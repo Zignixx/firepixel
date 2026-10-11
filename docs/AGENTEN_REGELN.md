@@ -40,6 +40,15 @@ Vom Nutzer genehmigte Ausnahme (11.10.): Treffer in der fertigen exe, die nur au
 - Python immer mit vollem Pfad `C:\Users\Administrator\AppData\Local\Programs\Python\Python314\python.exe -I …`.
 - Cargo-PATH: `$env:Path = [Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [Environment]::GetEnvironmentVariable('Path','User')`
 
+## 1b. Phase 6: Mehrsprachigkeit (ab 12.10.2026)
+
+Nutzerwunsch: Firepixel mehrsprachig – Deutsch (bisher) + Englisch, neue Sprachen später sehr einfach. Kern: `crates\fp-i18n` (Fluent; API `fp_i18n::t`, `fp_i18n::tr!`, `command_key`, `set_language`, `generation`; Regeln und Dateiaufteilung in `crates\fp-i18n\README.md`, Begriffe in `crates\fp-i18n\GLOSSAR.md`).
+- **Kein fester Nutzertext mehr im Code.** Jeder sichtbare Text → Schlüssel in `locales\de\<bereich>.ftl` **und** `locales\en\<bereich>.ftl` (gleichzeitig; Englisch nach Glossar). Ausgenommen: Eigennamen, Formatnamen, Einheitenkürzel, Symbole.
+- Bereichsdateien gehören je einem Agenten (Tabelle im README). Braucht ein Agent einen Text aus einem fremden Bereich: Schlüssel dort nicht selbst anlegen, sondern Befund – außer `btn-*`/`key-*`/`unit-*` aus `allgemein.ftl`, die I18N-KERN pflegt (fehlende dort als Befund).
+- Code-Dateien: Zuständigkeit wie in der Agentenliste der Phase 6 (Auftrag). Einzeilige Einhängungen in fremde Dateien nur mit Befund.
+- Nach jeder umgestellten Datei: bauen, eigene Tests, `cargo test -p fp-i18n` (Vollständigkeit) und `cargo test -p fp-neutral`, dann committen (§2a).
+- Die Oberfläche muss in Deutsch **unverändert** aussehen (gleicher Wortlaut wie bisher, bestehende Tests mit deutschen Texten bleiben grün), in Englisch und in der Testsprache `qps` darf nichts überlaufen (§4c).
+
 ## 2a. Versionsverwaltung (git, seit 12.10.2026)
 
 `firepixel\` ist ein lokales git-Repository (Branch `main`, kein Remote, nichts hochladen). Git liegt unter `C:\Program Files\Git` (PATH wie in §2 nachladen).

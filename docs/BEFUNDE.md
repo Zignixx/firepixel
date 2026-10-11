@@ -148,3 +148,20 @@ Regel: `AGENTEN_REGELN.md` §1a. Prüfung: `cargo test -p fp-neutral` (meldet Da
 - [x] (NT) Testkorpus: Verzeichnisverbindung `REA\korpus` → Installationskopie; alle Tests/Generatoren nutzen `FP_CORPUS_DIR` bzw. `..\korpus`.
 - [x] (NT, an RF) `fp-io\src\jpeg_ijg.rs` (neu) enthielt das Herstellerwort (Feld mit dem Herstellernamen in `JpegPlanes`, Kennungsvergleich im APP14-Segment) – umbenannt in `app14`, Erkennung am Aufbau (`0xEE`, ≥ 12 Byte); `jpeg_in.rs` angepasst, fp-io-Tests grün.
 - Hinweis an alle: bitte das Wort nicht neu einführen (auch nicht in Befund-Texten, Testnamen, Pfaden); `cargo test -p fp-neutral` vor dem Abschluss laufen lassen.
+
+## I18N-KERN
+
+## I18N-MENUE
+
+## I18N-DIALOGE
+
+## I18N-INSPEKTOR
+
+## I18N-BEDIENFELDER
+
+## I18N-SHELL
+
+## I18N-ENGINE
+
+## I18N-QA
+
