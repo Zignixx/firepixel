@@ -1,0 +1,338 @@
+//! Oberfläche von Firepixel (Phase 3: Grundgerüst) – egui/eframe 0.36, detailgetreu nach dem
+//! Hauptfenster des Originals (`re\ui-referenz\01_hauptfenster.png`, `re\11-bedienfelder-dialoge.md`).
+//!
+//! # Aufbau
+//!
+//! | Modul | Inhalt |
+//! |---|---|
+//! | [`theme`] | Design-System: Farben, Maße, Schriftgrößen; Designs Normal/Dunkel/OLED; Segoe UI |
+//! | [`icons`] | eigene Vektor-Icons (Werkzeuge, Symbolleiste, Bedienfelder, Fußleiste) |
+//! | [`widgets`] | Bausteine im Stil des Originals (Kopfzeilen, Trenner, Symbolknöpfe, Farbfelder) |
+//! | [`appbar`] | Anwendungsleiste: Logo, Menüs, Schnellknöpfe, Arbeitsbereich-Umschalter, Fensterknöpfe |
+//! | [`menu`] | Hauptmenü aus MENU 128 + Befehlsregister, Laufzeit-Untermenüs, Bedienfeldmenüs |
+//! | [`toolbar`] | Hauptsymbolleiste „Standard“ |
+//! | [`tools_panel`] | Werkzeugbedienfeld mit Flyouts und Farbfeldern |
+//! | [`canvas`] | Dokument-Reiter, Ansichtsreiter, Leinwand (fp-render), Lineale, Fußleiste |
+//! | [`inspector`] | Eigenschaften-Inspektor: Rahmen, Layout-Tabelle, Quadranten-Register |
+//! | [`panels`] | Bedienfelder (Kennungen, Inhalte) |
+//! | [`docking`] / [`workspace`] | Docking wie CS6, Arbeitsbereich-Layouts |
+//! | [`dialogs`] | Neues Dokument, Ungespeichert-Abfrage, Voreinstellungen, Über |
+//! | [`input`] | Tastenkürzel → fp-engine |
+//! | [`files`] | Dateidialoge, Öffnen/Speichern, Drag & Drop |
+//! | [`app_state`] / [`actions`] | Zustand und Aktions-Warteschlange |
+
+pub mod actions;
+pub mod app_state;
+pub mod appbar;
+pub mod bridge;
+pub mod canvas;
+mod start_window;
+pub mod dialogs;
+pub mod docking;
+pub mod files;
+pub mod icons;
+pub mod input;
+pub mod inspector;
+pub mod menu;
+pub mod menu_kbd;
+pub mod os_clipboard;
+pub mod panels;
+pub mod preview;
+pub mod theme;
+pub mod toolbar;
+pub mod tools_panel;
+pub mod ui_commands;
+pub mod widgets;
+pub mod workspace;
+
+use app_state::{Action, AppState, UiSettings, SETTINGS_KEY};
+use egui::{pos2, vec2, Rect};
+use fp_engine::{Preferences, Session};
+use std::path::PathBuf;
+use std::sync::Arc;
+use theme::{Theme, ThemeKind};
+
+/// Die Anwendung.
+pub struct FirepixelApp {
+    pub state: AppState,
+    last_title: String,
+    fonts_ready: bool,
+    /// `--design=…` gilt nur für diese Sitzung: (gespeichertes Design, Design aus der Kommandozeile).
+    cli_design: Option<(fp_engine::Theme, fp_engine::Theme)>,
+    /// Gezeichnete Frames. Die Fenstersymbole werden direkt nach dem Sichtbarwerden und 1,5 s
+    /// später erneut gesetzt (`start_window::after_frame`), weil die Taskleiste ihren Knopf dann anlegt.
+    frames: u32,
+}
+
+impl FirepixelApp {
+    /// Start aus eframe: Schriften, Voreinstellungen, gespeicherter Arbeitsbereich, Dateien aus der
+    /// Kommandozeile.
+    pub fn new(cc: &eframe::CreationContext<'_>, files: Vec<PathBuf>, design: Option<ThemeKind>) -> FirepixelApp {
+        theme::install_fonts(&cc.egui_ctx);
+        #[cfg(target_os = "windows")]
+        if let Some(window) = cc.winit_window() {
+            icons::apply_window_icons(window);
+        }
+        if let Some(window) = cc.winit_window() {
+            start_window::prepare_hidden(window, cc.storage);
+        }
+        let prefs_path = Preferences::default_path();
+        let mut prefs = prefs_path.as_deref().map(Preferences::load_or_default).unwrap_or_default();
+        dialogs::preferences::apply_original_dir(&prefs);
+        let mut cli_design = None;
+        if let Some(d) = design {
+            cli_design = Some((prefs.theme, d.to_engine()));
+            prefs.theme = d.to_engine();
+        }
+        let mut settings: UiSettings = cc.storage.and_then(|s| eframe::get_value(s, SETTINGS_KEY)).unwrap_or_default();
+        settings.workspace.repair();
+        // das Design steht in den Voreinstellungen von fp-engine (gemeinsam mit CLI/MCP)
+        settings.theme = ThemeKind::from_engine(prefs.theme);
+        // Register mit den Adapter-Befehlen der Oberfläche (Inspektor, Bedienfelder, Dialoge)
+        let mut session = ui_commands::new_session(prefs);
+        session.prefs_path = prefs_path;
+        let mut app = FirepixelApp::with_session(&cc.egui_ctx, session, settings, true);
+        app.fonts_ready = true;
+        app.cli_design = cli_design;
+        for f in files {
+            app.state.push(Action::OpenPath(f));
+        }
+        app
+    }
+
+    /// Anwendung ohne eframe (Tests, Bildschirmfotos): `threaded = false` rendert synchron.
+    pub fn with_session(ctx: &egui::Context, session: Session, settings: UiSettings, threaded: bool) -> FirepixelApp {
+        ctx.options_mut(|o| {
+            o.zoom_with_keyboard = false;
+        });
+        let mut state = AppState::new(session, settings, if threaded { Some(ctx.clone()) } else { None });
+        state.sync_render = !threaded;
+        FirepixelApp { state, last_title: String::new(), fonts_ready: false, cli_design: None, frames: 0 }
+    }
+
+    /// Zeichnet das ganze Hauptfenster in `ui`.
+    pub fn root_ui(&mut self, ui: &mut egui::Ui) {
+        let ctx = ui.ctx().clone();
+        if !self.fonts_ready {
+            // Schriften wirken erst ab dem nächsten Frame; vorher nichts zeichnen (fette Familie)
+            theme::install_fonts(&ctx);
+            self.fonts_ready = true;
+            ctx.request_repaint();
+            return;
+        }
+        let st = &mut self.state;
+        st.frame_counter += 1;
+        if st.theme_dirty {
+            st.theme.apply(&ctx);
+            st.theme_dirty = false;
+        }
+        let theme: Arc<Theme> = Arc::clone(&st.theme);
+        // fertige Renderergebnisse übernehmen
+        for res in st.worker.poll() {
+            let cc = st.canvases.entry(res.key.doc).or_default();
+            if cc.requested.as_ref() == Some(&res.key) || cc.shown.is_none() {
+                let img = canvas::render::to_color_image(&res.image);
+                match &mut cc.texture {
+                    Some(t) => t.set(img, egui::TextureOptions::NEAREST),
+                    None => cc.texture = Some(ctx.load_texture(format!("canvas-{}", res.key.doc.0), img, egui::TextureOptions::NEAREST)),
+                }
+                cc.shown = Some(res.key);
+            }
+        }
+        // Fenstertitel
+        let title = st.window_title();
+        if title != self.last_title {
+            ctx.send_viewport_cmd(egui::ViewportCommand::Title(title.clone()));
+            self.last_title = title;
+        }
+        // Schließen über das System (Alt+F4, Taskleiste): erst Rückfragen
+        if ctx.input(|i| i.viewport().close_requested()) && !st.quit_confirmed {
+            ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
+            st.push(Action::Quit);
+        }
+        files::handle_dropped_files(&ctx, st);
+        // Menüs per Tastatur (Alt+Buchstabe, F10, Pfeile …) vor den Kürzeln, Dokumentwechsel
+        if !st.dialogs.any_open() {
+            menu_kbd::keyboard(&ctx, st);
+            switch_documents(&ctx, st);
+        }
+        input::handle(&ctx, st);
+        // KI-Steuerkanal (MCP-Brücke, AU): Aufträge im UI-Thread abarbeiten
+        crate::bridge::frame(&ctx, st);
+        appbar::resize_edges(&ctx);
+
+        let m = theme.metrics.clone();
+        let hidden = st.settings.workspace.panels_hidden || st.session.ui.screen_mode == 2;
+        let no_frame = egui::Frame::NONE;
+        egui::Panel::top("fp-appbar").exact_size(m.app_bar_height).frame(no_frame).resizable(false).show_separator_line(false).show(ui, |ui| appbar::show(ui, st));
+        if st.settings.workspace.show_toolbar && !hidden {
+            egui::Panel::top("fp-toolbar").exact_size(m.toolbar_height).frame(no_frame).resizable(false).show_separator_line(false).show(ui, |ui| toolbar::show(ui, st));
+        }
+        if st.settings.workspace.show_tools && !hidden {
+            egui::Panel::left("fp-tools").exact_size(m.tools_width + m.splitter).frame(no_frame).resizable(false).show_separator_line(false).show(ui, |ui| {
+                let r = ui.max_rect();
+                let inner = Rect::from_min_max(r.min, pos2(r.right() - m.splitter, r.bottom()));
+                let mut child = ui.new_child(egui::UiBuilder::new().max_rect(inner));
+                tools_panel::show(&mut child, st);
+                widgets::vsplitter(ui.painter(), r.right() - m.splitter, r.y_range(), &theme);
+            });
+        }
+        if !hidden {
+            let dock_w = if st.settings.workspace.dock_mode == workspace::DockMode::Expanded {
+                st.settings.workspace.dock_width
+            } else if st.settings.workspace.dock_mode == workspace::DockMode::IconicWithNames {
+                150.0
+            } else {
+                38.0
+            };
+            // Dock nie breiter als der Platz neben Werkzeugen und einer Mindestleinwand
+            let tools_w = if st.settings.workspace.show_tools { m.tools_width + m.splitter } else { 0.0 };
+            let max_dock = (ui.max_rect().width() - tools_w - 260.0).max(m.dock_min_width.min(160.0));
+            let dock_w = dock_w.min(max_dock);
+            let resp = egui::Panel::right("fp-dock").exact_size(dock_w + m.splitter).frame(no_frame).resizable(false).show_separator_line(false).show(ui, |ui| {
+                let r = ui.max_rect();
+                let inner = Rect::from_min_max(pos2(r.left() + m.splitter, r.top()), r.max);
+                widgets::vsplitter(ui.painter(), r.left(), r.y_range(), &theme);
+                let mut child = ui.new_child(egui::UiBuilder::new().max_rect(inner));
+                docking::show_dock(&mut child, st);
+            });
+            // Breite des Docks an der Trennlinie ziehen
+            let r = resp.response.rect;
+            let grip = Rect::from_min_size(r.min, vec2(m.splitter + 2.0, r.height()));
+            let g = ui.interact(grip, egui::Id::new("dock-width"), egui::Sense::drag());
+            if g.hovered() || g.dragged() {
+                ctx.set_cursor_icon(egui::CursorIcon::ResizeHorizontal);
+            }
+            if g.dragged() && st.settings.workspace.dock_mode == workspace::DockMode::Expanded {
+                let w = (st.settings.workspace.dock_width - g.drag_delta().x).clamp(m.dock_min_width, 600.0);
+                st.settings.workspace.dock_width = w;
+            }
+        }
+        if st.settings.workspace.show_inspector && !hidden {
+            let h = inspector::height(&theme, st);
+            egui::Panel::bottom("fp-inspector").exact_size(h + m.splitter).frame(no_frame).resizable(false).show_separator_line(false).show(ui, |ui| {
+                let r = ui.max_rect();
+                widgets::hsplitter(ui.painter(), r.top(), r.x_range(), &theme);
+                let inner = Rect::from_min_max(pos2(r.left(), r.top() + m.splitter), r.max);
+                let mut child = ui.new_child(egui::UiBuilder::new().max_rect(inner));
+                inspector::show(&mut child, st);
+            });
+        }
+        egui::CentralPanel::no_frame().show(ui, |ui| {
+            canvas::show_document_area(ui, st);
+        });
+        docking::show_floating(&ctx, st);
+        docking::finish_drag(&ctx, st);
+        dialogs::show_all(&ctx, st);
+        st.process_actions(&ctx);
+        st.handle_session_events();
+        if st.close_window {
+            st.close_window = false;
+            ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+        }
+        // Vollbild-Modi (Werkzeugbedienfeld ▸ Ansicht)
+        let want_full = st.session.ui.screen_mode > 0;
+        let is_full = ctx.input(|i| i.viewport().fullscreen.unwrap_or(false));
+        if want_full != is_full {
+            ctx.send_viewport_cmd(egui::ViewportCommand::Fullscreen(want_full));
+        }
+    }
+}
+
+impl eframe::App for FirepixelApp {
+    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        self.frames = self.frames.saturating_add(1);
+        self.root_ui(ui);
+        // Fenster nach dem Sichtbarwerden maximieren; Symbole dann erneut setzen (und 1,5 s später)
+        let window = _frame.winit_window().map(|w| &**w);
+        if start_window::after_frame(ui.ctx(), window) {
+            #[cfg(target_os = "windows")]
+            if let Some(window) = window {
+                icons::apply_window_icons(window);
+                // Die Taskleiste legt ihren Knopf an, während der UI-Thread noch zeichnet, bekommt
+                // auf WM_GETICON keine Antwort und behält das Ersatzsymbol; WM_SETICON allein lässt
+                // sie nicht neu abfragen, ein (unveränderter) WM_SETTEXT schon (nachgewiesen 11.10.).
+                window.set_title(&window.title());
+            }
+        }
+    }
+
+    fn save(&mut self, storage: &mut dyn eframe::Storage) {
+        // ein per Kommandozeile erzwungenes Design nicht dauerhaft speichern (außer der Nutzer hat es
+        // in der Sitzung selbst umgestellt)
+        let restore = self.cli_design.filter(|(_, cli)| self.state.session.prefs.theme == *cli).map(|(saved, _)| saved);
+        let mut settings = self.state.settings.clone();
+        if let Some(saved) = restore {
+            settings.theme = ThemeKind::from_engine(saved);
+            let cur = std::mem::replace(&mut self.state.session.prefs.theme, saved);
+            let _ = self.state.session.save_prefs();
+            self.state.session.prefs.theme = cur;
+        } else {
+            let _ = self.state.session.save_prefs();
+        }
+        eframe::set_value(storage, SETTINGS_KEY, &settings);
+    }
+
+    fn clear_color(&self, _visuals: &egui::Visuals) -> [f32; 4] {
+        self.state.theme.colors.frame_bg.to_normalized_gamma_f32()
+    }
+}
+
+/// Strg+Tab bzw. Strg+F6 → nächstes Dokument, Strg+Umschalt+Tab bzw. Strg+Umschalt+F6 → voriges
+/// (MDI-Standard wie im Original). Die Taste wird verbraucht.
+fn switch_documents(ctx: &egui::Context, st: &mut AppState) {
+    let mut dir = 0i32;
+    ctx.input_mut(|i| {
+        for (key, shift) in [(egui::Key::Tab, false), (egui::Key::F6, false), (egui::Key::Tab, true), (egui::Key::F6, true)] {
+            let m = egui::Modifiers { ctrl: true, command: true, shift, ..Default::default() };
+            if i.consume_key(m, key) {
+                dir = if shift { -1 } else { 1 };
+            }
+        }
+    });
+    // Umschalt+W: Werkzeuge am Platz des Zauberstabs durchschalten (Zauberstab, KI-Auswahl)
+    if !st.session.tool_is_editing_text() && ctx.input_mut(|i| i.consume_key(egui::Modifiers::SHIFT, egui::Key::W)) {
+        let members = fp_engine::tools::flyout_members("Zauberstab");
+        if !members.is_empty() {
+            let cur = members.iter().position(|t| *t == st.session.tools.active);
+            let next = members[cur.map(|i| (i + 1) % members.len()).unwrap_or(0)];
+            st.push(app_state::Action::SetTool(next));
+        }
+    }
+    if dir == 0 {
+        return;
+    }
+    let docs: Vec<fp_engine::DocId> = st.session.documents().iter().map(|d| d.id).collect();
+    if docs.len() < 2 {
+        return;
+    }
+    let cur = st.session.active_id().and_then(|a| docs.iter().position(|d| *d == a)).unwrap_or(0) as i32;
+    let n = docs.len() as i32;
+    let next = docs[((cur + dir).rem_euclid(n)) as usize];
+    st.push(app_state::Action::Activate(next));
+}
+
+/// Fensteroptionen: ohne Systemrahmen (eigene Anwendungsleiste wie CS6), maximiert.
+pub fn native_options() -> eframe::NativeOptions {
+    eframe::NativeOptions {
+        viewport: egui::ViewportBuilder::default()
+            .with_title("Firepixel")
+            .with_app_id("firepixel")
+            .with_decorations(false)
+            .with_inner_size([1500.0, 950.0])
+            .with_min_inner_size([800.0, 500.0])
+            .with_maximized(true)
+            .with_drag_and_drop(true)
+            .with_icon(Arc::new(icons::app_icon_data())),
+        persist_window: true,
+        // maximiert erst nach dem Erscheinen (sonst blitzt das Fenster beim Start zweimal auf)
+        window_builder: Some(Box::new(start_window::strip_maximized)),
+        ..Default::default()
+    }
+}
+
+/// Startet die Anwendung (Dateien aus der Kommandozeile werden geöffnet; `design` überschreibt
+/// das gespeicherte Design, z. B. für Bildschirmfotos).
+pub fn run(files: Vec<PathBuf>, design: Option<ThemeKind>) -> eframe::Result {
+    eframe::run_native("Firepixel", native_options(), Box::new(move |cc| Ok(Box::new(FirepixelApp::new(cc, files, design)))))
+}

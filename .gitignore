@@ -1,0 +1,10 @@
+# Build-Ordner (gemeinsam und je Agent)
+/target/
+/target-*/
+
+# erzeugte Testdaten (jederzeit mit den Generatoren unter tools\golden neu erzeugbar)
+/tools/golden/*/out/
+
+# Python-Zwischenstände
+__pycache__/
+*.pyc

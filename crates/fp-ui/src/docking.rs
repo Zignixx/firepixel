@@ -1,0 +1,477 @@
+//! Eigenes Docking im Stil des Originals (Owl-Docks, 11 §4.1): rechts ein Dock mit gestapelten
+//! Bedienfeldgruppen (Reiterleiste, Bedienfeldmenü ≡, Einklappen per Klick auf den aktiven Reiter),
+//! schwebende Gruppen als eigene Fensterflächen, Reiter per Ziehen umgruppieren, andocken und lösen.
+//! Symbolmodus (Iconic Mode) mit aufklappenden Bedienfeldern.
+
+use crate::app_state::{Action, AppState};
+use crate::icons::{self, Icon, IconStyle};
+use crate::menu;
+use crate::panels::{self, PanelId};
+use crate::theme::{with_alpha, Theme, ToolGroup};
+use crate::widgets;
+use crate::workspace::{DockMode, PanelGroup};
+use egui::{pos2, vec2, Align2, Color32, Id, Pos2, Rect, Sense, Stroke, StrokeKind, Ui};
+
+/// Wohin ein gezogener Reiter fällt.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum DropTarget {
+    /// In Dock-Gruppe `group` an Reiterposition `index`.
+    DockTabs { group: usize, index: usize },
+    /// Neue Dock-Gruppe an Position `at`.
+    DockGap { at: usize },
+    /// In schwebende Gruppe.
+    FloatTabs { group: usize, index: usize },
+}
+
+/// Laufzeitzustand des Dockings (nicht gespeichert).
+#[derive(Clone, Debug, Default)]
+pub struct DockUi {
+    /// Gezogener Reiter.
+    pub drag: Option<PanelId>,
+    /// Ablagezonen dieses Frames.
+    pub zones: Vec<(Rect, DropTarget)>,
+    /// Ablagezonen des letzten Frames (für das Loslassen).
+    pub last_zones: Vec<(Rect, DropTarget)>,
+    /// Im Symbolmodus aufgeklapptes Bedienfeld.
+    pub iconic_open: Option<PanelId>,
+}
+
+/// Höhe einer Reiterleiste.
+pub fn tab_strip_height(theme: &Theme) -> f32 {
+    theme.metrics.panel_tab_height + 2.0
+}
+
+/// Ergebnis der Reiterleiste.
+#[derive(Default)]
+pub struct TabStripOut {
+    pub clicked: Option<usize>,
+    pub drag_started: Option<usize>,
+    pub menu_clicked: Option<egui::Response>,
+    pub tab_rects: Vec<Rect>,
+    pub background: Option<egui::Response>,
+}
+
+/// Zeichnet eine Reiterleiste wie in CS6 (Verlauf, aktiver Reiter in Inhaltsfarbe, Trenner, ≡).
+/// `accent` je Reiter für die farbigen Kennungen im OLED-Design.
+pub fn tab_strip(ui: &mut Ui, rect: Rect, id: Id, tabs: &[(&str, ToolGroup)], active: Option<usize>, show_menu: bool, collapsed: bool) -> TabStripOut {
+    let theme = Theme::current(ui.ctx());
+    let c = &theme.colors;
+    let mut out = TabStripOut::default();
+    let bg = ui.interact(rect, id.with("bg"), Sense::click_and_drag());
+    widgets::header_bar(ui.painter(), rect, &theme);
+    let font = theme.tab_font();
+    let mut x = rect.left() + 1.0;
+    let menu_w = if show_menu { 18.0 } else { 0.0 };
+    for (i, (title, group)) in tabs.iter().enumerate() {
+        let tw = widgets::text_width(ui, title, &font) + 2.0 * theme.metrics.panel_tab_pad;
+        let max_right = rect.right() - menu_w - 2.0;
+        let w = tw.min((max_right - x).max(24.0));
+        let tr = Rect::from_min_max(pos2(x, rect.top() + 1.0), pos2((x + w).min(max_right), rect.bottom()));
+        if tr.width() < 8.0 {
+            break;
+        }
+        let resp = ui.interact(tr, id.with(("tab", i)), Sense::click_and_drag());
+        let is_active = active == Some(i) && !collapsed;
+        let accent = theme.accent(*group);
+        if active == Some(i) {
+            ui.painter().rect_filled(tr, 0.0, c.tab_active_bg);
+            ui.painter().vline(tr.left() + 0.5, tr.y_range(), Stroke::new(1.0, c.tab_separator));
+            ui.painter().vline(tr.right() - 0.5, tr.y_range(), Stroke::new(1.0, c.tab_separator));
+            if theme.glow {
+                ui.painter().rect_filled(Rect::from_min_size(tr.min, vec2(tr.width(), 2.0)), 0.0, accent);
+                ui.painter().rect_filled(Rect::from_min_size(tr.min + vec2(0.0, 2.0), vec2(tr.width(), 4.0)), 0.0, with_alpha(accent, 40));
+            }
+            if is_active {
+                // aktiver Reiter verschmilzt mit dem Inhalt
+                ui.painter().hline(tr.x_range().shrink(1.0), tr.bottom() - 0.5, Stroke::new(1.0, c.tab_active_bg));
+            }
+        } else {
+            if resp.hovered() {
+                ui.painter().rect_filled(tr.shrink2(vec2(0.0, 1.0)), 0.0, c.tab_hover_bg);
+            }
+            ui.painter().vline(tr.right() - 0.5, tr.y_range().shrink(1.0), Stroke::new(1.0, c.tab_separator));
+            if theme.glow {
+                ui.painter().hline(tr.x_range().shrink(4.0), tr.bottom() - 2.5, Stroke::new(1.0, with_alpha(accent, 150)));
+            }
+        }
+        let tc = if active == Some(i) { c.tab_text } else { c.tab_text_inactive };
+        widgets::text_clipped(ui.painter(), pos2(tr.left() + theme.metrics.panel_tab_pad, tr.center().y), Align2::LEFT_CENTER, title, font.clone(), tc, tr.width() - 2.0 * theme.metrics.panel_tab_pad + 4.0);
+        if resp.clicked() {
+            out.clicked = Some(i);
+        }
+        if resp.drag_started() {
+            out.drag_started = Some(i);
+        }
+        out.tab_rects.push(tr);
+        x += w;
+    }
+    if show_menu {
+        let mr = Rect::from_center_size(pos2(rect.right() - 10.0, rect.center().y), vec2(16.0, 12.0));
+        let resp = ui.interact(mr, id.with("menu"), Sense::click());
+        let st = IconStyle::mono(if resp.hovered() { c.focus } else { c.tab_text }, c.frame_bg);
+        icons::paint(ui.painter(), mr, Icon::PanelMenu, &st);
+        out.menu_clicked = Some(resp.on_hover_text("Bedienfeldmenü"));
+    }
+    out.background = Some(bg);
+    out
+}
+
+fn panel_icon(p: PanelId) -> Icon {
+    match p {
+        PanelId::Optimize => Icon::Export,
+        PanelId::History => Icon::Undo,
+        PanelId::Align => Icon::AlignLeft,
+        PanelId::Pages => Icon::PageSmall,
+        PanelId::States => Icon::DistributeStates,
+        PanelId::Layers => Icon::Folder,
+        PanelId::Styles => Icon::Star,
+        PanelId::ColorPalette | PanelId::Swatches => Icon::Swatches,
+        PanelId::SpecialCharacters => Icon::Text,
+        PanelId::ImageEditing => Icon::Brush,
+        PanelId::Path => Icon::Pen,
+        PanelId::AutoShapes | PanelId::AutoShapeProperties => Icon::AutoShape,
+        PanelId::DocumentLibrary | PanelId::CommonLibrary | PanelId::SymbolProperties => Icon::EditSymbol,
+        PanelId::Info => Icon::Info,
+        PanelId::ColorMixer => Icon::DefaultColors,
+        PanelId::Url => Icon::HotspotRect,
+        PanelId::Behaviors => Icon::Slice,
+        PanelId::FindReplace => Icon::Zoom,
+        PanelId::CssProperties => Icon::Document,
+    }
+}
+
+/// Zeichnet eine Gruppe (Reiterleiste + Inhalt) in `rect`. `where_` bestimmt die Ablagezone.
+fn group_ui(ui: &mut Ui, st: &mut AppState, rect: Rect, group: &PanelGroup, gid: Id, floating: Option<usize>, dock_index: Option<usize>) -> Option<egui::Response> {
+    let theme = Theme::current(ui.ctx());
+    let vis = st.settings.workspace.visible_panels(group);
+    if vis.is_empty() {
+        return None;
+    }
+    let active_panel = st.settings.workspace.active_panel(group);
+    let active_idx = active_panel.and_then(|p| vis.iter().position(|q| *q == p));
+    let strip = Rect::from_min_size(rect.min, vec2(rect.width(), tab_strip_height(&theme)));
+    let tabs: Vec<(&str, ToolGroup)> = vis.iter().map(|p| (p.title(), p.group())).collect();
+    let out = tab_strip(ui, strip, gid, &tabs, active_idx, true, group.collapsed);
+    // Ablagezone: Reiterleiste
+    let target_index = |rects: &[Rect], x: f32| rects.iter().position(|r| x < r.center().x).unwrap_or(rects.len());
+    if st.dock.drag.is_some()
+        && let Some(p) = ui.ctx().pointer_hover_pos()
+        && strip.contains(p)
+    {
+        let idx = target_index(&out.tab_rects, p.x);
+        let x = out.tab_rects.get(idx).map(|r| r.left()).or_else(|| out.tab_rects.last().map(|r| r.right())).unwrap_or(strip.left() + 2.0);
+        ui.painter().vline(x, strip.y_range(), Stroke::new(2.0, theme.colors.focus));
+    }
+    let tab_rects = out.tab_rects.clone();
+    let real_index = |vis_idx: usize| -> usize {
+        // sichtbaren Index in Gruppenindex umrechnen
+        vis.get(vis_idx).and_then(|p| group.panels.iter().position(|q| q == p)).unwrap_or(group.panels.len())
+    };
+    let zone_target = match (floating, dock_index) {
+        (Some(f), _) => DropTarget::FloatTabs { group: f, index: group.panels.len() },
+        (None, Some(g)) => DropTarget::DockTabs { group: g, index: group.panels.len() },
+        _ => DropTarget::DockGap { at: 0 },
+    };
+    // Zonen je Reiterhälfte für die genaue Position
+    let mut x0 = strip.left();
+    for (i, r) in tab_rects.iter().enumerate() {
+        let zr = Rect::from_min_max(pos2(x0, strip.top()), pos2(r.center().x, strip.bottom()));
+        let idx = real_index(i);
+        let t = match zone_target {
+            DropTarget::FloatTabs { group: f, .. } => DropTarget::FloatTabs { group: f, index: idx },
+            DropTarget::DockTabs { group: g, .. } => DropTarget::DockTabs { group: g, index: idx },
+            o => o,
+        };
+        st.dock.zones.push((zr, t));
+        x0 = r.center().x;
+    }
+    st.dock.zones.push((Rect::from_min_max(pos2(x0, strip.top()), strip.max), zone_target));
+
+    if let Some(i) = out.clicked {
+        let gi = real_index(i);
+        st.push(Action::Run("ui.dock.tabClicked".into(), serde_json::json!({ "floating": floating, "group": dock_index, "index": gi })));
+    }
+    if let Some(i) = out.drag_started
+        && let Some(p) = vis.get(i)
+    {
+        st.dock.drag = Some(*p);
+    }
+    if let (Some(resp), Some(p)) = (&out.menu_clicked, active_panel) {
+        let nodes = menu::build_panel_menu(st, p);
+        let mut acts = Vec::new();
+        menu::popup_menu(ui, resp, &nodes, &mut acts);
+        for a in acts {
+            st.push(a);
+        }
+    }
+    if !group.collapsed
+        && let Some(p) = active_panel
+    {
+        let content = Rect::from_min_max(pos2(rect.left(), strip.bottom()), rect.max);
+        if content.height() > 4.0 {
+            ui.painter().rect_filled(content, 0.0, theme.colors.frame_bg);
+            let inner = content.shrink2(vec2(4.0, 3.0));
+            let mut child = ui.new_child(egui::UiBuilder::new().id_salt(("panel", p)).max_rect(inner).layout(egui::Layout::top_down(egui::Align::Min)));
+            child.set_clip_rect(inner.intersect(ui.clip_rect()));
+            panels::show(&mut child, st, p);
+        }
+    }
+    out.background
+}
+
+/// Rechtes Dock (im rechten Seitenbereich).
+pub fn show_dock(ui: &mut Ui, st: &mut AppState) {
+    let theme = Theme::current(ui.ctx());
+    let full = ui.max_rect();
+    let strip = Rect::from_min_size(full.min, vec2(full.width(), theme.metrics.dock_strip_height));
+    widgets::dock_strip(ui.painter(), strip, &theme);
+    let iconic = st.settings.workspace.dock_mode != DockMode::Expanded;
+    let br = Rect::from_center_size(pos2(strip.right() - 9.0, strip.center().y), vec2(12.0, 10.0));
+    let bresp = ui.interact(br, Id::new("dock-collapse"), Sense::click());
+    let st_icon = IconStyle::mono(theme.colors.dock_strip_arrow, theme.colors.frame_bg);
+    icons::paint(ui.painter(), br, if iconic { Icon::CollapseLeft } else { Icon::CollapseRight }, &st_icon);
+    if bresp.on_hover_text(if iconic { "Bedienfelder erweitern" } else { "Auf Symbole minimieren" }).clicked() {
+        st.push(Action::Run("ui.dock.toggleIconic".into(), serde_json::json!({})));
+    }
+    let area = Rect::from_min_max(pos2(full.left(), strip.bottom()), full.max);
+    ui.painter().rect_filled(area, 0.0, theme.colors.frame_bg);
+    if iconic {
+        iconic_dock(ui, st, area);
+        return;
+    }
+    let mut groups: Vec<(usize, PanelGroup)> =
+        st.settings.workspace.dock.iter().enumerate().filter(|(_, g)| !st.settings.workspace.visible_panels(g).is_empty()).map(|(i, g)| (i, g.clone())).collect();
+    let split = theme.metrics.splitter;
+    let header = tab_strip_height(&theme);
+    let n = groups.len();
+    let fixed: f32 = n as f32 * header + n as f32 * split;
+    let rem = (area.height() - fixed).max(0.0);
+    // Zu wenig Höhe: untere Gruppen nur für die Anzeige einklappen, damit jede offene Gruppe eine
+    // Mindesthöhe behält (sonst überlappen Listen und Knopfleisten); gespeichert bleibt der Zustand.
+    const MIN_GROUP_CONTENT: f32 = 120.0;
+    loop {
+        let open = groups.iter().filter(|(_, g)| !g.collapsed).count();
+        if open <= 1 || rem >= open as f32 * MIN_GROUP_CONTENT {
+            break;
+        }
+        if let Some((_, g)) = groups.iter_mut().rev().find(|(_, g)| !g.collapsed) {
+            g.collapsed = true;
+        }
+    }
+    let wsum: f32 = groups.iter().filter(|(_, g)| !g.collapsed).map(|(_, g)| g.weight).sum::<f32>().max(1e-3);
+    let mut y = area.top();
+    let mut prev_expanded: Option<(usize, f32)> = None;
+    for (k, (gi, g)) in groups.iter().enumerate() {
+        // Trenner oberhalb jeder Gruppe (wie CS6: dunkel/mittel/dunkel)
+        let sp = Rect::from_min_size(pos2(area.left(), y), vec2(area.width(), split));
+        widgets::hsplitter(ui.painter(), y, area.x_range(), &theme);
+        st.dock.zones.push((sp.expand2(vec2(0.0, 3.0)), DropTarget::DockGap { at: *gi }));
+        if st.dock.drag.is_some()
+            && let Some(p) = ui.ctx().pointer_hover_pos()
+            && sp.expand2(vec2(0.0, 3.0)).contains(p)
+        {
+            ui.painter().hline(sp.x_range(), sp.center().y, Stroke::new(3.0, theme.colors.focus));
+        }
+        // Höhe verändern zwischen zwei aufgeklappten Gruppen
+        if !g.collapsed
+            && let Some((pgi, ph)) = prev_expanded
+        {
+            let resp = ui.interact(sp, Id::new(("dock-split", k)), Sense::drag());
+            if resp.hovered() || resp.dragged() {
+                ui.ctx().set_cursor_icon(egui::CursorIcon::ResizeVertical);
+            }
+            if resp.dragged() {
+                let dy = resp.drag_delta().y;
+                let h = (rem * g.weight / wsum).max(1.0);
+                let new_prev = (ph + dy).max(40.0);
+                let new_this = (h - dy).max(40.0);
+                let total_w = st.settings.workspace.dock.get(pgi).map(|x| x.weight).unwrap_or(1.0) + g.weight;
+                let wp = total_w * new_prev / (new_prev + new_this);
+                if let Some(x) = st.settings.workspace.dock.get_mut(pgi) {
+                    x.weight = wp.max(0.1);
+                }
+                if let Some(x) = st.settings.workspace.dock.get_mut(*gi) {
+                    x.weight = (total_w - wp).max(0.1);
+                }
+            }
+        }
+        y += split;
+        let h = if g.collapsed { header } else { header + rem * g.weight / wsum };
+        let r = Rect::from_min_size(pos2(area.left(), y), vec2(area.width(), h));
+        group_ui(ui, st, r, g, Id::new(("dock-group", *gi)), None, Some(*gi));
+        if !g.collapsed {
+            prev_expanded = Some((*gi, h - header));
+        }
+        y += h;
+    }
+    // freier Raum unter den Gruppen: neue Gruppe am Ende
+    let rest = Rect::from_min_max(pos2(area.left(), y), area.max);
+    if rest.height() > 2.0 {
+        widgets::hsplitter(ui.painter(), y, area.x_range(), &theme);
+        st.dock.zones.push((rest, DropTarget::DockGap { at: st.settings.workspace.dock.len() }));
+    }
+}
+
+fn iconic_dock(ui: &mut Ui, st: &mut AppState, area: Rect) {
+    let theme = Theme::current(ui.ctx());
+    let with_names = st.settings.workspace.dock_mode == DockMode::IconicWithNames;
+    let mut y = area.top() + 4.0;
+    let groups: Vec<PanelGroup> = st.settings.workspace.dock.clone();
+    for (gi, g) in groups.iter().enumerate() {
+        let vis = st.settings.workspace.visible_panels(g);
+        if vis.is_empty() {
+            continue;
+        }
+        if gi > 0 {
+            widgets::hsplitter(ui.painter(), y, area.x_range(), &theme);
+            y += 6.0;
+        }
+        for p in vis {
+            let r = Rect::from_min_size(pos2(area.left() + 3.0, y), vec2(area.width() - 6.0, 26.0));
+            let resp = ui.interact(r, Id::new(("iconic", p)), Sense::click());
+            let open = st.dock.iconic_open == Some(p);
+            widgets::button_frame(ui.painter(), r, &resp, widgets::ButtonLook { selected: open, enabled: true, group: Some(p.group()) }, &theme);
+            let ir = Rect::from_center_size(pos2(r.left() + 13.0, r.center().y), vec2(16.0, 16.0));
+            icons::paint(ui.painter(), ir, panel_icon(p), &IconStyle::new(&theme, Some(p.group()), true));
+            if with_names {
+                widgets::text_clipped(ui.painter(), pos2(r.left() + 28.0, r.center().y), Align2::LEFT_CENTER, p.title(), theme.ui_font(), theme.colors.text, r.width() - 30.0);
+            }
+            if resp.on_hover_text(p.title()).clicked() {
+                st.dock.iconic_open = if open { None } else { Some(p) };
+            }
+            if open {
+                // aufgeklapptes Bedienfeld links neben dem Dock
+                let size = vec2(250.0, p.preferred_height() + tab_strip_height(&theme));
+                let pos = pos2(area.left() - size.x - 2.0, r.top().min(area.bottom() - size.y).max(area.top()));
+                let mut gcopy = g.clone();
+                gcopy.collapsed = false;
+                if let Some(ix) = gcopy.panels.iter().position(|q| *q == p) {
+                    gcopy.active = ix;
+                }
+                egui::Area::new(Id::new("iconic-flyout")).fixed_pos(pos).order(egui::Order::Foreground).show(ui.ctx(), |ui| {
+                    let rect = Rect::from_min_size(pos, size);
+                    ui.painter().rect_filled(rect, 0.0, theme.colors.frame_bg);
+                    let (_r, _resp) = ui.allocate_exact_size(size, Sense::hover());
+                    group_ui(ui, st, rect, &gcopy, Id::new(("iconic-group", gi)), None, Some(gi));
+                    ui.painter().rect_stroke(rect, 0.0, Stroke::new(1.0, if theme.glow { theme.accent(p.group()) } else { theme.colors.line_dark }), StrokeKind::Outside);
+                });
+            }
+            y += 28.0;
+        }
+    }
+}
+
+/// Schwebende Gruppen (über allem außer Menüs).
+pub fn show_floating(ctx: &egui::Context, st: &mut AppState) {
+    let theme = Theme::current(ctx);
+    if st.settings.workspace.panels_hidden {
+        return;
+    }
+    let groups = st.settings.workspace.floating.clone();
+    for (fi, f) in groups.iter().enumerate() {
+        if st.settings.workspace.visible_panels(&f.group).is_empty() {
+            continue;
+        }
+        let id = Id::new(("float", fi, f.group.panels.first().copied()));
+        // Mindestgröße und Lage im Fenster (Kopfleiste bleibt greifbar), wie das Original
+        let screen = ctx.content_rect();
+        let size = vec2(f.size[0].clamp(FLOAT_MIN[0], screen.width().max(FLOAT_MIN[0])), if f.group.collapsed { tab_strip_height(&theme) + 2.0 } else { f.size[1].clamp(FLOAT_MIN[1], (screen.height() - 40.0).max(FLOAT_MIN[1])) });
+        let pos = pos2(f.pos[0].clamp(screen.left() - size.x + 80.0, (screen.right() - 80.0).max(screen.left())), f.pos[1].clamp(screen.top() + 31.0, (screen.bottom() - 30.0).max(screen.top() + 31.0)));
+        egui::Area::new(id).fixed_pos(pos).order(egui::Order::Middle).show(ctx, |ui| {
+            let rect = Rect::from_min_size(pos, size);
+            let (_r, _resp) = ui.allocate_exact_size(size, Sense::hover());
+            let shadow = egui::Shadow { offset: [3, 3], blur: 8, spread: 0, color: Color32::from_black_alpha(if theme.glow { 0 } else { 70 }) };
+            ui.painter().add(shadow.as_shape(rect, 0.0));
+            ui.painter().rect_filled(rect, 0.0, theme.colors.frame_bg);
+            let inner = rect.shrink(1.0);
+            let bg = group_ui(ui, st, inner, &f.group, id.with("g"), Some(fi), None);
+            // Verschieben über den freien Teil der Reiterleiste
+            if let Some(bg) = bg {
+                if bg.dragged() {
+                    let d = bg.drag_delta();
+                    if let Some(x) = st.settings.workspace.floating.get_mut(fi) {
+                        x.pos[0] += d.x;
+                        x.pos[1] += d.y;
+                    }
+                }
+                if bg.drag_stopped()
+                    && let Some(p) = ctx.pointer_interact_pos()
+                {
+                    // über dem Dock losgelassen → andocken
+                    if let Some((_, DropTarget::DockGap { at })) = st.dock.last_zones.iter().find(|(r, t)| r.contains(p) && matches!(t, DropTarget::DockGap { .. })) {
+                        st.push(Action::Run("ui.dock.dockFloating".into(), serde_json::json!({ "floating": fi, "at": at })));
+                    }
+                }
+                if bg.double_clicked()
+                    && let Some(x) = st.settings.workspace.floating.get_mut(fi)
+                {
+                    x.group.collapsed = !x.group.collapsed;
+                }
+            }
+            ui.painter().rect_stroke(rect, 0.0, Stroke::new(1.0, if theme.glow { theme.colors.focus } else { theme.colors.line_dark }), StrokeKind::Inside);
+            // Größe ändern (Ecke unten rechts)
+            if !f.group.collapsed {
+                let gr = Rect::from_min_size(rect.right_bottom() - vec2(12.0, 12.0), vec2(12.0, 12.0));
+                let resp = ui.interact(gr, id.with("resize"), Sense::drag());
+                for k in 0..3 {
+                    let o = 3.0 + k as f32 * 3.0;
+                    ui.painter().line_segment([gr.right_bottom() - vec2(o, 1.0), gr.right_bottom() - vec2(1.0, o)], Stroke::new(1.0, theme.colors.grip_dark));
+                }
+                if resp.hovered() || resp.dragged() {
+                    ctx.set_cursor_icon(egui::CursorIcon::ResizeNwSe);
+                }
+                if resp.dragged() {
+                    let d = resp.drag_delta();
+                    if let Some(x) = st.settings.workspace.floating.get_mut(fi) {
+                        x.size[0] = (x.size[0] + d.x).max(FLOAT_MIN[0]);
+                        x.size[1] = (x.size[1] + d.y).max(FLOAT_MIN[1]);
+                    }
+                }
+            }
+        });
+    }
+}
+
+/// Mindestgröße schwebender Bedienfeldgruppen (Breite, Höhe) – darunter überlappen Bedienfeldinhalte.
+pub const FLOAT_MIN: [f32; 2] = [220.0, 160.0];
+
+/// Reiter-Ziehen: Geisterbild zeichnen und beim Loslassen ablegen bzw. lösen.
+pub fn finish_drag(ctx: &egui::Context, st: &mut AppState) {
+    let theme = Theme::current(ctx);
+    st.dock.last_zones = std::mem::take(&mut st.dock.zones);
+    let Some(p) = st.dock.drag else { return };
+    let pointer = ctx.pointer_interact_pos();
+    if let Some(pos) = ctx.pointer_hover_pos() {
+        let painter = ctx.layer_painter(egui::LayerId::new(egui::Order::Tooltip, Id::new("dock-ghost")));
+        let font = theme.tab_font();
+        let w = ctx.fonts_mut(|f| f.layout_no_wrap(p.title().to_string(), font.clone(), Color32::WHITE).size().x) + 16.0;
+        let r = Rect::from_min_size(pos + vec2(8.0, 6.0), vec2(w, 18.0));
+        painter.rect_filled(r, 0.0, with_alpha(theme.colors.tab_active_bg, 220));
+        painter.rect_stroke(r, 0.0, Stroke::new(1.0, theme.colors.focus), StrokeKind::Inside);
+        painter.text(pos2(r.left() + 8.0, r.center().y), Align2::LEFT_CENTER, p.title(), font, theme.colors.tab_text);
+        ctx.set_cursor_icon(egui::CursorIcon::Grabbing);
+    }
+    let released = ctx.input(|i| i.pointer.any_released() || !i.pointer.any_down());
+    if released {
+        st.dock.drag = None;
+        let Some(pos) = pointer else { return };
+        let target = st.dock.last_zones.iter().find(|(r, _)| r.contains(pos)).map(|(_, t)| *t);
+        let a = match target {
+            Some(DropTarget::DockTabs { group, index }) => serde_json::json!({ "panel": format!("{p:?}"), "kind": "dockTabs", "group": group, "index": index }),
+            Some(DropTarget::DockGap { at }) => serde_json::json!({ "panel": format!("{p:?}"), "kind": "dockGap", "at": at }),
+            Some(DropTarget::FloatTabs { group, index }) => serde_json::json!({ "panel": format!("{p:?}"), "kind": "floatTabs", "group": group, "index": index }),
+            None => serde_json::json!({ "panel": format!("{p:?}"), "kind": "float", "pos": [pos.x - 20.0, pos.y - 8.0] }),
+        };
+        st.push(Action::Run("ui.dock.drop".into(), a));
+    }
+}
+
+/// Bedienfeld-Kennung aus dem Debug-Namen (für die Aktionsparameter).
+pub fn panel_from_name(s: &str) -> Option<PanelId> {
+    PanelId::ALL.iter().copied().find(|p| format!("{p:?}") == s)
+}
+
+/// Ziel-Punkt eines Pos2 als Array.
+pub fn pos_arr(p: Pos2) -> [f32; 2] {
+    [p.x, p.y]
+}

@@ -1,0 +1,30 @@
+[package]
+name = "fp-export"
+description = "Export wie das Original: Optimieren-Einstellungen, Paletten, Quantisierer, Dithering, GIF/JPEG/PNG8/24/32, Animation, Slices, HTML/CSS/Verhalten, PSD; dazu WebP, AVIF, APNG"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+fp-geom = { workspace = true }
+fp-color = { workspace = true }
+fp-raster = { workspace = true }
+fp-model = { workspace = true }
+thiserror = { workspace = true }
+flate2 = { workspace = true }
+crc32fast = { workspace = true }
+# crate-eigene Spezialfälle (reine Rust-Crates): JPEG-Dekodierung für die Vorschau
+zune-jpeg = "0.5.15"
+# WebP verlustbehaftet/verlustfrei/animiert: libwebp, über libwebp-sys statisch mit MSVC gebaut (keine DLL)
+webp = { version = "=0.3.1", default-features = false }
+# AVIF: rav1e ohne Assembler (reines Rust)
+ravif = { version = "=0.13.0", default-features = false, features = ["threading"] }
+
+[dev-dependencies]
+fp-fwpng = { workspace = true }
+png = { workspace = true }
+serde_json = { workspace = true }
+
+[lints]
+workspace = true

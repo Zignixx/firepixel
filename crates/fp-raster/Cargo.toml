@@ -1,0 +1,21 @@
+[package]
+name = "fp-raster"
+description = "Pixelpuffer (RGBA8, Kacheln mit Copy-on-Write), Masken, Compositing, Resampling und die Bitmap-Filter des Originals"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+fp-geom = { workspace = true, features = ["serde"] }
+fp-color = { workspace = true, features = ["serde"] }
+serde = { workspace = true }
+thiserror = { workspace = true }
+rayon = { workspace = true }
+
+[dev-dependencies]
+png = { workspace = true }
+serde_json = { workspace = true }
+
+[lints]
+workspace = true

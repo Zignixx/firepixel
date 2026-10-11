@@ -1,0 +1,23 @@
+[package]
+name = "fp-fwpng"
+description = "Leser und Schreiber für FW-PNG (.fw.png): PNG-Container, private Chunks, Tag-Baum, Abbildung auf fp-model"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+fp-model = { workspace = true }
+fp-geom = { workspace = true }
+fp-color = { workspace = true }
+png = { workspace = true }
+flate2 = { workspace = true }
+crc32fast = { workspace = true }
+rayon = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+serde_json = { workspace = true }
+
+[lints]
+workspace = true

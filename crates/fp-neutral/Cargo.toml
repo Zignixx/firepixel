@@ -1,0 +1,10 @@
+[package]
+name = "fp-neutral"
+description = "Neutralitätsprüfung: kein Name des Originals oder seines Herstellers im Projekt (Quelltext, Daten, Dokumente, Dateinamen)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish = false
+
+[dependencies]

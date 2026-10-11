@@ -1,0 +1,32 @@
+[package]
+name = "fp-script"
+description = "JSF-Kompatibilität von Firepixel: JSF-JavaScript (fw, Document-DOM, Files, Errors) über boa_engine, abgebildet auf das Befehlsregister von fp-engine"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+fp-engine = { workspace = true }
+fp-model = { workspace = true }
+fp-geom = { workspace = true }
+fp-color = { workspace = true }
+fp-raster = { workspace = true }
+fp-fwpng = { workspace = true }
+fp-render = { workspace = true }
+fp-io = { workspace = true, optional = true }
+fp-export = { workspace = true, optional = true }
+png = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+# reine Rust-JS-Engine; ohne ICU/Temporal, mit Annex B (Altsyntax wie in SpiderMonkey 1.x)
+boa_engine = { version = "0.22", default-features = false, features = ["annex-b"] }
+
+[features]
+default = ["formats"]
+# Import fremder Formate (fp-io) und Export GIF/JPEG/WebP/AVIF/… (fp-export); ohne: nur FW-PNG/PNG
+formats = ["dep:fp-io", "dep:fp-export"]
+
+[lints]
+workspace = true

@@ -1,0 +1,2334 @@
+{
+"_quelle": "re\\inventory\\resources_de.json, MENU 128 (Hauptmenü des Originals, deutsch; Programmname durch Firepixel ersetzt); erzeugt für fp-ui",
+"menu": [
+{
+"text": "&Datei",
+"children": [
+{
+"text": "&Neu",
+"id": 57600
+},
+{
+"text": "Neu von Vorlage...",
+"id": 37866
+},
+{
+"text": "Ö&ffnen...",
+"id": 57601
+},
+{
+"text": "Bridge durchsuchen...",
+"id": 35795
+},
+{
+"text": "&Zuletzt geöffnete Dateien",
+"children": [
+{
+"text": "Letzte Datei",
+"id": 57616
+}
+]
+},
+{
+"text": "S&cannen",
+"children": [
+{
+"text": "Twain &importieren...",
+"id": 35199
+},
+{
+"sep": true
+},
+{
+"text": "T&wain auswählen...",
+"id": 35200
+}
+]
+},
+{
+"text": "&Schließen\tStrg+F4",
+"id": 57602
+},
+{
+"text": "Alle schließen",
+"id": 35789
+},
+{
+"sep": true
+},
+{
+"text": "S&peichern",
+"id": 57603
+},
+{
+"text": "Speic&hern unter...",
+"id": 57604
+},
+{
+"text": "A&lles speichern",
+"id": 35850
+},
+{
+"text": "Als Vorlage speichern...",
+"id": 37867
+},
+{
+"text": "&Wiederherstellen",
+"id": 35036
+},
+{
+"sep": true
+},
+{
+"text": "&Importieren...",
+"id": 35012
+},
+{
+"text": "&Exportieren...",
+"id": 35007
+},
+{
+"text": "Bildvo&rschau...",
+"id": 35404
+},
+{
+"text": "Als E-&Mail senden",
+"children": [
+{
+"text": "PNG-Datei für Firepixel...",
+"id": 35587
+},
+{
+"text": "Komprimierte JPG-Datei...",
+"id": 35588
+},
+{
+"text": "Exporteinstellungen verwenden...",
+"id": 35420
+}
+]
+},
+{
+"text": "HTML a&ktualisieren...",
+"id": 35416
+},
+{
+"sep": true
+},
+{
+"text": "Datei-Inf&o...",
+"id": 35792
+},
+{
+"sep": true
+},
+{
+"text": "E&xportassistent...",
+"id": 35181
+},
+{
+"text": "Batch-Ver&arbeitung...",
+"id": 35302
+},
+{
+"text": "&Vorschau im Browser",
+"children": [
+{
+"text": "Vorschau im &Primärbrowser",
+"id": 35313
+},
+{
+"text": "Vorschau im Sekundärbrowser",
+"id": 35315
+},
+{
+"sep": true
+},
+{
+"text": "Vorschau aller Seiten im Primärbrowser",
+"id": 49003
+},
+{
+"sep": true
+},
+{
+"text": "&Primärbrowser festlegen...",
+"id": 35314
+},
+{
+"text": "&Sekundärbrowser festlegen...",
+"id": 35316
+}
+]
+},
+{
+"sep": true
+},
+{
+"text": "Sei&te einrichten...",
+"id": 57605
+},
+{
+"text": "&Drucken...",
+"id": 57607
+},
+{
+"text": "HTM&L-Einrichtung...",
+"id": 35452
+},
+{
+"sep": true
+},
+{
+"text": "&Beenden\tAlt+F4",
+"id": 57665
+}
+]
+},
+{
+"text": "&Bearbeiten",
+"children": [
+{
+"text": "&Rückgängig",
+"id": 57643
+},
+{
+"text": "&Wiederholen",
+"id": 57644
+},
+{
+"sep": true
+},
+{
+"text": "Objekt ein&fügen",
+"children": [
+{
+"text": "Neue &Schaltfläche...",
+"id": 35191
+},
+{
+"text": "Neues Sy&mbol...",
+"id": 35195
+},
+{
+"sep": true
+},
+{
+"text": "&Hotspot",
+"id": 35179
+},
+{
+"text": "&Rechteckiges Segment",
+"id": 35237
+},
+{
+"text": "&Polygonsegment",
+"id": 35786
+},
+{
+"sep": true
+},
+{
+"text": "&Leere Bitmap",
+"id": 35180
+},
+{
+"text": "Bitmap durch &Kopieren",
+"id": 35581
+},
+{
+"text": "Bitmap durch &Ausschneiden",
+"id": 35582
+},
+{
+"sep": true
+},
+{
+"text": "&Ebene",
+"id": 35309
+},
+{
+"text": "&Status",
+"id": 35301
+},
+{
+"text": "Se&ite",
+"id": 35809
+}
+]
+},
+{
+"text": "&Suchen und ersetzen...",
+"id": 43402
+},
+{
+"sep": true
+},
+{
+"text": "&Ausschneiden",
+"id": 57635
+},
+{
+"text": "&Kopieren",
+"id": 57634
+},
+{
+"text": "Als &Vektoren kopieren",
+"id": 35411
+},
+{
+"text": "HTML-&Code kopieren...",
+"id": 35415
+},
+{
+"text": "&Einfügen",
+"id": 57637
+},
+{
+"text": "&Löschen",
+"id": 57632
+},
+{
+"sep": true
+},
+{
+"text": "Als &Maske einfügen",
+"id": 35430
+},
+{
+"text": "Inn&en einfügen",
+"id": 35127
+},
+{
+"text": "Attri&bute einfügen",
+"id": 35033
+},
+{
+"sep": true
+},
+{
+"text": "&Duplizieren",
+"id": 35006
+},
+{
+"text": "Klo&nen",
+"id": 35003
+},
+{
+"sep": true
+},
+{
+"text": "Ausgewählte Bitmap &zuschneiden",
+"id": 35145
+},
+{
+"text": "Dokument zuschneiden",
+"id": 35346
+},
+{
+"sep": true
+},
+{
+"text": "Voreinstellun&gen...",
+"id": 35034
+},
+{
+"text": "Tastat&urkurzbefehle...",
+"id": 35429
+}
+]
+},
+{
+"text": "&Ansicht",
+"children": [
+{
+"text": "&Größer zoomen",
+"id": 35063
+},
+{
+"text": "&Kleiner zoomen",
+"id": 35064
+},
+{
+"text": "&Vergrößerung",
+"children": [
+{
+"text": "6%",
+"id": 35624
+},
+{
+"text": "12%",
+"id": 35617
+},
+{
+"text": "25%",
+"id": 35620
+},
+{
+"text": "&50%",
+"id": 35623
+},
+{
+"text": "66%",
+"id": 35625
+},
+{
+"text": "&100%",
+"id": 35616
+},
+{
+"text": "150%",
+"id": 35626
+},
+{
+"text": "&200%",
+"id": 35619
+},
+{
+"text": "&300%",
+"id": 35627
+},
+{
+"text": "&400%",
+"id": 35622
+},
+{
+"text": "&800%",
+"id": 35629
+},
+{
+"text": "1&600%",
+"id": 35618
+},
+{
+"text": "3200%",
+"id": 35621
+},
+{
+"text": "6400%",
+"id": 35628
+}
+]
+},
+{
+"sep": true
+},
+{
+"text": "Aus&wahl anpassen",
+"id": 35066
+},
+{
+"text": "Alles an&passen",
+"id": 35065
+},
+{
+"sep": true
+},
+{
+"text": "Gamma 1.&8",
+"id": 35367
+},
+{
+"sep": true
+},
+{
+"text": "Auswahl aus&blenden",
+"id": 35071
+},
+{
+"text": "&QuickInfos",
+"id": 35826
+},
+{
+"text": "&Alles einblenden",
+"id": 35072
+},
+{
+"sep": true
+},
+{
+"text": "&Lineale",
+"id": 35130
+},
+{
+"text": "&Raster",
+"children": [
+{
+"text": "&Raster anzeigen",
+"id": 35131
+},
+{
+"text": "Am Raster au&srichten",
+"id": 35132
+},
+{
+"text": "&Raster bearbeiten...",
+"id": 35133
+}
+]
+},
+{
+"text": "&Hilfslinien",
+"children": [
+{
+"text": "Hilfslinien anzeigen",
+"id": 35134
+},
+{
+"text": "Hilfslinien &sperren",
+"id": 35135
+},
+{
+"text": "An Hilfslinien &ausrichten",
+"id": 35136
+},
+{
+"text": "Hilfslinien entfernen",
+"id": 49004
+}
+]
+},
+{
+"text": "Int&elligente Hilfslinien",
+"children": [
+{
+"text": "&Intelligente Hilfslinien anzeigen",
+"id": 35815
+},
+{
+"text": "An intelligenten Hilfslinien ausrichten",
+"id": 35821
+}
+]
+},
+{
+"text": "Hilfslinien für 9-Slice-Skalierung",
+"children": [
+{
+"text": "Hilfslinien s&perren",
+"id": 35812
+}
+]
+},
+{
+"text": "&Segment-Hilfslinien",
+"id": 35299
+},
+{
+"text": "Segmen&tüberlagerung",
+"id": 35426
+},
+{
+"sep": true
+},
+{
+"text": "Ränd&er",
+"id": 35088
+}
+]
+},
+{
+"text": "Au&swählen",
+"children": [
+{
+"text": "Alles aus&wählen",
+"id": 35038
+},
+{
+"text": "Au&swahl aufheben",
+"id": 35040
+},
+{
+"text": "G&esamtauswahl treffen",
+"id": 35194
+},
+{
+"text": "&Teilauswahl treffen",
+"id": 35193
+},
+{
+"sep": true
+},
+{
+"text": "Ä&hnliches auswählen",
+"id": 35041
+},
+{
+"text": "Auswahl um&kehren",
+"id": 35039
+},
+{
+"text": "&Weiche Kante…",
+"id": 35089
+},
+{
+"sep": true
+},
+{
+"text": "Auswahlrahmen erwe&itern...",
+"id": 35405
+},
+{
+"text": "Auswahlrahmen &verkleinern...",
+"id": 35406
+},
+{
+"text": "Auswahlrahmen &begrenzen...",
+"id": 35407
+},
+{
+"text": "Auswahlrahmen &glätten...",
+"id": 35408
+},
+{
+"sep": true
+},
+{
+"text": "A&uswahlrahmen in Pfad konvertieren",
+"id": 35780
+},
+{
+"sep": true
+},
+{
+"text": "Bitm&ap-Auswahl speichern...",
+"id": 35467
+},
+{
+"text": "Bitmap-Auswahl wiede&rherstellen...",
+"id": 35468
+},
+{
+"text": "Bitmap-Auswahl &löschen...",
+"id": 35783
+}
+]
+},
+{
+"text": "&Modifizieren",
+"children": [
+{
+"text": "Lei&nwand",
+"children": [
+{
+"text": "&Bildgröße...",
+"id": 35226
+},
+{
+"text": "L&einwandgröße...",
+"id": 35004
+},
+{
+"text": "Lein&wandfarbe...",
+"id": 35005
+},
+{
+"sep": true
+},
+{
+"text": "Leinwand &zuschneiden",
+"id": 35250
+},
+{
+"text": "&Leinwand anpassen",
+"id": 35574
+},
+{
+"sep": true
+},
+{
+"text": "180° &drehen",
+"id": 35348
+},
+{
+"text": "90° &im UZS drehen",
+"id": 35349
+},
+{
+"text": "90° gegen &UZS drehen",
+"id": 35350
+}
+]
+},
+{
+"sep": true
+},
+{
+"text": "An&imation",
+"children": [
+{
+"text": "&Auswahl animieren...",
+"id": 35451
+},
+{
+"text": "Ein&stellungen...",
+"id": 35463
+},
+{
+"sep": true
+},
+{
+"text": "Animation &entfernen",
+"id": 35472
+}
+]
+},
+{
+"text": "&Symbol",
+"children": [
+{
+"text": "&In Symbol konvertieren...",
+"id": 35189
+},
+{
+"sep": true
+},
+{
+"text": "&Symbol bearbeiten",
+"id": 35334
+},
+{
+"text": "An Position bearbeiten",
+"id": 35842
+},
+{
+"text": "Instanzen &tweenen...",
+"id": 35188
+},
+{
+"text": "Teilen",
+"id": 35190
+},
+{
+"text": "Symbol austauschen...",
+"id": 35807
+}
+]
+},
+{
+"text": "&Popupmenü",
+"children": [
+{
+"text": "Popupmenü hinzufügen...",
+"id": 35445
+},
+{
+"text": "Popupmenü bearbeiten...",
+"id": 35592
+},
+{
+"sep": true
+},
+{
+"text": "Popupmenü löschen",
+"id": 35593
+}
+]
+},
+{
+"sep": true
+},
+{
+"text": "&Maske",
+"children": [
+{
+"text": "&Alles einblenden",
+"id": 35431
+},
+{
+"text": "Alles aus&blenden",
+"id": 35432
+},
+{
+"sep": true
+},
+{
+"text": "Als Maske ein&fügen",
+"id": 35430
+},
+{
+"text": "Als Maske &gruppieren",
+"id": 35128
+},
+{
+"sep": true
+},
+{
+"text": "Auswahl &einblenden",
+"id": 35433
+},
+{
+"text": "Aus&wahl ausblenden",
+"id": 35434
+},
+{
+"sep": true
+},
+{
+"text": "Maske &deaktivieren",
+"id": 35435
+},
+{
+"text": "Maske &löschen",
+"id": 35436
+}
+]
+},
+{
+"text": "Selektives &JPEG",
+"children": [
+{
+"text": "Au&swahl als JPEG-Maske speichern",
+"id": 35469
+},
+{
+"text": "JPEG-Maske als Auswahl wiede&rherstellen",
+"id": 35470
+},
+{
+"text": "&Einstellungen...",
+"id": 35576
+},
+{
+"sep": true
+},
+{
+"text": "JPEG-&Maske entfernen",
+"id": 35471
+}
+]
+},
+{
+"sep": true
+},
+{
+"text": "Auswah&l sperren",
+"id": 35784
+},
+{
+"text": "Aus&wahl auf Hintergrund reduzieren",
+"id": 35009
+},
+{
+"text": "Mit &darunter liegender auf eine Ebene reduzieren",
+"id": 35583
+},
+{
+"text": "Ebenen als Hinterg&rund",
+"id": 35008
+},
+{
+"sep": true
+},
+{
+"text": "Transf&ormieren",
+"children": [
+{
+"text": "&Frei transformieren",
+"id": 35178
+},
+{
+"sep": true
+},
+{
+"text": "&Skalieren",
+"id": 35060
+},
+{
+"text": "&Neigen",
+"id": 35061
+},
+{
+"text": "Ver&zerren",
+"id": 35090
+},
+{
+"text": "N&umerisch transformieren...",
+"id": 35201
+},
+{
+"sep": true
+},
+{
+"text": "&180° drehen",
+"id": 35173
+},
+{
+"text": "90° &im UZS drehen",
+"id": 35174
+},
+{
+"text": "90° &gegen UZS drehen",
+"id": 35175
+},
+{
+"sep": true
+},
+{
+"text": "&Horizontal spiegeln",
+"id": 35176
+},
+{
+"text": "&Vertikal spiegeln",
+"id": 35177
+},
+{
+"sep": true
+},
+{
+"text": "&Transformationen entfernen",
+"id": 35152
+}
+]
+},
+{
+"text": "&Anordnen",
+"children": [
+{
+"text": "In den &Vordergrund",
+"id": 35067
+},
+{
+"text": "&Schrittweise nach vorne",
+"id": 35068
+},
+{
+"text": "Schrittweise nach h&inten",
+"id": 35070
+},
+{
+"text": "In den &Hintergrund",
+"id": 35069
+}
+]
+},
+{
+"text": "A&usrichten",
+"children": [
+{
+"text": "&Links",
+"id": 35073
+},
+{
+"text": "&Vertikal zentrieren",
+"id": 35075
+},
+{
+"text": "&Rechts",
+"id": 35074
+},
+{
+"sep": true
+},
+{
+"text": "&Oben",
+"id": 35077
+},
+{
+"text": "&Horizontal zentrieren",
+"id": 35076
+},
+{
+"text": "&Unten",
+"id": 35078
+},
+{
+"sep": true
+},
+{
+"text": "&Breiten verteilen",
+"id": 35080
+},
+{
+"text": "Höhen &verteilen",
+"id": 35079
+}
+]
+},
+{
+"sep": true
+},
+{
+"text": "P&fad in Auswahlrahmen konvertieren...",
+"id": 35781
+},
+{
+"text": "Pfade kom&binieren",
+"children": [
+{
+"text": "&Verbinden",
+"id": 35094
+},
+{
+"text": "&Teilen",
+"id": 35095
+},
+{
+"sep": true
+},
+{
+"text": "V&ereinigen",
+"id": 35211
+},
+{
+"text": "Ü&berschneiden",
+"id": 35212
+},
+{
+"text": "Ö&ffnen",
+"id": 35217
+},
+{
+"text": "&Zuschneiden",
+"id": 35213
+}
+]
+},
+{
+"text": "Pfad änd&ern",
+"children": [
+{
+"text": "&Vereinfachen...",
+"id": 35214
+},
+{
+"text": "Strich &erweitern...",
+"id": 35215
+},
+{
+"text": "&Pfad einlassen...",
+"id": 35216
+},
+{
+"sep": true
+},
+{
+"text": "Präzise Füllun&g",
+"id": 35183
+},
+{
+"text": "&Anti-Alias-Füllung",
+"id": 35184
+},
+{
+"text": "&Weiche-Kante-Füllung",
+"id": 35185
+}
+]
+},
+{
+"text": "An Pixeln ausrichten",
+"id": 35849
+},
+{
+"sep": true
+},
+{
+"text": "&Gruppieren",
+"id": 35010
+},
+{
+"text": "Gruppierung auf&heben",
+"id": 35062
+}
+]
+},
+{
+"text": "&Text",
+"children": [
+{
+"text": "&Schrift",
+"children": [
+{
+"text": "Platzhalter - nicht entfernen",
+"id": 35343
+}
+]
+},
+{
+"text": "&Größe",
+"children": [
+{
+"text": "&Andere...",
+"id": 35230
+},
+{
+"text": "&Kleiner",
+"id": 35635
+},
+{
+"text": "&Größer",
+"id": 35636
+},
+{
+"sep": true
+},
+{
+"text": "&8",
+"id": 35196
+},
+{
+"text": "&9",
+"id": 35197
+},
+{
+"text": "1&0",
+"id": 35198
+},
+{
+"text": "&12",
+"id": 35047
+},
+{
+"text": "1&4",
+"id": 35048
+},
+{
+"text": "18",
+"id": 35049
+},
+{
+"text": "&24",
+"id": 35050
+},
+{
+"text": "&36",
+"id": 35051
+},
+{
+"text": "48",
+"id": 35052
+},
+{
+"text": "&72",
+"id": 35053
+},
+{
+"text": "96",
+"id": 35054
+},
+{
+"text": "120",
+"id": 35141
+}
+]
+},
+{
+"text": "S&til",
+"children": [
+{
+"text": "&Standard",
+"id": 35057
+},
+{
+"sep": true
+},
+{
+"text": "Faux &Fett",
+"id": 35055
+},
+{
+"text": "Faux &Kursiv",
+"id": 35056
+},
+{
+"text": "&Unterstrichen",
+"id": 35320
+}
+]
+},
+{
+"text": "A&usrichten",
+"children": [
+{
+"text": "&Links",
+"id": 35044
+},
+{
+"text": "&Horizontal zentrieren",
+"id": 35042
+},
+{
+"text": "&Rechts",
+"id": 35045
+},
+{
+"text": "Blocksat&z",
+"id": 35043
+},
+{
+"sep": true
+},
+{
+"text": "&Oben",
+"id": 35114
+},
+{
+"text": "&Vertikal zentrieren",
+"id": 35115
+},
+{
+"text": "&Unten",
+"id": 35116
+},
+{
+"text": "Vertikaler &Blocksatz",
+"id": 35117
+}
+]
+},
+{
+"sep": true
+},
+{
+"text": "In Pfad &einfügen",
+"id": 49005
+},
+{
+"text": "An &Pfad anfügen",
+"id": 35118
+},
+{
+"text": "Von Pfad &lösen",
+"id": 35119
+},
+{
+"text": "Ric&htung",
+"children": [
+{
+"text": "U&m Pfad drehen",
+"id": 35120
+},
+{
+"text": "&Vertikal",
+"id": 35121
+},
+{
+"text": "Vertikal &neigen",
+"id": 35122
+},
+{
+"text": "&Horizontal neigen",
+"id": 35123
+}
+]
+},
+{
+"text": "&Richtung umkehren",
+"id": 35124
+},
+{
+"sep": true
+},
+{
+"text": "In Pfade &konvertieren",
+"id": 35125
+},
+{
+"sep": true
+},
+{
+"text": "Rechts&chreibprüfung...",
+"id": 35591
+},
+{
+"text": "Rechtschreibprüfu&ng einrichten...",
+"id": 35594
+}
+]
+},
+{
+"text": "Befeh&le",
+"children": [
+{
+"text": "Ge&speicherte Befehle verwalten...",
+"id": 35386
+},
+{
+"text": "Erweiterungen &verwalten...",
+"id": 35590
+},
+{
+"text": "Sk&ript ausführen...",
+"id": 35319
+},
+{
+"sep": true
+}
+]
+},
+{
+"text": "F&ilter",
+"children": [
+{
+"text": "Filter &wiederholen",
+"id": 35035
+},
+{
+"sep": true
+}
+]
+},
+{
+"text": "&Fenster",
+"children": [
+{
+"text": "Fenster dupli&zieren",
+"id": 57648
+},
+{
+"text": "Be&dienfelder ausblenden",
+"id": 35298
+},
+{
+"sep": true
+},
+{
+"text": "Erweiterungen",
+"children": [
+{
+"text": " ",
+"id": 35848
+}
+]
+},
+{
+"sep": true
+},
+{
+"text": "&Werkzeugleisten",
+"children": [
+{
+"text": "&Standard",
+"id": 35059
+}
+]
+},
+{
+"text": "Werk&zeuge",
+"id": 35058
+},
+{
+"text": "Ei&genschaften",
+"id": 35586
+},
+{
+"sep": true
+},
+{
+"text": "&Optimieren",
+"id": 43409
+},
+{
+"text": "&Ebenen",
+"id": 43412
+},
+{
+"sep": true
+},
+{
+"text": "Allgemeine Bibliothe&k",
+"id": 45816
+},
+{
+"sep": true
+},
+{
+"text": "CSS-Eigenschaften",
+"id": 49125
+},
+{
+"sep": true
+},
+{
+"text": "Sei&ten",
+"id": 35798
+},
+{
+"text": "Stat&us",
+"id": 43410
+},
+{
+"text": "&Verlauf",
+"id": 43418
+},
+{
+"sep": true
+},
+{
+"text": "Automatische &Formen",
+"id": 43422
+},
+{
+"text": "&Stile",
+"id": 43415
+},
+{
+"text": "Dokument&bibliothek",
+"id": 43416
+},
+{
+"text": "&URL",
+"id": 43414
+},
+{
+"sep": true
+},
+{
+"text": "Farbmisc&her",
+"id": 43405
+},
+{
+"text": "Fa&rbfelder",
+"id": 43408
+},
+{
+"sep": true
+},
+{
+"text": "&Info",
+"id": 43404
+},
+{
+"text": "Verha&lten",
+"id": 43413
+},
+{
+"text": "&Suchen und ersetzen",
+"id": 43402
+},
+{
+"sep": true
+},
+{
+"text": "Überla&ppend",
+"id": 57650
+},
+{
+"text": "Anordnen",
+"id": 57652
+}
+]
+},
+{
+"text": "&Hilfe",
+"children": [
+{
+"text": "Firepixel-&Hilfe",
+"id": 57667
+},
+{
+"text": "Firepixel &Support Center",
+"id": 35323
+},
+{
+"sep": true
+},
+{
+"text": "Programm zur Produktverbesserung...",
+"id": 7028
+},
+{
+"sep": true
+},
+{
+"text": "Firepixel Ex&change",
+"id": 7013
+},
+{
+"text": "Erweiterungen &verwalten...",
+"id": 35637
+},
+{
+"sep": true
+},
+{
+"text": "&Onlineforen",
+"id": 35580
+},
+{
+"sep": true
+},
+{
+"text": "Ü&ber Firepixel...",
+"id": 57664
+}
+]
+}
+],
+"context": {
+"6919": [
+{
+"text": "Farbfelder",
+"children": [
+{
+"text": "F&arbfelder hinzufügen...",
+"id": 35096
+},
+{
+"text": "Fa&rbfelder ersetzen...",
+"id": 35097
+},
+{
+"text": "Farbfelder &speichern...",
+"id": 35098
+},
+{
+"text": "Farbfelder lös&chen",
+"id": 35225
+},
+{
+"sep": true
+},
+{
+"text": "&Farbwürfel",
+"id": 35460
+},
+{
+"text": "Kon&tinuierlicher Farbton",
+"id": 35461
+},
+{
+"text": "&Windows-System",
+"id": 35102
+},
+{
+"text": "&Macintosh-System",
+"id": 35100
+},
+{
+"text": "&Graustufen",
+"id": 35099
+},
+{
+"sep": true
+},
+{
+"text": "Aktu&elle Exportpalette",
+"id": 35182
+},
+{
+"sep": true
+},
+{
+"text": "Nach Far&be sortieren",
+"id": 35103
+}
+]
+}
+],
+"6920": [
+{
+"text": "Farbmischer",
+"children": [
+{
+"text": "&RGB",
+"id": 35105
+},
+{
+"text": "He&xadezimal",
+"id": 35106
+},
+{
+"text": "&CMY",
+"id": 35108
+},
+{
+"text": "&HSB",
+"id": 35107
+},
+{
+"text": "&Graustufen",
+"id": 35109
+}
+]
+}
+],
+"6921": [
+{
+"text": "Effekt",
+"children": [
+{
+"text": "Als &Stil speichern...",
+"id": 35148
+},
+{
+"sep": true
+},
+{
+"text": "Alle ei&n",
+"id": 35350
+},
+{
+"text": "All&e aus",
+"id": 35351
+},
+{
+"sep": true
+},
+{
+"text": "&Zusatzmodule suchen...",
+"id": 35352
+}
+]
+}
+],
+"6922": [
+{
+"text": "Löschmethode",
+"children": [
+{
+"text": "&Nicht angegeben",
+"id": 35155
+},
+{
+"text": "&Ohne",
+"id": 35156
+},
+{
+"text": "&Hintergrund wiederherstellen",
+"id": 35157
+},
+{
+"text": "&Vorheriges wiederherstellen",
+"id": 35158
+}
+]
+}
+],
+"6923": [
+{
+"text": "Optionen",
+"children": [
+{
+"text": "Neues &Bild",
+"id": 35439
+},
+{
+"sep": true
+},
+{
+"text": "&Neue Ebene...",
+"id": 35159
+},
+{
+"text": "Neue &Unterebene...",
+"id": 35794
+},
+{
+"text": "Ebene &duplizieren...",
+"id": 35160
+},
+{
+"text": "Ebene statusübergreifend f&reigeben",
+"id": 35205
+},
+{
+"text": "Ein&zelebene bearbeiten",
+"id": 35167
+},
+{
+"text": "Ebene &löschen",
+"id": 35162
+},
+{
+"sep": true
+},
+{
+"text": "&Masterseitenebene hinzufügen",
+"id": 35816
+},
+{
+"text": "Ebene für Seiten freigeben...",
+"id": 35799
+},
+{
+"text": "Ebene für alle Seiten freigeben",
+"id": 35800
+},
+{
+"text": "&Freigegebene Ebene ausschließen",
+"id": 35805
+},
+{
+"text": "Freigegebene Ebene lösen",
+"id": 35796
+},
+{
+"sep": true
+},
+{
+"text": "&Auswahl auf Hintergrund reduzieren",
+"id": 35584
+},
+{
+"text": "Mit darunter liegender auf eine Ebene reduzieren",
+"id": 35585
+},
+{
+"sep": true
+},
+{
+"text": "Alle&s ausblenden",
+"id": 35163
+},
+{
+"text": "&Alles anzeigen",
+"id": 35164
+},
+{
+"text": "Alles s&perren",
+"id": 35165
+},
+{
+"text": "Alle Spe&rrungen aufheben",
+"id": 35166
+},
+{
+"sep": true
+},
+{
+"text": "Mas&ke hinzufügen",
+"id": 35441
+},
+{
+"text": "Mask&e bearbeiten",
+"id": 35442
+},
+{
+"text": "Maske deak&tivieren",
+"id": 35443
+},
+{
+"text": "&Maske löschen",
+"id": 35444
+},
+{
+"sep": true
+},
+{
+"text": "Miniatur&optionen...",
+"id": 35440
+}
+]
+}
+],
+"6924": [
+{
+"text": "Optionen",
+"children": [
+{
+"text": "St&atus hinzufügen...",
+"id": 35168
+},
+{
+"text": "Status &duplizieren...",
+"id": 35169
+},
+{
+"text": "&Status löschen",
+"id": 35170
+},
+{
+"sep": true
+},
+{
+"text": "In Status &kopieren...",
+"id": 35171
+},
+{
+"text": "Auf Status &verteilen",
+"id": 35172
+},
+{
+"sep": true
+},
+{
+"text": "Autom. &zuschneiden",
+"id": 35383
+},
+{
+"text": "&Nummerierung",
+"id": 35852
+},
+{
+"text": "Auto-&Differenz",
+"id": 35384
+},
+{
+"sep": true
+},
+{
+"text": "&Eigenschaften...",
+"id": 35385
+}
+]
+}
+],
+"6932": [
+{
+"text": "Optionen",
+"children": [
+{
+"text": "&Hexadezimal",
+"id": 35259
+},
+{
+"text": "&RGB",
+"id": 35258
+},
+{
+"text": "&CMY",
+"id": 35260
+},
+{
+"text": "H&SB",
+"id": 35261
+},
+{
+"sep": true
+},
+{
+"text": "&Pixel",
+"id": 35262
+},
+{
+"text": "&Zoll",
+"id": 35263
+},
+{
+"text": "Z&entimeter",
+"id": 35264
+},
+{
+"sep": true
+},
+{
+"text": "&Attribute skalieren",
+"id": 35280
+}
+]
+}
+],
+"6933": [
+{
+"text": "Zwiebelschichtoptionen",
+"children": [
+{
+"text": "Kein Zwiebelschicht-Effekt",
+"id": 35282
+},
+{
+"sep": true
+},
+{
+"text": "Nächsten Status anzeigen",
+"id": 35283
+},
+{
+"text": "Vorher und Nachher",
+"id": 35284
+},
+{
+"text": "Alle Status anzeigen",
+"id": 35322
+},
+{
+"text": "Benutzerdefiniert...",
+"id": 35281
+},
+{
+"sep": true
+},
+{
+"text": "Mehrfach-Status-Bearbeitung",
+"id": 35285
+}
+]
+}
+],
+"6935": [
+{
+"text": "Menü",
+"children": [
+{
+"text": "&Neuer Stil...",
+"id": 35294
+},
+{
+"text": "Stil duplizieren...",
+"id": 35829
+},
+{
+"text": "Sti&le löschen",
+"id": 35296
+},
+{
+"text": "Stil umbenennen...",
+"id": 35830
+},
+{
+"sep": true
+},
+{
+"text": "Stil neu definieren",
+"id": 35338
+},
+{
+"sep": true
+},
+{
+"text": "Abweichungen löschen",
+"id": 35832
+},
+{
+"text": "Verknüpfung mit Stil aufheben",
+"id": 35831
+},
+{
+"text": "Nicht verwendete Stile auswählen",
+"id": 35833
+},
+{
+"text": "&Stiloptionen...",
+"id": 35295
+},
+{
+"sep": true
+},
+{
+"text": "Stil &laden...",
+"id": 35834
+},
+{
+"sep": true
+},
+{
+"text": "Stilbibliothek importieren...",
+"id": 35836
+},
+{
+"text": "Stilbibliothek speichern",
+"id": 35835
+},
+{
+"sep": true
+},
+{
+"text": "&Große Symbole",
+"id": 35297
+}
+]
+}
+],
+"6937": [
+{
+"text": "Menü",
+"children": [
+{
+"text": "&Neues Symbol...",
+"id": 35353
+},
+{
+"text": "Duplizieren",
+"id": 35355
+},
+{
+"text": "Löschen",
+"id": 35356
+},
+{
+"sep": true
+},
+{
+"text": "Symbol bearbeiten",
+"id": 35357
+},
+{
+"text": "Eigenschaften...",
+"id": 35358
+},
+{
+"sep": true
+},
+{
+"text": "Hilfslinien für 9-Slice-Skalierung",
+"id": 35839
+},
+{
+"text": "Hilfslinien für 9-Slice-Skalierung sperren",
+"id": 35840
+},
+{
+"sep": true
+},
+{
+"text": "In allgemeiner Bibliothek speichern...",
+"id": 35820
+},
+{
+"sep": true
+},
+{
+"text": "Nicht verwendete Elemente auswählen",
+"id": 35359
+},
+{
+"text": "Aktualisieren...",
+"id": 35360
+},
+{
+"text": "Abspielen",
+"id": 35361
+},
+{
+"sep": true
+},
+{
+"text": "Symbole importieren...",
+"id": 35362
+},
+{
+"text": "Symbole exportieren...",
+"id": 35363
+}
+]
+}
+],
+"6939": [
+{
+"text": "Optionen",
+"children": [
+{
+"text": "&Ausgewählte Schritte wiederholen",
+"id": 35378
+},
+{
+"text": "S&chritte kopieren",
+"id": 35379
+},
+{
+"text": "Als Befehl &speichern...",
+"id": 35380
+},
+{
+"sep": true
+},
+{
+"text": "Ver&lauf löschen",
+"id": 35381
+}
+]
+}
+],
+"6940": [
+{
+"text": "Optionen für Schleifen",
+"children": [
+{
+"text": "Keine Schleife",
+"id": 35387
+},
+{
+"sep": true
+},
+{
+"text": "1",
+"id": 35389
+},
+{
+"text": "2",
+"id": 35390
+},
+{
+"text": "3",
+"id": 35391
+},
+{
+"text": "4",
+"id": 35392
+},
+{
+"text": "5",
+"id": 35393
+},
+{
+"text": "10",
+"id": 35394
+},
+{
+"text": "20",
+"id": 35395
+},
+{
+"sep": true
+},
+{
+"text": "Endlos",
+"id": 35388
+}
+]
+}
+],
+"6941": [
+{
+"text": "Optionen",
+"children": [
+{
+"text": "Einstellungen &speichern...",
+"id": 35417
+},
+{
+"text": "Einstellungen &löschen",
+"id": 35418
+},
+{
+"sep": true
+},
+{
+"text": "&Optimieren für Dateigröße...",
+"id": 35419
+},
+{
+"text": "Export&assistent...",
+"id": 35421
+},
+{
+"sep": true
+},
+{
+"text": "Mit &Zeilensprung",
+"id": 35397
+},
+{
+"text": "&Progressives JPEG",
+"id": 35398
+},
+{
+"text": "&JPEG-Ränder scharfzeichnen",
+"id": 35399
+},
+{
+"sep": true
+},
+{
+"text": "Sperrung aller Farben aufheben",
+"id": 35595
+},
+{
+"text": "&Nicht verwendete Farben entfernen",
+"id": 35396
+},
+{
+"text": "Paletteneintrag ersetzen...",
+"id": 35209
+},
+{
+"text": "Transparent machen",
+"id": 35235
+},
+{
+"sep": true
+},
+{
+"text": "Farbfeld-Rückmeldung anzeigen",
+"id": 35236
+},
+{
+"sep": true
+},
+{
+"text": "Bearbeitung entfernen",
+"id": 35234
+},
+{
+"text": "Alle Bearbeitungen entfernen",
+"id": 35223
+},
+{
+"sep": true
+},
+{
+"text": "Palette laden...",
+"id": 35203
+},
+{
+"text": "Palette speichern...",
+"id": 35204
+}
+]
+}
+],
+"6942": [
+{
+"text": "Palette",
+"children": [
+{
+"text": "Farbtabelle neu aufbauen",
+"id": 35409
+},
+{
+"sep": true
+},
+{
+"text": "Farbe hinzufügen...",
+"id": 35208
+},
+{
+"text": "Farbe bearbeiten...",
+"id": 35202
+},
+{
+"text": "Farbe löschen",
+"id": 35192
+},
+{
+"text": "Paletteneintrag ersetzen...",
+"id": 35209
+},
+{
+"sep": true
+},
+{
+"text": "Websicher machen",
+"id": 35224
+},
+{
+"sep": true
+},
+{
+"text": "Transparent",
+"id": 35235
+},
+{
+"text": "Farbe sperren",
+"id": 35218
+},
+{
+"text": "Alle Farben freigeben",
+"id": 35595
+},
+{
+"sep": true
+},
+{
+"text": "Nach Leuchtkraft sortieren",
+"id": 35219
+},
+{
+"text": "Nach Häufigkeit sortieren",
+"id": 35220
+},
+{
+"text": "Nicht sortiert",
+"id": 35221
+},
+{
+"sep": true
+},
+{
+"text": "Farbfeld-Rückmeldung anzeigen",
+"id": 35236
+},
+{
+"sep": true
+},
+{
+"text": "Bearbeitung entfernen",
+"id": 35234
+},
+{
+"text": "Alle Bearbeitungen entfernen",
+"id": 35223
+},
+{
+"sep": true
+},
+{
+"text": "Palette laden...",
+"id": 35203
+},
+{
+"text": "Palette speichern...",
+"id": 35204
+}
+]
+}
+],
+"7026": [
+{
+"text": "",
+"children": [
+{
+"text": "Neue Seite",
+"id": 35801
+},
+{
+"text": "Seite duplizieren",
+"id": 35806
+},
+{
+"text": "Seite löschen",
+"id": 35802
+},
+{
+"text": "Seite umbenennen",
+"id": 35803
+},
+{
+"text": "Mit Masterseite verknüpfen",
+"id": 35818
+},
+{
+"sep": true
+},
+{
+"text": "Als Masterseite festlegen",
+"id": 35813
+},
+{
+"text": "Masterseite zurücksetzen",
+"id": 35814
+},
+{
+"sep": true
+},
+{
+"text": "Ausgewählte Seite(n) exportieren...",
+"id": 35823
+},
+{
+"sep": true
+},
+{
+"text": "&Nummerierung",
+"id": 35853
+},
+{
+"text": "Optionen für Miniaturansicht...",
+"id": 35804
+}
+]
+}
+],
+"49120": [
+{
+"text": "Pipette",
+"children": [
+{
+"text": "Farbe kopieren",
+"id": 49121
+},
+{
+"text": "Füllfarbe kopieren",
+"id": 49122
+},
+{
+"text": "Strichfarbe kopieren",
+"id": 49123
+}
+]
+}
+]
+}
+}

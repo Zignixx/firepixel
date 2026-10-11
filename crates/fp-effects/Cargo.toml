@@ -1,0 +1,20 @@
+[package]
+name = "fp-effects"
+description = "Live-Effekte des Originals: Schlagschatten, Innerer Schatten, Glühen, Inneres Glühen, Abschrägung/Prägung, massiver Schatten, Farbfüllung, Photoshop-Live-Effekte und Effektketten"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+fp-geom = { workspace = true }
+fp-color = { workspace = true }
+fp-raster = { workspace = true }
+rayon = { workspace = true }
+
+[dev-dependencies]
+png = { workspace = true }
+serde_json = { workspace = true }
+
+[lints]
+workspace = true

@@ -1,0 +1,18 @@
+[package]
+name = "fp-model"
+description = "Dokumentmodell von Firepixel (reine Daten, serde): Seiten, Status, Ebenen, Elemente, Symbole, Stile"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+fp-geom = { workspace = true }
+fp-color = { workspace = true }
+serde = { workspace = true, features = ["rc"] }
+
+[dev-dependencies]
+serde_json = { workspace = true }
+
+[lints]
+workspace = true

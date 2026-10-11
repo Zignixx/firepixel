@@ -1,0 +1,46 @@
+[package]
+name = "fp-ui"
+description = "Oberfläche von Firepixel (egui/eframe): Hauptfenster wie das Original, Designs, Icons, Menüs, Docking, Leinwand, Inspektor-Rahmen, Dialoge"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+eframe = { workspace = true }
+egui = { workspace = true }
+fp-geom = { workspace = true }
+fp-color = { workspace = true }
+fp-raster = { workspace = true }
+fp-model = { workspace = true }
+fp-fwpng = { workspace = true }
+fp-render = { workspace = true }
+fp-engine = { workspace = true }
+# Optimieren/Export (Phase 4) und Compound Shapes im Inspektor (Pfadoperationen)
+fp-export = { workspace = true }
+fp-vector = { workspace = true }
+# Schriftenliste im Text-Inspektor (Index der Systemschriften, zur Laufzeit)
+fp-text = { workspace = true }
+# Formatliste für die Datei-Dialoge (Alle lesbaren Formate)
+fp-io = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+log = { workspace = true }
+# KI-Steuerkanal (src\bridge.rs, Agent AU): MCP-Brücke zur laufenden Oberfläche; JSF-Befehle-Menü
+fp-mcp = { workspace = true }
+fp-script = { workspace = true }
+# Bilder in/aus der Systemzwischenablage (reines Rust, schon über egui-winit im Baum) und PNG-Zwischendatei
+arboard = { version = "3", default-features = false, features = ["image-data"] }
+png = { workspace = true }
+# native Dateidialoge (Windows: Common Item Dialog über windows-sys, statisch, keine Zusatz-DLL)
+rfd = { version = "0.17", default-features = false }
+# Taskleisten-Icon (ICON_BIG): eframe setzt über `with_icon` nur das kleine Fenstersymbol;
+# dieselbe winit-Version wie in eframe, nur für `WindowExtWindows::set_taskbar_icon`.
+winit = { version = "0.30", default-features = false }
+
+[dev-dependencies]
+egui_kittest = { version = "0.36", features = ["wgpu", "snapshot"] }
+fp-neutral = { path = "../fp-neutral" }
+
+[lints]
+workspace = true

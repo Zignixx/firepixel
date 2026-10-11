@@ -1,0 +1,26 @@
+[package]
+name = "fp-vector"
+description = "Vektor-Rendering wie das Original: Pfad-Rasterizer, Füllungen/Verläufe/Muster/Texturen, Striche/Pinsel, Pfadoperationen (boolesche Operationen, Compound Shapes, Strich erweitern, Einlassen, Vereinfachen)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[features]
+default = []
+# Serialisierung der Eingabe-Strukturen (VectorPath, Fill, Stroke, BrushParams …).
+serde = ["dep:serde", "fp-geom/serde", "fp-color/serde"]
+
+[dependencies]
+fp-geom = { workspace = true }
+fp-color = { workspace = true }
+fp-raster = { workspace = true }
+rayon = { workspace = true }
+serde = { workspace = true, optional = true }
+
+[dev-dependencies]
+serde_json = { workspace = true }
+png = { workspace = true }
+
+[lints]
+workspace = true

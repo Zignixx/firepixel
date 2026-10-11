@@ -1,0 +1,25 @@
+[package]
+name = "fp-render"
+description = "Dokument-Compositor (CPU-Referenz) wie das Original: Seiten × Status, Ebenen, Gruppen, Masken, Symbole/9-Slice, Mischmodi, Live-Effekte, Render-Caches, Teil-Rendering und Treffertest"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+fp-geom = { workspace = true }
+fp-color = { workspace = true }
+fp-raster = { workspace = true }
+fp-model = { workspace = true }
+fp-fwpng = { workspace = true }
+fp-effects = { workspace = true }
+fp-vector = { workspace = true }
+fp-text = { workspace = true }
+rayon = { workspace = true }
+
+[dev-dependencies]
+png = { workspace = true }
+serde_json = { workspace = true }
+
+[lints]
+workspace = true

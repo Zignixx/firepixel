@@ -1,0 +1,39 @@
+[package]
+name = "fp-engine"
+description = "Programmkern von Firepixel: Befehlsregister, Undo/Redo-Verlauf, Auswahl, Zwischenablage, Werkzeug-Zustandsautomaten, Voreinstellungen und Sitzung (UI-unabhängig)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[features]
+default = ["vector", "render"]
+# Pfadoperationen (boolesche Operationen, Strich erweitern, Einlassen, Vereinfachen) über
+# fp-vector. Ohne das Feature baut fp-engine mit der eingebauten Grundgeometrie.
+vector = ["dep:fp-vector"]
+# Compositor fp-render als Vorgabe-Renderer der Sitzung (Pipette, Reduzieren, flaches Bild beim
+# Speichern). Ohne das Feature steckt die Anwendung einen eigenen `PageRenderer` ein.
+render = ["dep:fp-render"]
+
+[dependencies]
+fp-geom = { workspace = true, features = ["serde"] }
+fp-color = { workspace = true, features = ["serde"] }
+fp-raster = { workspace = true }
+fp-model = { workspace = true }
+fp-fwpng = { workspace = true }
+fp-text = { workspace = true }
+# Export (Exportieren, Bildvorschau, HTML, PSD/PDF …) und Import (Importieren, Öffnen anderer Formate)
+fp-export = { workspace = true }
+fp-io = { workspace = true }
+# KI-Auswahl (Objektauswahl, Motiv auswählen, Kante verfeinern), Agent KI
+fp-ai = { path = "../fp-ai" }
+# Rechtschreibprüfung mit Hunspell-Wörterbüchern (reines Rust; Wörterbücher zur Laufzeit)
+spellbook = "0.4"
+fp-vector = { workspace = true, optional = true }
+fp-render = { workspace = true, optional = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+
+[lints]
+workspace = true

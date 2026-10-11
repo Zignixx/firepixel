@@ -1,0 +1,848 @@
+//! Der Compositor: Seite × Status → Bild.
+//!
+//! Regeln (Belege in der Crate-Doku): Ebenen unten → oben (geteilte Ebenen und Masterseite über
+//! [`fp_model::Document::resolved_layers`] eingesetzt), Elemente in `ELMv` oben → unten (also
+//! rückwärts zeichnen), Web-Ebene und Web-Objekte nicht ins Bild, unsichtbare Ebenen/Cels/Elemente
+//! überspringen, `PRPb`-Stellvertreterpfade verwerfen. Mischen mit der MMX-Variante von
+//! Original-over (Modus Normal) bzw. den Mischmodi aus `fp_color` (skalar), Deckkraft als Byte.
+
+use std::sync::{Arc, Mutex, OnceLock};
+
+use fp_color::blend::OverVariant;
+use fp_color::{BlendMode, Opacity, Rgba8};
+use fp_effects::{apply_chain, EffectEntry};
+use fp_geom::{IRect, Matrix3, Vec2};
+use fp_model::{Document, Element, ElementKind, ElementState, GroupKind, Layer, LayerKind, LayerSlot, Symbol, SymbolKind};
+use fp_raster::resample::{nine_slice_scale, transform};
+use fp_raster::{composite, CompositeOptions, RgbaImage};
+
+use crate::cache::{Look, RenderCache};
+use crate::convert;
+use crate::nine::{nine_slice_stage, PointMap, Stage};
+use crate::options::{BackgroundMode, CachePolicy, RenderOptions, RenderReport};
+
+/// Ergebnis eines Renderings.
+#[derive(Debug, Clone)]
+pub struct RenderOutput {
+    /// Bild (RGBA8, nicht vormultipliziert). Bei Seiten: Grenzen = Leinwand in Dokumentkoordinaten.
+    pub image: RgbaImage,
+    /// Was fehlte bzw. genähert wurde.
+    pub report: RenderReport,
+}
+
+/// Ziel-Leinwand: fest (Seite, Ausschnitt) oder wachsend (isolierte Gruppen, Symbole).
+pub(crate) struct Canvas {
+    pub img: RgbaImage,
+    pub growable: bool,
+    /// Aufzeichnen statt Mischen (Seitenkacheln, [`crate::tiles`]).
+    pub rec: Option<Vec<crate::tiles::DrawOp>>,
+}
+
+impl Canvas {
+    pub(crate) fn growable() -> Canvas {
+        Canvas { img: RgbaImage::empty_at(0, 0), growable: true, rec: None }
+    }
+
+    /// Wie [`Canvas::draw`], beim Aufzeichnen aber nur den Schritt merken.
+    pub(crate) fn draw_look(&mut self, img: &Arc<RgbaImage>, opacity: Opacity, blend: BlendMode) {
+        if let Some(rec) = &mut self.rec {
+            if !img.is_empty() && opacity.0 != 0 {
+                rec.push(crate::tiles::DrawOp { img: Arc::clone(img), opacity, blend });
+            }
+            return;
+        }
+        self.draw(img, opacity, blend);
+    }
+
+    /// Mischt ein Aussehen mit Deckkraft und Mischmodus auf die Leinwand.
+    pub(crate) fn draw(&mut self, img: &RgbaImage, opacity: Opacity, blend: BlendMode) {
+        if img.is_empty() || opacity.0 == 0 {
+            return;
+        }
+        if self.growable {
+            if self.img.is_empty() {
+                // Leere Leinwand: Normal mit voller Deckkraft ist eine Kopie.
+                let mut base = RgbaImage::new(img.bounds()).unwrap_or_else(|_| RgbaImage::empty_at(0, 0));
+                if base.is_empty() {
+                    return;
+                }
+                composite(&mut base, img, None, &opts(opacity, blend));
+                self.img = base;
+                return;
+            }
+            if !contains(self.img.bounds(), img.bounds())
+                && let Ok(ext) = self.img.extended_to(img.bounds())
+            {
+                self.img = ext;
+            }
+        }
+        composite(&mut self.img, img, None, &opts(opacity, blend));
+    }
+}
+
+fn contains(a: IRect, b: IRect) -> bool {
+    a.left <= b.left && a.top <= b.top && a.right >= b.right && a.bottom >= b.bottom
+}
+
+fn opts(opacity: Opacity, blend: BlendMode) -> CompositeOptions {
+    CompositeOptions { mode: blend, opacity, variant: OverVariant::Mmx, clip: None }
+}
+
+/// Zustand beim Abstieg.
+#[derive(Clone)]
+pub(crate) struct State {
+    pub map: PointMap,
+    pub frame: usize,
+    /// Symbole auf dem Weg (Schutz vor Rekursion).
+    pub symbols: Vec<fp_model::SymbolId>,
+}
+
+/// Der Renderer (thread-sicher; Element-Cache intern).
+pub struct Renderer {
+    /// Einstellungen.
+    pub options: RenderOptions,
+    fonts: OnceLock<Arc<fp_text::FontDb>>,
+    cache: Mutex<RenderCache>,
+    tiles: Mutex<crate::tiles::TileCache>,
+}
+
+impl std::fmt::Debug for Renderer {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Renderer").field("options", &self.options).finish_non_exhaustive()
+    }
+}
+
+impl Default for Renderer {
+    fn default() -> Self {
+        Renderer::new(RenderOptions::default())
+    }
+}
+
+impl Renderer {
+    /// Neuer Renderer; Systemschriften werden beim ersten Text geladen.
+    pub fn new(options: RenderOptions) -> Renderer {
+        Renderer { options, fonts: OnceLock::new(), cache: Mutex::new(RenderCache::default()), tiles: Mutex::new(crate::tiles::TileCache::default()) }
+    }
+
+    /// Neuer Renderer mit vorgegebener Schriftdatenbank (z. B. von der Anwendung geteilt).
+    pub fn with_fonts(options: RenderOptions, fonts: Arc<fp_text::FontDb>) -> Renderer {
+        let r = Renderer::new(options);
+        let _ = r.fonts.set(fonts);
+        r
+    }
+
+    /// Schriftdatenbank (beim ersten Aufruf aus den Systemschriften aufgebaut).
+    pub fn fonts(&self) -> &Arc<fp_text::FontDb> {
+        self.fonts.get_or_init(|| Arc::new(fp_text::FontDb::system()))
+    }
+
+    /// Zugriff auf den Element-Cache (Generation erhöhen, leeren, Kennzahlen).
+    pub fn with_cache<R>(&self, f: impl FnOnce(&mut RenderCache) -> R) -> R {
+        match self.cache.lock() {
+            Ok(mut c) => f(&mut c),
+            Err(p) => f(&mut p.into_inner()),
+        }
+    }
+
+    /// Kennzahlen des Kachel-Caches.
+    pub fn tile_stats(&self) -> crate::tiles::TileStats {
+        match self.tiles.lock() {
+            Ok(t) => t.stats(),
+            Err(p) => p.into_inner().stats(),
+        }
+    }
+
+    /// Leert den Kachel-Cache (z. B. nach dem Schließen eines Dokuments).
+    pub fn clear_tiles(&self) {
+        match self.tiles.lock() {
+            Ok(mut t) => t.clear(),
+            Err(p) => p.into_inner().clear(),
+        }
+    }
+
+    /// Leinwand der Seite in Dokumentkoordinaten.
+    pub fn page_rect(doc: &Document, page: usize) -> Option<IRect> {
+        let p = doc.pages.get(page)?;
+        let c = &p.canvas;
+        let (x, y) = (convert::round_coord(c.origin.x as f64), convert::round_coord(c.origin.y as f64));
+        let w = (c.width as f64).round().clamp(0.0, 1.0e6) as i32;
+        let h = (c.height as f64).round().clamp(0.0, 1.0e6) as i32;
+        Some(IRect::from_xywh(x, y, w, h))
+    }
+
+    /// Ganze Seite `page` im Status `frame` (Leinwandfarbe nach [`BackgroundMode`]).
+    pub fn render_page(&self, doc: &Document, page: usize, frame: usize) -> RenderOutput {
+        match Self::page_rect(doc, page) {
+            Some(r) => self.render_rect(doc, page, frame, r),
+            None => {
+                let mut report = RenderReport::default();
+                report.miss("page");
+                RenderOutput { image: RgbaImage::empty_at(0, 0), report }
+            }
+        }
+    }
+
+    /// Ausschnitt `rect` (Dokumentkoordinaten, 1:1) einer Seite.
+    pub fn render_rect(&self, doc: &Document, page: usize, frame: usize, rect: IRect) -> RenderOutput {
+        let (grid, image, report) = self.compose_rect(doc, page, frame, rect);
+        match grid {
+            Some(g) => RenderOutput { image: g.assemble(rect), report },
+            None => RenderOutput { image, report },
+        }
+    }
+
+    /// Seite im Rechteck mischen: als Kacheln (Kachel-Cache) oder als fertiges Bild.
+    fn compose_rect(&self, doc: &Document, page: usize, frame: usize, rect: IRect) -> (Option<crate::tiles::TileGrid>, RgbaImage, RenderReport) {
+        let mut report = RenderReport::default();
+        let Some(p) = doc.pages.get(page) else {
+            report.miss("page");
+            return (None, RgbaImage::empty_at(rect.left, rect.top), report);
+        };
+        let bg = p.root.background.to_rgba8();
+        let mode = match self.options.background {
+            BackgroundMode::Auto => {
+                let mut erase = false;
+                fp_model::traverse::walk_root(&p.root, fp_model::traverse::RootRef::Page(page), &mut |_, _, e| {
+                    erase |= e.common.blend.0 == 25;
+                });
+                if erase { BackgroundMode::UnderlayLast } else { BackgroundMode::Fill }
+            }
+            m => m,
+        };
+        let fill = match mode {
+            BackgroundMode::Fill => bg,
+            _ => Rgba8::TRANSPARENT,
+        };
+        let st = State { map: PointMap::identity(), frame, symbols: Vec::new() };
+        let underlay = if mode == BackgroundMode::UnderlayLast && bg.a > 0 { Some(bg) } else { None };
+        if self.options.tile_cache && self.options.cache_budget_pixels > 0 {
+            // Aufzeichnen (Aussehen aus dem Element-Cache), dann kachelweise mischen; unveränderte
+            // Kacheln kommen aus dem Kachel-Cache (Ergebnis pixelgleich zum direkten Mischen).
+            let mut cv = Canvas { img: RgbaImage::empty_at(rect.left, rect.top), growable: false, rec: Some(Vec::new()) };
+            for rl in doc.resolved_layers(page) {
+                self.draw_layer(doc, &mut cv, &rl.layer, 0, rl.state(), &st, &mut report);
+            }
+            let ops = cv.rec.take().unwrap_or_default();
+            let budget = self.options.cache_budget_pixels / 4;
+            let grid = match self.tiles.lock() {
+                Ok(mut t) => t.compose_grid(rect, fill, underlay, &ops, budget),
+                Err(p) => p.into_inner().compose_grid(rect, fill, underlay, &ops, budget),
+            };
+            return match grid {
+                Some(g) => (Some(g), RgbaImage::empty_at(rect.left, rect.top), report),
+                None => (None, crate::tiles::mix_direct(rect, fill, underlay, &ops), report),
+            };
+        }
+        let img = RgbaImage::filled(rect, fill).unwrap_or_else(|_| RgbaImage::empty_at(rect.left, rect.top));
+        let mut cv = Canvas { img, growable: false, rec: None };
+        for rl in doc.resolved_layers(page) {
+            self.draw_layer(doc, &mut cv, &rl.layer, 0, rl.state(), &st, &mut report);
+        }
+        let mut image = cv.img;
+        if mode == BackgroundMode::UnderlayLast && bg.a > 0 {
+            let mut base = RgbaImage::filled(rect, bg).unwrap_or_else(|_| RgbaImage::empty_at(rect.left, rect.top));
+            composite(&mut base, &image, None, &opts(Opacity(255), BlendMode(0)));
+            image = base;
+        }
+        (None, image, report)
+    }
+
+    /// Ausschnitt `region` (Dokumentkoordinaten) mit Zoomfaktor `zoom` für die Leinwand der UI.
+    /// Ergebnis in Gerätepixeln (`ceil(Breite·zoom)` × `ceil(Höhe·zoom)`, Grenzen ab (0, 0));
+    /// abgetastet wird je Gerätepixelmitte (nächster Nachbar), so bleiben Pixel beim Vergrößern scharf.
+    pub fn render_region(&self, doc: &Document, page: usize, frame: usize, region: IRect, zoom: f64) -> RenderOutput {
+        let zoom = if zoom.is_finite() && zoom > 0.0 { zoom.clamp(1.0 / 256.0, 256.0) } else { 1.0 };
+        let (grid, base_img, report) = self.compose_rect(doc, page, frame, region);
+        if (zoom - 1.0).abs() < 1e-12 {
+            let mut img = match &grid {
+                Some(g) => g.assemble(region),
+                None => base_img,
+            };
+            img.set_origin(0, 0);
+            return RenderOutput { image: img, report };
+        }
+        let w = ((region.width() as f64) * zoom).ceil().clamp(0.0, 32768.0) as i32;
+        let h = ((region.height() as f64) * zoom).ceil().clamp(0.0, 32768.0) as i32;
+        let mut out = RgbaImage::new(IRect::new(0, 0, w, h)).unwrap_or_else(|_| RgbaImage::empty_at(0, 0));
+        let ow = out.width();
+        let src = &base_img;
+        let xs: Vec<i32> = (0..w).map(|i| region.left + (((i as f64) + 0.5) / zoom).floor() as i32).collect();
+        let ys: Vec<i32> = (0..h).map(|j| region.top + (((j as f64) + 0.5) / zoom).floor() as i32).collect();
+        use rayon::prelude::*;
+        if ow > 0 {
+            out.data_mut().par_chunks_mut(ow).enumerate().for_each(|(j, row)| {
+                let y = ys[j];
+                match &grid {
+                    Some(g) => {
+                        let inside_y = y >= region.top && y < region.bottom;
+                        for (i, p) in row.iter_mut().enumerate() {
+                            let x = xs[i];
+                            *p = if inside_y && x >= region.left && x < region.right { g.get(x, y) } else { [0, 0, 0, 0] };
+                        }
+                    }
+                    None => {
+                        for (i, p) in row.iter_mut().enumerate() {
+                            *p = src.get(xs[i], y).unwrap_or([0, 0, 0, 0]);
+                        }
+                    }
+                }
+            });
+        }
+        RenderOutput { image: out, report }
+    }
+
+    /// Ein Symbol im Status `frame` in Symbolkoordinaten (Grenzen = Inhalt).
+    pub fn render_symbol(&self, doc: &Document, symbol: &Arc<Symbol>, frame: usize) -> RenderOutput {
+        let mut report = RenderReport::default();
+        let st = State { map: PointMap::identity(), frame, symbols: vec![symbol.id] };
+        let mut cv = Canvas::growable();
+        self.draw_symbol_layers(doc, &mut cv, symbol, &st, &mut report);
+        RenderOutput { image: cv.img, report }
+    }
+
+    /// Aussehen eines einzelnen Elements (nach Effekten, vor Deckkraft/Mischmodus) in
+    /// Dokumentkoordinaten, abgebildet mit `map`.
+    pub fn render_element(&self, doc: &Document, e: &Arc<Element>, map: &PointMap, frame: usize) -> RenderOutput {
+        let mut report = RenderReport::default();
+        let st = State { map: map.clone(), frame, symbols: Vec::new() };
+        let image = match self.look(doc, e, &st, &mut report) {
+            Some(l) => (*l.image).clone(),
+            None => RgbaImage::empty_at(0, 0),
+        };
+        RenderOutput { image, report }
+    }
+
+    // ------------------------------------------------------------------ Ebenen
+
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) fn draw_layer(
+        &self,
+        doc: &Document,
+        cv: &mut Canvas,
+        layer: &Layer,
+        depth: u32,
+        state: ElementState,
+        st: &State,
+        rep: &mut RenderReport,
+    ) {
+        if layer.kind == LayerKind::Web {
+            return;
+        }
+        let vis = layer.visibility.get(st.frame).or(layer.visibility.first()).copied().unwrap_or(true);
+        if !vis {
+            return;
+        }
+        let per_frame = !layer.shared_across_frames && (depth == 0 || (depth == 1 && state == ElementState::MasterPageContent));
+        if per_frame && st.frame > 0 && st.frame < layer.cels.len() {
+            // Animationsinstanzen früherer Status laufen über ANNi Status weiter (13 §7.3, Laufzeit T6:
+            // die Instanz steht nur im Cel ihres Startstatus). Gezeichnet unter dem Inhalt des Status (A).
+            for c in 0..st.frame {
+                let k = st.frame - c;
+                for e in layer.cels[c].elements.iter().rev() {
+                    if let ElementKind::Instance(i) = &e.kind
+                        && i.anim.frames as usize > k
+                        && doc.symbol_by_id(i.symbol_id).is_some_and(|(_, s)| s.kind() == SymbolKind::Animation)
+                    {
+                        let st2 = State { frame: k, ..st.clone() };
+                        self.draw_element(doc, cv, e, depth, &st2, rep);
+                    }
+                }
+            }
+        }
+        let cel = layer.cel_at(st.frame, depth, state).or_else(|| layer.cels.first());
+        let Some(cel) = cel else { return };
+        if !cel.visible {
+            return;
+        }
+        // Elemente eines Status-Cels beginnen in diesem Status (Animationsstatus k = 0).
+        let local = if per_frame && st.frame < layer.cels.len() { State { frame: 0, ..st.clone() } } else { st.clone() };
+        for e in cel.elements.iter().rev() {
+            self.draw_element(doc, cv, e, depth, &local, rep);
+        }
+    }
+
+    fn draw_symbol_layers(&self, doc: &Document, cv: &mut Canvas, sym: &Arc<Symbol>, st: &State, rep: &mut RenderReport) {
+        for slot in &sym.root.layers {
+            match slot {
+                LayerSlot::Own(l) => self.draw_layer(doc, cv, l, 0, ElementState::Normal, st, rep),
+                LayerSlot::Shared(r) => {
+                    if let Some(l) = doc.shared_layer(&r.id).and_then(|d| d.layer.as_ref()) {
+                        self.draw_layer(doc, cv, l, 0, ElementState::SharedLayer, st, rep);
+                    }
+                }
+                LayerSlot::MasterPage(_) => rep.miss("MPLv"),
+                LayerSlot::Raw(_) => rep.miss("LYLv:raw"),
+            }
+        }
+    }
+
+    // ------------------------------------------------------------------ Elemente
+
+    pub(crate) fn draw_element(&self, doc: &Document, cv: &mut Canvas, e: &Arc<Element>, depth: u32, st: &State, rep: &mut RenderReport) {
+        if !e.common.visible {
+            return;
+        }
+        match &e.kind {
+            ElementKind::WebObject(_) => return,
+            ElementKind::Raw(_) => {
+                rep.miss("raw-element");
+                return;
+            }
+            ElementKind::SubLayer(l) => {
+                self.draw_layer(doc, cv, l, depth + 1, ElementState::Normal, st, rep);
+                return;
+            }
+            ElementKind::Path(p) if p.compat_proxy => return,
+            ElementKind::Group(g) if self.draw_group_direct(doc, e, g) => {
+                for c in g.children.iter().rev() {
+                    self.draw_element(doc, cv, c, depth, st, rep);
+                }
+                return;
+            }
+            _ => {}
+        }
+        if let Some(look) = self.look(doc, e, st, rep) {
+            let op = match look.extra_opacity {
+                Some(x) => Opacity(fp_color::round::mul255(x as u32, e.common.opacity.0 as u32) as u8),
+                None => e.common.opacity,
+            };
+            // Mischmodi von Elementen in Symbolinstanzen wirken wie Normal (Korpus: Instanz-Caches
+            // +185.000 exakte Pixel, Menu_Bar_07 15.984/15.984; A für die Ursache).
+            let blend = if !st.symbols.is_empty() && !self.options.symbol_blend_modes { BlendMode(0) } else { e.common.blend };
+            cv.draw_look(&look.image, op, blend);
+            rep.drawn += 1;
+        }
+    }
+
+    /// Kinder einer Gruppe direkt auf die Leinwand (keine Isolation)?
+    fn draw_group_direct(&self, doc: &Document, e: &Element, g: &fp_model::GroupElem) -> bool {
+        if g.kind.is_mask() && g.mask_flags.enabled && g.effective_mask().is_some() {
+            return false;
+        }
+        if has_visible_effects(e) {
+            return false;
+        }
+        if e.common.opacity.0 != 255 || e.common.blend.0 != 0 {
+            return false;
+        }
+        if e.cache.is_some() && self.cache_allowed(doc, e) {
+            return false;
+        }
+        !self.options.isolate_groups || g.children.iter().any(|c| c.common.blend.0 != 0)
+    }
+
+    fn cache_allowed(&self, doc: &Document, e: &Element) -> bool {
+        let pol = self.options.cache_policy;
+        match &e.kind {
+            ElementKind::Path(_) => pol == CachePolicy::All,
+            ElementKind::Text(_) => pol != CachePolicy::None,
+            ElementKind::Group(_) | ElementKind::CompoundShape(_) => matches!(pol, CachePolicy::All | CachePolicy::Original),
+            ElementKind::Instance(i) => match pol {
+                CachePolicy::All => true,
+                CachePolicy::Original => {
+                    let anim = doc.symbol_by_id(i.symbol_id).map(|(_, s)| s.kind() == SymbolKind::Animation).unwrap_or(false);
+                    doc.format_version() > 9 && !anim
+                }
+                _ => false,
+            },
+            _ => false,
+        }
+    }
+
+    /// Aussehen eines Elements (gecacht).
+    pub(crate) fn look(&self, doc: &Document, e: &Arc<Element>, st: &State, rep: &mut RenderReport) -> Option<Look> {
+        let container = matches!(e.kind, ElementKind::Group(_) | ElementKind::Instance(_));
+        let frame = if container { st.frame } else { usize::MAX };
+        let symbol = match &e.kind {
+            ElementKind::Instance(i) => doc.symbol_by_id(i.symbol_id).map(|(_, s)| Arc::clone(s)),
+            _ => None,
+        };
+        let budget = self.options.cache_budget_pixels;
+        if budget > 0
+            && let Some((look, r)) = self.with_cache(|c| c.get(e, frame, &st.map, symbol.as_ref()))
+        {
+            rep.merge(&r);
+            return look;
+        }
+        let mut r = RenderReport::default();
+        let look = self.compute_look(doc, e, st, symbol.as_ref(), &mut r);
+        rep.merge(&r);
+        if budget > 0 {
+            self.with_cache(|c| c.put(e, frame, &st.map, symbol.as_ref(), look.clone(), r, budget));
+        }
+        look
+    }
+
+    fn compute_look(&self, doc: &Document, e: &Arc<Element>, st: &State, symbol: Option<&Arc<Symbol>>, rep: &mut RenderReport) -> Option<Look> {
+        let effects: Vec<EffectEntry> = e.common.effects.as_ref().map(convert::effect_entries).unwrap_or_default();
+        let has_fx = effects.iter().any(|x| x.visible);
+        // Gespeicherter Render-Cache (enthält Effekte).
+        if let Some(c) = &e.cache
+            && self.cache_allowed(doc, e)
+            && let Some(img) = convert::image_of_node(c)
+            && let Some(placed) = self.place_cached(&img, &st.map, e, rep)
+        {
+            rep.from_file_cache += 1;
+            return Some(Look { image: Arc::new(placed), extra_opacity: None });
+        }
+        let mut extra_opacity = None;
+        let base: Option<RgbaImage> = match &e.kind {
+            ElementKind::Bitmap(b) => {
+                if has_fx
+                    && self.options.cache_policy != CachePolicy::None
+                    && let Some(res) = &b.effect_result
+                    && let Some(img) = convert::image_of_node(res)
+                {
+                    rep.from_file_cache += 1;
+                    return self.place_cached(&img, &st.map, e, rep).map(|i| Look { image: Arc::new(i), extra_opacity: None });
+                }
+                match convert::image_of(&b.image) {
+                    Some(img) => self.place_bitmap(&img, &st.map, rep),
+                    None => {
+                        rep.miss("IMGv:tiles");
+                        None
+                    }
+                }
+            }
+            ElementKind::Path(p) => self.path_layer(p, &st.map, rep),
+            ElementKind::Text(t) => self.text_layer(doc, t, &st.map, rep),
+            ElementKind::CompoundShape(c) => match c.result.as_ref().map(|r| &r.kind) {
+                Some(ElementKind::Path(p)) => self.path_layer(p, &st.map, rep),
+                _ => {
+                    rep.miss("CSGv");
+                    None
+                }
+            },
+            ElementKind::Group(g) => self.group_layer(doc, e, g, st, rep),
+            ElementKind::Instance(i) => {
+                let r = self.instance_layer(doc, i, symbol, st, rep);
+                if let Some((img, op)) = r {
+                    extra_opacity = op;
+                    Some(img)
+                } else {
+                    None
+                }
+            }
+            ElementKind::WebObject(_) | ElementKind::SubLayer(_) | ElementKind::Raw(_) => None,
+        };
+        let mut img = base?;
+        if has_fx {
+            if self.options.effects {
+                for p in img.data_mut() {
+                    if p[3] == 0 {
+                        *p = [0, 0, 0, 0];
+                    }
+                }
+                let res = apply_chain(&img, &effects, &self.options.effect_context);
+                for i in &res.issues {
+                    rep.miss(format!("effect:{i}"));
+                }
+                rep.effect_chains += 1;
+                img = res.image;
+            } else {
+                rep.miss("effects");
+            }
+        }
+        Some(Look { image: Arc::new(img), extra_opacity })
+    }
+
+    /// Gespeicherten Cache mit der Abbildung `map` platzieren: ganzzahlige Verschiebung direkt;
+    /// sonst neu rechnen lassen (`None`), wenn das Element selbst gerastert werden kann, oder
+    /// resampeln (Näherung).
+    fn place_cached(&self, img: &RgbaImage, map: &PointMap, e: &Element, rep: &mut RenderReport) -> Option<RgbaImage> {
+        if let Some((dx, dy)) = map.integer_translation() {
+            return Some(img.translated(dx, dy));
+        }
+        // 9-Slice-Text: nur verschieben (13 §7.8).
+        if let ElementKind::Text(t) = &e.kind
+            && map.is_nine_slice()
+        {
+            let a = text_anchor(t);
+            if let Some((dx, dy)) = map.translate_only(a).integer_translation() {
+                return Some(img.translated(dx, dy));
+            }
+        }
+        if !self.options.rasterize {
+            rep.miss(format!("{}:transform", kind_tag(e)));
+            return None;
+        }
+        match &e.kind {
+            ElementKind::Path(_) | ElementKind::Text(_) | ElementKind::Group(_) | ElementKind::CompoundShape(_) | ElementKind::Instance(_) => None,
+            _ => self.place_bitmap(img, map, rep),
+        }
+    }
+
+    /// Bitmap mit der Abbildung platzieren (Verschiebung, 9-Slice oder affine Abtastung).
+    fn place_bitmap(&self, img: &RgbaImage, map: &PointMap, rep: &mut RenderReport) -> Option<RgbaImage> {
+        if let Some((dx, dy)) = map.integer_translation() {
+            return Some(img.translated(dx, dy));
+        }
+        if !self.options.rasterize {
+            rep.miss("IMGv:transform");
+            return None;
+        }
+        rep.approx("bitmap-resampled");
+        if map.is_nine_slice() {
+            return Some(self.nine_slice_bitmap(img, map));
+        }
+        let m = map.as_affine().unwrap_or(Matrix3::IDENTITY);
+        Some(transform(img, &m, self.options.sampler, None))
+    }
+
+    fn nine_slice_bitmap(&self, img: &RgbaImage, map: &PointMap) -> RgbaImage {
+        // Stufen bis zur (ersten) 9-Slice-Stufe vorher anwenden, danach die übrigen affin.
+        let mut cur = img.clone();
+        for s in &map.stages {
+            cur = match s {
+                Stage::Affine(m) => match (PointMap { stages: vec![*s] }).integer_translation() {
+                    Some((dx, dy)) => cur.translated(dx, dy),
+                    None => transform(&cur, m, self.options.sampler, None),
+                },
+                Stage::Nine { x, y } => {
+                    let b = cur.bounds();
+                    let (x0, x1) = (x.apply(b.left as f64), x.apply(b.right as f64));
+                    let (y0, y1) = (y.apply(b.top as f64), y.apply(b.bottom as f64));
+                    let nw = (x1 - x0).round().clamp(0.0, 1.0e5) as u32;
+                    let nh = (y1 - y0).round().clamp(0.0, 1.0e5) as u32;
+                    let inset = |ax: &crate::nine::AxisMap, a0: i32, a1: i32| -> (u32, u32) {
+                        if !ax.nine {
+                            return (0, 0);
+                        }
+                        let g1 = ax.lo + ax.m1;
+                        let g2 = ax.hi - ax.m2;
+                        let l = (g1 - a0 as f64).round().clamp(0.0, (a1 - a0) as f64) as u32;
+                        let r = (a1 as f64 - g2).round().clamp(0.0, (a1 - a0) as f64) as u32;
+                        (l, r)
+                    };
+                    let (il, ir) = inset(x, b.left, b.right);
+                    let (it, ib) = inset(y, b.top, b.bottom);
+                    let mut out = nine_slice_scale(&cur, [il, it, ir, ib], nw, nh, self.options.sampler);
+                    out.set_origin(convert::round_coord(x0), convert::round_coord(y0));
+                    out
+                }
+            };
+        }
+        cur
+    }
+
+    fn path_layer(&self, p: &fp_model::PathElem, map: &PointMap, rep: &mut RenderReport) -> Option<RgbaImage> {
+        if !self.options.rasterize {
+            rep.miss("PTHv");
+            return None;
+        }
+        let vp = convert::vector_path(p, map);
+        let layer = fp_vector::render_path_layer(&vp)?;
+        for m in &layer.missing {
+            rep.miss(format!("PTHv:{m:?}"));
+        }
+        rep.rasterized_paths += 1;
+        Some(layer.image)
+    }
+
+    fn text_layer(&self, doc: &Document, t: &fp_model::TextElem, map: &PointMap, rep: &mut RenderReport) -> Option<RgbaImage> {
+        if !self.options.rasterize {
+            rep.miss("TXTv");
+            return None;
+        }
+        let block = convert::text_block(doc, t);
+        let mut lay = fp_text::layout(&block, self.fonts(), &fp_text::LayoutOptions::default());
+        if !lay.missing_fonts.is_empty() {
+            rep.approx("text-font-substituted");
+        }
+        // Abbildung: erst Text-MTXv, dann die Elternabbildung (bei 9-Slice nur verschieben).
+        let mut m = PointMap::identity();
+        if let Some(tm) = &t.transform {
+            m = m.then_affine(tm);
+        }
+        let parent = if map.is_nine_slice() { map.translate_only(text_anchor(t)) } else { map.clone() };
+        let full = PointMap { stages: m.stages.iter().chain(parent.stages.iter()).copied().collect() };
+        if let Some(a) = full.as_affine()
+            && !a.is_identity()
+        {
+            let aff = fp_text::raster::Affine {
+                a: a.m[0][0] as f64,
+                b: a.m[0][1] as f64,
+                c: a.m[1][0] as f64,
+                d: a.m[1][1] as f64,
+                e: a.m[2][0] as f64,
+                f: a.m[2][1] as f64,
+            };
+            for g in &mut lay.glyphs {
+                g.transform = g.transform.then(&aff);
+            }
+            for d in &mut lay.decorations {
+                for q in &mut d.quad {
+                    *q = aff.apply(*q);
+                }
+            }
+        }
+        rep.rasterized_texts += 1;
+        Some(fp_text::render::render(&lay, None))
+    }
+
+    fn group_layer(&self, doc: &Document, e: &Element, g: &fp_model::GroupElem, st: &State, rep: &mut RenderReport) -> Option<RgbaImage> {
+        let mut cv = Canvas::growable();
+        for c in g.children.iter().rev() {
+            self.draw_element(doc, &mut cv, c, 0, st, rep);
+        }
+        let mut img = cv.img;
+        let masked = g.kind.is_mask() && g.mask_flags.enabled;
+        if masked && let Some(me) = g.effective_mask() {
+            let mask = self.mask_values(doc, e, g, me, st, rep);
+            let b = img.bounds();
+            let w = img.width();
+            for (i, p) in img.data_mut().iter_mut().enumerate() {
+                if p[3] == 0 {
+                    continue;
+                }
+                let x = b.left + (i % w.max(1)) as i32;
+                let y = b.top + (i / w.max(1)) as i32;
+                let m = mask.as_ref().map(|(mb, mw, data)| {
+                    if mb.contains(x, y) { data[(y - mb.top) as usize * mw + (x - mb.left) as usize] } else { 0 }
+                });
+                let m = m.unwrap_or(0);
+                p[3] = ((p[3] as u32 * m as u32 + 127) / 255) as u8;
+            }
+        }
+        if img.is_empty() {
+            return None;
+        }
+        Some(img)
+    }
+
+    /// Maskenwerte (Grenzen, Breite, Daten) einer Maskengruppe (07 §7.5, Laufzeit T3).
+    #[allow(clippy::type_complexity)]
+    fn mask_values(
+        &self,
+        doc: &Document,
+        _group: &Element,
+        g: &fp_model::GroupElem,
+        me: &Arc<Element>,
+        st: &State,
+        rep: &mut RenderReport,
+    ) -> Option<(IRect, usize, Vec<u8>)> {
+        let alpha_attrs = g.mask_flags.hide_attrs;
+        let img: Option<RgbaImage> = match (&me.kind, g.kind) {
+            (ElementKind::Path(p), GroupKind::VectorMask) | (ElementKind::Path(p), GroupKind::BitmapMask) => {
+                if !self.options.rasterize {
+                    rep.miss("GRPv:mask");
+                    return None;
+                }
+                let vp = convert::vector_path(p, &st.map);
+                let vp = if alpha_attrs { vp } else { convert::fill_only(vp) };
+                fp_vector::render_path_layer(&vp).map(|l| l.image)
+            }
+            (ElementKind::Bitmap(b), _) => {
+                let src = b.effect_result.as_ref().and_then(|r| convert::image_of_node(r)).or_else(|| convert::image_of(&b.image));
+                let src = src.and_then(|i| self.place_bitmap(&i, &st.map, rep));
+                src.map(|mut i| {
+                    if alpha_attrs {
+                        for p in i.data_mut() {
+                            let lum = (p[0] as u32 * 299 + p[1] as u32 * 587 + p[2] as u32 * 114) / 1000;
+                            p[3] = ((p[3] as u32 * (255 - lum) + 127) / 255) as u8;
+                        }
+                    }
+                    i
+                })
+            }
+            _ => {
+                rep.approx("mask-generic");
+                self.look(doc, me, st, rep).map(|l| (*l.image).clone())
+            }
+        };
+        let img = img?;
+        let b = img.bounds();
+        Some((b, img.width(), img.data().iter().map(|p| p[3]).collect()))
+    }
+
+    fn instance_layer(
+        &self,
+        doc: &Document,
+        i: &fp_model::InstanceElem,
+        symbol: Option<&Arc<Symbol>>,
+        st: &State,
+        rep: &mut RenderReport,
+    ) -> Option<(RgbaImage, Option<u8>)> {
+        let Some(sym) = symbol else {
+            rep.miss("ALSv:symbol-fehlt");
+            return None;
+        };
+        if st.symbols.contains(&sym.id) || st.symbols.len() > 32 {
+            rep.miss("ALSv:rekursion");
+            return None;
+        }
+        let mut m = i.transform;
+        let mut extra = None;
+        let mut frame = sym.shown_frame(st.frame, 0);
+        if sym.kind() == SymbolKind::Animation {
+            let k = st.frame;
+            let af = i.anim.frame(k, sym.root.frame_count)?;
+            frame = af.symbol_frame;
+            let c = self.symbol_center(doc, sym, rep);
+            let local = Matrix3::translation(-c.0, -c.1)
+                .then(&Matrix3::scaling(af.scale as f32, af.scale as f32))
+                .then(&Matrix3::rotation_degrees(af.rotation))
+                .then(&Matrix3::translation(c.0, c.1));
+            m = local.then(&m).then(&Matrix3::translation(af.offset.x, af.offset.y));
+            extra = Some(af.opacity.0);
+        }
+        let stage = sym.nine_slice.as_ref().and_then(|ns| nine_slice_stage(ns, &m)).unwrap_or(Stage::Affine(m));
+        let inner = st.map.prepend(stage);
+        let mut syms = st.symbols.clone();
+        syms.push(sym.id);
+        let st2 = State { map: inner, frame, symbols: syms };
+        let mut cv = Canvas::growable();
+        self.draw_symbol_layers(doc, &mut cv, sym, &st2, rep);
+        if cv.img.is_empty() {
+            return None;
+        }
+        Some((cv.img, extra))
+    }
+
+    /// Mitte der Inhaltsgrenzen eines Symbols (Bezugspunkt der Animation, 13 §7.3/T6).
+    fn symbol_center(&self, doc: &Document, sym: &Arc<Symbol>, rep: &mut RenderReport) -> (f32, f32) {
+        let mut cv = Canvas::growable();
+        let st = State { map: PointMap::identity(), frame: 0, symbols: vec![sym.id] };
+        let mut r = RenderReport::default();
+        self.draw_symbol_layers(doc, &mut cv, sym, &st, &mut r);
+        if !r.is_complete() {
+            rep.approx("anim-center");
+        }
+        let b = cv.img.alpha_bounds();
+        if b.is_empty() {
+            return (0.0, 0.0);
+        }
+        ((b.left + b.right) as f32 / 2.0, (b.top + b.bottom) as f32 / 2.0)
+    }
+}
+
+/// Hat das Element sichtbare Live-Effekte?
+pub fn has_visible_effects(e: &Element) -> bool {
+    e.common.effects.as_ref().is_some_and(|l| l.has_visible())
+}
+
+/// Anker eines Texts für 9-Slice (13 §7.8): links → links oben, zentriert → Mitte, rechts → rechts oben.
+fn text_anchor(t: &fp_model::TextElem) -> Vec2 {
+    let b = t.bounds;
+    let align = t.runs.first().and_then(|r| r.attrs.alignment).or(t.initial.alignment).unwrap_or(0);
+    match align {
+        1 => Vec2::new(((b.left + b.right) / 2.0) as f64, ((b.top + b.bottom) / 2.0) as f64),
+        2 => Vec2::new(b.right as f64, b.top as f64),
+        _ => Vec2::new(b.left as f64, b.top as f64),
+    }
+}
+
+/// Tag-Name einer Elementart (für Berichte).
+pub fn kind_tag(e: &Element) -> &'static str {
+    match &e.kind {
+        ElementKind::Bitmap(_) => "IMGv",
+        ElementKind::Path(_) => "PTHv",
+        ElementKind::Text(_) => "TXTv",
+        ElementKind::Group(_) => "GRPv",
+        ElementKind::CompoundShape(_) => "CSGv",
+        ElementKind::Instance(_) => "ALSv",
+        ElementKind::WebObject(_) => "URLv",
+        ElementKind::SubLayer(_) => "LSLv",
+        ElementKind::Raw(_) => "RAW",
+    }
+}

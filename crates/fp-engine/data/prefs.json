@@ -1,0 +1,5161 @@
+{
+"prefs": [
+{
+"key": "DisableCSXS",
+"type": "bool",
+"default": false,
+"category": "Sonstiges",
+"effect": "CS-Extensions (CSXS/Flash-Panels) abschalten",
+"dialog_page": null
+},
+{
+"key": "SaveGroupCachedImages",
+"type": "bool",
+"default": true,
+"category": "Sonstiges",
+"effect": "zwischengespeicherte Gruppenbilder in .fw.png schreiben (A)",
+"dialog_page": null
+},
+{
+"key": "PageNumbering",
+"type": "bool",
+"default": true,
+"category": "Sonstiges",
+"effect": "Seiten nummerieren (Seiten-Bedienfeld, A)",
+"dialog_page": null
+},
+{
+"key": "FrameNumbering",
+"type": "bool",
+"default": true,
+"category": "Sonstiges",
+"effect": "Status/Frames nummerieren (A)",
+"dialog_page": null
+},
+{
+"key": "SerialNumber",
+"type": "string",
+"default": "",
+"category": "Sonstiges",
+"effect": "Seriennummer (leer)",
+"dialog_page": null
+},
+{
+"key": "MaxUndos",
+"type": "integer",
+"default": 20,
+"category": "Dialog: Allgemein",
+"effect": "Anzahl Rueckgaengig-Schritte",
+"dialog_page": "Allgemein"
+},
+{
+"key": "BrushDefaultColor",
+"type": "string",
+"default": "#000000",
+"category": "Dialog: Allgemein",
+"effect": "Standard-Strichfarbe",
+"dialog_page": "Allgemein"
+},
+{
+"key": "FillDefaultColor",
+"type": "string",
+"default": "#ffffff",
+"category": "Dialog: Allgemein",
+"effect": "Standard-Fuellfarbe",
+"dialog_page": "Allgemein"
+},
+{
+"key": "BrushMaskDefaultColor",
+"type": "string",
+"default": "#000000",
+"category": "Farbe",
+"effect": "Strichfarbe im Maskenmodus (Default)",
+"dialog_page": null
+},
+{
+"key": "FillMaskDefaultColor",
+"type": "string",
+"default": "#000000",
+"category": "Farbe",
+"effect": "Fuellfarbe im Maskenmodus (Default)",
+"dialog_page": null
+},
+{
+"key": "BrushCurrentColor",
+"type": "string",
+"default": "#000000",
+"category": "Farbe",
+"effect": "aktuelle Strichfarbe (zuletzt benutzt)",
+"dialog_page": null
+},
+{
+"key": "FillCurrentColor",
+"type": "string",
+"default": "#999999",
+"category": "Farbe",
+"effect": "aktuelle Fuellfarbe",
+"dialog_page": null
+},
+{
+"key": "BrushMaskCurrentColor",
+"type": "string",
+"default": "#000000",
+"category": "Farbe",
+"effect": "Strichfarbe im Maskenmodus (aktuell)",
+"dialog_page": null
+},
+{
+"key": "FillMaskCurrentColor",
+"type": "string",
+"default": "#000000",
+"category": "Farbe",
+"effect": "Fuellfarbe im Maskenmodus (aktuell)",
+"dialog_page": null
+},
+{
+"key": "BrushTipSize",
+"type": "integer",
+"default": 1,
+"category": "Fenster/Bedienfelder",
+"effect": "Pinselspitze Groesse (Pinselwerkzeug, A)",
+"dialog_page": null
+},
+{
+"key": "InspectorsAutoApply",
+"type": "bool",
+"default": false,
+"category": "Sonstiges",
+"effect": "Eigenschafteninspektor-Aenderungen sofort anwenden",
+"dialog_page": null
+},
+{
+"key": "ColorMixerAutoApply",
+"type": "bool",
+"default": false,
+"category": "Farbe",
+"effect": "Mischer-Aenderungen sofort anwenden",
+"dialog_page": null
+},
+{
+"key": "SelectionMouseOverPreview",
+"type": "bool",
+"default": true,
+"category": "Dialog: Bearbeiten",
+"effect": "Mausaktivierte Hervorhebung",
+"dialog_page": "Bearbeiten"
+},
+{
+"key": "PreviewDrag",
+"type": "bool",
+"default": true,
+"category": "Dialog: Bearbeiten",
+"effect": "Zieh-Vorschau",
+"dialog_page": "Bearbeiten"
+},
+{
+"key": "PreviewDragThreshInMilliseconds",
+"type": "integer",
+"default": 3000,
+"category": "System/Leistung",
+"effect": "Zieh-Vorschau Zeitschwelle (ms)",
+"dialog_page": null
+},
+{
+"key": "PointerToolPaintHandles",
+"type": "bool",
+"default": true,
+"category": "Dialog: Bearbeiten",
+"effect": "Fuellungsgriffe anzeigen",
+"dialog_page": "Bearbeiten"
+},
+{
+"key": "UseLastExportDirectory",
+"type": "bool",
+"default": true,
+"category": "Export",
+"effect": "letzten Exportordner wiederverwenden",
+"dialog_page": null
+},
+{
+"key": "UseSmallVectorImportPages",
+"type": "bool",
+"default": true,
+"category": "Sonstiges",
+"effect": "kleine Seitenvorschau beim Vektorimport (A)",
+"dialog_page": null
+},
+{
+"key": "ApplyNPreviewVisible",
+"type": "bool",
+"default": false,
+"category": "Fenster/Bedienfelder",
+"effect": "Vorschau in Anwenden-Dialogen (A)",
+"dialog_page": null
+},
+{
+"key": "AntiAliasFillAmount",
+"type": "integer",
+"default": 2,
+"category": "Sonstiges",
+"effect": "Breite der Kantenglaettung bei Fuellungen (A)",
+"dialog_page": null
+},
+{
+"key": "PencilAntiAlias",
+"type": "bool",
+"default": false,
+"category": "Sonstiges",
+"effect": "Bleistift geglaettet",
+"dialog_page": null
+},
+{
+"key": "PencilAutoErase",
+"type": "bool",
+"default": false,
+"category": "Sonstiges",
+"effect": "Bleistift Auto-Loeschen",
+"dialog_page": null
+},
+{
+"key": "ScrubPressure",
+"type": "bool",
+"default": true,
+"category": "Sonstiges",
+"effect": "Ziehregler: Druck",
+"dialog_page": null
+},
+{
+"key": "ScrubVelocity",
+"type": "bool",
+"default": true,
+"category": "Sonstiges",
+"effect": "Ziehregler: Geschwindigkeit",
+"dialog_page": null
+},
+{
+"key": "ScrubRate",
+"type": "integer",
+"default": 10,
+"category": "Sonstiges",
+"effect": "Ziehregler: Rate",
+"dialog_page": null
+},
+{
+"key": "FreeFormPushNPull_Preview",
+"type": "bool",
+"default": true,
+"category": "Sonstiges",
+"effect": "Freiform/Verbiegen-Werkzeug: PushNPull_Preview",
+"dialog_page": null
+},
+{
+"key": "FreeFormGravity_Preview",
+"type": "bool",
+"default": true,
+"category": "Sonstiges",
+"effect": "Freiform/Verbiegen-Werkzeug: Gravity_Preview",
+"dialog_page": null
+},
+{
+"key": "FreeFormPushNPullLen",
+"type": "integer",
+"default": 72,
+"category": "Sonstiges",
+"effect": "Freiform/Verbiegen-Werkzeug: PushNPullLen",
+"dialog_page": null
+},
+{
+"key": "FreeFormGravDiameter",
+"type": "integer",
+"default": 72,
+"category": "Sonstiges",
+"effect": "Freiform/Verbiegen-Werkzeug: GravDiameter",
+"dialog_page": null
+},
+{
+"key": "FreeFormGravPower",
+"type": "integer",
+"default": 80,
+"category": "Sonstiges",
+"effect": "Freiform/Verbiegen-Werkzeug: GravPower",
+"dialog_page": null
+},
+{
+"key": "FreeFormPushNPullLen_Sens",
+"type": "bool",
+"default": true,
+"category": "Sonstiges",
+"effect": "Freiform/Verbiegen-Werkzeug: PushNPullLen_Sens",
+"dialog_page": null
+},
+{
+"key": "FreeFormGravDiameter_Sens",
+"type": "bool",
+"default": true,
+"category": "Sonstiges",
+"effect": "Freiform/Verbiegen-Werkzeug: GravDiameter_Sens",
+"dialog_page": null
+},
+{
+"key": "FreeFormGravPower_Sens",
+"type": "bool",
+"default": false,
+"category": "Sonstiges",
+"effect": "Freiform/Verbiegen-Werkzeug: GravPower_Sens",
+"dialog_page": null
+},
+{
+"key": "CropTool_Constraint",
+"type": "integer",
+"default": 1,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Crop: _Constraint",
+"dialog_page": null
+},
+{
+"key": "CropTool_Horiz",
+"type": "integer",
+"default": 100,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Crop: _Horiz",
+"dialog_page": null
+},
+{
+"key": "CropTool_Vert",
+"type": "integer",
+"default": 100,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Crop: _Vert",
+"dialog_page": null
+},
+{
+"key": "WriteThumbnailPreview",
+"type": "bool",
+"default": true,
+"category": "Dialog: Allgemein",
+"effect": "Einzelseitenminiaturen (prVW) speichern",
+"dialog_page": "Allgemein"
+},
+{
+"key": "BezFitTolerance2",
+"type": "real",
+"default": 1.0,
+"category": "Sonstiges",
+"effect": "Kurvenanpassung (Freihand->Bezier): Tolerance2",
+"dialog_page": null
+},
+{
+"key": "BezFitCornerAngle",
+"type": "real",
+"default": 70.0,
+"category": "Sonstiges",
+"effect": "Kurvenanpassung (Freihand->Bezier): CornerAngle",
+"dialog_page": null
+},
+{
+"key": "BezFitMaxPctLenDiff",
+"type": "real",
+"default": 0.02,
+"category": "Sonstiges",
+"effect": "Kurvenanpassung (Freihand->Bezier): MaxPctLenDiff",
+"dialog_page": null
+},
+{
+"key": "BezFitExtraTightTolerance",
+"type": "real",
+"default": 0.001,
+"category": "Sonstiges",
+"effect": "Kurvenanpassung (Freihand->Bezier): ExtraTightTolerance",
+"dialog_page": null
+},
+{
+"key": "BezFitExtraTightToleranceStep",
+"type": "real",
+"default": -0.5,
+"category": "Sonstiges",
+"effect": "Kurvenanpassung (Freihand->Bezier): ExtraTightToleranceStep",
+"dialog_page": null
+},
+{
+"key": "BezHandlePickDist",
+"type": "integer",
+"default": 4,
+"category": "Hilfslinien/Raster",
+"effect": "Greifabstand Bezier-Griffe (px)",
+"dialog_page": null
+},
+{
+"key": "AlwaysAppendFileExtensions",
+"type": "bool",
+"default": true,
+"category": "Sonstiges",
+"effect": "Dateiendungen immer anhaengen",
+"dialog_page": null
+},
+{
+"key": "PolygonToolSides",
+"type": "integer",
+"default": 5,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Polygon: Sides",
+"dialog_page": null
+},
+{
+"key": "PolygonToolIsStar",
+"type": "bool",
+"default": false,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Polygon: IsStar",
+"dialog_page": null
+},
+{
+"key": "PolygonToolIsAuto",
+"type": "bool",
+"default": true,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Polygon: IsAuto",
+"dialog_page": null
+},
+{
+"key": "PolygonToolSpikiness",
+"type": "integer",
+"default": 38,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Polygon: Spikiness",
+"dialog_page": null
+},
+{
+"key": "RectToolCornerRadius",
+"type": "integer",
+"default": 300,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Rect: CornerRadius",
+"dialog_page": null
+},
+{
+"key": "EyeDropperExtraSamples",
+"type": "integer",
+"default": 0,
+"category": "Farbe",
+"effect": "Pipette: Radius n der Mittelung (0 = 1 Pixel, 1 = 3x3, 2 = 5x5)",
+"dialog_page": null
+},
+{
+"key": "EyedropperColorFormatPref",
+"type": "integer",
+"default": 0,
+"category": "Farbe",
+"effect": "Pipette \"Farbe kopieren\": 0 = HEX, 1 = RGBA (A)",
+"dialog_page": null
+},
+{
+"key": "StampToolMode",
+"type": "integer",
+"default": 0,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Stamp: Mode",
+"dialog_page": null
+},
+{
+"key": "StampToolSource",
+"type": "integer",
+"default": 0,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Stamp: Source",
+"dialog_page": null
+},
+{
+"key": "StampToolSize",
+"type": "integer",
+"default": 16,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Stamp: Size",
+"dialog_page": null
+},
+{
+"key": "StampToolEdge",
+"type": "integer",
+"default": 500,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Stamp: Edge",
+"dialog_page": null
+},
+{
+"key": "StampToolStampSpacing",
+"type": "integer",
+"default": 20,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Stamp: Abstand der Pinselabdruecke %",
+"dialog_page": null
+},
+{
+"key": "UseExtraPhotoshopPluginsDir",
+"type": "bool",
+"default": false,
+"category": "Dialog: Zusatzmodule",
+"effect": "zusaetzlicher Photoshop-Zusatzmodulordner aktiv",
+"dialog_page": "Zusatzmodule"
+},
+{
+"key": "UseExtraTexturesDir",
+"type": "bool",
+"default": false,
+"category": "Dialog: Zusatzmodule",
+"effect": "zusaetzlicher Texturordner aktiv",
+"dialog_page": "Zusatzmodule"
+},
+{
+"key": "UseExtraPatternsDir",
+"type": "bool",
+"default": false,
+"category": "Dialog: Zusatzmodule",
+"effect": "zusaetzlicher Musterordner aktiv",
+"dialog_page": "Zusatzmodule"
+},
+{
+"key": "ShowGrid",
+"type": "bool",
+"default": false,
+"category": "Dialog: Hilfslinien und Raster",
+"effect": "Raster anzeigen",
+"dialog_page": "Hilfslinien und Raster"
+},
+{
+"key": "ShowGuides",
+"type": "bool",
+"default": true,
+"category": "Dialog: Hilfslinien und Raster",
+"effect": "Hilfslinien anzeigen",
+"dialog_page": "Hilfslinien und Raster"
+},
+{
+"key": "SnapToGrids",
+"type": "bool",
+"default": false,
+"category": "Dialog: Hilfslinien und Raster",
+"effect": "Am Raster ausrichten",
+"dialog_page": "Hilfslinien und Raster"
+},
+{
+"key": "SnapToGuides",
+"type": "bool",
+"default": true,
+"category": "Dialog: Hilfslinien und Raster",
+"effect": "An Hilfslinien ausrichten",
+"dialog_page": "Hilfslinien und Raster"
+},
+{
+"key": "SnapDistance",
+"type": "integer",
+"default": 5,
+"category": "Dialog: Hilfslinien und Raster",
+"effect": "Fangabstand Hilfslinien/Raster (px)",
+"dialog_page": "Hilfslinien und Raster"
+},
+{
+"key": "PickDistance",
+"type": "integer",
+"default": 5,
+"category": "Dialog: Bearbeiten",
+"effect": "Markierungsabstand (px)",
+"dialog_page": "Bearbeiten"
+},
+{
+"key": "LockGuides",
+"type": "bool",
+"default": false,
+"category": "Dialog: Hilfslinien und Raster",
+"effect": "Hilfslinien sperren",
+"dialog_page": "Hilfslinien und Raster"
+},
+{
+"key": "GridHorizontalDistance",
+"type": "integer",
+"default": 36,
+"category": "Dialog: Hilfslinien und Raster",
+"effect": "Rasterabstand horizontal (px)",
+"dialog_page": "Hilfslinien und Raster"
+},
+{
+"key": "GridVerticalDistance",
+"type": "integer",
+"default": 36,
+"category": "Dialog: Hilfslinien und Raster",
+"effect": "Rasterabstand vertikal (px)",
+"dialog_page": "Hilfslinien und Raster"
+},
+{
+"key": "NewWindowsShowRulers",
+"type": "bool",
+"default": false,
+"category": "Fenster/Bedienfelder",
+"effect": "Lineale in neuen Fenstern",
+"dialog_page": null
+},
+{
+"key": "GuidePickDist",
+"type": "integer",
+"default": 4,
+"category": "Hilfslinien/Raster",
+"effect": "Greifabstand Hilfslinie (px)",
+"dialog_page": null
+},
+{
+"key": "GridGuideSnapDist",
+"type": "integer",
+"default": 8,
+"category": "Hilfslinien/Raster",
+"effect": "Fangabstand Raster (px, A)",
+"dialog_page": null
+},
+{
+"key": "GuideColor",
+"type": "string",
+"default": "#00ffff",
+"category": "Dialog: Hilfslinien und Raster",
+"effect": "Hilfslinienfarbe",
+"dialog_page": "Hilfslinien und Raster"
+},
+{
+"key": "GridColor",
+"type": "string",
+"default": "#00ffff",
+"category": "Dialog: Hilfslinien und Raster",
+"effect": "Rasterfarbe",
+"dialog_page": "Hilfslinien und Raster"
+},
+{
+"key": "DragOutThreshInPixels",
+"type": "integer",
+"default": 16,
+"category": "System/Leistung",
+"effect": "Ziehschwelle beim Herausziehen (px, A)",
+"dialog_page": null
+},
+{
+"key": "StopImageEditModeInPixels",
+"type": "integer",
+"default": 50,
+"category": "Sonstiges",
+"effect": "Abstand zum Beenden des Bitmap-Modus (px, A)",
+"dialog_page": null
+},
+{
+"key": "TextToolRevertsToPointer",
+"type": "bool",
+"default": true,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Text: RevertsToPointer",
+"dialog_page": null
+},
+{
+"key": "SmartShapeToolRevertsToPointer",
+"type": "bool",
+"default": false,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption SmartShape: RevertsToPointer",
+"dialog_page": null
+},
+{
+"key": "PhonyOpacityAlwaysFullyOpaque",
+"type": "integer",
+"default": 100,
+"category": "Sonstiges",
+"effect": "interner Deckkraft-Schalter (?)",
+"dialog_page": null
+},
+{
+"key": "WandToolTolerance",
+"type": "integer",
+"default": 32,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Wand: Toleranz",
+"dialog_page": null
+},
+{
+"key": "WandToolAntiAliased",
+"type": "bool",
+"default": false,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Wand: AntiAliased",
+"dialog_page": null
+},
+{
+"key": "WandToolFeatherAmount",
+"type": "integer",
+"default": 0,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Wand: FeatherAmount",
+"dialog_page": null
+},
+{
+"key": "MarqueeToolAntiAliased",
+"type": "bool",
+"default": false,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Marquee: AntiAliased",
+"dialog_page": null
+},
+{
+"key": "MarqueeToolFeatherAmount",
+"type": "integer",
+"default": 0,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Marquee: FeatherAmount",
+"dialog_page": null
+},
+{
+"key": "MarqueeToolMode",
+"type": "integer",
+"default": 0,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Marquee: Mode",
+"dialog_page": null
+},
+{
+"key": "MarqueeToolModeRatioX",
+"type": "integer",
+"default": 1,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Marquee: ModeRatioX",
+"dialog_page": null
+},
+{
+"key": "MarqueeToolModeRatioY",
+"type": "integer",
+"default": 2,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Marquee: ModeRatioY",
+"dialog_page": null
+},
+{
+"key": "MarqueeToolModeWidthX",
+"type": "integer",
+"default": 64,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Marquee: ModeWidthX",
+"dialog_page": null
+},
+{
+"key": "MarqueeToolModeWidthY",
+"type": "integer",
+"default": 64,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Marquee: ModeWidthY",
+"dialog_page": null
+},
+{
+"key": "LassoToolAntiAliased",
+"type": "bool",
+"default": false,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Lasso: AntiAliased",
+"dialog_page": null
+},
+{
+"key": "LassoToolFeatherAmount",
+"type": "integer",
+"default": 0,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Lasso: FeatherAmount",
+"dialog_page": null
+},
+{
+"key": "EraserToolDiameter",
+"type": "integer",
+"default": 13,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Eraser: Durchmesser (px)",
+"dialog_page": null
+},
+{
+"key": "EraserToolSoftEdge",
+"type": "integer",
+"default": 20,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Eraser: Kantenweichheit (Promille, A)",
+"dialog_page": null
+},
+{
+"key": "EraserToolIsCircle",
+"type": "bool",
+"default": true,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Eraser: runde Spitze",
+"dialog_page": null
+},
+{
+"key": "EraserToolOpacity",
+"type": "integer",
+"default": 100,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Eraser: Deckkraft %",
+"dialog_page": null
+},
+{
+"key": "EraserToolStampSpacing",
+"type": "integer",
+"default": 20,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Eraser: Abstand der Pinselabdruecke %",
+"dialog_page": null
+},
+{
+"key": "EraserToolPressureAffectsSize",
+"type": "bool",
+"default": false,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Eraser: Stiftdruck beeinflusst PressureAffectsSize",
+"dialog_page": null
+},
+{
+"key": "EraserToolPressureAffectsOpacity",
+"type": "bool",
+"default": true,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Eraser: Stiftdruck beeinflusst PressureAffectsOpacity",
+"dialog_page": null
+},
+{
+"key": "BlurToolDiameter",
+"type": "integer",
+"default": 13,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Blur: Durchmesser (px)",
+"dialog_page": null
+},
+{
+"key": "BlurToolSoftEdge",
+"type": "integer",
+"default": 1000,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Blur: Kantenweichheit (Promille, A)",
+"dialog_page": null
+},
+{
+"key": "BlurToolIsCircle",
+"type": "bool",
+"default": true,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Blur: runde Spitze",
+"dialog_page": null
+},
+{
+"key": "BlurToolStampSpacing",
+"type": "integer",
+"default": 20,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Blur: Abstand der Pinselabdruecke %",
+"dialog_page": null
+},
+{
+"key": "BlurToolIntensity",
+"type": "integer",
+"default": 50,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Blur: Intensity",
+"dialog_page": null
+},
+{
+"key": "BlurToolBlendMode",
+"type": "integer",
+"default": 0,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Blur: Mischmodus",
+"dialog_page": null
+},
+{
+"key": "BlurToolPressureAffectsSize",
+"type": "bool",
+"default": false,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Blur: Stiftdruck beeinflusst PressureAffectsSize",
+"dialog_page": null
+},
+{
+"key": "BlurToolPressureAffectsIntensity",
+"type": "bool",
+"default": true,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Blur: Stiftdruck beeinflusst PressureAffectsIntensity",
+"dialog_page": null
+},
+{
+"key": "SharpenToolDiameter",
+"type": "integer",
+"default": 13,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Sharpen: Durchmesser (px)",
+"dialog_page": null
+},
+{
+"key": "SharpenToolSoftEdge",
+"type": "integer",
+"default": 1000,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Sharpen: Kantenweichheit (Promille, A)",
+"dialog_page": null
+},
+{
+"key": "SharpenToolIsCircle",
+"type": "bool",
+"default": true,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Sharpen: runde Spitze",
+"dialog_page": null
+},
+{
+"key": "SharpenToolStampSpacing",
+"type": "integer",
+"default": 20,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Sharpen: Abstand der Pinselabdruecke %",
+"dialog_page": null
+},
+{
+"key": "SharpenToolIntensity",
+"type": "integer",
+"default": 50,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Sharpen: Intensity",
+"dialog_page": null
+},
+{
+"key": "SharpenToolBlendMode",
+"type": "integer",
+"default": 0,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Sharpen: Mischmodus",
+"dialog_page": null
+},
+{
+"key": "SharpenToolPressureAffectsSize",
+"type": "bool",
+"default": false,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Sharpen: Stiftdruck beeinflusst PressureAffectsSize",
+"dialog_page": null
+},
+{
+"key": "SharpenToolPressureAffectsIntensity",
+"type": "bool",
+"default": true,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Sharpen: Stiftdruck beeinflusst PressureAffectsIntensity",
+"dialog_page": null
+},
+{
+"key": "DodgeToolDiameter",
+"type": "integer",
+"default": 13,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Dodge: Durchmesser (px)",
+"dialog_page": null
+},
+{
+"key": "DodgeToolSoftEdge",
+"type": "integer",
+"default": 1000,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Dodge: Kantenweichheit (Promille, A)",
+"dialog_page": null
+},
+{
+"key": "DodgeToolIsCircle",
+"type": "bool",
+"default": true,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Dodge: runde Spitze",
+"dialog_page": null
+},
+{
+"key": "DodgeToolStampSpacing",
+"type": "integer",
+"default": 20,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Dodge: Abstand der Pinselabdruecke %",
+"dialog_page": null
+},
+{
+"key": "DodgeToolExposure",
+"type": "integer",
+"default": 50,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Dodge: Exposure",
+"dialog_page": null
+},
+{
+"key": "DodgeToolRange",
+"type": "integer",
+"default": 1,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Dodge: Range",
+"dialog_page": null
+},
+{
+"key": "DodgeToolPressureAffectsSize",
+"type": "bool",
+"default": false,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Dodge: Stiftdruck beeinflusst PressureAffectsSize",
+"dialog_page": null
+},
+{
+"key": "DodgeToolPressureAffectsExposure",
+"type": "bool",
+"default": true,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Dodge: Stiftdruck beeinflusst PressureAffectsExposure",
+"dialog_page": null
+},
+{
+"key": "BurnToolDiameter",
+"type": "integer",
+"default": 13,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Burn: Durchmesser (px)",
+"dialog_page": null
+},
+{
+"key": "BurnToolSoftEdge",
+"type": "integer",
+"default": 1000,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Burn: Kantenweichheit (Promille, A)",
+"dialog_page": null
+},
+{
+"key": "BurnToolIsCircle",
+"type": "bool",
+"default": true,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Burn: runde Spitze",
+"dialog_page": null
+},
+{
+"key": "BurnToolStampSpacing",
+"type": "integer",
+"default": 20,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Burn: Abstand der Pinselabdruecke %",
+"dialog_page": null
+},
+{
+"key": "BurnToolExposure",
+"type": "integer",
+"default": 50,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Burn: Exposure",
+"dialog_page": null
+},
+{
+"key": "BurnToolRange",
+"type": "integer",
+"default": 1,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Burn: Range",
+"dialog_page": null
+},
+{
+"key": "BurnToolPressureAffectsSize",
+"type": "bool",
+"default": false,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Burn: Stiftdruck beeinflusst PressureAffectsSize",
+"dialog_page": null
+},
+{
+"key": "BurnToolPressureAffectsExposure",
+"type": "bool",
+"default": true,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Burn: Stiftdruck beeinflusst PressureAffectsExposure",
+"dialog_page": null
+},
+{
+"key": "SmudgeToolDiameter",
+"type": "integer",
+"default": 22,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Smudge: Durchmesser (px)",
+"dialog_page": null
+},
+{
+"key": "SmudgeToolSoftEdge",
+"type": "integer",
+"default": 500,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Smudge: Kantenweichheit (Promille, A)",
+"dialog_page": null
+},
+{
+"key": "SmudgeToolIsCircle",
+"type": "bool",
+"default": true,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Smudge: runde Spitze",
+"dialog_page": null
+},
+{
+"key": "SmudgeToolStampSpacing",
+"type": "integer",
+"default": 20,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Smudge: Abstand der Pinselabdruecke %",
+"dialog_page": null
+},
+{
+"key": "SmudgeToolPressure",
+"type": "integer",
+"default": 50,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Smudge: Pressure",
+"dialog_page": null
+},
+{
+"key": "SmudgeToolBlendMode",
+"type": "integer",
+"default": 0,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Smudge: Mischmodus",
+"dialog_page": null
+},
+{
+"key": "SmudgeToolUseEntireDocument",
+"type": "bool",
+"default": false,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Smudge: UseEntireDocument",
+"dialog_page": null
+},
+{
+"key": "SmudgeToolFingerPaint",
+"type": "bool",
+"default": false,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Smudge: FingerPaint",
+"dialog_page": null
+},
+{
+"key": "SmudgeToolFingerPaintColor",
+"type": "bool",
+"default": false,
+"category": "Farbe",
+"effect": "Werkzeugoption Smudge: FingerPaintColor",
+"dialog_page": null
+},
+{
+"key": "SmudgeToolPressureAffectsSize",
+"type": "bool",
+"default": false,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Smudge: Stiftdruck beeinflusst PressureAffectsSize",
+"dialog_page": null
+},
+{
+"key": "SmudgeToolPressureAffectsPressure",
+"type": "bool",
+"default": true,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Smudge: Stiftdruck beeinflusst PressureAffectsPressure",
+"dialog_page": null
+},
+{
+"key": "RedEyeRemovalToolDiameter",
+"type": "integer",
+"default": 13,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption RedEyeRemoval: Durchmesser (px)",
+"dialog_page": null
+},
+{
+"key": "RedEyeRemovalToolIsCircle",
+"type": "bool",
+"default": true,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption RedEyeRemoval: runde Spitze",
+"dialog_page": null
+},
+{
+"key": "RedEyeRemovalToolMinLuminancePercentage",
+"type": "integer",
+"default": 25,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption RedEyeRemoval: MinLuminancePercentage",
+"dialog_page": null
+},
+{
+"key": "RedEyeRemovalToolMaxLuminancePercentage",
+"type": "integer",
+"default": 100,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption RedEyeRemoval: MaxLuminancePercentage",
+"dialog_page": null
+},
+{
+"key": "RedEyeRemovalToolMinSaturationPercentage",
+"type": "integer",
+"default": 50,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption RedEyeRemoval: MinSaturationPercentage",
+"dialog_page": null
+},
+{
+"key": "RedEyeRemovalToolMaxSaturationPercentage",
+"type": "integer",
+"default": 100,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption RedEyeRemoval: MaxSaturationPercentage",
+"dialog_page": null
+},
+{
+"key": "RedEyeRemovalToolTolerance",
+"type": "integer",
+"default": 50,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption RedEyeRemoval: Toleranz",
+"dialog_page": null
+},
+{
+"key": "RedEyeRemovalToolMinHueAngle",
+"type": "real",
+"default": 300.0,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption RedEyeRemoval: MinHueAngle",
+"dialog_page": null
+},
+{
+"key": "RedEyeRemovalToolMaxHueAngle",
+"type": "real",
+"default": 5.0,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption RedEyeRemoval: MaxHueAngle",
+"dialog_page": null
+},
+{
+"key": "RedEyeRemovalToolStrength",
+"type": "integer",
+"default": 50,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption RedEyeRemoval: Strength",
+"dialog_page": null
+},
+{
+"key": "RedEyeRemovalToolUseGreenBias",
+"type": "bool",
+"default": true,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption RedEyeRemoval: UseGreenBias",
+"dialog_page": null
+},
+{
+"key": "ReplaceColorToolDiameter",
+"type": "integer",
+"default": 13,
+"category": "Farbe",
+"effect": "Werkzeugoption ReplaceColor: Durchmesser (px)",
+"dialog_page": null
+},
+{
+"key": "ReplaceColorToolIsCircle",
+"type": "bool",
+"default": true,
+"category": "Farbe",
+"effect": "Werkzeugoption ReplaceColor: runde Spitze",
+"dialog_page": null
+},
+{
+"key": "ReplaceColorToolTolerance",
+"type": "bool",
+"default": false,
+"category": "Farbe",
+"effect": "Werkzeugoption ReplaceColor: Toleranz",
+"dialog_page": null
+},
+{
+"key": "ReplaceColorToolStrength",
+"type": "bool",
+"default": false,
+"category": "Farbe",
+"effect": "Werkzeugoption ReplaceColor: Strength",
+"dialog_page": null
+},
+{
+"key": "ReplaceColorToolSrcColor",
+"type": "string",
+"default": "#00FF00",
+"category": "Farbe",
+"effect": "Werkzeugoption ReplaceColor: SrcColor",
+"dialog_page": null
+},
+{
+"key": "ReplaceColorToolDestColor",
+"type": "string",
+"default": "#FF0000",
+"category": "Farbe",
+"effect": "Werkzeugoption ReplaceColor: DestColor",
+"dialog_page": null
+},
+{
+"key": "ReplaceColorToolColorize",
+"type": "bool",
+"default": false,
+"category": "Farbe",
+"effect": "Werkzeugoption ReplaceColor: Colorize",
+"dialog_page": null
+},
+{
+"key": "LZWSmoothingAmount",
+"type": "integer",
+"default": 7,
+"category": "Sonstiges",
+"effect": "LZW-Glaettung beim GIF-Export (siehe 08-export.md)",
+"dialog_page": null
+},
+{
+"key": "WebsnapRange",
+"type": "integer",
+"default": 14,
+"category": "Farbe",
+"effect": "Websnap-Toleranz fuer neue Exporteinstellungen (siehe 08-export.md)",
+"dialog_page": null
+},
+{
+"key": "FeedbackColor",
+"type": "string",
+"default": "#00a8ff",
+"category": "Farbe",
+"effect": "Hervorhebungsfarbe (Mouse-over)",
+"dialog_page": null
+},
+{
+"key": "SecondaryFeedbackColor",
+"type": "string",
+"default": "#e00000",
+"category": "Farbe",
+"effect": "zweite Hervorhebungsfarbe",
+"dialog_page": null
+},
+{
+"key": "MaskBarberColor",
+"type": "string",
+"default": "#66ff00",
+"category": "Farbe",
+"effect": "Farbe der Bitmap-Auswahlmarkierung",
+"dialog_page": null
+},
+{
+"key": "CustomCanvasColor",
+"type": "string",
+"default": "#000000",
+"category": "Farbe",
+"effect": "benutzerdefinierte Leinwandfarbe (Neues Dokument)",
+"dialog_page": null
+},
+{
+"key": "SliceGuideColor",
+"type": "string",
+"default": "#ff4a4a",
+"category": "Dialog: Hilfslinien und Raster",
+"effect": "Farbe der Segmenthilfslinien",
+"dialog_page": "Hilfslinien und Raster"
+},
+{
+"key": "SelectiveJPEGColor",
+"type": "string",
+"default": "#ff0080",
+"category": "Farbe",
+"effect": "Overlay-Farbe der selektiven JPEG-Maske",
+"dialog_page": null
+},
+{
+"key": "SelectiveJPEGOpacity",
+"type": "integer",
+"default": 64,
+"category": "Sonstiges",
+"effect": "Deckkraft der selektiven JPEG-Maske %",
+"dialog_page": null
+},
+{
+"key": "SingleLayerEditing",
+"type": "bool",
+"default": false,
+"category": "Sonstiges",
+"effect": "nur aktuelle Ebene bearbeiten",
+"dialog_page": null
+},
+{
+"key": "FillToolFillsSelection",
+"type": "bool",
+"default": false,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Fill: FillsSelection",
+"dialog_page": null
+},
+{
+"key": "FillToolMouseOverPreview",
+"type": "bool",
+"default": true,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Fill: MouseOverPreview",
+"dialog_page": null
+},
+{
+"key": "FillToolOpacity",
+"type": "integer",
+"default": 100,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Fill: Deckkraft %",
+"dialog_page": null
+},
+{
+"key": "FillToolBlendMode",
+"type": "integer",
+"default": 0,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Fill: Mischmodus",
+"dialog_page": null
+},
+{
+"key": "FillToolPreserveAlpha",
+"type": "bool",
+"default": false,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Fill: PreserveAlpha",
+"dialog_page": null
+},
+{
+"key": "FillToolTolerance",
+"type": "integer",
+"default": 32,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Fill: Toleranz",
+"dialog_page": null
+},
+{
+"key": "GradientToolFillsSelection",
+"type": "bool",
+"default": true,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Gradient: FillsSelection",
+"dialog_page": null
+},
+{
+"key": "GradientToolMouseOverPreview",
+"type": "bool",
+"default": true,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Gradient: MouseOverPreview",
+"dialog_page": null
+},
+{
+"key": "GradientToolOpacity",
+"type": "integer",
+"default": 100,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Gradient: Deckkraft %",
+"dialog_page": null
+},
+{
+"key": "GradientToolBlendMode",
+"type": "integer",
+"default": 0,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Gradient: Mischmodus",
+"dialog_page": null
+},
+{
+"key": "GradientToolPreserveAlpha",
+"type": "bool",
+"default": false,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Gradient: PreserveAlpha",
+"dialog_page": null
+},
+{
+"key": "GradientToolTolerance",
+"type": "integer",
+"default": 32,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Gradient: Toleranz",
+"dialog_page": null
+},
+{
+"key": "GradientToolIsDirectionVertical",
+"type": "bool",
+"default": true,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Gradient: IsDirectionVertical",
+"dialog_page": null
+},
+{
+"key": "TryToRetainLayers",
+"type": "bool",
+"default": true,
+"category": "Sonstiges",
+"effect": "Ebenen beim Import erhalten (A)",
+"dialog_page": null
+},
+{
+"key": "UseFWFilters",
+"type": "bool",
+"default": false,
+"category": "Dialog: Photoshop-Datei importieren/oeffnen",
+"effect": "native Filter statt PS-Live-Effekte",
+"dialog_page": "Photoshop-Datei importieren/oeffnen"
+},
+{
+"key": "PathToolPrecision",
+"type": "integer",
+"default": 5,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Path: Precision",
+"dialog_page": null
+},
+{
+"key": "AllowPictRgba",
+"type": "bool",
+"default": true,
+"category": "Sonstiges",
+"effect": "PICT mit Alpha",
+"dialog_page": null
+},
+{
+"key": "ExpandAnimatedGifFrames",
+"type": "bool",
+"default": true,
+"category": "Sonstiges",
+"effect": "Pfad erweitern: AnimatedGifFrames",
+"dialog_page": null
+},
+{
+"key": "Transmogrify",
+"type": "integer",
+"default": 736,
+"category": "Sonstiges",
+"effect": "interner Schalter (Bitfeld, ?)",
+"dialog_page": null
+},
+{
+"key": "MoveBitsWithPtrToolUsesFillColor",
+"type": "bool",
+"default": true,
+"category": "Farbe",
+"effect": "Werkzeugoption MoveBitsWithPtr: UsesFillColor",
+"dialog_page": null
+},
+{
+"key": "SaveAsMinimalFileWithBogusPngData",
+"type": "bool",
+"default": false,
+"category": "Sonstiges",
+"effect": "Testschalter: Minimaldatei mit Platzhalter-PNG (?)",
+"dialog_page": null
+},
+{
+"key": "SaveTextCachedImages",
+"type": "bool",
+"default": true,
+"category": "Sonstiges",
+"effect": "zwischengespeicherte Textbilder in .fw.png schreiben (A)",
+"dialog_page": null
+},
+{
+"key": "ShowAllFontsInMenu",
+"type": "bool",
+"default": true,
+"category": "Text",
+"effect": "alle Schriften im Menue",
+"dialog_page": null
+},
+{
+"key": "MakeDocsDirtyOnOpen",
+"type": "bool",
+"default": false,
+"category": "Sonstiges",
+"effect": "Dokument beim Oeffnen als geaendert markieren",
+"dialog_page": null
+},
+{
+"key": "ScriptFilesSaveAsText",
+"type": "bool",
+"default": true,
+"category": "Sonstiges",
+"effect": "Skripte als Text speichern",
+"dialog_page": null
+},
+{
+"key": "Text_Size",
+"type": "real",
+"default": 12.0,
+"category": "Text",
+"effect": "Textwerkzeug: Groesse",
+"dialog_page": null
+},
+{
+"key": "Text_Bold",
+"type": "bool",
+"default": false,
+"category": "Text",
+"effect": "Textwerkzeug-Vorgabe: Bold",
+"dialog_page": null
+},
+{
+"key": "Text_Italic",
+"type": "bool",
+"default": false,
+"category": "Text",
+"effect": "Textwerkzeug-Vorgabe: Italic",
+"dialog_page": null
+},
+{
+"key": "Text_Underline",
+"type": "bool",
+"default": false,
+"category": "Text",
+"effect": "Textwerkzeug-Vorgabe: Underline",
+"dialog_page": null
+},
+{
+"key": "Text_Leading",
+"type": "real",
+"default": 1.2,
+"category": "Text",
+"effect": "Textwerkzeug: Zeilenabstand",
+"dialog_page": null
+},
+{
+"key": "Text_LeadingMode",
+"type": "integer",
+"default": 0,
+"category": "Text",
+"effect": "Zeilenabstand-Modus 0 % / 1 exakt",
+"dialog_page": null
+},
+{
+"key": "Text_Justification",
+"type": "integer",
+"default": 0,
+"category": "Text",
+"effect": "Textwerkzeug-Vorgabe: Justification",
+"dialog_page": null
+},
+{
+"key": "Text_Orientation",
+"type": "integer",
+"default": 0,
+"category": "Text",
+"effect": "Textwerkzeug-Vorgabe: Orientation",
+"dialog_page": null
+},
+{
+"key": "Text_RangeKerning",
+"type": "real",
+"default": 0.0,
+"category": "Text",
+"effect": "Textwerkzeug-Vorgabe: RangeKerning",
+"dialog_page": null
+},
+{
+"key": "Text_HorizScale",
+"type": "real",
+"default": 1.0,
+"category": "Text",
+"effect": "Textwerkzeug-Vorgabe: HorizScale",
+"dialog_page": null
+},
+{
+"key": "Text_BaselineShift",
+"type": "real",
+"default": 0.0,
+"category": "Text",
+"effect": "Textwerkzeug-Vorgabe: BaselineShift",
+"dialog_page": null
+},
+{
+"key": "Text_AntiAliasedFill",
+"type": "bool",
+"default": true,
+"category": "Text",
+"effect": "Textwerkzeug-Vorgabe: AntiAliasedFill",
+"dialog_page": null
+},
+{
+"key": "Text_AntiAliasLevel",
+"type": "integer",
+"default": 0,
+"category": "Text",
+"effect": "Textwerkzeug-Vorgabe: AntiAliasLevel",
+"dialog_page": null
+},
+{
+"key": "Text_AutoKern",
+"type": "bool",
+"default": false,
+"category": "Text",
+"effect": "Textwerkzeug-Vorgabe: AutoKern",
+"dialog_page": null
+},
+{
+"key": "Text_FillColor",
+"type": "string",
+"default": "#000000",
+"category": "Farbe",
+"effect": "Textwerkzeug: Farbe",
+"dialog_page": null
+},
+{
+"key": "Text_ParagraphIndent",
+"type": "real",
+"default": 0.0,
+"category": "Text",
+"effect": "Textwerkzeug-Vorgabe: ParagraphIndent",
+"dialog_page": null
+},
+{
+"key": "Text_ParagraphSpacingBefore",
+"type": "real",
+"default": 0.0,
+"category": "Text",
+"effect": "Textwerkzeug-Vorgabe: ParagraphSpacingBefore",
+"dialog_page": null
+},
+{
+"key": "Text_ParagraphSpacingAfter",
+"type": "real",
+"default": 0.0,
+"category": "Text",
+"effect": "Textwerkzeug-Vorgabe: ParagraphSpacingAfter",
+"dialog_page": null
+},
+{
+"key": "TextEditor_ShowFont",
+"type": "bool",
+"default": true,
+"category": "Text",
+"effect": "Texteditor: ShowFont",
+"dialog_page": null
+},
+{
+"key": "TextEditor_ShowSizeAndColor",
+"type": "bool",
+"default": true,
+"category": "Farbe",
+"effect": "Texteditor: ShowSizeAndColor",
+"dialog_page": null
+},
+{
+"key": "TextEditor_AutoApply",
+"type": "bool",
+"default": true,
+"category": "Text",
+"effect": "Texteditor: AutoApply",
+"dialog_page": null
+},
+{
+"key": "TextEditor_AutoApplyTime",
+"type": "integer",
+"default": 250,
+"category": "Text",
+"effect": "Texteditor: AutoApplyTime",
+"dialog_page": null
+},
+{
+"key": "ResizeConstrain",
+"type": "bool",
+"default": true,
+"category": "Sonstiges",
+"effect": "Bildgroesse: Proportionen beibehalten",
+"dialog_page": null
+},
+{
+"key": "ResizeResample",
+"type": "bool",
+"default": true,
+"category": "Sonstiges",
+"effect": "Bildgroesse: Bild neu berechnen",
+"dialog_page": null
+},
+{
+"key": "TextEditor_RememberALLSettings",
+"type": "bool",
+"default": false,
+"category": "Text",
+"effect": "Texteditor: RememberALLSettings",
+"dialog_page": null
+},
+{
+"key": "TwainSource",
+"type": "string",
+"default": "",
+"category": "Sonstiges",
+"effect": "TWAIN-Quelle",
+"dialog_page": null
+},
+{
+"key": "BlackAndWhiteForDirector",
+"type": "bool",
+"default": false,
+"category": "Sonstiges",
+"effect": "Director-Export schwarzweiss (A)",
+"dialog_page": null
+},
+{
+"key": "NewDocHTMLTemplate",
+"type": "string",
+"default": "Dreamweaver",
+"category": "Sonstiges",
+"effect": "HTML-Vorlage neues Dokument",
+"dialog_page": null
+},
+{
+"key": "NewDocSlicing",
+"type": "integer",
+"default": 0,
+"category": "Sonstiges",
+"effect": "Segmentierung neues Dokument",
+"dialog_page": null
+},
+{
+"key": "DefaultDocHtmlEncoding",
+"type": "integer",
+"default": 1,
+"category": "Sonstiges",
+"effect": "HTML-Kodierung neues Dokument (A)",
+"dialog_page": null
+},
+{
+"key": "DefaultUseXHTML",
+"type": "bool",
+"default": true,
+"category": "Sonstiges",
+"effect": "HTML-Export: XHTML",
+"dialog_page": null
+},
+{
+"key": "DefaultUseExternalCSS",
+"type": "bool",
+"default": true,
+"category": "Sonstiges",
+"effect": "HTML-Export: externe CSS",
+"dialog_page": null
+},
+{
+"key": "SavePngWithAdam7Interlacing",
+"type": "bool",
+"default": false,
+"category": "Sonstiges",
+"effect": ".fw.png mit Adam7 speichern",
+"dialog_page": null
+},
+{
+"key": "ExportPngWithAdam7Interlacing",
+"type": "bool",
+"default": false,
+"category": "Export",
+"effect": "PNG-Export mit Adam7",
+"dialog_page": null
+},
+{
+"key": "BezInterpMaxErr",
+"type": "integer",
+"default": 8,
+"category": "Sonstiges",
+"effect": "Kurveninterpolation max. Fehler",
+"dialog_page": null
+},
+{
+"key": "SaveMkb1CompatFiles",
+"type": "bool",
+"default": true,
+"category": "Sonstiges",
+"effect": "mit aelteren Versionen kompatible Chunks schreiben (A)",
+"dialog_page": null
+},
+{
+"key": "CropToolStickiness",
+"type": "integer",
+"default": 20,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Crop: Stickiness",
+"dialog_page": null
+},
+{
+"key": "SimplifyAmount",
+"type": "integer",
+"default": 10,
+"category": "Sonstiges",
+"effect": "Pfad vereinfachen: Betrag",
+"dialog_page": null
+},
+{
+"key": "ExpandCapType",
+"type": "integer",
+"default": 0,
+"category": "Sonstiges",
+"effect": "Pfad erweitern: CapType",
+"dialog_page": null
+},
+{
+"key": "ExpandJoinType",
+"type": "integer",
+"default": 0,
+"category": "Sonstiges",
+"effect": "Pfad erweitern: JoinType",
+"dialog_page": null
+},
+{
+"key": "ExpandWidth",
+"type": "integer",
+"default": 10,
+"category": "Sonstiges",
+"effect": "Pfad erweitern: Width",
+"dialog_page": null
+},
+{
+"key": "ExpandMiterLimit",
+"type": "integer",
+"default": 10,
+"category": "Sonstiges",
+"effect": "Pfad erweitern: MiterLimit",
+"dialog_page": null
+},
+{
+"key": "InsetDirection",
+"type": "integer",
+"default": 0,
+"category": "Sonstiges",
+"effect": "Pfad einfuegen/versetzen: Direction",
+"dialog_page": null
+},
+{
+"key": "InsetJoinType",
+"type": "integer",
+"default": 0,
+"category": "Sonstiges",
+"effect": "Pfad einfuegen/versetzen: JoinType",
+"dialog_page": null
+},
+{
+"key": "InsetAmount",
+"type": "integer",
+"default": 10,
+"category": "Sonstiges",
+"effect": "Pfad einfuegen/versetzen: Amount",
+"dialog_page": null
+},
+{
+"key": "InsetMiterLimit",
+"type": "integer",
+"default": 10,
+"category": "Sonstiges",
+"effect": "Pfad einfuegen/versetzen: MiterLimit",
+"dialog_page": null
+},
+{
+"key": "UsePrecisionCursors",
+"type": "bool",
+"default": false,
+"category": "Dialog: Bearbeiten",
+"effect": "Praezise Cursor",
+"dialog_page": "Bearbeiten"
+},
+{
+"key": "UseBrushSizeCursors",
+"type": "bool",
+"default": true,
+"category": "Dialog: Bearbeiten",
+"effect": "Pinselstaerke im Malen-Cursor",
+"dialog_page": "Bearbeiten"
+},
+{
+"key": "ExportSilently",
+"type": "bool",
+"default": true,
+"category": "Export",
+"effect": "ohne Rueckfrage exportieren (A)",
+"dialog_page": null
+},
+{
+"key": "PixelTrimThreshold",
+"type": "integer",
+"default": 1,
+"category": "System/Leistung",
+"effect": "Alphaschwelle fuer \"Leinwand trimmen\": Pixel zaehlt, wenn Alpha > Wert",
+"dialog_page": null
+},
+{
+"key": "XformToolXformsBFE",
+"type": "bool",
+"default": true,
+"category": "Dialog: Allgemein",
+"effect": "Pinselstriche und Effekte beim Skalieren mitskalieren",
+"dialog_page": "Allgemein"
+},
+{
+"key": "NumericXformXformsBFE",
+"type": "bool",
+"default": true,
+"category": "Sonstiges",
+"effect": "numerische Transformation skaliert Striche/Effekte",
+"dialog_page": null
+},
+{
+"key": "TransformConstrain",
+"type": "bool",
+"default": true,
+"category": "Sonstiges",
+"effect": "numerische Transformation: Proportionen",
+"dialog_page": null
+},
+{
+"key": "TransformToolsAutoTrim",
+"type": "bool",
+"default": true,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Transform: sAutoTrim",
+"dialog_page": null
+},
+{
+"key": "XPDPaletteFeedback",
+"type": "bool",
+"default": true,
+"category": "Sonstiges",
+"effect": "Exportvorschau: Paletten-Rueckmeldung",
+"dialog_page": null
+},
+{
+"key": "OriginalFilesFolderName",
+"type": "string",
+"default": "Original Files",
+"category": "Sonstiges",
+"effect": "Sicherungsordner Stapelverarbeitung",
+"dialog_page": null
+},
+{
+"key": "ReplaceLogFileName",
+"type": "string",
+"default": "Project_Log.htm",
+"category": "Sonstiges",
+"effect": "Protokolldatei Suchen/Ersetzen",
+"dialog_page": null
+},
+{
+"key": "MultiFileSearchTypes",
+"type": "string",
+"default": "(PNG) (kMoaCfFormat_FreeHand7and8) (AI3) (kMoaCF_FirepixelCorelDrawReader) (kMoaCfFormat_PS30)",
+"category": "Sonstiges",
+"effect": "Dateitypen Suchen/Ersetzen",
+"dialog_page": null
+},
+{
+"key": "MultiFileBatchTypes",
+"type": "string",
+"default": "(PNG) (kMoaCfFormat_GIF) (kMoaCfFormat_JPEG) (kMoaCfFormat_TIFF) (kMoaCfFormat_PS30) (kMoaCfFormat_PICT) (kMoaCfFormat_BMP) (kMoaCfFormat_TGA) (kMoaCfFormat_WBMP)",
+"category": "Sonstiges",
+"effect": "Dateitypen Stapelverarbeitung",
+"dialog_page": null
+},
+{
+"key": "FFSearchFont",
+"type": "string",
+"default": "",
+"category": "Text",
+"effect": "Suchen: Schrift",
+"dialog_page": null
+},
+{
+"key": "FFReplaceFont",
+"type": "string",
+"default": "",
+"category": "Text",
+"effect": "Ersetzen: Schrift",
+"dialog_page": null
+},
+{
+"key": "FindReplaceOptions_SaveNClose",
+"type": "integer",
+"default": 1,
+"category": "Sonstiges",
+"effect": "Suchen/Ersetzen: SaveNClose",
+"dialog_page": null
+},
+{
+"key": "FindReplaceOptions_BackupOpts",
+"type": "integer",
+"default": 1,
+"category": "Sonstiges",
+"effect": "Suchen/Ersetzen: BackupOpts",
+"dialog_page": null
+},
+{
+"key": "FindReplaceOptions_LogChanges",
+"type": "integer",
+"default": 1,
+"category": "Sonstiges",
+"effect": "Suchen/Ersetzen: LogChanges",
+"dialog_page": null
+},
+{
+"key": "FindReplaceOptions_ReplaceThenFind",
+"type": "integer",
+"default": 1,
+"category": "Sonstiges",
+"effect": "Suchen/Ersetzen: ReplaceThenFind",
+"dialog_page": null
+},
+{
+"key": "StylesOptions_LargePreview",
+"type": "integer",
+"default": 0,
+"category": "Sonstiges",
+"effect": "Stile: grosse Vorschau",
+"dialog_page": null
+},
+{
+"key": "InfoPanelColorModel",
+"type": "integer",
+"default": 1,
+"category": "Farbe",
+"effect": "Info-Bedienfeld Farbmodell (Optionen Hex/RGB/CMY/HSB)",
+"dialog_page": null
+},
+{
+"key": "InfoPanelRulerUnits",
+"type": "integer",
+"default": 0,
+"category": "Fenster/Bedienfelder",
+"effect": "Info-Bedienfeld Einheit: 0 Pixel, 1 Zoll, 2 Zentimeter (A)",
+"dialog_page": null
+},
+{
+"key": "ColorMixerColorModel",
+"type": "integer",
+"default": 1,
+"category": "Farbe",
+"effect": "Farbmischer-Modell: 0 RGB, 1 Hex, 2 CMY, 3 HSB, 4 Graustufen",
+"dialog_page": null
+},
+{
+"key": "CurrentFavoritesFile",
+"type": "string",
+"default": "URLs.htm",
+"category": "Zuletzt benutzt",
+"effect": "URL-Bibliotheksdatei",
+"dialog_page": null
+},
+{
+"key": "OnionSkin_BeforeOpacity",
+"type": "integer",
+"default": 40,
+"category": "Sonstiges",
+"effect": "Zwiebelschichten: BeforeOpacity",
+"dialog_page": null
+},
+{
+"key": "OnionSkin_AfterOpacity",
+"type": "integer",
+"default": 20,
+"category": "Sonstiges",
+"effect": "Zwiebelschichten: AfterOpacity",
+"dialog_page": null
+},
+{
+"key": "MultiFrameEditing",
+"type": "bool",
+"default": true,
+"category": "Sonstiges",
+"effect": "Bearbeitung ueber mehrere Status",
+"dialog_page": null
+},
+{
+"key": "SwfMaintainObjEditable",
+"type": "bool",
+"default": true,
+"category": "Export",
+"effect": "SWF-Export/-Bedienfeld: MaintainObjEditable",
+"dialog_page": null
+},
+{
+"key": "SwfMaintainTextEditable",
+"type": "bool",
+"default": true,
+"category": "Export",
+"effect": "SWF-Export/-Bedienfeld: MaintainTextEditable",
+"dialog_page": null
+},
+{
+"key": "SwfJpegQuality",
+"type": "integer",
+"default": 100,
+"category": "Export",
+"effect": "SWF-Export/-Bedienfeld: JpegQuality",
+"dialog_page": null
+},
+{
+"key": "SwfExportAllFrames",
+"type": "bool",
+"default": true,
+"category": "Export",
+"effect": "SWF-Export/-Bedienfeld: ExportAllFrames",
+"dialog_page": null
+},
+{
+"key": "SwfExportFromFrame",
+"type": "integer",
+"default": 1,
+"category": "Export",
+"effect": "SWF-Export/-Bedienfeld: ExportFromFrame",
+"dialog_page": null
+},
+{
+"key": "SwfExportToFrame",
+"type": "integer",
+"default": 1,
+"category": "Export",
+"effect": "SWF-Export/-Bedienfeld: ExportToFrame",
+"dialog_page": null
+},
+{
+"key": "SwfFrameRate",
+"type": "integer",
+"default": 15,
+"category": "Export",
+"effect": "SWF-Export/-Bedienfeld: FrameRate",
+"dialog_page": null
+},
+{
+"key": "JsInterpIdleThreshInMilliseconds",
+"type": "integer",
+"default": 0,
+"category": "System/Leistung",
+"effect": "JS-Leerlaufschwelle ms",
+"dialog_page": null
+},
+{
+"key": "JsHeapLimit",
+"type": "integer",
+"default": 0,
+"category": "System/Leistung",
+"effect": "JavaScript-Heapgrenze (0 = Standard)",
+"dialog_page": null
+},
+{
+"key": "JsStackSize",
+"type": "integer",
+"default": 0,
+"category": "Fenster/Bedienfelder",
+"effect": "JavaScript-Stack (0 = Standard)",
+"dialog_page": null
+},
+{
+"key": "BatchGenName",
+"type": "string",
+"default": "BatchGen.jst",
+"category": "Export",
+"effect": "Stapelverarbeitung: GenName",
+"dialog_page": null
+},
+{
+"key": "BatchTemplateName",
+"type": "string",
+"default": "BatchTemplate.jst",
+"category": "Export",
+"effect": "Stapelverarbeitung: TemplateName",
+"dialog_page": null
+},
+{
+"key": "AutoGrowImages",
+"type": "bool",
+"default": true,
+"category": "Sonstiges",
+"effect": "Bitmap waechst beim Malen ueber Rand (A)",
+"dialog_page": null
+},
+{
+"key": "AutoImageEdit",
+"type": "bool",
+"default": true,
+"category": "Sonstiges",
+"effect": "automatisch in Bitmap-Modus wechseln (A)",
+"dialog_page": null
+},
+{
+"key": "EditURLChangesAll",
+"type": "bool",
+"default": false,
+"category": "Sonstiges",
+"effect": "URL-Aenderung gilt fuer alle",
+"dialog_page": null
+},
+{
+"key": "BatchOverwriteExstFiles",
+"type": "bool",
+"default": true,
+"category": "Export",
+"effect": "Stapelverarbeitung: OverwriteExstFiles",
+"dialog_page": null
+},
+{
+"key": "BatchCustomOutputDest",
+"type": "string",
+"default": "",
+"category": "Export",
+"effect": "Stapelverarbeitung: CustomOutputDest",
+"dialog_page": null
+},
+{
+"key": "BatchIncrementalBackup",
+"type": "bool",
+"default": false,
+"category": "Export",
+"effect": "Stapelverarbeitung: IncrementalBackup",
+"dialog_page": null
+},
+{
+"key": "BatchWhichFiles",
+"type": "integer",
+"default": 1,
+"category": "Export",
+"effect": "Stapelverarbeitung: WhichFiles",
+"dialog_page": null
+},
+{
+"key": "BatchDoReplace",
+"type": "bool",
+"default": false,
+"category": "Export",
+"effect": "Stapelverarbeitung: DoReplace",
+"dialog_page": null
+},
+{
+"key": "BatchDoExport",
+"type": "bool",
+"default": true,
+"category": "Export",
+"effect": "Stapelverarbeitung: DoExport",
+"dialog_page": null
+},
+{
+"key": "BatchDoBackup",
+"type": "bool",
+"default": true,
+"category": "Export",
+"effect": "Stapelverarbeitung: DoBackup",
+"dialog_page": null
+},
+{
+"key": "BatchExpFileSettings",
+"type": "string",
+"default": "GIF WebSnap 128",
+"category": "Export",
+"effect": "Stapelverarbeitung: Exportvoreinstellung",
+"dialog_page": null
+},
+{
+"key": "BatchExpFileModType",
+"type": "integer",
+"default": 1,
+"category": "Export",
+"effect": "Stapelverarbeitung: ExpFileModType",
+"dialog_page": null
+},
+{
+"key": "BatchExpFileMod",
+"type": "string",
+"default": "",
+"category": "Export",
+"effect": "Stapelverarbeitung: ExpFileMod",
+"dialog_page": null
+},
+{
+"key": "BatchRename_ReplaceCB",
+"type": "bool",
+"default": false,
+"category": "Export",
+"effect": "Stapelverarbeitung: Rename_ReplaceCB",
+"dialog_page": null
+},
+{
+"key": "BatchRename_Replace",
+"type": "string",
+"default": "",
+"category": "Export",
+"effect": "Stapelverarbeitung: Rename_Replace",
+"dialog_page": null
+},
+{
+"key": "BatchRename_With",
+"type": "string",
+"default": "",
+"category": "Export",
+"effect": "Stapelverarbeitung: Rename_With",
+"dialog_page": null
+},
+{
+"key": "BatchRename_BlanksCB",
+"type": "bool",
+"default": false,
+"category": "Export",
+"effect": "Stapelverarbeitung: Rename_BlanksCB",
+"dialog_page": null
+},
+{
+"key": "BatchRename_Blanks",
+"type": "string",
+"default": "",
+"category": "Export",
+"effect": "Stapelverarbeitung: Rename_Blanks",
+"dialog_page": null
+},
+{
+"key": "BatchRename_PrefixCB",
+"type": "bool",
+"default": false,
+"category": "Export",
+"effect": "Stapelverarbeitung: Rename_PrefixCB",
+"dialog_page": null
+},
+{
+"key": "BatchRename_Prefix",
+"type": "string",
+"default": "",
+"category": "Export",
+"effect": "Stapelverarbeitung: Rename_Prefix",
+"dialog_page": null
+},
+{
+"key": "BatchRename_SuffixCB",
+"type": "bool",
+"default": false,
+"category": "Export",
+"effect": "Stapelverarbeitung: Rename_SuffixCB",
+"dialog_page": null
+},
+{
+"key": "BatchRename_Suffix",
+"type": "string",
+"default": "",
+"category": "Export",
+"effect": "Stapelverarbeitung: Rename_Suffix",
+"dialog_page": null
+},
+{
+"key": "BatchExpFileScaleType",
+"type": "integer",
+"default": 1,
+"category": "Export",
+"effect": "Stapelverarbeitung: ExpFileScaleType",
+"dialog_page": null
+},
+{
+"key": "BatchExpFileFitWidth",
+"type": "integer",
+"default": 72,
+"category": "Export",
+"effect": "Stapelverarbeitung: ExpFileFitWidth",
+"dialog_page": null
+},
+{
+"key": "BatchExpFileFitHeight",
+"type": "integer",
+"default": 72,
+"category": "Export",
+"effect": "Stapelverarbeitung: ExpFileFitHeight",
+"dialog_page": null
+},
+{
+"key": "BatchExpFileWidth",
+"type": "integer",
+"default": 72,
+"category": "Export",
+"effect": "Stapelverarbeitung: ExpFileWidth",
+"dialog_page": null
+},
+{
+"key": "BatchExpFileHeight",
+"type": "integer",
+"default": 72,
+"category": "Export",
+"effect": "Stapelverarbeitung: ExpFileHeight",
+"dialog_page": null
+},
+{
+"key": "BatchExpFilePct",
+"type": "integer",
+"default": 100,
+"category": "Export",
+"effect": "Stapelverarbeitung: ExpFilePct",
+"dialog_page": null
+},
+{
+"key": "BatchScale_OnlyDown",
+"type": "bool",
+"default": false,
+"category": "Export",
+"effect": "Stapelverarbeitung: Scale_OnlyDown",
+"dialog_page": null
+},
+{
+"key": "BatchExpOptToSize",
+"type": "integer",
+"default": 0,
+"category": "Export",
+"effect": "Stapelverarbeitung: ExpOptToSize",
+"dialog_page": null
+},
+{
+"key": "PopupMenuEditorPos",
+"type": "string",
+"default": "0 0",
+"category": "Fenster/Bedienfelder",
+"effect": "Pop-up-Menue-Editor: EditorPos (siehe Verhalten/Pop-up)",
+"dialog_page": null
+},
+{
+"key": "PopupMenuEditorTextWidth",
+"type": "integer",
+"default": 0,
+"category": "Pop-up-Menue",
+"effect": "Pop-up-Menue-Editor: EditorTextWidth (siehe Verhalten/Pop-up)",
+"dialog_page": null
+},
+{
+"key": "PopupMenuEditorLinkWidth",
+"type": "integer",
+"default": 0,
+"category": "Pop-up-Menue",
+"effect": "Pop-up-Menue-Editor: EditorLinkWidth (siehe Verhalten/Pop-up)",
+"dialog_page": null
+},
+{
+"key": "PopupMenuEditorTargetWidth",
+"type": "integer",
+"default": 0,
+"category": "Pop-up-Menue",
+"effect": "Pop-up-Menue-Editor: EditorTargetWidth (siehe Verhalten/Pop-up)",
+"dialog_page": null
+},
+{
+"key": "PopupMenuUpTxtClr",
+"type": "string",
+"default": "#000000",
+"category": "Pop-up-Menue",
+"effect": "Pop-up-Menue-Editor: UpTxtClr (siehe Verhalten/Pop-up)",
+"dialog_page": null
+},
+{
+"key": "PopupMenuOvrTxtClr",
+"type": "string",
+"default": "#ffffff",
+"category": "Pop-up-Menue",
+"effect": "Pop-up-Menue-Editor: OvrTxtClr (siehe Verhalten/Pop-up)",
+"dialog_page": null
+},
+{
+"key": "PopupMenuTxtBold",
+"type": "bool",
+"default": false,
+"category": "Pop-up-Menue",
+"effect": "Pop-up-Menue-Editor: TxtBold (siehe Verhalten/Pop-up)",
+"dialog_page": null
+},
+{
+"key": "PopupMenuTxtItalic",
+"type": "bool",
+"default": false,
+"category": "Pop-up-Menue",
+"effect": "Pop-up-Menue-Editor: TxtItalic (siehe Verhalten/Pop-up)",
+"dialog_page": null
+},
+{
+"key": "PopupMenuFontFamily",
+"type": "string",
+"default": "",
+"category": "Text",
+"effect": "Pop-up-Menue-Editor: FontFamily (siehe Verhalten/Pop-up)",
+"dialog_page": null
+},
+{
+"key": "PopupMenuPointSize",
+"type": "integer",
+"default": 14,
+"category": "Fenster/Bedienfelder",
+"effect": "Pop-up-Menue-Editor: PointSize (siehe Verhalten/Pop-up)",
+"dialog_page": null
+},
+{
+"key": "PopupMenuTextOnly",
+"type": "bool",
+"default": true,
+"category": "Pop-up-Menue",
+"effect": "Pop-up-Menue-Editor: TextOnly (siehe Verhalten/Pop-up)",
+"dialog_page": null
+},
+{
+"key": "PopupMenuUpCellClr",
+"type": "string",
+"default": "#cccccc",
+"category": "Pop-up-Menue",
+"effect": "Pop-up-Menue-Editor: UpCellClr (siehe Verhalten/Pop-up)",
+"dialog_page": null
+},
+{
+"key": "PopupMenuOvrCellClr",
+"type": "string",
+"default": "#000084",
+"category": "Pop-up-Menue",
+"effect": "Pop-up-Menue-Editor: OvrCellClr (siehe Verhalten/Pop-up)",
+"dialog_page": null
+},
+{
+"key": "PopupMenuUpStyle",
+"type": "string",
+"default": "",
+"category": "Pop-up-Menue",
+"effect": "Pop-up-Menue-Editor: UpStyle (siehe Verhalten/Pop-up)",
+"dialog_page": null
+},
+{
+"key": "PopupMenuOverStyle",
+"type": "string",
+"default": "",
+"category": "Pop-up-Menue",
+"effect": "Pop-up-Menue-Editor: OverStyle (siehe Verhalten/Pop-up)",
+"dialog_page": null
+},
+{
+"key": "PopupMenuHAlign",
+"type": "integer",
+"default": 0,
+"category": "Pop-up-Menue",
+"effect": "Pop-up-Menue-Editor: HAlign (siehe Verhalten/Pop-up)",
+"dialog_page": null
+},
+{
+"key": "PopupMenuCellWidth",
+"type": "bool",
+"default": true,
+"category": "Pop-up-Menue",
+"effect": "Pop-up-Menue-Editor: CellWidth (siehe Verhalten/Pop-up)",
+"dialog_page": null
+},
+{
+"key": "PopupMenuCellPixelWidth",
+"type": "integer",
+"default": 0,
+"category": "Pop-up-Menue",
+"effect": "Pop-up-Menue-Editor: CellPixelWidth (siehe Verhalten/Pop-up)",
+"dialog_page": null
+},
+{
+"key": "PopupMenuCellHeight",
+"type": "bool",
+"default": true,
+"category": "Pop-up-Menue",
+"effect": "Pop-up-Menue-Editor: CellHeight (siehe Verhalten/Pop-up)",
+"dialog_page": null
+},
+{
+"key": "PopupMenuCellPixelHeight",
+"type": "integer",
+"default": 0,
+"category": "Pop-up-Menue",
+"effect": "Pop-up-Menue-Editor: CellPixelHeight (siehe Verhalten/Pop-up)",
+"dialog_page": null
+},
+{
+"key": "PopupMenuCellPadding",
+"type": "integer",
+"default": 3,
+"category": "Pop-up-Menue",
+"effect": "Pop-up-Menue-Editor: CellPadding (siehe Verhalten/Pop-up)",
+"dialog_page": null
+},
+{
+"key": "PopupMenuCellSpacing",
+"type": "integer",
+"default": 0,
+"category": "Pop-up-Menue",
+"effect": "Pop-up-Menue-Editor: CellSpacing (siehe Verhalten/Pop-up)",
+"dialog_page": null
+},
+{
+"key": "PopupMenuDelay",
+"type": "integer",
+"default": 1000,
+"category": "Pop-up-Menue",
+"effect": "Pop-up-Menue-Editor: Delay (siehe Verhalten/Pop-up)",
+"dialog_page": null
+},
+{
+"key": "PopupMenuCellBorderShadow",
+"type": "string",
+"default": "#555555",
+"category": "Pop-up-Menue",
+"effect": "Pop-up-Menue-Editor: CellBorderShadow (siehe Verhalten/Pop-up)",
+"dialog_page": null
+},
+{
+"key": "PopupMenuCellBorderHighlight",
+"type": "string",
+"default": "#ffffff",
+"category": "Pop-up-Menue",
+"effect": "Pop-up-Menue-Editor: CellBorderHighlight (siehe Verhalten/Pop-up)",
+"dialog_page": null
+},
+{
+"key": "PopupMenuBorder",
+"type": "bool",
+"default": true,
+"category": "Pop-up-Menue",
+"effect": "Pop-up-Menue-Editor: Border (siehe Verhalten/Pop-up)",
+"dialog_page": null
+},
+{
+"key": "PopupMenuBorderColor",
+"type": "string",
+"default": "#555555",
+"category": "Farbe",
+"effect": "Pop-up-Menue-Editor: BorderColor (siehe Verhalten/Pop-up)",
+"dialog_page": null
+},
+{
+"key": "PopupMenuBorderWidth",
+"type": "integer",
+"default": 1,
+"category": "Pop-up-Menue",
+"effect": "Pop-up-Menue-Editor: BorderWidth (siehe Verhalten/Pop-up)",
+"dialog_page": null
+},
+{
+"key": "PopupMenuIndent",
+"type": "integer",
+"default": 0,
+"category": "Pop-up-Menue",
+"effect": "Pop-up-Menue-Editor: Indent (siehe Verhalten/Pop-up)",
+"dialog_page": null
+},
+{
+"key": "PopupMenuIsVertical",
+"type": "bool",
+"default": true,
+"category": "Pop-up-Menue",
+"effect": "Pop-up-Menue-Editor: IsVertical (siehe Verhalten/Pop-up)",
+"dialog_page": null
+},
+{
+"key": "PopupMenuSubmenuPosition",
+"type": "string",
+"default": "-5 7",
+"category": "Pop-up-Menue",
+"effect": "Pop-up-Menue-Editor: SubmenuPosition (siehe Verhalten/Pop-up)",
+"dialog_page": null
+},
+{
+"key": "PopupMenuSubmenuRelative",
+"type": "bool",
+"default": true,
+"category": "Pop-up-Menue",
+"effect": "Pop-up-Menue-Editor: SubmenuRelative (siehe Verhalten/Pop-up)",
+"dialog_page": null
+},
+{
+"key": "PrimaryBrowser",
+"type": "string",
+"default": "",
+"category": "Sonstiges",
+"effect": "Primaerbrowser (Pfad)",
+"dialog_page": null
+},
+{
+"key": "SecondaryBrowser",
+"type": "string",
+"default": "",
+"category": "Sonstiges",
+"effect": "Sekundaerbrowser (Pfad)",
+"dialog_page": null
+},
+{
+"key": "SwapFileReclaimThreshFraction",
+"type": "real",
+"default": 0.5,
+"category": "System/Leistung",
+"effect": "Auslagerung: Rueckgewinnungsanteil",
+"dialog_page": null
+},
+{
+"key": "SwapFileReclaimThreshInMegs",
+"type": "integer",
+"default": 50,
+"category": "System/Leistung",
+"effect": "Auslagerung: Rueckgewinnung ab MB",
+"dialog_page": null
+},
+{
+"key": "MaxFolderDropDepth",
+"type": "integer",
+"default": 5,
+"category": "Sonstiges",
+"effect": "Ordnertiefe bei Drag&Drop",
+"dialog_page": null
+},
+{
+"key": "TryInterleaveSwapFiles",
+"type": "bool",
+"default": true,
+"category": "System/Leistung",
+"effect": "Auslagerungsdateien verschraenken",
+"dialog_page": null
+},
+{
+"key": "SwapFileChunkSize",
+"type": "integer",
+"default": 64,
+"category": "Fenster/Bedienfelder",
+"effect": "Auslagerungsdatei: Blockgroesse (A)",
+"dialog_page": null
+},
+{
+"key": "InitialSettings_DoDemo",
+"type": "bool",
+"default": false,
+"category": "Export",
+"effect": "Startwerte fuer Segmente/HTML: DoDemo",
+"dialog_page": null
+},
+{
+"key": "InitialSettings_ExportUndefined",
+"type": "bool",
+"default": true,
+"category": "Export",
+"effect": "Startwerte fuer Segmente/HTML: ExportUndefined",
+"dialog_page": null
+},
+{
+"key": "InitialSettings_ShimMode",
+"type": "integer",
+"default": 1,
+"category": "Export",
+"effect": "Startwerte fuer Segmente/HTML: ShimMode",
+"dialog_page": null
+},
+{
+"key": "InitialSettings_NameMode",
+"type": "integer",
+"default": 0,
+"category": "Export",
+"effect": "Startwerte fuer Segmente/HTML: NameMode",
+"dialog_page": null
+},
+{
+"key": "InitialSettings_ImageMap",
+"type": "integer",
+"default": 1,
+"category": "Export",
+"effect": "Startwerte fuer Segmente/HTML: ImageMap",
+"dialog_page": null
+},
+{
+"key": "InitialSettings_Alt",
+"type": "string",
+"default": "",
+"category": "Export",
+"effect": "Startwerte fuer Segmente/HTML: Alt",
+"dialog_page": null
+},
+{
+"key": "InitialSettings_URL",
+"type": "string",
+"default": "",
+"category": "Export",
+"effect": "Startwerte fuer Segmente/HTML: URL",
+"dialog_page": null
+},
+{
+"key": "AnimGifDangerousOpt",
+"type": "bool",
+"default": false,
+"category": "Sonstiges",
+"effect": "aggressive GIF-Animationsoptimierung (A)",
+"dialog_page": null
+},
+{
+"key": "AutoGenBehaviors",
+"type": "bool",
+"default": true,
+"category": "Sonstiges",
+"effect": "Verhalten automatisch erzeugen (A)",
+"dialog_page": null
+},
+{
+"key": "LegLookForPNG",
+"type": "integer",
+"default": 3,
+"category": "Dialog: Starten und Bearbeiten",
+"effect": "Bearbeiten mit externer Anwendung: PNG-Quelle",
+"dialog_page": "Starten und Bearbeiten"
+},
+{
+"key": "LoptLookForPNG",
+"type": "integer",
+"default": 3,
+"category": "Dialog: Starten und Bearbeiten",
+"effect": "Optimieren mit externer Anwendung: PNG-Quelle",
+"dialog_page": "Starten und Bearbeiten"
+},
+{
+"key": "DoIdleTimePaging",
+"type": "bool",
+"default": false,
+"category": "Sonstiges",
+"effect": "Auslagerung im Leerlauf",
+"dialog_page": null
+},
+{
+"key": "CropDocCropsImages",
+"type": "bool",
+"default": true,
+"category": "Dialog: Bearbeiten",
+"effect": "Objekte beim Zuschneiden loeschen",
+"dialog_page": "Bearbeiten"
+},
+{
+"key": "ExportTransformMode",
+"type": "integer",
+"default": 1,
+"category": "Export",
+"effect": "Interpolation beim Export-Skalieren (A)",
+"dialog_page": null
+},
+{
+"key": "EditTransformMode",
+"type": "integer",
+"default": 1,
+"category": "Dialog: Allgemein",
+"effect": "Interpolation beim Transformieren",
+"dialog_page": "Allgemein"
+},
+{
+"key": "ImageSizeTransformMode",
+"type": "integer",
+"default": 1,
+"category": "Sonstiges",
+"effect": "Interpolation Bildgroesse (A)",
+"dialog_page": null
+},
+{
+"key": "AliasTransformMode",
+"type": "integer",
+"default": 1,
+"category": "Sonstiges",
+"effect": "Interpolation (Alias, A)",
+"dialog_page": null
+},
+{
+"key": "IgnorePNGGammaOnRead",
+"type": "bool",
+"default": false,
+"category": "Farbe",
+"effect": "PNG-Import: gAMA-Chunk ignorieren (sonst Gammakorrektur auf Bildschirmgamma 2.2)",
+"dialog_page": null
+},
+{
+"key": "NeverBugForRegistration",
+"type": "bool",
+"default": false,
+"category": "Sonstiges",
+"effect": "keine Registrierungsaufforderung",
+"dialog_page": null
+},
+{
+"key": "ArtyWriterFH8Compatible",
+"type": "bool",
+"default": true,
+"category": "Sonstiges",
+"effect": "FreeHand-8-kompatibel kopieren",
+"dialog_page": null
+},
+{
+"key": "ExpandSelectionAmount",
+"type": "integer",
+"default": 10,
+"category": "Sonstiges",
+"effect": "Auswahl erweitern: px",
+"dialog_page": null
+},
+{
+"key": "ContractSelectionAmount",
+"type": "integer",
+"default": 10,
+"category": "Sonstiges",
+"effect": "Auswahl verkleinern: px",
+"dialog_page": null
+},
+{
+"key": "BorderSelectionAmount",
+"type": "integer",
+"default": 10,
+"category": "Sonstiges",
+"effect": "Auswahl umranden: px",
+"dialog_page": null
+},
+{
+"key": "SmoothSelectionAmount",
+"type": "integer",
+"default": 10,
+"category": "Sonstiges",
+"effect": "Auswahl glaetten: px",
+"dialog_page": null
+},
+{
+"key": "SelectionAdjustTolerance",
+"type": "integer",
+"default": 1,
+"category": "Sonstiges",
+"effect": "Toleranz Auswahlanpassung",
+"dialog_page": null
+},
+{
+"key": "PSTextEditable",
+"type": "bool",
+"default": true,
+"category": "Dialog: Photoshop-Datei importieren/oeffnen",
+"effect": "PSD-Text bearbeitbar",
+"dialog_page": "Photoshop-Datei importieren/oeffnen"
+},
+{
+"key": "PSImageLayersEditable",
+"type": "bool",
+"default": true,
+"category": "Dialog: Photoshop-Datei importieren/oeffnen",
+"effect": "PSD-Bildebenen: Bitmaps mit bearbeitbaren Effekten",
+"dialog_page": "Photoshop-Datei importieren/oeffnen"
+},
+{
+"key": "PSShapeLayersEditable",
+"type": "bool",
+"default": true,
+"category": "Dialog: Photoshop-Datei importieren/oeffnen",
+"effect": "PSD-Formebenen als bearbeitbare Pfade",
+"dialog_page": "Photoshop-Datei importieren/oeffnen"
+},
+{
+"key": "PSShapeLayerEffectsEditable",
+"type": "bool",
+"default": true,
+"category": "Dialog: Photoshop-Datei importieren/oeffnen",
+"effect": "PSD-Formebenen reduziert mit bearbeitbaren Effekten",
+"dialog_page": "Photoshop-Datei importieren/oeffnen"
+},
+{
+"key": "PSClippingMasksEditable",
+"type": "bool",
+"default": true,
+"category": "Dialog: Photoshop-Datei importieren/oeffnen",
+"effect": "Beschneidungsmasken bearbeitbar (Dialog invertiert)",
+"dialog_page": "Photoshop-Datei importieren/oeffnen"
+},
+{
+"key": "PSRetainAdjustmentLayersAppearance",
+"type": "bool",
+"default": true,
+"category": "Dialog: Photoshop-Datei importieren/oeffnen",
+"effect": "Erscheinungsbild der Einstellungsebenen beibehalten",
+"dialog_page": "Photoshop-Datei importieren/oeffnen"
+},
+{
+"key": "PSSmartImport",
+"type": "bool",
+"default": true,
+"category": "Photoshop-Import",
+"effect": "PSD: intelligenter Import (A)",
+"dialog_page": null
+},
+{
+"key": "PSIncludeGuides",
+"type": "bool",
+"default": true,
+"category": "Photoshop-Import",
+"effect": "PSD: Hilfslinien uebernehmen",
+"dialog_page": null
+},
+{
+"key": "PSShowPreviewOnOpen",
+"type": "bool",
+"default": false,
+"category": "Photoshop-Import",
+"effect": "PSD-Oeffnen: Vorschau",
+"dialog_page": null
+},
+{
+"key": "PSShowPreviewOnImport",
+"type": "bool",
+"default": false,
+"category": "Photoshop-Import",
+"effect": "PSD-Import: Vorschau",
+"dialog_page": null
+},
+{
+"key": "PSLayersAsFrames",
+"type": "bool",
+"default": false,
+"category": "Photoshop-Import",
+"effect": "PSD-Ebenen als Status",
+"dialog_page": null
+},
+{
+"key": "PSImportDialogSettings",
+"type": "integer",
+"default": 0,
+"category": "Photoshop-Import",
+"effect": null,
+"dialog_page": null
+},
+{
+"key": "PSOpenDialogSettings",
+"type": "integer",
+"default": 0,
+"category": "Photoshop-Import",
+"effect": null,
+"dialog_page": null
+},
+{
+"key": "PsdExport_Settings",
+"type": "integer",
+"default": 1,
+"category": "Export",
+"effect": "PSD-Export: Settings",
+"dialog_page": null
+},
+{
+"key": "PsdExport_Layers",
+"type": "integer",
+"default": 1,
+"category": "Export",
+"effect": "PSD-Export: Layers",
+"dialog_page": null
+},
+{
+"key": "PsdExport_Effects",
+"type": "integer",
+"default": 1,
+"category": "Export",
+"effect": "PSD-Export: Effects",
+"dialog_page": null
+},
+{
+"key": "PsdExport_Text",
+"type": "integer",
+"default": 1,
+"category": "Export",
+"effect": "PSD-Export: Text",
+"dialog_page": null
+},
+{
+"key": "PsdExport_Vector",
+"type": "integer",
+"default": 1,
+"category": "Export",
+"effect": "PSD-Export: Vector",
+"dialog_page": null
+},
+{
+"key": "PsdExport_Warn100",
+"type": "bool",
+"default": false,
+"category": "Export",
+"effect": "PSD-Export: Warn100",
+"dialog_page": null
+},
+{
+"key": "DontShowPSOptions",
+"type": "bool",
+"default": true,
+"category": "Sonstiges",
+"effect": null,
+"dialog_page": null
+},
+{
+"key": "CopyAsPathsFH8Compatible",
+"type": "bool",
+"default": true,
+"category": "Sonstiges",
+"effect": null,
+"dialog_page": null
+},
+{
+"key": "CheckForMissingStuffDuringScripts",
+"type": "bool",
+"default": true,
+"category": "Sonstiges",
+"effect": null,
+"dialog_page": null
+},
+{
+"key": "OnionSkinBeforeInButtonEditor",
+"type": "integer",
+"default": 0,
+"category": "Sonstiges",
+"effect": "Zwiebelschichten: BeforeInButtonEditor",
+"dialog_page": null
+},
+{
+"key": "OnionSkinAfterInButtonEditor",
+"type": "integer",
+"default": 0,
+"category": "Sonstiges",
+"effect": "Zwiebelschichten: AfterInButtonEditor",
+"dialog_page": null
+},
+{
+"key": "PSSharedLayers",
+"type": "bool",
+"default": false,
+"category": "Dialog: Photoshop-Datei importieren/oeffnen",
+"effect": "Ebene statusuebergreifend freigeben",
+"dialog_page": "Photoshop-Datei importieren/oeffnen"
+},
+{
+"key": "SymbolEditor_Pos",
+"type": "string",
+"default": "100 100",
+"category": "Fenster/Bedienfelder",
+"effect": null,
+"dialog_page": null
+},
+{
+"key": "SymbolEditor_Size",
+"type": "string",
+"default": "440 420",
+"category": "Fenster/Bedienfelder",
+"effect": null,
+"dialog_page": null
+},
+{
+"key": "ButtonEditor_Pos",
+"type": "string",
+"default": "100 100",
+"category": "Fenster/Bedienfelder",
+"effect": null,
+"dialog_page": null
+},
+{
+"key": "ButtonEditor_Size",
+"type": "string",
+"default": "440 420",
+"category": "Fenster/Bedienfelder",
+"effect": null,
+"dialog_page": null
+},
+{
+"key": "LastImportLocation",
+"type": "string",
+"default": "",
+"category": "Zuletzt benutzt",
+"effect": "zuletzt benutzter Ordner: Import",
+"dialog_page": null
+},
+{
+"key": "LastExportLocation",
+"type": "string",
+"default": "",
+"category": "Export",
+"effect": "zuletzt benutzter Ordner: Export",
+"dialog_page": null
+},
+{
+"key": "LastOpenLocation",
+"type": "string",
+"default": "",
+"category": "Zuletzt benutzt",
+"effect": "zuletzt benutzter Oeffnen-Ordner",
+"dialog_page": null
+},
+{
+"key": "LastSaveLocation",
+"type": "string",
+"default": "",
+"category": "Zuletzt benutzt",
+"effect": "zuletzt benutzter Speichern-Ordner",
+"dialog_page": null
+},
+{
+"key": "AllowTweeningOf3rdPartyEffects",
+"type": "bool",
+"default": true,
+"category": "Sonstiges",
+"effect": null,
+"dialog_page": null
+},
+{
+"key": "ShowAllPreview_Up",
+"type": "bool",
+"default": false,
+"category": "Sonstiges",
+"effect": null,
+"dialog_page": null
+},
+{
+"key": "AllowFilePreviewInOpenDialog",
+"type": "bool",
+"default": true,
+"category": "Sonstiges",
+"effect": null,
+"dialog_page": null
+},
+{
+"key": "AllowPreviewOfNonLocalFiles",
+"type": "bool",
+"default": true,
+"category": "Sonstiges",
+"effect": null,
+"dialog_page": null
+},
+{
+"key": "UseMPIfPresent",
+"type": "bool",
+"default": false,
+"category": "Sonstiges",
+"effect": null,
+"dialog_page": null
+},
+{
+"key": "CurrentShortcutSet",
+"type": "string",
+"default": "Web Standard",
+"category": "Zuletzt benutzt",
+"effect": "aktives Tastenkuerzel-Set (Datei in \"Keyboard Shortcuts\")",
+"dialog_page": null
+},
+{
+"key": "TilePercentForRender",
+"type": "integer",
+"default": 10,
+"category": "Sonstiges",
+"effect": null,
+"dialog_page": null
+},
+{
+"key": "LayersList_ThumbnailSize",
+"type": "integer",
+"default": 32,
+"category": "Fenster/Bedienfelder",
+"effect": null,
+"dialog_page": null
+},
+{
+"key": "PagesList_ThumbnailSize",
+"type": "integer",
+"default": 32,
+"category": "Fenster/Bedienfelder",
+"effect": null,
+"dialog_page": null
+},
+{
+"key": "SuppressWarningOnShortcutConflict",
+"type": "bool",
+"default": false,
+"category": "Sonstiges",
+"effect": null,
+"dialog_page": null
+},
+{
+"key": "LayersList_ShowWebLayer",
+"type": "bool",
+"default": true,
+"category": "Sonstiges",
+"effect": null,
+"dialog_page": null
+},
+{
+"key": "ShowPenPreview",
+"type": "bool",
+"default": true,
+"category": "Dialog: Bearbeiten",
+"effect": "Stiftvorschau",
+"dialog_page": "Bearbeiten"
+},
+{
+"key": "ShowSolidPoints",
+"type": "bool",
+"default": false,
+"category": "Dialog: Bearbeiten",
+"effect": "einfarbige Punkte",
+"dialog_page": "Bearbeiten"
+},
+{
+"key": "HTMLCommentsOn",
+"type": "bool",
+"default": false,
+"category": "Export",
+"effect": "HTML-Export: CommentsOn (siehe 08-export.md)",
+"dialog_page": null
+},
+{
+"key": "HTMLExtension",
+"type": "string",
+"default": ".htm",
+"category": "Export",
+"effect": "HTML-Dateiendung",
+"dialog_page": null
+},
+{
+"key": "MXMLExtension",
+"type": "string",
+"default": ".mxml",
+"category": "Sonstiges",
+"effect": null,
+"dialog_page": null
+},
+{
+"key": "HTMLCreator",
+"type": "string",
+"default": "MSIE",
+"category": "Export",
+"effect": "HTML-Export: Creator (siehe 08-export.md)",
+"dialog_page": null
+},
+{
+"key": "AttemptToMatteEPSFiles",
+"type": "bool",
+"default": true,
+"category": "Sonstiges",
+"effect": null,
+"dialog_page": null
+},
+{
+"key": "ForceLowercaseFilenames",
+"type": "bool",
+"default": false,
+"category": "Sonstiges",
+"effect": null,
+"dialog_page": null
+},
+{
+"key": "HTMLEmptyCellColor",
+"type": "string",
+"default": "#ffffff00",
+"category": "Farbe",
+"effect": "HTML-Export: EmptyCellColor (siehe 08-export.md)",
+"dialog_page": null
+},
+{
+"key": "HTMLEmptyCellUsesCanvasColor",
+"type": "bool",
+"default": true,
+"category": "Farbe",
+"effect": "HTML-Export: EmptyCellUsesCanvasColor (siehe 08-export.md)",
+"dialog_page": null
+},
+{
+"key": "HTMLEmptyCellContents",
+"type": "integer",
+"default": 2,
+"category": "Export",
+"effect": "HTML-Export: EmptyCellContents (siehe 08-export.md)",
+"dialog_page": null
+},
+{
+"key": "HTMLSliceNamingPart1",
+"type": "integer",
+"default": 6,
+"category": "Export",
+"effect": "HTML-Export: SliceNamingPart1 (siehe 08-export.md)",
+"dialog_page": null
+},
+{
+"key": "HTMLSliceNamingPart2",
+"type": "integer",
+"default": 15,
+"category": "Export",
+"effect": "HTML-Export: SliceNamingPart2 (siehe 08-export.md)",
+"dialog_page": null
+},
+{
+"key": "HTMLSliceNamingPart3",
+"type": "integer",
+"default": 1,
+"category": "Export",
+"effect": "HTML-Export: SliceNamingPart3 (siehe 08-export.md)",
+"dialog_page": null
+},
+{
+"key": "HTMLSliceNamingPart4",
+"type": "integer",
+"default": 0,
+"category": "Export",
+"effect": "HTML-Export: SliceNamingPart4 (siehe 08-export.md)",
+"dialog_page": null
+},
+{
+"key": "HTMLSliceNamingPart5",
+"type": "integer",
+"default": 0,
+"category": "Export",
+"effect": "HTML-Export: SliceNamingPart5 (siehe 08-export.md)",
+"dialog_page": null
+},
+{
+"key": "HTMLSliceNamingPart6",
+"type": "integer",
+"default": 0,
+"category": "Export",
+"effect": "HTML-Export: SliceNamingPart6 (siehe 08-export.md)",
+"dialog_page": null
+},
+{
+"key": "HTMLFrameNamingPart1",
+"type": "integer",
+"default": 5,
+"category": "Export",
+"effect": "HTML-Export: FrameNamingPart1 (siehe 08-export.md)",
+"dialog_page": null
+},
+{
+"key": "HTMLFrameNamingPart2",
+"type": "integer",
+"default": 1,
+"category": "Export",
+"effect": "HTML-Export: FrameNamingPart2 (siehe 08-export.md)",
+"dialog_page": null
+},
+{
+"key": "PopupSwatchesColorPaletteChoice",
+"type": "integer",
+"default": 1,
+"category": "Farbe",
+"effect": "Farbfeld-Popup: Satzwahl wie SwatchesPanel..., 1 = Inhalt des Farbfelder-Bedienfelds",
+"dialog_page": null
+},
+{
+"key": "PopupSwatchesShouldSnapToWebSafe",
+"type": "bool",
+"default": false,
+"category": "Farbe",
+"effect": "Farbfeld-Popup: gewaehlte Farben auf Web 216 einrasten",
+"dialog_page": null
+},
+{
+"key": "HTMLCreatorSig",
+"type": "string",
+"default": "DmWr",
+"category": "Export",
+"effect": "HTML-Export: CreatorSig (siehe 08-export.md)",
+"dialog_page": null
+},
+{
+"key": "WriteDWNotes",
+"type": "integer",
+"default": 1,
+"category": "Sonstiges",
+"effect": null,
+"dialog_page": null
+},
+{
+"key": "ClipNuggetDragsMask",
+"type": "bool",
+"default": false,
+"category": "Sonstiges",
+"effect": null,
+"dialog_page": null
+},
+{
+"key": "OptAltTogglesClipNuggetDragsMask",
+"type": "bool",
+"default": true,
+"category": "Sonstiges",
+"effect": null,
+"dialog_page": null
+},
+{
+"key": "MaxLenForPSPutTextProc",
+"type": "integer",
+"default": 1024,
+"category": "Sonstiges",
+"effect": null,
+"dialog_page": null
+},
+{
+"key": "LayersExpandedByDefault",
+"type": "bool",
+"default": true,
+"category": "Sonstiges",
+"effect": null,
+"dialog_page": null
+},
+{
+"key": "RapidRedrawThreshhold",
+"type": "integer",
+"default": 35,
+"category": "System/Leistung",
+"effect": null,
+"dialog_page": null
+},
+{
+"key": "ThrobRedrawThreshhold",
+"type": "integer",
+"default": 1000,
+"category": "System/Leistung",
+"effect": null,
+"dialog_page": null
+},
+{
+"key": "TryToUseVecOps",
+"type": "bool",
+"default": true,
+"category": "Sonstiges",
+"effect": null,
+"dialog_page": null
+},
+{
+"key": "UserDefinedPopupFontFamily",
+"type": "string",
+"default": "",
+"category": "Text",
+"effect": null,
+"dialog_page": null
+},
+{
+"key": "UserDefinedPopupDisplayFont",
+"type": "string",
+"default": "",
+"category": "Text",
+"effect": null,
+"dialog_page": null
+},
+{
+"key": "PIExpanded",
+"type": "bool",
+"default": true,
+"category": "Sonstiges",
+"effect": null,
+"dialog_page": null
+},
+{
+"key": "Spell_PersonalDictPath",
+"type": "string",
+"default": "",
+"category": "Text",
+"effect": "Rechtschreibung: PersonalDictPath",
+"dialog_page": null
+},
+{
+"key": "Spell_CheckDupeWords",
+"type": "bool",
+"default": true,
+"category": "Text",
+"effect": "Rechtschreibung: CheckDupeWords",
+"dialog_page": null
+},
+{
+"key": "Spell_IgnoreNumbers",
+"type": "bool",
+"default": true,
+"category": "Text",
+"effect": "Rechtschreibung: IgnoreNumbers",
+"dialog_page": null
+},
+{
+"key": "Spell_IgnoreInternet",
+"type": "bool",
+"default": true,
+"category": "Text",
+"effect": "Rechtschreibung: IgnoreInternet",
+"dialog_page": null
+},
+{
+"key": "Spell_IgnoreUpperCase",
+"type": "bool",
+"default": true,
+"category": "Text",
+"effect": "Rechtschreibung: IgnoreUpperCase",
+"dialog_page": null
+},
+{
+"key": "Spell_SuggestionSearchDepth",
+"type": "integer",
+"default": 50,
+"category": "Text",
+"effect": "Rechtschreibung: SuggestionSearchDepth",
+"dialog_page": null
+},
+{
+"key": "Spell_SuggestHTML",
+"type": "bool",
+"default": false,
+"category": "Text",
+"effect": "Rechtschreibung: SuggestHTML",
+"dialog_page": null
+},
+{
+"key": "Spell_Dicts_Checked",
+"type": "string",
+"default": "(.tlx)",
+"category": "Text",
+"effect": "Rechtschreibung: Dicts_Checked",
+"dialog_page": null
+},
+{
+"key": "MRUStrokes",
+"type": "integer",
+"default": 4,
+"category": "Sonstiges",
+"effect": "Anzahl zuletzt benutzter Striche (A)",
+"dialog_page": null
+},
+{
+"key": "HTMLEditDlgPos",
+"type": "string",
+"default": "-1 -1",
+"category": "Export",
+"effect": "HTML-Export: EditDlgPos (siehe 08-export.md)",
+"dialog_page": null
+},
+{
+"key": "HTMLEditDlgSize",
+"type": "string",
+"default": "500 500",
+"category": "Export",
+"effect": "HTML-Export: EditDlgSize (siehe 08-export.md)",
+"dialog_page": null
+},
+{
+"key": "ProjectLogDlgPos",
+"type": "string",
+"default": "-1 -1",
+"category": "Fenster/Bedienfelder",
+"effect": null,
+"dialog_page": null
+},
+{
+"key": "ProjectLogDlgSize",
+"type": "string",
+"default": "500 500",
+"category": "Fenster/Bedienfelder",
+"effect": null,
+"dialog_page": null
+},
+{
+"key": "WorkspaceShowsTabIcons",
+"type": "bool",
+"default": false,
+"category": "Sonstiges",
+"effect": null,
+"dialog_page": null
+},
+{
+"key": "ShowStartPage",
+"type": "bool",
+"default": true,
+"category": "Dialog: Allgemein",
+"effect": "Startseite anzeigen",
+"dialog_page": "Allgemein"
+},
+{
+"key": "LastCmdSaveLocation",
+"type": "string",
+"default": "",
+"category": "Zuletzt benutzt",
+"effect": "zuletzt benutzter Ordner: CmdSave",
+"dialog_page": null
+},
+{
+"key": "active tool for slot {ef29f252-c6f4-11d0-b598000502701850}",
+"type": "string",
+"default": "{8789476C-c6f7-11d0-9378000502701850}",
+"category": "Sonstiges",
+"effect": "aktives Werkzeug im Werkzeugplatz {ef29f252-c6f4-11d0-b598000502701850} (siehe 10-werkzeuge-befehle.md)",
+"dialog_page": null
+},
+{
+"key": "RPCSecurityLevel",
+"type": "integer",
+"default": 1,
+"category": "Sonstiges",
+"effect": null,
+"dialog_page": null
+},
+{
+"key": "ActiveSmartShape",
+"type": "string",
+"default": "",
+"category": "Sonstiges",
+"effect": null,
+"dialog_page": null
+},
+{
+"key": "Text_AntiAlias1",
+"type": "integer",
+"default": 192,
+"category": "Text",
+"effect": "Textglaettung Parameter 1 (siehe 09-text.md)",
+"dialog_page": null
+},
+{
+"key": "Text_AntiAlias2",
+"type": "integer",
+"default": 64,
+"category": "Text",
+"effect": "Textglaettung Parameter 2",
+"dialog_page": null
+},
+{
+"key": "Text_OverSample",
+"type": "integer",
+"default": 8,
+"category": "Text",
+"effect": "Textglaettung Ueberabtastung",
+"dialog_page": null
+},
+{
+"key": "ApplyTextLineBreak",
+"type": "bool",
+"default": true,
+"category": "Sonstiges",
+"effect": null,
+"dialog_page": null
+},
+{
+"key": "ShowFontNamesInEnglish",
+"type": "bool",
+"default": true,
+"category": "Dialog: Text",
+"effect": "Schriftnamen englisch",
+"dialog_page": "Text"
+},
+{
+"key": "ShowFontPreview",
+"type": "bool",
+"default": true,
+"category": "Dialog: Text",
+"effect": "Schriftvorschau im Menue",
+"dialog_page": "Text"
+},
+{
+"key": "FontPreviewSize",
+"type": "string",
+"default": "",
+"category": "Dialog: Text",
+"effect": "Groesse der Schriftvorschau (lokalisierter Text)",
+"dialog_page": "Text"
+},
+{
+"key": "DefaultLeading",
+"type": "real",
+"default": 1.2,
+"category": "Dialog: Text",
+"effect": "Standard-Zeilenabstand (Faktor)",
+"dialog_page": "Text"
+},
+{
+"key": "DefaultBaselineShift",
+"type": "integer",
+"default": 0,
+"category": "Dialog: Text",
+"effect": "Standard-Grundlinienverschiebung (px)",
+"dialog_page": "Text"
+},
+{
+"key": "DefaultMissingFont",
+"type": "string",
+"default": "Arial",
+"category": "Dialog: Text",
+"effect": "Ersatzschrift fuer fehlende Schriften (PostScript-Name)",
+"dialog_page": "Text"
+},
+{
+"key": "ShowRecentFonts",
+"type": "bool",
+"default": true,
+"category": "Dialog: Text",
+"effect": "zuletzt verwendete Schriften zeigen",
+"dialog_page": "Text"
+},
+{
+"key": "RecentFontLimit",
+"type": "integer",
+"default": 6,
+"category": "Dialog: Text",
+"effect": "Anzahl zuletzt verwendeter Schriften",
+"dialog_page": "Text"
+},
+{
+"key": "RecentFontList",
+"type": "string",
+"default": " ",
+"category": "Text",
+"effect": "Liste zuletzt verwendeter Schriften \"(A)(B)...\"",
+"dialog_page": null
+},
+{
+"key": "RecentFontSort",
+"type": "bool",
+"default": true,
+"category": "Text",
+"effect": null,
+"dialog_page": null
+},
+{
+"key": "UseSetTextRuns",
+"type": "bool",
+"default": false,
+"category": "Sonstiges",
+"effect": null,
+"dialog_page": null
+},
+{
+"key": "EnableLigatures",
+"type": "bool",
+"default": false,
+"category": "Sonstiges",
+"effect": "Ligaturen",
+"dialog_page": null
+},
+{
+"key": "CacheSmartShapeCode",
+"type": "bool",
+"default": true,
+"category": "Sonstiges",
+"effect": null,
+"dialog_page": null
+},
+{
+"key": "MotionBlurShowPreview",
+"type": "bool",
+"default": true,
+"category": "Sonstiges",
+"effect": "Filterdialog MotionBlur: Vorschau an",
+"dialog_page": null
+},
+{
+"key": "RadialBlurShowPreview",
+"type": "bool",
+"default": true,
+"category": "Sonstiges",
+"effect": "Filterdialog RadialBlur: Vorschau an",
+"dialog_page": null
+},
+{
+"key": "ZoomBlurShowPreview",
+"type": "bool",
+"default": true,
+"category": "Sonstiges",
+"effect": "Filterdialog ZoomBlur: Vorschau an",
+"dialog_page": null
+},
+{
+"key": "WandToolLiveRedo",
+"type": "bool",
+"default": true,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Wand: LiveRedo",
+"dialog_page": null
+},
+{
+"key": "MarqueeToolLiveRedo",
+"type": "bool",
+"default": true,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Marquee: LiveRedo",
+"dialog_page": null
+},
+{
+"key": "LassoToolLiveRedo",
+"type": "bool",
+"default": true,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Lasso: LiveRedo",
+"dialog_page": null
+},
+{
+"key": "ReplaceColorToolMode",
+"type": "bool",
+"default": false,
+"category": "Farbe",
+"effect": "Werkzeugoption ReplaceColor: Mode",
+"dialog_page": null
+},
+{
+"key": "DWOwnedFilePanelExtensions",
+"type": "string",
+"default": ".html;.htm;.shtml;.shtm;.lasso;.xhtml;.asp;.cfm;.cfml;.cfc;.jsp;.jst;.aspx;.ascx;.php;.php3;.java;.dwt;.edml;.edm;.css;.xml;.vtm;.vtml;.csn;.as;.wml;.tld;.lbi;.asc;.asr",
+"category": "Fenster/Bedienfelder",
+"effect": null,
+"dialog_page": null
+},
+{
+"key": "CheckSiteInfo",
+"type": "integer",
+"default": 1,
+"category": "Sonstiges",
+"effect": null,
+"dialog_page": null
+},
+{
+"key": "GenerateTimingData",
+"type": "bool",
+"default": true,
+"category": "Sonstiges",
+"effect": null,
+"dialog_page": null
+},
+{
+"key": "TimingData_MaxItemsOutput",
+"type": "integer",
+"default": 100,
+"category": "Sonstiges",
+"effect": null,
+"dialog_page": null
+},
+{
+"key": "LightingStyles",
+"type": "dict",
+"default": {},
+"category": "Sonstiges",
+"effect": null,
+"dialog_page": null
+},
+{
+"key": "MeshWarpToolVertical",
+"type": "integer",
+"default": 4,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption MeshWarp: Vertical",
+"dialog_page": null
+},
+{
+"key": "MeshWarpToolHorizontal",
+"type": "integer",
+"default": 4,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption MeshWarp: Horizontal",
+"dialog_page": null
+},
+{
+"key": "DeletePaths",
+"type": "bool",
+"default": true,
+"category": "Dialog: Bearbeiten",
+"effect": "Pfade beim Konvertieren in Auswahlrahmen loeschen",
+"dialog_page": "Bearbeiten"
+},
+{
+"key": "ConvertMarqueeMode",
+"type": "integer",
+"default": 2,
+"category": "Sonstiges",
+"effect": null,
+"dialog_page": null
+},
+{
+"key": "ConvertMarqueeAmount",
+"type": "integer",
+"default": 10,
+"category": "Sonstiges",
+"effect": null,
+"dialog_page": null
+},
+{
+"key": "ReplaceColorToolTransparant",
+"type": "integer",
+"default": 100,
+"category": "Farbe",
+"effect": "Werkzeugoption ReplaceColor: Transparant",
+"dialog_page": null
+},
+{
+"key": "LastExportSymbolsLocation",
+"type": "string",
+"default": "",
+"category": "Export",
+"effect": "zuletzt benutzter Ordner: ExportSymbols",
+"dialog_page": null
+},
+{
+"key": "LastImportSymbolsLocation",
+"type": "string",
+"default": "",
+"category": "Zuletzt benutzt",
+"effect": "zuletzt benutzter Ordner: ImportSymbols",
+"dialog_page": null
+},
+{
+"key": "LastPrefTextureTargetLocation",
+"type": "string",
+"default": "",
+"category": "Zuletzt benutzt",
+"effect": "zuletzt benutzter Ordner: PrefTextureTarget",
+"dialog_page": null
+},
+{
+"key": "LastPrefPatternTargetLocation",
+"type": "string",
+"default": "",
+"category": "Zuletzt benutzt",
+"effect": "zuletzt benutzter Ordner: PrefPatternTarget",
+"dialog_page": null
+},
+{
+"key": "LastPITextureTargetLocation",
+"type": "string",
+"default": "",
+"category": "Zuletzt benutzt",
+"effect": "zuletzt benutzter Ordner: PITextureTarget",
+"dialog_page": null
+},
+{
+"key": "LastPIPatternTargetLocation",
+"type": "string",
+"default": "",
+"category": "Zuletzt benutzt",
+"effect": "zuletzt benutzter Ordner: PIPatternTarget",
+"dialog_page": null
+},
+{
+"key": "LastKeyboardHTMLExportLocation",
+"type": "string",
+"default": "",
+"category": "Export",
+"effect": "zuletzt benutzter Ordner: KeyboardHTMLExport",
+"dialog_page": null
+},
+{
+"key": "LastPersonalDictLocation",
+"type": "string",
+"default": "",
+"category": "Zuletzt benutzt",
+"effect": "zuletzt benutzter Ordner: PersonalDict",
+"dialog_page": null
+},
+{
+"key": "LastRunScriptLocation",
+"type": "string",
+"default": "",
+"category": "Zuletzt benutzt",
+"effect": "zuletzt benutzter Ordner: RunScript",
+"dialog_page": null
+},
+{
+"key": "LastBatchSaveScriptLocation",
+"type": "string",
+"default": "",
+"category": "Zuletzt benutzt",
+"effect": "zuletzt benutzter Ordner: BatchSaveScript",
+"dialog_page": null
+},
+{
+"key": "LastAddSwatchesLocation",
+"type": "string",
+"default": "",
+"category": "Farbe",
+"effect": "zuletzt benutzter Ordner: AddSwatches",
+"dialog_page": null
+},
+{
+"key": "LastReplaceSwatchesLocation",
+"type": "string",
+"default": "",
+"category": "Farbe",
+"effect": "zuletzt benutzter Ordner: ReplaceSwatches",
+"dialog_page": null
+},
+{
+"key": "LastSaveSwatchesLocation",
+"type": "string",
+"default": "",
+"category": "Farbe",
+"effect": "zuletzt benutzter Ordner: SaveSwatches",
+"dialog_page": null
+},
+{
+"key": "LastLoadPaletteLocation",
+"type": "string",
+"default": "",
+"category": "Zuletzt benutzt",
+"effect": "zuletzt benutzter Ordner: LoadPalette",
+"dialog_page": null
+},
+{
+"key": "LastSavePaletteLocation",
+"type": "string",
+"default": "",
+"category": "Zuletzt benutzt",
+"effect": "zuletzt benutzter Ordner: SavePalette",
+"dialog_page": null
+},
+{
+"key": "LastImportURLLocation",
+"type": "string",
+"default": "",
+"category": "Zuletzt benutzt",
+"effect": "zuletzt benutzter Ordner: ImportURL",
+"dialog_page": null
+},
+{
+"key": "LastExportURLLocation",
+"type": "string",
+"default": "",
+"category": "Export",
+"effect": "zuletzt benutzter Ordner: ExportURL",
+"dialog_page": null
+},
+{
+"key": "LastImportStylesLocation",
+"type": "string",
+"default": "",
+"category": "Zuletzt benutzt",
+"effect": "zuletzt benutzter Ordner: ImportStyles",
+"dialog_page": null
+},
+{
+"key": "LastExportStylesLocation",
+"type": "string",
+"default": "",
+"category": "Export",
+"effect": "zuletzt benutzter Ordner: ExportStyles",
+"dialog_page": null
+},
+{
+"key": "LastBatchProcessStartLocation",
+"type": "string",
+"default": "",
+"category": "Zuletzt benutzt",
+"effect": "zuletzt benutzter Ordner: BatchProcessStart",
+"dialog_page": null
+},
+{
+"key": "LastCommonLibrarySaveLocation",
+"type": "string",
+"default": "",
+"category": "Zuletzt benutzt",
+"effect": "zuletzt benutzter Ordner: CommonLibrarySave",
+"dialog_page": null
+},
+{
+"key": "SavePrefsWhileRunning",
+"type": "bool",
+"default": true,
+"category": "Sonstiges",
+"effect": "Voreinstellungen sofort nach OK im Dialog speichern",
+"dialog_page": null
+},
+{
+"key": "MultiProcessorOverrideSwitch",
+"type": "integer",
+"default": 0,
+"category": "Sonstiges",
+"effect": null,
+"dialog_page": null
+},
+{
+"key": "OSBasedResample",
+"type": "bool",
+"default": false,
+"category": "Dialog: Allgemein",
+"effect": "schnellere, ungenauere Neuaufloesung (Betriebssystem-Skalierung)",
+"dialog_page": "Allgemein"
+},
+{
+"key": "SwatchesPanelColorPaletteChoice",
+"type": "integer",
+"default": 0,
+"category": "Farbe",
+"effect": "Farbfelder-Bedienfeld: 0 Farbwuerfel, 1 benutzerdefiniert, 2 Graustufen, 3 Mac, 4 Windows, 5 Kontinuierlicher Farbton",
+"dialog_page": null
+},
+{
+"key": "NineSliceShowGuides",
+"type": "bool",
+"default": true,
+"category": "Hilfslinien/Raster",
+"effect": null,
+"dialog_page": null
+},
+{
+"key": "NineSliceGuideColor",
+"type": "string",
+"default": "#0000ff",
+"category": "Dialog: Hilfslinien und Raster",
+"effect": "Farbe der 9-Slice-Hilfslinien",
+"dialog_page": "Hilfslinien und Raster"
+},
+{
+"key": "ResizeImageCurrentPageOnly",
+"type": "bool",
+"default": true,
+"category": "Sonstiges",
+"effect": null,
+"dialog_page": null
+},
+{
+"key": "ResizeCanvasCurrentPageOnly",
+"type": "bool",
+"default": true,
+"category": "Sonstiges",
+"effect": null,
+"dialog_page": null
+},
+{
+"key": "PDFExport_PagesToExport",
+"type": "integer",
+"default": 1,
+"category": "Export",
+"effect": "PDF-Export: PagesToExport",
+"dialog_page": null
+},
+{
+"key": "PDFExport_Compression",
+"type": "integer",
+"default": 3,
+"category": "Export",
+"effect": "PDF-Export: Compression",
+"dialog_page": null
+},
+{
+"key": "PDFExport_Quality",
+"type": "integer",
+"default": 1,
+"category": "Export",
+"effect": "PDF-Export: Quality",
+"dialog_page": null
+},
+{
+"key": "PDFExport_Compatibility",
+"type": "integer",
+"default": 4,
+"category": "Export",
+"effect": "PDF-Export: Compatibility",
+"dialog_page": null
+},
+{
+"key": "PDFExport_BleedValue",
+"type": "integer",
+"default": 0,
+"category": "Export",
+"effect": "PDF-Export: BleedValue",
+"dialog_page": null
+},
+{
+"key": "PDFExport_GrayScale",
+"type": "bool",
+"default": false,
+"category": "Export",
+"effect": "PDF-Export: GrayScale",
+"dialog_page": null
+},
+{
+"key": "PDFExport_SelectableText",
+"type": "bool",
+"default": true,
+"category": "Export",
+"effect": "PDF-Export: SelectableText",
+"dialog_page": null
+},
+{
+"key": "PDFExport_OpenPDFAfterExport",
+"type": "bool",
+"default": true,
+"category": "Export",
+"effect": "PDF-Export: OpenPDFAfterExport",
+"dialog_page": null
+},
+{
+"key": "ShowSmartGuides",
+"type": "bool",
+"default": true,
+"category": "Dialog: Hilfslinien und Raster",
+"effect": "Intelligente Hilfslinien anzeigen",
+"dialog_page": "Hilfslinien und Raster"
+},
+{
+"key": "SnapToSmartGuides",
+"type": "bool",
+"default": true,
+"category": "Dialog: Hilfslinien und Raster",
+"effect": "An intelligenten Hilfslinien ausrichten",
+"dialog_page": "Hilfslinien und Raster"
+},
+{
+"key": "Tooltips",
+"type": "bool",
+"default": false,
+"category": "Werkzeuge",
+"effect": null,
+"dialog_page": null
+},
+{
+"key": "UngroupAutoshapes",
+"type": "bool",
+"default": false,
+"category": "Dialog: Bearbeiten",
+"effect": "Autoformen bei 9-Slice-Skalierung entgruppieren",
+"dialog_page": "Bearbeiten"
+},
+{
+"key": "IconPanelsAutoCollapse",
+"type": "bool",
+"default": false,
+"category": "Dialog: Allgemein",
+"effect": "Bedienfeldsymbole automatisch minimieren",
+"dialog_page": "Allgemein"
+},
+{
+"key": "OpenNewDocumentAsTabs",
+"type": "bool",
+"default": true,
+"category": "Sonstiges",
+"effect": "Dokumente als Registerkarten",
+"dialog_page": null
+},
+{
+"key": "GuiBrightness",
+"type": "integer",
+"default": 50,
+"category": "Sonstiges",
+"effect": "Oberflaechenhelligkeit 0..100 (A)",
+"dialog_page": null
+},
+{
+"key": "ShowPSImportDialog",
+"type": "bool",
+"default": true,
+"category": "Dialog: Photoshop-Datei importieren/oeffnen",
+"effect": "Photoshop-Import-Dialog zeigen",
+"dialog_page": "Photoshop-Datei importieren/oeffnen"
+},
+{
+"key": "ShowPSOpenDialog",
+"type": "bool",
+"default": true,
+"category": "Dialog: Photoshop-Datei importieren/oeffnen",
+"effect": "Photoshop-Oeffnen-Dialog zeigen",
+"dialog_page": "Photoshop-Datei importieren/oeffnen"
+},
+{
+"key": "PasteTextOnlyFromOtherApps",
+"type": "bool",
+"default": false,
+"category": "Sonstiges",
+"effect": null,
+"dialog_page": null
+},
+{
+"key": "SmartGuideColor",
+"type": "string",
+"default": "#ff4aff",
+"category": "Dialog: Hilfslinien und Raster",
+"effect": "Farbe intelligenter Hilfslinien",
+"dialog_page": "Hilfslinien und Raster"
+},
+{
+"key": "SliceGuidesVisible",
+"type": "bool",
+"default": true,
+"category": "Dialog: Hilfslinien und Raster",
+"effect": "Segmenthilfslinien anzeigen",
+"dialog_page": "Hilfslinien und Raster"
+},
+{
+"key": "DisableCompatabilityWarnings",
+"type": "bool",
+"default": false,
+"category": "Sonstiges",
+"effect": null,
+"dialog_page": null
+},
+{
+"key": "MaxDocSizeInPixels",
+"type": "integer",
+"default": 6000,
+"category": "Sonstiges",
+"effect": "maximale Dokumentgroesse (Pixel je Seite) fuer Warnung/Begrenzung (A)",
+"dialog_page": null
+},
+{
+"key": "DocumentMode",
+"type": "integer",
+"default": 1,
+"category": "Sonstiges",
+"effect": null,
+"dialog_page": null
+},
+{
+"key": "CurrentLayout",
+"type": "string",
+"default": "Expanded Mode",
+"category": "Zuletzt benutzt",
+"effect": "aktiver Arbeitsbereich",
+"dialog_page": null
+},
+{
+"key": "MasterPageExpanded",
+"type": "bool",
+"default": true,
+"category": "Sonstiges",
+"effect": null,
+"dialog_page": null
+},
+{
+"key": "RoundnessMode",
+"type": "integer",
+"default": 0,
+"category": "Sonstiges",
+"effect": null,
+"dialog_page": null
+},
+{
+"key": "RecentMenus",
+"type": "dict",
+"default": {},
+"category": "Zuletzt benutzt",
+"effect": "zuletzt benutzte Menues (dict)",
+"dialog_page": null
+},
+{
+"key": "HTMLCustomUpStateFrameName",
+"type": "string",
+"default": "",
+"category": "Export",
+"effect": "HTML-Export: CustomUpStateFrameName (siehe 08-export.md)",
+"dialog_page": null
+},
+{
+"key": "HTMLCustomOverStateFrameName",
+"type": "string",
+"default": "",
+"category": "Export",
+"effect": "HTML-Export: CustomOverStateFrameName (siehe 08-export.md)",
+"dialog_page": null
+},
+{
+"key": "HTMLCustomDownStateFrameName",
+"type": "string",
+"default": "",
+"category": "Export",
+"effect": "HTML-Export: CustomDownStateFrameName (siehe 08-export.md)",
+"dialog_page": null
+},
+{
+"key": "HTMLCustomOverDownStateFrameName",
+"type": "string",
+"default": "",
+"category": "Export",
+"effect": "HTML-Export: CustomOverDownStateFrameName (siehe 08-export.md)",
+"dialog_page": null
+},
+{
+"key": "TurnOnAutoSave",
+"type": "bool",
+"default": false,
+"category": "Sonstiges",
+"effect": "automatisches Speichern",
+"dialog_page": null
+},
+{
+"key": "AutoSaveTimeLimit",
+"type": "integer",
+"default": 5,
+"category": "Sonstiges",
+"effect": "Intervall automatisches Speichern (min, A)",
+"dialog_page": null
+},
+{
+"key": "SpriteSelectorIsClass",
+"type": "bool",
+"default": true,
+"category": "Export",
+"effect": "CSS-Sprites: SelectorIsClass",
+"dialog_page": null
+},
+{
+"key": "SpriteCssPrefix",
+"type": "string",
+"default": "",
+"category": "Export",
+"effect": "CSS-Sprites: CssPrefix",
+"dialog_page": null
+},
+{
+"key": "SpriteCssSuffix",
+"type": "string",
+"default": "",
+"category": "Export",
+"effect": "CSS-Sprites: CssSuffix",
+"dialog_page": null
+},
+{
+"key": "SpritePadding",
+"type": "integer",
+"default": 11,
+"category": "Export",
+"effect": "CSS-Sprites: Padding",
+"dialog_page": null
+},
+{
+"key": "SpriteOrientation",
+"type": "integer",
+"default": 3,
+"category": "Export",
+"effect": "CSS-Sprites: Orientation",
+"dialog_page": null
+},
+{
+"key": "SpriteExportPreset",
+"type": "string",
+"default": "",
+"category": "Export",
+"effect": "CSS-Sprites: ExportPreset",
+"dialog_page": null
+},
+{
+"key": "AsynchronousSave",
+"type": "bool",
+"default": true,
+"category": "Sonstiges",
+"effect": null,
+"dialog_page": null
+},
+{
+"key": "DontLoadSkin",
+"type": "bool",
+"default": false,
+"category": "Sonstiges",
+"effect": "Oberflaechenskin nicht laden",
+"dialog_page": null
+},
+{
+"key": "PNG",
+"type": "string",
+"default": "kMoaCfFormat_GIF",
+"category": "Sonstiges",
+"effect": "Zwischenablage-/Formatzuordnung fuer PNG (Wert kMoaCfFormat_GIF, ?)",
+"dialog_page": null
+},
+{
+"key": "GenericSystemFontName",
+"type": "string",
+"default": "Arial",
+"category": "Text",
+"effect": "Systemschrift fuer UI-Ersatz",
+"dialog_page": null
+},
+{
+"key": "MainWindowPos",
+"type": "string",
+"default": "-4 -4",
+"category": "Fenster/Bedienfelder",
+"effect": "Hauptfensterposition \"x y\"",
+"dialog_page": null
+},
+{
+"key": "MainWindowDim",
+"type": "string",
+"default": "1032 748",
+"category": "Fenster/Bedienfelder",
+"effect": "Hauptfenstergroesse \"B H\"",
+"dialog_page": null
+},
+{
+"key": "MainWindowMaximized",
+"type": "bool",
+"default": true,
+"category": "Fenster/Bedienfelder",
+"effect": "Hauptfenster maximiert",
+"dialog_page": null
+},
+{
+"key": "OpenDocWindowMaximized",
+"type": "bool",
+"default": true,
+"category": "Fenster/Bedienfelder",
+"effect": "Dokumentfenster maximiert",
+"dialog_page": null
+},
+{
+"key": "TextEditorPos",
+"type": "string",
+"default": "50 100",
+"category": "Text",
+"effect": "Texteditor: Pos",
+"dialog_page": null
+},
+{
+"key": "TextEditorSize",
+"type": "string",
+"default": "420 345",
+"category": "Text",
+"effect": "Texteditor: Size",
+"dialog_page": null
+},
+{
+"key": "ExportPreviewPos",
+"type": "string",
+"default": "0 0",
+"category": "Export",
+"effect": null,
+"dialog_page": null
+},
+{
+"key": "ExportPreviewSize",
+"type": "string",
+"default": "0 0",
+"category": "Export",
+"effect": null,
+"dialog_page": null
+},
+{
+"key": "DefaultDocSize",
+"type": "string",
+"default": "660 440",
+"category": "Fenster/Bedienfelder",
+"effect": "Groesse neues Dokument \"B H\"",
+"dialog_page": null
+},
+{
+"key": "DefaultDocRes",
+"type": "integer",
+"default": 72,
+"category": "Sonstiges",
+"effect": "Aufloesung neues Dokument (Code speichert als real)",
+"dialog_page": null
+},
+{
+"key": "DefaultDocResUnitName",
+"type": "string",
+"default": "inch",
+"category": "Sonstiges",
+"effect": "Aufloesungseinheit: inch | cm",
+"dialog_page": null
+},
+{
+"key": "DefaultDocHorzSizeUnitName",
+"type": "string",
+"default": "pixels",
+"category": "Sonstiges",
+"effect": "Breiteneinheit: pixels | inch | cm",
+"dialog_page": null
+},
+{
+"key": "DefaultDocVertSizeUnitName",
+"type": "string",
+"default": "pixels",
+"category": "Sonstiges",
+"effect": "Hoeheneinheit: pixels | inch | cm",
+"dialog_page": null
+},
+{
+"key": "DefaultDocColorState",
+"type": "integer",
+"default": 1,
+"category": "Farbe",
+"effect": "Leinwandfarbe neues Dokument: 1 Weiss, 2 Transparent, 3 Benutzerdefiniert (A)",
+"dialog_page": null
+},
+{
+"key": "WarnLowOnMemBeforeXMB",
+"type": "integer",
+"default": 200,
+"category": "System/Leistung",
+"effect": "Speicherwarnung unter X MB",
+"dialog_page": null
+},
+{
+"key": "WarnLowOnPhyMemBeforeXMB",
+"type": "integer",
+"default": 100,
+"category": "System/Leistung",
+"effect": "Warnung physischer Speicher unter X MB",
+"dialog_page": null
+},
+{
+"key": "TrimHistorySteps",
+"type": "integer",
+"default": 6,
+"category": "Sonstiges",
+"effect": "Verlauf bei Speichermangel auf n Schritte kuerzen",
+"dialog_page": null
+},
+{
+"key": "DontShowLowMemDialogAgain",
+"type": "bool",
+"default": false,
+"category": "System/Leistung",
+"effect": null,
+"dialog_page": null
+},
+{
+"key": "AppendFwPng",
+"type": "bool",
+"default": true,
+"category": "Dialog: Allgemein",
+"effect": "\".fw.png\" an Dateinamen anhaengen",
+"dialog_page": "Allgemein"
+},
+{
+"key": "ScaleTextIn9Slice",
+"type": "bool",
+"default": false,
+"category": "Sonstiges",
+"effect": null,
+"dialog_page": null
+},
+{
+"key": "ExtraPhotoshopPluginsDir",
+"type": "string",
+"default": "",
+"category": "Dialog: Zusatzmodule",
+"effect": "Pfad Photoshop-Zusatzmodule",
+"dialog_page": "Zusatzmodule"
+},
+{
+"key": "ExtraTexturesDir",
+"type": "string",
+"default": "",
+"category": "Dialog: Zusatzmodule",
+"effect": "Pfad Texturen",
+"dialog_page": "Zusatzmodule"
+},
+{
+"key": "ExtraPatternsDir",
+"type": "string",
+"default": "",
+"category": "Dialog: Zusatzmodule",
+"effect": "Pfad Muster",
+"dialog_page": "Zusatzmodule"
+},
+{
+"key": "PasteImportOrder",
+"type": "string",
+"default": "(FreeHand MX) (FreeHand 10.0) (FreeHand 9.0) (FreeHand 8.0) (FreeHand 7.0) (AI3) (PNG) (Text Engine 2.0) (#8) (#13) (#1)",
+"category": "Sonstiges",
+"effect": null,
+"dialog_page": null
+},
+{
+"key": "PasteExportOrder",
+"type": "string",
+"default": "(PNG) (#8)",
+"category": "Export",
+"effect": null,
+"dialog_page": null
+},
+{
+"key": "CheckAssociationOnStartup_png",
+"type": "bool",
+"default": true,
+"category": "Sonstiges",
+"effect": "Dateizuordnung beim Start pruefen: png",
+"dialog_page": null
+},
+{
+"key": "CheckAssociationOnStartup_jsf",
+"type": "bool",
+"default": true,
+"category": "Sonstiges",
+"effect": "Dateizuordnung beim Start pruefen: jsf",
+"dialog_page": null
+},
+{
+"key": "Text_Font",
+"type": "string",
+"default": "Arial",
+"category": "Text",
+"effect": "Textwerkzeug: Schrift (Familienname)",
+"dialog_page": null
+},
+{
+"key": "Text_CoolType_Font",
+"type": "string",
+"default": "ArialMT",
+"category": "Text",
+"effect": "Textwerkzeug: Schrift (PostScript-Name)",
+"dialog_page": null
+},
+{
+"key": "Text_Editor_DefaultFont",
+"type": "string",
+"default": "ArialMT",
+"category": "Text",
+"effect": "Textwerkzeug-Vorgabe: Editor_DefaultFont",
+"dialog_page": null
+},
+{
+"key": "LastExportDirectory",
+"type": "string",
+"default": "",
+"category": "Export",
+"effect": null,
+"dialog_page": null
+},
+{
+"key": "InternalWinSetting06",
+"type": "integer",
+"default": 10,
+"category": "Sonstiges",
+"effect": null,
+"dialog_page": null
+},
+{
+"key": "ExportSlicesImageFolder",
+"type": "string",
+"default": "images",
+"category": "Export",
+"effect": "Unterordner fuer Segmentbilder",
+"dialog_page": null
+},
+{
+"key": "InternalWinSetting07",
+"type": "integer",
+"default": 48,
+"category": "Sonstiges",
+"effect": null,
+"dialog_page": null
+},
+{
+"key": "UseKeyboardCharset",
+"type": "bool",
+"default": true,
+"category": "Sonstiges",
+"effect": "Zeichensatz der Tastatur fuer Text",
+"dialog_page": null
+},
+{
+"key": "LocalGamma",
+"type": "real",
+"default": 2.2,
+"category": "Farbe",
+"effect": "Gamma des eigenen Systems (Windows 2.2) fuer \"Gamma 1.8\"-Vorschau",
+"dialog_page": null
+},
+{
+"key": "OtherGamma",
+"type": "real",
+"default": 1.8,
+"category": "Farbe",
+"effect": "Gamma der simulierten Plattform (Mac 1.8)",
+"dialog_page": null
+},
+{
+"key": "DefaultJsMaskCompression",
+"type": "integer",
+"default": 2,
+"category": "System/Leistung",
+"effect": null,
+"dialog_page": null
+},
+{
+"key": "SymLibPanel_MaximizedWidth",
+"type": "integer",
+"default": 313,
+"category": "Fenster/Bedienfelder",
+"effect": "Symbolbibliothek-Bedienfeld: MaximizedWidth",
+"dialog_page": null
+},
+{
+"key": "SymLibPanel_NameLabelWidth",
+"type": "integer",
+"default": 120,
+"category": "Fenster/Bedienfelder",
+"effect": "Symbolbibliothek-Bedienfeld: NameLabelWidth",
+"dialog_page": null
+},
+{
+"key": "SymLibPanel_KindLabelWidth",
+"type": "integer",
+"default": 105,
+"category": "Fenster/Bedienfelder",
+"effect": "Symbolbibliothek-Bedienfeld: KindLabelWidth",
+"dialog_page": null
+},
+{
+"key": "SymLibPanel_DateLabelWidth",
+"type": "integer",
+"default": 82,
+"category": "Fenster/Bedienfelder",
+"effect": "Symbolbibliothek-Bedienfeld: DateLabelWidth",
+"dialog_page": null
+},
+{
+"key": "CommonLibPanel_NameLabelWidth",
+"type": "integer",
+"default": 250,
+"category": "Fenster/Bedienfelder",
+"effect": "Allgemeine Bibliothek: NameLabelWidth",
+"dialog_page": null
+},
+{
+"key": "CommonLibPanel_KindLabelWidth",
+"type": "integer",
+"default": 50,
+"category": "Fenster/Bedienfelder",
+"effect": "Allgemeine Bibliothek: KindLabelWidth",
+"dialog_page": null
+},
+{
+"key": "ArtyFileExportType",
+"type": "integer",
+"default": 0,
+"category": "Export",
+"effect": null,
+"dialog_page": null
+},
+{
+"key": "InternalWinSetting08",
+"type": "integer",
+"default": 96,
+"category": "Sonstiges",
+"effect": null,
+"dialog_page": null
+},
+{
+"key": "WinAllowOpenDirectoryNamesWithSpaces",
+"type": "bool",
+"default": false,
+"category": "Fenster/Bedienfelder",
+"effect": "Windows-Fenster/Bedienfeld: AllowOpenDirectoryNamesWithSpaces",
+"dialog_page": null
+},
+{
+"key": "WinToolPalettePosition",
+"type": "string",
+"default": "-1 -1",
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Win: PalettePosition",
+"dialog_page": null
+},
+{
+"key": "WinToolPaletteVisible",
+"type": "bool",
+"default": true,
+"category": "Werkzeuge",
+"effect": "Werkzeugoption Win: PaletteVisible",
+"dialog_page": null
+},
+{
+"key": "WinPropertyInspectorPosition",
+"type": "string",
+"default": "-1 -1",
+"category": "Fenster/Bedienfelder",
+"effect": "Windows-Fenster/Bedienfeld: PropertyInspectorPosition",
+"dialog_page": null
+},
+{
+"key": "WinPropertyInspectorPaletteVisible",
+"type": "bool",
+"default": true,
+"category": "Fenster/Bedienfelder",
+"effect": "Windows-Fenster/Bedienfeld: PropertyInspectorPaletteVisible",
+"dialog_page": null
+},
+{
+"key": "WinFlashPalettePosition",
+"type": "string",
+"default": "-1 -1",
+"category": "Fenster/Bedienfelder",
+"effect": "Windows-Fenster/Bedienfeld: FlashPalettePosition",
+"dialog_page": null
+},
+{
+"key": "WinFlashPaletteSize",
+"type": "string",
+"default": "506 342",
+"category": "Fenster/Bedienfelder",
+"effect": "Windows-Fenster/Bedienfeld: FlashPaletteSize",
+"dialog_page": null
+},
+{
+"key": "WinFlashPaletteVisible",
+"type": "bool",
+"default": false,
+"category": "Fenster/Bedienfelder",
+"effect": "Windows-Fenster/Bedienfeld: FlashPaletteVisible",
+"dialog_page": null
+},
+{
+"key": "SharedLayerColor",
+"type": "string",
+"default": "#FFFF99",
+"category": "Farbe",
+"effect": "Markierung freigegebener Ebenen",
+"dialog_page": null
+},
+{
+"key": "SharedLayerHighlightColor",
+"type": "string",
+"default": "#FFCC66",
+"category": "Farbe",
+"effect": "Hervorhebung freigegebener Ebenen",
+"dialog_page": null
+},
+{
+"key": "MasterLayerColor",
+"type": "string",
+"default": "#D4D0C8",
+"category": "Farbe",
+"effect": "Markierung Masterseiten-Ebene",
+"dialog_page": null
+},
+{
+"key": "PIDockLocation",
+"type": "integer",
+"default": 4,
+"category": "Fenster/Bedienfelder",
+"effect": null,
+"dialog_page": null
+},
+{
+"key": "PIPrevDockLocation",
+"type": "integer",
+"default": 0,
+"category": "Fenster/Bedienfelder",
+"effect": null,
+"dialog_page": null
+},
+{
+"key": "PICollapsedIfDocked",
+"type": "bool",
+"default": false,
+"category": "Fenster/Bedienfelder",
+"effect": null,
+"dialog_page": null
+},
+{
+"key": "ToolsDockLocation",
+"type": "integer",
+"default": 1,
+"category": "Werkzeuge",
+"effect": null,
+"dialog_page": null
+},
+{
+"key": "ToolsPrevDockLocation",
+"type": "integer",
+"default": 0,
+"category": "Werkzeuge",
+"effect": null,
+"dialog_page": null
+},
+{
+"key": "SwfPanelMap",
+"type": "dict",
+"default": {
+"48603": "\\Image Editing.swf",
+"48601": "\\Align.swf",
+"48602": "\\Auto Shape Properties.swf",
+"48604": "\\Special Characters.swf"
+},
+"category": "Export",
+"effect": "Zuordnung Bedienfeld-ID -> SWF-Datei (Flash-Bedienfelder)",
+"dialog_page": null
+},
+{
+"key": "WinOpenDialogViewType",
+"type": "integer",
+"default": 28717,
+"category": "Fenster/Bedienfelder",
+"effect": "Windows-Fenster/Bedienfeld: OpenDialogViewType",
+"dialog_page": null
+}
+]
+}

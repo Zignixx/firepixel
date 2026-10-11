@@ -1,0 +1,29 @@
+[package]
+name = "fp-ai"
+description = "KI-Auswahl von Firepixel: eigene CPU-Inferenz (reines Rust) für Objektauswahl (SAM 2.1), Motiv auswählen und Kante verfeinern (BiRefNet), Modellverwaltung mit geprüftem Download"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+fp-geom = { workspace = true }
+fp-raster = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+rayon = { workspace = true }
+# Matrixmultiplikation (reines Rust, SIMD zur Laufzeit gewählt, sichere API)
+faer = { version = "0.24", default-features = false, features = ["std", "rayon"] }
+# Prüfsumme der Modelldateien
+sha2 = "0.10"
+# Download der Modelle nach Zustimmung (TLS über die Windows-Systembibliothek, keine eigene DLL)
+ureq = { version = "3", default-features = false, features = ["native-tls"] }
+
+[dev-dependencies]
+png = { workspace = true }
+# Testbilder (JPEG) lesen
+fp-io = { workspace = true }
+
+[lints]
+workspace = true

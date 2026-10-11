@@ -1,0 +1,424 @@
+//! Bausteine der Inspektor-Felder im Stil des Originals: Platzierung in Dialogeinheiten (DLU,
+//! Lage aus `dialoge.json`), Zahlenfeld mit Popup-Schieber („100 ▾“), Kombifeld, Textfeld,
+//! Symbol-Umschalter, Kontrollkästchen und Knopf. Alle Farben aus dem [`Theme`].
+//!
+//! Felder liefern geänderte Werte zurück (`Option<…>`); der Aufrufer schickt daraus einen Befehl.
+//! Textfelder übernehmen ihren Wert bei Eingabe bzw. Fokusverlust (Esc verwirft), wie Windows.
+
+use crate::inspector::glyphs::{self, Glyph};
+use crate::theme::Theme;
+use egui::{pos2, vec2, Align2, Color32, Id, Pos2, Rect, Response, Sense, Stroke, StrokeKind, Ui};
+use std::hash::Hash;
+
+/// Umrechnung DLU → Pixel (11 §6: 1,5 px waagerecht, 1,625 px senkrecht).
+pub const DLU_X: f32 = 1.5;
+pub const DLU_Y: f32 = 1.625;
+
+/// Ursprung für DLU-Angaben.
+#[derive(Clone, Copy, Debug)]
+pub struct Dl(pub Pos2);
+
+impl Dl {
+    /// Ursprung bei `p`.
+    pub fn at(p: Pos2) -> Dl {
+        Dl(p)
+    }
+    /// Rechteck aus `[x, y, b, h]` in DLU.
+    pub fn r(&self, x: f32, y: f32, w: f32, h: f32) -> Rect {
+        Rect::from_min_size(pos2((self.0.x + x * DLU_X).round(), (self.0.y + y * DLU_Y).round()), vec2((w * DLU_X).round(), (h * DLU_Y).round()))
+    }
+    /// Verschobener Ursprung (DLU).
+    pub fn offset(&self, x: f32, y: f32) -> Dl {
+        Dl(pos2(self.0.x + x * DLU_X, self.0.y + y * DLU_Y))
+    }
+}
+
+/// Beschriftung links ausgerichtet, senkrecht mittig.
+pub fn label(ui: &Ui, r: Rect, text: &str, enabled: bool) {
+    let t = Theme::current(ui.ctx());
+    let col = if enabled { t.colors.text } else { t.colors.text_disabled };
+    ui.painter().text(pos2(r.left(), r.center().y), Align2::LEFT_CENTER, text, t.ui_font(), col);
+}
+
+/// Beschriftung rechts ausgerichtet (wie die Original-Labels vor Feldern).
+pub fn label_right(ui: &Ui, r: Rect, text: &str, enabled: bool) {
+    let t = Theme::current(ui.ctx());
+    let col = if enabled { t.colors.text } else { t.colors.text_disabled };
+    ui.painter().text(pos2(r.right(), r.center().y), Align2::RIGHT_CENTER, text, t.ui_font(), col);
+}
+
+/// Rahmen eines Eingabefelds.
+pub fn field_frame(ui: &Ui, r: Rect, enabled: bool, focused: bool) {
+    let t = Theme::current(ui.ctx());
+    let c = &t.colors;
+    ui.painter().rect_filled(r, 0.0, if enabled { c.field_bg } else { c.frame_bg });
+    let border = if focused { c.focus } else if enabled { c.field_border } else { c.line_light };
+    ui.painter().rect_stroke(r, 0.0, Stroke::new(1.0, border), StrokeKind::Inside);
+}
+
+/// Tasten, die ein fokussiertes Textfeld selbst behält: Pfeile und Esc (Esc verwirft im Feld und
+/// darf nicht an Leinwand oder Werkzeug gehen).
+pub const TEXT_FILTER: egui::EventFilter = egui::EventFilter { horizontal_arrows: true, vertical_arrows: true, tab: false, escape: true };
+
+fn buffered_edit(ui: &mut Ui, id: Id, r: Rect, current: &str, enabled: bool, right: bool) -> (Option<String>, Response) {
+    let t = Theme::current(ui.ctx());
+    let te_id = id.with("te");
+    let focused = ui.memory(|m| m.has_focus(te_id));
+    // Puffer beim Tippen; ändert sich der Wert von außen (Schieber, Pfeil) und wurde noch nichts
+    // getippt, folgt der Puffer – sonst überschriebe der Fokusverlust den neuen Wert mit dem alten
+    let orig_id = id.with("orig");
+    let mut buf: String = if focused {
+        let stored = ui.data(|d| d.get_temp::<String>(id));
+        let orig = ui.data(|d| d.get_temp::<String>(orig_id));
+        match (stored, orig) {
+            (Some(b), Some(o)) if b == o && o != current => current.to_string(),
+            (Some(b), _) => b,
+            _ => current.to_string(),
+        }
+    } else {
+        current.to_string()
+    };
+    if focused {
+        let untouched = ui.data(|d| d.get_temp::<String>(orig_id)).is_none_or(|o| o != current && buf == current);
+        if untouched {
+            ui.data_mut(|d| d.insert_temp(orig_id, current.to_string()));
+        }
+    } else {
+        ui.data_mut(|d| d.insert_temp(orig_id, current.to_string()));
+    }
+    field_frame(ui, r, enabled, focused && t.glow);
+    let inner = r.shrink2(vec2(3.0, 1.0));
+    let col = if enabled { t.colors.field_text } else { t.colors.text_disabled };
+    let te = egui::TextEdit::singleline(&mut buf)
+        .id(te_id)
+        .frame(egui::Frame::NONE)
+        .font(t.ui_font())
+        .text_color(col)
+        .margin(egui::Margin::ZERO)
+        .vertical_align(egui::Align::Center)
+        .horizontal_align(if right { egui::Align::Max } else { egui::Align::Min })
+        .desired_width(inner.width())
+        // Esc selbst behandeln: sonst nimmt egui den Fokus schon zu Beginn des Bildes weg und die
+        // Taste erreicht zusätzlich die Leinwand (Auswahl aufheben)
+        .event_filter(crate::inspector::fields::TEXT_FILTER);
+    let resp = ui.add_enabled_ui(enabled, |ui| ui.put(inner, te)).inner;
+    // erstes Feld eines frisch geöffneten Dialogs: Fokus, Inhalt ganz markiert
+    crate::dialogs::autofocus_field(ui, &resp, current.chars().count());
+    crate::dialogs::select_on_tab(ui, &resp, current.chars().count());
+    let esc = ui.input(|i| i.key_pressed(egui::Key::Escape));
+    if esc && resp.has_focus() {
+        ui.memory_mut(|m| m.surrender_focus(te_id));
+        ui.data_mut(|d| d.remove::<String>(id));
+        return (None, resp);
+    }
+    let mut out = None;
+    if resp.lost_focus() && !esc && buf != current {
+        out = Some(buf.clone());
+    }
+    if resp.has_focus() {
+        ui.data_mut(|d| d.insert_temp(id, buf));
+    } else {
+        ui.data_mut(|d| d.remove::<String>(id));
+    }
+    (out, resp)
+}
+
+/// Textfeld; liefert den neuen Text nach Eingabe/Fokusverlust.
+pub fn text(ui: &mut Ui, id: impl Hash + std::fmt::Debug, r: Rect, current: &str, enabled: bool) -> Option<String> {
+    buffered_edit(ui, Id::new(id), r, current, enabled, false).0
+}
+
+/// Zahl formatieren (Komma, ohne überflüssige Nachkommastellen).
+pub fn fmt_num(v: f64, decimals: usize) -> String {
+    let s = format!("{v:.decimals$}");
+    let s = if decimals > 0 { s.trim_end_matches('0').trim_end_matches('.').to_string() } else { s };
+    s.replace('.', ",")
+}
+
+/// Zahl lesen (Komma oder Punkt; Rest nach der Zahl wird ignoriert wie `%d`).
+pub fn parse_num(s: &str) -> Option<f64> {
+    let t = s.trim().replace(',', ".");
+    let end = t.char_indices().take_while(|(i, c)| c.is_ascii_digit() || *c == '.' || (*i == 0 && (*c == '-' || *c == '+'))).map(|(i, c)| i + c.len_utf8()).last()?;
+    t[..end].parse::<f64>().ok().filter(|v| v.is_finite())
+}
+
+/// Wert auf einen Bereich klemmen (konservativ wie 11 §6: Eingaben auf den Schieberbereich).
+pub fn clamp_range(v: f64, range: (f64, f64)) -> f64 {
+    v.clamp(range.0.min(range.1), range.0.max(range.1))
+}
+
+/// Zahlenfeld mit optionalem Popup-Schieber (`arrow`). `value = None` zeigt ein leeres Feld
+/// (gemischte Auswahl). Liefert den neuen, auf `range` geklemmten Wert.
+#[allow(clippy::too_many_arguments)]
+pub fn number(ui: &mut Ui, id: impl Hash + std::fmt::Debug, edit: Rect, arrow: Option<Rect>, value: Option<f64>, range: (f64, f64), decimals: usize, enabled: bool) -> Option<f64> {
+    let id = Id::new(id);
+    let cur = value.map(|v| fmt_num(v, decimals)).unwrap_or_default();
+    let (txt, _) = buffered_edit(ui, id, edit, &cur, enabled, false);
+    let mut out = txt.and_then(|s| parse_num(&s)).map(|v| clamp_range(v, range));
+    if let Some(a) = arrow
+        && let Some(v) = slider_arrow(ui, id.with("arrow"), a, value.unwrap_or(range.0), range, decimals, enabled)
+    {
+        out = Some(v);
+    }
+    out
+}
+
+/// Pfeilknopf ▾ mit Popup-Schieber. Übernommen wird beim Loslassen.
+pub fn slider_arrow(ui: &mut Ui, id: Id, r: Rect, value: f64, range: (f64, f64), decimals: usize, enabled: bool) -> Option<f64> {
+    let t = Theme::current(ui.ctx());
+    let resp = ui.interact(r, id, if enabled { Sense::click() } else { Sense::hover() });
+    let c = &t.colors;
+    if resp.hovered() && enabled {
+        ui.painter().rect_filled(r, 0.0, c.button_hover_bg);
+        ui.painter().rect_stroke(r, 0.0, Stroke::new(1.0, c.button_hover_border), StrokeKind::Inside);
+    }
+    glyphs::chevron_down(ui.painter(), r, if enabled { c.icon_fg } else { c.icon_disabled });
+    let mut out = None;
+    let key = id.with("val");
+    egui::Popup::from_toggle_button_response(&resp)
+        .close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside)
+        .frame(crate::menu::menu_frame(&t))
+        .show(|ui| {
+            let mut v: f64 = ui.data(|d| d.get_temp(key)).unwrap_or(value);
+            ui.spacing_mut().slider_width = 130.0;
+            let s = egui::Slider::new(&mut v, range.0..=range.1).show_value(false);
+            let s = if decimals == 0 { s.step_by(1.0) } else { s };
+            let r2 = ui.add(s);
+            ui.label(egui::RichText::new(fmt_num(v, decimals)).font(t.small_font()).color(c.text));
+            if r2.dragged() || r2.changed() {
+                ui.data_mut(|d| d.insert_temp(key, v));
+            }
+            if r2.drag_stopped() || (r2.changed() && !r2.dragged()) {
+                out = Some(v);
+                ui.data_mut(|d| d.remove::<f64>(key));
+            }
+        });
+    out
+}
+
+/// Ein Eintrag „-----“ in Kombifeld-Listen ist ein Trenner.
+pub fn is_separator(s: &str) -> bool {
+    !s.is_empty() && s.chars().all(|c| c == '-' || c == '—')
+}
+
+/// Zeichnet ein Kombifeld (Feld + Chevron) und liefert die Antwort.
+pub fn combo_box_frame(ui: &mut Ui, id: Id, r: Rect, text: &str, enabled: bool) -> Response {
+    let t = Theme::current(ui.ctx());
+    let c = &t.colors;
+    let resp = ui.interact(r, id, if enabled { Sense::click() } else { Sense::hover() });
+    let open = egui::Popup::is_id_open(ui.ctx(), egui::Popup::default_response_id(&resp));
+    let hot = enabled && (resp.hovered() || open);
+    ui.painter().rect_filled(r, 0.0, if enabled { c.field_bg } else { c.frame_bg });
+    ui.painter().rect_stroke(r, 0.0, Stroke::new(1.0, if hot { c.button_hover_border } else if enabled { c.field_border } else { c.line_light }), StrokeKind::Inside);
+    let ar = Rect::from_min_max(pos2(r.right() - 16.0, r.top()), r.max);
+    if hot {
+        ui.painter().rect_filled(ar.shrink(1.0), 0.0, c.button_hover_bg);
+    }
+    glyphs::chevron_down(ui.painter(), ar, if enabled { c.icon_fg } else { c.icon_disabled });
+    let col = if enabled { c.field_text } else { c.text_disabled };
+    crate::widgets::text_clipped(ui.painter(), pos2(r.left() + 4.0, r.center().y), Align2::LEFT_CENTER, text, t.ui_font(), col, r.width() - 22.0);
+    resp
+}
+
+/// Kombifeld mit fester Liste. `selected` ist der Index in `items` (Trenner zählen mit, sind aber
+/// nicht wählbar). Liefert den gewählten Index.
+pub fn combo(ui: &mut Ui, id: impl Hash + std::fmt::Debug, r: Rect, items: &[&str], selected: Option<usize>, enabled: bool) -> Option<usize> {
+    let id = Id::new(id);
+    let text = selected.and_then(|i| items.get(i)).copied().unwrap_or("");
+    let resp = combo_box_frame(ui, id, r, text, enabled);
+    let mut out = None;
+    let t = Theme::current(ui.ctx());
+    egui::Popup::menu(&resp).frame(crate::menu::menu_frame(&t)).width(r.width().max(60.0)).show(|ui| {
+        ui.spacing_mut().item_spacing = vec2(0.0, 0.0);
+        egui::ScrollArea::vertical().max_height(360.0).show(ui, |ui| {
+            for (i, it) in items.iter().enumerate() {
+                if is_separator(it) {
+                    let (sr, _) = ui.allocate_exact_size(vec2(ui.available_width(), 7.0), Sense::hover());
+                    ui.painter().hline(sr.x_range().shrink(4.0), sr.center().y.floor() + 0.5, Stroke::new(1.0, t.colors.menu_separator));
+                    continue;
+                }
+                if list_item(ui, it, Some(i) == selected).clicked() {
+                    out = Some(i);
+                    ui.close();
+                }
+            }
+        });
+    });
+    out
+}
+
+/// Eintrag einer Aufklappliste.
+pub fn list_item(ui: &mut Ui, text: &str, selected: bool) -> Response {
+    let t = Theme::current(ui.ctx());
+    let c = &t.colors;
+    let (r, resp) = ui.allocate_exact_size(vec2(ui.available_width().max(60.0), 18.0), Sense::click());
+    if resp.hovered() {
+        ui.painter().rect_filled(r, 0.0, c.menu_hover_bg);
+    } else if selected {
+        ui.painter().rect_filled(r, 0.0, c.list_selected_bg);
+    }
+    let col = if resp.hovered() { c.menu_hover_text } else { c.menu_text };
+    ui.painter().text(pos2(r.left() + 6.0, r.center().y), Align2::LEFT_CENTER, text, t.ui_font(), col);
+    resp
+}
+
+/// Kombifeld mit Eingabe (ComboDropDown, z. B. Hyperlink): Text frei, Liste zur Auswahl.
+pub fn combo_edit(ui: &mut Ui, id: impl Hash + std::fmt::Debug, r: Rect, current: &str, items: &[String], enabled: bool) -> Option<String> {
+    let id = Id::new(id);
+    let er = Rect::from_min_max(r.min, pos2(r.right() - 16.0, r.bottom()));
+    let mut out = buffered_edit(ui, id, er, current, enabled, false).0;
+    let ar = Rect::from_min_max(pos2(r.right() - 17.0, r.top()), r.max);
+    let t = Theme::current(ui.ctx());
+    let resp = ui.interact(ar, id.with("arrow"), if enabled { Sense::click() } else { Sense::hover() });
+    ui.painter().rect_filled(ar, 0.0, if enabled { t.colors.field_bg } else { t.colors.frame_bg });
+    ui.painter().rect_stroke(ar, 0.0, Stroke::new(1.0, if enabled { t.colors.field_border } else { t.colors.line_light }), StrokeKind::Inside);
+    glyphs::chevron_down(ui.painter(), ar, if enabled { t.colors.icon_fg } else { t.colors.icon_disabled });
+    egui::Popup::menu(&resp).frame(crate::menu::menu_frame(&t)).width(r.width()).show(|ui| {
+        ui.spacing_mut().item_spacing = vec2(0.0, 0.0);
+        if items.is_empty() {
+            ui.label(egui::RichText::new("(keine Einträge)").color(t.colors.menu_text_disabled));
+        }
+        for it in items {
+            if list_item(ui, it, it == current).clicked() {
+                out = Some(it.clone());
+                ui.close();
+            }
+        }
+    });
+    out
+}
+
+/// Symbol-Umschalter (Füllart, Strichposition, Pfadoperationen, Ausrichtung …).
+pub fn toggle(ui: &mut Ui, id: impl Hash + std::fmt::Debug, r: Rect, glyph: Glyph, on: bool, enabled: bool, tip: &str) -> bool {
+    let t = Theme::current(ui.ctx());
+    let c = &t.colors;
+    let resp = ui.interact(r, Id::new(id), if enabled { Sense::click() } else { Sense::hover() });
+    let hot = enabled && resp.hovered();
+    if on {
+        if t.glow {
+            ui.painter().rect_filled(r, 2.0, crate::theme::with_alpha(c.focus, 40));
+            ui.painter().rect_stroke(r, 2.0, Stroke::new(1.0, c.focus), StrokeKind::Inside);
+        } else {
+            ui.painter().rect_filled(r, 2.0, c.tool_selected_bg);
+            ui.painter().rect_stroke(r, 2.0, Stroke::new(1.0, c.tool_selected_border), StrokeKind::Inside);
+        }
+    } else {
+        ui.painter().rect_filled(r, 2.0, if hot { c.button_hover_bg } else { c.button_bg });
+        ui.painter().rect_stroke(r, 2.0, Stroke::new(1.0, if hot { c.button_hover_border } else { c.button_border }), StrokeKind::Inside);
+    }
+    glyphs::paint(ui.painter(), r, glyph, &t, enabled);
+    let clicked = enabled && resp.clicked();
+    if !tip.is_empty() {
+        resp.on_hover_text(tip);
+    }
+    clicked
+}
+
+/// Flacher Symbolknopf (Stil-Knöpfe, Filter + / −).
+pub fn icon_button(ui: &mut Ui, id: impl Hash + std::fmt::Debug, r: Rect, glyph: Glyph, enabled: bool, tip: &str) -> Response {
+    let t = Theme::current(ui.ctx());
+    let c = &t.colors;
+    let resp = ui.interact(r, Id::new(id), if enabled { Sense::click() } else { Sense::hover() });
+    if enabled && resp.hovered() {
+        ui.painter().rect_filled(r, 2.0, c.button_hover_bg);
+        ui.painter().rect_stroke(r, 2.0, Stroke::new(1.0, c.button_hover_border), StrokeKind::Inside);
+    }
+    glyphs::paint(ui.painter(), r, glyph, &t, enabled);
+    if tip.is_empty() { resp } else { resp.on_hover_text(tip) }
+}
+
+/// Knopf mit Text (Windows-Stil).
+pub fn button(ui: &mut Ui, id: impl Hash + std::fmt::Debug, r: Rect, text: &str, enabled: bool) -> bool {
+    let t = Theme::current(ui.ctx());
+    let c = &t.colors;
+    let resp = ui.interact(r, Id::new(id), if enabled { Sense::click() } else { Sense::hover() });
+    let hot = enabled && resp.hovered();
+    let pressed = enabled && resp.is_pointer_button_down_on();
+    let bg = if pressed { c.button_pressed_bg } else if hot { c.button_hover_bg } else { c.button_bg };
+    ui.painter().rect_filled(r, 2.0, bg);
+    ui.painter().rect_stroke(r, 2.0, Stroke::new(1.0, if hot { c.button_hover_border } else { c.button_border }), StrokeKind::Inside);
+    let col = if enabled { c.text } else { c.text_disabled };
+    crate::widgets::text_clipped(ui.painter(), r.center(), Align2::CENTER_CENTER, text, t.ui_font(), col, r.width() - 6.0);
+    enabled && resp.clicked()
+}
+
+/// Kontrollkästchen mit Beschriftung; liefert den neuen Zustand.
+pub fn checkbox(ui: &mut Ui, id: impl Hash + std::fmt::Debug, r: Rect, text: &str, checked: bool, enabled: bool) -> Option<bool> {
+    let t = Theme::current(ui.ctx());
+    let c = &t.colors;
+    let resp = ui.interact(r, Id::new(id), if enabled { Sense::click() } else { Sense::hover() });
+    let bx = Rect::from_min_size(pos2(r.left(), r.center().y - 6.5), vec2(13.0, 13.0));
+    ui.painter().rect_filled(bx, 0.0, if enabled { c.field_bg } else { c.frame_bg });
+    ui.painter().rect_stroke(bx, 0.0, Stroke::new(1.0, if enabled && resp.hovered() { c.focus } else if enabled { c.field_border } else { c.line_light }), StrokeKind::Inside);
+    if checked {
+        let col = if enabled { c.field_text } else { c.text_disabled };
+        ui.painter().line(vec![pos2(bx.left() + 3.0, bx.center().y), pos2(bx.left() + 5.5, bx.bottom() - 3.5), pos2(bx.right() - 3.0, bx.top() + 3.5)], Stroke::new(1.6, col));
+    }
+    ui.painter().text(pos2(bx.right() + 5.0, r.center().y), Align2::LEFT_CENTER, text, t.ui_font(), if enabled { c.text } else { c.text_disabled });
+    (enabled && resp.clicked()).then_some(!checked)
+}
+
+/// Optionsfeld (rund) mit Beschriftung; liefert `true` beim Anklicken.
+pub fn radio(ui: &mut Ui, id: impl Hash + std::fmt::Debug, r: Rect, text: &str, on: bool, enabled: bool) -> bool {
+    let t = Theme::current(ui.ctx());
+    let c = &t.colors;
+    let resp = ui.interact(r, Id::new(id), if enabled { Sense::click() } else { Sense::hover() });
+    let center = pos2(r.left() + 6.5, r.center().y);
+    ui.painter().circle_filled(center, 6.0, if enabled { c.field_bg } else { c.frame_bg });
+    ui.painter().circle_stroke(center, 6.0, Stroke::new(1.0, if enabled && resp.hovered() { c.focus } else { c.field_border }));
+    if on {
+        ui.painter().circle_filled(center, 3.0, if enabled { c.field_text } else { c.text_disabled });
+    }
+    if !text.is_empty() {
+        ui.painter().text(pos2(r.left() + 17.0, r.center().y), Align2::LEFT_CENTER, text, t.ui_font(), if enabled { c.text } else { c.text_disabled });
+    }
+    enabled && resp.clicked()
+}
+
+/// Farbfeld mit Aufklapp-Dreieck (für Popups); `None` = keine Farbe (roter Schrägstrich).
+pub fn swatch(ui: &mut Ui, id: impl Hash + std::fmt::Debug, r: Rect, color: Option<fp_color::Argb>, enabled: bool) -> Response {
+    let t = Theme::current(ui.ctx());
+    let resp = ui.interact(r, Id::new(id), if enabled { Sense::click() } else { Sense::hover() });
+    let col = match color {
+        Some(c) => Color32::from_rgba_unmultiplied(c.r(), c.g(), c.b(), c.a()),
+        None => Color32::TRANSPARENT,
+    };
+    crate::widgets::color_well(ui.painter(), r, col, &t);
+    if enabled && resp.hovered() {
+        ui.painter().rect_stroke(r, 0.0, Stroke::new(1.0, t.colors.focus), StrokeKind::Inside);
+    }
+    resp
+}
+
+/// Senkrechte Trennlinie (zwischen Teilfeldern im Quadranten, z. B. Füllung | Strich).
+pub fn vsep(ui: &Ui, x: f32, y0: f32, y1: f32) {
+    let t = Theme::current(ui.ctx());
+    ui.painter().vline(x.floor() + 0.5, y0..=y1, Stroke::new(1.0, t.colors.line_mid));
+    ui.painter().vline(x.floor() + 1.5, y0..=y1, Stroke::new(1.0, t.colors.line_light));
+}
+
+/// Liste mit Rahmen (Filterliste, Listen in Dialogen); liefert das Innenrechteck.
+pub fn list_box(ui: &Ui, r: Rect) -> Rect {
+    let t = Theme::current(ui.ctx());
+    ui.painter().rect_filled(r, 0.0, t.colors.list_bg);
+    ui.painter().rect_stroke(r, 0.0, Stroke::new(1.0, t.colors.list_border), StrokeKind::Inside);
+    r.shrink(1.0)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn numbers_parse_and_format() {
+        assert_eq!(parse_num("12,5"), Some(12.5));
+        assert_eq!(parse_num(" 40 px"), Some(40.0));
+        assert_eq!(parse_num("-3"), Some(-3.0));
+        assert_eq!(parse_num("abc"), None);
+        assert_eq!(fmt_num(4.10, 1), "4,1");
+        assert_eq!(fmt_num(100.0, 0), "100");
+        assert_eq!(clamp_range(150.0, (0.0, 100.0)), 100.0);
+        assert!(is_separator("-----"));
+        assert!(!is_separator("Normal"));
+    }
+}
