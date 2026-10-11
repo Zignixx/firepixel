@@ -18,17 +18,44 @@
 //! sonst den Schlüssel selbst (fehlende Texte sind so sofort sichtbar). Die Testsprache
 //! [`PSEUDO_LANG`] („qps“) zeigt jeden Text markiert und verlängert: unübersetzte, fest
 //! eingebaute Texte fallen auf, und Layouts werden mit längeren Texten geprüft.
+//!
+//! # Formate
+//! Zugriffstasten ([`strip_access`], [`t_access`]), Tastenkürzel ([`shortcut_label`]),
+//! Einheiten ([`unit`]), Zahlen ([`fmt_decimal`], Fluent-Funktion `NUMBER`), Dateigrößen
+//! ([`fmt_size`]) und Datum/Uhrzeit ([`fmt_date`], [`fmt_time`]) folgen der aktuellen Sprache.
+//!
+//! # Leistung
+//! [`t`] wird je Frame tausendfach aufgerufen. Jeder Thread hat einen eigenen Lese-Cache, der an
+//! [`generation`] hängt: im Normalfall weder Sperre noch Fluent, nur ein Hash-Nachschlagen
+//! (Messung: `tests\leistung.rs`, Werte im README).
+//!
+//! # Prüfen
+//! [`check`] prüft Sprachdateien (fehlende/verwaiste Schlüssel, Platzhalter, Syntax,
+//! Zugriffstasten-Konflikte) – für Tests und `firepixel-cli sprache pruefen`.
 
 use fluent_bundle::concurrent::FluentBundle;
 use fluent_bundle::{FluentArgs, FluentResource};
+use std::cell::RefCell;
 use std::collections::{BTreeSet, HashMap};
 use std::path::Path;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, OnceLock, RwLock};
 use unic_langid::LanguageIdentifier;
 
 pub use fluent_bundle::FluentValue as Value;
 
+pub mod check;
+mod format;
+pub use format::{
+    fmt_date, fmt_datetime, fmt_number, fmt_size, fmt_time, shortcut_label, strip_access, t_access, unit, AccessText,
+};
+
 include!(concat!(env!("OUT_DIR"), "/embedded.rs"));
+
+/// Eingebaute Sprachdateien: (Sprachcode, Dateiname, Inhalt).
+pub fn embedded_files() -> &'static [(&'static str, &'static str, &'static str)] {
+    EMBEDDED
+}
 
 /// Ausgangssprache aller Texte (vollständig, Maßstab für die Vollständigkeitsprüfung).
 pub const SOURCE_LANG: &str = "de";
@@ -53,13 +80,29 @@ struct Lang {
     bundle: FluentBundle<FluentResource>,
     keys: BTreeSet<String>,
     errors: Vec<String>,
+    /// Dezimaltrennzeichen (mt-decimal-separator) für Zahlen in Platzhaltern.
+    sep: Arc<str>,
 }
 
 struct State {
     langs: Vec<Lang>,
     current: String,
+}
+
+/// Stand der Texte; steigt bei jedem Sprachwechsel bzw. Nachladen. Wird nur unter der
+/// Schreibsperre von [`state`] erhöht (nach der Änderung), gelesen ohne Sperre.
+static GENERATION: AtomicU64 = AtomicU64::new(1);
+
+/// Lese-Cache je Thread: (Stand, Schlüssel → (Text, gefunden)).
+struct LocalCache {
     generation: u64,
-    cache: HashMap<String, Arc<str>>,
+    map: FastMap<Box<str>, (Arc<str>, bool)>,
+    /// Abgeleitete Texte (Platzhalter, Kürzel), begrenzt auf [DERIVED_MAX].
+    derived: FastMap<Box<str>, Arc<str>>,
+}
+
+thread_local! {
+    static LOCAL: RefCell<LocalCache> = RefCell::new(LocalCache { generation: 0, map: FastMap::default(), derived: FastMap::default() });
 }
 
 fn state() -> &'static RwLock<State> {
@@ -69,8 +112,71 @@ fn state() -> &'static RwLock<State> {
         for (code, file, text) in EMBEDDED {
             add_source(&mut langs, code, file, text, true);
         }
-        RwLock::new(State { langs, current: SOURCE_LANG.to_string(), generation: 1, cache: HashMap::new() })
+        RwLock::new(State { langs, current: SOURCE_LANG.to_string() })
     })
+}
+
+fn bump_generation() {
+    GENERATION.fetch_add(1, Ordering::AcqRel);
+}
+
+/// Schneller Hash für die kurzen Schlüssel im Thread-Cache (FxHash-Verfahren; kein Schutz gegen
+/// gezielte Kollisionen nötig, die Schlüssel stammen aus dem Programm).
+#[derive(Default, Clone, Copy)]
+struct FxHasher(u64);
+
+impl std::hash::Hasher for FxHasher {
+    fn write(&mut self, bytes: &[u8]) {
+        const K: u64 = 0x517c_c1b7_2722_0a95;
+        let (chunks, rest) = bytes.as_chunks::<8>();
+        for c in chunks {
+            self.0 = (self.0.rotate_left(5) ^ u64::from_le_bytes(*c)).wrapping_mul(K);
+        }
+        for &b in rest {
+            self.0 = (self.0.rotate_left(5) ^ b as u64).wrapping_mul(K);
+        }
+    }
+    fn write_u8(&mut self, i: u8) {
+        self.0 = (self.0.rotate_left(5) ^ i as u64).wrapping_mul(0x517c_c1b7_2722_0a95);
+    }
+    fn finish(&self) -> u64 {
+        self.0
+    }
+}
+
+type FastMap<K, V> = HashMap<K, V, std::hash::BuildHasherDefault<FxHasher>>;
+
+thread_local! {
+    /// Dezimaltrennzeichen der Sprache, deren Bundle gerade formatiert (für [`format_value`],
+    /// einen `fn`-Zeiger ohne eigenen Zustand).
+    static FMT_SEP: RefCell<Arc<str>> = RefCell::new(Arc::from("."));
+}
+
+/// Zahlen in Fluent-Texten (`{ $n }`, `{ NUMBER($n, maximumFractionDigits: 1) }`) mit dem
+/// Dezimaltrennzeichen der Sprache des Bundles; ohne Tausendertrennung.
+fn format_value<M>(v: &Value<'_>, _intls: &M) -> Option<String> {
+    let Value::Number(n) = v else { return None };
+    let sep = FMT_SEP.with(|s| s.borrow().clone());
+    Some(format::number_string(n.value, n.options.minimum_fraction_digits, n.options.maximum_fraction_digits, &sep))
+}
+
+/// Fluent-Funktion `NUMBER(wert, minimumFractionDigits: …, maximumFractionDigits: …)`.
+fn number_function<'a>(pos: &[Value<'a>], named: &FluentArgs) -> Value<'a> {
+    match pos.first() {
+        Some(Value::Number(n)) => {
+            let mut n = n.clone();
+            n.options.merge(named);
+            Value::Number(n)
+        }
+        Some(Value::String(s)) => match s.parse::<fluent_bundle::types::FluentNumber>() {
+            Ok(mut n) => {
+                n.options.merge(named);
+                Value::Number(n)
+            }
+            Err(_) => Value::Error,
+        },
+        _ => Value::Error,
+    }
 }
 
 fn new_bundle(code: &str) -> FluentBundle<FluentResource> {
@@ -78,6 +184,8 @@ fn new_bundle(code: &str) -> FluentBundle<FluentResource> {
     let mut b = FluentBundle::new_concurrent(vec![id]);
     // keine Unicode-Isolationszeichen um Platzhalter (egui zeigt sie sonst als Kästchen)
     b.set_use_isolating(false);
+    b.set_formatter(Some(format_value));
+    let _ = b.add_function("NUMBER", number_function);
     b
 }
 
@@ -90,6 +198,7 @@ fn add_source(langs: &mut Vec<Lang>, code: &str, file: &str, text: &str, builtin
                 bundle: new_bundle(code),
                 keys: BTreeSet::new(),
                 errors: Vec::new(),
+                sep: Arc::from("."),
             });
             langs.len() - 1
         }
@@ -116,12 +225,16 @@ fn add_source(langs: &mut Vec<Lang>, code: &str, file: &str, text: &str, builtin
     }
     // spätere Dateien (Sprachordner) überschreiben eingebaute Texte gleicher Schlüssel
     lang.bundle.add_resource_overriding(res);
-    if let Some(name) = format_in(&lang.bundle, "language-name", None) {
+    if let Some(name) = format_in(lang, "language-name", None) {
         lang.info.name = name;
+    }
+    if let Some(sep) = format_in(lang, "fmt-decimal-separator", None) {
+        lang.sep = Arc::from(sep);
     }
 }
 
-fn format_in(bundle: &FluentBundle<FluentResource>, key: &str, args: Option<&FluentArgs>) -> Option<String> {
+fn format_in(lang: &Lang, key: &str, args: Option<&FluentArgs>) -> Option<String> {
+    let bundle = &lang.bundle;
     let (id, attr) = match key.split_once('.') {
         Some((i, a)) => (i, Some(a)),
         None => (key, None),
@@ -132,6 +245,7 @@ fn format_in(bundle: &FluentBundle<FluentResource>, key: &str, args: Option<&Flu
         None => msg.value()?,
     };
     let mut errors = Vec::new();
+    FMT_SEP.with(|s| *s.borrow_mut() = Arc::clone(&lang.sep));
     let s = bundle.format_pattern(pattern, args, &mut errors);
     if !errors.is_empty() {
         log::debug!("fp-i18n: {key}: {errors:?}");
@@ -151,53 +265,143 @@ pub fn pseudo(text: &str) -> String {
 
 fn lookup(st: &State, key: &str, args: Option<&FluentArgs>) -> Option<String> {
     if st.current == PSEUDO_LANG {
-        return st.langs.iter().find(|l| l.info.code == SOURCE_LANG).and_then(|l| format_in(&l.bundle, key, args)).map(|s| pseudo(&s));
+        return st.langs.iter().find(|l| l.info.code == SOURCE_LANG).and_then(|l| format_in(l, key, args)).map(|s| pseudo(&s));
     }
     for code in [st.current.as_str(), FALLBACK_LANG, SOURCE_LANG] {
-        if let Some(l) = st.langs.iter().find(|l| l.info.code == code) {
-            if let Some(s) = format_in(&l.bundle, key, args) {
-                return Some(s);
-            }
+        if let Some(l) = st.langs.iter().find(|l| l.info.code == code)
+            && let Some(s) = format_in(l, key, args)
+        {
+            return Some(s);
         }
     }
     None
 }
 
-/// Text zum Schlüssel in der aktuellen Sprache (mit Rückfallkette; unbekannt → der Schlüssel).
-pub fn t(key: &str) -> String {
-    let lock = state();
-    if let Ok(st) = lock.read() {
-        if let Some(s) = st.cache.get(key) {
-            return s.to_string();
+/// Nachschlagen über den Thread-Cache: (Text, gefunden). Im Normalfall ohne Sperre.
+fn cached(key: &str) -> (Arc<str>, bool) {
+    let generation = GENERATION.load(Ordering::Acquire);
+    let hit = LOCAL.with(|c| {
+        let mut c = c.borrow_mut();
+        if c.generation != generation {
+            c.map.clear();
+            c.derived.clear();
+            c.generation = generation;
+            return None;
         }
+        c.map.get(key).cloned()
+    });
+    if let Some(hit) = hit {
+        return hit;
     }
-    let text = match lock.read() {
+    let text = match state().read() {
         Ok(st) => lookup(&st, key, None),
         Err(_) => None,
     };
-    let text = match text {
-        Some(s) => s,
+    let entry = match text {
+        Some(s) => (Arc::<str>::from(s), true),
         None => {
             log::debug!("fp-i18n: fehlender Schlüssel {key}");
-            key.to_string()
+            (Arc::<str>::from(key), false)
         }
     };
-    if let Ok(mut st) = lock.write() {
-        st.cache.insert(key.to_string(), Arc::from(text.as_str()));
+    LOCAL.with(|c| {
+        let mut c = c.borrow_mut();
+        // Stand vor dem Nachschlagen: hat sich die Sprache inzwischen geändert, wird der Eintrag
+        // beim nächsten Aufruf mit dem ganzen Cache verworfen
+        if c.generation == generation {
+            c.map.insert(Box::from(key), entry.clone());
+        }
+    });
+    entry
+}
+
+/// Text zum Schlüssel in der aktuellen Sprache (mit Rückfallkette; unbekannt → der Schlüssel).
+pub fn t(key: &str) -> String {
+    cached(key).0.to_string()
+}
+
+/// Wie [`t`], aber ohne neue Zeichenkette (geteilter Text aus dem Cache).
+pub fn t_arc(key: &str) -> Arc<str> {
+    cached(key).0
+}
+
+/// Höchstzahl abgeleiteter Einträge je Thread (Texte mit Platzhaltern ändern sich z. B. beim
+/// Ziehen eines Schiebers in jedem Frame); darüber wird der Cache geleert.
+const DERIVED_MAX: usize = 4096;
+
+/// Abgeleiteter Text (Platzhalter, Kürzel) aus dem Thread-Cache bzw. neu berechnet.
+/// `id` muss Art und alle Eingaben eindeutig beschreiben.
+pub(crate) fn derived(id: &str, make: impl FnOnce() -> String) -> Arc<str> {
+    let generation = GENERATION.load(Ordering::Acquire);
+    let hit = LOCAL.with(|c| {
+        let mut c = c.borrow_mut();
+        if c.generation != generation {
+            c.map.clear();
+            c.derived.clear();
+            c.generation = generation;
+            return None;
+        }
+        c.derived.get(id).cloned()
+    });
+    if let Some(hit) = hit {
+        return hit;
     }
+    let text: Arc<str> = Arc::from(make());
+    LOCAL.with(|c| {
+        let mut c = c.borrow_mut();
+        if c.generation == generation {
+            if c.derived.len() >= DERIVED_MAX {
+                c.derived.clear();
+            }
+            c.derived.insert(Box::from(id), Arc::clone(&text));
+        }
+    });
     text
 }
 
+fn push_value_id(id: &mut String, v: &Value<'_>) {
+    use std::fmt::Write as _;
+    match v {
+        Value::String(s) => {
+            id.push('s');
+            id.push_str(s);
+        }
+        Value::Number(n) => {
+            let _ = write!(id, "n{}/{:?}/{:?}", n.value, n.options.minimum_fraction_digits, n.options.maximum_fraction_digits);
+        }
+        Value::Custom(_) => id.push_str("c?"),
+        Value::None => id.push('0'),
+        Value::Error => id.push('!'),
+    }
+}
+
 /// Text mit Platzhaltern, z. B. `t_args("dlg-unsaved-text", &[("name", "a.fw.png".into())])`.
+/// Ergebnisse werden je Thread zwischengespeichert (gleiche Werte → kein erneutes Formatieren).
 pub fn t_args(key: &str, args: &[(&str, Value<'_>)]) -> String {
-    let mut fa = FluentArgs::new();
+    let cacheable = !args.iter().any(|(_, v)| matches!(v, Value::Custom(_)));
+    let format = || {
+        let mut fa = FluentArgs::new();
+        for (k, v) in args {
+            fa.set(*k, v.clone());
+        }
+        match state().read() {
+            Ok(st) => lookup(&st, key, Some(&fa)).unwrap_or_else(|| key.to_string()),
+            Err(_) => key.to_string(),
+        }
+    };
+    if !cacheable {
+        return format();
+    }
+    let mut id = String::with_capacity(key.len() + 32);
+    id.push('\u{1}');
+    id.push_str(key);
     for (k, v) in args {
-        fa.set(*k, v.clone());
+        id.push('\u{1f}');
+        id.push_str(k);
+        id.push('=');
+        push_value_id(&mut id, v);
     }
-    match state().read() {
-        Ok(st) => lookup(&st, key, Some(&fa)).unwrap_or_else(|| key.to_string()),
-        Err(_) => key.to_string(),
-    }
+    derived(&id, format).to_string()
 }
 
 /// `tr!("key")` oder `tr!("key", name = wert, n = 3)`.
@@ -213,7 +417,7 @@ macro_rules! tr {
 
 /// Gibt es den Schlüssel in der aktuellen Sprache oder einer Rückfallsprache?
 pub fn has(key: &str) -> bool {
-    state().read().map(|st| lookup(&st, key, None).is_some()).unwrap_or(false)
+    cached(key).1
 }
 
 /// Schlüssel eines Befehls aus dem Register: `file.open` → `cmd-file-open`,
@@ -229,20 +433,24 @@ pub fn current_language() -> String {
 
 /// Zähler, der bei jedem Sprachwechsel bzw. Nachladen steigt (Oberflächen-Caches daran koppeln).
 pub fn generation() -> u64 {
-    state().read().map(|st| st.generation).unwrap_or(0)
+    GENERATION.load(Ordering::Acquire)
 }
 
 /// Sprache wechseln; `false`, wenn es den Code nicht gibt. [`PSEUDO_LANG`] ist immer erlaubt.
+/// Groß-/Kleinschreibung des Codes ist egal (`pt-br` = `pt-BR`).
 pub fn set_language(code: &str) -> bool {
     let Ok(mut st) = state().write() else { return false };
-    let known = code == PSEUDO_LANG || st.langs.iter().any(|l| l.info.code == code);
-    if !known {
-        return false;
-    }
+    let code = if code == PSEUDO_LANG {
+        PSEUDO_LANG.to_string()
+    } else {
+        match st.langs.iter().find(|l| l.info.code.eq_ignore_ascii_case(code)) {
+            Some(l) => l.info.code.clone(),
+            None => return false,
+        }
+    };
     if st.current != code {
-        st.current = code.to_string();
-        st.cache.clear();
-        st.generation += 1;
+        st.current = code;
+        bump_generation();
     }
     true
 }
@@ -266,10 +474,10 @@ pub fn load_external_dir(dir: &Path) -> Vec<String> {
                 if let Ok(files) = std::fs::read_dir(&p) {
                     for f in files.flatten() {
                         let fp = f.path();
-                        if fp.extension().and_then(|x| x.to_str()) == Some("ftl") {
-                            if let Ok(text) = std::fs::read_to_string(&fp) {
-                                found.push((code.clone(), fp.display().to_string(), text));
-                            }
+                        if fp.extension().and_then(|x| x.to_str()) == Some("ftl")
+                            && let Ok(text) = std::fs::read_to_string(&fp)
+                        {
+                            found.push((code.clone(), fp.display().to_string(), text));
                         }
                     }
                 }
@@ -293,8 +501,42 @@ pub fn load_external_dir(dir: &Path) -> Vec<String> {
             codes.push(code);
         }
     }
-    st.cache.clear();
-    st.generation += 1;
+    bump_generation();
+    drop(st);
+    codes
+}
+
+/// Nutzerordner für zusätzliche Sprachen: `%APPDATA%\Firepixel\Sprachen`
+/// (sonst `$XDG_CONFIG_HOME/firepixel/Sprachen` bzw. `$HOME/.config/firepixel/Sprachen`).
+pub fn user_language_dir() -> Option<std::path::PathBuf> {
+    use std::path::PathBuf;
+    if let Some(app) = std::env::var_os("APPDATA") {
+        return Some(PathBuf::from(app).join("Firepixel").join("Sprachen"));
+    }
+    if let Some(x) = std::env::var_os("XDG_CONFIG_HOME") {
+        return Some(PathBuf::from(x).join("firepixel").join("Sprachen"));
+    }
+    std::env::var_os("HOME").map(|h| PathBuf::from(h).join(".config").join("firepixel").join("Sprachen"))
+}
+
+/// Ordner `Sprachen` neben der laufenden exe (für tragbare Installationen).
+pub fn exe_language_dir() -> Option<std::path::PathBuf> {
+    std::env::current_exe().ok().and_then(|p| p.parent().map(|d| d.join("Sprachen")))
+}
+
+/// Lädt beide Sprachordner (neben der exe, dann Nutzerordner – der Nutzerordner gewinnt bei
+/// gleichen Schlüsseln). Gibt die geladenen Sprachcodes zurück.
+pub fn load_default_dirs() -> Vec<String> {
+    let mut codes = Vec::new();
+    for dir in [exe_language_dir(), user_language_dir()].into_iter().flatten() {
+        if dir.is_dir() {
+            for c in load_external_dir(&dir) {
+                if !codes.contains(&c) {
+                    codes.push(c);
+                }
+            }
+        }
+    }
     codes
 }
 
@@ -307,7 +549,7 @@ pub fn system_language() -> String {
     if codes.iter().any(|c| c.eq_ignore_ascii_case(&sys)) {
         return sys;
     }
-    if codes.iter().any(|c| *c == base) {
+    if codes.contains(&base) {
         return base;
     }
     FALLBACK_LANG.to_string()
@@ -339,8 +581,9 @@ pub fn errors(code: &str) -> Vec<String> {
 /// Dezimalzahl mit dem Trennzeichen der aktuellen Sprache (`fmt-decimal-separator`, Vorgabe „,“).
 pub fn fmt_decimal(v: f64, decimals: usize) -> String {
     let s = format!("{v:.decimals$}");
-    let sep = if has("fmt-decimal-separator") { t("fmt-decimal-separator") } else { ",".to_string() };
-    if sep == "." { s } else { s.replace('.', &sep) }
+    let (sep, found) = cached("fmt-decimal-separator");
+    let sep: &str = if found { &sep } else { "," };
+    if sep == "." { s } else { s.replace('.', sep) }
 }
 
 #[cfg(test)]
