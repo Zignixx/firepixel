@@ -40,6 +40,14 @@ Vom Nutzer genehmigte Ausnahme (11.10.): Treffer in der fertigen exe, die nur au
 - Python immer mit vollem Pfad `C:\Users\Administrator\AppData\Local\Programs\Python\Python314\python.exe -I …`.
 - Cargo-PATH: `$env:Path = [Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [Environment]::GetEnvironmentVariable('Path','User')`
 
+## 2a. Versionsverwaltung (git, seit 12.10.2026)
+
+`firepixel\` ist ein lokales git-Repository (Branch `main`, kein Remote, nichts hochladen). Git liegt unter `C:\Program Files\Git` (PATH wie in §2 nachladen).
+- Nach jedem fertigen, baubaren Arbeitsschritt **nur die eigenen Dateien** committen: `git add <eigene Pfade>` und `git commit -m "<Kürzel>: <was>"` mit der Zeile `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>` am Ende. Nie `git add -A` über fremde Bereiche, nie `git reset --hard`, `git checkout -- .`, `git clean`, Rebase oder Force – andere Agenten arbeiten gleichzeitig.
+- Meldet git `index.lock`, kurz warten und erneut versuchen.
+- Versehentlich zerstörte Datei: `git log -- <datei>` und `git show <commit>:<pfad>` zum Wiederherstellen; im Bericht erwähnen.
+- Build-Ordner und `tools\golden\*\out` sind per `.gitignore` ausgeschlossen.
+
 ## 3. Befunde (`docs\BEFUNDE.md`)
 
 Ein Eintrag je Zeile unter der Überschrift des **zuständigen** Agenten:
