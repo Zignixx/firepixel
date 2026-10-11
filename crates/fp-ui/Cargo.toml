@@ -16,6 +16,8 @@ fp-model = { workspace = true }
 fp-fwpng = { workspace = true }
 fp-render = { workspace = true }
 fp-engine = { workspace = true }
+# Mehrsprachigkeit (Phase 6): alle sichtbaren Texte über fp_i18n::t / tr!
+fp-i18n = { workspace = true }
 # Optimieren/Export (Phase 4) und Compound Shapes im Inspektor (Pfadoperationen)
 fp-export = { workspace = true }
 fp-vector = { workspace = true }
