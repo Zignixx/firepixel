@@ -168,7 +168,7 @@ pub fn apply_filter(s: &mut Session, f: &Filter, live: bool) -> Result<CommandOu
         let bitmaps: Vec<_> = if live { Vec::new() } else { selected_bitmaps(d) };
         let others: Vec<_> = selected_elements(d).into_iter().filter(|(_, e)| live || !matches!(e.kind, ElementKind::Bitmap(_))).collect();
         if bitmaps.is_empty() && others.is_empty() {
-            return Err(super::sel_err("nichts zum Filtern ausgewählt"));
+            return Err(super::sel_err("err-sel-nothing-to-filter"));
         }
         let doc = Arc::make_mut(&mut d.doc);
         for (path, _) in bitmaps {
@@ -195,34 +195,34 @@ pub fn apply_filter(s: &mut Session, f: &Filter, live: bool) -> Result<CommandOu
 
 pub(super) fn register(r: &mut CommandRegistry) {
     for &(name, label, path) in FILTERS {
-        let mut b = cmd(name).label(label).requires(SEL).opt("live", ParamKind::Bool, "als Live-Effekt anwenden statt destruktiv");
+        let mut b = cmd(name).label(label).requires(SEL).opt("live", ParamKind::Bool, &fp_i18n::t("filter-param-live"));
         b = match name {
             "filter.adjustColor.brightnessContrast" => b
-                .opt("brightness", ParamKind::Integer { min: Some(-100), max: Some(100) }, "Helligkeit")
-                .opt("contrast", ParamKind::Integer { min: Some(-100), max: Some(100) }, "Kontrast"),
+                .opt("brightness", ParamKind::Integer { min: Some(-100), max: Some(100) }, &fp_i18n::t("filter-param-brightness"))
+                .opt("contrast", ParamKind::Integer { min: Some(-100), max: Some(100) }, &fp_i18n::t("filter-param-contrast")),
             "filter.adjustColor.hueSaturation" => b
-                .opt("hue", ParamKind::Integer { min: Some(-180), max: Some(360) }, "Farbton")
-                .opt("saturation", ParamKind::Integer { min: Some(-100), max: Some(100) }, "Sättigung")
-                .opt("lightness", ParamKind::Integer { min: Some(-100), max: Some(100) }, "Helligkeit")
-                .opt("colorize", ParamKind::Bool, "Kolorieren"),
+                .opt("hue", ParamKind::Integer { min: Some(-180), max: Some(360) }, &fp_i18n::t("filter-param-hue"))
+                .opt("saturation", ParamKind::Integer { min: Some(-100), max: Some(100) }, &fp_i18n::t("filter-param-saturation"))
+                .opt("lightness", ParamKind::Integer { min: Some(-100), max: Some(100) }, &fp_i18n::t("filter-param-lightness"))
+                .opt("colorize", ParamKind::Bool, &fp_i18n::t("filter-param-colorize")),
             "filter.adjustColor.curves" => b
-                .opt("rgb_points", ParamKind::Json, "Kurvenpunkte RGB [{x, y}, …]")
-                .opt("red_points", ParamKind::Json, "Rot")
-                .opt("green_points", ParamKind::Json, "Grün")
-                .opt("blue_points", ParamKind::Json, "Blau"),
-            "filter.adjustColor.levels" => b.opt("rgb", ParamKind::Json, "{source_low, source_high, dest_low, dest_high, gamma}").opt("red", ParamKind::Json, "Rot").opt("green", ParamKind::Json, "Grün").opt("blue", ParamKind::Json, "Blau"),
+                .opt("rgb_points", ParamKind::Json, &fp_i18n::t("filter-param-curve-points"))
+                .opt("red_points", ParamKind::Json, &fp_i18n::t("filter-param-red"))
+                .opt("green_points", ParamKind::Json, &fp_i18n::t("filter-param-green"))
+                .opt("blue_points", ParamKind::Json, &fp_i18n::t("filter-param-blue")),
+            "filter.adjustColor.levels" => b.opt("rgb", ParamKind::Json, "{source_low, source_high, dest_low, dest_high, gamma}").opt("red", ParamKind::Json, &fp_i18n::t("filter-param-red")).opt("green", ParamKind::Json, &fp_i18n::t("filter-param-green")).opt("blue", ParamKind::Json, &fp_i18n::t("filter-param-blue")),
             "filter.adjustColor.colorFill" => b
-                .opt("color", ParamKind::Color, "Füllfarbe")
-                .opt("opacity", ParamKind::Integer { min: Some(0), max: Some(100) }, "Deckkraft in %")
-                .opt("blendMode", ParamKind::Integer { min: Some(0), max: Some(255) }, "Mischmodus (BLDi)"),
-            "filter.blur.gaussian" => b.opt("radius", ParamKind::Number { min: Some(0.1), max: Some(250.0) }, "Radius (Vorgabe 4,1)"),
-            "filter.blur.motion" => b.opt("angle", ParamKind::Integer { min: Some(0), max: Some(360) }, "Winkel").opt("distance", ParamKind::Integer { min: Some(1), max: Some(100) }, "Distanz"),
-            "filter.blur.radial" | "filter.blur.zoom" => b.opt("amount", ParamKind::Integer { min: Some(1), max: Some(100) }, "Stärke").opt("quality", ParamKind::Integer { min: Some(1), max: Some(100) }, "Qualität"),
-            "filter.noise.addNoise" => b.opt("amount", ParamKind::Integer { min: Some(1), max: Some(400) }, "Stärke in %").opt("use_color", ParamKind::Bool, "farbig"),
+                .opt("color", ParamKind::Color, &fp_i18n::t("filter-param-color"))
+                .opt("opacity", ParamKind::Integer { min: Some(0), max: Some(100) }, &fp_i18n::t("filter-param-opacity"))
+                .opt("blendMode", ParamKind::Integer { min: Some(0), max: Some(255) }, &fp_i18n::t("filter-param-blend-mode")),
+            "filter.blur.gaussian" => b.opt("radius", ParamKind::Number { min: Some(0.1), max: Some(250.0) }, &fp_i18n::t("filter-param-radius-default")),
+            "filter.blur.motion" => b.opt("angle", ParamKind::Integer { min: Some(0), max: Some(360) }, &fp_i18n::t("filter-param-angle")).opt("distance", ParamKind::Integer { min: Some(1), max: Some(100) }, &fp_i18n::t("filter-param-distance")),
+            "filter.blur.radial" | "filter.blur.zoom" => b.opt("amount", ParamKind::Integer { min: Some(1), max: Some(100) }, &fp_i18n::t("filter-param-amount")).opt("quality", ParamKind::Integer { min: Some(1), max: Some(100) }, &fp_i18n::t("filter-param-quality")),
+            "filter.noise.addNoise" => b.opt("amount", ParamKind::Integer { min: Some(1), max: Some(400) }, &fp_i18n::t("filter-param-amount-percent")).opt("use_color", ParamKind::Bool, &fp_i18n::t("filter-param-use-color")),
             "filter.sharpen.unsharpMask" => b
-                .opt("radius", ParamKind::Number { min: Some(0.1), max: Some(250.0) }, "Radius")
-                .opt("amount", ParamKind::Integer { min: Some(1), max: Some(500) }, "Stärke in %")
-                .opt("threshold", ParamKind::Integer { min: Some(0), max: Some(255) }, "Schwellenwert"),
+                .opt("radius", ParamKind::Number { min: Some(0.1), max: Some(250.0) }, &fp_i18n::t("filter-param-radius"))
+                .opt("amount", ParamKind::Integer { min: Some(1), max: Some(500) }, &fp_i18n::t("filter-param-amount-percent"))
+                .opt("threshold", ParamKind::Integer { min: Some(0), max: Some(255) }, &fp_i18n::t("filter-param-threshold")),
             _ => b,
         };
         // Menüpfad selbst setzen (dynamische Filtereinträge stehen nicht im Katalog)
@@ -233,10 +233,10 @@ pub(super) fn register(r: &mut CommandRegistry) {
         }));
     }
     r.add(cmd("filter.repeat").requires(&[Requirement::Document, Requirement::Selection]).available(|s| s.last_filter.is_some()).run(|s, _| {
-        let last = s.last_filter.clone().ok_or_else(|| EngineError::Failed("noch kein Filter angewandt".into()))?;
+        let last = s.last_filter.clone().ok_or_else(|| EngineError::Failed(fp_i18n::t("err-no-filter-yet")))?;
         let p = Params::new(&last.command, last.params.clone());
         let f = filter_for(&last.command, &p)?;
         let live = p.bool_or("live", false)?;
-        apply_filter(s, &f, live).map(|o| o.labeled("Filter wiederholen"))
+        apply_filter(s, &f, live).map(|o| o.labeled(fp_i18n::t("msg-step-repeat-filter")))
     }));
 }

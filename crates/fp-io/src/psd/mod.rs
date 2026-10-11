@@ -533,7 +533,7 @@ pub fn import(data: &[u8], opts: &ImportOptions) -> Result<ImportResult> {
             && let Some(LayerSlot::Own(l)) = p.root.layers.get_mut(0)
         {
             let l = Arc::make_mut(l);
-            l.name = "Hintergrund".into();
+            l.name = fp_i18n::t("msg-default-background");
             if let Some(c) = l.cels.first_mut() {
                 Arc::make_mut(c).elements.push(Arc::new(e));
             }

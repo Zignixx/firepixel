@@ -29,7 +29,7 @@ pub fn spawn(mut c: std::process::Command) -> Result<bool> {
     if !allowed() {
         return Ok(false);
     }
-    c.spawn().map(|_| true).map_err(|e| EngineError::Failed(format!("Programm konnte nicht gestartet werden: {e}")))
+    c.spawn().map(|_| true).map_err(|e| EngineError::Failed(fp_i18n::tr!("err-program-start", detail = e.to_string())))
 }
 
 /// Startet einen Prozess und wartet auf seine Ausgabe. `Ok(None)` = abgeschaltet.
@@ -37,7 +37,7 @@ pub fn run(mut c: std::process::Command) -> Result<Option<std::process::Output>>
     if !allowed() {
         return Ok(None);
     }
-    c.output().map(Some).map_err(|e| EngineError::Failed(format!("Programm konnte nicht gestartet werden: {e}")))
+    c.output().map(Some).map_err(|e| EngineError::Failed(fp_i18n::tr!("err-program-start", detail = e.to_string())))
 }
 
 /// Öffnet eine Datei bzw. einen Ordner mit dem zugeordneten Programm (oder mit `program`).

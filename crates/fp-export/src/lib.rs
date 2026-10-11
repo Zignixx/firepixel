@@ -67,20 +67,28 @@ pub use pipeline::{optimize, ExportContext, IndexedImage, Optimized};
 #[derive(Debug, thiserror::Error)]
 pub enum ExportError {
     /// Bild zu groß oder leer für das Format.
-    #[error("ungültige Bildgröße {0}×{1} für dieses Format")]
+    #[error("{}", m2("err-export-bad-size", "w", .0, "h", .1))]
     BadSize(usize, usize),
     /// Format wird nicht geschrieben.
-    #[error("Format wird nicht unterstützt: {0}")]
+    #[error("{}", m1("err-export-unsupported", "detail", .0))]
     Unsupported(String),
     /// Kodierfehler eines Fremd-Kodierers.
-    #[error("Kodierfehler: {0}")]
+    #[error("{}", m1("err-export-encode", "detail", .0))]
     Encode(String),
     /// Renderer fehlgeschlagen.
-    #[error("Rendern fehlgeschlagen: {0}")]
+    #[error("{}", m1("err-export-render", "detail", .0))]
     Render(String),
     /// Ein-/Ausgabefehler.
-    #[error("E/A-Fehler: {0}")]
+    #[error("{}", m1("err-export-io", "detail", .0))]
     Io(#[from] std::io::Error),
+}
+
+// ---- Mehrsprachige Meldungen (fp-i18n, `meldungen.ftl`) ----
+fn m1(key: &str, a: &str, va: &dyn std::fmt::Display) -> String {
+    fp_i18n::t_args(key, &[(a, fp_i18n::Value::from(va.to_string()))])
+}
+fn m2(key: &str, a: &str, va: &dyn std::fmt::Display, b: &str, vb: &dyn std::fmt::Display) -> String {
+    fp_i18n::t_args(key, &[(a, fp_i18n::Value::from(va.to_string())), (b, fp_i18n::Value::from(vb.to_string()))])
 }
 
 /// Ergebnis-Typ der Export-Funktionen.

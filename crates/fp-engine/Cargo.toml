@@ -34,6 +34,8 @@ fp-render = { workspace = true, optional = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
+# Mehrsprachigkeit: Fehlertexte, Verlaufsschritte, Statushinweise, Standardnamen
+fp-i18n = { workspace = true }
 
 [lints]
 workspace = true

@@ -579,7 +579,7 @@ impl PointerTool {
             PState::Rounding { id, corner, .. } => {
                 let Some((px, c)) = rounding_at(ctx, id, corner, p) else { return ToolResponse::default() };
                 self.state = PState::Rounding { id, corner, px };
-                self.overlay = vec![Overlay::Path { contours: vec![c] }, Overlay::Label { at: p, text: format!("Rundung {} px", fmt_num(px)) }];
+                self.overlay = vec![Overlay::Path { contours: vec![c] }, Overlay::Label { at: p, text: fp_i18n::tr!("msg-tool-roundness", px = fmt_num(px)) }];
                 ToolResponse::with_overlay(self.overlay.clone(), Cursor::PointerPoint)
             }
             PState::PressedPoint { start, hit, pull } if dist(start, p) >= thr => {
@@ -821,7 +821,7 @@ impl PointerTool {
             ElementKind::Text(_) => text_edit_response(e.id, p),
             ElementKind::Instance(_) => ToolResponse {
                 commands: vec![pick("select.set", json!({"ids": [e.id.0], "mode": "replace"}))],
-                status: Some("Symbol bearbeiten: der Bearbeitungsmodus für Symbole folgt.".into()),
+                status: Some(fp_i18n::t("msg-tool-symbol-edit-pending")),
                 ..ToolResponse::default()
             },
             ElementKind::Path(_) if self.id == ToolId::Pointer => {

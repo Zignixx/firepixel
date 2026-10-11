@@ -73,7 +73,7 @@ fn shape_mask(shape: &str, p: &crate::command::Params, antialias: bool) -> Resul
         "rect" => geometry::rect_contour(p.rect("rect")?.normalized(), 0.0),
         "ellipse" => geometry::ellipse_contour(p.rect("rect")?.normalized()),
         "polygon" => geometry::polygon_contour(&p.points("points")?, true),
-        other => return Err(EngineError::InvalidParams { name: p.command.clone(), message: format!("unbekannte Form {other}") }),
+        other => return Err(EngineError::InvalidParams { name: p.command.clone(), message: fp_i18n::tr!("err-unknown-shape", name = other) }),
     };
     let s = PathShape { contours: vec![contour], even_odd: false };
     let b = geometry::contours_bounds(&s.contours).map(|r| r.round_out()).unwrap_or_default();
@@ -164,14 +164,14 @@ fn saved_index(d: &DocumentState, p: &crate::command::Params) -> Result<usize> {
         return Ok(i);
     }
     let i = p.i64_or("index", 0)?.max(0) as usize;
-    if i < list.len() { Ok(i) } else { Err(EngineError::NotFound("gespeicherte Auswahl".into())) }
+    if i < list.len() { Ok(i) } else { Err(EngineError::NotFound(fp_i18n::t("err-nf-saved-selection"))) }
 }
 
 fn adjust(s: &mut Session, p: &crate::command::Params, f: impl Fn(&Mask, u32, u8) -> std::result::Result<Mask, fp_raster::RasterError>) -> Result<CommandOutput> {
     let amount = p.i64_or("amount", 1)?.clamp(1, 1000) as u32;
     let tol = s.prefs.get_int("SelectionAdjustTolerance", 0).clamp(0, 255) as u8;
     with_doc(s, |d| {
-        let m = d.selection.pixels.clone().ok_or_else(|| sel_err("keine Pixelauswahl"))?;
+        let m = d.selection.pixels.clone().ok_or_else(|| sel_err("err-req-pixel-selection"))?;
         let ext = m.extended(amount as i32 * 2)?;
         d.selection.pixels = Some(f(&ext, amount, tol)?).filter(|m| !m.tight_bounds().is_empty());
         Ok(CommandOutput::doc())
@@ -243,13 +243,13 @@ pub(super) fn register(r: &mut CommandRegistry) {
             // Pixelauswahl: alle Pixel der Bitmap, deren Farbe einer Farbe im Auswahlrahmen ähnelt
             if d.selection.has_pixels() {
                 let geo = crate::geometry::BasicGeometry;
-                let m = d.selection.pixels.clone().ok_or_else(|| sel_err("keine Pixelauswahl"))?;
+                let m = d.selection.pixels.clone().ok_or_else(|| sel_err("err-req-pixel-selection"))?;
                 let (_, e) = bitmap_for(d, None, &geo).or_else(|| {
                     let b = m.tight_bounds();
                     bitmap_for(d, Some(Point::new(b.left as f32 + 0.5, b.top as f32 + 0.5)), &geo)
-                }).ok_or_else(|| sel_err("keine Bitmap"))?;
-                let ElementKind::Bitmap(b) = &e.kind else { return Err(sel_err("keine Bitmap")) };
-                let img = docops::bitmap_image(b).ok_or_else(|| EngineError::Failed("Bitmap".into()))?;
+                }).ok_or_else(|| sel_err("err-sel-no-bitmap"))?;
+                let ElementKind::Bitmap(b) = &e.kind else { return Err(sel_err("err-sel-no-bitmap")) };
+                let img = docops::bitmap_image(b).ok_or_else(|| EngineError::Failed(fp_i18n::t("err-bitmap-unreadable-short")))?;
                 let mut colors: Vec<[u8; 4]> = Vec::new();
                 let mb = m.tight_bounds();
                 'outer: for y in mb.top..mb.bottom {
@@ -314,7 +314,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
             .run(|s, p| {
                 let r = p.i64_or("radius", 10)?.clamp(1, 1000) as u32;
                 with_doc(s, |d| {
-                    let m = d.selection.pixels.clone().ok_or_else(|| sel_err("keine Pixelauswahl"))?;
+                    let m = d.selection.pixels.clone().ok_or_else(|| sel_err("err-req-pixel-selection"))?;
                     d.selection.pixels = Some(m.extended(r as i32)?.feather(r)?);
                     Ok(CommandOutput::doc())
                 })
@@ -328,10 +328,10 @@ pub(super) fn register(r: &mut CommandRegistry) {
     r.add(cmd("select.convertMarqueeToPath").requires(&[Requirement::Document, Requirement::PixelSelection]).run(|s, _| {
         let attrs = shape_attrs(s, false, 1.0);
         with_doc(s, |d| {
-            let m = d.selection.pixels.clone().ok_or_else(|| sel_err("keine Pixelauswahl"))?;
+            let m = d.selection.pixels.clone().ok_or_else(|| sel_err("err-req-pixel-selection"))?;
             let contours = geometry::trace_mask(&m);
             if contours.is_empty() {
-                return Err(sel_err("leere Pixelauswahl"));
+                return Err(sel_err("err-sel-empty-pixels"));
             }
             let doc = Arc::make_mut(&mut d.doc);
             let mut idg = take_ids(doc);
@@ -345,10 +345,10 @@ pub(super) fn register(r: &mut CommandRegistry) {
     r.add(cmd("select.saveBitmapSelection").requires(&[Requirement::Document, Requirement::PixelSelection]).opt("name", ParamKind::String, "Name").run(|s, p| {
         let name = p.opt_str("name")?;
         with_doc(s, |d| {
-            let m = d.selection.pixels.clone().ok_or_else(|| sel_err("keine Pixelauswahl"))?;
+            let m = d.selection.pixels.clone().ok_or_else(|| sel_err("err-req-pixel-selection"))?;
             let page = d.page;
             let (md, l, t) = mask_to_data(&m);
-            let pg = Arc::make_mut(&mut d.doc).page_mut(page).ok_or_else(|| EngineError::NotFound("Seite".into()))?;
+            let pg = Arc::make_mut(&mut d.doc).page_mut(page).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-page")))?;
             let list = pg.saved_selections.get_or_insert_with(Vec::new);
             let name = name.unwrap_or_else(|| format!("Auswahl {}", list.len() + 1));
             list.push(SavedSelection { mask: Some(md), left: l, top: t, name: Some(name), extra: Extra::default() });
@@ -366,7 +366,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 with_doc(s, |d| {
                     let i = saved_index(d, p)?;
                     let sv = d.doc.pages.get(d.page).and_then(|pg| pg.saved_selections.as_ref()).and_then(|l| l.get(i)).cloned();
-                    let m = sv.and_then(|s| s.mask.as_ref().and_then(|md| data_to_mask(md, s.left, s.top))).ok_or_else(|| EngineError::NotFound("Maske".into()))?;
+                    let m = sv.and_then(|s| s.mask.as_ref().and_then(|md| data_to_mask(md, s.left, s.top))).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-mask")))?;
                     d.selection.apply_pixels(m, md);
                     Ok(CommandOutput::doc())
                 })
@@ -381,7 +381,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 with_doc(s, |d| {
                     let i = saved_index(d, p)?;
                     let page = d.page;
-                    let pg = Arc::make_mut(&mut d.doc).page_mut(page).ok_or_else(|| EngineError::NotFound("Seite".into()))?;
+                    let pg = Arc::make_mut(&mut d.doc).page_mut(page).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-page")))?;
                     if let Some(l) = &mut pg.saved_selections {
                         l.remove(i);
                     }
@@ -538,10 +538,10 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 let fe = p.i64_or("feather", 0)?.max(0) as u32;
                 let geo = Arc::new(crate::geometry::BasicGeometry);
                 with_doc(s, |d| {
-                    let (_, e) = bitmap_for(d, Some(pt), geo.as_ref()).ok_or_else(|| sel_err("keine Bitmap unter dem Zauberstab"))?;
-                    let ElementKind::Bitmap(b) = &e.kind else { return Err(sel_err("keine Bitmap")) };
-                    let img = docops::bitmap_image(b).ok_or_else(|| EngineError::Failed("Bitmap".into()))?;
-                    let m = flood_region(&img, pt.x.floor() as i32, pt.y.floor() as i32, tol).ok_or_else(|| sel_err("Punkt außerhalb der Bitmap"))?;
+                    let (_, e) = bitmap_for(d, Some(pt), geo.as_ref()).ok_or_else(|| sel_err("err-sel-no-bitmap-under-wand"))?;
+                    let ElementKind::Bitmap(b) = &e.kind else { return Err(sel_err("err-sel-no-bitmap")) };
+                    let img = docops::bitmap_image(b).ok_or_else(|| EngineError::Failed(fp_i18n::t("err-bitmap-unreadable-short")))?;
+                    let m = flood_region(&img, pt.x.floor() as i32, pt.y.floor() as i32, tol).ok_or_else(|| sel_err("err-sel-point-outside-bitmap"))?;
                     set_pixels(d, Some(m), md, fe);
                     Ok(CommandOutput::doc())
                 })

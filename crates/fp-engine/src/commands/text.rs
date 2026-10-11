@@ -22,7 +22,7 @@ fn edit_texts(s: &mut Session, f: impl Fn(&mut TextElem)) -> Result<CommandOutpu
         let page = d.page;
         let ids: Vec<_> = selected_elements(d).into_iter().filter(|(_, e)| matches!(e.kind, ElementKind::Text(_))).map(|(_, e)| e.id).collect();
         if ids.is_empty() {
-            return Err(sel_err("kein Text ausgewählt"));
+            return Err(sel_err("err-sel-no-text-selected"));
         }
         let doc = Arc::make_mut(&mut d.doc);
         for id in ids {
@@ -78,7 +78,7 @@ fn text_and_path(s: &Session) -> Result<(Arc<Element>, Arc<Element>)> {
     let p = els.iter().find(|(_, e)| matches!(e.kind, ElementKind::Path(_))).map(|(_, e)| Arc::clone(e));
     match (t, p) {
         (Some(t), Some(p)) if els.len() == 2 => Ok((t, p)),
-        _ => Err(sel_err("einen Text und einen Pfad auswählen")),
+        _ => Err(sel_err("err-sel-text-and-path")),
     }
 }
 
@@ -191,7 +191,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
             let page = d.page;
             let texts: Vec<_> = selected_elements(d).into_iter().filter(|(_, e)| matches!(&e.kind, ElementKind::Text(t) if t.on_path.is_some())).collect();
             if texts.is_empty() {
-                return Err(sel_err("kein Text auf Pfad ausgewählt"));
+                return Err(sel_err("err-sel-no-text-on-path"));
             }
             let mut sel = Vec::new();
             for (_, e) in texts {
@@ -264,7 +264,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 with_doc(s, |d| {
                     let id = match p.opt_i64("id")? {
                         Some(v) => fp_model::ElementId(v as u64),
-                        None => *d.selection.elements.first().ok_or_else(|| sel_err("kein Text"))?,
+                        None => *d.selection.elements.first().ok_or_else(|| sel_err("err-sel-no-text"))?,
                     };
                     let page = d.page;
                     let doc = Arc::make_mut(&mut d.doc);
@@ -299,10 +299,10 @@ pub(super) fn register(r: &mut CommandRegistry) {
             .opt("color", ParamKind::Color, "Textfarbe")
             .run(|s, p| {
                 let d = s.doc()?;
-                let (_, e) = selected_elements(d).into_iter().find(|(_, e)| matches!(e.kind, ElementKind::Text(_))).ok_or_else(|| sel_err("kein Text ausgewählt"))?;
+                let (_, e) = selected_elements(d).into_iter().find(|(_, e)| matches!(e.kind, ElementKind::Text(_))).ok_or_else(|| sel_err("err-sel-no-text-selected"))?;
                 let changes = ["text", "font", "size", "bold", "italic", "underline", "color"].iter().any(|k| p.has(k));
                 if !changes {
-                    let ElementKind::Text(t) = &e.kind else { return Err(sel_err("kein Text")) };
+                    let ElementKind::Text(t) = &e.kind else { return Err(sel_err("err-sel-no-text")) };
                     return Ok(CommandOutput::value(text_info(t)));
                 }
                 let a = attrs_from_params(p)?;
@@ -328,7 +328,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                     })
                     .ok_or(EngineError::ElementNotFound(id.0))?;
                     let info = docops::element_on_page(doc, page, id).and_then(|e| if let ElementKind::Text(t) = &e.kind { Some(text_info(t)) } else { None });
-                    Ok(CommandOutput::doc_with(info.unwrap_or_default()).labeled("Text bearbeiten"))
+                    Ok(CommandOutput::doc_with(info.unwrap_or_default()).labeled(fp_i18n::t("msg-step-edit-text")))
                 })
             }),
     );
@@ -418,7 +418,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                         });
                     }
                     if n == 0 {
-                        return Err(sel_err("kein Text"));
+                        return Err(sel_err("err-sel-no-text"));
                     }
                     Ok(CommandOutput::doc())
                 })
@@ -472,17 +472,17 @@ pub(super) fn register(r: &mut CommandRegistry) {
 /// Zeichen, Unterstreichungen als eigene Pfade) mit der Textfarbe; Name, Deckkraft, Mischmodus und
 /// Effekte gehen auf die Gruppe über. Bei nur einer Glyphe entsteht ein einzelner Pfad.
 fn convert_to_paths(s: &mut Session) -> Result<CommandOutput> {
-    let renderer = s.renderer().cloned().ok_or(EngineError::BackendMissing("ein Renderer für die Textauslegung"))?;
+    let renderer = s.renderer().cloned().ok_or(EngineError::BackendMissing("err-backend-text-renderer"))?;
     with_doc(s, |d| {
         let page = d.page;
         let texts: Vec<_> = selected_elements(d).into_iter().filter(|(_, e)| matches!(e.kind, ElementKind::Text(_))).collect();
         if texts.is_empty() {
-            return Err(sel_err("kein Text ausgewählt"));
+            return Err(sel_err("err-sel-no-text-selected"));
         }
         let mut new_sel: Vec<fp_model::ElementId> = d.selection.elements.iter().copied().filter(|id| !texts.iter().any(|(_, e)| e.id == *id)).collect();
         for (_, e) in texts {
             let ElementKind::Text(t) = &e.kind else { continue };
-            let outlines = renderer.text_outlines(&d.doc, t).ok_or(EngineError::BackendMissing("die Textauslegung"))?;
+            let outlines = renderer.text_outlines(&d.doc, t).ok_or(EngineError::BackendMissing("err-backend-text-layout"))?;
             let color = t.resolved_runs().first().and_then(|(a, _)| a.color).map(fp_color::Argb).unwrap_or(t.attrs.fill_color);
             let mut attrs = (*t.attrs).clone();
             attrs.fill_color = color;

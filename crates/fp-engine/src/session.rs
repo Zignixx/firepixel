@@ -203,7 +203,7 @@ pub trait ScriptHost: Send + Sync {
     /// Befehlsparameter plus `"op"` (`insert`, `dragControlPoint`, `setParams`, `redraw`,
     /// `describe`, `list`). Vorgabe: nicht verfügbar.
     fn auto_shape(&self, _session: &mut Session, _op: &Value) -> Result<Value> {
-        Err(EngineError::BackendMissing("die Laufzeit der automatischen Formen (fp-script)"))
+        Err(EngineError::BackendMissing("err-backend-autoshape-runtime"))
     }
 }
 
@@ -380,7 +380,7 @@ impl Session {
 
     /// Aktiviert ein Dokument.
     pub fn activate(&mut self, id: DocId) -> Result<()> {
-        let i = self.docs.iter().position(|d| d.id == id).ok_or_else(|| EngineError::NotFound("Dokument".into()))?;
+        let i = self.docs.iter().position(|d| d.id == id).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-document")))?;
         if self.active != Some(i) {
             self.active = Some(i);
             self.events.push(SessionEvent::ActiveDocumentChanged(Some(id)));
@@ -410,7 +410,7 @@ impl Session {
 
     /// Schließt ein Dokument (ohne Rückfrage; die UI fragt vorher nach `is_dirty`).
     pub fn close_document(&mut self, id: DocId) -> Result<()> {
-        let i = self.docs.iter().position(|d| d.id == id).ok_or_else(|| EngineError::NotFound("Dokument".into()))?;
+        let i = self.docs.iter().position(|d| d.id == id).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-document")))?;
         self.docs.remove(i);
         self.events.push(SessionEvent::DocumentClosed(id));
         self.active = if self.docs.is_empty() { None } else { Some(i.min(self.docs.len() - 1)) };
@@ -485,7 +485,7 @@ impl Session {
             }
         }
         if !c.extra_available(self) {
-            return Some("im aktuellen Zustand nicht möglich".into());
+            return Some(fp_i18n::t("err-req-state"));
         }
         None
     }
@@ -547,7 +547,7 @@ impl Session {
         match out.effect {
             Effect::Document => {
                 if let (Some(id), Some(b)) = (doc_id, before) {
-                    self.finish_step(id, b, out.label.clone().unwrap_or_else(|| info.label.clone()), name, &p.value);
+                    self.finish_step(id, b, out.label.clone().unwrap_or_else(|| info.step_label()), name, &p.value);
                 }
             }
             Effect::View => {
@@ -566,7 +566,7 @@ impl Session {
 
     /// Ändert ein (auch nicht aktives) Dokument als eigenen Verlaufsschritt.
     pub(crate) fn modify_document(&mut self, id: DocId, label: &str, command: &str, f: impl FnOnce(&mut DocumentState) -> Result<()>) -> Result<()> {
-        let i = self.docs.iter().position(|d| d.id == id).ok_or_else(|| EngineError::NotFound("Dokument".into()))?;
+        let i = self.docs.iter().position(|d| d.id == id).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-document")))?;
         let before = self.docs[i].snapshot();
         if let Err(e) = f(&mut self.docs[i]) {
             self.docs[i].restore(before);
@@ -687,7 +687,7 @@ impl Session {
     /// Rückgängig im aktiven Dokument.
     pub fn undo(&mut self) -> Result<()> {
         let d = self.doc_mut()?;
-        let snap = d.history.undo().ok_or(EngineError::History("nichts rückgängig zu machen"))?;
+        let snap = d.history.undo().ok_or(EngineError::History("err-req-can-undo"))?;
         self.apply_history_snapshot(snap);
         Ok(())
     }
@@ -695,7 +695,7 @@ impl Session {
     /// Wiederholen im aktiven Dokument.
     pub fn redo(&mut self) -> Result<()> {
         let d = self.doc_mut()?;
-        let snap = d.history.redo().ok_or(EngineError::History("nichts zu wiederholen"))?;
+        let snap = d.history.redo().ok_or(EngineError::History("err-req-can-redo"))?;
         self.apply_history_snapshot(snap);
         Ok(())
     }

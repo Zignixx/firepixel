@@ -28,7 +28,7 @@ impl GeometryOps for VectorGeometry {
 
     fn combine(&self, op: PathBoolOp, paths: &[PathShape]) -> Result<Vec<Vec<Contour>>> {
         let ops: Vec<Operand> = paths.iter().map(|p| Operand::new(to_v(&p.contours), p.even_odd, PathOp::Normal)).collect();
-        let none = || EngineError::Selection("mindestens zwei Pfade nötig".into());
+        let none = || EngineError::Selection(fp_i18n::t("err-sel-two-paths-needed"));
         Ok(match op {
             PathBoolOp::Union => vec![from_v(&pathops::union_paths(&ops).ok_or_else(none)?)],
             PathBoolOp::Intersect => vec![from_v(&pathops::intersect_paths(&ops).ok_or_else(none)?)],

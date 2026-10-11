@@ -72,11 +72,11 @@ pub fn resolve_source(s: &Session, source: &str, at: Option<Point>) -> Result<Ai
             && let ElementKind::Bitmap(b) = &e.kind
             && e.common.visible
         {
-            let img = docops::bitmap_image(b).ok_or_else(|| EngineError::Failed("Bitmap konnte nicht gelesen werden".into()))?;
+            let img = docops::bitmap_image(b).ok_or_else(|| EngineError::Failed(fp_i18n::t("err-bitmap-unreadable")))?;
             return Ok(AiSource { image: Arc::new(img), target: Some(e.id), kind: "bitmap" });
         }
         if source == "bitmap" {
-            return Err(sel_err("keine Bitmap ausgewählt bzw. unter dem Punkt"));
+            return Err(sel_err("err-sel-no-bitmap-at-point"));
         }
     }
     let key = (Arc::as_ptr(&d.doc) as usize, d.generation, d.page, d.frame);
@@ -86,8 +86,8 @@ pub fn resolve_source(s: &Session, source: &str, at: Option<Point>) -> Result<Ai
     {
         return Ok(AiSource { image: Arc::clone(img), target: None, kind: "page" });
     }
-    let r = s.renderer().ok_or(EngineError::BackendMissing("Renderer (fp-render) für die Seitenansicht"))?;
-    let img = Arc::new(r.render_page(&d.doc, d.page, d.frame).ok_or(EngineError::BackendMissing("Renderer (fp-render)"))?);
+    let r = s.renderer().ok_or(EngineError::BackendMissing("err-backend-renderer-page"))?;
+    let img = Arc::new(r.render_page(&d.doc, d.page, d.frame).ok_or(EngineError::BackendMissing("err-backend-renderer"))?);
     if let Ok(mut c) = page_cache().lock() {
         *c = Some((key, Arc::clone(&img)));
     }
@@ -110,9 +110,9 @@ pub fn model_for(s: &Session, p: Option<&Params>, task: Task) -> Result<ModelId>
         None => None,
     }
     .unwrap_or_else(|| s.prefs.get_str(key, ""));
-    let id = if name.is_empty() { models::default_for(task) } else { models::by_name(&name).ok_or_else(|| EngineError::InvalidParams { name: "model".into(), message: format!("unbekanntes KI-Modell „{name}“") })? };
+    let id = if name.is_empty() { models::default_for(task) } else { models::by_name(&name).ok_or_else(|| EngineError::InvalidParams { name: "model".into(), message: fp_i18n::tr!("err-unknown-model", name = name.as_str()) })? };
     if models::info(id).task != task {
-        return Err(EngineError::InvalidParams { name: "model".into(), message: format!("„{}“ ist kein Modell für diese Aufgabe", models::info(id).name) });
+        return Err(EngineError::InvalidParams { name: "model".into(), message: fp_i18n::tr!("err-model-wrong-task", name = models::info(id).name) });
     }
     Ok(id)
 }
@@ -224,7 +224,7 @@ fn parse_points(p: &Params) -> Result<Vec<PromptPoint>> {
         }
     };
     if let Some(v) = p.get("points") {
-        let arr = v.as_array().ok_or_else(|| EngineError::InvalidParams { name: p.command.clone(), message: "points: Liste erwartet".into() })?;
+        let arr = v.as_array().ok_or_else(|| EngineError::InvalidParams { name: p.command.clone(), message: fp_i18n::t("err-param-points-list") })?;
         for e in arr {
             let pp = match e {
                 Value::Array(a) if a.len() >= 2 => {
@@ -237,10 +237,10 @@ fn parse_points(p: &Params) -> Result<Vec<PromptPoint>> {
                     let y = o.get("y").and_then(|v| v.as_f64()).unwrap_or(f64::NAN) as f32;
                     PromptPoint { x, y, positive: label_of(o.get("label").or_else(|| o.get("positive"))) }
                 }
-                _ => return Err(EngineError::InvalidParams { name: p.command.clone(), message: "points: [x, y, label] erwartet".into() }),
+                _ => return Err(EngineError::InvalidParams { name: p.command.clone(), message: fp_i18n::t("err-param-points-triples") }),
             };
             if !pp.x.is_finite() || !pp.y.is_finite() {
-                return Err(EngineError::InvalidParams { name: p.command.clone(), message: "points: Zahlen erwartet".into() });
+                return Err(EngineError::InvalidParams { name: p.command.clone(), message: fp_i18n::t("err-param-points-numbers") });
             }
             out.push(pp);
         }
@@ -305,7 +305,7 @@ fn object_plan(s: &Session, p: &Params) -> Result<ObjectPlan> {
         prompt.boxx = boxx;
     }
     if prompt.points.is_empty() && prompt.boxx.is_none() {
-        return Err(EngineError::InvalidParams { name: p.command.clone(), message: "Klickpunkt (point/points) oder Rahmen (box) fehlt".into() });
+        return Err(EngineError::InvalidParams { name: p.command.clone(), message: fp_i18n::t("err-param-ai-prompt") });
     }
     let at = prompt.points.first().map(|q| Point::new(q.x, q.y)).or_else(|| prompt.boxx.map(|b| Point::new((b[0] + b[2]) / 2.0, (b[1] + b[3]) / 2.0)));
     let src = resolve_source(s, &source, at)?;
@@ -377,7 +377,7 @@ fn run_subject(s: &mut Session, p: &Params) -> Result<CommandOutput> {
     let m = pipeline::subject_mask(&src.image, region_param(p)?, model, &Progress::new()).map_err(ai_err)?;
     fp_ai::nn::trim();
     if m.tight_bounds().is_empty() {
-        return Err(sel_err("kein Motiv gefunden"));
+        return Err(sel_err("err-sel-no-subject"));
     }
     let m = feathered(m, fe);
     let base = if mode == SelectMode::Replace { None } else { s.doc()?.selection.pixels.clone() };
@@ -388,7 +388,7 @@ fn run_subject(s: &mut Session, p: &Params) -> Result<CommandOutput> {
 
 fn refine_inputs(s: &Session, p: &Params) -> Result<(AiSource, Mask, f32, ModelId)> {
     let model = model_for(s, Some(p), Task::Matting)?;
-    let sel = s.doc()?.selection.pixels.clone().filter(|m| !m.tight_bounds().is_empty()).ok_or_else(|| sel_err("keine Pixelauswahl"))?;
+    let sel = s.doc()?.selection.pixels.clone().filter(|m| !m.tight_bounds().is_empty()).ok_or_else(|| sel_err("err-req-pixel-selection"))?;
     let tb = sel.tight_bounds();
     let at = Point::new((tb.left + tb.right) as f32 / 2.0, (tb.top + tb.bottom) as f32 / 2.0);
     let src = resolve_source(s, &source_param(s, p)?, Some(at))?;
@@ -400,7 +400,7 @@ fn run_refine(s: &mut Session, p: &Params) -> Result<CommandOutput> {
     sync_folder(s);
     let output = p.opt_str("output")?.unwrap_or_else(|| s.prefs.get_str("AiRefineOutput", "selection"));
     if output != "selection" && output != "mask" {
-        return Err(EngineError::InvalidParams { name: p.command.clone(), message: "output: \"selection\" oder \"mask\"".into() });
+        return Err(EngineError::InvalidParams { name: p.command.clone(), message: fp_i18n::t("err-param-output") });
     }
     let (src, sel, radius, model) = refine_inputs(s, p)?;
     ensure_model(model)?;
@@ -413,19 +413,19 @@ fn run_refine(s: &mut Session, p: &Params) -> Result<CommandOutput> {
         return set_selection(s, Some(refined), value);
     }
     // Bitmapmaske auf der Quell-Bitmap (genau ein Verlaufsschritt)
-    let target = src.target.ok_or_else(|| sel_err("Maskenausgabe braucht eine Bitmap als Quelle (Bitmap auswählen)"))?;
+    let target = src.target.ok_or_else(|| sel_err("err-sel-mask-needs-bitmap"))?;
     {
         let d = s.doc()?;
         let path = docops::find_on_page(&d.doc, d.page, target).ok_or(EngineError::ElementNotFound(target.0))?;
         if docops::is_locked(&d.doc, d.page, &path) {
-            return Err(sel_err("die Bitmap ist gesperrt"));
+            return Err(sel_err("err-sel-bitmap-locked"));
         }
     }
     let d = s.doc_mut()?;
     d.selection.set(vec![target]);
     d.selection.pixels = Some(refined);
     let out = super::modify::mask_from_pixels(s, true)?;
-    Ok(out.labeled("Kante verfeinern"))
+    Ok(out.labeled(fp_i18n::t("msg-step-refine-edge")))
 }
 
 // ------------------------------------------------------------------ Vorwärmen für die Oberfläche

@@ -31,7 +31,7 @@ pub(crate) fn transform_selection(s: &mut Session, m: Matrix3) -> Result<Command
     with_doc(s, |d| {
         let (page, ids) = (d.page, d.selection.elements.clone());
         if ids.is_empty() {
-            return Err(sel_err("nichts ausgewählt"));
+            return Err(sel_err("err-sel-nothing"));
         }
         let doc = Arc::make_mut(&mut d.doc);
         for id in ids {
@@ -43,7 +43,7 @@ pub(crate) fn transform_selection(s: &mut Session, m: Matrix3) -> Result<Command
 
 fn sel_bounds(s: &Session) -> Result<Rect> {
     let d = s.doc()?;
-    docops::ids_bounds(&d.doc, d.page, &d.selection.elements).ok_or_else(|| sel_err("Auswahl ohne Grenzen"))
+    docops::ids_bounds(&d.doc, d.page, &d.selection.elements).ok_or_else(|| sel_err("err-sel-no-bounds"))
 }
 
 fn about_selection(s: &mut Session, m: Matrix3) -> Result<CommandOutput> {
@@ -52,11 +52,11 @@ fn about_selection(s: &mut Session, m: Matrix3) -> Result<CommandOutput> {
 }
 
 fn matrix_from(p: &Params, key: &str) -> Result<Matrix3> {
-    let v: Vec<f32> = p.parse(key)?.ok_or_else(|| EngineError::InvalidParams { name: p.command.clone(), message: format!("{key} fehlt") })?;
+    let v: Vec<f32> = p.parse(key)?.ok_or_else(|| EngineError::InvalidParams { name: p.command.clone(), message: fp_i18n::tr!("err-param-absent", key = key) })?;
     match v.len() {
         6 => Ok(Matrix3::from_affine(v[0], v[1], v[2], v[3], v[4], v[5])),
         9 => Ok(Matrix3::from_rows([[v[0], v[1], v[2]], [v[3], v[4], v[5]], [v[6], v[7], v[8]]])),
-        _ => Err(EngineError::InvalidParams { name: p.command.clone(), message: "Matrix mit 6 oder 9 Werten erwartet".into() }),
+        _ => Err(EngineError::InvalidParams { name: p.command.clone(), message: fp_i18n::t("err-param-matrix") }),
     }
 }
 
@@ -119,9 +119,9 @@ fn arrange(s: &mut Session, how: &'static str) -> Result<CommandOutput> {
 fn group(d: &mut DocumentState, as_mask: bool) -> Result<ElementId> {
     let page = d.page;
     let paths = selected_paths(d);
-    let first = paths.first().cloned().ok_or_else(|| sel_err("nichts ausgewählt"))?;
+    let first = paths.first().cloned().ok_or_else(|| sel_err("err-sel-nothing"))?;
     if as_mask && paths.len() < 2 {
-        return Err(sel_err("mindestens zwei Objekte auswählen"));
+        return Err(sel_err("err-sel-two-objects"));
     }
     let ids = d.selection.elements.clone();
     let doc = Arc::make_mut(&mut d.doc);
@@ -129,7 +129,7 @@ fn group(d: &mut DocumentState, as_mask: bool) -> Result<ElementId> {
     let mut idg = take_ids(doc);
     let g = if as_mask {
         let mut it = removed.into_iter();
-        let mask = it.next().ok_or_else(|| sel_err("leer"))?;
+        let mask = it.next().ok_or_else(|| sel_err("err-sel-empty"))?;
         let vector = !matches!(mask.kind, ElementKind::Bitmap(_));
         Element::new_mask_group(&mut idg, mask, it.collect(), vector)
     } else {
@@ -137,7 +137,7 @@ fn group(d: &mut DocumentState, as_mask: bool) -> Result<ElementId> {
     };
     doc.ids = idg;
     let gid = g.id;
-    let (list, idx) = docops::parent_list_mut(doc, &first).ok_or_else(|| EngineError::Failed("Elternliste".into()))?;
+    let (list, idx) = docops::parent_list_mut(doc, &first).ok_or_else(|| EngineError::Failed(fp_i18n::t("err-parent-list")))?;
     list.insert(idx.min(list.len()), Arc::new(g));
     d.selection.set(vec![gid]);
     Ok(gid)
@@ -183,7 +183,7 @@ fn align(s: &mut Session, how: &'static str) -> Result<CommandOutput> {
         let page = d.page;
         let items: Vec<(ElementId, Rect)> = selected_elements(d).into_iter().filter_map(|(_, e)| docops::element_bounds(&d.doc, &e).map(|b| (e.id, b))).collect();
         if items.is_empty() {
-            return Err(sel_err("keine Objekte mit Grenzen"));
+            return Err(sel_err("err-sel-no-objects-with-bounds"));
         }
         let reference = if items.len() == 1 {
             canvas_rect(&d.doc, page)
@@ -269,7 +269,7 @@ fn combine(s: &mut Session, op: PathBoolOp) -> Result<CommandOutput> {
         let page = d.page;
         let items = selected_path_shapes(d);
         if items.len() < 2 {
-            return Err(sel_err("mindestens zwei Pfade auswählen"));
+            return Err(sel_err("err-sel-two-paths"));
         }
         let shapes: Vec<PathShape> = items.iter().map(|(_, _, sh)| sh.clone()).collect();
         let res = geo.combine(op, &shapes)?;
@@ -314,7 +314,7 @@ fn alter_paths(s: &mut Session, f: impl Fn(&dyn geometry::GeometryOps, &Element,
         let page = d.page;
         let items = selected_path_shapes(d);
         if items.is_empty() {
-            return Err(sel_err("keine Pfade ausgewählt"));
+            return Err(sel_err("err-sel-no-paths-selected"));
         }
         let mut results = Vec::new();
         for (_, e, sh) in &items {
@@ -333,12 +333,12 @@ fn join(d: &mut DocumentState) -> Result<()> {
     let items = selected_path_shapes(d);
     let doc = Arc::make_mut(&mut d.doc);
     match items.len() {
-        0 => Err(sel_err("keine Pfade ausgewählt")),
+        0 => Err(sel_err("err-sel-no-paths-selected")),
         1 => {
             let (_, e, sh) = &items[0];
             let open: Vec<usize> = sh.contours.iter().enumerate().filter(|(_, c)| !c.closed).map(|(i, _)| i).collect();
             if open.len() != 1 || sh.contours.len() != 1 {
-                return Err(sel_err("Pfad hat keine einzelne offene Kontur"));
+                return Err(sel_err("err-sel-no-single-open-contour"));
             }
             docops::edit_by_id(doc, page, e.id, |x| {
                 if let ElementKind::Path(p) = &mut x.kind
@@ -463,7 +463,7 @@ fn mask_bitmap(d: &mut DocumentState, mask_img: RgbaImage, target: ElementId) ->
     let mut next = docops::tile_counter();
     let r = mask_img.bounds();
     let mask = Element::new_bitmap(&mut idg, Point::new(r.left as f32, r.top as f32), mask_img.width() as u32, mask_img.height() as u32, mask_img.as_bytes(), &mut next);
-    let (list, idx) = docops::parent_list_mut(doc, &path).ok_or_else(|| EngineError::Failed("Elternliste".into()))?;
+    let (list, idx) = docops::parent_list_mut(doc, &path).ok_or_else(|| EngineError::Failed(fp_i18n::t("err-parent-list")))?;
     let el = list.remove(idx);
     let g = Element::new_mask_group(&mut idg, Arc::new(mask), vec![el], false);
     let gid = g.id;
@@ -475,12 +475,12 @@ fn mask_bitmap(d: &mut DocumentState, mask_img: RgbaImage, target: ElementId) ->
 
 fn mask_from_selection(s: &mut Session, reveal_all: Option<bool>) -> Result<CommandOutput> {
     with_doc(s, |d| {
-        let target = d.selection.elements.first().copied().ok_or_else(|| sel_err("kein Objekt"))?;
+        let target = d.selection.elements.first().copied().ok_or_else(|| sel_err("err-sel-no-object"))?;
         let e = docops::element_on_page(&d.doc, d.page, target).ok_or(EngineError::ElementNotFound(target.0))?;
-        let b = docops::element_bounds(&d.doc, &e).ok_or_else(|| sel_err("keine Grenzen"))?.round_out();
+        let b = docops::element_bounds(&d.doc, &e).ok_or_else(|| sel_err("err-sel-no-bounds-short"))?.round_out();
         let img = match reveal_all {
             Some(reveal) => RgbaImage::filled(b, if reveal { fp_color::Rgba8::new(255, 255, 255, 255) } else { fp_color::Rgba8::new(0, 0, 0, 255) })?,
-            None => return Err(EngineError::Failed("intern".into())),
+            None => return Err(EngineError::Failed(fp_i18n::t("err-internal"))),
         };
         let id = mask_bitmap(d, img, target)?;
         Ok(CommandOutput::doc_with(json!({"id": id.0})))
@@ -489,10 +489,10 @@ fn mask_from_selection(s: &mut Session, reveal_all: Option<bool>) -> Result<Comm
 
 pub(crate) fn mask_from_pixels(s: &mut Session, reveal: bool) -> Result<CommandOutput> {
     with_doc(s, |d| {
-        let target = d.selection.elements.first().copied().ok_or_else(|| sel_err("kein Objekt"))?;
-        let m = d.selection.pixels.clone().ok_or_else(|| sel_err("keine Pixelauswahl"))?;
+        let target = d.selection.elements.first().copied().ok_or_else(|| sel_err("err-sel-no-object"))?;
+        let m = d.selection.pixels.clone().ok_or_else(|| sel_err("err-req-pixel-selection"))?;
         let e = docops::element_on_page(&d.doc, d.page, target).ok_or(EngineError::ElementNotFound(target.0))?;
-        let b = docops::element_bounds(&d.doc, &e).ok_or_else(|| sel_err("keine Grenzen"))?.round_out().union(&m.tight_bounds());
+        let b = docops::element_bounds(&d.doc, &e).ok_or_else(|| sel_err("err-sel-no-bounds-short"))?.round_out().union(&m.tight_bounds());
         let mut img = RgbaImage::new(b)?;
         let w = img.width().max(1);
         for (i, px) in img.data_mut().iter_mut().enumerate() {
@@ -535,8 +535,8 @@ fn flatten_elements(s: &Session, els: &[Arc<Element>]) -> Result<RgbaImage> {
     if let Some(img) = composite_bitmaps(&d.doc, els) {
         return Ok(img);
     }
-    let r = s.renderer().ok_or(EngineError::BackendMissing("Renderer (fp-render) für Vektorobjekte"))?;
-    r.render_elements(&d.doc, d.page, d.frame, els).ok_or(EngineError::BackendMissing("Renderer (fp-render)"))
+    let r = s.renderer().ok_or(EngineError::BackendMissing("err-backend-renderer-vector"))?;
+    r.render_elements(&d.doc, d.page, d.frame, els).ok_or(EngineError::BackendMissing("err-backend-renderer"))
 }
 
 fn replace_with_bitmap(d: &mut DocumentState, remove: &[ElementId], img: &RgbaImage, at: &ElementPath) -> Result<ElementId> {
@@ -575,7 +575,7 @@ fn rotate_canvas(s: &mut Session, deg: i32) -> Result<CommandOutput> {
     with_doc(s, |d| {
         let page = d.page;
         let doc = Arc::make_mut(&mut d.doc);
-        let pg = doc.pages.get(page).ok_or_else(|| EngineError::NotFound("Seite".into()))?;
+        let pg = doc.pages.get(page).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-page")))?;
         let (ox, oy, w, h) = (pg.canvas.origin.x, pg.canvas.origin.y, pg.canvas.width, pg.canvas.height);
         let rot = Matrix3::rotation_degrees(deg as f64);
         let shift = match deg {
@@ -728,7 +728,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 with_doc(s, |d| {
                     let page = d.page;
                     let doc = Arc::make_mut(&mut d.doc);
-                    let pg = doc.pages.get(page).ok_or_else(|| EngineError::NotFound("Seite".into()))?;
+                    let pg = doc.pages.get(page).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-page")))?;
                     let (ox, oy, w, h) = (pg.canvas.origin.x as f64, pg.canvas.origin.y as f64, pg.canvas.width as f64, pg.canvas.height as f64);
                     let (mut sx, mut sy) = match pc {
                         Some(pc) => (pc / 100.0, pc / 100.0),
@@ -744,7 +744,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                         let m = Matrix3::translation(-ox as f32, -oy as f32).then(&Matrix3::scaling(sx as f32, sy as f32)).then(&Matrix3::translation(ox as f32, oy as f32));
                         transform_page(doc, page, &m, sm);
                     }
-                    let p = doc.page_mut(page).ok_or_else(|| EngineError::NotFound("Seite".into()))?;
+                    let p = doc.page_mut(page).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-page")))?;
                     if resample {
                         p.canvas.width = (w * sx).round().max(1.0) as f32;
                         p.canvas.height = (h * sy).round().max(1.0) as f32;
@@ -785,13 +785,13 @@ pub(super) fn register(r: &mut CommandRegistry) {
         let c = p.color("color")?;
         with_doc(s, |d| {
             let page = d.page;
-            Arc::make_mut(&mut d.doc).page_mut(page).ok_or_else(|| EngineError::NotFound("Seite".into()))?.root.background = c;
+            Arc::make_mut(&mut d.doc).page_mut(page).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-page")))?.root.background = c;
             Ok(CommandOutput::doc())
         })
     }));
     r.add(cmd("modify.canvas.trimCanvas").requires(DOC).run(|s, _| {
         with_doc(s, |d| {
-            let b = docops::page_content_bounds(&d.doc, d.page).ok_or_else(|| sel_err("Seite ist leer"))?;
+            let b = docops::page_content_bounds(&d.doc, d.page).ok_or_else(|| sel_err("err-sel-page-empty"))?;
             crop_page(d, b.round_out())?;
             Ok(CommandOutput::doc())
         })
@@ -901,13 +901,13 @@ pub(super) fn register(r: &mut CommandRegistry) {
                     let page = d.page;
                     let insts = selected_instances(d);
                     if insts.len() != 2 {
-                        return Err(sel_err("genau zwei Instanzen auswählen"));
+                        return Err(sel_err("err-sel-two-instances"));
                     }
                     let (top_path, a) = (insts[0].0.clone(), Arc::clone(&insts[0].1));
                     let b = Arc::clone(&insts[1].1);
-                    let (ElementKind::Instance(ia), ElementKind::Instance(ib)) = (&a.kind, &b.kind) else { return Err(sel_err("Instanzen")) };
+                    let (ElementKind::Instance(ia), ElementKind::Instance(ib)) = (&a.kind, &b.kind) else { return Err(sel_err("err-sel-instances")) };
                     if ia.symbol_id != ib.symbol_id {
-                        return Err(sel_err("Instanzen desselben Symbols auswählen"));
+                        return Err(sel_err("err-sel-same-symbol"));
                     }
                     let doc = Arc::make_mut(&mut d.doc);
                     let mut new_ids = Vec::new();
@@ -988,7 +988,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                         .symbol_by_name(&key)
                         .map(|(_, s)| s.id)
                         .or_else(|| key.parse::<u32>().ok().map(fp_model::SymbolId).filter(|id| d.doc.symbol_by_id(*id).is_some()))
-                        .ok_or_else(|| EngineError::NotFound(format!("Symbol „{key}“")))?;
+                        .ok_or_else(|| EngineError::NotFound(fp_i18n::tr!("err-nf-symbol-named", name = key.as_str())))?;
                     let ids = d.selection.elements.clone();
                     let doc = Arc::make_mut(&mut d.doc);
                     for id in ids {
@@ -1065,10 +1065,10 @@ pub(super) fn register(r: &mut CommandRegistry) {
     // Selektives JPEG
     r.add(cmd("modify.selectiveJpeg.saveSelectionAsJpegMask").requires(&[Requirement::Document, Requirement::PixelSelection]).run(|s, _| {
         with_doc(s, |d| {
-            let m = d.selection.pixels.clone().ok_or_else(|| sel_err("keine Pixelauswahl"))?;
+            let m = d.selection.pixels.clone().ok_or_else(|| sel_err("err-req-pixel-selection"))?;
             let page = d.page;
             let (md, l, t) = mask_to_data(&m);
-            Arc::make_mut(&mut d.doc).page_mut(page).ok_or_else(|| EngineError::NotFound("Seite".into()))?.jpeg_mask =
+            Arc::make_mut(&mut d.doc).page_mut(page).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-page")))?.jpeg_mask =
                 Some(SavedSelection { mask: Some(md), left: l, top: t, name: None, extra: Extra::default() });
             Ok(CommandOutput::doc())
         })
@@ -1079,8 +1079,8 @@ pub(super) fn register(r: &mut CommandRegistry) {
             .available(|s| s.active().is_some_and(|d| d.doc.pages.get(d.page).is_some_and(|p| p.jpeg_mask.is_some())))
             .run(|s, _| {
                 with_doc(s, |d| {
-                    let jm = d.doc.pages.get(d.page).and_then(|p| p.jpeg_mask.clone()).ok_or_else(|| EngineError::NotFound("JPEG-Maske".into()))?;
-                    let m = jm.mask.as_ref().and_then(|md| super::select::data_to_mask(md, jm.left, jm.top)).ok_or_else(|| EngineError::NotFound("Maske".into()))?;
+                    let jm = d.doc.pages.get(d.page).and_then(|p| p.jpeg_mask.clone()).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-jpeg-mask")))?;
+                    let m = jm.mask.as_ref().and_then(|md| super::select::data_to_mask(md, jm.left, jm.top)).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-mask")))?;
                     d.selection.pixels = Some(m);
                     Ok(CommandOutput::doc())
                 })
@@ -1093,7 +1093,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
             .run(|s, _| {
                 with_doc(s, |d| {
                     let page = d.page;
-                    Arc::make_mut(&mut d.doc).page_mut(page).ok_or_else(|| EngineError::NotFound("Seite".into()))?.jpeg_mask = None;
+                    Arc::make_mut(&mut d.doc).page_mut(page).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-page")))?.jpeg_mask = None;
                     Ok(CommandOutput::doc())
                 })
             }),
@@ -1115,7 +1115,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
         let (els, first, ids) = {
             let d = s.doc()?;
             let els = selected_elements(d);
-            let first = els.first().map(|(p, _)| p.clone()).ok_or_else(|| sel_err("nichts ausgewählt"))?;
+            let first = els.first().map(|(p, _)| p.clone()).ok_or_else(|| sel_err("err-sel-nothing"))?;
             (els.iter().map(|(_, e)| Arc::clone(e)).collect::<Vec<_>>(), first, d.selection.elements.clone())
         };
         let img = flatten_elements(s, &els)?;
@@ -1128,13 +1128,13 @@ pub(super) fn register(r: &mut CommandRegistry) {
         let (els, below_path, ids) = {
             let d = s.doc()?;
             let els = selected_elements(d);
-            let (last_path, _) = els.last().cloned().ok_or_else(|| sel_err("nichts ausgewählt"))?;
+            let (last_path, _) = els.last().cloned().ok_or_else(|| sel_err("err-sel-nothing"))?;
             let mut bp = last_path.clone();
             match bp.steps.last_mut() {
                 Some(PathStep::Child(i)) => *i += 1,
-                _ => return Err(sel_err("kein Objekt darunter")),
+                _ => return Err(sel_err("err-sel-no-object-below")),
             }
-            let below = d.doc.element_at(&bp).cloned().ok_or_else(|| sel_err("kein Objekt darunter"))?;
+            let below = d.doc.element_at(&bp).cloned().ok_or_else(|| sel_err("err-sel-no-object-below"))?;
             let mut all: Vec<Arc<Element>> = els.iter().map(|(_, e)| Arc::clone(e)).collect();
             all.push(Arc::clone(&below));
             let mut ids = d.selection.elements.clone();
@@ -1155,7 +1155,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
         with_doc(s, |d| {
             let page = d.page;
             let doc = Arc::make_mut(&mut d.doc);
-            let p = doc.page_mut(page).ok_or_else(|| EngineError::NotFound("Seite".into()))?;
+            let p = doc.page_mut(page).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-page")))?;
             let frames = p.root.frame_count as usize;
             let normal: Vec<usize> =
                 p.root.layers.iter().enumerate().filter(|(_, s)| matches!(s, LayerSlot::Own(l) if l.kind == LayerKind::Normal)).map(|(i, _)| i).collect();
@@ -1281,9 +1281,9 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 let rr = p.rect("rect")?;
                 let q = p.points("quad")?;
                 if q.len() != 4 {
-                    return Err(EngineError::InvalidParams { name: p.command.clone(), message: "vier Punkte erwartet".into() });
+                    return Err(EngineError::InvalidParams { name: p.command.clone(), message: fp_i18n::t("err-param-four-points") });
                 }
-                let m = Matrix3::rect_to_quad(&rr, &[q[0], q[1], q[2], q[3]]).ok_or_else(|| EngineError::Failed("entartetes Viereck".into()))?;
+                let m = Matrix3::rect_to_quad(&rr, &[q[0], q[1], q[2], q[3]]).ok_or_else(|| EngineError::Failed(fp_i18n::t("err-degenerate-quad")))?;
                 transform_selection(s, m)
             }),
     );
@@ -1500,7 +1500,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 with_doc(s, |d| {
                     let id = match p.opt_i64("id")? {
                         Some(i) => ElementId(i as u64),
-                        None => d.selection.elements.first().copied().ok_or_else(|| sel_err("kein Pfad"))?,
+                        None => d.selection.elements.first().copied().ok_or_else(|| sel_err("err-sel-no-path"))?,
                     };
                     let page = d.page;
                     docops::edit_by_id(Arc::make_mut(&mut d.doc), page, id, |e| set_contours(e, contours, None)).ok_or(EngineError::ElementNotFound(id.0))?;

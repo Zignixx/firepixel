@@ -40,7 +40,7 @@ pub fn begin_edit(s: &mut Session, symbol: SymbolId, in_place: bool, instance: O
     let d = s.doc()?;
     let parent = d.id;
     let page = d.page;
-    let (_, sym) = d.doc.symbol_by_id(symbol).ok_or_else(|| EngineError::NotFound(format!("Symbol {}", symbol.0)))?;
+    let (_, sym) = d.doc.symbol_by_id(symbol).ok_or_else(|| EngineError::NotFound(fp_i18n::tr!("err-nf-symbol-id", id = symbol.0.to_string())))?;
     let sym = Arc::clone(sym);
     let b = symbol_bounds(&d.doc, &sym).unwrap_or(fp_geom::Rect::new(-50.0, -50.0, 50.0, 50.0));
     let (l, t) = (b.left.floor(), b.top.floor());
@@ -60,7 +60,7 @@ pub fn begin_edit(s: &mut Session, symbol: SymbolId, in_place: bool, instance: O
     // Symbol braucht mindestens eine normale Ebene
     if crate::docops::top_normal_layer(&doc, 0).is_none() {
         let mut ids = std::mem::take(&mut doc.ids);
-        let layer = fp_model::Layer::new(&mut ids, "Ebene 1", fp_model::LayerKind::Normal, doc.pages[0].root.frame_count.max(1) as usize);
+        let layer = fp_model::Layer::new(&mut ids, &fp_i18n::tr!("msg-default-layer", n = "1"), fp_model::LayerKind::Normal, doc.pages[0].root.frame_count.max(1) as usize);
         doc.ids = ids;
         if let Some(pg) = doc.page_mut(0) {
             pg.root.layers.push(LayerSlot::Own(Arc::new(layer)));
@@ -76,21 +76,21 @@ pub fn begin_edit(s: &mut Session, symbol: SymbolId, in_place: bool, instance: O
 /// Schreibt die Bearbeitungsansicht `edit` in ihr Dokument zurück (ein Verlaufsschritt), schließt
 /// sie und aktiviert das Dokument.
 pub fn finish_edit(s: &mut Session, edit: DocId, discard: bool) -> Result<DocId> {
-    let st = s.document(edit).ok_or_else(|| EngineError::NotFound("Bearbeitungsansicht".into()))?;
-    let link = st.symbol_edit.clone().ok_or_else(|| EngineError::Failed("keine Symbol-Bearbeitung".into()))?;
+    let st = s.document(edit).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-edit-view")))?;
+    let link = st.symbol_edit.clone().ok_or_else(|| EngineError::Failed(fp_i18n::t("err-no-symbol-edit")))?;
     let changed = st.history.undo_count() > 0;
     let edited = Arc::clone(&st.doc);
     if !discard && changed && s.document(link.parent).is_some() {
         s.modify_document(link.parent, "Symbol bearbeiten", "modify.symbol.exitEdit", |p| {
             let doc = Arc::make_mut(&mut p.doc);
-            let root = edited.pages.first().map(|pg| pg.root.clone()).ok_or_else(|| EngineError::Failed("Ansicht leer".into()))?;
+            let root = edited.pages.first().map(|pg| pg.root.clone()).ok_or_else(|| EngineError::Failed(fp_i18n::t("err-view-empty")))?;
             // neue Symbole aus der Ansicht übernehmen (z. B. verschachtelt angelegte)
             for sy in &edited.symbols {
                 if doc.symbol_by_id(sy.id).is_none() {
                     doc.symbols.push(Arc::clone(sy));
                 }
             }
-            let pos = doc.symbols.iter().position(|x| x.id == link.symbol).ok_or_else(|| EngineError::NotFound("Symbol".into()))?;
+            let pos = doc.symbols.iter().position(|x| x.id == link.symbol).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-symbol")))?;
             let sym = Arc::make_mut(&mut doc.symbols[pos]);
             let bg = sym.root.background;
             sym.root = root;
@@ -133,7 +133,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                     let (symbol, inst) = match p.opt_i64("symbol")? {
                         Some(v) => (SymbolId(v.max(0) as u32), None),
                         None => {
-                            let (id, sym, m) = selected_instance(s).ok_or_else(|| EngineError::Selection("keine Symbolinstanz ausgewählt".into()))?;
+                            let (id, sym, m) = selected_instance(s).ok_or_else(|| EngineError::Selection(fp_i18n::t("err-sel-no-instance")))?;
                             (sym, Some((id, m)))
                         }
                     };

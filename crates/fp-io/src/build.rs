@@ -99,9 +99,9 @@ pub fn document_from_raster(r: RasterImage, fmt: FileFormat) -> Document {
     let mut ids = std::mem::take(&mut doc.ids);
     let mut tile = 0u32;
     let e = bitmap_element(&mut ids, &r.image, None, &mut tile);
-    let name = r.layer_name.clone().unwrap_or_else(|| "Hintergrund".to_string());
+    let name = r.layer_name.clone().unwrap_or_else(|| fp_i18n::t("msg-default-background"));
     let jpeg = fmt == FileFormat::Jpeg;
-    let extra_layer = if jpeg { Some(Layer::new(&mut ids, "Ebene 1", LayerKind::Normal, 1)) } else { None };
+    let extra_layer = if jpeg { Some(Layer::new(&mut ids, &fp_i18n::tr!("msg-default-layer", n = "1"), LayerKind::Normal, 1)) } else { None };
     doc.ids = ids;
     if let Some(p) = doc.page_mut(0) {
         if let Some(LayerSlot::Own(l)) = p.root.layers.get_mut(0) {
@@ -149,7 +149,7 @@ fn anim_export(a: &Animation, fmt: FileFormat, expanded: bool) -> ExportSettings
 /// Ebene mit einem Bild je Status.
 fn frames_layer(ids: &mut IdGen, a: &Animation, expanded: bool, tile: &mut u32) -> Layer {
     let n = a.frames.len().max(1);
-    let mut l = Layer::new(ids, "Ebene 1", LayerKind::Normal, n);
+    let mut l = Layer::new(ids, &fp_i18n::tr!("msg-default-layer", n = "1"), LayerKind::Normal, n);
     let composed = if expanded { a.composed_frames() } else { Vec::new() };
     for (k, f) in a.frames.iter().enumerate() {
         let img = if expanded {

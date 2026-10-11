@@ -40,7 +40,7 @@ fn targets(s: &Session, p: &Params) -> Result<(usize, Vec<ElementId>)> {
         None => d.selection.elements.clone(),
     };
     if ids.is_empty() {
-        return Err(EngineError::Selection("nichts ausgewählt".into()));
+        return Err(EngineError::Selection(fp_i18n::t("err-sel-nothing")));
     }
     Ok((d.page, ids))
 }
@@ -724,7 +724,7 @@ pub fn register(r: &mut CommandRegistry) {
                             .iter()
                             .copied()
                             .find(|b| format!("{}/{}", b.category_de, b.name_de) == *n || b.name == n.as_str() || b.name_de == n.as_str())
-                            .ok_or_else(|| bad(p, format!("unbekannte Strichvorgabe {n}")))?,
+                            .ok_or_else(|| bad(p, fp_i18n::tr!("err-unknown-stroke-preset", name = n.as_str())))?,
                     ),
                     None => None,
                 };
@@ -865,7 +865,7 @@ pub fn register(r: &mut CommandRegistry) {
                         .iter()
                         .copied()
                         .find(|b| format!("{}/{}", b.category_de, b.name_de) == n || b.name == n.as_str() || b.name_de == n.as_str())
-                        .ok_or_else(|| bad(p, format!("unbekannte Strichvorgabe {n}")))?;
+                        .ok_or_else(|| bad(p, fp_i18n::tr!("err-unknown-stroke-preset", name = n.as_str())))?;
                     let keep = b.diameter;
                     b = Brush::basic(keep.max(1));
                     apply_preset(&mut b, &pr);
@@ -878,9 +878,9 @@ pub fn register(r: &mut CommandRegistry) {
                     for (k, v) in m {
                         let kb = k.as_bytes();
                         if kb.len() != 2 || !fp_model::attrs::SENSITIVITY_SOURCES.contains(&kb[0]) || !fp_model::attrs::SENSITIVITY_TARGETS.contains(&kb[1]) {
-                            return Err(bad(p, format!("ungültiger Schlüssel {k}")));
+                            return Err(bad(p, fp_i18n::tr!("err-invalid-key", name = k.as_str())));
                         }
-                        let pct = v.as_f64().ok_or_else(|| bad(p, format!("{k}: Zahl erwartet")))?;
+                        let pct = v.as_f64().ok_or_else(|| bad(p, fp_i18n::tr!("err-param-number-expected", key = k.as_str())))?;
                         let val = (pct.clamp(0.0, 100.0) * 10.0).round() as i32;
                         b.sensitivities.retain(|x| !(x.source == kb[0] && x.target == kb[1]));
                         if val > 0 {
@@ -888,7 +888,7 @@ pub fn register(r: &mut CommandRegistry) {
                         }
                     }
                 }
-                let v = serde_json::to_value(&b).map_err(|e| EngineError::Failed(format!("Pinsel: {e}")))?;
+                let v = serde_json::to_value(&b).map_err(|e| EngineError::Failed(fp_i18n::tr!("err-brush-detail", detail = e.to_string())))?;
                 s.tools.options.new_brush = Some(v.clone());
                 Ok(CommandOutput::session_with(json!({ "brush": v })))
             }),
@@ -898,11 +898,11 @@ pub fn register(r: &mut CommandRegistry) {
     r.add(cmd("pi.brush.save").label("Pinselstrich speichern").requires(&[Requirement::Document, Requirement::Selection]).param("name", ParamKind::String, "Name").run(|s, p| {
         let name = p.str("name")?.trim().to_string();
         if name.is_empty() {
-            return Err(bad(p, "Name fehlt"));
+            return Err(bad(p, fp_i18n::t("err-param-name-missing")));
         }
         let d = s.doc_mut()?;
         let page = d.page;
-        let b = d.selection.elements.iter().filter_map(|id| docops::element_on_page(&d.doc, page, *id)).find_map(|e| docops::path_attrs_of(&e).and_then(|a| a.brush.clone())).ok_or_else(|| EngineError::Selection("kein Objekt mit Strich ausgewählt".into()))?;
+        let b = d.selection.elements.iter().filter_map(|id| docops::element_on_page(&d.doc, page, *id)).find_map(|e| docops::path_attrs_of(&e).and_then(|a| a.brush.clone())).ok_or_else(|| EngineError::Selection(fp_i18n::t("err-sel-no-stroked-object")))?;
         let mut nb = b;
         nb.user_name = Some(name.clone());
         let v = page_mut(d)?.presets.brushes.get_or_insert_with(Vec::new);
@@ -919,7 +919,7 @@ pub fn register(r: &mut CommandRegistry) {
         let n = v.len();
         v.retain(|x| x.user_name.as_deref() != Some(name.as_str()));
         if v.len() == n {
-            return Err(EngineError::NotFound(format!("Pinselstrich „{name}“")));
+            return Err(EngineError::NotFound(fp_i18n::tr!("err-nf-brush", name = name.as_str())));
         }
         Ok(CommandOutput::doc())
     }));
@@ -964,7 +964,7 @@ pub fn register(r: &mut CommandRegistry) {
                 let i = p.usize("index")?;
                 let vals: Vec<(String, String)> = match p.get("params") {
                     Some(Value::Object(m)) => m.iter().map(|(k, v)| (k.clone(), v.as_str().map(|x| x.to_string()).unwrap_or_else(|| v.to_string()))).collect(),
-                    _ => return Err(bad(p, "params: Objekt erwartet")),
+                    _ => return Err(bad(p, fp_i18n::t("err-param-params"))),
                 };
                 edit_effects(s, p, move |l| match l.effects.get_mut(i) {
                     Some(e) => {
@@ -973,7 +973,7 @@ pub fn register(r: &mut CommandRegistry) {
                         }
                         Ok(())
                     }
-                    None => Err(EngineError::NotFound("Effekt".into())),
+                    None => Err(EngineError::NotFound(fp_i18n::t("err-nf-effect"))),
                 })
             }),
     );
@@ -985,7 +985,7 @@ pub fn register(r: &mut CommandRegistry) {
                 let (i, to) = (p.usize("index")?, p.usize("to")?);
                 edit_effects(s, p, move |l| {
                     if i >= l.effects.len() {
-                        return Err(EngineError::NotFound("Effekt".into()));
+                        return Err(EngineError::NotFound(fp_i18n::t("err-nf-effect")));
                     }
                     let e = l.effects.remove(i);
                     let to = to.min(l.effects.len());
@@ -1017,7 +1017,7 @@ pub fn register(r: &mut CommandRegistry) {
                             Some((moa, vis, params))
                         })
                         .collect(),
-                    _ => return Err(bad(p, "effects: Liste erwartet")),
+                    _ => return Err(bad(p, fp_i18n::t("err-param-effects"))),
                 };
                 edit_effects(s, p, move |l| {
                     l.effects.clear();
@@ -1077,7 +1077,7 @@ pub fn register(r: &mut CommandRegistry) {
                     }
                 }
                 if operands.len() < 2 {
-                    return Err(EngineError::Selection("mindestens zwei Pfade nötig".into()));
+                    return Err(EngineError::Selection(fp_i18n::t("err-sel-two-paths-needed")));
                 }
                 let pop = compound_ops(op.max(1), operands.len());
                 for (o, po) in operands.iter_mut().zip(pop) {
@@ -1085,7 +1085,7 @@ pub fn register(r: &mut CommandRegistry) {
                         pe.path_op = po;
                     }
                 }
-                let first = paths.first().cloned().ok_or_else(|| EngineError::Selection("keine Pfade".into()))?;
+                let first = paths.first().cloned().ok_or_else(|| EngineError::Selection(fp_i18n::t("err-sel-no-paths")))?;
                 let op_ids: Vec<ElementId> = operands.iter().map(|o| o.id).collect();
                 docops::remove_ids(doc, page, &op_ids);
                 let mut idg = std::mem::take(&mut doc.ids);
@@ -1116,7 +1116,7 @@ pub fn register(r: &mut CommandRegistry) {
                     }
                 };
                 if !inserted {
-                    return Err(EngineError::Failed("Compound Shape konnte nicht eingefügt werden".into()));
+                    return Err(EngineError::Failed(fp_i18n::t("err-compound-insert-failed")));
                 }
                 d.selection.set(vec![new_id]);
                 Ok(CommandOutput::doc())
@@ -1363,7 +1363,7 @@ pub fn register(r: &mut CommandRegistry) {
             .run(|s, p| {
                 let vals: Vec<(String, String)> = match p.get("values") {
                     Some(Value::Object(m)) => m.iter().map(|(k, v)| (k.clone(), v.as_str().map(|x| x.to_string()).unwrap_or_else(|| v.to_string()))).collect(),
-                    _ => return Err(bad(p, "values: Objekt erwartet")),
+                    _ => return Err(bad(p, fp_i18n::t("err-param-values"))),
                 };
                 edit_each(s, p, |e, _| {
                     if let ElementKind::Instance(i) = &mut e.kind {
@@ -1402,7 +1402,7 @@ pub fn register(r: &mut CommandRegistry) {
                     None => vec![d.frame],
                 };
                 let page = d.page;
-                let pg = Arc::make_mut(&mut d.doc).page_mut(page).ok_or_else(|| EngineError::NotFound("Seite".into()))?;
+                let pg = Arc::make_mut(&mut d.doc).page_mut(page).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-page")))?;
                 let ex = pg.root.export.get_or_insert_with(Default::default);
                 while ex.frames.len() < n {
                     ex.frames.push(fp_model::FrameInfo::default());
@@ -1435,7 +1435,7 @@ pub fn register(r: &mut CommandRegistry) {
                 let v = p.i64("loop")? as i32;
                 let d = s.doc_mut()?;
                 let page = d.page;
-                let pg = Arc::make_mut(&mut d.doc).page_mut(page).ok_or_else(|| EngineError::NotFound("Seite".into()))?;
+                let pg = Arc::make_mut(&mut d.doc).page_mut(page).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-page")))?;
                 pg.root.export.get_or_insert_with(Default::default).loop_count = v;
                 Ok(CommandOutput::doc())
             }),
@@ -1450,7 +1450,7 @@ pub fn register(r: &mut CommandRegistry) {
                 let (b, a) = (p.i64("before")? as i32, p.i64("after")? as i32);
                 let d = s.doc_mut()?;
                 let page = d.page;
-                let pg = Arc::make_mut(&mut d.doc).page_mut(page).ok_or_else(|| EngineError::NotFound("Seite".into()))?;
+                let pg = Arc::make_mut(&mut d.doc).page_mut(page).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-page")))?;
                 pg.root.onion_before = b;
                 pg.root.onion_after = a;
                 Ok(CommandOutput::doc())
@@ -1471,12 +1471,12 @@ pub fn register(r: &mut CommandRegistry) {
         let need = start + removed.len();
         let have = doc.pages.get(page).map(|pg| pg.root.frame_count as usize).unwrap_or(1);
         if need > have {
-            docops::insert_frames(doc, page, have, need - have).ok_or_else(|| EngineError::NotFound("Seite".into()))?;
+            docops::insert_frames(doc, page, have, need - have).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-page")))?;
         }
         let by_id: std::collections::HashMap<ElementId, Arc<Element>> = removed.into_iter().map(|(_, e)| (e.id, e)).collect();
         for (k, id) in order.iter().enumerate() {
             if let Some(e) = by_id.get(id) {
-                docops::insert_element(doc, page, start + k, layer, 0, Arc::clone(e)).ok_or_else(|| EngineError::Failed("Verteilen fehlgeschlagen".into()))?;
+                docops::insert_element(doc, page, start + k, layer, 0, Arc::clone(e)).ok_or_else(|| EngineError::Failed(fp_i18n::t("err-distribute-failed")))?;
             }
         }
         d.selection.clear();
@@ -1516,10 +1516,10 @@ pub fn register(r: &mut CommandRegistry) {
             .requires(DOC)
             .param("settings", ParamKind::Json, "fp_model::ExportSettings als JSON")
             .run(|s, p| {
-                let es: fp_model::ExportSettings = p.parse("settings")?.ok_or_else(|| bad(p, "settings fehlt"))?;
+                let es: fp_model::ExportSettings = p.parse("settings")?.ok_or_else(|| bad(p, fp_i18n::t("err-param-settings-missing")))?;
                 let d = s.doc_mut()?;
                 let page = d.page;
-                let pg = Arc::make_mut(&mut d.doc).page_mut(page).ok_or_else(|| EngineError::NotFound("Seite".into()))?;
+                let pg = Arc::make_mut(&mut d.doc).page_mut(page).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-page")))?;
                 let frames = pg.root.export.as_ref().map(|e| e.frames.clone()).unwrap_or_default();
                 let mut es = es;
                 if es.frames.is_empty() {
@@ -1537,7 +1537,7 @@ pub fn register(r: &mut CommandRegistry) {
         let i = p.opt_i64("index")?.map(|v| v as usize).unwrap_or(d.page);
         let doc = Arc::make_mut(&mut d.doc);
         if i >= doc.pages.len() {
-            return Err(EngineError::NotFound("Seite".into()));
+            return Err(EngineError::NotFound(fp_i18n::t("err-nf-page")));
         }
         if m {
             for (k, pg) in doc.pages.iter_mut().enumerate() {
@@ -1575,7 +1575,7 @@ pub fn register(r: &mut CommandRegistry) {
                 let e = Element::new(idg.element(), ElementKind::SubLayer(Arc::new(sub)));
                 doc.ids = idg;
                 let id = e.id;
-                docops::insert_element(doc, page, frame, layer, 0, Arc::new(e)).ok_or_else(|| EngineError::NotFound("Ebene".into()))?;
+                docops::insert_element(doc, page, frame, layer, 0, Arc::new(e)).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-layer")))?;
                 d.selection.set(vec![id]);
                 Ok(CommandOutput::doc())
             }),
@@ -1590,7 +1590,7 @@ pub fn register(r: &mut CommandRegistry) {
             pg.root.layers.iter().any(|sl| matches!(sl, LayerSlot::Shared(r) if d.doc.shared_layer(&r.id).and_then(|x| x.layer.as_ref()).is_some_and(|l| l.id == id)))
         });
         if !on_page {
-            return Err(EngineError::NotFound("geteilte Ebene".into()));
+            return Err(EngineError::NotFound(fp_i18n::t("err-nf-shared-layer")));
         }
         d.layer = Some(id);
         d.selection.clear();
@@ -1624,7 +1624,7 @@ pub fn register(r: &mut CommandRegistry) {
                 let doc = Arc::make_mut(&mut d.doc);
                 let items: Vec<(ElementId, Rect)> = ids.iter().filter_map(|id| docops::element_on_page(doc, page, *id).and_then(|e| docops::element_bounds(doc, &e)).map(|b| (*id, b))).collect();
                 if items.is_empty() {
-                    return Err(EngineError::Selection("keine Grenzen".into()));
+                    return Err(EngineError::Selection(fp_i18n::t("err-sel-no-bounds-short")));
                 }
                 let union = items.iter().skip(1).fold(items[0].1, |a, (_, b)| a.union(b));
                 let canvas = doc.pages.get(page).map(|pg| Rect::new(pg.canvas.origin.x, pg.canvas.origin.y, pg.canvas.origin.x + pg.canvas.width, pg.canvas.origin.y + pg.canvas.height)).unwrap_or(union);
@@ -1724,7 +1724,7 @@ pub fn register(r: &mut CommandRegistry) {
                 let (page, frame) = (d.page, d.frame);
                 let doc = Arc::make_mut(&mut d.doc);
                 let path = docops::find_on_page(doc, page, id).ok_or(EngineError::ElementNotFound(id.0))?;
-                let target_slot = docops::layer_slot(doc, page, layer).ok_or_else(|| EngineError::NotFound("Ebene".into()))?;
+                let target_slot = docops::layer_slot(doc, page, layer).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-layer")))?;
                 if path.steps.len() == 1
                     && path.slot == target_slot
                     && let Some(fp_model::PathStep::Child(old)) = path.steps.first()
@@ -1733,7 +1733,7 @@ pub fn register(r: &mut CommandRegistry) {
                     index -= 1;
                 }
                 let e = docops::remove_at(doc, &path).ok_or(EngineError::ElementNotFound(id.0))?;
-                docops::insert_element(doc, page, frame, Some(layer), index, e).ok_or_else(|| EngineError::Failed("Objekt konnte nicht verschoben werden".into()))?;
+                docops::insert_element(doc, page, frame, Some(layer), index, e).ok_or_else(|| EngineError::Failed(fp_i18n::t("err-object-move-failed")))?;
                 d.layer = Some(layer);
                 d.selection.set(vec![id]);
                 Ok(CommandOutput::doc())
@@ -1744,13 +1744,13 @@ pub fn register(r: &mut CommandRegistry) {
     r.add(cmd("pi.style.new").label("Neuer Stil").requires(&[Requirement::Document, Requirement::Selection]).param("name", ParamKind::String, "Name").opt("flags", ParamKind::Integer { min: Some(0), max: Some(0x1ff) }, "Attributgruppen ZSFi").opt("otherFlags", ParamKind::Integer { min: Some(0), max: Some(0x1f) }, "ZSOi").run(|s, p| {
         let name = p.str("name")?;
         if name.trim().is_empty() {
-            return Err(bad(p, "Name fehlt"));
+            return Err(bad(p, fp_i18n::t("err-param-name-missing")));
         }
         let flags = p.opt_i64("flags")?.map(|v| v as u32);
         let other = p.opt_i64("otherFlags")?.map(|v| v as u32);
         let d = s.doc_mut()?;
         let (page, ids) = (d.page, d.selection.elements.clone());
-        let first = ids.first().and_then(|id| docops::element_on_page(&d.doc, page, *id)).ok_or_else(|| EngineError::Selection("nichts ausgewählt".into()))?;
+        let first = ids.first().and_then(|id| docops::element_on_page(&d.doc, page, *id)).ok_or_else(|| EngineError::Selection(fp_i18n::t("err-sel-nothing")))?;
         let mut st = fp_model::Style::new(&name);
         if let Some(f) = flags {
             st.flags = f;
@@ -1842,7 +1842,7 @@ pub fn register(r: &mut CommandRegistry) {
             let before = v.len();
             v.retain(|x| x.name != name);
             if v.len() == before {
-                return Err(EngineError::NotFound(format!("Stil „{name}“")));
+                return Err(EngineError::NotFound(fp_i18n::tr!("err-nf-style", name = name.as_str())));
             }
         }
         Ok(CommandOutput::doc())
@@ -1851,7 +1851,7 @@ pub fn register(r: &mut CommandRegistry) {
         let (old, new) = (p.str("name")?, p.str("newName")?);
         let d = s.doc_mut()?;
         let doc = Arc::make_mut(&mut d.doc);
-        let st = doc.styles.as_mut().and_then(|v| v.iter_mut().find(|x| x.name == old)).ok_or_else(|| EngineError::NotFound(format!("Stil „{old}“")))?;
+        let st = doc.styles.as_mut().and_then(|v| v.iter_mut().find(|x| x.name == old)).ok_or_else(|| EngineError::NotFound(fp_i18n::tr!("err-nf-style", name = old.as_str())))?;
         Arc::make_mut(st).name = new;
         Ok(CommandOutput::doc())
     }));
@@ -1861,7 +1861,7 @@ pub fn register(r: &mut CommandRegistry) {
         let (i, n) = (p.usize("index")?, p.str("name")?);
         let d = s.doc_mut()?;
         let doc = Arc::make_mut(&mut d.doc);
-        let sym = doc.symbols.get_mut(i).ok_or_else(|| EngineError::NotFound("Symbol".into()))?;
+        let sym = doc.symbols.get_mut(i).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-symbol")))?;
         Arc::make_mut(sym).name = n;
         Ok(CommandOutput::doc())
     }));
@@ -1870,7 +1870,7 @@ pub fn register(r: &mut CommandRegistry) {
         let d = s.doc_mut()?;
         let doc = Arc::make_mut(&mut d.doc);
         if i >= doc.symbols.len() {
-            return Err(EngineError::NotFound("Symbol".into()));
+            return Err(EngineError::NotFound(fp_i18n::t("err-nf-symbol")));
         }
         let sym_id = doc.symbols[i].id;
         doc.symbols.remove(i);
@@ -1905,7 +1905,7 @@ pub fn register(r: &mut CommandRegistry) {
                 let d = s.doc_mut()?;
                 let (page, frame, layer) = (d.page, d.frame, d.layer);
                 let doc = Arc::make_mut(&mut d.doc);
-                let sym = doc.symbols.get(i).cloned().ok_or_else(|| EngineError::NotFound("Symbol".into()))?;
+                let sym = doc.symbols.get(i).cloned().ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-symbol")))?;
                 let c = doc.pages.get(page).map(|pg| pg.canvas);
                 let center = at.unwrap_or_else(|| c.map(|c| Point::new(c.origin.x + c.width / 2.0, c.origin.y + c.height / 2.0)).unwrap_or(Point::new(0.0, 0.0)));
                 let mut idg = std::mem::take(&mut doc.ids);
@@ -1916,7 +1916,7 @@ pub fn register(r: &mut CommandRegistry) {
                 doc.ids = idg;
                 e.common.name = Some(sym.name.clone());
                 let id = e.id;
-                docops::insert_element(doc, page, frame, layer, 0, Arc::new(e)).ok_or_else(|| EngineError::NotFound("Ebene".into()))?;
+                docops::insert_element(doc, page, frame, layer, 0, Arc::new(e)).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-layer")))?;
                 d.selection.set(vec![id]);
                 Ok(CommandOutput::doc())
             }),
@@ -1934,7 +1934,7 @@ pub fn register(r: &mut CommandRegistry) {
                 let bytes = std::fs::read(&path).map_err(|e| EngineError::Io(e.to_string()))?;
                 let lib = fp_fwpng::read(&bytes).map_err(|e| EngineError::Format(e.to_string()))?;
                 if lib.symbols.is_empty() {
-                    return Err(EngineError::Failed("die Datei enthält keine Symbole".into()));
+                    return Err(EngineError::Failed(fp_i18n::t("err-file-no-symbols")));
                 }
                 let d = s.doc_mut()?;
                 let (page, frame, layer) = (d.page, d.frame, d.layer);
@@ -1967,7 +1967,7 @@ pub fn register(r: &mut CommandRegistry) {
                     e.common.name = doc.symbols.last().map(|x| x.name.clone());
                     let id = e.id;
                     doc.ids = idg;
-                    docops::insert_element(doc, page, frame, layer, 0, Arc::new(e)).ok_or_else(|| EngineError::NotFound("Ebene".into()))?;
+                    docops::insert_element(doc, page, frame, layer, 0, Arc::new(e)).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-layer")))?;
                     d.selection.set(vec![id]);
                     out["id"] = json!(id.0);
                 } else {
@@ -2003,7 +2003,7 @@ pub fn register(r: &mut CommandRegistry) {
                     d.view.lock_guides = v;
                 }
                 let page = d.page;
-                let pg = Arc::make_mut(&mut d.doc).page_mut(page).ok_or_else(|| EngineError::NotFound("Seite".into()))?;
+                let pg = Arc::make_mut(&mut d.doc).page_mut(page).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-page")))?;
                 let g = pg.root.guides.get_or_insert_with(Default::default);
                 if let Some(c) = c {
                     g.color = Some(c);
@@ -2117,7 +2117,7 @@ fn pref_choice(r: &mut CommandRegistry, id: u32, name: &str, label: &str, key: &
 
 fn page_mut(d: &mut DocumentState) -> Result<&mut fp_model::Page> {
     let page = d.page;
-    Arc::make_mut(&mut d.doc).page_mut(page).ok_or_else(|| EngineError::NotFound("Seite".into()))
+    Arc::make_mut(&mut d.doc).page_mut(page).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-page")))
 }
 
 /// Exporteinstellungen der aktuellen Seite (Copy-on-Write, angelegt mit Vorgaben).
@@ -2155,7 +2155,7 @@ fn color_list(p: &Params, key: &str) -> Result<Vec<u32>> {
         Value::Array(a) => a.clone(),
         x => vec![x.clone()],
     };
-    items.iter().map(|x| parse_color(x).map(|c| c.0 | 0xff00_0000).ok_or_else(|| bad(p, format!("{key}: Farbe erwartet")))).collect()
+    items.iter().map(|x| parse_color(x).map(|c| c.0 | 0xff00_0000).ok_or_else(|| bad(p, fp_i18n::tr!("err-param-color-expected", key = key)))).collect()
 }
 
 fn read_file(path: &str) -> Result<Vec<u8>> {
@@ -2284,7 +2284,7 @@ pub fn current_export_palette(s: &Session) -> Result<Vec<u32>> {
     let (_, _, ex) = export_current(s, None)?;
     match &ex.optimized {
         fp_export::Optimized::Indexed(ix) => Ok(ix.palette.clone()),
-        _ => Err(EngineError::Failed("das Exportformat hat keine Palette".into())),
+        _ => Err(EngineError::Failed(fp_i18n::t("err-format-no-palette"))),
     }
 }
 
@@ -2315,7 +2315,7 @@ fn read_styles(path: &str) -> Result<Vec<Arc<fp_model::Style>>> {
         let doc = fp_fwpng::read(&bytes).map_err(|e| EngineError::Format(e.to_string()))?;
         return Ok(doc.styles.unwrap_or_default());
     }
-    let v: Vec<fp_model::Style> = serde_json::from_slice(&bytes).map_err(|e| EngineError::Format(format!("Stilbibliothek: {e}")))?;
+    let v: Vec<fp_model::Style> = serde_json::from_slice(&bytes).map_err(|e| EngineError::Format(fp_i18n::tr!("err-style-library", detail = e.to_string())))?;
     Ok(v.into_iter().map(Arc::new).collect())
 }
 
@@ -2337,7 +2337,7 @@ fn symbol_index(s: &Session, p: &Params) -> Result<usize> {
     let d = s.doc()?;
     let i = p.usize("index")?;
     if i >= d.doc.symbols.len() {
-        return Err(EngineError::NotFound("Symbol".into()));
+        return Err(EngineError::NotFound(fp_i18n::t("err-nf-symbol")));
     }
     Ok(i)
 }
@@ -2365,7 +2365,7 @@ fn history_steps(s: &Session, p: &Params) -> Result<Vec<crate::history::Recorded
         }
     };
     if idx.is_empty() {
-        return Err(EngineError::Failed("keine Schritte ausgewählt".into()));
+        return Err(EngineError::Failed(fp_i18n::t("err-no-steps")));
     }
     Ok(idx.into_iter().flat_map(|i| d.history.export(i..i + 1)).collect())
 }
@@ -2413,7 +2413,7 @@ fn register_context_menus(r: &mut CommandRegistry) {
         cmd("panel.effects.locatePlugins").label("Zusatzmodule suchen").param("path", ParamKind::Path, "Ordner mit Zusatzmodulen").run(|s, p| {
             let path = p.str("path")?;
             if !std::path::Path::new(&path).is_dir() {
-                return Err(EngineError::NotFound(format!("Ordner {path}")));
+                return Err(EngineError::NotFound(fp_i18n::tr!("err-nf-folder", path = path.as_str())));
             }
             s.prefs.set("Firepixel_PluginFolder", PrefValue::Str(path));
             s.prefs_changed();
@@ -2493,7 +2493,7 @@ fn register_layer_menu(r: &mut CommandRegistry) {
                         }
                     }
                     d.layer = Some(id);
-                    Ok(CommandOutput::doc_with(json!({"layer": id.0})).labeled("Neue Ebene"))
+                    Ok(CommandOutput::doc_with(json!({"layer": id.0})).labeled(fp_i18n::t("msg-step-new-layer")))
                 })
             }),
     );
@@ -2511,13 +2511,13 @@ fn register_layer_menu(r: &mut CommandRegistry) {
                 let pos = p.opt_str("position")?.unwrap_or_else(|| "above".into());
                 super::with_doc(s, |d| {
                     let page = d.page;
-                    let slot = active_slot(d).ok_or_else(|| EngineError::NotFound("Ebene".into()))?;
+                    let slot = active_slot(d).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-layer")))?;
                     let doc = Arc::make_mut(&mut d.doc);
                     let Some(LayerSlot::Own(src)) = doc.pages.get(page).and_then(|pg| pg.root.layers.get(slot)).cloned() else {
-                        return Err(EngineError::Failed("nur eigene Ebenen können dupliziert werden".into()));
+                        return Err(EngineError::Failed(fp_i18n::t("err-only-own-layers")));
                     };
                     if src.kind == LayerKind::Web {
-                        return Err(EngineError::Failed("die Web-Ebene kann nicht dupliziert werden".into()));
+                        return Err(EngineError::Failed(fp_i18n::t("err-web-layer-no-duplicate")));
                     }
                     let mut idg = super::take_ids(doc);
                     let copies: Vec<fp_model::Layer> = (0..n)
@@ -2529,7 +2529,7 @@ fn register_layer_menu(r: &mut CommandRegistry) {
                         })
                         .collect();
                     doc.ids = idg;
-                    let pg = doc.page_mut(page).ok_or_else(|| EngineError::NotFound("Seite".into()))?;
+                    let pg = doc.page_mut(page).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-page")))?;
                     let at = match pos.as_str() {
                         "top" => top_insert_index(pg),
                         "below" => slot,
@@ -2541,7 +2541,7 @@ fn register_layer_menu(r: &mut CommandRegistry) {
                         pg.root.layers.insert(at + k, LayerSlot::Own(Arc::new(l)));
                     }
                     d.layer = first.or(d.layer);
-                    Ok(CommandOutput::doc().labeled("Ebene duplizieren"))
+                    Ok(CommandOutput::doc().labeled(fp_i18n::t("msg-step-duplicate-layer")))
                 })
             }),
     );
@@ -2554,7 +2554,7 @@ fn register_layer_menu(r: &mut CommandRegistry) {
             .checked(|s| s.active().and_then(|d| d.layer.and_then(|l| docops::own_layers(&d.doc, d.page).into_iter().find(|(_, x)| x.id == l))).is_some_and(|(_, l)| l.shared_across_frames))
             .run(|s, _| {
                 let d = s.doc()?;
-                let cur = d.layer.and_then(|l| docops::own_layers(&d.doc, d.page).into_iter().find(|(_, x)| x.id == l)).map(|(_, l)| l.shared_across_frames).ok_or_else(|| EngineError::NotFound("Ebene".into()))?;
+                let cur = d.layer.and_then(|l| docops::own_layers(&d.doc, d.page).into_iter().find(|(_, x)| x.id == l)).map(|(_, l)| l.shared_across_frames).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-layer")))?;
                 s.execute("layer.setShared", json!({"shared": !cur})).map(passthrough)
             }),
     );
@@ -2569,7 +2569,7 @@ fn register_layer_menu(r: &mut CommandRegistry) {
             .available(|s| s.active().is_some_and(|d| master_page(&d.doc).is_some_and(|m| m != d.page) && !d.doc.pages.get(d.page).is_some_and(|p| p.root.layers.iter().any(|l| matches!(l, LayerSlot::MasterPage(_))))))
             .run(|s, _| {
                 super::with_doc(s, |d| {
-                    let m = master_page(&d.doc).ok_or_else(|| EngineError::Failed("keine Masterseite".into()))?;
+                    let m = master_page(&d.doc).ok_or_else(|| EngineError::Failed(fp_i18n::t("err-no-master-page")))?;
                     let page = d.page;
                     let doc = Arc::make_mut(&mut d.doc);
                     let guid = match doc.pages[m].id.clone() {
@@ -2580,7 +2580,7 @@ fn register_layer_menu(r: &mut CommandRegistry) {
                             g
                         }
                     };
-                    let pg = doc.page_mut(page).ok_or_else(|| EngineError::NotFound("Seite".into()))?;
+                    let pg = doc.page_mut(page).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-page")))?;
                     pg.root.layers.insert(0, LayerSlot::MasterPage(fp_model::MasterPageLayer { master: guid, expanded: true, name: "Masterseite".into(), visibility: vec![true], has_visibility_node: true, visibility_extra: Default::default(), extra: Default::default() }));
                     pg.linked_to_master = Some(true);
                     doc.invalidate_root_copy();
@@ -2591,7 +2591,7 @@ fn register_layer_menu(r: &mut CommandRegistry) {
     let share = |s: &mut Session, pages: Option<Vec<usize>>| -> Result<CommandOutput> {
         super::with_doc(s, |d| {
             let page = d.page;
-            let slot = active_slot(d).ok_or_else(|| EngineError::NotFound("Ebene".into()))?;
+            let slot = active_slot(d).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-layer")))?;
             let all = pages.is_none();
             let doc = Arc::make_mut(&mut d.doc);
             let n = doc.pages.len();
@@ -2599,12 +2599,12 @@ fn register_layer_menu(r: &mut CommandRegistry) {
             let guid = match doc.pages[page].root.layers.get(slot).cloned() {
                 Some(LayerSlot::Own(l)) => {
                     if l.kind == LayerKind::Web {
-                        return Err(EngineError::Failed("die Web-Ebene kann nicht freigegeben werden".into()));
+                        return Err(EngineError::Failed(fp_i18n::t("err-web-layer-no-share")));
                     }
                     let g = fp_model::Guid::new_random();
                     doc.shared_layers.push(fp_model::SharedLayerDef { id: g.clone(), to_all_pages: all, layer: Some(l), extra: Default::default() });
                     doc.has_shared_layer_list = true;
-                    let pg = doc.page_mut(page).ok_or_else(|| EngineError::NotFound("Seite".into()))?;
+                    let pg = doc.page_mut(page).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-page")))?;
                     pg.root.layers[slot] = LayerSlot::Shared(fp_model::SharedLayerRef { id: g.clone(), to_all_pages: false, extra: Default::default() });
                     g
                 }
@@ -2614,7 +2614,7 @@ fn register_layer_menu(r: &mut CommandRegistry) {
                     }
                     r.id
                 }
-                _ => return Err(EngineError::NotFound("Ebene".into())),
+                _ => return Err(EngineError::NotFound(fp_i18n::t("err-nf-layer"))),
             };
             for i in targets {
                 let pg = Arc::make_mut(&mut doc.pages[i]);
@@ -2653,7 +2653,7 @@ fn register_layer_menu(r: &mut CommandRegistry) {
             .available(move |s| s.active().is_some_and(|d| shared_ref(d).is_some()))
             .run(move |s, _| {
                 super::with_doc(s, |d| {
-                    let (slot, _) = shared_ref(d).ok_or_else(|| EngineError::Failed("keine freigegebene Ebene aktiv".into()))?;
+                    let (slot, _) = shared_ref(d).ok_or_else(|| EngineError::Failed(fp_i18n::t("err-no-shared-layer")))?;
                     page_mut(d)?.root.layers.remove(slot);
                     let page = d.page;
                     d.layer = docops::top_normal_layer(&d.doc, page);
@@ -2671,10 +2671,10 @@ fn register_layer_menu(r: &mut CommandRegistry) {
             .available(move |s| s.active().is_some_and(|d| shared_ref(d).is_some()))
             .run(move |s, _| {
                 super::with_doc(s, |d| {
-                    let (_, guid) = shared_ref(d).ok_or_else(|| EngineError::Failed("keine freigegebene Ebene aktiv".into()))?;
+                    let (_, guid) = shared_ref(d).ok_or_else(|| EngineError::Failed(fp_i18n::t("err-no-shared-layer")))?;
                     let doc = Arc::make_mut(&mut d.doc);
-                    let def = doc.shared_layers.iter().position(|x| x.id.same_as(&guid)).ok_or_else(|| EngineError::NotFound("geteilte Ebene".into()))?;
-                    let layer = doc.shared_layers[def].layer.clone().ok_or_else(|| EngineError::NotFound("geteilte Ebene".into()))?;
+                    let def = doc.shared_layers.iter().position(|x| x.id.same_as(&guid)).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-shared-layer")))?;
+                    let layer = doc.shared_layers[def].layer.clone().ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-shared-layer")))?;
                     let mut first = true;
                     let mut idg = super::take_ids(doc);
                     let mut keep_id = None;
@@ -2733,10 +2733,10 @@ fn register_layer_menu(r: &mut CommandRegistry) {
         cmd("panel.layers.editMask").label("Maske bearbeiten").requires(&[Requirement::Document, Requirement::Selection]).run(|s, _| {
             super::with_doc(s, |d| {
                 let page = d.page;
-                let first = d.selection.elements.first().copied().ok_or_else(|| super::sel_err("nichts ausgewählt"))?;
+                let first = d.selection.elements.first().copied().ok_or_else(|| super::sel_err("err-sel-nothing"))?;
                 let e = docops::element_on_page(&d.doc, page, first).ok_or(EngineError::ElementNotFound(first.0))?;
-                let ElementKind::Group(g) = &e.kind else { return Err(super::sel_err("keine Maskengruppe ausgewählt")) };
-                let m = g.mask.as_ref().ok_or_else(|| super::sel_err("die Gruppe hat keine Maske"))?;
+                let ElementKind::Group(g) = &e.kind else { return Err(super::sel_err("err-sel-no-mask-group")) };
+                let m = g.mask.as_ref().ok_or_else(|| super::sel_err("err-sel-group-no-mask"))?;
                 let is_bitmap = matches!(m.kind, ElementKind::Bitmap(_));
                 d.selection.set(vec![m.id]);
                 if is_bitmap {
@@ -2805,7 +2805,7 @@ fn register_state_menu(r: &mut CommandRegistry) {
                     let at = frame_position(d, p)?;
                     let (page, src) = (d.page, d.frame);
                     let doc = Arc::make_mut(&mut d.doc);
-                    docops::insert_frames(doc, page, at, n).ok_or_else(|| EngineError::NotFound("Seite".into()))?;
+                    docops::insert_frames(doc, page, at, n).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-page")))?;
                     let src = if at <= src { src + n } else { src };
                     let mut idg = super::take_ids(doc);
                     if let Some(pg) = doc.page_mut(page) {
@@ -2830,7 +2830,7 @@ fn register_state_menu(r: &mut CommandRegistry) {
                     doc.ids = idg;
                     d.frame = at.min(d.frame_count().saturating_sub(1));
                     d.selection.clear();
-                    Ok(CommandOutput::doc().labeled("Status duplizieren"))
+                    Ok(CommandOutput::doc().labeled(fp_i18n::t("msg-step-duplicate-state")))
                 })
             }),
     );
@@ -2891,12 +2891,12 @@ fn register_page_menu(r: &mut CommandRegistry) {
                     }
                 }
                 super::with_doc(s, |d| {
-                    let m = master_page(&d.doc).ok_or_else(|| EngineError::Failed("keine Masterseite".into()))?;
+                    let m = master_page(&d.doc).ok_or_else(|| EngineError::Failed(fp_i18n::t("err-no-master-page")))?;
                     let guid = d.doc.pages[m].id.clone().unwrap_or_else(fp_model::Guid::new_random);
                     let doc = Arc::make_mut(&mut d.doc);
                     Arc::make_mut(&mut doc.pages[m]).id = Some(guid.clone());
                     let page = d.page;
-                    let pg = doc.page_mut(page).ok_or_else(|| EngineError::NotFound("Seite".into()))?;
+                    let pg = doc.page_mut(page).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-page")))?;
                     for sl in pg.root.layers.iter_mut() {
                         if let LayerSlot::MasterPage(mp) = sl {
                             mp.master = if linked { fp_model::Guid::nil() } else { guid.clone() };
@@ -2917,7 +2917,7 @@ fn register_page_menu(r: &mut CommandRegistry) {
             .requires(DOC)
             .available(|s| s.active().is_some_and(|d| master_page(&d.doc).is_some()))
             .run(|s, _| {
-                let m = s.active().and_then(|d| master_page(&d.doc)).ok_or_else(|| EngineError::Failed("keine Masterseite".into()))?;
+                let m = s.active().and_then(|d| master_page(&d.doc)).ok_or_else(|| EngineError::Failed(fp_i18n::t("err-no-master-page")))?;
                 s.execute("pi.page.setMaster", json!({"index": m, "master": false})).map(passthrough)
             }),
     );
@@ -2947,7 +2947,7 @@ fn register_page_menu(r: &mut CommandRegistry) {
                         let pp = std::path::Path::new(&path);
                         let stem = pp.file_stem().map(|x| x.to_string_lossy().to_string()).unwrap_or_default();
                         let ext = pp.extension().map(|x| format!(".{}", x.to_string_lossy())).unwrap_or_default();
-                        let name = d.doc.pages[pi].name.clone().unwrap_or_else(|| format!("Seite {}", pi + 1));
+                        let name = d.doc.pages[pi].name.clone().unwrap_or_else(|| fp_i18n::tr!("msg-default-page", n = (pi + 1).to_string()));
                         pp.with_file_name(format!("{stem}_{name}{ext}")).to_string_lossy().to_string()
                     };
                     write_file(&target, &bytes)?;
@@ -2979,7 +2979,7 @@ fn register_history_menu(r: &mut CommandRegistry) {
         range_opts(cmd("panel.history.replaySelected").label("Ausgewählte Schritte wiederholen").requires(&[Requirement::Document, Requirement::CanUndo])).run(|s, p| {
             let cmds = history_steps(s, p)?;
             if cmds.is_empty() {
-                return Err(EngineError::Failed("die ausgewählten Schritte sind nicht wiederholbar".into()));
+                return Err(EngineError::Failed(fp_i18n::t("err-steps-not-replayable")));
             }
             s.replay(&cmds, "Schritte wiederholen")?;
             Ok(no_effect(json!({"steps": cmds.len()})))
@@ -3041,7 +3041,7 @@ fn register_style_menu(r: &mut CommandRegistry) {
             super::with_doc(s, |d| {
                 let doc = Arc::make_mut(&mut d.doc);
                 let v = doc.styles.get_or_insert_with(Vec::new);
-                let src = v.iter().find(|x| x.name == name).cloned().ok_or_else(|| EngineError::NotFound(format!("Stil „{name}“")))?;
+                let src = v.iter().find(|x| x.name == name).cloned().ok_or_else(|| EngineError::NotFound(fp_i18n::tr!("err-nf-style", name = name.as_str())))?;
                 let mut copy = (*src).clone();
                 let mut n = nn.unwrap_or_else(|| format!("{name} Kopie"));
                 let mut k = 2;
@@ -3061,7 +3061,7 @@ fn register_style_menu(r: &mut CommandRegistry) {
         cmd("panel.styles.delete").label("Stile löschen").requires(DOC).opt("names", ParamKind::Json, "Stilnamen").opt("name", ParamKind::String, "Stilname").run(|s, p| {
             let names = style_names(p)?;
             if names.is_empty() {
-                return Err(bad(p, "kein Stil angegeben"));
+                return Err(bad(p, fp_i18n::t("err-param-no-style")));
             }
             super::with_doc(s, |d| {
                 let doc = Arc::make_mut(&mut d.doc);
@@ -3085,7 +3085,7 @@ fn register_style_menu(r: &mut CommandRegistry) {
                 .as_ref()
                 .and_then(|v| v.iter().find(|x| x.name == name))
                 .map(|x| (x.flags, x.other_flags))
-                .ok_or_else(|| EngineError::NotFound(format!("Stil „{name}“")))?;
+                .ok_or_else(|| EngineError::NotFound(fp_i18n::tr!("err-nf-style", name = name.as_str())))?;
             s.execute("pi.style.new", json!({"name": name, "flags": flags, "otherFlags": other})).map(passthrough)
         }),
     );
@@ -3096,9 +3096,9 @@ fn register_style_menu(r: &mut CommandRegistry) {
             let d = s.doc()?;
             let items: Vec<(ElementId, String)> = d.selection.elements.iter().filter_map(|id| docops::element_on_page(&d.doc, d.page, *id).and_then(|e| e.common.style.clone().map(|n| (*id, n)))).collect();
             if items.is_empty() {
-                return Err(super::sel_err("kein Objekt mit Stil ausgewählt"));
+                return Err(super::sel_err("err-sel-no-styled-object"));
             }
-            s.run_group("Abweichungen löschen", |s| {
+            s.run_group(&fp_i18n::t("msg-step-clear-overrides"), |s| {
                 for (id, n) in &items {
                     s.execute("pi.style.apply", json!({"name": n, "ids": [id.0]}))?;
                 }
@@ -3139,7 +3139,7 @@ fn register_style_menu(r: &mut CommandRegistry) {
                 let (f, o) = (p.opt_i64("flags")?, p.opt_i64("otherFlags")?);
                 super::with_doc(s, |d| {
                     let doc = Arc::make_mut(&mut d.doc);
-                    let st = doc.styles.as_mut().and_then(|v| v.iter_mut().find(|x| x.name == name)).ok_or_else(|| EngineError::NotFound(format!("Stil „{name}“")))?;
+                    let st = doc.styles.as_mut().and_then(|v| v.iter_mut().find(|x| x.name == name)).ok_or_else(|| EngineError::NotFound(fp_i18n::tr!("err-nf-style", name = name.as_str())))?;
                     let st = Arc::make_mut(st);
                     if let Some(f) = f {
                         st.flags = f as u32;
@@ -3251,7 +3251,7 @@ fn register_library_menu(r: &mut CommandRegistry) {
             let sid = s.doc()?.doc.symbols[i].id;
             let d = s.doc()?;
             let inst = docops::selectable_ids(&d.doc, d.page, d.frame).into_iter().find(|id| docops::element_on_page(&d.doc, d.page, *id).is_some_and(|e| matches!(&e.kind, ElementKind::Instance(x) if x.symbol_id == sid)));
-            s.run_group("Symbol bearbeiten", |s| {
+            s.run_group(&fp_i18n::t("msg-step-edit-symbol"), |s| {
                 match inst {
                     Some(id) => {
                         s.execute("select.set", json!({"ids": [id.0]}))?;
@@ -3356,7 +3356,7 @@ fn register_library_menu(r: &mut CommandRegistry) {
             let only = p.opt_i64("index")?.map(|v| v as usize);
             let syms: Vec<(usize, Arc<fp_model::Symbol>)> = s.doc()?.doc.symbols.iter().cloned().enumerate().filter(|(i, x)| x.library_file.is_some() && only.is_none_or(|o| o == *i)).collect();
             if syms.is_empty() {
-                return Err(EngineError::Failed("kein Symbol aus einer Bibliotheksdatei".into()));
+                return Err(EngineError::Failed(fp_i18n::t("err-not-library-symbol")));
             }
             let mut updated = 0;
             let mut fresh: Vec<(usize, fp_model::Symbol)> = Vec::new();
@@ -3398,7 +3398,7 @@ fn register_library_menu(r: &mut CommandRegistry) {
             let only: Option<Vec<usize>> = p.parse("indices")?;
             let syms: Vec<Arc<fp_model::Symbol>> = s.doc()?.doc.symbols.iter().enumerate().filter(|(i, _)| only.as_ref().is_none_or(|o| o.contains(i))).map(|(_, x)| Arc::clone(x)).collect();
             if syms.is_empty() {
-                return Err(EngineError::Failed("keine Symbole".into()));
+                return Err(EngineError::Failed(fp_i18n::t("err-no-symbols")));
             }
             let n = syms.len();
             write_library(s, &path, syms)?;
@@ -3503,7 +3503,7 @@ fn register_swatch_menu(r: &mut CommandRegistry) {
         let i = p.usize("index")?;
         let mut v = current_swatches(&s.prefs);
         if i >= v.len() {
-            return Err(EngineError::NotFound("Farbfeld".into()));
+            return Err(EngineError::NotFound(fp_i18n::t("err-nf-swatch")));
         }
         v.remove(i);
         set_custom_swatches(s, &v);
@@ -3551,7 +3551,7 @@ fn register_optimize_menu(r: &mut CommandRegistry) {
         cmd("panel.optimize.saveSettings").label("Einstellungen speichern").requires(DOC).param("name", ParamKind::String, "Name der Vorgabe").run(|s, p| {
             let name = p.str("name")?;
             if name.trim().is_empty() {
-                return Err(bad(p, "Name fehlt"));
+                return Err(bad(p, fp_i18n::t("err-param-name-missing")));
             }
             let e = export_of(s);
             let mut m = match s.prefs.get(EXPORT_PRESETS_KEY) {
@@ -3574,7 +3574,7 @@ fn register_optimize_menu(r: &mut CommandRegistry) {
                 _ => Default::default(),
             };
             if m.remove(&name).is_none() {
-                return Err(EngineError::NotFound(format!("Vorgabe „{name}“")));
+                return Err(EngineError::NotFound(fp_i18n::tr!("err-nf-preset", name = name.as_str())));
             }
             s.prefs.set(EXPORT_PRESETS_KEY, PrefValue::Dict(m));
             s.prefs_changed();
@@ -3583,7 +3583,7 @@ fn register_optimize_menu(r: &mut CommandRegistry) {
     );
     r.add(cmd("panel.optimize.applySettings").label("Gespeicherte Einstellungen").requires(DOC).param("name", ParamKind::String, "Name der Vorgabe").run(|s, p| {
         let name = p.str("name")?;
-        let e = export_presets(&s.prefs).into_iter().find(|(n, _)| *n == name).map(|(_, e)| e).ok_or_else(|| EngineError::NotFound(format!("Vorgabe „{name}“")))?;
+        let e = export_presets(&s.prefs).into_iter().find(|(n, _)| *n == name).map(|(_, e)| e).ok_or_else(|| EngineError::NotFound(fp_i18n::tr!("err-nf-preset", name = name.as_str())))?;
         let d = s.doc_mut()?;
         let frames = d.doc.pages.get(d.page).and_then(|p| p.root.export.as_ref()).map(|x| x.frames.clone()).unwrap_or_default();
         let mut e = e;
@@ -3601,7 +3601,7 @@ fn register_optimize_menu(r: &mut CommandRegistry) {
             let ctx = fp_export::doc_export::page_context(&d.doc, d.page);
             let res = fp_export::size::optimize_to_size(&img, &st, target, &ctx, &fp_export::export::EncodeExtras::standalone()).map_err(|e| EngineError::Failed(e.to_string()))?;
             if !res.changed {
-                return Err(EngineError::Failed("für dieses Format gibt es keine Größenoptimierung (nur GIF/PNG 8 und JPEG)".into()));
+                return Err(EngineError::Failed(fp_i18n::t("err-no-size-optimize")));
             }
             let bytes = res.bytes;
             super::with_doc(s, |d| {
@@ -3659,7 +3659,7 @@ fn register_optimize_menu(r: &mut CommandRegistry) {
                 let fmt = format!("{:?}", st.format);
                 super::with_doc(s, |d| {
                     store_settings(d, &st)?;
-                    Ok(CommandOutput::doc_with(json!({"format": fmt, "bytes": bytes})).labeled("Exportassistent"))
+                    Ok(CommandOutput::doc_with(json!({"format": fmt, "bytes": bytes})).labeled(fp_i18n::t("msg-step-export-wizard")))
                 })
             }),
     );

@@ -104,7 +104,7 @@ fn load(aff: &Path, dic: &Path) -> Result<Arc<spellbook::Dictionary>> {
             Err(e) => e.into_bytes().iter().map(|&x| x as char).collect(),
         })
     };
-    let d = spellbook::Dictionary::new(&read(aff)?, &read(dic)?).map_err(|e| EngineError::Failed(format!("Wörterbuch {}: {e}", dic.display())))?;
+    let d = spellbook::Dictionary::new(&read(aff)?, &read(dic)?).map_err(|e| EngineError::Failed(fp_i18n::tr!("err-dictionary", path = dic.display().to_string(), detail = e.to_string())))?;
     let d = Arc::new(d);
     if let Ok(mut m) = c.lock() {
         m.insert(dic.to_path_buf(), Arc::clone(&d));
@@ -304,7 +304,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 let reps: Vec<Value> = match p.get("replace") {
                     Some(Value::Array(a)) => a.clone(),
                     Some(Value::Object(_)) => vec![p.get("replace").cloned().unwrap_or_default()],
-                    Some(_) => return Err(EngineError::InvalidParams { name: p.command.clone(), message: "replace: Liste".into() }),
+                    Some(_) => return Err(EngineError::InvalidParams { name: p.command.clone(), message: fp_i18n::t("err-param-replace") }),
                     None => Vec::new(),
                 };
                 let mut replaced = 0usize;
@@ -360,7 +360,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                     "note": if ck.dict.is_none() { Some("kein Wörterbuch gefunden: <sprache>.aff/.dic über „Rechtschreibprüfung einrichten“ angeben") } else { None },
                 });
                 if replaced > 0 {
-                    return Ok(CommandOutput::doc_with(value).labeled("Rechtschreibung"));
+                    return Ok(CommandOutput::doc_with(value).labeled(fp_i18n::t("msg-step-spelling")));
                 }
                 Ok(CommandOutput::value(value))
             }),

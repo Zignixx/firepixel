@@ -188,6 +188,45 @@ impl Effect {
         self.params.set_scalar("EffectIsVisible", if v { "true" } else { "false" });
     }
 
+    /// Schlüssel des Anzeigenamens in fp-i18n (`filter.ftl`, `effect-…` bzw. `filter-…`), z. B.
+    /// `effect-drop-shadow`; `None` für Plugins und unbekannte Effekte (dann [`Effect::ui_name`]).
+    pub fn label_key(&self) -> Option<&'static str> {
+        Some(match self.kind() {
+            EffectKind::BevelFamily => match self.get_f64("BevelType").unwrap_or(0.0) as i32 {
+                1 => "effect-bevel-outer",
+                2 => "effect-emboss-raised",
+                3 => "effect-emboss-inset",
+                4 => "effect-glow",
+                _ => "effect-bevel-inner",
+            },
+            EffectKind::DropShadow => "effect-drop-shadow",
+            EffectKind::InnerShadow => "effect-inner-shadow",
+            EffectKind::InnerGlow => "effect-inner-glow",
+            EffectKind::SolidShadow => "effect-solid-shadow",
+            EffectKind::ColorFill => "effect-color-fill",
+            EffectKind::PhotoshopLive => "effect-photoshop-live",
+            EffectKind::GaussianBlur => "filter-blur-gaussian",
+            EffectKind::Blur => "filter-blur-blur",
+            EffectKind::BlurMore => "filter-blur-blurMore",
+            EffectKind::MotionBlur => "filter-blur-motion",
+            EffectKind::RadialBlur => "filter-blur-radial",
+            EffectKind::ZoomBlur => "filter-blur-zoom",
+            EffectKind::Sharpen => "filter-sharpen-sharpen",
+            EffectKind::SharpenMore => "filter-sharpen-sharpenMore",
+            EffectKind::UnsharpMask => "filter-sharpen-unsharpMask",
+            EffectKind::AddNoise => "filter-noise-addNoise",
+            EffectKind::BrightnessContrast => "filter-adjustColor-brightnessContrast",
+            EffectKind::HueSaturation => "filter-adjustColor-hueSaturation",
+            EffectKind::Curves => "filter-adjustColor-curves",
+            EffectKind::Levels => "filter-adjustColor-levels",
+            EffectKind::AutoLevels => "filter-adjustColor-autoLevels",
+            EffectKind::Invert => "filter-adjustColor-invert",
+            EffectKind::FindEdges => "filter-other-findEdges",
+            EffectKind::ConvertToAlpha => "filter-other-convertToAlpha",
+            _ => return None,
+        })
+    }
+
     /// Anzeigename, den das Original nur schreibt (`mkbFile_WriteOnly_TemporaryEffectUiName`) bzw. `name`.
     pub fn ui_name(&self) -> Option<&str> {
         self.params.get_str("mkbFile_WriteOnly_TemporaryEffectUiName").or_else(|| self.params.get_str("name"))

@@ -51,26 +51,37 @@ use std::sync::Arc;
 #[derive(Debug, thiserror::Error)]
 pub enum ImportError {
     /// Format nicht erkannt.
-    #[error("unbekanntes Dateiformat")]
+    #[error("{}", m0("err-import-unknown-format"))]
     UnknownFormat,
     /// Format erkannt, aber nicht unterstützt (mit Begründung).
-    #[error("{0}")]
+    #[error("{}", m1("err-import-unsupported", "detail", .0))]
     Unsupported(String),
     /// Datei beschädigt bzw. unvollständig.
-    #[error("Datei beschädigt: {0}")]
+    #[error("{}", m1("err-import-corrupt", "detail", .0))]
     Corrupt(String),
     /// Bild zu groß.
-    #[error("Bild zu groß: {0}×{1}")]
+    #[error("{}", m2("err-import-too-large", "w", .0, "h", .1))]
     TooLarge(u32, u32),
     /// Fehler eines Fremd-Dekoders.
-    #[error("Dekodierfehler ({0}): {1}")]
+    #[error("{}", m2("err-import-decode", "codec", .0, "detail", .1))]
     Decode(&'static str, String),
     /// FW-PNG-Fehler.
-    #[error("FW-PNG: {0}")]
+    #[error("{}", m1("err-import-fwpng", "detail", .0))]
     FwPng(#[from] fp_fwpng::FwError),
     /// Ein-/Ausgabe.
-    #[error("E/A-Fehler: {0}")]
+    #[error("{}", m1("err-import-io", "detail", .0))]
     Io(#[from] std::io::Error),
+}
+
+// ---- Mehrsprachige Meldungen (fp-i18n, `meldungen.ftl`) ----
+fn m0(key: &str) -> String {
+    fp_i18n::t(key)
+}
+fn m1(key: &str, a: &str, va: &dyn std::fmt::Display) -> String {
+    fp_i18n::t_args(key, &[(a, fp_i18n::Value::from(va.to_string()))])
+}
+fn m2(key: &str, a: &str, va: &dyn std::fmt::Display, b: &str, vb: &dyn std::fmt::Display) -> String {
+    fp_i18n::t_args(key, &[(a, fp_i18n::Value::from(va.to_string())), (b, fp_i18n::Value::from(vb.to_string()))])
 }
 
 /// Ergebnis-Typ der Import-Funktionen.

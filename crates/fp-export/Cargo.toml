@@ -12,6 +12,8 @@ fp-color = { workspace = true }
 fp-raster = { workspace = true }
 fp-model = { workspace = true }
 thiserror = { workspace = true }
+# Mehrsprachige Fehlermeldungen
+fp-i18n = { workspace = true }
 flate2 = { workspace = true }
 crc32fast = { workspace = true }
 # crate-eigene Spezialfälle (reine Rust-Crates): JPEG-Dekodierung für die Vorschau

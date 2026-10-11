@@ -88,9 +88,9 @@ pub(crate) fn selected_elements(d: &DocumentState) -> Vec<(ElementPath, Arc<Elem
     selected_paths(d).into_iter().filter_map(|p| d.doc.element_at(&p).cloned().map(|e| (p, e))).collect()
 }
 
-/// Fehler „keine passende Auswahl“.
-pub(crate) fn sel_err(msg: &str) -> EngineError {
-    EngineError::Selection(msg.into())
+/// Fehler „keine passende Auswahl“; `key` = Schlüssel `err-sel-…` bzw. `err-req-…`.
+pub(crate) fn sel_err(key: &str) -> EngineError {
+    EngineError::Selection(fp_i18n::t(key))
 }
 
 /// Attribute für neue Formen aus den Werkzeugfarben: Füllung (wenn `fill`), Strich (wenn
@@ -111,7 +111,7 @@ pub(crate) fn insert_new(d: &mut DocumentState, e: Element) -> Result<ElementId>
     let id = e.id;
     let (page, frame, layer) = (d.page, d.frame, d.layer);
     let doc = Arc::make_mut(&mut d.doc);
-    docops::insert_element(doc, page, frame, layer, 0, Arc::new(e)).ok_or_else(|| EngineError::Failed("Element konnte nicht eingefügt werden".into()))?;
+    docops::insert_element(doc, page, frame, layer, 0, Arc::new(e)).ok_or_else(|| EngineError::Failed(fp_i18n::t("err-element-insert-failed")))?;
     d.selection.set(vec![id]);
     Ok(id)
 }
@@ -155,7 +155,7 @@ pub(crate) fn target_ids(d: &DocumentState, p: &crate::command::Params) -> Resul
         Some(v) if !v.is_empty() => Ok(v),
         _ => {
             if d.selection.elements.is_empty() {
-                Err(sel_err("keine Objekte ausgewählt"))
+                Err(sel_err("err-sel-no-objects"))
             } else {
                 Ok(d.selection.elements.clone())
             }

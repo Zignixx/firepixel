@@ -69,7 +69,7 @@ fn copy_to_clipboard(s: &mut Session, vectors_only: bool) -> Result<CommandOutpu
         .filter(|e| !vectors_only || !matches!(e.kind, ElementKind::Bitmap(_)))
         .collect();
     if els.is_empty() {
-        return Err(sel_err("nichts zu kopieren"));
+        return Err(sel_err("err-sel-nothing-to-copy"));
     }
     let attrs = els.first().map(|e| ClipAttributes { common: e.common.clone(), path: docops::path_attrs_of(e) });
     s.clipboard.clear();
@@ -102,7 +102,7 @@ pub(crate) fn clear_selection(d: &mut DocumentState) -> Result<()> {
     }
     let ids = d.selection.elements.clone();
     if ids.is_empty() {
-        return Err(sel_err("nichts ausgewählt"));
+        return Err(sel_err("err-sel-nothing"));
     }
     let doc = Arc::make_mut(&mut d.doc);
     docops::remove_ids(doc, page, &ids);
@@ -119,7 +119,7 @@ pub(crate) fn paste_elements(d: &mut DocumentState, els: &[Arc<Element>], offset
         let mut c = docops::reassign(doc, e);
         docops::translate_element(&mut c, offset.0, offset.1);
         ids.push(c.id);
-        docops::insert_element(doc, page, frame, layer, i, Arc::new(c)).ok_or_else(|| EngineError::Failed("Einfügen fehlgeschlagen".into()))?;
+        docops::insert_element(doc, page, frame, layer, i, Arc::new(c)).ok_or_else(|| EngineError::Failed(fp_i18n::t("err-paste-failed")))?;
     }
     d.selection.set(ids.clone());
     Ok(ids)
@@ -165,7 +165,7 @@ fn duplicate(s: &mut Session, offset: (f32, f32)) -> Result<CommandOutput> {
     with_doc(s, |d| {
         let els: Vec<_> = selected_elements(d);
         if els.is_empty() {
-            return Err(sel_err("nichts ausgewählt"));
+            return Err(sel_err("err-sel-nothing"));
         }
         let page = d.page;
         let doc = Arc::make_mut(&mut d.doc);
@@ -194,7 +194,7 @@ fn duplicate(s: &mut Session, offset: (f32, f32)) -> Result<CommandOutput> {
 pub(crate) fn move_selection(s: &mut Session, dx: f32, dy: f32, copy: bool) -> Result<CommandOutput> {
     if copy {
         duplicate(s, (dx, dy))?;
-        return Ok(CommandOutput::doc().labeled("Kopie verschieben"));
+        return Ok(CommandOutput::doc().labeled(fp_i18n::t("msg-step-move-copy")));
     }
     with_doc(s, |d| {
         let page = d.page;
@@ -212,7 +212,7 @@ pub(crate) fn move_selection(s: &mut Session, dx: f32, dy: f32, copy: bool) -> R
                 *m = nm;
             }
         }
-        Ok(CommandOutput::doc().labeled("Verschieben"))
+        Ok(CommandOutput::doc().labeled(fp_i18n::t("msg-step-move")))
     })
 }
 
@@ -244,7 +244,7 @@ pub(crate) fn make_symbol(d: &mut DocumentState, name: &str, kind: SymbolKind, i
                 Some(fp_model::PathStep::Child(i)) => *i,
                 _ => 0,
             };
-            let cel = docops::cel_mut(doc, page, p.slot, p.cel).ok_or_else(|| EngineError::Failed("Ebene".into()))?;
+            let cel = docops::cel_mut(doc, page, p.slot, p.cel).ok_or_else(|| EngineError::Failed(fp_i18n::t("err-nf-layer")))?;
             let i = idx.min(cel.elements.len());
             cel.elements.insert(i, Arc::new(inst));
         }
@@ -261,7 +261,7 @@ pub(crate) fn make_symbol(d: &mut DocumentState, name: &str, kind: SymbolKind, i
 fn web_from_selection(s: &mut Session, slice: bool, polygon: bool) -> Result<CommandOutput> {
     with_doc(s, |d| {
         let page = d.page;
-        let b = docops::ids_bounds(&d.doc, page, &d.selection.elements).ok_or_else(|| sel_err("keine Grenzen"))?;
+        let b = docops::ids_bounds(&d.doc, page, &d.selection.elements).ok_or_else(|| sel_err("err-sel-no-bounds-short"))?;
         let poly = if polygon {
             selected_elements(d).first().and_then(|(_, e)| match &e.kind {
                 ElementKind::Path(pe) if pe.contours.len() == 1 => {
@@ -289,11 +289,11 @@ fn web_from_selection(s: &mut Session, slice: bool, polygon: bool) -> Result<Com
 /// Hilfslinien werden so verschoben, dass `r` bei der Leinwand-Ursprungsecke liegt.
 pub(crate) fn crop_page(d: &mut DocumentState, r: IRect) -> Result<()> {
     if r.is_empty() {
-        return Err(EngineError::Failed("leerer Bereich".into()));
+        return Err(EngineError::Failed(fp_i18n::t("err-empty-area")));
     }
     let page = d.page;
     let doc = Arc::make_mut(&mut d.doc);
-    let p = doc.page_mut(page).ok_or_else(|| EngineError::NotFound("Seite".into()))?;
+    let p = doc.page_mut(page).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-page")))?;
     let (ox, oy) = (p.canvas.origin.x, p.canvas.origin.y);
     let (dx, dy) = (ox - r.left as f32, oy - r.top as f32);
     p.canvas.width = r.width() as f32;
@@ -372,15 +372,15 @@ pub(super) fn register(r: &mut CommandRegistry) {
     }));
     r.add(cmd("edit.pasteAsMask").requires(&[Requirement::Document, Requirement::Selection, Requirement::Clipboard]).run(|s, _| {
         let clip = s.clipboard.clone();
-        let mask_el = clip.elements.first().cloned().ok_or_else(|| sel_err("Zwischenablage enthält kein Objekt"))?;
+        let mask_el = clip.elements.first().cloned().ok_or_else(|| sel_err("err-sel-clipboard-no-object"))?;
         with_doc(s, |d| {
-            let target = d.selection.elements.first().copied().ok_or_else(|| sel_err("kein Objekt"))?;
+            let target = d.selection.elements.first().copied().ok_or_else(|| sel_err("err-sel-no-object"))?;
             let page = d.page;
             let doc = Arc::make_mut(&mut d.doc);
             let mask = Arc::new(docops::reassign(doc, &mask_el));
             let vector = !matches!(mask.kind, ElementKind::Bitmap(_));
             let path = docops::find_on_page(doc, page, target).ok_or(EngineError::ElementNotFound(target.0))?;
-            let (list, idx) = docops::parent_list_mut(doc, &path).ok_or_else(|| EngineError::Failed("Elternliste".into()))?;
+            let (list, idx) = docops::parent_list_mut(doc, &path).ok_or_else(|| EngineError::Failed(fp_i18n::t("err-parent-list")))?;
             let el = list.remove(idx);
             let mut idg = std::mem::take(&mut doc.ids);
             let g = Element::new_mask_group(&mut idg, mask, vec![el], vector);
@@ -396,15 +396,15 @@ pub(super) fn register(r: &mut CommandRegistry) {
     r.add(cmd("edit.pasteInside").requires(&[Requirement::Document, Requirement::Selection, Requirement::Clipboard]).run(|s, _| {
         let clip = s.clipboard.clone();
         if clip.elements.is_empty() {
-            return Err(sel_err("Zwischenablage enthält kein Objekt"));
+            return Err(sel_err("err-sel-clipboard-no-object"));
         }
         with_doc(s, |d| {
-            let target = d.selection.elements.first().copied().ok_or_else(|| sel_err("kein Objekt"))?;
+            let target = d.selection.elements.first().copied().ok_or_else(|| sel_err("err-sel-no-object"))?;
             let page = d.page;
             let doc = Arc::make_mut(&mut d.doc);
             let path = docops::find_on_page(doc, page, target).ok_or(EngineError::ElementNotFound(target.0))?;
             let children: Vec<Arc<Element>> = clip.elements.iter().map(|e| Arc::new(docops::reassign(doc, e))).collect();
-            let (list, idx) = docops::parent_list_mut(doc, &path).ok_or_else(|| EngineError::Failed("Elternliste".into()))?;
+            let (list, idx) = docops::parent_list_mut(doc, &path).ok_or_else(|| EngineError::Failed(fp_i18n::t("err-parent-list")))?;
             let mask = list.remove(idx);
             let vector = !matches!(mask.kind, ElementKind::Bitmap(_));
             let mut idg = std::mem::take(&mut doc.ids);
@@ -419,7 +419,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
         })
     }));
     r.add(cmd("edit.pasteAttributes").requires(&[Requirement::Document, Requirement::Selection, Requirement::Clipboard]).run(|s, _| {
-        let attrs = s.clipboard.attributes.clone().ok_or_else(|| sel_err("keine Attribute in der Zwischenablage"))?;
+        let attrs = s.clipboard.attributes.clone().ok_or_else(|| sel_err("err-sel-no-attributes"))?;
         with_doc(s, |d| {
             let (page, ids) = (d.page, d.selection.elements.clone());
             let doc = Arc::make_mut(&mut d.doc);
@@ -495,9 +495,9 @@ pub(super) fn register(r: &mut CommandRegistry) {
         r.add(cmd(name).requires(&[Requirement::Document, Requirement::PixelSelection]).run(move |s, _| {
             with_doc(s, |d| {
                 let mask = d.selection.pixels.clone().unwrap_or_default();
-                let (path, e) = selected_bitmaps(d).into_iter().next().ok_or_else(|| sel_err("keine Bitmap ausgewählt"))?;
-                let ElementKind::Bitmap(b) = &e.kind else { return Err(sel_err("keine Bitmap")) };
-                let img = bitmap_image(b).ok_or_else(|| EngineError::Failed("Bitmap".into()))?;
+                let (path, e) = selected_bitmaps(d).into_iter().next().ok_or_else(|| sel_err("err-sel-no-bitmap-selected"))?;
+                let ElementKind::Bitmap(b) = &e.kind else { return Err(sel_err("err-sel-no-bitmap")) };
+                let img = bitmap_image(b).ok_or_else(|| EngineError::Failed(fp_i18n::t("err-bitmap-unreadable-short")))?;
                 let px = masked_pixels(&img, &mask);
                 if cut {
                     let doc = Arc::make_mut(&mut d.doc);
@@ -530,7 +530,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 let n = p.i64_or("count", 1)?.max(1) as usize;
                 with_doc(s, |d| {
                     let (page, at) = (d.page, d.frame + 1);
-                    docops::insert_frames(Arc::make_mut(&mut d.doc), page, at, n).ok_or_else(|| EngineError::NotFound("Seite".into()))?;
+                    docops::insert_frames(Arc::make_mut(&mut d.doc), page, at, n).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-page")))?;
                     d.frame = at;
                     d.selection.clear();
                     Ok(CommandOutput::doc_with(json!({"state": at})))
@@ -541,7 +541,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
         let name = p.opt_str("name")?;
         with_doc(s, |d| {
             let n = d.doc.pages.len() + 1;
-            let name = name.unwrap_or_else(|| format!("Seite {n}"));
+            let name = name.unwrap_or_else(|| fp_i18n::tr!("msg-default-page", n = n.to_string()));
             let doc = Arc::make_mut(&mut d.doc);
             let at = doc.add_page(&name);
             d.page = at;
@@ -592,7 +592,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                         Some(r) => r.normalized().round_nearest(),
                         None => match &d.selection.pixels {
                             Some(m) if d.selection.has_pixels() => m.tight_bounds(),
-                            _ => docops::ids_bounds(&d.doc, d.page, &d.selection.elements).ok_or_else(|| sel_err("kein Zuschneidebereich"))?.round_out(),
+                            _ => docops::ids_bounds(&d.doc, d.page, &d.selection.elements).ok_or_else(|| sel_err("err-sel-no-crop-area"))?.round_out(),
                         },
                     };
                     crop_page(d, r)?;
@@ -610,12 +610,12 @@ pub(crate) fn add_layer(d: &mut DocumentState, name: Option<&str>, kind: LayerKi
     let doc = Arc::make_mut(&mut d.doc);
     let frames = doc.pages.get(page).map(|p| p.root.frame_count as usize).unwrap_or(1);
     let count = docops::own_layers(doc, page).len();
-    let label = name.map(|s| s.to_string()).unwrap_or_else(|| format!("Ebene {}", count));
+    let label = name.map(|s| s.to_string()).unwrap_or_else(|| fp_i18n::tr!("msg-default-layer", n = count.to_string()));
     let mut idg = take_ids(doc);
     let l = Layer::new(&mut idg, &label, kind, frames);
     doc.ids = idg;
     let id = l.id;
-    let p = doc.page_mut(page).ok_or_else(|| EngineError::NotFound("Seite".into()))?;
+    let p = doc.page_mut(page).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-page")))?;
     // über der aktiven Ebene, aber unter der Web-Ebene
     let web = p.root.layers.iter().position(|s| matches!(s, LayerSlot::Own(l) if l.kind == LayerKind::Web)).unwrap_or(p.root.layers.len());
     let at = cur_slot.map(|s| s + 1).unwrap_or(web).min(web);

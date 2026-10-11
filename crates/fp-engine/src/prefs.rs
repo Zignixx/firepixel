@@ -461,7 +461,7 @@ impl Preferences {
     /// Aus JSON-Text.
     pub fn from_json(text: &str) -> Result<Preferences> {
         let mut p: Preferences =
-            serde_json::from_str(text.trim_start_matches('\u{feff}')).map_err(|e| EngineError::Failed(format!("Voreinstellungen: {e}")))?;
+            serde_json::from_str(text.trim_start_matches('\u{feff}')).map_err(|e| EngineError::Failed(fp_i18n::tr!("err-prefs", detail = e.to_string())))?;
         p.recent_files.truncate(MAX_RECENT_FILES);
         Ok(p)
     }

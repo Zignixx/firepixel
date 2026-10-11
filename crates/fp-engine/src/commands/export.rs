@@ -65,10 +65,10 @@ pub fn apply_settings_json(mut s: OptimizeSettings, v: &Value, cmd_name: &str) -
         if v.is_null() {
             return Ok(s);
         }
-        return Err(bad(cmd_name, "settings: Objekt erwartet"));
+        return Err(bad(cmd_name, fp_i18n::t("err-param-settings")));
     };
     if let Some(p) = o.get("preset").and_then(|x| x.as_str()) {
-        s = builtin_presets().into_iter().find(|x| x.name.eq_ignore_ascii_case(p)).map(|x| x.settings).ok_or_else(|| bad(cmd_name, format!("unbekannte Vorgabe „{p}“")))?;
+        s = builtin_presets().into_iter().find(|x| x.name.eq_ignore_ascii_case(p)).map(|x| x.settings).ok_or_else(|| bad(cmd_name, fp_i18n::tr!("err-unknown-preset", name = p)))?;
     }
     if let Some(f) = o.get("format").and_then(|x| x.as_str()) {
         let (fmt, cm) = match f.to_ascii_lowercase().as_str() {
@@ -88,7 +88,7 @@ pub fn apply_settings_json(mut s: OptimizeSettings, v: &Value, cmd_name: &str) -
             "apng" => (ExportFormat::Apng, ColorMode::Rgba32),
             "qoi" => (ExportFormat::Qoi, ColorMode::Rgba32),
             "ico" => (ExportFormat::Ico, ColorMode::Rgba32),
-            _ => return Err(bad(cmd_name, format!("unbekanntes Format „{f}“"))),
+            _ => return Err(bad(cmd_name, fp_i18n::tr!("err-unknown-format", name = f))),
         };
         s.format = fmt;
         s.color_mode = cm;
@@ -133,7 +133,7 @@ pub fn apply_settings_json(mut s: OptimizeSettings, v: &Value, cmd_name: &str) -
                 if p <= 0 { Dither::None } else { Dither::Diffusion(p.min(100)) }
             }
             Value::String(t) if t == "2x2" => Dither::Pattern2x2,
-            _ => return Err(bad(cmd_name, "dither: Zahl, true/false oder \"2x2\"")),
+            _ => return Err(bad(cmd_name, fp_i18n::t("err-param-dither"))),
         };
     }
     if let Some(t) = o.get("transparency").and_then(|x| x.as_str()) {
@@ -142,7 +142,7 @@ pub fn apply_settings_json(mut s: OptimizeSettings, v: &Value, cmd_name: &str) -
             "index" => Transparency::Index,
             "alpha" => Transparency::IndexAlpha,
             "rgba" => Transparency::Rgba,
-            _ => return Err(bad(cmd_name, "transparency: none/index/alpha/rgba")),
+            _ => return Err(bad(cmd_name, fp_i18n::t("err-param-transparency"))),
         };
     }
     if let Some(p) = o.get("palette").and_then(|x| x.as_str()) {
@@ -162,19 +162,19 @@ pub fn apply_settings_json(mut s: OptimizeSettings, v: &Value, cmd_name: &str) -
             }
             "mac" => PaletteKind::Mac,
             "windows" => PaletteKind::Windows,
-            _ => return Err(bad(cmd_name, format!("unbekannte Palette „{p}“"))),
+            _ => return Err(bad(cmd_name, fp_i18n::tr!("err-unknown-palette", name = p))),
         };
     }
     match o.get("matte") {
         Some(Value::String(m)) if m == "none" => s.matte = None,
-        Some(Value::String(m)) => s.matte = Some(fp_color::Rgba8::parse_hex(m).map(|c| c.to_argb().0).ok_or_else(|| bad(cmd_name, "matte: Farbe"))?),
+        Some(Value::String(m)) => s.matte = Some(fp_color::Rgba8::parse_hex(m).map(|c| c.to_argb().0).ok_or_else(|| bad(cmd_name, fp_i18n::t("err-param-matte")))?),
         _ => {}
     }
     if let Some(c) = o.get("crop") {
         s.crop = match c {
             Value::Null => None,
             v => {
-                let r = crate::command::parse_rect(v).ok_or_else(|| bad(cmd_name, "crop: Rechteck"))?;
+                let r = crate::command::parse_rect(v).ok_or_else(|| bad(cmd_name, fp_i18n::t("err-param-crop")))?;
                 Some([r.left.round() as i32, r.top.round() as i32, r.right.round() as i32, r.bottom.round() as i32])
             }
         };
@@ -211,7 +211,7 @@ pub fn settings_json(s: &OptimizeSettings) -> Value {
 /// Speichert Optimieren-Einstellungen in die Seite (auch in die alte Einstellung, falls vorhanden,
 /// weil `page_settings` diese zuerst liest).
 pub fn store_page_settings(doc: &mut Document, page: usize, s: &OptimizeSettings) -> Result<()> {
-    let p = doc.page_mut(page).ok_or_else(|| EngineError::NotFound(format!("Seite {}", page + 1)))?;
+    let p = doc.page_mut(page).ok_or_else(|| EngineError::NotFound(fp_i18n::tr!("err-nf-page-n", n = (page + 1).to_string())))?;
     let base: ExportSettings = p.root.export.as_deref().cloned().unwrap_or_default();
     p.root.export = Some(Box::new(s.to_model(&base)));
     if let Some(l) = p.legacy_export.as_mut() {
@@ -322,7 +322,7 @@ fn page_param(s: &Session, p: &Params) -> Result<usize> {
         None => d.page,
     };
     if page >= d.doc.pages.len() {
-        return Err(EngineError::NotFound(format!("Seite {}", page + 1)));
+        return Err(EngineError::NotFound(fp_i18n::tr!("err-nf-page-n", n = (page + 1).to_string())));
     }
     Ok(page)
 }
@@ -492,7 +492,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
             .run(|s, p| {
                 let path = PathBuf::from(p.str("path")?);
                 let style = match p.opt_str("style")? {
-                    Some(n) => style_of(&n).ok_or_else(|| bad("file.export", format!("unbekannte Exportart „{n}“")))?,
+                    Some(n) => style_of(&n).ok_or_else(|| bad("file.export", fp_i18n::tr!("err-unknown-export-kind", name = n.as_str())))?,
                     None => FilesStyle::ImagesOnly,
                 };
                 let page = page_param(s, &p.clone())?;
@@ -529,7 +529,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 let rect = p.rect("rect")?;
                 let ir = fp_geom::IRect::new(rect.left.floor() as i32, rect.top.floor() as i32, rect.right.ceil() as i32, rect.bottom.ceil() as i32);
                 if ir.is_empty() {
-                    return Err(bad("file.exportArea", "leerer Bereich"));
+                    return Err(bad("file.exportArea", fp_i18n::t("err-empty-area")));
                 }
                 let d = s.doc()?;
                 let page = d.page;
@@ -589,7 +589,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 let value = json!({"settings": settings_json(&settings), "bytes": bytes.len(), "size": fp_export::preview::format_size(bytes.len()), "text": info.text(), "download": times, "fittedBytes": fitted});
                 if p.bool_or("apply", false)? {
                     with_doc(s, |d| store_page_settings(d.doc_mut(), page, &settings))?;
-                    return Ok(CommandOutput::doc_with(value).labeled("Exporteinstellungen"));
+                    return Ok(CommandOutput::doc_with(value).labeled(fp_i18n::t("msg-step-export-settings")));
                 }
                 Ok(CommandOutput::value(value))
             }),
@@ -647,7 +647,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 let value = json!({"settings": settings_json(&st), "reason": reason, "colors": colors, "bytes": bytes.len()});
                 if p.bool_or("apply", true)? {
                     with_doc(s, |d| store_page_settings(d.doc_mut(), page, &st))?;
-                    return Ok(CommandOutput::doc_with(value).labeled("Exportassistent"));
+                    return Ok(CommandOutput::doc_with(value).labeled(fp_i18n::t("msg-step-export-wizard")));
                 }
                 Ok(CommandOutput::value(value))
             }),
@@ -659,7 +659,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
             .run(|s, p| {
                 let path = PathBuf::from(p.str("path")?);
                 if !path.is_file() {
-                    return Err(EngineError::NotFound(format!("HTML-Datei {}", path.display())));
+                    return Err(EngineError::NotFound(fp_i18n::tr!("err-nf-html-file", path = path.display().to_string())));
                 }
                 let base = path.file_stem().map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
                 let dir = path.parent().map(Path::to_path_buf).unwrap_or_default();
@@ -696,12 +696,12 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 new.not_yet_set = Some(false);
                 let out = serde_json::to_value(&new).unwrap_or(Value::Null);
                 with_doc(s, |d| {
-                    let pg = d.doc_mut().page_mut(page).ok_or_else(|| EngineError::NotFound("Seite".into()))?;
+                    let pg = d.doc_mut().page_mut(page).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-page")))?;
                     let e = pg.root.export.get_or_insert_with(|| Box::new(ExportSettings::default()));
                     e.html = Some(Box::new(new));
                     Ok(())
                 })?;
-                Ok(CommandOutput::doc_with(out).labeled("HTML-Einrichtung"))
+                Ok(CommandOutput::doc_with(out).labeled(fp_i18n::t("msg-step-html-setup")))
             }),
     );
     r.add(cmd("edit.copyHtmlCode").requires(DOC).opt_default("style", ParamKind::Enum { values: vec!["htmlAndImages".into(), "cssAndImages".into()] }, json!("htmlAndImages"), "HTML-Art").run(|s, p| {
@@ -709,7 +709,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
         let base = base_name_of(s)?;
         let page = s.doc()?.page;
         let files = export_active(s, style, &base, page, None, true)?;
-        let html = files.iter().find(|f| f.path.ends_with(".htm")).map(|f| String::from_utf8_lossy(&f.bytes).into_owned()).ok_or_else(|| EngineError::Failed("kein HTML erzeugt".into()))?;
+        let html = files.iter().find(|f| f.path.ends_with(".htm")).map(|f| String::from_utf8_lossy(&f.bytes).into_owned()).ok_or_else(|| EngineError::Failed(fp_i18n::t("err-no-html")))?;
         s.clipboard.text = Some(html.clone());
         Ok(CommandOutput::session_with(json!({"html": html, "images": files.iter().filter(|f| !f.path.ends_with(".htm")).map(|f| f.path.clone()).collect::<Vec<_>>()})))
     }));
@@ -764,7 +764,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 written.extend(write_files(&dir, &files)?);
                 first.get_or_insert(dir.join(format!("{b}.htm")));
             }
-            let html = first.ok_or_else(|| EngineError::Failed("keine Seite".into()))?;
+            let html = first.ok_or_else(|| EngineError::Failed(fp_i18n::t("err-no-page")))?;
             if launch_allowed(p)? {
                 let prog = s.ui.browsers[browser].clone();
                 open_with_system(&html, prog.as_deref())?;
@@ -848,7 +848,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                             "a5" => [148.0, 210.0],
                             "letter" => [215.9, 279.4],
                             "legal" => [215.9, 355.6],
-                            _ => return Err(bad("file.pageSetup", "paper: A3/A4/A5/Letter/Legal oder [b, h]")),
+                            _ => return Err(bad("file.pageSetup", fp_i18n::t("err-param-paper"))),
                         }
                     }
                     Some(Value::Array(a)) if a.len() == 2 => ps.paper_mm = [a[0].as_f64().unwrap_or(210.0).max(10.0), a[1].as_f64().unwrap_or(297.0).max(10.0)],
@@ -885,7 +885,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                     None => vec![d.page],
                 };
                 if pages.is_empty() {
-                    return Err(bad("file.print", "keine gültige Seite"));
+                    return Err(bad("file.print", fp_i18n::t("err-no-valid-page")));
                 }
                 let ps = s.ui.page_setup.clone();
                 let printer = p.opt_str("printer")?.unwrap_or_else(|| ps.printer.clone());

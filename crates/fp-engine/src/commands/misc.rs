@@ -59,14 +59,14 @@ pub fn saved_commands() -> Vec<String> {
 fn safe_file_name(n: &str) -> Result<String> {
     let t = n.trim();
     if t.is_empty() || t.contains(['\\', '/', ':', '*', '?', '"', '<', '>', '|']) || t == "." || t == ".." {
-        return Err(EngineError::Failed(format!("ungültiger Name „{n}“")));
+        return Err(EngineError::Failed(fp_i18n::tr!("err-invalid-name", name = n)));
     }
     Ok(t.to_string())
 }
 
 /// Führt Skriptquelltext über die Skript-Laufzeit als einen Verlaufsschritt aus.
 pub fn run_script_source(s: &mut Session, code: &str, path: Option<&Path>, label: &str) -> Result<Value> {
-    let host = s.script_host().ok_or(EngineError::BackendMissing("die Skript-Laufzeit (fp-script)"))?;
+    let host = s.script_host().ok_or(EngineError::BackendMissing("err-backend-script-runtime"))?;
     let mut out = Value::Null;
     if s.active().is_some() {
         s.run_group(label, |s| {
@@ -202,11 +202,11 @@ fn manage_extensions(p: &Params) -> Result<CommandOutput> {
             } else if t.is_file() {
                 std::fs::remove_file(&t)?;
             } else {
-                return Err(EngineError::NotFound(format!("Erweiterung „{name}“")));
+                return Err(EngineError::NotFound(fp_i18n::tr!("err-nf-extension", name = name.as_str())));
             }
             Ok(CommandOutput::session_with(json!({"removed": name, "extensions": list_extensions()})))
         }
-        _ => Err(bad(p, "action: list/install/remove")),
+        _ => Err(bad(p, fp_i18n::t("err-param-action-ext"))),
     }
 }
 
@@ -227,7 +227,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 let (code, path) = match (p.opt_str("code")?, p.opt_str("path")?) {
                     (Some(c), _) => (c, None),
                     (None, Some(f)) => (std::fs::read_to_string(&f)?, Some(PathBuf::from(f))),
-                    _ => return Err(bad(p, "path oder code angeben")),
+                    _ => return Err(bad(p, fp_i18n::t("err-param-path-or-code"))),
                 };
                 let label = path.as_ref().and_then(|f| f.file_stem()).map(|n| n.to_string_lossy().to_string()).unwrap_or_else(|| "Skript".into());
                 let v = run_script_source(s, &code, path.as_deref(), &label)?;
@@ -241,7 +241,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
             .run(|s, p| {
                 let name = safe_file_name(&p.str("name")?)?;
                 let f = commands_dir().join(format!("{name}.jsf"));
-                let code = std::fs::read_to_string(&f).map_err(|_| EngineError::NotFound(format!("gespeicherter Befehl „{name}“")))?;
+                let code = std::fs::read_to_string(&f).map_err(|_| EngineError::NotFound(fp_i18n::tr!("err-nf-saved-command", name = name.as_str())))?;
                 let v = run_script_source(s, &code, Some(&f), &name)?;
                 Ok(CommandOutput::session_with(json!({"result": v})))
             }),
@@ -267,11 +267,11 @@ pub(super) fn register(r: &mut CommandRegistry) {
                     }
                     "rename" => {
                         let (a, b) = (safe_file_name(&p.str("name")?)?, safe_file_name(&p.str("newName")?)?);
-                        std::fs::rename(dir.join(format!("{a}.jsf")), dir.join(format!("{b}.jsf"))).map_err(|_| EngineError::NotFound(format!("gespeicherter Befehl „{a}“")))?;
+                        std::fs::rename(dir.join(format!("{a}.jsf")), dir.join(format!("{b}.jsf"))).map_err(|_| EngineError::NotFound(fp_i18n::tr!("err-nf-saved-command", name = a.as_str())))?;
                     }
                     "delete" => {
                         let a = safe_file_name(&p.str("name")?)?;
-                        std::fs::remove_file(dir.join(format!("{a}.jsf"))).map_err(|_| EngineError::NotFound(format!("gespeicherter Befehl „{a}“")))?;
+                        std::fs::remove_file(dir.join(format!("{a}.jsf"))).map_err(|_| EngineError::NotFound(fp_i18n::tr!("err-nf-saved-command", name = a.as_str())))?;
                     }
                     _ => return Err(bad(p, "action")),
                 }
@@ -422,7 +422,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
             None => wia("$d = New-Object -ComObject WIA.CommonDialog; $dev = $d.ShowSelectDevice(1, $true, $false); if ($dev) { $dev.DeviceID }")?.trim().to_string(),
         };
         if id.is_empty() {
-            return Err(EngineError::Failed("kein Scanner ausgewählt".into()));
+            return Err(EngineError::Failed(fp_i18n::t("err-no-scanner")));
         }
         s.prefs.set("ScannerDeviceId", crate::prefs::PrefValue::Str(id.clone()));
         s.prefs_changed();
@@ -441,7 +441,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                         // FormatID PNG; Gerät aus „Scanner auswählen“ wird vom Windows-Dialog vorgeschlagen
                         wia(&format!("$d = New-Object -ComObject WIA.CommonDialog; $i = $d.ShowAcquireImage(1, 1, 131072, '{{B96B3CAF-0728-11D3-9D7B-0000F81EF32E}}', $false, $true, $false); if ($i) {{ $i.SaveFile('{target}') }}"))?;
                         if !out.is_file() {
-                            return Err(EngineError::Failed("Scannen abgebrochen".into()));
+                            return Err(EngineError::Failed(fp_i18n::t("err-scan-cancelled")));
                         }
                         out
                     }
@@ -459,15 +459,15 @@ fn wia(script: &str) -> Result<String> {
     {
         let mut c = std::process::Command::new("powershell.exe");
         c.args(["-NoProfile", "-NonInteractive", "-STA", "-Command", script]);
-        let out = crate::shell::run(c)?.ok_or_else(|| EngineError::Failed("Bilderfassung: Starten von Fremdprogrammen ist abgeschaltet (FP_NO_SHELL_OPEN)".into()))?;
+        let out = crate::shell::run(c)?.ok_or_else(|| EngineError::Failed(fp_i18n::t("err-scan-shell-disabled")))?;
         if !out.status.success() {
-            return Err(EngineError::Failed(format!("Bilderfassung nicht verfügbar: {}", String::from_utf8_lossy(&out.stderr).trim())));
+            return Err(EngineError::Failed(fp_i18n::tr!("err-scan-unavailable", detail = String::from_utf8_lossy(&out.stderr).trim().to_string())));
         }
         Ok(String::from_utf8_lossy(&out.stdout).to_string())
     }
     #[cfg(not(windows))]
     {
         let _ = script;
-        Err(EngineError::Failed("Bilderfassung gibt es nur unter Windows".into()))
+        Err(EngineError::Failed(fp_i18n::t("err-scan-windows-only")))
     }
 }

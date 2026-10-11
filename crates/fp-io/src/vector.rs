@@ -398,7 +398,7 @@ pub fn import_pdf(data: &[u8], opts: &ImportOptions) -> Result<ImportResult> {
                 }
                 Some(acc) => {
                     let src = &r.document.pages[0];
-                    let idx = acc.document.add_page(&format!("Seite {}", i + 1));
+                    let idx = acc.document.add_page(&fp_i18n::tr!("msg-default-page", n = (i + 1).to_string()));
                     let els: Vec<Arc<Element>> = src
                         .root
                         .layers
@@ -567,7 +567,7 @@ fn import_ai_text(text: &str, opts: &ImportOptions) -> Result<ImportResult> {
     if let Some(p) = doc.page_mut(0)
         && let Some(fp_model::LayerSlot::Own(l)) = p.root.layers.get_mut(0)
     {
-        Arc::make_mut(l).name = "Ebene 1".into();
+        Arc::make_mut(l).name = fp_i18n::tr!("msg-default-layer", n = "1");
     }
     warnings.sort();
     warnings.dedup();
@@ -599,7 +599,7 @@ pub fn import_postscript(data: &[u8], fmt: FileFormat, opts: &ImportOptions) -> 
         if let Some(p) = r.document.page_mut(0)
             && let Some(fp_model::LayerSlot::Own(l)) = p.root.layers.get_mut(0)
         {
-            Arc::make_mut(l).name = "Ebene 1".into();
+            Arc::make_mut(l).name = fp_i18n::tr!("msg-default-layer", n = "1");
         }
         return Ok(r);
     }

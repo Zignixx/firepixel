@@ -1,0 +1,319 @@
+# Meldungen: Fehler (err-), Status-/Infomeldungen und Verlaufsschritte (msg-), KI-Auswahl (ai-).
+# Zuständig: I18N-ENGINE. Deutsch ist die Ausgangssprache; Englisch nach GLOSSAR.md.
+
+## Fehlerarten von fp-engine (EngineError, Text = Display)
+err-unknown-command = unbekannter Befehl „{ $name }“
+err-not-implemented = Befehl „{ $name }“ ist noch nicht umgesetzt
+err-unavailable = Befehl „{ $name }“ ist nicht verfügbar: { $reason }
+err-invalid-params = ungültige Parameter für „{ $name }“: { $message }
+err-no-document = kein Dokument geöffnet
+err-selection = keine passende Auswahl: { $detail }
+err-element-not-found = Element { $id } nicht gefunden
+err-not-found = { $what } nicht gefunden
+err-io = Datei: { $detail }
+err-format = FW-PNG: { $detail }
+err-backend-missing = für diese Operation fehlt { $what }
+err-failed = { $detail }
+
+## Voraussetzungen von Befehlen (Begründung bei „nicht verfügbar“)
+err-req-document = kein Dokument geöffnet
+err-req-selection = keine Auswahl
+err-req-min-selected = mindestens { $n } Objekte auswählen
+err-req-all-of = Auswahl enthält nicht nur { $kind }
+err-req-any-of = Auswahl enthält kein { $kind }
+err-req-clipboard = Zwischenablage leer
+err-req-has-path = Dokument wurde noch nicht gespeichert
+err-req-multiple-pages = nur eine Seite
+err-req-multiple-frames = nur ein Status
+
+## Parameterprüfung ($key = Parametername)
+err-param-missing = Pflichtparameter „{ $key }“ fehlt
+err-param-invalid = Parameter „{ $key }“ hat einen ungültigen Wert
+err-param-bad-number = { $key }: ungültige Zahl
+err-param-not-number = { $key }: keine Zahl
+err-param-number-expected = { $key }: Zahl erwartet
+err-param-absent = { $key } fehlt
+err-param-negative = { $key }: negativ
+err-param-bool-expected = { $key }: true/false erwartet
+err-param-text-expected = { $key }: Text erwartet
+err-param-hex-color-expected = { $key }: Farbe #rrggbb erwartet
+err-param-color-expected = { $key }: Farbe erwartet
+err-param-point-expected = { $key }: Punkt {"{"}x, y{"}"} erwartet
+err-param-rect-expected = { $key }: Rechteck erwartet
+err-param-ints-expected = { $key }: ganze Zahlen erwartet
+err-param-id-expected = { $key }: ID erwartet
+err-param-ids-expected = { $key }: Liste von IDs erwartet
+err-param-points-expected = { $key }: Punktliste erwartet
+err-param-detail = { $key }: { $detail }
+
+## Nicht gefunden – mit Namen
+err-nf-page-n = Seite { $n }
+err-nf-tool = Werkzeug „{ $name }“
+err-nf-shortcut-set = Tastenkürzel-Set „{ $name }“
+err-nf-extension = Erweiterung „{ $name }“
+err-nf-saved-command = gespeicherter Befehl „{ $name }“
+err-nf-symbol-named = Symbol „{ $name }“
+err-nf-symbol-id = Symbol { $id }
+err-nf-style = Stil „{ $name }“
+err-nf-brush = Pinselstrich „{ $name }“
+err-nf-preset = Vorgabe „{ $name }“
+err-nf-folder = Ordner { $path }
+err-nf-html-file = HTML-Datei { $path }
+
+## Weitere Fehler mit Werten
+err-unsaved-discard = „{ $name }“ hat ungespeicherte Änderungen (discard: true zum Verwerfen)
+err-unsaved = „{ $name }“ hat ungespeicherte Änderungen
+err-invalid-name = ungültiger Name „{ $name }“
+err-unknown-model = unbekanntes KI-Modell „{ $name }“
+err-model-wrong-task = „{ $name }“ ist kein Modell für diese Aufgabe
+err-unknown-blend = unbekannter Mischmodus { $name }
+err-unknown-effect = unbekannter Effekt { $name }
+err-unknown-preset = unbekannte Vorgabe „{ $name }“
+err-unknown-format = unbekanntes Format „{ $name }“
+err-unknown-palette = unbekannte Palette „{ $name }“
+err-unknown-export-kind = unbekannte Exportart „{ $name }“
+err-unknown-shortcut = unbekanntes Kürzel „{ $name }“
+err-builtin-set-readonly = mitgelieferte Sets sind schreibgeschützt: zuerst mit „duplicate“ ein eigenes Set anlegen
+err-unknown-tool = unbekanntes Werkzeug „{ $name }“
+err-unknown-shape = unbekannte Form { $name }
+err-unknown-stroke-preset = unbekannte Strichvorgabe { $name }
+err-invalid-key = ungültiger Schlüssel { $name }
+err-prefs = Voreinstellungen: { $detail }
+err-program-start = Programm konnte nicht gestartet werden: { $detail }
+err-scan-unavailable = Bilderfassung nicht verfügbar: { $detail }
+err-dictionary = Wörterbuch { $path }: { $detail }
+err-brush-detail = Pinsel: { $detail }
+err-page-missing = Seite { $n } fehlt
+err-invalid-set-name = „{ $name }“ ist kein zulässiger Name für ein eigenes Set
+err-set-not-found = Set „{ $name }“ nicht gefunden
+err-style-library = Stilbibliothek: { $detail }
+
+## Import (fp-io), Export (fp-export)
+err-import-unknown-format = unbekanntes Dateiformat
+err-import-unsupported = { $detail }
+err-import-corrupt = Datei beschädigt: { $detail }
+err-import-too-large = Bild zu groß: { $w }×{ $h }
+err-import-decode = Dekodierfehler ({ $codec }): { $detail }
+err-import-fwpng = FW-PNG: { $detail }
+err-import-io = E/A-Fehler: { $detail }
+err-export-bad-size = ungültige Bildgröße { $w }×{ $h } für dieses Format
+err-export-unsupported = Format wird nicht unterstützt: { $detail }
+err-export-encode = Kodierfehler: { $detail }
+err-export-render = Rendern fehlgeschlagen: { $detail }
+err-export-io = E/A-Fehler: { $detail }
+
+## KI-Auswahl (fp-ai)
+ai-err-model-missing = KI-Modell „{ $name }“ fehlt ({ $file }). Bitte über „Modelle verwalten“ laden oder die Datei in den Modellordner legen: { $folder }
+ai-err-weights = KI-Modell ungültig: { $detail }
+ai-err-download = Download fehlgeschlagen: { $detail }
+ai-err-download-disabled = Download ist gesperrt (Test- oder Stapelbetrieb)
+ai-err-checksum = Prüfsumme der Datei { $file } stimmt nicht (erwartet { $expected }, erhalten { $got })
+ai-err-cancelled = abgebrochen
+ai-err-input = { $detail }
+ai-err-io = Datei: { $detail }
+
+## Standardnamen neuer Ebenen, Seiten und Status
+msg-default-layer = Ebene { $n }
+msg-default-web-layer = Webebene
+msg-default-page = Seite { $n }
+msg-default-state = Status { $n }
+msg-default-background = Hintergrund
+msg-default-copy = { $name } Kopie
+msg-tool-roundness = Rundung { $px } px
+
+## Namen von Verlaufsschritten (Verlauf-Bedienfeld, „Rückgängig …“)
+msg-step-add-popup = Pop-up-Menü hinzufügen
+msg-step-clear-overrides = Abweichungen löschen
+msg-step-duplicate-layer = Ebene duplizieren
+msg-step-duplicate-state = Status duplizieren
+msg-step-edit-popup = Pop-up-Menü bearbeiten
+msg-step-edit-symbol = Symbol bearbeiten
+msg-step-edit-text = Text bearbeiten
+msg-step-export-settings = Exporteinstellungen
+msg-step-export-wizard = Exportassistent
+msg-step-html-setup = HTML-Einrichtung
+msg-step-import = Importieren
+msg-step-move = Verschieben
+msg-step-move-copy = Kopie verschieben
+msg-step-new-layer = Neue Ebene
+msg-step-refine-edge = Kante verfeinern
+msg-step-repeat-filter = Filter wiederholen
+msg-step-spelling = Rechtschreibung
+
+## Statushinweise der Werkzeuge
+msg-tool-knife-needs-paths = Messer: zuerst Pfade auswählen.
+msg-tool-needs-path = Zuerst einen Pfad auswählen.
+msg-tool-refine-edge-needs-pixels = Kante verfeinern: zuerst eine Pixelauswahl erstellen (z. B. mit „Motiv auswählen“ oder „Objektauswahl“).
+msg-tool-scrubber-needs-path = Pfadausbesserung: zuerst einen Pfad auswählen.
+msg-tool-stamp-needs-source = Stempel: zuerst mit Alt+Klick die Quelle festlegen.
+msg-tool-symbol-edit-pending = Symbol bearbeiten: der Bearbeitungsmodus für Symbole folgt.
+
+## Nicht gefunden ($what in err-not-found)
+err-nf-active-layer = aktive Ebene
+err-nf-contour = Kontur
+err-nf-document = Dokument
+err-nf-edit-view = Bearbeitungsansicht
+err-nf-effect = Effekt
+err-nf-guide = Hilfslinie
+err-nf-jpeg-mask = JPEG-Maske
+err-nf-layer = Ebene
+err-nf-mask = Maske
+err-nf-page = Seite
+err-nf-point = Punkt
+err-nf-recent-file = zuletzt geöffnete Datei
+err-nf-saved-selection = gespeicherte Auswahl
+err-nf-segment = Segment
+err-nf-shared-layer = geteilte Ebene
+err-nf-state = Status
+err-nf-swatch = Farbfeld
+err-nf-symbol = Symbol
+
+## Fehlende Bausteine ($what in err-backend-missing)
+err-backend-autoshape-runtime = die Laufzeit der automatischen Formen (fp-script)
+err-backend-pathops = Pfadoperationen (fp-vector)
+err-backend-renderer = Renderer (fp-render)
+err-backend-renderer-page = Renderer (fp-render) für die Seitenansicht
+err-backend-renderer-vector = Renderer (fp-render) für Vektorobjekte
+err-backend-script-runtime = die Skript-Laufzeit (fp-script)
+err-backend-text-layout = die Textauslegung
+err-backend-text-renderer = ein Renderer für die Textauslegung
+
+## Voraussetzungen und Verlauf
+err-req-can-redo = nichts zu wiederholen
+err-req-can-undo = nichts rückgängig zu machen
+err-req-pixel-selection = keine Pixelauswahl
+err-req-state = im aktuellen Zustand nicht möglich
+
+## Auswahl ($detail in err-selection)
+err-sel-bitmap-locked = die Bitmap ist gesperrt
+err-sel-clipboard-no-object = Zwischenablage enthält kein Objekt
+err-sel-empty = leer
+err-sel-empty-pixels = leere Pixelauswahl
+err-sel-group-no-mask = die Gruppe hat keine Maske
+err-sel-instances = Instanzen
+err-sel-mask-needs-bitmap = Maskenausgabe braucht eine Bitmap als Quelle (Bitmap auswählen)
+err-sel-no-attributes = keine Attribute in der Zwischenablage
+err-sel-no-bitmap = keine Bitmap
+err-sel-no-bitmap-at-point = keine Bitmap ausgewählt bzw. unter dem Punkt
+err-sel-no-bitmap-selected = keine Bitmap ausgewählt
+err-sel-no-bitmap-under-stroke = keine Bitmap unter dem Strich
+err-sel-no-bitmap-under-wand = keine Bitmap unter dem Zauberstab
+err-sel-no-bounds = Auswahl ohne Grenzen
+err-sel-no-bounds-short = keine Grenzen
+err-sel-no-crop-area = kein Zuschneidebereich
+err-sel-no-instance = keine Symbolinstanz ausgewählt
+err-sel-no-mask-group = keine Maskengruppe ausgewählt
+err-sel-no-object = kein Objekt
+err-sel-no-object-below = kein Objekt darunter
+err-sel-no-objects = keine Objekte ausgewählt
+err-sel-no-objects-with-bounds = keine Objekte mit Grenzen
+err-sel-no-path = kein Pfad
+err-sel-no-paths = keine Pfade
+err-sel-no-paths-selected = keine Pfade ausgewählt
+err-sel-no-popup = ausgewähltes Objekt hat kein Pop-up-Menü
+err-sel-no-single-open-contour = Pfad hat keine einzelne offene Kontur
+err-sel-no-stroked-object = kein Objekt mit Strich ausgewählt
+err-sel-no-styled-object = kein Objekt mit Stil ausgewählt
+err-sel-no-subject = kein Motiv gefunden
+err-sel-no-text = kein Text
+err-sel-no-text-on-path = kein Text auf Pfad ausgewählt
+err-sel-no-text-selected = kein Text ausgewählt
+err-sel-no-web-object = kein Slice/Hotspot
+err-sel-nothing = nichts ausgewählt
+err-sel-nothing-to-copy = nichts zu kopieren
+err-sel-nothing-to-filter = nichts zum Filtern ausgewählt
+err-sel-page-empty = Seite ist leer
+err-sel-point-outside-bitmap = Punkt außerhalb der Bitmap
+err-sel-same-symbol = Instanzen desselben Symbols auswählen
+err-sel-text-and-path = einen Text und einen Pfad auswählen
+err-sel-two-instances = genau zwei Instanzen auswählen
+err-sel-two-objects = mindestens zwei Objekte auswählen
+err-sel-two-paths = mindestens zwei Pfade auswählen
+err-sel-two-paths-needed = mindestens zwei Pfade nötig
+
+## Parameter ($message in err-invalid-params)
+err-param-action-ext = action: list/install/remove
+err-param-ai-prompt = Klickpunkt (point/points) oder Rahmen (box) fehlt
+err-param-anchor-or-rect = anchor oder rect angeben
+err-param-colors = colors: #rrggbb erwartet
+err-param-contours = contours: Liste erwartet
+err-param-crop = crop: Rechteck
+err-param-data = data: Objekt erwartet
+err-param-dither = dither: Zahl, true/false oder "2x2"
+err-param-effect-or-index = effect oder index angeben
+err-param-effects = effects: Liste erwartet
+err-param-empty-rect = leerer Rahmen
+err-param-four-points = vier Punkte erwartet
+err-param-items = items: Liste von {"{"}text, url, target, submenu{"}"}
+err-param-items-empty = items: mindestens ein Eintrag
+err-param-matrix = Matrix mit 6 oder 9 Werten erwartet
+err-param-matte = matte: Farbe
+err-param-menu = menu: Objekt erwartet
+err-param-name-missing = Name fehlt
+err-param-no-contours = keine Konturen
+err-param-no-points = keine Punkte
+err-param-no-style = kein Stil angegeben
+err-param-node = Knoten: {"{"}anchor, in, out{"}"} oder [x, y]
+err-param-nodes-missing = nodes fehlt
+err-param-not-object = Parameter müssen ein JSON-Objekt sein
+err-param-output = output: "selection" oder "mask"
+err-param-paper = paper: A3/A4/A5/Letter/Legal oder [b, h]
+err-param-params = params: Objekt erwartet
+err-param-path-needed = Dokument hat noch keinen Dateinamen: Parameter „path“ angeben
+err-param-path-or-code = path oder code angeben
+err-param-points-list = points: Liste erwartet
+err-param-points-numbers = points: Zahlen erwartet
+err-param-points-triples = points: [x, y, label] erwartet
+err-param-radius-zero = Radius 0
+err-param-replace = replace: Liste
+err-param-settings = settings: Objekt erwartet
+err-param-settings-missing = settings fehlt
+err-param-three-points = mindestens drei Punkte
+err-param-transparency = transparency: none/index/alpha/rgba
+err-param-two-points = mindestens zwei Punkte
+err-param-value = Wert
+err-param-values = values: Objekt erwartet
+
+## Sonstige Fehler
+err-bitmap-unreadable = Bitmap konnte nicht gelesen werden
+err-bitmap-unreadable-short = Bitmap
+err-compound-insert-failed = Compound Shape konnte nicht eingefügt werden
+err-cut-misses-path = Die Schnittlinie trifft keinen ausgewählten Pfad.
+err-degenerate-quad = entartetes Viereck
+err-distribute-failed = Verteilen fehlgeschlagen
+err-element-insert-failed = Element konnte nicht eingefügt werden
+err-empty-area = leerer Bereich
+err-file-no-objects = die Datei enthält keine Objekte
+err-file-no-symbols = die Datei enthält keine Symbole
+err-format-no-palette = das Exportformat hat keine Palette
+err-guides-locked = Hilfslinien sind gesperrt
+err-image-insert-failed = Bild konnte nicht eingefügt werden
+err-internal = intern
+err-layer-no-delete = diese Ebene kann nicht gelöscht werden
+err-no-filename = kein Dateiname
+err-no-filter-yet = noch kein Filter angewandt
+err-no-html = kein HTML erzeugt
+err-no-master-page = keine Masterseite
+err-no-new-object = kein neues Objekt
+err-no-page = keine Seite
+err-no-scanner = kein Scanner ausgewählt
+err-no-shared-layer = keine freigegebene Ebene aktiv
+err-no-size-optimize = für dieses Format gibt es keine Größenoptimierung (nur GIF/PNG 8 und JPEG)
+err-no-steps = keine Schritte ausgewählt
+err-no-symbol-edit = keine Symbol-Bearbeitung
+err-no-symbols = keine Symbole
+err-no-valid-page = keine gültige Seite
+err-not-library-symbol = kein Symbol aus einer Bibliotheksdatei
+err-object-move-failed = Objekt konnte nicht verschoben werden
+err-only-own-layers = nur eigene Ebenen können dupliziert werden
+err-parent-list = Elternliste
+err-paste-failed = Einfügen fehlgeschlagen
+err-scan-cancelled = Scannen abgebrochen
+err-scan-shell-disabled = Bilderfassung: Starten von Fremdprogrammen ist abgeschaltet (FP_NO_SHELL_OPEN)
+err-scan-windows-only = Bilderfassung gibt es nur unter Windows
+err-steps-not-replayable = die ausgewählten Schritte sind nicht wiederholbar
+err-stroke = Strich
+err-stroke-misses-path = Der Strich berührt keinen ausgewählten Pfad.
+err-view-empty = Ansicht leer
+err-web-layer-no-duplicate = die Web-Ebene kann nicht dupliziert werden
+err-web-layer-no-share = die Web-Ebene kann nicht freigegeben werden

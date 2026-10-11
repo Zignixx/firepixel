@@ -127,7 +127,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                     let out: Vec<Value> = ids.iter().filter_map(|id| docops::element_on_page(&d.doc, d.page, *id)).map(|e| json!({"id": e.id.0, "data": dict_json(&e.common.custom_data)})).collect();
                     return Ok(CommandOutput::value(Value::Array(out)));
                 };
-                let Value::Object(m) = data else { return Err(bad(p, "data: Objekt erwartet")) };
+                let Value::Object(m) = data else { return Err(bad(p, fp_i18n::t("err-param-data"))) };
                 let replace = p.bool_or("replace", false)?;
                 edit_targets(s, p, |e| {
                     let cd = &mut e.common.custom_data;
@@ -160,11 +160,11 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 with_doc(s, |d| {
                     let id = match p.opt_i64("layer")? {
                         Some(x) => fp_model::LayerId(x as u64),
-                        None => d.layer.ok_or_else(|| EngineError::NotFound("aktive Ebene".into()))?,
+                        None => d.layer.ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-active-layer")))?,
                     };
                     let page = d.page;
-                    let slot = docops::layer_slot(&d.doc, page, id).ok_or_else(|| EngineError::NotFound("Ebene".into()))?;
-                    let l = docops::layer_mut(Arc::make_mut(&mut d.doc), page, slot).ok_or_else(|| EngineError::NotFound("Ebene".into()))?;
+                    let slot = docops::layer_slot(&d.doc, page, id).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-layer")))?;
+                    let l = docops::layer_mut(Arc::make_mut(&mut d.doc), page, slot).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-layer")))?;
                     l.expanded = v;
                     Ok(CommandOutput::doc())
                 })
@@ -181,7 +181,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 let (l, t) = (p.opt_f64("left")?, p.opt_f64("top")?);
                 with_doc(s, |d| {
                     let page = p.opt_i64("page")?.map(|v| v.max(0) as usize).unwrap_or(d.page);
-                    let pg = d.doc_mut().page_mut(page).ok_or_else(|| EngineError::NotFound("Seite".into()))?;
+                    let pg = d.doc_mut().page_mut(page).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-page")))?;
                     if let Some(l) = l {
                         pg.canvas.origin.x = l as f32;
                     }
@@ -270,14 +270,14 @@ pub(super) fn register(r: &mut CommandRegistry) {
             .opt("ids", ParamKind::Ids, "Elemente (Vorgabe: Auswahl)")
             .param("values", ParamKind::Json, "{\"PZ\": 50, …}: Quelle P Druck/S Geschwindigkeit/H horizontal/V vertikal/R Zufall × Ziel Z Größe/A Winkel/O Deckkraft/B Schwärze/R Streuung/H Farbton/L Helligkeit/S Sättigung, Wert in % (0 entfernt)")
             .run(|s, p| {
-                let Some(Value::Object(m)) = p.get("values").cloned() else { return Err(bad(p, "values: Objekt erwartet")) };
+                let Some(Value::Object(m)) = p.get("values").cloned() else { return Err(bad(p, fp_i18n::t("err-param-values"))) };
                 let mut list = Vec::new();
                 for (k, v) in &m {
                     let b = k.as_bytes();
                     if b.len() != 2 || !fp_model::attrs::SENSITIVITY_SOURCES.contains(&b[0]) || !fp_model::attrs::SENSITIVITY_TARGETS.contains(&b[1]) {
-                        return Err(bad(p, format!("ungültiger Schlüssel {k}")));
+                        return Err(bad(p, fp_i18n::tr!("err-invalid-key", name = k.as_str())));
                     }
-                    let pct = v.as_f64().ok_or_else(|| bad(p, format!("{k}: Zahl erwartet")))?;
+                    let pct = v.as_f64().ok_or_else(|| bad(p, fp_i18n::tr!("err-param-number-expected", key = k.as_str())))?;
                     list.push((b[0], b[1], (pct.clamp(0.0, 100.0) * 10.0).round() as i32));
                 }
                 edit_targets(s, p, |e| {

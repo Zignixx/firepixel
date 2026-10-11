@@ -33,12 +33,12 @@ impl PathAttrs {
 }
 
 impl Page {
-    /// Neue Seite mit Leinwand, einer normalen Ebene „Ebene 1“ und der Web-Ebene (zuletzt, ganz oben).
+    /// Neue Seite mit Leinwand, einer normalen Ebene („Ebene 1“ in der Sprache der Oberfläche) und der Web-Ebene (zuletzt, ganz oben).
     pub fn new(ids: &mut IdGen, name: &str, width: f32, height: f32, background: Argb) -> Page {
         let mut root = LayerRoot::new(1);
         root.background = background;
-        root.layers.push(LayerSlot::Own(Arc::new(Layer::new(ids, "Ebene 1", LayerKind::Normal, 1))));
-        root.layers.push(LayerSlot::Own(Arc::new(Layer::new(ids, "Webebene", LayerKind::Web, 1))));
+        root.layers.push(LayerSlot::Own(Arc::new(Layer::new(ids, &fp_i18n::tr!("msg-default-layer", n = "1"), LayerKind::Normal, 1))));
+        root.layers.push(LayerSlot::Own(Arc::new(Layer::new(ids, &fp_i18n::t("msg-default-web-layer"), LayerKind::Web, 1))));
         root.grid = Some(Grid::default());
         root.guides = Some(Guides::default());
         root.export = Some(Box::new(ExportSettings::default()));
@@ -149,8 +149,8 @@ impl Symbol {
     pub fn new(ids: &mut IdGen, name: &str, id: SymbolId, kind: crate::symbol::SymbolKind) -> Symbol {
         let frames = if kind == crate::symbol::SymbolKind::Button { 4 } else { 1 };
         let mut root = LayerRoot::new(frames);
-        root.layers.push(LayerSlot::Own(Arc::new(Layer::new(ids, "Ebene 1", LayerKind::Normal, frames as usize))));
-        root.layers.push(LayerSlot::Own(Arc::new(Layer::new(ids, "Webebene", LayerKind::Web, frames as usize))));
+        root.layers.push(LayerSlot::Own(Arc::new(Layer::new(ids, &fp_i18n::tr!("msg-default-layer", n = "1"), LayerKind::Normal, frames as usize))));
+        root.layers.push(LayerSlot::Own(Arc::new(Layer::new(ids, &fp_i18n::t("msg-default-web-layer"), LayerKind::Web, frames as usize))));
         root.grid = Some(Grid::default());
         root.guides = Some(Guides::default());
         root.frame_count_repeat = Some(1);

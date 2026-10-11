@@ -61,7 +61,7 @@ fn apply_params(base: PopupMenu, p: &Params) -> Result<PopupMenu> {
     let mut m = base;
     if let Some(v) = p.get("menu") {
         let mut cur = serde_json::to_value(&m).map_err(|e| EngineError::Failed(e.to_string()))?;
-        let Value::Object(upd) = v else { return Err(bad(p, "menu: Objekt erwartet")) };
+        let Value::Object(upd) = v else { return Err(bad(p, fp_i18n::t("err-param-menu"))) };
         if let Value::Object(o) = &mut cur {
             for (k, x) in upd {
                 o.insert(k.clone(), x.clone());
@@ -70,9 +70,9 @@ fn apply_params(base: PopupMenu, p: &Params) -> Result<PopupMenu> {
         m = serde_json::from_value(cur).map_err(|e| bad(p, format!("menu: {e}")))?;
     }
     if let Some(v) = p.get("items") {
-        let items = items_from_json(v).ok_or_else(|| bad(p, "items: Liste von {text, url, target, submenu}"))?;
+        let items = items_from_json(v).ok_or_else(|| bad(p, fp_i18n::t("err-param-items")))?;
         if items.is_empty() {
-            return Err(bad(p, "items: mindestens ein Eintrag"));
+            return Err(bad(p, fp_i18n::t("err-param-items-empty")));
         }
         m.items_text = Some(format_menu_items(&items));
     }
@@ -97,7 +97,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 m.creation_date = Some(now_stamp());
                 with_doc(s, |d| {
                     let page = d.page;
-                    let target = selected_elements(d).into_iter().find(|(_, e)| matches!(e.kind, ElementKind::WebObject(_))).map(|(_, e)| e.id).ok_or_else(|| EngineError::Selection("kein Slice/Hotspot".into()))?;
+                    let target = selected_elements(d).into_iter().find(|(_, e)| matches!(e.kind, ElementKind::WebObject(_))).map(|(_, e)| e.id).ok_or_else(|| EngineError::Selection(fp_i18n::t("err-sel-no-web-object")))?;
                     // eindeutige Menü-ID je Dokument
                     let mut max_id = 0;
                     d.doc.walk_elements(|_, _, e: &Arc<fp_model::Element>| {
@@ -120,7 +120,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                         }
                     })
                     .ok_or(EngineError::ElementNotFound(target.0))?;
-                    Ok(CommandOutput::doc_with(out).labeled("Pop-up-Menü hinzufügen"))
+                    Ok(CommandOutput::doc_with(out).labeled(fp_i18n::t("msg-step-add-popup")))
                 })
             }),
     );
@@ -141,7 +141,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                             ElementKind::WebObject(w) => w.behaviors.as_ref().and_then(|b| b.items.iter().filter_map(|x| x.popup.as_deref()).nth(idx).cloned()).map(|m| (e.id, m)),
                             _ => None,
                         })
-                        .ok_or_else(|| EngineError::Selection("ausgewähltes Objekt hat kein Pop-up-Menü".into()))?;
+                        .ok_or_else(|| EngineError::Selection(fp_i18n::t("err-sel-no-popup")))?;
                     if !change {
                         return Ok(CommandOutput::value(menu_json(&cur)));
                     }
@@ -156,7 +156,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                             x.popup = Some(Box::new(m.clone()));
                         }
                     });
-                    Ok(CommandOutput::doc_with(out).labeled("Pop-up-Menü bearbeiten"))
+                    Ok(CommandOutput::doc_with(out).labeled(fp_i18n::t("msg-step-edit-popup")))
                 })
             }),
     );

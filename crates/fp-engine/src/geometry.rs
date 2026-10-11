@@ -75,16 +75,16 @@ impl GeometryOps for BasicGeometry {
         "basic"
     }
     fn combine(&self, _op: PathBoolOp, _paths: &[PathShape]) -> Result<Vec<Vec<Contour>>> {
-        Err(EngineError::BackendMissing("Pfadoperationen (fp-vector)"))
+        Err(EngineError::BackendMissing("err-backend-pathops"))
     }
     fn expand_stroke(&self, _c: &[Contour], _w: f64, _j: u32, _cap: u32, _m: f64) -> Result<Vec<Contour>> {
-        Err(EngineError::BackendMissing("Pfadoperationen (fp-vector)"))
+        Err(EngineError::BackendMissing("err-backend-pathops"))
     }
     fn inset(&self, _c: &[Contour], _d: f64, _e: bool, _j: u32, _m: f64) -> Result<Vec<Contour>> {
-        Err(EngineError::BackendMissing("Pfadoperationen (fp-vector)"))
+        Err(EngineError::BackendMissing("err-backend-pathops"))
     }
     fn simplify(&self, _c: &[Contour], _a: f64) -> Result<Vec<Contour>> {
-        Err(EngineError::BackendMissing("Pfadoperationen (fp-vector)"))
+        Err(EngineError::BackendMissing("err-backend-pathops"))
     }
 }
 

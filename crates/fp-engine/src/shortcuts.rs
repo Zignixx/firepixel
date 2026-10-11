@@ -348,7 +348,7 @@ pub fn any_set(name: &str) -> Option<&'static ShortcutSet> {
 /// Speichert ein eigenes Set (Datei + Speicher). Namen der mitgelieferten Sets sind gesperrt.
 pub fn save_custom_set(set: &ShortcutSet) -> Result<&'static ShortcutSet, String> {
     if set.name.trim().is_empty() || builtin_set(&set.name).is_some() {
-        return Err(format!("„{}“ ist kein zulässiger Name für ein eigenes Set", set.name));
+        return Err(fp_i18n::tr!("err-invalid-set-name", name = set.name.as_str()));
     }
     let f = file_of(&set.name);
     if let Some(d) = f.parent() {
@@ -372,7 +372,7 @@ pub fn delete_custom_set(name: &str) -> Result<(), String> {
     }
     match std::fs::remove_file(file_of(name)) {
         Ok(()) => Ok(()),
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Err(format!("Set „{name}“ nicht gefunden")),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Err(fp_i18n::tr!("err-set-not-found", name = name)),
         Err(e) => Err(e.to_string()),
     }
 }

@@ -142,7 +142,7 @@ impl ToolMachine for RetouchTool {
                 }
                 if self.id == ToolId::RubberStamp && self.source.is_none() {
                     return ToolResponse {
-                        status: Some("Stempel: zuerst mit Alt+Klick die Quelle festlegen.".into()),
+                        status: Some(fp_i18n::t("msg-tool-stamp-needs-source")),
                         cursor: Cursor::NotAllowed,
                         ..ToolResponse::default()
                     };

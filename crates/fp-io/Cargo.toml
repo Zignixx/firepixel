@@ -13,6 +13,8 @@ fp-raster = { workspace = true }
 fp-model = { workspace = true }
 fp-fwpng = { workspace = true }
 thiserror = { workspace = true }
+# Mehrsprachige Fehlermeldungen
+fp-i18n = { workspace = true }
 png = { workspace = true }
 flate2 = { workspace = true }
 # crate-eigene Spezialfälle (reine Rust-Crates, keine DLLs)

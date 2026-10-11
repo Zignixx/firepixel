@@ -159,7 +159,7 @@ pub fn decode(data: &[u8], cmyk: Option<&CmykTable>) -> Result<RasterImage> {
     }
     let mut img = RasterImage::from_rgba(w, h, rgba)?;
     img.dpi = dpi;
-    img.layer_name = Some("Hintergrund".into());
+    img.layer_name = Some(fp_i18n::t("msg-default-background"));
     Ok(img)
 }
 

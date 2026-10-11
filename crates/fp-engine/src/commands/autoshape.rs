@@ -10,7 +10,7 @@ use crate::session::Session;
 use serde_json::{json, Value};
 
 fn call(s: &mut Session, value: &Value, op: &str) -> Result<Value> {
-    let host = s.script_host().ok_or(EngineError::BackendMissing("die Laufzeit der automatischen Formen (fp-script)"))?;
+    let host = s.script_host().ok_or(EngineError::BackendMissing("err-backend-autoshape-runtime"))?;
     let mut v = if value.is_object() { value.clone() } else { json!({}) };
     v["op"] = json!(op);
     host.auto_shape(s, &v)

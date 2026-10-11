@@ -20,12 +20,12 @@ use std::sync::Arc;
 
 /// Liest Konturen `[{closed, nodes: [{anchor, in, out}]}]` (Henkel optional).
 pub(crate) fn parse_contours(p: &Params) -> Result<Vec<Contour>> {
-    let err = |m: &str| EngineError::InvalidParams { name: p.command.clone(), message: m.into() };
-    let arr = p.get("contours").and_then(|v| v.as_array()).ok_or_else(|| err("contours: Liste erwartet"))?;
+    let err = |key: &str| EngineError::InvalidParams { name: p.command.clone(), message: fp_i18n::t(key) };
+    let arr = p.get("contours").and_then(|v| v.as_array()).ok_or_else(|| err("err-param-contours"))?;
     let mut out = Vec::new();
     for c in arr {
         let closed = c.get("closed").and_then(|v| v.as_bool()).unwrap_or(false);
-        let nodes = c.get("nodes").and_then(|v| v.as_array()).ok_or_else(|| err("nodes fehlt"))?;
+        let nodes = c.get("nodes").and_then(|v| v.as_array()).ok_or_else(|| err("err-param-nodes-missing"))?;
         let mut ns = Vec::new();
         for n in nodes {
             let (a, i, o) = if let Some(a) = n.get("anchor") {
@@ -34,7 +34,7 @@ pub(crate) fn parse_contours(p: &Params) -> Result<Vec<Contour>> {
                 let o = n.get("out").and_then(crate::command::parse_point).unwrap_or(a);
                 (a, i, o)
             } else {
-                let a = crate::command::parse_point(n).ok_or_else(|| err("Knoten: {anchor, in, out} oder [x, y]"))?;
+                let a = crate::command::parse_point(n).ok_or_else(|| err("err-param-node"))?;
                 (a, a, a)
             };
             ns.push((a, i, o));
@@ -44,7 +44,7 @@ pub(crate) fn parse_contours(p: &Params) -> Result<Vec<Contour>> {
         }
     }
     if out.is_empty() {
-        return Err(err("keine Konturen"));
+        return Err(err("err-param-no-contours"));
     }
     Ok(out)
 }
@@ -89,7 +89,7 @@ fn shape_opts(b: crate::command::CommandBuilder) -> crate::command::CommandBuild
 fn layer_param(d: &DocumentState, p: &Params) -> Result<LayerId> {
     match p.opt_i64("layer")? {
         Some(v) => Ok(LayerId(v as u64)),
-        None => d.layer.ok_or_else(|| EngineError::NotFound("aktive Ebene".into())),
+        None => d.layer.ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-active-layer"))),
     }
 }
 
@@ -97,8 +97,8 @@ fn edit_layer(s: &mut Session, p: &Params, f: impl FnOnce(&mut fp_model::Layer))
     with_doc(s, |d| {
         let id = layer_param(d, p)?;
         let page = d.page;
-        let slot = docops::layer_slot(&d.doc, page, id).ok_or_else(|| EngineError::NotFound("Ebene".into()))?;
-        let l = docops::layer_mut(Arc::make_mut(&mut d.doc), page, slot).ok_or_else(|| EngineError::NotFound("Ebene".into()))?;
+        let slot = docops::layer_slot(&d.doc, page, id).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-layer")))?;
+        let l = docops::layer_mut(Arc::make_mut(&mut d.doc), page, slot).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-layer")))?;
         f(l);
         Ok(CommandOutput::doc())
     })
@@ -179,7 +179,7 @@ fn web_object(s: &mut Session, p: &Params, slice: bool) -> Result<CommandOutput>
         "polygon" => {
             let pts = p.points("points")?;
             if pts.len() < 3 {
-                return Err(EngineError::InvalidParams { name: p.command.clone(), message: "mindestens drei Punkte".into() });
+                return Err(EngineError::InvalidParams { name: p.command.clone(), message: fp_i18n::t("err-param-three-points") });
             }
             let c = geometry::polygon_contour(&pts, true);
             (geometry::contours_bounds(std::slice::from_ref(&c)).unwrap_or_default(), Some(c))
@@ -235,7 +235,7 @@ pub(crate) fn colors_param(p: &Params, fallback: &[Argb]) -> Result<Vec<Argb>> {
     match p.get("colors").and_then(|v| v.as_array()) {
         Some(a) => a
             .iter()
-            .map(|v| v.as_str().and_then(fp_color::Rgba8::parse_hex).map(|c| c.to_argb()).ok_or_else(|| EngineError::InvalidParams { name: p.command.clone(), message: "colors: #rrggbb erwartet".into() }))
+            .map(|v| v.as_str().and_then(fp_color::Rgba8::parse_hex).map(|c| c.to_argb()).ok_or_else(|| EngineError::InvalidParams { name: p.command.clone(), message: fp_i18n::t("err-param-colors") }))
             .collect(),
         None => Ok(fallback.to_vec()),
     }
@@ -287,7 +287,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
             .opt("spikiness", ParamKind::Number { min: Some(0.0), max: Some(1.0) }, "Spitzigkeit 0..1 (fehlt = automatisch)")
             .run(|s, p| {
                 let c = geometry::polygon_tool_contour(p.point("center")?, p.point("corner")?, p.i64_or("sides", 5)?.clamp(3, 360) as usize, p.bool_or("star", false)?, p.opt_f64("spikiness")?)
-                    .ok_or_else(|| EngineError::InvalidParams { name: p.command.clone(), message: "Radius 0".into() })?;
+                    .ok_or_else(|| EngineError::InvalidParams { name: p.command.clone(), message: fp_i18n::t("err-param-radius-zero") })?;
                 let a = attrs_from(s, p, true, 0.0)?;
                 let e = {
                     let d = s.doc_mut()?;
@@ -347,7 +347,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 let size = p.f64_or("size", s.tools.options.text_size as f64)? as f32;
                 let color = p.opt_color("color")?.unwrap_or(s.tools.fill_color);
                 let rect = p.opt_rect("rect")?;
-                let anchor = p.opt_point("anchor")?.or_else(|| rect.map(|r| Point::new(r.left, r.top + size))).ok_or_else(|| EngineError::InvalidParams { name: p.command.clone(), message: "anchor oder rect angeben".into() })?;
+                let anchor = p.opt_point("anchor")?.or_else(|| rect.map(|r| Point::new(r.left, r.top + size))).ok_or_else(|| EngineError::InvalidParams { name: p.command.clone(), message: fp_i18n::t("err-param-anchor-or-rect") })?;
                 let e = {
                     let d = s.doc_mut()?;
                     let doc = Arc::make_mut(&mut d.doc);
@@ -469,7 +469,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
     }));
     r.add(ids_opt(cmd("element.setBlendMode").label("Mischmodus").requires(DOC)).param("mode", ParamKind::String, "Name (normal, multiply, …) oder BLDi-Nummer").run(|s, p| {
         let m = p.str("mode")?;
-        let mode = BlendMode::from_name(&m).or_else(|| m.parse::<u8>().ok().map(BlendMode)).ok_or_else(|| EngineError::InvalidParams { name: p.command.clone(), message: format!("unbekannter Mischmodus {m}") })?;
+        let mode = BlendMode::from_name(&m).or_else(|| m.parse::<u8>().ok().map(BlendMode)).ok_or_else(|| EngineError::InvalidParams { name: p.command.clone(), message: fp_i18n::tr!("err-unknown-blend", name = m.as_str()) })?;
         common_edit(s, p, move |e| e.common.blend = mode)
     }));
     r.add(ids_opt(cmd("element.setName").label("Objektname").requires(DOC)).param("name", ParamKind::String, "Name").run(|s, p| {
@@ -496,7 +496,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
             .run(|s, p| {
                 with_targets(s, p, |s, p| {
                     let d = s.doc()?;
-                    let b = docops::ids_bounds(&d.doc, d.page, &d.selection.elements).ok_or_else(|| sel_err("keine Grenzen"))?;
+                    let b = docops::ids_bounds(&d.doc, d.page, &d.selection.elements).ok_or_else(|| sel_err("err-sel-no-bounds-short"))?;
                     let x = p.f64_or("x", b.left as f64)? as f32;
                     let y = p.f64_or("y", b.top as f64)? as f32;
                     let w = p.f64_or("width", b.width() as f64)? as f32;
@@ -512,7 +512,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
             .opt_default("visible", ParamKind::Bool, json!(true), "sichtbar")
             .run(|s, p| {
                 let name = p.str("effect")?;
-                let moa = effect_moa_id(&name).ok_or_else(|| EngineError::InvalidParams { name: p.command.clone(), message: format!("unbekannter Effekt {name}") })?;
+                let moa = effect_moa_id(&name).ok_or_else(|| EngineError::InvalidParams { name: p.command.clone(), message: fp_i18n::tr!("err-unknown-effect", name = name.as_str()) })?;
                 let vis = p.bool_or("visible", true)?;
                 let params: Vec<(String, String)> = match p.get("params") {
                     Some(Value::Object(m)) => m.iter().map(|(k, v)| (k.clone(), v.as_str().map(|s| s.to_string()).unwrap_or_else(|| v.to_string()))).collect(),
@@ -536,12 +536,12 @@ pub(super) fn register(r: &mut CommandRegistry) {
             .opt("visible", ParamKind::Bool, "sichtbar")
             .run(|s, p| {
                 let moa = match p.opt_str("effect")? {
-                    Some(n) => Some(effect_moa_id(&n).ok_or_else(|| EngineError::InvalidParams { name: p.command.clone(), message: format!("unbekannter Effekt {n}") })?),
+                    Some(n) => Some(effect_moa_id(&n).ok_or_else(|| EngineError::InvalidParams { name: p.command.clone(), message: fp_i18n::tr!("err-unknown-effect", name = n.as_str()) })?),
                     None => None,
                 };
                 let index = p.opt_i64("index")?.map(|v| v.max(0) as usize);
                 if moa.is_none() && index.is_none() {
-                    return Err(EngineError::InvalidParams { name: p.command.clone(), message: "effect oder index angeben".into() });
+                    return Err(EngineError::InvalidParams { name: p.command.clone(), message: fp_i18n::t("err-param-effect-or-index") });
                 }
                 let vis = p.opt_bool("visible")?;
                 let params: Vec<(String, String)> = match p.get("params") {
@@ -551,7 +551,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 edit_effects(s, p, move |l| {
                     let pos = match (&moa, index) {
                         (_, Some(i)) if i < l.effects.len() => Some(i),
-                        (_, Some(_)) => return Err(EngineError::NotFound("Effekt".into())),
+                        (_, Some(_)) => return Err(EngineError::NotFound(fp_i18n::t("err-nf-effect"))),
                         (Some(m), None) => l.effects.iter().position(|e| e.moa_id() == Some(m.as_str())),
                         (None, None) => None,
                     };
@@ -581,7 +581,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 l.effects.remove(i);
                 Ok(())
             } else {
-                Err(EngineError::NotFound("Effekt".into()))
+                Err(EngineError::NotFound(fp_i18n::t("err-nf-effect")))
             }
         })
     }));
@@ -597,7 +597,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                         e.set_visible(v);
                         Ok(())
                     }
-                    None => Err(EngineError::NotFound("Effekt".into())),
+                    None => Err(EngineError::NotFound(fp_i18n::t("err-nf-effect"))),
                 })
             }),
     );
@@ -648,12 +648,12 @@ pub(super) fn register(r: &mut CommandRegistry) {
             let id = layer_param(d, p)?;
             let page = d.page;
             let normals = docops::own_layers(&d.doc, page).iter().filter(|(_, l)| l.kind == LayerKind::Normal).count();
-            let slot = docops::layer_slot(&d.doc, page, id).ok_or_else(|| EngineError::NotFound("Ebene".into()))?;
+            let slot = docops::layer_slot(&d.doc, page, id).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-layer")))?;
             let is_web = docops::own_layers(&d.doc, page).iter().any(|(s, l)| *s == slot && l.kind == LayerKind::Web);
             if is_web || normals <= 1 {
-                return Err(EngineError::Failed("diese Ebene kann nicht gelöscht werden".into()));
+                return Err(EngineError::Failed(fp_i18n::t("err-layer-no-delete")));
             }
-            let pg = Arc::make_mut(&mut d.doc).page_mut(page).ok_or_else(|| EngineError::NotFound("Seite".into()))?;
+            let pg = Arc::make_mut(&mut d.doc).page_mut(page).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-page")))?;
             pg.root.layers.remove(slot);
             d.layer = docops::top_normal_layer(&d.doc, page);
             d.selection.clear();
@@ -703,7 +703,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 pg.root.layers.iter().any(|sl| matches!(sl, LayerSlot::Shared(r) if d.doc.shared_layer(&r.id).and_then(|x| x.layer.as_ref()).is_some_and(|l| l.id == id)))
             });
             if !shared {
-                docops::layer_slot(&d.doc, d.page, id).ok_or_else(|| EngineError::NotFound("Ebene".into()))?;
+                docops::layer_slot(&d.doc, d.page, id).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-layer")))?;
             }
             d.layer = Some(id);
             Ok(CommandOutput::doc())
@@ -720,8 +720,8 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 with_doc(s, |d| {
                     let id = layer_param(d, p)?;
                     let page = d.page;
-                    let slot = docops::layer_slot(&d.doc, page, id).ok_or_else(|| EngineError::NotFound("Ebene".into()))?;
-                    let pg = Arc::make_mut(&mut d.doc).page_mut(page).ok_or_else(|| EngineError::NotFound("Seite".into()))?;
+                    let slot = docops::layer_slot(&d.doc, page, id).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-layer")))?;
+                    let pg = Arc::make_mut(&mut d.doc).page_mut(page).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-page")))?;
                     let l = pg.root.layers.remove(slot);
                     let to = to.min(pg.root.layers.len());
                     pg.root.layers.insert(to, l);
@@ -733,16 +733,16 @@ pub(super) fn register(r: &mut CommandRegistry) {
         with_doc(s, |d| {
             let id = layer_param(d, p)?;
             let page = d.page;
-            let slot = docops::layer_slot(&d.doc, page, id).ok_or_else(|| EngineError::NotFound("Ebene".into()))?;
+            let slot = docops::layer_slot(&d.doc, page, id).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-layer")))?;
             let doc = Arc::make_mut(&mut d.doc);
-            let Some(LayerSlot::Own(l)) = doc.pages.get(page).and_then(|pg| pg.root.layers.get(slot)).cloned() else { return Err(EngineError::NotFound("Ebene".into())) };
+            let Some(LayerSlot::Own(l)) = doc.pages.get(page).and_then(|pg| pg.root.layers.get(slot)).cloned() else { return Err(EngineError::NotFound(fp_i18n::t("err-nf-layer"))) };
             let mut nl = (*l).clone();
             let mut idg = take_ids(doc);
             nl.reassign_ids(&mut idg);
             doc.ids = idg;
             nl.name = format!("{} Kopie", nl.name);
             let nid = nl.id;
-            doc.page_mut(page).ok_or_else(|| EngineError::NotFound("Seite".into()))?.root.layers.insert(slot + 1, LayerSlot::Own(Arc::new(nl)));
+            doc.page_mut(page).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-page")))?.root.layers.insert(slot + 1, LayerSlot::Own(Arc::new(nl)));
             d.layer = Some(nid);
             Ok(CommandOutput::doc_with(json!({"layer": nid.0})))
         })
@@ -758,7 +758,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
             let i = p.opt_i64("index")?.map(|v| v.max(0) as usize).unwrap_or(d.page);
             let doc = Arc::make_mut(&mut d.doc);
             if i >= doc.pages.len() || doc.pages.len() <= 1 {
-                return Err(EngineError::NotFound("Seite".into()));
+                return Err(EngineError::NotFound(fp_i18n::t("err-nf-page")));
             }
             doc.pages.remove(i);
             if doc.current_page >= doc.pages.len() {
@@ -776,7 +776,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
         with_doc(s, |d| {
             let i = p.opt_i64("index")?.map(|v| v.max(0) as usize).unwrap_or(d.page);
             let doc = Arc::make_mut(&mut d.doc);
-            let mut pg = (**doc.pages.get(i).ok_or_else(|| EngineError::NotFound("Seite".into()))?).clone();
+            let mut pg = (**doc.pages.get(i).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-page")))?).clone();
             let mut idg = take_ids(doc);
             for slot in &mut pg.root.layers {
                 if let LayerSlot::Own(l) = slot {
@@ -785,7 +785,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
             }
             doc.ids = idg;
             pg.id = Some(fp_model::Guid::new_random());
-            pg.name = Some(format!("{} Kopie", pg.display_name()));
+            pg.name = Some(fp_i18n::tr!("msg-default-copy", name = pg.display_name()));
             pg.is_master = Some(false);
             doc.pages.insert(i + 1, Arc::new(pg));
             d.page = i + 1;
@@ -799,7 +799,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
         let n = p.str("name")?;
         with_doc(s, |d| {
             let i = p.opt_i64("index")?.map(|v| v.max(0) as usize).unwrap_or(d.page);
-            Arc::make_mut(&mut d.doc).page_mut(i).ok_or_else(|| EngineError::NotFound("Seite".into()))?.name = Some(n);
+            Arc::make_mut(&mut d.doc).page_mut(i).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-page")))?.name = Some(n);
             Ok(CommandOutput::doc())
         })
     }));
@@ -807,7 +807,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
         let i = p.usize("index")?;
         with_doc(s, |d| {
             if i >= d.doc.pages.len() {
-                return Err(EngineError::NotFound("Seite".into()));
+                return Err(EngineError::NotFound(fp_i18n::t("err-nf-page")));
             }
             d.page = i;
             d.frame = 0;
@@ -830,7 +830,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 with_doc(s, |d| {
                     let at = at.map(|v| v.max(0) as usize).unwrap_or(d.frame + 1);
                     let page = d.page;
-                    docops::insert_frames(Arc::make_mut(&mut d.doc), page, at, n).ok_or_else(|| EngineError::NotFound("Seite".into()))?;
+                    docops::insert_frames(Arc::make_mut(&mut d.doc), page, at, n).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-page")))?;
                     d.frame = at.min(d.frame_count() - 1);
                     d.selection.clear();
                     Ok(CommandOutput::doc())
@@ -841,7 +841,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
         with_doc(s, |d| {
             let i = p.opt_i64("index")?.map(|v| v.max(0) as usize).unwrap_or(d.frame);
             let page = d.page;
-            docops::delete_frame(Arc::make_mut(&mut d.doc), page, i).ok_or_else(|| EngineError::NotFound("Status".into()))?;
+            docops::delete_frame(Arc::make_mut(&mut d.doc), page, i).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-state")))?;
             d.frame = d.frame.min(d.frame_count() - 1);
             d.selection.clear();
             Ok(CommandOutput::doc())
@@ -852,7 +852,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
             let i = p.opt_i64("index")?.map(|v| v.max(0) as usize).unwrap_or(d.frame);
             let page = d.page;
             let doc = Arc::make_mut(&mut d.doc);
-            docops::insert_frames(doc, page, i + 1, 1).ok_or_else(|| EngineError::NotFound("Seite".into()))?;
+            docops::insert_frames(doc, page, i + 1, 1).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-page")))?;
             let mut idg = take_ids(doc);
             if let Some(pg) = doc.page_mut(page) {
                 for slot in &mut pg.root.layers {
@@ -883,7 +883,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
         let i = p.usize("index")?;
         with_doc(s, |d| {
             if i >= d.frame_count() {
-                return Err(EngineError::NotFound("Status".into()));
+                return Err(EngineError::NotFound(fp_i18n::t("err-nf-state")));
             }
             d.frame = i;
             d.selection.clear();
@@ -938,7 +938,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
     // Werkzeuge und Verlauf
     r.add(cmd("tool.select").label("Werkzeug wählen").param("tool", ParamKind::String, "Werkzeugname (tool.pen, Stift, pen) oder GUID").run(|s, p| {
         let n = p.str("tool")?;
-        let t = tools::by_name(&n).or_else(|| tools::by_guid(&n)).ok_or_else(|| EngineError::NotFound(format!("Werkzeug „{n}“")))?;
+        let t = tools::by_name(&n).or_else(|| tools::by_guid(&n)).ok_or_else(|| EngineError::NotFound(fp_i18n::tr!("err-nf-tool", name = n.as_str())))?;
         s.set_tool(t)?;
         Ok(CommandOutput::session_with(json!({"tool": tools::info(t).map(|i| i.name)})))
     }));

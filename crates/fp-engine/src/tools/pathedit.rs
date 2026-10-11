@@ -389,7 +389,7 @@ impl ToolMachine for ScrubTool {
         match kind {
             PointerKind::Down => {
                 if !ctx.selection.elements.iter().filter_map(|id| docops::element_on_page(ctx.doc, ctx.page, *id)).any(|e| matches!(e.kind, ElementKind::Path(_))) {
-                    return ToolResponse { cursor: Cursor::NotAllowed, status: Some("Pfadausbesserung: zuerst einen Pfad auswählen.".into()), ..ToolResponse::default() };
+                    return ToolResponse { cursor: Cursor::NotAllowed, status: Some(fp_i18n::t("msg-tool-scrubber-needs-path")), ..ToolResponse::default() };
                 }
                 self.points = vec![*pos];
                 self.active = true;
@@ -457,7 +457,7 @@ impl ToolMachine for KnifeTool {
         match kind {
             PointerKind::Down => {
                 if ctx.selection.elements.is_empty() {
-                    return ToolResponse { cursor: Cursor::NotAllowed, status: Some("Messer: zuerst Pfade auswählen.".into()), ..ToolResponse::default() };
+                    return ToolResponse { cursor: Cursor::NotAllowed, status: Some(fp_i18n::t("msg-tool-knife-needs-paths")), ..ToolResponse::default() };
                 }
                 self.points = vec![*pos];
                 self.active = true;
@@ -562,7 +562,7 @@ impl ToolMachine for FreeformTool {
             PointerKind::Down => {
                 let paths = Self::selected_paths(ctx);
                 if paths.is_empty() {
-                    return ToolResponse { cursor: Cursor::NotAllowed, status: Some("Zuerst einen Pfad auswählen.".into()), ..ToolResponse::default() };
+                    return ToolResponse { cursor: Cursor::NotAllowed, status: Some(fp_i18n::t("msg-tool-needs-path")), ..ToolResponse::default() };
                 }
                 let near = paths.iter().any(|(_, cs)| crate::geometry::distance_to_contours(cs, *pos) <= ctx.pick_tolerance());
                 self.mode = Some(match self.id {

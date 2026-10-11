@@ -40,7 +40,7 @@ const MAGNIFICATIONS: &[(&str, f64)] = &[
 
 fn page_guides(d: &mut DocumentState) -> Result<&mut Guides> {
     let page = d.page;
-    let p = Arc::make_mut(&mut d.doc).page_mut(page).ok_or_else(|| EngineError::NotFound("Seite".into()))?;
+    let p = Arc::make_mut(&mut d.doc).page_mut(page).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-page")))?;
     Ok(p.root.guides.get_or_insert_with(Guides::default))
 }
 
@@ -200,7 +200,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                     }
                     if w.is_some() || h.is_some() || c.is_some() || o.is_some() {
                         let page = d.page;
-                        let pg = Arc::make_mut(&mut d.doc).page_mut(page).ok_or_else(|| EngineError::NotFound("Seite".into()))?;
+                        let pg = Arc::make_mut(&mut d.doc).page_mut(page).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-page")))?;
                         let g = pg.root.grid.get_or_insert_with(Grid::default);
                         if let Some(w) = w {
                             g.size.x = w as f32;
@@ -264,7 +264,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 let pos = p.f64("position")? as f32;
                 with_doc(s, |d| {
                     if d.view.lock_guides {
-                        return Err(EngineError::Failed("Hilfslinien sind gesperrt".into()));
+                        return Err(EngineError::Failed(fp_i18n::t("err-guides-locked")));
                     }
                     let g = page_guides(d)?;
                     if horiz { g.horizontal.push(pos) } else { g.vertical.push(pos) }
@@ -287,7 +287,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                     let g = page_guides(d)?;
                     let v = if horiz { &mut g.horizontal } else { &mut g.vertical };
                     if i >= v.len() {
-                        return Err(EngineError::NotFound("Hilfslinie".into()));
+                        return Err(EngineError::NotFound(fp_i18n::t("err-nf-guide")));
                     }
                     match pos {
                         Some(x) => v[i] = x as f32,

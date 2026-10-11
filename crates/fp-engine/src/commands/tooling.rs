@@ -18,8 +18,9 @@ use fp_raster::RgbaImage;
 use serde_json::json;
 use std::sync::Arc;
 
+/// Parameterfehler; `m` = Schlüssel `err-param-…` (fremde Texte bleiben unverändert).
 fn bad(p: &Params, m: &str) -> EngineError {
-    EngineError::InvalidParams { name: p.command.clone(), message: m.into() }
+    EngineError::InvalidParams { name: p.command.clone(), message: if m.starts_with("err-") { fp_i18n::t(m) } else { m.into() } }
 }
 
 /// Ändert die Konturen eines Pfads (Grundform wird zum Pfad).
@@ -32,7 +33,7 @@ fn edit_contours(d: &mut crate::session::DocumentState, id: ElementId, f: impl F
             pe.primitive = None;
             pe.polyline = None;
         } else {
-            res = Err(EngineError::Selection("kein Pfad".into()));
+            res = Err(EngineError::Selection(fp_i18n::t("err-sel-no-path")));
         }
     })
     .ok_or(EngineError::ElementNotFound(id.0))?;
@@ -109,7 +110,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 let draw = p.str("draw")?;
                 let params = p.get("params").cloned().unwrap_or_else(|| json!({}));
                 let out = run_inner(s, &draw, params)?;
-                let id = out.value.get("id").and_then(|v| v.as_u64()).ok_or_else(|| EngineError::Failed("kein neues Objekt".into()))?;
+                let id = out.value.get("id").and_then(|v| v.as_u64()).ok_or_else(|| EngineError::Failed(fp_i18n::t("err-no-new-object")))?;
                 let open = draw == "draw.line" || (draw == "draw.path" && !p.get("params").and_then(|v| v.get("contours")).and_then(|c| c.as_array()).is_some_and(|a| a.iter().any(|c| c.get("closed").and_then(|b| b.as_bool()) == Some(true))));
                 if let Some(f) = p.get("fill").filter(|v| v.is_object())
                     && !open
@@ -170,7 +171,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                         });
                     }
                     if !any {
-                        return Err(EngineError::Failed("Der Strich berührt keinen ausgewählten Pfad.".into()));
+                        return Err(EngineError::Failed(fp_i18n::t("err-stroke-misses-path")));
                     }
                     Ok(CommandOutput::doc())
                 })
@@ -196,7 +197,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                     _ => crate::tools::pathedit::default_insets(&from),
                 };
                 if from.width() <= 0.0 || from.height() <= 0.0 || to.width() <= 0.0 || to.height() <= 0.0 {
-                    return Err(bad(p, "leerer Rahmen"));
+                    return Err(bad(p, "err-param-empty-rect"));
                 }
                 with_doc(s, |d| {
                     let (page, ids) = (d.page, target_ids(d, p)?);
@@ -222,8 +223,8 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 let (ci, seg, t) = (p.usize("contour")?, p.usize("segment")?, p.f64("t")?);
                 with_doc(s, |d| {
                     edit_contours(d, id, |cs| {
-                        let c = cs.get_mut(ci).ok_or_else(|| EngineError::NotFound("Kontur".into()))?;
-                        let bc = geometry::to_bezier(c).insert_node(seg, t).ok_or_else(|| EngineError::NotFound("Segment".into()))?;
+                        let c = cs.get_mut(ci).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-contour")))?;
+                        let bc = geometry::to_bezier(c).insert_node(seg, t).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-segment")))?;
                         *c = geometry::from_bezier(&bc);
                         Ok(())
                     })?;
@@ -246,9 +247,9 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 with_doc(s, |d| {
                     let mut empty = false;
                     edit_contours(d, id, |cs| {
-                        let c = cs.get_mut(ci).ok_or_else(|| EngineError::NotFound("Kontur".into()))?;
+                        let c = cs.get_mut(ci).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-contour")))?;
                         if ni >= c.nodes.len() {
-                            return Err(EngineError::NotFound("Punkt".into()));
+                            return Err(EngineError::NotFound(fp_i18n::t("err-nf-point")));
                         }
                         c.nodes.remove(ni);
                         if c.nodes.len() < 3 {
@@ -332,7 +333,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
             .run(|s, p| {
                 let line = p.points("points")?;
                 if line.len() < 2 {
-                    return Err(bad(p, "mindestens zwei Punkte"));
+                    return Err(bad(p, "err-param-two-points"));
                 }
                 with_doc(s, |d| {
                     let ids = target_ids(d, p)?;
@@ -386,7 +387,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                         }
                     }
                     if !cut_any {
-                        return Err(EngineError::Failed("Die Schnittlinie trifft keinen ausgewählten Pfad.".into()));
+                        return Err(EngineError::Failed(fp_i18n::t("err-cut-misses-path")));
                     }
                     d.selection.set(new_sel);
                     Ok(CommandOutput::doc())
@@ -450,7 +451,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 let mode = p.str("mode")?;
                 let pts = p.points("points")?;
                 if pts.is_empty() {
-                    return Err(bad(p, "keine Punkte"));
+                    return Err(bad(p, "err-param-no-points"));
                 }
                 let prm = Retouch {
                     mode: mode.clone(),
@@ -467,7 +468,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                     tolerance: p.i64_or("tolerance", 50)?.clamp(0, 255) as f32,
                 };
                 with_doc(s, |d| {
-                    let (path, _) = bitmap_for(d, pts.first().copied(), &BasicGeometry).ok_or_else(|| sel_err("keine Bitmap unter dem Strich"))?;
+                    let (path, _) = bitmap_for(d, pts.first().copied(), &BasicGeometry).ok_or_else(|| sel_err("err-sel-no-bitmap-under-stroke"))?;
                     let sel = d.selection.pixels.clone().filter(|_| d.selection.has_pixels());
                     let doc = Arc::make_mut(&mut d.doc);
                     docops::edit_at(doc, &path, |e| {

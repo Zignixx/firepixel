@@ -103,7 +103,7 @@ fn crop_to(img: RgbaImage, area: fp_geom::IRect) -> RgbaImage {
 impl fp_export::render::PageRenderer for ExportRenderer<'_> {
     fn render(&self, doc: &Document, req: &RenderRequest) -> Result<RgbaImage, String> {
         if doc.pages.get(req.page).is_none() {
-            return Err(format!("Seite {} fehlt", req.page + 1));
+            return Err(fp_i18n::tr!("err-page-missing", n = (req.page + 1).to_string()));
         }
         let Some(r) = self.0 else {
             return SimpleRenderer.render(doc, req);

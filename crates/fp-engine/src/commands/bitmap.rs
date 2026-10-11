@@ -152,7 +152,7 @@ pub fn sample_color(s: &Session, p: Point, n: i32) -> Result<Argb> {
 fn points_size(p: &Params, s: &Session) -> Result<(Vec<Point>, f32)> {
     let pts = p.points("points")?;
     if pts.is_empty() {
-        return Err(EngineError::InvalidParams { name: p.command.clone(), message: "keine Punkte".into() });
+        return Err(EngineError::InvalidParams { name: p.command.clone(), message: fp_i18n::t("err-param-no-points") });
     }
     Ok((pts, p.f64_or("size", s.tools.options.brush_size as f64)?.clamp(0.5, 5000.0) as f32))
 }
@@ -172,7 +172,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 let color = p.opt_color("color")?.unwrap_or(s.tools.stroke_color);
                 let aa = p.bool_or("antialias", true)?;
                 let op = (p.f64_or("opacity", 100.0)?.clamp(0.0, 100.0) * 2.55).round() as u8;
-                let m = stroke_mask(&pts, size, aa, true).ok_or_else(|| EngineError::Failed("Strich".into()))?;
+                let m = stroke_mask(&pts, size, aa, true).ok_or_else(|| EngineError::Failed(fp_i18n::t("err-stroke")))?;
                 with_doc(s, |d| {
                     paint_mask(d, m, color, op)?;
                     Ok(CommandOutput::doc())
@@ -192,10 +192,10 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 let size = p.f64_or("size", s.tools.options.eraser_size as f64)?.clamp(0.5, 5000.0) as f32;
                 let round = p.bool_or("round", true)?;
                 let op = p.f64_or("opacity", 100.0)?.clamp(0.0, 100.0) / 100.0;
-                let m = stroke_mask(&pts, size, true, round).ok_or_else(|| EngineError::Failed("Strich".into()))?;
+                let m = stroke_mask(&pts, size, true, round).ok_or_else(|| EngineError::Failed(fp_i18n::t("err-stroke")))?;
                 with_doc(s, |d| {
                     let m = clip_to_selection(m, d);
-                    let (path, _) = bitmap_for(d, None, &BasicGeometry).ok_or_else(|| sel_err("keine Bitmap ausgewählt"))?;
+                    let (path, _) = bitmap_for(d, None, &BasicGeometry).ok_or_else(|| sel_err("err-sel-no-bitmap-selected"))?;
                     let doc = Arc::make_mut(&mut d.doc);
                     docops::edit_at(doc, &path, |e| {
                         if let ElementKind::Bitmap(b) = &mut e.kind
@@ -233,10 +233,10 @@ pub(super) fn register(r: &mut CommandRegistry) {
                     let cov = if fill_sel && d.selection.has_pixels() {
                         d.selection.pixels.clone().unwrap_or_default()
                     } else {
-                        let (_, e) = bitmap_for(d, Some(pt), &BasicGeometry).ok_or_else(|| sel_err("keine Bitmap"))?;
-                        let ElementKind::Bitmap(b) = &e.kind else { return Err(sel_err("keine Bitmap")) };
-                        let img = bitmap_image(b).ok_or_else(|| EngineError::Failed("Bitmap".into()))?;
-                        flood_region(&img, pt.x.floor() as i32, pt.y.floor() as i32, tol).ok_or_else(|| sel_err("Punkt außerhalb der Bitmap"))?
+                        let (_, e) = bitmap_for(d, Some(pt), &BasicGeometry).ok_or_else(|| sel_err("err-sel-no-bitmap"))?;
+                        let ElementKind::Bitmap(b) = &e.kind else { return Err(sel_err("err-sel-no-bitmap")) };
+                        let img = bitmap_image(b).ok_or_else(|| EngineError::Failed(fp_i18n::t("err-bitmap-unreadable-short")))?;
+                        flood_region(&img, pt.x.floor() as i32, pt.y.floor() as i32, tol).ok_or_else(|| sel_err("err-sel-point-outside-bitmap"))?
                     };
                     paint_mask(d, cov, color, 255)?;
                     Ok(CommandOutput::doc())
@@ -254,7 +254,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 let (a, b) = (p.point("from")?, p.point("to")?);
                 let colors = super::draw::colors_param(p, &[s.tools.fill_color, s.tools.stroke_color])?;
                 with_doc(s, |d| {
-                    let (path, e) = bitmap_for(d, Some(a), &BasicGeometry).ok_or_else(|| sel_err("keine Bitmap"))?;
+                    let (path, e) = bitmap_for(d, Some(a), &BasicGeometry).ok_or_else(|| sel_err("err-sel-no-bitmap"))?;
                     let region = match &d.selection.pixels {
                         Some(m) if d.selection.has_pixels() => m.clone(),
                         _ => Mask::from_rect(docops::element_bounds(&d.doc, &e).map(|r| r.round_out()).unwrap_or_default())?,

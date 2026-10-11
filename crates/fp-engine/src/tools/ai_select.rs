@@ -149,7 +149,7 @@ impl ToolMachine for AiClickTool {
                     request("select.aiSubject", json!({"mode": mode_from(ev).name(), "point": [pos.x, pos.y]}))
                 } else {
                     if !ctx.selection.has_pixels() {
-                        return ToolResponse { status: Some("Kante verfeinern: zuerst eine Pixelauswahl erstellen (z. B. mit „Motiv auswählen“ oder „Objektauswahl“).".into()), cursor: Cursor::Wand, ..ToolResponse::default() };
+                        return ToolResponse { status: Some(fp_i18n::t("msg-tool-refine-edge-needs-pixels")), cursor: Cursor::Wand, ..ToolResponse::default() };
                     }
                     request("select.aiRefineEdge", json!({}))
                 }

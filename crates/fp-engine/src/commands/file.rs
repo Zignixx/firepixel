@@ -33,7 +33,7 @@ pub fn load_document(path: &Path) -> Result<Document> {
     if let Some(l) = crate::docops::top_normal_layer(&doc, 0)
         && crate::docops::insert_element(&mut doc, 0, 0, Some(l), 0, Arc::new(e)).is_none()
     {
-        return Err(EngineError::Failed("Bild konnte nicht eingefügt werden".into()));
+        return Err(EngineError::Failed(fp_i18n::t("err-image-insert-failed")));
     }
     Ok(doc)
 }
@@ -78,7 +78,7 @@ fn save_active(s: &mut Session, path: Option<PathBuf>, adopt: bool) -> Result<Co
     let d = s.doc()?;
     let target = path.or_else(|| d.path.clone()).ok_or_else(|| EngineError::InvalidParams {
         name: "file.save".into(),
-        message: "Dokument hat noch keinen Dateinamen: Parameter „path“ angeben".into(),
+        message: fp_i18n::t("err-param-path-needed"),
     })?;
     let (doc, page, id) = (Arc::clone(&d.doc), d.page, d.id);
     save_document(s, &doc, page, &target)?;
@@ -159,7 +159,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
             .available(|s| !s.prefs.recent_files.is_empty())
             .run(|s, p| {
                 let i = p.i64_or("index", 0)?.max(0) as usize;
-                let path = s.prefs.recent_files.get(i).cloned().ok_or_else(|| EngineError::NotFound("zuletzt geöffnete Datei".into()))?;
+                let path = s.prefs.recent_files.get(i).cloned().ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-recent-file")))?;
                 open_path(s, path, false)
             }),
     );
@@ -176,7 +176,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                     return Ok(CommandOutput::session());
                 }
                 if d.is_dirty() && !p.bool_or("discard", false)? {
-                    return Err(EngineError::Failed(format!("„{}“ hat ungespeicherte Änderungen (discard: true zum Verwerfen)", d.title)));
+                    return Err(EngineError::Failed(fp_i18n::tr!("err-unsaved-discard", name = d.title.as_str())));
                 }
                 let id = d.id;
                 s.close_document(id)?;
@@ -190,7 +190,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
             .run(|s, p| {
                 let discard = p.bool_or("discard", false)?;
                 if !discard && let Some(d) = s.documents().iter().find(|d| d.is_dirty()) {
-                    return Err(EngineError::Failed(format!("„{}“ hat ungespeicherte Änderungen", d.title)));
+                    return Err(EngineError::Failed(fp_i18n::tr!("err-unsaved", name = d.title.as_str())));
                 }
                 let ids: Vec<_> = s.documents().iter().map(|d| d.id).collect();
                 for id in ids {
@@ -228,7 +228,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
             .run(|s, p| save_active(s, Some(PathBuf::from(p.str("path")?)), false)),
     );
     r.add(cmd("file.revert").requires(&[Requirement::Document, Requirement::HasPath]).run(|s, _| {
-        let path = s.doc()?.path.clone().ok_or_else(|| EngineError::Failed("kein Dateiname".into()))?;
+        let path = s.doc()?.path.clone().ok_or_else(|| EngineError::Failed(fp_i18n::t("err-no-filename")))?;
         let doc = load_document(&path)?;
         let prefs_max = s.prefs.max_undos();
         let d = s.doc_mut()?;
@@ -293,7 +293,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 }
                 let key = p.opt_str("key")?;
                 if let (Some(k), Some(v)) = (&key, p.get("value")) {
-                    let pv = PrefValue::from_json(v).ok_or_else(|| EngineError::InvalidParams { name: "edit.preferences".into(), message: "Wert".into() })?;
+                    let pv = PrefValue::from_json(v).ok_or_else(|| EngineError::InvalidParams { name: "edit.preferences".into(), message: fp_i18n::t("err-param-value") })?;
                     s.prefs.set(k, pv);
                     changed = true;
                 }
@@ -316,7 +316,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
             .run(|s, p| {
                 let bad = |m: String| EngineError::InvalidParams { name: "edit.keyboardShortcuts".into(), message: m };
                 if let Some(name) = p.opt_str("set")? {
-                    let set = crate::shortcuts::any_set(&name).ok_or_else(|| EngineError::NotFound(format!("Tastenkürzel-Set „{name}“")))?;
+                    let set = crate::shortcuts::any_set(&name).ok_or_else(|| EngineError::NotFound(fp_i18n::tr!("err-nf-shortcut-set", name = name.as_str())))?;
                     s.prefs.set("CurrentShortcutSet", PrefValue::Str(set.name.clone()));
                     s.prefs_changed();
                 }
@@ -329,10 +329,10 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 }
                 if p.has("command") || p.has("tool") {
                     let list: Vec<String> = p.parse("shortcuts")?.unwrap_or_default();
-                    let keys: Vec<crate::shortcuts::Shortcut> = list.iter().map(|k| crate::shortcuts::Shortcut::parse(k).ok_or_else(|| bad(format!("unbekanntes Kürzel „{k}“")))).collect::<Result<_>>()?;
+                    let keys: Vec<crate::shortcuts::Shortcut> = list.iter().map(|k| crate::shortcuts::Shortcut::parse(k).ok_or_else(|| bad(fp_i18n::tr!("err-unknown-shortcut", name = k.as_str())))).collect::<Result<_>>()?;
                     let cur = s.shortcut_set();
                     if crate::shortcuts::builtin_set(&cur.name).is_some() {
-                        return Err(bad("mitgelieferte Sets sind schreibgeschützt: zuerst mit „duplicate“ ein eigenes Set anlegen".into()));
+                        return Err(bad(fp_i18n::t("err-builtin-set-readonly")));
                     }
                     let mut set = cur.clone();
                     if let Some(c) = p.opt_str("command")? {
@@ -342,7 +342,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                         set.set_command(&key, keys.clone()).map_err(bad)?;
                     }
                     if let Some(t) = p.opt_str("tool")? {
-                        let id = crate::tools::by_name(&t).ok_or_else(|| bad(format!("unbekanntes Werkzeug „{t}“")))?;
+                        let id = crate::tools::by_name(&t).ok_or_else(|| bad(fp_i18n::tr!("err-unknown-tool", name = t.as_str())))?;
                         let guid = crate::tools::info(id).map(|i| i.guid).unwrap_or_default();
                         set.set_tool(guid, keys).map_err(bad)?;
                     }

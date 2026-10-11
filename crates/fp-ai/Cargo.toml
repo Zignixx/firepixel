@@ -12,6 +12,8 @@ fp-raster = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
+# Mehrsprachige Fehlermeldungen
+fp-i18n = { workspace = true }
 rayon = { workspace = true }
 # Matrixmultiplikation (reines Rust, SIMD zur Laufzeit gewählt, sichere API)
 faer = { version = "0.24", default-features = false, features = ["std", "rayon"] }

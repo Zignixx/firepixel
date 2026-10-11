@@ -297,7 +297,7 @@ pub fn insert_element(doc: &mut Document, page: usize, frame: usize, layer: Opti
             // Seite ohne passende Ebene: eine anlegen
             let frames = doc.pages.get(page)?.root.frame_count as usize;
             let mut ids = std::mem::take(&mut doc.ids);
-            let l = Layer::new(&mut ids, if is_web { "Webebene" } else { "Ebene 1" }, if is_web { LayerKind::Web } else { LayerKind::Normal }, frames);
+            let l = Layer::new(&mut ids, &if is_web { fp_i18n::t("msg-default-web-layer") } else { fp_i18n::tr!("msg-default-layer", n = "1") }, if is_web { LayerKind::Web } else { LayerKind::Normal }, frames);
             doc.ids = ids;
             let id = l.id;
             let p = doc.page_mut(page)?;

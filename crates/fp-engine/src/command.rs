@@ -163,22 +163,30 @@ pub enum Requirement {
 }
 
 impl Requirement {
-    /// Deutsche Begründung, falls nicht erfüllt.
+    /// Schlüssel der Begründung (`meldungen.ftl`), falls nicht erfüllt.
+    pub fn reason_key(&self) -> &'static str {
+        match self {
+            Requirement::Document => "err-req-document",
+            Requirement::Selection | Requirement::SelectionOrPixels => "err-req-selection",
+            Requirement::MinSelected(_) => "err-req-min-selected",
+            Requirement::PixelSelection => "err-req-pixel-selection",
+            Requirement::AllOf(_) => "err-req-all-of",
+            Requirement::AnyOf(_) => "err-req-any-of",
+            Requirement::Clipboard => "err-req-clipboard",
+            Requirement::CanUndo => "err-req-can-undo",
+            Requirement::CanRedo => "err-req-can-redo",
+            Requirement::HasPath => "err-req-has-path",
+            Requirement::MultiplePages => "err-req-multiple-pages",
+            Requirement::MultipleFrames => "err-req-multiple-frames",
+        }
+    }
+
+    /// Begründung in der aktuellen Sprache, falls nicht erfüllt.
     pub fn reason(&self) -> String {
         match self {
-            Requirement::Document => "kein Dokument geöffnet".into(),
-            Requirement::Selection => "keine Auswahl".into(),
-            Requirement::MinSelected(n) => format!("mindestens {n} Objekte auswählen"),
-            Requirement::PixelSelection => "keine Pixelauswahl".into(),
-            Requirement::SelectionOrPixels => "keine Auswahl".into(),
-            Requirement::AllOf(k) => format!("Auswahl enthält nicht nur {k:?}"),
-            Requirement::AnyOf(k) => format!("Auswahl enthält kein {k:?}"),
-            Requirement::Clipboard => "Zwischenablage leer".into(),
-            Requirement::CanUndo => "nichts rückgängig zu machen".into(),
-            Requirement::CanRedo => "nichts zu wiederholen".into(),
-            Requirement::HasPath => "Dokument wurde noch nicht gespeichert".into(),
-            Requirement::MultiplePages => "nur eine Seite".into(),
-            Requirement::MultipleFrames => "nur ein Status".into(),
+            Requirement::MinSelected(n) => fp_i18n::tr!(self.reason_key(), n = n.to_string()),
+            Requirement::AllOf(k) | Requirement::AnyOf(k) => fp_i18n::tr!(self.reason_key(), kind = format!("{k:?}")),
+            _ => fp_i18n::t(self.reason_key()),
         }
     }
 }
@@ -215,6 +223,30 @@ pub struct CommandInfo {
 }
 
 impl CommandInfo {
+    /// Name des Verlaufsschritts in der aktuellen Sprache. In der Ausgangssprache (Deutsch) genau
+    /// [`CommandInfo::label`]; sonst das Attribut `cmd-….step` (falls vorhanden), der Menütext
+    /// `cmd-…` ohne Zugriffstaste und „…“, bei Filtern `filter-…`, zuletzt `label`.
+    pub fn step_label(&self) -> String {
+        if fp_i18n::current_language() == fp_i18n::SOURCE_LANG {
+            return self.label.clone();
+        }
+        let key = fp_i18n::command_key(&self.name);
+        let step = format!("{key}.step");
+        if fp_i18n::has(&step) {
+            return fp_i18n::t(&step);
+        }
+        if self.name.starts_with("filter.") {
+            let fk = self.name.replace('.', "-");
+            if fp_i18n::has(&fk) {
+                return fp_i18n::t(&fk);
+            }
+        }
+        if fp_i18n::has(&key) {
+            return plain_label(&fp_i18n::t(&key));
+        }
+        self.label.clone()
+    }
+
     /// JSON-Schema der Parameter (für MCP `describe_command`).
     pub fn params_schema(&self) -> Value {
         let mut props = Map::new();
@@ -232,6 +264,14 @@ impl CommandInfo {
     pub fn shortcuts<'a>(&self, set: &'a ShortcutSet) -> &'a [Shortcut] {
         self.fw_cmd.as_deref().map(|c| set.command(c)).unwrap_or(&[])
     }
+}
+
+/// Menütext ohne Zugriffstaste (`&`, `&&` = `&`) und ohne abschließendes „…“/„...“.
+pub fn plain_label(menu_text: &str) -> String {
+    let s = menu_text.replace("&&", "\u{1}").replace('&', "").replace('\u{1}', "&");
+    let s = s.trim_end();
+    let s = s.strip_suffix('…').or_else(|| s.strip_suffix("...")).unwrap_or(s);
+    s.trim_end().to_string()
 }
 
 /// Art der Wirkung eines Befehls (steuert Verlauf und Ereignisse).
@@ -640,8 +680,9 @@ impl Params {
         Params { command: command.into(), value }
     }
 
-    fn err(&self, msg: String) -> EngineError {
-        EngineError::InvalidParams { name: self.command.clone(), message: msg }
+    /// Parameterfehler mit Schlüssel `err-param-…` (Platzhalter `$key` = Parametername).
+    fn err(&self, msg_key: &str, key: &str) -> EngineError {
+        EngineError::InvalidParams { name: self.command.clone(), message: fp_i18n::tr!(msg_key, key = key) }
     }
 
     /// Roher Wert.
@@ -658,16 +699,16 @@ impl Params {
     pub fn opt_f64(&self, key: &str) -> Result<Option<f64>> {
         match self.get(key) {
             None => Ok(None),
-            Some(Value::Number(n)) => n.as_f64().filter(|v| v.is_finite()).map(Some).ok_or_else(|| self.err(format!("{key}: ungültige Zahl"))),
-            Some(Value::String(s)) => s.trim().parse::<f64>().ok().filter(|v| v.is_finite()).map(Some).ok_or_else(|| self.err(format!("{key}: keine Zahl"))),
+            Some(Value::Number(n)) => n.as_f64().filter(|v| v.is_finite()).map(Some).ok_or_else(|| self.err("err-param-bad-number", key)),
+            Some(Value::String(s)) => s.trim().parse::<f64>().ok().filter(|v| v.is_finite()).map(Some).ok_or_else(|| self.err("err-param-not-number", key)),
             Some(Value::Bool(b)) => Ok(Some(*b as i32 as f64)),
-            Some(_) => Err(self.err(format!("{key}: Zahl erwartet"))),
+            Some(_) => Err(self.err("err-param-number-expected", key)),
         }
     }
 
     /// Zahl (Pflicht).
     pub fn f64(&self, key: &str) -> Result<f64> {
-        self.opt_f64(key)?.ok_or_else(|| self.err(format!("{key} fehlt")))
+        self.opt_f64(key)?.ok_or_else(|| self.err("err-param-absent", key))
     }
 
     /// Zahl mit Vorgabe.
@@ -687,13 +728,13 @@ impl Params {
 
     /// Ganzzahl (Pflicht).
     pub fn i64(&self, key: &str) -> Result<i64> {
-        self.opt_i64(key)?.ok_or_else(|| self.err(format!("{key} fehlt")))
+        self.opt_i64(key)?.ok_or_else(|| self.err("err-param-absent", key))
     }
 
     /// Index ≥ 0 (Pflicht).
     pub fn usize(&self, key: &str) -> Result<usize> {
         let v = self.i64(key)?;
-        usize::try_from(v).map_err(|_| self.err(format!("{key}: negativ")))
+        usize::try_from(v).map_err(|_| self.err("err-param-negative", key))
     }
 
     /// Wahrheitswert mit Vorgabe.
@@ -705,9 +746,9 @@ impl Params {
             Some(Value::String(s)) => match s.as_str() {
                 "true" | "1" => Ok(true),
                 "false" | "0" => Ok(false),
-                _ => Err(self.err(format!("{key}: true/false erwartet"))),
+                _ => Err(self.err("err-param-bool-expected", key)),
             },
-            Some(_) => Err(self.err(format!("{key}: true/false erwartet"))),
+            Some(_) => Err(self.err("err-param-bool-expected", key)),
         }
     }
 
@@ -723,13 +764,13 @@ impl Params {
             Some(Value::String(s)) => Ok(Some(s.clone())),
             Some(Value::Number(n)) => Ok(Some(n.to_string())),
             Some(Value::Bool(b)) => Ok(Some(b.to_string())),
-            Some(_) => Err(self.err(format!("{key}: Text erwartet"))),
+            Some(_) => Err(self.err("err-param-text-expected", key)),
         }
     }
 
     /// Text (Pflicht).
     pub fn str(&self, key: &str) -> Result<String> {
-        self.opt_str(key)?.ok_or_else(|| self.err(format!("{key} fehlt")))
+        self.opt_str(key)?.ok_or_else(|| self.err("err-param-absent", key))
     }
 
     /// Farbe (optional): `#rrggbb[aa]`, `rrggbb` oder ARGB-Zahl.
@@ -740,42 +781,42 @@ impl Params {
                 if s.eq_ignore_ascii_case("none") || s.eq_ignore_ascii_case("transparent") {
                     return Ok(Some(fp_color::Argb(0x00ff_ffff)));
                 }
-                fp_color::Rgba8::parse_hex(s).map(|c| Some(c.to_argb())).ok_or_else(|| self.err(format!("{key}: Farbe #rrggbb erwartet")))
+                fp_color::Rgba8::parse_hex(s).map(|c| Some(c.to_argb())).ok_or_else(|| self.err("err-param-hex-color-expected", key))
             }
-            Some(Value::Number(n)) => n.as_u64().map(|v| Some(fp_color::Argb(v as u32))).ok_or_else(|| self.err(format!("{key}: Farbe erwartet"))),
-            Some(_) => Err(self.err(format!("{key}: Farbe erwartet"))),
+            Some(Value::Number(n)) => n.as_u64().map(|v| Some(fp_color::Argb(v as u32))).ok_or_else(|| self.err("err-param-color-expected", key)),
+            Some(_) => Err(self.err("err-param-color-expected", key)),
         }
     }
 
     /// Farbe (Pflicht).
     pub fn color(&self, key: &str) -> Result<fp_color::Argb> {
-        self.opt_color(key)?.ok_or_else(|| self.err(format!("{key} fehlt")))
+        self.opt_color(key)?.ok_or_else(|| self.err("err-param-absent", key))
     }
 
     /// Punkt (optional): `{x, y}` oder `[x, y]`.
     pub fn opt_point(&self, key: &str) -> Result<Option<fp_geom::Point>> {
         match self.get(key) {
             None => Ok(None),
-            Some(v) => parse_point(v).map(Some).ok_or_else(|| self.err(format!("{key}: Punkt {{x, y}} erwartet"))),
+            Some(v) => parse_point(v).map(Some).ok_or_else(|| self.err("err-param-point-expected", key)),
         }
     }
 
     /// Punkt (Pflicht).
     pub fn point(&self, key: &str) -> Result<fp_geom::Point> {
-        self.opt_point(key)?.ok_or_else(|| self.err(format!("{key} fehlt")))
+        self.opt_point(key)?.ok_or_else(|| self.err("err-param-absent", key))
     }
 
     /// Rechteck (optional): `{left, top, right, bottom}`, `{x, y, width, height}` oder `[l, t, r, b]`.
     pub fn opt_rect(&self, key: &str) -> Result<Option<fp_geom::Rect>> {
         match self.get(key) {
             None => Ok(None),
-            Some(v) => parse_rect(v).map(Some).ok_or_else(|| self.err(format!("{key}: Rechteck erwartet"))),
+            Some(v) => parse_rect(v).map(Some).ok_or_else(|| self.err("err-param-rect-expected", key)),
         }
     }
 
     /// Rechteck (Pflicht).
     pub fn rect(&self, key: &str) -> Result<fp_geom::Rect> {
-        self.opt_rect(key)?.ok_or_else(|| self.err(format!("{key} fehlt")))
+        self.opt_rect(key)?.ok_or_else(|| self.err("err-param-absent", key))
     }
 
     /// Element-IDs (optional).
@@ -784,20 +825,20 @@ impl Params {
             None => Ok(None),
             Some(Value::Array(a)) => a
                 .iter()
-                .map(|v| v.as_u64().map(fp_model::ElementId).ok_or_else(|| self.err(format!("{key}: ganze Zahlen erwartet"))))
+                .map(|v| v.as_u64().map(fp_model::ElementId).ok_or_else(|| self.err("err-param-ints-expected", key)))
                 .collect::<Result<Vec<_>>>()
                 .map(Some),
-            Some(Value::Number(n)) => n.as_u64().map(|v| Some(vec![fp_model::ElementId(v)])).ok_or_else(|| self.err(format!("{key}: ID erwartet"))),
-            Some(_) => Err(self.err(format!("{key}: Liste von IDs erwartet"))),
+            Some(Value::Number(n)) => n.as_u64().map(|v| Some(vec![fp_model::ElementId(v)])).ok_or_else(|| self.err("err-param-id-expected", key)),
+            Some(_) => Err(self.err("err-param-ids-expected", key)),
         }
     }
 
     /// Liste von Punkten (`[[x, y], …]` oder `[{x, y}, …]`).
     pub fn points(&self, key: &str) -> Result<Vec<fp_geom::Point>> {
         match self.get(key) {
-            Some(Value::Array(a)) => a.iter().map(|v| parse_point(v).ok_or_else(|| self.err(format!("{key}: Punktliste erwartet")))).collect(),
-            None => Err(self.err(format!("{key} fehlt"))),
-            Some(_) => Err(self.err(format!("{key}: Punktliste erwartet"))),
+            Some(Value::Array(a)) => a.iter().map(|v| parse_point(v).ok_or_else(|| self.err("err-param-points-expected", key))).collect(),
+            None => Err(self.err("err-param-absent", key)),
+            Some(_) => Err(self.err("err-param-points-expected", key)),
         }
     }
 
@@ -811,7 +852,7 @@ impl Params {
                 Err(e) => {
                     let mut w = v.clone();
                     crate::commands::whole_numbers_as_ints(&mut w);
-                    serde_json::from_value(w).map(Some).map_err(|_| self.err(format!("{key}: {e}")))
+                    serde_json::from_value(w).map(Some).map_err(|_| EngineError::InvalidParams { name: self.command.clone(), message: fp_i18n::tr!("err-param-detail", key = key, detail = e.to_string()) })
                 }
             },
         }
@@ -847,13 +888,13 @@ pub fn parse_rect(v: &Value) -> Option<fp_geom::Rect> {
 /// Prüft die Pflichtparameter und Grundtypen gegen die Beschreibung.
 pub fn validate(info: &CommandInfo, p: &Params) -> Result<()> {
     if !(p.value.is_null() || p.value.is_object()) {
-        return Err(EngineError::InvalidParams { name: info.name.clone(), message: "Parameter müssen ein JSON-Objekt sein".into() });
+        return Err(EngineError::InvalidParams { name: info.name.clone(), message: fp_i18n::t("err-param-not-object") });
     }
     for spec in &info.params {
         let v = p.get(&spec.name);
         let Some(v) = v else {
             if spec.required {
-                return Err(EngineError::InvalidParams { name: info.name.clone(), message: format!("Pflichtparameter „{}“ fehlt", spec.name) });
+                return Err(EngineError::InvalidParams { name: info.name.clone(), message: fp_i18n::tr!("err-param-missing", key = spec.name.as_str()) });
             }
             continue;
         };
@@ -874,7 +915,7 @@ pub fn validate(info: &CommandInfo, p: &Params) -> Result<()> {
             ParamKind::Json => true,
         };
         if !ok {
-            return Err(EngineError::InvalidParams { name: info.name.clone(), message: format!("Parameter „{}“ hat einen ungültigen Wert", spec.name) });
+            return Err(EngineError::InvalidParams { name: info.name.clone(), message: fp_i18n::tr!("err-param-invalid", key = spec.name.as_str()) });
         }
     }
     Ok(())

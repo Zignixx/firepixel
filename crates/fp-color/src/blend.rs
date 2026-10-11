@@ -139,6 +139,12 @@ impl BlendMode {
         BlendMode::ALL.iter().find(|(m, _)| *m == self).map(|(_, n)| *n)
     }
 
+    /// Schlüssel des Anzeigenamens in fp-i18n (`filter.ftl`): `blend-` + [`BlendMode::name`],
+    /// z. B. `blend-multiply`; `None` für interne oder unbekannte Nummern.
+    pub fn label_key(self) -> Option<String> {
+        self.name().map(|n| format!("blend-{n}"))
+    }
+
     /// Modus zum Namen (Groß-/Kleinschreibung egal).
     pub fn from_name(name: &str) -> Option<BlendMode> {
         BlendMode::ALL.iter().find(|(_, n)| n.eq_ignore_ascii_case(name)).map(|(m, _)| *m)

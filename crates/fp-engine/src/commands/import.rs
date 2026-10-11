@@ -138,7 +138,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                     let doc = Arc::make_mut(&mut d.doc);
                     let mut els = import_elements(doc, &res.document);
                     if els.is_empty() {
-                        return Err(EngineError::Failed("die Datei enthält keine Objekte".into()));
+                        return Err(EngineError::Failed(fp_i18n::t("err-file-no-objects")));
                     }
                     if let Some(at) = at {
                         let b = els.iter().filter_map(|e| docops::element_bounds(doc, e)).reduce(|a, b| a.union(&b));
@@ -156,7 +156,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                     }
                     new_ids.reverse();
                     d.selection.set(new_ids.clone());
-                    Ok(CommandOutput::doc_with(json!({"ids": super::ids_json(&new_ids), "format": format!("{:?}", res.format), "warnings": res.warnings})).labeled("Importieren"))
+                    Ok(CommandOutput::doc_with(json!({"ids": super::ids_json(&new_ids), "format": format!("{:?}", res.format), "warnings": res.warnings})).labeled(fp_i18n::t("msg-step-import")))
                 })
             }),
     );
