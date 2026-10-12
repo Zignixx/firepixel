@@ -40,6 +40,13 @@ dlg-canvas-white = Weiß
 dlg-canvas-transparent = Transparent
 dlg-canvas-custom = Benutzerdefiniert:
 dlg-new-doc-templates = Vorlagen...
+# Zugriffstasten wie im Original (& vor dem Buchstaben; ohne & = sichtbarer Text, PM-5 D01)
+dlg-new-doc-width-ak = &Breite:
+dlg-new-doc-height-ak = &Höhe:
+dlg-new-doc-resolution-ak = &Auflösung:
+dlg-canvas-white-ak = We&iß
+dlg-canvas-transparent-ak = &Transparent
+dlg-canvas-custom-ak = Be&nutzerdefiniert:
 dlg-new-from-template = Neu von Vorlage
 ## Interpolation (Voreinstellungen, Bildgröße)
 dlg-interp-bicubic = Bikubisch

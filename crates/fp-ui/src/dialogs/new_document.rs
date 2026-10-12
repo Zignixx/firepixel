@@ -2,7 +2,7 @@
 
 use super::{dialog_frame, dlu, dlu_rect, extra_w, group_box, max_text_w, push_button, t, text_w, DialogClose};
 use crate::app_state::{Action, AppState};
-use egui::{vec2, Color32, Rect, Sense, Ui};
+use egui::{vec2, Color32, Id, Rect, Sense, Ui};
 use serde_json::json;
 
 /// Einheiten (Schlüssel, auch in Leinwand-/Bildgröße).
@@ -142,6 +142,19 @@ fn combo(ui: &mut Ui, rect: Rect, id: &str, items: &[&str], sel: &mut usize) {
     });
 }
 
+/// Unterstreicht die Zugriffstaste eines links ausgerichteten, senkrecht mittigen Texts (Optionsfelder
+/// zeichnen ihre Beschriftung selbst, ohne „&“).
+fn underline_access(ui: &Ui, left_center: egui::Pos2, raw: &str) {
+    let Some(i) = raw.find('&') else { return };
+    let Some(ch) = raw[i + 1..].chars().next() else { return };
+    let theme = crate::theme::Theme::current(ui.ctx());
+    let font = theme.ui_font();
+    let x0 = left_center.x + text_w(ui.ctx(), &raw[..i]);
+    let x1 = x0 + text_w(ui.ctx(), &ch.to_string());
+    let y = left_center.y + font.size * 0.55;
+    ui.painter().line_segment([egui::pos2(x0, y), egui::pos2(x1, y)], egui::Stroke::new(1.0, theme.colors.text));
+}
+
 /// Zeigt den Dialog.
 pub fn show(ctx: &egui::Context, st: &mut AppState) {
     let Some(mut d) = st.dialogs.new_document.clone() else { return };
@@ -150,9 +163,13 @@ pub fn show(ctx: &egui::Context, st: &mut AppState) {
     // Texte der aktuellen Sprache; längere Texte schieben die Spalten nach rechts (Deutsch: wie bisher)
     let units: Vec<String> = UNITS.iter().map(|k| t(k)).collect();
     let res_units: Vec<String> = RES_UNITS.iter().map(|k| t(k)).collect();
-    let labs = [t("dlg-new-doc-width"), t("dlg-new-doc-height"), t("dlg-new-doc-resolution")];
+    // Zugriffstasten wie im Original (&Breite, &Höhe, &Auflösung, We&iß, &Transparent,
+    // Be&nutzerdefiniert, PM-5 D01): Texte mit „&“, Lage und Breite ohne
+    let labs_ak = [t("dlg-new-doc-width-ak"), t("dlg-new-doc-height-ak"), t("dlg-new-doc-resolution-ak")];
+    let radios_ak = [t("dlg-canvas-white-ak"), t("dlg-canvas-transparent-ak"), t("dlg-canvas-custom-ak")];
+    let labs = labs_ak.clone().map(|s| s.replace('&', ""));
     let wh = [t("dlg-short-w"), t("dlg-short-h")];
-    let radios = [t("dlg-canvas-white"), t("dlg-canvas-transparent"), t("dlg-canvas-custom")];
+    let radios = radios_ak.clone().map(|s| s.replace('&', ""));
     let (tmpl_l, ok_l, cancel_l) = (t("dlg-new-doc-templates"), t("btn-ok"), t("btn-cancel"));
     let all_units: Vec<&str> = units.iter().chain(res_units.iter()).map(|s| s.as_str()).collect();
     let dx = extra_w(ctx, &[&labs[0], &labs[1], &labs[2]], dlu(75.0 - 12.0, 0.0).x);
@@ -187,17 +204,36 @@ pub fn show(ctx: &egui::Context, st: &mut AppState) {
             let rect = dlu_rect(o, r);
             let right = dlu_rect(o, [75.0, 0.0, 0.0, 0.0]).left() + dx;
             let left = rect.left().min(right - text_w(ui.ctx(), text));
+            let text = super::access_key_text(ui, text, true);
             super::put_left(ui, Rect::from_min_size(egui::pos2(left, rect.top()), vec2(right - left + 2.0, rect.height())), egui::Label::new(text).extend());
         };
-        right_label(ui, [41.0, 21.0, 34.0, 10.0], &labs[0]);
-        right_label(ui, [43.0, 38.0, 32.0, 10.0], &labs[1]);
-        right_label(ui, [26.0, 55.0, 49.0, 11.0], &labs[2]);
+        right_label(ui, [41.0, 21.0, 34.0, 10.0], &labs_ak[0]);
+        right_label(ui, [43.0, 38.0, 32.0, 10.0], &labs_ak[1]);
+        right_label(ui, [26.0, 55.0, 49.0, 11.0], &labs_ak[2]);
+        // Alt+Zugriffstaste: Feld bzw. Optionsfeld wählen (wie unter Windows)
+        let pressed = |ui: &mut Ui, raw: &str| super::access_key(raw).is_some_and(|k| ui.input_mut(|i| i.consume_key(egui::Modifiers::ALT, k)));
+        let mut focus_field = None;
+        for (k, raw) in labs_ak.iter().enumerate() {
+            if pressed(ui, raw) {
+                focus_field = Some(k);
+            }
+        }
+        let mut pick_radio = None;
+        for (k, raw) in radios_ak.iter().enumerate() {
+            if pressed(ui, raw) {
+                pick_radio = Some(k);
+            }
+        }
         let label = |ui: &mut Ui, r: Rect, t: &str| {
             super::put_left(ui, r, egui::Label::new(t).extend());
         };
         // Tab-Folge wie im Original: Breite → Höhe → Auflösung, dann die Einheiten („800 ⇥ 600 ↵“)
-        for (r, s) in [([76.0, 18.0, 31.0, 13.0], &mut d.width), ([76.0, 35.0, 31.0, 13.0], &mut d.height), ([76.0, 52.0, 31.0, 13.0], &mut d.resolution)] {
-            let te = ui.put(rr(o, r), egui::TextEdit::singleline(s));
+        for (k, (r, s)) in [([76.0, 18.0, 31.0, 13.0], &mut d.width), ([76.0, 35.0, 31.0, 13.0], &mut d.height), ([76.0, 52.0, 31.0, 13.0], &mut d.resolution)].into_iter().enumerate() {
+            let te = ui.put(rr(o, r), egui::TextEdit::singleline(s).id(Id::new(("nd-field", k))));
+            if focus_field == Some(k) {
+                te.request_focus();
+                super::select_all(ui.ctx(), te.id, s.chars().count());
+            }
             super::autofocus_field(ui, &te, s.chars().count());
             super::select_on_tab(ui, &te, s.chars().count());
         }
@@ -223,9 +259,16 @@ pub fn show(ctx: &egui::Context, st: &mut AppState) {
                 Rect::from_min_size(rect.min, vec2(rect.width().max(radio_w), rect.height()))
             })
             .collect();
+        if let Some(k) = pick_radio {
+            d.canvas = choices[k];
+            ui.memory_mut(|m| m.request_focus(Id::new("nd-canvas").with(k)));
+        }
         let sel = choices.iter().position(|c| *c == d.canvas).unwrap_or(0);
         if let Some(k) = super::radio_group(ui, "nd-canvas", &rects, &[radios[0].as_str(), radios[1].as_str(), radios[2].as_str()], sel, true) {
             d.canvas = choices[k];
+        }
+        for (r, raw) in rects.iter().zip(radios_ak.iter()) {
+            underline_access(ui, egui::pos2(r.left() + 17.0, r.center().y), raw);
         }
         let sw = dlu_rect(o, [96.0, 116.0, 14.0, 14.0]).translate(vec2(dsw, 0.0));
         let mut child = ui.new_child(egui::UiBuilder::new().max_rect(sw));

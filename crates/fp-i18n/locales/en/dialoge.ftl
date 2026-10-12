@@ -40,6 +40,13 @@ dlg-canvas-white = White
 dlg-canvas-transparent = Transparent
 dlg-canvas-custom = Custom:
 dlg-new-doc-templates = Templates...
+# Access keys (& before the letter; without & = visible text, PM-5 D01)
+dlg-new-doc-width-ak = &Width:
+dlg-new-doc-height-ak = &Height:
+dlg-new-doc-resolution-ak = &Resolution:
+dlg-canvas-white-ak = &White
+dlg-canvas-transparent-ak = &Transparent
+dlg-canvas-custom-ak = &Custom:
 dlg-new-from-template = New from Template
 ## Interpolation (Preferences, Image Size)
 dlg-interp-bicubic = Bicubic
