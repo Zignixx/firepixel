@@ -53,7 +53,7 @@ pub fn import_clipboard(format: &str, data: &[u8], opts: &ImportOptions) -> Resu
             let fmt = detect_format(data, if classify(format) == ClipFormat::Svg { "clip.svg" } else { "" });
             import_format(fmt, format, data, &o)
         }
-        ClipFormat::Other => Err(ImportError::Unsupported(format!("Zwischenablageformat „{format}“ wird nicht unterstützt"))),
+        ClipFormat::Other => Err(ImportError::Unsupported(fp_i18n::tr!("err-import-clipboard-format", name = format.to_string()))),
     }
 }
 

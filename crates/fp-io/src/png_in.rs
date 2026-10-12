@@ -120,7 +120,7 @@ pub fn decode_apng(data: &[u8]) -> Result<Animation> {
         }
     }
     if frames.is_empty() {
-        return Err(ImportError::Corrupt("APNG ohne Einzelbild".into()));
+        return Err(ImportError::Corrupt(fp_i18n::t("err-import-apng-no-frame")));
     }
     let loop_count = if ac.num_plays == 0 { 0 } else if ac.num_plays == 1 { -1 } else { ac.num_plays as i32 - 1 };
     Ok(Animation { width: w, height: h, frames, loop_count, has_transparency: has_t, palette: None })

@@ -5,3 +5,13 @@
 mod i18n_qa_common;
 
 qa_tests!("en");
+
+/// Bilder in dieser Sprache nach `docs\screenshots\phase6_en_*.png` (Hauptfenster je Design,
+/// Menüs, Dialoge, Inspektor; Normal und Dunkel).
+#[test]
+#[ignore]
+fn bilder() {
+    i18n_qa_common::set_lang("en");
+    let rep = i18n_qa_common::images_standard("phase6_en_", None);
+    eprintln!("{}", rep.join("\n"));
+}

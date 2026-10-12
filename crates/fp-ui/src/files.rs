@@ -1,7 +1,8 @@
-//! Datei-Grundfunktionen der Oberfläche: native Dateidialoge (rfd, Windows Common Item Dialog),
+//! Datei-Grundfunktionen der Oberfläche: Dateidialoge (über [crate::file_dialog], ohne Blockieren),
 //! Speichern mit „Speichern unter“-Rückfall, Drag & Drop.
 
 use crate::app_state::{Action, AppState};
+use crate::file_dialog::{self, Request};
 use serde_json::json;
 use std::path::{Path, PathBuf};
 
@@ -20,24 +21,13 @@ pub fn readable_extensions() -> Vec<&'static str> {
 }
 
 /// Filter „Alle lesbaren Formate“, danach je Format (Reihenfolge des Originals) und „Alle Dateien“.
-fn readable_filters(mut d: rfd::FileDialog) -> rfd::FileDialog {
-    d = d.add_filter(fp_i18n::t("ui-filter-all-readable"), &readable_extensions());
-    for r in fp_io::detect::REGISTRY.iter().filter(|r| r.in_file_dialog) {
-        let exts: Vec<&str> = r.extensions.iter().map(|e| e.trim_start_matches('.')).collect();
-        d = d.add_filter(format!("{} ({})", r.name, r.pattern), &exts);
+fn readable_filters(mut r: Request) -> Request {
+    r = r.filter(fp_i18n::t("ui-filter-all-readable"), &readable_extensions());
+    for f in fp_io::detect::REGISTRY.iter().filter(|f| f.in_file_dialog) {
+        r = r.filter(format!("{} ({})", f.name, f.pattern), f.extensions);
     }
-    d.add_filter(fp_i18n::t("ui-filter-all-files"), &["*"])
+    r.filter(fp_i18n::t("ui-filter-all-files"), &["*"])
 }
-
-/// Dateien zum Öffnen wählen (Mehrfachauswahl).
-pub fn pick_open_files(dir: Option<&Path>) -> Vec<PathBuf> {
-    let mut d = readable_filters(rfd::FileDialog::new().set_title(fp_i18n::t("ui-file-open-title")));
-    if let Some(dir) = dir {
-        d = d.set_directory(dir);
-    }
-    d.pick_files().unwrap_or_default()
-}
-
 /// Wie eine Datei unter einem Dateityp von „Speichern unter“ geschrieben wird.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SaveKind {
@@ -82,53 +72,52 @@ pub struct FilePickOverride {
     pub save: Option<PathBuf>,
 }
 
-/// Dateien zum Öffnen wählen (mit [`FilePickOverride`]).
-pub fn pick_open(st: &AppState, dir: Option<&Path>) -> Vec<PathBuf> {
-    match &st.file_override {
-        Some(o) => o.open.clone(),
-        None => pick_open_files(dir),
-    }
+/// Dateien zum Öffnen wählen (Mehrfachauswahl, ohne Blockieren; mit [`FilePickOverride`] sofort).
+pub fn pick_open(st: &mut AppState, dir: Option<&Path>, done: impl FnOnce(&mut AppState, Vec<PathBuf>) + Send + 'static) {
+    let req = readable_filters(Request::open_many(fp_i18n::t("ui-file-open-title"))).dir(dir);
+    file_dialog::request(st, req, done);
 }
 
 /// Eine Datei mit bestimmten Endungen wählen (Importieren, Skript, HTML); mit [`FilePickOverride`]
 /// wird die erste passende vorgegebene Datei genommen.
-pub fn pick_one(st: &AppState, title: &str, filter: &str, exts: &[&str]) -> Option<PathBuf> {
-    let matches = |p: &PathBuf| {
+pub fn pick_one(st: &mut AppState, title: &str, filter: &str, exts: &[&str], done: impl FnOnce(&mut AppState, PathBuf) + Send + 'static) {
+    let owned: Vec<String> = exts.iter().map(|e| e.to_lowercase()).collect();
+    let matches = move |p: &PathBuf| {
         let n = p.to_string_lossy().to_lowercase();
-        exts.iter().any(|e| *e == "*" || n.ends_with(&format!(".{e}")))
+        owned.iter().any(|e| e == "*" || n.ends_with(&format!(".{e}")))
     };
     if let Some(o) = &st.file_override {
-        return o.open.iter().find(|p| matches(p)).cloned();
+        if let Some(p) = o.open.iter().find(|p| matches(p)).cloned() {
+            done(st, p);
+        }
+        return;
     }
     let dir = st.session.active().and_then(|d| d.path.as_ref()).and_then(|p| p.parent().map(Path::to_path_buf));
-    let mut d = rfd::FileDialog::new().set_title(title).add_filter(filter, exts).add_filter(fp_i18n::t("ui-filter-all-files"), &["*"]);
-    if let Some(dir) = dir {
-        d = d.set_directory(dir);
-    }
-    d.pick_file()
+    let req = Request::open(title).filter(filter, exts).filter(fp_i18n::t("ui-filter-all-files"), &["*"]).dir(dir.as_deref());
+    file_dialog::request(st, req, move |st, r| {
+        if let Some(p) = r.into_iter().next() {
+            done(st, p);
+        }
+    });
 }
 
-/// Speicherziel wählen (mit [`FilePickOverride`]).
-pub fn pick_save(st: &AppState, title: &str, default_name: &str, dir: Option<&Path>) -> Option<PathBuf> {
-    match &st.file_override {
-        Some(o) => o.save.clone().map(ensure_fw_png),
-        None => pick_save_path(title, default_name, dir),
+/// Speicherziel wählen (Dateitypen von „Speichern unter“, ohne Blockieren; mit [`FilePickOverride`]
+/// sofort). `done` läuft nur, wenn ein Ziel gewählt wurde; `cancelled` sonst.
+pub fn pick_save(st: &mut AppState, title: &str, default_name: &str, dir: Option<&Path>, done: impl FnOnce(&mut AppState, Option<PathBuf>) + Send + 'static) {
+    if let Some(o) = &st.file_override {
+        let p = o.save.clone().map(ensure_fw_png);
+        done(st, p);
+        return;
     }
-}
-
-/// Ziel zum Speichern wählen.
-pub fn pick_save_path(title: &str, default_name: &str, dir: Option<&Path>) -> Option<PathBuf> {
-    let mut d = rfd::FileDialog::new().set_title(title).set_file_name(default_name);
+    let mut req = Request::save(title, default_name).dir(dir);
     for (label, exts, _) in SAVE_TYPES {
-        d = d.add_filter(*label, exts);
+        req = req.filter(*label, exts);
     }
-    if let Some(dir) = dir {
-        d = d.set_directory(dir);
-    }
-    let p = d.save_file()?;
-    Some(if save_kind(&p) == SaveKind::FwPng { ensure_fw_png(p) } else { p })
+    file_dialog::request(st, req, move |st, r| {
+        let p = r.into_iter().next().map(|p| if save_kind(&p) == SaveKind::FwPng { ensure_fw_png(p) } else { p });
+        done(st, p);
+    });
 }
-
 /// Hängt `.fw.png` an (wie das Kästchen „.fw.png anhängen“ des Originals, Vorgabe an): aus
 /// `name` und `name.png` wird `name.fw.png`.
 pub fn ensure_fw_png(p: PathBuf) -> PathBuf {
@@ -156,26 +145,39 @@ pub fn suggested_name(title: &str) -> String {
     }
 }
 
-/// Speichert das aktive Dokument; ohne Dateinamen mit „Speichern unter“. Liefert `true`, wenn
-/// gespeichert wurde.
-pub fn save_active(st: &mut AppState, force_dialog: bool) -> bool {
-    let Some(d) = st.session.active() else { return false };
+/// Speichert das aktive Dokument; ohne Dateinamen mit „Speichern unter“ (ohne Blockieren). `done`
+/// bekommt `true`, wenn gespeichert wurde.
+pub fn save_active(st: &mut AppState, force_dialog: bool, done: impl FnOnce(&mut AppState, bool) + Send + 'static) {
+    let Some(d) = st.session.active() else {
+        done(st, false);
+        return;
+    };
     let has_path = d.path.is_some();
     let title = d.title.clone();
+    let id = d.id;
     let dir = d.path.as_ref().and_then(|p| p.parent().map(Path::to_path_buf));
-    let params = if has_path && !force_dialog {
-        json!({})
-    } else {
-        match pick_save(st, &fp_i18n::t("ui-file-save-as-title"), &suggested_name(&title), dir.as_deref()) {
-            Some(p) => json!({ "path": p.to_string_lossy() }),
-            None => return false,
-        }
-    };
+    if has_path && !force_dialog {
+        let ok = write_active(st, None);
+        done(st, ok);
+        return;
+    }
+    pick_save(st, &fp_i18n::t("ui-file-save-as-title"), &suggested_name(&title), dir.as_deref(), move |st, p| {
+        // das Dokument kann während des Dialogs gewechselt haben: wieder aktivieren
+        let ok = match p {
+            Some(p) if st.session.activate(id).is_ok() => write_active(st, Some(p)),
+            _ => false,
+        };
+        done(st, ok);
+    });
+}
+
+/// Schreibt das aktive Dokument (`None` = unter seinem Namen).
+fn write_active(st: &mut AppState, path: Option<PathBuf>) -> bool {
     // anderer Dateityp: reduziert exportieren (Kopie, das Dokument behält Namen und Status)
-    if let Some(p) = params.get("path").and_then(|v| v.as_str()).map(PathBuf::from)
-        && save_kind(&p) != SaveKind::FwPng
+    if let Some(p) = &path
+        && save_kind(p) != SaveKind::FwPng
     {
-        let args = match save_kind(&p) {
+        let args = match save_kind(p) {
             SaveKind::Export(f) => json!({ "path": p.to_string_lossy(), "settings": { "format": f } }),
             SaveKind::Style(s) => json!({ "path": p.to_string_lossy(), "style": s }),
             SaveKind::FwPng => json!({}),
@@ -191,7 +193,10 @@ pub fn save_active(st: &mut AppState, force_dialog: bool) -> bool {
             }
         };
     }
-    let name = if params.get("path").is_some() { "file.saveAs" } else { "file.save" };
+    let (name, params) = match &path {
+        Some(p) => ("file.saveAs", json!({ "path": p.to_string_lossy() })),
+        None => ("file.save", json!({})),
+    };
     match st.session.execute(name, params) {
         Ok(_) => true,
         Err(e) => {
@@ -201,6 +206,20 @@ pub fn save_active(st: &mut AppState, force_dialog: bool) -> bool {
     }
 }
 
+/// „Alle speichern“: nacheinander jedes geänderte bzw. unbenannte Dokument (unbenannte fragen nach
+/// einem Namen), danach wieder das vorher aktive; Abbrechen eines Dialogs geht zum nächsten.
+pub fn save_all(st: &mut AppState, mut ids: Vec<fp_engine::DocId>, active: Option<fp_engine::DocId>) {
+    while !ids.is_empty() {
+        let id = ids.remove(0);
+        if st.session.activate(id).is_ok() && st.session.active().is_some_and(|d| d.is_dirty() || d.path.is_none()) {
+            save_active(st, false, move |st, _| save_all(st, ids, active));
+            return;
+        }
+    }
+    if let Some(a) = active {
+        let _ = st.session.activate(a);
+    }
+}
 /// Öffnet eine Datei über das Befehlsregister (Fehler als Meldung).
 pub fn open_path(st: &mut AppState, p: &Path) {
     // schon offen? → aktivieren

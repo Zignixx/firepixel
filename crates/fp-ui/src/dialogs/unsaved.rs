@@ -87,8 +87,12 @@ pub fn show(ctx: &egui::Context, st: &mut AppState) {
     let th = super::wrapped_h(ctx, &text, w - 76.0);
     let r = dialog_frame(ctx, "fp-unsaved", "Firepixel", vec2(w, 120f32.max(20.0 + th + 56.0).ceil()), |ui, body| {
         let theme = crate::theme::Theme::current(ui.ctx());
-        crate::icons::paint(ui.painter(), Rect::from_min_size(body.min + vec2(18.0, 20.0), vec2(28.0, 28.0)), crate::icons::Icon::Info, &crate::icons::IconStyle::new(&theme, None, true));
-        super::put_left(ui, Rect::from_min_size(body.min + vec2(60.0, 20.0), vec2(body.width() - 76.0, th.max(44.0))), egui::Label::new(text.as_str()).wrap());
+        // Gestaltung (docs\DESIGN.md §3, Rückfrage): Warnsymbol 32 px, kurzer Text mittig daneben
+        let icon = Rect::from_min_size(body.min + vec2(16.0, 18.0), vec2(32.0, 32.0));
+        crate::ui_kit::paint_icon(ui.painter(), icon, crate::ui_kit::KitIcon::Warning, &crate::icons::IconStyle::new(&theme, None, true));
+        let ty = if th < icon.height() { icon.center().y - th / 2.0 } else { icon.top() };
+        super::put_left(ui, Rect::from_min_size(egui::pos2(body.left() + 60.0, ty), vec2(body.width() - 76.0, th.max(20.0) + 4.0)), egui::Label::new(text.as_str()).wrap());
+        crate::ui_kit::hline(ui.painter(), body.x_range(), body.bottom() - 46.0, &theme);
         let b = super::button_row(ui.ctx(), body.right() - 12.0, body.bottom() - 34.0, &[&yes, &no, &cancel], 76.0, 23.0, 6.0);
         if push_button(ui, b[0], &yes, true, true) || access(ui, super::access_key(&yes)) {
             answer = Some(0);
@@ -106,14 +110,18 @@ pub fn show(ctx: &egui::Context, st: &mut AppState) {
     match answer {
         Some(0) => {
             let _ = st.session.activate(id);
-            if crate::files::save_active(st, false) {
-                close_doc(st, id);
-                flow.queue.remove(0);
-                st.dialogs.unsaved = Some(flow);
-            } else {
-                // Speichern abgebrochen → ganzen Ablauf abbrechen
-                st.dialogs.unsaved = None;
-            }
+            // Abfrage ausblenden, solange „Speichern unter“ offen ist (Dateidialog blockiert nicht)
+            st.dialogs.unsaved = None;
+            crate::files::save_active(st, false, move |st, ok| {
+                if ok {
+                    close_doc(st, id);
+                    flow.queue.remove(0);
+                    st.dialogs.unsaved = Some(flow);
+                } else {
+                    // Speichern abgebrochen → ganzen Ablauf abbrechen
+                    st.dialogs.unsaved = None;
+                }
+            });
         }
         Some(1) => {
             close_doc(st, id);

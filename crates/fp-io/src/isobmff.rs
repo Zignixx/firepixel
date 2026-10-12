@@ -24,7 +24,7 @@ impl<'a> Rd<'a> {
         Rd { d, p: 0 }
     }
     fn bytes(&mut self, n: usize) -> Result<&'a [u8]> {
-        let end = self.p.checked_add(n).ok_or_else(|| corrupt("Länge"))?;
+        let end = self.p.checked_add(n).ok_or_else(|| corrupt(&fp_i18n::t("err-import-length")))?;
         let s = self.d.get(self.p..end).ok_or_else(|| corrupt("Box zu kurz"))?;
         self.p = end;
         Ok(s)
@@ -53,7 +53,7 @@ impl<'a> Rd<'a> {
             2 => Ok(self.u16()? as u64),
             4 => Ok(self.u32()? as u64),
             8 => self.u64(),
-            _ => Err(corrupt("Feldbreite")),
+            _ => Err(corrupt(&fp_i18n::t("err-import-field-width"))),
         }
     }
     fn fourcc(&mut self) -> Result<[u8; 4]> {
@@ -104,7 +104,7 @@ pub fn boxes(d: &[u8]) -> Result<Vec<BoxRef<'_>>> {
             hdr += 16;
         }
         if size < hdr as u64 || size > (d.len() - p) as u64 {
-            return Err(corrupt(&format!("Box „{}“ mit falscher Länge", String::from_utf8_lossy(&kind))));
+            return Err(corrupt(&fp_i18n::tr!("err-import-box-length", name = String::from_utf8_lossy(&kind).to_string())));
         }
         let size = size as usize;
         out.push(BoxRef { kind, body: &d[p + hdr..p + size] });
@@ -274,12 +274,12 @@ impl<'a> Heif<'a> {
         let src = match loc.method {
             0 => self.file,
             1 => self.idat,
-            _ => return Err(ImportError::Unsupported("HEIF: Item-Konstruktion über Verweise wird nicht unterstützt".into())),
+            _ => return Err(ImportError::Unsupported(fp_i18n::t("err-import-heif-construction"))),
         };
         let mut out = Vec::new();
         for &(off, len) in &loc.extents {
-            let (o, l) = (usize::try_from(off).map_err(|_| corrupt("Versatz"))?, usize::try_from(len).map_err(|_| corrupt("Länge"))?);
-            let end = if l == 0 && loc.extents.len() == 1 { src.len() } else { o.checked_add(l).ok_or_else(|| corrupt("Länge"))? };
+            let (o, l) = (usize::try_from(off).map_err(|_| corrupt(&fp_i18n::t("err-import-offset")))?, usize::try_from(len).map_err(|_| corrupt(&fp_i18n::t("err-import-length")))?);
+            let end = if l == 0 && loc.extents.len() == 1 { src.len() } else { o.checked_add(l).ok_or_else(|| corrupt(&fp_i18n::t("err-import-length")))? };
             out.extend_from_slice(src.get(o..end).ok_or_else(|| corrupt("Item-Daten außerhalb der Datei"))?);
         }
         Ok(out)
@@ -339,7 +339,7 @@ fn parse_iloc(body: &[u8]) -> Result<BTreeMap<u32, Loc>> {
             }
             let off = r.un(off_size)?;
             let len = r.un(len_size)?;
-            extents.push((base.checked_add(off).ok_or_else(|| corrupt("Versatz"))?, len));
+            extents.push((base.checked_add(off).ok_or_else(|| corrupt(&fp_i18n::t("err-import-offset")))?, len));
         }
         out.insert(id, Loc { method, extents });
     }
@@ -547,7 +547,7 @@ pub fn tracks(file: &[u8]) -> Result<Vec<Track>> {
 
 /// Daten eines Samples.
 pub fn sample(file: &[u8], s: (u64, u32)) -> Result<&[u8]> {
-    let o = usize::try_from(s.0).map_err(|_| corrupt("Sample-Versatz"))?;
+    let o = usize::try_from(s.0).map_err(|_| corrupt(&fp_i18n::t("err-import-sample-offset")))?;
     file.get(o..o.saturating_add(s.1 as usize)).ok_or_else(|| corrupt("Sample außerhalb der Datei"))
 }
 

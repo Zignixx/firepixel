@@ -11,6 +11,8 @@ fp-geom = { workspace = true, features = ["serde"] }
 fp-color = { workspace = true, features = ["serde"] }
 serde = { workspace = true }
 thiserror = { workspace = true }
+# Mehrsprachige Fehlermeldungen
+fp-i18n = { workspace = true }
 rayon = { workspace = true }
 
 [dev-dependencies]

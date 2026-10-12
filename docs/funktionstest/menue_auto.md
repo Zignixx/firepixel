@@ -2,15 +2,15 @@
 
 Erzeugt von `crates\fp-ui\tests\gesamt_menu.rs` (`cargo test -p fp-ui --test gesamt_menu`). Nicht von Hand ändern.
 
-**306/306 Einträge ✅**
+**305/310 Einträge ✅**
 
 | Eintrag | Befehl | Ergebnis | Hinweis |
 |---|---|---|---|
 | Datei ▸ Neu | `file.new` | ✅ Dialog | ohne Auswahl |
 | Datei ▸ Neu von Vorlage... | `file.newFromTemplate` | ✅ Ui | ohne Auswahl: Dokument geöffnet/gewechselt |
-| Datei ▸ Öffnen... | `file.open` | ✅ Dialog | ohne Auswahl: Meldung „„C:\Users\ADMINI~1\AppData\Local\Temp\firepixel-gesamttest\14740-25\browser.exe“ konnte nicht geöffnet werden: FW-PNG: keine PNG-Signatur“ |
-| Datei ▸ Bridge durchsuchen... | `file.browseInBridge` | ✅ Ui | ohne Auswahl: Befehl liefert {"files":[{"bytes":2121,"modified":1791748533,"name":"vorlage.fw.png","path":"C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\firepixel-gesamttes – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
-| Datei ▸ Zuletzt geöffnete Dateien ▸ 1 C:\Users\ADMINI~1\AppData\Local\Temp\firepixel-gesamttest\14740-2\vorlage.fw.png | `OpenPath("C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\firepixel-gesamttest\\14740-2\\vorlage.fw.png")` | ✅ Ui | ohne Auswahl: Dokument geöffnet/gewechselt |
+| Datei ▸ Öffnen... | `file.open` | ✅ Dialog | ohne Auswahl: Meldung „„C:\Users\ADMINI~1\AppData\Local\Temp\firepixel-gesamttest\4352-24\browser.exe“ konnte nicht geöffnet werden: FW-PNG: keine PNG-Signatur“ |
+| Datei ▸ Bridge durchsuchen... | `file.browseInBridge` | ✅ Ui | ohne Auswahl: Befehl liefert {"files":[{"bytes":2122,"modified":1791770193,"name":"vorlage.fw.png","path":"C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\firepixel-gesamttes – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
+| Datei ▸ Zuletzt geöffnete Dateien ▸ 1 C:\Users\ADMINI~1\AppData\Local\Temp\firepixel-gesamttest\4352-0\vorlage.fw.png | `OpenPath("C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\firepixel-gesamttest\\4352-0\\vorlage.fw.png")` | ✅ Ui | ohne Auswahl: Dokument geöffnet/gewechselt |
 | Datei ▸ Scannen ▸ Twain importieren... | `file.twainAcquire` | ✅ Ui | ohne Auswahl: Meldung „Bilderfassung: Starten von Fremdprogrammen ist abgeschaltet (FP_NO_SHELL_OPEN)“ |
 | Datei ▸ Scannen ▸ Twain auswählen... | `file.twainSelect` | ✅ Ui | ohne Auswahl: Meldung „Bilderfassung: Starten von Fremdprogrammen ist abgeschaltet (FP_NO_SHELL_OPEN)“ |
 | Datei ▸ Schließen | `file.close` | ✅ Dialog | ohne Auswahl |
@@ -23,23 +23,23 @@ Erzeugt von `crates\fp-ui\tests\gesamt_menu.rs` (`cargo test -p fp-ui --test ges
 | Datei ▸ Importieren... | `file.import` | ✅ Doc | ohne Auswahl |
 | Datei ▸ Exportieren... | `file.export` | ✅ Dialog | ohne Auswahl |
 | Datei ▸ Bildvorschau... | `file.imagePreview` | ✅ Dialog | ohne Auswahl |
-| Datei ▸ Als E-Mail senden ▸ PNG-Datei für Firepixel... | `file.sendToEMail.firepixelPng` | ✅ Ui | ohne Auswahl: Befehl liefert {"attachment":"Unbenannt-2.fw.png","bytes":14085,"eml":"C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\Firepixel\\EMail\\Unbenannt-2.eml"} – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
-| Datei ▸ Als E-Mail senden ▸ Komprimierte JPG-Datei... | `file.sendToEMail.jpegCompressed` | ✅ Ui | ohne Auswahl: Befehl liefert {"attachment":"Unbenannt-2.jpg","bytes":17655,"eml":"C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\Firepixel\\EMail\\Unbenannt-2.eml"} – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
-| Datei ▸ Als E-Mail senden ▸ Exporteinstellungen verwenden... | `file.sendToEMail.useExportSettings` | ✅ Ui | ohne Auswahl: Befehl liefert {"attachment":"Unbenannt-2.gif","bytes":7828,"eml":"C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\Firepixel\\EMail\\Unbenannt-2.eml"} – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
+| Datei ▸ Als E-Mail senden ▸ PNG-Datei für Firepixel... | `file.sendToEMail.firepixelPng` | ✅ Ui | ohne Auswahl: Befehl liefert {"attachment":"Unbenannt-2.fw.png","bytes":13887,"eml":"C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\Firepixel\\EMail\\Unbenannt-2.eml"} – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
+| Datei ▸ Als E-Mail senden ▸ Komprimierte JPG-Datei... | `file.sendToEMail.jpegCompressed` | ✅ Ui | ohne Auswahl: Befehl liefert {"attachment":"Unbenannt-2.jpg","bytes":18282,"eml":"C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\Firepixel\\EMail\\Unbenannt-2.eml"} – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
+| Datei ▸ Als E-Mail senden ▸ Exporteinstellungen verwenden... | `file.sendToEMail.useExportSettings` | ✅ Ui | ohne Auswahl: Befehl liefert {"attachment":"Unbenannt-2.gif","bytes":7804,"eml":"C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\Firepixel\\EMail\\Unbenannt-2.eml"} – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
 | Datei ▸ HTML aktualisieren... | `file.updateHtml` | ✅ Ui | ohne Auswahl: Datei geschrieben |
 | Datei ▸ Datei-Info... | `file.fileInfo` | ✅ Dialog | ohne Auswahl: Meldung „Titel: Unbenannt-2.png Pfad: (nicht gespeichert) Seiten: 2 Symbole: 3 Formatversion: 10“ |
 | Datei ▸ Exportassistent... | `file.exportWizard` | ✅ Dialog | ohne Auswahl |
 | Datei ▸ Batch-Verarbeitung... | `file.batchProcess` | ✅ Dialog | ohne Auswahl |
-| Datei ▸ Vorschau im Browser ▸ Vorschau im Primärbrowser | `file.previewInBrowser.previewInPrimaryBrowser` | ✅ Ui | ohne Auswahl: Befehl liefert {"files":["C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\Firepixel\\Vorschau\\dok2\\Unbenannt-2_r1_c1.gif","C:\\Users\\ADMINI~1\\AppData\\Local – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
-| Datei ▸ Vorschau im Browser ▸ Vorschau im Sekundärbrowser | `file.previewInBrowser.previewInSecondaryBrowser` | ✅ Ui | ohne Auswahl: Befehl liefert {"files":["C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\Firepixel\\Vorschau\\dok2\\Unbenannt-2_r1_c1.gif","C:\\Users\\ADMINI~1\\AppData\\Local – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
-| Datei ▸ Vorschau im Browser ▸ Vorschau aller Seiten im Primärbrowser | `file.previewInBrowser.previewAllPagesInPrimaryBrowser` | ✅ Ui | ohne Auswahl: Befehl liefert {"files":["C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\Firepixel\\Vorschau\\dok2\\Unbenannt-2_s1_r1_c1.gif","C:\\Users\\ADMINI~1\\AppData\\Lo – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
+| Datei ▸ Vorschau im Browser ▸ Vorschau in Standardbrowser | `file.previewInBrowser.previewInPrimaryBrowser` | ✅ Ui | ohne Auswahl: Befehl liefert {"files":["C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\Firepixel\\Vorschau\\dok2\\Unbenannt-2_r1_c1.gif","C:\\Users\\ADMINI~1\\AppData\\Local – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
+| Datei ▸ Vorschau im Browser ▸ Vorschau in | `file.previewInBrowser.previewInSecondaryBrowser` | ❌ NeverAvailable | in keiner Testsituation verfügbar |
+| Datei ▸ Vorschau im Browser ▸ Vorschau aller Seiten in Standardbrowser anzeigen | `file.previewInBrowser.previewAllPagesInPrimaryBrowser` | ✅ Ui | ohne Auswahl: Befehl liefert {"files":["C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\Firepixel\\Vorschau\\dok2\\Unbenannt-2_s1_r1_c1.gif","C:\\Users\\ADMINI~1\\AppData\\Lo – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
 | Datei ▸ Vorschau im Browser ▸ Primärbrowser festlegen... | `file.previewInBrowser.setPrimaryBrowser` | ✅ Ui | ohne Auswahl |
 | Datei ▸ Vorschau im Browser ▸ Sekundärbrowser festlegen... | `file.previewInBrowser.setSecondaryBrowser` | ✅ Ui | ohne Auswahl |
 | Datei ▸ Seite einrichten... | `file.pageSetup` | ✅ Dialog | ohne Auswahl |
 | Datei ▸ Drucken... | `file.print` | ✅ Dialog | ohne Auswahl |
 | Datei ▸ HTML-Einrichtung... | `file.htmlSetup` | ✅ Dialog | ohne Auswahl |
 | Datei ▸ Beenden | `file.exit` | ✅ Dialog | ohne Auswahl |
-| Bearbeiten ▸ Rückgängig | `edit.undo` | ✅ Ui | Pixelauswahl |
+| Bearbeiten ▸ Rückgängig: Rechteck | `edit.undo` | ✅ Ui | Pixelauswahl |
 | Bearbeiten ▸ Wiederholen | `edit.redo` | ✅ Doc | nach Rückgängig |
 | Bearbeiten ▸ Objekt einfügen ▸ Neue Schaltfläche... | `edit.insert.newButton` | ✅ Dialog | ohne Auswahl |
 | Bearbeiten ▸ Objekt einfügen ▸ Neues Symbol... | `edit.insert.newSymbol` | ✅ Dialog | ohne Auswahl |
@@ -84,7 +84,7 @@ Erzeugt von `crates\fp-ui\tests\gesamt_menu.rs` (`cargo test -p fp-ui --test ges
 | Ansicht ▸ Vergrößerung ▸ 1600% | `view.magnification.1600` | ✅ Ui | ohne Auswahl |
 | Ansicht ▸ Vergrößerung ▸ 3200% | `view.magnification.3200` | ✅ Ui | ohne Auswahl |
 | Ansicht ▸ Vergrößerung ▸ 6400% | `view.magnification.6400` | ✅ Ui | ohne Auswahl |
-| Ansicht ▸ Auswahl anpassen | `view.fitSelection` | ✅ Ui | ohne Auswahl |
+| Ansicht ▸ Auswahl anpassen | `view.fitSelection` | ✅ Ui | Rechteck |
 | Ansicht ▸ Alles anpassen | `view.fitAll` | ✅ Ui | ohne Auswahl |
 | Ansicht ▸ Gamma 1.8 | `view.macintoshGamma` | ✅ Ui | ohne Auswahl |
 | Ansicht ▸ Auswahl ausblenden | `view.hideSelection` | ✅ Doc | Rechteck |
@@ -97,7 +97,7 @@ Erzeugt von `crates\fp-ui\tests\gesamt_menu.rs` (`cargo test -p fp-ui --test ges
 | Ansicht ▸ Hilfslinien ▸ Hilfslinien anzeigen | `view.guides.showGuides` | ✅ Ui | ohne Auswahl |
 | Ansicht ▸ Hilfslinien ▸ Hilfslinien sperren | `view.guides.lockGuides` | ✅ Ui | ohne Auswahl |
 | Ansicht ▸ Hilfslinien ▸ An Hilfslinien ausrichten | `view.guides.snapToGuides` | ✅ Ui | ohne Auswahl |
-| Ansicht ▸ Hilfslinien ▸ Hilfslinien entfernen | `view.guides.clearGuides` | ✅ Doc | ohne Auswahl |
+| Ansicht ▸ Hilfslinien ▸ Hilfslinien entfernen | `view.guides.clearGuides` | ❌ NeverAvailable | in keiner Testsituation verfügbar |
 | Ansicht ▸ Intelligente Hilfslinien ▸ Intelligente Hilfslinien anzeigen | `view.smartGuides.showSmartGuides` | ✅ Ui | ohne Auswahl |
 | Ansicht ▸ Intelligente Hilfslinien ▸ An intelligenten Hilfslinien ausrichten | `view.smartGuides.snapToSmartGuides` | ✅ Ui | ohne Auswahl |
 | Ansicht ▸ Hilfslinien für 9-Slice-Skalierung ▸ Hilfslinien sperren | `view.nineSliceScalingGuides.lockGuides` | ✅ Ui | ohne Auswahl |
@@ -107,23 +107,27 @@ Erzeugt von `crates\fp-ui\tests\gesamt_menu.rs` (`cargo test -p fp-ui --test ges
 | Ansicht ▸ Design ▸ Normal | `SetTheme(Normal)` | ✅ Ui | ohne Auswahl |
 | Ansicht ▸ Design ▸ Dunkel | `SetTheme(Dark)` | ✅ Ui | ohne Auswahl |
 | Ansicht ▸ Design ▸ OLED | `SetTheme(Oled)` | ✅ Ui | ohne Auswahl |
+| Ansicht ▸ Sprache ▸ Deutsch | `ui.setLanguage {"code":"de"}` | ✅ Ui | ohne Auswahl |
+| Ansicht ▸ Sprache ▸ English | `ui.setLanguage {"code":"en"}` | ✅ Ui | ohne Auswahl |
+| Ansicht ▸ Sprache ▸ Testsprache (qps) | `ui.setLanguage {"code":"qps"}` | ✅ Ui | ohne Auswahl |
+| Ansicht ▸ Sprache ▸ Sprachordner öffnen… | `ui.openLanguageFolder {}` | ✅ Ui | ohne Auswahl: Meldung „[!! Weitere Sprachen: .ftl-Dateien in C:\Users\Administrator\AppData\Roaming\Firepixel\Sprachen ···································!!]“ |
 | Auswählen ▸ Alles auswählen | `select.all` | ✅ Doc | ohne Auswahl |
 | Auswählen ▸ Auswahl aufheben | `select.none` | ✅ Doc | Rechteck |
 | Auswählen ▸ Gesamtauswahl treffen | `select.superselect` | ✅ Doc | Rechteck + Ellipse |
-| Auswählen ▸ Teilauswahl treffen | `select.subselect` | ✅ Doc | Rechteck + Ellipse |
+| Auswählen ▸ Teilauswahl treffen | `select.subselect` | ✅ Doc | drei Objekte |
 | Auswählen ▸ Ähnliches auswählen | `select.similar` | ✅ Doc | Rechteck + Ellipse |
 | Auswählen ▸ Motiv auswählen | `select.aiSubject` | ✅ Ui | ohne Auswahl |
-| Auswählen ▸ Kante verfeinern... | `select.aiRefineEdge` | ✅ Ui | Pixelauswahl: Meldung „Kante verfeinern: fertig“ |
+| Auswählen ▸ Kante verfeinern... | `select.aiRefineEdge` | ✅ Ui | Pixelauswahl: Meldung „[!! [!! Kante verfeinern ······!!]: fertig ··············!!]“ |
 | Auswählen ▸ Auswahl umkehren | `select.inverse` | ✅ Doc | ohne Auswahl |
-| Auswählen ▸ Weiche Kante… | `select.feather` | ✅ Dialog | Pixelauswahl |
+| Auswählen ▸ Weiche Kante… | `select.feather` | ✅ Dialog | ohne Auswahl |
 | Auswählen ▸ Auswahlrahmen erweitern... | `select.expandMarquee` | ✅ Dialog | Pixelauswahl |
 | Auswählen ▸ Auswahlrahmen verkleinern... | `select.contractMarquee` | ✅ Dialog | Pixelauswahl |
 | Auswählen ▸ Auswahlrahmen begrenzen... | `select.borderMarquee` | ✅ Dialog | Pixelauswahl |
 | Auswählen ▸ Auswahlrahmen glätten... | `select.smoothMarquee` | ✅ Dialog | Pixelauswahl |
 | Auswählen ▸ Auswahlrahmen in Pfad konvertieren | `select.convertMarqueeToPath` | ✅ Doc | Pixelauswahl |
 | Auswählen ▸ Bitmap-Auswahl speichern... | `select.saveBitmapSelection` | ✅ Dialog | Pixelauswahl |
-| Auswählen ▸ Bitmap-Auswahl wiederherstellen... | `select.restoreBitmapSelection` | ✅ Dialog | ohne Auswahl |
-| Auswählen ▸ Bitmap-Auswahl löschen... | `select.deleteBitmapSelection` | ✅ Dialog | ohne Auswahl |
+| Auswählen ▸ Bitmap-Auswahl wiederherstellen... | `select.restoreBitmapSelection` | ❌ NeverAvailable | in keiner Testsituation verfügbar |
+| Auswählen ▸ Bitmap-Auswahl löschen... | `select.deleteBitmapSelection` | ❌ NeverAvailable | in keiner Testsituation verfügbar |
 | Modifizieren ▸ Leinwand ▸ Bildgröße... | `modify.canvas.imageSize` | ✅ Dialog | ohne Auswahl |
 | Modifizieren ▸ Leinwand ▸ Leinwandgröße... | `modify.canvas.canvasSize` | ✅ Dialog | ohne Auswahl |
 | Modifizieren ▸ Leinwand ▸ Leinwandfarbe... | `modify.canvas.canvasColor` | ✅ Dialog | ohne Auswahl |
@@ -138,11 +142,11 @@ Erzeugt von `crates\fp-ui\tests\gesamt_menu.rs` (`cargo test -p fp-ui --test ges
 | Modifizieren ▸ Symbol ▸ In Symbol konvertieren... | `modify.symbol.convertToSymbol` | ✅ Dialog | Rechteck |
 | Modifizieren ▸ Symbol ▸ Symbol bearbeiten | `modify.symbol.editSymbol` | ✅ Ui | Grafiksymbol: Dokument geöffnet/gewechselt |
 | Modifizieren ▸ Symbol ▸ An Position bearbeiten | `modify.symbol.editInPlace` | ✅ Ui | Grafiksymbol: Dokument geöffnet/gewechselt |
-| Modifizieren ▸ Symbol ▸ Instanzen tweenen... | `modify.symbol.tweenInstances` | ✅ Dialog | zwei Instanzen |
+| Modifizieren ▸ Symbol ▸ Instanzen tweenen... | `modify.symbol.tweenInstances` | ✅ Dialog | ohne Auswahl |
 | Modifizieren ▸ Symbol ▸ Teilen | `modify.symbol.breakApart` | ✅ Doc | Grafiksymbol |
 | Modifizieren ▸ Symbol ▸ Symbol austauschen... | `modify.symbol.swapSymbol` | ✅ Dialog | Grafiksymbol |
-| Modifizieren ▸ Popupmenü ▸ Popupmenü hinzufügen... | `modify.popUpMenu.addPopUpMenu` | ✅ Dialog | Segment |
-| Modifizieren ▸ Popupmenü ▸ Popupmenü bearbeiten... | `modify.popUpMenu.editPopUpMenu` | ✅ Dialog | Segment: Meldung „Bitte zuerst ein Segment oder einen Hotspot mit Pop-up-Menü auswählen.“ |
+| Modifizieren ▸ Popupmenü ▸ Popupmenü hinzufügen... | `modify.popUpMenu.addPopUpMenu` | ✅ Dialog | ohne Auswahl |
+| Modifizieren ▸ Popupmenü ▸ Popupmenü bearbeiten... | `modify.popUpMenu.editPopUpMenu` | ✅ Dialog | Segment: Meldung „[!! Bitte zuerst ein Segment oder einen Hotspot mit Pop-up-Menü auswählen. ·························!!]“ |
 | Modifizieren ▸ Popupmenü ▸ Popupmenü löschen | `modify.popUpMenu.deletePopUpMenu` | ✅ Doc | Segment |
 | Modifizieren ▸ Maske ▸ Alles einblenden | `modify.mask.revealAll` | ✅ Doc | Rechteck |
 | Modifizieren ▸ Maske ▸ Alles ausblenden | `modify.mask.hideAll` | ✅ Doc | Rechteck |
@@ -158,8 +162,8 @@ Erzeugt von `crates\fp-ui\tests\gesamt_menu.rs` (`cargo test -p fp-ui --test ges
 | Modifizieren ▸ Selektives JPEG ▸ JPEG-Maske entfernen | `modify.selectiveJpeg.removeJpegMask` | ✅ Doc | mit JPEG-Maske |
 | Modifizieren ▸ Auswahl sperren | `modify.lockSelection` | ✅ Doc | Rechteck |
 | Modifizieren ▸ Auswahl auf Hintergrund reduzieren | `modify.flattenSelection` | ✅ Doc | Rechteck |
-| Modifizieren ▸ Mit darunter liegender auf eine Ebene reduzieren | `modify.mergeDown` | ✅ Doc | Text |
-| Modifizieren ▸ Ebenen als Hintergrund | `modify.flattenLayers` | ✅ Doc | ohne Auswahl |
+| Modifizieren ▸ Mit darunter liegender auf eine Ebene reduzieren | `modify.mergeDown` | ✅ Doc | Rechteck über Bitmap |
+| Modifizieren ▸ Ebenen als Hintergrund | `modify.flattenLayers` | ✅ Doc | zwei Ebenen |
 | Modifizieren ▸ Transformieren ▸ Frei transformieren | `modify.transform.freeTransform` | ✅ Ui | Rechteck |
 | Modifizieren ▸ Transformieren ▸ Skalieren | `modify.transform.scale` | ✅ Ui | Rechteck |
 | Modifizieren ▸ Transformieren ▸ Neigen | `modify.transform.skew` | ✅ Ui | Rechteck |
@@ -175,82 +179,82 @@ Erzeugt von `crates\fp-ui\tests\gesamt_menu.rs` (`cargo test -p fp-ui --test ges
 | Modifizieren ▸ Anordnen ▸ Schrittweise nach vorne | `modify.arrange.bringForward` | ✅ Doc | Rechteck |
 | Modifizieren ▸ Anordnen ▸ Schrittweise nach hinten | `modify.arrange.sendBackward` | ✅ Doc | Rechteck |
 | Modifizieren ▸ Anordnen ▸ In den Hintergrund | `modify.arrange.sendToBack` | ✅ Doc | Rechteck |
-| Modifizieren ▸ Ausrichten ▸ Links | `modify.align.left` | ✅ Doc | Rechteck |
-| Modifizieren ▸ Ausrichten ▸ Vertikal zentrieren | `modify.align.centerVertical` | ✅ Doc | Rechteck |
-| Modifizieren ▸ Ausrichten ▸ Rechts | `modify.align.right` | ✅ Doc | Rechteck |
-| Modifizieren ▸ Ausrichten ▸ Oben | `modify.align.top` | ✅ Doc | Rechteck |
-| Modifizieren ▸ Ausrichten ▸ Horizontal zentrieren | `modify.align.centerHorizontal` | ✅ Doc | Rechteck |
-| Modifizieren ▸ Ausrichten ▸ Unten | `modify.align.bottom` | ✅ Doc | Rechteck |
+| Modifizieren ▸ Ausrichten ▸ Links | `modify.align.left` | ✅ Doc | Rechteck + Ellipse |
+| Modifizieren ▸ Ausrichten ▸ Vertikal zentrieren | `modify.align.centerVertical` | ✅ Doc | Rechteck + Ellipse |
+| Modifizieren ▸ Ausrichten ▸ Rechts | `modify.align.right` | ✅ Doc | Rechteck + Ellipse |
+| Modifizieren ▸ Ausrichten ▸ Oben | `modify.align.top` | ✅ Doc | Rechteck + Ellipse |
+| Modifizieren ▸ Ausrichten ▸ Horizontal zentrieren | `modify.align.centerHorizontal` | ✅ Doc | Rechteck + Ellipse |
+| Modifizieren ▸ Ausrichten ▸ Unten | `modify.align.bottom` | ✅ Doc | Rechteck + Ellipse |
 | Modifizieren ▸ Ausrichten ▸ Breiten verteilen | `modify.align.distributeWidths` | ✅ Doc | drei Objekte |
 | Modifizieren ▸ Ausrichten ▸ Höhen verteilen | `modify.align.distributeHeights` | ✅ Doc | drei Objekte |
 | Modifizieren ▸ Pfad in Auswahlrahmen konvertieren... | `modify.convertPathToMarquee` | ✅ Doc | Rechteck |
 | Modifizieren ▸ Pfade kombinieren ▸ Verbinden | `modify.combinePaths.join` | ✅ Doc | Rechteck + Ellipse |
-| Modifizieren ▸ Pfade kombinieren ▸ Teilen | `modify.combinePaths.split` | ✅ Doc | Rechteck |
+| Modifizieren ▸ Pfade kombinieren ▸ Teilen | `modify.combinePaths.split` | ❌ NeverAvailable | in keiner Testsituation verfügbar |
 | Modifizieren ▸ Pfade kombinieren ▸ Vereinigen | `modify.combinePaths.union` | ✅ Doc | Rechteck + Ellipse |
 | Modifizieren ▸ Pfade kombinieren ▸ Überschneiden | `modify.combinePaths.intersect` | ✅ Doc | Rechteck + Ellipse |
 | Modifizieren ▸ Pfade kombinieren ▸ Öffnen | `modify.combinePaths.punch` | ✅ Doc | Rechteck + Ellipse |
 | Modifizieren ▸ Pfade kombinieren ▸ Zuschneiden | `modify.combinePaths.crop` | ✅ Doc | Rechteck + Ellipse |
-| Modifizieren ▸ Pfad ändern ▸ Vereinfachen... | `modify.alterPath.simplify` | ✅ Dialog | Rechteck |
-| Modifizieren ▸ Pfad ändern ▸ Strich erweitern... | `modify.alterPath.expandStroke` | ✅ Dialog | Rechteck |
-| Modifizieren ▸ Pfad ändern ▸ Pfad einlassen... | `modify.alterPath.insetPath` | ✅ Dialog | Rechteck |
-| Modifizieren ▸ Pfad ändern ▸ Präzise Füllung | `modify.alterPath.hardFill` | ✅ Doc | Rechteck |
-| Modifizieren ▸ Pfad ändern ▸ Anti-Alias-Füllung | `modify.alterPath.antiAliasFill` | ✅ Doc | Rechteck |
-| Modifizieren ▸ Pfad ändern ▸ Weiche-Kante-Füllung | `modify.alterPath.featherFill` | ✅ Doc | Rechteck |
+| Modifizieren ▸ Pfad ändern ▸ Vereinfachen... | `modify.alterPath.simplify` | ✅ Dialog | ohne Auswahl |
+| Modifizieren ▸ Pfad ändern ▸ Strich erweitern... | `modify.alterPath.expandStroke` | ✅ Dialog | ohne Auswahl |
+| Modifizieren ▸ Pfad ändern ▸ Pfad einlassen... | `modify.alterPath.insetPath` | ✅ Dialog | ohne Auswahl |
+| Modifizieren ▸ Pfad ändern ▸ Präzise Füllung | `modify.alterPath.hardFill` | ✅ Doc | Rechteck + Ellipse |
+| Modifizieren ▸ Pfad ändern ▸ Anti-Alias-Füllung | `modify.alterPath.antiAliasFill` | ✅ Doc | Rechteck + Ellipse |
+| Modifizieren ▸ Pfad ändern ▸ Weiche-Kante-Füllung | `modify.alterPath.featherFill` | ✅ Doc | Rechteck + Ellipse |
 | Modifizieren ▸ An Pixeln ausrichten | `modify.snapToPixel` | ✅ Doc | Rechteck |
 | Modifizieren ▸ Gruppieren | `modify.group` | ✅ Doc | Rechteck |
-| Modifizieren ▸ Gruppierung aufheben | `modify.ungroup` | ✅ Doc | drei Objekte |
+| Modifizieren ▸ Gruppierung aufheben | `modify.ungroup` | ✅ Doc | Rechteck |
 | Text ▸ Schrift ▸ Arial | `text.font {"font":"Arial"}` | ✅ Doc | Text |
 | Text ▸ Schrift ▸ Segoe UI | `text.font {"font":"SegoeUI"}` | ✅ Doc | Text |
 | Text ▸ Schrift ▸ Tahoma | `text.font {"font":"Tahoma"}` | ✅ Doc | Text |
-| Text ▸ Größe ▸ Andere... | `text.size.other` | ✅ Dialog | Text |
+| Text ▸ Größe ▸ Andere... | `text.size.other` | ✅ Dialog | ohne Auswahl |
 | Text ▸ Größe ▸ Kleiner | `text.size.smaller` | ✅ Doc | Text |
 | Text ▸ Größe ▸ Größer | `text.size.larger` | ✅ Doc | Text |
-| Text ▸ Größe ▸ 8 | `text.size.8` | ✅ Doc | Text |
-| Text ▸ Größe ▸ 9 | `text.size.9` | ✅ Doc | Text |
-| Text ▸ Größe ▸ 10 | `text.size.10` | ✅ Doc | Text |
-| Text ▸ Größe ▸ 12 | `text.size.12` | ✅ Doc | Text |
-| Text ▸ Größe ▸ 14 | `text.size.14` | ✅ Doc | Text |
-| Text ▸ Größe ▸ 18 | `text.size.18` | ✅ Doc | Text |
-| Text ▸ Größe ▸ 24 | `text.size.24` | ✅ Doc | Text |
-| Text ▸ Größe ▸ 36 | `text.size.36` | ✅ Doc | Text |
-| Text ▸ Größe ▸ 48 | `text.size.48` | ✅ Doc | Text |
-| Text ▸ Größe ▸ 72 | `text.size.72` | ✅ Doc | Text |
-| Text ▸ Größe ▸ 96 | `text.size.96` | ✅ Doc | Text |
-| Text ▸ Größe ▸ 120 | `text.size.120` | ✅ Doc | Text |
-| Text ▸ Stil ▸ Standard | `text.style.plain` | ✅ Doc | Text |
-| Text ▸ Stil ▸ Faux Fett | `text.style.fauxBold` | ✅ Doc | Text |
-| Text ▸ Stil ▸ Faux Kursiv | `text.style.fauxItalic` | ✅ Doc | Text |
-| Text ▸ Stil ▸ Unterstrichen | `text.style.underline` | ✅ Doc | Text |
-| Text ▸ Ausrichten ▸ Links | `text.align.left` | ✅ Doc | Text |
-| Text ▸ Ausrichten ▸ Horizontal zentrieren | `text.align.centeredHorizontally` | ✅ Doc | Text |
-| Text ▸ Ausrichten ▸ Rechts | `text.align.right` | ✅ Doc | Text |
-| Text ▸ Ausrichten ▸ Blocksatz | `text.align.justified` | ✅ Doc | Text |
-| Text ▸ Ausrichten ▸ Oben | `text.align.top` | ✅ Doc | Text |
-| Text ▸ Ausrichten ▸ Vertikal zentrieren | `text.align.centeredVertically` | ✅ Doc | Text |
-| Text ▸ Ausrichten ▸ Unten | `text.align.bottom` | ✅ Doc | Text |
-| Text ▸ Ausrichten ▸ Vertikaler Blocksatz | `text.align.justifiedVertically` | ✅ Doc | Text |
+| Text ▸ Größe ▸ 8 | `text.size.8` | ✅ Ui | ohne Auswahl |
+| Text ▸ Größe ▸ 9 | `text.size.9` | ✅ Ui | ohne Auswahl |
+| Text ▸ Größe ▸ 10 | `text.size.10` | ✅ Ui | ohne Auswahl |
+| Text ▸ Größe ▸ 12 | `text.size.12` | ✅ Ui | ohne Auswahl: keine erkennbare Wirkung |
+| Text ▸ Größe ▸ 14 | `text.size.14` | ✅ Ui | ohne Auswahl |
+| Text ▸ Größe ▸ 18 | `text.size.18` | ✅ Ui | ohne Auswahl |
+| Text ▸ Größe ▸ 24 | `text.size.24` | ✅ Ui | ohne Auswahl |
+| Text ▸ Größe ▸ 36 | `text.size.36` | ✅ Ui | ohne Auswahl |
+| Text ▸ Größe ▸ 48 | `text.size.48` | ✅ Ui | ohne Auswahl |
+| Text ▸ Größe ▸ 72 | `text.size.72` | ✅ Ui | ohne Auswahl |
+| Text ▸ Größe ▸ 96 | `text.size.96` | ✅ Ui | ohne Auswahl |
+| Text ▸ Größe ▸ 120 | `text.size.120` | ✅ Ui | ohne Auswahl |
+| Text ▸ Stil ▸ Standard | `text.style.plain` | ✅ Ui | ohne Auswahl: keine erkennbare Wirkung |
+| Text ▸ Stil ▸ Faux Fett | `text.style.fauxBold` | ✅ Ui | ohne Auswahl |
+| Text ▸ Stil ▸ Faux Kursiv | `text.style.fauxItalic` | ✅ Ui | ohne Auswahl |
+| Text ▸ Stil ▸ Unterstrichen | `text.style.underline` | ✅ Ui | ohne Auswahl |
+| Text ▸ Ausrichten ▸ Links | `text.align.left` | ✅ Ui | ohne Auswahl: keine erkennbare Wirkung |
+| Text ▸ Ausrichten ▸ Horizontal zentrieren | `text.align.centeredHorizontally` | ✅ Ui | ohne Auswahl |
+| Text ▸ Ausrichten ▸ Rechts | `text.align.right` | ✅ Ui | ohne Auswahl |
+| Text ▸ Ausrichten ▸ Blocksatz | `text.align.justified` | ✅ Ui | ohne Auswahl |
+| Text ▸ Ausrichten ▸ Oben | `text.align.top` | ✅ Ui | ohne Auswahl |
+| Text ▸ Ausrichten ▸ Vertikal zentrieren | `text.align.centeredVertically` | ✅ Ui | ohne Auswahl |
+| Text ▸ Ausrichten ▸ Unten | `text.align.bottom` | ✅ Ui | ohne Auswahl |
+| Text ▸ Ausrichten ▸ Vertikaler Blocksatz | `text.align.justifiedVertically` | ✅ Ui | ohne Auswahl |
 | Text ▸ In Pfad einfügen | `text.attachInPath` | ✅ Doc | Text + Ellipse |
 | Text ▸ An Pfad anfügen | `text.attachToPath` | ✅ Doc | Text + Ellipse |
 | Text ▸ Von Pfad lösen | `text.detachFromPath` | ✅ Doc | Text auf Pfad |
-| Text ▸ Richtung ▸ Um Pfad drehen | `text.orientation.rotateAroundPath` | ✅ Doc | Text |
-| Text ▸ Richtung ▸ Vertikal | `text.orientation.vertical` | ✅ Doc | Text |
-| Text ▸ Richtung ▸ Vertikal neigen | `text.orientation.skewVertical` | ✅ Doc | Text |
-| Text ▸ Richtung ▸ Horizontal neigen | `text.orientation.skewHorizontal` | ✅ Doc | Text |
-| Text ▸ Richtung umkehren | `text.reverseDirection` | ✅ Doc | Text |
+| Text ▸ Richtung ▸ Um Pfad drehen | `text.orientation.rotateAroundPath` | ✅ Doc | Text auf Pfad |
+| Text ▸ Richtung ▸ Vertikal | `text.orientation.vertical` | ✅ Doc | Text auf Pfad |
+| Text ▸ Richtung ▸ Vertikal neigen | `text.orientation.skewVertical` | ✅ Doc | Text auf Pfad |
+| Text ▸ Richtung ▸ Horizontal neigen | `text.orientation.skewHorizontal` | ✅ Doc | Text auf Pfad |
+| Text ▸ Richtung umkehren | `text.reverseDirection` | ✅ Doc | Text auf Pfad |
 | Text ▸ In Pfade konvertieren | `text.convertToPaths` | ✅ Doc | Text |
-| Text ▸ Rechtschreibprüfung... | `text.checkSpelling` | ✅ Dialog | ohne Auswahl: Meldung „Keine Fehler gefunden. kein Wörterbuch gefunden: <sprache>.aff/.dic über „Rechtschreibprüfung einrichten“ angeben“ |
+| Text ▸ Rechtschreibprüfung... | `text.checkSpelling` | ✅ Dialog | ohne Auswahl: Meldung „[!! Keine Fehler gefunden. [!! kein Wörterbuch gefunden: <sprache>.aff/.dic über „Rechtschreibprüfung einrichten“ angeben ··································!!] ··························································!!]“ |
 | Text ▸ Rechtschreibprüfung einrichten... | `text.spellingSetup` | ✅ Dialog | ohne Auswahl |
 | Befehle ▸ Gespeicherte Befehle verwalten... | `commands.manageSavedCommands` | ✅ Dialog | ohne Auswahl |
-| Befehle ▸ Erweiterungen verwalten... | `commands.manageExtensions` | ✅ Dialog | ohne Auswahl: Meldung „Es sind keine Erweiterungen installiert.“ |
+| Befehle ▸ Erweiterungen verwalten... | `commands.manageExtensions` | ✅ Dialog | ohne Auswahl: Meldung „[!! Es sind keine Erweiterungen installiert. ···············!!]“ |
 | Befehle ▸ Skript ausführen... | `commands.runScript` | ✅ Doc | ohne Auswahl |
 | Befehle ▸ KI-Modelle verwalten... | `ai.manageModels` | ✅ Dialog | ohne Auswahl |
 | Befehle ▸ Testbefehl | `commands.runScript {"path":"C:\\Users\\Administrator\\AppData\\Roaming\\Firepixel\\Commands\\Testbefehl.jsf"}` | ✅ Doc | ohne Auswahl |
-| Befehle ▸ Testbefehl2 | `commands.runScript {"path":"C:\\Users\\Administrator\\AppData\\Roaming\\Firepixel\\Commands\\Testbefehl2.jsf"}` | ✅ Ui | ohne Auswahl: Meldung „Skript: ReferenceError: select is not defined“ |
-| Befehle ▸ Warnmeldungen zurücksetzen | `ui.resetWarnings {}` | ✅ Ui | ohne Auswahl: Meldung „Warnmeldungen zurückgesetzt“ |
-| Befehle ▸ KI-Steuerkanal (MCP) | `ui.mcpToggle {}` | ✅ Ui | ohne Auswahl: Meldung „KI-Steuerkanal wird gestartet (Adresse und Token in %LOCALAPPDATA%\Firepixel\mcp-bridge.json)“ |
+| Befehle ▸ Testbefehl2 | `commands.runScript {"path":"C:\\Users\\Administrator\\AppData\\Roaming\\Firepixel\\Commands\\Testbefehl2.jsf"}` | ✅ Ui | ohne Auswahl: Meldung „[!! [!! Skript: ReferenceError: select is not defined ················!!] ·························!!]“ |
+| Befehle ▸ Warnmeldungen zurücksetzen | `ui.resetWarnings {}` | ✅ Ui | ohne Auswahl: Meldung „[!! Warnmeldungen zurückgesetzt ···········!!]“ |
+| Befehle ▸ KI-Steuerkanal (MCP) | `ui.mcpToggle {}` | ✅ Ui | ohne Auswahl: Meldung „[!! KI-Steuerkanal wird gestartet (Adresse und Token in %LOCALAPPDATA%\Firepixel\mcp-bridge.json) ···································!!]“ |
 | Filter ▸ Filter wiederholen | `filter.repeat` | ✅ Doc | nach Filter |
-| Filter ▸ Andere ▸ Kanten finden | `filter.other.findEdges` | ✅ Doc | Rechteck |
-| Filter ▸ Andere ▸ In Alpha konvertieren | `filter.other.convertToAlpha` | ✅ Doc | Rechteck |
+| Filter ▸ Andere ▸ In Alphakanal konv. | `filter.other.convertToAlpha` | ✅ Doc | Rechteck |
+| Filter ▸ Andere ▸ Ränder suchen | `filter.other.findEdges` | ✅ Doc | Rechteck |
 | Filter ▸ Farbe anpassen ▸ Auto-Tonwertkorrektur | `filter.adjustColor.autoLevels` | ✅ Doc | Rechteck |
 | Filter ▸ Farbe anpassen ▸ Farbfüllung... | `filter.adjustColor.colorFill` | ✅ Doc | Rechteck |
 | Filter ▸ Farbe anpassen ▸ Farbton/Sättigung... | `filter.adjustColor.hueSaturation` | ✅ Dialog | Rechteck |
@@ -262,12 +266,12 @@ Erzeugt von `crates\fp-ui\tests\gesamt_menu.rs` (`cargo test -p fp-ui --test ges
 | Filter ▸ Scharfzeichnen ▸ Scharfzeichnen | `filter.sharpen.sharpen` | ✅ Doc | Rechteck |
 | Filter ▸ Scharfzeichnen ▸ Stark scharfzeichnen | `filter.sharpen.sharpenMore` | ✅ Doc | Rechteck |
 | Filter ▸ Scharfzeichnen ▸ Unscharf maskieren... | `filter.sharpen.unsharpMask` | ✅ Dialog | Rechteck |
-| Filter ▸ Weichzeichnen ▸ Bewegungsunschärfe... | `filter.blur.motion` | ✅ Dialog | Rechteck |
-| Filter ▸ Weichzeichnen ▸ Gaußscher Weichzeichner... | `filter.blur.gaussian` | ✅ Dialog | Rechteck |
-| Filter ▸ Weichzeichnen ▸ Radiales Weichzeichnen... | `filter.blur.radial` | ✅ Dialog | Rechteck |
-| Filter ▸ Weichzeichnen ▸ Stark weichzeichnen | `filter.blur.blurMore` | ✅ Doc | Rechteck |
+| Filter ▸ Weichzeichnen ▸ Bewegungsunschärfe… | `filter.blur.motion` | ✅ Dialog | Rechteck |
+| Filter ▸ Weichzeichnen ▸ Gaußscher Weichz. ... | `filter.blur.gaussian` | ✅ Dialog | Rechteck |
+| Filter ▸ Weichzeichnen ▸ Radiales Weichz. ... | `filter.blur.radial` | ✅ Dialog | Rechteck |
+| Filter ▸ Weichzeichnen ▸ Stärker weichzeichnen | `filter.blur.blurMore` | ✅ Doc | Rechteck |
 | Filter ▸ Weichzeichnen ▸ Weichzeichnen | `filter.blur.blur` | ✅ Doc | Rechteck |
-| Filter ▸ Weichzeichnen ▸ Zentriertes Weichzeichnen... | `filter.blur.zoom` | ✅ Dialog | Rechteck |
+| Filter ▸ Weichzeichnen ▸ Zentriertes Weichz. ... | `filter.blur.zoom` | ✅ Dialog | Rechteck |
 | Fenster ▸ Fenster duplizieren | `window.duplicateWindow` | ✅ Ui | ohne Auswahl |
 | Fenster ▸ Bedienfelder ausblenden | `window.hidePanels` | ✅ Ui | ohne Auswahl |
 | Fenster ▸ Arbeitsbereichlayouts ▸ Erweiterter Modus | `LoadWorkspace("Erweiterter Modus")` | ✅ Ui | ohne Auswahl |
@@ -307,8 +311,8 @@ Erzeugt von `crates\fp-ui\tests\gesamt_menu.rs` (`cargo test -p fp-ui --test ges
 | Fenster ▸ 1 *Unbenannt-2.png | `Activate(DocId(2))` | ✅ Ui | zweites Dokument: Dokument geöffnet/gewechselt |
 | Hilfe ▸ Firepixel-Hilfe | `help.firepixelHelp` | ✅ Ui | ohne Auswahl: Befehl liefert {"path":"C:\\Users\\Administrator\\Desktop\\REA\\firepixel\\docs\\ANLEITUNG.md","section":"Erste Schritte","sections":["Firepixel – Kurzanle – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
 | Hilfe ▸ Firepixel Support Center | `help.supportCenter` | ✅ Ui | ohne Auswahl: Befehl liefert {"path":"C:\\Users\\Administrator\\Desktop\\REA\\firepixel\\docs\\ANLEITUNG.md","section":"Fehlerbehebung","sections":["Firepixel – Kurzanle – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
-| Hilfe ▸ Programm zur Produktverbesserung... | `help.productImprovement` | ✅ Ui | ohne Auswahl: Befehl liefert {"dataSent":false,"participate":false,"text":"Firepixel erfasst und sendet keine Nutzungsdaten."} – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
+| Hilfe ▸ Firepixel-Programm zur Produktverbesserung... | `help.productImprovement` | ✅ Ui | ohne Auswahl: Befehl liefert {"dataSent":false,"participate":false,"text":"[!! Firepixel erfasst und sendet keine Nutzungsdaten. ··················!!]"} – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
 | Hilfe ▸ Firepixel Exchange | `help.firepixelExchange` | ✅ Ui | ohne Auswahl: Befehl liefert {"extensions":[],"folder":"C:\\Users\\Administrator\\AppData\\Roaming\\Firepixel\\Extensions"} – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
-| Hilfe ▸ Erweiterungen verwalten... | `help.manageExtensions` | ✅ Dialog | ohne Auswahl: Meldung „Es sind keine Erweiterungen installiert.“ |
-| Hilfe ▸ Onlineforen | `help.onlineForums` | ✅ Ui | ohne Auswahl: Befehl liefert {"path":"C:\\Users\\Administrator\\Desktop\\REA\\firepixel\\docs\\ANLEITUNG.md","section":"Fehlerbehebung","sections":["Firepixel – Kurzanle – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
+| Hilfe ▸ Erweiterungen verwalten... | `help.manageExtensions` | ✅ Dialog | ohne Auswahl: Meldung „[!! Es sind keine Erweiterungen installiert. ···············!!]“ |
+| Hilfe ▸ Firepixel-Onlineforen | `help.onlineForums` | ✅ Ui | ohne Auswahl: Befehl liefert {"path":"C:\\Users\\Administrator\\Desktop\\REA\\firepixel\\docs\\ANLEITUNG.md","section":"Fehlerbehebung","sections":["Firepixel – Kurzanle – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
 | Hilfe ▸ Über Firepixel... | `help.about` | ✅ Dialog | ohne Auswahl |

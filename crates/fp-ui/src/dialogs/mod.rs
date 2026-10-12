@@ -105,6 +105,7 @@ impl Dialogs {
             || self.spelling.is_some()
             || self.popup_editor.is_some()
             || self.ai.modal_open()
+            || crate::file_dialog::is_open() // AU: offener Datei-Dialog sperrt wie ein modaler Dialog
     }
 
     /// „Strich bearbeiten“ öffnen (beim nächsten Bild, braucht die Auswahl).
@@ -504,7 +505,7 @@ pub fn extra_w(ctx: &egui::Context, texts: &[&str], avail: f32) -> f32 {
 /// Breite eines Kombifelds (Feld + Pfeil 22 px, wie `fields::combo` kürzt), damit der längste
 /// Eintrag ganz passt; passt er schon, bleibt die Mindestbreite (Deutsch: wie bisher).
 pub fn combo_fit_w(ctx: &egui::Context, items: &[&str], min: f32) -> f32 {
-    min.max((max_text_w(ctx, items) + 26.0).ceil())
+    min.max((max_text_w(ctx, items) + 22.0).ceil())
 }
 
 /// Texte zu Schlüsseln.

@@ -49,13 +49,18 @@ pub use tiles::{Tile, TiledImage, TILE_SIZE};
 /// Größte Pixelzahl eines Puffers (2²⁸ ≈ 268 Mio. Pixel, 1 GiB RGBA).
 pub const MAX_PIXELS: usize = 1 << 28;
 
+/// Meldung aus fp-i18n (`meldungen.ftl`) mit zwei Werten.
+fn raster_msg(key: &str, a: &str, va: &dyn std::fmt::Display, b: &str, vb: &dyn std::fmt::Display) -> String {
+    fp_i18n::t_args(key, &[(a, fp_i18n::Value::from(va.to_string())), (b, fp_i18n::Value::from(vb.to_string()))])
+}
+
 /// Fehler von fp-raster.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum RasterError {
     /// Puffer größer als [`MAX_PIXELS`].
-    #[error("Pixelpuffer zu groß: {width}×{height}")]
+    #[error("{}", raster_msg("err-raster-too-large", "w", .width, "h", .height))]
     TooLarge { width: u32, height: u32 },
     /// Datenlänge passt nicht zur Größe.
-    #[error("Datenlänge {got} passt nicht zur erwarteten Länge {expected}")]
+    #[error("{}", raster_msg("err-raster-size-mismatch", "got", .got, "expected", .expected))]
     SizeMismatch { expected: usize, got: usize },
 }

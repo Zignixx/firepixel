@@ -24,7 +24,7 @@ impl RasterImage {
         crate::check_size(w, h)?;
         let need = w as usize * h as usize * 4;
         if rgba.len() < need {
-            return Err(crate::ImportError::Corrupt(format!("Pixeldaten zu kurz ({} < {need})", rgba.len())));
+            return Err(crate::ImportError::Corrupt(fp_i18n::tr!("err-import-pixels-short", have = rgba.len().to_string(), need = need.to_string())));
         }
         let has_transparency = rgba[..need].as_chunks::<4>().0.iter().any(|p| p[3] != 255);
         let image = RgbaImage::from_rgba_bytes(IRect::new(0, 0, w as i32, h as i32), &rgba[..need]).map_err(|e| crate::ImportError::Corrupt(e.to_string()))?;

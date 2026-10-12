@@ -2,13 +2,13 @@
 
 Erzeugt von `crates\fp-ui\tests\gesamt_menu.rs` (`cargo test -p fp-ui --test gesamt_menu`). Nicht von Hand ändern.
 
-**282/282 Einträge ✅**
+**281/282 Einträge ✅**
 
 | Eintrag | Befehl | Ergebnis | Hinweis |
 |---|---|---|---|
 | Kontextmenü Nichts ausgewählt ▸ Einfügen | `edit.paste` | ✅ Doc | ohne Auswahl |
 | Kontextmenü Nichts ausgewählt ▸ Alles einblenden | `view.showAll` | ✅ Doc | ohne Auswahl |
-| Kontextmenü Nichts ausgewählt ▸ Vergrößerung ▸ Auswahl anpassen | `view.fitSelection` | ✅ Ui | ohne Auswahl |
+| Kontextmenü Nichts ausgewählt ▸ Vergrößerung ▸ Auswahl anpassen | `view.fitSelection` | ✅ Ui | Rechteck |
 | Kontextmenü Nichts ausgewählt ▸ Vergrößerung ▸ Alles anpassen | `view.fitAll` | ✅ Ui | ohne Auswahl |
 | Kontextmenü Nichts ausgewählt ▸ Vergrößerung ▸ 6% | `view.magnification.6` | ✅ Ui | ohne Auswahl |
 | Kontextmenü Nichts ausgewählt ▸ Vergrößerung ▸ 12% | `view.magnification.12` | ✅ Ui | ohne Auswahl |
@@ -25,7 +25,7 @@ Erzeugt von `crates\fp-ui\tests\gesamt_menu.rs` (`cargo test -p fp-ui --test ges
 | Kontextmenü Nichts ausgewählt ▸ Vergrößerung ▸ 3200% | `view.magnification.3200` | ✅ Ui | ohne Auswahl |
 | Kontextmenü Nichts ausgewählt ▸ Vergrößerung ▸ 6400% | `view.magnification.6400` | ✅ Ui | ohne Auswahl |
 | Kontextmenü Nichts ausgewählt ▸ Alles auswählen | `select.all` | ✅ Doc | ohne Auswahl |
-| Kontextmenü Nichts ausgewählt ▸ Ebenen als Hintergrund | `modify.flattenLayers` | ✅ Doc | ohne Auswahl |
+| Kontextmenü Nichts ausgewählt ▸ Ebenen als Hintergrund | `modify.flattenLayers` | ✅ Doc | zwei Ebenen |
 | Kontextmenü Nichts ausgewählt ▸ Leinwand ändern ▸ Bildgröße... | `modify.canvas.imageSize` | ✅ Dialog | ohne Auswahl |
 | Kontextmenü Nichts ausgewählt ▸ Leinwand ändern ▸ Leinwandgröße... | `modify.canvas.canvasSize` | ✅ Dialog | ohne Auswahl |
 | Kontextmenü Nichts ausgewählt ▸ Leinwand ändern ▸ Leinwandfarbe... | `modify.canvas.canvasColor` | ✅ Dialog | ohne Auswahl |
@@ -70,7 +70,7 @@ Erzeugt von `crates\fp-ui\tests\gesamt_menu.rs` (`cargo test -p fp-ui --test ges
 | Kontextmenü Objekt ausgewählt ▸ Bearbeiten ▸ Klonen | `edit.clone` | ✅ Doc | Rechteck |
 | Kontextmenü Objekt ausgewählt ▸ Bearbeiten ▸ Gewählte Bitmap zuschneiden | `edit.cropSelectedBitmap` | ✅ Doc | Bitmap |
 | Kontextmenü Objekt ausgewählt ▸ Bearbeiten ▸ Dokument zuschneiden | `edit.cropDocument` | ✅ Doc | Rechteck |
-| Kontextmenü Objekt ausgewählt ▸ Vergrößerung ▸ Auswahl anpassen | `view.fitSelection` | ✅ Ui | ohne Auswahl |
+| Kontextmenü Objekt ausgewählt ▸ Vergrößerung ▸ Auswahl anpassen | `view.fitSelection` | ✅ Ui | Rechteck |
 | Kontextmenü Objekt ausgewählt ▸ Vergrößerung ▸ Alles anpassen | `view.fitAll` | ✅ Ui | ohne Auswahl |
 | Kontextmenü Objekt ausgewählt ▸ Vergrößerung ▸ 6% | `view.magnification.6` | ✅ Ui | ohne Auswahl |
 | Kontextmenü Objekt ausgewählt ▸ Vergrößerung ▸ 12% | `view.magnification.12` | ✅ Ui | ohne Auswahl |
@@ -89,7 +89,7 @@ Erzeugt von `crates\fp-ui\tests\gesamt_menu.rs` (`cargo test -p fp-ui --test ges
 | Kontextmenü Objekt ausgewählt ▸ Auswählen ▸ Alle | `select.all` | ✅ Doc | ohne Auswahl |
 | Kontextmenü Objekt ausgewählt ▸ Auswählen ▸ Auswahl aufheben | `select.none` | ✅ Doc | Rechteck |
 | Kontextmenü Objekt ausgewählt ▸ Auswählen ▸ Gesamtauswahl treffen | `select.superselect` | ✅ Doc | Rechteck + Ellipse |
-| Kontextmenü Objekt ausgewählt ▸ Auswählen ▸ Teilauswahl treffen | `select.subselect` | ✅ Doc | Rechteck + Ellipse |
+| Kontextmenü Objekt ausgewählt ▸ Auswählen ▸ Teilauswahl treffen | `select.subselect` | ✅ Doc | drei Objekte |
 | Kontextmenü Objekt ausgewählt ▸ Auswahl ausblenden | `view.hideSelection` | ✅ Doc | Rechteck |
 | Kontextmenü Objekt ausgewählt ▸ Kanten | `view.edges` | ✅ Ui | ohne Auswahl |
 | Kontextmenü Objekt ausgewählt ▸ Pfad in Auswahlrahmen konvertieren... | `modify.convertPathToMarquee` | ✅ Doc | Rechteck |
@@ -109,12 +109,12 @@ Erzeugt von `crates\fp-ui\tests\gesamt_menu.rs` (`cargo test -p fp-ui --test ges
 | Kontextmenü Objekt ausgewählt ▸ Transformieren ▸ Transformationen entfernen | `modify.transform.removeTransformations` | ✅ Doc | Rechteck |
 | Kontextmenü Objekt ausgewählt ▸ An Pixeln ausrichten | `modify.snapToPixel` | ✅ Doc | Rechteck |
 | Kontextmenü Objekt ausgewählt ▸ Gruppieren | `modify.group` | ✅ Doc | Rechteck |
-| Kontextmenü Objekt ausgewählt ▸ Gruppierung aufheben | `modify.ungroup` | ✅ Doc | drei Objekte |
+| Kontextmenü Objekt ausgewählt ▸ Gruppierung aufheben | `modify.ungroup` | ✅ Doc | Rechteck |
 | Kontextmenü Objekt ausgewählt ▸ Als Maske gruppieren | `modify.mask.groupAsMask` | ✅ Doc | Rechteck + Ellipse |
 | Kontextmenü Objekt ausgewählt ▸ Pfad kombinieren ▸ Vereinigung | `path.combine.union` | ✅ Doc | Rechteck + Ellipse |
 | Kontextmenü Objekt ausgewählt ▸ Pfad kombinieren ▸ Ausstanzen | `path.combine.punch` | ✅ Doc | Rechteck + Ellipse |
 | Kontextmenü Objekt ausgewählt ▸ Pfad kombinieren ▸ Überschneiden | `path.combine.intersect` | ✅ Doc | Rechteck + Ellipse |
-| Kontextmenü Objekt ausgewählt ▸ Pfad kombinieren ▸ Zuschneiden  | `path.combine.crop` | ✅ Doc | Rechteck + Ellipse |
+| Kontextmenü Objekt ausgewählt ▸ Pfad kombinieren ▸ Zuschneiden | `path.combine.crop` | ✅ Doc | Rechteck + Ellipse |
 | Kontextmenü Objekt ausgewählt ▸ Pfad kombinieren ▸ Normal | `path.combine.normal` | ✅ Doc | Rechteck + Ellipse |
 | Kontextmenü Objekt ausgewählt ▸ Symbol austauschen... | `modify.symbol.swapSymbol` | ✅ Dialog | Grafiksymbol |
 | Kontextmenü Objekt ausgewählt ▸ In Symbol konvertieren | `modify.symbol.convertToSymbol` | ✅ Dialog | Rechteck |
@@ -123,7 +123,7 @@ Erzeugt von `crates\fp-ui\tests\gesamt_menu.rs` (`cargo test -p fp-ui --test ges
 | Kontextmenü Objekt ausgewählt ▸ Animation ▸ Animation entfernen | `modify.animation.removeAnimation` | ✅ Doc | Animationssymbol |
 | Kontextmenü Objekt ausgewählt ▸ Symbol ▸ Symbol bearbeiten | `modify.symbol.editSymbol` | ✅ Ui | Grafiksymbol: Dokument geöffnet/gewechselt |
 | Kontextmenü Objekt ausgewählt ▸ Symbol ▸ An Position bearbeiten | `modify.symbol.editInPlace` | ✅ Ui | Grafiksymbol: Dokument geöffnet/gewechselt |
-| Kontextmenü Objekt ausgewählt ▸ Symbol ▸ Instanzen tweenen... | `modify.symbol.tweenInstances` | ✅ Dialog | zwei Instanzen |
+| Kontextmenü Objekt ausgewählt ▸ Symbol ▸ Instanzen tweenen... | `modify.symbol.tweenInstances` | ✅ Dialog | ohne Auswahl |
 | Kontextmenü Objekt ausgewählt ▸ Symbol ▸ Teilen | `modify.symbol.breakApart` | ✅ Doc | Grafiksymbol |
 | Kontextmenü Objekt ausgewählt ▸ Hotspot einfügen | `edit.insert.hotspot` | ✅ Doc | Rechteck |
 | Kontextmenü Objekt ausgewählt ▸ Rechteckiges Segment einfügen | `edit.insert.slice` | ✅ Doc | Rechteck |
@@ -132,8 +132,8 @@ Erzeugt von `crates\fp-ui\tests\gesamt_menu.rs` (`cargo test -p fp-ui --test ges
 | Kontextmenü Objekt ausgewählt ▸ CSS-Sprites exportieren... | `file.export {}` | ✅ Dialog | ohne Auswahl |
 | Kontextmenü Objekt ausgewählt ▸ Auswahl sperren | `modify.lockSelection` | ✅ Doc | Rechteck |
 | Kontextmenü Objekt ausgewählt ▸ Auswahl auf Hintergrund reduzieren | `modify.flattenSelection` | ✅ Doc | Rechteck |
-| Kontextmenü Objekt ausgewählt ▸ Mit darunter liegender auf eine Ebene reduzieren | `modify.mergeDown` | ✅ Doc | Text |
-| Kontextmenü Objekt ausgewählt ▸ Ebenen als Hintergrund | `modify.flattenLayers` | ✅ Doc | ohne Auswahl |
+| Kontextmenü Objekt ausgewählt ▸ Mit darunter liegender auf eine Ebene reduzieren | `modify.mergeDown` | ✅ Doc | Rechteck über Bitmap |
+| Kontextmenü Objekt ausgewählt ▸ Ebenen als Hintergrund | `modify.flattenLayers` | ✅ Doc | zwei Ebenen |
 | Kontextmenü Objekt ausgewählt ▸ Vollbildmodus beenden | `view.exitFullScreen` | ✅ Ui | ohne Auswahl |
 | Kontextmenü Text ▸ Bearbeiten ▸ Ausschneiden | `edit.cut` | ✅ Doc | Rechteck |
 | Kontextmenü Text ▸ Bearbeiten ▸ Kopieren | `edit.copy` | ✅ Ui | Rechteck |
@@ -148,7 +148,7 @@ Erzeugt von `crates\fp-ui\tests\gesamt_menu.rs` (`cargo test -p fp-ui --test ges
 | Kontextmenü Text ▸ Anordnen ▸ Schrittweise nach vorne | `modify.arrange.bringForward` | ✅ Doc | Rechteck |
 | Kontextmenü Text ▸ Anordnen ▸ Schrittweise nach hinten | `modify.arrange.sendBackward` | ✅ Doc | Rechteck |
 | Kontextmenü Text ▸ Anordnen ▸ In den Hintergrund | `modify.arrange.sendToBack` | ✅ Doc | Rechteck |
-| Kontextmenü Text ▸ Vergrößerung ▸ Auswahl anpassen | `view.fitSelection` | ✅ Ui | ohne Auswahl |
+| Kontextmenü Text ▸ Vergrößerung ▸ Auswahl anpassen | `view.fitSelection` | ✅ Ui | Rechteck |
 | Kontextmenü Text ▸ Vergrößerung ▸ Alles anpassen | `view.fitAll` | ✅ Ui | ohne Auswahl |
 | Kontextmenü Text ▸ Vergrößerung ▸ 6% | `view.magnification.6` | ✅ Ui | ohne Auswahl |
 | Kontextmenü Text ▸ Vergrößerung ▸ 12% | `view.magnification.12` | ✅ Ui | ohne Auswahl |
@@ -167,38 +167,38 @@ Erzeugt von `crates\fp-ui\tests\gesamt_menu.rs` (`cargo test -p fp-ui --test ges
 | Kontextmenü Text ▸ Auswählen ▸ Alle | `select.all` | ✅ Doc | ohne Auswahl |
 | Kontextmenü Text ▸ Auswählen ▸ Auswahl aufheben | `select.none` | ✅ Doc | Rechteck |
 | Kontextmenü Text ▸ Auswählen ▸ Gesamtauswahl treffen | `select.superselect` | ✅ Doc | Rechteck + Ellipse |
-| Kontextmenü Text ▸ Auswählen ▸ Teilauswahl treffen | `select.subselect` | ✅ Doc | Rechteck + Ellipse |
-| Kontextmenü Text ▸ Größe ▸ Andere... | `text.size.other` | ✅ Dialog | Text |
-| Kontextmenü Text ▸ Größe ▸ 8 | `text.size.8` | ✅ Doc | Text |
-| Kontextmenü Text ▸ Größe ▸ 9 | `text.size.9` | ✅ Doc | Text |
-| Kontextmenü Text ▸ Größe ▸ 10 | `text.size.10` | ✅ Doc | Text |
-| Kontextmenü Text ▸ Größe ▸ 12 | `text.size.12` | ✅ Doc | Text |
-| Kontextmenü Text ▸ Größe ▸ 14 | `text.size.14` | ✅ Doc | Text |
-| Kontextmenü Text ▸ Größe ▸ 18 | `text.size.18` | ✅ Doc | Text |
-| Kontextmenü Text ▸ Größe ▸ 24 | `text.size.24` | ✅ Doc | Text |
-| Kontextmenü Text ▸ Größe ▸ 36 | `text.size.36` | ✅ Doc | Text |
-| Kontextmenü Text ▸ Größe ▸ 48 | `text.size.48` | ✅ Doc | Text |
-| Kontextmenü Text ▸ Größe ▸ 72 | `text.size.72` | ✅ Doc | Text |
-| Kontextmenü Text ▸ Größe ▸ 96 | `text.size.96` | ✅ Doc | Text |
-| Kontextmenü Text ▸ Größe ▸ 120 | `text.size.120` | ✅ Doc | Text |
-| Kontextmenü Text ▸ Stil ▸ Standard | `text.style.plain` | ✅ Doc | Text |
-| Kontextmenü Text ▸ Stil ▸ Fett | `text.style.fauxBold` | ✅ Doc | Text |
-| Kontextmenü Text ▸ Stil ▸ Kursiv | `text.style.fauxItalic` | ✅ Doc | Text |
-| Kontextmenü Text ▸ Stil ▸ Unterstrichen | `text.style.underline` | ✅ Doc | Text |
-| Kontextmenü Text ▸ Ausrichten ▸ Links | `text.align.left` | ✅ Doc | Text |
-| Kontextmenü Text ▸ Ausrichten ▸ Zentrieren | `text.align.centeredHorizontally` | ✅ Doc | Text |
-| Kontextmenü Text ▸ Ausrichten ▸ Rechts | `text.align.right` | ✅ Doc | Text |
-| Kontextmenü Text ▸ Ausrichten ▸ Blocksatz | `text.align.justified` | ✅ Doc | Text |
-| Kontextmenü Text ▸ Ausrichten ▸ Oben | `text.align.top` | ✅ Doc | Text |
-| Kontextmenü Text ▸ Ausrichten ▸ Zentrieren | `text.align.centeredVertically` | ✅ Doc | Text |
-| Kontextmenü Text ▸ Ausrichten ▸ Unten | `text.align.bottom` | ✅ Doc | Text |
-| Kontextmenü Text ▸ Ausrichten ▸ Blocksatz | `text.align.justifiedVertically` | ✅ Doc | Text |
+| Kontextmenü Text ▸ Auswählen ▸ Teilauswahl treffen | `select.subselect` | ✅ Doc | drei Objekte |
+| Kontextmenü Text ▸ Größe ▸ Andere... | `text.size.other` | ✅ Dialog | ohne Auswahl |
+| Kontextmenü Text ▸ Größe ▸ 8 | `text.size.8` | ✅ Ui | ohne Auswahl |
+| Kontextmenü Text ▸ Größe ▸ 9 | `text.size.9` | ✅ Ui | ohne Auswahl |
+| Kontextmenü Text ▸ Größe ▸ 10 | `text.size.10` | ✅ Ui | ohne Auswahl |
+| Kontextmenü Text ▸ Größe ▸ 12 | `text.size.12` | ✅ Ui | ohne Auswahl: keine erkennbare Wirkung |
+| Kontextmenü Text ▸ Größe ▸ 14 | `text.size.14` | ✅ Ui | ohne Auswahl |
+| Kontextmenü Text ▸ Größe ▸ 18 | `text.size.18` | ✅ Ui | ohne Auswahl |
+| Kontextmenü Text ▸ Größe ▸ 24 | `text.size.24` | ✅ Ui | ohne Auswahl |
+| Kontextmenü Text ▸ Größe ▸ 36 | `text.size.36` | ✅ Ui | ohne Auswahl |
+| Kontextmenü Text ▸ Größe ▸ 48 | `text.size.48` | ✅ Ui | ohne Auswahl |
+| Kontextmenü Text ▸ Größe ▸ 72 | `text.size.72` | ✅ Ui | ohne Auswahl |
+| Kontextmenü Text ▸ Größe ▸ 96 | `text.size.96` | ✅ Ui | ohne Auswahl |
+| Kontextmenü Text ▸ Größe ▸ 120 | `text.size.120` | ✅ Ui | ohne Auswahl |
+| Kontextmenü Text ▸ Stil ▸ Standard | `text.style.plain` | ✅ Ui | ohne Auswahl: keine erkennbare Wirkung |
+| Kontextmenü Text ▸ Stil ▸ Fett | `text.style.fauxBold` | ✅ Ui | ohne Auswahl |
+| Kontextmenü Text ▸ Stil ▸ Kursiv | `text.style.fauxItalic` | ✅ Ui | ohne Auswahl |
+| Kontextmenü Text ▸ Stil ▸ Unterstrichen | `text.style.underline` | ✅ Ui | ohne Auswahl |
+| Kontextmenü Text ▸ Ausrichten ▸ Links | `text.align.left` | ✅ Ui | ohne Auswahl: keine erkennbare Wirkung |
+| Kontextmenü Text ▸ Ausrichten ▸ Zentrieren | `text.align.centeredHorizontally` | ✅ Ui | ohne Auswahl |
+| Kontextmenü Text ▸ Ausrichten ▸ Rechts | `text.align.right` | ✅ Ui | ohne Auswahl |
+| Kontextmenü Text ▸ Ausrichten ▸ Blocksatz | `text.align.justified` | ✅ Ui | ohne Auswahl |
+| Kontextmenü Text ▸ Ausrichten ▸ Oben | `text.align.top` | ✅ Ui | ohne Auswahl |
+| Kontextmenü Text ▸ Ausrichten ▸ Zentrieren | `text.align.centeredVertically` | ✅ Ui | ohne Auswahl |
+| Kontextmenü Text ▸ Ausrichten ▸ Unten | `text.align.bottom` | ✅ Ui | ohne Auswahl |
+| Kontextmenü Text ▸ Ausrichten ▸ Blocksatz | `text.align.justifiedVertically` | ✅ Ui | ohne Auswahl |
 | Kontextmenü Text ▸ Von Pfad lösen | `text.detachFromPath` | ✅ Doc | Text auf Pfad |
-| Kontextmenü Text ▸ Richtung ▸ Um Pfad drehen | `text.orientation.rotateAroundPath` | ✅ Doc | Text |
-| Kontextmenü Text ▸ Richtung ▸ Vertikal | `text.orientation.vertical` | ✅ Doc | Text |
-| Kontextmenü Text ▸ Richtung ▸ Vertikal neigen | `text.orientation.skewVertical` | ✅ Doc | Text |
-| Kontextmenü Text ▸ Richtung ▸ Horizontal neigen | `text.orientation.skewHorizontal` | ✅ Doc | Text |
-| Kontextmenü Text ▸ Richtung umkehren | `text.reverseDirection` | ✅ Doc | Text |
+| Kontextmenü Text ▸ Richtung ▸ Um Pfad drehen | `text.orientation.rotateAroundPath` | ✅ Doc | Text auf Pfad |
+| Kontextmenü Text ▸ Richtung ▸ Vertikal | `text.orientation.vertical` | ✅ Doc | Text auf Pfad |
+| Kontextmenü Text ▸ Richtung ▸ Vertikal neigen | `text.orientation.skewVertical` | ✅ Doc | Text auf Pfad |
+| Kontextmenü Text ▸ Richtung ▸ Horizontal neigen | `text.orientation.skewHorizontal` | ✅ Doc | Text auf Pfad |
+| Kontextmenü Text ▸ Richtung umkehren | `text.reverseDirection` | ✅ Doc | Text auf Pfad |
 | Kontextmenü Text ▸ In Pfade konvertieren | `text.convertToPaths` | ✅ Doc | Text |
 | Kontextmenü Text ▸ Numerisch transformieren... | `modify.transform.numericTransform` | ✅ Dialog | Rechteck |
 | Kontextmenü Text ▸ Transformationen entfernen | `modify.transform.removeTransformations` | ✅ Doc | Rechteck |
@@ -212,7 +212,7 @@ Erzeugt von `crates\fp-ui\tests\gesamt_menu.rs` (`cargo test -p fp-ui --test ges
 | Kontextmenü Pixel ▸ Bearbeiten ▸ Als Maske einfügen | `edit.pasteAsMask` | ✅ Doc | Rechteck |
 | Kontextmenü Pixel ▸ Bearbeiten ▸ Duplizieren | `edit.duplicate` | ✅ Doc | Rechteck |
 | Kontextmenü Pixel ▸ Bearbeiten ▸ Klonen | `edit.clone` | ✅ Doc | Rechteck |
-| Kontextmenü Pixel ▸ Vergrößerung ▸ Auswahl anpassen | `view.fitSelection` | ✅ Ui | ohne Auswahl |
+| Kontextmenü Pixel ▸ Vergrößerung ▸ Auswahl anpassen | `view.fitSelection` | ✅ Ui | Rechteck |
 | Kontextmenü Pixel ▸ Vergrößerung ▸ Alles anpassen | `view.fitAll` | ✅ Ui | ohne Auswahl |
 | Kontextmenü Pixel ▸ Vergrößerung ▸ 6% | `view.magnification.6` | ✅ Ui | ohne Auswahl |
 | Kontextmenü Pixel ▸ Vergrößerung ▸ 12% | `view.magnification.12` | ✅ Ui | ohne Auswahl |
@@ -232,12 +232,12 @@ Erzeugt von `crates\fp-ui\tests\gesamt_menu.rs` (`cargo test -p fp-ui --test ges
 | Kontextmenü Pixel ▸ Dokument zuschneiden | `edit.cropDocument` | ✅ Doc | Rechteck |
 | Kontextmenü Pixel ▸ Neue Bitmap durch Kopieren | `edit.insert.bitmapViaCopy` | ✅ Doc | Bitmap + Pixelauswahl |
 | Kontextmenü Pixel ▸ Neue Bitmap durch Ausschneiden | `edit.insert.bitmapViaCut` | ✅ Doc | Bitmap + Pixelauswahl |
-| Kontextmenü Pixel ▸ Mit darunter liegender auf eine Ebene reduzieren | `modify.mergeDown` | ✅ Doc | Text |
+| Kontextmenü Pixel ▸ Mit darunter liegender auf eine Ebene reduzieren | `modify.mergeDown` | ✅ Doc | Rechteck über Bitmap |
 | Kontextmenü Pixel ▸ Alles auswählen | `select.all` | ✅ Doc | ohne Auswahl |
 | Kontextmenü Pixel ▸ Auswahl aufheben | `select.none` | ✅ Doc | Rechteck |
 | Kontextmenü Pixel ▸ Ähnliches auswählen | `select.similar` | ✅ Doc | Rechteck + Ellipse |
 | Kontextmenü Pixel ▸ Auswahlrahmen modifizieren ▸ Auswahl umkehren | `select.inverse` | ✅ Doc | ohne Auswahl |
-| Kontextmenü Pixel ▸ Auswahlrahmen modifizieren ▸ Weiche Kante... | `select.feather` | ✅ Dialog | Pixelauswahl |
+| Kontextmenü Pixel ▸ Auswahlrahmen modifizieren ▸ Weiche Kante... | `select.feather` | ✅ Dialog | ohne Auswahl |
 | Kontextmenü Pixel ▸ Auswahlrahmen modifizieren ▸ Erweitern... | `select.expandMarquee` | ✅ Dialog | Pixelauswahl |
 | Kontextmenü Pixel ▸ Auswahlrahmen modifizieren ▸ Verkleinern... | `select.contractMarquee` | ✅ Dialog | Pixelauswahl |
 | Kontextmenü Pixel ▸ Auswahlrahmen modifizieren ▸ Rahmen... | `select.borderMarquee` | ✅ Dialog | Pixelauswahl |
@@ -245,7 +245,7 @@ Erzeugt von `crates\fp-ui\tests\gesamt_menu.rs` (`cargo test -p fp-ui --test ges
 | Kontextmenü Pixel ▸ Auswahlrahmen modifizieren ▸ In Pfad konvertieren | `select.convertMarqueeToPath` | ✅ Doc | Pixelauswahl |
 | Kontextmenü Pixel ▸ Ränder | `view.edges` | ✅ Ui | ohne Auswahl |
 | Kontextmenü Pixel ▸ Auswahl speichern | `select.saveBitmapSelection` | ✅ Dialog | Pixelauswahl |
-| Kontextmenü Pixel ▸ Auswahl wiederherstellen | `select.restoreBitmapSelection` | ✅ Dialog | ohne Auswahl |
+| Kontextmenü Pixel ▸ Auswahl wiederherstellen | `select.restoreBitmapSelection` | ❌ NeverAvailable | in keiner Testsituation verfügbar |
 | Kontextmenü Pixel ▸ Selektives JPEG ▸ Auswahl als JPEG-Maske speichern | `modify.selectiveJpeg.saveSelectionAsJpegMask` | ✅ Doc | Pixelauswahl |
 | Kontextmenü Pixel ▸ Selektives JPEG ▸ JPEG-Maske als Auswahl wiederherstellen | `modify.selectiveJpeg.restoreJpegMaskAsSelection` | ✅ Doc | mit JPEG-Maske |
 | Kontextmenü Pixel ▸ Selektives JPEG ▸ Einstellungen... | `modify.selectiveJpeg.settings` | ✅ Dialog | ohne Auswahl |
@@ -266,7 +266,7 @@ Erzeugt von `crates\fp-ui\tests\gesamt_menu.rs` (`cargo test -p fp-ui --test ges
 | Kontextmenü Transformieren ▸ Vertikal spiegeln | `modify.transform.flipVertical` | ✅ Doc | Rechteck |
 | Kontextmenü Transformieren ▸ Transformationen entfernen | `modify.transform.removeTransformations` | ✅ Doc | Rechteck |
 | Kontextmenü Zuschneiden ▸ Dokument zuschneiden | `edit.cropSelectedBitmap` | ✅ Doc | Bitmap |
-| Kontextmenü Zuschneiden ▸ Zuschneiden abbrechen | `ui.toolKey {"key":"escape"}` | ✅ Ui | ohne Auswahl: Meldung „unbekannter Befehl „ui.toolKey““ |
+| Kontextmenü Zuschneiden ▸ Zuschneiden abbrechen | `ui.toolKey {"key":"escape"}` | ✅ Ui | ohne Auswahl: Meldung „[!! unbekannter Befehl „ui.toolKey“ ············!!]“ |
 | Kontextmenü Zoom ▸ Größer zoomen | `view.zoomIn` | ✅ Ui | ohne Auswahl |
 | Kontextmenü Zoom ▸ Kleiner zoomen | `view.zoomOut` | ✅ Ui | ohne Auswahl |
 | Kontextmenü Zoom ▸ Vergrößerung ▸ 6% | `view.magnification.6` | ✅ Ui | ohne Auswahl |
@@ -283,8 +283,8 @@ Erzeugt von `crates\fp-ui\tests\gesamt_menu.rs` (`cargo test -p fp-ui --test ges
 | Kontextmenü Zoom ▸ Vergrößerung ▸ 1600% | `view.magnification.1600` | ✅ Ui | ohne Auswahl |
 | Kontextmenü Zoom ▸ Vergrößerung ▸ 3200% | `view.magnification.3200` | ✅ Ui | ohne Auswahl |
 | Kontextmenü Zoom ▸ Vergrößerung ▸ 6400% | `view.magnification.6400` | ✅ Ui | ohne Auswahl |
-| Kontextmenü Zoom ▸ Auswahl anpassen | `view.fitSelection` | ✅ Ui | ohne Auswahl |
+| Kontextmenü Zoom ▸ Auswahl anpassen | `view.fitSelection` | ✅ Ui | Rechteck |
 | Kontextmenü Zoom ▸ Alles anpassen | `view.fitAll` | ✅ Ui | ohne Auswahl |
 | Kontextmenü Pipette ▸ Farbe kopieren | `ui.copyColor {"which":"sample"}` | ✅ Ui | ohne Auswahl: in die Zwischenablage |
-| Kontextmenü Pipette ▸ Füllfarbe kopieren | `ui.copyColor {"which":"fill"}` | ✅ Ui | ohne Auswahl: Meldung „Farbe #999999 kopiert“ |
-| Kontextmenü Pipette ▸ Strichfarbe kopieren | `ui.copyColor {"which":"stroke"}` | ✅ Ui | ohne Auswahl: Meldung „Farbe #000000 kopiert“ |
+| Kontextmenü Pipette ▸ Füllfarbe kopieren | `ui.copyColor {"which":"fill"}` | ✅ Ui | ohne Auswahl: Meldung „[!! Farbe #999999 kopiert ········!!]“ |
+| Kontextmenü Pipette ▸ Strichfarbe kopieren | `ui.copyColor {"which":"stroke"}` | ✅ Ui | ohne Auswahl: Meldung „[!! Farbe #000000 kopiert ········!!]“ |

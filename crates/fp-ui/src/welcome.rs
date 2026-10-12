@@ -151,7 +151,8 @@ fn hash01(x: i32, y: i32) -> f32 {
     ((h ^ (h >> 16)) & 0xffff) as f32 / 65535.0
 }
 
-fn paint_banner(p: &egui::Painter, r: Rect, theme: &Theme, narrow: bool) {
+/// Kopfbanner (Startbildschirm, Über Firepixel): Fläche aus dem Design, Pixelfeld, Logo, Name, Leitsatz.
+pub(crate) fn paint_banner(p: &egui::Painter, r: Rect, theme: &Theme, narrow: bool, tagline: &str) {
     let b = banner_colors(theme);
     crate::widgets::vgradient(p, r, b.top, b.bottom);
     // Struktur: Pixelfeld, das nach rechts dichter wird (eigenes Motiv „Funken aus Pixeln“)
@@ -166,8 +167,7 @@ fn paint_banner(p: &egui::Painter, r: Rect, theme: &Theme, narrow: bool) {
     let x = r.left() + margin + logo + if tiny { sp::S } else { sp::L };
     let max_w = (r.right() - margin - x).max(40.0);
     let name_size = if tiny { 18.0 } else if narrow { 24.0 } else { type_scale::DISPLAY };
-    let tagline = t("welcome-tagline");
-    let text_end = x + ui_kit::text_w(p.ctx(), &tagline, &theme.font(12.5)).max(ui_kit::text_w(p.ctx(), "Firepixel", &theme.bold(name_size))).min(max_w) + sp::L;
+    let text_end = x + ui_kit::text_w(p.ctx(), tagline, &theme.font(12.5)).max(ui_kit::text_w(p.ctx(), "Firepixel", &theme.bold(name_size))).min(max_w) + sp::L;
     for j in 0..rows {
         for i in 0..cols {
             let fx = i as f32 / cols.max(1) as f32;
@@ -189,7 +189,7 @@ fn paint_banner(p: &egui::Painter, r: Rect, theme: &Theme, narrow: bool) {
     let lr = Rect::from_min_size(pos2(r.left() + margin, r.center().y - logo / 2.0), vec2(logo, logo));
     icons::paint_app_logo(p, lr);
     ui_kit::paint_text_fit(p, Rect::from_min_max(pos2(x, r.center().y - 2.0 - name_size * 1.3), pos2(x + max_w, r.center().y - 2.0)), "Firepixel", theme.bold(name_size), b.text);
-    ui_kit::paint_text_fit(p, Rect::from_min_size(pos2(x, r.center().y + 2.0), vec2(max_w, 18.0)), &tagline, theme.font(12.5), b.weak);
+    ui_kit::paint_text_fit(p, Rect::from_min_size(pos2(x, r.center().y + 2.0), vec2(max_w, 18.0)), tagline, theme.font(12.5), b.weak);
     if theme.glow {
         p.hline(r.x_range(), r.bottom() - 0.5, Stroke::new(1.0, theme.colors.focus));
     }
@@ -262,7 +262,7 @@ fn draw_panel(ui: &mut Ui, st: &mut AppState, theme: &Theme, lay: &Layout, panel
     {
         let pc = p.with_clip_rect(Rect::from_min_max(panel.min, pos2(panel.right(), banner.bottom())));
         // Banner mit runden oberen Ecken: Ecken über die Karte zeichnen lassen
-        paint_banner(&pc, banner, theme, lay.w < 420.0);
+        paint_banner(&pc, banner, theme, lay.w < 420.0, &t("welcome-tagline"));
     }
     let x0 = panel.left() + lay.pad;
     let mut y = banner.bottom() + lay.pad;

@@ -143,7 +143,7 @@ pub fn lzw_decode(data: &[u8], min_code: u8, npix: usize) -> (Vec<u8>, bool) {
 }
 
 fn read_palette(b: &[u8], p: &mut usize, n: usize) -> Result<Vec<[u8; 3]>> {
-    let bytes = b.get(*p..*p + 3 * n).ok_or_else(|| ImportError::Corrupt("GIF-Palette abgeschnitten".into()))?;
+    let bytes = b.get(*p..*p + 3 * n).ok_or_else(|| ImportError::Corrupt(fp_i18n::t("err-import-gif-palette-cut")))?;
     *p += 3 * n;
     Ok(bytes.as_chunks::<3>().0.iter().map(|c| [c[0], c[1], c[2]]).collect())
 }
@@ -151,7 +151,7 @@ fn read_palette(b: &[u8], p: &mut usize, n: usize) -> Result<Vec<[u8; 3]>> {
 /// GIF lesen.
 pub fn decode(b: &[u8]) -> Result<GifFile> {
     if b.len() < 13 || &b[..3] != b"GIF" {
-        return Err(ImportError::Corrupt("kein GIF".into()));
+        return Err(ImportError::Corrupt(fp_i18n::t("err-import-not-gif")));
     }
     let u16le = |o: usize| u16::from_le_bytes([b[o], b[o + 1]]);
     let (w, h, flags, bg) = (u16le(6), u16le(8), b[10], b[11]);
@@ -165,16 +165,16 @@ pub fn decode(b: &[u8]) -> Result<GifFile> {
         match t {
             0x3B => break,
             0x21 => {
-                let label = *b.get(p).ok_or_else(|| ImportError::Corrupt("GIF-Erweiterung abgeschnitten".into()))?;
+                let label = *b.get(p).ok_or_else(|| ImportError::Corrupt(fp_i18n::t("err-import-gif-ext-cut")))?;
                 p += 1;
                 let mut blocks: Vec<&[u8]> = Vec::new();
                 loop {
-                    let n = *b.get(p).ok_or_else(|| ImportError::Corrupt("GIF-Unterblock abgeschnitten".into()))? as usize;
+                    let n = *b.get(p).ok_or_else(|| ImportError::Corrupt(fp_i18n::t("err-import-gif-subblock-cut")))? as usize;
                     p += 1;
                     if n == 0 {
                         break;
                     }
-                    blocks.push(b.get(p..p + n).ok_or_else(|| ImportError::Corrupt("GIF-Unterblock abgeschnitten".into()))?);
+                    blocks.push(b.get(p..p + n).ok_or_else(|| ImportError::Corrupt(fp_i18n::t("err-import-gif-subblock-cut")))?);
                     p += n;
                 }
                 match label {
@@ -195,11 +195,11 @@ pub fn decode(b: &[u8]) -> Result<GifFile> {
                 }
             }
             0x2C => {
-                let d = b.get(p..p + 9).ok_or_else(|| ImportError::Corrupt("Bildbeschreibung abgeschnitten".into()))?;
+                let d = b.get(p..p + 9).ok_or_else(|| ImportError::Corrupt(fp_i18n::t("err-import-image-desc-cut")))?;
                 let (x, y, fw, fh, fl) = (u16::from_le_bytes([d[0], d[1]]), u16::from_le_bytes([d[2], d[3]]), u16::from_le_bytes([d[4], d[5]]), u16::from_le_bytes([d[6], d[7]]), d[8]);
                 p += 9;
                 let local_palette = if fl & 0x80 != 0 { Some(read_palette(b, &mut p, 2 << (fl & 7))?) } else { None };
-                let mc = *b.get(p).ok_or_else(|| ImportError::Corrupt("LZW-Codegröße fehlt".into()))?;
+                let mc = *b.get(p).ok_or_else(|| ImportError::Corrupt(fp_i18n::t("err-import-lzw-size-missing")))?;
                 p += 1;
                 let mut data = Vec::new();
                 while let Some(&n) = b.get(p) {
@@ -242,7 +242,7 @@ pub fn decode(b: &[u8]) -> Result<GifFile> {
         }
     }
     if g.frames.is_empty() {
-        return Err(ImportError::Corrupt("GIF ohne Bild".into()));
+        return Err(ImportError::Corrupt(fp_i18n::t("err-import-gif-no-image")));
     }
     Ok(g)
 }

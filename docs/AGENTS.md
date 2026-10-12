@@ -112,7 +112,9 @@ Hinweis: Anfragen werden nebenläufig angenommen. Abhängige Aufrufe (z. B. `ren
 | `ui_find` | **nur Brücke:** sichtbare Bedienelemente/Beschriftungen finden (Menüeinträge, Knöpfe, Reiter, Bedienfeld-Zeilen, Dialog-Titelleisten) – Text, Rolle, Rechteck, Mittelpunkt in Fensterpunkten, oberste zuerst | `{"text": "Datei", "exact": true}` · `{"text": "OK", "role": "button"}` · `{"text": "Titelleiste"}` · `{"region": [0, 0, 400, 60]}` |
 | `ui_input` | **nur Brücke:** rohe Maus-/Tastatur-/Datei-Ereignisse einspeisen, genau wie echte Eingaben (siehe 5a) | `{"events": [{"type": "click", "pos": [640, 420]}, {"type": "key", "key": "C", "modifiers": ["ctrl"]}], "screenshot": true}` |
 
-Headless liefern `screenshot`/`ui_state`/`ui_action`/`ui_find`/`ui_input` eine Fehlermeldung mit
+| `ui_file_dialog` | **nur Brücke:** offenen Datei-Dialog (Öffnen, Speichern unter, Importieren, Ordner …) abfragen und beantworten (siehe 5b) | `{}` · `{"action": "choose", "path": "C:\\out\\a.fw.png"}` · `{"action": "choose", "paths": ["a.png", "b.png"]}` · `{"action": "cancel"}` |
+
+Headless liefern `screenshot`/`ui_state`/`ui_action`/`ui_find`/`ui_input`/`ui_file_dialog` eine Fehlermeldung mit
 Hinweis auf die Brücke (dort `render` und `tool_event` benutzen).
 
 Ressourcen (Markdown): `firepixel://docs/agents.md` (diese Datei), `firepixel://docs/commands.md`
@@ -307,6 +309,30 @@ gehaltene Umschalttasten, `dialog_open` und die Statuszeile.
 
 Für Dokumentänderungen ohne Oberfläche sind `run_command`/`tool_event` schneller und genauer;
 `ui_input` ist für das Prüfen und Bedienen der Oberfläche selbst gedacht.
+
+## 5b. Datei-Dialoge in der laufenden App
+
+Datei-Dialoge blockieren die App nicht mehr: Während einer offen ist, zeichnet Firepixel weiter und
+die Brücke antwortet. Leinwand, Menüs und Kürzel sind wie bei einem modalen Dialog gesperrt
+(`ui_state` → `dialog_open`, `file_dialog`).
+
+* **KI-Steuerkanal aktiv** (Brücke läuft): Statt des Windows-Dialogs erscheint ein Dialog in der App mit
+  Pfadfeld. `ui_file_dialog {}` zeigt Art (`open`, `open_many`, `save`, `folder`), Titel, Filter,
+  Startordner, vorgeschlagenen Namen und die letzten Ereignisse. Beantworten:
+  `{"action": "choose", "path": "…"}` (mehrere bei `open_many`: `"paths": […]`) oder `{"action": "cancel"}`.
+  Der Nutzer kann denselben Dialog auch selbst ausfüllen.
+* **Ohne Brücke** bzw. mit `FP_DATEIDIALOG=nativ`: der Windows-Dialog läuft in einem eigenen Thread, mit
+  dem Hauptfenster als Besitzer (zentriert darüber, modal, kein eigener Taskleisten-Knopf).
+  `ui_file_dialog` kann ihn auch dann beantworten, das Windows-Fenster bleibt aber sichtbar, bis es
+  geschlossen wird (`native_window_still_open`); sein Ergebnis wird verworfen.
+* **Testmodus** (Umgebungsvariable vor dem Start): `FP_DATEIDIALOG=abbrechen` bricht jeden Dialog sofort
+  ab. `FP_DATEIDIALOG=pfad:C:\ordner` beantwortet ihn sofort: Speichern mit dem vorgeschlagenen Namen
+  im Ordner, Öffnen mit der ersten passenden Datei (Mehrfachauswahl: alle passenden), Ordner mit dem
+  Ordner selbst. Jedes Ereignis steht im Log und in `ui_file_dialog` → `last_events`.
+
+Ablauf „Speichern unter“ über die Oberfläche:
+`ui_action {"run": "file.saveAs"}` → `ui_file_dialog {}` → `ui_file_dialog {"action": "choose", "path": "C:\\out\\bild.fw.png"}`
+→ `ui_state {}` (Titel ohne Stern). Ohne Oberfläche geht es direkt: `save {"path": …}`.
 
 ## 6. Befehle-Menü und gespeicherte Befehle
 

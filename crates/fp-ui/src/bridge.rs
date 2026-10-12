@@ -60,6 +60,8 @@ fn env_wants_bridge() -> bool {
 pub fn frame(ctx: &egui::Context, st: &mut AppState) {
     // JSF-Laufzeit für „Befehle ▸ Skript ausführen“ und gespeicherte Befehle einstecken
     fp_script::install_host(&mut st.session);
+    // Datei-Dialoge ohne Blockieren: Ergebnisse abholen, modale Sperre zeigen
+    crate::file_dialog::frame(ctx, st);
     if !ENV_CHECKED.swap(true, Ordering::SeqCst) && env_wants_bridge() {
         let port = std::env::var(ENV_PORT).ok().and_then(|p| p.trim().parse().ok()).unwrap_or(0);
         enable(port);
@@ -182,6 +184,7 @@ impl UiBridge {
                 }
                 UiRequest::Input(a) => inject::start_input(ctx, &a, p),
                 UiRequest::Find(a) => inject::start_find(ctx, &a, p),
+                UiRequest::FileDialog(a) => p.respond(ui_file_dialog(&a)),
             }
         }
         inject::frame(ctx, st.dialogs.any_open(), st.status.as_ref().map(|(m, _)| m.clone()));
@@ -310,6 +313,7 @@ pub fn ui_state(ctx: &egui::Context, st: &AppState) -> Value {
         "status": st.status.as_ref().map(|(m, _)| m.clone()),
         "frame": st.frame_counter,
         "window_title": st.window_title(),
+        "file_dialog": crate::file_dialog::status_json(),
     })
 }
 
@@ -381,4 +385,30 @@ pub fn ui_action(ctx: &egui::Context, st: &mut AppState, a: &Value) -> UiReply {
     st.handle_session_events();
     ctx.request_repaint();
     UiReply::Json(json!({"ok": true, "done": done, "dialog_open": st.dialogs.any_open(), "status": st.status.as_ref().map(|(m, _)| m.clone())}))
+}
+
+/// MCP-Werkzeug `ui_file_dialog`: Zustand des Datei-Dialogs bzw. Antwort darauf.
+fn ui_file_dialog(a: &Value) -> UiReply {
+    match a.get("action").and_then(Value::as_str).unwrap_or("status") {
+        "status" => UiReply::Json(crate::file_dialog::status_json()),
+        "cancel" => match crate::file_dialog::answer(Vec::new()) {
+            Ok(v) => UiReply::Json(v),
+            Err(e) => UiReply::Error(e),
+        },
+        "choose" => {
+            let paths: Vec<std::path::PathBuf> = match a.get("path").or_else(|| a.get("paths")) {
+                Some(Value::String(s)) => vec![s.into()],
+                Some(Value::Array(v)) => v.iter().filter_map(Value::as_str).map(std::path::PathBuf::from).collect(),
+                _ => Vec::new(),
+            };
+            if paths.is_empty() {
+                return UiReply::Error("path".into());
+            }
+            match crate::file_dialog::answer(paths) {
+                Ok(v) => UiReply::Json(v),
+                Err(e) => UiReply::Error(e),
+            }
+        }
+        other => UiReply::Error(format!("action: status | cancel | choose ({other})")),
+    }
 }

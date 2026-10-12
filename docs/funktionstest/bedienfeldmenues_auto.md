@@ -73,7 +73,7 @@ Erzeugt von `crates\fp-ui\tests\gesamt_menu.rs` (`cargo test -p fp-ui --test ges
 | Ebenen ▸ Freigegebene Ebene ausschließen | `panel.layers.excludeShared` | ✅ Doc | freigegebene Ebene |
 | Ebenen ▸ Freigegebene Ebene lösen | `panel.layers.detachShared` | ✅ Doc | freigegebene Ebene |
 | Ebenen ▸ Auswahl auf Hintergrund reduzieren | `panel.layers.flattenSelection` | ✅ Doc | Rechteck |
-| Ebenen ▸ Mit darunter liegender auf eine Ebene reduzieren | `panel.layers.mergeDown` | ✅ Doc | Text |
+| Ebenen ▸ Mit darunter liegender auf eine Ebene reduzieren | `panel.layers.mergeDown` | ✅ Doc | Rechteck über Bitmap |
 | Ebenen ▸ Alles ausblenden | `panel.layers.hideAll` | ✅ Doc | ohne Auswahl |
 | Ebenen ▸ Alles anzeigen | `panel.layers.showAll` | ✅ Doc | ohne Auswahl |
 | Ebenen ▸ Alles sperren | `panel.layers.lockAll` | ✅ Doc | ohne Auswahl |

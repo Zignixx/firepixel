@@ -430,11 +430,28 @@ Beispiele: {\"text\":\"Datei\"} · {\"text\":\"OK\",\"role\":\"button\",\"exact\
             read_only: true,
             destructive: false,
         },
+        ToolDef {
+            name: "ui_file_dialog",
+            title: "File dialog of the running app",
+            description: "Bridge mode only: shows whether a file dialog (Open, Save As, Import, Export, folder …) is open in the running app – kind, title, filters, start folder, suggested name, recent events – and answers it. \
+While a dialog is open the app keeps drawing, the canvas and menus are locked like with a modal dialog. With the AI control channel active the app shows its own dialog instead of the native one (FP_DATEIDIALOG=nativ forces the native one). \
+Examples: {\"action\":\"status\"} · {\"action\":\"cancel\"} · {\"action\":\"choose\",\"path\":\"C:\\\\out\\\\banner.fw.png\"} · {\"action\":\"choose\",\"paths\":[\"C:\\\\in\\\\a.png\",\"C:\\\\in\\\\b.png\"]}",
+            schema: obj(
+                json!({
+                    "action": {"type": "string", "enum": ["status", "cancel", "choose"], "default": "status"},
+                    "path": {"type": "string", "description": "file or folder for choose"},
+                    "paths": {"type": "array", "items": {"type": "string"}, "description": "several files (open dialogs with multiple selection)"}
+                }),
+                &[],
+            ),
+            read_only: false,
+            destructive: false,
+        },
     ]
 }
 
 /// Werkzeuge, die die laufende Oberfläche brauchen (Brückenmodus; asynchron im Server beantwortet).
-pub const UI_TOOLS: &[&str] = &["screenshot", "ui_state", "ui_action", "ui_input", "ui_find"];
+pub const UI_TOOLS: &[&str] = &["screenshot", "ui_state", "ui_action", "ui_input", "ui_find", "ui_file_dialog"];
 
 /// Zeitlimit für die Antwort der Oberfläche: `ui_input` bekommt zusätzlich die angeforderten
 /// Wartezeiten (höchstens 5 Minuten).
@@ -465,6 +482,7 @@ pub fn ui_request_for(name: &str, args: &Value) -> Option<crate::UiRequest> {
         "ui_action" => Some(crate::UiRequest::Action(if args.is_null() { json!({}) } else { args.clone() })),
         "ui_input" => Some(crate::UiRequest::Input(if args.is_null() { json!({}) } else { args.clone() })),
         "ui_find" => Some(crate::UiRequest::Find(if args.is_null() { json!({}) } else { args.clone() })),
+        "ui_file_dialog" => Some(crate::UiRequest::FileDialog(if args.is_null() { json!({}) } else { args.clone() })),
         _ => None,
     }
 }
@@ -733,7 +751,7 @@ fn call_inner(s: &mut Session, env: &ToolEnv, name: &str, args: &Value) -> ToolO
         "tool_event" => tool_event(s, args),
         "documents" => documents(s, args),
         "run_script" => run_script(s, env, args),
-        "screenshot" | "ui_state" | "ui_action" | "ui_input" | "ui_find" => ToolOutput::error(crate::McpError::NoUi.to_string()),
+        "screenshot" | "ui_state" | "ui_action" | "ui_input" | "ui_find" | "ui_file_dialog" => ToolOutput::error(crate::McpError::NoUi.to_string()),
         other => ToolOutput::error(fp_i18n::tr!("err-mcp-unknown-tool", name = other)),
     }
 }

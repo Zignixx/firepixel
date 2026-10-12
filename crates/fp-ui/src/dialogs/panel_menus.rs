@@ -29,16 +29,24 @@ pub struct PanelSelection {
 /// Dateifilter: (Beschreibung bzw. Textschlüssel `dlg-…`, Endungen).
 type Filters<'a> = &'a [(&'a str, &'a [&'a str])];
 
-/// Datei zum Öffnen wählen (in Tests über [`crate::files::FilePickOverride`]).
-pub fn pick_open(st: &AppState, title: &str, filters: Filters) -> Option<PathBuf> {
+/// Datei zum Öffnen wählen, ohne Blockieren (in Tests über [`crate::files::FilePickOverride`]):
+/// `done` läuft nur, wenn eine Datei gewählt wurde.
+pub fn pick_open(st: &mut AppState, title: &str, filters: Filters, done: impl FnOnce(&mut AppState, PathBuf) + Send + 'static) {
     if let Some(o) = &st.file_override {
-        return o.open.first().cloned();
+        if let Some(p) = o.open.first().cloned() {
+            done(st, p);
+        }
+        return;
     }
-    let mut d = rfd::FileDialog::new().set_title(title);
+    let mut req = crate::file_dialog::Request::open(title);
     for (n, e) in filters {
-        d = d.add_filter(filter_name(n), e);
+        req = req.filter(filter_name(n), e);
     }
-    d.pick_file()
+    crate::file_dialog::request(st, req, move |st, r| {
+        if let Some(p) = r.into_iter().next() {
+            done(st, p);
+        }
+    });
 }
 
 /// Beschreibung eines Dateifilters: Textschlüssel (`dlg-…`) übersetzt, sonst wie angegeben.
@@ -69,16 +77,36 @@ fn save_command_params(d: &super::form::FormDialog) -> serde_json::Value {
     json!({ "steps": d.base.get("steps").cloned().unwrap_or(json!([])), "path": dir.join(format!("{name}.jsf")).to_string_lossy() })
 }
 
-/// Speicherziel wählen (in Tests über [`crate::files::FilePickOverride`]).
-pub fn pick_save(st: &AppState, title: &str, name: &str, filters: Filters) -> Option<PathBuf> {
+/// Speicherziel wählen, ohne Blockieren (in Tests über [`crate::files::FilePickOverride`]): `done`
+/// läuft nur, wenn ein Ziel gewählt wurde.
+pub fn pick_save(st: &mut AppState, title: &str, name: &str, filters: Filters, done: impl FnOnce(&mut AppState, PathBuf) + Send + 'static) {
     if let Some(o) = &st.file_override {
-        return o.save.clone();
+        if let Some(p) = o.save.clone() {
+            done(st, p);
+        }
+        return;
     }
-    let mut d = rfd::FileDialog::new().set_title(title).set_file_name(name);
+    let mut req = crate::file_dialog::Request::save(title, name);
     for (n, e) in filters {
-        d = d.add_filter(filter_name(n), e);
+        req = req.filter(filter_name(n), e);
     }
-    d.save_file()
+    crate::file_dialog::request(st, req, move |st, r| {
+        if let Some(p) = r.into_iter().next() {
+            done(st, p);
+        }
+    });
+}
+
+/// Datei wählen und den Befehl `name` mit `path` ausführen.
+fn open_then_run(st: &mut AppState, title: &str, filters: Filters, name: &str) {
+    let n = name.to_string();
+    pick_open(st, title, filters, move |st, p| run_with_path(st, &n, Some(p), json!({})));
+}
+
+/// Speicherziel wählen und den Befehl `name` mit `path` ausführen.
+fn save_then_run(st: &mut AppState, title: &str, file: &str, filters: Filters, name: &str) {
+    let n = name.to_string();
+    pick_save(st, title, file, filters, move |st, p| run_with_path(st, &n, Some(p), json!({})));
 }
 
 const SWATCH_FILES: Filters = &[("dlg-filter-act", &["act"]), ("dlg-filter-ase", &["ase"]), ("dlg-filter-aco", &["aco"]), ("GIF (*.gif)", &["gif"])];
@@ -198,8 +226,7 @@ pub fn open(st: &mut AppState, name: &str) -> bool {
         }
         "panel.pages.export" => {
             let n = st.session.active().map(|d| d.title.trim_end_matches(".png").trim_end_matches(".fw").to_string()).unwrap_or_default();
-            let p = pick_save(st, &t("dlg-pmenu-export-page"), &format!("{n}.png"), &[("dlg-filter-image-optimize", &["png", "gif", "jpg", "webp"])]);
-            run_with_path(st, name, p, json!({}));
+            save_then_run(st, &t("dlg-pmenu-export-page"), &format!("{n}.png"), &[("dlg-filter-image-optimize", &["png", "gif", "jpg", "webp"])], name);
             return true;
         }
         // Verlauf
@@ -292,13 +319,11 @@ pub fn open(st: &mut AppState, name: &str) -> bool {
             return true;
         }
         "panel.styles.load" | "panel.styles.importLibrary" => {
-            let p = pick_open(st, &t("dlg-pmenu-load-styles"), STYLE_FILES);
-            run_with_path(st, name, p, json!({}));
+            open_then_run(st, &t("dlg-pmenu-load-styles"), STYLE_FILES, name);
             return true;
         }
         "panel.styles.saveLibrary" => {
-            let p = pick_save(st, &t("dlg-pmenu-save-style-library"), &format!("{}.json", t("dlg-pmenu-styles-file")), STYLE_FILES);
-            run_with_path(st, name, p, json!({}));
+            save_then_run(st, &t("dlg-pmenu-save-style-library"), &format!("{}.json", t("dlg-pmenu-styles-file")), STYLE_FILES, name);
             return true;
         }
         // Dokumentbibliothek
@@ -365,24 +390,20 @@ pub fn open(st: &mut AppState, name: &str) -> bool {
             return true;
         }
         "panel.library.import" => {
-            let p = pick_open(st, &t("dlg-pmenu-import-symbols"), LIB_FILES);
-            run_with_path(st, name, p, json!({}));
+            open_then_run(st, &t("dlg-pmenu-import-symbols"), LIB_FILES, name);
             return true;
         }
         "panel.library.export" => {
-            let p = pick_save(st, &t("dlg-pmenu-export-symbols"), &format!("{}.png", t("dlg-pmenu-symbols-file")), LIB_FILES);
-            run_with_path(st, name, p, json!({}));
+            save_then_run(st, &t("dlg-pmenu-export-symbols"), &format!("{}.png", t("dlg-pmenu-symbols-file")), LIB_FILES, name);
             return true;
         }
         // Farbfelder
         "panel.swatches.add" | "panel.swatches.replace" => {
-            let p = pick_open(st, &t("dlg-pmenu-open-swatches"), SWATCH_FILES);
-            run_with_path(st, name, p, json!({}));
+            open_then_run(st, &t("dlg-pmenu-open-swatches"), SWATCH_FILES, name);
             return true;
         }
         "panel.swatches.save" => {
-            let p = pick_save(st, &t("dlg-pmenu-save-swatches"), &format!("{}.act", t("dlg-pmenu-swatches-file")), SWATCH_SAVE);
-            run_with_path(st, name, p, json!({}));
+            save_then_run(st, &t("dlg-pmenu-save-swatches"), &format!("{}.act", t("dlg-pmenu-swatches-file")), SWATCH_SAVE, name);
             return true;
         }
         // Optimieren
@@ -440,11 +461,16 @@ pub fn open(st: &mut AppState, name: &str) -> bool {
             Some(FormDialog::new("19123", t("dlg-pmenu-save-as-style").as_str(), name, vec![Field::text("name", t("dlg-lbl-name").as_str(), &fp_i18n::tr!("dlg-style-default-name", n = n))]))
         }
         "panel.effects.locatePlugins" => {
-            let dir = match &st.file_override {
-                Some(o) => o.open.first().cloned(),
-                None => rfd::FileDialog::new().set_title(t("dlg-pmenu-locate-plugins")).pick_folder(),
-            };
-            run_with_path(st, name, dir, json!({}));
+            match &st.file_override {
+                Some(o) => {
+                    let dir = o.open.first().cloned();
+                    run_with_path(st, name, dir, json!({}));
+                }
+                None => {
+                    let n = name.to_string();
+                    crate::file_dialog::request(st, crate::file_dialog::Request::folder(t("dlg-pmenu-locate-plugins")), move |st, r| run_with_path(st, &n, r.into_iter().next(), json!({})));
+                }
+            }
             return true;
         }
         "panel.optimize.makeTransparent" | "panel.optimize.removeEdit" => {
@@ -456,13 +482,11 @@ pub fn open(st: &mut AppState, name: &str) -> bool {
             return true;
         }
         "panel.optimize.loadPalette" => {
-            let p = pick_open(st, &t("dlg-pmenu-load-palette"), SWATCH_FILES);
-            run_with_path(st, name, p, json!({}));
+            open_then_run(st, &t("dlg-pmenu-load-palette"), SWATCH_FILES, name);
             return true;
         }
         "panel.optimize.savePalette" => {
-            let p = pick_save(st, &t("dlg-pmenu-save-palette"), &format!("{}.act", t("dlg-pmenu-palette-file")), SWATCH_SAVE);
-            run_with_path(st, name, p, json!({}));
+            save_then_run(st, &t("dlg-pmenu-save-palette"), &format!("{}.act", t("dlg-pmenu-palette-file")), SWATCH_SAVE, name);
             return true;
         }
         _ => return false,

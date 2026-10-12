@@ -400,21 +400,7 @@ fn info_grid(ui: &mut egui::Ui, id: &str, rows: &mut [InfoRow]) {
 
 /// Dezent hervorgehobener Hinweisblock.
 fn hint_block(ui: &mut egui::Ui, text: &str) {
-    let t = Theme::current(ui.ctx());
-    let c = &t.colors;
-    egui::Frame::new()
-        .fill(crate::theme::mix(c.frame_bg, c.focus, 0.10))
-        .stroke(Stroke::new(1.0, crate::theme::with_alpha(c.focus, 120)))
-        .corner_radius(3.0)
-        .inner_margin(egui::Margin::symmetric(10, 8))
-        .show(ui, |ui| {
-            ui.set_width(ui.available_width());
-            ui.horizontal_top(|ui| {
-                let (r, _) = ui.allocate_exact_size(vec2(16.0, 16.0), Sense::hover());
-                crate::icons::paint(ui.painter(), r, crate::icons::Icon::Info, &crate::icons::IconStyle::mono(c.focus, c.frame_bg));
-                ui.add(egui::Label::new(egui::RichText::new(text).color(c.text)).wrap());
-            });
-        });
+    crate::ui_kit::notice(ui, crate::ui_kit::Tone::Info, None, text);
 }
 
 /// Fortschrittsbalken in Akzentfarbe mit Prozent.
@@ -440,8 +426,8 @@ fn header(ui: &mut egui::Ui, title: &str, sentence: &str) {
     let c = t.colors.clone();
     ui.horizontal(|ui| {
         let (r, _) = ui.allocate_exact_size(vec2(36.0, 36.0), Sense::hover());
-        ui.painter().rect_filled(r, 6.0, crate::theme::mix(c.frame_bg, c.focus, 0.18));
-        crate::icons::paint(ui.painter(), r.shrink(8.0), crate::icons::Icon::Import, &crate::icons::IconStyle::mono(c.focus, c.frame_bg));
+        ui.painter().rect_filled(r, 6.0, crate::ui_kit::tint(&t, c.focus));
+        crate::ui_kit::paint_icon(ui.painter(), r.shrink(4.0), crate::ui_kit::KitIcon::AiChip, &crate::icons::IconStyle::new(&t, None, true));
         ui.add_space(6.0);
         ui.vertical(|ui| {
             ui.label(egui::RichText::new(title).font(t.bold(14.0)).color(c.text));
@@ -508,19 +494,17 @@ fn show_missing(ctx: &egui::Context, st: &mut AppState) {
         hint_block(&mut c, &license_note(m));
         c.add_space(8.0);
         if d.done.is_some() {
-            let g = Theme::current(c.ctx()).colors.icon_green;
-            c.label(egui::RichText::new(fp_i18n::tr!("dlg-ai-loaded-running", model = m.name, task = tool.as_str())).color(g).strong());
+            crate::ui_kit::notice(&mut c, crate::ui_kit::Tone::Success, None, &fp_i18n::tr!("dlg-ai-loaded-running", model = m.name, task = tool.as_str()));
         } else if let Some((p, t)) = dl_state {
             let w = c.available_width();
             progress_bar(&mut c, p, w);
             c.label(egui::RichText::new(progress_text(p, m.size, t)).color(weak(&c)));
         } else if let Some(e) = &d.error {
-            let red = egui::Color32::from_rgb(210, 60, 50);
-            c.label(egui::RichText::new(t("dlg-ai-download-failed")).color(red).strong());
-            c.add(egui::Label::new(egui::RichText::new(e).color(red)).wrap());
+            crate::ui_kit::notice(&mut c, crate::ui_kit::Tone::Error, Some(&t("dlg-ai-download-failed")), e);
         }
         // Knöpfe unten rechts, einheitliche Größe
         let by = body.bottom() - PAD - BTN.y;
+        crate::ui_kit::hline(ui.painter(), body.x_range(), by - 13.0, &Theme::current(ui.ctx()));
         let right = Rect::from_min_size(pos2(body.right() - PAD - btn.x, by), btn);
         let left = Rect::from_min_size(pos2(right.left() - 8.0 - btn.x, by), btn);
         if d.done.is_some() {
@@ -613,7 +597,7 @@ fn cell(ui: &mut egui::Ui, r: Rect, f: impl FnOnce(&mut egui::Ui)) {
 fn show_manager(ctx: &egui::Context, st: &mut AppState) {
     let Some(mut d) = st.dialogs.ai.manager.take() else { return };
     if d.size == egui::Vec2::ZERO {
-        d.size = vec2(800.0, 600.0);
+        d.size = vec2(800.0, 540.0);
     }
     let mut close = false;
     let mut start: Option<ModelId> = None;
@@ -663,19 +647,19 @@ fn show_manager(ctx: &egui::Context, st: &mut AppState) {
         let row_h = 32.0;
         let (hr, _) = u.allocate_exact_size(vec2(tw, 24.0), Sense::hover());
         let p = u.painter();
-        p.rect_filled(hr, 0.0, crate::theme::mix(c.frame_bg, c.line_mid, 0.25));
+        // Tabellenkopf im Bedienfeld-Kopfstil (docs\DESIGN.md §8)
+        crate::widgets::header_bar(p, hr, &th);
         let hf = th.bold(11.5);
         let hy = hr.center().y;
-        p.text(pos2(hr.left() + cl.name.0, hy), egui::Align2::LEFT_CENTER, heads[0].as_str(), hf.clone(), c.text);
-        p.text(pos2(hr.left() + cl.task.0, hy), egui::Align2::LEFT_CENTER, heads[1].as_str(), hf.clone(), c.text);
-        p.text(pos2(hr.left() + cl.size_right, hy), egui::Align2::RIGHT_CENTER, heads[2].as_str(), hf.clone(), c.text);
-        p.text(pos2(hr.left() + cl.license.0, hy), egui::Align2::LEFT_CENTER, heads[3].as_str(), hf.clone(), c.text);
-        p.text(pos2(hr.left() + cl.status.0, hy), egui::Align2::LEFT_CENTER, heads[4].as_str(), hf, c.text);
-        p.hline(hr.x_range(), hr.bottom() - 0.5, Stroke::new(1.0, c.line_mid));
+        p.text(pos2(hr.left() + cl.name.0, hy), egui::Align2::LEFT_CENTER, heads[0].as_str(), hf.clone(), c.tab_text);
+        p.text(pos2(hr.left() + cl.task.0, hy), egui::Align2::LEFT_CENTER, heads[1].as_str(), hf.clone(), c.tab_text);
+        p.text(pos2(hr.left() + cl.size_right, hy), egui::Align2::RIGHT_CENTER, heads[2].as_str(), hf.clone(), c.tab_text);
+        p.text(pos2(hr.left() + cl.license.0, hy), egui::Align2::LEFT_CENTER, heads[3].as_str(), hf.clone(), c.tab_text);
+        p.text(pos2(hr.left() + cl.status.0, hy), egui::Align2::LEFT_CENTER, heads[4].as_str(), hf, c.tab_text);
         let font = th.ui_font();
         for (i, m) in models::MODELS.iter().enumerate() {
             let (rr, resp) = u.allocate_exact_size(vec2(tw, row_h), Sense::hover());
-            let bg = if resp.hovered() { c.list_hover_bg } else if i % 2 == 1 { crate::theme::mix(c.list_bg, c.line_light, 0.35) } else { c.list_bg };
+            let bg = if resp.hovered() { c.list_hover_bg } else if i % 2 == 1 { crate::ui_kit::zebra(&th) } else { c.list_bg };
             u.painter().rect_filled(rr, 0.0, bg);
             u.painter().hline(rr.x_range(), rr.bottom() - 0.5, Stroke::new(1.0, c.list_row_line));
             let y = rr.center().y;
@@ -743,12 +727,11 @@ fn show_manager(ctx: &egui::Context, st: &mut AppState) {
             u.add_space(4.0);
             u.label(egui::RichText::new(i).color(c.text_weak));
         }
-        u.add_space(10.0);
-        // --- Speicherort
-        egui::Frame::group(u.style()).inner_margin(egui::Margin::same(10)).show(&mut u, |ui| {
-            ui.set_width(ui.available_width());
-            ui.label(egui::RichText::new(t("dlg-ai-location")).strong());
-            ui.add_space(4.0);
+        u.add_space(16.0);
+        // --- Speicherort (Abschnitt mit Überschrift und Linie, docs\DESIGN.md §4)
+        crate::ui_kit::section(&mut u, &t("dlg-ai-location"));
+        u.vertical(|ui| {
+            ui.spacing_mut().item_spacing.y = 6.0;
             ui.horizontal(|ui| {
                 let w = (ui.available_width() - 2.0 * (btn.x + 8.0)).max(120.0);
                 let resp = ui.add(egui::TextEdit::singleline(&mut d.folder).desired_width(w).hint_text(t("dlg-ai-folder-hint")));
@@ -772,7 +755,7 @@ fn show_manager(ctx: &egui::Context, st: &mut AppState) {
                 });
             });
         });
-        u.add_space(8.0);
+        crate::ui_kit::separator(&mut u);
         u.horizontal(|ui| {
             ui.label(fp_i18n::tr!("dlg-ai-memory", size = size_text(mem)));
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
@@ -782,6 +765,7 @@ fn show_manager(ctx: &egui::Context, st: &mut AppState) {
             });
         });
         // Knopf „Schließen“ und Größengriff
+        crate::ui_kit::hline(ui.painter(), body.x_range(), body.bottom() - PAD - btn.y - 13.0, &th);
         let close_r = Rect::from_min_size(pos2(body.right() - PAD - btn.x, body.bottom() - PAD - btn.y), btn);
         if push_button(ui, close_r, &close_l, true, true) {
             close = true;
@@ -830,11 +814,16 @@ fn show_manager(ctx: &egui::Context, st: &mut AppState) {
     }
     match folder_action {
         Some("browse") => {
-            if let Some(f) = rfd::FileDialog::new().set_title(t("dlg-ai-pick-folder")).pick_folder() {
-                d.folder = f.display().to_string();
-                let _ = st.session.execute("ai.setModelFolder", serde_json::json!({"path": d.folder}));
-                d.info = Some(t("dlg-ai-folder-applied"));
-            }
+            // Dateidialog ohne Blockieren: Ergebnis kommt in einem späteren Frame
+            crate::file_dialog::request(st, crate::file_dialog::Request::folder(t("dlg-ai-pick-folder")), |st, r| {
+                let Some(f) = r.into_iter().next() else { return };
+                let folder = f.display().to_string();
+                let _ = st.session.execute("ai.setModelFolder", serde_json::json!({"path": folder}));
+                if let Some(m) = st.dialogs.ai.manager.as_mut() {
+                    m.folder = folder;
+                    m.info = Some(t("dlg-ai-folder-applied"));
+                }
+            });
         }
         Some("default") => {
             d.folder.clear();

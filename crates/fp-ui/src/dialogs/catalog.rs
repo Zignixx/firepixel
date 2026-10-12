@@ -5,7 +5,8 @@
 //! (5987, 19128, 5990, 5991, 6021), Statusleistentext (6012), HTML-Segment (14139),
 //! Strichoptionen (5963–5965), Neuer Stil (19123).
 
-use super::form::{Field, FormDialog};
+use super::form::{Field, FormDialog, Pict};
+use crate::inspector::scale;
 use super::t;
 use crate::app_state::AppState;
 use serde_json::{json, Map, Value};
@@ -24,7 +25,7 @@ pub fn filter_form(cmd: &str, live: bool) -> Option<FormDialog> {
     let (id, title, fields): (&str, String, Vec<Field>) = match cmd {
         "filter.blur.gaussian" => {
             let d = defaults::<GaussianBlurParams>();
-            ("5971", t("dlg-title-gaussian-blur"), vec![Field::slider("radius", t("dlg-lbl-radius").as_str(), dnum(&d, "radius", 1.0), 0.1, 250.0).decimals(1)])
+            ("5971", t("dlg-title-gaussian-blur"), vec![Field::slider("radius", t("dlg-lbl-radius").as_str(), dnum(&d, "radius", 1.0), 0.1, 250.0).decimals(1).scale(scale::BLUR_RADIUS)])
         }
         "filter.sharpen.unsharpMask" => {
             let d = defaults::<UnsharpMaskParams>();
@@ -32,9 +33,9 @@ pub fn filter_form(cmd: &str, live: bool) -> Option<FormDialog> {
                 "5972",
                 t("dlg-title-unsharp-mask"),
                 vec![
-                    Field::slider("amount", t("dlg-lbl-sharpen-amount").as_str(), dnum(&d, "amount", 50.0), 1.0, 500.0).unit("%"),
-                    Field::slider("radius", t("dlg-lbl-pixel-radius").as_str(), dnum(&d, "radius", 1.0), 0.1, 250.0).decimals(1),
-                    Field::slider("threshold", t("dlg-lbl-threshold").as_str(), dnum(&d, "threshold", 0.0), 0.0, 255.0),
+                    Field::slider("amount", t("dlg-lbl-sharpen-amount").as_str(), dnum(&d, "amount", 50.0), 1.0, 500.0).unit("%").scale(scale::SHARPEN_AMOUNT),
+                    Field::slider("radius", t("dlg-lbl-pixel-radius").as_str(), dnum(&d, "radius", 1.0), 0.1, 250.0).decimals(1).scale(scale::BLUR_RADIUS),
+                    Field::slider("threshold", t("dlg-lbl-threshold").as_str(), dnum(&d, "threshold", 0.0), 0.0, 255.0).scale(scale::THRESHOLD),
                 ],
             )
         }
@@ -45,29 +46,29 @@ pub fn filter_form(cmd: &str, live: bool) -> Option<FormDialog> {
         ),
         "filter.blur.motion" => {
             let d = defaults::<MotionBlurParams>();
-            ("6525", t("dlg-title-motion-blur"), vec![Field::slider("angle", t("dlg-lbl-angle").as_str(), dnum(&d, "angle", 90.0), 0.0, 360.0).unit("°"), Field::slider("distance", t("dlg-lbl-distance").as_str(), dnum(&d, "distance", 10.0), 1.0, 100.0)])
+            ("6525", t("dlg-title-motion-blur"), vec![Field::slider("angle", t("dlg-lbl-angle").as_str(), dnum(&d, "angle", 90.0), 0.0, 360.0).unit("°").popup(), Field::slider("distance", t("dlg-lbl-distance").as_str(), dnum(&d, "distance", 10.0), 1.0, 100.0).popup()])
         }
         "filter.adjustColor.hueSaturation" => (
             "19110",
             t("dlg-title-hue-saturation"),
             vec![
-                Field::slider("hue", t("dlg-lbl-hue").as_str(), 0.0, -180.0, 180.0),
-                Field::slider("saturation", t("dlg-lbl-saturation").as_str(), 0.0, -100.0, 100.0),
+                Field::slider("hue", t("dlg-lbl-hue").as_str(), 0.0, -180.0, 180.0).scale(scale::HUE),
+                Field::slider("saturation", t("dlg-lbl-saturation").as_str(), 0.0, -100.0, 100.0).scale(scale::SATURATION),
                 Field::slider("lightness", t("dlg-lbl-brightness").as_str(), 0.0, -100.0, 100.0),
                 Field::check("colorize", t("dlg-lbl-colorize").as_str(), false),
             ],
         ),
         "filter.noise.addNoise" => {
             let d = defaults::<AddNoiseParams>();
-            ("19157", t("dlg-title-add-noise"), vec![Field::slider("amount", t("dlg-lbl-amount").as_str(), dnum(&d, "amount", 50.0), 1.0, 400.0), Field::check("use_color", t("dlg-lbl-color-check").as_str(), d.get("use_color").and_then(|x| x.as_bool()).unwrap_or(true))])
+            ("19157", t("dlg-title-add-noise"), vec![Field::slider("amount", t("dlg-lbl-amount").as_str(), dnum(&d, "amount", 50.0), 1.0, 400.0).popup(), Field::check("use_color", t("dlg-lbl-color-check").as_str(), d.get("use_color").and_then(|x| x.as_bool()).unwrap_or(true))])
         }
         "filter.blur.radial" => {
             let d = defaults::<RadialBlurParams>();
-            ("19159", t("dlg-title-radial-blur"), vec![Field::slider("amount", t("dlg-lbl-amount").as_str(), dnum(&d, "amount", 30.0), 1.0, 100.0), Field::slider("quality", t("dlg-lbl-quality").as_str(), dnum(&d, "quality", 20.0), 1.0, 100.0)])
+            ("19159", t("dlg-title-radial-blur"), vec![Field::slider("amount", t("dlg-lbl-amount").as_str(), dnum(&d, "amount", 30.0), 1.0, 100.0).popup(), Field::slider("quality", t("dlg-lbl-quality").as_str(), dnum(&d, "quality", 20.0), 1.0, 100.0).popup()])
         }
         "filter.blur.zoom" => {
             let d = defaults::<ZoomBlurParams>();
-            ("19160", t("dlg-title-zoom-blur"), vec![Field::slider("amount", t("dlg-lbl-amount").as_str(), dnum(&d, "amount", 30.0), 1.0, 100.0), Field::slider("quality", t("dlg-lbl-quality").as_str(), dnum(&d, "quality", 20.0), 1.0, 100.0)])
+            ("19160", t("dlg-title-zoom-blur"), vec![Field::slider("amount", t("dlg-lbl-amount").as_str(), dnum(&d, "amount", 30.0), 1.0, 100.0).popup(), Field::slider("quality", t("dlg-lbl-quality").as_str(), dnum(&d, "quality", 20.0), 1.0, 100.0).popup()])
         }
         _ => return None,
     };
@@ -76,6 +77,14 @@ pub fn filter_form(cmd: &str, live: bool) -> Option<FormDialog> {
         f = f.with_base(json!({"live": true}));
     }
     Some(f)
+}
+
+/// Ecken als Symbolknöpfe in der Reihenfolge des Originals (Gehrung, abgeschrägt, rund); Codes der
+/// Voreinstellungen `InsetJoinType`/`ExpandJoinType`: 0 = rund (Vorgabe), 1 = abgeschrägt, 2 = Gehrung.
+fn join_field() -> Field {
+    Field::radio_of("join", t("dlg-lbl-corners").as_str(), &[t("dlg-join-miter").as_str(), t("dlg-join-bevel").as_str(), t("dlg-join-round").as_str()], vec![json!("miter"), json!("bevel"), json!("round")], 2)
+        .icons(&[Pict::JoinMiter, Pict::JoinBevel, Pict::JoinRound])
+        .pref_codes(&[2, 1, 0])
 }
 
 fn hex_of(c: fp_color::Argb) -> String {
@@ -90,10 +99,10 @@ pub fn form_for(st: &AppState, cmd: &str) -> Option<FormDialog> {
     let d = st.session.active();
     let f = match cmd {
         "select.feather" => FormDialog::new("5976", t("dlg-title-feather").as_str(), cmd, vec![Field::number("radius", t("dlg-lbl-radius").as_str(), 10.0, 1.0, 1000.0).unit("dlg-unit-pixels")]),
-        "select.expandMarquee" => FormDialog::new("19105", t("dlg-title-expand-marquee").as_str(), cmd, vec![Field::number("amount", t("dlg-lbl-expand-by").as_str(), 1.0, 1.0, 100.0).unit("dlg-unit-pixels")]),
-        "select.contractMarquee" => FormDialog::new("19106", t("dlg-title-contract-marquee").as_str(), cmd, vec![Field::number("amount", t("dlg-lbl-contract-by").as_str(), 1.0, 1.0, 100.0).unit("dlg-unit-pixels")]),
-        "select.borderMarquee" => FormDialog::new("19107", t("dlg-title-border-marquee").as_str(), cmd, vec![Field::number("amount", t("dlg-lbl-border").as_str(), 1.0, 1.0, 100.0).unit("dlg-unit-pixels")]),
-        "select.smoothMarquee" => FormDialog::new("19108", t("dlg-title-smooth-marquee").as_str(), cmd, vec![Field::number("amount", t("dlg-lbl-sample-radius").as_str(), 1.0, 1.0, 100.0).unit("dlg-unit-pixels")]),
+        "select.expandMarquee" => FormDialog::new("19105", t("dlg-title-expand-marquee").as_str(), cmd, vec![Field::number("amount", t("dlg-lbl-expand-by").as_str(), 10.0, 1.0, 100.0).unit("dlg-unit-pixels")]).with_prefs(&[("amount", "ExpandSelectionAmount")]),
+        "select.contractMarquee" => FormDialog::new("19106", t("dlg-title-contract-marquee").as_str(), cmd, vec![Field::number("amount", t("dlg-lbl-contract-by").as_str(), 10.0, 1.0, 100.0).unit("dlg-unit-pixels")]).with_prefs(&[("amount", "ContractSelectionAmount")]),
+        "select.borderMarquee" => FormDialog::new("19107", t("dlg-title-border-marquee").as_str(), cmd, vec![Field::number("amount", t("dlg-lbl-border").as_str(), 10.0, 1.0, 100.0).unit("dlg-unit-pixels")]).with_prefs(&[("amount", "BorderSelectionAmount")]),
+        "select.smoothMarquee" => FormDialog::new("19108", t("dlg-title-smooth-marquee").as_str(), cmd, vec![Field::number("amount", t("dlg-lbl-sample-radius").as_str(), 10.0, 1.0, 100.0).unit("dlg-unit-pixels")]).with_prefs(&[("amount", "SmoothSelectionAmount")]),
         "select.saveBitmapSelection" => FormDialog::new("6541", t("dlg-title-save-selection").as_str(), cmd, vec![Field::text("name", t("dlg-lbl-name").as_str(), &fp_i18n::tr!("dlg-selection-default-name", n = 1))]),
         "select.restoreBitmapSelection" | "select.deleteBitmapSelection" => {
             let names: Vec<String> = d.and_then(|d| d.doc.pages.get(d.page)).and_then(|p| p.saved_selections.as_ref()).map(|v| v.iter().enumerate().map(|(i, s)| s.name.clone().unwrap_or_else(|| fp_i18n::tr!("dlg-selection-default-name", n = i + 1))).collect()).unwrap_or_default();
@@ -110,31 +119,35 @@ pub fn form_for(st: &AppState, cmd: &str) -> Option<FormDialog> {
                 FormDialog::new("6542", t("dlg-title-delete-selection").as_str(), cmd, v)
             }
         }
-        "modify.alterPath.simplify" => FormDialog::new("6006", t("dlg-title-simplify").as_str(), cmd, vec![Field::number("amount", t("dlg-lbl-simplify-amount").as_str(), 1.0, 0.0, 100.0).decimals(1)]),
+        "modify.alterPath.simplify" => FormDialog::new("6006", t("dlg-title-simplify").as_str(), cmd, vec![Field::number("amount", t("dlg-lbl-simplify-amount").as_str(), 10.0, 0.0, 100.0).popup()]).with_prefs(&[("amount", "SimplifyAmount")]),
         "modify.alterPath.insetPath" => FormDialog::new(
             "6007",
             t("dlg-title-inset-path").as_str(),
             cmd,
             vec![
-                Field::radio_of("direction", t("dlg-lbl-direction").as_str(), &[t("dlg-dir-inside").as_str(), t("dlg-dir-outside").as_str()], vec![json!("inside"), json!("outside")], 0),
-                Field::number("distance", t("dlg-lbl-width").as_str(), 1.0, 0.0, 1000.0),
-                Field::radio_of("join", t("dlg-lbl-corners").as_str(), &[t("dlg-join-bevel").as_str(), t("dlg-join-round").as_str(), t("dlg-join-miter").as_str()], vec![json!("bevel"), json!("round"), json!("miter")], 2),
-                Field::number("miter", t("dlg-lbl-miter-limit").as_str(), 10.0, 4.0, 10.0),
+                Field::radio_of("direction", t("dlg-lbl-direction").as_str(), &[t("dlg-dir-inside").as_str(), t("dlg-dir-outside").as_str()], vec![json!("inside"), json!("outside")], 0).pref_codes(&[0, 1]),
+                Field::number("distance", t("dlg-lbl-width").as_str(), 10.0, 0.0, 1000.0).popup(),
+                join_field(),
+                Field::number("miter", t("dlg-lbl-miter-limit").as_str(), 10.0, 4.0, 10.0).decimals(2),
             ],
         )
-        .with_width(400.0),
+        .with_width(400.0)
+        .with_prefs(&[("direction", "InsetDirection"), ("distance", "InsetAmount"), ("join", "InsetJoinType"), ("miter", "InsetMiterLimit")]),
         "modify.alterPath.expandStroke" => FormDialog::new(
             "6008",
             t("dlg-title-expand-stroke").as_str(),
             cmd,
             vec![
-                Field::number("width", t("dlg-lbl-width").as_str(), 10.0, 0.1, 1000.0).decimals(1),
-                Field::radio_of("join", t("dlg-lbl-corners").as_str(), &[t("dlg-join-bevel").as_str(), t("dlg-join-round").as_str(), t("dlg-join-miter").as_str()], vec![json!("bevel"), json!("round"), json!("miter")], 2),
-                Field::number("miter", t("dlg-lbl-miter-limit").as_str(), 10.0, 1.0, 10.0),
-                Field::radio_of("cap", t("dlg-lbl-caps").as_str(), &[t("dlg-cap-butt").as_str(), t("dlg-cap-square").as_str(), t("dlg-cap-round").as_str()], vec![json!("butt"), json!("square"), json!("round")], 0),
+                Field::number("width", t("dlg-lbl-width").as_str(), 10.0, 1.0, 1000.0).popup(),
+                join_field(),
+                Field::number("miter", t("dlg-lbl-miter-limit").as_str(), 10.0, 1.0, 10.0).decimals(2),
+                Field::radio_of("cap", t("dlg-lbl-caps").as_str(), &[t("dlg-cap-butt").as_str(), t("dlg-cap-square").as_str(), t("dlg-cap-round").as_str()], vec![json!("butt"), json!("square"), json!("round")], 0)
+                    .icons(&[Pict::CapButt, Pict::CapSquare, Pict::CapRound])
+                    .pref_codes(&[0, 1, 2]),
             ],
         )
-        .with_width(400.0),
+        .with_width(400.0)
+        .with_prefs(&[("width", "ExpandWidth"), ("join", "ExpandJoinType"), ("miter", "ExpandMiterLimit"), ("cap", "ExpandCapType")]),
         "text.size.other" => FormDialog::new("6073", t("dlg-title-text-size").as_str(), cmd, vec![Field::number("size", t("dlg-lbl-size").as_str(), 12.0, 8.0, 96.0).unit("dlg-unit-points")]),
         "modify.symbol.tweenInstances" => FormDialog::new("6005", t("dlg-title-tween-instances").as_str(), cmd, vec![Field::number("steps", t("dlg-lbl-steps").as_str(), 1.0, 1.0, 1000.0), Field::check("_distribute", t("dlg-lbl-distribute-states").as_str(), false)]).with_transform(tween_params),
         "modify.symbol.convertToSymbol" => FormDialog::new(
@@ -165,20 +178,20 @@ pub fn form_for(st: &AppState, cmd: &str) -> Option<FormDialog> {
                     let dir = (-(a.offset.y as f64)).atan2(a.offset.x as f64).to_degrees().rem_euclid(360.0);
                     (a.frames as f64, dist, dir, a.scale as f64, a.start_opacity as f64 / 10.0, a.end_opacity as f64 / 10.0, a.rotation as f64)
                 }
-                None => (5.0, 72.0, 45.0, 100.0, 100.0, 100.0, 0.0),
+                None => (5.0, 72.0, 0.0, 100.0, 100.0, 100.0, 0.0),
             };
             FormDialog::new(
                 "19146",
                 t("dlg-title-animate").as_str(),
                 cmd,
                 vec![
-                    Field::slider("frames", t("dlg-lbl-states").as_str(), frames, 1.0, 60.0),
-                    Field::slider("_dist", t("dlg-lbl-movement").as_str(), dist.round(), 0.0, 250.0),
-                    Field::slider("_dir", t("dlg-lbl-direction").as_str(), dir.round(), 0.0, 360.0).unit("°"),
-                    Field::slider("scale", t("dlg-lbl-scale-to").as_str(), scale, 0.0, 250.0).unit("%"),
-                    Field::slider("startOpacity", t("dlg-lbl-opacity-from").as_str(), op0.round(), 0.0, 100.0),
-                    Field::slider("endOpacity", t("dlg-lbl-opacity-to").as_str(), op1.round(), 0.0, 100.0),
-                    Field::slider("_rot", t("dlg-lbl-rotation").as_str(), rot.abs(), 0.0, 360.0).unit("°"),
+                    Field::slider("frames", t("dlg-lbl-states").as_str(), frames, 1.0, 60.0).popup(),
+                    Field::slider("_dist", t("dlg-lbl-movement").as_str(), dist.round(), 0.0, 250.0).popup(),
+                    Field::slider("_dir", t("dlg-lbl-direction").as_str(), dir.round(), 0.0, 360.0).unit("°").popup(),
+                    Field::slider("scale", t("dlg-lbl-scale-to").as_str(), scale, 0.0, 250.0).unit("%").popup(),
+                    Field::slider("startOpacity", t("dlg-lbl-opacity-from").as_str(), op0.round(), 0.0, 100.0).popup(),
+                    Field::slider("endOpacity", t("dlg-lbl-opacity-to").as_str(), op1.round(), 0.0, 100.0).popup(),
+                    Field::slider("_rot", t("dlg-lbl-rotation").as_str(), rot.abs(), 0.0, 360.0).unit("°").popup(),
                     Field::radio_of("_cw", "", &[t("dlg-cw").as_str(), t("dlg-ccw").as_str()], vec![json!(true), json!(false)], if rot < 0.0 { 1 } else { 0 }),
                 ],
             )
@@ -275,6 +288,9 @@ pub fn form_for(st: &AppState, cmd: &str) -> Option<FormDialog> {
         "panel.behaviors.statusText" => FormDialog::new("6012", t("dlg-title-status-text").as_str(), "pi.behavior.add", vec![Field::text("statusText", t("dlg-lbl-message").as_str(), "")]).with_base(json!({"action": 1, "event": 0})).with_width(400.0),
         _ => return None,
     };
+    // gemerkte Werte aus den Voreinstellungen (wie im Original)
+    let mut f = f;
+    f.load_prefs(&st.session.prefs);
     Some(f)
 }
 

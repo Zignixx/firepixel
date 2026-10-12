@@ -6,28 +6,39 @@ use thiserror::Error;
 /// eine Panik.
 #[derive(Debug, Error)]
 pub enum FwError {
-    #[error("keine PNG-Signatur")]
+    #[error("{}", m0("err-fwpng-not-png"))]
     NotPng,
-    #[error("PNG-Chunk bei Offset {offset} abgeschnitten")]
+    #[error("{}", m1("err-fwpng-truncated-chunk", "offset", .offset))]
     TruncatedChunk { offset: usize },
-    #[error("PNG ohne IHDR")]
+    #[error("{}", m0("err-fwpng-missing-ihdr"))]
     MissingIhdr,
-    #[error("ungültiger Chunk {kind}: {msg}")]
+    #[error("{}", m2("err-fwpng-bad-chunk", "kind", .kind, "detail", .msg))]
     BadChunk { kind: String, msg: String },
-    #[error("Tag-Baum: {msg} (Offset {offset})")]
+    #[error("{}", m2("err-fwpng-tree", "detail", .msg, "offset", .offset))]
     Tree { offset: usize, msg: String },
-    #[error("aTXT: {msg} (Offset {offset})")]
+    #[error("{}", m2("err-fwpng-atxt", "detail", .msg, "offset", .offset))]
     Ate { offset: usize, msg: String },
     #[error("zlib: {0}")]
     Zlib(String),
-    #[error("Dokument: {0}")]
+    #[error("{}", m1("err-fwpng-document", "detail", .0))]
     Document(String),
-    #[error("PNG-Dekodierung: {0}")]
+    #[error("{}", m1("err-fwpng-png-decode", "detail", .0))]
     PngDecode(String),
-    #[error("PNG-Kodierung: {0}")]
+    #[error("{}", m1("err-fwpng-png-encode", "detail", .0))]
     PngEncode(String),
-    #[error("E/A: {0}")]
+    #[error("{}", m1("err-fwpng-io", "detail", .0))]
     Io(#[from] std::io::Error),
+}
+
+// ---- Mehrsprachige Meldungen (fp-i18n, `meldungen.ftl`) ----
+fn m0(key: &str) -> String {
+    fp_i18n::t(key)
+}
+fn m1(key: &str, a: &str, va: &dyn std::fmt::Display) -> String {
+    fp_i18n::t_args(key, &[(a, fp_i18n::Value::from(va.to_string()))])
+}
+fn m2(key: &str, a: &str, va: &dyn std::fmt::Display, b: &str, vb: &dyn std::fmt::Display) -> String {
+    fp_i18n::t_args(key, &[(a, fp_i18n::Value::from(va.to_string())), (b, fp_i18n::Value::from(vb.to_string()))])
 }
 
 /// Ergebnistyp des Crates.

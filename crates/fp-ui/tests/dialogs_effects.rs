@@ -169,7 +169,7 @@ fn edit_existing_effect_changes_same_entry() {
 
 #[test]
 fn filter_dialogs_live_and_destructive_preview() {
-    for (label, field) in [("Gaußscher Weichzeichner...", "radius"), ("Rauschen hinzufügen...", "amount"), ("Unscharf maskieren...", "amount"), ("Farbton/Sättigung...", "hue"), ("Helligkeit/Kontrast...", "brightness"), ("Bewegungsunschärfe...", "distance"), ("Radialer Weichzeichner...", "amount"), ("Zoom-Weichzeichner...", "amount")] {
+    for (label, field) in [("Gaußscher Weichz. ...", "radius"), ("Rauschen hinzufügen...", "amount"), ("Unscharf maskieren...", "amount"), ("Farbton/Sättigung...", "hue"), ("Helligkeit/Kontrast...", "brightness"), ("Bewegungsunschärfe…", "distance"), ("Radiales Weichz. ...", "amount"), ("Zentriertes Weichz. ...", "amount")] {
         // als Live-Effekt
         let mut h = harness(app_with_rect());
         h.run_steps(2);

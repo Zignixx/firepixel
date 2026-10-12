@@ -25,7 +25,7 @@ pub fn decode(d: &[u8]) -> Result<RasterImage> {
     let (bpp, desc) = (h[16], h[17]);
     check_size(w, hh)?;
     if !matches!(typ, 1 | 2 | 3 | 9 | 10 | 11) {
-        return Err(ImportError::Unsupported(format!("TGA-Typ {typ} wird nicht unterstützt")));
+        return Err(ImportError::Unsupported(fp_i18n::tr!("err-import-tga-type", kind = typ.to_string())));
     }
     let alpha_bits = desc & 15;
     let mut p = 18 + id_len;
@@ -45,7 +45,7 @@ pub fn decode(d: &[u8]) -> Result<RasterImage> {
     }
     let bytes = (bpp as usize).div_ceil(8);
     if bytes == 0 || bytes > 4 {
-        return Err(bad("ungültige Bittiefe"));
+        return Err(bad(&fp_i18n::t("err-import-bad-bit-depth")));
     }
     let n = w as usize * hh as usize;
     let mut raw: Vec<u8> = Vec::with_capacity(n * bytes);

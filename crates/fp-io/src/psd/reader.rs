@@ -401,7 +401,7 @@ fn ustr_block(d: &[u8]) -> Option<String> {
 pub fn read(b: &[u8]) -> Result<PsdFile> {
     let mut r = Reader::new(b);
     if r.take(4) != Some(b"8BPS") {
-        return Err(bad("Signatur fehlt"));
+        return Err(bad(&fp_i18n::t("err-import-signature-missing")));
     }
     let ver = r.u16().ok_or_else(|| bad("Kopf"))?;
     let psb = ver == 2;

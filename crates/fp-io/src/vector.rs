@@ -381,8 +381,8 @@ fn pdf_settings() -> hayro_svg::hayro_interpret::InterpreterSettings {
 pub fn import_pdf(data: &[u8], opts: &ImportOptions) -> Result<ImportResult> {
     let run = || -> Result<ImportResult> {
         let pdf = hayro_svg::hayro_syntax::Pdf::new(data.to_vec()).map_err(|e| match e {
-            hayro_svg::hayro_syntax::LoadPdfError::Decryption(_) => ImportError::Unsupported("verschlüsselte PDF-Dateien werden nicht unterstützt".into()),
-            _ => ImportError::Corrupt("PDF nicht lesbar".into()),
+            hayro_svg::hayro_syntax::LoadPdfError::Decryption(_) => ImportError::Unsupported(fp_i18n::t("err-import-pdf-encrypted")),
+            _ => ImportError::Corrupt(fp_i18n::t("err-import-pdf-unreadable")),
         })?;
         let settings = pdf_settings();
         let cache = hayro_svg::RenderCache::new();
@@ -424,12 +424,12 @@ pub fn import_pdf(data: &[u8], opts: &ImportOptions) -> Result<ImportResult> {
                 }
             }
         }
-        let mut r = result.ok_or_else(|| ImportError::Corrupt("PDF ohne Seite".into()))?;
+        let mut r = result.ok_or_else(|| ImportError::Corrupt(fp_i18n::t("err-import-pdf-no-page")))?;
         r.warnings.sort();
         r.warnings.dedup();
         Ok(r)
     };
-    std::panic::catch_unwind(std::panic::AssertUnwindSafe(run)).unwrap_or_else(|_| Err(ImportError::Decode("PDF", "PDF-Interpreter abgebrochen (beschädigte Daten)".into())))
+    std::panic::catch_unwind(std::panic::AssertUnwindSafe(run)).unwrap_or_else(|_| Err(ImportError::Decode("PDF", fp_i18n::t("err-import-pdf-aborted"))))
 }
 
 /// Element (rekursiv) mit neuen IDs aus `ids`.
@@ -461,10 +461,10 @@ fn is_illustrator(text: &str) -> bool {
 
 /// Illustrator-PostScript (≤ 8) bzw. AI-EPS lesen.
 fn import_ai_text(text: &str, opts: &ImportOptions) -> Result<ImportResult> {
-    let bb = bounding_box(text).ok_or_else(|| ImportError::Corrupt("AI/EPS ohne %%BoundingBox".into()))?;
+    let bb = bounding_box(text).ok_or_else(|| ImportError::Corrupt(fp_i18n::t("err-import-eps-no-bbox")))?;
     let (w, h) = ((bb[2] - bb[0]).ceil(), (bb[3] - bb[1]).ceil());
     if !(w > 0.0 && h > 0.0) {
-        return Err(ImportError::Corrupt("Begrenzungsrahmen mit Breite oder Höhe ≤ 0".into()));
+        return Err(ImportError::Corrupt(fp_i18n::t("err-import-bbox-empty")));
     }
     check_size(w as u32, h as u32)?;
     let body_start = ["%%EndSetup", "%%EndProlog"].iter().filter_map(|m| text.find(m)).min().unwrap_or(0);
@@ -603,7 +603,7 @@ pub fn import_postscript(data: &[u8], fmt: FileFormat, opts: &ImportOptions) -> 
         }
         return Ok(r);
     }
-    Err(ImportError::Unsupported("EPS ohne Illustrator-Daten kann nicht gelesen werden: Das Original rastert sie mit seinem PostScript-Modul (MPS.dll), das in Firepixel nicht enthalten ist. Bitte als Illustrator-8-EPS, SVG oder Pixelbild speichern.".into()))
+    Err(ImportError::Unsupported(fp_i18n::t("err-import-eps-no-ai-data")))
 }
 
 #[cfg(test)]

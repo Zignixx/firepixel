@@ -29,6 +29,7 @@ pub mod canvas;
 mod start_window;
 pub mod dialogs;
 pub mod docking;
+pub mod file_dialog; // AU: Datei-Dialoge ohne Blockieren
 pub mod files;
 pub mod icons;
 pub mod input;
@@ -80,6 +81,7 @@ impl FirepixelApp {
         }
         if let Some(window) = cc.winit_window() {
             start_window::prepare_hidden(window, cc.storage);
+            file_dialog::set_parent_window(window.clone()); // AU: Besitzer der nativen Datei-Dialoge
         }
         let prefs_path = Preferences::default_path();
         let mut prefs = prefs_path.as_deref().map(Preferences::load_or_default).unwrap_or_default();

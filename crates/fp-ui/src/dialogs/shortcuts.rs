@@ -208,11 +208,18 @@ pub fn show(ctx: &egui::Context, st: &mut AppState) {
                     2 => {
                         let html = set_html(st, &d.work);
                         let html_filter = t("dlg-sc-html-filter");
-                        if let Some(p) = super::panel_menus::pick_save(st, &t("dlg-sc-export-set"), &format!("{}.html", d.work.name), &[(html_filter.as_str(), &["html", "htm"])]) {
-                            d.message = Some(match std::fs::write(&p, html) {
+                        // Dateidialog ohne Blockieren: die Meldung landet im Dialog, sobald gewählt
+                        super::panel_menus::pick_save(st, &t("dlg-sc-export-set"), &format!("{}.html", d.work.name), &[(html_filter.as_str(), &["html", "htm"])], move |st, p| {
+                            let m = match std::fs::write(&p, html) {
                                 Ok(()) => fp_i18n::tr!("dlg-export-file-done", path = p.display().to_string()),
                                 Err(e) => fp_i18n::tr!("dlg-export-failed", error = e.to_string()),
-                            });
+                            };
+                            if let Some(s) = st.dialogs.shortcuts.as_mut() {
+                                s.message = Some(m);
+                            }
+                        });
+                        if let Some(m) = st.dialogs.shortcuts.as_ref().and_then(|s| s.message.clone()) {
+                            d.message = Some(m);
                         }
                     }
                     _ => {

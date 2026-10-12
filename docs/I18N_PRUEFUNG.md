@@ -52,18 +52,18 @@ Leinwand-Kontextmenüs in bis zu drei passenden Auswahl-Situationen) und in
 ## Zahlen je Bereich
 
 <!-- AUTO:START -->
-Stand des Laufs: 12.10.2026  3:49:33,41 (automatisch erzeugt von `crates\fp-ui\tests\i18n_qa_bericht.rs`)
+Stand des Laufs: 12.10.2026  4:29:41,70 (automatisch erzeugt von `crates\fp-ui\tests\i18n_qa_bericht.rs`)
 
 | Bereich | Bilder | Rohschlüssel de/en/qps | unmarkiert qps (Texte) | Überläufe en (neu ggü. de) | Überläufe qps (neu ggü. de) | Überläufe de (neu ggü. vor Phase 6) | Deutsch geändert | nicht herstellbar de/en/qps |
 |---|---|---|---|---|---|---|---|---|
-| Hauptfenster (3 Designs, leer, Symbolmodus) | 8 | 0/0/0 | 2 | 3 (0) | 0 (0) | 3 (0) | 0 | 0/0/0 |
+| Hauptfenster (3 Designs, leer, Symbolmodus) | 8 | 0/0/0 | 2 | 3 (0) | 4 (1) | 3 (0) | 7 | 0/0/0 |
 | Menüs und Untermenüs | 68 | 0/0/0 | 138 | 46 (10) | 24 (0) | 120 (9) | 68 | 6/1/16 |
-| Bedienfelder und Bedienfeldmenüs | 46 | 0/0/0 | 25 | 36 (1) | 4 (2) | 37 (2) | 8 | 0/0/0 |
-| Inspektor (Elementarten, Werkzeuge) | 80 | 0/0/0 | 11 | 51 (3) | 30 (8) | 68 (15) | 31 | 0/0/0 |
-| Dialoge | 102 | 0/0/0 | 29 | 26 (0) | 128 (115) | 27 (0) | 102 | 0/0/0 |
-| Kontextmenüs | 13 | 0/0/0 | 10 | 9 (5) | 1 (0) | 5 (0) | 1 | 1/1/1 |
-| Statuszeile | 7 | 0/0/0 | 8 | 4 (0) | 2 (1) | 8 (3) | 4 | 0/0/0 |
-| **Summe** | **324** | **0/0/0** | **223** | **(19)** | **(126)** | **268 (29)** | **214** | |
+| Bedienfelder und Bedienfeldmenüs | 46 | 0/0/0 | 4 | 36 (1) | 29 (2) | 35 (0) | 42 | 0/0/0 |
+| Inspektor (Elementarten, Werkzeuge) | 80 | 0/0/0 | 11 | 51 (12) | 30 (14) | 44 (5) | 79 | 0/0/0 |
+| Dialoge | 102 | 0/0/0 | 29 | 26 (0) | 128 (114) | 28 (1) | 101 | 0/0/0 |
+| Kontextmenüs | 13 | 0/0/0 | 10 | 9 (5) | 1 (0) | 5 (1) | 13 | 1/1/1 |
+| Statuszeile | 7 | 0/0/0 | 8 | 4 (0) | 2 (1) | 4 (0) | 7 | 0/0/0 |
+| **Summe** | **324** | **0/0/0** | **202** | **(28)** | **(132)** | **239 (16)** | **317** | |
 
 Lesart: Rohschlüssel und unmarkierte Texte zählen verschiedene Texte; Überläufe zählen verschiedene (Bild, Text, Art) über alle vier Größen (1024×768 und 1920×1080, je 100 % und 150 %). In Klammern: nur die Überläufe, die es im selben Bild und derselben Größe in Deutsch nicht gibt (Folge der Übersetzung). „Überläufe de“: alle deutschen Überläufe; in Klammern die, die es im Stand vor Phase 6 (`30ddaec`, gleiche Größen) nicht gab. Der Rest bestand schon vorher und ist sprachunabhängig.
 
@@ -77,6 +77,19 @@ Lesart: Rohschlüssel und unmarkierte Texte zählen verschiedene Texte; Überlä
 |---|---|
 | Seite 1 | haupt:dark, haupt:dark:auswahl, haupt:normal, haupt:normal:auswahl … (+3) |
 | Unbenannt-2 | haupt:dark, haupt:normal, haupt:oled, haupt:symbolmodus |
+
+**Überläufe qps, neu gegenüber Deutsch (1):**
+
+| Bild | Art | Text | Größen | Lage |
+|---|---|---|---|---|
+| haupt:symbolmodus | abgeschnitten | [!! Bildgröße... ·····!!] | 1024x768@150 | [436,411–529,423] sichtbar [436,411–522,423] |
+
+**Deutsch geändert gegenüber dem Stand vor Phase 6 (7 Bilder), je Zeile zusammengefasst (− vorher, + jetzt; Text, x,y,Breite,Höhe):**
+
+| Zeile | Bilder |
+|---|---|
+| vorher ["99 Farben\t1536,334,47,8"] → jetzt ["108 Farben\t1531,334,52,8"] | 6 haupt:dark, haupt:dark:auswahl, haupt:normal … |
+| vorher ["Firepixel\t474,349,78,20", "Firepixel-Dokument (FW-PNG)\t706,424,153,12", "Neu erstellen\t705,400,72,9", "Zuletzt verwendete Datei öffnen\t433,400,176, | 1 haupt:leer |
 
 
 ### Menüs und Untermenüs
@@ -245,115 +258,33 @@ Lesart: Rohschlüssel und unmarkierte Texte zählen verschiedene Texte; Überlä
 | menu:7/5 | abgeschnitten | Texture: | 1024x768@150 | [390,459–429,467] sichtbar [390,459–401,467] |
 | menu:7/6 | abgeschnitten | Texture: | 1024x768@150 | [390,459–429,467] sichtbar [390,459–401,467] |
 
-**Deutsch geändert gegenüber dem Stand vor Phase 6 (68):**
+**Deutsch geändert gegenüber dem Stand vor Phase 6 (68 Bilder), je Zeile zusammengefasst (− vorher, + jetzt; Text, x,y,Breite,Höhe):**
 
-- menu:0: vorher ["Pinselstrich bearbeit…\t395,971,109,9"] → jetzt ["Pinselstrich bearbeiten\t395,972,108,8"]
-- menu:0/18: vorher ["Pinselstrich bearbeit…\t395,971,109,9"] → jetzt ["Pinselstrich bearbeiten\t395,972,108,8"]
-- menu:0/25: vorher ["Pinselstrich bearbeit…\t395,971,109,9"] → jetzt ["Pinselstrich bearbeiten\t395,972,108,8"]
-- menu:0/4: vorher ["1 C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\firepixel-i18n-qa\\X\\vorlage.fw.png\t368,133,465,12", "Pinselstrich bearbeit…\t395,971,109,9"] 
-- menu:0/5: vorher ["Pinselstrich bearbeit…\t395,971,109,9"] → jetzt ["Pinselstrich bearbeiten\t395,972,108,8"]
-- menu:1: vorher ["Pinselstrich bearbeit…\t395,971,109,9"] → jetzt ["Pinselstrich bearbeiten\t395,972,108,8"]
-- menu:1/3: vorher ["Pinselstrich bearbeit…\t395,971,109,9"] → jetzt ["Pinselstrich bearbeiten\t395,972,108,8"]
-- menu:2: vorher ["Pinselstrich bearbeit…\t395,971,109,9"] → jetzt ["Pinselstrich bearbeiten\t395,972,108,8"]
-- menu:2/14: vorher ["Pinselstrich bearbeit…\t395,971,109,9"] → jetzt ["Pinselstrich bearbeiten\t395,972,108,8"]
-- menu:2/15: vorher ["Pinselstrich bearbeit…\t395,971,109,9"] → jetzt ["Pinselstrich bearbeiten\t395,972,108,8"]
-- menu:2/16: vorher ["Pinselstrich bearbeit…\t395,971,109,9"] → jetzt ["Pinselstrich bearbeiten\t395,972,108,8"]
-- menu:2/17: vorher ["Pinselstrich bearbeit…\t395,971,109,9"] → jetzt ["Pinselstrich bearbeiten\t395,972,108,8"]
-- menu:2/2: vorher ["Pinselstrich bearbeit…\t395,971,109,9"] → jetzt ["Pinselstrich bearbeiten\t395,972,108,8"]
-- menu:2/23: vorher ["Pinselstrich bearbeit…\t395,971,109,9"] → jetzt ["Pinselstrich bearbeiten\t395,972,108,8"]
-- menu:2/24: neu (nicht in der Basis)
-- menu:3: vorher ["Pinselstrich bearbeit…\t395,971,109,9"] → jetzt ["Pinselstrich bearbeiten\t395,972,108,8"]
-- menu:4: vorher ["Pinselstrich bearbeit…\t395,971,109,9"] → jetzt ["Pinselstrich bearbeiten\t395,972,108,8"]
-- menu:4/0: vorher ["Pinselstrich bearbeit…\t395,971,109,9"] → jetzt ["Pinselstrich bearbeiten\t395,972,108,8"]
-- menu:4/14: vorher ["Pinselstrich bearbeit…\t395,971,109,9"] → jetzt ["Pinselstrich bearbeiten\t395,972,108,8"]
-- menu:4/15: vorher ["Pinselstrich bearbeit…\t395,971,109,9"] → jetzt ["Pinselstrich bearbeiten\t395,972,108,8"]
-- menu:4/16: vorher ["Pinselstrich bearbeit…\t395,971,109,9"] → jetzt ["Pinselstrich bearbeiten\t395,972,108,8"]
-- menu:4/19: vorher ["Pinselstrich bearbeit…\t395,971,109,9"] → jetzt ["Pinselstrich bearbeiten\t395,972,108,8"]
-- menu:4/2: vorher ["Pinselstrich bearbeit…\t395,971,109,9"] → jetzt ["Pinselstrich bearbeiten\t395,972,108,8"]
-- menu:4/20: vorher ["Pinselstrich bearbeit…\t395,971,109,9"] → jetzt ["Pinselstrich bearbeiten\t395,972,108,8"]
-- menu:4/3: vorher ["Pinselstrich bearbeit…\t395,971,109,9"] → jetzt ["Pinselstrich bearbeiten\t395,972,108,8"]
-- menu:4/4: vorher ["Bearbeiten...\t415,947,61,9"] → jetzt ["Bearbeiten...\t381,947,61,9"]
-- menu:4/6: vorher ["Pinselstrich bearbeit…\t395,971,109,9"] → jetzt ["Pinselstrich bearbeiten\t395,972,108,8"]
-- menu:4/7: vorher ["Pinselstrich bearbeit…\t395,971,109,9"] → jetzt ["Pinselstrich bearbeiten\t395,972,108,8"]
-- menu:5: vorher ["Pinselstrich bearbeit…\t395,971,109,9"] → jetzt ["Pinselstrich bearbeiten\t395,972,108,8"]
-- menu:5/0: vorher ["202\t110,948,19,9", "306\t162,970,19,9", "Autom. Unterschneidung\t467,972,127,12"] → jetzt ["139\t111,948,18,9", "309\t162,970,19,9", "Autom.
-- menu:5/0/0: vorher ["202\t110,948,19,9", "306\t162,970,19,9", "Autom. Unterschneidung\t467,972,127,12"] → jetzt ["139\t111,948,18,9", "309\t162,970,19,9", "Auto
-- menu:5/0/1: vorher ["202\t110,948,19,9", "306\t162,970,19,9", "Autom. Unterschneidung\t467,972,127,12"] → jetzt ["139\t111,948,18,9", "309\t162,970,19,9", "Auto
-- menu:5/0/10: vorher ["202\t110,948,19,9", "306\t162,970,19,9", "Autom. Unterschneidung\t467,972,127,12"] → jetzt ["139\t111,948,18,9", "309\t162,970,19,9", "Aut
-- menu:5/0/11: vorher ["202\t110,948,19,9", "306\t162,970,19,9", "Autom. Unterschneidung\t467,972,127,12"] → jetzt ["139\t111,948,18,9", "309\t162,970,19,9", "Aut
-- menu:5/0/12: vorher ["202\t110,948,19,9", "306\t162,970,19,9", "Autom. Unterschneidung\t467,972,127,12"] → jetzt ["139\t111,948,18,9", "309\t162,970,19,9", "Aut
-- menu:5/0/13: vorher ["202\t110,948,19,9", "306\t162,970,19,9", "Autom. Unterschneidung\t467,972,127,12"] → jetzt ["139\t111,948,18,9", "309\t162,970,19,9", "Aut
-- menu:5/0/14: vorher ["202\t110,948,19,9", "306\t162,970,19,9", "Autom. Unterschneidung\t467,972,127,12"] → jetzt ["139\t111,948,18,9", "309\t162,970,19,9", "Aut
-- menu:5/0/15: vorher ["202\t110,948,19,9", "306\t162,970,19,9", "Autom. Unterschneidung\t467,972,127,12"] → jetzt ["139\t111,948,18,9", "309\t162,970,19,9", "Aut
-- menu:5/0/16: vorher ["202\t110,948,19,9", "306\t162,970,19,9", "Autom. Unterschneidung\t467,972,127,12"] → jetzt ["139\t111,948,18,9", "309\t162,970,19,9", "Aut
-- menu:5/0/17: vorher ["202\t110,948,19,9", "306\t162,970,19,9", "Autom. Unterschneidung\t467,972,127,12"] → jetzt ["139\t111,948,18,9", "309\t162,970,19,9", "Aut
-- menu:5/0/18: vorher ["202\t110,948,19,9", "306\t162,970,19,9", "Autom. Unterschneidung\t467,972,127,12"] → jetzt ["139\t111,948,18,9", "309\t162,970,19,9", "Aut
-- menu:5/0/19: vorher ["202\t110,948,19,9", "306\t162,970,19,9", "Autom. Unterschneidung\t467,972,127,12"] → jetzt ["139\t111,948,18,9", "309\t162,970,19,9", "Aut
-- menu:5/0/2: vorher ["202\t110,948,19,9", "306\t162,970,19,9", "Autom. Unterschneidung\t467,972,127,12"] → jetzt ["139\t111,948,18,9", "309\t162,970,19,9", "Auto
-- menu:5/0/20: vorher ["202\t110,948,19,9", "306\t162,970,19,9", "Autom. Unterschneidung\t467,972,127,12"] → jetzt ["139\t111,948,18,9", "309\t162,970,19,9", "Aut
-- menu:5/0/21: vorher ["202\t110,948,19,9", "306\t162,970,19,9", "Autom. Unterschneidung\t467,972,127,12"] → jetzt ["139\t111,948,18,9", "309\t162,970,19,9", "Aut
-- menu:5/0/3: vorher ["202\t110,948,19,9", "306\t162,970,19,9", "Autom. Unterschneidung\t467,972,127,12"] → jetzt ["139\t111,948,18,9", "309\t162,970,19,9", "Auto
-- menu:5/0/4: vorher ["202\t110,948,19,9", "306\t162,970,19,9", "Autom. Unterschneidung\t467,972,127,12"] → jetzt ["139\t111,948,18,9", "309\t162,970,19,9", "Auto
-- menu:5/0/5: vorher ["202\t110,948,19,9", "306\t162,970,19,9", "Autom. Unterschneidung\t467,972,127,12"] → jetzt ["139\t111,948,18,9", "309\t162,970,19,9", "Auto
-- menu:5/0/6: vorher ["202\t110,948,19,9", "306\t162,970,19,9", "Autom. Unterschneidung\t467,972,127,12"] → jetzt ["139\t111,948,18,9", "309\t162,970,19,9", "Auto
-- menu:5/0/7: vorher ["202\t110,948,19,9", "306\t162,970,19,9", "Autom. Unterschneidung\t467,972,127,12"] → jetzt ["139\t111,948,18,9", "309\t162,970,19,9", "Auto
-- menu:5/0/8: vorher ["202\t110,948,19,9", "306\t162,970,19,9", "Autom. Unterschneidung\t467,972,127,12"] → jetzt ["139\t111,948,18,9", "309\t162,970,19,9", "Auto
-- menu:5/0/9: vorher ["202\t110,948,19,9", "306\t162,970,19,9", "Autom. Unterschneidung\t467,972,127,12"] → jetzt ["139\t111,948,18,9", "309\t162,970,19,9", "Auto
-- menu:5/1: vorher ["202\t110,948,19,9", "306\t162,970,19,9", "Autom. Unterschneidung\t467,972,127,12"] → jetzt ["139\t111,948,18,9", "309\t162,970,19,9", "Autom.
-- menu:5/2: vorher ["202\t110,948,19,9", "306\t162,970,19,9", "Autom. Unterschneidung\t467,972,127,12"] → jetzt ["139\t111,948,18,9", "309\t162,970,19,9", "Autom.
-- menu:5/3: vorher ["202\t110,948,19,9", "306\t162,970,19,9", "Autom. Unterschneidung\t467,972,127,12"] → jetzt ["139\t111,948,18,9", "309\t162,970,19,9", "Autom.
-- menu:5/8: vorher ["202\t110,948,19,9", "306\t162,970,19,9", "Autom. Unterschneidung\t467,972,127,12"] → jetzt ["139\t111,948,18,9", "309\t162,970,19,9", "Autom.
-- menu:6: vorher ["Pinselstrich bearbeit…\t395,971,109,9"] → jetzt ["Pinselstrich bearbeiten\t395,972,108,8"]
-- menu:7: vorher ["Pinselstrich bearbeit…\t395,971,109,9"] → jetzt ["Pinselstrich bearbeiten\t395,972,108,8"]
-- menu:7/2: vorher ["Pinselstrich bearbeit…\t395,971,109,9"] → jetzt ["Pinselstrich bearbeiten\t395,972,108,8"]
-- menu:7/3: vorher ["Pinselstrich bearbeit…\t395,971,109,9"] → jetzt ["Pinselstrich bearbeiten\t395,972,108,8"]
-- menu:7/4: vorher ["Pinselstrich bearbeit…\t395,971,109,9"] → jetzt ["Pinselstrich bearbeiten\t395,972,108,8"]
-- menu:7/5: vorher ["Pinselstrich bearbeit…\t395,971,109,9"] → jetzt ["Pinselstrich bearbeiten\t395,972,108,8"]
-- menu:7/6: vorher ["Pinselstrich bearbeit…\t395,971,109,9"] → jetzt ["Pinselstrich bearbeiten\t395,972,108,8"]
-- menu:8: vorher ["Pinselstrich bearbeit…\t395,971,109,9"] → jetzt ["Pinselstrich bearbeiten\t395,972,108,8"]
-- menu:8/3: vorher ["Pinselstrich bearbeit…\t395,971,109,9"] → jetzt ["Pinselstrich bearbeiten\t395,972,108,8"]
-- menu:8/35: vorher ["Pinselstrich bearbeit…\t395,971,109,9"] → jetzt ["Pinselstrich bearbeiten\t395,972,108,8"]
-- menu:8/6: vorher ["Pinselstrich bearbeit…\t395,971,109,9"] → jetzt ["Pinselstrich bearbeiten\t395,972,108,8"]
-- menu:9: vorher ["Pinselstrich bearbeit…\t395,971,109,9"] → jetzt ["Pinselstrich bearbeiten\t395,972,108,8"]
+| Zeile | Bilder |
+|---|---|
+| vorher ["Pinselstrich bearbeit…\t395,971,109,9"] → jetzt ["Pinselstrich bearbeiten\t395,972,108,8"] | 38 menu:0, menu:0/18, menu:0/25 … |
+| vorher ["202\t110,948,19,9", "306\t162,970,19,9", "Autom. Unterschneidung\t467,972,127,12"] → jetzt ["139\t111,948,18,9", "309\t162,970,19,9", "Autom. Unterschn | 27 menu:5/0, menu:5/0/0, menu:5/0/1 … |
+| neu (nicht in der Basis) | 1 menu:2/24 |
+| vorher ["1 C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\firepixel-i18n-qa\\X\\vorlage.fw.png\t368,133,465,12", "Pinselstrich bearbeit…\t395,971,109,9"] → jetzt [" | 1 menu:0/4 |
+| vorher ["Bearbeiten...\t415,947,61,9"] → jetzt ["Bearbeiten...\t381,947,61,9"] | 1 menu:4/4 |
 
 
 ### Bedienfelder und Bedienfeldmenüs
 
-**Unmarkierte Texte qps (25):**
+**Unmarkierte Texte qps (4):**
 
 | Text | Bilder |
 |---|---|
 | 01  Seite 1 | panel:Pages, pmenu:Pages |
-| FF | pmenu:Info |
 | Seite 1 | panel:Align, panel:AutoShapeProperties, panel:AutoShapes, panel:Behaviors … (+42) |
 | URLs.htm | panel:Url, pmenu:Url |
 | width: 160px;⏎height: 120px;⏎background-color: #ff0000; | panel:CssProperties, pmenu:CssProperties |
-| µ | panel:SpecialCharacters, pmenu:SpecialCharacters |
-| Ä | panel:SpecialCharacters, pmenu:SpecialCharacters |
-| Å | panel:SpecialCharacters, pmenu:SpecialCharacters |
-| Ö | panel:SpecialCharacters, pmenu:SpecialCharacters |
-| Ø | panel:SpecialCharacters, pmenu:SpecialCharacters |
-| Ü | panel:SpecialCharacters, pmenu:SpecialCharacters |
-| ß | panel:SpecialCharacters, pmenu:SpecialCharacters |
-| à | panel:SpecialCharacters, pmenu:SpecialCharacters |
-| ä | panel:SpecialCharacters, pmenu:SpecialCharacters |
-| å | panel:SpecialCharacters, pmenu:SpecialCharacters |
-| æ | panel:SpecialCharacters, pmenu:SpecialCharacters |
-| ç | panel:SpecialCharacters, pmenu:SpecialCharacters |
-| è | panel:SpecialCharacters, pmenu:SpecialCharacters |
-| é | panel:SpecialCharacters, pmenu:SpecialCharacters |
-| ê | panel:SpecialCharacters, pmenu:SpecialCharacters |
-| ñ | panel:SpecialCharacters, pmenu:SpecialCharacters |
-| ö | panel:SpecialCharacters, pmenu:SpecialCharacters |
-| ø | panel:SpecialCharacters, pmenu:SpecialCharacters |
-| ü | panel:SpecialCharacters, pmenu:SpecialCharacters |
-| œ | panel:SpecialCharacters, pmenu:SpecialCharacters |
 
 **Überläufe en, neu gegenüber Deutsch (1):**
 
 | Bild | Art | Text | Größen | Lage |
 |---|---|---|---|---|
-| pmenu:Layers | abgeschnitten | Texture: | 1024x768@150 | [390,459–429,467] sichtbar [390,459–401,467] |
+| pmenu:Layers | abgeschnitten | Texture: | 1024x768@150 | [390,459–429,467] sichtbar [390,459–404,467] |
 
 **Überläufe qps, neu gegenüber Deutsch (2):**
 
@@ -362,16 +293,14 @@ Lesart: Rohschlüssel und unmarkierte Texte zählen verschiedene Texte; Überlä
 | panel:AutoShapeProperties | fensterrand | [!! Eigenschaften für automatische Form ·············!!] | 1024x768@150 | [490,287–749,298] Fenster [0,0–683,512] |
 | pmenu:AutoShapeProperties | fensterrand | [!! Eigenschaften für automatische Form ·············!!] | 1024x768@150 | [490,287–749,298] Fenster [0,0–683,512] |
 
-**Deutsch geändert gegenüber dem Stand vor Phase 6 (8):**
+**Deutsch geändert gegenüber dem Stand vor Phase 6 (42 Bilder), je Zeile zusammengefasst (− vorher, + jetzt; Text, x,y,Breite,Höhe):**
 
-- panel:AutoShapeProperties: vorher ["100\t617,360,18,9", "100\t617,424,18,9", "5\t616,328,6,9", "50\t616,392,13,9", "50\t616,456,13,9", "Gruppieren (1)\t127,900,
-- panel:Behaviors: vorher ["Bearbeiten...\t415,947,61,9"] → jetzt ["Bearbeiten...\t381,947,61,9"]
-- panel:Path: vorher ["Kombinieren\t1339,1044,63,9", "Pinselstrich bearbeit…\t395,971,109,9", "Zuschneiden\t1608,1020,64,9", "Überschneiden\t1513,1018,75,11"] → j
-- panel:Url: vorher ["Bearbeiten...\t415,947,61,9"] → jetzt ["Bearbeiten...\t381,947,61,9"]
-- pmenu:AutoShapeProperties: vorher ["100\t617,360,18,9", "100\t617,424,18,9", "5\t616,328,6,9", "50\t616,392,13,9", "50\t616,456,13,9", "Gruppieren (1)\t127,900,
-- pmenu:Behaviors: vorher ["Bearbeiten...\t415,947,61,9"] → jetzt ["Bearbeiten...\t381,947,61,9"]
-- pmenu:Path: vorher ["Kombinieren\t1339,1044,63,9", "Pinselstrich bearbeit…\t395,971,109,9", "Zuschneiden\t1608,1020,64,9", "Überschneiden\t1513,1018,75,11"] → j
-- pmenu:Url: vorher ["Bearbeiten...\t415,947,61,9"] → jetzt ["Bearbeiten...\t381,947,61,9"]
+| Zeile | Bilder |
+|---|---|
+| vorher ["99 Farben\t1536,334,47,8"] → jetzt ["108 Farben\t1531,334,52,8"] | 29 panel:AutoShapeProperties, panel:Behaviors, panel:ColorMixer … |
+| vorher ["99 Farben\t1536,290,47,8"] → jetzt ["108 Farben\t1531,290,52,8"] | 10 panel:AutoShapes, panel:CommonLibrary, panel:DocumentLibrary … |
+| vorher ["99 Farben\t1536,290,47,8", "Ausstanzen\t1431,1020,58,9", "Kombinieren\t1339,1044,63,9", "Vereinigen\t1343,1020,54,12", "Zuschneiden\t1608,1020,64,9", " | 2 panel:Path, pmenu:Path |
+| vorher ["99 Farben\t1536,334,47,8", "CMY\t644,254,25,9", "Graustufen\t644,298,58,9", "HSB\t645,276,21,9", "Hexadezimal\t645,232,66,9", "Hilfe\t645,329,23,9"] →  | 1 pmenu:ColorMixer |
 
 
 ### Inspektor (Elementarten, Werkzeuge)
@@ -392,60 +321,63 @@ Lesart: Rohschlüssel und unmarkierte Texte zählen verschiedene Texte; Überlä
 | Unbenannt-2 | pi:Masterseite, pi:Pixelauswahl, pi:importiertes Symbol, pi:nach Rückgängig … (+10) |
 | a | pi:Text, pi:Text auf Pfad, werkzeug:tool.text |
 
-**Überläufe en, neu gegenüber Deutsch (3):**
+**Überläufe en, neu gegenüber Deutsch (12):**
 
 | Bild | Art | Text | Größen | Lage |
 |---|---|---|---|---|
+| pi:Schaltfläche | abgeschnitten | Show Down state on load | 1024x768@100 | [492,736–622,746] sichtbar [492,736–561,746] |
+| werkzeug:tool.aiObject | abgeschnitten | SAM 2.1 Hiera Tiny (156 MB) | 1024x768@100 | [441,664–586,676] sichtbar [441,664–561,676] |
+| werkzeug:tool.aiRefineEdge | abgeschnitten | BiRefNet lite Matting (89 MB) | 1024x768@100 | [442,664–589,676] sichtbar [442,664–561,676] |
+| werkzeug:tool.aiRefineEdge | abgeschnitten | Create a pixel selection first | 1024x768@100 | [441,712–580,724] sichtbar [441,712–561,724] |
+| werkzeug:tool.aiSubject | abgeschnitten | BiRefNet lite (allgemein) (178 MB) | 1024x768@100 | [442,664–612,676] sichtbar [442,664–561,676] |
+| werkzeug:tool.burn | abgeschnitten | Exposure: | 1024x768@100 | [554,666–602,678] sichtbar [554,666–561,678] |
+| werkzeug:tool.dodge | abgeschnitten | Exposure: | 1024x768@100 | [554,666–602,678] sichtbar [554,666–561,678] |
+| werkzeug:tool.eraser | abgeschnitten | Shape: | 1024x768@150 | [372,409–405,420] sichtbar [372,409–401,420] |
 | werkzeug:tool.gradient | abgeschnitten | Tolerance: | 1024x768@150 | [398,409–449,417] sichtbar [398,409–401,417] |
 | werkzeug:tool.paintBucket | abgeschnitten | Tolerance: | 1024x768@150 | [398,409–449,417] sichtbar [398,409–401,417] |
-| werkzeug:tool.smudge | abgeschnitten | Pressure: | 1024x768@150 | [381,434–425,442] sichtbar [381,434–401,442] |
+| werkzeug:tool.replaceColor | abgeschnitten | Strength: | 1024x768@100 | [528,689–574,701] sichtbar [528,689–561,701] |
+| werkzeug:tool.replaceColor | abgeschnitten | Tolerance: | 1024x768@100 | [522,664–572,673] sichtbar [522,664–561,673] |
 
-**Überläufe qps, neu gegenüber Deutsch (8):**
+**Überläufe qps, neu gegenüber Deutsch (14):**
 
 | Bild | Art | Text | Größen | Lage |
 |---|---|---|---|---|
+| werkzeug:tool.aiObject | abgeschnitten | SAM 2.1 Hiera Tiny (156 MB) | 1024x768@100 | [441,664–586,676] sichtbar [441,664–561,676] |
 | werkzeug:tool.aiObject | abgeschnitten | [!! Klick: Objekt auswählen · Rahmen aufziehen: Objekt im Rahmen ·····················!!] | 1024x768@100 | [208,712–607,724] sichtbar [208,712–561,724] |
 | werkzeug:tool.aiObject | abgeschnitten | [!! Umschalt+Klick: hinzufügen · Alt+Klick: abziehen · Esc: neues Objekt ························!!] | 1024x768@100, 1024x768@150 | [208,732–636,744] sichtbar [208,732–561,744] |
+| werkzeug:tool.aiRefineEdge | abgeschnitten | BiRefNet lite Matting (89 MB) | 1024x768@100 | [442,664–589,676] sichtbar [442,664–561,676] |
+| werkzeug:tool.aiRefineEdge | abgeschnitten | [!! Erst eine Pixelauswahl erstellen ············!!] | 1024x768@100 | [442,712–653,723] sichtbar [442,712–561,723] |
+| werkzeug:tool.aiSubject | abgeschnitten | BiRefNet lite (allgemein) (178 MB) | 1024x768@100 | [442,664–612,676] sichtbar [442,664–561,676] |
+| werkzeug:tool.aiSubject | abgeschnitten | [!! Klick: Hauptmotiv als weiche Pixelauswahl · Umschalt: hinzufügen · Alt: abziehen ····························!!] | 1024x768@100 | [208,713–684,723] sichtbar [208,713–561,723] |
 | werkzeug:tool.aiSubject | fensterrand | [!! Klick: Hauptmotiv als weiche Pixelauswahl · Umschalt: hinzufügen · Alt: abziehen ····························!!] | 1024x768@150 | [208,457–684,468] Fenster [0,0–683,512] |
+| werkzeug:tool.eraser | abgeschnitten | [!! Form: ··!!] | 1024x768@150 | [346,409–404,419] sichtbar [346,409–401,419] |
 | werkzeug:tool.freeform | abgeschnitten | [!! Druck ··!!] | 1024x768@150 | [348,409–407,420] sichtbar [348,409–401,420] |
 | werkzeug:tool.freeform | abgeschnitten | [!! Vorschau ····!!] | 1024x768@150 | [348,428–428,439] sichtbar [348,428–401,439] |
 | werkzeug:tool.magicWand | abgeschnitten | [!! Hart ··!!] | 1024x768@150 | [374,410–425,420] sichtbar [374,410–401,420] |
+| werkzeug:tool.replaceColor | abgeschnitten | [!! Toleranz: ····!!] | 1024x768@100 | [497,665–573,675] sichtbar [497,665–561,675] |
 | werkzeug:tool.rubberStamp | abgeschnitten | [!! Gesamtes Dokument ·······!!] | 1024x768@100 | [417,688–565,700] sichtbar [417,688–561,700] |
-| werkzeug:tool.smudge | abgeschnitten | [!! Druck: ···!!] | 1024x768@150 | [361,434–425,444] sichtbar [361,434–401,444] |
 
-**Deutsch geändert gegenüber dem Stand vor Phase 6 (31):**
+**Deutsch geändert gegenüber dem Stand vor Phase 6 (79 Bilder), je Zeile zusammengefasst (− vorher, + jetzt; Text, x,y,Breite,Höhe):**
 
-- pi:Automatische Form: vorher ["Gruppieren (1)\t127,900,73,12", "Pinselstrich bearbeit…\t395,971,109,9"] → jetzt ["Gruppieren (1)\t127,900,70,10", "Pinselstrich 
-- pi:Ellipse: vorher ["Pinselstrich bearbeit…\t395,971,109,9"] → jetzt ["Pinselstrich bearbeiten\t395,972,108,8"]
-- pi:Gruppe: vorher ["Gruppieren (2)\t127,900,73,12", "Pinselstrich bearbeit…\t395,971,109,9"] → jetzt ["Gruppieren (2)\t127,900,70,10", "Pinselstrich bearbeiten\
-- pi:Maskengruppe: vorher ["Gruppieren (1)\t127,900,73,12", "Pinselstrich bearbeit…\t395,971,109,9"] → jetzt ["Gruppieren (1)\t127,900,70,10", "Pinselstrich bearb
-- pi:Pfad: vorher ["Pinselstrich bearbeit…\t395,971,109,9"] → jetzt ["Pinselstrich bearbeiten\t395,972,108,8"]
-- pi:Rechteck + Ellipse: vorher ["Pinselstrich bearbeit…\t395,971,109,9"] → jetzt ["Pinselstrich bearbeiten\t395,972,108,8"]
-- pi:Schaltfläche: vorher ["Bearbei…\t376,920,45,9"] → jetzt ["Bearbeiten...\t359,920,61,9"]
-- pi:Segment: vorher ["Bearbeiten...\t415,947,61,9"] → jetzt ["Bearbeiten...\t381,947,61,9"]
-- pi:Segment mit Pop-up-Menü: vorher ["Bearbeiten...\t415,947,61,9"] → jetzt ["Bearbeiten...\t381,947,61,9"]
-- pi:Text: vorher ["202\t110,948,19,9", "306\t162,970,19,9", "Autom. Unterschneidung\t467,972,127,12"] → jetzt ["139\t111,948,18,9", "309\t162,970,19,9", "Autom. 
-- pi:Text + Ellipse: vorher ["295\t110,970,19,9", "Pinselstrich bearbeit…\t395,971,109,9"] → jetzt ["298\t110,970,19,9", "Pinselstrich bearbeiten\t395,972,108,8"]
-- pi:Text auf Pfad: vorher ["202\t110,948,19,9", "29\t110,970,13,9", "306\t162,970,19,9", "40\t162,948,13,9", "Autom. Unterschneidung\t467,972,127,12"] → jetzt ["
-- pi:drei Objekte: vorher ["Pinselstrich bearbeit…\t395,971,109,9"] → jetzt ["Pinselstrich bearbeiten\t395,972,108,8"]
-- pi:zwei offene Pfade: vorher ["Pinselstrich bearbeit…\t395,971,109,9"] → jetzt ["Pinselstrich bearbeiten\t395,972,108,8"]
-- werkzeug:tool.aiSubject: vorher ["Motiv auswähl…\t114,898,77,8"] → jetzt ["Motiv auswählen\t114,898,81,8"]
-- werkzeug:tool.autoShape: vorher ["Automatische …\t113,898,78,8"] → jetzt ["Automatische Form\t113,898,67,23"]
-- werkzeug:tool.brush: vorher ["Pinselstrich bearbeit…\t395,971,109,9"] → jetzt ["Pinselstrich bearbeiten\t395,972,108,8"]
-- werkzeug:tool.ellipse: vorher ["Pinselstrich bearbeit…\t395,971,109,9"] → jetzt ["Pinselstrich bearbeiten\t395,972,108,8"]
-- werkzeug:tool.hotspotPolygon: vorher ["Hotspot-Polyg…\t114,898,77,10"] → jetzt ["Hotspot-Polygon\t114,898,42,25"]
-- werkzeug:tool.hotspotRect: vorher ["Hotspot-Recht…\t114,898,78,10"] → jetzt ["Hotspot-Rechteck\t114,898,43,23"]
-- werkzeug:tool.line: vorher ["Pinselstrich bearbeit…\t395,971,109,9"] → jetzt ["Pinselstrich bearbeiten\t395,972,108,8"]
-- werkzeug:tool.ovalMarquee: vorher ["Ovaler Auswah…\t113,898,80,8"] → jetzt ["Ovaler Auswahlrahmen\t113,898,78,23"]
-- werkzeug:tool.pathScrubAdd: vorher ["Pfadausbesser…\t114,898,76,8"] → jetzt ["Pfadausbesserung - additiv\t114,898,80,25"]
-- werkzeug:tool.pathScrubSubtract: vorher ["Pfadausbesser…\t114,898,76,8"] → jetzt ["Pfadausbesserung - subtraktiv\t114,898,80,25"]
-- werkzeug:tool.pen: vorher ["Pinselstrich bearbeit…\t395,971,109,9"] → jetzt ["Pinselstrich bearbeiten\t395,972,108,8"]
-- werkzeug:tool.polygonSlice: vorher ["Polygon-Segm…\t114,896,78,11"] → jetzt ["Polygon-Segment\t114,898,43,25"]
-- werkzeug:tool.redEyeRemoval: vorher ["Rote Augen en…\t114,898,79,10"] → jetzt ["Rote Augen entfernen\t113,898,57,23"]
-- werkzeug:tool.redrawPath: vorher ["Pfad nachzeich…\t114,898,79,8", "Pinselstrich bearbeit…\t395,971,109,9"] → jetzt ["Pfad nachzeichnen\t114,898,65,23", "Pinsel
-- werkzeug:tool.reshapeArea: vorher ["Bereich umfor…\t114,898,75,8"] → jetzt ["Bereich umformen\t114,898,50,23"]
-- werkzeug:tool.text: vorher ["Autom. Unterschneidung\t467,972,127,12"] → jetzt ["Autom. Unterschneidung\t467,972,116,10"]
-- werkzeug:tool.vectorPath: vorher ["Pinselstrich bearbeit…\t395,971,109,9"] → jetzt ["Pinselstrich bearbeiten\t395,972,108,8"]
+| Zeile | Bilder |
+|---|---|
+| vorher ["99 Farben\t1536,334,47,8"] → jetzt ["108 Farben\t1531,334,52,8"] | 50 pi:Animationssymbol, pi:Automatische Form, pi:Bitmap … |
+| vorher ["99 Farben\t1536,334,47,8", "Alphakanal\t658,946,56,12", "Graustufen\t658,966,56,9", "Maske:\t586,944,34,9"] → jetzt ["108 Farben\t1531,334,52,8"] | 9 werkzeug:tool.eyedropper, werkzeug:tool.gradient, werkzeug:tool.lasso … |
+| vorher ["0\t291,921,6,9", "10\t292,897,12,9", "99 Farben\t1536,334,47,8", "Alphakanal\t658,946,56,12", "Graustufen\t658,966,56,9", "Maske:\t586,944,34,9"] → jet | 4 werkzeug:tool.blur, werkzeug:tool.burn, werkzeug:tool.dodge … |
+| vorher ["1\t348,897,4,9", "99 Farben\t1536,334,47,8"] → jetzt ["10\t348,897,12,9", "108 Farben\t1531,334,52,8"] | 2 werkzeug:tool.pathScrubAdd, werkzeug:tool.pathScrubSubtract |
+| vorher ["99 Farben\t1536,334,47,8", "Teststil\t801,945,34,9"] → jetzt ["108 Farben\t1531,334,52,8"] | 2 pi:Rechteck + Ellipse, pi:drei Objekte |
+| vorher ["0\t291,921,6,9", "10\t292,897,12,9", "99 Farben\t1536,334,47,8", "Alphakanal\t658,946,56,12", "Graustufen\t658,966,56,9", "Maske:\t586,944,34,9"] → jet | 1 werkzeug:tool.rubberStamp |
+| vorher ["0\t291,921,6,9", "10\t292,897,12,9", "99 Farben\t1536,334,47,8", "Alphakanal\t658,946,56,12", "Graustufen\t658,966,56,9", "Maske:\t586,944,34,9"] → jet | 1 werkzeug:tool.smudge |
+| vorher ["0\t291,921,6,9", "99 Farben\t1536,334,47,8", "Alphakanal\t658,946,56,12", "Graustufen\t658,966,56,9", "Maske:\t586,944,34,9"] → jetzt ["108 Farben\t153 | 1 werkzeug:tool.eraser |
+| vorher ["100\t309,921,18,9", "202\t110,948,19,9", "29\t110,970,13,9", "306\t162,970,19,9", "40\t162,948,13,9", "71 Farben\t1536,334,47,8"] → jetzt ["111\t111,94 | 1 pi:Text auf Pfad |
+| vorher ["100\t309,921,18,9", "202\t110,948,19,9", "29\t110,970,13,9", "306\t162,970,19,9", "99 Farben\t1536,334,47,8", "Arial\t211,897,22,9"] → jetzt ["108 Farb | 1 pi:Text |
+| vorher ["10\t265,897,12,9", "50\t264,921,13,9", "99 Farben\t1536,334,47,8"] → jetzt ["108 Farben\t1531,334,52,8", "72\t264,897,13,9", "80\t264,921,13,9"] | 1 werkzeug:tool.reshapeArea |
+| vorher ["10\t265,897,12,9", "99 Farben\t1536,334,47,8"] → jetzt ["108 Farben\t1531,334,52,8", "72\t264,897,13,9"] | 1 werkzeug:tool.freeform |
+| vorher ["10\t292,897,12,9", "50\t579,921,13,9", "70\t579,897,13,9", "99 Farben\t1536,334,47,8", "Alphakanal\t658,946,56,12", "Graustufen\t658,966,56,9"] → jetzt | 1 werkzeug:tool.replaceColor |
+| vorher ["295\t110,970,19,9", "99 Farben\t1536,334,47,8"] → jetzt ["108 Farben\t1531,334,52,8", "296\t110,970,19,9"] | 1 pi:Text + Ellipse |
+| vorher ["70\t282,897,13,9", "99 Farben\t1536,334,47,8", "Alphakanal\t658,946,56,12", "Graustufen\t658,966,56,9", "Maske:\t586,944,34,9"] → jetzt ["108 Farben\t1 | 1 werkzeug:tool.redEyeRemoval |
+| vorher ["99 Farben\t1536,334,47,8", "Alphakanal\t664,946,56,12", "Graustufen\t664,966,56,9", "Maske:\t592,944,34,9"] → jetzt ["108 Farben\t1531,334,52,8"] | 1 werkzeug:tool.brush |
+| vorher ["99 Farben\t1536,334,47,8", "Arial\t211,897,22,9", "Regular\t389,897,38,12"] → jetzt ["108 Farben\t1531,334,52,8", "Bold\t389,897,22,9", "Myriad Pro\t21 | 1 werkzeug:tool.text |
 
 
 ### Dialoge
@@ -484,7 +416,7 @@ Lesart: Rohschlüssel und unmarkierte Texte zählen verschiedene Texte; Überlä
 | de_DE | dlg:form:6516 |
 | mm | dlg:form:10397 |
 
-**Überläufe qps, neu gegenüber Deutsch (115):**
+**Überläufe qps, neu gegenüber Deutsch (114):**
 
 | Bild | Art | Text | Größen | Lage |
 |---|---|---|---|---|
@@ -505,7 +437,6 @@ Lesart: Rohschlüssel und unmarkierte Texte zählen verschiedene Texte; Überlä
 | dlg:ki_verwalten | abgeschnitten | [!! SAM 2.1 Hiera Tiny  (Vorgabe) ··········!!] | 1024x768@100, 1920x1080@100, 1920x1080@150 | [139,206–340,218] sichtbar [139,206–318,218] |
 | dlg:ki_verwalten | fensterrand | [!! Aktuell: C:\Users\Administrator\AppData\Local\Firepixel\Modelle ·························!!] | 1024x768@150 | [-31,420–383,431] Fenster [0,0–683,512] |
 | dlg:ki_verwalten | fensterrand | [!! Ordner öffnen ·····!!] | 1024x768@150 | [597,422–706,432] Fenster [0,0–683,512] |
-| dlg:ki_verwalten | fensterrand | [!! Speicherort ·····!!] | 1024x768@150 | [-31,366–64,377] Fenster [0,0–683,512] |
 | dlg:ki_verwalten | fensterrand | [!! Standard ····!!] | 1024x768@150 | [607,394–687,404] Fenster [0,0–683,512] |
 | dlg:ki_verwalten | fensterrand | [!! Zwischenspeicher im Arbeitsspeicher: 0 MB ···············!!] | 1024x768@150 | [-42,467–238,478] Fenster [0,0–683,512] |
 | dlg:ki_verwalten | fensterrand | [!! Zwischenspeicher leeren ·········!!] | 1024x768@150 | [548,469–719,480] Fenster [0,0–683,512] |
@@ -604,88 +535,50 @@ Lesart: Rohschlüssel und unmarkierte Texte zählen verschiedene Texte; Überlä
 | dlg:voreinstellungen:6 | fensterrand | [!! Voreinstellungen ·······!!] | 1024x768@150 | [-28,11–105,23] Fenster [0,0–683,512] |
 | dlg:voreinstellungen:6 | fensterrand | [!! Zusatzmodule ·····!!] | 1024x768@150 | [-19,154–90,164] Fenster [0,0–683,512] |
 
-**Deutsch geändert gegenüber dem Stand vor Phase 6 (102):**
+**Deutsch geändert gegenüber dem Stand vor Phase 6 (101 Bilder), je Zeile zusammengefasst (− vorher, + jetzt; Text, x,y,Breite,Höhe):**
 
-- dlg:arbeitsbereich_speichern: vorher ["99 Farben\t1536,334,47,8"] → jetzt ["108 Farben\t1531,334,52,8"]
-- dlg:befehle_verwalten: vorher ["99 Farben\t1536,334,47,8"] → jetzt ["108 Farben\t1531,334,52,8"]
-- dlg:bildgroesse: vorher ["99 Farben\t1536,334,47,8", "Abbrechen\t898,659,55,9", "Bikubisch\t757,593,47,9", "OK\t836,659,16,9"] → jetzt ["108 Farben\t1531,334,52
-- dlg:bildvorschau: vorher ["99 Farben\t1536,334,47,8", "GIF   8,37 K   2 s bei 56 kbit/s   99 Farben\t662,266,206,11"] → jetzt ["108 Farben\t1531,334,52,8", "GIF
-- dlg:export: vorher ["99 Farben\t1536,334,47,8"] → jetzt ["108 Farben\t1531,334,52,8"]
-- dlg:form:10397: vorher ["99 Farben\t1536,334,47,8"] → jetzt ["108 Farben\t1531,334,52,8"]
-- dlg:form:19104: vorher ["99 Farben\t1536,334,47,8"] → jetzt ["108 Farben\t1531,334,52,8"]
-- dlg:form:19105: vorher ["99 Farben\t1536,334,47,8"] → jetzt ["108 Farben\t1531,334,52,8"]
-- dlg:form:19106: vorher ["99 Farben\t1536,334,47,8"] → jetzt ["108 Farben\t1531,334,52,8"]
-- dlg:form:19107: vorher ["99 Farben\t1536,334,47,8"] → jetzt ["108 Farben\t1531,334,52,8"]
-- dlg:form:19108: vorher ["99 Farben\t1536,334,47,8"] → jetzt ["108 Farben\t1531,334,52,8"]
-- dlg:form:19110: vorher ["99 Farben\t1536,334,47,8"] → jetzt ["108 Farben\t1531,334,52,8"]
-- dlg:form:19128: vorher ["99 Farben\t1536,334,47,8"] → jetzt ["108 Farben\t1531,334,52,8"]
-- dlg:form:19146: vorher ["99 Farben\t1536,334,47,8"] → jetzt ["108 Farben\t1531,334,52,8"]
-- dlg:form:19147: vorher ["99 Farben\t1536,334,47,8"] → jetzt ["108 Farben\t1531,334,52,8"]
-- dlg:form:19157: vorher ["221 Farben\t1530,334,53,8"] → jetzt ["230 Farben\t1530,334,53,8"]
-- dlg:form:19159: vorher ["108 Farben\t1531,334,52,8"] → jetzt ["117 Farben\t1531,334,52,8"]
-- dlg:form:19160: vorher ["99 Farben\t1536,334,47,8"] → jetzt ["108 Farben\t1531,334,52,8"]
-- dlg:form:19175: vorher ["99 Farben\t1536,334,47,8"] → jetzt ["108 Farben\t1531,334,52,8"]
-- dlg:form:2160: vorher ["2 Datei(en) ausgewählt.\t574,405,113,10", "99 Farben\t1536,334,47,8", "C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\firepixel-i18n-qa\\X\\
-- dlg:form:4630: vorher ["99 Farben\t1536,334,47,8"] → jetzt ["108 Farben\t1531,334,52,8"]
-- dlg:form:4717: vorher ["99 Farben\t1536,334,47,8"] → jetzt ["108 Farben\t1531,334,52,8"]
-- dlg:form:4734: vorher ["99 Farben\t1536,334,47,8"] → jetzt ["108 Farben\t1531,334,52,8"]
-- dlg:form:4766: vorher ["99 Farben\t1536,334,47,8"] → jetzt ["108 Farben\t1531,334,52,8"]
-- dlg:form:5968: vorher ["99 Farben\t1536,334,47,8"] → jetzt ["108 Farben\t1531,334,52,8"]
-- dlg:form:5971: vorher ["201 Farben\t1530,334,53,8"] → jetzt ["210 Farben\t1530,334,53,8"]
-- dlg:form:5972: vorher ["99 Farben\t1536,334,47,8"] → jetzt ["108 Farben\t1531,334,52,8"]
-- dlg:form:5974: vorher ["99 Farben\t1536,334,47,8"] → jetzt ["108 Farben\t1531,334,52,8"]
-- dlg:form:5976: vorher ["99 Farben\t1536,334,47,8"] → jetzt ["108 Farben\t1531,334,52,8"]
-- dlg:form:5977: vorher ["99 Farben\t1536,334,47,8"] → jetzt ["108 Farben\t1531,334,52,8"]
-- dlg:form:5984: vorher ["99 Farben\t1536,334,47,8"] → jetzt ["108 Farben\t1531,334,52,8"]
-- dlg:form:5987: vorher ["99 Farben\t1536,334,47,8"] → jetzt ["108 Farben\t1531,334,52,8"]
-- dlg:form:5990: vorher ["1\t738,476,4,9", "99 Farben\t1536,334,47,8", "Abbrechen\t928,541,55,9", "Am Anfang\t751,502,57,12", "Am Ende\t1127,502,46,9", "Anzahl:\t
-- dlg:form:5991: vorher ["99 Farben\t1536,334,47,8", "Abbrechen\t928,554,55,9", "OK\t864,554,16,9"] → jetzt ["108 Farben\t1531,334,52,8", "Abbrechen\t929,554,55,9
-- dlg:form:6005: vorher ["99 Farben\t1536,334,47,8"] → jetzt ["108 Farben\t1531,334,52,8"]
-- dlg:form:6006: vorher ["99 Farben\t1536,334,47,8"] → jetzt ["108 Farben\t1531,334,52,8"]
-- dlg:form:6007: vorher ["99 Farben\t1536,334,47,8"] → jetzt ["108 Farben\t1531,334,52,8"]
-- dlg:form:6008: vorher ["99 Farben\t1536,334,47,8"] → jetzt ["108 Farben\t1531,334,52,8"]
-- dlg:form:6026: vorher ["99 Farben\t1536,334,47,8"] → jetzt ["108 Farben\t1531,334,52,8"]
-- dlg:form:6073: vorher ["202\t110,948,19,9", "29\t110,970,13,9", "306\t162,970,19,9", "99 Farben\t1536,334,47,8", "Arial\t211,897,22,9", "Autom. Unterschneidung\
-- dlg:form:6074: vorher ["99 Farben\t1536,334,47,8"] → jetzt ["108 Farben\t1531,334,52,8"]
-- dlg:form:6272: vorher ["99 Farben\t1536,334,47,8", "Abbrechen\t928,528,55,9", "Groß\t935,488,25,9", "Keine\t752,488,27,9", "Klein\t814,488,24,9", "Miniaturgröße
-- dlg:form:6516: vorher ["99 Farben\t1536,334,47,8"] → jetzt ["108 Farben\t1531,334,52,8"]
-- dlg:form:6525: vorher ["109 Farben\t1531,334,52,8"] → jetzt ["118 Farben\t1531,334,52,8"]
-- dlg:form:6540: vorher ["99 Farben\t1536,334,47,8"] → jetzt ["108 Farben\t1531,334,52,8"]
-- dlg:form:6541: vorher ["99 Farben\t1536,334,47,8"] → jetzt ["108 Farben\t1531,334,52,8"]
-- dlg:form:6554: vorher ["99 Farben\t1536,334,47,8"] → jetzt ["108 Farben\t1531,334,52,8"]
-- dlg:form:6556: vorher ["99 Farben\t1536,334,47,8"] → jetzt ["108 Farben\t1531,334,52,8"]
-- dlg:form:6560: vorher ["99 Farben\t1536,334,47,8"] → jetzt ["108 Farben\t1531,334,52,8"]
-- dlg:form:page-rename: vorher ["99 Farben\t1536,334,47,8"] → jetzt ["108 Farben\t1531,334,52,8"]
-- dlg:form:states-props: vorher ["7\t757,488,6,9", "99 Farben\t1536,334,47,8", "Status 1\t757,462,39,9"] → jetzt ["108 Farben\t1531,334,52,8", "7\t780,488,6,9", "
-- dlg:ki_verwalten: vorher ["99 Farben\t1536,334,47,8"] → jetzt ["108 Farben\t1531,334,52,8"]
-- dlg:kurven: vorher ["99 Farben\t1536,334,47,8", "Auto\t934,342,25,9", "Zurücksetzen\t912,370,67,9"] → jetzt ["108 Farben\t1531,334,52,8", "Auto\t932,342,25,9", 
-- dlg:leinwandgroesse: vorher ["99 Farben\t1536,334,47,8"] → jetzt ["108 Farben\t1531,334,52,8"]
-- dlg:meldung:file.fileInfo: vorher ["99 Farben\t1536,334,47,8", "Datei-Info\t621,436,52,9", "OK\t928,547,16,9", "Titel: Unbenannt-2.png⏎Pfad: (nicht gespeichert)
-- dlg:meldung:file.open: vorher ["„C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\firepixel-i18n-qa\\X\\test.jsf“ konnte nicht geöffnet werden:⏎FW-PNG: keine PNG-Sign
-- dlg:meldung:modify.popUpMenu.editPopUpMenu: vorher ["99 Farben\t1536,334,47,8", "Bearbeiten...\t415,947,61,9"] → jetzt ["108 Farben\t1531,334,52,8", "Bearbeiten
-- dlg:meldung:panel.optimize.deleteSettings: vorher ["99 Farben\t1536,334,47,8"] → jetzt ["108 Farben\t1531,334,52,8"]
-- dlg:meldung:text.checkSpelling: vorher ["99 Farben\t1536,334,47,8"] → jetzt ["108 Farben\t1531,334,52,8"]
-- dlg:neues_dokument: vorher ["99 Farben\t1536,334,47,8"] → jetzt ["108 Farben\t1531,334,52,8"]
-- dlg:numerisch: vorher ["99 Farben\t1536,334,47,8"] → jetzt ["108 Farben\t1531,334,52,8"]
-- dlg:pending:NewStyle: vorher ["99 Farben\t1536,334,47,8"] → jetzt ["108 Farben\t1531,334,52,8"]
-- dlg:popup_editor: vorher ["99 Farben\t1536,334,47,8", "Bearbeiten...\t415,947,61,9"] → jetzt ["108 Farben\t1531,334,52,8", "Bearbeiten...\t381,947,61,9"]
-- dlg:rueckfrage:file.revert: vorher ["99 Farben\t1536,334,47,8", "Ja\t857,547,10,9", "Nein\t935,547,23,9"] → jetzt ["108 Farben\t1531,334,52,8", "Ja\t856,547,11,
-- dlg:rueckfrage:panel.history.clear: vorher ["99 Farben\t1536,334,47,8", "Ja\t857,547,10,9", "Nein\t935,547,23,9"] → jetzt ["108 Farben\t1531,334,52,8", "Ja\t856
-- dlg:rueckfrage:panel.library.delete: vorher ["99 Farben\t1536,334,47,8", "Ja\t857,547,10,9", "Nein\t935,547,23,9"] → jetzt ["108 Farben\t1531,334,52,8", "Ja\t85
-- dlg:tastenkuerzel: vorher ["+\t839,660,6,5", "99 Farben\t1536,334,47,8", "Abbrechen\t1038,765,55,9", "Aktueller Satz:\t494,254,72,9", "Alt+Umschalt+F10\t915,265
-- dlg:tonwert: vorher ["99 Farben\t1536,334,47,8"] → jetzt ["108 Farben\t1531,334,52,8"]
-- dlg:ueber: vorher ["99 Farben\t1536,334,47,8", "Grafikprogramm für Bildschirm- und Webgrafik, in Rust.\t694,506,282,12"] → jetzt ["108 Farben\t1531,334,52,8", "
-- dlg:ungespeichert: vorher ["99 Farben\t1536,334,47,8"] → jetzt ["108 Farben\t1531,334,52,8"]
-- dlg:voreinstellungen: vorher [".fw.png anhängen\t696,548,90,12", "20\t911,310,13,9", "99 Farben\t1536,334,47,8", "Abbrechen\t1038,735,55,9", "Alle Warnmeldungen
-- dlg:voreinstellungen:0: vorher [".fw.png anhängen\t696,548,90,12", "20\t911,310,13,9", "99 Farben\t1536,334,47,8", "Abbrechen\t1038,735,55,9", "Alle Warnmeldung
-- dlg:voreinstellungen:1: vorher ["5\t911,574,6,9", "99 Farben\t1536,334,47,8", "Abbrechen\t1038,735,55,9", "Allgemein\t499,283,51,12", "Bearbeiten\t500,304,53,9"
-- dlg:voreinstellungen:2: vorher ["36\t911,598,13,9", "36\t911,622,13,9", "5\t911,742,6,9", "9-Slice-Hilfslinien:\t678,478,90,9", "99 Farben\t1536,334,47,8", "Abb
-- dlg:voreinstellungen:3: vorher ["0\t911,334,6,9", "1,2\t912,310,14,11", "6\t911,430,6,9", "99 Farben\t1536,334,47,8", "Abbrechen\t1038,735,55,9", "Allgemein\t49
-- dlg:voreinstellungen:4: vorher ["99 Farben\t1536,334,47,8", "Abbrechen\t1038,735,55,9", "Allgemein\t499,283,51,12", "Bearbeiten\t500,304,53,9", "Bildebenen bear
-- dlg:voreinstellungen:5: vorher ["99 Farben\t1536,334,47,8", "Abbrechen\t1038,735,55,9", "Allgemein\t499,283,51,12", "Bearbeiten\t500,304,53,9", "Hilfslinien und
-- dlg:voreinstellungen:6: vorher ["99 Farben\t1536,334,47,8", "Abbrechen\t1038,735,55,9", "Allgemein\t499,283,51,12", "Bearbeiten\t500,304,53,9", "Beim Starten fr
-- fx:19110: vorher ["99 Farben\t1536,334,47,8"] → jetzt ["108 Farben\t1531,334,52,8"]
-- fx:19157: vorher ["221 Farben\t1530,334,53,8"] → jetzt ["230 Farben\t1530,334,53,8"]
+| Zeile | Bilder |
+|---|---|
+| vorher ["99 Farben\t1536,334,47,8"] → jetzt ["108 Farben\t1531,334,52,8"] | 51 dlg:arbeitsbereich_speichern, dlg:export, dlg:form:10397 … |
+| vorher ["1\t778,488,4,9", "99 Farben\t1536,334,47,8"] → jetzt ["10\t778,488,12,9", "108 Farben\t1531,334,52,8"] | 5 dlg:form:19105, dlg:form:19106, dlg:form:19107 … |
+| vorher [".fw.png anhängen\t696,548,90,12", "20\t911,310,13,9", "99 Farben\t1536,334,47,8", "Abbrechen\t1038,735,55,9", "Alle Warnmeldungen zurücksetzen\t700,634 | 2 dlg:voreinstellungen, dlg:voreinstellungen:0 |
+| vorher ["108 Farben\t1531,334,52,8", "30\t777,444,13,9", "Abbrechen\t888,573,55,9", "OK\t824,573,16,9", "Radiales Weichzeichnen\t641,408,125,9", "Stärke:\t644,4 | 2 dlg:form:19159, fx:19159 |
+| vorher ["109 Farben\t1531,334,52,8", "90\t777,444,13,9", "Abbrechen\t888,573,55,9", "Bewegungsunschärfe\t641,408,111,12", "OK\t824,573,16,9", "Vorschau\t662,572 | 2 dlg:form:6525, fx:6525 |
+| vorher ["201 Farben\t1530,334,53,8"] → jetzt ["210 Farben\t1530,334,53,8"] | 2 dlg:form:5971, fx:5971 |
+| vorher ["221 Farben\t1530,334,53,8", "50\t777,454,13,9", "Abbrechen\t888,563,55,9", "Farbe\t663,500,27,9", "OK\t824,563,16,9", "Rauschen hinzufügen\t641,418,112 | 2 dlg:form:19157, fx:19157 |
+| vorher ["30\t777,444,13,9", "99 Farben\t1536,334,47,8", "Abbrechen\t888,573,55,9", "OK\t824,573,16,9", "Stärke:\t644,444,34,9", "Vorschau\t662,572,46,9"] → jetz | 2 dlg:form:19160, fx:19160 |
+| vorher ["99 Farben\t1536,334,47,8", "In Alpha konvertieren\t41,800,108,12", "Kanten suchen\t41,822,73,9"] → jetzt ["108 Farben\t1531,334,52,8", "In Alphakanal k | 2 fx:menue:7, fx:menue:8 |
+| vorher ["%\t820,466,10,9", "0\t757,604,6,9", "100\t758,466,18,9", "100\t758,512,18,9", "100\t758,558,18,9", "45\t757,420,12,9"] → jetzt ["%\t835,476,10,9", "0\t | 1 dlg:form:19146 |
+| vorher ["+\t839,660,6,5", "99 Farben\t1536,334,47,8", "Abbrechen\t1038,765,55,9", "Aktueller Satz:\t494,254,72,9", "Alt+Umschalt+F10\t915,2654,95,9", "Alt+Umsch | 1 dlg:tastenkuerzel |
+| vorher ["0\t911,334,6,9", "1,2\t912,310,14,11", "6\t911,430,6,9", "99 Farben\t1536,334,47,8", "Abbrechen\t1038,735,55,9", "Allgemein\t499,283,51,12"] → jetzt [" | 1 dlg:voreinstellungen:3 |
+| vorher ["100\t309,921,18,9", "202\t110,948,19,9", "29\t110,970,13,9", "306\t162,970,19,9", "99 Farben\t1536,334,47,8", "Arial\t211,897,22,9"] → jetzt ["108 Farb | 1 dlg:form:6073 |
+| vorher ["119 Farben\t1531,334,52,8"] → jetzt ["128 Farben\t1531,334,52,8"] | 1 fx:fx-glow |
+| vorher ["123 Farben\t1531,334,52,8"] → jetzt ["131 Farben\t1531,334,52,8"] | 1 fx:fx-dropShadow |
+| vorher ["130 Farben\t1531,334,52,8"] → jetzt ["139 Farben\t1531,334,52,8"] | 1 fx:fx-innerGlow |
+| vorher ["132 Farben\t1531,334,52,8"] → jetzt ["141 Farben\t1531,334,52,8"] | 1 fx:fx-innerShadow |
+| vorher ["156 MB\t832,322,38,9", "178 MB\t832,394,38,9", "184 MB\t832,358,38,9", "444 MB\t831,430,39,9", "444 MB\t831,502,39,9", "6 von 6 Modellen vorhanden · 1, | 1 dlg:ki_verwalten |
+| vorher ["1\t738,476,4,9", "99 Farben\t1536,334,47,8", "Abbrechen\t928,541,55,9", "Am Anfang\t751,502,57,12", "Am Ende\t1127,502,46,9", "Anzahl:\t604,476,37,9"]  | 1 dlg:form:5990 |
+| vorher ["1\t748,476,4,9", "99 Farben\t1536,334,47,8", "Abgeschrägt\t761,502,64,12", "Eckig\t921,502,25,12", "Rund\t860,502,26,9"] → jetzt ["10\t748,476,12,9", " | 1 dlg:form:6007 |
+| vorher ["248 Farben\t1530,334,53,8"] → jetzt ["177 Farben\t1531,334,52,8"] | 1 fx:fx-bevel |
+| vorher ["36\t911,598,13,9", "36\t911,622,13,9", "5\t911,742,6,9", "9-Slice-Hilfslinien:\t678,478,90,9", "99 Farben\t1536,334,47,8", "Abbrechen\t1038,735,55,9"]  | 1 dlg:voreinstellungen:2 |
+| vorher ["5\t911,574,6,9", "99 Farben\t1536,334,47,8", "Abbrechen\t1038,735,55,9", "Allgemein\t499,283,51,12", "Bearbeiten\t500,304,53,9", "Bearbeiten\t679,280,6 | 1 dlg:voreinstellungen:1 |
+| vorher ["7\t757,488,6,9", "99 Farben\t1536,334,47,8", "Status 1\t757,462,39,9"] → jetzt ["108 Farben\t1531,334,52,8", "7\t780,488,6,9", "Status 1\t780,462,39,9" | 1 dlg:form:states-props |
+| vorher ["99 Farben\t1536,334,47,8", "Abbrechen\t1038,735,55,9", "Allgemein\t499,283,51,12", "Bearbeiten\t500,304,53,9", "Beim Starten fragen\t913,310,99,12", "B | 1 dlg:voreinstellungen:6 |
+| vorher ["99 Farben\t1536,334,47,8", "Abbrechen\t1038,735,55,9", "Allgemein\t499,283,51,12", "Bearbeiten\t500,304,53,9", "Bildebenen bearbeitbar\t697,356,118,9", | 1 dlg:voreinstellungen:4 |
+| vorher ["99 Farben\t1536,334,47,8", "Abbrechen\t1038,735,55,9", "Allgemein\t499,283,51,12", "Bearbeiten\t500,304,53,9", "Hilfslinien und Raster\t500,325,107,9", | 1 dlg:voreinstellungen:5 |
+| vorher ["99 Farben\t1536,334,47,8", "Abbrechen\t898,659,55,9", "Bikubisch\t757,593,47,9", "OK\t836,659,16,9"] → jetzt ["108 Farben\t1531,334,52,8", "Abbrechen\t | 1 dlg:bildgroesse |
+| vorher ["99 Farben\t1536,334,47,8", "Abbrechen\t928,528,55,9", "Groß\t935,488,25,9", "Keine\t752,488,27,9", "Klein\t814,488,24,9", "Miniaturgröße:\t605,488,74,1 | 1 dlg:form:6272 |
+| vorher ["99 Farben\t1536,334,47,8", "Abbrechen\t928,554,55,9", "OK\t864,554,16,9"] → jetzt ["108 Farben\t1531,334,52,8", "Abbrechen\t929,554,55,9", "OK\t865,554 | 1 dlg:form:5991 |
+| vorher ["99 Farben\t1536,334,47,8", "Abgeschrägt\t761,476,64,12", "Eckig\t832,528,25,12", "Eckig\t921,476,25,12", "Rund\t860,476,26,9", "Rund\t893,528,26,9"] →  | 1 dlg:form:6008 |
+| vorher ["99 Farben\t1536,334,47,8", "Auto\t934,342,25,9", "Zurücksetzen\t912,370,67,9"] → jetzt ["108 Farben\t1531,334,52,8", "Auto\t932,342,25,9", "Zurücksetze | 1 dlg:kurven |
+| vorher ["99 Farben\t1536,334,47,8", "Das Löschen des Verlaufs kann nicht rückgängig gemacht werden. Fortfahren?\t617,473,333,24", "Ja\t857,547,10,9", "Nein\t935 | 1 dlg:rueckfrage:panel.history.clear |
+| vorher ["99 Farben\t1536,334,47,8", "Das Symbol „Grafik“ und alle Instanzen löschen?\t617,473,243,12", "Ja\t857,547,10,9", "Nein\t935,547,23,9", "Symbol löschen | 1 dlg:rueckfrage:panel.library.delete |
+| vorher ["99 Farben\t1536,334,47,8", "Datei-Info\t621,436,52,9", "OK\t928,547,16,9", "Titel: Unbenannt-2.png⏎Pfad: (nicht gespeichert)⏎Seiten: 2⏎Symbole: 3⏎Forma | 1 dlg:meldung:file.fileInfo |
+| vorher ["99 Farben\t1536,334,47,8", "Firepixel\t611,436,42,12", "Ja\t857,547,10,9", "Letzte gespeicherte Version von \"gespeichert.fw.png\" wiederherstellen?\t6 | 1 dlg:rueckfrage:file.revert |
+| vorher ["99 Farben\t1536,334,47,8", "Firepixel\t695,462,78,20", "Grafikprogramm für Bildschirm- und Webgrafik, in Rust.\t694,506,282,12", "OK\t928,572,16,9", "V | 1 dlg:ueber |
+| vorher ["99 Farben\t1536,334,47,8", "GIF   8,37 K   2 s bei 56 kbit/s   99 Farben\t662,266,206,11"] → jetzt ["108 Farben\t1531,334,52,8", "GIF   8,35 K   2 s be | 1 dlg:bildvorschau |
+| vorher ["99 Farben\t1536,334,47,8", "Testbefehl\t609,382,51,9", "Testbefehl2\t609,400,58,9"] → jetzt ["108 Farben\t1531,334,52,8", "Testbefehl\t629,384,51,9", " | 1 dlg:befehle_verwalten |
+| vorher ["99 Farben\t1536,334,47,8", "Änderungen an Unbenannt-2 speichern?\t650,475,206,14"] → jetzt ["108 Farben\t1531,334,52,8", "Änderungen an Unbenannt-2 spe | 1 dlg:ungespeichert |
 
 
 ### Kontextmenüs
@@ -721,9 +614,13 @@ Lesart: Rohschlüssel und unmarkierte Texte zählen verschiedene Texte; Überlä
 | ctx:leinwand:objekt | abgeschnitten | Texture: | 1024x768@150 | [390,459–429,467] sichtbar [390,459–401,467] |
 | ctx:leinwand:text | abgeschnitten | Regular | 1024x768@150 | [389,410–427,421] sichtbar [389,410–401,421] |
 
-**Deutsch geändert gegenüber dem Stand vor Phase 6 (1):**
+**Deutsch geändert gegenüber dem Stand vor Phase 6 (13 Bilder), je Zeile zusammengefasst (− vorher, + jetzt; Text, x,y,Breite,Höhe):**
 
-- ctx:leinwand:text: vorher ["202\t110,948,19,9", "306\t162,970,19,9", "Autom. Unterschneidung\t467,972,127,12"] → jetzt ["139\t111,948,18,9", "309\t162,970,19,9"
+| Zeile | Bilder |
+|---|---|
+| vorher ["99 Farben\t1536,334,47,8"] → jetzt ["108 Farben\t1531,334,52,8"] | 10 ctx:ebene, ctx:leinwand:nichts, ctx:leinwand:objekt … |
+| vorher ["99 Farben\t1536,334,47,8", "Alphakanal\t658,946,56,12", "Graustufen\t658,966,56,9", "Maske:\t586,944,34,9"] → jetzt ["108 Farben\t1531,334,52,8"] | 2 ctx:leinwand:pipette, ctx:leinwand:pixel |
+| vorher ["100\t309,921,18,9", "202\t110,948,19,9", "29\t110,970,13,9", "306\t162,970,19,9", "99 Farben\t1536,334,47,8", "Arial\t211,897,22,9"] → jetzt ["108 Farb | 1 ctx:leinwand:text |
 
 
 ### Statuszeile
@@ -747,12 +644,14 @@ Lesart: Rohschlüssel und unmarkierte Texte zählen verschiedene Texte; Überlä
 |---|---|---|---|---|
 | status:zauberstab | abgeschnitten | [!! Hart ··!!] | 1024x768@150 | [374,410–425,420] sichtbar [374,410–401,420] |
 
-**Deutsch geändert gegenüber dem Stand vor Phase 6 (4):**
+**Deutsch geändert gegenüber dem Stand vor Phase 6 (7 Bilder), je Zeile zusammengefasst (− vorher, + jetzt; Text, x,y,Breite,Höhe):**
 
-- status:einfuegen: vorher ["Pinselstrich bearbeit…\t395,971,109,9"] → jetzt ["Pinselstrich bearbeiten\t395,972,108,8"]
-- status:gruppieren: vorher ["Gruppieren (1)\t127,900,73,12", "Pinselstrich bearbeit…\t395,971,109,9"] → jetzt ["Gruppieren (1)\t127,900,70,10", "Pinselstrich bea
-- status:stift: vorher ["Pinselstrich bearbeit…\t395,971,109,9"] → jetzt ["Pinselstrich bearbeiten\t395,972,108,8"]
-- status:text: vorher ["Autom. Unterschneidung\t467,972,127,12"] → jetzt ["Autom. Unterschneidung\t467,972,116,10"]
+| Zeile | Bilder |
+|---|---|
+| vorher ["99 Farben\t1536,334,47,8"] → jetzt ["108 Farben\t1531,334,52,8"] | 4 status:auswahl, status:gruppieren, status:stift … |
+| vorher ["94 Farben\t1536,334,47,8"] → jetzt ["103 Farben\t1531,334,52,8"] | 1 status:einfuegen |
+| vorher ["99 Farben\t1536,334,47,8", "Alphakanal\t658,946,56,12", "Graustufen\t658,966,56,9", "Maske:\t586,944,34,9"] → jetzt ["108 Farben\t1531,334,52,8"] | 1 status:zauberstab |
+| vorher ["99 Farben\t1536,334,47,8", "Arial\t211,897,22,9", "Regular\t389,897,38,12"] → jetzt ["108 Farben\t1531,334,52,8", "Bold\t389,897,22,9", "Myriad Pro\t21 | 1 status:text |
 
 
 ### Deutsch: Überläufe, die es vor Phase 6 nicht gab
@@ -771,40 +670,27 @@ Lesart: Rohschlüssel und unmarkierte Texte zählen verschiedene Texte; Überlä
 | menu:6 | abgeschnitten | Pinselstrich bearbeiten | 1024x768@150 |
 | menu:9 | abgeschnitten | Pinselstrich bearbeiten | 1024x768@150 |
 
-**Bedienfelder und Bedienfeldmenüs** (2):
+**Inspektor (Elementarten, Werkzeuge)** (5):
 
 | Bild | Art | Text | Größen |
 |---|---|---|---|
-| panel:Path | abgeschnitten | Pinselstrich bearbeiten | 1024x768@150 |
-| pmenu:Path | abgeschnitten | Pinselstrich bearbeiten | 1024x768@150 |
+| pi:Animationssymbol | abgeschnitten | 0 | 1024x768@150 |
+| pi:Animationssymbol | abgeschnitten | 100 | 1024x768@150 |
+| pi:Text | in_element | Autom. Unterschneidung | 1024x768@100 |
+| pi:Text auf Pfad | in_element | Autom. Unterschneidung | 1024x768@100 |
+| werkzeug:tool.smudge | abgeschnitten | Druck: | 1024x768@150 |
 
-**Inspektor (Elementarten, Werkzeuge)** (15):
-
-| Bild | Art | Text | Größen |
-|---|---|---|---|
-| pi:Automatische Form | abgeschnitten | Pinselstrich bearbeiten | 1024x768@150 |
-| pi:Ellipse | abgeschnitten | Pinselstrich bearbeiten | 1024x768@150 |
-| pi:Gruppe | abgeschnitten | Pinselstrich bearbeiten | 1024x768@150 |
-| pi:Maskengruppe | abgeschnitten | Pinselstrich bearbeiten | 1024x768@150 |
-| pi:Pfad | abgeschnitten | Pinselstrich bearbeiten | 1024x768@150 |
-| pi:Rechteck + Ellipse | abgeschnitten | Pinselstrich bearbeiten | 1024x768@150 |
-| pi:Text + Ellipse | abgeschnitten | Pinselstrich bearbeiten | 1024x768@150 |
-| pi:drei Objekte | abgeschnitten | Pinselstrich bearbeiten | 1024x768@150 |
-| pi:zwei offene Pfade | abgeschnitten | Pinselstrich bearbeiten | 1024x768@150 |
-| werkzeug:tool.brush | abgeschnitten | Pinselstrich bearbeiten | 1024x768@150 |
-| werkzeug:tool.ellipse | abgeschnitten | Pinselstrich bearbeiten | 1024x768@150 |
-| werkzeug:tool.line | abgeschnitten | Pinselstrich bearbeiten | 1024x768@150 |
-| werkzeug:tool.pen | abgeschnitten | Pinselstrich bearbeiten | 1024x768@150 |
-| werkzeug:tool.redrawPath | abgeschnitten | Pinselstrich bearbeiten | 1024x768@150 |
-| werkzeug:tool.vectorPath | abgeschnitten | Pinselstrich bearbeiten | 1024x768@150 |
-
-**Statuszeile** (3):
+**Dialoge** (1):
 
 | Bild | Art | Text | Größen |
 |---|---|---|---|
-| status:einfuegen | abgeschnitten | Pinselstrich bearbeiten | 1024x768@150 |
-| status:gruppieren | abgeschnitten | Pinselstrich bearbeiten | 1024x768@150 |
-| status:stift | abgeschnitten | Pinselstrich bearbeiten | 1024x768@150 |
+| dlg:ki_verwalten | fensterrand | Zwischenspeicher leeren | 1024x768@150 |
+
+**Kontextmenüs** (1):
+
+| Bild | Art | Text | Größen |
+|---|---|---|---|
+| ctx:leinwand:text | in_element | Autom. Unterschneidung | 1024x768@100 |
 <!-- AUTO:END -->
 
 ## Englisch fachlich (automatische Vorprüfung)

@@ -19,7 +19,7 @@ fn bad(s: &str) -> ImportError {
 /// Datei mit `BITMAPFILEHEADER` lesen.
 pub fn decode(data: &[u8]) -> Result<RasterImage> {
     if data.get(..2) != Some(b"BM") {
-        return Err(bad("Signatur fehlt"));
+        return Err(bad(&fp_i18n::t("err-import-signature-missing")));
     }
     let off = u32le(data, 10).ok_or_else(|| bad("Kopf abgeschnitten"))? as usize;
     decode_dib(data.get(14..).ok_or_else(|| bad("Kopf abgeschnitten"))?, Some(off.saturating_sub(14)), false)
@@ -59,7 +59,7 @@ pub fn decode_dib(d: &[u8], pixel_offset: Option<usize>, alpha32: bool) -> Resul
             u32le(d, 32).unwrap_or(0),
         )
     } else {
-        return Err(bad("unbekannte Kopfgröße"));
+        return Err(bad(&fp_i18n::t("err-import-unknown-header-size")));
     };
     let top_down = h < 0;
     let (wu, hu) = (w.unsigned_abs(), h.unsigned_abs());
@@ -198,7 +198,7 @@ pub fn decode_dib(d: &[u8], pixel_offset: Option<usize>, alpha32: bool) -> Resul
                 }
             }
         }
-        _ => return Err(ImportError::Unsupported(format!("BMP-Kompression {comp} mit {bpp} Bit wird nicht unterstützt"))),
+        _ => return Err(ImportError::Unsupported(fp_i18n::tr!("err-import-bmp-compression", comp = comp.to_string(), bpp = bpp.to_string()))),
     }
     if !idx.is_empty() {
         for (i, &v) in idx.iter().enumerate() {

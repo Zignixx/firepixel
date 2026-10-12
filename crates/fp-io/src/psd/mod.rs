@@ -526,7 +526,7 @@ pub fn import(data: &[u8], opts: &ImportOptions) -> Result<ImportResult> {
     let mut ids = std::mem::take(&mut doc.ids);
     let mut tile = 0u32;
     if flatten {
-        let img = unmatte_composite(&f).ok_or_else(|| ImportError::Corrupt("PSD ohne Composite".into()))?;
+        let img = unmatte_composite(&f).ok_or_else(|| ImportError::Corrupt(fp_i18n::t("err-import-psd-no-composite")))?;
         let e = bitmap_element(&mut ids, &img, None, &mut tile);
         doc.ids = ids;
         if let Some(p) = doc.page_mut(0)

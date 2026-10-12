@@ -34,7 +34,8 @@ Vom Nutzer genehmigte Ausnahme (11.10.): Treffer in der fertigen exe, die nur au
 ## 2. Bauen ohne sich gegenseitig zu stören
 
 - **Eigener Build-Ordner je Agent** (seit dem Neustart: C: 499 GB, ~329 GB frei; 24 GB RAM, 24 Kerne): in jeder Shell vor cargo `$env:CARGO_TARGET_DIR = 'C:\Users\Administrator\Desktop\REA\firepixel\target-<kürzel>'` (z. B. `target-lw`). Dann blockiert niemand mehr die anderen. Kein `cargo clean` in fremden Ordnern. Ausnahme: HG baut die Release-exe am Ende im normalen `target\`.
-- Immer `cargo … -j 4` (6 Agenten × 4 = 24 Kerne). Keine parallelen Korpus-Volltests; `--ignored`-Korpustests nur für das eigene Crate.
+- Immer `cargo … -j 4` (6 Agenten × 4 = 24 Kerne).
+- **Platz (12.10.: C: lief voll, alle Agenten standen):** je Build-Ordner höchstens ein Profil bauen (debug für Tests; release nur wenn wirklich nötig, danach `target-<kürzel>\release` löschen); `$env:CARGO_INCREMENTAL = '0'` setzen; wenn du fertig bist, deinen eigenen `target-<kürzel>` löschen (nur deinen!). Vor großen Builds freien Platz prüfen (`(Get-PSDrive C).Free`), unter 30 GB dem Koordinator melden. Keine parallelen Korpus-Volltests; `--ignored`-Korpustests nur für das eigene Crate.
 - „Blocking waiting for file lock“ ist normal: warten.
 - **Code muss bei jedem Speichern kompilieren** (kleine, in sich geschlossene Schritte). Bricht der Build wegen der Datei eines anderen Agenten: 5–10 min warten und erneut versuchen, nicht in dessen Datei eingreifen; bleibt es > 20 min kaputt, Befund eintragen.
 - Python immer mit vollem Pfad `C:\Users\Administrator\AppData\Local\Programs\Python\Python314\python.exe -I …`.

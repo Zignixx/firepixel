@@ -154,34 +154,36 @@ fn run_command(st: &mut AppState, ctx: &egui::Context, name: &str, params: Value
         }
         "file.open" if !has_param(&params, "path") => {
             let dir = st.session.active().and_then(|d| d.path.as_ref()).and_then(|p| p.parent().map(PathBuf::from));
-            for p in crate::files::pick_open(st, dir.as_deref()) {
-                crate::files::open_path(st, &p);
-            }
+            crate::files::pick_open(st, dir.as_deref(), |st, paths| {
+                for p in paths {
+                    crate::files::open_path(st, &p);
+                }
+            });
             return;
         }
         "file.newFromTemplate" if !has_param(&params, "path") => {
-            if let Some(p) = crate::files::pick_open(st, None).into_iter().next() {
-                run_command(st, ctx, name, json!({ "path": p.to_string_lossy() }));
-            }
+            let n = name.to_string();
+            crate::files::pick_open(st, None, move |st, paths| {
+                if let Some(p) = paths.into_iter().next() {
+                    st.run(&n, json!({ "path": p.to_string_lossy() }));
+                }
+            });
             return;
         }
         "file.import" if !has_param(&params, "path") => {
             let exts = crate::files::readable_extensions();
-            if let Some(p) = crate::files::pick_one(st, &fp_i18n::t("ui-file-import-title"), &fp_i18n::t("ui-filter-all-readable"), &exts) {
-                run_command(st, ctx, name, json!({ "path": p.to_string_lossy() }));
-            }
+            let n = name.to_string();
+            crate::files::pick_one(st, &fp_i18n::t("ui-file-import-title"), &fp_i18n::t("ui-filter-all-readable"), &exts, move |st, p| st.run(&n, json!({ "path": p.to_string_lossy() })));
             return;
         }
         "file.updateHtml" if !has_param(&params, "path") => {
-            if let Some(p) = crate::files::pick_one(st, &fp_i18n::t("ui-file-update-html-title"), &fp_i18n::t("ui-filter-html"), &["htm", "html"]) {
-                run_command(st, ctx, name, json!({ "path": p.to_string_lossy() }));
-            }
+            let n = name.to_string();
+            crate::files::pick_one(st, &fp_i18n::t("ui-file-update-html-title"), &fp_i18n::t("ui-filter-html"), &["htm", "html"], move |st, p| st.run(&n, json!({ "path": p.to_string_lossy() })));
             return;
         }
         "commands.runScript" if !has_param(&params, "path") && !has_param(&params, "code") => {
-            if let Some(p) = crate::files::pick_one(st, &fp_i18n::t("ui-file-run-script-title"), &fp_i18n::t("ui-filter-scripts"), &["jsf", "js"]) {
-                run_command(st, ctx, name, json!({ "path": p.to_string_lossy() }));
-            }
+            let n = name.to_string();
+            crate::files::pick_one(st, &fp_i18n::t("ui-file-run-script-title"), &fp_i18n::t("ui-filter-scripts"), &["jsf", "js"], move |st, p| st.run(&n, json!({ "path": p.to_string_lossy() })));
             return;
         }
         "file.revert" if !has_param(&params, "confirmed") => {
@@ -206,21 +208,13 @@ fn run_command(st: &mut AppState, ctx: &egui::Context, name: &str, params: Value
             // wie das Original: ungespeicherte Dokumente fragen nach einem Namen
             let active = st.session.active_id();
             let ids: Vec<_> = st.session.documents().iter().map(|d| d.id).collect();
-            for id in ids {
-                if st.session.activate(id).is_ok() && st.session.active().is_some_and(|d| d.is_dirty() || d.path.is_none()) {
-                    crate::files::save_active(st, false);
-                }
-            }
-            if let Some(a) = active {
-                let _ = st.session.activate(a);
-            }
+            crate::files::save_all(st, ids, active);
             return;
         }
         "file.previewInBrowser.setPrimaryBrowser" | "file.previewInBrowser.setSecondaryBrowser" if !has_param(&params, "path") => {
             let title = fp_i18n::t(if name.ends_with("PrimaryBrowser") { "ui-file-primary-browser-title" } else { "ui-file-secondary-browser-title" });
-            if let Some(p) = crate::files::pick_one(st, &title, &fp_i18n::t("ui-filter-programs"), &["exe"]) {
-                run_command(st, ctx, name, json!({ "path": p.to_string_lossy() }));
-            }
+            let n = name.to_string();
+            crate::files::pick_one(st, &title, &fp_i18n::t("ui-filter-programs"), &["exe"], move |st, p| st.run(&n, json!({ "path": p.to_string_lossy() })));
             return;
         }
         "file.openRecent" => {
@@ -231,18 +225,21 @@ fn run_command(st: &mut AppState, ctx: &egui::Context, name: &str, params: Value
             return;
         }
         "file.save" if !has_param(&params, "path") => {
-            crate::files::save_active(st, false);
+            crate::files::save_active(st, false, |_, _| {});
             return;
         }
         "file.saveAs" if !has_param(&params, "path") => {
-            crate::files::save_active(st, true);
+            crate::files::save_active(st, true, |_, _| {});
             return;
         }
         "file.saveAsTemplate" if !has_param(&params, "path") => {
             let title = st.session.active().map(|d| d.title.clone()).unwrap_or_default();
-            if let Some(p) = crate::files::pick_save(st, &fp_i18n::t("ui-file-save-template-title"), &crate::files::suggested_name(&title), None) {
-                run_command(st, ctx, name, json!({ "path": p.to_string_lossy() }));
-            }
+            let n = name.to_string();
+            crate::files::pick_save(st, &fp_i18n::t("ui-file-save-template-title"), &crate::files::suggested_name(&title), None, move |st, p| {
+                if let Some(p) = p {
+                    st.run(&n, json!({ "path": p.to_string_lossy() }));
+                }
+            });
             return;
         }
         "file.close" if !params.get("discard").is_some_and(|v| v.as_bool() == Some(true)) => {

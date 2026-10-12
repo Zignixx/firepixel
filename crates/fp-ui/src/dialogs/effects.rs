@@ -37,10 +37,11 @@ impl Fx {
     pub fn name(&self) -> String {
         t(self.label)
     }
-    /// Menütext: Filter mit eigenem Dialog tragen „...“ wie im Original.
+    /// Menütext: Filter mit eigenem Dialog tragen denselben Namen wie im Menü Filter (das Original
+    /// registriert je Filter einen Namen, z. B. „Gaußscher Weichz. ...“, `re\06-bitmap-filter.md` §2.2).
     pub fn menu_text(&self) -> String {
         match self.kind {
-            FxKind::Filter(_) => format!("{}...", t(self.label)),
+            FxKind::Filter(cmd) => crate::menu::clean_label(&t(&fp_i18n::command_key(cmd))).0,
             _ => t(self.label),
         }
     }
@@ -433,35 +434,35 @@ pub fn effect_form(name: &str, bevel: Option<i32>, e: Option<&Effect>, index: Op
 fn filter_effect_form(e: &Effect, index: usize) -> Option<FormDialog> {
     let n = |k: &str, d: f64| e.get_f64(k).unwrap_or(d);
     let (title, keys, fields): (String, Vec<(&str, &str)>, Vec<Field>) = match e.kind() {
-        EffectKind::GaussianBlur => (t("dlg-title-gaussian-blur"), vec![("radius", "gaussian_blur_radius")], vec![Field::slider("radius", t("dlg-lbl-radius").as_str(), n("gaussian_blur_radius", 1.0), 0.1, 250.0).decimals(1)]),
+        EffectKind::GaussianBlur => (t("dlg-title-gaussian-blur"), vec![("radius", "gaussian_blur_radius")], vec![Field::slider("radius", t("dlg-lbl-radius").as_str(), n("gaussian_blur_radius", 1.0), 0.1, 250.0).decimals(1).scale(crate::inspector::scale::BLUR_RADIUS)]),
         EffectKind::MotionBlur => (
 t("dlg-title-motion-blur"),
             vec![("angle", "motion_blur_angle"), ("distance", "motion_blur_distance")],
-            vec![Field::slider("angle", t("dlg-lbl-angle").as_str(), n("motion_blur_angle", 90.0), 0.0, 360.0), Field::slider("distance", t("dlg-lbl-distance").as_str(), n("motion_blur_distance", 10.0), 1.0, 100.0)],
+            vec![Field::slider("angle", t("dlg-lbl-angle").as_str(), n("motion_blur_angle", 90.0), 0.0, 360.0).popup(), Field::slider("distance", t("dlg-lbl-distance").as_str(), n("motion_blur_distance", 10.0), 1.0, 100.0).popup()],
         ),
         EffectKind::RadialBlur => (
 t("dlg-title-radial-blur"),
             vec![("amount", "radial_blur_amount"), ("quality", "radial_blur_quality")],
-            vec![Field::slider("amount", t("dlg-lbl-amount").as_str(), n("radial_blur_amount", 30.0), 1.0, 100.0), Field::slider("quality", t("dlg-lbl-quality").as_str(), n("radial_blur_quality", 20.0), 1.0, 100.0)],
+            vec![Field::slider("amount", t("dlg-lbl-amount").as_str(), n("radial_blur_amount", 30.0), 1.0, 100.0).popup(), Field::slider("quality", t("dlg-lbl-quality").as_str(), n("radial_blur_quality", 20.0), 1.0, 100.0).popup()],
         ),
         EffectKind::ZoomBlur => (
 t("dlg-title-zoom-blur"),
             vec![("amount", "zoom_blur_amount"), ("quality", "zoom_blur_quality")],
-            vec![Field::slider("amount", t("dlg-lbl-amount").as_str(), n("zoom_blur_amount", 30.0), 1.0, 100.0), Field::slider("quality", t("dlg-lbl-quality").as_str(), n("zoom_blur_quality", 20.0), 1.0, 100.0)],
+            vec![Field::slider("amount", t("dlg-lbl-amount").as_str(), n("zoom_blur_amount", 30.0), 1.0, 100.0).popup(), Field::slider("quality", t("dlg-lbl-quality").as_str(), n("zoom_blur_quality", 20.0), 1.0, 100.0).popup()],
         ),
         EffectKind::UnsharpMask => (
 t("dlg-title-unsharp-mask"),
             vec![("amount", "unsharp_mask_amount"), ("radius", "unsharp_mask_radius"), ("threshold", "unsharp_mask_threshold")],
             vec![
-                Field::slider("amount", t("dlg-lbl-sharpen-amount").as_str(), n("unsharp_mask_amount", 50.0), 1.0, 500.0),
-                Field::slider("radius", t("dlg-lbl-pixel-radius").as_str(), n("unsharp_mask_radius", 1.0), 0.1, 250.0).decimals(1),
-                Field::slider("threshold", t("dlg-lbl-threshold").as_str(), n("unsharp_mask_threshold", 0.0), 0.0, 255.0),
+                Field::slider("amount", t("dlg-lbl-sharpen-amount").as_str(), n("unsharp_mask_amount", 50.0), 1.0, 500.0).scale(crate::inspector::scale::SHARPEN_AMOUNT),
+                Field::slider("radius", t("dlg-lbl-pixel-radius").as_str(), n("unsharp_mask_radius", 1.0), 0.1, 250.0).decimals(1).scale(crate::inspector::scale::BLUR_RADIUS),
+                Field::slider("threshold", t("dlg-lbl-threshold").as_str(), n("unsharp_mask_threshold", 0.0), 0.0, 255.0).scale(crate::inspector::scale::THRESHOLD),
             ],
         ),
         EffectKind::AddNoise => (
 t("dlg-title-add-noise"),
             vec![("amount", "add_noise_amount"), ("use_color", "add_noise_use_color")],
-            vec![Field::slider("amount", t("dlg-lbl-amount").as_str(), n("add_noise_amount", 50.0), 1.0, 400.0), Field::check("use_color", t("dlg-lbl-color-check").as_str(), e.get_bool("add_noise_use_color").unwrap_or(true))],
+            vec![Field::slider("amount", t("dlg-lbl-amount").as_str(), n("add_noise_amount", 50.0), 1.0, 400.0).popup(), Field::check("use_color", t("dlg-lbl-color-check").as_str(), e.get_bool("add_noise_use_color").unwrap_or(true))],
         ),
         EffectKind::BrightnessContrast => (
 t("dlg-title-brightness-contrast"),
@@ -472,8 +473,8 @@ t("dlg-title-brightness-contrast"),
 t("dlg-title-hue-saturation"),
             vec![("hue", "hue_amount"), ("saturation", "saturation_amount"), ("lightness", "lightness_amount"), ("colorize", "hls_colorize")],
             vec![
-                Field::slider("hue", t("dlg-lbl-hue").as_str(), n("hue_amount", 0.0), -180.0, 180.0),
-                Field::slider("saturation", t("dlg-lbl-saturation").as_str(), n("saturation_amount", 0.0), -100.0, 100.0),
+                Field::slider("hue", t("dlg-lbl-hue").as_str(), n("hue_amount", 0.0), -180.0, 180.0).scale(crate::inspector::scale::HUE),
+                Field::slider("saturation", t("dlg-lbl-saturation").as_str(), n("saturation_amount", 0.0), -100.0, 100.0).scale(crate::inspector::scale::SATURATION),
                 Field::slider("lightness", t("dlg-lbl-brightness").as_str(), n("lightness_amount", 0.0), -100.0, 100.0),
                 Field::check("colorize", t("dlg-lbl-colorize").as_str(), e.get_bool("hls_colorize").unwrap_or(false)),
             ],

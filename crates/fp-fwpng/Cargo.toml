@@ -15,6 +15,8 @@ flate2 = { workspace = true }
 crc32fast = { workspace = true }
 rayon = { workspace = true }
 thiserror = { workspace = true }
+# Mehrsprachige Fehlermeldungen
+fp-i18n = { workspace = true }
 
 [dev-dependencies]
 serde_json = { workspace = true }

@@ -1,9 +1,15 @@
-//! „Über Firepixel“ (Hilfe-Menü, eigener Inhalt statt des Dialogs des Originals).
+//! „Über Firepixel“ (Hilfe-Menü, eigener Inhalt statt des Dialogs des Originals). Gestaltung nach
+//! `docs\DESIGN.md` §3 (Info-Fenster): Kopfbanner wie der Startbildschirm (Logo, Name, Version),
+//! Beschreibung, Knopfleiste.
 
-use super::{dialog_frame, push_button, t, DialogClose};
+use super::{dialog_frame, t, DialogClose};
 use crate::app_state::AppState;
 use crate::theme::Theme;
+use crate::ui_kit::{self, sp, BarButton};
 use egui::{pos2, vec2, Rect};
+
+const W: f32 = 400.0;
+const BANNER_H: f32 = 88.0;
 
 /// Zeigt den Dialog.
 pub fn show(ctx: &egui::Context, st: &mut AppState) {
@@ -12,18 +18,17 @@ pub fn show(ctx: &egui::Context, st: &mut AppState) {
     }
     let mut close = false;
     let desc = t("dlg-about-text");
+    let version = fp_i18n::tr!("dlg-about-version", version = env!("CARGO_PKG_VERSION"));
     // längere Beschreibung (andere Sprachen): umbrechen, Dialog wächst nach unten
-    let dh = super::wrapped_h(ctx, &desc, 380.0 - 100.0);
-    let r = dialog_frame(ctx, "fp-about", &t("dlg-about-title"), vec2(380.0, 170.0f32.max(74.0 + dh + 50.0).ceil()), |ui, body| {
+    let dh = super::wrapped_h(ctx, &desc, W - 2.0 * sp::L);
+    let h = (BANNER_H + sp::L + dh + sp::L + sp::BUTTON_BAR_H).ceil();
+    let ok = t("btn-ok");
+    let r = dialog_frame(ctx, "fp-about", &t("dlg-about-title"), vec2(W, h), |ui, body| {
         let theme = Theme::current(ui.ctx());
-        let st_icon = crate::icons::IconStyle::new(&theme, Some(crate::theme::ToolGroup::Select), true);
-        crate::icons::paint(ui.painter(), Rect::from_min_size(body.min + vec2(20.0, 20.0), vec2(48.0, 48.0)), crate::icons::Icon::Logo, &st_icon);
-        ui.painter().text(body.min + vec2(84.0, 26.0), egui::Align2::LEFT_TOP, "Firepixel", theme.bold(20.0), theme.colors.text);
-        ui.painter().text(body.min + vec2(84.0, 54.0), egui::Align2::LEFT_TOP, fp_i18n::tr!("dlg-about-version", version = env!("CARGO_PKG_VERSION")), theme.ui_font(), theme.colors.text_weak);
-        super::text_block(ui, Rect::from_min_size(body.min + vec2(84.0, 74.0), vec2(body.width() - 100.0, dh + 4.0)), egui::RichText::new(desc.as_str()).font(theme.ui_font()).color(theme.colors.text));
-        let ok = t("btn-ok");
-        let w = super::button_w(ui.ctx(), &ok, 76.0);
-        if push_button(ui, Rect::from_min_size(pos2(body.right() - 16.0 - w, body.bottom() - 34.0), vec2(w, 23.0)), &ok, true, true) {
+        let banner = Rect::from_min_size(body.min, vec2(body.width(), BANNER_H));
+        crate::welcome::paint_banner(&ui.painter().with_clip_rect(banner), banner, &theme, true, &version);
+        super::text_block(ui, Rect::from_min_size(pos2(body.left() + sp::L, banner.bottom() + sp::L), vec2(body.width() - 2.0 * sp::L, dh + 4.0)), egui::RichText::new(desc.as_str()).font(theme.ui_font()).color(theme.colors.text));
+        if ui_kit::button_bar(ui, body, &[], &[BarButton::default_button(&ok)]).right.is_some() {
             close = true;
         }
     });

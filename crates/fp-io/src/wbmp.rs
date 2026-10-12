@@ -22,7 +22,7 @@ pub fn decode(d: &[u8]) -> Result<RasterImage> {
     let mut p = 0usize;
     let typ = mbi(d, &mut p).ok_or_else(|| bad("Kopf"))?;
     if typ != 0 {
-        return Err(ImportError::Unsupported(format!("WBMP-Typ {typ}")));
+        return Err(ImportError::Unsupported(fp_i18n::tr!("err-import-wbmp-type", kind = typ.to_string())));
     }
     let fix = *d.get(p).ok_or_else(|| bad("Kopf"))?;
     p += 1;

@@ -262,7 +262,7 @@ pub fn import_format(fmt: FileFormat, name: &str, data: &[u8], opts: &ImportOpti
         FileFormat::Svg => crate::vector::import_svg(data, opts),
         FileFormat::Illustrator | FileFormat::Eps | FileFormat::EpsBinary => crate::vector::import_postscript(data, fmt, opts),
         FileFormat::Pdf => crate::vector::import_pdf(data, opts),
-        FileFormat::Act => Err(ImportError::Unsupported("Photoshop-Paletten (*.act) sind keine Bilder: im Optimieren-Bedienfeld „Palette laden“ bzw. in den Farbfeldern verwenden.".into())),
+        FileFormat::Act => Err(ImportError::Unsupported(fp_i18n::t("err-import-act-not-image"))),
         FileFormat::Unknown => {
             let _ = name;
             Err(ImportError::UnknownFormat)

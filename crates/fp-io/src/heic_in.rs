@@ -36,7 +36,7 @@ pub fn decode_heic(d: &[u8]) -> Result<RasterImage> {
         }
         RasterImage::from_rgba(w, h, data)
     };
-    catch_unwind(AssertUnwindSafe(run)).unwrap_or_else(|_| Err(ImportError::Decode("HEIC", "HEVC-Dekoder abgebrochen (beschädigte Daten)".into())))
+    catch_unwind(AssertUnwindSafe(run)).unwrap_or_else(|_| Err(ImportError::Decode("HEIC", fp_i18n::t("err-import-hevc-aborted"))))
 }
 
 #[cfg(test)]

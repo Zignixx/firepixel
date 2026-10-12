@@ -99,7 +99,7 @@ fn bericht() {
                 }
             }
         }
-        let changed = de.as_ref().map(|r| r.de_changed.len().to_string()).unwrap_or("–".into());
+        let changed = de.as_ref().map(|r| changed_scenes(r).to_string()).unwrap_or("–".into());
         let failed = [&de, &en, &qps].iter().map(|r| r.as_ref().map(|r| r.failed.len().to_string()).unwrap_or("–".into())).collect::<Vec<_>>().join("/");
         let scenes = de.as_ref().or(en.as_ref()).or(qps.as_ref()).map(|r| r.scenes).unwrap_or(0);
         md.push_str(&format!(
@@ -121,7 +121,7 @@ fn bericht() {
         totals[5] += lay(&en).map(|x| x.1).unwrap_or(0);
         totals[6] += lay(&qps).map(|x| x.1).unwrap_or(0);
         totals[7] += de.as_ref().map(|r| uniq(r.findings.iter().filter(|f| LAYOUT.contains(&f.kind.as_str())))).unwrap_or(0);
-        totals[8] += de.as_ref().map(|r| r.de_changed.len()).unwrap_or(0);
+        totals[8] += de.as_ref().map(changed_scenes).unwrap_or(0);
 
         // Einzelheiten
         details.push_str(&format!("\n### {title}\n\n"));
@@ -178,9 +178,19 @@ fn bericht() {
             && !r.de_changed.is_empty()
         {
             any = true;
-            details.push_str(&format!("**Deutsch geändert gegenüber dem Stand vor Phase 6 ({}):**\n\n", r.de_changed.len()));
-            for c in r.de_changed.iter().take(80) {
-                details.push_str(&format!("- {}\n", esc(c).replace('`', "'")));
+            let n_scenes = r.de_changed.iter().filter_map(|c| c.split_once(": ").map(|x| x.0)).collect::<BTreeSet<_>>().len();
+            details.push_str(&format!("**Deutsch geändert gegenüber dem Stand vor Phase 6 ({n_scenes} Bilder), je Zeile zusammengefasst (− vorher, + jetzt; Text, x,y,Breite,Höhe):**\n\n| Zeile | Bilder |\n|---|---|\n"));
+            // je einzelne Zeilenänderung: in wie vielen Bildern
+            let mut by: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
+            for c in &r.de_changed {
+                let (scene, diff) = c.split_once(": ").unwrap_or(("?", c));
+                by.entry(diff.to_string()).or_default().insert(scene.to_string());
+            }
+            let mut v: Vec<(String, BTreeSet<String>)> = by.into_iter().collect();
+            v.sort_by(|a, b| b.1.len().cmp(&a.1.len()));
+            for (diff, scenes) in v.iter().take(40) {
+                let sc: Vec<&String> = scenes.iter().take(3).collect();
+                details.push_str(&format!("| {} | {} {}{} |\n", esc(diff).replace('`', "'"), scenes.len(), sc.iter().map(|s| s.as_str()).collect::<Vec<_>>().join(", "), if scenes.len() > 3 { " …" } else { "" }));
             }
             details.push('\n');
         }
@@ -214,4 +224,8 @@ fn bericht() {
 /// Systems), nicht in die Doku schreiben (AGENTEN_REGELN §1a).
 fn neutral(md: &str) -> String {
     md.lines().map(|l| if fp_neutral::find_in_bytes(l.as_bytes()).is_empty() { l.to_string() } else { "| (Zeile entfernt: enthält einen gesperrten Namen, §1a) |".to_string() }).collect::<Vec<_>>().join("\n")
+}
+/// Anzahl der Bilder mit geänderter deutscher Textliste.
+fn changed_scenes(r: &AreaResult) -> usize {
+    r.de_changed.iter().filter_map(|c| c.split_once(": ").map(|x| x.0.to_string())).collect::<BTreeSet<_>>().len()
 }

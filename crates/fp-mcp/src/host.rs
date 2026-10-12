@@ -73,6 +73,8 @@ pub enum UiRequest {
     Input(serde_json::Value),
     /// Widgets/Texte der Oberfläche suchen (`ui_find`): `{"text": "Datei", "role": "button"}`.
     Find(serde_json::Value),
+    /// Datei-Dialog der Oberfläche abfragen/beantworten (`ui_file_dialog`): `{"action": "status"|"cancel"|"choose", "path"?}`.
+    FileDialog(serde_json::Value),
 }
 
 /// Ein Bild der Oberfläche (RGBA8, nicht vormultipliziert).

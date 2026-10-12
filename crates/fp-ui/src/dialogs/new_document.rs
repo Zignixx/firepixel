@@ -245,9 +245,9 @@ pub fn show(ctx: &egui::Context, st: &mut AppState) {
     match (result, r) {
         _ if templates => {
             st.dialogs.new_document = None;
-            if let Some(path) = super::panel_menus::pick_open(st, &t("dlg-new-from-template"), &[("FW-PNG", &["png"])]) {
+            super::panel_menus::pick_open(st, &t("dlg-new-from-template"), &[("FW-PNG", &["png"])], |st, path| {
                 st.push(Action::Run("file.newFromTemplate".into(), json!({"path": path.to_string_lossy()})));
-            }
+            });
         }
         (Some(true), _) => {
             st.dialogs.new_document = None;

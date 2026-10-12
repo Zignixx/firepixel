@@ -42,39 +42,39 @@ Erzeugt von `crates\fp-ui\tests\gesamt_logik.rs` (`cargo test -p fp-ui --test ge
 | Filter ▸ Weichzeichnen ▸ Gaußscher Weichzeichner... | `filter.blur.gaussian` | ✅ Doc | Rechteck, mit Vorschau |
 | Filter ▸ Weichzeichnen ▸ Radiales Weichzeichnen... | `filter.blur.radial` | ✅ Doc | Rechteck, mit Vorschau |
 | Filter ▸ Weichzeichnen ▸ Zentriertes Weichzeichnen... | `filter.blur.zoom` | ✅ Doc | Rechteck, mit Vorschau |
-| Filter (+) ▸ Abschrägung und Prägung ▸ Abschrägung innen – hinzufügen | `Effect { name: "bevel", bevel: Some(0) }` | ✅ Doc | ohne Auswahl, mit Vorschau |
-| Filter (+) ▸ Abschrägung und Prägung ▸ Abschrägung innen – bearbeiten | `Effect { name: "bevel", bevel: Some(0) }` | ✅ Doc | ohne Auswahl, mit Vorschau |
-| Filter (+) ▸ Abschrägung und Prägung ▸ Abschrägung außen – hinzufügen | `Effect { name: "bevel", bevel: Some(1) }` | ✅ Doc | ohne Auswahl, mit Vorschau |
-| Filter (+) ▸ Abschrägung und Prägung ▸ Abschrägung außen – bearbeiten | `Effect { name: "bevel", bevel: Some(1) }` | ✅ Doc | ohne Auswahl, mit Vorschau |
-| Filter (+) ▸ Abschrägung und Prägung ▸ Prägung eingelassen – hinzufügen | `Effect { name: "bevel", bevel: Some(3) }` | ✅ Doc | ohne Auswahl, mit Vorschau |
-| Filter (+) ▸ Abschrägung und Prägung ▸ Prägung eingelassen – bearbeiten | `Effect { name: "bevel", bevel: Some(3) }` | ✅ Doc | ohne Auswahl, mit Vorschau |
-| Filter (+) ▸ Abschrägung und Prägung ▸ Prägung erhaben – hinzufügen | `Effect { name: "bevel", bevel: Some(2) }` | ✅ Doc | ohne Auswahl, mit Vorschau |
-| Filter (+) ▸ Abschrägung und Prägung ▸ Prägung erhaben – bearbeiten | `Effect { name: "bevel", bevel: Some(2) }` | ✅ Doc | ohne Auswahl, mit Vorschau |
-| Filter (+) ▸ Anpassen der Farbe ▸ Farbfüllung – hinzufügen | `Effect { name: "colorFill", bevel: None }` | ✅ Doc | ohne Auswahl, mit Vorschau |
-| Filter (+) ▸ Anpassen der Farbe ▸ Farbfüllung – bearbeiten | `Effect { name: "colorFill", bevel: None }` | ✅ Doc | ohne Auswahl, mit Vorschau |
-| Filter (+) ▸ Anpassen der Farbe ▸ Farbton/Sättigung... – hinzufügen | `Filter("filter.adjustColor.hueSaturation")` | ✅ Doc | ohne Auswahl, mit Vorschau |
-| Filter (+) ▸ Anpassen der Farbe ▸ Farbton/Sättigung... – bearbeiten | `Filter("filter.adjustColor.hueSaturation")` | ✅ Doc | ohne Auswahl, mit Vorschau |
-| Filter (+) ▸ Anpassen der Farbe ▸ Helligkeit/Kontrast... – hinzufügen | `Filter("filter.adjustColor.brightnessContrast")` | ✅ Doc | ohne Auswahl, mit Vorschau |
-| Filter (+) ▸ Anpassen der Farbe ▸ Helligkeit/Kontrast... – bearbeiten | `Filter("filter.adjustColor.brightnessContrast")` | ✅ Doc | ohne Auswahl, mit Vorschau |
-| Filter (+) ▸ Rauschen ▸ Rauschen hinzufügen... – hinzufügen | `Filter("filter.noise.addNoise")` | ✅ Doc | ohne Auswahl, mit Vorschau |
-| Filter (+) ▸ Rauschen ▸ Rauschen hinzufügen... – bearbeiten | `Filter("filter.noise.addNoise")` | ✅ Doc | ohne Auswahl, mit Vorschau |
-| Filter (+) ▸ Schärfen ▸ Unscharf maskieren... – hinzufügen | `Filter("filter.sharpen.unsharpMask")` | ✅ Doc | ohne Auswahl, mit Vorschau |
-| Filter (+) ▸ Schärfen ▸ Unscharf maskieren... – bearbeiten | `Filter("filter.sharpen.unsharpMask")` | ✅ Doc | ohne Auswahl, mit Vorschau |
-| Filter (+) ▸ Schatten und Glühen ▸ Einfarbiger Schatten – hinzufügen | `Effect { name: "solidShadow", bevel: None }` | ✅ Doc | ohne Auswahl, mit Vorschau |
-| Filter (+) ▸ Schatten und Glühen ▸ Einfarbiger Schatten – bearbeiten | `Effect { name: "solidShadow", bevel: None }` | ✅ Doc | ohne Auswahl, mit Vorschau |
-| Filter (+) ▸ Schatten und Glühen ▸ Glühen – hinzufügen | `Effect { name: "glow", bevel: Some(4) }` | ✅ Doc | ohne Auswahl, mit Vorschau |
-| Filter (+) ▸ Schatten und Glühen ▸ Glühen – bearbeiten | `Effect { name: "glow", bevel: Some(4) }` | ✅ Doc | ohne Auswahl, mit Vorschau |
-| Filter (+) ▸ Schatten und Glühen ▸ Innerer Schatten – hinzufügen | `Effect { name: "innerShadow", bevel: None }` | ✅ Doc | ohne Auswahl, mit Vorschau |
-| Filter (+) ▸ Schatten und Glühen ▸ Innerer Schatten – bearbeiten | `Effect { name: "innerShadow", bevel: None }` | ✅ Doc | ohne Auswahl, mit Vorschau |
-| Filter (+) ▸ Schatten und Glühen ▸ Inneres Glühen – hinzufügen | `Effect { name: "innerGlow", bevel: None }` | ✅ Doc | ohne Auswahl, mit Vorschau |
-| Filter (+) ▸ Schatten und Glühen ▸ Inneres Glühen – bearbeiten | `Effect { name: "innerGlow", bevel: None }` | ✅ Doc | ohne Auswahl, mit Vorschau |
-| Filter (+) ▸ Schatten und Glühen ▸ Schlagschatten – hinzufügen | `Effect { name: "dropShadow", bevel: None }` | ✅ Doc | ohne Auswahl, mit Vorschau |
-| Filter (+) ▸ Schatten und Glühen ▸ Schlagschatten – bearbeiten | `Effect { name: "dropShadow", bevel: None }` | ✅ Doc | ohne Auswahl, mit Vorschau |
-| Filter (+) ▸ Weichzeichnen ▸ Bewegungsunschärfe... – hinzufügen | `Filter("filter.blur.motion")` | ✅ Doc | ohne Auswahl, mit Vorschau |
-| Filter (+) ▸ Weichzeichnen ▸ Bewegungsunschärfe... – bearbeiten | `Filter("filter.blur.motion")` | ✅ Doc | ohne Auswahl, mit Vorschau |
-| Filter (+) ▸ Weichzeichnen ▸ Gaußscher Weichzeichner... – hinzufügen | `Filter("filter.blur.gaussian")` | ✅ Doc | ohne Auswahl, mit Vorschau |
-| Filter (+) ▸ Weichzeichnen ▸ Gaußscher Weichzeichner... – bearbeiten | `Filter("filter.blur.gaussian")` | ✅ Doc | ohne Auswahl, mit Vorschau |
-| Filter (+) ▸ Weichzeichnen ▸ Radialer Weichzeichner... – hinzufügen | `Filter("filter.blur.radial")` | ✅ Doc | ohne Auswahl, mit Vorschau |
-| Filter (+) ▸ Weichzeichnen ▸ Radialer Weichzeichner... – bearbeiten | `Filter("filter.blur.radial")` | ✅ Doc | ohne Auswahl, mit Vorschau |
-| Filter (+) ▸ Weichzeichnen ▸ Zoom-Weichzeichner... – hinzufügen | `Filter("filter.blur.zoom")` | ✅ Doc | ohne Auswahl, mit Vorschau |
-| Filter (+) ▸ Weichzeichnen ▸ Zoom-Weichzeichner... – bearbeiten | `Filter("filter.blur.zoom")` | ✅ Doc | ohne Auswahl, mit Vorschau |
+| Filter (+) ▸ effect-group-bevel ▸ effect-bevel-inner – hinzufügen | `Effect { name: "bevel", bevel: Some(0) }` | ✅ Doc | ohne Auswahl, mit Vorschau |
+| Filter (+) ▸ effect-group-bevel ▸ effect-bevel-inner – bearbeiten | `Effect { name: "bevel", bevel: Some(0) }` | ✅ Doc | ohne Auswahl, mit Vorschau |
+| Filter (+) ▸ effect-group-bevel ▸ effect-bevel-outer – hinzufügen | `Effect { name: "bevel", bevel: Some(1) }` | ✅ Doc | ohne Auswahl, mit Vorschau |
+| Filter (+) ▸ effect-group-bevel ▸ effect-bevel-outer – bearbeiten | `Effect { name: "bevel", bevel: Some(1) }` | ✅ Doc | ohne Auswahl, mit Vorschau |
+| Filter (+) ▸ effect-group-bevel ▸ effect-emboss-inset – hinzufügen | `Effect { name: "bevel", bevel: Some(3) }` | ✅ Doc | ohne Auswahl, mit Vorschau |
+| Filter (+) ▸ effect-group-bevel ▸ effect-emboss-inset – bearbeiten | `Effect { name: "bevel", bevel: Some(3) }` | ✅ Doc | ohne Auswahl, mit Vorschau |
+| Filter (+) ▸ effect-group-bevel ▸ effect-emboss-raised – hinzufügen | `Effect { name: "bevel", bevel: Some(2) }` | ✅ Doc | ohne Auswahl, mit Vorschau |
+| Filter (+) ▸ effect-group-bevel ▸ effect-emboss-raised – bearbeiten | `Effect { name: "bevel", bevel: Some(2) }` | ✅ Doc | ohne Auswahl, mit Vorschau |
+| Filter (+) ▸ effect-group-adjust-color ▸ effect-color-fill – hinzufügen | `Effect { name: "colorFill", bevel: None }` | ✅ Doc | ohne Auswahl, mit Vorschau |
+| Filter (+) ▸ effect-group-adjust-color ▸ effect-color-fill – bearbeiten | `Effect { name: "colorFill", bevel: None }` | ✅ Doc | ohne Auswahl, mit Vorschau |
+| Filter (+) ▸ effect-group-adjust-color ▸ filter-adjustColor-hueSaturation – hinzufügen | `Filter("filter.adjustColor.hueSaturation")` | ✅ Doc | ohne Auswahl, mit Vorschau |
+| Filter (+) ▸ effect-group-adjust-color ▸ filter-adjustColor-hueSaturation – bearbeiten | `Filter("filter.adjustColor.hueSaturation")` | ✅ Doc | ohne Auswahl, mit Vorschau |
+| Filter (+) ▸ effect-group-adjust-color ▸ filter-adjustColor-brightnessContrast – hinzufügen | `Filter("filter.adjustColor.brightnessContrast")` | ✅ Doc | ohne Auswahl, mit Vorschau |
+| Filter (+) ▸ effect-group-adjust-color ▸ filter-adjustColor-brightnessContrast – bearbeiten | `Filter("filter.adjustColor.brightnessContrast")` | ✅ Doc | ohne Auswahl, mit Vorschau |
+| Filter (+) ▸ effect-group-noise ▸ filter-noise-addNoise – hinzufügen | `Filter("filter.noise.addNoise")` | ✅ Doc | ohne Auswahl, mit Vorschau |
+| Filter (+) ▸ effect-group-noise ▸ filter-noise-addNoise – bearbeiten | `Filter("filter.noise.addNoise")` | ✅ Doc | ohne Auswahl, mit Vorschau |
+| Filter (+) ▸ effect-group-sharpen ▸ filter-sharpen-unsharpMask – hinzufügen | `Filter("filter.sharpen.unsharpMask")` | ✅ Doc | ohne Auswahl, mit Vorschau |
+| Filter (+) ▸ effect-group-sharpen ▸ filter-sharpen-unsharpMask – bearbeiten | `Filter("filter.sharpen.unsharpMask")` | ✅ Doc | ohne Auswahl, mit Vorschau |
+| Filter (+) ▸ effect-group-shadow-glow ▸ effect-solid-shadow – hinzufügen | `Effect { name: "solidShadow", bevel: None }` | ✅ Doc | ohne Auswahl, mit Vorschau |
+| Filter (+) ▸ effect-group-shadow-glow ▸ effect-solid-shadow – bearbeiten | `Effect { name: "solidShadow", bevel: None }` | ✅ Doc | ohne Auswahl, mit Vorschau |
+| Filter (+) ▸ effect-group-shadow-glow ▸ effect-glow – hinzufügen | `Effect { name: "glow", bevel: Some(4) }` | ✅ Doc | ohne Auswahl, mit Vorschau |
+| Filter (+) ▸ effect-group-shadow-glow ▸ effect-glow – bearbeiten | `Effect { name: "glow", bevel: Some(4) }` | ✅ Doc | ohne Auswahl, mit Vorschau |
+| Filter (+) ▸ effect-group-shadow-glow ▸ effect-inner-shadow – hinzufügen | `Effect { name: "innerShadow", bevel: None }` | ✅ Doc | ohne Auswahl, mit Vorschau |
+| Filter (+) ▸ effect-group-shadow-glow ▸ effect-inner-shadow – bearbeiten | `Effect { name: "innerShadow", bevel: None }` | ✅ Doc | ohne Auswahl, mit Vorschau |
+| Filter (+) ▸ effect-group-shadow-glow ▸ effect-inner-glow – hinzufügen | `Effect { name: "innerGlow", bevel: None }` | ✅ Doc | ohne Auswahl, mit Vorschau |
+| Filter (+) ▸ effect-group-shadow-glow ▸ effect-inner-glow – bearbeiten | `Effect { name: "innerGlow", bevel: None }` | ✅ Doc | ohne Auswahl, mit Vorschau |
+| Filter (+) ▸ effect-group-shadow-glow ▸ effect-drop-shadow – hinzufügen | `Effect { name: "dropShadow", bevel: None }` | ✅ Doc | ohne Auswahl, mit Vorschau |
+| Filter (+) ▸ effect-group-shadow-glow ▸ effect-drop-shadow – bearbeiten | `Effect { name: "dropShadow", bevel: None }` | ✅ Doc | ohne Auswahl, mit Vorschau |
+| Filter (+) ▸ effect-group-blur ▸ filter-blur-motion – hinzufügen | `Filter("filter.blur.motion")` | ✅ Doc | ohne Auswahl, mit Vorschau |
+| Filter (+) ▸ effect-group-blur ▸ filter-blur-motion – bearbeiten | `Filter("filter.blur.motion")` | ✅ Doc | ohne Auswahl, mit Vorschau |
+| Filter (+) ▸ effect-group-blur ▸ filter-blur-gaussian – hinzufügen | `Filter("filter.blur.gaussian")` | ✅ Doc | ohne Auswahl, mit Vorschau |
+| Filter (+) ▸ effect-group-blur ▸ filter-blur-gaussian – bearbeiten | `Filter("filter.blur.gaussian")` | ✅ Doc | ohne Auswahl, mit Vorschau |
+| Filter (+) ▸ effect-group-blur ▸ filter-blur-radial – hinzufügen | `Filter("filter.blur.radial")` | ✅ Doc | ohne Auswahl, mit Vorschau |
+| Filter (+) ▸ effect-group-blur ▸ filter-blur-radial – bearbeiten | `Filter("filter.blur.radial")` | ✅ Doc | ohne Auswahl, mit Vorschau |
+| Filter (+) ▸ effect-group-blur ▸ filter-blur-zoom – hinzufügen | `Filter("filter.blur.zoom")` | ✅ Doc | ohne Auswahl, mit Vorschau |
+| Filter (+) ▸ effect-group-blur ▸ filter-blur-zoom – bearbeiten | `Filter("filter.blur.zoom")` | ✅ Doc | ohne Auswahl, mit Vorschau |

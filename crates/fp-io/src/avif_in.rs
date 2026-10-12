@@ -58,7 +58,7 @@ fn planes_of(p: &rav1d::Picture) -> Result<Planes> {
         let bpp = if wide { 2 } else { 1 };
         let mut out = Vec::with_capacity(pw as usize * ph as usize);
         for y in 0..ph as usize {
-            let row = data.get(y * stride..y * stride + pw as usize * bpp).ok_or_else(|| ImportError::Decode("AVIF", "Ebene zu kurz".into()))?;
+            let row = data.get(y * stride..y * stride + pw as usize * bpp).ok_or_else(|| ImportError::Decode("AVIF", fp_i18n::t("err-import-plane-short")))?;
             if wide {
                 out.extend(row.as_chunks::<2>().0.iter().map(|b| u16::from_ne_bytes(*b)));
             } else {
@@ -114,7 +114,7 @@ pub fn decode_av1(samples: &[&[u8]], still: bool) -> Result<Vec<Planes>> {
                 take(&mut dec, &mut out)?;
                 guard += 1;
                 if guard > 10_000 {
-                    return Err(ImportError::Decode("AVIF", "Dekoder hängt".into()));
+                    return Err(ImportError::Decode("AVIF", fp_i18n::t("err-import-decoder-hangs")));
                 }
                 r = dec.send_pending_data();
             }
@@ -130,7 +130,7 @@ pub fn decode_av1(samples: &[&[u8]], still: bool) -> Result<Vec<Planes>> {
         while take(&mut dec, &mut out)? {}
         Ok(out)
     };
-    catch_unwind(AssertUnwindSafe(run)).unwrap_or_else(|_| Err(ImportError::Decode("AVIF", "AV1-Dekoder abgebrochen (beschädigte Daten)".into())))
+    catch_unwind(AssertUnwindSafe(run)).unwrap_or_else(|_| Err(ImportError::Decode("AVIF", fp_i18n::t("err-import-av1-aborted"))))
 }
 
 /// (Kr, Kb) einer CICP-Matrix.
@@ -219,7 +219,7 @@ fn alpha_values(p: &Planes) -> Vec<u8> {
 /// Ein Bild (Farbe oder Alpha) eines Items: einzelnes `av01` oder `grid` aus `av01`-Kacheln.
 /// Liefert RGBA (für Alpha nur Kanal 0 belegt) in Item-Größe, noch ohne Transformationen.
 fn item_pixels(h: &Heif<'_>, id: u32, alpha: bool, nclx: Option<Nclx>) -> Result<(u32, u32, Vec<[u8; 4]>)> {
-    let it = h.items.get(&id).ok_or_else(|| ImportError::Corrupt("AVIF: Item fehlt".into()))?;
+    let it = h.items.get(&id).ok_or_else(|| ImportError::Corrupt(fp_i18n::t("err-import-avif-item-missing")))?;
     let convert = |p: &Planes| -> Vec<[u8; 4]> {
         if alpha {
             alpha_values(p).into_iter().map(|a| [a, a, a, 255]).collect()
@@ -235,7 +235,7 @@ fn item_pixels(h: &Heif<'_>, id: u32, alpha: bool, nclx: Option<Nclx>) -> Result
         b"av01" => {
             let d = h.data(id)?;
             let mut pl = decode_av1(&[&d], true)?;
-            let p = pl.pop().ok_or_else(|| ImportError::Decode("AVIF", "kein Bild dekodiert".into()))?;
+            let p = pl.pop().ok_or_else(|| ImportError::Decode("AVIF", fp_i18n::t("err-import-no-image-decoded")))?;
             Ok((p.width, p.height, convert(&p)))
         }
         b"grid" => {
@@ -243,16 +243,16 @@ fn item_pixels(h: &Heif<'_>, id: u32, alpha: bool, nclx: Option<Nclx>) -> Result
             check_size(g.width, g.height)?;
             let tiles = h.refs_from(id, b"dimg");
             if tiles.len() as u64 != g.rows as u64 * g.columns as u64 {
-                return Err(ImportError::Corrupt("AVIF: Kachelzahl passt nicht zum Raster".into()));
+                return Err(ImportError::Corrupt(fp_i18n::t("err-import-avif-tiles")));
             }
             let mut out = vec![[0u8, 0, 0, 255]; g.width as usize * g.height as usize];
             let (mut tw, mut th) = (0u32, 0u32);
             for (k, t) in tiles.iter().enumerate() {
                 if h.items.get(t).map(|i| &i.kind) != Some(b"av01") {
-                    return Err(ImportError::Unsupported("AVIF: Rasterkachel ist kein AV1-Bild".into()));
+                    return Err(ImportError::Unsupported(fp_i18n::t("err-import-avif-tile-not-av1")));
                 }
                 let d = h.data(*t)?;
-                let p = decode_av1(&[&d], true)?.pop().ok_or_else(|| ImportError::Decode("AVIF", "Kachel ohne Bild".into()))?;
+                let p = decode_av1(&[&d], true)?.pop().ok_or_else(|| ImportError::Decode("AVIF", fp_i18n::t("err-import-tile-no-image")))?;
                 if k == 0 {
                     (tw, th) = (p.width, p.height);
                 }
@@ -274,7 +274,7 @@ fn item_pixels(h: &Heif<'_>, id: u32, alpha: bool, nclx: Option<Nclx>) -> Result
             }
             Ok((g.width, g.height, out))
         }
-        k => Err(ImportError::Unsupported(format!("AVIF: Bildart „{}“ wird nicht unterstützt", String::from_utf8_lossy(k)))),
+        k => Err(ImportError::Unsupported(fp_i18n::tr!("err-import-avif-kind", kind = String::from_utf8_lossy(k).to_string()))),
     }
 }
 
@@ -296,7 +296,7 @@ fn unpremultiply(px: &mut [[u8; 4]]) {
 /// Primäres Standbild des `meta`-Teils.
 fn decode_still(h: &Heif<'_>) -> Result<(u32, u32, Vec<[u8; 4]>)> {
     let id = h.primary;
-    let it = h.items.get(&id).ok_or_else(|| ImportError::Corrupt("AVIF: primäres Item fehlt".into()))?;
+    let it = h.items.get(&id).ok_or_else(|| ImportError::Corrupt(fp_i18n::t("err-import-avif-primary-missing")))?;
     let props = it.props.clone();
     let (w, hh, mut px) = item_pixels(h, id, false, nclx_of(&props))?;
     if let Some(aid) = h.alpha_of(id) {
@@ -363,7 +363,7 @@ pub fn decode_avif(d: &[u8]) -> Result<Animation> {
         Some(h) if h.items.contains_key(&h.primary) => decode_still(&h)?,
         _ => match decode_sequence(d, &tracks)? {
             Some(a) => return Ok(a),
-            None => return Err(ImportError::Corrupt("AVIF ohne Bild".into())),
+            None => return Err(ImportError::Corrupt(fp_i18n::t("err-import-avif-no-image"))),
         },
     };
     check_size(w, h)?;

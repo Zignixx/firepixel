@@ -133,8 +133,11 @@ pub fn show_export(ctx: &egui::Context, st: &mut AppState) {
             let a = d.area.unwrap_or_default();
             let ext = st.session.active().map(|x| fp_export::doc_export::page_settings(&x.doc, x.page)).map(|s| s.format.extension().to_string()).unwrap_or_else(|| "png".into());
             let image_l = t("dlg-filter-image");
-            let path = super::panel_menus::pick_save(st, &t("dlg-export-area-title"), &format!("{}.{ext}", d.base_name), &[(image_l.as_str(), &["png", "gif", "jpg", "webp", "avif", "bmp", "tif"])]);
-            match path {
+            // Dateidialog ohne Blockieren: der Exportdialog wartet ausgeblendet und kommt bei Abbruch
+            // bzw. Fehler zurück
+            st.dialogs.export = None;
+            let req = crate::file_dialog::Request::save(t("dlg-export-area-title"), format!("{}.{ext}", d.base_name)).filter(image_l, &["png", "gif", "jpg", "webp", "avif", "bmp", "tif"]);
+            crate::file_dialog::request(st, req, move |st, r| match r.into_iter().next() {
                 Some(p) => match crate::ui_commands::execute(&mut st.session, "file.exportArea", serde_json::json!({"rect": [a.left, a.top, a.right, a.bottom], "path": p.to_string_lossy()})) {
                     Ok(_) => {
                         st.dialogs.export = None;
@@ -146,14 +149,11 @@ pub fn show_export(ctx: &egui::Context, st: &mut AppState) {
                     }
                 },
                 None => st.dialogs.export = Some(d),
-            }
+            });
         }
         (Some(true), _) => {
-            let dir = match &st.file_override {
-                Some(o) => o.save.as_ref().and_then(|p| p.parent().map(|x| x.to_path_buf())),
-                None => rfd::FileDialog::new().set_title(t("dlg-export-pick-folder")).pick_folder(),
-            };
-            match dir {
+            st.dialogs.export = None;
+            crate::file_dialog::request(st, crate::file_dialog::Request::folder(t("dlg-export-pick-folder")), move |st, r| match r.into_iter().next() {
                 Some(dir) => match run_export(st, &d, &dir) {
                     Ok(n) => {
                         st.dialogs.export = None;
@@ -165,7 +165,7 @@ pub fn show_export(ctx: &egui::Context, st: &mut AppState) {
                     }
                 },
                 None => st.dialogs.export = Some(d),
-            }
+            });
         }
         (Some(false), _) | (_, DialogClose::Cancelled) => st.dialogs.export = None,
         _ => st.dialogs.export = Some(d),
@@ -366,18 +366,23 @@ pub fn show_preview(ctx: &egui::Context, st: &mut AppState) {
             optimize::apply_settings(st, &d.settings);
             let ext = d.settings.format.extension();
             let name = st.session.active().map(|x| x.title.trim_end_matches(".png").trim_end_matches(".fw").to_string()).unwrap_or_else(|| t("dlg-default-image-name"));
-            if let Some(path) = rfd::FileDialog::new().set_title(t("dlg-export-title")).set_file_name(format!("{name}.{ext}")).add_filter(d.settings.format.display_name(), &[ext]).save_file()
-                && let Some(doc) = st.session.active()
-            {
-                let r = ExportRenderer { normal: Arc::clone(&st.renderer) };
-                match fp_export::doc_export::export_whole(&r, &doc.doc, doc.page, &d.settings, &fp_export::export::EncodeExtras::default()) {
-                    Ok(bytes) => match std::fs::write(&path, bytes) {
-                        Ok(()) => st.push(Action::Status(fp_i18n::tr!("dlg-export-file-done", path = path.display().to_string()))),
-                        Err(e) => st.push(Action::Status(fp_i18n::tr!("dlg-export-failed", error = e.to_string()))),
-                    },
-                    Err(e) => st.push(Action::Status(fp_i18n::tr!("dlg-export-failed", error = e.to_string()))),
+            let req = crate::file_dialog::Request::save(t("dlg-export-title"), format!("{name}.{ext}")).filter(d.settings.format.display_name(), &[ext]);
+            let settings = d.settings.clone();
+            crate::file_dialog::request(st, req, move |st, r| {
+                if let Some(path) = r.into_iter().next()
+                    && let Some(doc) = st.session.active()
+                {
+                    let r = ExportRenderer { normal: Arc::clone(&st.renderer) };
+                    let msg = match fp_export::doc_export::export_whole(&r, &doc.doc, doc.page, &settings, &fp_export::export::EncodeExtras::default()) {
+                        Ok(bytes) => match std::fs::write(&path, bytes) {
+                            Ok(()) => fp_i18n::tr!("dlg-export-file-done", path = path.display().to_string()),
+                            Err(e) => fp_i18n::tr!("dlg-export-failed", error = e.to_string()),
+                        },
+                        Err(e) => fp_i18n::tr!("dlg-export-failed", error = e.to_string()),
+                    };
+                    st.push(Action::Status(msg));
                 }
-            }
+            });
         }
         (Some(_), _) | (_, DialogClose::Cancelled) => st.dialogs.preview = None,
         _ => st.dialogs.preview = Some(d),

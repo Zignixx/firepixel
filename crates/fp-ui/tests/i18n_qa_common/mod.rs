@@ -815,11 +815,14 @@ pub fn open_menu_path(h: &mut H, path: &[usize]) -> Result<(), String> {
         egui::Popup::close_id(&h.ctx, Id::new(("fp-main-menu", path[0])));
         h.run_steps(1);
         let mut ok = false;
-        for j in (0..path[0]).rev() {
+        let mut seen_title = Vec::new();
+        // Index des Überlaufmenüs „»“ = Anzahl der Menüs, die in die Leiste passen (≤ path[0])
+        for j in (0..=path[0]).rev() {
             egui::Popup::open_id(&h.ctx, Id::new(("fp-main-menu", j)));
             h.run_steps(3);
             let ts = texts(h);
             if let Some(t) = ts.iter().rev().find(|t| t.text == title && t.rect.top() > 30.0) {
+                seen_title.push(format!("j{j}@{:.0},{:.0}", t.rect.center().x, t.rect.center().y));
                 let p = t.rect.center();
                 hover(h, p);
                 h.run_steps(2);
@@ -832,7 +835,7 @@ pub fn open_menu_path(h: &mut H, path: &[usize]) -> Result<(), String> {
             h.run_steps(1);
         }
         if !ok {
-            return Err(format!("Menü „{title}“ öffnet nicht (auch nicht über „»“)"));
+            return Err(format!("Menü „{title}“ öffnet nicht (auch nicht über „»“; Titel im Überlauf: {seen_title:?}, erster Eintrag {want0:?})"));
         }
     }
     for &k in &path[1..] {
@@ -1541,9 +1544,14 @@ pub fn compare_with_basis(area: &str, dump: &BTreeMap<String, Vec<String>>) -> V
         if a == b {
             continue;
         }
-        let gone: Vec<&String> = a.difference(&b).take(6).collect();
-        let new: Vec<&String> = b.difference(&a).take(6).collect();
-        out.push(format!("{id}: vorher {:?} → jetzt {:?}", gone, new));
+        // je geänderte Zeile ein Eintrag („−“ vorher, „+“ jetzt), damit gleiche Änderungen über
+        // viele Bilder im Bericht zusammengefasst werden können
+        for g in a.difference(&b).take(10) {
+            out.push(format!("{id}: − {g}"));
+        }
+        for n in b.difference(&a).take(10) {
+            out.push(format!("{id}: + {n}"));
+        }
     }
     for id in base.dump.keys() {
         if !dump.contains_key(id) && only().is_none() {

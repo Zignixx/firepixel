@@ -94,28 +94,23 @@ pub fn open(st: &mut AppState, name: &str) -> bool {
         "file.import" => {
             let names: Vec<String> = IMPORT_FILES.iter().map(|f| t(f.0)).collect();
             let filters: Vec<(&str, &[&str])> = IMPORT_FILES.iter().zip(&names).map(|(f, n)| (n.as_str(), f.1)).collect();
-            let p = pick_open(st, &t("dlg-md-import"), &filters);
-            if let Some(p) = p {
-                st.run(name, json!({"path": p.to_string_lossy()}));
-            }
+            let n = name.to_string();
+            pick_open(st, &t("dlg-md-import"), &filters, move |st, p| st.run(&n, json!({"path": p.to_string_lossy()})));
             return true;
         }
         "file.updateHtml" => {
-            if let Some(p) = pick_open(st, &t("dlg-md-pick-html"), &[(t("dlg-filter-html").as_str(), &["htm", "html"])]) {
-                st.run(name, json!({"path": p.to_string_lossy()}));
-            }
+            let n = name.to_string();
+            pick_open(st, &t("dlg-md-pick-html"), &[(t("dlg-filter-html").as_str(), &["htm", "html"])], move |st, p| st.run(&n, json!({"path": p.to_string_lossy()})));
             return true;
         }
         "commands.runScript" => {
-            if let Some(p) = pick_open(st, &t("dlg-md-run-script"), &[(t("dlg-filter-script").as_str(), &["jsf", "js"])]) {
-                st.run(name, json!({"path": p.to_string_lossy()}));
-            }
+            let n = name.to_string();
+            pick_open(st, &t("dlg-md-run-script"), &[(t("dlg-filter-script").as_str(), &["jsf", "js"])], move |st, p| st.run(&n, json!({"path": p.to_string_lossy()})));
             return true;
         }
         "file.previewInBrowser.setPrimaryBrowser" | "file.previewInBrowser.setSecondaryBrowser" => {
-            if let Some(p) = pick_open(st, &t("dlg-md-set-browser"), &[(t("dlg-filter-programs").as_str(), &["exe"])]) {
-                st.run(name, json!({"path": p.to_string_lossy()}));
-            }
+            let n = name.to_string();
+            pick_open(st, &t("dlg-md-set-browser"), &[(t("dlg-filter-programs").as_str(), &["exe"])], move |st, p| st.run(&n, json!({"path": p.to_string_lossy()})));
             return true;
         }
         "file.browseInBridge" => {
@@ -236,33 +231,15 @@ pub fn open(st: &mut AppState, name: &str) -> bool {
         ),
         "file.print" => Some(FormDialog::new("10397", t("dlg-md-print").as_str(), name, vec![Field::text("printer", t("dlg-md-printer").as_str(), ""), Field::check("_all", t("dlg-md-print-all").as_str(), false)]).with_width(420.0).with_transform(print_params)),
         "file.batchProcess" => {
-            let files: Vec<String> = match &st.file_override {
-                Some(o) => o.open.iter().map(|p| p.to_string_lossy().to_string()).collect(),
-                None => rfd::FileDialog::new().set_title(t("dlg-md-batch-files")).add_filter(t("dlg-filter-images"), &["png", "gif", "jpg", "jpeg", "psd", "bmp", "tif", "tiff", "webp"]).pick_files().unwrap_or_default().iter().map(|p| p.to_string_lossy().to_string()).collect(),
-            };
-            if files.is_empty() {
-                return true;
-            }
-            let out = std::path::Path::new(&files[0]).parent().map(|p| p.join(t("dlg-md-batch-folder")).to_string_lossy().to_string()).unwrap_or_default();
-            Some(
-                FormDialog::new(
-                    "2160",
-                    t("dlg-md-batch").as_str(),
-                    name,
-                    vec![
-                        Field::note(&fp_i18n::tr!("dlg-md-files-selected", n = files.len())),
-                        Field::text("outDir", t("dlg-md-out-dir").as_str(), &out),
-                        Field::radio_of("output", t("dlg-md-output").as_str(), &[t("dlg-md-output-export").as_str(), t("dlg-md-output-fwpng").as_str()], vec![json!("export"), json!("fwpng")], 0),
-                        Field::number("_scale", t("dlg-preview-scale").as_str(), 100.0, 1.0, 1000.0).unit("%"),
-                        Field::text("prefix", t("dlg-md-prefix").as_str(), ""),
-                        Field::text("suffix", t("dlg-md-suffix").as_str(), ""),
-                        Field::check("backup", t("dlg-md-backup").as_str(), false),
-                    ],
-                )
-                .with_base(json!({"files": files}))
-                .with_width(480.0)
-                .with_transform(batch_params),
-            )
+            // Dateidialog ohne Blockieren: der Dialog erscheint, sobald Dateien gewählt sind
+            let req = crate::file_dialog::Request::open_many(t("dlg-md-batch-files")).filter(t("dlg-filter-images"), &["png", "gif", "jpg", "jpeg", "psd", "bmp", "tif", "tiff", "webp"]);
+            crate::file_dialog::request(st, req, |st, paths| {
+                let files: Vec<String> = paths.iter().map(|p| p.to_string_lossy().to_string()).collect();
+                if !files.is_empty() {
+                    st.dialogs.form = Some(batch_form(files));
+                }
+            });
+            return true;
         }
         "modify.symbol.swapSymbol" => {
             let names: Vec<String> = st.session.active().map(|d| d.doc.symbols.iter().map(|s| s.name.clone()).collect()).unwrap_or_default();
@@ -283,6 +260,29 @@ pub fn open(st: &mut AppState, name: &str) -> bool {
         st.dialogs.form = Some(f);
     }
     true
+}
+
+/// Stapelverarbeitung (2160) für die gewählten Dateien.
+fn batch_form(files: Vec<String>) -> FormDialog {
+    let name = "file.batchProcess";
+    let out = std::path::Path::new(&files[0]).parent().map(|p| p.join(t("dlg-md-batch-folder")).to_string_lossy().to_string()).unwrap_or_default();
+    FormDialog::new(
+        "2160",
+        t("dlg-md-batch").as_str(),
+        name,
+        vec![
+            Field::note(&fp_i18n::tr!("dlg-md-files-selected", n = files.len())),
+            Field::text("outDir", t("dlg-md-out-dir").as_str(), &out),
+            Field::radio_of("output", t("dlg-md-output").as_str(), &[t("dlg-md-output-export").as_str(), t("dlg-md-output-fwpng").as_str()], vec![json!("export"), json!("fwpng")], 0),
+            Field::number("_scale", t("dlg-preview-scale").as_str(), 100.0, 1.0, 1000.0).unit("%"),
+            Field::text("prefix", t("dlg-md-prefix").as_str(), ""),
+            Field::text("suffix", t("dlg-md-suffix").as_str(), ""),
+            Field::check("backup", t("dlg-md-backup").as_str(), false),
+        ],
+    )
+    .with_base(json!({"files": files}))
+    .with_width(480.0)
+    .with_transform(batch_params)
 }
 
 /// Befehle mit eigenem Dialog in diesem Modul.

@@ -24,7 +24,7 @@ pub const HEIF_NOTE: &str = "HEIC/HEIF wird über heic-decoder (reines Rust) gel
 /// QOI lesen.
 pub fn decode_qoi(d: &[u8]) -> Result<RasterImage> {
     if d.len() < 22 || &d[..4] != b"qoif" {
-        return Err(ImportError::Corrupt("kein QOI".into()));
+        return Err(ImportError::Corrupt(fp_i18n::t("err-import-not-qoi")));
     }
     let w = u32::from_be_bytes([d[4], d[5], d[6], d[7]]);
     let h = u32::from_be_bytes([d[8], d[9], d[10], d[11]]);
@@ -121,7 +121,7 @@ pub fn decode_webp(d: &[u8]) -> Result<Animation> {
         frames.push(AnimationFrame { image, x: 0, y: 0, delay_cs: ms.div_ceil(10), disposal: 1, replace: true });
     }
     if frames.is_empty() {
-        return Err(ImportError::Corrupt("WebP ohne Einzelbild".into()));
+        return Err(ImportError::Corrupt(fp_i18n::t("err-import-webp-no-frame")));
     }
     Ok(Animation { width: w, height: h, frames, loop_count, has_transparency: has_t, palette: None })
 }
@@ -165,7 +165,7 @@ pub fn decode_jxl(d: &[u8]) -> Result<Animation> {
 pub fn decode_ico(d: &[u8]) -> Result<Vec<RasterImage>> {
     let u16le = |o: usize| d.get(o..o + 2).map(|b| u16::from_le_bytes([b[0], b[1]]));
     let u32le = |o: usize| d.get(o..o + 4).map(|b| u32::from_le_bytes([b[0], b[1], b[2], b[3]]));
-    let n = u16le(4).ok_or_else(|| ImportError::Corrupt("ICO-Kopf".into()))? as usize;
+    let n = u16le(4).ok_or_else(|| ImportError::Corrupt(fp_i18n::t("err-import-ico-header")))? as usize;
     let mut out = Vec::new();
     for k in 0..n.min(256) {
         let e = 6 + k * 16;
@@ -179,7 +179,7 @@ pub fn decode_ico(d: &[u8]) -> Result<Vec<RasterImage>> {
         out.push(img);
     }
     if out.is_empty() {
-        return Err(ImportError::Corrupt("ICO ohne Bild".into()));
+        return Err(ImportError::Corrupt(fp_i18n::t("err-import-ico-no-image")));
     }
     out.sort_by_key(|i| std::cmp::Reverse(i.width() * i.height()));
     Ok(out)
@@ -189,7 +189,7 @@ pub fn decode_ico(d: &[u8]) -> Result<Vec<RasterImage>> {
 fn decode_ico_dib(blob: &[u8]) -> Result<RasterImage> {
     let hsize = blob.get(..4).map(|b| u32::from_le_bytes([b[0], b[1], b[2], b[3]])).unwrap_or(0) as usize;
     if hsize < 40 || blob.len() < hsize {
-        return Err(ImportError::Corrupt("ICO-DIB".into()));
+        return Err(ImportError::Corrupt(fp_i18n::t("err-import-ico-dib")));
     }
     let w = i32::from_le_bytes([blob[4], blob[5], blob[6], blob[7]]);
     let h2 = i32::from_le_bytes([blob[8], blob[9], blob[10], blob[11]]);
@@ -226,7 +226,7 @@ fn decode_ico_dib(blob: &[u8]) -> Result<RasterImage> {
 pub fn import_ico(d: &[u8], opts: &ImportOptions) -> Result<ImportResult> {
     let imgs = decode_ico(d)?;
     let mut it = imgs.into_iter();
-    let first = it.next().ok_or_else(|| ImportError::Corrupt("ICO ohne Bild".into()))?;
+    let first = it.next().ok_or_else(|| ImportError::Corrupt(fp_i18n::t("err-import-ico-no-image")))?;
     let name = format!("{}×{}", first.width(), first.height());
     let mut doc = document_from_raster(first, FileFormat::Ico);
     if let Some(p) = doc.page_mut(0) {

@@ -25,16 +25,24 @@ pub fn show_confirm(ctx: &egui::Context, st: &mut AppState) {
     let Some(c) = st.dialogs.confirm.clone() else { return };
     let mut result = None;
     let (yes, no) = (t("btn-yes"), t("btn-no"));
-    let w = 400f32.max(super::button_row_w(ctx, &[&yes, &no], 76.0, 8.0) + 32.0);
-    // längere Rückfragen (andere Sprachen): Höhe wächst mit dem Umbruch
-    let th = super::wrapped_h(ctx, &c.text, w - 32.0);
-    let r = dialog_frame(ctx, "fp-confirm", &c.title, vec2(w, 120f32.max(16.0 + th + 54.0).ceil()), |ui, body| {
-        super::put_left(ui, Rect::from_min_size(body.min + vec2(16.0, 16.0), vec2(body.width() - 32.0, th.max(50.0))), egui::Label::new(c.text.as_str()).wrap());
-        let b = super::button_row(ui.ctx(), body.right() - 16.0, body.bottom() - 34.0, &[&yes, &no], 76.0, 23.0, 8.0);
-        if push_button(ui, b[0], &yes, true, true) || access(ui, super::access_key(&yes)) {
+    use crate::ui_kit::{self, sp, BarButton, KitIcon};
+    let w = 400f32.max(ui_kit::button_bar_width(ctx, &[], &[BarButton::default_button(&yes), BarButton::new(&no)]));
+    // Gestaltung (docs\DESIGN.md §3, Rückfrage): Warnsymbol 32 px links, Text daneben (mittig zum
+    // Symbol, längere Texte umbrechen und lassen den Dialog wachsen), Knopfleiste
+    let text_x = sp::L + 32.0 + sp::M;
+    let th = super::wrapped_h(ctx, &c.text, w - text_x - sp::L);
+    let content_h = th.max(32.0);
+    let r = dialog_frame(ctx, "fp-confirm", &c.title, vec2(w, (sp::L + content_h + sp::L + sp::BUTTON_BAR_H).ceil()), |ui, body| {
+        let theme = Theme::current(ui.ctx());
+        let icon = Rect::from_min_size(body.min + vec2(sp::L, sp::L), vec2(32.0, 32.0));
+        ui_kit::paint_icon(ui.painter(), icon, KitIcon::Warning, &crate::icons::IconStyle::new(&theme, None, true));
+        let ty = if th < 32.0 { icon.center().y - th / 2.0 } else { icon.top() };
+        super::put_left(ui, Rect::from_min_size(pos2(body.left() + text_x, ty), vec2(body.width() - text_x - sp::L, th + 4.0)), egui::Label::new(c.text.as_str()).wrap());
+        let bar = ui_kit::button_bar(ui, body, &[], &[BarButton::default_button(&yes), BarButton::new(&no)]);
+        if bar.right == Some(0) || access(ui, super::access_key(&yes)) {
             result = Some(true);
         }
-        if push_button(ui, b[1], &no, false, true) || access(ui, super::access_key(&no)) {
+        if bar.right == Some(1) || access(ui, super::access_key(&no)) {
             result = Some(false);
         }
     });

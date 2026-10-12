@@ -160,7 +160,7 @@ pub fn decode_zune(data: &[u8]) -> Result<RasterImage> {
     let mut probe = JpegDecoder::new(ZCursor::new(data));
     probe.decode_headers().map_err(|e| ImportError::Decode("JPEG", format!("{e:?}")))?;
     let input = probe.input_colorspace().unwrap_or(ColorSpace::YCbCr);
-    let info = probe.info().ok_or_else(|| ImportError::Corrupt("JPEG ohne Kopf".into()))?;
+    let info = probe.info().ok_or_else(|| ImportError::Corrupt(fp_i18n::t("err-import-jpeg-no-header")))?;
     let (w, h) = (info.width as u32, info.height as u32);
     check_size(w, h)?;
     let four = matches!(input, ColorSpace::CMYK | ColorSpace::YCCK);
@@ -172,7 +172,7 @@ pub fn decode_zune(data: &[u8]) -> Result<RasterImage> {
     let mut rgba = Vec::with_capacity(n * 4);
     if four {
         if px.len() < n * 4 {
-            return Err(ImportError::Corrupt("JPEG-Daten zu kurz".into()));
+            return Err(ImportError::Corrupt(fp_i18n::t("err-import-jpeg-short")));
         }
         let app14 = has_app14_transform(data);
         for p in px.as_chunks::<4>().0.iter().take(n) {
@@ -192,7 +192,7 @@ pub fn decode_zune(data: &[u8]) -> Result<RasterImage> {
         }
     } else {
         if px.len() < n * 3 {
-            return Err(ImportError::Corrupt("JPEG-Daten zu kurz".into()));
+            return Err(ImportError::Corrupt(fp_i18n::t("err-import-jpeg-short")));
         }
         for p in px.as_chunks::<3>().0.iter().take(n) {
             rgba.extend_from_slice(&[p[0], p[1], p[2], 255]);

@@ -35,7 +35,7 @@ fn proxy_drives_bridge_session() {
                 match p.request.clone() {
                     UiRequest::State => p.respond(UiReply::Json(json!({"mode": "bridge", "documents": session.documents().len()}))),
                     UiRequest::Screenshot { .. } => p.respond(UiReply::Image { width: 4, height: 2, rgba: vec![200; 32] }),
-                    UiRequest::Action(_) | UiRequest::Find(_) => p.respond(UiReply::Error("keine Oberfläche im Test".into())),
+                    UiRequest::Action(_) | UiRequest::Find(_) | UiRequest::FileDialog(_) => p.respond(UiReply::Error("keine Oberfläche im Test".into())),
                     UiRequest::Input(_) => p.respond(UiReply::JsonImages(json!({"ok": true}), vec![fp_mcp::UiImage { width: 2, height: 2, rgba: vec![9; 16] }])),
                 }
             }

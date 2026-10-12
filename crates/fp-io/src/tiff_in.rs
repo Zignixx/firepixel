@@ -86,13 +86,13 @@ pub fn decode(data: &[u8], cmyk: Option<&CmykTable>) -> Result<RasterImage> {
         DecodingResult::U16(v) => v.iter().map(|x| (x >> 8) as u8).collect(),
         DecodingResult::U32(v) => v.iter().map(|x| (x >> 24) as u8).collect(),
         DecodingResult::F32(v) => v.iter().map(|x| (x.clamp(0.0, 1.0) * 255.0).round() as u8).collect(),
-        _ => return Err(ImportError::Unsupported("TIFF-Sampleformat wird nicht unterstützt".into())),
+        _ => return Err(ImportError::Unsupported(fp_i18n::t("err-import-tiff-sample-format"))),
     };
     let n = w as usize * h as usize;
     let mut rgba = Vec::with_capacity(n * 4);
     let need = |k: usize| -> Result<()> {
         if samples.len() < n * k {
-            Err(ImportError::Corrupt("TIFF-Daten zu kurz".into()))
+            Err(ImportError::Corrupt(fp_i18n::t("err-import-tiff-short")))
         } else {
             Ok(())
         }
@@ -133,7 +133,7 @@ pub fn decode(data: &[u8], cmyk: Option<&CmykTable>) -> Result<RasterImage> {
             }
         }
         ColorType::Palette(bits) => {
-            let map = colormap.ok_or_else(|| ImportError::Corrupt("TIFF-Palette ohne ColorMap".into()))?;
+            let map = colormap.ok_or_else(|| ImportError::Corrupt(fp_i18n::t("err-import-tiff-no-colormap")))?;
             let nc = map.len() / 3;
             let idx: Vec<usize> = if bits == 8 {
                 samples.iter().take(n).map(|&v| v as usize).collect()
@@ -155,7 +155,7 @@ pub fn decode(data: &[u8], cmyk: Option<&CmykTable>) -> Result<RasterImage> {
                 rgba.extend_from_slice(&[c(0), c(1), c(2), 255]);
             }
         }
-        other => return Err(ImportError::Unsupported(format!("TIFF-Farbtyp {other:?} wird nicht unterstützt"))),
+        other => return Err(ImportError::Unsupported(fp_i18n::tr!("err-import-tiff-color-type", kind = format!("{other:?}")))),
     }
     let mut img = RasterImage::from_rgba(w, h, rgba)?;
     img.dpi = dpi;

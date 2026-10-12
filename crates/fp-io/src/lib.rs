@@ -93,7 +93,7 @@ pub const MAX_PIXELS: u64 = 1 << 28;
 /// Prüft eine Bildgröße.
 pub fn check_size(w: u32, h: u32) -> Result<()> {
     if w == 0 || h == 0 {
-        return Err(ImportError::Corrupt(format!("Bildgröße {w}×{h}")));
+        return Err(ImportError::Corrupt(fp_i18n::tr!("err-import-image-size", w = w.to_string(), h = h.to_string())));
     }
     if w as u64 * h as u64 > MAX_PIXELS {
         return Err(ImportError::TooLarge(w, h));
