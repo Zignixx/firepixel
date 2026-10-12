@@ -52,7 +52,6 @@
 //! Die Sprache ist prozessweit: erst alle deutschen, dann alle englischen Varianten; eigene
 //! Test-Binärdatei.
 
-#[allow(dead_code)]
 mod gesamt_common;
 
 use egui::accesskit::Role;
@@ -897,7 +896,9 @@ struct Hit {
 
 impl Hit {
     fn key(&self) -> String {
-        format!("{}|{}|{}", self.f.kind, self.view, neutral(&stable(&self.f.text)))
+        // nur der Anfang des Texts: geänderte Enden langer Hinweise ergeben keinen „neuen“ Fund
+        let t: String = neutral(&stable(&self.f.text)).chars().take(32).collect();
+        format!("{}|{}|{}", self.f.kind, self.view, t.trim_end_matches('…').trim_end())
     }
 }
 
@@ -1098,7 +1099,8 @@ fn write_report(hits: &[Hit], by_key: &BTreeMap<String, Vec<&Hit>>, allow: &BTre
         }
     }
     md.push_str("\n## Fundstellen\n\nJe Stelle: Art, Text, Rechteck (Punkte, erste Variante), Zahl der Varianten, Beispielvariante und Erklärung. Sortiert nach Bereich, Ansicht und Schwere.\n");
-    let mut by_view: BTreeMap<(&str, String), Vec<(&String, &Vec<&Hit>)>> = BTreeMap::new();
+    type ByView<'a> = BTreeMap<(&'a str, String), Vec<(&'a String, &'a Vec<&'a Hit>)>>;
+    let mut by_view: ByView = BTreeMap::new();
     for (k, v) in by_key {
         by_view.entry((v[0].area, v[0].view.clone())).or_default().push((k, v));
     }

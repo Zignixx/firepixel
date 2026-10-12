@@ -9,13 +9,13 @@ abgeschnitten|Inspektor Pfad|1-Pixel Hard
 abgeschnitten|Inspektor Pfad|1-Pixel hart
 abgeschnitten|Inspektor Text|Anti-Alias glatt
 abgeschnitten|Inspektor Text|Smooth Anti-Alias
-abgeschnitten|Inspektor Werkzeug tool.aiObject|Klick: Objekt auswählen · Rahmen aufziehen: Objekt im Rahmen
+abgeschnitten|Inspektor Werkzeug tool.aiObject|Klick: Objekt auswählen · Rahmen
 abgeschnitten|Inspektor Werkzeug tool.aiObject|SAM 2.1 Hiera Tiny (156 MB)
-abgeschnitten|Inspektor Werkzeug tool.aiObject|Umschalt+Klick: hinzufügen · Alt+Klick: abziehen · Esc: neu…
+abgeschnitten|Inspektor Werkzeug tool.aiObject|Umschalt+Klick: hinzufügen · Alt
 abgeschnitten|Inspektor Werkzeug tool.aiRefineEdge|BiRefNet lite Matting (89 MB)
 abgeschnitten|Inspektor Werkzeug tool.aiSubject|BiRefNet lite (general) (178 MB)
-abgeschnitten|Inspektor Werkzeug tool.aiSubject|Click: main subject as soft pixel selection · Shift: add · …
-abgeschnitten|Inspektor Werkzeug tool.aiSubject|Klick: Hauptmotiv als weiche Pixelauswahl · Umschalt: hinzu…
+abgeschnitten|Inspektor Werkzeug tool.aiSubject|Click: main subject as soft pixe
+abgeschnitten|Inspektor Werkzeug tool.aiSubject|Klick: Hauptmotiv als weiche Pix
 abgeschnitten|Inspektor Werkzeug tool.autoShape|1-Pixel Hard
 abgeschnitten|Inspektor Werkzeug tool.autoShape|1-Pixel hart
 abgeschnitten|Inspektor Werkzeug tool.brush|1-Pixel Hard
@@ -68,6 +68,6 @@ kaestchen|Inspektor Werkzeug tool.text|Auto kern
 kaestchen|Inspektor Werkzeug tool.text|Autom. Unterschneidung
 ragt-heraus|Inspektor Text|Autom. Unterschneidung
 ragt-heraus|Inspektor Werkzeug tool.text|Autom. Unterschneidung
-rand-knapp|Dialog ai.manageModels|Entfernen…
-rand-knapp|Dialog ai.manageModels|Remove…
+rand-knapp|Dialog ai.manageModels|Entfernen
+rand-knapp|Dialog ai.manageModels|Remove
 ueberlappt-text|Inspektor Segment|Bearbeiten...

@@ -640,3 +640,63 @@ Dialog `crates\fp-ui\src\dialogs\trace.rs` mit der Logo-Nachbearbeitung von VT-3
 - **Feineinstellungen** (`crates\fp-ai\src\tuning.rs`, Begründung `docs\MODELLE.md`): Objektauswahl – Toleranz (SAM-Logit-Schwelle ±10), Variante (Automatisch/Klein/Mittel/Groß aus den 4 Decoder-Masken), Rand (Hart/Anti-Alias/Weiche Kante + Wert), Ausdehnen −100…100 (Grauwert-Morphologie, weicher Rand bleibt), Glätten; Motiv – dieselben ohne Variante (Toleranz = Tonwerte der weichen Maske); Kante verfeinern – Radius wie bisher (anderer Radius braucht neues Matting). Werte als Voreinstellungen `AiObject*`/`AiSubject*`, gehen als Parameter an `select.aiObject`/`select.aiSubject`; `retune: true` bildet die letzte Auswahl aus der zwischengespeicherten Rohausgabe neu (kein Modell-Laufen), der Inspektor ruft das bei jeder Änderung. MCP/CLI-Doku in `docs\AGENTS.md`/`AGENTS.en.md`.
 - **Geprüft:** `cargo test -p fp-ai` (inkl. `tuning`), `fp-engine --test ai_tuning_ki2` (5, echte Modelle: Toleranz monoton, ±8 px Ausdehnen, Hart nur 0/255, Varianten nach Fläche, Retune nach `unload_all` + `clear_results` ohne geladenes Modell, 50× gleich = 1×, Rückweg exakt, Verknüpfung „hinzufügen“ bleibt) und `ai_select`; kittest `ai_progress_ki2` (Karte 3 Designs × de/en ohne Überlauf/Rohschlüssel innerhalb der Leinwand, feste Lage bei wechselndem Fortschritt, Abbrechen per Knopf und Esc, unter 300 ms nie sichtbar, Inspektorfelder je Werkzeug ohne Überlappung/Kürzung, Feld tippen setzt Voreinstellung, Retune aus dem Inspektor), `ai_kittest` (an die Verzögerung angepasst), `inspector_fv15`, `inspector_i18n`, `fp-i18n`, `fp-neutral`; `cargo check --workspace --all-targets` ohne Warnung; clippy ohne Warnung in eigenen Dateien. **Echtes Fenster, Brücke** (eigene Instanz `target-ki2`, eigenes APPDATA/LOCALAPPDATA mit Modell-Hardlinks, Modelle des Nutzers nur gelesen): Motiv auswählen auf `hund_gras.jpg` → Karte bei 2,6 s sichtbar, Auswahl korrekt; Rand → Hart und Toleranz über den Schieber auf 83 → Auswahl sofort nachgestellt (`N21_echt_motiv_*`).
 - **Offen / Nachtlauf (`docs\NACHPRUEFUNG.md`):** Objektauswahl im echten Fenster mit Variante/Ausdehnen; Tippen in Inspektorfelder über die Brücke (sprang auf dem Stand vor DLG-1 `fc7df14` zurück, betraf alle Inspektorfelder, dort behoben); Karte in Dunkel/OLED/150 % im echten Fenster. Der i18n-Scanner `i18n_keine_festen_texte` meldet nur eine fremde Stelle (`crates\fp-i18n\src\profile.rs:282`, EB-3). `RUSTC_WRAPPER=sccache` lehnte die Rechteprüfung ab (inzwischen vom Koordinator abgeschaltet).
+
+## Phase 7 – RAND-1 (P-RAND Teil 1: Prüfer für abgeschnittene Texte und knappe Ränder, N23) – Stand 12.10.2026
+
+- **Prüfer** `crates\fp-ui\tests\clipping_audit.rs` (kittest). Er öffnet 227 Ansichten:
+  - Hauptfenster
+  - jedes Bedienfeld im Dock und im schmalen Dock (Standardanordnung), die schwebenden auch schwebend
+  - das Optimieren-Bedienfeld zusätzlich bei JPEG, PNG 32 und AVIF
+  - den Inspektor für jede Auswahlsituation der Gesamttests und jedes Werkzeug, dazu „Symboleigenschaften“
+  - 80 Dialoge, die das Befehlsregister über `dialogs::open_for_command` öffnet (Testsituation wie in den Gesamttests)
+  - Neues Dokument, 7 Seiten der Voreinstellungen, Über, Arbeitsbereich speichern, Ungespeichert, Rückfrage, Meldung, Warnung
+  - die Startseite
+
+  Ausgewertet wird im selben Durchlauf:
+  - die Zeichenlisten je Ebene (`Context::graphics`, Reihenfolge und Clip)
+  - die Widget-Rechtecke (`this_pass.widgets`, mit Clip)
+  - der Barrierefreiheitsbaum (Rolle wie bei `ui_find`)
+
+  Arten: `abgeschnitten`, `verdeckt` (später gezeichnete deckende Fläche derselben Ebene, das war N23), `kaestchen`, `ueberlappt-text`, `ueberlappt-element`, `ragt-heraus`, `rand-knapp`, `dialog-ragt-hinaus`. Nur Hinweise sind `hinweis-bildlauf` und `hinweis-feldinhalt`.
+
+  Grenzwerte, begründet und einstellbar:
+  - waagerecht 2 px (`FP_RAND_GAP_X`)
+  - senkrecht 1 px (`FP_RAND_GAP_Y`): die kompakten 13-DLU-Felder des Originals haben nur 2–3 px Luft
+  - Rand 2 px (`FP_RAND_GAP_EDGE`)
+
+  Läufe:
+  - Standard (auch `cargo test --workspace`): Normal/de+en/100+150 %/1024 × 768, etwa 1,5 min
+  - `FP_RAND_FULL=1`: alle 24 Varianten (3 Designs × de/en × 100/150 % × 1024 × 768/1920 × 1080), etwa 3–4 min; schreibt `docs\funktionstest\rand_auto.md` und die Ausschnitte `docs\screenshots\rand\rand_*.png` (Fundstelle rot umrandet, keine Bilder mit gesperrten Namen, §1a)
+  - `FP_RAND_FULL=1 FP_RAND_UPDATE_ALLOW=1`: schreibt die Erlaubnisliste `clipping_audit_allow.txt` neu
+  - `FP_RAND_VIEWS`, `FP_RAND_SHOT_DIR`, `FP_RAND_DEBUG`: zur Fehlersuche
+
+  Der Test schlägt nur bei Stellen fehl, die nicht in der Liste stehen. Der Schlüssel ist Art + Ansicht + die ersten 32 Zeichen des Texts, unabhängig von der Variante.
+- **Behoben, Nutzerbeispiel (`5f2d009`):** `panels\optimize.rs`.
+  - Ursache: Der Optionsbereich war 128 px hoch, die Kästchen „Zeilensprung/Progressiv“ reichen bis 146,6 px. Bei GIF schob ein Feld den Layout-Cursor zufällig weiter, bei JPEG, PNG 24/32, WebP und AVIF nicht. Die Farbtabelle lag dann über der unteren Hälfte, genau wie im Bild des Nutzers.
+  - Korrektur: Der Bereich ist jetzt `2 + 89 DLU + 2` = 150 px hoch, die Tabelle beginnt immer darunter.
+  - Der Prüfer fand vorher 48 Stellen (Kästchen und verdeckte Texte, Dock und schmales Dock, de/en), danach 0.
+  - Das Vorher-Bild aus dem echten Fenster (Brücke, eigene Instanz mit eigenem APPDATA, nicht maximiert, hinten, beendet) liegt unter `docs\screenshots\nutzerbefunde\N23_vorher_echt_bruecke_optimieren_jpeg.png`. Das Nachher-Bild ist laut §7a als Eintrag in `docs\NACHPRUEFUNG.md` vertagt.
+- **Stand des Prüfers:** 70 Stellen mit 408 Funden, alle in der Erlaubnisliste; dazu 270 Hinweise.
+  - Bedienfelder 2
+  - Inspektor 55
+  - Dialoge 13
+  - Hauptfenster und Startseite 0
+
+  Fast alles tritt nur bei 1024 × 768 mit 150 % auf. Dann hat das Fenster 800 × 512 pt.
+- **Pakete für RAND-2:** Keines davon habe ich eingebaut. Es sind Layout-Umbauten oder Dateien, an denen gerade andere Agenten arbeiten.
+  - **R2-1 Inspektor im 800-pt-Fenster** (`inspector\obj_quads.rs`, `tool_quads.rs`, `ai_quads.rs`, in Arbeit bei FV-15/KI-2): Das Dock schneidet Q5/Q6 ab, 46 Stellen. Betroffen sind Kante „1-Pixel hart“ (alle Form- und Pfadwerkzeuge), „Auswahl füllen“, „Live-Auswahlrahmen“, „Transparenz beibehalten“, „Gesamtes Dokument“, die Kantenglättung des Texts, die KI-Modellwahl und die KI-Hinweistexte. Lösung: waagerechter Bildlauf im Inspektor oder Q5/Q6 einpassen.
+  - **R2-2 Text-Inspektor und Textwerkzeug:** Das Kästchen „Autom. Unterschneidung/Auto kern“ ist unten 4–12 % abgeschnitten, schon bei 100 %/1024 × 768 (6 Stellen). Seine Beschriftung ist 7 px breiter als das Kästchen-Rechteck (2). Bei der Segment-Auswahl überlappt „Bearbeiten...“ die Beschriftung „Ziel:“ (12 Varianten).
+  - **R2-3 Dialoge höher als das Fenster** (`dialogs\mod.rs` `dialog_frame_ex`): Bei 800 × 512 pt ragen Voreinstellungen (586 pt, 7 Seiten), Tastaturbefehle (590 pt) und KI-Modelle verwalten (570 pt hoch, 802 pt breit) unten hinaus, OK/Abbrechen sind nicht erreichbar (9 Stellen). Lösung: Höhe auf den Bildschirm begrenzen, Inhalt mit Bildlauf.
+  - **R2-4 `dialogs\models.rs`** (KI-2): Beim Knopf „Entfernen…/Remove…“ liegen 0–1 px zwischen Text und Rahmen, in allen Varianten (2 Stellen). Der Knopf braucht 4–6 px mehr Breite.
+  - **R2-5 Kleinkram:**
+    - `dialogs\trace.rs`: „Flecken entfernen/Remove speckles“ ist bei 150 %/1920 × 1080 bis auf die oberste Pixelzeile abgeschnitten, die Optionsspalte ist zu niedrig.
+    - `panels\library.rs` (fremde, nicht eingecheckte Änderungen): „Graphic“ in der Typspalte der Dokumentbibliothek ist auf Englisch abgeschnitten.
+  - **Noch nicht im Prüfer:** Menüs, Kontextmenüs, Tooltips, Bedienfeldmenüs. Das wäre als nächster Schritt in RAND-2 einzubauen.
+- **Nachweis:**
+  - `cargo check --workspace --all-targets` grün, ohne Warnungen
+  - `cargo test -p fp-i18n -p fp-neutral` grün
+  - Scanner `i18n_keine_festen_texte` grün
+  - `panels_i18n` grün
+  - `clipping_audit`: schneller Lauf und voller Lauf grün, auf HEAD inklusive der EB-3-Testprofile
+  - `cargo clippy -p fp-ui --test clipping_audit` ohne Warnungen in eigenen Dateien
+  - Gebaut im eigenen Worktree `..\fp-rand1`, `target-rand1`, beide wieder entfernt

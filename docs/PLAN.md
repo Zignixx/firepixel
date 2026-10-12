@@ -153,7 +153,7 @@ Die Reihenfolge gilt, solange nichts Dringenderes vom Nutzer kommt. Sobald ein P
 | Paket | Inhalt |
 |---|---|
 | ☐ **P-DESIGN** | N11: Dialoge und Startbildschirm schöner (DESIGN.md §13), Vorher/Nachher-Bilder in 3 Designs |
-| ☐ **P-RAND** | N23: **Prüfung der ganzen App auf abgeschnittene Texte und zu knappe Ränder.** Alle Bedienfelder, Dialoge, Inspektor-Seiten, Menüs, Tooltips; 3 Designs × de/en × 100/150 % × kleine/große Fenster. Beispiel: „Zeilensprung/Progressiv“ unter „Glättung“ halb abgeschnitten. Automatischer Test, der Textüberlauf in kittest erkennt, und Korrekturen |
+| ☐ **P-RAND** | N23: **Prüfung der ganzen App auf abgeschnittene Texte und zu knappe Ränder.** Alle Bedienfelder, Dialoge, Inspektor-Seiten, Menüs, Tooltips; 3 Designs × de/en × 100/150 % × kleine/große Fenster. Beispiel: „Zeilensprung/Progressiv“ unter „Glättung“ halb abgeschnitten. Automatischer Test, der Textüberlauf in kittest erkennt, und Korrekturen. ☑ **Teil RAND-1** (`5f2d009`): Prüfer `clipping_audit.rs` + Bericht `rand_auto.md`, Nutzerbeispiel behoben; 70 Stellen in der Erlaubnisliste. ☐ **Teil RAND-2**: die Pakete R2-1…R2-5 aus `STATUS.md` (RAND-1) abbauen, offen sind noch Menüs und Tooltips (prüft der Prüfer noch nicht) |
 
 ### E. Später, niedrige Priorität
 
