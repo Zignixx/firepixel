@@ -126,3 +126,5 @@ Nutzervorgabe: höchstens **4 Agenten gleichzeitig**, alle Opus, **kleine Auftr�
 | **FV-<n>** | Funktionsvergleich mit dem Original (Paritätsbefunde) | die im Auftrag genannten Befunde und deren Dateien |
 
 Laufen zwei Phase-7-Agenten in derselben Datei, gilt: kleine, in sich geschlossene Edits, vor jedem Edit die Datei neu lesen, nie fremde Änderungen zurückdrehen. Jeder hakt seine Befunde in `BEFUNDE.md` mit „– erledigt (<Kürzel>, <commit>)“ ab.
+
+Scratchpad: Der Scratchpad-Ordner ist für alle Agenten derselbe. Jeder legt Hilfsdateien (z. B. `env.ps1`, Testbilder) **nur in einem eigenen Unterordner `<kürzel>\`** ab, nie direkt im Scratchpad-Wurzelordner.
