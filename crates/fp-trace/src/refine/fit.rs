@@ -258,8 +258,6 @@ impl Chain {
         let m = self.m;
         let l_min = (4.0 * p.tol).max(6.0);
         let sag_max = 0.35 * p.tol;
-        // Kantenmitten einer Geraden liegen ≤ 0,35 px daneben, die erste Mitte der Nachbarkante 0,5 px.
-        let grow = (0.75 * p.tol).min(0.45);
         let mut lines: Vec<Line> = Vec::new();
         let mut last_end = 0usize;
         for w in verts.windows(2) {
@@ -277,6 +275,10 @@ impl Chain {
             if max_dev(core, c, d) > p.tol || sagitta(core, c, d) > sag_max {
                 continue;
             }
+            // Kantenmitten einer Geraden liegen ≤ 0,35 px daneben, die erste Mitte der Nachbarkante
+            // 0,5 px; bei Rauschen (JPEG) entsprechend der Streuung des Kerns mehr.
+            let rms = (core.iter().map(|&q| (q - c).cross(d).powi(2)).sum::<f64>() / core.len() as f64).sqrt();
+            let grow = (1.6 * rms + 0.15).clamp(0.45, (0.8 * p.tol).max(0.45));
             let on = |i: usize| (a[i] - c).cross(d).abs() <= grow;
             let mut lo = cu;
             while lo > last_end && on(lo - 1) {
@@ -299,10 +301,10 @@ impl Chain {
             let line = Line { a: lo, b: hi, c, d, snapped: false };
             if let Some(prev) = lines.last_mut()
                 && lo <= prev.b + 2
-                && angle_between(prev.d, d) < 2.0
+                && angle_between(prev.d, d) < 3.0
             {
                 let (c2, d2) = tls(&a[prev.a..=hi]);
-                if max_dev(&a[prev.a..=hi], c2, d2) <= p.tol {
+                if max_dev(&a[prev.a..=hi], c2, d2) <= 1.25 * p.tol {
                     let d2 = if d2.dot(a[hi] - a[prev.a]) < 0.0 { -d2 } else { d2 };
                     *prev = Line { a: prev.a, b: hi, c: c2, d: d2, snapped: false };
                     last_end = hi;
@@ -311,6 +313,24 @@ impl Chain {
             }
             lines.push(line);
             last_end = hi;
+        }
+        // Zweite Runde: fast gleich gerichtete Geraden mit kleinem Versatz (JPEG-Blöcke) verbinden,
+        // wenn die gemeinsame Gerade im Mittel gut passt.
+        let mut k = 1;
+        while k < lines.len() {
+            let (pl, cl) = (lines[k - 1], lines[k]);
+            if cl.a <= pl.b + 12 && angle_between(pl.d, cl.d) < 3.0 {
+                let pts = &a[pl.a..=cl.b];
+                let (c2, d2) = tls(pts);
+                let rms = (pts.iter().map(|&q| (q - c2).cross(d2).powi(2)).sum::<f64>() / pts.len() as f64).sqrt();
+                if max_dev(pts, c2, d2) <= 2.0 * p.tol && rms <= 0.5 * p.tol {
+                    let d2 = if d2.dot(a[cl.b] - a[pl.a]) < 0.0 { -d2 } else { d2 };
+                    lines[k - 1] = Line { a: pl.a, b: cl.b, c: c2, d: d2, snapped: false };
+                    lines.remove(k);
+                    continue;
+                }
+            }
+            k += 1;
         }
         lines
     }
@@ -383,7 +403,8 @@ impl Chain {
             offs.sort_by(f64::total_cmp);
             let med = offs[offs.len() / 2];
             let c = c0 + V::new(d.y, -d.x) * med;
-            (max_dev(pts, c, d) <= 1.25 * p.tol).then_some(Line { c, d, snapped: true, ..*l })
+            let before = max_dev(pts, l.c, l.d);
+            (max_dev(pts, c, d) <= (1.25 * p.tol).max(before + 0.3 * p.tol)).then_some(Line { c, d, snapped: true, ..*l })
         };
         for l in lines.iter_mut() {
             if let Some(d) = snap_dir(l.d, p.snap_deg)
@@ -438,9 +459,9 @@ impl Chain {
                 if let (Some(pi), Some(ni)) = (prev, next)
                     && pi != ni
                     && let (Item::Line(l1), Item::Line(l2)) = (items[pi], items[ni])
-                    && (b - a <= 3 || self.a[a].dist(self.a[b]) <= 2.0 * self.p.tol + 1.0)
+                    && (b - a <= 3 || self.a[a].dist(self.a[b]) <= 3.0 * self.p.tol + 2.0)
                     && let Some(x) = intersect(&l1, &l2)
-                    && x.dist(self.a[(a + b) / 2]) <= 2.0 * self.p.tol + 2.0
+                    && x.dist(self.a[(a + b) / 2]) <= 2.5 * self.p.tol + 2.0
                 {
                     drop[k] = true;
                 }

@@ -467,3 +467,55 @@ fn cancel_refine() {
     });
     assert_eq!(r.map(|_| ()), Err(TraceError::Cancelled));
 }
+
+/// Kleine Rastersymbole aus dem Korpus (nur lesen): Übereinstimmung mit/ohne Nachbearbeitung.
+/// `cargo test -p fp-trace --test refine corpus -- --ignored --nocapture`
+#[test]
+#[ignore]
+fn corpus_icons_refined() {
+    let root = std::env::var("FP_CORPUS_DIR").map(std::path::PathBuf::from).unwrap_or_else(|_| std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..").join("..").join("..").join("korpus"));
+    let files = [
+        "Configuration/Auto Shape Tools/Arrow.png",
+        "Configuration/Auto Shape Tools/Rounded Rectangle.png",
+        "Configuration/Auto Shape Tools/Star.png",
+        "Configuration/Auto Shape Tools/Doughnut.png",
+        "Configuration/Auto Shape Tools/Pie.png",
+        "Configuration/Auto Shapes/Cog.gif",
+        "Configuration/Auto Shapes/Clock.gif",
+    ];
+    let mut done = 0;
+    for rel in files {
+        let Ok(dynimg) = image::open(root.join(rel)) else { continue };
+        let rgba = dynimg.to_rgba8();
+        let (w, h) = rgba.dimensions();
+        let img = RgbaImage::from_rgba_bytes(IRect::from_xywh(0, 0, w as i32, h as i32), rgba.as_raw()).expect("Bild");
+        let o = TraceOptions::from_preset(Preset::Logo);
+        let (r, _, _) = run(rel, &img, &o);
+        let (r0, _, _) = run(&format!("{rel} (ohne)"), &img, &unrefined(o));
+        eprintln!("  → Übereinstimmung mit {:.2} %, ohne {:.2} %", match_ratio(&img, &r.render(), WHITE, 40) * 100.0, match_ratio(&img, &r0.render(), WHITE, 40) * 100.0);
+        done += 1;
+    }
+    assert!(done > 0);
+}
+
+/// Sichtprüfung: Eingabe und Ergebnisse (2fach gerastert) als PNG nach `FP_TRACE_OUT`.
+/// `FP_TRACE_OUT=… cargo test -p fp-trace --test refine dump -- --ignored`
+#[test]
+#[ignore]
+fn dump_pngs() {
+    let Ok(dir) = std::env::var("FP_TRACE_OUT") else { return };
+    let dir = std::path::PathBuf::from(dir);
+    let save = |name: &str, img: &RgbaImage| {
+        let bytes: Vec<u8> = img.data().iter().flat_map(|p| *p).collect();
+        image::save_buffer(dir.join(name), &bytes, img.width() as u32, img.height() as u32, image::ExtendedColorType::Rgba8).expect("PNG");
+    };
+    let cases = [("logo", logo(1.0, WHITE, true)), ("jpeg", jpeg_upscaled())];
+    for (name, img) in cases {
+        save(&format!("{name}_in.png"), &img);
+        let o = TraceOptions::from_preset(Preset::Logo);
+        let r = trace(&img, &o).expect("ok");
+        save(&format!("{name}_refined.png"), &render_scaled(&r, 2.0));
+        let r0 = trace(&img, &unrefined(o)).expect("ok");
+        save(&format!("{name}_plain.png"), &render_scaled(&r0, 2.0));
+    }
+}

@@ -165,7 +165,9 @@ pub(crate) fn trace(img: &RgbaImage, o: &TraceOptions, map: &Mapper, cancel: &At
         (false, true) => Some(Symmetry::Horizontal),
         _ => None,
     };
-    outline::merge_speckles(&mut lab.label, w, h, (o.filter_speckle * o.filter_speckle) as usize);
+    // Flecken: n × n Pixel, bei winzigen Bildern (Symbole) höchstens 0,5 % der Fläche
+    let speck = ((o.filter_speckle * o.filter_speckle) as usize).min((w * h / 200).max(2));
+    outline::merge_speckles(&mut lab.label, w, h, speck);
     check(cancel)?;
     let reg = outline::components(&lab.label, w, h);
     progress(Progress { stage: Stage::Cluster, fraction: 0.30 });

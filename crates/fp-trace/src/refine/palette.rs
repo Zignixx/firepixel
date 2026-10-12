@@ -1,7 +1,7 @@
 //! Farben einrasten: jedes Pixel bekommt eine Palettennummer (oder [`NONE`] = transparent).
 //!
-//! Palette (Schalter `snap_colors`): Grundlage sind nur **flache** Pixel (ähnlich zu mindestens 3
-//! der 8 Nachbarn); Kantenpixel der Kantenglättung und JPEG-Säume tragen nichts bei. Ein
+//! Palette (Schalter `snap_colors`): Grundlage sind nur **flache** Pixel (ähnlich zu mindestens 2
+//! der 8 Nachbarn, also auch 1 px dünne Linien); Kantenpixel der Kantenglättung und JPEG-Säume tragen nichts bei. Ein
 //! Histogramm (5 Bit je Kanal) wird nach Häufigkeit abgearbeitet: Farben nahe einer schon
 //! gewählten (Abstand ≤ `color_tolerance`) werden mit ihr gemittelt, neue Farben brauchen eine
 //! Mindestmenge und dürfen keine Mischung zweier gewählter Farben sein (außer sie bilden große,
@@ -9,7 +9,7 @@
 //! Mittelwerte der Originalfarben.
 //!
 //! Zuordnung: flache Pixel nahe einer Palettenfarbe nehmen sie direkt; alle anderen (Kanten)
-//! wählen die nächste Farbe **unter den Farben ihrer 5×5-Nachbarschaft** – eine Mischung aus Blau
+//! wählen die nächste Farbe **unter den Farben ihrer 5×5-Nachbarschaft** (weiche Kanten: bis 17×17) – eine Mischung aus Blau
 //! und Weiß wird also Blau oder Weiß, nie eine dritte, zufällig ähnliche Farbe.
 
 use super::NONE;
@@ -198,7 +198,7 @@ fn snap(rgb: &[[u8; 3]], opaque: &[bool], w: usize, h: usize, o: &TraceOptions) 
                     }
                 }
             }
-            if sim >= 3 {
+            if sim >= 2 {
                 semi[i] = true;
                 let b = &mut bins[((c[0] as usize >> 3) << 10) | ((c[1] as usize >> 3) << 5) | (c[2] as usize >> 3)];
                 for (s, &v) in b.sum.iter_mut().zip(&c) {
@@ -213,30 +213,38 @@ fn snap(rgb: &[[u8; 3]], opaque: &[bool], w: usize, h: usize, o: &TraceOptions) 
     }
     let mut cand: Vec<usize> = (0..bins.len()).filter(|&b| bins[b].semi > 0).collect();
     cand.sort_by(|&a, &b| (bins[b].strict, bins[b].semi, a).cmp(&(bins[a].strict, bins[a].semi, b)));
-    let speck = (o.filter_speckle * o.filter_speckle) as usize;
+    let speck = ((o.filter_speckle * o.filter_speckle) as usize).min((total / 200).max(2));
     let min_semi = (total / 5000).max(speck).max(4) as u32;
-    let big = (total / 100).max(1) as u32;
+    let big = (total / 100).max(4 * speck).max(16) as u32;
     let max_colors = if o.colors >= 2 { o.colors as usize } else { 256 };
-    let mut centers: Vec<Center> = Vec::new();
-    for &bi in &cand {
-        let bin = bins[bi];
-        let c = bin.mean();
-        let means: Vec<[f64; 3]> = centers.iter().map(Center::mean).collect();
-        if let Some((k, dd)) = nearest(&means, c)
-            && dd <= tol * tol
-        {
-            centers[k].add(&bin);
-            continue;
+    let greedy = |min_semi: u32| -> Vec<Center> {
+        let mut centers: Vec<Center> = Vec::new();
+        for &bi in &cand {
+            let bin = bins[bi];
+            let c = bin.mean();
+            let means: Vec<[f64; 3]> = centers.iter().map(Center::mean).collect();
+            if let Some((k, dd)) = nearest(&means, c)
+                && dd <= tol * tol
+            {
+                centers[k].add(&bin);
+                continue;
+            }
+            if bin.semi < min_semi || centers.len() >= max_colors {
+                continue;
+            }
+            if bin.strict < big && is_blend(c, &means, 0.5 * tol) {
+                continue;
+            }
+            let mut nc = Center::default();
+            nc.add(&bin);
+            centers.push(nc);
         }
-        if bin.semi < min_semi || centers.len() >= max_colors {
-            continue;
-        }
-        if bin.strict < big && is_blend(c, &means, 0.5 * tol) {
-            continue;
-        }
-        let mut nc = Center::default();
-        nc.add(&bin);
-        centers.push(nc);
+        centers
+    };
+    let mut centers = greedy(min_semi);
+    if centers.is_empty() {
+        // winzige Bilder: keine Farbe erreicht die Mindestmenge
+        centers = greedy(1);
     }
     // Ausgleich (k-Means über die Fächer)
     for _ in 0..2 {
@@ -294,15 +302,21 @@ fn snap(rgb: &[[u8; 3]], opaque: &[bool], w: usize, h: usize, o: &TraceOptions) 
                 label[i] = core[i];
                 continue;
             }
+            // Farben der Nachbarschaft (5×5, bei breiten weichen Kanten bis 17×17)
             let mut cands = [0u32; 8];
             let mut cnt = 0usize;
-            for yy in y.saturating_sub(2)..(y + 3).min(h) {
-                for xx in x.saturating_sub(2)..(x + 3).min(w) {
-                    let l = core[yy * w + xx];
-                    if l != NONE && cnt < 8 && !cands[..cnt].contains(&l) {
-                        cands[cnt] = l;
-                        cnt += 1;
+            for rad in [2usize, 4, 8] {
+                for yy in y.saturating_sub(rad)..(y + rad + 1).min(h) {
+                    for xx in x.saturating_sub(rad)..(x + rad + 1).min(w) {
+                        let l = core[yy * w + xx];
+                        if l != NONE && cnt < 8 && !cands[..cnt].contains(&l) {
+                            cands[cnt] = l;
+                            cnt += 1;
+                        }
                     }
+                }
+                if cnt >= 2 {
+                    break;
                 }
             }
             label[i] = if cnt == 0 { near_all(rgb[i]).0 } else { *cands[..cnt].iter().min_by_key(|&&k| dist(rgb[i], k as usize)).unwrap_or(&0) };
