@@ -82,7 +82,7 @@ pub struct SwatchCache {
 /// hervorgehoben. Liefert die Zahl der hervorgehobenen Pixel (0 = aus).
 pub fn swatch_feedback(ctx: &egui::Context, st: &mut crate::app_state::AppState, painter: &Painter, to_screen: &dyn Fn(Point) -> Pos2) -> usize {
     let Some(id) = st.session.active_id() else { return 0 };
-    let on = st.session.prefs.get_bool("Firepixel_OptimizeSwatchFeedback", false);
+    let on = st.session.prefs.get_bool("Firepixel_OptimizeSwatchFeedback", true);
     let sel = st.dialogs.panel_sel.palette.clone();
     if !on || sel.is_empty() {
         if let Some(cc) = st.canvases.get_mut(&id) {

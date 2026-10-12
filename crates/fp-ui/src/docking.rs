@@ -99,6 +99,8 @@ pub struct TabStripOut {
     pub drag_started: Option<usize>,
     pub menu_clicked: Option<egui::Response>,
     pub tab_rects: Vec<Rect>,
+    /// Antworten der Reiter (für das Kontextmenü per Rechtsklick).
+    pub tab_resps: Vec<egui::Response>,
     pub background: Option<egui::Response>,
 }
 
@@ -154,6 +156,7 @@ pub fn tab_strip(ui: &mut Ui, rect: Rect, id: Id, tabs: &[(&str, ToolGroup)], ac
             out.drag_started = Some(i);
         }
         out.tab_rects.push(tr);
+        out.tab_resps.push(resp);
         x += w;
     }
     if show_menu {
@@ -255,6 +258,16 @@ fn group_ui(ui: &mut Ui, st: &mut AppState, rect: Rect, group: &PanelGroup, gid:
         for a in acts {
             st.push(a);
         }
+    }
+    // Kontextmenü des Reiters: Schließen, Registerkartengruppe schließen (wie im Original, MN-3)
+    let mut acts = Vec::new();
+    for (i, r) in out.tab_resps.iter().enumerate() {
+        if let Some(p) = vis.get(i) {
+            r.context_menu(|ui| menu::show_nodes(ui, &menu::build_tab_menu(st, *p), &mut acts));
+        }
+    }
+    for a in acts {
+        st.push(a);
     }
     if !group.collapsed
         && let Some(p) = active_panel

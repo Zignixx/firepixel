@@ -1508,7 +1508,8 @@ pub fn register(r: &mut CommandRegistry) {
             }),
     );
 
-    r.add(cmd("pi.state.distribute").label("Auf Status verteilen").requires(&[Requirement::Document, Requirement::MinSelected(2)]).run(|s, p| {
+    // wie im Original schon mit einem Objekt aktiv (MN-3, PARITAET_B §3)
+    r.add(cmd("pi.state.distribute").label("Auf Status verteilen").requires(&[Requirement::Document, Requirement::Selection]).run(|s, p| {
         let (page, ids) = targets(s, p)?;
         let d = s.doc_mut()?;
         let start = d.frame;
@@ -2092,6 +2093,9 @@ impl Command for FwCommand {
     fn checked(&self, s: &Session) -> Option<bool> {
         self.inner.checked(s)
     }
+    fn menu_available(&self, s: &Session) -> bool {
+        self.inner.menu_available(s)
+    }
     fn extra_available(&self, s: &Session) -> bool {
         self.inner.extra_available(s)
     }
@@ -2131,6 +2135,19 @@ fn merged(fixed: &Value, p: &Params) -> Value {
 }
 
 /// Bedienfeldmenü-Eintrag als Verweis auf einen vorhandenen Befehl (gleiche Wirkung, eigene ID).
+/// Löschbefehl des Bedienfeldmenüs, der wie im Original immer aktiv ist: mit mehr als einem
+/// Status/einer Seite (`many`) wie `target`, sonst ohne Wirkung (der letzte bleibt stehen).
+fn last_kept(r: &mut CommandRegistry, id: u32, name: &str, label: &str, target: &'static str, many: fn(&DocumentState) -> bool) {
+    let c = cmd(name).label(label).describe(&fp_i18n::tr!("msg-panel-alias", target = target)).requires(DOC).opt("index", ParamKind::Integer { min: Some(0), max: None }, "Index (Vorgabe: aktueller)").run(move |s, p| {
+        if s.active().is_some_and(many) {
+            s.execute(target, merged(&json!({}), p)).map(passthrough)
+        } else {
+            Ok(CommandOutput::value(json!({ "deleted": false })))
+        }
+    });
+    add_fw(r, id, c);
+}
+
 fn alias(r: &mut CommandRegistry, id: u32, name: &str, label: &str, target: &'static str, fixed: Value) {
     let c = cmd(name).label(label).describe(&fp_i18n::tr!("msg-panel-alias", target = target)).available(move |s| s.command_state(target).0).run(move |s, p| s.execute(target, merged(&fixed, p)).map(passthrough));
     add_fw(r, id, c);
@@ -2174,6 +2191,23 @@ fn page_mut(d: &mut DocumentState) -> Result<&mut fp_model::Page> {
 /// Exporteinstellungen der aktuellen Seite (Copy-on-Write, angelegt mit Vorgaben).
 fn export_mut(d: &mut DocumentState) -> Result<&mut fp_model::ExportSettings> {
     Ok(page_mut(d)?.root.export.get_or_insert_with(Default::default))
+}
+
+/// Exportformat JPEG (`FMTi` 1).
+fn is_jpeg(e: &fp_model::ExportSettings) -> bool {
+    e.format == 1
+}
+
+/// Exportformat mit Farbtabelle: GIF, GIF-Animation, PNG 8 (`CLRi` 0).
+fn has_palette(e: &fp_model::ExportSettings) -> bool {
+    matches!(e.format, 0 | 4) || (e.format == 2 && e.color_mode == 0)
+}
+
+/// Erstes gewähltes Objekt ist eine Gruppe mit Maske („Maske bearbeiten“).
+fn selection_has_mask(s: &Session) -> bool {
+    s.active().is_some_and(|d| {
+        d.selection.elements.first().and_then(|id| docops::element_on_page(&d.doc, d.page, *id)).is_some_and(|e| matches!(&e.kind, ElementKind::Group(g) if g.mask.is_some()))
+    })
 }
 
 fn export_of(s: &Session) -> fp_model::ExportSettings {
@@ -2782,7 +2816,7 @@ fn register_layer_menu(r: &mut CommandRegistry) {
     add_fw(
         r,
         35442,
-        cmd("panel.layers.editMask").label("Maske bearbeiten").requires(&[Requirement::Document, Requirement::Selection]).run(|s, _| {
+        cmd("panel.layers.editMask").label("Maske bearbeiten").requires(&[Requirement::Document, Requirement::Selection]).menu_when(selection_has_mask).run(|s, _| {
             super::with_doc(s, |d| {
                 let page = d.page;
                 let first = d.selection.elements.first().copied().ok_or_else(|| super::sel_err("err-sel-nothing"))?;
@@ -2886,8 +2920,18 @@ fn register_state_menu(r: &mut CommandRegistry) {
                 })
             }),
     );
-    alias(r, 35170, "panel.states.delete", "Status löschen", "state.delete", json!({}));
-    alias(r, 35171, "panel.states.copyTo", "In Status kopieren", "pi.state.copyTo", json!({}));
+    // wie im Original auch beim letzten Status aktiv; der letzte Status bleibt dann stehen (MN-3)
+    last_kept(r, 35170, "panel.states.delete", "Status löschen", "state.delete", |d| d.frame_count() > 1);
+    // mit nur einem Status gibt es kein Ziel: grau wie im Original (MN-3)
+    add_fw(
+        r,
+        35171,
+        cmd("panel.states.copyTo")
+            .label("In Status kopieren")
+            .describe(&fp_i18n::tr!("msg-panel-alias", target = "pi.state.copyTo"))
+            .available(|s| s.command_state("pi.state.copyTo").0 && s.active().is_some_and(|d| d.frame_count() > 1))
+            .run(|s, p| s.execute("pi.state.copyTo", merged(&json!({}), p)).map(passthrough)),
+    );
     alias(r, 35172, "panel.states.distribute", "Auf Status verteilen", "pi.state.distribute", json!({}));
     let anim_toggle = |r: &mut CommandRegistry, id: u32, name: &str, label: &str, crop: bool| {
         let c = cmd(name)
@@ -2924,7 +2968,7 @@ fn register_state_menu(r: &mut CommandRegistry) {
 fn register_page_menu(r: &mut CommandRegistry) {
     alias(r, 35801, "panel.pages.new", "Neue Seite", "edit.insert.page", json!({}));
     alias(r, 35806, "panel.pages.duplicate", "Seite duplizieren", "page.duplicate", json!({}));
-    alias(r, 35802, "panel.pages.delete", "Seite löschen", "page.delete", json!({}));
+    last_kept(r, 35802, "panel.pages.delete", "Seite löschen", "page.delete", |d| d.doc.pages.len() > 1);
     alias(r, 35803, "panel.pages.rename", "Seite umbenennen", "page.rename", json!({}));
     add_fw(
         r,
@@ -3725,16 +3769,33 @@ fn register_optimize_menu(r: &mut CommandRegistry) {
         add_fw(r, id, c);
     };
     fmt_toggle(r, 35397, "panel.optimize.interlaced", "Mit Zeilensprung", |e| e.interlaced, |e, v| e.interlaced = v);
-    fmt_toggle(r, 35398, "panel.optimize.progressive", "Progressives JPEG", |e| e.jpeg_progressive, |e, v| e.jpeg_progressive = v);
+    // JPEG-Optionen nur bei JPEG, Palettenbefehle nur bei Formaten mit Farbtabelle: sonst grau
+    // und ohne Häkchen wie im Original (MN-3, PARITAET_B §3); Skripte dürfen sie weiter setzen
+    let only_when = |r: &mut CommandRegistry, id: u32, name: &str, label: &str, when: fn(&fp_model::ExportSettings) -> bool, get: fn(&fp_model::ExportSettings) -> bool, set: fn(&mut fp_model::ExportSettings, bool)| {
+        let c = cmd(name)
+            .label(label)
+            .requires(DOC)
+            .opt("on", ParamKind::Bool, "ein/aus (Vorgabe: umschalten)")
+            .menu_when(move |s| when(&export_of(s)))
+            .checked(move |s| s.active().is_some() && when(&export_of(s)) && get(&export_of(s)))
+            .run(move |s, p| {
+                let v = p.opt_bool("on")?.unwrap_or(!get(&export_of(s)));
+                let d = s.doc_mut()?;
+                set(export_mut(d)?, v);
+                Ok(CommandOutput::doc())
+            });
+        add_fw(r, id, c);
+    };
+    only_when(r, 35398, "panel.optimize.progressive", "Progressives JPEG", is_jpeg, |e| e.jpeg_progressive, |e, v| e.jpeg_progressive = v);
     // „JPEG-Ränder scharfzeichnen“ = keine Farbunterabtastung (4:4:4, `jpegSubsampling = 0`)
-    fmt_toggle(r, 35399, "panel.optimize.sharpenJpegEdges", "JPEG-Ränder scharfzeichnen", |e| e.jpeg_subsampling == 0, |e, v| e.jpeg_subsampling = if v { 0 } else { 1 });
-    fmt_toggle(r, 35396, "panel.optimize.removeUnusedColors", "Nicht verwendete Farben entfernen", |e| e.optimized, |e, v| e.optimized = v);
-    add_fw(r, 35595, cmd("panel.optimize.unlockAll").label("Sperrung aller Farben aufheben").requires(DOC).run(|s, _| edit_opt(s, fp_export::palette_edit::unlock_all)));
-    let colors_cmd = |name: &str, label: &str| cmd(name).label(label).requires(DOC).param("colors", ParamKind::Json, "Palettenfarben [\"#rrggbb\", …]");
+    only_when(r, 35399, "panel.optimize.sharpenJpegEdges", "JPEG-Ränder scharfzeichnen", is_jpeg, |e| e.jpeg_subsampling == 0, |e, v| e.jpeg_subsampling = if v { 0 } else { 1 });
+    only_when(r, 35396, "panel.optimize.removeUnusedColors", "Nicht verwendete Farben entfernen", has_palette, |e| e.optimized, |e, v| e.optimized = v);
+    add_fw(r, 35595, cmd("panel.optimize.unlockAll").label("Sperrung aller Farben aufheben").requires(DOC).menu_when(|s| has_palette(&export_of(s))).run(|s, _| edit_opt(s, fp_export::palette_edit::unlock_all)));
+    let colors_cmd = |name: &str, label: &str| cmd(name).label(label).requires(DOC).menu_when(|s| has_palette(&export_of(s))).param("colors", ParamKind::Json, "Palettenfarben [\"#rrggbb\", …]");
     add_fw(
         r,
         35209,
-        cmd("panel.optimize.editColor").label("Paletteneintrag ersetzen").requires(DOC).param("color", ParamKind::Color, "Palettenfarbe").param("newColor", ParamKind::Color, "neue Farbe").run(|s, p| {
+        cmd("panel.optimize.editColor").label("Paletteneintrag ersetzen").requires(DOC).menu_when(|s| has_palette(&export_of(s))).param("color", ParamKind::Color, "Palettenfarbe").param("newColor", ParamKind::Color, "neue Farbe").run(|s, p| {
             let (c, n) = (p.color("color")?.0 | 0xff00_0000, p.color("newColor")?.0 | 0xff00_0000);
             edit_opt(s, |o| fp_export::palette_edit::edit_color(o, c, Some(n)))
         }),
@@ -3768,7 +3829,7 @@ fn register_optimize_menu(r: &mut CommandRegistry) {
     add_fw(
         r,
         35223,
-        cmd("panel.optimize.removeAllEdits").label("Alle Bearbeitungen entfernen").requires(DOC).run(|s, _| {
+        cmd("panel.optimize.removeAllEdits").label("Alle Bearbeitungen entfernen").requires(DOC).menu_when(|s| has_palette(&export_of(s))).run(|s, _| {
             edit_opt(s, |o| {
                 let edited: Vec<u32> = o.palette.iter().filter(|e| e.edited.is_some()).map(|e| e.color).collect();
                 for c in edited {
@@ -3830,7 +3891,7 @@ fn register_optimize_menu(r: &mut CommandRegistry) {
             Ok(CommandOutput::value(json!({"colors": pal.len()})))
         }),
     );
-    pref_toggle(r, 35236, "panel.optimize.swatchFeedback", "Farbfeld-Rückmeldung anzeigen", "Firepixel_OptimizeSwatchFeedback", false);
+    pref_toggle(r, 35236, "panel.optimize.swatchFeedback", "Farbfeld-Rückmeldung anzeigen", "Firepixel_OptimizeSwatchFeedback", true);
 }
 #[cfg(test)]
 mod tests {

@@ -220,23 +220,13 @@ fn open_adjust_dialog(st: &mut AppState, cmd: &str, edit: Option<(usize, &Effect
 pub fn add_menu(ui: &mut Ui, resp: &Response, st: &mut AppState) {
     let theme = Theme::current(ui.ctx());
     let mut chosen: Option<usize> = None;
-    let mut special: Option<&str> = None;
+    // „Optionen“ wie im Original aus der Ressource 6921: Als Stil speichern │ Alle ein, Alle aus │
+    // Zusatzmodule suchen (vorher im ≡ des Inspektors, MN-3)
+    let options = crate::panels::common::resource_menu_nodes(st, "6921");
+    let mut acts = Vec::new();
     egui::Popup::menu(resp).frame(crate::menu::menu_frame(&theme)).show(|ui| {
         ui.spacing_mut().item_spacing = vec2(0.0, 0.0);
-        ui.menu_button(t("dlg-fx-options"), |ui| {
-            if fields::list_item(ui, &t("dlg-fx-all-on"), false).clicked() {
-                special = Some("on");
-                ui.close();
-            }
-            if fields::list_item(ui, &t("dlg-fx-all-off"), false).clicked() {
-                special = Some("off");
-                ui.close();
-            }
-            if fields::list_item(ui, &t("dlg-fx-save-style"), false).clicked() {
-                special = Some("style");
-                ui.close();
-            }
-        });
+        ui.menu_button(t("dlg-fx-options"), |ui| crate::menu::show_nodes(ui, &options, &mut acts));
         let mut groups: Vec<&str> = Vec::new();
         for f in FX {
             if !groups.contains(&f.group) {
@@ -255,11 +245,8 @@ pub fn add_menu(ui: &mut Ui, resp: &Response, st: &mut AppState) {
         }
         let _ = fields::list_item(ui, &t("dlg-fx-photoshop-unavailable"), false);
     });
-    match special {
-        Some("on") => st.run("pi.effects.visible", json!({"visible": true})),
-        Some("off") => st.run("pi.effects.visible", json!({"visible": false})),
-        Some("style") => st.dialogs.open_new_style(),
-        _ => {}
+    for a in acts {
+        st.push(a);
     }
     if let Some(i) = chosen {
         begin_add(st, i);

@@ -577,20 +577,49 @@ pub fn build_main_menu(st: &AppState) -> Vec<(String, Vec<Node>)> {
     out
 }
 
-/// Bedienfeldmenü (≡) eines Bedienfelds: Einträge der Ressource plus Schließen.
+/// Bedienfeldmenü (≡) eines Bedienfelds: Einträge der Ressource, am Ende „Hilfe“ wie im Original.
+/// „Schließen“/„Registerkartengruppe schließen“ stehen im Kontextmenü des Reiters
+/// ([`build_tab_menu`], MN-3).
 pub fn build_panel_menu(st: &AppState, panel: PanelId) -> Vec<Node> {
     let mut nodes = match panel.menu_resource().and_then(context_menu) {
         Some(entries) => convert(st, entries),
         None => Vec::new(),
     };
+    crate::dialogs::panel_menus::adjust_menu(st, &mut nodes);
     if !nodes.is_empty() {
         nodes.push(Node::Separator);
     }
-    nodes.push(item(&t("pmenu-help"), ItemAction::Ui(Action::Run("help.firepixelHelp".into(), json!({ "topic": "panels" }))), true, None));
-    nodes.push(Node::Separator);
-    nodes.push(item(&t("pmenu-close"), ItemAction::Ui(Action::TogglePanel(panel)), true, None));
-    nodes.push(item(&t("pmenu-closeGroup"), ItemAction::Ui(Action::Run("ui.closeGroup".into(), json!({ "panel": format!("{panel:?}") }))), true, None));
+    nodes.push(help_item());
     nodes
+}
+
+fn help_item() -> Node {
+    item(&t("pmenu-help"), ItemAction::Ui(Action::Run("help.firepixelHelp".into(), json!({ "topic": "panels" }))), true, None)
+}
+
+/// Kontextmenü (Rechtsklick) auf den Reiter eines Bedienfelds: Schließen, Registerkartengruppe schließen.
+pub fn build_tab_menu(_st: &AppState, panel: PanelId) -> Vec<Node> {
+    vec![
+        item(&t("pmenu-close"), ItemAction::Ui(Action::TogglePanel(panel)), true, None),
+        item(&t("pmenu-closeGroup"), ItemAction::Ui(Action::Run("ui.closeGroup".into(), json!({ "panel": format!("{panel:?}") }))), true, None),
+    ]
+}
+
+/// Bedienfeldmenü (≡) des Eigenschaften-Inspektors: im Original nur „Hilfe“. Die Effektoptionen
+/// (Ressource 6921) stehen im Effekt-Menü „+ ▸ Optionen“ des Inspektors.
+pub fn build_inspector_menu(_st: &AppState) -> Vec<Node> {
+    vec![help_item()]
+}
+
+/// Kontextmenü auf den Reitern des Inspektors: Volle/Halbe Höhe und Schließen.
+pub fn build_inspector_tab_menu(st: &AppState) -> Vec<Node> {
+    let half = st.settings.workspace.inspector_half;
+    vec![
+        item(&t("pi-menu-full-height"), ItemAction::Ui(Action::Run("ui.inspector.half".into(), json!({ "half": false }))), true, Some(!half)),
+        item(&t("pi-menu-half-height"), ItemAction::Ui(Action::Run("ui.inspector.half".into(), json!({ "half": true }))), true, Some(half)),
+        Node::Separator,
+        item(&t("pmenu-close"), ItemAction::Command("window.properties".into()), true, None),
+    ]
 }
 
 // ---------------------------------------------------------------------- Anzeige

@@ -259,6 +259,8 @@ pub fn candidates(f: &Fix) -> Vec<Candidate> {
         },
         Candidate { label: "Hilfslinien", prep: vec![("view.guides.editGuides", json!({ "horizontal": [100.0], "vertical": [200.0] }))], ids: vec![], pixels: false },
         Candidate { label: "zusammengesetzter Pfad", prep: vec![("select.set", json!({ "ids": [first(&f.path), first(&f.path2)] })), ("modify.combinePaths.join", json!({}))], ids: vec![], pixels: false },
+        // Exportformat JPEG: erst dann sind die JPEG-Einträge im Optimieren-≡ frei (MN-3)
+        Candidate { label: "Export JPEG", prep: vec![("file.imagePreview", json!({ "settings": { "format": "jpeg" }, "apply": true }))], ids: vec![], pixels: false },
         Candidate { label: "zweiter Browser", prep: vec![("file.previewInBrowser.setSecondaryBrowser", json!({ "path": f.file.with_file_name("browser.exe").to_string_lossy() }))], ids: vec![], pixels: false },
         Candidate { label: "abgeschalteter Warndialog", prep: vec![("edit.preferences", json!({ "key": "DisableNoticeCombinePaths", "value": true }))], ids: vec![], pixels: false },
     ]

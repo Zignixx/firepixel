@@ -157,26 +157,27 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
             ws.inspector_collapsed = false;
         }
     }
+    // ≡ wie im Original nur „Hilfe“ (die Effektoptionen 6921 stehen unter „+ ▸ Optionen“);
+    // Volle/Halbe Höhe und Schließen im Kontextmenü der Reiter (MN-3)
+    let mut acts = Vec::new();
     if let Some(resp) = &out.menu_clicked {
-        // Effekt-Menü des Inspektors (6921): Als Stil speichern, Alle ein/aus, Zusatzmodule suchen
-        let mut nodes = crate::panels::common::resource_menu_nodes(st, "6921");
-        let half = st.settings.workspace.inspector_half;
-        nodes.push(crate::menu::Node::Separator);
-        nodes.push(crate::menu::Node::Item { label: texte::t("pi-menu-full-height"), shortcut: None, action: crate::menu::ItemAction::Ui(Action::Run("ui.inspector.half".into(), serde_json::json!({"half": false}))), enabled: true, checked: Some(!half) });
-        nodes.push(crate::menu::Node::Item { label: texte::t("pi-menu-half-height"), shortcut: None, action: crate::menu::ItemAction::Ui(Action::Run("ui.inspector.half".into(), serde_json::json!({"half": true}))), enabled: true, checked: Some(half) });
-        nodes.push(crate::menu::Node::Separator);
-        nodes.push(crate::menu::Node::Item { label: texte::t("btn-close"), shortcut: None, action: crate::menu::ItemAction::Command("window.properties".into()), enabled: true, checked: None });
-        let mut acts = Vec::new();
+        let nodes = crate::menu::build_inspector_menu(st);
         crate::menu::popup_menu(ui, resp, &nodes, &mut acts);
-        for a in acts {
-            if let Action::Run(n, p) = &a
-                && n == "ui.inspector.half"
-            {
-                st.settings.workspace.inspector_half = p.get("half").and_then(|v| v.as_bool()).unwrap_or(false);
-                continue;
-            }
-            st.push(a);
+    }
+    if !out.tab_resps.is_empty() {
+        let nodes = crate::menu::build_inspector_tab_menu(st);
+        for r in &out.tab_resps {
+            r.context_menu(|ui| crate::menu::show_nodes(ui, &nodes, &mut acts));
         }
+    }
+    for a in acts {
+        if let Action::Run(n, p) = &a
+            && n == "ui.inspector.half"
+        {
+            st.settings.workspace.inspector_half = p.get("half").and_then(|v| v.as_bool()).unwrap_or(false);
+            continue;
+        }
+        st.push(a);
     }
     if st.settings.workspace.inspector_collapsed {
         return;

@@ -560,3 +560,32 @@ pub fn needs_ui(name: &str) -> bool {
             | "panel.effects.locatePlugins"
     )
 }
+
+/// Freigabe der Bedienfeldmenü-Einträge, die von der Auswahl **im Bedienfeld** abhängen (die
+/// Engine kennt sie nicht): wie im Original grau ohne gewählte Verlaufsschritte, ohne gewählten
+/// Stil bzw. ohne gewählte Palettenfarbe (MN-3, PARITAET_B §3).
+pub fn adjust_menu(st: &AppState, nodes: &mut [crate::menu::Node]) {
+    let sel = &st.dialogs.panel_sel;
+    for n in nodes.iter_mut() {
+        match n {
+            crate::menu::Node::Item { action: crate::menu::ItemAction::Command(name), enabled, .. } => {
+                let needs = match name.as_str() {
+                    "panel.history.replaySelected" | "panel.history.copySteps" | "panel.history.saveAsCommand" => !sel.history.is_empty(),
+                    "panel.styles.duplicate"
+                    | "panel.styles.delete"
+                    | "panel.styles.rename"
+                    | "panel.styles.redefine"
+                    | "panel.styles.clearOverrides"
+                    | "panel.styles.breakLink"
+                    | "panel.styles.options"
+                    | "panel.styles.saveLibrary" => !sel.styles.is_empty(),
+                    "panel.optimize.editColor" | "panel.optimize.makeTransparent" | "panel.optimize.removeEdit" => !sel.palette.is_empty(),
+                    _ => true,
+                };
+                *enabled &= needs;
+            }
+            crate::menu::Node::Sub { children, .. } => adjust_menu(st, children),
+            _ => {}
+        }
+    }
+}

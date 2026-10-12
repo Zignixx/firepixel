@@ -2,7 +2,7 @@
 
 Erzeugt von `crates\fp-ui\tests\gesamt_menu.rs` (`cargo test -p fp-ui --test gesamt_menu`). Nicht von Hand ändern.
 
-**181/181 Einträge ✅**
+**135/135 Einträge ✅**
 
 | Eintrag | Befehl | Ergebnis | Hinweis |
 |---|---|---|---|
@@ -11,8 +11,8 @@ Erzeugt von `crates\fp-ui\tests\gesamt_menu.rs` (`cargo test -p fp-ui --test ges
 | Optimieren ▸ Optimieren für Dateigröße... | `panel.optimize.optimizeToSize` | ✅ Dialog | ohne Auswahl |
 | Optimieren ▸ Exportassistent... | `panel.optimize.exportWizard` | ✅ Dialog | ohne Auswahl |
 | Optimieren ▸ Mit Zeilensprung | `panel.optimize.interlaced` | ✅ Doc | ohne Auswahl |
-| Optimieren ▸ Progressives JPEG | `panel.optimize.progressive` | ✅ Doc | ohne Auswahl |
-| Optimieren ▸ JPEG-Ränder scharfzeichnen | `panel.optimize.sharpenJpegEdges` | ✅ Doc | ohne Auswahl |
+| Optimieren ▸ Progressives JPEG | `panel.optimize.progressive` | ✅ Doc | Export JPEG |
+| Optimieren ▸ JPEG-Ränder scharfzeichnen | `panel.optimize.sharpenJpegEdges` | ✅ Doc | Export JPEG |
 | Optimieren ▸ Sperrung aller Farben aufheben | `panel.optimize.unlockAll` | ✅ Doc | ohne Auswahl |
 | Optimieren ▸ Nicht verwendete Farben entfernen | `panel.optimize.removeUnusedColors` | ✅ Doc | ohne Auswahl |
 | Optimieren ▸ Paletteneintrag ersetzen... | `panel.optimize.editColor` | ✅ Dialog | ohne Auswahl |
@@ -23,18 +23,12 @@ Erzeugt von `crates\fp-ui\tests\gesamt_menu.rs` (`cargo test -p fp-ui --test ges
 | Optimieren ▸ Palette laden... | `panel.optimize.loadPalette` | ✅ Doc | ohne Auswahl |
 | Optimieren ▸ Palette speichern... | `panel.optimize.savePalette` | ✅ Ui | ohne Auswahl: Datei geschrieben |
 | Optimieren ▸ Hilfe | `help.firepixelHelp {"topic":"panels"}` | ✅ Ui | ohne Auswahl: Befehl liefert {"path":"C:\\Users\\Administrator\\Desktop\\REA\\firepixel\\docs\\ANLEITUNG.md","section":"Bedienfelder","sections":["Firepixel – Kurzanleit – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
-| Optimieren ▸ Schließen | `TogglePanel(Optimize)` | ✅ Ui | ohne Auswahl |
-| Optimieren ▸ Registerkartengruppe schließen | `ui.closeGroup {"panel":"Optimize"}` | ✅ Ui | ohne Auswahl |
 | Verlauf ▸ Ausgewählte Schritte wiederholen | `panel.history.replaySelected` | ✅ Doc | ohne Auswahl |
 | Verlauf ▸ Schritte kopieren | `panel.history.copySteps` | ✅ Ui | ohne Auswahl: Meldung „Schritte in die Zwischenablage kopiert“ |
 | Verlauf ▸ Als Befehl speichern... | `panel.history.saveAsCommand` | ✅ Dialog | ohne Auswahl |
 | Verlauf ▸ Verlauf löschen | `panel.history.clear` | ✅ Dialog | ohne Auswahl |
 | Verlauf ▸ Hilfe | `help.firepixelHelp {"topic":"panels"}` | ✅ Ui | ohne Auswahl: Befehl liefert {"path":"C:\\Users\\Administrator\\Desktop\\REA\\firepixel\\docs\\ANLEITUNG.md","section":"Bedienfelder","sections":["Firepixel – Kurzanleit – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
-| Verlauf ▸ Schließen | `TogglePanel(History)` | ✅ Ui | ohne Auswahl |
-| Verlauf ▸ Registerkartengruppe schließen | `ui.closeGroup {"panel":"History"}` | ✅ Ui | ohne Auswahl |
 | Ausrichten ▸ Hilfe | `help.firepixelHelp {"topic":"panels"}` | ✅ Ui | ohne Auswahl: Befehl liefert {"path":"C:\\Users\\Administrator\\Desktop\\REA\\firepixel\\docs\\ANLEITUNG.md","section":"Bedienfelder","sections":["Firepixel – Kurzanleit – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
-| Ausrichten ▸ Schließen | `TogglePanel(Align)` | ✅ Ui | ohne Auswahl |
-| Ausrichten ▸ Registerkartengruppe schließen | `ui.closeGroup {"panel":"Align"}` | ✅ Ui | ohne Auswahl |
 | Seiten ▸ Neue Seite | `panel.pages.new` | ✅ Doc | ohne Auswahl |
 | Seiten ▸ Seite duplizieren | `panel.pages.duplicate` | ✅ Doc | ohne Auswahl |
 | Seiten ▸ Seite löschen | `panel.pages.delete` | ✅ Doc | ohne Auswahl |
@@ -46,20 +40,16 @@ Erzeugt von `crates\fp-ui\tests\gesamt_menu.rs` (`cargo test -p fp-ui --test ges
 | Seiten ▸ Nummerierung | `panel.pages.numbering` | ✅ Ui | ohne Auswahl |
 | Seiten ▸ Optionen für Miniaturansicht... | `panel.pages.thumbnailOptions` | ✅ Dialog | ohne Auswahl |
 | Seiten ▸ Hilfe | `help.firepixelHelp {"topic":"panels"}` | ✅ Ui | ohne Auswahl: Befehl liefert {"path":"C:\\Users\\Administrator\\Desktop\\REA\\firepixel\\docs\\ANLEITUNG.md","section":"Bedienfelder","sections":["Firepixel – Kurzanleit – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
-| Seiten ▸ Schließen | `TogglePanel(Pages)` | ✅ Ui | ohne Auswahl |
-| Seiten ▸ Registerkartengruppe schließen | `ui.closeGroup {"panel":"Pages"}` | ✅ Ui | ohne Auswahl |
 | Status ▸ Status hinzufügen... | `panel.states.add` | ✅ Dialog | ohne Auswahl |
 | Status ▸ Status duplizieren... | `panel.states.duplicate` | ✅ Dialog | ohne Auswahl |
 | Status ▸ Status löschen | `panel.states.delete` | ✅ Doc | ohne Auswahl |
 | Status ▸ In Status kopieren... | `panel.states.copyTo` | ✅ Dialog | Rechteck |
-| Status ▸ Auf Status verteilen | `panel.states.distribute` | ✅ Doc | Rechteck + Ellipse |
+| Status ▸ Auf Status verteilen | `panel.states.distribute` | ✅ Doc | Rechteck |
 | Status ▸ Autom. zuschneiden | `panel.states.autoCrop` | ✅ Doc | ohne Auswahl |
 | Status ▸ Nummerierung | `panel.states.numbering` | ✅ Ui | ohne Auswahl |
 | Status ▸ Auto-Differenz | `panel.states.autoDifference` | ✅ Doc | ohne Auswahl |
 | Status ▸ Eigenschaften... | `panel.states.properties` | ✅ Dialog | ohne Auswahl |
 | Status ▸ Hilfe | `help.firepixelHelp {"topic":"panels"}` | ✅ Ui | ohne Auswahl: Befehl liefert {"path":"C:\\Users\\Administrator\\Desktop\\REA\\firepixel\\docs\\ANLEITUNG.md","section":"Bedienfelder","sections":["Firepixel – Kurzanleit – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
-| Status ▸ Schließen | `TogglePanel(States)` | ✅ Ui | ohne Auswahl |
-| Status ▸ Registerkartengruppe schließen | `ui.closeGroup {"panel":"States"}` | ✅ Ui | ohne Auswahl |
 | Ebenen ▸ Neues Bild | `panel.layers.newBitmap` | ✅ Doc | ohne Auswahl |
 | Ebenen ▸ Neue Ebene... | `panel.layers.newLayer` | ✅ Dialog | ohne Auswahl |
 | Ebenen ▸ Neue Unterebene... | `panel.layers.newSubLayer` | ✅ Dialog | ohne Auswahl |
@@ -84,8 +74,6 @@ Erzeugt von `crates\fp-ui\tests\gesamt_menu.rs` (`cargo test -p fp-ui --test ges
 | Ebenen ▸ Maske löschen | `panel.layers.deleteMask` | ✅ Doc | Maskengruppe |
 | Ebenen ▸ Miniaturoptionen... | `panel.layers.thumbnailOptions` | ✅ Dialog | ohne Auswahl |
 | Ebenen ▸ Hilfe | `help.firepixelHelp {"topic":"panels"}` | ✅ Ui | ohne Auswahl: Befehl liefert {"path":"C:\\Users\\Administrator\\Desktop\\REA\\firepixel\\docs\\ANLEITUNG.md","section":"Bedienfelder","sections":["Firepixel – Kurzanleit – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
-| Ebenen ▸ Schließen | `TogglePanel(Layers)` | ✅ Ui | ohne Auswahl |
-| Ebenen ▸ Registerkartengruppe schließen | `ui.closeGroup {"panel":"Layers"}` | ✅ Ui | ohne Auswahl |
 | Stile ▸ Neuer Stil... | `panel.styles.new` | ✅ Dialog | Rechteck |
 | Stile ▸ Stil duplizieren... | `panel.styles.duplicate` | ✅ Doc | ohne Auswahl |
 | Stile ▸ Stile löschen | `panel.styles.delete` | ✅ Doc | ohne Auswahl |
@@ -100,11 +88,7 @@ Erzeugt von `crates\fp-ui\tests\gesamt_menu.rs` (`cargo test -p fp-ui --test ges
 | Stile ▸ Stilbibliothek speichern | `panel.styles.saveLibrary` | ✅ Ui | ohne Auswahl: Datei geschrieben |
 | Stile ▸ Große Symbole | `panel.styles.largeIcons` | ✅ Ui | ohne Auswahl |
 | Stile ▸ Hilfe | `help.firepixelHelp {"topic":"panels"}` | ✅ Ui | ohne Auswahl: Befehl liefert {"path":"C:\\Users\\Administrator\\Desktop\\REA\\firepixel\\docs\\ANLEITUNG.md","section":"Bedienfelder","sections":["Firepixel – Kurzanleit – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
-| Stile ▸ Schließen | `TogglePanel(Styles)` | ✅ Ui | ohne Auswahl |
-| Stile ▸ Registerkartengruppe schließen | `ui.closeGroup {"panel":"Styles"}` | ✅ Ui | ohne Auswahl |
 | Farbpalette ▸ Hilfe | `help.firepixelHelp {"topic":"panels"}` | ✅ Ui | ohne Auswahl: Befehl liefert {"path":"C:\\Users\\Administrator\\Desktop\\REA\\firepixel\\docs\\ANLEITUNG.md","section":"Bedienfelder","sections":["Firepixel – Kurzanleit – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
-| Farbpalette ▸ Schließen | `TogglePanel(ColorPalette)` | ✅ Ui | ohne Auswahl |
-| Farbpalette ▸ Registerkartengruppe schließen | `ui.closeGroup {"panel":"ColorPalette"}` | ✅ Ui | ohne Auswahl |
 | Farbfelder ▸ Farbfelder hinzufügen... | `panel.swatches.add` | ✅ Ui | ohne Auswahl |
 | Farbfelder ▸ Farbfelder ersetzen... | `panel.swatches.replace` | ✅ Ui | ohne Auswahl |
 | Farbfelder ▸ Farbfelder speichern... | `panel.swatches.save` | ✅ Ui | ohne Auswahl: Datei geschrieben |
@@ -117,20 +101,10 @@ Erzeugt von `crates\fp-ui\tests\gesamt_menu.rs` (`cargo test -p fp-ui --test ges
 | Farbfelder ▸ Aktuelle Exportpalette | `panel.swatches.exportPalette` | ✅ Ui | ohne Auswahl |
 | Farbfelder ▸ Nach Farbe sortieren | `panel.swatches.sortByColor` | ✅ Ui | ohne Auswahl |
 | Farbfelder ▸ Hilfe | `help.firepixelHelp {"topic":"panels"}` | ✅ Ui | ohne Auswahl: Befehl liefert {"path":"C:\\Users\\Administrator\\Desktop\\REA\\firepixel\\docs\\ANLEITUNG.md","section":"Bedienfelder","sections":["Firepixel – Kurzanleit – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
-| Farbfelder ▸ Schließen | `TogglePanel(Swatches)` | ✅ Ui | ohne Auswahl |
-| Farbfelder ▸ Registerkartengruppe schließen | `ui.closeGroup {"panel":"Swatches"}` | ✅ Ui | ohne Auswahl |
 | Sonderzeichen ▸ Hilfe | `help.firepixelHelp {"topic":"panels"}` | ✅ Ui | ohne Auswahl: Befehl liefert {"path":"C:\\Users\\Administrator\\Desktop\\REA\\firepixel\\docs\\ANLEITUNG.md","section":"Bedienfelder","sections":["Firepixel – Kurzanleit – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
-| Sonderzeichen ▸ Schließen | `TogglePanel(SpecialCharacters)` | ✅ Ui | ohne Auswahl |
-| Sonderzeichen ▸ Registerkartengruppe schließen | `ui.closeGroup {"panel":"SpecialCharacters"}` | ✅ Ui | ohne Auswahl |
 | Bildbearbeitung ▸ Hilfe | `help.firepixelHelp {"topic":"panels"}` | ✅ Ui | ohne Auswahl: Befehl liefert {"path":"C:\\Users\\Administrator\\Desktop\\REA\\firepixel\\docs\\ANLEITUNG.md","section":"Bedienfelder","sections":["Firepixel – Kurzanleit – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
-| Bildbearbeitung ▸ Schließen | `TogglePanel(ImageEditing)` | ✅ Ui | ohne Auswahl |
-| Bildbearbeitung ▸ Registerkartengruppe schließen | `ui.closeGroup {"panel":"ImageEditing"}` | ✅ Ui | ohne Auswahl |
 | Pfad ▸ Hilfe | `help.firepixelHelp {"topic":"panels"}` | ✅ Ui | ohne Auswahl: Befehl liefert {"path":"C:\\Users\\Administrator\\Desktop\\REA\\firepixel\\docs\\ANLEITUNG.md","section":"Bedienfelder","sections":["Firepixel – Kurzanleit – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
-| Pfad ▸ Schließen | `TogglePanel(Path)` | ✅ Ui | ohne Auswahl |
-| Pfad ▸ Registerkartengruppe schließen | `ui.closeGroup {"panel":"Path"}` | ✅ Ui | ohne Auswahl |
 | Automatische Formen ▸ Hilfe | `help.firepixelHelp {"topic":"panels"}` | ✅ Ui | ohne Auswahl: Befehl liefert {"path":"C:\\Users\\Administrator\\Desktop\\REA\\firepixel\\docs\\ANLEITUNG.md","section":"Bedienfelder","sections":["Firepixel – Kurzanleit – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
-| Automatische Formen ▸ Schließen | `TogglePanel(AutoShapes)` | ✅ Ui | ohne Auswahl |
-| Automatische Formen ▸ Registerkartengruppe schließen | `ui.closeGroup {"panel":"AutoShapes"}` | ✅ Ui | ohne Auswahl |
 | Dokumentbibliothek ▸ Neues Symbol... | `panel.library.newSymbol` | ✅ Dialog | ohne Auswahl |
 | Dokumentbibliothek ▸ Duplizieren | `panel.library.duplicate` | ✅ Doc | ohne Auswahl |
 | Dokumentbibliothek ▸ Löschen | `panel.library.delete` | ✅ Dialog | ohne Auswahl |
@@ -145,11 +119,7 @@ Erzeugt von `crates\fp-ui\tests\gesamt_menu.rs` (`cargo test -p fp-ui --test ges
 | Dokumentbibliothek ▸ Symbole importieren... | `panel.library.import` | ✅ Doc | ohne Auswahl |
 | Dokumentbibliothek ▸ Symbole exportieren... | `panel.library.export` | ✅ Ui | ohne Auswahl: Datei geschrieben |
 | Dokumentbibliothek ▸ Hilfe | `help.firepixelHelp {"topic":"panels"}` | ✅ Ui | ohne Auswahl: Befehl liefert {"path":"C:\\Users\\Administrator\\Desktop\\REA\\firepixel\\docs\\ANLEITUNG.md","section":"Bedienfelder","sections":["Firepixel – Kurzanleit – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
-| Dokumentbibliothek ▸ Schließen | `TogglePanel(DocumentLibrary)` | ✅ Ui | ohne Auswahl |
-| Dokumentbibliothek ▸ Registerkartengruppe schließen | `ui.closeGroup {"panel":"DocumentLibrary"}` | ✅ Ui | ohne Auswahl |
 | Allgemeine Bibliothek ▸ Hilfe | `help.firepixelHelp {"topic":"panels"}` | ✅ Ui | ohne Auswahl: Befehl liefert {"path":"C:\\Users\\Administrator\\Desktop\\REA\\firepixel\\docs\\ANLEITUNG.md","section":"Bedienfelder","sections":["Firepixel – Kurzanleit – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
-| Allgemeine Bibliothek ▸ Schließen | `TogglePanel(CommonLibrary)` | ✅ Ui | ohne Auswahl |
-| Allgemeine Bibliothek ▸ Registerkartengruppe schließen | `ui.closeGroup {"panel":"CommonLibrary"}` | ✅ Ui | ohne Auswahl |
 | Info ▸ Hexadezimal | `panel.info.hex` | ✅ Ui | ohne Auswahl: keine erkennbare Wirkung |
 | Info ▸ RGB | `panel.info.rgb` | ✅ Ui | ohne Auswahl |
 | Info ▸ CMY | `panel.info.cmy` | ✅ Ui | ohne Auswahl |
@@ -159,31 +129,15 @@ Erzeugt von `crates\fp-ui\tests\gesamt_menu.rs` (`cargo test -p fp-ui --test ges
 | Info ▸ Zentimeter | `panel.info.centimeters` | ✅ Ui | ohne Auswahl |
 | Info ▸ Attribute skalieren | `panel.info.scaleAttributes` | ✅ Ui | ohne Auswahl |
 | Info ▸ Hilfe | `help.firepixelHelp {"topic":"panels"}` | ✅ Ui | ohne Auswahl: Befehl liefert {"path":"C:\\Users\\Administrator\\Desktop\\REA\\firepixel\\docs\\ANLEITUNG.md","section":"Bedienfelder","sections":["Firepixel – Kurzanleit – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
-| Info ▸ Schließen | `TogglePanel(Info)` | ✅ Ui | ohne Auswahl |
-| Info ▸ Registerkartengruppe schließen | `ui.closeGroup {"panel":"Info"}` | ✅ Ui | ohne Auswahl |
 | Farbmischer ▸ RGB | `panel.mixer.rgb` | ✅ Ui | ohne Auswahl |
 | Farbmischer ▸ Hexadezimal | `panel.mixer.hex` | ✅ Ui | ohne Auswahl: keine erkennbare Wirkung |
 | Farbmischer ▸ CMY | `panel.mixer.cmy` | ✅ Ui | ohne Auswahl |
 | Farbmischer ▸ HSB | `panel.mixer.hsb` | ✅ Ui | ohne Auswahl |
 | Farbmischer ▸ Graustufen | `panel.mixer.grayscale` | ✅ Ui | ohne Auswahl |
 | Farbmischer ▸ Hilfe | `help.firepixelHelp {"topic":"panels"}` | ✅ Ui | ohne Auswahl: Befehl liefert {"path":"C:\\Users\\Administrator\\Desktop\\REA\\firepixel\\docs\\ANLEITUNG.md","section":"Bedienfelder","sections":["Firepixel – Kurzanleit – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
-| Farbmischer ▸ Schließen | `TogglePanel(ColorMixer)` | ✅ Ui | ohne Auswahl |
-| Farbmischer ▸ Registerkartengruppe schließen | `ui.closeGroup {"panel":"ColorMixer"}` | ✅ Ui | ohne Auswahl |
 | URL ▸ Hilfe | `help.firepixelHelp {"topic":"panels"}` | ✅ Ui | ohne Auswahl: Befehl liefert {"path":"C:\\Users\\Administrator\\Desktop\\REA\\firepixel\\docs\\ANLEITUNG.md","section":"Bedienfelder","sections":["Firepixel – Kurzanleit – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
-| URL ▸ Schließen | `TogglePanel(Url)` | ✅ Ui | ohne Auswahl |
-| URL ▸ Registerkartengruppe schließen | `ui.closeGroup {"panel":"Url"}` | ✅ Ui | ohne Auswahl |
 | Verhalten ▸ Hilfe | `help.firepixelHelp {"topic":"panels"}` | ✅ Ui | ohne Auswahl: Befehl liefert {"path":"C:\\Users\\Administrator\\Desktop\\REA\\firepixel\\docs\\ANLEITUNG.md","section":"Bedienfelder","sections":["Firepixel – Kurzanleit – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
-| Verhalten ▸ Schließen | `TogglePanel(Behaviors)` | ✅ Ui | ohne Auswahl |
-| Verhalten ▸ Registerkartengruppe schließen | `ui.closeGroup {"panel":"Behaviors"}` | ✅ Ui | ohne Auswahl |
 | Suchen und ersetzen ▸ Hilfe | `help.firepixelHelp {"topic":"panels"}` | ✅ Ui | ohne Auswahl: Befehl liefert {"path":"C:\\Users\\Administrator\\Desktop\\REA\\firepixel\\docs\\ANLEITUNG.md","section":"Bedienfelder","sections":["Firepixel – Kurzanleit – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
-| Suchen und ersetzen ▸ Schließen | `TogglePanel(FindReplace)` | ✅ Ui | ohne Auswahl |
-| Suchen und ersetzen ▸ Registerkartengruppe schließen | `ui.closeGroup {"panel":"FindReplace"}` | ✅ Ui | ohne Auswahl |
 | Symboleigenschaften ▸ Hilfe | `help.firepixelHelp {"topic":"panels"}` | ✅ Ui | ohne Auswahl: Befehl liefert {"path":"C:\\Users\\Administrator\\Desktop\\REA\\firepixel\\docs\\ANLEITUNG.md","section":"Bedienfelder","sections":["Firepixel – Kurzanleit – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
-| Symboleigenschaften ▸ Schließen | `TogglePanel(SymbolProperties)` | ✅ Ui | ohne Auswahl |
-| Symboleigenschaften ▸ Registerkartengruppe schließen | `ui.closeGroup {"panel":"SymbolProperties"}` | ✅ Ui | ohne Auswahl |
 | Eigenschaften für automatische Form ▸ Hilfe | `help.firepixelHelp {"topic":"panels"}` | ✅ Ui | ohne Auswahl: Befehl liefert {"path":"C:\\Users\\Administrator\\Desktop\\REA\\firepixel\\docs\\ANLEITUNG.md","section":"Bedienfelder","sections":["Firepixel – Kurzanleit – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
-| Eigenschaften für automatische Form ▸ Schließen | `TogglePanel(AutoShapeProperties)` | ✅ Ui | ohne Auswahl |
-| Eigenschaften für automatische Form ▸ Registerkartengruppe schließen | `ui.closeGroup {"panel":"AutoShapeProperties"}` | ✅ Ui | ohne Auswahl |
 | CSS-Eigenschaften ▸ Hilfe | `help.firepixelHelp {"topic":"panels"}` | ✅ Ui | ohne Auswahl: Befehl liefert {"path":"C:\\Users\\Administrator\\Desktop\\REA\\firepixel\\docs\\ANLEITUNG.md","section":"Bedienfelder","sections":["Firepixel – Kurzanleit – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
-| CSS-Eigenschaften ▸ Schließen | `TogglePanel(CssProperties)` | ✅ Ui | ohne Auswahl |
-| CSS-Eigenschaften ▸ Registerkartengruppe schließen | `ui.closeGroup {"panel":"CssProperties"}` | ✅ Ui | ohne Auswahl |
