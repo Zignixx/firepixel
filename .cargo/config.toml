@@ -1,3 +1,6 @@
 # C-Laufzeit statisch linken: die fertige firepixel.exe braucht kein Visual-C++-Redistributable.
+# Linker: rust-lld (lld-link aus der Rust-Toolchain, `lib\rustlib\x86_64-pc-windows-msvc\bin`),
+# deutlich schneller als link.exe; Bibliotheken (LIB) wie bisher aus den MSVC Build Tools (INF-1).
 [target.x86_64-pc-windows-msvc]
+linker = "rust-lld"
 rustflags = ["-C", "target-feature=+crt-static"]
