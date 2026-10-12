@@ -1,6 +1,8 @@
 [workspace]
 resolver = "3"
 members = ["crates/*", "apps/*"]
+# eigene Kopie von egui-wgpu (vendor\egui-wgpu, FV-8): nicht Teil des Workspace
+exclude = ["vendor"]
 
 [workspace.package]
 version = "0.1.0"
@@ -66,3 +68,9 @@ debug = false
 # KI-Inferenz (fp-ai) auch im Entwicklungsbuild optimiert, sonst ist sie um ein Vielfaches langsamer (Agent KI)
 [profile.dev.package.fp-ai]
 opt-level = 3
+
+# FV-8: egui-wgpu 0.36.2 mit Texturabtastung per textureLoad fuer Software-Rasterer (Rechner ohne
+# Grafikkarte, Fernsitzung: Tippen/Ziehen sonst 0,5-1 s verzoegert). Aenderungen in
+# vendor\egui-wgpu\README.md beschrieben.
+[patch.crates-io]
+egui-wgpu = { path = "vendor/egui-wgpu" }

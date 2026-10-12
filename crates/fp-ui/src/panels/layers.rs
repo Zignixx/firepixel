@@ -238,7 +238,9 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                         glyphs::paint(ui.painter(), lock2.shrink2(vec2(4.0, 8.0)), Glyph::Lock, &theme, true);
                     }
                     let thumb = Rect::from_min_size(pos2(r2.left() + 78.0, r2.top() + 3.0), vec2(tpx, tpx));
-                    if tpx > 0.0 {
+                    // Miniaturen nur für sichtbare Zeilen (FV-8: bei Seiten mit Tausenden Objekten
+                    // rechnete und lud jedes Bild sonst ständig Miniaturen nach)
+                    if tpx > 0.0 && ui.is_rect_visible(thumb) {
                         crate::widgets::checker(ui.painter(), thumb, 4.0, &theme);
                         if let Some(tex) = thumbs::element_thumb(ui.ctx(), st, doc_id, doc_gen, &doc, e, (tpx as u32 * 2).max(16)) {
                             let ts = tex.size_vec2();

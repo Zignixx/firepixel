@@ -179,23 +179,34 @@ pub fn color_well(painter: &Painter, rect: Rect, color: Color32, theme: &Theme) 
     corner_triangle(painter, rect, c.icon_fg);
 }
 
-/// Transparenz-Schachbrett.
+/// Transparenz-Schachbrett: ein einziges Rechteck mit einer sich wiederholenden 2×2-Textur
+/// (Feld links oben `checker_a`). Früher ein Rechteck je Feld – auf einer ganzen Leinwand waren
+/// das ~10.000 Formen mit ~100.000 Dreiecken, die der Software-Rasterer (Rechner ohne
+/// Grafikkarte, Fernsitzung) je Bild 0,5 s lang zeichnete (FV-8, Tippverzögerung).
 pub fn checker(painter: &Painter, rect: Rect, cell: f32, theme: &Theme) {
     let c = &theme.colors;
-    painter.rect_filled(rect, 0.0, c.checker_a);
     let cols = (rect.width() / cell).ceil() as i32;
     let rows = (rect.height() / cell).ceil() as i32;
-    if cols * rows > 40_000 {
+    if cell <= 0.0 || !rect.is_positive() || cols.saturating_mul(rows) > 40_000 {
+        painter.rect_filled(rect, 0.0, c.checker_a);
         return;
     }
-    for j in 0..rows {
-        for i in 0..cols {
-            if (i + j) % 2 == 1 {
-                let r = Rect::from_min_size(pos2(rect.left() + i as f32 * cell, rect.top() + j as f32 * cell), vec2(cell, cell)).intersect(rect);
-                painter.rect_filled(r, 0.0, c.checker_b);
-            }
-        }
+    let tex = checker_texture(painter.ctx(), c.checker_a, c.checker_b);
+    // eine Texturperiode = 2 Felder; Ursprung an der linken oberen Ecke von `rect`
+    let uv = Rect::from_min_max(pos2(0.0, 0.0), pos2(rect.width() / (2.0 * cell), rect.height() / (2.0 * cell)));
+    painter.image(tex.id(), rect, uv, Color32::WHITE);
+}
+
+/// 2×2-Textur des Schachbretts (je Farbpaar einmal angelegt, im egui-Speicher gehalten).
+fn checker_texture(ctx: &egui::Context, a: Color32, b: Color32) -> egui::TextureHandle {
+    let id = egui::Id::new(("fp-checker-texture", a.to_array(), b.to_array()));
+    if let Some(t) = ctx.data(|d| d.get_temp::<egui::TextureHandle>(id)) {
+        return t;
     }
+    let img = egui::ColorImage::new([2, 2], vec![a, b, b, a]);
+    let t = ctx.load_texture("fp-checker", img, egui::TextureOptions::NEAREST_REPEAT);
+    ctx.data_mut(|d| d.insert_temp(id, t.clone()));
+    t
 }
 
 /// Kleiner Aufklapp-Pfeil (▼) zentriert in `rect`.

@@ -94,6 +94,8 @@ pub struct CanvasCache {
     pub texture: Option<egui::TextureHandle>,
     /// Schlüssel der angezeigten Textur.
     pub shown: Option<RenderKey>,
+    /// Bild der angezeigten Textur (für das Hochladen nur geänderter Bereiche, [`show_result`]).
+    pub shown_image: Option<RgbaImage>,
     /// Zuletzt angeforderter Schlüssel.
     pub requested: Option<RenderKey>,
     /// Zähler für erzwungenes Neuzeichnen.
@@ -259,4 +261,98 @@ fn render_now(r: &fp_render::Renderer, doc: &Document, key: &RenderKey, hidden: 
 /// RGBA-Bild → egui-Bild.
 pub fn to_color_image(img: &RgbaImage) -> egui::ColorImage {
     egui::ColorImage::from_rgba_unmultiplied([img.width(), img.height()], img.as_bytes())
+}
+
+/// Fertiges Renderergebnis als Leinwandtextur zeigen. Zeigt die Textur schon denselben Ausschnitt
+/// im selben Zoom, wird nur das geänderte Rechteck hochgeladen: Auf Rechnern ohne Grafikkarte
+/// schafft das Hochladen nur etwa 30 MB/s, eine ganze Leinwandtextur bei 400 % (bis 4400×2500)
+/// brauchte dort über 1 s je Bearbeitung (FV-8).
+pub fn show_result(ctx: &egui::Context, cc: &mut CanvasCache, res: RenderResult) {
+    let same_layout = cc.shown.is_some_and(|k| k.region == res.key.region && (k.zoom - res.key.zoom).abs() < 1e-12);
+    match (&mut cc.texture, &cc.shown_image) {
+        (Some(tex), Some(prev)) if same_layout && prev.width() == res.image.width() && prev.height() == res.image.height() && tex.size() == [res.image.width(), res.image.height()] => {
+            if let Some((x, y, w, h)) = changed_rect(prev, &res.image) {
+                tex.set_partial([x, y], sub_image(&res.image, x, y, w, h), egui::TextureOptions::NEAREST);
+            }
+        }
+        (Some(tex), _) => tex.set(to_color_image(&res.image), egui::TextureOptions::NEAREST),
+        (None, _) => cc.texture = Some(ctx.load_texture(format!("canvas-{}", res.key.doc.0), to_color_image(&res.image), egui::TextureOptions::NEAREST)),
+    }
+    cc.shown = Some(res.key);
+    cc.shown_image = Some(res.image);
+}
+
+/// Kleinstes Rechteck (x, y, Breite, Höhe) in Bildpixeln, in dem sich zwei gleich große Bilder
+/// unterscheiden; `None` bei gleichem Inhalt.
+pub fn changed_rect(a: &RgbaImage, b: &RgbaImage) -> Option<(usize, usize, usize, usize)> {
+    let (w, h) = (b.width(), b.height());
+    if a.width() != w || a.height() != h || w == 0 || h == 0 {
+        return (w > 0 && h > 0).then_some((0, 0, w, h));
+    }
+    let stride = w * 4;
+    let (ra, rb) = (a.as_bytes().chunks_exact(stride), b.as_bytes().chunks_exact(stride));
+    let rows: Vec<usize> = ra.zip(rb).enumerate().filter(|(_, (x, y))| x != y).map(|(i, _)| i).collect();
+    let (&top, &bottom) = (rows.first()?, rows.last()?);
+    let (mut left, mut right) = (w, 0);
+    for &r in &rows {
+        let (x, y) = (&a.as_bytes()[r * stride..(r + 1) * stride], &b.as_bytes()[r * stride..(r + 1) * stride]);
+        let px = |i: usize| x[i * 4..i * 4 + 4] != y[i * 4..i * 4 + 4];
+        if let Some(l) = (0..left.min(w)).find(|&i| px(i)) {
+            left = l;
+        }
+        if let Some(rr) = (right..w).rev().find(|&i| px(i)) {
+            right = rr;
+        }
+    }
+    let right = right.max(left);
+    Some((left, top, right + 1 - left, bottom + 1 - top))
+}
+
+fn sub_image(img: &RgbaImage, x: usize, y: usize, w: usize, h: usize) -> egui::ColorImage {
+    let stride = img.width() * 4;
+    let mut bytes = Vec::with_capacity(w * h * 4);
+    for row in y..y + h {
+        bytes.extend_from_slice(&img.as_bytes()[row * stride + x * 4..row * stride + (x + w) * 4]);
+    }
+    egui::ColorImage::from_rgba_unmultiplied([w, h], &bytes)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn img(w: i32, h: i32) -> RgbaImage {
+        RgbaImage::new(IRect::new(0, 0, w, h)).expect("Bild")
+    }
+
+    fn set(i: &mut RgbaImage, x: usize, y: usize, v: u8) {
+        let w = i.width();
+        let p = (y * w + x) * 4;
+        i.as_bytes_mut()[p + 1] = v;
+        i.as_bytes_mut()[p + 3] = 255;
+    }
+
+    #[test]
+    fn changed_rect_is_bounding_box_of_differences() {
+        let a = img(40, 30);
+        let mut b = img(40, 30);
+        assert_eq!(changed_rect(&a, &b), None);
+        set(&mut b, 7, 5, 9);
+        assert_eq!(changed_rect(&a, &b), Some((7, 5, 1, 1)));
+        set(&mut b, 2, 20, 9);
+        set(&mut b, 39, 12, 9);
+        assert_eq!(changed_rect(&a, &b), Some((2, 5, 38, 16)));
+        // andere Größe: ganzes Bild
+        assert_eq!(changed_rect(&img(10, 10), &b), Some((0, 0, 40, 30)));
+    }
+
+    #[test]
+    fn sub_image_copies_the_rectangle() {
+        let mut a = img(8, 6);
+        set(&mut a, 3, 2, 200);
+        let s = sub_image(&a, 3, 2, 2, 3);
+        assert_eq!(s.size, [2, 3]);
+        assert_eq!(s.pixels[0].g(), 200);
+        assert_eq!(s.pixels[1].g(), 0);
+    }
 }

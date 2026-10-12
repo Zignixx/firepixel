@@ -155,12 +155,7 @@ impl FirepixelApp {
         for res in st.worker.poll() {
             let cc = st.canvases.entry(res.key.doc).or_default();
             if cc.requested.as_ref() == Some(&res.key) || cc.shown.is_none() {
-                let img = canvas::render::to_color_image(&res.image);
-                match &mut cc.texture {
-                    Some(t) => t.set(img, egui::TextureOptions::NEAREST),
-                    None => cc.texture = Some(ctx.load_texture(format!("canvas-{}", res.key.doc.0), img, egui::TextureOptions::NEAREST)),
-                }
-                cc.shown = Some(res.key);
+                canvas::render::show_result(&ctx, cc, res);
             }
         }
         // Fenstertitel
@@ -376,5 +371,10 @@ pub fn cli_help() -> String {
 /// Startet die Anwendung (Dateien aus der Kommandozeile werden geöffnet; `design` überschreibt
 /// das gespeicherte Design, z. B. für Bildschirmfotos).
 pub fn run(files: Vec<PathBuf>, design: Option<ThemeKind>) -> eframe::Result {
+    // Rechner ohne Grafikkarte (Software-Rasterer, z. B. in Fernsitzungen): egui-wgpu tastet Texturen
+    // mit `textureLoad` ab und schreibt Vertexdaten direkt – sonst brauchte dort jedes Bild 0,2–0,7 s
+    // und getippte Zeichen erschienen 0,6–1,2 s verzögert (FV-8, `vendor\egui-wgpu`). Wirkt nur auf
+    // Software-Rasterern.
+    eframe::egui_wgpu::SOFTWARE_RASTERIZER_TUNING.store(true, std::sync::atomic::Ordering::Relaxed);
     eframe::run_native("Firepixel", native_options(), Box::new(move |cc| Ok(Box::new(FirepixelApp::new(cc, files, design)))))
 }

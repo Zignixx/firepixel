@@ -23,7 +23,7 @@ use fp_engine::tools::{Cursor, Modifiers, PointerKind, ToolInput};
 use fp_engine::view::{PreviewMode, ZOOM_STEPS};
 use fp_engine::{Overlay, ToolEvent};
 use fp_geom::{IRect, Point};
-use render::{to_color_image, RenderJob, RenderKey};
+use render::{RenderJob, RenderKey};
 use serde_json::json;
 
 /// Zeichnet den ganzen Dokumentbereich in die verfügbare Fläche.
@@ -457,10 +457,7 @@ fn canvas_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
         let key = RenderKey { doc: id, generation, epoch: cc.epoch, page, frame, region, zoom: zoom_dev, variant };
         cc.requested = Some(key);
         if let Some(res) = st.worker.request(RenderJob { key, doc: docarc, hidden: hidden.clone() }, st.sync_render) {
-            let tex = ui.ctx().load_texture(format!("canvas-{}", id.0), to_color_image(&res.image), egui::TextureOptions::NEAREST);
-            let cc = st.canvases.entry(id).or_default();
-            cc.texture = Some(tex);
-            cc.shown = Some(res.key);
+            render::show_result(ui.ctx(), st.canvases.entry(id).or_default(), res);
         }
     }
     // Seitenlage in ganzen Gerätepixeln, abgeleitet aus derselben Abtastregel wie die Textur

@@ -45,6 +45,8 @@ winit = { version = "0.30", default-features = false }
 [dev-dependencies]
 egui_kittest = { version = "0.36", features = ["wgpu", "snapshot"] }
 fp-neutral = { path = "../fp-neutral" }
+# Bildtyp des Testrenderers (egui_kittest::TestRenderer), schon über egui_kittest im Baum (FV-8)
+image = { workspace = true }
 
 [lints]
 workspace = true
