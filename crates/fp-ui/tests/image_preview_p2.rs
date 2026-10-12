@@ -179,16 +179,26 @@ fn choose_in(h: &mut H, value: &str, item: &str) {
     h.run_steps(3);
 }
 
+/// Knoten mit dem Namen `label` in der Bildvorschau (Lage, aktiv). Nur im Dialog suchen: Seit NZ-1
+/// (`ec4ac99`) haben auch die Symbolknöpfe des Optimieren-Bedienfelds hinter dem Dialog
+/// Barrierefreiheits-Namen, mit demselben Wortlaut wie hier („Farbe bearbeiten“, „Farbe zu
+/// Transparenz hinzufügen“, „Farbe sperren“ …). Der erste Treffer war dann der (graue) Knopf im
+/// Bedienfeld, und ein Klick darauf traf den Hintergrund des modalen Dialogs.
+fn dialog_node(h: &H, label: &str) -> Option<(Rect, bool)> {
+    let dr = dialogs::dialog_rect(&h.ctx, image_preview::DIALOG_ID).expect("Bildvorschau gezeichnet");
+    h.query_all(By::new().label(label)).find(|n| dr.contains(n.rect().center())).map(|n| (n.rect(), !n.accesskit_node().is_disabled()))
+}
+
 fn has_label(h: &H, label: &str) -> bool {
-    h.query_all(By::new().label(label)).next().is_some()
+    dialog_node(h, label).is_some()
 }
 
 fn label_rect(h: &H, label: &str) -> Rect {
-    h.query_all(By::new().label(label)).next().map(|n| n.rect()).unwrap_or_else(|| panic!("„{label}“ nicht gefunden"))
+    dialog_node(h, label).map(|(r, _)| r).unwrap_or_else(|| panic!("„{label}“ nicht gefunden"))
 }
 
 fn is_enabled(h: &H, label: &str) -> bool {
-    h.query_all(By::new().label(label)).next().is_some_and(|n| !n.accesskit_node().is_disabled())
+    dialog_node(h, label).is_some_and(|(_, en)| en)
 }
 
 /// Lage der Farbtabelle und ihr Raster.
@@ -465,7 +475,8 @@ fn color_table_lock_websafe_transparent_and_menu() {
     // Knöpfe zeigen den Zustand (eingedrückt): Sperren, Websicher, Bearbeiten
     for key in ["image-preview-tip-lock", "image-preview-tip-snap-web", "image-preview-tip-edit-color"] {
         let lbl = fp_i18n::t(key);
-        let node = h.query_all(By::new().label(lbl.as_str())).next().expect(key);
+        let dr = dialogs::dialog_rect(&h.ctx, image_preview::DIALOG_ID).expect("Bildvorschau gezeichnet");
+        let node = h.query_all(By::new().label(lbl.as_str())).find(|n| dr.contains(n.rect().center())).expect(key);
         let a = node.accesskit_node();
         assert!(a.toggled() == Some(egui::accesskit::Toggled::True) || a.is_selected() == Some(true), "{key} eingedrückt");
     }
