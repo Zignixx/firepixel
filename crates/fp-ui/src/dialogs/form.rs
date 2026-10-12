@@ -78,7 +78,7 @@ pub enum Pict {
     CapRound,
 }
 
-fn paint_pict(p: &egui::Painter, r: Rect, k: Pict, col: egui::Color32) {
+pub(crate) fn paint_pict(p: &egui::Painter, r: Rect, k: Pict, col: egui::Color32) {
     let s = Stroke::new(1.2, col);
     let c = r.center();
     match k {

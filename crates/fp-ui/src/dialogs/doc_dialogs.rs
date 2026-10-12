@@ -533,6 +533,9 @@ const NT_MODE: &str = "NumericTransformMode";
 const NT_SCALE_X: &str = "NumericTransformScaleX";
 const NT_SCALE_Y: &str = "NumericTransformScaleY";
 const NT_ANGLE: &str = "NumericTransformAngle";
+/// Pixelmaße bei „Größe ändern“ (DLG-7).
+const NT_WIDTH: &str = "NumericTransformWidth";
+const NT_HEIGHT: &str = "NumericTransformHeight";
 
 /// Numerisch transformieren (6002).
 #[derive(Clone, Debug, PartialEq)]
@@ -563,8 +566,9 @@ impl NumericTransformDialog {
             mode: p.get_int(NT_MODE, 0).clamp(0, 2) as usize,
             sx: pct(NT_SCALE_X),
             sy: pct(NT_SCALE_Y),
-            w: b.width() as f64,
-            h: b.height() as f64,
+            // Pixelmaße bei „Größe ändern“: zuletzt per OK bestätigt (DLG-7), sonst die Auswahl
+            w: p.get_real(NT_WIDTH, b.width() as f64).clamp(1.0, 30000.0),
+            h: p.get_real(NT_HEIGHT, b.height() as f64).clamp(1.0, 30000.0),
             cur_w: b.width() as f64,
             cur_h: b.height() as f64,
             angle: p.get_real(NT_ANGLE, 0.0).clamp(-360.0, 360.0),
@@ -584,7 +588,10 @@ impl NumericTransformDialog {
                 p.set(NT_SCALE_Y, fp_engine::PrefValue::Real(self.sy));
             }
             2 => p.set(NT_ANGLE, fp_engine::PrefValue::Real(self.angle)),
-            _ => {}
+            _ => {
+                p.set(NT_WIDTH, fp_engine::PrefValue::Real(self.w));
+                p.set(NT_HEIGHT, fp_engine::PrefValue::Real(self.h));
+            }
         }
     }
 
@@ -598,7 +605,50 @@ impl NumericTransformDialog {
     }
 }
 
-/// Zeigt den Dialog.
+impl NumericTransformDialog {
+    /// Getippter Wert in Feld `k` (0 = waagerecht, 1 = senkrecht) der aktuellen Art; mit
+    /// „Proportionen beibehalten“ rechnet das andere Feld sofort mit (Original: B 50 → H 50 beim
+    /// Tippen, PM-6 D26).
+    pub fn set_value(&mut self, k: usize, nv: f64) {
+        let nv = nv.max(0.0);
+        if self.mode == 1 {
+            if k == 0 {
+                if self.constrain && self.cur_w > 0.0 {
+                    self.h = (nv * self.cur_h / self.cur_w).round();
+                }
+                self.w = nv;
+            } else {
+                if self.constrain && self.cur_h > 0.0 {
+                    self.w = (nv * self.cur_w / self.cur_h).round();
+                }
+                self.h = nv;
+            }
+        } else if k == 0 {
+            self.sx = nv;
+            if self.constrain {
+                self.sy = nv;
+            }
+        } else {
+            self.sy = nv;
+            if self.constrain {
+                self.sx = nv;
+            }
+        }
+    }
+
+    /// Objektgröße nach der Transformation, rechts im Dialog („B: 100 / H: 80“); beim Drehen keine.
+    pub fn object_size(&self) -> Option<(f64, f64)> {
+        match self.mode {
+            0 => Some((self.cur_w * self.sx / 100.0, self.cur_h * self.sy / 100.0)),
+            1 => Some((self.w, self.h)),
+            _ => None,
+        }
+    }
+}
+
+/// Zeigt den Dialog (Original 6002, PM-6 D26): Liste Skalieren/Größe ändern/Drehen; in einem Rahmen
+/// die Felder mit ↔/↕-Symbol, Einheit, Kette (bei „Proportionen beibehalten“) und rechts die
+/// Objektgröße „B: … / H: …“; darunter die Kästchen, OK/Abbrechen rechts oben.
 pub fn show_numeric_transform(ctx: &egui::Context, st: &mut AppState) {
     let Some(mut d) = st.dialogs.numeric_transform.clone() else { return };
     let mut result = None;
@@ -607,65 +657,66 @@ pub fn show_numeric_transform(ctx: &egui::Context, st: &mut AppState) {
     let angle_l = t("dlg-numeric-angle");
     let px_l = t("dlg-unit-pixels");
     let (attrs_l, constrain_l, ok_l, cancel_l) = (t("dlg-numeric-scale-attributes"), t("dlg-constrain"), t("btn-ok"), t("btn-cancel"));
-    let dx = extra_w(ctx, &[&wh[0], &wh[1], &angle_l], dlu(46.0, 0.0).x - 4.0);
-    let du = extra_w(ctx, &[&px_l], dlu(30.0, 0.0).x);
     let mw = combo_fit_w(ctx, &refs(&modes), dlu(120.0, 0.0).x);
     let bw = super::buttons_w(ctx, &[&ok_l, &cancel_l], dlu(56.0, 0.0).x);
     let checks = super::max_text_w(ctx, &[&attrs_l, &constrain_l]) + 18.0 + dlu(8.0, 0.0).x + 8.0;
-    // Knopfspalte rechts von Feldern, Einheit und Modusliste
-    let bx = dlu(150.0, 0.0).x.max(dlu(144.0, 0.0).x + dx + du + 6.0).max(dlu(8.0, 0.0).x + mw + 12.0).ceil();
+    // Spalten im Rahmen: Symbol, Feld, Einheit, Kette, Objektgröße
+    let field_x = dlu(30.0, 0.0).x.max(dlu(14.0, 0.0).x + super::text_w(ctx, &angle_l) + 6.0).ceil();
+    let field_w = dlu(34.0, 0.0).x;
+    let unit_w = super::max_text_w(ctx, &["%", &px_l]).ceil();
+    let size_x = field_x + field_w + 6.0 + unit_w + 22.0;
+    let size_w = super::max_text_w(ctx, &[&fp_i18n::tr!("dlg-numeric-size-w", v = "00000"), &fp_i18n::tr!("dlg-numeric-size-h", v = "00000")]).ceil();
+    let frame_r = (size_x + size_w + 10.0).max(dlu(8.0, 0.0).x + mw).ceil();
+    // Knopfspalte rechts von Rahmen und Modusliste
+    let bx = dlu(150.0, 0.0).x.max(frame_r + 12.0).ceil();
     let width = (bx + bw + dlu(8.0, 0.0).x).max(dlu(214.0, 0.0).x).max(checks);
     let r = dialog_frame(ctx, "fp-numeric", &t("dlg-numeric-title"), vec2(width, dlu(0.0, 130.0).y), |ui, body| {
-        let rr = |r: [f32; 4]| dlu_rect(body.min, r).translate(vec2(if r[0] >= 60.0 { dx } else { 0.0 }, 0.0));
-        let lr = |y: f32| Rect::from_min_size(dlu_rect(body.min, [14.0, y, 0.0, 10.0]).min, vec2(dlu(46.0, 0.0).x - 4.0 + dx, dlu(0.0, 10.0).y));
         let o = body.min;
+        let theme = crate::theme::Theme::current(ui.ctx());
         if let Some(m) = fields::combo(ui, "nt-mode", Rect::from_min_size(dlu_rect(o, [8.0, 8.0, 120.0, 13.0]).min, vec2(mw, dlu(0.0, 13.0).y)), &refs(&modes), Some(d.mode), true) {
             d.mode = m;
         }
+        let frame = Rect::from_min_max(dlu_rect(o, [8.0, 26.0, 0.0, 0.0]).min, egui::pos2(o.x + frame_r, dlu_rect(o, [0.0, 68.0, 0.0, 0.0]).top()));
+        ui.painter().rect_stroke(frame, 2.0, egui::Stroke::new(1.0, if theme.glow { theme.colors.line_dark } else { theme.colors.line_mid }), egui::StrokeKind::Inside);
+        let row = |k: usize| dlu_rect(o, [0.0, 32.0 + k as f32 * 18.0, 0.0, 13.0]);
+        let fr = |k: usize| Rect::from_min_size(egui::pos2(o.x + field_x, row(k).top()), vec2(field_w, row(k).height()));
         match d.mode {
             2 => {
-                label(ui, o, lr(34.0), &angle_l);
-                if let Some(t) = fields::text(ui, "nt-angle", rr([60.0, 32.0, 40.0, 13.0]), &fields::fmt_num(d.angle, 1), true)
+                label(ui, o, Rect::from_min_size(egui::pos2(o.x + dlu(14.0, 0.0).x, fr(0).top()), vec2(field_x - dlu(14.0, 0.0).x - 4.0, fr(0).height())), &angle_l);
+                if let Some(t) = live_text(ui, "nt-angle", fr(0), &fields::fmt_num(d.angle, 1), true)
                     && let Some(v) = fields::parse_num(&t)
                 {
                     d.angle = v.clamp(-360.0, 360.0);
                 }
-                label(ui, o, rr([104.0, 34.0, 10.0, 10.0]), "°");
+                label(ui, o, Rect::from_min_size(egui::pos2(fr(0).right() + 6.0, fr(0).top()), vec2(12.0, fr(0).height())), "°");
             }
             m => {
                 let (a, b, unit) = if m == 1 { (d.w, d.h, px_l.as_str()) } else { (d.sx, d.sy, "%") };
-                for (k, (lab, v)) in [(&wh[0], a), (&wh[1], b)].iter().enumerate() {
-                    let y = 32.0 + k as f32 * 18.0;
-                    label(ui, o, lr(y + 2.0), lab);
-                    if let Some(t) = fields::text(ui, ("nt-v", m, k), rr([60.0, y, 50.0, 13.0]), &fields::fmt_num(*v, 1), true)
+                let mut units = [Rect::NOTHING; 2];
+                for (k, v) in [a, b].into_iter().enumerate() {
+                    let f = fr(k);
+                    // Symbol ↔ bzw. ↕ statt „Breite:/Höhe:“ (Text bleibt Tooltip und Name)
+                    let sr = Rect::from_center_size(egui::pos2(o.x + dlu(14.0, 0.0).x + 6.0, f.center().y), if k == 0 { vec2(13.0, 7.0) } else { vec2(7.0, 13.0) });
+                    super::path_dialogs::paint_double_arrow(ui, sr, k == 0, theme.colors.text);
+                    let hover = ui.interact(sr.expand(3.0), Id::new(("nt-symbol", k)), egui::Sense::hover());
+                    hover.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Label, true, wh[k].as_str()));
+                    let _ = hover.on_hover_text(wh[k].as_str());
+                    if let Some(t) = live_text(ui, ("nt-v", m, k), f, &fields::fmt_num(v, 1), true)
                         && let Some(nv) = fields::parse_num(&t)
                     {
-                        let nv = nv.max(0.0);
-                        if m == 1 {
-                            if k == 0 {
-                                if d.constrain && d.cur_w > 0.0 {
-                                    d.h = (nv * d.cur_h / d.cur_w).round();
-                                }
-                                d.w = nv;
-                            } else {
-                                if d.constrain && d.cur_h > 0.0 {
-                                    d.w = (nv * d.cur_w / d.cur_h).round();
-                                }
-                                d.h = nv;
-                            }
-                        } else if k == 0 {
-                            d.sx = nv;
-                            if d.constrain {
-                                d.sy = nv;
-                            }
-                        } else {
-                            d.sy = nv;
-                            if d.constrain {
-                                d.sx = nv;
-                            }
-                        }
+                        d.set_value(k, nv);
                     }
-                    label(ui, o, Rect::from_min_size(rr([114.0, y + 2.0, 30.0, 10.0]).min, vec2(dlu(30.0, 0.0).x + du, dlu(0.0, 10.0).y)), unit);
+                    units[k] = Rect::from_min_size(egui::pos2(f.right() + 6.0, f.top()), vec2(unit_w, f.height()));
+                    label(ui, o, units[k], unit);
+                }
+                if d.constrain {
+                    chain(ui, units[0], units[1], true);
+                }
+                if let Some((w, h)) = d.object_size() {
+                    for (k, (key, v)) in [("dlg-numeric-size-w", w), ("dlg-numeric-size-h", h)].into_iter().enumerate() {
+                        let s = fp_i18n::tr!(key, v = format!("{}", v.round() as i64));
+                        fields::label(ui, Rect::from_min_size(egui::pos2(o.x + size_x, fr(k).top()), vec2(size_w + 2.0, fr(k).height())), &s, true);
+                    }
                 }
             }
         }
@@ -683,9 +734,6 @@ pub fn show_numeric_transform(ctx: &egui::Context, st: &mut AppState) {
         if push_button(ui, Rect::from_min_size(egui::pos2(o.x + bx, dlu_rect(o, [0.0, 26.0, 0.0, 0.0]).top()), vec2(bw, bh)), &cancel_l, false, true) {
             result = Some(false);
         }
-        let _ = Rect::NOTHING;
-        let _ = vec2(0.0, 0.0);
-        let _ = Id::NULL;
     });
     match (result, r) {
         (Some(true), _) => {

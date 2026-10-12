@@ -915,7 +915,15 @@ pub(super) fn method(doc: DocId, name: &str, args: &[Arg], ctx: &mut Context) ->
             on_selection(doc, "modify.alterPath.expandStroke", p)
         }
         "pathInset" => on_selection(doc, "modify.alterPath.insetPath", json!({"width": a(0).f64()})),
-        "convertPathToMarquee" => on_selection(doc, "modify.convertPathToMarquee", json!({})),
+        // mode: 0 hart, 1 Anti-Alias, 2 weiche Kante (mit featherAmount), wie der Dialog D32
+        "convertPathToMarquee" => {
+            let edge = match a(0).i64() {
+                0 if !args.is_empty() => "hard",
+                2 => "feather",
+                _ => "antiAlias",
+            };
+            on_selection(doc, "modify.convertPathToMarquee", json!({"edge": edge, "feather": a(1).i64().clamp(0, 1000)}))
+        }
         "flattenSelection" => on_selection(doc, "modify.flattenSelection", json!({})),
         "mergeDown" => exec(Some(doc), "modify.mergeDown", json!({})).map(|_| JsValue::undefined()),
         "flattenDocument" | "flattenLayers" => exec(Some(doc), "modify.flattenLayers", json!({})).map(|_| JsValue::undefined()),

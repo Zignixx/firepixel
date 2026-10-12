@@ -5,7 +5,7 @@
 //! (5987, 19128, 5990, 5991, 6021), Statusleistentext (6012), HTML-Segment (14139),
 //! Strichoptionen (5963–5965), Neuer Stil (19123).
 
-use super::form::{number_input, CustomLayout, Field, FormDialog, Pict};
+use super::form::{number_input, CustomLayout, Field, FormDialog};
 use crate::inspector::scale;
 use super::{dlu, dlu_rect, t, text_w};
 use crate::app_state::AppState;
@@ -114,14 +114,6 @@ pub fn filter_form(cmd: &str, live: bool) -> Option<FormDialog> {
     Some(f)
 }
 
-/// Ecken als Symbolknöpfe in der Reihenfolge des Originals (Gehrung, abgeschrägt, rund); Codes der
-/// Voreinstellungen `InsetJoinType`/`ExpandJoinType`: 0 = rund (Vorgabe), 1 = abgeschrägt, 2 = Gehrung.
-fn join_field() -> Field {
-    Field::radio_of("join", t("dlg-lbl-corners").as_str(), &[t("dlg-join-miter").as_str(), t("dlg-join-bevel").as_str(), t("dlg-join-round").as_str()], vec![json!("miter"), json!("bevel"), json!("round")], 2)
-        .icons(&[Pict::JoinMiter, Pict::JoinBevel, Pict::JoinRound])
-        .pref_codes(&[2, 1, 0])
-}
-
 fn hex_of(c: fp_color::Argb) -> String {
     crate::ui_commands::hex(c)
 }
@@ -168,35 +160,11 @@ fn plain_form(st: &AppState, cmd: &str) -> Option<FormDialog> {
                 FormDialog::new("6542", t("dlg-title-delete-selection").as_str(), cmd, v)
             }
         }
-        "modify.alterPath.simplify" => FormDialog::new("6006", t("dlg-title-simplify").as_str(), cmd, vec![Field::number("amount", t("dlg-lbl-simplify-amount").as_str(), 10.0, 0.0, 100.0).popup()]).with_prefs(&[("amount", "SimplifyAmount")]),
-        "modify.alterPath.insetPath" => FormDialog::new(
-            "6007",
-            t("dlg-title-inset-path").as_str(),
-            cmd,
-            vec![
-                Field::radio_of("direction", t("dlg-lbl-direction").as_str(), &[t("dlg-dir-inside").as_str(), t("dlg-dir-outside").as_str()], vec![json!("inside"), json!("outside")], 0).pref_codes(&[0, 1]),
-                Field::number("distance", t("dlg-lbl-width").as_str(), 10.0, 0.0, 1000.0).popup(),
-                join_field(),
-                Field::number("miter", t("dlg-lbl-miter-limit").as_str(), 10.0, 4.0, 10.0).decimals(2),
-            ],
-        )
-        .with_width(400.0)
-        .with_prefs(&[("direction", "InsetDirection"), ("distance", "InsetAmount"), ("join", "InsetJoinType"), ("miter", "InsetMiterLimit")]),
-        "modify.alterPath.expandStroke" => FormDialog::new(
-            "6008",
-            t("dlg-title-expand-stroke").as_str(),
-            cmd,
-            vec![
-                Field::number("width", t("dlg-lbl-width").as_str(), 10.0, 1.0, 1000.0).popup(),
-                join_field(),
-                Field::number("miter", t("dlg-lbl-miter-limit").as_str(), 10.0, 1.0, 10.0).decimals(2),
-                Field::radio_of("cap", t("dlg-lbl-caps").as_str(), &[t("dlg-cap-butt").as_str(), t("dlg-cap-square").as_str(), t("dlg-cap-round").as_str()], vec![json!("butt"), json!("square"), json!("round")], 0)
-                    .icons(&[Pict::CapButt, Pict::CapSquare, Pict::CapRound])
-                    .pref_codes(&[0, 1, 2]),
-            ],
-        )
-        .with_width(400.0)
-        .with_prefs(&[("width", "ExpandWidth"), ("join", "ExpandJoinType"), ("miter", "ExpandMiterLimit"), ("cap", "ExpandCapType")]),
+        // Pfad-Dialoge mit Anordnung des Originals (DLG-7, PM-6 D29–D32): eigene Datei
+        "modify.alterPath.simplify" => super::path_dialogs::simplify(cmd),
+        "modify.alterPath.insetPath" => super::path_dialogs::inset(cmd),
+        "modify.alterPath.expandStroke" => super::path_dialogs::expand_stroke(cmd),
+        "modify.convertPathToMarquee" => super::path_dialogs::to_marquee(cmd),
         // Vorgabe wie im Original: Größe des gewählten Texts, sonst der zuletzt bestätigte Wert;
         // Feld mit Popup-Schieber 8..96 (11 §3.5.5), ohne Einheit, Knöpfe rechts untereinander
         "text.size.other" => FormDialog::new("6073", t("dlg-title-text-size").as_str(), cmd, vec![Field::number("size", t("dlg-lbl-size").as_str(), text_size_default(st), 8.0, 96.0).popup()]).with_layout(TEXT_SIZE_LAYOUT).with_store_hook(remember_text_size),

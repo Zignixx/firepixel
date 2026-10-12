@@ -21,6 +21,7 @@ pub mod misc;
 pub mod models;
 mod new_document;
 pub mod panel_menus;
+pub mod path_dialogs;
 pub mod popup_menu;
 pub(crate) mod preferences;
 pub mod shortcuts;

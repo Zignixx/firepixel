@@ -1364,7 +1364,15 @@ pub(super) fn register(r: &mut CommandRegistry) {
     r.add(cmd("modify.align.distributeHeights").requires(&[Requirement::Document, Requirement::MinSelected(3)]).run(|s, _| align(s, "distributeHeights")));
 
     // Pfade
-    r.add(cmd("modify.convertPathToMarquee").requires(&[Requirement::Document, Requirement::AnyOf(ObjectKind::Path)]).run(|s, _| {
+    // Dialog des Originals (PM-6 D32): „Rand:“ Hart / Anti-Alias (Vorgabe) / Weiche Kante + Breite
+    r.add(
+        cmd("modify.convertPathToMarquee")
+            .requires(&[Requirement::Document, Requirement::AnyOf(ObjectKind::Path)])
+            .opt_default("edge", ParamKind::Enum { values: ["hard", "antiAlias", "feather"].iter().map(|s| s.to_string()).collect() }, json!("antiAlias"), "Kante: hard, antiAlias (Vorgabe) oder feather")
+            .opt_default("feather", ParamKind::Integer { min: Some(0), max: Some(1000) }, json!(0), "Breite der weichen Kante")
+            .run(|s, p| {
+        let edge = p.opt_str("edge")?.unwrap_or_else(|| "antiAlias".into());
+        let feather = if edge == "feather" { p.opt_i64("feather")?.unwrap_or(0).clamp(0, 1000) as u32 } else { 0 };
         let geo = Arc::clone(&s.geometry_arc());
         let delete = s.prefs.get_bool("DeletePaths", true);
         with_doc(s, |d| {
@@ -1372,11 +1380,14 @@ pub(super) fn register(r: &mut CommandRegistry) {
             let mut acc: Option<Mask> = None;
             for (_, _, sh) in &items {
                 let b = geometry::contours_bounds(&sh.contours).map(|r| r.round_out()).unwrap_or_default();
-                let m = geo.coverage(sh, b.inflate(1, 1), true);
+                let m = geo.coverage(sh, b.inflate(1, 1), edge != "hard");
                 acc = Some(match acc {
                     None => m,
                     Some(a) => a.union(&m)?,
                 });
+            }
+            if feather > 0 {
+                acc = acc.map(|m| m.feather(feather)).transpose()?;
             }
             if delete {
                 let ids: Vec<_> = items.iter().map(|(_, e, _)| e.id).collect();
@@ -1387,7 +1398,8 @@ pub(super) fn register(r: &mut CommandRegistry) {
             d.selection.pixels = acc;
             Ok(CommandOutput::doc())
         })
-    }));
+            }),
+    );
     r.add(cmd("modify.combinePaths.join").requires(SEL).available(|s| s.active().is_some_and(|d| selected_elements(d).iter().any(|(_, e)| matches!(e.kind, ElementKind::Path(_) | ElementKind::Text(_) | ElementKind::Group(_) | ElementKind::WebObject(_))))).run(|s, _| {
         with_doc(s, join)?;
         Ok(CommandOutput::doc())

@@ -502,7 +502,8 @@ fn typed_value_survives_mouse_click_into_another_field() {
         }
         for (a, b) in [(1usize, 0usize), (0, 1), (n - 1, 0)] {
             let before = field_values(&h);
-            let typed = if before.get(a).map(String::as_str) == Some("7") { "8" } else { "7" };
+            // Wert statt Text vergleichen (Winkelgrenze zeigt „7.00“, DLG-7)
+            let typed = if before.get(a).and_then(|s| s.parse::<f64>().ok()) == Some(7.0) { "8" } else { "7" };
             let c = field_centers(&h);
             click(&mut h, c[a]);
             key_m(&mut h, Key::A, ctrl());
