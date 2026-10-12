@@ -33,7 +33,7 @@ impl PageRenderer for ExportRenderer {
             Background::Transparent => transparent_renderer(),
             _ => Arc::clone(&self.normal),
         };
-        let rect = req.area.or_else(|| fp_export::render::page_rect(doc, req.page)).ok_or("keine Leinwand")?;
+        let rect = req.area.or_else(|| fp_export::render::page_rect(doc, req.page)).ok_or_else(|| fp_i18n::t("panel-opt-no-canvas"))?;
         Ok(r.render_rect(doc, req.page, req.frame, rect).image)
     }
 }
@@ -81,7 +81,64 @@ pub const PALETTES: &[(&str, PaletteKind, bool, Option<i32>)] = &[
 ];
 
 const COLOR_COUNTS: [&str; 8] = ["2", "4", "8", "16", "32", "64", "128", "256"];
-const TRANSPARENCY: [&str; 3] = ["Ohne Transparenz", "Indextransparenz", "Alphatransparenz"];
+const TRANSPARENCY: [&str; 3] = ["panel-opt-transp-none", "panel-opt-transp-index", "panel-opt-transp-alpha"];
+
+/// Schlüssel der übersetzbaren Namen in [`FORMATS`], [`PALETTES`] und den eingebauten Vorgaben
+/// (`fp_export::options::builtin_presets`); die übrigen Namen sind Formatnamen und bleiben.
+const NAME_KEYS: &[(&str, &str)] = &[
+    ("Animiertes GIF", "panel-opt-format-anim-gif"),
+    ("WebP verlustfrei", "panel-opt-format-webp-lossless"),
+    ("Animiertes WebP", "panel-opt-format-anim-webp"),
+    ("Adaptiv", "panel-opt-palette-adaptive"),
+    ("Web-Adaptiv", "panel-opt-palette-web-adaptive"),
+    ("Web 216", "panel-opt-palette-web216"),
+    ("Exakt", "panel-opt-palette-exact"),
+    ("Macintosh", "panel-opt-palette-mac"),
+    ("Windows", "panel-opt-palette-windows"),
+    ("Graustufen", "panel-opt-palette-grayscale"),
+    ("Schwarzweiß", "panel-opt-palette-bw"),
+    ("Einheitlich", "panel-opt-palette-uniform"),
+    ("Benutzerdefiniert", "panel-opt-palette-custom"),
+];
+
+/// Vorgabenamen aus fp-export → Schlüssel.
+const PRESET_KEYS: &[(&str, &str)] = &[
+    ("GIF Web 216", "panel-opt-preset-gif-web216"),
+    ("GIF WebSnap 256", "panel-opt-preset-gif-websnap256"),
+    ("GIF WebSnap 128", "panel-opt-preset-gif-websnap128"),
+    ("GIF Adaptiv 256", "panel-opt-preset-gif-adaptive256"),
+    ("JPEG – Höhere Qualität", "panel-opt-preset-jpeg-better"),
+    ("JPEG – Kleinere Datei", "panel-opt-preset-jpeg-smaller"),
+    ("Animiertes GIF WebSnap 128", "panel-opt-preset-anim-gif-websnap128"),
+    ("PNG8", "panel-opt-preset-png8"),
+    ("PNG24", "panel-opt-preset-png24"),
+    ("PNG32", "panel-opt-preset-png32"),
+    ("WebP 80", "panel-opt-preset-webp80"),
+    ("WebP verlustfrei", "panel-opt-preset-webp-lossless"),
+    ("AVIF 60", "panel-opt-preset-avif60"),
+    ("APNG", "panel-opt-preset-apng"),
+    ("Animiertes WebP", "panel-opt-preset-anim-webp"),
+];
+
+fn translated(name: &str, table: &[(&str, &str)]) -> String {
+    table.iter().find(|(de, _)| *de == name).map(|(_, k)| fp_i18n::t(k)).unwrap_or_else(|| name.to_string())
+}
+
+/// Angezeigter Name eines Eintrags von [`FORMATS`] (Trennlinien bleiben).
+pub fn format_name(i: usize) -> String {
+    FORMATS.get(i).map(|f| translated(f.0, NAME_KEYS)).unwrap_or_default()
+}
+
+/// Angezeigter Name eines Eintrags von [`PALETTES`].
+pub fn palette_name(i: usize) -> String {
+    PALETTES.get(i).map(|p| translated(p.0, NAME_KEYS)).unwrap_or_default()
+}
+
+/// Übersetzter Anzeigename einer Export-Vorgabe (`Preset::name` aus fp-export); unbekannte
+/// (z. B. eigene, gespeicherte) Namen bleiben unverändert.
+pub fn preset_label(name: &str) -> String {
+    translated(name, PRESET_KEYS)
+}
 
 /// Index der Formatliste.
 pub fn format_index(s: &OptimizeSettings) -> Option<usize> {
@@ -111,13 +168,13 @@ pub fn preset_index(s: &OptimizeSettings) -> Option<usize> {
 
 /// Kurzbeschreibung (wenn keine Vorgabe passt), z. B. „GIF Adaptiv 128“.
 pub fn settings_label(s: &OptimizeSettings) -> String {
-    let f = format_index(s).map(|i| FORMATS[i].0).unwrap_or("Benutzerdefiniert");
+    let f = format_index(s).map(format_name).unwrap_or_else(|| fp_i18n::t("panel-opt-custom"));
     if s.color_mode == ColorMode::Indexed && s.format != ExportFormat::Wbmp {
-        format!("{f} {} {}", PALETTES[palette_index(s)].0, s.max_colors)
+        format!("{f} {} {}", palette_name(palette_index(s)), s.max_colors)
     } else if s.format == ExportFormat::Jpeg {
         format!("JPEG {}", s.jpeg.quality)
     } else {
-        f.to_string()
+        f
     }
 }
 
@@ -128,7 +185,7 @@ pub fn apply_settings(st: &mut AppState, s: &OptimizeSettings) {
     let model = s.to_model(&base);
     match serde_json::to_value(&model) {
         Ok(v) => st.run("pi.export.settings", json!({"settings": v})),
-        Err(e) => st.push(Action::Status(format!("Exporteinstellungen: {e}"))),
+        Err(e) => st.push(Action::Status(fp_i18n::tr!("panel-opt-settings-error", error = e.to_string()))),
     }
 }
 
@@ -207,7 +264,7 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
     let theme = Theme::current(ui.ctx());
     let c = theme.colors.clone();
     let Some(s) = current(st) else {
-        common::not_available(ui, "Kein Dokument geöffnet.");
+        common::not_available(ui, &common::t("panel-opt-no-document"));
         return;
     };
     let mut ns = s.clone();
@@ -216,7 +273,8 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
     let d = Dl::at(area.min + vec2(4.0, 2.0));
     // Gespeicherte Einstellungen (4749)
     let presets = builtin_presets();
-    let names: Vec<&str> = presets.iter().map(|p| p.name).collect();
+    let names_s: Vec<String> = presets.iter().map(|p| preset_label(p.name)).collect();
+    let names: Vec<&str> = names_s.iter().map(|s| s.as_str()).collect();
     let psel = preset_index(&s);
     let label = psel.map(|i| names[i].to_string()).unwrap_or_else(|| settings_label(&s));
     let resp = fields::combo_box_frame(ui, Id::new("opt-preset"), d.r(16.0, 2.0, 113.0, 12.0), &label, true);
@@ -247,7 +305,8 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
     }
     ui.painter().hline(d.r(131.0, 8.0, 17.0, 1.0).x_range(), d.r(0.0, 8.0, 1.0, 1.0).top(), Stroke::new(1.0, c.line_mid));
     // Format (4610), Matte (4685)
-    let fnames: Vec<&str> = FORMATS.iter().map(|f| f.0).collect();
+    let fnames_s: Vec<String> = (0..FORMATS.len()).map(format_name).collect();
+    let fnames: Vec<&str> = fnames_s.iter().map(|s| s.as_str()).collect();
     if let Some(i) = fields::combo(ui, "opt-format", d.r(2.0, 17.0, 71.0, 13.0), &fnames, format_index(&s), true)
         && let Some((f, m)) = FORMATS[i].1
     {
@@ -257,7 +316,7 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
             ns.webp.lossless = f == ExportFormat::WebPLossless || ns.webp.lossless;
         }
     }
-    fields::label_right(ui, d.r(74.0, 18.0, 39.0, 11.0), "Hintergr.:", true);
+    common::label_right_fit(ui, d.r(74.0, 18.0, 39.0, 11.0), &common::t("panel-opt-matte"), true);
     let matte = s.matte.map(fp_color::Argb);
     match crate::inspector::popups::color_button(ui, "opt-matte", d.r(114.0, 17.0, 16.0, 13.0), st, matte, true, true, false) {
         Some(crate::inspector::popups::ColorChoice::Color(col)) => ns.matte = Some(col.0 | 0xff00_0000),
@@ -269,7 +328,8 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
     let lossy_modern = matches!(ns.format, ExportFormat::WebP | ExportFormat::Avif) || (ns.format == ExportFormat::AnimatedWebP && !ns.webp.lossless);
     if indexed {
         // Palette (4616), Farben (4602)
-        let pnames: Vec<&str> = PALETTES.iter().map(|p| p.0).collect();
+        let pnames_s: Vec<String> = (0..PALETTES.len()).map(palette_name).collect();
+        let pnames: Vec<&str> = pnames_s.iter().map(|s| s.as_str()).collect();
         if let Some(i) = fields::combo(ui, "opt-palette", d.r(2.0, 32.0, 71.0, 13.0), &pnames, Some(palette_index(&s)), true) {
             let (_, k, web, cnt) = PALETTES[i];
             ns.palette_kind = k;
@@ -278,7 +338,7 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                 ns.max_colors = n;
             }
         }
-        fields::label_right(ui, d.r(75.0, 33.0, 37.0, 11.0), "Farben:", true);
+        common::label_right_fit(ui, d.r(75.0, 33.0, 37.0, 11.0), &common::t("panel-opt-colors"), true);
         let cnt_items: Vec<String> = COLOR_COUNTS.iter().map(|s| s.to_string()).collect();
         if let Some(v) = fields::combo_edit(ui, "opt-colors", d.r(113.0, 32.0, 33.0, 13.0), &s.max_colors.to_string(), &cnt_items, true)
             && let Some(n) = fields::parse_num(&v)
@@ -287,11 +347,11 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
         }
         // Verlust (4677), Rastern (4676)
         let gif = matches!(ns.format, ExportFormat::Gif | ExportFormat::AnimatedGif);
-        fields::label(ui, d.r(0.0, 48.0, 32.0, 11.0), "Verlust:", gif);
+        common::label_fit(ui, d.r(0.0, 48.0, 38.0, 11.0), &common::t("panel-opt-loss"), gif);
         if let Some(v) = fields::number(ui, "opt-lossy", d.r(39.0, 48.0, 24.0, 13.0), Some(d.r(63.0, 48.0, 9.0, 12.0)), Some(s.lossy as f64), (0.0, 100.0), 0, gif) {
             ns.lossy = v as i32;
         }
-        fields::label_right(ui, d.r(73.0, 49.0, 40.0, 11.0), "Rastern:", true);
+        common::label_right_fit(ui, d.r(73.0, 49.0, 40.0, 11.0), &common::t("panel-opt-dither"), true);
         let dp = match s.dither {
             Dither::Diffusion(p) => p,
             Dither::Pattern2x2 => 100,
@@ -306,7 +366,9 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
             Transparency::Index => 1,
             _ => 2,
         };
-        if let Some(i) = fields::combo(ui, "opt-transp", d.r(2.0, 63.0, 136.0, 13.0), &TRANSPARENCY, Some(ti), true) {
+        let tn: Vec<String> = TRANSPARENCY.iter().map(|k| common::t(k)).collect();
+        let tn_refs: Vec<&str> = tn.iter().map(|s| s.as_str()).collect();
+        if let Some(i) = fields::combo(ui, "opt-transp", d.r(2.0, 63.0, 136.0, 13.0), &tn_refs, Some(ti), true) {
             ns.transparency = match i {
                 1 => Transparency::Index,
                 2 => Transparency::IndexAlpha,
@@ -314,7 +376,7 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
             };
         }
     } else if jpeg || lossy_modern {
-        fields::label_right(ui, d.r(74.0, 34.0, 38.0, 11.0), "Qualität:", true);
+        common::label_right_fit(ui, d.r(40.0, 34.0, 72.0, 11.0), &common::t("panel-opt-quality"), true);
         let q = if jpeg { s.jpeg.quality } else if ns.format == ExportFormat::Avif { s.avif.quality } else { s.webp.quality };
         if let Some(v) = fields::number(ui, "opt-quality", d.r(113.0, 32.0, 24.0, 13.0), Some(d.r(137.0, 32.0, 9.0, 12.0)), Some(q as f64), (1.0, 100.0), 0, true) {
             let v = v as i32;
@@ -327,32 +389,32 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
             }
         }
         if jpeg {
-            fields::label_right(ui, d.r(30.0, 49.0, 82.0, 11.0), "Selektive Qualität:", s.jpeg.selective.enabled);
+            common::label_right_fit(ui, d.r(0.0, 49.0, 112.0, 11.0), &common::t("panel-opt-selective-quality"), s.jpeg.selective.enabled);
             if let Some(v) = fields::number(ui, "opt-selq", d.r(113.0, 48.0, 18.0, 13.0), None, Some(s.jpeg.selective.quality as f64), (1.0, 100.0), 0, s.jpeg.selective.enabled) {
                 ns.jpeg.selective.quality = v as i32;
             }
-            fields::label_right(ui, d.r(28.0, 64.0, 84.0, 11.0), "Glättung:", true);
+            common::label_right_fit(ui, d.r(0.0, 64.0, 112.0, 11.0), &common::t("panel-opt-smoothing"), true);
             let sm: Vec<String> = (0..=8).map(|i| i.to_string()).collect();
             let smr: Vec<&str> = sm.iter().map(|s| s.as_str()).collect();
             if let Some(i) = fields::combo(ui, "opt-smooth", d.r(114.0, 63.0, 32.0, 13.0), &smr, Some(s.jpeg.smoothing.clamp(0, 8) as usize), true) {
                 ns.jpeg.smoothing = i as i32;
             }
         } else if ns.format == ExportFormat::Avif {
-            fields::label_right(ui, d.r(30.0, 49.0, 82.0, 11.0), "Geschwindigkeit:", true);
+            common::label_right_fit(ui, d.r(0.0, 49.0, 112.0, 11.0), &common::t("panel-opt-speed"), true);
             if let Some(v) = fields::number(ui, "opt-speed", d.r(113.0, 48.0, 24.0, 13.0), Some(d.r(137.0, 48.0, 9.0, 12.0)), Some(s.avif.speed as f64), (1.0, 10.0), 0, true) {
                 ns.avif.speed = v as u8;
             }
         }
     } else {
         // 24/32-Bit-Formate: Transparenz folgt der Farbtiefe
-        let t = if ns.color_mode == ColorMode::Rgba32 { "Alphatransparenz" } else { "Ohne Transparenz" };
-        let _ = fields::combo(ui, "opt-transp-tc", d.r(2.0, 63.0, 136.0, 13.0), &[t], Some(0), false);
+        let t = common::t(if ns.color_mode == ColorMode::Rgba32 { "panel-opt-transp-alpha" } else { "panel-opt-transp-none" });
+        let _ = fields::combo(ui, "opt-transp-tc", d.r(2.0, 63.0, 136.0, 13.0), &[t.as_str()], Some(0), false);
     }
     // Optionen (Bedienfeldmenü 6941: Zeilensprung, progressives JPEG)
-    if let Some(b) = fields::checkbox(ui, "opt-interlace", d.r(2.0, 79.0, 70.0, 10.0), "Zeilensprung", s.interlaced, matches!(ns.format, ExportFormat::Gif | ExportFormat::AnimatedGif | ExportFormat::Png)) {
+    if let Some(b) = common::checkbox_fit(ui, "opt-interlace", d.r(2.0, 79.0, 70.0, 10.0), &common::t("panel-opt-interlaced"), s.interlaced, matches!(ns.format, ExportFormat::Gif | ExportFormat::AnimatedGif | ExportFormat::Png)) {
         ns.interlaced = b;
     }
-    if let Some(b) = fields::checkbox(ui, "opt-progressive", d.r(76.0, 79.0, 70.0, 10.0), "Progressiv", s.jpeg.progressive, jpeg) {
+    if let Some(b) = common::checkbox_fit(ui, "opt-progressive", d.r(76.0, 79.0, 70.0, 10.0), &common::t("panel-opt-progressive"), s.jpeg.progressive, jpeg) {
         ns.jpeg.progressive = b;
     }
     if ns != s {
@@ -463,30 +525,32 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
         st.push(a);
     }
     let y = table.bottom() + 4.0;
-    ui.painter().text(pos2(avail.left() + 2.0, y + 9.0), Align2::LEFT_CENTER, "Sortieren nach:", theme.small_font(), c.text);
-    if let Some(i) = fields::combo(ui, "opt-sort", Rect::from_min_size(pos2(avail.left() + 82.0, y), vec2(60.0, 18.0)), &["Ohne", "Leuchtkraft", "Häufigkeit"], Some(sort_i), indexed) {
+    common::fit_text(ui, Rect::from_min_size(pos2(avail.left() + 2.0, y), vec2(78.0, 18.0)), Align2::LEFT_CENTER, &common::t("panel-opt-sort-by"), theme.small_font(), c.text);
+    let sorts = ["panel-opt-sort-none", "panel-opt-sort-luminance", "panel-opt-sort-popularity"].map(common::t);
+    if let Some(i) = fields::combo(ui, "opt-sort", Rect::from_min_size(pos2(avail.left() + 82.0, y), vec2(60.0, 18.0)), &[sorts[0].as_str(), sorts[1].as_str(), sorts[2].as_str()], Some(sort_i), indexed) {
         st.run(["panel.optimize.sortNone", "panel.optimize.sortLuminance", "panel.optimize.sortPopularity"][i.min(2)], json!({}));
     }
     let count = pv.as_ref().map(|p| p.colors).unwrap_or(0);
-    ui.painter().text(pos2(avail.right() - 4.0, y + 9.0), Align2::RIGHT_CENTER, format!("{count} Farben"), theme.small_font(), c.text);
+    let count_r = Rect::from_min_max(pos2(avail.left() + 146.0, y), pos2(avail.right() - 4.0, y + 18.0));
+    common::fit_text(ui, count_r, Align2::RIGHT_CENTER, &fp_i18n::tr!("panel-opt-color-count", n = count), theme.small_font(), c.text);
     // Knopfleiste (4630–4699): Transparenz, Bearbeiten, Websicher, Sperren, Hinzufügen, Löschen
     // bei niedriger Gruppe nicht über die Sortierzeile legen (Inhalt wird dann am Gruppenrand abgeschnitten)
     let by = (avail.bottom() - 20.0).max(y + 22.0);
     let has_sel = !sel.is_empty() && indexed;
     let colors: Vec<String> = sel.iter().map(|c| format!("#{:06x}", c & 0x00ff_ffff)).collect();
     let glyphs: [(crate::inspector::glyphs::Glyph, &str, bool, &str, serde_json::Value); 8] = [
-        (crate::inspector::glyphs::Glyph::Plus, "Farbe zu Transparenz hinzufügen", has_sel, "panel.optimize.makeTransparent", json!({"colors": colors, "on": true})),
-        (crate::inspector::glyphs::Glyph::Minus, "Farbe aus Transparenz entfernen", has_sel, "panel.optimize.makeTransparent", json!({"colors": colors, "on": false})),
-        (crate::inspector::glyphs::Glyph::Eyedropper, "Farbe für Transparenz wählen (ausgewählte Farbe als einzige transparente)", has_sel, "history.replay", json!({"commands": [{"command": "panel.optimize.makeTransparent", "params": {"colors": model.palette.iter().filter(|e| e.transparent == Some(true)).map(|e| format!("#{:06x}", e.color & 0xff_ffff)).collect::<Vec<_>>(), "on": false}}, {"command": "panel.optimize.makeTransparent", "params": {"colors": colors, "on": true}}], "label": "Transparenz wählen"})),
-        (crate::inspector::glyphs::Glyph::Gear, "Farbe bearbeiten", has_sel, "panel.optimize.editColor", json!({})),
-        (crate::inspector::glyphs::Glyph::Picker, "Websicher machen", has_sel, "panel.optimize.snapToWeb", json!({"colors": colors})),
-        (crate::inspector::glyphs::Glyph::Lock, "Farbe sperren", has_sel, "panel.optimize.lockColors", json!({"colors": colors})),
-        (crate::inspector::glyphs::Glyph::StyleNew, "Farbe hinzufügen", indexed, "panel.optimize.addColorMenu", json!({})),
-        (crate::inspector::glyphs::Glyph::Trash, "Farbe löschen", has_sel, "panel.optimize.deleteColors", json!({"colors": colors})),
+        (crate::inspector::glyphs::Glyph::Plus, "panel-opt-add-transparent", has_sel, "panel.optimize.makeTransparent", json!({"colors": colors, "on": true})),
+        (crate::inspector::glyphs::Glyph::Minus, "panel-opt-remove-transparent", has_sel, "panel.optimize.makeTransparent", json!({"colors": colors, "on": false})),
+        (crate::inspector::glyphs::Glyph::Eyedropper, "panel-opt-select-transparent", has_sel, "history.replay", json!({"commands": [{"command": "panel.optimize.makeTransparent", "params": {"colors": model.palette.iter().filter(|e| e.transparent == Some(true)).map(|e| format!("#{:06x}", e.color & 0xff_ffff)).collect::<Vec<_>>(), "on": false}}, {"command": "panel.optimize.makeTransparent", "params": {"colors": colors, "on": true}}], "label": common::t("panel-opt-select-transparent-label")})),
+        (crate::inspector::glyphs::Glyph::Gear, "panel-opt-edit-color", has_sel, "panel.optimize.editColor", json!({})),
+        (crate::inspector::glyphs::Glyph::Picker, "panel-opt-snap-web", has_sel, "panel.optimize.snapToWeb", json!({"colors": colors})),
+        (crate::inspector::glyphs::Glyph::Lock, "panel-opt-lock-color", has_sel, "panel.optimize.lockColors", json!({"colors": colors})),
+        (crate::inspector::glyphs::Glyph::StyleNew, "panel-opt-add-color", indexed, "panel.optimize.addColorMenu", json!({})),
+        (crate::inspector::glyphs::Glyph::Trash, "panel-opt-delete-color", has_sel, "panel.optimize.deleteColors", json!({"colors": colors})),
     ];
     for (i, (g, tip, en, cmd, params)) in glyphs.iter().enumerate() {
         let x = avail.left() + 4.0 + i as f32 * 21.0 + if i >= 3 { 12.0 } else { 0.0 } + if i >= 6 { 12.0 } else { 0.0 };
-        if fields::icon_button(ui, ("opt-btn", i), Rect::from_min_size(pos2(x, by), vec2(19.0, 16.0)), *g, *en, tip).clicked() && *en {
+        if fields::icon_button(ui, ("opt-btn", i), Rect::from_min_size(pos2(x, by), vec2(19.0, 16.0)), *g, *en, &common::t(tip)).clicked() && *en {
             st.run(cmd, params.clone());
         }
     }
@@ -505,5 +569,9 @@ mod tests {
         }
         let s = OptimizeSettings { palette_kind: PaletteKind::Grayscale, max_colors: 2, ..Default::default() };
         assert_eq!(PALETTES[palette_index(&s)].0, "Schwarzweiß");
+        // jeder Vorgabename hat einen Schlüssel (sonst bliebe er in jeder Sprache deutsch)
+        for p in builtin_presets() {
+            assert!(PRESET_KEYS.iter().any(|(de, _)| *de == p.name), "Vorgabe ohne Schlüssel: {}", p.name);
+        }
     }
 }

@@ -45,7 +45,7 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                 ui.painter().text(ir.right_bottom(), Align2::RIGHT_BOTTOM, "×", theme.bold(11.0), c.icon_red);
             }
             let col = if done { c.text } else { c.text_disabled };
-            ui.painter().text(pos2(rect.left() + 42.0, rect.center().y), Align2::LEFT_CENTER, label, theme.ui_font(), col);
+            crate::widgets::text_clipped(ui.painter(), pos2(rect.left() + 42.0, rect.center().y), Align2::LEFT_CENTER, label, theme.ui_font(), col, rect.width() - 46.0);
             if resp.clicked() {
                 if resp.interact_pointer_pos().is_some_and(|p| slider.contains(p)) {
                     goto = Some(i + 1);
@@ -81,20 +81,21 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
         st.session.active().map(|d| sel.iter().flat_map(|i| d.history.export(*i..*i + 1)).collect()).unwrap_or_default()
     };
     let rec = cmds(st);
+    let (tip_copy, tip_save) = (common::t("panel-history-copy-steps"), common::t("panel-history-save-command"));
     let buttons = [
-        FooterButton { glyph: Glyph::Copy, tip: "Schritte kopieren", enabled: any && replay, action: Some(Action::Status("copy-steps".into())) },
-        FooterButton { glyph: Glyph::Save, tip: "Als Befehl speichern", enabled: any && replay, action: Some(Action::Status("save-steps".into())) },
+        FooterButton { glyph: Glyph::Copy, tip: &tip_copy, enabled: any && replay, action: Some(Action::Status("copy-steps".into())) },
+        FooterButton { glyph: Glyph::Save, tip: &tip_save, enabled: any && replay, action: Some(Action::Status("save-steps".into())) },
     ];
     // „Wiederholen“ als Textknopf links (4171)
     let rect = ui.available_rect_before_wrap();
     let rr = Rect::from_min_size(pos2(rect.left() + 3.0, rect.bottom() - common::FOOTER_H + 3.0), vec2(72.0, 16.0));
-    if crate::inspector::fields::button(ui, "history-replay", rr, "Wiederholen", any && replay) {
-        st.run("history.replay", json!({"commands": rec.clone(), "label": "Schritte wiederholen"}));
+    if crate::inspector::fields::button(ui, "history-replay", rr, &common::t("panel-history-replay"), any && replay) {
+        st.run("history.replay", json!({"commands": rec.clone(), "label": common::t("panel-history-replay-label")}));
     }
     match common::footer(ui, 80.0, "", &buttons) {
         Some(Action::Status(s)) if s == "copy-steps" => {
             ui.ctx().copy_text(fp_engine::history::to_script(&rec));
-            st.push(Action::Status("Schritte in die Zwischenablage kopiert".into()));
+            st.push(Action::Status(common::t("panel-history-copied")));
         }
         Some(Action::Status(s)) if s == "save-steps" => {
             // wie im Original: Namensabfrage, Ablage im Befehlsordner (Befehle-Menü)

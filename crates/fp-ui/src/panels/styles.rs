@@ -34,7 +34,7 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
     let c = theme.colors.clone();
     let (head, _) = ui.allocate_exact_size(vec2(ui.available_width(), 26.0), Sense::hover());
     crate::inspector::glyphs::paint(ui.painter(), Rect::from_min_size(head.min + vec2(6.0, 5.0), vec2(16.0, 16.0)), Glyph::Folder, &theme, true);
-    let _ = fields::combo(ui, "styles-src", Rect::from_min_size(head.min + vec2(26.0, 3.0), vec2(160.0, 20.0)), &["Aktuelles Dokument"], Some(0), true);
+    let _ = fields::combo(ui, "styles-src", Rect::from_min_size(head.min + vec2(26.0, 3.0), vec2(160.0_f32.min(head.width() - 30.0).max(40.0), 20.0)), &[common::t("panel-styles-source-document").as_str()], Some(0), true);
     let styles: Vec<std::sync::Arc<fp_model::Style>> = st.session.active().and_then(|d| d.doc.styles.clone()).unwrap_or_default();
     let doc_key = st.session.active().map(|d| d.id.0).unwrap_or(0);
     let sel: Option<String> = st.dialogs.panel_sel.styles.first().cloned();
@@ -52,7 +52,7 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
         for (i, s) in styles.iter().enumerate() {
             let r = Rect::from_min_size(pos2(area.left() + 2.0 + (i % cols) as f32 * cell, area.top() + 2.0 + (i / cols) as f32 * (cell + 14.0)), vec2(cell - 4.0, cell - 4.0));
             let resp = ui.interact(r, Id::new(("style", i)), Sense::click_and_drag());
-            resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Other, true, format!("Stil {}", s.name)));
+            resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Other, true, fp_i18n::tr!("panel-styles-item", name = s.name.as_str())));
             if resp.drag_started() {
                 super::drag_drop::start(ui.ctx(), super::drag_drop::Payload::Style(s.name.clone()));
             }
@@ -108,12 +108,14 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
             }
         }
         if styles.is_empty() {
-            ui.painter().text(area.left_top() + vec2(8.0, 8.0), Align2::LEFT_TOP, "Keine Stile im Dokument", theme.small_font(), c.text_disabled);
+            let r = Rect::from_min_max(area.left_top() + vec2(8.0, 8.0), pos2(area.right() - 4.0, area.top() + 22.0));
+            common::fit_text(ui, r, Align2::LEFT_TOP, &common::t("panel-styles-empty"), theme.small_font(), c.text_disabled);
         }
     });
+    let (tip_new, tip_del) = (common::t("panel-styles-new"), common::t("panel-styles-delete"));
     let buttons = [
-        FooterButton { glyph: Glyph::StyleNew, tip: "Neuer Stil", enabled: has_selection, action: Some(Action::Run("panel.styles.new".into(), json!({}))) },
-        FooterButton { glyph: Glyph::Trash, tip: "Stil löschen", enabled: sel.is_some(), action: sel.clone().map(|_| Action::Run("panel.styles.delete".into(), json!({"names": multi.clone()}))) },
+        FooterButton { glyph: Glyph::StyleNew, tip: &tip_new, enabled: has_selection, action: Some(Action::Run("panel.styles.new".into(), json!({}))) },
+        FooterButton { glyph: Glyph::Trash, tip: &tip_del, enabled: sel.is_some(), action: sel.clone().map(|_| Action::Run("panel.styles.delete".into(), json!({"names": multi.clone()}))) },
     ];
     if let Some(a) = common::footer(ui, 8.0, "", &buttons) {
         actions.push(a);

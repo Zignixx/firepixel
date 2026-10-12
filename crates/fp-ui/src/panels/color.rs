@@ -7,6 +7,7 @@
 //! „Graustufen“ 256 Stufen, „Benutzerdefiniert“. Dateien ACT/ASE/ACO/GIF über fp-color.
 //! Sortieren nach Farbe wie `@006741a0` (kleinstes H8, Gleichstand → letzter).
 
+use super::common;
 use crate::app_state::{Action, AppState};
 use crate::inspector::fields;
 use crate::theme::Theme;
@@ -17,7 +18,15 @@ use serde_json::json;
 
 /// Farbfeldsätze: Anzeigename und Nummer der Voreinstellung `SwatchesPanelColorPaletteChoice`
 /// (0 Farbwürfel, 1 benutzerdefiniert, 2 Graustufen, 3 Mac, 4 Windows, 5 Kontinuierlicher Farbton).
-pub const SETS: &[(&str, i64)] = &[("Farbwürfel", 0), ("Kontinuierlicher Farbton", 5), ("Windows-System", 4), ("Macintosh-System", 3), ("Graustufen", 2), ("Benutzerdefiniert", 1)];
+/// Erster Wert: Schlüssel des Anzeigenamens in `bedienfelder.ftl`.
+pub const SETS: &[(&str, i64)] = &[
+    ("panel-swatches-set-cubes", 0),
+    ("panel-swatches-set-continuous", 5),
+    ("panel-swatches-set-windows", 4),
+    ("panel-swatches-set-mac", 3),
+    ("panel-swatches-set-grayscale", 2),
+    ("panel-swatches-set-custom", 1),
+];
 
 fn hsv(h: f32, s: f32, v: f32) -> Argb {
     let h = h.rem_euclid(360.0) / 60.0;
@@ -58,27 +67,30 @@ pub fn swatches(ui: &mut Ui, st: &mut AppState) {
     let choice = st.session.prefs.get_int(ui_commands::SWATCH_SET_KEY, 0);
     let colors = ui_commands::current_swatches(&st.session.prefs);
     let (head, _) = ui.allocate_exact_size(vec2(ui.available_width(), 24.0), Sense::hover());
-    let names: Vec<&str> = SETS.iter().map(|s| s.0).collect();
-    if let Some(i) = fields::combo(ui, "swatch-set", Rect::from_min_size(head.min + vec2(2.0, 2.0), vec2(150.0, 20.0)), &names, SETS.iter().position(|s| s.1 == choice), true) {
+    let names_s: Vec<String> = SETS.iter().map(|s| common::t(s.0)).collect();
+    let names: Vec<&str> = names_s.iter().map(|s| s.as_str()).collect();
+    // schmale Bedienfelder: Satzauswahl und Menü teilen sich die Breite
+    let set_w = (head.width() * 0.6).clamp(60.0, 150.0);
+    if let Some(i) = fields::combo(ui, "swatch-set", Rect::from_min_size(head.min + vec2(2.0, 2.0), vec2(set_w, 20.0)), &names, SETS.iter().position(|s| s.1 == choice), true) {
         st.run("panel.swatches.setChoice", json!({"set": SETS[i].1}));
     }
-    let menu_r = Rect::from_min_size(pos2(head.left() + 156.0, head.top() + 2.0), vec2((head.width() - 160.0).max(40.0), 20.0));
-    let resp = fields::combo_box_frame(ui, Id::new("swatch-file"), menu_r, "Farbfelder", true);
+    let menu_r = Rect::from_min_size(pos2(head.left() + set_w + 6.0, head.top() + 2.0), vec2((head.width() - set_w - 10.0).max(40.0), 20.0));
+    let resp = fields::combo_box_frame(ui, Id::new("swatch-file"), menu_r, &common::t("panel-swatches-menu"), true);
     egui::Popup::menu(&resp).frame(crate::menu::menu_frame(&theme)).show(|ui| {
         ui.spacing_mut().item_spacing = vec2(0.0, 0.0);
         for (label, cmd) in [
-            ("Farbfelder hinzufügen…", "panel.swatches.add"),
-            ("Farbfelder ersetzen…", "panel.swatches.replace"),
-            ("Farbfelder speichern…", "panel.swatches.save"),
-            ("Farbfelder löschen", "panel.swatches.clear"),
-            ("Nach Farbe sortieren", "panel.swatches.sortByColor"),
+            ("panel-swatches-add", "panel.swatches.add"),
+            ("panel-swatches-replace", "panel.swatches.replace"),
+            ("panel-swatches-save", "panel.swatches.save"),
+            ("panel-swatches-clear", "panel.swatches.clear"),
+            ("panel-swatches-sort", "panel.swatches.sortByColor"),
         ] {
-            if fields::list_item(ui, label, false).clicked() {
+            if fields::list_item(ui, &common::t(label), false).clicked() {
                 st.run(cmd, json!({}));
                 ui.close();
             }
         }
-        if fields::list_item(ui, "Aktuelle Füllfarbe hinzufügen", false).clicked() {
+        if fields::list_item(ui, &common::t("panel-swatches-add-fill"), false).clicked() {
             st.run("panel.swatches.addColor", json!({"color": ui_commands::hex(Argb(st.session.tools.fill_color.0 | 0xff00_0000))}));
             ui.close();
         }
@@ -89,7 +101,7 @@ pub fn swatches(ui: &mut Ui, st: &mut AppState) {
     let cols = ((avail / cell).floor() as usize).max(1);
     let rows = colors.len().div_ceil(cols).max(1);
     let (rect, resp) = ui.allocate_exact_size(vec2(cols as f32 * cell, rows as f32 * cell), Sense::click_and_drag());
-    resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Other, true, "Farbfelder-Raster"));
+    resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Other, true, common::t("panel-swatches-grid")));
     ui.painter().rect_filled(rect, 0.0, theme.colors.line_dark);
     let mut hovered = None;
     for (i, c) in colors.iter().enumerate() {
@@ -166,10 +178,10 @@ pub fn mixer(ui: &mut Ui, st: &mut AppState) {
     }
     // Standardfarben / Tauschen
     let br = Rect::from_min_size(pos2(area.left() + 4.0, area.top() + 66.0), vec2(18.0, 16.0));
-    if fields::icon_button(ui, "mixer-default", br, crate::inspector::glyphs::Glyph::FillSolid, true, "Standardfarben").clicked() {
+    if fields::icon_button(ui, "mixer-default", br, crate::inspector::glyphs::Glyph::FillSolid, true, &common::t("panel-mixer-defaults")).clicked() {
         st.run("color.defaults", json!({}));
     }
-    if fields::icon_button(ui, "mixer-swap", br.translate(vec2(22.0, 0.0)), crate::inspector::glyphs::Glyph::Redo, true, "Farben austauschen").clicked() {
+    if fields::icon_button(ui, "mixer-swap", br.translate(vec2(22.0, 0.0)), crate::inspector::glyphs::Glyph::Redo, true, &common::t("panel-mixer-swap")).clicked() {
         st.run("color.swap", json!({}));
     }
     // Kanäle
@@ -193,7 +205,8 @@ pub fn mixer(ui: &mut Ui, st: &mut AppState) {
         }
     }
     let mr = Rect::from_min_size(pos2(area.left() + 180.0, area.top() + 4.0), vec2((area.width() - 186.0).max(60.0), 20.0));
-    if let Some(i) = fields::combo(ui, "mixer-model", mr, &["RGB", "Hexadezimal", "CMY", "HSB", "Graustufen"], Some(model_v.clamp(0, 4) as usize), true) {
+    let (hex_s, gray_s) = (common::t("panel-mixer-model-hex"), common::t("panel-mixer-model-grayscale"));
+    if let Some(i) = fields::combo(ui, "mixer-model", mr, &["RGB", hex_s.as_str(), "CMY", "HSB", gray_s.as_str()], Some(model_v.clamp(0, 4) as usize), true) {
         let cmd = ["panel.mixer.rgb", "panel.mixer.hex", "panel.mixer.cmy", "panel.mixer.hsb", "panel.mixer.grayscale"][i.min(4)];
         st.run(cmd, json!({}));
     }
@@ -284,14 +297,14 @@ pub fn palette(ui: &mut Ui, st: &mut AppState) {
         ui.data_mut(|d| d.insert_temp(Id::new(PAL_BASE), nb));
     }
     // Harmonien
-    let harmonies: [(&str, Vec<f32>); 4] = [("Komplementär", vec![0.0, 180.0]), ("Triade", vec![0.0, 120.0, 240.0]), ("Analog", vec![-30.0, 0.0, 30.0]), ("Quadrat", vec![0.0, 90.0, 180.0, 270.0])];
+    let harmonies: [(&str, Vec<f32>); 4] = [("panel-palette-complementary", vec![0.0, 180.0]), ("panel-palette-triad", vec![0.0, 120.0, 240.0]), ("panel-palette-analogous", vec![-30.0, 0.0, 30.0]), ("panel-palette-square", vec![0.0, 90.0, 180.0, 270.0])];
     let mut y = area.top() + radius * 2.0 + 18.0;
     let mut picked = None;
     for (name, offs) in harmonies.iter() {
         if y + 16.0 > area.bottom() {
             break;
         }
-        ui.painter().text(pos2(area.left() + 6.0, y + 7.0), Align2::LEFT_CENTER, *name, theme.small_font(), theme.colors.text);
+        common::fit_text(ui, Rect::from_min_size(pos2(area.left() + 6.0, y), vec2(78.0, 14.0)), Align2::LEFT_CENTER, &common::t(name), theme.small_font(), theme.colors.text);
         for (k, o) in offs.iter().enumerate() {
             let col = hsv(base.0 + o, base.1, base.2);
             let r = Rect::from_min_size(pos2(area.left() + 86.0 + k as f32 * 22.0, y), vec2(20.0, 14.0));
@@ -306,7 +319,7 @@ pub fn palette(ui: &mut Ui, st: &mut AppState) {
     if let Some(c) = picked {
         apply_color(st, c, ui.input(|i| i.modifiers.shift));
     }
-    if fields::button(ui, "palette-add", Rect::from_min_size(pos2(area.left() + 6.0, area.bottom() - 2.0), vec2(150.0, 20.0)), "Zu Farbfeldern hinzufügen", true) {
+    if fields::button(ui, "palette-add", Rect::from_min_size(pos2(area.left() + 6.0, area.bottom() - 2.0), vec2(150.0_f32.min(area.width() - 10.0).max(40.0), 20.0)), &common::t("panel-palette-add"), true) {
         for (_, offs) in harmonies.iter() {
             for o in offs {
                 st.run("panel.swatches.addColor", json!({"color": ui_commands::hex(hsv(base.0 + o, base.1, base.2))}));

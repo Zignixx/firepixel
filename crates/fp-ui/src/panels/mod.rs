@@ -38,7 +38,7 @@ pub fn state_name(st: &AppState, i: usize) -> String {
         .and_then(|e| e.frames.get(i))
         .and_then(|f| f.name.clone())
         .filter(|n| !n.is_empty())
-        .unwrap_or_else(|| format!("Status {}", i + 1))
+        .unwrap_or_else(|| fp_i18n::tr!("panel-state-default-name", n = i + 1))
 }
 
 /// Alle andockbaren Bedienfelder (ohne Werkzeuge und Eigenschaften-Inspektor).
@@ -97,33 +97,38 @@ impl PanelId {
         PanelId::CssProperties,
     ];
 
-    /// Reitertitel (wie im Fenster-Menü, ohne Kürzel).
-    pub fn title(self) -> &'static str {
+    /// Schlüssel des Reitertitels in `bedienfelder.ftl`.
+    pub fn title_key(self) -> &'static str {
         match self {
-            PanelId::Optimize => "Optimieren",
-            PanelId::History => "Verlauf",
-            PanelId::Align => "Ausrichten",
-            PanelId::Pages => "Seiten",
-            PanelId::States => "Status",
-            PanelId::Layers => "Ebenen",
-            PanelId::Styles => "Stile",
-            PanelId::ColorPalette => "Farbpalette",
-            PanelId::Swatches => "Farbfelder",
-            PanelId::SpecialCharacters => "Sonderzeichen",
-            PanelId::ImageEditing => "Bildbearbeitung",
-            PanelId::Path => "Pfad",
-            PanelId::AutoShapes => "Automatische Formen",
-            PanelId::DocumentLibrary => "Dokumentbibliothek",
-            PanelId::CommonLibrary => "Allgemeine Bibliothek",
-            PanelId::Info => "Info",
-            PanelId::ColorMixer => "Farbmischer",
-            PanelId::Url => "URL",
-            PanelId::Behaviors => "Verhalten",
-            PanelId::FindReplace => "Suchen und ersetzen",
-            PanelId::SymbolProperties => "Symboleigenschaften",
-            PanelId::AutoShapeProperties => "Eigenschaften für automatische Form",
-            PanelId::CssProperties => "CSS-Eigenschaften",
+            PanelId::Optimize => "panel-title-optimize",
+            PanelId::History => "panel-title-history",
+            PanelId::Align => "panel-title-align",
+            PanelId::Pages => "panel-title-pages",
+            PanelId::States => "panel-title-states",
+            PanelId::Layers => "panel-title-layers",
+            PanelId::Styles => "panel-title-styles",
+            PanelId::ColorPalette => "panel-title-color-palette",
+            PanelId::Swatches => "panel-title-swatches",
+            PanelId::SpecialCharacters => "panel-title-special-characters",
+            PanelId::ImageEditing => "panel-title-image-editing",
+            PanelId::Path => "panel-title-path",
+            PanelId::AutoShapes => "panel-title-auto-shapes",
+            PanelId::DocumentLibrary => "panel-title-document-library",
+            PanelId::CommonLibrary => "panel-title-common-library",
+            PanelId::Info => "panel-title-info",
+            PanelId::ColorMixer => "panel-title-color-mixer",
+            PanelId::Url => "panel-title-url",
+            PanelId::Behaviors => "panel-title-behaviors",
+            PanelId::FindReplace => "panel-title-find-replace",
+            PanelId::SymbolProperties => "panel-title-symbol-properties",
+            PanelId::AutoShapeProperties => "panel-title-auto-shape-properties",
+            PanelId::CssProperties => "panel-title-css-properties",
         }
+    }
+
+    /// Reitertitel (wie im Fenster-Menü, ohne Kürzel) in der aktuellen Sprache.
+    pub fn title(self) -> &'static str {
+        common::t_static(self.title_key())
     }
 
     /// Befehl in fp-engine (Fenster-Menü), falls es einen gibt. Die Flash-Bedienfelder von CS6

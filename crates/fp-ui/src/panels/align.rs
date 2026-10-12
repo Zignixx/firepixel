@@ -2,6 +2,7 @@
 //! „Relativ zum Objekt/zur Leinwand“, Ausrichten (6), Proportionieren (6), Größe (3), Abstand (2)
 //! mit „Gleichm.“. Ausgeführt über `pi.align` (Adapter, ein Verlaufsschritt).
 
+use super::common;
 use crate::app_state::AppState;
 use crate::inspector::fields;
 use crate::theme::Theme;
@@ -124,36 +125,37 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
     let x0 = area.left() + 10.0;
     let mut y = area.top() + 6.0;
     // Relativ zu
-    let rel = if to_canvas { "Relativ zur Leinwand" } else { "Relativ zum Objekt" };
+    let rel = common::t(if to_canvas { "panel-align-relative-canvas" } else { "panel-align-relative-object" });
     let tr = Rect::from_min_size(pos2(area.right() - 32.0, y), vec2(24.0, 18.0));
-    ui.painter().text(pos2(tr.left() - 6.0, tr.center().y), egui::Align2::RIGHT_CENTER, rel, t.ui_font(), t.colors.text);
-    if fields::toggle(ui, "align-rel", tr, crate::inspector::glyphs::Glyph::FillSolid, to_canvas, true, "Zur Leinwand ausrichten") {
+    common::fit_text(ui, Rect::from_min_max(pos2(area.left() + 4.0, tr.top()), pos2(tr.left() - 6.0, tr.bottom())), egui::Align2::RIGHT_CENTER, &rel, t.ui_font(), t.colors.text);
+    if fields::toggle(ui, "align-rel", tr, crate::inspector::glyphs::Glyph::FillSolid, to_canvas, true, &common::t("panel-align-to-canvas")) {
         ui.data_mut(|d| d.insert_temp(Id::new(TO_CANVAS), !to_canvas));
     }
     y += 22.0;
     let enabled1 = n >= 1;
-    let row = |ui: &mut Ui, st: &mut AppState, y: f32, label: &str, modes: &[(&str, &str)], enabled: bool, gap_after: usize| {
+    let row = |ui: &mut Ui, st: &mut AppState, y: f32, label: &str, label_w: f32, modes: &[(&str, &str)], enabled: bool, gap_after: usize| {
         let t = Theme::current(ui.ctx());
-        ui.painter().text(pos2(x0, y), egui::Align2::LEFT_TOP, label, t.ui_font(), t.colors.text);
+        common::fit_text(ui, Rect::from_min_size(pos2(x0, y), vec2(label_w, 14.0)), egui::Align2::LEFT_TOP, &common::t(label), t.ui_font(), t.colors.text);
         let mut x = x0;
         for (i, (m, tip)) in modes.iter().enumerate() {
             if i == gap_after {
                 x += 14.0;
             }
-            mode_button(ui, st, Rect::from_min_size(pos2(x, y + 16.0), vec2(24.0, 22.0)), m, tip, enabled, to_canvas);
+            mode_button(ui, st, Rect::from_min_size(pos2(x, y + 16.0), vec2(24.0, 22.0)), m, &common::t(tip), enabled, to_canvas);
             x += 28.0;
         }
     };
-    row(ui, st, y, "Ausrichten:", &[("left", "Links ausrichten"), ("hcenter", "Horizontal zentrieren"), ("right", "Rechts ausrichten"), ("top", "Oben ausrichten"), ("vcenter", "Vertikal zentrieren"), ("bottom", "Unten ausrichten")], enabled1, 3);
+    let full_w = (area.right() - x0 - 4.0).max(0.0);
+    row(ui, st, y, "panel-align-align", full_w, &[("left", "panel-align-left"), ("hcenter", "panel-align-hcenter"), ("right", "panel-align-right"), ("top", "panel-align-top"), ("vcenter", "panel-align-vcenter"), ("bottom", "panel-align-bottom")], enabled1, 3);
     y += 46.0;
     let enabled_dist = n >= 2 || (to_canvas && n >= 1);
-    row(ui, st, y, "Proportionieren:", &[("distTop", "Oberkanten verteilen"), ("distVCenter", "Vertikale Mitten verteilen"), ("distBottom", "Unterkanten verteilen"), ("distLeft", "Linke Kanten verteilen"), ("distHCenter", "Horizontale Mitten verteilen"), ("distRight", "Rechte Kanten verteilen")], enabled_dist, 3);
+    row(ui, st, y, "panel-align-distribute", full_w, &[("distTop", "panel-align-dist-top"), ("distVCenter", "panel-align-dist-vcenter"), ("distBottom", "panel-align-dist-bottom"), ("distLeft", "panel-align-dist-left"), ("distHCenter", "panel-align-dist-hcenter"), ("distRight", "panel-align-dist-right")], enabled_dist, 3);
     y += 46.0;
-    row(ui, st, y, "Größe:", &[("matchWidth", "Breite angleichen"), ("matchHeight", "Höhe angleichen"), ("matchBoth", "Breite und Höhe angleichen")], enabled1, 9);
     let sx = x0 + 3.0 * 28.0 + 20.0;
-    ui.painter().text(pos2(sx, y), egui::Align2::LEFT_TOP, "Abstand:", t.ui_font(), t.colors.text);
+    row(ui, st, y, "panel-align-size", sx - x0 - 6.0, &[("matchWidth", "panel-align-match-width"), ("matchHeight", "panel-align-match-height"), ("matchBoth", "panel-align-match-both")], enabled1, 9);
+    common::fit_text(ui, Rect::from_min_size(pos2(sx, y), vec2((area.right() - sx - 4.0).max(0.0), 14.0)), egui::Align2::LEFT_TOP, &common::t("panel-align-space"), t.ui_font(), t.colors.text);
     let enabled_space = n >= 3 || (to_canvas && n >= 1);
-    mode_button(ui, st, Rect::from_min_size(pos2(sx, y + 16.0), vec2(24.0, 22.0)), "spaceV", "Vertikal gleichmäßig verteilen", enabled_space, to_canvas);
-    mode_button(ui, st, Rect::from_min_size(pos2(sx + 28.0, y + 16.0), vec2(24.0, 22.0)), "spaceH", "Horizontal gleichmäßig verteilen", enabled_space, to_canvas);
-    let _ = fields::combo(ui, "align-space", Rect::from_min_size(pos2(sx, y + 42.0), vec2(80.0, 20.0)), &["Gleichm."], Some(0), enabled_space);
+    mode_button(ui, st, Rect::from_min_size(pos2(sx, y + 16.0), vec2(24.0, 22.0)), "spaceV", &common::t("panel-align-space-v"), enabled_space, to_canvas);
+    mode_button(ui, st, Rect::from_min_size(pos2(sx + 28.0, y + 16.0), vec2(24.0, 22.0)), "spaceH", &common::t("panel-align-space-h"), enabled_space, to_canvas);
+    let _ = fields::combo(ui, "align-space", Rect::from_min_size(pos2(sx, y + 42.0), vec2(80.0, 20.0)), &[common::t("panel-align-space-even").as_str()], Some(0), enabled_space);
 }

@@ -14,8 +14,8 @@ use serde_json::json;
 const RENAME: &str = "states-rename";
 const DELAY: &str = "states-delay";
 
-/// Schleifen-Menü (6940): Anzeigename und `FLPi`.
-pub const LOOPS: &[(&str, i32)] = &[("Keine Schleife", -1), ("1", 1), ("2", 2), ("3", 3), ("4", 4), ("5", 5), ("10", 10), ("20", 20), ("Endlos", 0)];
+/// Schleifen-Menü (6940): `FLPi`-Werte (Anzeige über [`loop_text`]).
+pub const LOOPS: &[i32] = &[-1, 1, 2, 3, 4, 5, 10, 20, 0];
 
 fn frame_info(st: &AppState, i: usize) -> fp_model::FrameInfo {
     st.session
@@ -29,8 +29,8 @@ fn frame_info(st: &AppState, i: usize) -> fp_model::FrameInfo {
 /// Text der Schleifenanzeige.
 pub fn loop_text(v: i32) -> String {
     match v {
-        0 => "Endlos".into(),
-        v if v < 0 => "Keine Schleife".into(),
+        0 => common::t("panel-states-forever"),
+        v if v < 0 => common::t("panel-states-no-loop"),
         v => format!("{v}"),
     }
 }
@@ -79,7 +79,7 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                     ui.data_mut(|dd| dd.remove::<usize>(Id::new(RENAME)));
                 }
             } else {
-                ui.painter().text(pos2(nr.left(), rect.center().y), Align2::LEFT_CENTER, &names[i], font.clone(), c.text);
+                crate::widgets::text_clipped(ui.painter(), pos2(nr.left(), rect.center().y), Align2::LEFT_CENTER, &names[i], font.clone(), c.text, nr.width());
             }
             let dr = Rect::from_min_max(pos2(rect.right() - 42.0, rect.top()), pos2(rect.right() - 2.0, rect.bottom()));
             ui.painter().text(pos2(dr.right() - 4.0, rect.center().y), Align2::RIGHT_CENTER, info.delay.to_string(), theme.ui_font(), c.text_weak);
@@ -115,17 +115,17 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
     if let Some(i) = delay_edit {
         let mut open = true;
         let info = infos.get(i).cloned().unwrap_or_default();
-        egui::Window::new("Statusverzögerung").id(Id::new("state-delay-win")).collapsible(false).resizable(false).open(&mut open).show(ui.ctx(), |ui| {
+        egui::Window::new(common::t("panel-states-delay-title")).id(Id::new("state-delay-win")).collapsible(false).resizable(false).open(&mut open).show(ui.ctx(), |ui| {
             ui.horizontal(|ui| {
-                ui.label("Statusverzögerung:");
+                ui.label(common::t("panel-states-delay-label"));
                 let mut v = info.delay;
                 if ui.add(egui::DragValue::new(&mut v).range(0..=9999)).changed() {
                     actions.push(Action::Run("pi.state.props".into(), json!({"indices": [i], "delay": v})));
                 }
-                ui.label("/100 Sek.");
+                ui.label(common::t("panel-states-delay-unit"));
             });
             let mut vis = info.visible;
-            if ui.checkbox(&mut vis, "Beim Export einschließen").changed() {
+            if ui.checkbox(&mut vis, common::t("panel-states-include-export")).changed() {
                 actions.push(Action::Run("pi.state.props".into(), json!({"indices": [i], "visible": vis})));
             }
         });
@@ -138,17 +138,18 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
     let y = rect.bottom() - common::FOOTER_H + 3.0;
     let onion_r = Rect::from_min_size(pos2(rect.left() + 2.0, y), vec2(19.0, 16.0));
     let loop_r = Rect::from_min_size(pos2(rect.left() + 22.0, y), vec2(19.0, 16.0));
-    let onion = ui.interact(onion_r, Id::new("states-onion"), Sense::click()).on_hover_text("Zwiebelschichteneffekt");
+    let onion = ui.interact(onion_r, Id::new("states-onion"), Sense::click()).on_hover_text(common::t("panel-states-onion"));
     glyphs::paint(ui.painter(), onion_r.shrink(1.0), Glyph::Onion, &theme, true);
-    let lp = ui.interact(loop_r, Id::new("states-loop"), Sense::click()).on_hover_text("GIF-Animationsschleife");
+    let lp = ui.interact(loop_r, Id::new("states-loop"), Sense::click()).on_hover_text(common::t("panel-states-loop"));
     glyphs::paint(ui.painter(), loop_r.shrink(1.0), Glyph::Loop, &theme, true);
     common::resource_menu(ui, &onion, st, "6933");
     common::resource_menu(ui, &lp, st, "6940");
     let text = loop_text(loop_count);
+    let (tip_dist, tip_new, tip_del) = (common::t("panel-states-distribute"), common::t("panel-states-new"), common::t("panel-states-delete"));
     let buttons = [
-        FooterButton { glyph: Glyph::Distribute, tip: "Auf Status verteilen", enabled: st.session.active().is_some_and(|d| d.selection.elements.len() > 1), action: Some(Action::Run("pi.state.distribute".into(), json!({}))) },
-        FooterButton { glyph: Glyph::NewLayer, tip: "Neu / Status duplizieren", enabled: true, action: Some(if ui.input(|i| i.modifiers.alt) { Action::Run("state.duplicate".into(), json!({})) } else { Action::Run("state.add".into(), json!({})) }) },
-        FooterButton { glyph: Glyph::Trash, tip: "Status löschen", enabled: n > 1, action: Some(Action::Run("state.delete".into(), json!({}))) },
+        FooterButton { glyph: Glyph::Distribute, tip: &tip_dist, enabled: st.session.active().is_some_and(|d| d.selection.elements.len() > 1), action: Some(Action::Run("pi.state.distribute".into(), json!({}))) },
+        FooterButton { glyph: Glyph::NewLayer, tip: &tip_new, enabled: true, action: Some(if ui.input(|i| i.modifiers.alt) { Action::Run("state.duplicate".into(), json!({})) } else { Action::Run("state.add".into(), json!({})) }) },
+        FooterButton { glyph: Glyph::Trash, tip: &tip_del, enabled: n > 1, action: Some(Action::Run("state.delete".into(), json!({}))) },
     ];
     if let Some(a) = common::footer(ui, 46.0, &text, &buttons) {
         actions.push(a);

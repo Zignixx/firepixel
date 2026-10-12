@@ -17,20 +17,32 @@ fn first(st: &AppState) -> Option<Arc<fp_model::Element>> {
     crate::inspector::obj_quads::selection(st).into_iter().next()
 }
 
+/// Überschrift und Befehlsknöpfe; `title` und die Beschriftungen sind Schlüssel. Knöpfe brechen um
+/// und werden nie breiter als das Bedienfeld (sonst Text mit „…“, voller Text als Tooltip).
 fn cmd_buttons(ui: &mut Ui, st: &mut AppState, title: &str, items: &[(&str, &str)]) {
-    common::caption(ui, title);
+    common::caption(ui, &common::t(title));
     ui.horizontal_wrapped(|ui| {
         ui.spacing_mut().item_spacing = vec2(4.0, 4.0);
-        for (label, cmd) in items {
+        let max_w = ui.available_width().max(30.0);
+        for (key, cmd) in items {
+            let label = common::t(key);
             let enabled = st.session.is_available(cmd);
-            let w = crate::widgets::text_width(ui, label, &Theme::current(ui.ctx()).ui_font()) + 16.0;
-            let (r, _) = ui.allocate_exact_size(vec2(w, 20.0), Sense::hover());
-            if fields::button(ui, ("cmdbtn", *cmd), r, label, enabled) {
+            let full = crate::widgets::text_width(ui, &label, &Theme::current(ui.ctx()).ui_font()) + 16.0;
+            let (r, resp) = ui.allocate_exact_size(vec2(full.min(max_w), 20.0), Sense::hover());
+            if full > max_w {
+                let _ = resp.on_hover_text(&label);
+            }
+            if fields::button(ui, ("cmdbtn", *cmd), r, &label, enabled) {
                 st.run(cmd, json!({}));
             }
         }
     });
     ui.add_space(6.0);
+}
+
+/// Überschrift (Schlüssel); bricht bei schmalen Bedienfeldern um.
+fn caption_key(ui: &mut Ui, key: &str) {
+    common::caption(ui, &common::t(key));
 }
 
 // ---------------------------------------------------------------------- Pfad
@@ -41,44 +53,46 @@ pub fn path(ui: &mut Ui, st: &mut AppState) {
     cmd_buttons(
         ui,
         st,
-        "Pfade kombinieren:",
+        "panel-path-combine",
         &[
-            ("Verbinden", "modify.combinePaths.join"),
-            ("Teilen", "modify.combinePaths.split"),
-            ("Vereinigen", "modify.combinePaths.union"),
-            ("Überschneiden", "modify.combinePaths.intersect"),
-            ("Ausstanzen", "modify.combinePaths.punch"),
-            ("Zuschneiden", "modify.combinePaths.crop"),
+            ("panel-path-join", "modify.combinePaths.join"),
+            ("panel-path-split", "modify.combinePaths.split"),
+            ("panel-path-union", "modify.combinePaths.union"),
+            ("panel-path-intersect", "modify.combinePaths.intersect"),
+            ("panel-path-punch", "modify.combinePaths.punch"),
+            ("panel-path-crop", "modify.combinePaths.crop"),
         ],
     );
     cmd_buttons(
         ui,
         st,
-        "Pfad ändern:",
+        "panel-path-alter",
         &[
-            ("Vereinfachen...", "modify.alterPath.simplify"),
-            ("Strich erweitern...", "modify.alterPath.expandStroke"),
-            ("Pfad einlassen...", "modify.alterPath.insetPath"),
-            ("Harte Füllung", "modify.alterPath.hardFill"),
-            ("Geglättete Füllung", "modify.alterPath.antiAliasFill"),
-            ("Weiche Füllung", "modify.alterPath.featherFill"),
+            ("panel-path-simplify", "modify.alterPath.simplify"),
+            ("panel-path-expand-stroke", "modify.alterPath.expandStroke"),
+            ("panel-path-inset", "modify.alterPath.insetPath"),
+            ("panel-path-hard-fill", "modify.alterPath.hardFill"),
+            ("panel-path-anti-alias-fill", "modify.alterPath.antiAliasFill"),
+            ("panel-path-feather-fill", "modify.alterPath.featherFill"),
         ],
     );
-    cmd_buttons(ui, st, "Punkte bearbeiten:", &[("An Pixeln ausrichten", "modify.snapToPixel"), ("Pfad in Auswahlrahmen", "modify.convertPathToMarquee")]);
+    cmd_buttons(ui, st, "panel-path-edit-points", &[("panel-path-snap-pixel", "modify.snapToPixel"), ("panel-path-to-marquee", "modify.convertPathToMarquee")]);
     let compound = first(st).is_some_and(|e| matches!(e.kind, ElementKind::CompoundShape(_)));
-    common::caption(ui, "Zusammengesetzte Form:");
-    ui.horizontal(|ui| {
-        for (label, op) in [("Vereinigen", 1), ("Ausstanzen", 3), ("Überschneiden", 2), ("Zuschneiden", 4)] {
-            let (r, _) = ui.allocate_exact_size(vec2(84.0, 20.0), Sense::hover());
+    caption_key(ui, "panel-path-compound");
+    // Knöpfe brechen bei schmalen Bedienfeldern um (statt über den Rand zu laufen)
+    ui.horizontal_wrapped(|ui| {
+        let w = ui.available_width().clamp(30.0, 84.0);
+        for (key, op) in [("panel-path-union", 1), ("panel-path-punch", 3), ("panel-path-intersect", 2), ("panel-path-crop", 4)] {
+            let (r, _) = ui.allocate_exact_size(vec2(w, 20.0), Sense::hover());
             let paths = crate::inspector::obj_quads::selection(st).iter().filter(|e| matches!(e.kind, ElementKind::Path(_))).count();
-            if fields::button(ui, ("pathop", op), r, label, compound || paths >= 2) {
+            if fields::button(ui, ("pathop", op), r, &common::t(key), compound || paths >= 2) {
                 st.run("pi.compound.setOp", json!({"op": op}));
             }
         }
     });
     ui.horizontal(|ui| {
-        let (r, _) = ui.allocate_exact_size(vec2(84.0, 20.0), Sense::hover());
-        if fields::button(ui, "pathop-combine", r, "Kombinieren", compound) {
+        let (r, _) = ui.allocate_exact_size(vec2(ui.available_width().clamp(30.0, 84.0), 20.0), Sense::hover());
+        if fields::button(ui, "pathop-combine", r, &common::t("panel-path-combine-compound"), compound) {
             st.run("pi.compound.combine", json!({}));
         }
     });
@@ -114,8 +128,8 @@ pub fn info(ui: &mut Ui, st: &mut AppState) {
     let unit = st.session.prefs.get_int("InfoPanelRulerUnits", 0);
     let ppi = st.session.active().and_then(|d| d.doc.pages.get(d.page)).map(|p| p.canvas.resolution as f64).filter(|r| *r > 0.0).unwrap_or(72.0);
     let fmt_u = |v: f64| match unit {
-        1 => format!("{:.2}", v / ppi).replace('.', ","),
-        2 => format!("{:.2}", v / ppi * 2.54).replace('.', ","),
+        1 => fp_i18n::fmt_decimal(v / ppi, 2),
+        2 => fp_i18n::fmt_decimal(v / ppi * 2.54, 2),
         _ => format!("{v:.0}"),
     };
     let (x, y) = st.pointer_doc.map(|p| (p.x.round(), p.y.round())).unwrap_or((0.0, 0.0));
@@ -127,7 +141,8 @@ pub fn info(ui: &mut Ui, st: &mut AppState) {
     let b = st.session.active().and_then(|d| fp_engine::docops::ids_bounds(&d.doc, d.page, &d.selection.elements));
     let en = b.is_some();
     let (bw, bh, bx, by) = b.map(|r| (r.width() as f64, r.height() as f64, r.left as f64, r.top as f64)).unwrap_or((0.0, 0.0, 0.0, 0.0));
-    let rows = [("B:", bw, "width", d.r(12.0, 40.0, 11.0, 8.0), d.r(26.0, 38.0, 30.0, 12.0)), ("H:", bh, "height", d.r(12.0, 53.0, 11.0, 8.0), d.r(26.0, 51.0, 30.0, 12.0)), ("X:", bx, "x", d.r(84.0, 40.0, 10.0, 8.0), d.r(97.0, 38.0, 30.0, 12.0)), ("Y:", by, "y", d.r(84.0, 53.0, 10.0, 8.0), d.r(97.0, 51.0, 30.0, 12.0))];
+    let (lw, lh) = (common::t("panel-info-width"), common::t("panel-info-height"));
+    let rows = [(lw.as_str(), bw, "width", d.r(12.0, 40.0, 11.0, 8.0), d.r(26.0, 38.0, 30.0, 12.0)), (lh.as_str(), bh, "height", d.r(12.0, 53.0, 11.0, 8.0), d.r(26.0, 51.0, 30.0, 12.0)), ("X:", bx, "x", d.r(84.0, 40.0, 10.0, 8.0), d.r(97.0, 38.0, 30.0, 12.0)), ("Y:", by, "y", d.r(84.0, 53.0, 10.0, 8.0), d.r(97.0, 51.0, 30.0, 12.0))];
     for (l, v, key, lr, er) in rows {
         fields::label_right(ui, lr, l, en);
         if let Some(n) = fields::number(ui, ("info", key), er, None, en.then_some(v.round()), (-30000.0, 30000.0), 0, en) {
@@ -180,7 +195,7 @@ pub fn special_characters(ui: &mut Ui, st: &mut AppState) {
                 Some((id, t)) => st.run("text.setText", json!({"id": id.0, "text": format!("{t}{ch}")})),
                 None => {
                     ui.ctx().copy_text(ch.to_string());
-                    st.push(Action::Status(format!("„{ch}“ in die Zwischenablage kopiert (kein Text ausgewählt)")));
+                    st.push(Action::Status(fp_i18n::tr!("panel-special-copied", ch = ch.to_string())));
                 }
             }
         }
@@ -192,7 +207,7 @@ pub fn special_characters(ui: &mut Ui, st: &mut AppState) {
 /// Bildbearbeitung (Image Editing.swf, nativ): Bitmap-Werkzeuge, Anpassungen, Filter.
 pub fn image_editing(ui: &mut Ui, st: &mut AppState) {
     let theme = Theme::current(ui.ctx());
-    common::caption(ui, "Bitmap-Werkzeuge:");
+    caption_key(ui, "panel-imgedit-tools");
     let tools = [
         ToolId::Marquee,
         ToolId::OvalMarquee,
@@ -217,10 +232,9 @@ pub fn image_editing(ui: &mut Ui, st: &mut AppState) {
     ui.horizontal_wrapped(|ui| {
         ui.spacing_mut().item_spacing = vec2(2.0, 2.0);
         for t in tools {
-            let info = fp_engine::tools::info(t);
-            let tip = info.map(|i| i.label).unwrap_or("");
+            let tip = common::tool_label(t);
             let look = crate::widgets::ButtonLook { selected: st.session.tools.active == t, enabled: true, group: Some(crate::theme::ToolGroup::Bitmap) };
-            if crate::widgets::icon_button(ui, crate::icons::tool_icon(t), vec2(24.0, 22.0), 16.0, look, tip).clicked() {
+            if crate::widgets::icon_button(ui, crate::icons::tool_icon(t), vec2(24.0, 22.0), 16.0, look, &tip).clicked() {
                 st.push(Action::SetTool(t));
             }
         }
@@ -230,17 +244,27 @@ pub fn image_editing(ui: &mut Ui, st: &mut AppState) {
     cmd_buttons(
         ui,
         st,
-        "Anpassungen:",
+        "panel-imgedit-adjust",
         &[
-            ("Auto-Tonwert", "filter.adjustColor.autoLevels"),
-            ("Helligkeit/Kontrast...", "filter.adjustColor.brightnessContrast"),
-            ("Kurven...", "filter.adjustColor.curves"),
-            ("Tonwert...", "filter.adjustColor.levels"),
-            ("Farbton/Sättigung...", "filter.adjustColor.hueSaturation"),
-            ("Umkehren", "filter.adjustColor.invert"),
+            ("panel-imgedit-auto-levels", "filter.adjustColor.autoLevels"),
+            ("panel-imgedit-brightness", "filter.adjustColor.brightnessContrast"),
+            ("panel-imgedit-curves", "filter.adjustColor.curves"),
+            ("panel-imgedit-levels", "filter.adjustColor.levels"),
+            ("panel-imgedit-hue-sat", "filter.adjustColor.hueSaturation"),
+            ("panel-imgedit-invert", "filter.adjustColor.invert"),
         ],
     );
-    cmd_buttons(ui, st, "Filter:", &[("Gaußscher Weichzeichner...", "filter.blur.gaussian"), ("Unscharf maskieren...", "filter.sharpen.unsharpMask"), ("Rauschen...", "filter.noise.addNoise"), ("Numerisch transformieren...", "modify.transform.numericTransform")]);
+    cmd_buttons(
+        ui,
+        st,
+        "panel-imgedit-filters",
+        &[
+            ("panel-imgedit-gaussian", "filter.blur.gaussian"),
+            ("panel-imgedit-unsharp", "filter.sharpen.unsharpMask"),
+            ("panel-imgedit-noise", "filter.noise.addNoise"),
+            ("panel-imgedit-numeric", "modify.transform.numericTransform"),
+        ],
+    );
 }
 
 // ---------------------------------------------------------------------- URL
@@ -292,7 +316,7 @@ pub fn url(ui: &mut Ui, st: &mut AppState) {
     common::list_frame(ui, "url-list", common::FOOTER_H, |ui| {
         for (i, u) in lib.iter().enumerate() {
             let (r, resp) = common::row(ui, 18.0, sel == Some(i));
-            ui.painter().text(pos2(r.left() + 6.0, r.center().y), Align2::LEFT_CENTER, u, theme.ui_font(), theme.colors.text);
+            crate::widgets::text_clipped(ui.painter(), pos2(r.left() + 6.0, r.center().y), Align2::LEFT_CENTER, u, theme.ui_font(), theme.colors.text, r.width() - 8.0);
             if resp.clicked() {
                 pick = Some(i);
             }
@@ -306,14 +330,14 @@ pub fn url(ui: &mut Ui, st: &mut AppState) {
     }
     let rect = ui.available_rect_before_wrap();
     let y = rect.bottom() - common::FOOTER_H + 3.0;
-    if fields::icon_button(ui, "url-add", Rect::from_min_size(pos2(rect.right() - 44.0, y), vec2(19.0, 16.0)), Glyph::Plus, cur.as_ref().is_some_and(|u| !u.is_empty()), "Aktuelle URL zur Bibliothek hinzufügen").clicked()
+    if fields::icon_button(ui, "url-add", Rect::from_min_size(pos2(rect.right() - 44.0, y), vec2(19.0, 16.0)), Glyph::Plus, cur.as_ref().is_some_and(|u| !u.is_empty()), &common::t("panel-url-add")).clicked()
         && let Some(u) = cur
         && !lib.contains(&u)
     {
         lib.push(u);
         set_url_library(ui.ctx(), lib.clone());
     }
-    if fields::icon_button(ui, "url-del", Rect::from_min_size(pos2(rect.right() - 23.0, y), vec2(19.0, 16.0)), Glyph::Trash, sel.is_some(), "URL aus der Bibliothek löschen").clicked()
+    if fields::icon_button(ui, "url-del", Rect::from_min_size(pos2(rect.right() - 23.0, y), vec2(19.0, 16.0)), Glyph::Trash, sel.is_some(), &common::t("panel-url-delete")).clicked()
         && let Some(i) = sel
         && i < lib.len()
     {
@@ -325,25 +349,26 @@ pub fn url(ui: &mut Ui, st: &mut AppState) {
 
 // ---------------------------------------------------------------------- Verhalten
 
-/// Aktionen des Verhalten-Menüs (6928): Anzeigename, `BETi`.
+/// Aktionen des Verhalten-Menüs (6928): Schlüssel des Anzeigenamens, `BETi`.
 pub const BEHAVIOR_ACTIONS: &[(&str, i32)] = &[
-    ("Einfaches Rollover", 8),
-    ("Bild austauschen", 2),
-    ("Bildaustausch wiederherstellen", 5),
-    ("Navigationsleistenbild festlegen", 0),
-    ("Navigationsleiste - Over", 6),
-    ("Navigationsleiste - Down", 4),
-    ("Navigationsleiste wiederherstellen", 7),
-    ("Statusleistentext festlegen", 1),
+    ("panel-beh-simple-rollover", 8),
+    ("panel-beh-swap-image", 2),
+    ("panel-beh-swap-restore", 5),
+    ("panel-beh-nav-image", 0),
+    ("panel-beh-nav-over", 6),
+    ("panel-beh-nav-down", 4),
+    ("panel-beh-nav-restore", 7),
+    ("panel-beh-status-text", 1),
 ];
 
-fn behavior_label(a: i32) -> &'static str {
-    match a {
-        9 => "Popupmenü anzeigen",
-        11 => "Sound abspielen",
-        3 => "Navigationsleistenbild festlegen",
-        _ => BEHAVIOR_ACTIONS.iter().find(|b| b.1 == a).map(|b| b.0).unwrap_or("Verhalten"),
-    }
+/// Anzeigename einer Verhaltensaktion (`BETi`).
+pub fn behavior_label(a: i32) -> String {
+    common::t(match a {
+        9 => "panel-beh-popup",
+        11 => "panel-beh-sound",
+        3 => "panel-beh-nav-image",
+        _ => BEHAVIOR_ACTIONS.iter().find(|b| b.1 == a).map(|b| b.0).unwrap_or("panel-beh-generic"),
+    })
 }
 
 /// Verhalten-Bedienfeld (4128).
@@ -357,11 +382,11 @@ pub fn behaviors(ui: &mut Ui, st: &mut AppState) {
     });
     let en = list.is_some();
     let (head, _) = ui.allocate_exact_size(vec2(ui.available_width(), 24.0), Sense::hover());
-    let add = fields::icon_button(ui, "beh-add", Rect::from_min_size(head.min + vec2(4.0, 3.0), vec2(19.0, 17.0)), Glyph::Plus, en, "Verhalten hinzufügen");
+    let add = fields::icon_button(ui, "beh-add", Rect::from_min_size(head.min + vec2(4.0, 3.0), vec2(19.0, 17.0)), Glyph::Plus, en, &common::t("panel-beh-add"));
     egui::Popup::menu(&add).frame(crate::menu::menu_frame(&theme)).show(|ui| {
         ui.spacing_mut().item_spacing = vec2(0.0, 0.0);
         for (label, a) in BEHAVIOR_ACTIONS {
-            if fields::list_item(ui, label, false).clicked() {
+            if fields::list_item(ui, &common::t(label), false).clicked() {
                 if *a == 1 {
                     st.dialogs.open_status_text();
                 } else {
@@ -370,14 +395,14 @@ pub fn behaviors(ui: &mut Ui, st: &mut AppState) {
                 ui.close();
             }
         }
-        if fields::list_item(ui, "Popupmenü anzeigen…", false).clicked() {
+        if fields::list_item(ui, &common::t("panel-beh-popup-menu"), false).clicked() {
             // Pop-up-Menü-Editor (6283) legt das Verhalten „Popupmenü anzeigen“ an
             st.run("modify.popUpMenu.addPopUpMenu", json!({}));
             ui.close();
         }
     });
     let sel: Option<usize> = ui.data(|d| d.get_temp(Id::new("beh-sel")));
-    if fields::icon_button(ui, "beh-del", Rect::from_min_size(head.min + vec2(25.0, 3.0), vec2(19.0, 17.0)), Glyph::Minus, en && sel.is_some(), "Verhalten löschen").clicked()
+    if fields::icon_button(ui, "beh-del", Rect::from_min_size(head.min + vec2(25.0, 3.0), vec2(19.0, 17.0)), Glyph::Minus, en && sel.is_some(), &common::t("panel-beh-remove")).clicked()
         && let Some(i) = sel
     {
         st.run("pi.behavior.remove", json!({"index": i}));
@@ -387,21 +412,21 @@ pub fn behaviors(ui: &mut Ui, st: &mut AppState) {
     common::list_frame(ui, "beh-list", 0.0, |ui| {
         let (hr, _) = ui.allocate_exact_size(vec2(ui.available_width(), 18.0), Sense::hover());
         ui.painter().rect_filled(hr, 0.0, theme.colors.header_top);
-        ui.painter().text(pos2(hr.left() + 6.0, hr.center().y), Align2::LEFT_CENTER, "Ereignisse", theme.small_font(), theme.colors.text);
-        ui.painter().text(pos2(hr.left() + 110.0, hr.center().y), Align2::LEFT_CENTER, "Aktionen", theme.small_font(), theme.colors.text);
+        common::fit_text(ui, Rect::from_min_max(pos2(hr.left() + 6.0, hr.top()), pos2(hr.left() + 106.0, hr.bottom())), Align2::LEFT_CENTER, &common::t("panel-beh-events"), theme.small_font(), theme.colors.text);
+        common::fit_text(ui, Rect::from_min_max(pos2(hr.left() + 110.0, hr.top()), pos2(hr.right() - 2.0, hr.bottom())), Align2::LEFT_CENTER, &common::t("panel-beh-actions"), theme.small_font(), theme.colors.text);
         for (i, b) in list.clone().unwrap_or_default().iter().enumerate() {
             let (r, resp) = common::row(ui, 20.0, sel == Some(i));
             let er = Rect::from_min_size(pos2(r.left() + 2.0, r.top() + 1.0), vec2(104.0, 18.0));
             if let Some(ev) = fields::combo(ui, ("beh-ev", i), er, &fp_model::web::BEHAVIOR_EVENTS, Some(b.event.clamp(0, 3) as usize), true) {
                 actions.push(Action::Run("pi.behavior.event".into(), json!({"index": i, "event": ev})));
             }
-            ui.painter().text(pos2(r.left() + 110.0, r.center().y), Align2::LEFT_CENTER, behavior_label(b.action), theme.ui_font(), theme.colors.text);
+            crate::widgets::text_clipped(ui.painter(), pos2(r.left() + 110.0, r.center().y), Align2::LEFT_CENTER, &behavior_label(b.action), theme.ui_font(), theme.colors.text, r.width() - 112.0);
             if resp.clicked() {
                 ui.data_mut(|d| d.insert_temp(Id::new("beh-sel"), i));
             }
         }
         if !en {
-            ui.label(egui::RichText::new("Hotspot oder Segment auswählen").color(theme.colors.text_disabled).font(theme.small_font()));
+            ui.label(egui::RichText::new(common::t("panel-beh-select-hint")).color(theme.colors.text_disabled).font(theme.small_font()));
         }
     });
     for a in actions {
@@ -532,42 +557,48 @@ pub fn find_replace(ui: &mut Ui, st: &mut AppState) {
     let before = fs.clone();
     let (area, _) = ui.allocate_exact_size(vec2(ui.available_width(), 170.0), Sense::hover());
     let d = Dl::at(area.min + vec2(4.0, 4.0));
-    if let Some(i) = fields::combo(ui, "find-scope", d.r(0.0, 0.0, 70.0, 13.0), &["Auswahl suchen", "Seite suchen"], Some(fs.scope), true) {
+    let tx = |keys: &[&str]| -> Vec<String> { keys.iter().map(|k| common::t(k)).collect() };
+    let scopes = tx(&["panel-find-scope-selection", "panel-find-scope-page"]);
+    let scope_refs: Vec<&str> = scopes.iter().map(|s| s.as_str()).collect();
+    if let Some(i) = fields::combo(ui, "find-scope", d.r(0.0, 0.0, 70.0, 13.0), &scope_refs, Some(fs.scope), true) {
         fs.scope = i;
     }
-    if let Some(i) = fields::combo(ui, "find-kind", d.r(74.0, 0.0, 66.0, 13.0), &["Text suchen", "Schrift suchen", "Farbe suchen", "URL suchen", "Nicht-Web216 suchen"], Some(fs.kind), true) {
+    let kinds = tx(&["panel-find-kind-text", "panel-find-kind-font", "panel-find-kind-color", "panel-find-kind-url", "panel-find-kind-nonweb"]);
+    let kind_refs: Vec<&str> = kinds.iter().map(|s| s.as_str()).collect();
+    if let Some(i) = fields::combo(ui, "find-kind", d.r(74.0, 0.0, 66.0, 13.0), &kind_refs, Some(fs.kind), true) {
         fs.kind = i;
     }
+    let (l_find, l_change) = (common::t("panel-find-find"), common::t("panel-find-change"));
     match fs.kind {
         2 => {
-            fields::label(ui, d.r(0.0, 20.0, 40.0, 8.0), "Suchen:", true);
+            common::label_fit(ui, d.r(0.0, 20.0, 43.0, 8.0), &l_find, true);
             if let Some(popups_choice) = crate::inspector::popups::color_button(ui, "find-c1", d.r(44.0, 18.0, 16.0, 13.0), st, fs.find_color.map(fp_color::Argb), true, false, false)
                 && let crate::inspector::popups::ColorChoice::Color(c) = popups_choice
             {
                 fs.find_color = Some(c.0);
             }
-            fields::label(ui, d.r(0.0, 36.0, 40.0, 8.0), "Ändern:", true);
+            common::label_fit(ui, d.r(0.0, 36.0, 43.0, 8.0), &l_change, true);
             if let Some(crate::inspector::popups::ColorChoice::Color(c)) = crate::inspector::popups::color_button(ui, "find-c2", d.r(44.0, 34.0, 16.0, 13.0), st, fs.replace_color.map(fp_color::Argb), true, false, false) {
                 fs.replace_color = Some(c.0);
             }
         }
         4 => {
-            crate::dialogs::put_left(ui, d.r(0.0, 20.0, 140.0, 40.0), egui::Label::new(egui::RichText::new("Sucht Füll- und Strichfarben außerhalb der Web-216-Palette; „Ersetzen“ rastet sie auf die nächste websichere Farbe ein.").font(Theme::current(ui.ctx()).small_font())).wrap());
+            crate::dialogs::put_left(ui, d.r(0.0, 20.0, 140.0, 40.0), egui::Label::new(egui::RichText::new(common::t("panel-find-nonweb-hint")).font(Theme::current(ui.ctx()).small_font())).wrap());
         }
         _ => {
-            fields::label(ui, d.r(0.0, 20.0, 40.0, 8.0), "Suchen:", true);
+            common::label_fit(ui, d.r(0.0, 20.0, 43.0, 8.0), &l_find, true);
             if let Some(v) = fields::text(ui, "find-text", d.r(44.0, 18.0, 96.0, 13.0), &fs.find, true) {
                 fs.find = v;
             }
-            fields::label(ui, d.r(0.0, 36.0, 40.0, 8.0), "Ändern:", true);
+            common::label_fit(ui, d.r(0.0, 36.0, 43.0, 8.0), &l_change, true);
             if let Some(v) = fields::text(ui, "find-rep", d.r(44.0, 34.0, 96.0, 13.0), &fs.replace, true) {
                 fs.replace = v;
             }
             if fs.kind != 1 {
-                if let Some(b) = fields::checkbox(ui, "find-word", d.r(0.0, 52.0, 70.0, 10.0), "Ganzes Wort", fs.whole_word, true) {
+                if let Some(b) = common::checkbox_fit(ui, "find-word", d.r(0.0, 52.0, 70.0, 10.0), &common::t("panel-find-whole-word"), fs.whole_word, true) {
                     fs.whole_word = b;
                 }
-                if let Some(b) = fields::checkbox(ui, "find-case", d.r(72.0, 52.0, 70.0, 10.0), "Groß/Klein", fs.case, true) {
+                if let Some(b) = common::checkbox_fit(ui, "find-case", d.r(72.0, 52.0, 70.0, 10.0), &common::t("panel-find-match-case"), fs.case, true) {
                     fs.case = b;
                 }
             }
@@ -575,25 +606,26 @@ pub fn find_replace(ui: &mut Ui, st: &mut AppState) {
     }
     let hits = find_hits(st, &fs);
     let y = 68.0;
-    if fields::button(ui, "find-next", d.r(0.0, y, 44.0, 14.0), "Suchen", !hits.is_empty()) {
+    if fields::button(ui, "find-next", d.r(0.0, y, 44.0, 14.0), &common::t("panel-find-next"), !hits.is_empty()) {
         let next = hits.iter().map(|h| h.0).find(|id| fs.last.is_none_or(|l| *id > l)).or_else(|| hits.first().map(|h| h.0));
         if let Some(id) = next {
             fs.last = Some(id);
             st.run("select.set", json!({"ids": [id]}));
         }
     }
-    if fields::button(ui, "find-rep1", d.r(48.0, y, 44.0, 14.0), "Ersetzen", !hits.is_empty()) {
+    let (l_rep, l_all) = (common::t("panel-find-replace"), common::t("panel-find-replace-all"));
+    if fields::button(ui, "find-rep1", d.r(48.0, y, 44.0, 14.0), &l_rep, !hits.is_empty()) {
         let target = fs.last.and_then(|l| hits.iter().find(|h| h.0 == l)).or(hits.first());
         if let Some((_, c)) = target {
-            st.run("history.replay", json!({"commands": [c], "label": "Ersetzen"}));
+            st.run("history.replay", json!({"commands": [c], "label": l_rep}));
         }
     }
-    if fields::button(ui, "find-all", d.r(96.0, y, 44.0, 14.0), "Alle ersetzen", !hits.is_empty()) {
+    if fields::button(ui, "find-all", d.r(96.0, y, 44.0, 14.0), &l_all, !hits.is_empty()) {
         let cmds: Vec<Value> = hits.iter().map(|h| h.1.clone()).collect();
-        st.run("history.replay", json!({"commands": cmds, "label": "Alle ersetzen"}));
+        st.run("history.replay", json!({"commands": cmds, "label": l_all}));
     }
     let theme = Theme::current(ui.ctx());
-    ui.painter().text(d.r(0.0, y + 20.0, 1.0, 8.0).left_center(), Align2::LEFT_CENTER, format!("{} Treffer", hits.len()), theme.small_font(), theme.colors.text_weak);
+    common::fit_text(ui, d.r(0.0, y + 20.0, 140.0, 8.0), Align2::LEFT_CENTER, &fp_i18n::tr!("panel-find-hits", n = hits.len()), theme.small_font(), theme.colors.text_weak);
     if fs != before {
         ui.data_mut(|dd| dd.insert_temp(key, fs));
     }
@@ -610,16 +642,16 @@ pub fn symbol_properties(ui: &mut Ui, st: &mut AppState) {
     });
     let Some(params) = params.filter(|p| !p.is_empty()) else {
         ui.add_space(8.0);
-        ui.label(egui::RichText::new("Kein Rich Symbol ausgewählt").color(theme.colors.text_disabled).font(theme.small_font()));
+        ui.label(egui::RichText::new(common::t("panel-symprops-none")).color(theme.colors.text_disabled).font(theme.small_font()));
         return;
     };
     let (hr, _) = ui.allocate_exact_size(vec2(ui.available_width(), 18.0), Sense::hover());
     ui.painter().rect_filled(hr, 0.0, theme.colors.header_top);
-    ui.painter().text(pos2(hr.left() + 6.0, hr.center().y), Align2::LEFT_CENTER, "Name", theme.small_font(), theme.colors.text);
-    ui.painter().text(pos2(hr.center().x, hr.center().y), Align2::LEFT_CENTER, "Wert", theme.small_font(), theme.colors.text);
+    common::fit_text(ui, Rect::from_min_max(pos2(hr.left() + 6.0, hr.top()), pos2(hr.center().x - 4.0, hr.bottom())), Align2::LEFT_CENTER, &common::t("panel-symprops-name"), theme.small_font(), theme.colors.text);
+    common::fit_text(ui, Rect::from_min_max(pos2(hr.center().x, hr.top()), pos2(hr.right() - 2.0, hr.bottom())), Align2::LEFT_CENTER, &common::t("panel-symprops-value"), theme.small_font(), theme.colors.text);
     for (i, p) in params.iter().enumerate() {
         let (r, _) = ui.allocate_exact_size(vec2(ui.available_width(), 22.0), Sense::hover());
-        ui.painter().text(pos2(r.left() + 6.0, r.center().y), Align2::LEFT_CENTER, &p.name, theme.ui_font(), theme.colors.text);
+        crate::widgets::text_clipped(ui.painter(), pos2(r.left() + 6.0, r.center().y), Align2::LEFT_CENTER, &p.name, theme.ui_font(), theme.colors.text, r.width() / 2.0 - 10.0);
         let vr = Rect::from_min_max(pos2(r.center().x, r.top() + 1.0), pos2(r.right() - 4.0, r.bottom() - 1.0));
         if p.kind.eq_ignore_ascii_case("boolean") {
             let on = p.value == "true";
@@ -635,7 +667,7 @@ pub fn symbol_properties(ui: &mut Ui, st: &mut AppState) {
             st.run("pi.symbol.params", json!({"values": {p.name.clone(): v}}));
         }
     }
-    common::not_available(ui, "Hinweis: Die Darstellung der Rich Symbols folgt den Werten erst mit fp-script.");
+    common::not_available(ui, &common::t("panel-symprops-note"));
 }
 
 // ---------------------------------------------------------------------- CSS-Eigenschaften
@@ -731,16 +763,16 @@ pub fn css_properties(ui: &mut Ui, st: &mut AppState) {
     let mut css = css_for(st);
     if css.is_empty() {
         ui.add_space(8.0);
-        ui.label(egui::RichText::new("Objekt auswählen").color(theme.colors.text_disabled).font(theme.small_font()));
+        ui.label(egui::RichText::new(common::t("panel-css-select")).color(theme.colors.text_disabled).font(theme.small_font()));
         return;
     }
     let avail = ui.available_rect_before_wrap();
     let r = Rect::from_min_max(avail.min + vec2(2.0, 2.0), pos2(avail.right() - 2.0, avail.bottom() - 28.0));
     ui.painter().rect_filled(r, 0.0, theme.colors.list_bg);
     ui.put(r.shrink(2.0), egui::TextEdit::multiline(&mut css).font(egui::FontId::monospace(11.0)).interactive(false).frame(egui::Frame::NONE));
-    if fields::button(ui, "css-copy", Rect::from_min_size(pos2(avail.left() + 2.0, avail.bottom() - 24.0), vec2(80.0, 20.0)), "Alle kopieren", true) {
+    if fields::button(ui, "css-copy", Rect::from_min_size(pos2(avail.left() + 2.0, avail.bottom() - 24.0), vec2(80.0_f32.max(crate::widgets::text_width(ui, &common::t("panel-css-copy-all"), &theme.ui_font()) + 12.0).min(avail.width() - 4.0), 20.0)), &common::t("panel-css-copy-all"), true) {
         ui.ctx().copy_text(css_for(st));
-        st.push(Action::Status("CSS in die Zwischenablage kopiert".into()));
+        st.push(Action::Status(common::t("panel-css-copied")));
     }
     let _ = Color32::WHITE;
 }

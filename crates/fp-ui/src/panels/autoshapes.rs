@@ -46,6 +46,124 @@ pub fn shape_list(st: &mut AppState) -> Vec<ShapeInfo> {
     list
 }
 
+/// Schlüssel einer Form (I18N-MENUE, `werkzeuge.ftl`): `shape-<englischer Name klein, Leerzeichen → ->`,
+/// z. B. „Rounded Rectangle“ → `shape-rounded-rectangle`, „3D Box“ → `shape-3d-box`.
+pub fn shape_key(name: &str) -> String {
+    let slug: String = name.trim().to_lowercase().chars().map(|c| if c.is_ascii_alphanumeric() { c } else { '-' }).collect();
+    let mut out = String::from("shape-");
+    for part in slug.split('-').filter(|p| !p.is_empty()) {
+        if !out.ends_with('-') {
+            out.push('-');
+        }
+        out.push_str(part);
+    }
+    out
+}
+
+/// Anzeigename einer Form: Übersetzung über [`shape_key`], sonst der Name aus fp-script.
+pub fn shape_label(name: &str, fallback: &str) -> String {
+    let key = shape_key(name);
+    if fp_i18n::has(&key) {
+        return fp_i18n::t(&key);
+    }
+    if fallback.is_empty() { name.to_string() } else { fallback.to_string() }
+}
+
+/// Parameterbeschriftungen der Formen (deutsch aus fp-script) → Schlüssel in `bedienfelder.ftl`.
+const PARAM_KEYS: &[(&str, &str)] = &[
+    ("Drehung", "rotation"),
+    ("Scheitelpunkt", "apex"),
+    ("Scheitelbogen", "apex-arc"),
+    ("Bogen", "arc"),
+    ("Länge der Spitze", "tip-length"),
+    ("Breite der Spitze", "tip-width"),
+    ("Anzahl", "count"),
+    ("Im Uhrzeigersinn", "clockwise"),
+    ("Geschlossen", "closed"),
+    ("Eckgröße", "corner-size"),
+    ("Ecke oben links", "corner-tl"),
+    ("Ecke oben rechts", "corner-tr"),
+    ("Ecke unten rechts", "corner-br"),
+    ("Ecke unten links", "corner-bl"),
+    ("Rundung Knick 1", "bend1"),
+    ("Rundung Knick 2", "bend2"),
+    ("Eckenart", "corner-type"),
+    ("Krümmung", "curvature"),
+    ("Kurve", "curve"),
+    ("Kurvenradius", "curve-radius"),
+    ("Zahntiefe", "tooth-depth"),
+    ("Unterteilungen", "subdivisions"),
+    ("Versatz X", "offset-x"),
+    ("Versatz Y", "offset-y"),
+    ("Format", "format"),
+    ("Brennweite", "focal"),
+    ("Rahmenbreite", "frame-width"),
+    ("Spalt", "gap"),
+    ("Höhe", "height"),
+    ("Anfang", "start"),
+    ("Ende", "end"),
+    ("Schaftdicke", "shaft-thickness"),
+    ("Loch", "hole"),
+    ("Hohl (0–1)", "hollow"),
+    ("Stunde", "hour"),
+    ("Farbton", "hue"),
+    ("Innenausschnitt", "inner-cutout"),
+    ("Innerer Radius (Röhre)", "inner-radius-tube"),
+    ("Länge", "length"),
+    ("Ecken gemeinsam", "link-corners"),
+    ("Minute", "minute"),
+    ("Richtung", "direction"),
+    ("Monat (0–11)", "month"),
+    ("Zacken", "points"),
+    ("Rahmenversatz", "frame-offset"),
+    ("Überhang", "overhang"),
+    ("Größe", "size"),
+    ("Radius", "radius"),
+    ("Radius 1", "radius1"),
+    ("Radius 2", "radius2"),
+    ("Innerer Radius", "inner-radius"),
+    ("Drehung X", "rotation-x"),
+    ("Drehung Y", "rotation-y"),
+    ("Rundung", "roundness"),
+    ("Rundung 1", "roundness1"),
+    ("Rundung 2", "roundness2"),
+    ("Breite", "width"),
+    ("Zufallswert", "seed"),
+    ("Symbol (-1 = Auswahl)", "symbol"),
+    ("Seiten", "sides"),
+    ("Spitzengröße", "tip-size"),
+    ("Stil (0 einfarbig, 1 zweifarbig)", "style"),
+    ("Zähne", "teeth"),
+    ("Text", "text"),
+    ("Dicke", "thickness"),
+    ("Windungen", "turns"),
+    ("Zeiger X", "pointer-x"),
+    ("Zeiger Y", "pointer-y"),
+    ("Einheit", "unit"),
+    ("Schaftlänge", "shaft-length"),
+    ("Wellenlänge", "wavelength"),
+    ("Jahr", "year"),
+];
+
+/// Auswahlwerte (gespeichert wird der deutsche Wert) → Schlüssel in `bedienfelder.ftl`.
+const OPTION_KEYS: &[(&str, &str)] = &[
+    ("gerade", "straight"),
+    ("rund", "round"),
+    ("nach innen", "inverted"),
+    ("waagerecht – senkrecht – waagerecht", "hvh"),
+    ("senkrecht – waagerecht – senkrecht", "vhv"),
+];
+
+/// Übersetzte Parameterbeschriftung (unbekannte Beschriftungen bleiben, wie sie sind).
+pub fn param_label(label: &str) -> String {
+    PARAM_KEYS.iter().find(|(de, _)| *de == label).map(|(_, k)| fp_i18n::t(&format!("panel-asp-p-{k}"))).unwrap_or_else(|| label.to_string())
+}
+
+/// Übersetzter Auswahlwert (Einheiten wie „px“ bleiben).
+pub fn option_label(value: &str) -> String {
+    OPTION_KEYS.iter().find(|(de, _)| *de == value).map(|(_, k)| fp_i18n::t(&format!("panel-asp-o-{k}"))).unwrap_or_else(|| value.to_string())
+}
+
 type PreviewCache = Arc<Mutex<HashMap<String, Option<TextureHandle>>>>;
 
 fn previews(ctx: &egui::Context) -> PreviewCache {
@@ -95,7 +213,7 @@ pub fn panel(ui: &mut Ui, st: &mut AppState) {
     let mut insert: Option<String> = None;
     let has_doc = st.session.active().is_some();
     if list.is_empty() {
-        common::not_available(ui, "Die Laufzeit der automatischen Formen ist nicht verfügbar.");
+        common::not_available(ui, &common::t("panel-autoshapes-unavailable"));
         return;
     }
     let mut budget = 3u32;
@@ -116,8 +234,8 @@ pub fn panel(ui: &mut Ui, st: &mut AppState) {
                 ui.painter().image(t.id(), r.shrink(2.0), Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0)), Color32::WHITE);
             }
             ui.painter().rect_stroke(r, 2.0, Stroke::new(if selected { 2.0 } else { 1.0 }, if selected { c.selection } else { c.list_border }), StrokeKind::Inside);
-            let label = if s.label.is_empty() { s.name.as_str() } else { s.label.as_str() };
-            crate::widgets::text_clipped(ui.painter(), pos2(r.center().x, r.bottom() + 7.0), Align2::CENTER_CENTER, label, theme.small_font(), c.text, cell);
+            let label = shape_label(&s.name, &s.label);
+            crate::widgets::text_clipped(ui.painter(), pos2(r.center().x, r.bottom() + 7.0), Align2::CENTER_CENTER, &label, theme.small_font(), c.text, cell);
             let resp = resp.on_hover_text(label);
             if resp.clicked() {
                 sel = Some(s.name.clone());
@@ -133,7 +251,8 @@ pub fn panel(ui: &mut Ui, st: &mut AppState) {
         }
         None => d.remove::<String>(sel_key),
     });
-    let buttons = [FooterButton { glyph: Glyph::Play, tip: "In die Leinwandmitte einfügen", enabled: has_doc && sel.is_some(), action: sel.clone().map(|n| Action::Run("autoShape.insert".into(), json!({"shape": n}))) }];
+    let tip_insert = common::t("panel-autoshapes-insert");
+    let buttons = [FooterButton { glyph: Glyph::Play, tip: &tip_insert, enabled: has_doc && sel.is_some(), action: sel.clone().map(|n| Action::Run("autoShape.insert".into(), json!({"shape": n}))) }];
     if let Some(a) = common::footer(ui, 8.0, "", &buttons) {
         st.push(a);
     }
@@ -159,7 +278,7 @@ pub fn selected_shape(st: &AppState) -> Option<u64> {
 pub fn properties(ui: &mut Ui, st: &mut AppState) {
     let theme = Theme::current(ui.ctx());
     let Some(id) = selected_shape(st) else {
-        common::not_available(ui, "Keine automatische Form ausgewählt.");
+        common::not_available(ui, &common::t("panel-asp-none"));
         return;
     };
     let generation = st.session.active().map(|d| d.generation).unwrap_or(0);
@@ -173,33 +292,44 @@ pub fn properties(ui: &mut Ui, st: &mut AppState) {
             v
         }
     };
-    let title = desc.get("label").and_then(|v| v.as_str()).unwrap_or("Automatische Form").to_string();
-    ui.label(egui::RichText::new(title).font(theme.bold(theme.fonts.ui)).color(theme.colors.text));
+    let de_label = desc.get("label").and_then(|v| v.as_str()).unwrap_or("");
+    let title = match desc.get("shape").and_then(|v| v.as_str()) {
+        Some(name) => shape_label(name, de_label),
+        None if !de_label.is_empty() => de_label.to_string(),
+        None => common::t("panel-asp-default-title"),
+    };
+    let (tr_, _) = ui.allocate_exact_size(vec2(ui.available_width(), 18.0), Sense::hover());
+    common::fit_text(ui, tr_.shrink2(vec2(2.0, 0.0)), Align2::LEFT_CENTER, &title, theme.bold(theme.fonts.ui), theme.colors.text);
     let params = desc.get("params").and_then(|p| p.as_array()).cloned().unwrap_or_default();
     if params.is_empty() {
-        common::not_available(ui, "Diese Form hat keine einstellbaren Eigenschaften.");
+        common::not_available(ui, &common::t("panel-asp-no-params"));
         return;
     }
+    // Beschriftungsspalte: bis 120 px, bei schmalen Bedienfeldern weniger (Text mit „…“)
+    let label_w = (ui.available_width() - 100.0).clamp(50.0, 120.0);
     let mut change: Option<(String, Value)> = None;
     for (i, p) in params.iter().enumerate() {
         let k = p.get("key").and_then(|v| v.as_str()).unwrap_or("").to_string();
-        let label = p.get("label").and_then(|v| v.as_str()).unwrap_or(&k).to_string();
+        let label = param_label(p.get("label").and_then(|v| v.as_str()).unwrap_or(&k));
         let kind = p.get("type").and_then(|v| v.as_str()).unwrap_or("number");
         let value = p.get("value").cloned().unwrap_or(Value::Null);
         let (row, _) = ui.allocate_exact_size(vec2(ui.available_width(), 24.0), Sense::hover());
-        let lr = Rect::from_min_size(row.min + vec2(4.0, 2.0), vec2(120.0, 20.0));
-        let cr = Rect::from_min_max(pos2(row.left() + 128.0, row.top() + 2.0), pos2(row.right() - 4.0, row.bottom() - 2.0));
+        let lr = Rect::from_min_size(row.min + vec2(4.0, 2.0), vec2(label_w, 20.0));
+        let cr = Rect::from_min_max(pos2(row.left() + label_w + 8.0, row.top() + 2.0), pos2(row.right() - 4.0, row.bottom() - 2.0));
         match kind {
             "bool" => {
                 let on = value.as_bool().unwrap_or_else(|| value.as_str() == Some("true"));
-                if let Some(b) = fields::checkbox(ui, ("as-b", i), Rect::from_min_size(row.min + vec2(4.0, 4.0), vec2(row.width() - 8.0, 16.0)), &label, on, true) {
+                let cbr = Rect::from_min_size(row.min + vec2(4.0, 4.0), vec2(row.width() - 8.0, 16.0));
+                if let Some(b) = fields::checkbox(ui, ("as-b", i), cbr, "", on, true) {
                     change = Some((k, json!(b)));
                 }
+                common::label_fit(ui, Rect::from_min_max(pos2(cbr.left() + 18.0, cbr.top()), cbr.max), &label, true);
             }
             "choice" => {
-                fields::label(ui, lr, &label, true);
+                common::label_fit(ui, lr, &label, true);
                 let opts: Vec<String> = p.get("options").and_then(|o| o.as_array()).map(|a| a.iter().map(|x| x.as_str().map(|s| s.to_string()).unwrap_or_else(|| x.to_string())).collect()).unwrap_or_default();
-                let refs: Vec<&str> = opts.iter().map(|s| s.as_str()).collect();
+                let shown: Vec<String> = opts.iter().map(|o| option_label(o)).collect();
+                let refs: Vec<&str> = shown.iter().map(|s| s.as_str()).collect();
                 let cur = value.as_str().map(|s| s.to_string()).unwrap_or_else(|| value.to_string());
                 let sel = opts.iter().position(|o| *o == cur);
                 if let Some(n) = fields::combo(ui, ("as-c", i), Rect::from_min_size(cr.min, vec2(cr.width().min(160.0), 20.0)), &refs, sel, true) {
@@ -207,20 +337,20 @@ pub fn properties(ui: &mut Ui, st: &mut AppState) {
                 }
             }
             "color" => {
-                fields::label(ui, lr, &label, true);
+                common::label_fit(ui, lr, &label, true);
                 let cur = value.as_str().and_then(fp_color::Rgba8::parse_hex).map(|c| c.to_argb());
                 if let Some(crate::inspector::popups::ColorChoice::Color(col)) = crate::inspector::popups::color_button(ui, ("as-col", i), Rect::from_min_size(cr.min, vec2(26.0, 20.0)), st, cur, true, false, false) {
                     change = Some((k, json!(crate::ui_commands::hex(col))));
                 }
             }
             "text" => {
-                fields::label(ui, lr, &label, true);
+                common::label_fit(ui, lr, &label, true);
                 if let Some(t) = fields::text(ui, ("as-t", i), Rect::from_min_size(cr.min, vec2(cr.width().min(200.0), 20.0)), value.as_str().unwrap_or(""), true) {
                     change = Some((k, json!(t)));
                 }
             }
             _ => {
-                fields::label(ui, lr, &label, true);
+                common::label_fit(ui, lr, &label, true);
                 let min = p.get("min").and_then(|v| v.as_f64()).unwrap_or(-100000.0);
                 let max = p.get("max").and_then(|v| v.as_f64()).unwrap_or(100000.0);
                 let dec = if kind == "integer" { 0 } else { 2 };

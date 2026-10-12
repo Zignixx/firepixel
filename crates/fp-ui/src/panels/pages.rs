@@ -63,7 +63,7 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                 if let Some(res) = common::inline_rename(ui, Id::new(("page-rename", i)), nr, &name) {
                     match res {
                         Some(nn) if valid_page_name(&nn) => actions.push(Action::Run("page.rename".into(), json!({"index": i, "name": nn}))),
-                        Some(_) => actions.push(Action::Status("Ungültiges Zeichen im Seitennamen: \\ / : * ? \" < > |".into())),
+                        Some(_) => actions.push(Action::Status(common::t("panel-pages-invalid-name"))),
                         None => {}
                     }
                     ui.data_mut(|dd| dd.remove::<usize>(Id::new(RENAME)));
@@ -71,7 +71,7 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
             } else {
                 let font = if sel { theme.bold(theme.fonts.ui) } else { theme.ui_font() };
                 let label = if numbering { format!("{:02}  {}", i + 1, name) } else { name.clone() };
-                ui.painter().text(pos2(nr.left(), rect.center().y), Align2::LEFT_CENTER, label, font, if sel { c.list_selected_text } else { c.text });
+                crate::widgets::text_clipped(ui.painter(), pos2(nr.left(), rect.center().y), Align2::LEFT_CENTER, &label, font, if sel { c.list_selected_text } else { c.text }, nr.width());
             }
             if resp.clicked() && i != current {
                 actions.push(Action::SetPage(i));
@@ -81,11 +81,12 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
             }
         }
     });
-    let text = if n == 1 { "1 Seite".to_string() } else { format!("{n} Seiten") };
+    let text = fp_i18n::tr!("panel-pages-count", n = n);
     let alt = ui.input(|i| i.modifiers.alt);
+    let (tip_new, tip_del) = (common::t("panel-pages-new"), common::t("panel-pages-delete"));
     let buttons = [
-        FooterButton { glyph: Glyph::NewLayer, tip: "Neue / doppelte Seite", enabled: true, action: Some(if alt { Action::Run("page.duplicate".into(), json!({})) } else { Action::Run("edit.insert.page".into(), json!({})) }) },
-        FooterButton { glyph: Glyph::Trash, tip: "Seite löschen", enabled: n > 1, action: Some(Action::Run("page.delete".into(), json!({}))) },
+        FooterButton { glyph: Glyph::NewLayer, tip: &tip_new, enabled: true, action: Some(if alt { Action::Run("page.duplicate".into(), json!({})) } else { Action::Run("edit.insert.page".into(), json!({})) }) },
+        FooterButton { glyph: Glyph::Trash, tip: &tip_del, enabled: n > 1, action: Some(Action::Run("page.delete".into(), json!({}))) },
     ];
     if let Some(a) = common::footer(ui, 30.0, &text, &buttons) {
         actions.push(a);

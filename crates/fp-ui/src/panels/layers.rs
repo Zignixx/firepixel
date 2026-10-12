@@ -45,22 +45,23 @@ fn element_label(e: &Element) -> String {
     {
         return n.clone();
     }
+    let t = common::t;
     match &e.kind {
-        ElementKind::Bitmap(_) => "Bitmap".into(),
-        ElementKind::Path(p) if p.primitive.is_some() => "Rechteck".into(),
-        ElementKind::Path(_) => "Pfad".into(),
-        ElementKind::Text(t) => {
-            let s = t.plain_text();
+        ElementKind::Bitmap(_) => t("panel-layers-kind-bitmap"),
+        ElementKind::Path(p) if p.primitive.is_some() => t("panel-layers-kind-rectangle"),
+        ElementKind::Path(_) => t("panel-layers-kind-path"),
+        ElementKind::Text(tx) => {
+            let s = tx.plain_text();
             let s: String = s.chars().take(24).collect();
-            if s.trim().is_empty() { "Text".into() } else { s }
+            if s.trim().is_empty() { t("panel-layers-kind-text") } else { s }
         }
-        ElementKind::Group(_) => "Gruppe".into(),
-        ElementKind::CompoundShape(_) => "Zusammengesetzte Form".into(),
-        ElementKind::Instance(_) => "Symbol".into(),
-        ElementKind::WebObject(w) if w.slice.is_some() => "Segment".into(),
-        ElementKind::WebObject(_) => "Hotspot".into(),
+        ElementKind::Group(_) => t("panel-layers-kind-group"),
+        ElementKind::CompoundShape(_) => t("panel-layers-kind-compound"),
+        ElementKind::Instance(_) => t("panel-layers-kind-symbol"),
+        ElementKind::WebObject(w) if w.slice.is_some() => t("panel-layers-kind-slice"),
+        ElementKind::WebObject(_) => t("panel-layers-kind-hotspot"),
         ElementKind::SubLayer(l) => l.name.clone(),
-        ElementKind::Raw(_) => "Objekt".into(),
+        ElementKind::Raw(_) => t("panel-layers-kind-object"),
     }
 }
 
@@ -99,7 +100,7 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
     {
         st.run("element.setBlendMode", json!({"mode": BLEND_ITEMS[i].1.to_string()}));
     }
-    fields::label(ui, dl.r(84.0, 3.0, 34.0, 8.0), "Deckkraft", true);
+    common::label_fit(ui, dl.r(84.0, 3.0, 35.0, 8.0), &common::t("panel-layers-opacity"), true);
     let op = first_sel.as_ref().map(|e| e.common.opacity.to_percent().round());
     if let Some(v) = fields::number(ui, "layers-opacity", dl.r(120.0, 2.0, 21.0, 12.0), Some(dl.r(142.0, 2.0, 9.0, 12.0)), op.or(Some(100.0)), (0.0, 100.0), 0, en) {
         st.run("element.setOpacity", json!({"opacity": v}));
@@ -150,7 +151,7 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
             let is_collapsed = collapsed.contains(&l.id.0);
             paint_triangle(ui, tri, !is_collapsed, c.icon_fg);
             glyphs::paint(ui.painter(), Rect::from_center_size(pos2(rect.left() + 66.0, rect.center().y), vec2(16.0, 14.0)), Glyph::Folder, &theme, true);
-            let name = if web { "Webebene".to_string() } else { l.name.clone() };
+            let name = if web { common::t("panel-layers-web-layer") } else { l.name.clone() };
             let name_r = Rect::from_min_max(pos2(rect.left() + 78.0, rect.top() + 2.0), pos2(rect.right() - 22.0, rect.bottom() - 2.0));
             let renaming = rename.as_ref().is_some_and(|k| matches!(k, RowKind::Layer { id, .. } if *id == l.id));
             if renaming {
@@ -340,12 +341,13 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
     };
     let alt = ui.input(|i| i.modifiers.alt);
     let new_layer = if alt { Action::Run("layer.duplicate".into(), json!({})) } else { Action::Run("layer.add".into(), json!({})) };
+    let tips: [String; 5] = ["panel-layers-new-sublayer", "panel-layers-new-layer", "panel-layers-new-bitmap", "panel-layers-add-mask", "panel-layers-delete"].map(common::t);
     let buttons = [
-        FooterButton { glyph: Glyph::NewSubLayer, tip: "Neue Unterebene", enabled: true, action: Some(Action::Run("pi.layer.addSub".into(), json!({}))) },
-        FooterButton { glyph: Glyph::NewLayer, tip: "Neu / Ebene duplizieren", enabled: true, action: Some(new_layer) },
-        FooterButton { glyph: Glyph::Bitmap, tip: "Neues Bitmap-Bild", enabled: true, action: Some(Action::Run("edit.insert.emptyBitmap".into(), json!({}))) },
-        FooterButton { glyph: Glyph::Mask, tip: "Maske hinzufügen", enabled: !selected.is_empty(), action: Some(Action::Run("modify.mask.revealAll".into(), json!({}))) },
-        FooterButton { glyph: Glyph::Trash, tip: "Auswahl löschen", enabled: !selected.is_empty() || can_delete_layer, action: del_action },
+        FooterButton { glyph: Glyph::NewSubLayer, tip: &tips[0], enabled: true, action: Some(Action::Run("pi.layer.addSub".into(), json!({}))) },
+        FooterButton { glyph: Glyph::NewLayer, tip: &tips[1], enabled: true, action: Some(new_layer) },
+        FooterButton { glyph: Glyph::Bitmap, tip: &tips[2], enabled: true, action: Some(Action::Run("edit.insert.emptyBitmap".into(), json!({}))) },
+        FooterButton { glyph: Glyph::Mask, tip: &tips[3], enabled: !selected.is_empty(), action: Some(Action::Run("modify.mask.revealAll".into(), json!({}))) },
+        FooterButton { glyph: Glyph::Trash, tip: &tips[4], enabled: !selected.is_empty() || can_delete_layer, action: del_action },
     ];
     if let Some(a) = footer_with_state(ui, st, &frame_text, &buttons) {
         actions.push(a);

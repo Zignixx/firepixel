@@ -20,14 +20,14 @@ use std::sync::Arc;
 
 const RENAME: &str = "doclib-rename";
 
-fn kind_label(k: fp_model::SymbolKind) -> &'static str {
-    match k {
-        fp_model::SymbolKind::Graphic => "Grafik",
-        fp_model::SymbolKind::Button => "Schaltfläche",
-        fp_model::SymbolKind::Animation => "Animation",
-        fp_model::SymbolKind::Widget => "Komponente",
-        fp_model::SymbolKind::Other(_) => "Symbol",
-    }
+fn kind_label(k: fp_model::SymbolKind) -> String {
+    common::t(match k {
+        fp_model::SymbolKind::Graphic => "panel-doclib-kind-graphic",
+        fp_model::SymbolKind::Button => "panel-doclib-kind-button",
+        fp_model::SymbolKind::Animation => "panel-doclib-kind-animation",
+        fp_model::SymbolKind::Widget => "panel-doclib-kind-component",
+        fp_model::SymbolKind::Other(_) => "panel-doclib-kind-symbol",
+    })
 }
 
 /// Dokumentbibliothek.
@@ -55,8 +55,9 @@ pub fn document(ui: &mut Ui, st: &mut AppState) {
     }
     // Kopfzeile der Liste
     let (hr, _) = ui.allocate_exact_size(vec2(ui.available_width(), 16.0), Sense::hover());
-    ui.painter().text(pos2(hr.left() + 26.0, hr.center().y), Align2::LEFT_CENTER, format!("{} Elemente", doc.symbols.len()), theme.small_font(), c.text);
-    ui.painter().text(pos2(hr.right() - 70.0, hr.center().y), Align2::LEFT_CENTER, "Art", theme.small_font(), c.text);
+    let count = fp_i18n::tr!("panel-doclib-count", n = doc.symbols.len());
+    common::fit_text(ui, Rect::from_min_max(pos2(hr.left() + 26.0, hr.top()), pos2(hr.right() - 74.0, hr.bottom())), Align2::LEFT_CENTER, &count, theme.small_font(), c.text);
+    common::fit_text(ui, Rect::from_min_max(pos2(hr.right() - 70.0, hr.top()), pos2(hr.right() - 2.0, hr.bottom())), Align2::LEFT_CENTER, &common::t("panel-doclib-kind"), theme.small_font(), c.text);
     common::list_frame(ui, "doclib-list", common::FOOTER_H, |ui| {
         for (i, s) in doc.symbols.iter().enumerate() {
             let (r, resp) = common::row(ui, 20.0, sel == Some(i));
@@ -72,7 +73,7 @@ pub fn document(ui: &mut Ui, st: &mut AppState) {
             } else {
                 crate::widgets::text_clipped(ui.painter(), pos2(nr.left(), r.center().y), Align2::LEFT_CENTER, &s.name, theme.ui_font(), c.text, nr.width());
             }
-            ui.painter().text(pos2(r.right() - 70.0, r.center().y), Align2::LEFT_CENTER, kind_label(s.kind()), theme.small_font(), c.text_weak);
+            crate::widgets::text_clipped(ui.painter(), pos2(r.right() - 70.0, r.center().y), Align2::LEFT_CENTER, &kind_label(s.kind()), theme.small_font(), c.text_weak, 68.0);
             if resp.clicked() {
                 new_sel = Some(i);
             }
@@ -91,10 +92,11 @@ pub fn document(ui: &mut Ui, st: &mut AppState) {
         }
     });
     let has_sel = st.session.active().is_some_and(|d| !d.selection.elements.is_empty());
+    let tips: [String; 3] = ["panel-doclib-place", "panel-doclib-new-symbol", "panel-doclib-delete"].map(common::t);
     let buttons = [
-        FooterButton { glyph: Glyph::Play, tip: "In Leinwandmitte einfügen", enabled: sel.is_some(), action: sel.map(|i| Action::Run("pi.symbol.place".into(), json!({"index": i}))) },
-        FooterButton { glyph: Glyph::StyleNew, tip: "Neues Symbol (aus der Auswahl)", enabled: has_sel, action: Some(Action::Run("modify.symbol.convertToSymbol".into(), json!({}))) },
-        FooterButton { glyph: Glyph::Trash, tip: "Löschen", enabled: sel.is_some(), action: sel.map(|i| Action::Run("panel.doclib.delete".into(), json!({"index": i}))) },
+        FooterButton { glyph: Glyph::Play, tip: &tips[0], enabled: sel.is_some(), action: sel.map(|i| Action::Run("pi.symbol.place".into(), json!({"index": i}))) },
+        FooterButton { glyph: Glyph::StyleNew, tip: &tips[1], enabled: has_sel, action: Some(Action::Run("modify.symbol.convertToSymbol".into(), json!({}))) },
+        FooterButton { glyph: Glyph::Trash, tip: &tips[2], enabled: sel.is_some(), action: sel.map(|i| Action::Run("panel.doclib.delete".into(), json!({"index": i}))) },
     ];
     if let Some(a) = common::footer(ui, 8.0, "", &buttons) {
         actions.push(a);
@@ -105,8 +107,8 @@ pub fn document(ui: &mut Ui, st: &mut AppState) {
                 let i = p.get("index").and_then(|v| v.as_u64()).unwrap_or(0) as usize;
                 let name = doc.symbols.get(i).map(|s| s.name.clone()).unwrap_or_default();
                 st.dialogs.confirm = Some(crate::dialogs::Confirm {
-                    title: "Symbol löschen".into(),
-                    text: format!("Das Symbol „{name}“ und alle Instanzen löschen?"),
+                    title: common::t("panel-doclib-delete-title"),
+                    text: fp_i18n::tr!("panel-doclib-delete-text", name = name.as_str()),
                     command: "pi.symbol.delete".into(),
                     params: json!({"index": i}),
                 });
@@ -127,10 +129,10 @@ pub fn library_roots() -> Vec<(String, PathBuf)> {
     let mut v = Vec::new();
     if let Some(dir) = fp_engine::Preferences::default_path().and_then(|p| p.parent().map(|d| d.join("Allgemeine Bibliothek"))) {
         let _ = std::fs::create_dir_all(&dir);
-        v.push(("Eigene Bibliothek".to_string(), dir));
+        v.push((common::t("panel-commonlib-own"), dir));
     }
     if let Some(p) = fp_color::install::original_subdir("Configuration\\Libraries") {
-        v.push(("Ressourcenordner des Originals".to_string(), p));
+        v.push((common::t("panel-commonlib-original"), p));
     }
     v
 }
@@ -177,7 +179,7 @@ pub fn common(ui: &mut Ui, st: &mut AppState) {
             let pts = if is_open { vec![pos2(cc.x - 4.0, cc.y - 2.0), pos2(cc.x + 4.0, cc.y - 2.0), pos2(cc.x, cc.y + 3.0)] } else { vec![pos2(cc.x - 2.0, cc.y - 4.0), pos2(cc.x + 3.0, cc.y), pos2(cc.x - 2.0, cc.y + 4.0)] };
             ui.painter().add(egui::Shape::convex_polygon(pts, theme.colors.icon_fg, Stroke::NONE));
             crate::inspector::glyphs::paint(ui.painter(), Rect::from_min_size(pos2(x + 12.0, r.top() + 2.0), vec2(16.0, 16.0)), Glyph::Folder, theme, true);
-            ui.painter().text(pos2(x + 32.0, r.center().y), Align2::LEFT_CENTER, label, theme.ui_font(), theme.colors.text);
+            crate::widgets::text_clipped(ui.painter(), pos2(x + 32.0, r.center().y), Align2::LEFT_CENTER, label, theme.ui_font(), theme.colors.text, r.right() - x - 34.0);
             if resp.clicked() {
                 *toggle = Some(key.clone());
             }
@@ -195,7 +197,8 @@ pub fn common(ui: &mut Ui, st: &mut AppState) {
                 let name = f.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
                 let name = name.trim_end_matches(".png").trim_end_matches(".graphic").to_string();
                 crate::inspector::glyphs::paint(ui.painter(), Rect::from_min_size(pos2(r2.left() + 18.0 + (depth + 1) as f32 * 14.0, r2.top() + 3.0), vec2(14.0, 14.0)), Glyph::Bitmap, theme, true);
-                ui.painter().text(pos2(r2.left() + 36.0 + (depth + 1) as f32 * 14.0, r2.center().y), Align2::LEFT_CENTER, &name, theme.ui_font(), theme.colors.text);
+                let nx = r2.left() + 36.0 + (depth + 1) as f32 * 14.0;
+                crate::widgets::text_clipped(ui.painter(), pos2(nx, r2.center().y), Align2::LEFT_CENTER, &name, theme.ui_font(), theme.colors.text, r2.right() - nx - 2.0);
                 if resp2.clicked() {
                     *new_sel = Some(f.clone());
                 }
@@ -211,7 +214,7 @@ pub fn common(ui: &mut Ui, st: &mut AppState) {
             walk(ui, p, label, 0, &open, &sel, &theme, &mut toggle, &mut new_sel, &mut insert);
         }
         if roots.is_empty() {
-            ui.label(egui::RichText::new("Keine Bibliotheksordner").color(c.text_disabled));
+            ui.label(egui::RichText::new(common::t("panel-commonlib-empty")).color(c.text_disabled));
         }
     });
     if let Some(k) = toggle {
@@ -225,7 +228,8 @@ pub fn common(ui: &mut Ui, st: &mut AppState) {
     }
     let has_doc = st.session.active().is_some();
     let target = insert;
-    let buttons = [FooterButton { glyph: Glyph::Play, tip: "In das Dokument einfügen", enabled: has_doc && sel.is_some(), action: sel.clone().map(|p| Action::Run("pi.symbol.import".into(), json!({"path": p.to_string_lossy()}))) }];
+    let tip_insert = common::t("panel-commonlib-insert");
+    let buttons = [FooterButton { glyph: Glyph::Play, tip: &tip_insert, enabled: has_doc && sel.is_some(), action: sel.clone().map(|p| Action::Run("pi.symbol.import".into(), json!({"path": p.to_string_lossy()}))) }];
     if let Some(a) = common::footer(ui, 8.0, "", &buttons) {
         st.push(a);
     }

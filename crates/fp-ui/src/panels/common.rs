@@ -169,6 +169,90 @@ pub fn resource_menu(ui: &Ui, resp: &egui::Response, st: &mut crate::app_state::
     }
 }
 
+// ---------------------------------------------------------------------- Texte (Phase 6)
+
+/// Text eines Schlüssels aus `bedienfelder.ftl` (bzw. jeder anderen Bereichsdatei).
+pub fn t(key: &str) -> String {
+    fp_i18n::t(key)
+}
+
+/// Übersetzter Text als `&'static str` (für APIs, die feste Texte erwarten, z. B. Reitertitel).
+/// Jeder unterschiedliche Text wird genau einmal abgelegt; die Menge ist durch die Zahl der
+/// Schlüssel × Sprachen begrenzt.
+pub fn t_static(key: &str) -> &'static str {
+    use std::collections::HashMap;
+    use std::sync::{Mutex, OnceLock};
+    static POOL: OnceLock<Mutex<HashMap<String, &'static str>>> = OnceLock::new();
+    let text = fp_i18n::t(key);
+    let pool = POOL.get_or_init(|| Mutex::new(HashMap::new()));
+    let Ok(mut m) = pool.lock() else {
+        return "";
+    };
+    if let Some(s) = m.get(&text) {
+        return s;
+    }
+    let s: &'static str = Box::leak(text.clone().into_boxed_str());
+    m.insert(text, s);
+    s
+}
+
+/// Text in `r` (links, rechts oder mittig ausgerichtet), bei Platzmangel mit „…“ gekürzt; der
+/// volle Text steht dann als Tooltip über `r`. Liefert `true`, wenn gekürzt wurde.
+pub fn fit_text(ui: &Ui, r: Rect, align: Align2, text: &str, font: egui::FontId, color: egui::Color32) -> bool {
+    let full = crate::widgets::text_width(ui, text, &font);
+    let x = match align.x() {
+        egui::Align::Min => r.left(),
+        egui::Align::Center => r.center().x,
+        egui::Align::Max => r.right(),
+    };
+    let y = match align.y() {
+        egui::Align::Min => r.top(),
+        egui::Align::Center => r.center().y,
+        egui::Align::Max => r.bottom(),
+    };
+    crate::widgets::text_clipped(ui.painter(), pos2(x, y), align, text, font, color, r.width().max(0.0));
+    let cut = full > r.width();
+    if cut {
+        let id = Id::new(("fit-text", r.min.x as i32, r.min.y as i32, text));
+        let _ = ui.interact(r, id, Sense::hover()).on_hover_text(text);
+    }
+    cut
+}
+
+/// Beschriftung wie [`crate::inspector::fields::label`], aber auf `r` gekürzt (mit „…“ und Tooltip).
+pub fn label_fit(ui: &Ui, r: Rect, text: &str, enabled: bool) {
+    let t = Theme::current(ui.ctx());
+    let col = if enabled { t.colors.text } else { t.colors.text_disabled };
+    fit_text(ui, r, Align2::LEFT_CENTER, text, t.ui_font(), col);
+}
+
+/// Rechtsbündige Beschriftung (wie [`crate::inspector::fields::label_right`]), auf `r` gekürzt.
+pub fn label_right_fit(ui: &Ui, r: Rect, text: &str, enabled: bool) {
+    let t = Theme::current(ui.ctx());
+    let col = if enabled { t.colors.text } else { t.colors.text_disabled };
+    fit_text(ui, r, Align2::RIGHT_CENTER, text, t.ui_font(), col);
+}
+
+/// Kontrollkästchen wie [`crate::inspector::fields::checkbox`], Beschriftung auf `r` gekürzt.
+pub fn checkbox_fit(ui: &mut Ui, id: impl std::hash::Hash + std::fmt::Debug, r: Rect, text: &str, checked: bool, enabled: bool) -> Option<bool> {
+    let out = crate::inspector::fields::checkbox(ui, id, r, "", checked, enabled);
+    label_fit(ui, Rect::from_min_max(pos2(r.left() + 18.0, r.top()), r.max), text, enabled);
+    out
+}
+
+/// Anzeigename eines Werkzeugs: `tool-<name ohne „tool.“>`, sonst `cmd-tool-…`, sonst die
+/// Beschriftung aus fp-engine (gleiche Reihenfolge wie im Inspektor).
+pub fn tool_label(t: fp_engine::ToolId) -> String {
+    let Some(info) = fp_engine::tools::info(t) else { return String::new() };
+    let short = info.name.strip_prefix("tool.").unwrap_or(info.name);
+    for key in [format!("tool-{short}"), fp_i18n::command_key(info.name)] {
+        if fp_i18n::has(&key) {
+            return fp_i18n::t(&key);
+        }
+    }
+    info.label.to_string()
+}
+
 /// Hinweistext für Funktionen, die noch nicht verfügbar sind.
 pub fn not_available(ui: &mut Ui, text: &str) {
     let theme = Theme::current(ui.ctx());
