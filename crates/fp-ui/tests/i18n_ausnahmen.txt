@@ -49,3 +49,36 @@ text workspace.rs | ungültige Struktur
 text workspace.rs | Erweiterter Modus
 text workspace.rs | Symbolmodus
 text workspace.rs | Symbolmodus mit Bedienfeldnamen
+# Nachschlagetabellen der Bedienfelder (I18N-BEDIENFELDER, 12.10.): deutsche Quelltexte aus fp-script
+# (Parameter der automatischen Formen) bzw. fp-export (Vorgabenamen, Palette „Schwarzweiß“) → Schlüssel;
+# angezeigt wird immer die Übersetzung (panel-asp-p-*, panel-opt-*)
+text autoshapes.rs | Länge der Spitze
+text autoshapes.rs | Eckgröße
+text autoshapes.rs | Krümmung
+text autoshapes.rs | Höhe
+text autoshapes.rs | Innerer Radius (Röhre)
+text autoshapes.rs | Länge
+text autoshapes.rs | Überhang
+text autoshapes.rs | Größe
+text autoshapes.rs | Spitzengröße
+text autoshapes.rs | Zähne
+text autoshapes.rs | Schaftlänge
+text autoshapes.rs | Wellenlänge
+text optimize.rs | Schwarzweiß
+text optimize.rs | JPEG – Höhere Qualität
+
+# I18N-ENGINE (12.10.): interne Fehler des eigenen JPEG-Dekoders. jpeg_in.rs ruft ihn mit `if let Ok(…)` auf und fällt bei jedem Fehler auf zune-jpeg zurück – diese Texte sieht nie ein Nutzer.
+text jpeg_ijg.rs | Huffman-Tabelle ungültig
+text jpeg_ijg.rs | ungültiger Huffman-Code
+text jpeg_ijg.rs | kein JPEG
+text jpeg_ijg.rs | nur 8-Bit-JPEG
+text jpeg_ijg.rs | JPEG-Kopf ungültig
+text jpeg_ijg.rs | zu groß
+text jpeg_ijg.rs | Abtastfaktor
+text jpeg_ijg.rs | JPEG-Variante nicht unterstützt (arithmetisch/verlustfrei)
+text jpeg_ijg.rs | Scan vor dem Bildkopf
+text jpeg_ijg.rs | Spektralauswahl
+text jpeg_ijg.rs | JPEG ohne Bild
+text jpeg_ijg.rs | nicht ganzzahliges Abtastverhältnis
+# I18N-ENGINE: Strichvorgaben (BRUSH_PRESETS category_de/name_de) und Verlaufsformen (GRADIENT_SHAPES) in fp-engine\src\commands\panel.rs sind feste Kennungen („Kategorie/Name“ als Parameter `preset`, gespeicherter Pinselname wie im Original); die Anzeige übersetzt der Inspektor (inspector\texte.rs, pi-*).
+# I18N-ENGINE: Parameterbeschreibungen der Befehle (.opt/.param/.describe in fp-engine) gehen nur ins MCP-/CLI-Schema für Agenten und Entwickler, nicht in die Oberfläche (Filterparameter sind übersetzt, filter-param-*).
