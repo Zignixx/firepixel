@@ -1,47 +1,48 @@
 # Firepixel: Stand
 
-## Gesamtübersicht – Stand 12.10.2026 abends (DOC-1)
+## Gesamtübersicht – Stand 12.10.2026 nach Welle 2 (DOC-2)
 
-**Was Firepixel ist:** ein nativer Nachbau des klassischen Grafikprogramms (im Folgenden „das Original“) in Rust: eine einzelne EXE ohne Installation, dazu `firepixel-cli`. Er öffnet und speichert FW-PNG (`.fw.png`) und wird bedient wie das Original. Umfang: 19 Crates, ≈ 196.000 Zeilen Rust, 161 Testdateien, 192 Commits (davon ≈ 150 am 12.10.).
+**Was Firepixel ist:** ein nativer Nachbau des klassischen Grafikprogramms (im Folgenden „das Original“) in Rust: eine einzelne EXE ohne Installation, dazu `firepixel-cli`. Er öffnet und speichert FW-PNG (`.fw.png`) und wird bedient wie das Original. Umfang: 20 Crates, ≈ 212.000 Zeilen Rust, 177 Testdateien, 235 Commits (davon ≈ 190 am 12.10.).
 
 **Was Firepixel kann:**
 - **Dokumente:** Vektor und Bitmap, Seiten, Status (Animation), Ebenen, Symbole, Live-Filter, 41 automatische Formen. Rendertreue 648/651 Korpusseiten pixelgenau.
-- **Formate:** Öffnen PNG, GIF, JPEG, BMP, TIFF, TGA, WBMP, PSD, SVG, WebP, APNG, AVIF, HEIC, JPEG XL, QOI, ICO. Export über Optimieren/Bildvorschau, SVG.
+- **Formate:** Öffnen PNG, GIF, JPEG, BMP, TIFF, TGA, WBMP, PSD, SVG, WebP, APNG, AVIF, HEIC, JPEG XL, QOI, ICO. Speichern unter auch als „Reduziertes PNG“. Export über Datei ▸ Exportieren mit 10 Arten (PDF mit Kennwortschutz, HTML und Bilder, Nur Bilder, CSS und Bilder, CSS-Sprites, Ebenen/Status/Seiten in Dateien, PSD, SVG) samt Optionen-Dialogen, dazu Optimieren/Bildvorschau.
 - **Oberfläche wie im Original:** Menüs, Werkzeuge inkl. Bitmap-Malwerkzeuge, Bedienfelder, Inspektor, Dialoge, Kontextmenüs, Kürzel; 3 Designs (Normal, Dunkel, OLED).
 - **Deutsch und Englisch** vollständig (Fluent, 0 feste Texte, Scanner scharf). Sprache in der UI umschaltbar, MCP antwortet englisch, CLI mit `--lang`. Technisches ist immer englisch (§1c), alte Ordner werden beim ersten Start migriert.
 - **Bitmap nachzeichnen** (Bild → Vektor/SVG) mit Live-Vorschau, 4 Vorgaben und Logo-Aufräumen.
 - **KI-Auswahl** (Objekt, Motiv, Kante; SAM 2.1 / BiRefNet lokal) mit Fortschrittskarte und Feineinstellungen.
-- **Bildvorschau** mit 1/2/4 Feldern, Registerkarte Optionen, Farbtabelle, Pipetten und Optimieren auf Größe.
+- **Bildvorschau** mit 1/2/4 Feldern, Registerkarten Optionen, Datei und Animation, Farbtabelle, Pipetten, Exportbereich-Werkzeug, Abspielknöpfen und Optimieren auf Größe.
+- **Kurven und Tonwertkorrektur** wie im Original (Histogramm, Griffe, Auto, Pipetten), auch als bearbeitbarer Live-Filter; Bitmap-Auswahl speichern/wiederherstellen/löschen.
 - **Automatisierung:** ein Befehlsregister für UI, CLI, MCP (headless und Brücke zur laufenden App mit `ui_find`/`ui_input`/`screenshot`) und JSF (550/565 Methoden).
 - **Leistung:** Tippen auf Rechnern ohne Grafikkarte ≈ 77 ms je Zeichen (vorher 640 ms).
 
 **Parität mit dem Original (Stand in den Dateien):**
 
-| Abgleich | ✅ | ⚠️ | ❌ | sonst |
-|---|---:|---:|---:|---|
-| PARITAET_A Werkzeuge, Inspektor, Leinwand, Zeiger (126 Zeilen) | 123 | 1 | 2 | 0 ⏳ |
-| PARITAET_B Hauptmenüs (350 Zeilen, 9 Lagen, PM-7) | 276 | 20 | 25 | 29 ℹ️ |
-| PARITAET_B Dialoge (50, Feld für Feld, PM-5/PM-6) | 3 | 21 | 15 | 5 ⏳, 6 🔧 (umgesetzt, Nachmessung offen) |
-| PARITAET_B Bedienfeldmenüs ≡ (10) | 1 | 4 | 4 | 1 ❔ |
+| Abgleich | ✅ | ⚠️ | ❌ | ⏳ umgesetzt, Nachprüfung ausstehend | sonst |
+|---|---:|---:|---:|---:|---|
+| PARITAET_A Werkzeuge, Inspektor, Leinwand, Zeiger (126 Zeilen) | 123 | 1 | 2 | 0 | – |
+| PARITAET_B Hauptmenüs (350 Zeilen, 9 Lagen, PM-7) | 276 | 9 | 4 | 32 | 29 ℹ️ |
+| PARITAET_B Dialoge (50, Feld für Feld, PM-5/PM-6) | 3 | 0 | 6 | 40 (davon 6 🔧) | 1 ❔ (D08) |
+| PARITAET_B Bedienfeldmenüs ≡ (10) | 1 | 0 | 0 | 8 | 1 ❔ |
 
-Automatischer Gesamttest: Menüs 345/345, Kontextmenüs 283/283. BEFUNDE.md: 296 erledigt, 77 offen. Nutzerbefunde: 18 ✅, 3 🔧 (N01, N21, N23 teilweise), 1 ⚠️ (N22), 1 ❌ teilweise (N11).
+Offen ❌ bei den Dialogen: D10 Datei-Info, D11 Exportassistent, D12 Batch („Später“), D13 HTML-Einrichtung, D15 HTML-Code kopieren, D24 Rechtschreibprüfung einrichten. Automatischer Gesamttest: Menüs 345/345, Kontextmenüs 283/283. BEFUNDE.md: 313 erledigt, 88 offen. NACHPRUEFUNG.md: 82 Zeilen, davon 81 ⏳. Nutzerbefunde: 18 ✅, 4 🔧 (N01, N21, N23 teilweise, N24), 1 ⚠️ (N22: P4 offen), 1 ❌ teilweise (N11).
 
-**Was offen ist** (Reihenfolge nach der Pause, Einzelheiten in `docs\PLAN.md` §5):
-1. EB-2: Speichern unter ▸ Reduziertes PNG
-2. KT-1/KT-2: Kurven und Tonwertkorrektur neu nach `re\19`
-3. E1: Export-Dialog neu nach `re\18`
-4. BV-3: Bildvorschau Teil 3 (Datei, Exportbereich, Animation), dann BV-4
-5. DLG-4: Neues Symbol, gespeicherte Befehle
-6. MN-2: Menüfreigabe bei Pixelauswahl/Segment/Gruppe, Untermenü-Köpfe, Text ▸ Schrift
-7. P-DLG5–9: Dialoge D26–D50, gemerkte Werte in allen Filterdialogen
-8. danach E2/E3, KT-3, MN-3/MN-4, RAND-2, P-DESIGN (N11), P-PERF, P-TE2, P-NEUTRAL
-9. Abschluss Z: Gesamttest, Release, komplettes Durchklicken im echten Fenster (de/en, 3 Designs)
+**Was seit DOC-1 dazukam:**
+- **Welle 1:** EB-2 Reduziertes PNG · KV-1 Kurven · KV-2 Tonwertkorrektur · E1 Exportdialog · BV-3 Bildvorschau P3 · MN-2 Menüfreigabe · DLG-5 Filterdialoge Farbe/Schärfe · NZ-2 rote Tests und N24.
+- **Welle 2:** E2 Optionen-Dialoge des Exports · KV-3 Kurven/Tonwert live und Bitmap-Auswahl · DLG-4, DLG-6–DLG-9 Dialoge D14–D50 · MN-3 Bedienfeldmenüs.
+- Je Agent ein Bericht unter `docs\berichte\` (ab Welle 2) bzw. ein Abschnitt unten.
 
-Bekannte Grenzen: Datei-Dialoge erscheinen nicht mittig (nur mit `unsafe`), SWF/AI8 gestrichen, HTML-Teil nur funktional.
+**Was offen ist** (Reihenfolge, Einzelheiten in `docs\PLAN.md` §4c):
+1. **Welle 3:** BV-4 (Bildvorschau P4), E3 (HTML-Einrichtung, Exportassistent), DLG-10 (D10, D15, D24), MN-4 (Menü-Beschriftungen), RAND-2a/b (abgeschnittene Texte), AU-3, PERF-1
+2. **Welle 4:** NEUTRAL-1, TE-2, DES-1/DES-2 (N11), NZ-3/NZ-4 (Restpunkte aus den Berichten, Messungen im Original)
+3. **Nachtlauf:** GT-1 Gesamttest und Release, CT-1…CT-4 Klicktests im echten Fenster (de/en, 3 Designs) mit NACHPRUEFUNG, FIX
+
+Bekannte Grenzen: Datei-Dialoge erscheinen nicht mittig (nur mit `unsafe`), SWF/AI8 gestrichen, HTML-Teil nur funktional, PDF ohne Textebene und ohne JPEG 2000, PSD ohne Ebeneneffekte und Textebenen.
 
 **Wo was steht:**
 - `docs\PLAN.md`: Fahrplan
 - `docs\NACHPRUEFUNG.md`: Prüfungen im echten Fenster für den Nachtlauf
+- `docs\berichte\`: Berichte der Agenten ab Welle 2
 - `docs\TESTLEITFADEN_2026-10-12.md`: Hands-on-Test für den Nutzer, alles seit 12.10. 04:00
 - `docs\NUTZERBEFUNDE.md`: Meldungen des Nutzers
 - `docs\PARITAET_A.md`/`PARITAET_B.md`: Abgleich mit dem Original

@@ -4,7 +4,7 @@ Herausgesucht am 12.10.2026 aus dem Verlauf vom 11./12.10. Jeder Punkt muss **im
 
 Legende: ✅ behoben **und** im echten Fenster nachgeprüft · ⚠️ im echten Fenster nachgeprüft, Rest-Abweichung (Befund eingetragen) · 🔧 laut Befund behoben, Nachprüfung im echten Fenster fehlt · ❌ offen · „teilweise“ = nur ein Teil ist erledigt, der Rest steht im Nachweis
 
-**Stand 12.10.2026 abends:** 18 ✅ · 4 🔧 (N01, N21, N23 teilweise, N24) · 1 ⚠️ (N22) · 1 ❌ teilweise (N11). Prüfanleitung für den Nutzer: `docs\TESTLEITFADEN_2026-10-12.md` Teil A; offene Prüfungen im echten Fenster: `docs\NACHPRUEFUNG.md`. Neue Meldungen bekommen die nächste Nr. ab N24.
+**Stand 12.10.2026 nachts (geprüft von DOC-2 nach Welle 2):** 18 ✅ · 4 🔧 (N01, N21, N23 teilweise, N24: NZ-2 `8a79ab9`, Nachprüfung NACHPRUEFUNG §2) · 1 ⚠️ (N22: P1–P3 umgesetzt (BV-1…BV-3), P4 offen → BV-4) · 1 ❌ teilweise (N11). Welle 2 hat keinen Nutzerbefund berührt. Prüfanleitung für den Nutzer: `docs\TESTLEITFADEN_2026-10-12.md` Teil A; offene Prüfungen im echten Fenster: `docs\NACHPRUEFUNG.md`. Neue Meldungen bekommen die nächste Nr. ab N24.
 
 | Nr | Meldung des Nutzers | Bild | Stand | Nachweis / zuständig |
 |---|---|---|---|---|

@@ -1,13 +1,14 @@
 # Firepixel – Gesamtplan
 
-Stand: **12.10.2026, ≈ 20:15** (Koordinator; auf den Ist-Stand gebracht von DOC-1 in der Pause). Dieses Dokument ist der Fahrplan bis „fertig“. Es sagt, was erledigt ist, was gerade läuft und was in welcher Reihenfolge noch kommt. Die Einzelheiten stehen in den verlinkten Dateien. Wer ein Paket abschließt, hakt es hier ab (☐ → ☑) und trägt den Commit ein.
+Stand: **12.10.2026 nachts, nach Welle 2** (auf den Ist-Stand gebracht von DOC-2; vorher DOC-1 in der Pause ≈ 20:15). Dieses Dokument ist der Fahrplan bis „fertig“. Es sagt, was erledigt ist, was gerade läuft und was in welcher Reihenfolge noch kommt. Die Einzelheiten stehen in den verlinkten Dateien. Wer ein Paket abschließt, hakt es hier ab (☐ → ☑) und trägt den Commit ein.
 
 Verwandte Dateien:
 - `STATUS.md`: Stand je Crate und je Agent
 - `ARCHITEKTUR.md`: verbindlicher Bauplan
 - `docs\AGENTEN_REGELN.md`: Regeln für alle Agenten
 - `docs\BEFUNDE.md`: offene und erledigte Befunde je Bereich
-- `docs\NUTZERBEFUNDE.md`: vom Nutzer gemeldete Fehler und Wünsche N01–N23
+- `docs\NUTZERBEFUNDE.md`: vom Nutzer gemeldete Fehler und Wünsche N01–N24
+- `docs\berichte\*.md`: Berichte der Agenten ab Welle 2 (AGENTEN_REGELN §7b.2), vom Doku-Agenten übertragen
 - `docs\PARITAET_A.md` / `PARITAET_B.md`: Abgleich mit dem Original, Knopf für Knopf
 - `docs\FUNKTIONSTEST.md` und `docs\funktionstest\*_auto.md`: automatischer Gesamttest
 - `docs\NACHPRUEFUNG.md`: Prüfungen im echten Fenster für den Nachtlauf (§7a)
@@ -58,7 +59,7 @@ Umfang heute: 19 Crates, ≈ 169.000 Zeilen Rust, 132 Testdateien, 16 Sprachdate
 |---|---|---|
 | **Übersetzung** (UE-1…UE-5) | fest eingebaute Texte 389 → 0, Scanner für den ganzen Workspace scharf; MCP antwortet standardmäßig englisch, CLI mit `--lang`; englische Doku (`AGENTS.en.md`, `ANLEITUNG.en.md`); Hilfe öffnet die Anleitung in der UI-Sprache | ☑ (Rest: englischer Klickdurchgang in Z) |
 | **Bild → SVG** (VT-1…VT-4) | Crate fp-trace (visioncortex, MIT/Apache), Befehl `modify.traceBitmap`, Dialog mit Live-Vorschau, 4 Vorgaben, Vorher/Nachher, „Aufräumen“ (Logo 1108 → 30 Knoten, 99,3 %), SVG speichern; erreichbar über Menü, Kontextmenü und Inspektor | ☑ (Rest: N20 größeres Fenster) |
-| **Abgleich mit dem Original** | PARITAET_A: **123 ✅ / 1 ⚠️ / 2 ❌** von 126 Zeilen (vorher 31/18/27, 86/22/9, 106/16/4); Warnungen Z01–Z18 mit „Nicht mehr anzeigen“, Schieberkurven, gemerkte Dialogwerte, Wiederholen im Menü, Fang, Frei transformieren, Zeiger, Inspektor-Felder (FV-1…FV-16, PM-1…PM-7, EB-1, DLG-1…DLG-3) | 🔄 PARITAET_B siehe §5 B |
+| **Abgleich mit dem Original** | PARITAET_A: **123 ✅ / 1 ⚠️ / 2 ❌** von 126 Zeilen (vorher 31/18/27, 86/22/9, 106/16/4); Warnungen Z01–Z18 mit „Nicht mehr anzeigen“, Schieberkurven, gemerkte Dialogwerte, Wiederholen im Menü, Fang, Frei transformieren, Zeiger, Inspektor-Felder (FV-1…FV-16, PM-1…PM-7, EB-1, DLG-1…DLG-9, KV-1…KV-3, E1/E2, MN-2/MN-3) | 🔄 PARITAET_B: Menüs 276 ✅ / 32 ⏳, Dialoge 3 ✅ / 40 ⏳ / 6 ❌, Bedienfeldmenüs 1 ✅ / 8 ⏳ (§7) |
 | **Fehler des Nutzers** | N02–N10, N12–N20 ✅ im echten Fenster | 🔄 siehe §3 |
 | **Testversion** | `Desktop\Firepixel-Vorschau-12-10\` (Stand `d71dba1`) an den Nutzer übergeben | ☑ |
 
@@ -70,37 +71,53 @@ Umfang heute: 19 Crates, ≈ 169.000 Zeilen Rust, 132 Testdateien, 16 Sprachdate
 |---|---|---|---|
 | N01 | Filter-Größe mehrfach ändern stapelt den Effekt | 🔧 Rest (Abbrechen ohne Verlaufsrest) von NZ-1 `ec4ac99` behoben, Nachprüfung im Nachtlauf | P-PRUEF ☑ / NACHPRUEFUNG |
 | N02–N10, N12–N18 | Dialoge ziehen, Zoom, Kopieren, Start, Text, Speichern unter, Neutralität … | ✅ im echten Fenster | ☑ |
-| N11 | Dialoge/Startbildschirm schöner | ❌ teilweise | P-DESIGN |
+| N11 | Dialoge/Startbildschirm schöner | ❌ teilweise | DES-1/DES-2 (Welle 4) |
 | N19 | Suche in der Schriftarten-Liste | ✅ FV-12 `e8dd1ad` | P-N19-20 ☑ |
 | N20 | „Bitmap nachzeichnen“ standardmäßig größer | ✅ FV-12 `e8dd1ad` | P-N19-20 ☑ |
 | N21 | KI-Fortschrittskarte + Feineinstellungen | 🔧 KI-2 `39c6e6a`, Nachprüfung im Nachtlauf | P-KI ☑ |
-| N22 | Datei ▸ Bildvorschau vollständig | ⚠️ P1 + P2 + P3 fertig (BV-1, BV-2, BV-3), P4 offen | BV-4 |
-| N23 | abgeschnittene Texte, zu knappe Ränder | 🔧 teilweise: RAND-1 `5f2d009` (Prüfer + Nutzerbeispiel), 70 Stellen offen | RAND-2 (vor Z) |
-
----|---|---|---|
-| N01 | Filter-Größe mehrfach ändern stapelt den Effekt | 🔧 Nachprüfung im Fenster fehlt | P-PRUEF |
-| N11 | Dialoge/Startbildschirm schöner | ❌ teilweise | P-DESIGN |
-| N13 | Text nach Esc kurz unsichtbar | ⚠️ von FV-6 behoben, Nachprüfung im Fenster fehlt | P-PRUEF |
-| N14 | Schriftgrößen-Schieber in 100er-Schritten | 🔧 Nachprüfung im Fenster fehlt | P-PRUEF |
-| N16–N18 | Speichern-Dialog hängt / Neutralität / „Pick an app“ | 🔧 | P-PRUEF |
-| N19 | Suche in der Schriftarten-Liste (Wunsch) | ❌ | P-N19-20 |
-| N20 | Fenster „Bitmap nachzeichnen“ standardmäßig größer (≈ 1050 × 830) | ❌ | P-N19-20 |
-| N21 | KI-Fortschrittsfenster schöner + Einstellungen zum Feintunen, sofern die Modelle sie hergeben | ❌ | P-KI |
-| N22 | Datei ▸ Bildvorschau vollständig (1/2/4-fach-Vergleich …) | 🔄 Spezifikation läuft (RE-BV) | P-BV |
-| N23 | abgeschnittene Texte, zu knappe Ränder → Prüfung der ganzen App | ❌ | P-RAND (vor Z) |
+| N22 | Datei ▸ Bildvorschau vollständig | ⚠️ P1 + P2 + P3 fertig (BV-1, BV-2, BV-3), P4 offen | BV-4 (Welle 3) |
+| N23 | abgeschnittene Texte, zu knappe Ränder | 🔧 teilweise: RAND-1 `5f2d009` (Prüfer + Nutzerbeispiel), 70 Stellen offen | RAND-2a/b (Welle 3) |
+| N24 | Schriftliste ohne Bildlaufleiste | 🔧 NZ-2 `8a79ab9`, Nachprüfung im Nachtlauf (app-weit: Befund HG → NZ-3) | ☑ |
 
 ---
 
-## 4. Läuft gerade (Stand ≈ 20:15: Pause)
+## 4. Stand nach Welle 2 (12.10.2026 nachts)
 
-**Pause.** Alle Agenten der Runde sind fertig, auch **INF-1** (ein Testprogramm je Crate ab `b656ad5`, AGENTEN_REGELN §2); dazu der Doku-Agent DOC-1 (§4a Punkt 4). Neue Agenten erst, wenn der Nutzer „weiter“ sagt.
+**Kein Agent läuft.** Welle 1 und Welle 2 sind fertig; die Doku hat DOC-2 übertragen (Berichte unter `docs\berichte\`). Weiter mit Welle 3 (§4c), sobald der Koordinator startet.
+
+### Welle 1 (nach der Pause, 12.10. ab ≈ 21:00)
+
+| Agent | Paket | Commits | Kurzergebnis |
+|---|---|---|---|
+| ☑ EB-2 | P-EB1 Reduziertes PNG | `f5169d8`, Doku `67c06f3` | Typ „Reduziertes PNG“ in Speichern unter, „Als Kopie speichern“, Hinweis, „Optionen…“ → Bildvorschau; SWF/AI8 gestrichen |
+| ☑ KV-1 | Kurven nach `re\19` | `5548dab`, `0afa445`, `a4e258f`, `5c1d4cb`, `177d99a`, Doku `431fc13` | Feld 208 × 208, Rampen, Mausregeln, Auto und Pipetten im Dialog; D43 ⏳ |
+| ☑ KV-2 | Tonwertkorrektur nach `re\19` | `2e8221e`, Doku `35fe6e7` | Histogramm, Schieber mit Griffen, Gamma, Auto und Pipetten; D44 ⏳ |
+| ☑ E1 | Export-Dialog nach `re\18` | `4ff82ef` | ein Ablauf mit Ordner, Name, 10 Arten, Unterpaneelen, Rückfrage, Merken; D07 ⏳ |
+| ☑ BV-3 | Bildvorschau P3 | `16741b9`, Doku `636ea41` | Registerkarte Datei, Werkzeug Exportbereich, Registerkarte Animation, Abspielknöpfe |
+| ☑ MN-2 | Menüfreigabe und -aufbau | `06c3203`, Doku `3c0e38f` | 32 Menüzeilen ⏳ (21 ❌ + 11 ⚠️): Pixelauswahl, Segment/Gruppe, Untermenü-Köpfe, Text ▸ Schrift |
+| ☑ DLG-5 | P-DLG5 Farbe/Schärfe | `5f06b0c`, Doku `5db2a58` | D41, D42, D45, D46, D48 ⏳; gemerkte Werte in allen Filterdialogen, „Bild filtern“ |
+| ☑ NZ-2 | Nachzügler: rote Tests, N24 | `8a79ab9`, `1a56ce8`, `efbe9e8`, `56ce03e`, `5b41c8a` + `12f01dd`, Doku `7a28386` | N24 Bildlaufleiste der Schriftliste, `ux_b_abgleich` parallel stabil, `clipping_audit` grün, `file_dialog::is_open` |
+
+### Welle 2 (12.10. ab ≈ 22:30, warme Bau-Slots, AGENTEN_REGELN §7b)
+
+| Agent | Paket | Commit | Kurzergebnis |
+|---|---|---|---|
+| ☑ E2 | Optionen-Dialoge des Exports | `28abb4f` | PDF (Version, Komprimierung, Kennwortschutz), CSS-Sprites (Selektor, Präfix/Suffix, Layout, Meldung), Ebenen/Status/Seiten in Dateien, Photoshop; „Optionen…“ je Art; D07 ⏳ |
+| ☑ KV-3 | Kurven/Tonwert live, Bitmap-Auswahl | `0447b9f` | „+“ öffnet den Dialog, ⓘ bearbeitet mit den gespeicherten Werten; Bitmap-Auswahl speichern/wiederherstellen/löschen nach `re\19` §5; D40 ⏳ |
+| ☑ DLG-4 | P-DLG4 | `ac6e85c` | D14 Neues Symbol öffnet die Symbolbearbeitung, D25 Meldung ohne eigene Befehle, D16 Kategorien/Gruppen/Hilfe, D17 Menübaum; alle ⏳ |
+| ☑ DLG-6 | P-DLG6 Weichzeichner | `43e6bbe` | D47/D49/D50 Grenzen wie im Original (Zuschnitt auf Alpha > 0, Bewegung bis Abstand − 1), Beschriftungen, Anordnung, Startfokus OK; ⏳ |
+| ☑ DLG-7 | P-DLG7 Pfad/Transformieren | `8c704d0` | D26 live und gemerkt, D29–D31 Beschriftungen/Anordnung, neuer Dialog D32; ⏳ |
+| ☑ DLG-8 | P-DLG8 Auswahl | `7543f7a`, Bericht `eba28e8` | D35–D39 Anordnung, „Breite:“/„Auswahlradius:“, Verlaufsnamen; +6 bei „Erweitern um 5“ folgt aus `re\05`, Messung im Original offen |
+| ☑ DLG-9 | P-DLG9 Symbol/Animation | `285599d` | D27/D28 Anordnung, Rechteck mit Bewegungsweg, Schritt „In Symbol konvertieren“, D34 zweite Meldung; ⏳ |
+| ☑ MN-3 | Bedienfeldmenüs ≡ | `5489b22` | 8 Zeilen ⏳: Freigaben je Lage, Schließen im Reiter-Kontextmenü, Eigenschaften-≡ nur „Hilfe“, „+ ▸ Optionen“ |
+| ☑ DOC-2 | Doku der Wellen 1 und 2 | siehe `git log --grep "^DOC-2:"` | PARITAET_B, BEFUNDE (11 erledigt, 22 neu), NACHPRUEFUNG (+24 Zeilen), PLAN, STATUS, NUTZERBEFUNDE |
 
 Beschleuniger (Nutzerentscheidung 12.10. ≈ 17:00), gelten weiter:
 1. Die Firepixel-Seite wird über die Brücke ohne GUI-Sperre geprüft (AGENTEN_REGELN §4e). Echte Systemmaus nur fürs Original, für Eingaben, die vom Betriebssystem abhängen, und fürs Durchklicken am Ende.
 2. Reine Spezifikations-Agenten ohne Build laufen zusätzlich.
 3. ~~sccache~~: abgeschaltet (0 % Treffer). Schneller wird es über rust-lld (`843de17`) und das gebündelte Testprogramm (INF-1).
 
-**Fertig in dieser Runde (12.10. nachmittags/abends):**
+### Fertig vor der Pause (12.10. nachmittags/abends)
 
 | Agent | Paket | Commits |
 |---|---|---|
@@ -121,7 +138,7 @@ Beschleuniger (Nutzerentscheidung 12.10. ≈ 17:00), gelten weiter:
 | ☑ BV-1 / BV-2 / BV-3 | Bildvorschau P1 / P2 / P3 | `9906252`, `0c01836`, `71577d5` / `9fc13e6`, `f476f35` / `16741b9` |
 | ☑ FV-12, FV-13, EB-3, TE-1, FV-8, FV-11 | siehe §5 und STATUS | `e8dd1ad`, `9e14aab`, `777ce3d`, `c1e16e1`, `8f6bcfc`, `24e9524` … |
 | ☑ RE-EX | Spezifikation `re\18-export-dialoge.md`, Pakete E1–E3 | (`re\`, nicht im Repository) |
-| ☑ RE-KT | Spezifikation `re\19-kurven-tonwert.md`, Pakete KT-1–3 | (`re\`) |
+| ☑ RE-KT | Spezifikation `re\19-kurven-tonwert.md`, Pakete KV-1–3 (früher KT-1–3) | (`re\`) |
 | ☑ RE-SWF | Spezifikation `re\20-ai8swf.md`; umgesetzt wird nur Reduziertes PNG (Pakete A, B) | (`re\`) |
 | ☑ INF-1 | rust-lld als Linker; ein Testprogramm `all` je Crate für fp-ui und fp-engine (neue Testdateien automatisch, Sprache je Test-Thread), 8 + 1 Einzelprozess-Tests; Regeln in AGENTEN_REGELN §2 | `843de17`, `b656ad5` |
 
@@ -151,7 +168,7 @@ Wenn der letzte fertig ist, beginnt die **Pause**. In der Pause:
      - ganz oben die Punkte, die der Nutzer selbst gemeldet hat
    - Eine Kopie davon kommt als `NEU.md` in den Ordner der Testversion.
 
-Danach geht es weiter, wenn der Nutzer „weiter“ sagt. **Reihenfolge nach der Pause:** EB-2 → KT-1/KT-2 → E1 → BV-3 → DLG-4 → MN-2 → P-DLG5–9 → danach E2, KT-3, BV-4, MN-3, MN-4, RAND-2 usw. (Pakete in §5). Die Kürzungen in §4b bleiben gültig.
+Danach geht es weiter, wenn der Nutzer „weiter“ sagt. **Reihenfolge nach der Pause:** EB-2 → KV-1/KV-2 → E1 → BV-3 → DLG-4 → MN-2 → P-DLG5–9 → danach E2, KV-3, BV-4, MN-3, MN-4, RAND-2 usw. – Wellen 1 und 2 erledigt (§4), weiter mit §4c. Die Kürzungen in §4b bleiben gültig.
 
 ## 4b. Gekürzt bzw. verkleinert (Nutzerentscheidung 12.10.2026 ≈ 18:45)
 
@@ -167,6 +184,45 @@ Danach geht es weiter, wenn der Nutzer „weiter“ sagt. **Reihenfolge nach der
 | D12 Batch-Verarbeitung | Bleibt wie vom Nutzer zurückgestellt unter „Später“ (P-AU2) und gehört nicht zu DLX-5. |
 | Nicht gekürzt | Seltene Dialoge D26–D50 bleiben **feldgenau** wie im Original. |
 
+## 4c. Welle 3, Welle 4 und Nachtlauf (Stand nach Welle 2)
+
+Namen: Kurven/Tonwert-Pakete heißen **KV-1…3** (früher KT-1…3), die Klicktests am Ende **CT-1…4** (früher ebenfalls KT). Jede Welle höchstens 8 Agenten, Berichte nach `docs\berichte\`, danach ein Doku-Agent.
+
+**Welle 3 (Funktion):**
+
+| Paket | Inhalt | Quelle |
+|---|---|---|
+| ☐ **BV-4** | Bildvorschau P4: OK schreibt die Einstellung des aktiven Feldes, Exportieren, Esc schließt, Vorgabenreihenfolge, Tooltips (N22) | `re\17` §10, NUTZERBEFUNDE N22 |
+| ☐ **E3** | HTML-Einrichtung (D13) und Exportassistent (D11) **nur funktional** (§4b); HTML-Einrichtung als „Optionen…“ der HTML-Arten; Reste aus E1 (Rollover `_s2`/`_f2`, Hinweise 10120–10122/3254, Startordner „Bilder“) | `re\18`, STATUS E1 |
+| ☐ **DLG-10** | P-DLG-X Rest: D10 Datei-Info (XMP-Fenster), D24 Rechtschreibprüfung einrichten, D15 HTML-Code kopieren (nur funktional); Hinweis-Meldungen aus dem alten P-DLG5 | PARITAET_B §2 (❌ D10, D15, D24) |
+| ☐ **MN-4** | Beschriftungen im Menü: Befehle-Menü (fehlende mitgelieferte Befehle, Namen 1:1), Kürzeltexte AKUT/ZIRKUMFLEX, „Maske deaktivieren“, „Filter wiederholen“ mit Filternamen, „Bridge durchsuchen“ | PARITAET_B §1 (9 ⚠️, 4 ❌) |
+| ☐ **RAND-2a** | abgeschnittene Texte: R2-1 Inspektor im 800-pt-Fenster, R2-2 Text-Inspektor, R2-3 Dialoge höher als das Fenster | STATUS RAND-1, N23 |
+| ☐ **RAND-2b** | R2-4/R2-5 Kleinkram, `list_frame` über der Fußleiste (NZ-2), Zeilensprung-Kästchen der Bildvorschau; Prüfer um Menüs und Tooltips erweitern | STATUS RAND-1, BEFUNDE |
+| ☐ **AU-3** | gekürzt (§4b): F7 Feldübernahme beim Objektwechsel, vertauschte JSF-Textrichtung | BEFUNDE AU |
+| ☐ **PERF-1** | gekürzt (§4b): Alles auswählen und Pfeiltasten auf Seiten mit Tausenden Objekten | BEFUNDE LW/HG (FV-8) |
+
+**Welle 4 (Aufräumen und Gestaltung):**
+
+| Paket | Inhalt |
+|---|---|
+| ☐ **NEUTRAL-1** | fp-neutral prüft auch `STATUS.md`, `docs\*.md`, `docs\berichte\*`, `docs\funktionstest\*` (P-NEUTRAL) |
+| ☐ **TE-2** | Technisches Englisch Teil 2: `.ftl`-Dateinamen, Quelldateien, Anleitung, Umgebungsvariablen; Testnamen bleiben (§4b) |
+| ☐ **DES-1** | N11: Dialoge schöner (DESIGN.md §13), Vorher/Nachher in 3 Designs |
+| ☐ **DES-2** | N11: Startbildschirm schöner, Vorher/Nachher in 3 Designs |
+| ☐ **NZ-3** | Nachzügler Oberfläche (Restpunkte aus Welle 1/2, je Befund in BEFUNDE): Popup-Schieber ▾ kein Tab-Stopp; `FormDialog::load_prefs` bei Text-Auswahllisten; Klemmen beim OK (19105–19108); Tab-Folge der Knöpfe in Formularen (D27/D28); D14 gesperrtes Kästchen „In allgemeiner Bibliothek speichern“; Info-Symbol in `show_message` (D25); D17 Rest (Symbolknöpfe, Fokus/Pfeiltasten im Baum, Kombifeld „Befehle:“); D26 Startfokus auf der Liste; Verlaufsnamen der Pfade („Pfade erweitern“/„Pfade einlassen“); Live-Anzeige in „Bitmap-Auswahl wiederherstellen“; Fußknopf „Auf Status verteilen“ ab 1 Objekt; Accessibility-Name für „Optionen…“ im Exportdialog; Klick neben modalen Dialog schließt ihn (NZ-2); Bildlaufleisten app-weit sichtbar (HG, NZ-2); Aufräumen: alte Formulare in `catalog.rs`, unbenutzte Schlüssel `dlg-fx-*`, `dlg-op-*`, `btn-help` in `allgemein.ftl` |
+| ☐ **NZ-4** | Nachzügler Engine/Export und Messungen: Sprite-Felder als FW-PNG-Tag; PDF „Textauswahl aktivieren“ (unsichtbarer Text); Photoshop-Optionen Effekte/Vektor/Text und Ebene je Objekt; offene Fragen aus `re\18` (Raster-Layout, „_“, PDF-Qualität); wgpu-Renderer im Testprogramm `all` (INF, NZ-2). **Im Original messen** (eine GUI-Sitzung): Bewegungsunschärfe Winkel 0, Auswahl erweitern 1/5/10 und begrenzen 5, Animieren mit Richtung ≠ 0, „Neue Schaltfläche“, Lage von Volle/Halbe Höhe, Optimieren-Palettenbefehle bei GIF, Fußknopf „Auf Status verteilen“, englische Texte D39 und Verlaufsnamen |
+
+**Nachtlauf (Abschluss Z):**
+
+| Paket | Inhalt |
+|---|---|
+| ☐ **GT-1** | Gesamttestlauf: `cargo test --workspace`, alle `funktionstest\*_auto.md`, i18n-Scanner 0, fp-neutral, technisches Englisch; Release-Build als Testversion |
+| ☐ **CT-1** | Klicktest Menüs und Dialoge im echten Fenster, dabei NACHPRUEFUNG §3 und §7 abarbeiten |
+| ☐ **CT-2** | Klicktest Werkzeuge, Leinwand, Inspektor, KI (NACHPRUEFUNG §1, §2, §6) |
+| ☐ **CT-3** | Klicktest Bedienfelder, Docking, Datei-Abläufe, Bildvorschau/Export (NACHPRUEFUNG §4, §5) |
+| ☐ **CT-4** | Englisch, 3 Designs, Fenstergrößen, Prüfungen im Original (Zeilen mit Art „Original“) |
+| ☐ **FIX** | jedes ❌ aus GT-1/CT-1…4 beheben und erneut prüfen; danach Schritt Z 4 |
+
 ## 5. Warteschlange (in dieser Reihenfolge; jedes Paket = ein kleiner Agent)
 
 Die Reihenfolge gilt, solange nichts Dringenderes vom Nutzer kommt. Sobald ein Platz frei wird, startet das oberste Paket, dessen Dateien nicht gerade ein anderer Agent bearbeitet.
@@ -180,37 +236,37 @@ Die Reihenfolge gilt, solange nichts Dringenderes vom Nutzer kommt. Sobald ein P
 | ☑ **P-IBD1** | Texturliste: Benutzer-Texturordner (77) + „Andere…“ (W21-Rest); Feldtext beim Klick auf ein anderes Objekt (F7); `pi.text.antialias` Zuordnung; Inspektor-Hinweis „Esc: neues Objekt“ bei der Objektauswahl – FV-15: W21, Musterliste, `pi.text.antialias`, Hinweis erledigt; F7 im Original nicht messbar (interner Fehler bei jedem Leinwandklick), Befund offen bis zum Neustart des Originals | BEFUNDE IBD/EB/HG |
 | ☑ **P-PRUEF** (PM-4, `2797c0e`) | **Nachprüfung im echten Firepixel-Fenster:** FV-10 (W19, W21, W22, W24, W26, W29, O2, O8, O16; die Prüfung wurde während der Testpause abgelehnt), FV-9-Reste (W10/W15/W17/W27/W28), N01, N13, N14, N16–N18; danach die Zähltabelle in PARITAET_A nachführen | FV-10/FV-9-Berichte, NUTZERBEFUNDE |
 | ☑ **P-MENU1** | 8 Menüeinträge, die im Gesamttest durchfallen: Bitmap-Auswahl wiederherstellen/löschen, Hilfslinien entfernen, Pfade kombinieren ▸ Teilen, Vorschau im zweiten Browser (in keiner Testsituation verfügbar), Befehlsskripte „Andere Ebenen ausblenden/sperren“, „Warndialoge zurücksetzen“ (keine erkennbare Wirkung) – erledigt (FV-13: menue_auto 345/345, kontextmenues_auto 283/283) | `docs\funktionstest\menue_auto.md` |
-| ☐ **P-AU1** | JSF wie im Original: zwei Aufrufe → andere Objekte (O11/O6), `pixelRect` beim Text ohne 2-px-Rand (L22), `fw.setActiveViewScale` in der Brücke, `addNewHotspot` „slice“ | BEFUNDE AU |
-| ☐ **P-PERF** | Restliche langsame Stellen von FV-8: erste Ziehbewegung großer Objekte bis 1 s, erstes Bild nach Zoom/Bildlauf bis 1,4 s, Alles auswählen auf Seiten mit Tausenden Objekten (Pfeiltasten 250–430 ms), Inspektorfelder messen; Ziel ≤ 50 ms auch auf dem Software-Rasterer | BEFUNDE LW/HG (FV-8) |
-| ☐ **P-NEUTRAL** | fp-neutral prüft auch `STATUS.md`, `docs\*.md` und `docs\funktionstest\*` (am 12.10. stand ein JSF-Funktionsname mit dem Namen des Originals in STATUS/BEFUNDE, vom Koordinator entfernt `620f021`, der Test hatte es nicht gefunden); Testreste im echten Profil sind entfernt (`Testbefehl*.jsf`, `Allgemeine Bibliothek\Sym.png` → Scratchpad), seit EB-3 `777ce3d` verhindert ein Wächter neue | BEFUNDE EB-3 |
+| ☐ **P-AU1** → **AU-3** (Welle 3) | JSF wie im Original: zwei Aufrufe → andere Objekte (O11/O6), `pixelRect` beim Text ohne 2-px-Rand (L22), `fw.setActiveViewScale` in der Brücke, `addNewHotspot` „slice“ | BEFUNDE AU |
+| ☐ **P-PERF** → **PERF-1** (Welle 3) | Restliche langsame Stellen von FV-8: erste Ziehbewegung großer Objekte bis 1 s, erstes Bild nach Zoom/Bildlauf bis 1,4 s, Alles auswählen auf Seiten mit Tausenden Objekten (Pfeiltasten 250–430 ms), Inspektorfelder messen; Ziel ≤ 50 ms auch auf dem Software-Rasterer | BEFUNDE LW/HG (FV-8) |
+| ☐ **P-NEUTRAL** → **NEUTRAL-1** (Welle 4) | fp-neutral prüft auch `STATUS.md`, `docs\*.md` und `docs\funktionstest\*` (am 12.10. stand ein JSF-Funktionsname mit dem Namen des Originals in STATUS/BEFUNDE, vom Koordinator entfernt `620f021`, der Test hatte es nicht gefunden); Testreste im echten Profil sind entfernt (`Testbefehl*.jsf`, `Allgemeine Bibliothek\Sym.png` → Scratchpad), seit EB-3 `777ce3d` verhindert ein Wächter neue | BEFUNDE EB-3 |
 | ☑ **P-HG1** | Datei-Dialoge im zuletzt benutzten Ordner; Rückfrage nach Strg+W erst nach 1,3–2 s; WM_CLOSE von außen beendet die App nicht | BEFUNDE HG – erledigt DLG-3 (9c7c28b, af8fe21; Lage/Zusatzfelder als Befund HG) |
 
 ### B. Menüs, Dialoge, Bedienfeldmenüs (PARITAET_B)
 
 | Paket | Inhalt |
 |---|---|
-| ☑ **P-PM4** | **Neue Messrunde PARITAET_B** in beiden Programmen, erledigt in drei Teilen: PM-5 D01–D25 (`360b0c7`), PM-6 D26–D50 (`0b5eaa4`), PM-7 Hauptmenüs und Bedienfeldmenüs (`d597680`). Stand in PARITAET_B: Menüs 276/20/25/29 ℹ️, Dialoge 3/21/15/5 ⏳/6 🔧, Bedienfeldmenüs 1/4/4/1 ❔ |
+| ☑ **P-PM4** | **Neue Messrunde PARITAET_B** in beiden Programmen, erledigt in drei Teilen: PM-5 D01–D25 (`360b0c7`), PM-6 D26–D50 (`0b5eaa4`), PM-7 Hauptmenüs und Bedienfeldmenüs (`d597680`). Stand nach der Messung: Menüs 276/20/25/29 ℹ️, Dialoge 3/21/15/5 ⏳/6 🔧, Bedienfeldmenüs 1/4/4/1 ❔; nach Welle 2 siehe §7 |
 | ☑ **P-PM4 Teil 1** | PM-5 (`360b0c7`): D01–D25 nachgemessen → 0 ✅ / 10 ⚠️ / 14 ❌ / 1 ⏳; 13 neue Befunde (IBD) |
 | ☑ **P-DLG1** | Teil 1 (DLG-1, `fc7df14`, `173bca1`): Zahlenfelder nehmen wieder Eingaben an (Ursache: Fensterfokus in `buffered_edit`), Tab-Folge aller Dialoge (Titelleiste, Startfokus, Optionsgruppen); D19/D20/D01/Verlauf → DLG-1b; Teil 2 (DLG-1b, `6c557e6`, `91a4d90`, `00809ba`, `aabc863`): D19 live, D20 Anker/B:H:/Auswahl, D01 Zugriffstasten, keine leeren Verlaufsschritte, D16 Liste per Tab |
 | ☑ **P-DLG2** | DLG-2 (`9469497`): D18 Raster (ohne Kästchen, ↔/↕, Lage der Vorlage), D21 untereinander, D22 gesperrt ohne Haken + Überlagerungsfarbe, D23 Größe der Auswahl/zuletzt benutzt + Popup-Schieber; Rest: Popup-Schieber in D18 im Original messen (Befund DLG-2) |
 | ☑ **P-DLG3** | Dateidialoge D02–D06, D09: mittig über dem Fenster statt oben links, Startordner (nicht immer „Dokumente“), Titel, Filter, Zusatzfelder bei Öffnen/Speichern unter (zusammen mit P-HG1) – erledigt DLG-3 (af8fe21, 18ab983; Lage/Zusatzfelder als Befund HG) |
-| ☐ **P-DLG4** | D14 Neues Symbol (OK öffnet die Symbolbearbeitung statt einer leeren Instanz bei 0,0), D25 gespeicherte Befehle (ohne eigene nur eine Meldung), D16, D17 |
+| ☑ **P-DLG4** | D14 Neues Symbol (OK öffnet die Symbolbearbeitung statt einer leeren Instanz bei 0,0), D25 gespeicherte Befehle (ohne eigene nur eine Meldung), D16, D17 – erledigt (DLG-4 `ac6e85c`; Reste in NZ-3) |
 | ☑ **P-DLG5** | Farbe/Schärfe (IBD, von PM-6): D41 Farbton/Sättigung (Kennlinie, „Kolorieren“), D42 Helligkeit/Kontrast, D46 Unscharf maskieren, D48 Gaußscher Weichzeichner, D45 Rauschen; gemerkte Werte nach OK, Feld neben dem Schieber, Knöpfe rechts, Beschriftungen und Startfokus wie im Original – erledigt (DLG-5 `5f06b0c`; Nachprüfung in NACHPRUEFUNG) |
-| ☐ **P-DLG6** | Weichzeichner-Wirkung (RF + IBD, von PM-6): D47 Bewegungsunschärfe (nur in Bewegungsrichtung, „Umfang“), D49 Radial (Stärke/Grenzen, „Menge“), D50 Zentriert („Anzahl“), gemerkte Werte |
-| ☐ **P-DLG7** | Pfad/Transformieren (IBD, von PM-6): D26 Numerisch transformieren (B/H live, Symbole, Kette, gemerkt), D29 „Menge“, D30/D31 („Winkelgrenze“ 10.00, Anordnung), **neuer Dialog D32** Pfad in Auswahlrahmen (Rand + Breite) |
-| ☐ **P-DLG8** | Auswahl (IBD + EB, von PM-6): D35 Weiche Kante (gemerkt), D38/D39 Beschriftungen, D40 Auswahl speichern mit Ziel und Vorgang, D36 Pixelfrage klären |
-| ☐ **P-DLG9** | Symbol/Animation/Verhalten (IBD + EB, von PM-6): D27 Anordnung, D28 Beschriftungen/Trennlinien/Startfokus/Symbolrechteck, D34 zweite Meldung, D33 (nur Tab) |
-| ☐ **Gemerkte Werte** | in **allen** Filterdialogen (D41, D42, D45–D50) sowie D35 und D26 die per OK bestätigten Werte merken wie im Original; wird in P-DLG5–8 mit erledigt. Dazu Verlaufsnamen („Bild filtern“) als kleine Entscheidung für EB. Weiter offen aus dem alten P-DLG5…: Hinweis-Meldungen, Live-Filter-Menü „+“, Überlauf bei 1024 × 768 / 150 %. **Stand:** gemerkte Werte in allen Filterdialogen, D35 und D26 sowie Verlaufsname „Bild filtern“ für Filter erledigt (DLG-5 `5f06b0c`); offen nur noch die übrigen Punkte |
+| ☑ **P-DLG6** | Weichzeichner-Wirkung (RF + IBD, von PM-6): D47 Bewegungsunschärfe (nur in Bewegungsrichtung, „Umfang“), D49 Radial (Stärke/Grenzen, „Menge“), D50 Zentriert („Anzahl“), gemerkte Werte – erledigt (DLG-6 `43e6bbe`; Messung Winkel 0 in NZ-4) |
+| ☑ **P-DLG7** | Pfad/Transformieren (IBD, von PM-6): D26 Numerisch transformieren (B/H live, Symbole, Kette, gemerkt), D29 „Menge“, D30/D31 („Winkelgrenze“ 10.00, Anordnung), **neuer Dialog D32** Pfad in Auswahlrahmen (Rand + Breite) – erledigt (DLG-7 `8c704d0`; Startfokus D26 und ▾-Tab-Stopp in NZ-3) |
+| ☑ **P-DLG8** | Auswahl (IBD + EB, von PM-6): D35 Weiche Kante (gemerkt), D38/D39 Beschriftungen, D40 Auswahl speichern mit Ziel und Vorgang, D36 Pixelfrage klären – erledigt (DLG-8 `7543f7a`: D35–D39, Pixelfrage aus `re\05` geklärt, Messung in NZ-4; D40 von KV-3 `0447b9f`) |
+| ☑ **P-DLG9** | Symbol/Animation/Verhalten (IBD + EB, von PM-6): D27 Anordnung, D28 Beschriftungen/Trennlinien/Startfokus/Symbolrechteck, D34 zweite Meldung, D33 (nur Tab) – erledigt (DLG-9 `285599d`; Tab-Folge der Knöpfe in NZ-3) |
+| ☑ **Gemerkte Werte** | in **allen** Filterdialogen (D41, D42, D45–D50) sowie D35 und D26 die per OK bestätigten Werte merken wie im Original; wird in P-DLG5–8 mit erledigt. Dazu Verlaufsnamen („Bild filtern“) als kleine Entscheidung für EB. Weiter offen aus dem alten P-DLG5…: Hinweis-Meldungen, Live-Filter-Menü „+“, Überlauf bei 1024 × 768 / 150 %. **Stand:** gemerkte Werte in allen Filterdialogen, D35 und D26 sowie Verlaufsname „Bild filtern“ für Filter erledigt (DLG-5 `5f06b0c`); Rest verteilt: Hinweis-Meldungen → DLG-10, Live-Filter-Menü-Namen → NZ-3, Überlauf → RAND-2a/b |
 | ☑ **E1** | Export-Dialog (von RE-EX, `re\18` §9.6): ein Ablauf mit Artenliste (PDF, HTML und Bilder, Nur Bilder, CSS und Bilder, CSS-Sprites, Ebenen/Status/Seiten in Dateien, PSD, SVG), Unterpaneele mit Grau-Regeln, Ordner + Name in einem Dialog, Dateien je Art – umgesetzt (E1, 12.10.; Nachprüfung im Fenster ausstehend, Reste für E2/E3 in STATUS) |
-| ☐ **E2** | Optionen-Dialoge (von RE-EX): PDF-, CSS-Sprite-, „Ebenen/Status/Seiten in Dateien“-, Photoshop-Optionen; „Optionen…“ je Art richtig verdrahten |
-| ☐ **E3** | HTML-Einrichtung (D13) und Exportassistent (D11) **nur funktional** (von RE-EX, §4b): Felder, die der HTML-Export auswertet; Assistent als Zustandsautomat, „Beenden“ öffnet die Bildvorschau |
-| ☑ **KT-1** (KV-1) | Kurven originalgetreu (von RE-KT, `re\19` §7.4): Layout, Zeichnung, Mausregeln, Felder, Auto und Pipetten im Dialog, Tests aus `ktref.py` – umgesetzt (KV-1, `5548dab`, `0afa445`; Tests `curves_kv1.rs`, `fp-raster` `curve_edit`), Nachprüfung im Fenster in NACHPRUEFUNG §3 |
-| ☑ **KT-2** (KV-2) | Tonwertkorrektur originalgetreu (von RE-KT): Histogramm, Schieber-Widget mit Griffen, Gamma-Abbildung, Auto und Pipetten, gemeinsamer Vorschau-Schalter – umgesetzt (KV-2, `2e8221e`; Tests `levels_kv2.rs`, `fp-raster` `levels_math`), Nachprüfung im Fenster in NACHPRUEFUNG §3 |
-| ☐ **KT-3** | Live-Bearbeitung und Auswahl-Dialoge (von RE-KT): Kurven/Tonwert als bearbeitbare Live-Filter, Dialoge „Bitmap-Auswahl speichern/wiederherstellen/löschen“ |
-| ☐ **P-DLG-X Rest** | laut PM-5 außerdem unvollständig: D07, D10 (XMP-Fenster fehlt), D12 (Batch, „Später“), D15 (nur funktional, §4b); Bildvorschau D24 siehe P-BV |
+| ☑ **E2** | Optionen-Dialoge (von RE-EX): PDF-, CSS-Sprite-, „Ebenen/Status/Seiten in Dateien“-, Photoshop-Optionen; „Optionen…“ je Art richtig verdrahten – erledigt (E2 `28abb4f`; Reste in NZ-4) |
+| ☐ **E3** (Welle 3) | HTML-Einrichtung (D13) und Exportassistent (D11) **nur funktional** (von RE-EX, §4b): Felder, die der HTML-Export auswertet; Assistent als Zustandsautomat, „Beenden“ öffnet die Bildvorschau |
+| ☑ **KV-1** | Kurven originalgetreu (von RE-KT, `re\19` §7.4): Layout, Zeichnung, Mausregeln, Felder, Auto und Pipetten im Dialog, Tests aus `ktref.py` – umgesetzt (KV-1, `5548dab`, `0afa445`; Tests `curves_kv1.rs`, `fp-raster` `curve_edit`), Nachprüfung im Fenster in NACHPRUEFUNG §3 |
+| ☑ **KV-2** | Tonwertkorrektur originalgetreu (von RE-KT): Histogramm, Schieber-Widget mit Griffen, Gamma-Abbildung, Auto und Pipetten, gemeinsamer Vorschau-Schalter – umgesetzt (KV-2, `2e8221e`; Tests `levels_kv2.rs`, `fp-raster` `levels_math`), Nachprüfung im Fenster in NACHPRUEFUNG §3 |
+| ☑ **KV-3** | Live-Bearbeitung und Auswahl-Dialoge (von RE-KT): Kurven/Tonwert als bearbeitbare Live-Filter, Dialoge „Bitmap-Auswahl speichern/wiederherstellen/löschen“ – erledigt (KV-3 `0447b9f`) |
+| ☐ **P-DLG-X Rest** → **DLG-10** (Welle 3) | laut PM-5 außerdem unvollständig: D07, D10 (XMP-Fenster fehlt), D12 (Batch, „Später“), D15 (nur funktional, §4b); Bildvorschau D24 siehe P-BV |
 | ☑ **MN-2** | Menüfreigabe und -aufbau (EB + Menü, von PM-7, ersetzt P-MENU2): Freigabe bei Pixelauswahl (12 Objektbefehle grau), Untermenü-Köpfe immer aktiv (11), Text ▸ Schrift wie im Original (auch ohne Text aktiv, ✓, zuletzt benutzte oben, Familien flach), Freigabe bei Segment/Gruppe (7). „Mit darunter liegender reduzieren“ und das Befehle-Menü im frischen Profil sind laut PM-7 schon gleich – erledigt `06c3203` (Nachprüfung im Fenster: NACHPRUEFUNG §7) |
-| ☐ **MN-3** | Bedienfeldmenüs ≡ (von PM-7): Verlauf/Stile ohne Auswahl grau, Status/Seiten bei einem Element, Ebenen „Maske bearbeiten“, Optimieren (✓ Farbfeld-Rückmeldung, JPEG-Einträge), „Schließen“ ins Reiter-Kontextmenü, Eigenschaften-≡ |
-| ☐ **MN-4** | Beschriftungen (klein, von PM-7): Befehle-Menü (fehlende mitgelieferte Befehle, Namen 1:1, doppeltes „Warnmeldungen zurücksetzen“), Kürzeltexte AKUT/ZIRKUMFLEX, „Maske deaktivieren“ ohne Kürzel, „Filter wiederholen“ mit Filternamen, Entscheidung „Bridge durchsuchen“ |
+| ☑ **MN-3** | Bedienfeldmenüs ≡ (von PM-7): Verlauf/Stile ohne Auswahl grau, Status/Seiten bei einem Element, Ebenen „Maske bearbeiten“, Optimieren (✓ Farbfeld-Rückmeldung, JPEG-Einträge), „Schließen“ ins Reiter-Kontextmenü, Eigenschaften-≡ – erledigt (MN-3 `5489b22`; Messfragen in NZ-4) |
+| ☐ **MN-4** (Welle 3) | Beschriftungen (klein, von PM-7): Befehle-Menü (fehlende mitgelieferte Befehle, Namen 1:1, doppeltes „Warnmeldungen zurücksetzen“), Kürzeltexte AKUT/ZIRKUMFLEX, „Maske deaktivieren“ ohne Kürzel, „Filter wiederholen“ mit Filternamen, Entscheidung „Bridge durchsuchen“ |
 | ☑ **EB-2** (P-EB1) | **nur „Reduziertes PNG“** (von RE-SWF, `re\20` §5, §4b): Paket A Typ in „Speichern unter“ (Filterindex, `.png` ohne `.fw.png`, Inhalt über die Export-Pipeline), Paket B „Als Kopie speichern“, Hinweistext, „Optionen…“ → Bildvorschau. SWF/AI8 entfallen – erledigt `f5169d8` (Zusatzfelder im Dialog der App, Folgedialog nach dem Windows-Dialog; Nachprüfung ausstehend) |
 
 ### C. Wünsche des Nutzers aus der Testversion
@@ -219,15 +275,15 @@ Die Reihenfolge gilt, solange nichts Dringenderes vom Nutzer kommt. Sobald ein P
 |---|---|
 | ☑ **P-N19-20** (FV-12, e8dd1ad) | N19 Suche in der Schriftarten-Liste (Inspektor und Text-Menü, Tippen filtert, Pfeiltasten/Eingabe); N20 Nachzeichnen-Dialog standardmäßig ≈ 1050 × 830, Vorschau größer, „Aufräumen“ ohne Scrollen sichtbar, Größe gemerkt |
 | ☑ **P-KI** (KI-2, `39c6e6a`) | N21: Fortschrittsfenster der KI-Werkzeuge schön gestalten (Design wie der Nachzeichnen-Dialog, alle 3 Designs); prüfen, welche Stellschrauben SAM 2.1/BiRefNet wirklich hergeben (Maskenschwelle, Kante weich/ausdehnen/zusammenziehen, Maskenvariante bei SAM), nur diese im Inspektor anbieten; optional: Vorschau der Objektmaske beim Überfahren |
-| ☐ **P-BV1…4** | N22 Bildvorschau, **Cleanroom**-Agenten, die *nur* `re\17-bildvorschau.md` (§10) lesen. ☑ P1 Mehrfachansicht und Kern (erledigt, BV-1, Commits 9906252, 0c01836, 71577d5); ☑ P2 Registerkarte Optionen vollständig (Format/Palette/Rastern/Glättung/Transparenz mit 3 Pipetten, Farbtabelle mit Menü und Statuszeile, „Optimieren auf Größe“; erledigt, BV-2, Commit 9fc13e6, Nachprüfung im echten Fenster in NACHPRUEFUNG); ☑ **BV-3** P3 Datei (Skalieren, Exportbereich mit Werkzeug), Animation, Abspielknöpfe (erledigt, Commit 16741b9, Nachprüfung im echten Fenster in NACHPRUEFUNG); ☐ **BV-4** P4 Verhalten (OK schreibt die Einstellung des aktiven Feldes, Exportieren, Esc schließt), Vorgaben, Texte. Nebenbefund: PARITAET_B D08 „Esc schließt nicht“ ist falsch, im Original schließt Esc |
-| ☐ **P-TE2** | Technisches Englisch, Teil 2: `.ftl`-Dateinamen (`befehlstexte.ftl`, `nachzeichnen.ftl` …) und deutsche Datei- und Testnamen im Quelltext umbenennen, nach der Liste von TE-1. Erst wenn wenige Agenten in den `.ftl`-Dateien arbeiten |
+| ☐ **P-BV1…4** | N22 Bildvorschau, **Cleanroom**-Agenten, die *nur* `re\17-bildvorschau.md` (§10) lesen. ☑ P1 Mehrfachansicht und Kern (erledigt, BV-1, Commits 9906252, 0c01836, 71577d5); ☑ P2 Registerkarte Optionen vollständig (Format/Palette/Rastern/Glättung/Transparenz mit 3 Pipetten, Farbtabelle mit Menü und Statuszeile, „Optimieren auf Größe“; erledigt, BV-2, Commit 9fc13e6, Nachprüfung im echten Fenster in NACHPRUEFUNG); ☑ **BV-3** P3 Datei (Skalieren, Exportbereich mit Werkzeug), Animation, Abspielknöpfe (erledigt, Commit 16741b9, Nachprüfung im echten Fenster in NACHPRUEFUNG); ☐ **BV-4** (Welle 3) P4 Verhalten (OK schreibt die Einstellung des aktiven Feldes, Exportieren, Esc schließt), Vorgaben, Texte. Nebenbefund: PARITAET_B D08 „Esc schließt nicht“ ist falsch, im Original schließt Esc |
+| ☐ **P-TE2** → **TE-2** (Welle 4) | Technisches Englisch, Teil 2: `.ftl`-Dateinamen (`befehlstexte.ftl`, `nachzeichnen.ftl` …) und deutsche Datei- und Testnamen im Quelltext umbenennen, nach der Liste von TE-1. Erst wenn wenige Agenten in den `.ftl`-Dateien arbeiten |
 
 ### D. Gestaltung und Feinschliff
 
 | Paket | Inhalt |
 |---|---|
-| ☐ **P-DESIGN** | N11: Dialoge und Startbildschirm schöner (DESIGN.md §13), Vorher/Nachher-Bilder in 3 Designs |
-| ☐ **P-RAND** | N23: **Prüfung der ganzen App auf abgeschnittene Texte und zu knappe Ränder.** Alle Bedienfelder, Dialoge, Inspektor-Seiten, Menüs, Tooltips; 3 Designs × de/en × 100/150 % × kleine/große Fenster. Beispiel: „Zeilensprung/Progressiv“ unter „Glättung“ halb abgeschnitten. Automatischer Test, der Textüberlauf in kittest erkennt, und Korrekturen. ☑ **Teil RAND-1** (`5f2d009`): Prüfer `clipping_audit.rs` + Bericht `rand_auto.md`, Nutzerbeispiel behoben; 70 Stellen in der Erlaubnisliste. ☐ **Teil RAND-2**: die Pakete R2-1…R2-5 aus `STATUS.md` (RAND-1) abbauen, offen sind noch Menüs und Tooltips (prüft der Prüfer noch nicht) |
+| ☐ **P-DESIGN** → **DES-1/DES-2** (Welle 4) | N11: Dialoge und Startbildschirm schöner (DESIGN.md §13), Vorher/Nachher-Bilder in 3 Designs |
+| ☐ **P-RAND** | N23: **Prüfung der ganzen App auf abgeschnittene Texte und zu knappe Ränder.** Alle Bedienfelder, Dialoge, Inspektor-Seiten, Menüs, Tooltips; 3 Designs × de/en × 100/150 % × kleine/große Fenster. Beispiel: „Zeilensprung/Progressiv“ unter „Glättung“ halb abgeschnitten. Automatischer Test, der Textüberlauf in kittest erkennt, und Korrekturen. ☑ **Teil RAND-1** (`5f2d009`): Prüfer `clipping_audit.rs` + Bericht `rand_auto.md`, Nutzerbeispiel behoben; 70 Stellen in der Erlaubnisliste. ☐ **Teil RAND-2** → **RAND-2a/RAND-2b** (Welle 3): die Pakete R2-1…R2-5 aus `STATUS.md` (RAND-1) abbauen, offen sind noch Menüs und Tooltips (prüft der Prüfer noch nicht) |
 
 ### E. Später, niedrige Priorität
 
@@ -240,9 +296,9 @@ Die Reihenfolge gilt, solange nichts Dringenderes vom Nutzer kommt. Sobald ein P
 
 ### Z. Abschluss (erst wenn A–D erledigt sind)
 
-1. ☐ **Gesamttestlauf:** `cargo test --workspace` + alle `funktionstest\*_auto.md` grün, i18n-Scanner 0, fp-neutral grün, technisches Englisch grün.
+1. ☐ **Gesamttestlauf (GT-1):** `cargo test --workspace` + alle `funktionstest\*_auto.md` grün, i18n-Scanner 0, fp-neutral grün, technisches Englisch grün.
 2. ☐ **Release-Build** als einzelne EXE + CLI, Testversion an den Nutzer.
-3. ☐ **Komplettes Durchklicken im echten Fenster:**
+3. ☐ **Komplettes Durchklicken im echten Fenster (CT-1…CT-4, Fehler beheben: FIX):**
    - jedes Menü, jedes Werkzeug (auf der Leinwand zeichnen), jedes Bedienfeld samt Menü, jedes Inspektor-Feld, jeder Dialog (Werte ändern, OK, Abbrechen), Kontextmenüs
    - Öffnen, Speichern und Exportieren mit echten Dateien
    - alle 3 Designs, Deutsch **und Englisch**, Fenstergrößen klein/groß/maximiert, Bedienfelder an- und abdocken
@@ -259,14 +315,17 @@ Die Reihenfolge gilt, solange nichts Dringenderes vom Nutzer kommt. Sobald ein P
 
 ---
 
-## 7. Zahlen auf einen Blick (12.10., ≈ 20:15)
+## 7. Zahlen auf einen Blick (12.10. nachts, nach Welle 2)
 
 | Messgröße | Wert |
 |---|---|
 | PARITAET_A (Werkzeuge, Inspektor, Leinwand, Zeiger) | 123 ✅ / 1 ⚠️ / 2 ❌ (126 Zeilen) |
-| PARITAET_B (PM-5/PM-6/PM-7, 12.10. abends) | Menüs 276/20/25 (+29 ℹ️) · Dialoge 3/21/15 (+5 ⏳, 6 🔧) · Bedienfeldmenüs 1/4/4 (+1 ❔) |
-| Automatischer Gesamttest | Menüs 345/345 · Kontextmenüs 283/283 (FV-13); übrige Berichte vom Lauf 10:30 |
-| BEFUNDE.md | 296 erledigt · 77 offen |
-| Nutzerbefunde | 18 ✅ · 3 🔧 (N01, N21, N23 teilweise) · 1 ⚠️ (N22) · 1 ❌ teilweise (N11) |
+| PARITAET_B Hauptmenüs (350 Zeilen) | 276 ✅ · 9 ⚠️ · 4 ❌ · 29 ℹ️ · 32 ⏳ umgesetzt, Nachprüfung ausstehend (vorher 276/20/25/29) |
+| PARITAET_B Dialoge (50) | 3 ✅ · 0 ⚠️ · 6 ❌ · 1 ❔ · 40 ⏳ (davon 6 🔧 DLG-3) (vorher 3/21/15, 5 ⏳, 6 🔧) |
+| PARITAET_B Bedienfeldmenüs (10) | 1 ✅ · 1 ❔ · 8 ⏳ (vorher 1/4/4/1) |
+| Automatischer Gesamttest | Menüs 345/345 · Kontextmenüs 283/283 (FV-13); Bedienfeldmenüs 135 Einträge neu erzeugt (MN-3); übrige Berichte vom Lauf 10:30 |
+| BEFUNDE.md | 313 erledigt · 88 offen (DOC-2: 11 abgehakt, 22 neu aus den Berichten) |
+| NACHPRUEFUNG.md | 82 Zeilen: 1 ✅ · 81 ⏳ |
+| Nutzerbefunde | 18 ✅ · 4 🔧 (N01, N21, N23 teilweise, N24) · 1 ⚠️ (N22) · 1 ❌ teilweise (N11) |
 | Fest eingebaute Texte | 0 |
-| Umfang | 19 Crates, ≈ 196.000 Zeilen Rust, 161 Testdateien, 192 Commits |
+| Umfang | 20 Crates, ≈ 212.000 Zeilen Rust, 177 Testdateien, 235 Commits |
