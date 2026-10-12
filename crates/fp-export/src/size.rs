@@ -21,6 +21,33 @@ pub struct SizeResult {
     pub changed: bool,
 }
 
+/// Kleinste Dateigröße, die [`optimize_to_size`] erreichen kann: indiziert mit 2 Farben (und dem
+/// unteren Ende des Ditherbereichs), JPEG mit Qualität 2 (und der stärksten Glättung der Suche).
+/// `None` = Format ohne Suche (PNG 24/32, TIFF/BMP 24, WBMP …).
+pub fn size_floor(img: &RgbaImage, s: &OptimizeSettings, ctx: &ExportContext, ex: &EncodeExtras) -> Result<Option<usize>> {
+    let mut cur = s.clone();
+    match (s.format, effective_color_mode(s)) {
+        (_, ColorMode::Indexed) if s.format != ExportFormat::Wbmp => {
+            if cur.palette_kind == PaletteKind::Exact {
+                cur.palette_kind = PaletteKind::Adaptive;
+            }
+            if cur.palette_kind == PaletteKind::Uniform && cur.grid_levels.pow(3) > 125 {
+                cur.palette_kind = PaletteKind::Web216;
+            }
+            cur.max_colors = 2;
+            if let Dither::Diffusion(p) = cur.dither {
+                cur.dither = Dither::Diffusion((p - 50).max(30).min(p));
+            }
+        }
+        (ExportFormat::Jpeg, _) => {
+            cur.jpeg.quality = 2;
+            cur.jpeg.smoothing = (s.jpeg.smoothing + 4).clamp(0, 7);
+        }
+        _ => return Ok(None),
+    }
+    Ok(Some(export_image(img, &cur, ctx, ex)?.bytes.len()))
+}
+
 /// Sucht Einstellungen mit Dateigröße nahe `target` Byte.
 pub fn optimize_to_size(img: &RgbaImage, s: &OptimizeSettings, target: usize, ctx: &ExportContext, ex: &EncodeExtras) -> Result<SizeResult> {
     let size_of = |st: &OptimizeSettings| -> Result<(usize, usize)> {
@@ -143,5 +170,28 @@ mod tests {
         assert!(jr.settings.jpeg.quality < 80);
         let p = OptimizeSettings { format: ExportFormat::Png, color_mode: ColorMode::Rgba32, ..OptimizeSettings::default() };
         assert!(!optimize_to_size(&img, &p, 100, &ctx, &ex).unwrap().changed);
+    }
+
+    #[test]
+    fn size_floor_is_the_smallest_reachable_size() {
+        let r = fp_geom::IRect::new(0, 0, 64, 48);
+        let data: Vec<[u8; 4]> = (0..64 * 48).map(|i| [(i * 7 % 256) as u8, (i * 13 % 256) as u8, (i % 64 * 4) as u8, 255]).collect();
+        let img = RgbaImage::from_raw(r, data).unwrap();
+        let ctx = ExportContext::default();
+        let ex = EncodeExtras::standalone();
+        let s = OptimizeSettings::default();
+        let full = export_image(&img, &s, &ctx, &ex).unwrap().bytes.len();
+        let floor = size_floor(&img, &s, &ctx, &ex).unwrap().expect("GIF hat eine Suche");
+        assert!(floor < full, "{floor} < {full}");
+        // jede Zwischenstufe der Suche ist mindestens so groß wie die Untergrenze
+        let res = optimize_to_size(&img, &s, floor + (full - floor) / 3, &ctx, &ex).unwrap();
+        assert!(res.bytes >= floor && res.settings.max_colors > 2, "{res:?}");
+        let j = OptimizeSettings { format: ExportFormat::Jpeg, color_mode: ColorMode::Rgb24, ..OptimizeSettings::default() };
+        let jf = size_floor(&img, &j, &ctx, &ex).unwrap().expect("JPEG hat eine Suche");
+        assert!(jf < export_image(&img, &j, &ctx, &ex).unwrap().bytes.len());
+        let p = OptimizeSettings { format: ExportFormat::Png, color_mode: ColorMode::Rgb24, ..OptimizeSettings::default() };
+        assert_eq!(size_floor(&img, &p, &ctx, &ex).unwrap(), None, "PNG 24 ohne Suche");
+        let w = OptimizeSettings { format: ExportFormat::Wbmp, ..OptimizeSettings::default() };
+        assert_eq!(size_floor(&img, &w, &ctx, &ex).unwrap(), None, "WBMP ohne Suche");
     }
 }

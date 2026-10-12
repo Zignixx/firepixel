@@ -30,9 +30,27 @@ pub struct PaneResult {
     /// Anzahl Farben der Palette (indiziert) bzw. 0.
     pub colors: usize,
     pub palette: Vec<u32>,
+    /// Farbtabelle (Farbe, Zähler, gesperrt, bearbeitet, websicher, transparent) aus demselben Lauf
+    /// wie Bild und Größe (`fp_export::palette_edit::entries_from_result`, kein zweiter Lauf).
+    pub entries: Vec<fp_export::palette_edit::PaletteEntry>,
+    /// Paletteneintrag je angezeigtem Pixel (indiziert, sonst leer) – Pipetten, Klick in die Vorschau.
+    pub indices: Arc<Vec<u8>>,
     /// Angezeigtes Bild (Ausgabepixel).
     pub image: Option<Arc<RgbaImage>>,
     pub error: Option<String>,
+}
+
+impl PaneResult {
+    /// Paletteneintrag (Index in [`PaneResult::entries`]) des Bildpunkts `(x, y)` im angezeigten Bild.
+    pub fn index_at(&self, x: i64, y: i64) -> Option<usize> {
+        let img = self.image.as_ref()?;
+        let (w, h) = (img.width() as i64, img.height() as i64);
+        if x < 0 || y < 0 || x >= w || y >= h || self.indices.len() != (w * h) as usize {
+            return None;
+        }
+        let i = self.indices[(y * w + x) as usize] as usize;
+        (i < self.entries.len()).then_some(i)
+    }
 }
 
 /// Was gerechnet wird.
@@ -243,7 +261,7 @@ fn run(input: &JobInput, cache: &RenderCache, cancel: &AtomicBool) -> Option<Pan
 /// Rechnet einen Auftrag (ohne Thread; auch für Tests).
 pub fn compute(input: &JobInput, cache: &RenderCache, cancel: &AtomicBool) -> PaneResult {
     let r = CachingRenderer { inner: ExportRenderer { normal: Arc::clone(&input.renderer) }, cache, doc_key: input.doc_key };
-    let empty = |error: Option<String>| PaneResult { key: input.key, bytes: 0, colors: 0, palette: Vec::new(), image: None, error };
+    let empty = |error: Option<String>| PaneResult { key: input.key, bytes: 0, colors: 0, palette: Vec::new(), entries: Vec::new(), indices: Arc::new(Vec::new()), image: None, error };
     match &input.kind {
         JobKind::Original => {
             let req = RenderRequest { page: input.page, frame: input.frame, background: Background::Canvas, ..Default::default() };
@@ -255,7 +273,10 @@ pub fn compute(input: &JobInput, cache: &RenderCache, cancel: &AtomicBool) -> Pa
         JobKind::Export(s) => {
             let cancelled = || cancel.load(Ordering::SeqCst);
             match fp_export::doc_export::preview_whole(&r, &input.doc, input.page, input.frame, s, encode_extras(), &cancelled) {
-                Ok(Some(p)) => PaneResult { key: input.key, bytes: p.bytes, colors: p.colors, palette: p.palette, image: Some(Arc::new(p.image)), error: None },
+                Ok(Some(p)) => {
+                    let entries = fp_export::palette_edit::entries_from_result(&p.palette, &p.counts, p.transparent_index, s);
+                    PaneResult { key: input.key, bytes: p.bytes, colors: p.colors, palette: p.palette, entries, indices: Arc::new(p.indices), image: Some(Arc::new(p.image)), error: None }
+                }
                 Ok(None) => empty(None),
                 Err(e) => empty(Some(e.to_string())),
             }

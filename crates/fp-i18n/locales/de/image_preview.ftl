@@ -39,3 +39,83 @@ image-preview-next-frame = Nächster Status
 # Dialog „Vorgabenname“ („+“ im Feld)
 image-preview-preset-name-title = Vorgabenname
 image-preview-preset-name-label = Name:
+
+# Registerkarte „Optionen“ (re\17 §2, Paket P2)
+image-preview-opt-format = Format:
+image-preview-opt-palette = Palette:
+image-preview-opt-quality = Qualität:
+image-preview-opt-loss = Verlust:
+image-preview-opt-dither = Rastern:
+image-preview-opt-smoothing = Glättung:
+image-preview-opt-smoothing-none = Ohne Glätten
+image-preview-opt-smoothing-max = 8 Maximale Glättung
+image-preview-opt-palette-websnap = WebSnap-Adaptiv
+image-preview-opt-matte = Hintergrund:
+image-preview-opt-progressive = Progressive Browseranzeige
+image-preview-opt-sharpen = Farbränder scharfzeichnen
+image-preview-opt-remove-unused = Nicht verwendete Farben entfernen
+image-preview-opt-interlaced = Browseranzeige mit Zeilensprungverfahren
+image-preview-tip-format = Exportdateiformat
+image-preview-tip-options = Optionen für diese Registerkarte
+image-preview-tip-palette = Palettenindex
+image-preview-tip-quality = JPEG-Qualität
+image-preview-tip-loss = Verlustreiche GIF-Komprimierung
+image-preview-tip-colors = Maximale Anzahl von Farben
+image-preview-tip-actual-colors = Tatsächliche Anzahl von Farben
+image-preview-tip-dither = Bild rastern
+image-preview-tip-dither-amount = Rastermenge
+image-preview-tip-smoothing = Glättungsstufe
+image-preview-tip-progressive = Progressiv
+image-preview-tip-sharpen = Präzise Ränder nicht komprimieren
+image-preview-tip-edit-color = Farbe bearbeiten
+image-preview-tip-transparent = Transparent
+image-preview-tip-snap-web = Websicher machen
+image-preview-tip-lock = Farbe sperren
+image-preview-tip-add = Farbe hinzufügen
+image-preview-tip-delete = Farbe löschen
+image-preview-tip-pipette-set = Farbe für Transparenz wählen
+image-preview-tip-pipette-add = Farbe zu Transparenz hinzufügen
+image-preview-tip-pipette-remove = Farbe aus Transparenz entfernen
+image-preview-tip-transparency = Transparenztyp wählen
+image-preview-tip-matte = Transparenz-Hintergrundfarbe
+image-preview-tip-remove-unused = Bild für kleinere Dateien optimieren
+image-preview-tip-interlaced = Zeilensprung-Bild
+image-preview-tip-optimize-size = Assistent für Dateigrößenoptimierung
+
+# Farbtabelle, Statuszeile, Palettenmenü (§2.5, §2.7)
+image-preview-color-table = Farbtabelle
+image-preview-color-status = R:{ $r } G:{ $g } B:{ $b } Hex:{ $hex } Index:{ $index }
+image-preview-color-status-alpha = R:{ $r } G:{ $g } B:{ $b } A:{ $a } Hex:{ $hex } Index:{ $index }
+image-preview-flag-locked = Gesperrt
+image-preview-flag-edited = Modifiziert
+image-preview-flag-websafe = Websicher
+image-preview-flag-transparent = Transparent
+image-preview-menu-add-color = Farbe hinzufügen…
+image-preview-menu-edit-color = Farbe bearbeiten…
+image-preview-menu-delete-color = Farbe löschen
+image-preview-menu-replace-color = Paletteneintrag ersetzen…
+image-preview-menu-snap-web = Websicher machen
+image-preview-menu-transparent = Transparent
+image-preview-menu-lock = Farbe sperren
+image-preview-menu-unlock-all = Alle Farben freigeben
+image-preview-menu-sort-luminance = Nach Leuchtkraft sortieren
+image-preview-menu-sort-popularity = Nach Häufigkeit sortieren
+image-preview-menu-unsorted = Nicht sortiert
+image-preview-menu-swatch-feedback = Farbfeld-Rückmeldung anzeigen
+image-preview-menu-remove-edit = Bearbeitung entfernen
+image-preview-menu-remove-all-edits = Alle Bearbeitungen entfernen
+image-preview-menu-load-palette = Palette laden…
+image-preview-menu-save-palette = Palette speichern…
+image-preview-palette-error = Palette: { $error }
+image-preview-palette-empty = Die Datei enthält keine Farben.
+
+# Dialog „Farbe“ (Doppelklick, Farbe bearbeiten/hinzufügen)
+image-preview-color-title = Farbe
+image-preview-color-add-title = Farbe hinzufügen
+image-preview-color-hex = Hex:
+
+# Dialog „Für Dateigröße optimieren“ (§2.8)
+image-preview-size-title = Für Dateigröße optimieren
+image-preview-size-target = Zielgröße:
+image-preview-size-unit = k
+image-preview-size-too-small = Die resultierende Datei wäre zu klein. Die ursprünglichen Werte wurden eingegeben.

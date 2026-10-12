@@ -11,7 +11,7 @@ use super::common;
 use crate::app_state::{Action, AppState};
 use crate::inspector::fields::{self, Dl};
 use crate::theme::Theme;
-use egui::{pos2, vec2, Align2, Color32, Id, Rect, Sense, Stroke, StrokeKind, Ui};
+use egui::{pos2, vec2, Align2, Id, Rect, Sense, Stroke, Ui};
 use fp_export::options::{builtin_presets, ColorMode, Dither, ExportFormat, OptimizeSettings, PaletteKind, Transparency};
 use fp_export::render::{Background, PageRenderer, RenderRequest};
 use serde_json::json;
@@ -448,41 +448,16 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
         let pal: Vec<u32> = ents.iter().map(|e| e.shown).collect();
         let cell = 14.0;
         let cols = ((inner.width() / cell).floor() as usize).max(1);
-        for (i, col) in pal.iter().enumerate() {
+        for (i, _) in pal.iter().enumerate() {
             let r = Rect::from_min_size(pos2(inner.left() + 1.0 + (i % cols) as f32 * cell, inner.top() + 1.0 + (i / cols) as f32 * cell), vec2(cell - 1.0, cell - 1.0));
             if r.bottom() > inner.bottom() {
                 break;
             }
-            let a = (col >> 24) as u8;
-            if a == 0 {
-                crate::widgets::checker(ui.painter(), r, 3.0, &theme);
-            } else {
-                ui.painter().rect_filled(r, 0.0, Color32::from_rgb((col >> 16) as u8, (col >> 8) as u8, *col as u8));
-            }
             let pe = &ents[i];
             let key = pe.color | 0xff00_0000;
-            // Markierungen wie im Original: Quadrat unten rechts = gesperrt, Raute = bearbeitet,
-            // Schachbrett-Ecke = transparent, Punkt = websicher
-            {
-                let e = pe;
-                if e.web_safe {
-                    ui.painter().circle_filled(r.center(), 1.5, Color32::from_gray(if (col >> 8 & 0xff) > 128 { 0 } else { 255 }));
-                }
-                if e.locked {
-                    ui.painter().rect_filled(Rect::from_min_size(r.right_bottom() - vec2(4.0, 4.0), vec2(3.0, 3.0)), 0.0, Color32::WHITE);
-                    ui.painter().rect_stroke(Rect::from_min_size(r.right_bottom() - vec2(4.0, 4.0), vec2(3.0, 3.0)), 0.0, Stroke::new(1.0, Color32::BLACK), StrokeKind::Inside);
-                }
-                if e.edited {
-                    let m = r.left_bottom() + vec2(3.0, -3.0);
-                    ui.painter().add(egui::Shape::convex_polygon(vec![m + vec2(0.0, -2.5), m + vec2(2.5, 0.0), m + vec2(0.0, 2.5), m + vec2(-2.5, 0.0)], Color32::WHITE, Stroke::new(0.5, Color32::BLACK)));
-                }
-                if e.transparent {
-                    crate::widgets::checker(ui.painter(), Rect::from_min_size(r.min, vec2(6.0, 6.0)), 3.0, &theme);
-                }
-            }
-            if sel.contains(&key) {
-                ui.painter().rect_stroke(r.expand(1.0), 0.0, Stroke::new(2.0, c.focus), StrokeKind::Inside);
-            }
+            // gemeinsamer Baustein mit der Farbtabelle der Bildvorschau (re\17 §2.5.2): Markierungen
+            // gesperrt (rechts unten), bearbeitet (links unten), websicher (Raute), transparent (Karos)
+            crate::dialogs::image_preview::color_table::paint_cell(ui.painter(), r, pe, sel.contains(&key));
             let hit = tresp.interact_pointer_pos().is_some_and(|pp| r.contains(pp));
             if hit && (tresp.clicked() || tresp.secondary_clicked()) {
                 let m = ui.input(|i| i.modifiers);

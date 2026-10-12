@@ -39,7 +39,8 @@ pub fn web_snap(c: u32) -> u32 {
     (c & 0xFF00_0000) | s((c >> 16) & 255) << 16 | s((c >> 8) & 255) << 8 | s(c & 255)
 }
 
-fn is_web_safe(c: u32) -> bool {
+/// Alle Kanäle Vielfache von 51?
+pub fn is_web_safe(c: u32) -> bool {
     [(c >> 16) & 255, (c >> 8) & 255, c & 255].iter().all(|v| v % 51 == 0)
 }
 
@@ -142,22 +143,77 @@ pub fn palette_rgb(entries: &[PaletteEntry]) -> Vec<[u8; 3]> {
 pub fn current_palette(img: &RgbaImage, s: &OptimizeSettings, ctx: &ExportContext) -> Vec<PaletteEntry> {
     let px = image_pixels(img);
     let ix = quantize_indexed(&px, img.width(), img.height(), s, ctx);
-    let mut out = Vec::with_capacity(ix.palette.len());
-    for (i, &c) in ix.palette.iter().enumerate() {
+    entries_from_result(&ix.palette, &ix.counts, ix.transparent_index, s)
+}
+
+/// Palettenansicht aus einem schon berechneten Ergebnis (Palette, Zähler, Transparenzindex des
+/// Indexbilds) und den Flags der Einstellungen – ohne die Pipeline ein zweites Mal zu rechnen
+/// (Farbtabelle der Bildvorschau, re\17-bildvorschau.md §13). Ein Eintrag mit Alpha 0 ist
+/// transparent (Indextransparenz), ebenso ein markierter Eintrag bei eingeschalteter Transparenz.
+pub fn entries_from_result(palette: &[u32], counts: &[u64], transparent_index: Option<usize>, s: &OptimizeSettings) -> Vec<PaletteEntry> {
+    let mut out = Vec::with_capacity(palette.len());
+    for (i, &c) in palette.iter().enumerate() {
         let flags = s.palette.iter().find(|p| rgb(p.color) == rgb(c) || p.edited.is_some_and(|n| rgb(n) == rgb(c)));
         let original = flags.map(|f| f.color).unwrap_or(c);
         let edited = flags.is_some_and(|f| f.edited.is_some());
         out.push(PaletteEntry {
             color: original,
             shown: c,
-            count: ix.counts.get(i).copied().unwrap_or(0),
+            count: counts.get(i).copied().unwrap_or(0),
             locked: flags.is_some_and(|f| f.locked),
-            transparent: ix.transparent_index == Some(i) || flags.is_some_and(|f| f.transparent && s.transparency != Transparency::None),
+            transparent: transparent_index == Some(i) || flags.is_some_and(|f| f.transparent && s.transparency != Transparency::None),
             edited,
             web_safe: is_web_safe(c),
         });
     }
     out
+}
+
+/// Pipette „Farbe für Transparenz wählen“: genau diese Farbe wird transparent, alle anderen nicht;
+/// die Transparenz steht danach auf „Indextransparenz“ (re\17-bildvorschau.md §2.6).
+pub fn set_only_transparent(s: &mut OptimizeSettings, color: u32) {
+    for p in &mut s.palette {
+        p.transparent = false;
+    }
+    s.transparency = Transparency::Index;
+    entry_mut(s, color).transparent = true;
+    tidy(s);
+}
+
+/// Bearbeitung einer Farbe entfernen („Bearbeitung entfernen“).
+pub fn remove_edit(s: &mut OptimizeSettings, color: u32) {
+    edit_color(s, color, None);
+}
+
+/// Alle Bearbeitungen entfernen (Sperren und Transparenz bleiben).
+pub fn remove_all_edits(s: &mut OptimizeSettings) {
+    for p in &mut s.palette {
+        p.edited = None;
+    }
+    tidy(s);
+}
+
+/// Mehrere Farben löschen: die übrigen Farben werden die benutzerdefinierte Palette (Flags bleiben).
+pub fn delete_colors(s: &mut OptimizeSettings, current: &[PaletteEntry], colors: &[u32]) {
+    let rest: Vec<PaletteEntry> = current.iter().filter(|e| !colors.iter().any(|&c| rgb(c) == rgb(e.color))).copied().collect();
+    let mut out: Vec<PaletteColor> = Vec::with_capacity(rest.len());
+    for e in &rest {
+        let flags = s.palette.iter().find(|p| rgb(p.color) == rgb(e.color)).copied();
+        out.push(flags.unwrap_or(PaletteColor::new(e.color | 0xFF00_0000)));
+    }
+    s.palette = out;
+    s.palette_kind = PaletteKind::Custom;
+    s.max_colors = (s.palette.len() as i32).clamp(2, 256);
+}
+
+/// Ist irgendeine Farbe gesperrt bzw. bearbeitet (Menü „Alle Farben freigeben“, „Alle Bearbeitungen
+/// entfernen“ grau, wenn nicht)?
+pub fn any_locked(s: &OptimizeSettings) -> bool {
+    s.palette.iter().any(|p| p.locked)
+}
+
+pub fn any_edited(s: &OptimizeSettings) -> bool {
+    s.palette.iter().any(|p| p.edited.is_some())
 }
 
 #[cfg(test)]
@@ -203,5 +259,42 @@ mod tests {
         assert!(s.palette.iter().all(|p| p.color & 0xFFFFFF != 0x0AC80A));
         rebuild(&mut s);
         assert!(s.palette.iter().all(|p| !p.locked && !p.transparent && p.edited.is_none()));
+    }
+
+    /// Farbtabelle der Bildvorschau (re\17 §2.5/§2.6): Ansicht aus einem fertigen Ergebnis ohne
+    /// zweiten Lauf, Pipette „Farbe für Transparenz wählen“, Bearbeitungen entfernen, mehrere löschen.
+    #[test]
+    fn entries_from_result_and_dialog_edits() {
+        let ctx = ExportContext::default();
+        let mut s = OptimizeSettings::default();
+        let px = image_pixels(&img());
+        let ix = quantize_indexed(&px, 20, 20, &s, &ctx);
+        assert_eq!(entries_from_result(&ix.palette, &ix.counts, ix.transparent_index, &s), current_palette(&img(), &s, &ctx), "gleiche Ansicht ohne zweiten Lauf");
+        // nur diese Farbe transparent, Liste auf Indextransparenz
+        set_transparent(&mut s, 0xFF0A_C80A, true);
+        set_only_transparent(&mut s, 0xFFC8_0A0A);
+        assert_eq!(s.transparency, Transparency::Index);
+        assert_eq!(s.palette.iter().filter(|p| p.transparent).map(|p| p.color & 0xFF_FFFF).collect::<Vec<_>>(), vec![0xC80A0A]);
+        let pal = current_palette(&img(), &s, &ctx);
+        assert_eq!(pal.iter().filter(|e| e.transparent).count(), 1, "{pal:?}");
+        assert!(pal.iter().find(|e| e.color & 0xFF_FFFF == 0xC80A0A).is_some_and(|e| e.transparent && e.shown >> 24 == 0));
+        // Bearbeitungen
+        snap_to_web(&mut s, 0xFF0C_0CBE);
+        edit_color(&mut s, 0xFF0A_C80A, Some(0xFF11_2233));
+        assert!(any_edited(&s) && !any_locked(&s));
+        let pal = current_palette(&img(), &s, &ctx);
+        let blue = pal.iter().find(|e| e.color & 0xFF_FFFF == 0x0C0CBE).expect("blau");
+        assert!(blue.edited && blue.web_safe && blue.shown & 0xFF_FFFF == 0x0000CC, "{blue:?}");
+        remove_edit(&mut s, 0xFF0C_0CBE);
+        assert_eq!(s.palette.iter().filter(|p| p.edited.is_some()).count(), 1);
+        remove_all_edits(&mut s);
+        assert!(!any_edited(&s));
+        assert!(s.palette.iter().any(|p| p.transparent), "Transparenz bleibt");
+        // mehrere Farben löschen → benutzerdefinierte Palette mit dem Rest
+        let pal = current_palette(&img(), &s, &ctx);
+        let n = pal.len();
+        delete_colors(&mut s, &pal, &[0xFF0A_C80A, 0xFF0C_0CBE]);
+        assert_eq!((s.palette_kind, s.palette.len()), (PaletteKind::Custom, n - 2));
+        assert!(s.palette.iter().any(|p| p.color & 0xFF_FFFF == 0xC80A0A && p.transparent), "Flags bleiben");
     }
 }

@@ -209,8 +209,46 @@ pub struct WholePreview {
     pub colors: usize,
     /// Palette (indiziert, `0xAARRGGBB`), sonst leer.
     pub palette: Vec<u32>,
+    /// Pixelzähler je Paletteneintrag (indiziert), sonst leer.
+    pub counts: Vec<u64>,
+    /// Transparenzindex des Indexbilds (kann hinter der Palette liegen, Index-Alpha).
+    pub transparent_index: Option<usize>,
+    /// Indizes des angezeigten Bildes zeilenweise (indiziert; gleiche Größe wie `image`), sonst
+    /// leer – für Pipetten und Farbtabelle der Bildvorschau (Pixel → Paletteneintrag).
+    pub indices: Vec<u8>,
     /// Angezeigtes Bild: Indexbild durch die Palette aufgelöst, JPEG echt dekodiert.
     pub image: RgbaImage,
+}
+
+/// Ergebnis von [`optimize_whole_to_size`].
+#[derive(Clone, Debug, PartialEq)]
+pub enum SizeOutcome {
+    /// Gefundene Einstellung (zuletzt berechnete der Bisektion, kann das Ziel überschreiten).
+    Found(crate::size::SizeResult),
+    /// Ziel kleiner als die kleinstmögliche Datei: die ursprünglichen Werte bleiben (Meldung
+    /// „Die resultierende Datei wäre zu klein …“, re\17-bildvorschau.md §2.8). `floor` = kleinste
+    /// erreichbare Größe in Byte.
+    TooSmall { floor: usize },
+    /// Format ohne Suche (PNG 24/32, TIFF, BMP 24 …, re\17 §9): Einstellung unverändert.
+    NotApplicable,
+}
+
+/// „Optimieren auf Größe“ (Assistent für Dateigrößenoptimierung, re\17-bildvorschau.md §2.8,
+/// 08 §7) für ein ganzes Bild: dieselbe Kette wie [`export_whole`] (Status `frame`, Exportbereich,
+/// Skalierung, gleiche Kodierer), dann Bisektion über Farbanzahl bzw. JPEG-Qualität. Vorab wird
+/// die kleinstmögliche Größe bestimmt (2 Farben bzw. Qualität 2); liegt das Ziel darunter, kommt
+/// [`SizeOutcome::TooSmall`]. `target` in Byte.
+pub fn optimize_whole_to_size(r: &dyn PageRenderer, doc: &Document, page: usize, frame: usize, s: &OptimizeSettings, target: usize, ex: &EncodeExtras) -> Result<SizeOutcome> {
+    let ctx = page_context(doc, page);
+    let img = apply_crop_scale(render(r, doc, page, frame.min(frame_count(doc, page) - 1), s, LayerFilter::All)?, s);
+    let Some(floor) = crate::size::size_floor(&img, s, &ctx, ex)? else {
+        return Ok(SizeOutcome::NotApplicable);
+    };
+    if target < floor {
+        return Ok(SizeOutcome::TooSmall { floor });
+    }
+    let res = crate::size::optimize_to_size(&img, s, target, &ctx, ex)?;
+    Ok(if res.changed { SizeOutcome::Found(res) } else { SizeOutcome::NotApplicable })
 }
 
 /// Bildvorschau eines Feldes: dieselbe Kette wie [`export_whole`] (gleiche Kodierer und
@@ -234,12 +272,13 @@ pub fn preview_whole(r: &dyn PageRenderer, doc: &Document, page: usize, frame: u
     } else {
         still.bytes.len()
     };
-    let palette = match &still.optimized {
-        crate::Optimized::Indexed(ix) => ix.palette.clone(),
-        _ => Vec::new(),
+    let (palette, counts, transparent_index, indices) = match &still.optimized {
+        crate::Optimized::Indexed(ix) => (ix.palette.clone(), ix.counts.clone(), ix.transparent_index, ix.indices.clone()),
+        _ => (Vec::new(), Vec::new(), None, Vec::new()),
     };
     let image = crate::export::preview(&still, s, (0, 0));
-    Ok(Some(WholePreview { bytes, colors: still.colors, palette, image }))
+    let indices = if indices.len() == image.width() * image.height() { indices } else { Vec::new() };
+    Ok(Some(WholePreview { bytes, colors: still.colors, palette, counts, transparent_index, indices, image }))
 }
 
 fn safe_name(s: &str) -> String {
@@ -570,6 +609,42 @@ mod tests {
         assert!(preview_whole(&SimpleRenderer, &d, 0, 0, &cases[0], &ex, &|| true).unwrap().is_none());
         // Status außerhalb: letzter Status statt Panik
         assert!(preview_whole(&SimpleRenderer, &d, 0, 9, &cases[0], &ex, &|| false).unwrap().is_some());
+    }
+
+    /// Bildvorschau P2: Indizes, Zähler und Transparenzindex kommen aus demselben Lauf; Pixel →
+    /// Paletteneintrag stimmt mit dem angezeigten Bild überein. „Optimieren auf Größe“ meldet ein
+    /// unerreichbares Ziel und Formate ohne Suche.
+    #[test]
+    fn preview_carries_indices_and_size_outcomes() {
+        let d = doc();
+        let ex = EncodeExtras::default();
+        let s = OptimizeSettings::default();
+        let p = preview_whole(&SimpleRenderer, &d, 0, 0, &s, &ex, &|| false).unwrap().expect("Ergebnis");
+        assert_eq!(p.indices.len(), 40 * 20);
+        assert_eq!(p.counts.len(), p.palette.len());
+        assert!(p.counts.iter().sum::<u64>() > 0);
+        for (i, &ix) in p.indices.iter().enumerate() {
+            let c = p.palette[ix as usize];
+            let px = p.image.data()[i];
+            assert_eq!([(c >> 16) as u8, (c >> 8) as u8, c as u8], [px[0], px[1], px[2]], "Pixel {i}");
+        }
+        let truecolor = OptimizeSettings { format: ExportFormat::Png, color_mode: crate::options::ColorMode::Rgba32, ..OptimizeSettings::default() };
+        let t = preview_whole(&SimpleRenderer, &d, 0, 0, &truecolor, &ex, &|| false).unwrap().expect("Ergebnis");
+        assert!(t.indices.is_empty() && t.palette.is_empty() && t.transparent_index.is_none());
+        // Indextransparenz mit markierter Farbe: der Eintrag wird transparent und ist der Transparenzindex
+        let mut tr = s.clone();
+        crate::palette_edit::set_only_transparent(&mut tr, 0xFFFF_0000);
+        let pt = preview_whole(&SimpleRenderer, &d, 0, 0, &tr, &ex, &|| false).unwrap().expect("Ergebnis");
+        let k = pt.palette.iter().position(|c| c & 0xFF_FFFF == 0xFF_0000).expect("Rot in der Palette");
+        assert_eq!(pt.transparent_index, Some(k));
+        assert_eq!(pt.image.data()[0][3], 0, "rotes Pixel transparent");
+        // Optimieren auf Größe
+        assert!(matches!(optimize_whole_to_size(&SimpleRenderer, &d, 0, 0, &s, 1, &ex).unwrap(), SizeOutcome::TooSmall { floor } if floor > 1));
+        assert_eq!(optimize_whole_to_size(&SimpleRenderer, &d, 0, 0, &truecolor, 100, &ex).unwrap(), SizeOutcome::NotApplicable);
+        match optimize_whole_to_size(&SimpleRenderer, &d, 0, 0, &s, p.bytes, &ex).unwrap() {
+            SizeOutcome::Found(r) => assert!(r.changed && r.bytes > 0),
+            o => panic!("{o:?}"),
+        }
     }
 
     #[test]

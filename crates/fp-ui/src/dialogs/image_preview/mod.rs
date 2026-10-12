@@ -15,6 +15,8 @@
 //! - Fenster in der Größe veränderbar, Start- = Mindestgröße (§1.1); Größe, Modus und
 //!   Feldeinstellungen werden wie im Original **nicht** gemerkt (§7).
 
+pub mod color_table;
+pub mod optimize_to_size;
 pub mod options;
 pub mod pane;
 pub mod toolbar;
@@ -67,6 +69,16 @@ pub enum Tool {
     Pointer,
     /// Zoom: Klick eine Stufe größer, Alt+Klick eine Stufe kleiner, um den Klickpunkt.
     Zoom,
+    /// Eine der drei Transparenz-Pipetten (§2.6): Klick in ein Feld nimmt die Palettenfarbe des
+    /// Bildpunkts.
+    Pipette(color_table::Pipette),
+}
+
+/// Ergebnis einer Palettendatei (Laden/Speichern laufen über den Dateidialog und kommen später an).
+#[derive(Clone, Debug)]
+pub enum PaletteIo {
+    Loaded { pane: usize, colors: Vec<[u8; 3]> },
+    Error(String),
 }
 
 /// Zustand der Bildvorschau.
@@ -93,6 +105,21 @@ pub struct ImagePreview {
     cache: Arc<RenderCache>,
     /// Lage der Felder im letzten Bild (für Tests und Diagnose).
     pub layout: Vec<(usize, pane::PaneLayout)>,
+    /// Farbtabelle des aktiven Feldes (Auswahl, Farbfeld-Rückmeldung).
+    pub table: color_table::TableState,
+    /// Offener Dialog „Farbe“.
+    pub color_dialog: Option<color_table::ColorDialog>,
+    /// Offener Dialog „Für Dateigröße optimieren“.
+    pub size_dialog: Option<optimize_to_size::SizeDialog>,
+    /// Laufende Suche „Optimieren auf Größe“.
+    pub size_job: Option<optimize_to_size::SizeJob>,
+    /// Offene Meldung (z. B. Ziel zu klein).
+    pub message: Option<String>,
+    /// Ergebnisse von „Palette laden/speichern“ (aus dem Dateidialog).
+    pub palette_io: Arc<std::sync::Mutex<Vec<PaletteIo>>>,
+    feedback_tex: Option<(u64, Vec<usize>, egui::TextureHandle)>,
+    /// „Palette laden/speichern“ aus dem Kontextmenü der Vorschau (Dateidialog im nächsten Schritt).
+    pending_file: Option<(usize, color_table::PaletteCmd)>,
 }
 
 /// Ergebnis eines Bildes.
@@ -131,6 +158,44 @@ impl ImagePreview {
             original_tex: None,
             cache: Arc::new(RenderCache::default()),
             layout: Vec::new(),
+            table: color_table::TableState::default(),
+            color_dialog: None,
+            size_dialog: None,
+            size_job: None,
+            message: None,
+            palette_io: Arc::new(std::sync::Mutex::new(Vec::new())),
+            feedback_tex: None,
+            pending_file: None,
+        }
+    }
+
+    /// Bildpunkt (Pixel im angezeigten Bild) unter dem Bildschirmpunkt `p` im Feld `i`.
+    pub fn pixel_at(&self, i: usize, lay: &pane::PaneLayout, p: egui::Pos2) -> Option<(i64, i64)> {
+        let img = self.panes[i].result.as_ref()?.image.as_ref()?;
+        let sz = vec2(img.width() as f32, img.height() as f32);
+        let c = self.center.unwrap_or(sz / 2.0);
+        let q = (p - (lay.image.center() - c * self.zoom())) / self.zoom();
+        (lay.image.contains(p) && q.x >= 0.0 && q.y >= 0.0).then(|| (q.x.floor() as i64, q.y.floor() as i64))
+    }
+
+    /// Klick mit Zeiger bzw. Pipette in das Feld `i` an `p`: Zeiger mit gewählter Farbe wählt den
+    /// Paletteneintrag des Bildpunkts (§2.5.4), die Pipetten setzen Transparenz (§2.6). `true`, wenn
+    /// der Klick etwas bewirkt hat.
+    pub fn click_image(&mut self, i: usize, lay: &pane::PaneLayout, p: egui::Pos2) -> bool {
+        let Some((x, y)) = self.pixel_at(i, lay, p) else { return false };
+        let Some(res) = self.panes[i].result.clone() else { return false };
+        let Some(k) = res.index_at(x, y) else { return false };
+        let e = res.entries[k];
+        match self.tool {
+            Tool::Pointer if !self.table.selected.is_empty() && i == self.active => {
+                self.table.selected = vec![e.color];
+                true
+            }
+            Tool::Pipette(kind) => {
+                color_table::apply_pipette(kind, &mut self.panes[i].settings, e.color);
+                true
+            }
+            _ => false,
         }
     }
 
@@ -151,7 +216,7 @@ impl ImagePreview {
 
     /// Wird in einem sichtbaren Feld noch gerechnet?
     pub fn is_busy(&self) -> bool {
-        self.mode.panes().iter().any(|&i| self.panes[i].is_busy()) || self.original_job.is_some()
+        self.mode.panes().iter().any(|&i| self.panes[i].is_busy()) || self.original_job.is_some() || self.size_job.is_some()
     }
 
     /// 1/2/4 Felder (§5.1): neu sichtbare Felder übernehmen die Einstellung des aktiven Feldes;
@@ -288,14 +353,122 @@ pub fn show(ctx: &egui::Context, st: &mut AppState) {
         kind: JobKind::Original,
         key: 0,
     };
+    poll_palette_io(&mut d);
+    poll_size_job(&mut d);
     let outcome = draw(ctx, st, &mut d);
     d.update_jobs(ctx, &base);
     preset_name_dialog(ctx, st, &mut d);
+    sub_dialogs(ctx, &mut d, &base);
     match outcome {
         Some(Outcome::Ok) => optimize::apply_settings(st, &d.panes[d.active].settings.clone()),
         Some(Outcome::Export) => export_with(st, d.panes[d.active].settings.clone()),
         Some(Outcome::Cancel) => {}
         None => st.dialogs.preview = Some(d),
+    }
+}
+
+/// Ergebnisse von „Palette laden/speichern“ übernehmen.
+fn poll_palette_io(d: &mut ImagePreview) {
+    let events: Vec<PaletteIo> = d.palette_io.lock().map(|mut v| std::mem::take(&mut *v)).unwrap_or_default();
+    for e in events {
+        match e {
+            PaletteIo::Loaded { pane, colors } => {
+                // nach „Palette laden“ steht die Palettenliste auf „Benutzerdefiniert“ (§2.7)
+                if let Some(p) = d.panes.get_mut(pane) {
+                    fp_export::palette_edit::load_palette(&mut p.settings, &colors);
+                }
+                d.table.selected.clear();
+            }
+            PaletteIo::Error(msg) => d.message = Some(fp_i18n::tr!("image-preview-palette-error", error = msg)),
+        }
+    }
+}
+
+const PALETTE_OPEN: &[(&str, &[&str])] = &[("dlg-filter-act", &["act"]), ("dlg-filter-ase", &["ase"]), ("dlg-filter-aco", &["aco"]), ("GIF (*.gif)", &["gif"])];
+const PALETTE_SAVE: &[(&str, &[&str])] = &[("dlg-filter-act", &["act"]), ("dlg-filter-ase", &["ase"]), ("dlg-filter-aco", &["aco"])];
+
+/// „Palette laden…“: Farbtabelle (ACT, ASE, ACO, GIF) wählen; die Farben werden die
+/// benutzerdefinierte Palette des Feldes `pane`.
+pub(crate) fn load_palette(st: &mut AppState, d: &ImagePreview, pane: usize) {
+    let slot = Arc::clone(&d.palette_io);
+    super::panel_menus::pick_open(st, &t("dlg-pmenu-load-palette"), PALETTE_OPEN, move |_st, p| {
+        let ev = match fp_engine::commands::panel::read_swatch_file(&p.to_string_lossy()) {
+            Ok(cols) if !cols.is_empty() => PaletteIo::Loaded { pane, colors: cols.iter().take(256).map(|c| [c.r(), c.g(), c.b()]).collect() },
+            Ok(_) => PaletteIo::Error(t("image-preview-palette-empty")),
+            Err(e) => PaletteIo::Error(e.to_string()),
+        };
+        if let Ok(mut v) = slot.lock() {
+            v.push(ev);
+        }
+    });
+}
+
+/// „Palette speichern…“: angezeigte Palette des aktiven Feldes als ACT/ASE/ACO.
+pub(crate) fn save_palette(st: &mut AppState, d: &ImagePreview, entries: &[fp_export::palette_edit::PaletteEntry]) {
+    let slot = Arc::clone(&d.palette_io);
+    let colors: Vec<fp_color::Argb> = entries.iter().map(|e| fp_color::Argb(e.shown | 0xFF00_0000)).collect();
+    let name = format!("{}.act", t("dlg-pmenu-palette-file"));
+    super::panel_menus::pick_save(st, &t("dlg-pmenu-save-palette"), &name, PALETTE_SAVE, move |_st, p| {
+        let ext = p.extension().map(|e| e.to_string_lossy().to_lowercase()).unwrap_or_default();
+        let bytes = fp_engine::commands::panel::swatch_file_bytes(&ext, &colors);
+        if let Err(e) = std::fs::write(&p, bytes)
+            && let Ok(mut v) = slot.lock()
+        {
+            v.push(PaletteIo::Error(e.to_string()));
+        }
+    });
+}
+
+/// Dialoge über der Bildvorschau: „Farbe“, „Für Dateigröße optimieren“, Meldung; Ergebnis der Suche.
+fn sub_dialogs(ctx: &egui::Context, d: &mut ImagePreview, base: &JobInput) {
+    if let Some(cd) = d.color_dialog.take() {
+        match color_table::color_dialog(ctx, cd) {
+            color_table::ColorOutcome::Open(cd) => d.color_dialog = Some(cd),
+            color_table::ColorOutcome::Ok(cd) => {
+                if let Some(p) = d.panes.get_mut(cd.pane) {
+                    color_table::apply_color_dialog(&cd, &mut p.settings);
+                }
+            }
+            color_table::ColorOutcome::Cancel => {}
+        }
+    }
+    if let Some(sd) = d.size_dialog.take() {
+        match optimize_to_size::dialog(ctx, sd) {
+            optimize_to_size::SizeDialogOutcome::Open(sd) => d.size_dialog = Some(sd),
+            optimize_to_size::SizeDialogOutcome::Ok(pane, target) => {
+                let s = d.panes[pane].settings.clone();
+                d.size_job = Some(optimize_to_size::SizeJob::spawn(ctx, base, pane, s, target));
+            }
+            optimize_to_size::SizeDialogOutcome::Cancel => {}
+        }
+    }
+    if let Some(m) = d.message.clone()
+        && optimize_to_size::message(ctx, &m)
+    {
+        d.message = None;
+    }
+}
+
+/// Ergebnis der Suche „Optimieren auf Größe“ übernehmen (vor dem Starten der Feldaufträge, damit
+/// das Feld im selben Bild neu rechnet).
+fn poll_size_job(d: &mut ImagePreview) {
+    if let Some(job) = &d.size_job
+        && let Some(r) = job.poll()
+    {
+        let (pane, start) = (job.pane, job.start.clone());
+        d.size_job = None;
+        match r {
+            Ok(fp_export::doc_export::SizeOutcome::Found(res)) => {
+                // inzwischen selbst geändert: Ergebnis verwerfen
+                if d.panes[pane].settings == start {
+                    d.panes[pane].settings = res.settings;
+                }
+            }
+            Ok(fp_export::doc_export::SizeOutcome::TooSmall { .. }) => d.message = Some(t("image-preview-size-too-small")),
+            Ok(fp_export::doc_export::SizeOutcome::NotApplicable) => {}
+            Err(e) if !e.is_empty() => d.message = Some(e),
+            Err(_) => {}
+        }
     }
 }
 
@@ -338,11 +511,16 @@ fn draw(ctx: &egui::Context, st: &mut AppState, d: &mut ImagePreview) -> Option<
         let theme = Theme::current(ui.ctx());
         let left = Rect::from_min_size(body.min + vec2(8.0, 10.0), vec2(m.width, body.height() - 10.0 - 52.0));
         let area = Rect::from_min_max(pos2(left.right() + 7.0, body.top() + 11.0), pos2(body.right() - 8.0, body.bottom() - 79.0));
-        let active = d.active;
-        let mut tab = d.tab;
-        options::show(ui, st, left, m, &mut tab, &mut d.panes[active].settings);
-        d.tab = tab;
+        options::show(ui, st, left, m, d);
         draw_panes(ui, d, area, &entries);
+        if let Some((i, k)) = d.pending_file.take() {
+            if k == color_table::PaletteCmd::LoadPalette {
+                load_palette(st, d, i);
+            } else {
+                let entries = d.panes[i].result.as_ref().map(|r| r.entries.clone()).unwrap_or_default();
+                save_palette(st, d, &entries);
+            }
+        }
         toolbar::show(ui, d, pos2(area.left() + 3.0, body.bottom() - 75.0));
         ui.painter().hline((body.left() + 8.0)..=(body.right() - 8.0), body.bottom() - 41.5, Stroke::new(1.0, theme.colors.line_mid));
         let by = body.bottom() - 31.0;
@@ -389,7 +567,45 @@ fn draw_panes(ui: &mut egui::Ui, d: &mut ImagePreview, area: Rect, entries: &[pa
             d.active = i;
         }
         let on_image = resp.hover_pos().is_some_and(|p| lay.image.contains(p));
+        // Klick ins Bild: Zeiger mit gewählter Farbe wählt den Eintrag des Bildpunkts, Pipetten
+        if resp.clicked()
+            && let Some(p) = resp.interact_pointer_pos()
+        {
+            d.click_image(i, lay, p);
+        }
+        // Rechtsklick in die Vorschau: Palettenmenü (§2.5.4), wenn das Feld eine Farbtabelle hat
+        if i == d.active && options::visibility(&d.panes[i].settings).color_table.shown() {
+            let entries = d.panes[i].result.as_ref().map(|r| r.entries.clone()).unwrap_or_default();
+            let s = &d.panes[i].settings;
+            let sel = d.table.selected_entries(&entries);
+            let ms = color_table::MenuState {
+                has_selection: !sel.is_empty(),
+                any_locked: fp_export::palette_edit::any_locked(s),
+                selection_edited: sel.iter().any(|(_, e)| e.edited),
+                any_edited: fp_export::palette_edit::any_edited(s),
+                sorting: s.sorting,
+                feedback: d.table.feedback,
+            };
+            if let Some(k) = color_table::context_menu(&resp, ms) {
+                match color_table::apply(k, &mut d.panes[i].settings, &entries, &mut d.table) {
+                    color_table::FollowUp::ColorDialog(mode) => {
+                        let start = match mode {
+                            color_table::ColorMode::Edit(o) => entries.iter().find(|e| e.color & 0xFF_FFFF == o & 0xFF_FFFF).map(|e| e.shown).unwrap_or(o),
+                            color_table::ColorMode::Add => 0xFF80_8080,
+                        };
+                        d.color_dialog = Some(color_table::ColorDialog::new(i, mode, start));
+                    }
+                    color_table::FollowUp::LoadPalette | color_table::FollowUp::SavePalette => d.pending_file = Some((i, k)),
+                    color_table::FollowUp::None => {}
+                }
+            }
+        }
         match d.tool {
+            Tool::Pipette(_) => {
+                if on_image {
+                    ui.ctx().set_cursor_icon(egui::CursorIcon::Crosshair);
+                }
+            }
             Tool::Pointer => {
                 // der gegriffene Bildpunkt bleibt unter dem Zeiger (ab dem Drücken gerechnet, auch
                 // die Bewegung, bevor egui das Ziehen erkennt)
@@ -445,6 +661,28 @@ fn draw_panes(ui: &mut egui::Ui, d: &mut ImagePreview, area: Rect, entries: &[pa
             Rect::from_min_size(lay.image.center() - c * z, sz * z)
         });
         pane::paint_image(ui, lay.image, img_rect, tex.as_ref());
+        // Farbfeld-Rückmeldung: Pixel der gewählten Farben im aktiven Feld hervorheben (§2.7)
+        if show
+            && i == d.active
+            && d.table.feedback
+            && let (Some(r), Some(ir)) = (res.as_ref(), img_rect)
+        {
+            let sel: Vec<usize> = d.table.selected_entries(&r.entries).into_iter().map(|(k, _)| k).collect();
+            if !sel.is_empty() {
+                let cached = d.feedback_tex.as_ref().filter(|(k, s, _)| *k == r.key && *s == sel).map(|(_, _, t)| t.clone());
+                let tex = cached.or_else(|| {
+                    let img = r.image.as_ref()?;
+                    let col = crate::theme::with_alpha(Theme::current(ui.ctx()).colors.focus, 200);
+                    let ci = color_table::feedback_image(&r.indices, img.width(), img.height(), &sel, col)?;
+                    let t = ui.ctx().load_texture("fp-ipv-feedback", ci, egui::TextureOptions::NEAREST);
+                    d.feedback_tex = Some((r.key, sel.clone(), t.clone()));
+                    Some(t)
+                });
+                if let Some(t) = tex {
+                    ui.painter().with_clip_rect(lay.image.intersect(ui.clip_rect())).image(t.id(), ir, Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0)), egui::Color32::WHITE);
+                }
+            }
+        }
         pane::paint_frame(ui, lay.frame, d.active == i);
         let busy = d.panes[i].is_busy();
         let act = pane::header(ui, i, lay, &d.panes[i], entries, busy);

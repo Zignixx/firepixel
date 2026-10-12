@@ -39,3 +39,83 @@ image-preview-next-frame = Next frame
 # "Preset Name" dialog ("+" in the pane)
 image-preview-preset-name-title = Preset Name
 image-preview-preset-name-label = Name:
+
+# "Options" tab (re\17 §2, package P2)
+image-preview-opt-format = Format:
+image-preview-opt-palette = Palette:
+image-preview-opt-quality = Quality:
+image-preview-opt-loss = Loss:
+image-preview-opt-dither = Dither:
+image-preview-opt-smoothing = Smoothing:
+image-preview-opt-smoothing-none = No smoothing
+image-preview-opt-smoothing-max = 8 Maximum smoothing
+image-preview-opt-palette-websnap = WebSnap Adaptive
+image-preview-opt-matte = Matte:
+image-preview-opt-progressive = Progressive browser display
+image-preview-opt-sharpen = Sharpen color edges
+image-preview-opt-remove-unused = Remove unused colors
+image-preview-opt-interlaced = Interlaced browser display
+image-preview-tip-format = Export file format
+image-preview-tip-options = Options for this tab
+image-preview-tip-palette = Indexed palette
+image-preview-tip-quality = JPEG quality
+image-preview-tip-loss = Lossy GIF compression
+image-preview-tip-colors = Maximum number of colors
+image-preview-tip-actual-colors = Actual number of colors
+image-preview-tip-dither = Dither image
+image-preview-tip-dither-amount = Dither amount
+image-preview-tip-smoothing = Smoothing level
+image-preview-tip-progressive = Progressive
+image-preview-tip-sharpen = Do not compress sharp edges
+image-preview-tip-edit-color = Edit color
+image-preview-tip-transparent = Transparent
+image-preview-tip-snap-web = Snap to web safe
+image-preview-tip-lock = Lock color
+image-preview-tip-add = Add color
+image-preview-tip-delete = Delete color
+image-preview-tip-pipette-set = Select transparency color
+image-preview-tip-pipette-add = Add color to transparency
+image-preview-tip-pipette-remove = Remove color from transparency
+image-preview-tip-transparency = Select transparency type
+image-preview-tip-matte = Transparency matte color
+image-preview-tip-remove-unused = Optimize image for smaller files
+image-preview-tip-interlaced = Interlaced image
+image-preview-tip-optimize-size = Optimize to size wizard
+
+# Color table, status line, palette menu (§2.5, §2.7)
+image-preview-color-table = Color table
+image-preview-color-status = R:{ $r } G:{ $g } B:{ $b } Hex:{ $hex } Index:{ $index }
+image-preview-color-status-alpha = R:{ $r } G:{ $g } B:{ $b } A:{ $a } Hex:{ $hex } Index:{ $index }
+image-preview-flag-locked = Locked
+image-preview-flag-edited = Edited
+image-preview-flag-websafe = Web Safe
+image-preview-flag-transparent = Transparent
+image-preview-menu-add-color = Add Color…
+image-preview-menu-edit-color = Edit Color…
+image-preview-menu-delete-color = Delete Color
+image-preview-menu-replace-color = Replace Color…
+image-preview-menu-snap-web = Snap To Web Safe
+image-preview-menu-transparent = Transparent
+image-preview-menu-lock = Lock Color
+image-preview-menu-unlock-all = Unlock All Colors
+image-preview-menu-sort-luminance = Sort by Luminance
+image-preview-menu-sort-popularity = Sort by Popularity
+image-preview-menu-unsorted = Unsorted
+image-preview-menu-swatch-feedback = Show Swatch Feedback
+image-preview-menu-remove-edit = Remove Edit
+image-preview-menu-remove-all-edits = Remove All Edits
+image-preview-menu-load-palette = Load Palette…
+image-preview-menu-save-palette = Save Palette…
+image-preview-palette-error = Palette: { $error }
+image-preview-palette-empty = The file contains no colors.
+
+# "Color" dialog (double-click, edit/add color)
+image-preview-color-title = Color
+image-preview-color-add-title = Add Color
+image-preview-color-hex = Hex:
+
+# "Optimize to Size" dialog (§2.8)
+image-preview-size-title = Optimize to Size
+image-preview-size-target = Target size:
+image-preview-size-unit = k
+image-preview-size-too-small = The resulting file would be too small. The original values were restored.
