@@ -50,6 +50,11 @@ impl PageRenderer for EngineRenderer {
         }
         Some(fp_text::render::glyph_contours(&lay))
     }
+
+    /// Satzrahmen eines Textes (Auswahlrahmen, Treffertest, Info).
+    fn text_frame(&self, doc: &Document, t: &fp_model::TextElem) -> Option<fp_geom::Rect> {
+        fp_engine::render::fp_text_frame(self.0.fonts(), doc, t)
+    }
 }
 
 /// Elemente (oben zuerst) übereinander rendern; `None`, wenn nichts sichtbar ist.

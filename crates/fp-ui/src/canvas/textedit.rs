@@ -36,6 +36,8 @@ pub fn view_key(v: &TextEditView, generation: u64) -> u64 {
     eat(&v.anchor.y.to_le_bytes());
     eat(&v.width.unwrap_or(-1.0).to_le_bytes());
     eat(&v.target.unwrap_or(0).to_le_bytes());
+    // Formatierung (Attribute aus dem Inspektor während der Bearbeitung)
+    eat(format!("{:?}{:?}", v.spans, v.base).as_bytes());
     h
 }
 

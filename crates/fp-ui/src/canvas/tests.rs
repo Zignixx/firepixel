@@ -679,6 +679,38 @@ fn double_click_text_starts_editing_hg_sequence() {
     assert!(caret.is_some_and(|c| c > 0 && c < "Firepixel Test".chars().count()), "Caret {caret:?}");
 }
 
+/// Nutzerbefund: Text beginnen, „Ha“ tippen, im Inspektor 200 pt wählen → der Text ändert sich
+/// live, der Editor bleibt offen, der Editorrahmen wächst mit; nach Esc ist der Auswahlrahmen
+/// so groß wie der gesetzte Text (nicht die alte Schätzung).
+#[test]
+fn inspector_size_while_typing_grows_text_live() {
+    let mut h = harness();
+    set_tool(&mut h, ToolId::Text);
+    let p = at(&h, 40.0, 40.0);
+    hg_click(&mut h, p);
+    h.run_steps(2);
+    assert!(h.state().state.session.tool_is_editing_text());
+    hg_ev(&mut h, Event::Text("Ha".into()));
+    h.run_steps(2);
+    let frame = |h: &Harness<'static, FirepixelApp>| h.state().state.canvases.values().next().and_then(|c| c.text.as_ref().map(|t| t.frame)).expect("Editor-Satz");
+    let small = frame(&h);
+    // genau das, was das Größenfeld des Inspektors schickt
+    h.state_mut().state.run("text.setAttributes", json!({"size": 200}));
+    h.run_steps(3);
+    assert!(h.state().state.session.tool_is_editing_text(), "Editor bleibt offen");
+    let big = frame(&h);
+    assert!(big.height() > small.height() * 8.0, "Editorrahmen wächst live: {small:?} → {big:?}");
+    let n0 = undo_count(&h);
+    hg_ev(&mut h, Event::Key { key: egui::Key::Escape, physical_key: None, pressed: true, repeat: false, modifiers: Modifiers::NONE });
+    hg_ev(&mut h, Event::Key { key: egui::Key::Escape, physical_key: None, pressed: false, repeat: false, modifiers: Modifiers::NONE });
+    h.run_steps(3);
+    assert!(!h.state().state.session.tool_is_editing_text());
+    assert_eq!(undo_count(&h), n0 + 1, "ein Verlaufsschritt");
+    let sel = h.state().state.canvases.values().next().and_then(|c| c.sel_frames.first().copied()).expect("Auswahlrahmen");
+    let (w, hgt) = (sel[1].x - sel[0].x, sel[2].y - sel[1].y);
+    assert!(hgt > 180.0 && w > big.width() - 2.0, "Auswahlrahmen {w}×{hgt}, Satz {big:?}");
+}
+
 /// Ausgewähltes Objekt auf den Reiter eines anderen Dokuments ziehen: Dokument wird aktiv, Ablegen
 /// auf der Leinwand kopiert das Objekt hinein (ein Verlaufsschritt), das Quelldokument bleibt.
 #[test]
