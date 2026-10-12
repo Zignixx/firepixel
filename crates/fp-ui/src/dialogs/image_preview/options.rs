@@ -8,10 +8,10 @@
 //! Statuszeile, drei Pipetten und Transparenzliste (§2.5/§2.6), Hintergrund (Matte), „Nicht
 //! verwendete Farben entfernen“, Zeilensprung und der Knopf „Optimieren auf Größe“ (§2.8).
 //! Sichtbar bzw. grau je Format genau nach der Tabelle §2.3 ([`visibility`]).
-//! Datei und Animation: Stand P1 (Paket P3 baut hier weiter).
+//! Datei und Animation (Paket P3): [`super::file_tab`], [`super::animation_tab`].
 
 use super::color_table::{self, FollowUp, MenuState, PaletteCmd, Pipette};
-use super::super::{combo_fit_w, extra_w, fit_label, refs, report_overflow, text_w, tl};
+use super::super::{combo_fit_w, extra_w, refs, report_overflow, text_w, tl};
 use super::{ImagePreview, Tool};
 use crate::app_state::AppState;
 use crate::inspector::fields;
@@ -214,6 +214,7 @@ pub fn measure(ctx: &egui::Context) -> Measure {
         .max(2.0 * PAD + 18.0 + checks + 4.0)
         .max(2.0 * PAD + 96.0 + tw)
         .max(2.0 * PAD + matte_w + 40.0)
+        .max(2.0 * PAD + super::file_tab::min_width(ctx))
         .ceil();
     Measure { width, tab_w, dx, cw }
 }
@@ -240,15 +241,20 @@ pub fn show(ui: &mut Ui, st: &mut AppState, left: Rect, m: Measure, d: &mut Imag
     let theme = Theme::current(ui.ctx());
     let c = &theme.colors;
     let tabs = tl(&TAB_KEYS);
+    // „Animation“ ist grau, solange das Dokument nur einen Status hat (§4)
+    if d.tab == 2 && d.frames <= 1 {
+        d.tab = 0;
+    }
     // Registerkarten Optionen / Datei / Animation
     for (i, label) in tabs.iter().enumerate() {
+        let en = i != 2 || d.frames > 1;
         let tr = Rect::from_min_size(left.min + vec2(i as f32 * (m.tab_w + 2.0), 0.0), vec2(m.tab_w, 20.0));
-        let resp = ui.interact(tr, Id::new(("pv-tab", i)), Sense::click());
-        resp.widget_info(|| egui::WidgetInfo::selected(egui::WidgetType::Button, true, d.tab == i, label));
+        let resp = ui.interact(tr, Id::new(("pv-tab", i)), if en { Sense::click() } else { Sense::hover() });
+        resp.widget_info(|| egui::WidgetInfo::selected(egui::WidgetType::Button, en, d.tab == i, label));
         ui.painter().rect_filled(tr, 0.0, if d.tab == i { c.tab_active_bg } else { c.tab_inactive_bg });
         ui.painter().rect_stroke(tr, 0.0, Stroke::new(1.0, c.line_mid), StrokeKind::Inside);
-        ui.painter().text(tr.center(), Align2::CENTER_CENTER, label.as_str(), theme.ui_font(), c.text);
-        if resp.clicked() {
+        ui.painter().text(tr.center(), Align2::CENTER_CENTER, label.as_str(), theme.ui_font(), if en { c.text } else { c.text_disabled });
+        if en && resp.clicked() {
             d.tab = i;
         }
     }
@@ -257,25 +263,8 @@ pub fn show(ui: &mut Ui, st: &mut AppState, left: Rect, m: Measure, d: &mut Imag
     let inner = page.shrink2(vec2(PAD, 0.0));
     match d.tab {
         0 => options_tab(ui, st, page, inner, m, d),
-        1 => {
-            let s = &mut d.panes[d.active].settings;
-            let (dx, lw) = (m.dx, 70.0 + m.dx);
-            let cx = inner.left() + 76.0 + dx;
-            let y0 = page.top() + 10.0;
-            fit_label(ui, Rect::from_min_size(pos2(inner.left(), y0), vec2(lw, 20.0)), &t("dlg-preview-scale"), true);
-            let percent = s.scale.filter(|sc| sc.use_scale).map(|sc| sc.percent as f64).unwrap_or(100.0);
-            if let Some(v) = fields::number(ui, "pv-scale", Rect::from_min_size(pos2(cx, y0), vec2(50.0, 20.0)), Some(Rect::from_min_size(pos2(cx + 52.0, y0), vec2(14.0, 20.0))), Some(percent), (1.0, 1000.0), 0, true) {
-                s.scale = Some(fp_model::ExportScale { use_scale: (v - 100.0).abs() > 0.01, constrain: true, percent: v.round() as i32, width: 0, height: 0 });
-            }
-            ui.painter().text(pos2(cx + 70.0, y0 + 10.0), Align2::LEFT_CENTER, "%", theme.ui_font(), c.text);
-        }
-        _ => {
-            let y0 = page.top() + 10.0;
-            let frames = st.session.active().map(|x| x.frame_count()).unwrap_or(1);
-            ui.painter().text(pos2(inner.left(), y0), Align2::LEFT_TOP, fp_i18n::tr!("dlg-preview-states", n = frames), theme.ui_font(), c.text);
-            let looping = crate::panels::states::loop_text(st.session.active().and_then(|x| x.doc.pages.get(x.page)).map(|p| p.loop_count()).unwrap_or(0));
-            ui.painter().text(pos2(inner.left(), y0 + 20.0), Align2::LEFT_TOP, fp_i18n::tr!("dlg-preview-loop", looping = looping), theme.ui_font(), c.text);
-        }
+        1 => super::file_tab::show(ui, page, inner, d),
+        _ => super::animation_tab::show(ui, page, inner, d),
     }
     // „Assistent für Dateigrößenoptimierung“ sitzt auf allen Registerseiten an derselben Stelle (§2.1)
     let br = Rect::from_min_size(pos2(inner.right() - 23.0, page.bottom() - 28.0), vec2(23.0, 24.0));

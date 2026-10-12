@@ -9,13 +9,18 @@
 //! - **Aktives Feld** mit Doppelrahmen; ein Klick aktiviert es, die linke Spalte
 //!   ([`options`]) zeigt und ändert immer seine Einstellung.
 //! - Zoom (11 Stufen 6 % … 6400 %) und Verschieben wirken **auf alle Felder gleich** (§5.6).
-//! - Werkzeugleiste unten ([`toolbar`], §6); Exportbereich und Animation folgen in Paket P3.
+//! - Werkzeugleiste unten ([`toolbar`], §6) mit Werkzeug „Exportbereich“ ([`crop`]) und
+//!   Abspielknöpfen; gemeinsamer Status aller Felder ([`ImagePreview::frame`], beim Öffnen Status 1
+//!   wie der Export). Registerkarten Datei ([`file_tab`]) und Animation ([`animation_tab`]).
 //! - Rechnen **im Hintergrund** je Feld mit Abbruch ([`worker`]); die Vorschau kodiert mit
 //!   denselben Kodierern und Parametern wie der echte Export.
 //! - Fenster in der Größe veränderbar, Start- = Mindestgröße (§1.1); Größe, Modus und
 //!   Feldeinstellungen werden wie im Original **nicht** gemerkt (§7).
 
+pub mod animation_tab;
 pub mod color_table;
+pub mod crop;
+pub mod file_tab;
 pub mod optimize_to_size;
 pub mod options;
 pub mod pane;
@@ -69,6 +74,9 @@ pub enum Tool {
     Pointer,
     /// Zoom: Klick eine Stufe größer, Alt+Klick eine Stufe kleiner, um den Klickpunkt.
     Zoom,
+    /// Exportbereich (§6): gestrichelter Rahmen mit 8 Griffen im aktiven Feld; Ziehen an Griffen
+    /// oder Kanten setzt den Exportbereich dieses Feldes. Das Feld zeigt dabei das ganze Bild.
+    ExportArea,
     /// Eine der drei Transparenz-Pipetten (§2.6): Klick in ein Feld nimmt die Palettenfarbe des
     /// Bildpunkts.
     Pipette(color_table::Pipette),
@@ -120,6 +128,19 @@ pub struct ImagePreview {
     feedback_tex: Option<(u64, Vec<usize>, egui::TextureHandle)>,
     /// „Palette laden/speichern“ aus dem Kontextmenü der Vorschau (Dateidialog im nächsten Schritt).
     pending_file: Option<(usize, color_table::PaletteCmd)>,
+    /// Gemeinsamer Status aller Felder (0 = Status 1; beim Öffnen Status 1 wie der Export, §6).
+    pub frame: usize,
+    /// Anzahl Status der Seite.
+    pub frames: usize,
+    /// Abspielen läuft (Knopf ▶/■).
+    pub playing: bool,
+    /// Zeitpunkt (Zeit der Oberfläche) des nächsten Statuswechsels beim Abspielen.
+    pub next_tick: Option<f64>,
+    /// Größe der Seite in Dokumentpixeln (Bezug für Skalieren und Exportbereich).
+    pub doc_size: (usize, usize),
+    /// Laufendes Ziehen mit dem Werkzeug „Exportbereich“: Feld, Griff, Bereich und Druckpunkt beim
+    /// Drücken.
+    crop_drag: Option<(usize, crop::Handle, [i32; 4], egui::Pos2)>,
 }
 
 /// Ergebnis eines Bildes.
@@ -166,6 +187,12 @@ impl ImagePreview {
             palette_io: Arc::new(std::sync::Mutex::new(Vec::new())),
             feedback_tex: None,
             pending_file: None,
+            frame: 0,
+            frames: 1,
+            playing: false,
+            next_tick: None,
+            doc_size: (1, 1),
+            crop_drag: None,
         }
     }
 
@@ -197,6 +224,30 @@ impl ImagePreview {
             }
             _ => false,
         }
+    }
+
+    /// Lage des ganzen, nicht zugeschnittenen Bildes des Feldes `i` auf dem Bildschirm, solange das
+    /// Feld es zeigt (Werkzeug „Exportbereich“); sonst `None`.
+    pub fn full_image_rect(&self, i: usize, lay: &pane::PaneLayout) -> Option<Rect> {
+        let p = &self.panes[i];
+        let img = p.result.as_ref()?.image.as_ref()?;
+        if (img.width(), img.height()) != crop::scaled_size(self.doc_size, &p.settings) {
+            return None;
+        }
+        let sz = vec2(img.width() as f32, img.height() as f32);
+        let c = self.center.unwrap_or(sz / 2.0);
+        Some(Rect::from_min_size(lay.image.center() - c * self.zoom(), sz * self.zoom()))
+    }
+
+    /// Rahmen des Exportbereichs des Feldes `i` auf dem Bildschirm (nur mit dem Werkzeug
+    /// „Exportbereich“ im aktiven Feld).
+    pub fn export_area_rect(&self, i: usize, lay: &pane::PaneLayout) -> Option<Rect> {
+        if self.tool != Tool::ExportArea || i != self.active {
+            return None;
+        }
+        let ir = self.full_image_rect(i, lay)?;
+        let s = &self.panes[i].settings;
+        Some(crop::screen_rect(crop::area_doc(self.doc_size, s), ir, self.doc_size, s, self.zoom()))
     }
 
     /// Einstellung des aktiven Feldes.
@@ -279,7 +330,9 @@ impl ImagePreview {
 
     fn update_jobs(&mut self, ctx: &egui::Context, base: &JobInput) {
         for &i in self.mode.panes() {
-            self.panes[i].update(ctx, base, &self.cache);
+            // Werkzeug „Exportbereich“: das aktive Feld zeigt das ganze Bild (§6)
+            let uncropped = self.tool == Tool::ExportArea && i == self.active;
+            self.panes[i].update(ctx, base, &self.cache, uncropped);
         }
         let need_orig = self.mode.panes().iter().any(|&i| !self.panes[i].show_preview);
         let key = worker::settings_key(base.doc_key, base.page, base.frame, &JobKind::Original);
@@ -344,11 +397,16 @@ fn save_user_preset(st: &mut AppState, name: &str, s: &OptimizeSettings) {
 pub fn show(ctx: &egui::Context, st: &mut AppState) {
     let Some(mut d) = st.dialogs.preview.take() else { return };
     let Some(doc) = st.session.active() else { return };
+    d.frames = doc.frame_count();
+    d.frame = d.frame.min(d.frames - 1);
+    d.doc_size = fp_export::render::page_rect(&doc.doc, doc.page).map(|r| (r.width().max(1) as usize, r.height().max(1) as usize)).unwrap_or((1, 1));
+    animation_tab::tick(&mut d, ctx);
     let base = JobInput {
         doc: Arc::clone(&doc.doc),
         renderer: Arc::clone(&st.renderer),
         page: doc.page,
-        frame: doc.frame,
+        // gemeinsamer Status des Dialogs (beim Öffnen Status 1 wie der Export)
+        frame: d.frame,
         doc_key: (doc.id.0, doc.generation),
         kind: JobKind::Original,
         key: 0,
@@ -356,6 +414,8 @@ pub fn show(ctx: &egui::Context, st: &mut AppState) {
     poll_palette_io(&mut d);
     poll_size_job(&mut d);
     let outcome = draw(ctx, st, &mut d);
+    // Status im selben Bild gewechselt (Knöpfe, Liste): gleich für den neuen Status rechnen
+    let base = JobInput { frame: d.frame.min(d.frames - 1), ..base };
     d.update_jobs(ctx, &base);
     preset_name_dialog(ctx, st, &mut d);
     sub_dialogs(ctx, &mut d, &base);
@@ -635,7 +695,11 @@ fn draw_panes(ui: &mut egui::Ui, d: &mut ImagePreview, area: Rect, entries: &[pa
                     d.set_zoom(idx, Some((p, lay.image.center())));
                 }
             }
+            Tool::ExportArea => crop_tool(ui, d, i, lay, &resp),
         }
+    }
+    if !ui.input(|inp| inp.pointer.any_down()) {
+        d.crop_drag = None;
     }
     let z = d.zoom();
     let center = d.center;
@@ -661,6 +725,14 @@ fn draw_panes(ui: &mut egui::Ui, d: &mut ImagePreview, area: Rect, entries: &[pa
             Rect::from_min_size(lay.image.center() - c * z, sz * z)
         });
         pane::paint_image(ui, lay.image, img_rect, tex.as_ref());
+        // Werkzeug „Exportbereich“: Rahmen mit Griffen im aktiven Feld
+        if show
+            && i == d.active
+            && let Some(sr) = d.export_area_rect(i, lay)
+            && let Some(ir) = d.full_image_rect(i, lay)
+        {
+            crop::paint(ui, lay.image, ir, sr);
+        }
         // Farbfeld-Rückmeldung: Pixel der gewählten Farben im aktiven Feld hervorheben (§2.7)
         if show
             && i == d.active
@@ -704,6 +776,34 @@ fn draw_panes(ui: &mut egui::Ui, d: &mut ImagePreview, area: Rect, entries: &[pa
             let name = pane::matching_preset(entries, &p.settings).map(|k| entries[k].label.clone()).or_else(|| p.last_preset.clone()).unwrap_or_else(|| optimize::settings_label(&p.settings));
             d.preset_name = Some((i, name));
         }
+    }
+}
+
+/// Werkzeug „Exportbereich“ im Feld `i` (§6): Ziehen an Griffen oder Kanten ändert den Bereich,
+/// Ziehen im Inneren verschiebt ihn. Das Kästchen „Exportbereich“ wird dabei angehakt.
+fn crop_tool(ui: &egui::Ui, d: &mut ImagePreview, i: usize, lay: &pane::PaneLayout, resp: &egui::Response) {
+    let Some(sr) = d.export_area_rect(i, lay) else { return };
+    if resp.drag_started()
+        && let Some(o) = ui.input(|inp| inp.pointer.press_origin())
+        && let Some(h) = crop::hit(sr, o)
+    {
+        d.crop_drag = Some((i, h, crop::area_doc(d.doc_size, &d.panes[i].settings), o));
+    }
+    if let Some((pi, h, start, o)) = d.crop_drag
+        && pi == i
+    {
+        if resp.dragged()
+            && let Some(p) = ui.input(|inp| inp.pointer.latest_pos())
+        {
+            let (fx, fy) = crop::factors(d.doc_size, &d.panes[i].settings);
+            let z = d.zoom() as f64;
+            let delta = p - o;
+            let new = crop::drag(start, h, delta.x as f64 / (fx * z), delta.y as f64 / (fy * z), d.doc_size);
+            d.panes[i].settings.crop = Some(new);
+        }
+        ui.ctx().set_cursor_icon(h.cursor());
+    } else if let Some(h) = resp.hover_pos().and_then(|p| crop::hit(sr, p)) {
+        ui.ctx().set_cursor_icon(h.cursor());
     }
 }
 

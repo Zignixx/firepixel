@@ -1,5 +1,5 @@
-//! Werkzeugleiste unter der Vorschaufläche (re\17-bildvorschau.md §6): Zeiger, Exportbereich
-//! (Paket P3, grau), Zoom, Zoomliste, 1/2/4 Felder und die Animationsknöpfe (P3, grau).
+//! Werkzeugleiste unter der Vorschaufläche (re\17-bildvorschau.md §6): Zeiger, Exportbereich,
+//! Zoom, Zoomliste, 1/2/4 Felder und die Animationsknöpfe mit Statusnummer (Paket P3).
 
 use super::{ImagePreview, Tool, ViewMode};
 use crate::icons::{self, Icon, IconStyle};
@@ -60,8 +60,10 @@ pub(super) fn show(ui: &mut Ui, d: &mut ImagePreview, origin: egui::Pos2) {
         d.tool = Tool::Pointer;
     }
     x += 24.0;
-    // Exportbereich: Paket P3
-    tool_button(ui, "export-area", b(x), Icon::ExportArea, false, false, &t("image-preview-tool-export-area"));
+    // Exportbereich (§6): Rahmen mit Griffen im aktiven Feld
+    if tool_button(ui, "export-area", b(x), Icon::ExportArea, d.tool == Tool::ExportArea, true, &t("image-preview-tool-export-area")) {
+        d.tool = Tool::ExportArea;
+    }
     x += 24.0;
     if tool_button(ui, "zoom", b(x), Icon::Zoom, d.tool == Tool::Zoom, true, &t("image-preview-tool-zoom")) {
         d.tool = Tool::Zoom;
@@ -82,22 +84,60 @@ pub(super) fn show(ui: &mut Ui, d: &mut ImagePreview, origin: egui::Pos2) {
         }
         x += 24.0;
     }
-    // Animation (Paket P3): Plätze mit grauen Knöpfen
+    // Animation (§6): erster, abspielen/stoppen, letzter, Statusnummer, vorheriger, nächster.
+    // Grau: alles bei nur einem Status; auf Status 1 „erster“/„vorheriger“, auf dem letzten
+    // „letzter“/„nächster“. Der Status gilt für alle Felder.
     x += 10.0;
+    let n = d.frames.max(1);
+    let multi = n > 1;
+    let cur = d.frame.min(n - 1);
     let a = |x: f32| Rect::from_min_size(pos2(x, y + 2.0), vec2(21.0, 20.0));
-    for (icon, key) in [(Icon::FirstFrame, "image-preview-first-frame"), (Icon::Play, "image-preview-play"), (Icon::LastFrame, "image-preview-last-frame")] {
-        tool_button(ui, key, a(x), icon, false, false, &t(key));
-        x += 21.0;
+    if tool_button(ui, "image-preview-first-frame", a(x), Icon::FirstFrame, false, multi && cur > 0, &t("image-preview-first-frame")) {
+        super::animation_tab::go_to(d, 0);
     }
-    x += 6.0;
+    x += 21.0;
+    if play_button(ui, a(x), d.playing, multi) {
+        d.playing = !d.playing;
+        d.next_tick = None;
+    }
+    x += 21.0;
+    if tool_button(ui, "image-preview-last-frame", a(x), Icon::LastFrame, false, multi && cur + 1 < n, &t("image-preview-last-frame")) {
+        super::animation_tab::go_to(d, n - 1);
+    }
+    x += 21.0 + 6.0;
     let fr = Rect::from_min_size(pos2(x, y + 2.0), vec2(44.0, 20.0));
-    fields::field_frame(ui, fr, false, false);
-    let theme = Theme::current(ui.ctx());
-    ui.painter().text(pos2(fr.left() + 4.0, fr.center().y), egui::Align2::LEFT_CENTER, "1", theme.ui_font(), theme.colors.text_disabled);
-    ui.interact(fr, Id::new("fp-ipv-frame-tip"), Sense::hover()).on_hover_text(t("image-preview-current-frame"));
-    x += 44.0 + 6.0;
-    for (icon, key) in [(Icon::PrevFrame, "image-preview-prev-frame"), (Icon::NextFrame, "image-preview-next-frame")] {
-        tool_button(ui, key, a(x), icon, false, false, &t(key));
-        x += 21.0;
+    let items: Vec<String> = (1..=n).map(|i| i.to_string()).collect();
+    if let Some(v) = fields::combo_edit(ui, "fp-ipv-frame", fr, &(cur + 1).to_string(), &items, multi)
+        && let Some(k) = fields::parse_num(&v)
+    {
+        super::animation_tab::go_to(d, (k.round().max(1.0) as usize).min(n) - 1);
     }
+    let tip = t("image-preview-current-frame");
+    let tr = ui.interact(fr, Id::new("fp-ipv-frame-tip"), Sense::hover());
+    tr.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Other, multi, tip.as_str()));
+    tr.on_hover_text(tip);
+    x += 44.0 + 6.0;
+    if tool_button(ui, "image-preview-prev-frame", a(x), Icon::PrevFrame, false, multi && cur > 0, &t("image-preview-prev-frame")) {
+        super::animation_tab::go_to(d, cur - 1);
+    }
+    x += 21.0;
+    if tool_button(ui, "image-preview-next-frame", a(x), Icon::NextFrame, false, multi && cur + 1 < n, &t("image-preview-next-frame")) {
+        super::animation_tab::go_to(d, cur + 1);
+    }
+}
+
+/// Knopf „Abspielen / Stoppen“: ▶ bzw. ■ während des Abspielens.
+fn play_button(ui: &mut Ui, r: Rect, playing: bool, enabled: bool) -> bool {
+    let tip = t("image-preview-play");
+    if !playing {
+        return tool_button(ui, "image-preview-play", r, Icon::Play, false, enabled, &tip);
+    }
+    let theme = Theme::current(ui.ctx());
+    let resp = ui.interact(r, Id::new(("fp-ipv-tool", "image-preview-play")), if enabled { Sense::click() } else { Sense::hover() });
+    resp.widget_info(|| egui::WidgetInfo::selected(egui::WidgetType::Button, enabled, true, tip.as_str()));
+    button_frame(ui.painter(), r, &resp, ButtonLook { selected: true, enabled, group: None }, &theme);
+    ui.painter().rect_filled(Rect::from_center_size(r.center(), vec2(8.0, 8.0)), 0.0, theme.colors.icon_fg);
+    let clicked = enabled && resp.clicked();
+    resp.on_hover_text(tip);
+    clicked
 }

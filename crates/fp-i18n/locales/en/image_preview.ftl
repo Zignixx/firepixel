@@ -119,3 +119,47 @@ image-preview-size-title = Optimize to Size
 image-preview-size-target = Target size:
 image-preview-size-unit = k
 image-preview-size-too-small = The resulting file would be too small. The original values were restored.
+
+# "File" tab (§3)
+image-preview-file-scale = Scale
+image-preview-file-percent = %:
+image-preview-file-width = W:
+image-preview-file-height = H:
+image-preview-file-x = X:
+image-preview-file-y = Y:
+image-preview-file-pixels = Pixels
+image-preview-file-constrain = Constrain proportions
+image-preview-file-export-area = Export area
+image-preview-tip-scale-percent = Scale the image on export
+image-preview-tip-scale-width = Scale to this width
+image-preview-tip-scale-height = Scale to this height
+image-preview-tip-constrain = Keep the image proportions
+image-preview-tip-export-area = Export an area of the image
+image-preview-tip-area-x = Start point X coordinate
+image-preview-tip-area-y = Start point Y coordinate
+image-preview-tip-area-width = Width of the export area
+image-preview-tip-area-height = Height of the export area
+
+# "Animation" tab (§4)
+image-preview-disposal-unspecified = Unspecified
+image-preview-disposal-none = None
+image-preview-disposal-background = Restore to Background
+image-preview-disposal-previous = Revert to Previous
+image-preview-disposal-letter-unspecified = U
+image-preview-disposal-letter-none = N
+image-preview-disposal-letter-background = B
+image-preview-disposal-letter-previous = P
+image-preview-anim-delay-first = { $delay } /100 sec
+image-preview-anim-runtime = Duration: { $seconds } sec
+image-preview-anim-export-frame = Export state { $n }
+image-preview-anim-play-once = Play once
+image-preview-anim-loop = Loop
+image-preview-anim-forever = Forever
+image-preview-anim-crop-each = Crop each state
+image-preview-anim-save-differences = Save differences between states
+image-preview-tip-disposal = Disposal method
+image-preview-tip-frame-delay = State delay
+image-preview-tip-runtime = Total animation delay time
+image-preview-tip-repeat = Number of repeats
+image-preview-tip-crop-each = Crop to changed pixels
+image-preview-tip-save-differences = Save changed pixels only

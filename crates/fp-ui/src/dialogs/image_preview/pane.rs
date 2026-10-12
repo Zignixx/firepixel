@@ -226,11 +226,39 @@ pub struct Pane {
     /// Erste Änderung, die noch auf ihren Auftrag wartet (Entprellung).
     pub(super) pending_since: Option<Instant>,
     pub(super) texture: Option<(u64, egui::TextureHandle)>,
+    /// Zuletzt gerechnete Ergebnisse (Abspielen, Statuswechsel, Werkzeug „Exportbereich“ ein/aus:
+    /// schon gerechnete Status bzw. Einstellungen werden nicht noch einmal gerechnet).
+    pub(super) recent: Vec<Arc<PaneResult>>,
 }
+
+/// So viele Ergebnisse merkt sich ein Feld.
+pub const RECENT: usize = 48;
+/// … und höchstens so viele Bildpunkte zusammen (große Bilder: weniger Einträge).
+pub const RECENT_PIXELS: usize = 16 * 1024 * 1024;
 
 impl Pane {
     pub fn new(settings: OptimizeSettings) -> Pane {
-        Pane { settings, show_preview: true, initialized: false, last_preset: None, result: None, job: None, pending_since: None, texture: None }
+        Pane { settings, show_preview: true, initialized: false, last_preset: None, result: None, job: None, pending_since: None, texture: None, recent: Vec::new() }
+    }
+
+    /// Einstellung, mit der gerechnet wird: mit dem Werkzeug „Exportbereich“ im aktiven Feld ohne
+    /// Exportbereich (das Feld zeigt dann das ganze Bild, §6).
+    pub fn job_settings(&self, uncropped: bool) -> OptimizeSettings {
+        let mut s = self.settings.clone();
+        if uncropped {
+            s.crop = None;
+        }
+        s
+    }
+
+    fn remember(&mut self, r: Arc<PaneResult>) {
+        self.recent.retain(|x| x.key != r.key);
+        self.recent.push(r);
+        // höchstens RECENT Ergebnisse und zusammen höchstens RECENT_PIXELS Bildpunkte
+        let px = |v: &[Arc<PaneResult>]| v.iter().filter_map(|x| x.image.as_ref()).map(|i| i.width() * i.height()).sum::<usize>();
+        while self.recent.len() > 1 && (self.recent.len() > RECENT || px(&self.recent) > RECENT_PIXELS) {
+            self.recent.remove(0);
+        }
     }
 
     /// Wird für dieses Feld gerade gerechnet (oder wartet eine Änderung auf ihren Auftrag)?
@@ -251,7 +279,7 @@ impl Pane {
     /// Ergebnis abholen bzw. einen Auftrag starten, wenn sich Dokument oder Einstellung geändert
     /// haben. Ein neuer Auftrag bricht den alten ab; solange noch gerechnet wird, wartet eine
     /// Änderung [`DEBOUNCE`] auf weitere (Tippen, Schieber).
-    pub(super) fn update(&mut self, ctx: &egui::Context, base: &JobInput, cache: &Arc<worker::RenderCache>) {
+    pub(super) fn update(&mut self, ctx: &egui::Context, base: &JobInput, cache: &Arc<worker::RenderCache>, uncropped: bool) {
         if let Some(j) = &self.job
             && let Some(r) = j.poll()
         {
@@ -260,11 +288,19 @@ impl Pane {
             if let Some(r) = r
                 && r.key == key
             {
-                self.result = Some(Arc::new(r));
+                let r = Arc::new(r);
+                self.remember(Arc::clone(&r));
+                self.result = Some(r);
             }
         }
-        let kind = JobKind::Export(Box::new(self.settings.clone()));
+        let kind = JobKind::Export(Box::new(self.job_settings(uncropped)));
         let key = worker::settings_key(base.doc_key, base.page, base.frame, &kind);
+        // schon einmal gerechnet (anderer Status, Werkzeug gewechselt): sofort zeigen
+        if self.result.as_ref().is_none_or(|r| r.key != key)
+            && let Some(r) = self.recent.iter().find(|r| r.key == key).cloned()
+        {
+            self.result = Some(r);
+        }
         let done = self.result.as_ref().is_some_and(|r| r.key == key);
         let running = self.job.as_ref().is_some_and(|j| j.key == key);
         if done || running {

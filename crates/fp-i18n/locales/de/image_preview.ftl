@@ -119,3 +119,47 @@ image-preview-size-title = Für Dateigröße optimieren
 image-preview-size-target = Zielgröße:
 image-preview-size-unit = k
 image-preview-size-too-small = Die resultierende Datei wäre zu klein. Die ursprünglichen Werte wurden eingegeben.
+
+# Registerkarte „Datei“ (§3)
+image-preview-file-scale = Skalieren
+image-preview-file-percent = %:
+image-preview-file-width = B:
+image-preview-file-height = H:
+image-preview-file-x = X:
+image-preview-file-y = Y:
+image-preview-file-pixels = Pixel
+image-preview-file-constrain = Proportionen beibehalten
+image-preview-file-export-area = Exportbereich
+image-preview-tip-scale-percent = Bild beim Exportieren skalieren
+image-preview-tip-scale-width = Auf diese Breite skalieren
+image-preview-tip-scale-height = Auf diese Höhe skalieren
+image-preview-tip-constrain = Bildgröße proportional festlegen
+image-preview-tip-export-area = Einen Bildbereich exportieren
+image-preview-tip-area-x = Anfangspunkt X-Koordinate
+image-preview-tip-area-y = Anfangspunkt Y-Koordinate
+image-preview-tip-area-width = Breite des Exportbereichs
+image-preview-tip-area-height = Höhe des Exportbereichs
+
+# Registerkarte „Animation“ (§4)
+image-preview-disposal-unspecified = Nicht angegeben
+image-preview-disposal-none = Ohne
+image-preview-disposal-background = Hintergrund wiederherstellen
+image-preview-disposal-previous = Vorheriges wiederherstellen
+image-preview-disposal-letter-unspecified = N
+image-preview-disposal-letter-none = O
+image-preview-disposal-letter-background = H
+image-preview-disposal-letter-previous = V
+image-preview-anim-delay-first = { $delay } /100 Sek.
+image-preview-anim-runtime = Laufzeit: { $seconds } Sek.
+image-preview-anim-export-frame = Status { $n } exportieren
+image-preview-anim-play-once = Einmal abspielen
+image-preview-anim-loop = Schleife
+image-preview-anim-forever = Endlos
+image-preview-anim-crop-each = Jeden Status zuschneiden
+image-preview-anim-save-differences = Unterschiede zwischen den Status speichern
+image-preview-tip-disposal = Löschmethode
+image-preview-tip-frame-delay = Statusverzögerung
+image-preview-tip-runtime = Gesamte Animationsverzögerungszeit
+image-preview-tip-repeat = Anzahl der Wiederholungen
+image-preview-tip-crop-each = Auf geänderte Pixel zuschneiden
+image-preview-tip-save-differences = Nur geänderte Pixel speichern

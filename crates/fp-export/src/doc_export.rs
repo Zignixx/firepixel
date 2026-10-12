@@ -131,27 +131,51 @@ fn render(r: &dyn PageRenderer, doc: &Document, page: usize, frame: usize, s: &O
     r.render(doc, &RenderRequest { page, frame, layers, background: bg, area: None }).map_err(ExportError::Render)
 }
 
-fn apply_crop_scale(img: RgbaImage, s: &OptimizeSettings) -> RgbaImage {
+/// Exportbereich (`crop`, Dokumentpixel) innerhalb eines Bildes `full_w` × `full_h`; ohne bzw. mit
+/// leerem Exportbereich das ganze Bild.
+pub fn crop_rect(full_w: usize, full_h: usize, s: &OptimizeSettings) -> IRect {
+    let full = IRect::new(0, 0, full_w as i32, full_h as i32);
+    match s.crop {
+        Some([l, t, r, b]) if !IRect::new(l, t, r, b).is_empty() => {
+            let c = IRect::new(l, t, r, b).intersect(&full);
+            if c.is_empty() { full } else { c }
+        }
+        _ => full,
+    }
+}
+
+/// Ausgabegröße nach Exportbereich und Skalierung (re\17-bildvorschau.md §3): Prozent wirken auf
+/// den Exportbereich; eine feste Zielgröße (Breite/Höhe) gilt für das ganze Bild, ein Exportbereich
+/// wird im selben Verhältnis skaliert. Genau die Größe, die [`apply_crop_scale`] erzeugt.
+pub fn crop_scale_size(full_w: usize, full_h: usize, s: &OptimizeSettings) -> (usize, usize) {
+    let c = crop_rect(full_w, full_h, s);
+    let (cw, ch) = (c.width() as i64, c.height() as i64);
+    match s.scale {
+        Some(sc) if sc.use_scale && sc.percent > 0 && sc.percent != 100 => ((cw * sc.percent as i64 / 100).max(1) as usize, (ch * sc.percent as i64 / 100).max(1) as usize),
+        Some(sc) if sc.use_scale && sc.width > 0 && sc.height > 0 && full_w > 0 && full_h > 0 => {
+            let k = |c: i64, target: i32, full: usize| ((c * target as i64 * 2 + full as i64) / (2 * full as i64)).max(1) as usize;
+            (k(cw, sc.width, full_w), k(ch, sc.height, full_h))
+        }
+        _ => (cw as usize, ch as usize),
+    }
+}
+
+/// Exportbereich und Skalierung anwenden (dieselbe Kette für Export, Bildvorschau und „Optimieren
+/// auf Größe“). Die Ausgabegröße ist [`crop_scale_size`].
+pub fn apply_crop_scale(img: RgbaImage, s: &OptimizeSettings) -> RgbaImage {
+    let (full_w, full_h) = (img.width(), img.height());
     let mut img = img;
-    if let Some([l, t, rr, b]) = s.crop {
-        let r = IRect::new(l, t, rr, b);
-        if !r.is_empty() {
+    if s.crop.is_some() {
+        let b = img.bounds();
+        let r = crop_rect(full_w, full_h, s);
+        let r = IRect::new(r.left + b.left, r.top + b.top, r.right + b.left, r.bottom + b.top);
+        if r != b {
             img = img.cropped(r);
         }
     }
-    if let Some(sc) = s.scale
-        && sc.use_scale
-    {
-        let (w, h) = if sc.percent > 0 && sc.percent != 100 {
-            ((img.width() as i64 * sc.percent as i64 / 100).max(1), (img.height() as i64 * sc.percent as i64 / 100).max(1))
-        } else if sc.width > 0 && sc.height > 0 {
-            (sc.width as i64, sc.height as i64)
-        } else {
-            (img.width() as i64, img.height() as i64)
-        };
-        if w as usize != img.width() || h as usize != img.height() {
-            img = fp_raster::resample::resize(&img, w as u32, h as u32, Sampler::Bicubic);
-        }
+    let (w, h) = crop_scale_size(full_w, full_h, s);
+    if w != img.width() || h != img.height() {
+        img = fp_raster::resample::resize(&img, w as u32, h as u32, Sampler::Bicubic);
     }
     img
 }
@@ -663,6 +687,26 @@ mod tests {
             let o = DocExportOptions { style, ..DocExportOptions::new("t") };
             let f = export_document(&d, &SimpleRenderer, &o, &EncodeExtras::standalone());
             assert!(f.as_ref().is_ok_and(|v| !v.is_empty()), "{style:?}: {:?}", f.err());
+        }
+    }
+
+    #[test]
+    fn crop_scale_size_matches_apply_crop_scale() {
+        let img = RgbaImage::filled(IRect::new(0, 0, 480, 320), fp_color::Rgba8::new(10, 20, 30, 255)).expect("Bild");
+        let mut s = OptimizeSettings::default();
+        let sc = |percent, width, height| Some(fp_model::ExportScale { use_scale: true, constrain: true, percent, width, height });
+        for (crop, scale, want) in [
+            (None, sc(50, 0, 0), (240, 160)),
+            (Some([40, 0, 240, 320]), sc(50, 240, 160), (100, 160)),
+            (Some([0, 0, 240, 160]), sc(100, 120, 80), (60, 40)),
+            (None, sc(100, 120, 80), (120, 80)),
+            (Some([400, 300, 600, 400]), None, (80, 20)),
+        ] {
+            s.crop = crop;
+            s.scale = scale;
+            assert_eq!(crop_scale_size(480, 320, &s), want, "{crop:?} {scale:?}");
+            let out = apply_crop_scale(img.clone(), &s);
+            assert_eq!((out.width(), out.height()), want, "{crop:?} {scale:?}");
         }
     }
 }
