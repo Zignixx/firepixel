@@ -313,6 +313,7 @@ Die Reihenfolge gilt, solange nichts Dringenderes vom Nutzer kommt. Sobald ein P
 - Keine blockierenden. Annahme: Code-Kommentare und deutsche Doku-Dateien bleiben deutsch, nur Technisches wird englisch (§1c).
 - Für P-CI/P-OS braucht es später die Entscheidung, ob und wo ein GitHub-Repository angelegt wird.
 - Entschieden 13.10. ≈ 01:05: Rechtschreibung **nur Ordnerwahl** (keine Wörterbücher mitliefern); Bildschirmfoto, Symbolskript erstellen, Gemeinsame Palette **echt umsetzen** (Paket CMD-1 nach MN-5).
+- Entschieden 13.10. ≈ 01:13: **Keine neuen Agenten**, die laufenden fertig werden lassen; Batch (BATCH-1) erst später; Testversion vor den Nachttests, Nachttests nur nach ausdrücklichem „los“ des Nutzers; Meldungen nur im Chat.
 - Entschieden 13.10. ≈ 01:10: XMP-Schlüssel bleibt **neutral** (`XMP`, nur Dublin Core, keine Ausnahme in fp-neutral); „Bridge durchsuchen“ bleibt **aktiv** als „Im Dateibrowser durchsuchen…“ (öffnet den Ordner des Dokuments im Dateibrowser des Systems).
 
 ---
