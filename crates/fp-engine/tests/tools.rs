@@ -309,11 +309,11 @@ fn bitmap_tools() {
     tool(&mut s, ToolId::Gradient);
     drag(&mut s, (200.0, 30.0), (250.0, 30.0));
     assert_eq!(fp_engine::docops::path_attrs_of(&el(&s, r)).and_then(|a| a.fill.as_ref().map(|f| f.shape)), Some(2));
-    // Pinsel ohne Bitmap: Vektorpfad mit Strich
+    // Pinsel ohne Bitmap: wie im Original eine neue Bitmap (PARITAET_A L36, FV-11), kein Pfad
     ex(&mut s, "select.none", json!({}));
     tool(&mut s, ToolId::Brush);
     events(&mut s, &[ToolEvent::down(10.0, 150.0), ToolEvent::drag(30.0, 160.0), ToolEvent::drag(60.0, 150.0), ToolEvent::up(80.0, 170.0)]);
-    assert_eq!(el(&s, last(&s)).js_type(), "Path");
+    assert_eq!(el(&s, last(&s)).js_type(), "Image");
 }
 
 #[test]

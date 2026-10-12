@@ -126,9 +126,13 @@ impl ToolMachine for RetouchTool {
             return ToolResponse::default();
         }
         if ev.input == ToolInput::Key(ToolKey::Escape) {
-            self.points.clear();
-            self.active = false;
-            return ToolResponse::default();
+            if self.active {
+                self.points.clear();
+                self.active = false;
+                return ToolResponse::default();
+            }
+            // wie im Original: mit Bitmap als Ziel → Zeiger, Bitmap bleibt gewählt (PARITAET_A L39)
+            return super::bitmap::escape_paint_tool(ctx);
         }
         let ToolInput::Pointer { kind, pos } = &ev.input else { return ToolResponse::default() };
         self.hover = Some(*pos);

@@ -2,6 +2,7 @@
 //! Verlaufsgriffe und die Retusche-Werkzeuge (`bitmap.retouch`). Wie alle Befehle landen sie im
 //! Verlauf und sind für MCP/JSF aufrufbar.
 
+use super::bitmap::{dab_points, Dab};
 use super::select::bitmap_for;
 use super::{sel_err, take_ids, target_ids, with_doc, DOC};
 use crate::command::{cmd, CommandOutput, CommandRegistry, ParamKind, Params};
@@ -549,10 +550,6 @@ struct Retouch {
     tolerance: f32,
 }
 
-fn lum(p: [u8; 4]) -> f32 {
-    0.299 * p[0] as f32 + 0.587 * p[1] as f32 + 0.114 * p[2] as f32
-}
-
 fn rgb_to_hsv(p: [u8; 4]) -> (f32, f32, f32) {
     let (r, g, b) = (p[0] as f32 / 255.0, p[1] as f32 / 255.0, p[2] as f32 / 255.0);
     let mx = r.max(g).max(b);
@@ -570,130 +567,189 @@ fn rgb_to_hsv(p: [u8; 4]) -> (f32, f32, f32) {
     (h, if mx > 0.0 { d / mx } else { 0.0 }, mx)
 }
 
-/// Wendet die Retusche entlang des Strichs auf das Bild an (in Dokumentkoordinaten).
+/// Verstärkung des Weichzeichners: Ein voller Abdruck mischt bei Intensität 100 % 35,3 % des
+/// 3×3-Mittels ein (gemessen am Original: Intensität 50 an einer Farbkante → 15/255, an der
+/// Bitmapkante → 30/255; FV-11, PARITAET_A L38).
+const BLUR_GAIN: f32 = 0.353;
+/// Abstand der Abdrücke: `Durchmesser × Abstand % × SPACING_GAIN` (an den Strichmessungen des
+/// Originals kalibriert: Weichzeichner 13 → ≈ 2 px, Stempel 16 → ≈ 2,4 px).
+const SPACING_GAIN: f32 = 0.75;
+/// Farbe außerhalb der Bitmap beim Weichzeichnen: transparentes Weiß (das Original hellt die
+/// Bitmapkante dabei auf und lässt die Bitmap um 1 px wachsen).
+const OUTSIDE: [f32; 4] = [255.0, 255.0, 255.0, 0.0];
+
+fn in_rect(r: &fp_geom::IRect, x: i32, y: i32) -> bool {
+    x >= r.left && x < r.right && y >= r.top && y < r.bottom
+}
+
+/// Wendet die Retusche entlang des Strichs auf das Bild an (in Dokumentkoordinaten). Jeder Abdruck
+/// wirkt auf das Ergebnis der vorigen (wie im Original); gerechnet wird in Gleitkomma, gerundet erst
+/// am Ende.
 fn retouch(img: &mut RgbaImage, pts: &[Point], prm: &Retouch, sel: Option<&fp_raster::Mask>) {
-    let r = (prm.size / 2.0).max(0.5);
-    let step = (prm.size * prm.spacing / 100.0).max(1.0);
-    // Abdrücke im Abstand `step`
-    let mut stamps = vec![pts[0]];
-    let mut carry = 0.0f32;
-    for w in pts.windows(2) {
-        let (a, b) = (w[0], w[1]);
-        let len = (b.x - a.x).hypot(b.y - a.y);
-        let mut t = step - carry;
-        while t <= len {
-            let f = t / len.max(1e-6);
-            stamps.push(Point::new(a.x + (b.x - a.x) * f, a.y + (b.y - a.y) * f));
-            t += step;
+    let dab = Dab::new(prm.size, prm.round, prm.soft * 100.0);
+    let step = (prm.size * prm.spacing / 100.0 * SPACING_GAIN).max(1.0);
+    let stamps = dab_points(pts, step);
+    let reach = stamps.iter().fold(fp_geom::IRect::default(), |r, s| r.union(&dab.bounds(*s)));
+    let orig = img.bounds();
+    let grows = prm.mode == "blur";
+    if grows && !orig.is_empty() {
+        // Weichzeichner darf die Bitmap um 1 px erweitern (neue Pixel transparent weiß)
+        let ext = orig.union(&reach.intersect(&orig.inflate(1, 1)));
+        if ext != orig
+            && let Ok(mut e) = img.extended_to(ext)
+        {
+            for y in ext.top..ext.bottom {
+                for x in ext.left..ext.right {
+                    if !in_rect(&orig, x, y) {
+                        e.set_pixel(x, y, Rgba8::new(255, 255, 255, 0));
+                    }
+                }
+            }
+            *img = e;
         }
-        carry = (carry + len) % step;
+    }
+    let ib = img.bounds();
+    let work = reach.inflate(1, 1).intersect(&ib);
+    if work.is_empty() {
+        return;
+    }
+    let ww = work.width() as usize;
+    let idx = |x: i32, y: i32| (y - work.top) as usize * ww + (x - work.left) as usize;
+    let mut buf: Vec<[f32; 4]> = Vec::with_capacity(ww * work.height() as usize);
+    for y in work.top..work.bottom {
+        for x in work.left..work.right {
+            buf.push(img.get(x, y).map(|p| p.map(|v| v as f32)).unwrap_or(OUTSIDE));
+        }
     }
     let source = img.clone();
-    let inner = r * (1.0 - prm.soft);
+    let read = |b: &[[f32; 4]], x: i32, y: i32| -> [f32; 4] {
+        if in_rect(&work, x, y) {
+            b[idx(x, y)]
+        } else {
+            source.get(x, y).map(|p| p.map(|v| v as f32)).unwrap_or(OUTSIDE)
+        }
+    };
+    let mix = |a: [f32; 4], b: [f32; 4], t: f32| -> [f32; 4] { [0, 1, 2, 3].map(|k| a[k] + (b[k] - a[k]) * t) };
+    let lumf = |p: [f32; 4]| 0.299 * p[0] + 0.587 * p[1] + 0.114 * p[2];
     let mut prev: Option<Point> = None;
     for s in stamps {
-        let (x0, y0, x1, y1) = ((s.x - r).floor() as i32, (s.y - r).floor() as i32, (s.x + r).ceil() as i32, (s.y + r).ceil() as i32);
-        let snapshot = if prm.mode == "smudge" || prm.mode == "blur" || prm.mode == "sharpen" { Some(img.clone()) } else { None };
-        for y in y0..y1 {
-            for x in x0..x1 {
-                let (cx, cy) = (x as f32 + 0.5 - s.x, y as f32 + 0.5 - s.y);
-                let d = if prm.round { cx.hypot(cy) } else { cx.abs().max(cy.abs()) };
-                if d > r {
-                    continue;
-                }
-                let mut w = if d <= inner || r <= inner { 1.0 } else { 1.0 - (d - inner) / (r - inner) };
-                w *= prm.strength;
-                if let Some(m) = sel {
-                    w *= m.get(x, y) as f32 / 255.0;
-                }
-                if w <= 0.0 {
-                    continue;
-                }
-                let Some(px) = img.get(x, y) else { continue };
-                let get = |im: &RgbaImage, xx: i32, yy: i32| im.get(xx, yy).unwrap_or(px);
-                let avg = |im: &RgbaImage| -> [f32; 4] {
-                    let mut acc = [0f32; 4];
-                    for dy in -1..=1 {
-                        for dx in -1..=1 {
-                            let q = get(im, x + dx, y + dy);
-                            for k in 0..4 {
-                                acc[k] += q[k] as f32;
-                            }
-                        }
-                    }
-                    acc.map(|v| v / 9.0)
-                };
-                let mix = |a: [u8; 4], b: [f32; 4], t: f32| -> [u8; 4] {
-                    let mut o = a;
-                    for k in 0..4 {
-                        o[k] = (a[k] as f32 + (b[k] - a[k] as f32) * t).round().clamp(0.0, 255.0) as u8;
-                    }
-                    o
-                };
-                let out = match prm.mode.as_str() {
-                    "blur" => mix(px, avg(snapshot.as_ref().unwrap_or(img)), w),
-                    "sharpen" => {
-                        let a = avg(snapshot.as_ref().unwrap_or(img));
-                        let target = [0, 1, 2].map(|k| px[k] as f32 + (px[k] as f32 - a[k]) * 1.5);
-                        mix(px, [target[0], target[1], target[2], px[3] as f32], w)
-                    }
-                    "dodge" | "burn" => {
-                        let l = lum(px) / 255.0;
-                        let band = match prm.range {
-                            0 => (1.0 - l).powi(2),
-                            2 => l * l,
-                            _ => 1.0 - (2.0 * l - 1.0).powi(2),
-                        };
-                        let t = w * 0.35 * band;
-                        if prm.mode == "dodge" {
-                            mix(px, [255.0, 255.0, 255.0, px[3] as f32], t)
-                        } else {
-                            mix(px, [0.0, 0.0, 0.0, px[3] as f32], t)
-                        }
-                    }
-                    "smudge" => {
-                        let Some(pv) = prev else { continue };
-                        let q = get(snapshot.as_ref().unwrap_or(img), x - (s.x - pv.x).round() as i32, y - (s.y - pv.y).round() as i32);
-                        mix(px, q.map(|v| v as f32), w)
-                    }
-                    "stamp" => {
-                        let (sx, sy) = ((x as f32 + prm.offset.0).floor() as i32, (y as f32 + prm.offset.1).floor() as i32);
-                        let Some(q) = source.get(sx, sy) else { continue };
-                        mix(px, q.map(|v| v as f32), w)
-                    }
-                    "replaceColor" => {
-                        let f = prm.from;
-                        let dist = ((px[0] as f32 - f.r as f32).abs() + (px[1] as f32 - f.g as f32).abs() + (px[2] as f32 - f.b as f32).abs()) / 3.0;
-                        let tol = prm.tolerance.max(1.0);
-                        if dist > tol {
-                            continue;
-                        }
-                        let t = w * (1.0 - dist / tol).max(0.2);
-                        let tc = prm.to;
-                        let target = if prm.colorize {
-                            let l = lum(px) / 255.0;
-                            [tc.r as f32 * l * 1.5, tc.g as f32 * l * 1.5, tc.b as f32 * l * 1.5, px[3] as f32]
-                        } else {
-                            // Abweichung von der Von-Farbe bleibt erhalten (Schattierung)
-                            let (fr, tr) = ([f.r, f.g, f.b], [tc.r, tc.g, tc.b]);
-                            let c = |k: usize| tr[k] as f32 + px[k] as f32 - fr[k] as f32;
-                            [c(0), c(1), c(2), px[3] as f32]
-                        };
-                        mix(px, target, t)
-                    }
-                    _ => {
-                        // Rote Augen: Farbton 300°–5°, Sättigung ≥ 50 %, Helligkeit ≥ 25 % → Rotkanal absenken
-                        let (h, sat, v) = rgb_to_hsv(px);
-                        if !(h >= 300.0 || h <= 5.0 + prm.tolerance / 10.0) || sat < 0.5 || v < 0.25 {
-                            continue;
-                        }
-                        let rr = (px[1] as f32 + px[2] as f32) / 2.0;
-                        mix(px, [rr, px[1] as f32, px[2] as f32, px[3] as f32], (w * 2.0).min(1.0))
-                    }
-                };
-                img.set_pixel(x, y, Rgba8::new(out[0], out[1], out[2], out[3]));
+        let mut changes: Vec<(usize, [f32; 4])> = Vec::new();
+        dab.each(s, |x, y, w0| {
+            if !in_rect(&work, x, y) {
+                return;
             }
+            let mut w = w0 * prm.strength;
+            if let Some(m) = sel {
+                w *= m.get(x, y) as f32 / 255.0;
+            }
+            if w <= 0.0 {
+                return;
+            }
+            let px = buf[idx(x, y)];
+            // Änderungen werden erst nach dem Abdruck übernommen: gelesen wird der Stand davor
+            let from: &[[f32; 4]] = &buf;
+            let avg = || -> [f32; 4] {
+                let mut acc = [0f32; 4];
+                for dy in -1..=1 {
+                    for dx in -1..=1 {
+                        let q = read(from, x + dx, y + dy);
+                        for k in 0..4 {
+                            acc[k] += q[k];
+                        }
+                    }
+                }
+                acc.map(|v| v / 9.0)
+            };
+            let out = match prm.mode.as_str() {
+                "blur" => mix(px, avg(), w * BLUR_GAIN),
+                "sharpen" => {
+                    let a = avg();
+                    let target = [0, 1, 2].map(|k| px[k] + (px[k] - a[k]) * 1.5);
+                    mix(px, [target[0], target[1], target[2], px[3]], w)
+                }
+                "dodge" | "burn" => {
+                    let l = lumf(px) / 255.0;
+                    let band = match prm.range {
+                        0 => (1.0 - l).powi(2),
+                        2 => l * l,
+                        _ => 1.0 - (2.0 * l - 1.0).powi(2),
+                    };
+                    let t = w * 0.35 * band;
+                    if prm.mode == "dodge" { mix(px, [255.0, 255.0, 255.0, px[3]], t) } else { mix(px, [0.0, 0.0, 0.0, px[3]], t) }
+                }
+                "smudge" => {
+                    let Some(pv) = prev else { return };
+                    let q = read(from, x - (s.x - pv.x).round() as i32, y - (s.y - pv.y).round() as i32);
+                    mix(px, q, w)
+                }
+                "stamp" => {
+                    // Quelle über das Ziel legen (transparente Quelle lässt das Ziel stehen, gemessen)
+                    let (sx, sy) = ((x as f32 + prm.offset.0).floor() as i32, (y as f32 + prm.offset.1).floor() as i32);
+                    let Some(q) = source.get(sx, sy) else { return };
+                    let sa = q[3] as f32 / 255.0 * w;
+                    let da = px[3] / 255.0;
+                    let oa = sa + da * (1.0 - sa);
+                    if oa <= 0.0 {
+                        return;
+                    }
+                    let c = |k: usize| (q[k] as f32 * sa + px[k] * da * (1.0 - sa)) / oa;
+                    [c(0), c(1), c(2), oa * 255.0]
+                }
+                "replaceColor" => {
+                    let f = prm.from;
+                    let dist = ((px[0] - f.r as f32).abs() + (px[1] - f.g as f32).abs() + (px[2] - f.b as f32).abs()) / 3.0;
+                    let tol = prm.tolerance.max(1.0);
+                    if dist > tol {
+                        return;
+                    }
+                    let t = w * (1.0 - dist / tol).max(0.2);
+                    let tc = prm.to;
+                    let target = if prm.colorize {
+                        let l = lumf(px) / 255.0;
+                        [tc.r as f32 * l * 1.5, tc.g as f32 * l * 1.5, tc.b as f32 * l * 1.5, px[3]]
+                    } else {
+                        // Abweichung von der Von-Farbe bleibt erhalten (Schattierung)
+                        let (fr, tr) = ([f.r, f.g, f.b], [tc.r, tc.g, tc.b]);
+                        let c = |k: usize| tr[k] as f32 + px[k] - fr[k] as f32;
+                        [c(0), c(1), c(2), px[3]]
+                    };
+                    mix(px, target, t)
+                }
+                _ => {
+                    // Rote Augen: Farbton 300°–5°, Sättigung ≥ 50 %, Helligkeit ≥ 25 % → Rotkanal absenken
+                    let p8 = px.map(|v| v.round().clamp(0.0, 255.0) as u8);
+                    let (h, sat, v) = rgb_to_hsv(p8);
+                    if !(h >= 300.0 || h <= 5.0 + prm.tolerance / 10.0) || sat < 0.5 || v < 0.25 {
+                        return;
+                    }
+                    let rr = (px[1] + px[2]) / 2.0;
+                    mix(px, [rr, px[1], px[2], px[3]], (w * 2.0).min(1.0))
+                }
+            };
+            changes.push((idx(x, y), out.map(|v| v.clamp(0.0, 255.0))));
+        });
+        for (i, v) in changes {
+            buf[i] = v;
         }
         prev = Some(s);
+    }
+    for y in work.top..work.bottom {
+        for x in work.left..work.right {
+            let mut p = buf[idx(x, y)].map(|v| v.round().clamp(0.0, 255.0) as u8);
+            if grows && !in_rect(&orig, x, y) {
+                // neue Randpixel: Deckung abrunden, unter 2/255 verwerfen – an den Messungen des
+                // Originals kalibriert (Strich 345 → 390 an B2: oben wächst die Bitmap, unten nicht)
+                let a = buf[idx(x, y)][3];
+                p[3] = if a < 2.0 { 0 } else { a.floor().clamp(0.0, 255.0) as u8 };
+            }
+            img.set_pixel(x, y, Rgba8::new(p[0], p[1], p[2], p[3]));
+        }
+    }
+    if grows && !orig.is_empty() {
+        // nur Ränder behalten, die wirklich Deckung bekommen haben
+        let keep = orig.union(&img.alpha_bounds());
+        if keep != img.bounds() {
+            *img = img.cropped(keep);
+        }
     }
 }

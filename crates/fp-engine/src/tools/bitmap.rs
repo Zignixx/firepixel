@@ -49,6 +49,19 @@ pub(crate) fn escape_bitmap_mode(ctx: &ToolContext) -> ToolResponse {
     ToolResponse { commands: vec![Invocation::new("modify.exitBitmapMode", json!({}))], switch_tool: Some(ToolId::Pointer), ..ToolResponse::default() }
 }
 
+/// Esc in einem Malwerkzeug (Pinsel, Bleistift, Radiergummi, Weichzeichner & Co., Stempel …) ohne
+/// laufenden Strich, gemessen am Original (FV-11): Ist eine Bitmap das Ziel (ausgewählt oder
+/// Bitmapmodus), endet der Bitmapmodus und das Werkzeug wechselt zum Zeiger; die Bitmap bleibt
+/// ausgewählt – auch ohne vorheriges Malen. Ohne Bitmap (nichts oder ein Vektor gewählt) bleibt
+/// alles, wie es ist.
+pub(crate) fn escape_paint_tool(ctx: &ToolContext) -> ToolResponse {
+    if !bitmap_target(ctx) {
+        return ToolResponse::default();
+    }
+    let commands = if ctx.bitmap_mode || ctx.selection.has_pixels() { vec![Invocation::new("modify.exitBitmapMode", json!({}))] } else { Vec::new() };
+    ToolResponse { commands, switch_tool: Some(ToolId::Pointer), ..ToolResponse::default() }
+}
+
 /// Fang für Pixelauswahl: Hilfslinien, Raster, ganze Pixel (keine intelligenten Hilfslinien).
 fn pixel_snap(ctx: &ToolContext, p: Point) -> Point {
     Snapper::new(ctx, &[]).without_smart().point(p).point
@@ -355,13 +368,27 @@ impl ToolMachine for BrushTool {
             return ToolResponse::default();
         }
         if ev.input == ToolInput::Key(ToolKey::Escape) {
-            self.points.clear();
-            self.active = false;
-            return ToolResponse::default();
+            if self.active {
+                self.points.clear();
+                self.active = false;
+                return ToolResponse::default();
+            }
+            return escape_paint_tool(ctx);
         }
         let ToolInput::Pointer { kind, pos } = &ev.input else { return ToolResponse::default() };
         self.hover = Some(*pos);
         match kind {
+            PointerKind::Down if self.id == ToolId::Eraser && !bitmap_target(ctx) => {
+                // Radiergummi ohne Bitmap: das Original hebt nur die Auswahl auf (gemessen, R1 gewählt)
+                self.active = false;
+                if !ctx.selection.elements.is_empty() {
+                    return ToolResponse {
+                        commands: vec![Invocation::new("tool.pick", json!({"command": "select.set", "params": {"ids": []}}))],
+                        cursor: self.cursor(),
+                        ..ToolResponse::default()
+                    };
+                }
+            }
             PointerKind::Down => {
                 self.points = vec![*pos];
                 self.active = true;
@@ -386,11 +413,31 @@ impl ToolMachine for BrushTool {
                 let cmd = match self.id {
                     ToolId::Eraser => Invocation::new(
                         "bitmap.erase",
-                        json!({"points": pj, "size": size, "round": ctx.options.eraser_round, "opacity": ctx.options.eraser_opacity}),
+                        json!({"points": pj, "size": size, "round": ctx.options.eraser_round, "opacity": ctx.options.eraser_opacity, "edge": ctx.options.eraser_edge}),
                     ),
-                    ToolId::Brush if !bitmap_target(ctx) => {
-                        let Some(c) = freehand_contour_json(&pts, ctx.options.path_precision, false) else { return ToolResponse::default() };
-                        super::styled(Invocation::new("draw.path", json!({"contours": [c], "fill": false, "strokeWidth": size})), ctx.options)
+                    ToolId::Brush => {
+                        // Wie im Original malt der Pinsel immer Pixel: in die ausgewählte Bitmap,
+                        // sonst in eine neue Bitmap; gerendert mit dem Strich der Werkzeugvorgabe
+                        // (PARITAET_A L36). Ohne Renderer (headless) malt `bitmap.paint` eine runde Spitze.
+                        let mut params = json!({"points": pj, "size": size, "antialias": true});
+                        // Das Original malt den Pinselstrich ohne den Endpunkt: Ziehen 300 → 400
+                        // füllt 300–399, ein Vektorpfad gleicher Lage dagegen 300–400 (gemessen).
+                        let mut stroke = pts.clone();
+                        if stroke.len() >= 2 {
+                            let n = stroke.len();
+                            let (a, b) = (stroke[n - 2], stroke[n - 1]);
+                            let l = dist(a, b);
+                            if l > 1.0 {
+                                stroke[n - 1] = Point::new(b.x - (b.x - a.x) / l, b.y - (b.y - a.y) / l);
+                            } else {
+                                stroke.pop();
+                            }
+                        }
+                        if let Some(c) = freehand_contour_json(&stroke, ctx.options.path_precision, false) {
+                            let shape = super::styled(Invocation::new("draw.path", json!({"contours": [c], "fill": false, "strokeWidth": size})), ctx.options);
+                            params["draw"] = json!({"command": shape.command, "params": shape.params});
+                        }
+                        Invocation::new("bitmap.paint", params)
                     }
                     _ => Invocation::new(
                         "bitmap.paint",
