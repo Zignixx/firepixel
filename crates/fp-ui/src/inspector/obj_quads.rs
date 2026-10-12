@@ -469,7 +469,7 @@ pub fn fill_panel(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target, enabled: b
             let resp = fields::icon_button(ui, id.with(("kind", k)), r, g, pen, tip);
             let mut chosen: Option<std::path::PathBuf> = None;
             let mut other = false;
-            egui::Popup::menu(&resp).frame(crate::menu::menu_frame(&theme)).show(|ui| {
+            egui::Popup::menu(&resp).frame(crate::menu::menu_frame(&theme)).width(150.0).show(|ui| {
                 ui.spacing_mut().item_spacing = egui::vec2(0.0, 0.0);
                 egui::ScrollArea::vertical().max_height(360.0).show(ui, |ui| {
                     for (name, p) in popups::pattern_files() {

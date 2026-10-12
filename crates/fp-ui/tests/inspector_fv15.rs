@@ -4,7 +4,7 @@
 //! KI-Objektauswahl „Esc: Bitmapmodus beenden“ (HG). Realistische Eingaben wie egui-winit unter
 //! Windows (je Ereignis ein Bild, Tippen als `Event::Text`, Tastendruck und Loslassen getrennt).
 
-use egui::{Event, Key, Modifiers, PointerButton, Pos2};
+use egui::{Event, Modifiers, PointerButton, Pos2};
 use egui_kittest::kittest::{By, NodeT, Queryable};
 use egui_kittest::Harness;
 use fp_engine::ToolId;
@@ -46,11 +46,6 @@ fn st(h: &H) -> &AppState {
 fn ev(h: &mut H, e: Event) {
     h.event(e);
     h.run_steps(1);
-}
-
-fn key(h: &mut H, k: Key, m: Modifiers) {
-    ev(h, Event::Key { key: k, physical_key: Some(k), pressed: true, repeat: false, modifiers: m });
-    ev(h, Event::Key { key: k, physical_key: Some(k), pressed: false, repeat: false, modifiers: m });
 }
 
 fn press(h: &mut H, p: Pos2, down: bool) {
@@ -258,6 +253,33 @@ fn w21_listed_texture_gets_mask() {
     let tex = attrs.fill_texture.as_ref().expect("Fülltextur");
     assert_eq!(tex.name, name);
     assert!(tex.mask.is_some(), "Textur aus dem Texturordner hat eine Maske");
+    assert_eq!(undo_count(&h), n0 + 1);
+}
+
+/// Musterliste (Knopf „Muster“ an einem gewählten Rechteck): Muster aus allen Musterordnern, eine
+/// schmale Liste mit Bildlauf und darunter „Andere…“ (immer sichtbar); Wahl eines Musters ist ein
+/// Schritt und setzt die Musterfüllung.
+#[test]
+fn w21_pattern_list_like_texture_list() {
+    let Some((first, _)) = popups::pattern_files().first().cloned() else { return };
+    let mut h = harness(|s| {
+        rect(s, [50, 50, 150, 120], "#ff0000");
+    });
+    // Muster-Knopf: vierter Füllart-Knopf rechts über der Fülltextur-Liste (Lage wie im echten Fenster)
+    let tex = texture_combos(&h)[0];
+    let pattern = egui::pos2(tex.left() + 119.0, tex.top() - 38.0);
+    click(&mut h, pattern);
+    let other = h.get_by_label("Andere...").rect();
+    assert!(other.bottom() <= HH, "„Andere…“ sichtbar: {other:?}");
+    assert!(other.width() < 220.0, "schmale Liste: {other:?}");
+    let item = h.get_by_label(&first).rect();
+    assert!(item.top() < other.top());
+    let n0 = undo_count(&h);
+    click(&mut h, item.center());
+    h.run_steps(2);
+    let attrs = obj_quads::shown_attrs(st(&h)).expect("Attribute");
+    let f = attrs.fill.as_ref().expect("Füllung");
+    assert_eq!(f.pattern.as_ref().map(|p| p.name.clone()).as_deref(), Some(first.as_str()));
     assert_eq!(undo_count(&h), n0 + 1);
 }
 
