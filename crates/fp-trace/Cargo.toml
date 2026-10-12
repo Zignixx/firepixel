@@ -1,0 +1,28 @@
+[package]
+name = "fp-trace"
+description = "Bitmap nachzeichnen: Rasterbild in gefüllte, bearbeitbare Bézier-Pfade umwandeln (Vektorisierung)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+fp-geom = { workspace = true }
+fp-color = { workspace = true }
+fp-raster = { workspace = true }
+serde = { workspace = true }
+# Mehrsprachige Fehlermeldungen (Schlüssel `trace-*` in locales\<code>\nachzeichnen.ftl)
+fp-i18n = { workspace = true }
+# Vektorisierung: visioncortex 0.9.3 (veröffentlicht 14.08.2026), Lizenz MIT OR Apache-2.0,
+# reines Rust (Abhängigkeiten bit-vec, flo_curves, num-traits, alle MIT/Apache).
+# Bewusst nicht vtracer: 1.0.0-alpha.* ist Alpha, 0.6.5 bringt Datei-/SVG-Ein-/Ausgabe mit, die wir
+# nicht brauchen; der Ablauf (Farbcluster → Pfade) ist hier in `lib.rs` nach dessen Muster
+# (ebenfalls MIT OR Apache-2.0) eigenständig umgesetzt. Potrace (GPL) ist ausgeschlossen.
+visioncortex = "=0.9.3"
+
+[dev-dependencies]
+# Korpus-Test (#[ignore]): Rasterdateien lesen
+image = { workspace = true, features = ["png", "gif", "jpeg"] }
+
+[lints]
+workspace = true

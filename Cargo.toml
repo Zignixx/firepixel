@@ -39,6 +39,7 @@ fp-ui = { path = "crates/fp-ui" }
 fp-script = { path = "crates/fp-script" }
 fp-mcp = { path = "crates/fp-mcp" }
 fp-i18n = { path = "crates/fp-i18n" }
+fp-trace = { path = "crates/fp-trace" }
 
 [workspace.lints.rust]
 unsafe_code = "forbid"
