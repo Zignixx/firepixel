@@ -114,3 +114,15 @@ Am 11.10. hat ein Test ~80 „Pick an app“-Fenster beim Nutzer geöffnet (E-Ma
 ## 6. Abschluss je Agent
 
 `STATUS.md`-Abschnitt aktualisieren (Stand, Messzahlen, was geprüft ist, was offen bleibt mit Grund). Vorher: eigenes Crate/eigene Dateien `cargo build -j 3` und `cargo test -j 3 -p <crate>` grün, `cargo clippy -j 3 -p <crate>` ohne Warnungen in eigenen Dateien.
+
+## 7. Phase 7 (ab 12.10.2026 mittags): kleine Aufträge, höchstens 4 Agenten auf Opus
+
+Nutzervorgabe: höchstens **4 Agenten gleichzeitig**, alle Opus, **kleine Aufträge** (ein Feature-Schnitt oder eine Handvoll Befunde). Die Phase-5/6-Agenten laufen nicht mehr; ihre Bereiche aus §1/§1b übernehmen die Phase-7-Agenten **nur für die im Auftrag genannten Befunde/Dateien**. Alles andere wie bisher (§1a Neutralität, §2 eigener `target-<kürzel>`, `-j 4`, §2a git nur eigene Pfade, §3 Befunde, §4 „funktioniert“).
+
+| Kürzel | Thema | darf schreiben |
+|---|---|---|
+| **VT-<n>** | Bitmap nachzeichnen (Vektorisierung) | neues Crate `crates\fp-trace`; in fp-engine die neue Datei `src\commands\trace.rs` + je eine Registrierungszeile; Schlüssel `cmd-modify-traceBitmap*`/`trace-*` in `locales\{de,en}\menue.ftl` bzw. neue `locales\{de,en}\nachzeichnen.ftl`; ab VT-2 der neue Dialog `crates\fp-ui\src\dialogs\trace.rs` + Einhängezeile |
+| **UE-<n>** | Übersetzung (Restbefunde Phase 6) | die im Auftrag genannten Befunde und deren Dateien |
+| **FV-<n>** | Funktionsvergleich mit dem Original (Paritätsbefunde) | die im Auftrag genannten Befunde und deren Dateien |
+
+Laufen zwei Phase-7-Agenten in derselben Datei, gilt: kleine, in sich geschlossene Edits, vor jedem Edit die Datei neu lesen, nie fremde Änderungen zurückdrehen. Jeder hakt seine Befunde in `BEFUNDE.md` mit „– erledigt (<Kürzel>, <commit>)“ ab.
