@@ -1343,7 +1343,7 @@ pub fn write_export(e: &ExportSettings) -> Vec<RawNode> {
 }
 
 /// Firepixel-eigene Erweiterung im `EXPv`: Exportoptionen für CSS-Sprites. Das Original hält diese
-/// Felder im Dokument, ihre Tags sind aber nicht bekannt (`re 8` §1.5 „Tags ?“, nicht im
+/// Felder im Dokument, ihre Tags sind aber nicht bekannt (`re\08` §1.5 „Tags ?“, nicht im
 /// Vokabular). Der Container beginnt mit Kleinbuchstaben und kann daher mit keinem Tag des
 /// Originals (immer drei Großbuchstaben/Ziffern) zusammenfallen.
 pub const SPRITE_EXT: TagKey = k!(b"fpSv");
