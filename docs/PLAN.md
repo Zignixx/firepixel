@@ -162,7 +162,7 @@ Die Reihenfolge gilt, solange nichts Dringenderes vom Nutzer kommt. Sobald ein P
 | ☐ **P-AU1** | JSF wie im Original: zwei Aufrufe → andere Objekte (O11/O6), `pixelRect` beim Text ohne 2-px-Rand (L22), `fw.setActiveViewScale` in der Brücke, `addNewHotspot` „slice“ | BEFUNDE AU |
 | ☐ **P-PERF** | Restliche langsame Stellen von FV-8: erste Ziehbewegung großer Objekte bis 1 s, erstes Bild nach Zoom/Bildlauf bis 1,4 s, Alles auswählen auf Seiten mit Tausenden Objekten (Pfeiltasten 250–430 ms), Inspektorfelder messen; Ziel ≤ 50 ms auch auf dem Software-Rasterer | BEFUNDE LW/HG (FV-8) |
 | ☐ **P-NEUTRAL** | fp-neutral prüft auch `STATUS.md`, `docs\*.md` und `docs\funktionstest\*` (am 12.10. stand ein JSF-Funktionsname mit dem Namen des Originals in STATUS/BEFUNDE, vom Koordinator entfernt `620f021`, der Test hatte es nicht gefunden); Testreste im echten Profil sind entfernt (`Testbefehl*.jsf`, `Allgemeine Bibliothek\Sym.png` → Scratchpad), seit EB-3 `777ce3d` verhindert ein Wächter neue | BEFUNDE EB-3 |
-| ☐ **P-HG1** | Datei-Dialoge im zuletzt benutzten Ordner; Rückfrage nach Strg+W erst nach 1,3–2 s; WM_CLOSE von außen beendet die App nicht | BEFUNDE HG |
+| ☑ **P-HG1** | Datei-Dialoge im zuletzt benutzten Ordner; Rückfrage nach Strg+W erst nach 1,3–2 s; WM_CLOSE von außen beendet die App nicht | BEFUNDE HG – erledigt DLG-3 (9c7c28b, af8fe21; Lage/Zusatzfelder als Befund HG) |
 
 ### B. Menüs, Dialoge, Bedienfeldmenüs (PARITAET_B)
 
@@ -172,7 +172,7 @@ Die Reihenfolge gilt, solange nichts Dringenderes vom Nutzer kommt. Sobald ein P
 | ☑ **P-PM4 Teil 1** | PM-5 (`360b0c7`): D01–D25 nachgemessen → 0 ✅ / 10 ⚠️ / 14 ❌ / 1 ⏳; 13 neue Befunde (IBD) |
 | ☑ **P-DLG1** | Teil 1 (DLG-1, `fc7df14`, `173bca1`): Zahlenfelder nehmen wieder Eingaben an (Ursache: Fensterfokus in `buffered_edit`), Tab-Folge aller Dialoge (Titelleiste, Startfokus, Optionsgruppen); D19/D20/D01/Verlauf → DLG-1b |
 | ☑ **P-DLG2** | DLG-2 (`9469497`): D18 Raster (ohne Kästchen, ↔/↕, Lage der Vorlage), D21 untereinander, D22 gesperrt ohne Haken + Überlagerungsfarbe, D23 Größe der Auswahl/zuletzt benutzt + Popup-Schieber; Rest: Popup-Schieber in D18 im Original messen (Befund DLG-2) |
-| ☐ **P-DLG3** | Dateidialoge D02–D06, D09: mittig über dem Fenster statt oben links, Startordner (nicht immer „Dokumente“), Titel, Filter, Zusatzfelder bei Öffnen/Speichern unter (zusammen mit P-HG1) |
+| ☑ **P-DLG3** | Dateidialoge D02–D06, D09: mittig über dem Fenster statt oben links, Startordner (nicht immer „Dokumente“), Titel, Filter, Zusatzfelder bei Öffnen/Speichern unter (zusammen mit P-HG1) – erledigt DLG-3 (af8fe21, 18ab983; Lage/Zusatzfelder als Befund HG) |
 | ☐ **P-DLG4** | D14 Neues Symbol (OK öffnet die Symbolbearbeitung statt einer leeren Instanz bei 0,0), D25 gespeicherte Befehle (ohne eigene nur eine Meldung), D16, D17 |
 | ☐ **P-DLG5…** | nach PM-6 (D26–D50) in Paketen zu 3–5 Dialogen; Originalbeschriftungen; Hinweis-Meldungen; Live-Filter-Menü „+“; Überlauf bei 1024 × 768 / 150 % |
 | ☐ **P-DLG-X** | unvollständige große Dialoge: Exportieren, Exportassistent, HTML-Einrichtung (Spezifikation RE-EX), Kurven/Tonwertkorrektur (Pipetten, Histogramm), Auswahl speichern (Spezifikation RE-KT); laut PM-5 außerdem unvollständig: D07, D10 (XMP-Fenster fehlt), D11, D12, D13, D15, D24 (Bildvorschau siehe P-BV) |
