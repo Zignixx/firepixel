@@ -446,7 +446,10 @@ pub(super) fn header(ui: &mut Ui, index: usize, lay: &PaneLayout, pane: &Pane, e
         }
         tip(ui, ("fp-ipv-preset-tip", index), cr, "image-preview-saved-settings-tip");
         let pr = Rect::from_center_size(pos2(r.right() - 9.0, r.center().y), vec2(18.0, 18.0));
-        if fields::icon_button(ui, ("fp-ipv-plus", index), pr, Glyph::Plus, true, &t("image-preview-save-current-tip")).clicked() {
+        let plus_tip = t("image-preview-save-current-tip");
+        let plus = fields::icon_button(ui, ("fp-ipv-plus", index), pr, Glyph::Plus, true, &plus_tip);
+        plus.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, true, plus_tip.as_str()));
+        if plus.clicked() {
             act.save_preset = true;
             act.touched = true;
         }

@@ -475,6 +475,50 @@ fn header_texts_follow_spec_and_sizes_equal_real_export() {
     }
 }
 
+/// „+“ im Feld: Dialog „Vorgabenname“ vorbelegt mit der zuletzt gewählten Vorgabe; OK speichert
+/// die Einstellung **dieses Feldes**, Esc schließt nur den kleinen Dialog.
+#[test]
+fn plus_saves_the_pane_settings_as_user_preset() {
+    let _g = lock();
+    let mut h = harness();
+    open(&mut h);
+    h.get_by_label(&fp_i18n::t("image-preview-view-2")).click();
+    h.run_steps(3);
+    let mut s = builtin_presets()[1].settings.clone();
+    s.max_colors = 64;
+    dlg(&mut h).panes[1].settings = s.clone();
+    dlg(&mut h).panes[1].last_preset = Some(fp_i18n::t("panel-opt-preset-gif-websnap256"));
+    let tip = fp_i18n::t("image-preview-save-current-tip");
+    let f1 = layout(&mut h, 1).frame;
+    let plus = h.query_all(By::new().label(tip.as_str())).map(|n| n.rect()).find(|r| f1.contains(r.center())).expect("„+“ in Feld 1");
+    click_at(&mut h, plus.center(), Default::default());
+    assert_eq!(dlg(&mut h).active, 1);
+    assert_eq!(dlg(&mut h).preset_name.as_ref().map(|p| p.1.clone()), Some(fp_i18n::t("panel-opt-preset-gif-websnap256")), "vorbelegt");
+    assert_eq!(dialogs::last_dialog_id(&h.ctx).as_deref(), Some(image_preview::PRESET_DIALOG_ID));
+    // Esc schließt nur „Vorgabenname“
+    h.key_press(egui::Key::Escape);
+    h.run_steps(3);
+    assert!(st(&mut h).dialogs.preview.is_some() && dlg(&mut h).preset_name.is_none(), "Bildvorschau bleibt offen");
+    // erneut, Namen tippen, OK
+    click_at(&mut h, plus.center(), Default::default());
+    h.key_press_modifiers(egui::Modifiers::COMMAND, egui::Key::A);
+    h.event(egui::Event::Text("Meine 64".into()));
+    h.run_steps(2);
+    h.key_press(egui::Key::Enter);
+    h.run_steps(4);
+    assert!(dlg(&mut h).preset_name.is_none(), "geschlossen");
+    assert!(st(&mut h).dialogs.preview.is_some(), "Enter im kleinen Dialog schließt die Bildvorschau nicht");
+    let own = fp_ui::ui_commands::export_presets(&st(&mut h).session.prefs);
+    let (_, e) = own.iter().find(|(n, _)| n == "Meine 64").expect("Vorgabe gespeichert");
+    let back = OptimizeSettings::from_model(e, None);
+    assert_eq!((back.max_colors, back.web_adaptive), (64, true), "Einstellung von Feld 1");
+    // die Liste zeigt jetzt den eigenen Namen (genaue Übereinstimmung)
+    let entries = pane::preset_entries(&own);
+    let k = pane::matching_preset(&entries, &dlg(&mut h).panes[1].settings).expect("passt");
+    assert_eq!(entries[k].label, "Meine 64");
+    assert_eq!(dlg(&mut h).panes[1].last_preset.as_deref(), Some("Meine 64"));
+}
+
 #[test]
 fn worker_cancels_outdated_jobs_and_ui_stays_fluid() {
     let _g = lock();

@@ -480,12 +480,11 @@ fn preset_name_dialog(ctx: &egui::Context, st: &mut AppState, d: &mut ImagePrevi
         super::put_left(ui, Rect::from_min_size(body.min + vec2(16.0, 18.0), vec2(54.0 + dx, 20.0)), egui::Label::new(name_l.as_str()).extend());
         let te = ui.put(Rect::from_min_size(body.min + vec2(70.0 + dx, 14.0), vec2(250.0, 22.0)), egui::TextEdit::singleline(&mut name));
         super::autofocus_field(ui, &te, name.chars().count());
-        if !te.has_focus() && ui.memory(|m| m.focused().is_none()) {
-            te.request_focus();
-        }
+        // einziges Eingabefeld: behält den Fokus (wie „Arbeitsbereich speichern“)
+        te.request_focus();
         let b = super::button_row(ui.ctx(), body.right() - 16.0, body.bottom() - 34.0, &[&ok_l, &cancel_l], 76.0, 23.0, 8.0);
         let ok = push_button(ui, b[0], &ok_l, true, !name.trim().is_empty());
-        if ok || (te.lost_focus() && ui.input(|inp| inp.key_pressed(egui::Key::Enter)) && !name.trim().is_empty()) {
+        if ok || (ui.input(|inp| inp.key_pressed(egui::Key::Enter)) && !name.trim().is_empty()) {
             result = Some(true);
         }
         if push_button(ui, b[1], &cancel_l, false, true) {
