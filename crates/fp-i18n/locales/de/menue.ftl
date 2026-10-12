@@ -561,19 +561,23 @@ cmd-help-firepixelHelp = Firepixel-&Hilfe
     .description = Öffnet die Firepixel-Hilfe
 cmd-help-supportCenter = Firepixel &Support Center
     .description = Öffnet einen Browser und besucht das Firepixel Support Center
-cmd-help-productImprovement = Programm zur Produktverbesserung...
+cmd-help-productImprovement = Firepixel-Programm zur Produktverbesserung...
+    .label = Programm zur Produktverbesserung
     .description = Weicher
 cmd-help-firepixelExchange = Firepixel Ex&change
     .description = Öffnet einen Browser und die Firepixel Exchange-Site
 cmd-help-manageExtensions = Erweiterungen &verwalten...
-cmd-help-onlineForums = &Onlineforen
+cmd-help-onlineForums = &Firepixel-Onlineforen
+    .label = Onlineforen
 cmd-help-about = Ü&ber Firepixel...
     .description = Zeigt Programm- und Copyrightinformationen sowie die Versionsnummer an
 
 ## Hauptmenü (Laufzeit)
 
 menu-file-openRecent-none = Keine
-# Rückgängig/Wiederholen mit dem Namen des Verlaufsschritts (wie im Original)
+menu-file-previewIn = Vorschau in { $browser }
+menu-file-previewAllIn = Vorschau aller Seiten in { $browser } anzeigen
+menu-file-defaultBrowser = Standardbrowser
 menu-edit-withStep = { $label }: { $step }
 menu-window-extensions-none = Keine Erweiterungen
 menu-view-theme = Design
@@ -606,9 +610,10 @@ cmd-select-aiSubject = Motiv auswählen
     .description = Wählt das Hauptmotiv der Bitmap bzw. der sichtbaren Seite per KI (BiRefNet) als weiche Pixelauswahl aus
 cmd-select-aiRefineEdge = Kante verfeinern...
     .description = Verfeinert die Kante der Pixelauswahl per KI (Haare, Fell) mit echter Halbtransparenz
-cmd-filter-other-findEdges = Kanten finden
+cmd-filter-other-findEdges = Ränder suchen
     .label = Kanten suchen
-cmd-filter-other-convertToAlpha = In Alpha konvertieren
+cmd-filter-other-convertToAlpha = In Alphakanal konv.
+    .label = In Alpha konvertieren
 cmd-filter-adjustColor-autoLevels = Auto-Tonwertkorrektur
 cmd-filter-adjustColor-colorFill = Farbfüllung...
 cmd-filter-adjustColor-hueSaturation = Farbton/Sättigung...
@@ -621,13 +626,15 @@ cmd-filter-noise-addNoise = Rauschen hinzufügen...
 cmd-filter-sharpen-sharpen = Scharfzeichnen
 cmd-filter-sharpen-sharpenMore = Stark scharfzeichnen
 cmd-filter-sharpen-unsharpMask = Unscharf maskieren...
-cmd-filter-blur-motion = Bewegungsunschärfe...
-cmd-filter-blur-gaussian = Gaußscher Weichzeichner...
-cmd-filter-blur-radial = Radiales Weichzeichnen...
+cmd-filter-blur-motion = Bewegungsunschärfe…
+cmd-filter-blur-gaussian = Gaußscher Weichz. ...
+    .label = Gaußscher Weichzeichner
+cmd-filter-blur-radial = Radiales Weichz. ...
     .label = Radialer Weichzeichner
-cmd-filter-blur-blurMore = Stark weichzeichnen
+cmd-filter-blur-blurMore = Stärker weichzeichnen
+    .label = Stark weichzeichnen
 cmd-filter-blur-blur = Weichzeichnen
-cmd-filter-blur-zoom = Zentriertes Weichzeichnen...
+cmd-filter-blur-zoom = Zentriertes Weichz. ...
     .label = Zoom-Weichzeichner
 
 ## Bedienfeldmenü 6919 (swatches)

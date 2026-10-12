@@ -58,7 +58,13 @@ impl MenuEntry {
 
 /// Tastenkürzel in der aktuellen Sprache (`Strg+Umschalt+S` bzw. `Ctrl+Shift+S`).
 pub fn shortcut_text(sc: &fp_engine::shortcuts::Shortcut) -> String {
-    fp_i18n::shortcut_label(&sc.display_de())
+    // Umlaut-Tasten klein wie im Original („Strg+ü“), Buchstaben A–Z groß
+    let de = sc.display_de();
+    let de = match de.rsplit_once('+') {
+        Some((mods, k)) if k.chars().count() == 1 && k.chars().all(|c| c.is_alphabetic() && !c.is_ascii()) => format!("{mods}+{}", k.to_lowercase()),
+        _ => de,
+    };
+    fp_i18n::shortcut_label(&de)
 }
 
 /// Menütext ohne Zugriffstaste, Kürzel und abschließendes „…“/„...“ (Beschriftung).
@@ -223,6 +229,25 @@ fn with_step_name(st: &AppState, name: &str, label: String) -> String {
     }
 }
 
+/// Datei ▸ Vorschau im Browser wie im Original mit dem Programmnamen des Browsers
+/// („Vorschau in iexplore.exe“); ohne Sekundärbrowser nur „Vorschau in“ (gesperrt).
+fn browser_label(st: &AppState, name: &str, label: String, enabled: bool) -> (String, bool) {
+    let (idx, key) = match name {
+        "file.previewInBrowser.previewInPrimaryBrowser" => (0, "menu-file-previewIn"),
+        "file.previewInBrowser.previewInSecondaryBrowser" => (1, "menu-file-previewIn"),
+        "file.previewInBrowser.previewAllPagesInPrimaryBrowser" => (0, "menu-file-previewAllIn"),
+        _ => return (label, enabled),
+    };
+    let prog = st.session.ui.browsers.get(idx).cloned().flatten();
+    let browser = match &prog {
+        Some(p) => std::path::Path::new(p).file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_else(|| p.clone()),
+        None if idx == 0 => t("menu-file-defaultBrowser"),
+        None => String::new(),
+    };
+    let text = fp_i18n::tr!(key, browser = browser).trim_end().to_string();
+    (text, enabled && (idx == 0 || prog.is_some()))
+}
+
 /// Schlüssel der Untermenüs, die zur Laufzeit gefüllt werden.
 const KEY_RECENT: &str = "menu-file-openRecent";
 const KEY_FONT: &str = "menu-text-font";
@@ -258,6 +283,7 @@ fn convert(st: &AppState, entries: &[MenuEntry]) -> Vec<Node> {
             Some(n) => {
                 let (enabled, checked, shortcut) = command_state(st, &n, sc);
                 let label = with_step_name(st, &n, label);
+                let (label, enabled) = browser_label(st, &n, label, enabled);
                 out.push(Node::Item { label, shortcut, action: ItemAction::Command(n), enabled, checked });
             }
             None => out.push(Node::Item { label, shortcut: sc, action: ItemAction::None, enabled: false, checked: None }),
@@ -355,7 +381,7 @@ fn recent_files(st: &AppState) -> Vec<Node> {
 /// Filter-Untermenüs wie im Original: (Schlüssel des Untermenüs, Befehle). Angezeigt wird der
 /// Menütext `cmd-…` des Befehls; fehlt ein Befehl im Register, ist der Eintrag gesperrt.
 const FILTER_GROUPS: [(&str, &[&str]); 5] = [
-    ("menu-filter-other", &["filter.other.findEdges", "filter.other.convertToAlpha"]),
+    ("menu-filter-other", &["filter.other.convertToAlpha", "filter.other.findEdges"]),
     (
         "menu-filter-adjustColor",
         &[

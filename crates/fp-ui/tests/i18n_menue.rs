@@ -207,6 +207,29 @@ fn german_menu_looks_exactly_like_the_resource() {
     assert_eq!(menu::command_label(&app.state, "file.open"), "Öffnen");
     assert_eq!(menu::command_label(&app.state, "filter.blur.zoom"), "Zoom-Weichzeichner");
     assert_eq!(menu::command_path(&app.state, "modify.align.left"), "Modifizieren ▸ Ausrichten ▸ Links");
+    // Laufzeit-Texte genau wie im Original (Parität UX-B, docs\PARITAET_B.md §1)
+    let menus = menu::build_main_menu(&app.state);
+    let sub = |top: &str, name: &str| -> Vec<String> {
+        let nodes = &menus.iter().find(|(t, _)| t == top).expect("Menü").1;
+        nodes
+            .iter()
+            .find_map(|n| match n {
+                Node::Sub { label, children, .. } if label == name => Some(children.iter().filter_map(|c| if let Node::Item { label, .. } = c { Some(label.clone()) } else { None }).collect()),
+                _ => None,
+            })
+            .expect("Untermenü")
+    };
+    assert_eq!(sub("Filter", "Andere"), ["In Alphakanal konv.", "Ränder suchen"]);
+    assert_eq!(sub("Filter", "Weichzeichnen"), ["Bewegungsunschärfe…", "Gaußscher Weichz. ...", "Radiales Weichz. ...", "Stärker weichzeichnen", "Weichzeichnen", "Zentriertes Weichz. ..."]);
+    let help = sub_items(&menus, "Hilfe");
+    assert!(help.contains(&"Firepixel-Programm zur Produktverbesserung...".to_string()) && help.contains(&"Firepixel-Onlineforen".to_string()), "{help:?}");
+    let browser = sub("Datei", "Vorschau im Browser");
+    assert!(browser[0].starts_with("Vorschau in ") && browser[2].starts_with("Vorschau aller Seiten in ") && browser[2].ends_with(" anzeigen"), "{browser:?}");
+    assert_eq!(browser[1], "Vorschau in", "ohne Sekundärbrowser wie im Original");
+}
+
+fn sub_items(menus: &[(String, Vec<Node>)], top: &str) -> Vec<String> {
+    menus.iter().find(|(t, _)| t == top).map(|(_, ns)| ns.iter().filter_map(|n| if let Node::Item { label, .. } = n { Some(label.clone()) } else { None }).collect()).unwrap_or_default()
 }
 
 /// Zugriffstasten je Menüebene: (Pfad, [(Taste, Beschriftung)]).
@@ -414,13 +437,15 @@ fn undo_shows_step_name_and_delete_key() {
     // Zugriffstaste bleibt die von „&Rückgängig“
     assert_eq!(fp_ui::menu_kbd::access_of(&format!("/Bearbeiten/{undo}")).map(|a| a.1), Some('r'));
     let (_, del) = find(&app, "edit.clear").expect("Löschen im Menü");
-    assert_eq!(del.as_deref(), Some("Entf"), "Löschen zeigt Entf wie das Original");
+    assert_eq!(del, Some(fp_i18n::shortcut_label("Entf")), "Löschen zeigt die Entf-Taste wie das Original");
+    let (_, guides) = find(&app, "view.guides.showGuides").expect("Hilfslinien anzeigen");
+    assert_eq!(guides.as_deref(), Some("Strg+ü"), "Umlaut-Taste klein wie im Original");
     fp_i18n::set_language("en");
     let (undo_en, _) = find(&app, "edit.undo").expect("Undo");
     assert!(undo_en.starts_with("Undo: "), "{undo_en}");
     assert_eq!(fp_ui::menu_kbd::access_of(&format!("/Edit/{undo_en}")).map(|a| a.1), Some('u'));
     let (_, del_en) = find(&app, "edit.clear").expect("Clear");
-    assert_eq!(del_en.as_deref(), Some("Del"));
+    assert_eq!(del_en, Some(fp_i18n::shortcut_label("Del")));
 }
 
 #[test]

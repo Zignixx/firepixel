@@ -561,19 +561,23 @@ cmd-help-firepixelHelp = Firepixel &Help
     .description = Opens the Firepixel help
 cmd-help-supportCenter = Firepixel &Support Center
     .description = Opens a browser and goes to the Firepixel Support Center
-cmd-help-productImprovement = Product Improvement Program...
+cmd-help-productImprovement = Firepixel Product Improvement Program...
+    .label = Product Improvement Program
     .description = Product Improvement Program
 cmd-help-firepixelExchange = Firepixel E&xchange
     .description = Opens a browser and goes to the Firepixel Exchange site
 cmd-help-manageExtensions = &Manage Extensions...
-cmd-help-onlineForums = &Online Forums
+cmd-help-onlineForums = Firepixel &Online Forums
+    .label = Online Forums
 cmd-help-about = &About Firepixel...
     .description = Displays program information, copyright and version number
 
 ## Hauptmenü (Laufzeit)
 
 menu-file-openRecent-none = None
-# Undo/Redo with the name of the history step
+menu-file-previewIn = Preview in { $browser }
+menu-file-previewAllIn = Preview All Pages in { $browser }
+menu-file-defaultBrowser = Default Browser
 menu-edit-withStep = { $label }: { $step }
 menu-window-extensions-none = No Extensions
 menu-view-theme = Theme
@@ -609,6 +613,7 @@ cmd-select-aiRefineEdge = Refine Edge...
 cmd-filter-other-findEdges = Find Edges
     .label = Find Edges
 cmd-filter-other-convertToAlpha = Convert to Alpha
+    .label = Convert to Alpha
 cmd-filter-adjustColor-autoLevels = Auto Levels
 cmd-filter-adjustColor-colorFill = Color Fill...
 cmd-filter-adjustColor-hueSaturation = Hue/Saturation...
@@ -623,9 +628,11 @@ cmd-filter-sharpen-sharpenMore = Sharpen More
 cmd-filter-sharpen-unsharpMask = Unsharp Mask...
 cmd-filter-blur-motion = Motion Blur...
 cmd-filter-blur-gaussian = Gaussian Blur...
+    .label = Gaussian Blur
 cmd-filter-blur-radial = Radial Blur...
     .label = Radial Blur
 cmd-filter-blur-blurMore = Blur More
+    .label = Blur More
 cmd-filter-blur-blur = Blur
 cmd-filter-blur-zoom = Zoom Blur...
     .label = Zoom Blur
