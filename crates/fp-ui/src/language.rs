@@ -50,18 +50,34 @@ pub fn is_rtl(code: &str) -> bool {
 }
 
 /// Start: Sprachordner laden (`Sprachen\` neben der exe, `%APPDATA%\Firepixel\Sprachen`), dann
-/// die gespeicherte Sprache bzw. beim ersten Start die Systemsprache wählen. Gibt den Code zurück.
-pub fn init(prefs: &Preferences) -> String {
+/// die Sprache wählen und in `prefs` festhalten (bleibt so beim nächsten Start):
+/// * gespeicherte Sprache, falls es sie (noch) gibt;
+/// * sonst beim **ersten Start** (noch keine Voreinstellungsdatei) die Systemsprache;
+/// * sonst – Installation von vor der Sprachwahl – Deutsch wie bisher.
+///
+/// Gibt den Code zurück.
+pub fn init(prefs: &mut Preferences) -> String {
+    let first_start = !Preferences::default_path().is_some_and(|p| p.exists());
+    init_with(prefs, first_start)
+}
+
+/// Wie [`init`], mit vorgegebenem „erster Start“ (Tests).
+pub fn init_with(prefs: &mut Preferences, first_start: bool) -> String {
     let loaded = fp_i18n::load_default_dirs();
     if !loaded.is_empty() {
         log::info!("Sprachordner: {}", loaded.join(", "));
     }
-    let wanted = stored(prefs).unwrap_or_else(fp_i18n::system_language);
+    let fallback = if first_start { fp_i18n::system_language() } else { fp_i18n::SOURCE_LANG.to_string() };
+    let wanted = stored(prefs).unwrap_or_else(|| fallback.clone());
     if !fp_i18n::set_language(&wanted) {
-        log::warn!("Sprache „{wanted}“ nicht gefunden, Systemsprache");
-        fp_i18n::set_language(&fp_i18n::system_language());
+        log::warn!("Sprache „{wanted}“ nicht gefunden");
+        fp_i18n::set_language(&fallback);
     }
-    fp_i18n::current_language()
+    let now = fp_i18n::current_language();
+    if stored(prefs).as_deref() != Some(now.as_str()) {
+        prefs.set(PREF_KEY, PrefValue::Str(now.clone()));
+    }
+    now
 }
 
 /// Wählbare Sprachen: (Code, Anzeigename). Eigennamen (`language-name`), eingebaute zuerst;

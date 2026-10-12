@@ -103,14 +103,22 @@ fn start_uses_stored_then_system_language() {
     let _g = lock();
     let mut p = Preferences::new();
     p.set(language::PREF_KEY, PrefValue::Str("en".into()));
-    assert_eq!(language::init(&p), "en");
+    assert_eq!(language::init_with(&mut p, false), "en");
     p.set(language::PREF_KEY, PrefValue::Str("EN".into()));
-    assert_eq!(language::init(&p), "en", "Groß-/Kleinschreibung egal");
-    // gespeicherte Sprache gibt es nicht (Ordner gelöscht) → Systemsprache
+    assert_eq!(language::init_with(&mut p, false), "en", "Groß-/Kleinschreibung egal");
+    assert_eq!(language::stored(&p).as_deref(), Some("en"), "Schreibweise vereinheitlicht");
+    // gespeicherte Sprache gibt es nicht mehr (Ordner gelöscht) → Deutsch bzw. beim ersten Start Systemsprache
     p.set(language::PREF_KEY, PrefValue::Str("xx".into()));
-    assert_eq!(language::init(&p), fp_i18n::system_language());
-    // erster Start
-    assert_eq!(language::init(&Preferences::new()), fp_i18n::system_language());
+    assert_eq!(language::init_with(&mut p, false), "de");
+    // erster Start: Systemsprache, danach festgehalten
+    let mut first = Preferences::new();
+    let sys = fp_i18n::system_language();
+    assert_eq!(language::init_with(&mut first, true), sys);
+    assert_eq!(language::stored(&first), Some(sys));
+    // Voreinstellungen von vor der Sprachwahl (Datei vorhanden, ohne Sprache): Deutsch wie bisher
+    let mut old = Preferences::new();
+    assert_eq!(language::init_with(&mut old, false), "de");
+    assert_eq!(language::stored(&old).as_deref(), Some("de"));
     fp_i18n::set_language("de");
 }
 
