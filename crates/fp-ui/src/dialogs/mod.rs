@@ -8,6 +8,7 @@ pub mod catalog;
 pub mod doc_dialogs;
 pub mod effects;
 pub mod export;
+pub mod image_preview;
 pub mod form;
 pub mod levels;
 pub mod menu_dialogs;
@@ -54,7 +55,8 @@ pub struct Dialogs {
     pub levels: Option<levels::LevelsDialog>,
     pub curves: Option<levels::CurvesDialog>,
     pub export: Option<export::ExportDialog>,
-    pub preview: Option<export::PreviewDialog>,
+    /// Bildvorschau (BV-1).
+    pub preview: Option<image_preview::ImagePreview>,
     pub shortcuts: Option<shortcuts::ShortcutsDialog>,
     pub confirm: Option<Confirm>,
     pub text_editor: Option<misc::TextEditorDialog>,
@@ -150,7 +152,7 @@ pub fn open_for_command(st: &mut AppState, name: &str) -> bool {
                 d
             });
         }
-        "file.imagePreview" => st.dialogs.preview = export::PreviewDialog::new(st),
+        "file.imagePreview" => st.dialogs.preview = image_preview::ImagePreview::new(st),
         "edit.keyboardShortcuts" => st.dialogs.shortcuts = Some(shortcuts::ShortcutsDialog::new(st)),
         "text.editor" => st.dialogs.text_editor = misc::TextEditorDialog::new(st),
         "text.checkSpelling" => spelling::open_check(st),
@@ -199,13 +201,19 @@ pub enum DialogClose {
 /// Modaler Dialog im Windows-Stil: Titelleiste mit Schließen-Kreuz, Fläche in Rahmenfarbe,
 /// Inhalt in einem Bereich fester Größe (`size` = Client-Bereich).
 pub fn dialog_frame(ctx: &egui::Context, id: &str, title: &str, size: egui::Vec2, content: impl FnOnce(&mut Ui, Rect)) -> DialogClose {
-    dialog_frame_ex(ctx, id, title, size, false, content)
+    dialog_frame_ex(ctx, id, title, size, None, false, content)
 }
 
 /// Wie [`dialog_frame`], aber an Rändern und Ecken in der Größe änderbar; `min_size` ist die
 /// Ausgangs- und Mindestgröße des Client-Bereichs.
 pub fn dialog_frame_resizable(ctx: &egui::Context, id: &str, title: &str, min_size: egui::Vec2, content: impl FnOnce(&mut Ui, Rect)) -> DialogClose {
-    dialog_frame_ex(ctx, id, title, min_size, true, content)
+    dialog_frame_ex(ctx, id, title, min_size, None, true, content)
+}
+
+/// Wie [`dialog_frame_resizable`], aber mit eigener Ausgangsgröße beim Öffnen (`initial`, nie
+/// kleiner als `min_size`), z. B. eine gemerkte, vom Nutzer gezogene Größe.
+pub fn dialog_frame_resizable_sized(ctx: &egui::Context, id: &str, title: &str, min_size: egui::Vec2, initial: egui::Vec2, content: impl FnOnce(&mut Ui, Rect)) -> DialogClose {
+    dialog_frame_ex(ctx, id, title, min_size, Some(initial), true, content)
 }
 
 /// Höhe der Titelleiste der Dialoge.
@@ -287,7 +295,7 @@ pub fn clamp_dialog_pos(pos: egui::Pos2, outer: egui::Vec2, screen: Rect) -> egu
     pos2(x, y)
 }
 
-fn dialog_frame_ex(ctx: &egui::Context, id: &str, title: &str, size: egui::Vec2, resizable: bool, content: impl FnOnce(&mut Ui, Rect)) -> DialogClose {
+fn dialog_frame_ex(ctx: &egui::Context, id: &str, title: &str, size: egui::Vec2, initial: Option<egui::Vec2>, resizable: bool, content: impl FnOnce(&mut Ui, Rect)) -> DialogClose {
     let theme = Theme::current(ctx);
     let c = theme.colors.clone();
     let mut close = DialogClose::Open;
@@ -300,7 +308,7 @@ fn dialog_frame_ex(ctx: &egui::Context, id: &str, title: &str, size: egui::Vec2,
     // neu geöffnet (im letzten Bild nicht gezeichnet): wie im Original zentriert, Ausgangsgröße
     let stored = dialog_geom(ctx, id).filter(|g| g.pass + 1 >= pass);
     let opened = stored.is_none();
-    let client = if resizable { stored.map(|g| g.client).unwrap_or(size).max(size) } else { size };
+    let client = if resizable { stored.map(|g| g.client).unwrap_or(initial.unwrap_or(size)).max(size) } else { size };
     let outer = vec2(client.x, client.y + title_h) + vec2(2.0, 2.0);
     let mut pos = clamp_dialog_pos(stored.map(|g| g.pos).unwrap_or_else(|| screen.center() - outer / 2.0), outer, screen);
     // Titelleiste ziehen wie bei einem Windows-Dialog: der gegriffene Punkt bleibt unter dem
@@ -663,7 +671,7 @@ pub fn show_all(ctx: &egui::Context, st: &mut AppState) {
     levels::show_levels(ctx, st);
     levels::show_curves(ctx, st);
     export::show_export(ctx, st);
-    export::show_preview(ctx, st);
+    image_preview::show(ctx, st);
     shortcuts::show(ctx, st);
     misc::show_confirm(ctx, st);
     misc::show_text_editor(ctx, st);

@@ -255,7 +255,9 @@ fn resizable_dialog_resizes_at_edges() {
     // kleiner als die Mindestgröße geht nicht
     drag(&mut h, r2.max - vec2(3.0, 3.0), r2.min + vec2(10.0, 10.0));
     let (_, r3) = current(&h);
-    assert!(r3.width() >= 820.0 && r3.height() >= 520.0, "Mindestgröße: {r3:?}");
+    // Mindestgröße = Startgröße (re\17-bildvorschau.md §1.1, Client 698 × 582; BV-1)
+    let min = fp_ui::dialogs::image_preview::MIN_CLIENT;
+    assert!(r3.width() >= min.x && r3.height() >= min.y, "Mindestgröße: {r3:?}");
     let after = canvas_state(&h);
     assert!(*before.0 == *after.0 && before.2 == after.2, "Größe ändern berührt das Dokument nicht");
     // nicht größenveränderlich: Bildgröße behält die Größe
