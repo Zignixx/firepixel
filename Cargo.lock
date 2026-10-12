@@ -2068,6 +2068,7 @@ dependencies = [
  "fp-raster",
  "image",
  "serde",
+ "serde_json",
  "visioncortex",
 ]
 

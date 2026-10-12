@@ -25,12 +25,21 @@
 //! geschlossene [`BezierContour`]s (Füllregel gerade/ungerade, Löcher als eigene Konturen) und
 //! eine deckende Füllfarbe. [`TraceResult::render`] rastert das Ergebnis (Vorschau, Tests).
 //!
+//! **Logo-Nachbearbeitung** ([`TraceOptions::refine`], Vorgabe „Logo“: an): eigener Ablauf für
+//! flächige Motive – Farben auf saubere Originalfarben einrasten, gemeinsame Kanten benachbarter
+//! Flächen (keine Haarrisse), exakte Grundformen (Kreis, Ellipse, Rechteck, abgerundetes
+//! Rechteck), eingerastete Geraden (0°/45°/90°, rechte Winkel), wenige Bézier-Knoten, optional
+//! Spiegelsymmetrie. Kennzahlen liefert [`trace_with_report`] ([`RefineReport`]).
+//!
 //! Abbruch und Fortschritt (für die Live-Vorschau): [`trace_with`] nimmt ein `&AtomicBool` und
 //! einen Rückruf mit [`Progress`]. Kein `unsafe`; Panics der Bibliothek werden abgefangen und als
 //! [`TraceError::Internal`] gemeldet.
 
 mod quantize;
+mod refine;
 mod render;
+
+pub use refine::{RefineOptions, RefineReport, Symmetry, FAST_PREVIEW_PIXELS};
 
 use fp_color::Rgba8;
 use fp_geom::{BezierContour, BezierNode, IRect, Point};
@@ -57,6 +66,8 @@ pub const DEFAULT_MAX_PIXELS: u64 = 4_000_000;
 /// | `Schwarzweiss` | Schwarzweiß (Schwelle 128) | – | – | – | 4 px | Spline | 60° | – |
 /// | `Illustration` | Farbe | 32 | 7 Bit | 16 | 4 px | Spline | 60° | stapeln |
 /// | `Foto` | Farbe | 64 | 8 Bit | 48 | 10 px | Spline | 180° | stapeln |
+///
+/// Logo-Nachbearbeitung ([`RefineOptions`]) nur bei `Logo` an (Schalter wie [`RefineOptions::logo`]).
 ///
 /// Gemeinsam: Segmentlänge 4, 10 Glättungsdurchläufe, Spleißwinkel 45°, 2 Nachkommastellen,
 /// Transparenz ignorieren (Alpha < 128), höchstens 4 Megapixel (größere herunterskalieren).
@@ -177,6 +188,9 @@ pub struct TraceOptions {
     pub max_pixels: u64,
     /// Größere Bilder herunterskalieren (sonst [`TraceError::TooLarge`]).
     pub downscale: bool,
+    /// Logo-Nachbearbeitung (fehlt der Eintrag im JSON: aus).
+    #[serde(default)]
+    pub refine: RefineOptions,
 }
 
 impl Default for TraceOptions {
@@ -207,9 +221,10 @@ impl TraceOptions {
             threshold: 128,
             max_pixels: DEFAULT_MAX_PIXELS,
             downscale: true,
+            refine: RefineOptions::default(),
         };
         match p {
-            Preset::Logo => TraceOptions { colors: 16, color_precision: 6, ..base },
+            Preset::Logo => TraceOptions { colors: 16, color_precision: 6, refine: RefineOptions::logo(), ..base },
             Preset::Schwarzweiss => TraceOptions { color_mode: ColorMode::BlackWhite, ..base },
             Preset::Illustration => TraceOptions { colors: 32, ..base },
             Preset::Foto => TraceOptions { colors: 64, color_precision: 8, layer_difference: 48, filter_speckle: 10, corner_threshold: 180.0, ..base },
@@ -230,6 +245,7 @@ impl TraceOptions {
             splice_threshold: f(self.splice_threshold, 0.0, 180.0, d.splice_threshold),
             path_precision: self.path_precision.min(8),
             alpha_threshold: self.alpha_threshold.max(1),
+            refine: self.refine.validated(),
             ..self.clone()
         }
     }
@@ -360,6 +376,12 @@ pub fn trace(image: &RgbaImage, opts: &TraceOptions) -> Result<TraceResult, Trac
 /// Zeichnet ein Bild nach. `cancel` wird regelmäßig geprüft (→ [`TraceError::Cancelled`]),
 /// `progress` erhält den Fortschritt (monoton steigend, zuletzt [`Stage::Done`] mit 1,0).
 pub fn trace_with(image: &RgbaImage, opts: &TraceOptions, cancel: &AtomicBool, progress: &mut dyn FnMut(Progress)) -> Result<TraceResult, TraceError> {
+    trace_with_report(image, opts, cancel, progress).map(|(r, _)| r)
+}
+
+/// Wie [`trace_with`], zusätzlich die Kennzahlen der Logo-Nachbearbeitung (`None`, wenn
+/// [`RefineOptions::enabled`] aus ist).
+pub fn trace_with_report(image: &RgbaImage, opts: &TraceOptions, cancel: &AtomicBool, progress: &mut dyn FnMut(Progress)) -> Result<(TraceResult, Option<RefineReport>), TraceError> {
     let o = opts.validated();
     let bounds = image.bounds();
     let (w, h) = (image.width() as u64, image.height() as u64);
@@ -368,7 +390,10 @@ pub fn trace_with(image: &RgbaImage, opts: &TraceOptions, cancel: &AtomicBool, p
     }
     progress(Progress { stage: Stage::Prepare, fraction: 0.0 });
     let total = w * h;
-    let limit = if o.max_pixels == 0 { HARD_PIXEL_LIMIT } else { o.max_pixels.min(HARD_PIXEL_LIMIT) };
+    let mut limit = if o.max_pixels == 0 { HARD_PIXEL_LIMIT } else { o.max_pixels.min(HARD_PIXEL_LIMIT) };
+    if o.refine.enabled && o.refine.fast {
+        limit = limit.min(FAST_PREVIEW_PIXELS);
+    }
     let work: Cow<RgbaImage> = if total > limit {
         if !o.downscale {
             return Err(TraceError::TooLarge { width: w as u32, height: h as u32 });
@@ -394,11 +419,17 @@ pub fn trace_with(image: &RgbaImage, opts: &TraceOptions, cancel: &AtomicBool, p
         h: th as f64,
     };
     check(cancel)?;
-    let run = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| match o.color_mode {
-        ColorMode::Color => trace_color(&work, &o, &map, cancel, progress),
-        ColorMode::BlackWhite => trace_binary(&work, &o, &map, cancel, progress),
+    let run = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        if o.refine.enabled {
+            return refine::trace(&work, &o, &map, cancel, progress).map(|(p, r)| (p, Some(r)));
+        }
+        match o.color_mode {
+            ColorMode::Color => trace_color(&work, &o, &map, cancel, progress),
+            ColorMode::BlackWhite => trace_binary(&work, &o, &map, cancel, progress),
+        }
+        .map(|p| (p, None))
     }));
-    let paths = match run {
+    let (paths, report) = match run {
         Ok(r) => r?,
         Err(e) => {
             let msg = e.downcast_ref::<&str>().map(|s| s.to_string()).or_else(|| e.downcast_ref::<String>().cloned()).unwrap_or_default();
@@ -406,7 +437,7 @@ pub fn trace_with(image: &RgbaImage, opts: &TraceOptions, cancel: &AtomicBool, p
         }
     };
     progress(Progress { stage: Stage::Done, fraction: 1.0 });
-    Ok(TraceResult { paths, bounds, traced_width: tw as u32, traced_height: th as u32 })
+    Ok((TraceResult { paths, bounds, traced_width: tw as u32, traced_height: th as u32 }, report))
 }
 
 fn check(cancel: &AtomicBool) -> Result<(), TraceError> {

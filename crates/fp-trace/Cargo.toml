@@ -23,6 +23,8 @@ visioncortex = "=0.9.3"
 [dev-dependencies]
 # Korpus-Test (#[ignore]): Rasterdateien lesen
 image = { workspace = true, features = ["png", "gif", "jpeg"] }
+# Rückwärtskompatibilität der Optionen (JSON ohne `refine`)
+serde_json = { workspace = true }
 
 [lints]
 workspace = true
