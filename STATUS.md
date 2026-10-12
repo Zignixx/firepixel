@@ -742,6 +742,37 @@ Dialog `crates\fp-ui\src\dialogs\trace.rs` mit der Logo-Nachbearbeitung von VT-3
   - D16: Kategorieliste per Tab erreichbar machen.
 - **Aufgeräumt:** eigene Brücken-Instanz beendet, Worktree `..\fp-dlg1` und `target-dlg1` gelöscht.
 
+## Phase 7 – DLG-1b (P-DLG1 Teil 2: D19, D20, D01, Verlaufsschritte, D16) – Stand 12.10.2026
+- **D19 Bildgröße (`6c557e6`):**
+  - Pixel- und Druckfelder sind „live“: Ein eigenes Feld in `doc_dialogs.rs` (`live_text`) meldet den Puffer bei jedem `resp.changed()`, `buffered_edit` bleibt unberührt.
+  - Die Höhe wird ungerundet weitergeführt (B 333 → Pixelfeld 266, Druckhöhe 3.7); gerundet wird erst beim Ausführen.
+  - Druckgröße mit 3 Stellen und Punkt (`fmt_print`, „6.944“), Kettensymbol `Icon::LinkProportions` neben beiden Gruppen, solange „Proportionen beibehalten“ an ist.
+  - OK ohne Änderung (gleiche Pixelgröße und Auflösung) führt keinen Befehl aus; die Kästchen werden trotzdem gemerkt.
+- **D20 Leinwandgröße (`6c557e6`):**
+  - ↔/↕ vor den Feldern, rechts „B: …“/„H: …“ live in Pixeln.
+  - Anker 3 × 3 mit Pfeilen, die vom Anker wegzeigen (`anchor_grid`): ein Tab-Stopp, Pfeiltasten im Raster, Optionsfelder mit Namen für die Barrierefreiheit.
+  - „Nur aktuelle Seite“ in der Gruppe „Neue Größe“; der Dialog ist jetzt 222 × 218 DLU (`dialogs_i18n::deutsch_unveraendert` angepasst).
+  - `modify.canvas.canvasSize` wählt danach alle Objekte der Seite aus, im selben Verlaufsschritt; Rückgängig stellt die alte Auswahl her.
+- **D01 (`91a4d90`):** Zugriffstasten &Breite/&Höhe/&Auflösung/We&iß/&Transparent/Be&nutzerdefiniert (en &Width/&Height/&Resolution/&White/&Transparent/&Custom), neue Schlüssel `*-ak` in `dialoge.ftl` de/en. Unterstrichen, Alt+Taste wählt das Feld (markiert) bzw. die Option.
+- **Verlaufsschritte (`00809ba`):**
+  - `view.grid.editGrid`, `file.exportWizard` und `file.htmlSetup` liefern `Effect::View` mit neuer Generation (`view::doc_without_step`): kein Schritt, Dokument gilt als geändert. Unveränderte Werte ändern das Dokument gar nicht.
+  - Raster bearbeiten: OK ohne Änderung führt keinen Befehl aus (`FormDialog::with_skip_unchanged`).
+  - Grundlage ist die Messung PM-5: D18 Strg+Z ändert das Raster nicht; D19 OK ohne Änderung ohne Schritt; D11/D13 ohne die Schritte „Exportassistent“/„HTML-Einrichtung“.
+- **D16 (`aabc863`):** Kategorieliste mit Startfokus, ein Tab-Stopp, Pfeil auf/ab, Pos1/Ende.
+- **Geprüft (worktree `..\fp-dlg1b` auf HEAD `0b5eaa4` + eigene Dateien):**
+  - kittest `crates\fp-ui\tests\dialogs_dlg1b.rs`, 6/6 grün (Live-Rechnung 3× im Wechsel, OK ohne Änderung, Anker per Tastatur, Auswahl nach OK samt Rückgängig, Alt-Tasten, Liste per Tab, kein Schritt bei Raster/Assistent/HTML)
+  - mitgelaufen: `dialogs_dlg1`, `dialogs_dlg2`, `dialogs_enter`, `dialogs_i18n`, `dialogs_sliders` grün
+  - `cargo test -p fp-engine --test all_commands` und `--test commands` grün, `cargo test -p fp-i18n -p fp-neutral` grün, `cargo check --workspace --all-targets` ohne Warnungen
+  - i18n-Scanner: nur der bekannte fremde Fund `crates\fp-i18n\src\profile.rs:282`
+- **Nachprüfung** im echten Fenster bzw. über die Brücke: 5 Zeilen in `docs\NACHPRUEFUNG.md`.
+- **Offen:**
+  - Raster und Exporteinstellungen ohne eigenen Schritt: Ein **späteres Rückgängig eines früheren Schritts** stellt auch Raster bzw. Exporteinstellungen von davor wieder her, weil sie im Dokument-Schnappschuss liegen. Ob das Original sie dabei behält, ist nicht gemessen; sonst müsste der Verlauf (EB, `history.rs`/`session.rs`) diese Felder beim Rückgängig erhalten.
+  - `panel.optimize.exportWizard` (Optimieren-Bedienfeld, `panel.rs`) legt weiter den Schritt „Exportassistent“ an. `panel.rs` hatte fremde, nicht committete Änderungen und wurde nicht angefasst.
+  - D16: Kategorienamen, Gruppen, Neustart-Hinweis und „Hilfe“ bleiben offen (Befund PM-5 D21/D16).
+  - D20: Popup-Schieber und Einzelheiten der Pfeilsymbole sind nur nachempfunden, nicht pixelgleich.
+  - Zugriffstasten in Bildgröße (&Proportionen, &Bild neu auflösen) noch nicht umgesetzt.
+- **Aufgeräumt:** Worktree `..\fp-dlg1b` und `target-dlg1b` gelöscht.
+
 ## Phase 7 – DLG-2 (P-DLG2: Dialoge D18, D21, D22, D23 wie im Original) – Stand 12.10.2026
 - **Erledigt (Commit 9469497):** `FormDialog` kann eine eigene Anordnung nach der Vorlage zeichnen (`CustomLayout`, Lage in DLU aus `dialoge.json`; längere Texte anderer Sprachen schieben die Spalte und verbreitern den Dialog), gemeinsames Zahlenfeld `number_input`, Optionsfelder untereinander (`Field::vertical`), Farbfeld ohne Beschriftung eingerückt. D18 Raster bearbeiten (5984): nur Farbe und zwei Abstände, ↔/↕-Doppelpfeile (Text bleibt Tooltip/Name), keine Kästchen „Raster anzeigen“/„Am Raster ausrichten“ (der Befehl lässt sie unberührt), Farbfeld kein Tab-Stopp. D21 Leinwandfarbe (5977): untereinander, „Benutzerdefiniert:“, Farbfeld darunter. D22 Selektives JPEG (19147): Qualität neben dem Haken, „Überlagerungsfarbe:“ = `SelectiveJPEGColor` (#ff0080, bei OK gemerkt), Trennlinie, ohne Haken Qualität/Farbe/Kästchen gesperrt. D23 Textgröße (6073): Vorgabe = Größe des gewählten Texts, sonst der zuletzt bestätigte Wert (solange die Werkzeugvorgabe gleich blieb), sonst `tools.options.text_size`; Popup-Schieber 8..96 (11 §3.5.5), ohne Einheit, Knöpfe rechts untereinander. Neuer Schlüssel `dlg-md-overlay-color` (de/en).
 - **Geprüft:** neu `crates\fp-ui\tests\dialogs_dlg2.rs` (5 Tests: Felder/Größe/Tab-Folge/Wirkung D18, Anordnung und Wirkung D21, Sperren/Tippen/Klicken/gemerkte Farbe D22, Vorgabewerte und Anordnung D23, keine Überläufe auf Englisch); `dialogs_dlg1` (6) und `dialogs_sliders::canvas_color_custom_from_prefs` grün (dort angepasst: Beschriftung „Benutzerdefiniert:“, gesperrte Felder zählen nicht als Eingabefeld); `cargo check --workspace --all-targets` ohne Warnungen; `cargo test -p fp-i18n -p fp-neutral` grün; i18n-Scanner: 1 fremder Fund `fp-i18n\src\profile.rs:282` (Meldung des Profil-Wächters, EB-3), keiner aus DLG-2. Gebaut in eigenem Worktree. Echtes Fenster/Brücke: in NACHPRUEFUNG (4 Zeilen).
