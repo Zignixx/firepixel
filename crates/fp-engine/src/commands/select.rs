@@ -172,14 +172,15 @@ fn saved_index(d: &DocumentState, p: &crate::command::Params) -> Result<usize> {
     if i < list.len() { Ok(i) } else { Err(EngineError::NotFound(fp_i18n::t("err-nf-saved-selection"))) }
 }
 
-fn adjust(s: &mut Session, p: &crate::command::Params, f: impl Fn(&Mask, u32, u8) -> std::result::Result<Mask, fp_raster::RasterError>) -> Result<CommandOutput> {
+/// Verlaufsname wie im Original (PM-6 D35–D39): „Auswahl erweitern“ usw. statt des Menünamens.
+fn adjust(s: &mut Session, p: &crate::command::Params, step: &str, f: impl Fn(&Mask, u32, u8) -> std::result::Result<Mask, fp_raster::RasterError>) -> Result<CommandOutput> {
     let amount = p.i64_or("amount", 1)?.clamp(1, 1000) as u32;
     let tol = s.prefs.get_int("SelectionAdjustTolerance", 0).clamp(0, 255) as u8;
     with_doc(s, |d| {
         let m = d.selection.pixels.clone().ok_or_else(|| sel_err("err-req-pixel-selection"))?;
         let ext = m.extended(amount as i32 * 2)?;
         d.selection.pixels = Some(f(&ext, amount, tol)?).filter(|m| !m.tight_bounds().is_empty());
-        Ok(CommandOutput::doc())
+        Ok(CommandOutput::doc().labeled(fp_i18n::t(step)))
     })
 }
 
@@ -327,15 +328,15 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 with_doc(s, |d| {
                     let m = d.selection.pixels.clone().filter(|_| d.selection.has_pixels()).ok_or_else(|| sel_err("err-req-pixel-selection"))?;
                     d.selection.pixels = Some(m.extended(r as i32)?.feather(r)?);
-                    Ok(CommandOutput::doc())
+                    Ok(CommandOutput::doc().labeled(fp_i18n::t("msg-step-feather-selection")))
                 })
             }),
     );
     let amt = || ParamKind::Integer { min: Some(1), max: Some(1000) };
-    r.add(cmd("select.expandMarquee").requires(&[Requirement::Document, Requirement::PixelSelection]).opt_default("amount", amt(), json!(1), "Pixel").run(|s, p| adjust(s, p, |m, a, t| m.expand(a, t))));
-    r.add(cmd("select.contractMarquee").requires(&[Requirement::Document, Requirement::PixelSelection]).opt_default("amount", amt(), json!(1), "Pixel").run(|s, p| adjust(s, p, |m, a, t| m.contract(a, t))));
-    r.add(cmd("select.borderMarquee").requires(&[Requirement::Document, Requirement::PixelSelection]).opt_default("amount", amt(), json!(1), "Pixel").run(|s, p| adjust(s, p, |m, a, t| m.border(a, t))));
-    r.add(cmd("select.smoothMarquee").requires(&[Requirement::Document, Requirement::PixelSelection]).opt_default("amount", amt(), json!(1), "Pixel").run(|s, p| adjust(s, p, |m, a, t| m.smooth(a, t))));
+    r.add(cmd("select.expandMarquee").requires(&[Requirement::Document, Requirement::PixelSelection]).opt_default("amount", amt(), json!(1), "Pixel").run(|s, p| adjust(s, p, "msg-step-expand-selection", |m, a, t| m.expand(a, t))));
+    r.add(cmd("select.contractMarquee").requires(&[Requirement::Document, Requirement::PixelSelection]).opt_default("amount", amt(), json!(1), "Pixel").run(|s, p| adjust(s, p, "msg-step-contract-selection", |m, a, t| m.contract(a, t))));
+    r.add(cmd("select.borderMarquee").requires(&[Requirement::Document, Requirement::PixelSelection]).opt_default("amount", amt(), json!(1), "Pixel").run(|s, p| adjust(s, p, "msg-step-border-selection", |m, a, t| m.border(a, t))));
+    r.add(cmd("select.smoothMarquee").requires(&[Requirement::Document, Requirement::PixelSelection]).opt_default("amount", amt(), json!(1), "Pixel").run(|s, p| adjust(s, p, "msg-step-smooth-selection", |m, a, t| m.smooth(a, t))));
     r.add(cmd("select.convertMarqueeToPath").requires(&[Requirement::Document, Requirement::PixelSelection]).run(|s, _| {
         let attrs = shape_attrs(s, false, 1.0);
         with_doc(s, |d| {

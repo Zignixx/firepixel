@@ -14,6 +14,7 @@ pub mod image_preview;
 pub mod form;
 pub mod levels;
 pub mod levels_common;
+pub mod marquee;
 pub mod curves;
 pub mod menu_dialogs;
 pub mod misc;

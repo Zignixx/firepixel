@@ -247,6 +247,11 @@ msg-step-move-copy = Move Copy
 msg-step-new-layer = New Layer
 msg-step-refine-edge = Refine Edge
 msg-step-filter-image = Filter Image
+msg-step-feather-selection = Feather Selection
+msg-step-expand-selection = Expand Selection
+msg-step-contract-selection = Contract Selection
+msg-step-border-selection = Border Selection
+msg-step-smooth-selection = Smooth Selection
 msg-step-repeat-filter = Repeat Filter
 msg-step-spelling = Spelling
 

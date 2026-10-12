@@ -247,6 +247,11 @@ msg-step-move-copy = Kopie verschieben
 msg-step-new-layer = Neue Ebene
 msg-step-refine-edge = Kante verfeinern
 msg-step-filter-image = Bild filtern
+msg-step-feather-selection = Weiche Auswahlkante
+msg-step-expand-selection = Auswahl erweitern
+msg-step-contract-selection = Auswahl verkleinern
+msg-step-border-selection = Rand auswählen
+msg-step-smooth-selection = Auswahl glätten
 msg-step-repeat-filter = Filter wiederholen
 msg-step-spelling = Rechtschreibung
 
