@@ -32,7 +32,7 @@ fn find_many_matches_find_on_page() {
     let s = session_with_objects();
     let d = s.active().expect("doc");
     let mut ids = all_ids(&s);
-    assert!(ids.len() >= 14, "Rechtecke, Gruppe, Kinder: {}", ids.len());
+    assert_eq!(ids.len(), 13, "10 Rechtecke, Gruppe, 2 Kinder");
     ids.reverse();
     ids.push(ElementId(999_999)); // fehlt
     ids.push(ids[0]); // doppelt

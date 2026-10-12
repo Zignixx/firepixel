@@ -5,7 +5,7 @@
 //! Je Bild: OberflÃ¤che (`Harness::step`, CPU) und Zeichnen mit egui-wgpu wie im echten Fenster
 //! (Zerlegen in Dreiecke, Puffer/Texturen hochladen, Zeichnen, auf das Ende warten, ohne RÃ¼cklesen),
 //! mit der Anpassung fÃ¼r Software-Rasterer (`vendor\egui-wgpu`). Dokumente: ein erzeugtes mit
-//! 3000 Rechtecken und, falls vorhanden, die Korpusseite `Wireframes\iPad.png`.
+//! 3200 Rechtecken (100 · 2^5) und, falls vorhanden, die Korpusseite `Wireframes\iPad.png`.
 //!
 //! Die nicht ignorierten Tests prÃ¼fen ohne Zeitmessung, dass bei groÃŸer Auswahl das Bild klein bleibt
 //! (Anzahl Formen/Eckpunkte) und dass Auswahl und Darstellung dieselben bleiben.
@@ -344,7 +344,7 @@ fn probe_parts_with_large_selection() {
     // ganzes Bild (CPU) mit und ohne Bedienfelder/Inspektor
     let mut h = harness_cpu(st);
     h.run_steps(3);
-    let mut t = |h: &mut H, name: &str| {
+    let t = |h: &mut H, name: &str| {
         let v: Vec<f64> = (0..4)
             .map(|_| {
                 let t = Instant::now();
