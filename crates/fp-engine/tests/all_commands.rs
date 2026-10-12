@@ -635,7 +635,7 @@ fn overrides(name: &str, ids: &Ids) -> Option<(Value, Option<Setup>)> {
             ex(s, "modify.mask.groupAsMask", json!({}));
             Value::Null
         })),
-        "modify.flattenSelection" | "modify.mergeDown" => rs(json!({}), Box::new(move |s: &mut Session| {
+        "modify.flattenSelection" => rs(json!({}), Box::new(move |s: &mut Session| {
             select(s, &[bitmap]);
             Value::Null
         })),
@@ -759,6 +759,32 @@ fn overrides(name: &str, ids: &Ids) -> Option<(Value, Option<Setup>)> {
         n if n.starts_with("filter.") => rs(json!({}), sel_ids(vec![bitmap])),
         "autoShape.insert" => r(json!({"shape": "Pfeil", "rect": [10, 10, 50, 50]})),
         "file.saveCopyAs" => r(json!({"path": t("kopie.fw.png")})),
+        "edit.redo" => rs(json!({}), Box::new(|s: &mut Session| {
+            rect_quick(s);
+            ex(s, "edit.undo", json!({}));
+            Value::Null
+        })),
+        "select.feather" => rs(json!({"radius": 3}), Box::new(move |s: &mut Session| {
+            select(s, &[bitmap]);
+            ex(s, "select.pixels", json!({"shape": "rect", "rect": [202, 102, 212, 112]}));
+            Value::Null
+        })),
+        "modify.symbol.breakApart" => rs(json!({}), Box::new(move |s: &mut Session| {
+            select(s, &[ellipse]);
+            ex(s, "modify.symbol.convertToSymbol", json!({"name": "S"}));
+            Value::Null
+        })),
+        "modify.mergeDown" => rs(json!({}), Box::new(|s: &mut Session| {
+            // Rechteck direkt über der Bitmap
+            let id = rect_quick(s);
+            select(s, &[id]);
+            Value::Null
+        })),
+        "modify.alterPath.simplify" | "modify.alterPath.expandStroke" | "modify.alterPath.insetPath" => rs(json!({}), sel_ids(vec![ellipse])),
+        "text.size.larger" | "text.size.smaller" => rs(json!({}), sel_ids(vec![text])),
+        n if n.starts_with("text.size.") || n.starts_with("text.style.") && n != "text.style.plain" || n.starts_with("text.align.") && n != "text.align.left" => {
+            rs(json!({"size": 30}), sel_ids(vec![text]))
+        }
         "pi.layer.setActiveShared" => rs(json!({"layer": ids.layer}), Box::new(|s: &mut Session| {
             ex(s, "page.add", json!({}));
             ex(s, "page.setCurrent", json!({"index": 0}));

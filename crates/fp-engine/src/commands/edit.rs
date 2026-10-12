@@ -339,10 +339,25 @@ pub(super) fn register(r: &mut CommandRegistry) {
         s.undo()?;
         Ok(CommandOutput::session())
     }));
-    r.add(cmd("edit.redo").requires(&[Requirement::Document, Requirement::CanRedo]).run(|s, _| {
-        s.redo()?;
-        Ok(CommandOutput::session())
-    }));
+    // Wiederholen: ohne zurückgenommenen Schritt wiederholt das Original den letzten Befehl
+    // („Wiederholen: Auswahl aufheben“).
+    r.add(
+        cmd("edit.redo")
+            .requires(DOC)
+            .available(|s| s.active().is_some_and(|d| d.history.can_redo()) || s.last_command.is_some())
+            .run(|s, _| {
+                if s.active().is_some_and(|d| d.history.can_redo()) {
+                    s.redo()?;
+                    return Ok(CommandOutput::session());
+                }
+                let last = s.last_command.clone().ok_or(EngineError::History("err-req-can-redo"))?;
+                let c = s.registry().get(&last.command).cloned().ok_or_else(|| EngineError::UnknownCommand(last.command.clone()))?;
+                let p = crate::command::Params::new(&last.command, last.params.clone());
+                let out = c.apply(s, &p)?;
+                let label = s.last_command_label.clone().unwrap_or_else(|| c.info().label.clone());
+                Ok(out.labeled(label))
+            }),
+    );
     r.add(cmd("edit.copy").requires(&[Requirement::Document, Requirement::SelectionOrPixels]).run(|s, _| copy_to_clipboard(s, false)));
     r.add(cmd("edit.copyAsVectors").requires(SEL).run(|s, _| copy_to_clipboard(s, true)));
     r.add(cmd("edit.cut").requires(&[Requirement::Document, Requirement::SelectionOrPixels]).run(|s, _| {
@@ -480,9 +495,10 @@ pub(super) fn register(r: &mut CommandRegistry) {
             Ok(CommandOutput::doc_with(json!({"id": id.0})))
         })
     }));
-    r.add(cmd("edit.insert.hotspot").requires(SEL).run(|s, _| web_from_selection(s, false, false)));
-    r.add(cmd("edit.insert.slice").requires(SEL).run(|s, _| web_from_selection(s, true, false)));
-    r.add(cmd("edit.insert.polygonSlice").requires(SEL).run(|s, _| web_from_selection(s, true, true)));
+    // im Original immer aktiv; ohne Auswahl Meldung statt Wirkung
+    r.add(cmd("edit.insert.hotspot").requires(DOC).run(|s, _| web_from_selection(s, false, false)));
+    r.add(cmd("edit.insert.slice").requires(DOC).run(|s, _| web_from_selection(s, true, false)));
+    r.add(cmd("edit.insert.polygonSlice").requires(DOC).run(|s, _| web_from_selection(s, true, true)));
     r.add(cmd("edit.insert.emptyBitmap").requires(DOC).run(|s, _| {
         with_doc(s, |d| {
             let img = RgbaImage::empty_at(0, 0);
@@ -584,6 +600,8 @@ pub(super) fn register(r: &mut CommandRegistry) {
     r.add(
         cmd("edit.cropDocument")
             .requires(DOC)
+            // Menü wie im Original nur mit Auswahl; das Zuschneiden-Werkzeug übergibt `rect`
+            .menu_when(|s| s.active().is_some_and(|d| !d.selection.is_empty()))
             .opt("rect", ParamKind::Rect, "Zuschnitt (Vorgabe: Pixelauswahl bzw. Grenzen der Auswahl)")
             .run(|s, p| {
                 let rect = p.opt_rect("rect")?;

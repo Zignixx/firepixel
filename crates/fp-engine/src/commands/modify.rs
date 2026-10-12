@@ -178,6 +178,18 @@ fn ungroup(d: &mut DocumentState, only_masks: bool) -> Result<Vec<ElementId>> {
 
 // ------------------------------------------------------------------ Ausrichten / Verteilen
 
+/// Liegt direkt unter dem untersten ausgewählten Objekt eine Bitmap (Mit darunter liegender reduzieren)?
+fn bitmap_below_selection(s: &Session) -> bool {
+    let Some(d) = s.active() else { return false };
+    let Some((last, _)) = selected_elements(d).into_iter().last() else { return false };
+    let mut bp = last;
+    match bp.steps.last_mut() {
+        Some(PathStep::Child(i)) => *i += 1,
+        _ => return false,
+    }
+    d.doc.element_at(&bp).is_some_and(|e| matches!(e.kind, ElementKind::Bitmap(_)))
+}
+
 fn align(s: &mut Session, how: &'static str) -> Result<CommandOutput> {
     with_doc(s, |d| {
         let page = d.page;
@@ -893,7 +905,8 @@ pub(super) fn register(r: &mut CommandRegistry) {
     );
     r.add(
         cmd("modify.symbol.tweenInstances")
-            .requires(&[Requirement::Document, Requirement::MinSelected(2), Requirement::AllOf(ObjectKind::Instance)])
+            // im Original immer aktiv; ohne zwei Instanzen Meldung statt Wirkung
+            .requires(DOC)
             .opt_default("steps", ParamKind::Integer { min: Some(1), max: Some(1000) }, json!(1), "Zwischenschritte")
             .run(|s, p| {
                 let steps = p.i64_or("steps", 1)?.clamp(1, 1000) as usize;
@@ -936,11 +949,14 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 })
             }),
     );
-    r.add(cmd("modify.symbol.breakApart").requires(&[Requirement::Document, Requirement::AnyOf(ObjectKind::Instance)]).run(|s, _| {
+    r.add(cmd("modify.symbol.breakApart").requires(DOC).run(|s, _| {
         let sm = sampler(s);
         with_doc(s, |d| {
             let page = d.page;
             let insts = selected_instances(d);
+            if insts.is_empty() {
+                return Err(sel_err("err-sel-no-instance"));
+            }
             let mut sel = Vec::new();
             for (_, e) in insts.iter().rev() {
                 let ElementKind::Instance(i) = &e.kind else { continue };
@@ -1020,8 +1036,9 @@ pub(super) fn register(r: &mut CommandRegistry) {
     }));
 
     // Maske
-    r.add(cmd("modify.mask.revealAll").requires(SEL).run(|s, _| mask_from_selection(s, Some(true))));
-    r.add(cmd("modify.mask.hideAll").requires(SEL).run(|s, _| mask_from_selection(s, Some(false))));
+    // wie im Original nur bei genau einem Objekt
+    r.add(cmd("modify.mask.revealAll").requires(SEL).available(|s| s.active().is_some_and(|d| d.selection.elements.len() == 1)).run(|s, _| mask_from_selection(s, Some(true))));
+    r.add(cmd("modify.mask.hideAll").requires(SEL).available(|s| s.active().is_some_and(|d| d.selection.elements.len() == 1)).run(|s, _| mask_from_selection(s, Some(false))));
     r.add(cmd("modify.mask.revealSelection").requires(&[Requirement::Document, Requirement::Selection, Requirement::PixelSelection]).run(|s, _| mask_from_pixels(s, true)));
     r.add(cmd("modify.mask.hideSelection").requires(&[Requirement::Document, Requirement::Selection, Requirement::PixelSelection]).run(|s, _| mask_from_pixels(s, false)));
     r.add(cmd("modify.mask.groupAsMask").requires(&[Requirement::Document, Requirement::MinSelected(2)]).run(|s, _| {
@@ -1063,9 +1080,10 @@ pub(super) fn register(r: &mut CommandRegistry) {
     }));
 
     // Selektives JPEG
-    r.add(cmd("modify.selectiveJpeg.saveSelectionAsJpegMask").requires(&[Requirement::Document, Requirement::PixelSelection]).run(|s, _| {
+    // Selektives JPEG: im Original immer aktiv; ohne Pixelauswahl bzw. Maske Meldung statt Wirkung
+    r.add(cmd("modify.selectiveJpeg.saveSelectionAsJpegMask").requires(DOC).run(|s, _| {
         with_doc(s, |d| {
-            let m = d.selection.pixels.clone().ok_or_else(|| sel_err("err-req-pixel-selection"))?;
+            let m = d.selection.pixels.clone().filter(|_| d.selection.has_pixels()).ok_or_else(|| sel_err("err-req-pixel-selection"))?;
             let page = d.page;
             let (md, l, t) = mask_to_data(&m);
             Arc::make_mut(&mut d.doc).page_mut(page).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-page")))?.jpeg_mask =
@@ -1076,7 +1094,6 @@ pub(super) fn register(r: &mut CommandRegistry) {
     r.add(
         cmd("modify.selectiveJpeg.restoreJpegMaskAsSelection")
             .requires(DOC)
-            .available(|s| s.active().is_some_and(|d| d.doc.pages.get(d.page).is_some_and(|p| p.jpeg_mask.is_some())))
             .run(|s, _| {
                 with_doc(s, |d| {
                     let jm = d.doc.pages.get(d.page).and_then(|p| p.jpeg_mask.clone()).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-jpeg-mask")))?;
@@ -1089,10 +1106,12 @@ pub(super) fn register(r: &mut CommandRegistry) {
     r.add(
         cmd("modify.selectiveJpeg.removeJpegMask")
             .requires(DOC)
-            .available(|s| s.active().is_some_and(|d| d.doc.pages.get(d.page).is_some_and(|p| p.jpeg_mask.is_some())))
             .run(|s, _| {
                 with_doc(s, |d| {
                     let page = d.page;
+                    if d.doc.pages.get(page).is_none_or(|p| p.jpeg_mask.is_none()) {
+                        return Err(EngineError::NotFound(fp_i18n::t("err-nf-jpeg-mask")));
+                    }
                     Arc::make_mut(&mut d.doc).page_mut(page).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-page")))?.jpeg_mask = None;
                     Ok(CommandOutput::doc())
                 })
@@ -1124,7 +1143,8 @@ pub(super) fn register(r: &mut CommandRegistry) {
             Ok(CommandOutput::doc_with(json!({"id": id.0})))
         })
     }));
-    r.add(cmd("modify.mergeDown").requires(SEL).note("Vektorobjekte brauchen einen Renderer (fp-render)").run(|s, _| {
+    // wie im Original nur, wenn unter dem untersten ausgewählten Objekt eine Bitmap liegt
+    r.add(cmd("modify.mergeDown").requires(SEL).available(bitmap_below_selection).note("Vektorobjekte brauchen einen Renderer (fp-render)").run(|s, _| {
         let (els, below_path, ids) = {
             let d = s.doc()?;
             let els = selected_elements(d);
@@ -1151,7 +1171,8 @@ pub(super) fn register(r: &mut CommandRegistry) {
             Ok(CommandOutput::doc_with(json!({"id": id.0})))
         })
     }));
-    r.add(cmd("modify.flattenLayers").requires(DOC).run(|s, _| {
+    // wie im Original erst ab zwei normalen Ebenen
+    r.add(cmd("modify.flattenLayers").requires(DOC).available(|s| s.active().is_some_and(|d| docops::own_layers(&d.doc, d.page).iter().filter(|(_, l)| l.kind == LayerKind::Normal).count() >= 2)).run(|s, _| {
         with_doc(s, |d| {
             let page = d.page;
             let doc = Arc::make_mut(&mut d.doc);
@@ -1239,7 +1260,8 @@ pub(super) fn register(r: &mut CommandRegistry) {
     r.add(cmd("modify.transform.rotate90DegreeCcw").requires(SEL).run(|s, _| about_selection(s, Matrix3::rotation_degrees(-90.0))));
     r.add(cmd("modify.transform.flipHorizontal").requires(SEL).run(|s, _| about_selection(s, Matrix3::scaling(-1.0, 1.0))));
     r.add(cmd("modify.transform.flipVertical").requires(SEL).run(|s, _| about_selection(s, Matrix3::scaling(1.0, -1.0))));
-    r.add(cmd("modify.transform.removeTransformations").requires(SEL).run(|s, _| {
+    // Bitmaps haben im Original keine entfernbaren Transformationen
+    r.add(cmd("modify.transform.removeTransformations").requires(SEL).available(|s| s.active().is_some_and(|d| selected_elements(d).iter().any(|(_, e)| !matches!(e.kind, ElementKind::Bitmap(_))))).run(|s, _| {
         with_doc(s, |d| {
             let (page, ids) = (d.page, d.selection.elements.clone());
             let doc = Arc::make_mut(&mut d.doc);
@@ -1301,7 +1323,8 @@ pub(super) fn register(r: &mut CommandRegistry) {
         ("modify.align.centerHorizontal", "centerHorizontal"),
         ("modify.align.bottom", "bottom"),
     ] {
-        r.add(cmd(name).requires(SEL).run(move |s, _| align(s, how)));
+        // Menü: wie im Original ab zwei Objekten (an der Leinwand ausrichten: Bedienfeld `pi.align`)
+        r.add(cmd(name).requires(&[Requirement::Document, Requirement::MinSelected(2)]).run(move |s, _| align(s, how)));
     }
     r.add(cmd("modify.align.distributeWidths").requires(&[Requirement::Document, Requirement::MinSelected(3)]).run(|s, _| align(s, "distributeWidths")));
     r.add(cmd("modify.align.distributeHeights").requires(&[Requirement::Document, Requirement::MinSelected(3)]).run(|s, _| align(s, "distributeHeights")));
@@ -1331,20 +1354,23 @@ pub(super) fn register(r: &mut CommandRegistry) {
             Ok(CommandOutput::doc())
         })
     }));
-    r.add(cmd("modify.combinePaths.join").requires(&[Requirement::Document, Requirement::AnyOf(ObjectKind::Path)]).run(|s, _| {
+    r.add(cmd("modify.combinePaths.join").requires(SEL).available(|s| s.active().is_some_and(|d| selected_elements(d).iter().any(|(_, e)| matches!(e.kind, ElementKind::Path(_) | ElementKind::Text(_))))).run(|s, _| {
         with_doc(s, join)?;
         Ok(CommandOutput::doc())
     }));
-    r.add(cmd("modify.combinePaths.split").requires(&[Requirement::Document, Requirement::AnyOf(ObjectKind::Path)]).run(|s, _| {
+    // nur zusammengesetzte Pfade (mehr als eine Kontur) lassen sich teilen
+    r.add(cmd("modify.combinePaths.split").requires(SEL).available(|s| s.active().is_some_and(|d| selected_elements(d).iter().any(|(_, e)| matches!(&e.kind, ElementKind::Path(p) if p.contours.len() > 1)))).run(|s, _| {
         with_doc(s, split)?;
         Ok(CommandOutput::doc())
     }));
-    let paths2 = &[Requirement::Document, Requirement::MinSelected(2), Requirement::AllOf(ObjectKind::Path)];
+    // im Original immer aktiv; ohne zwei Pfade Meldung statt Wirkung
+    let paths2 = DOC;
     r.add(cmd("modify.combinePaths.union").requires(paths2).run(|s, _| combine(s, PathBoolOp::Union)));
     r.add(cmd("modify.combinePaths.intersect").requires(paths2).run(|s, _| combine(s, PathBoolOp::Intersect)));
     r.add(cmd("modify.combinePaths.punch").requires(paths2).run(|s, _| combine(s, PathBoolOp::Punch)));
     r.add(cmd("modify.combinePaths.crop").requires(paths2).run(|s, _| combine(s, PathBoolOp::Crop)));
-    let paths1 = &[Requirement::Document, Requirement::AnyOf(ObjectKind::Path)];
+    // im Original immer aktiv; ohne Pfade Meldung statt Wirkung
+    let paths1 = DOC;
     r.add(
         cmd("modify.alterPath.simplify")
             .requires(paths1)
@@ -1402,7 +1428,9 @@ pub(super) fn register(r: &mut CommandRegistry) {
     for (name, edge) in [("modify.alterPath.hardFill", 0), ("modify.alterPath.antiAliasFill", 1), ("modify.alterPath.featherFill", 2)] {
         r.add(
             cmd(name)
-                .requires(&[Requirement::Document, Requirement::AnyOf(ObjectKind::PathAttrs)])
+                // wie im Original nur für Texte und freie Pfade (nicht Rechteck-Grundformen)
+                .requires(SEL)
+                .available(|s| s.active().is_some_and(|d| selected_elements(d).iter().any(|(_, e)| matches!(&e.kind, ElementKind::Text(_) | ElementKind::CompoundShape(_)) || matches!(&e.kind, ElementKind::Path(p) if p.primitive.is_none()))))
                 .opt("amount", ParamKind::Integer { min: Some(0), max: Some(1000) }, "weiche Kante in px (nur Weiche-Kante-Füllung)")
                 .checked(move |s| {
                     s.active().is_some_and(|d| {
@@ -1441,8 +1469,25 @@ pub(super) fn register(r: &mut CommandRegistry) {
             Ok(CommandOutput::doc_with(json!({"id": id.0})))
         })
     }));
-    r.add(cmd("modify.ungroup").requires(&[Requirement::Document, Requirement::AnyOf(ObjectKind::Group)]).run(|s, _| {
+    // Gruppen auflösen; Rechteck-Grundformen werden wie im Original zu freien Pfaden
+    r.add(cmd("modify.ungroup").requires(SEL).available(|s| s.active().is_some_and(|d| selected_elements(d).iter().any(|(_, e)| matches!(e.kind, ElementKind::Group(_)) || matches!(&e.kind, ElementKind::Path(p) if p.primitive.is_some())))).run(|s, _| {
         with_doc(s, |d| {
+            let page = d.page;
+            let prims: Vec<ElementId> = selected_elements(d).into_iter().filter(|(_, e)| matches!(&e.kind, ElementKind::Path(p) if p.primitive.is_some())).map(|(_, e)| e.id).collect();
+            if !prims.is_empty() {
+                let doc = Arc::make_mut(&mut d.doc);
+                for id in &prims {
+                    docops::edit_by_id(doc, page, *id, |e| {
+                        if let ElementKind::Path(p) = &mut e.kind {
+                            p.primitive = None;
+                        }
+                    });
+                }
+            }
+            let has_groups = selected_elements(d).iter().any(|(_, e)| matches!(e.kind, ElementKind::Group(_)));
+            if !has_groups {
+                return Ok(CommandOutput::doc_with(json!({"ids": ids_json(&prims)})));
+            }
             let ids = ungroup(d, false)?;
             Ok(CommandOutput::doc_with(json!({"ids": ids_json(&ids)})))
         })

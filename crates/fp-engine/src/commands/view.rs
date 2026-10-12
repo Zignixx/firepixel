@@ -126,7 +126,8 @@ pub(super) fn register(r: &mut CommandRegistry) {
         d.view.fit_rect_exact(r);
         Ok(CommandOutput::view())
     }));
-    r.add(cmd("view.fitSelection").requires(DOC).run(|s, _| {
+    // Menü wie im Original nur mit Auswahl (Kontextmenü/Werkzeug zoomen sonst auf die Leinwand)
+    r.add(cmd("view.fitSelection").requires(DOC).menu_when(|s| s.active().is_some_and(|d| !d.selection.elements.is_empty())).run(|s, _| {
         let d = s.doc_mut()?;
         let r = docops::ids_bounds(&d.doc, d.page, &d.selection.elements).unwrap_or_else(|| canvas_rect(&d.doc, d.page));
         d.view.fit_rect_exact(r);
@@ -244,7 +245,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 })
             }),
     );
-    r.add(cmd("view.guides.clearGuides").requires(DOC).run(|s, _| {
+    r.add(cmd("view.guides.clearGuides").requires(DOC).menu_when(|s| s.active().is_some_and(|d| d.doc.pages.get(d.page).and_then(|p| p.root.guides.as_ref()).is_some_and(|g| !g.horizontal.is_empty() || !g.vertical.is_empty()))).run(|s, _| {
         with_doc(s, |d| {
             let g = page_guides(d)?;
             g.horizontal.clear();

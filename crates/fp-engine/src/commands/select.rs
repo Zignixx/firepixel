@@ -152,6 +152,11 @@ pub(crate) fn bitmap_for(d: &DocumentState, at: Option<Point>, geo: &dyn geometr
         .find(|(_, e)| matches!(e.kind, ElementKind::Bitmap(_)))
 }
 
+/// Gibt es gespeicherte Bitmap-Auswahlen auf der Seite?
+fn has_saved_selection(s: &Session) -> bool {
+    s.active().is_some_and(|d| d.doc.pages.get(d.page).and_then(|p| p.saved_selections.as_ref()).is_some_and(|l| !l.is_empty()))
+}
+
 fn all_selectable(d: &DocumentState) -> Vec<ElementId> {
     docops::selectable_ids(&d.doc, d.page, d.frame)
 }
@@ -194,7 +199,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
             Ok(CommandOutput::doc())
         })
     }));
-    r.add(cmd("select.none").requires(DOC).run(|s, _| {
+    r.add(cmd("select.none").requires(DOC).menu_when(|s| s.active().is_some_and(|d| !d.selection.is_empty())).run(|s, _| {
         with_doc(s, |d| {
             d.selection.clear();
             Ok(CommandOutput::doc())
@@ -222,7 +227,8 @@ pub(super) fn register(r: &mut CommandRegistry) {
             Ok(CommandOutput::doc())
         })
     }));
-    r.add(cmd("select.subselect").requires(SEL).run(|s, _| {
+    // wie im Original nur für Objekte mit Kindern (Gruppen, Masken …)
+    r.add(cmd("select.subselect").requires(SEL).available(|s| s.active().is_some_and(|d| selected_elements(d).iter().any(|(_, e)| !e.children().is_empty()))).run(|s, _| {
         with_doc(s, |d| {
             let mut out = Vec::new();
             for (_, e) in selected_elements(d) {
@@ -237,9 +243,13 @@ pub(super) fn register(r: &mut CommandRegistry) {
             Ok(CommandOutput::doc())
         })
     }));
-    r.add(cmd("select.similar").requires(&[Requirement::Document, Requirement::SelectionOrPixels]).opt("tolerance", ParamKind::Integer { min: Some(0), max: Some(255) }, "Toleranz (Vorgabe wie Zauberstab: 32)").run(|s, p| {
+    // im Original immer aktiv; ohne Auswahl Meldung statt Wirkung
+    r.add(cmd("select.similar").requires(DOC).opt("tolerance", ParamKind::Integer { min: Some(0), max: Some(255) }, "Toleranz (Vorgabe wie Zauberstab: 32)").run(|s, p| {
         let tol = p.i64_or("tolerance", 32)?.clamp(0, 255) as i32;
         with_doc(s, |d| {
+            if d.selection.is_empty() {
+                return Err(sel_err("err-sel-nothing"));
+            }
             // Pixelauswahl: alle Pixel der Bitmap, deren Farbe einer Farbe im Auswahlrahmen ähnelt
             if d.selection.has_pixels() {
                 let geo = crate::geometry::BasicGeometry;
@@ -309,12 +319,13 @@ pub(super) fn register(r: &mut CommandRegistry) {
     }));
     r.add(
         cmd("select.feather")
-            .requires(&[Requirement::Document, Requirement::PixelSelection])
+            // im Original immer aktiv; ohne Pixelauswahl Meldung statt Wirkung
+            .requires(DOC)
             .opt_default("radius", ParamKind::Integer { min: Some(1), max: Some(1000) }, json!(10), "Radius der weichen Kante")
             .run(|s, p| {
                 let r = p.i64_or("radius", 10)?.clamp(1, 1000) as u32;
                 with_doc(s, |d| {
-                    let m = d.selection.pixels.clone().ok_or_else(|| sel_err("err-req-pixel-selection"))?;
+                    let m = d.selection.pixels.clone().filter(|_| d.selection.has_pixels()).ok_or_else(|| sel_err("err-req-pixel-selection"))?;
                     d.selection.pixels = Some(m.extended(r as i32)?.feather(r)?);
                     Ok(CommandOutput::doc())
                 })
@@ -358,6 +369,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
     r.add(
         cmd("select.restoreBitmapSelection")
             .requires(DOC)
+            .available(has_saved_selection)
             .opt("name", ParamKind::String, "Name")
             .opt("index", ParamKind::Integer { min: Some(0), max: None }, "Index")
             .opt("mode", mode_param(), "Verknüpfung mit der Auswahl")
@@ -375,6 +387,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
     r.add(
         cmd("select.deleteBitmapSelection")
             .requires(DOC)
+            .available(has_saved_selection)
             .opt("name", ParamKind::String, "Name")
             .opt("index", ParamKind::Integer { min: Some(0), max: None }, "Index")
             .run(|s, p| {

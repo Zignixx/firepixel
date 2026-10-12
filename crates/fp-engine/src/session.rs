@@ -303,6 +303,10 @@ pub struct Session {
     events: Vec<SessionEvent>,
     /// Letzter Filteraufruf (für „Filter wiederholen“).
     pub last_filter: Option<RecordedCommand>,
+    /// Letzter Dokumentbefehl und seine Verlaufsbeschriftung (Bearbeiten ▸ Wiederholen ohne
+    /// zurückgenommenen Schritt wiederholt ihn wie im Original).
+    pub last_command: Option<RecordedCommand>,
+    pub last_command_label: Option<String>,
     group_depth: u32,
     group_log: Vec<RecordedCommand>,
     next_doc: u64,
@@ -345,6 +349,8 @@ impl Session {
             script_host: None,
             events: Vec::new(),
             last_filter: None,
+            last_command: None,
+            last_command_label: None,
             group_depth: 0,
             group_log: Vec::new(),
             next_doc: 1,
@@ -547,13 +553,13 @@ impl Session {
 
     /// Ist der Befehl verfügbar (Menüeintrag aktiv)?
     pub fn is_available(&self, name: &str) -> bool {
-        self.registry.get(name).is_some_and(|c| c.info().implemented && self.unmet(c.as_ref()).is_none())
+        self.registry.get(name).is_some_and(|c| c.info().implemented && self.unmet(c.as_ref()).is_none() && c.menu_available(self))
     }
 
     /// Menüzustand eines Befehls: (aktiv, Häkchen).
     pub fn command_state(&self, name: &str) -> (bool, Option<bool>) {
         match self.registry.get(name) {
-            Some(c) => (c.info().implemented && self.unmet(c.as_ref()).is_none(), c.checked(self)),
+            Some(c) => (c.info().implemented && self.unmet(c.as_ref()).is_none() && c.menu_available(self), c.checked(self)),
             None => (false, None),
         }
     }
@@ -607,6 +613,10 @@ impl Session {
                 return Err(e);
             }
         };
+        if out.effect == Effect::Document && !matches!(name, "edit.undo" | "edit.redo") && !name.starts_with("history.") {
+            self.last_command = Some(RecordedCommand { command: name.into(), params: p.value.clone() });
+            self.last_command_label = Some(out.label.clone().unwrap_or_else(|| info.label.clone()));
+        }
         if name.starts_with("filter.") && name != "filter.repeat" {
             self.last_filter = Some(RecordedCommand { command: name.into(), params: p.value.clone() });
         }
@@ -762,6 +772,15 @@ impl Session {
         let snap = d.history.undo().ok_or(EngineError::History("err-req-can-undo"))?;
         self.apply_history_snapshot(snap);
         Ok(())
+    }
+
+    /// Beschriftungen für „Rückgängig: …“ und „Wiederholen: …“ im Menü (Original): Rückgängig = letzter
+    /// Verlaufsschritt; Wiederholen = zurückgenommener Schritt, sonst der letzte Befehl.
+    pub fn undo_redo_labels(&self) -> (Option<String>, Option<String>) {
+        let d = self.active();
+        let undo = d.and_then(|d| d.history.undo_label().map(str::to_string));
+        let redo = d.and_then(|d| d.history.redo_label().map(str::to_string)).or_else(|| d.and(self.last_command_label.clone()));
+        (undo, redo)
     }
 
     /// Wiederholen im aktiven Dokument.

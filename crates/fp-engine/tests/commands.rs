@@ -102,10 +102,9 @@ fn align_and_distribute() {
     let g1 = bounds(&s, b).left - bounds(&s, a).right;
     let g2 = bounds(&s, c).left - bounds(&s, b).right;
     assert!(approx(g1, g2) && approx(g1, 35.0));
-    // ein Objekt: an der Leinwand ausrichten
+    // ein Objekt: Menü wie im Original grau (an der Leinwand ausrichten: Bedienfeld pi.align)
     select(&mut s, &[a]);
-    ex(&mut s, "modify.align.right", json!({}));
-    assert!(approx(bounds(&s, a).right, 300.0));
+    assert!(!s.is_available("modify.align.right"));
 }
 
 // ------------------------------------------------------------------ Transformieren

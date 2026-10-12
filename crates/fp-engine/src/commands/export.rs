@@ -751,7 +751,8 @@ pub(super) fn register(r: &mut CommandRegistry) {
         ("file.previewInBrowser.previewInSecondaryBrowser", 1, false),
         ("file.previewInBrowser.previewAllPagesInPrimaryBrowser", 0, true),
     ] {
-        r.add(cmd(name).requires(DOC).opt_default("open", ParamKind::Bool, json!(true), "Browser starten").run(move |s, p| {
+        // Sekundärbrowser: im Menü wie im Original nur, wenn einer festgelegt ist
+        r.add(cmd(name).requires(DOC).menu_when(move |s| browser == 0 || s.ui.browsers[browser].is_some()).opt_default("open", ParamKind::Bool, json!(true), "Browser starten").run(move |s, p| {
             let base = base_name_of(s)?;
             let dir = temp_dir("Vorschau").join(format!("dok{}", s.doc()?.id.0));
             let _ = std::fs::remove_dir_all(&dir);

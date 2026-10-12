@@ -1,7 +1,7 @@
 //! Menü „Text“: Schrift, Größe, Stil, Ausrichtung (`JSTi`, 09 §3.5), Text an/in Pfad, Richtung,
 //! sowie Textinhalt und -attribute für Texteditor und Eigenschaften-Inspektor.
 
-use super::{selected_elements, sel_err, target_ids, with_doc};
+use super::{selected_elements, sel_err, target_ids, with_doc, DOC};
 use crate::command::{cmd, CommandOutput, CommandRegistry, ObjectKind, ParamKind, Params, Requirement};
 use crate::docops;
 use crate::error::{EngineError, Result};
@@ -45,6 +45,42 @@ fn set_attr(t: &mut TextElem, f: &dyn Fn(&mut TextAttrs)) {
     }
 }
 
+/// Ist ein Text ausgewählt?
+fn has_text(s: &Session) -> bool {
+    s.active().is_some_and(|d| selected_elements(d).iter().any(|(_, e)| matches!(e.kind, ElementKind::Text(_))))
+}
+
+/// Ist ein Text auf Pfad ausgewählt?
+fn has_text_on_path(s: &Session) -> bool {
+    s.active().is_some_and(|d| selected_elements(d).iter().any(|(_, e)| matches!(&e.kind, ElementKind::Text(t) if t.on_path.is_some())))
+}
+
+/// Mit Textauswahl die Texte ändern, sonst die Vorgaben des Textwerkzeugs (wie das Original).
+fn texts_or_defaults(s: &mut Session, on_text: impl Fn(&mut TextElem), on_defaults: impl FnOnce(&mut Session)) -> Result<CommandOutput> {
+    if has_text(s) {
+        return edit_texts(s, on_text);
+    }
+    on_defaults(s);
+    s.prefs_changed();
+    Ok(CommandOutput::session())
+}
+
+fn set_default_size(s: &mut Session, v: f32) {
+    s.prefs.set("Text_Size", crate::prefs::PrefValue::Real(v as f64));
+    s.tools.options.text_size = v;
+}
+
+/// Größe des ausgewählten Textes bzw. Vorgabe des Textwerkzeugs (Häkchen im Menü).
+fn current_size(s: &Session) -> Option<f32> {
+    let d = s.active()?;
+    let sel = selected_elements(d).into_iter().find_map(|(_, e)| if let ElementKind::Text(t) = &e.kind { Some(first_size(t)) } else { None });
+    Some(sel.unwrap_or(s.tools.options.text_size))
+}
+
+fn current_style(s: &Session, key: &str) -> bool {
+    s.prefs.get_bool(key, false)
+}
+
 fn first_size(t: &TextElem) -> f32 {
     t.resolved_runs().first().and_then(|(a, _)| a.size).or(t.initial.size).unwrap_or(12.0)
 }
@@ -72,6 +108,7 @@ pub(crate) fn attrs_from_params(p: &Params) -> Result<TextAttrs> {
 }
 
 fn text_and_path(s: &Session) -> Result<(Arc<Element>, Arc<Element>)> {
+    // (auch Verfügbarkeit von „An/In Pfad anfügen“)
     let d = s.doc()?;
     let els = selected_elements(d);
     let t = els.iter().find(|(_, e)| matches!(e.kind, ElementKind::Text(_))).map(|(_, e)| Arc::clone(e));
@@ -110,13 +147,20 @@ pub(super) fn register(r: &mut CommandRegistry) {
             t.initial.ps_font = Some(p_font(&t.initial));
         })
     }));
-    r.add(cmd("text.size.other").requires(TEXT_SEL).param("size", ParamKind::Number { min: Some(1.0), max: Some(5000.0) }, "Größe in px").run(|s, p| {
+    // Größe/Stil/Ausrichtung sind im Original immer aktiv: ohne ausgewählten Text setzen sie die
+    // Vorgaben des Textwerkzeugs (`Text_Size`, `Text_Bold` …).
+    r.add(cmd("text.size.other").requires(DOC).param("size", ParamKind::Number { min: Some(1.0), max: Some(5000.0) }, "Größe in px").run(|s, p| {
         let v = p.f64("size")? as f32;
-        edit_texts(s, move |t| set_attr(t, &move |a| a.size = Some(v)))
+        texts_or_defaults(s, move |t| set_attr(t, &move |a| a.size = Some(v)), move |s| set_default_size(s, v))
     }));
     for &v in SIZES {
         let name = format!("text.size.{}", v as i32);
-        r.add(cmd(&name).requires(TEXT_SEL).run(move |s, _| edit_texts(s, move |t| set_attr(t, &move |a| a.size = Some(v)))));
+        r.add(
+            cmd(&name)
+                .requires(DOC)
+                .checked(move |s| current_size(s) == Some(v))
+                .run(move |s, _| texts_or_defaults(s, move |t| set_attr(t, &move |a| a.size = Some(v)), move |s| set_default_size(s, v))),
+        );
     }
     for (name, up) in [("text.size.larger", true), ("text.size.smaller", false)] {
         r.add(cmd(name).requires(TEXT_SEL).run(move |s, _| {
@@ -131,36 +175,60 @@ pub(super) fn register(r: &mut CommandRegistry) {
             })
         }));
     }
-    r.add(cmd("text.style.plain").requires(TEXT_SEL).run(|s, _| {
-        edit_texts(s, |t| {
-            set_attr(t, &|a| {
-                a.bold = Some(false);
-                a.italic = Some(false);
-                a.underline = Some(false);
-            })
-        })
-    }));
+    r.add(
+        cmd("text.style.plain")
+            .requires(DOC)
+            .checked(|s| ["Text_Bold", "Text_Italic", "Text_Underline"].iter().all(|k| !current_style(s, k)))
+            .run(|s, _| {
+                texts_or_defaults(
+                    s,
+                    |t| {
+                        set_attr(t, &|a| {
+                            a.bold = Some(false);
+                            a.italic = Some(false);
+                            a.underline = Some(false);
+                        })
+                    },
+                    |s| {
+                        for k in ["Text_Bold", "Text_Italic", "Text_Underline"] {
+                            s.prefs.set(k, crate::prefs::PrefValue::Bool(false));
+                        }
+                    },
+                )
+            }),
+    );
     type Get = fn(&TextAttrs) -> Option<bool>;
     type Set = fn(&mut TextAttrs, bool);
-    let styles: [(&str, Get, Set); 3] = [
-        ("text.style.fauxBold", |a| a.bold, |a, v| a.bold = Some(v)),
-        ("text.style.fauxItalic", |a| a.italic, |a, v| a.italic = Some(v)),
-        ("text.style.underline", |a| a.underline, |a, v| a.underline = Some(v)),
+    let styles: [(&str, &str, Get, Set); 3] = [
+        ("text.style.fauxBold", "Text_Bold", |a| a.bold, |a, v| a.bold = Some(v)),
+        ("text.style.fauxItalic", "Text_Italic", |a| a.italic, |a, v| a.italic = Some(v)),
+        ("text.style.underline", "Text_Underline", |a| a.underline, |a, v| a.underline = Some(v)),
     ];
-    for (name, get, set) in styles {
+    for (name, key, get, set) in styles {
         r.add(
             cmd(name)
-                .requires(TEXT_SEL)
+                .requires(DOC)
                 .checked(move |s| {
-                    s.active().is_some_and(|d| {
-                        selected_elements(d).iter().any(|(_, e)| matches!(&e.kind, ElementKind::Text(t) if t.resolved_runs().first().and_then(|(a, _)| get(a)).unwrap_or(false)))
-                    })
+                    if has_text(s) {
+                        s.active().is_some_and(|d| {
+                            selected_elements(d).iter().any(|(_, e)| matches!(&e.kind, ElementKind::Text(t) if t.resolved_runs().first().and_then(|(a, _)| get(a)).unwrap_or(false)))
+                        })
+                    } else {
+                        current_style(s, key)
+                    }
                 })
                 .run(move |s, _| {
-                    edit_texts(s, move |t| {
-                        let on = !t.resolved_runs().first().and_then(|(a, _)| get(a)).unwrap_or(false);
-                        set_attr(t, &move |a| set(a, on));
-                    })
+                    texts_or_defaults(
+                        s,
+                        move |t| {
+                            let on = !t.resolved_runs().first().and_then(|(a, _)| get(a)).unwrap_or(false);
+                            set_attr(t, &move |a| set(a, on));
+                        },
+                        move |s| {
+                            let on = !current_style(s, key);
+                            s.prefs.set(key, crate::prefs::PrefValue::Bool(on));
+                        },
+                    )
                 }),
         );
     }
@@ -177,16 +245,23 @@ pub(super) fn register(r: &mut CommandRegistry) {
     ] {
         r.add(
             cmd(name)
-                .requires(TEXT_SEL)
+                .requires(DOC)
                 .checked(move |s| {
-                    s.active().is_some_and(|d| selected_elements(d).iter().any(|(_, e)| matches!(&e.kind, ElementKind::Text(t) if t.resolved_runs().first().and_then(|(a, _)| a.alignment) == Some(v))))
+                    if has_text(s) {
+                        s.active().is_some_and(|d| selected_elements(d).iter().any(|(_, e)| matches!(&e.kind, ElementKind::Text(t) if t.resolved_runs().first().and_then(|(a, _)| a.alignment).unwrap_or(0) == v)))
+                    } else {
+                        s.prefs.get_int("Text_Justification", 0) as i32 == v
+                    }
                 })
-                .run(move |s, _| edit_texts(s, move |t| set_attr(t, &move |a| a.alignment = Some(v)))),
+                .run(move |s, _| {
+                    texts_or_defaults(s, move |t| set_attr(t, &move |a| a.alignment = Some(v)), move |s| s.prefs.set("Text_Justification", crate::prefs::PrefValue::Int(v as i64)))
+                }),
         );
     }
-    r.add(cmd("text.attachToPath").requires(&[Requirement::Document, Requirement::MinSelected(2)]).run(|s, _| attach(s, false)));
-    r.add(cmd("text.attachInPath").requires(&[Requirement::Document, Requirement::MinSelected(2)]).run(|s, _| attach(s, true)));
-    r.add(cmd("text.detachFromPath").requires(TEXT_SEL).run(|s, _| {
+    // wie im Original nur bei Text **und** Pfad bzw. bei Text auf Pfad
+    r.add(cmd("text.attachToPath").requires(&[Requirement::Document, Requirement::MinSelected(2)]).available(|s| text_and_path(s).is_ok()).run(|s, _| attach(s, false)));
+    r.add(cmd("text.attachInPath").requires(&[Requirement::Document, Requirement::MinSelected(2)]).available(|s| text_and_path(s).is_ok()).run(|s, _| attach(s, true)));
+    r.add(cmd("text.detachFromPath").requires(TEXT_SEL).available(has_text_on_path).run(|s, _| {
         with_doc(s, |d| {
             let page = d.page;
             let texts: Vec<_> = selected_elements(d).into_iter().filter(|(_, e)| matches!(&e.kind, ElementKind::Text(t) if t.on_path.is_some())).collect();
@@ -229,6 +304,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
         r.add(
             cmd(name)
                 .requires(TEXT_SEL)
+                .available(has_text_on_path)
                 .checked(move |s| {
                     s.active().is_some_and(|d| selected_elements(d).iter().any(|(_, e)| matches!(&e.kind, ElementKind::Text(t) if t.on_path.as_ref().and_then(|o| o.mode) == Some(mode))))
                 })
@@ -241,7 +317,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 }),
         );
     }
-    r.add(cmd("text.reverseDirection").requires(TEXT_SEL).run(|s, _| {
+    r.add(cmd("text.reverseDirection").requires(TEXT_SEL).available(has_text_on_path).run(|s, _| {
         edit_texts(s, |t| {
             if let Some(o) = &mut t.on_path
                 && let Some(pe) = &mut o.path

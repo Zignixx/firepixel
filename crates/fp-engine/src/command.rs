@@ -343,6 +343,12 @@ pub trait Command: Send + Sync {
     fn extra_available(&self, _session: &Session) -> bool {
         true
     }
+    /// Freigabe im **Menü** (grau/aktiv) zusätzlich zur Ausführbarkeit: Das Original graut manche
+    /// Befehle aus, die per Werkzeug/Skript trotzdem laufen (z. B. „Dokument zuschneiden“ ohne
+    /// Auswahl, das Zuschneiden-Werkzeug übergibt den Bereich). Vorgabe: wie ausführbar.
+    fn menu_available(&self, _session: &Session) -> bool {
+        true
+    }
 }
 
 type ApplyFn = dyn Fn(&mut Session, &Params) -> Result<CommandOutput> + Send + Sync;
@@ -354,6 +360,7 @@ pub struct FnCommand {
     apply: Box<ApplyFn>,
     checked: Option<Box<CheckFn>>,
     avail: Option<Box<CheckFn>>,
+    menu_avail: Option<Box<CheckFn>>,
 }
 
 impl Command for FnCommand {
@@ -369,6 +376,9 @@ impl Command for FnCommand {
     fn extra_available(&self, session: &Session) -> bool {
         self.avail.as_ref().is_none_or(|f| f(session))
     }
+    fn menu_available(&self, session: &Session) -> bool {
+        self.menu_avail.as_ref().is_none_or(|f| f(session))
+    }
 }
 
 /// Baukasten für [`FnCommand`].
@@ -376,6 +386,7 @@ pub struct CommandBuilder {
     info: CommandInfo,
     checked: Option<Box<CheckFn>>,
     avail: Option<Box<CheckFn>>,
+    menu_avail: Option<Box<CheckFn>>,
 }
 
 /// Neuer Befehl mit Namen; Menüdaten ergänzt das Register aus dem Katalog.
@@ -398,6 +409,7 @@ pub fn cmd(name: &str) -> CommandBuilder {
         },
         checked: None,
         avail: None,
+        menu_avail: None,
     }
 }
 
@@ -471,6 +483,11 @@ impl CommandBuilder {
         self.avail = Some(Box::new(f));
         self
     }
+    /// Freigabe nur im Menü (siehe [`Command::menu_available`]).
+    pub fn menu_when(mut self, f: impl Fn(&Session) -> bool + Send + Sync + 'static) -> Self {
+        self.menu_avail = Some(Box::new(f));
+        self
+    }
     /// Befehl ohne Wirkung (Platzhalter mit Beschreibung).
     pub fn not_implemented(mut self) -> FnCommand {
         self.info.implemented = false;
@@ -480,7 +497,7 @@ impl CommandBuilder {
 
     /// Ausführung festlegen und Befehl bauen.
     pub fn run(self, f: impl Fn(&mut Session, &Params) -> Result<CommandOutput> + Send + Sync + 'static) -> FnCommand {
-        FnCommand { info: self.info, apply: Box::new(f), checked: self.checked, avail: self.avail }
+        FnCommand { info: self.info, apply: Box::new(f), checked: self.checked, avail: self.avail, menu_avail: self.menu_avail }
     }
 }
 

@@ -87,7 +87,8 @@ fn menu_json(m: &PopupMenu) -> Value {
 pub(super) fn register(r: &mut CommandRegistry) {
     r.add(
         cmd("modify.popUpMenu.addPopUpMenu")
-            .requires(WEB_SEL)
+            // im Original immer aktiv; ohne Slice/Hotspot Meldung statt Wirkung
+            .requires(super::DOC)
             .param("items", ParamKind::Json, "Einträge [{text, url, target, submenu}]")
             .opt("menu", ParamKind::Json, "Darstellung (Felder von PopupMenu, z. B. {\"font\": \"Arial\", \"size\": 12, \"vertical\": true})")
             .opt_default("event", ParamKind::Integer { min: Some(0), max: Some(3) }, json!(0), "Ereignis (0 onMouseOver, 1 onClick)")
