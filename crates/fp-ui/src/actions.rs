@@ -10,7 +10,6 @@ use crate::panels::PanelId;
 use crate::workspace::{DockMode, Workspace};
 use fp_engine::EngineError;
 use serde_json::{json, Value};
-use std::path::PathBuf;
 
 fn now(ctx: &egui::Context) -> f64 {
     ctx.input(|i| i.time)
@@ -155,8 +154,7 @@ fn run_command(st: &mut AppState, ctx: &egui::Context, name: &str, params: Value
             return;
         }
         "file.open" if !has_param(&params, "path") => {
-            let dir = st.session.active().and_then(|d| d.path.as_ref()).and_then(|p| p.parent().map(PathBuf::from));
-            crate::files::pick_open(st, dir.as_deref(), |st, paths| {
+            crate::files::pick(st, crate::files::DialogKind::Open, "", |st, paths| {
                 for p in paths {
                     crate::files::open_path(st, &p);
                 }
@@ -165,7 +163,7 @@ fn run_command(st: &mut AppState, ctx: &egui::Context, name: &str, params: Value
         }
         "file.newFromTemplate" if !has_param(&params, "path") => {
             let n = name.to_string();
-            crate::files::pick_open(st, None, move |st, paths| {
+            crate::files::pick(st, crate::files::DialogKind::NewFromTemplate, "", move |st, paths| {
                 if let Some(p) = paths.into_iter().next() {
                     st.run(&n, json!({ "path": p.to_string_lossy() }));
                 }
@@ -173,14 +171,21 @@ fn run_command(st: &mut AppState, ctx: &egui::Context, name: &str, params: Value
             return;
         }
         "file.import" if !has_param(&params, "path") => {
-            let exts = crate::files::readable_extensions();
             let n = name.to_string();
-            crate::files::pick_one(st, &fp_i18n::t("ui-file-import-title"), &fp_i18n::t("ui-filter-all-readable"), &exts, move |st, p| st.run(&n, json!({ "path": p.to_string_lossy() })));
+            crate::files::pick(st, crate::files::DialogKind::Import, "", move |st, r| {
+                if let Some(p) = r.into_iter().next() {
+                    st.run(&n, json!({ "path": p.to_string_lossy() }));
+                }
+            });
             return;
         }
         "file.updateHtml" if !has_param(&params, "path") => {
             let n = name.to_string();
-            crate::files::pick_one(st, &fp_i18n::t("ui-file-update-html-title"), &fp_i18n::t("ui-filter-html"), &["htm", "html"], move |st, p| st.run(&n, json!({ "path": p.to_string_lossy() })));
+            crate::files::pick(st, crate::files::DialogKind::UpdateHtml, "", move |st, r| {
+                if let Some(p) = r.into_iter().next() {
+                    st.run(&n, json!({ "path": p.to_string_lossy() }));
+                }
+            });
             return;
         }
         "commands.runScript" if !has_param(&params, "path") && !has_param(&params, "code") => {
@@ -237,8 +242,8 @@ fn run_command(st: &mut AppState, ctx: &egui::Context, name: &str, params: Value
         "file.saveAsTemplate" if !has_param(&params, "path") => {
             let title = st.session.active().map(|d| d.title.clone()).unwrap_or_default();
             let n = name.to_string();
-            crate::files::pick_save(st, &fp_i18n::t("ui-file-save-template-title"), &crate::files::suggested_name(&title), None, move |st, p| {
-                if let Some(p) = p {
+            crate::files::pick(st, crate::files::DialogKind::SaveAsTemplate, &crate::files::suggested_name(&title), move |st, r| {
+                if let Some(p) = r.into_iter().next().map(crate::files::save_target) {
                     st.run(&n, json!({ "path": p.to_string_lossy() }));
                 }
             });

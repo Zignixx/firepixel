@@ -87,14 +87,16 @@ ui-dock-expand = Expand Panels
 ui-dock-collapse-icons = Collapse to Icons
 
 ## File dialogs (titles and filters; format names stay)
-ui-filter-all-readable = All readable formats
+ui-filter-all-readable = All readable files
+ui-filter-fw-png = FW-PNG (*.png)
 ui-filter-all-files = All Files (*.*)
-ui-filter-html = HTML files
+ui-filter-html = HTML files (*.htm)
 ui-filter-scripts = Scripts (*.jsf, *.js)
 ui-filter-programs = Programs (*.exe)
 ui-file-open-title = Open
 ui-file-import-title = Import
-ui-file-update-html-title = Update HTML
+ui-file-update-html-title = Locate HTML File:
+ui-file-new-from-template-title = New from Template
 ui-file-run-script-title = Run Script
 ui-file-primary-browser-title = Set Primary Browser
 ui-file-secondary-browser-title = Set Secondary Browser

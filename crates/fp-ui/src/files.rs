@@ -20,14 +20,165 @@ pub fn readable_extensions() -> Vec<&'static str> {
     v
 }
 
-/// Filter „Alle lesbaren Formate“, danach je Format (Reihenfolge des Originals) und „Alle Dateien“.
+/// Reihenfolge der Einzelformate in „Öffnen“/„Importieren“ wie im Original gemessen (DLG-3,
+/// 12.10.: FW-PNG, PSD, GIF, JPEG, WBMP, TIFF, Targa, BMP, Illustrator, EPS; RTF/ASCII-Text liest
+/// Firepixel nicht), danach die übrigen Formate von fp-io in dessen Reihenfolge.
+const OPEN_ORDER: &[&str] = &["PNG", "PS30", "kMoaCfFormat_GIF", "kMoaCfFormat_JPEG", "kMoaCfFormat_WBMP", "kMoaCfFormat_TIFF", "kMoaCfFormat_TGA", "kMoaCfFormat_BMP", "AI3", "EPSF"];
+
+/// Filter von „Öffnen“ und „Importieren“ wie im Original: die Einzelformate, dann „Alle lesbaren
+/// Dateien“ (vorgewählt) und „Alle Dateien“.
 fn readable_filters(mut r: Request) -> Request {
-    r = r.filter(fp_i18n::t("ui-filter-all-readable"), &readable_extensions());
-    for f in fp_io::detect::REGISTRY.iter().filter(|f| f.in_file_dialog) {
+    let formats: Vec<&fp_io::detect::ReaderInfo> = fp_io::detect::REGISTRY.iter().filter(|f| f.in_file_dialog).collect();
+    let mut ordered: Vec<&fp_io::detect::ReaderInfo> = OPEN_ORDER.iter().filter_map(|id| formats.iter().copied().find(|f| f.id == *id)).collect();
+    for f in &formats {
+        if !ordered.iter().any(|o| o.id == f.id) {
+            ordered.push(f);
+        }
+    }
+    for f in ordered {
         r = r.filter(format!("{} ({})", f.name, f.pattern), f.extensions);
     }
-    r.filter(fp_i18n::t("ui-filter-all-files"), &["*"])
+    r = r.filter(fp_i18n::t("ui-filter-all-readable"), &readable_extensions());
+    let all_readable = r.filters.len() - 1;
+    r.default_filter(all_readable).filter(fp_i18n::t("ui-filter-all-files"), &["*"])
 }
+
+/// Art eines Datei-Dialogs der Oberfläche: bestimmt Startordner, Titel, Filter und den
+/// Voreinstellungsschlüssel, unter dem der Ordner gemerkt wird (Original: `Last…Location`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum DialogKind {
+    /// Datei ▸ Öffnen (D03)
+    Open,
+    /// Datei ▸ Neu von Vorlage (D02)
+    NewFromTemplate,
+    /// Datei ▸ Speichern unter (D04)
+    SaveAs,
+    /// Datei ▸ Als Vorlage speichern (D05)
+    SaveAsTemplate,
+    /// Datei ▸ Importieren (D06)
+    Import,
+    /// Datei ▸ HTML aktualisieren (D09)
+    UpdateHtml,
+}
+
+impl DialogKind {
+    /// Voreinstellung, unter der der zuletzt benutzte Ordner steht.
+    pub fn pref_key(self) -> Option<&'static str> {
+        match self {
+            DialogKind::Open => Some("LastOpenLocation"),
+            DialogKind::SaveAs => Some("LastSaveLocation"),
+            DialogKind::Import => Some("LastImportLocation"),
+            _ => None,
+        }
+    }
+
+    /// Fenstertitel wie im Original (D05 hat dort den Standardtitel „Speichern unter“, D09
+    /// „HTML-Datei suchen:“).
+    pub fn title(self) -> String {
+        fp_i18n::t(match self {
+            DialogKind::Open => "ui-file-open-title",
+            DialogKind::NewFromTemplate => "ui-file-new-from-template-title",
+            DialogKind::SaveAs | DialogKind::SaveAsTemplate => "ui-file-save-as-title",
+            DialogKind::Import => "ui-file-import-title",
+            DialogKind::UpdateHtml => "ui-file-update-html-title",
+        })
+    }
+
+    /// Dialog mit Titel, Filtern und Mehrfachauswahl wie im Original (ohne Startordner).
+    pub fn request(self, file_name: &str) -> Request {
+        match self {
+            DialogKind::Open => readable_filters(Request::open_many(self.title())),
+            DialogKind::Import => readable_filters(Request::open(self.title())),
+            DialogKind::NewFromTemplate => Request::open(self.title()).filter(fp_i18n::t("ui-filter-fw-png"), &["png"]),
+            DialogKind::SaveAsTemplate => Request::save(self.title(), file_name).filter(fp_i18n::t("ui-filter-fw-png"), &["png"]),
+            DialogKind::SaveAs => {
+                let mut r = Request::save(self.title(), file_name);
+                for (label, exts, _) in SAVE_TYPES {
+                    r = r.filter(*label, exts);
+                }
+                r
+            }
+            DialogKind::UpdateHtml => Request::open(self.title()).filter(fp_i18n::t("ui-filter-html"), &["htm", "html"]).filter(fp_i18n::t("ui-filter-all-files"), &["*"]),
+        }
+    }
+}
+
+/// Ordner „Dokumente“ des Nutzers (Rückfall aller Datei-Dialoge).
+pub fn documents_dir() -> Option<PathBuf> {
+    // nur gelesen, nie beschrieben (Startordner des Dialogs)
+    let home = std::env::home_dir()?;
+    let docs = home.join("Documents");
+    Some(if docs.is_dir() { docs } else { home })
+}
+
+/// Vorlagenordner (`%APPDATA%\Firepixel\Templates`, im Testlauf im Testprofil).
+pub fn templates_dir() -> Option<PathBuf> {
+    fp_i18n::profile::roaming_dir().map(|d| d.join("Templates"))
+}
+
+/// Gemerkter Ordner einer Voreinstellung, wenn es ihn noch gibt.
+fn remembered_dir(prefs: &fp_engine::Preferences, key: &str) -> Option<PathBuf> {
+    let v = prefs.get_str(key, "");
+    let v = v.trim();
+    let p = PathBuf::from(v);
+    (!v.is_empty() && p.is_dir()).then_some(p)
+}
+
+/// Startordner wie im Original (gemessen DLG-3, 12.10.):
+/// - Öffnen und HTML aktualisieren: zuletzt beim Öffnen benutzter Ordner (`LastOpenLocation`),
+///   sonst der Ordner des gespeicherten Dokuments;
+/// - Importieren: `LastImportLocation`, sonst `LastOpenLocation`, sonst Ordner des Dokuments;
+/// - Speichern unter: Ordner des gespeicherten Dokuments, sonst `LastSaveLocation`;
+/// - Neu von Vorlage, Als Vorlage speichern: Vorlagenordner;
+/// - sonst „Dokumente“.
+pub fn start_dir(prefs: &fp_engine::Preferences, kind: DialogKind, doc_path: Option<&Path>) -> Option<PathBuf> {
+    let doc_dir = || doc_path.and_then(Path::parent).filter(|d| d.is_dir()).map(Path::to_path_buf);
+    let last = |k: &str| remembered_dir(prefs, k);
+    let dir = match kind {
+        DialogKind::Open | DialogKind::UpdateHtml => last("LastOpenLocation").or_else(doc_dir),
+        DialogKind::Import => last("LastImportLocation").or_else(|| last("LastOpenLocation")).or_else(doc_dir),
+        DialogKind::SaveAs => doc_dir().or_else(|| last("LastSaveLocation")),
+        DialogKind::NewFromTemplate | DialogKind::SaveAsTemplate => templates_dir().filter(|d| d.is_dir()),
+    };
+    dir.or_else(documents_dir)
+}
+
+/// Merkt den Ordner einer bestätigten Wahl unter dem Schlüssel der Art (Datei → ihr Ordner).
+/// Gibt `true` zurück, wenn sich etwas geändert hat.
+pub fn remember_dir(prefs: &mut fp_engine::Preferences, kind: DialogKind, chosen: &Path) -> bool {
+    let Some(key) = kind.pref_key() else { return false };
+    let dir = if chosen.is_dir() { Some(chosen) } else { chosen.parent() };
+    let Some(dir) = dir.filter(|d| !d.as_os_str().is_empty()) else { return false };
+    let v = dir.display().to_string();
+    if prefs.get_str(key, "") == v {
+        return false;
+    }
+    prefs.set(key, fp_engine::prefs::PrefValue::Str(v));
+    true
+}
+
+/// Datei-Dialog der Art `kind` für das aktive Dokument: Startordner, Titel und Filter wie im
+/// Original; nach einer bestätigten Wahl wird der Ordner gemerkt. Ergebnis leer = abgebrochen.
+pub fn pick(st: &mut AppState, kind: DialogKind, file_name: &str, done: impl FnOnce(&mut AppState, Vec<PathBuf>) + Send + 'static) {
+    if matches!(kind, DialogKind::NewFromTemplate | DialogKind::SaveAsTemplate)
+        && let Some(t) = templates_dir()
+    {
+        fp_i18n::profile::guard_write(&t);
+        let _ = std::fs::create_dir_all(&t);
+    }
+    let doc_path = st.session.active().and_then(|d| d.path.clone());
+    let dir = start_dir(&st.session.prefs, kind, doc_path.as_deref());
+    let req = kind.request(file_name).dir(dir.as_deref());
+    file_dialog::request(st, req, move |st, r| {
+        if let Some(first) = r.first()
+            && remember_dir(&mut st.session.prefs, kind, first)
+        {
+            st.session.prefs_changed();
+        }
+        done(st, r);
+    });
+}
+
 /// Wie eine Datei unter einem Dateityp von „Speichern unter“ geschrieben wird.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SaveKind {
@@ -42,12 +193,12 @@ pub enum SaveKind {
 /// Dateitypen von „Speichern unter“: die Typen des Originals, soweit Firepixel sie schreibt, und
 /// die modernen Formate (Beschriftung, Endungen, Art).
 pub const SAVE_TYPES: &[(&str, &[&str], SaveKind)] = &[
-    ("FW-PNG (*.fw.png)", &["png"], SaveKind::FwPng),
+    ("FW-PNG (*.png)", &["png"], SaveKind::FwPng),
     ("BMP (*.bmp)", &["bmp"], SaveKind::Export("bmp")),
     ("GIF (*.gif)", &["gif"], SaveKind::Export("gif")),
-    ("JPEG (*.jpg)", &["jpg", "jpeg"], SaveKind::Export("jpeg")),
+    ("JPEG (*.jpg; *.jpeg; *.jpe)", &["jpg", "jpeg", "jpe"], SaveKind::Export("jpeg")),
     ("Photoshop PSD (*.psd)", &["psd"], SaveKind::Style("psd")),
-    ("TIFF (*.tif)", &["tif", "tiff"], SaveKind::Export("tiff")),
+    ("TIFF (*.tif; *.tiff)", &["tif", "tiff"], SaveKind::Export("tiff")),
     ("WBMP (*.wbmp)", &["wbmp"], SaveKind::Export("wbmp")),
     ("WebP (*.webp)", &["webp"], SaveKind::Export("webp")),
     ("AVIF (*.avif)", &["avif"], SaveKind::Export("avif")),
@@ -114,9 +265,15 @@ pub fn pick_save(st: &mut AppState, title: &str, default_name: &str, dir: Option
         req = req.filter(*label, exts);
     }
     file_dialog::request(st, req, move |st, r| {
-        let p = r.into_iter().next().map(|p| if save_kind(&p) == SaveKind::FwPng { ensure_fw_png(p) } else { p });
+        let p = r.into_iter().next().map(save_target);
         done(st, p);
     });
+}
+
+/// Gewählter Speichername → Ziel: FW-PNG bekommt `.fw.png` (Kästchen „.fw.png anhängen“ des
+/// Originals, Vorgabe an), andere Dateitypen bleiben.
+pub fn save_target(p: PathBuf) -> PathBuf {
+    if save_kind(&p) == SaveKind::FwPng { ensure_fw_png(p) } else { p }
 }
 /// Hängt `.fw.png` an (wie das Kästchen „.fw.png anhängen“ des Originals, Vorgabe an): aus
 /// `name` und `name.png` wird `name.fw.png`.
@@ -155,13 +312,13 @@ pub fn save_active(st: &mut AppState, force_dialog: bool, done: impl FnOnce(&mut
     let has_path = d.path.is_some();
     let title = d.title.clone();
     let id = d.id;
-    let dir = d.path.as_ref().and_then(|p| p.parent().map(Path::to_path_buf));
     if has_path && !force_dialog {
         let ok = write_active(st, None);
         done(st, ok);
         return;
     }
-    pick_save(st, &fp_i18n::t("ui-file-save-as-title"), &suggested_name(&title), dir.as_deref(), move |st, p| {
+    pick(st, DialogKind::SaveAs, &suggested_name(&title), move |st, r| {
+        let p = r.into_iter().next().map(save_target);
         // das Dokument kann während des Dialogs gewechselt haben: wieder aktivieren
         let ok = match p {
             Some(p) if st.session.activate(id).is_ok() => write_active(st, Some(p)),
