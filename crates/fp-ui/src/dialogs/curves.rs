@@ -356,13 +356,18 @@ pub fn show_curves(ctx: &egui::Context, st: &mut AppState) {
     }
     let mut dialog_rect = None;
     let mut pref_change = None;
-    let r = dialog_frame(ctx, "fp-curves", &t("dlg-curves-title"), vec2(374.0, 317.0), |ui, body| {
+    // Knopfspalte: 98 px wie im Original, breiter nur bei längeren Texten (andere Sprachen)
+    let bw = super::buttons_w(ctx, &[&ok_l, &cancel_l, &auto_l], 98.0).ceil();
+    let combo_x = 81f32.max(3.0 + 10.0 + super::text_w(ctx, &ch_l) + 8.0).ceil();
+    let col = 273f32.max(combo_x + 143.0 + 12.0);
+    let pw = (18.0 + super::text_w(ctx, &prev_l)).max(80.0).ceil();
+    let client_w = 374f32.max(col + bw + 3.0).max(col - 2.0 + pw + 3.0);
+    let r = dialog_frame(ctx, "fp-curves", &t("dlg-curves-title"), vec2(client_w, 317.0), |ui, body| {
         dialog_rect = Some(Rect::from_min_max(body.min - vec2(0.0, DIALOG_TITLE_H), body.max));
         let o = body.min;
         let at = |x: f32, y: f32, w: f32, h: f32| Rect::from_min_size(o + vec2(x, y), vec2(w, h));
         // Gruppe „Kanal:“ mit der Liste in der Überschrift
-        super::group_box(ui, at(3.0, 5.0, 258.0, 309.0), &ch_l);
-        let combo_x = 81f32.max(3.0 + 10.0 + super::text_w(ui.ctx(), &ch_l) + 8.0);
+        super::group_box(ui, at(3.0, 5.0, 258f32.max(combo_x + 146.0), 309.0), &ch_l);
         let cr = at(combo_x, 2.0, 143.0, 21.0);
         if let Some(c) = fields::combo(ui, "cv-ch", cr, &refs(&channels), Some(d.channel), true) {
             d.set_channel(c);
@@ -424,22 +429,25 @@ pub fn show_curves(ctx: &egui::Context, st: &mut AppState) {
         let _ = ui.interact(inr, Id::new("cv-in-tip"), Sense::hover()).on_hover_text(&in_tip);
         let _ = ui.interact(outr, Id::new("cv-out-tip"), Sense::hover()).on_hover_text(&out_tip);
         // Knopfspalte rechts
-        if push_button(ui, at(273.0, 11.0, 98.0, 23.0), &ok_l, true, true) {
+        if push_button(ui, at(col, 11.0, bw, 23.0), &ok_l, true, true) {
             result = Some(true);
         }
-        if push_button(ui, at(273.0, 44.0, 98.0, 23.0), &cancel_l, false, true) {
+        if push_button(ui, at(col, 44.0, bw, 23.0), &cancel_l, false, true) {
             result = Some(false);
         }
-        let ar = at(273.0, 73.0, 98.0, 23.0);
+        let ar = at(col, 73.0, bw, 23.0);
         if push_button(ui, ar, &auto_l, false, true) {
             d.picking = None;
             d.auto();
         }
         let _ = ui.interact(ar, Id::new("cv-auto-tip"), Sense::hover()).on_hover_text(&auto_tip);
-        if let Some(p) = common::pipette_buttons(ui, "cv", [o.x + 286.0, o.x + 309.0, o.x + 333.0], o.y + 104.0, d.picking) {
+        if let Some(p) = common::pipette_buttons(ui, "cv", {
+            let px = o.x + col + 13.0 + (bw - 98.0) / 2.0;
+            [px, px + 23.0, px + 47.0]
+        }, o.y + 104.0, d.picking) {
             d.picking = Some(p);
         }
-        let pr = at(271.0, 136.0, (18.0 + super::text_w(ui.ctx(), &prev_l)).max(80.0), 16.0);
+        let pr = at(col - 2.0, 136.0, pw, 16.0);
         if let Some(b) = fields::checkbox(ui, "cv-prev", pr, &prev_l.replace('&', ""), d.preview.preview_on, true) {
             d.preview.preview_on = b;
             pref_change = Some(b);
