@@ -312,6 +312,8 @@ Die Reihenfolge gilt, solange nichts Dringenderes vom Nutzer kommt. Sobald ein P
 
 - Keine blockierenden. Annahme: Code-Kommentare und deutsche Doku-Dateien bleiben deutsch, nur Technisches wird englisch (§1c).
 - Für P-CI/P-OS braucht es später die Entscheidung, ob und wo ein GitHub-Repository angelegt wird.
+- Entschieden 13.10. ≈ 01:05: Rechtschreibung **nur Ordnerwahl** (keine Wörterbücher mitliefern); Bildschirmfoto, Symbolskript erstellen, Gemeinsame Palette **echt umsetzen** (Paket CMD-1 nach MN-5).
+- Offen (Nutzer will mehr Infos): XMP-Schlüssel (Standard vs. neutral, DLG-10), „Bridge durchsuchen“ (aktiv als „Im Dateibrowser durchsuchen…“ vs. grau wie gemessen).
 
 ---
 
