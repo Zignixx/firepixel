@@ -89,8 +89,10 @@ const RUNTIME_ACCESS: &[(&str, &str)] = &[
 
 /// Zugriffstasten aller Menüeinträge in der aktuellen Sprache, Schlüssel = Pfad der bereinigten
 /// Beschriftungen. Neu gebildet, sobald sich die Sprache ändert ([`fp_i18n::generation`]).
-fn access_map() -> Arc<HashMap<String, (usize, char)>> {
-    static M: Mutex<Option<(u64, Arc<HashMap<String, (usize, char)>>)>> = Mutex::new(None);
+type AccessMap = Arc<HashMap<String, (usize, char)>>;
+
+fn access_map() -> AccessMap {
+    static M: Mutex<Option<(u64, AccessMap)>> = Mutex::new(None);
     fn walk(entries: &[MenuEntry], prefix: &str, out: &mut HashMap<String, (usize, char)>) {
         for e in entries {
             if e.sep {

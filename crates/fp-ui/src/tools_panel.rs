@@ -25,34 +25,36 @@ pub struct FlyoutState {
 /// Ein Platz im Werkzeugbedienfeld.
 #[derive(Clone, Copy, Debug)]
 enum Slot {
-    /// Werkzeug-Gruppe (Flyout-Name) mit Standardwerkzeug.
-    Tool(&'static str, ToolId),
+    /// Standardwerkzeug des Platzes; die Flyout-Gruppe ist die des Werkzeugs (Werkzeugtabelle).
+    Tool(ToolId),
     /// Pseudo-Werkzeug „Segmente ausblenden/einblenden“.
     Slices(bool),
 }
 
 const SECTIONS: &[(ToolGroup, &[Slot])] = &[
-    (ToolGroup::Select, &[Slot::Tool("Zeiger", ToolId::Pointer), Slot::Tool("Teilauswahl", ToolId::Subselection), Slot::Tool("Skalieren", ToolId::Scale), Slot::Tool("Zuschneiden", ToolId::Crop)]),
+    (ToolGroup::Select, &[Slot::Tool(ToolId::Pointer), Slot::Tool(ToolId::Subselection), Slot::Tool(ToolId::Scale), Slot::Tool(ToolId::Crop)]),
     (
         ToolGroup::Bitmap,
         &[
-            Slot::Tool("Auswahlrahmen", ToolId::Marquee),
-            Slot::Tool("Lasso", ToolId::Lasso),
-            Slot::Tool("Zauberstab", ToolId::MagicWand),
-            Slot::Tool("Pinsel", ToolId::Brush),
-            Slot::Tool("Bleistift", ToolId::Pencil),
-            Slot::Tool("Radiergummi", ToolId::Eraser),
-            Slot::Tool("Weichzeichner", ToolId::Blur),
-            Slot::Tool("Stempel", ToolId::RubberStamp),
+            Slot::Tool(ToolId::Marquee),
+            Slot::Tool(ToolId::Lasso),
+            Slot::Tool(ToolId::MagicWand),
+            Slot::Tool(ToolId::Brush),
+            Slot::Tool(ToolId::Pencil),
+            Slot::Tool(ToolId::Eraser),
+            Slot::Tool(ToolId::Blur),
+            Slot::Tool(ToolId::RubberStamp),
         ],
     ),
-    (
-        ToolGroup::Vector,
-        &[Slot::Tool("Linie", ToolId::Line), Slot::Tool("Stift", ToolId::Pen), Slot::Tool("Rechteck", ToolId::Rectangle), Slot::Tool("Text", ToolId::Text), Slot::Tool("Freiform", ToolId::Freeform), Slot::Tool("Messer", ToolId::Knife)],
-    ),
-    (ToolGroup::Web, &[Slot::Tool("Hotspot", ToolId::HotspotRect), Slot::Tool("Segment", ToolId::Slice), Slot::Slices(false), Slot::Slices(true)]),
-    (ToolGroup::Colors, &[Slot::Tool("Pipette", ToolId::Eyedropper), Slot::Tool("Füllwerkzeug", ToolId::PaintBucket)]),
+    (ToolGroup::Vector, &[Slot::Tool(ToolId::Line), Slot::Tool(ToolId::Pen), Slot::Tool(ToolId::Rectangle), Slot::Tool(ToolId::Text), Slot::Tool(ToolId::Freeform), Slot::Tool(ToolId::Knife)]),
+    (ToolGroup::Web, &[Slot::Tool(ToolId::HotspotRect), Slot::Tool(ToolId::Slice), Slot::Slices(false), Slot::Slices(true)]),
+    (ToolGroup::Colors, &[Slot::Tool(ToolId::Eyedropper), Slot::Tool(ToolId::PaintBucket)]),
 ];
+
+/// Flyout-Gruppe (interne Kennung aus der Werkzeugtabelle von fp-engine) eines Werkzeugs.
+fn flyout_of(id: ToolId) -> &'static str {
+    tools::info(id).map(|i| i.flyout).unwrap_or("")
+}
 
 /// Automatische Formen im Rechteck-Flyout (Laufzeit T3; Logik in fp-script, `autoShape.insert`):
 /// deutscher Name (Kennung für `autoShape.insert`, Reihenfolge wie im Original) und englischer
@@ -179,7 +181,7 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
             let col = k % 2;
             let r = Rect::from_min_size(pos2(left + col as f32 * cell.x, y), cell);
             match slot {
-                Slot::Tool(fly, default) => tool_slot(ui, st, r, fly, *default, *group, active, now),
+                Slot::Tool(default) => tool_slot(ui, st, r, flyout_of(*default), *default, *group, active, now),
                 Slot::Slices(show) => {
                     let hidden = st.session.active().is_some_and(|d| d.view.hide_slices);
                     let selected = if *show { !hidden } else { hidden };
@@ -217,9 +219,9 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
         }
     }
     y += small.y + 4.0;
-    for (k, (fly, default)) in [("Hand", ToolId::Hand), ("Zoom", ToolId::Zoom)].iter().enumerate() {
+    for (k, default) in [ToolId::Hand, ToolId::Zoom].iter().enumerate() {
         let r = Rect::from_min_size(pos2(left + k as f32 * cell.x, y), cell);
-        tool_slot(ui, st, r, fly, *default, ToolGroup::View, active, now);
+        tool_slot(ui, st, r, flyout_of(*default), *default, ToolGroup::View, active, now);
     }
     y += cell.y + 4.0;
     section_separator(ui, full, y, &theme);
@@ -366,7 +368,7 @@ fn flyout_popup(ctx: &egui::Context, st: &mut AppState) {
                     .filter(|t| **t != ToolId::AutoShape)
                     .map(|t| (tool_tooltip(st, *t), Some(*t), false, ""))
                     .collect();
-                if f.group == "Rechteck" {
+                if f.group == flyout_of(ToolId::Rectangle) {
                     v.push((String::new(), None, true, ""));
                     for (de, en) in AUTO_SHAPES {
                         v.push((shape_label(en, de), Some(ToolId::AutoShape), false, de));

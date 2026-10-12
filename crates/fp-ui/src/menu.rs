@@ -288,36 +288,26 @@ fn recent_files(st: &AppState) -> Vec<Node> {
         .collect()
 }
 
-/// Filter-Untermenüs: (Schlüssel des Untermenüs, [(deutscher Menütext zum Auflösen, Befehl)]); angezeigt
-/// wird der Menütext `cmd-…` des Befehls.
-const FILTER_GROUPS: [(&str, &[(&str, &str)]); 5] = [
-        ("menu-filter-other", &[("Kanten finden", "filter.other.findEdges"), ("In Alpha konvertieren", "filter.other.convertToAlpha")]),
-        (
-            "menu-filter-adjustColor",
-            &[
-                ("Auto-Tonwertkorrektur", "filter.adjustColor.autoLevels"),
-                ("Farbfüllung...", "filter.adjustColor.colorFill"),
-                ("Farbton/Sättigung...", "filter.adjustColor.hueSaturation"),
-                ("Helligkeit/Kontrast...", "filter.adjustColor.brightnessContrast"),
-                ("Kurven...", "filter.adjustColor.curves"),
-                ("Tonwertkorrektur...", "filter.adjustColor.levels"),
-                ("Umkehren", "filter.adjustColor.invert"),
-            ],
-        ),
-        ("menu-filter-noise", &[("Rauschen hinzufügen...", "filter.noise.addNoise")]),
-        ("menu-filter-sharpen", &[("Scharfzeichnen", "filter.sharpen.sharpen"), ("Stark scharfzeichnen", "filter.sharpen.sharpenMore"), ("Unscharf maskieren...", "filter.sharpen.unsharpMask")]),
-        (
-            "menu-filter-blur",
-            &[
-                ("Bewegungsunschärfe...", "filter.blur.motion"),
-                ("Gaußscher Weichzeichner...", "filter.blur.gaussian"),
-                ("Radiales Weichzeichnen...", "filter.blur.radial"),
-                ("Stark weichzeichnen", "filter.blur.blurMore"),
-                ("Weichzeichnen", "filter.blur.blur"),
-                ("Zentriertes Weichzeichnen...", "filter.blur.zoom"),
-            ],
-        ),
-    ];
+/// Filter-Untermenüs wie im Original: (Schlüssel des Untermenüs, Befehle). Angezeigt wird der
+/// Menütext `cmd-…` des Befehls; fehlt ein Befehl im Register, ist der Eintrag gesperrt.
+const FILTER_GROUPS: [(&str, &[&str]); 5] = [
+    ("menu-filter-other", &["filter.other.findEdges", "filter.other.convertToAlpha"]),
+    (
+        "menu-filter-adjustColor",
+        &[
+            "filter.adjustColor.autoLevels",
+            "filter.adjustColor.colorFill",
+            "filter.adjustColor.hueSaturation",
+            "filter.adjustColor.brightnessContrast",
+            "filter.adjustColor.curves",
+            "filter.adjustColor.levels",
+            "filter.adjustColor.invert",
+        ],
+    ),
+    ("menu-filter-noise", &["filter.noise.addNoise"]),
+    ("menu-filter-sharpen", &["filter.sharpen.sharpen", "filter.sharpen.sharpenMore", "filter.sharpen.unsharpMask"]),
+    ("menu-filter-blur", &["filter.blur.motion", "filter.blur.gaussian", "filter.blur.radial", "filter.blur.blurMore", "filter.blur.blur", "filter.blur.zoom"]),
+];
 
 /// Untermenü-Inhalte, die das Original zur Laufzeit aus Skripten bzw. Filtern füllt.
 fn filter_submenus(st: &AppState) -> Vec<Node> {
@@ -326,14 +316,13 @@ fn filter_submenus(st: &AppState) -> Vec<Node> {
         .map(|(key, items)| {
             let children: Vec<Node> = items
                 .iter()
-                .map(|(l, name)| {
-                    let label = t_opt(&fp_i18n::command_key(name)).map(|s| clean_label(&s).0).unwrap_or_else(|| l.to_string());
-                    match resolve_filter(st, name, l) {
-                        Some(n) => {
-                            let (en, ck, sc) = command_state(st, &n, None);
-                            Node::Item { label, shortcut: sc, action: ItemAction::Command(n), enabled: en, checked: ck }
-                        }
-                        None => item(&label, ItemAction::None, false, None),
+                .map(|name| {
+                    let label = clean_label(&t(&fp_i18n::command_key(name))).0;
+                    if st.session.registry().get(name).is_some() {
+                        let (en, ck, sc) = command_state(st, name, None);
+                        Node::Item { label, shortcut: sc, action: ItemAction::Command(name.to_string()), enabled: en, checked: ck }
+                    } else {
+                        item(&label, ItemAction::None, false, None)
                     }
                 })
                 .collect();
@@ -341,16 +330,6 @@ fn filter_submenus(st: &AppState) -> Vec<Node> {
             Node::Sub { label: clean_label(&t(key)).0, children, enabled }
         })
         .collect()
-}
-
-/// Filterbefehl im Register: erst der erwartete Name, sonst ein `filter.*`-Befehl mit gleicher
-/// Beschriftung (der Name kann sich in fp-engine noch ändern).
-fn resolve_filter(st: &AppState, name: &str, label: &str) -> Option<String> {
-    if st.session.registry().get(name).is_some() {
-        return Some(name.to_string());
-    }
-    let plain = label.trim_end_matches("...");
-    st.session.registry().iter().find(|c| c.info().name.starts_with("filter.") && c.info().label.trim_end_matches("...") == plain).map(|c| c.info().name.clone())
 }
 
 /// Befehle-Menü zur Laufzeit wie im Original: der Befehlsordner (`commands_dir`, darin gespeicherte
