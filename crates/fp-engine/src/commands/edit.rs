@@ -479,14 +479,46 @@ pub(super) fn register(r: &mut CommandRegistry) {
     }
 
     // Objekt einfügen
-    r.add(cmd("edit.insert.newSymbol").requires(DOC).opt("name", ParamKind::String, "Symbolname").run(|s, p| {
-        let name = p.opt_str("name")?.unwrap_or_else(|| "Symbol".into());
-        with_doc(s, |d| {
-            let ids = d.selection.elements.clone();
-            let id = make_symbol(d, &name, SymbolKind::Graphic, &ids)?;
-            Ok(CommandOutput::doc_with(json!({"id": id.0})))
-        })
-    }));
+    r.add(
+        cmd("edit.insert.newSymbol")
+            .requires(DOC)
+            .opt("name", ParamKind::String, "Symbolname")
+            .opt_default("kind", ParamKind::Enum { values: vec!["graphic".into(), "animation".into(), "button".into()] }, json!("graphic"), "Typ")
+            .opt_default("edit", ParamKind::Bool, json!(false), "leeres Symbol in der Bibliothek anlegen und seine Symbolbearbeitung öffnen (Menü wie im Original)")
+            .opt_default("nineSlice", ParamKind::Bool, json!(false), "Hilfslinien für 9-Slice-Skalierung aktivieren (mit edit)")
+            .run(|s, p| {
+                let name = p.opt_str("name")?.unwrap_or_else(|| "Symbol".into());
+                let kind = match p.opt_str("kind")?.as_deref() {
+                    Some("animation") => SymbolKind::Animation,
+                    Some("button") => SymbolKind::Button,
+                    _ => SymbolKind::Graphic,
+                };
+                if p.bool_or("edit", false)? {
+                    // Original (PM-5 D14): OK legt ein leeres Symbol an und öffnet dessen Bearbeitung;
+                    // keine Instanz im Dokument, die Auswahl bleibt unberührt
+                    let nine = p.bool_or("nineSlice", false)?;
+                    let sid = with_doc(s, |d| {
+                        let doc = Arc::make_mut(&mut d.doc);
+                        let sid = doc.new_symbol_id();
+                        let mut idg = take_ids(doc);
+                        let mut sym = Symbol::new(&mut idg, &name, sid, kind);
+                        doc.ids = idg;
+                        if nine {
+                            super::panel::set_nine_slice(&mut sym, true);
+                        }
+                        doc.symbols.push(Arc::new(sym));
+                        Ok(sid)
+                    })?;
+                    let view = super::symbol_edit::begin_edit(s, sid, false, None)?;
+                    return Ok(CommandOutput::doc_with(json!({"symbol": sid.0, "doc": view.0})));
+                }
+                with_doc(s, |d| {
+                    let ids = d.selection.elements.clone();
+                    let id = make_symbol(d, &name, kind, &ids)?;
+                    Ok(CommandOutput::doc_with(json!({"id": id.0})))
+                })
+            }),
+    );
     r.add(cmd("edit.insert.newButton").requires(DOC).opt("name", ParamKind::String, "Name der Schaltfläche").run(|s, p| {
         let name = p.opt_str("name")?.unwrap_or_else(|| "Schaltfläche".into());
         with_doc(s, |d| {

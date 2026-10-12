@@ -75,6 +75,13 @@ pub fn saved_commands() -> Vec<String> {
     v
 }
 
+/// Gespeicherte Befehle des Nutzers: wie [`saved_commands`], ohne die mitgelieferten Skripte des
+/// Befehle-Menüs (Original: nur Befehle aus Verlauf ▸ „Als Befehl speichern“, PM-5 D25).
+pub fn user_saved_commands(s: &Session) -> Vec<String> {
+    let builtin = s.script_host().map(|h| h.builtin_commands()).unwrap_or_default();
+    saved_commands().into_iter().filter(|n| !builtin.iter().any(|b| b.eq_ignore_ascii_case(n))).collect()
+}
+
 fn safe_file_name(n: &str) -> Result<String> {
     let t = n.trim();
     if t.is_empty() || t.contains(['\\', '/', ':', '*', '?', '"', '<', '>', '|']) || t == "." || t == ".." {
@@ -294,7 +301,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                     fp_i18n::profile::guard_write(&dir);
                 }
                 match action.as_deref().unwrap_or("list") {
-                    "list" => return Ok(CommandOutput::value(json!({"folder": dir.to_string_lossy(), "commands": saved_commands()}))),
+                    "list" => return Ok(CommandOutput::value(json!({"folder": dir.to_string_lossy(), "commands": user_saved_commands(s)}))),
                     "save" => {
                         let name = safe_file_name(&p.str("name")?)?;
                         let code = match p.opt_str("code")? {
@@ -315,7 +322,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                     _ => return Err(bad(p, "action")),
                 }
                 s.emit(SessionEvent::PanelsChanged);
-                Ok(CommandOutput::session_with(json!({"commands": saved_commands()})))
+                Ok(CommandOutput::session_with(json!({"commands": user_saved_commands(s)})))
             }),
     );
     for id in [35590u32, 35637] {

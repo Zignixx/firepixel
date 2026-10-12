@@ -266,6 +266,13 @@ pub trait ScriptHost: Send + Sync {
     fn auto_shape(&self, _session: &mut Session, _op: &Value) -> Result<Value> {
         Err(EngineError::BackendMissing("err-backend-autoshape-runtime"))
     }
+
+    /// Namen (ohne `.jsf`) der mitgelieferten Befehlsskripte auf oberster Ebene des Befehlsordners.
+    /// Sie gehören zum Befehle-Menü, sind aber keine gespeicherten Befehle des Nutzers (im Original
+    /// liegen sie im Programmordner); „Gespeicherte Befehle verwalten“ lässt sie weg. Vorgabe: keine.
+    fn builtin_commands(&self) -> Vec<String> {
+        Vec::new()
+    }
 }
 
 /// Werkzeugzustand der Sitzung.

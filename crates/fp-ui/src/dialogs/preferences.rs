@@ -11,9 +11,13 @@ use egui::{pos2, vec2, Align2, Rect, Sense, Stroke, StrokeKind, Ui};
 use fp_engine::{PrefValue, Preferences};
 use std::collections::BTreeMap;
 
-/// Kategorien in der Reihenfolge der Liste.
+/// Kategorien in der Reihenfolge der Liste (wie im Original: „Starten und Bearbeiten“ vor
+/// „Zusatzmodule“, PM-5 D16).
 /// (Schlüssel der Texte in `dialoge.ftl`; ebenso die Beschriftungen der Einträge.)
-pub const CATEGORIES: [&str; 7] = ["dlg-pref-cat-general", "dlg-pref-cat-edit", "dlg-pref-cat-guides", "dlg-pref-cat-type", "dlg-pref-cat-psimport", "dlg-pref-cat-plugins", "dlg-pref-cat-launch"];
+pub const CATEGORIES: [&str; 7] = ["dlg-pref-cat-general", "dlg-pref-cat-edit", "dlg-pref-cat-guides", "dlg-pref-cat-type", "dlg-pref-cat-psimport", "dlg-pref-cat-launch", "dlg-pref-cat-plugins"];
+
+/// Index der Kategorie „Zusatzmodule“ (Hinweis unter den Feldern).
+const CAT_PLUGINS: usize = 6;
 
 /// Ein Eintrag einer Seite (Voreinstellungsschlüssel, Textschlüssel der Beschriftung, …).
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -107,7 +111,8 @@ fn page_items(cat: usize) -> &'static [Item] {
             Check("PSClippingMasksEditable", "dlg-pref-psclippingmaskseditable", true),
             Check("PSRetainAdjustmentLayersAppearance", "dlg-pref-psretainadjustmentlayersappearance", true),
         ],
-        5 => &[
+        5 => &[Combo1("LegLookForPNG", "dlg-pref-leglookforpng", LOOK, 3), Combo1("LoptLookForPNG", "dlg-pref-loptlookforpng", LOOK, 3)],
+        _ => &[
             Item::Caption("dlg-pref-cap-plugins"),
             Check("UseExtraPhotoshopPluginsDir", "dlg-pref-useextraphotoshoppluginsdir", false),
             Text("ExtraPhotoshopPluginsDir", "dlg-pref-extraphotoshoppluginsdir", ""),
@@ -118,7 +123,150 @@ fn page_items(cat: usize) -> &'static [Item] {
             Item::Caption("dlg-pref-cap-originaldir"),
             Text(ORIGINAL_DIR_KEY, "dlg-pref-originalresourcedir", ""),
         ],
-        _ => &[Combo1("LegLookForPNG", "dlg-pref-leglookforpng", LOOK, 3), Combo1("LoptLookForPNG", "dlg-pref-loptlookforpng", LOOK, 3)],
+    }
+}
+
+/// Zeile der Seite „Allgemein“ (Gruppen wie im Original, PM-5 D16).
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum GeneralRow {
+    /// Beschriftung rechtsbündig links der Steuerspalte (Textschlüssel oder keine), dann ein
+    /// Eintrag aus `page_items(0)` (Schlüssel der Voreinstellung).
+    Item(Option<&'static str>, &'static str),
+    /// Rückgängig-Schritte mit Neustart-Hinweis rechts daneben.
+    Undo,
+    /// Farbfelder mit Beschriftung rechts (Schlüssel der Voreinstellung, Textschlüssel).
+    Colors(&'static [(&'static str, &'static str)]),
+    /// Design-Auswahl (Firepixel).
+    Theme,
+    /// Sprache (Firepixel).
+    Language,
+    /// „Alle Warnmeldungen zurücksetzen“.
+    ResetWarnings,
+}
+
+/// Gruppen der Seite „Allgemein“: Überschrift mit Trennlinie (Textschlüssel, `None` = ohne) und Zeilen.
+pub const GENERAL_GROUPS: &[(Option<&str>, &[GeneralRow])] = &[
+    (
+        None,
+        &[
+            GeneralRow::Item(Some("dlg-pref-grp-docoptions"), "ShowStartPage"),
+            GeneralRow::Item(None, "XformToolXformsBFE"),
+            GeneralRow::Undo,
+            GeneralRow::Item(None, "EditTransformMode"),
+            GeneralRow::Item(None, "OSBasedResample"),
+        ],
+    ),
+    (Some("dlg-pref-grp-save"), &[GeneralRow::Item(None, "WriteThumbnailPreview"), GeneralRow::Item(None, "AppendFwPng")]),
+    (
+        Some("dlg-pref-cap-ui"),
+        &[GeneralRow::Item(Some("dlg-pref-grp-workspace"), "IconPanelsAutoCollapse"), GeneralRow::Theme, GeneralRow::Language, GeneralRow::Item(None, crate::language::DEV_PREF_KEY)],
+    ),
+    (
+        Some("dlg-pref-grp-colors"),
+        &[GeneralRow::Colors(&[("BrushDefaultColor", "dlg-pref-color-stroke"), ("FillDefaultColor", "dlg-pref-color-fill")]), GeneralRow::Colors(&[("FeedbackColor", "dlg-pref-color-highlight")]), GeneralRow::ResetWarnings],
+    ),
+];
+
+/// Überschriften der Gruppen auf „Allgemein“ (übersetzt, in der Reihenfolge der Seite).
+pub fn general_group_titles() -> Vec<String> {
+    GENERAL_GROUPS.iter().filter_map(|(g, _)| g.map(t)).collect()
+}
+
+fn general_item(key: &str) -> Option<&'static Item> {
+    page_items(0).iter().find(|it| match it {
+        Item::Check(k, ..) | Item::Int(k, ..) | Item::Real(k, ..) | Item::Color(k, ..) | Item::Combo1(k, ..) | Item::Text(k, ..) => *k == key,
+        Item::Caption(_) => false,
+    })
+}
+
+/// Höhe der Seite „Allgemein“ ab der Überschrift.
+fn general_height() -> f32 {
+    GENERAL_GROUPS.iter().map(|(g, rows)| if g.is_some() { 26.0 } else { 0.0 } + rows.len() as f32 * 26.0).sum::<f32>() + 28.0
+}
+
+/// Eintrag ohne eigene Beschriftung (die steht rechtsbündig links der Steuerspalte).
+fn strip_label(it: &Item) -> Item {
+    match *it {
+        Item::Int(k, _, a, b, c) => Item::Int(k, "", a, b, c),
+        Item::Combo1(k, _, items, def) => Item::Combo1(k, "", items, def),
+        other => other,
+    }
+}
+
+/// Zeichnet die Seite „Allgemein“ in Gruppen.
+fn draw_general(ui: &mut Ui, d: &mut PreferencesDialog, prefs: &Preferences, page: Rect, ctrl_x: f32, reset_w: f32, st: &AppState) {
+    let theme = Theme::current(ui.ctx());
+    let c = &theme.colors;
+    let mut y = page.top() + 28.0;
+    for (group, rows) in GENERAL_GROUPS {
+        if let Some(g) = group {
+            let txt = t(g);
+            let gw = super::text_w(ui.ctx(), &txt) * 1.1;
+            ui.painter().text(pos2(page.left(), y + 10.0), Align2::LEFT_CENTER, &txt, theme.bold(theme.fonts.ui), c.text);
+            ui.painter().hline((page.left() + gw + 6.0)..=page.right(), y + 11.0, Stroke::new(1.0, c.list_border));
+            y += 26.0;
+        }
+        for row in *rows {
+            let label = |ui: &mut Ui, k: &str| {
+                let txt = t(k);
+                ui.painter().text(pos2(ctrl_x - 6.0, y + 10.0), Align2::RIGHT_CENTER, &txt, theme.ui_font(), c.text);
+            };
+            let full = Rect::from_min_size(pos2(ctrl_x, y), vec2(page.right() - ctrl_x, 22.0));
+            match *row {
+                GeneralRow::Item(l, key) => {
+                    if let Some(l) = l {
+                        label(ui, l);
+                    }
+                    if let Some(it) = general_item(key) {
+                        if let Item::Combo1(_, lk, ..) | Item::Int(_, lk, ..) = it {
+                            label(ui, lk);
+                        }
+                        draw_item(ui, d, prefs, &strip_label(it), full, ctrl_x, st);
+                    }
+                }
+                GeneralRow::Undo => {
+                    label(ui, "dlg-pref-maxundos");
+                    if let Some(it) = general_item("MaxUndos") {
+                        draw_item(ui, d, prefs, &strip_label(it), full, ctrl_x, st);
+                    }
+                    crate::widgets::text_clipped(ui.painter(), pos2(ctrl_x + 68.0, y + 10.0), Align2::LEFT_CENTER, &t("dlg-pref-restart-note"), theme.ui_font(), c.text, page.right() - ctrl_x - 68.0);
+                }
+                GeneralRow::Colors(list) => {
+                    let mut x = ctrl_x;
+                    for (key, lk) in list {
+                        if let Some(Item::Color(k, _, def)) = general_item(key) {
+                            let v = d.get(prefs, k).and_then(|v| v.as_color()).or_else(|| fp_color::Rgba8::parse_hex(def).map(|c| c.to_argb()));
+                            if let Some(crate::inspector::popups::ColorChoice::Color(cc)) = crate::inspector::popups::color_button(ui, ("pref", *k), Rect::from_min_size(pos2(x, y), vec2(26.0, 20.0)), st, v, true, false, false) {
+                                d.values.insert((*k).into(), PrefValue::Str(format!("#{:02x}{:02x}{:02x}", cc.r(), cc.g(), cc.b())));
+                            }
+                            let txt = t(lk);
+                            ui.painter().text(pos2(x + 32.0, y + 10.0), Align2::LEFT_CENTER, &txt, theme.ui_font(), c.text);
+                            x += 32.0 + super::text_w(ui.ctx(), &txt).max(80.0) + 20.0;
+                        }
+                    }
+                }
+                GeneralRow::Theme => {
+                    label(ui, "dlg-pref-theme");
+                    let names: Vec<String> = ThemeKind::ALL.iter().map(|k| k.name()).collect();
+                    let cur = ThemeKind::ALL.iter().position(|k| *k == d.theme);
+                    let refs = super::refs(&names);
+                    if let Some(i) = fields::combo(ui, "pref-theme", Rect::from_min_size(pos2(ctrl_x, y), vec2(super::combo_fit_w(ui.ctx(), &refs, 140.0), 20.0)), &refs, cur, true) {
+                        d.theme = ThemeKind::ALL[i];
+                    }
+                }
+                GeneralRow::Language => {
+                    // Sprache (fp_ui::language): Eigennamen aller Sprachen, Auswahl als values["Language"]
+                    crate::language::pref_row(ui, Rect::from_min_size(pos2(page.left(), y), vec2(ctrl_x - page.left(), 20.0)), Rect::from_min_size(pos2(ctrl_x, y), vec2(180.0, 20.0)), &mut d.values, prefs);
+                }
+                GeneralRow::ResetWarnings => {
+                    let reset = t("dlg-pref-reset-warnings");
+                    if fields::button(ui, "pref-resetwarn", Rect::from_min_size(pos2(ctrl_x, y), vec2(reset_w, 22.0)), &reset, !d.reset_warnings) {
+                        d.reset_warnings = true;
+                    }
+                }
+            }
+            y += 26.0;
+        }
     }
 }
 
@@ -166,7 +314,7 @@ pub fn apply_original_dir(prefs: &Preferences) {
 }
 
 fn draw_item(ui: &mut Ui, d: &mut PreferencesDialog, prefs: &Preferences, item: &Item, r: Rect, ctrl_x: f32, st: &AppState) {
-    let tl = |k: &str| t(k);
+    let tl = |k: &str| if k.is_empty() { String::new() } else { t(k) };
     match *item {
         Item::Check(k, label, def) => {
             let v = d.get(prefs, k).and_then(|v| v.as_bool()).unwrap_or(def);
@@ -252,13 +400,19 @@ impl Layout {
                 }
             }
             let extra = match cat {
-                0 => 6.0 + 24.0 + 26.0 + 30.0 + 22.0,
-                5 => 12.0 + 40.0,
+                CAT_PLUGINS => 12.0 + 40.0,
                 _ => 0.0,
             };
-            page_h = page_h.max(28.0 + items.len() as f32 * 24.0 + extra);
+            page_h = page_h.max(if cat == 0 { general_height() } else { 28.0 + items.len() as f32 * 24.0 + extra });
         }
+        // Allgemein: rechtsbündige Beschriftungen der Gruppen, Neustart-Hinweis und Farbbeschriftungen
+        for k in ["dlg-pref-grp-docoptions", "dlg-pref-grp-workspace"] {
+            label_w = label_w.max(tw(k));
+        }
+        let note_w = 68.0 + tw("dlg-pref-restart-note");
+        let colors_w = 32.0 + tw("dlg-pref-color-stroke").max(80.0) + 20.0 + 32.0 + tw("dlg-pref-color-fill");
         let ctrl_off = 230f32.max(label_w + 10.0).ceil();
+        page_w = page_w.max(ctrl_off + note_w.max(colors_w).max(20.0 + tw("dlg-pref-xformtoolxformsbfe")).max(20.0 + tw("dlg-pref-osbasedresample")));
         let reset_w = 220f32.max(tw("dlg-pref-reset-warnings") + 16.0).ceil();
         // Kombifelder: bisher auf die Seitenbreite gekürzt (198 px); mehr Platz nur für längere Einträge
         page_w = page_w.max(ctrl_off + if cw > 220.0 { cw } else { 198.0 }).max(reset_w).max(super::text_w(ctx, &t("dlg-pref-cap-ui")) * 1.1);
@@ -274,7 +428,8 @@ pub fn show(ctx: &egui::Context, st: &mut AppState) {
     let Some(mut d) = st.dialogs.preferences.clone() else { return };
     let mut result = None;
     let lay = Layout::measure(ctx);
-    let (ok_l, cancel_l) = (t("btn-ok"), t("btn-cancel"));
+    let (ok_l, cancel_l, help_l) = (t("btn-ok"), t("btn-cancel"), t("dlg-pref-help"));
+    let mut help = false;
     let r = dialog_frame(ctx, "fp-prefs", &t("dlg-pref-title"), lay.size, |ui, body| {
         let theme = Theme::current(ui.ctx());
         let c = &theme.colors;
@@ -341,36 +496,25 @@ pub fn show(ctx: &egui::Context, st: &mut AppState) {
         let mut y = page.top() + 28.0;
         let ctrl_x = page.left() + lay.ctrl_off;
         let prefs = st.session.prefs.clone();
-        for it in page_items(d.category) {
-            let h = 24.0;
-            draw_item(ui, &mut d, &prefs, it, Rect::from_min_size(pos2(page.left(), y), vec2(page.width(), 22.0)), ctrl_x, st);
-            y += h;
-        }
         if d.category == 0 {
-            y += 6.0;
-            ui.painter().text(pos2(page.left(), y + 10.0), Align2::LEFT_CENTER, t("dlg-pref-cap-ui"), theme.bold(theme.fonts.ui), c.text);
-            y += 24.0;
-            super::fit_label(ui, Rect::from_min_size(pos2(page.left(), y), vec2(ctrl_x - page.left(), 20.0)), &t("dlg-pref-theme"), true);
-            let names: Vec<String> = ThemeKind::ALL.iter().map(|k| k.name()).collect();
-            let cur = ThemeKind::ALL.iter().position(|k| *k == d.theme);
-            let refs = super::refs(&names);
-            if let Some(i) = fields::combo(ui, "pref-theme", Rect::from_min_size(pos2(ctrl_x, y), vec2(super::combo_fit_w(ui.ctx(), &refs, 140.0), 20.0)), &refs, cur, true) {
-                d.theme = ThemeKind::ALL[i];
-            }
-            // Sprache (fp_ui::language): Eigennamen aller Sprachen, Auswahl als values["Language"]
-            y += 26.0;
-            crate::language::pref_row(ui, Rect::from_min_size(pos2(page.left(), y), vec2(ctrl_x - page.left(), 20.0)), Rect::from_min_size(pos2(ctrl_x, y), vec2(180.0, 20.0)), &mut d.values, &prefs);
-            y += 30.0;
-            let reset = t("dlg-pref-reset-warnings");
-            if fields::button(ui, "pref-resetwarn", Rect::from_min_size(pos2(page.left(), y), vec2(lay.reset_w, 22.0)), &reset, !d.reset_warnings) {
-                d.reset_warnings = true;
+            // Gruppen wie im Original: Dokumentoptionen, Speichern, Benutzeroberfläche, Standardfarben
+            draw_general(ui, &mut d, &prefs, page, ctrl_x, lay.reset_w, st);
+        } else {
+            for it in page_items(d.category) {
+                draw_item(ui, &mut d, &prefs, it, Rect::from_min_size(pos2(page.left(), y), vec2(page.width(), 22.0)), ctrl_x, st);
+                y += 24.0;
             }
         }
-        if d.category == 5 {
+        if d.category == CAT_PLUGINS {
             // Hinweis umbrechen (war eine lange Zeile)
             super::text_block(ui, Rect::from_min_size(pos2(page.left(), y + 12.0), vec2(page.width(), 40.0)), egui::RichText::new(t("dlg-pref-plugins-note")).font(theme.small_font()).color(c.text_weak));
         }
         let by = body.bottom() - 36.0;
+        // „Hilfe“ unten links wie im Original (öffnet die Hilfe, der Dialog bleibt offen)
+        let hw = super::button_w(ui.ctx(), &help_l, 72.0);
+        if push_button(ui, Rect::from_min_size(pos2(body.left() + 12.0, by), vec2(hw, 23.0)), &help_l, false, true) {
+            help = true;
+        }
         let b = super::button_row(ui.ctx(), body.right() - 16.0, by, &[&ok_l, &cancel_l], 76.0, 23.0, 8.0);
         if push_button(ui, b[0], &ok_l, true, true) {
             result = Some(true);
@@ -379,6 +523,9 @@ pub fn show(ctx: &egui::Context, st: &mut AppState) {
             result = Some(false);
         }
     });
+    if help {
+        st.run("help.firepixelHelp", serde_json::json!({}));
+    }
     match (result, r) {
         (Some(true), _) => {
             st.dialogs.preferences = None;

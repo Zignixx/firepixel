@@ -156,7 +156,13 @@ pub fn open(st: &mut AppState, name: &str) -> bool {
             return true;
         }
         "commands.manageSavedCommands" => {
-            st.dialogs.saved_commands = Some(refresh_saved(st));
+            let d = refresh_saved(st);
+            if d.names.is_empty() {
+                // Original: Info-Meldung mit dem Programmnamen als Titel statt der leeren Liste
+                st.dialogs.message = Some((t("dlg-md-app-title"), t("dlg-md-no-saved-info")));
+            } else {
+                st.dialogs.saved_commands = Some(d);
+            }
             return true;
         }
         "file.exportWizard" => Some(
@@ -257,10 +263,23 @@ pub fn open(st: &mut AppState, name: &str) -> bool {
             let refs: Vec<&str> = names.iter().map(|s| s.as_str()).collect();
             Some(FormDialog::new("6560", &t("dlg-md-swap-symbol"), name, vec![Field::choice_of("symbol", t("dlg-md-symbol").as_str(), &refs, names.iter().map(|n| json!(n)).collect(), 0)]).with_width(380.0))
         }
-        "edit.insert.newSymbol" | "edit.insert.newButton" => {
-            let (title, def) = if name == "edit.insert.newButton" { (t("dlg-md-new-button"), t("dlg-md-button-default-name")) } else { (t("dlg-md-new-symbol"), t("dlg-symbol-default-name")) };
-            Some(FormDialog::new("19104", &title, name, vec![Field::text("name", &t("dlg-lbl-name"), &def)]).with_width(380.0))
-        }
+        // Neues Symbol: im Original derselbe Dialog wie „In Symbol konvertieren“ (Name, Typ,
+        // 9-Slice); OK legt ein leeres Symbol an und öffnet seine Symbolbearbeitung (PM-5 D14)
+        "edit.insert.newSymbol" => Some(
+            FormDialog::new(
+                "19104",
+                t("dlg-title-convert-to-symbol").as_str(),
+                name,
+                vec![
+                    Field::text("name", t("dlg-lbl-name").as_str(), t("dlg-symbol-default-name").as_str()),
+                    Field::radio_of("kind", t("dlg-lbl-type").as_str(), &[t("dlg-symbol-graphic").as_str(), t("dlg-symbol-animation").as_str(), t("dlg-symbol-button").as_str()], vec![json!("graphic"), json!("animation"), json!("button")], 0),
+                    Field::check("nineSlice", t("dlg-lbl-enable-nineslice").as_str(), false),
+                ],
+            )
+            .with_base(json!({"edit": true}))
+            .with_width(420.0),
+        ),
+        "edit.insert.newButton" => Some(FormDialog::new("19104", &t("dlg-md-new-button"), name, vec![Field::text("name", &t("dlg-lbl-name"), &t("dlg-md-button-default-name"))]).with_width(380.0)),
         _ => return false,
     };
     if let Some(f) = form {

@@ -3436,7 +3436,7 @@ fn register_library_menu(r: &mut CommandRegistry) {
     );
 }
 
-fn set_nine_slice(sym: &mut fp_model::Symbol, on: bool) {
+pub(super) fn set_nine_slice(sym: &mut fp_model::Symbol, on: bool) {
     if !on {
         sym.nine_slice = None;
         return;

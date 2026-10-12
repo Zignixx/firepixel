@@ -176,6 +176,11 @@ impl fp_engine::ScriptHost for JsfHost {
         // läuft innerhalb von Session::execute (Befehle autoShape.*): Verlauf macht der Befehl
         autoshape::op(session, op)
     }
+
+    fn builtin_commands(&self) -> Vec<String> {
+        // nur die oberste Ebene: Unterordner sind Untermenüs und werden nie als gespeichert gelistet
+        builtin_commands::BUILTIN.iter().map(|(rel, _)| *rel).chain(builtin_commands::BUILTIN_EN.iter().copied()).filter(|rel| !rel.contains('/')).map(|rel| rel.trim_end_matches(".jsf").to_string()).collect()
+    }
 }
 
 /// Steckt die JSF-Laufzeit in eine Sitzung (falls noch keine eingesteckt ist).

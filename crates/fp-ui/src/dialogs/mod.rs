@@ -32,7 +32,7 @@ mod unsaved;
 
 pub use misc::Confirm;
 pub use new_document::NewDocumentDialog;
-pub use preferences::PreferencesDialog;
+pub use preferences::{general_group_titles, PreferencesDialog, CATEGORIES as PREFERENCE_CATEGORIES};
 pub use unsaved::{without_last_extension, PendingClose, UnsavedFlow};
 
 use crate::app_state::AppState;

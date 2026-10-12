@@ -13,6 +13,7 @@ use crate::theme::Theme;
 use egui::{pos2, vec2, Align2, Rect, Sense, Stroke, StrokeKind};
 use fp_engine::shortcuts::{Shortcut, ShortcutSet};
 use serde_json::json;
+use std::collections::BTreeSet;
 
 /// Zeile der Liste: Kennung (`cmd:<cmd_-Name>` bzw. `tool:<GUID>`), Anzeigetext, Kürzel.
 pub type Row = (String, String, Vec<Shortcut>);
@@ -38,6 +39,50 @@ pub struct ShortcutsDialog {
     /// Eingabe für Duplizieren/Umbenennen: (umbenennen?, Name).
     pub name_edit: Option<(bool, String)>,
     pub message: Option<String>,
+    /// Aufgeklappte Knoten des Menübaums (Pfad bis zum Knoten, Teile mit „ ▸ “ verbunden).
+    pub expanded: BTreeSet<String>,
+}
+
+/// Zeile des Menübaums (Original: Baum der Menüs mit ⊞/⊟, PM-5 D17).
+#[derive(Clone, Debug, PartialEq)]
+pub enum TreeLine {
+    /// Menü bzw. Untermenü: Tiefe, Beschriftung, Pfad (Schlüssel in `expanded`), aufgeklappt?
+    Folder { depth: usize, label: String, path: String, open: bool },
+    /// Befehl: Tiefe, Beschriftung, Index in den Zeilen.
+    Leaf { depth: usize, label: String, row: usize },
+}
+
+/// Menübaum aus den Zeilen der Menübefehle (Pfade „Menü ▸ Untermenü ▸ Befehl“, nach Menüs
+/// gruppiert). Nur Knoten unter aufgeklappten Menüs erscheinen.
+pub fn tree_lines(rows: &[Row], expanded: &BTreeSet<String>) -> Vec<TreeLine> {
+    let mut out = Vec::new();
+    let mut shown: Vec<String> = Vec::new();
+    for (i, (_, path, _)) in rows.iter().enumerate() {
+        let parts: Vec<&str> = path.split(" ▸ ").collect();
+        let n = parts.len();
+        // gemeinsame Knoten mit der vorigen Zeile nicht wiederholen
+        let common = shown.iter().zip(parts.iter()).take_while(|(a, b)| a.as_str() == **b).count().min(n - 1);
+        shown.truncate(common);
+        let mut visible = (0..common).all(|k| expanded.contains(&parts[..=k].join(" ▸ ")));
+        for k in common..n - 1 {
+            let p = parts[..=k].join(" ▸ ");
+            let open = expanded.contains(&p);
+            if visible {
+                out.push(TreeLine::Folder { depth: k, label: parts[k].to_string(), path: p, open });
+            }
+            visible &= open;
+            shown.push(parts[k].to_string());
+        }
+        if visible {
+            out.push(TreeLine::Leaf { depth: n - 1, label: parts[n - 1].to_string(), row: i });
+        }
+    }
+    out
+}
+
+/// Reihenfolge der Hauptmenüs (Datei, Bearbeiten, Ansicht …) in der aktuellen Sprache.
+fn menu_order() -> Vec<String> {
+    crate::menu::main_menu().iter().filter(|e| !e.sep).map(|e| crate::menu::clean_label(&e.local_text()).0).collect()
 }
 
 impl ShortcutsDialog {
@@ -48,7 +93,7 @@ impl ShortcutsDialog {
 
     fn for_set(st: &AppState, name: &str) -> ShortcutsDialog {
         let work = fp_engine::shortcuts::any_set(name).cloned().unwrap_or_else(|| st.session.shortcut_set().clone());
-        ShortcutsDialog { work, dirty: false, delete: Vec::new(), section: 0, filter: String::new(), selected: None, selected_key: None, pressed: None, capturing: false, name_edit: None, message: None }
+        ShortcutsDialog { work, dirty: false, delete: Vec::new(), section: 0, filter: String::new(), selected: None, selected_key: None, pressed: None, capturing: false, name_edit: None, message: None, expanded: BTreeSet::new() }
     }
 
     /// Ist die Arbeitskopie ein mitgelieferter Satz (schreibgeschützt)?
@@ -82,7 +127,10 @@ pub fn rows(st: &AppState, set: &ShortcutSet, section: usize, filter: &str) -> V
             }
             out.push((format!("cmd:{cmd}"), path, set.command(&cmd).to_vec()));
         }
-        out.sort_by(|a, b| a.1.cmp(&b.1));
+        // Hauptmenüs in Menüreihenfolge, darin alphabetisch (Untermenüs bleiben zusammen)
+        let order = menu_order();
+        let top = |p: &str| order.iter().position(|m| p.split(" ▸ ").next() == Some(m.as_str())).unwrap_or(usize::MAX);
+        out.sort_by(|a, b| top(&a.1).cmp(&top(&b.1)).then_with(|| a.1.cmp(&b.1)));
     } else {
         for t in fp_engine::tools::TOOLS {
             let label = crate::panels::common::tool_label(t.id);
@@ -126,6 +174,18 @@ fn conflict(st: &AppState, set: &ShortcutSet, sc: &Shortcut, except: &str, tool:
         .map(|c| if fp_i18n::current_language() == fp_i18n::SOURCE_LANG { c.info().menu_path.join(" ▸ ") } else { crate::menu::command_path(st, &c.info().name) })
         .unwrap_or_else(|| cmd.to_string());
     Some((format!("cmd:{cmd}"), label))
+}
+
+/// Beschreibung (Statuszeilentext) der gewählten Zeile: Menübefehl über den `cmd_`-Namen,
+/// Werkzeug über seine Beschriftung.
+pub fn selected_description(st: &AppState, id: Option<&str>) -> Option<String> {
+    match id?.split_once(':')? {
+        ("cmd", c) => {
+            let name = st.session.registry().by_fw_cmd(c)?.info().name.clone();
+            crate::menu::command_description(st, &name).filter(|s| !s.trim().is_empty())
+        }
+        _ => None,
+    }
 }
 
 /// Erfasst eine gedrückte Taste mit Modifikatoren.
@@ -259,32 +319,72 @@ pub fn show(ctx: &egui::Context, st: &mut AppState) {
             d.filter = t;
         }
         ui.painter().text(o + vec2(306.0 + ds, 40.0), Align2::LEFT_CENTER, search_l.as_str(), theme.small_font(), c.text_weak);
-        let list = Rect::from_min_max(o + vec2(0.0, 60.0), pos2(body.right() - 14.0, body.bottom() - 150.0));
+        let list = Rect::from_min_max(o + vec2(0.0, 60.0), pos2(body.right() - 14.0, body.bottom() - 174.0));
         ui.painter().rect_filled(list, 0.0, c.list_bg);
         ui.painter().rect_stroke(list, 0.0, Stroke::new(1.0, c.list_border), StrokeKind::Inside);
         let rws = rows(st, &d.work, d.section, &d.filter);
         let mut child = ui.new_child(egui::UiBuilder::new().max_rect(list.shrink(1.0)));
         egui::ScrollArea::vertical().auto_shrink([false, false]).show(&mut child, |ui| {
             ui.spacing_mut().item_spacing = vec2(0.0, 0.0);
-            for (id, path, keys) in &rws {
-                let sel = d.selected.as_deref() == Some(id.as_str());
+            // Menübefehle ohne Suche als Baum wie im Original, sonst (Suche, Werkzeuge) flach
+            let lines: Vec<TreeLine> = if d.section == 0 && d.filter.trim().is_empty() {
+                tree_lines(&rws, &d.expanded)
+            } else {
+                rws.iter().enumerate().map(|(i, r)| TreeLine::Leaf { depth: 0, label: r.1.clone(), row: i }).collect()
+            };
+            for line in &lines {
                 let (rr, resp) = ui.allocate_exact_size(vec2(ui.available_width(), 18.0), Sense::click());
-                if sel {
-                    ui.painter().rect_filled(rr, 0.0, c.list_selected_bg);
-                } else if resp.hovered() {
-                    ui.painter().rect_filled(rr, 0.0, c.list_hover_bg);
-                }
-                crate::widgets::text_clipped(ui.painter(), pos2(rr.left() + 6.0, rr.center().y), Align2::LEFT_CENTER, path, theme.ui_font(), c.text, rr.width() * 0.68);
-                let k: Vec<String> = keys.iter().map(crate::menu::shortcut_text).collect();
-                crate::widgets::text_clipped(ui.painter(), pos2(rr.left() + rr.width() * 0.7, rr.center().y), Align2::LEFT_CENTER, &k.join(", "), theme.ui_font(), c.text_weak, rr.width() * 0.3 - 6.0);
-                if resp.clicked() {
-                    d.selected = Some(id.clone());
-                    d.selected_key = (!keys.is_empty()).then_some(0);
+                match line {
+                    TreeLine::Folder { depth, label, path, open } => {
+                        let x = rr.left() + 6.0 + *depth as f32 * 16.0;
+                        if resp.hovered() {
+                            ui.painter().rect_filled(rr, 0.0, c.list_hover_bg);
+                        }
+                        // Kästchen ⊞/⊟
+                        let b = Rect::from_center_size(pos2(x + 4.5, rr.center().y), vec2(9.0, 9.0));
+                        let stroke = Stroke::new(1.0, c.text_weak);
+                        ui.painter().rect_stroke(b, 0.0, stroke, StrokeKind::Inside);
+                        ui.painter().hline((b.left() + 2.0)..=(b.right() - 2.0), b.center().y, stroke);
+                        if !open {
+                            ui.painter().vline(b.center().x, (b.top() + 2.0)..=(b.bottom() - 2.0), stroke);
+                        }
+                        ui.painter().text(pos2(x + 14.0, rr.center().y), Align2::LEFT_CENTER, label, theme.ui_font(), c.text);
+                        resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, true, label));
+                        if resp.clicked() && !d.expanded.remove(path) {
+                            d.expanded.insert(path.clone());
+                        }
+                    }
+                    TreeLine::Leaf { depth, label, row } => {
+                        let (id, _, keys) = &rws[*row];
+                        let sel = d.selected.as_deref() == Some(id.as_str());
+                        if sel {
+                            ui.painter().rect_filled(rr, 0.0, c.list_selected_bg);
+                        } else if resp.hovered() {
+                            ui.painter().rect_filled(rr, 0.0, c.list_hover_bg);
+                        }
+                        let x = rr.left() + 6.0 + *depth as f32 * 16.0 + if *depth > 0 { 14.0 } else { 0.0 };
+                        crate::widgets::text_clipped(ui.painter(), pos2(x, rr.center().y), Align2::LEFT_CENTER, label, theme.ui_font(), c.text, rr.left() + rr.width() * 0.68 - x);
+                        let k: Vec<String> = keys.iter().map(crate::menu::shortcut_text).collect();
+                        crate::widgets::text_clipped(ui.painter(), pos2(rr.left() + rr.width() * 0.7, rr.center().y), Align2::LEFT_CENTER, &k.join(", "), theme.ui_font(), c.text_weak, rr.width() * 0.3 - 6.0);
+                        resp.widget_info(|| egui::WidgetInfo::selected(egui::WidgetType::SelectableLabel, true, sel, label));
+                        if resp.clicked() {
+                            d.selected = Some(id.clone());
+                            d.selected_key = (!keys.is_empty()).then_some(0);
+                        }
+                    }
                 }
             }
         });
+        // Beschreibung des gewählten Befehls (Original: „Beschreibung:“ unter dem Baum)
+        let desc_l = t("dlg-sc-description");
+        let dy = list.bottom() + 6.0;
+        let dw = super::text_w(ui.ctx(), &desc_l) + 8.0;
+        ui.painter().text(pos2(o.x, dy + 10.0), Align2::LEFT_CENTER, &desc_l, theme.ui_font(), c.text);
+        if let Some(desc) = selected_description(st, d.selected.as_deref()) {
+            crate::widgets::text_clipped(ui.painter(), pos2(o.x + dw, dy + 10.0), Align2::LEFT_CENTER, &desc, theme.ui_font(), c.text, list.right() - o.x - dw);
+        }
         // Kürzel der Auswahl
-        let y = list.bottom() + 8.0;
+        let y = list.bottom() + 32.0;
         super::fit_label(ui, Rect::from_min_size(pos2(o.x, y), vec2(106.0 + dk, 20.0)), &keys_l, d.selected.is_some());
         let keys: Vec<Shortcut> = d.selected.as_deref().map(|id| keys_of(&d.work, id).to_vec()).unwrap_or_default();
         let kl = Rect::from_min_size(pos2(o.x + 110.0 + dk, y), vec2(220.0, 60.0));
