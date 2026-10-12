@@ -121,6 +121,14 @@ Wenn der letzte fertig ist, beginnt die **Pause**. In der Pause:
    - `PLAN.md` auf den Ist-Stand
    - `NUTZERBEFUNDE.md`, `NACHPRUEFUNG.md` aufgeräumt
    - `REA\UEBERGABE.md` mit dem Stand 12.10. abends
+   - **neu `docs\TESTLEITFADEN_2026-10-12.md`** (Nutzerwunsch): **alles, was seit 12.10. ≈ 04:00 geändert wurde**, nach Bereichen geordnet. Quelle sind `git log` seit 04:00, NUTZERBEFUNDE, BEFUNDE und PARITAET. Je Änderung:
+     - was neu bzw. anders ist
+     - **wie man hinkommt**: Menüpfad, Werkzeug, Kürzel, Bedienfeld
+     - **ein kurzer Handgriff zum Ausprobieren** mit dem erwarteten Ergebnis
+     - der Vergleich mit dem Original, wo das sinnvoll ist
+     - die Nr. aus NUTZERBEFUNDE (N…), falls es ein Bug des Nutzers war
+     - ganz oben die Punkte, die der Nutzer selbst gemeldet hat
+   - Eine Kopie davon kommt als `NEU.md` in den Ordner der Testversion.
 
 Danach geht es weiter, wenn der Nutzer „weiter“ sagt, mit EB-2, DLX-2, DLX-1, BV-3, DLG-4 und dann Welle B.
 
