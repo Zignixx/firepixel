@@ -61,11 +61,28 @@ pub fn temp_dir() -> PathBuf {
     d
 }
 
+/// Befehls- und Erweiterungsordner des Tests (einmal je Prozess): nie das echte Nutzerprofil
+/// (`%APPDATA%\Firepixel\Commands`) lesen, sondern die mitgelieferten Befehlsskripte
+/// (`fp_script::builtin_commands`, deutsche Namen wie die Oberfläche des Tests) in einem Testordner.
+pub fn test_profile() -> &'static Path {
+    static DIR: std::sync::OnceLock<PathBuf> = std::sync::OnceLock::new();
+    DIR.get_or_init(|| {
+        let d = std::env::temp_dir().join("firepixel-gesamttest").join(format!("{}-profile", std::process::id()));
+        let _ = std::fs::remove_dir_all(&d);
+        let (commands, extensions) = (d.join("Commands"), d.join("Extensions"));
+        let _ = std::fs::create_dir_all(&extensions);
+        let _ = fp_script::builtin_commands::install_into(&commands);
+        fp_engine::commands::misc::set_profile_dirs(commands, extensions);
+        d
+    })
+}
+
 /// Testdokument: 800 × 600, zwei Seiten, zwei Status, alle Objektarten, Zwischenablage gefüllt,
 /// Zoom 50 %, eine gespeicherte Testdatei in „zuletzt geöffnet“.
 pub fn fixture() -> (AppState, egui::Context, Fix) {
     // keine Fremdprogramme aus Tests (AGENTEN_REGELN §4a)
     fp_engine::shell::disable();
+    test_profile();
     let session = fp_ui::ui_commands::new_session(fp_engine::Preferences::new());
     let ctx = egui::Context::default();
     let mut st = AppState::new(session, UiSettings::default(), None);
@@ -232,14 +249,30 @@ pub fn candidates(f: &Fix) -> Vec<Candidate> {
         Candidate { label: "Masterseite", prep: vec![("pi.page.setMaster", json!({ "index": 0 })), ("page.setCurrent", json!({ "index": 1 }))], ids: vec![], pixels: false },
         Candidate { label: "importiertes Symbol", prep: vec![("panel.library.import", json!({ "path": f.file.to_string_lossy() }))], ids: vec![], pixels: false },
         Candidate { label: "zweites Dokument", prep: vec![("file.new", json!({ "width": 100, "height": 100 }))], ids: vec![], pixels: false },
+        // Situationen, in denen das Original weitere Einträge freigibt (FV-13, P-MENU1)
+        Candidate {
+            label: "gespeicherte Bitmap-Auswahl",
+            prep: vec![("select.pixels", json!({ "shape": "rect", "rect": [40, 40, 120, 120], "mode": "replace" })), ("select.saveBitmapSelection", json!({ "name": "Testauswahl" })), ("select.pixels", json!({ "shape": "none" }))],
+            ids: vec![],
+            pixels: false,
+        },
+        Candidate { label: "Hilfslinien", prep: vec![("view.guides.editGuides", json!({ "horizontal": [100.0], "vertical": [200.0] }))], ids: vec![], pixels: false },
+        Candidate { label: "zusammengesetzter Pfad", prep: vec![("select.set", json!({ "ids": [first(&f.path), first(&f.path2)] })), ("modify.combinePaths.join", json!({}))], ids: vec![], pixels: false },
+        Candidate { label: "zweiter Browser", prep: vec![("file.previewInBrowser.setSecondaryBrowser", json!({ "path": f.file.with_file_name("browser.exe").to_string_lossy() }))], ids: vec![], pixels: false },
+        Candidate { label: "abgeschalteter Warndialog", prep: vec![("edit.preferences", json!({ "key": "DisableNoticeCombinePaths", "value": true }))], ids: vec![], pixels: false },
     ]
+}
+
+/// Kandidaten, deren Vorbereitung die Auswahl selbst setzt (danach nicht überschreiben).
+fn keeps_selection(label: &str) -> bool {
+    matches!(label, "Text auf Pfad" | "zweites Dokument" | "zusammengesetzter Pfad")
 }
 
 pub fn apply_candidate(st: &mut AppState, cand: &Candidate) {
     for (n, p) in &cand.prep {
         let _ = st.session.execute(n, p.clone());
     }
-    if cand.label != "Text auf Pfad" && cand.label != "zweites Dokument" {
+    if !keeps_selection(cand.label) {
         select(st, &cand.ids);
     }
     if cand.pixels {

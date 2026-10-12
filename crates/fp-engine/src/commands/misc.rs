@@ -31,13 +31,31 @@ fn config_dir() -> PathBuf {
     crate::prefs::Preferences::default_path().and_then(|p| p.parent().map(Path::to_path_buf)).unwrap_or_else(|| std::env::temp_dir().join("Firepixel"))
 }
 
+/// Vom Prozess gesetzte Ordner (Tests): `std::env::set_var` ist in Edition 2024 `unsafe` und im
+/// Workspace verboten, deshalb dieser Schalter wie [`crate::shell::disable`].
+static DIR_OVERRIDES: std::sync::RwLock<(Option<PathBuf>, Option<PathBuf>)> = std::sync::RwLock::new((None, None));
+
+/// Legt für diesen Prozess den Befehls- und den Erweiterungsordner fest (Tests: nie das echte
+/// Nutzerprofil lesen oder beschreiben). Hat Vorrang vor `FP_COMMANDS_DIR`/`FP_EXTENSIONS_DIR`.
+pub fn set_profile_dirs(commands: PathBuf, extensions: PathBuf) {
+    if let Ok(mut g) = DIR_OVERRIDES.write() {
+        *g = (Some(commands), Some(extensions));
+    }
+}
+
 /// Ordner der gespeicherten Befehle.
 pub fn commands_dir() -> PathBuf {
+    if let Some(d) = DIR_OVERRIDES.read().ok().and_then(|g| g.0.clone()) {
+        return d;
+    }
     std::env::var_os("FP_COMMANDS_DIR").map(PathBuf::from).unwrap_or_else(|| config_dir().join("Commands"))
 }
 
 /// Ordner der Erweiterungen.
 pub fn extensions_dir() -> PathBuf {
+    if let Some(d) = DIR_OVERRIDES.read().ok().and_then(|g| g.1.clone()) {
+        return d;
+    }
     std::env::var_os("FP_EXTENSIONS_DIR").map(PathBuf::from).unwrap_or_else(|| config_dir().join("Extensions"))
 }
 

@@ -92,11 +92,11 @@ for (var i = sel.length - 1; i >= 0; i--) {\n\
     ),
     (
         "Dokument/Andere Ebenen ausblenden.jsf",
-        "var d = fw.getDocumentDOM();\nvar cur = d.currentLayerNum;\nfor (var i = 0; i < d.layers.length; i++) if (i != cur && d.layers[i].layerType != \"web\") d.setLayerVisible(i, -1, false);\n",
+        "var d = fw.getDocumentDOM();\nvar cur = d.currentLayerNum;\nfor (var i = 0; i < d.layers.length; i++) if (i != cur && d.layers[i].layerType != \"web\") d.setLayerVisible(i, -1, false, false);\n",
     ),
     (
         "Dokument/Andere Ebenen sperren.jsf",
-        "var d = fw.getDocumentDOM();\nvar cur = d.currentLayerNum;\nfor (var i = 0; i < d.layers.length; i++) if (i != cur && d.layers[i].layerType != \"web\") d.setLayerLocked(i, -1, true);\n",
+        "var d = fw.getDocumentDOM();\nvar cur = d.currentLayerNum;\nfor (var i = 0; i < d.layers.length; i++) if (i != cur && d.layers[i].layerType != \"web\") d.setLayerLocked(i, -1, true, false);\n",
     ),
     (
         "Dokument/Status umkehren.jsf",
@@ -232,11 +232,38 @@ pub const MARKER_FILE: &str = ".firepixel-commands";
 /// Alter deutscher Name der Markierungsdatei.
 pub const LEGACY_MARKER_FILE: &str = ".firepixel-befehle";
 
+/// Fehlerhafte Fassungen früherer Versionen (Index in [`BUILTIN`], alter Quelltext): `setLayerVisible`/
+/// `setLayerLocked` brauchen wie im Original vier Argumente, mit drei bricht das Skript ab (FV-13).
+const OUTDATED: &[(usize, &str)] = &[
+    (18, "var d = fw.getDocumentDOM();\nvar cur = d.currentLayerNum;\nfor (var i = 0; i < d.layers.length; i++) if (i != cur && d.layers[i].layerType != \"web\") d.setLayerVisible(i, -1, false);\n"),
+    (19, "var d = fw.getDocumentDOM();\nvar cur = d.currentLayerNum;\nfor (var i = 0; i < d.layers.length; i++) if (i != cur && d.layers[i].layerType != \"web\") d.setLayerLocked(i, -1, true);\n"),
+];
+
+/// Ersetzt mitgelieferte Befehle in `dir`, die noch wortgleich in einer fehlerhaften alten Fassung
+/// vorliegen (deutsche und englische Namen); vom Nutzer geänderte Dateien bleiben unberührt.
+/// Liefert die Zahl der ersetzten Dateien.
+pub fn update_outdated(dir: &Path) -> std::io::Result<usize> {
+    let mut n = 0;
+    for (i, old) in OUTDATED {
+        let Some((rel_de, src)) = BUILTIN.get(*i) else { continue };
+        for rel in [Some(*rel_de), BUILTIN_EN.get(*i).copied()].into_iter().flatten() {
+            let p: PathBuf = rel.split('/').fold(dir.to_path_buf(), |acc, part| acc.join(part));
+            if std::fs::read_to_string(&p).is_ok_and(|s| s == *old) {
+                std::fs::write(&p, src)?;
+                n += 1;
+            }
+        }
+    }
+    Ok(n)
+}
+
 /// Wie [`install_into`] für den Befehlsordner der Anwendung. Einmal je Ordner: eine Markierungsdatei
 /// verhindert, dass gelöschte Befehle beim nächsten Start wiederkommen. Die Namen folgen der
 /// aktuellen Sprache (`fp_i18n::current_language`) – deshalb erst nach der Sprachwahl aufrufen.
+/// Fehlerhafte alte Fassungen mitgelieferter Befehle werden bei jedem Start ersetzt ([`update_outdated`]).
 pub fn install_builtin_commands() -> std::io::Result<usize> {
     let dir = fp_engine::commands::misc::commands_dir();
+    let _ = update_outdated(&dir);
     // Markierung technisch englisch (AGENTEN_REGELN §1c); die alte `.firepixel-befehle` zählt weiter
     let marker = fp_i18n::paths::migrate_file(&dir.join(MARKER_FILE), &dir.join(LEGACY_MARKER_FILE));
     if marker.exists() {

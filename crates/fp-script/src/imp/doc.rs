@@ -363,6 +363,18 @@ pub(super) fn layer_id(doc: DocId, idx: i64) -> FwResult<Option<u64>> {
     })
 }
 
+/// IDs aller Ebenen der aktuellen Seite (eigene und freigegebene).
+fn all_layer_ids(doc: DocId) -> FwResult<Vec<u64>> {
+    let n = st(|s| Ok(s.session.document(doc).and_then(|d| d.doc.pages.get(d.page)).map(|p| p.root.layers.len()).unwrap_or(0)))?;
+    let mut v = Vec::new();
+    for i in 0..n {
+        if let Some(id) = layer_id(doc, i as i64)? {
+            v.push(id);
+        }
+    }
+    Ok(v)
+}
+
 /// Index der aktiven Ebene.
 pub(super) fn current_layer_index(doc: DocId) -> FwResult<i64> {
     st(|s| {
@@ -920,14 +932,17 @@ pub(super) fn method(doc: DocId, name: &str, args: &[Arg], ctx: &mut Context) ->
             exec(Some(doc), "layer.rename", json!({"layer": id, "name": arg_str(args, 1)}))?;
             u()
         }
-        "setLayerVisible" => {
-            let id = layer_id(doc, a(0).i64())?.ok_or_else(|| FwErr::bad("Ebene"))?;
-            exec(Some(doc), "layer.setVisible", json!({"layer": id, "visible": a(2).bool()}))?;
-            u()
-        }
-        "setLayerLocked" => {
-            let id = layer_id(doc, a(0).i64())?.ok_or_else(|| FwErr::bad("Ebene"))?;
-            exec(Some(doc), "layer.setLocked", json!({"layer": id, "locked": a(2).bool()}))?;
+        // (layerIndex, frameIndex, value, allLayers): mit allLayers = true jede Ebene der Seite,
+        // layerIndex wird dann wie im Original (re\03, fw_api) ignoriert
+        "setLayerVisible" | "setLayerLocked" => {
+            let ids = if a(3).bool() { all_layer_ids(doc)? } else { vec![layer_id(doc, a(0).i64())?.ok_or_else(|| FwErr::bad("Ebene"))?] };
+            for id in ids {
+                if name == "setLayerVisible" {
+                    exec(Some(doc), "layer.setVisible", json!({"layer": id, "visible": a(2).bool()}))?;
+                } else {
+                    exec(Some(doc), "layer.setLocked", json!({"layer": id, "locked": a(2).bool()}))?;
+                }
+            }
             u()
         }
         "setLayerSharing" => {
