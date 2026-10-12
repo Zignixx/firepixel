@@ -130,7 +130,7 @@ Die Reihenfolge gilt, solange nichts Dringenderes vom Nutzer kommt. Sobald ein P
 |---|---|
 | ☐ **P-PM4** | **Neue Messrunde PARITAET_B** in beiden Programmen: Hauptmenüs (311/5/5), alle 50 Dialoge Feld für Feld (Stand 04:30: 3/16/30; seitdem vieles behoben, aber nicht nachgemessen), Bedienfeldmenüs (1/3/4); neue Befunde in kleine Pakete aufteilen |
 | ☑ **P-PM4 Teil 1** | PM-5 (`360b0c7`): D01–D25 nachgemessen → 0 ✅ / 10 ⚠️ / 14 ❌ / 1 ⏳; 13 neue Befunde (IBD) |
-| ☐ **P-DLG1** | läuft (DLG-1), siehe §4 |
+| ☑ **P-DLG1** | Teil 1 (DLG-1, `fc7df14`, `173bca1`): Zahlenfelder nehmen wieder Eingaben an (Ursache: Fensterfokus in `buffered_edit`), Tab-Folge aller Dialoge (Titelleiste, Startfokus, Optionsgruppen); D19/D20/D01/Verlauf → DLG-1b |
 | ☐ **P-DLG2** | D18 Raster, D23 Textgröße (zeigt immer 12), D21, D22 (Felder ohne Haken nicht grau, Überlagerungsfarbe fehlt) |
 | ☐ **P-DLG3** | Dateidialoge D02–D06, D09: mittig über dem Fenster statt oben links, Startordner (nicht immer „Dokumente“), Titel, Filter, Zusatzfelder bei Öffnen/Speichern unter (zusammen mit P-HG1) |
 | ☐ **P-DLG4** | D14 Neues Symbol (OK öffnet die Symbolbearbeitung statt einer leeren Instanz bei 0,0), D25 gespeicherte Befehle (ohne eigene nur eine Meldung), D16, D17 |

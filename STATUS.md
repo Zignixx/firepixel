@@ -700,3 +700,28 @@ Dialog `crates\fp-ui\src\dialogs\trace.rs` mit der Logo-Nachbearbeitung von VT-3
   - `clipping_audit`: schneller Lauf und voller Lauf grün, auf HEAD inklusive der EB-3-Testprofile
   - `cargo clippy -p fp-ui --test clipping_audit` ohne Warnungen in eigenen Dateien
   - Gebaut im eigenen Worktree `..\fp-rand1`, `target-rand1`, beide wieder entfernt
+
+## Phase 7 – DLG-1 (P-DLG1 Teil 1: Zahlenfelder, Tab-Folge der Dialoge) – Stand 12.10.2026
+- **Zahlenfelder (hoch, `fc7df14`):** Die Ursache lag in `inspector\fields.rs::buffered_edit`. Am Ende des Felds stand `Response::has_focus()`, das in egui 0.36 zusätzlich den **Fensterfokus** (`input.focused`) verlangt.
+  - Ohne Systemfokus des Hauptfensters (RDP ohne Vordergrund, Brücken-Instanz „nicht aktiviert“ nach §4e, Alt+Tab) wurde der Tipp-Puffer nach jedem Bild verworfen. Jede Ziffer landete wieder auf dem Modellwert: B 500, „600“ → „6“, „5000“, „5000“.
+  - Das erklärt PM-5: Die ersten Öffnungen gingen, solange das Fenster noch Fokus hatte. „Neues Dokument“ hat eigene TextEdit-Puffer und war nicht betroffen.
+  - Jetzt zählt nur der Feldfokus (`Memory::has_focus`). Nachgestellt in einer eigenen Brücken-Instanz mit Debug-Protokoll je Bild; der neue Test schlägt auf dem Stand davor fehl.
+- **Tab-Folge (`173bca1`):**
+  - Titelleiste und Schließen-Kreuz sind keine Tab-Stopps mehr.
+  - Startfokus: erstes Eingabefeld bzw. erste Optionsgruppe, ohne beides nach drei Bildern der Standardknopf. Exportassistent, HTML-Einrichtung, Selektives JPEG und Rechtschreibung einrichten starten wie gemessen auf OK (`FormDialog::with_focus_ok`).
+  - Neu `dialogs::radio_group`: Eine Optionsgruppe ist ein Tab-Stopp, Pfeiltasten wählen mit Umlauf, mit Fokusrahmen. Eingesetzt in allen Formulardialogen, in „Neues Dokument“ und im Pop-up-Menü-Editor.
+  - „Neues Dokument“: … › OK › Abbrechen › Vorlagen…; das Farbfeld ist kein Stopp (`skip_tab_stop_before/after`).
+- **Geprüft (kittest, `crates\fp-ui\tests\dialogs_dlg1.rs`, 7 Tests):**
+  - Leinwand-/Bildgröße, Raster und Textgröße je 10× im Wechsel, OK/Abbrechen, mit und ohne Fensterfokus, Wirkung geprüft
+  - 47 Dialoge mit Eingabefeld je 10× geöffnet und getippt
+  - Titelleiste in 47 Dialogen nie Tab-Stopp; Startfokus; Optionsgruppe mit Pfeiltasten; Tab-Folge „Neues Dokument“
+  - alle `dialogs_*`-Tests grün, `cargo check --workspace --all-targets` grün (sauberer Worktree auf `fc7df14` plus eigene Dateien), `cargo test -p fp-i18n` grün
+- **Fremde rote Prüfungen** (nicht von DLG-1, im Worktree auf `fc7df14` gesehen): `fp-neutral` meldete `STATUS.md:595` und `docs\BEFUNDE.md:153/187`, auf dem aktuellen Stand samt DLG-1-Doku wieder grün; der i18n-Scanner meldet einen festen Text in `crates\fp-i18n\src\profile.rs:282` (EB-3).
+- **Nachprüfung** im echten Fenster bzw. über die Brücke (10× je Dialog ohne Fensterfokus, Tab-Folge): Zeilen in `docs\NACHPRUEFUNG.md` (§7a). Keine Paarbilder.
+- **Offen → DLG-1b** (Vorarbeit, nicht begonnen):
+  - D19 Bildgröße: Die Felder übernehmen erst beim Fokusverlust. Nötig ist ein „live“-Feld, das bei `resp.changed()` den Puffer meldet. Die Höhe ungerundet weiterführen: Das Original zeigt für 266,4 px die Druckhöhe 3.7. Druckgröße mit 3 Stellen und Punkt. Kette über `icons::Icon::LinkProportions`/Lock, ↔/↕ wie `tool_quads::MARQUEE_W_SYMBOL`.
+  - D20 Leinwandgröße: nach OK alle Objekte auswählen, B:/H: live, Anker mit Pfeilen als Gruppe nach dem Muster `radio_group`.
+  - D01: Zugriffstasten.
+  - Verlaufsschritte: `view.grid.editGrid`, `file.exportWizard` und `file.htmlSetup` liefern `CommandOutput::doc*` und damit einen Schritt. Für das Original ohne Schritt am einfachsten `Effect::View` mit `generation += 1`, das `all_commands` zulässt. Ein OK ohne Änderung in D18/D19 in der Oberfläche gar nicht erst ausführen.
+  - D16: Kategorieliste per Tab erreichbar machen.
+- **Aufgeräumt:** eigene Brücken-Instanz beendet, Worktree `..\fp-dlg1` und `target-dlg1` gelöscht.
