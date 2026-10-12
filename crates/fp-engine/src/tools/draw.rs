@@ -481,7 +481,8 @@ impl ToolMachine for PenTool {
                         None => {}
                     }
                 }
-                let snapped = Snapper::new(ctx, &[]).point(*pos);
+                // Stiftpunkte rasten nicht an Objektmitten (PARITAET_A L35)
+                let snapped = Snapper::new(ctx, &[]).without_centers().point(*pos);
                 let p = match self.nodes.last() {
                     Some(last) if ev.mods.shift => constrain_angle(last.0, *pos, 45.0),
                     _ => snapped.point,
@@ -512,7 +513,7 @@ impl ToolMachine for PenTool {
                     self.guides.clear();
                     self.cursor = if self.closing { Cursor::PenClose } else { Cursor::Pen };
                 } else {
-                    let sp = Snapper::new(ctx, &[]).point(*pos);
+                    let sp = Snapper::new(ctx, &[]).without_centers().point(*pos);
                     let h = match self.nodes.last() {
                         Some(last) if ev.mods.shift => constrain_angle(last.0, *pos, 45.0),
                         _ => sp.point,

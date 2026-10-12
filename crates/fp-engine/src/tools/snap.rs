@@ -21,6 +21,17 @@ enum Source {
     Smart(Rect),
 }
 
+/// Welche Stellen eines bewegten Rechtecks bzw. Ziels zusammenpassen.
+#[derive(Clone, Copy, Debug, PartialEq)]
+enum Kind {
+    /// Punkt: rastet an Kanten und Mitten.
+    Any,
+    /// Kante des bewegten Rechtecks: nur an Kanten anderer Objekte.
+    Edge,
+    /// Mitte des bewegten Rechtecks: nur an Mitten anderer Objekte.
+    Center,
+}
+
 #[derive(Clone, Copy, Debug)]
 struct Hit {
     /// Zielwert auf der Achse.
@@ -53,6 +64,8 @@ pub struct Snapper {
     targets: Vec<Rect>,
     page: Option<Rect>,
     smart: bool,
+    /// Punkte rasten auch an Objektmitten (Stift: nein, PARITAET_A L35).
+    centers: bool,
     show_smart: bool,
     pixels: bool,
 }
@@ -112,6 +125,7 @@ impl Snapper {
             targets,
             page: page_rect,
             smart,
+            centers: true,
             show_smart: v.show_smart_guides,
             pixels: ctx.prefs.get_bool("SnapToPixelGrid", true),
         }
@@ -120,6 +134,13 @@ impl Snapper {
     /// Ohne intelligente Hilfslinien (Pixelauswahl, Freihand).
     pub fn without_smart(mut self) -> Snapper {
         self.smart = false;
+        self
+    }
+
+    /// Punkte rasten nur an Kanten anderer Objekte, nicht an deren Mitten (Stift: im Original
+    /// rastet ein Stiftpunkt 5 px neben der Mitte einer Gruppe nicht ein, PARITAET_A L35).
+    pub fn without_centers(mut self) -> Snapper {
+        self.centers = false;
         self
     }
 
@@ -139,7 +160,7 @@ impl Snapper {
     }
 
     /// Beste Fanglinie für einen Wert einer Achse (`vertical` = x-Achse).
-    fn best(&self, val: f32, vertical: bool) -> Option<Hit> {
+    fn best(&self, val: f32, vertical: bool, kind: Kind) -> Option<Hit> {
         let mut best: Option<Hit> = None;
         let mut offer = |h: Hit| {
             // Fangabstand einschließlich: im Original rastet ein Abstand von genau 5 Bildschirmpixeln
@@ -159,9 +180,17 @@ impl Snapper {
         }
         if self.smart {
             for r in self.smart_rects() {
-                let vals = if vertical { [r.left, (r.left + r.right) / 2.0, r.right] } else { [r.top, (r.top + r.bottom) / 2.0, r.bottom] };
-                for v in vals {
-                    offer(Hit { value: v, dist: (val - v).abs(), rank: 2, source: Source::Smart(*r) });
+                let (a, b) = if vertical { (r.left, r.right) } else { (r.top, r.bottom) };
+                let vals = [(a, false), ((a + b) / 2.0, true), (b, false)];
+                for (v, center) in vals {
+                    let ok = match kind {
+                        Kind::Any => !center || self.centers,
+                        Kind::Edge => !center,
+                        Kind::Center => center,
+                    };
+                    if ok {
+                        offer(Hit { value: v, dist: (val - v).abs(), rank: 2, source: Source::Smart(*r) });
+                    }
                 }
             }
         }
@@ -170,8 +199,8 @@ impl Snapper {
 
     /// Rastet einen Punkt ein.
     pub fn point(&self, p: Point) -> Snapped {
-        let hx = self.best(p.x, true);
-        let hy = self.best(p.y, false);
+        let hx = self.best(p.x, true, Kind::Any);
+        let hy = self.best(p.y, false, Kind::Any);
         let mut q = p;
         if let Some(h) = hx {
             q.x = h.value;
@@ -195,14 +224,16 @@ impl Snapper {
         Snapped { point: q, guides, snapped_x: hx.is_some(), snapped_y: hy.is_some() }
     }
 
-    /// Rastet ein bewegtes Rechteck ein (Kanten und Mitte); liefert die Korrektur (dx, dy) und die
-    /// Rückmeldung für das korrigierte Rechteck.
+    /// Rastet ein bewegtes Rechteck ein; liefert die Korrektur (dx, dy) und die Rückmeldung für
+    /// das korrigierte Rechteck. An anderen Objekten rasten nur gleichartige Stellen: Kanten an
+    /// Kanten, Mitte an Mitten. Im Original rastet die Oberkante beim Verschieben nicht an der Mitte
+    /// einer Gruppe ein (Abstand 4 und 5), auch die Mitte nicht an deren Unterkante (PARITAET_A L4).
     pub fn rect(&self, r: Rect) -> (f32, f32, Vec<Overlay>) {
         let r = r.normalized();
         let pick = |vals: [f32; 3], vertical: bool| -> Option<(f32, Hit)> {
             let mut out: Option<(f32, Hit)> = None;
-            for s in vals {
-                if let Some(h) = self.best(s, vertical)
+            for (i, s) in vals.into_iter().enumerate() {
+                if let Some(h) = self.best(s, vertical, if i == 1 { Kind::Center } else { Kind::Edge })
                     && out.is_none_or(|(_, b)| h.dist < b.dist - 1e-6 || ((h.dist - b.dist).abs() <= 1e-6 && h.rank < b.rank))
                 {
                     out = Some((h.value - s, h));
@@ -223,15 +254,17 @@ impl Snapper {
             let (mcx, mcy) = ((m.left + m.right) / 2.0, (m.top + m.bottom) / 2.0);
             if let Some((_, Hit { source: Source::Smart(t), .. })) = sx {
                 // alle übereinstimmenden x-Werte zeigen (Kante und Mitte können gleichzeitig passen)
-                for v in [m.left, mcx, m.right] {
-                    if [t.left, (t.left + t.right) / 2.0, t.right].iter().any(|w| (w - v).abs() < 0.01) {
+                for (v, c) in [(m.left, false), (mcx, true), (m.right, false)] {
+                    let w: &[f32] = if c { &[(t.left + t.right) / 2.0] } else { &[t.left, t.right] };
+                    if w.iter().any(|w| (w - v).abs() < 0.01) {
                         guides.push(Overlay::SmartGuide { from: Point::new(v, m.top.min(t.top)), to: Point::new(v, m.bottom.max(t.bottom)) });
                     }
                 }
             }
             if let Some((_, Hit { source: Source::Smart(t), .. })) = sy {
-                for v in [m.top, mcy, m.bottom] {
-                    if [t.top, (t.top + t.bottom) / 2.0, t.bottom].iter().any(|w| (w - v).abs() < 0.01) {
+                for (v, c) in [(m.top, false), (mcy, true), (m.bottom, false)] {
+                    let w: &[f32] = if c { &[(t.top + t.bottom) / 2.0] } else { &[t.top, t.bottom] };
+                    if w.iter().any(|w| (w - v).abs() < 0.01) {
                         guides.push(Overlay::SmartGuide { from: Point::new(m.left.min(t.left), v), to: Point::new(m.right.max(t.right), v) });
                     }
                 }
@@ -302,6 +335,7 @@ mod tests {
             targets,
             page: Some(Rect::new(0.0, 0.0, 300.0, 200.0)),
             smart: true,
+            centers: true,
             show_smart: true,
             pixels: true,
         }

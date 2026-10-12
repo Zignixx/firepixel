@@ -558,7 +558,15 @@ pub(super) fn register(r: &mut CommandRegistry) {
                     let ElementKind::Bitmap(b) = &e.kind else { return Err(sel_err("err-sel-no-bitmap")) };
                     let img = docops::bitmap_image(b).ok_or_else(|| EngineError::Failed(fp_i18n::t("err-bitmap-unreadable-short")))?;
                     let m = flood_region(&img, pt.x.floor() as i32, pt.y.floor() as i32, tol).ok_or_else(|| sel_err("err-sel-point-outside-bitmap"))?;
+                    let id = e.id;
                     set_pixels(d, Some(m), md, fe);
+                    // wie im Original („Bitmap bearbeiten“ + „Zauberstab“): die Bitmap ist danach
+                    // das gewählte Objekt und bleibt es nach Esc (PARITAET_A L13, fw.selection = [B])
+                    if d.selection.elements != [id] {
+                        d.selection.elements = vec![id];
+                        d.selection.points.clear();
+                    }
+                    d.bitmap_mode = true;
                     Ok(CommandOutput::doc())
                 })
             }),

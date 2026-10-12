@@ -14,6 +14,10 @@ pub const MAX_ZOOM: f64 = 64.0;
 /// Rand je Seite (Bildschirmpixel) bei „Alles anpassen“/„Auswahl anpassen“ (gemessen im Original).
 pub const FIT_MARGIN: f64 = 15.0;
 
+/// Abzug vom Sichtbereich (Bildschirmpixel, je Richtung insgesamt) beim Zoomwerkzeug-Rahmen
+/// (gemessen im Original, PARITAET_A L25: 1462 × 822 → 1445 × 805).
+pub const ZOOM_RECT_INSET: f64 = 17.0;
+
 /// Nächste größere Zoomstufe (B `@005e4e80`): exakter Treffer → Nachbar (geklemmt), sonst die obere
 /// Grenze des umschließenden Intervalls.
 pub fn zoom_step_in(z: f64) -> f64 {
@@ -157,6 +161,22 @@ impl ViewState {
         let (vw, vh) = (self.viewport.0.max(1.0), self.viewport.1.max(1.0));
         let m = 2.0 * FIT_MARGIN;
         let fit = ((vw - m).max(1.0) / r.width() as f64).min((vh - m).max(1.0) / r.height() as f64);
+        let z = fit.clamp(MIN_ZOOM, MAX_ZOOM);
+        self.zoom = z;
+        let c = (((r.left + r.right) / 2.0) as f64, ((r.top + r.bottom) / 2.0) as f64);
+        self.origin = (c.0 - vw / 2.0 / z, c.1 - vh / 2.0 / z);
+    }
+
+    /// Zoomwerkzeug-Rahmen wie im Original: stufenlos so, dass das Rechteck in den Sichtbereich
+    /// abzüglich [`ZOOM_RECT_INSET`] je Richtung passt, begrenzt auf 6,25 %–6400 %, dann zentriert.
+    /// Gemessen (PARITAET_A L25, Sichtbereich 1462 × 822): 100 × 70 → 1150 %, 200 × 70 → 722,5 %,
+    /// 100 × 20 → 1445 %, also Einpassen in 1445 × 805.
+    pub fn fit_zoom_rect(&mut self, r: Rect) {
+        if r.is_empty() || !r.left.is_finite() {
+            return;
+        }
+        let (vw, vh) = (self.viewport.0.max(1.0), self.viewport.1.max(1.0));
+        let fit = ((vw - ZOOM_RECT_INSET).max(1.0) / r.width() as f64).min((vh - ZOOM_RECT_INSET).max(1.0) / r.height() as f64);
         let z = fit.clamp(MIN_ZOOM, MAX_ZOOM);
         self.zoom = z;
         let c = (((r.left + r.right) / 2.0) as f64, ((r.top + r.bottom) / 2.0) as f64);

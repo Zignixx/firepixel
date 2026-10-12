@@ -617,9 +617,10 @@ impl PointerTool {
         let n = cs.get_mut(hit.contour)?.nodes.get_mut(hit.node)?;
         match (hit.part, pull) {
             (Part::Anchor, true) => {
-                // Alt-Ziehen am Anker zieht symmetrische Henkel heraus
+                // Alt-Ziehen am Anker zieht wie im Original nur den Ausgangshenkel heraus; der
+                // Eingangshenkel bleibt, wo er war (PARITAET_A L33: Eckpunkt 320,140 → 350,140 ergibt
+                // pred 320,140 | succ 350,140, nicht symmetrisch)
                 n.succ = Point::new(n.anchor.x + dx, n.anchor.y + dy);
-                n.pred = Point::new(n.anchor.x - dx, n.anchor.y - dy);
                 n.curve = true;
             }
             (Part::Anchor, false) => {

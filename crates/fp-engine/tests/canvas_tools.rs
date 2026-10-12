@@ -223,11 +223,11 @@ fn subselection_points_toggle_and_handles() {
     let c = &path_of(&s, p).contours[0];
     assert_eq!((c.nodes[0].anchor.x, c.nodes[1].anchor.x, c.nodes[2].anchor.x), (9.0, 60.0, 59.0));
     undo_redo(&mut s, &before);
-    // Alt-Ziehen am Anker zieht Henkel heraus
+    // Alt-Ziehen am Anker zieht wie im Original nur den Ausgangshenkel heraus (PARITAET_A L33)
     events(&mut s, &[ToolEvent::down(60.0, 10.0), ToolEvent::up(60.0, 10.0)]);
     events(&mut s, &[ToolEvent::down(60.0, 10.0).alt(), ToolEvent::drag(65.0, 10.0).alt(), ToolEvent::drag(80.0, 10.0).alt(), ToolEvent::up(80.0, 10.0).alt()]);
     let n = &path_of(&s, p).contours[0].nodes[1];
-    assert_eq!((n.succ.x, n.pred.x), (80.0, 40.0));
+    assert_eq!((n.succ.x, n.pred.x), (80.0, 60.0));
     // Entf löscht unterausgewählte Punkte
     events(&mut s, &[ToolEvent::key(ToolKey::Delete)]);
     assert_eq!(path_of(&s, p).contours[0].nodes.len(), 2);

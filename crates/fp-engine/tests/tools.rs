@@ -341,8 +341,8 @@ fn web_and_view_tools() {
     assert_eq!(s.active().map(|d| d.view.zoom), Some(1.0));
     ex(&mut s, "view.setViewport", json!({"width": 400, "height": 400}));
     drag(&mut s, (0.0, 0.0), (100.0, 100.0));
-    // stufenlos eingepasst mit 15 px Rand wie „Auswahl anpassen“ (UX-A L25): (400 − 30) / 100
-    assert_eq!(s.active().map(|d| d.view.zoom), Some(3.7));
+    // stufenlos eingepasst in den Sichtbereich minus 17 px wie im Original (PARITAET_A L25): (400 − 17) / 100
+    assert_eq!(s.active().map(|d| d.view.zoom), Some(3.83));
     tool(&mut s, ToolId::Hand);
     let o = s.active().map(|d| d.view.origin).unwrap_or_default();
     // nach dem Verschieben liegt der Zeiger (Dokumentkoordinaten) wieder auf dem Griffpunkt

@@ -823,18 +823,9 @@ fn hit_depth(doc: &Document, e: &Element, p: Point, geo: &dyn GeometryOps, opt: 
             Some(r) => hit_depth(doc, r, p, geo, opt, depth + 1),
             None => c.operands.iter().any(|o| hit_depth(doc, o, p, geo, opt, depth + 1)),
         },
-        ElementKind::Bitmap(b) => {
-            let Some(r) = element_bounds(doc, e) else { return false };
-            if !r.contains(p) {
-                return false;
-            }
-            let pos = b.image.position();
-            let (x, y) = ((p.x - pos.x).floor(), (p.y - pos.y).floor());
-            if x < 0.0 || y < 0.0 {
-                return false;
-            }
-            b.image.pixel(x as u32, y as u32).map(|c| c.a > 0).unwrap_or(true)
-        }
+        // Bitmaps treffen wie im Original in ihrem ganzen Rahmen, auch auf durchsichtigen Pixeln
+        // (FV-11/FV-14: Klick in ein radiertes Loch bzw. die Ecke einer Ellipsen-Bitmap wählt sie)
+        ElementKind::Bitmap(_) => element_bounds(doc, e).is_some_and(|r| r.contains(p)),
         _ => element_bounds(doc, e).is_some_and(|r| r.inflate(opt.tolerance as f32, opt.tolerance as f32).contains(p)),
     }
 }

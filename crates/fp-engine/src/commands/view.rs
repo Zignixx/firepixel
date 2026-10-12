@@ -95,8 +95,9 @@ pub(super) fn register(r: &mut CommandRegistry) {
     );
     r.add(cmd("view.zoomToRect").label("Auf Bereich zoomen").requires(DOC).param("rect", ParamKind::Rect, "Bereich").run(|s, p| {
         let rr = p.rect("rect")?;
-        // stufenlos einpassen wie im Original (UX-A L25: Rahmen 100 × 70 → 1150 %, keine Tabellenstufe)
-        view_cmd(s, |v| v.fit_rect_exact(rr))
+        // stufenlos einpassen wie im Original (UX-A L25: Rahmen 100 × 70 → 1150 %, keine
+        // Tabellenstufe), mit dem Rand des Zoomrahmens (17 px), nicht dem von „Einpassen“
+        view_cmd(s, |v| v.fit_zoom_rect(rr))
     }));
     r.add(
         cmd("view.pan")
