@@ -263,6 +263,7 @@ fn plain_form(st: &AppState, cmd: &str) -> Option<FormDialog> {
                 vec![Field::color("color", t("dlg-lbl-color").as_str(), &hex_of(col)), Field::number("width", t("dlg-lbl-grid-h").as_str(), gw, 1.0, 10000.0).unit("dlg-unit-pixels"), Field::number("height", t("dlg-lbl-grid-v").as_str(), gh, 1.0, 10000.0).unit("dlg-unit-pixels")],
             )
             .with_layout(GRID_LAYOUT)
+            .with_skip_unchanged()
         }
         "view.guides.editGuides" => {
             let g = d.and_then(|d| d.doc.pages.get(d.page)).and_then(|p| p.root.guides.clone());

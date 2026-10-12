@@ -289,6 +289,9 @@ pub struct FormDialog {
     pub store_hook: Option<fn(&FormDialog, &mut fp_engine::Preferences)>,
     /// Startfokus auf OK statt auf das erste Feld (wie im Original gemessen, PM-5).
     pub focus_ok: bool,
+    /// Parameter beim Öffnen: OK mit denselben Werten führt keinen Befehl aus (Original: Raster
+    /// bearbeiten ohne Änderung, PM-5 D18), siehe [`FormDialog::with_skip_unchanged`].
+    pub initial: Option<Value>,
     /// Eigene Anordnung nach der Vorlage des Originals statt der Standardzeilen.
     pub custom: Option<CustomLayout>,
 }
@@ -311,12 +314,18 @@ pub const PREVIEW_FIELD: &str = "_preview";
 impl FormDialog {
     /// Neuer Dialog.
     pub fn new(id: &str, title: &str, command: &str, fields: Vec<Field>) -> FormDialog {
-        FormDialog { id: id.into(), title: title.into(), fields, command: command.into(), base: json!({}), preview: false, preview_on: false, applied: None, applied_params: None, applied_doc: None, stale: None, width: 340.0, transform: None, prefs: Vec::new(), store_hook: None, focus_ok: false, custom: None }
+        FormDialog { id: id.into(), title: title.into(), fields, command: command.into(), base: json!({}), preview: false, preview_on: false, applied: None, applied_params: None, applied_doc: None, stale: None, width: 340.0, transform: None, prefs: Vec::new(), store_hook: None, focus_ok: false, initial: None, custom: None }
     }
     /// Startfokus auf OK (Original: Exportassistent, HTML-Einrichtung, Selektives JPEG,
     /// Rechtschreibung einrichten).
     pub fn with_focus_ok(mut self) -> FormDialog {
         self.focus_ok = true;
+        self
+    }
+    /// OK ohne Änderung führt keinen Befehl aus (Werte beim Aufruf dieser Funktion gelten als
+    /// Ausgangsstand; nach den Feldern und Voreinstellungen aufrufen).
+    pub fn with_skip_unchanged(mut self) -> FormDialog {
+        self.initial = Some(self.params());
         self
     }
     /// Eigene Anordnung (siehe [`CustomLayout`]).
@@ -913,6 +922,8 @@ pub fn show_form(ctx: &egui::Context, st: &mut AppState, d: &mut FormDialog) -> 
                 let (cmd, p) = d.invocation();
                 if d.stale.as_ref() == Some(&d.params()) {
                     // die stehengebliebene Vorschau ist bereits das Ergebnis
+                } else if d.initial.as_ref() == Some(&d.params()) {
+                    // nichts geändert: wie im Original kein Befehl, kein Verlaufsschritt
                 } else if cmd.is_empty() {
                     // reiner Hinweisdialog
                 } else if p.as_object().is_some_and(|o| o.is_empty()) {

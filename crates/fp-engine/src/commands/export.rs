@@ -646,8 +646,17 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 }
                 let value = json!({"settings": settings_json(&st), "reason": fp_i18n::t(reason), "reasonKey": reason, "colors": colors, "bytes": bytes.len()});
                 if p.bool_or("apply", true)? {
-                    with_doc(s, |d| store_page_settings(d.doc_mut(), page, &st))?;
-                    return Ok(CommandOutput::doc_with(value).labeled(fp_i18n::t("msg-step-export-wizard")));
+                    // Original: kein Verlaufsschritt „Exportassistent“ (PM-5 D11)
+                    let changed = with_doc(s, |d| {
+                        let before = Arc::clone(&d.doc);
+                        store_page_settings(d.doc_mut(), page, &st)?;
+                        let changed = d.doc.pages.get(page).map(|p| &p.root.export) != before.pages.get(page).map(|p| &p.root.export);
+                        if !changed {
+                            d.doc = before;
+                        }
+                        Ok(changed)
+                    })?;
+                    return Ok(super::view::doc_without_step(s, changed, value));
                 }
                 Ok(CommandOutput::value(value))
             }),
@@ -695,13 +704,17 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 let mut new: fp_model::HtmlSettings = serde_json::from_value(v).map_err(|e| bad("file.htmlSetup", e.to_string()))?;
                 new.not_yet_set = Some(false);
                 let out = serde_json::to_value(&new).unwrap_or(Value::Null);
-                with_doc(s, |d| {
-                    let pg = d.doc_mut().page_mut(page).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-page")))?;
-                    let e = pg.root.export.get_or_insert_with(|| Box::new(ExportSettings::default()));
-                    e.html = Some(Box::new(new));
-                    Ok(())
-                })?;
-                Ok(CommandOutput::doc_with(out).labeled(fp_i18n::t("msg-step-html-setup")))
+                // Original: kein Verlaufsschritt „HTML-Einrichtung“ (PM-5 D13); unverändert = keine Änderung
+                let same = d.doc.pages[page].root.export.as_ref().and_then(|e| e.html.as_deref()) == Some(&new);
+                if !same {
+                    with_doc(s, |d| {
+                        let pg = d.doc_mut().page_mut(page).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-page")))?;
+                        let e = pg.root.export.get_or_insert_with(|| Box::new(ExportSettings::default()));
+                        e.html = Some(Box::new(new));
+                        Ok(())
+                    })?;
+                }
+                Ok(super::view::doc_without_step(s, !same, out))
             }),
     );
     r.add(cmd("edit.copyHtmlCode").requires(DOC).opt_default("style", ParamKind::Enum { values: vec!["htmlAndImages".into(), "cssAndImages".into()] }, json!("htmlAndImages"), "HTML-Art").run(|s, p| {

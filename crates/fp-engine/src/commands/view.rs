@@ -10,6 +10,18 @@ use crate::view::ViewState;
 use fp_model::{Grid, Guides};
 use std::sync::Arc;
 
+/// Dokument geändert, aber wie im Original **ohne Verlaufsschritt** (Raster bearbeiten,
+/// Exportassistent, HTML-Einrichtung; PM-5 D18/D11/D13): neue Generation (Neuzeichnen, „geändert“)
+/// und Wirkung `View` statt `Document`.
+pub(super) fn doc_without_step(s: &mut Session, changed: bool, value: serde_json::Value) -> CommandOutput {
+    if changed && let Ok(d) = s.doc_mut() {
+        d.generation += 1;
+        let (doc, generation) = (d.id, d.generation);
+        s.emit(crate::session::SessionEvent::DocumentChanged { doc, generation });
+    }
+    CommandOutput { value, ..CommandOutput::view() }
+}
+
 fn view_cmd(s: &mut Session, f: impl FnOnce(&mut ViewState)) -> Result<CommandOutput> {
     let d = s.doc_mut()?;
     f(&mut d.view);
@@ -194,7 +206,9 @@ pub(super) fn register(r: &mut CommandRegistry) {
             .run(|s, p| {
                 let (w, h, c, o) = (p.opt_f64("width")?, p.opt_f64("height")?, p.opt_color("color")?, p.opt_point("origin")?);
                 let (show, snap) = (p.opt_bool("show")?, p.opt_bool("snap")?);
-                with_doc(s, |d| {
+                // Original: Raster bearbeiten legt keinen Verlaufsschritt an (PM-5 D18, Strg+Z ändert
+                // das Raster nicht); unveränderte Werte ändern das Dokument gar nicht
+                let changed = with_doc(s, |d| {
                     if let Some(v) = show {
                         d.view.show_grid = v;
                     }
@@ -203,8 +217,8 @@ pub(super) fn register(r: &mut CommandRegistry) {
                     }
                     if w.is_some() || h.is_some() || c.is_some() || o.is_some() {
                         let page = d.page;
-                        let pg = Arc::make_mut(&mut d.doc).page_mut(page).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-page")))?;
-                        let g = pg.root.grid.get_or_insert_with(Grid::default);
+                        let cur = d.doc.pages.get(page).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-page")))?.root.grid.clone();
+                        let mut g: Grid = cur.clone().unwrap_or_default();
                         if let Some(w) = w {
                             g.size.x = w as f32;
                         }
@@ -217,9 +231,15 @@ pub(super) fn register(r: &mut CommandRegistry) {
                         if let Some(o) = o {
                             g.origin = o;
                         }
+                        if cur.as_ref() != Some(&g) {
+                            let pg = Arc::make_mut(&mut d.doc).page_mut(page).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-page")))?;
+                            pg.root.grid = Some(g);
+                            return Ok(true);
+                        }
                     }
-                    Ok(CommandOutput::doc())
-                })
+                    Ok(false)
+                })?;
+                Ok(doc_without_step(s, changed, serde_json::Value::Null))
             }),
     );
     r.add(
