@@ -192,12 +192,35 @@ fn item(label: &str, action: ItemAction, enabled: bool, checked: Option<bool>) -
 
 /// Zustand eines Befehls für das Menü: (aktiv, Häkchen, Kürzel).
 pub(crate) fn command_state(st: &AppState, name: &str, fallback_sc: Option<String>) -> (bool, Option<bool>, Option<String>) {
-    let sc = st.session.command_shortcuts(name).first().map(shortcut_text).or(fallback_sc);
+    let sc = menu_shortcut(st, name).map(|s| shortcut_text(&s)).or(fallback_sc);
     if let Some((en, ck)) = crate::actions::ui_command_state(st, name) {
         return (en, ck, sc);
     }
     let (en, ck) = st.session.command_state(name);
     (en, ck, sc)
+}
+
+/// Kürzel, das ein Menüeintrag zeigt: das erste des Satzes, aber wie im Original Entf vor der
+/// Rücktaste (z. B. „Löschen“ mit Entf und Rück → Entf).
+pub fn menu_shortcut(st: &AppState, name: &str) -> Option<fp_engine::shortcuts::Shortcut> {
+    const VK_BACK: u16 = 8;
+    let all = st.session.command_shortcuts(name);
+    all.iter().find(|s| s.vk != VK_BACK).or(all.first()).copied()
+}
+
+/// „Rückgängig“/„Wiederholen“ mit dem Namen des Verlaufsschritts wie im Original
+/// („Rückgängig: Auswahl aufheben“).
+fn with_step_name(st: &AppState, name: &str, label: String) -> String {
+    let doc = st.session.active();
+    let step = match name {
+        "edit.undo" => doc.and_then(|d| d.history.undo_label()),
+        "edit.redo" => doc.and_then(|d| d.history.redo_label()),
+        _ => None,
+    };
+    match step {
+        Some(s) if !s.is_empty() => fp_i18n::tr!("menu-edit-withStep", label = label, step = s),
+        _ => label,
+    }
 }
 
 /// Schlüssel der Untermenüs, die zur Laufzeit gefüllt werden.
@@ -234,6 +257,7 @@ fn convert(st: &AppState, entries: &[MenuEntry]) -> Vec<Node> {
         match name {
             Some(n) => {
                 let (enabled, checked, shortcut) = command_state(st, &n, sc);
+                let label = with_step_name(st, &n, label);
                 out.push(Node::Item { label, shortcut, action: ItemAction::Command(n), enabled, checked });
             }
             None => out.push(Node::Item { label, shortcut: sc, action: ItemAction::None, enabled: false, checked: None }),
@@ -242,19 +266,59 @@ fn convert(st: &AppState, entries: &[MenuEntry]) -> Vec<Node> {
     out
 }
 
-/// Text ▸ Schrift: Systemschriften (fp-text, im Hintergrund indiziert), bei vielen Familien nach
-/// Anfangsbuchstaben in Untermenüs; Klick setzt `text.font` für die ausgewählten Texte.
+/// Zuletzt benutzte Schriften (Voreinstellung `RecentFontList`, Form „(A)(B)…“).
+fn recent_fonts(st: &AppState) -> Vec<String> {
+    if !st.session.prefs.get_bool("ShowRecentFonts", true) {
+        return Vec::new();
+    }
+    let limit = st.session.prefs.get_int("RecentFontLimit", 5).clamp(0, 50) as usize;
+    let list = st.session.prefs.get_str("RecentFontList", "");
+    list.split(')').filter_map(|p| p.trim().strip_prefix('(')).filter(|s| !s.is_empty()).map(str::to_string).take(limit).collect()
+}
+
+/// Merkt eine im Menü gewählte Schrift als zuletzt benutzt (vorn in `RecentFontList`).
+pub fn note_font_choice(st: &mut AppState, a: &Action) {
+    let Action::Run(name, p) = a else { return };
+    if name != "text.font" {
+        return;
+    }
+    let Some(ps) = p.get("font").and_then(|v| v.as_str()) else { return };
+    let fams = crate::inspector::fonts::families();
+    let Some(fam) = fams.iter().find(|f| f.styles.iter().any(|s| s.1 == ps) || f.name == ps).map(|f| f.name.clone()) else { return };
+    let mut list = recent_fonts(st);
+    list.retain(|n| *n != fam);
+    list.insert(0, fam);
+    list.truncate(st.session.prefs.get_int("RecentFontLimit", 5).clamp(1, 50) as usize);
+    let s: String = list.iter().map(|n| format!("({n})")).collect();
+    st.session.prefs.set("RecentFontList", fp_engine::prefs::PrefValue::Str(s));
+}
+
+/// Text ▸ Schrift: oben die zuletzt benutzten Schriften (wie im Original), dann die
+/// Systemschriften (fp-text, im Hintergrund indiziert) – bei vielen Familien nach Anfangsbuchstaben
+/// in Untermenüs, damit das Menü auf den Bildschirm passt. Familien mit mehreren Schnitten zeigen
+/// die Schnitte als Untermenü. Klick setzt `text.font` für die ausgewählten Texte.
 fn font_menu(st: &AppState) -> Vec<Node> {
     let enabled = st.session.is_available("text.font");
     let fams = crate::inspector::fonts::families();
+    let pick = |ps: &str| ItemAction::Ui(Action::Run("text.font".into(), json!({ "font": ps })));
     let entry = |f: &crate::inspector::fonts::Family| {
+        if f.styles.len() > 1 {
+            let children = f.styles.iter().map(|(style, ps)| item(style, pick(ps), enabled, None)).collect();
+            return Node::Sub { label: f.name.clone(), children, enabled };
+        }
         let ps = f.styles.first().map(|s| s.1.clone()).unwrap_or_else(|| f.name.clone());
-        item(&f.name, ItemAction::Ui(Action::Run("text.font".into(), json!({ "font": ps }))), enabled, None)
+        item(&f.name, pick(&ps), enabled, None)
     };
-    if fams.len() <= 40 {
-        return fams.iter().map(entry).collect();
-    }
     let mut out: Vec<Node> = Vec::new();
+    let recent: Vec<Node> = recent_fonts(st).iter().filter_map(|n| fams.iter().find(|f| f.name.eq_ignore_ascii_case(n))).map(entry).collect();
+    if !recent.is_empty() {
+        out.extend(recent);
+        out.push(Node::Separator);
+    }
+    if fams.len() <= 40 {
+        out.extend(fams.iter().map(entry));
+        return out;
+    }
     let mut cur: Option<(String, Vec<Node>)> = None;
     for f in fams.iter() {
         let first = f.name.chars().next().map(|c| c.to_uppercase().to_string()).unwrap_or_default();
@@ -383,7 +447,8 @@ fn command_tail() -> Vec<Node> {
 
 fn panel_item(st: &AppState, p: PanelId) -> Node {
     // Titel kommt aus `bedienfelder.ftl` (PanelId::title)
-    let checked = st.settings.workspace.is_visible(p);
+    // wie im Original: Häkchen nur, wenn das Bedienfeld vorn in seiner sichtbaren Gruppe liegt
+    let checked = st.settings.workspace.is_visible(p) && st.settings.workspace.is_front(p);
     item(p.title(), ItemAction::Ui(Action::TogglePanel(p)), true, Some(checked))
 }
 
@@ -659,6 +724,7 @@ pub fn show_menu_bar(ui: &mut Ui, st: &mut AppState) {
             .show(|ui| show_nodes(ui, nodes, &mut out));
     }
     for a in out {
+        note_font_choice(st, &a);
         st.push(a);
     }
     crate::menu_kbd::show(ui.ctx(), st, &all_menus, &anchors);

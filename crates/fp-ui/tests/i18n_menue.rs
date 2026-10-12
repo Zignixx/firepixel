@@ -392,6 +392,37 @@ fn duplicate_german_access_key_cycles_instead_of_running() {
     assert_ne!(a.path, b.path, "zweites L springt zum nächsten Eintrag");
 }
 
+/// Befund UX-B (Parität): „Rückgängig: <Schritt>“, Löschen zeigt Entf, Alt+B ▸ R bleibt bedienbar.
+#[test]
+fn undo_shows_step_name_and_delete_key() {
+    let _g = lock();
+    let mut app = make_app(true);
+    let _ = app.state.session.execute("draw.rectangle", serde_json::json!({ "rect": [10, 10, 60, 40] }));
+    let find = |app: &FirepixelApp, cmd: &str| -> Option<(String, Option<String>)> {
+        fn walk(ns: &[Node], cmd: &str) -> Option<(String, Option<String>)> {
+            ns.iter().find_map(|n| match n {
+                Node::Item { label, shortcut, action: ItemAction::Command(c), .. } if c == cmd => Some((label.clone(), shortcut.clone())),
+                Node::Sub { children, .. } => walk(children, cmd),
+                _ => None,
+            })
+        }
+        menu::build_main_menu(&app.state).iter().find_map(|(_, ns)| walk(ns, cmd))
+    };
+    let step = app.state.session.active().and_then(|d| d.history.undo_label().map(str::to_string)).expect("Verlaufsschritt");
+    let (undo, _) = find(&app, "edit.undo").expect("Rückgängig im Menü");
+    assert_eq!(undo, format!("Rückgängig: {step}"));
+    // Zugriffstaste bleibt die von „&Rückgängig“
+    assert_eq!(fp_ui::menu_kbd::access_of(&format!("/Bearbeiten/{undo}")).map(|a| a.1), Some('r'));
+    let (_, del) = find(&app, "edit.clear").expect("Löschen im Menü");
+    assert_eq!(del.as_deref(), Some("Entf"), "Löschen zeigt Entf wie das Original");
+    fp_i18n::set_language("en");
+    let (undo_en, _) = find(&app, "edit.undo").expect("Undo");
+    assert!(undo_en.starts_with("Undo: "), "{undo_en}");
+    assert_eq!(fp_ui::menu_kbd::access_of(&format!("/Edit/{undo_en}")).map(|a| a.1), Some('u'));
+    let (_, del_en) = find(&app, "edit.clear").expect("Clear");
+    assert_eq!(del_en.as_deref(), Some("Del"));
+}
+
 #[test]
 fn every_command_and_tool_has_texts_in_de_and_en() {
     let _g = lock();

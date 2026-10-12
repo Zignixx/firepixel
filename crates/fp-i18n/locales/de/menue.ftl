@@ -573,6 +573,8 @@ cmd-help-about = Ü&ber Firepixel...
 ## Hauptmenü (Laufzeit)
 
 menu-file-openRecent-none = Keine
+# Rückgängig/Wiederholen mit dem Namen des Verlaufsschritts (wie im Original)
+menu-edit-withStep = { $label }: { $step }
 menu-window-extensions-none = Keine Erweiterungen
 menu-view-theme = Design
 menu-window-other = Sonstige

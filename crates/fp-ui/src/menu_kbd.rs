@@ -135,7 +135,13 @@ fn access_map() -> AccessMap {
 
 /// Zugriffstaste eines Eintrags im Menübaum (Pfad der angezeigten Texte, z. B. `/Datei/Öffnen...`).
 pub fn access_of(path: &str) -> Option<(usize, char)> {
-    access_map().get(path).copied()
+    let map = access_map();
+    if let Some(a) = map.get(path) {
+        return Some(*a);
+    }
+    // Einträge mit Laufzeitzusatz („Rückgängig: Auswahl aufheben“): Taste des Grundtexts
+    let cut = path.find(": ")?;
+    map.get(&path[..cut]).copied()
 }
 
 fn selectable(n: &Node) -> bool {
@@ -383,6 +389,7 @@ pub fn keyboard(ctx: &egui::Context, st: &mut AppState) {
     }
     store(ctx, s);
     for a in out {
+        menu::note_font_choice(st, &a);
         st.push(a);
     }
 }
@@ -462,6 +469,7 @@ pub fn show(ctx: &egui::Context, st: &mut AppState, menus: &[(String, Vec<Node>)
     }
     store(ctx, s);
     for a in out {
+        menu::note_font_choice(st, &a);
         st.push(a);
     }
 }

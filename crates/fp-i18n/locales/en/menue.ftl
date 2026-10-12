@@ -573,6 +573,8 @@ cmd-help-about = &About Firepixel...
 ## Hauptmenü (Laufzeit)
 
 menu-file-openRecent-none = None
+# Undo/Redo with the name of the history step
+menu-edit-withStep = { $label }: { $step }
 menu-window-extensions-none = No Extensions
 menu-view-theme = Theme
 menu-window-other = Other
