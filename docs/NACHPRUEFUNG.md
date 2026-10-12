@@ -6,7 +6,7 @@ Jeder Agent trägt hier ein, was er gebaut, aber noch nicht im echten Fenster ge
 
 | Agent | Commit | Was prüfen (Ablauf, erwartetes Ergebnis) | Art | Stand |
 |---|---|---|---|---|
-| FV-10 | `f618672` | W19, W21, W22, W24, W26, W29, O2, O8, O16, falls PM-4 sie nicht schon abgehakt hat (siehe PARITAET_A) | Brücke | ⏳ |
+| FV-10 | `f618672` | W19, W21, W22, W24, W26, W29, O2, O8, O16, falls PM-4 sie nicht schon abgehakt hat (siehe PARITAET_A) | Brücke | ✅ PM-4 (echtes Fenster, alle ✅, PARITAET_A) |
 | FV-15 | `5eee815` | F7 im frisch gestarteten Original messen (R1, „30“ tippen, R2 anklicken), dann Firepixel angleichen | Original + Brücke | ⏳ |
 | FV-14 | `8b03953` | Fang L4/L35 im Original messen. Testdokument per `fw.openDocument` aus einer kopierten Datei öffnen, nicht neu anlegen: R1 50,50–150,120, E1 200,50–300,120, G 350–470 × 50–100. Zeiger-Ziehen ab 100,85 um +0/+3, +47/0, +0/+22, +0/−7, +0/+17, +97/0: In Firepixel rasten Kante an Kante und Mitte an Mitte, Kante an Mitte nicht. Stiftklicks 153,20 · 253,20 · 585,53 · 585,77: Firepixel x 150, x 253, y 50, y 77. Bei Abweichung `tools\snap.rs` anpassen | Original | ⏳ |
 | FV-14 | `8b03953` | L33 im Original: Pfad 320,240 · 400,240 · 480,240 (Eckpunkte), Unterauswahl. Alt-Ziehen am mittleren Punkt nach 400,270, am Endpunkt nach 510,240, am Anfangspunkt nach 290,240. Firepixel: nur der Ausgangshenkel liegt unter dem Zeiger, der Eingangshenkel bleibt | Original | ⏳ |
