@@ -16,6 +16,11 @@
 //!   denselben Kodierern und Parametern wie der echte Export.
 //! - Fenster in der Größe veränderbar, Start- = Mindestgröße (§1.1); Größe, Modus und
 //!   Feldeinstellungen werden wie im Original **nicht** gemerkt (§7).
+//! - Paket P4 (§7): OK bzw. „Exportieren…“ schreiben die Einstellung des aktiven Feldes in einem
+//!   Verlaufsschritt in die Seite ([`commit_settings`]); „Exportieren…“ öffnet darüber den
+//!   Exportdialog, nach dessen Schließen geht es in der Bildvorschau weiter. Esc/Abbrechen ändert
+//!   nichts, Esc in einem Unterdialog schließt nur diesen, Esc beim Ziehen des Exportbereichs bricht
+//!   nur das Ziehen ab. Mausrad wie im Dokumentfenster (`wheel`).
 
 pub mod animation_tab;
 pub mod color_table;
@@ -31,7 +36,7 @@ pub use pane::Pane;
 
 use super::{button_w, dialog_frame, dialog_frame_resizable, push_button, DialogClose, DIALOG_TITLE_H};
 use crate::app_state::{Action, AppState};
-use crate::panels::optimize::{self, ExportRenderer};
+use crate::panels::optimize;
 use crate::theme::Theme;
 use egui::{pos2, vec2, Id, Rect, Sense, Stroke, Vec2};
 use fp_export::options::OptimizeSettings;
@@ -139,8 +144,13 @@ pub struct ImagePreview {
     /// Größe der Seite in Dokumentpixeln (Bezug für Skalieren und Exportbereich).
     pub doc_size: (usize, usize),
     /// Laufendes Ziehen mit dem Werkzeug „Exportbereich“: Feld, Griff, Bereich und Druckpunkt beim
-    /// Drücken.
-    crop_drag: Option<(usize, crop::Handle, [i32; 4], egui::Pos2)>,
+    /// Drücken, dazu der Exportbereich vor dem Ziehen (Esc stellt ihn wieder her).
+    crop_drag: Option<(usize, crop::Handle, [i32; 4], egui::Pos2, Option<[i32; 4]>)>,
+    /// Strg+Mausrad: angesammelte Rastungen (eine Zoomstufe je volle Rastung).
+    wheel_acc: f32,
+    /// „Exportieren…“ hat den Exportdialog über der Bildvorschau geöffnet; nach seinem Schließen
+    /// geht es in der Bildvorschau weiter (§7: Abbruch dort → zurück in die Bildvorschau).
+    pub export_child: bool,
 }
 
 /// Ergebnis eines Bildes.
@@ -193,6 +203,8 @@ impl ImagePreview {
             next_tick: None,
             doc_size: (1, 1),
             crop_drag: None,
+            wheel_acc: 0.0,
+            export_child: false,
         }
     }
 
@@ -396,6 +408,10 @@ fn save_user_preset(st: &mut AppState, name: &str, s: &OptimizeSettings) {
 /// Zeigt die Bildvorschau (und darüber ggf. „Vorgabenname“).
 pub fn show(ctx: &egui::Context, st: &mut AppState) {
     let Some(mut d) = st.dialogs.preview.take() else { return };
+    // der über „Exportieren…“ geöffnete Exportdialog ist zu: weiter in der Bildvorschau
+    if d.export_child && st.dialogs.export.is_none() {
+        d.export_child = false;
+    }
     let Some(doc) = st.session.active() else { return };
     d.frames = doc.frame_count();
     d.frame = d.frame.min(d.frames - 1);
@@ -420,11 +436,60 @@ pub fn show(ctx: &egui::Context, st: &mut AppState) {
     preset_name_dialog(ctx, st, &mut d);
     sub_dialogs(ctx, &mut d, &base);
     match outcome {
-        Some(Outcome::Ok) => optimize::apply_settings(st, &d.panes[d.active].settings.clone()),
-        Some(Outcome::Export) => export_with(st, d.panes[d.active].settings.clone()),
+        Some(Outcome::Ok) => {
+            let s = d.panes[d.active].settings.clone();
+            commit_settings(st, &s);
+            sync_export_dialog(st, &s);
+        }
+        Some(Outcome::Export) => {
+            let s = d.panes[d.active].settings.clone();
+            commit_settings(st, &s);
+            sync_export_dialog(st, &s);
+            // aus dem Exportdialog geöffnet („Optionen…“): zurück dorthin, er liest die eben
+            // übernommene Einstellung der Seite
+            if st.dialogs.export.is_none() {
+                // der Verlaufsschritt läuft erst nach diesem Bild: Dateiendung schon jetzt nach
+                // der übernommenen Einstellung
+                st.dialogs.export = super::export::ExportDialog::new(st).map(|mut e| {
+                    e.page_ext = s.format.extension().to_string();
+                    e
+                });
+                d.export_child = st.dialogs.export.is_some();
+                st.dialogs.preview = Some(d);
+            }
+        }
         Some(Outcome::Cancel) => {}
         None => st.dialogs.preview = Some(d),
     }
+}
+
+/// Liegt der Exportdialog unter der Bildvorschau (geöffnet über dessen „Optionen…“), folgt seine
+/// Dateiendung sofort dem übernommenen Format (der Verlaufsschritt läuft erst nach diesem Bild).
+fn sync_export_dialog(st: &mut AppState, s: &OptimizeSettings) {
+    if let Some(e) = st.dialogs.export.as_mut() {
+        e.page_ext = s.format.extension().to_string();
+        if !e.file_name.trim().is_empty() {
+            e.file_name = super::export::with_ext(&e.file_name, &e.ext());
+        }
+    }
+}
+
+/// OK bzw. „Exportieren…“ (§7): die Einstellung des aktiven Feldes (Format, Palette, Skalierung,
+/// Exportbereich, Animation, Hintergrund) wird die Exporteinstellung der Seite – ein
+/// Verlaufsschritt „Optimieren“ (`pi.export.settings`), nur wenn sich etwas ändert. Verzögerung,
+/// Löschmethode und Sichtbarkeit der Status gehen nur in die Exporteinstellung (`frameInfo`), nicht
+/// zurück in die Status des Dokuments (§4/§11.7 lassen das offen). `true`, wenn geschrieben wurde.
+pub fn commit_settings(st: &mut AppState, s: &OptimizeSettings) -> bool {
+    let Some(d) = st.session.active() else { return false };
+    let Some(page) = d.doc.pages.get(d.page) else { return false };
+    if let Some(cur) = page.root.export.as_deref() {
+        let same = serde_json::to_value(s.to_model(cur)).ok().zip(serde_json::to_value(cur).ok()).is_some_and(|(a, b)| a == b);
+        if same {
+            return false;
+        }
+    }
+    optimize::apply_settings(st, s);
+    true
 }
 
 /// Ergebnisse von „Palette laden/speichern“ übernehmen.
@@ -530,30 +595,6 @@ fn poll_size_job(d: &mut ImagePreview) {
             Err(_) => {}
         }
     }
-}
-
-/// „Exportieren…“: Einstellung des aktiven Feldes übernehmen und exportieren (Verhalten wie bisher;
-/// der volle Exportdialog über der Bildvorschau folgt in Paket P4).
-fn export_with(st: &mut AppState, settings: OptimizeSettings) {
-    optimize::apply_settings(st, &settings);
-    let ext = settings.format.extension();
-    let name = st.session.active().map(|x| x.title.trim_end_matches(".png").trim_end_matches(".fw").to_string()).unwrap_or_else(|| t("dlg-default-image-name"));
-    let req = crate::file_dialog::Request::save(t("dlg-export-title"), format!("{name}.{ext}")).filter(settings.format.display_name(), &[ext]);
-    crate::file_dialog::request(st, req, move |st, r| {
-        if let Some(path) = r.into_iter().next()
-            && let Some(doc) = st.session.active()
-        {
-            let r = ExportRenderer { normal: Arc::clone(&st.renderer) };
-            let msg = match fp_export::doc_export::export_whole(&r, &doc.doc, doc.page, &settings, &fp_export::export::EncodeExtras::default()) {
-                Ok(bytes) => match std::fs::write(&path, bytes) {
-                    Ok(()) => fp_i18n::tr!("dlg-export-file-done", path = path.display().to_string()),
-                    Err(e) => fp_i18n::tr!("dlg-export-failed", error = e.to_string()),
-                },
-                Err(e) => fp_i18n::tr!("dlg-export-failed", error = e.to_string()),
-            };
-            st.push(Action::Status(msg));
-        }
-    });
 }
 
 fn draw(ctx: &egui::Context, st: &mut AppState, d: &mut ImagePreview) -> Option<Outcome> {
@@ -701,6 +742,15 @@ fn draw_panes(ui: &mut egui::Ui, d: &mut ImagePreview, area: Rect, entries: &[pa
     if !ui.input(|inp| inp.pointer.any_down()) {
         d.crop_drag = None;
     }
+    // Esc während des Ziehens mit „Exportbereich“: Ziehen abbrechen, Bereich wie vorher; die Taste
+    // wird verbraucht, damit sie nicht zugleich den Dialog schließt
+    if let Some((i, .., before)) = d.crop_drag
+        && ui.input_mut(|inp| inp.consume_key(egui::Modifiers::NONE, egui::Key::Escape))
+    {
+        d.panes[i].settings.crop = before;
+        d.crop_drag = None;
+    }
+    wheel(ui, d, &lays);
     let z = d.zoom();
     let center = d.center;
     for (i, lay) in &lays {
@@ -779,6 +829,66 @@ fn draw_panes(ui: &mut egui::Ui, d: &mut ImagePreview, area: Rect, entries: &[pa
     }
 }
 
+/// Bildschirmpunkte je Zeilen-Rastung beim Bildlauf (wie im Dokumentfenster).
+const WHEEL_LINE_PX: f32 = 52.0;
+/// Punkte eines Rad-Ereignisses, die einer Rastung entsprechen (Touchpads, hochauflösende Räder).
+const WHEEL_POINTS_PER_NOTCH: f32 = 100.0;
+
+/// Mausrad über einem Feld (§11.5 im Original nicht gemessen; Verhalten wie im Dokumentfenster):
+/// Rad = alle Felder senkrecht verschieben (waagerechtes Rad bzw. Touchpad waagerecht), Umschalt+Rad
+/// tut nichts, Strg+Rad = je volle Rastung genau eine der 11 Zoomstufen um den Mauszeiger.
+fn wheel(ui: &egui::Ui, d: &mut ImagePreview, lays: &[(usize, pane::PaneLayout)]) {
+    // nur, wenn die Bildvorschau oben liegt und der Zeiger über einem Bild steht
+    let Some(lay) = lays.iter().map(|(_, l)| l).find(|l| ui.rect_contains_pointer(l.image)) else { return };
+    let Some(p) = ui.input(|i| i.pointer.hover_pos()) else { return };
+    let events: Vec<(egui::MouseWheelUnit, Vec2, bool, bool)> = ui.input(|i| {
+        i.events
+            .iter()
+            .filter_map(|e| match e {
+                egui::Event::MouseWheel { unit, delta, modifiers, .. } => Some((*unit, *delta, modifiers.ctrl || modifiers.command, modifiers.shift)),
+                _ => None,
+            })
+            .collect()
+    });
+    let mut pan = Vec2::ZERO;
+    for (unit, delta, ctrl, shift) in events {
+        if ctrl {
+            let n = match unit {
+                egui::MouseWheelUnit::Point => delta.y / WHEEL_POINTS_PER_NOTCH,
+                _ if delta.y == 0.0 => 0.0,
+                _ => delta.y.signum(),
+            };
+            // Richtungswechsel verwirft den Rest; höchstens eine Stufe je Ereignis
+            if n * d.wheel_acc < 0.0 {
+                d.wheel_acc = 0.0;
+            }
+            d.wheel_acc += n;
+            let step = if d.wheel_acc >= 1.0 {
+                1
+            } else if d.wheel_acc <= -1.0 {
+                -1
+            } else {
+                0
+            };
+            if step != 0 {
+                d.wheel_acc -= step as f32;
+                let idx = if step > 0 { (d.zoom_idx + 1).min(toolbar::ZOOMS.len() - 1) } else { d.zoom_idx.saturating_sub(1) };
+                d.set_zoom(idx, Some((p, lay.image.center())));
+            }
+        } else if !shift {
+            let k = match unit {
+                egui::MouseWheelUnit::Point => 1.0,
+                egui::MouseWheelUnit::Line => WHEEL_LINE_PX,
+                egui::MouseWheelUnit::Page => lay.image.height(),
+            };
+            pan += delta * k;
+        }
+    }
+    if pan != Vec2::ZERO {
+        d.pan(pan);
+    }
+}
+
 /// Werkzeug „Exportbereich“ im Feld `i` (§6): Ziehen an Griffen oder Kanten ändert den Bereich,
 /// Ziehen im Inneren verschiebt ihn. Das Kästchen „Exportbereich“ wird dabei angehakt.
 fn crop_tool(ui: &egui::Ui, d: &mut ImagePreview, i: usize, lay: &pane::PaneLayout, resp: &egui::Response) {
@@ -787,9 +897,9 @@ fn crop_tool(ui: &egui::Ui, d: &mut ImagePreview, i: usize, lay: &pane::PaneLayo
         && let Some(o) = ui.input(|inp| inp.pointer.press_origin())
         && let Some(h) = crop::hit(sr, o)
     {
-        d.crop_drag = Some((i, h, crop::area_doc(d.doc_size, &d.panes[i].settings), o));
+        d.crop_drag = Some((i, h, crop::area_doc(d.doc_size, &d.panes[i].settings), o, d.panes[i].settings.crop));
     }
-    if let Some((pi, h, start, o)) = d.crop_drag
+    if let Some((pi, h, start, o, _)) = d.crop_drag
         && pi == i
     {
         if resp.dragged()

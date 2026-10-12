@@ -549,7 +549,9 @@ fn options_tab(ui: &mut Ui, st: &mut AppState, page: Rect, inner: Rect, m: Measu
         tip(ui, "remove-unused", r, "image-preview-tip-remove-unused");
     }
     if vis.interlaced.shown() {
-        let r = Rect::from_min_size(pos2(inner.left() + 9.0, bottom - 45.0), vec2(right - inner.left() - 9.0 - 30.0, 16.0));
+        // volle Breite wie „Nicht verwendete Farben entfernen“ (RAND-1: vorher 30 px zu schmal, der
+        // Knopf „Optimieren auf Größe“ sitzt darunter und braucht hier keinen Platz)
+        let r = Rect::from_min_size(pos2(inner.left() + 9.0, bottom - 45.0), vec2(right - inner.left() - 9.0, 16.0));
         if let Some(b) = fields::checkbox(ui, "pv-interl", r, &t("image-preview-opt-interlaced"), s.interlaced, true) {
             s.interlaced = b;
         }
