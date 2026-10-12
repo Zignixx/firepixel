@@ -316,17 +316,17 @@ fn w24_marquee_fixed_values_symbols_and_zero() {
 
 // ------------------------------------------------------------------ W26 Verlauf
 
-/// Verlauf-Werkzeug: das Füllfarbfeld zeigt den Verlauf, den das Werkzeug malt (Füll- →
-/// Strichfarbe); Füllwerkzeug und Rechteck bleiben einfarbig. Farbwechsel ändert die Vorschau mit.
+/// Verlauf-Werkzeug: das Füllfarbfeld zeigt den Verlauf, den das Werkzeug malt – seit FV-16 die
+/// eigenen Farben des Werkzeugs (Werksvorgabe Schwarz → Weiß, im Original gemessen), unabhängig
+/// von der Füllfarbe; Füllwerkzeug und Rechteck bleiben einfarbig.
 #[test]
 fn w26_gradient_tool_swatch_shows_gradient() {
     let mut h = harness(|_| {});
     tool(&mut h, ToolId::Gradient);
-    let (f, s) = (st(&h).session.tools.fill_color.0 | 0xff00_0000, st(&h).session.tools.stroke_color.0 | 0xff00_0000);
-    assert_eq!(fp_ui::inspector::obj_quads::tool_swatch_gradient(&h.ctx), Some(vec![f, s]));
+    assert_eq!(fp_ui::inspector::obj_quads::tool_swatch_gradient(&h.ctx), Some(vec![0xff00_0000, 0xffff_ffff]));
     h.state_mut().state.session.tools.fill_color = fp_color::Argb(0xff00_00ff);
     h.run_steps(2);
-    assert_eq!(fp_ui::inspector::obj_quads::tool_swatch_gradient(&h.ctx), Some(vec![0xff00_00ff, s]));
+    assert_eq!(fp_ui::inspector::obj_quads::tool_swatch_gradient(&h.ctx), Some(vec![0xff00_0000, 0xffff_ffff]));
     for t in [ToolId::PaintBucket, ToolId::Rectangle] {
         tool(&mut h, t);
         assert_eq!(fp_ui::inspector::obj_quads::tool_swatch_gradient(&h.ctx), None, "{t:?} einfarbig");

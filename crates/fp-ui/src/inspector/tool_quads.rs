@@ -339,8 +339,18 @@ fn fill_selection_pref(tool: ToolId) -> Option<&'static str> {
     }
 }
 
-/// Beim Wechsel zu Farbeimer bzw. Verlauf gilt dessen eigene Vorgabe „Auswahl füllen“
-/// (`ToolOptions::fill_selection` ist in fp-engine ein gemeinsames Feld beider Werkzeuge).
+/// Voreinstellung der Farbtoleranz je Werkzeug (`FillToolTolerance` bzw. `GradientToolTolerance`).
+fn tolerance_pref(tool: ToolId) -> Option<&'static str> {
+    match tool {
+        ToolId::PaintBucket => Some("FillToolTolerance"),
+        ToolId::Gradient => Some("GradientToolTolerance"),
+        _ => None,
+    }
+}
+
+/// Beim Wechsel zu Farbeimer bzw. Verlauf gelten dessen eigene Voreinstellungen „Auswahl füllen“
+/// und Toleranz (in fp-engine getrennte Felder `fill_selection`/`gradient_fill_selection` und
+/// `fill_tolerance`/`gradient_tolerance`; das Original merkt beide Werkzeuge getrennt).
 pub fn sync_fill_selection(ctx: &egui::Context, st: &mut AppState) {
     let key = Id::new("fv1-fill-selection-tool");
     let tool = st.session.tools.active;
@@ -348,26 +358,35 @@ pub fn sync_fill_selection(ctx: &egui::Context, st: &mut AppState) {
         return;
     }
     ctx.data_mut(|d| d.insert_temp(key, tool));
-    if let Some(k) = fill_selection_pref(tool) {
+    if let (Some(k), Some(kt)) = (fill_selection_pref(tool), tolerance_pref(tool)) {
         let def = tool == ToolId::Gradient;
-        st.session.tools.options.fill_selection = st.session.prefs.get_bool(k, def);
+        let on = st.session.prefs.get_bool(k, def);
+        let tol = st.session.prefs.get_int(kt, 32).clamp(0, 255) as u32;
+        let o = &mut st.session.tools.options;
+        o.set_fills_selection(tool, on);
+        o.set_tolerance_of(tool, tol);
     }
 }
 
 fn fill_tool_q3(ui: &mut Ui, st: &mut AppState, r: Rect) {
     let d = Dl::at(r.min);
+    let tool = st.session.tools.active;
     obj_quads::fill_panel(ui, st, d.offset(1.0, 0.0), Target::Tool, true);
     fields::vsep(ui, d.r(122.0, 0.0, 1.0, 1.0).left(), r.top() + 1.0, r.bottom());
-    // Toleranz gilt nur ohne „Auswahl füllen“ (Original: dann grau)
-    let tol_en = !st.session.tools.options.fill_selection;
+    // Toleranz gilt nur ohne „Auswahl füllen“ (Original: dann grau); beide je Werkzeug gemerkt
+    let fills_sel = st.session.tools.options.fills_selection(tool);
+    let tol_en = !fills_sel;
     fields::label_right(ui, d.r(122.0, 2.0, 43.0, 8.0), &tx("pi-tolerance"), tol_en);
-    if let Some(v) = fields::number(ui, "fill-tol", d.r(167.0, 0.0, 21.0, 13.0), Some(d.r(189.0, 0.0, 9.0, 13.0)), Some(st.session.tools.options.fill_tolerance as f64), (0.0, 255.0), 0, tol_en) {
-        st.session.tools.options.fill_tolerance = v as u32;
+    if let Some(v) = fields::number(ui, "fill-tol", d.r(167.0, 0.0, 21.0, 13.0), Some(d.r(189.0, 0.0, 9.0, 13.0)), Some(st.session.tools.options.tolerance_of(tool) as f64), (0.0, 255.0), 0, tol_en) {
+        st.session.tools.options.set_tolerance_of(tool, v as u32);
+        if let Some(k) = tolerance_pref(tool) {
+            st.session.prefs.set(k, fp_engine::prefs::PrefValue::Int(v as i64));
+        }
     }
-    if let Some(b) = fields::checkbox(ui, "fill-sel", d.r(167.0, 16.0, 65.0, 10.0), &tx("pi-fill-selection"), st.session.tools.options.fill_selection, true) {
-        st.session.tools.options.fill_selection = b;
+    if let Some(b) = fields::checkbox(ui, "fill-sel", d.r(167.0, 16.0, 65.0, 10.0), &tx("pi-fill-selection"), fills_sel, true) {
+        st.session.tools.options.set_fills_selection(tool, b);
         // je Werkzeug gemerkt (Farbeimer und Verlauf haben eigene Vorgaben)
-        if let Some(k) = fill_selection_pref(st.session.tools.active) {
+        if let Some(k) = fill_selection_pref(tool) {
             st.session.prefs.set(k, fp_engine::prefs::PrefValue::Bool(b));
         }
     }
@@ -530,6 +549,20 @@ fn red_eye_q3(ui: &mut Ui, _st: &mut AppState, r: Rect) {
     });
 }
 
+const REPLACE_SRC_PREF: &str = "ReplaceColorToolSrcColor";
+const REPLACE_DST_PREF: &str = "ReplaceColorToolDestColor";
+
+/// „Von“- und „in“-Farbe von „Farbe ersetzen“ aus den Voreinstellungen (Werksvorgabe #00FF00 bzw.
+/// #FF0000, PARITAET_A W8).
+pub fn replace_colors(p: &fp_engine::prefs::Preferences) -> (fp_color::Argb, fp_color::Argb) {
+    (p.get_color(REPLACE_SRC_PREF, fp_color::Argb(0xff00_ff00)), p.get_color(REPLACE_DST_PREF, fp_color::Argb(0xffff_0000)))
+}
+
+/// Farbe im Format der Voreinstellung (`#RRGGBB`, wie die Werksvorgabe).
+fn ui_hex(c: fp_color::Argb) -> String {
+    format!("#{:02X}{:02X}{:02X}", c.r(), c.g(), c.b())
+}
+
 fn replace_color_q3(ui: &mut Ui, st: &mut AppState, r: Rect) {
     let d = Dl::at(r.min);
     let ta = tool_attrs(ui.ctx());
@@ -546,16 +579,18 @@ fn replace_color_q3(ui: &mut Ui, st: &mut AppState, r: Rect) {
     fields::label_right(ui, d.r(196.0, 2.0, 52.0, 8.0), &tx("pi-tolerance"), true);
     let tol = fields::number(ui, "rc-tol", d.r(250.0, 0.0, 21.0, 13.0), Some(d.r(272.0, 0.0, 9.0, 13.0)), Some(ta.tolerance as f64), (0.0, 255.0), 0, true);
     fields::label_right(ui, d.r(213.0, 17.0, 35.0, 8.0), &tx("pi-strength"), true);
-    let stg = fields::number(ui, "rc-str", d.r(250.0, 15.0, 21.0, 13.0), Some(d.r(272.0, 15.0, 9.0, 13.0)), Some(ta.strength as f64), (0.0, 100.0), 0, true);
+    let stg = fields::number(ui, "rc-str", d.r(250.0, 15.0, 21.0, 13.0), Some(d.r(272.0, 15.0, 9.0, 13.0)), Some(ta.strength as f64), (0.0, 255.0), 0, true);
     fields::label_right(ui, d.r(19.0, 17.0, 37.0, 8.0), &tx("pi-replace-from"), true);
     let _ = fields::combo(ui, "rc-from", d.r(58.0, 15.0, 56.0, 13.0), &refs(&tl(&["pi-replace-swatch", "pi-replace-image"])), Some(0), true);
-    let (sc, fc) = (st.session.tools.stroke_color, st.session.tools.fill_color);
-    if let Some(super::popups::ColorChoice::Color(c)) = super::popups::color_button(ui, "rc-c1", d.r(117.0, 15.0, 14.0, 12.0), st, Some(sc), true, false, false) {
-        st.push(Action::SetColors { stroke: Some(c), fill: None });
+    // „Von“/„in“ sind eigene Farben des Werkzeugs (Werksvorgabe #00FF00 → #FF0000, PARITAET_A W8),
+    // nicht Strich-/Füllfarbe; das Werkzeug malt mit genau diesen Voreinstellungen
+    let (src, dst) = replace_colors(&st.session.prefs);
+    if let Some(super::popups::ColorChoice::Color(c)) = super::popups::color_button(ui, "rc-c1", d.r(117.0, 15.0, 14.0, 12.0), st, Some(src), true, false, false) {
+        st.session.prefs.set(REPLACE_SRC_PREF, fp_engine::prefs::PrefValue::Str(ui_hex(c)));
     }
     fields::label(ui, d.r(137.0, 17.0, 15.0, 8.0), &tx("pi-replace-to"), true);
-    if let Some(super::popups::ColorChoice::Color(c)) = super::popups::color_button(ui, "rc-c2", d.r(153.0, 15.0, 14.0, 12.0), st, Some(fc), true, false, false) {
-        st.push(Action::SetColors { stroke: None, fill: Some(c) });
+    if let Some(super::popups::ColorChoice::Color(c)) = super::popups::color_button(ui, "rc-c2", d.r(153.0, 15.0, 14.0, 12.0), st, Some(dst), true, false, false) {
+        st.session.prefs.set(REPLACE_DST_PREF, fp_engine::prefs::PrefValue::Str(ui_hex(c)));
     }
     let col = fields::checkbox(ui, "rc-colorize", d.r(290.0, 16.0, 83.0, 10.0), &tx("pi-colorize"), ta.colorize, true);
     edit_tool_attrs(ui.ctx(), |a| {

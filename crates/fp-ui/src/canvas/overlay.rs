@@ -282,13 +282,10 @@ pub fn attrs_from_prefs(tool: fp_engine::ToolId, p: &fp_engine::prefs::Preferenc
             ta.tolerance = int(&k("Tolerance"), 50);
         }
         T::ReplaceColor => {
-            // In den PREF-Daten sind Toleranz/Stärke als Wahrheitswert abgelegt; das Original zeigt
-            // Toleranz 32 (UX-A a_123). Stärke wirkt über `ReplaceColorToolTransparant` (100).
-            ta.tolerance = match p.get(&k("Tolerance")) {
-                Some(fp_engine::prefs::PrefValue::Int(v)) => v as i32,
-                _ => 32,
-            };
-            ta.strength = int(&k("Transparant"), 100);
+            // Werksvorgaben des Originals: Toleranz 32, Stärke 200 (PARITAET_A W8; die Ressource des
+            // Originals führt beide mit falschem Typ, `data\prefs.json` als Ganzzahl)
+            ta.tolerance = int(&k("Tolerance"), 32);
+            ta.strength = int(&k("Strength"), 200);
             ta.colorize = p.get_bool(&k("Colorize"), false);
         }
         _ => {}
@@ -355,7 +352,7 @@ pub fn retouch_prefs(tool: fp_engine::ToolId, ta: &crate::inspector::obj_quads::
             v.push((k("Tolerance"), Int(ta.tolerance as i64)));
         }
         T::ReplaceColor => {
-            v.push((k("Transparant"), Int(ta.strength as i64)));
+            v.push((k("Strength"), Int(ta.strength as i64)));
             v.push((k("Colorize"), Bool(ta.colorize)));
             v.push((k("Tolerance"), Int(ta.tolerance as i64)));
         }

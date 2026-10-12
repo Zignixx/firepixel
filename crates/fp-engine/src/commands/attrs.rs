@@ -199,15 +199,25 @@ pub(super) fn register(r: &mut CommandRegistry) {
             .label("Musterfüllung")
             .requires(DOC)
             .opt("ids", ParamKind::Ids, "Elemente (Vorgabe: Auswahl)")
-            .param("image", ParamKind::Path, "Musterbild (PNG, JPEG, GIF …)")
+            .opt("image", ParamKind::Path, "Musterbild (PNG, JPEG, GIF …); ohne: Datei zu „name“ aus den Musterordnern")
             .opt("name", ParamKind::String, "Mustername (Vorgabe: Dateiname)")
             .run(|s, p| {
-                let path = p.str("image")?;
-                let img = load_image_file(&path)?;
-                let name = p.opt_str("name")?.unwrap_or_else(|| std::path::Path::new(&path).file_stem().map(|n| n.to_string_lossy().to_string()).unwrap_or_else(|| "Muster".into()));
-                // feste Kachelnummern: der Schreiber nummeriert ohnehin neu, so bleibt das Ergebnis reproduzierbar
-                let mut next = 1u32;
-                let node = Arc::new(BitmapNode::from_rgba(fp_geom::Point::new(0.0, 0.0), img.width() as u32, img.height() as u32, img.as_bytes(), &mut next));
+                let (node, name) = match p.opt_str("image")? {
+                    Some(path) => {
+                        let img = load_image_file(&path)?;
+                        let name = p.opt_str("name")?.unwrap_or_else(|| std::path::Path::new(&path).file_stem().map(|n| n.to_string_lossy().to_string()).unwrap_or_else(|| "Muster".into()));
+                        // feste Kachelnummern: der Schreiber nummeriert ohnehin neu, so bleibt das Ergebnis reproduzierbar
+                        let mut next = 1u32;
+                        (Arc::new(BitmapNode::from_rgba(fp_geom::Point::new(0.0, 0.0), img.width() as u32, img.height() as u32, img.as_bytes(), &mut next)), name)
+                    }
+                    None => {
+                        // nur per Name: Datei aus den Musterordnern (`crate::resources`)
+                        let Some(name) = p.opt_str("name")? else { return Err(bad(p, fp_i18n::tr!("err-param-missing", key = "image"))) };
+                        let pat = crate::resources::load_pattern(&name).ok_or_else(|| bad(p, fp_i18n::tr!("err-not-found", what = name.as_str())))?;
+                        let Some(node) = pat.image else { return Err(bad(p, fp_i18n::tr!("err-not-found", what = name.as_str()))) };
+                        (node, name)
+                    }
+                };
                 edit_targets(s, p, |e| {
                     let node = Arc::clone(&node);
                     let name = name.clone();
@@ -231,18 +241,20 @@ pub(super) fn register(r: &mut CommandRegistry) {
             .requires(DOC)
             .opt("ids", ParamKind::Ids, "Elemente (Vorgabe: Auswahl)")
             .opt_default("target", ParamKind::Enum { values: vec!["fill".into(), "stroke".into()] }, json!("fill"), "Füllungs- oder Strichtextur")
-            .opt("image", ParamKind::Path, "Texturbild (Helligkeit = Maske); ohne: Textur entfernen")
+            .opt("image", ParamKind::Path, "Texturbild (Helligkeit = Maske); ohne: Datei zu „name“ aus den Texturordnern, ohne beides: Textur entfernen")
             .opt("name", ParamKind::String, "Texturname")
             .opt("amount", ParamKind::Integer { min: Some(0), max: Some(100) }, "Texturmenge in %")
             .run(|s, p| {
                 let stroke = p.opt_str("target")?.as_deref() == Some("stroke");
-                let tex = match p.opt_str("image")? {
-                    Some(path) => {
+                let tex = match (p.opt_str("image")?, p.opt_str("name")?) {
+                    (Some(path), name) => {
                         let img = load_image_file(&path)?;
-                        let name = p.opt_str("name")?.unwrap_or_else(|| std::path::Path::new(&path).file_stem().map(|n| n.to_string_lossy().to_string()).unwrap_or_else(|| "Textur".into()));
+                        let name = name.unwrap_or_else(|| std::path::Path::new(&path).file_stem().map(|n| n.to_string_lossy().to_string()).unwrap_or_else(|| "Textur".into()));
                         Some(Texture { name: name.clone(), user_name: Some(name), mask: Some(texture_mask(&img)), extra: Default::default() })
                     }
-                    None => None,
+                    // nur per Name: Datei aus den Texturordnern (`crate::resources`)
+                    (None, Some(name)) if !name.is_empty() => Some(crate::resources::load_texture(&name).ok_or_else(|| bad(p, fp_i18n::tr!("err-not-found", what = name.as_str())))?),
+                    _ => None,
                 };
                 let amount = p.opt_i64("amount")?.map(|v| v as i32 * 10);
                 edit_targets(s, p, |e| {

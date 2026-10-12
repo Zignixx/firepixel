@@ -359,7 +359,8 @@ fn w25_fill_selection_default_per_tool() {
     let mut h = harness(|_| {});
     let _ = h.state_mut().state.session.set_tool(ToolId::Gradient);
     h.run_steps(3);
-    assert!(st(&h).session.tools.options.fill_selection, "Verlauf: Vorgabe ☑");
+    // Farbeimer und Verlauf haben getrennte Felder (FV-16, `gradient_fill_selection`)
+    assert!(st(&h).session.tools.options.gradient_fill_selection, "Verlauf: Vorgabe ☑");
     let _ = h.state_mut().state.session.set_tool(ToolId::PaintBucket);
     h.run_steps(3);
     assert!(!st(&h).session.tools.options.fill_selection, "Farbeimer: Vorgabe ☐");
@@ -370,16 +371,19 @@ fn w25_fill_selection_default_per_tool() {
     assert_eq!(st(&h).session.tools.options.fill_tolerance, 40);
     let _ = h.state_mut().state.session.set_tool(ToolId::Gradient);
     h.run_steps(3);
-    let f = input_with(&h, "40");
+    // der Verlauf hat seine eigene Toleranz (Werksvorgabe 32)
+    let f = input_with(&h, "32");
     type_into(&mut h, f, "50");
     key(&mut h, Key::Enter, Modifiers::NONE);
-    assert_eq!(st(&h).session.tools.options.fill_tolerance, 40, "grau bei „Auswahl füllen“");
-    // je Werkzeug gemerkt: beim Verlauf ausschalten, Farbeimer bleibt aus, Verlauf bleibt aus
+    assert_eq!(st(&h).session.tools.options.gradient_tolerance, 32, "grau bei „Auswahl füllen“");
+    assert_eq!(st(&h).session.tools.options.fill_tolerance, 40);
+    // je Werkzeug gemerkt
     let _ = h.state_mut().state.session.set_tool(ToolId::PaintBucket);
     h.run_steps(2);
     let _ = h.state_mut().state.session.set_tool(ToolId::Gradient);
     h.run_steps(2);
-    assert!(st(&h).session.tools.options.fill_selection);
+    assert!(st(&h).session.tools.options.gradient_fill_selection);
+    assert!(!st(&h).session.tools.options.fill_selection);
 }
 
 // ------------------------------------------------------------------ W15: Textwerkzeug-Vorgaben
@@ -655,7 +659,7 @@ fn checkboxes_have_accessibility_info() {
     assert_eq!(n.accesskit_node().toggled(), Some(egui::accesskit::Toggled::True), "Verlauf: Vorgabe ☑");
     n.click();
     h.run_steps(3);
-    assert!(!st(&h).session.tools.options.fill_selection, "Klick über den Baum schaltet um");
+    assert!(!st(&h).session.tools.options.gradient_fill_selection, "Klick über den Baum schaltet um");
     let n = h.get_by_role_and_label(egui::accesskit::Role::CheckBox, "Auswahl füllen");
     assert_eq!(n.accesskit_node().toggled(), Some(egui::accesskit::Toggled::False));
 }

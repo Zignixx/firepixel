@@ -44,6 +44,7 @@ pub mod geometry;
 pub mod history;
 pub mod prefs;
 pub mod render;
+pub mod resources;
 #[cfg(feature = "render")]
 pub mod render_backend;
 pub mod selection;

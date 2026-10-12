@@ -615,10 +615,12 @@ impl ToolMachine for FillTool {
                 let to = self.cur.take();
                 let dragged = to.is_some() || dist(s, *pos) >= ctx.drag_threshold();
                 let to = to.unwrap_or(*pos);
-                let colors = json!([crate::commands::argb_hex(ctx.fill_color), crate::commands::argb_hex(ctx.stroke_color)]);
+                // eigene Farben des Verlauf-Werkzeugs (Werksvorgabe Schwarz → Weiß), nicht Füll- → Strichfarbe
+                let colors = json!(ctx.options.gradient_tool_colors().into_iter().map(crate::commands::argb_hex).collect::<Vec<_>>());
                 if self.id == ToolId::Gradient && dragged {
                     if bitmap_target(ctx) || ctx.selection.has_pixels() {
-                        return ToolResponse::commit(vec![Invocation::new("bitmap.gradient", json!({"from": pt_json(s), "to": pt_json(to), "colors": colors}))]);
+                        let (tol, fill_sel) = (ctx.options.gradient_tolerance, ctx.options.gradient_fill_selection);
+                        return ToolResponse::commit(vec![Invocation::new("bitmap.gradient", json!({"from": pt_json(s), "to": pt_json(to), "colors": colors, "tolerance": tol, "fillSelection": fill_sel}))]);
                     }
                     if !ctx.selection.elements.is_empty() {
                         return ToolResponse::commit(vec![Invocation::new("element.setGradient", json!({"from": pt_json(s), "to": pt_json(to), "colors": colors}))]);
@@ -628,7 +630,7 @@ impl ToolMachine for FillTool {
                 if bitmap_target(ctx) {
                     return ToolResponse::commit(vec![Invocation::new(
                         "bitmap.floodFill",
-                        json!({"point": pt_json(*pos), "tolerance": ctx.options.fill_tolerance, "fillSelection": ctx.options.fill_selection}),
+                        json!({"point": pt_json(*pos), "tolerance": ctx.options.tolerance_of(self.id), "fillSelection": ctx.options.fills_selection(self.id)}),
                     )]);
                 }
                 let opt = HitOptions { tolerance: ctx.pick_tolerance(), ..HitOptions::default() };

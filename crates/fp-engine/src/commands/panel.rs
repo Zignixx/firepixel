@@ -162,8 +162,10 @@ fn set_handles(e: &mut Element, h: fp_model::FillHandles) {
     }
 }
 
+/// Textur nach Namen: mit Maske aus den Texturordnern (`crate::resources`), sonst nur der Name
+/// (ohne Datei bleibt die Textur ohne Wirkung, wie bisher).
 fn texture(name: &str) -> Texture {
-    Texture { name: name.to_string(), user_name: Some(name.to_string()), mask: None, extra: Default::default() }
+    crate::resources::load_texture(name).unwrap_or_else(|| Texture { name: name.to_string(), user_name: Some(name.to_string()), mask: None, extra: Default::default() })
 }
 
 // ---------------------------------------------------------------------- Pinsel
@@ -548,8 +550,14 @@ pub fn register(r: &mut CommandRegistry) {
             .opt("textureAmount", ParamKind::Integer { min: Some(0), max: Some(100) }, "Texturmenge in %")
             .opt("textureTransparent", ParamKind::Bool, "transparente Textur")
             .opt("dither", ParamKind::Bool, "Verlauf mit Dither")
+            .opt("pattern", ParamKind::String, "Musterfüllung nach Name (Datei aus den Musterordnern)")
             .run(|s, p| {
                 let cat = p.opt_str("category")?;
+                // Muster nur per Name: Datei aus den Musterordnern laden (`crate::resources`)
+                let pattern = match p.opt_str("pattern")? {
+                    Some(n) if !n.is_empty() => Some(crate::resources::load_pattern(&n).ok_or_else(|| EngineError::InvalidParams { name: p.command.clone(), message: fp_i18n::tr!("err-not-found", what = n.as_str()) })?),
+                    _ => None,
+                };
                 let color = p.opt_color("color")?;
                 let shape = p.opt_i64("shape")?.map(|v| v as i32);
                 let stops = parse_stops(p.get("stops"));
@@ -610,6 +618,17 @@ pub fn register(r: &mut CommandRegistry) {
                                 }
                             }
                             _ => {}
+                        }
+                        if let Some(pat) = &pattern {
+                            let mut f = a.fill.clone().unwrap_or_else(Fill::solid);
+                            f.category = "fc_Pattern".into();
+                            f.name = pat.name.clone();
+                            f.user_name = Some(pat.name.clone());
+                            f.shape = 15;
+                            f.shape_ext = 0;
+                            f.gradient = None;
+                            f.pattern = Some(pat.clone());
+                            a.fill = Some(f);
                         }
                         if let Some(c) = color {
                             a.fill_color = c;

@@ -450,9 +450,23 @@ pub struct ToolOptions {
     pub lasso_edge: EdgeMode,
     pub wand_tolerance: u32,
     pub wand_edge: EdgeMode,
+    /// Farbtoleranz des Farbeimers (`FillToolTolerance`).
     pub fill_tolerance: u32,
-    /// Ausgewählten Bereich füllen (Farbeimer).
+    /// Ausgewählten Bereich füllen (Farbeimer, `FillToolFillsSelection`, Werksvorgabe aus).
     pub fill_selection: bool,
+    /// Farbtoleranz des Verlaufs (`GradientToolTolerance`); das Original merkt sie getrennt vom
+    /// Farbeimer.
+    #[serde(default = "tolerance_32")]
+    pub gradient_tolerance: u32,
+    /// Ausgewählten Bereich füllen (Verlauf, `GradientToolFillsSelection`, Werksvorgabe an,
+    /// PARITAET_A W25); getrennt vom Farbeimer gemerkt.
+    #[serde(default = "yes")]
+    pub gradient_fill_selection: bool,
+    /// Eigene Farben des Verlauf-Werkzeugs (gleichmäßig verteilt), unabhängig von Füll- und
+    /// Strichfarbe; Werksvorgabe Schwarz → Weiß (im Original gemessen: Füllfarbe #808080,
+    /// Strichfarbe #C04040 → Farbfeld Schwarz → Weiß, PARITAET_A W26).
+    #[serde(default = "default_gradient_colors")]
+    pub gradient_colors: Vec<Argb>,
     pub brush_size: f32,
     pub brush_soft: bool,
     pub pencil_antialias: bool,
@@ -503,6 +517,19 @@ fn black() -> Argb {
     Argb(0xff00_0000)
 }
 
+fn yes() -> bool {
+    true
+}
+
+fn tolerance_32() -> u32 {
+    32
+}
+
+/// Werksvorgabe des Verlauf-Werkzeugs: Schwarz → Weiß.
+pub fn default_gradient_colors() -> Vec<Argb> {
+    vec![Argb(0xff00_0000), Argb(0xffff_ffff)]
+}
+
 /// Vorgabeschrift des Textwerkzeugs: wie im Original „Myriad Pro“, wenn installiert (UX-A W14,
 /// `docs\screenshots\paritaet\a_133`), sonst `Text_Font` (Werksvorgabe Arial).
 pub fn default_text_font(p: &Preferences) -> String {
@@ -515,6 +542,39 @@ pub fn default_text_font(p: &Preferences) -> String {
 }
 
 impl ToolOptions {
+    /// „Ausgewählten Bereich füllen“ des Werkzeugs (Verlauf eigenes Feld, sonst Farbeimer).
+    pub fn fills_selection(&self, tool: ToolId) -> bool {
+        if tool == ToolId::Gradient { self.gradient_fill_selection } else { self.fill_selection }
+    }
+
+    /// Setzt „Ausgewählten Bereich füllen“ für Farbeimer bzw. Verlauf.
+    pub fn set_fills_selection(&mut self, tool: ToolId, on: bool) {
+        if tool == ToolId::Gradient {
+            self.gradient_fill_selection = on;
+        } else {
+            self.fill_selection = on;
+        }
+    }
+
+    /// Farben, die das Verlauf-Werkzeug malt (mindestens zwei; sonst die Werksvorgabe).
+    pub fn gradient_tool_colors(&self) -> Vec<Argb> {
+        if self.gradient_colors.len() >= 2 { self.gradient_colors.clone() } else { default_gradient_colors() }
+    }
+
+    /// Farbtoleranz des Werkzeugs (Verlauf eigenes Feld, sonst Farbeimer).
+    pub fn tolerance_of(&self, tool: ToolId) -> u32 {
+        if tool == ToolId::Gradient { self.gradient_tolerance } else { self.fill_tolerance }
+    }
+
+    /// Setzt die Farbtoleranz von Farbeimer bzw. Verlauf.
+    pub fn set_tolerance_of(&mut self, tool: ToolId, v: u32) {
+        if tool == ToolId::Gradient {
+            self.gradient_tolerance = v;
+        } else {
+            self.fill_tolerance = v;
+        }
+    }
+
     /// Vorgaben aus den Voreinstellungen.
     pub fn from_prefs(p: &Preferences) -> ToolOptions {
         let edge = |aa: &str, fe: &str| {
@@ -544,6 +604,9 @@ impl ToolOptions {
             wand_edge: edge("WandToolAntiAliased", "WandToolFeatherAmount"),
             fill_tolerance: p.get_int("FillToolTolerance", 32).clamp(0, 255) as u32,
             fill_selection: p.get_bool("FillToolFillsSelection", false),
+            gradient_tolerance: p.get_int("GradientToolTolerance", 32).clamp(0, 255) as u32,
+            gradient_fill_selection: p.get_bool("GradientToolFillsSelection", true),
+            gradient_colors: default_gradient_colors(),
             brush_size: p.get_int("BrushTipSize", 1).max(1) as f32,
             brush_soft: false,
             pencil_antialias: p.get_bool("PencilAntiAlias", false),

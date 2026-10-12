@@ -452,53 +452,31 @@ pub fn stroke_category(ui: &mut Ui, id: Id, r: Rect, label: &str, has: bool, pre
 }
 
 /// Name des eigenen Benutzer-Texturordners in `%APPDATA%\Firepixel` (technisch englisch, §1c).
-pub const USER_TEXTURES_DIR: &str = "Textures";
+pub const USER_TEXTURES_DIR: &str = fp_engine::resources::TEXTURES;
 /// Name des eigenen Benutzer-Musterordners in `%APPDATA%\Firepixel`.
-pub const USER_PATTERNS_DIR: &str = "Patterns";
+pub const USER_PATTERNS_DIR: &str = fp_engine::resources::PATTERNS;
 
 /// Bildendungen, die als Textur bzw. Muster gelesen werden.
-pub const RESOURCE_IMAGE_EXTS: [&str; 5] = ["png", "jpg", "jpeg", "gif", "bmp"];
+pub const RESOURCE_IMAGE_EXTS: [&str; 5] = fp_engine::resources::IMAGE_EXTS;
 
 /// Ordner einer Ressourcenart (`kind` = `Textures` bzw. `Patterns`) in Leserichtung: der
 /// Ressourcenordner des Originals (`Configuration\<kind>`), dessen Vorlage für den
 /// Benutzerordner (`First Run\<kind>`; das Original kopiert sie beim ersten Start in seinen
 /// Benutzerordner und listet beide zusammen, gemessen 52 + 74 → 77 Texturen bzw. 50 + 60 → 60
-/// Muster) und der eigene Benutzerordner `%APPDATA%\Firepixel\<kind>` (`user_base`).
+/// Muster) und der eigene Benutzerordner `%APPDATA%\Firepixel\<kind>` (`user_base`). Dieselben
+/// Ordner nutzt die Engine, um Texturen und Muster nur per Name zu laden ([`fp_engine::resources`]).
 pub fn resource_dirs(original: Option<&std::path::Path>, user_base: Option<&std::path::Path>, kind: &str) -> Vec<std::path::PathBuf> {
-    let mut v = Vec::new();
-    if let Some(o) = original {
-        v.push(o.join("Configuration").join(kind));
-        v.push(o.join("First Run").join(kind));
-    }
-    if let Some(u) = user_base {
-        v.push(u.join(kind));
-    }
-    v
+    fp_engine::resources::dirs_in(original, user_base, kind)
 }
 
 /// Bilddateien der Ordner (Name = Dateiname ohne Endung, Pfad), je Name nur die erste Fundstelle
 /// (ohne Rücksicht auf Groß-/Kleinschreibung), nach Namen geordnet. Fehlende Ordner zählen nicht.
 pub fn resource_files_in(dirs: &[std::path::PathBuf]) -> Vec<(String, std::path::PathBuf)> {
-    let mut v: Vec<(String, std::path::PathBuf)> = Vec::new();
-    for dir in dirs {
-        let Ok(rd) = std::fs::read_dir(dir) else { continue };
-        let mut files: Vec<std::path::PathBuf> = rd.flatten().map(|e| e.path()).filter(|p| p.is_file() && p.extension().is_some_and(|x| RESOURCE_IMAGE_EXTS.iter().any(|e| x.eq_ignore_ascii_case(e)))).collect();
-        files.sort();
-        for p in files {
-            let Some(stem) = p.file_stem().map(|s| s.to_string_lossy().to_string()) else { continue };
-            if !v.iter().any(|(n, _)| n.eq_ignore_ascii_case(&stem)) {
-                v.push((stem, p));
-            }
-        }
-    }
-    v.sort_by(|a, b| a.0.to_lowercase().cmp(&b.0.to_lowercase()).then_with(|| a.0.cmp(&b.0)));
-    v
+    fp_engine::resources::files_in(dirs)
 }
 
 fn resource_files(kind: &str) -> Vec<(String, std::path::PathBuf)> {
-    let original = fp_color::install::original_dir();
-    let user = fp_i18n::user_config_dir();
-    resource_files_in(&resource_dirs(original.as_deref(), user.as_deref(), kind))
+    resource_files_in(&fp_engine::resources::dirs(kind))
 }
 
 /// Texturen (Name, Datei) aus dem Ressourcenordner des Originals, dessen Benutzervorlage und dem

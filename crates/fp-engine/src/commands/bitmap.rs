@@ -451,14 +451,26 @@ pub(super) fn register(r: &mut CommandRegistry) {
             .param("from", ParamKind::Point, "Anfang")
             .param("to", ParamKind::Point, "Ende")
             .opt("colors", ParamKind::Json, "Farben [#rrggbb, …] (Vorgabe: Füll- → Strichfarbe)")
+            .opt_default("fillSelection", ParamKind::Bool, json!(true), "ausgewählten Bereich füllen (aus: Farbbereich am Anfangspunkt nach Toleranz)")
+            .opt_default("tolerance", ParamKind::Integer { min: Some(0), max: Some(255) }, json!(32), "Farbtoleranz (nur ohne „ausgewählten Bereich füllen“)")
             .run(|s, p| {
                 let (a, b) = (p.point("from")?, p.point("to")?);
                 let colors = super::draw::colors_param(p, &[s.tools.fill_color, s.tools.stroke_color])?;
+                let fill_sel = p.bool_or("fillSelection", true)?;
+                let tol = p.i64_or("tolerance", 32)?.clamp(0, 255) as u32;
                 with_doc(s, |d| {
                     let (path, e) = bitmap_for(d, Some(a), &BasicGeometry).ok_or_else(|| sel_err("err-sel-no-bitmap"))?;
-                    let region = match &d.selection.pixels {
-                        Some(m) if d.selection.has_pixels() => m.clone(),
-                        _ => Mask::from_rect(docops::element_bounds(&d.doc, &e).map(|r| r.round_out()).unwrap_or_default())?,
+                    // wie der Farbeimer: mit „Auswahl füllen“ die Pixelauswahl (ohne: die ganze
+                    // Bitmap), sonst der zusammenhängende Farbbereich am Anfangspunkt
+                    let region = if !fill_sel {
+                        let ElementKind::Bitmap(bm) = &e.kind else { return Err(sel_err("err-sel-no-bitmap")) };
+                        let img = bitmap_image(bm).ok_or_else(|| EngineError::Failed(fp_i18n::t("err-bitmap-unreadable-short")))?;
+                        flood_region(&img, a.x.floor() as i32, a.y.floor() as i32, tol).ok_or_else(|| sel_err("err-sel-point-outside-bitmap"))?
+                    } else {
+                        match &d.selection.pixels {
+                            Some(m) if d.selection.has_pixels() => m.clone(),
+                            _ => Mask::from_rect(docops::element_bounds(&d.doc, &e).map(|r| r.round_out()).unwrap_or_default())?,
+                        }
                     };
                     let (dx, dy) = ((b.x - a.x) as f64, (b.y - a.y) as f64);
                     let l2 = (dx * dx + dy * dy).max(1e-9);

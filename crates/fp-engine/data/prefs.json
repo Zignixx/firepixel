@@ -1266,16 +1266,16 @@
 },
 {
 "key": "ReplaceColorToolTolerance",
-"type": "bool",
-"default": false,
+"type": "integer",
+"default": 32,
 "category": "Farbe",
 "effect": "Werkzeugoption ReplaceColor: Toleranz",
 "dialog_page": null
 },
 {
 "key": "ReplaceColorToolStrength",
-"type": "bool",
-"default": false,
+"type": "integer",
+"default": 200,
 "category": "Farbe",
 "effect": "Werkzeugoption ReplaceColor: Strength",
 "dialog_page": null

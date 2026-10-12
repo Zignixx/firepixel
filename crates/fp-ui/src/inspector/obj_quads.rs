@@ -333,6 +333,34 @@ pub fn tool_swatch_gradient(ctx: &egui::Context) -> Option<Vec<u32>> {
     ctx.data(|d| d.get_temp::<Option<Vec<u32>>>(Id::new(TOOL_SWATCH_GRADIENT))).flatten()
 }
 
+/// Antwort des Verlaufseditors für das Verlauf-Werkzeug: Farbstopps → eigene Werkzeugfarben
+/// (`ToolOptions::gradient_colors`), „Umkehren“, Verlaufsform als Werkzeugattribut.
+fn apply_tool_gradient(ui: &Ui, st: &mut AppState, p: &Value) {
+    let o = &mut st.session.tools.options;
+    if let Some(stops) = p.get("stops").and_then(|v| v.as_array()) {
+        let mut v: Vec<(f64, Argb)> = stops
+            .iter()
+            .filter_map(|s| {
+                let pos = s.get(0)?.as_f64()?;
+                let c = fp_color::Rgba8::parse_hex(s.get(1)?.as_str()?)?.to_argb();
+                Some((pos, Argb(c.0 | 0xff00_0000)))
+            })
+            .collect();
+        v.sort_by(|a, b| a.0.total_cmp(&b.0));
+        if v.len() >= 2 {
+            o.gradient_colors = v.into_iter().map(|(_, c)| c).collect();
+        }
+    }
+    if p.get("reverse").and_then(|v| v.as_bool()) == Some(true) {
+        let mut c = o.gradient_tool_colors();
+        c.reverse();
+        o.gradient_colors = c;
+    }
+    if let Some(sh) = p.get("shape").and_then(|v| v.as_i64()) {
+        edit_tool_attrs(ui.ctx(), |a| a.grad_shape = sh as i32);
+    }
+}
+
 fn apply_fill(ui: &Ui, st: &mut AppState, tgt: Target, params: Value) {
     match tgt {
         Target::Selection => st.run("pi.fill", params),
@@ -400,7 +428,31 @@ pub fn fill_panel(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target, enabled: b
     let id = Id::new(("pi-fill", tgt == Target::Tool));
     super::glyphs::paint(ui.painter(), d.r(0.0, 0.0, 12.0, 11.0), Glyph::PaintBucket, &theme, en);
     let sw = d.r(14.0, 0.0, 15.0, 13.0);
-    if kind == 2 && tgt == Target::Selection {
+    // Verlauf-Werkzeug: eigenes Farbfeld mit dem Verlauf, den das Werkzeug malt (Werksvorgabe
+    // Schwarz → Weiß, unabhängig von Füll- und Strichfarbe; Original gemessen, PARITAET_A W26),
+    // Klick öffnet den Verlaufseditor; ohne Füllart-Knöpfe (W25)
+    let gradient_tool = tgt == Target::Tool && st.session.tools.active == fp_engine::ToolId::Gradient;
+    if gradient_tool {
+        let cols = st.session.tools.options.gradient_tool_colors();
+        let n = (cols.len() - 1).max(1) as f32;
+        let stops: Vec<(f32, Argb)> = cols.iter().enumerate().map(|(i, c)| (i as f32 / n, Argb(c.0 | 0xff00_0000))).collect();
+        let mut f = fp_model::Fill::solid();
+        f.shape = ta.grad_shape.max(2);
+        f.gradient = Some(ui_commands::make_gradient(f.shape, &stops, None));
+        let resp = fields::swatch(ui, id.with("sw"), sw, Some(stops[0].1), en);
+        draw_gradient_swatch(ui, sw, &f);
+        ui.ctx().data_mut(|dd| dd.insert_temp(Id::new(TOOL_SWATCH_GRADIENT), Some(stops.iter().map(|s| s.1 .0).collect::<Vec<u32>>())));
+        let mut out = None;
+        egui::Popup::from_toggle_button_response(&resp)
+            .close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside)
+            .frame(crate::menu::menu_frame(&theme).inner_margin(egui::Margin::same(6)))
+            .show(|ui| {
+                out = popups::gradient_editor(ui, id.with("grad"), &f);
+            });
+        if let Some(p) = out {
+            apply_tool_gradient(ui, st, &p);
+        }
+    } else if kind == 2 && tgt == Target::Selection {
         let resp = fields::swatch(ui, id.with("sw"), sw, color, en);
         if let Some(f) = &fill {
             draw_gradient_swatch(ui, sw, f);
@@ -419,17 +471,8 @@ pub fn fill_panel(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target, enabled: b
         }
     } else {
         let choice = popups::color_button(ui, id.with("sw"), sw, st, color, en, true, true);
-        // Verlauf-Werkzeug: das Farbfeld zeigt wie im Original den Verlauf, hier den, den das
-        // Werkzeug malt (Füll- → Strichfarbe), statt eines einfarbigen Felds (PARITAET_A W26)
         if tgt == Target::Tool {
-            let grad = (st.session.tools.active == fp_engine::ToolId::Gradient).then(|| {
-                let (a, b) = (Argb(st.session.tools.fill_color.0 | 0xff00_0000), Argb(st.session.tools.stroke_color.0 | 0xff00_0000));
-                let mut f = fp_model::Fill::solid();
-                f.gradient = Some(ui_commands::make_gradient(0, &[(0.0, a), (1.0, b)], None));
-                draw_gradient_swatch(ui, sw, &f);
-                vec![a.0, b.0]
-            });
-            ui.ctx().data_mut(|dd| dd.insert_temp(Id::new(TOOL_SWATCH_GRADIENT), grad));
+            ui.ctx().data_mut(|dd| dd.insert_temp(Id::new(TOOL_SWATCH_GRADIENT), None::<Vec<u32>>));
         }
         match choice {
             Some(ColorChoice::Color(c)) => {
@@ -453,9 +496,10 @@ pub fn fill_panel(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target, enabled: b
             None => {}
         }
     }
-    // Füllart-Knöpfe Keine / Einfarbig / Verlauf / Muster
+    // Füllart-Knöpfe Keine / Einfarbig / Verlauf / Muster; der Werkzeug-Inspektor des Verlaufs
+    // zeigt nur das Farbfeld (Original, PARITAET_A W25/W26; das Füllwerkzeug hat die Knöpfe)
     let kinds = [(54.0, Glyph::FillNone, 0u8, "pi-fill-none", "none"), (70.0, Glyph::FillSolid, 1, "pi-fill-solid", "solid"), (86.0, Glyph::FillGradient, 2, "pi-fill-gradient", "gradient"), (102.0, Glyph::FillPattern, 3, "pi-fill-pattern", "")];
-    for (x, g, k, tip, cat) in kinds {
+    for (x, g, k, tip, cat) in kinds.into_iter().filter(|_| !gradient_tool) {
         let tip = t(tip);
         let tip = tip.as_str();
         let pattern = k == 3;
@@ -508,8 +552,9 @@ pub fn fill_panel(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target, enabled: b
             }
         }
     }
-    // Rand: Hart / Anti-Alias / Weiche Kante + Breite
-    let fen = en && kind != 0;
+    // Rand: Hart / Anti-Alias / Weiche Kante + Breite (Verlauf-Werkzeug: immer bedienbar, es malt
+    // stets einen Verlauf)
+    let fen = en && (kind != 0 || gradient_tool);
     fields::label(ui, d.r(0.0, 17.0, 31.0, 8.0), &t("pi-edge"), fen);
     let edge_items = tl(&EDGE_ITEMS);
     if let Some(i) = fields::combo(ui, id.with("edge"), d.r(33.0, 15.0, 55.0, 13.0), &refs(&edge_items), Some(edge.clamp(0, 2) as usize), fen) {
@@ -542,7 +587,9 @@ pub fn fill_texture_panel(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target, en
         }
         Target::Tool => (if st.session.tools.fill_color.a() == 0 { 0 } else { ta.fill_kind }, ta.fill_texture.clone(), ta.fill_texture_amount, ta.fill_texture_transparent, false),
     };
-    let en = enabled && kind != 0 && (tgt == Target::Tool || attrs.is_some());
+    // Verlauf-Werkzeug: Textur immer bedienbar (es malt stets einen Verlauf, Original a_W25)
+    let gradient_tool = tgt == Target::Tool && st.session.tools.active == fp_engine::ToolId::Gradient;
+    let en = enabled && (kind != 0 || gradient_tool) && (tgt == Target::Tool || attrs.is_some());
     let id = Id::new(("pi-ftex", tgt == Target::Tool));
     fields::label(ui, d.r(0.0, 2.0, 30.0, 8.0), &t("pi-texture"), en);
     match texture_combo(ui, id.with("name"), d.r(31.0, 0.0, 55.0, 14.0), &tex, en) {

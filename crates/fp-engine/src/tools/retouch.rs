@@ -51,7 +51,9 @@ pub fn params(id: ToolId, ctx: &ToolContext) -> RetouchParams {
         ToolId::Dodge | ToolId::Burn => p.get_int(&key("Exposure"), 50),
         ToolId::Smudge => p.get_int(&key("Pressure"), 50),
         ToolId::RedEyeRemoval => p.get_int(&key("Strength"), 50),
-        ToolId::ReplaceColor => p.get_int(&key("Transparant"), 100),
+        // Stärke im Inspektor 0..255, Werksvorgabe 200 (`ReplaceColorToolStrength`, PARITAET_A W8);
+        // Annahme: 200 = volle Wirkung (Skala des Originals nicht gemessen)
+        ToolId::ReplaceColor => p.get_int(&key("Strength"), 200) / 2,
         _ => 100,
     };
     RetouchParams {
