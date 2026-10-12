@@ -71,6 +71,7 @@ pub fn download(id: ModelId, prog: &Progress) -> Result<PathBuf> {
     }
     let m = models::info(id);
     let folder = models::download_folder();
+    fp_i18n::profile::guard_write(&folder);
     std::fs::create_dir_all(&folder)?;
     let target = folder.join(m.file);
     let part = folder.join(format!("{}.part", m.file));

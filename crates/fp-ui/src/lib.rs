@@ -355,8 +355,8 @@ pub fn native_options() -> eframe::NativeOptions {
         // Fensterlage und Arbeitsbereich unter %APPDATA%\Firepixel\data wie die Voreinstellungen.
         // eframe fragt sonst den Systemordner direkt ab und übergeht eine umgesetzte
         // APPDATA-Variable: Testinstanzen mit eigenem APPDATA überschrieben dann die Fensterlage
-        // des Nutzers (beobachtet 12.10.).
-        persistence_path: std::env::var_os("APPDATA").filter(|a| !a.is_empty()).map(|a| PathBuf::from(a).join("Firepixel").join("data").join("app.ron")),
+        // des Nutzers (beobachtet 12.10.). In Testläufen das Testprofil (fp_i18n::profile, EB-3).
+        persistence_path: fp_i18n::profile::roaming_dir().map(|d| d.join("data").join("app.ron")),
         // maximiert erst nach dem Erscheinen (sonst blitzt das Fenster beim Start zweimal auf)
         window_builder: Some(Box::new(start_window::strip_maximized)),
         ..Default::default()

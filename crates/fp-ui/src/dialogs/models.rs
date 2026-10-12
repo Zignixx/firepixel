@@ -838,6 +838,7 @@ fn show_manager(ctx: &egui::Context, st: &mut AppState) {
         }
         Some("open") => {
             let f = models::download_folder();
+            fp_i18n::profile::guard_write(&f);
             let _ = std::fs::create_dir_all(&f);
             if !matches!(fp_engine::shell::shell_open(&f, None), Ok(true)) {
                 d.info = Some(fp_i18n::tr!("dlg-ai-folder-path", path = f.display().to_string()));

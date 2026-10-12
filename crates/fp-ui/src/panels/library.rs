@@ -139,6 +139,7 @@ pub fn common_library_dir_in(base: &std::path::Path) -> PathBuf {
 pub fn library_roots() -> Vec<(String, PathBuf)> {
     let mut v = Vec::new();
     if let Some(dir) = fp_engine::Preferences::default_path().and_then(|p| p.parent().map(common_library_dir_in)) {
+        fp_i18n::profile::guard_write(&dir);
         let _ = std::fs::create_dir_all(&dir);
         v.push((common::t("panel-commonlib-own"), dir));
     }

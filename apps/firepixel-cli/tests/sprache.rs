@@ -6,6 +6,7 @@ use predicates::prelude::*;
 fn cli() -> Command {
     let mut c = Command::cargo_bin("firepixel-cli").expect("exe");
     c.env("FP_NO_SHELL_OPEN", "1").env("FIREPIXEL_LANG", "de");
+    c.env(fp_i18n::profile::ENV_TEST_PROFILE, fp_i18n::profile::use_test_profile()); // nie ins echte Nutzerprofil (EB-3)
     c
 }
 

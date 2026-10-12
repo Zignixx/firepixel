@@ -69,6 +69,7 @@ pub fn test_profile() -> &'static Path {
     DIR.get_or_init(|| {
         let d = std::env::temp_dir().join("firepixel-gesamttest").join(format!("{}-profile", std::process::id()));
         let _ = std::fs::remove_dir_all(&d);
+        fp_i18n::profile::redirect(&d); // alle übrigen Profilordner ebenfalls hierher (EB-3)
         let (commands, extensions) = (d.join("Commands"), d.join("Extensions"));
         let _ = std::fs::create_dir_all(&extensions);
         let _ = fp_script::builtin_commands::install_into(&commands);

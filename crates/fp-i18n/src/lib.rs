@@ -47,6 +47,7 @@ pub use fluent_bundle::FluentValue as Value;
 pub mod check;
 mod format;
 pub mod paths;
+pub mod profile;
 pub use format::{
     fmt_date, fmt_datetime, fmt_number, fmt_size, fmt_time, shortcut_label, strip_access, t_access, unit, AccessText,
 };
@@ -554,16 +555,9 @@ pub const LANGUAGE_DIR: &str = "Languages";
 pub const LEGACY_LANGUAGE_DIR: &str = "Sprachen";
 
 /// Nutzerordner von Firepixel: `%APPDATA%\Firepixel` (sonst `$XDG_CONFIG_HOME/firepixel` bzw.
-/// `$HOME/.config/firepixel`).
+/// `$HOME/.config/firepixel`); in Testläufen das Testprofil ([`profile::roaming_dir`]).
 pub fn user_config_dir() -> Option<std::path::PathBuf> {
-    use std::path::PathBuf;
-    if let Some(app) = std::env::var_os("APPDATA") {
-        return Some(PathBuf::from(app).join("Firepixel"));
-    }
-    if let Some(x) = std::env::var_os("XDG_CONFIG_HOME") {
-        return Some(PathBuf::from(x).join("firepixel"));
-    }
-    std::env::var_os("HOME").map(|h| PathBuf::from(h).join(".config").join("firepixel"))
+    profile::roaming_dir()
 }
 
 /// Sprachordner in `base`: `Languages`, alter Ordner `Sprachen` wird migriert bzw. als Rückfall benutzt.

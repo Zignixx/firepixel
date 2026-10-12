@@ -186,10 +186,12 @@ mod tests {
     /// Voreinstellungen), damit Testinstanzen mit eigenem APPDATA die des Nutzers nicht anfassen.
     #[test]
     fn window_state_follows_appdata() {
-        let Some(appdata) = std::env::var_os("APPDATA").filter(|a| !a.is_empty()) else { return };
+        let Some(base) = fp_i18n::profile::roaming_dir() else { return };
         let o = crate::native_options();
-        let want = std::path::PathBuf::from(appdata).join("Firepixel").join("data").join("app.ron");
+        let want = base.join("data").join("app.ron");
         assert_eq!(o.persistence_path.as_deref(), Some(want.as_path()));
+        // im Test nie die Fensterlage des Nutzers (EB-3)
+        assert!(!fp_i18n::profile::is_real(&want), "{want:?}");
         assert!(o.persist_window);
     }
 

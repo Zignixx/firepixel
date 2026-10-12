@@ -443,15 +443,10 @@ impl Preferences {
     // ---------------------------------------------------------------- Datei
 
     /// Standardpfad der Voreinstellungsdatei: `%APPDATA%\Firepixel\preferences.json`
-    /// (sonst `$XDG_CONFIG_HOME/firepixel/…` bzw. `$HOME/.config/firepixel/…`).
+    /// (sonst `$XDG_CONFIG_HOME/firepixel/…` bzw. `$HOME/.config/firepixel/…`); in Testläufen im
+    /// Testprofil ([`fp_i18n::profile`], nie das echte Nutzerprofil).
     pub fn default_path() -> Option<PathBuf> {
-        if let Some(app) = std::env::var_os("APPDATA") {
-            return Some(PathBuf::from(app).join("Firepixel").join("preferences.json"));
-        }
-        if let Some(x) = std::env::var_os("XDG_CONFIG_HOME") {
-            return Some(PathBuf::from(x).join("firepixel").join("preferences.json"));
-        }
-        std::env::var_os("HOME").map(|h| PathBuf::from(h).join(".config").join("firepixel").join("preferences.json"))
+        fp_i18n::profile::roaming_dir().map(|d| d.join("preferences.json"))
     }
 
     /// Liest eine Voreinstellungsdatei.
@@ -480,6 +475,7 @@ impl Preferences {
 
     /// Schreibt die Datei (über eine temporäre Datei, damit ein Abbruch keine halbe Datei hinterlässt).
     pub fn save(&self, path: &Path) -> Result<()> {
+        fp_i18n::profile::guard_write(path);
         if let Some(dir) = path.parent() {
             std::fs::create_dir_all(dir)?;
         }

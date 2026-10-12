@@ -10,6 +10,7 @@ use std::sync::Arc;
 /// Sitzung mit einem neuen Dokument (weißer Hintergrund).
 pub fn doc_session(w: f32, h: f32) -> Session {
     fp_engine::shell::disable();
+    fp_i18n::profile::use_test_profile(); // nie ins echte Nutzerprofil (EB-3)
     let mut s = Session::default();
     ex(&mut s, "file.new", json!({"width": w, "height": h, "background": "#ffffff"}));
     s

@@ -351,6 +351,7 @@ pub fn save_custom_set(set: &ShortcutSet) -> Result<&'static ShortcutSet, String
         return Err(fp_i18n::tr!("err-invalid-set-name", name = set.name.as_str()));
     }
     let f = file_of(&set.name);
+    fp_i18n::profile::guard_write(&f);
     if let Some(d) = f.parent() {
         std::fs::create_dir_all(d).map_err(|e| e.to_string())?;
     }
@@ -370,6 +371,7 @@ pub fn delete_custom_set(name: &str) -> Result<(), String> {
     if let Ok(mut m) = custom_map().lock() {
         m.retain(|k, _| !k.eq_ignore_ascii_case(name));
     }
+    fp_i18n::profile::guard_write(&file_of(name));
     match std::fs::remove_file(file_of(name)) {
         Ok(()) => Ok(()),
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => Err(fp_i18n::tr!("err-set-not-found", name = name)),

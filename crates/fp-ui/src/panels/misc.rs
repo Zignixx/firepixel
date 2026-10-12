@@ -295,6 +295,7 @@ fn url_library(ctx: &egui::Context) -> Vec<String> {
 
 fn set_url_library(ctx: &egui::Context, v: Vec<String>) {
     if let Some(p) = url_file() {
+        fp_i18n::profile::guard_write(&p);
         if let Some(dir) = p.parent() {
             let _ = std::fs::create_dir_all(dir);
         }

@@ -1238,6 +1238,7 @@ fn case_for(name: &str, info: &fp_engine::CommandInfo, ids: &Ids) -> Case {
 #[test]
 fn all_commands_work() {
     let _g = serial();
+    fp_i18n::profile::use_test_profile(); // nie ins echte Nutzerprofil (EB-3)
     // nie Fremdprogramme (Browser, E-Mail, Druck, Explorer) starten
     fp_engine::shell::disable();
 
@@ -1273,6 +1274,7 @@ fn all_commands_work() {
 #[ignore]
 fn commands_on_corpus_files() {
     let _g = serial();
+    fp_i18n::profile::use_test_profile(); // nie ins echte Nutzerprofil (EB-3)
     fp_engine::shell::disable();
     let m = std::fs::canonicalize(env!("CARGO_MANIFEST_DIR")).unwrap_or_else(|_| PathBuf::from(env!("CARGO_MANIFEST_DIR")));
     let root = std::env::var_os("FP_CORPUS_DIR").map(PathBuf::from).unwrap_or_else(|| m.join("../../../korpus"));
@@ -1486,6 +1488,7 @@ fn repeat_case(reg: &CommandRegistry, name: &str) -> Result<&'static str, String
 #[test]
 fn repeated_commands_replace_instead_of_append() {
     let _g = serial();
+    fp_i18n::profile::use_test_profile(); // nie ins echte Nutzerprofil (EB-3)
     fp_engine::shell::disable();
     let reg = CommandRegistry::with_defaults();
     let filter = std::env::var("FP_ONLY").ok();

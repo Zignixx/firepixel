@@ -210,6 +210,7 @@ pub fn install_into(dir: &Path) -> std::io::Result<usize> {
 
 /// Wie [`install_into`] mit Datei-/Ordnernamen in der Sprache `lang` (`de`, sonst Englisch).
 pub fn install_into_lang(dir: &Path, lang: &str) -> std::io::Result<usize> {
+    fp_i18n::profile::guard_write(dir);
     let german = lang == "de" || lang.starts_with("de-");
     let mut n = 0;
     for (i, (rel_de, src)) in BUILTIN.iter().enumerate() {
@@ -249,6 +250,7 @@ pub fn update_outdated(dir: &Path) -> std::io::Result<usize> {
         for rel in [Some(*rel_de), BUILTIN_EN.get(*i).copied()].into_iter().flatten() {
             let p: PathBuf = rel.split('/').fold(dir.to_path_buf(), |acc, part| acc.join(part));
             if std::fs::read_to_string(&p).is_ok_and(|s| s == *old) {
+                fp_i18n::profile::guard_write(&p);
                 std::fs::write(&p, src)?;
                 n += 1;
             }
@@ -270,6 +272,7 @@ pub fn install_builtin_commands() -> std::io::Result<usize> {
         return Ok(0);
     }
     let n = install_into_lang(&dir, &fp_i18n::current_language())?;
+    fp_i18n::profile::guard_write(&marker);
     std::fs::write(marker, env!("CARGO_PKG_VERSION"))?;
     Ok(n)
 }

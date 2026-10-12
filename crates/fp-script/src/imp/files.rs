@@ -28,6 +28,13 @@ fn same_form(input_url: bool, path: &Path) -> String {
 
 pub(super) fn method(name: &str, args: &[Arg], ctx: &mut Context) -> FwResult<JsValue> {
     let a0 = args.first();
+    // Testläufe schreiben nie ins echte Nutzerprofil (fp_i18n::profile)
+    if matches!(name, "createDirectory" | "createFile" | "deleteFile" | "deleteFileIfExisting" | "rename" | "swap") {
+        fp_i18n::profile::guard_write(&p(a0));
+    }
+    if matches!(name, "copy" | "swap") {
+        fp_i18n::profile::guard_write(&p(args.get(1)));
+    }
     match name {
         "exists" => {
             let path = super::fw::resolve_read(&p(a0));
@@ -140,7 +147,7 @@ pub(super) fn method(name: &str, args: &[Arg], ctx: &mut Context) -> FwResult<Js
         }
         "getLanguageDirectory" => {
             let custom = with_state(|s| s.opts.language_dir.clone())?;
-            let dir = custom.unwrap_or_else(|| std::env::var_os("APPDATA").map(PathBuf::from).unwrap_or_else(std::env::temp_dir).join("Firepixel").join("Language"));
+            let dir = custom.unwrap_or_else(|| fp_i18n::profile::roaming_dir().unwrap_or_else(|| std::env::temp_dir().join("Firepixel")).join("Language"));
             Ok(conv::s(&path_to_url(&dir)))
         }
         "getLastErrorString" => Ok(conv::s(&with_state(|s| s.last_file_error.clone())?)),
@@ -148,6 +155,7 @@ pub(super) fn method(name: &str, args: &[Arg], ctx: &mut Context) -> FwResult<Js
             let path = super::fw::resolve_read(&p(a0));
             let write = args.get(1).is_some_and(|x| x.bool());
             let st = if write {
+                fp_i18n::profile::guard_write(&path);
                 if let Some(dir) = path.parent().filter(|d| !d.as_os_str().is_empty()) {
                     let _ = std::fs::create_dir_all(dir);
                 }

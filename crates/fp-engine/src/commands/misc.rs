@@ -212,7 +212,11 @@ fn copy_dir(from: &Path, to: &Path) -> Result<()> {
 
 fn manage_extensions(p: &Params) -> Result<CommandOutput> {
     let dir = extensions_dir();
-    match p.opt_str("action")?.as_deref().unwrap_or("list") {
+    let action = p.opt_str("action")?;
+    if action.as_deref().is_some_and(|a| a != "list") {
+        fp_i18n::profile::guard_write(&dir);
+    }
+    match action.as_deref().unwrap_or("list") {
         "list" => Ok(CommandOutput::value(json!({"folder": dir.to_string_lossy(), "extensions": list_extensions()}))),
         "install" => {
             let src = PathBuf::from(p.str("path")?);
@@ -285,7 +289,11 @@ pub(super) fn register(r: &mut CommandRegistry) {
             .opt("code", ParamKind::String, "Skriptquelltext (save); ohne: Verlauf des Dokuments als Skript")
             .run(|s, p| {
                 let dir = commands_dir();
-                match p.opt_str("action")?.as_deref().unwrap_or("list") {
+                let action = p.opt_str("action")?;
+                if action.as_deref().is_some_and(|a| a != "list") {
+                    fp_i18n::profile::guard_write(&dir);
+                }
+                match action.as_deref().unwrap_or("list") {
                     "list" => return Ok(CommandOutput::value(json!({"folder": dir.to_string_lossy(), "commands": saved_commands()}))),
                     "save" => {
                         let name = safe_file_name(&p.str("name")?)?;
@@ -324,6 +332,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
     if let Some(name) = catalog_name(7013) {
         r.add(cmd(&name).opt_default("open", ParamKind::Bool, json!(true), "Ordner im Explorer öffnen").run(|_, p| {
             let dir = extensions_dir();
+            fp_i18n::profile::guard_write(&dir);
             std::fs::create_dir_all(&dir)?;
             if launch_allowed(p)? {
                 open_with_system(&dir, None)?;

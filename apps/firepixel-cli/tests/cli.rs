@@ -18,6 +18,7 @@ fn cli() -> Command {
     let mut c = Command::cargo_bin("firepixel-cli").unwrap_or_else(|e| panic!("{e}"));
     // Ausgaben auf Deutsch prüfen (sonst Systemsprache)
     c.env("FIREPIXEL_LANG", "de");
+    c.env(fp_i18n::profile::ENV_TEST_PROFILE, fp_i18n::profile::use_test_profile()).env("FP_NO_SHELL_OPEN", "1"); // nie ins echte Nutzerprofil (EB-3)
     c
 }
 
@@ -152,7 +153,7 @@ fn mcp_http_and_bridge_proxy() {
     // fehlende Token-Datei: verständlicher Fehler, Exit 1
     cli().args(["mcp", "--bridge", "--token-file"]).arg(d.join("fehlt.json")).assert().code(1).stderr(predicate::str::contains("--mcp"));
     let exe = assert_cmd::cargo::cargo_bin("firepixel-cli");
-    let mut server = std::process::Command::new(&exe)
+    let mut server = fp_i18n::profile::child_env(&mut std::process::Command::new(&exe))
         .args(["mcp", "--http", "--port", "0", "--token-file"])
         .arg(&tok)
         .stdin(Stdio::null())
@@ -220,7 +221,7 @@ fn run_steps_in_place_and_info_filters() {
 #[test]
 fn mcp_stdio_server_answers() {
     let exe = assert_cmd::cargo::cargo_bin("firepixel-cli");
-    let mut child = std::process::Command::new(exe).arg("mcp").stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::null()).spawn().unwrap_or_else(|e| panic!("{e}"));
+    let mut child = fp_i18n::profile::child_env(&mut std::process::Command::new(exe)).arg("mcp").stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::null()).spawn().unwrap_or_else(|e| panic!("{e}"));
     let mut stdin = child.stdin.take().unwrap_or_else(|| panic!("stdin"));
     let stdout = child.stdout.take().unwrap_or_else(|| panic!("stdout"));
     let mut lines = BufReader::new(stdout).lines();

@@ -244,8 +244,9 @@ pub const MODELS_DIR: &str = "Models";
 /// Alter deutscher Name des Modellordners.
 pub const LEGACY_MODELS_DIR: &str = "Modelle";
 
+/// `%LOCALAPPDATA%\Firepixel`, in Testläufen das Testprofil (`fp_i18n::profile`).
 fn local_base() -> Option<PathBuf> {
-    std::env::var_os("LOCALAPPDATA").map(|d| PathBuf::from(d).join("Firepixel"))
+    fp_i18n::profile::local_dir()
 }
 
 fn exe_base() -> Option<PathBuf> {
@@ -283,6 +284,18 @@ pub fn search_folders() -> Vec<PathBuf> {
             v.push(c.clone());
             // alter Ordner neben einem schon vorhandenen neuen: mit durchsuchen (nichts geht verloren)
             v.extend(base.and_then(|b| fp_i18n::paths::leftover_dir(&c, &b.join(LEGACY_MODELS_DIR))));
+        }
+    }
+    // Testlauf mit umgeleitetem Profil: die echten Modelle des Nutzers bleiben lesbar (nur lesen,
+    // ganz hinten – Downloads gehen nie dorthin, siehe [`download_folder`])
+    if fp_i18n::profile::is_test_run()
+        && let Some(real) = fp_i18n::profile::real_local_dir()
+        && local_base().as_ref() != Some(&real)
+    {
+        for d in [real.join(MODELS_DIR), real.join(LEGACY_MODELS_DIR)] {
+            if d.is_dir() && !v.contains(&d) {
+                v.push(d);
+            }
         }
     }
     v

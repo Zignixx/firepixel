@@ -66,7 +66,11 @@ pub fn migrate_dir(new: &Path, old: &Path) -> PathBuf {
     if !migration_enabled() || failed_before(new, old) {
         return if !new.is_dir() && old.is_dir() { old.to_path_buf() } else { new.to_path_buf() };
     }
-    let r = migrate_dir_with(new, old, |a, b| std::fs::rename(a, b));
+    let r = migrate_dir_with(new, old, |a, b| {
+        crate::profile::guard_write(a);
+        crate::profile::guard_write(b);
+        std::fs::rename(a, b)
+    });
     if r.as_path() == old {
         mark_failed(new, old);
     }
@@ -103,6 +107,8 @@ pub fn migrate_file(new: &Path, old: &Path) -> PathBuf {
     if !migration_enabled() || failed_before(new, old) {
         return old.to_path_buf();
     }
+    crate::profile::guard_write(old);
+    crate::profile::guard_write(new);
     match std::fs::rename(old, new) {
         Ok(()) if new.is_file() => new.to_path_buf(),
         _ => {

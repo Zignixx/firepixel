@@ -19,7 +19,8 @@ fn script_dir() -> Option<PathBuf> {
 
 /// Verzeichnisse der Anwendung (Firepixel hat keine Installation wie das Original): Benutzerordner.
 fn app_dir(sub: &str) -> String {
-    let base = std::env::var_os("APPDATA").map(PathBuf::from).unwrap_or_else(std::env::temp_dir).join("Firepixel");
+    // %APPDATA%\Firepixel, in Testläufen das Testprofil (fp_i18n::profile)
+    let base = fp_i18n::profile::roaming_dir().unwrap_or_else(|| std::env::temp_dir().join("Firepixel"));
     let p = if sub.is_empty() { base } else { base.join(sub) };
     path_to_url(&p) + "/"
 }
@@ -665,6 +666,7 @@ pub(super) fn history_method(name: &str, args: &[Arg], ctx: &mut Context) -> FwR
             })?;
             if let Some(url) = args.get(1).and_then(|a| a.str()) {
                 let p = url_to_path(&url);
+                fp_i18n::profile::guard_write(&p);
                 if let Some(dir) = p.parent() {
                     let _ = std::fs::create_dir_all(dir);
                 }

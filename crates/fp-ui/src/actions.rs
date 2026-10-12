@@ -111,6 +111,7 @@ pub fn execute(st: &mut AppState, ctx: &egui::Context, a: Action) {
             st.settings.named_workspaces.retain(|(n, _)| *n != name);
             // zusätzlich als XML im Format des Originals (Layoutordner)
             if let Some(dir) = crate::workspace::layouts_dir() {
+                fp_i18n::profile::guard_write(&dir);
                 let _ = std::fs::create_dir_all(&dir);
                 if let Err(e) = std::fs::write(dir.join(format!("{name}.xml")), w.to_panel_state_xml()) {
                     st.set_status(fp_i18n::tr!("ui-workspace-save-failed", error = e.to_string()), now(ctx));

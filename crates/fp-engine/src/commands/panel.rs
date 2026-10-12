@@ -2172,6 +2172,7 @@ fn read_file(path: &str) -> Result<Vec<u8>> {
 }
 
 fn write_file(path: &str, bytes: &[u8]) -> Result<()> {
+    fp_i18n::profile::guard_write(std::path::Path::new(path));
     std::fs::write(path, bytes).map_err(|e| EngineError::Io(format!("{path}: {e}")))
 }
 

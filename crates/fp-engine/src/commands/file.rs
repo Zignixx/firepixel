@@ -53,6 +53,7 @@ pub fn save_document(s: &Session, doc: &Document, page: usize, path: &Path) -> R
         },
         None => fp_fwpng::write(&d, &opts, &fp_fwpng::NoFlattener)?,
     };
+    fp_i18n::profile::guard_write(path);
     if let Some(dir) = path.parent()
         && !dir.as_os_str().is_empty()
     {

@@ -168,6 +168,7 @@ pub fn apply_prefs(st: &mut AppState, ctx: &egui::Context) {
 /// Ordner für weitere Sprachen (wird bei Bedarf angelegt).
 pub fn language_folder() -> Option<std::path::PathBuf> {
     let dir = fp_i18n::user_language_dir()?;
+    fp_i18n::profile::guard_write(&dir);
     let _ = std::fs::create_dir_all(&dir);
     Some(dir)
 }

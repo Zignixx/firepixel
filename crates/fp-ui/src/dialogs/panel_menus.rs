@@ -73,6 +73,7 @@ fn save_command_params(d: &super::form::FormDialog) -> serde_json::Value {
     let name = d.get("name").as_str().map(str::to_string).unwrap_or_else(|| t("dlg-pmenu-command-fallback")).trim().replace(['\\', '/', ':', '*', '?', '"', '<', '>', '|'], "_");
     let name = if name.is_empty() { t("dlg-pmenu-command-fallback") } else { name };
     let dir = d.base.get("_dir").and_then(|v| v.as_str()).map(PathBuf::from).unwrap_or_else(fp_engine::commands::misc::commands_dir);
+    fp_i18n::profile::guard_write(&dir);
     let _ = std::fs::create_dir_all(&dir);
     json!({ "steps": d.base.get("steps").cloned().unwrap_or(json!([])), "path": dir.join(format!("{name}.jsf")).to_string_lossy() })
 }

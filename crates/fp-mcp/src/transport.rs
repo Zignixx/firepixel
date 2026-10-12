@@ -78,13 +78,10 @@ impl Default for HttpOptions {
 }
 
 /// Vorgabe-Datei für Adresse und Token: `%LOCALAPPDATA%\Firepixel\mcp-http.json`
-/// (sonst `$XDG_STATE_HOME/firepixel` bzw. `~/.local/state/firepixel`).
+/// (sonst `$XDG_STATE_HOME/firepixel` bzw. `~/.local/state/firepixel`); in Testläufen im
+/// Testprofil (`fp_i18n::profile`).
 pub fn default_token_file() -> PathBuf {
-    let base = std::env::var_os("LOCALAPPDATA")
-        .map(|p| PathBuf::from(p).join("Firepixel"))
-        .or_else(|| std::env::var_os("XDG_STATE_HOME").map(|p| PathBuf::from(p).join("firepixel")))
-        .or_else(|| std::env::var_os("HOME").map(|p| PathBuf::from(p).join(".local").join("state").join("firepixel")))
-        .unwrap_or_else(|| std::env::temp_dir().join("firepixel"));
+    let base = fp_i18n::profile::local_dir().unwrap_or_else(|| std::env::temp_dir().join("firepixel"));
     base.join("mcp-http.json")
 }
 
@@ -189,6 +186,7 @@ impl Drop for HttpServer {
 }
 
 fn write_token_file(path: &Path, addr: SocketAddr, token: &str, mode: &str) -> Result<(), McpError> {
+    fp_i18n::profile::guard_write(path);
     if let Some(dir) = path.parent() {
         std::fs::create_dir_all(dir)?;
     }
