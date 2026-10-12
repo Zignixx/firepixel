@@ -26,7 +26,7 @@ Verwandte Dateien:
 9. **KI-Steuerung „so gut wie photocraft“:** ein Befehlsregister für UI, CLI, MCP und JSF.
 10. **Arbeitsweise:**
     - autonom, ohne Rückfragen
-    - **höchstens 6 Agenten gleichzeitig** (seit 12.10. ≈ 15:30, vorher 4), alle auf Opus 5.5, kleine Aufträge; höchstens 1–2 davon bedienen die Oberfläche stark
+    - **höchstens 8 Agenten gleichzeitig** (seit 12.10. ≈ 16:40; vorher 6 bzw. 4), alle auf Opus 5.5, kleine Aufträge; höchstens 1–2 davon bedienen die Oberfläche stark
     - nur einer bedient die Oberfläche (Sperre `re\scripts\fwsteuerung\gui-sitzung.ps1`)
     - RDP bleibt offen
 11. **„Fertig“ gibt es erst nach dem kompletten Durchklicken der ganzen App im echten Fenster** (§5, Schritt Z).
@@ -79,7 +79,7 @@ Umfang heute: 19 Crates, ≈ 169.000 Zeilen Rust, 132 Testdateien, 16 Sprachdate
 
 ---
 
-## 4. Läuft gerade (höchstens 6)
+## 4. Läuft gerade (höchstens 8)
 
 | Agent | Auftrag | Schreibt in |
 |---|---|---|
@@ -88,6 +88,8 @@ Umfang heute: 19 Crates, ≈ 169.000 Zeilen Rust, 132 Testdateien, 16 Sprachdate
 | **BV-1** (Cleanroom) | Bildvorschau Paket P1: 1/2/4-fach, eigene Einstellungen je Feld, Kopfzeile mit genauer Größen-/Ladezeitformel, aktives Feld, synchroner Zoom und Bildlauf, Hintergrundrechnung, gleiche Kodierung wie der Export. Quelle **nur** `re\17-bildvorschau.md` (☑ RE-BV, 13 Abschnitte, im Original nachgeprüft) | neues Modul `fp-ui\src\dialogs\image_preview\`, `image_preview.ftl`, fp-export |
 | **FV-13** | P-MENU1: 8 Menüeinträge aus dem Gesamttest (Bitmap-Auswahl wiederherstellen/löschen, Hilfslinien entfernen, Pfade teilen, zweiter Browser, 3 Befehlsskripte); Test liest nicht mehr das echte Profil | fp-engine-Befehle, fp-script, `gesamt_menu.rs` |
 | **PM-5** | P-PM4 Teil 1: Messrunde Dialoge D01–D25 in beiden Programmen, Paketvorschläge zu 3–5 Dialogen | nur Doku + Bilder |
+| **KI-2** | P-KI: N21 KI-Fortschrittsfenster schön (3 Designs, de/en, kein Aufblitzen) + Feineinstellungen, die die Modelle wirklich hergeben (Schwelle, Kante, ausdehnen/zusammenziehen, Maskenvariante) im Werkzeug-Inspektor | fp-ai, KI-Befehle, KI-Inspektor, `ai_progress_ki2.rs` |
+| **FV-15** | P-IBD1: Texturliste 77 + „Andere…“, Feldtext beim Klick auf ein anderes Objekt (F7), `pi.text.antialias`, Hinweistext der Objektauswahl | Inspektor, `panel.rs`, `inspector_fv15.rs` |
 | **FV-12** | N19 Suche in der Schriftarten-Liste, N20 Nachzeichnen-Dialog größer (≈ 1050 × 830), Übersetzungsrest `bitmap.paint`/`bitmap.erase` | `inspector\fonts.rs`, `dialogs\trace.rs`, ftl |
 
 Fertig seit dem Plan: ☑ **FV-8** Tippverzögerung (`8f6bcfc`, `5a821e0`): Ursache ist der Software-Rasterer dieses Rechners (keine Grafikkarte, jedes Bild 150–700 ms). Gegenmittel: egui-wgpu-Kopie in `vendor\` nur für Software-Rasterer, Schachbrett als eine Textur, Teil-Upload der Leinwand, Ebenen-Miniaturen nur sichtbar. Zeit je Zeichen 640 → 77 ms (große Seite 1190 → 96 ms) · ☑ **TE-1** Technisches auf Englisch, Teil 1 (`c1e16e1`): 31 Namen, u. a. `Sprachen` → `Languages`, `Modelle` → `Models`, `Allgemeine Bibliothek` → `Common Library`, CLI `sprache` → `language`, `FP_DATEIDIALOG` → `FP_FILE_DIALOG`; Migration erst beim nächsten Start durch den Nutzer; Wächter `fp-neutral\tests\technical_english.rs`; Liste und Teil 2 in `docs\TECHNISCH_ENGLISCH.md` §D · ☑ **RE-BV** (`re\17-bildvorschau.md`) · ☑ **FV-11** Bitmap-Werkzeuge: Pinsel malt Pixel, Esc in allen Malwerkzeugen, Abdruckmodell für Radiergummi/Weichzeichner/Stempel, kein Rahmen beim Malen; L-Abschnitt 30/7/2 → 34/4/1 (`24e9524`, `37aaac0`, `8072c14`, `a6c6a61`). Neuer Rest LW: Zeiger-Klick auf ein transparentes Bitmap-Pixel wählt nichts (Original: Bitmap); Abdruckmodell für Scharfzeichner, Abwedler usw. ungemessen → in P-LW1.
