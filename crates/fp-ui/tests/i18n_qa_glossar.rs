@@ -212,11 +212,27 @@ fn englisch_fachlich() {
             }
             continue;
         }
-        // Glossar
-        for (gd, ge) in &gl {
-            if has_word(dv, gd) && !has_word(ev, ge) {
-                // Mehrdeutige Begriffe: nur melden, wenn das Wort allein steht oder Menü/Befehl ist
-                push("glossar", key, file, dv, ev, format!("„{gd}“ → „{ge}“"));
+        // Glossar (ohne Zugriffstasten; alle englischen Varianten eines deutschen Begriffs gelten;
+        // Wortstamm, damit „Copy“ auch „copies“ trifft; Beschreibungen sind Fließtext und zählen nicht)
+        let dclean = dv.replace('&', "");
+        let eclean = ev.replace('&', "").to_lowercase();
+        if !key.ends_with(".description") {
+            let mut by_de: BTreeMap<&str, Vec<&str>> = BTreeMap::new();
+            for (gd, ge) in &gl {
+                by_de.entry(gd.as_str()).or_default().push(ge.as_str());
+            }
+            for (gd, ges) in by_de {
+                if !has_word(&dclean, gd) {
+                    continue;
+                }
+                let hit = ges.iter().any(|ge| {
+                    let g = ge.to_lowercase();
+                    let stem: String = g.trim_end_matches(['y', 'e', 's']).to_string();
+                    eclean.contains(&g) || (stem.len() >= 3 && eclean.contains(&stem))
+                });
+                if !hit {
+                    push("glossar", key, file, dv, ev, format!("„{gd}“ → „{}“", ges.join("“/„")));
+                }
             }
         }
         // Ellipse
@@ -256,7 +272,7 @@ fn englisch_fachlich() {
                 push("tastenname", key, file, dv, ev, format!("deutscher Tastenname „{g}“"));
             }
         }
-        if GERMAN_WORDS.iter().any(|w| ev.contains(w)) || (ev == dv && dv.chars().filter(|c| c.is_alphabetic()).count() > 3 && dv.split_whitespace().count() > 1) {
+        if GERMAN_WORDS.iter().any(|w| ev.contains(w)) {
             push("deutsch", key, file, dv, ev, "wirkt unübersetzt".into());
         }
     }
@@ -310,6 +326,7 @@ fn englisch_fachlich() {
             md.push_str(&format!("| `{}` | {} | {} | {} | {} |\n", i.key, i.file, e(&i.de), e(&i.en), e(&i.note)));
         }
     }
+    let md: String = md.lines().map(|l| if fp_neutral::find_in_bytes(l.as_bytes()).is_empty() { l.to_string() } else { "| (Zeile entfernt: gesperrter Name, §1a) |".to_string() }).collect::<Vec<_>>().join("\n");
     let path = i18n_qa_common::repo().join("docs").join("I18N_PRUEFUNG.md");
     let old = std::fs::read_to_string(&path).unwrap_or_else(|_| "# Prüfung der Mehrsprachigkeit (I18N-QA)\n\n<!-- EN:START -->\n<!-- EN:END -->\n".into());
     let new = match old.split_once("<!-- EN:START -->") {

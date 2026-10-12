@@ -231,7 +231,7 @@ pub fn fixture() -> (AppState, egui::Context, Fix) {
 }
 
 /// Inhalte des Testdokuments (Nutzerdaten, nie übersetzt).
-pub const FIXTURE_TEXTS: &[&str] = &["Firepixel Test", "Bibliothekssymbol", "Grafik", "Knopf", "Animation", "Teststil", "vorlage", "gespeichert", "Eins"];
+pub const FIXTURE_TEXTS: &[&str] = &["Firepixel Test", "Bibliothekssymbol", "Grafik", "Knopf", "Animation", "Teststil", "vorlage", "gespeichert", "Eins", "Mein Arbeitsbereich", "Testbefehl", ".htm"];
 
 /// Eine Testsituation (Auswahl, Vorbereitungsbefehle).
 #[derive(Clone, Debug)]
@@ -332,7 +332,13 @@ pub fn harness_for(st: AppState, cfg: Cfg, wgpu: bool) -> H {
     app.state = st;
     let b = Harness::builder().with_size(egui::vec2(cfg.w / cfg.ppp, cfg.h / cfg.ppp)).with_pixels_per_point(cfg.ppp).with_max_steps(40).with_step_dt(1.0 / 60.0);
     let b = if wgpu { b.wgpu() } else { b };
-    let mut h = b.build_ui_state(|ui, app: &mut FirepixelApp| app.root_ui(ui), app);
+    let mut h = b.build_ui_state(
+        |ui, app: &mut FirepixelApp| {
+            app.root_ui(ui);
+            capture_texts(ui.ctx());
+        },
+        app,
+    );
     h.run_steps(4);
     h
 }
@@ -365,38 +371,60 @@ pub fn click(h: &mut H, p: Pos2, button: PointerButton) {
 
 // ------------------------------------------------------------------ Texte und Prüfungen
 
-/// Ein gezeichneter Text.
+/// Ein gezeichneter Text mit seiner Ebene (Fenster, Popup, Hintergrund).
 #[derive(Clone, Debug)]
 pub struct TextItem {
     pub text: String,
     pub rect: Rect,
     pub clip: Rect,
+    pub layer: LayerId,
 }
 
-fn walk_shape(s: &Shape, clip: Rect, out: &mut Vec<TextItem>) {
+fn walk_shape(s: &Shape, clip: Rect, layer: LayerId, out: &mut Vec<TextItem>) {
     match s {
         Shape::Text(t) => {
             let text = t.galley.text().to_string();
             if text.trim().is_empty() || t.opacity_factor <= 0.01 {
                 return;
             }
-            out.push(TextItem { text, rect: t.visual_bounding_rect(), clip });
+            out.push(TextItem { text, rect: t.visual_bounding_rect(), clip, layer });
         }
-        Shape::Vec(v) => v.iter().for_each(|x| walk_shape(x, clip, out)),
+        Shape::Vec(v) => v.iter().for_each(|x| walk_shape(x, clip, layer, out)),
         _ => {}
     }
 }
 
-pub fn texts(h: &H) -> Vec<TextItem> {
-    let mut out = Vec::new();
-    for cs in &h.output().shapes {
-        walk_shape(&cs.shape, cs.clip_rect, &mut out);
+const TEXTS_ID: &str = "i18n-qa-texts";
+
+/// Am Ende jedes Bildes (vor dem Abschluss des Durchgangs): alle Texte je Ebene merken.
+pub fn capture_texts(ctx: &egui::Context) {
+    let mut layers: Vec<LayerId> = ctx.memory(|m| m.layer_ids().collect());
+    let extra: Vec<LayerId> = ctx.viewport(|v| v.this_pass.widgets.layers().map(|(l, _)| *l).chain(v.prev_pass.widgets.layers().map(|(l, _)| *l)).collect());
+    for l in std::iter::once(LayerId::background()).chain(extra) {
+        if !layers.contains(&l) {
+            layers.insert(0, l);
+        }
     }
-    out
+    let mut out = Vec::new();
+    ctx.graphics(|g| {
+        for l in &layers {
+            if let Some(pl) = g.get(*l) {
+                for cs in pl.all_entries() {
+                    walk_shape(&cs.shape, cs.clip_rect, *l, &mut out);
+                }
+            }
+        }
+    });
+    ctx.data_mut(|d| d.insert_temp(Id::new(TEXTS_ID), std::sync::Arc::new(out)));
+}
+
+/// Texte des letzten Bildes (in Zeichenreihenfolge der Ebenen).
+pub fn texts(h: &H) -> Vec<TextItem> {
+    h.ctx.data(|d| d.get_temp::<std::sync::Arc<Vec<TextItem>>>(Id::new(TEXTS_ID))).map(|a| (*a).clone()).unwrap_or_default()
 }
 
 /// Bereichspräfixe der Schlüssel (`crates\fp-i18n\README.md`).
-pub const KEY_PREFIXES: &[&str] = &["language", "btn", "fmt", "unit", "key", "test", "menu", "cmd", "ctx", "pmenu", "tool", "shape", "dlg", "pi", "panel", "ui", "err", "msg", "ai", "filter", "effect", "blend"];
+pub const KEY_PREFIXES: &[&str] = &["language", "btn", "fmt", "unit", "key", "test", "menu", "cmd", "ctx", "pmenu", "tool", "shape", "dlg", "pi", "panel", "ui", "err", "msg", "ai", "filter", "effect", "blend", "lang", "welcome"];
 
 /// Rohschlüssel im Text (z. B. `dlg-canvas-size`, `cmd-file-open.tooltip`).
 pub fn raw_keys(text: &str) -> Vec<String> {
@@ -419,8 +447,35 @@ pub fn raw_keys(text: &str) -> Vec<String> {
 pub const PROPER: &[&str] = &[
     "Firepixel", "FW-PNG", "PNG", "PNG8", "PNG24", "PNG32", "GIF", "JPEG", "JPG", "WebP", "AVIF", "BMP", "TIFF", "TIF", "PSD", "PDF", "SVG", "ICO", "WBMP", "PICT", "JSF", "HTML", "CSS", "XML", "SWF", "AI", "EPS", "RGB", "RGBA", "HSB", "HSL",
     "CMYK", "HEX", "px", "pt", "dpi", "ppi", "K", "M", "MB", "KB", "GB", "kB", "Bit", "Bits", "fps", "ms", "s", "x", "X", "Y", "W", "H", "B", "R", "G", "A", "Arial", "Tahoma", "Verdana", "Segoe", "UI", "Times", "New", "Roman", "Courier", "Sans", "Serif", "Regular",
-    "Bold", "Italic", "Normal", "Mono", "Consolas", "Calibri", "Cambria", "Georgia", "Impact", "Symbol", "Wingdings", "Webdings", "Marlett", "MCP", "SAM", "BiRefNet", "ONNX", "URL", "OK",
+    "Bold", "Italic", "Normal", "Mono", "Consolas", "Calibri", "Cambria", "Georgia", "Impact", "Symbol", "Wingdings", "Webdings", "Marlett", "MCP", "SAM", "BiRefNet", "ONNX", "URL", "OK", "mm", "cm", "Myriad", "Pro", "Apache-2", "Hiera", "Tiny", "Small", "lite", "Matting", "HR", "jQuery", "Twain", "WebSnap", "Lossless",
 ];
+
+/// Schriftfamilien und -stile des Systems sowie die Eigennamen aller Sprachen.
+pub fn proper_names() -> &'static BTreeSet<String> {
+    static N: std::sync::OnceLock<BTreeSet<String>> = std::sync::OnceLock::new();
+    N.get_or_init(|| {
+        let mut s = BTreeSet::new();
+        let mut fams = fp_ui::inspector::fonts::families();
+        for _ in 0..200 {
+            if !fams.is_empty() {
+                break;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(100));
+            fams = fp_ui::inspector::fonts::families();
+        }
+        for f in fams.iter() {
+            s.insert(f.name.clone());
+            for (st, _) in &f.styles {
+                s.insert(st.clone());
+            }
+        }
+        // Sprachnamen stehen in ihrer eigenen Sprache (nie übersetzt)
+        for l in fp_i18n::languages() {
+            s.insert(l.name);
+        }
+        s
+    })
+}
 
 /// Darf ein Text in der Testsprache unmarkiert sein?
 pub fn exempt_unmarked(text: &str) -> bool {
@@ -428,15 +483,23 @@ pub fn exempt_unmarked(text: &str) -> bool {
     if !t.chars().any(|c| c.is_alphabetic()) {
         return true;
     }
-    if FIXTURE_TEXTS.iter().any(|f| t.contains(f)) {
+    if FIXTURE_TEXTS.iter().any(|f| t == *f || (f.len() > 9 && t.contains(f))) {
+        return true;
+    }
+    // Schriftnamen (Systemschriften, Stile) und Eigennamen der Sprachen
+    if proper_names().contains(t) {
         return true;
     }
     // Pfade, Dateinamen, Farben
     if t.contains(":\\") || t.contains('/') && !t.contains(' ') || t.ends_with(".png") || t.ends_with(".jsf") || t.starts_with('#') && t.len() <= 9 {
         return true;
     }
-    // nur aus Eigennamen/Einheiten/Zahlen/Symbolen
-    t.split(|c: char| !c.is_alphanumeric() && c != '-').filter(|w| !w.is_empty()).all(|w| w.chars().all(|c| c.is_ascii_digit()) || PROPER.contains(&w) || w.chars().all(|c| c.is_ascii_hexdigit()) && w.len() >= 6)
+    // nur aus Eigennamen/Einheiten/Zahlen/Symbolen, Kürzeln (≤ 3 Großbuchstaben, F-Tasten,
+    // Papierformate), Sprachcodes (de_DE)
+    let short = |w: &str| (w.chars().count() <= 3 && w.chars().all(|c| c.is_uppercase() || c.is_ascii_digit())) || (w.starts_with('F') && w.len() <= 3 && w[1..].chars().all(|c| c.is_ascii_digit()));
+    t.split(|c: char| !c.is_alphanumeric() && c != '-' && c != '_').filter(|w| !w.is_empty()).all(|w| {
+        w.chars().all(|c| c.is_ascii_digit()) || PROPER.contains(&w) || short(w) || w.chars().count() == 1 || w.len() == 5 && w.as_bytes()[2] == b'_' || w.chars().all(|c| c.is_ascii_hexdigit()) && w.len() >= 6
+    })
 }
 
 pub fn marked(text: &str) -> bool {
@@ -505,14 +568,23 @@ pub fn check(h: &H, lang: &str, scene: &str, cfg: &Cfg, items: &[TextItem], text
         return out;
     }
     let screen = h.ctx.content_rect();
-    // sichtbarer Teil je Text
-    let vis: Vec<Rect> = items.iter().map(|t| t.rect.intersect(t.clip).intersect(screen)).collect();
+    // sichtbarer Teil je Text; verdeckte Texte (unter einem Popup/Fenster) zählen nicht
+    let order_of = |l: &LayerId| -> usize { h.ctx.memory(|m| m.layer_ids().position(|x| x == *l).unwrap_or(0)) + l.order as usize * 10_000 };
+    let occluded: Vec<bool> = items
+        .iter()
+        .map(|t| match h.ctx.layer_id_at(t.rect.center()) {
+            Some(top) => top != t.layer && order_of(&top) > order_of(&t.layer),
+            None => false,
+        })
+        .collect();
+    let vis: Vec<Rect> = items.iter().enumerate().map(|(i, t)| if occluded[i] { Rect::NOTHING } else { t.rect.intersect(t.clip).intersect(screen) }).collect();
     for (i, t) in items.iter().enumerate() {
         let v = vis[i];
         if !v.is_positive() || v.height() < 0.5 * t.rect.height() {
             continue;
         }
-        let ell = t.text.trim_end().ends_with('…') || t.text.trim_end().ends_with("...");
+        // Pfade in Eingabefeldern dürfen abgeschnitten sein (Feld rollt)
+        let ell = t.text.trim_end().ends_with('…') || t.text.trim_end().ends_with("...") || t.text.contains(":\\");
         let cut_x = t.rect.min.x < t.clip.min.x - 1.0 || t.rect.max.x > t.clip.max.x + 1.0;
         let at_screen = t.rect.min.x < screen.min.x - 0.5 || t.rect.max.x > screen.max.x + 0.5 || t.rect.min.y < screen.min.y - 0.5 || t.rect.max.y > screen.max.y + 0.5;
         if at_screen {
@@ -527,7 +599,7 @@ pub fn check(h: &H, lang: &str, scene: &str, cfg: &Cfg, items: &[TextItem], text
     for i in 0..items.len() {
         for j in (i + 1)..items.len() {
             let (a, b) = (&items[i], &items[j]);
-            if a.clip != b.clip {
+            if a.layer != b.layer {
                 continue;
             }
             let x = shrink(vis[i]).intersect(shrink(vis[j]));
@@ -561,7 +633,7 @@ pub fn check(h: &H, lang: &str, scene: &str, cfg: &Cfg, items: &[TextItem], text
         if !v.is_positive() {
             continue;
         }
-        let Some(tl) = layer_of(h, t.clip, screen) else { continue };
+        let tl = t.layer;
         for (wl, w) in &widgets {
             if *wl != tl || w.area() > 0.25 * screen.area() {
                 continue;
@@ -593,8 +665,23 @@ pub fn check(h: &H, lang: &str, scene: &str, cfg: &Cfg, items: &[TextItem], text
 
 /// Zeile der Textliste (Deutsch unverändert): Text mit Lage.
 pub fn dump_line(t: &TextItem) -> String {
-    format!("{}\t{:.0},{:.0},{:.0},{:.0}", t.text.replace('\n', "⏎"), t.rect.min.x, t.rect.min.y, t.rect.width(), t.rect.height())
+    format!("{}\t{:.0},{:.0},{:.0},{:.0}", normalize_text(&t.text).replace('\n', "⏎"), t.rect.min.x, t.rect.min.y, t.rect.width(), t.rect.height())
 }
+
+/// Laufabhängige Teile (Temp-Ordner mit Prozessnummer) vereinheitlichen.
+pub fn normalize_text(s: &str) -> String {
+    match s.find("firepixel-i18n-qa\\") {
+        Some(i) => {
+            let rest = &s[i + "firepixel-i18n-qa\\".len()..];
+            let tail = rest.find('\\').map(|j| &rest[j..]).unwrap_or("");
+            format!("{}firepixel-i18n-qa\\X{}", &s[..i], tail)
+        }
+        None => s.to_string(),
+    }
+}
+
+/// Neue Einträge, die Phase 6 bewusst hinzufügt (Ansicht ▸ Sprache): im Vergleich nicht als Abweichung zählen.
+pub const EXPECTED_NEW: &[&str] = &["Sprache"];
 
 // ------------------------------------------------------------------ Bilder (Szenen)
 
@@ -711,11 +798,43 @@ pub fn menu_paths(st: &AppState) -> Vec<(Vec<usize>, String)> {
 
 /// Öffnet Hauptmenü `path[0]` und fährt nacheinander über die Untermenü-Einträge.
 pub fn open_menu_path(h: &mut H, path: &[usize]) -> Result<(), String> {
-    let id = Id::new(("fp-main-menu", path[0]));
-    egui::Popup::open_id(&h.ctx, id);
-    h.run_steps(3);
     let menus = fp_ui::menu::build_main_menu(st(h));
-    let mut nodes: Vec<Node> = menus.get(path[0]).map(|m| m.1.clone()).ok_or("Menü fehlt")?;
+    let (title, mut nodes): (String, Vec<Node>) = menus.get(path[0]).cloned().ok_or("Menü fehlt")?;
+    let first_label = |nodes: &[Node]| -> Option<String> {
+        nodes.iter().find_map(|n| match n {
+            Node::Item { label, .. } | Node::Sub { label, .. } => Some(label.clone()),
+            Node::Separator => None,
+        })
+    };
+    let want0 = first_label(&nodes);
+    egui::Popup::open_id(&h.ctx, Id::new(("fp-main-menu", path[0])));
+    h.run_steps(3);
+    let shown = |h: &H, w: &Option<String>| w.as_ref().is_none_or(|w| texts(h).iter().any(|t| &t.text == w));
+    if !shown(h, &want0) {
+        // schmales Fenster: das Menü steht im Überlaufmenü „»“ (Popup mit kleinerem Index)
+        egui::Popup::close_id(&h.ctx, Id::new(("fp-main-menu", path[0])));
+        h.run_steps(1);
+        let mut ok = false;
+        for j in (0..path[0]).rev() {
+            egui::Popup::open_id(&h.ctx, Id::new(("fp-main-menu", j)));
+            h.run_steps(3);
+            let ts = texts(h);
+            if let Some(t) = ts.iter().rev().find(|t| t.text == title && t.rect.top() > 30.0) {
+                let p = t.rect.center();
+                hover(h, p);
+                h.run_steps(2);
+                if shown(h, &want0) {
+                    ok = true;
+                    break;
+                }
+            }
+            egui::Popup::close_id(&h.ctx, Id::new(("fp-main-menu", j)));
+            h.run_steps(1);
+        }
+        if !ok {
+            return Err(format!("Menü „{title}“ öffnet nicht (auch nicht über „»“)"));
+        }
+    }
     for &k in &path[1..] {
         let Some(Node::Sub { label, children, .. }) = nodes.get(k).cloned() else { return Err(format!("Untermenü {k} fehlt")) };
         // Eintrag im zuletzt gezeichneten Popup suchen (letztes Vorkommen in Zeichenreihenfolge)
@@ -1415,13 +1534,15 @@ pub fn compare_with_basis(area: &str, dump: &BTreeMap<String, Vec<String>>) -> V
             out.push(format!("{id}: neu (nicht in der Basis)"));
             continue;
         };
-        if old == lines {
+        // Texte mit Temp-Pfad: Breite hängt von der Prozessnummer ab → nur Text vergleichen
+        let norm = |v: &Vec<String>| -> BTreeSet<String> { v.iter().map(|l| normalize_text(l)).map(|l| if l.contains("firepixel-i18n-qa\\X") { l.split('\t').next().unwrap_or("").to_string() } else { l }).filter(|l| !EXPECTED_NEW.iter().any(|e| l.split('\t').next() == Some(*e))).collect() };
+        let a: BTreeSet<String> = norm(old);
+        let b: BTreeSet<String> = norm(lines);
+        if a == b {
             continue;
         }
-        let a: BTreeSet<&String> = old.iter().collect();
-        let b: BTreeSet<&String> = lines.iter().collect();
-        let gone: Vec<&&String> = a.difference(&b).take(6).collect();
-        let new: Vec<&&String> = b.difference(&a).take(6).collect();
+        let gone: Vec<&String> = a.difference(&b).take(6).collect();
+        let new: Vec<&String> = b.difference(&a).take(6).collect();
         out.push(format!("{id}: vorher {:?} → jetzt {:?}", gone, new));
     }
     for id in base.dump.keys() {
