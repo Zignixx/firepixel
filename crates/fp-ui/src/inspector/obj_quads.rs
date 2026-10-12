@@ -1414,9 +1414,11 @@ fn slice_q4(ui: &mut Ui, st: &mut AppState, r: Rect) {
             let presets = refs(&presets);
             let cur = sp.as_ref().and_then(|s| s.export.as_ref()).map(|e| fp_export::OptimizeSettings::from_model(e, None));
             let sel = cur.as_ref().and_then(|c| fp_export::options::builtin_presets().iter().position(|p| p.settings.format == c.format && p.settings.color_mode == c.color_mode));
-            // Deutsch: Lage aus dialoge.json (der Knopf reicht dort unter „Ziel:“); übersetzt endet der
-            // Knopf vor der längeren Beschriftung („Edit...“ passt auch so)
-            let bt = if fields::source_language() { d.r(136.0, 1.0, 53.0, 13.0) } else { d.r(136.0, 1.0, 30.0, 13.0) };
+            // Deutsch: Lage aus dialoge.json, dort 53 DLU breit und unter „Ziel:“ reichend; der Text
+            // „Bearbeiten...“ lief dann in die Beschriftung (RAND-2a, N23). 44 DLU enden vor
+            // „Ziel:“ und lassen dem Text 2,5 px Rand. Übersetzt endet der Knopf vor der längeren
+            // Beschriftung („Edit...“ passt auch so)
+            let bt = if fields::source_language() { d.r(136.0, 1.0, 44.0, 13.0) } else { d.r(136.0, 1.0, 30.0, 13.0) };
             let _ = fields::combo(ui, "pi-slice-export", d.r(26.0, 1.0, 108.0, 13.0), &presets, sel, false);
             let _ = fields::button(ui, "pi-slice-export-edit", bt, &t("pi-edit"), false);
         }
@@ -1872,7 +1874,8 @@ pub fn text_row2(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target) {
             st.run("pi.text.pathOffset", json!({"offset": x}));
         }
     }
-    if let Some(b) = fields::checkbox(ui, id.with("ak"), d.r(165.0, 18.0, 92.0, 10.0), &t("pi-text-autokern"), v.auto_kern, en_obj) {
+    // 100 statt 92 DLU: „Autom. Unterschneidung“ ist 97 DLU breit (RAND-2a, N23)
+    if let Some(b) = fields::checkbox(ui, id.with("ak"), d.r(165.0, 18.0, 100.0, 10.0), &t("pi-text-autokern"), v.auto_kern, en_obj) {
         match tgt {
             Target::Selection => st.run("pi.text.autoKern", json!({"on": b})),
             Target::Tool => st.run("text.setToolDefaults", json!({"autoKern": b})),

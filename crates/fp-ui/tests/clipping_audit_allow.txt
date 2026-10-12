@@ -1,56 +1,8 @@
 # Erlaubnisliste des Prüfers clipping_audit.rs (RAND-1, N23): bekannte Funde `Art|Ansicht|Text`.
 # Behobene Zeilen streichen (der Bericht docs\funktionstest\rand_auto.md nennt sie unter „nicht mehr gefunden“).
 # Neu schreiben: FP_RAND_FULL=1 FP_RAND_UPDATE_ALLOW=1 cargo test -p fp-ui --test clipping_audit
-abgeschnitten|Bedienfeld DocumentLibrary (Dock)|Graphic
-abgeschnitten|Bedienfeld DocumentLibrary (schmales Dock)|Graphic
+# RAND-2a (13.10.): 61 erledigte Zeilen gestrichen (R2-1 Inspektor im schmalen Fenster, R2-2 Text/Segment, dazu inzwischen behobene Funde anderer Pakete).
 abgeschnitten|Dialog modify.traceBitmap|Flecken entfernen
-abgeschnitten|Dialog modify.traceBitmap|Remove speckles
-abgeschnitten|Inspektor Pfad|1-Pixel Hard
-abgeschnitten|Inspektor Pfad|1-Pixel hart
-abgeschnitten|Inspektor Text|Anti-Alias glatt
-abgeschnitten|Inspektor Text|Smooth Anti-Alias
-abgeschnitten|Inspektor Werkzeug tool.aiObject|Klick: Objekt auswählen · Rahmen
-abgeschnitten|Inspektor Werkzeug tool.aiObject|SAM 2.1 Hiera Tiny (156 MB)
-abgeschnitten|Inspektor Werkzeug tool.aiObject|Umschalt+Klick: hinzufügen · Alt
-abgeschnitten|Inspektor Werkzeug tool.aiRefineEdge|BiRefNet lite Matting (89 MB)
-abgeschnitten|Inspektor Werkzeug tool.aiSubject|BiRefNet lite (general) (178 MB)
-abgeschnitten|Inspektor Werkzeug tool.aiSubject|Click: main subject as soft pixe
-abgeschnitten|Inspektor Werkzeug tool.aiSubject|Klick: Hauptmotiv als weiche Pix
-abgeschnitten|Inspektor Werkzeug tool.autoShape|1-Pixel Hard
-abgeschnitten|Inspektor Werkzeug tool.autoShape|1-Pixel hart
-abgeschnitten|Inspektor Werkzeug tool.brush|1-Pixel Hard
-abgeschnitten|Inspektor Werkzeug tool.brush|1-Pixel hart
-abgeschnitten|Inspektor Werkzeug tool.ellipse|1-Pixel Hard
-abgeschnitten|Inspektor Werkzeug tool.ellipse|1-Pixel hart
-abgeschnitten|Inspektor Werkzeug tool.gradient|Auswahl füllen
-abgeschnitten|Inspektor Werkzeug tool.gradient|Fill selection
-abgeschnitten|Inspektor Werkzeug tool.line|1-Pixel Hard
-abgeschnitten|Inspektor Werkzeug tool.line|1-Pixel hart
-abgeschnitten|Inspektor Werkzeug tool.marquee|Live-Auswahlrahmen
-abgeschnitten|Inspektor Werkzeug tool.ovalMarquee|Live-Auswahlrahmen
-abgeschnitten|Inspektor Werkzeug tool.paintBucket|Auswahl füllen
-abgeschnitten|Inspektor Werkzeug tool.paintBucket|Fill selection
-abgeschnitten|Inspektor Werkzeug tool.pencil|Preserve transparency
-abgeschnitten|Inspektor Werkzeug tool.pencil|Transparenz beibehalten
-abgeschnitten|Inspektor Werkzeug tool.pen|1-Pixel Hard
-abgeschnitten|Inspektor Werkzeug tool.pen|1-Pixel hart
-abgeschnitten|Inspektor Werkzeug tool.polygon|1-Pixel Hard
-abgeschnitten|Inspektor Werkzeug tool.polygon|1-Pixel hart
-abgeschnitten|Inspektor Werkzeug tool.rectangle|1-Pixel Hard
-abgeschnitten|Inspektor Werkzeug tool.rectangle|1-Pixel hart
-abgeschnitten|Inspektor Werkzeug tool.redrawPath|1-Pixel Hard
-abgeschnitten|Inspektor Werkzeug tool.redrawPath|1-Pixel hart
-abgeschnitten|Inspektor Werkzeug tool.rubberStamp|Gesamtes Dokument
-abgeschnitten|Inspektor Werkzeug tool.scale|1-Pixel Hard
-abgeschnitten|Inspektor Werkzeug tool.scale|1-Pixel hart
-abgeschnitten|Inspektor Werkzeug tool.skew|1-Pixel Hard
-abgeschnitten|Inspektor Werkzeug tool.skew|1-Pixel hart
-abgeschnitten|Inspektor Werkzeug tool.text|Anti-Alias glatt
-abgeschnitten|Inspektor Werkzeug tool.text|Smooth Anti-Alias
-abgeschnitten|Inspektor Werkzeug tool.vectorPath|1-Pixel Hard
-abgeschnitten|Inspektor Werkzeug tool.vectorPath|1-Pixel hart
-abgeschnitten|Inspektor zwei offene Pfade|1-Pixel Hard
-abgeschnitten|Inspektor zwei offene Pfade|1-Pixel hart
 dialog-ragt-hinaus|Dialog Voreinstellungen 1|
 dialog-ragt-hinaus|Dialog Voreinstellungen 2|
 dialog-ragt-hinaus|Dialog Voreinstellungen 3|
@@ -60,20 +12,8 @@ dialog-ragt-hinaus|Dialog Voreinstellungen 6|
 dialog-ragt-hinaus|Dialog Voreinstellungen|
 dialog-ragt-hinaus|Dialog ai.manageModels|
 dialog-ragt-hinaus|Dialog edit.keyboardShortcuts|
-kaestchen|Inspektor Text|
-kaestchen|Inspektor Text|Auto kern
-kaestchen|Inspektor Text|Autom. Unterschneidung
-kaestchen|Inspektor Werkzeug tool.text|
-kaestchen|Inspektor Werkzeug tool.text|Auto kern
-kaestchen|Inspektor Werkzeug tool.text|Autom. Unterschneidung
-ragt-heraus|Inspektor Text|Autom. Unterschneidung
-ragt-heraus|Inspektor Werkzeug tool.text|Autom. Unterschneidung
 rand-knapp|Dialog ai.manageModels|Entfernen
-rand-knapp|Dialog ai.manageModels|Remove
-ueberlappt-text|Inspektor Segment|Bearbeiten...
 # NZ-2 (12.10.): neue Funde nach DLG-1/1b/2/3, NZ-1 und KI-2, begründet aufgenommen.
-# R2-1 (Inspektor im 800-pt-Fenster): neuer zusammengefasster KI-Hinweis pi-ai-object-hint2 (ersetzt die beiden alten Zeilen „Klick: Objekt auswählen“/„Umschalt+Klick“).
-abgeschnitten|Inspektor Werkzeug tool.aiObject|Klick oder Rahmen: Objekt · Umsc
 # RAND-2 (Bedienfeld zu niedrig im 800×512-pt-Fenster, 150 %): panels\common.rs list_frame hält die Liste mindestens 24 px hoch, auch wenn sie dann über die Fußleiste reicht; seit NZ-1 (ec4ac99) haben die Fußleistenknöpfe Barrierefreiheits-Knoten, deshalb sieht der Prüfer die Überdeckung erst jetzt (Befund IBD/RAND-2).
 ragt-heraus|Bedienfeld DocumentLibrary (Dock)|Grafik
 ragt-heraus|Bedienfeld DocumentLibrary (schmales Dock)|Grafik
@@ -81,5 +21,3 @@ ueberlappt-element|Bedienfeld DocumentLibrary (Dock)|Grafik
 ueberlappt-element|Bedienfeld DocumentLibrary (Dock)|Schaltfläche
 ueberlappt-element|Bedienfeld DocumentLibrary (schmales Dock)|Grafik
 ueberlappt-element|Bedienfeld DocumentLibrary (schmales Dock)|Schaltfläche
-# Bildvorschau (BV-2, options.rs gerade bei BV-3 in Arbeit): Kästchen „Browseranzeige mit Zeilensprungverfahren“ ist 30 px schmaler als die Spalte, der deutsche Text ragt hinaus (Befund BV).
-ragt-heraus|Dialog file.imagePreview|Browseranzeige mit Zeilensprungv

@@ -26,7 +26,7 @@
 //! | `ragt-heraus` | ein Text ist breiter bzw. höher als sein eigenes Bedienelement |
 //! | `rand-knapp` | weniger als `FP_RAND_GAP_X` (2 px) waagerecht bzw. `FP_RAND_GAP_Y` (1 px) senkrecht zwischen Text und Rahmen eines Knopfs/Felds/Klappfelds, bzw. weniger als `FP_RAND_GAP_EDGE` (2 px) zum linken/rechten Rand von Dialog, Bedienfeld oder Inspektor |
 //! | `dialog-ragt-hinaus` | ein Dialog bzw. ein schwebendes Fenster ragt über das Hauptfenster |
-//! | `hinweis-bildlauf` | (nur Hinweis) Text am oberen/unteren Rand eines hohen Bereichs angeschnitten – Bildlauf bzw. zu wenig Dockhöhe, gewollt |
+//! | `hinweis-bildlauf` | (nur Hinweis) Text am oberen/unteren Rand eines hohen Bereichs angeschnitten – Bildlauf bzw. zu wenig Dockhöhe, gewollt; ebenso an der linken/rechten Kante des waagerechten Bildlaufs im schmalen Inspektor (`inspector::hscroll_viewport`, RAND-2a) |
 //! | `hinweis-feldinhalt` | (nur Hinweis) Inhalt eines Eingabefelds länger als das Feld (scrollt) |
 //!
 //! Warum senkrecht nur 1 px: Die kompakten Felder des Originals sind 13 DLU (21 px) hoch und haben
@@ -596,6 +596,8 @@ struct Roi {
     frame: Option<Rect>,
     /// reine Zahlen auslassen (Lineale)
     no_numbers: bool,
+    /// sichtbarer Ausschnitt eines waagerechten Bildlaufs (Inspektor im schmalen Fenster)
+    hscroll: Option<Rect>,
 }
 
 fn panel_rect(ctx: &egui::Context, id: &str) -> Option<Rect> {
@@ -607,7 +609,7 @@ fn roi_for(h: &H, view: &View, cap: &Cap, screen: Rect) -> (Roi, bool) {
     let ctx = &h.ctx;
     let dock = panel_rect(ctx, "fp-dock");
     let insp = panel_rect(ctx, "fp-inspector");
-    let all = Roi { area: screen, exclude: vec![], layers: None, frame: None, no_numbers: false };
+    let all = Roi { area: screen, exclude: vec![], layers: None, frame: None, no_numbers: false, hscroll: None };
     if let View::Panel(p, PanelMode::Dock | PanelMode::Narrow, _) = view {
         let bg = Some(vec![layer_index(cap, LayerId::background())]);
         return match dock.and_then(|d| dock_group_rect(&h.state().app.state, cap, *p, d)) {
@@ -630,7 +632,7 @@ fn roi_for(h: &H, view: &View, cap: &Cap, screen: Rect) -> (Roi, bool) {
             }
         }
         View::Panel(..) => all.clone(),
-        View::InspectorSel(_) | View::InspectorTool(_) | View::InspectorSymbol => Roi { area: insp.unwrap_or(screen), frame: insp, layers: Some(vec![layer_index(cap, LayerId::background())]), ..all },
+        View::InspectorSel(_) | View::InspectorTool(_) | View::InspectorSymbol => Roi { area: insp.unwrap_or(screen), frame: insp, layers: Some(vec![layer_index(cap, LayerId::background())]), hscroll: fp_ui::inspector::hscroll_viewport(ctx), ..all },
         View::Dialog { .. } | View::Extra(..) => {
             // oberster Dialog (Vordergrund) und alles darüber
             let fg: Vec<usize> = cap.areas.iter().filter(|(i, _)| cap.layers[*i].order == Order::Foreground).map(|(i, _)| *i).collect();
@@ -730,14 +732,20 @@ fn analyze(cap: &Cap, ns: &[NodeRec], screen: Rect, roi: &Roi, cfg: &Cfg) -> (Ve
         if (cut_h && !ell) || cut_v {
             let lost = 1.0 - v.area() / t.rect.area().max(1.0);
             let in_field = fields.iter().any(|f| f.rect.expand(1.0).contains_rect(bound));
+            let at_hscroll = cut_h && !cut_v && roi.hscroll.is_some_and(|sv| (t.rect.right() > bound.right() + tol && (bound.right() - sv.right()).abs() < 1.0) || (t.rect.left() < bound.left() - tol && (bound.left() - sv.left()).abs() < 1.0));
             let kind = if in_field {
                 "hinweis-feldinhalt"
             } else if cut_v && !cut_h && bound.height() >= 2.5 * t.rect.height() {
                 "hinweis-bildlauf"
+            } else if at_hscroll {
+                // Text endet an der Kante des waagerechten Bildlaufs (Inspektor im schmalen
+                // Fenster): er ist nur außerhalb des Ausschnitts und mit Bildlauf erreichbar (RAND-2a)
+                "hinweis-bildlauf"
             } else {
                 "abgeschnitten"
             };
-            cut[k] = kind == "abgeschnitten";
+            // auch am Bildlauf-Rand keine Rand-/Überlappungsprüfung für den angeschnittenen Text
+            cut[k] = kind == "abgeschnitten" || at_hscroll;
             out.push(Finding { kind, text: t.text.clone(), rect: t.rect, score: lost, detail: format!("Clip {}", r1(t.clip)) });
         }
         // später gezeichnetes, deckendes Rechteck derselben Ebene

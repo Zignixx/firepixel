@@ -106,12 +106,9 @@ static LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 /// Bekannte Mängel der deutschen Darstellung, die schon vor Phase 6 bestanden (Regel „Deutsch
 /// unverändert“, daher nicht geändert; Befund an den Koordinator): (Fall, Text).
 const KNOWN_DE: &[(&str, &str)] = &[
+    // RAND-2a: „Bearbeiten...“/„Ziel:“ beim Segment und „Autom. Unterschneidung“ behoben
     ("Gruppe", "Gruppieren (2)"),
-    ("Segment Bild", "Bearbeiten..."),
-    ("Segment Bild", "Ziel:"),
     ("Segment Hintergrund", "Horizontale Position:"),
-    ("Text", "Autom. Unterschneidung"),
-    ("Werkzeug tool.text", "Autom. Unterschneidung"),
 ];
 
 const TEXT_KINDS: [&str; 5] = ["label", "name", "check", "radio", "button"];

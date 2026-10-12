@@ -119,6 +119,7 @@ pub fn height(theme: &Theme, st: &AppState) -> f32 {
 pub fn show(ui: &mut Ui, st: &mut AppState) {
     // Werkzeugvorgaben, die beim Werkzeugwechsel bzw. beim Beginn eines neuen Texts gelten
     tool_quads::sync_fill_selection(ui.ctx(), st);
+    ui.ctx().data_mut(|d| d.remove::<Rect>(Id::new(HSCROLL_ID)));
     obj_quads::apply_text_tool_defaults(ui.ctx(), st);
     let theme = Theme::current(ui.ctx());
     let c = theme.colors.clone();
@@ -198,10 +199,21 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
         // schmales Fenster: die Quadranten behalten ihre Breite nach dem Original, der Inspektor
         // bekommt einen waagerechten Bildlauf (statt Quadrant 3/4 abzuschneiden)
         let mut child = ui.new_child(egui::UiBuilder::new().id_salt("inspector-scroll").max_rect(body).layout(egui::Layout::left_to_right(egui::Align::Min)));
-        egui::ScrollArea::horizontal().id_salt("inspector-hscroll").auto_shrink([false, false]).show(&mut child, |ui| {
-            let (r, _) = ui.allocate_exact_size(vec2(BODY_WIDTH, body.height()), Sense::hover());
-            quadrants(ui, st, r, &state, half, &theme);
-        });
+        // RAND-2a (N23): schwebende, schmale Leiste über dem 5-px-Rand unter Zeile 2. Die feste
+        // Leiste des Designs nahm 10 px von der Höhe und schnitt die untere Zeile ab (Kästchen
+        // „Autom. Unterschneidung“). Die Leiste bleibt dünn sichtbar, damit man den Bildlauf
+        // erkennt; das Mausrad blättert ohne Umschalttaste waagerecht.
+        child.spacing_mut().scroll = hscroll_style();
+        child.style_mut().always_scroll_the_only_direction = true;
+        let out = egui::ScrollArea::horizontal()
+            .id_salt("inspector-hscroll")
+            .auto_shrink([false, false])
+            .scroll_bar_visibility(egui::scroll_area::ScrollBarVisibility::AlwaysVisible)
+            .show(&mut child, |ui| {
+                let (r, _) = ui.allocate_exact_size(vec2(BODY_WIDTH, body.height()), Sense::hover());
+                quadrants(ui, st, r, &state, half, &theme);
+            });
+        ui.ctx().data_mut(|d| d.insert_temp(Id::new(HSCROLL_ID), out.inner_rect));
     }
     // Übernahme durch einen Klick daneben (z. B. auf die Leinwand) sofort ausführen, damit der
     // Wert noch das gezeigte Objekt trifft (die Leinwand verarbeitet den Klick erst danach)
@@ -209,6 +221,35 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
         st.process_actions(ui.ctx());
     }
     ui.allocate_rect(full, Sense::hover());
+}
+
+const HSCROLL_ID: &str = "inspector-hscroll-viewport";
+
+/// Sichtbarer Ausschnitt des waagerechten Bildlaufs im schmalen Fenster (`None`, wenn der
+/// Inspektor ganz hineinpasst). Texte, die genau an dieser Kante enden, sind nicht abgeschnitten,
+/// sondern liegen nur außerhalb des Ausschnitts (Prüfer `clipping_audit`, RAND-2a).
+pub fn hscroll_viewport(ctx: &egui::Context) -> Option<Rect> {
+    ctx.data(|d| d.get_temp::<Rect>(Id::new(HSCROLL_ID)))
+}
+
+/// Bildlaufleiste des schmalen Inspektors: schwebend (belegt keine Höhe), ruhend 3 px dünn und
+/// sichtbar, beim Darüberfahren 6 px.
+fn hscroll_style() -> egui::style::ScrollStyle {
+    egui::style::ScrollStyle {
+        floating: true,
+        bar_width: 6.0,
+        floating_width: 3.0,
+        floating_allocated_width: 0.0,
+        bar_inner_margin: 0.0,
+        bar_outer_margin: 1.0,
+        dormant_background_opacity: 0.0,
+        dormant_handle_opacity: 0.7,
+        active_background_opacity: 0.4,
+        active_handle_opacity: 1.0,
+        interact_background_opacity: 0.6,
+        interact_handle_opacity: 1.0,
+        ..egui::style::ScrollStyle::solid()
+    }
 }
 
 /// Breite der Quadranten Q1/Q2, Q3/Q4 und Q5/Q6 (Pixel) und die nötige Gesamtbreite.
