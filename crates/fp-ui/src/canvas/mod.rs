@@ -1101,12 +1101,31 @@ fn overlays(ui: &Ui, st: &mut AppState, painter: &egui::Painter, area: Rect, vie
         Overlay::TextEdit(v) => v.target,
         _ => None,
     });
+    // Malwerkzeuge (Pinsel, Radiergummi, Weichzeichner & Co., Stempel …): das Original zeigt um die
+    // Bitmap, in die gemalt wird, weder Rahmen noch Griffe (FV-11, gemessen)
+    let paint_tool = matches!(
+        st.session.tools.active,
+        fp_engine::ToolId::Brush
+            | fp_engine::ToolId::Pencil
+            | fp_engine::ToolId::Eraser
+            | fp_engine::ToolId::Blur
+            | fp_engine::ToolId::Sharpen
+            | fp_engine::ToolId::Dodge
+            | fp_engine::ToolId::Burn
+            | fp_engine::ToolId::Smudge
+            | fp_engine::ToolId::RubberStamp
+            | fp_engine::ToolId::ReplaceColor
+            | fp_engine::ToolId::RedEyeRemoval
+    );
     if view.show_edges {
         for eid in &d.selection.elements {
             if editing_target == Some(eid.0) {
                 continue;
             }
             let Some(e) = fp_engine::docops::element_on_page(&d.doc, d.page, *eid) else { continue };
+            if paint_tool && matches!(e.kind, fp_model::ElementKind::Bitmap(_)) {
+                continue;
+            }
             let Some(b) = fp_engine::docops::element_bounds(&d.doc, &e) else { continue };
             let corners = match moving.as_ref().filter(|(ids, _)| ids.contains(&eid.0)) {
                 Some((_, m)) => b.corners().map(|p| m.apply(p)),

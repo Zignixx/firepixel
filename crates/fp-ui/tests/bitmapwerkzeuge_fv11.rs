@@ -359,3 +359,35 @@ fn esc_in_malwerkzeugen_mit_und_ohne_bitmap() {
         assert_eq!(undo_count(s), h0, "{t:?}: Esc ohne Bitmapmodus ist kein Verlaufsschritt");
     }
 }
+
+// ------------------------------------------------------------------ Auswahlrahmen beim Malen
+
+/// Das Original zeigt um die gewählte Bitmap keinen Rahmen und keine Griffe, solange ein
+/// Malwerkzeug aktiv ist (Paarbilder fv11_*); mit dem Zeiger erscheinen sie wieder.
+#[test]
+fn malwerkzeug_zeigt_keinen_auswahlrahmen_um_die_bitmap() {
+    let t = app();
+    let (r1, b) = (t.r1, t.b2);
+    let mut h = egui_kittest::Harness::builder()
+        .with_size(egui::vec2(1400.0, 900.0))
+        .with_pixels_per_point(1.0)
+        .with_max_steps(16)
+        .build_ui_state(|ui, app: &mut FirepixelApp| app.root_ui(ui), t.a);
+    let frames = |h: &egui_kittest::Harness<'_, FirepixelApp>| h.state().state.canvases.values().next().map(|c| c.sel_frames.len()).unwrap_or(0);
+    h.state_mut().state.session.execute("select.set", json!({"ids": [b.0]})).expect("Auswahl");
+    h.run_steps(2);
+    assert_eq!(frames(&h), 1, "Zeiger: Rahmen um B2");
+    for tl in [ToolId::Brush, ToolId::Eraser, ToolId::Blur, ToolId::RubberStamp] {
+        h.state_mut().state.session.set_tool(tl).expect("Werkzeug");
+        h.run_steps(2);
+        assert_eq!(frames(&h), 0, "{tl:?}: kein Rahmen um die Bitmap");
+    }
+    // Vektor bleibt mit Rahmen (im Original nicht gemessen, Verhalten unverändert)
+    h.state_mut().state.session.execute("select.set", json!({"ids": [r1.0]})).expect("Auswahl");
+    h.run_steps(2);
+    assert_eq!(frames(&h), 1);
+    h.state_mut().state.session.set_tool(ToolId::Pointer).expect("Werkzeug");
+    h.state_mut().state.session.execute("select.set", json!({"ids": [b.0]})).expect("Auswahl");
+    h.run_steps(2);
+    assert_eq!(frames(&h), 1, "zurück beim Zeiger: Rahmen wieder da");
+}
