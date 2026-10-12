@@ -65,7 +65,9 @@ path = "tests/all.rs"
 # Eigener Prozess nur, wenn ein Test prozessweiten Zustand umstellt, den parallel laufende Tests
 # anderer Dateien sehen würden. Jede Datei hier mit Grund; die Liste klein halten.
 
-# Sonden mit Fensterzustand, wackeln parallel (Aufruf laut Datei mit --test-threads 1)
+# Sonden mit Bildern: egui_kittest legt je Harness einen eigenen wgpu-Renderer (Instanz + Gerät) an;
+# gleichzeitig angelegt stürzt der Prozess gelegentlich ab. Die Datei läuft per Mutex nacheinander
+# (NZ-2), im gemeinsamen Programm würden die Renderer anderer Dateien parallel dazukommen.
 [[test]]
 name = "ux_b_abgleich"
 path = "tests/ux_b_abgleich.rs"

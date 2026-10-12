@@ -2,7 +2,8 @@
 //!
 //! Sonden mit realistischen Eingaben (Tastenereignisse wie egui-winit, Klicks über mehrere Bilder).
 //! Jede Sonde druckt `UXB <Nr>: <Beobachtung>`; geprüft wird nur, was im Katalog als „Original“
-//! belegt ist. Aufruf: `cargo test -p fp-ui --test ux_b_abgleich -- --nocapture --test-threads 1`.
+//! belegt ist. Aufruf: `cargo test -p fp-ui --test ux_b_abgleich -- --nocapture` (die Sonden laufen über
+//! [`shell_off`] nacheinander).
 
 use egui::{Event, Key, Modifiers, PointerButton, Pos2};
 use egui_kittest::kittest::Queryable;
@@ -99,13 +100,25 @@ fn focused(h: &H) -> bool {
     h.ctx.memory(|m| m.focused().is_some())
 }
 
-fn shell_off() {
+/// Die Tests dieser Datei laufen nacheinander (NZ-2). Grund: Jede Sonde macht Bilder
+/// (`shot` → `Harness::render`), und dabei legt egui_kittest für jeden Harness einen eigenen
+/// wgpu-Renderer mit eigener Instanz und eigenem Gerät an (beim ersten Bild, abgebaut mit dem
+/// Harness). Starten neun Sonden das gleichzeitig, stürzt der Prozess gelegentlich mit einer
+/// Zugriffsverletzung ab: 6 von 30 Läufen, ohne Bilder 0 von 30 (gemessen 12.10.2026). Der
+/// Wächter wird zuerst angelegt und zuletzt freigegeben, er umschließt also auch den Abbau des
+/// Renderers. Damit braucht der Aufruf kein `--test-threads 1` mehr.
+static GPU: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+#[must_use]
+fn shell_off() -> std::sync::MutexGuard<'static, ()> {
+    let g = GPU.lock().unwrap_or_else(|e| e.into_inner());
     fp_engine::shell::disable();
+    g
 }
 
 #[test]
 fn uxb_d_neues_dokument() {
-    shell_off();
+    let _gpu = shell_off();
     let mut h = harness();
     h.state_mut().state.run("file.new", json!({}));
     h.run_steps(4);
@@ -137,7 +150,7 @@ fn uxb_d_neues_dokument() {
 
 #[test]
 fn uxb_m_ungespeichert() {
-    shell_off();
+    let _gpu = shell_off();
     let mut h = harness();
     let id = h.state().state.session.active_id().expect("doc");
     h.state_mut().state.push(Action::CloseDocument(id));
@@ -153,7 +166,7 @@ fn uxb_m_ungespeichert() {
 
 #[test]
 fn uxb_w_reiter_und_tasten() {
-    shell_off();
+    let _gpu = shell_off();
     let mut s = session();
     s.execute("file.new", json!({"width": 300, "height": 200})).expect("doc2");
     let mut h = harness_with(s);
@@ -181,7 +194,7 @@ fn uxb_w_reiter_und_tasten() {
 /// Dialoge: Fokus beim Öffnen, Lage (zentriert?), Enter = Standardknopf, Esc = Abbrechen.
 #[test]
 fn uxb_d_dialoge_grundverhalten() {
-    shell_off();
+    let _gpu = shell_off();
     let cmds = [
         "modify.canvas.imageSize",
         "modify.canvas.canvasSize",
@@ -220,7 +233,7 @@ fn uxb_d_dialoge_grundverhalten() {
 /// Bestätigungsdialog (Rückfrage) mit Enter.
 #[test]
 fn uxb_m_rueckfrage_enter() {
-    shell_off();
+    let _gpu = shell_off();
     let mut h = harness();
     h.state_mut().state.dialogs.confirm = Some(fp_ui::dialogs::Confirm { title: "Firepixel".into(), text: "Testfrage".into(), command: "select.all".into(), params: json!({}) });
     h.run_steps(3);
@@ -233,7 +246,7 @@ fn uxb_m_rueckfrage_enter() {
 /// Neues Dokument merkt die zuletzt benutzte Größe.
 #[test]
 fn uxb_d_neues_dokument_merken() {
-    shell_off();
+    let _gpu = shell_off();
     let mut h = harness();
     h.state_mut().state.run("file.new", json!({}));
     h.run_steps(3);
@@ -253,7 +266,7 @@ fn uxb_d_neues_dokument_merken() {
 /// Ebenen-Bedienfeld sichtbar machen und fotografieren (Koordinaten für weitere Sonden).
 #[test]
 fn uxb_e_ebenen_bild() {
-    shell_off();
+    let _gpu = shell_off();
     let mut h = harness();
     click(&mut h, Pos2::new(1442.0, 384.0), Modifiers::NONE);
     h.state_mut().state.run("select.set", json!({"ids": []}));
@@ -284,7 +297,7 @@ fn focused_value(h: &H) -> Option<String> {
 
 #[test]
 fn uxb_e_ebenen_umbenennen() {
-    shell_off();
+    let _gpu = shell_off();
     // E01: Doppelklick auf den Namen, sofort tippen, Enter
     let mut h = layers_harness();
     dclick(&mut h, Pos2::new(1430.0, 516.0));
@@ -324,7 +337,7 @@ fn uxb_e_ebenen_umbenennen() {
 
 #[test]
 fn uxb_e_ebenen_klicks() {
-    shell_off();
+    let _gpu = shell_off();
     let vis = |h: &H| -> Vec<(String, bool)> {
         let s = &h.state().state;
         let d = s.session.active().expect("doc");
@@ -396,7 +409,7 @@ fn uxb_e_ebenen_klicks() {
 
 #[test]
 fn uxb_i_zahlenfelder() {
-    shell_off();
+    let _gpu = shell_off();
     let w = Pos2::new(124.0, 953.0);
     let bounds = |h: &H| {
         let d = h.state().state.session.active().expect("doc");

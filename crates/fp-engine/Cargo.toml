@@ -62,3 +62,10 @@ path = "tests/all.rs"
 [[test]]
 name = "ai_missing"
 path = "tests/ai_missing.rs"
+
+# rechnet mit den echten Modellen und prüft „kein Modell geladen“ bzw. die zwischengespeicherte
+# Rohausgabe (`retune`): der KI-Zwischenspeicher (`fp_ai`) ist prozessweit, andere Dateien laden
+# und entladen parallel Modelle (NZ-2; im gemeinsamen Programm rot, allein 5/5 grün)
+[[test]]
+name = "ai_tuning_ki2"
+path = "tests/ai_tuning_ki2.rs"

@@ -3,9 +3,11 @@
 //! zwischengespeicherten Modell-Ausgabe neu, ohne ein Modell zu laden oder zu rechnen.
 //!
 //! Braucht die echten Modelle (sonst übersprungen). Die Tests dieser Datei laufen nacheinander
-//! (gemeinsame Sperre), damit „kein Modell geladen“ eindeutig prüfbar ist.
+//! (gemeinsame Sperre), damit „kein Modell geladen“ eindeutig prüfbar ist. Eigener Prozess
+//! (`[[test]]` im `Cargo.toml`): der KI-Zwischenspeicher ist prozessweit, im gemeinsamen Programm
+//! `all` laden und entladen Tests anderer Dateien gleichzeitig Modelle.
 
-use crate::common;
+mod common;
 
 use common::*;
 use fp_engine::commands::ai as ai;
