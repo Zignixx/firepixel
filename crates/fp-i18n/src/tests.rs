@@ -146,6 +146,25 @@ fn caches_follow_language_switch_across_threads() {
     assert_eq!(t("btn-cancel"), "Abbrechen");
 }
 
+/// Vorübergehende Sprache nur im eigenen Thread (MCP-Brücke: englische Fehlertexte, UI bleibt).
+#[test]
+fn with_language_is_thread_local_and_nested() {
+    let _g = LOCK.lock();
+    set_language("de");
+    assert_eq!(t("btn-cancel"), "Abbrechen");
+    let (inner, nested, other_thread) = with_language("en", || {
+        let other = std::thread::spawn(|| t("btn-cancel")).join().unwrap_or_default();
+        let nested = with_language("de", || tr!("test-layers", n = 2));
+        (t("btn-cancel"), nested, other)
+    });
+    assert_eq!(inner, "Cancel");
+    assert_eq!(nested, "2 Ebenen");
+    assert_eq!(other_thread, "Abbrechen", "andere Threads unberührt");
+    assert_eq!(t("btn-cancel"), "Abbrechen", "danach wieder die Sprache der Oberfläche");
+    assert_eq!(current_language(), "de");
+    assert_eq!(with_language("EN", || tr!("test-zoom", z = 12.5)), "Zoom 12.5%");
+}
+
 /// Platzhalter je Schlüssel gleich, keine neuen Zugriffstasten-Konflikte, Syntax sauber.
 #[test]
 fn builtin_placeholders_and_access_keys() {

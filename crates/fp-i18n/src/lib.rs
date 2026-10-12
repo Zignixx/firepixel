@@ -263,11 +263,39 @@ pub fn pseudo(text: &str) -> String {
     format!("[!! {text} {}!!]", "·".repeat(pad))
 }
 
+thread_local! {
+    /// Sprache, die in diesem Thread vorübergehend gilt ([with_language]).
+    static OVERRIDE: RefCell<Option<String>> = const { RefCell::new(None) };
+}
+
+fn override_lang() -> Option<String> {
+    OVERRIDE.with(|o| o.borrow().clone())
+}
+
+/// Führt  mit einer anderen Sprache aus – nur in diesem Thread, die Oberfläche bleibt
+/// unverändert (z. B. englische Fehlertexte für KI-Agenten über die MCP-Brücke). Unbekannte
+/// Codes: Rückfallkette wie sonst (Englisch, Deutsch). Verschachtelbar.
+pub fn with_language<R>(code: &str, f: impl FnOnce() -> R) -> R {
+    struct Restore(Option<String>);
+    impl Drop for Restore {
+        fn drop(&mut self) {
+            let prev = self.0.take();
+            OVERRIDE.with(|o| *o.borrow_mut() = prev);
+        }
+    }
+    let prev = OVERRIDE.with(|o| o.borrow_mut().replace(code.to_string()));
+    let _restore = Restore(prev);
+    f()
+}
+
 fn lookup(st: &State, key: &str, args: Option<&FluentArgs>) -> Option<String> {
-    if st.current == PSEUDO_LANG {
+    let ov = override_lang();
+    let current = ov.as_deref().unwrap_or(st.current.as_str());
+    if current == PSEUDO_LANG {
         return st.langs.iter().find(|l| l.info.code == SOURCE_LANG).and_then(|l| format_in(l, key, args)).map(|s| pseudo(&s));
     }
-    for code in [st.current.as_str(), FALLBACK_LANG, SOURCE_LANG] {
+    let current = st.langs.iter().find(|l| l.info.code.eq_ignore_ascii_case(current)).map(|l| l.info.code.as_str()).unwrap_or(current);
+    for code in [current, FALLBACK_LANG, SOURCE_LANG] {
         if let Some(l) = st.langs.iter().find(|l| l.info.code == code)
             && let Some(s) = format_in(l, key, args)
         {
@@ -279,6 +307,13 @@ fn lookup(st: &State, key: &str, args: Option<&FluentArgs>) -> Option<String> {
 
 /// Nachschlagen über den Thread-Cache: (Text, gefunden). Im Normalfall ohne Sperre.
 fn cached(key: &str) -> (Arc<str>, bool) {
+    if OVERRIDE.with(|o| o.borrow().is_some()) {
+        // vorübergehende Sprache: am Cache vorbei
+        return match state().read().ok().and_then(|st| lookup(&st, key, None)) {
+            Some(s) => (Arc::from(s), true),
+            None => (Arc::from(key), false),
+        };
+    }
     let generation = GENERATION.load(Ordering::Acquire);
     let hit = LOCAL.with(|c| {
         let mut c = c.borrow_mut();
@@ -332,6 +367,9 @@ const DERIVED_MAX: usize = 4096;
 /// Abgeleiteter Text (Platzhalter, Kürzel) aus dem Thread-Cache bzw. neu berechnet.
 /// `id` muss Art und alle Eingaben eindeutig beschreiben.
 pub(crate) fn derived(id: &str, make: impl FnOnce() -> String) -> Arc<str> {
+    if OVERRIDE.with(|o| o.borrow().is_some()) {
+        return Arc::from(make());
+    }
     let generation = GENERATION.load(Ordering::Acquire);
     let hit = LOCAL.with(|c| {
         let mut c = c.borrow_mut();
@@ -428,6 +466,9 @@ pub fn command_key(command: &str) -> String {
 
 /// Aktuelle Sprache.
 pub fn current_language() -> String {
+    if let Some(code) = override_lang() {
+        return code;
+    }
     state().read().map(|st| st.current.clone()).unwrap_or_else(|_| SOURCE_LANG.to_string())
 }
 
