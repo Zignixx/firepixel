@@ -552,6 +552,21 @@ pub fn combo_box_frame(ui: &mut Ui, id: Id, r: Rect, text: &str, enabled: bool) 
     resp
 }
 
+/// Layout-Protokoll der Einträge eines Kombifelds (nur bei [`set_audit`]): jeder Eintrag muss in
+/// das geschlossene Feld passen (Text links, Chevron rechts).
+pub fn audit_combo_items(ui: &Ui, r: Rect, items: &[&str]) {
+    if !ui.ctx().data(|d| d.get_temp::<bool>(Id::new(AUDIT_ON))).unwrap_or(false) {
+        return;
+    }
+    let avail = Rect::from_min_max(pos2(r.left() + 4.0, r.top()), pos2(r.right() - 18.0, r.bottom()));
+    let font = Theme::current(ui.ctx()).ui_font();
+    for it in items.iter().filter(|s| !is_separator(s)) {
+        let w = text_w(ui, it, &font);
+        let need = Rect::from_min_size(avail.min, vec2(w, avail.height()));
+        audit(ui, "combo-item", it, avail, need, if w > avail.width() + 0.5 { 2 } else { 0 });
+    }
+}
+
 /// Kombifeld mit fester Liste. `selected` ist der Index in `items` (Trenner zählen mit, sind aber
 /// nicht wählbar). Liefert den gewählten Index.
 pub fn combo(ui: &mut Ui, id: impl Hash + std::fmt::Debug, r: Rect, items: &[&str], selected: Option<usize>, enabled: bool) -> Option<usize> {
@@ -560,16 +575,7 @@ pub fn combo(ui: &mut Ui, id: impl Hash + std::fmt::Debug, r: Rect, items: &[&st
     let resp = combo_box_frame(ui, id, r, text, enabled);
     let mut out = None;
     let t = Theme::current(ui.ctx());
-    if ui.ctx().data(|d| d.get_temp::<bool>(Id::new(AUDIT_ON))).unwrap_or(false) {
-        // jeder Eintrag muss in das geschlossene Feld passen (Text links, Chevron rechts)
-        let avail = Rect::from_min_max(pos2(r.left() + 4.0, r.top()), pos2(r.right() - 18.0, r.bottom()));
-        let font = t.ui_font();
-        for it in items.iter().filter(|s| !is_separator(s)) {
-            let w = text_w(ui, it, &font);
-            let need = Rect::from_min_size(avail.min, vec2(w, avail.height()));
-            audit(ui, "combo-item", it, avail, need, if w > avail.width() + 0.5 { 2 } else { 0 });
-        }
-    }
+    audit_combo_items(ui, r, items);
     egui::Popup::menu(&resp).frame(crate::menu::menu_frame(&t)).width(r.width().max(60.0)).show(|ui| {
         ui.spacing_mut().item_spacing = vec2(0.0, 0.0);
         egui::ScrollArea::vertical().max_height(360.0).show(ui, |ui| {

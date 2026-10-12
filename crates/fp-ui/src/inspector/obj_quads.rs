@@ -1557,7 +1557,7 @@ pub fn text_row1(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target) {
     if fsel.is_none() && en {
         let resp = fields::combo_box_frame(ui, id.with("fam"), fam_r, &family, en);
         let _ = resp;
-    } else if let Some(i) = fields::combo(ui, id.with("fam"), fam_r, &names, fsel, en) {
+    } else if let Some(i) = super::fonts::family_combo(ui, id.with("fam"), fam_r, &names, fsel, en) {
         let ps = super::fonts::ps_name(names[i], &style);
         set_text(ui, st, tgt, json!({"font": ps}));
     }

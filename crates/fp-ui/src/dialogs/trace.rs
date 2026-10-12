@@ -25,7 +25,7 @@
 //! ([`fp_engine::commands::trace::offer_prepared`]). **Abbrechen** ändert nichts. Vorgabe, Optionen und „Original behalten“ werden in den
 //! Voreinstellungen gemerkt ([`PREF_OPTIONS`], [`PREF_KEEP`]).
 
-use super::{dialog_frame_resizable, report_overflow, t, DialogClose, DIALOG_TITLE_H};
+use super::{dialog_frame_resizable_sized, report_overflow, t, DialogClose, DIALOG_TITLE_H};
 use crate::app_state::{Action, AppState};
 use crate::icons;
 use crate::inspector::fields;
@@ -46,6 +46,15 @@ pub const DIALOG_ID: &str = "fp-trace";
 pub const PREF_OPTIONS: &str = "TraceDialogOptions";
 /// Voreinstellung: „Original behalten“.
 pub const PREF_KEEP: &str = "TraceDialogKeepOriginal";
+/// Voreinstellung: vom Nutzer gezogene Größe des Client-Bereichs („Breite Höhe“ in Punkten).
+pub const PREF_SIZE: &str = "TraceDialogSize";
+/// Ausgangsgröße des Client-Bereichs: außen ≈ 1050 × 830 (Nutzerbefund N20; vorher 900 × 640).
+/// Vorschau groß, „Aufräumen“ und „Erweitert“ ohne Bildlauf sichtbar.
+pub const DEFAULT_CLIENT: Vec2 = Vec2::new(1048.0, 800.0);
+/// Mindestgröße des Client-Bereichs (kleiner wird es nur, wenn das Hauptfenster selbst klein ist).
+pub const MIN_CLIENT: Vec2 = Vec2::new(680.0, 500.0);
+/// Anteil des Hauptfensters, den der Dialog beim Öffnen höchstens einnimmt.
+pub const MAX_SCREEN_SHARE: f32 = 0.9;
 /// Eigene Inspektor-Vorlage (Q5 bei Bitmaps): Knopf „Nachzeichnen…“.
 pub const INSPECTOR_Q5: u16 = 19101;
 /// Höchstabweichung je Farbkanal für „gleich“ in der Übereinstimmung.
@@ -183,6 +192,30 @@ fn selected_bitmaps(st: &AppState) -> Vec<RgbaImage> {
         })
         .filter(|img| img.width() > 0 && img.height() > 0)
         .collect()
+}
+
+/// Gemerkte, vom Nutzer gezogene Größe des Client-Bereichs (`None` = nie geändert).
+pub fn remembered_size(st: &AppState) -> Option<Vec2> {
+    let s = st.session.prefs.get_str(PREF_SIZE, "");
+    let mut it = s.split_whitespace().map(|v| v.parse::<f32>());
+    match (it.next(), it.next()) {
+        (Some(Ok(w)), Some(Ok(h))) if w.is_finite() && h.is_finite() && w > 0.0 && h > 0.0 => Some(vec2(w, h)),
+        _ => None,
+    }
+}
+
+/// Mindest- und Ausgangsgröße des Client-Bereichs für ein Hauptfenster der Größe `screen`
+/// (Punkte): Ausgangsgröße die gemerkte bzw. [`DEFAULT_CLIENT`], außen höchstens
+/// [`MAX_SCREEN_SHARE`] des Hauptfensters. Die Mindestgröße [`MIN_CLIENT`] geht vor; nur in sehr
+/// kleinen Hauptfenstern (z. B. 1024 × 768 bei 150 %) wird sie auf das Fenster abzüglich eines
+/// schmalen Rands begrenzt (wie vorher; nie unter 320 × 300), damit der Inhalt nicht überläuft.
+pub fn dialog_sizes(screen: Vec2, remembered: Option<Vec2>) -> (Vec2, Vec2) {
+    let frame = vec2(2.0, DIALOG_TITLE_H + 2.0);
+    let cap = (screen * MAX_SCREEN_SHARE - frame).floor();
+    let fit = (screen - vec2(16.0, DIALOG_TITLE_H + 16.0)).floor();
+    let min = MIN_CLIENT.min(fit).max(vec2(320.0, 300.0));
+    let initial = remembered.unwrap_or(DEFAULT_CLIENT).min(cap).max(min).floor();
+    (min, initial)
 }
 
 /// Gemerkte Optionen aus den Voreinstellungen (sonst die Vorgabe „Logo“).
@@ -646,16 +679,23 @@ pub fn show(ctx: &egui::Context, st: &mut AppState) {
     }
     d.ensure_original_texture(ctx);
     let screen = ctx.content_rect();
-    // passt bei 1024 × 768 und 150 % (683 × 512 Punkte); größer, wo Platz ist
-    let size = vec2(900f32.min(screen.width() - 16.0).max(320.0), 640f32.min(screen.height() - DIALOG_TITLE_H - 16.0).max(300.0)).floor();
+    let remembered = remembered_size(st);
+    let (min, initial) = dialog_sizes(screen.size(), remembered);
     let mut outcome: Option<bool> = None;
     let mut want_svg = false;
     let title = t("trace-dlg-title");
-    let r = dialog_frame_resizable(ctx, DIALOG_ID, &title, size, |ui, body| {
+    let r = dialog_frame_resizable_sized(ctx, DIALOG_ID, &title, min, initial, |ui, body| {
         let (o, svg) = d.ui(ui, body, now);
         outcome = o;
         want_svg = svg;
     });
+    // vom Nutzer gezogene Größe merken (gilt beim nächsten Öffnen, auch nach einem Neustart)
+    if let Some(g) = super::dialog_geom(ctx, DIALOG_ID) {
+        let client = g.client.round();
+        if client != initial.round() && Some(client) != remembered.map(|v| v.round()) {
+            st.session.prefs.set(PREF_SIZE, fp_engine::prefs::PrefValue::Str(format!("{} {}", client.x, client.y)));
+        }
+    }
     if want_svg {
         d.save_svg(st);
     }

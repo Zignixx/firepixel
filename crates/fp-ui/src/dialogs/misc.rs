@@ -117,7 +117,7 @@ pub fn show_text_editor(ctx: &egui::Context, st: &mut AppState) {
         let fams = crate::inspector::fonts::families();
         let (family, style) = crate::inspector::fonts::lookup(&d.font);
         let names: Vec<&str> = fams.iter().map(|f| f.name.as_str()).collect();
-        if let Some(i) = fields::combo(ui, "te-font", Rect::from_min_size(o, vec2(180.0, 20.0)), &names, names.iter().position(|n| *n == family), true) {
+        if let Some(i) = crate::inspector::fonts::family_combo(ui, "te-font", Rect::from_min_size(o, vec2(180.0, 20.0)), &names, names.iter().position(|n| *n == family), true) {
             d.font = crate::inspector::fonts::ps_name(names[i], &style);
         }
         if let Some(v) = fields::number(ui, "te-size", Rect::from_min_size(o + vec2(186.0, 0.0), vec2(44.0, 20.0)), Some(Rect::from_min_size(o + vec2(232.0, 0.0), vec2(14.0, 20.0))), Some(d.size), (1.0, 5000.0), 1, true) {
