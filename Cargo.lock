@@ -2091,6 +2091,7 @@ dependencies = [
  "fp-render",
  "fp-script",
  "fp-text",
+ "fp-trace",
  "fp-vector",
  "log",
  "png",
