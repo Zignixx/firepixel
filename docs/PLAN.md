@@ -93,7 +93,7 @@ Abgelehnt bzw. nicht gewählt: zweite GUI-Spur über einen zweiten Windows-Benut
 | **FV-14** | P-LW1: Leinwand-Rest (Fang an Objektmitten L4/L35, Alt-Eckpunkt L33, Esc nach Zauberstab L13, Zoomrahmen L25, Strg+Leertaste L7, Stift L34, Klick auf transparentes Bitmap-Pixel) | fp-ui canvas, fp-engine tools, `canvas_fv14.rs` |
 | **PM-4** | P-PRUEF: Nachprüfung im echten Fenster (FV-10 W19…O16, FV-9 W10/W15/W17/W27/W28, FV-11 kurz, N01/N13/N14/N16–N18), Zähltabelle PARITAET_A nachführen | nur Doku + Bilder |
 | **BV-1** (Cleanroom) | Bildvorschau Paket P1: 1/2/4-fach, eigene Einstellungen je Feld, Kopfzeile mit genauer Größen-/Ladezeitformel, aktives Feld, synchroner Zoom und Bildlauf, Hintergrundrechnung, gleiche Kodierung wie der Export. Quelle **nur** `re\17-bildvorschau.md` (☑ RE-BV, 13 Abschnitte, im Original nachgeprüft) | neues Modul `fp-ui\src\dialogs\image_preview\`, `image_preview.ftl`, fp-export |
-| **PM-5** | P-PM4 Teil 1: Messrunde Dialoge D01–D25 in beiden Programmen, Paketvorschläge zu 3–5 Dialogen | nur Doku + Bilder |
+| **DLG-1** | P-DLG1: **Zahlenfelder nehmen nach einigen Öffnungen keine Eingabe mehr an** (hoch, Leinwand-/Bildgröße, Raster, Textgröße), D19 live nachrechnen, D20 Auswahl/Anker/B:H:, D01-Rest, Tab-Folge in allen Dialogen, keine leeren Verlaufsschritte | `dialogs\*`, `dialogs_dlg1.rs` |
 | **RE-EX** (Analyse, ohne Build) | Spezifikation `re\18-export-dialoge.md`: Exportieren (alle Arten + Optionen), Exportassistent, HTML-Einrichtung, mit Lückenliste und Paketen → danach Cleanroom-Agenten DLX-1 | nur `re\` |
 | **RE-KT** (Analyse, ohne Build) | Spezifikation `re\19-kurven-tonwert.md`: Kurven, Tonwertkorrektur (Pipetten, Histogramm), Auto-Tonwert, Bitmap-Auswahl speichern/wiederherstellen → danach DLX-2/3 | nur `re\` |
 | **RE-SWF** (Analyse, ohne Build) | Spezifikation `re\20-ai8-swf.md`: Speichern als AI8, SWF (inkl. Optionen), Reduziertes PNG, mit Python-Referenz → danach Cleanroom-Agent EB-2 | nur `re\` |
@@ -128,8 +128,13 @@ Die Reihenfolge gilt, solange nichts Dringenderes vom Nutzer kommt. Sobald ein P
 | Paket | Inhalt |
 |---|---|
 | ☐ **P-PM4** | **Neue Messrunde PARITAET_B** in beiden Programmen: Hauptmenüs (311/5/5), alle 50 Dialoge Feld für Feld (Stand 04:30: 3/16/30; seitdem vieles behoben, aber nicht nachgemessen), Bedienfeldmenüs (1/3/4); neue Befunde in kleine Pakete aufteilen |
-| ☐ **P-DLG1…n** | Dialoge nach der Messung in Paketen zu 3–5 Dialogen, z. B. D18/D20/D22/D23; Originalbeschriftungen; Hinweis-Meldungen; Live-Filter-Menü „+“; Überlauf bei 1024 × 768 / 150 % |
-| ☐ **P-DLG-X** | unvollständige große Dialoge: Exportieren, Exportassistent, HTML-Einrichtung, Kurven/Tonwertkorrektur (Pipetten, Histogramm), Auswahl speichern (Bildvorschau siehe P-BV) |
+| ☑ **P-PM4 Teil 1** | PM-5 (`360b0c7`): D01–D25 nachgemessen → 0 ✅ / 10 ⚠️ / 14 ❌ / 1 ⏳; 13 neue Befunde (IBD) |
+| ☐ **P-DLG1** | läuft (DLG-1), siehe §4 |
+| ☐ **P-DLG2** | D18 Raster, D23 Textgröße (zeigt immer 12), D21, D22 (Felder ohne Haken nicht grau, Überlagerungsfarbe fehlt) |
+| ☐ **P-DLG3** | Dateidialoge D02–D06, D09: mittig über dem Fenster statt oben links, Startordner (nicht immer „Dokumente“), Titel, Filter, Zusatzfelder bei Öffnen/Speichern unter (zusammen mit P-HG1) |
+| ☐ **P-DLG4** | D14 Neues Symbol (OK öffnet die Symbolbearbeitung statt einer leeren Instanz bei 0,0), D25 gespeicherte Befehle (ohne eigene nur eine Meldung), D16, D17 |
+| ☐ **P-DLG5…** | nach PM-6 (D26–D50) in Paketen zu 3–5 Dialogen; Originalbeschriftungen; Hinweis-Meldungen; Live-Filter-Menü „+“; Überlauf bei 1024 × 768 / 150 % |
+| ☐ **P-DLG-X** | unvollständige große Dialoge: Exportieren, Exportassistent, HTML-Einrichtung (Spezifikation RE-EX), Kurven/Tonwertkorrektur (Pipetten, Histogramm), Auswahl speichern (Spezifikation RE-KT); laut PM-5 außerdem unvollständig: D07, D10 (XMP-Fenster fehlt), D11, D12, D13, D15, D24 (Bildvorschau siehe P-BV) |
 | ☐ **P-MENU2** | Menüaufbau: Schrift-Menü (zuletzt benutzte oben, Familien flach), „Bridge durchsuchen“ aktiv/grau, „Mit darunter liegender reduzieren“ bei Text, Befehle-Menü im frischen Profil, Bedienfeldmenüs (≡) |
 | ☐ **P-EB1** | Speichern unter: Dateitypen AI8, SWF, „Reduziertes PNG“ |
 
