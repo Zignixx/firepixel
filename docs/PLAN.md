@@ -114,6 +114,13 @@ Wenn der letzte fertig ist, beginnt die **Pause**. In der Pause:
 1. **Aufräumen:** übrig gebliebene Worktrees, `target-*`-Ordner und Testinstanzen. Im Original lagen am Abend viele leere Testdokumente; bei Bedarf startet der Nutzer es neu.
 2. **Stand prüfen:** `cargo check --workspace --all-targets`, fp-i18n, fp-neutral, i18n-Scanner.
 3. **Testversion:** Release-Build aus einer sauberen Kopie von HEAD, auf den Desktop, Ordnername mit Datum und Uhrzeit, mit `NEU.md`.
+4. **Doku nachziehen** (Nutzerwunsch, ein Doku-Agent ohne Build):
+   - `ANLEITUNG.md`/`.en.md`: neue Funktionen seit 12.10. mittags, z. B. Schriftsuche, KI-Feineinstellungen und Fortschrittskarte, Bildvorschau 1/2/4-fach mit Optionen, Texturen „Andere…“, Pinsel auf Bitmap, Datei-Dialoge
+   - `AGENTS.md`/`.en.md` und MCP-Ressourcen: neue Parameter
+   - `STATUS.md` oben eine aktuelle Gesamtübersicht statt nur Agenten-Abschnitten
+   - `PLAN.md` auf den Ist-Stand
+   - `NUTZERBEFUNDE.md`, `NACHPRUEFUNG.md` aufgeräumt
+   - `REA\UEBERGABE.md` mit dem Stand 12.10. abends
 
 Danach geht es weiter, wenn der Nutzer „weiter“ sagt, mit EB-2, DLX-2, DLX-1, BV-3, DLG-4 und dann Welle B.
 
