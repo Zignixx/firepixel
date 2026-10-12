@@ -2,15 +2,15 @@
 
 Erzeugt von `crates\fp-ui\tests\gesamt_menu.rs` (`cargo test -p fp-ui --test gesamt_menu`). Nicht von Hand ändern.
 
-**339/347 Einträge ✅**
+**345/345 Einträge ✅**
 
 | Eintrag | Befehl | Ergebnis | Hinweis |
 |---|---|---|---|
 | Datei ▸ Neu | `file.new` | ✅ Dialog | ohne Auswahl |
 | Datei ▸ Neu von Vorlage... | `file.newFromTemplate` | ✅ Ui | ohne Auswahl: Dokument geöffnet/gewechselt |
-| Datei ▸ Öffnen... | `file.open` | ✅ Dialog | ohne Auswahl: Meldung „„C:\Users\ADMINI~1\AppData\Local\Temp\firepixel-gesamttest\19376-25\browser.exe“ konnte nicht geöffnet werden: FW-PNG: keine PNG-Signatur“ |
-| Datei ▸ Bridge durchsuchen... | `file.browseInBridge` | ✅ Ui | ohne Auswahl: Befehl liefert {"files":[{"bytes":2128,"modified":1791794025,"name":"vorlage.fw.png","path":"C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\firepixel-gesamttes – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
-| Datei ▸ Zuletzt geöffnete Dateien ▸ 1 C:\Users\ADMINI~1\AppData\Local\Temp\firepixel-gesamttest\19376-1\vorlage.fw.png | `OpenPath("C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\firepixel-gesamttest\\19376-1\\vorlage.fw.png")` | ✅ Ui | ohne Auswahl: Dokument geöffnet/gewechselt |
+| Datei ▸ Öffnen... | `file.open` | ✅ Dialog | ohne Auswahl: Meldung „„C:\Users\ADMINI~1\AppData\Local\Temp\firepixel-gesamttest\11840-26\browser.exe“ konnte nicht geöffnet werden: FW-PNG: keine PNG-Signatur“ |
+| Datei ▸ Bridge durchsuchen... | `file.browseInBridge` | ✅ Ui | ohne Auswahl: Befehl liefert {"files":[{"bytes":2127,"modified":1791813276,"name":"vorlage.fw.png","path":"C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\firepixel-gesamttes – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
+| Datei ▸ Zuletzt geöffnete Dateien ▸ 1 C:\Users\ADMINI~1\AppData\Local\Temp\firepixel-gesamttest\11840-3\vorlage.fw.png | `OpenPath("C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\firepixel-gesamttest\\11840-3\\vorlage.fw.png")` | ✅ Ui | ohne Auswahl: Dokument geöffnet/gewechselt |
 | Datei ▸ Scannen ▸ Twain importieren... | `file.twainAcquire` | ✅ Ui | ohne Auswahl: Meldung „Bilderfassung: Starten von Fremdprogrammen ist abgeschaltet (FP_NO_SHELL_OPEN)“ |
 | Datei ▸ Scannen ▸ Twain auswählen... | `file.twainSelect` | ✅ Ui | ohne Auswahl: Meldung „Bilderfassung: Starten von Fremdprogrammen ist abgeschaltet (FP_NO_SHELL_OPEN)“ |
 | Datei ▸ Schließen | `file.close` | ✅ Dialog | ohne Auswahl |
@@ -23,16 +23,16 @@ Erzeugt von `crates\fp-ui\tests\gesamt_menu.rs` (`cargo test -p fp-ui --test ges
 | Datei ▸ Importieren... | `file.import` | ✅ Doc | ohne Auswahl |
 | Datei ▸ Exportieren... | `file.export` | ✅ Dialog | ohne Auswahl |
 | Datei ▸ Bildvorschau... | `file.imagePreview` | ✅ Dialog | ohne Auswahl |
-| Datei ▸ Als E-Mail senden ▸ PNG-Datei für Firepixel... | `file.sendToEMail.firepixelPng` | ✅ Ui | ohne Auswahl: Befehl liefert {"attachment":"Unbenannt-2.fw.png","bytes":13908,"eml":"C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\Firepixel\\EMail\\Unbenannt-2.eml"} – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
-| Datei ▸ Als E-Mail senden ▸ Komprimierte JPG-Datei... | `file.sendToEMail.jpegCompressed` | ✅ Ui | ohne Auswahl: Befehl liefert {"attachment":"Unbenannt-2.jpg","bytes":18182,"eml":"C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\Firepixel\\EMail\\Unbenannt-2.eml"} – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
-| Datei ▸ Als E-Mail senden ▸ Exporteinstellungen verwenden... | `file.sendToEMail.useExportSettings` | ✅ Ui | ohne Auswahl: Befehl liefert {"attachment":"Unbenannt-2.gif","bytes":7804,"eml":"C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\Firepixel\\EMail\\Unbenannt-2.eml"} – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
+| Datei ▸ Als E-Mail senden ▸ PNG-Datei für Firepixel... | `file.sendToEMail.firepixelPng` | ✅ Ui | ohne Auswahl: Befehl liefert {"attachment":"Unbenannt-2.fw.png","bytes":13906,"eml":"C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\Firepixel\\Email\\Unbenannt-2.eml"} – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
+| Datei ▸ Als E-Mail senden ▸ Komprimierte JPG-Datei... | `file.sendToEMail.jpegCompressed` | ✅ Ui | ohne Auswahl: Befehl liefert {"attachment":"Unbenannt-2.jpg","bytes":18182,"eml":"C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\Firepixel\\Email\\Unbenannt-2.eml"} – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
+| Datei ▸ Als E-Mail senden ▸ Exporteinstellungen verwenden... | `file.sendToEMail.useExportSettings` | ✅ Ui | ohne Auswahl: Befehl liefert {"attachment":"Unbenannt-2.gif","bytes":7804,"eml":"C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\Firepixel\\Email\\Unbenannt-2.eml"} – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
 | Datei ▸ HTML aktualisieren... | `file.updateHtml` | ✅ Ui | ohne Auswahl: Datei geschrieben |
 | Datei ▸ Datei-Info... | `file.fileInfo` | ✅ Dialog | ohne Auswahl: Meldung „Titel: Unbenannt-2.png Pfad: (nicht gespeichert) Seiten: 2 Symbole: 3 Formatversion: 10“ |
 | Datei ▸ Exportassistent... | `file.exportWizard` | ✅ Dialog | ohne Auswahl |
 | Datei ▸ Batch-Verarbeitung... | `file.batchProcess` | ✅ Dialog | ohne Auswahl |
-| Datei ▸ Vorschau im Browser ▸ Vorschau in Standardbrowser | `file.previewInBrowser.previewInPrimaryBrowser` | ✅ Ui | ohne Auswahl: Befehl liefert {"files":["C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\Firepixel\\Vorschau\\dok2\\Unbenannt-2_r1_c1.gif","C:\\Users\\ADMINI~1\\AppData\\Local – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
-| Datei ▸ Vorschau im Browser ▸ Vorschau in | `file.previewInBrowser.previewInSecondaryBrowser` | ❌ NeverAvailable | in keiner Testsituation verfügbar |
-| Datei ▸ Vorschau im Browser ▸ Vorschau aller Seiten in Standardbrowser anzeigen | `file.previewInBrowser.previewAllPagesInPrimaryBrowser` | ✅ Ui | ohne Auswahl: Befehl liefert {"files":["C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\Firepixel\\Vorschau\\dok2\\Unbenannt-2_s1_r1_c1.gif","C:\\Users\\ADMINI~1\\AppData\\Lo – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
+| Datei ▸ Vorschau im Browser ▸ Vorschau in Standardbrowser | `file.previewInBrowser.previewInPrimaryBrowser` | ✅ Ui | ohne Auswahl: Befehl liefert {"files":["C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\Firepixel\\Preview\\doc2\\Unbenannt-2_r1_c1.gif","C:\\Users\\ADMINI~1\\AppData\\Local\ – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
+| Datei ▸ Vorschau im Browser ▸ Vorschau in | `file.previewInBrowser.previewInSecondaryBrowser` | ✅ Ui | zweiter Browser: Befehl liefert {"files":["C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\Firepixel\\Preview\\doc2\\Unbenannt-2_r1_c1.gif","C:\\Users\\ADMINI~1\\AppData\\Local\ – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
+| Datei ▸ Vorschau im Browser ▸ Vorschau aller Seiten in Standardbrowser anzeigen | `file.previewInBrowser.previewAllPagesInPrimaryBrowser` | ✅ Ui | ohne Auswahl: Befehl liefert {"files":["C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\Firepixel\\Preview\\doc2\\Unbenannt-2_s1_r1_c1.gif","C:\\Users\\ADMINI~1\\AppData\\Loc – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
 | Datei ▸ Vorschau im Browser ▸ Primärbrowser festlegen... | `file.previewInBrowser.setPrimaryBrowser` | ✅ Ui | ohne Auswahl |
 | Datei ▸ Vorschau im Browser ▸ Sekundärbrowser festlegen... | `file.previewInBrowser.setSecondaryBrowser` | ✅ Ui | ohne Auswahl |
 | Datei ▸ Seite einrichten... | `file.pageSetup` | ✅ Dialog | ohne Auswahl |
@@ -97,7 +97,7 @@ Erzeugt von `crates\fp-ui\tests\gesamt_menu.rs` (`cargo test -p fp-ui --test ges
 | Ansicht ▸ Hilfslinien ▸ Hilfslinien anzeigen | `view.guides.showGuides` | ✅ Ui | ohne Auswahl |
 | Ansicht ▸ Hilfslinien ▸ Hilfslinien sperren | `view.guides.lockGuides` | ✅ Ui | ohne Auswahl |
 | Ansicht ▸ Hilfslinien ▸ An Hilfslinien ausrichten | `view.guides.snapToGuides` | ✅ Ui | ohne Auswahl |
-| Ansicht ▸ Hilfslinien ▸ Hilfslinien entfernen | `view.guides.clearGuides` | ❌ NeverAvailable | in keiner Testsituation verfügbar |
+| Ansicht ▸ Hilfslinien ▸ Hilfslinien entfernen | `view.guides.clearGuides` | ✅ Doc | Hilfslinien |
 | Ansicht ▸ Intelligente Hilfslinien ▸ Intelligente Hilfslinien anzeigen | `view.smartGuides.showSmartGuides` | ✅ Ui | ohne Auswahl |
 | Ansicht ▸ Intelligente Hilfslinien ▸ An intelligenten Hilfslinien ausrichten | `view.smartGuides.snapToSmartGuides` | ✅ Ui | ohne Auswahl |
 | Ansicht ▸ Hilfslinien für 9-Slice-Skalierung ▸ Hilfslinien sperren | `view.nineSliceScalingGuides.lockGuides` | ✅ Ui | ohne Auswahl |
@@ -126,8 +126,8 @@ Erzeugt von `crates\fp-ui\tests\gesamt_menu.rs` (`cargo test -p fp-ui --test ges
 | Auswählen ▸ Auswahlrahmen glätten... | `select.smoothMarquee` | ✅ Dialog | Pixelauswahl |
 | Auswählen ▸ Auswahlrahmen in Pfad konvertieren | `select.convertMarqueeToPath` | ✅ Doc | Pixelauswahl |
 | Auswählen ▸ Bitmap-Auswahl speichern... | `select.saveBitmapSelection` | ✅ Dialog | Pixelauswahl |
-| Auswählen ▸ Bitmap-Auswahl wiederherstellen... | `select.restoreBitmapSelection` | ❌ NeverAvailable | in keiner Testsituation verfügbar |
-| Auswählen ▸ Bitmap-Auswahl löschen... | `select.deleteBitmapSelection` | ❌ NeverAvailable | in keiner Testsituation verfügbar |
+| Auswählen ▸ Bitmap-Auswahl wiederherstellen... | `select.restoreBitmapSelection` | ✅ Dialog | gespeicherte Bitmap-Auswahl |
+| Auswählen ▸ Bitmap-Auswahl löschen... | `select.deleteBitmapSelection` | ✅ Dialog | gespeicherte Bitmap-Auswahl |
 | Modifizieren ▸ Leinwand ▸ Bildgröße... | `modify.canvas.imageSize` | ✅ Dialog | ohne Auswahl |
 | Modifizieren ▸ Leinwand ▸ Leinwandgröße... | `modify.canvas.canvasSize` | ✅ Dialog | ohne Auswahl |
 | Modifizieren ▸ Leinwand ▸ Leinwandfarbe... | `modify.canvas.canvasColor` | ✅ Dialog | ohne Auswahl |
@@ -189,7 +189,7 @@ Erzeugt von `crates\fp-ui\tests\gesamt_menu.rs` (`cargo test -p fp-ui --test ges
 | Modifizieren ▸ Ausrichten ▸ Höhen verteilen | `modify.align.distributeHeights` | ✅ Doc | drei Objekte |
 | Modifizieren ▸ Pfad in Auswahlrahmen konvertieren... | `modify.convertPathToMarquee` | ✅ Doc | Rechteck |
 | Modifizieren ▸ Pfade kombinieren ▸ Verbinden | `modify.combinePaths.join` | ✅ Doc | Rechteck + Ellipse |
-| Modifizieren ▸ Pfade kombinieren ▸ Teilen | `modify.combinePaths.split` | ❌ NeverAvailable | in keiner Testsituation verfügbar |
+| Modifizieren ▸ Pfade kombinieren ▸ Teilen | `modify.combinePaths.split` | ✅ Doc | zusammengesetzter Pfad |
 | Modifizieren ▸ Pfade kombinieren ▸ Vereinigen | `modify.combinePaths.union` | ✅ Dialog | ohne Auswahl |
 | Modifizieren ▸ Pfade kombinieren ▸ Überschneiden | `modify.combinePaths.intersect` | ✅ Dialog | ohne Auswahl |
 | Modifizieren ▸ Pfade kombinieren ▸ Öffnen | `modify.combinePaths.punch` | ✅ Dialog | ohne Auswahl |
@@ -249,44 +249,42 @@ Erzeugt von `crates\fp-ui\tests\gesamt_menu.rs` (`cargo test -p fp-ui --test ges
 | Befehle ▸ Erweiterungen verwalten... | `commands.manageExtensions` | ✅ Dialog | ohne Auswahl: Meldung „[!! Es sind keine Erweiterungen installiert. ···············!!]“ |
 | Befehle ▸ Skript ausführen... | `commands.runScript` | ✅ Doc | ohne Auswahl |
 | Befehle ▸ KI-Modelle verwalten... | `ai.manageModels` | ✅ Dialog | ohne Auswahl |
-| Befehle ▸ Auswahl ▸ Bisheriges Vektor-Rendering verwenden | `commands.runScript {"path":"C:\\Users\\Administrator\\AppData\\Roaming\\Firepixel\\Commands\\Auswahl\\Bisheriges Vektor-Rendering verwenden.jsf"}` | ✅ Doc | Rechteck |
-| Befehle ▸ Auswahl ▸ Verbessertes Vektor-Rendering verwenden | `commands.runScript {"path":"C:\\Users\\Administrator\\AppData\\Roaming\\Firepixel\\Commands\\Auswahl\\Verbessertes Vektor-Rendering verwenden.jsf"}` | ✅ Doc | Rechteck |
-| Befehle ▸ Batch-Befehle ▸ Alles auswählen | `commands.runScript {"path":"C:\\Users\\Administrator\\AppData\\Roaming\\Firepixel\\Commands\\Batch-Befehle\\Alles auswählen.jsf"}` | ✅ Doc | ohne Auswahl |
-| Befehle ▸ Batch-Befehle ▸ Auswahl automatisch tonwertkorrigieren | `commands.runScript {"path":"C:\\Users\\Administrator\\AppData\\Roaming\\Firepixel\\Commands\\Batch-Befehle\\Auswahl automatisch tonwertkorrigieren.jsf"}` | ✅ Doc | Rechteck |
-| Befehle ▸ Batch-Befehle ▸ Auswahl scharfzeichnen | `commands.runScript {"path":"C:\\Users\\Administrator\\AppData\\Roaming\\Firepixel\\Commands\\Batch-Befehle\\Auswahl scharfzeichnen.jsf"}` | ✅ Doc | Rechteck |
-| Befehle ▸ Batch-Befehle ▸ Auswahl um 180° drehen | `commands.runScript {"path":"C:\\Users\\Administrator\\AppData\\Roaming\\Firepixel\\Commands\\Batch-Befehle\\Auswahl um 180° drehen.jsf"}` | ✅ Doc | Rechteck |
-| Befehle ▸ Batch-Befehle ▸ Auswahl um 270° drehen | `commands.runScript {"path":"C:\\Users\\Administrator\\AppData\\Roaming\\Firepixel\\Commands\\Batch-Befehle\\Auswahl um 270° drehen.jsf"}` | ✅ Doc | Rechteck |
-| Befehle ▸ Batch-Befehle ▸ Auswahl um 90° drehen | `commands.runScript {"path":"C:\\Users\\Administrator\\AppData\\Roaming\\Firepixel\\Commands\\Batch-Befehle\\Auswahl um 90° drehen.jsf"}` | ✅ Doc | Rechteck |
-| Befehle ▸ Batch-Befehle ▸ Auswahl weichzeichnen | `commands.runScript {"path":"C:\\Users\\Administrator\\AppData\\Roaming\\Firepixel\\Commands\\Batch-Befehle\\Auswahl weichzeichnen.jsf"}` | ✅ Doc | Rechteck |
-| Befehle ▸ Batch-Befehle ▸ Dokument um 180° drehen | `commands.runScript {"path":"C:\\Users\\Administrator\\AppData\\Roaming\\Firepixel\\Commands\\Batch-Befehle\\Dokument um 180° drehen.jsf"}` | ✅ Doc | ohne Auswahl |
-| Befehle ▸ Batch-Befehle ▸ Dokument um 270° drehen | `commands.runScript {"path":"C:\\Users\\Administrator\\AppData\\Roaming\\Firepixel\\Commands\\Batch-Befehle\\Dokument um 270° drehen.jsf"}` | ✅ Doc | ohne Auswahl |
-| Befehle ▸ Batch-Befehle ▸ Dokument um 90° drehen | `commands.runScript {"path":"C:\\Users\\Administrator\\AppData\\Roaming\\Firepixel\\Commands\\Batch-Befehle\\Dokument um 90° drehen.jsf"}` | ✅ Doc | ohne Auswahl |
-| Befehle ▸ Batch-Befehle ▸ Farbe der Auswahl umkehren | `commands.runScript {"path":"C:\\Users\\Administrator\\AppData\\Roaming\\Firepixel\\Commands\\Batch-Befehle\\Farbe der Auswahl umkehren.jsf"}` | ✅ Doc | Rechteck |
-| Befehle ▸ Dokument ▸ Andere Ebenen ausblenden | `commands.runScript {"path":"C:\\Users\\Administrator\\AppData\\Roaming\\Firepixel\\Commands\\Dokument\\Andere Ebenen ausblenden.jsf"}` | ❌ Nothing("") | ohne Auswahl: keine erkennbare Wirkung |
-| Befehle ▸ Dokument ▸ Andere Ebenen sperren | `commands.runScript {"path":"C:\\Users\\Administrator\\AppData\\Roaming\\Firepixel\\Commands\\Dokument\\Andere Ebenen sperren.jsf"}` | ❌ Nothing("") | ohne Auswahl: keine erkennbare Wirkung |
-| Befehle ▸ Dokument ▸ Auf Ebenen verteilen | `commands.runScript {"path":"C:\\Users\\Administrator\\AppData\\Roaming\\Firepixel\\Commands\\Dokument\\Auf Ebenen verteilen.jsf"}` | ✅ Doc | Rechteck |
-| Befehle ▸ Dokument ▸ Status umkehren | `commands.runScript {"path":"C:\\Users\\Administrator\\AppData\\Roaming\\Firepixel\\Commands\\Dokument\\Status umkehren.jsf"}` | ✅ Doc | ohne Auswahl |
-| Befehle ▸ Größe ausgewählter Objekte ändern | `commands.runScript {"path":"C:\\Users\\Administrator\\AppData\\Roaming\\Firepixel\\Commands\\Größe ausgewählter Objekte ändern.jsf"}` | ✅ Doc | Rechteck |
-| Befehle ▸ Kreativ ▸ Bilderrahmen hinzufügen | `commands.runScript {"path":"C:\\Users\\Administrator\\AppData\\Roaming\\Firepixel\\Commands\\Kreativ\\Bilderrahmen hinzufügen.jsf"}` | ✅ Doc | ohne Auswahl |
-| Befehle ▸ Kreativ ▸ In Graustufen umwandeln | `commands.runScript {"path":"C:\\Users\\Administrator\\AppData\\Roaming\\Firepixel\\Commands\\Kreativ\\In Graustufen umwandeln.jsf"}` | ✅ Doc | Rechteck |
-| Befehle ▸ Kreativ ▸ In Sepiaton umwandeln | `commands.runScript {"path":"C:\\Users\\Administrator\\AppData\\Roaming\\Firepixel\\Commands\\Kreativ\\In Sepiaton umwandeln.jsf"}` | ✅ Doc | Rechteck |
-| Befehle ▸ Kreativ ▸ Pfeilspitzen hinzufügen | `commands.runScript {"path":"C:\\Users\\Administrator\\AppData\\Roaming\\Firepixel\\Commands\\Kreativ\\Pfeilspitzen hinzufügen.jsf"}` | ✅ Doc | Pfad |
-| Befehle ▸ Kreativ ▸ Schatten hinzufügen | `commands.runScript {"path":"C:\\Users\\Administrator\\AppData\\Roaming\\Firepixel\\Commands\\Kreativ\\Schatten hinzufügen.jsf"}` | ✅ Doc | Rechteck |
-| Befehle ▸ Kreativ ▸ Verdrehen und ausblenden | `commands.runScript {"path":"C:\\Users\\Administrator\\AppData\\Roaming\\Firepixel\\Commands\\Kreativ\\Verdrehen und ausblenden.jsf"}` | ✅ Doc | Rechteck |
-| Befehle ▸ Testbefehl | `commands.runScript {"path":"C:\\Users\\Administrator\\AppData\\Roaming\\Firepixel\\Commands\\Testbefehl.jsf"}` | ✅ Doc | ohne Auswahl |
-| Befehle ▸ Testbefehl2 | `commands.runScript {"path":"C:\\Users\\Administrator\\AppData\\Roaming\\Firepixel\\Commands\\Testbefehl2.jsf"}` | ✅ Ui | ohne Auswahl: Meldung „[!! [!! Skript: ReferenceError: select is not defined ················!!] ·························!!]“ |
-| Befehle ▸ Text ▸ Blindtext | `commands.runScript {"path":"C:\\Users\\Administrator\\AppData\\Roaming\\Firepixel\\Commands\\Text\\Blindtext.jsf"}` | ✅ Doc | ohne Auswahl |
-| Befehle ▸ Text ▸ Breite festlegen | `commands.runScript {"path":"C:\\Users\\Administrator\\AppData\\Roaming\\Firepixel\\Commands\\Text\\Breite festlegen.jsf"}` | ✅ Doc | Text |
-| Befehle ▸ Text ▸ Erster Buchstabe groß | `commands.runScript {"path":"C:\\Users\\Administrator\\AppData\\Roaming\\Firepixel\\Commands\\Text\\Erster Buchstabe groß.jsf"}` | ✅ Doc | Text |
-| Befehle ▸ Text ▸ Feste Breite umschalten | `commands.runScript {"path":"C:\\Users\\Administrator\\AppData\\Roaming\\Firepixel\\Commands\\Text\\Feste Breite umschalten.jsf"}` | ✅ Doc | Text |
-| Befehle ▸ Text ▸ Großbuchstaben | `commands.runScript {"path":"C:\\Users\\Administrator\\AppData\\Roaming\\Firepixel\\Commands\\Text\\Großbuchstaben.jsf"}` | ✅ Doc | Text |
-| Befehle ▸ Text ▸ In Pfade umwandeln | `commands.runScript {"path":"C:\\Users\\Administrator\\AppData\\Roaming\\Firepixel\\Commands\\Text\\In Pfade umwandeln.jsf"}` | ✅ Doc | Text |
-| Befehle ▸ Text ▸ In Pixel umwandeln | `commands.runScript {"path":"C:\\Users\\Administrator\\AppData\\Roaming\\Firepixel\\Commands\\Text\\In Pixel umwandeln.jsf"}` | ✅ Doc | Rechteck |
-| Befehle ▸ Text ▸ Kleinbuchstaben | `commands.runScript {"path":"C:\\Users\\Administrator\\AppData\\Roaming\\Firepixel\\Commands\\Text\\Kleinbuchstaben.jsf"}` | ✅ Doc | Text |
-| Befehle ▸ Text ▸ Verfestigen | `commands.runScript {"path":"C:\\Users\\Administrator\\AppData\\Roaming\\Firepixel\\Commands\\Text\\Verfestigen.jsf"}` | ✅ Doc | Text |
-| Befehle ▸ Warndialoge zurücksetzen | `commands.runScript {"path":"C:\\Users\\Administrator\\AppData\\Roaming\\Firepixel\\Commands\\Warndialoge zurücksetzen.jsf"}` | ❌ Nothing("") | ohne Auswahl: keine erkennbare Wirkung |
-| Befehle ▸ Web ▸ ALT-Text festlegen | `commands.runScript {"path":"C:\\Users\\Administrator\\AppData\\Roaming\\Firepixel\\Commands\\Web\\ALT-Text festlegen.jsf"}` | ✅ Doc | Grafiksymbol |
-| Befehle ▸ Web ▸ Leeren ALT-Text auswählen | `commands.runScript {"path":"C:\\Users\\Administrator\\AppData\\Roaming\\Firepixel\\Commands\\Web\\Leeren ALT-Text auswählen.jsf"}` | ✅ Doc | ohne Auswahl |
+| Befehle ▸ Auswahl ▸ Bisheriges Vektor-Rendering verwenden | `commands.runScript {"path":"C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\firepixel-gesamttest\\11840-profile\\Commands\\Auswahl\\Bisheriges Vektor-Rendering verwenden.jsf"}` | ✅ Doc | Rechteck |
+| Befehle ▸ Auswahl ▸ Verbessertes Vektor-Rendering verwenden | `commands.runScript {"path":"C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\firepixel-gesamttest\\11840-profile\\Commands\\Auswahl\\Verbessertes Vektor-Rendering verwenden.jsf"}` | ✅ Doc | Rechteck |
+| Befehle ▸ Batch-Befehle ▸ Alles auswählen | `commands.runScript {"path":"C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\firepixel-gesamttest\\11840-profile\\Commands\\Batch-Befehle\\Alles auswählen.jsf"}` | ✅ Doc | ohne Auswahl |
+| Befehle ▸ Batch-Befehle ▸ Auswahl automatisch tonwertkorrigieren | `commands.runScript {"path":"C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\firepixel-gesamttest\\11840-profile\\Commands\\Batch-Befehle\\Auswahl automatisch tonwertkorrigieren.jsf"}` | ✅ Doc | Rechteck |
+| Befehle ▸ Batch-Befehle ▸ Auswahl scharfzeichnen | `commands.runScript {"path":"C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\firepixel-gesamttest\\11840-profile\\Commands\\Batch-Befehle\\Auswahl scharfzeichnen.jsf"}` | ✅ Doc | Rechteck |
+| Befehle ▸ Batch-Befehle ▸ Auswahl um 180° drehen | `commands.runScript {"path":"C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\firepixel-gesamttest\\11840-profile\\Commands\\Batch-Befehle\\Auswahl um 180° drehen.jsf"}` | ✅ Doc | Rechteck |
+| Befehle ▸ Batch-Befehle ▸ Auswahl um 270° drehen | `commands.runScript {"path":"C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\firepixel-gesamttest\\11840-profile\\Commands\\Batch-Befehle\\Auswahl um 270° drehen.jsf"}` | ✅ Doc | Rechteck |
+| Befehle ▸ Batch-Befehle ▸ Auswahl um 90° drehen | `commands.runScript {"path":"C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\firepixel-gesamttest\\11840-profile\\Commands\\Batch-Befehle\\Auswahl um 90° drehen.jsf"}` | ✅ Doc | Rechteck |
+| Befehle ▸ Batch-Befehle ▸ Auswahl weichzeichnen | `commands.runScript {"path":"C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\firepixel-gesamttest\\11840-profile\\Commands\\Batch-Befehle\\Auswahl weichzeichnen.jsf"}` | ✅ Doc | Rechteck |
+| Befehle ▸ Batch-Befehle ▸ Dokument um 180° drehen | `commands.runScript {"path":"C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\firepixel-gesamttest\\11840-profile\\Commands\\Batch-Befehle\\Dokument um 180° drehen.jsf"}` | ✅ Doc | ohne Auswahl |
+| Befehle ▸ Batch-Befehle ▸ Dokument um 270° drehen | `commands.runScript {"path":"C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\firepixel-gesamttest\\11840-profile\\Commands\\Batch-Befehle\\Dokument um 270° drehen.jsf"}` | ✅ Doc | ohne Auswahl |
+| Befehle ▸ Batch-Befehle ▸ Dokument um 90° drehen | `commands.runScript {"path":"C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\firepixel-gesamttest\\11840-profile\\Commands\\Batch-Befehle\\Dokument um 90° drehen.jsf"}` | ✅ Doc | ohne Auswahl |
+| Befehle ▸ Batch-Befehle ▸ Farbe der Auswahl umkehren | `commands.runScript {"path":"C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\firepixel-gesamttest\\11840-profile\\Commands\\Batch-Befehle\\Farbe der Auswahl umkehren.jsf"}` | ✅ Doc | Rechteck |
+| Befehle ▸ Dokument ▸ Andere Ebenen ausblenden | `commands.runScript {"path":"C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\firepixel-gesamttest\\11840-profile\\Commands\\Dokument\\Andere Ebenen ausblenden.jsf"}` | ✅ Doc | zwei Ebenen |
+| Befehle ▸ Dokument ▸ Andere Ebenen sperren | `commands.runScript {"path":"C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\firepixel-gesamttest\\11840-profile\\Commands\\Dokument\\Andere Ebenen sperren.jsf"}` | ✅ Doc | zwei Ebenen |
+| Befehle ▸ Dokument ▸ Auf Ebenen verteilen | `commands.runScript {"path":"C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\firepixel-gesamttest\\11840-profile\\Commands\\Dokument\\Auf Ebenen verteilen.jsf"}` | ✅ Doc | Rechteck |
+| Befehle ▸ Dokument ▸ Status umkehren | `commands.runScript {"path":"C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\firepixel-gesamttest\\11840-profile\\Commands\\Dokument\\Status umkehren.jsf"}` | ✅ Doc | ohne Auswahl |
+| Befehle ▸ Größe ausgewählter Objekte ändern | `commands.runScript {"path":"C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\firepixel-gesamttest\\11840-profile\\Commands\\Größe ausgewählter Objekte ändern.jsf"}` | ✅ Doc | Rechteck |
+| Befehle ▸ Kreativ ▸ Bilderrahmen hinzufügen | `commands.runScript {"path":"C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\firepixel-gesamttest\\11840-profile\\Commands\\Kreativ\\Bilderrahmen hinzufügen.jsf"}` | ✅ Doc | ohne Auswahl |
+| Befehle ▸ Kreativ ▸ In Graustufen umwandeln | `commands.runScript {"path":"C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\firepixel-gesamttest\\11840-profile\\Commands\\Kreativ\\In Graustufen umwandeln.jsf"}` | ✅ Doc | Rechteck |
+| Befehle ▸ Kreativ ▸ In Sepiaton umwandeln | `commands.runScript {"path":"C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\firepixel-gesamttest\\11840-profile\\Commands\\Kreativ\\In Sepiaton umwandeln.jsf"}` | ✅ Doc | Rechteck |
+| Befehle ▸ Kreativ ▸ Pfeilspitzen hinzufügen | `commands.runScript {"path":"C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\firepixel-gesamttest\\11840-profile\\Commands\\Kreativ\\Pfeilspitzen hinzufügen.jsf"}` | ✅ Doc | Pfad |
+| Befehle ▸ Kreativ ▸ Schatten hinzufügen | `commands.runScript {"path":"C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\firepixel-gesamttest\\11840-profile\\Commands\\Kreativ\\Schatten hinzufügen.jsf"}` | ✅ Doc | Rechteck |
+| Befehle ▸ Kreativ ▸ Verdrehen und ausblenden | `commands.runScript {"path":"C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\firepixel-gesamttest\\11840-profile\\Commands\\Kreativ\\Verdrehen und ausblenden.jsf"}` | ✅ Doc | Rechteck |
+| Befehle ▸ Text ▸ Blindtext | `commands.runScript {"path":"C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\firepixel-gesamttest\\11840-profile\\Commands\\Text\\Blindtext.jsf"}` | ✅ Doc | ohne Auswahl |
+| Befehle ▸ Text ▸ Breite festlegen | `commands.runScript {"path":"C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\firepixel-gesamttest\\11840-profile\\Commands\\Text\\Breite festlegen.jsf"}` | ✅ Doc | Text |
+| Befehle ▸ Text ▸ Erster Buchstabe groß | `commands.runScript {"path":"C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\firepixel-gesamttest\\11840-profile\\Commands\\Text\\Erster Buchstabe groß.jsf"}` | ✅ Doc | Text |
+| Befehle ▸ Text ▸ Feste Breite umschalten | `commands.runScript {"path":"C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\firepixel-gesamttest\\11840-profile\\Commands\\Text\\Feste Breite umschalten.jsf"}` | ✅ Doc | Text |
+| Befehle ▸ Text ▸ Großbuchstaben | `commands.runScript {"path":"C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\firepixel-gesamttest\\11840-profile\\Commands\\Text\\Großbuchstaben.jsf"}` | ✅ Doc | Text |
+| Befehle ▸ Text ▸ In Pfade umwandeln | `commands.runScript {"path":"C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\firepixel-gesamttest\\11840-profile\\Commands\\Text\\In Pfade umwandeln.jsf"}` | ✅ Doc | Text |
+| Befehle ▸ Text ▸ In Pixel umwandeln | `commands.runScript {"path":"C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\firepixel-gesamttest\\11840-profile\\Commands\\Text\\In Pixel umwandeln.jsf"}` | ✅ Doc | Rechteck |
+| Befehle ▸ Text ▸ Kleinbuchstaben | `commands.runScript {"path":"C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\firepixel-gesamttest\\11840-profile\\Commands\\Text\\Kleinbuchstaben.jsf"}` | ✅ Doc | Text |
+| Befehle ▸ Text ▸ Verfestigen | `commands.runScript {"path":"C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\firepixel-gesamttest\\11840-profile\\Commands\\Text\\Verfestigen.jsf"}` | ✅ Doc | Text |
+| Befehle ▸ Warndialoge zurücksetzen | `commands.runScript {"path":"C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\firepixel-gesamttest\\11840-profile\\Commands\\Warndialoge zurücksetzen.jsf"}` | ✅ Ui | abgeschalteter Warndialog |
+| Befehle ▸ Web ▸ ALT-Text festlegen | `commands.runScript {"path":"C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\firepixel-gesamttest\\11840-profile\\Commands\\Web\\ALT-Text festlegen.jsf"}` | ✅ Doc | Grafiksymbol |
+| Befehle ▸ Web ▸ Leeren ALT-Text auswählen | `commands.runScript {"path":"C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\firepixel-gesamttest\\11840-profile\\Commands\\Web\\Leeren ALT-Text auswählen.jsf"}` | ✅ Doc | ohne Auswahl |
 | Befehle ▸ Warnmeldungen zurücksetzen | `ui.resetWarnings {}` | ✅ Ui | ohne Auswahl: Meldung „[!! Warnmeldungen zurückgesetzt ···········!!]“ |
 | Befehle ▸ KI-Steuerkanal (MCP) | `ui.mcpToggle {}` | ✅ Ui | ohne Auswahl: Meldung „[!! KI-Steuerkanal wird gestartet (Adresse und Token in %LOCALAPPDATA%\Firepixel\mcp-bridge.json) ···································!!]“ |
 | Filter ▸ Filter wiederholen | `filter.repeat` | ✅ Doc | nach Filter |
@@ -346,10 +344,10 @@ Erzeugt von `crates\fp-ui\tests\gesamt_menu.rs` (`cargo test -p fp-ui --test ges
 | Fenster ▸ Überlappend | `window.cascade` | ✅ Ui | ohne Auswahl |
 | Fenster ▸ Anordnen | `window.tile` | ✅ Ui | ohne Auswahl |
 | Fenster ▸ 1 *Unbenannt-2.png | `Activate(DocId(2))` | ✅ Ui | zweites Dokument: Dokument geöffnet/gewechselt |
-| Hilfe ▸ Firepixel-Hilfe | `help.firepixelHelp` | ✅ Ui | ohne Auswahl: Befehl liefert {"path":"C:\\Users\\Administrator\\Desktop\\REA\\firepixel\\docs\\ANLEITUNG.md","section":"Erste Schritte","sections":["Firepixel – Kurzanle – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
-| Hilfe ▸ Firepixel Support Center | `help.supportCenter` | ✅ Ui | ohne Auswahl: Befehl liefert {"path":"C:\\Users\\Administrator\\Desktop\\REA\\firepixel\\docs\\ANLEITUNG.md","section":"Fehlerbehebung","sections":["Firepixel – Kurzanle – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
+| Hilfe ▸ Firepixel-Hilfe | `help.firepixelHelp` | ✅ Ui | ohne Auswahl: Befehl liefert {"path":"C:\\Users\\Administrator\\Desktop\\REA\\firepixel\\docs\\ANLEITUNG.en.md","section":null,"sections":["Firepixel – Quick Guide","Get – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
+| Hilfe ▸ Firepixel Support Center | `help.supportCenter` | ✅ Ui | ohne Auswahl: Befehl liefert {"path":"C:\\Users\\Administrator\\Desktop\\REA\\firepixel\\docs\\ANLEITUNG.en.md","section":null,"sections":["Firepixel – Quick Guide","Get – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
 | Hilfe ▸ Firepixel-Programm zur Produktverbesserung... | `help.productImprovement` | ✅ Ui | ohne Auswahl: Befehl liefert {"dataSent":false,"participate":false,"text":"[!! Firepixel erfasst und sendet keine Nutzungsdaten. ··················!!]"} – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
-| Hilfe ▸ Firepixel Exchange | `help.firepixelExchange` | ✅ Ui | ohne Auswahl: Befehl liefert {"extensions":[],"folder":"C:\\Users\\Administrator\\AppData\\Roaming\\Firepixel\\Extensions"} – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
+| Hilfe ▸ Firepixel Exchange | `help.firepixelExchange` | ✅ Ui | ohne Auswahl: Befehl liefert {"extensions":[],"folder":"C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\firepixel-gesamttest\\11840-profile\\Extensions"} – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
 | Hilfe ▸ Erweiterungen verwalten... | `help.manageExtensions` | ✅ Dialog | ohne Auswahl: Meldung „[!! Es sind keine Erweiterungen installiert. ···············!!]“ |
-| Hilfe ▸ Firepixel-Onlineforen | `help.onlineForums` | ✅ Ui | ohne Auswahl: Befehl liefert {"path":"C:\\Users\\Administrator\\Desktop\\REA\\firepixel\\docs\\ANLEITUNG.md","section":"Fehlerbehebung","sections":["Firepixel – Kurzanle – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
+| Hilfe ▸ Firepixel-Onlineforen | `help.onlineForums` | ✅ Ui | ohne Auswahl: Befehl liefert {"path":"C:\\Users\\Administrator\\Desktop\\REA\\firepixel\\docs\\ANLEITUNG.en.md","section":null,"sections":["Firepixel – Quick Guide","Get – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
 | Hilfe ▸ Über Firepixel... | `help.about` | ✅ Dialog | ohne Auswahl |

@@ -2,7 +2,7 @@
 
 Erzeugt von `crates\fp-ui\tests\gesamt_menu.rs` (`cargo test -p fp-ui --test gesamt_menu`). Nicht von Hand ändern.
 
-**282/283 Einträge ✅**
+**283/283 Einträge ✅**
 
 | Eintrag | Befehl | Ergebnis | Hinweis |
 |---|---|---|---|
@@ -246,7 +246,7 @@ Erzeugt von `crates\fp-ui\tests\gesamt_menu.rs` (`cargo test -p fp-ui --test ges
 | Kontextmenü Pixel ▸ Auswahlrahmen modifizieren ▸ In Pfad konvertieren | `select.convertMarqueeToPath` | ✅ Doc | Pixelauswahl |
 | Kontextmenü Pixel ▸ Ränder | `view.edges` | ✅ Ui | ohne Auswahl |
 | Kontextmenü Pixel ▸ Auswahl speichern | `select.saveBitmapSelection` | ✅ Dialog | Pixelauswahl |
-| Kontextmenü Pixel ▸ Auswahl wiederherstellen | `select.restoreBitmapSelection` | ❌ NeverAvailable | in keiner Testsituation verfügbar |
+| Kontextmenü Pixel ▸ Auswahl wiederherstellen | `select.restoreBitmapSelection` | ✅ Dialog | gespeicherte Bitmap-Auswahl |
 | Kontextmenü Pixel ▸ Selektives JPEG ▸ Auswahl als JPEG-Maske speichern | `modify.selectiveJpeg.saveSelectionAsJpegMask` | ✅ Doc | Pixelauswahl |
 | Kontextmenü Pixel ▸ Selektives JPEG ▸ JPEG-Maske als Auswahl wiederherstellen | `modify.selectiveJpeg.restoreJpegMaskAsSelection` | ✅ Doc | ohne Auswahl |
 | Kontextmenü Pixel ▸ Selektives JPEG ▸ Einstellungen... | `modify.selectiveJpeg.settings` | ✅ Dialog | ohne Auswahl |
@@ -267,7 +267,7 @@ Erzeugt von `crates\fp-ui\tests\gesamt_menu.rs` (`cargo test -p fp-ui --test ges
 | Kontextmenü Transformieren ▸ Vertikal spiegeln | `modify.transform.flipVertical` | ✅ Doc | Rechteck |
 | Kontextmenü Transformieren ▸ Transformationen entfernen | `modify.transform.removeTransformations` | ✅ Doc | Rechteck |
 | Kontextmenü Zuschneiden ▸ Dokument zuschneiden | `edit.cropSelectedBitmap` | ✅ Doc | Bitmap |
-| Kontextmenü Zuschneiden ▸ Zuschneiden abbrechen | `ui.toolKey {"key":"escape"}` | ✅ Ui | ohne Auswahl: Meldung „[!! unbekannter Befehl „ui.toolKey“ ············!!]“ |
+| Kontextmenü Zuschneiden ▸ Zuschneiden abbrechen | `ui.toolKey {"key":"escape"}` | ✅ Ui | ohne Auswahl: Meldung „unbekannter Befehl „ui.toolKey““ |
 | Kontextmenü Zoom ▸ Größer zoomen | `view.zoomIn` | ✅ Ui | ohne Auswahl |
 | Kontextmenü Zoom ▸ Kleiner zoomen | `view.zoomOut` | ✅ Ui | ohne Auswahl |
 | Kontextmenü Zoom ▸ Vergrößerung ▸ 6% | `view.magnification.6` | ✅ Ui | ohne Auswahl |
