@@ -24,7 +24,7 @@
 | PARITAET_B Dialoge (50, Feld für Feld, PM-5/PM-6) | 3 | 21 | 15 | 5 ⏳, 6 🔧 (umgesetzt, Nachmessung offen) |
 | PARITAET_B Bedienfeldmenüs ≡ (10) | 1 | 4 | 4 | 1 ❔ |
 
-Automatischer Gesamttest: Menüs 345/345, Kontextmenüs 283/283. BEFUNDE.md: 296 erledigt, 77 offen. Nutzerbefunde: 18 ✅, 2 🔧 (N01, N21), 2 ⚠️ (N22, N23), 1 ❌ (N11).
+Automatischer Gesamttest: Menüs 345/345, Kontextmenüs 283/283. BEFUNDE.md: 296 erledigt, 77 offen. Nutzerbefunde: 18 ✅, 3 🔧 (N01, N21, N23 teilweise), 1 ⚠️ (N22), 1 ❌ teilweise (N11).
 
 **Was offen ist** (Reihenfolge nach der Pause, Einzelheiten in `docs\PLAN.md` §5):
 1. EB-2: Speichern unter ▸ Reduziertes PNG

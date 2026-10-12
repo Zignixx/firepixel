@@ -29,6 +29,9 @@ ohne Neustart. Weitere Sprachen sind einfache `.ftl`-Textdateien in `%APPDATA%\F
   WBMP, PSD, SVG, WebP, APNG, AVIF, HEIC, JPEG XL, QOI, ICO.
 - *Datei ▸ Speichern* (Strg+S) schreibt FW-PNG; alle Ebenen, Seiten, Status, Symbole und
   Live-Filter bleiben bearbeitbar.
+- Die Datei-Dialoge (Öffnen, Importieren, Speichern unter, Neu von Vorlage, Als Vorlage speichern)
+  starten im zuletzt benutzten Ordner bzw. im Ordner des Dokuments; Vorlagen liegen in
+  `%APPDATA%\Firepixel\Templates`. Während ein Datei-Dialog offen ist, zeichnet Firepixel weiter.
 - *Bearbeiten ▸ Rückgängig/Wiederholen* (Strg+Z / Strg+Y); das Verlauf-Bedienfeld zeigt alle Schritte.
 - Das Fenster hat oben die Anwendungsleiste mit Logo, Menüs, Schnellknöpfen und dem
   Arbeitsbereich-Umschalter, darunter die Hauptsymbolleiste, links die Werkzeuge, rechts die
@@ -63,6 +66,13 @@ Häufige Kürzel (Satz „Firepixel“, umschaltbar unter *Bearbeiten ▸ Tastat
 Umschalt beim Ziehen hält Seitenverhältnisse und Winkel fest, Alt zeichnet von der Mitte aus.
 Doppelklick auf eine Bitmap öffnet den Bitmapmodus; Doppelklick auf Text bearbeitet ihn. Ein
 Rechtsklick öffnet das zum Werkzeug und zur Auswahl passende Kontextmenü.
+
+**Bitmap-Werkzeuge:** Der **Pinsel** malt Pixel: Ist keine Bitmap gewählt, legt er eine neue an,
+sonst malt er in die gewählte. **Radiergummi**, **Weichzeichner** und **Stempel** arbeiten mit
+weichem Rand wie im Original; Esc beendet das Malen und wechselt zum Zeiger. Das Werkzeug
+**Verlauf** hat eigene Farben (Vorgabe Schwarz → Weiß, Klick aufs Farbfeld öffnet den
+Verlaufseditor), „Auswahl füllen“ und Toleranz gelten getrennt vom Farbeimer. **Farbe ersetzen**
+hat eigene Farben „Von“ und „in“ (Vorgabe Grün → Rot).
 
 ## Menüs
 
@@ -109,6 +119,12 @@ Wichtige Bedienfelder:
 Der **Eigenschaften-Inspektor** unten zeigt je nach Auswahl Füllung, Strich, Deckkraft,
 Mischmodus, Filter (+/−) und Text- bzw. Symbol-Einstellungen.
 
+- **Schriftsuche:** Die aufgeklappte Schriftliste (Text-Inspektor, Textwerkzeug, Texteditor) hat oben
+  ein Suchfeld. Tippen filtert (Teilwort, ohne Groß-/Kleinschreibung), ↑/↓ wählen, Eingabe
+  übernimmt, Esc schließt ohne Änderung.
+- **Texturen und Muster:** Die Listen zeigen alle Texturen bzw. Muster aus den Ressourcenordnern;
+  „Andere…“ unter der Liste wählt eine eigene Bilddatei.
+
 ## Bitmap nachzeichnen
 
 *Modifizieren ▸ Bitmap nachzeichnen…* (auch im Kontextmenü einer Bitmap) verwandelt ein Pixelbild in
@@ -125,6 +141,9 @@ bearbeitbare, gefüllte Vektorpfade. Im Dialog:
 OK übernimmt das Ergebnis der Vorschau als Gruppe auf einer neuen Ebene „Nachgezeichnet“, in einem
 Rückgängig-Schritt; mit „Original behalten“ (Vorgabe) bleibt die Bitmap erhalten.
 
+Das Fenster öffnet sich groß (≈ 1050 × 830, höchstens 90 % des Hauptfensters) und merkt sich die
+Größe, auf die du es ziehst.
+
 ## KI-Auswahl
 
 Drei Werkzeuge am Platz des Zauberstabs (Abschnitt Bitmap) erzeugen Pixelauswahlen mit lokalen
@@ -140,6 +159,16 @@ Die Modelle werden nicht mitgeliefert. Fehlt eines, bietet Firepixel den Downloa
 Zustimmung wird geladen. Übersicht, Lizenzen und Modellordner: *Befehle ▸ KI-Modelle verwalten…*
 (Einzelheiten in `docs\MODELLE.md`).
 
+Während ein Modell rechnet, zeigt eine Karte unten über der Leinwand Werkzeug, Modell, die Stufen,
+einen Balken und die Zeit; *Abbrechen* oder Esc bricht ab. Im Inspektor des Werkzeugs gibt es
+**Feineinstellungen**, die die Modelle wirklich hergeben:
+
+- *Toleranz* (mehr oder weniger Auswahl), *Rand* (Hart, Anti-Alias, Weiche Kante),
+  *Ausdehnen* (> 0 größer, < 0 kleiner), *Glätten*,
+- nur bei der Objektauswahl: *Variante* (Automatisch, Klein, Mittel, Groß).
+
+Eine Änderung stellt die letzte Auswahl sofort nach, ohne dass das Modell neu rechnet.
+
 ## Exportieren
 
 Im Bedienfeld **Optimieren** stellt man das Exportformat ein:
@@ -153,6 +182,19 @@ Export, jeweils mit Dateigröße und Ladezeit. Bei 4-fach stehen drei Einstellun
 nebeneinander.
 
 *Datei ▸ Exportieren* schreibt Bilder, Segmente samt HTML/CSS und alle Seiten.
+
+**Bildvorschau** (*Datei ▸ Bildvorschau…*): Mit den Knöpfen unten (1, 2 oder 4 Vorschaufenster)
+vergleichst du Formate und Qualitäten nebeneinander. Jedes Feld hat seine eigene Einstellung, das
+angeklickte Feld zeigt sie links. Zoom und Bildlauf gelten für alle Felder. Die Registerkarte
+**Optionen** hat:
+
+- Format, Palette, Farben, Verlust, Rastern, Qualität/Glättung (JPEG), Hintergrund;
+- die **Farbtabelle**: Klick zeigt die Farbwerte, Knöpfe zum Sperren, für websicher und transparent,
+  ≡ bzw. Rechtsklick öffnet das Palettenmenü;
+- drei **Pipetten** für die Transparenz;
+- **Optimieren auf Größe** (Knopf unten rechts), das die Einstellung für eine Zieldateigröße sucht.
+
+Gespeicherte Einstellungen wählst du aus der Liste oben, „+“ speichert die aktuelle.
 
 ## Automatisierung (Skripte, Kommandozeile, MCP)
 
@@ -171,6 +213,10 @@ nebeneinander.
 ## Fehlerbehebung
 
 - **Voreinstellungen** liegen in `%APPDATA%\Firepixel\preferences.json`. Löschen setzt sie zurück.
+- **Ordnernamen:** Seit dem 12.10.2026 heißen die Ordner der App englisch: `Languages` (früher
+  `Sprachen`), `Models` (früher `Modelle`, unter `%LOCALAPPDATA%\Firepixel`), `Common Library`
+  (früher `Allgemeine Bibliothek`). Beim ersten Start einer neuen Version benennt Firepixel die alten
+  Ordner einmal um; geht das nicht, liest es sie weiter.
 - Ist der Arbeitsbereich durcheinander: *Fenster ▸ Arbeitsbereichlayouts ▸ Standardarbeitsbereich*.
 - Warnmeldungen, die mit „Nicht mehr anzeigen“ unterdrückt wurden, kommen über
   *Befehle ▸ Warnmeldungen zurücksetzen* (oder *Voreinstellungen ▸ Alle Warnmeldungen zurücksetzen*)

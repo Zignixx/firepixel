@@ -139,6 +139,14 @@ Resources (Markdown): `firepixel://docs/agents.md` (this file), `firepixel://doc
     `element.setOpacity {opacity}`, `element.setBlendMode {mode}`, `element.setName {name}`,
     `element.setVisible`, `element.setLocked`, `element.setBounds {x?, y?, width?, height?}`,
     `element.addEffect {effect: "dropShadow"|"innerShadow"|"bevel"|"glow"|… , params?}`, `element.setGradient {from, to, colors?}`
+  * Textures and patterns (names as in the inspector lists, files from the texture or pattern folders):
+    `element.setTexture {name | image, target?: "fill"|"stroke", amount?, ids?}` (without `name` and `image`: remove the texture),
+    `element.setPattern {name | image, ids?}`, `pi.fill {pattern}` or `pi.fill {texture, textureAmount?}` on the selection
+    (no selection: the tool's default); an unknown name → error message
+  * Bitmap: `bitmap.floodFill {point, tolerance?, color?, fillSelection?}` (Paint Bucket),
+    `bitmap.gradient {from, to, colors?, fillSelection?, tolerance?}` (Gradient tool; `fillSelection`
+    default `true` = fill the pixel selection or the whole bitmap, `false` = contiguous color area at the
+    start point by `tolerance` 0…255, default 32), `bitmap.paint`, `bitmap.erase`
   * Selection: `select.set {ids, mode?}`, `select.inRect {rect}`, `select.pointAt {point}`
   * Structure: `layer.add {name?}`, `layer.setVisible {layer, visible}`, `layer.setActive {layer}`,
     `page.add`, `page.setCurrent {index}`, `state.add {count?}`, `state.setCurrent {index}`

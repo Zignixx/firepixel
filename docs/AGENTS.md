@@ -140,6 +140,14 @@ Ressourcen (Markdown): `firepixel://docs/agents.md` (diese Datei), `firepixel://
     `element.setOpacity {opacity}`, `element.setBlendMode {mode}`, `element.setName {name}`,
     `element.setVisible`, `element.setLocked`, `element.setBounds {x?, y?, width?, height?}`,
     `element.addEffect {effect: "dropShadow"|"innerShadow"|"bevel"|"glow"|… , params?}`, `element.setGradient {from, to, colors?}`
+  * Texturen und Muster (Namen wie in den Inspektorlisten, Dateien aus den Textur- bzw. Musterordnern):
+    `element.setTexture {name | image, target?: "fill"|"stroke", amount?, ids?}` (ohne `name` und `image`: Textur entfernen),
+    `element.setPattern {name | image, ids?}`, `pi.fill {pattern}` bzw. `pi.fill {texture, textureAmount?}` an der Auswahl
+    (ohne Auswahl: Vorgabe des Werkzeugs); unbekannter Name → Fehlermeldung
+  * Bitmap: `bitmap.floodFill {point, tolerance?, color?, fillSelection?}` (Farbeimer),
+    `bitmap.gradient {from, to, colors?, fillSelection?, tolerance?}` (Verlauf-Werkzeug; `fillSelection`
+    Vorgabe `true` = Pixelauswahl bzw. ganze Bitmap füllen, `false` = zusammenhängender Farbbereich am
+    Anfangspunkt nach `tolerance` 0…255, Vorgabe 32), `bitmap.paint`, `bitmap.erase`
   * Auswahl: `select.set {ids, mode?}`, `select.inRect {rect}`, `select.pointAt {point}`
   * Struktur: `layer.add {name?}`, `layer.setVisible {layer, visible}`, `layer.setActive {layer}`,
     `page.add`, `page.setCurrent {index}`, `state.add {count?}`, `state.setCurrent {index}`

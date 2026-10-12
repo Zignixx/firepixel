@@ -58,7 +58,7 @@ Umfang heute: 19 Crates, ≈ 169.000 Zeilen Rust, 132 Testdateien, 16 Sprachdate
 |---|---|---|
 | **Übersetzung** (UE-1…UE-5) | fest eingebaute Texte 389 → 0, Scanner für den ganzen Workspace scharf; MCP antwortet standardmäßig englisch, CLI mit `--lang`; englische Doku (`AGENTS.en.md`, `ANLEITUNG.en.md`); Hilfe öffnet die Anleitung in der UI-Sprache | ☑ (Rest: englischer Klickdurchgang in Z) |
 | **Bild → SVG** (VT-1…VT-4) | Crate fp-trace (visioncortex, MIT/Apache), Befehl `modify.traceBitmap`, Dialog mit Live-Vorschau, 4 Vorgaben, Vorher/Nachher, „Aufräumen“ (Logo 1108 → 30 Knoten, 99,3 %), SVG speichern; erreichbar über Menü, Kontextmenü und Inspektor | ☑ (Rest: N20 größeres Fenster) |
-| **Abgleich mit dem Original** | PARITAET_A: **123 ✅ / 1 ⚠️ / 2 ❌** von 126 Zeilen (vorher 31/18/27, 86/22/9, 106/16/4); Warnungen Z01–Z18 mit „Nicht mehr anzeigen“, Schieberkurven, gemerkte Dialogwerte, Wiederholen im Menü, Fang, Frei transformieren, Zeiger, Inspektor-Felder (FV-1…FV-10, PM-1…PM-3, EB-1) | 🔄 siehe §4 |
+| **Abgleich mit dem Original** | PARITAET_A: **123 ✅ / 1 ⚠️ / 2 ❌** von 126 Zeilen (vorher 31/18/27, 86/22/9, 106/16/4); Warnungen Z01–Z18 mit „Nicht mehr anzeigen“, Schieberkurven, gemerkte Dialogwerte, Wiederholen im Menü, Fang, Frei transformieren, Zeiger, Inspektor-Felder (FV-1…FV-16, PM-1…PM-7, EB-1, DLG-1…DLG-3) | 🔄 PARITAET_B siehe §5 B |
 | **Fehler des Nutzers** | N02–N10, N12–N20 ✅ im echten Fenster | 🔄 siehe §3 |
 | **Testversion** | `Desktop\Firepixel-Vorschau-12-10\` (Stand `d71dba1`) an den Nutzer übergeben | ☑ |
 
@@ -75,7 +75,7 @@ Umfang heute: 19 Crates, ≈ 169.000 Zeilen Rust, 132 Testdateien, 16 Sprachdate
 | N20 | „Bitmap nachzeichnen“ standardmäßig größer | ✅ FV-12 `e8dd1ad` | P-N19-20 ☑ |
 | N21 | KI-Fortschrittskarte + Feineinstellungen | 🔧 KI-2 `39c6e6a`, Nachprüfung im Nachtlauf | P-KI ☑ |
 | N22 | Datei ▸ Bildvorschau vollständig | ⚠️ P1 + P2 fertig (BV-1, BV-2), P3/P4 offen | BV-3, BV-4 |
-| N23 | abgeschnittene Texte, zu knappe Ränder | ⚠️ RAND-1 `5f2d009` (Prüfer + Nutzerbeispiel), 70 Stellen offen | RAND-2 (vor Z) |
+| N23 | abgeschnittene Texte, zu knappe Ränder | 🔧 teilweise: RAND-1 `5f2d009` (Prüfer + Nutzerbeispiel), 70 Stellen offen | RAND-2 (vor Z) |
 
 ---|---|---|---|
 | N01 | Filter-Größe mehrfach ändern stapelt den Effekt | 🔧 Nachprüfung im Fenster fehlt | P-PRUEF |
@@ -267,6 +267,6 @@ Die Reihenfolge gilt, solange nichts Dringenderes vom Nutzer kommt. Sobald ein P
 | PARITAET_B (PM-5/PM-6/PM-7, 12.10. abends) | Menüs 276/20/25 (+29 ℹ️) · Dialoge 3/21/15 (+5 ⏳, 6 🔧) · Bedienfeldmenüs 1/4/4 (+1 ❔) |
 | Automatischer Gesamttest | Menüs 345/345 · Kontextmenüs 283/283 (FV-13); übrige Berichte vom Lauf 10:30 |
 | BEFUNDE.md | 296 erledigt · 77 offen |
-| Nutzerbefunde | 18 ✅ · 2 🔧 (N01, N21) · 2 ⚠️ (N22, N23) · 1 ❌ (N11) |
+| Nutzerbefunde | 18 ✅ · 3 🔧 (N01, N21, N23 teilweise) · 1 ⚠️ (N22) · 1 ❌ teilweise (N11) |
 | Fest eingebaute Texte | 0 |
 | Umfang | 19 Crates, ≈ 196.000 Zeilen Rust, 161 Testdateien, 192 Commits |
