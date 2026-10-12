@@ -256,7 +256,8 @@ pub enum HeaderIcon {
 pub fn section(ui: &mut Ui, title: &str) -> Rect {
     let theme = Theme::current(ui.ctx());
     let w = ui.available_width();
-    let (rect, _) = ui.allocate_exact_size(vec2(w, 18.0), Sense::hover());
+    let (rect, resp) = ui.allocate_exact_size(vec2(w, 18.0), Sense::hover());
+    resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Label, true, title));
     section_at(ui.painter(), rect, title, &theme);
     ui.add_space(sp::XS);
     rect
@@ -323,6 +324,8 @@ pub fn notice(ui: &mut Ui, tone: Tone, title: Option<&str>, text: &str) -> Respo
     let th = tg.as_ref().map(|g| g.size().y + 2.0).unwrap_or(0.0) + bg.size().y;
     let h = (th.max(16.0) + 2.0 * sp::S + 2.0).ceil();
     let (rect, resp) = ui.allocate_exact_size(vec2(w, h), Sense::hover());
+    // Barrierefreiheit (und egui_kittest/`ui_find`): Titel und Text als Beschriftung
+    resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Label, true, title.map(|t| format!("{t}\n{text}")).unwrap_or_else(|| text.to_string())));
     notice_at(ui.painter(), rect, tone, title, text, &theme);
     resp
 }
