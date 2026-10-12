@@ -1,0 +1,30 @@
+# Startbildschirm (Willkommensfenster, crates\fp-ui\src\welcome.rs). Zuständig: DESIGN.
+
+welcome-tagline = Pixel und Vektoren für Bildschirm und Web
+welcome-recent-title = Zuletzt geöffnete Dateien
+welcome-recent-empty = Noch keine Dateien geöffnet
+welcome-recent-empty-hint = Hier erscheinen die Dateien, die Sie zuletzt bearbeitet haben.
+welcome-recent-missing = Datei nicht gefunden:
+welcome-open = Öffnen...
+    .tooltip = Eine vorhandene Datei öffnen
+welcome-new-title = Neu erstellen
+welcome-new-document = Firepixel-Dokument (FW-PNG)
+    .tooltip = Ein neues, leeres Dokument anlegen
+welcome-new-template = Aus Vorlage...
+    .tooltip = Ein neues Dokument auf Grundlage einer Vorlagendatei anlegen
+welcome-extend-title = Erweitern
+welcome-extend-commands = Gespeicherte Befehle...
+    .tooltip = Eigene Befehle (JSF-Skripte) umbenennen und löschen
+welcome-extend-extensions = Erweiterungen verwalten...
+    .tooltip = Installierte Erweiterungen anzeigen und verwalten
+welcome-help-guide = Kurzanleitung
+    .tooltip = Die mitgelieferte Anleitung öffnen
+welcome-help-shortcuts = Tastenkürzel
+    .tooltip = Tastenkürzel ansehen und anpassen
+welcome-help-models = KI-Modelle verwalten
+    .tooltip = Lokale Modelle für die KI-Auswahl herunterladen und prüfen
+welcome-help-automation = Automatisierung und KI-Steuerung
+    .tooltip = Skripte, Kommandozeile und MCP-Steuerkanal
+welcome-dont-show = Nicht mehr anzeigen
+    .tooltip = Wieder einschalten unter Bearbeiten ▸ Voreinstellungen ▸ Allgemein
+welcome-version = Version { $version }
