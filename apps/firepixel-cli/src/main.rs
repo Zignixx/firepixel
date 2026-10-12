@@ -12,6 +12,8 @@ use serde_json::{json, Value};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
+mod sprache;
+
 const ABOUT: &str = "Firepixel – Kommandozeile (FW-PNG bearbeiten, rendern, Skripte, MCP-Server für KI-Agenten)";
 
 const AFTER_HELP: &str = "Beispiele:
@@ -214,6 +216,9 @@ Doku: docs/AGENTS.md bzw. MCP-Ressource firepixel://docs/agents.md")]
         #[arg(long)]
         token_file: Option<PathBuf>,
     },
+    /// Sprachdateien prüfen, Vorlage für eine neue Sprache anlegen, Sprachen auflisten
+    #[command(subcommand)]
+    Sprache(sprache::SpracheCmd),
 }
 
 /// Fehler mit Meldung.
@@ -278,6 +283,7 @@ fn run(cli: Cli, sub: Option<&ArgMatches>) -> Res<Value> {
                 cmd_mcp(http, port, token, token_file)
             }
         }
+        Cmd::Sprache(c) => sprache::run(c, json_out).map_err(Fail),
     }
 }
 
