@@ -6,9 +6,9 @@
 
 | Bereich | geprüft | ✅ | ⚠️ | ❌ | ℹ️/❔ | Abschnitt |
 |---|---:|---:|---:|---:|---:|---|
-| Hauptmenüs (jeder Eintrag in 5 Lagen: Kürzel, aktiv/grau, Häkchen) | 350 Zeilen | 311 | 5 | 5 | 29 | §1 |
+| Hauptmenüs (jeder Eintrag in 9 Lagen: Kürzel, aktiv/grau, Häkchen, Untermenü, Beschriftung) | 350 Zeilen | 276 | 20 | 25 | 29 | §1 (neu gemessen von PM-7, 12.10.; vorher 311 / 5 / 5 / 29 in 5 Lagen) |
 | Dialoge Feld für Feld | 50 | 3 | 11 | 19 | 1 ⏳ + 16 🔧 | §2 (D01–D25 neu gemessen von PM-5: 0 ✅ / 10 ⚠️ / 14 ❌ / 1 ⏳; D26–D50 Stand 04:30 mit 🔧 aus FV-4/FV-5) |
-| Bedienfeldmenüs (≡) | 9 | 1 | 3 | 4 | 1 | §3 |
+| Bedienfeldmenüs (≡) | 10 | 1 | 4 | 4 | 1 | §3 (neu gemessen von PM-7, 12.10.; Firepixel unverändert, dazu Eigenschaften) |
 
 **Wichtigste Ergebnisse:**
 - Die **Menüfreigabe** ist nach meinem Befund von EB behoben (Commit c67a402, Test `paritaet_menue.rs`, 264/264). Meine Nachmessung bestätigt das: Von zuvor 96 ❌ bleiben 5.
@@ -32,10 +32,10 @@
 | I18N-ENGINE / EB | „Wiederholen“ (Strg+Y) im Original aktiv mit „Wiederholen: <letzter Schritt>“ | 🔧 behoben: `edit.redo` wiederholt ohne zurückgenommenen Schritt den letzten Befehl (EB c67a402); das Menü zeigt jetzt auch dann „Wiederholen: <letzter Schritt>“ (FV-5, `menu.rs` über `Session::undo_redo_labels`); Nachprüfung im echten Fenster offen |
 | EB | Warnungen bei immer aktiven Befehlen ohne Ziel (Wortlaut Z01–Z18) | 🔧 behoben (FV-5): Z01–Z09, Z14–Z18 Meldung mit Wortlaut, Warnsymbol und „Nicht mehr anzeigen“ (Voreinstellungen `DisableNotice…`, Warnmeldungen/Warndialoge zurücksetzen schalten sie wieder ein); Z10 Rückfrage Hotspot/Segment/Abbrechen; Z11 still, Z12/Z13 Verlaufsschritt „JPEG-Maske laden/löschen“; Nachprüfung im echten Fenster offen |
 | I18N-MENUE | Rückgängig/Wiederholen mit Schrittnamen; Häkchen im Fenster-Menü nur beim vordersten Reiter; Schrift-Menü; Kürzel-Anzeige | teilweise (Schnitte als Untermenü umgesetzt); Schrittnamen in der echten App nicht nachgeprüft |
-| I18N-SHELL / HG / AU | Befehle-Menü im frischen Profil leer (`install_builtin_commands`) | laut Koordinator eingebaut, **nicht nachgeprüft** |
+| I18N-SHELL / HG / AU | Befehle-Menü im frischen Profil leer (`install_builtin_commands`) | nachgeprüft (PM-7, 12.10.): gefüllt; es fehlen 3 Einträge und 2 Untereinträge, Namen weichen ab (§1, I18N-MENUE) |
 | I18N-SHELL / HG | native Datei-Dialoge bei (0,0) ohne Besitzer, Startordner, Batch-Dialog | offen |
 | I18N-DIALOGE / IBD | D01–D25, D26–D50, Schieberabbildung, Vorgaben/gemerkte Werte aus den Voreinstellungen | Schieberabbildung, senkrechte Popup-Schieber und Vorgaben/gemerkte Werte 🔧 behoben (FV-4), Nachmessung im echten Fenster offen; übrige D-Zeilen offen |
-| I18N-BEDIENFELDER / IBD | Zustände in den Bedienfeldmenüs (Verlauf, Stile, Status, Seiten, Ebenen, Optimieren) | offen |
+| I18N-BEDIENFELDER / IBD | Zustände in den Bedienfeldmenüs (Verlauf, Stile, Status, Seiten, Ebenen, Optimieren) | offen, von PM-7 am 12.10. unverändert nachgemessen (§3) |
 | (älter) IBD/HG | Katalog `docs\UX_ABGLEICH_B.md` vom 11.10. (Fokus, Ungespeichert-Wortlaut, Ebenen-Klick, Reiter-Kontextmenü …) | teilweise behoben, siehe dort |
 
 ### Noch nicht geprüft (Reihenfolge für die nächste Runde)
@@ -117,369 +117,377 @@ Agent **UX-B**, Stand 12.10.2026 nachts. Der Abgleich wurde von Grund auf neu ge
 - ⚠️ kleine Abweichung (meist Beschriftung)
 - ❌ Funktion anders oder fehlt
 - ℹ️ nur in einem Programm, bewusst
-## 1. Hauptmenüs (jeder Eintrag in 5 Lagen)
+## 1. Hauptmenüs (jeder Eintrag in 9 Lagen, 5 Gesichtspunkte)
 
-Lagen: S1 Dokument ohne Auswahl · S2 ein Rechteck · S3 zwei Rechtecke · S4 Text · S5 Bitmap. „aktiv“ nennt den Zustand je Lage in dieser Reihenfolge.
-Original: Menüs per Nachricht an die Menüleiste geöffnet, Untermenüs einzeln geöffnet (frischer Zustand), Einträge per `MN_GETHMENU`/`GetMenuState` gelesen (`re\_testdateien\ux\paritaet\o_menue_S1…S5.txt`).
-Firepixel: Sonde `crates\fp-ui\tests\ux_b_paritaet.rs` (`target-uxb\paritaet\fp_menues.tsv`), Bilder über die MCP-Brücke der eigenen Testinstanz.
-Nicht verglichen werden die Laufzeitlisten (zuletzt geöffnete Dateien, Dokumentliste) sowie der Zustand von Rückgängig/Wiederholen und der Einfüge-Befehle, weil Verlauf und Zwischenablage verschieden waren.
+**Neu gemessen von PM-7, 12.10. (≈ 18:45–19:35), in beiden Programmen.** Gesichtspunkte je Eintrag: Kürzel, aktiv/grau, Häkchen, Untermenü ja/nein, Beschriftung.
+Lagen: S1 Dokument ohne Auswahl · S2 ein Rechteck · S3 zwei Rechtecke · S4 Text · S5 Bitmap · S6 Pixelauswahl (Auswahlrahmen in der Bitmap) · S7 Gruppe · S8 Symbolinstanz · S9 Segment. Die Zeichenfolge „●○…“ gibt aktiv (●) bzw. grau (○) je Lage in dieser Reihenfolge an, „Häkchen ✓·…“ ebenso.
+- **Original:** Kopie eines Testdokuments (R1, R2, Text T1 „Hallo“, Bitmap B1; dazu per JSF die Gruppe G1, die Symbolinstanz SY und das Segment SL), per `fw.openDocument` geöffnet und ohne Speichern geschlossen. Die Menüs wurden per Nachricht an die Menüleiste geöffnet, jedes Untermenü einzeln frisch geöffnet und per `MN_GETHMENU`/`GetMenuState` gelesen. S6 ist mit echter Maus gezogen (Auswahlrahmen-Werkzeug, Vordergrundprüfung); per JSF (`convertPathToMarquee`) entsteht kein wirksamer Auswahlrahmen.
+- **Firepixel:** sauberer Worktree von HEAD `6882dac`, Sonde nach dem Muster von `crates\fp-ui\tests\ux_b_paritaet.rs` mit denselben 9 Lagen (nur für die Messung, nicht eingecheckt). Befehle-Menü im frischen Profil: eigene Instanz mit eigenem APPDATA/LOCALAPPDATA und `--mcp`, echtes Fenster, Brücke.
+- **Nicht gewertet:** Laufzeitlisten (zuletzt geöffnete Dateien, Dokumentliste im Fenster-Menü); aktiv/grau von Rückgängig/Wiederholen, den Einfüge-Befehlen und „Wiederherstellen“ (Verlauf, Zwischenablage und gespeicherte Datei waren verschieden); Häkchen im Fenster-Menü, bei QuickInfos und Anti-Alias-Füllung; Häkchen unter Text ▸ Größe/Stil/Ausrichten ohne ausgewählten Text (das sind die Vorgaben des Textwerkzeugs: Original 48, Firepixel 12). Die Beschriftungen „Vorschau im Primär-/Sekundärbrowser“, die das Original vor dem ersten Öffnen des Untermenüs kurz meldet, sind nicht gezählt; frisch geöffnet zeigt es wie Firepixel „Vorschau in iexplore.exe“ und „Vorschau in“ (grau).
+- **Gegenüber 04:30:**
+  - Befehle-Menü im frischen Profil jetzt gefüllt, aber mit Lücken und eigenen Namen (Zeilen „Befehle >“).
+  - „Mit darunter liegender auf eine Ebene reduzieren“ ist in allen 9 Lagen gleich: aktiv, wenn direkt darunter eine Bitmap liegt, im Testdokument also bei der Gruppe. Der alte ❌ bei Text kam von der anderen Stapelfolge im damaligen Testdokument.
+  - Pfeiltasten-Kürzel („Nach-oben-Taste“), „Löschen-Taste“ und „Strg+ü“ sind jetzt gleich.
+  - Neu sichtbar durch die zusätzlichen Lagen:
+    - Bei Pixelauswahl sperrt das Original die Objektbefehle (12 ❌).
+    - Bei Segment und Gruppe weichen 7 Einträge ab.
+  - Neu gewertet: Untermenü-Köpfe bleiben im Original immer aktiv, auch wenn alle Einträge grau sind (11 ⚠️).
+  - Offen geblieben: Schrift-Menü und „Bridge durchsuchen“.
 
-Nachprüfung 12.10. nach EB-Commit c67a402: Firepixel neu gemessen (Sonde), Original unverändert. Häkchen im Fenster-Menü/QuickInfos/Anti-Alias-Füllung sowie Einfüge-Befehle hängen von Reiterlage, Voreinstellungen bzw. Zwischenablage ab und werden nicht gewertet.
-
-Zählung: ℹ️ 29, ⚠️ 5, ✅ 311, ❌ 5
+Zählung (PM-7, 12.10.): ✅ 276, ⚠️ 20, ❌ 25, ℹ️ 29 (350 Zeilen)
 
 | Element | Original | Firepixel | | Bild |
 |---|---|---|---|---|
-| Befehle > (mitgelieferte Befehlsskripte) | 51 Einträge: Auswahl, Batch-Befehle, Bildschirmfoto, Demo - aktuelles Dokument, Dokument, Größe ausgewählter Objekte ändern, Kreativ, Symbolskript erstellen, Text, Web, jQuery Mobile-Thema | fehlt: im frischen Profil legt Firepixel keine eigenen Befehle an (nur „Gespeicherte Befehle verwalten…“, „Erweiterungen verwalten…“, „Skript ausführen…“, „Warnmeldungen zurücksetzen“) | ❌ | [Bild](screenshots/paritaet/b_M07_menue_befehle.png) |
-| Text > Schrift > (Liste) | Kürzel –; aktiv 439 Einträge: zuerst zuletzt benutzte Schriften, dann alle Familien flach, Schnitte als Untermenü | Kürzel –; aktiv 377 Einträge: Schnitte jetzt als Untermenü, aber weiter nach Anfangsbuchstaben gruppiert (A ▸, B ▸ …) und ohne zuletzt benutzte Schriften – Aufbau des Schriftmenüs anders | ❌ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
-| Datei > Neu | Kürzel Strg+N; aktiv an an an an an | Kürzel Strg+N; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M01_menue_datei.png) |
-| Datei > Neu von Vorlage | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M01_menue_datei.png) |
-| Datei > Öffnen | Kürzel Strg+O; aktiv an an an an an | Kürzel Strg+O; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M01_menue_datei.png) |
-| Datei > Bridge durchsuchen | Kürzel Strg+Alt+O; aktiv aus aus aus aus aus | Kürzel Strg+Alt+O; aktiv an an an an an – aktiv weicht ab in S1,S2,S3,S4,S5 | ❌ | [Bild](screenshots/paritaet/b_M01_menue_datei.png) |
-| Datei > Zuletzt geöffnete Dateien | Kürzel –; aktiv an an an an an | Kürzel –; aktiv aus aus aus aus aus | ✅ | [Bild](screenshots/paritaet/b_M01_menue_datei.png) |
-| Datei > Scannen | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M01_menue_datei.png) |
-| Datei > Scannen > Twain importieren | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M01_menue_datei.png) |
-| Datei > Scannen > Twain auswählen | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M01_menue_datei.png) |
-| Datei > Schließen | Kürzel Strg+W; aktiv an an an an an | Kürzel Strg+W; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M01_menue_datei.png) |
-| Datei > Alle schließen | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M01_menue_datei.png) |
-| Datei > Speichern | Kürzel Strg+S; aktiv an an an an an | Kürzel Strg+S; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M01_menue_datei.png) |
-| Datei > Speichern unter | Kürzel Strg+Umschalt+S; aktiv an an an an an | Kürzel Strg+Umschalt+S; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M01_menue_datei.png) |
-| Datei > Alles speichern | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M01_menue_datei.png) |
-| Datei > Als Vorlage speichern | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M01_menue_datei.png) |
-| Datei > Wiederherstellen | Kürzel –; aktiv aus aus aus aus aus | Kürzel –; aktiv aus aus aus aus aus | ✅ | [Bild](screenshots/paritaet/b_M01_menue_datei.png) |
-| Datei > Importieren | Kürzel Strg+R; aktiv an an an an an | Kürzel Strg+R; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M01_menue_datei.png) |
-| Datei > Exportieren | Kürzel Strg+Umschalt+R; aktiv an an an an an | Kürzel Strg+Umschalt+R; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M01_menue_datei.png) |
-| Datei > Bildvorschau | Kürzel Strg+Umschalt+X; aktiv an an an an an | Kürzel Strg+Umschalt+X; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M01_menue_datei.png) |
-| Datei > Als E-Mail senden | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M01_menue_datei.png) |
-| Datei > Als E-Mail senden > PNG-Datei für Firepixel | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M01_menue_datei.png) |
-| Datei > Als E-Mail senden > Komprimierte JPG-Datei | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M01_menue_datei.png) |
-| Datei > Als E-Mail senden > Exporteinstellungen verwenden | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M01_menue_datei.png) |
-| Datei > HTML aktualisieren | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M01_menue_datei.png) |
-| Datei > Datei-Info | Kürzel Strg+Alt+Umschalt+F; aktiv an an an an an | Kürzel Strg+Alt+Umschalt+F; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M01_menue_datei.png) |
-| Datei > Exportassistent | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M01_menue_datei.png) |
-| Datei > Batch-Verarbeitung | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M01_menue_datei.png) |
-| Datei > Vorschau im Browser | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M01_menue_datei.png) |
-| Datei > Vorschau im Browser > Vorschau in Standardbrowser | Kürzel F12; aktiv an an an an an | Kürzel F12; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M01_menue_datei.png) |
-| Datei > Vorschau im Browser > Vorschau in | Kürzel Umschalt+F12; aktiv aus aus aus aus aus | Kürzel Umschalt+F12; aktiv aus aus aus aus aus | ✅ | [Bild](screenshots/paritaet/b_M01_menue_datei.png) |
-| Datei > Vorschau im Browser > Vorschau aller Seiten in Standardbrowser anzeigen | Kürzel Strg+F12; aktiv an an an an an | Kürzel Strg+F12; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M01_menue_datei.png) |
-| Datei > Vorschau im Browser > Primärbrowser festlegen | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M01_menue_datei.png) |
-| Datei > Vorschau im Browser > Sekundärbrowser festlegen | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M01_menue_datei.png) |
-| Datei > Seite einrichten | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M01_menue_datei.png) |
-| Datei > Drucken | Kürzel Strg+P; aktiv an an an an an | Kürzel Strg+P; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M01_menue_datei.png) |
-| Datei > HTML-Einrichtung | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M01_menue_datei.png) |
-| Datei > Beenden | Kürzel Strg+Q; aktiv an an an an an | Kürzel Strg+Q; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M01_menue_datei.png) |
-| Bearbeiten > Rückgängig | Kürzel Strg+Z; aktiv an an an an an | Kürzel Strg+Z; aktiv aus aus aus aus aus | ✅ | [Bild](screenshots/paritaet/b_M02_menue_bearbeiten.png) |
-| Bearbeiten > Wiederholen | Kürzel Strg+Y; aktiv an an an an an | Kürzel Strg+Y; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M02_menue_bearbeiten.png) |
-| Bearbeiten > Objekt einfügen | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M02_menue_bearbeiten.png) |
-| Bearbeiten > Objekt einfügen > Neue Schaltfläche | Kürzel Strg+Umschalt+F8; aktiv an an an an an | Kürzel Strg+Umschalt+F8; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M02_menue_bearbeiten.png) |
-| Bearbeiten > Objekt einfügen > Neues Symbol | Kürzel Strg+F8; aktiv an an an an an | Kürzel Strg+F8; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M02_menue_bearbeiten.png) |
-| Bearbeiten > Objekt einfügen > Hotspot | Kürzel Strg+Umschalt+U; aktiv an an an an an | Kürzel Strg+Umschalt+U; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M02_menue_bearbeiten.png) |
-| Bearbeiten > Objekt einfügen > Rechteckiges Segment | Kürzel Alt+Umschalt+U; aktiv an an an an an | Kürzel Alt+Umschalt+U; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M02_menue_bearbeiten.png) |
-| Bearbeiten > Objekt einfügen > Polygonsegment | Kürzel Alt+Umschalt+P; aktiv an an an an an | Kürzel Alt+Umschalt+P; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M02_menue_bearbeiten.png) |
-| Bearbeiten > Objekt einfügen > Leere Bitmap | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M02_menue_bearbeiten.png) |
-| Bearbeiten > Objekt einfügen > Bitmap durch Kopieren | Kürzel –; aktiv aus aus aus aus aus | Kürzel –; aktiv aus aus aus aus aus | ✅ | [Bild](screenshots/paritaet/b_M02_menue_bearbeiten.png) |
-| Bearbeiten > Objekt einfügen > Bitmap durch Ausschneiden | Kürzel –; aktiv aus aus aus aus aus | Kürzel –; aktiv aus aus aus aus aus | ✅ | [Bild](screenshots/paritaet/b_M02_menue_bearbeiten.png) |
-| Bearbeiten > Objekt einfügen > Ebene | Kürzel Umschalt+L; aktiv an an an an an | Kürzel Umschalt+L; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M02_menue_bearbeiten.png) |
-| Bearbeiten > Objekt einfügen > Status | Kürzel Umschalt+F; aktiv an an an an an | Kürzel Umschalt+F; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M02_menue_bearbeiten.png) |
-| Bearbeiten > Objekt einfügen > Seite | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M02_menue_bearbeiten.png) |
-| Bearbeiten > Suchen und ersetzen | Kürzel Strg+F; aktiv an an an an an | Kürzel Strg+F; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M02_menue_bearbeiten.png) |
-| Bearbeiten > Ausschneiden | Kürzel Strg+X; aktiv aus an an an an | Kürzel Strg+X; aktiv aus an an an an | ✅ | [Bild](screenshots/paritaet/b_M02_menue_bearbeiten.png) |
-| Bearbeiten > Kopieren | Kürzel Strg+C; aktiv aus an an an an | Kürzel Strg+C; aktiv aus an an an an | ✅ | [Bild](screenshots/paritaet/b_M02_menue_bearbeiten.png) |
-| Bearbeiten > Als Vektoren kopieren | Kürzel –; aktiv aus an an an an | Kürzel –; aktiv aus an an an an | ✅ | [Bild](screenshots/paritaet/b_M02_menue_bearbeiten.png) |
-| Bearbeiten > HTML-Code kopieren | Kürzel Strg+Alt+C; aktiv an an an an an | Kürzel Strg+Alt+C; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M02_menue_bearbeiten.png) |
-| Bearbeiten > Einfügen | Kürzel Strg+V; aktiv an an an an an | Kürzel Strg+V; aktiv aus aus aus aus aus | ✅ | [Bild](screenshots/paritaet/b_M02_menue_bearbeiten.png) |
-| Bearbeiten > Löschen | Kürzel Löschen-Taste; aktiv aus an an an an | Kürzel Entf; aktiv aus an an an an | ✅ | [Bild](screenshots/paritaet/b_M02_menue_bearbeiten.png) |
-| Bearbeiten > Als Maske einfügen | Kürzel Strg+Alt+V; aktiv aus an aus an an | Kürzel Strg+Alt+V; aktiv aus aus aus aus aus | ✅ | [Bild](screenshots/paritaet/b_M02_menue_bearbeiten.png) |
-| Bearbeiten > Innen einfügen | Kürzel Strg+Umschalt+V; aktiv aus an aus an an | Kürzel Strg+Umschalt+V; aktiv aus aus aus aus aus | ✅ | [Bild](screenshots/paritaet/b_M02_menue_bearbeiten.png) |
-| Bearbeiten > Attribute einfügen | Kürzel Strg+Alt+Umschalt+V; aktiv an an an an an | Kürzel Strg+Alt+Umschalt+V; aktiv aus aus aus aus aus | ✅ | [Bild](screenshots/paritaet/b_M02_menue_bearbeiten.png) |
-| Bearbeiten > Duplizieren | Kürzel Strg+Alt+D; aktiv aus an an an an | Kürzel Strg+Alt+D; aktiv aus an an an an | ✅ | [Bild](screenshots/paritaet/b_M02_menue_bearbeiten.png) |
-| Bearbeiten > Klonen | Kürzel Strg+Umschalt+D; aktiv aus an an an an | Kürzel Strg+Umschalt+D; aktiv aus an an an an | ✅ | [Bild](screenshots/paritaet/b_M02_menue_bearbeiten.png) |
-| Bearbeiten > Ausgewählte Bitmap zuschneiden | Kürzel –; aktiv aus aus aus aus an | Kürzel –; aktiv aus aus aus aus an | ✅ | [Bild](screenshots/paritaet/b_M02_menue_bearbeiten.png) |
-| Bearbeiten > Dokument zuschneiden | Kürzel –; aktiv aus an an an an | Kürzel –; aktiv aus an an an an | ✅ | [Bild](screenshots/paritaet/b_M02_menue_bearbeiten.png) |
-| Bearbeiten > Voreinstellungen | Kürzel Strg+U; aktiv an an an an an | Kürzel Strg+U; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M02_menue_bearbeiten.png) |
-| Bearbeiten > Tastaturkurzbefehle | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M02_menue_bearbeiten.png) |
-| Ansicht > Größer zoomen | Kürzel Strg++; aktiv an an an an an | Kürzel Strg++; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
-| Ansicht > Kleiner zoomen | Kürzel Strg+-; aktiv an an an an an | Kürzel Strg+-; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
-| Ansicht > Vergrößerung | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
-| Ansicht > Vergrößerung > 6% | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
-| Ansicht > Vergrößerung > 12% | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
-| Ansicht > Vergrößerung > 25% | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
-| Ansicht > Vergrößerung > 50% | Kürzel Strg+5; aktiv an an an an an | Kürzel Strg+5; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
-| Ansicht > Vergrößerung > 66% | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
-| Ansicht > Vergrößerung > 100% | Kürzel Strg+1; aktiv an an an an an; ✓ | Kürzel Strg+1; aktiv an an an an an; ✓ | ✅ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
-| Ansicht > Vergrößerung > 150% | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
-| Ansicht > Vergrößerung > 200% | Kürzel Strg+2; aktiv an an an an an | Kürzel Strg+2; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
-| Ansicht > Vergrößerung > 300% | Kürzel Strg+3; aktiv an an an an an | Kürzel Strg+3; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
-| Ansicht > Vergrößerung > 400% | Kürzel Strg+4; aktiv an an an an an | Kürzel Strg+4; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
-| Ansicht > Vergrößerung > 800% | Kürzel Strg+8; aktiv an an an an an | Kürzel Strg+8; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
-| Ansicht > Vergrößerung > 1600% | Kürzel Strg+6; aktiv an an an an an | Kürzel Strg+6; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
-| Ansicht > Vergrößerung > 3200% | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
-| Ansicht > Vergrößerung > 6400% | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
-| Ansicht > Auswahl anpassen | Kürzel Strg+Alt+0; aktiv aus an an an an | Kürzel Strg+Alt+0; aktiv aus an an an an | ✅ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
-| Ansicht > Alles anpassen | Kürzel Strg+0; aktiv an an an an an | Kürzel Strg+0; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
-| Ansicht > Gamma 1.8 | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
-| Ansicht > Auswahl ausblenden | Kürzel Strg+L; aktiv aus an an an an | Kürzel Strg+L; aktiv aus an an an an | ✅ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
-| Ansicht > QuickInfos | Kürzel Strg+AKUT; aktiv an an an an an | Kürzel Strg+´; aktiv an an an an an; ✓ | ✅ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
-| Ansicht > Alles einblenden | Kürzel Strg+Umschalt+L; aktiv an an an an an | Kürzel Strg+Umschalt+L; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
-| Ansicht > Lineale | Kürzel Strg+Alt+R; aktiv an an an an an | Kürzel Strg+Alt+R; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
-| Ansicht > Raster | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
-| Ansicht > Raster > Raster anzeigen | Kürzel Strg+Alt+G; aktiv an an an an an | Kürzel Strg+Alt+G; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
-| Ansicht > Raster > Am Raster ausrichten | Kürzel Strg+Alt+Umschalt+G; aktiv an an an an an | Kürzel Strg+Alt+Umschalt+G; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
-| Ansicht > Raster > Raster bearbeiten | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
-| Ansicht > Hilfslinien | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
-| Ansicht > Hilfslinien > Hilfslinien anzeigen | Kürzel Strg+ü; aktiv an an an an an; ✓ | Kürzel Strg+ü; aktiv an an an an an; ✓ | ✅ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
-| Ansicht > Hilfslinien > Hilfslinien sperren | Kürzel Strg+Alt+ü; aktiv an an an an an | Kürzel Strg+Alt+ü; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
-| Ansicht > Hilfslinien > An Hilfslinien ausrichten | Kürzel Strg+Umschalt+ü; aktiv an an an an an; ✓ | Kürzel Strg+Umschalt+ü; aktiv an an an an an; ✓ | ✅ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
-| Ansicht > Hilfslinien > Hilfslinien entfernen | Kürzel –; aktiv aus aus aus aus aus | Kürzel –; aktiv aus aus aus aus aus | ✅ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
-| Ansicht > Intelligente Hilfslinien | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
-| Ansicht > Intelligente Hilfslinien > Intelligente Hilfslinien anzeigen | Kürzel Strg+ZIRKUMFLEX; aktiv an an an an an; ✓ | Kürzel Strg+^; aktiv an an an an an; ✓ | ✅ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
-| Ansicht > Intelligente Hilfslinien > An intelligenten Hilfslinien ausrichten | Kürzel Strg+Umschalt+ZIRKUMFLEX; aktiv an an an an an; ✓ | Kürzel Strg+Umschalt+^; aktiv an an an an an; ✓ | ✅ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
-| Ansicht > Hilfslinien für 9-Slice-Skalierung | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
-| Ansicht > Hilfslinien für 9-Slice-Skalierung > Hilfslinien sperren | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
-| Ansicht > Segment-Hilfslinien | Kürzel Strg+Alt+Umschalt+ü; aktiv an an an an an; ✓ | Kürzel Strg+Alt+Umschalt+ü; aktiv an an an an an; ✓ | ✅ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
-| Ansicht > Segmentüberlagerung | Kürzel –; aktiv an an an an an; ✓ | Kürzel –; aktiv an an an an an; ✓ | ✅ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
-| Ansicht > Ränder | Kürzel Strg+H; aktiv an an an an an; ✓ | Kürzel Strg+H; aktiv an an an an an; ✓ | ✅ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
-| Auswählen > Alles auswählen | Kürzel Strg+A; aktiv an an an an an | Kürzel Strg+A; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M04_menue_auswaehlen.png) |
-| Auswählen > Auswahl aufheben | Kürzel Strg+D; aktiv aus an an an an | Kürzel Strg+D; aktiv aus an an an an | ✅ | [Bild](screenshots/paritaet/b_M04_menue_auswaehlen.png) |
-| Auswählen > Gesamtauswahl treffen | Kürzel Strg+Nach-rechts-Taste; aktiv aus an an an an | Kürzel Strg+Rechts; aktiv aus an an an an | ✅ | [Bild](screenshots/paritaet/b_M04_menue_auswaehlen.png) |
-| Auswählen > Teilauswahl treffen | Kürzel Strg+Nach-links-Taste; aktiv aus aus aus aus aus | Kürzel Strg+Links; aktiv aus aus aus aus aus | ✅ | [Bild](screenshots/paritaet/b_M04_menue_auswaehlen.png) |
-| Auswählen > Ähnliches auswählen | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M04_menue_auswaehlen.png) |
-| Auswählen > Auswahl umkehren | Kürzel Strg+Umschalt+I; aktiv an an an an an | Kürzel Strg+Umschalt+I; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M04_menue_auswaehlen.png) |
-| Auswählen > Weiche Kante | Kürzel Strg+Alt+Umschalt+D; aktiv an an an an an | Kürzel Strg+Alt+Umschalt+D; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M04_menue_auswaehlen.png) |
-| Auswählen > Auswahlrahmen erweitern | Kürzel –; aktiv aus aus aus aus aus | Kürzel –; aktiv aus aus aus aus aus | ✅ | [Bild](screenshots/paritaet/b_M04_menue_auswaehlen.png) |
-| Auswählen > Auswahlrahmen verkleinern | Kürzel –; aktiv aus aus aus aus aus | Kürzel –; aktiv aus aus aus aus aus | ✅ | [Bild](screenshots/paritaet/b_M04_menue_auswaehlen.png) |
-| Auswählen > Auswahlrahmen begrenzen | Kürzel –; aktiv aus aus aus aus aus | Kürzel –; aktiv aus aus aus aus aus | ✅ | [Bild](screenshots/paritaet/b_M04_menue_auswaehlen.png) |
-| Auswählen > Auswahlrahmen glätten | Kürzel –; aktiv aus aus aus aus aus | Kürzel –; aktiv aus aus aus aus aus | ✅ | [Bild](screenshots/paritaet/b_M04_menue_auswaehlen.png) |
-| Auswählen > Auswahlrahmen in Pfad konvertieren | Kürzel –; aktiv aus aus aus aus aus | Kürzel –; aktiv aus aus aus aus aus | ✅ | [Bild](screenshots/paritaet/b_M04_menue_auswaehlen.png) |
-| Auswählen > Bitmap-Auswahl speichern | Kürzel –; aktiv aus aus aus aus aus | Kürzel –; aktiv aus aus aus aus aus | ✅ | [Bild](screenshots/paritaet/b_M04_menue_auswaehlen.png) |
-| Auswählen > Bitmap-Auswahl wiederherstellen | Kürzel –; aktiv aus aus aus aus aus | Kürzel –; aktiv aus aus aus aus aus | ✅ | [Bild](screenshots/paritaet/b_M04_menue_auswaehlen.png) |
-| Auswählen > Bitmap-Auswahl löschen | Kürzel –; aktiv aus aus aus aus aus | Kürzel –; aktiv aus aus aus aus aus | ✅ | [Bild](screenshots/paritaet/b_M04_menue_auswaehlen.png) |
-| Modifizieren > Leinwand | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Leinwand > Bildgröße | Kürzel Strg+J; aktiv an an an an an | Kürzel Strg+J; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Leinwand > Leinwandgröße | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Leinwand > Leinwandfarbe | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Leinwand > Leinwand zuschneiden | Kürzel Strg+Alt+T; aktiv an an an an an | Kürzel Strg+Alt+T; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Leinwand > Leinwand anpassen | Kürzel Strg+Alt+F; aktiv an an an an an | Kürzel Strg+Alt+F; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Leinwand > 180° drehen | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Leinwand > 90° im UZS drehen | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Leinwand > 90° gegen UZS drehen | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Animation | Kürzel –; aktiv an an an an an | Kürzel –; aktiv aus an an an an | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Animation > Auswahl animieren | Kürzel Alt+Umschalt+F8; aktiv aus an an an an | Kürzel Alt+Umschalt+F8; aktiv aus an an an an | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Animation > Einstellungen | Kürzel –; aktiv aus aus aus aus aus | Kürzel –; aktiv aus aus aus aus aus | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Animation > Animation entfernen | Kürzel –; aktiv aus aus aus aus aus | Kürzel –; aktiv aus aus aus aus aus | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Symbol | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Symbol > In Symbol konvertieren | Kürzel F8; aktiv aus an an an an | Kürzel F8; aktiv aus an an an an | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Symbol > Symbol bearbeiten | Kürzel –; aktiv aus aus aus aus aus | Kürzel –; aktiv aus aus aus aus aus | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Symbol > An Position bearbeiten | Kürzel –; aktiv aus aus aus aus aus | Kürzel –; aktiv aus aus aus aus aus | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Symbol > Instanzen tweenen | Kürzel Strg+Alt+Umschalt+T; aktiv an an an an an | Kürzel Strg+Alt+Umschalt+T; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Symbol > Teilen | Kürzel Strg+Umschalt+B; aktiv an an an an an | Kürzel Strg+Umschalt+B; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Symbol > Symbol austauschen | Kürzel –; aktiv aus aus aus aus aus | Kürzel –; aktiv aus aus aus aus aus | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Popupmenü | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Popupmenü > Popupmenü hinzufügen | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Popupmenü > Popupmenü bearbeiten | Kürzel –; aktiv aus aus aus aus aus | Kürzel –; aktiv aus aus aus aus aus | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Popupmenü > Popupmenü löschen | Kürzel –; aktiv aus aus aus aus aus | Kürzel –; aktiv aus aus aus aus aus | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Maske | Kürzel –; aktiv an an an an an | Kürzel –; aktiv aus an an an an | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Maske > Alles einblenden | Kürzel –; aktiv aus an aus an an | Kürzel –; aktiv aus an aus an an | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Maske > Alles ausblenden | Kürzel –; aktiv aus an aus an an | Kürzel –; aktiv aus an aus an an | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Maske > Als Maske einfügen | Kürzel Strg+Alt+V; aktiv aus an aus an an | Kürzel Strg+Alt+V; aktiv aus aus aus aus aus | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Maske > Als Maske gruppieren | Kürzel –; aktiv aus aus an aus aus | Kürzel –; aktiv aus aus an aus aus | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Maske > Auswahl einblenden | Kürzel –; aktiv aus aus aus aus aus | Kürzel –; aktiv aus aus aus aus aus | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Maske > Auswahl ausblenden | Kürzel –; aktiv aus aus aus aus aus | Kürzel –; aktiv aus aus aus aus aus | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Maske > Maske deaktivieren | Kürzel –; aktiv aus aus aus aus aus | Kürzel Strg+Alt+H; aktiv aus aus aus aus aus – Kürzel – ≠ Strg+Alt+H | ⚠️ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Maske > Maske löschen | Kürzel –; aktiv aus aus aus aus aus | Kürzel –; aktiv aus aus aus aus aus | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Selektives JPEG | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Selektives JPEG > Auswahl als JPEG-Maske speichern | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Selektives JPEG > JPEG-Maske als Auswahl wiederherstellen | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Selektives JPEG > Einstellungen | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Selektives JPEG > JPEG-Maske entfernen | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Auswahl sperren | Kürzel Strg+Alt+L; aktiv aus an an an an | Kürzel Strg+Alt+L; aktiv aus an an an an | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Auswahl auf Hintergrund reduzieren | Kürzel Strg+Alt+Umschalt+Z; aktiv aus an an an an | Kürzel Strg+Alt+Umschalt+Z; aktiv aus an an an an | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Mit darunter liegender auf eine Ebene reduzieren | Kürzel Strg+E; aktiv aus aus aus an aus | Kürzel Strg+E; aktiv aus aus aus aus aus – aktiv weicht ab in S4 | ❌ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Ebenen als Hintergrund | Kürzel Strg+Alt+E; aktiv aus aus aus aus aus | Kürzel Strg+Alt+E; aktiv aus aus aus aus aus | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Transformieren | Kürzel –; aktiv an an an an an | Kürzel –; aktiv aus an an an an | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Transformieren > Frei transformieren | Kürzel Strg+T; aktiv aus an an an an | Kürzel Strg+T; aktiv aus an an an an | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Transformieren > Skalieren | Kürzel –; aktiv aus an an an an | Kürzel –; aktiv aus an an an an | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Transformieren > Neigen | Kürzel –; aktiv aus an an an an | Kürzel –; aktiv aus an an an an | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Transformieren > Verzerren | Kürzel –; aktiv aus an an an an | Kürzel –; aktiv aus an an an an | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Transformieren > Numerisch transformieren | Kürzel Strg+Umschalt+T; aktiv aus an an an an | Kürzel Strg+Umschalt+T; aktiv aus an an an an | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Transformieren > 180° drehen | Kürzel –; aktiv aus an an an an | Kürzel –; aktiv aus an an an an | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Transformieren > 90° im UZS drehen | Kürzel Strg+Umschalt+9; aktiv aus an an an an | Kürzel Strg+Umschalt+9; aktiv aus an an an an | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Transformieren > 90° gegen UZS drehen | Kürzel Strg+Umschalt+7; aktiv aus an an an an | Kürzel Strg+Umschalt+7; aktiv aus an an an an | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Transformieren > Horizontal spiegeln | Kürzel –; aktiv aus an an an an | Kürzel –; aktiv aus an an an an | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Transformieren > Vertikal spiegeln | Kürzel –; aktiv aus an an an an | Kürzel –; aktiv aus an an an an | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Transformieren > Transformationen entfernen | Kürzel –; aktiv aus an an an aus | Kürzel –; aktiv aus an an an aus | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Anordnen | Kürzel –; aktiv an an an an an | Kürzel –; aktiv aus an an an an | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Anordnen > In den Vordergrund | Kürzel Strg+Umschalt+Nach-oben-Taste; aktiv aus an an an an | Kürzel Strg+Umschalt+Oben; aktiv aus an an an an – Kürzel Strg+Umschalt+Nach-oben-Taste ≠ Strg+Umschalt+Oben | ⚠️ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Anordnen > Schrittweise nach vorne | Kürzel Strg+Nach-oben-Taste; aktiv aus an an an an | Kürzel Strg+Oben; aktiv aus an an an an – Kürzel Strg+Nach-oben-Taste ≠ Strg+Oben | ⚠️ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Anordnen > Schrittweise nach hinten | Kürzel Strg+Nach-unten-Taste; aktiv aus an an an an | Kürzel Strg+Unten; aktiv aus an an an an – Kürzel Strg+Nach-unten-Taste ≠ Strg+Unten | ⚠️ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Anordnen > In den Hintergrund | Kürzel Strg+Umschalt+Nach-unten-Taste; aktiv aus an an an an | Kürzel Strg+Umschalt+Unten; aktiv aus an an an an – Kürzel Strg+Umschalt+Nach-unten-Taste ≠ Strg+Umschalt+Unten | ⚠️ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Ausrichten | Kürzel –; aktiv an an an an an | Kürzel –; aktiv aus aus an aus aus | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Ausrichten > Links | Kürzel Strg+Alt+1; aktiv aus aus an aus aus | Kürzel Strg+Alt+1; aktiv aus aus an aus aus | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Ausrichten > Vertikal zentrieren | Kürzel Strg+Alt+2; aktiv aus aus an aus aus | Kürzel Strg+Alt+2; aktiv aus aus an aus aus | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Ausrichten > Rechts | Kürzel Strg+Alt+3; aktiv aus aus an aus aus | Kürzel Strg+Alt+3; aktiv aus aus an aus aus | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Ausrichten > Oben | Kürzel Strg+Alt+4; aktiv aus aus an aus aus | Kürzel Strg+Alt+4; aktiv aus aus an aus aus | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Ausrichten > Horizontal zentrieren | Kürzel Strg+Alt+5; aktiv aus aus an aus aus | Kürzel Strg+Alt+5; aktiv aus aus an aus aus | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Ausrichten > Unten | Kürzel Strg+Alt+6; aktiv aus aus an aus aus | Kürzel Strg+Alt+6; aktiv aus aus an aus aus | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Ausrichten > Breiten verteilen | Kürzel Strg+Alt+7; aktiv aus aus aus aus aus | Kürzel Strg+Alt+7; aktiv aus aus aus aus aus | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Ausrichten > Höhen verteilen | Kürzel Strg+Alt+9; aktiv aus aus aus aus aus | Kürzel Strg+Alt+9; aktiv aus aus aus aus aus | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Pfad in Auswahlrahmen konvertieren | Kürzel –; aktiv aus an an aus aus | Kürzel –; aktiv aus an an aus aus | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Pfade kombinieren | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Pfade kombinieren > Verbinden | Kürzel Strg+Umschalt+J; aktiv aus an an an aus | Kürzel Strg+Umschalt+J; aktiv aus an an an aus | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Pfade kombinieren > Teilen | Kürzel Strg+Alt+J; aktiv aus aus aus aus aus | Kürzel Strg+Alt+J; aktiv aus aus aus aus aus | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Pfade kombinieren > Vereinigen | Kürzel Strg+Alt+U; aktiv an an an an an | Kürzel Strg+Alt+U; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Pfade kombinieren > Überschneiden | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Pfade kombinieren > Öffnen | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Pfade kombinieren > Zuschneiden | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Pfad ändern | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Pfad ändern > Vereinfachen | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Pfad ändern > Strich erweitern | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Pfad ändern > Pfad einlassen | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Pfad ändern > Präzise Füllung | Kürzel –; aktiv aus aus aus an aus | Kürzel –; aktiv aus aus aus an aus | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Pfad ändern > Anti-Alias-Füllung | Kürzel –; aktiv aus aus aus an aus | Kürzel –; aktiv aus aus aus an aus; ✓ – Häkchen – ≠ ✓ | ❌ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Pfad ändern > Weiche-Kante-Füllung | Kürzel –; aktiv aus aus aus an aus | Kürzel –; aktiv aus aus aus an aus | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > An Pixeln ausrichten | Kürzel Strg+K; aktiv aus an an aus aus | Kürzel Strg+K; aktiv aus an an aus aus | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Gruppieren | Kürzel Strg+G; aktiv aus an an an an | Kürzel Strg+G; aktiv aus an an an an | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Gruppierung aufheben | Kürzel Strg+Umschalt+G; aktiv aus an an aus aus | Kürzel Strg+Umschalt+G; aktiv aus an an aus aus | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Text > Schrift | Kürzel –; aktiv an an an an an | Kürzel –; aktiv aus aus aus an aus | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
-| Text > Größe | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
-| Text > Größe > Andere | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
-| Text > Größe > Kleiner | Kürzel Strg+Umschalt+,; aktiv aus aus aus an aus | Kürzel Strg+Umschalt+,; aktiv aus aus aus an aus | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
-| Text > Größe > Größer | Kürzel Strg+Umschalt+.; aktiv aus aus aus an aus | Kürzel Strg+Umschalt+.; aktiv aus aus aus an aus | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
-| Text > Größe > 8 | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
-| Text > Größe > 9 | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
-| Text > Größe > 10 | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
-| Text > Größe > 12 | Kürzel –; aktiv an an an an an; ✓ | Kürzel –; aktiv an an an an an; ✓ | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
-| Text > Größe > 14 | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
-| Text > Größe > 18 | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
-| Text > Größe > 24 | Kürzel –; aktiv an an an an an; ✓ | Kürzel –; aktiv an an an an an; ✓ | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
-| Text > Größe > 36 | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
-| Text > Größe > 48 | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
-| Text > Größe > 72 | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
-| Text > Größe > 96 | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
-| Text > Größe > 120 | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
-| Text > Stil | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
-| Text > Stil > Standard | Kürzel –; aktiv an an an an an; ✓ | Kürzel –; aktiv an an an an an; ✓ | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
-| Text > Stil > Faux Fett | Kürzel Strg+B; aktiv an an an an an | Kürzel Strg+B; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
-| Text > Stil > Faux Kursiv | Kürzel Strg+I; aktiv an an an an an | Kürzel Strg+I; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
-| Text > Stil > Unterstrichen | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
-| Text > Ausrichten | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
-| Text > Ausrichten > Links | Kürzel Strg+Alt+Umschalt+L; aktiv an an an an an; ✓ | Kürzel Strg+Alt+Umschalt+L; aktiv an an an an an; ✓ | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
-| Text > Ausrichten > Horizontal zentrieren | Kürzel Strg+Alt+Umschalt+C; aktiv an an an an an | Kürzel Strg+Alt+Umschalt+C; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
-| Text > Ausrichten > Rechts | Kürzel Strg+Alt+Umschalt+R; aktiv an an an an an | Kürzel Strg+Alt+Umschalt+R; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
-| Text > Ausrichten > Blocksatz | Kürzel Strg+Alt+Umschalt+J; aktiv an an an an an | Kürzel Strg+Alt+Umschalt+J; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
-| Text > Ausrichten > Oben | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
-| Text > Ausrichten > Vertikal zentrieren | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
-| Text > Ausrichten > Unten | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
-| Text > Ausrichten > Vertikaler Blocksatz | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
-| Text > In Pfad einfügen | Kürzel –; aktiv aus aus aus aus aus | Kürzel –; aktiv aus aus aus aus aus | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
-| Text > An Pfad anfügen | Kürzel Strg+Umschalt+Y; aktiv aus aus aus aus aus | Kürzel Strg+Umschalt+Y; aktiv aus aus aus aus aus | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
-| Text > Von Pfad lösen | Kürzel –; aktiv aus aus aus aus aus | Kürzel –; aktiv aus aus aus aus aus | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
-| Text > Richtung | Kürzel –; aktiv an an an an an | Kürzel –; aktiv aus aus aus aus aus | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
-| Text > Richtung > Um Pfad drehen | Kürzel –; aktiv aus aus aus aus aus | Kürzel –; aktiv aus aus aus aus aus | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
-| Text > Richtung > Vertikal | Kürzel –; aktiv aus aus aus aus aus | Kürzel –; aktiv aus aus aus aus aus | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
-| Text > Richtung > Vertikal neigen | Kürzel –; aktiv aus aus aus aus aus | Kürzel –; aktiv aus aus aus aus aus | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
-| Text > Richtung > Horizontal neigen | Kürzel –; aktiv aus aus aus aus aus | Kürzel –; aktiv aus aus aus aus aus | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
-| Text > Richtung umkehren | Kürzel –; aktiv aus aus aus aus aus | Kürzel –; aktiv aus aus aus aus aus | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
-| Text > In Pfade konvertieren | Kürzel Strg+Umschalt+P; aktiv aus aus aus an aus | Kürzel Strg+Umschalt+P; aktiv aus aus aus an aus | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
-| Text > Rechtschreibprüfung | Kürzel Umschalt+F7; aktiv an an an an an | Kürzel Umschalt+F7; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
-| Text > Rechtschreibprüfung einrichten | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
-| Befehle > Gespeicherte Befehle verwalten | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M07_menue_befehle.png) |
-| Befehle > Erweiterungen verwalten | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M07_menue_befehle.png) |
-| Befehle > Skript ausführen | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M07_menue_befehle.png) |
-| Befehle > Warnmeldungen zurücksetzen | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M07_menue_befehle.png) |
-| Filter > Filter wiederholen | Kürzel Strg+Alt+Umschalt+X; aktiv aus aus aus aus aus | Kürzel Strg+Alt+Umschalt+X; aktiv aus aus aus aus aus | ✅ | [Bild](screenshots/paritaet/b_M08_menue_filter.png) |
-| Filter > Andere | Kürzel –; aktiv an an an an an | Kürzel –; aktiv aus an an an an | ✅ | [Bild](screenshots/paritaet/b_M08_menue_filter.png) |
-| Filter > Andere > In Alphakanal konv. | Kürzel –; aktiv aus an an an an | Kürzel –; aktiv aus an an an an | ✅ | [Bild](screenshots/paritaet/b_M08_menue_filter.png) |
-| Filter > Andere > Ränder suchen | Kürzel –; aktiv aus an an an an | Kürzel –; aktiv aus an an an an | ✅ | [Bild](screenshots/paritaet/b_M08_menue_filter.png) |
-| Filter > Farbe anpassen | Kürzel –; aktiv an an an an an | Kürzel –; aktiv aus an an an an | ✅ | [Bild](screenshots/paritaet/b_M08_menue_filter.png) |
-| Filter > Farbe anpassen > Auto-Tonwertkorrektur | Kürzel –; aktiv aus an an an an | Kürzel –; aktiv aus an an an an | ✅ | [Bild](screenshots/paritaet/b_M08_menue_filter.png) |
-| Filter > Farbe anpassen > Farbton/Sättigung | Kürzel –; aktiv aus an an an an | Kürzel –; aktiv aus an an an an | ✅ | [Bild](screenshots/paritaet/b_M08_menue_filter.png) |
-| Filter > Farbe anpassen > Helligkeit/Kontrast | Kürzel –; aktiv aus an an an an | Kürzel –; aktiv aus an an an an | ✅ | [Bild](screenshots/paritaet/b_M08_menue_filter.png) |
-| Filter > Farbe anpassen > Kurven | Kürzel –; aktiv aus an an an an | Kürzel –; aktiv aus an an an an | ✅ | [Bild](screenshots/paritaet/b_M08_menue_filter.png) |
-| Filter > Farbe anpassen > Tonwertkorrektur | Kürzel –; aktiv aus an an an an | Kürzel –; aktiv aus an an an an | ✅ | [Bild](screenshots/paritaet/b_M08_menue_filter.png) |
-| Filter > Farbe anpassen > Umkehren | Kürzel –; aktiv aus an an an an | Kürzel –; aktiv aus an an an an | ✅ | [Bild](screenshots/paritaet/b_M08_menue_filter.png) |
-| Filter > Rauschen | Kürzel –; aktiv an an an an an | Kürzel –; aktiv aus an an an an | ✅ | [Bild](screenshots/paritaet/b_M08_menue_filter.png) |
-| Filter > Rauschen > Rauschen hinzufügen | Kürzel –; aktiv aus an an an an | Kürzel –; aktiv aus an an an an | ✅ | [Bild](screenshots/paritaet/b_M08_menue_filter.png) |
-| Filter > Scharfzeichnen | Kürzel –; aktiv an an an an an | Kürzel –; aktiv aus an an an an | ✅ | [Bild](screenshots/paritaet/b_M08_menue_filter.png) |
-| Filter > Scharfzeichnen > Scharfzeichnen | Kürzel –; aktiv aus an an an an | Kürzel –; aktiv aus an an an an | ✅ | [Bild](screenshots/paritaet/b_M08_menue_filter.png) |
-| Filter > Scharfzeichnen > Stark scharfzeichnen | Kürzel –; aktiv aus an an an an | Kürzel –; aktiv aus an an an an | ✅ | [Bild](screenshots/paritaet/b_M08_menue_filter.png) |
-| Filter > Scharfzeichnen > Unscharf maskieren | Kürzel –; aktiv aus an an an an | Kürzel –; aktiv aus an an an an | ✅ | [Bild](screenshots/paritaet/b_M08_menue_filter.png) |
-| Filter > Weichzeichnen | Kürzel –; aktiv an an an an an | Kürzel –; aktiv aus an an an an | ✅ | [Bild](screenshots/paritaet/b_M08_menue_filter.png) |
-| Filter > Weichzeichnen > Bewegungsunschärfe | Kürzel –; aktiv aus an an an an | Kürzel –; aktiv aus an an an an | ✅ | [Bild](screenshots/paritaet/b_M08_menue_filter.png) |
-| Filter > Weichzeichnen > Gaußscher Weichz. | Kürzel –; aktiv aus an an an an | Kürzel –; aktiv aus an an an an | ✅ | [Bild](screenshots/paritaet/b_M08_menue_filter.png) |
-| Filter > Weichzeichnen > Radiales Weichz. | Kürzel –; aktiv aus an an an an | Kürzel –; aktiv aus an an an an | ✅ | [Bild](screenshots/paritaet/b_M08_menue_filter.png) |
-| Filter > Weichzeichnen > Stärker weichzeichnen | Kürzel –; aktiv aus an an an an | Kürzel –; aktiv aus an an an an | ✅ | [Bild](screenshots/paritaet/b_M08_menue_filter.png) |
-| Filter > Weichzeichnen > Weichzeichnen | Kürzel –; aktiv aus an an an an | Kürzel –; aktiv aus an an an an | ✅ | [Bild](screenshots/paritaet/b_M08_menue_filter.png) |
-| Filter > Weichzeichnen > Zentriertes Weichz. | Kürzel –; aktiv aus an an an an | Kürzel –; aktiv aus an an an an | ✅ | [Bild](screenshots/paritaet/b_M08_menue_filter.png) |
-| Fenster > Fenster duplizieren | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M09_menue_fenster.png) |
-| Fenster > Bedienfelder ausblenden | Kürzel F4; aktiv an an an an an | Kürzel F4; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M09_menue_fenster.png) |
-| Fenster > Erweiterungen | Kürzel –; aktiv an an an an an | Kürzel –; aktiv aus aus aus aus aus | ✅ | [Bild](screenshots/paritaet/b_M09_menue_fenster.png) |
-| Fenster > Erweiterungen > Kuler | – | Kürzel – (nur Firepixel) – Erweiterung eines Drittanbieters (nicht nachgebaut) | ℹ️ | [Bild](screenshots/paritaet/b_M09_menue_fenster.png) |
-| Fenster > Erweiterungen > jQuery Mobile-Thema – anwendungsinterne Vorschau | – | Kürzel – (nur Firepixel) – Erweiterung eines Drittanbieters (nicht nachgebaut) | ℹ️ | [Bild](screenshots/paritaet/b_M09_menue_fenster.png) |
-| Fenster > Werkzeugleisten | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M09_menue_fenster.png) |
-| Fenster > Werkzeugleisten > Standard | Kürzel –; aktiv an an an an an; ✓ | Kürzel –; aktiv an an an an an; ✓ | ✅ | [Bild](screenshots/paritaet/b_M09_menue_fenster.png) |
-| Fenster > Werkzeuge | Kürzel Strg+F2; aktiv an an an an an; ✓ | Kürzel Strg+F2; aktiv an an an an an; ✓ | ✅ | [Bild](screenshots/paritaet/b_M09_menue_fenster.png) |
-| Fenster > Eigenschaften | Kürzel Strg+F3; aktiv an an an an an; ✓ | Kürzel Strg+F3; aktiv an an an an an; ✓ | ✅ | [Bild](screenshots/paritaet/b_M09_menue_fenster.png) |
-| Fenster > Optimieren | Kürzel F6; aktiv an an an an an | Kürzel F6; aktiv an an an an an; ✓ | ✅ | [Bild](screenshots/paritaet/b_M09_menue_fenster.png) |
-| Fenster > Ebenen | Kürzel F2; aktiv an an an an an; ✓ | Kürzel F2; aktiv an an an an an; ✓ | ✅ | [Bild](screenshots/paritaet/b_M09_menue_fenster.png) |
-| Fenster > Allgemeine Bibliothek | Kürzel F7; aktiv an an an an an | Kürzel F7; aktiv an an an an an; ✓ | ✅ | [Bild](screenshots/paritaet/b_M09_menue_fenster.png) |
-| Fenster > CSS-Eigenschaften | Kürzel Strg+F7; aktiv an an an an an | Kürzel Strg+F7; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M09_menue_fenster.png) |
-| Fenster > Seiten | Kürzel F5; aktiv an an an an an | Kürzel F5; aktiv an an an an an; ✓ | ✅ | [Bild](screenshots/paritaet/b_M09_menue_fenster.png) |
-| Fenster > Status | Kürzel Umschalt+F2; aktiv an an an an an | Kürzel Umschalt+F2; aktiv an an an an an; ✓ | ✅ | [Bild](screenshots/paritaet/b_M09_menue_fenster.png) |
-| Fenster > Verlauf | Kürzel Umschalt+F10; aktiv an an an an an; ✓ | Kürzel Umschalt+F10; aktiv an an an an an; ✓ | ✅ | [Bild](screenshots/paritaet/b_M09_menue_fenster.png) |
-| Fenster > Automatische Formen | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an; ✓ | ✅ | [Bild](screenshots/paritaet/b_M09_menue_fenster.png) |
-| Fenster > Stile | Kürzel Strg+F11; aktiv an an an an an; ✓ | Kürzel Strg+F11; aktiv an an an an an; ✓ | ✅ | [Bild](screenshots/paritaet/b_M09_menue_fenster.png) |
-| Fenster > Dokumentbibliothek | Kürzel F11; aktiv an an an an an | Kürzel F11; aktiv an an an an an; ✓ | ✅ | [Bild](screenshots/paritaet/b_M09_menue_fenster.png) |
-| Fenster > URL | Kürzel Alt+Umschalt+F10; aktiv an an an an an | Kürzel Alt+Umschalt+F10; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M09_menue_fenster.png) |
-| Fenster > Farbmischer | Kürzel Umschalt+F9; aktiv an an an an an | Kürzel Umschalt+F9; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M09_menue_fenster.png) |
-| Fenster > Farbfelder | Kürzel Strg+F9; aktiv an an an an an | Kürzel Strg+F9; aktiv an an an an an; ✓ | ✅ | [Bild](screenshots/paritaet/b_M09_menue_fenster.png) |
-| Fenster > Info | Kürzel Alt+Umschalt+F12; aktiv an an an an an | Kürzel Alt+Umschalt+F12; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M09_menue_fenster.png) |
-| Fenster > Verhalten | Kürzel Umschalt+F3; aktiv an an an an an | Kürzel Umschalt+F3; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M09_menue_fenster.png) |
-| Fenster > Suchen und ersetzen | Kürzel Strg+F; aktiv an an an an an | Kürzel Strg+F; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M09_menue_fenster.png) |
-| Fenster > Ausrichten | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M09_menue_fenster.png) |
-| Fenster > Eigenschaften für automatische Form | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M09_menue_fenster.png) |
-| Fenster > Sonstige | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M09_menue_fenster.png) |
-| Fenster > Sonstige > Farbpalette | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M09_menue_fenster.png) |
-| Fenster > Sonstige > Bildbearbeitung | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M09_menue_fenster.png) |
-| Fenster > Sonstige > Sonderzeichen | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M09_menue_fenster.png) |
-| Fenster > Pfad | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M09_menue_fenster.png) |
-| Fenster > Symboleigenschaften | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an; ✓ | ✅ | [Bild](screenshots/paritaet/b_M09_menue_fenster.png) |
-| Fenster > Überlappend | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M09_menue_fenster.png) |
-| Fenster > Anordnen | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M09_menue_fenster.png) |
-| Hilfe > Firepixel-Hilfe | Kürzel F1; aktiv an an an an an | Kürzel F1; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M10_menue_hilfe.png) |
-| Hilfe > Firepixel Support Center | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M10_menue_hilfe.png) |
-| Hilfe > Firepixel-Programm zur Produktverbesserung | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M10_menue_hilfe.png) |
-| Hilfe > Firepixel Exchange | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M10_menue_hilfe.png) |
-| Hilfe > Erweiterungen verwalten | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M10_menue_hilfe.png) |
-| Hilfe > Firepixel-Onlineforen | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M10_menue_hilfe.png) |
-| Hilfe > Über Firepixel | Kürzel –; aktiv an an an an an | Kürzel –; aktiv an an an an an | ✅ | [Bild](screenshots/paritaet/b_M10_menue_hilfe.png) |
-| Hilfe > Produktregistrierung | – | Kürzel – (nur Firepixel) – bewusst weggelassen (Lizenz/Registrierung des Originals) | ℹ️ | [Bild](screenshots/paritaet/b_M10_menue_hilfe.png) |
-| Hilfe > Deaktivieren | – | Kürzel – (nur Firepixel) – bewusst weggelassen (Lizenz/Registrierung des Originals) | ℹ️ | [Bild](screenshots/paritaet/b_M10_menue_hilfe.png) |
-| Hilfe > Aktualisierungen | – | Kürzel – (nur Firepixel) – bewusst weggelassen (Lizenz/Registrierung des Originals) | ℹ️ | [Bild](screenshots/paritaet/b_M10_menue_hilfe.png) |
-| Datei > Zuletzt geöffnete Dateien > Keine | – | Kürzel – (nur Firepixel) – nur in Firepixel | ℹ️ | [Bild](screenshots/paritaet/b_M01_menue_datei.png) |
-| Ansicht > Design | – | Kürzel – (nur Firepixel) – nur in Firepixel | ℹ️ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
-| Ansicht > Design > Normal | – | Kürzel – (nur Firepixel) – nur in Firepixel | ℹ️ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
-| Ansicht > Design > Dunkel | – | Kürzel – (nur Firepixel) – nur in Firepixel | ℹ️ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
-| Ansicht > Design > OLED | – | Kürzel – (nur Firepixel) – nur in Firepixel | ℹ️ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
-| Ansicht > Sprache | – | Kürzel – (nur Firepixel) – nur in Firepixel | ℹ️ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
-| Ansicht > Sprache > Deutsch | – | Kürzel – (nur Firepixel) – nur in Firepixel | ℹ️ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
-| Ansicht > Sprache > English | – | Kürzel – (nur Firepixel) – nur in Firepixel | ℹ️ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
-| Ansicht > Sprache > Testsprache (qps) | – | Kürzel – (nur Firepixel) – nur in Firepixel | ℹ️ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
-| Ansicht > Sprache > Sprachordner öffnen | – | Kürzel – (nur Firepixel) – nur in Firepixel | ℹ️ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
-| Auswählen > Motiv auswählen | – | Kürzel – (nur Firepixel) – nur in Firepixel | ℹ️ | [Bild](screenshots/paritaet/b_M04_menue_auswaehlen.png) |
-| Auswählen > Kante verfeinern | – | Kürzel – (nur Firepixel) – nur in Firepixel | ℹ️ | [Bild](screenshots/paritaet/b_M04_menue_auswaehlen.png) |
-| Befehle > KI-Modelle verwalten | – | Kürzel – (nur Firepixel) – nur in Firepixel | ℹ️ | [Bild](screenshots/paritaet/b_M07_menue_befehle.png) |
-| Befehle > Testbefehl | – | Kürzel – (nur Firepixel) – nur in Firepixel | ℹ️ | [Bild](screenshots/paritaet/b_M07_menue_befehle.png) |
-| Befehle > Testbefehl2 | – | Kürzel – (nur Firepixel) – nur in Firepixel | ℹ️ | [Bild](screenshots/paritaet/b_M07_menue_befehle.png) |
-| Befehle > KI-Steuerkanal (MCP) | – | Kürzel – (nur Firepixel) – nur in Firepixel | ℹ️ | [Bild](screenshots/paritaet/b_M07_menue_befehle.png) |
-| Filter > Farbe anpassen > Farbfüllung | – | Kürzel – (nur Firepixel) – nur in Firepixel | ℹ️ | [Bild](screenshots/paritaet/b_M08_menue_filter.png) |
-| Fenster > Arbeitsbereichlayouts | – | Kürzel – (nur Firepixel) – nur in Firepixel | ℹ️ | [Bild](screenshots/paritaet/b_M09_menue_fenster.png) |
-| Fenster > Arbeitsbereichlayouts > Erweiterter Modus | – | Kürzel – (nur Firepixel) – nur in Firepixel | ℹ️ | [Bild](screenshots/paritaet/b_M09_menue_fenster.png) |
-| Fenster > Arbeitsbereichlayouts > Symbolmodus | – | Kürzel – (nur Firepixel) – nur in Firepixel | ℹ️ | [Bild](screenshots/paritaet/b_M09_menue_fenster.png) |
-| Fenster > Arbeitsbereichlayouts > Symbolmodus mit Bedienfeldnamen | – | Kürzel – (nur Firepixel) – nur in Firepixel | ℹ️ | [Bild](screenshots/paritaet/b_M09_menue_fenster.png) |
-| Fenster > Arbeitsbereichlayouts > Aktuelles speichern | – | Kürzel – (nur Firepixel) – nur in Firepixel | ℹ️ | [Bild](screenshots/paritaet/b_M09_menue_fenster.png) |
-| Fenster > Arbeitsbereichlayouts > Standardarbeitsbereich | – | Kürzel – (nur Firepixel) – nur in Firepixel | ℹ️ | [Bild](screenshots/paritaet/b_M09_menue_fenster.png) |
-| Fenster > Erweiterungen > Keine Erweiterungen | – | Kürzel – (nur Firepixel) – nur in Firepixel | ℹ️ | [Bild](screenshots/paritaet/b_M09_menue_fenster.png) |
+| Text > Schrift > (Liste) | 3 zuletzt benutzte Schriften oben (Arial, Myriad Pro, Times New Roman), Trennlinie, dann alle Familien **flach**, Familien mit mehreren Schnitten als Untermenü; aktuelle Schrift ✓; Einträge **auch ohne Text aktiv** (setzen die Vorgabe des Textwerkzeugs) | Familien weiter nach Anfangsbuchstaben gruppiert (A ▸, B ▸ … Y ▸), Schnitte als Untermenü; im frischen Profil keine zuletzt benutzten Schriften; ohne ausgewählten Text grau (S1–S3, S5–S9), kein ✓ für die aktuelle Schrift (PM-7, 12.10.) | ❌ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
+| Befehle > (Liste im frischen Profil) | 12 Einträge unter „Skript ausführen…“: Auswahl ▸, Batch-Befehle ▸, Bildschirmfoto, Demo - aktuelles Dokument, Dokument ▸, Größe ausgewählter Objekte ändern, jQuery Mobile-Thema ▸, Kreativ ▸, Symbolskript erstellen, Text ▸, Warnmeldungen zurücksetzen, Web ▸ | jetzt vorhanden (frisches Profil, eigene Instanz, echtes Fenster, Brücke): KI-Modelle verwalten…, Auswahl ▸, Batch-Befehle ▸, Dokument ▸, Größe ausgewählter Objekte ändern, Kreativ ▸, Text ▸, **Warndialoge zurücksetzen**, Web ▸, dazu am Ende **Warnmeldungen zurücksetzen** und KI-Steuerkanal ✓ – „Warnmeldungen zurücksetzen“ steht damit doppelt (einmal unter anderem Namen); es fehlen Bildschirmfoto, Demo - aktuelles Dokument, Symbolskript erstellen (PM-7, 12.10.) | ❌ | [Bild](screenshots/paritaet/pm7_M07_befehle_firepixel.png) |
+| Befehle > Auswahl ▸ | Früheres Vektorrendern verwenden, Verbessertes Vektorrendern verwenden | Bisheriges Vektor-Rendering verwenden, Verbessertes Vektor-Rendering verwenden – Beschriftung anders (PM-7, 12.10.) | ⚠️ | [Bild](screenshots/paritaet/pm7_M07_befehle_firepixel.png) |
+| Befehle > Batch-Befehle ▸ | 11: 180°-Drehung, 270°-Drehung, 90°-Drehung, Alles auswählen, Auswahl scharfzeichnen, Auswahl um 180/270/90 Grad drehen, Auswahl weichzeichnen, Auswahlfarbe umkehren, Auto-Tonwertauswahl | 11, gleiche Befehle, andere Namen und damit andere Reihenfolge: Dokument um 180°/270°/90° drehen, Auswahl um 180°/270°/90° drehen, Farbe der Auswahl umkehren, Auswahl automatisch tonwertkorrigieren (PM-7, 12.10.) | ⚠️ | – |
+| Befehle > Dokument ▸ | Andere Ebenen ausblenden, Andere Ebenen sperren, Status umkehren, Verteilung auf Ebenen | gleich bis auf „Auf Ebenen verteilen“ (statt „Verteilung auf Ebenen“, steht deshalb vor „Status umkehren“) (PM-7, 12.10.) | ⚠️ | – |
+| Befehle > Kreativ ▸ | 7: Autom. Vektormaske, Bilderrahmen hinzufügen, Drehen und Ausblenden, Graustufenkonvertierung, Pfeilspitzen hinzufügen, Schatten hinzufügen, Sepia-Konvertierung | 6: **Autom. Vektormaske fehlt**; Verdrehen und ausblenden, In Graustufen umwandeln, In Sepiaton umwandeln (andere Namen) (PM-7, 12.10.) | ❌ | – |
+| Befehle > Text ▸ | 9: Als Großbuchstaben, Als Kleinbuchstaben, Als Pfade wiedergeben, Als Pixel wiedergeben, Breite festlegen, Erster Buchstabe Großbuchstabe, Feste Breite ein/aus, Lorem ipsum, Verfestigen | 9, andere Namen: Großbuchstaben, Kleinbuchstaben, In Pfade umwandeln, In Pixel umwandeln, Erster Buchstabe groß, Feste Breite umschalten, Blindtext (PM-7, 12.10.) | ⚠️ | – |
+| Befehle > Web ▸ | ALT-Text festlegen, Gemeinsame Palette, Leeren ALT-Text auswählen | **Gemeinsame Palette fehlt** (PM-7, 12.10.) | ❌ | – |
+| Befehle > jQuery Mobile-Thema ▸ | Neues Thema, Symbolplatzhalter einfügen, Thema exportieren, Themavorschau im Browser | – (Erweiterung eines Drittanbieters, nicht nachgebaut) | ℹ️ | – |
+| Datei > Neu | Kürzel Strg+N; ●●●●●●●●● | Kürzel Strg+N; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M01_menue_datei.png) |
+| Datei > Neu von Vorlage | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M01_menue_datei.png) |
+| Datei > Öffnen | Kürzel Strg+O; ●●●●●●●●● | Kürzel Strg+O; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M01_menue_datei.png) |
+| Datei > Bridge durchsuchen | Kürzel Strg+Alt+O; ○○○○○○○○○ | Kürzel Strg+Alt+O; ●●●●●●●●● – aktiv weicht ab in S1,S2,S3,S4,S5,S6,S7,S8,S9 (PM-7, 12.10.) | ❌ | [Bild](screenshots/paritaet/b_M01_menue_datei.png) |
+| Datei > Zuletzt geöffnete Dateien | Kürzel –; ●●●●●●●●● | Kürzel –; ○○○○○○○○○ | ✅ | [Bild](screenshots/paritaet/b_M01_menue_datei.png) |
+| Datei > Scannen | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M01_menue_datei.png) |
+| Datei > Scannen > Twain importieren | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M01_menue_datei.png) |
+| Datei > Scannen > Twain auswählen | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M01_menue_datei.png) |
+| Datei > Schließen | Kürzel Strg+W; ●●●●●●●●● | Kürzel Strg+W; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M01_menue_datei.png) |
+| Datei > Alle schließen | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M01_menue_datei.png) |
+| Datei > Speichern | Kürzel Strg+S; ●●●●●●●●● | Kürzel Strg+S; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M01_menue_datei.png) |
+| Datei > Speichern unter | Kürzel Strg+Umschalt+S; ●●●●●●●●● | Kürzel Strg+Umschalt+S; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M01_menue_datei.png) |
+| Datei > Alles speichern | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M01_menue_datei.png) |
+| Datei > Als Vorlage speichern | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M01_menue_datei.png) |
+| Datei > Wiederherstellen | Kürzel –; ●●●●●●●●● | Kürzel –; ○○○○○○○○○ | ✅ | [Bild](screenshots/paritaet/b_M01_menue_datei.png) |
+| Datei > Importieren | Kürzel Strg+R; ●●●●●●●●● | Kürzel Strg+R; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M01_menue_datei.png) |
+| Datei > Exportieren | Kürzel Strg+Umschalt+R; ●●●●●●●●● | Kürzel Strg+Umschalt+R; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M01_menue_datei.png) |
+| Datei > Bildvorschau | Kürzel Strg+Umschalt+X; ●●●●●●●●● | Kürzel Strg+Umschalt+X; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M01_menue_datei.png) |
+| Datei > Als E-Mail senden | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M01_menue_datei.png) |
+| Datei > Als E-Mail senden > PNG-Datei für Firepixel | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M01_menue_datei.png) |
+| Datei > Als E-Mail senden > Komprimierte JPG-Datei | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M01_menue_datei.png) |
+| Datei > Als E-Mail senden > Exporteinstellungen verwenden | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M01_menue_datei.png) |
+| Datei > HTML aktualisieren | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M01_menue_datei.png) |
+| Datei > Datei-Info | Kürzel Strg+Alt+Umschalt+F; ●●●●●●●●● | Kürzel Strg+Alt+Umschalt+F; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M01_menue_datei.png) |
+| Datei > Exportassistent | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M01_menue_datei.png) |
+| Datei > Batch-Verarbeitung | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M01_menue_datei.png) |
+| Datei > Vorschau im Browser | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M01_menue_datei.png) |
+| Datei > Vorschau im Browser > Primärbrowser festlegen | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M01_menue_datei.png) |
+| Datei > Vorschau im Browser > Sekundärbrowser festlegen | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M01_menue_datei.png) |
+| Datei > Seite einrichten | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M01_menue_datei.png) |
+| Datei > Drucken | Kürzel Strg+P; ●●●●●●●●● | Kürzel Strg+P; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M01_menue_datei.png) |
+| Datei > HTML-Einrichtung | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M01_menue_datei.png) |
+| Datei > Beenden | Kürzel Strg+Q; ●●●●●●●●● | Kürzel Strg+Q; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M01_menue_datei.png) |
+| Datei > Vorschau im Browser > Vorschau in Standardbrowser | Kürzel F12; ●●●●●●●●● | Kürzel F12; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M01_menue_datei.png) |
+| Datei > Vorschau im Browser > Vorschau in | Kürzel Umschalt+F12; ○○○○○○○○○ | Kürzel Umschalt+F12; ○○○○○○○○○ | ✅ | [Bild](screenshots/paritaet/b_M01_menue_datei.png) |
+| Datei > Vorschau im Browser > Vorschau aller Seiten in Standardbrowser anzeigen | Kürzel Strg+F12; ●●●●●●●●● | Kürzel Strg+F12; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M01_menue_datei.png) |
+| Bearbeiten > Rückgängig | Kürzel Strg+Z; ●●●●●●●●● | Kürzel Strg+Z; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M02_menue_bearbeiten.png) |
+| Bearbeiten > Wiederholen | Kürzel Strg+Y; ●●●●●●●●● | Kürzel Strg+Y; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M02_menue_bearbeiten.png) |
+| Bearbeiten > Objekt einfügen | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M02_menue_bearbeiten.png) |
+| Bearbeiten > Objekt einfügen > Neue Schaltfläche | Kürzel Strg+Umschalt+F8; ●●●●●●●●● | Kürzel Strg+Umschalt+F8; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M02_menue_bearbeiten.png) |
+| Bearbeiten > Objekt einfügen > Neues Symbol | Kürzel Strg+F8; ●●●●●●●●● | Kürzel Strg+F8; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M02_menue_bearbeiten.png) |
+| Bearbeiten > Objekt einfügen > Hotspot | Kürzel Strg+Umschalt+U; ●●●●●●●●● | Kürzel Strg+Umschalt+U; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M02_menue_bearbeiten.png) |
+| Bearbeiten > Objekt einfügen > Rechteckiges Segment | Kürzel Alt+Umschalt+U; ●●●●●●●●● | Kürzel Alt+Umschalt+U; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M02_menue_bearbeiten.png) |
+| Bearbeiten > Objekt einfügen > Polygonsegment | Kürzel Alt+Umschalt+P; ●●●●●●●●● | Kürzel Alt+Umschalt+P; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M02_menue_bearbeiten.png) |
+| Bearbeiten > Objekt einfügen > Leere Bitmap | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M02_menue_bearbeiten.png) |
+| Bearbeiten > Objekt einfügen > Bitmap durch Kopieren | Kürzel –; ○○○○○●○○○ | Kürzel –; ○○○○○●○○○ | ✅ | [Bild](screenshots/paritaet/b_M02_menue_bearbeiten.png) |
+| Bearbeiten > Objekt einfügen > Bitmap durch Ausschneiden | Kürzel –; ○○○○○●○○○ | Kürzel –; ○○○○○●○○○ | ✅ | [Bild](screenshots/paritaet/b_M02_menue_bearbeiten.png) |
+| Bearbeiten > Objekt einfügen > Ebene | Kürzel Umschalt+L; ●●●●●●●●● | Kürzel Umschalt+L; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M02_menue_bearbeiten.png) |
+| Bearbeiten > Objekt einfügen > Status | Kürzel Umschalt+F; ●●●●●●●●● | Kürzel Umschalt+F; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M02_menue_bearbeiten.png) |
+| Bearbeiten > Objekt einfügen > Seite | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M02_menue_bearbeiten.png) |
+| Bearbeiten > Suchen und ersetzen | Kürzel Strg+F; ●●●●●●●●● | Kürzel Strg+F; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M02_menue_bearbeiten.png) |
+| Bearbeiten > Ausschneiden | Kürzel Strg+X; ○●●●●●●●● | Kürzel Strg+X; ○●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M02_menue_bearbeiten.png) |
+| Bearbeiten > Kopieren | Kürzel Strg+C; ○●●●●●●●● | Kürzel Strg+C; ○●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M02_menue_bearbeiten.png) |
+| Bearbeiten > Als Vektoren kopieren | Kürzel –; ○●●●●○●●○ | Kürzel –; ○●●●●●●●● – aktiv weicht ab in S6,S9 (PM-7, 12.10.) | ❌ | [Bild](screenshots/paritaet/b_M02_menue_bearbeiten.png) |
+| Bearbeiten > HTML-Code kopieren | Kürzel Strg+Alt+C; ●●●●●●●●● | Kürzel Strg+Alt+C; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M02_menue_bearbeiten.png) |
+| Bearbeiten > Einfügen | Kürzel Strg+V; ●●●●●●●●● | Kürzel Strg+V; ○○○○○○○○○ | ✅ | [Bild](screenshots/paritaet/b_M02_menue_bearbeiten.png) |
+| Bearbeiten > Löschen | Kürzel Löschen-Taste; ○●●●●●●●● | Kürzel Löschen-Taste; ○●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M02_menue_bearbeiten.png) |
+| Bearbeiten > Als Maske einfügen | Kürzel Strg+Alt+V; ○●○●●○●●○ | Kürzel Strg+Alt+V; ○○○○○○○○○ | ✅ | [Bild](screenshots/paritaet/b_M02_menue_bearbeiten.png) |
+| Bearbeiten > Innen einfügen | Kürzel Strg+Umschalt+V; ○●○●●○●●○ | Kürzel Strg+Umschalt+V; ○○○○○○○○○ | ✅ | [Bild](screenshots/paritaet/b_M02_menue_bearbeiten.png) |
+| Bearbeiten > Attribute einfügen | Kürzel Strg+Alt+Umschalt+V; ●●●●●○●●● | Kürzel Strg+Alt+Umschalt+V; ○○○○○○○○○ | ✅ | [Bild](screenshots/paritaet/b_M02_menue_bearbeiten.png) |
+| Bearbeiten > Duplizieren | Kürzel Strg+Alt+D; ○●●●●○●●● | Kürzel Strg+Alt+D; ○●●●●●●●● – aktiv weicht ab in S6 (PM-7, 12.10.) | ❌ | [Bild](screenshots/paritaet/b_M02_menue_bearbeiten.png) |
+| Bearbeiten > Klonen | Kürzel Strg+Umschalt+D; ○●●●●○●●● | Kürzel Strg+Umschalt+D; ○●●●●●●●● – aktiv weicht ab in S6 (PM-7, 12.10.) | ❌ | [Bild](screenshots/paritaet/b_M02_menue_bearbeiten.png) |
+| Bearbeiten > Ausgewählte Bitmap zuschneiden | Kürzel –; ○○○○●●○○○ | Kürzel –; ○○○○●●○○○ | ✅ | [Bild](screenshots/paritaet/b_M02_menue_bearbeiten.png) |
+| Bearbeiten > Dokument zuschneiden | Kürzel –; ○●●●●●●●● | Kürzel –; ○●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M02_menue_bearbeiten.png) |
+| Bearbeiten > Voreinstellungen | Kürzel Strg+U; ●●●●●●●●● | Kürzel Strg+U; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M02_menue_bearbeiten.png) |
+| Bearbeiten > Tastaturkurzbefehle | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M02_menue_bearbeiten.png) |
+| Ansicht > Größer zoomen | Kürzel Strg++; ●●●●●●●●● | Kürzel Strg++; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
+| Ansicht > Kleiner zoomen | Kürzel Strg+-; ●●●●●●●●● | Kürzel Strg+-; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
+| Ansicht > Vergrößerung | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
+| Ansicht > Vergrößerung > 6% | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
+| Ansicht > Vergrößerung > 12% | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
+| Ansicht > Vergrößerung > 25% | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
+| Ansicht > Vergrößerung > 50% | Kürzel Strg+5; ●●●●●●●●● | Kürzel Strg+5; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
+| Ansicht > Vergrößerung > 66% | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
+| Ansicht > Vergrößerung > 100% | Kürzel Strg+1; ●●●●●●●●●; Häkchen ✓✓✓✓✓✓✓✓✓ | Kürzel Strg+1; ●●●●●●●●●; Häkchen ✓✓✓✓✓✓✓✓✓ | ✅ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
+| Ansicht > Vergrößerung > 150% | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
+| Ansicht > Vergrößerung > 200% | Kürzel Strg+2; ●●●●●●●●● | Kürzel Strg+2; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
+| Ansicht > Vergrößerung > 300% | Kürzel Strg+3; ●●●●●●●●● | Kürzel Strg+3; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
+| Ansicht > Vergrößerung > 400% | Kürzel Strg+4; ●●●●●●●●● | Kürzel Strg+4; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
+| Ansicht > Vergrößerung > 800% | Kürzel Strg+8; ●●●●●●●●● | Kürzel Strg+8; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
+| Ansicht > Vergrößerung > 1600% | Kürzel Strg+6; ●●●●●●●●● | Kürzel Strg+6; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
+| Ansicht > Vergrößerung > 3200% | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
+| Ansicht > Vergrößerung > 6400% | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
+| Ansicht > Auswahl anpassen | Kürzel Strg+Alt+0; ○●●●●●●●● | Kürzel Strg+Alt+0; ○●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
+| Ansicht > Alles anpassen | Kürzel Strg+0; ●●●●●●●●● | Kürzel Strg+0; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
+| Ansicht > Gamma 1.8 | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
+| Ansicht > Auswahl ausblenden | Kürzel Strg+L; ○●●●●●●●● | Kürzel Strg+L; ○●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
+| Ansicht > QuickInfos | Kürzel Strg+AKUT; ●●●●●●●●● | Kürzel Strg+´; ●●●●●●●●●; Häkchen ✓✓✓✓✓✓✓✓✓ – Kürzel Strg+AKUT ≠ Strg+´ (PM-7, 12.10.) | ⚠️ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
+| Ansicht > Alles einblenden | Kürzel Strg+Umschalt+L; ●●●●●●●●● | Kürzel Strg+Umschalt+L; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
+| Ansicht > Lineale | Kürzel Strg+Alt+R; ●●●●●●●●● | Kürzel Strg+Alt+R; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
+| Ansicht > Raster | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
+| Ansicht > Raster > Raster anzeigen | Kürzel Strg+Alt+G; ●●●●●●●●● | Kürzel Strg+Alt+G; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
+| Ansicht > Raster > Am Raster ausrichten | Kürzel Strg+Alt+Umschalt+G; ●●●●●●●●● | Kürzel Strg+Alt+Umschalt+G; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
+| Ansicht > Raster > Raster bearbeiten | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
+| Ansicht > Hilfslinien | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
+| Ansicht > Hilfslinien > Hilfslinien anzeigen | Kürzel Strg+ü; ●●●●●●●●●; Häkchen ✓✓✓✓✓✓✓✓✓ | Kürzel Strg+ü; ●●●●●●●●●; Häkchen ✓✓✓✓✓✓✓✓✓ | ✅ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
+| Ansicht > Hilfslinien > Hilfslinien sperren | Kürzel Strg+Alt+ü; ●●●●●●●●● | Kürzel Strg+Alt+ü; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
+| Ansicht > Hilfslinien > An Hilfslinien ausrichten | Kürzel Strg+Umschalt+ü; ●●●●●●●●●; Häkchen ✓✓✓✓✓✓✓✓✓ | Kürzel Strg+Umschalt+ü; ●●●●●●●●●; Häkchen ✓✓✓✓✓✓✓✓✓ | ✅ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
+| Ansicht > Hilfslinien > Hilfslinien entfernen | Kürzel –; ○○○○○○○○○ | Kürzel –; ○○○○○○○○○ | ✅ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
+| Ansicht > Intelligente Hilfslinien | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
+| Ansicht > Intelligente Hilfslinien > Intelligente Hilfslinien anzeigen | Kürzel Strg+ZIRKUMFLEX; ●●●●●●●●●; Häkchen ✓✓✓✓✓✓✓✓✓ | Kürzel Strg+^; ●●●●●●●●●; Häkchen ✓✓✓✓✓✓✓✓✓ – Kürzel Strg+ZIRKUMFLEX ≠ Strg+^ (PM-7, 12.10.) | ⚠️ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
+| Ansicht > Intelligente Hilfslinien > An intelligenten Hilfslinien ausrichten | Kürzel Strg+Umschalt+ZIRKUMFLEX; ●●●●●●●●●; Häkchen ✓✓✓✓✓✓✓✓✓ | Kürzel Strg+Umschalt+^; ●●●●●●●●●; Häkchen ✓✓✓✓✓✓✓✓✓ – Kürzel Strg+Umschalt+ZIRKUMFLEX ≠ Strg+Umschalt+^ (PM-7, 12.10.) | ⚠️ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
+| Ansicht > Hilfslinien für 9-Slice-Skalierung | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
+| Ansicht > Hilfslinien für 9-Slice-Skalierung > Hilfslinien sperren | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
+| Ansicht > Segment-Hilfslinien | Kürzel Strg+Alt+Umschalt+ü; ●●●●●●●●●; Häkchen ✓✓✓✓✓✓✓✓✓ | Kürzel Strg+Alt+Umschalt+ü; ●●●●●●●●●; Häkchen ✓✓✓✓✓✓✓✓✓ | ✅ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
+| Ansicht > Segmentüberlagerung | Kürzel –; ●●●●●●●●●; Häkchen ✓✓✓✓✓✓✓✓✓ | Kürzel –; ●●●●●●●●●; Häkchen ✓✓✓✓✓✓✓✓✓ | ✅ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
+| Ansicht > Ränder | Kürzel Strg+H; ●●●●●●●●●; Häkchen ✓✓✓✓✓✓✓✓✓ | Kürzel Strg+H; ●●●●●●●●●; Häkchen ✓✓✓✓✓✓✓✓✓ | ✅ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
+| Auswählen > Alles auswählen | Kürzel Strg+A; ●●●●●●●●● | Kürzel Strg+A; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M04_menue_auswaehlen.png) |
+| Auswählen > Auswahl aufheben | Kürzel Strg+D; ○●●●●●●●● | Kürzel Strg+D; ○●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M04_menue_auswaehlen.png) |
+| Auswählen > Gesamtauswahl treffen | Kürzel Strg+Nach-rechts-Taste; ○●●●●○●●● | Kürzel Strg+Nach-rechts-Taste; ○●●●●●●●● – aktiv weicht ab in S6 (PM-7, 12.10.) | ❌ | [Bild](screenshots/paritaet/b_M04_menue_auswaehlen.png) |
+| Auswählen > Teilauswahl treffen | Kürzel Strg+Nach-links-Taste; ○○○○○○●○○ | Kürzel Strg+Nach-links-Taste; ○○○○○○●○○ | ✅ | [Bild](screenshots/paritaet/b_M04_menue_auswaehlen.png) |
+| Auswählen > Ähnliches auswählen | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M04_menue_auswaehlen.png) |
+| Auswählen > Auswahl umkehren | Kürzel Strg+Umschalt+I; ●●●●●●●●● | Kürzel Strg+Umschalt+I; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M04_menue_auswaehlen.png) |
+| Auswählen > Weiche Kante | Kürzel Strg+Alt+Umschalt+D; ●●●●●●●●● | Kürzel Strg+Alt+Umschalt+D; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M04_menue_auswaehlen.png) |
+| Auswählen > Auswahlrahmen erweitern | Kürzel –; ○○○○○●○○○ | Kürzel –; ○○○○○●○○○ | ✅ | [Bild](screenshots/paritaet/b_M04_menue_auswaehlen.png) |
+| Auswählen > Auswahlrahmen verkleinern | Kürzel –; ○○○○○●○○○ | Kürzel –; ○○○○○●○○○ | ✅ | [Bild](screenshots/paritaet/b_M04_menue_auswaehlen.png) |
+| Auswählen > Auswahlrahmen begrenzen | Kürzel –; ○○○○○●○○○ | Kürzel –; ○○○○○●○○○ | ✅ | [Bild](screenshots/paritaet/b_M04_menue_auswaehlen.png) |
+| Auswählen > Auswahlrahmen glätten | Kürzel –; ○○○○○●○○○ | Kürzel –; ○○○○○●○○○ | ✅ | [Bild](screenshots/paritaet/b_M04_menue_auswaehlen.png) |
+| Auswählen > Auswahlrahmen in Pfad konvertieren | Kürzel –; ○○○○○●○○○ | Kürzel –; ○○○○○●○○○ | ✅ | [Bild](screenshots/paritaet/b_M04_menue_auswaehlen.png) |
+| Auswählen > Bitmap-Auswahl speichern | Kürzel –; ○○○○○●○○○ | Kürzel –; ○○○○○●○○○ | ✅ | [Bild](screenshots/paritaet/b_M04_menue_auswaehlen.png) |
+| Auswählen > Bitmap-Auswahl wiederherstellen | Kürzel –; ○○○○○●○○○ | Kürzel –; ○○○○○○○○○ – aktiv weicht ab in S6 – nicht gewertet: im Original in S6/S9 aktiv, obwohl keine Auswahl gespeichert wurde (Ursache offen, vermutlich Zustand aus einem früheren Lauf im selben Dokument); FV-13 hatte die Freigabe mit gespeicherter Auswahl schon geprüft (PM-7, 12.10.) | ℹ️ | [Bild](screenshots/paritaet/b_M04_menue_auswaehlen.png) |
+| Auswählen > Bitmap-Auswahl löschen | Kürzel –; ○○○○○●○○● | Kürzel –; ○○○○○○○○○ – aktiv weicht ab in S6,S9 – nicht gewertet: im Original in S6/S9 aktiv, obwohl keine Auswahl gespeichert wurde (Ursache offen, vermutlich Zustand aus einem früheren Lauf im selben Dokument); FV-13 hatte die Freigabe mit gespeicherter Auswahl schon geprüft (PM-7, 12.10.) | ℹ️ | [Bild](screenshots/paritaet/b_M04_menue_auswaehlen.png) |
+| Modifizieren > Leinwand | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Leinwand > Bildgröße | Kürzel Strg+J; ●●●●●●●●● | Kürzel Strg+J; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Leinwand > Leinwandgröße | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Leinwand > Leinwandfarbe | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Leinwand > Leinwand zuschneiden | Kürzel Strg+Alt+T; ●●●●●●●●● | Kürzel Strg+Alt+T; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Leinwand > Leinwand anpassen | Kürzel Strg+Alt+F; ●●●●●●●●● | Kürzel Strg+Alt+F; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Leinwand > 180° drehen | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Leinwand > 90° im UZS drehen | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Leinwand > 90° gegen UZS drehen | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Animation | Kürzel –; ●●●●●●●●● | Kürzel –; ○●●●●●●●● – Untermenü-Kopf grau in S1 (Original: Kopf aktiv, alle Einträge grau) (PM-7, 12.10.) | ⚠️ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Animation > Auswahl animieren | Kürzel Alt+Umschalt+F8; ○●●●●○●●● | Kürzel Alt+Umschalt+F8; ○●●●●●●●● – aktiv weicht ab in S6 (PM-7, 12.10.) | ❌ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Animation > Einstellungen | Kürzel –; ○○○○○○○○○ | Kürzel –; ○○○○○○○○○ | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Animation > Animation entfernen | Kürzel –; ○○○○○○○○○ | Kürzel –; ○○○○○○○○○ | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Symbol | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Symbol > In Symbol konvertieren | Kürzel F8; ○●●●●○●●○ | Kürzel F8; ○●●●●●●●● – aktiv weicht ab in S6,S9 (PM-7, 12.10.) | ❌ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Symbol > Symbol bearbeiten | Kürzel –; ○○○○○○○●○ | Kürzel –; ○○○○○○○●○ | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Symbol > An Position bearbeiten | Kürzel –; ○○○○○○○●○ | Kürzel –; ○○○○○○○●○ | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Symbol > Instanzen tweenen | Kürzel Strg+Alt+Umschalt+T; ●●●●●●●●● | Kürzel Strg+Alt+Umschalt+T; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Symbol > Teilen | Kürzel Strg+Umschalt+B; ●●●●●●●●● | Kürzel Strg+Umschalt+B; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Symbol > Symbol austauschen | Kürzel –; ○○○○○○○●○ | Kürzel –; ○○○○○○○●○ | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Popupmenü | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Popupmenü > Popupmenü hinzufügen | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Popupmenü > Popupmenü bearbeiten | Kürzel –; ○○○○○○○○○ | Kürzel –; ○○○○○○○○● – aktiv weicht ab in S9 (PM-7, 12.10.) | ❌ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Popupmenü > Popupmenü löschen | Kürzel –; ○○○○○○○○○ | Kürzel –; ○○○○○○○○● – aktiv weicht ab in S9 (PM-7, 12.10.) | ❌ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Maske | Kürzel –; ●●●●●●●●● | Kürzel –; ○●●●●●●●● – Untermenü-Kopf grau in S1 (Original: Kopf aktiv, alle Einträge grau) (PM-7, 12.10.) | ⚠️ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Maske > Alles einblenden | Kürzel –; ○●○●●●●●○ | Kürzel –; ○●○●●●●●● – aktiv weicht ab in S9 (PM-7, 12.10.) | ❌ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Maske > Alles ausblenden | Kürzel –; ○●○●●●●●○ | Kürzel –; ○●○●●●●●● – aktiv weicht ab in S9 (PM-7, 12.10.) | ❌ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Maske > Als Maske einfügen | Kürzel Strg+Alt+V; ○●○●●○●●○ | Kürzel Strg+Alt+V; ○○○○○○○○○ | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Maske > Als Maske gruppieren | Kürzel –; ○○●○○○○○○ | Kürzel –; ○○●○○○○○○ | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Maske > Auswahl einblenden | Kürzel –; ○○○○○●○○○ | Kürzel –; ○○○○○●○○○ | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Maske > Auswahl ausblenden | Kürzel –; ○○○○○●○○○ | Kürzel –; ○○○○○●○○○ | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Maske > Maske deaktivieren | Kürzel –; ○○○○○○○○○ | Kürzel Strg+Alt+H; ○○○○○○○○○ – Kürzel – ≠ Strg+Alt+H (PM-7, 12.10.) | ⚠️ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Maske > Maske löschen | Kürzel –; ○○○○○○○○○ | Kürzel –; ○○○○○○○○○ | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Selektives JPEG | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Selektives JPEG > Auswahl als JPEG-Maske speichern | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Selektives JPEG > JPEG-Maske als Auswahl wiederherstellen | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Selektives JPEG > Einstellungen | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Selektives JPEG > JPEG-Maske entfernen | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Auswahl sperren | Kürzel Strg+Alt+L; ○●●●●●●●● | Kürzel Strg+Alt+L; ○●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Auswahl auf Hintergrund reduzieren | Kürzel Strg+Alt+Umschalt+Z; ○●●●●○●●○ | Kürzel Strg+Alt+Umschalt+Z; ○●●●●●●●● – aktiv weicht ab in S6,S9 (PM-7, 12.10.) | ❌ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Mit darunter liegender auf eine Ebene reduzieren | Kürzel Strg+E; ○○○○○○●○○ | Kürzel Strg+E; ○○○○○○●○○ | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Ebenen als Hintergrund | Kürzel Strg+Alt+E; ○○○○○○○○○ | Kürzel Strg+Alt+E; ○○○○○○○○○ | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Transformieren | Kürzel –; ●●●●●●●●● | Kürzel –; ○●●●●●●●● – Untermenü-Kopf grau in S1 (Original: Kopf aktiv, alle Einträge grau) (PM-7, 12.10.) | ⚠️ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Transformieren > Frei transformieren | Kürzel Strg+T; ○●●●●●●●● | Kürzel Strg+T; ○●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Transformieren > Skalieren | Kürzel –; ○●●●●●●●● | Kürzel –; ○●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Transformieren > Neigen | Kürzel –; ○●●●●●●●● | Kürzel –; ○●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Transformieren > Verzerren | Kürzel –; ○●●●●●●●● | Kürzel –; ○●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Transformieren > Numerisch transformieren | Kürzel Strg+Umschalt+T; ○●●●●●●●● | Kürzel Strg+Umschalt+T; ○●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Transformieren > 180° drehen | Kürzel –; ○●●●●●●●● | Kürzel –; ○●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Transformieren > 90° im UZS drehen | Kürzel Strg+Umschalt+9; ○●●●●●●●● | Kürzel Strg+Umschalt+9; ○●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Transformieren > 90° gegen UZS drehen | Kürzel Strg+Umschalt+7; ○●●●●●●●● | Kürzel Strg+Umschalt+7; ○●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Transformieren > Horizontal spiegeln | Kürzel –; ○●●●●●●●● | Kürzel –; ○●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Transformieren > Vertikal spiegeln | Kürzel –; ○●●●●●●●● | Kürzel –; ○●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Transformieren > Transformationen entfernen | Kürzel –; ○●●●○○○●○ | Kürzel –; ○●●●○○●●● – aktiv weicht ab in S7,S9 (PM-7, 12.10.) | ❌ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Anordnen | Kürzel –; ●●●●●●●●● | Kürzel –; ○●●●●●●●● – Untermenü-Kopf grau in S1 (Original: Kopf aktiv, alle Einträge grau) (PM-7, 12.10.) | ⚠️ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Anordnen > In den Vordergrund | Kürzel Strg+Umschalt+Nach-oben-Taste; ○●●●●○●●● | Kürzel Strg+Umschalt+Nach-oben-Taste; ○●●●●●●●● – aktiv weicht ab in S6 (PM-7, 12.10.) | ❌ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Anordnen > Schrittweise nach vorne | Kürzel Strg+Nach-oben-Taste; ○●●●●○●●● | Kürzel Strg+Nach-oben-Taste; ○●●●●●●●● – aktiv weicht ab in S6 (PM-7, 12.10.) | ❌ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Anordnen > Schrittweise nach hinten | Kürzel Strg+Nach-unten-Taste; ○●●●●○●●● | Kürzel Strg+Nach-unten-Taste; ○●●●●●●●● – aktiv weicht ab in S6 (PM-7, 12.10.) | ❌ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Anordnen > In den Hintergrund | Kürzel Strg+Umschalt+Nach-unten-Taste; ○●●●●○●●● | Kürzel Strg+Umschalt+Nach-unten-Taste; ○●●●●●●●● – aktiv weicht ab in S6 (PM-7, 12.10.) | ❌ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Ausrichten | Kürzel –; ●●●●●●●●● | Kürzel –; ○○●○○○○○○ – Untermenü-Kopf grau in S1,S2,S4,S5,S6,S7,S8,S9 (Original: Kopf aktiv, alle Einträge grau) (PM-7, 12.10.) | ⚠️ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Ausrichten > Links | Kürzel Strg+Alt+1; ○○●○○○○○○ | Kürzel Strg+Alt+1; ○○●○○○○○○ | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Ausrichten > Vertikal zentrieren | Kürzel Strg+Alt+2; ○○●○○○○○○ | Kürzel Strg+Alt+2; ○○●○○○○○○ | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Ausrichten > Rechts | Kürzel Strg+Alt+3; ○○●○○○○○○ | Kürzel Strg+Alt+3; ○○●○○○○○○ | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Ausrichten > Oben | Kürzel Strg+Alt+4; ○○●○○○○○○ | Kürzel Strg+Alt+4; ○○●○○○○○○ | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Ausrichten > Horizontal zentrieren | Kürzel Strg+Alt+5; ○○●○○○○○○ | Kürzel Strg+Alt+5; ○○●○○○○○○ | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Ausrichten > Unten | Kürzel Strg+Alt+6; ○○●○○○○○○ | Kürzel Strg+Alt+6; ○○●○○○○○○ | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Ausrichten > Breiten verteilen | Kürzel Strg+Alt+7; ○○○○○○○○○ | Kürzel Strg+Alt+7; ○○○○○○○○○ | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Ausrichten > Höhen verteilen | Kürzel Strg+Alt+9; ○○○○○○○○○ | Kürzel Strg+Alt+9; ○○○○○○○○○ | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Pfad in Auswahlrahmen konvertieren | Kürzel –; ○●●○○○○○○ | Kürzel –; ○●●○○○○○○ | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Pfade kombinieren | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Pfade kombinieren > Verbinden | Kürzel Strg+Umschalt+J; ○●●●○○●○● | Kürzel Strg+Umschalt+J; ○●●●○○○○○ – aktiv weicht ab in S7,S9 (PM-7, 12.10.) | ❌ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Pfade kombinieren > Teilen | Kürzel Strg+Alt+J; ○○○○○○○○○ | Kürzel Strg+Alt+J; ○○○○○○○○○ | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Pfade kombinieren > Vereinigen | Kürzel Strg+Alt+U; ●●●●●●●●● | Kürzel Strg+Alt+U; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Pfade kombinieren > Überschneiden | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Pfade kombinieren > Öffnen | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Pfade kombinieren > Zuschneiden | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Pfad ändern | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Pfad ändern > Vereinfachen | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Pfad ändern > Strich erweitern | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Pfad ändern > Pfad einlassen | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Pfad ändern > Präzise Füllung | Kürzel –; ○○○●○○○○○ | Kürzel –; ○○○●○○○○○ | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Pfad ändern > Anti-Alias-Füllung | Kürzel –; ○○○●○○○○○ | Kürzel –; ○○○●○○○○○; Häkchen ·✓✓✓··✓·· | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Pfad ändern > Weiche-Kante-Füllung | Kürzel –; ○○○●○○○○○ | Kürzel –; ○○○●○○○○○ | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > An Pixeln ausrichten | Kürzel Strg+K; ○●●○○○●○○ | Kürzel Strg+K; ○●●○○○○○○ – aktiv weicht ab in S7 (PM-7, 12.10.) | ❌ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Gruppieren | Kürzel Strg+G; ○●●●●○●●● | Kürzel Strg+G; ○●●●●●●●● – aktiv weicht ab in S6 (PM-7, 12.10.) | ❌ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Gruppierung aufheben | Kürzel Strg+Umschalt+G; ○●●○○○●○○ | Kürzel Strg+Umschalt+G; ○●●○○○●○○ | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Text > Schrift | Kürzel –; ●●●●●●●●● | Kürzel –; ○○○●○○○○○ – aktiv weicht ab in S1,S2,S3,S5,S6,S7,S8,S9 (PM-7, 12.10.) | ❌ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
+| Text > Größe | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
+| Text > Größe > Andere | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
+| Text > Größe > Kleiner | Kürzel Strg+Umschalt+,; ○○○●○○○○○ | Kürzel Strg+Umschalt+,; ○○○●○○○○○ | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
+| Text > Größe > Größer | Kürzel Strg+Umschalt+.; ○○○●○○○○○ | Kürzel Strg+Umschalt+.; ○○○●○○○○○ | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
+| Text > Größe > 8 | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
+| Text > Größe > 9 | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
+| Text > Größe > 10 | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
+| Text > Größe > 12 | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●●; Häkchen ✓✓✓·✓✓✓✓✓ | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
+| Text > Größe > 14 | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
+| Text > Größe > 18 | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
+| Text > Größe > 24 | Kürzel –; ●●●●●●●●●; Häkchen ···✓····· | Kürzel –; ●●●●●●●●●; Häkchen ···✓····· | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
+| Text > Größe > 36 | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
+| Text > Größe > 48 | Kürzel –; ●●●●●●●●●; Häkchen ✓✓✓·✓✓✓✓✓ | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
+| Text > Größe > 72 | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
+| Text > Größe > 96 | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
+| Text > Größe > 120 | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
+| Text > Stil | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
+| Text > Stil > Standard | Kürzel –; ●●●●●●●●●; Häkchen ✓✓✓✓✓✓✓✓✓ | Kürzel –; ●●●●●●●●●; Häkchen ✓✓✓✓✓✓✓✓✓ | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
+| Text > Stil > Faux Fett | Kürzel Strg+B; ●●●●●●●●● | Kürzel Strg+B; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
+| Text > Stil > Faux Kursiv | Kürzel Strg+I; ●●●●●●●●● | Kürzel Strg+I; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
+| Text > Stil > Unterstrichen | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
+| Text > Ausrichten | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
+| Text > Ausrichten > Links | Kürzel Strg+Alt+Umschalt+L; ●●●●●●●●●; Häkchen ✓✓✓✓✓✓✓✓✓ | Kürzel Strg+Alt+Umschalt+L; ●●●●●●●●●; Häkchen ✓✓✓✓✓✓✓✓✓ | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
+| Text > Ausrichten > Horizontal zentrieren | Kürzel Strg+Alt+Umschalt+C; ●●●●●●●●● | Kürzel Strg+Alt+Umschalt+C; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
+| Text > Ausrichten > Rechts | Kürzel Strg+Alt+Umschalt+R; ●●●●●●●●● | Kürzel Strg+Alt+Umschalt+R; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
+| Text > Ausrichten > Blocksatz | Kürzel Strg+Alt+Umschalt+J; ●●●●●●●●● | Kürzel Strg+Alt+Umschalt+J; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
+| Text > Ausrichten > Oben | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
+| Text > Ausrichten > Vertikal zentrieren | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
+| Text > Ausrichten > Unten | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
+| Text > Ausrichten > Vertikaler Blocksatz | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
+| Text > In Pfad einfügen | Kürzel –; ○○○○○○○○○ | Kürzel –; ○○○○○○○○○ | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
+| Text > An Pfad anfügen | Kürzel Strg+Umschalt+Y; ○○○○○○○○○ | Kürzel Strg+Umschalt+Y; ○○○○○○○○○ | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
+| Text > Von Pfad lösen | Kürzel –; ○○○○○○○○○ | Kürzel –; ○○○○○○○○○ | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
+| Text > Richtung | Kürzel –; ●●●●●●●●● | Kürzel –; ○○○○○○○○○ – Untermenü-Kopf grau in S1,S2,S3,S4,S5,S6,S7,S8,S9 (Original: Kopf aktiv, alle Einträge grau) (PM-7, 12.10.) | ⚠️ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
+| Text > Richtung > Um Pfad drehen | Kürzel –; ○○○○○○○○○ | Kürzel –; ○○○○○○○○○ | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
+| Text > Richtung > Vertikal | Kürzel –; ○○○○○○○○○ | Kürzel –; ○○○○○○○○○ | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
+| Text > Richtung > Vertikal neigen | Kürzel –; ○○○○○○○○○ | Kürzel –; ○○○○○○○○○ | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
+| Text > Richtung > Horizontal neigen | Kürzel –; ○○○○○○○○○ | Kürzel –; ○○○○○○○○○ | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
+| Text > Richtung umkehren | Kürzel –; ○○○○○○○○○ | Kürzel –; ○○○○○○○○○ | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
+| Text > In Pfade konvertieren | Kürzel Strg+Umschalt+P; ○○○●○○○○○ | Kürzel Strg+Umschalt+P; ○○○●○○○○○ | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
+| Text > Rechtschreibprüfung | Kürzel Umschalt+F7; ●●●●●●●●● | Kürzel Umschalt+F7; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
+| Text > Rechtschreibprüfung einrichten | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
+| Filter > Filter wiederholen | Kürzel Strg+Alt+Umschalt+X; ○○○○○?○○○ | Kürzel Strg+Alt+Umschalt+X; ○○○○○○○○○ | ✅ | [Bild](screenshots/paritaet/b_M08_menue_filter.png) |
+| Filter > Andere | Kürzel –; ●●●●●●●●● | Kürzel –; ○●●●●●●●● – Untermenü-Kopf grau in S1 (Original: Kopf aktiv, alle Einträge grau) (PM-7, 12.10.) | ⚠️ | [Bild](screenshots/paritaet/b_M08_menue_filter.png) |
+| Filter > Andere > In Alphakanal konv. | Kürzel –; ○●●●●●●●● | Kürzel –; ○●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M08_menue_filter.png) |
+| Filter > Andere > Ränder suchen | Kürzel –; ○●●●●●●●● | Kürzel –; ○●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M08_menue_filter.png) |
+| Filter > Farbe anpassen | Kürzel –; ●●●●●●●●● | Kürzel –; ○●●●●●●●● – Untermenü-Kopf grau in S1 (Original: Kopf aktiv, alle Einträge grau) (PM-7, 12.10.) | ⚠️ | [Bild](screenshots/paritaet/b_M08_menue_filter.png) |
+| Filter > Farbe anpassen > Auto-Tonwertkorrektur | Kürzel –; ○●●●●●●●● | Kürzel –; ○●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M08_menue_filter.png) |
+| Filter > Farbe anpassen > Farbton/Sättigung | Kürzel –; ○●●●●●●●● | Kürzel –; ○●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M08_menue_filter.png) |
+| Filter > Farbe anpassen > Helligkeit/Kontrast | Kürzel –; ○●●●●●●●● | Kürzel –; ○●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M08_menue_filter.png) |
+| Filter > Farbe anpassen > Kurven | Kürzel –; ○●●●●●●●● | Kürzel –; ○●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M08_menue_filter.png) |
+| Filter > Farbe anpassen > Tonwertkorrektur | Kürzel –; ○●●●●●●●● | Kürzel –; ○●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M08_menue_filter.png) |
+| Filter > Farbe anpassen > Umkehren | Kürzel –; ○●●●●●●●● | Kürzel –; ○●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M08_menue_filter.png) |
+| Filter > Rauschen | Kürzel –; ●●●●●●●●● | Kürzel –; ○●●●●●●●● – Untermenü-Kopf grau in S1 (Original: Kopf aktiv, alle Einträge grau) (PM-7, 12.10.) | ⚠️ | [Bild](screenshots/paritaet/b_M08_menue_filter.png) |
+| Filter > Rauschen > Rauschen hinzufügen | Kürzel –; ○●●●●●●●● | Kürzel –; ○●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M08_menue_filter.png) |
+| Filter > Scharfzeichnen | Kürzel –; ●●●●●●●●● | Kürzel –; ○●●●●●●●● – Untermenü-Kopf grau in S1 (Original: Kopf aktiv, alle Einträge grau) (PM-7, 12.10.) | ⚠️ | [Bild](screenshots/paritaet/b_M08_menue_filter.png) |
+| Filter > Scharfzeichnen > Scharfzeichnen | Kürzel –; ○●●●●●●●● | Kürzel –; ○●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M08_menue_filter.png) |
+| Filter > Scharfzeichnen > Stark scharfzeichnen | Kürzel –; ○●●●●●●●● | Kürzel –; ○●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M08_menue_filter.png) |
+| Filter > Scharfzeichnen > Unscharf maskieren | Kürzel –; ○●●●●●●●● | Kürzel –; ○●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M08_menue_filter.png) |
+| Filter > Weichzeichnen | Kürzel –; ●●●●●●●●● | Kürzel –; ○●●●●●●●● – Untermenü-Kopf grau in S1 (Original: Kopf aktiv, alle Einträge grau) (PM-7, 12.10.) | ⚠️ | [Bild](screenshots/paritaet/b_M08_menue_filter.png) |
+| Filter > Weichzeichnen > Bewegungsunschärfe | Kürzel –; ○●●●●●●●● | Kürzel –; ○●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M08_menue_filter.png) |
+| Filter > Weichzeichnen > Gaußscher Weichz. | Kürzel –; ○●●●●●●●● | Kürzel –; ○●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M08_menue_filter.png) |
+| Filter > Weichzeichnen > Radiales Weichz. | Kürzel –; ○●●●●●●●● | Kürzel –; ○●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M08_menue_filter.png) |
+| Filter > Weichzeichnen > Stärker weichzeichnen | Kürzel –; ○●●●●●●●● | Kürzel –; ○●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M08_menue_filter.png) |
+| Filter > Weichzeichnen > Weichzeichnen | Kürzel –; ○●●●●●●●● | Kürzel –; ○●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M08_menue_filter.png) |
+| Filter > Weichzeichnen > Zentriertes Weichz. | Kürzel –; ○●●●●●●●● | Kürzel –; ○●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M08_menue_filter.png) |
+| Fenster > Fenster duplizieren | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M09_menue_fenster.png) |
+| Fenster > Bedienfelder ausblenden | Kürzel F4; ●●●●●●●●● | Kürzel F4; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M09_menue_fenster.png) |
+| Fenster > Erweiterungen | Kürzel –; ●●●●●●●●● | Kürzel –; ○○○○○○○○○ – Erweiterungen von Drittanbietern nicht nachgebaut; Firepixel: Kopf grau, darin „Keine Erweiterungen“ (PM-7, 12.10.) | ℹ️ | [Bild](screenshots/paritaet/b_M09_menue_fenster.png) |
+| Fenster > Erweiterungen > Kuler | Kürzel –; ●●●●●●●●● | fehlt – Erweiterung eines Drittanbieters (nicht nachgebaut) (PM-7, 12.10.) | ℹ️ | [Bild](screenshots/paritaet/b_M09_menue_fenster.png) |
+| Fenster > Erweiterungen > jQuery Mobile-Thema – anwendungsinterne Vorschau | Kürzel Strg+F10; ●●●●●●●●● | fehlt – Erweiterung eines Drittanbieters (nicht nachgebaut) (PM-7, 12.10.) | ℹ️ | [Bild](screenshots/paritaet/b_M09_menue_fenster.png) |
+| Fenster > Werkzeugleisten | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M09_menue_fenster.png) |
+| Fenster > Werkzeugleisten > Standard | Kürzel –; ●●●●●●●●●; Häkchen ✓✓✓✓✓✓✓✓✓ | Kürzel –; ●●●●●●●●●; Häkchen ✓✓✓✓✓✓✓✓✓ | ✅ | [Bild](screenshots/paritaet/b_M09_menue_fenster.png) |
+| Fenster > Werkzeuge | Kürzel Strg+F2; ●●●●●●●●●; Häkchen ✓✓✓✓✓✓✓✓✓ | Kürzel Strg+F2; ●●●●●●●●●; Häkchen ✓✓✓✓✓✓✓✓✓ | ✅ | [Bild](screenshots/paritaet/b_M09_menue_fenster.png) |
+| Fenster > Eigenschaften | Kürzel Strg+F3; ●●●●●●●●●; Häkchen ✓✓✓✓✓✓✓✓✓ | Kürzel Strg+F3; ●●●●●●●●●; Häkchen ✓✓✓✓✓✓✓✓✓ | ✅ | [Bild](screenshots/paritaet/b_M09_menue_fenster.png) |
+| Fenster > Optimieren | Kürzel F6; ●●●●●●●●● | Kürzel F6; ●●●●●●●●●; Häkchen ✓✓✓✓✓✓✓✓✓ | ✅ | [Bild](screenshots/paritaet/b_M09_menue_fenster.png) |
+| Fenster > Ebenen | Kürzel F2; ●●●●●●●●●; Häkchen ✓✓✓✓✓·✓✓· | Kürzel F2; ●●●●●●●●●; Häkchen ✓✓✓✓✓✓✓✓✓ | ✅ | [Bild](screenshots/paritaet/b_M09_menue_fenster.png) |
+| Fenster > Allgemeine Bibliothek | Kürzel F7; ●●●●●●●●● | Kürzel F7; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M09_menue_fenster.png) |
+| Fenster > CSS-Eigenschaften | Kürzel Strg+F7; ●●●●●●●●● | Kürzel Strg+F7; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M09_menue_fenster.png) |
+| Fenster > Seiten | Kürzel F5; ●●●●●●●●●; Häkchen ·····✓··✓ | Kürzel F5; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M09_menue_fenster.png) |
+| Fenster > Status | Kürzel Umschalt+F2; ●●●●●●●●● | Kürzel Umschalt+F2; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M09_menue_fenster.png) |
+| Fenster > Verlauf | Kürzel Umschalt+F10; ●●●●●●●●●; Häkchen ✓✓✓✓✓·✓✓· | Kürzel Umschalt+F10; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M09_menue_fenster.png) |
+| Fenster > Automatische Formen | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M09_menue_fenster.png) |
+| Fenster > Stile | Kürzel Strg+F11; ●●●●●●●●● | Kürzel Strg+F11; ●●●●●●●●●; Häkchen ✓✓✓✓✓✓✓✓✓ | ✅ | [Bild](screenshots/paritaet/b_M09_menue_fenster.png) |
+| Fenster > Dokumentbibliothek | Kürzel F11; ●●●●●●●●● | Kürzel F11; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M09_menue_fenster.png) |
+| Fenster > URL | Kürzel Alt+Umschalt+F10; ●●●●●●●●● | Kürzel Alt+Umschalt+F10; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M09_menue_fenster.png) |
+| Fenster > Farbmischer | Kürzel Umschalt+F9; ●●●●●●●●● | Kürzel Umschalt+F9; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M09_menue_fenster.png) |
+| Fenster > Farbfelder | Kürzel Strg+F9; ●●●●●●●●●; Häkchen ✓✓✓✓✓✓✓✓✓ | Kürzel Strg+F9; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M09_menue_fenster.png) |
+| Fenster > Info | Kürzel Alt+Umschalt+F12; ●●●●●●●●● | Kürzel Alt+Umschalt+F12; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M09_menue_fenster.png) |
+| Fenster > Verhalten | Kürzel Umschalt+F3; ●●●●●●●●● | Kürzel Umschalt+F3; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M09_menue_fenster.png) |
+| Fenster > Suchen und ersetzen | Kürzel Strg+F; ●●●●●●●●● | Kürzel Strg+F; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M09_menue_fenster.png) |
+| Fenster > Ausrichten | Kürzel –; ●●●●●●●●●; Häkchen ·····✓··✓ | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M09_menue_fenster.png) |
+| Fenster > Eigenschaften für automatische Form | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M09_menue_fenster.png) |
+| Fenster > Sonstige | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M09_menue_fenster.png) |
+| Fenster > Sonstige > Farbpalette | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M09_menue_fenster.png) |
+| Fenster > Sonstige > Bildbearbeitung | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M09_menue_fenster.png) |
+| Fenster > Sonstige > Sonderzeichen | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M09_menue_fenster.png) |
+| Fenster > Pfad | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M09_menue_fenster.png) |
+| Fenster > Symboleigenschaften | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●●; Häkchen ✓✓✓✓✓✓✓✓✓ | ✅ | [Bild](screenshots/paritaet/b_M09_menue_fenster.png) |
+| Fenster > Überlappend | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M09_menue_fenster.png) |
+| Fenster > Anordnen | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M09_menue_fenster.png) |
+| Hilfe > Firepixel-Hilfe | Kürzel F1; ●●●●●●●●● | Kürzel F1; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M10_menue_hilfe.png) |
+| Hilfe > Firepixel Support Center | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M10_menue_hilfe.png) |
+| Hilfe > Firepixel-Programm zur Produktverbesserung | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M10_menue_hilfe.png) |
+| Hilfe > Firepixel Exchange | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M10_menue_hilfe.png) |
+| Hilfe > Erweiterungen verwalten | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M10_menue_hilfe.png) |
+| Hilfe > Firepixel-Onlineforen | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M10_menue_hilfe.png) |
+| Hilfe > Über Firepixel | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M10_menue_hilfe.png) |
+| Hilfe > Produktregistrierung | Kürzel –; ○○○○○○○○○ | fehlt – nur im Original, bewusst weggelassen (Lizenz/Registrierung) (PM-7, 12.10.) | ℹ️ | [Bild](screenshots/paritaet/b_M10_menue_hilfe.png) |
+| Hilfe > Deaktivieren | Kürzel –; ○○○○○○○○○ | fehlt – nur im Original, bewusst weggelassen (Lizenz/Registrierung) (PM-7, 12.10.) | ℹ️ | [Bild](screenshots/paritaet/b_M10_menue_hilfe.png) |
+| Hilfe > Aktualisierungen | Kürzel –; ○○○○○○○○○ | fehlt – nur im Original, bewusst weggelassen (Lizenz/Registrierung) (PM-7, 12.10.) | ℹ️ | [Bild](screenshots/paritaet/b_M10_menue_hilfe.png) |
+| Filter > Wiederholen | Kürzel Strg+Alt+Umschalt+X; ?????●??? | Kürzel –; – – nur gesehen, nachdem ein anderer Agent im Original Farbton/Sättigung benutzt hatte: Original „Wiederholen: Farbton/Sättigung...“ (aktiv, Strg+Alt+Umschalt+X); Firepixel hat dafür „Filter wiederholen“ mit fester Beschriftung (`cmd-filter-repeat`), der Schrittname fehlt – im echten Fenster nach einem Filter nachprüfen (PM-7, 12.10.) | ⚠️ | [Bild](screenshots/paritaet/b_M08_menue_filter.png) |
+| Ansicht > Design | – | Kürzel – (nur Firepixel) – nur in Firepixel (PM-7, 12.10.) | ℹ️ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
+| Ansicht > Design > Normal | – | Kürzel – (nur Firepixel) – nur in Firepixel (PM-7, 12.10.) | ℹ️ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
+| Ansicht > Design > Dunkel | – | Kürzel – (nur Firepixel) – nur in Firepixel (PM-7, 12.10.) | ℹ️ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
+| Ansicht > Design > OLED | – | Kürzel – (nur Firepixel) – nur in Firepixel (PM-7, 12.10.) | ℹ️ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
+| Ansicht > Sprache | – | Kürzel – (nur Firepixel) – nur in Firepixel (PM-7, 12.10.) | ℹ️ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
+| Ansicht > Sprache > Deutsch | – | Kürzel – (nur Firepixel) – nur in Firepixel (PM-7, 12.10.) | ℹ️ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
+| Ansicht > Sprache > English | – | Kürzel – (nur Firepixel) – nur in Firepixel (PM-7, 12.10.) | ℹ️ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
+| Ansicht > Sprache > Testsprache (qps) | – | Kürzel – (nur Firepixel) – nur in Firepixel (PM-7, 12.10.) | ℹ️ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
+| Ansicht > Sprache > Sprachordner öffnen | – | Kürzel – (nur Firepixel) – nur in Firepixel (PM-7, 12.10.) | ℹ️ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
+| Auswählen > Motiv auswählen | – | Kürzel – (nur Firepixel) – nur in Firepixel (PM-7, 12.10.) | ℹ️ | [Bild](screenshots/paritaet/b_M04_menue_auswaehlen.png) |
+| Auswählen > Kante verfeinern | – | Kürzel – (nur Firepixel) – nur in Firepixel (PM-7, 12.10.) | ℹ️ | [Bild](screenshots/paritaet/b_M04_menue_auswaehlen.png) |
+| Modifizieren > Bitmap nachzeichnen | – | Kürzel – (nur Firepixel) – nur in Firepixel (PM-7, 12.10.) | ℹ️ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Filter > Farbe anpassen > Farbfüllung | – | Kürzel – (nur Firepixel) – nur in Firepixel (PM-7, 12.10.) | ℹ️ | [Bild](screenshots/paritaet/b_M08_menue_filter.png) |
+| Fenster > Arbeitsbereichlayouts | – | Kürzel – (nur Firepixel) – nur in Firepixel (PM-7, 12.10.) | ℹ️ | [Bild](screenshots/paritaet/b_M09_menue_fenster.png) |
+| Fenster > Arbeitsbereichlayouts > Erweiterter Modus | – | Kürzel – (nur Firepixel) – nur in Firepixel (PM-7, 12.10.) | ℹ️ | [Bild](screenshots/paritaet/b_M09_menue_fenster.png) |
+| Fenster > Arbeitsbereichlayouts > Symbolmodus | – | Kürzel – (nur Firepixel) – nur in Firepixel (PM-7, 12.10.) | ℹ️ | [Bild](screenshots/paritaet/b_M09_menue_fenster.png) |
+| Fenster > Arbeitsbereichlayouts > Symbolmodus mit Bedienfeldnamen | – | Kürzel – (nur Firepixel) – nur in Firepixel (PM-7, 12.10.) | ℹ️ | [Bild](screenshots/paritaet/b_M09_menue_fenster.png) |
+| Fenster > Arbeitsbereichlayouts > Aktuelles speichern | – | Kürzel – (nur Firepixel) – nur in Firepixel (PM-7, 12.10.) | ℹ️ | [Bild](screenshots/paritaet/b_M09_menue_fenster.png) |
+| Fenster > Arbeitsbereichlayouts > Standardarbeitsbereich | – | Kürzel – (nur Firepixel) – nur in Firepixel (PM-7, 12.10.) | ℹ️ | [Bild](screenshots/paritaet/b_M09_menue_fenster.png) |
+| Fenster > Erweiterungen > Keine Erweiterungen | – | Kürzel – (nur Firepixel) – nur in Firepixel (PM-7, 12.10.) | ℹ️ | [Bild](screenshots/paritaet/b_M09_menue_fenster.png) |
 
 ## 2. Dialoge (Feld für Feld)
 
@@ -546,16 +554,18 @@ Original: Dialog über das Menü geöffnet (Nachrichten an Menüleiste und Menü
 
 ## 3. Bedienfeldmenüs (≡)
 
-Original: Reiter und ≡ mit echter Maus angeklickt (Vordergrundprüfung), Menü per `MN_GETHMENU` gelesen (`re\_testdateien\ux\paritaet\panels\o_panelmenues.txt`), Lage „1 Rechteck“. Firepixel: `build_panel_menu` in derselben Lage (Sonde `paritaet_bedienfeldmenues`). Das Export-Format der Testdokumente war verschieden (Original PNG32, Firepixel GIF), deshalb sind die Palettenbefehle im Optimieren-Menü nicht vergleichbar.
+**Neu gemessen von PM-7, 12.10.:** Original mit echter Maus (Reiter und ≡ angeklickt, Vordergrundprüfung), Menü per `MN_GETHMENU` gelesen, Lage S2 (ein Rechteck), 1 Seite, 1 Status, keine Stile, keine Verlaufsschritte gewählt. Firepixel: `build_panel_menu` in derselben Lage (Sonde wie §1, HEAD `6882dac`), das Eigenschaften-≡ im echten Fenster über die Brücke. Das Export-Format der Testdokumente ist verschieden (Original PNG32, Firepixel GIF), die Palettenbefehle im Optimieren- und Farbfelder-Menü sind deshalb nicht vergleichbar. Das Original ist seit 04:30 unverändert; Firepixel hat sich in keinem Eintrag geändert.
 
 | Bedienfeld | Original | Firepixel | | Bild |
 |---|---|---|---|---|
-| alle | letzter Eintrag „Hilfe“; Gruppe schließen über das Reiter-Kontextmenü | zusätzlich „Schließen“ und „Registerkartengruppe schließen“ im ≡-Menü | ⚠️ | – |
-| Optimieren | Einträge wie Firepixel; „Farbfeld-Rückmeldung anzeigen“ **✓**; „Progressives JPEG“/„JPEG-Ränder scharfzeichnen“ **grau** (Format kein JPEG) | Rückmeldung ohne ✓; JPEG-Einträge aktiv, „JPEG-Ränder scharfzeichnen ✓“ und „Nicht verwendete Farben entfernen ✓“ bei GIF | ❌ | [Bild](screenshots/paritaet/b_P_menue_optimieren_original.png) |
-| Verlauf | „Ausgewählte Schritte wiederholen“, „Schritte kopieren“, „Als Befehl speichern…“ **grau** ohne gewählte Schritte; „Verlauf löschen“ aktiv | alle aktiv | ❌ | [Bild](screenshots/paritaet/b_P_menue_verlauf_original.png) |
-| Seiten | bei 1 Seite: „Seite löschen“ **aktiv**; „Mit Masterseite verknüpfen“, „Masterseite zurücksetzen“ grau; „Nummerierung ✓“ | „Seite löschen“ grau; sonst gleich | ⚠️ | [Bild](screenshots/paritaet/b_P_menue_seiten_original.png) |
-| Status | bei 1 Status: „Status löschen“ **aktiv**, „In Status kopieren…“ **grau**, „Auf Status verteilen“ **aktiv**; ✓ bei Autom. zuschneiden/Nummerierung/Auto-Differenz | „Status löschen“ grau, „In Status kopieren…“ aktiv, „Auf Status verteilen“ grau | ❌ | [Bild](screenshots/paritaet/b_P_menue_status_original.png) |
-| Ebenen | 27 Einträge; „Maske bearbeiten“ **grau** ohne Maske | gleiche Einträge und Zustände, nur „Maske bearbeiten“ aktiv | ⚠️ | [Bild](screenshots/paritaet/b_P_menue_ebenen_original.png) |
-| Stile | ohne gewählten Stil **grau**: Stil duplizieren…, Stile löschen, Stil umbenennen…, Stil neu definieren, Abweichungen löschen, Verknüpfung mit Stil aufheben, Stiloptionen…, Stilbibliothek speichern | alle aktiv | ❌ | [Bild](screenshots/paritaet/b_P_menue_stile_original.png) |
+| alle | letzter Eintrag „Hilfe“; Gruppe schließen über das Reiter-Kontextmenü | zusätzlich „Schließen“ und „Registerkartengruppe schließen“ im ≡-Menü (PM-7, 12.10.: unverändert) | ⚠️ | – |
+| Optimieren | „Farbfeld-Rückmeldung anzeigen“ **✓**; „Progressives JPEG“/„JPEG-Ränder scharfzeichnen“ **grau** (Format kein JPEG) | Rückmeldung ohne ✓; JPEG-Einträge aktiv, „JPEG-Ränder scharfzeichnen ✓“ und „Nicht verwendete Farben entfernen ✓“ bei GIF (PM-7, 12.10.: unverändert) | ❌ | [Bild](screenshots/paritaet/b_P_menue_optimieren_original.png) |
+| Verlauf | „Ausgewählte Schritte wiederholen“, „Schritte kopieren“, „Als Befehl speichern…“ **grau** ohne gewählte Schritte; „Verlauf löschen“ aktiv | alle aktiv (PM-7, 12.10.: unverändert) | ❌ | [Bild](screenshots/paritaet/b_P_menue_verlauf_original.png) |
+| Seiten | bei 1 Seite: „Seite löschen“ **aktiv**; „Mit Masterseite verknüpfen“, „Masterseite zurücksetzen“ grau; „Nummerierung ✓“ | „Seite löschen“ grau; sonst gleich (PM-7, 12.10.: unverändert) | ⚠️ | [Bild](screenshots/paritaet/b_P_menue_seiten_original.png) |
+| Status | bei 1 Status: „Status löschen“ **aktiv**, „In Status kopieren…“ **grau**, „Auf Status verteilen“ **aktiv**; ✓ bei Autom. zuschneiden/Nummerierung/Auto-Differenz | „Status löschen“ grau, „In Status kopieren…“ aktiv, „Auf Status verteilen“ grau (PM-7, 12.10.: unverändert) | ❌ | [Bild](screenshots/paritaet/b_P_menue_status_original.png) |
+| Ebenen | 27 Einträge; „Maske bearbeiten“ **grau** ohne Maske | gleiche Einträge und Zustände, nur „Maske bearbeiten“ aktiv (PM-7, 12.10.: unverändert) | ⚠️ | [Bild](screenshots/paritaet/b_P_menue_ebenen_original.png) |
+| Stile | ohne gewählten Stil **grau**: Stil duplizieren…, Stile löschen, Stil umbenennen…, Stil neu definieren, Abweichungen löschen, Verknüpfung mit Stil aufheben, Stiloptionen…, Stilbibliothek speichern | alle aktiv (PM-7, 12.10.: unverändert) | ❌ | [Bild](screenshots/paritaet/b_P_menue_stile_original.png) |
 | Farbfelder | Einträge, ✓ Farbwürfel, „Aktuelle Exportpalette“ grau (PNG32) | gleich (Exportpalette bei GIF aktiv) | ✅ | [Bild](screenshots/paritaet/b_P_menue_farbfelder_original.png) |
-| Ausrichten, Farbpalette (Flash-Bedienfelder) | kein ≡-Menü | – | ❔ | – |
+| Eigenschaften (neu, PM-7) | ≡ enthält nur „Hilfe“ | ≡ enthält das Inspektor-Optionsmenü: Als Stil speichern…, Alle ein, Alle aus, Zusatzmodule suchen…, Volle Höhe, Halbe Höhe, Schließen; „Hilfe“ fehlt (PM-7, 12.10.) | ⚠️ | – |
+| Ausrichten, Farbpalette (Flash-Bedienfelder) | ein Klick auf ≡ öffnet kein Windows-Menü (PM-7: kein `#32768`) | Hilfe, Schließen, Registerkartengruppe schließen | ❔ | – |
+

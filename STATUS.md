@@ -767,3 +767,72 @@ Dialog `crates\fp-ui\src\dialogs\trace.rs` mit der Logo-Nachbearbeitung von VT-3
 - **Nicht machbar bzw. offen (Befunde HG):** Lage mittig (Windows legt den Dialog an die linke obere Ecke; Verschieben nur mit `unsafe` oder neuer Abhängigkeit, vom Koordinator abgelehnt); Zusatzfelder (nativ nur `IFileDialogCustomize` = `unsafe`; im App-eigenen Dialog später); „Alle lesbaren Dateien“ nativ vorn statt an 13. Stelle (rfd wählt den ersten Filter).
 - **Tests:** neu `crates\fp-ui\tests\file_dialogs_dlg3.rs` (9: Startordner je Art, Merken, Titel/Filter/Reihenfolge de/en, Dialogbeschreibung wie für den Brücken-Dialog inkl. Merken, Schließen von außen ohne/mit unverändertem/geändertem Dokument, Strg+W-Rückfrage im selben Bild). Grün: `file_dialogs_dlg3`, `cargo check --workspace --all-targets`, `cargo test -p fp-i18n -p fp-neutral`. Scanner `i18n_keine_festen_texte`: 1 Rest in `fp-i18n\src\profile.rs:282` (fremd, nicht DLG-3). Nachprüfung im echten Fenster: `docs\NACHPRUEFUNG.md` (6 Zeilen DLG-3).
 - **Aufgeräumt:** Worktree `..\fp-dlg3` und `target-dlg3` gelöscht, eigene Testinstanzen beendet.
+
+## Phase 7 – PM-7 (P-PM4 Teil 3: Nachmessung Hauptmenüs und Bedienfeldmenüs in beiden Programmen) – Stand 12.10.2026
+- **Gemessen** (nur Messung, kein Code geändert):
+  - Hauptmenüs: jeder Eintrag in 9 Lagen (S1 ohne Auswahl, S2 Rechteck, S3 zwei Rechtecke, S4 Text, S5 Bitmap, S6 Pixelauswahl, S7 Gruppe, S8 Symbolinstanz, S9 Segment), je mit Kürzel, aktiv/grau, Häkchen, Untermenü und Beschriftung.
+  - Bedienfeldmenüs ≡ in Lage S2.
+  - **Original:**
+    - Kopie eines Testdokuments, per `fw.openDocument` geöffnet; Gruppe, Symbol und Segment per JSF ergänzt; ohne Speichern geschlossen.
+    - 7 kurze Sitzungen unter `gui-sitzung.ps1` (33–208 s).
+    - Menüs per Nachricht an die Menüleiste geöffnet, jedes Untermenü frisch geöffnet und per `MN_GETHMENU`/`GetMenuState` gelesen.
+    - S6 und die ≡-Menüs mit echter Maus (Vordergrundprüfung). Per JSF (`convertPathToMarquee`) entsteht kein wirksamer Auswahlrahmen.
+  - **Firepixel:**
+    - Sauberer Worktree `..\fp-pm7` von HEAD `6882dac`.
+    - Menüsonde nach dem Muster von `ux_b_paritaet.rs` mit denselben 9 Lagen, nur für die Messung, nicht eingecheckt.
+    - Befehle-Menü im frischen Profil und Eigenschaften-≡ in einer eigenen Instanz (eigenes APPDATA/LOCALAPPDATA, `--mcp`, sichtbar unten links, nicht aktiviert), echtes Fenster, Brücke.
+- **Ergebnis §1 Hauptmenüs:** **276 ✅ / 20 ⚠️ / 25 ❌ / 29 ℹ️** (350 Zeilen). Vorher waren es 311 / 5 / 5 / 29 in 5 Lagen; der Rückgang kommt fast ganz von den neuen Lagen und Gesichtspunkten.
+  - Erledigt bzw. gleich:
+    - Befehle-Menü im frischen Profil gefüllt.
+    - „Mit darunter liegender reduzieren“ gleich in allen 9 Lagen: aktiv über einer Bitmap, der UX-B-Fall kam von der Stapelfolge.
+    - Kürzel „Nach-oben-Taste“, „Löschen-Taste“ und „Strg+ü“ gleich.
+    - „Rückgängig/Wiederholen: <Schritt>“ gleich.
+    - Browser-Vorschau-Einträge gleich.
+  - Wichtigste Abweichungen:
+    1. Bei **Pixelauswahl** sperrt das Original 12 Objektbefehle: Duplizieren, Klonen, Als Vektoren kopieren, Gesamtauswahl treffen, Auswahl animieren, In Symbol konvertieren, Auswahl auf Hintergrund reduzieren, Anordnen ×4, Gruppieren. In Firepixel sind sie aktiv.
+    2. **Segment/Gruppe:** 7 Einträge weichen ab, darunter „Popupmenü bearbeiten/löschen“ ohne Popupmenü aktiv sowie „Verbinden“ und „An Pixeln ausrichten“ bei der Gruppe im Original aktiv.
+    3. **Untermenü-Köpfe** bleiben im Original immer aktiv (11 ⚠️).
+    4. **Text ▸ Schrift:** Familien nicht flach, ohne Text grau, kein ✓.
+    5. **Befehle-Menü:** 5 mitgelieferte Befehle fehlen, die Namen sind eigene, „Warnmeldungen zurücksetzen“ steht doppelt.
+    6. „Bridge durchsuchen“ ist aktiv.
+    7. Kürzeltexte AKUT/ZIRKUMFLEX.
+    8. „Filter wiederholen“ zeigt keinen Filternamen.
+- **Ergebnis §3 Bedienfeldmenüs:** **1 ✅ / 4 ⚠️ / 4 ❌ / 1 ❔** (10 Zeilen, neu: Eigenschaften-≡). Alle UX-B-Punkte unverändert offen: Verlauf, Stile, Status, Seiten, Ebenen „Maske bearbeiten“, Optimieren und „Schließen“ im ≡.
+- **Befunde:** neu in `docs\BEFUNDE.md`, je „(von PM-7 …)“:
+  - EB: 1 (Freigabe S6/S7/S9)
+  - I18N-MENUE: 6 und ein Hinweis
+  - I18N-BEDIENFELDER: 1 (Nachmessung und Eigenschaften-≡)
+- **Bild:** `docs\screenshots\paritaet\pm7_M07_befehle_firepixel.png`. Die übrigen Abweichungen sind in den vorhandenen `b_M*`/`b_P_*`-Bildern zu sehen.
+- **Vorfälle im Original:**
+  - Ein ≡-Lauf traf nach dem Klick auf Ausrichten wegen der geänderten Bedienfeldhöhen falsche Stellen. Ausgelöst wurde nur die Meldung „Verknüpfungsfunktion braucht eine Masterseite“ (OK) und ein weiterer Dialog (Abbrechen); am Dokument hat sich nichts geändert.
+  - Die rechte Bedienfeldspalte ist seitdem anders aufgeteilt (obere Gruppe höher). Der vordere Reiter ist wieder Verlauf.
+  - In einem abgebrochenen Lauf hat der `finally`-Zweig trotz fremder Meldung JSF ausgeführt. Der Runner schloss dabei eine fremde Meldung „interner Fehler“. Das Skript ist korrigiert.
+  - JSF-Läufe liefen wie bei PM-5 teils doppelt, deshalb waren alle Schritte wiederholbar angelegt.
+- **Nicht gemessen:**
+  - Zustände der Befehle-Einträge je Lage in Firepixel (nur Aufbau und Namen)
+  - Ausrichten/Farbpalette ≡ (Flash-Bedienfelder, kein Windows-Menü)
+  - „Filter wiederholen“ in Firepixel nach einem Filter
+  - Herkunft von „Bitmap-Auswahl wiederherstellen/löschen“, die im Original in S6/S9 aktiv sind (nicht gewertet)
+- **Paketvorschläge** (nach Alltagswichtigkeit):
+  - **MN-2 Menüfreigabe und Menüaufbau** (fp-engine `requires`/`available`, `menu.rs`):
+    1. Freigabe bei Pixelauswahl (12)
+    2. Untermenü-Köpfe immer aktiv (11)
+    3. Text ▸ Schrift wie im Original: auch ohne Text aktiv (setzt die Vorgabe), ✓ aktuelle Schrift, zuletzt benutzte oben, Familien flach mit Bildlauf
+    4. Freigabe bei Segment und Gruppe (7)
+  - **MN-3 Bedienfeldmenüs ≡** (`build_panel_menu` bzw. Zustände der `panel.*`-Befehle):
+    - Verlauf ohne gewählte Schritte grau
+    - Stile ohne gewählten Stil grau
+    - Status/Seiten bei einem Element
+    - Ebenen „Maske bearbeiten“
+    - Optimieren: ✓ Farbfeld-Rückmeldung, JPEG-Einträge grau außer bei JPEG
+    - „Schließen/Registerkartengruppe schließen“ aus dem ≡ ins Reiter-Kontextmenü
+    - Eigenschaften-≡
+  - **MN-4 (klein) Beschriftungen:**
+    - Befehle-Menü: fehlende Befehle, Namen 1:1, doppeltes „Warnmeldungen zurücksetzen“
+    - Kürzeltexte AKUT/ZIRKUMFLEX, „Maske deaktivieren“ ohne Kürzel
+    - „Wiederholen: <Filter>“
+    - Entscheidung zu „Bridge durchsuchen“
+- **Aufgeräumt:**
+  - Firepixel-Instanz beendet.
+  - Testdokument im Original ohne Speichern geschlossen; am Ende keine Dialoge und Menüs offen (`dialog.ps1`).
+  - Worktree `..\fp-pm7` und `target-pm7` gelöscht.
