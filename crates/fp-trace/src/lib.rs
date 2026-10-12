@@ -65,9 +65,12 @@ pub const DEFAULT_MAX_PIXELS: u64 = 4_000_000;
 /// | `Logo` | Farbe | 16 | 6 Bit | 16 | 4 px | Spline | 60° | stapeln |
 /// | `Schwarzweiss` | Schwarzweiß (Schwelle 128) | – | – | – | 4 px | Spline | 60° | – |
 /// | `Illustration` | Farbe | 32 | 7 Bit | 16 | 4 px | Spline | 60° | stapeln |
-/// | `Foto` | Farbe | 64 | 8 Bit | 48 | 10 px | Spline | 180° | stapeln |
+/// | `Foto` | Farbe | 64 | 6 Bit | 16 | 12 px | Spline (Segment 8) | 180° | stapeln |
 ///
 /// Logo-Nachbearbeitung ([`RefineOptions`]) nur bei `Logo` an (Schalter wie [`RefineOptions::logo`]).
+///
+/// Foto (VT-4): feinere Farbstufen (Ebenenabstand 16 statt 48) gegen den Plakat-Eindruck, 6 Bit
+/// Farbgenauigkeit und größere Flecken/Segmente gegen unruhige Konturen bei Bildrauschen.
 ///
 /// Gemeinsam: Segmentlänge 4, 10 Glättungsdurchläufe, Spleißwinkel 45°, 2 Nachkommastellen,
 /// Transparenz ignorieren (Alpha < 128), höchstens 4 Megapixel (größere herunterskalieren).
@@ -83,7 +86,7 @@ pub enum Preset {
     /// Viele Farben, Stapelebenen (Grafiken, Poster).
     #[serde(rename = "illustration")]
     Illustration,
-    /// Fotos: volle Farbtiefe, gröbere Flecken, weiche Kurven.
+    /// Fotos: feine Farbstufen (Verläufe als viele Farbflächen), gröbere Flecken, weiche Kurven.
     #[serde(rename = "photo", alias = "foto")]
     Foto,
 }
@@ -227,7 +230,7 @@ impl TraceOptions {
             Preset::Logo => TraceOptions { colors: 16, color_precision: 6, refine: RefineOptions::logo(), ..base },
             Preset::Schwarzweiss => TraceOptions { color_mode: ColorMode::BlackWhite, ..base },
             Preset::Illustration => TraceOptions { colors: 32, ..base },
-            Preset::Foto => TraceOptions { colors: 64, color_precision: 8, layer_difference: 48, filter_speckle: 10, corner_threshold: 180.0, ..base },
+            Preset::Foto => TraceOptions { colors: 64, color_precision: 6, layer_difference: 16, filter_speckle: 12, corner_threshold: 180.0, length_threshold: 8.0, ..base },
         }
     }
 
@@ -583,7 +586,37 @@ fn trace_color(img: &RgbaImage, o: &TraceOptions, map: &Mapper, cancel: &AtomicB
         }
         out.push(TracedPath { contours, color: Rgba8::new(c.r, c.g, c.b, 255), pixels: cluster.area() });
     }
+    if !cutout && !any_transparent {
+        keep_image_corners(&mut out, map);
+    }
     Ok(out)
+}
+
+/// Bildkante (Stapeln, deckendes Bild): Die unterste Fläche reicht bis an die Bildkante, ihre Kurve
+/// rundet die Bildecken aber ab (bei „Foto“ gibt es wegen Ecke 180° gar keine Ecken), sodass dort
+/// Lücken entstehen. Die unterste Fläche wird deshalb zum exakten Bildrechteck (alle anderen
+/// Flächen liegen darüber, das Bild ist vollständig gedeckt); reicht sie nicht an alle vier Kanten,
+/// kommt ein Rechteck in ihrer Farbe darunter.
+fn keep_image_corners(out: &mut Vec<TracedPath>, map: &Mapper) {
+    let Some(bottom) = out.first() else { return };
+    let rect = BezierContour::new(vec![BezierNode::corner(map.map(0.0, 0.0)), BezierNode::corner(map.map(map.w, 0.0)), BezierNode::corner(map.map(map.w, map.h)), BezierNode::corner(map.map(0.0, map.h))], true);
+    let (lo, hi) = (map.map(0.0, 0.0), map.map(map.w, map.h));
+    let (mut l, mut t, mut r, mut b) = (f32::MAX, f32::MAX, f32::MIN, f32::MIN);
+    for n in bottom.contours.iter().flat_map(|c| c.nodes.iter()) {
+        l = l.min(n.pt.x);
+        t = t.min(n.pt.y);
+        r = r.max(n.pt.x);
+        b = b.max(n.pt.y);
+    }
+    // „reicht an die Kante“: höchstens 2 Bildpixel Abstand
+    let (tx, ty) = (2.0 * map.sx as f32, 2.0 * map.sy as f32);
+    let spans = l <= lo.x + tx && t <= lo.y + ty && r >= hi.x - tx && b >= hi.y - ty;
+    if spans {
+        out[0].contours = vec![rect];
+    } else {
+        let color = bottom.color;
+        out.insert(0, TracedPath { contours: vec![rect], color, pixels: 0 });
+    }
 }
 
 /// Clusterbildung Schritt für Schritt mit Abbruch und Fortschritt im Bereich `span`.
