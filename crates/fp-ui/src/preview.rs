@@ -70,7 +70,8 @@ pub fn tile_settings(current: &OptimizeSettings, mode: PreviewMode) -> Vec<Optim
 /// Berechnet (oder holt) die Vorschau des aktiven Dokuments mit `s`.
 pub fn tile(ctx: &egui::Context, st: &AppState, s: &OptimizeSettings) -> Option<PreviewTile> {
     let d = st.session.active()?;
-    let key = format!("{}-{}-{}-{}-{:?}", d.id.0, d.generation, d.page, d.frame, s);
+    // Sprachstand im Schlüssel: die Beschriftung wechselt mit der Sprache
+    let key = format!("{}-{}-{}-{}-{}-{:?}", d.id.0, d.generation, d.page, d.frame, fp_i18n::generation(), s);
     let c = cache(ctx);
     if let Ok(g) = c.lock()
         && let Some(t) = g.get(&key)
@@ -89,13 +90,13 @@ pub fn tile(ctx: &egui::Context, st: &AppState, s: &OptimizeSettings) -> Option<
                     let size = [pv.width(), pv.height()];
                     let tex = ctx.load_texture(format!("fp-preview-{key}"), crate::canvas::render::to_color_image(&pv), egui::TextureOptions::NEAREST);
                     let secs = fp_export::preview::download_seconds(ex.bytes.len(), 56_000);
-                    let colors = if ex.colors > 0 { format!("  {} Farben", ex.colors) } else { String::new() };
-                    PreviewTile { texture: Some(tex), caption: format!("{label}  {}  {secs} s bei 56 kbit/s{colors}", fp_export::preview::format_size(ex.bytes.len())), size }
+                    let colors = if ex.colors > 0 { format!("  {}", fp_i18n::tr!("ui-preview-colors", n = ex.colors)) } else { String::new() };
+                    PreviewTile { texture: Some(tex), caption: format!("{}{colors}", fp_i18n::tr!("ui-preview-caption", label = label.as_str(), size = fp_export::preview::format_size(ex.bytes.len()), secs = secs.to_string())), size }
                 }
                 Err(e) => PreviewTile { texture: None, caption: format!("{label}: {e}"), size: [0, 0] },
             }
         }
-        Err(e) => PreviewTile { texture: None, caption: format!("Vorschau nicht möglich: {e}"), size: [0, 0] },
+        Err(e) => PreviewTile { texture: None, caption: fp_i18n::tr!("ui-preview-failed", error = e.to_string()), size: [0, 0] },
     };
     if let Ok(mut g) = c.lock() {
         // alte Generationen desselben Dokuments verwerfen
@@ -142,7 +143,7 @@ pub fn show(ui: &mut Ui, st: &mut AppState, rect: Rect, original: &mut dyn FnMut
             let mut child = ui.new_child(egui::UiBuilder::new().max_rect(body));
             child.set_clip_rect(body);
             original(&mut child, st, body);
-            "Original".to_string()
+            fp_i18n::t("ui-preview-original")
         } else {
             match tiles.next().and_then(|s| tile(&ctx, st, s)) {
                 Some(t) => {

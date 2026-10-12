@@ -1,6 +1,7 @@
 //! Firepixel: Grafik- und Webdesign-Programm.
 //!
-//! Aufruf: `firepixel [--design=normal|dunkel|oled] [--mcp[=PORT]] [Datei …]`
+//! Aufruf: `firepixel [--design=normal|dunkel|oled] [--mcp[=PORT]] [--help] [Datei …]`
+//! (Hilfetext: Schlüssel `ui-cli-help` in `crates\fp-i18n\locales\<sprache>\oberflaeche.ftl`)
 //!
 //! * `--design=…` überschreibt das gespeicherte Design (z. B. für Bildschirmfotos).
 //! * `--mcp[=PORT]` startet den KI-Steuerkanal (MCP über HTTP, nur 127.0.0.1, mit Token; siehe
@@ -14,6 +15,11 @@ fn main() -> eframe::Result {
     let mut files = Vec::new();
     for a in std::env::args_os().skip(1) {
         let s = a.to_string_lossy().to_string();
+        if matches!(s.as_str(), "--help" | "-h" | "/?") {
+            // Hilfetext in der Sprache der Oberfläche (ohne Konsole nur bei umgeleiteter Ausgabe sichtbar)
+            println!("{}", fp_ui::cli_help());
+            return Ok(());
+        }
         if let Some(d) = s.strip_prefix("--design=") {
             design = match d.to_lowercase().as_str() {
                 "normal" => Some(ThemeKind::Normal),

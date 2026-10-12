@@ -83,10 +83,10 @@ pub fn visible_center(st: &AppState) -> Option<(f64, f64)> {
 /// Fremden Text als Textobjekt einfügen: 12 pt, mittig im sichtbaren Teil, ausgewählt, ein
 /// Verlaufsschritt (wie im Original).
 pub fn paste_text(st: &mut AppState, text: &str) -> Result<(), String> {
-    let (cx, cy) = visible_center(st).ok_or("kein Dokument geöffnet")?;
+    let (cx, cy) = visible_center(st).ok_or_else(|| fp_i18n::t("ui-clip-no-document"))?;
     let text = text.replace("\r\n", "\r").replace('\n', "\r");
     st.session
-        .run_group("Einfügen", |s| {
+        .run_group(&fp_i18n::t("ui-history-paste"), |s| {
             s.execute("draw.text", json!({ "text": text, "anchor": [cx, cy], "size": 12 }))?;
             // Grenzen des neuen Texts auf die Mitte schieben
             let b = s.active().and_then(|d| {

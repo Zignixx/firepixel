@@ -69,20 +69,20 @@ pub fn frame(ctx: &egui::Context, st: &mut AppState) {
         && let Some(b) = g.take()
     {
         b.stop();
-        st.set_status("KI-Steuerkanal beendet", ctx.input(|i| i.time));
+        st.set_status(fp_i18n::t("ui-mcp-stopped"), ctx.input(|i| i.time));
     }
     if REQUESTED.swap(false, Ordering::SeqCst) && g.is_none() {
         let port = PORT.load(Ordering::SeqCst);
         match UiBridge::start(ctx, if port == 0 { fp_mcp::DEFAULT_PORT } else { port }, true) {
             Ok(b) => {
-                let msg = format!("KI-Steuerkanal aktiv: {} (Token in {})", b.url().unwrap_or_default(), fp_mcp::bridge_token_file().display());
+                let msg = fp_i18n::tr!("ui-mcp-active", url = b.url().unwrap_or_default(), file = fp_mcp::bridge_token_file().display().to_string());
                 log::info!("{msg}");
                 eprintln!("{msg}");
                 st.set_status(msg, ctx.input(|i| i.time));
                 *g = Some(b);
             }
             Err(e) => {
-                let msg = format!("KI-Steuerkanal konnte nicht starten: {e}");
+                let msg = fp_i18n::tr!("ui-mcp-failed", error = e.to_string());
                 log::warn!("{msg}");
                 eprintln!("{msg}");
                 st.set_status(msg, ctx.input(|i| i.time));

@@ -66,15 +66,15 @@ pub fn show_document_area(ui: &mut Ui, st: &mut AppState) {
 /// bei einem Fenster) gesperrt.
 pub fn tab_menu(id: fp_engine::DocId, _docs: usize) -> Vec<crate::menu::Node> {
     use crate::menu::{ItemAction, Node};
-    let item = |label: &str, action: ItemAction, enabled: bool| Node::Item { label: label.into(), shortcut: None, action, enabled, checked: None };
+    let item = |key: &str, action: ItemAction, enabled: bool| Node::Item { label: fp_i18n::t(key), shortcut: None, action, enabled, checked: None };
     vec![
-        item("Alles hier zusammenführen", ItemAction::None, false),
-        item("Schließen", ItemAction::Ui(Action::CloseDocument(id)), true),
-        item("Alle schließen", ItemAction::Command("file.closeAll".into()), true),
-        item("In neues Fenster verschieben", ItemAction::None, false),
+        item("ui-tab-merge-all", ItemAction::None, false),
+        item("ui-tab-close", ItemAction::Ui(Action::CloseDocument(id)), true),
+        item("ui-tab-close-all", ItemAction::Command("file.closeAll".into()), true),
+        item("ui-tab-move-to-new-window", ItemAction::None, false),
         Node::Separator,
-        item("Neues Dokument", ItemAction::Command("file.new".into()), true),
-        item("Dokument öffnen", ItemAction::Command("file.open".into()), true),
+        item("ui-tab-new-document", ItemAction::Command("file.new".into()), true),
+        item("ui-tab-open-document", ItemAction::Command("file.open".into()), true),
     ]
 }
 
@@ -146,7 +146,7 @@ fn doc_tabs(ui: &mut Ui, st: &mut AppState, rect: Rect) {
         let xresp = ui.interact(xr, Id::new(("doc-tab-x", id.0)), Sense::click());
         let xc = if xresp.hovered() { c.icon_red } else { c.text_weak };
         icons::paint(ui.painter(), xr.shrink(1.0), Icon::Close, &IconStyle::mono(xc, c.frame_bg));
-        if xresp.on_hover_text("Schließen").clicked() {
+        if xresp.on_hover_text(fp_i18n::t("ui-tab-close")).clicked() {
             st.push(Action::CloseDocument(*id));
         } else if resp.clicked() {
             st.push(Action::Activate(*id));
@@ -161,7 +161,7 @@ fn doc_tabs(ui: &mut Ui, st: &mut AppState, rect: Rect) {
     }
     if overflow {
         let mr = Rect::from_min_size(pos2(rect.right() - more_w - 2.0, rect.top() + 3.0), vec2(more_w, rect.height() - 5.0));
-        let mresp = ui.interact(mr, Id::new("doc-tabs-more"), Sense::click()).on_hover_text("Weitere Dokumente");
+        let mresp = ui.interact(mr, Id::new("doc-tabs-more"), Sense::click()).on_hover_text(fp_i18n::t("ui-tab-more"));
         if mresp.hovered() {
             ui.painter().rect_filled(mr, 0.0, c.tab_hover_bg);
         }
@@ -197,7 +197,7 @@ fn drop_carry(st: &mut AppState, c: &Carry, at: Point) {
     let old = std::mem::take(&mut st.session.clipboard);
     st.session.clipboard.elements = c.elements.clone();
     let (dx, dy) = (at.x - c.grab.x, at.y - c.grab.y);
-    let r = st.session.run_group("Objekte einfügen", |s| {
+    let r = st.session.run_group(&fp_i18n::t("ui-history-paste-objects"), |s| {
         s.execute("edit.paste", json!({}))?;
         if dx != 0.0 || dy != 0.0 {
             s.execute("edit.move", json!({"dx": dx, "dy": dy}))?;
@@ -219,18 +219,20 @@ fn view_bar_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
     let Some(d) = st.session.active() else { return };
     let mode = d.view.preview_mode;
     let modes = [
-        (PreviewMode::Original, Icon::ViewOriginal, "Original", "Bearbeitbares Original"),
-        (PreviewMode::Preview, Icon::ViewPreview, "Vorschau", "Bildvorschau"),
-        (PreviewMode::TwoUp, Icon::View2Up, "2-fach", "Zweifach-Vorschau"),
-        (PreviewMode::FourUp, Icon::View4Up, "4-fach", "Vierfach-Vorschau"),
+        (PreviewMode::Original, Icon::ViewOriginal, "ui-view-original"),
+        (PreviewMode::Preview, Icon::ViewPreview, "ui-view-preview"),
+        (PreviewMode::TwoUp, Icon::View2Up, "ui-view-2up"),
+        (PreviewMode::FourUp, Icon::View4Up, "ui-view-4up"),
     ];
     let mut x = rect.left() + 4.0;
     let font = theme.ui_font();
     let mut chosen = None;
     // rechter Rand für die Ansichtsreiter: Platz für den Seitenknopf lassen (schmale Leinwand)
     let modes_right = rect.right() - 36.0;
-    for (i, (m, icon, label, tip)) in modes.iter().enumerate() {
-        let w = widgets::text_width(ui, label, &font) + 26.0;
+    for (i, (m, icon, key)) in modes.iter().enumerate() {
+        let label = fp_i18n::t(key);
+        let tip = fp_i18n::t(&format!("{key}.tooltip"));
+        let w = widgets::text_width(ui, &label, &font) + 26.0;
         if x + w > modes_right {
             break;
         }
@@ -239,8 +241,8 @@ fn view_bar_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
         let selected = mode == *m;
         widgets::button_frame(ui.painter(), r, &resp, ButtonLook { selected, enabled: true, group: Some(ToolGroup::View) }, &theme);
         icons::paint(ui.painter(), Rect::from_center_size(pos2(r.left() + 11.0, r.center().y), vec2(14.0, 14.0)), *icon, &IconStyle::new(&theme, Some(ToolGroup::View), true));
-        ui.painter().text(pos2(r.left() + 20.0, r.center().y), Align2::LEFT_CENTER, *label, font.clone(), c.text);
-        if resp.on_hover_text(*tip).clicked() {
+        ui.painter().text(pos2(r.left() + 20.0, r.center().y), Align2::LEFT_CENTER, label, font.clone(), c.text);
+        if resp.on_hover_text(tip).clicked() {
             chosen = Some(*m);
         }
         x += w + 2.0;
@@ -258,7 +260,7 @@ fn view_bar_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
     }
     // Seitenauswahl rechts
     let Some(d) = st.session.active() else { return };
-    let names: Vec<String> = d.doc.pages.iter().enumerate().map(|(i, p)| if p.display_name().is_empty() { format!("Seite {}", i + 1) } else { p.display_name().to_string() }).collect();
+    let names: Vec<String> = d.doc.pages.iter().enumerate().map(|(i, p)| if p.display_name().is_empty() { fp_i18n::tr!("ui-page-default-name", n = i + 1) } else { p.display_name().to_string() }).collect();
     let page = d.page;
     let nav = Rect::from_center_size(pos2(rect.right() - 20.0, rect.center().y), vec2(18.0, 18.0));
     // Seitenauswahl rechts, bei schmaler Leinwand nach links begrenzt bzw. ausgeblendet (nichts überlappt)
@@ -282,7 +284,7 @@ fn view_bar_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
     let resp = ui.interact(nav, Id::new("page-nav"), Sense::click());
     widgets::button_frame(ui.painter(), nav, &resp, ButtonLook { selected: false, enabled: names.len() > 1, group: Some(ToolGroup::View) }, &theme);
     icons::paint(ui.painter(), nav.shrink(2.0), Icon::PageNavigate, &IconStyle::new(&theme, Some(ToolGroup::View), names.len() > 1));
-    if resp.on_hover_text("Seitenauswahl ändern").clicked() && names.len() > 1 {
+    if resp.on_hover_text(fp_i18n::t("ui-page-nav")).clicked() && names.len() > 1 {
         st.push(Action::SetPage((page + 1) % names.len()));
     }
 }
@@ -305,7 +307,7 @@ fn start_page(ui: &mut Ui, st: &mut AppState, rect: Rect) {
     ui.painter().text(pos2(head.left() + 56.0, head.center().y), Align2::LEFT_CENTER, "Firepixel", theme.bold(20.0), c.app_bar_text);
     let col_w = (panel.width() - 48.0) / 2.0;
     let mut child = ui.new_child(egui::UiBuilder::new().max_rect(Rect::from_min_size(pos2(panel.left() + 16.0, head.bottom() + 14.0), vec2(col_w, panel.height() - 70.0))).layout(egui::Layout::top_down(egui::Align::Min)));
-    child.label(egui::RichText::new("Zuletzt verwendete Datei öffnen").font(theme.bold(theme.fonts.ui)));
+    child.label(egui::RichText::new(fp_i18n::t("ui-start-recent")).font(theme.bold(theme.fonts.ui)));
     child.add_space(6.0);
     let recent: Vec<std::path::PathBuf> = st.session.prefs.recent_files.iter().take(8).cloned().collect();
     for p in recent {
@@ -314,13 +316,13 @@ fn start_page(ui: &mut Ui, st: &mut AppState, rect: Rect) {
             st.push(Action::OpenPath(p));
         }
     }
-    if child.link("Öffnen...").clicked() {
+    if child.link(fp_i18n::t("ui-start-open")).clicked() {
         st.run("file.open", json!({}));
     }
     let mut child2 = ui.new_child(egui::UiBuilder::new().max_rect(Rect::from_min_size(pos2(panel.left() + 32.0 + col_w, head.bottom() + 14.0), vec2(col_w, panel.height() - 70.0))).layout(egui::Layout::top_down(egui::Align::Min)));
-    child2.label(egui::RichText::new("Neu erstellen").font(theme.bold(theme.fonts.ui)));
+    child2.label(egui::RichText::new(fp_i18n::t("ui-start-create-new")).font(theme.bold(theme.fonts.ui)));
     child2.add_space(6.0);
-    if child2.link("Firepixel-Dokument (FW-PNG)").clicked() {
+    if child2.link(fp_i18n::t("ui-start-new-document")).clicked() {
         st.run("file.new", json!({}));
     }
 }
@@ -671,7 +673,7 @@ pub fn ui_request(st: &mut AppState, req: &fp_engine::tools::Invocation) {
         }
         // Export-Dialog wie im Original (der Dialog übernimmt den Bereich aus `export_area`)
         if !crate::dialogs::open_for_command(st, "file.export") {
-            st.push(Action::Status("Exportbereich festgelegt.".into()));
+            st.push(Action::Status(fp_i18n::t("ui-export-area-set")));
         }
     }
 }
@@ -1009,8 +1011,16 @@ fn overlays(ui: &Ui, st: &mut AppState, painter: &egui::Painter, area: Rect, vie
         _ => None,
     });
     let mut frames: Vec<[Point; 4]> = Vec::new();
+    // Text im Editor: dessen Rahmen zeichnet der Editor aus dem aktuellen Satz (wächst live mit)
+    let editing_target = feedback.iter().find_map(|o| match o {
+        Overlay::TextEdit(v) => v.target,
+        _ => None,
+    });
     if view.show_edges {
         for eid in &d.selection.elements {
+            if editing_target == Some(eid.0) {
+                continue;
+            }
             let Some(e) = fp_engine::docops::element_on_page(&d.doc, d.page, *eid) else { continue };
             let Some(b) = fp_engine::docops::element_bounds(&d.doc, &e) else { continue };
             let corners = match moving.as_ref().filter(|(ids, _)| ids.contains(&eid.0)) {
@@ -1445,30 +1455,30 @@ fn scrollbars(ui: &mut Ui, st: &mut AppState, area: Rect, view: &fp_engine::View
 fn selection_info(st: &AppState) -> String {
     let Some(d) = st.session.active() else { return String::new() };
     if d.bitmap_mode {
-        return "Bitmapmodus".into();
+        return fp_i18n::t("ui-sel-bitmap-mode");
     }
     let n = d.selection.elements.len();
     if n == 0 {
         // wie im Original: Exportformat der Optimieren-Einstellung der Seite („GIF (Dokument)“)
         let s = fp_export::doc_export::page_settings(&d.doc, d.page);
-        return format!("{} (Dokument)", s.format.display_name());
+        return fp_i18n::tr!("ui-sel-document", format = s.format.display_name().to_string());
     }
     if n > 1 {
-        return format!("{n} Objekte");
+        return fp_i18n::tr!("ui-sel-objects", n = n);
     }
-    let Some(e) = d.selection.elements.first().and_then(|id| fp_engine::docops::element_on_page(&d.doc, d.page, *id)) else { return "Objekt".into() };
+    let Some(e) = d.selection.elements.first().and_then(|id| fp_engine::docops::element_on_page(&d.doc, d.page, *id)) else { return fp_i18n::t("ui-sel-object") };
     use fp_model::ElementKind as K;
-    match &e.kind {
-        K::Bitmap(_) => "Bitmap".into(),
-        K::Path(p) if p.primitive.is_some() => "Rechteck".into(),
-        K::Path(_) => "Pfad".into(),
-        K::Group(_) => "Gruppieren".into(),
-        K::CompoundShape(_) => "Zusammengesetzte Form".into(),
-        K::Text(_) => "Text".into(),
-        K::Instance(_) => "Symbol".into(),
-        K::WebObject(_) => "Segment".into(),
-        _ => "Objekt".into(),
-    }
+    fp_i18n::t(match &e.kind {
+        K::Bitmap(_) => "ui-sel-bitmap",
+        K::Path(p) if p.primitive.is_some() => "ui-sel-rectangle",
+        K::Path(_) => "ui-sel-path",
+        K::Group(_) => "ui-sel-group",
+        K::CompoundShape(_) => "ui-sel-compound",
+        K::Text(_) => "ui-sel-text",
+        K::Instance(_) => "ui-sel-symbol",
+        K::WebObject(_) => "ui-sel-slice",
+        _ => "ui-sel-object",
+    })
 }
 
 fn footer_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
@@ -1499,15 +1509,15 @@ fn footer_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
     // Anzeige wie im Original mit `%4.f%%` (rechtsbündig vierstellig, z. B. „ 100%“)
     p.text(pos2(zr.left() + 6.0, zr.center().y), Align2::LEFT_CENTER, format!("{:4.0}%", zoom * 100.0), theme.small_font(), c.text);
     widgets::drop_arrow(p, Rect::from_center_size(pos2(zr.right() - 9.0, zr.center().y + 2.0), vec2(8.0, 8.0)), c.text);
-    let zresp = ui.interact(zr, Id::new("footer-zoom"), Sense::click()).on_hover_text("Vergrößerung");
+    let zresp = ui.interact(zr, Id::new("footer-zoom"), Sense::click()).on_hover_text(fp_i18n::t("ui-zoom"));
     let nodes: Vec<crate::menu::Node> = ZOOM_STEPS
         .iter()
         .filter(|z| ![0.16, 0.33, 6.0].contains(*z))
         .map(|z| crate::menu::Node::Item { label: format!("{:.0}%", if *z == 0.0625 { 6.0 } else if *z == 0.125 { 12.0 } else { z * 100.0 }), shortcut: None, action: crate::menu::ItemAction::Ui(Action::SetZoom(*z)), enabled: true, checked: Some(zoom == *z) })
         .chain([
             crate::menu::Node::Separator,
-            crate::menu::Node::Item { label: "Auswahl anpassen".into(), shortcut: None, action: crate::menu::ItemAction::Command("view.fitSelection".into()), enabled: st.session.is_available("view.fitSelection"), checked: None },
-            crate::menu::Node::Item { label: "Alles anpassen".into(), shortcut: None, action: crate::menu::ItemAction::Command("view.fitAll".into()), enabled: true, checked: None },
+            crate::menu::Node::Item { label: fp_i18n::t("ui-zoom-fit-selection"), shortcut: None, action: crate::menu::ItemAction::Command("view.fitSelection".into()), enabled: st.session.is_available("view.fitSelection"), checked: None },
+            crate::menu::Node::Item { label: fp_i18n::t("ui-zoom-fit-all"), shortcut: None, action: crate::menu::ItemAction::Command("view.fitAll".into()), enabled: true, checked: None },
         ])
         .collect();
     let mut acts = Vec::new();
@@ -1520,15 +1530,15 @@ fn footer_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
     let mut x = sr.left() - 6.0 - 7.0 * 22.0 - 16.0;
     let y = rect.center().y - bsize.y / 2.0;
     let multi = frames > 1;
-    let items: [(Icon, &str, bool, Option<Action>); 3] = [
-        (Icon::FirstFrame, "Erster Status", multi && frame > 0, Some(Action::SetFrame(0))),
-        (Icon::Play, "Wiedergeben/Stoppen", multi, None),
-        (Icon::LastFrame, "Letzter Status", multi && frame + 1 < frames, Some(Action::SetFrame(frames.saturating_sub(1)))),
+    let items: [(Icon, String, bool, Option<Action>); 3] = [
+        (Icon::FirstFrame, fp_i18n::t("ui-state-first"), multi && frame > 0, Some(Action::SetFrame(0))),
+        (Icon::Play, fp_i18n::t("ui-state-play"), multi, None),
+        (Icon::LastFrame, fp_i18n::t("ui-state-last"), multi && frame + 1 < frames, Some(Action::SetFrame(frames.saturating_sub(1)))),
     ];
     for (icon, tip, en, act) in items {
         let r = Rect::from_min_size(pos2(x, y), bsize);
         let mut child = ui.new_child(egui::UiBuilder::new().max_rect(r));
-        if widgets::icon_button(&mut child, icon, bsize, 11.0, ButtonLook { selected: false, enabled: en, group: Some(ToolGroup::View) }, tip).clicked()
+        if widgets::icon_button(&mut child, icon, bsize, 11.0, ButtonLook { selected: false, enabled: en, group: Some(ToolGroup::View) }, &tip).clicked()
             && let Some(a) = act
         {
             st.push(a);
@@ -1537,15 +1547,15 @@ fn footer_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
     }
     ui.painter().text(pos2(x + 14.0, rect.center().y), Align2::CENTER_CENTER, format!("{}", frame + 1), theme.small_font(), c.text);
     x += 32.0;
-    let items2: [(Icon, &str, bool, Option<Action>); 3] = [
-        (Icon::PrevFrame, "Vorheriger Status", multi && frame > 0, Some(Action::SetFrame(frame.saturating_sub(1)))),
-        (Icon::NextFrame, "Nächster Status", multi && frame + 1 < frames, Some(Action::SetFrame(frame + 1))),
-        (Icon::ExitBitmapMode, "Bitmapmodus beenden", bitmap_mode, Some(Action::Run("modify.exitBitmapMode".into(), json!({})))),
+    let items2: [(Icon, String, bool, Option<Action>); 3] = [
+        (Icon::PrevFrame, fp_i18n::t("ui-state-prev"), multi && frame > 0, Some(Action::SetFrame(frame.saturating_sub(1)))),
+        (Icon::NextFrame, fp_i18n::t("ui-state-next"), multi && frame + 1 < frames, Some(Action::SetFrame(frame + 1))),
+        (Icon::ExitBitmapMode, fp_i18n::t("ui-exit-bitmap-mode"), bitmap_mode, Some(Action::Run("modify.exitBitmapMode".into(), json!({})))),
     ];
     for (icon, tip, en, act) in items2 {
         let r = Rect::from_min_size(pos2(x, y), bsize);
         let mut child = ui.new_child(egui::UiBuilder::new().max_rect(r));
-        if widgets::icon_button(&mut child, icon, bsize, 11.0, ButtonLook { selected: false, enabled: en, group: Some(ToolGroup::View) }, tip).clicked()
+        if widgets::icon_button(&mut child, icon, bsize, 11.0, ButtonLook { selected: false, enabled: en, group: Some(ToolGroup::View) }, &tip).clicked()
             && let Some(a) = act
         {
             st.push(a);

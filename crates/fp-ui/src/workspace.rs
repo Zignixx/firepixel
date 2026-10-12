@@ -362,6 +362,18 @@ impl Workspace {
     }
 }
 
+/// Sprachschlüssel eines mitgelieferten Layouts. Gespeichert (eframe, Aktionen, Vergleich mit dem
+/// aktiven Layout) wird immer die feste deutsche Kennung aus [`Workspace::presets`]; angezeigt wird
+/// der Text des Schlüssels (`appbar::workspace_display_name`).
+pub fn preset_key(name: &str) -> Option<&'static str> {
+    match name {
+        "Erweiterter Modus" => Some("ui-workspace-expanded"),
+        "Symbolmodus" => Some("ui-workspace-iconic"),
+        "Symbolmodus mit Bedienfeldnamen" => Some("ui-workspace-iconic-names"),
+        _ => None,
+    }
+}
+
 // ---------------------------------------------------------------------- Arbeitsbereich-XML
 
 /// Befehls-ID des Eigenschaften-Inspektors im Arbeitsbereich-XML.

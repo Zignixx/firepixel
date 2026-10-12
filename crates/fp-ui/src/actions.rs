@@ -112,7 +112,7 @@ pub fn execute(st: &mut AppState, ctx: &egui::Context, a: Action) {
             if let Some(dir) = crate::workspace::layouts_dir() {
                 let _ = std::fs::create_dir_all(&dir);
                 if let Err(e) = std::fs::write(dir.join(format!("{name}.xml")), w.to_panel_state_xml()) {
-                    st.set_status(format!("Arbeitsbereich konnte nicht gespeichert werden: {e}"), now(ctx));
+                    st.set_status(fp_i18n::tr!("ui-workspace-save-failed", error = e.to_string()), now(ctx));
                 }
             }
             st.settings.named_workspaces.push((name.clone(), w));
@@ -144,6 +144,9 @@ fn run_command(st: &mut AppState, ctx: &egui::Context, name: &str, params: Value
         execute(st, ctx, Action::TogglePanel(p));
         return;
     }
+    if crate::language::run_action(st, ctx, name, &params) {
+        return;
+    }
     match name {
         "file.new" if !has_param(&params, "width") => {
             st.dialogs.new_document = Some(NewDocumentDialog::from_prefs(&st.session.prefs));
@@ -164,19 +167,19 @@ fn run_command(st: &mut AppState, ctx: &egui::Context, name: &str, params: Value
         }
         "file.import" if !has_param(&params, "path") => {
             let exts = crate::files::readable_extensions();
-            if let Some(p) = crate::files::pick_one(st, "Importieren", "Alle lesbaren Formate", &exts) {
+            if let Some(p) = crate::files::pick_one(st, &fp_i18n::t("ui-file-import-title"), &fp_i18n::t("ui-filter-all-readable"), &exts) {
                 run_command(st, ctx, name, json!({ "path": p.to_string_lossy() }));
             }
             return;
         }
         "file.updateHtml" if !has_param(&params, "path") => {
-            if let Some(p) = crate::files::pick_one(st, "HTML aktualisieren", "HTML-Dateien", &["htm", "html"]) {
+            if let Some(p) = crate::files::pick_one(st, &fp_i18n::t("ui-file-update-html-title"), &fp_i18n::t("ui-filter-html"), &["htm", "html"]) {
                 run_command(st, ctx, name, json!({ "path": p.to_string_lossy() }));
             }
             return;
         }
         "commands.runScript" if !has_param(&params, "path") && !has_param(&params, "code") => {
-            if let Some(p) = crate::files::pick_one(st, "Skript ausführen", "Skripte (*.jsf, *.js)", &["jsf", "js"]) {
+            if let Some(p) = crate::files::pick_one(st, &fp_i18n::t("ui-file-run-script-title"), &fp_i18n::t("ui-filter-scripts"), &["jsf", "js"]) {
                 run_command(st, ctx, name, json!({ "path": p.to_string_lossy() }));
             }
             return;
@@ -186,7 +189,7 @@ fn run_command(st: &mut AppState, ctx: &egui::Context, name: &str, params: Value
             let name = st.session.active().map(|d| d.path.as_ref().and_then(|p| p.file_name()).map(|n| n.to_string_lossy().to_string()).unwrap_or_else(|| d.title.clone())).unwrap_or_default();
             st.dialogs.confirm = Some(crate::dialogs::Confirm {
                 title: "Firepixel".into(),
-                text: format!("Letzte gespeicherte Version von \"{name}\" wiederherstellen?"),
+                text: fp_i18n::tr!("ui-revert-confirm", name = name),
                 command: "file.revert".into(),
                 params: json!({ "confirmed": true }),
             });
@@ -214,8 +217,8 @@ fn run_command(st: &mut AppState, ctx: &egui::Context, name: &str, params: Value
             return;
         }
         "file.previewInBrowser.setPrimaryBrowser" | "file.previewInBrowser.setSecondaryBrowser" if !has_param(&params, "path") => {
-            let title = if name.ends_with("PrimaryBrowser") { "Primärbrowser festlegen" } else { "Sekundärbrowser festlegen" };
-            if let Some(p) = crate::files::pick_one(st, title, "Programme (*.exe)", &["exe"]) {
+            let title = fp_i18n::t(if name.ends_with("PrimaryBrowser") { "ui-file-primary-browser-title" } else { "ui-file-secondary-browser-title" });
+            if let Some(p) = crate::files::pick_one(st, &title, &fp_i18n::t("ui-filter-programs"), &["exe"]) {
                 run_command(st, ctx, name, json!({ "path": p.to_string_lossy() }));
             }
             return;
@@ -237,7 +240,7 @@ fn run_command(st: &mut AppState, ctx: &egui::Context, name: &str, params: Value
         }
         "file.saveAsTemplate" if !has_param(&params, "path") => {
             let title = st.session.active().map(|d| d.title.clone()).unwrap_or_default();
-            if let Some(p) = crate::files::pick_save(st, "Als Vorlage speichern", &crate::files::suggested_name(&title), None) {
+            if let Some(p) = crate::files::pick_save(st, &fp_i18n::t("ui-file-save-template-title"), &crate::files::suggested_name(&title), None) {
                 run_command(st, ctx, name, json!({ "path": p.to_string_lossy() }));
             }
             return;
@@ -293,24 +296,24 @@ fn run_command(st: &mut AppState, ctx: &egui::Context, name: &str, params: Value
             };
             let hex = format!("#{:06X}", c.0 & 0x00ff_ffff);
             ctx.copy_text(hex.clone());
-            st.set_status(format!("Farbe {hex} kopiert"), now(ctx));
+            st.set_status(fp_i18n::tr!("ui-color-copied", hex = hex), now(ctx));
             return;
         }
         "ui.mcpToggle" => {
             // KI-Steuerkanal (MCP über HTTP, nur 127.0.0.1) ein/aus
             if crate::bridge::running_url().is_some() {
                 crate::bridge::disable();
-                st.set_status("KI-Steuerkanal aus", now(ctx));
+                st.set_status(fp_i18n::t("ui-mcp-off"), now(ctx));
             } else {
                 crate::bridge::enable(0);
-                st.set_status("KI-Steuerkanal wird gestartet (Adresse und Token in %LOCALAPPDATA%\\Firepixel\\mcp-bridge.json)", now(ctx));
+                st.set_status(fp_i18n::t("ui-mcp-starting"), now(ctx));
             }
             return;
         }
         "ui.resetWarnings" => {
             st.session.prefs.reset_warnings();
             st.session.prefs_changed();
-            st.set_status("Warnmeldungen zurückgesetzt", now(ctx));
+            st.set_status(fp_i18n::t("ui-warnings-reset"), now(ctx));
             return;
         }
         "ui.closeGroup" => {
@@ -410,8 +413,9 @@ fn run_command(st: &mut AppState, ctx: &egui::Context, name: &str, params: Value
             }
         }
         Err(EngineError::NotImplemented(n)) => {
-            let label = st.session.registry().get(&n).map(|c| c.info().label.clone()).unwrap_or(n);
-            st.set_status(format!("„{label}“ ist noch nicht umgesetzt."), now(ctx));
+            let key = fp_i18n::command_key(&n);
+            let label = if fp_i18n::has(&key) { fp_i18n::t(&key) } else { st.session.registry().get(&n).map(|c| c.info().label.clone()).unwrap_or(n) };
+            st.set_status(fp_i18n::tr!("ui-not-implemented", label = label.replace('&', "")), now(ctx));
         }
         Err(e) => st.set_status(e.to_string(), now(ctx)),
     }

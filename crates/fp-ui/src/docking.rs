@@ -110,7 +110,7 @@ pub fn tab_strip(ui: &mut Ui, rect: Rect, id: Id, tabs: &[(&str, ToolGroup)], ac
         let resp = ui.interact(mr, id.with("menu"), Sense::click());
         let st = IconStyle::mono(if resp.hovered() { c.focus } else { c.tab_text }, c.frame_bg);
         icons::paint(ui.painter(), mr, Icon::PanelMenu, &st);
-        out.menu_clicked = Some(resp.on_hover_text("Bedienfeldmenü"));
+        out.menu_clicked = Some(resp.on_hover_text(fp_i18n::t("ui-dock-panel-menu")));
     }
     out.background = Some(bg);
     out
@@ -150,7 +150,8 @@ fn group_ui(ui: &mut Ui, st: &mut AppState, rect: Rect, group: &PanelGroup, gid:
     let active_panel = st.settings.workspace.active_panel(group);
     let active_idx = active_panel.and_then(|p| vis.iter().position(|q| *q == p));
     let strip = Rect::from_min_size(rect.min, vec2(rect.width(), tab_strip_height(&theme)));
-    let tabs: Vec<(&str, ToolGroup)> = vis.iter().map(|p| (p.title(), p.group())).collect();
+    let titles: Vec<String> = vis.iter().map(|p| p.title().to_string()).collect();
+    let tabs: Vec<(&str, ToolGroup)> = vis.iter().zip(&titles).map(|(p, t)| (t.as_str(), p.group())).collect();
     let out = tab_strip(ui, strip, gid, &tabs, active_idx, true, group.collapsed);
     // Ablagezone: Reiterleiste
     let target_index = |rects: &[Rect], x: f32| rects.iter().position(|r| x < r.center().x).unwrap_or(rects.len());
@@ -230,7 +231,7 @@ pub fn show_dock(ui: &mut Ui, st: &mut AppState) {
     let bresp = ui.interact(br, Id::new("dock-collapse"), Sense::click());
     let st_icon = IconStyle::mono(theme.colors.dock_strip_arrow, theme.colors.frame_bg);
     icons::paint(ui.painter(), br, if iconic { Icon::CollapseLeft } else { Icon::CollapseRight }, &st_icon);
-    if bresp.on_hover_text(if iconic { "Bedienfelder erweitern" } else { "Auf Symbole minimieren" }).clicked() {
+    if bresp.on_hover_text(fp_i18n::t(if iconic { "ui-dock-expand" } else { "ui-dock-collapse-icons" })).clicked() {
         st.push(Action::Run("ui.dock.toggleIconic".into(), serde_json::json!({})));
     }
     let area = Rect::from_min_max(pos2(full.left(), strip.bottom()), full.max);
@@ -334,9 +335,9 @@ fn iconic_dock(ui: &mut Ui, st: &mut AppState, area: Rect) {
             let ir = Rect::from_center_size(pos2(r.left() + 13.0, r.center().y), vec2(16.0, 16.0));
             icons::paint(ui.painter(), ir, panel_icon(p), &IconStyle::new(&theme, Some(p.group()), true));
             if with_names {
-                widgets::text_clipped(ui.painter(), pos2(r.left() + 28.0, r.center().y), Align2::LEFT_CENTER, p.title(), theme.ui_font(), theme.colors.text, r.width() - 30.0);
+                widgets::text_clipped(ui.painter(), pos2(r.left() + 28.0, r.center().y), Align2::LEFT_CENTER, &p.title().to_string(), theme.ui_font(), theme.colors.text, r.width() - 30.0);
             }
-            if resp.on_hover_text(p.title()).clicked() {
+            if resp.on_hover_text(p.title().to_string()).clicked() {
                 st.dock.iconic_open = if open { None } else { Some(p) };
             }
             if open {
@@ -448,7 +449,7 @@ pub fn finish_drag(ctx: &egui::Context, st: &mut AppState) {
         let r = Rect::from_min_size(pos + vec2(8.0, 6.0), vec2(w, 18.0));
         painter.rect_filled(r, 0.0, with_alpha(theme.colors.tab_active_bg, 220));
         painter.rect_stroke(r, 0.0, Stroke::new(1.0, theme.colors.focus), StrokeKind::Inside);
-        painter.text(pos2(r.left() + 8.0, r.center().y), Align2::LEFT_CENTER, p.title(), font, theme.colors.tab_text);
+        painter.text(pos2(r.left() + 8.0, r.center().y), Align2::LEFT_CENTER, p.title().to_string(), font, theme.colors.tab_text);
         ctx.set_cursor_icon(egui::CursorIcon::Grabbing);
     }
     let released = ctx.input(|i| i.pointer.any_released() || !i.pointer.any_down());

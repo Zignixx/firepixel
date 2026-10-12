@@ -32,13 +32,23 @@ impl ThemeKind {
     /// Alle Designs in Menüreihenfolge.
     pub const ALL: [ThemeKind; 3] = [ThemeKind::Normal, ThemeKind::Dark, ThemeKind::Oled];
 
-    /// Deutscher Name (Menü Ansicht ▸ Design, Voreinstellungen).
+    /// Feste deutsche Kennung (Dateinamen von Bildschirmfotos, Testberichte). Für die Anzeige
+    /// [`ThemeKind::name`] nehmen.
     pub fn label(self) -> &'static str {
         match self {
             ThemeKind::Normal => "Normal",
             ThemeKind::Dark => "Dunkel",
             ThemeKind::Oled => "OLED",
         }
+    }
+
+    /// Angezeigter Name in der aktuellen Sprache (Menü Ansicht ▸ Design, Voreinstellungen).
+    pub fn name(self) -> String {
+        fp_i18n::t(match self {
+            ThemeKind::Normal => "ui-theme-normal",
+            ThemeKind::Dark => "ui-theme-dark",
+            ThemeKind::Oled => "ui-theme-oled",
+        })
     }
 
     /// Umrechnung aus der Voreinstellung von fp-engine.
@@ -76,7 +86,20 @@ impl ToolGroup {
     /// Alle Gruppen in Bedienfeld-Reihenfolge.
     pub const ALL: [ToolGroup; 6] = [ToolGroup::Select, ToolGroup::Bitmap, ToolGroup::Vector, ToolGroup::Web, ToolGroup::Colors, ToolGroup::View];
 
-    /// Überschrift im Werkzeugbedienfeld.
+    /// Überschrift im Werkzeugbedienfeld in der aktuellen Sprache.
+    pub fn name(self) -> String {
+        fp_i18n::t(match self {
+            ToolGroup::Select => "ui-toolgroup-select",
+            ToolGroup::Bitmap => "ui-toolgroup-bitmap",
+            ToolGroup::Vector => "ui-toolgroup-vector",
+            ToolGroup::Web => "ui-toolgroup-web",
+            ToolGroup::Colors => "ui-toolgroup-colors",
+            ToolGroup::View => "ui-toolgroup-view",
+        })
+    }
+
+    /// Feste deutsche Kennung (wie die Abschnittsnamen der Werkzeugtabelle). Für die Anzeige
+    /// [`ToolGroup::name`] nehmen.
     pub fn label(self) -> &'static str {
         match self {
             ToolGroup::Select => "Auswählen",
@@ -849,32 +872,72 @@ pub fn mix(a: Color32, b: Color32, t: f32) -> Color32 {
 
 // ---------------------------------------------------------------------- Schriften
 
-/// Lädt Segoe UI (normal und fett) zur Laufzeit aus `%WINDIR%\Fonts`. Fehlt sie, bleibt die
-/// egui-Standardschrift; die fette Familie fällt dann auf die normale zurück.
+/// Systemschriften für die Oberfläche (Name in egui, Datei in `%WINDIR%\Fonts`). Segoe UI deckt
+/// Latein, Kyrillisch und Griechisch ab; die CJK-Schriften sind Rückfallschriften für Chinesisch,
+/// Japanisch und Koreanisch (Oberflächentexte weiterer Sprachen, Ebenen-/Seiten-/Dateinamen).
+const SYSTEM_FONTS: &[(&str, &str)] = &[
+    ("segoe", "segoeui.ttf"),
+    ("segoe-bold", "segoeuib.ttf"),
+    ("segoe-symbol", "seguisym.ttf"),
+    ("cjk-zh", "msyh.ttc"),
+    ("cjk-ja", "YuGothM.ttc"),
+    ("cjk-ko", "malgun.ttf"),
+];
+
+/// Einmal je Prozess gelesene Schriftdateien (gemeinsam für alle egui-Kontexte; die CJK-Dateien
+/// sind zusammen etwa 47 MB groß).
+fn system_fonts() -> &'static Vec<(&'static str, Arc<egui::FontData>)> {
+    static FONTS: std::sync::OnceLock<Vec<(&'static str, Arc<egui::FontData>)>> = std::sync::OnceLock::new();
+    FONTS.get_or_init(|| {
+        let dir = std::env::var_os("WINDIR").map(std::path::PathBuf::from).unwrap_or_else(|| std::path::PathBuf::from(r"C:\Windows")).join("Fonts");
+        SYSTEM_FONTS.iter().filter_map(|(name, file)| std::fs::read(dir.join(file)).ok().map(|b| (*name, Arc::new(egui::FontData::from_owned(b))))).collect()
+    })
+}
+
+/// Reihenfolge der CJK-Rückfallschriften: die Schrift der aktuellen Sprache zuerst (gleiche
+/// Unicode-Zeichen haben im Chinesischen, Japanischen und Koreanischen verschiedene Glyphenformen).
+pub fn cjk_fallback_order(lang: &str) -> [&'static str; 3] {
+    let base = lang.split(['-', '_']).next().unwrap_or("").to_lowercase();
+    match base.as_str() {
+        "ja" => ["cjk-ja", "cjk-zh", "cjk-ko"],
+        "ko" => ["cjk-ko", "cjk-zh", "cjk-ja"],
+        _ => ["cjk-zh", "cjk-ja", "cjk-ko"],
+    }
+}
+
+/// Lädt Segoe UI (normal und fett) zur Laufzeit aus `%WINDIR%\Fonts`, dazu Segoe UI Symbol und die
+/// CJK-Rückfallschriften (Microsoft YaHei, Yu Gothic, Malgun Gothic), soweit vorhanden. Fehlt Segoe
+/// UI, bleibt die egui-Standardschrift; die fette Familie fällt dann auf die normale zurück. Die
+/// Reihenfolge der CJK-Schriften richtet sich nach der aktuellen Sprache (beim Sprachwechsel neu
+/// aufrufen).
+///
+/// Grenze: Schriften von rechts nach links (Arabisch, Hebräisch, Persisch) und Schriften, die
+/// Glyphen-Formung brauchen (z. B. Devanagari, Thai), setzt egui 0.36 nicht richtig (kein Bidi,
+/// kein Shaping); dafür werden bewusst keine Rückfallschriften geladen (siehe `language.rs`,
+/// `crates\fp-i18n\README.md`).
 pub fn install_fonts(ctx: &egui::Context) {
     let mut defs = egui::FontDefinitions::default();
-    let dir = std::env::var_os("WINDIR").map(std::path::PathBuf::from).unwrap_or_else(|| std::path::PathBuf::from(r"C:\Windows")).join("Fonts");
-    let regular = std::fs::read(dir.join("segoeui.ttf")).ok();
-    let bold = std::fs::read(dir.join("segoeuib.ttf")).ok();
-    let symbols = std::fs::read(dir.join("seguisym.ttf")).ok();
+    for (name, data) in system_fonts() {
+        defs.font_data.insert((*name).to_string(), Arc::clone(data));
+    }
     let mut prop: Vec<String> = Vec::new();
-    if let Some(bytes) = regular {
-        defs.font_data.insert("segoe".into(), Arc::new(egui::FontData::from_owned(bytes)));
+    if defs.font_data.contains_key("segoe") {
         prop.push("segoe".into());
     }
     let mut bold_list: Vec<String> = Vec::new();
-    if let Some(bytes) = bold {
-        defs.font_data.insert("segoe-bold".into(), Arc::new(egui::FontData::from_owned(bytes)));
+    if defs.font_data.contains_key("segoe-bold") {
         bold_list.push("segoe-bold".into());
-    }
-    if let Some(bytes) = symbols {
-        defs.font_data.insert("segoe-symbol".into(), Arc::new(egui::FontData::from_owned(bytes)));
     }
     let base: Vec<String> = defs.families.get(&FontFamily::Proportional).cloned().unwrap_or_default();
     let mut proportional = prop.clone();
     proportional.extend(base.iter().cloned());
     if defs.font_data.contains_key("segoe-symbol") {
         proportional.push("segoe-symbol".into());
+    }
+    for f in cjk_fallback_order(&fp_i18n::current_language()) {
+        if defs.font_data.contains_key(f) {
+            proportional.push(f.into());
+        }
     }
     let mut bold_family = bold_list;
     bold_family.extend(proportional.iter().cloned());
@@ -916,6 +979,19 @@ mod tests {
         assert_eq!(t.colors.frame_bg, Color32::from_rgb(214, 214, 214));
         assert_eq!(t.colors.canvas_bg, Color32::from_rgb(200, 200, 200));
         assert_eq!(t.colors.list_selected_bg, Color32::from_rgb(168, 198, 237));
+    }
+
+    #[test]
+    fn cjk_order_follows_language() {
+        assert_eq!(cjk_fallback_order("ja")[0], "cjk-ja");
+        assert_eq!(cjk_fallback_order("ko-KR")[0], "cjk-ko");
+        assert_eq!(cjk_fallback_order("zh-TW")[0], "cjk-zh");
+        assert_eq!(cjk_fallback_order("de")[0], "cjk-zh");
+        // jede Schrift genau einmal
+        for l in ["ja", "ko", "zh", "de"] {
+            let o = cjk_fallback_order(l);
+            assert!(o.contains(&"cjk-ja") && o.contains(&"cjk-ko") && o.contains(&"cjk-zh"));
+        }
     }
 
     #[test]

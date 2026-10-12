@@ -47,7 +47,7 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
     let menus_end = child.min_rect().right().min(menu_rect.right());
     // Platz zwischen Menüs und Fensterknöpfen verteilen
     let font = theme.menu_font();
-    let name = st.settings.workspace.name.clone();
+    let name = workspace_display_name(&st.settings.workspace.name);
     let tw = widgets::text_width(ui, &name, &font);
     let space = minr.left() - 14.0 - menus_end;
     let switcher_full = tw + 26.0 + 16.0;
@@ -68,15 +68,15 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
     if show_quick {
         let bsize = vec2(26.0, 22.0);
         let y = rect.center().y - bsize.y / 2.0;
-        let quick: [(Icon, &str, Action, bool); 3] = [
-            (Icon::Browse, "Durchsuchen (Öffnen)", Action::Run("file.open".into(), json!({})), false),
-            (Icon::Hand, "Hand-Werkzeug (H)", Action::SetTool(ToolId::Hand), st.session.tools.active == ToolId::Hand),
-            (Icon::Zoom, "Zoom-Werkzeug (Z)", Action::SetTool(ToolId::Zoom), st.session.tools.active == ToolId::Zoom),
+        let quick: [(Icon, String, Action, bool); 3] = [
+            (Icon::Browse, fp_i18n::t("ui-appbar-browse"), Action::Run("file.open".into(), json!({})), false),
+            (Icon::Hand, fp_i18n::t("ui-appbar-hand-tool"), Action::SetTool(ToolId::Hand), st.session.tools.active == ToolId::Hand),
+            (Icon::Zoom, fp_i18n::t("ui-appbar-zoom-tool"), Action::SetTool(ToolId::Zoom), st.session.tools.active == ToolId::Zoom),
         ];
         for (icon, tip, act, selected) in quick {
             let r = Rect::from_min_size(pos2(x, y), bsize);
             let mut b = ui.new_child(egui::UiBuilder::new().max_rect(r));
-            if widgets::icon_button(&mut b, icon, bsize, 16.0, ButtonLook { selected, enabled: true, group: Some(ToolGroup::View) }, tip).clicked() {
+            if widgets::icon_button(&mut b, icon, bsize, 16.0, ButtonLook { selected, enabled: true, group: Some(ToolGroup::View) }, &tip).clicked() {
                 st.push(act);
             }
             x += bsize.x + 8.0;
@@ -94,7 +94,7 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
         widgets::drop_arrow(ui.painter(), btn, c.text);
         let ztext = zoom.map(|z| format!("{:.0}%", z * 100.0)).unwrap_or_default();
         ui.painter().text(pos2(zr.left() + 6.0, zr.center().y), Align2::LEFT_CENTER, ztext, theme.small_font(), if zoom.is_some() { c.field_text } else { c.text_disabled });
-        let zresp = ui.interact(zr, Id::new("appbar-zoom"), Sense::click()).on_hover_text("Vergrößerung");
+        let zresp = ui.interact(zr, Id::new("appbar-zoom"), Sense::click()).on_hover_text(fp_i18n::t("ui-zoom"));
         if zoom.is_some() {
             let nodes: Vec<Node> = [6.0f64, 12.0, 25.0, 50.0, 66.0, 100.0, 150.0, 200.0, 300.0, 400.0, 800.0, 1600.0, 3200.0, 6400.0]
                 .iter()
@@ -119,9 +119,9 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
     ui.painter().rect_stroke(frame, egui::CornerRadius { nw: 0, ne: 0, sw: 3, se: 3 }, Stroke::new(1.0, c.line_mid), StrokeKind::Inside);
     let maximized = ui.ctx().input(|i| i.viewport().maximized.unwrap_or(false));
     for (r, icon, cmd, tip) in [
-        (minr, Icon::Minimize, 0, "Minimieren"),
-        (maxr, if maximized { Icon::Restore } else { Icon::Maximize }, 1, if maximized { "Wiederherstellen" } else { "Maximieren" }),
-        (close, Icon::WindowClose, 2, "Schließen"),
+        (minr, Icon::Minimize, 0, fp_i18n::t("ui-window-minimize")),
+        (maxr, if maximized { Icon::Restore } else { Icon::Maximize }, 1, fp_i18n::t(if maximized { "ui-window-restore" } else { "ui-window-maximize" })),
+        (close, Icon::WindowClose, 2, fp_i18n::t("ui-window-close")),
     ] {
         let resp = ui.interact(r, Id::new(("winbtn", cmd)), Sense::click());
         if resp.hovered() {
@@ -151,7 +151,7 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
         ui.painter().text(pos2(wr.left() + 4.0, wr.center().y), Align2::LEFT_CENTER, &name, font, c.app_bar_text);
     }
     widgets::drop_arrow(ui.painter(), Rect::from_center_size(pos2(wr.right() - 8.0, wr.center().y + 2.0), vec2(8.0, 8.0)), c.text_weak);
-    let wresp = wresp.on_hover_text(format!("Einen Arbeitsbereich auswählen ({name})"));
+    let wresp = wresp.on_hover_text(fp_i18n::tr!("ui-workspace-switcher", name = name.as_str()));
     let nodes = workspace_menu(st);
     let mut acts = Vec::new();
     menu::popup_menu(ui, &wresp, &nodes, &mut acts);
@@ -166,7 +166,7 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
 /// Standardarbeitsbereich.
 pub fn workspace_menu(st: &AppState) -> Vec<Node> {
     let name = st.settings.workspace.name.clone();
-    let entry = |n: &str| Node::Item { label: n.to_string(), shortcut: None, action: ItemAction::Ui(Action::LoadWorkspace(n.to_string())), enabled: true, checked: Some(n == name) };
+    let entry = |n: &str| Node::Item { label: workspace_display_name(n), shortcut: None, action: ItemAction::Ui(Action::LoadWorkspace(n.to_string())), enabled: true, checked: Some(n == name) };
     let mut nodes: Vec<Node> = Workspace::presets().iter().map(|w| entry(&w.name)).collect();
     let mut saved: Vec<String> = st.settings.named_workspaces.iter().map(|(n, _)| n.clone()).collect();
     if let Some(dir) = crate::workspace::layouts_dir()
@@ -189,9 +189,18 @@ pub fn workspace_menu(st: &AppState) -> Vec<Node> {
         }
     }
     nodes.push(Node::Separator);
-    nodes.push(Node::Item { label: "Aktuelles speichern...".into(), shortcut: None, action: ItemAction::Ui(Action::Run("ui.saveWorkspace".into(), json!({}))), enabled: true, checked: None });
-    nodes.push(Node::Item { label: "Standardarbeitsbereich".into(), shortcut: None, action: ItemAction::Ui(Action::ResetWorkspace), enabled: true, checked: None });
+    nodes.push(Node::Item { label: fp_i18n::t("ui-workspace-save-current"), shortcut: None, action: ItemAction::Ui(Action::Run("ui.saveWorkspace".into(), json!({}))), enabled: true, checked: None });
+    nodes.push(Node::Item { label: fp_i18n::t("ui-workspace-default"), shortcut: None, action: ItemAction::Ui(Action::ResetWorkspace), enabled: true, checked: None });
     nodes
+}
+
+/// Angezeigter Name eines Arbeitsbereichs: die mitgelieferten Layouts in der aktuellen Sprache
+/// (gespeichert wird ihre feste Kennung, z. B. „Erweiterter Modus“), eigene Layouts unverändert.
+pub fn workspace_display_name(name: &str) -> String {
+    match crate::workspace::preset_key(name) {
+        Some(key) => fp_i18n::t(key),
+        None => name.to_string(),
+    }
 }
 
 /// Größenänderung am Fensterrand (ohne Systemrahmen): Mauszeiger setzen und Ziehen starten.

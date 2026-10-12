@@ -33,6 +33,7 @@ pub mod files;
 pub mod icons;
 pub mod input;
 pub mod inspector;
+pub mod language;
 pub mod menu;
 pub mod menu_kbd;
 pub mod os_clipboard;
@@ -41,6 +42,7 @@ pub mod preview;
 pub mod theme;
 pub mod toolbar;
 pub mod tools_panel;
+pub mod ui_kit; pub mod welcome; // Agent DESIGN (Befund in BEFUNDE.md, Abschnitt I18N-SHELL)
 pub mod ui_commands;
 pub mod widgets;
 pub mod workspace;
@@ -56,6 +58,9 @@ use theme::{Theme, ThemeKind};
 pub struct FirepixelApp {
     pub state: AppState,
     last_title: String,
+    /// Sprachstand ([`fp_i18n::generation`]), für den `last_title`, Schriften und die
+    /// Statuszeile gelten; ändert er sich, wird alles in der neuen Sprache neu aufgebaut.
+    lang_generation: u64,
     fonts_ready: bool,
     /// `--design=…` gilt nur für diese Sitzung: (gespeichertes Design, Design aus der Kommandozeile).
     cli_design: Option<(fp_engine::Theme, fp_engine::Theme)>,
@@ -79,6 +84,7 @@ impl FirepixelApp {
         let prefs_path = Preferences::default_path();
         let mut prefs = prefs_path.as_deref().map(Preferences::load_or_default).unwrap_or_default();
         dialogs::preferences::apply_original_dir(&prefs);
+        if language::init(&mut prefs) != fp_i18n::SOURCE_LANG { theme::install_fonts(&cc.egui_ctx); }
         let mut cli_design = None;
         if let Some(d) = design {
             cli_design = Some((prefs.theme, d.to_engine()));
@@ -107,7 +113,7 @@ impl FirepixelApp {
         });
         let mut state = AppState::new(session, settings, if threaded { Some(ctx.clone()) } else { None });
         state.sync_render = !threaded;
-        FirepixelApp { state, last_title: String::new(), fonts_ready: false, cli_design: None, frames: 0 }
+        FirepixelApp { state, last_title: String::new(), lang_generation: fp_i18n::generation(), fonts_ready: false, cli_design: None, frames: 0 }
     }
 
     /// Zeichnet das ganze Hauptfenster in `ui`.
@@ -119,6 +125,16 @@ impl FirepixelApp {
             self.fonts_ready = true;
             ctx.request_repaint();
             return;
+        }
+        // Sprachwechsel zur Laufzeit: selbst gespeicherte Texte verwerfen (Fenstertitel, Meldung der
+        // Statuszeile) und die Schriften neu einrichten (Reihenfolge der CJK-Rückfallschriften)
+        let lang_gen = fp_i18n::generation();
+        if lang_gen != self.lang_generation {
+            self.lang_generation = lang_gen;
+            self.last_title.clear();
+            self.state.status = None;
+            theme::install_fonts(&ctx);
+            ctx.request_repaint();
         }
         let st = &mut self.state;
         st.frame_counter += 1;
@@ -329,6 +345,11 @@ pub fn native_options() -> eframe::NativeOptions {
         window_builder: Some(Box::new(start_window::strip_maximized)),
         ..Default::default()
     }
+}
+
+/// Hilfetext der Kommandozeile (`firepixel --help`) in der aktuellen Sprache.
+pub fn cli_help() -> String {
+    fp_i18n::t("ui-cli-help")
 }
 
 /// Startet die Anwendung (Dateien aus der Kommandozeile werden geöffnet; `design` überschreibt

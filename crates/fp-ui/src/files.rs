@@ -21,17 +21,17 @@ pub fn readable_extensions() -> Vec<&'static str> {
 
 /// Filter „Alle lesbaren Formate“, danach je Format (Reihenfolge des Originals) und „Alle Dateien“.
 fn readable_filters(mut d: rfd::FileDialog) -> rfd::FileDialog {
-    d = d.add_filter("Alle lesbaren Formate", &readable_extensions());
+    d = d.add_filter(fp_i18n::t("ui-filter-all-readable"), &readable_extensions());
     for r in fp_io::detect::REGISTRY.iter().filter(|r| r.in_file_dialog) {
         let exts: Vec<&str> = r.extensions.iter().map(|e| e.trim_start_matches('.')).collect();
         d = d.add_filter(format!("{} ({})", r.name, r.pattern), &exts);
     }
-    d.add_filter("Alle Dateien (*.*)", &["*"])
+    d.add_filter(fp_i18n::t("ui-filter-all-files"), &["*"])
 }
 
 /// Dateien zum Öffnen wählen (Mehrfachauswahl).
 pub fn pick_open_files(dir: Option<&Path>) -> Vec<PathBuf> {
-    let mut d = readable_filters(rfd::FileDialog::new().set_title("Öffnen"));
+    let mut d = readable_filters(rfd::FileDialog::new().set_title(fp_i18n::t("ui-file-open-title")));
     if let Some(dir) = dir {
         d = d.set_directory(dir);
     }
@@ -101,7 +101,7 @@ pub fn pick_one(st: &AppState, title: &str, filter: &str, exts: &[&str]) -> Opti
         return o.open.iter().find(|p| matches(p)).cloned();
     }
     let dir = st.session.active().and_then(|d| d.path.as_ref()).and_then(|p| p.parent().map(Path::to_path_buf));
-    let mut d = rfd::FileDialog::new().set_title(title).add_filter(filter, exts).add_filter("Alle Dateien (*.*)", &["*"]);
+    let mut d = rfd::FileDialog::new().set_title(title).add_filter(filter, exts).add_filter(fp_i18n::t("ui-filter-all-files"), &["*"]);
     if let Some(dir) = dir {
         d = d.set_directory(dir);
     }
@@ -166,7 +166,7 @@ pub fn save_active(st: &mut AppState, force_dialog: bool) -> bool {
     let params = if has_path && !force_dialog {
         json!({})
     } else {
-        match pick_save(st, "Speichern unter", &suggested_name(&title), dir.as_deref()) {
+        match pick_save(st, &fp_i18n::t("ui-file-save-as-title"), &suggested_name(&title), dir.as_deref()) {
             Some(p) => json!({ "path": p.to_string_lossy() }),
             None => return false,
         }
@@ -182,11 +182,11 @@ pub fn save_active(st: &mut AppState, force_dialog: bool) -> bool {
         };
         return match st.session.execute("file.export", args) {
             Ok(_) => {
-                st.status = Some((format!("Als Kopie gespeichert: {}", p.display()), 0.0));
+                st.status = Some((fp_i18n::tr!("ui-file-saved-copy", path = p.display().to_string()), 0.0));
                 true
             }
             Err(e) => {
-                st.dialogs.message = Some(("Firepixel".into(), format!("Die Datei konnte nicht gespeichert werden:\n{e}")));
+                st.dialogs.message = Some(("Firepixel".into(), fp_i18n::tr!("ui-file-save-failed", error = e.to_string())));
                 false
             }
         };
@@ -195,7 +195,7 @@ pub fn save_active(st: &mut AppState, force_dialog: bool) -> bool {
     match st.session.execute(name, params) {
         Ok(_) => true,
         Err(e) => {
-            st.dialogs.message = Some(("Firepixel".into(), format!("Die Datei konnte nicht gespeichert werden:\n{e}")));
+            st.dialogs.message = Some(("Firepixel".into(), fp_i18n::tr!("ui-file-save-failed", error = e.to_string())));
             false
         }
     }
@@ -210,7 +210,7 @@ pub fn open_path(st: &mut AppState, p: &Path) {
         return;
     }
     if let Err(e) = st.session.execute("file.open", json!({ "path": p.to_string_lossy() })) {
-        st.dialogs.message = Some(("Firepixel".into(), format!("„{}“ konnte nicht geöffnet werden:\n{e}", p.display())));
+        st.dialogs.message = Some(("Firepixel".into(), fp_i18n::tr!("ui-file-open-failed", path = p.display().to_string(), error = e.to_string())));
     }
 }
 
@@ -271,10 +271,10 @@ pub fn drop_files_at(st: &mut AppState, files: &[PathBuf], pos: Option<egui::Pos
     if let Some(at) = target
         && !import.is_empty()
     {
-        let label = if import.len() == 1 { "Importieren" } else { "Dateien importieren" };
+        let label = fp_i18n::t(if import.len() == 1 { "ui-history-import" } else { "ui-history-import-files" });
         let paths: Vec<String> = import.iter().map(|f| f.to_string_lossy().to_string()).collect();
         let mut ids: Vec<u64> = Vec::new();
-        let r = st.session.run_group(label, |s| {
+        let r = st.session.run_group(&label, |s| {
             for p in &paths {
                 s.execute("file.import", json!({ "path": p, "at": at }))?;
                 if let Some(d) = s.active() {
@@ -287,7 +287,7 @@ pub fn drop_files_at(st: &mut AppState, files: &[PathBuf], pos: Option<egui::Pos
             Ok(()) => {
                 let _ = st.session.execute("select.set", json!({ "ids": ids }));
             }
-            Err(e) => st.dialogs.message = Some(("Firepixel".into(), format!("Importieren nicht möglich:\n{e}"))),
+            Err(e) => st.dialogs.message = Some(("Firepixel".into(), fp_i18n::tr!("ui-file-import-failed", error = e.to_string()))),
         }
     }
     for f in open {
