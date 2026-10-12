@@ -10,6 +10,7 @@ pub mod ghost;
 pub mod overlay;
 pub mod render;
 pub mod textedit;
+pub mod web;
 #[cfg(test)]
 mod tests;
 
@@ -320,6 +321,14 @@ fn to_screen(view: &fp_engine::ViewState, origin: Pos2, x: f64, y: f64) -> Pos2 
     pos2(origin.x + sx as f32, origin.y + sy as f32)
 }
 
+/// Rohes Zeigerereignis eines Bildes (in Reihenfolge).
+#[derive(Clone, Copy, Debug)]
+enum RawPtr {
+    Mods(egui::Modifiers),
+    Move(Pos2),
+    Button(Pos2, bool, egui::Modifiers),
+}
+
 fn mods(i: &egui::InputState, space: bool) -> Modifiers {
     Modifiers { shift: i.modifiers.shift, alt: i.modifiers.alt, ctrl: i.modifiers.ctrl || i.modifiers.command, space, caps: false }
 }
@@ -535,6 +544,10 @@ fn paint_cursor(ui: &Ui, st: &AppState, area: Rect, resp: &egui::Response) {
     let cursor = match st.session.active_id().and_then(|id| st.canvases.get(&id)) {
         Some(c) if c.panning => Cursor::Grabbing,
         Some(c) if c.guide_move.is_some() => if c.guide_move.is_some_and(|g| g.0) { Cursor::GuideH } else { Cursor::GuideV },
+        // Strg+Leertaste = vorübergehend Zoom (mit Alt: verkleinern)
+        _ if st.space_down && ui.input(|i| i.modifiers.command) => {
+            if ui.input(|i| i.modifiers.alt) { Cursor::ZoomOut } else { Cursor::ZoomIn }
+        }
         _ if st.space_down => Cursor::Hand,
         _ => st.tool_cursor,
     };
@@ -655,6 +668,19 @@ fn input(ui: &mut Ui, st: &mut AppState, area: Rect, resp: &egui::Response) {
     let (pointer, wheel, zoom_delta, mods_now, primary_pressed, primary_released, middle_down, primary_down, time) = ui.input(|i| {
         (i.pointer.interact_pos(), i.smooth_scroll_delta, i.zoom_delta(), mods(i, space), i.pointer.primary_pressed(), i.pointer.primary_released(), i.pointer.middle_down(), i.pointer.primary_down(), i.time)
     });
+    let (raw_seq, end_mods) = ui.input(|i| {
+        let mut v = Vec::new();
+        for e in &i.events {
+            match e {
+                egui::Event::ModifiersChanged(m) => v.push(RawPtr::Mods(*m)),
+                egui::Event::WindowFocused(false) => v.push(RawPtr::Mods(egui::Modifiers::NONE)),
+                egui::Event::PointerMoved(p) => v.push(RawPtr::Move(*p)),
+                egui::Event::PointerButton { pos, button: egui::PointerButton::Primary, pressed, modifiers } => v.push(RawPtr::Button(*pos, *pressed, *modifiers)),
+                _ => {}
+            }
+        }
+        (v, i.modifiers)
+    });
     let hovered = resp.hovered() || resp.dragged();
     let to_doc = |p: Pos2| view.screen_to_doc((p.x - area.left()) as f64, (p.y - area.top()) as f64);
     if let Some(p) = pointer.filter(|p| area.contains(*p)) {
@@ -675,7 +701,8 @@ fn input(ui: &mut Ui, st: &mut AppState, area: Rect, resp: &egui::Response) {
                 _ => {}
             }
         }
-        (w, z, 40.0)
+        // Rastung = 52 Bildschirmpixel wie im Original (UX-A L9/L11)
+        (w, z, 52.0)
     });
     let zoom_wheel = wheel_events.iter().any(|w| w.2) || mods_now.ctrl;
     if hovered {
@@ -720,13 +747,13 @@ fn input(ui: &mut Ui, st: &mut AppState, area: Rect, resp: &egui::Response) {
                 egui::MouseWheelUnit::Line => line_px,
                 egui::MouseWheelUnit::Page => page_h,
             };
-            let v = *delta * k;
-            if *shift && v.x == 0.0 {
-                dx += v.y;
-            } else {
-                dx += v.x;
-                dy += v.y;
+            // Umschalt+Rad tut im Original nichts (UX-A L10); Alt+Rad rollt wie ohne Taste
+            if *shift {
+                continue;
             }
+            let v = *delta * k;
+            dx += v.x;
+            dy += v.y;
         }
         if (dx != 0.0 || dy != 0.0) && let Some(d) = st.session.active_mut() {
             d.view.pan(dx as f64, dy as f64);
@@ -742,6 +769,19 @@ fn input(ui: &mut Ui, st: &mut AppState, area: Rect, resp: &egui::Response) {
         (Some(p), Some(d)) if free && pointer_tool && area.contains(p) => guide_at(d, area, p),
         _ => None,
     };
+    // Vorübergehender Zoom wie im Original (UX-A L7): Strg+Leertaste+Klick vergrößert um den
+    // Klickpunkt, Strg+Alt+Leertaste+Klick verkleinert
+    if space && mods_now.ctrl && free {
+        st.tool_cursor = if mods_now.alt { Cursor::ZoomOut } else { Cursor::ZoomIn };
+        if primary_pressed
+            && let Some(p) = pointer.filter(|p| area.contains(*p))
+            && let Some(d) = st.session.active_mut()
+        {
+            let anchor = Some(((p.x - area.left()) as f64, (p.y - area.top()) as f64));
+            if mods_now.alt { d.view.zoom_out(anchor) } else { d.view.zoom_in(anchor) }
+        }
+        return;
+    }
     let cc = st.canvases.entry(id).or_default();
     // Hand: Leertaste oder mittlere Taste
     // Leertaste schwenkt nur, wenn sie vor dem Mausdruck gehalten wurde; während eines laufenden
@@ -858,33 +898,75 @@ fn input(ui: &mut Ui, st: &mut AppState, area: Rect, resp: &egui::Response) {
             if !primary_down || primary_released {
                 cc.text_drag = false;
             }
-        } else if primary_pressed && free && area.contains(p) && !space {
-            cc.pointer_down = true;
-            cc.press_pos = Some(dp);
-            cc.last_pos = Some(dp);
-            events.push(mk(PointerKind::Down, dp));
-        } else if cc.pointer_down && (primary_released || !primary_down) {
-            cc.pointer_down = false;
-            cc.last_pos = Some(dp);
-            events.push(mk(PointerKind::Up, dp));
-            // danach Überfahren an derselben Stelle: Werkzeug meldet wieder seinen Zeiger
-            if free && area.contains(p) {
-                events.push(mk(PointerKind::Move, dp));
+        } else {
+            // Rohe Ereignisse dieses Bildes der Reihe nach (UX-A L3/L15/L16/L24): Bei echter,
+            // schneller Eingabe kommen Umschalttasten, Drücken, Bewegen und Loslassen (auch ein
+            // ganzer Doppelklick) im selben Bild an; der Bildzustand von egui (`primary_pressed`,
+            // `modifiers` am Bildende, `interact_pos`) verliert dann Lage und Umschalttasten.
+            let mut cur = cc.frame_mods.unwrap_or(end_mods);
+            let tm = |m: egui::Modifiers| Modifiers { shift: m.shift, alt: m.alt, ctrl: m.ctrl || m.command, space, caps: false };
+            let at = |kind: PointerKind, q: Point, m: Modifiers| ToolEvent { input: ToolInput::Pointer { kind, pos: q }, mods: m, pressure: 1.0, time_ms: t_ms };
+            let mut had_button = false;
+            for r in &raw_seq {
+                match *r {
+                    RawPtr::Mods(m) => cur = m,
+                    RawPtr::Move(q) => {
+                        let dq = to_doc(q);
+                        if (cc.pointer_down || (free && area.contains(q))) && cc.last_pos != Some(dq) {
+                            cc.last_pos = Some(dq);
+                            events.push(at(PointerKind::Move, dq, tm(cur)));
+                        }
+                    }
+                    RawPtr::Button(q, true, m) => {
+                        cur = m;
+                        had_button = true;
+                        if !cc.pointer_down && free && area.contains(q) && !space {
+                            let dq = to_doc(q);
+                            cc.pointer_down = true;
+                            cc.press_pos = Some(dq);
+                            cc.last_pos = Some(dq);
+                            cc.click_press = Some(q);
+                            events.push(at(PointerKind::Down, dq, tm(cur)));
+                        }
+                    }
+                    RawPtr::Button(q, false, m) => {
+                        cur = m;
+                        had_button = true;
+                        if cc.pointer_down {
+                            let dq = to_doc(q);
+                            cc.pointer_down = false;
+                            cc.last_pos = Some(dq);
+                            events.push(at(PointerKind::Up, dq, tm(cur)));
+                            // Doppelklick selbst erkennen (Windows: zweiter Klick binnen 500 ms,
+                            // höchstens 4 px entfernt), je Klick – auch zwei Klicks in einem Bild
+                            if cc.click_press.take().is_some_and(|c| c.distance(q) <= 4.0) {
+                                let double = cc.last_click.is_some_and(|(t, l)| time - t <= 0.5 && l.distance(q) <= 4.0);
+                                cc.last_click = if double { None } else { Some((time, q)) };
+                                if double {
+                                    events.push(at(PointerKind::DoubleClick, dq, tm(cur)));
+                                }
+                            } else {
+                                cc.last_click = None;
+                            }
+                            // danach Überfahren an derselben Stelle: Werkzeug meldet wieder seinen Zeiger
+                            if free && area.contains(q) {
+                                events.push(at(PointerKind::Move, dq, tm(cur)));
+                            }
+                        }
+                    }
+                }
             }
-        } else if (cc.pointer_down || (free && area.contains(p))) && cc.last_pos != Some(dp) {
-            cc.last_pos = Some(dp);
-            events.push(mk(PointerKind::Move, dp));
+            // Loslassen ohne Ereignis (außerhalb des Fensters, Fokusverlust)
+            if cc.pointer_down && !had_button && (primary_released || !primary_down) {
+                cc.pointer_down = false;
+                cc.click_press = None;
+                cc.last_pos = Some(dp);
+                events.push(mk(PointerKind::Up, dp));
+            }
         }
-        // Doppelklick selbst erkennen (Windows: zweiter Klick binnen 500 ms, höchstens 4 px entfernt);
-        // `Response::double_clicked` von egui kam in dieser Folge nicht zuverlässig an
-        let mut double = false;
-        if resp.clicked() && free {
-            double = cc.last_click.is_some_and(|(t, q)| time - t <= 0.5 && q.distance(p) <= 4.0);
-            cc.last_click = if double { None } else { Some((time, p)) };
-        }
-        if double {
-            events.push(mk(PointerKind::DoubleClick, dp));
-        }
+    }
+    if let Some(cc) = st.canvases.get_mut(&id) {
+        cc.frame_mods = Some(end_mods);
     }
     let ctx = ui.ctx().clone();
     for ev in events {
@@ -965,6 +1047,17 @@ fn overlays(ui: &Ui, st: &mut AppState, painter: &egui::Painter, area: Rect, vie
             if area.contains(pp) {
                 label_at(painter, &theme, pp + vec2(10.0, 10.0), &format!("{label:.0}"));
             }
+        }
+    }
+    // Web-Ebene: Segmente/Hotspots und Segment-Hilfslinien (UX-A O17)
+    if !view.hide_slices
+        && let Some(pr) = page_rect(&d.doc, d.page)
+    {
+        let items = web::items(&d.doc, d.page, d.frame);
+        if !items.is_empty() {
+            let pg = fp_geom::Rect::new(pr.left as f32, pr.top as f32, pr.right as f32, pr.bottom as f32);
+            let gc = st.session.prefs.get_color("SliceGuideColor", fp_color::Argb(0xffff_4a4a));
+            web::paint(painter, &items, pg, view.show_slice_guides, argb(gc), &spp);
         }
     }
     // Auswahl: Rahmen mit Eckgriffen

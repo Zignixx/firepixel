@@ -80,8 +80,6 @@ impl DragTracker {
 pub struct ShapeTool {
     id: ToolId,
     drag: DragTracker,
-    /// Eckenradius in px, per Pfeil auf/ab beim Aufziehen geändert.
-    corner_px: Option<f32>,
     overlay: Vec<Overlay>,
     guides: Vec<Overlay>,
     /// Automatische Form: gezogener Steuerpunkt.
@@ -91,17 +89,11 @@ pub struct ShapeTool {
 impl ShapeTool {
     /// Neues Werkzeug (Rectangle, Ellipse, Polygon, AutoShape).
     pub fn new(id: ToolId) -> ShapeTool {
-        ShapeTool { id, drag: DragTracker::new(), corner_px: None, overlay: Vec::new(), guides: Vec::new(), control: None }
+        ShapeTool { id, drag: DragTracker::new(), overlay: Vec::new(), guides: Vec::new(), control: None }
     }
 
-    fn roundness(&self, r: &Rect, ctx: &ToolContext) -> f32 {
-        match self.corner_px {
-            Some(px) => {
-                let m = r.width().abs().min(r.height().abs());
-                if m > 0.0 { (2.0 * px / m).clamp(0.0, 1.0) } else { 0.0 }
-            }
-            None => ctx.options.rect_roundness.clamp(0.0, 1.0),
-        }
+    fn roundness(&self, _r: &Rect, ctx: &ToolContext) -> f32 {
+        ctx.options.rect_roundness.clamp(0.0, 1.0)
     }
 
     fn preview(&self, start: Point, cur: Point, ev: &ToolEvent, ctx: &ToolContext) -> (Vec<Overlay>, Option<Invocation>) {
@@ -185,9 +177,6 @@ impl ToolMachine for ShapeTool {
                         return ToolResponse::with_overlay(control_points_feedback(ctx, None), Cursor::PointerPoint);
                     }
                 }
-                if *kind == PointerKind::Down {
-                    self.corner_px = None;
-                }
                 let sp = Snapper::new(ctx, &[]).point(*pos);
                 if !self.drag.active() && *kind != PointerKind::Down {
                     // Überfahren: nur Fanglinien zeigen
@@ -221,15 +210,14 @@ impl ToolMachine for ShapeTool {
                 }
                 ToolResponse::with_overlay(self.overlay(), Cursor::Crosshair)
             }
-            ToolInput::Key(k @ (ToolKey::Up | ToolKey::Down)) if self.id == ToolId::Rectangle => {
-                if let Some((s, c)) = self.drag.dragging() {
-                    let r = constrain_rect(s, c, ev.mods.shift, ev.mods.alt);
-                    let max = r.width().abs().min(r.height().abs()) / 2.0;
-                    let cur = self.corner_px.unwrap_or(ctx.options.rect_roundness * max);
-                    let step = if *k == ToolKey::Up { 1.0 } else { -1.0 };
-                    self.corner_px = Some((cur + step).clamp(0.0, max));
-                    self.overlay = self.preview(s, c, ev, ctx).0;
-                }
+            // Pfeil auf/ab während des Aufziehens: im laufenden Original ohne
+            // Wirkung (PARITAET_A L17, live gemessen; re\10 ist hier überholt).
+            ToolInput::Key(ToolKey::Up | ToolKey::Down) if self.drag.active() => {
+                ToolResponse::with_overlay(self.overlay(), Cursor::Crosshair)
+            }
+            // Esc während des Aufziehens wird im Original ignoriert, die Form
+            // entsteht beim Loslassen (PARITAET_A L19, gemessen am Rechteck).
+            ToolInput::Key(ToolKey::Escape) if self.id == ToolId::Rectangle && self.drag.active() => {
                 ToolResponse::with_overlay(self.overlay(), Cursor::Crosshair)
             }
             ToolInput::Key(ToolKey::Escape) => {

@@ -349,6 +349,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 let size = p.f64_or("size", s.tools.options.text_size as f64)? as f32;
                 let color = p.opt_color("color")?.unwrap_or(s.tools.options.text_color);
                 let rect = p.opt_rect("rect")?;
+                let lead = s.prefs.get_real("Text_Leading", 1.2);
                 let anchor = p.opt_point("anchor")?.or_else(|| rect.map(|r| Point::new(r.left, r.top + size))).ok_or_else(|| EngineError::InvalidParams { name: p.command.clone(), message: fp_i18n::t("err-param-anchor-or-rect") })?;
                 let e = {
                     let d = s.doc_mut()?;
@@ -361,8 +362,17 @@ pub(super) fn register(r: &mut CommandRegistry) {
                         t.bounds = Rect::new(r.left, r.top, r.right, r.bottom.max(r.top + size * 1.2));
                         t.anchor_rect = Some(t.bounds);
                     }
-                    if let (Some(runs), ElementKind::Text(t)) = (runs, &mut e.kind) {
-                        crate::tools::text::apply_runs(t, runs);
+                    match (runs, &mut e.kind) {
+                        (Some(runs), ElementKind::Text(t)) => crate::tools::text::apply_runs(t, runs),
+                        (None, ElementKind::Text(t)) => {
+                            // Zeilenabstand der Werksvorgabe (`Text_Leading` 120 %, UX-A O4)
+                            let l = Some(lead as f32);
+                            t.initial.leading = l;
+                            for r in &mut t.runs {
+                                r.attrs.leading = l;
+                            }
+                        }
+                        _ => {}
                     }
                     e
                 };

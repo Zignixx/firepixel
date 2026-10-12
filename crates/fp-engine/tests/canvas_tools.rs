@@ -467,7 +467,7 @@ fn text_tool_editor_keys_clipboard_and_undo() {
     assert!(!s.tool_is_editing_text());
     let t = top_elements(&s).iter().find(|e| matches!(e.kind, ElementKind::Text(_))).map(|e| e.id).expect("Text");
     assert!(matches!(&el(&s, t).kind, ElementKind::Text(x) if x.plain_text() == "Hallo Welt"));
-    assert_eq!(s.tools.active, ToolId::Pointer, "zurück zum Zeiger");
+    assert_eq!(s.tools.active, ToolId::Text, "Esc: Werkzeug bleibt Text (wie im Original, UX-A L21/L22)");
     undo_redo(&mut s, &before);
     // Vorhandenen Text bearbeiten: alles markieren und ersetzen
     tool(&mut s, ToolId::Text);
@@ -651,6 +651,56 @@ fn text_tool_uses_original_font_and_own_text_color() {
     s.tools.options.text_color = fp_color::Argb(0xff12_3456);
     ex(&mut s, "draw.text", json!({"text": "X", "anchor": [10, 150]}));
     assert_eq!(text_of(&s, last(&s)).resolved_runs()[0].0.color, Some(0xff12_3456));
+}
+
+/// UX-A L1, L13, L22, L25, O4: Gummiband wählt berührte Objekte; Esc im Zauberstab beendet den
+/// Bitmapmodus (Auswahlrahmen weg, Zeiger, Bitmap bleibt gewählt, ein Schritt); Klick mit dem
+/// Textwerkzeug = Grundlinie, Zeilenabstand 120 %, Werkzeug bleibt Text; Zoomrahmen stufenlos.
+#[test]
+fn parity_ux_a_rubber_escape_text_zoom() {
+    let mut s = doc_session(800.0, 600.0);
+    let r1 = rect(&mut s, 50.0, 50.0, 150.0, 120.0);
+    select(&mut s, &[]);
+    tool(&mut s, ToolId::Pointer);
+    drag(&mut s, (20.0, 20.0), (100.0, 100.0));
+    assert_eq!(sel(&s), vec![r1], "teilweise berührt zählt");
+    // Zauberstab + Esc
+    let b = bitmap(&mut s, 300, 50, 60, 60, [200, 0, 0, 255]);
+    select(&mut s, &[b]);
+    tool(&mut s, ToolId::MagicWand);
+    click(&mut s, 320.0, 70.0);
+    assert!(s.active().unwrap().selection.has_pixels(), "Auswahlrahmen");
+    let n = s.active().unwrap().history.len();
+    s.tool_event(&ToolEvent::key(ToolKey::Escape)).expect("Esc");
+    let d = s.active().unwrap();
+    assert!(!d.selection.has_pixels() && !d.bitmap_mode, "Bitmapmodus beendet");
+    assert_eq!(d.selection.elements, vec![b], "Bitmap bleibt gewählt");
+    assert_eq!(s.tools.active, ToolId::Pointer);
+    assert_eq!(s.active().unwrap().history.len(), n + 1, "Verlaufsschritt");
+    // Esc ohne Bitmapmodus und Auswahlrahmen: nichts
+    tool(&mut s, ToolId::MagicWand);
+    let n = s.active().unwrap().history.len();
+    s.tool_event(&ToolEvent::key(ToolKey::Escape)).expect("Esc");
+    assert_eq!((s.tools.active, s.active().unwrap().history.len()), (ToolId::MagicWand, n));
+    // Text per Klick: Klickpunkt = Grundlinie, 120 %, Werkzeug bleibt Text
+    tool(&mut s, ToolId::Text);
+    click(&mut s, 300.0, 340.0);
+    send_in(&mut s, ToolInput::Text("Abc".into()));
+    s.tool_event(&ToolEvent::key(ToolKey::Escape)).expect("Esc");
+    assert_eq!(s.tools.active, ToolId::Text);
+    let t = last(&s);
+    let tx = text_of(&s, t);
+    assert_eq!(tx.anchor_rect.map(|r| (r.left, r.top)), Some((300.0, 340.0)), "Grundlinie am Klickpunkt");
+    assert_eq!(tx.resolved_runs()[0].0.leading, Some(1.2));
+    let bt = bounds(&s, t);
+    assert!(bt.top < 340.0 && bt.bottom > 340.0 && bt.bottom < 345.0, "{bt:?}");
+    // auch per Skript neue Texte mit 120 %
+    ex(&mut s, "draw.text", json!({"text": "S", "anchor": [10, 500]}));
+    assert_eq!(text_of(&s, last(&s)).initial.leading, Some(1.2));
+    // Zoomrahmen 50,50–150,120: stufenlos eingepasst (keine Tabellenstufe)
+    ex(&mut s, "view.zoomToRect", json!({"rect": [50, 50, 150, 120]}));
+    let z = s.active().unwrap().view.zoom;
+    assert!(![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 8.0, 12.0, 16.0].iter().any(|t| (z - t).abs() < 1e-9), "stufenlos: {z}");
 }
 
 #[test]
@@ -950,7 +1000,7 @@ fn escape_mid_drag_leaves_document_unchanged() {
     for t in [
         ToolId::Pointer,
         ToolId::Subselection,
-        ToolId::Rectangle,
+        // Rechteck: Esc wird im Original ignoriert (L19), eigener Test unten
         ToolId::Ellipse,
         ToolId::Polygon,
         ToolId::Line,

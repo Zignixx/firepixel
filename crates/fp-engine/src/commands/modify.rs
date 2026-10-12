@@ -1497,7 +1497,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
         d.bitmap_mode = true;
         Ok(CommandOutput::session())
     }));
-    r.add(cmd("modify.exitBitmapMode").requires(DOC).available(|s| s.active().is_some_and(|d| d.bitmap_mode)).run(|s, _| {
+    r.add(cmd("modify.exitBitmapMode").requires(DOC).available(|s| s.active().is_some_and(|d| d.bitmap_mode || d.selection.has_pixels())).run(|s, _| {
         with_doc(s, |d| {
             d.bitmap_mode = false;
             d.selection.pixels = None;

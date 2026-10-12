@@ -57,6 +57,10 @@ pub struct TextEditView {
     /// Attribute für Text an leerer Stelle (neuer bzw. ganz gelöschter Text).
     #[serde(default)]
     pub base: TextAttrs,
+    /// Erste Grundlinie eines per Klick begonnenen Punkttexts (Klickpunkt, wie im Original; UX-A
+    /// L22). Bleibt fest, wenn sich die Größe ändert.
+    #[serde(default)]
+    pub baseline: Option<Point>,
 }
 
 /// Grundattribute eines neuen Texts (wie `draw.text`).
@@ -348,7 +352,7 @@ impl TextEditView {
 
     /// Erste Grundlinie eines neuen Punkttexts (wie `draw.text` mit `anchor`).
     pub fn baseline_anchor(&self) -> Point {
-        Point::new(self.anchor.x, self.anchor.y + self.size)
+        self.baseline.unwrap_or(Point::new(self.anchor.x, self.anchor.y + self.size))
     }
 }
 
@@ -539,6 +543,7 @@ impl TextTool {
                 color: ctx.fill_color,
                 spans,
                 base,
+                baseline: None,
             };
             v.sync_base();
             v.sanitize();
@@ -613,12 +618,17 @@ impl TextTool {
                     let s = snap.point(start).point;
                     let e = snap.point(*pos).point;
                     let width = if dist(start, *pos) >= ctx.drag_threshold() { Some((e.x - s.x).abs().max(1.0)) } else { None };
-                    // Klickpunkt bzw. aufgezogener Rahmen = linke obere Ecke des Textblocks
-                    let anchor = if width.is_some() { Point::new(s.x.min(e.x), s.y.min(e.y)) } else { s };
+                    // Aufgezogener Rahmen = linke obere Ecke des Textblocks; Klick = erste Grundlinie
+                    // (wie im Original, UX-A L22: Klick bei y 340 → Text 323–341 bei 12 pt)
+                    let size = ctx.options.text_size;
+                    let (anchor, baseline) = if width.is_some() { (Point::new(s.x.min(e.x), s.y.min(e.y)), None) } else { (Point::new(s.x, s.y - size), Some(s)) };
                     // eigene Textfarbe des Werkzeugs (wie im Original), nicht die Füllfarbe
                     let color = ctx.options.text_color;
-                    let mut base = new_attrs(&ctx.options.text_font, ctx.options.text_size, color);
+                    let mut base = new_attrs(&ctx.options.text_font, size, color);
                     base.color = Some(color.0);
+                    // Zeilenabstand der Werksvorgabe (`Text_Leading` 120 %, UX-A O4)
+                    base.leading = Some(ctx.prefs.get_real("Text_Leading", 1.2) as f32);
+                    base.leading_mode = Some(ctx.prefs.get_int("Text_LeadingMode", 0) as i32);
                     self.state = TextState::Editing(Box::new(TextEditView {
                         target: None,
                         anchor,
@@ -628,10 +638,11 @@ impl TextTool {
                         sel_anchor: 0,
                         preedit: None,
                         font: ctx.options.text_font.clone(),
-                        size: ctx.options.text_size,
+                        size,
                         color,
                         spans: Vec::new(),
                         base,
+                        baseline,
                     }));
                 }
                 self.drag = None;
@@ -707,7 +718,9 @@ impl TextTool {
                 let n = char_len(&v.text);
                 let extend = ev.mods.shift;
                 match k {
-                    ToolKey::Escape => return self.commit(ctx, true),
+                    // Esc übernimmt; das Werkzeug bleibt wie im laufenden Original „Text“ (UX-A
+                    // L21/L22 – `TextToolRevertsToPointer` wirkt dort beim Esc nicht)
+                    ToolKey::Escape => return self.commit(ctx, false),
                     ToolKey::Backspace => {
                         if !Self::delete_selection(v) && v.caret > 0 {
                             let from = if ev.mods.ctrl { Self::word_left(v) } else { v.caret - 1 };

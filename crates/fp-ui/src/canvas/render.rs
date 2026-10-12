@@ -144,6 +144,10 @@ pub struct CanvasCache {
     /// Letzter Klick auf der Leinwand (Zeit, Bildschirmpunkt) für die Doppelklick-Erkennung.
     pub last_click: Option<(f64, egui::Pos2)>,
     pub pinch_acc: f32,
+    /// Umschalttasten am Ende des letzten Bildes (Startzustand für die Ereignisfolge des nächsten).
+    pub frame_mods: Option<egui::Modifiers>,
+    /// Drückpunkt (Bildschirm) des laufenden Klicks für die Klick-/Doppelklick-Erkennung.
+    pub click_press: Option<egui::Pos2>,
     /// Farbfeld-Rückmeldung (Optimieren-Bedienfeld).
     pub swatch: Option<super::overlay::SwatchCache>,
 }

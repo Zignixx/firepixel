@@ -461,6 +461,94 @@ fn space_during_drag_moves_the_shape_in_ui() {
     assert_eq!((r.left, r.top, r.right, r.bottom), (250.0, 200.0, 310.0, 240.0));
 }
 
+/// UX-A L15/L16 mit egui-winit-genauer Folge: Umschalt/Alt nur als `ModifiersChanged` (eigenes
+/// Bild, vor dem Mausdruck), Zeigerereignisse mit denselben Modifikatoren, Loslassen der Taste erst
+/// nach dem Loslassen der Maus. Umschalt = Quadrat ab dem Startpunkt, Alt = von der Mitte aus.
+#[test]
+fn rectangle_shift_alt_held_before_press_winit_sequence() {
+    for (m, expect) in [(Modifiers::SHIFT, (240.0, 145.0, 300.0, 205.0)), (Modifiers::ALT, (180.0, 115.0, 300.0, 175.0))] {
+        let mut h = harness();
+        let _ = h.state_mut().state.session.execute("view.setZoom", json!({"zoom": 1.0}));
+        set_tool(&mut h, ToolId::Rectangle);
+        h.run_steps(2);
+        let a = at(&h, 240.0, 145.0);
+        ev(&mut h, Event::PointerMoved(a));
+        ev(&mut h, Event::ModifiersChanged(m));
+        ev(&mut h, Event::PointerButton { pos: a, button: PointerButton::Primary, pressed: true, modifiers: m });
+        for i in 1..=10 {
+            let q = at(&h, 240.0 + 6.0 * i as f32, 145.0 + 3.0 * i as f32);
+            ev(&mut h, Event::PointerMoved(q));
+        }
+        let b = at(&h, 300.0, 175.0);
+        ev(&mut h, Event::PointerButton { pos: b, button: PointerButton::Primary, pressed: false, modifiers: m });
+        ev(&mut h, Event::ModifiersChanged(Modifiers::NONE));
+        h.run_steps(2);
+        let d = h.state().state.session.active().expect("d");
+        let r = fp_engine::docops::element_bounds(&d.doc, &top(&h)[0]).expect("Rechteck");
+        assert_eq!((r.left, r.top, r.right, r.bottom), expect, "{m:?}");
+    }
+}
+
+/// Mehrere Ereignisse in **einem** Bild (echte, schnelle Eingabe per SendInput).
+fn burst(h: &mut Harness<'static, FirepixelApp>, evs: Vec<Event>) {
+    h.input_mut().events.extend(evs);
+    h.step();
+    h.run_steps(2);
+}
+
+/// UX-A L15/L16/L24/L3: Umschalttaste, Drücken, Ziehen und Loslassen im selben Bild – die Lage des
+/// Drückens und die Umschalttasten je Ereignis gelten (nicht der Zustand am Bildende).
+#[test]
+fn burst_input_keeps_press_position_and_modifiers() {
+    let mut h = harness();
+    let _ = h.state_mut().state.session.execute("view.setZoom", json!({"zoom": 1.0}));
+    set_tool(&mut h, ToolId::Rectangle);
+    h.run_steps(2);
+    let (a, m1, b) = (at(&h, 240.0, 145.0), at(&h, 270.0, 160.0), at(&h, 300.0, 175.0));
+    let s = Modifiers::SHIFT;
+    burst(&mut h, vec![
+        Event::PointerMoved(a),
+        Event::ModifiersChanged(s),
+        Event::PointerButton { pos: a, button: PointerButton::Primary, pressed: true, modifiers: s },
+        Event::PointerMoved(m1),
+        Event::PointerMoved(b),
+        Event::PointerButton { pos: b, button: PointerButton::Primary, pressed: false, modifiers: s },
+        Event::ModifiersChanged(Modifiers::NONE),
+    ]);
+    let d = h.state().state.session.active().expect("d");
+    let r = fp_engine::docops::element_bounds(&d.doc, &top(&h)[0]).expect("Rechteck");
+    assert_eq!((r.left, r.top, r.right, r.bottom), (240.0, 145.0, 300.0, 205.0), "Quadrat ab dem Drückpunkt");
+    // Stift: Klick, Klick, Doppelklick (der Doppelklick in einem Bild) → offener Pfad mit 3 Punkten
+    let _ = h.state_mut().state.session.execute("select.none", json!({}));
+    set_tool(&mut h, ToolId::Pen);
+    let n0 = top(&h).len();
+    let click = |p: Pos2| vec![Event::PointerMoved(p), Event::PointerButton { pos: p, button: PointerButton::Primary, pressed: true, modifiers: Modifiers::NONE }, Event::PointerButton { pos: p, button: PointerButton::Primary, pressed: false, modifiers: Modifiers::NONE }];
+    let (p1, p2, p3) = (at(&h, 250.0, 50.0), at(&h, 330.0, 50.0), at(&h, 330.0, 120.0));
+    burst(&mut h, click(p1));
+    burst(&mut h, click(p2));
+    let mut dbl = click(p3);
+    dbl.extend(click(p3).into_iter().skip(1));
+    burst(&mut h, dbl);
+    assert_eq!(top(&h).len(), n0 + 1, "Pfad übernommen");
+    let e = top(&h)[0].clone();
+    let fp_model::ElementKind::Path(pe) = &e.kind else { panic!("kein Pfad") };
+    assert_eq!(pe.contours[0].nodes.len(), 3);
+    assert!(!pe.contours[0].closed);
+    // Zeiger: Umschalt erst während des Ziehens (L3) → waagerecht eingerastet
+    set_tool(&mut h, ToolId::Pointer);
+    let _ = h.state_mut().state.session.execute("select.none", json!({}));
+    let rect = top(&h).into_iter().find(|x| matches!(x.kind, fp_model::ElementKind::Path(ref p) if p.primitive.is_some() || p.contours[0].closed)).expect("Rechteck");
+    let id = rect.id;
+    let before = fp_engine::docops::element_bounds(&h.state().state.session.active().expect("d").doc, &rect).expect("b");
+    let g = at(&h, 270.0, 175.0);
+    burst(&mut h, vec![Event::PointerMoved(g), Event::PointerButton { pos: g, button: PointerButton::Primary, pressed: true, modifiers: Modifiers::NONE }, Event::PointerMoved(g + egui::vec2(10.0, 2.0))]);
+    burst(&mut h, vec![Event::ModifiersChanged(s), Event::PointerMoved(g + egui::vec2(40.0, 10.0)), Event::PointerButton { pos: g + egui::vec2(40.0, 10.0), button: PointerButton::Primary, pressed: false, modifiers: s }, Event::ModifiersChanged(Modifiers::NONE)]);
+    let d = h.state().state.session.active().expect("d");
+    let el = fp_engine::docops::element_on_page(&d.doc, d.page, id).expect("Pfad");
+    let after = fp_engine::docops::element_bounds(&d.doc, &el).expect("b");
+    assert_eq!((after.left - before.left, after.top - before.top), (40.0, 0.0), "Umschalt während des Ziehens rastet waagerecht");
+}
+
 /// Gezeichnete Lage der Leinwand-Textur im letzten Bild (Rechteck des Bildes mit dieser Textur).
 fn drawn_canvas_rect(h: &Harness<'static, FirepixelApp>) -> Option<egui::Rect> {
     let st = &h.state().state;
@@ -645,13 +733,17 @@ fn plain_wheel_scrolls_with_hg_sequence() {
     h.run_steps(15);
     let o1 = h.state().state.session.active().map(|d| d.view.origin).unwrap_or_default();
     let dy = (o1.1 - o0.1) * 4.0;
-    assert!(dy > 5.0 && dy < 200.0, "Bildlauf {dy}");
-    // Umschalt = waagerecht
-    let o1x = o1.0;
+    // eine Rastung = 52 Bildschirmpixel wie im Original (UX-A L9)
+    assert!((dy - 52.0).abs() < 0.01, "Bildlauf {dy}");
+    // Umschalt+Rad tut im Original nichts (L10), Alt+Rad rollt senkrecht wie ohne Taste (L11)
     hg_ev(&mut h, Event::MouseWheel { unit: egui::MouseWheelUnit::Line, delta: egui::vec2(0.0, -1.0), phase: egui::TouchPhase::Move, modifiers: Modifiers::SHIFT });
     h.run_steps(5);
     let o2 = h.state().state.session.active().map(|d| d.view.origin).unwrap_or_default();
-    assert!((o2.0 - o1x).abs() * 4.0 > 5.0 && (o2.1 - o1.1).abs() < 1e-9, "waagerecht {o1:?} → {o2:?}");
+    assert_eq!(o2, o1, "Umschalt+Rad: nichts");
+    hg_ev(&mut h, Event::MouseWheel { unit: egui::MouseWheelUnit::Line, delta: egui::vec2(0.0, -1.0), phase: egui::TouchPhase::Move, modifiers: Modifiers::ALT });
+    h.run_steps(5);
+    let o3 = h.state().state.session.active().map(|d| d.view.origin).unwrap_or_default();
+    assert!(((o3.1 - o2.1) * 4.0 - 52.0).abs() < 0.01 && o3.0 == o2.0, "Alt+Rad senkrecht {o2:?} → {o3:?}");
 }
 
 /// Doppelklick mit dem Zeiger auf Text öffnet den Text-Editor an der Klickstelle (HGs Folge).

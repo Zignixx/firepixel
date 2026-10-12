@@ -43,10 +43,14 @@ fn rectangle_tool_modifiers() {
         ToolEvent::up(130.0, 40.0),
     ]);
     assert!(rect_approx(bounds(&s, last(&s)), Rect::new(110.0, 20.0, 130.0, 40.0)));
-    // Pfeil auf beim Aufziehen: Eckenrundung
+    // Pfeil auf beim Aufziehen: im Original ohne Wirkung (PARITAET_A L17)
     events(&mut s, &[ToolEvent::down(0.0, 150.0), ToolEvent::drag(40.0, 190.0), ToolEvent::key(ToolKey::Up), ToolEvent::key(ToolKey::Up), ToolEvent::up(40.0, 190.0)]);
-    assert!(matches!(&el(&s, last(&s)).kind, ElementKind::Path(p) if p.primitive.as_ref().is_some_and(|r| (r.roundness - 0.1).abs() < 1e-4)));
+    assert!(matches!(&el(&s, last(&s)).kind, ElementKind::Path(p) if p.primitive.as_ref().is_some_and(|r| r.roundness.abs() < 1e-4)));
     assert_eq!(top_elements(&s).len(), 5);
+    // Esc beim Aufziehen wird ignoriert, das Rechteck entsteht beim Loslassen (L19)
+    events(&mut s, &[ToolEvent::down(200.0, 150.0), ToolEvent::drag(240.0, 180.0), ToolEvent::key(ToolKey::Escape), ToolEvent::up(240.0, 180.0)]);
+    assert_eq!(top_elements(&s).len(), 6);
+    assert!(rect_approx(bounds(&s, last(&s)), Rect::new(200.0, 150.0, 240.0, 180.0)));
 }
 
 #[test]
@@ -131,7 +135,8 @@ fn freehand_and_text() {
     tool(&mut s, ToolId::Text);
     events(&mut s, &[ToolEvent::down(10.0, 100.0), ToolEvent::up(10.0, 100.0), ToolEvent::text("Hal"), ToolEvent::text("lo"), ToolEvent::key(ToolKey::Backspace), ToolEvent::key(ToolKey::Escape)]);
     assert!(matches!(&el(&s, last(&s)).kind, ElementKind::Text(t) if t.plain_text() == "Hal" .to_string() + "l"));
-    assert_eq!(s.tools.active, ToolId::Pointer, "TextToolRevertsToPointer");
+    // Esc: Werkzeug bleibt Text wie im laufenden Original (UX-A L21/L22)
+    assert_eq!(s.tools.active, ToolId::Text);
     // Rahmen aufziehen = feste Breite; vorhandenen Text bearbeiten
     tool(&mut s, ToolId::Text);
     events(&mut s, &[ToolEvent::down(100.0, 10.0), ToolEvent::drag(200.0, 20.0), ToolEvent::up(200.0, 20.0), ToolEvent::text("Rahmen")]);
@@ -336,7 +341,8 @@ fn web_and_view_tools() {
     assert_eq!(s.active().map(|d| d.view.zoom), Some(1.0));
     ex(&mut s, "view.setViewport", json!({"width": 400, "height": 400}));
     drag(&mut s, (0.0, 0.0), (100.0, 100.0));
-    assert_eq!(s.active().map(|d| d.view.zoom), Some(4.0));
+    // stufenlos eingepasst mit 15 px Rand wie „Auswahl anpassen“ (UX-A L25): (400 − 30) / 100
+    assert_eq!(s.active().map(|d| d.view.zoom), Some(3.7));
     tool(&mut s, ToolId::Hand);
     let o = s.active().map(|d| d.view.origin).unwrap_or_default();
     // nach dem Verschieben liegt der Zeiger (Dokumentkoordinaten) wieder auf dem Griffpunkt

@@ -431,15 +431,18 @@ pub(super) fn register(r: &mut CommandRegistry) {
         cmd("select.inRect")
             .label("Auswahlrechteck")
             .requires(DOC)
-            .param("rect", ParamKind::Rect, "Rechteck (Objekte vollständig darin)")
+            .param("rect", ParamKind::Rect, "Rechteck (berührte Objekte wie im Original)")
             .opt_default("mode", mode_param(), json!("replace"), "Verknüpfung")
+            .opt_default("contain", ParamKind::Bool, json!(false), "nur vollständig umschlossene Objekte")
             .run(|s, p| {
                 let rr = p.rect("rect")?.normalized();
                 let m = mode(p)?;
+                // Original: jedes vom Rahmen berührte Objekt zählt (UX-A L1)
+                let contain = p.bool_or("contain", false)?;
                 with_doc(s, |d| {
                     let ids: Vec<_> = all_selectable(d)
                         .into_iter()
-                        .filter(|id| docops::element_on_page(&d.doc, d.page, *id).and_then(|e| docops::element_bounds(&d.doc, &e)).is_some_and(|b| rr.contains_rect(&b)))
+                        .filter(|id| docops::element_on_page(&d.doc, d.page, *id).and_then(|e| docops::element_bounds(&d.doc, &e)).is_some_and(|b| if contain { rr.contains_rect(&b) } else { rr.intersects(&b) }))
                         .collect();
                     d.selection.apply(&ids, m);
                     Ok(CommandOutput::doc())

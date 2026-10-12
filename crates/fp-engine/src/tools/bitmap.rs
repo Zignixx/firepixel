@@ -36,6 +36,16 @@ fn bitmap_target(ctx: &ToolContext) -> bool {
         || ctx.selection.elements.iter().any(|id| docops::element_on_page(ctx.doc, ctx.page, *id).is_some_and(|e| matches!(e.kind, ElementKind::Bitmap(_))))
 }
 
+/// Esc in einem Bitmap-Auswahlwerkzeug ohne laufenden Vorgang: wie im Original „Bitmapmodus
+/// beenden“ (Verlaufsschritt; Auswahlrahmen weg, Bitmap bleibt ausgewählt, Werkzeug → Zeiger;
+/// UX-A L13, `a_321`). Ohne Bitmapmodus und Pixelauswahl: nichts.
+pub(crate) fn escape_bitmap_mode(ctx: &ToolContext) -> ToolResponse {
+    if !(ctx.bitmap_mode || ctx.selection.has_pixels()) {
+        return ToolResponse::default();
+    }
+    ToolResponse { commands: vec![Invocation::new("modify.exitBitmapMode", json!({}))], switch_tool: Some(ToolId::Pointer), ..ToolResponse::default() }
+}
+
 /// Fang für Pixelauswahl: Hilfslinien, Raster, ganze Pixel (keine intelligenten Hilfslinien).
 fn pixel_snap(ctx: &ToolContext, p: Point) -> Point {
     Snapper::new(ctx, &[]).without_smart().point(p).point
@@ -84,6 +94,9 @@ impl ToolMachine for MarqueeTool {
         }
         let ToolInput::Pointer { kind, pos } = &ev.input else {
             if ev.input == ToolInput::Key(ToolKey::Escape) {
+                if self.start.is_none() {
+                    return escape_bitmap_mode(ctx);
+                }
                 self.start = None;
                 self.overlay.clear();
             }
@@ -234,6 +247,9 @@ impl ToolMachine for LassoTool {
             }
             ToolInput::Key(ToolKey::Enter) if poly && self.active => self.commit(ctx),
             ToolInput::Key(ToolKey::Escape) => {
+                if !self.active {
+                    return escape_bitmap_mode(ctx);
+                }
                 self.points.clear();
                 self.active = false;
                 self.hover = None;
@@ -274,6 +290,7 @@ impl ToolMachine for WandTool {
                     ..ToolResponse::default()
                 }
             }
+            ToolInput::Key(ToolKey::Escape) if ctx.has_document => escape_bitmap_mode(ctx),
             _ => ToolResponse { cursor: Cursor::Wand, ..ToolResponse::default() },
         }
     }

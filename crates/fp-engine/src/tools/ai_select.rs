@@ -104,6 +104,8 @@ impl ToolMachine for AiObjectTool {
                 self.dragging = false;
                 ToolResponse::with_overlay(Vec::new(), Cursor::Wand)
             }
+            // sonst wie beim Zauberstab: Bitmapmodus beenden (UX-A L13)
+            ToolInput::Key(ToolKey::Escape) if ctx.has_document => super::bitmap::escape_bitmap_mode(ctx),
             _ => ToolResponse::default(),
         }
     }
@@ -141,7 +143,12 @@ impl ToolMachine for AiClickTool {
     }
 
     fn handle(&mut self, ev: &ToolEvent, ctx: &ToolContext) -> ToolResponse {
-        let ToolInput::Pointer { kind, pos } = &ev.input else { return ToolResponse::default() };
+        let ToolInput::Pointer { kind, pos } = &ev.input else {
+            if ev.input == ToolInput::Key(ToolKey::Escape) && ctx.has_document {
+                return super::bitmap::escape_bitmap_mode(ctx);
+            }
+            return ToolResponse::default();
+        };
         match kind {
             // wie der Zauberstab: der Mausdruck löst aus
             super::PointerKind::Down if ctx.has_document => {
