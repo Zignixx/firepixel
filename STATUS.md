@@ -539,3 +539,31 @@ Dialog `crates\fp-ui\src\dialogs\trace.rs` mit der Logo-Nachbearbeitung von VT-3
 - **Übersetzungsrest:** 2 Schlüssel in `befehlstexte.ftl` de/en (`bitmap.paint`, `bitmap.erase`); `parameterbeschreibungen_in_de_und_en` grün.
 - **Geprüft:** `font_search_fv12` 8/8 (davon 1 Bildtest), `trace_size_fv12` 5/5 (davon 1 Bildtest), `dialogs_trace`, `inspector_fv9`/`fv10`/`paritaet`/`fields`/`i18n`, `dialogs_i18n`, `dialogs_text_layout`, `i18n_keine_festen_texte` grün; `cargo test -p fp-i18n -p fp-neutral -p firepixel-cli` grün; `cargo check --workspace --all-targets` im sauberen Worktree von HEAD grün. Echtes Fenster, Brücke (eigene Instanz, eigenes APPDATA/LOCALAPPDATA, `ui_input`): Suche, Pfeile, Eingabe, Esc, kein Treffer, Textwerkzeug; Dialoggröße, Ziehen, Merken über Abbrechen und Neustart.
 - **Offen:** keine eigenen Befunde. Hinweis: die Bildschirmfotos zeigen installierte Fremdschriften; der Bildtest speichert nur Bilder ohne gesperrte Namen (§1a, `fp_neutral::find_in_bytes`).
+
+## Phase 7 – PM-5 (P-PM4 Teil 1: Nachmessung Dialoge D01–D25 in beiden Programmen) – Stand 12.10.2026
+- **Gemessen:** D01–D25 aus `docs\PARITAET_B.md` §2 Feld für Feld neu, ohne Umbau. Original: eigenes Testdokument `pm5_test.fw` (500 × 400, R1, R2, T1 „Hallo“ 24 pt, B1; einmal als eigene Testdatei im Scratchpad angelegt, alle Änderungen danach ohne Speichern verworfen, am Ende geschlossen), Sitzungen unter `gui-sitzung.ps1` (je 11–195 s). Dialoge über das Menü geöffnet, Steuerelemente, Tab-Folge, Fokus und Standardknopf per Win32 gelesen. Tab/Enter/Esc gingen als Fensternachricht an das fokussierte Element, weil die RDP-Sitzung kein Vordergrundfenster hatte (SetForegroundWindow scheiterte, SendInput unmöglich). Wirkung per JSF, Rückgängig über den Menübefehl, Bilder per PrintWindow. Firepixel: eigene Debug-Instanz aus einem sauberen Worktree von `ecf43b3`, eigenes APPDATA/LOCALAPPDATA, `--mcp`, `FP_FILE_DIALOG=native`, Fenster 1032 × 748 wie das Original, abseits des Originals; echtes Fenster, Brücke (`ui_find`, `ui_input` mit Tab/Enter/Esc/Strg+Z, `screenshot`).
+- **Ergebnis D01–D25:** 0 ✅ / 10 ⚠️ / 14 ❌ / 1 ⏳ (D08 Bildvorschau, Neubau nach `re\17`; Esc schließt dort im Original). Vorher 0 ✅ / 7 ⚠️ / 15 ❌ / 1 ❔ / 2 🔧. Besser geworden: D01 (gemerkte Werte, Farbfeld schwarz), D18 (Rasterfarbe cyan), D20 (gewählter Anker sichtbar), D21 (Farbfeld schwarz). Neu bewertet als ❌: D10 Datei-Info (XMP-Fenster fehlt), D25 (mitgelieferte Skripte gelten als gespeicherte Befehle). Zähltabelle oben in PARITAET_B: Dialoge 50 = 3 ✅ / 11 ⚠️ / 19 ❌ / 1 ⏳ / 16 🔧 (D26–D50 unverändert).
+- **Wichtigste Abweichungen** (13 neue Befunde unter IBD in `docs\BEFUNDE.md`, „von PM-5“):
+  1. **hoch:** Zahlenfelder in Leinwandgröße, Bildgröße, Raster bearbeiten und Textgröße nehmen nach einigen Öffnungen keine Ziffern mehr an. Die Ziffer kommt an, im nächsten Bild steht wieder der alte Wert. Nachgestellt in einer frischen Instanz; Neues Dokument bleibt bedienbar.
+  2. Tab-Folge: Die Titelleiste ist ein Tab-Stopp, ein Startfokus fehlt, jedes Optionsfeld ist ein eigener Stopp.
+  3. Verlaufsschritte, die das Original nicht anlegt: Raster bearbeiten, OK ohne Änderung, Exportassistent, HTML-Einrichtung.
+  4. Bildgröße rechnet die Felder erst bei Fokusverlust nach.
+  5. Leinwandgröße: Das Original wählt nach OK alle Objekte aus.
+  6. Neues Symbol fügt eine leere Instanz ein, statt die Symbolbearbeitung zu öffnen.
+  7. Textgröße: Vorgabe immer 12.
+  8. Selektives JPEG: Felder nicht grau, die Überlagerungsfarbe fehlt.
+  9. Native Dateidialoge erscheinen links oben am Hauptfenster, nicht mittig, und starten immer in „Dokumente“; Zusatzfelder fehlen.
+- **Abgehakt bzw. ergänzt** im I18N-DIALOGE-Eintrag „Dialoge D01–D25“: D01, D18-Farbe, D20-Anker, D21-Farbe („erledigt laut Nachmessung PM-5“) und die Korrektur zu D08 (Esc).
+- **Paarbilder:** `docs\screenshots\paritaet\pm5_D<nr>_*.png` (25 Stück). Stellen mit dem Produktnamen sind in den Originalbildern grau überdeckt (D11 Seite 2, D16, D24, D25). Dateidialoge und das Datei-Info-Fenster des Originals sind nicht abgelegt. In den Firepixel-Dateidialogen ist der Navigationsbereich überdeckt.
+- **Nicht gemessen:**
+  - Popup-Schieber ▾ des Originals in D18/D23 mit der Maus (ohne Vordergrund nicht möglich); in Firepixel fehlen sie ohnehin.
+  - Wirkung von OK bei D13 im Original auf den Verlauf (Skriptfehler im Lauf).
+  - Symbolbearbeitung nach OK in D14 (bewusst nicht ausgelöst).
+- **Beobachtung:** JSF-Skripte liefen im Original teils **doppelt**: Elemente wurden doppelt angelegt, ein per JSF angelegtes Dokument entstand zweimal, gemeldet wurde -1073741819. Deshalb nur wiederholbare Skripte verwenden. Am Ende sind im Original rund 38 unbenannte leere Dokumente anderer Läufe offen, keines von PM-5.
+- **Aufgeräumt:** Firepixel-Instanz beendet, Worktree `..\fp-pm5` und `target-pm5` gelöscht, Testdokument im Original ohne Speichern geschlossen, keine Dialoge offen.
+- **Paketvorschläge** (je 3–5 Dialoge, nach Alltagswichtigkeit):
+  - **P-DLG1** Größendialoge: Eingabefehler der Zahlenfelder (zuerst), D19 Bildgröße, D20 Leinwandgröße, D01 Neues Dokument; dazu die Tab-Folge in allen Dialogen (Titelleiste, Startfokus, Optionsgruppen).
+  - **P-DLG2** kleine Formulardialoge: D18 Raster bearbeiten (kein Verlaufsschritt, ▾, Kästchen weg), D23 Textgröße (Vorgabe, ▾), D21 Leinwandfarbe (Anordnung), D22 Selektives JPEG (grau, Überlagerungsfarbe).
+  - **P-DLG3** Dateidialoge (HG): D02/D03/D04/D05/D06/D09 mittig, mit Startordner, Titel, Filtern und den Zusatzfeldern von Speichern unter/Öffnen.
+  - **P-DLG4** Bearbeiten/Befehle: D14 Neues Symbol, D25 Gespeicherte Befehle, D16 Voreinstellungen (Namen, Gruppen, Hilfe), D17 Tastaturkurzbefehle (Menübaum, Beschreibung).
+  - **P-DLG-X** große Umbauten: D07 Exportieren, D11 Exportassistent, D15 HTML-Code kopieren, D13 HTML-Einrichtung, D12 Batch; dazu D10 Datei-Info und D24 Rechtschreibung.
