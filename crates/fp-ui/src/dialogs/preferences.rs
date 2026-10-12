@@ -281,18 +281,60 @@ pub fn show(ctx: &egui::Context, st: &mut AppState) {
         let list = Rect::from_min_size(body.min + vec2(12.0, 12.0), vec2(lay.list_w, body.height() - 60.0));
         ui.painter().rect_filled(list, 0.0, c.list_bg);
         ui.painter().rect_stroke(list, 0.0, Stroke::new(1.0, c.list_border), StrokeKind::Inside);
+        // Kategorieliste wie eine Windows-Liste: **ein** Tab-Stopp (der gewählte Eintrag), hat beim
+        // Öffnen den Fokus, Pfeiltasten/Pos1/Ende wählen (Original, PM-5 D16)
+        let mut focus_to = None;
         for (i, cat) in CATEGORIES.iter().enumerate() {
             let rr = Rect::from_min_size(list.min + vec2(1.0, 1.0 + i as f32 * 21.0), vec2(list.width() - 2.0, 21.0));
-            let resp = ui.interact(rr, egui::Id::new(("prefcat", i)), Sense::click());
+            let id = egui::Id::new(("prefcat", i));
+            let resp = ui.interact(rr, id, if d.category == i { Sense::click() } else { Sense::CLICK });
+            let label = t(cat);
+            resp.widget_info(|| egui::WidgetInfo::selected(egui::WidgetType::SelectableLabel, true, d.category == i, &label));
             if d.category == i {
                 ui.painter().rect_filled(rr, 0.0, c.list_selected_bg);
             } else if resp.hovered() {
                 ui.painter().rect_filled(rr, 0.0, c.list_hover_bg);
             }
-            ui.painter().text(pos2(rr.left() + 6.0, rr.center().y), Align2::LEFT_CENTER, t(cat), theme.ui_font(), c.text);
-            if resp.clicked() {
-                d.category = i;
+            ui.painter().text(pos2(rr.left() + 6.0, rr.center().y), Align2::LEFT_CENTER, &label, theme.ui_font(), c.text);
+            if d.category == i {
+                // Startfokus wie im Original auf der Liste (vor allen Feldern gezeichnet)
+                let key = super::autofocus_id(ui.layer_id());
+                if resp.enabled() && ui.ctx().data(|dd| dd.get_temp::<u64>(key)).is_some() {
+                    ui.ctx().data_mut(|dd| dd.remove::<u64>(key));
+                    resp.request_focus();
+                }
+                if ui.memory(|m| m.has_focus(id)) {
+                    ui.painter().rect_stroke(rr.shrink(1.0), 0.0, Stroke::new(1.0, c.focus), StrokeKind::Inside);
+                    ui.memory_mut(|m| m.set_focus_lock_filter(id, egui::EventFilter { horizontal_arrows: false, vertical_arrows: true, tab: false, escape: false }));
+                    let n = CATEGORIES.len();
+                    let to = ui.input_mut(|inp| {
+                        let mut to = i;
+                        if inp.consume_key(egui::Modifiers::NONE, egui::Key::ArrowDown) {
+                            to = (to + 1).min(n - 1);
+                        }
+                        if inp.consume_key(egui::Modifiers::NONE, egui::Key::ArrowUp) {
+                            to = to.saturating_sub(1);
+                        }
+                        if inp.consume_key(egui::Modifiers::NONE, egui::Key::Home) {
+                            to = 0;
+                        }
+                        if inp.consume_key(egui::Modifiers::NONE, egui::Key::End) {
+                            to = n - 1;
+                        }
+                        to
+                    });
+                    if to != i {
+                        focus_to = Some(to);
+                    }
+                }
             }
+            if resp.clicked() {
+                focus_to = Some(i);
+            }
+        }
+        if let Some(i) = focus_to {
+            d.category = i;
+            ui.memory_mut(|m| m.request_focus(egui::Id::new(("prefcat", i))));
         }
         let page = Rect::from_min_max(pos2(list.right() + 16.0, list.top()), pos2(body.right() - 14.0, list.bottom()));
         ui.painter().text(page.min, Align2::LEFT_TOP, t(CATEGORIES[d.category]), theme.bold(theme.fonts.heading), c.text);
