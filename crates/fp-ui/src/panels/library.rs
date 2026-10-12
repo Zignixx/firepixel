@@ -41,8 +41,9 @@ pub fn document(ui: &mut Ui, st: &mut AppState) {
     let rename: Option<usize> = ui.data(|dd| dd.get_temp(Id::new(RENAME)));
     let mut actions = Vec::new();
     let mut new_sel = None;
-    // Vorschau
-    let (pv, _) = ui.allocate_exact_size(vec2(ui.available_width(), 96.0), Sense::hover());
+    // Vorschau; RAND-2b (R2-5): in niedrigen Docks kleiner, damit die Liste zwei Zeilen behält
+    let pv_h = (ui.available_height() - 16.0 - common::FOOTER_H - 2.0 * 20.0 - 2.0 - 2.0 * ui.spacing().item_spacing.y).clamp(24.0, 96.0).floor();
+    let (pv, _) = ui.allocate_exact_size(vec2(ui.available_width(), pv_h), Sense::hover());
     let pr = pv.shrink(4.0);
     ui.painter().rect_filled(pr, 0.0, Color32::WHITE);
     ui.painter().rect_stroke(pr, 0.0, Stroke::new(1.0, c.list_border), StrokeKind::Inside);

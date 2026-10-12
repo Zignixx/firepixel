@@ -773,7 +773,8 @@ fn show_manager(ctx: &egui::Context, st: &mut AppState) {
                     } else {
                         ui.label(egui::RichText::new(present_l.as_str()).color(c.icon_green).strong());
                         ui.add_space(6.0);
-                        if ui.add(egui::Button::new(egui::RichText::new(remove_l.as_str()).small()).frame(false)).on_hover_text(t("dlg-ai-remove-tip")).clicked() {
+                        // RAND-2b (R2-4): Innenabstand wie ein Knopf (Text nicht am Rand), Rahmen nur unter der Maus
+                        if ui.add(egui::Button::new(egui::RichText::new(remove_l.as_str()).small()).frame(true).frame_when_inactive(false)).on_hover_text(t("dlg-ai-remove-tip")).clicked() {
                             ask_remove = Some(m.id);
                         }
                     }

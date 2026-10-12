@@ -6,6 +6,9 @@
 //! (dazu „Symboleigenschaften“); jeder Dialog, den ein Befehl des Registers öffnet (Auswahl wie in
 //! den Gesamttests), dazu Neues Dokument, alle Seiten der Voreinstellungen, Über, Arbeitsbereich
 //! speichern, Ungespeichert-Abfrage, Rückfrage, Meldung und Warnung; zuletzt die Startseite.
+//! RAND-2b: dazu jedes Hauptmenü, die Bedienfeldmenüs (≡, per Klick), die Kontextmenüs der
+//! Leinwand und der Reiter (per Rechtsklick) und Stichproben der Tooltips (Werkzeugleiste,
+//! Inspektor; Zeiger darüber, Verzögerung 0). Geprüft wird dort nur die Menü- bzw. Tooltip-Ebene.
 //!
 //! **Varianten:** 3 Designs × de/en × Skalierung 100/150 % × Fenster 1024 × 768 und 1920 × 1080
 //! (Bildpunkte des Bildschirms; kleiner als 800 × 500 Punkte lässt Firepixel das Fenster nicht
@@ -26,7 +29,7 @@
 //! | `ragt-heraus` | ein Text ist breiter bzw. höher als sein eigenes Bedienelement |
 //! | `rand-knapp` | weniger als `FP_RAND_GAP_X` (2 px) waagerecht bzw. `FP_RAND_GAP_Y` (1 px) senkrecht zwischen Text und Rahmen eines Knopfs/Felds/Klappfelds, bzw. weniger als `FP_RAND_GAP_EDGE` (2 px) zum linken/rechten Rand von Dialog, Bedienfeld oder Inspektor |
 //! | `dialog-ragt-hinaus` | ein Dialog bzw. ein schwebendes Fenster ragt über das Hauptfenster |
-//! | `hinweis-bildlauf` | (nur Hinweis) Text am oberen/unteren Rand eines hohen Bereichs angeschnitten – Bildlauf bzw. zu wenig Dockhöhe, gewollt; ebenso an der linken/rechten Kante des waagerechten Bildlaufs im schmalen Inspektor (`inspector::hscroll_viewport`, RAND-2a) |
+//! | `hinweis-bildlauf` | (nur Hinweis) Text am oberen/unteren Rand eines hohen Bereichs angeschnitten – Bildlauf bzw. zu wenig Dockhöhe, gewollt; ebenso an der linken/rechten Kante des waagerechten Bildlaufs im schmalen Inspektor (`inspector::hscroll_viewport`, RAND-2a); auch, wenn der Text einen eigenen, niedrigen Clip hat (Zeile), dessen Schnittkante aber die Kante eines hohen Bereichs derselben Ebene ist (RAND-2b) |
 //! | `hinweis-feldinhalt` | (nur Hinweis) Inhalt eines Eingabefelds länger als das Feld (scrollt) |
 //!
 //! Warum senkrecht nur 1 px: Die kompakten Felder des Originals sind 13 DLU (21 px) hoch und haben
@@ -147,6 +150,14 @@ enum View {
     Dialog { cmd: String, cand: usize },
     Extra(&'static str, usize),
     Start,
+    /// RAND-2b: Hauptmenü Nr. (Popup `("fp-main-menu", i)`)
+    Menu(usize),
+    /// RAND-2b: k-tes Bedienfeldmenü (≡) von oben links
+    PanelMenu(usize),
+    /// RAND-2b: Kontextmenü („Leinwand“, „Reiter“, „Inspektor-Reiter“)
+    Context(&'static str),
+    /// RAND-2b: Tooltip des k-ten Bedienelements (Stichprobe) in „Werkzeuge“ bzw. „Inspektor“
+    Tooltip(&'static str, usize),
 }
 
 impl View {
@@ -157,7 +168,12 @@ impl View {
             View::InspectorSel(_) | View::InspectorTool(_) | View::InspectorSymbol => "Inspektor",
             View::Dialog { .. } | View::Extra(..) => "Dialoge",
             View::Start => "Startseite",
+            View::Menu(_) | View::PanelMenu(_) | View::Context(_) => "Menüs",
+            View::Tooltip(..) => "Tooltips",
         }
+    }
+    fn popup(&self) -> bool {
+        matches!(self, View::Menu(_) | View::PanelMenu(_) | View::Context(_) | View::Tooltip(..))
     }
     /// Stabiler Name (Schlüssel der Erlaubnisliste, unabhängig von der Sprache).
     fn name(&self, cands: &[Candidate]) -> String {
@@ -174,9 +190,19 @@ impl View {
             View::Dialog { cmd, .. } => format!("Dialog {cmd}"),
             View::Extra(k, i) => if *i == 0 { format!("Dialog {k}") } else { format!("Dialog {k} {i}") },
             View::Start => "Startseite".into(),
+            View::Menu(i) => format!("Hauptmenü {}", i + 1),
+            View::PanelMenu(k) => format!("Bedienfeldmenü {}", k + 1),
+            View::Context(w) => format!("Kontextmenü {w}"),
+            View::Tooltip(w, k) => format!("Tooltip {w} {}", k + 1),
         }
     }
 }
+
+/// Hauptmenüs (`menu::build_main_menu`), Bedienfeldmenüs (≡ im Dock und im Inspektor) und
+/// Tooltip-Stichproben je Bereich (RAND-2b).
+const MAIN_MENUS: usize = 10;
+const PANEL_MENUS: usize = 8;
+const TOOLTIP_SAMPLES: usize = 6;
 
 /// Seiten der Voreinstellungen (`dialogs\preferences.rs`, `CATEGORIES`).
 const PREF_PAGES: usize = 7;
@@ -253,6 +279,21 @@ fn all_views(cands: &[Candidate], dialogs: &[(String, usize)]) -> Vec<View> {
         }
     }
     v.push(View::Start);
+    // RAND-2b: Menüs, Kontextmenüs, Tooltips
+    for i in 0..MAIN_MENUS {
+        v.push(View::Menu(i));
+    }
+    for k in 0..PANEL_MENUS {
+        v.push(View::PanelMenu(k));
+    }
+    for w in ["Leinwand", "Reiter", "Inspektor-Reiter"] {
+        v.push(View::Context(w));
+    }
+    for w in ["Werkzeuge", "Inspektor"] {
+        for k in 0..TOOLTIP_SAMPLES {
+            v.push(View::Tooltip(w, k));
+        }
+    }
     if let Ok(f) = std::env::var("FP_RAND_VIEWS") {
         let f = f.to_lowercase();
         v.retain(|x| x.name(cands).to_lowercase().contains(&f));
@@ -376,6 +417,7 @@ fn setup(st: &mut AppState, view: &View, cands: &[Candidate], extra_collapse: us
                 _ => {}
             }
         }
+        View::Menu(_) | View::PanelMenu(_) | View::Context(_) | View::Tooltip(..) => apply_candidate(st, &cands[1.min(cands.len() - 1)]),
         View::Start => {
             apply_candidate(st, none);
             while st.session.active_id().is_some() {
@@ -557,8 +599,14 @@ fn nodes(h: &H, cap: &Cap) -> Vec<NodeRec> {
 fn run_view(h: &mut H, view: &View, cands: &[Candidate]) -> (Cap, Vec<NodeRec>, Rect, Roi) {
     let mut extra = 0;
     loop {
+        egui::Popup::close_all(&h.ctx);
+        h.event(egui::Event::PointerGone);
         setup(&mut h.state_mut().app.state, view, cands, extra);
         h.run_steps(2);
+        if view.popup() {
+            trigger(h, view);
+            h.run_steps(3);
+        }
         h.state_mut().want = true;
         h.step();
         h.state_mut().want = false;
@@ -566,10 +614,72 @@ fn run_view(h: &mut H, view: &View, cands: &[Candidate]) -> (Cap, Vec<NodeRec>, 
         let ns = nodes(h, &cap);
         let screen = h.ctx.content_rect();
         let (roi, shown) = roi_for(h, view, &cap, screen);
-        if shown || extra >= 4 {
+        if shown || extra >= 4 || !matches!(view, View::Panel(..)) {
             return (cap, ns, screen, roi);
         }
         extra += 1;
+    }
+}
+
+/// RAND-2b: öffnet das Menü bzw. den Tooltip der Ansicht (nach dem Einrichten).
+fn trigger(h: &mut H, view: &View) {
+    use egui_kittest::kittest::{By, NodeT, Queryable};
+    let ctx = h.ctx.clone();
+    let menu_buttons = |h: &H| {
+        let label = fp_i18n::t("ui-dock-panel-menu");
+        let mut v: Vec<Rect> = h.query_all(By::new().label(&label)).map(|n| n.rect()).collect();
+        v.sort_by(|a, b| (a.top(), a.left()).partial_cmp(&(b.top(), b.left())).unwrap_or(std::cmp::Ordering::Equal));
+        v
+    };
+    let click = |h: &H, p: Pos2, button: egui::PointerButton| {
+        h.event(egui::Event::PointerMoved(p));
+        for pressed in [true, false] {
+            h.event(egui::Event::PointerButton { pos: p, button, pressed, modifiers: egui::Modifiers::NONE });
+        }
+    };
+    match view {
+        View::Menu(i) => egui::Popup::open_id(&ctx, Id::new(("fp-main-menu", *i))),
+        View::PanelMenu(k) => {
+            if let Some(r) = menu_buttons(h).get(*k) {
+                click(h, r.center(), egui::PointerButton::Primary);
+            }
+        }
+        View::Context(w) => {
+            let dock = panel_rect(&ctx, "fp-dock");
+            let insp = panel_rect(&ctx, "fp-inspector");
+            let p = match *w {
+                "Leinwand" => {
+                    let tools = panel_rect(&ctx, "fp-tools").map(|r| r.right()).unwrap_or(0.0);
+                    let top = panel_rect(&ctx, "fp-toolbar").or(panel_rect(&ctx, "fp-appbar")).map(|r| r.bottom()).unwrap_or(0.0);
+                    let right = dock.map(|r| r.left()).unwrap_or(ctx.content_rect().right());
+                    let bottom = insp.map(|r| r.top()).unwrap_or(ctx.content_rect().bottom());
+                    Some(pos2((tools + right) / 2.0, (top + bottom) / 2.0))
+                }
+                // erster Reiter der obersten Dockgruppe bzw. des Inspektors (Zeile des ≡)
+                "Reiter" => dock.and_then(|d| menu_buttons(h).into_iter().find(|r| d.contains(r.center())).map(|r| pos2(d.left() + 24.0, r.center().y))),
+                _ => insp.and_then(|d| menu_buttons(h).into_iter().find(|r| d.contains(r.center())).map(|r| pos2(d.left() + 24.0, r.center().y))),
+            };
+            if let Some(p) = p {
+                click(h, p, egui::PointerButton::Secondary);
+            }
+        }
+        View::Tooltip(w, k) => {
+            ctx.all_styles_mut(|s| {
+                s.interaction.tooltip_delay = 0.0;
+                s.interaction.show_tooltips_only_when_still = false;
+            });
+            let area = if *w == "Werkzeuge" { panel_rect(&ctx, "fp-tools") } else { panel_rect(&ctx, "fp-inspector") };
+            if let Some(a) = area {
+                let mut rs: Vec<Rect> = h.query_all(By::new()).filter(|n| control(n.accesskit_node().role())).map(|n| n.rect()).filter(|r| r.is_positive() && a.contains(r.center())).collect();
+                rs.sort_by(|a, b| (a.top(), a.left()).partial_cmp(&(b.top(), b.left())).unwrap_or(std::cmp::Ordering::Equal));
+                rs.dedup_by(|a, b| (a.center() - b.center()).length() < 1.0);
+                if !rs.is_empty() {
+                    let r = rs[(k * rs.len() / TOOLTIP_SAMPLES).min(rs.len() - 1)];
+                    h.event(egui::Event::PointerMoved(r.center()));
+                }
+            }
+        }
+        _ => {}
     }
 }
 
@@ -617,6 +727,13 @@ fn roi_for(h: &H, view: &View, cap: &Cap, screen: Rect) -> (Roi, bool) {
             None => (Roi { area: dock.unwrap_or(screen), frame: dock, layers: bg, ..all }, false),
         };
     }
+    if view.popup() {
+        // nur die Menü- bzw. Tooltip-Ebene; Rahmen = größte solche Fläche
+        let pop: Vec<(usize, Rect)> = cap.areas.iter().filter(|(i, a)| a.is_positive() && matches!(cap.layers[*i].order, Order::Foreground | Order::Tooltip)).copied().collect();
+        let frame = pop.iter().map(|(_, a)| *a).max_by(|a, b| a.area().partial_cmp(&b.area()).unwrap_or(std::cmp::Ordering::Equal));
+        let layers = if pop.is_empty() { vec![usize::MAX] } else { pop.iter().map(|(i, _)| *i).collect() };
+        return (Roi { area: screen, layers: Some(layers), frame, ..all }, !pop.is_empty());
+    }
     let roi = match view {
         View::Main => Roi { exclude: dock.into_iter().chain(insp).collect(), no_numbers: true, layers: Some(vec![layer_index(cap, LayerId::background())]), ..all },
         View::Panel(_, PanelMode::Floating, _) => {
@@ -651,6 +768,7 @@ fn roi_for(h: &H, view: &View, cap: &Cap, screen: Rect) -> (Roi, bool) {
             let area = Rect::from_min_max(pos2(tools.map(|r| r.right()).unwrap_or(screen.left()), top), pos2(dock.map(|r| r.left()).unwrap_or(screen.right()), insp.map(|r| r.top()).unwrap_or(screen.bottom())));
             Roi { area, layers: Some(vec![layer_index(cap, LayerId::background())]), ..all }
         }
+        View::Menu(_) | View::PanelMenu(_) | View::Context(_) | View::Tooltip(..) => all.clone(),
     };
     (roi, true)
 }
@@ -733,9 +851,18 @@ fn analyze(cap: &Cap, ns: &[NodeRec], screen: Rect, roi: &Roi, cfg: &Cfg) -> (Ve
             let lost = 1.0 - v.area() / t.rect.area().max(1.0);
             let in_field = fields.iter().any(|f| f.rect.expand(1.0).contains_rect(bound));
             let at_hscroll = cut_h && !cut_v && roi.hscroll.is_some_and(|sv| (t.rect.right() > bound.right() + tol && (bound.right() - sv.right()).abs() < 1.0) || (t.rect.left() < bound.left() - tol && (bound.left() - sv.left()).abs() < 1.0));
+            // RAND-2b: Zeile mit eigenem Clip, deren Schnittkante die Kante eines hohen Bereichs
+            // derselben Ebene ist (Bildlaufbereich): ebenfalls Bildlauf
+            let tall_edge = || {
+                let cut_bottom = t.rect.bottom() > bound.bottom() + tol;
+                let edge = if cut_bottom { bound.bottom() } else { bound.top() };
+                cap.texts.iter().map(|u| (u.layer, u.clip)).chain(cap.boxes.iter().map(|b| (b.layer, b.clip))).any(|(l, c)| {
+                    l == t.layer && c.height() >= 2.5 * t.rect.height() && c.x_range().contains(bound.center().x) && ((if cut_bottom { c.bottom() } else { c.top() }) - edge).abs() <= 0.5
+                })
+            };
             let kind = if in_field {
                 "hinweis-feldinhalt"
-            } else if cut_v && !cut_h && bound.height() >= 2.5 * t.rect.height() {
+            } else if cut_v && !cut_h && (bound.height() >= 2.5 * t.rect.height() || tall_edge()) {
                 "hinweis-bildlauf"
             } else if at_hscroll {
                 // Text endet an der Kante des waagerechten Bildlaufs (Inspektor im schmalen
@@ -851,7 +978,10 @@ fn analyze(cap: &Cap, ns: &[NodeRec], screen: Rect, roi: &Roi, cfg: &Cfg) -> (Ve
         let worst = lost.max(hid);
         if worst > 0.02 {
             let label = texts.iter().filter(|t| t.layer == layer && c.rect.expand(2.0).intersects(t.rect)).map(|t| t.text.clone()).next().unwrap_or_default();
-            out.push(Finding { kind: "kaestchen", text: label, rect: c.rect, score: worst, detail: format!("{:?}: {:.0} % des Kästchens {} nicht sichtbar{}", c.role, worst * 100.0, r1(bx), if hid > lost { " (verdeckt)" } else { "" }) });
+            // RAND-2b: nur oben/unten vom Clip eines hohen Bereichs angeschnitten (Bildlauf): Hinweis
+            let scrolled = hid <= lost && clip.height() >= 2.5 * bx.height() && bx.left() >= clip.left() - 0.5 && bx.right() <= clip.right() + 0.5 && screen.contains_rect(bx);
+            let kind = if scrolled { "hinweis-bildlauf" } else { "kaestchen" };
+            out.push(Finding { kind, text: label, rect: c.rect, score: worst, detail: format!("{:?}: {:.0} % des Kästchens {} nicht sichtbar{}", c.role, worst * 100.0, r1(bx), if hid > lost { " (verdeckt)" } else { "" }) });
         }
     }
     // Rand zu Dialog/Bedienfeld/Inspektor
@@ -1076,7 +1206,7 @@ fn write_report(hits: &[Hit], by_key: &BTreeMap<String, Vec<&Hit>>, allow: &BTre
     md.push_str(&format!("- Erlaubnisliste: {} Einträge, davon {} nicht mehr gefunden\n\n", allow.len(), stale.len()));
     // Zahlen je Bereich und Art
     let kinds = ["kaestchen", "verdeckt", "abgeschnitten", "dialog-ragt-hinaus", "ueberlappt-text", "ueberlappt-element", "ragt-heraus", "rand-knapp", "hinweis-bildlauf", "hinweis-feldinhalt"];
-    let areas = ["Hauptfenster", "Bedienfelder", "Inspektor", "Dialoge", "Startseite"];
+    let areas = ["Hauptfenster", "Bedienfelder", "Inspektor", "Dialoge", "Startseite", "Menüs", "Tooltips"];
     md.push_str("## Stellen je Bereich (Funde in Klammern)\n\n| Bereich |");
     for k in kinds {
         md.push_str(&format!(" {k} |"));

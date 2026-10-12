@@ -455,7 +455,13 @@ fn dialog_frame_ex(ctx: &egui::Context, id: &str, title: &str, size: egui::Vec2,
     let stored = dialog_geom(ctx, id).filter(|g| g.pass + 1 >= pass);
     let opened = stored.is_none();
     let client = if resizable { stored.map(|g| g.client).unwrap_or(initial.unwrap_or(size)).max(size) } else { size };
-    let outer = vec2(client.x, client.y + title_h) + vec2(2.0, 2.0);
+    // RAND-2b (R2-3): höher/breiter als das Hauptfenster → sichtbare Größe auf den Bildschirm
+    // begrenzen, Inhalt mit Bildlauf, Knopfzeile unten fest (siehe [`push_button`])
+    let max_client = vec2((screen.width() - 2.0).max(120.0), (screen.height() - title_h - 2.0).max(80.0));
+    let scroll = client.x > max_client.x + 0.5 || client.y > max_client.y + 0.5;
+    let bar = if scroll { ctx.global_style().spacing.scroll.allocated_width() } else { 0.0 };
+    let shown = if scroll { vec2((client.x + bar).min(max_client.x), client.y.min(max_client.y)) } else { client };
+    let outer = vec2(shown.x, shown.y + title_h) + vec2(2.0, 2.0);
     let mut pos = clamp_dialog_pos(stored.map(|g| g.pos).unwrap_or_else(|| screen.center() - outer / 2.0), outer, screen);
     // Titelleiste ziehen wie bei einem Windows-Dialog: der gegriffene Punkt bleibt unter dem
     // Zeiger. Versatz beim Drücken merken und die Lage schon vor dem Zeichnen aus der Zeigerlage
@@ -492,7 +498,7 @@ fn dialog_frame_ex(ctx: &egui::Context, id: &str, title: &str, size: egui::Vec2,
         .current_pos(pos);
     let frame = egui::Frame::new().fill(c.frame_bg).stroke(Stroke::new(1.0, if theme.glow { c.focus } else { c.line_dark })).inner_margin(egui::Margin::ZERO);
     let resp = egui::Modal::new(Id::new(id)).area(area).frame(frame).backdrop_color(egui::Color32::from_black_alpha(if theme.glow { 150 } else { 40 })).show(ctx, |ui| {
-        let (rect, _) = ui.allocate_exact_size(vec2(client.x, client.y + title_h), Sense::hover());
+        let (rect, _) = ui.allocate_exact_size(vec2(shown.x, shown.y + title_h), Sense::hover());
         let tr = Rect::from_min_size(rect.min, vec2(rect.width(), title_h));
         ui.painter().rect_filled(tr, 0.0, c.app_bar_bg);
         ui.painter().hline(tr.x_range(), tr.bottom() - 0.5, Stroke::new(1.0, if theme.glow { c.focus } else { c.line_mid }));
@@ -516,8 +522,12 @@ fn dialog_frame_ex(ctx: &egui::Context, id: &str, title: &str, size: egui::Vec2,
             close = DialogClose::Cancelled;
         }
         let body = Rect::from_min_max(pos2(rect.left(), tr.bottom()), rect.max);
-        let mut child = ui.new_child(egui::UiBuilder::new().max_rect(body).layout(egui::Layout::top_down(egui::Align::Min)));
-        content(&mut child, body);
+        if scroll {
+            scrolled_body(ui, id, body, client, bar, if theme.glow { c.focus } else { c.line_mid }, content);
+        } else {
+            let mut child = ui.new_child(egui::UiBuilder::new().max_rect(body).layout(egui::Layout::top_down(egui::Align::Min)));
+            content(&mut child, body);
+        }
         // Größe an Rändern und Ecken ändern (nach dem Inhalt registriert, damit die Griffe oben liegen)
         if resizable {
             const G: f32 = 5.0;
@@ -591,6 +601,51 @@ fn dialog_frame_ex(ctx: &egui::Context, id: &str, title: &str, size: egui::Vec2,
     close
 }
 
+/// Höhe der festen Knopfzeile unten, wenn ein Dialog mit Bildlauf gezeigt wird (RAND-2b).
+pub const DIALOG_PIN_STRIP: f32 = 48.0;
+
+/// Feste Knopfzeile eines Dialogs mit Bildlauf: [`push_button`] verschiebt Knöpfe, deren Oberkante
+/// im Inhalt unterhalb von `from_y` liegt, in den Streifen `clip` am unteren Rand.
+#[derive(Clone, Copy, Debug)]
+struct PinStrip {
+    from_y: f32,
+    mid_x: f32,
+    dy: f32,
+    dx_left: f32,
+    dx_right: f32,
+    clip: Rect,
+}
+
+fn pin_id() -> Id {
+    Id::new("fp-dialog-pin-strip")
+}
+
+/// Inhalt eines Dialogs, der größer als das Hauptfenster ist: der Inhalt behält seine volle Größe
+/// (`client`) und läuft in einem Bildlaufbereich; die Knopfzeile bleibt unten sichtbar.
+fn scrolled_body(ui: &mut Ui, id: &str, body: Rect, client: egui::Vec2, bar: f32, line: egui::Color32, content: impl FnOnce(&mut Ui, Rect)) {
+    let strip_h = DIALOG_PIN_STRIP.min(body.height() / 2.0);
+    let view = Rect::from_min_max(body.min, pos2(body.right(), body.bottom() - strip_h));
+    let strip = Rect::from_min_max(pos2(body.left(), view.bottom()), body.max);
+    let ctx = ui.ctx().clone();
+    let mut sui = ui.new_child(egui::UiBuilder::new().max_rect(view).layout(egui::Layout::top_down(egui::Align::Min)));
+    egui::ScrollArea::both().id_salt((id, "fp-dialog-scroll")).auto_shrink([false, false]).max_width(view.width()).max_height(view.height()).show(&mut sui, |ui| {
+        let (vbody, _) = ui.allocate_exact_size(client, Sense::hover());
+        let pin = PinStrip {
+            from_y: vbody.bottom() - strip_h,
+            mid_x: vbody.center().x,
+            dy: body.bottom() - vbody.bottom(),
+            dx_left: body.left() - vbody.left(),
+            dx_right: (body.right() - bar) - vbody.right(),
+            clip: strip,
+        };
+        ctx.data_mut(|d| d.insert_temp(pin_id(), pin));
+        let mut child = ui.new_child(egui::UiBuilder::new().max_rect(vbody).layout(egui::Layout::top_down(egui::Align::Min)));
+        content(&mut child, vbody);
+        ctx.data_mut(|d| d.remove::<PinStrip>(pin_id()));
+    });
+    ui.painter().hline(strip.x_range(), strip.top() + 0.5, Stroke::new(1.0, line));
+}
+
 /// Setzt ein Widget linksbündig oben in `rect`. Anders als `ui.put` (zentriertes,
 /// ausgerichtetes Layout) streckt das umbrechende Beschriftungen nicht auf Blocksatz.
 pub fn put_left(ui: &mut Ui, rect: Rect, w: impl egui::Widget) -> egui::Response {
@@ -623,6 +678,20 @@ pub fn group_box(ui: &Ui, rect: Rect, label: &str) {
 
 /// Standard-Knopf mit fester Größe; `default` zeichnet den Standardrahmen (OK).
 pub fn push_button(ui: &mut Ui, rect: Rect, label: &str, default: bool, enabled: bool) -> bool {
+    // Dialog mit Bildlauf: Knöpfe der unteren Zeile bleiben fest im sichtbaren Streifen
+    if let Some(pin) = ui.ctx().data(|d| d.get_temp::<PinStrip>(pin_id()))
+        && rect.top() >= pin.from_y - 0.5
+    {
+        let dx = if rect.center().x > pin.mid_x { pin.dx_right } else { pin.dx_left };
+        let r = rect.translate(vec2(dx, pin.dy));
+        let mut child = ui.new_child(egui::UiBuilder::new().max_rect(r.union(pin.clip)));
+        child.set_clip_rect(pin.clip);
+        return push_button_at(&mut child, r, label, default, enabled);
+    }
+    push_button_at(ui, rect, label, default, enabled)
+}
+
+fn push_button_at(ui: &mut Ui, rect: Rect, label: &str, default: bool, enabled: bool) -> bool {
     let theme = Theme::current(ui.ctx());
     if button_text_w(ui.ctx(), label) + BUTTON_PAD > rect.width() + 0.5 {
         report_overflow(ui.ctx(), format!("Knopf „{label}“ breiter als {:.0} px", rect.width()));

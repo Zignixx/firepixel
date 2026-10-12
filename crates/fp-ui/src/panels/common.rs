@@ -13,14 +13,19 @@ pub const FOOTER_H: f32 = 22.0;
 pub fn list_frame(ui: &mut Ui, id: impl std::hash::Hash + std::fmt::Debug, footer: f32, add: impl FnOnce(&mut Ui)) -> Rect {
     let theme = Theme::current(ui.ctx());
     let avail = ui.available_rect_before_wrap();
-    let rect = Rect::from_min_max(avail.min + vec2(1.0, 1.0), pos2(avail.right() - 1.0, (avail.bottom() - footer).max(avail.top() + 24.0)));
-    ui.painter().rect_filled(rect, 0.0, theme.colors.list_bg);
-    ui.painter().rect_stroke(rect, 0.0, Stroke::new(1.0, theme.colors.list_border), StrokeKind::Inside);
-    let mut child = ui.new_child(egui::UiBuilder::new().max_rect(rect.shrink(1.0)).layout(egui::Layout::top_down(egui::Align::Min)));
-    egui::ScrollArea::vertical().id_salt(Id::new(id)).auto_shrink([false, false]).show(&mut child, |ui| {
-        ui.spacing_mut().item_spacing = vec2(0.0, 0.0);
-        add(ui);
-    });
+    // RAND-2b (NZ-2): nie über die Fußleiste hinaus; ist das Bedienfeld zu niedrig, wird die
+    // Liste kleiner (früher mindestens 24 px, sie lag dann über den Fußleistenknöpfen)
+    let rect = Rect::from_min_max(avail.min + vec2(1.0, 1.0), pos2(avail.right() - 1.0, (avail.bottom() - footer).max(avail.top() + 1.0)));
+    if rect.height() >= 4.0 {
+        ui.painter().rect_filled(rect, 0.0, theme.colors.list_bg);
+        ui.painter().rect_stroke(rect, 0.0, Stroke::new(1.0, theme.colors.list_border), StrokeKind::Inside);
+        let mut child = ui.new_child(egui::UiBuilder::new().max_rect(rect.shrink(1.0)).layout(egui::Layout::top_down(egui::Align::Min)));
+        // ohne Mindesthöhe (egui: 64 px), sonst reicht der Bildlaufbereich über die Fußleiste
+        egui::ScrollArea::vertical().id_salt(Id::new(id)).auto_shrink([false, false]).min_scrolled_height(0.0).max_height(rect.height() - 2.0).show(&mut child, |ui| {
+            ui.spacing_mut().item_spacing = vec2(0.0, 0.0);
+            add(ui);
+        });
+    }
     ui.allocate_rect(rect, Sense::hover());
     rect
 }
