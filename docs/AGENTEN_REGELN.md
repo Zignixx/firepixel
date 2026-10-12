@@ -141,6 +141,33 @@ Am 11.10. hat ein Test ~80 „Pick an app“-Fenster beim Nutzer geöffnet (E-Ma
 
 `STATUS.md`-Abschnitt aktualisieren (Stand, Messzahlen, was geprüft ist, was offen bleibt mit Grund). Vorher: eigenes Crate/eigene Dateien `cargo build -j 3` und `cargo test -j 3 -p <crate>` grün, `cargo clippy -j 3 -p <crate>` ohne Warnungen in eigenen Dateien.
 
+## 7a. Prüfungen gesammelt am Ende (Nutzerwunsch 12.10.2026 ≈ 18:00, gilt vor §4, §4c und §4e)
+
+Damit tagsüber mehr umgesetzt wird, laufen die teuren Prüfungen gesammelt am Ende, über Nacht.
+
+**Ab jetzt macht jeder Umsetzungs-Agent nur noch:**
+- seine Änderung
+- **gezielte eigene Tests:** Unit-Test bzw. kittest für genau das, was er geändert hat, in seiner eigenen Testdatei; nur diese laufen lassen
+- `cargo check --workspace --all-targets`
+- bei Texten: `cargo test -p fp-i18n` und den i18n-Scanner
+- `cargo test -p fp-neutral`
+- Doku: BEFUNDE, PARITAET (Stand „umgesetzt, Nachprüfung ausstehend“), STATUS, PLAN
+
+**Ans Ende verschoben (nicht mehr je Agent):**
+- Prüfungen im echten Fenster bzw. über die Brücke
+- Bildserien (3 Designs × de/en), Paarbilder
+- breite Testläufe ganzer Crates bzw. aller fp-ui-Tests
+- Release-Builds
+
+Stattdessen trägt der Agent je Punkt eine Zeile in **`docs\NACHPRUEFUNG.md`** ein: was zu prüfen ist, der Ablauf und das erwartete Ergebnis.
+
+**Nicht verschoben:**
+- **Messungen im Original:** Sie sind keine Prüfung, sondern liefern die Vorgabe (PM-n, RE-n, und wenn ein Wert fehlt, um richtig zu bauen).
+- Prüfagenten, deren Auftrag selbst die Prüfung ist (PM-4, KT-n).
+- INF-1: Er muss beweisen, dass Bauen und Tests weiter gehen.
+
+Den Gesamttest und die Nachprüfung macht am Ende PLAN §5 Z.
+
 ## 7. Phase 7 (ab 12.10.2026 mittags): kleine Aufträge, höchstens 4 Agenten auf Opus
 
 Nutzervorgabe: höchstens **4 Agenten gleichzeitig**, alle Opus, **kleine Aufträge** (ein Feature-Schnitt oder eine Handvoll Befunde). Die Phase-5/6-Agenten laufen nicht mehr; ihre Bereiche aus §1/§1b übernehmen die Phase-7-Agenten **nur für die im Auftrag genannten Befunde/Dateien**. Alles andere wie bisher (§1a Neutralität, §2 eigener `target-<kürzel>`, `-j 4`, §2a git nur eigene Pfade, §3 Befunde, §4 „funktioniert“).
