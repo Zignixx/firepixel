@@ -93,7 +93,7 @@ Umfang heute: 19 Crates, ≈ 169.000 Zeilen Rust, 132 Testdateien, 16 Sprachdate
 
 ## 4. Läuft gerade (Stand ≈ 20:15: Pause)
 
-**Pause.** Alle Agenten der Runde sind fertig. Es läuft nur noch **INF-1** (Testaufteilung: alle Integrationstests je Crate in **ein** Testprogramm, `build.rs` sammelt sie; ändert AGENTEN_REGELN §2), dazu der Doku-Agent DOC-1 (§4a Punkt 4). Neue Agenten erst, wenn der Nutzer „weiter“ sagt.
+**Pause.** Alle Agenten der Runde sind fertig, auch **INF-1** (ein Testprogramm je Crate ab `b656ad5`, AGENTEN_REGELN §2); dazu der Doku-Agent DOC-1 (§4a Punkt 4). Neue Agenten erst, wenn der Nutzer „weiter“ sagt.
 
 Beschleuniger (Nutzerentscheidung 12.10. ≈ 17:00), gelten weiter:
 1. Die Firepixel-Seite wird über die Brücke ohne GUI-Sperre geprüft (AGENTEN_REGELN §4e). Echte Systemmaus nur fürs Original, für Eingaben, die vom Betriebssystem abhängen, und fürs Durchklicken am Ende.
@@ -123,7 +123,7 @@ Beschleuniger (Nutzerentscheidung 12.10. ≈ 17:00), gelten weiter:
 | ☑ RE-EX | Spezifikation `re\18-export-dialoge.md`, Pakete E1–E3 | (`re\`, nicht im Repository) |
 | ☑ RE-KT | Spezifikation `re\19-kurven-tonwert.md`, Pakete KT-1–3 | (`re\`) |
 | ☑ RE-SWF | Spezifikation `re\20-ai8swf.md`; umgesetzt wird nur Reduziertes PNG (Pakete A, B) | (`re\`) |
-| 🔄 INF-1 | rust-lld ☑ (`843de17`); ein Testprogramm je Crate läuft | – |
+| ☑ INF-1 | rust-lld als Linker; ein Testprogramm `all` je Crate für fp-ui und fp-engine (neue Testdateien automatisch, Sprache je Test-Thread), 8 + 1 Einzelprozess-Tests; Regeln in AGENTEN_REGELN §2 | `843de17`, `b656ad5` |
 
 ---
 
