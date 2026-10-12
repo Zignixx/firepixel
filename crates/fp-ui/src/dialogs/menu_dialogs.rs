@@ -171,7 +171,8 @@ pub fn open(st: &mut AppState, name: &str) -> bool {
                 ],
             )
             .with_width(480.0)
-            .with_transform(wizard_params),
+            .with_transform(wizard_params)
+            .with_focus_ok(),
         ),
         "file.htmlSetup" => {
             let h = st.session.active().and_then(|d| d.doc.pages.get(d.page)).and_then(|p| p.root.export.as_ref()).and_then(|e| e.html.as_deref().cloned()).unwrap_or_else(fp_model::HtmlSettings::cs6_default);
@@ -192,7 +193,8 @@ pub fn open(st: &mut AppState, name: &str) -> bool {
                     ],
                 )
                 .with_width(440.0)
-                .with_transform(html_setup_params),
+                .with_transform(html_setup_params)
+                .with_focus_ok(),
             )
         }
         "modify.selectiveJpeg.settings" => {
@@ -209,7 +211,8 @@ pub fn open(st: &mut AppState, name: &str) -> bool {
                         Field::check("preserveButtons", t("dlg-md-preserve-buttons").as_str(), e.jpeg_sel_preserve_buttons),
                     ],
                 )
-                .with_width(400.0),
+                .with_width(400.0)
+                .with_focus_ok(),
             )
         }
         "file.pageSetup" => Some(

@@ -236,6 +236,7 @@ pub fn setup_form(st: &mut AppState) -> Option<FormDialog> {
         )
         .with_base(json!({"_words": words}))
         .with_width(460.0)
-        .with_transform(setup_params),
+        .with_transform(setup_params)
+        .with_focus_ok(),
     )
 }

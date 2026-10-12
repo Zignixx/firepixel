@@ -226,11 +226,10 @@ pub fn show(ctx: &egui::Context, st: &mut AppState) {
                 let vertical = d.flag("vertical", true);
                 let cx = 110.0 + dx1;
                 super::fit_label(ui, Rect::from_min_size(a, vec2(100.0 + dx1, 20.0)), &l1[0], true);
-                if fields::radio(ui, "pm-v", Rect::from_min_size(a + vec2(cx, 2.0), vec2(rw[0], 16.0)), &radios[0], vertical, true) {
-                    d.menu.insert("vertical".into(), json!(true));
-                }
-                if fields::radio(ui, "pm-h", Rect::from_min_size(a + vec2(cx + rw[0] + 10.0, 2.0), vec2(rw[1], 16.0)), &radios[1], !vertical, true) {
-                    d.menu.insert("vertical".into(), json!(false));
+                // Optionsgruppe = ein Tab-Stopp, Pfeiltasten wählen
+                let rects = [Rect::from_min_size(a + vec2(cx, 2.0), vec2(rw[0], 16.0)), Rect::from_min_size(a + vec2(cx + rw[0] + 10.0, 2.0), vec2(rw[1], 16.0))];
+                if let Some(k) = super::radio_group(ui, "pm-orient", &rects, &[radios[0].as_str(), radios[1].as_str()], if vertical { 0 } else { 1 }, true) {
+                    d.menu.insert("vertical".into(), json!(k == 0));
                 }
                 super::fit_label(ui, Rect::from_min_size(a + vec2(0.0, 30.0), vec2(100.0 + dx1, 20.0)), &l1[1], true);
                 if let Some(n) = fields::combo(ui, "pm-ta", Rect::from_min_size(a + vec2(cx, 30.0), vec2(acw, 20.0)), &refs(&aligns), Some(d.num("text_alignment", 0.0).clamp(0.0, 2.0) as usize), true) {

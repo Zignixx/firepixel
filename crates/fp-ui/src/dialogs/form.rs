@@ -264,6 +264,8 @@ pub struct FormDialog {
     /// Zusätzliches Zurückschreiben bei OK, wenn es vom Zustand abhängt (z. B. die benutzerdefinierte
     /// Leinwandfarbe nur, wenn „Benutzerdefiniert“ gewählt ist).
     pub store_hook: Option<fn(&FormDialog, &mut fp_engine::Preferences)>,
+    /// Startfokus auf OK statt auf das erste Feld (wie im Original gemessen, PM-5).
+    pub focus_ok: bool,
 }
 
 /// Pseudo-Feldschlüssel des Kästchens „Vorschau“ in [`FormDialog::with_prefs`]
@@ -273,7 +275,13 @@ pub const PREVIEW_FIELD: &str = "_preview";
 impl FormDialog {
     /// Neuer Dialog.
     pub fn new(id: &str, title: &str, command: &str, fields: Vec<Field>) -> FormDialog {
-        FormDialog { id: id.into(), title: title.into(), fields, command: command.into(), base: json!({}), preview: false, preview_on: false, applied: None, applied_params: None, applied_doc: None, stale: None, width: 340.0, transform: None, prefs: Vec::new(), store_hook: None }
+        FormDialog { id: id.into(), title: title.into(), fields, command: command.into(), base: json!({}), preview: false, preview_on: false, applied: None, applied_params: None, applied_doc: None, stale: None, width: 340.0, transform: None, prefs: Vec::new(), store_hook: None, focus_ok: false }
+    }
+    /// Startfokus auf OK (Original: Exportassistent, HTML-Einrichtung, Selektives JPEG,
+    /// Rechtschreibung einrichten).
+    pub fn with_focus_ok(mut self) -> FormDialog {
+        self.focus_ok = true;
+        self
     }
     /// Mit Umformung der Parameter.
     pub fn with_transform(mut self, f: fn(&FormDialog) -> Value) -> FormDialog {
@@ -707,13 +715,17 @@ pub fn draw_fields(ui: &mut Ui, st: &AppState, d: &mut FormDialog, area: Rect) -
                     y += h;
                     continue;
                 }
-                for (k, it) in items.iter().enumerate() {
+                // eine Optionsgruppe = ein Tab-Stopp, Pfeiltasten innerhalb (wie im Original)
+                let mut rects = Vec::with_capacity(items.len());
+                for it in items.iter() {
                     let w = crate::widgets::text_width(ui, it, &theme.ui_font()) + 26.0;
-                    if fields::radio(ui, egui::Id::new((dlg_id.as_str(), i, k)), Rect::from_min_size(pos2(x, y + 2.0), vec2(w, 16.0)), it, sel == k, true) {
-                        f.value = json!(k);
-                        changed = true;
-                    }
+                    rects.push(Rect::from_min_size(pos2(x, y + 2.0), vec2(w, 16.0)));
                     x += w + 8.0;
+                }
+                let labels: Vec<&str> = items.iter().map(|s| s.as_str()).collect();
+                if let Some(k) = super::radio_group(ui, (dlg_id.as_str(), i, "radio"), &rects, &labels, sel, true) {
+                    f.value = json!(k);
+                    changed = true;
                 }
             }
             FieldKind::Text { multiline } => {
@@ -760,6 +772,9 @@ pub fn show_form(ctx: &egui::Context, st: &mut AppState, d: &mut FormDialog) -> 
     let id = format!("fp-form-{}", d.id);
     let title = d.title.clone();
     let r = dialog_frame(ctx, &id, &title, size, |ui, body| {
+        if d.focus_ok {
+            super::autofocus_default_button(ui);
+        }
         changed = draw_fields(ui, st, d, body);
         let y = body.bottom() - 36.0;
         if d.preview {

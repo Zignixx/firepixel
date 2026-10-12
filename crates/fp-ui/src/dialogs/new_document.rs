@@ -214,27 +214,34 @@ pub fn show(ctx: &egui::Context, st: &mut AppState) {
         label(ui, short(rr(o, [206.0, 39.0, 12.0, 10.0])), &wh[1]);
         label(ui, rr(o, [218.0, 39.0, 30.0, 10.0]), &format!("{ph:.0}"));
         group_box(ui, dlu_rect(o, [8.0, 78.0, 242.0, 70.0]).with_max_x(body.right() - dlu(10.0, 0.0).x), &t("dlg-canvas-color-group"));
-        for (y, label, choice) in [(90.0, &radios[0], CanvasChoice::White), (104.0, &radios[1], CanvasChoice::Transparent), (118.0, &radios[2], CanvasChoice::Custom)] {
-            let rect = dlu_rect(o, [13.0, y, 80.0, 11.0]);
-            let rect = Rect::from_min_size(rect.min, vec2(rect.width().max(radio_w), rect.height()));
-            let mut row = ui.new_child(egui::UiBuilder::new().max_rect(rect).layout(egui::Layout::left_to_right(egui::Align::Center)));
-            if row.radio(d.canvas == choice, label.as_str()).clicked() {
-                d.canvas = choice;
-            }
+        // Optionsgruppe = ein Tab-Stopp, Pfeiltasten wählen (Original: Tab … › Weiß › OK)
+        let choices = [CanvasChoice::White, CanvasChoice::Transparent, CanvasChoice::Custom];
+        let rects: Vec<Rect> = [90.0, 104.0, 118.0]
+            .iter()
+            .map(|y| {
+                let rect = dlu_rect(o, [13.0, *y, 80.0, 11.0]);
+                Rect::from_min_size(rect.min, vec2(rect.width().max(radio_w), rect.height()))
+            })
+            .collect();
+        let sel = choices.iter().position(|c| *c == d.canvas).unwrap_or(0);
+        if let Some(k) = super::radio_group(ui, "nd-canvas", &rects, &[radios[0].as_str(), radios[1].as_str(), radios[2].as_str()], sel, true) {
+            d.canvas = choices[k];
         }
         let sw = dlu_rect(o, [96.0, 116.0, 14.0, 14.0]).translate(vec2(dsw, 0.0));
         let mut child = ui.new_child(egui::UiBuilder::new().max_rect(sw));
         let mut rgb = [d.custom.r(), d.custom.g(), d.custom.b()];
-        if child.color_edit_button_srgb(&mut rgb).changed() {
+        // das Farbfeld ist im Original kein Tab-Stopp
+        let skip = egui::Id::new("nd-swatch");
+        super::skip_tab_stop_before(ui, skip);
+        let sresp = child.color_edit_button_srgb(&mut rgb);
+        super::skip_tab_stop_after(ui, skip, &sresp);
+        if sresp.changed() {
             d.custom = Color32::from_rgb(rgb[0], rgb[1], rgb[2]);
             d.canvas = CanvasChoice::Custom;
         }
         let _ = ui.allocate_rect(body, Sense::hover());
         // „Vorlagen…“ öffnet wie im Original „Neu von Vorlage“ (Dateiwahl, 7490)
         let by = dlu_rect(o, [0.0, 154.0, 0.0, 14.0]);
-        if push_button(ui, Rect::from_min_size(egui::pos2(o.x + dlu(8.0, 0.0).x, by.top()), vec2(bw, by.height())), &tmpl_l, false, true) {
-            templates = true;
-        }
         let valid = d.pixel_size().is_some();
         let b = super::button_row(ui.ctx(), body.right() - dlu(10.0, 0.0).x, by.top(), &[&ok_l, &cancel_l], bw, by.height(), gap);
         if push_button(ui, b[0], &ok_l, true, valid) {
@@ -242,6 +249,10 @@ pub fn show(ctx: &egui::Context, st: &mut AppState) {
         }
         if push_button(ui, b[1], &cancel_l, false, true) {
             result = Some(false);
+        }
+        // nach OK/Abbrechen gezeichnet: Tab-Folge … › OK › Abbrechen › Vorlagen… wie im Original
+        if push_button(ui, Rect::from_min_size(egui::pos2(o.x + dlu(8.0, 0.0).x, by.top()), vec2(bw, by.height())), &tmpl_l, false, true) {
+            templates = true;
         }
     });
     match (result, r) {

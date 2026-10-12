@@ -322,3 +322,145 @@ fn every_dialog_field_keeps_typed_text_over_ten_openings() {
     eprintln!("geprüft {}: {checked:?}\nohne Eingabefeld/Dialog: {skipped:?}", checked.len());
     assert!(checked.len() >= 25, "zu wenige Dialoge geprüft ({}): ohne Feld {skipped:?}", checked.len());
 }
+
+// ---------------------------------------------------------------------- Tab-Folge (PM-5)
+
+/// Rolle und Name des fokussierten Bedienelements (Barrierefreiheits-Baum).
+fn focused(h: &H) -> Option<(egui::accesskit::Role, String)> {
+    h.ctx.memory(|m| m.focused())?;
+    h.get_all(By::new()).find(|n| n.accesskit_node().is_focused()).map(|n| {
+        let node = n.accesskit_node();
+        let name = node.label().map(|s| s.to_string()).or_else(|| node.value().map(|s| s.to_string())).unwrap_or_default();
+        (node.role(), name)
+    })
+}
+
+/// Tab-Folge eines Dialogs: `n` × Tab, je Schritt das fokussierte Element.
+fn tab_cycle(h: &mut H, n: usize) -> Vec<(egui::accesskit::Role, String)> {
+    let mut v = Vec::new();
+    for _ in 0..n {
+        key(h, Key::Tab);
+        h.run_steps(1);
+        v.push(focused(h).unwrap_or((egui::accesskit::Role::Unknown, String::new())));
+    }
+    v
+}
+
+/// Die Titelleiste (und ihr Schließen-Kreuz) ist in keinem Dialog ein Tab-Stopp.
+#[test]
+fn title_bar_is_never_a_tab_stop() {
+    let (mut h, _) = harness(true);
+    h.state_mut().state.session.execute("select.all", json!({})).expect("alles");
+    let title = fp_i18n::tr!("dlg-titlebar", title = "");
+    let mut seen = 0;
+    for name in DIALOG_COMMANDS {
+        h.state_mut().state.run(name, json!({}));
+        h.run_steps(4);
+        if !st(&h).dialogs.any_open() {
+            continue;
+        }
+        let id = last_dialog_id(&h.ctx).expect("Dialog");
+        for _ in 0..20 {
+            key(&mut h, Key::Tab);
+            let f = h.ctx.memory(|m| m.focused());
+            assert!(f != Some(egui::Id::new((id.as_str(), "title-drag"))) && f != Some(egui::Id::new((id.as_str(), "x"))), "{name}: Titelleiste bzw. Kreuz als Tab-Stopp");
+            if let Some((_, n)) = focused(&h) {
+                assert!(!(n.starts_with(title.trim()) && !title.trim().is_empty()), "{name}: Tab erreicht „{n}“");
+            }
+        }
+        seen += 1;
+        key(&mut h, Key::Escape);
+        h.run_steps(4);
+        if st(&h).dialogs.any_open() {
+            h.state_mut().state.dialogs = Default::default();
+            h.run_steps(2);
+        }
+    }
+    assert!(seen >= 40, "{seen} Dialoge geprüft");
+}
+
+/// Startfokus wie im Original gemessen: Exportassistent, HTML-Einrichtung, Selektives JPEG und
+/// Rechtschreibung einrichten auf OK; Leinwandfarbe auf dem gewählten Optionsfeld „Weiß“; sonst das
+/// erste Eingabefeld.
+#[test]
+fn start_focus_like_the_original() {
+    let ok = fp_i18n::t("btn-ok");
+    for name in ["file.exportWizard", "file.htmlSetup", "modify.selectiveJpeg.settings", "text.spellingSetup"] {
+        let (mut h, _) = harness(true);
+        open(&mut h, name);
+        h.run_steps(3);
+        assert_eq!(focused(&h), Some((egui::accesskit::Role::Button, ok.clone())), "{name}: Startfokus OK");
+        // Eingabe = OK (fokussierter Standardknopf)
+        key(&mut h, Key::Enter);
+        h.run_steps(4);
+        assert!(!st(&h).dialogs.any_open(), "{name}: Eingabe schließt");
+    }
+    let (mut h, _) = harness(true);
+    open(&mut h, "modify.canvas.canvasColor");
+    h.run_steps(3);
+    let f = focused(&h).expect("Fokus");
+    assert_eq!(f.0, egui::accesskit::Role::RadioButton, "Leinwandfarbe: Startfokus auf der Optionsgruppe ({f:?})");
+    for name in ["modify.canvas.canvasSize", "modify.canvas.imageSize", "view.grid.editGrid", "text.size.other", "file.new"] {
+        let (mut h, _) = harness(true);
+        open(&mut h, name);
+        h.run_steps(3);
+        assert_eq!(focused(&h).map(|f| f.0), Some(egui::accesskit::Role::TextInput), "{name}: Startfokus erstes Feld");
+    }
+}
+
+/// Optionsfeld-Gruppen sind ein Tab-Stopp, Pfeiltasten wählen innerhalb der Gruppe.
+#[test]
+fn radio_group_is_one_tab_stop_with_arrow_keys() {
+    let (mut h, _) = harness(true);
+    open(&mut h, "modify.canvas.canvasColor");
+    h.run_steps(3);
+    let cycle = tab_cycle(&mut h, 12);
+    let radios = cycle.iter().filter(|(r, _)| *r == egui::accesskit::Role::RadioButton).count();
+    assert!(radios <= 12 / 3 + 1 && radios >= 1, "Leinwandfarbe: Optionsgruppe einmal je Umlauf: {cycle:?}");
+    // Stopps je Umlauf: Gruppe, (Farbfeld), OK, Abbrechen → kein Optionsfeld zweimal hintereinander
+    assert!(cycle.windows(2).all(|w| !(w[0].0 == egui::accesskit::Role::RadioButton && w[1].0 == egui::accesskit::Role::RadioButton)), "zwei Optionsfelder nacheinander: {cycle:?}");
+    // zur Gruppe zurück, Pfeil ab → „Transparent“ gewählt und fokussiert
+    for _ in 0..12 {
+        if focused(&h).is_some_and(|f| f.0 == egui::accesskit::Role::RadioButton) {
+            break;
+        }
+        key(&mut h, Key::Tab);
+    }
+    let before = focused(&h).expect("Gruppe");
+    key(&mut h, Key::ArrowDown);
+    h.run_steps(2);
+    let after = focused(&h).expect("Fokus nach Pfeil");
+    assert_eq!(after.0, egui::accesskit::Role::RadioButton, "Pfeil bleibt in der Gruppe");
+    assert_ne!(after.1, before.1, "Pfeil wählt das nächste Optionsfeld");
+    let f = st(&h).dialogs.form.as_ref().expect("Formular");
+    assert_eq!(f.fields.iter().find(|x| matches!(x.kind, fp_ui::dialogs::form::FieldKind::Radio(_))).and_then(|x| x.value.as_u64()), Some(1), "Transparent gewählt");
+    key(&mut h, Key::ArrowUp);
+    h.run_steps(2);
+    let f = st(&h).dialogs.form.as_ref().expect("Formular");
+    assert_eq!(f.fields.iter().find(|x| matches!(x.kind, fp_ui::dialogs::form::FieldKind::Radio(_))).and_then(|x| x.value.as_u64()), Some(0), "Pfeil auf → wieder Weiß");
+}
+
+/// „Neues Dokument“: Breite › Höhe › Auflösung › 3 Einheiten › Optionsgruppe › OK › Abbrechen ›
+/// Vorlagen… (Farbfeld kein Tab-Stopp, Original PM-5).
+#[test]
+fn new_document_tab_order_like_the_original() {
+    let (mut h, _) = harness(true);
+    open(&mut h, "file.new");
+    h.run_steps(3);
+    let start = focused(&h).expect("Startfokus");
+    assert_eq!(start.0, egui::accesskit::Role::TextInput);
+    let cycle = tab_cycle(&mut h, 10);
+    use egui::accesskit::Role as R;
+    let roles: Vec<R> = cycle.iter().map(|c| c.0).collect();
+    let (ok, cancel, tmpl) = (fp_i18n::t("btn-ok"), fp_i18n::t("btn-cancel"), fp_i18n::t("dlg-new-doc-templates"));
+    assert_eq!(&roles[0..2], &[R::TextInput, R::TextInput], "Höhe, Auflösung: {cycle:?}");
+    assert_eq!(roles.iter().filter(|r| **r == R::RadioButton).count(), 1, "eine Optionsgruppe: {cycle:?}");
+    let pos = |l: &str| cycle.iter().position(|c| c.0 == R::Button && c.1.replace('&', "") == l.replace('&', ""));
+    let (po, pc, pt) = (pos(&ok), pos(&cancel), pos(&tmpl));
+    assert!(po.is_some() && pc.is_some() && pt.is_some(), "Knöpfe im Umlauf: {cycle:?}");
+    assert!(po < pc && pc < pt, "OK › Abbrechen › Vorlagen…: {cycle:?}");
+    let radio = roles.iter().position(|r| *r == R::RadioButton).expect("Gruppe");
+    assert_eq!(Some(radio + 1), po, "nach der Optionsgruppe direkt OK (Farbfeld kein Tab-Stopp): {cycle:?}");
+    // Umlauf zurück zur Breite
+    assert_eq!(cycle[9].0, R::TextInput, "nach Vorlagen… wieder Breite: {cycle:?}");
+}

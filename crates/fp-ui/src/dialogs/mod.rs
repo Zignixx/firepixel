@@ -266,6 +266,134 @@ pub fn select_all(ctx: &egui::Context, id: Id, text_len: usize) {
     s.store(ctx, id);
 }
 
+// ---------------------------------------------------------------------- Tab-Folge (PM-5, P-DLG1)
+
+fn focus_ok_id(layer: egui::LayerId) -> Id {
+    Id::new(("fp-dialog-focus-ok", layer))
+}
+
+/// Startfokus auf den Standardknopf statt auf das erste Feld (Original: Exportassistent „Weiter“,
+/// HTML-Einrichtung, Selektives JPEG, Rechtschreibung einrichten). Vor den Feldern aufrufen.
+pub fn autofocus_default_button(ui: &Ui) {
+    let key = autofocus_id(ui.layer_id());
+    if let Some(p) = ui.ctx().data(|d| d.get_temp::<u64>(key)) {
+        ui.ctx().data_mut(|d| {
+            d.remove::<u64>(key);
+            d.insert_temp(focus_ok_id(ui.layer_id()), p);
+        });
+    }
+}
+
+/// Standardknopf: übernimmt den Startfokus, wenn der Dialog es verlangt
+/// ([`autofocus_default_button`]) oder kein Feld ihn genommen hat (Dialoge ohne Eingabefeld und
+/// Optionsfeld, wie ein Windows-Dialog; siehe Ende von `dialog_frame_ex`).
+fn default_button_autofocus(ui: &Ui, resp: &egui::Response) {
+    let layer = ui.layer_id();
+    let asked = ui.ctx().data(|d| d.get_temp::<u64>(focus_ok_id(layer))).is_some();
+    if resp.enabled() && asked {
+        ui.ctx().data_mut(|d| {
+            d.remove::<u64>(focus_ok_id(layer));
+            d.remove::<u64>(autofocus_id(layer));
+        });
+        resp.request_focus();
+    }
+}
+
+/// Optionsfeld-Gruppe wie unter Windows: **ein** Tab-Stopp (das gewählte Feld), Pfeiltasten wählen
+/// innerhalb der Gruppe (mit Umlauf); ein Mausklick wählt und setzt den Fokus. Erstes Bedienelement
+/// eines frisch geöffneten Dialogs: das gewählte Feld bekommt den Startfokus. Liefert die neue Wahl.
+pub fn radio_group(ui: &mut Ui, id: impl std::hash::Hash + std::fmt::Debug, rects: &[Rect], labels: &[&str], sel: usize, enabled: bool) -> Option<usize> {
+    let gid = Id::new(id);
+    let n = rects.len().min(labels.len());
+    if n == 0 {
+        return None;
+    }
+    let sel = sel.min(n - 1);
+    let theme = Theme::current(ui.ctx());
+    let c = theme.colors.clone();
+    let ids: Vec<Id> = (0..n).map(|k| gid.with(k)).collect();
+    let mut out = None;
+    let mut focus_to = None;
+    for k in 0..n {
+        let r = rects[k];
+        // nur das gewählte Feld ist fokussierbar (ein Tab-Stopp für die ganze Gruppe)
+        let sense = if !enabled { Sense::hover() } else if k == sel { Sense::click() } else { Sense::CLICK };
+        let resp = ui.interact(r, ids[k], sense);
+        resp.widget_info(|| egui::WidgetInfo::selected(egui::WidgetType::RadioButton, enabled, k == sel, labels[k]));
+        let center = pos2(r.left() + 6.5, r.center().y);
+        ui.painter().circle_filled(center, 6.0, if enabled { c.field_bg } else { c.frame_bg });
+        ui.painter().circle_stroke(center, 6.0, Stroke::new(1.0, if enabled && resp.hovered() { c.focus } else { c.field_border }));
+        if k == sel {
+            ui.painter().circle_filled(center, 3.0, if enabled { c.field_text } else { c.text_disabled });
+        }
+        let tr = Rect::from_min_max(pos2(r.left() + 17.0, r.top()), pos2(r.right().max(r.left() + 17.0), r.bottom()));
+        if !labels[k].is_empty() {
+            crate::inspector::fields::label(ui, tr, labels[k], enabled);
+        }
+        if k == sel && enabled {
+            if ui.memory(|m| m.has_focus(ids[k])) {
+                // Fokusrahmen um die Beschriftung (Windows: gepunktet)
+                let tw = text_w(ui.ctx(), labels[k]).min(tr.width());
+                let fr = Rect::from_min_size(pos2(tr.left() - 2.0, r.center().y - 8.0), vec2(tw + 4.0, 16.0));
+                ui.painter().rect_stroke(fr, 0.0, Stroke::new(1.0, c.focus), StrokeKind::Inside);
+                // Pfeiltasten bleiben in der Gruppe (sonst sucht egui das nächste Feld in der Richtung)
+                ui.memory_mut(|m| m.set_focus_lock_filter(ids[k], egui::EventFilter { horizontal_arrows: true, vertical_arrows: true, tab: false, escape: false }));
+                let step = ui.input_mut(|i| {
+                    let mut s = 0i32;
+                    for (key, d) in [(egui::Key::ArrowDown, 1), (egui::Key::ArrowRight, 1), (egui::Key::ArrowUp, -1), (egui::Key::ArrowLeft, -1)] {
+                        if i.consume_key(egui::Modifiers::NONE, key) {
+                            s += d;
+                        }
+                    }
+                    s
+                });
+                if step != 0 {
+                    let to = (sel as i32 + step).rem_euclid(n as i32) as usize;
+                    out = Some(to);
+                    focus_to = Some(to);
+                }
+            }
+            // Startfokus, wenn die Gruppe das erste Bedienelement des Dialogs ist (nicht im
+            // Größenbestimmungs-Bild, dort sind die Widgets gesperrt und die Felder davor kamen
+            // noch nicht zum Zug, vgl. [`autofocus_field`])
+            let key = autofocus_id(ui.layer_id());
+            if resp.enabled() && ui.ctx().data(|d| d.get_temp::<u64>(key)).is_some() {
+                ui.ctx().data_mut(|d| d.remove::<u64>(key));
+                resp.request_focus();
+            }
+        }
+        if enabled && resp.clicked() {
+            if k != sel {
+                out = Some(k);
+            }
+            focus_to = Some(k);
+        }
+    }
+    if let Some(k) = focus_to {
+        ui.memory_mut(|m| m.request_focus(ids[k]));
+    }
+    out
+}
+
+/// Bedienelement, das wie im Original kein Tab-Stopp ist, aber nur als fokussierbares egui-Widget
+/// zu haben ist (z. B. das Farbfeld in „Neues Dokument“): erreicht Tab es, geht der Fokus im
+/// nächsten Bild in derselben Richtung weiter. `key` kennzeichnet das Element; vor dem Zeichnen
+/// [`skip_tab_stop_before`], danach [`skip_tab_stop_after`] mit der Antwort aufrufen.
+pub fn skip_tab_stop_before(ui: &Ui, key: Id) {
+    if let Some(back) = ui.ctx().data_mut(|d| d.remove_temp::<bool>(key.with("fp-skip-tab"))) {
+        ui.memory_mut(|m| m.move_focus(if back { egui::FocusDirection::Previous } else { egui::FocusDirection::Next }));
+    }
+}
+
+/// Siehe [`skip_tab_stop_before`].
+pub fn skip_tab_stop_after(ui: &Ui, key: Id, resp: &egui::Response) {
+    if resp.gained_focus() && !ui.input(|i| i.pointer.any_pressed() || i.pointer.any_down()) {
+        let back = ui.input(|i| i.modifiers.shift);
+        ui.ctx().data_mut(|d| d.insert_temp(key.with("fp-skip-tab"), back));
+        ui.ctx().request_repaint();
+    }
+}
+
 const LAST_DIALOG: &str = "fp-last-dialog";
 
 /// Kennung des zuletzt gezeichneten Dialograhmens (für Tests und Diagnose).
@@ -355,12 +483,13 @@ fn dialog_frame_ex(ctx: &egui::Context, id: &str, title: &str, size: egui::Vec2,
         let xr = Rect::from_center_size(pos2(tr.right() - 18.0, tr.center().y), vec2(30.0, 22.0));
         // Titelleiste ziehen verschiebt den Dialog (ohne das Schließen-Kreuz)
         let drag_r = Rect::from_min_max(tr.min, pos2(xr.left() - 2.0, tr.bottom()));
-        let dresp = ui.interact(drag_r, drag_id, Sense::drag());
+        // wie unter Windows kein Tab-Stopp (nur ziehen, nicht fokussierbar; PM-5 Tab-Folge)
+        let dresp = ui.interact(drag_r, drag_id, Sense::DRAG);
         dresp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Other, true, fp_i18n::tr!("dlg-titlebar", title = title)));
         if dresp.dragged() {
             ui.ctx().request_repaint();
         }
-        let xresp = ui.interact(xr, Id::new((id, "x")), Sense::click());
+        let xresp = ui.interact(xr, Id::new((id, "x")), Sense::CLICK);
         if xresp.hovered() {
             ui.painter().rect_filled(xr, 0.0, c.window_close_hover);
         }
@@ -418,8 +547,21 @@ fn dialog_frame_ex(ctx: &egui::Context, id: &str, title: &str, size: egui::Vec2,
             }
         }
     });
+    // hat nach drei Bildern kein Feld und keine Optionsgruppe den Startfokus genommen, geht er an
+    // den Standardknopf (Dialoge ohne Eingabefeld, wie unter Windows)
     if ctx.data(|d| d.get_temp::<u64>(af)).is_some_and(|p| p + 3 < pass) {
-        ctx.data_mut(|d| d.remove::<u64>(af));
+        let layer = egui::LayerId::new(egui::Order::Foreground, Id::new(id));
+        // ein Feld, das sich den Fokus selbst geholt hat (eigene TextEdits), behält ihn
+        let inside = ctx.memory(|m| m.focused()).and_then(|f| ctx.read_response(f)).is_some_and(|r| r.layer_id == layer);
+        ctx.data_mut(|d| {
+            d.remove::<u64>(af);
+            if !inside {
+                d.insert_temp(focus_ok_id(layer), pass);
+            }
+        });
+        if !inside {
+            ctx.request_repaint();
+        }
     }
     geom.pos = clamp_dialog_pos(geom.pos, vec2(geom.client.x, geom.client.y + title_h) + vec2(2.0, 2.0), screen);
     ctx.data_mut(|d| {
@@ -478,9 +620,10 @@ pub fn push_button(ui: &mut Ui, rect: Rect, label: &str, default: bool, enabled:
     }
     if default && enabled {
         ui.painter().rect_stroke(rect, 2.0, Stroke::new(1.0, theme.colors.focus), StrokeKind::Inside);
+        default_button_autofocus(ui, &resp);
     }
     let clicked = enabled && resp.clicked();
-    clicked || (default && enabled && enter_confirms(ui))
+    clicked || (default && enabled && enter_confirms(ui, resp.id))
 }
 
 /// Beschriftung mit Zugriffstaste: „&Ja“ unterstreicht das J (wie unter Windows).
@@ -610,7 +753,7 @@ pub fn fit_label(ui: &Ui, r: Rect, text: &str, enabled: bool) {
 /// Zahlen- oder Textfeld den Fokus hat. Damit der getippte Wert vorher übernommen ist (Felder
 /// übernehmen beim Fokusverlust, der erst im Bild nach der Eingabe gemeldet wird), wirkt die Taste
 /// ein Bild später. Ein mehrzeiliges Textfeld behält die Eingabe (Zeilenumbruch).
-fn enter_confirms(ui: &Ui) -> bool {
+fn enter_confirms(ui: &Ui, own: Id) -> bool {
     let ctx = ui.ctx();
     let layer = ui.layer_id();
     if ctx.memory(|m| m.top_modal_layer()).is_some_and(|t| t != layer) {
@@ -632,7 +775,9 @@ fn enter_confirms(ui: &Ui) -> bool {
     // ein per Tab fokussierter Knopf löst selbst aus (egui: Eingabe = Klick auf den fokussierten
     // Knopf), dann nicht zusätzlich den Standardknopf
     let buttons: std::collections::HashSet<Id> = ctx.data(|d| d.get_temp(Id::new("fp-dialog-buttons"))).unwrap_or_default();
-    let other_focus = ctx.memory(|m| m.focused()).is_some_and(|f| buttons.contains(&f));
+    // (der fokussierte Standardknopf selbst zählt nicht: hat er den Fokus erst in diesem Bild
+    // bekommen, klickt egui ihn nicht)
+    let other_focus = ctx.memory(|m| m.focused()).is_some_and(|f| f != own && buttons.contains(&f));
     if enter && !ctx.text_edit_focused() && !other_focus {
         ctx.data_mut(|d| d.insert_temp(key, nr));
         ctx.request_repaint();
