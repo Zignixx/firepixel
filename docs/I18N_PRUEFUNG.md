@@ -855,3 +855,52 @@ Schlüssel de: 3145, en: 3145. Ellipsen in en: {"...": 146, "…": 12}.
 |---|---|---|---|---|
 | `panel-opt-palette-bw` | bedienfelder.ftl | Schwarzweiß | Black & White | „&“ nur in einer Sprache |
 <!-- EN:END -->
+
+## Lückensuche UE-3 (12.10.2026)
+
+Auftrag: die ganze App übersetzbar und vollständig in Deutsch und Englisch – auch Fehlermeldungen der
+Bibliotheken, MCP- und Kommandozeilen-Ausgaben.
+
+**Prüfung erweitert** (`crates\fp-ui\tests\i18n_keine_festen_texte.rs`, jetzt scharf: `keine_festen_texte`
+läuft bei jedem `cargo test -p fp-ui`):
+- geprüft wird der ganze Workspace (`SCAN_DIRS`): fp-ui und `apps\firepixel` (UI-Aufrufe, deutsche Literale),
+  `apps\firepixel-cli` und fp-mcp (neue Prüfart „Ausgabe“: `println!`/`eprintln!`, `Fail(…)`,
+  `ToolOutput::error`, JSON-Texte wie `"hint"`/`"text"`/`"note"`, clap-Hilfe aus Doku-Kommentaren, jedes
+  deutsche Literal), alle Bibliotheken (fp-engine, fp-io, fp-export, fp-fwpng, fp-raster, fp-script,
+  fp-ai, fp-trace, fp-i18n, fp-model, fp-render, fp-text, fp-effects, fp-vector, fp-color, fp-geom: Fehler
+  über `Err(…)`, jede Variante `XyzError::…(…)`, `#[error(…)]`, `warnings.push(…)`, `corrupt`/`bad`).
+- Selbsttests: `scanner_erkennt_typische_faelle`, neu `scanner_erkennt_ausgaben_von_cli_und_mcp`.
+- Nicht über Literale prüfbar und deshalb eigene Tests: Parameterbeschreibungen/Hinweise aller Befehle
+  (`firepixel-cli` `parameterbeschreibungen_in_de_und_en`), Hilfe der Kommandozeile
+  (`hilfe_vollstaendig_in_de_und_en`), MCP-Werkzeuge/Ressourcen/Menüpfade
+  (`fp-mcp --test sprache` `werkzeuge_ressourcen_und_menuepfade_in_beiden_sprachen`).
+
+**Zahl fester Texte** (dieselbe erweiterte Prüfung auf dem Stand vor UE-3, Commit 83d4074, und danach):
+
+| Crate | vorher | nachher | umgestellt |
+|---|---:|---:|---|
+| fp-mcp (+ Brücke in fp-ui) | 157 (+4) | 0 | Werkzeugtitel/-beschreibungen/Parameter (`mcp-tool-*`), Anweisungen, Hinweise, Fehler (`err-mcp-*`), Menüpfad englisch (`command_menu_path`), Ressourcen (`mcp-res-*`, `document-model.md`/`examples.md` de/en), Antworten der laufenden Oberfläche (`err-mcp-ui-*`) |
+| firepixel-cli | 103 | 0 | ganze Hilfe aus `kommandozeile.ftl` (`cli-*`, `--lang`, `FIREPIXEL_LANG`, sonst Systemsprache), Fehler, Ausgaben, `sprache pruefen/vorlage/liste`, clap-Fehler übersetzt |
+| fp-io | 70 | 0 | Import-Hinweise (`msg-import-warn-*`), Dateiteile der Dekoder (`err-import-part-*`), HEIF/AV1-Details |
+| fp-ai | 28 | 0 | Detailtexte (`ai-err-d-*`) |
+| fp-export | 11 | 0 | Detailtexte (`err-export-d-*`) |
+| fp-ui | 10 | 0 | Brücke (s. o.); 6 deutsche Rückfall-Quelltexte der Mischmodus-Liste als begründete Ausnahme |
+| fp-color | 5 | 0 | Farbfeld-/CMYK-Fehler (`err-color-*`) |
+| fp-i18n | 2 (+ Details) | 0 | Prüfmeldungen (`cli-check-*`) |
+| fp-text | 2 | 0 | Schriftfehler (`err-text-*`) |
+| fp-script | 1 (+ 18 JSF-Fehlercodes) | 0 | `err-script-element-not-autoshape`, `err-script-hr-*` |
+| fp-engine | 0 (+ 533 Parametertexte an 732 Stellen, Kurzhilfe) | 0 | `befehlstexte.ftl` (`cmdtext-*`, `fp_engine::command::source_text`), Kurzhilfe `msg-help-*` |
+| übrige (fp-fwpng, fp-raster, fp-trace, fp-model, fp-render, fp-effects, fp-vector, fp-geom) | 0 | 0 | – |
+| **Summe** | **389** (+ 533 Parametertexte) | **0** | |
+
+Vorher mit der alten Prüfung (nur fp-ui und fünf Bibliotheken): 6.
+
+**Begründete Ausnahmen** (`crates\fp-ui\tests\i18n_ausnahmen.txt`, je mit Kommentar): Eigennamen, Format-
+und Tastenkürzel; Kennungen (Arbeitsbereich-/Design-/Werkzeuggruppen-Kennungen, Exportvorgaben,
+`FP_ARG`, `language-name = …` in Sprachvorlagen, Eingabe-Alias „rück“); deutsche Rückfall-Quelltexte
+(Mischmodus-Liste, Formparameter, Pinsel-/Verlaufsvorgaben); technische Detailtexte der FW-PNG-Leser
+(Entscheidung UE-1) und interne Fehler (eigener JPEG-Dekoder, Layout-XML-Leser, serde in fp-model);
+JSON-RPC-Standardtext „Parse error“; Parametername + Parserfehler (`menu: {e}`, `brush: {e}`, `runs ≠ text`).
+Außerhalb der Prüfung: clap-Syntaxplatzhalter `[OPTIONS]` in der Aufrufzeile; die Dokumente
+`docs\AGENTS.md` (MCP-Ressource `agents.md`) und die JSF-Kompatibilitätsliste (`jsf.md`, aus fp-script)
+sind deutsche Dokumentation (Befund an den Koordinator); `ANLEITUNG.md` ebenso.

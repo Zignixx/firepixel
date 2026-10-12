@@ -7,14 +7,16 @@
 //!    `RichText::new`, `on_hover_text`, `painter.text`, `set_status`, Menü-`item`, Felder
 //!    `label:`/`title:`/`text:` …).
 //! 2. **Deutsche Literale**: in fp-ui jedes Literal mit Umlaut/ß/„“ außerhalb von Kommentaren und
-//!    Tests; in den UI-nahen Crates (fp-engine, fp-io, fp-export, fp-script, fp-ai) Literale mit
-//!    Wörtern, die in Fehlermeldungen gehen (`EngineError::Failed(…)`, `Err(…)`, `reason:` …).
+//!    Tests; in allen Bibliotheken (`SCAN_DIRS`) Literale mit Wörtern, die in Fehlermeldungen gehen
+//!    (`EngineError::Failed(…)`, `XyzError::…(…)`, `Err(…)`, `#[error(…)]`, `warnings.push(…)` …).
+//! 3. **Ausgaben** (UE-3, firepixel-cli und fp-mcp): Konsolenausgaben, Fehler, JSON-Texte (`"hint"` …),
+//!    clap-Hilfetexte (Doku-Kommentare in `#[derive(Parser/Subcommand)]`) und jedes deutsche Literal.
 //!
 //! Ausnahmen (Eigennamen, Formatnamen, Einheiten, bewusst feste Texte): `i18n_ausnahmen.txt`.
 //!
 //! Aufruf: `cargo test -p fp-ui --test i18n_keine_festen_texte -- --ignored --nocapture`
-//! (Filter auf Pfadteile: Umgebungsvariable `FP_I18N_FILTER=menu.rs`). Zunächst nur Bericht;
-//! `keine_festen_texte` wird scharf geschaltet, wenn alle Bereiche umgestellt sind.
+//! (Filter auf Pfadteile: Umgebungsvariable `FP_I18N_FILTER=menu.rs`). `keine_festen_texte` ist
+//! scharf (läuft immer).
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
@@ -777,10 +779,9 @@ fn feste_texte_bericht() {
     println!("{}", report(&hits));
 }
 
-/// Scharf: keine festen Texte mehr. Wird freigeschaltet (ohne `#[ignore]`), wenn alle Bereiche
-/// umgestellt sind.
+/// Scharf (seit UE-3, 12.10.): keine festen Texte mehr im ganzen Workspace (begründete Ausnahmen in
+/// `i18n_ausnahmen.txt`).
 #[test]
-#[ignore]
 fn keine_festen_texte() {
     let hits = scan();
     assert!(hits.is_empty(), "{}", report(&hits));

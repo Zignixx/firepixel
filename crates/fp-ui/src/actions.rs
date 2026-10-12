@@ -24,7 +24,8 @@ fn has_param(p: &Value, key: &str) -> bool {
 pub fn ui_command_state(st: &AppState, name: &str) -> Option<(bool, Option<bool>)> {
     let ws = &st.settings.workspace;
     if let Some(p) = PanelId::from_command(name) {
-        return Some((true, Some(ws.is_visible(p))));
+        // Häkchen wie im Original nur für das vorderste Bedienfeld seiner sichtbaren Gruppe
+        return Some((true, Some(ws.is_visible(p) && ws.is_front(p))));
     }
     match name {
         "window.toolbars.main" => Some((true, Some(ws.show_toolbar))),
@@ -410,9 +411,8 @@ fn run_command(st: &mut AppState, ctx: &egui::Context, name: &str, params: Value
             }
         }
         Err(EngineError::NotImplemented(n)) => {
-            let key = fp_i18n::command_key(&n);
-            let label = if fp_i18n::has(&key) { fp_i18n::t(&key) } else { st.session.registry().get(&n).map(|c| c.info().label.clone()).unwrap_or(n) };
-            st.set_status(fp_i18n::tr!("ui-not-implemented", label = label.replace('&', "")), now(ctx));
+            let label = crate::menu::command_label(st, &n);
+            st.set_status(fp_i18n::tr!("ui-not-implemented", label = label), now(ctx));
         }
         Err(e) => st.set_status(e.to_string(), now(ctx)),
     }

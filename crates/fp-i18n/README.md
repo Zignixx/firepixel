@@ -78,6 +78,10 @@ eingebaute Texte fallen sofort auf, und Layouts werden mit langen Texten geprüf
 - Chinesisch, Japanisch, Koreanisch: Systemschriften Microsoft YaHei, Yu Gothic, Malgun Gothic als Rückfall (die der aktuellen Sprache zuerst), zur Laufzeit geladen.
 - **Rechts nach links (Arabisch, Hebräisch, Persisch, Urdu): nicht unterstützt.** egui setzt Text nur links→rechts und ohne Glyphenformung (keine Bidi-Umordnung, keine arabischen Verbindungsformen, kein gespiegeltes Layout). Solche Sprachdateien lassen sich laden, erscheinen im Menü mit „(RTL)“ markiert, sind aber kaum lesbar.
 
+### Kommandozeile und MCP
+- `firepixel-cli` spricht `--lang <code>`, sonst `FIREPIXEL_LANG`, sonst die Systemsprache; die Hilfe kommt vollständig aus `kommandozeile.ftl`.
+- Der MCP-Server antwortet KI-Agenten in `FIREPIXEL_MCP_LANG` (Vorgabe Englisch, je Aufruf `language`), über `fp_i18n::with_language` nur im Thread des Aufrufs; die Oberfläche bleibt in ihrer Sprache.
+
 ## Für Entwickler
 - Jeder für Nutzer sichtbare Text kommt aus `fp_i18n::t("schluessel")` bzw. `fp_i18n::tr!("schluessel", name = wert)`. **Keine festen Texte in UI-Code.** Ausnahmen: Eigennamen (Firepixel, Dateiformate wie PNG/WebP), Einheiten-Kürzel (px, %), reine Symbole.
 - Texte werden in jedem Frame neu geholt; Sprachwechsel wirken sofort. Wer Texte selbst zwischenspeichert, koppelt den Cache an `fp_i18n::generation()`.
@@ -123,7 +127,7 @@ leistung -- --ignored --nocapture`, 12.10.2026, Maschine durch parallele Builds 
 
 ### Prüfungen (dauerhaft)
 - `fp-i18n`: Vollständigkeit de/en, keine verwaisten Schlüssel, Syntax, Platzhalter je Schlüssel gleich, keine neuen Zugriffstasten-Konflikte im Englischen.
-- `fp-ui\tests\i18n_keine_festen_texte.rs`: Quelltext-Scanner für feste Texte (UI-Aufrufe, deutsche Literale, Fehlermeldungen der UI-nahen Crates) mit Ausnahmeliste `i18n_ausnahmen.txt`; meldet `Datei:Zeile` und „feste Texte übrig: N“. Bericht: `cargo test -p fp-ui --test i18n_keine_festen_texte -- --ignored --nocapture` (Filter: `$env:FP_I18N_FILTER = 'menu.rs'`).
+- `fp-ui\tests\i18n_keine_festen_texte.rs`: Quelltext-Scanner für feste Texte im ganzen Workspace (UI-Aufrufe, deutsche Literale, Fehlermeldungen aller Bibliotheken, Ausgaben von Kommandozeile und MCP-Server) mit Ausnahmeliste `i18n_ausnahmen.txt`; meldet `Datei:Zeile` und „feste Texte übrig: N“; scharf seit UE-3 (`keine_festen_texte` muss 0 ergeben). Bericht: `cargo test -p fp-ui --test i18n_keine_festen_texte -- --ignored --nocapture` (Filter: `$env:FP_I18N_FILTER = 'menu.rs'`).
 - `fp-ui\tests\i18n_sprachwahl.rs`: Menü, Wechsel ohne Neustart, Start mit gespeicherter/Systemsprache, Sprachordner, Schriftabdeckung.
 
 ## Schlüssel und Bereichsdateien
@@ -142,7 +146,9 @@ Schlüssel: Kleinbuchstaben, Bindestriche, Bereichspräfix. Attribute mit Punkt 
 | `filter.ftl` | `filter-`, `effect-`, `blend-` (Filter-, Effekt- und Mischmodusnamen, Parameter) | I18N-ENGINE |
 | `willkommen.ftl` | `welcome-` (Startbildschirm) | DESIGN |
 | `skript.ftl` | `err-script-` (Meldungen aus fp-script: automatische Formen, Dateien) | AU |
-| `mcp.ftl` | `msg-mcp-`, `err-mcp-` (Antworten des MCP-Servers an KI-Agenten) | AU |
+| `mcp.ftl` | `msg-mcp-`, `err-mcp-` (Antworten des MCP-Servers und der Brücke an KI-Agenten), `mcp-tool-` (Werkzeugtitel, `.description`, Parameter), `mcp-res-` (Ressourcen), `mcp-doc-arg` | AU, UE-3 |
+| `kommandozeile.ftl` | `cli-` (Hilfe von `firepixel-cli`: `cli-<befehl>`, `.examples`, `cli-<befehl>-arg-<option>`, `.value`; Meldungen; `cli-lang-*`, `cli-check-*` Sprachprüfung) | UE-3 |
+| `befehlstexte.ftl` | `cmdtext-` (Parameterbeschreibungen und Hinweise der Befehle für MCP/CLI; Schlüssel aus dem deutschen Quelltext, `fp_engine::command::source_text_key`) | UE-3 |
 | `dateidialog.ftl` | `fdlg-` (Datei-Dialog in der App bei aktivem KI-Steuerkanal) | AU |
 
 Jeder Agent schreibt nur in seine Dateien (in `de` **und** `en`).
