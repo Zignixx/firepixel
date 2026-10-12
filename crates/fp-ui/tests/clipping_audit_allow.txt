@@ -71,3 +71,15 @@ ragt-heraus|Inspektor Werkzeug tool.text|Autom. Unterschneidung
 rand-knapp|Dialog ai.manageModels|Entfernen
 rand-knapp|Dialog ai.manageModels|Remove
 ueberlappt-text|Inspektor Segment|Bearbeiten...
+# NZ-2 (12.10.): neue Funde nach DLG-1/1b/2/3, NZ-1 und KI-2, begründet aufgenommen.
+# R2-1 (Inspektor im 800-pt-Fenster): neuer zusammengefasster KI-Hinweis pi-ai-object-hint2 (ersetzt die beiden alten Zeilen „Klick: Objekt auswählen“/„Umschalt+Klick“).
+abgeschnitten|Inspektor Werkzeug tool.aiObject|Klick oder Rahmen: Objekt · Umsc
+# RAND-2 (Bedienfeld zu niedrig im 800×512-pt-Fenster, 150 %): panels\common.rs list_frame hält die Liste mindestens 24 px hoch, auch wenn sie dann über die Fußleiste reicht; seit NZ-1 (ec4ac99) haben die Fußleistenknöpfe Barrierefreiheits-Knoten, deshalb sieht der Prüfer die Überdeckung erst jetzt (Befund IBD/RAND-2).
+ragt-heraus|Bedienfeld DocumentLibrary (Dock)|Grafik
+ragt-heraus|Bedienfeld DocumentLibrary (schmales Dock)|Grafik
+ueberlappt-element|Bedienfeld DocumentLibrary (Dock)|Grafik
+ueberlappt-element|Bedienfeld DocumentLibrary (Dock)|Schaltfläche
+ueberlappt-element|Bedienfeld DocumentLibrary (schmales Dock)|Grafik
+ueberlappt-element|Bedienfeld DocumentLibrary (schmales Dock)|Schaltfläche
+# Bildvorschau (BV-2, options.rs gerade bei BV-3 in Arbeit): Kästchen „Browseranzeige mit Zeilensprungverfahren“ ist 30 px schmaler als die Spalte, der deutsche Text ragt hinaus (Befund BV).
+ragt-heraus|Dialog file.imagePreview|Browseranzeige mit Zeilensprungv
