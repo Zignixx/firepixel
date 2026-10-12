@@ -73,7 +73,7 @@ impl CurvesDialog {
     /// Neuer Dialog mit gegebenen Histogrammen und Vorschau-Zustand (ohne Oberfläche, Tests).
     pub fn with_state(hist: [[u64; 256]; 3], live: bool, preview_on: bool) -> CurvesDialog {
         let base = if live { json!({"live": true}) } else { json!({}) };
-        let mut preview = FormDialog::new("19112", &t("dlg-curves-title"), "filter.adjustColor.curves", vec![]).with_base(base).with_preview();
+        let mut preview = FormDialog::new("curves", &t("dlg-curves-title"), "filter.adjustColor.curves", vec![]).with_base(base).with_preview();
         preview.preview_on = preview_on;
         let mut d = CurvesDialog { params: CurvesParams::default(), channel: 0, selected: Some(0), shown: (0.0, 0.0), drag: None, reversed: false, picking: None, preview, hist, live };
         d.sync_fields();
