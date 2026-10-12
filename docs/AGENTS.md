@@ -229,12 +229,29 @@ dem Zielordner. Herunterladen geht nur in der Oberfläche nach Zustimmung des Nu
 | Befehl | Zweck | Beispiel |
 |---|---|---|
 | `ai.models` | Modelle mit Aufgabe, Größe, Lizenz, `available`, Pfad; Suchordner und Download-Ziel | `run_command {"name": "ai.models"}` |
-| `select.aiObject` | Objekt unter Punkt(en) oder im Rahmen (SAM 2.1). Parameter: `point` oder `points: [[x, y, 1\|0], …]` (1 = Objekt, 0 = Hintergrund), `box`, `mode` (`replace`/`add`/`subtract`/`intersect`), `session` + `refine: true` (dieselbe Auswahl verfeinern), `source: auto\|bitmap\|page`, `region`, `view`, `model: sam2Tiny\|sam2Small`, `feather`. Ergebnis `{session, iou, objectScore, bounds, source}` | `{"name": "select.aiObject", "params": {"point": [220, 140]}}` |
-| `select.aiSubject` | Hauptmotiv (BiRefNet) als weiche Auswahl. `mode`, `source`, `point` (Bitmap unter dem Punkt), `region`, `model: birefnetLite\|birefnet`, `feather` | `{"name": "select.aiSubject", "params": {"source": "page"}}` |
+| `select.aiObject` | Objekt unter Punkt(en) oder im Rahmen (SAM 2.1). Parameter: `point` oder `points: [[x, y, 1\|0], …]` (1 = Objekt, 0 = Hintergrund), `box`, `mode` (`replace`/`add`/`subtract`/`intersect`), `session` + `refine: true` (dieselbe Auswahl verfeinern), `source: auto\|bitmap\|page`, `region`, `view`, `model: sam2Tiny\|sam2Small`, Feineinstellungen (siehe unten). Ergebnis `{session, iou, objectScore, bounds, source, tuning}` | `{"name": "select.aiObject", "params": {"point": [220, 140]}}` |
+| `select.aiSubject` | Hauptmotiv (BiRefNet) als weiche Auswahl. `mode`, `source`, `point` (Bitmap unter dem Punkt), `region`, `model: birefnetLite\|birefnet`, Feineinstellungen (siehe unten). Ergebnis `{session, bounds, source, tuning}` | `{"name": "select.aiSubject", "params": {"source": "page"}}` |
 | `select.aiRefineEdge` | Kante der vorhandenen Pixelauswahl verfeinern (Haare, Fell, echte Halbtransparenz). `radius` (0 = automatisch), `output: selection\|mask`, `source`, `model: birefnetLiteMatting\|birefnetHrMatting` – braucht eine Pixelauswahl | `{"name": "select.aiRefineEdge", "params": {"output": "mask"}}` |
 | `ai.setModelFolder` | eigenen Modellordner festlegen (leer = Standard) | `{"name": "ai.setModelFolder", "params": {"path": "D:\\modelle"}}` |
 | `ai.clearCache` | KI-Zwischenspeicher und geladene Modelle freigeben | `{"name": "ai.clearCache"}` |
 | `ai.manageModels` | ohne Oberfläche wie `ai.models`; in der App öffnet es den Verwaltungsdialog | `ui_action {"run": "ai.manageModels"}` |
+
+Feineinstellungen von `select.aiObject` und `select.aiSubject` (ohne Parameter gelten die Werte aus
+dem Inspektor des Werkzeugs, sonst die Vorgabe; Begründung in `docs\MODELLE.md`):
+
+| Parameter | Werte | Wirkung |
+|---|---|---|
+| `tolerance` | 0…100, Vorgabe 50 | 50 = Entscheidung des Modells; höher wählt mehr aus. SAM: Schwelle der Masken-Logits (±10), BiRefNet: Tonwerte der weichen Maske |
+| `edge` | `hard` \| `antiAlias` (Vorgabe) \| `feather` | Kante wie beim Zauberstab; `feather` mit `feather: <px>` (ohne `edge` macht `feather` > 0 wie bisher eine weiche Kante) |
+| `expand` | −100…100 px | ausdehnen (> 0) bzw. zusammenziehen (< 0); der weiche Rand bleibt erhalten |
+| `smooth` | 0…100 px | glätten: rundet Ecken, entfernt Krümel und kleine Löcher |
+| `variant` | `auto` \| `small` \| `medium` \| `large` | nur `select.aiObject`: Wahl unter den Masken des SAM-Decoders (`auto` = Wahl des Modells, sonst die Mehrfachmasken nach Fläche) |
+| `retune` | `true` | die letzte Auswahl der Aufgabe (bzw. `session`) mit neuen Werten aus der zwischengespeicherten Modell-Ausgabe neu bilden – kein Modell-Laufen; nur solange die Auswahl noch genau dieses Ergebnis ist, sonst Fehler |
+
+Beispiel: `run_command {"name": "select.aiSubject", "params": {}}` →
+`run_command {"name": "select.aiSubject", "params": {"retune": true, "tolerance": 70, "expand": 2, "edge": "feather", "feather": 3}}`.
+`select.aiRefineEdge` hat nur `radius` (Breite des Kantenbereichs); ein anderer Radius braucht einen
+neuen Matting-Lauf.
 
 Ablauf „Objekt freistellen“:
 

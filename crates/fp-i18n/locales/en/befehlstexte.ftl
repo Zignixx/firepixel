@@ -510,6 +510,14 @@ cmdtext-bildquelle = Image source
 cmdtext-birefnetlitematting-vorgabe-oder-birefne-cf9b8e = birefnetLiteMatting (default) or birefnetHrMatting
 cmdtext-ergebnis-als-weiche-pixelauswahl-oder-al-2b3d4a = Result as a soft pixel selection or as a bitmap mask
 cmdtext-breite-des-kantenbereichs-in-pixeln-0-au-8d2e95 = Width of the edge area in pixels (0 = automatic)
+cmdtext-toleranz-0-100-50-schwelle-des-modells-h-c610e4 = tolerance 0..100 (50 = the model's threshold, higher = select more; default: Property inspector)
+cmdtext-maskenvariante-auto-wahl-des-modells-ode-bf1a9d = mask variant: auto (the model's choice) or the small, medium or large multimask output
+cmdtext-kante-hard-antialias-vorgabe-oder-feather = edge: hard, antiAlias (default) or feather
+cmdtext-auswahl-ausdehnen-pixel-negativ-zusammenziehen = expand the selection (pixels, negative = contract)
+cmdtext-auswahl-glaetten-radius-in-pixeln = smooth the selection (radius in pixels)
+cmdtext-letztes-ergebnis-mit-neuen-feineinstellu-e07f9a = rebuild the last result with new fine-tuning without running the model again
+cmdtext-toleranz-0-100-50-weiche-maske-des-model-708c7b = tolerance 0..100 (50 = the model's soft mask, higher = select more; default: Property inspector)
+cmdtext-sitzung-eines-frueheren-ergebnisses-fuer-retune = session of an earlier result (for retune)
 cmdtext-ordner-mit-den-ki-modellen-leer-standard = Folder with the AI models (empty = default)
 cmdtext-alpha-unter-diesem-wert-gilt-als-transparent = Alpha below this value counts as transparent
 cmdtext-farbe-oder-schwarzweiss = Color or black and white

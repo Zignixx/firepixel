@@ -1,9 +1,15 @@
 //! KI-Auswahl (fp-ai): Objektauswahl (SAM 2.1), Motiv auswählen und Kante verfeinern (BiRefNet).
 //!
-//! * `select.aiObject {points | point, box?, mode?, session?, refine?, source?, region?, model?, feather?}`
-//! * `select.aiSubject {mode?, source?, point?, region?, model?, feather?}`
+//! * `select.aiObject {points | point, box?, mode?, session?, refine?, source?, region?, model?,
+//!   tolerance?, variant?, edge?, feather?, expand?, smooth?, retune?}`
+//! * `select.aiSubject {mode?, source?, point?, region?, model?, tolerance?, edge?, feather?,
+//!   expand?, smooth?, session?, retune?}`
 //! * `select.aiRefineEdge {radius?, output: "selection" | "mask", source?, model?}`
 //! * `ai.models {}` (Modelle, Ordner, Verfügbarkeit), `ai.setModelFolder {path}`, `ai.clearCache {}`
+//!
+//! Feineinstellungen ([`tuning_for`]) kommen aus den Parametern, sonst aus den Voreinstellungen des
+//! Inspektors. `retune: true` bildet die letzte Auswahl der Aufgabe aus der zwischengespeicherten
+//! Rohausgabe neu (kein Modell-Laufen), solange die Auswahl noch genau dieses Ergebnis ist.
 //!
 //! Ergebnisse sind normale Pixelauswahlen bzw. (bei `output: "mask"`) eine Bitmapmaske. Wie die
 //! anderen Klick-Auswahlen erzeugt eine Auswahländerung **keinen** Verlaufsschritt
@@ -25,7 +31,7 @@ use crate::selection::SelectMode;
 use crate::session::{SessionEvent, Session};
 use fp_ai::models::{self, ModelId, Task};
 use fp_ai::pipeline::{self, ObjectPrompt, PromptPoint};
-use fp_ai::{AiError, Progress};
+use fp_ai::{AiError, Edge, Progress, Tuning, Variant};
 use fp_geom::{IRect, Point};
 use fp_model::element::ElementKind;
 use fp_model::ElementId;
@@ -149,14 +155,9 @@ fn combine(base: Option<Mask>, m: Mask, mode: SelectMode) -> Option<Mask> {
     sel.pixels
 }
 
-fn feathered(mut m: Mask, feather: u32) -> Mask {
-    if feather > 0
-        && let Ok(f) = m.feather(feather)
-    {
-        m = f;
-    }
-    m.set_soft_edge(SoftEdge::One);
-    m
+/// Leere Maske = keine Pixelauswahl (wie [`set_selection`] sie ablegt).
+fn nonempty(m: Option<Mask>) -> Option<Mask> {
+    m.filter(|m| !m.tight_bounds().is_empty())
 }
 
 fn mask_hash(m: Option<&Mask>) -> u64 {
@@ -329,23 +330,176 @@ fn auto_region(img: IRect, view: fp_geom::Rect) -> Option<IRect> {
     Some(v.inflate(m, m).intersect(&img))
 }
 
+// ------------------------------------------------------------------ Feineinstellungen
+
+/// Präfix der Voreinstellungen je Aufgabe (`AiObjectTolerance`, `AiSubjectEdge` …).
+fn tuning_prefix(task: Task) -> &'static str {
+    match task {
+        Task::Object => "AiObject",
+        _ => "AiSubject",
+    }
+}
+
+/// Feineinstellungen eines Aufrufs: Parameter, sonst Voreinstellung (Inspektor), sonst Vorgabe.
+///
+/// * `tolerance` 0…100 (50 = Entscheidung des Modells)
+/// * `edge` `hard` | `antiAlias` | `feather` mit `feather` Pixeln; ohne `edge` macht ein
+///   `feather` > 0 wie bisher eine weiche Kante
+/// * `expand` −100…100 (negativ = zusammenziehen), `smooth` 0…100
+/// * `variant` `auto` | `small` | `medium` | `large` (nur Objektauswahl)
+pub fn tuning_for(s: &Session, p: &Params, task: Task) -> Result<Tuning> {
+    let pre = tuning_prefix(task);
+    let key = |k: &str| format!("{pre}{k}");
+    let bad = |name: &str, v: &str| EngineError::InvalidParams { name: name.into(), message: fp_i18n::tr!("err-param-ai-value", value = v) };
+    let tolerance = match p.opt_f64("tolerance")? {
+        Some(v) => v as f32,
+        None => s.prefs.get_int(&key("Tolerance"), 50) as f32,
+    };
+    let feather_param = p.opt_i64("feather")?;
+    let feather = feather_param.unwrap_or_else(|| s.prefs.get_int(&key("Feather"), 0)).clamp(0, 1000) as u32;
+    let edge = match p.opt_str("edge")? {
+        Some(e) => Edge::from_name(&e).ok_or_else(|| bad("edge", &e))?,
+        None if feather_param.is_some_and(|f| f > 0) => Edge::Feather,
+        None if feather_param.is_some() => Edge::AntiAlias,
+        None => Edge::from_name(&s.prefs.get_str(&key("Edge"), "antiAlias")).unwrap_or_default(),
+    };
+    let expand = p.opt_i64("expand")?.unwrap_or_else(|| s.prefs.get_int(&key("Expand"), 0)) as i32;
+    let smooth = p.opt_i64("smooth")?.unwrap_or_else(|| s.prefs.get_int(&key("Smooth"), 0)).max(0) as u32;
+    let variant = if task == Task::Object {
+        match p.opt_str("variant")? {
+            Some(v) => Variant::from_name(&v).ok_or_else(|| bad("variant", &v))?,
+            None => Variant::from_name(&s.prefs.get_str("AiObjectVariant", "auto")).unwrap_or_default(),
+        }
+    } else {
+        Variant::Auto
+    };
+    Ok(Tuning { tolerance, variant, edge, feather, expand, smooth }.clamped())
+}
+
+fn tuning_json(t: &Tuning, task: Task) -> Value {
+    let mut v = json!({"tolerance": t.tolerance, "edge": t.edge.name(), "feather": t.feather, "expand": t.expand, "smooth": t.smooth});
+    if task == Task::Object {
+        v["variant"] = json!(t.variant.name());
+    }
+    v
+}
+
+/// Rohausgabe eines KI-Aufrufs zum Nachstellen ohne neues Modell-Laufen.
+#[derive(Clone)]
+enum RawOut {
+    Object(pipeline::ObjectRaw),
+    Subject(pipeline::SubjectRaw),
+}
+
+/// Letztes Ergebnis einer Objekt- bzw. Motivauswahl: Rohausgabe, Bild, Verknüpfung mit der
+/// Auswahl davor. Ändert man danach Toleranz, Kante … (`retune: true`), wird nur die Maske neu
+/// gebildet – solange die Auswahl noch genau dieses Ergebnis ist.
+#[derive(Clone)]
+struct Retune {
+    token: u64,
+    raw: RawOut,
+    image: Arc<RgbaImage>,
+    base: Option<Mask>,
+    mode: SelectMode,
+    result_hash: u64,
+}
+
+/// Die letzten Ergebnisse (wenige, weil sie Bild und Rohausgabe festhalten).
+fn retunes() -> &'static Mutex<std::collections::VecDeque<Retune>> {
+    static R: OnceLock<Mutex<std::collections::VecDeque<Retune>>> = OnceLock::new();
+    R.get_or_init(|| Mutex::new(std::collections::VecDeque::new()))
+}
+
+const MAX_RETUNES: usize = 4;
+
+fn remember(r: Retune) {
+    if let Ok(mut q) = retunes().lock() {
+        q.retain(|e| e.token != r.token);
+        q.push_back(r);
+        while q.len() > MAX_RETUNES {
+            q.pop_front();
+        }
+    }
+}
+
+/// Passendes Ergebnis zum Nachstellen: Sitzung `session` bzw. das jüngste der Aufgabe, dessen
+/// Ergebnis noch die aktuelle Auswahl ist.
+fn find_retune(task: Task, token: Option<u64>, cur_hash: u64) -> Option<Retune> {
+    let q = retunes().lock().ok()?;
+    q.iter()
+        .rev()
+        .find(|e| {
+            let kind_ok = matches!((&e.raw, task), (RawOut::Object(_), Task::Object) | (RawOut::Subject(_), Task::Subject));
+            kind_ok && token.is_none_or(|t| t == e.token) && e.result_hash == cur_hash
+        })
+        .cloned()
+}
+
+/// Gibt es ein Ergebnis dieser Aufgabe, das sich mit `retune: true` nachstellen lässt (die
+/// Auswahl ist noch genau dieses Ergebnis)? Für die Oberfläche (Inspektor).
+pub fn can_retune(s: &Session, command: &str) -> bool {
+    let task = match command {
+        "select.aiObject" => Task::Object,
+        "select.aiSubject" => Task::Subject,
+        _ => return false,
+    };
+    let Ok(d) = s.doc() else { return false };
+    find_retune(task, None, mask_hash(d.selection.pixels.as_ref())).is_some()
+}
+
+/// `retune: true`: letzte Objekt- bzw. Motivauswahl mit neuen Feineinstellungen aus der
+/// zwischengespeicherten Rohausgabe neu bilden (kein Modell-Laufen).
+fn run_retune(s: &mut Session, p: &Params, task: Task) -> Result<CommandOutput> {
+    let token = p.opt_i64("session")?.map(|v| v.max(0) as u64);
+    let cur = s.doc()?.selection.pixels.clone();
+    let mut r = find_retune(task, token, mask_hash(cur.as_ref())).ok_or_else(|| sel_err("err-sel-ai-nothing-to-retune"))?;
+    let t = tuning_for(s, p, task)?;
+    let (m, extra) = match &r.raw {
+        RawOut::Object(raw) => {
+            let o = pipeline::object_from_raw(raw, &r.image, &t).map_err(ai_err)?;
+            (o.mask, json!({"iou": o.iou, "objectScore": o.object_score}))
+        }
+        RawOut::Subject(raw) => (pipeline::subject_from_raw(raw, &r.image, &t).map_err(ai_err)?, json!({})),
+    };
+    let result = nonempty(combine(r.base.clone(), m, r.mode));
+    let hash = mask_hash(result.as_ref());
+    if let RawOut::Object(_) = r.raw
+        && let Ok(mut map) = sessions().lock()
+        && let Some(ss) = map.get_mut(&r.token)
+    {
+        ss.result_hash = hash;
+    }
+    r.result_hash = hash;
+    let token = r.token;
+    remember(r);
+    let mut value = json!({"session": token, "retuned": true, "tuning": tuning_json(&t, task), "bounds": bounds_json(result.as_ref())});
+    if let (Some(v), Some(e)) = (value.as_object_mut(), extra.as_object()) {
+        v.extend(e.clone());
+    }
+    set_selection(s, result, value)
+}
+
 fn run_object(s: &mut Session, p: &Params) -> Result<CommandOutput> {
     sync_folder(s);
+    if p.bool_or("retune", false)? {
+        return run_retune(s, p, Task::Object);
+    }
     let plan = object_plan(s, p)?;
     ensure_model(plan.model)?;
-    let fe = p.i64_or("feather", 0)?.clamp(0, 1000) as u32;
-    let r = pipeline::object_mask(&plan.src.image, plan.region, &plan.prompt, plan.model, &Progress::new()).map_err(ai_err)?;
+    let t = tuning_for(s, p, Task::Object)?;
+    let raw = pipeline::object_raw(&plan.src.image, plan.region, &plan.prompt, plan.model, &Progress::new()).map_err(ai_err)?;
     fp_ai::nn::trim();
-    let m = feathered(r.mask, fe);
-    let result = combine(plan.base.clone(), m, plan.mode);
+    let r = pipeline::object_from_raw(&raw, &plan.src.image, &t).map_err(ai_err)?;
+    let result = nonempty(combine(plan.base.clone(), r.mask, plan.mode));
+    let hash = mask_hash(result.as_ref());
     let ss = ObjSession {
         prompt: plan.prompt.clone(),
-        base: plan.base,
+        base: plan.base.clone(),
         mode: plan.mode,
         source: plan.source,
         region: plan.region,
         model: plan.model,
-        result_hash: mask_hash(result.as_ref()),
+        result_hash: hash,
     };
     if let Ok(mut m) = sessions().lock() {
         if m.len() > 64 {
@@ -353,6 +507,7 @@ fn run_object(s: &mut Session, p: &Params) -> Result<CommandOutput> {
         }
         m.insert(plan.token, ss);
     }
+    remember(Retune { token: plan.token, raw: RawOut::Object(raw), image: Arc::clone(&plan.src.image), base: plan.base, mode: plan.mode, result_hash: hash });
     let value = json!({
         "session": plan.token,
         "iou": r.iou,
@@ -360,6 +515,7 @@ fn run_object(s: &mut Session, p: &Params) -> Result<CommandOutput> {
         "cached": r.cached,
         "source": plan.src.kind,
         "points": plan.prompt.points.len(),
+        "tuning": tuning_json(&t, Task::Object),
         "bounds": bounds_json(result.as_ref()),
     });
     set_selection(s, result, value)
@@ -369,20 +525,30 @@ fn run_object(s: &mut Session, p: &Params) -> Result<CommandOutput> {
 
 fn run_subject(s: &mut Session, p: &Params) -> Result<CommandOutput> {
     sync_folder(s);
+    if p.bool_or("retune", false)? {
+        return run_retune(s, p, Task::Subject);
+    }
     let model = model_for(s, Some(p), Task::Subject)?;
     ensure_model(model)?;
     let src = resolve_source(s, &source_param(s, p)?, p.opt_point("point")?)?;
     let mode = mode_of(p)?;
-    let fe = p.i64_or("feather", 0)?.clamp(0, 1000) as u32;
-    let m = pipeline::subject_mask(&src.image, region_param(p)?, model, &Progress::new()).map_err(ai_err)?;
+    let t = tuning_for(s, p, Task::Subject)?;
+    let raw = pipeline::subject_raw(&src.image, region_param(p)?, model, &Progress::new()).map_err(ai_err)?;
     fp_ai::nn::trim();
+    // „kein Motiv“ nach dem Urteil des Modells (unabhängig von der Toleranz)
+    if raw.alpha.iter().all(|a| *a * 255.0 < 2.0) {
+        return Err(sel_err("err-sel-no-subject"));
+    }
+    let m = pipeline::subject_from_raw(&raw, &src.image, &t).map_err(ai_err)?;
     if m.tight_bounds().is_empty() {
         return Err(sel_err("err-sel-no-subject"));
     }
-    let m = feathered(m, fe);
     let base = if mode == SelectMode::Replace { None } else { s.doc()?.selection.pixels.clone() };
-    let result = combine(base, m, mode);
-    let value = json!({"source": src.kind, "bounds": bounds_json(result.as_ref())});
+    let result = nonempty(combine(base.clone(), m, mode));
+    let hash = mask_hash(result.as_ref());
+    let token = new_session_token();
+    remember(Retune { token, raw: RawOut::Subject(raw), image: Arc::clone(&src.image), base, mode, result_hash: hash });
+    let value = json!({"session": token, "source": src.kind, "tuning": tuning_json(&t, Task::Subject), "bounds": bounds_json(result.as_ref())});
     set_selection(s, result, value)
 }
 
@@ -469,6 +635,10 @@ pub fn missing_model(s: &Session, name: &str, params: &Value) -> Result<Option<M
 pub fn prepare(s: &Session, name: &str, params: &Value) -> Result<Option<Prepared>> {
     sync_folder(s);
     let p = Params::new(name, params.clone());
+    // Nachstellen braucht kein Modell (Rohausgabe liegt vor)
+    if p.bool_or("retune", false)? {
+        return Ok(None);
+    }
     match name {
         "select.aiObject" => {
             let plan = object_plan(s, &p)?;
@@ -521,6 +691,22 @@ pub fn is_ai_command(name: &str) -> bool {
 
 // ------------------------------------------------------------------ Registrierung
 
+fn tolerance_kind() -> ParamKind {
+    ParamKind::Number { min: Some(0.0), max: Some(100.0) }
+}
+
+fn edge_kind() -> ParamKind {
+    ParamKind::Enum { values: ["hard", "antiAlias", "feather"].iter().map(|s| s.to_string()).collect() }
+}
+
+fn expand_kind() -> ParamKind {
+    ParamKind::Integer { min: Some(-(fp_ai::tuning::MAX_EXPAND as i64)), max: Some(fp_ai::tuning::MAX_EXPAND as i64) }
+}
+
+fn smooth_kind() -> ParamKind {
+    ParamKind::Integer { min: Some(0), max: Some(fp_ai::tuning::MAX_SMOOTH as i64) }
+}
+
 fn source_kind() -> ParamKind {
     ParamKind::Enum { values: ["auto", "bitmap", "page"].iter().map(|s| s.to_string()).collect() }
 }
@@ -542,7 +728,13 @@ pub(super) fn register(r: &mut CommandRegistry) {
             .opt("region", ParamKind::Rect, "nur dieser Ausschnitt (z. B. sichtbarer Bereich)")
             .opt("view", ParamKind::Rect, "sichtbarer Bereich: bei starker Vergrößerung wird nur er codiert")
             .opt("model", ParamKind::String, "sam2Tiny (Vorgabe) oder sam2Small")
-            .opt_default("feather", ParamKind::Integer { min: Some(0), max: Some(1000) }, json!(0), "weiche Kante")
+            .opt("tolerance", tolerance_kind(), "Toleranz 0..100 (50 = Schwelle des Modells, höher = mehr auswählen; Vorgabe: Inspektor)")
+            .opt("variant", ParamKind::Enum { values: ["auto", "small", "medium", "large"].iter().map(|s| s.to_string()).collect() }, "Maskenvariante: auto (Wahl des Modells) oder die kleine, mittlere bzw. große Mehrfachmaske")
+            .opt("edge", edge_kind(), "Kante: hard, antiAlias (Vorgabe) oder feather")
+            .opt("feather", ParamKind::Integer { min: Some(0), max: Some(1000) }, "weiche Kante")
+            .opt("expand", expand_kind(), "Auswahl ausdehnen (Pixel, negativ = zusammenziehen)")
+            .opt("smooth", smooth_kind(), "Auswahl glätten (Radius in Pixeln)")
+            .opt("retune", ParamKind::Bool, "letztes Ergebnis mit neuen Feineinstellungen ohne neues Modell-Laufen neu bilden")
             .run(run_object),
     );
     r.add(
@@ -555,7 +747,13 @@ pub(super) fn register(r: &mut CommandRegistry) {
             .opt("point", ParamKind::Point, "Punkt (wählt die Bitmap unter dem Punkt)")
             .opt("region", ParamKind::Rect, "nur dieser Ausschnitt")
             .opt("model", ParamKind::String, "birefnetLite (Vorgabe) oder birefnet")
-            .opt_default("feather", ParamKind::Integer { min: Some(0), max: Some(1000) }, json!(0), "weiche Kante")
+            .opt("tolerance", tolerance_kind(), "Toleranz 0..100 (50 = weiche Maske des Modells, höher = mehr auswählen; Vorgabe: Inspektor)")
+            .opt("edge", edge_kind(), "Kante: hard, antiAlias (Vorgabe) oder feather")
+            .opt("feather", ParamKind::Integer { min: Some(0), max: Some(1000) }, "weiche Kante")
+            .opt("expand", expand_kind(), "Auswahl ausdehnen (Pixel, negativ = zusammenziehen)")
+            .opt("smooth", smooth_kind(), "Auswahl glätten (Radius in Pixeln)")
+            .opt("session", ParamKind::Integer { min: Some(0), max: None }, "Sitzung eines früheren Ergebnisses (für retune)")
+            .opt("retune", ParamKind::Bool, "letztes Ergebnis mit neuen Feineinstellungen ohne neues Modell-Laufen neu bilden")
             .run(run_subject),
     );
     r.add(

@@ -228,12 +228,29 @@ folder. Downloading is only possible in the user interface after the user agrees
 | Command | Purpose | Example |
 |---|---|---|
 | `ai.models` | models with task, size, license, `available`, path; search folders and download target | `run_command {"name": "ai.models"}` |
-| `select.aiObject` | object under point(s) or inside a box (SAM 2.1). Parameters: `point` or `points: [[x, y, 1\|0], …]` (1 = object, 0 = background), `box`, `mode` (`replace`/`add`/`subtract`/`intersect`), `session` + `refine: true` (refine the same selection), `source: auto\|bitmap\|page`, `region`, `view`, `model: sam2Tiny\|sam2Small`, `feather`. Result `{session, iou, objectScore, bounds, source}` | `{"name": "select.aiObject", "params": {"point": [220, 140]}}` |
-| `select.aiSubject` | main subject (BiRefNet) as a soft selection. `mode`, `source`, `point` (bitmap under the point), `region`, `model: birefnetLite\|birefnet`, `feather` | `{"name": "select.aiSubject", "params": {"source": "page"}}` |
+| `select.aiObject` | object under point(s) or inside a box (SAM 2.1). Parameters: `point` or `points: [[x, y, 1\|0], …]` (1 = object, 0 = background), `box`, `mode` (`replace`/`add`/`subtract`/`intersect`), `session` + `refine: true` (refine the same selection), `source: auto\|bitmap\|page`, `region`, `view`, `model: sam2Tiny\|sam2Small`, fine-tuning (see below). Result `{session, iou, objectScore, bounds, source, tuning}` | `{"name": "select.aiObject", "params": {"point": [220, 140]}}` |
+| `select.aiSubject` | main subject (BiRefNet) as a soft selection. `mode`, `source`, `point` (bitmap under the point), `region`, `model: birefnetLite\|birefnet`, fine-tuning (see below). Result `{session, bounds, source, tuning}` | `{"name": "select.aiSubject", "params": {"source": "page"}}` |
 | `select.aiRefineEdge` | refine the edge of the existing pixel selection (hair, fur, real semi-transparency). `radius` (0 = automatic), `output: selection\|mask`, `source`, `model: birefnetLiteMatting\|birefnetHrMatting` – needs a pixel selection | `{"name": "select.aiRefineEdge", "params": {"output": "mask"}}` |
 | `ai.setModelFolder` | set your own model folder (empty = default) | `{"name": "ai.setModelFolder", "params": {"path": "D:\\models"}}` |
 | `ai.clearCache` | release the AI cache and loaded models | `{"name": "ai.clearCache"}` |
 | `ai.manageModels` | without user interface like `ai.models`; in the app it opens the management dialog | `ui_action {"run": "ai.manageModels"}` |
+
+Fine-tuning of `select.aiObject` and `select.aiSubject` (without parameters the values from the
+tool's Property inspector apply, otherwise the defaults; reasons in `docs\MODELLE.md`):
+
+| Parameter | Values | Effect |
+|---|---|---|
+| `tolerance` | 0…100, default 50 | 50 = the model's own decision; higher selects more. SAM: threshold of the mask logits (±10), BiRefNet: tone levels of the soft mask |
+| `edge` | `hard` \| `antiAlias` (default) \| `feather` | edge as with the Magic Wand; `feather` with `feather: <px>` (without `edge`, `feather` > 0 still gives a feathered edge) |
+| `expand` | −100…100 px | expand (> 0) or contract (< 0); the soft edge is kept |
+| `smooth` | 0…100 px | smooth: rounds corners, removes specks and small holes |
+| `variant` | `auto` \| `small` \| `medium` \| `large` | `select.aiObject` only: choice among the masks of the SAM decoder (`auto` = the model's choice, otherwise the multimask outputs by area) |
+| `retune` | `true` | rebuild the task's last selection (or `session`) with new values from the cached model output – no model run; only while the selection is still exactly that result, otherwise an error |
+
+Example: `run_command {"name": "select.aiSubject", "params": {}}` →
+`run_command {"name": "select.aiSubject", "params": {"retune": true, "tolerance": 70, "expand": 2, "edge": "feather", "feather": 3}}`.
+`select.aiRefineEdge` only has `radius` (width of the edge band); a different radius needs a new
+matting run.
 
 Workflow "cut out an object":
 

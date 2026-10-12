@@ -4,6 +4,7 @@
 //! Zustands-Struct in [`Dialogs`]).
 
 mod about;
+pub mod ai_progress;
 pub mod catalog;
 pub mod doc_dialogs;
 pub mod effects;

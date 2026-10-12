@@ -11,6 +11,8 @@
 //! * [`pipeline`]: Vor-/Nachverarbeitung, Skalierung großer Bilder, Ergebnis als
 //!   [`fp_raster::Mask`] in Dokumentkoordinaten.
 //! * [`job`]: Rechnen im Hintergrund-Thread mit Fortschritt und Abbrechen.
+//! * [`tuning`]: Feineinstellungen (Toleranz, Maskenvariante, Kante, Ausdehnen, Glätten) als
+//!   Nachbearbeitung der zwischengespeicherten Modell-Ausgabe.
 
 pub mod birefnet;
 pub mod cache;
@@ -22,9 +24,11 @@ pub mod models;
 pub mod nn;
 pub mod pipeline;
 pub mod sam2;
+pub mod tuning;
 pub mod weights;
 
-pub use cancel::{Cancel, Progress};
+pub use cancel::{Cancel, Progress, Stage};
 pub use error::{AiError, Result};
 pub use models::{ModelId, ModelInfo};
 pub use pipeline::{ObjectPrompt, PromptPoint};
+pub use tuning::{Edge, Tuning, Variant};

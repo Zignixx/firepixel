@@ -7,7 +7,8 @@
 //!   [`Mask`] mit den Grenzen des Ausschnitts.
 
 use crate::cache::{self, Loaded};
-use crate::cancel::Progress;
+use crate::cancel::{Progress, Stage};
+use crate::tuning::{self, Tuning, Variant};
 use crate::error::{AiError, Result};
 use crate::models::{self, ModelId};
 use crate::nn;
@@ -161,7 +162,12 @@ pub fn alpha_to_mask(alpha: &[f32], s: usize, img: &RgbaImage, r: IRect) -> Resu
 /// SAM-Logits `[s, s]` → Maske: erst bilinear auf die Ausschnittgröße (wie das Original), dann
 /// Schwelle 0 mit 2 Logit-Einheiten Übergang (geglättete Kante ohne Schleier um das Objekt).
 pub fn logits_to_mask(logits: &[f32], s: usize, img: &RgbaImage, r: IRect) -> Result<Mask> {
-    values_to_mask(logits, s, img, r, |l| (l + 1.0) * 0.5)
+    logits_to_mask_at(logits, s, img, r, 0.0)
+}
+
+/// Wie [`logits_to_mask`] mit eigener Schwelle (`threshold` in Logit-Einheiten, 0 = Vorgabe).
+pub fn logits_to_mask_at(logits: &[f32], s: usize, img: &RgbaImage, r: IRect, threshold: f32) -> Result<Mask> {
+    values_to_mask(logits, s, img, r, |l| (l - threshold + 1.0) * 0.5)
 }
 
 fn values_to_mask(vals: &[f32], s: usize, img: &RgbaImage, r: IRect, map: impl Fn(f32) -> f32 + Sync) -> Result<Mask> {
@@ -189,6 +195,18 @@ pub fn image_key(img: &RgbaImage, r: IRect, model: ModelId) -> u64 {
     cache::hash_bytes(img.as_bytes(), &[r.left as u64, r.top as u64, r.right as u64, r.bottom as u64, img.bounds().left as u64, img.bounds().top as u64, img.width() as u64, model as u64])
 }
 
+/// Modell aus dem Zwischenspeicher bzw. von der Platte; meldet die Stufe „Modell laden“, wenn es
+/// wirklich geladen werden muss, danach „Bild analysieren“.
+fn load_model(id: ModelId, prog: &Progress) -> Result<std::sync::Arc<Loaded>> {
+    if !cache::is_loaded(id) {
+        prog.set_stage(Stage::LoadModel);
+    }
+    let m = cache::model(id)?;
+    prog.cancel.check()?;
+    prog.set_stage(Stage::Analyze);
+    Ok(m)
+}
+
 fn sam_model(id: ModelId) -> Result<std::sync::Arc<Loaded>> {
     let m = cache::model(id)?;
     if !matches!(*m, Loaded::Sam2(_)) {
@@ -202,6 +220,7 @@ pub fn object_ready(img: &RgbaImage, region: Option<IRect>, model: ModelId) -> b
     clip_region(img, region).map(|r| cache::embedding_cached(image_key(img, r, model)).is_some()).unwrap_or(false)
 }
 
+
 /// Berechnet nur die Bild-Einbettung (Vorwärmen nach dem ersten Klick bzw. beim Werkzeugwechsel).
 pub fn object_prepare(img: &RgbaImage, region: Option<IRect>, model: ModelId, prog: &Progress) -> Result<bool> {
     let r = clip_region(img, region)?;
@@ -209,7 +228,7 @@ pub fn object_prepare(img: &RgbaImage, region: Option<IRect>, model: ModelId, pr
     if cache::embedding_cached(key).is_some() {
         return Ok(true);
     }
-    let m = sam_model(model)?;
+    let m = load_model(model, prog)?;
     let Loaded::Sam2(sam) = &*m else { return Err(AiError::Input(fp_i18n::t("ai-err-d-no-sam"))) };
     nn::pool().install(|| {
         cache::embedding(key, || {
@@ -220,15 +239,54 @@ pub fn object_prepare(img: &RgbaImage, region: Option<IRect>, model: ModelId, pr
     Ok(false)
 }
 
-/// Objektauswahl: Punkte/Rahmen (Dokumentkoordinaten) → Maske des Ausschnitts.
-pub fn object_mask(img: &RgbaImage, region: Option<IRect>, prompt: &ObjectPrompt, model: ModelId, prog: &Progress) -> Result<ObjectResult> {
+/// Rohausgabe der Objektauswahl: alle vier Masken-Logits des Decoders für einen Ausschnitt. Aus
+/// ihr lassen sich Toleranz, Maskenvariante und Kante ohne neues Modell-Laufen ändern
+/// ([`object_from_raw`]).
+#[derive(Clone, Debug)]
+pub struct ObjectRaw {
+    /// `[4, LOW, LOW]` Logits (0 = Einzelmaske, 1…3 = Mehrfachmasken).
+    pub masks: std::sync::Arc<Vec<f32>>,
+    /// Güte je Maske.
+    pub ious: [f32; 4],
+    /// Wahl des Modells (Variante „Automatisch“).
+    pub pick: usize,
+    /// Objekt-Logit.
+    pub object_score: f32,
+    /// Ausschnitt in Dokumentkoordinaten.
+    pub region: IRect,
+    /// War die Bild-Einbettung schon im Speicher?
+    pub cached: bool,
+}
+
+impl ObjectRaw {
+    fn plane(&self, i: usize) -> &[f32] {
+        let n = sam2::LOW * sam2::LOW;
+        &self.masks[i * n..(i + 1) * n]
+    }
+
+    /// Index der Maske für eine Variante: Klein/Mittel/Groß = Mehrfachmasken 1…3 nach Fläche
+    /// (Logit > 0).
+    pub fn index_for(&self, v: Variant) -> usize {
+        let mut multi: Vec<(usize, usize)> = (1..4).map(|i| (self.plane(i).iter().filter(|l| **l > 0.0).count(), i)).collect();
+        multi.sort();
+        match v {
+            Variant::Auto => self.pick,
+            Variant::Small => multi[0].1,
+            Variant::Medium => multi[1].1,
+            Variant::Large => multi[2].1,
+        }
+    }
+}
+
+/// Objektauswahl bis zur Rohausgabe (Encoder aus dem Zwischenspeicher, dann der Decoder).
+pub fn object_raw(img: &RgbaImage, region: Option<IRect>, prompt: &ObjectPrompt, model: ModelId, prog: &Progress) -> Result<ObjectRaw> {
     if prompt.points.is_empty() && prompt.boxx.is_none() {
         return Err(AiError::Input(fp_i18n::t("ai-err-d-point-or-box")));
     }
     let r = clip_region(img, region)?;
     let key = image_key(img, r, model);
     let cached = cache::embedding_cached(key).is_some();
-    let m = sam_model(model)?;
+    let m = if cached { sam_model(model)? } else { load_model(model, prog)? };
     let Loaded::Sam2(sam) = &*m else { return Err(AiError::Input(fp_i18n::t("ai-err-d-no-sam"))) };
     let (w, h) = (r.width() as f32, r.height() as f32);
     let sx = sam2::SIZE as f32 / w;
@@ -239,6 +297,7 @@ pub fn object_mask(img: &RgbaImage, region: Option<IRect>, prompt: &ObjectPrompt
             let x = model_input(img, r, sam2::SIZE);
             sam.encode(&x, prog)
         })?;
+        prog.set_stage(Stage::Mask);
         let mut p = Prompt { multimask: prompt.points.len() == 1 && prompt.boxx.is_none(), ..Prompt::default() };
         for pt in &prompt.points {
             let (x, y) = to_model(pt.x, pt.y);
@@ -250,9 +309,25 @@ pub fn object_mask(img: &RgbaImage, region: Option<IRect>, prompt: &ObjectPrompt
             p.boxx = Some([x0, y0, x1, y1]);
         }
         let d = sam.decode(&emb, &p)?;
-        let mask = logits_to_mask(&d.logits, sam2::LOW, img, r)?;
-        Ok(ObjectResult { mask, iou: d.iou, object_score: d.object_score, cached })
+        Ok(ObjectRaw { masks: std::sync::Arc::new(d.all), ious: d.ious, pick: d.pick, object_score: d.object_score, region: r, cached })
     })
+}
+
+/// Maske aus der Rohausgabe mit Feineinstellungen (schnell, kein Modell).
+pub fn object_from_raw(raw: &ObjectRaw, img: &RgbaImage, t: &Tuning) -> Result<ObjectResult> {
+    let t = t.clamped();
+    let i = raw.index_for(t.variant);
+    let mask = nn::pool().install(|| logits_to_mask_at(raw.plane(i), sam2::LOW, img, raw.region, t.sam_threshold()))?;
+    let mask = tuning::postprocess(mask, &t)?;
+    Ok(ObjectResult { mask, iou: raw.ious[i], object_score: raw.object_score, cached: raw.cached })
+}
+
+/// Objektauswahl: Punkte/Rahmen (Dokumentkoordinaten) → Maske des Ausschnitts (Vorgabe-Einstellungen).
+pub fn object_mask(img: &RgbaImage, region: Option<IRect>, prompt: &ObjectPrompt, model: ModelId, prog: &Progress) -> Result<ObjectResult> {
+    let raw = object_raw(img, region, prompt, model, prog)?;
+    let i = raw.pick;
+    let mask = nn::pool().install(|| logits_to_mask(raw.plane(i), sam2::LOW, img, raw.region))?;
+    Ok(ObjectResult { mask, iou: raw.ious[i], object_score: raw.object_score, cached: raw.cached })
 }
 
 fn alpha_key(img: &RgbaImage, r: IRect, model: ModelId, size: usize) -> u64 {
@@ -264,7 +339,7 @@ fn birefnet_alpha(img: &RgbaImage, r: IRect, model: ModelId, size: usize, prog: 
     if let Some(a) = cache::alpha_cached(key) {
         return Ok(a);
     }
-    let m = cache::model(model)?;
+    let m = load_model(model, prog)?;
     let Loaded::BiRefNet(net) = &*m else { return Err(AiError::Input(fp_i18n::t("ai-err-d-no-birefnet"))) };
     nn::pool().install(|| {
         cache::alpha(key, || {
@@ -288,12 +363,38 @@ pub fn subject_ready(img: &RgbaImage, region: Option<IRect>, model: ModelId) -> 
     clip_region(img, region).map(|r| cache::alpha_cached(alpha_key(img, r, model, birefnet_size(model))).is_some()).unwrap_or(false)
 }
 
-/// Motiv auswählen: weiche Maske des Hauptmotivs im Ausschnitt.
-pub fn subject_mask(img: &RgbaImage, region: Option<IRect>, model: ModelId, prog: &Progress) -> Result<Mask> {
+/// Rohausgabe von „Motiv auswählen“: weiche Maske des Netzes (`size × size`, 0…1) für einen
+/// Ausschnitt; Toleranz und Kante lassen sich daraus ohne neues Modell-Laufen ändern.
+#[derive(Clone, Debug)]
+pub struct SubjectRaw {
+    /// Weiche Maske `[size, size]`.
+    pub alpha: std::sync::Arc<Vec<f32>>,
+    /// Modellauflösung.
+    pub size: usize,
+    /// Ausschnitt in Dokumentkoordinaten.
+    pub region: IRect,
+}
+
+/// Motiv bis zur Rohausgabe.
+pub fn subject_raw(img: &RgbaImage, region: Option<IRect>, model: ModelId, prog: &Progress) -> Result<SubjectRaw> {
     let r = clip_region(img, region)?;
     let s = birefnet_size(model);
-    let a = birefnet_alpha(img, r, model, s, prog)?;
-    alpha_to_mask(&a, s, img, r)
+    let alpha = birefnet_alpha(img, r, model, s, prog)?;
+    Ok(SubjectRaw { alpha, size: s, region: r })
+}
+
+/// Motiv-Maske aus der Rohausgabe mit Feineinstellungen (eine Maskenvariante gibt es hier nicht).
+pub fn subject_from_raw(raw: &SubjectRaw, img: &RgbaImage, t: &Tuning) -> Result<Mask> {
+    let t = t.clamped();
+    let mask = nn::pool().install(|| values_to_mask(&raw.alpha, raw.size, img, raw.region, |a| t.soft_level(a)))?;
+    tuning::postprocess(mask, &t)
+}
+
+/// Motiv auswählen: weiche Maske des Hauptmotivs im Ausschnitt (Vorgabe-Einstellungen).
+pub fn subject_mask(img: &RgbaImage, region: Option<IRect>, model: ModelId, prog: &Progress) -> Result<Mask> {
+    let raw = subject_raw(img, region, model, prog)?;
+    prog.set_stage(Stage::Mask);
+    alpha_to_mask(&raw.alpha, raw.size, img, raw.region)
 }
 
 /// Exakte euklidische Distanztransformation (Felzenszwalb/Huttenlocher): Abstand jedes Pixels
@@ -380,6 +481,7 @@ pub fn refine_edge(img: &RgbaImage, sel: &Mask, radius: f32, model: ModelId, pro
     let (r, radius) = refine_region(img, sel, radius)?;
     let s = birefnet_size(model);
     let a = birefnet_alpha(img, r, model, s, prog)?;
+    prog.set_stage(Stage::Mask);
     let (w, h) = (r.width() as usize, r.height() as usize);
     let am = resample_plane(&a, s, s, w, h);
     // Auswahl im Ausschnitt

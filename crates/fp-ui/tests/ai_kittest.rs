@@ -73,6 +73,17 @@ fn click(h: &mut Harness<'static, FirepixelApp>, p: Pos2) {
     }
 }
 
+/// Bilder zeichnen, bis die Fortschrittsanzeige sichtbar ist (nach 300 ms).
+fn show_progress(h: &mut Harness<'static, FirepixelApp>) {
+    let t = Instant::now();
+    let f0 = h.state().state.dialogs.ai.progress_frames;
+    // ein paar sichtbare Bilder abwarten (das erste Bild einer Fläche ist nur ein Größenlauf)
+    while t.elapsed() < Duration::from_secs(5) && h.state().state.dialogs.ai.busy() && h.state().state.dialogs.ai.progress_frames < f0 + 3 {
+        std::thread::sleep(Duration::from_millis(20));
+        h.step();
+    }
+}
+
 /// Bilder laufen lassen, bis die Hintergrundrechnung fertig ist.
 fn wait_job(h: &mut Harness<'static, FirepixelApp>, max: Duration) {
     let t = Instant::now();
@@ -96,6 +107,8 @@ fn object_tool_click_selects_with_marching_ants() {
     click(&mut h, p);
     // erster Klick: Bild-Encoding läuft im Hintergrund, die Oberfläche bleibt bedienbar
     assert!(h.state().state.dialogs.ai.busy(), "Hintergrundrechnung läuft");
+    // die Fortschrittsanzeige erscheint erst nach 300 ms (kein Aufblitzen bei kurzen Läufen)
+    show_progress(&mut h);
     assert!(h.get_all(By::new().label("Abbrechen")).next().is_some(), "Fortschrittsfenster mit Abbrechen");
     wait_job(&mut h, Duration::from_secs(60));
     let st = &h.state().state;
@@ -132,7 +145,7 @@ fn cancel_in_the_middle_keeps_selection_and_document() {
     let p = at(&h, 200.0, 150.0);
     click(&mut h, p);
     assert!(h.state().state.dialogs.ai.busy());
-    h.step();
+    show_progress(&mut h);
     let b: Vec<_> = h.get_all(By::new().label("Abbrechen")).collect();
     b.last().expect("Abbrechen").click();
     drop(b);

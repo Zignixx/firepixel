@@ -343,6 +343,8 @@ err-sel-two-paths-needed = at least two paths needed
 ## Parameter ($message in err-invalid-params)
 err-param-action-ext = action: list/install/remove
 err-param-ai-prompt = click point (point/points) or box (box) missing
+err-param-ai-value = unknown value “{ $value }”
+err-sel-ai-nothing-to-retune = no AI selection to adjust (the selection has changed since)
 err-param-anchor-or-rect = specify anchor or rect
 err-param-colors = colors: #rrggbb expected
 err-param-contours = contours: list expected

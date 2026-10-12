@@ -59,6 +59,31 @@ Die Netze sind in `crates\fp-ai` in reinem Rust nachgebaut (keine ONNX-Laufzeit,
 (Abweichung der Logits: BiRefNet lite ≤ 1,4·10⁻⁴, Matting lite ≤ 2,4·10⁻⁴, BiRefNet Swin-L ≤ 3,8·10⁻³;
 SAM 2.1 Einbettung ≤ 1·10⁻⁵, Masken-Logits ≤ 4·10⁻⁴, Maske 100 % gleich).
 
+## Feineinstellungen (Inspektor, Parameter)
+
+Angeboten wird nur, was die Modelle bzw. unser Code wirklich hergeben (`crates\fp-ai\src\tuning.rs`).
+Alles ist Nachbearbeitung der Modell-Ausgabe, die nach dem ersten Klick zwischengespeichert ist:
+Ändert man einen Wert im Inspektor, bildet Firepixel die Auswahl desselben Werkzeugs sofort neu
+(`retune: true`), ohne das Netz erneut laufen zu lassen.
+
+| Einstellung | Objektauswahl (SAM 2.1) | Motiv auswählen (BiRefNet) | Kante verfeinern (Matting) | Warum |
+|---|---|---|---|---|
+| **Toleranz** 0…100 (50) | ✓ Schwelle der Masken-Logits, ±10 Logit-Einheiten | ✓ Tonwerte der weichen Maske (50 = unverändert) | – | SAM entscheidet über eine Schwelle (Vorgabe 0); BiRefNet liefert eine weiche Maske 0…1, deren Tonwerte sich monoton verschieben lassen. Beim Matting ist das Alpha die gemessene Deckkraft (Haare), eine Schwelle würde sie zerstören. |
+| **Variante** Automatisch/Klein/Mittel/Groß | ✓ | – | – | Der SAM-Decoder rechnet immer eine Einzelmaske und drei Mehrfachmasken mit eigener Güte (IoU). „Automatisch“ = Wahl des Modells, sonst die Mehrfachmasken nach Fläche (Teil, Objekt, Objekt mit Umgebung). BiRefNet hat nur eine Ausgabe. |
+| **Kante** Hart/Anti-Alias/Weiche Kante + Wert | ✓ | ✓ | – | wie beim Zauberstab; reine Nachbearbeitung. Beim Matting ist die Kante das Ergebnis selbst. |
+| **Ausdehnen** −100…100 px | ✓ | ✓ | – | Grauwert-Morphologie mit Kreisscheibe: der weiche Rand wandert mit, statt hart zu werden. |
+| **Glätten** 0…100 px | ✓ | ✓ | – | Dreiecksfilter und Straffen des Übergangs: rundet Ecken, entfernt Krümel und kleine Löcher. |
+| **Radius** (0 = automatisch) | – | – | ✓ (wie bisher) | Breite des Kantenbereichs, in dem das Matting-Alpha gilt. Er bestimmt auch den Bildausschnitt für das Netz; ein anderer Radius braucht deshalb einen neuen Matting-Lauf und wird erst beim nächsten Klick angewandt. |
+
+Nicht angeboten: eine Wahl der BiRefNet-Auflösung (das Netz ist für 1024 trainiert, siehe
+`birefnet_size`), „Objektwert“-Schwelle von SAM (sie sagt nur, ob unter dem Punkt überhaupt ein
+Objekt liegt, und steht im Ergebnis als `objectScore`), Punktdichte/Mehrfachpunkte im Inspektor
+(Punkte und Rahmen kommen schon über Klick, Umschalt/Alt-Klick und Aufziehen).
+
+Voreinstellungen: `AiObjectTolerance`, `AiObjectEdge`, `AiObjectFeather`, `AiObjectVariant`,
+`AiObjectExpand`, `AiObjectSmooth` bzw. `AiSubject…`; Parameter der Befehle in `docs\AGENTS.md` §5
+(„KI-Auswahl“).
+
 ## Testbilder (`crates\fp-ai\testdata`)
 
 Frei lizenzierte Fotos von Wikimedia Commons (CC0), auf 1280 px Breite verkleinert:

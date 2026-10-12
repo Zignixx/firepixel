@@ -510,6 +510,14 @@ cmdtext-bildquelle = Bildquelle
 cmdtext-birefnetlitematting-vorgabe-oder-birefne-cf9b8e = birefnetLiteMatting (Vorgabe) oder birefnetHrMatting
 cmdtext-ergebnis-als-weiche-pixelauswahl-oder-al-2b3d4a = Ergebnis als weiche Pixelauswahl oder als Bitmapmaske
 cmdtext-breite-des-kantenbereichs-in-pixeln-0-au-8d2e95 = Breite des Kantenbereichs in Pixeln (0 = automatisch)
+cmdtext-toleranz-0-100-50-schwelle-des-modells-h-c610e4 = Toleranz 0..100 (50 = Schwelle des Modells, höher = mehr auswählen; Vorgabe: Inspektor)
+cmdtext-maskenvariante-auto-wahl-des-modells-ode-bf1a9d = Maskenvariante: auto (Wahl des Modells) oder die kleine, mittlere bzw. große Mehrfachmaske
+cmdtext-kante-hard-antialias-vorgabe-oder-feather = Kante: hard, antiAlias (Vorgabe) oder feather
+cmdtext-auswahl-ausdehnen-pixel-negativ-zusammenziehen = Auswahl ausdehnen (Pixel, negativ = zusammenziehen)
+cmdtext-auswahl-glaetten-radius-in-pixeln = Auswahl glätten (Radius in Pixeln)
+cmdtext-letztes-ergebnis-mit-neuen-feineinstellu-e07f9a = letztes Ergebnis mit neuen Feineinstellungen ohne neues Modell-Laufen neu bilden
+cmdtext-toleranz-0-100-50-weiche-maske-des-model-708c7b = Toleranz 0..100 (50 = weiche Maske des Modells, höher = mehr auswählen; Vorgabe: Inspektor)
+cmdtext-sitzung-eines-frueheren-ergebnisses-fuer-retune = Sitzung eines früheren Ergebnisses (für retune)
 cmdtext-ordner-mit-den-ki-modellen-leer-standard = Ordner mit den KI-Modellen (leer = Standard)
 cmdtext-alpha-unter-diesem-wert-gilt-als-transparent = Alpha unter diesem Wert gilt als transparent
 cmdtext-farbe-oder-schwarzweiss = Farbe oder Schwarzweiß

@@ -163,6 +163,12 @@ pub struct Decoded {
     pub iou: f32,
     /// Objekt-Wert (Logit; < 0 = vermutlich kein Objekt).
     pub object_score: f32,
+    /// Alle vier Masken-Logits `[4, 256, 256]` (0 = Einzelmaske, 1…3 = Mehrfachmasken).
+    pub all: Vec<f32>,
+    /// Vorhergesagte Güte je Maske.
+    pub ious: [f32; 4],
+    /// Index der gewählten Maske in [`Decoded::all`].
+    pub pick: usize,
 }
 
 /// Geladenes SAM 2.1.
@@ -563,8 +569,10 @@ impl Sam2 {
         };
         nn::prof("dec rest", tp);
         let logits = masks[pick * npx..(pick + 1) * npx].to_vec();
+        let all = masks[..4 * npx].to_vec();
         nn::give(masks);
-        Ok(Decoded { logits, iou: iou[pick], object_score })
+        let ious = [0, 1, 2, 3].map(|i| iou.get(i).copied().unwrap_or(0.0));
+        Ok(Decoded { logits, iou: iou[pick], object_score, all, ious, pick })
     }
 }
 

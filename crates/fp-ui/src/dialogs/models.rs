@@ -1,8 +1,8 @@
 //! KI-Auswahl in der Oberfläche (Agent KI):
 //!
 //! * Hintergrundrechnung der KI-Befehle (`select.aiObject`, `select.aiSubject`,
-//!   `select.aiRefineEdge`): Bild-Encoding bzw. Freistellung laufen in einem eigenen Thread, ein
-//!   kleines Fortschrittsfenster zeigt den Stand und hat „Abbrechen“; danach wird der Befehl
+//!   `select.aiRefineEdge`): Bild-Encoding bzw. Freistellung laufen in einem eigenen Thread, eine
+//!   ruhige Fortschrittskarte ([`super::ai_progress`]) zeigt den Stand und hat „Abbrechen“; danach wird der Befehl
 //!   ausgeführt (dann nur noch der schnelle Teil). Die Oberfläche blockiert nie.
 //! * Dialog „KI-Modell fehlt“: Name, Quelle, Größe, Lizenz und Zielordner; heruntergeladen wird
 //!   erst nach „Herunterladen“ (mit Fortschritt, Prüfsumme und Abbrechen).
@@ -28,6 +28,8 @@ pub struct RunningJob {
     /// Rechnung; ein einfacher Klick ersetzt die Liste, Umschalt/Alt-Klicks hängen an).
     then: Vec<Invocation>,
     title: String,
+    /// Was die Fortschrittsanzeige zeigt.
+    view: super::ai_progress::ProgressView,
 }
 
 /// Download (im Dialog „Modell fehlt“ bzw. „Modelle verwalten“).
@@ -67,6 +69,10 @@ pub struct AiDialogs {
     pub job: Option<RunningJob>,
     pub missing: Option<MissingDialog>,
     pub manager: Option<ManagerDialog>,
+    /// Fortschrittsanzeige blendet nach dem Ende eines sichtbaren Laufs aus.
+    pub fading: Option<super::ai_progress::Fading>,
+    /// Zahl der Bilder, in denen die Fortschrittsanzeige sichtbar war (Tests: kein Aufblitzen).
+    pub progress_frames: u64,
 }
 
 impl AiDialogs {
@@ -160,6 +166,7 @@ pub fn request(st: &mut AppState, inv: &Invocation) {
     if st.session.active().is_none() {
         return;
     }
+    let inv = &with_tuning(st, inv);
     match eng::missing_model(&st.session, &inv.command, &inv.params) {
         Ok(Some(model)) => {
             if let Some(j) = st.dialogs.ai.job.take() {
@@ -215,12 +222,12 @@ fn start(st: &mut AppState, mut queue: Vec<Invocation>) {
                 Err(e) => status(st, e.to_string()),
             },
             Ok(Some(prep)) => {
-                let title = title_for(&inv.command);
-                let model = models::info(prep.model).display_name();
+                let view = progress_view(&inv.command, prep.model);
                 let key = prep.key;
-                let job = Job::spawn(format!("{title} ({model})"), move |p| eng::run_prepared(&prep, p));
+                let job = Job::spawn(format!("{} ({})", view.title, view.model), move |p| eng::run_prepared(&prep, p));
                 queue.insert(0, inv);
-                st.dialogs.ai.job = Some(RunningJob { job, key, then: queue, title });
+                st.dialogs.ai.fading = None;
+                st.dialogs.ai.job = Some(RunningJob { job, key, then: queue, title: view.title.clone(), view });
                 return;
             }
             Err(e) => status(st, e.to_string()),
@@ -252,12 +259,63 @@ pub fn show(ctx: &egui::Context, st: &mut AppState) {
     show_manager(ctx, st);
 }
 
+/// Symbol, Titel, Modell und Stufen der Fortschrittsanzeige eines KI-Befehls. Stufen: „Modell
+/// laden“ nur, wenn das Modell noch nicht im Speicher ist; „Maske berechnen“ nur, wo die
+/// Hintergrundrechnung sie wirklich macht (Motiv, Kante verfeinern).
+pub fn progress_view(cmd: &str, model: ModelId) -> super::ai_progress::ProgressView {
+    use fp_ai::Stage;
+    let icon = match cmd {
+        "select.aiSubject" => crate::icons::Icon::AiSubject,
+        "select.aiRefineEdge" => crate::icons::Icon::AiRefineEdge,
+        _ => crate::icons::Icon::AiObject,
+    };
+    let mut stages = Vec::new();
+    if !fp_ai::cache::is_loaded(model) {
+        stages.push(Stage::LoadModel);
+    }
+    stages.push(Stage::Analyze);
+    if cmd != "select.aiObject" {
+        stages.push(Stage::Mask);
+    }
+    super::ai_progress::ProgressView { title: title_for(cmd), model: models::info(model).display_name(), icon, stages, estimate: Default::default() }
+}
+
+/// Nur für Tests und Bildschirmfotos: startet einen KI-Lauf mit eigener Rechnung `f` (statt des
+/// Modells) und der Anzeige von `cmd`/`model`; danach wird nichts ausgeführt.
+pub fn start_demo(st: &mut AppState, cmd: &str, model: ModelId, f: impl FnOnce(&fp_ai::Progress) -> fp_ai::Result<()> + Send + 'static) {
+    let view = progress_view(cmd, model);
+    let job = Job::spawn("Demo", f);
+    st.dialogs.ai.fading = None;
+    st.dialogs.ai.job = Some(RunningJob { job, key: 0, then: Vec::new(), title: view.title.clone(), view });
+}
+
 fn poll_job(ctx: &egui::Context, st: &mut AppState) {
+    use super::ai_progress::{self as ap, Fading, Frame};
+    // über der Leinwand des aktiven Dokuments schweben (nicht über Inspektor und Bedienfeldern)
+    let anchor = st.session.active().and_then(|d| st.canvases.get(&d.id)).and_then(|c| c.area);
+    // Ausblenden nach dem Ende
+    if let Some(fd) = st.dialogs.ai.fading.as_mut() {
+        let k = 1.0 - fd.since.elapsed().as_secs_f32() / ap::FADE_OUT;
+        let mut shown = false;
+        let elapsed = fd.elapsed;
+        ap::show(ctx, Frame { view: &mut fd.view, progress: None, elapsed, cancelling: false, fade_out: Some(k), anchor }, &mut shown);
+        if k <= 0.0 {
+            st.dialogs.ai.fading = None;
+        }
+    }
     let Some(j) = st.dialogs.ai.job.as_mut() else { return };
     if let Some(r) = j.job.poll() {
         let Some(j) = st.dialogs.ai.job.take() else { return };
+        let elapsed = j.job.elapsed();
         match r {
-            Ok(()) => start(st, j.then),
+            Ok(()) => {
+                // war die Anzeige zu sehen, kurz mit vollem Balken ausblenden statt zu verschwinden
+                if elapsed >= ap::SHOW_DELAY {
+                    st.dialogs.ai.fading = Some(Fading { view: j.view.clone(), elapsed, since: std::time::Instant::now() });
+                    ctx.request_repaint();
+                }
+                start(st, j.then)
+            }
             Err(fp_ai::AiError::Cancelled) => status(st, fp_i18n::tr!("dlg-ai-cancelled", title = j.title.as_str())),
             Err(e) => {
                 st.dialogs.message = Some((j.title.clone(), e.to_string()));
@@ -265,32 +323,55 @@ fn poll_job(ctx: &egui::Context, st: &mut AppState) {
         }
         return;
     }
-    let p = j.job.progress.get();
-    let label = j.job.label.clone();
-    let mut cancel = false;
-    egui::Window::new(t("dlg-ai-selection"))
-        .id(egui::Id::new("fp-ai-progress"))
-        .title_bar(false)
-        .resizable(false)
-        .collapsible(false)
-        .anchor(egui::Align2::CENTER_BOTTOM, vec2(0.0, -48.0))
-        .show(ctx, |ui| {
-            ui.set_width(320.0);
-            ui.label(fp_i18n::tr!("dlg-ai-analyzing", task = label.as_str()));
-            ui.add(egui::ProgressBar::new(p).show_percentage());
-            ui.horizontal(|ui| {
-                ui.label(format!("{:.1} s", j.job.elapsed()));
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    if ui.button(t("btn-cancel")).clicked() {
-                        cancel = true;
-                    }
-                });
-            });
-        });
+    let elapsed = j.job.elapsed();
+    let cancelling = j.job.progress.cancel.is_cancelled();
+    let mut shown = false;
+    let cancel = ap::show(ctx, Frame { view: &mut j.view, progress: Some(&j.job.progress), elapsed, cancelling, fade_out: None, anchor }, &mut shown);
+    if shown {
+        st.dialogs.ai.progress_frames += 1;
+    }
     if cancel || ctx.input(|i| i.key_pressed(egui::Key::Escape)) {
         j.job.cancel();
     }
-    ctx.request_repaint_after(std::time::Duration::from_millis(50));
+}
+
+/// Feineinstellungen aus dem Inspektor (Voreinstellungen) als Parameter an den Befehl, soweit er
+/// sie nicht selbst mitbringt.
+fn with_tuning(st: &AppState, inv: &Invocation) -> Invocation {
+    let (pre, variant) = match inv.command.as_str() {
+        "select.aiObject" => ("AiObject", true),
+        "select.aiSubject" => ("AiSubject", false),
+        _ => return inv.clone(),
+    };
+    let mut out = inv.clone();
+    let prefs = &st.session.prefs;
+    let mut put = |k: &str, v: serde_json::Value| {
+        if let Some(o) = out.params.as_object_mut()
+            && !o.contains_key(k)
+        {
+            o.insert(k.to_string(), v);
+        }
+    };
+    put("tolerance", serde_json::json!(prefs.get_int(&format!("{pre}Tolerance"), 50)));
+    put("edge", serde_json::json!(prefs.get_str(&format!("{pre}Edge"), "antiAlias")));
+    put("feather", serde_json::json!(prefs.get_int(&format!("{pre}Feather"), 0)));
+    put("expand", serde_json::json!(prefs.get_int(&format!("{pre}Expand"), 0)));
+    put("smooth", serde_json::json!(prefs.get_int(&format!("{pre}Smooth"), 0)));
+    if variant {
+        put("variant", serde_json::json!(prefs.get_str("AiObjectVariant", "auto")));
+    }
+    out
+}
+
+/// Nach einer Änderung im Inspektor: die letzte Auswahl dieses Werkzeugs mit den neuen Werten aus
+/// der zwischengespeicherten Modell-Ausgabe neu bilden (kein Modell-Laufen). Ohne passende
+/// Auswahl (geändert, keine KI-Auswahl) geschieht nichts. `true` = neu gebildet.
+pub fn retune(st: &mut AppState, cmd: &str) -> bool {
+    if st.session.active().is_none() || st.dialogs.ai.busy() || !eng::can_retune(&st.session, cmd) {
+        return false;
+    }
+    let inv = with_tuning(st, &Invocation::new(cmd, serde_json::json!({"retune": true})));
+    st.session.execute(&inv.command, inv.params).is_ok()
 }
 
 /// Startet den Download eines Modells (nur aus den Dialogen nach Klick auf „Herunterladen“).
