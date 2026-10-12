@@ -4,17 +4,17 @@ Auftrag: „Vergleich mal alle Funktionen vom Original und Firepixel, damit sie 
 
 ## Übergabe (Stand 12.10.2026, Arbeit auf Nutzerwunsch angehalten)
 
-**Zahlen je Bereich** (126 Zeilen; Abschnitt 5 von PM-3 am 12.10. in beiden Programmen nachgemessen und um L31–L39 ergänzt; neu gezählt von PM-1 am 12.10. nach dem Stand der Tabellen inkl. FV-1/FV-3-Nachmessungen; T, L und K nachgeführt von FV-6; Abschnitte 1–4 von PM-2 am 12.10. in beiden Programmen im echten Fenster nachgemessen, Firepixel-Release vom Stand `771bf08` + Arbeitsstand; ✅ gleich, ⚠️ Abweichung im Detail, ❌ fehlt bzw. falsch, ⏳ nicht fertig gemessen):
+**Zahlen je Bereich** (126 Zeilen; Abschnitt 5 von PM-3 am 12.10. in beiden Programmen nachgemessen und um L31–L39 ergänzt; neu gezählt von PM-1 am 12.10. nach dem Stand der Tabellen inkl. FV-1/FV-3-Nachmessungen; T, L und K nachgeführt von FV-6; Abschnitte 1–4 von PM-2 am 12.10. in beiden Programmen im echten Fenster nachgemessen, Firepixel-Release vom Stand `771bf08` + Arbeitsstand; W10/W14–W17/W27/W28, F7, F9, F10, O6 von FV-9 nachgeführt (F7/F9/F10/W14/W16/O6 im echten Fenster); ✅ gleich, ⚠️ Abweichung im Detail, ❌ fehlt bzw. falsch, ⏳ nicht fertig gemessen):
 
 | Bereich | ✅ | ⚠️ | ❌ | ⏳ |
 |---|---|---|---|---|
-| 1 Inspektor je Werkzeug (W1–W38) | 24 | 13 | 1 | 0 |
-| 2 Feldverhalten (F1–F15) | 13 | 1 | 1 | 0 |
+| 1 Inspektor je Werkzeug (W1–W38) | 31 | 6 | 1 | 0 |
+| 2 Feldverhalten (F1–F15) | 15 | 0 | 0 | 0 |
 | 3 Text: Schriftgröße (T1–T6) | 6 | 0 | 0 | 0 |
-| 4 Inspektor je Objektart (O1–O17) | 12 | 4 | 1 | 0 |
+| 4 Inspektor je Objektart (O1–O17) | 13 | 3 | 1 | 0 |
 | 5 Leinwand/Werkzeugverhalten (L1–L39) | 30 | 7 | 2 | 0 |
 | 6 Mauszeiger (K1–K11) | 11 | 0 | 0 | 0 |
-| **Summe** | **96** | **25** | **5** | **0** |
+| **Summe** | **106** | **16** | **4** | **0** |
 
 **PM-2 (12.10.):** Vorher in 1–4: 31 ✅ / 18 ⚠️ / 27 ❌, nachher 55 ✅ / 18 ⚠️ / 3 ❌. Neue Befunde in `BEFUNDE.md` (Kennung „von PM-2“): LW 1 (W8), IBD 14 (F10, F7, W14, W10/W27/W28, W16, W19, W21, W22, W24, W26, W29, O2, O8, O16), EB 1 (prefs.json W8). W15, W17 und O6 hängen an den offenen IBD-Befunden von EB-1, O11 am offenen AU-Befund. **F10 im Original neu gemessen:** Strg+A im Zahlenfeld markiert den Feldtext (die frühere Angabe „Alles auswählen“, nach der FV-1 umgebaut hat, ließ sich in 3 Läufen nicht bestätigen). Messhinweise: Firepixel zeichnet den Inspektor nach einem Werkzeugwechsel (auch per echtem Klick) erst nach 0,3–1,5 s neu; Fotos früher zeigen noch Werte des vorigen Werkzeugs – mindestens 1,5 s warten. Im Original übernimmt ein noch fokussiertes, geändertes Inspektorfeld seinen Text beim Klick auf ein anderes Objekt – vor jeder Feldprobe die Objekte neu anlegen. Skripte: `..\re\_testdateien\ux\uxa\werkzeug\pm2\` (`env.ps1`, `sitz.ps1`, `w.ps1`, `o.ps1`, `f.ps1`, `f2.ps1`, `x.ps1`, `rc.ps1`), Ablauf wie unten.
 
@@ -121,14 +121,14 @@ Legende: ✅ gleich · ⚠️ kleine Abweichung · ❌ anders · ⏳ wartet auf 
 | W7 | Stempel | Größe / Rand | 16 / 50 (PREF `StampToolSize=16`, `Edge=500`) | PM-2 (12.10., echtes Fenster): 16 / 50 | ✅ | a_W7_stempel |
 | W8 | Farbe ersetzen | Größe / Toleranz / Stärke | 13 / 32 / 200 | PM-2 (12.10., echtes Fenster): 13 / 32 / **100**; „Von“-Farbe schwarz, „in“ grau (Original #00FF00 / #FF0000) – Befunde PM-2 (LW W8, EB prefs.json) | ❌ | a_W8_farbe_ersetzen |
 | W9 | Rote Augen entfernen | Toleranz / Stärke | 50 / 50 | PM-2 (12.10., echtes Fenster): 50 / 50 | ✅ | a_W9_rote_augen |
-| W10 | Rote Augen entfernen | Name im Kopf | zweizeilig „Rote Augen / entfernen“ | PM-2 (12.10., echtes Fenster): unverändert „Rote Augen en…“ – Befund PM-2 (IBD W10/W27/W28) | ⚠️ | a_W9_rote_augen |
+| W10 | Rote Augen entfernen | Name im Kopf | zweizeilig „Rote Augen / entfernen“ | FV-9 (12.10., kittest): zweizeilig „Rote Augen / entfernen“ (Umbruch an Wortgrenzen, erst ab drei Zeilen „…“); vorher PM-2 „Rote Augen en…“ | ✅ | a_W9_rote_augen |
 | W11 | Freiform | Größe / Druck / Vorschau | 72 / ☑ / ☑ | PM-2 (12.10., echtes Fenster): 72 / ☑ / ☑ | ✅ | a_W11_freiform |
 | W12 | Bereich umformen | Größe / Stärke / Druck Größe / Druck Stärke | 72 / 80 / ☑ / ☐ | PM-2 (12.10., echtes Fenster): 72 / 80 / ☑ / ☐ (Kopf gekürzt, siehe W28) | ✅ | a_W12_bereich_umformen |
 | W13 | Pfadausbesserung (additiv/subtraktiv) | Druck / Geschwindigkeit / Rate | ☑ / ☑ / 10 | PM-2 (12.10., echtes Fenster): ☑ / ☑ / 10 (additiv und subtraktiv) | ✅ | a_W13_pfadausbesserung |
-| W14 | Text | Schriftfamilie | Myriad Pro (Vorgabeschrift) | PM-2 (12.10., echtes Fenster): Myriad Pro; aber Schnitt „**Bold**“ statt „Regular“ (Text ist nicht fett) – Befund PM-2 (IBD W14) | ⚠️ | a_W14_W18_textwerkzeug |
-| W15 | Text | Laufweite, Zeilenabstand (+Einheit), Absatzeinzug, Abstand vor/nach, Horizontalskala, Grundlinie, Anti-Alias, Autom. Unterschneidung | alle **bedienbar**, bevor man tippt (Vorgabe für den neuen Text) | PM-2 (12.10., echtes Fenster): Laufweite, Zeilenabstand + Einheit, Einzug, Abstand vor/nach, Horizontalskala bedienbar; **Anti-Alias und Autom. Unterschneidung grau** (Anbindung offen, IBD-Befund von EB-1) | ⚠️ | a_W14_W18_textwerkzeug |
-| W16 | Text | Kurzzeichen Fett/Kursiv | „F“ / „K“ (deutsch) | PM-2 (12.10., echtes Fenster): unverändert „B“ / „I“ – Befund PM-2 (IBD W16) | ⚠️ | a_W14_W18_textwerkzeug |
-| W17 | Text | Knopf Textausrichtung (horizontal/vertikal, „ab/cd“) neben U | vorhanden | PM-2 (12.10., echtes Fenster): Knopf „ab/cd ▾“ vorhanden, ohne Auswahl aber grau (Anbindung offen, IBD-Befund von EB-1) | ⚠️ | a_W14_W18_textwerkzeug |
+| W14 | Text | Schriftfamilie | Myriad Pro (Vorgabeschrift) | FV-9 (12.10., echtes Fenster): Myriad Pro / „Regular“ (Werkzeug und Textobjekt T1; vorher „Bold“, weil die erste Schriftdatei der Familie fett ist) | ✅ | a_W14_W18_textwerkzeug |
+| W15 | Text | Laufweite, Zeilenabstand (+Einheit), Absatzeinzug, Abstand vor/nach, Horizontalskala, Grundlinie, Anti-Alias, Autom. Unterschneidung | alle **bedienbar**, bevor man tippt (Vorgabe für den neuen Text) | PM-2 (12.10., echtes Fenster): Laufweite, Zeilenabstand + Einheit, Einzug, Abstand vor/nach, Horizontalskala bedienbar; FV-9 (12.10.): auch Anti-Alias und Autom. Unterschneidung bedienbar (echtes Fenster: „Anti-Alias glatt“ aktiv; kittest: Wahl setzt `text.setToolDefaults` ohne Verlaufsschritt, der nächste Text bekommt sie) | ✅ | a_W14_W18_textwerkzeug |
+| W16 | Text | Kurzzeichen Fett/Kursiv | „F“ / „K“ (deutsch) | FV-9 (12.10., echtes Fenster): „F“ / kursives „K“ (englisch „B“ / „I“, Schlüssel je Sprache) | ✅ | a_W14_W18_textwerkzeug |
+| W17 | Text | Knopf Textausrichtung (horizontal/vertikal, „ab/cd“) neben U | vorhanden | FV-9 (12.10., kittest): Knopf „ab/cd ▾“ auch ohne Auswahl bedienbar, setzt die Richtung neuer Texte (`text.setToolDefaults`); vorher PM-2: grau | ✅ | a_W14_W18_textwerkzeug |
 | W18 | Text | Textfarbe | eigenes Farbfeld des Textwerkzeugs (schwarz) | PM-2 (12.10., echtes Fenster): eigenes Farbfeld des Textwerkzeugs, schwarz | ✅ | a_W14_W18_textwerkzeug |
 | W19 | Polygon | „Winkel“ und „Autom.“ bei Form = Polygon | bedienbar (Winkel 38, Autom. ☑) | FV-10 (12.10., kittest + offscreen gerendertes Bild, echtes Fenster ausstehend, f618672): Winkel 38 und „Autom.“ ☑ bei Polygon und Stern bedienbar; getippter Winkel hebt „Autom.“ auf; vorher PM-2 ⚠️ (Befund PM-2) | ✅ | a_131, fv10_W19_polygon |
 | W20 | Linie, Stift, Vektorpfad, Rechteck, Ellipse, Polygon, Auto-Form, Pinsel | Strichposition innen/mitte/außen im Werkzeug-Inspektor | nicht vorhanden (nur am Objekt) | PM-2 (12.10., echtes Fenster): keine Knöpfe mehr im Werkzeug-Inspektor (Linie, Stift, Rechteck, Ellipse, Polygon, Auto-Form, Pinsel) | ✅ | a_W20_rechteck_werkzeug |
@@ -138,8 +138,8 @@ Legende: ✅ gleich · ⚠️ kleine Abweichung · ❌ anders · ⏳ wartet auf 
 | W24 | Auswahlrahmen | Feste Breite/Höhe | Symbole ↔ ↕, Werte 0/0, grau bei „Normal“ | FV-10 (12.10., kittest + offscreen gerendertes Bild, echtes Fenster ausstehend, f618672): Symbole ↔/↕, bei „Normal“ 0/0 grau; „Festes Verhältnis“ 1/2, „Feste Größe“ 64/64 aus den Voreinstellungen (im Original gemessen), Werte bleiben beim Wechsel; vorher PM-2 ⚠️ (Befund PM-2) | ✅ | a_W1_auswahlrahmen, fv10_W22_W24_auswahlrahmen, fv10_W24_original_feste_werte |
 | W25 | Verlauf | „Auswahl füllen“ / Toleranz | ☑ / Toleranz grau (hängt davon ab) | PM-2 (12.10., echtes Fenster): ☑ / Toleranz grau; Füllwerkzeug ☐ / Toleranz bedienbar | ✅ | a_W25_verlauf |
 | W26 | Verlauf | Füllfarbfeld | zeigt den Verlauf | FV-10 (12.10., kittest + offscreen gerendertes Bild, echtes Fenster ausstehend, f618672): Füllfarbfeld zeigt den Verlauf, den das Werkzeug malt (Füll- → Strichfarbe). Rest: Farben/Füllart-Knöpfe – Befund FV-10; vorher PM-2 ⚠️ (Befund PM-2) | ✅ | a_W25_verlauf, fv10_W26_verlauf |
-| W27 | Auto-Form | Kopf | Name der gewählten Form („Abgefastes Rechteck“) | PM-2 (12.10., echtes Fenster): unverändert „Automatische …“ – Befund PM-2 (IBD W10/W27/W28) | ⚠️ | a_132 |
-| W28 | Pfadausbesserung, Polygon-Segment, Hotspot-Rechteck | Name im Kopf | zweizeilig voll | PM-2 (12.10., echtes Fenster): unverändert gekürzt („Pfadausbesser…“, „Polygon-Segm…“, „Hotspot-Recht…“, auch „Bereich umfor…“) – Befund PM-2 (IBD W10/W27/W28) | ⚠️ | a_W13_pfadausbesserung, a_W12_bereich_umformen |
+| W27 | Auto-Form | Kopf | Name der gewählten Form („Abgefastes Rechteck“) | FV-9 (12.10., kittest): Name der gewählten Form („Abgefastes Rechteck“, je Sprache); vorher PM-2 „Automatische …“ | ✅ | a_132 |
+| W28 | Pfadausbesserung, Polygon-Segment, Hotspot-Rechteck | Name im Kopf | zweizeilig voll | FV-9 (12.10., kittest): Pfadausbesserung, Polygon-Segment, Hotspot-Rechteck und Bereich umformen zweizeilig ungekürzt; vorher PM-2 gekürzt | ✅ | a_W13_pfadausbesserung, a_W12_bereich_umformen |
 | W29 | Zeiger (Dokument) | Exportformat-Liste | Format des Dokuments | FV-10 (12.10., kittest + offscreen gerendertes Bild, echtes Fenster ausstehend, f618672): kein Knopf „Bearbeiten…“ mehr neben der Exportformat-Liste; vorher PM-2 ⚠️ (Befund PM-2) | ✅ | a_100, fv10_W29_dokument |
 | W30 | Zauberstab | Toleranz 32, Rand Hart, Live-Auswahlrahmen ☑ | so | so | ✅ | a_113 |
 | W31 | Pipette | Auswahl „1 Pixel“, Farbformat „HEX“ | so | so (außer W1) | ✅ | a_144 |
@@ -163,10 +163,10 @@ Gemessen mit echter Eingabe: Klick ins Feld, Ende, Umschalt+Pos1, Tippen, Abschl
 | F4 | „x“ + Eingabe | Buchstabe wird nicht angenommen, Wert bleibt | Wert bleibt, kein Verlaufsschritt | ✅ | |
 | F5 | Pfeil hoch im Feld | keine Änderung | keine Änderung | ✅ | |
 | F6 | Mausrad über dem Feld | keine Änderung | keine Änderung | ✅ | |
-| F7 | „7“ + Esc, dann Klick auf die Leinwand | 7 wird übernommen (Esc verwirft nicht) | PM-2 (12.10., echtes Fenster): Esc verwirft nicht mehr (Esc + Tab übernimmt 7), aber **Esc + Klick auf die Leinwand verwirft** (Deckkraft bleibt 100) – Befund PM-2 (IBD F7) | ⚠️ | a_F7_esc_dann_leinwand |
+| F7 | „7“ + Esc, dann Klick auf die Leinwand | 7 wird übernommen (Esc verwirft nicht) | FV-9 (12.10., echtes Fenster, 4 Läufe + Esc/Tab): 7 übernommen. Ursache war nicht Esc: bei schnellen echten Klicks (Drücken/Loslassen in einem Bild) änderte die Leinwand die Auswahl, bevor der übernommene Wert ausgeführt wurde (auch F9 ging so in 1 von 3 Läufen verloren); jetzt führt der Inspektor die Übernahme sofort aus. Offen (Nebenbeobachtung PM-2): Klick auf ein **anderes** Objekt überträgt den Feldtext in Firepixel auf das vorher gezeigte Objekt, im Original auf das neu angeklickte | ✅ | a_F7_esc_dann_leinwand |
 | F8 | „60“ + Tab | übernommen | übernommen | ✅ | |
-| F9 | „40“, Klick auf die Leinwand | übernommen | übernommen | ✅ | |
-| F10 | Strg+A im Feld | **markiert den Feldtext**, Objektauswahl bleibt; getippter Wert bleibt und wird mit Eingabe übernommen (PM-2, 12.10., 3 Läufe; die frühere Angabe „Alles auswählen“ ließ sich nicht bestätigen) | PM-2 (12.10., echtes Fenster): **wählt alle Objekte** (9), der getippte Wert geht verloren – Befund PM-2 (IBD F10) | ❌ | a_F10_strg_a_im_feld |
+| F9 | „40“, Klick auf die Leinwand | übernommen | FV-9 (12.10., echtes Fenster, 3 Läufe): übernommen (vor der Korrektur zu F7 gingen schnelle Klicks verloren) | ✅ | |
+| F10 | Strg+A im Feld | **markiert den Feldtext**, Objektauswahl bleibt; getippter Wert bleibt und wird mit Eingabe übernommen (PM-2, 12.10., 3 Läufe; die frühere Angabe „Alles auswählen“ ließ sich nicht bestätigen) | FV-9 (12.10., echtes Fenster, 3 Läufe): markiert den Feldtext, Auswahl bleibt R1; „55“ + Strg+A + Eingabe → 55 (vorher PM-2: wählte alle 9 Objekte) | ✅ | a_F10_strg_a_im_feld |
 | F11 | jede Übernahme | ein Verlaufsschritt | ein Schritt „Deckkraft“ | ✅ | |
 
 ### 2a. Feldprobe B, X, Rundung, Strich (PM-1, Rechteck R1 50,50–150,120, `uxp_pm_v7.ps1`)
@@ -202,7 +202,7 @@ Testdokument mit denselben Objekten in beiden Programmen (per JSF angelegt): R1,
 | O3 | Ellipse (Pfad) | alle Felder inkl. „Pinselstrich bearbeiten“, Stil | so | so | ✅ | a_301 |
 | O4 | Text | Zeilenabstand eines neuen Textes | 120 % | PM-2 (12.10., echtes Fenster): 120 % | ✅ | a_O4_O8_text |
 | O5 | Text | Grenzen eines Textrahmens 50,170–200,200 | X 48, Y 168, B 154, H 28 (2 px Rand um den Textbereich) | PM-2 (12.10., echtes Fenster): X 48, Y 168, B 154, H 28 (EB-1: angezeigte Grenzen ± 2 px) | ✅ | a_O4_O8_text |
-| O6 | Text | Anti-Alias / Autom. Unterschneidung eines per Skript angelegten Textes (`addNewText(…, true)` = aus den Voreinstellungen) | „Anti-Alias glatt“ / ☐ | PM-2 (12.10., echtes Fenster): Autom. Unterschneidung ☐ wie im Original; Glättung zeigt weiter „Kein Anti-Alias“ (JSF `antiAliased` false; Zuordnung `TAAi` im Inspektor falsch, IBD-Befund von EB-1; AU-Befund O11/O6) | ⚠️ | a_O4_O8_text |
+| O6 | Text | Anti-Alias / Autom. Unterschneidung eines per Skript angelegten Textes (`addNewText(…, true)` = aus den Voreinstellungen) | „Anti-Alias glatt“ / ☐ | FV-9 (12.10., echtes Fenster): „Anti-Alias glatt“ / ☐ (Liste jetzt wie `text.setProperties`: Kein Anti-Alias = harte Füllkante, `TAAi` 0 glatt, 3 System → scharf); JSF `antiAliased` bleibt AU-Befund O11/O6 | ✅ | a_O4_O8_text |
 | O7 | Text | Pinselstrich-Feld (Stift + Farbe) in Zeile 2 | vorhanden | PM-2 (12.10., echtes Fenster): Stift + Strichfarbfeld in Zeile 2 vorhanden | ✅ | a_O4_O8_text |
 | O8 | Text | Horizontalskala | „100%“ | FV-10 (12.10., kittest + offscreen gerendertes Bild, echtes Fenster ausstehend, f618672): „100%“ beim Objekt und beim Textwerkzeug; „120“ bzw. „80%“ getippt gilt, Feld zeigt den Wert mit „%“; vorher PM-2 ⚠️ (Befund PM-2) | ✅ | a_O4_O8_text, fv10_O8_text |
 | O9 | Gruppe | „Gruppieren (2)“, Füllung/Strich/Deckkraft/Filter/Stil | so | so | ✅ | a_303 |
@@ -282,7 +282,7 @@ Das Original zeichnet einige Zeiger invertiert (XOR); auf weißem Grund sind sie
 | | Anzahl |
 |---|---|
 | geprüfte Elemente | 126 Zeilen (rund 320 einzelne Felder, Vorgaben, Abläufe bzw. Zeiger) |
-| ✅ | 96 |
-| ⚠️ | 25 |
-| ❌ | 5 |
+| ✅ | 106 |
+| ⚠️ | 16 |
+| ❌ | 4 |
 | ⏳ | 0 |
