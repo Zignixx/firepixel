@@ -7,16 +7,17 @@
 
 use super::form::{Field, FormDialog};
 use super::panel_menus::pick_open;
-use super::{dialog_frame, push_button, DialogClose};
+use super::{dialog_frame, push_button, t, DialogClose};
 use crate::app_state::{Action, AppState};
 use crate::inspector::fields;
 use crate::theme::Theme;
 use egui::{pos2, vec2, Align2, Rect};
 use serde_json::{json, Value};
 
+/// Dateifilter „Importieren“ (Textschlüssel, Endungen).
 const IMPORT_FILES: &[(&str, &[&str])] = &[
-    ("Alle lesbaren Formate", &["png", "psd", "svg", "ai", "eps", "gif", "jpg", "jpeg", "bmp", "tif", "tiff", "tga", "webp", "jxl", "qoi", "ico"]),
-    ("Alle Dateien (*.*)", &["*"]),
+    ("dlg-filter-all-readable", &["png", "psd", "svg", "ai", "eps", "gif", "jpg", "jpeg", "bmp", "tif", "tiff", "tga", "webp", "jxl", "qoi", "ico"]),
+    ("dlg-filter-all-files", &["*"]),
 ];
 
 /// Gespeicherte Befehle verwalten (6042).
@@ -91,26 +92,28 @@ fn batch_params(d: &FormDialog) -> Value {
 pub fn open(st: &mut AppState, name: &str) -> bool {
     let form = match name {
         "file.import" => {
-            let p = pick_open(st, "Importieren", IMPORT_FILES);
+            let names: Vec<String> = IMPORT_FILES.iter().map(|f| t(f.0)).collect();
+            let filters: Vec<(&str, &[&str])> = IMPORT_FILES.iter().zip(&names).map(|(f, n)| (n.as_str(), f.1)).collect();
+            let p = pick_open(st, &t("dlg-md-import"), &filters);
             if let Some(p) = p {
                 st.run(name, json!({"path": p.to_string_lossy()}));
             }
             return true;
         }
         "file.updateHtml" => {
-            if let Some(p) = pick_open(st, "HTML-Datei auswählen", &[("HTML (*.htm, *.html)", &["htm", "html"])]) {
+            if let Some(p) = pick_open(st, &t("dlg-md-pick-html"), &[(t("dlg-filter-html").as_str(), &["htm", "html"])]) {
                 st.run(name, json!({"path": p.to_string_lossy()}));
             }
             return true;
         }
         "commands.runScript" => {
-            if let Some(p) = pick_open(st, "Skript ausführen", &[("Befehl (*.jsf, *.js)", &["jsf", "js"])]) {
+            if let Some(p) = pick_open(st, &t("dlg-md-run-script"), &[(t("dlg-filter-script").as_str(), &["jsf", "js"])]) {
                 st.run(name, json!({"path": p.to_string_lossy()}));
             }
             return true;
         }
         "file.previewInBrowser.setPrimaryBrowser" | "file.previewInBrowser.setSecondaryBrowser" => {
-            if let Some(p) = pick_open(st, "Browser festlegen", &[("Programme (*.exe)", &["exe"])]) {
+            if let Some(p) = pick_open(st, &t("dlg-md-set-browser"), &[(t("dlg-filter-programs").as_str(), &["exe"])]) {
                 st.run(name, json!({"path": p.to_string_lossy()}));
             }
             return true;
@@ -123,9 +126,9 @@ pub fn open(st: &mut AppState, name: &str) -> bool {
             match crate::ui_commands::execute(&mut st.session, name, json!({"style": "htmlAndImages"})) {
                 Ok(o) => {
                     st.dialogs.clipboard = o.value.get("html").and_then(|h| h.as_str()).map(|s| s.to_string());
-                    st.push(Action::Status("HTML-Code in die Zwischenablage kopiert".into()));
+                    st.push(Action::Status(t("dlg-md-html-copied")));
                 }
-                Err(e) => st.dialogs.message = Some(("HTML-Code kopieren".into(), e.to_string())),
+                Err(e) => st.dialogs.message = Some((t("dlg-md-copy-html"), e.to_string())),
             }
             return true;
         }
@@ -133,28 +136,28 @@ pub fn open(st: &mut AppState, name: &str) -> bool {
             match crate::ui_commands::execute(&mut st.session, name, json!({})) {
                 Ok(o) => {
                     let v = &o.value;
-                    let mut t = format!(
-                        "Titel: {}\nPfad: {}\nSeiten: {}\nSymbole: {}\nFormatversion: {}",
-                        v["title"].as_str().unwrap_or(""),
-                        v["path"].as_str().unwrap_or("(nicht gespeichert)"),
-                        v["pages"],
-                        v["symbols"],
-                        v["formatVersion"]
+                    let mut text = fp_i18n::tr!(
+                        "dlg-md-file-info-text",
+                        title = v["title"].as_str().unwrap_or(""),
+                        path = v["path"].as_str().map(str::to_string).unwrap_or_else(|| t("dlg-md-not-saved")),
+                        pages = v["pages"].to_string(),
+                        symbols = v["symbols"].to_string(),
+                        version = v["formatVersion"].to_string()
                     );
                     for e in v["text"].as_array().into_iter().flatten() {
-                        t.push_str(&format!("\n{}: {}", e["key"].as_str().unwrap_or(""), e["text"].as_str().unwrap_or("")));
+                        text.push_str(&format!("\n{}: {}", e["key"].as_str().unwrap_or(""), e["text"].as_str().unwrap_or("")));
                     }
-                    st.dialogs.message = Some(("Datei-Info".into(), t));
+                    st.dialogs.message = Some((t("dlg-md-file-info"), text));
                 }
-                Err(e) => st.dialogs.message = Some(("Datei-Info".into(), e.to_string())),
+                Err(e) => st.dialogs.message = Some((t("dlg-md-file-info"), e.to_string())),
             }
             return true;
         }
         "commands.manageExtensions" | "help.manageExtensions" => {
             let v = crate::ui_commands::execute(&mut st.session, name, json!({"action": "list"})).map(|o| o.value).unwrap_or(Value::Null);
             let list: Vec<String> = v.get("extensions").and_then(|a| a.as_array()).map(|a| a.iter().map(|x| x.as_str().map(|s| s.to_string()).unwrap_or_else(|| x.get("name").and_then(|n| n.as_str()).unwrap_or("?").to_string())).collect()).unwrap_or_default();
-            let text = if list.is_empty() { "Es sind keine Erweiterungen installiert.".to_string() } else { list.join("\n") };
-            st.dialogs.message = Some(("Erweiterungen verwalten".into(), text));
+            let text = if list.is_empty() { t("dlg-md-no-extensions") } else { list.join("\n") };
+            st.dialogs.message = Some((t("dlg-md-manage-extensions"), text));
             return true;
         }
         "commands.manageSavedCommands" => {
@@ -164,12 +167,12 @@ pub fn open(st: &mut AppState, name: &str) -> bool {
         "file.exportWizard" => Some(
             FormDialog::new(
                 "4717",
-                "Exportassistent",
+                t("dlg-md-export-wizard").as_str(),
                 name,
                 vec![
-                    Field::radio_of("destination", "Ziel:", &["Web", "Bildbearbeitung", "Webseite (HTML)"], vec![json!("web"), json!("image"), json!("dreamweaver")], 0),
-                    Field::check("_limit", "Exportgröße festlegen", false),
-                    Field::number("_kb", "Zielgröße:", 32.0, 0.1, 100000.0).decimals(1).unit("K"),
+                    Field::radio_of("destination", t("dlg-md-destination").as_str(), &[t("dlg-md-dest-web").as_str(), t("dlg-md-dest-image").as_str(), t("dlg-md-dest-html").as_str()], vec![json!("web"), json!("image"), json!("dreamweaver")], 0),
+                    Field::check("_limit", t("dlg-md-limit-size").as_str(), false),
+                    Field::number("_kb", t("dlg-md-target-size").as_str(), 32.0, 0.1, 100000.0).decimals(1).unit("K"),
                 ],
             )
             .with_width(480.0)
@@ -180,17 +183,17 @@ pub fn open(st: &mut AppState, name: &str) -> bool {
             Some(
                 FormDialog::new(
                     "4766",
-                    "HTML-Einrichtung",
+                    t("dlg-md-html-setup").as_str(),
                     name,
                     vec![
-                        Field::caption("Allgemein"),
-                        Field::text("file_extension", "Erweiterung:", h.file_extension.as_deref().unwrap_or(".htm")),
-                        Field::check("_xhtml", "XHTML-kompatibel", h.xhtml.unwrap_or(1) != 0),
-                        Field::caption("Dokumentspezifisch"),
-                        Field::text("images_dir", "Bildordner:", h.images_dir.as_deref().unwrap_or("")),
-                        Field::check("slice_along_guides", "Segmente an Hilfslinien", h.slice_along_guides.unwrap_or(false)),
-                        Field::check("discard_unspecified_slices", "Nicht angegebene Segmente verwerfen", h.discard_unspecified_slices.unwrap_or(false)),
-                        Field::check("generate_demo_html", "Demo-HTML erzeugen", h.generate_demo_html.unwrap_or(false)),
+                        Field::caption(t("dlg-md-cap-general").as_str()),
+                        Field::text("file_extension", t("dlg-md-extension").as_str(), h.file_extension.as_deref().unwrap_or(".htm")),
+                        Field::check("_xhtml", t("dlg-md-xhtml").as_str(), h.xhtml.unwrap_or(1) != 0),
+                        Field::caption(t("dlg-md-cap-document").as_str()),
+                        Field::text("images_dir", t("dlg-md-images-dir").as_str(), h.images_dir.as_deref().unwrap_or("")),
+                        Field::check("slice_along_guides", t("dlg-md-slice-guides").as_str(), h.slice_along_guides.unwrap_or(false)),
+                        Field::check("discard_unspecified_slices", t("dlg-md-discard-slices").as_str(), h.discard_unspecified_slices.unwrap_or(false)),
+                        Field::check("generate_demo_html", t("dlg-md-demo-html").as_str(), h.generate_demo_html.unwrap_or(false)),
                     ],
                 )
                 .with_width(440.0)
@@ -202,13 +205,13 @@ pub fn open(st: &mut AppState, name: &str) -> bool {
             Some(
                 FormDialog::new(
                     "19147",
-                    "Selektive JPEG-Einstellungen",
+                    t("dlg-md-selective-jpeg").as_str(),
                     name,
                     vec![
-                        Field::check("enabled", "Selektive Qualität aktivieren", e.jpeg_sel_enabled),
-                        Field::number("quality", "Qualität:", e.jpeg_sel_quality as f64, 1.0, 100.0),
-                        Field::check("preserveText", "Textqualität beibehalten", e.jpeg_sel_preserve_text),
-                        Field::check("preserveButtons", "Schaltflächenqualität beibehalten", e.jpeg_sel_preserve_buttons),
+                        Field::check("enabled", t("dlg-md-enable-selective").as_str(), e.jpeg_sel_enabled),
+                        Field::number("quality", t("dlg-lbl-quality").as_str(), e.jpeg_sel_quality as f64, 1.0, 100.0),
+                        Field::check("preserveText", t("dlg-md-preserve-text").as_str(), e.jpeg_sel_preserve_text),
+                        Field::check("preserveButtons", t("dlg-md-preserve-buttons").as_str(), e.jpeg_sel_preserve_buttons),
                     ],
                 )
                 .with_width(400.0),
@@ -217,43 +220,43 @@ pub fn open(st: &mut AppState, name: &str) -> bool {
         "file.pageSetup" => Some(
             FormDialog::new(
                 "10397",
-                "Seite einrichten",
+                t("dlg-md-page-setup").as_str(),
                 name,
                 vec![
-                    Field::choice_of("paper", "Papier:", &["A4", "A3", "Letter"], vec![json!("A4"), json!("A3"), json!("Letter")], 0),
-                    Field::radio_of("orientation", "Ausrichtung:", &["Hochformat", "Querformat"], vec![json!("portrait"), json!("landscape")], 0),
-                    Field::number("margins", "Ränder:", 10.0, 0.0, 100.0).unit("mm"),
-                    Field::number("scale", "Skalierung:", 100.0, 1.0, 1000.0).unit("%"),
-                    Field::check("fit", "Auf Seite einpassen", false),
-                    Field::number("dpi", "Druckauflösung:", 300.0, 36.0, 1200.0).unit("dpi"),
+                    Field::choice_of("paper", t("dlg-md-paper").as_str(), &["A4", "A3", "Letter"], vec![json!("A4"), json!("A3"), json!("Letter")], 0),
+                    Field::radio_of("orientation", t("dlg-md-orientation").as_str(), &[t("dlg-md-portrait").as_str(), t("dlg-md-landscape").as_str()], vec![json!("portrait"), json!("landscape")], 0),
+                    Field::number("margins", t("dlg-md-margins").as_str(), 10.0, 0.0, 100.0).unit("mm"),
+                    Field::number("scale", t("dlg-md-scale").as_str(), 100.0, 1.0, 1000.0).unit("%"),
+                    Field::check("fit", t("dlg-md-fit-page").as_str(), false),
+                    Field::number("dpi", t("dlg-md-print-dpi").as_str(), 300.0, 36.0, 1200.0).unit("dpi"),
                 ],
             )
             .with_width(420.0)
             .with_transform(page_setup_params),
         ),
-        "file.print" => Some(FormDialog::new("10397", "Drucken", name, vec![Field::text("printer", "Drucker (leer = Standard):", ""), Field::check("_all", "Alle Seiten drucken", false)]).with_width(420.0).with_transform(print_params)),
+        "file.print" => Some(FormDialog::new("10397", t("dlg-md-print").as_str(), name, vec![Field::text("printer", t("dlg-md-printer").as_str(), ""), Field::check("_all", t("dlg-md-print-all").as_str(), false)]).with_width(420.0).with_transform(print_params)),
         "file.batchProcess" => {
             let files: Vec<String> = match &st.file_override {
                 Some(o) => o.open.iter().map(|p| p.to_string_lossy().to_string()).collect(),
-                None => rfd::FileDialog::new().set_title("Zu verarbeitende Dateien").add_filter("Bilder", &["png", "gif", "jpg", "jpeg", "psd", "bmp", "tif", "tiff", "webp"]).pick_files().unwrap_or_default().iter().map(|p| p.to_string_lossy().to_string()).collect(),
+                None => rfd::FileDialog::new().set_title(t("dlg-md-batch-files")).add_filter(t("dlg-filter-images"), &["png", "gif", "jpg", "jpeg", "psd", "bmp", "tif", "tiff", "webp"]).pick_files().unwrap_or_default().iter().map(|p| p.to_string_lossy().to_string()).collect(),
             };
             if files.is_empty() {
                 return true;
             }
-            let out = std::path::Path::new(&files[0]).parent().map(|p| p.join("Batch").to_string_lossy().to_string()).unwrap_or_default();
+            let out = std::path::Path::new(&files[0]).parent().map(|p| p.join(t("dlg-md-batch-folder")).to_string_lossy().to_string()).unwrap_or_default();
             Some(
                 FormDialog::new(
                     "2160",
-                    "Batch-Verarbeitung",
+                    t("dlg-md-batch").as_str(),
                     name,
                     vec![
-                        Field::note(&format!("{} Datei(en) ausgewählt.", files.len())),
-                        Field::text("outDir", "Zielordner:", &out),
-                        Field::radio_of("output", "Ergebnis:", &["Exportieren", "Als FW-PNG speichern"], vec![json!("export"), json!("fwpng")], 0),
-                        Field::number("_scale", "Skalieren:", 100.0, 1.0, 1000.0).unit("%"),
-                        Field::text("prefix", "Präfix:", ""),
-                        Field::text("suffix", "Suffix:", ""),
-                        Field::check("backup", "Originale sichern", false),
+                        Field::note(&fp_i18n::tr!("dlg-md-files-selected", n = files.len())),
+                        Field::text("outDir", t("dlg-md-out-dir").as_str(), &out),
+                        Field::radio_of("output", t("dlg-md-output").as_str(), &[t("dlg-md-output-export").as_str(), t("dlg-md-output-fwpng").as_str()], vec![json!("export"), json!("fwpng")], 0),
+                        Field::number("_scale", t("dlg-preview-scale").as_str(), 100.0, 1.0, 1000.0).unit("%"),
+                        Field::text("prefix", t("dlg-md-prefix").as_str(), ""),
+                        Field::text("suffix", t("dlg-md-suffix").as_str(), ""),
+                        Field::check("backup", t("dlg-md-backup").as_str(), false),
                     ],
                 )
                 .with_base(json!({"files": files}))
@@ -264,15 +267,15 @@ pub fn open(st: &mut AppState, name: &str) -> bool {
         "modify.symbol.swapSymbol" => {
             let names: Vec<String> = st.session.active().map(|d| d.doc.symbols.iter().map(|s| s.name.clone()).collect()).unwrap_or_default();
             if names.is_empty() {
-                st.dialogs.message = Some(("Symbol austauschen".into(), "Das Dokument enthält keine Symbole.".into()));
+                st.dialogs.message = Some((t("dlg-md-swap-symbol"), t("dlg-md-no-symbols")));
                 return true;
             }
             let refs: Vec<&str> = names.iter().map(|s| s.as_str()).collect();
-            Some(FormDialog::new("6560", "Symbol austauschen", name, vec![Field::choice_of("symbol", "Symbol:", &refs, names.iter().map(|n| json!(n)).collect(), 0)]).with_width(380.0))
+            Some(FormDialog::new("6560", &t("dlg-md-swap-symbol"), name, vec![Field::choice_of("symbol", t("dlg-md-symbol").as_str(), &refs, names.iter().map(|n| json!(n)).collect(), 0)]).with_width(380.0))
         }
         "edit.insert.newSymbol" | "edit.insert.newButton" => {
-            let (title, def) = if name == "edit.insert.newButton" { ("Neue Schaltfläche", "Schaltfläche") } else { ("Neues Symbol", "Symbol") };
-            Some(FormDialog::new("19104", title, name, vec![Field::text("name", "Name:", def)]).with_width(380.0))
+            let (title, def) = if name == "edit.insert.newButton" { (t("dlg-md-new-button"), t("dlg-md-button-default-name")) } else { (t("dlg-md-new-symbol"), t("dlg-symbol-default-name")) };
+            Some(FormDialog::new("19104", &title, name, vec![Field::text("name", &t("dlg-lbl-name"), &def)]).with_width(380.0))
         }
         _ => return false,
     };
@@ -314,9 +317,13 @@ pub fn show_saved_commands(ctx: &egui::Context, st: &mut AppState) {
     let Some(mut d) = st.dialogs.saved_commands.clone() else { return };
     let mut close = false;
     let mut action: Option<Value> = None;
-    let r = dialog_frame(ctx, "fp-saved-commands", "Gespeicherte Befehle verwalten", vec2(420.0, 300.0), |ui, body| {
+    let btn_l = super::tl(&["dlg-md-rename", "dlg-md-delete", "dlg-md-done"]);
+    let ok_l = t("btn-ok");
+    let bw = super::buttons_w(ctx, &super::refs(&btn_l), 86.0);
+    let ow = super::button_w(ctx, &ok_l, 60.0);
+    let r = dialog_frame(ctx, "fp-saved-commands", &t("dlg-md-saved-title"), vec2(420f32.max(12.0 + 200.0 + 12.0 + bw + 12.0).ceil(), 300.0), |ui, body| {
         let theme = Theme::current(ui.ctx());
-        let list = Rect::from_min_max(body.min + vec2(12.0, 12.0), pos2(body.right() - 110.0, body.bottom() - 40.0));
+        let list = Rect::from_min_max(body.min + vec2(12.0, 12.0), pos2(body.right() - 24.0 - bw, body.bottom() - 40.0));
         let inner = fields::list_box(ui, list);
         let mut child = ui.new_child(egui::UiBuilder::new().max_rect(inner));
         child.spacing_mut().item_spacing = vec2(0.0, 0.0);
@@ -327,24 +334,24 @@ pub fn show_saved_commands(ctx: &egui::Context, st: &mut AppState) {
             }
         }
         if d.names.is_empty() {
-            ui.painter().text(inner.left_top() + vec2(6.0, 6.0), Align2::LEFT_TOP, "Keine gespeicherten Befehle", theme.small_font(), theme.colors.text_disabled);
+            ui.painter().text(inner.left_top() + vec2(6.0, 6.0), Align2::LEFT_TOP, t("dlg-md-no-saved"), theme.small_font(), theme.colors.text_disabled);
         }
-        let bx = body.right() - 98.0;
+        let bx = body.right() - 12.0 - bw;
         let sel = d.selected.and_then(|i| d.names.get(i).cloned());
-        if push_button(ui, Rect::from_min_size(pos2(bx, body.top() + 12.0), vec2(86.0, 23.0)), "Umbenennen", false, sel.is_some()) {
+        if push_button(ui, Rect::from_min_size(pos2(bx, body.top() + 12.0), vec2(bw, 23.0)), &btn_l[0], false, sel.is_some()) {
             d.rename = sel.clone();
         }
-        if push_button(ui, Rect::from_min_size(pos2(bx, body.top() + 40.0), vec2(86.0, 23.0)), "Löschen", false, sel.is_some())
+        if push_button(ui, Rect::from_min_size(pos2(bx, body.top() + 40.0), vec2(bw, 23.0)), &btn_l[1], false, sel.is_some())
             && let Some(n) = &sel
         {
             action = Some(json!({"action": "delete", "name": n}));
         }
         if let (Some(old), Some(buf)) = (sel.clone(), d.rename.clone()) {
-            let er = Rect::from_min_size(pos2(body.left() + 12.0, body.bottom() - 32.0), vec2(list.width() - 70.0, 22.0));
+            let er = Rect::from_min_size(pos2(body.left() + 12.0, body.bottom() - 32.0), vec2(list.width() - 10.0 - ow, 22.0));
             if let Some(t) = fields::text(ui, "saved-rename", er, &buf, true) {
                 d.rename = Some(t);
             }
-            if push_button(ui, Rect::from_min_size(pos2(er.right() + 6.0, er.top()), vec2(60.0, 22.0)), "OK", true, true) {
+            if push_button(ui, Rect::from_min_size(pos2(er.right() + 6.0, er.top()), vec2(ow, 22.0)), &ok_l, true, true) {
                 let new = d.rename.clone().unwrap_or_default();
                 if !new.trim().is_empty() && new != old {
                     action = Some(json!({"action": "rename", "name": old, "newName": new}));
@@ -352,7 +359,7 @@ pub fn show_saved_commands(ctx: &egui::Context, st: &mut AppState) {
                 d.rename = None;
             }
         }
-        if push_button(ui, Rect::from_min_size(pos2(bx, body.bottom() - 34.0), vec2(86.0, 23.0)), "Fertig", true, true) {
+        if push_button(ui, Rect::from_min_size(pos2(bx, body.bottom() - 34.0), vec2(bw, 23.0)), &btn_l[2], true, true) {
             close = true;
         }
     });

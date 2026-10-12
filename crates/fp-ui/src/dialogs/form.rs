@@ -5,7 +5,7 @@
 //! **Live-Vorschau**: der Befehl wird angewandt und bei jeder Änderung bzw. beim Abbrechen über
 //! den Verlauf zurückgenommen – am Ende bleibt genau ein Verlaufsschritt.
 
-use super::{dialog_frame, push_button, DialogClose};
+use super::{dialog_frame, push_button, t, DialogClose};
 use crate::app_state::AppState;
 use crate::inspector::fields;
 use crate::theme::Theme;
@@ -31,6 +31,11 @@ pub enum FieldKind {
     Caption,
     /// Hinweistext.
     Note,
+}
+
+/// Einheit eines Zahlenfelds: Textschlüssel (`dlg-…`) übersetzt, Symbole („%“, „°“) wie sie sind.
+pub fn unit_text(unit: &str) -> String {
+    if unit.starts_with("dlg-") { t(unit) } else { unit.to_string() }
 }
 
 /// Ein Feld.
@@ -63,7 +68,7 @@ impl Field {
         }
         self
     }
-    /// Einheit hinter dem Feld.
+    /// Einheit hinter dem Feld (Symbol wie „%“ oder Textschlüssel `dlg-unit-…`).
     pub fn unit(mut self, u: &'static str) -> Field {
         if let FieldKind::Number { unit, .. } = &mut self.kind {
             *unit = u;
@@ -262,6 +267,71 @@ impl FormDialog {
     pub fn content_height(&self) -> f32 {
         self.fields.iter().map(Self::row_height).sum::<f32>() + 60.0 + if self.preview { 24.0 } else { 0.0 }
     }
+
+    /// Maße für die Texte der aktuellen Sprache: Beschriftungsspalte (mindestens 130 px wie
+    /// bisher), Dialogbreite (mindestens [`FormDialog::width`]) und Zeilenhöhen (Hinweise brechen um).
+    pub fn layout(&self, ctx: &egui::Context) -> FormLayout {
+        let theme = Theme::current(ctx);
+        let tw = |s: &str| super::text_w(ctx, s);
+        let mut lw: f32 = 0.0;
+        // Breite rechts der Beschriftungsspalte bzw. über die ganze Zeile
+        let mut ctrl: f32 = 0.0;
+        let mut full: f32 = 0.0;
+        for f in &self.fields {
+            match &f.kind {
+                FieldKind::Number { unit, .. } => {
+                    lw = lw.max(tw(&f.label));
+                    ctrl = ctrl.max(60.0 + if unit.is_empty() { 0.0 } else { 6.0 + tw(&unit_text(unit)) });
+                }
+                FieldKind::Choice(items) => {
+                    lw = lw.max(tw(&f.label));
+                    let refs: Vec<&str> = items.iter().map(|s| s.as_str()).collect();
+                    ctrl = ctrl.max(super::combo_fit_w(ctx, &refs, 80.0));
+                }
+                FieldKind::Radio(items) => {
+                    let w: f32 = items.iter().map(|it| tw(it) + 26.0 + 8.0).sum();
+                    if f.label.is_empty() {
+                        full = full.max(w);
+                    } else {
+                        lw = lw.max(tw(&f.label));
+                        ctrl = ctrl.max(w);
+                    }
+                }
+                FieldKind::Text { multiline: false } | FieldKind::Color => lw = lw.max(tw(&f.label)),
+                FieldKind::Text { multiline: true } => full = full.max(tw(&f.label)),
+                FieldKind::Check => full = full.max(18.0 + tw(&f.label)),
+                FieldKind::Caption => full = full.max(ctx.fonts_mut(|fo| fo.layout_no_wrap(f.label.clone(), theme.bold(theme.fonts.ui), egui::Color32::WHITE).size().x) + 24.0),
+                FieldKind::Note => {}
+            }
+        }
+        let label_w = 130f32.max((lw + 8.0).ceil());
+        let (ok, cancel) = (t("btn-ok"), t("btn-cancel"));
+        let buttons = super::button_row_w(ctx, &[&ok, &cancel], 76.0, 8.0) + 16.0 + if self.preview { 18.0 + tw(&t("dlg-preview")) + 12.0 } else { 0.0 };
+        let width = self.width.max((28.0 + label_w + ctrl).ceil()).max((28.0 + full).ceil()).max((buttons + 14.0).ceil());
+        let note_w = width - 28.0;
+        let rows: Vec<f32> = self
+            .fields
+            .iter()
+            .map(|f| match f.kind {
+                FieldKind::Note => {
+                    let h = ctx.fonts_mut(|fo| fo.layout(f.label.clone(), theme.small_font(), egui::Color32::WHITE, note_w).size().y);
+                    Self::row_height(f).max((h + 6.0).ceil())
+                }
+                _ => Self::row_height(f),
+            })
+            .collect();
+        let height = rows.iter().sum::<f32>() + 60.0 + if self.preview { 24.0 } else { 0.0 };
+        FormLayout { label_w, width, height, rows }
+    }
+}
+
+/// Maße eines Formulars (siehe [`FormDialog::layout`]).
+#[derive(Clone, Debug, PartialEq)]
+pub struct FormLayout {
+    pub label_w: f32,
+    pub width: f32,
+    pub height: f32,
+    pub rows: Vec<f32>,
 }
 
 /// Vorschau zurücknehmen (falls angewandt). Nur wenn der oberste Verlaufsschritt noch die Vorschau
@@ -314,7 +384,7 @@ pub fn apply_preview(st: &mut AppState, d: &mut FormDialog) {
     if d.stale.is_some() {
         // stehengebliebene Vorschau: nicht noch einmal anwenden (würde sich addieren)
         d.preview_on = false;
-        st.push(crate::app_state::Action::Status("Vorschau unterbrochen: das Dokument wurde während des Dialogs geändert.".into()));
+        st.push(crate::app_state::Action::Status(t("dlg-preview-interrupted")));
         return;
     }
     let (cmd, p) = d.invocation();
@@ -332,15 +402,17 @@ pub fn draw_fields(ui: &mut Ui, st: &AppState, d: &mut FormDialog, area: Rect) -
     let theme = Theme::current(ui.ctx());
     let c = &theme.colors;
     let mut changed = false;
-    let label_w = 130.0;
+    let lay = d.layout(ui.ctx());
+    let label_w = lay.label_w;
     let mut y = area.top() + 12.0;
     let x0 = area.left() + 14.0;
     let ctrl_x = x0 + label_w;
     let ctrl_w = (area.right() - 14.0 - ctrl_x).max(80.0);
     let dlg_id = d.id.clone();
     for (i, f) in d.fields.iter_mut().enumerate() {
-        let h = FormDialog::row_height(f);
+        let h = lay.rows.get(i).copied().unwrap_or_else(|| FormDialog::row_height(f));
         let lr = Rect::from_min_size(pos2(x0, y), vec2(label_w - 6.0, 20.0));
+        let label = |ui: &Ui, text: &str| super::fit_label(ui, lr, text, true);
         let id = (dlg_id.as_str(), i);
         match &f.kind {
             FieldKind::Caption => {
@@ -351,7 +423,7 @@ pub fn draw_fields(ui: &mut Ui, st: &AppState, d: &mut FormDialog, area: Rect) -
                 super::put_left(ui, Rect::from_min_size(pos2(x0, y), vec2(area.width() - 28.0, h - 4.0)), egui::Label::new(egui::RichText::new(&f.label).color(c.text_weak).font(theme.small_font())).wrap());
             }
             FieldKind::Number { min, max, decimals, slider, unit } => {
-                fields::label(ui, lr, &f.label, true);
+                label(ui, &f.label);
                 let v = f.value.as_f64().unwrap_or(*min);
                 let er = Rect::from_min_size(pos2(ctrl_x, y), vec2(60.0, 20.0));
                 let txt = fields::fmt_num(v, *decimals);
@@ -366,7 +438,7 @@ pub fn draw_fields(ui: &mut Ui, st: &AppState, d: &mut FormDialog, area: Rect) -
                     ui.painter().rect_stroke(er, 0.0, Stroke::new(1.5, c.icon_red), StrokeKind::Inside);
                 }
                 if !unit.is_empty() {
-                    ui.painter().text(pos2(er.right() + 6.0, er.center().y), Align2::LEFT_CENTER, *unit, theme.ui_font(), c.text);
+                    ui.painter().text(pos2(er.right() + 6.0, er.center().y), Align2::LEFT_CENTER, unit_text(unit), theme.ui_font(), c.text);
                 }
                 if *slider {
                     let sr = Rect::from_min_size(pos2(x0, y + 24.0), vec2(area.width() - 28.0, 18.0));
@@ -392,17 +464,18 @@ pub fn draw_fields(ui: &mut Ui, st: &AppState, d: &mut FormDialog, area: Rect) -
                 }
             }
             FieldKind::Choice(items) => {
-                fields::label(ui, lr, &f.label, true);
+                label(ui, &f.label);
                 let refs: Vec<&str> = items.iter().map(|s| s.as_str()).collect();
                 let sel = f.value.as_u64().map(|v| v as usize);
-                if let Some(n) = fields::combo(ui, id, Rect::from_min_size(pos2(ctrl_x, y), vec2(ctrl_w.min(200.0), 20.0)), &refs, sel, true) {
+                let cw = super::combo_fit_w(ui.ctx(), &refs, ctrl_w.min(200.0)).min(ctrl_w);
+                if let Some(n) = fields::combo(ui, id, Rect::from_min_size(pos2(ctrl_x, y), vec2(cw, 20.0)), &refs, sel, true) {
                     f.value = json!(n);
                     changed = true;
                 }
             }
             FieldKind::Radio(items) => {
                 if !f.label.is_empty() {
-                    fields::label(ui, lr, &f.label, true);
+                    label(ui, &f.label);
                 }
                 let sel = f.value.as_u64().unwrap_or(0) as usize;
                 let mut x = if f.label.is_empty() { x0 } else { ctrl_x };
@@ -428,7 +501,7 @@ pub fn draw_fields(ui: &mut Ui, st: &AppState, d: &mut FormDialog, area: Rect) -
                         changed = true;
                     }
                 } else {
-                    fields::label(ui, lr, &f.label, true);
+                    label(ui, &f.label);
                     if let Some(t) = fields::text(ui, id, Rect::from_min_size(pos2(ctrl_x, y), vec2(ctrl_w, 20.0)), f.value.as_str().unwrap_or(""), true) {
                         f.value = json!(t);
                         changed = true;
@@ -436,7 +509,7 @@ pub fn draw_fields(ui: &mut Ui, st: &AppState, d: &mut FormDialog, area: Rect) -
                 }
             }
             FieldKind::Color => {
-                fields::label(ui, lr, &f.label, true);
+                label(ui, &f.label);
                 let cur = f.value.as_str().and_then(fp_color::Rgba8::parse_hex).map(|c| c.to_argb());
                 if let Some(crate::inspector::popups::ColorChoice::Color(col)) = crate::inspector::popups::color_button(ui, id, Rect::from_min_size(pos2(ctrl_x, y), vec2(26.0, 20.0)), st, cur, true, false, false) {
                     let a = cur.map(|c| c.a()).unwrap_or(255) as u32;
@@ -452,7 +525,8 @@ pub fn draw_fields(ui: &mut Ui, st: &AppState, d: &mut FormDialog, area: Rect) -
 
 /// Zeigt einen Formular-Dialog; liefert `Some(true)` bei OK, `Some(false)` bei Abbrechen.
 pub fn show_form(ctx: &egui::Context, st: &mut AppState, d: &mut FormDialog) -> Option<bool> {
-    let size = vec2(d.width, d.content_height());
+    let lay = d.layout(ctx);
+    let size = vec2(lay.width, lay.height);
     let mut result = None;
     let mut changed = false;
     let id = format!("fp-form-{}", d.id);
@@ -461,18 +535,20 @@ pub fn show_form(ctx: &egui::Context, st: &mut AppState, d: &mut FormDialog) -> 
         changed = draw_fields(ui, st, d, body);
         let y = body.bottom() - 36.0;
         if d.preview {
-            let theme = Theme::current(ui.ctx());
-            if let Some(b) = fields::checkbox(ui, (id.as_str(), "preview"), Rect::from_min_size(pos2(body.left() + 14.0, y + 3.0), vec2(90.0, 16.0)), "Vorschau", d.preview_on, true) {
+            let pl = t("dlg-preview");
+            let pw = (18.0 + super::text_w(ui.ctx(), &pl)).max(90.0);
+            if let Some(b) = fields::checkbox(ui, (id.as_str(), "preview"), Rect::from_min_size(pos2(body.left() + 14.0, y + 3.0), vec2(pw, 16.0)), &pl, d.preview_on, true) {
                 d.preview_on = b;
                 changed = true;
             }
-            let _ = theme;
         }
         let valid = d.valid();
-        if push_button(ui, Rect::from_min_size(pos2(body.right() - 176.0, y), vec2(76.0, 23.0)), "OK", true, valid) {
+        let (ok_l, cancel_l) = (t("btn-ok"), t("btn-cancel"));
+        let b = super::button_row(ui.ctx(), body.right() - 16.0, y, &[&ok_l, &cancel_l], 76.0, 23.0, 8.0);
+        if push_button(ui, b[0], &ok_l, true, valid) {
             result = Some(true);
         }
-        if push_button(ui, Rect::from_min_size(pos2(body.right() - 92.0, y), vec2(76.0, 23.0)), "Abbrechen", false, true) {
+        if push_button(ui, b[1], &cancel_l, false, true) {
             result = Some(false);
         }
         let _ = ui.allocate_rect(body, Sense::hover());
@@ -528,7 +604,7 @@ pub fn show_form(ctx: &egui::Context, st: &mut AppState, d: &mut FormDialog) -> 
                     st.push(crate::app_state::Action::Status(e.to_string()));
                 }
             } else if d.stale.is_some() {
-                st.push(crate::app_state::Action::Status("Abbrechen: die Vorschau konnte nicht zurückgenommen werden (Dokument dazwischen geändert) – bitte Rückgängig verwenden.".into()));
+                st.push(crate::app_state::Action::Status(t("dlg-preview-cancel-failed")));
             }
             Some(false)
         }

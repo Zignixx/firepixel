@@ -3,7 +3,7 @@
 //! Benutzeroberfläche“ die Design-Wahl Normal/Dunkel/OLED. Änderungen erst mit OK; danach
 //! sofort gespeichert (`SavePrefsWhileRunning`).
 
-use super::{dialog_frame, push_button, DialogClose};
+use super::{dialog_frame, push_button, t, DialogClose};
 use crate::app_state::{Action, AppState};
 use crate::inspector::fields;
 use crate::theme::{Theme, ThemeKind};
@@ -12,9 +12,10 @@ use fp_engine::{PrefValue, Preferences};
 use std::collections::BTreeMap;
 
 /// Kategorien in der Reihenfolge der Liste.
-pub const CATEGORIES: [&str; 7] = ["Allgemein", "Bearbeiten", "Hilfslinien und Raster", "Text", "Photoshop-Import/Öffnen", "Zusatzmodule", "Starten und Bearbeiten"];
+/// (Schlüssel der Texte in `dialoge.ftl`; ebenso die Beschriftungen der Einträge.)
+pub const CATEGORIES: [&str; 7] = ["dlg-pref-cat-general", "dlg-pref-cat-edit", "dlg-pref-cat-guides", "dlg-pref-cat-type", "dlg-pref-cat-psimport", "dlg-pref-cat-plugins", "dlg-pref-cat-launch"];
 
-/// Ein Eintrag einer Seite.
+/// Ein Eintrag einer Seite (Voreinstellungsschlüssel, Textschlüssel der Beschriftung, …).
 #[derive(Clone, Copy, Debug, PartialEq)]
 enum Item {
     Check(&'static str, &'static str, bool),
@@ -27,94 +28,97 @@ enum Item {
     Caption(&'static str),
 }
 
-const INTERP: &[&str] = &["Bikubisch", "Bilinear", "Weich", "Nächster Nachbar"];
-const LOOK: &[&str] = &["Immer PNG-Quelldatei verwenden", "Nie PNG-Quelldatei verwenden", "Beim Starten fragen"];
+/// Interpolationsverfahren (auch „Bildgröße“).
+pub(crate) const INTERP: &[&str] = &["dlg-interp-bicubic", "dlg-interp-bilinear", "dlg-interp-soft", "dlg-interp-nearest"];
+const LOOK: &[&str] = &["dlg-pref-look-always", "dlg-pref-look-never", "dlg-pref-look-ask"];
 
 fn page_items(cat: usize) -> &'static [Item] {
     use Item::*;
     match cat {
         0 => &[
-            Int("MaxUndos", "Rückgängig-Schritte:", 20, 0, 999),
-            Check("ShowStartPage", "Startseite anzeigen", true),
-            Check("XformToolXformsBFE", "Pinselstriche und Effekte skalieren", true),
-            Combo1("EditTransformMode", "Interpolation:", INTERP, 1),
-            Check("OSBasedResample", "Schnellere, aber weniger präzise Neuauflösung", false),
-            Color("BrushDefaultColor", "Standardfarbe Pinselstrich:", "#000000"),
-            Color("FillDefaultColor", "Standardfarbe Füllung:", "#ffffff"),
-            Color("FeedbackColor", "Hervorhebung:", "#00a8ff"),
-            Check("IconPanelsAutoCollapse", "Bedienfeldsymbole automatisch minimieren", false),
-            Check("WriteThumbnailPreview", "Einzelseitenminiaturen speichern", true),
-            Check("AppendFwPng", ".fw.png anhängen", true),
+            Int("MaxUndos", "dlg-pref-maxundos", 20, 0, 999),
+            Check("ShowStartPage", "dlg-pref-showstartpage", true),
+            Check("XformToolXformsBFE", "dlg-pref-xformtoolxformsbfe", true),
+            Combo1("EditTransformMode", "dlg-pref-edittransformmode", INTERP, 1),
+            Check("OSBasedResample", "dlg-pref-osbasedresample", false),
+            Color("BrushDefaultColor", "dlg-pref-brushdefaultcolor", "#000000"),
+            Color("FillDefaultColor", "dlg-pref-filldefaultcolor", "#ffffff"),
+            Color("FeedbackColor", "dlg-pref-feedbackcolor", "#00a8ff"),
+            Check("IconPanelsAutoCollapse", "dlg-pref-iconpanelsautocollapse", false),
+            Check("WriteThumbnailPreview", "dlg-pref-writethumbnailpreview", true),
+            Check("AppendFwPng", "dlg-pref-appendfwpng", true),
+            // Entwickleroptionen: Testsprache qps auch im Release-Build (Text aus allgemein.ftl)
+            Check(crate::language::DEV_PREF_KEY, "lang-dev-options", false),
         ],
         1 => &[
-            Check("CropDocCropsImages", "Objekte beim Zuschneiden löschen", true),
-            Check("DeletePaths", "Pfade beim Konvertieren in Auswahlrahmen löschen", true),
-            Check("UseBrushSizeCursors", "Pinselstärke in Malen-Cursor", true),
-            Check("UsePrecisionCursors", "Präzise Cursor", false),
-            Caption("Stift-Werkzeug:"),
-            Check("ShowPenPreview", "Stiftvorschau anzeigen", true),
-            Check("ShowSolidPoints", "Einfarbige Punkte anzeigen", false),
-            Caption("Zeiger und Teilauswahl:"),
-            Check("SelectionMouseOverPreview", "Mausaktivierte Hervorhebung", true),
-            Check("PointerToolPaintHandles", "Füllungsgriffe anzeigen", true),
-            Check("PreviewDrag", "Vorschau beim Ziehen", true),
-            Int("PickDistance", "Markierungsabstand (Pixel):", 5, 1, 10),
-            Check("UngroupAutoshapes", "Gruppierung automatischer Formen bei 9-Slice aufheben", false),
+            Check("CropDocCropsImages", "dlg-pref-cropdoccropsimages", true),
+            Check("DeletePaths", "dlg-pref-deletepaths", true),
+            Check("UseBrushSizeCursors", "dlg-pref-usebrushsizecursors", true),
+            Check("UsePrecisionCursors", "dlg-pref-useprecisioncursors", false),
+            Caption("dlg-pref-cap-pen"),
+            Check("ShowPenPreview", "dlg-pref-showpenpreview", true),
+            Check("ShowSolidPoints", "dlg-pref-showsolidpoints", false),
+            Caption("dlg-pref-cap-pointer"),
+            Check("SelectionMouseOverPreview", "dlg-pref-selectionmouseoverpreview", true),
+            Check("PointerToolPaintHandles", "dlg-pref-pointertoolpainthandles", true),
+            Check("PreviewDrag", "dlg-pref-previewdrag", true),
+            Int("PickDistance", "dlg-pref-pickdistance", 5, 1, 10),
+            Check("UngroupAutoshapes", "dlg-pref-ungroupautoshapes", false),
         ],
         2 => &[
-            Caption("Hilfslinien:"),
-            Check("ShowGuides", "Anzeigen", true),
-            Check("LockGuides", "Sperren", false),
-            Check("SnapToGuides", "Ausrichten", true),
-            Color("GuideColor", "Hilfslinienfarbe:", "#00ffff"),
-            Color("SliceGuideColor", "Segmenthilfslinien:", "#ff4a4a"),
-            Check("SliceGuidesVisible", "Segmenthilfslinien anzeigen", true),
-            Color("NineSliceGuideColor", "9-Slice-Hilfslinien:", "#0000ff"),
-            Caption("Raster:"),
-            Check("ShowGrid", "Raster anzeigen", false),
-            Check("SnapToGrids", "Am Raster ausrichten", false),
-            Color("GridColor", "Rasterfarbe:", "#00ffff"),
-            Int("GridHorizontalDistance", "Rasterabstand horizontal:", 36, 1, 10000),
-            Int("GridVerticalDistance", "Rasterabstand vertikal:", 36, 1, 10000),
-            Caption("Intelligente Hilfslinien:"),
-            Check("ShowSmartGuides", "Anzeigen", true),
-            Check("SnapToSmartGuides", "Ausrichten", true),
-            Color("SmartGuideColor", "Farbe:", "#ff4aff"),
-            Int("SnapDistance", "Ausrichtungsabstand (Pixel):", 5, 1, 50),
+            Caption("dlg-pref-cap-guides"),
+            Check("ShowGuides", "dlg-pref-showguides", true),
+            Check("LockGuides", "dlg-pref-lockguides", false),
+            Check("SnapToGuides", "dlg-pref-snaptoguides", true),
+            Color("GuideColor", "dlg-pref-guidecolor", "#00ffff"),
+            Color("SliceGuideColor", "dlg-pref-sliceguidecolor", "#ff4a4a"),
+            Check("SliceGuidesVisible", "dlg-pref-sliceguidesvisible", true),
+            Color("NineSliceGuideColor", "dlg-pref-ninesliceguidecolor", "#0000ff"),
+            Caption("dlg-pref-cap-grid"),
+            Check("ShowGrid", "dlg-pref-showgrid", false),
+            Check("SnapToGrids", "dlg-pref-snaptogrids", false),
+            Color("GridColor", "dlg-pref-gridcolor", "#00ffff"),
+            Int("GridHorizontalDistance", "dlg-pref-gridhorizontaldistance", 36, 1, 10000),
+            Int("GridVerticalDistance", "dlg-pref-gridverticaldistance", 36, 1, 10000),
+            Caption("dlg-pref-cap-smartguides"),
+            Check("ShowSmartGuides", "dlg-pref-showsmartguides", true),
+            Check("SnapToSmartGuides", "dlg-pref-snaptosmartguides", true),
+            Color("SmartGuideColor", "dlg-pref-smartguidecolor", "#ff4aff"),
+            Int("SnapDistance", "dlg-pref-snapdistance", 5, 1, 50),
         ],
         3 => &[
-            Real("DefaultLeading", "Standard-Zeilenabstand (Faktor):", 1.2, 0.0, 10.0),
-            Real("DefaultBaselineShift", "Grundlinienverschiebung (px):", 0.0, -999.0, 999.0),
-            Check("ShowFontNamesInEnglish", "Schriftnamen auf Englisch anzeigen", false),
-            Check("ShowFontPreview", "Schriftvorschau", true),
-            Check("ShowRecentFonts", "Zuletzt verwendete Schriften anzeigen", true),
-            Int("RecentFontLimit", "Anzahl zuletzt verwendeter Schriften:", 6, 0, 20),
-            Text("DefaultMissingFont", "Ersatz für fehlende Schriften:", "Arial"),
+            Real("DefaultLeading", "dlg-pref-defaultleading", 1.2, 0.0, 10.0),
+            Real("DefaultBaselineShift", "dlg-pref-defaultbaselineshift", 0.0, -999.0, 999.0),
+            Check("ShowFontNamesInEnglish", "dlg-pref-showfontnamesinenglish", false),
+            Check("ShowFontPreview", "dlg-pref-showfontpreview", true),
+            Check("ShowRecentFonts", "dlg-pref-showrecentfonts", true),
+            Int("RecentFontLimit", "dlg-pref-recentfontlimit", 6, 0, 20),
+            Text("DefaultMissingFont", "dlg-pref-defaultmissingfont", "Arial"),
         ],
         4 => &[
-            Check("ShowPSImportDialog", "Dialog beim Importieren anzeigen", true),
-            Check("ShowPSOpenDialog", "Dialog beim Öffnen anzeigen", true),
-            Check("PSImageLayersEditable", "Bildebenen bearbeitbar", true),
-            Check("PSTextEditable", "Text bearbeitbar", true),
-            Check("PSShapeLayersEditable", "Formebenen bearbeitbar", true),
-            Check("PSShapeLayerEffectsEditable", "Effekte der Formebenen bearbeitbar", true),
-            Check("PSSharedLayers", "Ebenen über Status teilen", false),
-            Check("UseFWFilters", "Native Filter haben Vorrang", false),
-            Check("PSClippingMasksEditable", "Schnittmasken bearbeitbar", true),
-            Check("PSRetainAdjustmentLayersAppearance", "Erscheinungsbild der Einstellungsebenen beibehalten", true),
+            Check("ShowPSImportDialog", "dlg-pref-showpsimportdialog", true),
+            Check("ShowPSOpenDialog", "dlg-pref-showpsopendialog", true),
+            Check("PSImageLayersEditable", "dlg-pref-psimagelayerseditable", true),
+            Check("PSTextEditable", "dlg-pref-pstexteditable", true),
+            Check("PSShapeLayersEditable", "dlg-pref-psshapelayerseditable", true),
+            Check("PSShapeLayerEffectsEditable", "dlg-pref-psshapelayereffectseditable", true),
+            Check("PSSharedLayers", "dlg-pref-pssharedlayers", false),
+            Check("UseFWFilters", "dlg-pref-usefwfilters", false),
+            Check("PSClippingMasksEditable", "dlg-pref-psclippingmaskseditable", true),
+            Check("PSRetainAdjustmentLayersAppearance", "dlg-pref-psretainadjustmentlayersappearance", true),
         ],
         5 => &[
-            Item::Caption("Zusatzmodule (Neustart erforderlich):"),
-            Check("UseExtraPhotoshopPluginsDir", "Photoshop-Zusatzmodule", false),
-            Text("ExtraPhotoshopPluginsDir", "Ordner:", ""),
-            Check("UseExtraTexturesDir", "Texturen", false),
-            Text("ExtraTexturesDir", "Ordner:", ""),
-            Check("UseExtraPatternsDir", "Muster", false),
-            Text("ExtraPatternsDir", "Ordner:", ""),
-            Item::Caption("Ressourcenordner des Originals (leer = automatische Suche):"),
-            Text(ORIGINAL_DIR_KEY, "Ordner:", ""),
+            Item::Caption("dlg-pref-cap-plugins"),
+            Check("UseExtraPhotoshopPluginsDir", "dlg-pref-useextraphotoshoppluginsdir", false),
+            Text("ExtraPhotoshopPluginsDir", "dlg-pref-extraphotoshoppluginsdir", ""),
+            Check("UseExtraTexturesDir", "dlg-pref-useextratexturesdir", false),
+            Text("ExtraTexturesDir", "dlg-pref-extratexturesdir", ""),
+            Check("UseExtraPatternsDir", "dlg-pref-useextrapatternsdir", false),
+            Text("ExtraPatternsDir", "dlg-pref-extrapatternsdir", ""),
+            Item::Caption("dlg-pref-cap-originaldir"),
+            Text(ORIGINAL_DIR_KEY, "dlg-pref-originalresourcedir", ""),
         ],
-        _ => &[Combo1("LegLookForPNG", "FW-PNG-Quelldateien (Bearbeiten):", LOOK, 3), Combo1("LoptLookForPNG", "FW-PNG-Quelldateien (Optimieren):", LOOK, 3)],
+        _ => &[Combo1("LegLookForPNG", "dlg-pref-leglookforpng", LOOK, 3), Combo1("LoptLookForPNG", "dlg-pref-loptlookforpng", LOOK, 3)],
     }
 }
 
@@ -162,52 +166,105 @@ pub fn apply_original_dir(prefs: &Preferences) {
 }
 
 fn draw_item(ui: &mut Ui, d: &mut PreferencesDialog, prefs: &Preferences, item: &Item, r: Rect, ctrl_x: f32, st: &AppState) {
+    let tl = |k: &str| t(k);
     match *item {
         Item::Check(k, label, def) => {
             let v = d.get(prefs, k).and_then(|v| v.as_bool()).unwrap_or(def);
-            if let Some(b) = fields::checkbox(ui, ("pref", k), Rect::from_min_size(r.min, vec2(r.width(), 18.0)), label, v, true) {
+            if let Some(b) = fields::checkbox(ui, ("pref", k), Rect::from_min_size(r.min, vec2(r.width(), 18.0)), &tl(label), v, true) {
                 d.values.insert(k.into(), PrefValue::Bool(b));
             }
         }
         Item::Int(k, label, def, lo, hi) => {
-            fields::label(ui, Rect::from_min_size(r.min, vec2(ctrl_x - r.left(), 20.0)), label, true);
+            super::fit_label(ui, Rect::from_min_size(r.min, vec2(ctrl_x - r.left(), 20.0)), &tl(label), true);
             let v = d.get(prefs, k).and_then(|v| v.as_int()).unwrap_or(def);
             if let Some(n) = fields::number(ui, ("pref", k), Rect::from_min_size(pos2(ctrl_x, r.top()), vec2(60.0, 20.0)), None, Some(v as f64), (lo as f64, hi as f64), 0, true) {
                 d.values.insert(k.into(), PrefValue::Int(n as i64));
             }
         }
         Item::Real(k, label, def, lo, hi) => {
-            fields::label(ui, Rect::from_min_size(r.min, vec2(ctrl_x - r.left(), 20.0)), label, true);
+            super::fit_label(ui, Rect::from_min_size(r.min, vec2(ctrl_x - r.left(), 20.0)), &tl(label), true);
             let v = d.get(prefs, k).and_then(|v| v.as_real()).unwrap_or(def);
             if let Some(n) = fields::number(ui, ("pref", k), Rect::from_min_size(pos2(ctrl_x, r.top()), vec2(60.0, 20.0)), None, Some(v), (lo, hi), 2, true) {
                 d.values.insert(k.into(), PrefValue::Real(n));
             }
         }
         Item::Color(k, label, def) => {
-            fields::label(ui, Rect::from_min_size(r.min, vec2(ctrl_x - r.left(), 20.0)), label, true);
+            super::fit_label(ui, Rect::from_min_size(r.min, vec2(ctrl_x - r.left(), 20.0)), &tl(label), true);
             let v = d.get(prefs, k).and_then(|v| v.as_color()).or_else(|| fp_color::Rgba8::parse_hex(def).map(|c| c.to_argb()));
             if let Some(crate::inspector::popups::ColorChoice::Color(c)) = crate::inspector::popups::color_button(ui, ("pref", k), Rect::from_min_size(pos2(ctrl_x, r.top()), vec2(26.0, 20.0)), st, v, true, false, false) {
                 d.values.insert(k.into(), PrefValue::Str(format!("#{:02x}{:02x}{:02x}", c.r(), c.g(), c.b())));
             }
         }
         Item::Combo1(k, label, items, def) => {
-            fields::label(ui, Rect::from_min_size(r.min, vec2(ctrl_x - r.left(), 20.0)), label, true);
+            super::fit_label(ui, Rect::from_min_size(r.min, vec2(ctrl_x - r.left(), 20.0)), &tl(label), true);
             let v = d.get(prefs, k).and_then(|v| v.as_int()).unwrap_or(def).clamp(1, items.len() as i64);
-            if let Some(i) = fields::combo(ui, ("pref", k), Rect::from_min_size(pos2(ctrl_x, r.top()), vec2((r.right() - ctrl_x).min(220.0), 20.0)), items, Some((v - 1) as usize), true) {
+            let names: Vec<String> = items.iter().map(|k| t(k)).collect();
+            let refs: Vec<&str> = names.iter().map(|s| s.as_str()).collect();
+            if let Some(i) = fields::combo(ui, ("pref", k), Rect::from_min_size(pos2(ctrl_x, r.top()), vec2((r.right() - ctrl_x).min(combo_w(ui.ctx())), 20.0)), &refs, Some((v - 1) as usize), true) {
                 d.values.insert(k.into(), PrefValue::Int(i as i64 + 1));
             }
         }
         Item::Text(k, label, def) => {
-            fields::label(ui, Rect::from_min_size(r.min, vec2(ctrl_x - r.left(), 20.0)), label, true);
+            super::fit_label(ui, Rect::from_min_size(r.min, vec2(ctrl_x - r.left(), 20.0)), &tl(label), true);
             let v = d.get(prefs, k).and_then(|v| v.as_str()).unwrap_or_else(|| def.to_string());
             if let Some(t) = fields::text(ui, ("pref", k), Rect::from_min_size(pos2(ctrl_x, r.top()), vec2((r.right() - ctrl_x).min(220.0), 20.0)), &v, true) {
                 d.values.insert(k.into(), PrefValue::Str(t));
             }
         }
         Item::Caption(label) => {
-            let t = Theme::current(ui.ctx());
-            ui.painter().text(pos2(r.left(), r.top() + 10.0), Align2::LEFT_CENTER, label, t.bold(t.fonts.ui), t.colors.text);
+            let th = Theme::current(ui.ctx());
+            ui.painter().text(pos2(r.left(), r.top() + 10.0), Align2::LEFT_CENTER, tl(label), th.bold(th.fonts.ui), th.colors.text);
         }
+    }
+}
+
+/// Breite der Kombifelder (längster Eintrag, mindestens wie bisher 220 px).
+fn combo_w(ctx: &egui::Context) -> f32 {
+    let names: Vec<String> = LOOK.iter().chain(INTERP.iter()).map(|k| t(k)).collect();
+    let refs: Vec<&str> = names.iter().map(|s| s.as_str()).collect();
+    220f32.max(super::max_text_w(ctx, &refs) + 28.0).ceil()
+}
+
+/// Maße des Dialogs in der aktuellen Sprache: Kategorienliste, Beschriftungsspalte und
+/// Dialoggröße wachsen mit den Texten (Deutsch: wie bisher 170 / 230 px, 640 px breit).
+struct Layout {
+    list_w: f32,
+    ctrl_off: f32,
+    reset_w: f32,
+    size: egui::Vec2,
+}
+
+impl Layout {
+    fn measure(ctx: &egui::Context) -> Layout {
+        let tw = |k: &str| super::text_w(ctx, &t(k));
+        let list_w = CATEGORIES.iter().map(|k| tw(k) + 14.0).fold(170.0, f32::max).ceil();
+        let mut label_w: f32 = tw("dlg-pref-theme").max(tw("lang-label"));
+        let mut page_w: f32 = 0.0;
+        let mut page_h: f32 = 0.0;
+        let cw = combo_w(ctx);
+        for cat in 0..CATEGORIES.len() {
+            let items = page_items(cat);
+            for it in items {
+                match *it {
+                    Item::Check(_, l, _) => page_w = page_w.max(tw(l) + 20.0),
+                    Item::Caption(l) => page_w = page_w.max(tw(l) * 1.1 + 4.0),
+                    Item::Int(_, l, ..) | Item::Real(_, l, ..) | Item::Color(_, l, _) | Item::Combo1(_, l, ..) | Item::Text(_, l, _) => label_w = label_w.max(tw(l)),
+                }
+            }
+            let extra = match cat {
+                0 => 6.0 + 24.0 + 26.0 + 30.0 + 22.0,
+                5 => 12.0 + 40.0,
+                _ => 0.0,
+            };
+            page_h = page_h.max(28.0 + items.len() as f32 * 24.0 + extra);
+        }
+        let ctrl_off = 230f32.max(label_w + 10.0).ceil();
+        let reset_w = 220f32.max(tw("dlg-pref-reset-warnings") + 16.0).ceil();
+        page_w = page_w.max(ctrl_off + cw).max(reset_w).max(super::text_w(ctx, &t("dlg-pref-cap-ui")) * 1.1);
+        let w = 640f32.max(12.0 + list_w + 16.0 + page_w + 14.0).ceil();
+        // Seiten mit vielen Einträgen: Platz bis über die Knöpfe
+        let h = 500f32.max(12.0 + page_h + 60.0).ceil();
+        Layout { list_w, ctrl_off, reset_w, size: vec2(w, h) }
     }
 }
 
@@ -215,10 +272,12 @@ fn draw_item(ui: &mut Ui, d: &mut PreferencesDialog, prefs: &Preferences, item: 
 pub fn show(ctx: &egui::Context, st: &mut AppState) {
     let Some(mut d) = st.dialogs.preferences.clone() else { return };
     let mut result = None;
-    let r = dialog_frame(ctx, "fp-prefs", "Voreinstellungen", vec2(640.0, 500.0), |ui, body| {
+    let lay = Layout::measure(ctx);
+    let (ok_l, cancel_l) = (t("btn-ok"), t("btn-cancel"));
+    let r = dialog_frame(ctx, "fp-prefs", &t("dlg-pref-title"), lay.size, |ui, body| {
         let theme = Theme::current(ui.ctx());
         let c = &theme.colors;
-        let list = Rect::from_min_size(body.min + vec2(12.0, 12.0), vec2(170.0, body.height() - 60.0));
+        let list = Rect::from_min_size(body.min + vec2(12.0, 12.0), vec2(lay.list_w, body.height() - 60.0));
         ui.painter().rect_filled(list, 0.0, c.list_bg);
         ui.painter().rect_stroke(list, 0.0, Stroke::new(1.0, c.list_border), StrokeKind::Inside);
         for (i, cat) in CATEGORIES.iter().enumerate() {
@@ -229,15 +288,15 @@ pub fn show(ctx: &egui::Context, st: &mut AppState) {
             } else if resp.hovered() {
                 ui.painter().rect_filled(rr, 0.0, c.list_hover_bg);
             }
-            ui.painter().text(pos2(rr.left() + 6.0, rr.center().y), Align2::LEFT_CENTER, *cat, theme.ui_font(), c.text);
+            ui.painter().text(pos2(rr.left() + 6.0, rr.center().y), Align2::LEFT_CENTER, t(cat), theme.ui_font(), c.text);
             if resp.clicked() {
                 d.category = i;
             }
         }
         let page = Rect::from_min_max(pos2(list.right() + 16.0, list.top()), pos2(body.right() - 14.0, list.bottom()));
-        ui.painter().text(page.min, Align2::LEFT_TOP, CATEGORIES[d.category], theme.bold(theme.fonts.heading), c.text);
+        ui.painter().text(page.min, Align2::LEFT_TOP, t(CATEGORIES[d.category]), theme.bold(theme.fonts.heading), c.text);
         let mut y = page.top() + 28.0;
-        let ctrl_x = page.left() + 230.0;
+        let ctrl_x = page.left() + lay.ctrl_off;
         let prefs = st.session.prefs.clone();
         for it in page_items(d.category) {
             let h = 24.0;
@@ -246,27 +305,34 @@ pub fn show(ctx: &egui::Context, st: &mut AppState) {
         }
         if d.category == 0 {
             y += 6.0;
-            ui.painter().text(pos2(page.left(), y + 10.0), Align2::LEFT_CENTER, "Benutzeroberfläche", theme.bold(theme.fonts.ui), c.text);
+            ui.painter().text(pos2(page.left(), y + 10.0), Align2::LEFT_CENTER, t("dlg-pref-cap-ui"), theme.bold(theme.fonts.ui), c.text);
             y += 24.0;
-            fields::label(ui, Rect::from_min_size(pos2(page.left(), y), vec2(200.0, 20.0)), "Design:", true);
-            let names: Vec<&str> = ThemeKind::ALL.iter().map(|k| k.label()).collect();
+            super::fit_label(ui, Rect::from_min_size(pos2(page.left(), y), vec2(ctrl_x - page.left(), 20.0)), &t("dlg-pref-theme"), true);
+            let names: Vec<String> = ThemeKind::ALL.iter().map(|k| k.name()).collect();
             let cur = ThemeKind::ALL.iter().position(|k| *k == d.theme);
-            if let Some(i) = fields::combo(ui, "pref-theme", Rect::from_min_size(pos2(ctrl_x, y), vec2(140.0, 20.0)), &names, cur, true) {
+            let refs = super::refs(&names);
+            if let Some(i) = fields::combo(ui, "pref-theme", Rect::from_min_size(pos2(ctrl_x, y), vec2(super::combo_fit_w(ui.ctx(), &refs, 140.0), 20.0)), &refs, cur, true) {
                 d.theme = ThemeKind::ALL[i];
             }
+            // Sprache (fp_ui::language): Eigennamen aller Sprachen, Auswahl als values["Language"]
+            y += 26.0;
+            crate::language::pref_row(ui, Rect::from_min_size(pos2(page.left(), y), vec2(ctrl_x - page.left(), 20.0)), Rect::from_min_size(pos2(ctrl_x, y), vec2(180.0, 20.0)), &mut d.values, &prefs);
             y += 30.0;
-            if fields::button(ui, "pref-resetwarn", Rect::from_min_size(pos2(page.left(), y), vec2(220.0, 22.0)), "Alle Warnmeldungen zurücksetzen", !d.reset_warnings) {
+            let reset = t("dlg-pref-reset-warnings");
+            if fields::button(ui, "pref-resetwarn", Rect::from_min_size(pos2(page.left(), y), vec2(lay.reset_w, 22.0)), &reset, !d.reset_warnings) {
                 d.reset_warnings = true;
             }
         }
         if d.category == 5 {
-            ui.painter().text(pos2(page.left(), y + 12.0), Align2::LEFT_TOP, "Hinweis: Firepixel bettet keine Texturen oder Muster des Originals ein; Ordner werden nur zur Laufzeit gelesen.", theme.small_font(), c.text_weak);
+            // Hinweis umbrechen (war eine lange Zeile)
+            super::text_block(ui, Rect::from_min_size(pos2(page.left(), y + 12.0), vec2(page.width(), 40.0)), egui::RichText::new(t("dlg-pref-plugins-note")).font(theme.small_font()).color(c.text_weak));
         }
         let by = body.bottom() - 36.0;
-        if push_button(ui, Rect::from_min_size(pos2(body.right() - 176.0, by), vec2(76.0, 23.0)), "OK", true, true) {
+        let b = super::button_row(ui.ctx(), body.right() - 16.0, by, &[&ok_l, &cancel_l], 76.0, 23.0, 8.0);
+        if push_button(ui, b[0], &ok_l, true, true) {
             result = Some(true);
         }
-        if push_button(ui, Rect::from_min_size(pos2(body.right() - 92.0, by), vec2(76.0, 23.0)), "Abbrechen", false, true) {
+        if push_button(ui, b[1], &cancel_l, false, true) {
             result = Some(false);
         }
     });
@@ -275,6 +341,8 @@ pub fn show(ctx: &egui::Context, st: &mut AppState) {
             st.dialogs.preferences = None;
             d.apply(&mut st.session.prefs);
             st.session.prefs_changed();
+            // Sprachwechsel sofort, ohne Neustart
+            crate::language::apply_prefs(st, ctx);
             st.push(Action::SetTheme(d.theme));
         }
         (Some(false), _) | (_, DialogClose::Cancelled) => st.dialogs.preferences = None,
@@ -295,7 +363,7 @@ mod tests {
         for c in 0..CATEGORIES.len() {
             for it in page_items(c) {
                 if let Item::Check(k, _, _) | Item::Int(k, _, _, _, _) = it {
-                    assert!(fp_engine::prefs::definition(k).is_some() || p.get(k).is_some(), "unbekannter Schlüssel {k}");
+                    assert!(fp_engine::prefs::definition(k).is_some() || p.get(k).is_some() || *k == crate::language::DEV_PREF_KEY, "unbekannter Schlüssel {k}");
                 }
             }
         }

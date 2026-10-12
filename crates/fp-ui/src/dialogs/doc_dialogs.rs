@@ -2,14 +2,14 @@
 //! (6011, Pixelabmessungen/Druckgröße mit Einheiten, Proportionen, Neuauflösung) und
 //! „Numerisch transformieren“ (6002). Lage der Steuerelemente in DLU wie in `dialoge.json`.
 
-use super::{dialog_frame, dlu, dlu_rect, group_box, push_button, DialogClose};
+use super::{combo_fit_w, dialog_frame, dlu, dlu_rect, extra_w, group_box, push_button, refs, t, tl, DialogClose};
 use crate::app_state::{Action, AppState};
 use crate::inspector::fields;
 use egui::{vec2, Id, Rect, Ui};
 use serde_json::json;
 
-fn label(ui: &mut Ui, o: egui::Pos2, r: [f32; 4], t: &str) {
-    fields::label(ui, dlu_rect(o, r), t, true);
+fn label(ui: &mut Ui, _o: egui::Pos2, r: Rect, text: &str) {
+    super::fit_label(ui, r, text, true);
 }
 
 // ---------------------------------------------------------------------- Leinwandgröße
@@ -29,7 +29,9 @@ pub struct CanvasSizeDialog {
 
 /// Ankernamen für `modify.canvas.canvasSize`.
 pub const ANCHORS: [&str; 9] = ["topLeft", "top", "topRight", "left", "center", "right", "bottomLeft", "bottom", "bottomRight"];
-const UNITS: [&str; 3] = ["Pixel", "Zoll", "Zentimeter"];
+/// Tooltips der Ankerknöpfe (Schlüssel).
+const ANCHOR_TIPS: [&str; 9] = ["dlg-anchor-top-left", "dlg-anchor-top", "dlg-anchor-top-right", "dlg-anchor-left", "dlg-anchor-center", "dlg-anchor-right", "dlg-anchor-bottom-left", "dlg-anchor-bottom", "dlg-anchor-bottom-right"];
+use super::new_document::UNITS;
 
 fn to_unit(px: f64, unit: usize, ppi: f64) -> f64 {
     match unit {
@@ -68,25 +70,40 @@ impl CanvasSizeDialog {
 pub fn show_canvas_size(ctx: &egui::Context, st: &mut AppState) {
     let Some(mut d) = st.dialogs.canvas_size.clone() else { return };
     let mut result = None;
-    let r = dialog_frame(ctx, "fp-canvas-size", "Leinwandgröße", dlu(222.0, 196.0), |ui, body| {
+    // Texte der aktuellen Sprache; längere Texte schieben die Spalten (Deutsch: Lage wie bisher)
+    let units = tl(&UNITS);
+    let wh = tl(&["dlg-short-w", "dlg-short-h"]);
+    let (anchor_l, page_l, hint_l, ok_l, cancel_l) = (t("dlg-canvas-size-anchor"), t("dlg-only-current-page"), t("dlg-canvas-size-range"), t("btn-ok"), t("btn-cancel"));
+    let dx = extra_w(ctx, &refs(&wh), dlu(14.0, 0.0).x - 2.0);
+    let cw = combo_fit_w(ctx, &refs(&units), dlu(60.0, 0.0).x);
+    let dc = cw - dlu(60.0, 0.0).x;
+    let da = extra_w(ctx, &[&anchor_l], dlu(215.0 - 158.0, 0.0).x - 4.0);
+    let bw = super::buttons_w(ctx, &[&ok_l, &cancel_l], dlu(50.0, 0.0).x);
+    let ex = (dx + dc + da).max(2.0 * bw + dlu(5.0 + 9.0, 0.0).x - dlu(222.0 - 7.0, 0.0).x).max(super::text_w(ctx, &page_l) + 24.0 - dlu(222.0 - 9.0, 0.0).x).max(0.0);
+    let shift = move |x: f32| if x >= 158.0 { dx + dc } else if x >= 34.0 { dx } else { 0.0 };
+    let rr = move |o: egui::Pos2, r: [f32; 4]| dlu_rect(o, r).translate(vec2(shift(r[0]), 0.0));
+    let r = dialog_frame(ctx, "fp-canvas-size", &t("dlg-canvas-size-title"), dlu(222.0, 196.0) + vec2(ex, 0.0), |ui, body| {
         let o = body.min;
-        group_box(ui, dlu_rect(o, [7.0, 6.0, 208.0, 66.0]), "Neue Größe");
-        label(ui, o, [20.0, 22.0, 30.0, 10.0], "B:");
+        let gw = |r: Rect| r.with_max_x(body.right() - dlu(7.0, 0.0).x);
+        group_box(ui, gw(dlu_rect(o, [7.0, 6.0, 208.0, 66.0])), &t("dlg-canvas-size-new"));
+        let short = |r: Rect| Rect::from_min_size(r.min, vec2(r.width() + dx, r.height()));
+        label(ui, o, short(dlu_rect(o, [20.0, 22.0, 14.0, 10.0])), &wh[0]);
         let wtxt = fields::fmt_num(d.width, if d.unit == 0 { 0 } else { 2 });
-        if let Some(t) = fields::text(ui, "cs-w", dlu_rect(o, [34.0, 20.0, 50.0, 13.0]), &wtxt, true)
+        if let Some(t) = fields::text(ui, "cs-w", rr(o, [34.0, 20.0, 50.0, 13.0]), &wtxt, true)
             && let Some(v) = fields::parse_num(&t)
         {
             d.width = v.max(0.0);
         }
-        label(ui, o, [20.0, 42.0, 30.0, 10.0], "H:");
+        label(ui, o, short(dlu_rect(o, [20.0, 42.0, 14.0, 10.0])), &wh[1]);
         let htxt = fields::fmt_num(d.height, if d.unit == 0 { 0 } else { 2 });
-        if let Some(t) = fields::text(ui, "cs-h", dlu_rect(o, [34.0, 40.0, 50.0, 13.0]), &htxt, true)
+        if let Some(t) = fields::text(ui, "cs-h", rr(o, [34.0, 40.0, 50.0, 13.0]), &htxt, true)
             && let Some(v) = fields::parse_num(&t)
         {
             d.height = v.max(0.0);
         }
         for (k, key) in [(0usize, "cs-wu"), (1, "cs-hu")] {
-            if let Some(u) = fields::combo(ui, key, dlu_rect(o, [88.0, 20.0 + k as f32 * 20.0, 60.0, 13.0]), &UNITS, Some(d.unit), true) {
+            let cr = rr(o, [88.0, 20.0 + k as f32 * 20.0, 60.0, 13.0]);
+            if let Some(u) = fields::combo(ui, key, Rect::from_min_size(cr.min, vec2(cw, cr.height())), &refs(&units), Some(d.unit), true) {
                 let (w, h) = (from_unit(d.width, d.unit, d.resolution), from_unit(d.height, d.unit, d.resolution));
                 d.unit = u;
                 d.width = to_unit(w, u, d.resolution);
@@ -94,27 +111,31 @@ pub fn show_canvas_size(ctx: &egui::Context, st: &mut AppState) {
             }
         }
         // Anker 3 × 3 (5791–5800)
-        label(ui, o, [158.0, 14.0, 40.0, 10.0], "Anker:");
-        for (i, tip) in ANCHORS.iter().enumerate() {
-            let r = dlu_rect(o, [158.0 + (i % 3) as f32 * 16.0, 24.0 + (i / 3) as f32 * 14.0, 14.0, 12.0]);
-            if fields::toggle(ui, ("cs-anchor", i), r, crate::inspector::glyphs::Glyph::FillSolid, d.anchor == i, true, tip) {
+        let ar = rr(o, [158.0, 14.0, 57.0, 10.0]);
+        label(ui, o, Rect::from_min_size(ar.min, vec2(ar.width() + da, ar.height())), &anchor_l);
+        for (i, tip) in ANCHOR_TIPS.iter().enumerate() {
+            let r = rr(o, [158.0 + (i % 3) as f32 * 16.0, 24.0 + (i / 3) as f32 * 14.0, 14.0, 12.0]);
+            if fields::toggle(ui, ("cs-anchor", i), r, crate::inspector::glyphs::Glyph::FillSolid, d.anchor == i, true, &t(tip)) {
                 d.anchor = i;
             }
         }
-        group_box(ui, dlu_rect(o, [7.0, 78.0, 208.0, 42.0]), "Aktuelle Größe");
-        label(ui, o, [20.0, 92.0, 120.0, 10.0], &format!("B: {:.0} Pixel", d.cur_w));
-        label(ui, o, [20.0, 104.0, 120.0, 10.0], &format!("H: {:.0} Pixel", d.cur_h));
-        if let Some(b) = fields::checkbox(ui, "cs-page", dlu_rect(o, [9.0, 128.0, 150.0, 10.0]), "Nur aktuelle Seite", d.current_page_only, true) {
+        group_box(ui, gw(dlu_rect(o, [7.0, 78.0, 208.0, 42.0])), &t("dlg-canvas-size-current"));
+        label(ui, o, dlu_rect(o, [20.0, 92.0, 190.0, 10.0]), &fp_i18n::tr!("dlg-canvas-size-cur-w", w = format!("{:.0}", d.cur_w)));
+        label(ui, o, dlu_rect(o, [20.0, 104.0, 190.0, 10.0]), &fp_i18n::tr!("dlg-canvas-size-cur-h", h = format!("{:.0}", d.cur_h)));
+        if let Some(b) = fields::checkbox(ui, "cs-page", dlu_rect(o, [9.0, 128.0, 150.0, 10.0]).with_max_x(body.right() - 8.0), &page_l, d.current_page_only, true) {
             d.current_page_only = b;
         }
         let p = d.params();
         if p.is_none() {
-            label(ui, o, [9.0, 144.0, 200.0, 10.0], "Werte zwischen 1 und 30000 Pixel eingeben.");
+            // Hinweis umbricht bei längeren Texten (Platz bis zu den Knöpfen)
+            let hr = dlu_rect(o, [9.0, 144.0, 0.0, 26.0]);
+            super::text_block(ui, Rect::from_min_max(hr.min, egui::pos2(body.right() - 8.0, hr.bottom())), hint_l.as_str());
         }
-        if push_button(ui, dlu_rect(o, [110.0, 172.0, 50.0, 14.0]), "OK", true, p.is_some()) {
+        let b = super::button_row(ui.ctx(), body.right() - dlu(7.0, 0.0).x, dlu_rect(o, [0.0, 172.0, 0.0, 0.0]).top(), &[&ok_l, &cancel_l], bw, dlu(0.0, 14.0).y, dlu(5.0, 0.0).x);
+        if push_button(ui, b[0], &ok_l, true, p.is_some()) {
             result = Some(true);
         }
-        if push_button(ui, dlu_rect(o, [165.0, 172.0, 50.0, 14.0]), "Abbrechen", false, true) {
+        if push_button(ui, b[1], &cancel_l, false, true) {
             result = Some(false);
         }
     });
@@ -153,7 +174,6 @@ pub struct ImageSizeDialog {
     pub current_page_only: bool,
 }
 
-const METHODS: [&str; 4] = ["Bikubisch", "Bilinear", "Weich", "Nächster Nachbar"];
 
 impl ImageSizeDialog {
     /// Werte der aktuellen Seite.
@@ -211,17 +231,41 @@ impl ImageSizeDialog {
 pub fn show_image_size(ctx: &egui::Context, st: &mut AppState) {
     let Some(mut d) = st.dialogs.image_size.clone() else { return };
     let mut result = None;
-    let r = dialog_frame(ctx, "fp-image-size", "Bildgröße", dlu(232.0, 214.0), |ui, body| {
+    let wh = tl(&["dlg-new-doc-width", "dlg-new-doc-height"]);
+    let res_l = t("dlg-new-doc-resolution");
+    let px_units = tl(&["dlg-unit-pixels", "dlg-unit-percent"]);
+    let pr_units = tl(&["dlg-unit-percent", "dlg-unit-inches", "dlg-unit-cm"]);
+    let res_units = tl(&super::new_document::RES_UNITS);
+    let methods = tl(super::preferences::INTERP);
+    let (constrain_l, resample_l, page_l, ok_l, cancel_l) = (t("dlg-constrain"), t("dlg-image-size-resample"), t("dlg-only-current-page"), t("btn-ok"), t("btn-cancel"));
+    let dx = extra_w(ctx, &[&wh[0], &wh[1], &res_l], dlu(46.0, 0.0).x - 4.0);
+    let all_units: Vec<&str> = px_units.iter().chain(pr_units.iter()).chain(res_units.iter()).map(|s| s.as_str()).collect();
+    let cw = combo_fit_w(ctx, &all_units, dlu(54.0, 0.0).x);
+    let mx = dlu(84.0, 0.0).x.max((dlu(9.0, 0.0).x + 18.0 + super::text_w(ctx, &resample_l) + 8.0).ceil());
+    let mw = combo_fit_w(ctx, &refs(&methods), dlu(84.0, 0.0).x);
+    let bw = super::buttons_w(ctx, &[&ok_l, &cancel_l], dlu(50.0, 0.0).x);
+    let checks_w = super::max_text_w(ctx, &[&constrain_l, &page_l]) + 18.0 + dlu(9.0, 0.0).x;
+    let ex = (dx + cw - dlu(54.0, 0.0).x)
+        .max(mx + mw - dlu(168.0, 0.0).x)
+        .max(checks_w + 8.0 - dlu(232.0, 0.0).x)
+        .max(2.0 * bw + dlu(5.0 + 7.0 + 7.0, 0.0).x - dlu(232.0, 0.0).x)
+        .max(0.0)
+        .ceil();
+    let rr = move |o: egui::Pos2, r: [f32; 4]| dlu_rect(o, r).translate(vec2(if r[0] >= 60.0 { dx } else { 0.0 }, 0.0));
+    let cr = move |o: egui::Pos2, y: f32| Rect::from_min_size(rr(o, [114.0, y, 54.0, 13.0]).min, vec2(cw, dlu(0.0, 13.0).y));
+    let r = dialog_frame(ctx, "fp-image-size", &t("dlg-image-size-title"), dlu(232.0, 214.0) + vec2(ex, 0.0), |ui, body| {
+        let gw = |r: Rect| r.with_max_x(body.right() - dlu(7.0, 0.0).x);
+        let lr = |y: f32| Rect::from_min_size(dlu_rect(body.min, [14.0, y, 0.0, 10.0]).min, vec2(dlu(46.0, 0.0).x - 4.0 + dx, dlu(0.0, 10.0).y));
         let o = body.min;
         let en_px = d.resample;
-        group_box(ui, dlu_rect(o, [7.0, 6.0, 218.0, 50.0]), "Pixelabmessungen");
-        for (k, (lab, key)) in [("Breite:", "w"), ("Höhe:", "h")].iter().enumerate() {
+        group_box(ui, gw(dlu_rect(o, [7.0, 6.0, 218.0, 50.0])), &t("dlg-image-size-pixels"));
+        for (k, (lab, key)) in [(&wh[0], "w"), (&wh[1], "h")].iter().enumerate() {
             let y = 20.0 + k as f32 * 18.0;
-            label(ui, o, [14.0, y + 2.0, 40.0, 10.0], lab);
+            label(ui, o, lr(y + 2.0), lab);
             let px = if k == 0 { d.w } else { d.h };
             let cur = if k == 0 { d.cur_w } else { d.cur_h };
             let shown = if d.px_unit == 1 { px / cur.max(1.0) * 100.0 } else { px };
-            if let Some(t) = fields::text(ui, ("is-px", *key), dlu_rect(o, [60.0, y, 50.0, 13.0]), &fields::fmt_num(shown, if d.px_unit == 1 { 1 } else { 0 }), en_px)
+            if let Some(t) = fields::text(ui, ("is-px", *key), rr(o, [60.0, y, 50.0, 13.0]), &fields::fmt_num(shown, if d.px_unit == 1 { 1 } else { 0 }), en_px)
                 && let Some(v) = fields::parse_num(&t)
             {
                 let v = if d.px_unit == 1 { v / 100.0 * cur } else { v };
@@ -231,15 +275,15 @@ pub fn show_image_size(ctx: &egui::Context, st: &mut AppState) {
                     d.set_height(v);
                 }
             }
-            if let Some(u) = fields::combo(ui, ("is-pxu", k), dlu_rect(o, [114.0, y, 54.0, 13.0]), &["Pixel", "Prozent"], Some(d.px_unit), en_px) {
+            if let Some(u) = fields::combo(ui, ("is-pxu", k), cr(o, y), &refs(&px_units), Some(d.px_unit), en_px) {
                 d.px_unit = u;
             }
         }
-        group_box(ui, dlu_rect(o, [7.0, 62.0, 218.0, 70.0]), "Druckgröße");
+        group_box(ui, gw(dlu_rect(o, [7.0, 62.0, 218.0, 70.0])), &t("dlg-image-size-print"));
         let ppi = d.ppi();
-        for (k, lab) in ["Breite:", "Höhe:"].iter().enumerate() {
+        for (k, lab) in wh.iter().enumerate() {
             let y = 76.0 + k as f32 * 18.0;
-            label(ui, o, [14.0, y + 2.0, 40.0, 10.0], lab);
+            label(ui, o, lr(y + 2.0), lab);
             let px = if k == 0 { d.w } else { d.h };
             let cur = if k == 0 { d.cur_w } else { d.cur_h };
             let shown = match d.print_unit {
@@ -247,7 +291,7 @@ pub fn show_image_size(ctx: &egui::Context, st: &mut AppState) {
                 2 => px / ppi * 2.54,
                 _ => px / ppi,
             };
-            if let Some(t) = fields::text(ui, ("is-pr", k), dlu_rect(o, [60.0, y, 50.0, 13.0]), &fields::fmt_num(shown, 2), true)
+            if let Some(t) = fields::text(ui, ("is-pr", k), rr(o, [60.0, y, 50.0, 13.0]), &fields::fmt_num(shown, 2), true)
                 && let Some(v) = fields::parse_num(&t)
             {
                 let px = match d.print_unit {
@@ -270,12 +314,12 @@ pub fn show_image_size(ctx: &egui::Context, st: &mut AppState) {
                     }
                 }
             }
-            if let Some(u) = fields::combo(ui, ("is-pru", k), dlu_rect(o, [114.0, y, 54.0, 13.0]), &["Prozent", "Zoll", "Zentimeter"], Some(d.print_unit), true) {
+            if let Some(u) = fields::combo(ui, ("is-pru", k), cr(o, y), &refs(&pr_units), Some(d.print_unit), true) {
                 d.print_unit = u;
             }
         }
-        label(ui, o, [14.0, 114.0, 44.0, 10.0], "Auflösung:");
-        if let Some(t) = fields::text(ui, "is-res", dlu_rect(o, [60.0, 112.0, 50.0, 13.0]), &fields::fmt_num(d.resolution, 2), true)
+        label(ui, o, lr(114.0), &res_l);
+        if let Some(t) = fields::text(ui, "is-res", rr(o, [60.0, 112.0, 50.0, 13.0]), &fields::fmt_num(d.resolution, 2), true)
             && let Some(v) = fields::parse_num(&t)
         {
             let old_ppi = d.ppi();
@@ -286,33 +330,34 @@ pub fn show_image_size(ctx: &egui::Context, st: &mut AppState) {
                 d.h = (d.h * f).round();
             }
         }
-        if let Some(u) = fields::combo(ui, "is-resu", dlu_rect(o, [114.0, 112.0, 54.0, 13.0]), &["Pixel/Zoll", "Pixel/cm"], Some(d.res_unit), true) {
+        if let Some(u) = fields::combo(ui, "is-resu", cr(o, 112.0), &refs(&res_units), Some(d.res_unit), true) {
             if u != d.res_unit {
                 d.resolution = if u == 1 { d.resolution / 2.54 } else { d.resolution * 2.54 };
             }
             d.res_unit = u;
         }
-        if let Some(b) = fields::checkbox(ui, "is-constrain", dlu_rect(o, [9.0, 140.0, 120.0, 10.0]), "Proportionen beibehalten", d.constrain, true) {
+        if let Some(b) = fields::checkbox(ui, "is-constrain", dlu_rect(o, [9.0, 140.0, 120.0, 10.0]).with_max_x(body.right() - 8.0), &constrain_l, d.constrain, true) {
             d.constrain = b;
         }
-        if let Some(b) = fields::checkbox(ui, "is-resample", dlu_rect(o, [9.0, 154.0, 70.0, 10.0]), "Bild neu auflösen", d.resample, true) {
+        if let Some(b) = fields::checkbox(ui, "is-resample", Rect::from_min_max(dlu_rect(o, [9.0, 154.0, 70.0, 10.0]).min, egui::pos2(o.x + mx - 4.0, dlu_rect(o, [9.0, 154.0, 70.0, 10.0]).bottom())), &resample_l, d.resample, true) {
             d.resample = b;
             if !b {
                 d.w = d.cur_w;
                 d.h = d.cur_h;
             }
         }
-        if let Some(m) = fields::combo(ui, "is-method", dlu_rect(o, [84.0, 152.0, 84.0, 13.0]), &METHODS, Some(d.method), d.resample) {
+        if let Some(m) = fields::combo(ui, "is-method", Rect::from_min_size(egui::pos2(o.x + mx, dlu_rect(o, [84.0, 152.0, 84.0, 13.0]).top()), vec2(mw, dlu(0.0, 13.0).y)), &refs(&methods), Some(d.method), d.resample) {
             d.method = m;
         }
-        if let Some(b) = fields::checkbox(ui, "is-page", dlu_rect(o, [9.0, 170.0, 120.0, 10.0]), "Nur aktuelle Seite", d.current_page_only, true) {
+        if let Some(b) = fields::checkbox(ui, "is-page", dlu_rect(o, [9.0, 170.0, 120.0, 10.0]).with_max_x(body.right() - 8.0), &page_l, d.current_page_only, true) {
             d.current_page_only = b;
         }
         let p = d.params();
-        if push_button(ui, dlu_rect(o, [120.0, 192.0, 50.0, 14.0]), "OK", true, p.is_some()) {
+        let b = super::button_row(ui.ctx(), body.right() - dlu(7.0, 0.0).x, dlu_rect(o, [0.0, 192.0, 0.0, 0.0]).top(), &[&ok_l, &cancel_l], bw, dlu(0.0, 14.0).y, dlu(5.0, 0.0).x);
+        if push_button(ui, b[0], &ok_l, true, p.is_some()) {
             result = Some(true);
         }
-        if push_button(ui, dlu_rect(o, [175.0, 192.0, 50.0, 14.0]), "Abbrechen", false, true) {
+        if push_button(ui, b[1], &cancel_l, false, true) {
             result = Some(false);
         }
     });
@@ -370,27 +415,42 @@ impl NumericTransformDialog {
 pub fn show_numeric_transform(ctx: &egui::Context, st: &mut AppState) {
     let Some(mut d) = st.dialogs.numeric_transform.clone() else { return };
     let mut result = None;
-    let r = dialog_frame(ctx, "fp-numeric", "Numerisch transformieren", dlu(214.0, 130.0), |ui, body| {
+    let modes = tl(&["dlg-numeric-scale", "dlg-numeric-resize", "dlg-numeric-rotate"]);
+    let wh = tl(&["dlg-new-doc-width", "dlg-new-doc-height"]);
+    let angle_l = t("dlg-numeric-angle");
+    let px_l = t("dlg-unit-pixels");
+    let (attrs_l, constrain_l, ok_l, cancel_l) = (t("dlg-numeric-scale-attributes"), t("dlg-constrain"), t("btn-ok"), t("btn-cancel"));
+    let dx = extra_w(ctx, &[&wh[0], &wh[1], &angle_l], dlu(46.0, 0.0).x - 4.0);
+    let du = extra_w(ctx, &[&px_l], dlu(30.0, 0.0).x);
+    let mw = combo_fit_w(ctx, &refs(&modes), dlu(120.0, 0.0).x);
+    let bw = super::buttons_w(ctx, &[&ok_l, &cancel_l], dlu(56.0, 0.0).x);
+    let checks = super::max_text_w(ctx, &[&attrs_l, &constrain_l]) + 18.0 + dlu(8.0, 0.0).x + 8.0;
+    // Knopfspalte rechts von Feldern, Einheit und Modusliste
+    let bx = dlu(150.0, 0.0).x.max(dlu(144.0, 0.0).x + dx + du + 6.0).max(dlu(8.0, 0.0).x + mw + 12.0).ceil();
+    let width = (bx + bw + dlu(8.0, 0.0).x).max(dlu(214.0, 0.0).x).max(checks);
+    let r = dialog_frame(ctx, "fp-numeric", &t("dlg-numeric-title"), vec2(width, dlu(0.0, 130.0).y), |ui, body| {
+        let rr = |r: [f32; 4]| dlu_rect(body.min, r).translate(vec2(if r[0] >= 60.0 { dx } else { 0.0 }, 0.0));
+        let lr = |y: f32| Rect::from_min_size(dlu_rect(body.min, [14.0, y, 0.0, 10.0]).min, vec2(dlu(46.0, 0.0).x - 4.0 + dx, dlu(0.0, 10.0).y));
         let o = body.min;
-        if let Some(m) = fields::combo(ui, "nt-mode", dlu_rect(o, [8.0, 8.0, 120.0, 13.0]), &["Skalieren", "Größe ändern", "Drehen"], Some(d.mode), true) {
+        if let Some(m) = fields::combo(ui, "nt-mode", Rect::from_min_size(dlu_rect(o, [8.0, 8.0, 120.0, 13.0]).min, vec2(mw, dlu(0.0, 13.0).y)), &refs(&modes), Some(d.mode), true) {
             d.mode = m;
         }
         match d.mode {
             2 => {
-                label(ui, o, [14.0, 34.0, 40.0, 10.0], "Winkel:");
-                if let Some(t) = fields::text(ui, "nt-angle", dlu_rect(o, [60.0, 32.0, 40.0, 13.0]), &fields::fmt_num(d.angle, 1), true)
+                label(ui, o, lr(34.0), &angle_l);
+                if let Some(t) = fields::text(ui, "nt-angle", rr([60.0, 32.0, 40.0, 13.0]), &fields::fmt_num(d.angle, 1), true)
                     && let Some(v) = fields::parse_num(&t)
                 {
                     d.angle = v.clamp(-360.0, 360.0);
                 }
-                label(ui, o, [104.0, 34.0, 10.0, 10.0], "°");
+                label(ui, o, rr([104.0, 34.0, 10.0, 10.0]), "°");
             }
             m => {
-                let (a, b, unit) = if m == 1 { (d.w, d.h, "Pixel") } else { (d.sx, d.sy, "%") };
-                for (k, (lab, v)) in [("Breite:", a), ("Höhe:", b)].iter().enumerate() {
+                let (a, b, unit) = if m == 1 { (d.w, d.h, px_l.as_str()) } else { (d.sx, d.sy, "%") };
+                for (k, (lab, v)) in [(&wh[0], a), (&wh[1], b)].iter().enumerate() {
                     let y = 32.0 + k as f32 * 18.0;
-                    label(ui, o, [14.0, y + 2.0, 40.0, 10.0], lab);
-                    if let Some(t) = fields::text(ui, ("nt-v", m, k), dlu_rect(o, [60.0, y, 50.0, 13.0]), &fields::fmt_num(*v, 1), true)
+                    label(ui, o, lr(y + 2.0), lab);
+                    if let Some(t) = fields::text(ui, ("nt-v", m, k), rr([60.0, y, 50.0, 13.0]), &fields::fmt_num(*v, 1), true)
                         && let Some(nv) = fields::parse_num(&t)
                     {
                         let nv = nv.max(0.0);
@@ -418,21 +478,22 @@ pub fn show_numeric_transform(ctx: &egui::Context, st: &mut AppState) {
                             }
                         }
                     }
-                    label(ui, o, [114.0, y + 2.0, 30.0, 10.0], unit);
+                    label(ui, o, Rect::from_min_size(rr([114.0, y + 2.0, 30.0, 10.0]).min, vec2(dlu(30.0, 0.0).x + du, dlu(0.0, 10.0).y)), unit);
                 }
             }
         }
-        if let Some(b) = fields::checkbox(ui, "nt-attrs", dlu_rect(o, [8.0, 74.0, 120.0, 10.0]), "Attribute skalieren", d.scale_attrs, d.mode != 2) {
+        if let Some(b) = fields::checkbox(ui, "nt-attrs", dlu_rect(o, [8.0, 74.0, 120.0, 10.0]).with_max_x(body.right() - 4.0), &attrs_l, d.scale_attrs, d.mode != 2) {
             d.scale_attrs = b;
         }
-        if let Some(b) = fields::checkbox(ui, "nt-constrain", dlu_rect(o, [8.0, 88.0, 120.0, 10.0]), "Proportionen beibehalten", d.constrain, d.mode != 2) {
+        if let Some(b) = fields::checkbox(ui, "nt-constrain", dlu_rect(o, [8.0, 88.0, 120.0, 10.0]).with_max_x(body.right() - 4.0), &constrain_l, d.constrain, d.mode != 2) {
             d.constrain = b;
         }
         let p = d.params();
-        if push_button(ui, dlu_rect(o, [150.0, 8.0, 56.0, 14.0]), "OK", true, p.is_some()) {
+        let bh = dlu(0.0, 14.0).y;
+        if push_button(ui, Rect::from_min_size(egui::pos2(o.x + bx, dlu_rect(o, [0.0, 8.0, 0.0, 0.0]).top()), vec2(bw, bh)), &ok_l, true, p.is_some()) {
             result = Some(true);
         }
-        if push_button(ui, dlu_rect(o, [150.0, 26.0, 56.0, 14.0]), "Abbrechen", false, true) {
+        if push_button(ui, Rect::from_min_size(egui::pos2(o.x + bx, dlu_rect(o, [0.0, 26.0, 0.0, 0.0]).top()), vec2(bw, bh)), &cancel_l, false, true) {
             result = Some(false);
         }
         let _ = Rect::NOTHING;

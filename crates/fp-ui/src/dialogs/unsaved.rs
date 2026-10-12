@@ -1,8 +1,8 @@
 //! Ungespeichert-Abfrage beim Schließen und Beenden (Ja / Nein / Abbrechen wie das Original).
 
-use super::{dialog_frame, push_button, DialogClose};
+use super::{dialog_frame, push_button, t, DialogClose};
 use crate::app_state::AppState;
-use egui::{pos2, vec2, Rect};
+use egui::{vec2, Rect};
 use fp_engine::DocId;
 use serde_json::json;
 
@@ -52,7 +52,8 @@ pub fn without_last_extension(name: &str) -> &str {
 }
 
 /// Zugriffstaste ohne Alt (Windows-Meldungsfenster), nur ohne Textfeldfokus.
-fn access(ui: &egui::Ui, k: egui::Key) -> bool {
+fn access(ui: &egui::Ui, k: Option<egui::Key>) -> bool {
+    let Some(k) = k else { return false };
     !ui.ctx().text_edit_focused() && ui.input(|i| i.key_pressed(k) && !i.modifiers.ctrl)
 }
 
@@ -78,22 +79,24 @@ pub fn show(ctx: &egui::Context, st: &mut AppState) {
     };
     let title = st.session.document(id).map(|d| d.title.clone()).unwrap_or_default();
     let mut answer: Option<u8> = None;
-    let r = dialog_frame(ctx, "fp-unsaved", "Firepixel", vec2(420.0, 120.0), |ui, body| {
+    let (yes, no, cancel) = (t("btn-yes"), t("btn-no"), t("btn-cancel"));
+    let text = fp_i18n::tr!("dlg-unsaved-text", name = without_last_extension(&title));
+    let row_w = super::button_row_w(ctx, &[&yes, &no, &cancel], 76.0, 6.0);
+    let w = 420f32.max(row_w + 24.0);
+    // langer Text (Dateiname, andere Sprachen): Höhe wächst mit dem Umbruch
+    let th = super::wrapped_h(ctx, &text, w - 76.0);
+    let r = dialog_frame(ctx, "fp-unsaved", "Firepixel", vec2(w, 120f32.max(20.0 + th + 56.0).ceil()), |ui, body| {
         let theme = crate::theme::Theme::current(ui.ctx());
         crate::icons::paint(ui.painter(), Rect::from_min_size(body.min + vec2(18.0, 20.0), vec2(28.0, 28.0)), crate::icons::Icon::Info, &crate::icons::IconStyle::new(&theme, None, true));
-        super::put_left(
-            ui,
-            Rect::from_min_size(body.min + vec2(60.0, 20.0), vec2(body.width() - 76.0, 44.0)),
-            egui::Label::new(format!("Änderungen an {} speichern?", without_last_extension(&title))).wrap(),
-        );
-        let y = body.bottom() - 34.0;
-        if push_button(ui, Rect::from_min_size(pos2(body.right() - 252.0, y), vec2(76.0, 23.0)), "&Ja", true, true) || access(ui, egui::Key::J) {
+        super::put_left(ui, Rect::from_min_size(body.min + vec2(60.0, 20.0), vec2(body.width() - 76.0, th.max(44.0))), egui::Label::new(text.as_str()).wrap());
+        let b = super::button_row(ui.ctx(), body.right() - 12.0, body.bottom() - 34.0, &[&yes, &no, &cancel], 76.0, 23.0, 6.0);
+        if push_button(ui, b[0], &yes, true, true) || access(ui, super::access_key(&yes)) {
             answer = Some(0);
         }
-        if push_button(ui, Rect::from_min_size(pos2(body.right() - 170.0, y), vec2(76.0, 23.0)), "&Nein", false, true) || access(ui, egui::Key::N) {
+        if push_button(ui, b[1], &no, false, true) || access(ui, super::access_key(&no)) {
             answer = Some(1);
         }
-        if push_button(ui, Rect::from_min_size(pos2(body.right() - 88.0, y), vec2(76.0, 23.0)), "Abbrechen", false, true) {
+        if push_button(ui, b[2], &cancel, false, true) || access(ui, super::access_key(&cancel)) {
             answer = Some(2);
         }
     });

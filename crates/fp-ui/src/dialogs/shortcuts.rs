@@ -6,7 +6,7 @@
 //! erst OK speichert (fp-engine `shortcuts::save_custom_set`, Satzwahl über
 //! `edit.keyboardShortcuts`), Abbrechen verwirft alles.
 
-use super::{dialog_frame, push_button, DialogClose};
+use super::{dialog_frame, push_button, refs, t, DialogClose};
 use crate::app_state::{Action, AppState};
 use crate::inspector::fields;
 use crate::theme::Theme;
@@ -75,7 +75,8 @@ pub fn rows(st: &AppState, set: &ShortcutSet, section: usize, filter: &str) -> V
                 continue;
             }
             let Some(cmd) = info.fw_cmd.clone() else { continue };
-            let path = info.menu_path.join(" ▸ ");
+            // Deutsch: Pfad aus dem Register wie bisher; andere Sprachen: übersetzter Menüpfad
+            let path = if fp_i18n::current_language() == fp_i18n::SOURCE_LANG { info.menu_path.join(" ▸ ") } else { crate::menu::command_path(st, &info.name) };
             if !f.is_empty() && !path.to_lowercase().contains(&f) {
                 continue;
             }
@@ -84,7 +85,7 @@ pub fn rows(st: &AppState, set: &ShortcutSet, section: usize, filter: &str) -> V
         out.sort_by(|a, b| a.1.cmp(&b.1));
     } else {
         for t in fp_engine::tools::TOOLS {
-            let label = t.label.to_string();
+            let label = crate::panels::common::tool_label(t.id);
             if !f.is_empty() && !label.to_lowercase().contains(&f) {
                 continue;
             }
@@ -106,7 +107,7 @@ fn set_keys(set: &mut ShortcutSet, id: &str, keys: Vec<Shortcut>) -> Result<(), 
     match id.split_once(':') {
         Some(("cmd", c)) => set.set_command(c, keys),
         Some(("tool", g)) => set.set_tool(g, keys),
-        _ => Err("unbekannter Eintrag".into()),
+        _ => Err(t("dlg-sc-unknown-entry")),
     }
 }
 
@@ -114,11 +115,16 @@ fn set_keys(set: &mut ShortcutSet, id: &str, keys: Vec<Shortcut>) -> Result<(), 
 fn conflict(st: &AppState, set: &ShortcutSet, sc: &Shortcut, except: &str, tool: bool) -> Option<(String, String)> {
     if tool {
         let guid = set.tools_for(sc).into_iter().find(|g| format!("tool:{g}") != except)?;
-        let label = fp_engine::tools::TOOLS.iter().find(|t| fp_engine::shortcuts::normalize_guid(t.guid) == guid).map(|t| t.label.to_string()).unwrap_or_else(|| guid.to_string());
+        let label = fp_engine::tools::TOOLS.iter().find(|t| fp_engine::shortcuts::normalize_guid(t.guid) == guid).map(|t| crate::panels::common::tool_label(t.id)).unwrap_or_else(|| guid.to_string());
         return Some((format!("tool:{guid}"), label));
     }
     let cmd = set.commands_for(sc).into_iter().find(|c| format!("cmd:{c}") != except)?;
-    let label = st.session.registry().by_fw_cmd(cmd).map(|c| c.info().menu_path.join(" ▸ ")).unwrap_or_else(|| cmd.to_string());
+    let label = st
+        .session
+        .registry()
+        .by_fw_cmd(cmd)
+        .map(|c| if fp_i18n::current_language() == fp_i18n::SOURCE_LANG { c.info().menu_path.join(" ▸ ") } else { crate::menu::command_path(st, &c.info().name) })
+        .unwrap_or_else(|| cmd.to_string());
     Some((format!("cmd:{cmd}"), label))
 }
 
@@ -134,14 +140,15 @@ fn captured_key(ui: &egui::Ui) -> Option<Shortcut> {
 
 /// HTML-Übersicht eines Satzes (Exportieren).
 pub fn set_html(st: &AppState, set: &ShortcutSet) -> String {
-    let mut s = format!("<!DOCTYPE html>\n<html><head><meta charset=\"utf-8\"><title>Tastaturkurzbefehle: {}</title></head><body>\n<h1>Tastaturkurzbefehle: {}</h1>\n", set.name, set.name);
-    for (title, sec) in [("Menübefehle", 0), ("Werkzeuge", 1)] {
+    let heading = fp_i18n::tr!("dlg-sc-html-title", name = set.name.as_str()).replace('&', "&amp;").replace('<', "&lt;");
+    let mut s = format!("<!DOCTYPE html>\n<html><head><meta charset=\"utf-8\"><title>{heading}</title></head><body>\n<h1>{heading}</h1>\n");
+    for (title, sec) in [(t("dlg-sc-menu-commands"), 0), (t("dlg-sc-tools"), 1)] {
         s.push_str(&format!("<h2>{title}</h2>\n<table border=\"1\" cellpadding=\"3\">\n"));
         for (_, label, keys) in rows(st, set, sec, "") {
             if keys.is_empty() {
                 continue;
             }
-            let k: Vec<String> = keys.iter().map(|k| k.display_de()).collect();
+            let k: Vec<String> = keys.iter().map(crate::menu::shortcut_text).collect();
             s.push_str(&format!("<tr><td>{}</td><td>{}</td></tr>\n", label.replace('&', "&amp;").replace('<', "&lt;"), k.join(", ")));
         }
         s.push_str("</table>\n");
@@ -155,11 +162,31 @@ pub fn show(ctx: &egui::Context, st: &mut AppState) {
     let Some(mut d) = st.dialogs.shortcuts.clone() else { return };
     let mut result = None;
     let mut switch_to: Option<String> = None;
-    let r = dialog_frame(ctx, "fp-shortcuts", "Tastaturkurzbefehle", vec2(640.0, 560.0), |ui, body| {
+    // Texte der aktuellen Sprache; Spalten und Knöpfe wachsen mit (Deutsch: Lage wie bisher)
+    let set_l = t("dlg-sc-current-set");
+    let btn_l = super::tl(&["dlg-sc-duplicate", "dlg-sc-rename", "dlg-sc-export", "dlg-sc-delete"]);
+    let sections = super::tl(&["dlg-sc-menu-commands", "dlg-sc-tools"]);
+    let (search_l, keys_l, press_l, ok_l, cancel_l) = (t("dlg-sc-search"), t("dlg-sc-shortcut"), t("dlg-sc-press-key"), t("btn-ok"), t("btn-cancel"));
+    let assign_ls = [t("dlg-sc-assign"), t("dlg-sc-reassign")];
+    let dx = super::extra_w(ctx, &[&set_l], 110.0 - 4.0);
+    let bw = super::buttons_w(ctx, &refs(&btn_l), 68.0);
+    let bx0 = 316.0 + dx;
+    let sec_w = super::combo_fit_w(ctx, &refs(&sections), 160.0);
+    let ds = sec_w - 160.0;
+    let dk = super::extra_w(ctx, &[&keys_l], 110.0 - 4.0);
+    let dp = super::extra_w(ctx, &[&press_l], 160.0 - 4.0);
+    let aw = super::buttons_w(ctx, &[&assign_ls[0], &assign_ls[1]], 90.0);
+    let width = 640f32
+        .max(28.0 + bx0 + 4.0 * (bw + 4.0))
+        .max(28.0 + 170.0 + ds + 136.0 + super::text_w(ctx, &search_l))
+        .max(28.0 + 160.0 + dp + 170.0 + 6.0 + aw)
+        .max(28.0 + 110.0 + dk + 220.0 + 6.0 + 58.0)
+        .ceil();
+    let r = dialog_frame(ctx, "fp-shortcuts", &t("dlg-sc-title"), vec2(width, 560.0), |ui, body| {
         let theme = Theme::current(ui.ctx());
         let c = &theme.colors;
         let o = body.min + vec2(14.0, 14.0);
-        fields::label(ui, Rect::from_min_size(o, vec2(110.0, 20.0)), "Aktueller Satz:", true);
+        super::fit_label(ui, Rect::from_min_size(o, vec2(110.0 + dx, 20.0)), &set_l, true);
         let mut names = set_names();
         names.retain(|n| !d.delete.iter().any(|x| x.eq_ignore_ascii_case(n)));
         if !names.iter().any(|n| n.eq_ignore_ascii_case(&d.work.name)) {
@@ -167,23 +194,24 @@ pub fn show(ctx: &egui::Context, st: &mut AppState) {
         }
         let refs: Vec<&str> = names.iter().map(|s| s.as_str()).collect();
         let cur = names.iter().position(|n| n.eq_ignore_ascii_case(&d.work.name));
-        if let Some(i) = fields::combo(ui, "sc-set", Rect::from_min_size(o + vec2(116.0, 0.0), vec2(190.0, 20.0)), &refs, cur, true) {
+        if let Some(i) = fields::combo(ui, "sc-set", Rect::from_min_size(o + vec2(116.0 + dx, 0.0), vec2(190.0, 20.0)), &refs, cur, true) {
             switch_to = Some(names[i].clone());
         }
         let ro = d.read_only();
-        let btns = [("Duplizieren", true), ("Umbenennen", !ro), ("Exportieren", true), ("Löschen", !ro)];
+        let btns = [(&btn_l[0], true), (&btn_l[1], !ro), (&btn_l[2], true), (&btn_l[3], !ro)];
         for (k, (label, en)) in btns.iter().enumerate() {
-            let br = Rect::from_min_size(o + vec2(316.0 + k as f32 * 72.0, 0.0), vec2(68.0, 20.0));
+            let br = Rect::from_min_size(o + vec2(bx0 + k as f32 * (bw + 4.0), 0.0), vec2(bw, 20.0));
             if fields::button(ui, ("sc-btn", k), br, label, *en) {
                 match k {
-                    0 => d.name_edit = Some((false, format!("{} Kopie", d.work.name))),
+                    0 => d.name_edit = Some((false, fp_i18n::tr!("dlg-sc-copy-name", name = d.work.name.as_str()))),
                     1 => d.name_edit = Some((true, d.work.name.clone())),
                     2 => {
                         let html = set_html(st, &d.work);
-                        if let Some(p) = super::panel_menus::pick_save(st, "Satz exportieren", &format!("{}.html", d.work.name), &[("HTML (*.html)", &["html", "htm"])]) {
+                        let html_filter = t("dlg-sc-html-filter");
+                        if let Some(p) = super::panel_menus::pick_save(st, &t("dlg-sc-export-set"), &format!("{}.html", d.work.name), &[(html_filter.as_str(), &["html", "htm"])]) {
                             d.message = Some(match std::fs::write(&p, html) {
-                                Ok(()) => format!("Exportiert: {}", p.display()),
-                                Err(e) => format!("Export fehlgeschlagen: {e}"),
+                                Ok(()) => fp_i18n::tr!("dlg-export-file-done", path = p.display().to_string()),
+                                Err(e) => fp_i18n::tr!("dlg-export-failed", error = e.to_string()),
                             });
                         }
                     }
@@ -196,16 +224,16 @@ pub fn show(ctx: &egui::Context, st: &mut AppState) {
         }
         // Name für Duplizieren/Umbenennen
         if let Some((rename, name)) = d.name_edit.clone() {
-            let nr = Rect::from_min_size(o + vec2(316.0, 24.0), vec2(212.0, 20.0));
+            let nr = Rect::from_min_size(o + vec2(bx0, 24.0), vec2(212.0, 20.0));
             let mut n = name.clone();
             if let Some(t) = fields::text(ui, "sc-name", nr, &name, true) {
                 n = t;
                 d.name_edit = Some((rename, n.clone()));
             }
-            if fields::button(ui, "sc-name-ok", Rect::from_min_size(nr.right_top() + vec2(4.0, 0.0), vec2(56.0, 20.0)), "OK", !n.trim().is_empty()) {
+            if fields::button(ui, "sc-name-ok", Rect::from_min_size(nr.right_top() + vec2(4.0, 0.0), vec2(super::button_w(ui.ctx(), &ok_l, 56.0), 20.0)), &ok_l, !n.trim().is_empty()) {
                 let n = n.trim().to_string();
                 if fp_engine::shortcuts::builtin_set(&n).is_some() {
-                    d.message = Some(format!("„{n}“ ist der Name eines mitgelieferten Satzes."));
+                    d.message = Some(fp_i18n::tr!("dlg-sc-builtin-name", name = n.as_str()));
                 } else {
                     if rename && !d.work.name.eq_ignore_ascii_case(&n) {
                         d.delete.push(d.work.name.clone());
@@ -216,14 +244,14 @@ pub fn show(ctx: &egui::Context, st: &mut AppState) {
                 d.name_edit = None;
             }
         }
-        if let Some(i) = fields::combo(ui, "sc-section", Rect::from_min_size(o + vec2(0.0, 30.0), vec2(160.0, 20.0)), &["Menübefehle", "Werkzeuge"], Some(d.section), true) {
+        if let Some(i) = fields::combo(ui, "sc-section", Rect::from_min_size(o + vec2(0.0, 30.0), vec2(sec_w, 20.0)), &super::refs(&sections), Some(d.section), true) {
             d.section = i;
             d.selected = None;
         }
-        if let Some(t) = fields::text(ui, "sc-filter", Rect::from_min_size(o + vec2(170.0, 30.0), vec2(130.0, 20.0)), &d.filter, true) {
+        if let Some(t) = fields::text(ui, "sc-filter", Rect::from_min_size(o + vec2(170.0 + ds, 30.0), vec2(130.0, 20.0)), &d.filter, true) {
             d.filter = t;
         }
-        ui.painter().text(o + vec2(306.0, 40.0), Align2::LEFT_CENTER, "Suchen", theme.small_font(), c.text_weak);
+        ui.painter().text(o + vec2(306.0 + ds, 40.0), Align2::LEFT_CENTER, search_l.as_str(), theme.small_font(), c.text_weak);
         let list = Rect::from_min_max(o + vec2(0.0, 60.0), pos2(body.right() - 14.0, body.bottom() - 150.0));
         ui.painter().rect_filled(list, 0.0, c.list_bg);
         ui.painter().rect_stroke(list, 0.0, Stroke::new(1.0, c.list_border), StrokeKind::Inside);
@@ -240,8 +268,8 @@ pub fn show(ctx: &egui::Context, st: &mut AppState) {
                     ui.painter().rect_filled(rr, 0.0, c.list_hover_bg);
                 }
                 crate::widgets::text_clipped(ui.painter(), pos2(rr.left() + 6.0, rr.center().y), Align2::LEFT_CENTER, path, theme.ui_font(), c.text, rr.width() * 0.68);
-                let k: Vec<String> = keys.iter().map(|k| k.display_de()).collect();
-                ui.painter().text(pos2(rr.left() + rr.width() * 0.7, rr.center().y), Align2::LEFT_CENTER, k.join(", "), theme.ui_font(), c.text_weak);
+                let k: Vec<String> = keys.iter().map(crate::menu::shortcut_text).collect();
+                crate::widgets::text_clipped(ui.painter(), pos2(rr.left() + rr.width() * 0.7, rr.center().y), Align2::LEFT_CENTER, &k.join(", "), theme.ui_font(), c.text_weak, rr.width() * 0.3 - 6.0);
                 if resp.clicked() {
                     d.selected = Some(id.clone());
                     d.selected_key = (!keys.is_empty()).then_some(0);
@@ -250,14 +278,14 @@ pub fn show(ctx: &egui::Context, st: &mut AppState) {
         });
         // Kürzel der Auswahl
         let y = list.bottom() + 8.0;
-        fields::label(ui, Rect::from_min_size(pos2(o.x, y), vec2(100.0, 20.0)), "Tastenkürzel:", d.selected.is_some());
+        super::fit_label(ui, Rect::from_min_size(pos2(o.x, y), vec2(106.0 + dk, 20.0)), &keys_l, d.selected.is_some());
         let keys: Vec<Shortcut> = d.selected.as_deref().map(|id| keys_of(&d.work, id).to_vec()).unwrap_or_default();
-        let kl = Rect::from_min_size(pos2(o.x + 110.0, y), vec2(220.0, 60.0));
+        let kl = Rect::from_min_size(pos2(o.x + 110.0 + dk, y), vec2(220.0, 60.0));
         let inner = fields::list_box(ui, kl);
         let mut kc = ui.new_child(egui::UiBuilder::new().max_rect(inner));
         kc.spacing_mut().item_spacing = vec2(0.0, 0.0);
         for (i, k) in keys.iter().enumerate() {
-            if fields::list_item(&mut kc, &k.display_de(), d.selected_key == Some(i)).clicked() {
+            if fields::list_item(&mut kc, &crate::menu::shortcut_text(k), d.selected_key == Some(i)).clicked() {
                 d.selected_key = Some(i);
             }
         }
@@ -279,8 +307,8 @@ pub fn show(ctx: &egui::Context, st: &mut AppState) {
                 d.selected_key = None;
             }
         }
-        fields::label(ui, Rect::from_min_size(pos2(o.x, y + 68.0), vec2(160.0, 20.0)), "Drücken Sie die Taste:", can_edit);
-        let pr = Rect::from_min_size(pos2(o.x + 160.0, y + 68.0), vec2(170.0, 20.0));
+        super::fit_label(ui, Rect::from_min_size(pos2(o.x, y + 68.0), vec2(156.0 + dp, 20.0)), &press_l, can_edit);
+        let pr = Rect::from_min_size(pos2(o.x + 160.0 + dp, y + 68.0), vec2(170.0, 20.0));
         let presp = ui.interact(pr, egui::Id::new("sc-press"), if can_edit { Sense::click() } else { Sense::hover() });
         if presp.clicked() {
             d.capturing = true;
@@ -293,7 +321,7 @@ pub fn show(ctx: &egui::Context, st: &mut AppState) {
             d.capturing = false;
         }
         fields::field_frame(ui, pr, can_edit, d.capturing && can_edit);
-        let ptxt = d.pressed.map(|k| k.display_de()).unwrap_or_else(|| if d.capturing { "…".into() } else { String::new() });
+        let ptxt = d.pressed.map(|k| crate::menu::shortcut_text(&k)).unwrap_or_else(|| if d.capturing { "…".into() } else { String::new() });
         ui.painter().text(pos2(pr.left() + 4.0, pr.center().y), Align2::LEFT_CENTER, ptxt, theme.ui_font(), c.field_text);
         // Konflikt (6261)
         let tool = d.section == 1;
@@ -302,10 +330,10 @@ pub fn show(ctx: &egui::Context, st: &mut AppState) {
             _ => None,
         };
         if let Some((_, label)) = &conf {
-            ui.painter().text(pos2(o.x, y + 100.0), Align2::LEFT_CENTER, format!("Bereits vergeben an: {label}"), theme.small_font(), c.icon_red);
+            crate::widgets::text_clipped(ui.painter(), pos2(o.x, y + 100.0), Align2::LEFT_CENTER, &fp_i18n::tr!("dlg-sc-conflict", target = label.as_str()), theme.small_font(), c.icon_red, body.width() - 28.0);
         }
-        let assign_label = if conf.is_some() { "Neu zuweisen" } else { "Zuweisen" };
-        let assign = fields::button(ui, "sc-assign", Rect::from_min_size(pos2(pr.right() + 6.0, pr.top()), vec2(90.0, 20.0)), assign_label, can_edit && d.pressed.is_some());
+        let assign_label = if conf.is_some() { &assign_ls[1] } else { &assign_ls[0] };
+        let assign = fields::button(ui, "sc-assign", Rect::from_min_size(pos2(pr.right() + 6.0, pr.top()), vec2(aw, 20.0)), assign_label, can_edit && d.pressed.is_some());
         if (assign || (add_clicked && d.pressed.is_some()))
             && let (Some(id), Some(k)) = (d.selected.clone(), d.pressed)
         {
@@ -329,15 +357,17 @@ pub fn show(ctx: &egui::Context, st: &mut AppState) {
             d.capturing = true;
         }
         if ro {
-            ui.painter().text(pos2(o.x, y + 118.0), Align2::LEFT_CENTER, "Mitgelieferte Sätze sind schreibgeschützt: zum Ändern zuerst „Duplizieren“.", theme.small_font(), c.text_weak);
+            // Hinweis bricht bei längeren Texten um (Platz bis zur Meldungszeile)
+            super::text_block(ui, Rect::from_min_size(pos2(o.x, y + 111.0), vec2(body.width() - 28.0, 28.0)), egui::RichText::new(t("dlg-sc-read-only")).font(theme.small_font()).color(c.text_weak));
         }
+        let b = super::button_row(ui.ctx(), body.right() - 16.0, body.bottom() - 36.0, &[&ok_l, &cancel_l], 76.0, 23.0, 8.0);
         if let Some(m) = &d.message {
-            ui.painter().text(pos2(o.x, body.bottom() - 24.0), Align2::LEFT_CENTER, m, theme.small_font(), c.text);
+            crate::widgets::text_clipped(ui.painter(), pos2(o.x, body.bottom() - 24.0), Align2::LEFT_CENTER, m, theme.small_font(), c.text, b[0].left() - 8.0 - o.x);
         }
-        if push_button(ui, Rect::from_min_size(pos2(body.right() - 176.0, body.bottom() - 36.0), vec2(76.0, 23.0)), "OK", true, true) {
+        if push_button(ui, b[0], &ok_l, true, true) {
             result = Some(true);
         }
-        if push_button(ui, Rect::from_min_size(pos2(body.right() - 92.0, body.bottom() - 36.0), vec2(76.0, 23.0)), "Abbrechen", false, true) {
+        if push_button(ui, b[1], &cancel_l, false, true) {
             result = Some(false);
         }
     });

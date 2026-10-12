@@ -3,7 +3,7 @@
 //! (19123).
 
 use super::form::{Field, FormDialog};
-use super::{dialog_frame, dialog_frame_resizable, push_button, DialogClose};
+use super::{dialog_frame, dialog_frame_resizable, push_button, t, DialogClose};
 use crate::app_state::{Action, AppState};
 use crate::inspector::fields;
 use crate::inspector::glyphs::Glyph;
@@ -24,12 +24,17 @@ pub struct Confirm {
 pub fn show_confirm(ctx: &egui::Context, st: &mut AppState) {
     let Some(c) = st.dialogs.confirm.clone() else { return };
     let mut result = None;
-    let r = dialog_frame(ctx, "fp-confirm", &c.title, vec2(400.0, 120.0), |ui, body| {
-        super::put_left(ui, Rect::from_min_size(body.min + vec2(16.0, 16.0), vec2(body.width() - 32.0, 50.0)), egui::Label::new(c.text.as_str()).wrap());
-        if push_button(ui, Rect::from_min_size(pos2(body.right() - 176.0, body.bottom() - 34.0), vec2(76.0, 23.0)), "Ja", true, true) {
+    let (yes, no) = (t("btn-yes"), t("btn-no"));
+    let w = 400f32.max(super::button_row_w(ctx, &[&yes, &no], 76.0, 8.0) + 32.0);
+    // längere Rückfragen (andere Sprachen): Höhe wächst mit dem Umbruch
+    let th = super::wrapped_h(ctx, &c.text, w - 32.0);
+    let r = dialog_frame(ctx, "fp-confirm", &c.title, vec2(w, 120f32.max(16.0 + th + 54.0).ceil()), |ui, body| {
+        super::put_left(ui, Rect::from_min_size(body.min + vec2(16.0, 16.0), vec2(body.width() - 32.0, th.max(50.0))), egui::Label::new(c.text.as_str()).wrap());
+        let b = super::button_row(ui.ctx(), body.right() - 16.0, body.bottom() - 34.0, &[&yes, &no], 76.0, 23.0, 8.0);
+        if push_button(ui, b[0], &yes, true, true) || access(ui, super::access_key(&yes)) {
             result = Some(true);
         }
-        if push_button(ui, Rect::from_min_size(pos2(body.right() - 92.0, body.bottom() - 34.0), vec2(76.0, 23.0)), "Nein", false, true) {
+        if push_button(ui, b[1], &no, false, true) || access(ui, super::access_key(&no)) {
             result = Some(false);
         }
     });
@@ -41,6 +46,12 @@ pub fn show_confirm(ctx: &egui::Context, st: &mut AppState) {
         (Some(false), _) | (_, DialogClose::Cancelled) => st.dialogs.confirm = None,
         _ => {}
     }
+}
+
+/// Zugriffstaste ohne Alt (Meldungsfenster), nur ohne Textfeldfokus.
+fn access(ui: &egui::Ui, k: Option<egui::Key>) -> bool {
+    let Some(k) = k else { return false };
+    !ui.ctx().text_edit_focused() && ui.input(|i| i.key_pressed(k) && !i.modifiers.ctrl)
 }
 
 // ---------------------------------------------------------------------- Texteditor
@@ -91,7 +102,7 @@ pub fn show_text_editor(ctx: &egui::Context, st: &mut AppState) {
     let Some(mut d) = st.dialogs.text_editor.clone() else { return };
     let mut result = None;
     let mut apply = false;
-    let r = dialog_frame_resizable(ctx, "fp-texteditor", "Texteditor", vec2(560.0, 380.0), |ui, body| {
+    let r = dialog_frame_resizable(ctx, "fp-texteditor", &t("dlg-te-title"), vec2(560.0, 380.0), |ui, body| {
         let theme = Theme::current(ui.ctx());
         let c = &theme.colors;
         let o = body.min + vec2(12.0, 12.0);
@@ -104,7 +115,7 @@ pub fn show_text_editor(ctx: &egui::Context, st: &mut AppState) {
         if let Some(v) = fields::number(ui, "te-size", Rect::from_min_size(o + vec2(186.0, 0.0), vec2(44.0, 20.0)), Some(Rect::from_min_size(o + vec2(232.0, 0.0), vec2(14.0, 20.0))), Some(d.size), (1.0, 5000.0), 1, true) {
             d.size = v;
         }
-        let toggles = [(Glyph::Bold, d.bold, "Fett"), (Glyph::Italic, d.italic, "Kursiv"), (Glyph::Underline, d.underline, "Unterstrichen")];
+        let toggles = [(Glyph::Bold, d.bold, t("dlg-te-bold")), (Glyph::Italic, d.italic, t("dlg-te-italic")), (Glyph::Underline, d.underline, t("dlg-te-underline"))];
         for (k, (g, on, tip)) in toggles.iter().enumerate() {
             if fields::toggle(ui, ("te-st", k), Rect::from_min_size(o + vec2(256.0 + k as f32 * 24.0, 0.0), vec2(22.0, 20.0)), *g, *on, true, tip) {
                 match k {
@@ -114,7 +125,7 @@ pub fn show_text_editor(ctx: &egui::Context, st: &mut AppState) {
                 }
             }
         }
-        for (k, (g, tip)) in [(Glyph::AlignLeft, "Linksbündig"), (Glyph::AlignCenter, "Zentriert"), (Glyph::AlignRight, "Rechtsbündig"), (Glyph::AlignJustify, "Blocksatz"), (Glyph::AlignStretch, "Erzwungener Blocksatz")].iter().enumerate() {
+        for (k, (g, tip)) in [(Glyph::AlignLeft, t("dlg-te-align-left")), (Glyph::AlignCenter, t("dlg-te-align-center")), (Glyph::AlignRight, t("dlg-te-align-right")), (Glyph::AlignJustify, t("dlg-te-align-justify")), (Glyph::AlignStretch, t("dlg-te-align-stretch"))].iter().enumerate() {
             if fields::toggle(ui, ("te-al", k), Rect::from_min_size(o + vec2(338.0 + k as f32 * 24.0, 0.0), vec2(22.0, 20.0)), *g, d.align == k as i32, true, tip) {
                 d.align = k as i32;
             }
@@ -124,22 +135,26 @@ pub fn show_text_editor(ctx: &egui::Context, st: &mut AppState) {
         ui.painter().rect_stroke(tr, 0.0, Stroke::new(1.0, c.field_border), StrokeKind::Inside);
         let font = if d.show_font { egui::FontId::proportional((d.size as f32).clamp(8.0, 48.0)) } else { theme.ui_font() };
         ui.put(tr.shrink(4.0), egui::TextEdit::multiline(&mut d.text).frame(egui::Frame::NONE).font(font).desired_width(tr.width() - 8.0));
-        if let Some(b) = fields::checkbox(ui, "te-show", Rect::from_min_size(pos2(o.x, body.bottom() - 60.0), vec2(160.0, 16.0)), "Schrift anzeigen", d.show_font, true) {
+        let show_l = t("dlg-te-show-font");
+        let sw = (18.0 + super::text_w(ui.ctx(), &show_l)).max(160.0);
+        if let Some(b) = fields::checkbox(ui, "te-show", Rect::from_min_size(pos2(o.x, body.bottom() - 60.0), vec2(sw, 16.0)), &show_l, d.show_font, true) {
             d.show_font = b;
         }
-        ui.painter().text(pos2(o.x + 170.0, body.bottom() - 52.0), Align2::LEFT_CENTER, format!("{} Zeichen", d.text.chars().count()), theme.small_font(), c.text_weak);
-        if push_button(ui, Rect::from_min_size(pos2(body.right() - 260.0, body.bottom() - 36.0), vec2(76.0, 23.0)), "Anwenden", false, true) {
+        ui.painter().text(pos2(o.x + sw + 10.0, body.bottom() - 52.0), Align2::LEFT_CENTER, fp_i18n::tr!("dlg-te-chars", n = d.text.chars().count()), theme.small_font(), c.text_weak);
+        let (apply_l, ok_l, cancel_l) = (t("dlg-te-apply"), t("btn-ok"), t("btn-cancel"));
+        let b = super::button_row(ui.ctx(), body.right() - 16.0, body.bottom() - 36.0, &[&apply_l, &ok_l, &cancel_l], 76.0, 23.0, 8.0);
+        if push_button(ui, b[0], &apply_l, false, true) {
             apply = true;
         }
-        if push_button(ui, Rect::from_min_size(pos2(body.right() - 176.0, body.bottom() - 36.0), vec2(76.0, 23.0)), "OK", true, true) {
+        if push_button(ui, b[1], &ok_l, true, true) {
             result = Some(true);
         }
-        if push_button(ui, Rect::from_min_size(pos2(body.right() - 92.0, body.bottom() - 36.0), vec2(76.0, 23.0)), "Abbrechen", false, true) {
+        if push_button(ui, b[2], &cancel_l, false, true) {
             result = Some(false);
         }
     });
     if apply || result == Some(true) {
-        st.push(Action::Run("history.replay".into(), json!({"commands": d.commands(), "label": "Texteditor"})));
+        st.push(Action::Run("history.replay".into(), json!({"commands": d.commands(), "label": t("dlg-te-title")})));
     }
     match (result, r) {
         (Some(_), _) | (_, DialogClose::Cancelled) => st.dialogs.text_editor = None,
@@ -153,15 +168,17 @@ pub fn show_text_editor(ctx: &egui::Context, st: &mut AppState) {
 pub fn show_html_slice(ctx: &egui::Context, st: &mut AppState) {
     let Some(mut text) = st.dialogs.html_slice.clone() else { return };
     let mut result = None;
-    let r = dialog_frame_resizable(ctx, "fp-htmlslice", "HTML-Segment bearbeiten", vec2(460.0, 300.0), |ui, body| {
+    let (ok_l, cancel_l) = (t("btn-ok"), t("btn-cancel"));
+    let r = dialog_frame_resizable(ctx, "fp-htmlslice", &t("dlg-html-slice-title"), vec2(460.0, 300.0), |ui, body| {
         let theme = Theme::current(ui.ctx());
         let tr = Rect::from_min_max(body.min + vec2(12.0, 12.0), pos2(body.right() - 12.0, body.bottom() - 48.0));
         ui.painter().rect_filled(tr, 0.0, theme.colors.field_bg);
         ui.put(tr.shrink(3.0), egui::TextEdit::multiline(&mut text).frame(egui::Frame::NONE).font(egui::FontId::monospace(12.0)).desired_width(tr.width() - 6.0));
-        if push_button(ui, Rect::from_min_size(pos2(body.right() - 176.0, body.bottom() - 36.0), vec2(76.0, 23.0)), "OK", true, true) {
+        let b = super::button_row(ui.ctx(), body.right() - 16.0, body.bottom() - 36.0, &[&ok_l, &cancel_l], 76.0, 23.0, 8.0);
+        if push_button(ui, b[0], &ok_l, true, true) {
             result = Some(true);
         }
-        if push_button(ui, Rect::from_min_size(pos2(body.right() - 92.0, body.bottom() - 36.0), vec2(76.0, 23.0)), "Abbrechen", false, true) {
+        if push_button(ui, b[1], &cancel_l, false, true) {
             result = Some(false);
         }
     });
@@ -185,40 +202,40 @@ pub fn stroke_options_form(st: &AppState) -> Option<FormDialog> {
     // ohne Auswahl: Pinsel der Werkzeugvorgabe (`ToolOptions::new_brush`, ohne Vorschau)
     if sel.is_empty() {
         let b = fp_engine::commands::panel::tool_brush(&st.session.tools.options);
-        return Some(FormDialog::new("stroke-options", "Strich bearbeiten", "pi.tool.brush", brush_fields(&b)).with_width(380.0).with_transform(tool_stroke_params));
+        return Some(FormDialog::new("stroke-options", &t("dlg-stroke-title"), "pi.tool.brush", brush_fields(&b)).with_width(380.0).with_transform(tool_stroke_params));
     }
     let b = sel.iter().find_map(|e| fp_engine::docops::path_attrs_of(e).and_then(|a| a.brush.clone()))?;
-    Some(FormDialog::new("stroke-options", "Strich bearbeiten", "pi.brush", brush_fields(&b)).with_preview().with_width(380.0).with_transform(stroke_params))
+    Some(FormDialog::new("stroke-options", &t("dlg-stroke-title"), "pi.brush", brush_fields(&b)).with_preview().with_width(380.0).with_transform(stroke_params))
 }
 
 /// Felder von „Strich bearbeiten“ mit den Werten des Pinsels `b`.
 fn brush_fields(b: &fp_model::Brush) -> Vec<Field> {
     let pct = |v: i32| (v as f64 / 10.0).round();
     let fields = vec![
-        Field::caption("Spitze"),
-        Field::slider("diameter", "Spitzengröße:", b.diameter as f64, 1.0, 1000.0).unit("px"),
-        Field::slider("softness", "Kantenweichheit:", pct(b.softness), 0.0, 100.0).unit("%"),
-        Field::choice_of("shape", "Form:", &["Eckig", "Rund"], vec![json!(0), json!(1)], usize::from(b.shape != 0)),
-        Field::slider("aspect", "Seitenverhältnis:", pct(b.aspect).max(1.0), 1.0, 100.0).unit("%"),
-        Field::slider("angle", "Winkel:", b.angle as f64, 0.0, 359.0).unit("°"),
-        Field::caption("Auftrag"),
-        Field::slider("spacing", "Abstand:", pct(b.spacing), 0.0, 1000.0).unit("%"),
-        Field::slider("flowRate", "Flussrate:", pct(b.flow_rate), 0.0, 100.0).unit("%"),
-        Field::number("tipCount", "Spitzen:", b.tip_count.max(1) as f64, 1.0, 32.0),
-        Field::caption("Strichmuster"),
-        Field::choice_of("dashCount", "Strichmuster:", &["Keines", "Ein Paar", "Zwei Paare", "Drei Paare"], vec![json!(0), json!(1), json!(2), json!(3)], b.dash_count.clamp(0, 3) as usize),
-        Field::number("_on0", "Strich 1:", b.dash_on[0] as f64, 0.0, 1000.0).unit("px"),
-        Field::number("_off0", "Lücke 1:", b.dash_off[0] as f64, 0.0, 1000.0).unit("px"),
-        Field::number("_on1", "Strich 2:", b.dash_on[1] as f64, 0.0, 1000.0).unit("px"),
-        Field::number("_off1", "Lücke 2:", b.dash_off[1] as f64, 0.0, 1000.0).unit("px"),
-        Field::number("_on2", "Strich 3:", b.dash_on[2] as f64, 0.0, 1000.0).unit("px"),
-        Field::number("_off2", "Lücke 3:", b.dash_off[2] as f64, 0.0, 1000.0).unit("px"),
-        Field::caption("Empfindlichkeit"),
-        Field::number("_PZ", "Größe ← Druck:", pct(b.sensitivity(b'P', b'Z')), 0.0, 100.0).unit("%"),
-        Field::number("_SZ", "Größe ← Geschwindigkeit:", pct(b.sensitivity(b'S', b'Z')), 0.0, 100.0).unit("%"),
-        Field::number("_PO", "Deckkraft ← Druck:", pct(b.sensitivity(b'P', b'O')), 0.0, 100.0).unit("%"),
-        Field::number("_SO", "Deckkraft ← Geschwindigkeit:", pct(b.sensitivity(b'S', b'O')), 0.0, 100.0).unit("%"),
-        Field::number("_RR", "Streuung ← Zufall:", pct(b.sensitivity(b'R', b'R')), 0.0, 100.0).unit("%"),
+        Field::caption(t("dlg-brush-cap-tip").as_str()),
+        Field::slider("diameter", t("dlg-brush-tip-size").as_str(), b.diameter as f64, 1.0, 1000.0).unit("px"),
+        Field::slider("softness", t("dlg-brush-edge-softness").as_str(), pct(b.softness), 0.0, 100.0).unit("%"),
+        Field::choice_of("shape", t("dlg-brush-shape").as_str(), &[t("dlg-brush-shape-square").as_str(), t("dlg-brush-shape-round").as_str()], vec![json!(0), json!(1)], usize::from(b.shape != 0)),
+        Field::slider("aspect", t("dlg-brush-aspect").as_str(), pct(b.aspect).max(1.0), 1.0, 100.0).unit("%"),
+        Field::slider("angle", t("dlg-lbl-angle").as_str(), b.angle as f64, 0.0, 359.0).unit("°"),
+        Field::caption(t("dlg-brush-cap-ink").as_str()),
+        Field::slider("spacing", t("dlg-lbl-distance").as_str(), pct(b.spacing), 0.0, 1000.0).unit("%"),
+        Field::slider("flowRate", t("dlg-brush-flow").as_str(), pct(b.flow_rate), 0.0, 100.0).unit("%"),
+        Field::number("tipCount", t("dlg-brush-tips").as_str(), b.tip_count.max(1) as f64, 1.0, 32.0),
+        Field::caption(t("dlg-brush-cap-dash").as_str()),
+        Field::choice_of("dashCount", t("dlg-brush-dash").as_str(), &[t("dlg-dash-none").as_str(), t("dlg-dash-one").as_str(), t("dlg-dash-two").as_str(), t("dlg-dash-three").as_str()], vec![json!(0), json!(1), json!(2), json!(3)], b.dash_count.clamp(0, 3) as usize),
+        Field::number("_on0", t("dlg-brush-dash-on-1").as_str(), b.dash_on[0] as f64, 0.0, 1000.0).unit("px"),
+        Field::number("_off0", t("dlg-brush-dash-off-1").as_str(), b.dash_off[0] as f64, 0.0, 1000.0).unit("px"),
+        Field::number("_on1", t("dlg-brush-dash-on-2").as_str(), b.dash_on[1] as f64, 0.0, 1000.0).unit("px"),
+        Field::number("_off1", t("dlg-brush-dash-off-2").as_str(), b.dash_off[1] as f64, 0.0, 1000.0).unit("px"),
+        Field::number("_on2", t("dlg-brush-dash-on-3").as_str(), b.dash_on[2] as f64, 0.0, 1000.0).unit("px"),
+        Field::number("_off2", t("dlg-brush-dash-off-3").as_str(), b.dash_off[2] as f64, 0.0, 1000.0).unit("px"),
+        Field::caption(t("dlg-brush-cap-sensitivity").as_str()),
+        Field::number("_PZ", t("dlg-brush-size-pressure").as_str(), pct(b.sensitivity(b'P', b'Z')), 0.0, 100.0).unit("%"),
+        Field::number("_SZ", t("dlg-brush-size-speed").as_str(), pct(b.sensitivity(b'S', b'Z')), 0.0, 100.0).unit("%"),
+        Field::number("_PO", t("dlg-brush-opacity-pressure").as_str(), pct(b.sensitivity(b'P', b'O')), 0.0, 100.0).unit("%"),
+        Field::number("_SO", t("dlg-brush-opacity-speed").as_str(), pct(b.sensitivity(b'S', b'O')), 0.0, 100.0).unit("%"),
+        Field::number("_RR", t("dlg-brush-scatter-random").as_str(), pct(b.sensitivity(b'R', b'R')), 0.0, 100.0).unit("%"),
     ];
     fields
 }
@@ -246,7 +263,7 @@ fn stroke_params(d: &FormDialog) -> Value {
     for k in ["PZ", "SZ", "PO", "SO", "RR"] {
         sens.insert(k.into(), json!(d.get(&format!("_{k}")).as_f64().unwrap_or(0.0).round() as i64));
     }
-    json!({"commands": [{"command": "pi.brush", "params": Value::Object(m)}, {"command": "element.setBrushSensitivity", "params": {"values": Value::Object(sens)}}], "label": "Strich bearbeiten"})
+    json!({"commands": [{"command": "pi.brush", "params": Value::Object(m)}, {"command": "element.setBrushSensitivity", "params": {"values": Value::Object(sens)}}], "label": t("dlg-stroke-title")})
 }
 
 // ---------------------------------------------------------------------- Neuer Stil
@@ -255,19 +272,19 @@ fn stroke_params(d: &FormDialog) -> Value {
 pub fn new_style_form(st: &AppState) -> FormDialog {
     let n = st.session.active().and_then(|d| d.doc.styles.as_ref().map(|s| s.len())).unwrap_or(0) + 1;
     let fields = vec![
-        Field::text("name", "Name:", &format!("Stil {n}")),
-        Field::caption("Eigenschaften"),
-        Field::check("_fillType", "Füllungstyp", true),
-        Field::check("_fillColor", "Füllfarbe", true),
-        Field::check("_effect", "Effekt", true),
-        Field::check("_strokeType", "Strichtyp", true),
-        Field::check("_strokeColor", "Strichfarbe", true),
-        Field::check("_font", "Textschrift", true),
-        Field::check("_size", "Textgröße", true),
-        Field::check("_style", "Textstil", true),
-        Field::check("_other", "Andere Textattribute", true),
+        Field::text("name", &t("dlg-lbl-name"), &fp_i18n::tr!("dlg-style-default-name", n = n)),
+        Field::caption(t("dlg-style-cap-props").as_str()),
+        Field::check("_fillType", t("dlg-style-fill-type").as_str(), true),
+        Field::check("_fillColor", t("dlg-style-fill-color").as_str(), true),
+        Field::check("_effect", t("dlg-style-effect").as_str(), true),
+        Field::check("_strokeType", t("dlg-style-stroke-type").as_str(), true),
+        Field::check("_strokeColor", t("dlg-style-stroke-color").as_str(), true),
+        Field::check("_font", t("dlg-style-font").as_str(), true),
+        Field::check("_size", t("dlg-style-size").as_str(), true),
+        Field::check("_style", t("dlg-style-style").as_str(), true),
+        Field::check("_other", t("dlg-style-other").as_str(), true),
     ];
-    FormDialog::new("new-style", "Neuer Stil", "pi.style.new", fields).with_transform(style_params)
+    FormDialog::new("new-style", &t("dlg-new-style-title"), "pi.style.new", fields).with_transform(style_params)
 }
 
 /// Parameter für `pi.style.new` (ZSFi/ZSOi-Bits wie in fp-model `Style`).

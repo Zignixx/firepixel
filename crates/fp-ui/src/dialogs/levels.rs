@@ -3,7 +3,7 @@
 //! Auto, Vorschau über den Verlauf wie bei den Formular-Dialogen.
 
 use super::form::{apply_preview, revert_preview, FormDialog};
-use super::{dialog_frame, push_button, DialogClose};
+use super::{dialog_frame, push_button, refs, t, tl, DialogClose};
 use crate::app_state::AppState;
 use crate::inspector::fields;
 use crate::theme::Theme;
@@ -11,7 +11,7 @@ use egui::{pos2, vec2, Align2, Color32, Id, Rect, Sense, Shape, Stroke, StrokeKi
 use fp_raster::filters::{CurvePoint, CurvesParams, LevelsChannel, LevelsParams};
 use serde_json::json;
 
-const CHANNELS: [&str; 4] = ["RGB", "Rot", "Grün", "Blau"];
+const CHANNELS: [&str; 4] = ["dlg-channel-rgb", "dlg-channel-red", "dlg-channel-green", "dlg-channel-blue"];
 
 /// Histogramme (Helligkeit, R, G, B) der ausgewählten Objekte.
 pub fn histogram(st: &AppState) -> [[u64; 256]; 4] {
@@ -70,7 +70,7 @@ impl LevelsDialog {
     /// Neuer Dialog (Histogramm der Auswahl).
     pub fn new(st: &AppState, live: bool) -> LevelsDialog {
         let base = if live { json!({"live": true}) } else { json!({}) };
-        LevelsDialog { params: LevelsParams::default(), channel: 0, preview: FormDialog::new("19111", "Tonwertkorrektur", "filter.adjustColor.levels", vec![]).with_base(base).with_preview(), hist: histogram(st), live }
+        LevelsDialog { params: LevelsParams::default(), channel: 0, preview: FormDialog::new("19111", &t("dlg-levels-title"), "filter.adjustColor.levels", vec![]).with_base(base).with_preview(), hist: histogram(st), live }
     }
 
     fn channel_mut(&mut self) -> &mut LevelsChannel {
@@ -97,18 +97,24 @@ pub fn show_levels(ctx: &egui::Context, st: &mut AppState) {
     let Some(mut d) = st.dialogs.levels.clone() else { return };
     let mut result = None;
     let mut auto = false;
-    let r = dialog_frame(ctx, "fp-levels", "Tonwertkorrektur", vec2(400.0, 330.0), |ui, body| {
+    let channels = tl(&CHANNELS);
+    let (ch_l, in_l, out_l, auto_l, prev_l, ok_l, cancel_l) = (t("dlg-channel"), t("dlg-levels-input"), t("dlg-levels-output"), t("dlg-auto"), t("dlg-preview"), t("btn-ok"), t("btn-cancel"));
+    let dch = super::extra_w(ctx, &[&ch_l], 40.0);
+    let dl = super::extra_w(ctx, &[&in_l, &out_l], 120.0);
+    let aw = super::button_w(ctx, &auto_l, 76.0);
+    let width = 400f32.max(14.0 + 46.0 + dch + 100.0 + 12.0 + aw + 16.0).max(14.0 + 124.0 + dl + 2.0 * 52.0 + 46.0 + 14.0).max(super::button_row_w(ctx, &[&ok_l, &cancel_l], 76.0, 8.0) + 16.0 + 14.0 + 18.0 + super::text_w(ctx, &prev_l) + 12.0).ceil();
+    let r = dialog_frame(ctx, "fp-levels", &t("dlg-levels-title"), vec2(width, 330.0), |ui, body| {
         let t = Theme::current(ui.ctx());
         let o = body.min + vec2(14.0, 12.0);
-        fields::label(ui, Rect::from_min_size(o, vec2(40.0, 20.0)), "Kanal:", true);
-        if let Some(c) = fields::combo(ui, "lv-ch", Rect::from_min_size(o + vec2(46.0, 0.0), vec2(100.0, 20.0)), &CHANNELS, Some(d.channel), true) {
+        super::fit_label(ui, Rect::from_min_size(o, vec2(40.0 + dch, 20.0)), &ch_l, true);
+        if let Some(c) = fields::combo(ui, "lv-ch", Rect::from_min_size(o + vec2(46.0 + dch, 0.0), vec2(super::combo_fit_w(ui.ctx(), &refs(&channels), 100.0), 20.0)), &refs(&channels), Some(d.channel), true) {
             d.channel = c;
         }
         let ch = *d.channel_mut();
-        fields::label(ui, Rect::from_min_size(o + vec2(0.0, 30.0), vec2(120.0, 20.0)), "Tonwertspreizung:", true);
+        super::fit_label(ui, Rect::from_min_size(o + vec2(0.0, 30.0), vec2(120.0 + dl, 20.0)), &in_l, true);
         let mut new = ch;
         for (k, (v, rng, dec)) in [(ch.source_low as f64, (0.0, 253.0), 0), (ch.gamma, (0.1, 10.0), 2), (ch.source_high as f64, (2.0, 255.0), 0)].iter().enumerate() {
-            if let Some(nv) = fields::number(ui, ("lv-in", k), Rect::from_min_size(o + vec2(124.0 + k as f32 * 52.0, 30.0), vec2(46.0, 20.0)), None, Some(*v), *rng, *dec, true) {
+            if let Some(nv) = fields::number(ui, ("lv-in", k), Rect::from_min_size(o + vec2(124.0 + dl + k as f32 * 52.0, 30.0), vec2(46.0, 20.0)), None, Some(*v), *rng, *dec, true) {
                 match k {
                     0 => new.source_low = (nv as i32).min(new.source_high - 2),
                     1 => new.gamma = nv,
@@ -150,9 +156,9 @@ pub fn show_levels(ctx: &egui::Context, st: &mut AppState) {
                 new.gamma = (tpos.ln() / 0.5f64.ln()).clamp(0.1, 10.0);
             }
         }
-        fields::label(ui, Rect::from_min_size(o + vec2(0.0, 206.0), vec2(120.0, 20.0)), "Tonwertumfang:", true);
+        super::fit_label(ui, Rect::from_min_size(o + vec2(0.0, 206.0), vec2(120.0 + dl, 20.0)), &out_l, true);
         for (k, v) in [ch.dest_low, ch.dest_high].iter().enumerate() {
-            if let Some(nv) = fields::number(ui, ("lv-out", k), Rect::from_min_size(o + vec2(124.0 + k as f32 * 104.0, 206.0), vec2(46.0, 20.0)), None, Some(*v as f64), (0.0, 255.0), 0, true) {
+            if let Some(nv) = fields::number(ui, ("lv-out", k), Rect::from_min_size(o + vec2(124.0 + dl + k as f32 * 104.0, 206.0), vec2(46.0, 20.0)), None, Some(*v as f64), (0.0, 255.0), 0, true) {
                 if k == 0 {
                     new.dest_low = nv as i32;
                 } else {
@@ -175,16 +181,17 @@ pub fn show_levels(ctx: &egui::Context, st: &mut AppState) {
         if new != ch {
             *d.channel_mut() = new;
         }
-        if let Some(b) = fields::checkbox(ui, "lv-prev", Rect::from_min_size(pos2(body.left() + 14.0, body.bottom() - 32.0), vec2(80.0, 16.0)), "Vorschau", d.preview.preview_on, true) {
+        if let Some(b) = fields::checkbox(ui, "lv-prev", Rect::from_min_size(pos2(body.left() + 14.0, body.bottom() - 32.0), vec2((18.0 + super::text_w(ui.ctx(), &prev_l)).max(80.0), 16.0)), &prev_l, d.preview.preview_on, true) {
             d.preview.preview_on = b;
         }
-        if fields::button(ui, "lv-auto", Rect::from_min_size(pos2(body.right() - 92.0, o.y), vec2(76.0, 22.0)), "Auto", true) {
+        if fields::button(ui, "lv-auto", Rect::from_min_size(pos2(body.right() - 16.0 - aw, o.y), vec2(aw, 22.0)), &auto_l, true) {
             auto = true;
         }
-        if push_button(ui, Rect::from_min_size(pos2(body.right() - 176.0, body.bottom() - 36.0), vec2(76.0, 23.0)), "OK", true, true) {
+        let b = super::button_row(ui.ctx(), body.right() - 16.0, body.bottom() - 36.0, &[&ok_l, &cancel_l], 76.0, 23.0, 8.0);
+        if push_button(ui, b[0], &ok_l, true, true) {
             result = Some(true);
         }
-        if push_button(ui, Rect::from_min_size(pos2(body.right() - 92.0, body.bottom() - 36.0), vec2(76.0, 23.0)), "Abbrechen", false, true) {
+        if push_button(ui, b[1], &cancel_l, false, true) {
             result = Some(false);
         }
         let _ = Align2::LEFT_TOP;
@@ -242,7 +249,7 @@ impl CurvesDialog {
     /// Neuer Dialog.
     pub fn new(st: &AppState, live: bool) -> CurvesDialog {
         let base = if live { json!({"live": true}) } else { json!({}) };
-        CurvesDialog { params: CurvesParams::default(), channel: 0, drag: None, preview: FormDialog::new("19112", "Gradationskurven", "filter.adjustColor.curves", vec![]).with_base(base).with_preview(), hist: histogram(st), live }
+        CurvesDialog { params: CurvesParams::default(), channel: 0, drag: None, preview: FormDialog::new("19112", &t("dlg-curves-title"), "filter.adjustColor.curves", vec![]).with_base(base).with_preview(), hist: histogram(st), live }
     }
 
     fn points_mut(&mut self) -> &mut Vec<CurvePoint> {
@@ -269,11 +276,18 @@ pub fn show_curves(ctx: &egui::Context, st: &mut AppState) {
     let Some(mut d) = st.dialogs.curves.clone() else { return };
     let mut result = None;
     let mut auto = false;
-    let r = dialog_frame(ctx, "fp-curves", "Gradationskurven", vec2(400.0, 380.0), |ui, body| {
+    let channels = tl(&CHANNELS);
+    let (ch_l, auto_l, reset_l, prev_l, ok_l, cancel_l) = (t("dlg-channel"), t("dlg-auto"), t("dlg-reset"), t("dlg-preview"), t("btn-ok"), t("btn-cancel"));
+    let dch = super::extra_w(ctx, &[&ch_l], 40.0);
+    let aw = super::buttons_w(ctx, &[&auto_l, &reset_l], 76.0);
+    let io = fp_i18n::tr!("dlg-curves-io", input = "255", output = "255");
+    let io_w = super::max_text_w(ctx, &io.lines().collect::<Vec<_>>());
+    let width = 400f32.max(14.0 + 270.0 + io_w + 14.0).max(14.0 + 46.0 + dch + 100.0 + 12.0 + aw + 16.0).ceil();
+    let r = dialog_frame(ctx, "fp-curves", &t("dlg-curves-title"), vec2(width, 380.0), |ui, body| {
         let t = Theme::current(ui.ctx());
         let o = body.min + vec2(14.0, 12.0);
-        fields::label(ui, Rect::from_min_size(o, vec2(40.0, 20.0)), "Kanal:", true);
-        if let Some(c) = fields::combo(ui, "cv-ch", Rect::from_min_size(o + vec2(46.0, 0.0), vec2(100.0, 20.0)), &CHANNELS, Some(d.channel), true) {
+        super::fit_label(ui, Rect::from_min_size(o, vec2(40.0 + dch, 20.0)), &ch_l, true);
+        if let Some(c) = fields::combo(ui, "cv-ch", Rect::from_min_size(o + vec2(46.0 + dch, 0.0), vec2(super::combo_fit_w(ui.ctx(), &refs(&channels), 100.0), 20.0)), &refs(&channels), Some(d.channel), true) {
             d.channel = c;
             d.drag = None;
         }
@@ -344,20 +358,21 @@ pub fn show_curves(ctx: &egui::Context, st: &mut AppState) {
         }
         let hover = resp.hover_pos().map(from_screen);
         let (ix, oy) = hover.map(|p| (p.x, table[p.x as usize] as f32)).unwrap_or((0.0, 0.0));
-        ui.painter().text(o + vec2(270.0, 60.0), Align2::LEFT_TOP, format!("Eingabe: {ix:.0}\nAusgabe: {oy:.0}"), t.ui_font(), t.colors.text);
-        if fields::button(ui, "cv-auto", Rect::from_min_size(pos2(body.right() - 92.0, o.y), vec2(76.0, 22.0)), "Auto", true) {
+        ui.painter().text(o + vec2(270.0, 60.0), Align2::LEFT_TOP, fp_i18n::tr!("dlg-curves-io", input = format!("{ix:.0}"), output = format!("{oy:.0}")), t.ui_font(), t.colors.text);
+        if fields::button(ui, "cv-auto", Rect::from_min_size(pos2(body.right() - 16.0 - aw, o.y), vec2(aw, 22.0)), &auto_l, true) {
             auto = true;
         }
-        if fields::button(ui, "cv-reset", Rect::from_min_size(pos2(body.right() - 92.0, o.y + 28.0), vec2(76.0, 22.0)), "Zurücksetzen", true) {
+        if fields::button(ui, "cv-reset", Rect::from_min_size(pos2(body.right() - 16.0 - aw, o.y + 28.0), vec2(aw, 22.0)), &reset_l, true) {
             d.points_mut().clear();
         }
-        if let Some(b) = fields::checkbox(ui, "cv-prev", Rect::from_min_size(pos2(body.left() + 14.0, body.bottom() - 32.0), vec2(80.0, 16.0)), "Vorschau", d.preview.preview_on, true) {
+        if let Some(b) = fields::checkbox(ui, "cv-prev", Rect::from_min_size(pos2(body.left() + 14.0, body.bottom() - 32.0), vec2((18.0 + super::text_w(ui.ctx(), &prev_l)).max(80.0), 16.0)), &prev_l, d.preview.preview_on, true) {
             d.preview.preview_on = b;
         }
-        if push_button(ui, Rect::from_min_size(pos2(body.right() - 176.0, body.bottom() - 36.0), vec2(76.0, 23.0)), "OK", true, true) {
+        let b = super::button_row(ui.ctx(), body.right() - 16.0, body.bottom() - 36.0, &[&ok_l, &cancel_l], 76.0, 23.0, 8.0);
+        if push_button(ui, b[0], &ok_l, true, true) {
             result = Some(true);
         }
-        if push_button(ui, Rect::from_min_size(pos2(body.right() - 92.0, body.bottom() - 36.0), vec2(76.0, 23.0)), "Abbrechen", false, true) {
+        if push_button(ui, b[1], &cancel_l, false, true) {
             result = Some(false);
         }
     });

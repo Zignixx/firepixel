@@ -5,6 +5,7 @@
 //! Deckkraft 0..100, Weichheit 0..30). Dialoge mit Live-Vorschau über den Verlauf.
 
 use super::form::{Field, FormDialog};
+use super::t;
 use crate::app_state::AppState;
 use crate::inspector::fields;
 use crate::theme::Theme;
@@ -23,12 +24,26 @@ pub enum FxKind {
     Simple(&'static str),
 }
 
-/// Ein Eintrag des Live-Filter-Menüs.
+/// Ein Eintrag des Live-Filter-Menüs (`group`, `label`: Textschlüssel aus `filter.ftl`).
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Fx {
     pub group: &'static str,
     pub label: &'static str,
     pub kind: FxKind,
+}
+
+impl Fx {
+    /// Name in der aktuellen Sprache (ohne „...“).
+    pub fn name(&self) -> String {
+        t(self.label)
+    }
+    /// Menütext: Filter mit eigenem Dialog tragen „...“ wie im Original.
+    pub fn menu_text(&self) -> String {
+        match self.kind {
+            FxKind::Filter(_) => format!("{}...", t(self.label)),
+            _ => t(self.label),
+        }
+    }
 }
 
 const fn fx(group: &'static str, label: &'static str, kind: FxKind) -> Fx {
@@ -37,75 +52,44 @@ const fn fx(group: &'static str, label: &'static str, kind: FxKind) -> Fx {
 
 /// Menü in Original-Reihenfolge.
 pub const FX: &[Fx] = &[
-    fx("Abschrägung und Prägung", "Abschrägung innen", FxKind::Effect { name: "bevel", bevel: Some(0) }),
-    fx("Abschrägung und Prägung", "Abschrägung außen", FxKind::Effect { name: "bevel", bevel: Some(1) }),
-    fx("Abschrägung und Prägung", "Prägung eingelassen", FxKind::Effect { name: "bevel", bevel: Some(3) }),
-    fx("Abschrägung und Prägung", "Prägung erhaben", FxKind::Effect { name: "bevel", bevel: Some(2) }),
-    fx("Anpassen der Farbe", "Auto-Tonwertkorrektur", FxKind::Simple("autoLevels")),
-    fx("Anpassen der Farbe", "Farbfüllung", FxKind::Effect { name: "colorFill", bevel: None }),
-    fx("Anpassen der Farbe", "Farbton/Sättigung...", FxKind::Filter("filter.adjustColor.hueSaturation")),
-    fx("Anpassen der Farbe", "Gradationskurven...", FxKind::Filter("filter.adjustColor.curves")),
-    fx("Anpassen der Farbe", "Helligkeit/Kontrast...", FxKind::Filter("filter.adjustColor.brightnessContrast")),
-    fx("Anpassen der Farbe", "Tonwertkorrektur...", FxKind::Filter("filter.adjustColor.levels")),
-    fx("Anpassen der Farbe", "Umkehren", FxKind::Simple("invert")),
-    fx("Andere", "In Alpha konvertieren", FxKind::Simple("convertToAlpha")),
-    fx("Andere", "Kanten suchen", FxKind::Simple("findEdges")),
-    fx("Rauschen", "Rauschen hinzufügen...", FxKind::Filter("filter.noise.addNoise")),
-    fx("Schärfen", "Scharfzeichnen", FxKind::Simple("sharpen")),
-    fx("Schärfen", "Stark scharfzeichnen", FxKind::Simple("sharpenMore")),
-    fx("Schärfen", "Unscharf maskieren...", FxKind::Filter("filter.sharpen.unsharpMask")),
-    fx("Schatten und Glühen", "Einfarbiger Schatten", FxKind::Effect { name: "solidShadow", bevel: None }),
-    fx("Schatten und Glühen", "Glühen", FxKind::Effect { name: "glow", bevel: Some(4) }),
-    fx("Schatten und Glühen", "Innerer Schatten", FxKind::Effect { name: "innerShadow", bevel: None }),
-    fx("Schatten und Glühen", "Inneres Glühen", FxKind::Effect { name: "innerGlow", bevel: None }),
-    fx("Schatten und Glühen", "Schlagschatten", FxKind::Effect { name: "dropShadow", bevel: None }),
-    fx("Weichzeichnen", "Bewegungsunschärfe...", FxKind::Filter("filter.blur.motion")),
-    fx("Weichzeichnen", "Gaußscher Weichzeichner...", FxKind::Filter("filter.blur.gaussian")),
-    fx("Weichzeichnen", "Radialer Weichzeichner...", FxKind::Filter("filter.blur.radial")),
-    fx("Weichzeichnen", "Stark weichzeichnen", FxKind::Simple("blurMore")),
-    fx("Weichzeichnen", "Weichzeichnen", FxKind::Simple("blur")),
-    fx("Weichzeichnen", "Zoom-Weichzeichner...", FxKind::Filter("filter.blur.zoom")),
+    fx("effect-group-bevel", "effect-bevel-inner", FxKind::Effect { name: "bevel", bevel: Some(0) }),
+    fx("effect-group-bevel", "effect-bevel-outer", FxKind::Effect { name: "bevel", bevel: Some(1) }),
+    fx("effect-group-bevel", "effect-emboss-inset", FxKind::Effect { name: "bevel", bevel: Some(3) }),
+    fx("effect-group-bevel", "effect-emboss-raised", FxKind::Effect { name: "bevel", bevel: Some(2) }),
+    fx("effect-group-adjust-color", "filter-adjustColor-autoLevels", FxKind::Simple("autoLevels")),
+    fx("effect-group-adjust-color", "effect-color-fill", FxKind::Effect { name: "colorFill", bevel: None }),
+    fx("effect-group-adjust-color", "filter-adjustColor-hueSaturation", FxKind::Filter("filter.adjustColor.hueSaturation")),
+    fx("effect-group-adjust-color", "filter-adjustColor-curves", FxKind::Filter("filter.adjustColor.curves")),
+    fx("effect-group-adjust-color", "filter-adjustColor-brightnessContrast", FxKind::Filter("filter.adjustColor.brightnessContrast")),
+    fx("effect-group-adjust-color", "filter-adjustColor-levels", FxKind::Filter("filter.adjustColor.levels")),
+    fx("effect-group-adjust-color", "filter-adjustColor-invert", FxKind::Simple("invert")),
+    fx("effect-group-other", "filter-other-convertToAlpha", FxKind::Simple("convertToAlpha")),
+    fx("effect-group-other", "filter-other-findEdges", FxKind::Simple("findEdges")),
+    fx("effect-group-noise", "filter-noise-addNoise", FxKind::Filter("filter.noise.addNoise")),
+    fx("effect-group-sharpen", "filter-sharpen-sharpen", FxKind::Simple("sharpen")),
+    fx("effect-group-sharpen", "filter-sharpen-sharpenMore", FxKind::Simple("sharpenMore")),
+    fx("effect-group-sharpen", "filter-sharpen-unsharpMask", FxKind::Filter("filter.sharpen.unsharpMask")),
+    fx("effect-group-shadow-glow", "effect-solid-shadow", FxKind::Effect { name: "solidShadow", bevel: None }),
+    fx("effect-group-shadow-glow", "effect-glow", FxKind::Effect { name: "glow", bevel: Some(4) }),
+    fx("effect-group-shadow-glow", "effect-inner-shadow", FxKind::Effect { name: "innerShadow", bevel: None }),
+    fx("effect-group-shadow-glow", "effect-inner-glow", FxKind::Effect { name: "innerGlow", bevel: None }),
+    fx("effect-group-shadow-glow", "effect-drop-shadow", FxKind::Effect { name: "dropShadow", bevel: None }),
+    fx("effect-group-blur", "filter-blur-motion", FxKind::Filter("filter.blur.motion")),
+    fx("effect-group-blur", "filter-blur-gaussian", FxKind::Filter("filter.blur.gaussian")),
+    fx("effect-group-blur", "filter-blur-radial", FxKind::Filter("filter.blur.radial")),
+    fx("effect-group-blur", "filter-blur-blurMore", FxKind::Simple("blurMore")),
+    fx("effect-group-blur", "filter-blur-blur", FxKind::Simple("blur")),
+    fx("effect-group-blur", "filter-blur-zoom", FxKind::Filter("filter.blur.zoom")),
 ];
 
-/// Anzeigename eines Effekts in der Filterliste.
+/// Anzeigename eines Effekts in der Filterliste (Namen aus `filter.ftl` über
+/// `Effect::label_key`; unbekannte Effekte: Name aus der Datei bzw. „Effekt“).
 pub fn effect_label(e: &Effect) -> String {
-    match e.kind() {
-        EffectKind::BevelFamily => match e.get_f64("BevelType").unwrap_or(0.0) as i32 {
-            1 => "Abschrägung außen",
-            2 => "Prägung erhaben",
-            3 => "Prägung eingelassen",
-            4 => "Glühen",
-            _ => "Abschrägung innen",
-        }
-        .into(),
-        EffectKind::DropShadow => "Schlagschatten".into(),
-        EffectKind::InnerShadow => "Innerer Schatten".into(),
-        EffectKind::InnerGlow => "Inneres Glühen".into(),
-        EffectKind::SolidShadow => "Einfarbiger Schatten".into(),
-        EffectKind::ColorFill => "Farbfüllung".into(),
-        EffectKind::PhotoshopLive => "Photoshop-Live-Effekte".into(),
-        EffectKind::GaussianBlur => "Gaußscher Weichzeichner".into(),
-        EffectKind::Blur => "Weichzeichnen".into(),
-        EffectKind::BlurMore => "Stark weichzeichnen".into(),
-        EffectKind::MotionBlur => "Bewegungsunschärfe".into(),
-        EffectKind::RadialBlur => "Radialer Weichzeichner".into(),
-        EffectKind::ZoomBlur => "Zoom-Weichzeichner".into(),
-        EffectKind::Sharpen => "Scharfzeichnen".into(),
-        EffectKind::SharpenMore => "Stark scharfzeichnen".into(),
-        EffectKind::UnsharpMask => "Unscharf maskieren".into(),
-        EffectKind::AddNoise => "Rauschen hinzufügen".into(),
-        EffectKind::BrightnessContrast => "Helligkeit/Kontrast".into(),
-        EffectKind::HueSaturation => "Farbton/Sättigung".into(),
-        EffectKind::Curves => "Gradationskurven".into(),
-        EffectKind::Levels => "Tonwertkorrektur".into(),
-        EffectKind::AutoLevels => "Auto-Tonwertkorrektur".into(),
-        EffectKind::Invert => "Umkehren".into(),
-        EffectKind::FindEdges => "Kanten suchen".into(),
-        EffectKind::ConvertToAlpha => "In Alpha konvertieren".into(),
-        _ => e.ui_name().map(|s| s.to_string()).unwrap_or_else(|| "Effekt".into()),
+    match e.label_key() {
+        Some(key) => t(key),
+        None => e.ui_name().map(|s| s.to_string()).unwrap_or_else(|| t("effect-generic")),
     }
 }
-
 /// Hat der Effekt einen Einstellungsdialog?
 pub fn editable(e: &Effect) -> bool {
     matches!(
@@ -134,16 +118,16 @@ pub fn add_menu(ui: &mut Ui, resp: &Response, st: &mut AppState) {
     let mut special: Option<&str> = None;
     egui::Popup::menu(resp).frame(crate::menu::menu_frame(&theme)).show(|ui| {
         ui.spacing_mut().item_spacing = vec2(0.0, 0.0);
-        ui.menu_button("Optionen", |ui| {
-            if fields::list_item(ui, "Alle ein", false).clicked() {
+        ui.menu_button(t("dlg-fx-options"), |ui| {
+            if fields::list_item(ui, &t("dlg-fx-all-on"), false).clicked() {
                 special = Some("on");
                 ui.close();
             }
-            if fields::list_item(ui, "Alle aus", false).clicked() {
+            if fields::list_item(ui, &t("dlg-fx-all-off"), false).clicked() {
                 special = Some("off");
                 ui.close();
             }
-            if fields::list_item(ui, "Als Stil speichern...", false).clicked() {
+            if fields::list_item(ui, &t("dlg-fx-save-style"), false).clicked() {
                 special = Some("style");
                 ui.close();
             }
@@ -155,16 +139,16 @@ pub fn add_menu(ui: &mut Ui, resp: &Response, st: &mut AppState) {
             }
         }
         for g in groups {
-            ui.menu_button(g, |ui| {
+            ui.menu_button(t(g), |ui| {
                 for (i, f) in FX.iter().enumerate().filter(|(_, f)| f.group == g) {
-                    if fields::list_item(ui, f.label, false).clicked() {
+                    if fields::list_item(ui, &f.menu_text(), false).clicked() {
                         chosen = Some(i);
                         ui.close();
                     }
                 }
             });
         }
-        let _ = fields::list_item(ui, "Photoshop-Live-Effekte (noch nicht verfügbar)", false);
+        let _ = fields::list_item(ui, &t("dlg-fx-photoshop-unavailable"), false);
     });
     match special {
         Some("on") => st.run("pi.effects.visible", json!({"visible": true})),
@@ -334,70 +318,71 @@ fn with_target(st: &AppState, mut f: FormDialog) -> FormDialog {
 
 /// Dialog eines Live-Effekts (neu bzw. vorhandener Effekt `index`).
 pub fn effect_form(name: &str, bevel: Option<i32>, e: Option<&Effect>, index: Option<usize>, fill: fp_color::Argb) -> FormDialog {
-    let (title, fields): (&str, Vec<Field>) = match name {
+    let (title, fields): (String, Vec<Field>) = match name {
         "dropShadow" | "innerShadow" => {
             let (col, op) = hex_alpha(&txt(e, "ShadowColor", "#000000a6"));
             (
-                if name == "dropShadow" { "Schlagschatten" } else { "Innerer Schatten" },
+                if name == "dropShadow" { t("effect-drop-shadow") } else { t("effect-inner-shadow") },
                 vec![
-                    Field::slider("dist", "Abstand:", num(e, "ShadowDistance", 7.0), 0.0, 100.0),
-                    Field::slider("opacity", "Deckkraft:", op, 0.0, 100.0).unit("%"),
-                    Field::slider("soft", "Weichheit:", num(e, "ShadowBlur", 4.0), 0.0, 30.0),
-                    Field::slider("angle", "Winkel:", num(e, "ShadowAngle", 315.0), 0.0, 360.0).unit("°"),
-                    Field::color("color", "Farbe:", &col),
-                    Field::check("knockout", "Objekt aussparen", txt(e, "ShadowType", "0") == "1"),
+                    Field::slider("dist", t("dlg-lbl-distance").as_str(), num(e, "ShadowDistance", 7.0), 0.0, 100.0),
+                    Field::slider("opacity", t("dlg-lbl-opacity").as_str(), op, 0.0, 100.0).unit("%"),
+                    Field::slider("soft", t("dlg-lbl-softness").as_str(), num(e, "ShadowBlur", 4.0), 0.0, 30.0),
+                    Field::slider("angle", t("dlg-lbl-angle").as_str(), num(e, "ShadowAngle", 315.0), 0.0, 360.0).unit("°"),
+                    Field::color("color", t("dlg-lbl-color").as_str(), &col),
+                    Field::check("knockout", t("dlg-fx-knockout").as_str(), txt(e, "ShadowType", "0") == "1"),
                 ],
             )
         }
         "glow" => {
             let (col, op) = hex_alpha(&txt(e, "OuterBevelColor", &format!("#{:02x}{:02x}{:02x}ff", fill.r(), fill.g(), fill.b())));
             (
-                "Glühen",
+                t("effect-glow"),
                 vec![
-                    Field::slider("width", "Breite:", num(e, "GlowWidth", 4.0), 0.0, 35.0),
-                    Field::slider("opacity", "Deckkraft:", if e.is_some() { op } else { 65.0 }, 0.0, 100.0).unit("%"),
-                    Field::slider("soft", "Weichheit:", num(e, "MaskSoftness", 4.0), 0.0, 30.0),
-                    Field::slider("offset", "Glühversatz:", num(e, "GlowStartDistance", 0.0), 0.0, 100.0),
-                    Field::color("color", "Farbe:", &col),
+                    Field::slider("width", t("dlg-lbl-width").as_str(), num(e, "GlowWidth", 4.0), 0.0, 35.0),
+                    Field::slider("opacity", t("dlg-lbl-opacity").as_str(), if e.is_some() { op } else { 65.0 }, 0.0, 100.0).unit("%"),
+                    Field::slider("soft", t("dlg-lbl-softness").as_str(), num(e, "MaskSoftness", 4.0), 0.0, 30.0),
+                    Field::slider("offset", t("dlg-fx-glow-offset").as_str(), num(e, "GlowStartDistance", 0.0), 0.0, 100.0),
+                    Field::color("color", t("dlg-lbl-color").as_str(), &col),
                 ],
             )
         }
         "innerGlow" => {
             let (col, op) = hex_alpha(&txt(e, "OuterBevelColor", &format!("#{:02x}{:02x}{:02x}ff", fill.r(), fill.g(), fill.b())));
             (
-                "Inneres Glühen",
+                t("effect-inner-glow"),
                 vec![
-                    Field::slider("width", "Breite:", num(e, "GlowWidth", 4.0), 0.0, 35.0),
-                    Field::slider("opacity", "Deckkraft:", if e.is_some() { op } else { 65.0 }, 0.0, 100.0).unit("%"),
-                    Field::slider("soft", "Weichheit:", num(e, "MaskSoftness", 4.0), 0.0, 30.0),
-                    Field::slider("offset", "Glühversatz:", num(e, "GlowStartDistance", 0.0), 0.0, 100.0),
-                    Field::color("color", "Farbe:", &col),
+                    Field::slider("width", t("dlg-lbl-width").as_str(), num(e, "GlowWidth", 4.0), 0.0, 35.0),
+                    Field::slider("opacity", t("dlg-lbl-opacity").as_str(), if e.is_some() { op } else { 65.0 }, 0.0, 100.0).unit("%"),
+                    Field::slider("soft", t("dlg-lbl-softness").as_str(), num(e, "MaskSoftness", 4.0), 0.0, 30.0),
+                    Field::slider("offset", t("dlg-fx-glow-offset").as_str(), num(e, "GlowStartDistance", 0.0), 0.0, 100.0),
+                    Field::color("color", t("dlg-lbl-color").as_str(), &col),
                 ],
             )
         }
         "solidShadow" => {
             let c = txt(e, "color", "#000000ff");
             (
-                "Einfarbiger Schatten",
+                t("effect-solid-shadow"),
                 vec![
-                    Field::slider("angle", "Winkel:", num(e, "angle", 315.0), 0.0, 360.0).unit("°"),
-                    Field::slider("dist", "Abstand:", num(e, "distance", 7.0), 0.0, 100.0),
-                    Field::color("color", "Farbe:", if c == "#ffffff00" { "#000000ff" } else { &c }),
-                    Field::check("original", "Originalfarben verwenden", c == "#ffffff00"),
+                    Field::slider("angle", t("dlg-lbl-angle").as_str(), num(e, "angle", 315.0), 0.0, 360.0).unit("°"),
+                    Field::slider("dist", t("dlg-lbl-distance").as_str(), num(e, "distance", 7.0), 0.0, 100.0),
+                    Field::color("color", t("dlg-lbl-color").as_str(), if c == "#ffffff00" { "#000000ff" } else { &c }),
+                    Field::check("original", t("dlg-fx-use-original-colors").as_str(), c == "#ffffff00"),
                 ],
             )
         }
         "colorFill" => {
             let bl = num(e, "Blendmode", 0.0) as i64;
-            let names: Vec<&str> = crate::inspector::obj_quads::BLEND_ITEMS.iter().map(|b| b.0).collect();
+            let labels = crate::inspector::texte::blend_labels();
+            let names: Vec<&str> = labels.iter().map(|s| s.as_str()).collect();
             let vals: Vec<Value> = crate::inspector::obj_quads::BLEND_ITEMS.iter().map(|b| json!(b.1.max(0))).collect();
             let idx = crate::inspector::obj_quads::BLEND_ITEMS.iter().position(|b| b.1 as i64 == bl).unwrap_or(0);
             (
-                "Farbfüllung",
+                t("effect-color-fill"),
                 vec![
-                    Field::choice_of("blend", "Mischmodus:", &names, vals, idx),
-                    Field::color("color", "Farbe:", &txt(e, "Color", "#ff0000ff")),
-                    Field::slider("opacity", "Deckkraft:", num(e, "Opacity", 100.0), 0.0, 100.0).unit("%"),
+                    Field::choice_of("blend", t("dlg-lbl-blend-mode").as_str(), &names, vals, idx),
+                    Field::color("color", t("dlg-lbl-color").as_str(), &txt(e, "Color", "#ff0000ff")),
+                    Field::slider("opacity", t("dlg-lbl-opacity").as_str(), num(e, "Opacity", 100.0), 0.0, 100.0).unit("%"),
                 ],
             )
         }
@@ -406,24 +391,24 @@ pub fn effect_form(name: &str, bevel: Option<i32>, e: Option<&Effect>, index: Op
             let emboss = bt == 2 || bt == 3;
             let mut v = Vec::new();
             if emboss {
-                v.push(Field::choice_of("type", "Art:", &["Prägung erhaben", "Prägung eingelassen"], vec![json!(2), json!(3)], if bt == 3 { 1 } else { 0 }));
+                v.push(Field::choice_of("type", t("dlg-lbl-kind").as_str(), &[t("effect-emboss-raised").as_str(), t("effect-emboss-inset").as_str()], vec![json!(2), json!(3)], if bt == 3 { 1 } else { 0 }));
             } else {
-                v.push(Field::choice_of("type", "Art:", &["Abschrägung innen", "Abschrägung außen"], vec![json!(0), json!(1)], if bt == 1 { 1 } else { 0 }));
-                v.push(Field::choice("slope", "Kantenform:", &["Flach", "Glatt", "Abfallend", "Rahmen 1", "Rahmen 2", "Ring", "Kräuseln"], num(e, "SlopeType", 0.0).clamp(0.0, 6.0) as usize));
+                v.push(Field::choice_of("type", t("dlg-lbl-kind").as_str(), &[t("effect-bevel-inner").as_str(), t("effect-bevel-outer").as_str()], vec![json!(0), json!(1)], if bt == 1 { 1 } else { 0 }));
+                v.push(Field::choice("slope", t("dlg-fx-edge-shape").as_str(), &[t("dlg-fx-slope-flat").as_str(), t("dlg-fx-slope-smooth").as_str(), t("dlg-fx-slope-sloped").as_str(), t("dlg-fx-slope-frame1").as_str(), t("dlg-fx-slope-frame2").as_str(), t("dlg-fx-slope-ring").as_str(), t("dlg-fx-slope-ruffle").as_str()], num(e, "SlopeType", 0.0).clamp(0.0, 6.0) as usize));
             }
-            v.push(Field::slider("width", "Breite:", num(e, "BevelWidth", 10.0), 0.0, 35.0));
-            v.push(Field::slider("contrast", "Kontrast:", num(e, "BevelContrast", 75.0), 0.0, 100.0).unit("%"));
-            v.push(Field::slider("soft", "Weichheit:", num(e, "AngleSoftness", 3.0), 0.0, 10.0));
-            v.push(Field::slider("angle", "Winkel:", num(e, "LightAngle", 135.0), 0.0, 360.0).unit("°"));
+            v.push(Field::slider("width", t("dlg-lbl-width").as_str(), num(e, "BevelWidth", 10.0), 0.0, 35.0));
+            v.push(Field::slider("contrast", t("dlg-lbl-contrast").as_str(), num(e, "BevelContrast", 75.0), 0.0, 100.0).unit("%"));
+            v.push(Field::slider("soft", t("dlg-lbl-softness").as_str(), num(e, "AngleSoftness", 3.0), 0.0, 10.0));
+            v.push(Field::slider("angle", t("dlg-lbl-angle").as_str(), num(e, "LightAngle", 135.0), 0.0, 360.0).unit("°"));
             if emboss {
-                v.push(Field::check("show", "Objekt anzeigen", txt(e, "ShowObject", "false").eq_ignore_ascii_case("true")));
+                v.push(Field::check("show", t("dlg-fx-show-object").as_str(), txt(e, "ShowObject", "false").eq_ignore_ascii_case("true")));
             } else {
-                v.push(Field::choice("button", "Schaltflächen-Vorgabe:", &["Erhaben", "Hervorgehoben", "Eingelassen", "Umgekehrt"], num(e, "ButtonState", 0.0).clamp(0.0, 3.0) as usize));
+                v.push(Field::choice("button", t("dlg-fx-button-preset").as_str(), &[t("dlg-fx-button-raised").as_str(), t("dlg-fx-button-highlighted").as_str(), t("dlg-fx-button-inset").as_str(), t("dlg-fx-button-inverted").as_str()], num(e, "ButtonState", 0.0).clamp(0.0, 3.0) as usize));
                 if bt == 1 {
-                    v.push(Field::color("color", "Farbe:", &txt(e, "OuterBevelColor", &format!("#{:02x}{:02x}{:02x}ff", fill.r(), fill.g(), fill.b()))));
+                    v.push(Field::color("color", t("dlg-lbl-color").as_str(), &txt(e, "OuterBevelColor", &format!("#{:02x}{:02x}{:02x}ff", fill.r(), fill.g(), fill.b()))));
                 }
             }
-            (if emboss { "Prägung" } else { "Abschrägung" }, v)
+            (if emboss { t("dlg-fx-emboss") } else { t("dlg-fx-bevel") }, v)
         }
     };
     let mut base = json!({"effect": name, "bevel": bevel.unwrap_or(-1)});
@@ -441,62 +426,62 @@ pub fn effect_form(name: &str, bevel: Option<i32>, e: Option<&Effect>, index: Op
         base["index"] = json!(i);
     }
     let command = if index.is_some() { "pi.effect.set" } else { "element.addEffect" };
-    FormDialog::new(&format!("fx-{name}"), title, command, fields).with_base(base).with_transform(effect_params).with_preview()
+    FormDialog::new(&format!("fx-{name}"), &title, command, fields).with_base(base).with_transform(effect_params).with_preview()
 }
 
 /// Dialog eines vorhandenen Bitmap-Filter-Effekts (Parameter wie im Dateiformat, 06 §2.2).
 fn filter_effect_form(e: &Effect, index: usize) -> Option<FormDialog> {
     let n = |k: &str, d: f64| e.get_f64(k).unwrap_or(d);
-    let (title, keys, fields): (&str, Vec<(&str, &str)>, Vec<Field>) = match e.kind() {
-        EffectKind::GaussianBlur => ("Gaußscher Weichzeichner", vec![("radius", "gaussian_blur_radius")], vec![Field::slider("radius", "Radius:", n("gaussian_blur_radius", 1.0), 0.1, 250.0).decimals(1)]),
+    let (title, keys, fields): (String, Vec<(&str, &str)>, Vec<Field>) = match e.kind() {
+        EffectKind::GaussianBlur => (t("dlg-title-gaussian-blur"), vec![("radius", "gaussian_blur_radius")], vec![Field::slider("radius", t("dlg-lbl-radius").as_str(), n("gaussian_blur_radius", 1.0), 0.1, 250.0).decimals(1)]),
         EffectKind::MotionBlur => (
-            "Bewegungsunschärfe",
+t("dlg-title-motion-blur"),
             vec![("angle", "motion_blur_angle"), ("distance", "motion_blur_distance")],
-            vec![Field::slider("angle", "Winkel:", n("motion_blur_angle", 90.0), 0.0, 360.0), Field::slider("distance", "Abstand:", n("motion_blur_distance", 10.0), 1.0, 100.0)],
+            vec![Field::slider("angle", t("dlg-lbl-angle").as_str(), n("motion_blur_angle", 90.0), 0.0, 360.0), Field::slider("distance", t("dlg-lbl-distance").as_str(), n("motion_blur_distance", 10.0), 1.0, 100.0)],
         ),
         EffectKind::RadialBlur => (
-            "Radiales Weichzeichnen",
+t("dlg-title-radial-blur"),
             vec![("amount", "radial_blur_amount"), ("quality", "radial_blur_quality")],
-            vec![Field::slider("amount", "Stärke:", n("radial_blur_amount", 30.0), 1.0, 100.0), Field::slider("quality", "Qualität:", n("radial_blur_quality", 20.0), 1.0, 100.0)],
+            vec![Field::slider("amount", t("dlg-lbl-amount").as_str(), n("radial_blur_amount", 30.0), 1.0, 100.0), Field::slider("quality", t("dlg-lbl-quality").as_str(), n("radial_blur_quality", 20.0), 1.0, 100.0)],
         ),
         EffectKind::ZoomBlur => (
-            "Zentriertes Weichzeichnen",
+t("dlg-title-zoom-blur"),
             vec![("amount", "zoom_blur_amount"), ("quality", "zoom_blur_quality")],
-            vec![Field::slider("amount", "Stärke:", n("zoom_blur_amount", 30.0), 1.0, 100.0), Field::slider("quality", "Qualität:", n("zoom_blur_quality", 20.0), 1.0, 100.0)],
+            vec![Field::slider("amount", t("dlg-lbl-amount").as_str(), n("zoom_blur_amount", 30.0), 1.0, 100.0), Field::slider("quality", t("dlg-lbl-quality").as_str(), n("zoom_blur_quality", 20.0), 1.0, 100.0)],
         ),
         EffectKind::UnsharpMask => (
-            "Unscharf maskieren",
+t("dlg-title-unsharp-mask"),
             vec![("amount", "unsharp_mask_amount"), ("radius", "unsharp_mask_radius"), ("threshold", "unsharp_mask_threshold")],
             vec![
-                Field::slider("amount", "Schärfe:", n("unsharp_mask_amount", 50.0), 1.0, 500.0),
-                Field::slider("radius", "Pixelradius:", n("unsharp_mask_radius", 1.0), 0.1, 250.0).decimals(1),
-                Field::slider("threshold", "Schwellenwert:", n("unsharp_mask_threshold", 0.0), 0.0, 255.0),
+                Field::slider("amount", t("dlg-lbl-sharpen-amount").as_str(), n("unsharp_mask_amount", 50.0), 1.0, 500.0),
+                Field::slider("radius", t("dlg-lbl-pixel-radius").as_str(), n("unsharp_mask_radius", 1.0), 0.1, 250.0).decimals(1),
+                Field::slider("threshold", t("dlg-lbl-threshold").as_str(), n("unsharp_mask_threshold", 0.0), 0.0, 255.0),
             ],
         ),
         EffectKind::AddNoise => (
-            "Rauschen hinzufügen",
+t("dlg-title-add-noise"),
             vec![("amount", "add_noise_amount"), ("use_color", "add_noise_use_color")],
-            vec![Field::slider("amount", "Stärke:", n("add_noise_amount", 50.0), 1.0, 400.0), Field::check("use_color", "Farbe", e.get_bool("add_noise_use_color").unwrap_or(true))],
+            vec![Field::slider("amount", t("dlg-lbl-amount").as_str(), n("add_noise_amount", 50.0), 1.0, 400.0), Field::check("use_color", t("dlg-lbl-color-check").as_str(), e.get_bool("add_noise_use_color").unwrap_or(true))],
         ),
         EffectKind::BrightnessContrast => (
-            "Helligkeit/Kontrast",
+t("dlg-title-brightness-contrast"),
             vec![("brightness", "brightness_amount"), ("contrast", "contrast_amount")],
-            vec![Field::slider("brightness", "Helligkeit:", n("brightness_amount", 0.0), -100.0, 100.0), Field::slider("contrast", "Kontrast:", n("contrast_amount", 0.0), -100.0, 100.0)],
+            vec![Field::slider("brightness", t("dlg-lbl-brightness").as_str(), n("brightness_amount", 0.0), -100.0, 100.0), Field::slider("contrast", t("dlg-lbl-contrast").as_str(), n("contrast_amount", 0.0), -100.0, 100.0)],
         ),
         EffectKind::HueSaturation => (
-            "Farbton/Sättigung",
+t("dlg-title-hue-saturation"),
             vec![("hue", "hue_amount"), ("saturation", "saturation_amount"), ("lightness", "lightness_amount"), ("colorize", "hls_colorize")],
             vec![
-                Field::slider("hue", "Farbton:", n("hue_amount", 0.0), -180.0, 180.0),
-                Field::slider("saturation", "Sättigung:", n("saturation_amount", 0.0), -100.0, 100.0),
-                Field::slider("lightness", "Helligkeit:", n("lightness_amount", 0.0), -100.0, 100.0),
-                Field::check("colorize", "Färben", e.get_bool("hls_colorize").unwrap_or(false)),
+                Field::slider("hue", t("dlg-lbl-hue").as_str(), n("hue_amount", 0.0), -180.0, 180.0),
+                Field::slider("saturation", t("dlg-lbl-saturation").as_str(), n("saturation_amount", 0.0), -100.0, 100.0),
+                Field::slider("lightness", t("dlg-lbl-brightness").as_str(), n("lightness_amount", 0.0), -100.0, 100.0),
+                Field::check("colorize", t("dlg-lbl-colorize").as_str(), e.get_bool("hls_colorize").unwrap_or(false)),
             ],
         ),
         _ => return None,
     };
     let mapping: Vec<Value> = keys.iter().map(|(a, b)| json!([a, b])).collect();
-    Some(FormDialog::new("fx-filter", title, "pi.effect.set", fields).with_base(json!({"index": index, "map": mapping})).with_transform(filter_effect_params).with_preview())
+    Some(FormDialog::new("fx-filter", &title, "pi.effect.set", fields).with_base(json!({"index": index, "map": mapping})).with_transform(filter_effect_params).with_preview())
 }
 
 fn filter_effect_params(d: &FormDialog) -> Value {

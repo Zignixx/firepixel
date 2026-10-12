@@ -5,7 +5,7 @@
 //! Hinzufügen (persönliches Wörterbuch), Löschen (Wort entfernen).
 
 use super::form::{Field, FormDialog};
-use super::{dialog_frame, push_button, DialogClose};
+use super::{dialog_frame, push_button, t, DialogClose};
 use crate::app_state::{Action, AppState};
 use crate::inspector::fields;
 use crate::theme::Theme;
@@ -97,10 +97,10 @@ pub fn open_check(st: &mut AppState) {
     recheck(st, &mut d, json!({}));
     if d.current().is_none() {
         let msg = match &d.note {
-            Some(n) => format!("Keine Fehler gefunden.\n{n}"),
-            None => "Die Rechtschreibprüfung ist abgeschlossen. Es wurden keine Fehler gefunden.".to_string(),
+            Some(n) => fp_i18n::tr!("dlg-spell-no-errors-note", note = n.as_str()),
+            None => t("dlg-spell-no-errors"),
         };
-        st.dialogs.message = Some(("Rechtschreibprüfung".into(), msg));
+        st.dialogs.message = Some((t("dlg-spell-title"), msg));
         return;
     }
     st.dialogs.spelling = Some(d);
@@ -110,20 +110,27 @@ pub fn open_check(st: &mut AppState) {
 pub fn show_check(ctx: &egui::Context, st: &mut AppState) {
     let Some(mut d) = st.dialogs.spelling.clone() else { return };
     let mut op: Option<&str> = None;
-    let r = dialog_frame(ctx, "fp-spelling", "Rechtschreibprüfung", vec2(470.0, 300.0), |ui, body| {
+    // Texte der aktuellen Sprache; Beschriftungsspalte und Knöpfe wachsen mit (Deutsch: wie bisher)
+    let labs = super::tl(&["dlg-spell-not-found", "dlg-spell-change-to", "dlg-spell-suggestions"]);
+    let btn_l = super::tl(&["dlg-spell-ignore", "dlg-spell-ignore-all", "dlg-spell-change", "dlg-spell-change-all", "dlg-spell-add", "dlg-spell-delete", "btn-close"]);
+    let dx = super::extra_w(ctx, &super::refs(&labs), 150.0 - 4.0);
+    let bw = super::buttons_w(ctx, &super::refs(&btn_l), 108.0);
+    let width = 470f32.max(12.0 + 150.0 + dx + 170.0 + 12.0 + bw + 12.0).ceil();
+    let lx = 150.0 + dx;
+    let r = dialog_frame(ctx, "fp-spelling", &t("dlg-spell-title"), vec2(width, 300.0), |ui, body| {
         let theme = Theme::current(ui.ctx());
         let o = body.min + vec2(12.0, 12.0);
         let cur = d.current().cloned();
-        fields::label(ui, Rect::from_min_size(o, vec2(150.0, 18.0)), "Nicht im Wörterbuch:", true);
-        let wr = Rect::from_min_size(o + vec2(150.0, 0.0), vec2(170.0, 20.0));
+        super::fit_label(ui, Rect::from_min_size(o, vec2(lx - 4.0, 18.0)), &labs[0], true);
+        let wr = Rect::from_min_size(o + vec2(lx, 0.0), vec2(170.0, 20.0));
         fields::field_frame(ui, wr, false, false);
         ui.painter().text(pos2(wr.left() + 4.0, wr.center().y), Align2::LEFT_CENTER, cur.as_ref().map(|c| c.word.as_str()).unwrap_or(""), theme.bold(theme.fonts.ui), theme.colors.icon_red);
-        fields::label(ui, Rect::from_min_size(o + vec2(0.0, 28.0), vec2(150.0, 18.0)), "Ändern in:", true);
-        if let Some(t) = fields::text(ui, "spell-change", Rect::from_min_size(o + vec2(150.0, 28.0), vec2(170.0, 20.0)), &d.change_to, true) {
+        super::fit_label(ui, Rect::from_min_size(o + vec2(0.0, 28.0), vec2(lx - 4.0, 18.0)), &labs[1], true);
+        if let Some(t) = fields::text(ui, "spell-change", Rect::from_min_size(o + vec2(lx, 28.0), vec2(170.0, 20.0)), &d.change_to, true) {
             d.change_to = t;
         }
-        fields::label(ui, Rect::from_min_size(o + vec2(0.0, 56.0), vec2(150.0, 18.0)), "Vorschläge:", true);
-        let list = Rect::from_min_size(o + vec2(150.0, 56.0), vec2(170.0, 150.0));
+        super::fit_label(ui, Rect::from_min_size(o + vec2(0.0, 56.0), vec2(lx - 4.0, 18.0)), &labs[2], true);
+        let list = Rect::from_min_size(o + vec2(lx, 56.0), vec2(170.0, 150.0));
         let inner = fields::list_box(ui, list);
         let mut child = ui.new_child(egui::UiBuilder::new().max_rect(inner));
         child.spacing_mut().item_spacing = vec2(0.0, 0.0);
@@ -135,21 +142,21 @@ pub fn show_check(ctx: &egui::Context, st: &mut AppState) {
                 }
             }
             if c.suggestions.is_empty() {
-                child.painter().text(inner.left_top() + vec2(4.0, 4.0), Align2::LEFT_TOP, "(keine Vorschläge)", theme.small_font(), theme.colors.text_disabled);
+                child.painter().text(inner.left_top() + vec2(4.0, 4.0), Align2::LEFT_TOP, t("dlg-spell-no-suggestions"), theme.small_font(), theme.colors.text_disabled);
             }
         }
-        let bx = body.right() - 120.0;
+        let bx = body.right() - 12.0 - bw;
         let has = cur.is_some();
-        let buttons = [("Ignorieren", "ignore"), ("Alle ignorieren", "ignoreAll"), ("Ändern", "change"), ("Alle ändern", "changeAll"), ("Hinzufügen", "add"), ("Löschen", "delete")];
+        let buttons = [(&btn_l[0], "ignore"), (&btn_l[1], "ignoreAll"), (&btn_l[2], "change"), (&btn_l[3], "changeAll"), (&btn_l[4], "add"), (&btn_l[5], "delete")];
         for (k, (label, id)) in buttons.iter().enumerate() {
-            if push_button(ui, Rect::from_min_size(pos2(bx, body.top() + 12.0 + k as f32 * 28.0), vec2(108.0, 23.0)), label, k == 2, has) {
+            if push_button(ui, Rect::from_min_size(pos2(bx, body.top() + 12.0 + k as f32 * 28.0), vec2(bw, 23.0)), label, k == 2, has) {
                 op = Some(id);
             }
         }
         if let Some(n) = &d.note {
-            super::put_left(ui, Rect::from_min_size(pos2(body.left() + 12.0, body.bottom() - 70.0), vec2(body.width() - 140.0, 32.0)), egui::Label::new(egui::RichText::new(n).font(theme.small_font()).color(theme.colors.text_weak)).wrap());
+            super::put_left(ui, Rect::from_min_size(pos2(body.left() + 12.0, body.bottom() - 70.0), vec2(body.width() - 32.0 - bw, 32.0)), egui::Label::new(egui::RichText::new(n).font(theme.small_font()).color(theme.colors.text_weak)).wrap());
         }
-        if push_button(ui, Rect::from_min_size(pos2(bx, body.bottom() - 34.0), vec2(108.0, 23.0)), "Schließen", false, true) {
+        if push_button(ui, Rect::from_min_size(pos2(bx, body.bottom() - 34.0), vec2(bw, 23.0)), &btn_l[6], false, true) {
             op = Some("close");
         }
     });
@@ -181,7 +188,7 @@ pub fn show_check(ctx: &egui::Context, st: &mut AppState) {
         d.done = true;
     }
     if !d.done && op.is_some() && d.current().is_none() {
-        st.dialogs.message = Some(("Rechtschreibprüfung".into(), "Die Rechtschreibprüfung ist abgeschlossen.".into()));
+        st.dialogs.message = Some((t("dlg-spell-title"), t("dlg-spell-done")));
         d.done = true;
     }
     st.dialogs.spelling = if d.done { None } else { Some(d) };
@@ -217,14 +224,14 @@ pub fn setup_form(st: &mut AppState) -> Option<FormDialog> {
     Some(
         FormDialog::new(
             "6516",
-            "Rechtschreibprüfung einrichten",
+            &t("dlg-spell-setup-title"),
             "text.spellingSetup",
             vec![
-                Field::text("language", "Wörterbuch (Sprache):", &s("language")),
-                Field::text("dictionaryDir", "Ordner (.aff/.dic):", &s("dictionaryDir")),
-                Field::check("ignoreUppercase", "Wörter in Großbuchstaben ignorieren", b("ignoreUppercase", true)),
-                Field::check("ignoreNumbers", "Wörter mit Ziffern ignorieren", b("ignoreNumbers", true)),
-                Field::multiline("_dict", "Persönliches Wörterbuch (ein Wort je Zeile):", &words.join("\n")),
+                Field::text("language", &t("dlg-spell-setup-language"), &s("language")),
+                Field::text("dictionaryDir", &t("dlg-spell-setup-folder"), &s("dictionaryDir")),
+                Field::check("ignoreUppercase", &t("dlg-spell-setup-ignore-upper"), b("ignoreUppercase", true)),
+                Field::check("ignoreNumbers", &t("dlg-spell-setup-ignore-numbers"), b("ignoreNumbers", true)),
+                Field::multiline("_dict", &t("dlg-spell-setup-personal"), &words.join("\n")),
             ],
         )
         .with_base(json!({"_words": words}))

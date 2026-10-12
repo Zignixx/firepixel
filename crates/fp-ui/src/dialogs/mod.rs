@@ -29,6 +29,7 @@ pub use unsaved::{without_last_extension, PendingClose, UnsavedFlow};
 use crate::app_state::AppState;
 use crate::theme::Theme;
 use egui::{pos2, vec2, Align2, Id, Rect, Sense, Stroke, StrokeKind, Ui};
+pub use fp_i18n::t;
 
 /// Offene Dialoge.
 #[derive(Default)]
@@ -148,7 +149,7 @@ pub fn open_for_command(st: &mut AppState, name: &str) -> bool {
             let edit = name.ends_with("editPopUpMenu");
             st.dialogs.popup_editor = popup_menu::PopupEditor::open(st, edit);
             if st.dialogs.popup_editor.is_none() {
-                st.dialogs.message = Some(("Pop-up-Menü".into(), "Bitte zuerst ein Segment oder einen Hotspot mit Pop-up-Menü auswählen.".into()));
+                st.dialogs.message = Some((t("dlg-popup-title"), t("dlg-popup-need-selection")));
             }
         }
         "text.spellingSetup" => {
@@ -283,6 +284,9 @@ fn dialog_frame_ex(ctx: &egui::Context, id: &str, title: &str, size: egui::Vec2,
     let title_h = DIALOG_TITLE_H;
     let screen = ctx.content_rect();
     let pass = ctx.cumulative_pass_nr();
+    // längere Titel (andere Sprachen) verbreitern den Dialog, statt unter das Kreuz zu laufen
+    let title_w = ctx.fonts_mut(|f| f.layout_no_wrap(title.to_string(), theme.menu_font(), egui::Color32::WHITE).size().x);
+    let size = vec2(size.x.max((title_w + 10.0 + 44.0).ceil()), size.y);
     // neu geöffnet (im letzten Bild nicht gezeichnet): wie im Original zentriert, Ausgangsgröße
     let stored = dialog_geom(ctx, id).filter(|g| g.pass + 1 >= pass);
     let opened = stored.is_none();
@@ -313,7 +317,7 @@ fn dialog_frame_ex(ctx: &egui::Context, id: &str, title: &str, size: egui::Vec2,
         // Titelleiste ziehen verschiebt den Dialog (ohne das Schließen-Kreuz)
         let drag_r = Rect::from_min_max(tr.min, pos2(xr.left() - 2.0, tr.bottom()));
         let dresp = ui.interact(drag_r, Id::new((id, "title-drag")), Sense::drag());
-        dresp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Other, true, format!("Titelleiste {title}")));
+        dresp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Other, true, fp_i18n::tr!("dlg-titlebar", title = title)));
         if dresp.dragged() {
             geom.pos += dresp.drag_delta();
             ui.ctx().request_repaint();
@@ -423,6 +427,9 @@ pub fn group_box(ui: &Ui, rect: Rect, label: &str) {
 /// Standard-Knopf mit fester Größe; `default` zeichnet den Standardrahmen (OK).
 pub fn push_button(ui: &mut Ui, rect: Rect, label: &str, default: bool, enabled: bool) -> bool {
     let theme = Theme::current(ui.ctx());
+    if button_text_w(ui.ctx(), label) + BUTTON_PAD > rect.width() + 0.5 {
+        report_overflow(ui.ctx(), format!("Knopf „{label}“ breiter als {:.0} px", rect.width()));
+    }
     // gesperrt: grau wie im Original
     let text = access_key_text(ui, label, enabled);
     let resp = ui.add_enabled_ui(enabled, |ui| ui.put(rect, egui::Button::new(text).min_size(rect.size()))).inner;
@@ -452,6 +459,112 @@ fn access_key_text(ui: &Ui, label: &str, enabled: bool) -> egui::WidgetText {
     job.append(&k.to_string(), 0.0, fmt(true));
     job.append(&rest[k.len_utf8()..], 0.0, fmt(false));
     job.into()
+}
+
+/// Zugriffstaste einer Beschriftung („&Ja“ → J, „&Yes“ → Y); `None` ohne `&`.
+pub fn access_key(label: &str) -> Option<egui::Key> {
+    let i = label.find('&')?;
+    let c = label[i + 1..].chars().next()?.to_uppercase().next()?;
+    egui::Key::from_name(&c.to_string())
+}
+
+// ---------------------------------------------------------------------- Textbreiten (Mehrsprachigkeit)
+
+/// Innenabstand eines Knopfs links + rechts (`button_padding` 6 px der Designs).
+pub const BUTTON_PAD: f32 = 12.0;
+
+/// Breite eines Texts in der Dialogschrift (`&` der Zugriffstaste zählt nicht), auch vor dem Zeichnen.
+pub fn text_w(ctx: &egui::Context, text: &str) -> f32 {
+    let font = Theme::current(ctx).ui_font();
+    ctx.fonts_mut(|f| f.layout_no_wrap(text.replace('&', ""), font, egui::Color32::WHITE).size().x)
+}
+
+/// Höhe eines an `width` umbrochenen Texts in der Dialogschrift.
+pub fn wrapped_h(ctx: &egui::Context, text: &str, width: f32) -> f32 {
+    let font = Theme::current(ctx).ui_font();
+    ctx.fonts_mut(|f| f.layout(text.to_string(), font, egui::Color32::WHITE, width).size().y)
+}
+
+/// Breite einer Knopfbeschriftung (Knopfschrift).
+pub fn button_text_w(ctx: &egui::Context, text: &str) -> f32 {
+    let font = ctx.global_style().text_styles.get(&egui::TextStyle::Button).cloned().unwrap_or_else(|| Theme::current(ctx).ui_font());
+    ctx.fonts_mut(|f| f.layout_no_wrap(text.replace('&', ""), font, egui::Color32::WHITE).size().x)
+}
+
+/// Breitester von mehreren Texten.
+pub fn max_text_w(ctx: &egui::Context, texts: &[&str]) -> f32 {
+    texts.iter().map(|s| text_w(ctx, s)).fold(0.0, f32::max)
+}
+
+/// Platz, den die breiteste Beschriftung über `avail` hinaus braucht (0 = passt wie bisher).
+pub fn extra_w(ctx: &egui::Context, texts: &[&str], avail: f32) -> f32 {
+    (max_text_w(ctx, texts) - avail).max(0.0).ceil()
+}
+
+/// Breite eines Kombifelds (Feld + Pfeil 22 px), damit der längste Eintrag ganz passt.
+pub fn combo_fit_w(ctx: &egui::Context, items: &[&str], min: f32) -> f32 {
+    min.max((max_text_w(ctx, items) + 26.0).ceil())
+}
+
+/// Texte zu Schlüsseln.
+pub fn tl(keys: &[&str]) -> Vec<String> {
+    keys.iter().map(|k| t(k)).collect()
+}
+
+/// `&[String]` → `Vec<&str>`.
+pub fn refs(v: &[String]) -> Vec<&str> {
+    v.iter().map(|s| s.as_str()).collect()
+}
+
+/// Knopfbreite: Mindestbreite wie bisher, längere Beschriftungen bekommen Platz.
+pub fn button_w(ctx: &egui::Context, label: &str, min: f32) -> f32 {
+    min.max((button_text_w(ctx, label) + BUTTON_PAD).ceil())
+}
+
+/// Gemeinsame Breite einer Knopfgruppe (alle gleich breit wie unter Windows).
+pub fn buttons_w(ctx: &egui::Context, labels: &[&str], min: f32) -> f32 {
+    labels.iter().map(|l| button_w(ctx, l, min)).fold(min, f32::max)
+}
+
+/// Knopfzeile rechtsbündig: `labels` von links nach rechts, rechter Rand `right`, Abstand `gap`;
+/// liefert die Rechtecke (gleich breit, Mindestbreite `min`).
+pub fn button_row(ctx: &egui::Context, right: f32, top: f32, labels: &[&str], min: f32, h: f32, gap: f32) -> Vec<Rect> {
+    let w = buttons_w(ctx, labels, min);
+    let n = labels.len() as f32;
+    let x0 = right - n * w - (n - 1.0).max(0.0) * gap;
+    (0..labels.len()).map(|i| Rect::from_min_size(pos2(x0 + i as f32 * (w + gap), top), vec2(w, h))).collect()
+}
+
+/// Gesamtbreite einer Knopfzeile (für die Mindestbreite eines Dialogs).
+pub fn button_row_w(ctx: &egui::Context, labels: &[&str], min: f32, gap: f32) -> f32 {
+    let n = labels.len() as f32;
+    n * buttons_w(ctx, labels, min) + (n - 1.0).max(0.0) * gap
+}
+
+const OVERFLOW: &str = "fp-dialog-overflow";
+
+/// Meldet einen Text, der nicht in seinen Platz passt (für die Layout-Tests aller Sprachen).
+pub fn report_overflow(ctx: &egui::Context, what: String) {
+    log::debug!("Dialog-Layout: {what}");
+    ctx.data_mut(|d| {
+        let v = d.get_temp_mut_or_default::<Vec<String>>(Id::new(OVERFLOW));
+        if !v.contains(&what) {
+            v.push(what);
+        }
+    });
+}
+
+/// Gemeldete Überläufe abholen (und leeren).
+pub fn take_overflows(ctx: &egui::Context) -> Vec<String> {
+    ctx.data_mut(|d| d.remove_temp::<Vec<String>>(Id::new(OVERFLOW))).unwrap_or_default()
+}
+
+/// Beschriftung, die in `r` passen muss (sonst Überlauf melden); links, senkrecht mittig.
+pub fn fit_label(ui: &Ui, r: Rect, text: &str, enabled: bool) {
+    if text_w(ui.ctx(), text) > r.width() + 0.5 {
+        report_overflow(ui.ctx(), format!("Beschriftung „{text}“ breiter als {:.0} px", r.width()));
+    }
+    crate::inspector::fields::label(ui, r, text, enabled);
 }
 
 /// Eingabe löst wie im Original immer den Standardknopf des obersten Dialogs aus, auch wenn ein
@@ -498,7 +611,7 @@ pub fn show_all(ctx: &egui::Context, st: &mut AppState) {
         match p {
             PendingForm::StrokeOptions => match misc::stroke_options_form(st) {
                 Some(f) => st.dialogs.form = Some(f),
-                None => misc::not_available_message(st, "Strich bearbeiten", "Bitte zuerst ein Objekt mit Strich auswählen."),
+                None => misc::not_available_message(st, &t("dlg-stroke-title"), &t("dlg-stroke-need-selection")),
             },
             PendingForm::NewStyle => st.dialogs.form = Some(misc::new_style_form(st)),
             PendingForm::StatusText => st.dialogs.form = catalog::form_for(st, "panel.behaviors.statusText"),
@@ -540,9 +653,14 @@ pub fn show_all(ctx: &egui::Context, st: &mut AppState) {
 fn show_message(ctx: &egui::Context, st: &mut AppState) {
     let Some((title, text)) = st.dialogs.message.clone() else { return };
     let mut done = false;
-    let r = dialog_frame(ctx, "fp-message", &title, vec2(380.0, 120.0), |ui, body| {
-        put_left(ui, Rect::from_min_size(body.min + vec2(16.0, 16.0), vec2(body.width() - 32.0, 60.0)), egui::Label::new(text.as_str()).wrap());
-        if push_button(ui, Rect::from_min_size(pos2(body.right() - 92.0, body.bottom() - 34.0), vec2(76.0, 23.0)), "OK", true, true) {
+    // längere Meldungen (andere Sprachen): Höhe wächst mit dem umbrochenen Text
+    let tw = 380.0 - 32.0;
+    let th = wrapped_h(ctx, &text, tw);
+    let r = dialog_frame(ctx, "fp-message", &title, vec2(380.0, 120.0f32.max(th + 16.0 + 50.0).ceil()), |ui, body| {
+        put_left(ui, Rect::from_min_size(body.min + vec2(16.0, 16.0), vec2(body.width() - 32.0, body.height() - 66.0)), egui::Label::new(text.as_str()).wrap());
+        let ok = t("btn-ok");
+        let w = button_w(ui.ctx(), &ok, 76.0);
+        if push_button(ui, Rect::from_min_size(pos2(body.right() - 16.0 - w, body.bottom() - 34.0), vec2(w, 23.0)), &ok, true, true) {
             done = true;
         }
     });
@@ -554,15 +672,19 @@ fn show_message(ctx: &egui::Context, st: &mut AppState) {
 fn save_workspace(ctx: &egui::Context, st: &mut AppState) {
     let Some(mut name) = st.dialogs.save_workspace.clone() else { return };
     let mut result = None;
-    let r = dialog_frame(ctx, "fp-save-ws", "Arbeitsbereichlayout speichern", vec2(340.0, 110.0), |ui, body| {
-        put_left(ui, Rect::from_min_size(body.min + vec2(16.0, 16.0), vec2(60.0, 20.0)), egui::Label::new("Name:"));
-        let te = ui.put(Rect::from_min_size(body.min + vec2(70.0, 14.0), vec2(250.0, 22.0)), egui::TextEdit::singleline(&mut name));
+    let name_l = t("dlg-save-workspace-name");
+    let dx = extra_w(ctx, &[&name_l], 50.0);
+    let (ok_l, cancel_l) = (t("btn-ok"), t("btn-cancel"));
+    let r = dialog_frame(ctx, "fp-save-ws", &t("dlg-save-workspace-title"), vec2(340.0 + dx, 110.0), |ui, body| {
+        put_left(ui, Rect::from_min_size(body.min + vec2(16.0, 16.0), vec2(54.0 + dx, 20.0)), egui::Label::new(name_l.as_str()).extend());
+        let te = ui.put(Rect::from_min_size(body.min + vec2(70.0 + dx, 14.0), vec2(250.0, 22.0)), egui::TextEdit::singleline(&mut name));
         te.request_focus();
-        let ok = push_button(ui, Rect::from_min_size(pos2(body.right() - 176.0, body.bottom() - 34.0), vec2(76.0, 23.0)), "OK", true, !name.trim().is_empty());
+        let b = button_row(ui.ctx(), body.right() - 16.0, body.bottom() - 34.0, &[&ok_l, &cancel_l], 76.0, 23.0, 8.0);
+        let ok = push_button(ui, b[0], &ok_l, true, !name.trim().is_empty());
         if ok || (ui.input(|i| i.key_pressed(egui::Key::Enter)) && !name.trim().is_empty()) {
             result = Some(true);
         }
-        if push_button(ui, Rect::from_min_size(pos2(body.right() - 92.0, body.bottom() - 34.0), vec2(76.0, 23.0)), "Abbrechen", false, true) {
+        if push_button(ui, b[1], &cancel_l, false, true) {
             result = Some(false);
         }
     });

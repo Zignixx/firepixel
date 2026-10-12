@@ -9,7 +9,7 @@
 //! * Dialog „KI-Modelle verwalten“ (`ai.manageModels`): alle Modelle mit Stand, Modellordner,
 //!   Zwischenspeicher leeren.
 
-use super::{dialog_frame, push_button, DialogClose};
+use super::{dialog_frame, push_button, t, DialogClose};
 use crate::app_state::{Action, AppState};
 use crate::theme::Theme;
 use egui::{pos2, vec2, Rect, Sense, Stroke};
@@ -108,13 +108,13 @@ pub fn handles(name: &str) -> bool {
     eng::is_ai_command(name) || name == "ai.manageModels"
 }
 
-fn title_for(cmd: &str) -> &'static str {
-    match cmd {
-        "select.aiObject" => "Objektauswahl",
-        "select.aiSubject" => "Motiv auswählen",
-        "select.aiRefineEdge" => "Kante verfeinern",
-        _ => "KI-Auswahl",
-    }
+fn title_for(cmd: &str) -> String {
+    t(match cmd {
+        "select.aiObject" => "dlg-ai-object",
+        "select.aiSubject" => "dlg-ai-subject",
+        "select.aiRefineEdge" => "dlg-ai-refine-edge",
+        _ => "dlg-ai-selection",
+    })
 }
 
 fn status(st: &mut AppState, s: impl Into<String>) {
@@ -215,7 +215,7 @@ fn start(st: &mut AppState, mut queue: Vec<Invocation>) {
                 Err(e) => status(st, e.to_string()),
             },
             Ok(Some(prep)) => {
-                let title = title_for(&inv.command).to_string();
+                let title = title_for(&inv.command);
                 let model = models::info(prep.model).name;
                 let key = prep.key;
                 let job = Job::spawn(format!("{title} ({model})"), move |p| eng::run_prepared(&prep, p));
@@ -234,10 +234,10 @@ fn execute(st: &mut AppState, inv: &Invocation) {
             let title = title_for(&inv.command);
             let msg = match inv.command.as_str() {
                 "select.aiObject" => match out.value.get("iou").and_then(|v| v.as_f64()) {
-                    Some(iou) => format!("{title}: Objekt ausgewählt (Güte {:.0} %). Umschalt+Klick fügt hinzu, Alt+Klick zieht ab.", iou * 100.0),
-                    None => format!("{title}: fertig"),
+                    Some(iou) => fp_i18n::tr!("dlg-ai-object-selected", title = title.as_str(), quality = format!("{:.0}", iou * 100.0)),
+                    None => fp_i18n::tr!("dlg-ai-done", title = title.as_str()),
                 },
-                _ => format!("{title}: fertig"),
+                _ => fp_i18n::tr!("dlg-ai-done", title = title.as_str()),
             };
             status(st, msg);
         }
@@ -258,7 +258,7 @@ fn poll_job(ctx: &egui::Context, st: &mut AppState) {
         let Some(j) = st.dialogs.ai.job.take() else { return };
         match r {
             Ok(()) => start(st, j.then),
-            Err(fp_ai::AiError::Cancelled) => status(st, format!("{}: abgebrochen", j.title)),
+            Err(fp_ai::AiError::Cancelled) => status(st, fp_i18n::tr!("dlg-ai-cancelled", title = j.title.as_str())),
             Err(e) => {
                 st.dialogs.message = Some((j.title.clone(), e.to_string()));
             }
@@ -268,7 +268,7 @@ fn poll_job(ctx: &egui::Context, st: &mut AppState) {
     let p = j.job.progress.get();
     let label = j.job.label.clone();
     let mut cancel = false;
-    egui::Window::new("KI-Auswahl")
+    egui::Window::new(t("dlg-ai-selection"))
         .id(egui::Id::new("fp-ai-progress"))
         .title_bar(false)
         .resizable(false)
@@ -276,12 +276,12 @@ fn poll_job(ctx: &egui::Context, st: &mut AppState) {
         .anchor(egui::Align2::CENTER_BOTTOM, vec2(0.0, -48.0))
         .show(ctx, |ui| {
             ui.set_width(320.0);
-            ui.label(format!("{label} – Bild wird analysiert …"));
+            ui.label(fp_i18n::tr!("dlg-ai-analyzing", task = label.as_str()));
             ui.add(egui::ProgressBar::new(p).show_percentage());
             ui.horizontal(|ui| {
                 ui.label(format!("{:.1} s", j.job.elapsed()));
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    if ui.button("Abbrechen").clicked() {
+                    if ui.button(t("btn-cancel")).clicked() {
                         cancel = true;
                     }
                 });
@@ -306,9 +306,9 @@ const BTN: egui::Vec2 = egui::Vec2::new(116.0, 24.0);
 /// Innenrand der KI-Dialoge.
 const PAD: f32 = 16.0;
 
-/// Zahl mit deutschem Dezimalkomma.
+/// Zahl mit dem Dezimaltrennzeichen der Sprache (Deutsch: Komma).
 fn de(v: f64, dec: usize) -> String {
-    format!("{v:.dec$}").replace('.', ",")
+    fp_i18n::fmt_decimal(v, dec)
 }
 
 /// Größe lesbar: „156 MB“, „1,2 GB“.
@@ -336,36 +336,35 @@ pub fn ellipsize(s: &str, max: usize) -> String {
     o
 }
 
-fn task_text(t: models::Task) -> &'static str {
-    match t {
-        models::Task::Object => "Objektauswahl",
-        models::Task::Subject => "Motiv auswählen",
-        models::Task::Matting => "Kante verfeinern",
-    }
+fn task_text(task: models::Task) -> String {
+    t(match task {
+        models::Task::Object => "dlg-ai-object",
+        models::Task::Subject => "dlg-ai-subject",
+        models::Task::Matting => "dlg-ai-refine-edge",
+    })
 }
 
 /// Lizenzhinweis eines Modells (ein Absatz).
 fn license_note(m: &models::ModelInfo) -> String {
     match m.task {
-        models::Task::Object => format!("Lizenz {}: Gewichte und Code von Meta, kommerzielle Nutzung erlaubt. Trainiert auf SA-1B und SA-V.", m.license),
-        _ => format!(
-            "Lizenz {} (Gewichte und Code von Peng Zheng). Hinweis: Laut Autor stammen die Trainingsdaten teils aus Datensätzen, die nur für nichtkommerzielle Forschung freigegeben sind (z. B. P3M-10k{}).",
-            m.license,
-            if m.task == models::Task::Matting { ", AM-2k, Distinctions-646" } else { "" }
-        ),
+        models::Task::Object => fp_i18n::tr!("dlg-ai-license-object", license = m.license),
+        _ => fp_i18n::tr!("dlg-ai-license-matting", license = m.license, datasets = if m.task == models::Task::Matting { "P3M-10k, AM-2k, Distinctions-646" } else { "P3M-10k" }),
     }
 }
 
 /// Fortschrittstext „27 MB von 156 MB · 5,4 MB/s · noch ca. 24 s“.
 pub fn progress_text(p: f32, size: u64, elapsed: f32) -> String {
     let done = (p as f64 * size as f64) as u64;
-    let mut s = format!("{} von {}", size_text(done), size_text(size));
+    // Teile mit „ · “ verbunden (Liste); jeder Teil ein eigener Text
+    let mut s = fp_i18n::tr!("dlg-ai-progress-of", done = size_text(done), total = size_text(size));
     if elapsed > 0.3 && done > 0 {
         let rate = done as f64 / elapsed as f64;
-        s.push_str(&format!(" · {} MB/s", de(rate / 1e6, 1)));
+        s.push_str(" · ");
+        s.push_str(&fp_i18n::tr!("dlg-ai-rate", rate = de(rate / 1e6, 1)));
         let rest = (size.saturating_sub(done)) as f64 / rate.max(1.0);
         if rest >= 1.0 {
-            s.push_str(&if rest >= 90.0 { format!(" · noch ca. {} min", (rest / 60.0).round() as u64) } else { format!(" · noch ca. {} s", rest.round() as u64) });
+            s.push_str(" · ");
+            s.push_str(&if rest >= 90.0 { fp_i18n::tr!("dlg-ai-remaining-min", n = (rest / 60.0).round() as u64) } else { fp_i18n::tr!("dlg-ai-remaining-s", n = rest.round() as u64) });
         }
     }
     s
@@ -381,12 +380,15 @@ type InfoRow<'a> = (&'a str, &'a mut dyn FnMut(&mut egui::Ui));
 
 fn info_grid(ui: &mut egui::Ui, id: &str, rows: &mut [InfoRow]) {
     let w = weak(ui);
+    // Beschriftungsspalte: mindestens 96 px wie bisher, längere Beschriftungen bekommen Platz
+    let body_font = egui::TextStyle::Body.resolve(ui.style());
+    let lw = rows.iter().map(|(l, _)| ui.ctx().fonts_mut(|f| f.layout_no_wrap(l.to_string(), body_font.clone(), egui::Color32::WHITE).size().x) + 4.0).fold(96.0f32, f32::max).ceil();
     ui.push_id(id, |ui| {
         ui.spacing_mut().item_spacing.y = 6.0;
         for (label, f) in rows.iter_mut() {
             ui.horizontal(|ui| {
-                ui.allocate_ui_with_layout(vec2(96.0, 20.0), egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    ui.set_min_size(vec2(96.0, 20.0));
+                ui.allocate_ui_with_layout(vec2(lw, 20.0), egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    ui.set_min_size(vec2(lw, 20.0));
                     ui.label(egui::RichText::new(*label).color(w));
                 });
                 ui.add_space(6.0);
@@ -426,7 +428,7 @@ fn checksum_row(ui: &mut egui::Ui, sha: &str) {
     let short = format!("{}…{}", &sha[..12], &sha[sha.len() - 8..]);
     ui.horizontal(|ui| {
         ui.label(egui::RichText::new(short).font(egui::FontId::monospace(12.0))).on_hover_text(sha);
-        if ui.small_button("Kopieren").on_hover_text("SHA-256 in die Zwischenablage").clicked() {
+        if ui.small_button(t("dlg-ai-copy")).on_hover_text(t("dlg-ai-copy-tip")).clicked() {
             ui.ctx().copy_text(sha.to_string());
         }
     });
@@ -454,7 +456,7 @@ fn show_missing(ctx: &egui::Context, st: &mut AppState) {
     let Some(mut d) = st.dialogs.ai.missing.take() else { return };
     let m = models::info(d.model);
     let folder = models::download_folder().display().to_string();
-    let tool = d.pending.as_ref().map(|i| title_for(&i.command)).unwrap_or("die KI-Auswahl");
+    let tool = d.pending.as_ref().map(|i| title_for(&i.command)).unwrap_or_else(|| t("dlg-ai-the-selection"));
     #[derive(PartialEq)]
     enum Btn {
         None,
@@ -464,36 +466,40 @@ fn show_missing(ctx: &egui::Context, st: &mut AppState) {
     }
     let mut pressed = Btn::None;
     let dl_state = d.download.as_ref().map(|x| (x.job.progress.get(), x.job.elapsed()));
-    let r = dialog_frame(ctx, "fp-ai-missing", "KI-Modell fehlt", vec2(600.0, 410.0), |ui, body| {
+    let (dl_l, retry_l, cancel_l) = (t("dlg-ai-download"), t("dlg-ai-retry"), t("btn-cancel"));
+    let bw = super::buttons_w(ctx, &[&dl_l, &retry_l, &cancel_l], BTN.x);
+    let btn = vec2(bw, BTN.y);
+    let r = dialog_frame(ctx, "fp-ai-missing", &t("dlg-ai-missing-title"), vec2(600.0, 410.0), |ui, body| {
         let inner = Rect::from_min_max(body.min + vec2(PAD, PAD), body.max - vec2(PAD, PAD + BTN.y + 12.0));
         let mut c = ui.new_child(egui::UiBuilder::new().max_rect(inner).layout(egui::Layout::top_down(egui::Align::Min)));
-        header(&mut c, &format!("„{}“ wird gebraucht", m.name), &format!("Für „{tool}“ fehlt ein KI-Modell; Firepixel lädt es erst nach Ihrer Zustimmung herunter."));
+        header(&mut c, &fp_i18n::tr!("dlg-ai-needed", model = m.name), &fp_i18n::tr!("dlg-ai-missing-text", task = tool.as_str()));
         c.add_space(10.0);
         c.separator();
         c.add_space(6.0);
         let src = short_source(m);
         let fshort = ellipsize(&folder, 56);
+        let gl = super::tl(&["dlg-ai-model", "dlg-ai-task", "dlg-ai-size", "dlg-ai-license", "dlg-ai-source", "dlg-ai-checksum", "dlg-ai-folder"]);
         info_grid(
             &mut c,
             "fp-ai-missing-grid",
             &mut [
-                ("Modell", &mut |ui: &mut egui::Ui| {
+                (gl[0].as_str(), &mut |ui: &mut egui::Ui| {
                     ui.label(egui::RichText::new(m.name).strong());
                 }),
-                ("Aufgabe", &mut |ui: &mut egui::Ui| {
+                (gl[1].as_str(), &mut |ui: &mut egui::Ui| {
                     ui.label(task_text(m.task));
                 }),
-                ("Größe", &mut |ui: &mut egui::Ui| {
+                (gl[2].as_str(), &mut |ui: &mut egui::Ui| {
                     ui.label(size_text(m.size));
                 }),
-                ("Lizenz", &mut |ui: &mut egui::Ui| {
+                (gl[3].as_str(), &mut |ui: &mut egui::Ui| {
                     ui.label(m.license);
                 }),
-                ("Quelle", &mut |ui: &mut egui::Ui| {
+                (gl[4].as_str(), &mut |ui: &mut egui::Ui| {
                     ui.label(&src).on_hover_text(m.url);
                 }),
-                ("Prüfsumme", &mut |ui: &mut egui::Ui| checksum_row(ui, m.sha256)),
-                ("Zielordner", &mut |ui: &mut egui::Ui| {
+                (gl[5].as_str(), &mut |ui: &mut egui::Ui| checksum_row(ui, m.sha256)),
+                (gl[6].as_str(), &mut |ui: &mut egui::Ui| {
                     ui.label(&fshort).on_hover_text(&folder);
                 }),
             ],
@@ -503,32 +509,32 @@ fn show_missing(ctx: &egui::Context, st: &mut AppState) {
         c.add_space(8.0);
         if d.done.is_some() {
             let g = Theme::current(c.ctx()).colors.icon_green;
-            c.label(egui::RichText::new(format!("✓ {} geladen und geprüft – „{tool}“ wird ausgeführt …", m.name)).color(g).strong());
+            c.label(egui::RichText::new(fp_i18n::tr!("dlg-ai-loaded-running", model = m.name, task = tool.as_str())).color(g).strong());
         } else if let Some((p, t)) = dl_state {
             let w = c.available_width();
             progress_bar(&mut c, p, w);
             c.label(egui::RichText::new(progress_text(p, m.size, t)).color(weak(&c)));
         } else if let Some(e) = &d.error {
             let red = egui::Color32::from_rgb(210, 60, 50);
-            c.label(egui::RichText::new("Download fehlgeschlagen").color(red).strong());
+            c.label(egui::RichText::new(t("dlg-ai-download-failed")).color(red).strong());
             c.add(egui::Label::new(egui::RichText::new(e).color(red)).wrap());
         }
         // Knöpfe unten rechts, einheitliche Größe
         let by = body.bottom() - PAD - BTN.y;
-        let right = Rect::from_min_size(pos2(body.right() - PAD - BTN.x, by), BTN);
-        let left = Rect::from_min_size(pos2(right.left() - 8.0 - BTN.x, by), BTN);
+        let right = Rect::from_min_size(pos2(body.right() - PAD - btn.x, by), btn);
+        let left = Rect::from_min_size(pos2(right.left() - 8.0 - btn.x, by), btn);
         if d.done.is_some() {
             // automatisch weiter
         } else if d.download.is_some() {
-            if push_button(ui, right, "Abbrechen", false, true) {
+            if push_button(ui, right, &cancel_l, false, true) {
                 pressed = Btn::CancelDownload;
             }
         } else {
-            let label = if d.error.is_some() { "Erneut versuchen" } else { "Herunterladen" };
+            let label = if d.error.is_some() { &retry_l } else { &dl_l };
             if push_button(ui, left, label, true, fp_ai::download::allowed()) {
                 pressed = Btn::Download;
             }
-            if push_button(ui, right, "Abbrechen", false, true) {
+            if push_button(ui, right, &cancel_l, false, true) {
                 pressed = Btn::Cancel;
             }
         }
@@ -557,13 +563,13 @@ fn show_missing(ctx: &egui::Context, st: &mut AppState) {
         d.download = None;
         match res {
             Ok(_) => d.done = Some(std::time::Instant::now()),
-            Err(fp_ai::AiError::Cancelled) => d.error = Some("Der Download wurde abgebrochen.".into()),
+            Err(fp_ai::AiError::Cancelled) => d.error = Some(t("dlg-ai-download-cancelled")),
             Err(e) => d.error = Some(e.to_string()),
         }
     }
     if let Some(t) = d.done {
         if t.elapsed() >= std::time::Duration::from_millis(900) {
-            status(st, format!("{} geladen.", m.name));
+            status(st, fp_i18n::tr!("dlg-ai-loaded", model = m.name));
             if let Some(inv) = d.pending.take() {
                 request(st, &inv);
             }
@@ -588,15 +594,15 @@ struct Cols {
     status: (f32, f32),
 }
 
-fn cols(w: f32) -> Cols {
-    let status_w = 200.0;
-    let fixed = 130.0 + 80.0 + 90.0 + status_w + 4.0 * 12.0;
+/// `task_w`/`status_w`: Spaltenbreiten für die Texte der aktuellen Sprache (mindestens 130/200 px).
+fn cols(w: f32, task_w: f32, status_w: f32) -> Cols {
+    let fixed = task_w + 80.0 + 90.0 + status_w + 4.0 * 12.0;
     let name_w = (w - fixed - 10.0).max(180.0);
     let x_task = 10.0 + name_w + 12.0;
-    let x_size_r = x_task + 130.0 + 12.0 + 80.0;
+    let x_size_r = x_task + task_w + 12.0 + 80.0;
     let x_lic = x_size_r + 12.0;
     let x_status = x_lic + 90.0 + 12.0;
-    Cols { name: (10.0, name_w), task: (x_task, 130.0), size_right: x_size_r, license: (x_lic, 90.0), status: (x_status, status_w) }
+    Cols { name: (10.0, name_w), task: (x_task, task_w), size_right: x_size_r, license: (x_lic, 90.0), status: (x_status, status_w) }
 }
 
 fn cell(ui: &mut egui::Ui, r: Rect, f: impl FnOnce(&mut egui::Ui)) {
@@ -623,41 +629,57 @@ fn show_manager(ctx: &egui::Context, st: &mut AppState) {
     let n_av = avail.iter().filter(|a| **a).count();
     let used: u64 = models::MODELS.iter().zip(&avail).filter(|(_, a)| **a).map(|(m, _)| m.size).sum();
     let mem = fp_ai::cache::memory_bytes();
-    let size = d.size;
-    let r = dialog_frame(ctx, "fp-ai-models", "KI-Modelle verwalten", size, |ui, body| {
-        let t = Theme::current(ui.ctx());
-        let c = t.colors.clone();
+    // Texte der aktuellen Sprache; Spalten und Knöpfe wachsen mit (Deutsch: wie bisher)
+    let heads = super::tl(&["dlg-ai-model", "dlg-ai-task", "dlg-ai-size", "dlg-ai-license", "dlg-ai-status"]);
+    let tasks: Vec<String> = [models::Task::Object, models::Task::Subject, models::Task::Matting].into_iter().map(task_text).collect();
+    let (dl_l, present_l, remove_l, remove_q, yes_l, no_l) = (t("dlg-ai-download"), t("dlg-ai-present"), t("dlg-ai-remove"), t("dlg-ai-remove-question"), t("dlg-ai-yes"), t("dlg-ai-no"));
+    let (browse_l, default_l, open_l, clear_l, close_l, cancel_l) = (t("btn-browse"), t("dlg-ai-default-folder"), t("dlg-ai-open-folder"), t("dlg-ai-clear-cache"), t("btn-close"), t("btn-cancel"));
+    let task_w = super::max_text_w(ctx, &super::refs(&tasks)).max(super::text_w(ctx, &heads[1])).max(130.0 - 8.0) + 8.0;
+    let dlw = super::button_w(ctx, &dl_l, 130.0);
+    let status_w = 200f32
+        .max(dlw)
+        .max(super::text_w(ctx, &present_l) * 1.1 + 6.0 + super::text_w(ctx, &remove_l) + 12.0)
+        .max(super::text_w(ctx, &remove_q) + super::text_w(ctx, &yes_l) + super::text_w(ctx, &no_l) + 40.0)
+        .ceil();
+    let bw = super::buttons_w(ctx, &[&dl_l, &cancel_l, &browse_l, &default_l, &open_l, &close_l], BTN.x);
+    let btn = vec2(bw, BTN.y);
+    let cw = super::button_w(ctx, &clear_l, 170.0);
+    let min_w = 680f32.max(2.0 * PAD + 10.0 + 180.0 + task_w + 80.0 + 90.0 + status_w + 4.0 * 12.0).ceil();
+    let size = vec2(d.size.x.max(min_w), d.size.y);
+    let r = dialog_frame(ctx, "fp-ai-models", &t("dlg-ai-manage-title"), size, |ui, body| {
+        let th = Theme::current(ui.ctx());
+        let c = th.colors.clone();
         let inner = Rect::from_min_max(body.min + vec2(PAD, PAD), body.max - vec2(PAD, PAD + BTN.y + 12.0));
         let mut u = ui.new_child(egui::UiBuilder::new().max_rect(inner).layout(egui::Layout::top_down(egui::Align::Min)));
         header(
             &mut u,
-            &format!("{n_av} von {} Modellen vorhanden · {} belegt", models::MODELS.len(), size_text(used)),
-            "Die KI-Modelle werden nicht mit Firepixel ausgeliefert. Heruntergeladen wird nur, was Sie hier bestätigen.",
+            &fp_i18n::tr!("dlg-ai-manage-summary", present = n_av, total = models::MODELS.len(), used = size_text(used)),
+            &t("dlg-ai-manage-text"),
         );
         u.add_space(10.0);
         // --- Tabelle
         let tw = u.available_width();
-        let cl = cols(tw);
+        let cl = cols(tw, task_w, status_w);
         let row_h = 32.0;
         let (hr, _) = u.allocate_exact_size(vec2(tw, 24.0), Sense::hover());
         let p = u.painter();
         p.rect_filled(hr, 0.0, crate::theme::mix(c.frame_bg, c.line_mid, 0.25));
-        let hf = t.bold(11.5);
+        let hf = th.bold(11.5);
         let hy = hr.center().y;
-        p.text(pos2(hr.left() + cl.name.0, hy), egui::Align2::LEFT_CENTER, "Modell", hf.clone(), c.text);
-        p.text(pos2(hr.left() + cl.task.0, hy), egui::Align2::LEFT_CENTER, "Aufgabe", hf.clone(), c.text);
-        p.text(pos2(hr.left() + cl.size_right, hy), egui::Align2::RIGHT_CENTER, "Größe", hf.clone(), c.text);
-        p.text(pos2(hr.left() + cl.license.0, hy), egui::Align2::LEFT_CENTER, "Lizenz", hf.clone(), c.text);
-        p.text(pos2(hr.left() + cl.status.0, hy), egui::Align2::LEFT_CENTER, "Stand", hf, c.text);
+        p.text(pos2(hr.left() + cl.name.0, hy), egui::Align2::LEFT_CENTER, heads[0].as_str(), hf.clone(), c.text);
+        p.text(pos2(hr.left() + cl.task.0, hy), egui::Align2::LEFT_CENTER, heads[1].as_str(), hf.clone(), c.text);
+        p.text(pos2(hr.left() + cl.size_right, hy), egui::Align2::RIGHT_CENTER, heads[2].as_str(), hf.clone(), c.text);
+        p.text(pos2(hr.left() + cl.license.0, hy), egui::Align2::LEFT_CENTER, heads[3].as_str(), hf.clone(), c.text);
+        p.text(pos2(hr.left() + cl.status.0, hy), egui::Align2::LEFT_CENTER, heads[4].as_str(), hf, c.text);
         p.hline(hr.x_range(), hr.bottom() - 0.5, Stroke::new(1.0, c.line_mid));
-        let font = t.ui_font();
+        let font = th.ui_font();
         for (i, m) in models::MODELS.iter().enumerate() {
             let (rr, resp) = u.allocate_exact_size(vec2(tw, row_h), Sense::hover());
             let bg = if resp.hovered() { c.list_hover_bg } else if i % 2 == 1 { crate::theme::mix(c.list_bg, c.line_light, 0.35) } else { c.list_bg };
             u.painter().rect_filled(rr, 0.0, bg);
             u.painter().hline(rr.x_range(), rr.bottom() - 0.5, Stroke::new(1.0, c.list_row_line));
             let y = rr.center().y;
-            let name = if m.default { format!("{}  (Vorgabe)", m.name) } else { m.name.to_string() };
+            let name = if m.default { fp_i18n::tr!("dlg-ai-default-model", model = m.name) } else { m.name.to_string() };
             let name_rect = Rect::from_min_size(pos2(rr.left() + cl.name.0, rr.top()), vec2(cl.name.1, row_h));
             u.painter().with_clip_rect(name_rect).text(pos2(name_rect.left(), y), egui::Align2::LEFT_CENTER, name, font.clone(), c.text);
             u.interact(name_rect, egui::Id::new(("fp-ai-row", i)), Sense::hover()).on_hover_text(format!("{}\n{}", short_source(m), m.note));
@@ -670,27 +692,27 @@ fn show_manager(ctx: &egui::Context, st: &mut AppState) {
                     && id == m.id
                 {
                     progress_bar(ui, pr, 130.0);
-                    if ui.small_button("×").on_hover_text("Download abbrechen").clicked() {
+                    if ui.small_button("×").on_hover_text(t("dlg-ai-cancel-download")).clicked() {
                         cancel_dl = true;
                     }
                 } else if avail[i] {
                     if d.confirm_remove == Some(m.id) {
-                        ui.label("Entfernen?");
-                        if ui.small_button("Ja").clicked() {
+                        ui.label(remove_q.as_str());
+                        if ui.small_button(yes_l.as_str()).clicked() {
                             remove = Some(m.id);
                         }
-                        if ui.small_button("Nein").clicked() {
+                        if ui.small_button(no_l.as_str()).clicked() {
                             ask_remove = None;
                             d.confirm_remove = None;
                         }
                     } else {
-                        ui.label(egui::RichText::new("✓ Vorhanden").color(c.icon_green).strong());
+                        ui.label(egui::RichText::new(present_l.as_str()).color(c.icon_green).strong());
                         ui.add_space(6.0);
-                        if ui.add(egui::Button::new(egui::RichText::new("Entfernen…").small()).frame(false)).on_hover_text("Modelldatei löschen").clicked() {
+                        if ui.add(egui::Button::new(egui::RichText::new(remove_l.as_str()).small()).frame(false)).on_hover_text(t("dlg-ai-remove-tip")).clicked() {
                             ask_remove = Some(m.id);
                         }
                     }
-                } else if ui.add_enabled(dl.is_none() && fp_ai::download::allowed(), egui::Button::new("Herunterladen").min_size(vec2(130.0, 22.0))).clicked() {
+                } else if ui.add_enabled(dl.is_none() && fp_ai::download::allowed(), egui::Button::new(dl_l.as_str()).min_size(vec2(130.0, 22.0))).clicked() {
                     ask = Some(m.id);
                 }
             });
@@ -706,13 +728,13 @@ fn show_manager(ctx: &egui::Context, st: &mut AppState) {
             u.add_space(8.0);
             hint_block(
                 &mut u,
-                &format!("„{}“ herunterladen? {} von {} (SHA-256 {}…). {}", m.name, size_text(m.size), short_source(m), &m.sha256[..12], license_note(m)),
+                &fp_i18n::tr!("dlg-ai-confirm-download", model = m.name, size = size_text(m.size), source = short_source(m), sha = &m.sha256[..12], license = license_note(m)),
             );
             u.horizontal(|ui| {
-                if ui.add_sized(BTN, egui::Button::new("Herunterladen")).clicked() {
+                if ui.add_sized(btn, egui::Button::new(dl_l.as_str())).clicked() {
                     start = Some(id);
                 }
-                if ui.add_sized(BTN, egui::Button::new("Abbrechen")).clicked() {
+                if ui.add_sized(btn, egui::Button::new(cancel_l.as_str())).clicked() {
                     d.confirm = None;
                 }
             });
@@ -725,26 +747,26 @@ fn show_manager(ctx: &egui::Context, st: &mut AppState) {
         // --- Speicherort
         egui::Frame::group(u.style()).inner_margin(egui::Margin::same(10)).show(&mut u, |ui| {
             ui.set_width(ui.available_width());
-            ui.label(egui::RichText::new("Speicherort").strong());
+            ui.label(egui::RichText::new(t("dlg-ai-location")).strong());
             ui.add_space(4.0);
             ui.horizontal(|ui| {
-                let w = (ui.available_width() - 2.0 * (BTN.x + 8.0)).max(120.0);
-                let resp = ui.add(egui::TextEdit::singleline(&mut d.folder).desired_width(w).hint_text("leer = %LOCALAPPDATA%\\Firepixel\\Modelle"));
+                let w = (ui.available_width() - 2.0 * (btn.x + 8.0)).max(120.0);
+                let resp = ui.add(egui::TextEdit::singleline(&mut d.folder).desired_width(w).hint_text(t("dlg-ai-folder-hint")));
                 if resp.lost_focus() {
                     folder_action = Some("apply");
                 }
-                if ui.add_sized(BTN, egui::Button::new("Durchsuchen…")).clicked() {
+                if ui.add_sized(btn, egui::Button::new(browse_l.as_str())).clicked() {
                     folder_action = Some("browse");
                 }
-                if ui.add_sized(BTN, egui::Button::new("Standard")).clicked() {
+                if ui.add_sized(btn, egui::Button::new(default_l.as_str())).clicked() {
                     folder_action = Some("default");
                 }
             });
             ui.horizontal(|ui| {
                 let f = models::download_folder().display().to_string();
-                ui.label(egui::RichText::new(format!("Aktuell: {}", ellipsize(&f, 70))).color(c.text_weak)).on_hover_text(f);
+                ui.label(egui::RichText::new(fp_i18n::tr!("dlg-ai-current-folder", path = ellipsize(&f, 70))).color(c.text_weak)).on_hover_text(f);
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    if ui.add_sized(BTN, egui::Button::new("Ordner öffnen")).clicked() {
+                    if ui.add_sized(btn, egui::Button::new(open_l.as_str())).clicked() {
                         folder_action = Some("open");
                     }
                 });
@@ -752,16 +774,16 @@ fn show_manager(ctx: &egui::Context, st: &mut AppState) {
         });
         u.add_space(8.0);
         u.horizontal(|ui| {
-            ui.label(format!("Zwischenspeicher im Arbeitsspeicher: {}", size_text(mem)));
+            ui.label(fp_i18n::tr!("dlg-ai-memory", size = size_text(mem)));
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                if ui.add_enabled(mem > 0, egui::Button::new("Zwischenspeicher leeren").min_size(vec2(170.0, BTN.y))).on_hover_text("Geladene Modelle und Bild-Einbettungen freigeben").clicked() {
+                if ui.add_enabled(mem > 0, egui::Button::new(clear_l.as_str()).min_size(vec2(cw, BTN.y))).on_hover_text(t("dlg-ai-clear-cache-tip")).clicked() {
                     clear = true;
                 }
             });
         });
         // Knopf „Schließen“ und Größengriff
-        let close_r = Rect::from_min_size(pos2(body.right() - PAD - BTN.x, body.bottom() - PAD - BTN.y), BTN);
-        if push_button(ui, close_r, "Schließen", true, true) {
+        let close_r = Rect::from_min_size(pos2(body.right() - PAD - btn.x, body.bottom() - PAD - btn.y), btn);
+        if push_button(ui, close_r, &close_l, true, true) {
             close = true;
         }
         let grip = Rect::from_min_size(body.max - vec2(14.0, 14.0), vec2(14.0, 14.0));
@@ -781,7 +803,7 @@ fn show_manager(ctx: &egui::Context, st: &mut AppState) {
         }
         return;
     }
-    d.size = vec2((d.size.x + resize.x).max(680.0), (d.size.y + resize.y).max(520.0));
+    d.size = vec2((size.x + resize.x).max(min_w), (d.size.y + resize.y).max(520.0));
     if let Some(id) = ask {
         d.confirm = Some(id);
         d.confirm_remove = None;
@@ -798,9 +820,9 @@ fn show_manager(ctx: &egui::Context, st: &mut AppState) {
         d.confirm_remove = None;
         fp_ai::cache::unload(id);
         d.info = Some(match models::find(id).map(std::fs::remove_file) {
-            Some(Ok(())) => format!("{} entfernt.", models::info(id).name),
-            Some(Err(e)) => format!("Entfernen fehlgeschlagen: {e}"),
-            None => "Datei nicht gefunden.".into(),
+            Some(Ok(())) => fp_i18n::tr!("dlg-ai-removed", model = models::info(id).name),
+            Some(Err(e)) => fp_i18n::tr!("dlg-ai-remove-failed", error = e.to_string()),
+            None => t("dlg-ai-file-not-found"),
         });
     }
     if cancel_dl && let Some(x) = &d.download {
@@ -808,44 +830,44 @@ fn show_manager(ctx: &egui::Context, st: &mut AppState) {
     }
     match folder_action {
         Some("browse") => {
-            if let Some(f) = rfd::FileDialog::new().set_title("Modellordner wählen").pick_folder() {
+            if let Some(f) = rfd::FileDialog::new().set_title(t("dlg-ai-pick-folder")).pick_folder() {
                 d.folder = f.display().to_string();
                 let _ = st.session.execute("ai.setModelFolder", serde_json::json!({"path": d.folder}));
-                d.info = Some("Modellordner übernommen.".into());
+                d.info = Some(t("dlg-ai-folder-applied"));
             }
         }
         Some("default") => {
             d.folder.clear();
             let _ = st.session.execute("ai.setModelFolder", serde_json::json!({"path": ""}));
-            d.info = Some("Standard-Modellordner.".into());
+            d.info = Some(t("dlg-ai-folder-default"));
         }
         Some("apply") => {
             if st.session.prefs.get_str("AiModelFolder", "") != d.folder.trim() {
                 let _ = st.session.execute("ai.setModelFolder", serde_json::json!({"path": d.folder.trim()}));
-                d.info = Some("Modellordner übernommen.".into());
+                d.info = Some(t("dlg-ai-folder-applied"));
             }
         }
         Some("open") => {
             let f = models::download_folder();
             let _ = std::fs::create_dir_all(&f);
             if !matches!(fp_engine::shell::shell_open(&f, None), Ok(true)) {
-                d.info = Some(format!("Ordner: {}", f.display()));
+                d.info = Some(fp_i18n::tr!("dlg-ai-folder-path", path = f.display().to_string()));
             }
         }
         _ => {}
     }
     if clear {
         let _ = st.session.execute("ai.clearCache", serde_json::json!({}));
-        d.info = Some("Zwischenspeicher geleert.".into());
+        d.info = Some(t("dlg-ai-cache-cleared"));
     }
     if let Some(x) = d.download.as_mut()
         && let Some(res) = x.job.poll()
     {
         let name = models::info(x.model).name;
         d.info = Some(match res {
-            Ok(_) => format!("✓ {name} geladen und geprüft."),
-            Err(fp_ai::AiError::Cancelled) => "Download abgebrochen.".into(),
-            Err(e) => format!("Download fehlgeschlagen: {e}"),
+            Ok(_) => fp_i18n::tr!("dlg-ai-loaded-checked", model = name),
+            Err(fp_ai::AiError::Cancelled) => t("dlg-ai-download-aborted"),
+            Err(e) => fp_i18n::tr!("dlg-ai-download-failed-error", error = e.to_string()),
         });
         d.download = None;
     }

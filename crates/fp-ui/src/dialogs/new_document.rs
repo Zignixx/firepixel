@@ -1,12 +1,13 @@
 //! Dialog „Neues Dokument“ (Vorlage 5961, Lage der Steuerelemente in DLU aus `dialoge.json`).
 
-use super::{dialog_frame, dlu, dlu_rect, group_box, push_button, DialogClose};
+use super::{dialog_frame, dlu, dlu_rect, extra_w, group_box, max_text_w, push_button, t, text_w, DialogClose};
 use crate::app_state::{Action, AppState};
 use egui::{vec2, Color32, Rect, Sense, Ui};
 use serde_json::json;
 
-const UNITS: [&str; 3] = ["Pixel", "Zoll", "Zentimeter"];
-const RES_UNITS: [&str; 2] = ["Pixel/Zoll", "Pixel/cm"];
+/// Einheiten (Schlüssel, auch in Leinwand-/Bildgröße).
+pub(crate) const UNITS: [&str; 3] = ["dlg-unit-pixels", "dlg-unit-inches", "dlg-unit-cm"];
+pub(crate) const RES_UNITS: [&str; 2] = ["dlg-unit-ppi", "dlg-unit-ppcm"];
 
 /// Leinwandfarbe.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -144,39 +145,82 @@ pub fn show(ctx: &egui::Context, st: &mut AppState) {
     let Some(mut d) = st.dialogs.new_document.clone() else { return };
     let mut result: Option<bool> = None;
     let mut templates = false;
-    let size = dlu(260.0, 174.0);
-    let r = dialog_frame(ctx, "fp-new-doc", "Neues Dokument", size, |ui, body| {
+    // Texte der aktuellen Sprache; längere Texte schieben die Spalten nach rechts (Deutsch: wie bisher)
+    let units: Vec<String> = UNITS.iter().map(|k| t(k)).collect();
+    let res_units: Vec<String> = RES_UNITS.iter().map(|k| t(k)).collect();
+    let labs = [t("dlg-new-doc-width"), t("dlg-new-doc-height"), t("dlg-new-doc-resolution")];
+    let wh = [t("dlg-short-w"), t("dlg-short-h")];
+    let radios = [t("dlg-canvas-white"), t("dlg-canvas-transparent"), t("dlg-canvas-custom")];
+    let (tmpl_l, ok_l, cancel_l) = (t("dlg-new-doc-templates"), t("btn-ok"), t("btn-cancel"));
+    let all_units: Vec<&str> = units.iter().chain(res_units.iter()).map(|s| s.as_str()).collect();
+    let dx = extra_w(ctx, &[&labs[0], &labs[1], &labs[2]], dlu(75.0 - 12.0, 0.0).x);
+    let dc = extra_w(ctx, &all_units, dlu(91.0, 0.0).x - 34.0);
+    let dv = extra_w(ctx, &[&wh[0], &wh[1]], dlu(12.0, 0.0).x - 2.0);
+    // Optionsfeld: Kreis 14 px + Abstand 4 px + Text
+    let radio_w = max_text_w(ctx, &[&radios[0], &radios[1], &radios[2]]) + 18.0;
+    let dsw = (dlu(13.0, 0.0).x + radio_w + 1.0 - dlu(96.0, 0.0).x).max(0.0).ceil();
+    let bw = super::buttons_w(ctx, &[&tmpl_l, &ok_l, &cancel_l], dlu(50.0, 0.0).x);
+    let gap = dlu(4.0, 0.0).x;
+    let ex = (dx + dc + dv).max(dsw - dlu(250.0 - 110.0 - 4.0, 0.0).x).max(dlu(8.0 + 10.0, 0.0).x + 3.0 * bw + 2.0 * gap + 20.0 - dlu(260.0, 0.0).x);
+    let size = dlu(260.0, 174.0) + vec2(ex, 0.0);
+    // Verschiebung einer DLU-Spalte: rechts der Beschriftungen um dx, rechts der Einheiten um dc …
+    let shift = move |x: f32| -> f32 {
+        if x >= 218.0 {
+            dx + dc + dv
+        } else if x >= 206.0 {
+            dx + dc
+        } else if x >= 76.0 {
+            dx
+        } else {
+            0.0
+        }
+    };
+    let rr = move |o: egui::Pos2, r: [f32; 4]| dlu_rect(o, r).translate(vec2(shift(r[0]), 0.0));
+    let r = dialog_frame(ctx, "fp-new-doc", &t("dlg-new-doc-title"), size, |ui, body| {
         let o = body.min;
         let bytes = d.pixel_size().map(|(w, h)| w * h * 4.0).unwrap_or(0.0);
-        group_box(ui, dlu_rect(o, [8.0, 6.0, 242.0, 68.0]), &format!("Leinwandgröße: {}", size_label(bytes)));
-        let label = |ui: &mut Ui, r: [f32; 4], t: &str| {
-            super::put_left(ui, dlu_rect(o, r), egui::Label::new(t));
+        group_box(ui, dlu_rect(o, [8.0, 6.0, 242.0, 68.0]).with_max_x(body.right() - dlu(10.0, 0.0).x), &fp_i18n::tr!("dlg-new-doc-canvas-size", size = size_label(bytes)));
+        // Beschriftungen rechtsbündig vor den Feldern (passen sie, steht der Text wie bisher)
+        let right_label = |ui: &mut Ui, r: [f32; 4], text: &str| {
+            let rect = dlu_rect(o, r);
+            let right = dlu_rect(o, [75.0, 0.0, 0.0, 0.0]).left() + dx;
+            let left = rect.left().min(right - text_w(ui.ctx(), text));
+            super::put_left(ui, Rect::from_min_size(egui::pos2(left, rect.top()), vec2(right - left + 2.0, rect.height())), egui::Label::new(text).extend());
         };
-        label(ui, [41.0, 21.0, 34.0, 10.0], "Breite:");
-        label(ui, [43.0, 38.0, 32.0, 10.0], "Höhe:");
-        label(ui, [26.0, 55.0, 49.0, 11.0], "Auflösung:");
+        right_label(ui, [41.0, 21.0, 34.0, 10.0], &labs[0]);
+        right_label(ui, [43.0, 38.0, 32.0, 10.0], &labs[1]);
+        right_label(ui, [26.0, 55.0, 49.0, 11.0], &labs[2]);
+        let label = |ui: &mut Ui, r: Rect, t: &str| {
+            super::put_left(ui, r, egui::Label::new(t).extend());
+        };
         // Tab-Folge wie im Original: Breite → Höhe → Auflösung, dann die Einheiten („800 ⇥ 600 ↵“)
         for (r, s) in [([76.0, 18.0, 31.0, 13.0], &mut d.width), ([76.0, 35.0, 31.0, 13.0], &mut d.height), ([76.0, 52.0, 31.0, 13.0], &mut d.resolution)] {
-            let te = ui.put(dlu_rect(o, r), egui::TextEdit::singleline(s));
+            let te = ui.put(rr(o, r), egui::TextEdit::singleline(s));
             super::autofocus_field(ui, &te, s.chars().count());
             super::select_on_tab(ui, &te, s.chars().count());
         }
-        combo(ui, dlu_rect(o, [112.0, 18.0, 91.0, 13.0]), "nd-wu", &UNITS, &mut d.width_unit);
-        combo(ui, dlu_rect(o, [112.0, 35.0, 91.0, 13.0]), "nd-hu", &UNITS, &mut d.height_unit);
-        combo(ui, dlu_rect(o, [112.0, 52.0, 91.0, 13.0]), "nd-ru", &RES_UNITS, &mut d.resolution_unit);
+        let urefs: Vec<&str> = units.iter().map(|s| s.as_str()).collect();
+        let rrefs: Vec<&str> = res_units.iter().map(|s| s.as_str()).collect();
+        let cw = |r: Rect| Rect::from_min_size(r.min, vec2(r.width() + dc, r.height()));
+        combo(ui, cw(rr(o, [112.0, 18.0, 91.0, 13.0])), "nd-wu", &urefs, &mut d.width_unit);
+        combo(ui, cw(rr(o, [112.0, 35.0, 91.0, 13.0])), "nd-hu", &urefs, &mut d.height_unit);
+        combo(ui, cw(rr(o, [112.0, 52.0, 91.0, 13.0])), "nd-ru", &rrefs, &mut d.resolution_unit);
         let (pw, ph) = d.pixel_size().unwrap_or((0.0, 0.0));
-        label(ui, [206.0, 21.0, 12.0, 10.0], "B:");
-        label(ui, [218.0, 21.0, 30.0, 10.0], &format!("{pw:.0}"));
-        label(ui, [206.0, 39.0, 12.0, 10.0], "H:");
-        label(ui, [218.0, 39.0, 30.0, 10.0], &format!("{ph:.0}"));
-        group_box(ui, dlu_rect(o, [8.0, 78.0, 242.0, 70.0]), "Leinwandfarbe");
-        for (y, label, choice) in [(90.0, "Weiß", CanvasChoice::White), (104.0, "Transparent", CanvasChoice::Transparent), (118.0, "Benutzerdefiniert:", CanvasChoice::Custom)] {
-            let mut row = ui.new_child(egui::UiBuilder::new().max_rect(dlu_rect(o, [13.0, y, 80.0, 11.0])).layout(egui::Layout::left_to_right(egui::Align::Center)));
-            if row.radio(d.canvas == choice, label).clicked() {
+        let short = |r: Rect| Rect::from_min_size(r.min, vec2(r.width() + dv, r.height()));
+        label(ui, short(rr(o, [206.0, 21.0, 12.0, 10.0])), &wh[0]);
+        label(ui, rr(o, [218.0, 21.0, 30.0, 10.0]), &format!("{pw:.0}"));
+        label(ui, short(rr(o, [206.0, 39.0, 12.0, 10.0])), &wh[1]);
+        label(ui, rr(o, [218.0, 39.0, 30.0, 10.0]), &format!("{ph:.0}"));
+        group_box(ui, dlu_rect(o, [8.0, 78.0, 242.0, 70.0]).with_max_x(body.right() - dlu(10.0, 0.0).x), &t("dlg-canvas-color-group"));
+        for (y, label, choice) in [(90.0, &radios[0], CanvasChoice::White), (104.0, &radios[1], CanvasChoice::Transparent), (118.0, &radios[2], CanvasChoice::Custom)] {
+            let rect = dlu_rect(o, [13.0, y, 80.0, 11.0]);
+            let rect = Rect::from_min_size(rect.min, vec2(rect.width().max(radio_w), rect.height()));
+            let mut row = ui.new_child(egui::UiBuilder::new().max_rect(rect).layout(egui::Layout::left_to_right(egui::Align::Center)));
+            if row.radio(d.canvas == choice, label.as_str()).clicked() {
                 d.canvas = choice;
             }
         }
-        let sw = dlu_rect(o, [96.0, 116.0, 14.0, 14.0]);
+        let sw = dlu_rect(o, [96.0, 116.0, 14.0, 14.0]).translate(vec2(dsw, 0.0));
         let mut child = ui.new_child(egui::UiBuilder::new().max_rect(sw));
         let mut rgb = [d.custom.r(), d.custom.g(), d.custom.b()];
         if child.color_edit_button_srgb(&mut rgb).changed() {
@@ -185,22 +229,23 @@ pub fn show(ctx: &egui::Context, st: &mut AppState) {
         }
         let _ = ui.allocate_rect(body, Sense::hover());
         // „Vorlagen…“ öffnet wie im Original „Neu von Vorlage“ (Dateiwahl, 7490)
-        if push_button(ui, dlu_rect(o, [8.0, 154.0, 50.0, 14.0]), "Vorlagen...", false, true) {
+        let by = dlu_rect(o, [0.0, 154.0, 0.0, 14.0]);
+        if push_button(ui, Rect::from_min_size(egui::pos2(o.x + dlu(8.0, 0.0).x, by.top()), vec2(bw, by.height())), &tmpl_l, false, true) {
             templates = true;
         }
         let valid = d.pixel_size().is_some();
-        if push_button(ui, dlu_rect(o, [146.0, 154.0, 50.0, 14.0]), "OK", true, valid) {
+        let b = super::button_row(ui.ctx(), body.right() - dlu(10.0, 0.0).x, by.top(), &[&ok_l, &cancel_l], bw, by.height(), gap);
+        if push_button(ui, b[0], &ok_l, true, valid) {
             result = Some(true);
         }
-        if push_button(ui, dlu_rect(o, [200.0, 154.0, 50.0, 14.0]), "Abbrechen", false, true) {
+        if push_button(ui, b[1], &cancel_l, false, true) {
             result = Some(false);
         }
-        let _ = vec2(0.0, 0.0);
     });
     match (result, r) {
         _ if templates => {
             st.dialogs.new_document = None;
-            if let Some(path) = super::panel_menus::pick_open(st, "Neu von Vorlage", &[("FW-PNG", &["png"])]) {
+            if let Some(path) = super::panel_menus::pick_open(st, &t("dlg-new-from-template"), &[("FW-PNG", &["png"])]) {
                 st.push(Action::Run("file.newFromTemplate".into(), json!({"path": path.to_string_lossy()})));
             }
         }

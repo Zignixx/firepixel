@@ -73,7 +73,7 @@ use egui_kittest::kittest::Queryable;
 
 /// Index eines Eintrags im Live-Filter-Menü.
 fn fx_index(label: &str) -> usize {
-    effects::FX.iter().position(|f| f.label == label).unwrap_or_else(|| panic!("{label}"))
+    effects::FX.iter().position(|f| f.menu_text() == label).unwrap_or_else(|| panic!("{label}"))
 }
 
 const EFFECT_DIALOGS: &[(&str, &str, &str)] = &[

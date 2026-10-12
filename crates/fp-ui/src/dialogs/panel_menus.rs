@@ -7,6 +7,7 @@
 //! (Verlaufsschritte, Stile, Symbol, Palettenfarben, [`PanelSelection`]).
 
 use super::form::{Field, FormDialog};
+use super::t;
 use crate::app_state::{Action, AppState};
 use serde_json::{json, Value};
 use std::collections::BTreeSet;
@@ -25,7 +26,7 @@ pub struct PanelSelection {
     pub palette: Vec<u32>,
 }
 
-/// Dateifilter: (Beschreibung, Endungen).
+/// Dateifilter: (Beschreibung bzw. Textschlüssel `dlg-…`, Endungen).
 type Filters<'a> = &'a [(&'a str, &'a [&'a str])];
 
 /// Datei zum Öffnen wählen (in Tests über [`crate::files::FilePickOverride`]).
@@ -35,16 +36,21 @@ pub fn pick_open(st: &AppState, title: &str, filters: Filters) -> Option<PathBuf
     }
     let mut d = rfd::FileDialog::new().set_title(title);
     for (n, e) in filters {
-        d = d.add_filter(*n, e);
+        d = d.add_filter(filter_name(n), e);
     }
     d.pick_file()
+}
+
+/// Beschreibung eines Dateifilters: Textschlüssel (`dlg-…`) übersetzt, sonst wie angegeben.
+fn filter_name(n: &str) -> String {
+    if n.starts_with("dlg-") { t(n) } else { n.to_string() }
 }
 
 /// „Befehl speichern“ (Vorlage 5968, wie im Original eine Namensabfrage statt Dateidialog): der
 /// Befehl landet als `<Name>.jsf` im Befehlsordner und erscheint im Befehle-Menü.
 pub fn open_save_command(st: &mut AppState, steps: &[usize]) {
     let n = std::fs::read_dir(fp_engine::commands::misc::commands_dir()).map(|r| r.count()).unwrap_or(0) + 1;
-    let f = super::form::FormDialog::new("5968", "Befehl speichern", "panel.history.saveAsCommand", vec![super::form::Field::text("name", "Name:", &format!("Befehl {n}"))])
+    let f = super::form::FormDialog::new("5968", &t("dlg-pmenu-save-command"), "panel.history.saveAsCommand", vec![super::form::Field::text("name", &t("dlg-lbl-name"), &fp_i18n::tr!("dlg-pmenu-command-default-name", n = n))])
         .with_base(json!({ "steps": steps, "_dir": command_dir(st).to_string_lossy() }))
         .with_transform(save_command_params);
     st.dialogs.form = Some(f);
@@ -52,12 +58,12 @@ pub fn open_save_command(st: &mut AppState, steps: &[usize]) {
 
 /// Befehlsordner (in Tests der Ordner der Speicher-Vorgabe aus [`crate::files::FilePickOverride`]).
 fn command_dir(st: &AppState) -> PathBuf {
-    st.file_override.as_ref().and_then(|o| o.save.as_ref()).and_then(|p| p.parent().map(|d| d.join("Befehle"))).unwrap_or_else(fp_engine::commands::misc::commands_dir)
+    st.file_override.as_ref().and_then(|o| o.save.as_ref()).and_then(|p| p.parent().map(|d| d.join(t("dlg-pmenu-commands-folder")))).unwrap_or_else(fp_engine::commands::misc::commands_dir)
 }
 
 fn save_command_params(d: &super::form::FormDialog) -> serde_json::Value {
-    let name = d.get("name").as_str().unwrap_or("Befehl").trim().replace(['\\', '/', ':', '*', '?', '"', '<', '>', '|'], "_");
-    let name = if name.is_empty() { "Befehl".to_string() } else { name };
+    let name = d.get("name").as_str().map(str::to_string).unwrap_or_else(|| t("dlg-pmenu-command-fallback")).trim().replace(['\\', '/', ':', '*', '?', '"', '<', '>', '|'], "_");
+    let name = if name.is_empty() { t("dlg-pmenu-command-fallback") } else { name };
     let dir = d.base.get("_dir").and_then(|v| v.as_str()).map(PathBuf::from).unwrap_or_else(fp_engine::commands::misc::commands_dir);
     let _ = std::fs::create_dir_all(&dir);
     json!({ "steps": d.base.get("steps").cloned().unwrap_or(json!([])), "path": dir.join(format!("{name}.jsf")).to_string_lossy() })
@@ -70,15 +76,15 @@ pub fn pick_save(st: &AppState, title: &str, name: &str, filters: Filters) -> Op
     }
     let mut d = rfd::FileDialog::new().set_title(title).set_file_name(name);
     for (n, e) in filters {
-        d = d.add_filter(*n, e);
+        d = d.add_filter(filter_name(n), e);
     }
     d.save_file()
 }
 
-const SWATCH_FILES: Filters = &[("Farbtabelle (*.act)", &["act"]), ("Swatch Exchange (*.ase)", &["ase"]), ("Farbfelder (*.aco)", &["aco"]), ("GIF (*.gif)", &["gif"])];
-const SWATCH_SAVE: Filters = &[("Farbtabelle (*.act)", &["act"]), ("Swatch Exchange (*.ase)", &["ase"]), ("Farbfelder (*.aco)", &["aco"])];
-const STYLE_FILES: Filters = &[("Stilbibliothek (*.json)", &["json"]), ("FW-PNG (*.png)", &["png"])];
-const LIB_FILES: Filters = &[("FW-PNG-Bibliothek (*.png)", &["png"])];
+const SWATCH_FILES: Filters = &[("dlg-filter-act", &["act"]), ("dlg-filter-ase", &["ase"]), ("dlg-filter-aco", &["aco"]), ("GIF (*.gif)", &["gif"])];
+const SWATCH_SAVE: Filters = &[("dlg-filter-act", &["act"]), ("dlg-filter-ase", &["ase"]), ("dlg-filter-aco", &["aco"])];
+const STYLE_FILES: Filters = &[("dlg-filter-style-library", &["json"]), ("FW-PNG (*.png)", &["png"])];
+const LIB_FILES: Filters = &[("dlg-filter-fwpng-library", &["png"])];
 
 fn run_with_path(st: &mut AppState, name: &str, path: Option<PathBuf>, mut extra: Value) {
     let Some(p) = path else { return };
@@ -93,11 +99,11 @@ fn colors_hex(v: &[u32]) -> Vec<String> {
 fn size_radio(key_value: i64) -> Field {
     let sizes = [0, 16, 32, 48, 64];
     let idx = sizes.iter().position(|s| *s == key_value).unwrap_or(2);
-    Field::radio_of("size", "Miniaturgröße:", &["Keine", "Klein", "Mittel", "Groß", "Sehr groß"], sizes.iter().map(|s| json!(s)).collect(), idx)
+    Field::radio_of("size", t("dlg-pmenu-thumb-size").as_str(), &[t("dlg-pmenu-thumb-none").as_str(), t("dlg-pmenu-thumb-small").as_str(), t("dlg-pmenu-thumb-medium").as_str(), t("dlg-pmenu-thumb-large").as_str(), t("dlg-pmenu-thumb-xlarge").as_str()], sizes.iter().map(|s| json!(s)).collect(), idx)
 }
 
 fn where_radio(default: usize) -> Field {
-    Field::radio_of("where", "Einfügen:", &["Am Anfang", "Vor aktuellem Status", "Nach aktuellem Status", "Am Ende"], vec![json!("start"), json!("before"), json!("after"), json!("end")], default)
+    Field::radio_of("where", t("dlg-lbl-insert").as_str(), &[t("dlg-insert-start").as_str(), t("dlg-insert-before-state").as_str(), t("dlg-insert-after-state").as_str(), t("dlg-insert-end").as_str()], vec![json!("start"), json!("before"), json!("after"), json!("end")], default)
 }
 
 fn share_pages_params(d: &FormDialog) -> Value {
@@ -147,52 +153,52 @@ pub fn open(st: &mut AppState, name: &str) -> bool {
         // Ebenen
         "panel.layers.newLayer" => {
             let n = st.session.active().map(|d| fp_engine::docops::own_layers(&d.doc, d.page).len()).unwrap_or(1);
-            Some(FormDialog::new("5987", "Neue Ebene", name, vec![Field::text("name", "Name:", &format!("Ebene {n}")), Field::check("shared", "Statusübergreifend freigeben", false)]).with_width(360.0))
+            Some(FormDialog::new("5987", t("dlg-title-new-layer").as_str(), name, vec![Field::text("name", t("dlg-lbl-name").as_str(), &fp_i18n::tr!("msg-default-layer", n = n.to_string())), Field::check("shared", t("dlg-lbl-share-across-states").as_str(), false)]).with_width(360.0))
         }
-        "panel.layers.newSubLayer" => Some(FormDialog::new("5987", "Neue Unterebene", name, vec![Field::text("name", "Name:", "Unterebene")]).with_width(360.0)),
+        "panel.layers.newSubLayer" => Some(FormDialog::new("5987", t("dlg-pmenu-new-sublayer").as_str(), name, vec![Field::text("name", t("dlg-lbl-name").as_str(), &t("msg-default-sublayer"))]).with_width(360.0)),
         "panel.layers.duplicate" => Some(
             FormDialog::new(
                 "19128",
-                "Ebene duplizieren",
+                t("dlg-title-duplicate-layer").as_str(),
                 name,
-                vec![Field::number("count", "Anzahl:", 1.0, 1.0, 100.0), Field::radio_of("position", "Einfügen:", &["Oben", "Vor aktueller Ebene", "Nach aktueller Ebene", "Unten"], vec![json!("top"), json!("above"), json!("below"), json!("bottom")], 1)],
+                vec![Field::number("count", t("dlg-lbl-count").as_str(), 1.0, 1.0, 100.0), Field::radio_of("position", t("dlg-lbl-insert").as_str(), &[t("dlg-insert-top").as_str(), t("dlg-insert-before-layer").as_str(), t("dlg-insert-after-layer").as_str(), t("dlg-insert-bottom").as_str()], vec![json!("top"), json!("above"), json!("below"), json!("bottom")], 1)],
             )
             .with_width(560.0),
         ),
         "panel.layers.shareToPages" => {
             let Some(d) = st.session.active() else { return false };
-            let mut fields = vec![Field::caption("Ebene freigeben für:")];
+            let mut fields = vec![Field::caption(t("dlg-pmenu-share-for").as_str())];
             for (i, p) in d.doc.pages.iter().enumerate() {
                 if i != d.page {
-                    fields.push(Field::check(&format!("_page{i}"), &p.name.clone().unwrap_or_else(|| format!("Seite {}", i + 1)), false));
+                    fields.push(Field::check(&format!("_page{i}"), &p.name.clone().unwrap_or_else(|| fp_i18n::tr!("msg-default-page", n = (i + 1).to_string())), false));
                 }
             }
             if fields.len() == 1 {
-                fields.push(Field::note("Das Dokument hat nur eine Seite."));
+                fields.push(Field::note(t("dlg-pmenu-only-one-page").as_str()));
             }
-            Some(FormDialog::new("6554", "Ebene für Seiten freigeben", name, fields).with_width(360.0).with_transform(share_pages_params))
+            Some(FormDialog::new("6554", t("dlg-pmenu-share-to-pages").as_str(), name, fields).with_width(360.0).with_transform(share_pages_params))
         }
-        "panel.layers.thumbnailOptions" => Some(FormDialog::new("6272", "Miniaturoptionen", name, vec![size_radio(prefs_int(st, "LayersList_ThumbnailSize", 32))]).with_width(420.0)),
-        "panel.pages.thumbnailOptions" => Some(FormDialog::new("6272", "Optionen für Miniaturansicht", name, vec![size_radio(prefs_int(st, "PagesList_ThumbnailSize", 32))]).with_width(420.0)),
+        "panel.layers.thumbnailOptions" => Some(FormDialog::new("6272", t("dlg-pmenu-thumb-options").as_str(), name, vec![size_radio(prefs_int(st, "LayersList_ThumbnailSize", 32))]).with_width(420.0)),
+        "panel.pages.thumbnailOptions" => Some(FormDialog::new("6272", t("dlg-pmenu-thumb-view-options").as_str(), name, vec![size_radio(prefs_int(st, "PagesList_ThumbnailSize", 32))]).with_width(420.0)),
         // Status
-        "panel.states.add" => Some(FormDialog::new("5990", "Status hinzufügen", name, vec![Field::number("count", "Anzahl:", 1.0, 1.0, 1000.0), where_radio(3)]).with_width(560.0)),
-        "panel.states.duplicate" => Some(FormDialog::new("5990", "Status duplizieren", name, vec![Field::number("count", "Anzahl:", 1.0, 1.0, 1000.0), where_radio(2)]).with_width(560.0)),
+        "panel.states.add" => Some(FormDialog::new("5990", t("dlg-title-add-states").as_str(), name, vec![Field::number("count", t("dlg-lbl-count").as_str(), 1.0, 1.0, 1000.0), where_radio(3)]).with_width(560.0)),
+        "panel.states.duplicate" => Some(FormDialog::new("5990", t("dlg-pmenu-duplicate-states").as_str(), name, vec![Field::number("count", t("dlg-lbl-count").as_str(), 1.0, 1.0, 1000.0), where_radio(2)]).with_width(560.0)),
         "panel.states.copyTo" => super::catalog::form_for(st, "panel.states.copyTo"),
         "panel.states.properties" => {
             let Some(d) = st.session.active() else { return false };
             let f = d.doc.pages.get(d.page).and_then(|p| p.root.export.as_ref()).map(|e| e.frame(d.frame)).unwrap_or_default();
             let n = crate::panels::state_name(st, d.frame);
-            Some(FormDialog::new("states-props", "Statuseigenschaften", name, vec![Field::text("name", "Name:", &n), Field::number("delay", "Statusverzögerung (1/100 s):", f.delay as f64, 0.0, 9999.0), Field::check("visible", "Beim Exportieren einschließen", f.visible)]).with_width(380.0))
+            Some(FormDialog::new("states-props", t("dlg-pmenu-state-props").as_str(), name, vec![Field::text("name", t("dlg-lbl-name").as_str(), &n), Field::number("delay", t("dlg-pmenu-state-delay").as_str(), f.delay as f64, 0.0, 9999.0), Field::check("visible", t("dlg-pmenu-include-export").as_str(), f.visible)]).with_width(380.0))
         }
         // Seiten
         "panel.pages.rename" => {
             let Some(d) = st.session.active() else { return false };
-            let n = d.doc.pages.get(d.page).and_then(|p| p.name.clone()).unwrap_or_else(|| format!("Seite {}", d.page + 1));
-            Some(FormDialog::new("page-rename", "Seite umbenennen", name, vec![Field::text("name", "Name:", &n)]))
+            let n = d.doc.pages.get(d.page).and_then(|p| p.name.clone()).unwrap_or_else(|| fp_i18n::tr!("msg-default-page", n = (d.page + 1).to_string()));
+            Some(FormDialog::new("page-rename", t("dlg-pmenu-rename-page").as_str(), name, vec![Field::text("name", t("dlg-lbl-name").as_str(), &n)]))
         }
         "panel.pages.export" => {
             let n = st.session.active().map(|d| d.title.trim_end_matches(".png").trim_end_matches(".fw").to_string()).unwrap_or_default();
-            let p = pick_save(st, "Seite exportieren", &format!("{n}.png"), &[("Bild (Format laut Optimieren)", &["png", "gif", "jpg", "webp"])]);
+            let p = pick_save(st, &t("dlg-pmenu-export-page"), &format!("{n}.png"), &[("dlg-filter-image-optimize", &["png", "gif", "jpg", "webp"])]);
             run_with_path(st, name, p, json!({}));
             return true;
         }
@@ -200,14 +206,14 @@ pub fn open(st: &mut AppState, name: &str) -> bool {
         "panel.history.replaySelected" | "panel.history.copySteps" | "panel.history.saveAsCommand" => {
             let steps: Vec<usize> = sel.history.iter().copied().collect();
             if steps.is_empty() {
-                st.push(Action::Status("Bitte zuerst Schritte im Verlauf auswählen.".into()));
+                st.push(Action::Status(t("dlg-pmenu-need-steps")));
                 return true;
             }
             match name {
                 "panel.history.copySteps" => match crate::ui_commands::execute(&mut st.session, name, json!({ "steps": steps })) {
                     Ok(o) => {
                         st.dialogs.clipboard = o.value.get("script").and_then(|v| v.as_str()).map(|s| s.to_string());
-                        st.push(Action::Status("Schritte in die Zwischenablage kopiert".into()));
+                        st.push(Action::Status(t("dlg-pmenu-steps-copied")));
                     }
                     Err(e) => st.push(Action::Status(e.to_string())),
                 },
@@ -217,7 +223,7 @@ pub fn open(st: &mut AppState, name: &str) -> bool {
             return true;
         }
         "panel.history.clear" => {
-            st.dialogs.confirm = Some(super::Confirm { title: "Verlauf löschen".into(), text: "Das Löschen des Verlaufs kann nicht rückgängig gemacht werden. Fortfahren?".into(), command: name.into(), params: json!({ "confirmed": true }) });
+            st.dialogs.confirm = Some(super::Confirm { title: t("dlg-pmenu-clear-history"), text: t("dlg-pmenu-clear-history-text"), command: name.into(), params: json!({ "confirmed": true }) });
             return true;
         }
         // Stile
@@ -227,7 +233,7 @@ pub fn open(st: &mut AppState, name: &str) -> bool {
         }
         "panel.styles.duplicate" | "panel.styles.redefine" => {
             let Some(n) = sel.styles.first() else {
-                st.push(Action::Status("Bitte zuerst einen Stil auswählen.".into()));
+                st.push(Action::Status(t("dlg-pmenu-need-style")));
                 return true;
             };
             st.run(name, json!({ "name": n }));
@@ -235,7 +241,7 @@ pub fn open(st: &mut AppState, name: &str) -> bool {
         }
         "panel.styles.delete" => {
             if sel.styles.is_empty() {
-                st.push(Action::Status("Bitte zuerst einen Stil auswählen.".into()));
+                st.push(Action::Status(t("dlg-pmenu-need-style")));
                 return true;
             }
             st.run(name, json!({ "names": sel.styles }));
@@ -244,18 +250,18 @@ pub fn open(st: &mut AppState, name: &str) -> bool {
         }
         "panel.styles.rename" => {
             let Some(n) = sel.styles.first() else { return true };
-            Some(FormDialog::new("19175", "Stil umbenennen", name, vec![Field::text("newName", "Name:", n)]).with_base(json!({ "name": n })))
+            Some(FormDialog::new("19175", t("dlg-pmenu-rename-style").as_str(), name, vec![Field::text("newName", t("dlg-lbl-name").as_str(), n)]).with_base(json!({ "name": n })))
         }
         "panel.styles.options" => {
             let Some(n) = sel.styles.first() else {
-                st.push(Action::Status("Bitte zuerst einen Stil auswählen.".into()));
+                st.push(Action::Status(t("dlg-pmenu-need-style")));
                 return true;
             };
             let s = st.session.active().and_then(|d| d.doc.styles.as_ref().and_then(|v| v.iter().find(|x| &x.name == n).cloned()));
             let (fl, ot) = s.map(|x| (x.flags, x.other_flags)).unwrap_or((0x1ff, 0x1f));
             let mut f = super::misc::new_style_form(st);
             f.id = "6026".into();
-            f.title = "Stil bearbeiten".into();
+            f.title = t("dlg-pmenu-edit-style");
             f.command = name.into();
             f.base = json!({ "name": n });
             for fd in &mut f.fields {
@@ -286,29 +292,29 @@ pub fn open(st: &mut AppState, name: &str) -> bool {
             return true;
         }
         "panel.styles.load" | "panel.styles.importLibrary" => {
-            let p = pick_open(st, "Stile laden", STYLE_FILES);
+            let p = pick_open(st, &t("dlg-pmenu-load-styles"), STYLE_FILES);
             run_with_path(st, name, p, json!({}));
             return true;
         }
         "panel.styles.saveLibrary" => {
-            let p = pick_save(st, "Stilbibliothek speichern", "Stile.json", STYLE_FILES);
+            let p = pick_save(st, &t("dlg-pmenu-save-style-library"), &format!("{}.json", t("dlg-pmenu-styles-file")), STYLE_FILES);
             run_with_path(st, name, p, json!({}));
             return true;
         }
         // Dokumentbibliothek
         "panel.library.newSymbol" => Some(
-            FormDialog::new("19104", "Neues Symbol", name, vec![Field::text("name", "Name:", "Symbol"), Field::radio_of("kind", "Typ:", &["Grafik", "Animation", "Schaltfläche"], vec![json!("graphic"), json!("animation"), json!("button")], 0)]).with_width(420.0),
+            FormDialog::new("19104", t("dlg-md-new-symbol").as_str(), name, vec![Field::text("name", t("dlg-lbl-name").as_str(), &t("dlg-symbol-default-name")), Field::radio_of("kind", t("dlg-lbl-type").as_str(), &[t("dlg-symbol-graphic").as_str(), t("dlg-symbol-animation").as_str(), t("dlg-symbol-button").as_str()], vec![json!("graphic"), json!("animation"), json!("button")], 0)]).with_width(420.0),
         ),
         "panel.library.duplicate" | "panel.library.edit" | "panel.library.nineSlice" | "panel.library.lockNineSlice" | "panel.library.delete" | "panel.library.properties" | "panel.library.saveToCommon" => {
             let Some(i) = sel.symbol else {
-                st.push(Action::Status("Bitte zuerst ein Symbol in der Bibliothek auswählen.".into()));
+                st.push(Action::Status(t("dlg-pmenu-need-symbol")));
                 return true;
             };
             let sym = st.session.active().and_then(|d| d.doc.symbols.get(i).cloned());
             let Some(sym) = sym else { return true };
             match name {
                 "panel.library.delete" => {
-                    st.dialogs.confirm = Some(super::Confirm { title: "Symbol löschen".into(), text: format!("Das Symbol „{}“ und alle Instanzen löschen?", sym.name), command: name.into(), params: json!({ "index": i }) });
+                    st.dialogs.confirm = Some(super::Confirm { title: t("dlg-pmenu-delete-symbol"), text: fp_i18n::tr!("dlg-pmenu-delete-symbol-text", name = sym.name.as_str()), command: name.into(), params: json!({ "index": i }) });
                     st.dialogs.panel_sel.symbol = None;
                     return true;
                 }
@@ -321,12 +327,12 @@ pub fn open(st: &mut AppState, name: &str) -> bool {
                     Some(
                         FormDialog::new(
                             "19104",
-                            "Symboleigenschaften",
+                            t("dlg-pmenu-symbol-props").as_str(),
                             name,
                             vec![
-                                Field::text("name", "Name:", &sym.name),
-                                Field::radio_of("kind", "Typ:", &["Grafik", "Animation", "Schaltfläche"], vec![json!("graphic"), json!("animation"), json!("button")], k),
-                                Field::check("nineSlice", "Hilfslinien für 9-Slice-Skalierung aktivieren", sym.nine_slice.is_some()),
+                                Field::text("name", t("dlg-lbl-name").as_str(), &sym.name),
+                                Field::radio_of("kind", t("dlg-lbl-type").as_str(), &[t("dlg-symbol-graphic").as_str(), t("dlg-symbol-animation").as_str(), t("dlg-symbol-button").as_str()], vec![json!("graphic"), json!("animation"), json!("button")], k),
+                                Field::check("nineSlice", t("dlg-lbl-enable-nineslice").as_str(), sym.nine_slice.is_some()),
                             ],
                         )
                         .with_base(json!({ "index": i }))
@@ -336,7 +342,7 @@ pub fn open(st: &mut AppState, name: &str) -> bool {
                 "panel.library.saveToCommon" => {
                     let dir = crate::panels::library::library_roots().into_iter().next().map(|(_, p)| p).unwrap_or_default();
                     Some(
-                        FormDialog::new("6556", "In allgemeiner Bibliothek speichern", name, vec![Field::text("_file", "Dateiname:", &format!("{}.png", sym.name))])
+                        FormDialog::new("6556", t("dlg-pmenu-save-common").as_str(), name, vec![Field::text("_file", t("dlg-export-file-name").as_str(), &format!("{}.png", sym.name))])
                             .with_base(json!({ "index": i, "_dir": dir.to_string_lossy() }))
                             .with_width(380.0)
                             .with_transform(symbol_form_params),
@@ -353,54 +359,54 @@ pub fn open(st: &mut AppState, name: &str) -> bool {
                 let first = o.value.get("indices").and_then(|v| v.as_array()).and_then(|a| a.first()).and_then(|v| v.as_u64()).map(|v| v as usize);
                 st.dialogs.panel_sel.symbol = first;
                 if first.is_none() {
-                    st.push(Action::Status("Alle Symbole werden verwendet.".into()));
+                    st.push(Action::Status(t("dlg-pmenu-all-symbols-used")));
                 }
             }
             return true;
         }
         "panel.library.import" => {
-            let p = pick_open(st, "Symbole importieren", LIB_FILES);
+            let p = pick_open(st, &t("dlg-pmenu-import-symbols"), LIB_FILES);
             run_with_path(st, name, p, json!({}));
             return true;
         }
         "panel.library.export" => {
-            let p = pick_save(st, "Symbole exportieren", "Symbole.png", LIB_FILES);
+            let p = pick_save(st, &t("dlg-pmenu-export-symbols"), &format!("{}.png", t("dlg-pmenu-symbols-file")), LIB_FILES);
             run_with_path(st, name, p, json!({}));
             return true;
         }
         // Farbfelder
         "panel.swatches.add" | "panel.swatches.replace" => {
-            let p = pick_open(st, "Farbfelder öffnen", SWATCH_FILES);
+            let p = pick_open(st, &t("dlg-pmenu-open-swatches"), SWATCH_FILES);
             run_with_path(st, name, p, json!({}));
             return true;
         }
         "panel.swatches.save" => {
-            let p = pick_save(st, "Farbfelder speichern", "Farbfelder.act", SWATCH_SAVE);
+            let p = pick_save(st, &t("dlg-pmenu-save-swatches"), &format!("{}.act", t("dlg-pmenu-swatches-file")), SWATCH_SAVE);
             run_with_path(st, name, p, json!({}));
             return true;
         }
         // Optimieren
-        "panel.optimize.saveSettings" => Some(FormDialog::new("5974", "Vorgabename", name, vec![Field::text("name", "Name:", "Eigene Einstellung")])),
+        "panel.optimize.saveSettings" => Some(FormDialog::new("5974", t("dlg-pmenu-preset-name").as_str(), name, vec![Field::text("name", t("dlg-lbl-name").as_str(), &t("dlg-pmenu-own-setting"))])),
         "panel.optimize.deleteSettings" => {
             let names: Vec<String> = crate::ui_commands::export_presets(&st.session.prefs).into_iter().map(|(n, _)| n).collect();
             if names.is_empty() {
-                st.dialogs.message = Some(("Einstellungen löschen".into(), "Es gibt keine gespeicherten Einstellungen.".into()));
+                st.dialogs.message = Some((t("dlg-pmenu-delete-settings"), t("dlg-pmenu-no-settings")));
                 return true;
             }
             let refs: Vec<&str> = names.iter().map(|s| s.as_str()).collect();
-            Some(FormDialog::new("5974", "Einstellungen löschen", name, vec![Field::choice_of("name", "Vorgabe:", &refs, names.iter().map(|n| json!(n)).collect(), 0)]))
+            Some(FormDialog::new("5974", t("dlg-pmenu-delete-settings").as_str(), name, vec![Field::choice_of("name", t("dlg-pmenu-preset").as_str(), &refs, names.iter().map(|n| json!(n)).collect(), 0)]))
         }
-        "panel.optimize.optimizeToSize" => Some(FormDialog::new("4734", "Für Dateigröße optimieren", name, vec![Field::number("kb", "Zielgröße:", 32.0, 0.1, 100000.0).decimals(1).unit("K")])),
+        "panel.optimize.optimizeToSize" => Some(FormDialog::new("4734", t("dlg-pmenu-optimize-size").as_str(), name, vec![Field::number("kb", t("dlg-md-target-size").as_str(), 32.0, 0.1, 100000.0).decimals(1).unit("K")])),
         "panel.optimize.exportWizard" => Some(
             FormDialog::new(
                 "4717",
-                "Exportassistent",
+                t("dlg-md-export-wizard").as_str(),
                 name,
                 vec![
-                    Field::radio_of("target", "Ziel:", &["Web", "Bildbearbeitung", "Webseite (HTML)"], vec![json!("web"), json!("imageEditing"), json!("dreamweaver")], 0),
-                    Field::check("_limit", "Exportgröße festlegen", false),
-                    Field::number("_kb", "Zielgröße:", 32.0, 0.1, 100000.0).decimals(1).unit("K"),
-                    Field::note("Der Assistent analysiert das Bild (Fotos → JPEG, Flächen → GIF) und setzt die Exporteinstellungen der Seite."),
+                    Field::radio_of("target", t("dlg-md-destination").as_str(), &[t("dlg-md-dest-web").as_str(), t("dlg-md-dest-image").as_str(), t("dlg-md-dest-html").as_str()], vec![json!("web"), json!("imageEditing"), json!("dreamweaver")], 0),
+                    Field::check("_limit", t("dlg-md-limit-size").as_str(), false),
+                    Field::number("_kb", t("dlg-md-target-size").as_str(), 32.0, 0.1, 100000.0).decimals(1).unit("K"),
+                    Field::note(t("dlg-pmenu-wizard-note").as_str()),
                 ],
             )
             .with_width(480.0)
@@ -408,17 +414,17 @@ pub fn open(st: &mut AppState, name: &str) -> bool {
         ),
         "panel.optimize.editColor" => {
             let Some(c) = sel.palette.first().copied() else {
-                st.push(Action::Status("Bitte zuerst eine Farbe in der Farbtabelle auswählen.".into()));
+                st.push(Action::Status(t("dlg-pmenu-need-color")));
                 return true;
             };
             let hex = format!("#{:06x}ff", c & 0x00ff_ffff);
-            Some(FormDialog::new("4630", "Farbe bearbeiten", name, vec![Field::color("newColor", "Neue Farbe:", &hex)]).with_base(json!({ "color": format!("#{:06x}", c & 0x00ff_ffff) })))
+            Some(FormDialog::new("4630", t("dlg-pmenu-edit-color").as_str(), name, vec![Field::color("newColor", t("dlg-pmenu-new-color").as_str(), &hex)]).with_base(json!({ "color": format!("#{:06x}", c & 0x00ff_ffff) })))
         }
-        "panel.optimize.addColorMenu" => Some(FormDialog::new("4630", "Farbe hinzufügen", "panel.optimize.addColor", vec![Field::color("color", "Farbe:", "#808080ff")])),
+        "panel.optimize.addColorMenu" => Some(FormDialog::new("4630", t("dlg-pmenu-add-color").as_str(), "panel.optimize.addColor", vec![Field::color("color", t("dlg-lbl-color").as_str(), "#808080ff")])),
         "panel.optimize.editColorMenu" => return open(st, "panel.optimize.editColor"),
         "panel.optimize.deleteColorMenu" | "panel.optimize.snapToWebMenu" | "panel.optimize.lockColorMenu" => {
             if sel.palette.is_empty() {
-                st.push(Action::Status("Bitte zuerst eine Farbe in der Farbtabelle auswählen.".into()));
+                st.push(Action::Status(t("dlg-pmenu-need-color")));
                 return true;
             }
             let target = match name {
@@ -431,31 +437,31 @@ pub fn open(st: &mut AppState, name: &str) -> bool {
         }
         "panel.effects.saveAsStyle" => {
             let n = st.session.active().and_then(|d| d.doc.styles.as_ref().map(|s| s.len())).unwrap_or(0) + 1;
-            Some(FormDialog::new("19123", "Als Stil speichern", name, vec![Field::text("name", "Name:", &format!("Stil {n}"))]))
+            Some(FormDialog::new("19123", t("dlg-pmenu-save-as-style").as_str(), name, vec![Field::text("name", t("dlg-lbl-name").as_str(), &fp_i18n::tr!("dlg-style-default-name", n = n))]))
         }
         "panel.effects.locatePlugins" => {
             let dir = match &st.file_override {
                 Some(o) => o.open.first().cloned(),
-                None => rfd::FileDialog::new().set_title("Zusatzmodule suchen").pick_folder(),
+                None => rfd::FileDialog::new().set_title(t("dlg-pmenu-locate-plugins")).pick_folder(),
             };
             run_with_path(st, name, dir, json!({}));
             return true;
         }
         "panel.optimize.makeTransparent" | "panel.optimize.removeEdit" => {
             if sel.palette.is_empty() {
-                st.push(Action::Status("Bitte zuerst eine Farbe in der Farbtabelle auswählen.".into()));
+                st.push(Action::Status(t("dlg-pmenu-need-color")));
                 return true;
             }
             st.run(name, json!({ "colors": colors_hex(&sel.palette) }));
             return true;
         }
         "panel.optimize.loadPalette" => {
-            let p = pick_open(st, "Palette laden", SWATCH_FILES);
+            let p = pick_open(st, &t("dlg-pmenu-load-palette"), SWATCH_FILES);
             run_with_path(st, name, p, json!({}));
             return true;
         }
         "panel.optimize.savePalette" => {
-            let p = pick_save(st, "Palette speichern", "Palette.act", SWATCH_SAVE);
+            let p = pick_save(st, &t("dlg-pmenu-save-palette"), &format!("{}.act", t("dlg-pmenu-palette-file")), SWATCH_SAVE);
             run_with_path(st, name, p, json!({}));
             return true;
         }

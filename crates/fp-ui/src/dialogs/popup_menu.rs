@@ -4,7 +4,7 @@
 //! Größe) und Position (Versatz von Menü und Untermenü). OK führt `modify.popUpMenu.addPopUpMenu`
 //! bzw. `…editPopUpMenu` aus (ein Verlaufsschritt), Abbrechen ändert nichts.
 
-use super::{dialog_frame, push_button, DialogClose};
+use super::{dialog_frame, push_button, refs, t, tl, DialogClose};
 use crate::app_state::{Action, AppState};
 use crate::inspector::fields;
 use crate::theme::Theme;
@@ -85,7 +85,7 @@ impl PopupEditor {
         } else {
             let mut menu = Map::new();
             menu.insert("vertical".into(), json!(true));
-            Some(PopupEditor { edit, tab: 0, rows: vec![Row { level: 0, text: "Eintrag 1".into(), url: String::new(), target: String::new() }], selected: Some(0), menu })
+            Some(PopupEditor { edit, tab: 0, rows: vec![Row { level: 0, text: fp_i18n::tr!("dlg-pm-default-item", n = 1), url: String::new(), target: String::new() }], selected: Some(0), menu })
         }
     }
 
@@ -111,18 +111,41 @@ impl PopupEditor {
 pub fn show(ctx: &egui::Context, st: &mut AppState) {
     let Some(mut d) = st.dialogs.popup_editor.clone() else { return };
     let mut result = None;
-    let title = if d.edit { "Pop-up-Menü-Editor (bearbeiten)" } else { "Pop-up-Menü-Editor" };
-    let r = dialog_frame(ctx, "fp-popup-editor", title, vec2(560.0, 420.0), |ui, body| {
+    let title = if d.edit { t("dlg-pm-title-edit") } else { t("dlg-pm-title") };
+    // Texte der aktuellen Sprache; Spalten wachsen mit (Deutsch: Lage wie bisher)
+    let tabs = tl(&["dlg-pm-tab-content", "dlg-pm-tab-appearance", "dlg-pm-tab-advanced", "dlg-pm-tab-position"]);
+    let l0 = tl(&["dlg-pm-text", "dlg-pm-link", "dlg-pm-target"]);
+    let l1 = tl(&["dlg-pm-orientation", "dlg-pm-text-align", "dlg-pm-text-up", "dlg-pm-text-over", "dlg-pm-highlight"]);
+    let radios = tl(&["dlg-pm-vertical", "dlg-pm-horizontal"]);
+    let aligns = tl(&["dlg-pm-align-left", "dlg-pm-align-center", "dlg-pm-align-right"]);
+    let l2 = tl(&["dlg-pm-cell-spacing", "dlg-pm-cell-padding", "dlg-pm-text-indent", "dlg-pm-border-width", "dlg-pm-hide-delay", "dlg-pm-fixed-width", "dlg-pm-border-color", "dlg-pm-shadow-color"]);
+    let l3 = tl(&["dlg-pm-menu-x", "dlg-pm-menu-y", "dlg-pm-sub-x", "dlg-pm-sub-y"]);
+    let (bold_l, hide_l, rel_l, ok_l, cancel_l) = (t("dlg-pm-bold"), t("dlg-pm-hide-on-leave"), t("dlg-pm-sub-relative"), t("btn-ok"), t("btn-cancel"));
+    let tab_w = super::buttons_w(ctx, &refs(&tabs), 108.0);
+    let dx0 = super::extra_w(ctx, &refs(&l0), 60.0 - 4.0);
+    let dx1 = super::extra_w(ctx, &refs(&l1), 100.0 - 4.0);
+    let l23: Vec<&str> = l2.iter().chain(l3.iter()).map(|s| s.as_str()).collect();
+    let dx2 = super::extra_w(ctx, &l23, 150.0 - 4.0);
+    let rw: Vec<f32> = radios.iter().map(|r| (super::text_w(ctx, r) + 20.0).max(110.0)).collect();
+    let acw = super::combo_fit_w(ctx, &refs(&aligns), 120.0);
+    let bold_w = (18.0 + super::text_w(ctx, &bold_l)).max(80.0);
+    let inner_w = (64.0 + dx0 + 300.0)
+        .max(110.0 + dx1 + rw[0] + 10.0 + rw[1])
+        .max(110.0 + dx1 + acw + 20.0 + bold_w)
+        .max(160.0 + dx2 + 60.0)
+        .max(18.0 + super::max_text_w(ctx, &[&hide_l, &rel_l]));
+    let width = 560f32.max(24.0 + 4.0 * (tab_w + 4.0)).max(24.0 + 20.0 + inner_w).max(super::button_row_w(ctx, &[&ok_l, &cancel_l], 76.0, 8.0) + 32.0).ceil();
+    let r = dialog_frame(ctx, "fp-popup-editor", &title, vec2(width, 420.0), |ui, body| {
         let theme = Theme::current(ui.ctx());
         let c = &theme.colors;
         let o = body.min + vec2(12.0, 10.0);
         // Registerkarten
-        for (k, name) in ["Inhalt", "Erscheinungsbild", "Erweitert", "Position"].iter().enumerate() {
-            let tr = Rect::from_min_size(o + vec2(k as f32 * 112.0, 0.0), vec2(108.0, 22.0));
+        for (k, name) in tabs.iter().enumerate() {
+            let tr = Rect::from_min_size(o + vec2(k as f32 * (tab_w + 4.0), 0.0), vec2(tab_w, 22.0));
             let resp = ui.interact(tr, egui::Id::new(("pm-tab", k)), Sense::click());
             ui.painter().rect_filled(tr, 0.0, if d.tab == k { c.list_bg } else { c.frame_bg });
             ui.painter().rect_stroke(tr, 0.0, Stroke::new(1.0, c.line_mid), StrokeKind::Inside);
-            ui.painter().text(tr.center(), Align2::CENTER_CENTER, *name, theme.ui_font(), c.text);
+            ui.painter().text(tr.center(), Align2::CENTER_CENTER, name.as_str(), theme.ui_font(), c.text);
             if resp.clicked() {
                 d.tab = k;
             }
@@ -148,7 +171,7 @@ pub fn show(ctx: &egui::Context, st: &mut AppState) {
                 if fields::button(ui, "pm-add", btn(0.0), "+", true) {
                     let level = d.selected.and_then(|i| d.rows.get(i)).map(|r| r.level).unwrap_or(0);
                     let at = d.selected.map(|i| i + 1).unwrap_or(d.rows.len());
-                    d.rows.insert(at, Row { level, text: format!("Eintrag {}", d.rows.len() + 1), url: String::new(), target: String::new() });
+                    d.rows.insert(at, Row { level, text: fp_i18n::tr!("dlg-pm-default-item", n = d.rows.len() + 1), url: String::new(), target: String::new() });
                     d.selected = Some(at);
                 }
                 if fields::button(ui, "pm-del", btn(1.0), "−", d.selected.is_some() && d.rows.len() > 1)
@@ -181,15 +204,15 @@ pub fn show(ctx: &egui::Context, st: &mut AppState) {
                 }
                 if let Some(i) = d.selected.filter(|i| *i < d.rows.len()) {
                     let fy = by + 32.0;
-                    for (k, (label, key)) in [("Text:", 0), ("Link:", 1), ("Ziel:", 2)].iter().enumerate() {
+                    for (k, (label, key)) in [(&l0[0], 0), (&l0[1], 1), (&l0[2], 2)].iter().enumerate() {
                         let y = fy + k as f32 * 26.0;
-                        fields::label(ui, Rect::from_min_size(pos2(a.x, y), vec2(60.0, 20.0)), label, true);
+                        super::fit_label(ui, Rect::from_min_size(pos2(a.x, y), vec2(60.0 + dx0, 20.0)), label, true);
                         let cur = match key {
                             0 => d.rows[i].text.clone(),
                             1 => d.rows[i].url.clone(),
                             _ => d.rows[i].target.clone(),
                         };
-                        if let Some(t) = fields::text(ui, ("pm-f", *key, i), Rect::from_min_size(pos2(a.x + 64.0, y), vec2(300.0, 20.0)), &cur, true) {
+                        if let Some(t) = fields::text(ui, ("pm-f", *key, i), Rect::from_min_size(pos2(a.x + 64.0 + dx0, y), vec2(300.0, 20.0)), &cur, true) {
                             match key {
                                 0 => d.rows[i].text = t,
                                 1 => d.rows[i].url = t,
@@ -201,78 +224,80 @@ pub fn show(ctx: &egui::Context, st: &mut AppState) {
             }
             1 => {
                 let vertical = d.flag("vertical", true);
-                fields::label(ui, Rect::from_min_size(a, vec2(100.0, 20.0)), "Ausrichtung:", true);
-                if fields::radio(ui, "pm-v", Rect::from_min_size(a + vec2(110.0, 2.0), vec2(110.0, 16.0)), "Vertikal", vertical, true) {
+                let cx = 110.0 + dx1;
+                super::fit_label(ui, Rect::from_min_size(a, vec2(100.0 + dx1, 20.0)), &l1[0], true);
+                if fields::radio(ui, "pm-v", Rect::from_min_size(a + vec2(cx, 2.0), vec2(rw[0], 16.0)), &radios[0], vertical, true) {
                     d.menu.insert("vertical".into(), json!(true));
                 }
-                if fields::radio(ui, "pm-h", Rect::from_min_size(a + vec2(230.0, 2.0), vec2(110.0, 16.0)), "Horizontal", !vertical, true) {
+                if fields::radio(ui, "pm-h", Rect::from_min_size(a + vec2(cx + rw[0] + 10.0, 2.0), vec2(rw[1], 16.0)), &radios[1], !vertical, true) {
                     d.menu.insert("vertical".into(), json!(false));
                 }
-                fields::label(ui, Rect::from_min_size(a + vec2(0.0, 30.0), vec2(100.0, 20.0)), "Textausrichtung:", true);
-                if let Some(n) = fields::combo(ui, "pm-ta", Rect::from_min_size(a + vec2(110.0, 30.0), vec2(120.0, 20.0)), &["Links", "Zentriert", "Rechts"], Some(d.num("text_alignment", 0.0).clamp(0.0, 2.0) as usize), true) {
+                super::fit_label(ui, Rect::from_min_size(a + vec2(0.0, 30.0), vec2(100.0 + dx1, 20.0)), &l1[1], true);
+                if let Some(n) = fields::combo(ui, "pm-ta", Rect::from_min_size(a + vec2(cx, 30.0), vec2(acw, 20.0)), &refs(&aligns), Some(d.num("text_alignment", 0.0).clamp(0.0, 2.0) as usize), true) {
                     d.menu.insert("text_alignment".into(), json!(n));
                 }
-                if let Some(b) = fields::checkbox(ui, "pm-bold", Rect::from_min_size(a + vec2(250.0, 32.0), vec2(80.0, 16.0)), "Fett", d.flag("bold", false), true) {
+                if let Some(b) = fields::checkbox(ui, "pm-bold", Rect::from_min_size(a + vec2(cx + acw + 20.0, 32.0), vec2(bold_w, 16.0)), &bold_l, d.flag("bold", false), true) {
                     d.menu.insert("bold".into(), json!(b));
                 }
-                for (k, (label, key, def)) in [("Text (Normal):", "text_up_color", 0x000000u32), ("Text (Darüber):", "text_over_color", 0xffffff), ("Hervorhebung:", "hilite_color", 0x336699)].iter().enumerate() {
+                for (k, (label, key, def)) in [(&l1[2], "text_up_color", 0x000000u32), (&l1[3], "text_over_color", 0xffffff), (&l1[4], "hilite_color", 0x336699)].iter().enumerate() {
                     let y = 64.0 + k as f32 * 28.0;
-                    fields::label(ui, Rect::from_min_size(a + vec2(0.0, y), vec2(100.0, 20.0)), label, true);
+                    super::fit_label(ui, Rect::from_min_size(a + vec2(0.0, y), vec2(100.0 + dx1, 20.0)), label, true);
                     let cur = d.color(key, *def);
-                    if let Some(crate::inspector::popups::ColorChoice::Color(col)) = crate::inspector::popups::color_button(ui, ("pm-col", k), Rect::from_min_size(a + vec2(110.0, y), vec2(26.0, 20.0)), st, Some(cur), true, false, false) {
+                    if let Some(crate::inspector::popups::ColorChoice::Color(col)) = crate::inspector::popups::color_button(ui, ("pm-col", k), Rect::from_min_size(a + vec2(cx, y), vec2(26.0, 20.0)), st, Some(cur), true, false, false) {
                         d.menu.insert(key.to_string(), json!(col.0 & 0x00ff_ffff));
                     }
                 }
             }
             2 => {
                 let nums: [(&str, &str, f64, f64, f64); 6] = [
-                    ("Zellabstand:", "item_spacing", 0.0, 0.0, 100.0),
-                    ("Zellauffüllung:", "item_padding", 3.0, 0.0, 100.0),
-                    ("Texteinzug:", "text_indent", 0.0, 0.0, 100.0),
-                    ("Rahmenbreite:", "border_size", 1.0, 0.0, 20.0),
-                    ("Menüverzögerung (ms):", "hide_timeout", 1000.0, 0.0, 10000.0),
-                    ("Breite (fest):", "menu_width", 0.0, 0.0, 2000.0),
+                    (l2[0].as_str(), "item_spacing", 0.0, 0.0, 100.0),
+                    (l2[1].as_str(), "item_padding", 3.0, 0.0, 100.0),
+                    (l2[2].as_str(), "text_indent", 0.0, 0.0, 100.0),
+                    (l2[3].as_str(), "border_size", 1.0, 0.0, 20.0),
+                    (l2[4].as_str(), "hide_timeout", 1000.0, 0.0, 10000.0),
+                    (l2[5].as_str(), "menu_width", 0.0, 0.0, 2000.0),
                 ];
                 for (k, (label, key, def, lo, hi)) in nums.iter().enumerate() {
                     let y = k as f32 * 28.0;
-                    fields::label(ui, Rect::from_min_size(a + vec2(0.0, y), vec2(150.0, 20.0)), label, true);
-                    if let Some(v) = fields::number(ui, ("pm-n", k), Rect::from_min_size(a + vec2(160.0, y), vec2(60.0, 20.0)), None, Some(d.num(key, *def)), (*lo, *hi), 0, true) {
+                    super::fit_label(ui, Rect::from_min_size(a + vec2(0.0, y), vec2(150.0 + dx2, 20.0)), label, true);
+                    if let Some(v) = fields::number(ui, ("pm-n", k), Rect::from_min_size(a + vec2(160.0 + dx2, y), vec2(60.0, 20.0)), None, Some(d.num(key, *def)), (*lo, *hi), 0, true) {
                         d.menu.insert(key.to_string(), json!(v as i64));
                         if *key == "menu_width" {
                             d.menu.insert("override_width".into(), json!(v > 0.0));
                         }
                     }
                 }
-                if let Some(b) = fields::checkbox(ui, "pm-hide", Rect::from_min_size(a + vec2(0.0, 172.0), vec2(260.0, 16.0)), "Menü beim Verlassen ausblenden", d.flag("hide_on_mouseout", true), true) {
+                if let Some(b) = fields::checkbox(ui, "pm-hide", Rect::from_min_size(a + vec2(0.0, 172.0), vec2((18.0 + super::text_w(ui.ctx(), &hide_l)).max(260.0), 16.0)), &hide_l, d.flag("hide_on_mouseout", true), true) {
                     d.menu.insert("hide_on_mouseout".into(), json!(b));
                 }
-                for (k, (label, key, def)) in [("Rahmenfarbe:", "border_color", 0x000000u32), ("Schattenfarbe:", "shadow_color", 0x666666)].iter().enumerate() {
+                for (k, (label, key, def)) in [(l2[6].as_str(), "border_color", 0x000000u32), (l2[7].as_str(), "shadow_color", 0x666666)].iter().enumerate() {
                     let y = 200.0 + k as f32 * 28.0;
-                    fields::label(ui, Rect::from_min_size(a + vec2(0.0, y), vec2(150.0, 20.0)), label, true);
+                    super::fit_label(ui, Rect::from_min_size(a + vec2(0.0, y), vec2(150.0 + dx2, 20.0)), label, true);
                     let cur = d.color(key, *def);
-                    if let Some(crate::inspector::popups::ColorChoice::Color(col)) = crate::inspector::popups::color_button(ui, ("pm-c2", k), Rect::from_min_size(a + vec2(160.0, y), vec2(26.0, 20.0)), st, Some(cur), true, false, false) {
+                    if let Some(crate::inspector::popups::ColorChoice::Color(col)) = crate::inspector::popups::color_button(ui, ("pm-c2", k), Rect::from_min_size(a + vec2(160.0 + dx2, y), vec2(26.0, 20.0)), st, Some(cur), true, false, false) {
                         d.menu.insert(key.to_string(), json!(col.0 & 0x00ff_ffff));
                     }
                 }
             }
             _ => {
-                let nums: [(&str, &str); 4] = [("Menü X:", "horz_offset"), ("Menü Y:", "vert_offset"), ("Untermenü X:", "horz_submenu_offset"), ("Untermenü Y:", "vert_submenu_offset")];
+                let nums: [(&str, &str); 4] = [(l3[0].as_str(), "horz_offset"), (l3[1].as_str(), "vert_offset"), (l3[2].as_str(), "horz_submenu_offset"), (l3[3].as_str(), "vert_submenu_offset")];
                 for (k, (label, key)) in nums.iter().enumerate() {
                     let y = k as f32 * 28.0;
-                    fields::label(ui, Rect::from_min_size(a + vec2(0.0, y), vec2(150.0, 20.0)), label, true);
-                    if let Some(v) = fields::number(ui, ("pm-p", k), Rect::from_min_size(a + vec2(160.0, y), vec2(60.0, 20.0)), None, Some(d.num(key, 0.0)), (-2000.0, 2000.0), 0, true) {
+                    super::fit_label(ui, Rect::from_min_size(a + vec2(0.0, y), vec2(150.0 + dx2, 20.0)), label, true);
+                    if let Some(v) = fields::number(ui, ("pm-p", k), Rect::from_min_size(a + vec2(160.0 + dx2, y), vec2(60.0, 20.0)), None, Some(d.num(key, 0.0)), (-2000.0, 2000.0), 0, true) {
                         d.menu.insert(key.to_string(), json!(v));
                     }
                 }
-                if let Some(b) = fields::checkbox(ui, "pm-rel", Rect::from_min_size(a + vec2(0.0, 116.0), vec2(320.0, 16.0)), "Untermenü relativ zum Menüeintrag", d.flag("submenu_relative", false), true) {
+                if let Some(b) = fields::checkbox(ui, "pm-rel", Rect::from_min_size(a + vec2(0.0, 116.0), vec2((18.0 + super::text_w(ui.ctx(), &rel_l)).max(320.0), 16.0)), &rel_l, d.flag("submenu_relative", false), true) {
                     d.menu.insert("submenu_relative".into(), json!(b));
                 }
             }
         }
-        if push_button(ui, Rect::from_min_size(pos2(body.right() - 176.0, body.bottom() - 34.0), vec2(76.0, 23.0)), "OK", true, !d.rows.is_empty()) {
+        let b = super::button_row(ui.ctx(), body.right() - 16.0, body.bottom() - 34.0, &[&ok_l, &cancel_l], 76.0, 23.0, 8.0);
+        if push_button(ui, b[0], &ok_l, true, !d.rows.is_empty()) {
             result = Some(true);
         }
-        if push_button(ui, Rect::from_min_size(pos2(body.right() - 92.0, body.bottom() - 34.0), vec2(76.0, 23.0)), "Abbrechen", false, true) {
+        if push_button(ui, b[1], &cancel_l, false, true) {
             result = Some(false);
         }
     });
