@@ -1,34 +1,41 @@
-//! Startbildschirm (Willkommensfenster), Agent DESIGN. Erscheint auf der Leinwandfläche, solange
-//! kein Dokument offen ist – Aufbau wie der Startbildschirm des Originals, aber mit eigenem
-//! Branding (Flammen-Pixel-Logo, eigene Symbole, eigene Ziele; keine Online-Angebote):
+//! Startbildschirm (Willkommensfenster), Agent DESIGN, überarbeitet von DES-2 (Nutzerbefund N11:
+//! „ohne Liebe“). Erscheint auf der Leinwandfläche, solange kein Dokument offen ist. Inhalt wie der
+//! Startbildschirm des Originals, eigenes Branding (Flammen-Pixel-Logo, eigene Symbole, eigene
+//! Ziele; keine Online-Angebote):
 //!
 //! ```text
-//! ┌────────────────────────────────────────────────────────────┐
-//! │ [Logo] Firepixel                         · ·▪ ▪·▪ (Pixel)  │  Kopfbanner
-//! │        Leitsatz                                             │
-//! ├─────────────────────────────┬──────────────────────────────┤
-//! │ Zuletzt geöffnete Dateien   │ Neu erstellen                │
-//! │  ▣ datei.fw.png             │  ▣ Firepixel-Dokument (FW-PNG)│
-//! │  …                          │  ▣ Aus Vorlage...             │
-//! │ ─────────                   │ Erweitern                     │
-//! │  ▣ Öffnen...                │  ▣ Gespeicherte Befehle...    │
-//! ├─────────────────────────────┴──────────────────────────────┤
-//! │ Kurzanleitung »   Tastenkürzel »   …              [Logo]    │
-//! ├────────────────────────────────────────────────────────────┤
-//! │ ☐ Nicht mehr anzeigen                           Version x  │
-//! └────────────────────────────────────────────────────────────┘
+//! ╭──────────────────────────────────────────────────────────────╮
+//! │ [Logo] Firepixel                          · ·▪ ▪·▪ (Pixel)   │  Kopfzeile
+//! │        Leitsatz                                              │
+//! ╰──────────────────────────────────────────────────────────────╯
+//! ╭─ ▣ Neu erstellen ──────╮ ╭─ ▣ Zuletzt geöffnete Dateien ─────╮
+//! │ [▣] Firepixel-Dokument │ │ [Vorschau] datei.fw.png           │
+//! │     leeres Dokument    │ │            C:\Pfad\…  (gedämpft)  │
+//! │ [▣] Aus Vorlage...     │ │ …                                 │
+//! ╰────────────────────────╯ │ ───────                           │
+//! ╭─ ▣ Hilfe und Lernen ───╮ │ ▣ Öffnen...                       │
+//! │ ▣ Kurzanleitung »      │ │                                   │
+//! │ …   Erweitern …        │ │                                   │
+//! ╰────────────────────────╯ ╰───────────────────────────────────╯
+//!  ☐ Nicht mehr anzeigen                              Version x
 //! ```
 //!
+//! Drei Karten in zwei Spalten ab [`TWO_COLUMNS_MIN_W`], darunter einspaltig (Neu, Zuletzt, Hilfe);
+//! Bildlauf, wenn die Fläche nicht reicht. Jeder Eintrag ist mit Tab/Umschalt+Tab und den
+//! Pfeiltasten erreichbar und mit Eingabe/Leertaste auslösbar (Fokusrahmen in `focus`).
 //! „Nicht mehr anzeigen“ setzt die Voreinstellung `ShowStartPage` (wie im Original; wieder
 //! einschalten über Voreinstellungen ▸ Allgemein). In der laufenden Sitzung bleibt der Bildschirm
 //! sichtbar, damit sich das Häkchen zurücknehmen lässt. Texte: Präfix `welcome-` in
-//! `locales\<sprache>\willkommen.ftl`. Bausteine aus [`crate::ui_kit`].
+//! `locales\<sprache>\willkommen.ftl`. Bausteine aus [`crate::ui_kit`], Vorschaubilder aus
+//! [`thumbs`].
+
+mod thumbs;
 
 use crate::app_state::{Action, AppState};
 use crate::icons::{self, Icon, IconStyle};
 use crate::theme::{mix, with_alpha, Theme, ThemeKind};
 use crate::ui_kit::{self, sp, type_scale, KitIcon, RowIcon};
-use egui::{pos2, vec2, Align2, Color32, CornerRadius, Id, Rect, Sense, Stroke, StrokeKind, Ui};
+use egui::{pos2, vec2, Align2, Color32, CornerRadius, Id, Rect, Response, Sense, Stroke, StrokeKind, Ui};
 use fp_i18n::t;
 use serde_json::json;
 use std::path::{Path, PathBuf};
@@ -37,13 +44,24 @@ use std::path::{Path, PathBuf};
 pub const PREF_SHOW: &str = "ShowStartPage";
 /// Höchstens so viele zuletzt geöffnete Dateien.
 pub const MAX_RECENT: usize = 8;
-/// Größte Breite der Karte.
-const PANEL_MAX_W: f32 = 760.0;
+/// Größte Breite des Inhalts.
+const PANEL_MAX_W: f32 = 940.0;
 /// Ab dieser Breite zwei Spalten.
-const TWO_COLUMNS_MIN_W: f32 = 540.0;
-const TITLE_H: f32 = 26.0;
-const LINK_H: f32 = 22.0;
-const FOOTER_H: f32 = 40.0;
+const TWO_COLUMNS_MIN_W: f32 = 600.0;
+/// Abstand zwischen den Karten.
+const GAP: f32 = sp::L;
+/// Innenabstand der Karten.
+const PAD: f32 = sp::L;
+/// Kopf einer Karte (Symbolchip + Titel).
+const HEAD_H: f32 = 34.0;
+/// Großer Eintrag „Neu erstellen“ (Symbol, Titel, Erklärung).
+const TILE_H: f32 = 54.0;
+/// Zeile „Zuletzt geöffnet“ (Vorschau, Name, Ordner).
+const RECENT_H: f32 = 44.0;
+/// Hilfe-Link.
+const LINK_H: f32 = 26.0;
+const FOOTER_H: f32 = 28.0;
+const RADIUS: u8 = 8;
 
 /// Hat der Nutzer „Nicht mehr anzeigen“ in dieser Sitzung angekreuzt? Dann bleibt der Bildschirm
 /// bis zum Neustart sichtbar.
@@ -54,6 +72,30 @@ fn ticked_id() -> Id {
 /// Wird der Startbildschirm gezeigt?
 pub fn is_visible(ctx: &egui::Context, st: &AppState) -> bool {
     st.session.prefs.get_bool(PREF_SHOW, true) || ctx.data(|d| d.get_temp::<bool>(ticked_id())).unwrap_or(false)
+}
+
+/// Werden noch Vorschaubilder der zuletzt geöffneten Dateien gelesen? (Tests, Bildserien.)
+pub fn thumbnails_pending(ctx: &egui::Context) -> bool {
+    thumbs::pending(ctx)
+}
+
+fn last_id() -> Id {
+    Id::new("fp-welcome-last-triggered")
+}
+
+/// Zuletzt auf dem Startbildschirm ausgelöster Eintrag: Befehlsname bzw. `open:<pfad>` (Tests,
+/// Brücke). Der Befehl selbst läuft wie jeder Menübefehl über die Aktionswarteschlange.
+pub fn last_triggered(ctx: &egui::Context) -> Option<String> {
+    ctx.data(|d| d.get_temp::<String>(last_id()))
+}
+
+fn mark(ctx: &egui::Context, what: String) {
+    ctx.data_mut(|d| d.insert_temp(last_id(), what));
+}
+
+fn trigger(ui: &Ui, st: &mut AppState, cmd: &str, params: serde_json::Value) {
+    st.run(cmd, params);
+    mark(ui.ctx(), cmd.to_string());
 }
 
 /// Ein Eintrag der Liste „Zuletzt geöffnet“.
@@ -90,7 +132,7 @@ pub fn recent_items(st: &AppState) -> Vec<RecentItem> {
         .collect()
 }
 
-/// Einträge der Spalte „Neu erstellen“ / „Erweitern“: (Symbol, Textschlüssel, Befehl).
+/// Einträge der Karte „Neu erstellen“: (Symbol, Textschlüssel, Befehl).
 fn create_entries() -> [(KitIcon, &'static str, &'static str); 2] {
     [(KitIcon::NewDocument, "welcome-new-document", "file.new"), (KitIcon::Template, "welcome-new-template", "file.newFromTemplate")]
 }
@@ -102,7 +144,7 @@ fn extend_entries(st: &AppState) -> Vec<(KitIcon, &'static str, &'static str)> {
         .collect()
 }
 
-/// Links unten: (Symbol, Textschlüssel, Befehl, Parameter).
+/// Hilfe-Links: (Symbol, Textschlüssel, Befehl, Parameter).
 fn help_links() -> [(KitIcon, &'static str, &'static str, serde_json::Value); 4] {
     [
         (KitIcon::Book, "welcome-help-guide", "help.firepixelHelp", json!({ "topic": "start" })),
@@ -195,38 +237,84 @@ pub(crate) fn paint_banner(p: &egui::Painter, r: Rect, theme: &Theme, narrow: bo
     }
 }
 
+// ---------------------------------------------------------------------- Farben der Karten
+
+/// Kartenfläche: hell im Normal-Design, im Dunkel-Design etwas heller als die Leinwand (sonst
+/// verschwinden die Karten), im OLED-Design schwarz.
+fn card_fill(theme: &Theme) -> Color32 {
+    let c = &theme.colors;
+    match theme.kind {
+        ThemeKind::Normal => ui_kit::card_bg(theme),
+        ThemeKind::Dark => mix(c.menu_bg, c.frame_bg, 0.45),
+        ThemeKind::Oled => c.frame_bg,
+    }
+}
+
+/// Leitfarbe je Karte: 0 = Neu erstellen, 1 = Zuletzt geöffnet, 2 = Hilfe. OLED farbenfroh aus
+/// den Gruppenfarben, sonst ruhige Symbolfarben des Designs.
+fn accent(theme: &Theme, card: usize) -> Color32 {
+    let c = &theme.colors;
+    if theme.glow {
+        [c.group_accent[2], c.group_accent[0], c.group_accent[3]][card.min(2)]
+    } else {
+        [c.icon_green, c.focus, c.icon_yellow][card.min(2)]
+    }
+}
+
+/// Getönte Fläche in der Leitfarbe (Symbolchip, Hover).
+fn accent_tint(theme: &Theme, col: Color32, strength: f32) -> Color32 {
+    let base = card_fill(theme);
+    let t = match theme.kind {
+        ThemeKind::Normal => 0.14,
+        ThemeKind::Dark => 0.22,
+        ThemeKind::Oled => 0.22,
+    } * strength;
+    mix(base, col, t)
+}
+
+// ---------------------------------------------------------------------- Maße
+
 /// Maße des Startbildschirms für eine verfügbare Fläche.
 #[derive(Clone, Copy, Debug)]
 struct Layout {
     w: f32,
     two: bool,
-    pad: f32,
     banner_h: f32,
-    col_w: f32,
-    left_h: f32,
-    right_h: f32,
+    left_w: f32,
+    right_w: f32,
+    start_h: f32,
+    help_h: f32,
+    recent_h: f32,
     cols_h: f32,
-    bottom_h: f32,
     total_h: f32,
 }
 
 fn layout(ctx: &egui::Context, avail: egui::Vec2, n_recent: usize, n_extend: usize) -> Layout {
-    let w = (avail.x - 2.0 * sp::L).clamp(200.0, PANEL_MAX_W).floor();
+    let w = (avail.x - 2.0 * sp::L).clamp(160.0, PANEL_MAX_W).floor();
     let two = w >= TWO_COLUMNS_MIN_W;
     let narrow = w < 420.0;
-    let pad = if two { sp::XL } else { sp::L };
-    let banner_h = if narrow { 84.0 } else { 108.0 };
-    let col_w = if two { (w - 2.0 * pad - sp::XL) / 2.0 } else { w - 2.0 * pad };
-    let empty_h = ui_kit::empty_state_height(ctx, &t("welcome-recent-empty"), Some(&t("welcome-recent-empty-hint")), col_w);
-    let list_h = if n_recent == 0 { empty_h } else { n_recent as f32 * sp::ROW };
-    let left_h = TITLE_H + list_h + sp::S + 2.0 + sp::S + sp::ROW;
-    let right_h = TITLE_H + 2.0 * sp::ROW + if n_extend > 0 { sp::L + TITLE_H + n_extend as f32 * sp::ROW } else { 0.0 };
-    let cols_h = if two { left_h.max(right_h) } else { left_h + sp::L + right_h };
-    let links = help_links().len() as f32;
-    let bottom_h = if two { (links * LINK_H).max(64.0 + 20.0) } else { links * LINK_H };
-    let total_h = banner_h + pad + cols_h + pad + 2.0 + sp::L + bottom_h + sp::L + 2.0 + FOOTER_H;
-    Layout { w, two, pad, banner_h, col_w, left_h, right_h, cols_h, bottom_h, total_h }
+    let banner_h = if narrow { 84.0 } else { 112.0 };
+    let left_w = if two { (w * 0.4).clamp(250.0, 350.0).floor() } else { w };
+    let right_w = if two { w - left_w - GAP } else { w };
+    let start_h = PAD + HEAD_H + 2.0 * TILE_H + sp::S + PAD;
+    let mut help_h = PAD + HEAD_H + help_links().len() as f32 * LINK_H + if n_extend > 0 { sp::M + 18.0 + sp::XS + n_extend as f32 * LINK_H } else { 0.0 } + PAD;
+    let empty_h = ui_kit::empty_state_height(ctx, &t("welcome-recent-empty"), Some(&t("welcome-recent-empty-hint")), right_w - 2.0 * PAD);
+    let list_h = if n_recent == 0 { empty_h } else { n_recent as f32 * RECENT_H };
+    let mut recent_h = PAD + HEAD_H + list_h + sp::S + 2.0 + sp::S + sp::ROW + PAD;
+    let cols_h = if two {
+        let left = start_h + GAP + help_h;
+        let h = left.max(recent_h);
+        help_h += h - left;
+        recent_h = h;
+        h
+    } else {
+        start_h + GAP + recent_h + GAP + help_h
+    };
+    let total_h = banner_h + GAP + cols_h + sp::S + FOOTER_H;
+    Layout { w, two, banner_h, left_w, right_w, start_h, help_h, recent_h, cols_h, total_h }
 }
+
+// ---------------------------------------------------------------------- Zeichnen
 
 /// Zeichnet den Startbildschirm in `rect` (Leinwandfläche ohne Dokument). Ist er abgeschaltet,
 /// bleibt die Fläche leer.
@@ -250,111 +338,305 @@ pub fn show(ui: &mut Ui, st: &mut AppState, rect: Rect) {
     });
 }
 
+/// Fokus innerhalb des Startbildschirms (für die Pfeiltasten).
+#[derive(Default)]
+struct Nav {
+    focused: bool,
+}
+
+impl Nav {
+    fn track(&mut self, r: &Response) {
+        self.focused |= r.has_focus();
+    }
+}
+
 #[allow(clippy::too_many_arguments)]
 fn draw_panel(ui: &mut Ui, st: &mut AppState, theme: &Theme, lay: &Layout, panel: Rect, recent: &[RecentItem], extend: &[(KitIcon, &'static str, &'static str)]) {
     let c = &theme.colors;
     let p = ui.painter().clone();
-    // Karte mit Schatten
-    let shadow = egui::Shadow { offset: [0, 3], blur: 14, spread: 0, color: Color32::from_black_alpha(if theme.kind == ThemeKind::Normal { 45 } else { 120 }) };
-    p.add(shadow.as_shape(panel, CornerRadius::same(4)));
-    p.rect_filled(panel, CornerRadius::same(4), ui_kit::card_bg(theme));
+    let mut nav = Nav::default();
+    // ------------------------------------------------ Kopfzeile
     let banner = Rect::from_min_size(panel.min, vec2(panel.width(), lay.banner_h));
-    {
-        let pc = p.with_clip_rect(Rect::from_min_max(panel.min, pos2(panel.right(), banner.bottom())));
-        // Banner mit runden oberen Ecken: Ecken über die Karte zeichnen lassen
-        paint_banner(&pc, banner, theme, lay.w < 420.0, &t("welcome-tagline"));
+    paint_banner(&p.with_clip_rect(banner), banner, theme, lay.w < 420.0, &t("welcome-tagline"));
+    // runde Ecken: die Ecken außerhalb der Rundung mit der Leinwandfarbe überdecken
+    p.rect_stroke(banner, CornerRadius::same(RADIUS), Stroke::new(4.0, c.canvas_bg), StrokeKind::Outside);
+    if theme.glow {
+        p.rect_stroke(banner, CornerRadius::same(RADIUS), Stroke::new(1.0, with_alpha(c.focus, 200)), StrokeKind::Inside);
     }
-    let x0 = panel.left() + lay.pad;
-    let mut y = banner.bottom() + lay.pad;
-    // ------------------------------------------------ Spalten
-    let left = Rect::from_min_size(pos2(x0, y), vec2(lay.col_w, lay.left_h));
-    let right = if lay.two { Rect::from_min_size(pos2(x0 + lay.col_w + sp::XL, y), vec2(lay.col_w, lay.right_h)) } else { Rect::from_min_size(pos2(x0, y + lay.left_h + sp::L), vec2(lay.col_w, lay.right_h)) };
-    if lay.two {
-        ui_kit::vline(&p, x0 + lay.col_w + sp::XL / 2.0 - 1.0, egui::Rangef::new(y, y + lay.cols_h), theme);
+    // ------------------------------------------------ Karten
+    let top = banner.bottom() + GAP;
+    let (start_r, recent_r, help_r) = if lay.two {
+        let s = Rect::from_min_size(pos2(panel.left(), top), vec2(lay.left_w, lay.start_h));
+        let h = Rect::from_min_size(pos2(panel.left(), s.bottom() + GAP), vec2(lay.left_w, lay.help_h));
+        let r = Rect::from_min_size(pos2(panel.left() + lay.left_w + GAP, top), vec2(lay.right_w, lay.recent_h));
+        (s, r, h)
+    } else {
+        let s = Rect::from_min_size(pos2(panel.left(), top), vec2(lay.w, lay.start_h));
+        let r = Rect::from_min_size(pos2(panel.left(), s.bottom() + GAP), vec2(lay.w, lay.recent_h));
+        let h = Rect::from_min_size(pos2(panel.left(), r.bottom() + GAP), vec2(lay.w, lay.help_h));
+        (s, r, h)
+    };
+    // Neu erstellen
+    let a0 = accent(theme, 0);
+    let inner = card(&p, start_r, theme, a0, RowIcon::Kit(KitIcon::NewDocument), &t("welcome-new-title"));
+    let mut y = inner.top();
+    for (icon, key, cmd) in create_entries() {
+        let r = Rect::from_min_size(pos2(inner.left(), y), vec2(inner.width(), TILE_H));
+        let resp = action_tile(ui, r, Id::new(("fp-welcome-new", key)), icon, &t(key), &t(&format!("{key}.tooltip")), a0, theme);
+        nav.track(&resp);
+        if resp.clicked() {
+            trigger(ui, st, cmd, json!({}));
+        }
+        y += TILE_H + sp::S;
     }
-    // links: zuletzt geöffnet
-    ui_kit::section_at(&p, Rect::from_min_size(left.min, vec2(left.width(), 18.0)), &t("welcome-recent-title"), theme);
-    let mut ly = left.top() + TITLE_H;
+    // Zuletzt geöffnet
+    let a1 = accent(theme, 1);
+    let inner = card(&p, recent_r, theme, a1, RowIcon::Icon(Icon::Folder), &t("welcome-recent-title"));
+    let mut y = inner.top();
     if recent.is_empty() {
-        let h = ui_kit::empty_state_height(ui.ctx(), &t("welcome-recent-empty"), Some(&t("welcome-recent-empty-hint")), left.width());
-        ui_kit::empty_state_at(&p, Rect::from_min_size(pos2(left.left(), ly), vec2(left.width(), h)), KitIcon::EmptyTray, &t("welcome-recent-empty"), Some(&t("welcome-recent-empty-hint")), theme);
-        ly += h;
+        let h = ui_kit::empty_state_height(ui.ctx(), &t("welcome-recent-empty"), Some(&t("welcome-recent-empty-hint")), inner.width());
+        ui_kit::empty_state_at(&p, Rect::from_min_size(pos2(inner.left(), y), vec2(inner.width(), h)), KitIcon::EmptyTray, &t("welcome-recent-empty"), Some(&t("welcome-recent-empty-hint")), theme);
+        y += h;
     }
     for (i, it) in recent.iter().enumerate() {
-        let r = Rect::from_min_size(pos2(left.left(), ly), vec2(left.width(), sp::ROW));
-        let tip = if it.exists { it.path.display().to_string() } else { format!("{}\n{}", t("welcome-recent-missing"), it.path.display()) };
-        if ui_kit::link_row_at(ui, r, Id::new(("fp-welcome-recent", i)), it.icon, &it.name, Some(&tip), it.exists).clicked() {
+        let r = Rect::from_min_size(pos2(inner.left(), y), vec2(inner.width(), RECENT_H));
+        let thumb = if it.exists { thumbs::get(ui.ctx(), &it.path) } else { None };
+        let resp = recent_row(ui, r, Id::new(("fp-welcome-recent", i)), it, thumb.as_ref(), theme);
+        nav.track(&resp);
+        if resp.clicked() {
             st.push(Action::OpenPath(it.path.clone()));
+            mark(ui.ctx(), format!("open:{}", it.path.display()));
         }
-        ly += sp::ROW;
+        y += RECENT_H;
     }
-    ly += sp::S;
-    ui_kit::hline(&p, egui::Rangef::new(left.left(), left.right()), ly, theme);
-    ly += 2.0 + sp::S;
-    let r = Rect::from_min_size(pos2(left.left(), ly), vec2(left.width(), sp::ROW));
-    if ui_kit::link_row_at(ui, r, Id::new("fp-welcome-open"), RowIcon::Icon(Icon::Open), &t("welcome-open"), Some(&t("welcome-open.tooltip")), true).clicked() {
-        st.run("file.open", json!({}));
+    // „Öffnen...“ unten an der Karte (die Karte ist so hoch wie die linke Spalte)
+    y = (y + sp::S).max(inner.bottom() - sp::ROW - sp::S - 2.0);
+    ui_kit::hline(&p, egui::Rangef::new(inner.left(), inner.right()), y, theme);
+    y += 2.0 + sp::S;
+    let r = Rect::from_min_size(pos2(inner.left(), y), vec2(inner.width(), sp::ROW));
+    let resp = ui_kit::link_row_at(ui, r, Id::new("fp-welcome-open"), RowIcon::Icon(Icon::Open), &t("welcome-open"), Some(&t("welcome-open.tooltip")), true);
+    focus_ring(&p, &resp, r, theme);
+    nav.track(&resp);
+    if resp.clicked() {
+        trigger(ui, st, "file.open", json!({}));
     }
-    // rechts: neu erstellen, erweitern
-    ui_kit::section_at(&p, Rect::from_min_size(right.min, vec2(right.width(), 18.0)), &t("welcome-new-title"), theme);
-    let mut ry = right.top() + TITLE_H;
-    for (icon, key, cmd) in create_entries() {
-        let r = Rect::from_min_size(pos2(right.left(), ry), vec2(right.width(), sp::ROW));
-        if ui_kit::link_row_at(ui, r, Id::new(("fp-welcome-new", key)), RowIcon::Kit(icon), &t(key), Some(&t(&format!("{key}.tooltip"))), true).clicked() {
-            st.run(cmd, json!({}));
+    // Hilfe und Erweitern
+    let a2 = accent(theme, 2);
+    let inner = card(&p, help_r, theme, a2, RowIcon::Kit(KitIcon::Book), &t("welcome-help-title"));
+    let mut y = inner.top();
+    for (k, (icon, key, cmd, params)) in help_links().into_iter().enumerate() {
+        let r = Rect::from_min_size(pos2(inner.left(), y), vec2(inner.width(), LINK_H));
+        paint_small_icon(&p, Rect::from_center_size(pos2(r.left() + sp::XS + 8.0, r.center().y), vec2(16.0, 16.0)), icon, theme);
+        let lr = Rect::from_min_max(pos2(r.left() + sp::XS + 16.0 + sp::S, r.top()), r.max);
+        let resp = ui_kit::more_link_at(ui, lr, Id::new(("fp-welcome-help", k)), &t(key), Some(&t(&format!("{key}.tooltip"))));
+        focus_ring(&p, &resp, r, theme);
+        nav.track(&resp);
+        if resp.clicked() {
+            trigger(ui, st, cmd, params);
         }
-        ry += sp::ROW;
+        y += LINK_H;
     }
     if !extend.is_empty() {
-        ry += sp::L;
-        ui_kit::section_at(&p, Rect::from_min_size(pos2(right.left(), ry), vec2(right.width(), 18.0)), &t("welcome-extend-title"), theme);
-        ry += TITLE_H;
+        y += sp::M;
+        ui_kit::section_at(&p, Rect::from_min_size(pos2(inner.left(), y), vec2(inner.width(), 18.0)), &t("welcome-extend-title"), theme);
+        y += 18.0 + sp::XS;
         for (icon, key, cmd) in extend {
-            let r = Rect::from_min_size(pos2(right.left(), ry), vec2(right.width(), sp::ROW));
-            if ui_kit::link_row_at(ui, r, Id::new(("fp-welcome-extend", *key)), RowIcon::Kit(*icon), &t(key), Some(&t(&format!("{key}.tooltip"))), true).clicked() {
-                st.run(cmd, json!({}));
+            let r = Rect::from_min_size(pos2(inner.left(), y + 1.0), vec2(inner.width(), LINK_H - 2.0));
+            let resp = ui_kit::link_row_at(ui, r, Id::new(("fp-welcome-extend", *key)), RowIcon::Kit(*icon), &t(key), Some(&t(&format!("{key}.tooltip"))), true);
+            focus_ring(&p, &resp, r, theme);
+            nav.track(&resp);
+            if resp.clicked() {
+                trigger(ui, st, cmd, json!({}));
             }
-            ry += sp::ROW;
+            y += LINK_H;
         }
     }
-    y += lay.cols_h + lay.pad;
-    // ------------------------------------------------ unten: Links und Logo
-    ui_kit::hline(&p, egui::Rangef::new(panel.left() + lay.pad, panel.right() - lay.pad), y, theme);
-    y += 2.0 + sp::L;
-    let logo_w = if lay.two { 64.0 + sp::XL } else { 0.0 };
-    let links_w = panel.width() - 2.0 * lay.pad - logo_w;
-    for (k, (icon, key, cmd, params)) in help_links().into_iter().enumerate() {
-        let r = Rect::from_min_size(pos2(x0, y + k as f32 * LINK_H), vec2(links_w, LINK_H));
-        // Symbol vor dem »-Link
-        paint_small_icon(&p, Rect::from_center_size(pos2(r.left() + 8.0, r.center().y), vec2(16.0, 16.0)), icon, theme);
-        let lr = Rect::from_min_max(pos2(r.left() + 16.0 + sp::S, r.top()), r.max);
-        if ui_kit::more_link_at(ui, lr, Id::new(("fp-welcome-help", k)), &t(key), Some(&t(&format!("{key}.tooltip")))).clicked() {
-            st.run(cmd, params);
-        }
+    // ------------------------------------------------ Fußzeile: Nicht mehr anzeigen, Version
+    let foot = Rect::from_min_size(pos2(panel.left(), panel.top() + lay.banner_h + GAP + lay.cols_h + sp::S), vec2(panel.width(), FOOTER_H));
+    let ver = fp_i18n::tr!("welcome-version", version = env!("CARGO_PKG_VERSION"));
+    let ver_font = theme.font(type_scale::CAPTION);
+    let ver_w = ui_kit::text_w(ui.ctx(), &ver, &ver_font);
+    let ver_color = if theme.kind == ThemeKind::Normal { mix(c.text_weak, c.text, 0.4) } else { c.text_weak };
+    let show_ver = foot.width() > ver_w + 200.0;
+    if show_ver {
+        p.text(pos2(foot.right() - sp::XS, foot.center().y), Align2::RIGHT_CENTER, ver, ver_font, ver_color);
     }
-    if lay.two {
-        let lr = Rect::from_min_size(pos2(panel.right() - lay.pad - 64.0, y), vec2(64.0, 64.0));
-        icons::paint_app_logo(&p, lr);
-        let ver = fp_i18n::tr!("welcome-version", version = env!("CARGO_PKG_VERSION"));
-        p.text(pos2(lr.center().x, lr.bottom() + sp::XS), Align2::CENTER_TOP, ver, theme.font(type_scale::CAPTION), c.text_weak);
-    }
-    y += lay.bottom_h + sp::L;
-    // ------------------------------------------------ Fußzeile: Nicht mehr anzeigen
-    ui_kit::hline(&p, panel.x_range(), y, theme);
-    y += 2.0;
-    let foot = Rect::from_min_max(pos2(panel.left(), y), pos2(panel.right(), panel.bottom()));
-    p.rect_filled(foot, CornerRadius { nw: 0, ne: 0, sw: 4, se: 4 }, if theme.glow { c.frame_bg } else { mix(ui_kit::card_bg(theme), c.frame_bg, 0.5) });
     let mut dont = !st.session.prefs.get_bool(PREF_SHOW, true);
-    let cb_r = Rect::from_min_max(pos2(x0, foot.top()), pos2(foot.right() - lay.pad, foot.bottom()));
+    let cb_r = Rect::from_min_max(pos2(foot.left() + sp::XS, foot.top()), pos2(if show_ver { foot.right() - ver_w - sp::L } else { foot.right() }, foot.bottom()));
     let mut cu = ui.new_child(egui::UiBuilder::new().max_rect(cb_r).layout(egui::Layout::left_to_right(egui::Align::Center)));
     crate::theme::field_widgets(&mut cu);
     let resp = cu.add(egui::Checkbox::new(&mut dont, t("welcome-dont-show"))).on_hover_text(t("welcome-dont-show.tooltip"));
+    nav.track(&resp);
     if resp.changed() {
         st.session.prefs.set(PREF_SHOW, fp_engine::PrefValue::Bool(!dont));
         st.session.prefs_changed();
         ui.ctx().data_mut(|d| d.insert_temp(ticked_id(), true));
     }
-    p.rect_stroke(panel, CornerRadius::same(4), Stroke::new(1.0, if theme.glow { with_alpha(c.focus, 200) } else { c.line_dark }), StrokeKind::Outside);
+    // ------------------------------------------------ Pfeiltasten bewegen den Fokus
+    if nav.focused {
+        let dir = ui.input_mut(|i| {
+            use egui::{FocusDirection as F, Key, Modifiers as M};
+            [(Key::ArrowDown, F::Down), (Key::ArrowUp, F::Up), (Key::ArrowLeft, F::Left), (Key::ArrowRight, F::Right)].into_iter().find(|(k, _)| i.consume_key(M::NONE, *k)).map(|(_, d)| d)
+        });
+        if let Some(d) = dir {
+            ui.memory_mut(|m| m.move_focus(d));
+        }
+    }
+}
+
+/// Karte mit Schatten, Rahmen und Kopf (Symbolchip in der Leitfarbe, Titel). Liefert die
+/// Innenfläche unter dem Kopf.
+fn card(p: &egui::Painter, r: Rect, theme: &Theme, col: Color32, icon: RowIcon, title: &str) -> Rect {
+    let c = &theme.colors;
+    let cr = CornerRadius::same(RADIUS);
+    if !theme.glow {
+        let shadow = egui::Shadow { offset: [0, 2], blur: 10, spread: 0, color: Color32::from_black_alpha(if theme.kind == ThemeKind::Normal { 34 } else { 110 }) };
+        p.add(shadow.as_shape(r, cr));
+    }
+    p.rect_filled(r, cr, card_fill(theme));
+    let border = match theme.kind {
+        ThemeKind::Normal => mix(c.line_mid, c.canvas_bg, 0.55),
+        ThemeKind::Dark => c.line_dark,
+        ThemeKind::Oled => with_alpha(col, 170),
+    };
+    p.rect_stroke(r, cr, Stroke::new(1.0, border), StrokeKind::Inside);
+    if theme.glow {
+        // OLED: leuchtender Streifen oben in der Leitfarbe
+        let strip = Rect::from_min_size(r.min + vec2(RADIUS as f32, 0.0), vec2(r.width() - 2.0 * RADIUS as f32, 2.0));
+        p.rect_filled(strip, 1.0, col);
+    }
+    // Kopf
+    let chip = Rect::from_min_size(pos2(r.left() + PAD, r.top() + PAD - 2.0), vec2(24.0, 24.0));
+    p.rect_filled(chip, CornerRadius::same(6), if theme.glow { with_alpha(col, 46) } else { accent_tint(theme, col, 1.4) });
+    let ir = Rect::from_center_size(chip.center(), vec2(16.0, 16.0));
+    let st = IconStyle::new(theme, None, true);
+    match icon {
+        RowIcon::Icon(i) => icons::paint(p, ir, i, &st),
+        RowIcon::Kit(k) => ui_kit::paint_icon(p, ir, k, &st),
+        RowIcon::None => {}
+    }
+    let tr = Rect::from_min_max(pos2(chip.right() + sp::S + 2.0, chip.top()), pos2(r.right() - PAD, chip.bottom()));
+    let title_color = if theme.glow { col } else { c.text };
+    ui_kit::paint_text_fit(p, tr, title, theme.bold(type_scale::SECTION + 1.0), title_color);
+    Rect::from_min_max(pos2(r.left() + PAD, r.top() + PAD + HEAD_H), pos2(r.right() - PAD, r.bottom() - PAD))
+}
+
+/// Fokusrahmen (Tastaturbedienung) um ein Element.
+fn focus_ring(p: &egui::Painter, resp: &Response, r: Rect, theme: &Theme) {
+    if resp.has_focus() {
+        p.rect_stroke(r, CornerRadius::same(5), Stroke::new(1.5, theme.colors.focus), StrokeKind::Inside);
+    }
+}
+
+/// Großer Eintrag: Symbolchip, Titel fett, Erklärsatz gedämpft. Hover getönt, Fokusrahmen.
+#[allow(clippy::too_many_arguments)]
+fn action_tile(ui: &mut Ui, rect: Rect, id: Id, icon: KitIcon, title: &str, subtitle: &str, col: Color32, theme: &Theme) -> Response {
+    let c = &theme.colors;
+    let resp = ui.interact(rect, id, Sense::click());
+    resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, true, title));
+    let hot = resp.hovered() || resp.has_focus();
+    let down = resp.is_pointer_button_down_on();
+    let p = ui.painter();
+    let cr = CornerRadius::same(6);
+    let (bg, border) = match (hot, theme.kind) {
+        (true, ThemeKind::Oled) => (with_alpha(col, if down { 60 } else { 34 }), with_alpha(col, 220)),
+        (true, _) => (accent_tint(theme, col, if down { 1.6 } else { 0.9 }), mix(card_fill(theme), col, 0.55)),
+        (false, ThemeKind::Normal) => (c.field_bg, mix(c.line_mid, c.canvas_bg, 0.6)),
+        (false, ThemeKind::Dark) => (mix(card_fill(theme), c.field_bg, 0.35), c.line_dark),
+        (false, ThemeKind::Oled) => (c.frame_bg, with_alpha(col, 70)),
+    };
+    p.rect_filled(rect, cr, bg);
+    p.rect_stroke(rect, cr, Stroke::new(1.0, border), StrokeKind::Inside);
+    if resp.has_focus() {
+        p.rect_stroke(rect.shrink(1.0), CornerRadius::same(5), Stroke::new(1.5, c.focus), StrokeKind::Inside);
+    }
+    let chip = Rect::from_min_size(pos2(rect.left() + sp::S + 2.0, rect.center().y - 17.0), vec2(34.0, 34.0));
+    p.rect_filled(chip, CornerRadius::same(7), if theme.glow { with_alpha(col, 40) } else { accent_tint(theme, col, 1.2) });
+    ui_kit::paint_icon(p, Rect::from_center_size(chip.center(), vec2(22.0, 22.0)), icon, &IconStyle::new(theme, None, true));
+    let x = chip.right() + sp::M;
+    let tw = (rect.right() - sp::S - x).max(20.0);
+    let title_color = if hot && theme.glow { col } else { c.text };
+    ui_kit::paint_text_fit(p, Rect::from_min_size(pos2(x, rect.center().y - 17.0), vec2(tw, 17.0)), title, theme.bold(type_scale::SECTION), title_color);
+    let shown = ui_kit::elide(ui.ctx(), subtitle, &theme.font(type_scale::CAPTION), tw);
+    let sub_color = if theme.kind == ThemeKind::Normal { mix(c.text_weak, c.text, 0.2) } else { c.text_weak };
+    p.text(pos2(x, rect.center().y + 9.0), Align2::LEFT_CENTER, &shown, theme.font(type_scale::CAPTION), sub_color);
+    let resp = if resp.hovered() { resp.on_hover_cursor(egui::CursorIcon::PointingHand) } else { resp };
+    if shown != subtitle { resp.on_hover_text(subtitle) } else { resp }
+}
+
+/// Zeile „Zuletzt geöffnet“: Vorschau (oder Symbol der Dateiart), Name, Ordner gedämpft.
+fn recent_row(ui: &mut Ui, rect: Rect, id: Id, it: &RecentItem, thumb: Option<&egui::TextureHandle>, theme: &Theme) -> Response {
+    let c = &theme.colors;
+    let resp = ui.interact(rect, id, Sense::click());
+    resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Link, true, &it.name));
+    let hot = resp.hovered() || resp.has_focus();
+    let p = ui.painter();
+    let cr = CornerRadius::same(5);
+    if hot {
+        if theme.glow {
+            p.rect_filled(rect, cr, with_alpha(c.focus, 30));
+            p.rect_stroke(rect, cr, Stroke::new(1.0, with_alpha(c.focus, 160)), StrokeKind::Inside);
+        } else {
+            p.rect_filled(rect, cr, c.list_hover_bg);
+        }
+    }
+    if resp.has_focus() {
+        p.rect_stroke(rect, cr, Stroke::new(1.5, c.focus), StrokeKind::Inside);
+    }
+    // Vorschau bzw. Symbol
+    let bx = Rect::from_min_size(pos2(rect.left() + sp::XS + 2.0, rect.center().y - 18.0), vec2(36.0, 36.0));
+    let box_bg = if theme.kind == ThemeKind::Normal { c.field_bg } else { mix(card_fill(theme), c.field_bg, 0.6) };
+    p.rect_filled(bx, CornerRadius::same(4), box_bg);
+    match thumb {
+        Some(tex) => {
+            let sz = tex.size_vec2();
+            let s = (34.0 / sz.x.max(1.0)).min(34.0 / sz.y.max(1.0));
+            let ir = Rect::from_center_size(bx.center(), sz * s);
+            if tex_has_room(ir) {
+                crate::widgets::checker(p, ir, 4.0, theme);
+            }
+            p.image(tex.id(), ir, Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0)), Color32::WHITE);
+        }
+        None => {
+            let ir = Rect::from_center_size(bx.center(), vec2(20.0, 20.0));
+            let st = IconStyle::new(theme, None, it.exists);
+            match it.icon {
+                RowIcon::Icon(i) => icons::paint(p, ir, i, &st),
+                RowIcon::Kit(k) => ui_kit::paint_icon(p, ir, k, &st),
+                RowIcon::None => {}
+            }
+        }
+    }
+    let border = if theme.glow { with_alpha(c.focus, 90) } else { mix(c.line_mid, box_bg, 0.55) };
+    p.rect_stroke(bx, CornerRadius::same(4), Stroke::new(1.0, border), StrokeKind::Inside);
+    // Name und Ordner
+    let x = bx.right() + sp::M - 2.0;
+    let tw = (rect.right() - sp::S - x).max(20.0);
+    let name_font = theme.font(type_scale::BODY + 0.5);
+    let name_color = if !it.exists {
+        c.text_disabled
+    } else if hot {
+        if theme.glow { c.focus } else { c.menu_hover_text }
+    } else {
+        c.text
+    };
+    let name = ui_kit::elide(ui.ctx(), &it.name, &name_font, tw);
+    p.text(pos2(x, rect.center().y - 8.0), Align2::LEFT_CENTER, &name, name_font, name_color);
+    let folder = it.path.parent().map(|d| d.display().to_string()).unwrap_or_default();
+    if !folder.is_empty() {
+        let f = theme.font(type_scale::CAPTION);
+        let shown = ui_kit::elide_middle(ui.ctx(), &folder, &f, tw);
+        let weak = if !it.exists { c.text_disabled } else if theme.kind == ThemeKind::Normal { mix(c.text_weak, c.text, 0.15) } else { c.text_weak };
+        p.text(pos2(x, rect.center().y + 9.0), Align2::LEFT_CENTER, shown, f, weak);
+    }
+    let resp = if resp.hovered() { resp.on_hover_cursor(egui::CursorIcon::PointingHand) } else { resp };
+    let tip = if it.exists { it.path.display().to_string() } else { format!("{}\n{}", t("welcome-recent-missing"), it.path.display()) };
+    resp.on_hover_text(tip)
+}
+
+/// Schachbrett nur hinter Vorschauen, die groß genug sind, dass es nicht flimmert.
+fn tex_has_room(r: Rect) -> bool {
+    r.width() >= 8.0 && r.height() >= 8.0
 }
 
 fn paint_small_icon(p: &egui::Painter, r: Rect, icon: KitIcon, theme: &Theme) {
@@ -380,6 +662,9 @@ mod tests {
         crate::ui_kit::tests::with_ctx(|ctx| {
             let wide = layout(ctx, vec2(1200.0, 800.0), 8, 2);
             assert!(wide.two && wide.w <= PANEL_MAX_W);
+            assert!((wide.left_w + GAP + wide.right_w - wide.w).abs() < 0.5);
+            // Spalten gleich hoch
+            assert!((wide.start_h + GAP + wide.help_h - wide.recent_h).abs() < 0.5);
             let narrow = layout(ctx, vec2(400.0, 500.0), 0, 2);
             assert!(!narrow.two && narrow.w <= 400.0 - 2.0 * sp::L + 0.5);
             assert!(narrow.total_h > wide.total_h - 200.0);

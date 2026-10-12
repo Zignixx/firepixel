@@ -17,6 +17,7 @@ welcome-extend-commands = Gespeicherte Befehle...
     .tooltip = Eigene Befehle (JSF-Skripte) umbenennen und löschen
 welcome-extend-extensions = Erweiterungen verwalten...
     .tooltip = Installierte Erweiterungen anzeigen und verwalten
+welcome-help-title = Hilfe und Lernen
 welcome-help-guide = Kurzanleitung
     .tooltip = Die mitgelieferte Anleitung öffnen
 welcome-help-shortcuts = Tastenkürzel

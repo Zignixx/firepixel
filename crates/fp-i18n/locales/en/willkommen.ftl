@@ -17,6 +17,7 @@ welcome-extend-commands = Saved Commands...
     .tooltip = Rename and delete your own commands (JSF scripts)
 welcome-extend-extensions = Manage Extensions...
     .tooltip = Show and manage installed extensions
+welcome-help-title = Help and Learning
 welcome-help-guide = Quick Guide
     .tooltip = Open the included guide
 welcome-help-shortcuts = Keyboard Shortcuts
