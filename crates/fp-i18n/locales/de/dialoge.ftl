@@ -245,6 +245,9 @@ dlg-lbl-brightness = Helligkeit:
 dlg-lbl-contrast = Kontrast:
 dlg-lbl-angle = Winkel:
 dlg-lbl-distance = Abstand:
+# Bewegungsunschärfe (6525) und Zentriertes Weichzeichnen (19160): eigener Wortlaut des Originals (PM-6 D47/D50)
+dlg-lbl-motion-distance = Umfang:
+dlg-lbl-zoom-amount = Anzahl:
 dlg-lbl-hue = Farbton:
 dlg-lbl-saturation = Sättigung:
 dlg-lbl-lightness = Helligkeit:

@@ -181,9 +181,46 @@ for i, (r, a, t) in enumerate([(4.1, 50, 0), (1.5, 200, 10), (2.0, 500, 0), (0.7
                                          "params": {"radius": r, "amount": a, "threshold": t, "precision": "Double"}},
             F.unsharp_mask(IMGS[s], r, a, t))
 
+def motion_blur_measured(img, ang, d):
+    """Wie F.motion_blur, aber Proben i = 0 .. abstand-1 statt i <= abstand (DLG-6, Messung PM-6
+    PARITAET_B D47: Winkel 90, Umfang 20 an 320,200,420,300 ergibt 320,200,420,319)."""
+    import math
+    m = max(0, int(d))
+    H, W = img.shape[:2]
+    big = np.zeros((H + 2 * m, W + 2 * m, 4), np.uint8)
+    big[m:m + H, m:m + W] = img
+    H, W = big.shape[:2]
+    a = int(ang)
+    if a >= 360:
+        a %= 360
+    if a < 0:
+        a = a + 360 + ((-a - 1) // 360) * 360
+    th = a / 360.0 * 6.283185307179586
+    sn, cs = math.sin(th), math.cos(th)
+    out = big.copy()
+    if int(d) < 0:
+        return out, m
+    src = np.where((big[..., 3] == 0)[..., None], 0, big.astype(np.int64))
+    acc = np.zeros((H, W, 4), np.int64)
+    cnt = np.zeros((H, W), np.int64)
+    alive = np.ones((H, W), bool)
+    ys, xs = np.mgrid[0:H, 0:W]
+    i = 0
+    while float(i) < float(int(d)):
+        dx, dy = (0, 0) if i == 0 else (int(i * cs), int(i * sn))
+        sx, sy = xs + dx, ys - dy
+        alive &= (sx >= 0) & (sx < W) & (sy >= 0) & (sy < H)
+        acc += np.where(alive[..., None], src[np.clip(sy, 0, H - 1), np.clip(sx, 0, W - 1)], 0)
+        cnt += alive
+        i += 1
+    ok = cnt > 0
+    out[ok] = np.minimum(255, acc // np.maximum(cnt, 1)[..., None])[ok].astype(np.uint8)
+    return out, m
+
+
 for i, (ang, d) in enumerate([(90, 10), (0, 5), (45, 7), (200, 3), (-30, 6), (359, 4), (720, 2)]):
     for s in ("rnd", "disc"):
-        out, m = F.motion_blur(IMGS[s], ang, d)
+        out, m = motion_blur_measured(IMGS[s], ang, d)
         add("motion%d_%s" % (i, s), s, {"filter": "motion_blur", "params": {"angle": ang, "distance": d}}, out, (-m, -m))
 
 for i, (a, q) in enumerate([(30, 20), (100, 100), (10, 50)]):

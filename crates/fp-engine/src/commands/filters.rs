@@ -179,7 +179,8 @@ pub fn apply_filter(s: &mut Session, f: &Filter, live: bool) -> Result<CommandOu
                 if let ElementKind::Bitmap(b) = &mut e.kind
                     && let Some(img) = bitmap_image(b)
                 {
-                    let out = f.apply(&img, mask.as_ref());
+                    // Vergrößerter Puffer auf den sichtbaren Inhalt zugeschnitten (PM-6, D47/D49)
+                    let out = fp_raster::filters::trim_growth(img.bounds(), &f.apply(&img, mask.as_ref()));
                     set_bitmap_image(b, &out);
                 }
             });

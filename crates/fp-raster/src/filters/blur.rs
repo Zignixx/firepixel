@@ -63,10 +63,13 @@ impl PixelFilter for MotionBlurParams {
         }
         let (w, h) = (src.width() as i64, src.height() as i64);
         let wu = src.width();
-        // Versätze je Probe (abgeschnitten wie `_ftol`)
+        // Versätze je Probe (abgeschnitten wie `_ftol`). Proben `i = 0 … abstand − 1`: Die
+        // Spezifikation (06 §4.11) nennt `i ≤ abstand`, gemessen reicht die Unschärfe im Original
+        // aber nur `abstand − 1` Pixel weit (PM-6, PARITAET_B D47: B1 320,200,420,300, Winkel 90,
+        // Umfang 20 → 320,200,420,319). Die x87-Vergleichsflags sind die naheliegende Lesefehlerquelle.
         let mut offs = Vec::new();
         let mut i = 0i64;
-        while (i as f64) <= dist {
+        while (i as f64) < dist {
             offs.push(if i == 0 { (0, 0) } else { ((i as f64 * c) as i64, (i as f64 * s) as i64) });
             i += 1;
         }

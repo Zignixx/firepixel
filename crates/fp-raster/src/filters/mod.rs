@@ -103,6 +103,22 @@ pub fn apply_framework<F: PixelFilter + ?Sized>(f: &F, img: &RgbaImage, mask: Op
     out.cropped(img.bounds().union(&region))
 }
 
+/// Zuschnitt nach dem Menübefehl „Filter“ an einer Bitmap: Der vergrößerte Ausgabepuffer wird auf
+/// die Pixel mit Alpha > 0 zugeschnitten, die Eingabegrenzen bleiben immer erhalten.
+///
+/// Gemessen am Original (PM-6, PARITAET_B D47–D49, B1 = 320,200,420,300 deckend): Radial 10/20
+/// → 317,197,424,304 (Puffer 299,179,441,321), Bewegung 90/20 → 320,200,420,319, Gauß 2 →
+/// 315,195,425,305. Wie die gespeicherten Caches (06 §2.4). Dass Eingabegrenzen mit
+/// durchsichtigem Rand erhalten bleiben, ist angenommen (A).
+pub fn trim_growth(input: IRect, out: &RgbaImage) -> RgbaImage {
+    let ob = out.bounds();
+    let r = out.alpha_bounds().union(&input).intersect(&ob);
+    if r == ob || r.is_empty() {
+        return out.clone();
+    }
+    out.cropped(r)
+}
+
 /// Startet das Ergebnis eines Filters als Kopie der Eingabe (das Original füllt `dst` vorab mit
 /// `src`, 06 §2.4).
 pub(crate) fn start(src: &RgbaImage) -> RgbaImage {

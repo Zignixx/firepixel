@@ -438,7 +438,7 @@ fn filter_effect_form(e: &Effect, index: usize) -> Option<FormDialog> {
         EffectKind::MotionBlur => (
 t("dlg-title-motion-blur"),
             vec![("angle", "motion_blur_angle"), ("distance", "motion_blur_distance")],
-            vec![Field::slider("angle", t("dlg-lbl-angle").as_str(), n("motion_blur_angle", 90.0), 0.0, 360.0).popup(), Field::slider("distance", t("dlg-lbl-distance").as_str(), n("motion_blur_distance", 10.0), 1.0, 100.0).popup()],
+            vec![Field::slider("angle", t("dlg-lbl-angle").as_str(), n("motion_blur_angle", 90.0), 0.0, 360.0).popup(), Field::slider("distance", t("dlg-lbl-motion-distance").as_str(), n("motion_blur_distance", 10.0), 1.0, 100.0).popup()],
         ),
         EffectKind::RadialBlur => (
 t("dlg-title-radial-blur"),
@@ -448,7 +448,7 @@ t("dlg-title-radial-blur"),
         EffectKind::ZoomBlur => (
 t("dlg-title-zoom-blur"),
             vec![("amount", "zoom_blur_amount"), ("quality", "zoom_blur_quality")],
-            vec![Field::slider("amount", t("dlg-lbl-amount").as_str(), n("zoom_blur_amount", 30.0), 1.0, 100.0).popup(), Field::slider("quality", t("dlg-lbl-quality").as_str(), n("zoom_blur_quality", 20.0), 1.0, 100.0).popup()],
+            vec![Field::slider("amount", t("dlg-lbl-zoom-amount").as_str(), n("zoom_blur_amount", 30.0), 1.0, 100.0).popup(), Field::slider("quality", t("dlg-lbl-quality").as_str(), n("zoom_blur_quality", 20.0), 1.0, 100.0).popup()],
         ),
         EffectKind::UnsharpMask => (
 t("dlg-title-unsharp-mask"),

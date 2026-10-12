@@ -49,7 +49,7 @@ pub fn filter_form(cmd: &str, live: bool) -> Option<FormDialog> {
         ),
         "filter.blur.motion" => {
             let d = defaults::<MotionBlurParams>();
-            ("6525", t("dlg-title-motion-blur"), vec![Field::slider("angle", t("dlg-lbl-angle").as_str(), dnum(&d, "angle", 90.0), 0.0, 360.0).unit("°").popup(), Field::slider("distance", t("dlg-lbl-distance").as_str(), dnum(&d, "distance", 10.0), 1.0, 100.0).popup()])
+            ("6525", t("dlg-title-motion-blur"), vec![Field::slider("angle", t("dlg-lbl-angle").as_str(), dnum(&d, "angle", 90.0), 0.0, 360.0).popup(), Field::slider("distance", t("dlg-lbl-motion-distance").as_str(), dnum(&d, "distance", 10.0), 1.0, 100.0).popup()])
         }
         "filter.adjustColor.hueSaturation" => (
             "19110",
@@ -71,16 +71,17 @@ pub fn filter_form(cmd: &str, live: bool) -> Option<FormDialog> {
         }
         "filter.blur.zoom" => {
             let d = defaults::<ZoomBlurParams>();
-            ("19160", t("dlg-title-zoom-blur"), vec![Field::slider("amount", t("dlg-lbl-amount").as_str(), dnum(&d, "amount", 30.0), 1.0, 100.0).popup(), Field::slider("quality", t("dlg-lbl-quality").as_str(), dnum(&d, "quality", 20.0), 1.0, 100.0).popup()])
+            ("19160", t("dlg-title-zoom-blur"), vec![Field::slider("amount", t("dlg-lbl-zoom-amount").as_str(), dnum(&d, "amount", 30.0), 1.0, 100.0).popup(), Field::slider("quality", t("dlg-lbl-quality").as_str(), dnum(&d, "quality", 20.0), 1.0, 100.0).popup()])
         }
         _ => return None,
     };
     let mut f = FormDialog::new(id, &title, cmd, fields).with_preview();
-    // Anordnung des Originals (PM-6): Felder links, Knöpfe rechts; Rauschen mit Startfokus OK
-    if matches!(id, "5971" | "5972" | "6074" | "19110" | "19157") {
+    // Anordnung des Originals (PM-6): Felder links, Knöpfe rechts; Rauschen, Bewegung, Radial und
+    // Zentriert mit Startfokus OK (D45/D47/D49/D50)
+    if matches!(id, "5971" | "5972" | "6074" | "19110" | "19157" | "6525" | "19159" | "19160") {
         f = f.with_side_buttons();
     }
-    if id == "19157" {
+    if matches!(id, "19157" | "6525" | "19159" | "19160") {
         f = f.with_focus_ok();
     }
     // zuletzt per OK bestätigte Werte, app-weit wie im Original (PM-6 D41/D42/D45–D50); Abbrechen
