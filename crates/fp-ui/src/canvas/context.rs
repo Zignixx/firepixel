@@ -190,15 +190,16 @@ fn copy_color(ctx: &egui::Context, st: &mut AppState, which: &str, at: Option<fp
 
 /// Zeigt das Kontextmenü am Antwortbereich der Leinwand (öffnet sich per Rechtsklick).
 pub fn show(ui: &egui::Ui, resp: &egui::Response, st: &mut AppState, menu: Option<&ContextMenu>) {
-    use egui::containers::menu::MenuConfig;
-    use egui::{Popup, UiKind, UiStackInfo};
+    use egui::Popup;
     let theme = crate::theme::Theme::current(ui.ctx());
     let Some(menu) = menu else { return };
     let nodes = build(st, entries(menu.id));
     let mut acts: Vec<Action> = Vec::new();
     Popup::context_menu(resp)
         .frame(crate::menu::menu_frame(&theme))
-        .info(UiStackInfo::new(UiKind::Menu).with_tag_value(MenuConfig::MENU_CONFIG_TAG, MenuConfig::new()))
+        // Menü-Popup wie die übrigen: auf das Fenster begrenzt, Pfeile schließen nicht (MN-6)
+        .close_behavior(crate::menu::MENU_CLOSE)
+        .info(crate::menu::menu_info())
         .show(|ui| crate::menu::show_nodes(ui, &nodes, &mut acts));
     for a in acts {
         apply(ui.ctx(), st, a, menu.at);

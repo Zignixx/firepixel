@@ -156,7 +156,8 @@ pub fn resource_context_menu(resp: &egui::Response, st: &mut crate::app_state::A
     let view: &crate::app_state::AppState = st;
     egui::Popup::context_menu(resp)
         .frame(crate::menu::menu_frame(&theme))
-        .info(egui::UiStackInfo::new(egui::UiKind::Menu).with_tag_value(egui::containers::menu::MenuConfig::MENU_CONFIG_TAG, egui::containers::menu::MenuConfig::new()))
+        .close_behavior(crate::menu::MENU_CLOSE)
+        .info(crate::menu::menu_info())
         .show(|ui| {
             // Einträge erst beim Öffnen bilden (Zustände/Häkchen aus dem Register)
             let nodes = resource_menu_nodes(view, id);

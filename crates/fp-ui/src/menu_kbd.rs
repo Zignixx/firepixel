@@ -427,13 +427,34 @@ pub fn show(ctx: &egui::Context, st: &mut AppState, menus: &[(String, Vec<Node>)
     let mut out = Vec::new();
     let mut origin = anchors.get(s.top).map(|r| r.left_bottom()).unwrap_or(pos2(40.0, 30.0));
     let mut close = false;
+    // MN-6: nach einer Änderung der Markierung einige Bilder lang den markierten Eintrag in Sicht
+    // scrollen (zu hohe Menüs laufen mit Bildlauf, `menu_scroll`); danach blättern Pfeile/Mausrad frei
+    let seen_id = Id::new("fp-menu-kbd-seen");
+    let (seen, mut reveal_frames) = ctx.data(|d| d.get_temp::<((usize, Vec<usize>), u8)>(seen_id)).unwrap_or(((usize::MAX, Vec::new()), 0));
+    if seen != (s.top, s.path.clone()) {
+        reveal_frames = 4;
+    }
+    let reveal = reveal_frames > 0;
+    let content = ctx.content_rect();
+    let mut parent: Option<Rect> = None;
     for level in 0..s.path.len() {
         let Some((nodes, key_path)) = level_nodes(menus, s.top, &s.path, level) else { break };
         let sel = s.path[level];
         let mut sel_rect = None;
-        egui::Area::new(Id::new(("fp-menu-kbd-level", level))).order(egui::Order::Foreground).fixed_pos(origin).show(ctx, |ui| {
+        let area_id = Id::new(("fp-menu-kbd-level", level));
+        // Untermenü passt rechts nicht ins Fenster: links neben das übergeordnete Menü (Windows)
+        if let Some(p) = parent
+            && let Some(prev) = ctx.memory(|m| m.area_rect(area_id))
+            && origin.x + prev.width() > content.right()
+        {
+            origin.x = (p.left() - prev.width() + 2.0).max(content.left());
+        }
+        let max_h = if level == 0 { crate::menu_scroll::max_height_below(ctx, origin.y) } else { crate::menu_scroll::max_height(ctx) };
+        let natural = crate::menu_scroll::natural_height(ctx, nodes);
+        let area = egui::Area::new(area_id).order(egui::Order::Foreground).fixed_pos(origin).show(ctx, |ui| {
             menu::menu_frame(&theme).show(ui, |ui| {
                 ui.spacing_mut().item_spacing = vec2(0.0, 0.0);
+                crate::menu_scroll::body(ui, natural, max_h, |ui| {
                 for (i, n) in nodes.iter().enumerate() {
                     if matches!(n, Node::Separator) {
                         menu::paint_separator_pub(ui);
@@ -450,6 +471,9 @@ pub fn show(ctx: &egui::Context, st: &mut AppState, menus: &[(String, Vec<Node>)
                     underline(ui.painter(), ui, pos2(resp.rect.left() + menu::LABEL_X, resp.rect.center().y), label, access_of(&format!("{key_path}/{label}")), &font, col);
                     if i == sel {
                         sel_rect = Some(resp.rect);
+                        if reveal {
+                            resp.scroll_to_me(None);
+                        }
                     }
                     if resp.clicked() && enabled {
                         match n {
@@ -464,10 +488,15 @@ pub fn show(ctx: &egui::Context, st: &mut AppState, menus: &[(String, Vec<Node>)
                         }
                     }
                 }
+                });
             });
         });
-        origin = sel_rect.map(|r| r.right_top() + vec2(2.0, -4.0)).unwrap_or(origin + vec2(200.0, 0.0));
+        let me = area.response.rect;
+        parent = Some(me);
+        // Untermenü am markierten Eintrag, dessen Lage auf den sichtbaren Teil des Menüs begrenzt
+        origin = sel_rect.map(|r| pos2(r.right() + 2.0, (r.top() - 4.0).clamp(me.top(), (me.bottom() - r.height()).max(me.top())))).unwrap_or(origin + vec2(200.0, 0.0));
     }
+    ctx.data_mut(|d| d.insert_temp(seen_id, ((s.top, s.path.clone()), reveal_frames.saturating_sub(1))));
     if close {
         s = KbdMenu::default();
     }

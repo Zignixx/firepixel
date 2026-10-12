@@ -18,7 +18,7 @@ use crate::app_state::{Action, AppState};
 use crate::panels::PanelId;
 use crate::theme::{with_alpha, Theme, ThemeKind};
 use egui::containers::menu::{MenuConfig, SubMenu};
-use egui::{pos2, vec2, Align2, Popup, Rect, Response, Sense, Stroke, Ui, UiKind, UiStackInfo};
+use egui::{pos2, vec2, Align2, Popup, PopupCloseBehavior, Rect, Response, Sense, Stroke, Ui, UiKind, UiStackInfo};
 use fp_i18n::t;
 use serde::Deserialize;
 use serde_json::{json, Value};
@@ -703,13 +703,35 @@ fn paint_item(ui: &mut Ui, label: &str, shortcut: Option<&str>, checked: Option<
 
 fn paint_separator(ui: &mut Ui) {
     let theme = Theme::current(ui.ctx());
-    let resp = ui.allocate_response(vec2(10.0, 9.0), Sense::hover());
+    let resp = ui.allocate_response(vec2(10.0, crate::menu_scroll::SEPARATOR_H), Sense::hover());
     let r = resp.rect;
     ui.painter().hline((r.left() + CHECK_COL)..=(r.right() - 8.0), r.center().y.floor() + 0.5, Stroke::new(1.0, theme.colors.menu_separator));
 }
 
-/// Zeigt die Knoten eines Menüs; ausgewählte Aktionen landen in `out`.
+/// Zeigt die Knoten eines Menüs; ausgewählte Aktionen landen in `out`. Ist das Menü höher als das
+/// Fenster, läuft es mit Pfeilleisten und Bildlauf wie ein natives Windows-Menü (MN-6,
+/// [`crate::menu_scroll`]).
 pub fn show_nodes(ui: &mut Ui, nodes: &[Node], out: &mut Vec<Action>) {
+    let max_h = crate::menu_scroll::max_height(ui.ctx());
+    show_nodes_max(ui, nodes, out, max_h);
+}
+
+/// Wie [`show_nodes`], Inhalt höchstens `max_h` hoch (Hauptmenü: Platz unter dem Titel).
+pub fn show_nodes_max(ui: &mut Ui, nodes: &[Node], out: &mut Vec<Action>, max_h: f32) {
+    let natural = crate::menu_scroll::natural_height(ui.ctx(), nodes);
+    crate::menu_scroll::body(ui, natural, max_h, |ui| show_list(ui, nodes, out));
+}
+
+/// Stapelinfo der Menü-Popups: Klicks ins Menü (Pfeilleisten, Trenner, graue Einträge) schließen
+/// es wie unter Windows nicht; Einträge schließen es selbst (`ui.close()`), MN-6.
+pub fn menu_info() -> UiStackInfo {
+    UiStackInfo::new(UiKind::Menu).with_tag_value(MenuConfig::MENU_CONFIG_TAG, MenuConfig::new().close_behavior(MENU_CLOSE))
+}
+
+/// Schließverhalten der Menü-Popups (siehe [`menu_info`]).
+pub const MENU_CLOSE: PopupCloseBehavior = PopupCloseBehavior::CloseOnClickOutside;
+
+fn show_list(ui: &mut Ui, nodes: &[Node], out: &mut Vec<Action>) {
     ui.spacing_mut().item_spacing = vec2(0.0, 0.0);
     for n in nodes {
         match n {
@@ -745,15 +767,11 @@ pub fn sub_head_checked(siblings: &[Node], children: &[Node]) -> Option<bool> {
     (siblings.len() > LONG_SUBMENU && children.iter().any(|c| matches!(c, Node::Item { checked: Some(true), .. }))).then_some(true)
 }
 
-/// Inhalt eines Untermenüs; lange Untermenüs (Text ▸ Schrift: alle Familien flach, ab
-/// [`LONG_SUBMENU`] Einträgen) bekommen wie im Original einen Bildlauf und bleiben im Fenster.
+/// Inhalt eines Untermenüs; Untermenüs, die höher als das Fenster sind (Text ▸ Schrift: alle
+/// Familien flach), bekommen wie im Original Pfeilleisten mit Bildlauf und bleiben im Fenster;
+/// egui schiebt das Untermenü nach oben bzw. auf die andere Seite, damit es ganz zu sehen ist.
 pub fn show_submenu_body(ui: &mut Ui, children: &[Node], out: &mut Vec<Action>) {
-    if children.len() > LONG_SUBMENU {
-        let max_h = (ui.ctx().content_rect().height() - 40.0).max(120.0);
-        egui::ScrollArea::vertical().max_height(max_h).auto_shrink([true, true]).show(ui, |ui| show_nodes(ui, children, out));
-    } else {
-        show_nodes(ui, children, out);
-    }
+    show_nodes(ui, children, out);
 }
 
 /// Öffnet ein Menü-Popup an `resp` (Bedienfeldmenü, Flyout-ähnliche Menüs).
@@ -761,7 +779,8 @@ pub fn popup_menu(ui: &Ui, resp: &Response, nodes: &[Node], out: &mut Vec<Action
     let theme = Theme::current(ui.ctx());
     Popup::menu(resp)
         .frame(menu_frame(&theme))
-        .info(UiStackInfo::new(UiKind::Menu).with_tag_value(MenuConfig::MENU_CONFIG_TAG, MenuConfig::new()))
+        .close_behavior(MENU_CLOSE)
+        .info(menu_info())
         .show(|ui| show_nodes(ui, nodes, out));
 }
 
@@ -852,8 +871,10 @@ pub fn show_menu_bar(ui: &mut Ui, st: &mut AppState) {
         Popup::menu(&resp)
             .id(ids[i])
             .frame(menu_frame(&theme))
-            .info(UiStackInfo::new(UiKind::Menu).with_tag_value(MenuConfig::MENU_CONFIG_TAG, MenuConfig::new()))
-            .show(|ui| show_nodes(ui, nodes, &mut out));
+            .close_behavior(MENU_CLOSE)
+            .info(menu_info())
+            // wie unter Windows unter dem Titel, höchstens bis zum Fensterrand (MN-6)
+            .show(|ui| show_nodes_max(ui, nodes, &mut out, crate::menu_scroll::max_height_below(ui.ctx(), rect.bottom())));
     }
     for a in out {
         note_font_choice(st, &a);

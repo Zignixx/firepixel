@@ -37,6 +37,7 @@ pub mod inspector;
 pub mod language;
 pub mod menu;
 pub mod menu_kbd;
+pub mod menu_scroll;
 pub mod os_clipboard;
 pub mod panels;
 pub mod preview;
