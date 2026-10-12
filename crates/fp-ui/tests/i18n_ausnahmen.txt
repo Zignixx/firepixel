@@ -23,9 +23,6 @@ px pt mm cm in ms KB MB GB TB
 # Tasten (stehen in key-* bzw. kommen aus shortcut_label)
 Ctrl Shift Alt Esc Tab Num
 
-# Dateien, die nur auf UI-Aufrufe geprüft werden (Fehlertexte für KI-Agenten der MCP-Brücke, Sprache
-# der Agenten: siehe fp_i18n::with_language)
-nur-ui fp-ui/src/bridge
 
 # Symbole
 text glyphs.rs | AV
@@ -86,3 +83,18 @@ text jpeg_ijg.rs | nicht ganzzahliges Abtastverhältnis
 # UE-1 (12.10.): Detailtexte der FW-PNG-Leser in fp-fwpng (tree.rs, ate.rs, chunks.rs, png.rs, file.rs, read.rs: „Tag-Baum …“,
 # „unpassendes >>“, „Magic FADECAFE fehlt“ …) bleiben deutsch: technische Ursache für Entwickler, eingebettet in die
 # übersetzte Hülle err-fwpng-* (Detail als Platzhalter). fp-io-Präfixe „BMP: …“ sind Formatname + übersetzter Text.
+
+# UE-3 (12.10.): Kommandozeile und MCP-Server werden mitgeprüft (Prüfart „Ausgabe“).
+# JSON-RPC-Standardmeldung (Protokolltext, in jeder Sprache gleich) und interner Renderbericht (Debug-Ausgabe der Struktur)
+text proxy.rs | Parse error: {e}
+text render.rs | Renderer: {:?}
+# Mischmodus-Liste: deutsche Namen sind nur Rückfall-Quelltexte; angezeigt wird blend-<name> aus filter.ftl
+# (inspector\texte.rs::blend_label, Test texte::keys_of_lists_exist prüft jeden Schlüssel)
+text obj_quads.rs | Sättigung
+text obj_quads.rs | Grün
+text obj_quads.rs | Glühen
+text obj_quads.rs | Abkühlen
+text obj_quads.rs | Erwärmen
+text obj_quads.rs | Tönung
+# Bibliotheksname
+zlib

@@ -150,7 +150,7 @@ pub fn document_json(d: &DocumentState, opts: &DocJsonOptions) -> Value {
     });
     if ctx.truncated {
         out["truncated"] = json!(true);
-        out["note"] = json!(format!("nur die ersten {} Elemente; mit depth/types/name/page einschränken oder maxElements erhöhen", opts.max_elements));
+        out["note"] = json!(fp_i18n::tr!("msg-mcp-truncated", n = opts.max_elements.to_string()));
     }
     out
 }

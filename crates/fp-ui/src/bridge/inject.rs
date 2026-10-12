@@ -165,11 +165,11 @@ pub(crate) fn cancel_all() {
     };
     for mut s in scripts {
         if let Some(r) = s.reply.take() {
-            r.respond(UiReply::Error("Steuerkanal beendet".into()));
+            r.respond(UiReply::Error(super::at("err-mcp-ui-channel-closed")));
         }
     }
     for f in finds {
-        f.reply.respond(UiReply::Error("Steuerkanal beendet".into()));
+        f.reply.respond(UiReply::Error(super::at("err-mcp-ui-channel-closed")));
     }
 }
 
@@ -214,7 +214,7 @@ pub(crate) fn frame(ctx: &egui::Context, dialog_open: bool, status: Option<Strin
             w.2 += 1;
             if w.2 > 120 {
                 s.shot_wait = None;
-                s.labels.push("Bildschirmfoto: keins erhalten (Fenster minimiert?)".into());
+                s.labels.push(super::at("err-mcp-ui-no-screenshot"));
             }
         }
         let idle = s.steps.is_empty() && s.not_before.is_none() && s.frames_left == 0 && s.shot_wait.is_none() && s.shot_request.is_none();
@@ -729,6 +729,11 @@ fn pos_of(v: Option<&Value>) -> Option<Pos2> {
     Some(pos2(v.get("x")?.as_f64()? as f32, v.get("y")?.as_f64()? as f32))
 }
 
+/// „<feld> fehlt“ in der Antwortsprache der Agenten.
+fn missing(field: &str) -> String {
+    super::agent_text(|| fp_i18n::tr!("err-mcp-param-missing", param = field))
+}
+
 fn mods_of(v: Option<&Value>) -> Result<Modifiers, String> {
     let mut m = Modifiers::NONE;
     let Some(v) = v else { return Ok(m) };
@@ -737,7 +742,7 @@ fn mods_of(v: Option<&Value>) -> Result<Modifiers, String> {
         Value::String(s) => s.split(['+', ',', ' ']).filter(|x| !x.is_empty()).map(str::to_lowercase).collect(),
         Value::Object(o) => o.iter().filter(|(_, b)| b.as_bool() == Some(true)).map(|(k, _)| k.to_lowercase()).collect(),
         Value::Null => Vec::new(),
-        _ => return Err("modifiers: Liste wie [\"ctrl\",\"shift\"]".into()),
+        _ => return Err(super::at("err-mcp-ui-modifiers")),
     };
     for n in names {
         match n.as_str() {
@@ -747,7 +752,7 @@ fn mods_of(v: Option<&Value>) -> Result<Modifiers, String> {
             }
             "shift" | "umschalt" => m.shift = true,
             "alt" => m.alt = true,
-            other => return Err(format!("unbekannte Umschalttaste „{other}“ (ctrl, shift, alt)")),
+            other => return Err(super::agent_text(|| fp_i18n::tr!("err-mcp-ui-unknown-modifier", name = other))),
         }
     }
     Ok(m)
@@ -760,12 +765,12 @@ fn button_of(v: Option<&Value>) -> Result<PointerButton, String> {
         "middle" | "mitte" => Ok(PointerButton::Middle),
         "back" | "extra1" => Ok(PointerButton::Extra1),
         "forward" | "extra2" => Ok(PointerButton::Extra2),
-        other => Err(format!("unbekannte Maustaste „{other}“ (left, right, middle)")),
+        other => Err(super::agent_text(|| fp_i18n::tr!("err-mcp-ui-unknown-button", name = other))),
     }
 }
 
 fn key_of(v: Option<&Value>) -> Result<Key, String> {
-    let name = v.and_then(Value::as_str).ok_or("key fehlt (z. B. \"C\", \"Enter\", \"Escape\", \"F5\")")?;
+    let name = v.and_then(Value::as_str).ok_or_else(|| super::at("err-mcp-ui-key-missing"))?;
     let alias = match name.to_lowercase().as_str() {
         "esc" => "Escape".to_string(),
         "del" | "entf" => "Delete".to_string(),
@@ -782,14 +787,14 @@ fn key_of(v: Option<&Value>) -> Result<Key, String> {
         _ if name.chars().count() == 1 => name.to_uppercase(),
         _ => name.to_string(),
     };
-    Key::from_name(&alias).ok_or_else(|| format!("unbekannte Taste „{name}“ (Namen wie egui: A, 5, F1, Enter, Escape, Tab, Delete, ArrowLeft, PageUp …)"))
+    Key::from_name(&alias).ok_or_else(|| super::agent_text(|| fp_i18n::tr!("err-mcp-ui-unknown-key", key = name)))
 }
 
 fn paths_of(v: Option<&Value>) -> Result<Vec<PathBuf>, String> {
     let a = v.and_then(Value::as_array).ok_or("paths: Liste von Dateipfaden")?;
     let p: Vec<PathBuf> = a.iter().filter_map(Value::as_str).map(PathBuf::from).collect();
     if p.is_empty() {
-        return Err("paths ist leer".into());
+        return Err(super::at("err-mcp-ui-paths-empty"));
     }
     Ok(p)
 }
@@ -809,26 +814,26 @@ fn fmt_pos(p: Pos2) -> String {
 
 /// Baut eine Eingabefolge aus `{"events": [...], ...}`.
 fn parse(args: &Value) -> Result<Script, String> {
-    let events = args.get("events").and_then(Value::as_array).ok_or("events fehlt: Liste von Schritten, z. B. [{\"type\":\"click\",\"pos\":[100,200]}]")?;
+    let events = args.get("events").and_then(Value::as_array).ok_or_else(|| super::at("err-mcp-ui-events-missing"))?;
     let each = args.get("screenshot_each").and_then(Value::as_bool).unwrap_or(false);
     let settle = args.get("settle_frames").and_then(Value::as_u64).unwrap_or(2).min(60) as u32;
     let final_shot = match args.get("screenshot") {
         Some(Value::Bool(true)) => Some(None),
-        Some(v @ Value::Array(_)) => Some(Some(rect_of(Some(v)).ok_or("screenshot: true oder [l, t, r, b]")?)),
+        Some(v @ Value::Array(_)) => Some(Some(rect_of(Some(v)).ok_or_else(|| super::at("err-mcp-ui-screenshot-arg"))?)),
         _ => None,
     };
     let mut steps: VecDeque<Step> = VecDeque::new();
     let mut labels = Vec::new();
     let frame = |steps: &mut VecDeque<Step>, evs: Vec<Ev>| steps.push_back(Step::Frame(evs));
     for (i, e) in events.iter().enumerate() {
-        let t = e.get("type").and_then(Value::as_str).ok_or_else(|| format!("Schritt {}: type fehlt", i + 1))?;
-        let err = |m: String| format!("Schritt {} ({t}): {m}", i + 1);
+        let t = e.get("type").and_then(Value::as_str).ok_or_else(|| super::agent_text(|| fp_i18n::tr!("err-mcp-ui-step-type", n = i + 1)))?;
+        let err = |m: String| super::agent_text(|| fp_i18n::tr!("err-mcp-ui-step", n = i + 1, kind = t, error = m));
         let pos = pos_of(e.get("pos"));
         let mods = mods_of(e.get("modifiers")).map_err(err)?;
         let with_mods = !mods.is_none();
         match t {
             "move" => {
-                let p = pos.ok_or_else(|| err("pos fehlt".into()))?;
+                let p = pos.ok_or_else(|| err(missing("pos")))?;
                 frame(&mut steps, vec![Ev::Move(p)]);
                 labels.push(format!("move {}", fmt_pos(p)));
             }
@@ -856,11 +861,11 @@ fn parse(args: &Value) -> Result<Script, String> {
                 if with_mods {
                     frame(&mut steps, vec![Ev::PopMods]);
                 }
-                labels.push(format!("{t}{} {}", if count > 1 { format!(" ×{count}") } else { String::new() }, pos.map(fmt_pos).unwrap_or_else(|| "(Zeiger)".into())));
+                labels.push(format!("{t}{} {}", if count > 1 { format!(" ×{count}") } else { String::new() }, pos.map(fmt_pos).unwrap_or_else(|| super::at("msg-mcp-ui-pointer"))));
             }
             "drag" => {
-                let from = pos_of(e.get("from")).or(pos).ok_or_else(|| err("from fehlt".into()))?;
-                let to = pos_of(e.get("to")).ok_or_else(|| err("to fehlt".into()))?;
+                let from = pos_of(e.get("from")).or(pos).ok_or_else(|| err(missing("from")))?;
+                let to = pos_of(e.get("to")).ok_or_else(|| err(missing("to")))?;
                 let n = e.get("steps").and_then(Value::as_u64).unwrap_or(12).clamp(1, 400) as usize;
                 let ms = e.get("ms").and_then(Value::as_u64).unwrap_or(16).min(2000);
                 let hold = e.get("hold_ms").and_then(Value::as_u64).unwrap_or(0).min(5000);
@@ -884,19 +889,19 @@ fn parse(args: &Value) -> Result<Script, String> {
                 if with_mods {
                     frame(&mut steps, vec![Ev::PopMods]);
                 }
-                labels.push(format!("drag {} → {} ({n} Schritte)", fmt_pos(from), fmt_pos(to)));
+                labels.push(super::agent_text(|| fp_i18n::tr!("msg-mcp-ui-drag", from = fmt_pos(from), to = fmt_pos(to), n = n)));
             }
             "wheel" | "scroll" => {
                 let d = match e.get("delta") {
                     Some(Value::Array(a)) if a.len() == 2 => vec2(a[0].as_f64().unwrap_or(0.0) as f32, a[1].as_f64().unwrap_or(0.0) as f32),
                     Some(Value::Number(n)) => vec2(0.0, n.as_f64().unwrap_or(0.0) as f32),
-                    _ => return Err(err("delta fehlt ([x, y] oder Zahl; positiv = nach oben)".into())),
+                    _ => return Err(err(super::at("err-mcp-ui-delta"))),
                 };
                 let unit = match e.get("unit").and_then(Value::as_str).unwrap_or("line") {
                     "line" | "zeile" => MouseWheelUnit::Line,
                     "point" | "punkt" | "pixel" => MouseWheelUnit::Point,
                     "page" | "seite" => MouseWheelUnit::Page,
-                    other => return Err(err(format!("unit „{other}“ (line, point, page)"))),
+                    other => return Err(err(super::agent_text(|| fp_i18n::tr!("err-mcp-ui-bad-value", name = "unit", value = other, list = "line, point, page")))),
                 };
                 if with_mods {
                     frame(&mut steps, vec![Ev::PushMods(mods)]);
@@ -928,7 +933,7 @@ fn parse(args: &Value) -> Result<Script, String> {
                         }
                         "press" | "down" => frame(&mut steps, vec![Ev::KeyDown(key)]),
                         "release" | "up" => frame(&mut steps, vec![Ev::KeyUp(key)]),
-                        other => return Err(err(format!("action „{other}“ (tap, press, release)"))),
+                        other => return Err(err(super::agent_text(|| fp_i18n::tr!("err-mcp-ui-bad-value", name = "action", value = other, list = "tap, press, release")))),
                     }
                 }
                 if with_mods {
@@ -942,12 +947,12 @@ fn parse(args: &Value) -> Result<Script, String> {
                 labels.push(format!("modifiers {:?}", mods_json(mods)));
             }
             "text" => {
-                let s = e.get("text").and_then(Value::as_str).ok_or_else(|| err("text fehlt".into()))?;
+                let s = e.get("text").and_then(Value::as_str).ok_or_else(|| err(missing("text")))?;
                 frame(&mut steps, vec![Ev::Text(s.to_string())]);
                 labels.push(format!("text {s:?}"));
             }
             "type" => {
-                let s = e.get("text").and_then(Value::as_str).ok_or_else(|| err("text fehlt".into()))?;
+                let s = e.get("text").and_then(Value::as_str).ok_or_else(|| err(missing("text")))?;
                 let ms = e.get("ms").and_then(Value::as_u64).unwrap_or(0).min(1000);
                 for c in s.chars() {
                     frame(&mut steps, vec![Ev::TypeChar(c)]);
@@ -973,7 +978,7 @@ fn parse(args: &Value) -> Result<Script, String> {
                 labels.push("paste".into());
             }
             "zoom" => {
-                let f = e.get("factor").and_then(Value::as_f64).ok_or_else(|| err("factor fehlt (z. B. 1.25)".into()))? as f32;
+                let f = e.get("factor").and_then(Value::as_f64).ok_or_else(|| err(missing("factor")))? as f32;
                 frame(&mut steps, vec![Ev::Zoom(f)]);
                 labels.push(format!("zoom ×{f}"));
             }
@@ -984,15 +989,15 @@ fn parse(args: &Value) -> Result<Script, String> {
             }
             "drop_files" => {
                 let p = paths_of(e.get("paths")).map_err(err)?;
-                let at = pos.ok_or_else(|| err("pos fehlt (Ablageort in Fensterpunkten)".into()))?;
+                let at = pos.ok_or_else(|| err(missing("pos")))?;
                 // wie OLE-Drag&Drop unter Windows: Schweben, Ablegen, danach erst Zeigerposition
                 frame(&mut steps, vec![Ev::Hover(p.clone())]);
                 frame(&mut steps, vec![Ev::Drop(p.clone())]);
                 frame(&mut steps, vec![Ev::Move(at)]);
-                labels.push(format!("drop_files {} Datei(en) bei {}", p.len(), fmt_pos(at)));
+                labels.push(super::agent_text(|| fp_i18n::tr!("msg-mcp-ui-drop", n = p.len(), pos = fmt_pos(at))));
             }
             "wait" | "sleep" => {
-                let ms = e.get("ms").and_then(Value::as_u64).ok_or_else(|| err("ms fehlt".into()))?.min(30_000);
+                let ms = e.get("ms").and_then(Value::as_u64).ok_or_else(|| err(missing("ms")))?.min(30_000);
                 steps.push_back(Step::Wait(ms));
                 labels.push(format!("wait {ms} ms"));
             }
@@ -1015,16 +1020,14 @@ fn parse(args: &Value) -> Result<Script, String> {
                 labels.push(format!("focus {f}"));
             }
             other => {
-                return Err(err(format!(
-                    "unbekannter Typ „{other}“ (move, click, double_click, right_click, down, up, drag, wheel, key, modifiers, text, type, copy, cut, paste, zoom, hover_files, drop_files, wait, frames, screenshot, pointer_gone, focus)"
-                )));
+                return Err(err(super::agent_text(|| fp_i18n::tr!("err-mcp-ui-unknown-type", kind = other, list = "move, click, double_click, right_click, down, up, drag, wheel, key, modifiers, text, type, copy, cut, paste, zoom, hover_files, drop_files, wait, frames, screenshot, pointer_gone, focus"))));
             }
         }
         if each && t != "screenshot" && t != "wait" && t != "frames" {
             steps.push_back(Step::Shot(None));
         }
         if steps.len() > MAX_STEPS {
-            return Err(format!("zu viele Frames (> {MAX_STEPS}); Folge aufteilen"));
+            return Err(super::agent_text(|| fp_i18n::tr!("err-mcp-ui-too-many-frames", max = MAX_STEPS)));
         }
     }
     Ok(Script {
@@ -1119,9 +1122,9 @@ mod tests {
         let frames = s.steps.iter().filter(|st| matches!(st, Step::Frame(_))).count();
         assert_eq!(frames, 5 + 7 + 4 + 4 + 3);
         assert!(s.final_shot.is_some());
-        assert!(parse(&json!({"events": [{"type": "fliegen"}]})).is_err_and(|e| e.contains("unbekannter Typ")));
-        assert!(parse(&json!({"events": [{"type": "key", "key": "Hyper"}]})).is_err_and(|e| e.contains("unbekannte Taste")));
-        assert!(parse(&json!({"events": [{"type": "click", "modifiers": ["meta"]}]})).is_err_and(|e| e.contains("Umschalttaste")));
+        assert!(parse(&json!({"events": [{"type": "fliegen"}]})).is_err_and(|e| e.contains("unknown type")), "Antwortsprache der Agenten: Englisch");
+        assert!(parse(&json!({"events": [{"type": "key", "key": "Hyper"}]})).is_err_and(|e| e.contains("unknown key")));
+        assert!(parse(&json!({"events": [{"type": "click", "modifiers": ["meta"]}]})).is_err_and(|e| e.contains("modifier key")));
         assert!(parse(&json!({})).is_err());
     }
 

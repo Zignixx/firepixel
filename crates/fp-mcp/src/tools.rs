@@ -16,8 +16,10 @@ use std::sync::Arc;
 #[derive(Clone, Debug)]
 pub struct ToolDef {
     pub name: &'static str,
-    pub title: &'static str,
-    pub description: &'static str,
+    /// Titel in der Sprache des Aufrufs (`mcp-tool-<name>`).
+    pub title: String,
+    /// Beschreibung in der Sprache des Aufrufs (`mcp-tool-<name>.description`).
+    pub description: String,
     pub schema: Value,
     /// Ändert nichts (nur lesen).
     pub read_only: bool,
@@ -71,13 +73,37 @@ pub struct ToolEnv {
 
 impl Default for ToolEnv {
     fn default() -> Self {
-        ToolEnv { renderer: Arc::new(Renderer::default()), allow_scripts: true, language: std::env::var("FIREPIXEL_MCP_LANG").ok().filter(|l| !l.trim().is_empty()).unwrap_or_else(|| "en".into()) }
+        ToolEnv { renderer: Arc::new(Renderer::default()), allow_scripts: true, language: default_language() }
     }
+}
+
+/// Antwortsprache für KI-Agenten: `FIREPIXEL_MCP_LANG`, sonst Englisch (auch für die Antworten
+/// der Oberfläche im Brückenmodus).
+pub fn default_language() -> String {
+    std::env::var("FIREPIXEL_MCP_LANG").ok().filter(|l| !l.trim().is_empty()).unwrap_or_else(|| "en".into())
 }
 
 // ------------------------------------------------------------------ Beschreibungen
 
-const DOC_ARG: &str = "Dokument-ID aus get_document/documents; Vorgabe: aktives Dokument. Wird gesetzt, wird es zum aktiven Dokument.";
+/// Titel, Beschreibung und Parameterbeschreibungen aus `mcp.ftl` in der aktuellen Sprache
+/// (`mcp-tool-<werkzeug>`, `.description`, `mcp-tool-<werkzeug>-<parameter>`, `doc` = `mcp-doc-arg`).
+fn localize_tool(mut d: ToolDef) -> ToolDef {
+    use fp_i18n::{has, t};
+    let key = format!("mcp-tool-{}", d.name);
+    d.title = t(&key);
+    d.description = t(&format!("{key}.description"));
+    if let Some(Value::Object(props)) = d.schema.get_mut("properties") {
+        for (p, v) in props.iter_mut() {
+            let pk = if p == "doc" { "mcp-doc-arg".to_string() } else { format!("{key}-{p}") };
+            if has(&pk)
+                && let Value::Object(o) = v
+            {
+                o.insert("description".into(), json!(t(&pk)));
+            }
+        }
+    }
+    d
+}
 
 fn obj(props: Value, required: &[&str]) -> Value {
     json!({"type": "object", "properties": props, "required": required, "additionalProperties": false})
@@ -85,22 +111,17 @@ fn obj(props: Value, required: &[&str]) -> Value {
 
 /// Alle Werkzeuge in fester Reihenfolge.
 pub fn tool_defs() -> Vec<ToolDef> {
-    vec![
+    let defs = vec![
         ToolDef {
             name: "list_commands",
-            title: "Befehle auflisten",
-            description: "Listet Befehle des Firepixel-Befehlsregisters (gleiche Befehle wie Menüs, Werkzeuge und Bedienfelder der Oberfläche). \
-Namen folgen dem Schema <menü>.<eintrag>[.<untereintrag>] in camelCase, z. B. file.open, edit.duplicate, modify.align.left, \
-modify.transform.flipHorizontal, filter.blur.gaussian; dazu Werkzeug-/Bedienfeldbefehle wie draw.rectangle, draw.text, element.setFill, \
-layer.add, select.set. Ohne category und filter kommt eine Übersicht der Kategorien mit Anzahl. \
-Beispiele: {\"category\":\"draw\"} · {\"filter\":\"align\"} · {\"category\":\"modify.transform\",\"available_only\":true}. \
-Danach describe_command für Parameter aufrufen.",
+            title: String::new(),
+            description: String::new(),
             schema: obj(
                 json!({
-                    "category": {"type": "string", "description": "Namenspräfix (file, edit, view, select, modify, text, commands, filter, window, help, draw, element, layer, page, state, path, bitmap, color, tool, history, web, guide, transform) oder deutscher Menüname (Ändern, Filter …)"},
-                    "filter": {"type": "string", "description": "Suchtext in Name, Beschriftung, Statustext und JS-Namen (Groß-/Kleinschreibung egal)"},
-                    "include_unimplemented": {"type": "boolean", "default": false, "description": "auch Menü-Platzhalter ohne Wirkung zeigen"},
-                    "available_only": {"type": "boolean", "default": false, "description": "nur Befehle, die im aktuellen Zustand ausführbar sind (Auswahl, Dokument …)"},
+                    "category": {"type": "string"},
+                    "filter": {"type": "string"},
+                    "include_unimplemented": {"type": "boolean", "default": false},
+                    "available_only": {"type": "boolean", "default": false},
                     "limit": {"type": "integer", "minimum": 1, "maximum": 1000, "default": 200}
                 }),
                 &[],
@@ -110,32 +131,23 @@ Danach describe_command für Parameter aufrufen.",
         },
         ToolDef {
             name: "describe_command",
-            title: "Befehl beschreiben",
-            description: "Vollständige Beschreibung eines Befehls: deutsche Beschriftung, Menüpfad, JSON-Schema der Parameter (Typen, Pflicht, Vorgaben, Wertebereiche), \
-Verfügbarkeits-Prädikate (z. B. „mindestens 2 Objekte ausgewählt“) mit aktuellem Erfüllt-Status, Tastenkürzel im aktiven Set, JS-Entsprechungen und ein Aufrufbeispiel. \
-Akzeptiert auch JS-Namen (addNewRectangle) und meldet bei Tippfehlern ähnliche Namen. Beispiel: {\"name\":\"modify.align.left\"}",
-            schema: obj(json!({"name": {"type": "string", "description": "Befehlsname, z. B. draw.rectangle"}}), &["name"]),
+            title: String::new(),
+            description: String::new(),
+            schema: obj(json!({"name": {"type": "string"}}), &["name"]),
             read_only: true,
             destructive: false,
         },
         ToolDef {
             name: "run_command",
-            title: "Befehl ausführen",
-            description: "Führt einen Befehl aus (wie Menüklick/Werkzeug in der Oberfläche) und legt einen Rückgängig-Schritt an. Liefert den Rückgabewert (z. B. {\"id\": 17} für neue Objekte), \
-die neue Auswahl mit Grenzen, Verlaufszähler und Dokumentgeneration. Die meisten Befehle wirken auf die aktuelle Auswahl – vorher select verwenden oder `ids` übergeben, wo der Befehl das anbietet. \
-Koordinaten sind Dokumentpixel; Rechtecke [links, oben, rechts, unten] oder {left, top, right, bottom}; Farben \"#rrggbb\" oder \"#rrggbbaa\". \
-Mit `steps` laufen mehrere Befehle als EIN Rückgängig-Schritt (bei Fehler wird alles zurückgenommen). \
-Beispiele: {\"name\":\"draw.rectangle\",\"params\":{\"rect\":[20,20,220,120],\"fillColor\":\"#3366ff\",\"strokeWidth\":0}} · \
-{\"name\":\"draw.text\",\"params\":{\"text\":\"Hallo\",\"anchor\":[30,80],\"size\":24,\"color\":\"#000000\"}} · \
-{\"name\":\"modify.align.centerHorizontal\"} · {\"name\":\"filter.blur.gaussian\",\"params\":{\"radius\":3}} · \
-{\"steps\":[{\"name\":\"select.all\"},{\"name\":\"modify.group\"}]}",
+            title: String::new(),
+            description: String::new(),
             schema: obj(
                 json!({
-                    "name": {"type": "string", "description": "Befehlsname (list_commands/describe_command)"},
-                    "params": {"type": "object", "description": "Parameter nach dem Schema aus describe_command", "additionalProperties": true},
-                    "steps": {"type": "array", "description": "mehrere Befehle als ein Rückgängig-Schritt", "items": {"type": "object", "properties": {"name": {"type": "string"}, "params": {"type": "object"}}, "required": ["name"]}},
-                    "label": {"type": "string", "description": "Verlaufsbeschriftung für steps"},
-                    "doc": {"type": "integer", "description": DOC_ARG}
+                    "name": {"type": "string"},
+                    "params": {"type": "object", "additionalProperties": true},
+                    "steps": {"type": "array", "items": {"type": "object", "properties": {"name": {"type": "string"}, "params": {"type": "object"}}, "required": ["name"]}},
+                    "label": {"type": "string"},
+                    "doc": {"type": "integer"}
                 }),
                 &[],
             ),
@@ -144,20 +156,17 @@ Beispiele: {\"name\":\"draw.rectangle\",\"params\":{\"rect\":[20,20,220,120],\"f
         },
         ToolDef {
             name: "get_document",
-            title: "Dokumentbaum lesen",
-            description: "Liest den Dokumentbaum als JSON: Seiten (Größe, Leinwandfarbe, Status), Ebenen in Original-Reihenfolge unten→oben (Web-Ebene zuletzt) mit IDs, \
-Elemente oben→unten mit stabiler ID, Typ (rectangle, path, text, bitmap, group, maskGroup, autoShape, compoundShape, instance, slice, hotspot), Name, Grenzen \
-{left, top, right, bottom, width, height}, Deckkraft (%), Mischmodus, Füllung/Strich, Text/Schrift, Effekte, Symbol; dazu Auswahl, aktive Ebene, Verlaufszähler und die Liste offener Dokumente. \
-Große Dokumente mit depth, types, name, selected_only oder page eingrenzen. Beispiele: {} · {\"depth\":1} · {\"types\":[\"text\"]} · {\"selected_only\":true} · {\"all_pages\":true,\"depth\":0}",
+            title: String::new(),
+            description: String::new(),
             schema: obj(
                 json!({
-                    "doc": {"type": "integer", "description": DOC_ARG},
-                    "page": {"type": "integer", "minimum": 0, "description": "ausführlich gezeigte Seite (Vorgabe: aktuelle)"},
+                    "doc": {"type": "integer"},
+                    "page": {"type": "integer", "minimum": 0},
                     "all_pages": {"type": "boolean", "default": false},
-                    "state": {"type": "integer", "minimum": 0, "description": "Status (Frame), dessen Inhalt gezeigt wird"},
-                    "depth": {"type": "integer", "minimum": 0, "maximum": 32, "default": 8, "description": "0 = nur Ebenen, 1 = Elemente der Ebenen, 2+ = auch Gruppeninhalt"},
-                    "types": {"type": "array", "items": {"type": "string"}, "description": "nur diese Elementtypen"},
-                    "name": {"type": "string", "description": "nur Elemente, deren Name den Text enthält"},
+                    "state": {"type": "integer", "minimum": 0},
+                    "depth": {"type": "integer", "minimum": 0, "maximum": 32, "default": 8},
+                    "types": {"type": "array", "items": {"type": "string"}},
+                    "name": {"type": "string"},
                     "selected_only": {"type": "boolean", "default": false},
                     "attributes": {"type": "boolean", "default": true},
                     "custom_data": {"type": "boolean", "default": false},
@@ -170,20 +179,18 @@ Große Dokumente mit depth, types, name, selected_only oder page eingrenzen. Bei
         },
         ToolDef {
             name: "select",
-            title: "Auswählen",
-            description: "Setzt die Objektauswahl, auf die die meisten Befehle wirken. Genau eine Art angeben: ids (Element-IDs aus get_document), all, none, \
-point (oberstes Objekt unter dem Punkt) oder rect (Objekte vollständig im Rechteck). mode: replace (Vorgabe), add, subtract, intersect, toggle. \
-Liefert die neue Auswahl mit Typ, Name und Grenzen. Beispiele: {\"ids\":[12,15]} · {\"all\":true} · {\"point\":[50,40]} · {\"rect\":[0,0,200,100],\"mode\":\"add\"} · {\"none\":true}",
+            title: String::new(),
+            description: String::new(),
             schema: obj(
                 json!({
                     "ids": {"type": "array", "items": {"type": "integer"}},
                     "all": {"type": "boolean"},
                     "none": {"type": "boolean"},
-                    "point": {"description": "[x, y] oder {x, y}"},
-                    "rect": {"description": "[l, t, r, b] oder {left, top, right, bottom}"},
-                    "deep": {"type": "boolean", "default": false, "description": "bei point in Gruppen absteigen"},
+                    "point": {},
+                    "rect": {},
+                    "deep": {"type": "boolean", "default": false},
                     "mode": {"type": "string", "enum": ["replace", "add", "subtract", "intersect", "toggle"], "default": "replace"},
-                    "doc": {"type": "integer", "description": DOC_ARG}
+                    "doc": {"type": "integer"}
                 }),
                 &[],
             ),
@@ -192,18 +199,16 @@ Liefert die neue Auswahl mit Typ, Name und Grenzen. Beispiele: {\"ids\":[12,15]}
         },
         ToolDef {
             name: "render",
-            title: "Rendern (Bild)",
-            description: "Rendert offscreen (ohne Fenster) eine Seite, einen Ausschnitt oder ein einzelnes Element als PNG-Bild und gibt es als Bildinhalt zurück – \
-zum Prüfen des Ergebnisses nach Änderungen. zoom 2 = 200 % (Pixel scharf), 0.5 = verkleinerte Vorschau. Große Ausgaben werden automatisch verkleinert (max_pixels). \
-Beispiele: {} · {\"zoom\":0.5} · {\"rect\":[0,0,100,100],\"zoom\":4} · {\"element\":17} · {\"page\":1,\"state\":2}",
+            title: String::new(),
+            description: String::new(),
             schema: obj(
                 json!({
-                    "doc": {"type": "integer", "description": DOC_ARG},
+                    "doc": {"type": "integer"},
                     "page": {"type": "integer", "minimum": 0},
                     "state": {"type": "integer", "minimum": 0},
                     "zoom": {"type": "number", "exclusiveMinimum": 0, "maximum": 64, "default": 1},
-                    "rect": {"description": "Ausschnitt [l, t, r, b] in Dokumentpixeln"},
-                    "element": {"type": "integer", "description": "nur dieses Element (transparenter Grund)"},
+                    "rect": {},
+                    "element": {"type": "integer"},
                     "max_pixels": {"type": "integer", "minimum": 1, "default": 4000000}
                 }),
                 &[],
@@ -213,41 +218,36 @@ Beispiele: {} · {\"zoom\":0.5} · {\"rect\":[0,0,100,100],\"zoom\":4} · {\"ele
         },
         ToolDef {
             name: "open",
-            title: "Datei öffnen",
-            description: "Öffnet eine Datei als neues aktives Dokument: FW-PNG (.fw.png bzw. PNG mit Original-Daten, editierbar), PNG, PSD (Ebenen), GIF, JPEG, BMP, TIFF, \
-TGA, WebP, JPEG XL, QOI, ICO, SVG, AI/EPS. Fremde Formate werden als unbenanntes Dokument geöffnet (Speichern mit save {path}). \
-Pfade absolut angeben. Liefert die Dokument-ID und eine Kurzfassung. Beispiel: {\"path\":\"C:\\\\Bilder\\\\entwurf.fw.png\"}",
+            title: String::new(),
+            description: String::new(),
             schema: obj(json!({"path": {"type": "string"}}), &["path"]),
             read_only: false,
             destructive: false,
         },
         ToolDef {
             name: "save",
-            title: "Speichern",
-            description: "Speichert das Dokument als FW-PNG (editierbar, mit flachem Vorschaubild). Ohne path unter dem bisherigen Namen; \
-mit path wie „Speichern unter“. Für flache Bilder export verwenden. Beispiel: {\"path\":\"C:\\\\out\\\\ergebnis.fw.png\"}",
-            schema: obj(json!({"path": {"type": "string"}, "doc": {"type": "integer", "description": DOC_ARG}}), &[]),
+            title: String::new(),
+            description: String::new(),
+            schema: obj(json!({"path": {"type": "string"}, "doc": {"type": "integer"}}), &[]),
             read_only: false,
             destructive: true,
         },
         ToolDef {
             name: "export",
-            title: "Exportieren",
-            description: "Exportiert ein flaches Bild, ohne den Dokumentnamen zu ändern. Format aus der Endung oder format: png (PNG32; auch Ausschnitt rect, Element, zoom), \
-gif, jpg, webp, avif, bmp, tiff, qoi, ico, apng (ganze Seite über die Original-Optimierung; quality/colors optional) oder fwpng (editierbare Kopie). \
-Beispiele: {\"path\":\"C:\\\\out\\\\seite.png\"} · {\"path\":\"C:\\\\out\\\\logo.png\",\"element\":17,\"zoom\":2} · {\"path\":\"C:\\\\out\\\\foto.jpg\",\"quality\":85} · {\"path\":\"C:\\\\out\\\\icon.gif\",\"colors\":32}",
+            title: String::new(),
+            description: String::new(),
             schema: obj(
                 json!({
                     "path": {"type": "string"},
-                    "format": {"type": "string", "description": "png, fwpng, gif, jpg, webp, avif, bmp, tiff, qoi, ico, apng (Vorgabe: Endung)"},
-                    "quality": {"type": "integer", "minimum": 1, "maximum": 100, "description": "JPEG/WebP/AVIF-Qualität"},
-                    "colors": {"type": "integer", "minimum": 2, "maximum": 256, "description": "Farbzahl für GIF/PNG8"},
+                    "format": {"type": "string"},
+                    "quality": {"type": "integer", "minimum": 1, "maximum": 100},
+                    "colors": {"type": "integer", "minimum": 2, "maximum": 256},
                     "page": {"type": "integer", "minimum": 0},
                     "state": {"type": "integer", "minimum": 0},
                     "zoom": {"type": "number", "exclusiveMinimum": 0, "default": 1},
-                    "rect": {"description": "Ausschnitt [l, t, r, b]"},
+                    "rect": {},
                     "element": {"type": "integer"},
-                    "doc": {"type": "integer", "description": DOC_ARG}
+                    "doc": {"type": "integer"}
                 }),
                 &["path"],
             ),
@@ -256,39 +256,38 @@ Beispiele: {\"path\":\"C:\\\\out\\\\seite.png\"} · {\"path\":\"C:\\\\out\\\\log
         },
         ToolDef {
             name: "undo",
-            title: "Rückgängig",
-            description: "Macht die letzten Schritte im aktiven Dokument rückgängig (Vorgabe 1). Beispiel: {\"steps\":3}",
-            schema: obj(json!({"steps": {"type": "integer", "minimum": 1, "default": 1}, "doc": {"type": "integer", "description": DOC_ARG}}), &[]),
+            title: String::new(),
+            description: String::new(),
+            schema: obj(json!({"steps": {"type": "integer", "minimum": 1, "default": 1}, "doc": {"type": "integer"}}), &[]),
             read_only: false,
             destructive: false,
         },
         ToolDef {
             name: "redo",
-            title: "Wiederholen",
-            description: "Stellt rückgängig gemachte Schritte wieder her (Vorgabe 1). Beispiel: {}",
-            schema: obj(json!({"steps": {"type": "integer", "minimum": 1, "default": 1}, "doc": {"type": "integer", "description": DOC_ARG}}), &[]),
+            title: String::new(),
+            description: String::new(),
+            schema: obj(json!({"steps": {"type": "integer", "minimum": 1, "default": 1}, "doc": {"type": "integer"}}), &[]),
             read_only: false,
             destructive: false,
         },
         ToolDef {
             name: "history",
-            title: "Verlauf",
-            description: "Zeigt den Verlauf des aktiven Dokuments (Beschriftungen, Position, Befehle mit Parametern zum Wiederabspielen) oder springt mit goto zu einer Position \
-(Zahl ausgeführter Schritte). Beispiele: {} · {\"goto\":2}",
-            schema: obj(json!({"goto": {"type": "integer", "minimum": 0}, "doc": {"type": "integer", "description": DOC_ARG}}), &[]),
+            title: String::new(),
+            description: String::new(),
+            schema: obj(json!({"goto": {"type": "integer", "minimum": 0}, "doc": {"type": "integer"}}), &[]),
             read_only: false,
             destructive: false,
         },
         ToolDef {
             name: "new_document",
-            title: "Neues Dokument",
-            description: "Legt ein neues leeres Dokument an und aktiviert es. Beispiele: {\"width\":800,\"height\":600} · {\"width\":64,\"height\":64,\"background\":\"#00000000\"} (transparent)",
+            title: String::new(),
+            description: String::new(),
             schema: obj(
                 json!({
                     "width": {"type": "number", "minimum": 1, "maximum": 30000},
                     "height": {"type": "number", "minimum": 1, "maximum": 30000},
-                    "background": {"type": "string", "description": "#rrggbb oder #rrggbbaa (Vorgabe weiß)"},
-                    "resolution": {"type": "number", "minimum": 1, "description": "Pixel/Zoll (Vorgabe 72)"}
+                    "background": {"type": "string"},
+                    "resolution": {"type": "number", "minimum": 1}
                 }),
                 &["width", "height"],
             ),
@@ -297,16 +296,11 @@ Beispiele: {\"path\":\"C:\\\\out\\\\seite.png\"} · {\"path\":\"C:\\\\out\\\\log
         },
         ToolDef {
             name: "tool_event",
-            title: "Werkzeug bedienen",
-            description: "Bedient ein Werkzeug wie ein Mensch mit der Maus: wählt optional das Werkzeug (tool: pointer, rectangle, ellipse, polygon, line, pen, text, brush, pencil, \
-eraser, marquee, ovalMarquee, lasso, magicWand, paintBucket, gradient, eyedropper, scale, skew, distort, crop, slice, hotspotRect, hand, zoom …) und schickt Zeigerereignisse in \
-Dokumentkoordinaten an den Werkzeug-Automaten. drag ist eine Abkürzung für down → move(s) → up. Modifikatoren wie im Original: shift (Quadrat/45°), alt (von der Mitte/Kopie), \
-space (beim Aufziehen verschieben). Ausgeführte Befehle landen im Verlauf. Beispiele: {\"tool\":\"rectangle\",\"drag\":{\"from\":[10,10],\"to\":[110,60]}} · \
-{\"tool\":\"pen\",\"events\":[{\"type\":\"down\",\"x\":10,\"y\":10},{\"type\":\"up\",\"x\":10,\"y\":10},{\"type\":\"down\",\"x\":90,\"y\":10},{\"type\":\"up\",\"x\":90,\"y\":10},{\"type\":\"double\",\"x\":90,\"y\":80}]} · \
-{\"tool\":\"text\",\"events\":[{\"type\":\"down\",\"x\":20,\"y\":40},{\"type\":\"up\",\"x\":20,\"y\":40},{\"type\":\"text\",\"text\":\"Hallo\"},{\"type\":\"key\",\"key\":\"escape\"}]}",
+            title: String::new(),
+            description: String::new(),
             schema: obj(
                 json!({
-                    "tool": {"type": "string", "description": "Werkzeugname (tool.rectangle, rectangle, Rechteck)"},
+                    "tool": {"type": "string"},
                     "events": {"type": "array", "items": {"type": "object", "properties": {
                         "type": {"type": "string", "enum": ["down", "move", "up", "double", "key", "text"]},
                         "x": {"type": "number"}, "y": {"type": "number"},
@@ -316,7 +310,7 @@ space (beim Aufziehen verschieben). Ausgeführte Befehle landen im Verlauf. Beis
                         "pressure": {"type": "number", "minimum": 0, "maximum": 1}
                     }, "required": ["type"]}},
                     "drag": {"type": "object", "properties": {"from": {}, "to": {}, "steps": {"type": "integer", "minimum": 1, "maximum": 200, "default": 8}, "shift": {"type": "boolean"}, "alt": {"type": "boolean"}}, "required": ["from", "to"]},
-                    "doc": {"type": "integer", "description": DOC_ARG}
+                    "doc": {"type": "integer"}
                 }),
                 &[],
             ),
@@ -325,31 +319,28 @@ space (beim Aufziehen verschieben). Ausgeführte Befehle landen im Verlauf. Beis
         },
         ToolDef {
             name: "documents",
-            title: "Offene Dokumente",
-            description: "Listet offene Dokumente (ID, Titel, Pfad, ungespeichert?) und aktiviert oder schließt optional eines. Beispiele: {} · {\"activate\":2} · {\"close\":3,\"discard\":true}",
+            title: String::new(),
+            description: String::new(),
             schema: obj(json!({"activate": {"type": "integer"}, "close": {"type": "integer"}, "discard": {"type": "boolean", "default": false}}), &[]),
             read_only: false,
             destructive: false,
         },
         ToolDef {
             name: "run_script",
-            title: "JSF-Skript ausführen",
-            description: "Führt JSF-JavaScript (.jsf, API fw/dom wie das Original) in Firepixel aus – Code direkt oder eine Datei. Liefert Ergebnis, alert()-Texte und Fehler. \
-Nicht umgesetzte API-Member werfen eine Ausnahme „nicht implementiert: <Name>“. Beispiel: {\"code\":\"var d = fw.getDocumentDOM(); d.addNewRectangle({left:0,top:0,right:50,bottom:50}, 0); d.width\"}",
+            title: String::new(),
+            description: String::new(),
             schema: obj(json!({"code": {"type": "string"}, "path": {"type": "string"}, "single_undo_step": {"type": "boolean", "default": false}}), &[]),
             read_only: false,
             destructive: false,
         },
         ToolDef {
             name: "screenshot",
-            title: "Bildschirmfoto der Oberfläche",
-            description: "Nur im Brückenmodus (laufende Firepixel-Oberfläche): Bildschirmfoto des Hauptfensters als PNG – zeigt Menüs, Bedienfelder, Inspektor, Leinwand \
-mit Auswahlrahmen und offene Dialoge so, wie der Nutzer sie sieht. Für das reine Dokumentbild headless stattdessen render verwenden. \
-Beispiele: {} · {\"rect\":[0,0,800,600]} (Ausschnitt in Fensterpunkten) · {\"max_size\":1200}",
+            title: String::new(),
+            description: String::new(),
             schema: obj(
                 json!({
-                    "rect": {"type": "array", "items": {"type": "number"}, "minItems": 4, "maxItems": 4, "description": "Ausschnitt [l, t, r, b] in Fensterpunkten"},
-                    "max_size": {"type": "integer", "minimum": 64, "maximum": 8192, "default": 1600, "description": "größere Kante höchstens so viele Pixel (verkleinert)"}
+                    "rect": {"type": "array", "items": {"type": "number"}, "minItems": 4, "maxItems": 4},
+                    "max_size": {"type": "integer", "minimum": 64, "maximum": 8192, "default": 1600}
                 }),
                 &[],
             ),
@@ -358,20 +349,16 @@ Beispiele: {} · {\"rect\":[0,0,800,600]} (Ausschnitt in Fensterpunkten) · {\"m
         },
         ToolDef {
             name: "ui_state",
-            title: "Zustand der Oberfläche",
-            description: "Nur im Brückenmodus: Zustand der laufenden Oberfläche – aktives Werkzeug, Farben, Zoom und Bildlauf je Dokument, Fenstergröße, sichtbare Bedienfelder, \
-Design, offene Dialoge, Statuszeile, Lage der Leinwand im Fenster (für screenshot-Koordinaten). Beispiel: {}",
+            title: String::new(),
+            description: String::new(),
             schema: obj(json!({}), &[]),
             read_only: true,
             destructive: false,
         },
         ToolDef {
             name: "ui_action",
-            title: "Aktion der Oberfläche",
-            description: "Nur im Brückenmodus: löst eine Aktion in der Oberfläche aus wie ein Mensch (inklusive Dialogen, die sich dann im Fenster öffnen): \
-{\"run\":\"modify.canvas.imageSize\"} (Menübefehl über die Oberfläche, Dialogbefehle öffnen ihren Dialog), {\"zoom\":2} (200 %), {\"fit\":true} (einpassen), \
-{\"panel\":\"window.layers\"} (Bedienfeld zeigen), {\"tool\":\"tool.pen\"}, {\"theme\":\"dunkel\"}, {\"close_dialogs\":true}, {\"status\":\"Text in der Statuszeile\"}. \
-Für Dokumentänderungen ohne Dialog besser run_command verwenden.",
+            title: String::new(),
+            description: String::new(),
             schema: obj(
                 json!({
                     "run": {"type": "string"}, "params": {"type": "object"}, "zoom": {"type": "number"}, "fit": {"type": "boolean"},
@@ -385,24 +372,12 @@ Für Dokumentänderungen ohne Dialog besser run_command verwenden.",
         },
         ToolDef {
             name: "ui_input",
-            title: "Eingaben einspeisen (Maus, Tastatur, Dateien)",
-            description: "Nur im Brückenmodus: speist rohe Eingabe-Ereignisse in die laufende Oberfläche ein – auf demselben Weg wie echte Maus/Tastatur \
-(egui-Eingabe vor jedem Frame, genau wie egui-winit sie unter Windows liefert: Strg+C/X/V werden zu Copy/Cut/Paste, Strg+V ohne Text in der Ablage liefert nur das Loslassen, \
-Text nur ohne Strg). Koordinaten in Fensterpunkten (wie ui_find und screenshot-rect). Jeder Schritt läuft in eigenen Frames; die Antwort kommt, wenn alles verarbeitet ist. \
-Ereignisse (`events`, nacheinander): {\"type\":\"move\",\"pos\":[x,y]} · {\"type\":\"click\",\"pos\":[x,y],\"button\":\"left|right|middle\",\"count\":1|2,\"modifiers\":[\"ctrl\",\"shift\",\"alt\"]} · \
-{\"type\":\"down\"|\"up\",\"button\":\"left\",\"pos\":[x,y]} · {\"type\":\"drag\",\"from\":[x,y],\"to\":[x,y],\"steps\":12,\"ms\":16,\"modifiers\":[]} · \
-{\"type\":\"wheel\",\"delta\":[0,1],\"unit\":\"line|point\",\"pos\":[x,y],\"modifiers\":[\"ctrl\"]} (positiv = nach oben/vergrößern) · \
-{\"type\":\"key\",\"key\":\"C\",\"modifiers\":[\"ctrl\"],\"action\":\"tap|press|release\"} (Namen wie egui: A–Z, 0–9, F1, Enter, Escape, Tab, Delete, ArrowLeft …) · \
-{\"type\":\"modifiers\",\"modifiers\":[\"shift\"]} (gehaltene Umschalttasten setzen, [] löst) · {\"type\":\"text\",\"text\":\"abc\"} · {\"type\":\"type\",\"text\":\"Hallo\"} (je Zeichen Taste+Text) · \
-{\"type\":\"copy\"|\"cut\"|\"paste\",\"text\":\"…\"} · {\"type\":\"drop_files\",\"paths\":[\"C:/x.png\"],\"pos\":[x,y]} · {\"type\":\"hover_files\",\"paths\":[…]} · \
-{\"type\":\"wait\",\"ms\":200} · {\"type\":\"frames\",\"n\":2} · {\"type\":\"screenshot\",\"rect\":[l,t,r,b]} · {\"type\":\"pointer_gone\"} · {\"type\":\"focus\",\"focused\":true}. \
-Optionen: \"screenshot\": true oder [l,t,r,b] (Bild nach dem letzten Schritt), \"screenshot_each\": true (Bild nach jedem Schritt, höchstens 24), \"settle_frames\": 2, \"max_size\". \
-Antwort: ausgeführte Schritte, von egui gemeldete Widget-Ereignisse (angeklickt, Fokus), Zeigerposition, offene Dialoge, Statuszeile. \
-Beispiel Strg+C/Strg+V: {\"events\":[{\"type\":\"click\",\"pos\":[600,400]},{\"type\":\"key\",\"key\":\"C\",\"modifiers\":[\"ctrl\"]},{\"type\":\"key\",\"key\":\"V\",\"modifiers\":[\"ctrl\"]}],\"screenshot\":true}",
+            title: String::new(),
+            description: String::new(),
             schema: obj(
                 json!({
-                    "events": {"type": "array", "items": {"type": "object"}, "description": "Schritte nacheinander (siehe Beschreibung)"},
-                    "screenshot": {"description": "true oder [l, t, r, b]: Bildschirmfoto nach dem letzten Schritt"},
+                    "events": {"type": "array", "items": {"type": "object"}},
+                    "screenshot": {},
                     "screenshot_each": {"type": "boolean", "default": false},
                     "settle_frames": {"type": "integer", "minimum": 0, "maximum": 60, "default": 2},
                     "max_size": {"type": "integer", "minimum": 64, "maximum": 8192, "default": 1600}
@@ -414,14 +389,11 @@ Beispiel Strg+C/Strg+V: {\"events\":[{\"type\":\"click\",\"pos\":[600,400]},{\"t
         },
         ToolDef {
             name: "ui_find",
-            title: "Widgets der Oberfläche finden",
-            description: "Nur im Brückenmodus: sucht sichtbare Bedienelemente und Beschriftungen im aktuellen Fensterbild – Menüeinträge, Knöpfe, Reiter, Bedienfeld-Zeilen, \
-Dialogtitel – über die Barrierefreiheits-Infos von egui (Rolle, Name) und die gezeichneten Texte. Liefert je Treffer Text, Rolle, Rechteck und Mittelpunkt in Fensterpunkten \
-(direkt für ui_input nutzbar), oberste Treffer zuerst. Groß-/Kleinschreibung egal, Teiltreffer erlaubt (exact: true für genau). \
-Beispiele: {\"text\":\"Datei\"} · {\"text\":\"OK\",\"role\":\"button\",\"exact\":true} · {\"role\":\"menu_item\"} · {\"text\":\"Ebene 1\"} · {\"region\":[0,0,400,60]}",
+            title: String::new(),
+            description: String::new(),
             schema: obj(
                 json!({
-                    "text": {"type": "string"}, "role": {"type": "string", "description": "z. B. button, menu_item, check_box, text_input, label, window, tab, slider"},
+                    "text": {"type": "string"}, "role": {"type": "string"},
                     "exact": {"type": "boolean", "default": false}, "region": {"type": "array", "items": {"type": "number"}, "minItems": 4, "maxItems": 4},
                     "limit": {"type": "integer", "minimum": 1, "maximum": 500, "default": 50}
                 }),
@@ -432,22 +404,21 @@ Beispiele: {\"text\":\"Datei\"} · {\"text\":\"OK\",\"role\":\"button\",\"exact\
         },
         ToolDef {
             name: "ui_file_dialog",
-            title: "File dialog of the running app",
-            description: "Bridge mode only: shows whether a file dialog (Open, Save As, Import, Export, folder …) is open in the running app – kind, title, filters, start folder, suggested name, recent events – and answers it. \
-While a dialog is open the app keeps drawing, the canvas and menus are locked like with a modal dialog. With the AI control channel active the app shows its own dialog instead of the native one (FP_DATEIDIALOG=nativ forces the native one). \
-Examples: {\"action\":\"status\"} · {\"action\":\"cancel\"} · {\"action\":\"choose\",\"path\":\"C:\\\\out\\\\banner.fw.png\"} · {\"action\":\"choose\",\"paths\":[\"C:\\\\in\\\\a.png\",\"C:\\\\in\\\\b.png\"]}",
+            title: String::new(),
+            description: String::new(),
             schema: obj(
                 json!({
                     "action": {"type": "string", "enum": ["status", "cancel", "choose"], "default": "status"},
-                    "path": {"type": "string", "description": "file or folder for choose"},
-                    "paths": {"type": "array", "items": {"type": "string"}, "description": "several files (open dialogs with multiple selection)"}
+                    "path": {"type": "string"},
+                    "paths": {"type": "array", "items": {"type": "string"}}
                 }),
                 &[],
             ),
             read_only: false,
             destructive: false,
         },
-    ]
+    ];
+    defs.into_iter().map(localize_tool).collect()
 }
 
 /// Werkzeuge, die die laufende Oberfläche brauchen (Brückenmodus; asynchron im Server beantwortet).
@@ -593,18 +564,18 @@ fn arg_str<'a>(a: &'a Value, k: &str) -> Option<&'a str> {
 
 fn engine_err(e: EngineError) -> ToolOutput {
     let hint = match &e {
-        EngineError::UnknownCommand(_) => " – Namen mit list_commands suchen",
-        EngineError::InvalidParams { .. } => " – Schema mit describe_command prüfen",
-        EngineError::Unavailable { .. } => " – Voraussetzung herstellen (z. B. select, new_document)",
-        EngineError::NoDocument => " – zuerst new_document oder open",
-        _ => "",
+        EngineError::UnknownCommand(_) => fp_i18n::t("err-mcp-hint-unknown-command"),
+        EngineError::InvalidParams { .. } => fp_i18n::t("err-mcp-hint-invalid-params"),
+        EngineError::Unavailable { .. } => fp_i18n::t("err-mcp-hint-unavailable"),
+        EngineError::NoDocument => fp_i18n::t("err-mcp-hint-no-document"),
+        _ => String::new(),
     };
     ToolOutput::error(format!("{e}{hint}"))
 }
 
 fn activate(s: &mut Session, args: &Value) -> Result<(), ToolOutput> {
     if let Some(id) = arg_u64(args, "doc") {
-        s.activate(DocId(id)).map_err(|_| ToolOutput::error(format!("Dokument {id} ist nicht offen – documents listet die offenen Dokumente")))?;
+        s.activate(DocId(id)).map_err(|_| ToolOutput::error(fp_i18n::tr!("err-mcp-doc-not-open-hint", id = id.to_string())))?;
     }
     Ok(())
 }
@@ -789,21 +760,23 @@ fn list_commands(s: &Session, a: &Value) -> ToolOutput {
         }
         if let Some(cat) = &cat {
             let menu0 = i.menu_path.first().map(|m| m.to_lowercase()).unwrap_or_default();
+            let local0 = command_menu_path(&i).first().map(|m| m.to_lowercase()).unwrap_or_default();
             let n = i.name.to_lowercase();
-            if !(n == *cat || n.starts_with(&format!("{cat}.")) || menu0 == *cat) {
+            if !(n == *cat || n.starts_with(&format!("{cat}.")) || menu0 == *cat || local0 == *cat) {
                 continue;
             }
         }
         if let Some(f) = &filter {
             let hay = format!(
-                "{} {} {} {} {} {} {}",
+                "{} {} {} {} {} {} {} {}",
                 i.name.to_lowercase(),
                 i.label.to_lowercase(),
                 command_label(&i).to_lowercase(),
                 i.description.clone().unwrap_or_default().to_lowercase(),
                 command_description(&i).unwrap_or_default().to_lowercase(),
                 i.js.join(" ").to_lowercase(),
-                i.menu_path.join(" ").to_lowercase()
+                i.menu_path.join(" ").to_lowercase(),
+                command_menu_path(&i).join(" ").to_lowercase()
             );
             if !hay.contains(f.as_str()) {
                 continue;
@@ -823,7 +796,7 @@ fn list_commands(s: &Session, a: &Value) -> ToolOutput {
             o["implemented"] = json!(false);
         }
         if !i.menu_path.is_empty() {
-            o["menu"] = json!(i.menu_path.join(" › "));
+            o["menu"] = json!(command_menu_path(&i).join(" › "));
         }
         out.push(o);
     }
@@ -844,7 +817,7 @@ fn describe_command(s: &Session, a: &Value) -> ToolOutput {
     }
     let example = if ex.is_empty() { json!({"name": i.name}) } else { json!({"name": i.name, "params": ex}) };
     ToolOutput::json(json!({
-        "name": i.name, "label": command_label(&i), "menu": i.menu_path, "description": command_description(&i),
+        "name": i.name, "label": command_label(&i), "menu": command_menu_path(&i), "description": command_description(&i),
         "implemented": i.implemented, "availableNow": enabled, "checked": checked,
         "requires": reqs, "params": i.params_schema(), "shortcuts": shortcuts,
         "js": i.js, "fwId": i.fw_id, "fwCmd": i.fw_cmd, "note": i.note,
@@ -857,11 +830,11 @@ fn run_command(s: &mut Session, a: &Value) -> ToolOutput {
         return e;
     }
     if let Some(Value::Array(steps)) = a.get("steps") {
-        let label = arg_str(a, "label").unwrap_or("Agent-Schritte").to_string();
+        let label = arg_str(a, "label").map(str::to_string).unwrap_or_else(|| fp_i18n::t("msg-mcp-agent-steps"));
         let mut results = Vec::new();
         let mut names = Vec::new();
         for st in steps {
-            let Some(n) = st.get("name").and_then(|v| v.as_str()) else { return ToolOutput::error("jeder Schritt braucht name") };
+            let Some(n) = st.get("name").and_then(|v| v.as_str()) else { return ToolOutput::error(fp_i18n::t("err-mcp-step-needs-name")) };
             match resolve_command(s, n) {
                 Some(i) => names.push((i.name.clone(), st.get("params").cloned().unwrap_or(Value::Null))),
                 None => return ToolOutput::error(fp_i18n::tr!("err-mcp-unknown-command", name = n, similar = suggestions(s, n).join(", "))),
@@ -879,7 +852,7 @@ fn run_command(s: &mut Session, a: &Value) -> ToolOutput {
             Err(e) => engine_err(e),
         };
     }
-    let Some(name) = arg_str(a, "name") else { return ToolOutput::error("name oder steps angeben") };
+    let Some(name) = arg_str(a, "name") else { return ToolOutput::error(fp_i18n::t("err-mcp-name-or-steps")) };
     let Some(info) = resolve_command(s, name) else {
         return ToolOutput::error(fp_i18n::tr!("err-mcp-unknown-command", name = name, similar = suggestions(s, name).join(", ")));
     };
@@ -900,7 +873,7 @@ fn get_document(s: &mut Session, a: &Value) -> ToolOutput {
         return e;
     }
     let Some(d) = s.active() else {
-        return ToolOutput::json(json!({"doc": null, "documents": docjson::documents_json(s), "hint": "kein Dokument offen – new_document oder open"}));
+        return ToolOutput::json(json!({"doc": null, "documents": docjson::documents_json(s), "hint": fp_i18n::t("err-mcp-no-document-hint")}));
     };
     let opts = DocJsonOptions {
         page: arg_u64(a, "page").map(|v| v as usize),
@@ -935,7 +908,7 @@ fn select(s: &mut Session, a: &Value) -> ToolOutput {
     } else if let Some(r) = a.get("rect") {
         s.execute("select.inRect", json!({"rect": r, "mode": mode}))
     } else {
-        return ToolOutput::error("ids, all, none, point oder rect angeben");
+        return ToolOutput::error(fp_i18n::t("err-mcp-select-kind"));
     };
     match r {
         Ok(_) => ToolOutput::json(json!({"ok": true, "selection": selection_summary(s), "count": s.active().map_or(0, |d| d.selection.elements.len())})),
@@ -946,7 +919,7 @@ fn select(s: &mut Session, a: &Value) -> ToolOutput {
 fn render_request(a: &Value, default_max: u64) -> Result<RenderRequest, ToolOutput> {
     let rect = match a.get("rect") {
         None | Some(Value::Null) => None,
-        Some(v) => Some(fp_engine::command::parse_rect(v).ok_or_else(|| ToolOutput::error("rect: [l, t, r, b] oder {left, top, right, bottom} erwartet"))?),
+        Some(v) => Some(fp_engine::command::parse_rect(v).ok_or_else(|| ToolOutput::error(fp_i18n::t("err-mcp-rect-expected")))?),
     };
     Ok(RenderRequest {
         page: arg_u64(a, "page").map(|v| v as usize),
@@ -966,7 +939,7 @@ fn render_tool(s: &mut Session, env: &ToolEnv, a: &Value) -> ToolOutput {
         Ok(r) => r,
         Err(e) => return e,
     };
-    let Some(d) = s.active() else { return ToolOutput::error("kein Dokument offen – new_document oder open") };
+    let Some(d) = s.active() else { return ToolOutput::error(fp_i18n::t("err-mcp-no-document-hint")) };
     match render::render(&env.renderer, d, &req) {
         Ok(r) => {
             let meta = r.meta();
@@ -989,10 +962,10 @@ fn doc_brief(s: &Session) -> Value {
 }
 
 fn open(s: &mut Session, a: &Value) -> ToolOutput {
-    let Some(path) = arg_str(a, "path") else { return ToolOutput::error("path fehlt") };
+    let Some(path) = arg_str(a, "path") else { return ToolOutput::error(fp_i18n::tr!("err-mcp-param-missing", param = "path")) };
     match fp_script::fileio::open_document(s, std::path::Path::new(path)) {
         Ok(_) => ToolOutput::json(json!({"ok": true, "document": doc_brief(s)})),
-        Err(e) => ToolOutput::error(format!("{e} (lesbar: {})", fp_script::fileio::import_extensions().join(", "))),
+        Err(e) => ToolOutput::error(fp_i18n::tr!("err-mcp-open-failed", error = e.to_string(), formats = fp_script::fileio::import_extensions().join(", "))),
     }
 }
 
@@ -1048,9 +1021,9 @@ fn export(s: &mut Session, env: &ToolEnv, a: &Value) -> ToolOutput {
     if let Err(e) = activate(s, a) {
         return e;
     }
-    let Some(path) = arg_str(a, "path").map(PathBuf::from) else { return ToolOutput::error("path fehlt") };
+    let Some(path) = arg_str(a, "path").map(PathBuf::from) else { return ToolOutput::error(fp_i18n::tr!("err-mcp-param-missing", param = "path")) };
     let fmt = export_format(a, &path.to_string_lossy());
-    let Some(d) = s.active() else { return ToolOutput::error("kein Dokument offen") };
+    let Some(d) = s.active() else { return ToolOutput::error(fp_i18n::t("err-mcp-no-document")) };
     if fmt == "fwpng" {
         let (doc, page) = (Arc::clone(&d.doc), d.page);
         return match save_fwpng_copy(s, &doc, page, &path) {
@@ -1065,7 +1038,7 @@ fn export(s: &mut Session, env: &ToolEnv, a: &Value) -> ToolOutput {
         let (id, page, state) = (d.id, arg_u64(a, "page").map(|v| v as usize), arg_u64(a, "state").map(|v| v as usize));
         return match fp_script::fileio::export_page(s, id, page, state, &target, &opts) {
             Ok(n) => ToolOutput::json(json!({"ok": true, "path": target.to_string_lossy(), "format": fmt, "bytes": n})),
-            Err(e) => ToolOutput::error(format!("{e} (Formate: fwpng, {})", fp_script::fileio::export_extensions().join(", "))),
+            Err(e) => ToolOutput::error(fp_i18n::tr!("err-mcp-export-failed", error = e.to_string(), formats = fp_script::fileio::export_extensions().join(", "))),
         };
     }
     let req = match render_request(a, 400_000_000) {
@@ -1077,7 +1050,7 @@ fn export(s: &mut Session, env: &ToolEnv, a: &Value) -> ToolOutput {
             if let Some(dir) = path.parent().filter(|p| !p.as_os_str().is_empty())
                 && let Err(e) = std::fs::create_dir_all(dir)
             {
-                return ToolOutput::error(format!("Ordner {}: {e}", dir.display()));
+                return ToolOutput::error(fp_i18n::tr!("err-mcp-folder", path = dir.display().to_string(), error = e.to_string()));
             }
             match std::fs::write(&path, &r.png) {
                 Ok(()) => ToolOutput::json(json!({"ok": true, "path": path.to_string_lossy(), "format": "png", "image": r.meta()})),
@@ -1102,7 +1075,7 @@ fn undo_redo(s: &mut Session, a: &Value, undo: bool) -> ToolOutput {
         done += 1;
     }
     if done == 0 {
-        return ToolOutput::error(if undo { "nichts rückgängig zu machen" } else { "nichts zu wiederholen" });
+        return ToolOutput::error(fp_i18n::t(if undo { "err-mcp-nothing-to-undo" } else { "err-mcp-nothing-to-redo" }));
     }
     ToolOutput::json(json!({"ok": true, "steps": done, "state": state_summary(s)}))
 }
@@ -1116,12 +1089,12 @@ fn history(s: &mut Session, a: &Value) -> ToolOutput {
     {
         return engine_err(e);
     }
-    let Some(d) = s.active() else { return ToolOutput::error("kein Dokument offen") };
+    let Some(d) = s.active() else { return ToolOutput::error(fp_i18n::t("err-mcp-no-document")) };
     let steps: Vec<Value> = d.history.steps().iter().map(|st| json!({"label": st.label, "command": st.command, "params": st.params})).collect();
     ToolOutput::json(json!({
         "position": d.history.undo_count(), "redoAvailable": d.history.redo_count(), "maxUndos": d.history.max_undos(),
         "dropped": d.history.dropped(), "steps": steps,
-        "hint": "steps[0..position] sind ausgeführt; history {\"goto\": n} springt; Befehle lassen sich mit run_command {steps:[…]} erneut abspielen"
+        "hint": fp_i18n::t("msg-mcp-history-hint")
     }))
 }
 
@@ -1143,10 +1116,10 @@ fn mods_of(e: &Value) -> Modifiers {
 }
 
 fn parse_event(e: &Value) -> Result<ToolEvent, String> {
-    let t = arg_str(e, "type").ok_or("Ereignis ohne type")?;
+    let t = arg_str(e, "type").ok_or_else(|| fp_i18n::tr!("err-mcp-param-missing", param = "type"))?;
     let pos = || -> Result<Point, String> {
-        let x = arg_f64(e, "x").ok_or("x fehlt")?;
-        let y = arg_f64(e, "y").ok_or("y fehlt")?;
+        let x = arg_f64(e, "x").ok_or_else(|| fp_i18n::tr!("err-mcp-param-missing", param = "x"))?;
+        let y = arg_f64(e, "y").ok_or_else(|| fp_i18n::tr!("err-mcp-param-missing", param = "y"))?;
         Ok(Point::new(x as f32, y as f32))
     };
     let input = match t {
@@ -1166,11 +1139,11 @@ fn parse_event(e: &Value) -> Result<ToolEvent, String> {
                 "backspace" => ToolKey::Backspace,
                 "delete" | "del" => ToolKey::Delete,
                 "tab" => ToolKey::Tab,
-                other => return Err(format!("unbekannte Taste „{other}“")),
+                other => return Err(fp_i18n::tr!("err-mcp-unknown-key", key = other)),
             };
             ToolInput::Key(k)
         }
-        other => return Err(format!("unbekannter Ereignistyp „{other}“")),
+        other => return Err(fp_i18n::tr!("err-mcp-unknown-event", kind = other)),
     };
     let pressure = arg_f64(e, "pressure").unwrap_or(1.0).clamp(0.0, 1.0) as f32;
     Ok(ToolEvent { input, mods: mods_of(e), pressure, time_ms: 0 })
@@ -1183,7 +1156,7 @@ fn tool_event(s: &mut Session, a: &Value) -> ToolOutput {
     if let Some(t) = arg_str(a, "tool") {
         let Some(id) = fp_engine::tools::by_name(t).or_else(|| fp_engine::tools::by_name(&format!("tool.{t}"))) else {
             let names: Vec<&str> = fp_engine::tools::TOOLS.iter().filter(|t| t.implemented).map(|t| t.name).collect();
-            return ToolOutput::error(format!("unbekanntes Werkzeug „{t}“; verfügbar: {}", names.join(", ")));
+            return ToolOutput::error(fp_i18n::tr!("err-mcp-unknown-canvas-tool", name = t, names = names.join(", ")));
         };
         if let Err(e) = s.set_tool(id) {
             return engine_err(e);
@@ -1192,7 +1165,7 @@ fn tool_event(s: &mut Session, a: &Value) -> ToolOutput {
     let mut events = Vec::new();
     if let Some(d) = a.get("drag") {
         let (Some(from), Some(to)) = (d.get("from").and_then(parse_point), d.get("to").and_then(parse_point)) else {
-            return ToolOutput::error("drag braucht from und to als [x, y]");
+            return ToolOutput::error(fp_i18n::t("err-mcp-drag-from-to"));
         };
         let steps = arg_u64(d, "steps").unwrap_or(8).clamp(1, 200) as usize;
         let mods = mods_of(d);
@@ -1226,13 +1199,13 @@ fn tool_event(s: &mut Session, a: &Value) -> ToolOutput {
                 last_overlay = r.overlay.iter().map(|o| serde_json::to_value(o).unwrap_or(Value::Null)).collect();
                 cursor = format!("{:?}", r.cursor);
             }
-            Err(e) => return ToolOutput::error(format!("Ereignis {i}: {e}")),
+            Err(e) => return ToolOutput::error(fp_i18n::tr!("err-mcp-event", index = i.to_string(), error = e.to_string())),
         }
     }
     ToolOutput::json(json!({
         "ok": true, "tool": fp_engine::tools::info(s.tools.active).map(|i| i.name), "events": events.len(),
         "executed": executed, "overlay": last_overlay, "cursor": cursor, "state": state_summary(s),
-        "hint": if executed.is_empty() { "noch nichts übernommen – Vorgang ggf. mit up/double/key enter abschließen" } else { "" }
+        "hint": if executed.is_empty() { fp_i18n::t("msg-mcp-tool-nothing-yet") } else { String::new() }
     }))
 }
 
@@ -1240,12 +1213,12 @@ fn documents(s: &mut Session, a: &Value) -> ToolOutput {
     if let Some(id) = arg_u64(a, "activate")
         && s.activate(DocId(id)).is_err()
     {
-        return ToolOutput::error(format!("Dokument {id} ist nicht offen"));
+        return ToolOutput::error(fp_i18n::tr!("err-mcp-doc-not-open", id = id.to_string()));
     }
     if let Some(id) = arg_u64(a, "close") {
-        let Some(d) = s.document(DocId(id)) else { return ToolOutput::error(format!("Dokument {id} ist nicht offen")) };
+        let Some(d) = s.document(DocId(id)) else { return ToolOutput::error(fp_i18n::tr!("err-mcp-doc-not-open", id = id.to_string())) };
         if d.is_dirty() && !arg_bool(a, "discard") {
-            return ToolOutput::error(format!("„{}“ hat ungespeicherte Änderungen – save oder discard: true", d.title));
+            return ToolOutput::error(fp_i18n::tr!("err-mcp-unsaved", title = d.title.clone()));
         }
         if let Err(e) = s.close_document(DocId(id)) {
             return engine_err(e);
@@ -1256,13 +1229,13 @@ fn documents(s: &mut Session, a: &Value) -> ToolOutput {
 
 fn run_script(s: &mut Session, env: &ToolEnv, a: &Value) -> ToolOutput {
     if !env.allow_scripts {
-        return ToolOutput::error("Skripte sind in diesem Server abgeschaltet");
+        return ToolOutput::error(fp_i18n::t("err-mcp-scripts-off"));
     }
     let opts = fp_script::ScriptOptions { single_undo_step: arg_bool(a, "single_undo_step"), ..fp_script::ScriptOptions::default() };
     let outcome = match (arg_str(a, "code"), arg_str(a, "path")) {
         (Some(code), _) => fp_script::run_source(s, code, &opts),
         (None, Some(p)) => fp_script::run_file(s, std::path::Path::new(p), &opts),
-        (None, None) => return ToolOutput::error("code oder path angeben"),
+        (None, None) => return ToolOutput::error(fp_i18n::t("err-mcp-code-or-path")),
     };
     let v = outcome.to_json();
     let mut out = ToolOutput::json(json!({"script": v, "state": state_summary(s)}));
@@ -1344,6 +1317,41 @@ pub fn command_label(i: &fp_engine::CommandInfo) -> String {
     } else {
         i.label.clone()
     }
+}
+
+/// Menüpfad eines Befehls in der Sprache der Antwort: je Stufe `menu-<präfix des Befehlsnamens>`
+/// (`modify.align.left` → `menu-modify`, `menu-modify-align`), wenn dessen deutscher Text der
+/// Stufe entspricht; sonst bleibt die Stufe wie im Register.
+pub fn command_menu_path(i: &fp_engine::CommandInfo) -> Vec<String> {
+    let segs: Vec<&str> = i.name.split('.').collect();
+    let source = fp_i18n::current_language() == fp_i18n::SOURCE_LANG;
+    i.menu_path
+        .iter()
+        .enumerate()
+        .map(|(k, de)| {
+            let plain = |t: String| strip_amp(&t).trim_end_matches("...").trim_end_matches('…').to_string();
+            let de_plain = plain(de.clone());
+            if k < segs.len() {
+                let key = format!("menu-{}", segs[..=k].join("-"));
+                if fp_i18n::has(&key) && fp_i18n::with_language(fp_i18n::SOURCE_LANG, || plain(fp_i18n::t(&key))) == de_plain {
+                    return if source { de.clone() } else { strip_amp(&fp_i18n::t(&key)) };
+                }
+            }
+            if k + 1 == i.menu_path.len() && fp_i18n::with_language(fp_i18n::SOURCE_LANG, || plain(command_label(i))) == de_plain {
+                return if source { de.clone() } else { command_label(i) };
+            }
+            // sonst: Menüschlüssel desselben Hauptmenüs mit diesem deutschen Text (z. B. „Scannen“)
+            let prefix = format!("menu-{}", segs[0]);
+            let found = fp_i18n::keys(fp_i18n::SOURCE_LANG)
+                .into_iter()
+                .filter(|k| k.starts_with(&prefix) && !k.contains('.'))
+                .find(|k| fp_i18n::with_language(fp_i18n::SOURCE_LANG, || plain(fp_i18n::t(k))) == de_plain);
+            match found {
+                Some(k) if !source => strip_amp(&fp_i18n::t(&k)),
+                _ => de.clone(),
+            }
+        })
+        .collect()
 }
 
 /// Beschreibung eines Befehls in der Sprache der Antwort (`cmd-….description`, sonst `.tooltip`).

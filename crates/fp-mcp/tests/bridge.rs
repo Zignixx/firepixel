@@ -96,6 +96,9 @@ fn proxy_drives_bridge_session() {
 fn headless_ui_tools_explain_bridge() {
     let mut s = fp_engine::Session::default();
     let r = fp_mcp::tools::call(&mut s, &fp_mcp::tools::ToolEnv::default(), "screenshot", &json!({}));
+    // Antwortsprache der Agenten: Englisch (Vorgabe), Deutsch auf Wunsch (UE-3)
+    assert!(r.is_error && r.text().contains("bridge mode"), "{}", r.text());
+    let r = fp_mcp::tools::call(&mut s, &fp_mcp::tools::ToolEnv::default(), "screenshot", &json!({"language": "de"}));
     assert!(r.is_error && r.text().contains("Brückenmodus"), "{}", r.text());
 }
 

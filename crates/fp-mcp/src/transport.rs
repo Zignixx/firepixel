@@ -98,7 +98,7 @@ pub fn bridge_token_file() -> PathBuf {
 /// Zufälliges Token (64 Hex-Zeichen = 256 Bit).
 pub fn generate_token() -> Result<String, McpError> {
     let mut buf = [0u8; 32];
-    getrandom::fill(&mut buf).map_err(|e| McpError::Config(format!("Zufallsquelle: {e}")))?;
+    getrandom::fill(&mut buf).map_err(|e| McpError::Config(fp_i18n::tr!("err-mcp-random", error = e.to_string())))?;
     Ok(buf.iter().map(|b| format!("{b:02x}")).collect())
 }
 
@@ -207,7 +207,7 @@ pub async fn start_http(host: Arc<dyn SessionHost>, opts: HttpOptions) -> Result
     let addr = listener.local_addr()?;
     let token = match opts.token {
         Some(t) if t.len() >= 16 => t,
-        Some(_) => return Err(McpError::Config("Token muss mindestens 16 Zeichen haben".into())),
+        Some(_) => return Err(McpError::Config(fp_i18n::t("err-mcp-token-min"))),
         None => generate_token()?,
     };
     let token_file = if opts.write_token_file {
@@ -296,7 +296,7 @@ pub fn start_http_background(host: Arc<dyn SessionHost>, opts: HttpOptions) -> R
             let _ = thread.join();
             Err(e)
         }
-        Err(_) => Err(McpError::Protocol("HTTP-Thread beendet".into())),
+        Err(_) => Err(McpError::Protocol(fp_i18n::t("err-mcp-http-thread"))),
     }
 }
 

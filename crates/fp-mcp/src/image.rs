@@ -10,10 +10,10 @@ pub fn encode_png(img: &RgbaImage) -> Result<Vec<u8>, String> {
 /// Kodiert rohe RGBA8-Daten als PNG.
 pub fn encode_png_raw(width: u32, height: u32, rgba: &[u8]) -> Result<Vec<u8>, String> {
     if width == 0 || height == 0 {
-        return Err("leeres Bild".into());
+        return Err(fp_i18n::t("err-mcp-image-empty"));
     }
     if rgba.len() != width as usize * height as usize * 4 {
-        return Err("Bilddaten passen nicht zur Größe".into());
+        return Err(fp_i18n::t("err-mcp-image-size"));
     }
     let mut out = Vec::new();
     {

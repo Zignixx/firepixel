@@ -58,24 +58,24 @@ pub fn render(renderer: &Renderer, d: &DocumentState, req: &RenderRequest) -> Re
     let doc = &d.doc;
     let page = req.page.unwrap_or(d.page);
     if page >= doc.pages.len() {
-        return Err(format!("Seite {page} gibt es nicht (Dokument hat {} Seiten)", doc.pages.len()));
+        return Err(fp_i18n::tr!("err-mcp-no-page", page = page.to_string(), n = doc.pages.len()));
     }
     let frames = doc.pages[page].root.frame_count.max(1) as usize;
     let state = req.state.unwrap_or(if page == d.page { d.frame } else { 0 });
     if state >= frames {
-        return Err(format!("Status {state} gibt es nicht (Seite hat {frames} Status)"));
+        return Err(fp_i18n::tr!("err-mcp-no-state", state = state.to_string(), n = frames));
     }
     let mut zoom = if req.zoom.is_finite() && req.zoom > 0.0 { req.zoom.clamp(1.0 / 64.0, 64.0) } else { 1.0 };
     let mut notes = Vec::new();
     let (base, origin) = match req.element {
         Some(id) => {
-            let e = fp_engine::docops::element_on_page(doc, page, fp_model::ElementId(id)).ok_or_else(|| format!("Element {id} nicht auf Seite {page}"))?;
+            let e = fp_engine::docops::element_on_page(doc, page, fp_model::ElementId(id)).ok_or_else(|| fp_i18n::tr!("err-mcp-element-not-on-page", id = id.to_string(), page = page.to_string()))?;
             let out = renderer.render_element(doc, &e, &PointMap::identity(), state);
             if !out.report.is_complete() {
                 notes.push(format!("Renderer: {:?}", out.report));
             }
             if out.image.is_empty() {
-                return Err(format!("Element {id} hat kein sichtbares Aussehen"));
+                return Err(fp_i18n::tr!("err-mcp-element-invisible", id = id.to_string()));
             }
             let b = out.image.bounds();
             (out.image, (b.left, b.top))
@@ -83,10 +83,10 @@ pub fn render(renderer: &Renderer, d: &DocumentState, req: &RenderRequest) -> Re
         None => {
             let region = match req.rect {
                 Some(r) => r.normalized().round_out(),
-                None => Renderer::page_rect(doc, page).ok_or("Seite ohne Leinwand")?,
+                None => Renderer::page_rect(doc, page).ok_or_else(|| fp_i18n::t("err-mcp-page-no-canvas"))?,
             };
             if region.width() == 0 || region.height() == 0 {
-                return Err("leerer Ausschnitt".into());
+                return Err(fp_i18n::t("err-mcp-empty-rect"));
             }
             let out = renderer.render_rect(doc, page, state, region);
             if !out.report.is_complete() {
@@ -99,7 +99,7 @@ pub fn render(renderer: &Renderer, d: &DocumentState, req: &RenderRequest) -> Re
     let want = (w0 * zoom).ceil() * (h0 * zoom).ceil();
     if want > req.max_pixels as f64 && want > 0.0 {
         let z2 = zoom * (req.max_pixels as f64 / want).sqrt();
-        notes.push(format!("Zoom von {zoom} auf {z2:.4} verkleinert (höchstens {} Pixel)", req.max_pixels));
+        notes.push(fp_i18n::tr!("msg-mcp-zoom-reduced", from = zoom, to = z2, max = req.max_pixels.to_string()));
         zoom = z2;
     }
     let img = scale(&base, zoom);

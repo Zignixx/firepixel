@@ -209,7 +209,25 @@ const UI_SINKS: &[&str] = &[
 ];
 
 /// Aufrufe, deren Fehlertext beim Nutzer landet (UI-nahe Crates).
-const MSG_SINKS: &[&str] = &["Failed", "Err", "Selection", "NotFound", "Io", "Format", "NotImplemented", "Unavailable", "InvalidParams", "set_status", "Status", "msg", "fail", "bail"];
+const MSG_SINKS: &[&str] = &[
+    "Failed", "Err", "Selection", "NotFound", "Io", "Format", "NotImplemented", "Unavailable", "InvalidParams", "set_status", "Status", "msg", "fail", "bail",
+    "#[error]",
+];
+
+/// Zusätzliche Ziele in Kommandozeile und MCP-Server (Ausgaben an Nutzer bzw. KI-Agenten).
+const OUT_SINKS: &[&str] = &[
+    "Failed", "Err", "Selection", "NotFound", "Io", "Format", "NotImplemented", "Unavailable", "InvalidParams", "set_status", "Status", "msg", "fail", "bail",
+    "#[error]", "Fail", "error", "error_output", "invalid_params", "internal_error", "Config", "Protocol", "println", "eprintln", "print", "eprint", "writeln",
+    "write", "push_str", "push", "about", "after_help", "help", "long_about", "with_instructions", "with_title", "with_description", "ToolOutput::error",
+    "McpError::Config", "McpError::Protocol", "ErrorData::invalid_params", "ErrorData::internal_error", "EngineError::Failed", "ok_or", "ok_or_else",
+    "map_err",
+];
+
+/// Aufrufe, die in der Kommandozeile beim Nutzer ankommen (nicht intern).
+const CONSOLE_SINKS: &[&str] = &["println", "eprintln", "print", "eprint"];
+
+/// JSON-Schlüssel, deren Wert ein Text für Nutzer bzw. Agenten ist (`json!({"hint": …})`).
+const JSON_KEYS: &[&str] = &["hint", "text", "note", "notes", "error", "message", "description", "title", "label", "menu", "reason", "warning", "summary"];
 
 /// Interne Ausgaben (Protokoll, Tests, Entwicklerhinweise): Literale darin zählen nicht.
 const INTERNAL: &[&str] = &[
@@ -262,8 +280,45 @@ fn field_before(m: &[u8], pos: usize) -> Option<String> {
     Some(String::from_utf8_lossy(&m[i..end]).to_string())
 }
 
+/// JSON-Schlüssel direkt vor `pos` (`"hint": …` in `json!`), aus dem Originaltext gelesen.
+fn json_key_before(m: &[u8], src: &[u8], pos: usize) -> Option<String> {
+    let mut i = pos;
+    while i > 0 && matches!(m[i - 1], b' ' | b'\n' | b'\r') {
+        i -= 1;
+    }
+    if i == 0 || m[i - 1] != b':' {
+        return None;
+    }
+    i -= 1;
+    while i > 0 && m[i - 1] == b' ' {
+        i -= 1;
+    }
+    if i == 0 || m[i - 1] != b'"' {
+        return None;
+    }
+    let end = i - 1;
+    let mut s = end;
+    while s > 0 && m[s - 1] == b'x' {
+        s -= 1;
+    }
+    if s == 0 || m[s - 1] != b'"' {
+        return None;
+    }
+    Some(String::from_utf8_lossy(&src[s..end]).to_string())
+}
+
+/// Ist der Aufruf bei `name_start` ein Attribut `#[error(…)]` (thiserror-Meldung)?
+fn is_error_attr(m: &[u8], name: &str, name_start: usize) -> bool {
+    name == "error" && name_start >= 2 && &m[name_start - 2..name_start] == b"#["
+}
+
 /// Name des sichtbaren Aufrufs/Felds, an den das Literal bei `pos` geht (oder `None`).
 fn enclosing_sink(m: &[u8], pos: usize, sinks: &[&str]) -> Option<String> {
+    enclosing_sink_src(m, None, pos, sinks)
+}
+
+/// Wie [`enclosing_sink`], mit Originaltext zusätzlich JSON-Schlüssel (`JSON_KEYS`) als Ziel.
+fn enclosing_sink_src(m: &[u8], src: Option<&[u8]>, pos: usize, sinks: &[&str]) -> Option<String> {
     let matches_sink = |n: &str| sinks.contains(&n) || n.rsplit("::").next().is_some_and(|last| sinks.contains(&last) && !n.contains("::"));
     let mut child_start = pos;
     for _ in 0..8 {
@@ -271,6 +326,12 @@ fn enclosing_sink(m: &[u8], pos: usize, sinks: &[&str]) -> Option<String> {
             && UI_FIELDS.contains(&f.as_str())
         {
             return Some(format!("{f}:"));
+        }
+        if let Some(src) = src
+            && let Some(k) = json_key_before(m, src, child_start)
+            && JSON_KEYS.contains(&k.as_str())
+        {
+            return Some(format!("\"{k}\":"));
         }
         let mut depth = 0i32;
         let mut i = child_start;
@@ -295,6 +356,9 @@ fn enclosing_sink(m: &[u8], pos: usize, sinks: &[&str]) -> Option<String> {
         match m[open] {
             b'(' => {
                 let (name, name_start) = ident_before(m, open);
+                if is_error_attr(m, &name, name_start) {
+                    return sinks.contains(&"#[error]").then(|| "#[error]".to_string());
+                }
                 if matches_sink(&name) {
                     return Some(name);
                 }
@@ -328,6 +392,12 @@ struct Exceptions {
 
 /// Steht das Literal in einer internen Ausgabe (`log::warn!`, `assert!`, `report_overflow` …)?
 fn in_internal_call(m: &[u8], pos: usize) -> bool {
+    in_internal_call_mode(m, pos, false)
+}
+
+/// Wie [`in_internal_call`]; mit `console` zählen `println!`/`eprintln!` … als Ausgabe an den
+/// Nutzer (Kommandozeile), nicht als intern.
+fn in_internal_call_mode(m: &[u8], pos: usize, console: bool) -> bool {
     let mut child_start = pos;
     for _ in 0..6 {
         let mut depth = 0i32;
@@ -355,6 +425,10 @@ fn in_internal_call(m: &[u8], pos: usize) -> bool {
         }
         let (name, name_start) = ident_before(m, open);
         let last = name.rsplit("::").next().unwrap_or("");
+        let macro_call = open > 0 && m[..open].iter().rev().find(|c| **c != b' ') == Some(&b'!');
+        if is_error_attr(m, &name, name_start) || (console && (CONSOLE_SINKS.contains(&last) || (last == "error" && !macro_call))) {
+            return false;
+        }
         if INTERNAL.contains(&last) {
             return true;
         }
@@ -502,15 +576,75 @@ fn rel(p: &Path) -> String {
     p2.strip_prefix(&r).map(|x| x.display().to_string()).unwrap_or_else(|_| p.display().to_string()).replace("\\\\?\\", "")
 }
 
-fn scan_file(path: &Path, ui_crate: bool, ex: &Exceptions, hits: &mut Vec<Hit>) {
+/// Prüfart einer Datei.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Mode {
+    /// Oberfläche (fp-ui, firepixel): UI-Aufrufe und jedes deutsche Literal.
+    Ui,
+    /// UI-nahe Bibliotheken: Fehlermeldungen (`Err(…)`, `#[error(…)]` …).
+    Msg,
+    /// Kommandozeile und MCP-Server: Konsolenausgaben, Fehler, JSON-Texte (`"hint"` …),
+    /// clap-Hilfetexte (Doku-Kommentare in `#[derive(Parser/Subcommand/Args)]`) und jedes deutsche Literal.
+    Out,
+}
+
+/// Doku-Kommentare (`///`) in clap-Ableitungen: werden zur Hilfe von `--help`.
+fn clap_doc_comments(src: &str, stop: usize) -> Vec<(usize, String)> {
+    let mut out = Vec::new();
+    let mut pending = false;
+    let mut depth = 0i32;
+    let mut pos = 0;
+    for (n, line) in src.split_inclusive('\n').enumerate() {
+        if pos >= stop {
+            break;
+        }
+        pos += line.len();
+        let t = line.trim();
+        if t.starts_with("#[derive(") && ["Parser", "Subcommand", "Args"].iter().any(|d| t.contains(d)) {
+            pending = true;
+        }
+        if depth > 0 && t.starts_with("///") {
+            out.push((n + 1, t.trim_start_matches('/').trim().to_string()));
+        }
+        if t.starts_with("//") {
+            continue;
+        }
+        if pending || depth > 0 {
+            let code: String = t.split("//").next().unwrap_or("").to_string();
+            for c in code.chars() {
+                match c {
+                    '{' => {
+                        depth += 1;
+                        pending = false;
+                    }
+                    '}' => depth -= 1,
+                    _ => {}
+                }
+            }
+            if depth < 0 {
+                depth = 0;
+            }
+        }
+    }
+    out
+}
+
+fn scan_file(path: &Path, mode: Mode, ex: &Exceptions, hits: &mut Vec<Hit>) {
     let Ok(src) = std::fs::read_to_string(path) else { return };
     let stop = test_module_start(&src);
     let (lits, masked) = lex(&src);
     let file = rel(path);
     let fname = path.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
     let check_german = !ex.no_german.iter().any(|p| file.replace('\\', "/").contains(p.as_str()));
+    if mode == Mode::Out {
+        for (line, text) in clap_doc_comments(&src, stop) {
+            if !words(&text, ex).is_empty() {
+                hits.push(Hit { file: file.clone(), line, kind: "Ausgabe", via: "clap-Hilfe".into(), text: text.chars().take(70).collect() });
+            }
+        }
+    }
     for lit in lits {
-        if lit.start >= stop || lit.text.trim().is_empty() || is_key_like(&lit.text) || in_internal_call(&masked, lit.start) {
+        if lit.start >= stop || lit.text.trim().is_empty() || is_key_like(&lit.text) || in_internal_call_mode(&masked, lit.start, mode == Mode::Out) {
             continue;
         }
         if ex.literals.iter().any(|(f, l)| (f == "*" || *f == fname || file.ends_with(f.as_str())) && *l == lit.text) {
@@ -518,39 +652,74 @@ fn scan_file(path: &Path, ui_crate: bool, ex: &Exceptions, hits: &mut Vec<Hit>) 
         }
         let w = words(&lit.text, ex);
         let short: String = lit.text.chars().take(70).collect();
-        if ui_crate {
-            if !w.is_empty()
-                && let Some(via) = enclosing_sink(&masked, lit.start, UI_SINKS)
-            {
-                hits.push(Hit { file: file.clone(), line: lit.line, kind: "UI", via, text: short });
-                continue;
+        match mode {
+            Mode::Ui => {
+                if !w.is_empty()
+                    && let Some(via) = enclosing_sink(&masked, lit.start, UI_SINKS)
+                {
+                    hits.push(Hit { file: file.clone(), line: lit.line, kind: "UI", via, text: short });
+                    continue;
+                }
+                if check_german && german(&lit.text) && !w.is_empty() {
+                    hits.push(Hit { file: file.clone(), line: lit.line, kind: "deutsch", via: String::new(), text: short });
+                }
             }
-            if check_german && german(&lit.text) && !w.is_empty() {
-                hits.push(Hit { file: file.clone(), line: lit.line, kind: "deutsch", via: String::new(), text: short });
+            Mode::Msg => {
+                if !w.is_empty()
+                    && let Some(via) = enclosing_sink(&masked, lit.start, MSG_SINKS)
+                {
+                    hits.push(Hit { file: file.clone(), line: lit.line, kind: "Meldung", via, text: short });
+                }
             }
-        } else if !w.is_empty()
-            && let Some(via) = enclosing_sink(&masked, lit.start, MSG_SINKS)
-        {
-            hits.push(Hit { file: file.clone(), line: lit.line, kind: "Meldung", via, text: short });
+            Mode::Out => {
+                if w.is_empty() {
+                    continue;
+                }
+                if let Some(via) = enclosing_sink_src(&masked, Some(src.as_bytes()), lit.start, OUT_SINKS) {
+                    hits.push(Hit { file: file.clone(), line: lit.line, kind: "Ausgabe", via, text: short });
+                } else if check_german && german(&lit.text) {
+                    hits.push(Hit { file: file.clone(), line: lit.line, kind: "deutsch", via: String::new(), text: short });
+                }
+            }
         }
     }
 }
 
-/// Alle Treffer (UI-Crate fp-ui, UI-nahe Crates nur Meldungen).
+/// Geprüfte Quellordner und ihre Prüfart (UE-3: der ganze Workspace; fp-neutral ist nur eine
+/// Prüfung ohne Nutzertexte).
+const SCAN_DIRS: &[(&str, Mode)] = &[
+    ("crates/fp-ui/src", Mode::Ui),
+    ("apps/firepixel/src", Mode::Ui),
+    ("apps/firepixel-cli/src", Mode::Out),
+    ("crates/fp-mcp/src", Mode::Out),
+    ("crates/fp-engine/src", Mode::Msg),
+    ("crates/fp-io/src", Mode::Msg),
+    ("crates/fp-export/src", Mode::Msg),
+    ("crates/fp-script/src", Mode::Msg),
+    ("crates/fp-ai/src", Mode::Msg),
+    ("crates/fp-fwpng/src", Mode::Msg),
+    ("crates/fp-raster/src", Mode::Msg),
+    ("crates/fp-trace/src", Mode::Msg),
+    ("crates/fp-i18n/src", Mode::Msg),
+    ("crates/fp-model/src", Mode::Msg),
+    ("crates/fp-render/src", Mode::Msg),
+    ("crates/fp-text/src", Mode::Msg),
+    ("crates/fp-effects/src", Mode::Msg),
+    ("crates/fp-vector/src", Mode::Msg),
+    ("crates/fp-color/src", Mode::Msg),
+    ("crates/fp-geom/src", Mode::Msg),
+];
+
+/// Alle Treffer (Prüfart je Ordner siehe `SCAN_DIRS`).
 fn scan() -> Vec<Hit> {
     let ex = exceptions();
     let r = root();
     let mut hits = Vec::new();
-    let mut ui = Vec::new();
-    rs_files(&r.join("crates").join("fp-ui").join("src"), &mut ui);
-    for f in &ui {
-        scan_file(f, true, &ex, &mut hits);
-    }
-    for c in ["fp-engine", "fp-io", "fp-export", "fp-script", "fp-ai"] {
+    for (dir, mode) in SCAN_DIRS {
         let mut files = Vec::new();
-        rs_files(&r.join("crates").join(c).join("src"), &mut files);
+        rs_files(&r.join(dir), &mut files);
         for f in &files {
-            scan_file(f, false, &ex, &mut hits);
+            scan_file(f, *mode, &ex, &mut hits);
         }
     }
     if let Ok(filter) = std::env::var("FP_I18N_FILTER") {
@@ -580,11 +749,12 @@ fn report(hits: &[Hit]) -> String {
     }
     let kinds = |k: &str| hits.iter().filter(|h| h.kind == k).count();
     out.push_str(&format!(
-        "\nfeste Texte übrig: {} (UI-Aufrufe: {}, deutsche Literale in fp-ui: {}, Meldungen: {}) – je Crate: {:?}\n",
+        "\nfeste Texte übrig: {} (UI-Aufrufe: {}, deutsche Literale: {}, Meldungen: {}, Ausgaben CLI/MCP: {}) – je Crate: {:?}\n",
         hits.len(),
         kinds("UI"),
         kinds("deutsch"),
         kinds("Meldung"),
+        kinds("Ausgabe"),
         by_crate
     ));
     out
@@ -654,4 +824,53 @@ mod tests { fn g() { ui.label("Testtext"); } }
     assert!(!found.contains_key("file.saveAs") && !found.contains_key("panel-layers") && !found.contains_key("px"));
     assert!(!found.contains_key("Kommentar") && !found.contains_key("Testtext"));
     assert!(found.contains_key("roh \"Text\" mit Wörtern"));
+}
+
+/// UE-3: Prüfart „Ausgabe“ (Kommandozeile, MCP-Server) – Konsole, JSON-Texte, thiserror, clap-Hilfe.
+#[test]
+fn scanner_erkennt_ausgaben_von_cli_und_mcp() {
+    let src = r##"
+#[derive(Debug, thiserror::Error)]
+enum E {
+    #[error("die Sitzung ist weg")]
+    Weg,
+}
+#[derive(Parser)]
+struct Cli {
+    /// Ausgabe als JSON
+    #[arg(long)]
+    json: bool,
+}
+fn f() {
+    eprintln!("Beenden mit Strg+C.");
+    log::error!("intern kaputt");
+    let v = json!({"hint": "noch nichts übernommen", "name": "file.open"});
+    let w = json!({"text": format!("{n} Dateien verarbeitet")});
+    return ToolOutput::error("nichts zu wiederholen");
+}
+"##;
+    let (lits, masked) = lex(src);
+    let ex = Exceptions { words: BTreeSet::new(), literals: Vec::new(), no_german: Vec::new() };
+    let mut found = BTreeMap::new();
+    for l in &lits {
+        if is_key_like(&l.text) || words(&l.text, &ex).is_empty() || in_internal_call_mode(&masked, l.start, true) {
+            continue;
+        }
+        found.insert(l.text.clone(), enclosing_sink_src(&masked, Some(src.as_bytes()), l.start, OUT_SINKS));
+    }
+    let via = |s: &str| found.get(s).cloned().flatten();
+    assert_eq!(via("die Sitzung ist weg").as_deref(), Some("#[error]"));
+    assert_eq!(via("Beenden mit Strg+C.").as_deref(), Some("eprintln"));
+    assert_eq!(via("noch nichts übernommen").as_deref(), Some("\"hint\":"));
+    assert_eq!(via("{n} Dateien verarbeitet").as_deref(), Some("\"text\":"));
+    assert_eq!(via("nichts zu wiederholen").as_deref(), Some("ToolOutput::error"));
+    assert!(!found.contains_key("intern kaputt"), "log::error! bleibt intern");
+    let docs = clap_doc_comments(src, src.len());
+    assert_eq!(docs.len(), 1, "{docs:?}");
+    assert_eq!(docs[0].1, "Ausgabe als JSON");
+    // thiserror-Meldungen zählen auch in Bibliotheken
+    let (lits, masked) = lex(src);
+    let l = lits.iter().find(|l| l.text == "die Sitzung ist weg").expect("Literal");
+    assert!(!in_internal_call(&masked, l.start));
+    assert_eq!(enclosing_sink(&masked, l.start, MSG_SINKS).as_deref(), Some("#[error]"));
 }

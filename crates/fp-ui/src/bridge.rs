@@ -150,7 +150,7 @@ impl UiBridge {
     /// Beendet den Server (Token-Datei wird gelöscht).
     pub fn stop(mut self) {
         for s in self.shots.drain(..) {
-            s.reply.respond(UiReply::Error("Steuerkanal beendet".into()));
+            s.reply.respond(UiReply::Error(at("err-mcp-ui-channel-closed")));
         }
         inject::cancel_all();
         if let Some(s) = self.server.take() {
@@ -218,7 +218,7 @@ impl UiBridge {
         for mut s in self.shots.drain(..) {
             s.frames += 1;
             if s.frames > 120 {
-                s.reply.respond(UiReply::Error("kein Bildschirmfoto erhalten (Fenster minimiert?)".into()));
+                s.reply.respond(UiReply::Error(at("err-mcp-ui-no-screenshot")));
             } else {
                 keep.push(s);
             }
@@ -241,7 +241,7 @@ fn crop_image(img: &egui::ColorImage, rect: Option<[f32; 4]>, ppp: f32) -> UiRep
         None => (0, 0, w, h),
     };
     if x1 <= x0 || y1 <= y0 {
-        return UiReply::Error("leerer Ausschnitt".into());
+        return UiReply::Error(at("err-mcp-empty-rect"));
     }
     let mut rgba = Vec::with_capacity((x1 - x0) * (y1 - y0) * 4);
     for y in y0..y1 {
@@ -323,43 +323,43 @@ pub fn ui_action(ctx: &egui::Context, st: &mut AppState, a: &Value) -> UiReply {
     let mut actions: Vec<Action> = Vec::new();
     if a.get("close_dialogs").and_then(Value::as_bool) == Some(true) {
         st.dialogs = crate::dialogs::Dialogs::default();
-        done.push("Dialoge geschlossen".into());
+        done.push(at("msg-mcp-ui-done-dialogs"));
     }
     if let Some(name) = a.get("run").and_then(Value::as_str) {
         if st.session.registry().get(name).is_none() {
-            return UiReply::Error(format!("unbekannter Befehl „{name}“ – list_commands"));
+            return UiReply::Error(agent_text(|| fp_i18n::tr!("err-mcp-ui-unknown-command", name = name)));
         }
         actions.push(Action::Run(name.to_string(), a.get("params").cloned().unwrap_or(json!({}))));
-        done.push(format!("Befehl {name}"));
+        done.push(agent_text(|| fp_i18n::tr!("msg-mcp-ui-done-command", name = name)));
     }
     if let Some(z) = a.get("zoom").and_then(Value::as_f64) {
         if !(0.01..=64.0).contains(&z) {
-            return UiReply::Error("zoom zwischen 0.01 und 64 (1 = 100 %)".into());
+            return UiReply::Error(at("err-mcp-ui-zoom-range"));
         }
         actions.push(Action::SetZoom(z));
         done.push(format!("Zoom {:.0} %", z * 100.0));
     }
     if a.get("fit").and_then(Value::as_bool) == Some(true) {
         actions.push(Action::Run("view.fitAll".into(), json!({})));
-        done.push("eingepasst".into());
+        done.push(at("msg-mcp-ui-done-fit"));
     }
     if let Some(p) = a.get("panel").and_then(Value::as_str) {
         let id = crate::panels::PanelId::from_command(p).or_else(|| crate::panels::PanelId::from_command(&format!("window.{p}")));
         match id {
             Some(id) => {
                 actions.push(Action::ShowPanel(id));
-                done.push(format!("Bedienfeld {p}"));
+                done.push(agent_text(|| fp_i18n::tr!("msg-mcp-ui-done-panel", name = p)));
             }
-            None => return UiReply::Error(format!("unbekanntes Bedienfeld „{p}“ (z. B. window.layers, window.history)")),
+            None => return UiReply::Error(agent_text(|| fp_i18n::tr!("err-mcp-ui-unknown-panel", name = p))),
         }
     }
     if let Some(t) = a.get("tool").and_then(Value::as_str) {
         match fp_engine::tools::by_name(t).or_else(|| fp_engine::tools::by_name(&format!("tool.{t}"))) {
             Some(id) => {
                 actions.push(Action::SetTool(id));
-                done.push(format!("Werkzeug {t}"));
+                done.push(agent_text(|| fp_i18n::tr!("msg-mcp-ui-done-tool", name = t)));
             }
-            None => return UiReply::Error(format!("unbekanntes Werkzeug „{t}“")),
+            None => return UiReply::Error(agent_text(|| fp_i18n::tr!("err-mcp-unknown-tool", name = t))),
         }
     }
     if let Some(t) = a.get("theme").and_then(Value::as_str) {
@@ -367,17 +367,17 @@ pub fn ui_action(ctx: &egui::Context, st: &mut AppState, a: &Value) -> UiReply {
             "normal" | "hell" => crate::theme::ThemeKind::Normal,
             "dunkel" | "dark" => crate::theme::ThemeKind::Dark,
             "oled" => crate::theme::ThemeKind::Oled,
-            other => return UiReply::Error(format!("unbekanntes Design „{other}“ (normal, dunkel, oled)")),
+            other => return UiReply::Error(agent_text(|| fp_i18n::tr!("err-mcp-ui-unknown-theme", name = other))),
         };
         actions.push(Action::SetTheme(k));
-        done.push(format!("Design {t}"));
+        done.push(agent_text(|| fp_i18n::tr!("msg-mcp-ui-done-theme", name = t)));
     }
     if let Some(m) = a.get("status").and_then(Value::as_str) {
         actions.push(Action::Status(m.to_string()));
-        done.push("Statuszeile".into());
+        done.push(at("msg-mcp-ui-done-status"));
     }
     if done.is_empty() {
-        return UiReply::Error("keine Aktion angegeben (run, zoom, fit, panel, tool, theme, close_dialogs, status)".into());
+        return UiReply::Error(at("err-mcp-ui-no-action"));
     }
     for act in actions {
         crate::actions::execute(st, ctx, act);
@@ -385,6 +385,17 @@ pub fn ui_action(ctx: &egui::Context, st: &mut AppState, a: &Value) -> UiReply {
     st.handle_session_events();
     ctx.request_repaint();
     UiReply::Json(json!({"ok": true, "done": done, "dialog_open": st.dialogs.any_open(), "status": st.status.as_ref().map(|(m, _)| m.clone())}))
+}
+
+/// Text für KI-Agenten in ihrer Antwortsprache (`fp_mcp::tools::default_language`, Vorgabe
+/// Englisch); die Oberfläche selbst bleibt in ihrer Sprache.
+pub(crate) fn agent_text(f: impl FnOnce() -> String) -> String {
+    fp_i18n::with_language(&fp_mcp::tools::default_language(), f)
+}
+
+/// Schlüssel → Text in der Antwortsprache der Agenten.
+pub(crate) fn at(key: &str) -> String {
+    agent_text(|| fp_i18n::t(key))
 }
 
 /// MCP-Werkzeug `ui_file_dialog`: Zustand des Datei-Dialogs bzw. Antwort darauf.

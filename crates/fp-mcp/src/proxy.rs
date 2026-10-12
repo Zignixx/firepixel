@@ -30,18 +30,18 @@ pub struct BridgeTarget {
 impl BridgeTarget {
     /// Aus URL (`http://127.0.0.1:47800/mcp`) und Token.
     pub fn from_url(url: &str, token: &str) -> Result<BridgeTarget, McpError> {
-        let rest = url.strip_prefix("http://").ok_or_else(|| McpError::Config(format!("nur http://-Adressen: {url}")))?;
+        let rest = url.strip_prefix("http://").ok_or_else(|| McpError::Config(fp_i18n::tr!("err-mcp-only-http", url = url)))?;
         let (authority, path) = match rest.find('/') {
             Some(i) => (&rest[..i], rest[i..].to_string()),
             None => (rest, crate::MCP_PATH.to_string()),
         };
-        let (host, port) = authority.rsplit_once(':').ok_or_else(|| McpError::Config(format!("Port fehlt in {url}")))?;
+        let (host, port) = authority.rsplit_once(':').ok_or_else(|| McpError::Config(fp_i18n::tr!("err-mcp-port-missing", url = url)))?;
         if !matches!(host, "127.0.0.1" | "localhost" | "[::1]") {
-            return Err(McpError::Config(format!("nur lokale Adressen erlaubt: {host}")));
+            return Err(McpError::Config(fp_i18n::tr!("err-mcp-only-local", host = host)));
         }
-        let port = port.parse().map_err(|_| McpError::Config(format!("ungültiger Port in {url}")))?;
+        let port = port.parse().map_err(|_| McpError::Config(fp_i18n::tr!("err-mcp-bad-port", url = url)))?;
         if token.len() < 16 {
-            return Err(McpError::Config("Token fehlt oder ist zu kurz".into()));
+            return Err(McpError::Config(fp_i18n::t("err-mcp-token-short")));
         }
         Ok(BridgeTarget { port, path, token: token.to_string() })
     }
@@ -49,14 +49,11 @@ impl BridgeTarget {
     /// Liest Adresse und Token aus der Token-Datei der laufenden Oberfläche.
     pub fn from_token_file(path: &Path) -> Result<BridgeTarget, McpError> {
         let text = std::fs::read_to_string(path).map_err(|e| {
-            McpError::Config(format!(
-                "Token-Datei {} nicht lesbar ({e}) – läuft Firepixel mit eingeschaltetem KI-Steuerkanal (firepixel.exe --mcp bzw. FIREPIXEL_MCP=1)?",
-                path.display()
-            ))
+            McpError::Config(fp_i18n::tr!("err-mcp-token-file-unreadable", path = path.display().to_string(), error = e.to_string()))
         })?;
-        let v: Value = serde_json::from_str(text.trim_start_matches('\u{feff}')).map_err(|e| McpError::Config(format!("Token-Datei: {e}")))?;
-        let url = v["url"].as_str().ok_or_else(|| McpError::Config("Token-Datei ohne url".into()))?;
-        let token = v["token"].as_str().ok_or_else(|| McpError::Config("Token-Datei ohne token".into()))?;
+        let v: Value = serde_json::from_str(text.trim_start_matches('\u{feff}')).map_err(|e| McpError::Config(fp_i18n::tr!("err-mcp-token-file", error = e.to_string())))?;
+        let url = v["url"].as_str().ok_or_else(|| McpError::Config(fp_i18n::tr!("err-mcp-token-file-field", field = "url")))?;
+        let token = v["token"].as_str().ok_or_else(|| McpError::Config(fp_i18n::tr!("err-mcp-token-file-field", field = "token")))?;
         BridgeTarget::from_url(url, token)
     }
 }
@@ -148,7 +145,7 @@ impl Proxy {
 
     fn post(&self, body: &str, pending: &HashSet<String>, method: &str) -> Result<HttpReply, McpError> {
         let mut s = TcpStream::connect(("127.0.0.1", self.target.port))
-            .map_err(|e| McpError::Config(format!("keine Verbindung zu Firepixel auf 127.0.0.1:{} ({e}) – läuft die Oberfläche noch?", self.target.port)))?;
+            .map_err(|e| McpError::Config(fp_i18n::tr!("err-mcp-no-connection", port = self.target.port.to_string(), error = e.to_string())))?;
         s.set_read_timeout(Some(self.timeout))?;
         let _ = s.set_nodelay(true);
         let mut req = format!(
@@ -249,7 +246,7 @@ impl Proxy {
                 match serde_json::from_str::<Value>(&t) {
                     Ok(Value::Array(a)) => reply.messages.extend(a),
                     Ok(v) => reply.messages.push(v),
-                    Err(e) => return Err(McpError::Protocol(format!("ungültige Antwort: {e}"))),
+                    Err(e) => return Err(McpError::Protocol(fp_i18n::tr!("err-mcp-bad-reply", error = e.to_string()))),
                 }
             }
         }
