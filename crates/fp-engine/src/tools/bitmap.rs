@@ -454,6 +454,15 @@ impl FillTool {
         if self.id == ToolId::Gradient { Cursor::Gradient } else { Cursor::Bucket }
     }
 
+    /// Gibt es unter `p` etwas zu füllen (Bitmapmodus/Pixelauswahl oder ein Objekt)?
+    fn has_target(&self, p: Point, ctx: &ToolContext) -> bool {
+        if bitmap_target(ctx) || ctx.selection.has_pixels() {
+            return true;
+        }
+        let opt = HitOptions { tolerance: ctx.pick_tolerance(), ..HitOptions::default() };
+        super::pointer::top_hit(ctx, p, &opt).is_some()
+    }
+
     fn dragged_handles(h: FillHandles, which: GradDrag, start: Point, cur: Point) -> FillHandles {
         let (dx, dy) = (cur.x - start.x, cur.y - start.y);
         let mv = |p: Point| Point::new(p.x + dx, p.y + dy);
@@ -531,7 +540,15 @@ impl ToolMachine for FillTool {
                     self.cur = Some(if ev.mods.shift { constrain_angle(s, *pos, 45.0) } else { *pos });
                 }
                 let hover_handle = gradient_target(ctx).is_some_and(|(_, h)| dist(*pos, h.start) <= tol || dist(*pos, h.end) <= tol);
-                ToolResponse::with_overlay(self.overlay(), if hover_handle && self.start.is_none() { Cursor::Move } else { self.cursor() })
+                let cursor = if hover_handle && self.start.is_none() {
+                    Cursor::Move
+                } else if self.id == ToolId::PaintBucket && self.start.is_none() && !self.has_target(*pos, ctx) {
+                    // Füllwerkzeug über leerer Fläche ohne Objekt: Verbotszeichen (PARITAET_A K8)
+                    Cursor::NotAllowed
+                } else {
+                    self.cursor()
+                };
+                ToolResponse::with_overlay(self.overlay(), cursor)
             }
             PointerKind::Up => {
                 if let Some((id, h, w, s)) = self.handle.take() {

@@ -93,7 +93,7 @@ fn path_of(s: &Session, id: ElementId) -> fp_model::element::PathElem {
 // ------------------------------------------------------------------ Auswählen
 
 #[test]
-fn pointer_select_move_copy_and_corner_roundness() {
+fn pointer_select_move_copy_and_corner_handle_scales() {
     let mut s = doc_session(300.0, 200.0);
     let a = rect(&mut s, 10.0, 10.0, 50.0, 50.0);
     let b = ellipse(&mut s, 100.0, 10.0, 140.0, 50.0);
@@ -124,18 +124,43 @@ fn pointer_select_move_copy_and_corner_roundness() {
     let fb = s.tool_feedback();
     assert!(fb.iter().any(|o| matches!(o, Overlay::Ghost { ids, copy: false, .. } if ids == &vec![a.0])), "{fb:?}");
     events(&mut s, &[ToolEvent::key(ToolKey::Escape)]);
-    // Eckpunkt einer Rechteck-Grundform ziehen = Eckenrundung (Pixel), ein Verlaufsschritt
-    let a = rect(&mut s, 150.0, 100.0, 250.0, 160.0);
+    // Eckgriff einer Rechteck-Grundform ziehen = Skalieren wie bei allen Objekten, die Rundung
+    // bleibt 0 (Original live: R1 50,50–150,120, Eckgriff +40/+30 → größer, PARITAET_A L26)
+    let a = rect(&mut s, 150.0, 100.0, 250.0, 170.0);
     tool(&mut s, ToolId::Pointer);
     let fb = s.tool_feedback();
     assert!(fb.iter().any(|o| matches!(o, Overlay::PathPoints { contours, .. } if contours[0].nodes.len() == 4)), "Eckpunkte der Grundform");
+    // Überfahren des Eckgriffs: einfacher Pfeil (K2), Kantengriff ebenso (K3)
+    let r = s.tool_event(&ToolEvent::drag(250.0, 170.0)).expect("hover");
+    assert_eq!(r.cursor, fp_engine::tools::Cursor::Arrow, "Eckgriff");
+    let r = s.tool_event(&ToolEvent::drag(250.0, 135.0)).expect("hover");
+    assert_eq!(r.cursor, fp_engine::tools::Cursor::Arrow, "Kantengriff");
     let before = doc(&s);
-    events(&mut s, &[ToolEvent::down(150.0, 100.0), ToolEvent::drag(155.0, 101.0), ToolEvent::drag(160.0, 102.0), ToolEvent::up(160.0, 102.0)]);
+    let mut seq = vec![ToolEvent::down(250.0, 170.0)];
+    for i in 1..=20 {
+        let f = i as f32 / 20.0;
+        seq.push(ToolEvent::drag(250.0 + 40.0 * f, 170.0 + 30.0 * f));
+    }
+    seq.push(ToolEvent::up(290.0, 200.0));
+    events(&mut s, &seq);
     let p = path_of(&s, a);
     let r = p.primitive.as_ref().map(|x| x.roundness).unwrap_or(0.0);
-    assert!((r - 10.0 / 30.0).abs() < 1e-3, "Rundung {r}");
-    assert!(rect_approx(bounds(&s, a), Rect::new(150.0, 100.0, 250.0, 160.0)), "Größe bleibt");
+    assert_eq!(r, 0.0, "Rundung bleibt 0");
+    assert!(rect_approx(bounds(&s, a), Rect::new(150.0, 100.0, 290.0, 200.0)), "größer: {:?}", bounds(&s, a));
     undo_redo(&mut s, &before);
+    // jede Ecke: die gegenüberliegende bleibt stehen
+    for (from, to, want) in [
+        ((150.0, 100.0), (130.0, 90.0), Rect::new(130.0, 90.0, 250.0, 170.0)),
+        ((250.0, 100.0), (260.0, 80.0), Rect::new(150.0, 80.0, 260.0, 170.0)),
+        ((150.0, 170.0), (140.0, 190.0), Rect::new(140.0, 100.0, 250.0, 190.0)),
+    ] {
+        s.undo().expect("undo");
+        select(&mut s, &[a]);
+        tool(&mut s, ToolId::Pointer);
+        drag(&mut s, from, to);
+        assert!(rect_approx(bounds(&s, a), want), "{from:?}: {:?}", bounds(&s, a));
+        assert_eq!(path_of(&s, a).primitive.as_ref().map(|x| x.roundness), Some(0.0));
+    }
 }
 
 #[test]
@@ -270,6 +295,16 @@ fn crop_and_export_area() {
     assert!(s.tool_feedback().iter().any(|o| matches!(o, Overlay::Shade { .. })));
     events(&mut s, &[ToolEvent::key(ToolKey::Escape)]);
     assert_eq!(doc(&s), d0);
+    assert_eq!(s.tools.active, ToolId::ExportArea);
+    // Zuschneiden: Rahmen ziehen, Esc → Leinwand unverändert, Werkzeug Zeiger (PARITAET_A L28)
+    tool(&mut s, ToolId::Crop);
+    let h0 = s.active().unwrap().history.len();
+    drag(&mut s, (20.0, 20.0), (120.0, 90.0));
+    events(&mut s, &[ToolEvent::key(ToolKey::Escape)]);
+    assert_eq!(doc(&s), d0, "Leinwand unverändert");
+    assert_eq!(s.active().unwrap().history.len(), h0, "kein Verlaufsschritt");
+    assert_eq!(s.tools.active, ToolId::Pointer, "Werkzeug wechselt zum Zeiger");
+    assert!(!s.tool_feedback().iter().any(|o| matches!(o, Overlay::Shade { .. })));
 }
 
 // ------------------------------------------------------------------ Vektor
@@ -973,6 +1008,134 @@ fn hand_and_zoom() {
     assert_ne!(s.active().map(|d| d.view.origin).unwrap_or_default(), o);
 }
 
+/// UX-A L27: Doppelklick mit dem Zeiger auf eine Bitmap (Folge der Leinwand) öffnet den
+/// Bitmapmodus, das Werkzeug wechselt zum Auswahlrahmen; Esc beendet ihn wieder (L13).
+#[test]
+fn pointer_double_click_bitmap_enters_bitmap_mode() {
+    let mut s = doc_session(400.0, 300.0);
+    let b = bitmap(&mut s, 100, 100, 60, 60, [0, 120, 200, 255]);
+    select(&mut s, &[]);
+    tool(&mut s, ToolId::Pointer);
+    events(&mut s, &[
+        ToolEvent::drag(130.0, 130.0),
+        ToolEvent::down(130.0, 130.0),
+        ToolEvent::up(130.0, 130.0),
+        ToolEvent::drag(130.0, 130.0),
+        ToolEvent::down(130.0, 130.0),
+        ToolEvent::up(130.0, 130.0),
+        ToolEvent::double(130.0, 130.0),
+        ToolEvent::drag(130.0, 130.0),
+    ]);
+    let d = s.active().unwrap();
+    assert!(d.bitmap_mode, "Bitmapmodus");
+    assert_eq!(d.selection.elements, vec![b]);
+    assert_eq!(s.tools.active, ToolId::Marquee, "Werkzeug Auswahlrahmen");
+    // im Bitmapmodus mit dem Auswahlrahmen weiterarbeiten, Esc ohne Rahmen beendet ihn
+    s.tool_event(&ToolEvent::key(ToolKey::Escape)).expect("Esc");
+    assert!(!s.active().unwrap().bitmap_mode);
+    assert_eq!(s.tools.active, ToolId::Pointer);
+}
+
+/// PARITAET_A K6–K9: Mauszeiger beim Überfahren wie im Original.
+#[test]
+fn hover_cursors_like_original() {
+    use fp_engine::tools::Cursor;
+    let mut s = doc_session(400.0, 300.0);
+    let r = rect(&mut s, 50.0, 50.0, 150.0, 120.0);
+    select(&mut s, &[]);
+    let hover = |s: &mut Session, x: f32, y: f32| s.tool_event(&ToolEvent::drag(x, y)).expect("hover").cursor;
+    // Füllwerkzeug: über leerer Fläche ⊘, über einem Objekt der Farbeimer
+    tool(&mut s, ToolId::PaintBucket);
+    assert_eq!(hover(&mut s, 300.0, 250.0), Cursor::NotAllowed);
+    assert_eq!(hover(&mut s, 100.0, 80.0), Cursor::Bucket);
+    // Zuschneiden: Zuschneide-Symbol (Exportbereich bleibt beim Fadenkreuz)
+    tool(&mut s, ToolId::Crop);
+    assert_eq!(hover(&mut s, 300.0, 250.0), Cursor::Crop);
+    tool(&mut s, ToolId::ExportArea);
+    assert_eq!(hover(&mut s, 300.0, 250.0), Cursor::Crosshair);
+    // Stift über leerer Leinwand: Federspitze (Cursor::Pen, ohne Zusatz)
+    tool(&mut s, ToolId::Pen);
+    assert_eq!(hover(&mut s, 300.0, 250.0), Cursor::Pen);
+    // Hand: offen beim Überfahren, Faust nur beim Ziehen, danach wieder offen
+    tool(&mut s, ToolId::Hand);
+    assert_eq!(hover(&mut s, 300.0, 250.0), Cursor::Hand);
+    assert_eq!(s.tool_event(&ToolEvent::down(300.0, 250.0)).expect("down").cursor, Cursor::Grabbing);
+    let _ = s.tool_event(&ToolEvent::drag(305.0, 252.0));
+    let _ = s.tool_event(&ToolEvent::up(305.0, 252.0));
+    assert_eq!(hover(&mut s, 305.0, 252.0), Cursor::Hand);
+    let _ = r;
+}
+
+/// UX-A L24: Stift Klick, Klick, Doppelklick – genau die Folge der Leinwand (je Klick Drücken,
+/// Loslassen, Überfahren; beim zweiten Klick des Doppelklicks danach `DoubleClick`). Original:
+/// offener Pfad mit drei Punkten 250,150 → 330,150 → 330,220, ein Verlaufsschritt.
+#[test]
+fn pen_double_click_keeps_open_path_like_original() {
+    let mut s = doc_session(600.0, 400.0);
+    tool(&mut s, ToolId::Pen);
+    let before = doc(&s);
+    let n0 = top_elements(&s).len();
+    let h0 = s.active().unwrap().history.len();
+    let click = |x: f32, y: f32| vec![ToolEvent::drag(x, y), ToolEvent::down(x, y), ToolEvent::up(x, y), ToolEvent::drag(x, y)];
+    let mut seq = click(250.0, 150.0);
+    seq.extend(click(330.0, 150.0));
+    seq.extend(click(330.0, 220.0));
+    seq.extend([ToolEvent::down(330.0, 220.0), ToolEvent::up(330.0, 220.0), ToolEvent::double(330.0, 220.0), ToolEvent::drag(330.0, 220.0)]);
+    events(&mut s, &seq);
+    assert_eq!(top_elements(&s).len(), n0 + 1, "Pfad bleibt");
+    assert_eq!(s.active().unwrap().history.len(), h0 + 1, "ein Verlaufsschritt");
+    let c = &path_of(&s, last(&s)).contours[0];
+    assert!(!c.closed);
+    let pts: Vec<(f32, f32)> = c.nodes.iter().map(|n| (n.anchor.x, n.anchor.y)).collect();
+    assert_eq!(pts, vec![(250.0, 150.0), (330.0, 150.0), (330.0, 220.0)]);
+    assert_eq!(s.tools.active, ToolId::Pen, "Werkzeug bleibt");
+    undo_redo(&mut s, &before);
+    // danach beginnt ein Klick einen neuen Pfad (nicht das Fortsetzen des eben gezeichneten)
+    let mut seq = click(100.0, 300.0);
+    seq.extend(click(150.0, 300.0));
+    seq.extend([ToolEvent::down(150.0, 300.0), ToolEvent::up(150.0, 300.0), ToolEvent::double(150.0, 300.0)]);
+    events(&mut s, &seq);
+    assert_eq!(top_elements(&s).len(), n0 + 2);
+    assert_eq!(path_of(&s, last(&s)).contours[0].nodes.len(), 2);
+}
+
+/// UX-A L15/L16: Rechteck von 240,145 um +60/+30 neben E1 (Mitte x = 250) und R2 (Oberkante
+/// y = 150). Der Startpunkt rastet nur innerhalb von 5 Bildschirmpixeln ein (Original), Umschalt =
+/// Quadrat ab dem Startpunkt, Alt = von der Mitte aus. Viele kleine Bewegungen wie mit der Maus.
+#[test]
+fn rectangle_start_snap_shift_alt_like_original() {
+    fn draw(s: &mut Session, from: (f32, f32), d: (f32, f32), shift: bool, alt: bool) -> Rect {
+        let m = |e: ToolEvent| {
+            let e = if shift { e.shift() } else { e };
+            if alt { e.alt() } else { e }
+        };
+        let mut seq = vec![m(ToolEvent::drag(from.0, from.1)), m(ToolEvent::down(from.0, from.1))];
+        for i in 1..=12 {
+            let f = i as f32 / 12.0;
+            seq.push(m(ToolEvent::drag(from.0 + d.0 * f, from.1 + d.1 * f)));
+        }
+        seq.push(m(ToolEvent::up(from.0 + d.0, from.1 + d.1)));
+        events(s, &seq);
+        let r = bounds(s, last(s));
+        s.undo().expect("undo");
+        r
+    }
+    let mut s = doc_session(600.0, 400.0);
+    ellipse(&mut s, 200.0, 20.0, 300.0, 80.0);
+    rect(&mut s, 330.0, 150.0, 400.0, 220.0);
+    select(&mut s, &[]);
+    tool(&mut s, ToolId::Rectangle);
+    // 10 bzw. 5 px entfernt: kein Einrasten (strikt kleiner als der Fangabstand)
+    assert_eq!(draw(&mut s, (240.0, 145.0), (60.0, 30.0), false, false), Rect::new(240.0, 145.0, 300.0, 175.0));
+    assert_eq!(draw(&mut s, (240.0, 145.0), (60.0, 30.0), true, false), Rect::new(240.0, 145.0, 300.0, 205.0), "Umschalt: Quadrat");
+    assert_eq!(draw(&mut s, (240.0, 145.0), (60.0, 30.0), false, true), Rect::new(180.0, 115.0, 300.0, 175.0), "Alt: von der Mitte");
+    // innerhalb von 5 Bildschirmpixeln rastet der Start ein
+    assert_eq!(draw(&mut s, (247.0, 148.0), (53.0, 27.0), false, false), Rect::new(250.0, 150.0, 300.0, 175.0));
+    // bei 200 % sind 4 Dokumentpixel 8 Bildschirmpixel: kein Einrasten
+    ex(&mut s, "view.setZoom", json!({"zoom": 2.0}));
+    assert_eq!(draw(&mut s, (246.0, 146.0), (54.0, 29.0), false, false), Rect::new(246.0, 146.0, 300.0, 175.0));
+}
+
 // ------------------------------------------------------------------ Fang und Vollständigkeit
 
 #[test]
@@ -1061,13 +1224,15 @@ fn repeated_drags_no_duplicates_and_undo_chain() {
     let a = rect(&mut s, 50.0, 50.0, 150.0, 120.0);
     let start = doc(&s);
     tool(&mut s, ToolId::Pointer);
-    // Rundung mehrmals ziehen: der Wert wird ersetzt, die Kontur bleibt eine
-    for (i, x) in [60.0, 70.0, 55.0].iter().enumerate() {
-        events(&mut s, &[ToolEvent::down(50.0, 50.0), ToolEvent::drag(*x - 2.0, 51.0), ToolEvent::drag(*x, 52.0), ToolEvent::up(*x, 52.0)]);
+    // Eckgriff mehrmals ziehen (skaliert, PARITAET_A L26): Kontur bleibt eine, Rundung 0
+    let mut from = (150.0, 120.0);
+    for (i, to) in [(160.0, 130.0), (140.0, 110.0), (150.0, 120.0)].into_iter().enumerate() {
+        events(&mut s, &[ToolEvent::down(from.0, from.1), ToolEvent::drag((from.0 + to.0) / 2.0, (from.1 + to.1) / 2.0), ToolEvent::drag(to.0, to.1), ToolEvent::up(to.0, to.1)]);
+        from = to;
         let p = path_of(&s, a);
         assert_eq!(p.contours.len(), 1, "Durchgang {i}");
-        let r = p.primitive.as_ref().map(|r| r.roundness).unwrap_or(0.0);
-        assert!((r - (*x - 50.0) / 35.0).abs() < 1e-3, "Durchgang {i}: {r}");
+        assert_eq!(p.primitive.as_ref().map(|r| r.roundness), Some(0.0), "Durchgang {i}");
+        assert!(rect_approx(bounds(&s, a), Rect::new(50.0, 50.0, to.0, to.1)), "Durchgang {i}: {:?}", bounds(&s, a));
     }
     assert_eq!(top_elements(&s).len(), 1);
     // Skalieren und 9-Slice mehrmals
@@ -1244,11 +1409,13 @@ fn shared_layer_elements_are_editable() {
     drag(&mut s, (100.0, 80.0), (120.0, 90.0));
     assert!(rect_approx(bounds(&s, a), Rect::new(70.0, 60.0, 170.0, 130.0)), "{:?}", bounds(&s, a));
     undo_redo(&mut s, &before);
-    // Rundung an der Ecke
+    // Eckgriff skaliert (auch auf der geteilten Ebene), die Rundung bleibt
     let before = doc(&s);
     events(&mut s, &[ToolEvent::down(70.0, 60.0), ToolEvent::drag(75.0, 61.0), ToolEvent::drag(80.0, 62.0), ToolEvent::up(80.0, 62.0)]);
-    assert!(path_of(&s, a).primitive.as_ref().is_some_and(|p| p.roundness > 0.0));
+    assert!(rect_approx(bounds(&s, a), Rect::new(80.0, 62.0, 170.0, 130.0)), "{:?}", bounds(&s, a));
+    assert!(path_of(&s, a).primitive.as_ref().is_some_and(|p| p.roundness == 0.0));
     undo_redo(&mut s, &before);
+    s.undo().expect("undo");
     // Skalieren und Teilauswahl-Punkt
     tool(&mut s, ToolId::Scale);
     let before = doc(&s);

@@ -275,11 +275,8 @@ enum PState {
     Rubber { start: Point, cur: Point, add: bool },
     Scaling { handle: usize, bounds: Rect, cur: Rect },
     DraggingPoint { start: Point, cur: Point, hit: PointHit, pull: bool, guides: Vec<Overlay> },
-    /// Eckpunkt einer Rechteck-Grundform gedrückt (Ziehen = Eckenrundung).
-    PressedCorner { start: Point, id: ElementId, corner: usize },
     /// Steuerpunkt einer automatischen Form wird gezogen.
     Control(ControlDrag),
-    Rounding { id: ElementId, corner: usize, px: f32 },
 }
 
 /// Sichtbare Steuerpunkte der ausgewählten automatischen Formen: (Form, Index, Lage, Tooltip).
@@ -342,47 +339,6 @@ fn pick(command: &str, params: serde_json::Value) -> Invocation {
     Invocation::new("tool.pick", json!({"command": command, "params": params}))
 }
 
-/// Rechteck-Grundform unter den ausgewählten Elementen, deren Eckpunkt bei `p` liegt:
-/// (Element, Ecke 0 LO, 1 RO, 2 RU, 3 LU).
-fn primitive_corner_at(ctx: &ToolContext, p: Point, tol: f32) -> Option<(ElementId, usize)> {
-    for id in &ctx.selection.elements {
-        let Some(e) = docops::element_on_page(ctx.doc, ctx.page, *id) else { continue };
-        let ElementKind::Path(pe) = &e.kind else { continue };
-        let Some(pr) = &pe.primitive else { continue };
-        let r = pr.rect.normalized();
-        for (i, c) in r.corners().iter().enumerate() {
-            if dist(pr.transform.apply(*c), p) <= tol {
-                return Some((*id, i));
-            }
-        }
-    }
-    None
-}
-
-/// Eckenrundung in px beim Ziehen der Ecke `corner` nach `p` (waagerechter Abstand nach innen
-/// im Rechteckraum, höchstens die halbe kürzere Seite) und die Vorschau-Kontur.
-fn rounding_at(ctx: &ToolContext, id: ElementId, corner: usize, p: Point) -> Option<(f32, Contour)> {
-    let e = docops::element_on_page(ctx.doc, ctx.page, id)?;
-    let ElementKind::Path(pe) = &e.kind else { return None };
-    let pr = pe.primitive.as_ref()?;
-    let r = pr.rect.normalized();
-    let q = pr.transform.inverse().map(|m| m.apply(p)).unwrap_or(p);
-    let half = r.width().min(r.height()) / 2.0;
-    let inward = match corner {
-        0 | 3 => q.x - r.left,
-        _ => r.right - q.x,
-    };
-    let px = inward.clamp(0.0, half.max(0.0));
-    let frac = if half > 0.0 { (px / half) as f64 } else { 0.0 };
-    let mut c = crate::geometry::rect_contour(r, frac);
-    for n in &mut c.nodes {
-        n.anchor = pr.transform.apply(n.anchor);
-        n.pred = pr.transform.apply(n.pred);
-        n.succ = pr.transform.apply(n.succ);
-    }
-    Some((px, c))
-}
-
 /// Zeiger, Hintere auswählen und Teilauswahl.
 #[derive(Clone, Debug)]
 pub struct PointerTool {
@@ -429,15 +385,11 @@ impl PointerTool {
             self.hover_cursor = Cursor::PointerPoint;
             return ToolResponse { cursor: self.hover_cursor, ..ToolResponse::default() };
         }
-        if self.id == ToolId::Pointer && primitive_corner_at(ctx, p, tol).is_some() {
-            self.hover_cursor = Cursor::PointerPoint;
-            return ToolResponse { cursor: self.hover_cursor, ..ToolResponse::default() };
-        }
+        // Über den Griffen der Auswahl zeigt das Original den einfachen Pfeil (PARITAET_A K2/K3)
         if self.paint_handles(ctx)
             && let Some(b) = Self::selection_bounds(ctx)
-            && let Some(h) = handle_at(&b, p, tol)
+            && handle_at(&b, p, tol).is_some()
         {
-            self.hover_cursor = handle_cursor(h);
             return ToolResponse { cursor: self.hover_cursor, ..ToolResponse::default() };
         }
         if self.id != ToolId::SelectBehind && point_hit(ctx, p, self.id == ToolId::Subselection, self.id == ToolId::Subselection).is_some() {
@@ -470,14 +422,8 @@ impl PointerTool {
             self.state = PState::Control(ControlDrag { id, index, from: at, points: vec![at] });
             return ToolResponse { overlay: control_points_feedback(ctx, Some((id, index, at))), cursor: Cursor::PointerPoint, ..ToolResponse::default() };
         }
-        // Eckpunkte von Rechteck-Grundformen: Ziehen ändert die Rundung (wie CS6)
-        if self.id == ToolId::Pointer
-            && let Some((id, corner)) = primitive_corner_at(ctx, p, tol)
-        {
-            self.state = PState::PressedCorner { start: p, id, corner };
-            return ToolResponse { cursor: Cursor::PointerPoint, ..ToolResponse::default() };
-        }
-        // Griffe der Auswahl (nur Zeiger, PointerToolPaintHandles)
+        // Griffe der Auswahl (nur Zeiger, PointerToolPaintHandles); auch die Eckgriffe eines
+        // Rechtecks skalieren – im Original live gemessen, die Rundung bleibt (PARITAET_A L26)
         if self.paint_handles(ctx)
             && let Some(b) = Self::selection_bounds(ctx)
             && let Some(h) = handle_at(&b, p, tol)
@@ -570,16 +516,6 @@ impl PointerTool {
                     self.overlay.push(Overlay::Label { at: p, text: t });
                 }
                 self.state = PState::Control(c);
-                ToolResponse::with_overlay(self.overlay.clone(), Cursor::PointerPoint)
-            }
-            PState::PressedCorner { start, id, corner } if dist(start, p) >= thr => {
-                self.state = PState::Rounding { id, corner, px: 0.0 };
-                self.moved(p, ev, ctx)
-            }
-            PState::Rounding { id, corner, .. } => {
-                let Some((px, c)) = rounding_at(ctx, id, corner, p) else { return ToolResponse::default() };
-                self.state = PState::Rounding { id, corner, px };
-                self.overlay = vec![Overlay::Path { contours: vec![c] }, Overlay::Label { at: p, text: fp_i18n::tr!("msg-tool-roundness", px = fmt_num(px)) }];
                 ToolResponse::with_overlay(self.overlay.clone(), Cursor::PointerPoint)
             }
             PState::PressedPoint { start, hit, pull } if dist(start, p) >= thr => {
@@ -731,7 +667,6 @@ impl PointerTool {
                 Some(inv) => ToolResponse::commit(vec![inv]),
                 None => ToolResponse::default(),
             },
-            PState::Rounding { id, px, .. } => ToolResponse::commit(vec![Invocation::new("pi.roundness", json!({"value": px, "pixels": true, "ids": [id.0]}))]),
             PState::Moving { start, cur, copy, .. } => {
                 let (dx, dy) = (cur.x - start.x, cur.y - start.y);
                 // Umschalt-Klick hat das Objekt gerade abgewählt: nichts verschieben
@@ -814,10 +749,11 @@ impl PointerTool {
                     _ => ToolResponse::default(),
                 }
             }
-            ElementKind::Bitmap(_) => ToolResponse::commit(vec![
-                pick("select.set", json!({"ids": [e.id.0], "mode": "replace"})),
-                Invocation::new("modify.editBitmap", json!({})),
-            ]),
+            // Bitmap: Bitmapmodus, das Werkzeug wechselt zum Auswahlrahmen (PARITAET_A L27)
+            ElementKind::Bitmap(_) => ToolResponse {
+                switch_tool: Some(ToolId::Marquee),
+                ..ToolResponse::commit(vec![pick("select.set", json!({"ids": [e.id.0], "mode": "replace"})), Invocation::new("modify.editBitmap", json!({}))])
+            },
             ElementKind::Text(_) => text_edit_response(e.id, p),
             ElementKind::Instance(_) => ToolResponse {
                 commands: vec![pick("select.set", json!({"ids": [e.id.0], "mode": "replace"}))],
@@ -1417,7 +1353,13 @@ pub struct CropTool {
 impl CropTool {
     /// Neues Werkzeug (Crop oder ExportArea).
     pub fn new(id: ToolId) -> CropTool {
-        CropTool { id, rect: None, drag: None, cursor: Cursor::Crosshair }
+        CropTool { id, rect: None, drag: None, cursor: Self::idle(id) }
+    }
+
+    /// Zeiger ohne Griff: Zuschneiden zeigt das Zuschneide-Symbol (PARITAET_A K9), Exportbereich
+    /// das Fadenkreuz.
+    fn idle(id: ToolId) -> Cursor {
+        if id == ToolId::Crop { Cursor::Crop } else { Cursor::Crosshair }
     }
 
     fn commit(&mut self) -> ToolResponse {
@@ -1460,7 +1402,7 @@ impl ToolMachine for CropTool {
                 self.cursor = match h {
                     Some(h) => handle_cursor(h),
                     None if inside => Cursor::Move,
-                    None => Cursor::Crosshair,
+                    None => Self::idle(self.id),
                 };
                 ToolResponse { overlay: self.overlay(), cursor: self.cursor, ..ToolResponse::default() }
             }
@@ -1486,9 +1428,9 @@ impl ToolMachine for CropTool {
                         Some(r) => match handle_at(&r, *pos, tol) {
                             Some(h) => handle_cursor(h),
                             None if r.contains(*pos) => Cursor::Move,
-                            None => Cursor::Crosshair,
+                            None => Self::idle(self.id),
                         },
-                        None => Cursor::Crosshair,
+                        None => Self::idle(self.id),
                     };
                 }
                 let mut o = self.overlay();
@@ -1502,9 +1444,13 @@ impl ToolMachine for CropTool {
             }
             ToolInput::Pointer { kind: PointerKind::DoubleClick, .. } | ToolInput::Key(ToolKey::Enter) => self.commit(),
             ToolInput::Key(ToolKey::Escape) => {
+                let had = self.rect.is_some();
                 self.rect = None;
                 self.drag = None;
-                ToolResponse::default()
+                // Zuschneiden: Esc verwirft den Rahmen, das Werkzeug wechselt zum Zeiger (Original
+                // live gemessen, PARITAET_A L28); Exportbereich nicht gemessen, bleibt
+                let switch_tool = (had && self.id == ToolId::Crop).then_some(ToolId::Pointer);
+                ToolResponse { switch_tool, ..ToolResponse::default() }
             }
             _ => ToolResponse::default(),
         }

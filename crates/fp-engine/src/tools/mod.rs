@@ -318,6 +318,8 @@ pub enum Cursor {
     /// Hilfslinie verschieben (↕ bzw. ↔).
     GuideH,
     GuideV,
+    /// Zuschneiden (zwei verschränkte Winkel).
+    Crop,
 }
 
 /// Antwort eines Werkzeugs.

@@ -181,7 +181,49 @@ fn magnifier(p: &Painter, at: Pos2, c: &Palette, minus: bool) {
     }
 }
 
+/// Offene Hand (Hand-Werkzeug bzw. Leertaste ohne Maustaste, PARITAET_A K6): vier gespreizte,
+/// getrennte Finger und abgespreizter Daumen.
+fn open_hand(p: &Painter, at: Pos2, c: &Palette) {
+    let (f, o) = (c.cursor_outline, c.cursor_fill);
+    let palm = egui::Rect::from_center_size(pos2(at.x + 0.5, at.y + 4.0), vec2(10.0, 8.0));
+    // Finger: Lage x, Länge (Mittel- und Ringfinger länger)
+    for (k, len) in [(0.0, 7.0), (1.0, 9.0), (2.0, 8.5), (3.0, 6.0)] {
+        let x = palm.left() + 1.0 + k * 3.0;
+        let r = egui::Rect::from_min_max(pos2(x - 1.0, palm.top() - len), pos2(x + 1.0, palm.top() + 2.0));
+        p.rect_filled(r.expand(1.0), 2.0, o);
+        p.rect_filled(r, 1.0, f);
+    }
+    let thumb = [(palm.left() - 5.0 - at.x, palm.top() - at.y - 0.5), (palm.left() - 3.5 - at.x, palm.top() - at.y - 1.5), (palm.left() + 0.5 - at.x, palm.center().y - at.y), (palm.left() + 0.5 - at.x, palm.bottom() - at.y - 1.0)];
+    poly(p, at, &thumb, f, o);
+    p.rect_filled(palm.expand(1.0), 3.0, o);
+    p.rect_filled(palm, 2.5, f);
+}
+
+/// Zuschneide-Symbol: zwei verschränkte Winkel, Hotspot in der Mitte (PARITAET_A K9).
+fn crop(p: &Painter, at: Pos2, c: &Palette) {
+    for (a, b, d) in [((-7.0, -3.0), (3.0, -3.0), (3.0, 7.0)), ((-3.0, -7.0), (-3.0, 3.0), (7.0, 3.0))] {
+        line(p, at, a, b, c);
+        line(p, at, b, d, c);
+    }
+}
+
+/// Federspitze (Stift über leerer Leinwand, PARITAET_A K7): Spitze im Hotspot, nach unten
+/// breiter, mit Schlitz, Loch und Schaftkante.
+fn nib(p: &Painter, at: Pos2, c: &Palette) {
+    let pts = [(0.0, 0.0), (4.5, 7.0), (3.0, 11.0), (-3.0, 11.0), (-4.5, 7.0)];
+    poly(p, at, &pts, c.cursor_fill, c.cursor_outline);
+    p.line_segment([pos2(at.x, at.y + 1.0), pos2(at.x, at.y + 6.0)], Stroke::new(1.0, c.cursor_outline));
+    p.circle_filled(pos2(at.x, at.y + 7.5), 1.2, c.cursor_outline);
+    let bar = egui::Rect::from_min_max(pos2(at.x - 4.0, at.y + 12.0), pos2(at.x + 4.0, at.y + 14.5));
+    p.rect_filled(bar.expand(1.0), 0.0, c.cursor_outline);
+    p.rect_filled(bar, 0.0, c.cursor_fill);
+}
+
 fn hand(p: &Painter, at: Pos2, c: &Palette, closed: bool) {
+    if !closed {
+        open_hand(p, at, c);
+        return;
+    }
     // Hotspot = Handmitte
     let palm = egui::Rect::from_center_size(pos2(at.x, at.y + 3.0), vec2(11.0, 9.0));
     let (f, o) = (c.cursor_outline, c.cursor_fill);
@@ -308,7 +350,10 @@ pub fn paint(p: &Painter, at: Pos2, c: Cursor, colors: &Palette, precise: bool) 
             crosshair(p, at, colors, 0.0, 7.0);
             p.circle_stroke(at, 4.0, Stroke::new(1.0, colors.cursor_fill));
         }
-        Cursor::Pen | Cursor::PenClose | Cursor::PenAdd | Cursor::PenRemove | Cursor::PenContinue => {
+        // Stift ohne Zusatz: Federspitze wie im Original (K7)
+        Cursor::Pen => nib(p, at, colors),
+        Cursor::Crop => crop(p, at, colors),
+        Cursor::PenClose | Cursor::PenAdd | Cursor::PenRemove | Cursor::PenContinue => {
             pen(p, at, colors);
             pen_badge(p, at, colors, c);
         }
@@ -370,7 +415,7 @@ mod tests {
                 Cursor::NotAllowed, Cursor::PointerPoint, Cursor::PointerSegment, Cursor::Subselect, Cursor::SelectBehind, Cursor::PenAdd,
                 Cursor::PenRemove, Cursor::PenContinue, Cursor::ResizeH, Cursor::ResizeV, Cursor::ResizeNeSw, Cursor::Skew, Cursor::Distort,
                 Cursor::Pivot, Cursor::Knife, Cursor::Freeform, Cursor::Reshape, Cursor::Pencil, Cursor::Eraser, Cursor::Stamp, Cursor::Wand,
-                Cursor::Lasso, Cursor::Gradient, Cursor::GuideH, Cursor::GuideV,
+                Cursor::Lasso, Cursor::Gradient, Cursor::GuideH, Cursor::GuideV, Cursor::Crop,
             ] {
                 paint(p, pos2(50.0, 50.0), c, &theme.colors, false);
                 paint(p, pos2(50.0, 50.0), c, &theme.colors, true);

@@ -1277,7 +1277,10 @@ fn crop_context_menu_commits_and_cancels() {
     super::context::apply(&ctx, &mut h.state_mut().state, act, None);
     assert!(!h.state_mut().state.session.tool_feedback().iter().any(|o| matches!(o, Overlay::Shade { .. })), "Rahmen verworfen");
     assert_eq!(h.state().state.session.active().map(|d| (*d.doc).clone()), Some(before.clone()));
+    // wie Esc: das Werkzeug wechselt zum Zeiger (PARITAET_A L28)
+    assert_eq!(h.state().state.session.tools.active, ToolId::Pointer);
     // „Dokument zuschneiden“ übernimmt den Rahmen
+    set_tool(&mut h, ToolId::Crop);
     mouse_drag(&mut h, a, b, Modifiers::NONE);
     let nodes = super::context::build(&h.state().state, super::context::entries("6910"));
     let Some(crate::menu::ItemAction::Ui(act)) = find_item(&nodes, "Dokument zuschneiden") else { panic!("Eintrag fehlt") };
@@ -1298,4 +1301,54 @@ fn arrow_keys_nudge_through_the_tool() {
     let d = h.state().state.session.active().expect("d");
     let bnd = fp_engine::docops::element_bounds(&d.doc, &top(&h)[0]).expect("Grenzen");
     assert_eq!(bnd.left, 60.0);
+}
+
+/// UX-A L26 mit Mausereignissen über viele Bilder: R1 50,50–150,120 gewählt, Eckgriff rechts
+/// unten mit dem Zeiger um +40/+30 ziehen → größer (Original live), Rundung bleibt 0.
+#[test]
+fn pointer_corner_handle_scales_rectangle_ui() {
+    let mut h = harness();
+    let _ = h.state_mut().state.session.execute("view.setZoom", json!({"zoom": 1.0}));
+    let _ = h.state_mut().state.session.execute("draw.rectangle", json!({"rect": [50, 50, 150, 120]}));
+    set_tool(&mut h, ToolId::Pointer);
+    h.run_steps(2);
+    let a = at(&h, 150.0, 120.0);
+    hg_ev(&mut h, Event::PointerMoved(a));
+    hg_ev(&mut h, Event::PointerButton { pos: a, button: PointerButton::Primary, pressed: true, modifiers: Modifiers::NONE });
+    for i in 1..=10 {
+        hg_ev(&mut h, Event::PointerMoved(a + egui::vec2(4.0 * i as f32, 3.0 * i as f32)));
+    }
+    let b = a + egui::vec2(40.0, 30.0);
+    hg_ev(&mut h, Event::PointerButton { pos: b, button: PointerButton::Primary, pressed: false, modifiers: Modifiers::NONE });
+    h.run_steps(2);
+    let d = h.state().state.session.active().expect("d");
+    let e = top(&h)[0].clone();
+    let r = fp_engine::docops::element_bounds(&d.doc, &e).expect("Grenzen");
+    assert_eq!((r.left, r.top, r.right, r.bottom), (50.0, 50.0, 190.0, 150.0));
+    let ElementKind::Path(p) = &e.kind else { panic!("kein Pfad") };
+    assert_eq!(p.primitive.as_ref().map(|x| x.roundness), Some(0.0));
+}
+
+/// UX-A L24 mit getrennten Bildern und echtem Abstand (Klicks ~0,3 s auseinander, Doppelklick
+/// ~0,1 s): Stift Klick, Klick, Doppelklick → offener Pfad mit drei Punkten.
+#[test]
+fn pen_double_click_in_separate_frames_keeps_path() {
+    let mut h = harness();
+    let _ = h.state_mut().state.session.execute("view.setZoom", json!({"zoom": 1.0}));
+    set_tool(&mut h, ToolId::Pen);
+    h.run_steps(2);
+    let n0 = top(&h).len();
+    let (p1, p2, p3) = (at(&h, 250.0, 150.0), at(&h, 330.0, 150.0), at(&h, 330.0, 220.0));
+    for p in [p1, p2, p3] {
+        hg_click(&mut h, p);
+        h.run_steps(15);
+    }
+    hg_click(&mut h, p3);
+    h.run_steps(3);
+    assert_eq!(top(&h).len(), n0 + 1, "Pfad übernommen");
+    let e = top(&h)[0].clone();
+    let ElementKind::Path(pe) = &e.kind else { panic!("kein Pfad") };
+    let pts: Vec<(f32, f32)> = pe.contours[0].nodes.iter().map(|n| (n.anchor.x, n.anchor.y)).collect();
+    assert_eq!(pts, vec![(250.0, 150.0), (330.0, 150.0), (330.0, 220.0)]);
+    assert!(!pe.contours[0].closed);
 }

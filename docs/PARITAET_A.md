@@ -217,8 +217,8 @@ Testdokument mit denselben Objekten in beiden Programmen (per JSF angelegt): R1,
 | L12 | Zauberstab-Klick auf Bitmap | Bitmapmodus („Bitmap bearbeiten“ + „Zauberstab“ im Verlauf), Auswahlrahmen | Auswahlrahmen | ✅ | a_320 |
 | L13 | danach **Esc** | „Bitmapmodus beenden“: Auswahlrahmen weg, Werkzeug wechselt zum Zeiger, Bitmap bleibt als Objekt gewählt | Auswahlrahmen bleibt, Werkzeug bleibt Zauberstab | ❌ | a_321 |
 | L14 | danach Strg+D | Auswahl aufheben | Auswahl aufheben | ✅ | |
-| L15 | Rechteck, Umschalt gehalten, Ziehen 240,145 → +60/+30 | Quadrat 60 × 60 ab dem Startpunkt | 250,150–300,175: kein Quadrat, Startpunkt um 10/5 px verschoben (rastet an E1-Mitte x=250 und R2-Oberkante y=150 ein) | ❌ | |
-| L16 | Rechteck, Alt gehalten | von der Mitte aus: 180–300 × 125–175 | wie ohne Alt (250,150–300,175) | ❌ | |
+| L15 | Rechteck, Umschalt gehalten, Ziehen 240,145 → +60/+30 | Quadrat 60 × 60 ab dem Startpunkt | 250,150–300,175: kein Quadrat, Startpunkt um 10/5 px verschoben (rastet an E1-Mitte x=250 und R2-Oberkante y=150 ein) | 🔧 behoben, Nachmessung im echten Fenster offen | |
+| L16 | Rechteck, Alt gehalten | von der Mitte aus: 180–300 × 125–175 | wie ohne Alt (250,150–300,175) | 🔧 behoben, Nachmessung im echten Fenster offen | |
 | L17 | Rechteck, 5× Pfeil hoch während des Ziehens | Rundung bleibt 0 (in CS6 live keine Wirkung) | Rundung 0,145 | ⚠️ | |
 | L18 | Rechteck, Leertaste während des Ziehens | Startpunkt wandert mit (Form verschoben) | Startpunkt wandert mit | ✅ | |
 | L19 | Rechteck, Esc während des Ziehens | wird ignoriert, Rechteck entsteht beim Loslassen | Aufziehen abgebrochen, kein Rechteck | ⚠️ | |
@@ -226,11 +226,11 @@ Testdokument mit denselben Objekten in beiden Programmen (per JSF angelegt): R1,
 | L21 | Textwerkzeug: Klick, Esc ohne Text | kein Objekt, Werkzeug bleibt Text | kein Objekt, Werkzeug wechselt zum Zeiger | ⚠️ | |
 | L22 | Textwerkzeug: Klick bei 300,340, „Abc“, Esc | Text 300,323–339,341 (Klickpunkt ≈ Grundlinie), Werkzeug bleibt Text | Text 299,341–321,356 (Klickpunkt = Oberkante), Werkzeug wechselt zum Zeiger | ❌ | |
 | L23 | Stift: 2 Klicks, Esc | offener Pfad 250,150–330,150 | ebenso | ✅ | |
-| L24 | Stift: Klick, Klick, Doppelklick | offener Pfad mit 3 Punkten bis 330,220 | **kein Pfad** (nach dem Doppelklick ist nichts da) | ❌ | |
+| L24 | Stift: Klick, Klick, Doppelklick | offener Pfad mit 3 Punkten bis 330,220 | **kein Pfad** (nach dem Doppelklick ist nichts da) | 🔧 behoben, Nachmessung im echten Fenster offen | |
 | L25 | Zoomwerkzeug: Rahmen 50,50–150,120 aufziehen | 1150 % (stufenlos eingepasst) | 800 % (Tabellenstufe) | ❌ | |
-| L26 | Zeiger: Eckgriff eines gewählten Rechtecks um +40/+30 ziehen | Rechteck wird **größer** (bis 193,153), Rundung bleibt 0 | keine Änderung (weder Größe noch Rundung) | ❌ | |
-| L27 | Zeiger: Doppelklick auf Bitmap | Bitmapmodus, Werkzeug wechselt zum Auswahlrahmen | nichts | ❌ | |
-| L28 | Zuschneiden: Rahmen ziehen, Esc | Leinwand unverändert, Werkzeug wechselt zum Zeiger | Leinwand unverändert, Werkzeug bleibt Zuschneiden | ⚠️ | |
+| L26 | Zeiger: Eckgriff eines gewählten Rechtecks um +40/+30 ziehen | Rechteck wird **größer** (bis 193,153), Rundung bleibt 0 | keine Änderung (weder Größe noch Rundung) | 🔧 behoben, Nachmessung im echten Fenster offen | |
+| L27 | Zeiger: Doppelklick auf Bitmap | Bitmapmodus, Werkzeug wechselt zum Auswahlrahmen | nichts | 🔧 behoben, Nachmessung im echten Fenster offen | |
+| L28 | Zuschneiden: Rahmen ziehen, Esc | Leinwand unverändert, Werkzeug wechselt zum Zeiger | Leinwand unverändert, Werkzeug bleibt Zuschneiden | 🔧 behoben, Nachmessung im echten Fenster offen | |
 | L29 | Zuschneiden: Rahmen 20,20–300,200, Eingabe, Strg+Z | 280 × 180, Rückgängig stellt 600 × 400 her | ebenso | ✅ | |
 | L30 | Skalieren: Eckgriff ziehen, Esc bzw. Eingabe | ⏳ (Werkzeug lässt sich im laufenden Original nicht per Skript wählen) | Esc verwirft, Eingabe übernimmt, ein Schritt | ⏳ | |
 
@@ -241,14 +241,14 @@ Das Original zeichnet einige Zeiger invertiert (XOR); auf weißem Grund sind sie
 | Nr | Lage | Original | Firepixel | |
 |---|---|---|---|---|
 | K1 | Zeiger über leerer Leinwand / über Objekt / im gewählten Objekt / mit Alt | schwarzer Pfeil | schwarzer Pfeil | ✅ |
-| K2 | Zeiger über Eckgriff eines gewählten Rechtecks | Pfeil (ohne Zusatz) | Pfeil mit schwarzem Quadrat | ⚠️ |
-| K3 | Zeiger über Kantengriff | Pfeil | Doppelpfeil ↔ | ⚠️ |
+| K2 | Zeiger über Eckgriff eines gewählten Rechtecks | Pfeil (ohne Zusatz) | Pfeil mit schwarzem Quadrat | 🔧 behoben, Nachmessung im echten Fenster offen |
+| K3 | Zeiger über Kantengriff | Pfeil | Doppelpfeil ↔ | 🔧 behoben, Nachmessung im echten Fenster offen |
 | K4 | Teilauswahl über Objekt | weißer Pfeil | weißer Pfeil mit Zusatz | ✅ |
 | K5 | Zoom / Zoom mit Alt | Lupe + / Lupe − | Lupe + / Lupe − | ✅ |
-| K6 | Hand-Werkzeug bzw. Leertaste, ohne Maustaste | **offene** Hand | geschlossene Faust | ⚠️ |
-| K7 | Stift über leerer Leinwand | Federspitze | Stift mit Kreuz (wie „Pfad schließen/entfernen“) | ⚠️ |
-| K8 | Füllwerkzeug über leerer Leinwand (kein Objekt) | Verbotszeichen ⊘ | Farbeimer | ⚠️ |
-| K9 | Zuschneiden | Zuschneide-Symbol | Fadenkreuz | ⚠️ |
+| K6 | Hand-Werkzeug bzw. Leertaste, ohne Maustaste | **offene** Hand | geschlossene Faust | 🔧 behoben, Nachmessung im echten Fenster offen |
+| K7 | Stift über leerer Leinwand | Federspitze | Stift mit Kreuz (wie „Pfad schließen/entfernen“) | 🔧 behoben, Nachmessung im echten Fenster offen |
+| K8 | Füllwerkzeug über leerer Leinwand (kein Objekt) | Verbotszeichen ⊘ | Farbeimer | 🔧 behoben, Nachmessung im echten Fenster offen |
+| K9 | Zuschneiden | Zuschneide-Symbol | Fadenkreuz | 🔧 behoben, Nachmessung im echten Fenster offen |
 | K10 | Radiergummi über Bitmap | Kreis in Pinselgröße | Kreis in Pinselgröße mit Mittelkreuz | ✅ |
 | K11 | Zauberstab, Pipette | Zauberstab / Pipette | Zauberstab / Pipette (eigene Form) | ✅ |
 

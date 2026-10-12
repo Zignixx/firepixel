@@ -63,13 +63,6 @@ impl DragTracker {
         self.state = Drag::Idle;
     }
 
-    fn dragging(&self) -> Option<(Point, Point)> {
-        match self.state {
-            Drag::Dragging { start, cur, .. } => Some((start, cur)),
-            _ => None,
-        }
-    }
-
     fn active(&self) -> bool {
         self.state != Drag::Idle
     }
