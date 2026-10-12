@@ -61,9 +61,9 @@ pub use model::{
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum TextError {
     /// Datei nicht lesbar.
-    #[error("Schriftdatei {0} nicht lesbar: {1}")]
+    #[error("{}", fp_i18n::t_args("err-text-font-io", &[("path", fp_i18n::Value::from(.0.clone())), ("error", fp_i18n::Value::from(.1.clone()))]))]
     Io(String, String),
     /// Keine gültige OpenType-/TrueType-Schrift.
-    #[error("ungültige Schrift: {0}")]
+    #[error("{}", fp_i18n::t_args("err-text-bad-font", &[("detail", fp_i18n::Value::from(.0.clone()))]))]
     BadFont(String),
 }

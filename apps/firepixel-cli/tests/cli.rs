@@ -15,7 +15,10 @@ fn tmp(name: &str) -> PathBuf {
 }
 
 fn cli() -> Command {
-    Command::cargo_bin("firepixel-cli").unwrap_or_else(|e| panic!("{e}"))
+    let mut c = Command::cargo_bin("firepixel-cli").unwrap_or_else(|e| panic!("{e}"));
+    // Ausgaben auf Deutsch prüfen (sonst Systemsprache)
+    c.env("FIREPIXEL_LANG", "de");
+    c
 }
 
 fn json_of(out: &[u8]) -> Value {
@@ -251,4 +254,18 @@ fn mcp_stdio_server_answers() {
     let _ = child.kill();
     let _ = child.wait();
     assert!(got_image);
+}
+
+/// UE-3: Ausgaben, Fehler und Hilfe der Kommandozeile in Englisch (`--lang en` bzw. `FIREPIXEL_LANG`).
+#[test]
+fn ausgaben_englisch() {
+    let out = cli().args(["--lang", "en", "commands", "--filter", "gaussian"]).assert().success().get_output().stdout.clone();
+    let s = String::from_utf8_lossy(&out);
+    assert!(s.contains("Gaussian Blur") || s.contains("filter.blur.gaussian"), "{s}");
+    assert!(s.contains("(* = required parameter)"), "{s}");
+    cli().env("FIREPIXEL_LANG", "en").args(["run"]).assert().code(1).stderr(predicate::str::contains("Error: give an input file or --new"));
+    cli().args(["--lang", "en", "--gibtsnicht"]).assert().code(2).stderr(predicate::str::contains("unknown option").and(predicate::str::contains("Help:")));
+    cli().args(["--lang", "de", "--gibtsnicht"]).assert().code(2).stderr(predicate::str::contains("unbekannte Option"));
+    cli().args(["--lang", "en", "render", "--help"]).assert().success().stdout(predicate::str::contains("Usage:").and(predicate::str::contains("Examples:")));
+    cli().args(["--lang", "en", "sprache", "liste"]).assert().success().stdout(predicate::str::contains("built-in").and(predicate::str::contains("Language folders:")));
 }

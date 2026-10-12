@@ -5,6 +5,7 @@
 //! `{"ok": false, "error": …}` mit Exit-Code 1).
 
 use clap::{ArgMatches, CommandFactory, FromArgMatches, Parser, Subcommand};
+use fp_i18n::{t, tr};
 use fp_engine::Session;
 use fp_mcp::docjson::{self, DocJsonOptions};
 use fp_mcp::render::{self as fprender, RenderRequest};
@@ -14,100 +15,50 @@ use std::process::ExitCode;
 
 mod sprache;
 
-const ABOUT: &str = "Firepixel – Kommandozeile (FW-PNG bearbeiten, rendern, Skripte, MCP-Server für KI-Agenten)";
-
-const AFTER_HELP: &str = "Beispiele:
-  firepixel-cli commands --filter align
-  firepixel-cli info entwurf.fw.png --json
-  firepixel-cli run entwurf.fw.png --cmd select.all --cmd modify.align.left --out ausgerichtet.fw.png
-  firepixel-cli run --new 400x300 --cmd draw.rectangle --params '{\"rect\":[20,20,200,120],\"fillColor\":\"#3366ff\"}' --out neu.fw.png
-  firepixel-cli render entwurf.fw.png --zoom 0.5 --out vorschau.png
-  firepixel-cli batch --actions aktionen.json --in eingang --out ausgang
-  firepixel-cli script makro.jsf entwurf.fw.png --out ergebnis.fw.png
-  firepixel-cli mcp                      (MCP über stdio, z. B. für Claude Code)
-  firepixel-cli mcp --http --port 47800  (MCP über HTTP auf 127.0.0.1 mit Token)
-  firepixel-cli mcp --bridge             (stdio-MCP zur laufenden Oberfläche, firepixel.exe --mcp)
-
-Befehlsnamen: <menü>.<eintrag> in camelCase (file.save, modify.transform.flipHorizontal, filter.blur.gaussian)
-sowie draw.*, element.*, layer.*, page.*, state.*, select.*. Parameter: firepixel-cli commands --filter <name> --json.";
-
 #[derive(Parser, Debug)]
-#[command(name = "firepixel-cli", version, about = ABOUT, after_help = AFTER_HELP)]
+#[command(name = "firepixel-cli", version)]
 struct Cli {
-    /// Ausgabe als JSON (maschinenlesbar)
+    // Hilfetexte aller Befehle und Optionen: kommandozeile.ftl (`cli-…`, siehe `localize`)
     #[arg(long, global = true)]
     json: bool,
+    #[arg(long, global = true, value_name = "CODE")]
+    lang: Option<String>,
     #[command(subcommand)]
     cmd: Cmd,
 }
 
 #[derive(Subcommand, Debug)]
 enum Cmd {
-    /// Befehle auf eine Datei anwenden und speichern
-    #[command(after_help = "Beispiele:
-  firepixel-cli run in.fw.png --cmd select.all --cmd modify.group --out out.fw.png
-  firepixel-cli run in.fw.png --cmd filter.blur.gaussian --params '{\"radius\":2}' --out out.fw.png
-  firepixel-cli run --new 200x100 --cmd draw.text --params '{\"text\":\"Hallo\",\"anchor\":[10,60],\"size\":32}' --out text.png
-  firepixel-cli run in.fw.png --steps schritte.json --out out.fw.png
-
---params gehört zum vorangehenden --cmd. --out mit Endung .png (ohne .fw) schreibt ein flaches PNG,
-sonst eine FW-PNG. --steps nimmt eine JSON-Liste [{\"cmd\": …, \"params\": {…}}, …] (Datei oder Text).")]
+    // Hilfetexte: kommandozeile.ftl (`cli-<befehl>`, `.examples`, `cli-<befehl>-arg-<option>`)
     Run {
-        /// Eingabedatei (.fw.png oder .png); entfällt mit --new
         file: Option<PathBuf>,
-        /// Neues Dokument BREITExHÖHE[:#farbe] statt einer Datei, z. B. 800x600 oder 64x64:#00000000
         #[arg(long, value_name = "WxH")]
         new: Option<String>,
-        /// Befehlsname (mehrfach möglich)
         #[arg(long = "cmd", value_name = "NAME")]
         cmds: Vec<String>,
-        /// JSON-Parameter für das vorangehende --cmd
         #[arg(long = "params", value_name = "JSON")]
         params: Vec<String>,
-        /// Schrittliste als JSON-Datei oder JSON-Text
         #[arg(long, value_name = "JSON|DATEI")]
         steps: Option<String>,
-        /// Alle Befehle als ein Rückgängig-Schritt
         #[arg(long)]
         group: bool,
-        /// Zieldatei (Vorgabe: Eingabedatei überschreiben nur mit --in-place)
         #[arg(long, value_name = "DATEI")]
         out: Option<PathBuf>,
-        /// Eingabedatei überschreiben
         #[arg(long)]
         in_place: bool,
     },
-    /// Dieselben Aktionen auf alle Dateien eines Ordners anwenden
-    #[command(after_help = "Beispiel aktionen.json:
-  [ {\"cmd\": \"select.all\"},
-    {\"cmd\": \"modify.canvas.imageSize\", \"params\": {\"percent\": 50}},
-    {\"cmd\": \"filter.sharpen.sharpen\"} ]
-
-  firepixel-cli batch --actions aktionen.json --in eingang --out ausgang
-  firepixel-cli batch --actions '[{\"cmd\":\"modify.transform.flipHorizontal\"}]' --in a --out b --format png")]
     Batch {
-        /// Aktionen als JSON-Datei oder JSON-Text
         #[arg(long, value_name = "JSON|DATEI")]
         actions: String,
-        /// Eingangsordner
         #[arg(long = "in", value_name = "ORDNER")]
         input: PathBuf,
-        /// Ausgangsordner (wird angelegt)
         #[arg(long = "out", value_name = "ORDNER")]
         output: PathBuf,
-        /// Ausgabeformat: fwpng (Vorgabe, editierbar), png, gif, jpg, webp, avif, bmp, tiff, qoi, ico, apng
         #[arg(long, default_value = "fwpng")]
         format: String,
-        /// Nur Dateien, deren Name diesen Text enthält
         #[arg(long)]
         filter: Option<String>,
     },
-    /// Seite, Ausschnitt oder Element als PNG rendern (offscreen)
-    #[command(after_help = "Beispiele:
-  firepixel-cli render datei.fw.png --out seite.png
-  firepixel-cli render datei.fw.png --page 1 --state 2 --zoom 2 --out s2.png
-  firepixel-cli render datei.fw.png --rect 0,0,100,100 --zoom 4 --out ausschnitt.png
-  firepixel-cli render datei.fw.png --element 17 --out element.png")]
     Render {
         file: PathBuf,
         #[arg(long)]
@@ -116,20 +67,13 @@ sonst eine FW-PNG. --steps nimmt eine JSON-Liste [{\"cmd\": …, \"params\": {�
         state: Option<usize>,
         #[arg(long, default_value_t = 1.0)]
         zoom: f64,
-        /// Ausschnitt l,t,r,b in Dokumentpixeln
         #[arg(long, value_name = "L,T,R,B")]
         rect: Option<String>,
-        /// Nur dieses Element (ID aus `info`)
         #[arg(long)]
         element: Option<u64>,
         #[arg(long, value_name = "DATEI")]
         out: PathBuf,
     },
-    /// Dokumentbaum anzeigen (Seiten, Status, Ebenen, Elemente mit IDs)
-    #[command(after_help = "Beispiele:
-  firepixel-cli info datei.fw.png
-  firepixel-cli info datei.fw.png --json --depth 1
-  firepixel-cli info datei.fw.png --json --all-pages --types text")]
     Info {
         file: PathBuf,
         #[arg(long, default_value_t = 8)]
@@ -138,86 +82,43 @@ sonst eine FW-PNG. --steps nimmt eine JSON-Liste [{\"cmd\": …, \"params\": {�
         all_pages: bool,
         #[arg(long)]
         page: Option<usize>,
-        /// Nur diese Elementtypen (kommagetrennt: text,path,rectangle,bitmap,group,instance …)
         #[arg(long, value_delimiter = ',')]
         types: Vec<String>,
-        /// customData ausgeben
         #[arg(long)]
         custom_data: bool,
     },
-    /// Befehlskatalog anzeigen
-    #[command(after_help = "Beispiele:
-  firepixel-cli commands
-  firepixel-cli commands --category modify.align
-  firepixel-cli commands --filter weich --json")]
     Commands {
-        /// Suchtext in Name, Beschriftung, Statustext, Menü
         #[arg(long)]
         filter: Option<String>,
-        /// Namenspräfix (draw, modify, filter …)
         #[arg(long)]
         category: Option<String>,
-        /// Auch Platzhalter ohne Wirkung
         #[arg(long)]
         all: bool,
     },
-    /// Datei umwandeln (Format aus der Endung)
-    #[command(after_help = "Beispiele:
-  firepixel-cli convert entwurf.fw.png entwurf.png     (flaches PNG32)
-  firepixel-cli convert entwurf.fw.png entwurf.jpg     (JPEG über die Optimierung wie im Original)
-  firepixel-cli convert ebenen.psd ebenen.fw.png       (PSD mit Ebenen als FW-PNG)
-  firepixel-cli convert foto.png foto.webp
-Lesen: .fw.png .png .psd .gif .jpg .bmp .tif .tga .webp .jxl .qoi .ico .svg .ai .eps
-Schreiben: .fw.png .png .gif .jpg .webp .avif .bmp .tif .qoi .ico .apng")]
     Convert { input: PathBuf, output: PathBuf },
-    /// JSF-JavaScript (.jsf) ausführen
-    #[command(after_help = "Beispiele:
-  firepixel-cli script makro.jsf
-  firepixel-cli script makro.jsf entwurf.fw.png --out ergebnis.fw.png
-  firepixel-cli script --code \"fw.createFirepixelDocument({x:100,y:100},{pixelsPerUnit:72,units:'inch'},'#ffffff').width\"")]
     Script {
-        /// Skriptdatei
         script: Option<PathBuf>,
-        /// Dokument, das vorher geöffnet wird
         file: Option<PathBuf>,
-        /// Skript als Text statt Datei
         #[arg(long)]
         code: Option<String>,
-        /// Aktives Dokument danach speichern
         #[arg(long, value_name = "DATEI")]
         out: Option<PathBuf>,
-        /// Wert der globalen Variable FP_ARG
         #[arg(long)]
         arg: Option<String>,
     },
-    /// MCP-Server für KI-Agenten (stdio oder HTTP auf 127.0.0.1 mit Token)
-    #[command(after_help = "Beispiele – Einrichtung in Claude Code (stdio):
-  claude mcp add firepixel -- firepixel-cli mcp
-HTTP (Token steht danach in %LOCALAPPDATA%\\Firepixel\\mcp-http.json):
-  firepixel-cli mcp --http --port 47800
-  claude mcp add --transport http firepixel http://127.0.0.1:47800/mcp --header \"Authorization: Bearer <token>\"
-Brücke zur laufenden Oberfläche (firepixel.exe --mcp bzw. FIREPIXEL_MCP=1; Token in %LOCALAPPDATA%\\Firepixel\\mcp-bridge.json):
-  claude mcp add firepixel-gui -- firepixel-cli mcp --bridge
-Doku: docs/AGENTS.md bzw. MCP-Ressource firepixel://docs/agents.md")]
     Mcp {
-        /// Streamable HTTP statt stdio
         #[arg(long, conflicts_with = "bridge")]
         http: bool,
-        /// stdio-Weiterleitung zur laufenden Firepixel-Oberfläche (Brückenmodus)
         #[arg(long)]
         bridge: bool,
-        /// Port auf 127.0.0.1 (0 = frei wählen)
         #[arg(long, default_value_t = fp_mcp::DEFAULT_PORT)]
         port: u16,
-        /// Festes Token (mindestens 16 Zeichen; Vorgabe: zufällig)
         #[arg(long)]
         token: Option<String>,
-        /// Datei für Adresse und Token (Vorgabe im Benutzerprofil)
         #[arg(long)]
         token_file: Option<PathBuf>,
     },
-    /// Sprachdateien prüfen, Vorlage für eine neue Sprache anlegen, Sprachen auflisten
-    #[command(subcommand)]
+    #[command(subcommand, alias = "language")]
     Sprache(sprache::SpracheCmd),
 }
 
@@ -233,13 +134,14 @@ impl<E: std::fmt::Display> From<E> for Fail {
 type Res<T> = Result<T, Fail>;
 
 fn main() -> ExitCode {
-    let matches = Cli::command().get_matches();
+    init_language();
+    let matches = match localized_command().try_get_matches() {
+        Ok(m) => m,
+        Err(e) => return clap_error(e),
+    };
     let cli = match Cli::from_arg_matches(&matches) {
         Ok(c) => c,
-        Err(e) => {
-            let _ = e.print();
-            return ExitCode::from(2);
-        }
+        Err(e) => return clap_error(e),
     };
     let json_out = cli.json;
     let sub = matches.subcommand().map(|(_, m)| m.clone());
@@ -259,15 +161,128 @@ fn main() -> ExitCode {
             if json_out {
                 println!("{}", json!({"ok": false, "error": m}));
             } else {
-                eprintln!("Fehler: {m}");
+                eprintln!("{}", tr!("cli-error", message = m));
             }
             ExitCode::from(1)
         }
     }
 }
 
+// ------------------------------------------------------------------ Sprache und Hilfe
+
+/// Sprache der Kommandozeile: `--lang <code>` (auch `--lang=<code>`), sonst `FIREPIXEL_LANG`, sonst
+/// die Systemsprache. Sprachordner (`Sprachen\` neben der exe, `%APPDATA%\Firepixel\Sprachen`)
+/// werden vorher geladen, damit auch eigene Sprachen gehen.
+fn init_language() {
+    fp_i18n::load_default_dirs();
+    let args: Vec<String> = std::env::args().collect();
+    let from_args = args.iter().enumerate().find_map(|(i, a)| match a.strip_prefix("--lang=") {
+        Some(v) => Some(v.to_string()),
+        None if a == "--lang" => args.get(i + 1).cloned(),
+        None => None,
+    });
+    let code = from_args.or_else(|| std::env::var("FIREPIXEL_LANG").ok().filter(|s| !s.trim().is_empty())).unwrap_or_else(fp_i18n::system_language);
+    if !fp_i18n::set_language(&code) {
+        fp_i18n::set_language(&fp_i18n::system_language());
+    }
+}
+
+/// Der clap-Befehl mit allen Hilfetexten in der aktuellen Sprache.
+fn localized_command() -> clap::Command {
+    let version = clap::Arg::new("version").short('V').long("version").action(clap::ArgAction::Version).help(t("cli-version")).help_heading(t("cli-heading-options"));
+    localize(Cli::command(), "cli-root").disable_version_flag(true).arg(version)
+}
+
+/// Setzt Beschreibung (`<key>`), Beispiele (`<key>.examples`), Optionstexte (`<key>-arg-<id>`, Wertname
+/// `.value`), Überschriften, Hilfe-Option und Vorlage – rekursiv für alle Unterbefehle
+/// (`cli-<befehl>`, `cli-sprache-<befehl>`).
+fn localize(mut c: clap::Command, key: &str) -> clap::Command {
+    use fp_i18n::has;
+    if has(key) {
+        c = c.about(t(key));
+    }
+    let examples = format!("{key}.examples");
+    if has(&examples) {
+        c = c.after_help(t(&examples));
+    }
+    let (h_args, h_opts) = (t("cli-heading-arguments"), t("cli-heading-options"));
+    let ids: Vec<(String, bool)> = c.get_arguments().map(|a| (a.get_id().to_string(), a.is_positional())).collect();
+    for (id, positional) in ids {
+        let k = format!("{key}-arg-{}", id.replace('_', "-"));
+        let k = if has(&k) { k } else { format!("cli-root-arg-{}", id.replace('_', "-")) };
+        let heading = if positional { h_args.clone() } else { h_opts.clone() };
+        c = c.mut_arg(&id, |mut a| {
+            if has(&k) {
+                a = a.help(t(&k));
+            }
+            let v = format!("{k}.value");
+            if has(&v) {
+                a = a.value_name(t(&v));
+            }
+            a.help_heading(heading)
+        });
+    }
+    let help = clap::Arg::new("help").short('h').long("help").action(clap::ArgAction::Help).help(t("cli-help")).help_heading(h_opts);
+    c = c
+        .disable_help_flag(true)
+        .arg(help)
+        .help_template(format!("{{about-with-newline}}\n{} {{usage}}\n\n{{all-args}}{{after-help}}", t("cli-usage")))
+        .subcommand_help_heading(t("cli-heading-commands"))
+        .subcommand_value_name(t("cli-value-command"));
+    let subs: Vec<String> = c.get_subcommands().map(|s| s.get_name().to_string()).collect();
+    if !subs.is_empty() {
+        c = c.disable_help_subcommand(true);
+    }
+    let base = if key == "cli-root" { "cli".to_string() } else { key.to_string() };
+    for name in subs {
+        let sk = format!("{base}-{name}");
+        c = c.mut_subcommand(&name, |sc| localize(sc, &sk));
+    }
+    c
+}
+
+/// Fehler beim Lesen der Kommandozeile in der aktuellen Sprache (Hilfe/Version unverändert).
+fn clap_error(e: clap::Error) -> ExitCode {
+    use clap::error::{ContextKind, ContextValue, ErrorKind};
+    match e.kind() {
+        ErrorKind::DisplayHelp | ErrorKind::DisplayVersion => {
+            let _ = e.print();
+            return ExitCode::SUCCESS;
+        }
+        ErrorKind::DisplayHelpOnMissingArgumentOrSubcommand => {
+            let _ = e.print();
+            return ExitCode::from(2);
+        }
+        _ => {}
+    }
+    let ctx = |k: ContextKind| {
+        e.get(k)
+            .map(|v| match v {
+                ContextValue::String(s) => s.clone(),
+                ContextValue::Strings(v) => v.join(", "),
+                other => other.to_string(),
+            })
+            .unwrap_or_default()
+    };
+    let value = [ContextKind::InvalidValue, ContextKind::InvalidSubcommand].into_iter().map(ctx).find(|v| !v.is_empty()).unwrap_or_default();
+    let key = match e.kind() {
+        ErrorKind::UnknownArgument => "cli-err-unknown-argument",
+        ErrorKind::InvalidSubcommand => "cli-err-unknown-subcommand",
+        ErrorKind::InvalidValue | ErrorKind::ValueValidation => "cli-err-invalid-value",
+        ErrorKind::MissingRequiredArgument => "cli-err-missing-argument",
+        ErrorKind::MissingSubcommand => "cli-err-missing-subcommand",
+        ErrorKind::ArgumentConflict => "cli-err-conflict",
+        ErrorKind::TooManyValues | ErrorKind::TooFewValues | ErrorKind::WrongNumberOfValues => "cli-err-number-of-values",
+        _ => "cli-err-invalid-call",
+    };
+    eprintln!("{}", tr!(key, arg = ctx(ContextKind::InvalidArg), value = value, other = ctx(ContextKind::PriorArg)));
+    eprintln!("{}", t("cli-err-help-hint"));
+    ExitCode::from(2)
+}
+
 fn run(cli: Cli, sub: Option<&ArgMatches>) -> Res<Value> {
     let json_out = cli.json;
+    let _ = &cli.lang; // schon in `init_language` ausgewertet
     match cli.cmd {
         Cmd::Run { file, new, cmds, params, steps, group, out, in_place } => cmd_run(sub, file, new, cmds, params, steps, group, out, in_place),
         Cmd::Batch { actions, input, output, format, filter } => cmd_batch(&actions, &input, &output, &format, filter.as_deref()),
@@ -299,7 +314,7 @@ fn json_arg(s: &str) -> Res<Value> {
     } else {
         t.to_string()
     };
-    serde_json::from_str(text.trim_start_matches('\u{feff}')).map_err(|e| Fail(format!("ungültiges JSON ({e}): {}", text.chars().take(80).collect::<String>())))
+    serde_json::from_str(text.trim_start_matches('\u{feff}')).map_err(|e| Fail(tr!("cli-err-json", error = e.to_string(), text = text.chars().take(80).collect::<String>())))
 }
 
 fn open(s: &mut Session, path: &Path) -> Res<()> {
@@ -313,9 +328,9 @@ fn new_doc(s: &mut Session, spec: &str) -> Res<()> {
         Some((a, b)) => (a, Some(b)),
         None => (spec, None),
     };
-    let (w, h) = size.split_once(['x', 'X']).ok_or_else(|| Fail(format!("--new erwartet BREITExHÖHE, nicht „{spec}“")))?;
-    let w: f64 = w.trim().parse().map_err(|_| Fail(format!("Breite „{w}“")))?;
-    let h: f64 = h.trim().parse().map_err(|_| Fail(format!("Höhe „{h}“")))?;
+    let (w, h) = size.split_once(['x', 'X']).ok_or_else(|| Fail(tr!("cli-err-new-size", spec = spec)))?;
+    let w: f64 = w.trim().parse().map_err(|_| Fail(tr!("cli-err-width", value = w)))?;
+    let h: f64 = h.trim().parse().map_err(|_| Fail(tr!("cli-err-height", value = h)))?;
     let mut p = json!({"width": w, "height": h});
     if let Some(c) = color {
         p["background"] = json!(c);
@@ -336,7 +351,7 @@ fn write_output(s: &mut Session, out: &Path) -> Res<Value> {
     if !l.ends_with(".png") {
         let id = s.doc()?.id;
         let n = fp_script::fileio::export_page(s, id, None, None, out, &Value::Null)
-            .map_err(|e| Fail(format!("{e} (Formate: .fw.png, {})", fp_script::fileio::export_extensions().iter().map(|x| format!(".{x}")).collect::<Vec<_>>().join(", "))))?;
+            .map_err(|e| Fail(tr!("cli-err-export-formats", error = e.to_string(), formats = fp_script::fileio::export_extensions().iter().map(|x| format!(".{x}")).collect::<Vec<_>>().join(", "))))?;
         return Ok(json!({"path": out.to_string_lossy(), "format": out.extension().map(|e| e.to_string_lossy().to_string()), "bytes": n}));
     }
     if is_flat_png(out) {
@@ -377,7 +392,7 @@ fn cmd_run(
     match (&file, &new) {
         (Some(f), _) => open(&mut s, f)?,
         (None, Some(spec)) => new_doc(&mut s, spec)?,
-        (None, None) => return Err(Fail("Eingabedatei oder --new angeben".into())),
+        (None, None) => return Err(Fail(t("cli-err-input-or-new"))),
     }
     // --params dem vorangehenden --cmd zuordnen (über die Positionen in der Kommandozeile)
     let mut list: Vec<(String, Value)> = cmds.iter().map(|c| (c.clone(), Value::Null)).collect();
@@ -387,15 +402,15 @@ fn cmd_run(
         for (k, p) in params.iter().enumerate() {
             let pos = pi.get(k).copied().unwrap_or(usize::MAX);
             let owner = ci.iter().rposition(|c| *c < pos).or(if ci.is_empty() { None } else { Some(k.min(ci.len() - 1)) });
-            let Some(o) = owner else { return Err(Fail("--params ohne vorangehendes --cmd".into())) };
+            let Some(o) = owner else { return Err(Fail(t("cli-err-params-without-cmd"))) };
             list[o].1 = json_arg(p)?;
         }
     }
     if let Some(st) = &steps {
         let v = json_arg(st)?;
         let arr = v.get("steps").cloned().unwrap_or(v);
-        for item in arr.as_array().ok_or_else(|| Fail("--steps: JSON-Liste erwartet".into()))? {
-            let name = item.get("cmd").or_else(|| item.get("name")).or_else(|| item.get("command")).and_then(|n| n.as_str()).ok_or_else(|| Fail("Schritt ohne \"cmd\"".into()))?;
+        for item in arr.as_array().ok_or_else(|| Fail(tr!("cli-err-json-list", option = "--steps")))? {
+            let name = item.get("cmd").or_else(|| item.get("name")).or_else(|| item.get("command")).and_then(|n| n.as_str()).ok_or_else(|| Fail(t("cli-err-step-without-cmd")))?;
             list.push((name.to_string(), item.get("params").cloned().unwrap_or(Value::Null)));
         }
     }
@@ -415,7 +430,7 @@ fn cmd_run(
     };
     let n = results.len();
     Ok(json!({"ok": true, "commands": results, "saved": saved, "state": state_json(&s),
-              "text": format!("{n} Befehl(e) ausgeführt{}", saved.as_ref().and_then(|v| v.get("path")).and_then(|p| p.as_str()).map(|p| format!(", gespeichert: {p}")).unwrap_or_default())}))
+              "text": tr!("cli-msg-run-done", n = n, saved = saved.as_ref().and_then(|v| v.get("path")).and_then(|p| p.as_str()).map(|p| tr!("cli-msg-saved", path = p)).unwrap_or_default())}))
 }
 
 fn cmd_batch(actions: &str, input: &Path, output: &Path, format: &str, filter: Option<&str>) -> Res<Value> {
@@ -423,7 +438,7 @@ fn cmd_batch(actions: &str, input: &Path, output: &Path, format: &str, filter: O
     let arr = v.get("actions").cloned().unwrap_or(v);
     let list: Vec<(String, Value)> = arr
         .as_array()
-        .ok_or_else(|| Fail("--actions: JSON-Liste erwartet".into()))?
+        .ok_or_else(|| Fail(tr!("cli-err-json-list", option = "--actions")))?
         .iter()
         .map(|a| {
             let n = a.get("cmd").or_else(|| a.get("name")).or_else(|| a.get("command")).and_then(|n| n.as_str()).unwrap_or("").to_string();
@@ -431,12 +446,12 @@ fn cmd_batch(actions: &str, input: &Path, output: &Path, format: &str, filter: O
         })
         .collect();
     if list.iter().any(|(n, _)| n.is_empty()) {
-        return Err(Fail("jede Aktion braucht \"cmd\"".into()));
+        return Err(Fail(t("cli-err-action-without-cmd")));
     }
     let out_ext = match format.trim_start_matches('.').to_lowercase().as_str() {
         "fwpng" | "fw.png" => "fw.png".to_string(),
         e if fp_script::fileio::export_extensions().contains(&e) => e.to_string(),
-        other => return Err(Fail(format!("--format: fwpng oder {}, nicht „{other}“", fp_script::fileio::export_extensions().join(", ")))),
+        other => return Err(Fail(tr!("cli-err-format", formats = fp_script::fileio::export_extensions().join(", "), value = other))),
     };
     std::fs::create_dir_all(output)?;
     let mut files: Vec<PathBuf> = std::fs::read_dir(input)
@@ -474,13 +489,13 @@ fn cmd_batch(actions: &str, input: &Path, output: &Path, format: &str, filter: O
         }
     }
     let ok = files.len() - failed;
-    Ok(json!({"ok": failed == 0, "processed": files.len(), "failed": failed, "files": report, "text": format!("{ok} von {} Dateien verarbeitet → {}", files.len(), output.display())}))
+    Ok(json!({"ok": failed == 0, "processed": files.len(), "failed": failed, "files": report, "text": tr!("cli-msg-batch-done", ok = ok, n = files.len(), dir = output.display().to_string())}))
 }
 
 fn parse_rect(s: &str) -> Res<fp_geom::Rect> {
-    let v: Vec<f32> = s.split(',').map(|x| x.trim().parse::<f32>()).collect::<Result<_, _>>().map_err(|_| Fail(format!("--rect l,t,r,b erwartet, nicht „{s}“")))?;
+    let v: Vec<f32> = s.split(',').map(|x| x.trim().parse::<f32>()).collect::<Result<_, _>>().map_err(|_| Fail(tr!("cli-err-rect", value = s)))?;
     if v.len() != 4 {
-        return Err(Fail("--rect braucht vier Zahlen".into()));
+        return Err(Fail(t("cli-err-rect-four")));
     }
     Ok(fp_geom::Rect::new(v[0], v[1], v[2], v[3]))
 }
@@ -504,7 +519,8 @@ fn cmd_render(file: &Path, page: Option<usize>, state: Option<usize>, zoom: f64,
 
 fn tree_text(v: &Value) -> String {
     let mut out = String::new();
-    out += &format!("{} – {} Seite(n)\n", v["title"].as_str().unwrap_or(""), v["pages"].as_array().map_or(0, |a| a.len()));
+    out += &tr!("cli-msg-tree-doc", title = v["title"].as_str().unwrap_or(""), n = v["pages"].as_array().map_or(0, |a| a.len()));
+    out.push('\n');
     fn el(out: &mut String, e: &Value, ind: usize) {
         let b = &e["bounds"];
         out.push_str(&format!(
@@ -512,7 +528,7 @@ fn tree_text(v: &Value) -> String {
             "",
             e["id"],
             e["type"].as_str().unwrap_or(""),
-            e["name"].as_str().map(|n| format!("„{n}“ ")).unwrap_or_default(),
+            e["name"].as_str().map(|n| format!("{} ", tr!("cli-msg-quoted", text = n))).unwrap_or_default(),
             e["text"].as_str().map(|t| format!("\"{}\" ", t.chars().take(30).collect::<String>())).unwrap_or_default(),
             b["left"],
             b["top"],
@@ -525,9 +541,11 @@ fn tree_text(v: &Value) -> String {
         }
     }
     for p in v["pages"].as_array().into_iter().flatten() {
-        out += &format!("Seite {} „{}“ {}×{} px, {} Status, Leinwand {}\n", p["index"], p["name"].as_str().unwrap_or(""), p["width"], p["height"], p["states"], p["background"].as_str().unwrap_or(""));
+        out += &tr!("cli-msg-tree-page", index = p["index"].to_string(), name = p["name"].as_str().unwrap_or(""), width = p["width"].to_string(), height = p["height"].to_string(), states = p["states"].as_u64().unwrap_or(1) as usize, background = p["background"].as_str().unwrap_or(""));
+        out.push('\n');
         for l in p["layers"].as_array().into_iter().flatten().rev() {
-            out += &format!("  Ebene #{} „{}“ ({}{})\n", l["id"], l["name"].as_str().unwrap_or(""), l["kind"].as_str().unwrap_or(""), if l["visible"] == json!(false) { ", ausgeblendet" } else { "" });
+            let hidden = if l["visible"] == json!(false) { t("cli-msg-tree-hidden") } else { String::new() };
+            out += &format!("  {}\n", tr!("cli-msg-tree-layer", id = l["id"].to_string(), name = l["name"].as_str().unwrap_or(""), kind = l["kind"].as_str().unwrap_or(""), hidden = hidden));
             for e in l["elements"].as_array().into_iter().flatten() {
                 el(&mut out, e, 4);
             }
@@ -579,7 +597,7 @@ fn cmd_commands(filter: Option<&str>, category: Option<&str>, all: bool, json_ou
     if json_out {
         Ok(json!({"count": list.len(), "commands": list}))
     } else {
-        Ok(json!({"text": format!("{}\n\n{} Befehle (* = Pflichtparameter)", lines.join("\n"), lines.len())}))
+        Ok(json!({"text": format!("{}\n\n{}", lines.join("\n"), tr!("cli-msg-commands-count", n = lines.len()))}))
     }
 }
 
@@ -599,16 +617,16 @@ fn cmd_script(script: Option<PathBuf>, file: Option<PathBuf>, code: Option<Strin
     }
     let mut opts = fp_script::ScriptOptions::default();
     if let Some(a) = arg {
-        opts.globals.push(("FP_ARG".into(), json!(a)));
+        opts.globals.push((String::from("FP_ARG"), json!(a)));
     }
     let outcome = match (&code, &script) {
         (Some(c), _) => fp_script::run_source(&mut s, c, &opts),
         (None, Some(p)) => fp_script::run_file(&mut s, p, &opts),
-        (None, None) => return Err(Fail("Skriptdatei oder --code angeben".into())),
+        (None, None) => return Err(Fail(t("cli-err-script-or-code"))),
     };
     let saved = match &out {
         Some(o) if s.active().is_some() => Some(write_output(&mut s, o)?),
-        Some(_) => return Err(Fail("kein Dokument zum Speichern offen".into())),
+        Some(_) => return Err(Fail(t("cli-err-no-document-to-save"))),
         None => None,
     };
     let mut v = outcome.to_json();
@@ -621,13 +639,13 @@ fn cmd_script(script: Option<PathBuf>, file: Option<PathBuf>, code: Option<Strin
         text += &format!("{l}\n");
     }
     if let Some(r) = &outcome.result {
-        text += &format!("Ergebnis: {r}\n");
+        text += &format!("{}\n", tr!("cli-msg-script-result", result = r.to_string()));
     }
     if !outcome.not_implemented.is_empty() {
-        text += &format!("nicht implementiert: {}\n", outcome.not_implemented.join(", "));
+        text += &format!("{}\n", tr!("cli-msg-script-not-implemented", list = outcome.not_implemented.join(", ")));
     }
     if let Some(e) = &outcome.error {
-        return Err(Fail(format!("{}Skriptfehler: {e}", text)));
+        return Err(Fail(format!("{text}{}", tr!("cli-err-script", error = e.to_string()))));
     }
     v["text"] = json!(text.trim_end());
     Ok(v)
@@ -643,11 +661,11 @@ fn cmd_mcp(http: bool, port: u16, token: Option<String>, token_file: Option<Path
     rt.block_on(async move {
         let opts = fp_mcp::HttpOptions { port, token, token_file, write_token_file: true };
         let srv = fp_mcp::start_http(host, opts).await.map_err(|e| Fail(e.to_string()))?;
-        eprintln!("Firepixel-MCP (HTTP) läuft auf {}", srv.url());
-        eprintln!("Token: {}", srv.token());
-        eprintln!("Header: Authorization: Bearer {}", srv.token());
-        eprintln!("Token-Datei: {}", srv.token_file().display());
-        eprintln!("Beenden mit Strg+C.");
+        eprintln!("{}", tr!("cli-msg-mcp-http-running", url = srv.url()));
+        eprintln!("{}", tr!("cli-msg-mcp-token", token = srv.token()));
+        eprintln!("{}", tr!("cli-msg-mcp-header", token = srv.token()));
+        eprintln!("{}", tr!("cli-msg-mcp-token-file", path = srv.token_file().display().to_string()));
+        eprintln!("{}", t("cli-msg-mcp-stop"));
         srv.wait().await;
         Ok::<(), Fail>(())
     })?;
@@ -658,7 +676,7 @@ fn cmd_mcp(http: bool, port: u16, token: Option<String>, token_file: Option<Path
 fn cmd_mcp_bridge(token_file: Option<PathBuf>) -> Res<Value> {
     let file = token_file.unwrap_or_else(fp_mcp::bridge_token_file);
     let target = fp_mcp::proxy::BridgeTarget::from_token_file(&file)?;
-    eprintln!("Firepixel-MCP: Weiterleitung an die laufende Oberfläche (127.0.0.1:{}{})", target.port, target.path);
+    eprintln!("{}", tr!("cli-msg-mcp-bridge", address = format!("127.0.0.1:{}{}", target.port, target.path)));
     fp_mcp::proxy::run_stdio_proxy(target)?;
     Ok(Value::Null)
 }
@@ -672,4 +690,53 @@ fn new_session() -> Session {
 
 fn tokio_runtime() -> Res<tokio::runtime::Runtime> {
     Ok(tokio::runtime::Builder::new_multi_thread().worker_threads(2).enable_all().build()?)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// UE-3: jeder Befehl, jede Option und jeder Wertname hat Texte in Deutsch und Englisch.
+    #[test]
+    fn hilfe_vollstaendig_in_de_und_en() {
+        fn walk(c: &clap::Command, key: &str, out: &mut Vec<String>) {
+            out.push(key.to_string());
+            for a in c.get_arguments() {
+                let id = a.get_id().to_string().replace('_', "-");
+                if id != "json" && id != "lang" {
+                    out.push(format!("{key}-arg-{id}"));
+                }
+            }
+            let base = if key == "cli-root" { "cli".to_string() } else { key.to_string() };
+            for s in c.get_subcommands() {
+                walk(s, &format!("{base}-{}", s.get_name()), out);
+            }
+        }
+        let mut keys = vec!["cli-root-arg-json".to_string(), "cli-root-arg-lang".to_string()];
+        walk(&Cli::command(), "cli-root", &mut keys);
+        let mut missing = Vec::new();
+        for lang in ["de", "en"] {
+            for k in &keys {
+                if !fp_i18n::with_language(lang, || fp_i18n::keys(lang).contains(k)) {
+                    missing.push(format!("{lang}: {k}"));
+                }
+            }
+        }
+        assert!(missing.is_empty(), "fehlende Hilfetexte:\n{}", missing.join("\n"));
+        // lokalisierter Befehl: englische Hilfe ohne deutsche Reste
+        let help = fp_i18n::with_language("en", || {
+            let mut c = localized_command();
+            let mut s = c.render_help().to_string();
+            for sub in ["run", "batch", "render", "info", "commands", "convert", "script", "mcp", "sprache"] {
+                if let Some(sc) = c.find_subcommand_mut(sub) {
+                    s += &sc.render_help().to_string();
+                }
+            }
+            s
+        });
+        assert!(help.contains("Usage:") && help.contains("Options") && help.contains("Examples:"), "{help}");
+        assert!(!help.chars().any(|c| "äöüÄÖÜß„".contains(c)), "{help}");
+        let de = fp_i18n::with_language("de", || localized_command().render_help().to_string());
+        assert!(de.contains("Aufruf:") && de.contains("Beispiele:") && de.contains("Ausgabe als JSON (maschinenlesbar)"), "{de}");
+    }
 }

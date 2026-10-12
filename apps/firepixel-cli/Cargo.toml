@@ -21,7 +21,7 @@ fp-script = { workspace = true }
 # firepixel-cli sprache … (src\sprache.rs, I18N-KERN)
 fp-i18n = { workspace = true }
 serde_json = { workspace = true }
-clap = { version = "4.6", features = ["derive"] }
+clap = { version = "4.6", features = ["derive", "string"] }
 tokio = { version = "1", features = ["rt-multi-thread"] }
 
 [build-dependencies]

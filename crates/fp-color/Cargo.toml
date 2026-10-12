@@ -12,6 +12,7 @@ default = []
 serde = ["dep:serde"]
 
 [dependencies]
+fp-i18n = { workspace = true }
 thiserror = { workspace = true }
 serde = { workspace = true, optional = true }
 

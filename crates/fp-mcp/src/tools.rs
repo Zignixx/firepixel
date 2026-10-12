@@ -760,7 +760,7 @@ fn list_commands(s: &Session, a: &Value) -> ToolOutput {
         }
         if let Some(cat) = &cat {
             let menu0 = i.menu_path.first().map(|m| m.to_lowercase()).unwrap_or_default();
-            let local0 = command_menu_path(&i).first().map(|m| m.to_lowercase()).unwrap_or_default();
+            let local0 = command_menu_path(i).first().map(|m| m.to_lowercase()).unwrap_or_default();
             let n = i.name.to_lowercase();
             if !(n == *cat || n.starts_with(&format!("{cat}.")) || menu0 == *cat || local0 == *cat) {
                 continue;
@@ -771,12 +771,12 @@ fn list_commands(s: &Session, a: &Value) -> ToolOutput {
                 "{} {} {} {} {} {} {} {}",
                 i.name.to_lowercase(),
                 i.label.to_lowercase(),
-                command_label(&i).to_lowercase(),
+                command_label(i).to_lowercase(),
                 i.description.clone().unwrap_or_default().to_lowercase(),
-                command_description(&i).unwrap_or_default().to_lowercase(),
+                command_description(i).unwrap_or_default().to_lowercase(),
                 i.js.join(" ").to_lowercase(),
                 i.menu_path.join(" ").to_lowercase(),
-                command_menu_path(&i).join(" ").to_lowercase()
+                command_menu_path(i).join(" ").to_lowercase()
             );
             if !hay.contains(f.as_str()) {
                 continue;
@@ -791,12 +791,12 @@ fn list_commands(s: &Session, a: &Value) -> ToolOutput {
             continue;
         }
         let params: Vec<String> = i.params.iter().map(|p| if p.required { format!("{}*", p.name) } else { p.name.clone() }).collect();
-        let mut o = json!({"name": i.name, "label": command_label(&i), "params": params, "available": available});
+        let mut o = json!({"name": i.name, "label": command_label(i), "params": params, "available": available});
         if !i.implemented {
             o["implemented"] = json!(false);
         }
         if !i.menu_path.is_empty() {
-            o["menu"] = json!(command_menu_path(&i).join(" › "));
+            o["menu"] = json!(command_menu_path(i).join(" › "));
         }
         out.push(o);
     }
@@ -817,7 +817,7 @@ fn describe_command(s: &Session, a: &Value) -> ToolOutput {
     }
     let example = if ex.is_empty() { json!({"name": i.name}) } else { json!({"name": i.name, "params": ex}) };
     ToolOutput::json(json!({
-        "name": i.name, "label": command_label(&i), "menu": command_menu_path(&i), "description": command_description(&i),
+        "name": i.name, "label": command_label(i), "menu": command_menu_path(i), "description": command_description(i),
         "implemented": i.implemented, "availableNow": enabled, "checked": checked,
         "requires": reqs, "params": i.params_schema(), "shortcuts": shortcuts,
         "js": i.js, "fwId": i.fw_id, "fwCmd": i.fw_cmd, "note": i.note,

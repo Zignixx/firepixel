@@ -5,7 +5,7 @@ use predicates::prelude::*;
 
 fn cli() -> Command {
     let mut c = Command::cargo_bin("firepixel-cli").expect("exe");
-    c.env("FP_NO_SHELL_OPEN", "1");
+    c.env("FP_NO_SHELL_OPEN", "1").env("FIREPIXEL_LANG", "de");
     c
 }
 

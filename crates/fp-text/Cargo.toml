@@ -7,6 +7,7 @@ license.workspace = true
 rust-version.workspace = true
 
 [dependencies]
+fp-i18n = { workspace = true }
 fp-geom = { workspace = true, features = ["serde"] }
 fp-color = { workspace = true, features = ["serde"] }
 fp-raster = { workspace = true }

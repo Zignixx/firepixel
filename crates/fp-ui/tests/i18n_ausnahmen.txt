@@ -98,3 +98,7 @@ text obj_quads.rs | Erwärmen
 text obj_quads.rs | Tönung
 # Bibliotheksname
 zlib
+# Kennungen: Name der globalen JSF-Variable, Schlüsselzeile in neuen Sprachvorlagen, Eingabe-Alias der Rücktaste (MCP ui_input)
+text main.rs | FP_ARG
+text sprache.rs | language-name = {code}\n
+text inject.rs | rück

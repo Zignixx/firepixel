@@ -69,7 +69,7 @@ pub struct Problem {
 
 impl std::fmt::Display for Problem {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let level = if self.kind.is_error() { "Fehler" } else { "Warnung" };
+        let level = crate::t(if self.kind.is_error() { "cli-check-error" } else { "cli-check-warning" });
         write!(f, "{level} [{}] {}", self.kind.code(), self.file)?;
         if self.line > 0 {
             write!(f, ":{}", self.line)?;
@@ -229,7 +229,7 @@ impl LangData {
                         file: file.to_string(),
                         line: line_of(text, e.pos.start),
                         key: String::new(),
-                        detail: format!("{} – „{}“", e.kind, snippet.trim()),
+                        detail: crate::tr!("cli-check-syntax", kind = e.kind.to_string(), text = snippet.trim()),
                     });
                 }
                 r
@@ -249,7 +249,7 @@ impl LangData {
                     file: file.to_string(),
                     line,
                     key: name.clone(),
-                    detail: format!("schon in {}:{}", prev.file, prev.line),
+                    detail: crate::tr!("cli-check-duplicate", file = prev.file.as_str(), line = prev.line),
                 });
                 continue;
             }
@@ -334,7 +334,7 @@ pub fn compare(reference: &LangData, cand: &LangData, complete: bool) -> Vec<Pro
     if complete {
         for (k, info) in &reference.keys {
             if !cand.keys.contains_key(k) {
-                out.push(p(Kind::Missing, &info.file, info.line, k, format!("Ausgangstext: „{}“", info.text)));
+                out.push(p(Kind::Missing, &info.file, info.line, k, crate::tr!("cli-check-source-text", text = info.text.as_str())));
             }
         }
     }
@@ -345,14 +345,14 @@ pub fn compare(reference: &LangData, cand: &LangData, complete: bool) -> Vec<Pro
         };
         let unknown: Vec<String> = info.vars.difference(&r.vars).map(|v| format!("${v}")).collect();
         if !unknown.is_empty() {
-            out.push(p(Kind::PlaceholderUnknown, &info.file, info.line, k, format!("{} (erlaubt: {})", unknown.join(", "), fmt_vars(&r.vars))));
+            out.push(p(Kind::PlaceholderUnknown, &info.file, info.line, k, crate::tr!("cli-check-allowed", vars = unknown.join(", "), allowed = fmt_vars(&r.vars))));
         }
         let missing: Vec<String> = r.vars.difference(&info.vars).map(|v| format!("${v}")).collect();
         if !missing.is_empty() {
             out.push(p(Kind::PlaceholderMissing, &info.file, info.line, k, missing.join(", ")));
         }
         if r.access.is_some() && info.access.is_none() && !k.contains('.') {
-            out.push(p(Kind::AccessMissing, &info.file, info.line, k, format!("Ausgangstext „{}“ hat eine Zugriffstaste (&)", r.text)));
+            out.push(p(Kind::AccessMissing, &info.file, info.line, k, crate::tr!("cli-check-access-missing", text = r.text.as_str())));
         }
     }
     // Konflikte, die es in der Ausgangssprache so nicht gibt
@@ -364,14 +364,14 @@ pub fn compare(reference: &LangData, cand: &LangData, complete: bool) -> Vec<Pro
         }
         let first = &cand.keys[&keys[0]];
         let texts: Vec<String> = keys.iter().map(|k| format!("{k} „{}“", cand.keys[k].text)).collect();
-        out.push(p(Kind::AccessConflict, &first.file, first.line, &keys[0], format!("Taste „{c}“ mehrfach in Gruppe {group}: {}", texts.join(", "))));
+        out.push(p(Kind::AccessConflict, &first.file, first.line, &keys[0], crate::tr!("cli-check-access-conflict", key = c.to_string(), group = group.as_str(), list = texts.join(", "))));
     }
     out.sort();
     out
 }
 
 fn fmt_vars(v: &BTreeSet<String>) -> String {
-    if v.is_empty() { "keine".to_string() } else { v.iter().map(|x| format!("${x}")).collect::<Vec<_>>().join(", ") }
+    if v.is_empty() { crate::t("cli-check-none") } else { v.iter().map(|x| format!("${x}")).collect::<Vec<_>>().join(", ") }
 }
 
 /// Namen der eingebauten Bereichsdateien (`menue.ftl` …).
@@ -418,7 +418,7 @@ impl Report {
 
 fn read_ftl(path: &Path) -> Result<String, String> {
     let bytes = std::fs::read(path).map_err(|e| format!("{}: {e}", path.display()))?;
-    String::from_utf8(bytes).map_err(|_| format!("{}: keine UTF-8-Datei (bitte als UTF-8 speichern)", path.display()))
+    String::from_utf8(bytes).map_err(|_| crate::tr!("cli-check-not-utf8", path = path.display().to_string()))
 }
 
 fn ftl_files(dir: &Path) -> Vec<std::path::PathBuf> {
@@ -459,7 +459,7 @@ pub fn load_path(path: &Path) -> Result<Vec<(LangData, Option<String>)>, String>
         return Ok(out);
     }
     if !path.is_dir() {
-        return Err(format!("{}: weder Datei noch Ordner", path.display()));
+        return Err(crate::tr!("cli-check-no-path", path = path.display().to_string()));
     }
     let direct = ftl_files(path);
     let is_lang_folder = direct.iter().any(|p| areas.contains(&file_name(p)));
@@ -500,7 +500,7 @@ pub fn load_path(path: &Path) -> Result<Vec<(LangData, Option<String>)>, String>
         out.push((d, None));
     }
     if out.is_empty() {
-        return Err(format!("{}: keine .ftl-Dateien gefunden", path.display()));
+        return Err(crate::tr!("cli-check-no-ftl", path = path.display().to_string()));
     }
     Ok(out)
 }

@@ -426,3 +426,14 @@ err-stroke-misses-path = The stroke does not touch any selected path.
 err-view-empty = view is empty
 err-web-layer-no-duplicate = the Web Layer cannot be duplicated
 err-web-layer-no-share = the Web Layer cannot be shared
+
+# >>> UE-3 Farben und Schriften
+# Errors from fp-color (swatches, CMYK) and fp-text (font files), UE-3
+err-color-cmyk-short = CMYK table too short: { $n } bytes, expected { $expected }
+err-color-swatch-short = file too short ({ $n } bytes)
+err-color-swatch-signature = not a { $format } file (signature missing)
+err-color-swatch-truncated = { $format } file truncated
+err-color-swatch-no-palette = no palette included
+err-text-font-io = font file { $path } not readable: { $error }
+err-text-bad-font = invalid font: { $detail }
+# <<< UE-3 Farben und Schriften

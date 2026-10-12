@@ -14,20 +14,25 @@ use crate::cmyk::{ase_cmyk_byte, cmyk_to_rgb, CmykTable};
 use crate::round::round_even;
 use crate::{Palette, Rgba8};
 
+/// Meldung `key` mit einem Platzhalter in der aktuellen Sprache (meldungen.ftl).
+fn m1(key: &str, a: &str, va: &dyn std::fmt::Display) -> String {
+    fp_i18n::t_args(key, &[(a, fp_i18n::Value::from(va.to_string()))])
+}
+
 /// Fehler beim Lesen von Farbfelddateien.
 #[derive(Debug, thiserror::Error, PartialEq, Eq)]
 pub enum SwatchError {
     /// Datei kürzer als nötig (ACT: < 3 Byte; das Original wirft dann eine Ausnahme).
-    #[error("Datei zu kurz ({0} Byte)")]
+    #[error("{}", m1("err-color-swatch-short", "n", .0))]
     TooShort(usize),
     /// Falsche Signatur.
-    #[error("keine {0}-Datei (Signatur fehlt)")]
+    #[error("{}", m1("err-color-swatch-signature", "format", .0))]
     BadSignature(&'static str),
     /// Datei endet mitten in einem Block.
-    #[error("{0}-Datei abgeschnitten")]
+    #[error("{}", m1("err-color-swatch-truncated", "format", .0))]
     Truncated(&'static str),
     /// Datei ohne Palette.
-    #[error("keine Palette enthalten")]
+    #[error("{}", fp_i18n::t("err-color-swatch-no-palette"))]
     NoPalette,
 }
 

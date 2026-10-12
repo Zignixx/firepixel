@@ -426,3 +426,14 @@ err-stroke-misses-path = Der Strich berührt keinen ausgewählten Pfad.
 err-view-empty = Ansicht leer
 err-web-layer-no-duplicate = die Web-Ebene kann nicht dupliziert werden
 err-web-layer-no-share = die Web-Ebene kann nicht freigegeben werden
+
+# >>> UE-3 Farben und Schriften
+# Fehler aus fp-color (Farbfelder, CMYK) und fp-text (Schriftdateien), UE-3
+err-color-cmyk-short = CMYK-Tabelle zu kurz: { $n } Byte, erwartet { $expected }
+err-color-swatch-short = Datei zu kurz ({ $n } Byte)
+err-color-swatch-signature = keine { $format }-Datei (Signatur fehlt)
+err-color-swatch-truncated = { $format }-Datei abgeschnitten
+err-color-swatch-no-palette = keine Palette enthalten
+err-text-font-io = Schriftdatei { $path } nicht lesbar: { $error }
+err-text-bad-font = ungültige Schrift: { $detail }
+# <<< UE-3 Farben und Schriften

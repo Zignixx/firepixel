@@ -31,7 +31,7 @@ pub const CMYK_TABLE_BYTES: usize = CMYK_TABLE_ENTRIES * 6;
 #[derive(Debug, thiserror::Error, PartialEq, Eq)]
 pub enum CmykTableError {
     /// Die Daten sind kürzer als 39.366 Byte.
-    #[error("CMYK-Tabelle zu kurz: {0} Byte, erwartet {CMYK_TABLE_BYTES}")]
+    #[error("{}", fp_i18n::t_args("err-color-cmyk-short", &[("n", fp_i18n::Value::from(.0.to_string())), ("expected", fp_i18n::Value::from(CMYK_TABLE_BYTES.to_string()))]))]
     TooShort(usize),
 }
 

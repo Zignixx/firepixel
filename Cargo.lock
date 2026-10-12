@@ -1825,6 +1825,7 @@ name = "fp-color"
 version = "0.1.0"
 dependencies = [
  "crc32fast",
+ "fp-i18n",
  "serde",
  "serde_json",
  "thiserror 2.0.21",
@@ -2047,6 +2048,7 @@ version = "0.1.0"
 dependencies = [
  "fp-color",
  "fp-geom",
+ "fp-i18n",
  "fp-raster",
  "png",
  "rustybuzz",
