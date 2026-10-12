@@ -30,3 +30,22 @@ nur-ui fp-ui/src/bridge
 # Symbole
 text glyphs.rs | AV
 text styles.rs | Aa
+
+# Feste Kennungen (I18N-SHELL, 12.10.): Nachschlage-IDs der Export-Vorgaben (Anzeige über fp_export-Vorgabenamen)
+text preview.rs | JPEG – Höhere Qualität
+text preview.rs | GIF Adaptiv 256
+text preview.rs | JPEG – Kleinere Datei
+text preview.rs | GIF Web 216
+# ToolGroup::label()/ThemeKind::label()/from_section: feste Kennungen, Anzeige über name() (ui-toolgroup-*, ui-theme-*)
+text theme.rs | Auswählen
+text theme.rs | Vektor
+text theme.rs | Farben
+text theme.rs | Ansicht
+text theme.rs | Dunkel
+# interne Fehler des Layout-XML-Lesers (Aufrufer verwerfen sie mit .ok(), nie sichtbar) und gespeicherte Layout-Kennungen
+text workspace.rs | unvollständiges Element
+text workspace.rs | Attribut {key} ohne Anführungszeichen
+text workspace.rs | ungültige Struktur
+text workspace.rs | Erweiterter Modus
+text workspace.rs | Symbolmodus
+text workspace.rs | Symbolmodus mit Bedienfeldnamen
