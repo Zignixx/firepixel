@@ -584,11 +584,11 @@ pub fn save_extras_ui_ex(ui: &mut egui::Ui, extras: TypeExtras, copy: &mut bool,
         clicked = ui.add_enabled(extras.options, egui::Button::new(fp_i18n::t("fdlg-options"))).clicked();
         match extras.copy {
             CopyBox::Off => {
-                ui.checkbox(copy, fp_i18n::t("fdlg-save-as-copy"));
+                crate::theme::with_field_widgets(ui, |ui| ui.checkbox(copy, fp_i18n::t("fdlg-save-as-copy")));
             }
             CopyBox::Locked => {
                 let mut on = true;
-                ui.add_enabled(false, egui::Checkbox::new(&mut on, fp_i18n::t("fdlg-save-as-copy")));
+                crate::theme::with_field_widgets(ui, |ui| ui.add_enabled(false, egui::Checkbox::new(&mut on, fp_i18n::t("fdlg-save-as-copy"))));
             }
         }
     });

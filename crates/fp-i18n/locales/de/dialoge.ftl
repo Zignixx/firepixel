@@ -148,7 +148,6 @@ dlg-pref-grp-colors = Standardfarben
 dlg-pref-color-stroke = Pinselstrich
 dlg-pref-color-fill = Füllung
 dlg-pref-color-highlight = Hervorhebung
-dlg-pref-help = Hilfe
 dlg-pref-plugins-note = Hinweis: Firepixel bettet keine Texturen oder Muster des Originals ein; Ordner werden nur zur Laufzeit gelesen.
 ## Gemeinsam
 dlg-only-current-page = Nur aktuelle Seite
@@ -174,7 +173,8 @@ dlg-anchor-bottom-right = Unten rechts
 dlg-image-size-title = Bildgröße
 dlg-image-size-pixels = Pixelabmessungen
 dlg-image-size-print = Druckgröße
-dlg-image-size-resample = Bild neu auflösen
+dlg-image-size-resample = &Bild neu auflösen
+dlg-image-size-constrain = &Proportionen beibehalten
 dlg-numeric-title = Numerisch transformieren
 dlg-numeric-scale = Skalieren
 dlg-numeric-resize = Größe ändern
@@ -366,9 +366,6 @@ dlg-style-other = Andere Textattribute
 
 ## Live-Filter (effects.rs)
 dlg-fx-options = Optionen
-dlg-fx-all-on = Alle ein
-dlg-fx-all-off = Alle aus
-dlg-fx-save-style = Als Stil speichern...
 dlg-fx-photoshop-unavailable = Photoshop-Live-Effekte (noch nicht verfügbar)
 dlg-fx-emboss = Prägung
 dlg-fx-bevel = Abschrägung
@@ -407,16 +404,16 @@ dlg-channel-rgb = RGB
 dlg-channel-red = Rot
 dlg-channel-green = Grün
 dlg-channel-blue = Blau
-dlg-levels-input = Eingabetonwerte:
-dlg-levels-output = Ausgabetonwerte:
+dlg-levels-input = E&ingabetonwerte:
+dlg-levels-output = A&usgabetonwerte:
 dlg-levels-auto = &Auto
 dlg-levels-auto-tip = Tonwerte automatisch anpassen
+dlg-levels-preview = &Vorschau
 dlg-levels-min-tip = Mindestintensität
 dlg-levels-gamma-tip = Gamma
 dlg-levels-max-tip = Höchstintensität
 dlg-levels-input-tip = Eingabetonwerte festlegen
 dlg-levels-output-tip = Ausgabetonwerte festlegen
-dlg-auto = Auto
 ## Kurven und Tonwertkorrektur gemeinsam (levels_common.rs)
 dlg-adjust-channel-tip = Zu bearbeitende Farbkanäle
 dlg-pipette-shadow = Schattenfarbe auswählen

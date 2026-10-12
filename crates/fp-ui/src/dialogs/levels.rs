@@ -9,7 +9,7 @@
 
 use super::form::{apply_preview, revert_preview, FormDialog};
 use super::levels_common::{self as common, Pipette, CHANNELS};
-use super::{dialog_frame, push_button, refs, t, tl, DialogClose};
+use super::{access, dialog_frame, push_button, refs, t, tl, DialogClose};
 use crate::app_state::AppState;
 use crate::inspector::fields;
 use crate::theme::Theme;
@@ -229,7 +229,7 @@ pub fn show_levels(ctx: &egui::Context, st: &mut AppState) {
     let mut result = None;
     let channels = tl(&CHANNELS);
     let (ch_tip, min_tip, gamma_tip, max_tip, auto_tip) = (t("dlg-adjust-channel-tip"), t("dlg-levels-min-tip"), t("dlg-levels-gamma-tip"), t("dlg-levels-max-tip"), t("dlg-levels-auto-tip"));
-    let (ch_l, in_l, out_l, auto_l, prev_l, ok_l, cancel_l) = (t("dlg-channel"), t("dlg-levels-input"), t("dlg-levels-output"), t("dlg-levels-auto"), t("dlg-preview"), t("btn-ok"), t("btn-cancel"));
+    let (ch_l, in_l, out_l, auto_l, prev_l, ok_l, cancel_l) = (t("dlg-channel"), t("dlg-levels-input"), t("dlg-levels-output"), t("dlg-levels-auto"), t("dlg-levels-preview"), t("btn-ok"), t("btn-cancel"));
     // Lage nach §3.2 (Client-Koordinaten des Originals, 393 × 263); breitere Knopftexte
     // verbreitern nur die Knopfspalte
     let bw = super::buttons_w(ctx, &[&ok_l, &cancel_l, &auto_l], 98.0);
@@ -254,7 +254,28 @@ pub fn show_levels(ctx: &egui::Context, st: &mut AppState) {
         let _ = ui.interact(cr, Id::new("lv-ch-tip"), Sense::hover()).on_hover_text(&ch_tip);
         let ch = *d.channel_ref();
         // Eingabetonwerte: Schwarz, Gamma, Weiß
-        crate::inspector::fields::label_right(ui, at(11.0, 34.0, 135.0, 21.0), &in_l, true);
+        access::label_right(ui, at(11.0, 34.0, 135.0, 21.0), &in_l, true);
+        // Alt+I / Alt+U (de): erstes Feld der Eingabe- bzw. Ausgabetonwerte wählen
+        let focus = |ui: &Ui, slider: Slider, k: usize, ch: &LevelsChannel| {
+            let (v, dec) = match (slider, k) {
+                (Slider::Input, 0) => (ch.source_low as f64, 0),
+                (Slider::Input, 1) => (ch.gamma, 2),
+                (Slider::Input, _) => (ch.source_high as f64, 0),
+                (Slider::Output, 0) => (ch.dest_low as f64, 0),
+                (Slider::Output, _) => (ch.dest_high as f64, 0),
+            };
+            let n = fields::fmt_num(v, dec).chars().count();
+            match slider {
+                Slider::Input => access::focus_field(ui, ("lv-in", k), n),
+                Slider::Output => access::focus_field(ui, ("lv-out", k), n),
+            }
+        };
+        if access::pressed(ui, &in_l) {
+            focus(ui, Slider::Input, 0, &ch);
+        }
+        if access::pressed(ui, &out_l) {
+            focus(ui, Slider::Output, 0, &ch);
+        }
         for (k, (x, v, rng, dec)) in [(152.0, ch.source_low as f64, (0.0, 255.0), 0), (192.0, ch.gamma, (0.1, 10.0), 2), (233.0, ch.source_high as f64, (0.0, 255.0), 0)].into_iter().enumerate() {
             let fr = at(x, 34.0, 36.0, 21.0);
             if let Some(nv) = fields::number(ui, ("lv-in", k), fr, None, Some(v), rng, dec, true) {
@@ -268,11 +289,19 @@ pub fn show_levels(ctx: &egui::Context, st: &mut AppState) {
         let track = at(17.0, 174.0, 249.0, 13.0);
         let ch = *d.channel_ref();
         let hv = lm::input_handles(&ch);
+        let grabbed_before = d.drag;
         if let Some((i, v)) = slider(ui, &mut d, Slider::Input, track, &hv, &[Color32::BLACK, Color32::from_gray(128), Color32::WHITE], track.top() + 1.0, &t("dlg-levels-input-tip")) {
             d.drag_handle(Slider::Input, i, v);
         }
+        // Beim Drücken auf einen Griff bekommt das zugehörige Feld den Fokus (§3.5); die Felder
+        // stehen schon vor dem Schieber, geben den Fokus beim selben Mausdruck also nicht ab
+        // ebenso beim Loslassen: ohne Bewegung ist das für egui ein Klick neben das Feld
+        match (grabbed_before, d.drag) {
+            (None, Some((Slider::Input, i))) | (Some((Slider::Input, i)), None) => focus(ui, Slider::Input, i, d.channel_ref()),
+            _ => {}
+        }
         // Ausgabetonwerte
-        crate::inspector::fields::label_right(ui, at(5.0, 192.0, 182.0, 21.0), &out_l, true);
+        access::label_right(ui, at(5.0, 192.0, 182.0, 21.0), &out_l, true);
         let ch = *d.channel_ref();
         for (k, (x, v)) in [(191.0, ch.dest_low), (231.0, ch.dest_high)].into_iter().enumerate() {
             let fr = at(x, 192.0, 36.0, 21.0);
@@ -284,8 +313,13 @@ pub fn show_levels(ctx: &egui::Context, st: &mut AppState) {
         draw_ramp(ui, at(21.0, 218.0, 241.0, 13.0));
         let otrack = at(17.0, 232.0, 249.0, 13.0);
         let ch = *d.channel_ref();
+        let grabbed_before = d.drag;
         if let Some((i, v)) = slider(ui, &mut d, Slider::Output, otrack, &[ch.dest_low as f64, ch.dest_high as f64], &[Color32::BLACK, Color32::WHITE], otrack.top(), &t("dlg-levels-output-tip")) {
             d.drag_handle(Slider::Output, i, v);
+        }
+        match (grabbed_before, d.drag) {
+            (None, Some((Slider::Output, i))) | (Some((Slider::Output, i)), None) => focus(ui, Slider::Output, i, d.channel_ref()),
+            _ => {}
         }
         // Knopfspalte
         if push_button(ui, at(287.0, 16.0, bw, 23.0), &ok_l, true, true) {
@@ -295,7 +329,7 @@ pub fn show_levels(ctx: &egui::Context, st: &mut AppState) {
             result = Some(false);
         }
         let ar = at(287.0, 75.0, bw, 23.0);
-        if push_button(ui, ar, &auto_l, false, true) {
+        if push_button(ui, ar, &auto_l, false, true) || access::pressed(ui, &auto_l) {
             d.auto();
         }
         let _ = ui.interact(ar, Id::new("lv-auto-tip"), Sense::hover()).on_hover_text(&auto_tip);
@@ -303,7 +337,7 @@ pub fn show_levels(ctx: &egui::Context, st: &mut AppState) {
         if let Some(p) = common::pipette_buttons(ui, "lv", [o.x + px, o.x + px + 24.0, o.x + px + 48.0], o.y + 109.0, d.picking) {
             d.picking = if d.picking == Some(p) { None } else { Some(p) };
         }
-        if let Some(b) = fields::checkbox(ui, "lv-prev", at(285.0, 141.0, pw, 16.0), &prev_l, d.preview.preview_on, true) {
+        if let Some(b) = access::checkbox(ui, "lv-prev", at(285.0, 141.0, pw, 16.0), &prev_l, d.preview.preview_on, true) {
             d.preview.preview_on = b;
             preview_toggled = Some(b);
         }

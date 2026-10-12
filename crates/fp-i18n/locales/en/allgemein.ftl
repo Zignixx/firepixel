@@ -20,6 +20,7 @@ btn-no = &No
 btn-close = Close
 btn-apply = Apply
 btn-browse = Browse…
+btn-help = &Help
 
 # units (abbreviations; unit("px") in fp-i18n)
 unit-px = px

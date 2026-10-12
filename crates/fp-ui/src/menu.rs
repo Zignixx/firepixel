@@ -707,13 +707,21 @@ pub fn show_nodes(ui: &mut Ui, nodes: &[Node], out: &mut Vec<Action>) {
             Node::Sub { label, children, enabled } => {
                 let id = ui.next_auto_id();
                 let open = egui::containers::menu::MenuState::from_ui(ui, |s, _| s.open_item == Some(SubMenu::id_from_widget_id(id)));
-                let resp = paint_item(ui, label, None, None, *enabled, true, open);
+                let resp = paint_item(ui, label, None, sub_head_checked(nodes, children), *enabled, true, open);
                 if *enabled {
                     SubMenu::new().show(ui, &resp, |ui| show_submenu_body(ui, children, out));
                 }
             }
         }
     }
+}
+
+/// Häkchen am Kopf eines Untermenüs: In langen Listen (Text ▸ Schrift, ab [`LONG_SUBMENU`]
+/// Einträgen) trägt eine Familie mit mehreren Schnitten das ✓ am Familienkopf, wenn einer ihrer
+/// Schnitte gewählt ist – sonst sähe man es erst nach dem Aufklappen (Befund MN-2). Kurze Menüs
+/// (z. B. Ansicht ▸ Design) zeigen am Kopf wie im Original kein Häkchen.
+pub fn sub_head_checked(siblings: &[Node], children: &[Node]) -> Option<bool> {
+    (siblings.len() > LONG_SUBMENU && children.iter().any(|c| matches!(c, Node::Item { checked: Some(true), .. }))).then_some(true)
 }
 
 /// Inhalt eines Untermenüs; lange Untermenüs (Text ▸ Schrift: alle Familien flach, ab

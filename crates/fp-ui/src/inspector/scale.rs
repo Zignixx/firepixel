@@ -100,7 +100,7 @@ impl Scale {
 pub fn slider(ui: &mut egui::Ui, value: &mut f64, range: (f64, f64), scale: Scale) -> egui::Response {
     let (min, max) = (range.0.min(range.1), range.0.max(range.1));
     let mut pos = scale.to_pos(*value, min, max);
-    let r = ui.add(egui::Slider::new(&mut pos, 0.0..=scale.max_pos(min, max)).step_by(1.0).show_value(false));
+    let r = crate::theme::with_field_widgets(ui, |ui| ui.add(egui::Slider::new(&mut pos, 0.0..=scale.max_pos(min, max)).step_by(1.0).show_value(false)));
     if r.changed() {
         *value = scale.to_value(pos, min, max);
     }

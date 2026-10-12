@@ -4,6 +4,7 @@
 //! Zustands-Struct in [`Dialogs`]).
 
 mod about;
+pub mod access;
 pub mod ai_progress;
 pub mod catalog;
 pub mod doc_dialogs;
@@ -858,11 +859,16 @@ pub fn show_all(ctx: &egui::Context, st: &mut AppState) {
 fn show_message(ctx: &egui::Context, st: &mut AppState) {
     let Some((title, text)) = st.dialogs.message.clone() else { return };
     let mut done = false;
+    // Info-Symbol 32 px links wie im Original (D25), Text daneben (kurz: mittig zum Symbol);
     // längere Meldungen (andere Sprachen): Höhe wächst mit dem umbrochenen Text
-    let tw = 380.0 - 32.0;
+    let tw = 380.0 - 60.0 - 16.0;
     let th = wrapped_h(ctx, &text, tw);
-    let r = dialog_frame(ctx, "fp-message", &title, vec2(380.0, 120.0f32.max(th + 16.0 + 50.0).ceil()), |ui, body| {
-        put_left(ui, Rect::from_min_size(body.min + vec2(16.0, 16.0), vec2(body.width() - 32.0, body.height() - 66.0)), egui::Label::new(text.as_str()).wrap());
+    let r = dialog_frame(ctx, "fp-message", &title, vec2(380.0, 120.0f32.max(th.max(32.0) + 16.0 + 50.0).ceil()), |ui, body| {
+        let theme = Theme::current(ui.ctx());
+        let icon = Rect::from_min_size(body.min + vec2(16.0, 16.0), vec2(32.0, 32.0));
+        crate::ui_kit::paint_icon(ui.painter(), icon, crate::ui_kit::KitIcon::Info, &crate::icons::IconStyle::new(&theme, None, true));
+        let ty = if th < icon.height() { icon.center().y - th / 2.0 } else { icon.top() };
+        put_left(ui, Rect::from_min_size(pos2(body.left() + 60.0, ty), vec2(tw, (body.bottom() - 50.0 - ty).max(th))), egui::Label::new(text.as_str()).wrap());
         let ok = t("btn-ok");
         let w = button_w(ui.ctx(), &ok, 76.0);
         if push_button(ui, Rect::from_min_size(pos2(body.right() - 16.0 - w, body.bottom() - 34.0), vec2(w, 23.0)), &ok, true, true) {

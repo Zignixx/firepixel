@@ -439,7 +439,7 @@ pub fn show(ctx: &egui::Context, st: &mut AppState, menus: &[(String, Vec<Node>)
                     }
                     let (label, shortcut, enabled, checked, sub) = match n {
                         Node::Item { label, shortcut, enabled, checked, .. } => (label.as_str(), shortcut.as_deref(), *enabled, *checked, false),
-                        Node::Sub { label, enabled, .. } => (label.as_str(), None, *enabled, None, true),
+                        Node::Sub { label, enabled, children } => (label.as_str(), None, *enabled, menu::sub_head_checked(nodes, children), true),
                         Node::Separator => continue,
                     };
                     let resp = menu::paint_item_pub(ui, label, shortcut, checked, enabled, sub, i == sel);

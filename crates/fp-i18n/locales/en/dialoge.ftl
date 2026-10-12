@@ -148,7 +148,6 @@ dlg-pref-grp-colors = Default Colors
 dlg-pref-color-stroke = Stroke
 dlg-pref-color-fill = Fill
 dlg-pref-color-highlight = Highlight
-dlg-pref-help = Help
 dlg-pref-plugins-note = Note: Firepixel does not embed any textures or patterns of the original; folders are only read at run time.
 ## Shared
 dlg-only-current-page = Current page only
@@ -174,7 +173,8 @@ dlg-anchor-bottom-right = Bottom right
 dlg-image-size-title = Image Size
 dlg-image-size-pixels = Pixel Dimensions
 dlg-image-size-print = Print Size
-dlg-image-size-resample = Resample image
+dlg-image-size-resample = &Resample image
+dlg-image-size-constrain = &Constrain proportions
 dlg-numeric-title = Numeric Transform
 dlg-numeric-scale = Scale
 dlg-numeric-resize = Resize
@@ -366,9 +366,6 @@ dlg-style-other = Other text attributes
 
 ## Live filters (effects.rs)
 dlg-fx-options = Options
-dlg-fx-all-on = All On
-dlg-fx-all-off = All Off
-dlg-fx-save-style = Save as Style...
 dlg-fx-photoshop-unavailable = Photoshop Live Effects (not available yet)
 dlg-fx-emboss = Emboss
 dlg-fx-bevel = Bevel
@@ -407,16 +404,16 @@ dlg-channel-rgb = RGB
 dlg-channel-red = Red
 dlg-channel-green = Green
 dlg-channel-blue = Blue
-dlg-levels-input = Input Levels:
-dlg-levels-output = Output Levels:
+dlg-levels-input = &Input Levels:
+dlg-levels-output = &Output Levels:
 dlg-levels-auto = &Auto
 dlg-levels-auto-tip = Adjust levels automatically
+dlg-levels-preview = &Preview
 dlg-levels-min-tip = Minimum intensity
 dlg-levels-gamma-tip = Gamma
 dlg-levels-max-tip = Maximum intensity
 dlg-levels-input-tip = Set input levels
 dlg-levels-output-tip = Set output levels
-dlg-auto = Auto
 ## Curves and Levels shared (levels_common.rs)
 dlg-adjust-channel-tip = Color channels to edit
 dlg-pipette-shadow = Select shadow color

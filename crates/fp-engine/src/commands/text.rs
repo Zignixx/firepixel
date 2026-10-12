@@ -251,7 +251,10 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 t.initial.ps_font = Some(p_font(&t.initial));
             },
             move |s| {
-                s.prefs.set("Text_Font", crate::prefs::PrefValue::Str(family.clone()));
+                // Ausdrücklich speichern, auch wenn es die Werksvorgabe (Arial) ist: `prefs.set`
+                // ließe den Schlüssel dann weg, und nach einem Neustart gälte wieder die Vorzugsschrift
+                // des Textwerkzeugs statt der gewählten (Befund MN-2, NZ-3)
+                s.prefs.values.insert("Text_Font".to_string(), crate::prefs::PrefValue::Str(family.clone()));
                 s.tools.options.text_font = family;
             },
         )

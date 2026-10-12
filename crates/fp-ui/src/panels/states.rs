@@ -125,7 +125,7 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                 ui.label(common::t("panel-states-delay-unit"));
             });
             let mut vis = info.visible;
-            if ui.checkbox(&mut vis, common::t("panel-states-include-export")).changed() {
+            if crate::theme::with_field_widgets(ui, |ui| ui.checkbox(&mut vis, common::t("panel-states-include-export"))).changed() {
                 actions.push(Action::Run("pi.state.props".into(), json!({"indices": [i], "visible": vis})));
             }
         });

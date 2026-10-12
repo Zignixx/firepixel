@@ -276,6 +276,7 @@ pub fn show(ctx: &egui::Context, st: &mut AppState) {
         // das Farbfeld ist im Original kein Tab-Stopp
         let skip = egui::Id::new("nd-swatch");
         super::skip_tab_stop_before(ui, skip);
+        crate::theme::field_widgets(&mut child);
         let sresp = child.color_edit_button_srgb(&mut rgb);
         super::skip_tab_stop_after(ui, skip, &sresp);
         if sresp.changed() {

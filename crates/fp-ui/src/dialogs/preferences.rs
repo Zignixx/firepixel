@@ -428,7 +428,7 @@ pub fn show(ctx: &egui::Context, st: &mut AppState) {
     let Some(mut d) = st.dialogs.preferences.clone() else { return };
     let mut result = None;
     let lay = Layout::measure(ctx);
-    let (ok_l, cancel_l, help_l) = (t("btn-ok"), t("btn-cancel"), t("dlg-pref-help"));
+    let (ok_l, cancel_l, help_l) = (t("btn-ok"), t("btn-cancel"), t("btn-help"));
     let mut help = false;
     let r = dialog_frame(ctx, "fp-prefs", &t("dlg-pref-title"), lay.size, |ui, body| {
         let theme = Theme::current(ui.ctx());
@@ -512,7 +512,7 @@ pub fn show(ctx: &egui::Context, st: &mut AppState) {
         let by = body.bottom() - 36.0;
         // „Hilfe“ unten links wie im Original (öffnet die Hilfe, der Dialog bleibt offen)
         let hw = super::button_w(ui.ctx(), &help_l, 72.0);
-        if push_button(ui, Rect::from_min_size(pos2(body.left() + 12.0, by), vec2(hw, 23.0)), &help_l, false, true) {
+        if push_button(ui, Rect::from_min_size(pos2(body.left() + 12.0, by), vec2(hw, 23.0)), &help_l, false, true) || super::access::pressed(ui, &help_l) {
             help = true;
         }
         let b = super::button_row(ui.ctx(), body.right() - 16.0, by, &[&ok_l, &cancel_l], 76.0, 23.0, 8.0);

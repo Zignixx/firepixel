@@ -819,6 +819,9 @@ impl Theme {
         v.widgets.open.bg_stroke = Stroke::new(1.0, c.menu_hover_border);
         v.widgets.open.fg_stroke = Stroke::new(1.0, c.menu_hover_text);
         v.widgets.open.corner_radius = r0;
+        // Bildlaufleisten: Spur `scrollbar_bg`, Griff `scrollbar_thumb` (Textfelder behalten mit
+        // `text_edit_bg_color` ihren eigenen Grund)
+        scrollbar_widgets(&mut v, c);
         v
     }
 
@@ -857,6 +860,43 @@ impl Theme {
 }
 
 const THEME_KEY: &str = "fp-ui-theme";
+
+/// Griff der egui-Bildlaufleisten in allen Listen sichtbar machen (Befund NZ-2, N24): egui zeichnet
+/// die feste Leiste mit `extreme_bg_color` als Spur und `widgets.{inactive,hovered,active}.bg_fill`
+/// als Griff. Beides war `field_bg`, der Griff also erst unter der Maus zu sehen. Jetzt gelten
+/// app-weit die Farben der Leinwand-Bildlaufleisten (`scrollbar_bg`/`scrollbar_thumb`), unter der
+/// Maus bzw. beim Ziehen etwas kräftiger (heller in Dunkel/OLED).
+///
+/// `extreme_bg_color` nutzt sonst nur der egui-Fortschrittsbalken als Grund; `bg_fill` nur
+/// egui-eigene Kästchen, Schieber und Farbknöpfe – diese wenigen Stellen zeichnen über
+/// [`with_field_widgets`] weiter im Feldstil. Knöpfe und Kombifelder nutzen `weak_bg_fill`.
+pub fn scrollbar_widgets(v: &mut Visuals, c: &Palette) {
+    v.extreme_bg_color = c.scrollbar_bg;
+    v.widgets.inactive.bg_fill = c.scrollbar_thumb;
+    v.widgets.hovered.bg_fill = mix(c.scrollbar_thumb, c.text, 0.3);
+    v.widgets.active.bg_fill = mix(c.scrollbar_thumb, c.text, 0.5);
+}
+
+/// Feldstil für egui-eigene Kästchen, Schieber und Farbknöpfe (`bg_fill` wie vor
+/// [`scrollbar_widgets`]): Grund `field_bg`, unter der Maus `button_hover_bg`, gedrückt
+/// `button_pressed_bg`. Gilt nur für `ui`.
+pub fn field_widgets(ui: &mut egui::Ui) {
+    let theme = Theme::current(ui.ctx());
+    let c = &theme.colors;
+    let w = &mut ui.visuals_mut().widgets;
+    w.inactive.bg_fill = c.field_bg;
+    w.hovered.bg_fill = c.button_hover_bg;
+    w.active.bg_fill = c.button_pressed_bg;
+}
+
+/// Zeichnet `add` im Feldstil ([`field_widgets`]), z. B. ein `egui::Checkbox`.
+pub fn with_field_widgets<R>(ui: &mut egui::Ui, add: impl FnOnce(&mut egui::Ui) -> R) -> R {
+    ui.scope(|ui| {
+        field_widgets(ui);
+        add(ui)
+    })
+    .inner
+}
 
 /// Farbe mit Deckkraft (0..255) für Schein-Effekte.
 pub fn with_alpha(c: Color32, a: u8) -> Color32 {

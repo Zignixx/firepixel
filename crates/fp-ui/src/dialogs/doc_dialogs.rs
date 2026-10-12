@@ -378,7 +378,7 @@ pub fn show_image_size(ctx: &egui::Context, st: &mut AppState) {
     let pr_units = tl(&["dlg-unit-percent", "dlg-unit-inches", "dlg-unit-cm"]);
     let res_units = tl(&super::new_document::RES_UNITS);
     let methods = tl(super::preferences::INTERP);
-    let (constrain_l, resample_l, page_l, ok_l, cancel_l) = (t("dlg-constrain"), t("dlg-image-size-resample"), t("dlg-only-current-page"), t("btn-ok"), t("btn-cancel"));
+    let (constrain_l, resample_l, page_l, ok_l, cancel_l) = (t("dlg-image-size-constrain"), t("dlg-image-size-resample"), t("dlg-only-current-page"), t("btn-ok"), t("btn-cancel"));
     let dx = extra_w(ctx, &[&wh[0], &wh[1], &res_l], dlu(46.0, 0.0).x - 4.0);
     let all_units: Vec<&str> = px_units.iter().chain(pr_units.iter()).chain(res_units.iter()).map(|s| s.as_str()).collect();
     let cw = combo_fit_w(ctx, &all_units, dlu(54.0, 0.0).x);
@@ -483,10 +483,10 @@ pub fn show_image_size(ctx: &egui::Context, st: &mut AppState) {
             }
             d.res_unit = u;
         }
-        if let Some(b) = fields::checkbox(ui, "is-constrain", dlu_rect(o, [9.0, 140.0, 120.0, 10.0]).with_max_x(body.right() - 8.0), &constrain_l, d.constrain, true) {
+        if let Some(b) = super::access::checkbox(ui, "is-constrain", dlu_rect(o, [9.0, 140.0, 120.0, 10.0]).with_max_x(body.right() - 8.0), &constrain_l, d.constrain, true) {
             d.constrain = b;
         }
-        if let Some(b) = fields::checkbox(ui, "is-resample", Rect::from_min_max(dlu_rect(o, [9.0, 154.0, 70.0, 10.0]).min, egui::pos2(o.x + mx - 4.0, dlu_rect(o, [9.0, 154.0, 70.0, 10.0]).bottom())), &resample_l, d.resample, true) {
+        if let Some(b) = super::access::checkbox(ui, "is-resample", Rect::from_min_max(dlu_rect(o, [9.0, 154.0, 70.0, 10.0]).min, egui::pos2(o.x + mx - 4.0, dlu_rect(o, [9.0, 154.0, 70.0, 10.0]).bottom())), &resample_l, d.resample, true) {
             d.resample = b;
             if !b {
                 d.w = d.cur_w;

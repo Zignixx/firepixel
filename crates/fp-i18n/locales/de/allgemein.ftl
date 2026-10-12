@@ -17,6 +17,7 @@ btn-no = &Nein
 btn-close = Schließen
 btn-apply = Übernehmen
 btn-browse = Durchsuchen…
+btn-help = &Hilfe
 
 # Einheiten (Kürzel; unit("px") in fp-i18n)
 unit-px = px

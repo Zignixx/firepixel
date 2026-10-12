@@ -347,6 +347,7 @@ fn draw_panel(ui: &mut Ui, st: &mut AppState, theme: &Theme, lay: &Layout, panel
     let mut dont = !st.session.prefs.get_bool(PREF_SHOW, true);
     let cb_r = Rect::from_min_max(pos2(x0, foot.top()), pos2(foot.right() - lay.pad, foot.bottom()));
     let mut cu = ui.new_child(egui::UiBuilder::new().max_rect(cb_r).layout(egui::Layout::left_to_right(egui::Align::Center)));
+    crate::theme::field_widgets(&mut cu);
     let resp = cu.add(egui::Checkbox::new(&mut dont, t("welcome-dont-show"))).on_hover_text(t("welcome-dont-show.tooltip"));
     if resp.changed() {
         st.session.prefs.set(PREF_SHOW, fp_engine::PrefValue::Bool(!dont));

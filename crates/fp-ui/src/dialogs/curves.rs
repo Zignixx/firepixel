@@ -10,7 +10,7 @@
 
 use super::form::{apply_preview, revert_preview, FormDialog};
 use super::levels_common::{self as common, Pipette};
-use super::{dialog_frame, push_button, refs, t, tl, DialogClose, DIALOG_TITLE_H};
+use super::{access, dialog_frame, push_button, refs, t, tl, DialogClose, DIALOG_TITLE_H};
 use crate::app_state::AppState;
 use crate::inspector::fields;
 use egui::{pos2, vec2, Color32, Id, Pos2, Rect, Sense, Shape, Ui};
@@ -395,11 +395,17 @@ pub fn show_curves(ctx: &egui::Context, st: &mut AppState) {
         let inner = frame.shrink(1.0);
         let resp = ui.interact(inner, Id::new("cv-field"), Sense::click_and_drag());
         let (pressed, released, pos) = ui.input(|i| (i.pointer.primary_pressed(), i.pointer.primary_released(), i.pointer.interact_pos()));
+        // Punkt gegriffen: das Feld „Eingabe“ bekommt danach den Fokus (wie der Griff im Original)
+        let mut grabbed = false;
         if d.picking.is_none() {
+            // Loslassen nach dem Greifen ohne Bewegung ist für egui ein Klick neben das Feld; der
+            // Fokus wird danach erneut gesetzt (Win32: das Feld behält ihn)
+            grabbed = released && d.drag.is_some();
             if let Some(p) = pos {
                 let rel = p - inner.min;
                 if pressed && ui.rect_contains_pointer(inner) {
                     d.press(rel.x, rel.y);
+                    grabbed |= d.drag.is_some();
                 } else if d.drag.is_some() {
                     d.drag_to(rel.x, rel.y);
                 }
@@ -422,9 +428,17 @@ pub fn show_curves(ctx: &egui::Context, st: &mut AppState) {
         paint_field(ui, &d, inner);
         // Felder Eingabe/Ausgabe (gewählter Punkt)
         let (inr, outr) = (at(214.0, 263.0, 36.0, 20.0), at(214.0, 286.0, 36.0, 20.0));
-        fields::label_right(ui, at(15.0, 266.0, 194.0, 13.0), &in_l.replace('&', ""), true);
-        fields::label_right(ui, at(15.0, 289.0, 194.0, 13.0), &out_l.replace('&', ""), true);
+        access::label_right(ui, at(15.0, 266.0, 194.0, 13.0), &in_l, true);
+        access::label_right(ui, at(15.0, 289.0, 194.0, 13.0), &out_l, true);
         let edit = d.selected.is_some();
+        // Alt+E / Alt+A (de): Feld Eingabe bzw. Ausgabe wählen (nur mit gewähltem Punkt)
+        let len = |v: f32| fields::fmt_num(v as f64, 0).chars().count();
+        if access::pressed(ui, &in_l) && edit {
+            access::focus_field(ui, "cv-in", len(d.shown.0));
+        }
+        if access::pressed(ui, &out_l) && edit {
+            access::focus_field(ui, "cv-out", len(d.shown.1));
+        }
         if let Some(v) = fields::number(ui, "cv-in", inr, None, Some(d.shown.0 as f64), (0.0, 99999.0), 0, edit) {
             d.commit_fields(v, d.shown.1 as f64);
         }
@@ -433,6 +447,11 @@ pub fn show_curves(ctx: &egui::Context, st: &mut AppState) {
         }
         let _ = ui.interact(inr, Id::new("cv-in-tip"), Sense::hover()).on_hover_text(&in_tip);
         let _ = ui.interact(outr, Id::new("cv-out-tip"), Sense::hover()).on_hover_text(&out_tip);
+        // erst nach dem Zeichnen der Felder: sonst gäbe das Feld den Fokus beim selben Mausdruck
+        // gleich wieder ab („Klick daneben“)
+        if grabbed && d.selected.is_some() {
+            access::focus_field(ui, "cv-in", len(d.shown.0));
+        }
         // Knopfspalte rechts
         if push_button(ui, at(col, 11.0, bw, 23.0), &ok_l, true, true) {
             result = Some(true);
@@ -441,7 +460,7 @@ pub fn show_curves(ctx: &egui::Context, st: &mut AppState) {
             result = Some(false);
         }
         let ar = at(col, 73.0, bw, 23.0);
-        if push_button(ui, ar, &auto_l, false, true) {
+        if push_button(ui, ar, &auto_l, false, true) || access::pressed(ui, &auto_l) {
             d.picking = None;
             d.auto();
         }
@@ -453,7 +472,7 @@ pub fn show_curves(ctx: &egui::Context, st: &mut AppState) {
             d.picking = Some(p);
         }
         let pr = at(col - 2.0, 136.0, pw, 16.0);
-        if let Some(b) = fields::checkbox(ui, "cv-prev", pr, &prev_l.replace('&', ""), d.preview.preview_on, true) {
+        if let Some(b) = access::checkbox(ui, "cv-prev", pr, &prev_l, d.preview.preview_on, true) {
             d.preview.preview_on = b;
             pref_change = Some(b);
         }
