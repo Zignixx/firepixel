@@ -61,7 +61,7 @@ key-down = Down
 key-num = Num
 
 # language selection (View ▸ Language, Preferences)
-lang-menu = Language
+lang-menu = La&nguage
 lang-open-folder = Open Language Folder…
 lang-pseudo = Pseudo-language (qps)
 lang-label = Language:

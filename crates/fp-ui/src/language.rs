@@ -132,7 +132,8 @@ pub fn menu_node(st: &AppState) -> Node {
         enabled: true,
         checked: None,
     });
-    Node::Sub { label: fp_i18n::t("lang-menu"), children, enabled: true }
+    // Zugriffstaste (Spra&che / La&nguage) unterstreicht und bedient menu_kbd über den Rohtext
+    Node::Sub { label: fp_i18n::strip_access(&fp_i18n::t("lang-menu")).0, children, enabled: true }
 }
 
 /// Sprache wechseln: sofort wirksam, in den Voreinstellungen gespeichert, Schriften angepasst.
@@ -177,7 +178,7 @@ pub fn run_action(st: &mut AppState, ctx: &egui::Context, name: &str, params: &V
         "ui.setLanguage" => {
             let code = params.get("code").and_then(|v| v.as_str()).unwrap_or("");
             if !switch(st, ctx, code) {
-                st.set_status(format!("{}: {code}?", fp_i18n::t("lang-menu")), ctx.input(|i| i.time));
+                st.set_status(format!("{}: {code}?", fp_i18n::strip_access(&fp_i18n::t("lang-menu")).0), ctx.input(|i| i.time));
             }
             true
         }

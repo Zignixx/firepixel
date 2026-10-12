@@ -58,7 +58,7 @@ key-down = Unten
 key-num = Num
 
 # Sprachwahl (Ansicht ▸ Sprache, Voreinstellungen)
-lang-menu = Sprache
+lang-menu = Spra&che
 lang-open-folder = Sprachordner öffnen…
 lang-pseudo = Testsprache (qps)
 lang-label = Sprache:

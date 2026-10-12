@@ -140,6 +140,7 @@ Schlüssel: Kleinbuchstaben, Bindestriche, Bereichspräfix. Attribute mit Punkt 
 | `oberflaeche.ftl` | `ui-` (Anwendungsleiste, Symbolleiste, Reiter, Leinwand-Overlays, Statuszeile, Fußleiste, Docking, Datei-Dialogfilter, Startfenster) | I18N-SHELL |
 | `meldungen.ftl` | `err-` (Fehler aus fp-engine/fp-io/fp-export/fp-script), `msg-` (Status-/Infomeldungen), `ai-` (KI-Auswahl) | I18N-ENGINE |
 | `filter.ftl` | `filter-`, `effect-`, `blend-` (Filter-, Effekt- und Mischmodusnamen, Parameter) | I18N-ENGINE |
+| `willkommen.ftl` | `welcome-` (Startbildschirm) | DESIGN |
 
 Jeder Agent schreibt nur in seine Dateien (in `de` **und** `en`).
 
