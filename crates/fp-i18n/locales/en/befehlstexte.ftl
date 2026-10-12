@@ -533,3 +533,4 @@ cmdtext-spleisswinkel-der-splines-in-grad = Splice angle of the splines in degre
 cmdtext-schwarzweiss-helligkeitsschwelle = Black and white: brightness threshold
 cmdtext-vektorobjekte-brauchen-einen-renderer-fp-render = Vector objects need a renderer (fp-render)
 cmdtext-menue-platzhalter-zur-laufzeit-ersetzt = Menu placeholder, replaced at run time
+cmdtext-logo-nachbearbeitung-true-false-oder-obj-cdb621 = Logo clean-up: true/false or an object (enabled, snapColors, colorTolerance, straighten, snapAngle, shapes, shapeTolerance, reduceNodes, fitTolerance, closeGaps, symmetry, fast); missing: as the preset

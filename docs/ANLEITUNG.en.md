@@ -19,7 +19,8 @@ needed for the user interface.
 **Language:** *View ▸ Language* or *Edit ▸ Preferences ▸ General*. Firepixel ships with German
 and English; on first start it uses the Windows language. The switch takes effect immediately.
 More languages are plain `.ftl` text files in `%APPDATA%\Firepixel\Sprachen\` (*View ▸ Language ▸
-Open Language Folder…*); a guide for translators is in `crates\fp-i18n\README.md`.
+Open Language Folder…*); a guide for translators is in `crates\fp-i18n\README.md`. This guide is also
+available in German (`ANLEITUNG.md`).
 
 **Basics:**
 
@@ -72,9 +73,12 @@ that fits the tool and the selection.
   Preferences and Keyboard Shortcuts.
 - **View:** Magnification, Fit Selection/Fit All, Rulers, Grid, Guides, Smart Guides, Theme, Language.
 - **Select, Modify, Text, Filters:** act on the selection. If a command is grayed out, running it
-  via its shortcut shows the reason in the status bar.
+  via its shortcut shows the reason in the status bar. Commands that can always be chosen but find
+  no suitable target (e.g. *Simplify...* without a path) report this with a warning, like the
+  original; "Don't show again" switches it off.
 - **Commands:** Run Script (`.jsf`), saved commands from the commands folder
-  (`%APPDATA%\Firepixel\Commands`, subfolders become submenus) and the AI control channel.
+  (`%APPDATA%\Firepixel\Commands`, subfolders become submenus), Manage AI Models, Reset Warning
+  Dialogs and the AI control channel.
 - **Window:** shows and hides panels. *Workspace Layouts* saves and loads arrangements; at the end
   is the list of open documents.
 
@@ -104,6 +108,36 @@ Important panels:
 The **Properties inspector** at the bottom shows, depending on the selection, fill, stroke,
 opacity, blending mode, Live Filters (+/−) and text or symbol settings.
 
+## Trace Bitmap
+
+*Modify ▸ Trace Bitmap...* (also in the context menu of a bitmap) turns a pixel image into editable,
+filled vector paths. In the dialog:
+
+- **Preset:** Logo (few flat colors, crisp edges), Black and White (line art, scans, lettering),
+  Illustration (many colors), Photo (soft shapes).
+- **Settings:** colors or threshold, detail and smoothness, corners, remove speckles.
+  **Clean up** (on for Logo) unifies colors, straightens lines, detects circles and rectangles and
+  uses fewer nodes; the details are under *Advanced*.
+- **Preview:** Compare, Original, Vector or Outlines, plus figures (paths, points, colors, match).
+
+OK takes over the result of the preview as a group on a new layer "Traced", in one undo step; with
+"Keep original" (default) the bitmap stays.
+
+## AI Selection
+
+Three tools in the slot of the Magic Wand (Bitmap section) create pixel selections with local AI
+models, without a network connection while computing:
+
+- **Object Selection:** click an object or drag a box; as with the Magic Wand, Shift+click adds and
+  Alt+click subtracts.
+- **Select Subject** (also *Select ▸ Select Subject*): selects the main subject with a soft edge.
+- **Refine Edge** (also *Select ▸ Refine Edge...*): improves the edge of an existing selection for
+  hair, fur and semi-transparency.
+
+The models are not shipped. If one is missing, Firepixel offers the download; nothing is loaded
+before you agree. Overview, licenses and model folder: *Commands ▸ Manage AI Models...* (details in
+`docs\MODELLE.md`).
+
 ## Exporting
 
 In the **Optimize** panel you set the export format:
@@ -123,18 +157,23 @@ each with file size and download time. 4-Up shows three settings side by side fo
   step.
 - **Command line:** `firepixel-cli` can inspect documents (`info`), apply commands (`run`,
   `batch`), render images (`render`), convert (`convert`), run scripts (`script`) and check
-  translations (`sprache pruefen`). `firepixel-cli <command> --help` shows examples.
+  translations (`language check`). `firepixel-cli <command> --help` shows examples; `--lang en|de`
+  chooses the language of the output.
 - **AI control (MCP):** `firepixel-cli mcp` (stdio), or in the running application
   *Commands ▸ AI Control Channel (MCP)*, or start with `--mcp`. The server listens on 127.0.0.1
   only and requires a token. Address and token are in `%LOCALAPPDATA%\Firepixel\mcp-bridge.json`.
-  Details are in `docs\AGENTS.md`.
+  AI agents get answers in English, in German on request. Details are in `docs\AGENTS.en.md`
+  (German: `docs\AGENTS.md`).
 
 ## Troubleshooting
 
 - **Preferences** are stored in `%APPDATA%\Firepixel\preferences.json`. Deleting the file resets
   them.
 - If the workspace is in a mess: *Window ▸ Workspace Layouts ▸ Default Workspace*.
-- Warnings suppressed with "Don't show again" come back via *Commands ▸ Reset Warning Dialogs*.
+- Warnings suppressed with "Don't show again" come back via *Commands ▸ Reset Warning Dialogs*
+  (or *Preferences ▸ Reset All Warning Dialogs*).
+- "AI model … is missing": load it in *Commands ▸ Manage AI Models...* or put the file into the model
+  folder shown there.
 - Resources of the original are optional. Textures, patterns, libraries and the CMYK table of an
   existing installation are used by Firepixel if the folder is entered in *Preferences*. None of
   them is shipped.

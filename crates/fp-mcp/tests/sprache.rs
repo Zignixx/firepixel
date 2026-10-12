@@ -128,3 +128,36 @@ fn werkzeuge_ressourcen_und_menuepfade_in_beiden_sprachen() {
     }
     assert!(bad.is_empty(), "{} Menüpfade mit deutschen Stufen:\n{}", bad.len(), bad.join("\n"));
 }
+
+/// UE-4: Agenten-Anleitung und JSF-Liste in der Antwortsprache (Englisch als Vorgabe, `de` → Deutsch);
+/// die deutsche JSF-Liste bleibt wortgleich mit `fp_script::coverage_markdown`.
+#[test]
+fn agenten_anleitung_und_jsf_liste_in_beiden_sprachen() {
+    let german = |t: &str| t.chars().any(|c| "äöüÄÖÜß„“".contains(c));
+    let reg = fp_engine::Session::default();
+    let read = |lang: &str, uri: &str| fp_i18n::with_language(lang, || fp_mcp::resources::read(uri, reg.registry())).unwrap_or_default();
+    let de = read("de", "firepixel://docs/agents.md");
+    let en = read("en", "firepixel://docs/agents.md");
+    assert!(de.starts_with("# Firepixel für KI-Agenten"), "{}", &de[..60]);
+    assert!(en.starts_with("# Firepixel for AI Agents"), "{}", &en[..60]);
+    let bad: Vec<&str> = en.lines().filter(|l| german(l)).collect();
+    assert!(bad.is_empty(), "deutsche Zeilen in AGENTS.en.md:\n{}", bad.join("\n"));
+    // gleiche Gliederung in beiden Fassungen
+    let heads = |s: &str| s.lines().filter(|l| l.starts_with('#') && !l.starts_with("#!")).count();
+    assert_eq!(heads(&de), heads(&en), "Überschriften AGENTS.md / AGENTS.en.md");
+    // weitere Sprachen: Englisch
+    assert_eq!(read("fr", "firepixel://docs/agents.md"), en);
+
+    let jsf_de = read("de", "firepixel://docs/jsf.md");
+    assert_eq!(jsf_de, fp_script::coverage_markdown(), "deutsche JSF-Liste wortgleich");
+    let jsf_en = read("en", "firepixel://docs/jsf.md");
+    assert!(jsf_en.starts_with("# JSF compatibility\n\nImplemented: **"), "{}", &jsf_en[..80]);
+    assert_eq!(jsf_en.lines().count(), jsf_de.lines().count());
+    let bad: Vec<&str> = jsf_en.lines().filter(|l| german(l) || l.contains("Methoden") || l.contains("ausgelassen")).collect();
+    assert!(bad.is_empty(), "deutsche Zeilen in jsf.md (en):\n{}", bad.join("\n"));
+    let (de_keys, en_keys) = (fp_i18n::keys("de"), fp_i18n::keys("en"));
+    for (c, m, _) in fp_script::coverage::EXCEPTIONS {
+        let k = fp_mcp::resources::jsf_reason_key(c, m);
+        assert!(de_keys.contains(&k) && en_keys.contains(&k), "Begründung {c}.{m}: Schlüssel {k} fehlt");
+    }
+}

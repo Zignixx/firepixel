@@ -152,7 +152,7 @@ msg-mcp-cat-intro = { $n } commands, { $implemented } of them with an effect. Ca
 msg-mcp-cat-unimplemented = not implemented
 msg-mcp-cat-needs = needs: { $list }
 mcp-res-agents = Guide for AI agents
-    .description = Setup, typical workflows, command name scheme, examples (document in German)
+    .description = Setup, typical workflows, command name scheme, examples
 mcp-res-commands = Command catalog
     .description = All commands by category with parameters, required values and availability
 mcp-res-document-model = Document model
@@ -160,7 +160,34 @@ mcp-res-document-model = Document model
 mcp-res-examples = Examples
     .description = Ready-made tool calls for common tasks
 mcp-res-jsf = JSF compatibility
-    .description = Which parts of the JSF JavaScript API are implemented (document in German)
+    .description = Which parts of the JSF JavaScript API are implemented
+# JSF compatibility list (resource jsf.md, fp_mcp::resources::jsf_markdown) – UE-4
+mcp-res-jsf-title = JSF compatibility
+mcp-res-jsf-intro = Implemented: **{ $m } of { $mt } methods**, **{ $p } of { $pt } properties** of the binding table of the original; deliberately left out: { $em } methods, { $ep } properties (reasons below).
+mcp-res-jsf-rules = Type rules as in the original: missing arguments come from defaults, otherwise exception `-2147216337` (EBadParamCount); extra arguments are ignored; `"5"` counts as a number, numbers as text; `null` for boolean/int/float throws `-2147216343` (EBadParamType); assignments to read-only properties are ignored; errors are thrown as an HRESULT number. Members that are not implemented throw `Error("nicht implementiert: Class.member")` (fixed message text).
+mcp-res-jsf-extras = In addition: `fp.run(name, params)` runs a command of the command registry (format of "Copy Steps" and saved commands), `fp.available(name)` checks whether it is available in the current state. Auto shapes: `dom.insertSmartShapeAt`, `dom.dragControlPoint`, `dom.redrawSmartShape`; the shape scripts run in a runtime of their own with `smartShape`, `Path`, `Contour`, `ContourNode`, `ControlPoint`.
+mcp-res-jsf-class-omitted = **{ $class }**: left out – { $reason }
+mcp-res-jsf-class-missing = **{ $class }**: not implemented yet ({ $methods } methods, { $props } properties)
+mcp-res-jsf-class-counts = **{ $class }**: methods { $m }/{ $mt }, properties { $p }/{ $pt }
+mcp-res-jsf-methods = Methods: { $list }
+mcp-res-jsf-props = Properties: { $list }
+mcp-res-jsf-member-omitted = left out: { $member } – { $reason }
+mcp-res-jsf-why-firepixel-exportswf = Flash export (SWF) – obsolete format, no exporter in Firepixel
+mcp-res-jsf-why-firepixel-exportfxg = FXG export (Flex) – obsolete format, no exporter in Firepixel
+mcp-res-jsf-why-firepixel-exportmxmlandimages = MXML export (Flex) – obsolete format, no exporter in Firepixel
+mcp-res-jsf-why-firepixel-exportdirectorasslices = Director export – obsolete format, no exporter in Firepixel
+mcp-res-jsf-why-firepixel-exportdirectoraslayers = Director export – obsolete format, no exporter in Firepixel
+mcp-res-jsf-why-firepixel-exportillustrator = Export as Illustrator 8 – no exporter in Firepixel (SVG/PDF via exportPDF or file.export)
+mcp-res-jsf-why-style-clipcopysmallpreviewimage = Style preview image to the clipboard – Firepixel creates no style preview images
+mcp-res-jsf-why-style-clipcopylargepreviewimage = Style preview image to the clipboard – Firepixel creates no style preview images
+mcp-res-jsf-why-behaviorinfo = Object of the HTML export templates of the original; Firepixel exports HTML/behaviors natively (fp-export) and does not run these templates
+mcp-res-jsf-why-behaviorinfo-menuitems-i = like BehaviorInfo (HTML export templates)
+mcp-res-jsf-why-behaviorslist = like BehaviorInfo (HTML export templates)
+mcp-res-jsf-why-imagemap = like BehaviorInfo (HTML export templates)
+mcp-res-jsf-why-imagemaplist = like BehaviorInfo (HTML export templates)
+mcp-res-jsf-why-sliceinfo = like BehaviorInfo (HTML export templates)
+mcp-res-jsf-why-slices = like BehaviorInfo (HTML export templates)
+mcp-res-jsf-why-exportdoc = like BehaviorInfo (HTML export templates)
 # <<< UE-3 Meldungen
 
 # >>> UE-3 Brücke

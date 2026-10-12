@@ -161,6 +161,33 @@ mcp-res-examples = Beispiele
     .description = Fertige Werkzeugaufrufe für häufige Aufgaben
 mcp-res-jsf = JSF-Kompatibilität
     .description = Welche Teile der JSF-JavaScript-API umgesetzt sind
+# JSF-Kompatibilitätsliste (Ressource jsf.md, fp_mcp::resources::jsf_markdown) – UE-4
+mcp-res-jsf-title = JSF-Kompatibilität
+mcp-res-jsf-intro = Umgesetzt: **{ $m } von { $mt } Methoden**, **{ $p } von { $pt } Properties** der Bindungstabelle des Originals; bewusst ausgelassen: { $em } Methoden, { $ep } Properties (Begründung unten).
+mcp-res-jsf-rules = Typregeln wie im Original: fehlende Argumente aus Vorgaben, sonst Ausnahme `-2147216337` (EBadParamCount); überzählige Argumente werden ignoriert; `"5"` gilt als Zahl, Zahlen als Text; `null` für boolean/int/float wirft `-2147216343` (EBadParamType); Zuweisung an read-only-Properties wird ignoriert; Fehler werden als HRESULT-Zahl geworfen. Nicht umgesetzte Member werfen `Error("nicht implementiert: Klasse.member")`.
+mcp-res-jsf-extras = Zusätzlich: `fp.run(name, params)` führt einen Befehl des Befehlsregisters aus (Format von „Schritte kopieren“ und gespeicherten Befehlen), `fp.available(name)` prüft, ob er im aktuellen Zustand verfügbar ist. Automatische Formen: `dom.insertSmartShapeAt`, `dom.dragControlPoint`, `dom.redrawSmartShape`; die Formen-Skripte laufen in einer eigenen Laufzeit mit `smartShape`, `Path`, `Contour`, `ContourNode`, `ControlPoint`.
+mcp-res-jsf-class-omitted = **{ $class }**: ausgelassen – { $reason }
+mcp-res-jsf-class-missing = **{ $class }**: noch nicht umgesetzt ({ $methods } Methoden, { $props } Properties)
+mcp-res-jsf-class-counts = **{ $class }**: Methoden { $m }/{ $mt }, Properties { $p }/{ $pt }
+mcp-res-jsf-methods = Methoden: { $list }
+mcp-res-jsf-props = Properties: { $list }
+mcp-res-jsf-member-omitted = ausgelassen: { $member } – { $reason }
+mcp-res-jsf-why-firepixel-exportswf = Flash-Export (SWF) – Format veraltet, kein Exporter in Firepixel
+mcp-res-jsf-why-firepixel-exportfxg = FXG-Export (Flex) – Format veraltet, kein Exporter in Firepixel
+mcp-res-jsf-why-firepixel-exportmxmlandimages = MXML-Export (Flex) – Format veraltet, kein Exporter in Firepixel
+mcp-res-jsf-why-firepixel-exportdirectorasslices = Director-Export – Format veraltet, kein Exporter in Firepixel
+mcp-res-jsf-why-firepixel-exportdirectoraslayers = Director-Export – Format veraltet, kein Exporter in Firepixel
+mcp-res-jsf-why-firepixel-exportillustrator = Export als Illustrator 8 – kein Exporter in Firepixel (SVG/PDF über exportPDF bzw. file.export)
+mcp-res-jsf-why-style-clipcopysmallpreviewimage = Stil-Vorschaubild in die Zwischenablage – Firepixel erzeugt keine Stil-Vorschaubilder
+mcp-res-jsf-why-style-clipcopylargepreviewimage = Stil-Vorschaubild in die Zwischenablage – Firepixel erzeugt keine Stil-Vorschaubilder
+mcp-res-jsf-why-behaviorinfo = Objekt der HTML-Exportvorlagen des Originals; Firepixel exportiert HTML/Verhalten nativ (fp-export) und führt diese Vorlagen nicht aus
+mcp-res-jsf-why-behaviorinfo-menuitems-i = wie BehaviorInfo (HTML-Exportvorlagen)
+mcp-res-jsf-why-behaviorslist = wie BehaviorInfo (HTML-Exportvorlagen)
+mcp-res-jsf-why-imagemap = wie BehaviorInfo (HTML-Exportvorlagen)
+mcp-res-jsf-why-imagemaplist = wie BehaviorInfo (HTML-Exportvorlagen)
+mcp-res-jsf-why-sliceinfo = wie BehaviorInfo (HTML-Exportvorlagen)
+mcp-res-jsf-why-slices = wie BehaviorInfo (HTML-Exportvorlagen)
+mcp-res-jsf-why-exportdoc = wie BehaviorInfo (HTML-Exportvorlagen)
 # <<< UE-3 Meldungen
 
 # >>> UE-3 Brücke

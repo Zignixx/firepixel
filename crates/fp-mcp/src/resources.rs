@@ -24,17 +24,85 @@ pub fn resources() -> Vec<DocResource> {
 /// Inhalt einer Ressource.
 pub fn read(uri: &str, registry: &CommandRegistry) -> Option<String> {
     match uri {
-        "firepixel://docs/agents.md" => Some(AGENTS_MD.to_string()),
+        "firepixel://docs/agents.md" => Some(by_language(AGENTS_MD, AGENTS_MD_EN).to_string()),
         "firepixel://docs/commands.md" => Some(commands_markdown(registry)),
         "firepixel://docs/document-model.md" => Some(by_language(DOCUMENT_MODEL_MD, DOCUMENT_MODEL_MD_EN).to_string()),
         "firepixel://docs/examples.md" => Some(by_language(EXAMPLES_MD, EXAMPLES_MD_EN).to_string()),
-        "firepixel://docs/jsf.md" => Some(fp_script::coverage_markdown()),
+        "firepixel://docs/jsf.md" => Some(jsf_markdown()),
         _ => None,
     }
 }
 
 /// Anleitung für Agenten (aus `docs/AGENTS.md`).
 pub const AGENTS_MD: &str = include_str!("../../../docs/AGENTS.md");
+/// Anleitung für Agenten, englisch (aus `docs/AGENTS.en.md`).
+pub const AGENTS_MD_EN: &str = include_str!("../../../docs/AGENTS.en.md");
+
+/// Schlüssel der Begründung einer bewusst ausgelassenen JSF-Klasse/-Methode
+/// (`mcp-res-jsf-why-<klasse>-<member>`, Kleinbuchstaben, sonst Bindestriche).
+pub fn jsf_reason_key(class: &str, member: &str) -> String {
+    let mut k = String::from("mcp-res-jsf-why");
+    for part in [class, member] {
+        k.push('-');
+        let mut last_dash = true;
+        for c in part.chars().flat_map(char::to_lowercase) {
+            if c.is_ascii_alphanumeric() {
+                k.push(c);
+                last_dash = false;
+            } else if !last_dash {
+                k.push('-');
+                last_dash = true;
+            }
+        }
+        while k.ends_with('-') {
+            k.pop();
+        }
+    }
+    k
+}
+
+/// JSF-Kompatibilitätsliste (Ressource `firepixel://docs/jsf.md`) in der aktuellen Sprache: dieselben
+/// Zahlen und Listen wie [`fp_script::coverage_markdown`], Deutsch wortgleich mit ihr.
+pub fn jsf_markdown() -> String {
+    use fp_script::coverage::{EXCEPTIONS, METHODS, PROPS};
+    let listed = |t: &[(&str, &[&str])], c: &str, n: &str| t.iter().any(|(k, ns)| *k == c && (ns.contains(&n) || ns.contains(&"*")));
+    let excepted = |c: &str, n: &str| EXCEPTIONS.iter().any(|(k, m, _)| *k == c && (*m == n || *m == "*"));
+    let why = |c: &str, m: &str, de: &str| {
+        let key = jsf_reason_key(c, m);
+        if fp_i18n::has(&key) { fp_i18n::t(&key) } else { de.to_string() }
+    };
+    let (m, mt, p, pt) = fp_script::coverage();
+    let (em, ep) = fp_script::coverage::exceptions();
+    let mut s = String::new();
+    let _ = writeln!(s, "# {}\n", fp_i18n::t("mcp-res-jsf-title"));
+    let _ = writeln!(s, "{}\n", fp_i18n::tr!("mcp-res-jsf-intro", m = m, mt = mt, p = p, pt = pt, em = em, ep = ep));
+    let _ = writeln!(s, "{}\n", fp_i18n::t("mcp-res-jsf-rules"));
+    let _ = writeln!(s, "{}\n", fp_i18n::t("mcp-res-jsf-extras"));
+    for c in fp_script::bindings::CLASSES {
+        let mi: Vec<&str> = c.methods.iter().filter(|x| listed(METHODS, c.js, x.name) && !excepted(c.js, x.name)).map(|x| x.name).collect();
+        let pi: Vec<&str> = c.props.iter().filter(|x| listed(PROPS, c.js, x.name) && !excepted(c.js, x.name)).map(|x| x.name).collect();
+        if mi.is_empty() && pi.is_empty() {
+            let line = match EXCEPTIONS.iter().find(|(k, m, _)| *k == c.js && *m == "*") {
+                Some((k, m, de)) => fp_i18n::tr!("mcp-res-jsf-class-omitted", class = c.js, reason = why(k, m, de)),
+                None => fp_i18n::tr!("mcp-res-jsf-class-missing", class = c.js, methods = c.methods.len(), props = c.props.len()),
+            };
+            let _ = writeln!(s, "- {line}");
+            continue;
+        }
+        let counts = fp_i18n::tr!("mcp-res-jsf-class-counts", class = c.js, m = mi.len(), mt = c.methods.len(), p = pi.len(), pt = c.props.len());
+        let _ = writeln!(s, "- {counts}");
+        if !mi.is_empty() {
+            let _ = writeln!(s, "  - {}", fp_i18n::tr!("mcp-res-jsf-methods", list = mi.join(", ")));
+        }
+        if !pi.is_empty() {
+            let _ = writeln!(s, "  - {}", fp_i18n::tr!("mcp-res-jsf-props", list = pi.join(", ")));
+        }
+        for (k, m, de) in EXCEPTIONS.iter().filter(|(k, m, _)| *k == c.js && *m != "*") {
+            let _ = writeln!(s, "  - {}", fp_i18n::tr!("mcp-res-jsf-member-omitted", member = *m, reason = why(k, m, de)));
+        }
+    }
+    s
+}
 
 /// Befehlskatalog als Markdown.
 pub fn commands_markdown(reg: &CommandRegistry) -> String {

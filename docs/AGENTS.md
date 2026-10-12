@@ -85,7 +85,9 @@ Sprache: Antworten, Befehlsbeschriftungen (`label`, `description` in `list_comma
 und Fehlermeldungen kommen standardmäßig auf **Englisch** – unabhängig von der Sprache der Oberfläche,
 die dabei nicht umschaltet. Jedes Werkzeug nimmt optional `"language": "de"` (oder einen anderen
 Sprachcode); die Vorgabe des Servers lässt sich mit der Umgebungsvariablen `FIREPIXEL_MCP_LANG` ändern.
-Befehlsnamen (`file.open` …) und Parameter sind sprachunabhängig.
+Befehlsnamen (`file.open` …) und Parameter sind sprachunabhängig. Auch die Ressourcen (diese Anleitung,
+Befehlskatalog, Dokumentmodell, Beispiele, JSF-Liste) kommen in der Antwortsprache: Deutsch für `de`,
+sonst Englisch (englische Fassung dieser Datei: `docs\AGENTS.en.md`).
 
 Hinweis: Anfragen werden nebenläufig angenommen. Abhängige Aufrufe (z. B. `render` nach
 `new_document`) erst nach der Antwort des vorigen senden – MCP-Clients wie Claude tun das von selbst.
@@ -245,6 +247,30 @@ Ablauf „Objekt freistellen“:
 Die Werkzeuge `tool.aiObject`, `tool.aiSubject`, `tool.aiRefineEdge` stellen in `tool_event` nur eine
 Anfrage an die Oberfläche (headless ohne Wirkung) – Agenten nehmen die Befehle oben.
 
+**Bitmap nachzeichnen** (Pixelbild → bearbeitbare Vektorpfade, lokal gerechnet)
+
+`modify.traceBitmap` zeichnet jede ausgewählte Bitmap nach und legt das Ergebnis als Gruppe je Bitmap
+auf eine neue Ebene („Nachgezeichnet“); die neuen Gruppen sind danach ausgewählt. Ein Aufruf ist
+**ein** Verlaufsschritt. In der Oberfläche: *Modifizieren ▸ Bitmap nachzeichnen…* (Dialog mit Vorschau).
+
+* `preset`: `logo` (Vorgabe; wenige flache Farben, mit Aufräumen), `blackWhite`, `illustration`, `photo`.
+  Alle weiteren Optionen überschreiben einzelne Werte der Vorgabe: `colorMode` (`color`/`blackWhite`),
+  `colors` (0 = keine Farbreduktion), `filterSpeckle`, `cornerThreshold`, `mode` (`spline`/`polygon`),
+  `hierarchical` (`stacked`/`cutout`), `threshold` (Schwarzweiß), `ignoreTransparent`, `maxPixels`,
+  `downscale` … – vollständig mit Bereichen: `describe_command {"name": "modify.traceBitmap"}`.
+* `refine`: Aufräumen (Logo-Nachbearbeitung) – `true`/`false` oder ein Objekt über der Vorgabe, z. B.
+  `{"snapColors": true, "colorTolerance": 12, "straighten": true, "shapes": true, "reduceNodes": true}`.
+* `keepOriginal` (Vorgabe `true`; `false` löscht die Bitmap), `layerName`.
+* Ergebnis: `{ids, layer, paths, nodes, downscaled, keptOriginal}`.
+
+Ablauf: `select {"ids": [5]}` → `run_command {"name": "modify.traceBitmap", "params": {"preset": "logo"}}`
+→ `render {"zoom": 1}` vergleichen → bei Bedarf `undo` und mit anderen Werten wiederholen.
+
+**Warnungen ohne Ziel**
+
+Menübefehle, die ohne passendes Ziel nichts tun können (z. B. *Vereinfachen…* ohne Pfad), melden das
+wie im Original mit einem Warntext; über MCP kommt er als Fehlermeldung, ohne Verlaufsschritt.
+
 ## 5a. Die laufende App bedienen: `ui_find` und `ui_input`
 
 `ui_input` speist Ereignisse über ein egui-Plugin vor jedem Frame in die rohe Eingabe ein – derselbe
@@ -292,7 +318,8 @@ gehaltene Umschalttasten, `dialog_open` und die Statuszeile.
 `ui_find` durchsucht für einen Frame den Barrierefreiheits-Baum von egui (Rolle + Name, z. B. `button`,
 `check_box`, `text_input`, Dialog-Titelleisten als „Titelleiste <Titel>“) und alle gezeichneten Texte
 (Menüs, Bedienfeld-Zeilen, Beschriftungen). Treffer sind nach Genauigkeit und Zeichenreihenfolge sortiert
-(was oben liegt, zuerst) – `center` direkt als `pos` für `ui_input` verwenden.
+(was oben liegt, zuerst) – `center` direkt als `pos` für `ui_input` verwenden. Gesucht wird in der
+aktuellen Sprache der Oberfläche.
 
 **Beispiele**
 
@@ -354,8 +381,10 @@ firepixel-cli render <datei> [--page N] [--state N] [--zoom Z] [--rect l,t,r,b] 
 firepixel-cli convert <ein> <aus>
 firepixel-cli script <x.jsf> [datei] [--code JS] [--out datei] [--arg WERT]
 firepixel-cli mcp [--http [--port N] [--token T] [--token-file DATEI]] | --bridge [--token-file DATEI]
+firepixel-cli sprache pruefen|vorlage|liste …   (englisch: language check|template|list)
 ```
 
 `--json` liefert überall maschinenlesbare Ausgaben; Exit-Code 0 = Erfolg, 1 = Fehler, 2 = falscher Aufruf.
-`firepixel-cli <befehl> --help` zeigt Beispiele. Parameter mit Leerzeichen lassen sich unter
+`firepixel-cli <befehl> --help` zeigt Beispiele; `--lang de|en` (oder `FIREPIXEL_LANG`) wählt die
+Sprache von Hilfe und Ausgaben. Parameter mit Leerzeichen lassen sich unter
 PowerShell am einfachsten als Datei übergeben: `--params @p.json`.
