@@ -74,7 +74,7 @@ Umfang heute: 19 Crates, ≈ 169.000 Zeilen Rust, 132 Testdateien, 16 Sprachdate
 | N19 | Suche in der Schriftarten-Liste | ✅ FV-12 `e8dd1ad` | P-N19-20 ☑ |
 | N20 | „Bitmap nachzeichnen“ standardmäßig größer | ✅ FV-12 `e8dd1ad` | P-N19-20 ☑ |
 | N21 | KI-Fortschrittskarte + Feineinstellungen | 🔧 KI-2 `39c6e6a`, Nachprüfung im Nachtlauf | P-KI ☑ |
-| N22 | Datei ▸ Bildvorschau vollständig | ⚠️ P1 + P2 fertig (BV-1, BV-2), P3/P4 offen | BV-3, BV-4 |
+| N22 | Datei ▸ Bildvorschau vollständig | ⚠️ P1 + P2 + P3 fertig (BV-1, BV-2, BV-3), P4 offen | BV-4 |
 | N23 | abgeschnittene Texte, zu knappe Ränder | 🔧 teilweise: RAND-1 `5f2d009` (Prüfer + Nutzerbeispiel), 70 Stellen offen | RAND-2 (vor Z) |
 
 ---|---|---|---|
@@ -118,7 +118,7 @@ Beschleuniger (Nutzerentscheidung 12.10. ≈ 17:00), gelten weiter:
 | ☑ FV-16 | P-LW2 Verlauf-Werkzeug, Farbe ersetzen, Texturen per Name | `118aada`, `be5d176` |
 | ☑ KI-2 | P-KI (N21) Fortschrittskarte + Feineinstellungen | `39c6e6a`, `8482c8f` |
 | ☑ RAND-1 | P-RAND Teil 1: Prüfer `clipping_audit.rs`, N23-Beispiel | `5f2d009`, `101cd74` |
-| ☑ BV-1 / BV-2 | Bildvorschau P1 / P2 | `9906252`, `0c01836`, `71577d5` / `9fc13e6`, `f476f35` |
+| ☑ BV-1 / BV-2 / BV-3 | Bildvorschau P1 / P2 / P3 | `9906252`, `0c01836`, `71577d5` / `9fc13e6`, `f476f35` / `16741b9` |
 | ☑ FV-12, FV-13, EB-3, TE-1, FV-8, FV-11 | siehe §5 und STATUS | `e8dd1ad`, `9e14aab`, `777ce3d`, `c1e16e1`, `8f6bcfc`, `24e9524` … |
 | ☑ RE-EX | Spezifikation `re\18-export-dialoge.md`, Pakete E1–E3 | (`re\`, nicht im Repository) |
 | ☑ RE-KT | Spezifikation `re\19-kurven-tonwert.md`, Pakete KT-1–3 | (`re\`) |
@@ -219,7 +219,7 @@ Die Reihenfolge gilt, solange nichts Dringenderes vom Nutzer kommt. Sobald ein P
 |---|---|
 | ☑ **P-N19-20** (FV-12, e8dd1ad) | N19 Suche in der Schriftarten-Liste (Inspektor und Text-Menü, Tippen filtert, Pfeiltasten/Eingabe); N20 Nachzeichnen-Dialog standardmäßig ≈ 1050 × 830, Vorschau größer, „Aufräumen“ ohne Scrollen sichtbar, Größe gemerkt |
 | ☑ **P-KI** (KI-2, `39c6e6a`) | N21: Fortschrittsfenster der KI-Werkzeuge schön gestalten (Design wie der Nachzeichnen-Dialog, alle 3 Designs); prüfen, welche Stellschrauben SAM 2.1/BiRefNet wirklich hergeben (Maskenschwelle, Kante weich/ausdehnen/zusammenziehen, Maskenvariante bei SAM), nur diese im Inspektor anbieten; optional: Vorschau der Objektmaske beim Überfahren |
-| ☐ **P-BV1…4** | N22 Bildvorschau, **Cleanroom**-Agenten, die *nur* `re\17-bildvorschau.md` (§10) lesen. ☑ P1 Mehrfachansicht und Kern (erledigt, BV-1, Commits 9906252, 0c01836, 71577d5); ☑ P2 Registerkarte Optionen vollständig (Format/Palette/Rastern/Glättung/Transparenz mit 3 Pipetten, Farbtabelle mit Menü und Statuszeile, „Optimieren auf Größe“; erledigt, BV-2, Commit 9fc13e6, Nachprüfung im echten Fenster in NACHPRUEFUNG); ☐ **BV-3** P3 Datei (Skalieren, Exportbereich mit Werkzeug) und Animation; ☐ **BV-4** P4 Verhalten (OK schreibt die Einstellung des aktiven Feldes, Exportieren, Esc schließt), Vorgaben, Texte. Nebenbefund: PARITAET_B D08 „Esc schließt nicht“ ist falsch, im Original schließt Esc |
+| ☐ **P-BV1…4** | N22 Bildvorschau, **Cleanroom**-Agenten, die *nur* `re\17-bildvorschau.md` (§10) lesen. ☑ P1 Mehrfachansicht und Kern (erledigt, BV-1, Commits 9906252, 0c01836, 71577d5); ☑ P2 Registerkarte Optionen vollständig (Format/Palette/Rastern/Glättung/Transparenz mit 3 Pipetten, Farbtabelle mit Menü und Statuszeile, „Optimieren auf Größe“; erledigt, BV-2, Commit 9fc13e6, Nachprüfung im echten Fenster in NACHPRUEFUNG); ☑ **BV-3** P3 Datei (Skalieren, Exportbereich mit Werkzeug), Animation, Abspielknöpfe (erledigt, Commit 16741b9, Nachprüfung im echten Fenster in NACHPRUEFUNG); ☐ **BV-4** P4 Verhalten (OK schreibt die Einstellung des aktiven Feldes, Exportieren, Esc schließt), Vorgaben, Texte. Nebenbefund: PARITAET_B D08 „Esc schließt nicht“ ist falsch, im Original schließt Esc |
 | ☐ **P-TE2** | Technisches Englisch, Teil 2: `.ftl`-Dateinamen (`befehlstexte.ftl`, `nachzeichnen.ftl` …) und deutsche Datei- und Testnamen im Quelltext umbenennen, nach der Liste von TE-1. Erst wenn wenige Agenten in den `.ftl`-Dateien arbeiten |
 
 ### D. Gestaltung und Feinschliff
