@@ -79,7 +79,14 @@ Umfang heute: 19 Crates, ≈ 169.000 Zeilen Rust, 132 Testdateien, 16 Sprachdate
 
 ---
 
-## 4. Läuft gerade (höchstens 8)
+## 4. Läuft gerade (höchstens 8 bauende Agenten, dazu reine Analyse-Agenten ohne Build)
+
+**Beschleuniger (Nutzerentscheidung 12.10. ≈ 17:00):**
+1. Die Firepixel-Seite wird über die Brücke ohne GUI-Sperre parallel geprüft (AGENTEN_REGELN §4e). Echte Systemmaus nur fürs Original, für Eingaben, die vom Betriebssystem abhängen, und fürs Durchklicken am Ende.
+2. Reine Spezifikations-Agenten laufen zusätzlich: Export-Dialoge, Kurven/Tonwert, AI8/SWF.
+3. Gemeinsamer Build-Cache sccache (`tools\sccache\`, §2).
+
+Abgelehnt bzw. nicht gewählt: zweite GUI-Spur über einen zweiten Windows-Benutzer.
 
 | Agent | Auftrag | Schreibt in |
 |---|---|---|
@@ -88,6 +95,9 @@ Umfang heute: 19 Crates, ≈ 169.000 Zeilen Rust, 132 Testdateien, 16 Sprachdate
 | **BV-1** (Cleanroom) | Bildvorschau Paket P1: 1/2/4-fach, eigene Einstellungen je Feld, Kopfzeile mit genauer Größen-/Ladezeitformel, aktives Feld, synchroner Zoom und Bildlauf, Hintergrundrechnung, gleiche Kodierung wie der Export. Quelle **nur** `re\17-bildvorschau.md` (☑ RE-BV, 13 Abschnitte, im Original nachgeprüft) | neues Modul `fp-ui\src\dialogs\image_preview\`, `image_preview.ftl`, fp-export |
 | **FV-13** | P-MENU1: 8 Menüeinträge aus dem Gesamttest (Bitmap-Auswahl wiederherstellen/löschen, Hilfslinien entfernen, Pfade teilen, zweiter Browser, 3 Befehlsskripte); Test liest nicht mehr das echte Profil | fp-engine-Befehle, fp-script, `gesamt_menu.rs` |
 | **PM-5** | P-PM4 Teil 1: Messrunde Dialoge D01–D25 in beiden Programmen, Paketvorschläge zu 3–5 Dialogen | nur Doku + Bilder |
+| **RE-EX** (Analyse, ohne Build) | Spezifikation `re\18-export-dialoge.md`: Exportieren (alle Arten + Optionen), Exportassistent, HTML-Einrichtung, mit Lückenliste und Paketen → danach Cleanroom-Agenten DLX-1 | nur `re\` |
+| **RE-KT** (Analyse, ohne Build) | Spezifikation `re\19-kurven-tonwert.md`: Kurven, Tonwertkorrektur (Pipetten, Histogramm), Auto-Tonwert, Bitmap-Auswahl speichern/wiederherstellen → danach DLX-2/3 | nur `re\` |
+| **RE-SWF** (Analyse, ohne Build) | Spezifikation `re\20-ai8-swf.md`: Speichern als AI8, SWF (inkl. Optionen), Reduziertes PNG, mit Python-Referenz → danach Cleanroom-Agent EB-2 | nur `re\` |
 | **KI-2** | P-KI: N21 KI-Fortschrittsfenster schön (3 Designs, de/en, kein Aufblitzen) + Feineinstellungen, die die Modelle wirklich hergeben (Schwelle, Kante, ausdehnen/zusammenziehen, Maskenvariante) im Werkzeug-Inspektor | fp-ai, KI-Befehle, KI-Inspektor, `ai_progress_ki2.rs` |
 | **FV-15** | P-IBD1: Texturliste 77 + „Andere…“, Feldtext beim Klick auf ein anderes Objekt (F7), `pi.text.antialias`, Hinweistext der Objektauswahl | Inspektor, `panel.rs`, `inspector_fv15.rs` |
 | **FV-12** | N19 Suche in der Schriftarten-Liste, N20 Nachzeichnen-Dialog größer (≈ 1050 × 830), Übersetzungsrest `bitmap.paint`/`bitmap.erase` | `inspector\fonts.rs`, `dialogs\trace.rs`, ftl |
