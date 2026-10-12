@@ -164,4 +164,31 @@ Aufbau wie im Original, eigenes Branding:
 
 ## 13. Bestandsaufnahme (vorher) und Prioritäten
 
-Siehe Abschnitt unten; wird nach dem Bildlauf ergänzt.
+Bestand am 12.10.2026: **79 Bilder** (`design_vorher_*.png`) – Startbildschirm, 71 über Menüs,
+Bedienfeldmenüs und Kontextmenüs erreichbare Dialogarten (automatisch gefunden, Liste in
+`target-design\design-qa\dialoge.json`) und die 7 Seiten der Voreinstellungen, je Normal | Dunkel | OLED.
+
+Gesamteindruck: Die Dialoge des Originals (Neues Dokument, Leinwand-/Bildgröße, Numerisch,
+Tonwert, Kurven, Filter) sind ordentlich und nah am Vorbild. „Lieblos“ wirken vor allem die
+**eigenen und generischen Fenster**: Meldungen ohne Symbol, Rückfragen ohne Gliederung, Listen ohne
+Kopf und leere Zustände, große Leerflächen, uneinheitliche Knopfbreiten. Das Dunkel-Design hat kaum
+Kontrast zwischen Titelleiste und Fläche; OLED ist stimmig.
+
+| Prio | Fenster (Datei) | Befund | Maßnahme |
+|---|---|---|---|
+| 1 | **Startbildschirm** (`canvas\mod.rs` → neu `welcome.rs`) | Überschrift + zwei Spalten blauer Textlinks, sonst leer | **erledigt** (§12), Umschaltung beim Zuständigen |
+| 2 | **Meldung** (`dialogs\mod.rs::show_message`; Datei-Info, Rechtschreibung, Pop-up-Menü, Optimieren) | kein Symbol, Text klebt oben links, „Schlüssel: Wert“-Zeilen als Fließtext (Datei-Info), viel Leerraum, Hinweistext ohne Hervorhebung | Symbol 32 px je Art, Text senkrecht am Symbol, Wertepaare als Raster, Knopfleiste |
+| 3 | **Rückfragen** (`misc.rs::Confirm`: Wiederherstellen, Verlauf löschen, Bibliothek löschen …) | kein Symbol, Text ohne Abstand zur Titelleiste, Knöpfe rechts unten mit großem Loch darüber | Warn-/Fragesymbol, kompaktere Höhe, Knopfleiste |
+| 4 | **Ungespeichert** (`unsaved.rs`) | Info-Symbol (passt nicht zur Frage), Text nicht mittig zum Symbol, Leerraum | Warnsymbol, Erklärsatz klein darunter, Knopfleiste (Wortlaut unverändert) |
+| 5 | **KI-Modelle verwalten** (`models.rs`) | gute Basis, aber Tabelle ohne Zebra/Hover, Kopf ohne Kopfstil, Gruppe „Speicherort“ mit vier ungleich breiten Knöpfen gequetscht, ~100 px Leerraum unten, Kopfsymbol unklar | `dialog_header` (KI-Chip), `ui_kit::table`, Abschnitte „Modelle“/„Speicherort“/„Arbeitsspeicher“, Knopfleiste |
+| 6 | **Gespeicherte Befehle verwalten** (`menu_dialogs.rs`) | nackte Liste ohne Kopf, ohne leeren Zustand, ohne Auswahlhervorhebung; Knöpfe rechts oben grau | Kopf, Tabelle (Name, Datei), leerer Zustand, Knöpfe einheitlich |
+| 7 | **Über Firepixel** (`about.rs`) | ordentlich, aber flach; Satz bricht hässlich („in Rust.“) | Banner wie Startbildschirm, Version/Lizenz als Raster |
+| 8 | **Tastenkürzel** (`shortcuts.rs`, Original) | Liste ohne Kopf/Zebra, sehr dicht; unterer Bereich (Kürzel, „Drücken Sie die Taste“) gequetscht | nur Ausführung: Zebra/Hover, Abstände, Abschnittslinie |
+| 9 | **Export** (`export.rs`, Original) | ~80 px Leerraum über den Knöpfen, „Optimieren:“-Zeile gedämpft ohne Bezug | Höhe an Inhalt, Knopfleiste |
+| 10 | **Formulardialoge** (`form.rs`: Exportassistent, Neue Schaltfläche, Stil, Seiten/Status-Eigenschaften, Filter …) | einheitlich, aber Beschriftungsspalte je Dialog verschieden, Knöpfe ohne Trennlinie | Beschriftung-Wert-Raster, Knopfleiste |
+| 11 | **Pop-up-Menü-Editor** (`popup_menu.rs`, Original) | Reiter wie Knöpfe, Liste ohne Kopf, winzige Pfeilknöpfe | Reiterstil, Liste mit Zebra, Symbolknöpfe 24 px |
+| 12 | **Voreinstellungen** (`preferences.rs`, Original) | sauber; Überschrift „Benutzeroberfläche“ ohne Linie | Abschnittslinien |
+| 13 | Neues Dokument, Leinwand-/Bildgröße, Numerisch, Tonwert, Kurven, Bildvorschau, Arbeitsbereich speichern | nah am Original, ordentlich | nur bei Bedarf (Knopfbreiten) |
+
+Die Dialogdateien bearbeitet zurzeit I18N-DIALOGE; die Überarbeitung (Prio 2 ff.) beginnt, sobald
+sie fertig gemeldet sind (Regel: keine Datei ändern, die gerade umgestellt wird).
