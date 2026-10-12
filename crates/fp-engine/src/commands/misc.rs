@@ -379,7 +379,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 s.prefs_changed();
             }
             let v = s.prefs.get("ProductImprovementOptIn").map(|v| v.to_json()).unwrap_or(json!(false));
-            Ok(CommandOutput::session_with(json!({"participate": v, "dataSent": false, "text": "Firepixel erfasst und sendet keine Nutzungsdaten."})))
+            Ok(CommandOutput::session_with(json!({"participate": v, "dataSent": false, "text": fp_i18n::t("msg-no-usage-data")})))
         }));
     }
 

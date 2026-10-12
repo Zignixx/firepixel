@@ -7,6 +7,8 @@ license.workspace = true
 rust-version.workspace = true
 
 [dependencies]
+# Mehrsprachige Fehlermeldungen (Skriptfehler für die Oberfläche)
+fp-i18n = { workspace = true }
 fp-engine = { workspace = true }
 fp-model = { workspace = true }
 fp-geom = { workspace = true }

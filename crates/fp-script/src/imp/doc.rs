@@ -22,7 +22,7 @@ pub(super) fn jserr(e: boa_engine::JsError) -> FwErr {
 /// Aktuelle Seite, Status, Auswahl eines Dokuments.
 pub(super) fn info(doc: DocId) -> FwResult<(usize, usize, Vec<ElementId>)> {
     st(|s| {
-        let d = s.session.document(doc).ok_or_else(|| FwErr::bad("Dokument ist geschlossen"))?;
+        let d = s.session.document(doc).ok_or_else(|| FwErr::bad(fp_i18n::t("err-script-doc-closed")))?;
         Ok((d.page, d.frame, d.selection.elements.clone()))
     })
 }
@@ -148,7 +148,7 @@ fn apply_brush(doc: DocId, brush: &Value, color: Option<String>) -> FwResult<()>
 /// Grenzen mehrerer Elemente.
 pub(super) fn bounds(doc: DocId, ids: &[ElementId]) -> FwResult<Option<[f64; 4]>> {
     st(|s| {
-        let d = s.session.document(doc).ok_or_else(|| FwErr::bad("Dokument ist geschlossen"))?;
+        let d = s.session.document(doc).ok_or_else(|| FwErr::bad(fp_i18n::t("err-script-doc-closed")))?;
         Ok(fp_engine::docops::ids_bounds(&d.doc, d.page, ids).map(|r| [r.left as f64, r.top as f64, r.right as f64, r.bottom as f64]))
     })
 }
@@ -248,7 +248,7 @@ fn filter_command(e: &Value) -> Option<(&'static str, Value)> {
 /// FW-PNG-Kopie (ohne Pfadwechsel).
 pub(super) fn save_copy(doc: DocId, path: &Path) -> FwResult<()> {
     st(|s| {
-        let d = s.session.document(doc).ok_or_else(|| FwErr::bad("Dokument ist geschlossen"))?;
+        let d = s.session.document(doc).ok_or_else(|| FwErr::bad(fp_i18n::t("err-script-doc-closed")))?;
         let (model, page) = (Arc::clone(&d.doc), d.page);
         let mut m = (*model).clone();
         if m.current_page != page && page < m.pages.len() {
@@ -349,7 +349,7 @@ fn import_file(doc: DocId, path: &Path, bounds: Option<[f64; 4]>, keep_aspect: b
 /// Ebenen-ID zum Index der Ebenenliste (unten → oben); -1 = aktive.
 pub(super) fn layer_id(doc: DocId, idx: i64) -> FwResult<Option<u64>> {
     st(|s| {
-        let d = s.session.document(doc).ok_or_else(|| FwErr::bad("Dokument ist geschlossen"))?;
+        let d = s.session.document(doc).ok_or_else(|| FwErr::bad(fp_i18n::t("err-script-doc-closed")))?;
         if idx < 0 {
             return Ok(d.layer.map(|l| l.0));
         }
@@ -366,7 +366,7 @@ pub(super) fn layer_id(doc: DocId, idx: i64) -> FwResult<Option<u64>> {
 /// Index der aktiven Ebene.
 pub(super) fn current_layer_index(doc: DocId) -> FwResult<i64> {
     st(|s| {
-        let d = s.session.document(doc).ok_or_else(|| FwErr::bad("Dokument ist geschlossen"))?;
+        let d = s.session.document(doc).ok_or_else(|| FwErr::bad(fp_i18n::t("err-script-doc-closed")))?;
         let Some(id) = d.layer else { return Ok(-1) };
         Ok(fp_engine::docops::layer_slot(&d.doc, d.page, id).map(|i| i as i64).unwrap_or(-1))
     })
@@ -1022,7 +1022,7 @@ pub(super) fn method(doc: DocId, name: &str, args: &[Arg], ctx: &mut Context) ->
 
 pub(super) fn get(doc: DocId, name: &str, ctx: &mut Context) -> FwResult<JsValue> {
     let snap = st(|s| {
-        let d = s.session.document(doc).ok_or_else(|| FwErr::bad("Dokument ist geschlossen"))?;
+        let d = s.session.document(doc).ok_or_else(|| FwErr::bad(fp_i18n::t("err-script-doc-closed")))?;
         Ok((Arc::clone(&d.doc), d.page, d.frame, d.path.clone(), d.title.clone(), d.is_dirty(), d.layer))
     });
     let (model, page, frame, path, title, dirty, _layer) = match snap {

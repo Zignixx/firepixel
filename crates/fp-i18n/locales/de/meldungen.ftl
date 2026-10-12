@@ -102,6 +102,12 @@ err-export-encode = Kodierfehler: { $detail }
 err-export-render = Rendern fehlgeschlagen: { $detail }
 err-export-io = E/A-Fehler: { $detail }
 
+## Skripte (fp-script)
+err-script = Skript: { $detail }
+err-script-failed = Skriptfehler
+err-script-doc-closed = Dokument ist geschlossen
+err-script-doc-n-closed = Dokument { $id } ist geschlossen
+
 ## KI-Auswahl (fp-ai)
 ai-err-model-missing = KI-Modell „{ $name }“ fehlt ({ $file }). Bitte über „Modelle verwalten“ laden oder die Datei in den Modellordner legen: { $folder }
 ai-err-weights = KI-Modell ungültig: { $detail }
@@ -112,6 +118,14 @@ ai-err-cancelled = abgebrochen
 ai-err-input = { $detail }
 ai-err-io = Datei: { $detail }
 
+## Hinweise und Rückgaben von Befehlen
+msg-wizard-animated-gif = mehrere Status: animiertes GIF
+msg-wizard-png32-edit = Weiterbearbeitung: verlustfreies PNG32
+msg-wizard-png8 = wenige Farben (Grafik): PNG8 mit exakter Farbzahl
+msg-wizard-png32-alpha = viele Farben mit Transparenz: PNG32
+msg-wizard-jpeg = viele Farben (Foto): JPEG Qualität 80
+msg-no-usage-data = Firepixel erfasst und sendet keine Nutzungsdaten.
+
 ## Standardnamen neuer Ebenen, Seiten und Status
 msg-default-layer = Ebene { $n }
 msg-default-web-layer = Webebene
@@ -119,6 +133,8 @@ msg-default-page = Seite { $n }
 msg-default-state = Status { $n }
 msg-default-background = Hintergrund
 msg-default-copy = { $name } Kopie
+msg-default-copy-n = { $name } Kopie { $n }
+msg-default-sublayer = Unterebene
 msg-tool-roundness = Rundung { $px } px
 
 ## Namen von Verlaufsschritten (Verlauf-Bedienfeld, „Rückgängig …“)

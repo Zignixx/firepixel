@@ -740,7 +740,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
             let mut idg = take_ids(doc);
             nl.reassign_ids(&mut idg);
             doc.ids = idg;
-            nl.name = format!("{} Kopie", nl.name);
+            nl.name = fp_i18n::tr!("msg-default-copy", name = nl.name.as_str());
             let nid = nl.id;
             doc.page_mut(page).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-page")))?.root.layers.insert(slot + 1, LayerSlot::Own(Arc::new(nl)));
             d.layer = Some(nid);

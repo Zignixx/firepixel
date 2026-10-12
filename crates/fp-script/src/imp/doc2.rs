@@ -25,7 +25,7 @@ fn ex(doc: DocId, name: &str, p: Value) -> FwResult<JsValue> {
 
 /// Ansichtszustand lesen.
 fn view<R>(doc: DocId, f: impl FnOnce(&fp_engine::view::ViewState) -> R) -> FwResult<R> {
-    st(|s| s.session.document(doc).map(|d| f(&d.view)).ok_or_else(|| FwErr::bad("Dokument ist geschlossen")))
+    st(|s| s.session.document(doc).map(|d| f(&d.view)).ok_or_else(|| FwErr::bad(fp_i18n::t("err-script-doc-closed"))))
 }
 
 /// Schalter über den Umschaltbefehl auf `want` bringen.
@@ -38,7 +38,7 @@ fn toggle_to(doc: DocId, cmd: &str, cur: bool, want: bool) -> FwResult<JsValue> 
 
 fn page_root<R>(doc: DocId, f: impl FnOnce(&fp_model::Page, usize, usize) -> R) -> FwResult<R> {
     st(|s| {
-        let d = s.session.document(doc).ok_or_else(|| FwErr::bad("Dokument ist geschlossen"))?;
+        let d = s.session.document(doc).ok_or_else(|| FwErr::bad(fp_i18n::t("err-script-doc-closed")))?;
         let p = d.doc.pages.get(d.page).ok_or_else(|| FwErr::bad("Seite"))?;
         Ok(f(p, d.page, d.frame))
     })

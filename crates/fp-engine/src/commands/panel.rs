@@ -1570,7 +1570,7 @@ pub fn register(r: &mut CommandRegistry) {
                 let doc = Arc::make_mut(&mut d.doc);
                 let frames = doc.pages.get(page).map(|pg| pg.root.frame_count as usize).unwrap_or(1);
                 let mut idg = std::mem::take(&mut doc.ids);
-                let n = name.unwrap_or_else(|| "Unterebene".into());
+                let n = name.unwrap_or_else(|| fp_i18n::t("msg-default-sublayer"));
                 let sub = fp_model::Layer::new(&mut idg, &n, fp_model::LayerKind::Normal, frames.max(1));
                 let e = Element::new(idg.element(), ElementKind::SubLayer(Arc::new(sub)));
                 doc.ids = idg;
@@ -2524,7 +2524,7 @@ fn register_layer_menu(r: &mut CommandRegistry) {
                         .map(|_| {
                             let mut l = (*src).clone();
                             l.reassign_ids(&mut idg);
-                            l.name = format!("{} Kopie", src.name);
+                            l.name = fp_i18n::tr!("msg-default-copy", name = src.name.as_str());
                             l
                         })
                         .collect();
@@ -3043,10 +3043,10 @@ fn register_style_menu(r: &mut CommandRegistry) {
                 let v = doc.styles.get_or_insert_with(Vec::new);
                 let src = v.iter().find(|x| x.name == name).cloned().ok_or_else(|| EngineError::NotFound(fp_i18n::tr!("err-nf-style", name = name.as_str())))?;
                 let mut copy = (*src).clone();
-                let mut n = nn.unwrap_or_else(|| format!("{name} Kopie"));
+                let mut n = nn.unwrap_or_else(|| fp_i18n::tr!("msg-default-copy", name = name.as_str()));
                 let mut k = 2;
                 while v.iter().any(|x| x.name == n) {
-                    n = format!("{name} Kopie {k}");
+                    n = fp_i18n::tr!("msg-default-copy-n", name = name.as_str(), n = k.to_string());
                     k += 1;
                 }
                 copy.name = n.clone();
@@ -3235,7 +3235,7 @@ fn register_library_menu(r: &mut CommandRegistry) {
                     }
                 }
                 doc.ids = idg;
-                sym.name = format!("{} Kopie", sym.name);
+                sym.name = fp_i18n::tr!("msg-default-copy", name = sym.name.as_str());
                 sym.library_file = None;
                 doc.symbols.insert(i + 1, Arc::new(sym));
                 Ok(CommandOutput::doc_with(json!({"index": i + 1})))

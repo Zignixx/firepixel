@@ -163,7 +163,7 @@ impl State {
         if let Some(d) = doc
             && prev != Some(d)
         {
-            self.session.activate(d).map_err(|_| FwErr::Hr(hr::E_NO_ACTIVE_DOCUMENT, format!("Dokument {} ist geschlossen", d.0)))?;
+            self.session.activate(d).map_err(|_| FwErr::Hr(hr::E_NO_ACTIVE_DOCUMENT, fp_i18n::tr!("err-script-doc-n-closed", id = d.0.to_string())))?;
         }
         let r = self.session.execute(name, params);
         if let (Some(d), Some(p)) = (doc, prev)

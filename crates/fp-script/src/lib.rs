@@ -164,11 +164,11 @@ impl fp_engine::ScriptHost for JsfHost {
         if o.ok {
             Ok(json!({"result": o.result, "alerts": o.alerts, "log": o.log, "notImplemented": o.not_implemented}))
         } else {
-            let mut msg = o.error.unwrap_or_else(|| "Skriptfehler".into());
+            let mut msg = o.error.unwrap_or_else(|| fp_i18n::t("err-script-failed"));
             if let Some(d) = o.diagnostics.last() {
                 msg = format!("{msg} ({d})");
             }
-            Err(fp_engine::EngineError::Failed(format!("Skript: {msg}")))
+            Err(fp_engine::EngineError::Failed(fp_i18n::tr!("err-script", detail = msg)))
         }
     }
 

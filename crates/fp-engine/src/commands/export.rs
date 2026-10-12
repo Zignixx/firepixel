@@ -616,20 +616,20 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 let reason;
                 if frames > 1 {
                     st = apply_settings_json(st, &json!({"format": "animatedGif", "webSnap": true, "colors": 128}), "file.exportWizard")?;
-                    reason = "mehrere Status: animiertes GIF";
+                    reason = "msg-wizard-animated-gif";
                 } else if dest == "image" {
                     st = apply_settings_json(st, &json!({"format": "png32"}), "file.exportWizard")?;
-                    reason = "Weiterbearbeitung: verlustfreies PNG32";
+                    reason = "msg-wizard-png32-edit";
                 } else if colors <= 256 {
                     let tr = if transparent_canvas && alpha { "index" } else { "none" };
                     st = apply_settings_json(st, &json!({"format": "png8", "palette": "adaptive", "colors": colors.clamp(2, 256), "transparency": tr}), "file.exportWizard")?;
-                    reason = "wenige Farben (Grafik): PNG8 mit exakter Farbzahl";
+                    reason = "msg-wizard-png8";
                 } else if transparent_canvas && alpha {
                     st = apply_settings_json(st, &json!({"format": "png32"}), "file.exportWizard")?;
-                    reason = "viele Farben mit Transparenz: PNG32";
+                    reason = "msg-wizard-png32-alpha";
                 } else {
                     st = apply_settings_json(st, &json!({"format": "jpeg", "quality": 80, "smoothing": 0}), "file.exportWizard")?;
-                    reason = "viele Farben (Foto): JPEG Qualität 80";
+                    reason = "msg-wizard-jpeg";
                 }
                 let ctx = page_context(&doc, page);
                 if let Some(t) = p.opt_i64("targetSize")? {
@@ -644,7 +644,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 if let Some(path) = p.opt_str("path")? {
                     std::fs::write(path, &bytes)?;
                 }
-                let value = json!({"settings": settings_json(&st), "reason": reason, "colors": colors, "bytes": bytes.len()});
+                let value = json!({"settings": settings_json(&st), "reason": fp_i18n::t(reason), "reasonKey": reason, "colors": colors, "bytes": bytes.len()});
                 if p.bool_or("apply", true)? {
                     with_doc(s, |d| store_page_settings(d.doc_mut(), page, &st))?;
                     return Ok(CommandOutput::doc_with(value).labeled(fp_i18n::t("msg-step-export-wizard")));
