@@ -152,9 +152,56 @@ pub(crate) fn bitmap_for(d: &DocumentState, at: Option<Point>, geo: &dyn geometr
         .find(|(_, e)| matches!(e.kind, ElementKind::Bitmap(_)))
 }
 
-/// Gibt es gespeicherte Bitmap-Auswahlen auf der Seite?
+/// Gibt es gespeicherte Bitmap-Auswahlen in einem offenen Dokument gleicher Größe (aktive Seite)?
+/// (re\19-kurven-tonwert.md §5.1: Wiederherstellen/Löschen nur mit gespeicherten Auswahlen.)
 fn has_saved_selection(s: &Session) -> bool {
-    s.active().is_some_and(|d| d.doc.pages.get(d.page).and_then(|p| p.saved_selections.as_ref()).is_some_and(|l| !l.is_empty()))
+    let Some(a) = s.active() else { return false };
+    let size = canvas_size(a);
+    s.documents().iter().any(|d| (d.id == a.id || canvas_size(d) == size) && d.doc.pages.get(d.page).and_then(|p| p.saved_selections.as_ref()).is_some_and(|l| !l.is_empty()))
+}
+
+/// Leinwandgröße der aktiven Seite (Vergleich „gleiche Größe“ der Auswahl-Dialoge, §5.2).
+fn canvas_size(d: &DocumentState) -> (u32, u32) {
+    let r = canvas_rect(&d.doc, d.page).round_out();
+    (r.width(), r.height())
+}
+
+/// Dokument aus dem Parameter `document` (ID, Vorgabe: aktives), nur gleich groß wie das aktive.
+fn other_document(s: &Session, p: &crate::command::Params) -> Result<crate::session::DocId> {
+    let a = s.doc()?;
+    let Some(id) = p.opt_i64("document")? else { return Ok(a.id) };
+    let id = crate::session::DocId(id.max(0) as u64);
+    let d = s.document(id).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-document")))?;
+    if canvas_size(d) != canvas_size(a) {
+        return Err(sel_err("err-sel-document-size"));
+    }
+    Ok(id)
+}
+
+/// Gespeicherte Auswahl schreiben: neuer Name → anhängen; vorhandener Name → mit der gespeicherten
+/// Maske verknüpfen (ersetzen, hinzufügen, abziehen, schneiden; §5.2).
+fn store_saved(d: &mut DocumentState, name: &str, m: &Mask, md: SelectMode) -> Result<()> {
+    let page = d.page;
+    let pg = Arc::make_mut(&mut d.doc).page_mut(page).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-page")))?;
+    let list = pg.saved_selections.get_or_insert_with(Vec::new);
+    let pos = list.iter().position(|s| s.name.as_deref() == Some(name));
+    let old = pos.and_then(|i| list[i].mask.as_ref().and_then(|x| data_to_mask(x, list[i].left, list[i].top)));
+    let out = match (old, md) {
+        (Some(o), SelectMode::Add | SelectMode::Toggle) => o.union(m)?,
+        (Some(o), SelectMode::Subtract) => o.subtract(m)?,
+        (Some(o), SelectMode::Intersect) => o.intersection(m)?,
+        _ => m.clone(),
+    };
+    if out.tight_bounds().is_empty() {
+        return Err(sel_err("err-sel-empty-pixels"));
+    }
+    let (data, l, t) = mask_to_data(&out);
+    let entry = SavedSelection { mask: Some(data), left: l, top: t, name: Some(name.to_string()), extra: Extra::default() };
+    match pos {
+        Some(i) => list[i] = entry,
+        None => list.push(entry),
+    }
+    Ok(())
 }
 
 fn all_selectable(d: &DocumentState) -> Vec<ElementId> {
@@ -354,19 +401,30 @@ pub(super) fn register(r: &mut CommandRegistry) {
             Ok(CommandOutput::doc_with(json!({"id": id.0})))
         })
     }));
-    r.add(cmd("select.saveBitmapSelection").requires(&[Requirement::Document, Requirement::PixelSelection]).opt("name", ParamKind::String, "Name").run(|s, p| {
-        let name = p.opt_str("name")?;
-        with_doc(s, |d| {
-            let m = d.selection.pixels.clone().ok_or_else(|| sel_err("err-req-pixel-selection"))?;
-            let page = d.page;
-            let (md, l, t) = mask_to_data(&m);
-            let pg = Arc::make_mut(&mut d.doc).page_mut(page).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-page")))?;
-            let list = pg.saved_selections.get_or_insert_with(Vec::new);
-            let name = name.unwrap_or_else(|| format!("Auswahl {}", list.len() + 1));
-            list.push(SavedSelection { mask: Some(md), left: l, top: t, name: Some(name), extra: Extra::default() });
-            Ok(CommandOutput::doc())
-        })
-    }));
+    // re\19-kurven-tonwert.md §5: Speicherort je Seite (aktive Seite des Zieldokuments), Speichern und
+    // Laden sind eigene Verlaufsschritte („Auswahl speichern“/„Auswahl laden“)
+    r.add(
+        cmd("select.saveBitmapSelection")
+            .requires(&[Requirement::Document, Requirement::PixelSelection])
+            .opt("name", ParamKind::String, "Name (Vorgabe „Standard“; vorhandener Name wird ersetzt bzw. verknüpft)")
+            .opt("mode", mode_param(), "Verknüpfung mit der vorhandenen gleichnamigen Auswahl (Vorgabe ersetzen)")
+            .opt("document", ParamKind::Integer { min: Some(0), max: None }, "Zieldokument (ID, gleiche Größe; Vorgabe: aktives)")
+            .run(|s, p| {
+                let name = p.opt_str("name")?.unwrap_or_else(|| fp_i18n::t("sel-saved-default-name"));
+                let md = mode(p)?;
+                let target = other_document(s, p)?;
+                let d = s.doc()?;
+                let src = d.id;
+                let m = d.selection.pixels.clone().filter(|_| d.selection.has_pixels()).ok_or_else(|| sel_err("err-req-pixel-selection"))?;
+                let label = fp_i18n::t("msg-step-save-selection");
+                if target == src {
+                    with_doc(s, |d| store_saved(d, &name, &m, md))?;
+                } else {
+                    s.modify_document(target, &label, "select.saveBitmapSelection", |d| store_saved(d, &name, &m, md))?;
+                }
+                Ok(CommandOutput::doc().labeled(label))
+            }),
+    );
     r.add(
         cmd("select.restoreBitmapSelection")
             .requires(DOC)
@@ -374,14 +432,23 @@ pub(super) fn register(r: &mut CommandRegistry) {
             .opt("name", ParamKind::String, "Name")
             .opt("index", ParamKind::Integer { min: Some(0), max: None }, "Index")
             .opt("mode", mode_param(), "Verknüpfung mit der Auswahl")
+            .opt("invert", ParamKind::Bool, "geladene Maske vorher umkehren")
+            .opt("document", ParamKind::Integer { min: Some(0), max: None }, "Quelldokument (ID, gleiche Größe; Vorgabe: aktives)")
             .run(|s, p| {
                 let md = mode(p)?;
+                let invert = p.bool_or("invert", false)?;
+                let source = other_document(s, p)?;
+                let src = s.document(source).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-document")))?;
+                let i = saved_index(src, p)?;
+                let sv = src.doc.pages.get(src.page).and_then(|pg| pg.saved_selections.as_ref()).and_then(|l| l.get(i)).cloned();
+                let mut m = sv.and_then(|s| s.mask.as_ref().and_then(|md| data_to_mask(md, s.left, s.top))).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-mask")))?;
                 with_doc(s, |d| {
-                    let i = saved_index(d, p)?;
-                    let sv = d.doc.pages.get(d.page).and_then(|pg| pg.saved_selections.as_ref()).and_then(|l| l.get(i)).cloned();
-                    let m = sv.and_then(|s| s.mask.as_ref().and_then(|md| data_to_mask(md, s.left, s.top))).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-mask")))?;
+                    if invert {
+                        let within = canvas_rect(&d.doc, d.page).round_out().union(&m.bounds());
+                        m = m.inverted(within)?;
+                    }
                     d.selection.apply_pixels(m, md);
-                    Ok(CommandOutput::doc())
+                    Ok(CommandOutput::doc().labeled(fp_i18n::t("msg-step-load-selection")))
                 })
             }),
     );
@@ -391,16 +458,24 @@ pub(super) fn register(r: &mut CommandRegistry) {
             .available(has_saved_selection)
             .opt("name", ParamKind::String, "Name")
             .opt("index", ParamKind::Integer { min: Some(0), max: None }, "Index")
+            .opt("document", ParamKind::Integer { min: Some(0), max: None }, "Dokument (ID, gleiche Größe; Vorgabe: aktives)")
             .run(|s, p| {
-                with_doc(s, |d| {
+                let target = other_document(s, p)?;
+                let remove = |d: &mut DocumentState| -> Result<()> {
                     let i = saved_index(d, p)?;
                     let page = d.page;
                     let pg = Arc::make_mut(&mut d.doc).page_mut(page).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-page")))?;
                     if let Some(l) = &mut pg.saved_selections {
                         l.remove(i);
                     }
-                    Ok(CommandOutput::doc())
-                })
+                    Ok(())
+                };
+                if Some(target) == s.active_id() {
+                    with_doc(s, remove)?;
+                } else {
+                    s.modify_document(target, &fp_i18n::t(&fp_i18n::command_key("select.deleteBitmapSelection")), "select.deleteBitmapSelection", remove)?;
+                }
+                Ok(CommandOutput::doc())
             }),
     );
 

@@ -107,9 +107,34 @@ pub fn filter_for(name: &str, p: &Params) -> Result<Filter> {
     })
 }
 
+/// Punktliste eines Kurven-Effekts (`GPLv`) aus Kurvenpunkten.
+pub fn curve_points_value(pts: &[fp_raster::filters::CurvePoint]) -> fp_model::DataValue {
+    fp_model::DataValue::Points(fp_model::PointList { points: pts.iter().map(|q| fp_geom::Point::new(q.x, q.y)).collect(), ..Default::default() })
+}
+
 /// Live-Effekt-Eintrag (`EPSv`) zu einem Filter, Parameternamen wie im Dateiformat (06 §2.2).
 pub fn live_effect(f: &Filter) -> Effect {
     let mut e = Effect::new(&format!("{{{}}}", f.moa_id()), true);
+    // Kurven und Tonwert (re\19-kurven-tonwert.md §6.1): alle vier Punktlisten bzw. Kanalsätze
+    match f {
+        Filter::Curves(p) => {
+            for (k, pts) in [("rgb_points", &p.rgb_points), ("red_points", &p.red_points), ("green_points", &p.green_points), ("blue_points", &p.blue_points)] {
+                e.params.set_structured(k, curve_points_value(pts));
+            }
+            return e;
+        }
+        Filter::Levels(p) => {
+            for (n, c) in [("rgb", &p.rgb), ("red", &p.red), ("green", &p.green), ("blue", &p.blue)] {
+                e.set(&format!("source_low_{n}"), c.source_low.to_string());
+                e.set(&format!("source_high_{n}"), c.source_high.to_string());
+                e.set(&format!("dest_low_{n}"), c.dest_low.to_string());
+                e.set(&format!("dest_high_{n}"), c.dest_high.to_string());
+                e.set(&format!("gamma_{n}"), c.gamma.to_string());
+            }
+            return e;
+        }
+        _ => {}
+    }
     let mut set = |k: &str, v: String| e.set(k, v);
     match f {
         Filter::BrightnessContrast(p) => {

@@ -62,6 +62,8 @@ pub struct CurvesDialog {
     /// Histogramme R, G, B des Originalbilds (für Auto).
     pub hist: [[u64; 256]; 3],
     pub live: bool,
+    /// Vorhandener Live-Effekt, der bearbeitet wird (ⓘ, KV-3); None = Filter bzw. neuer Effekt.
+    pub edit: Option<super::effects::LiveEdit>,
 }
 
 impl CurvesDialog {
@@ -75,7 +77,7 @@ impl CurvesDialog {
         let base = if live { json!({"live": true}) } else { json!({}) };
         let mut preview = FormDialog::new("curves", &t("dlg-curves-title"), "filter.adjustColor.curves", vec![]).with_base(base).with_preview();
         preview.preview_on = preview_on;
-        let mut d = CurvesDialog { params: CurvesParams::default(), channel: 0, selected: Some(0), shown: (0.0, 0.0), drag: None, reversed: false, picking: None, preview, hist, live };
+        let mut d = CurvesDialog { params: CurvesParams::default(), channel: 0, selected: Some(0), shown: (0.0, 0.0), drag: None, reversed: false, picking: None, preview, hist, live, edit: None };
         d.sync_fields();
         d
     }
@@ -96,6 +98,9 @@ impl CurvesDialog {
 
     /// Befehlsparameter (alle vier Punktlisten).
     pub fn command_params(&self) -> serde_json::Value {
+        if let Some(e) = &self.edit {
+            return e.invocation(super::effects::curves_effect_params(&self.params));
+        }
         let mut v = serde_json::to_value(&self.params).unwrap_or(json!({}));
         if self.live {
             v["live"] = json!(true);

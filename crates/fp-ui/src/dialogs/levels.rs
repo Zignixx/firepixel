@@ -49,6 +49,8 @@ pub struct LevelsDialog {
     pub picking: Option<Pipette>,
     /// Gezogener Griff.
     pub drag: Option<(Slider, usize)>,
+    /// Vorhandener Live-Effekt, der bearbeitet wird (ⓘ, KV-3); None = Filter bzw. neuer Effekt.
+    pub edit: Option<super::effects::LiveEdit>,
 }
 
 impl LevelsDialog {
@@ -60,7 +62,7 @@ impl LevelsDialog {
         preview.preview_on = common::preview_pref(st);
         let hist = common::channel_histograms(st);
         let params = LevelsParams::default();
-        LevelsDialog { params, channel: 0, preview, hist, shown: lm::display_histogram(&hist, &params, 0), live, picking: None, drag: None }
+        LevelsDialog { params, channel: 0, preview, hist, shown: lm::display_histogram(&hist, &params, 0), live, picking: None, drag: None, edit: None }
     }
 
     /// Parametersatz des gewählten Kanals.
@@ -125,6 +127,9 @@ impl LevelsDialog {
 
     /// Befehlsparameter.
     pub fn command_params(&self) -> serde_json::Value {
+        if let Some(e) = &self.edit {
+            return e.invocation(super::effects::levels_effect_params(&self.params));
+        }
         let mut v = serde_json::to_value(self.params).unwrap_or(json!({}));
         if self.live {
             v["live"] = json!(true);

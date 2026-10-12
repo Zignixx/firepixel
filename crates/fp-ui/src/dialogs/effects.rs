@@ -109,7 +109,111 @@ pub fn editable(e: &Effect) -> bool {
             | EffectKind::AddNoise
             | EffectKind::BrightnessContrast
             | EffectKind::HueSaturation
+            | EffectKind::Curves
+            | EffectKind::Levels
     )
+}
+
+/// Ziel beim Bearbeiten eines vorhandenen Kurven- bzw. Tonwert-Effekts über ⓘ
+/// (re\19-kurven-tonwert.md §1.1/§6.1): Index in der Effektliste und die beim Öffnen gewählten
+/// Objekte (Auswahlwechsel während des Dialogs, AGENTEN_REGELN §4b). OK ersetzt die Werte
+/// (`pi.effect.set`), Abbrechen lässt sie unverändert.
+#[derive(Clone, Debug, PartialEq)]
+pub struct LiveEdit {
+    pub index: usize,
+    pub ids: Vec<u64>,
+}
+
+impl LiveEdit {
+    /// Parameter für `pi.effect.set`.
+    pub fn invocation(&self, params: Map<String, Value>) -> Value {
+        let mut v = json!({"index": self.index, "params": params});
+        if !self.ids.is_empty() {
+            v["ids"] = json!(self.ids);
+        }
+        v
+    }
+}
+
+/// Effektparameter eines Kurven-Effekts wie im Dateiformat (alle vier Punktlisten, §6.1).
+pub fn curves_effect_params(p: &fp_raster::filters::CurvesParams) -> Map<String, Value> {
+    let pts = |v: &Vec<fp_raster::filters::CurvePoint>| json!(v.iter().map(|q| json!([q.x, q.y])).collect::<Vec<_>>());
+    let mut m = Map::new();
+    m.insert("rgb_points".into(), pts(&p.rgb_points));
+    m.insert("red_points".into(), pts(&p.red_points));
+    m.insert("green_points".into(), pts(&p.green_points));
+    m.insert("blue_points".into(), pts(&p.blue_points));
+    m
+}
+
+/// Effektparameter eines Tonwert-Effekts wie im Dateiformat (`source_low_rgb` … `gamma_blue`).
+pub fn levels_effect_params(p: &fp_raster::filters::LevelsParams) -> Map<String, Value> {
+    let mut m = Map::new();
+    for (n, c) in [("rgb", &p.rgb), ("red", &p.red), ("green", &p.green), ("blue", &p.blue)] {
+        m.insert(format!("source_low_{n}"), json!(c.source_low.to_string()));
+        m.insert(format!("source_high_{n}"), json!(c.source_high.to_string()));
+        m.insert(format!("dest_low_{n}"), json!(c.dest_low.to_string()));
+        m.insert(format!("dest_high_{n}"), json!(c.dest_high.to_string()));
+        m.insert(format!("gamma_{n}"), json!(c.gamma.to_string()));
+    }
+    m
+}
+
+/// Gespeicherte Kurven eines Effekts (fehlende bzw. unvollständige Listen: Identität).
+pub fn curves_of(e: &Effect) -> fp_raster::filters::CurvesParams {
+    let mut p = fp_raster::filters::CurvesParams::default();
+    for (k, dst) in [("rgb_points", &mut p.rgb_points), ("red_points", &mut p.red_points), ("green_points", &mut p.green_points), ("blue_points", &mut p.blue_points)] {
+        if let Some(v) = e.get_points(k).filter(|v| v.len() >= 2) {
+            *dst = v.iter().map(|q| fp_raster::filters::CurvePoint { x: q.x, y: q.y }).collect();
+        }
+    }
+    p
+}
+
+/// Gespeicherte Tonwerte eines Effekts (fehlende Schlüssel: Grundwerte 0/1/255 und 0/255).
+pub fn levels_of(e: &Effect) -> fp_raster::filters::LevelsParams {
+    let ch = |n: &str| fp_raster::filters::LevelsChannel {
+        source_low: e.get_f64(&format!("source_low_{n}")).map(|v| v as i32).unwrap_or(0),
+        source_high: e.get_f64(&format!("source_high_{n}")).map(|v| v as i32).unwrap_or(255),
+        dest_low: e.get_f64(&format!("dest_low_{n}")).map(|v| v as i32).unwrap_or(0),
+        dest_high: e.get_f64(&format!("dest_high_{n}")).map(|v| v as i32).unwrap_or(255),
+        gamma: e.get_f64(&format!("gamma_{n}")).unwrap_or(1.0),
+    };
+    fp_raster::filters::LevelsParams { rgb: ch("rgb"), red: ch("red"), green: ch("green"), blue: ch("blue") }
+}
+
+fn selected_ids(st: &AppState) -> Vec<u64> {
+    st.session.active().map(|d| d.selection.elements.iter().map(|i| i.0).collect()).unwrap_or_default()
+}
+
+/// Kurven- bzw. Tonwertdialog als Live-Effekt öffnen: ohne `edit` zum Anlegen (Grundwerte, OK hängt
+/// den Effekt an, Abbrechen legt nichts an), mit `edit` für einen vorhandenen Effekt.
+fn open_adjust_dialog(st: &mut AppState, cmd: &str, edit: Option<(usize, &Effect)>) -> bool {
+    let ids = selected_ids(st);
+    match cmd {
+        "filter.adjustColor.curves" => {
+            let mut d = super::curves::CurvesDialog::new(st, true);
+            if let Some((index, e)) = edit {
+                d.params = curves_of(e);
+                d.set_channel(0);
+                d.edit = Some(LiveEdit { index, ids });
+                d.preview.command = "pi.effect.set".into();
+            }
+            st.dialogs.curves = Some(d);
+        }
+        "filter.adjustColor.levels" => {
+            let mut d = super::levels::LevelsDialog::new(st, true);
+            if let Some((index, e)) = edit {
+                d.params = levels_of(e);
+                d.set_channel(0);
+                d.edit = Some(LiveEdit { index, ids });
+                d.preview.command = "pi.effect.set".into();
+            }
+            st.dialogs.levels = Some(d);
+        }
+        _ => return false,
+    }
+    true
 }
 
 /// Menü „+“ an einer Antwort (Kategorie → Filter, Optionen „Alle ein/aus“).
@@ -168,6 +272,9 @@ pub fn begin_add(st: &mut AppState, index: usize) {
     match f.kind {
         FxKind::Simple(name) => st.run("element.addEffect", json!({"effect": name})),
         FxKind::Filter(cmd) => {
+            if open_adjust_dialog(st, cmd, None) {
+                return;
+            }
             if let Some(d) = super::catalog::filter_form_with_prefs(st, cmd, true) {
                 st.dialogs.form = Some(d);
             } else {
@@ -185,6 +292,17 @@ pub fn begin_add(st: &mut AppState, index: usize) {
 pub fn begin_edit(st: &mut AppState, index: usize, e: &Effect) {
     if !editable(e) {
         return;
+    }
+    match e.kind() {
+        EffectKind::Curves => {
+            open_adjust_dialog(st, "filter.adjustColor.curves", Some((index, e)));
+            return;
+        }
+        EffectKind::Levels => {
+            open_adjust_dialog(st, "filter.adjustColor.levels", Some((index, e)));
+            return;
+        }
+        _ => {}
     }
     let fill = st.session.tools.fill_color;
     let d = match e.kind() {

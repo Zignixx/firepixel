@@ -16,6 +16,7 @@ pub mod levels;
 pub mod levels_common;
 pub mod marquee;
 pub mod curves;
+pub mod bitmap_selection;
 pub mod menu_dialogs;
 pub mod misc;
 pub mod models;
@@ -61,6 +62,8 @@ pub struct Dialogs {
     pub numeric_transform: Option<doc_dialogs::NumericTransformDialog>,
     pub levels: Option<levels::LevelsDialog>,
     pub curves: Option<curves::CurvesDialog>,
+    /// Bitmap-Auswahl speichern/wiederherstellen/löschen (KV-3).
+    pub bitmap_selection: Option<bitmap_selection::BitmapSelectionDialog>,
     pub export: Option<export::ExportDialog>,
     /// Bildvorschau (BV-1).
     pub preview: Option<image_preview::ImagePreview>,
@@ -110,6 +113,7 @@ impl Dialogs {
             || self.numeric_transform.is_some()
             || self.levels.is_some()
             || self.curves.is_some()
+            || self.bitmap_selection.is_some()
             || self.export.is_some()
             || self.preview.is_some()
             || self.shortcuts.is_some()
@@ -177,6 +181,7 @@ pub fn open_for_command(st: &mut AppState, name: &str) -> bool {
             }
         }
         _ if models::handles(name) => return models::open_command(st, name),
+        _ if bitmap_selection::handles(name) => return bitmap_selection::open(st, name),
         _ if menu_dialogs::handles(name) => return menu_dialogs::open(st, name),
         _ if panel_menus::needs_ui(name) => return panel_menus::open(st, name),
         _ => match catalog::form_for(st, name) {
@@ -822,6 +827,7 @@ pub fn show_all(ctx: &egui::Context, st: &mut AppState) {
     doc_dialogs::show_numeric_transform(ctx, st);
     levels::show_levels(ctx, st);
     curves::show_curves(ctx, st);
+    bitmap_selection::show(ctx, st);
     export::show_export(ctx, st);
     image_preview::show(ctx, st);
     shortcuts::show(ctx, st);

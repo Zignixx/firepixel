@@ -374,6 +374,25 @@ pub fn set_effects(e: &mut Element, l: Option<EffectList>) {
     e.common.effects = l;
 }
 
+/// Wert eines Effektparameters für `pi.effect.set`: Text wie im Dateiformat bzw. eine Punktliste
+/// (Kurven-Effekt, KV-3), wenn ein Feld aus Punkten `[x, y]` oder `{x, y}` kommt.
+fn effect_param_value(v: &Value) -> fp_model::DataValue {
+    let point = |q: &Value| -> Option<fp_geom::Point> {
+        let (x, y) = match q {
+            Value::Array(a) if a.len() == 2 => (a[0].as_f64()?, a[1].as_f64()?),
+            Value::Object(o) => (o.get("x")?.as_f64()?, o.get("y")?.as_f64()?),
+            _ => return None,
+        };
+        Some(fp_geom::Point::new(x as f32, y as f32))
+    };
+    if let Value::Array(a) = v
+        && let Some(points) = a.iter().map(point).collect::<Option<Vec<_>>>()
+    {
+        return fp_model::DataValue::Points(fp_model::PointList { points, ..Default::default() });
+    }
+    fp_model::DataValue::Scalar(v.as_str().map(|x| x.to_string()).unwrap_or_else(|| v.to_string()))
+}
+
 fn edit_effects(s: &mut Session, p: &Params, f: impl Fn(&mut EffectList) -> Result<()>) -> Result<CommandOutput> {
     let (page, ids) = targets(s, p)?;
     let d = s.doc_mut()?;
@@ -981,14 +1000,18 @@ pub fn register(r: &mut CommandRegistry) {
             .param("params", ParamKind::Json, "Parameter {Schlüssel: Wert} wie im Dateiformat")
             .run(|s, p| {
                 let i = p.usize("index")?;
-                let vals: Vec<(String, String)> = match p.get("params") {
-                    Some(Value::Object(m)) => m.iter().map(|(k, v)| (k.clone(), v.as_str().map(|x| x.to_string()).unwrap_or_else(|| v.to_string()))).collect(),
+                // Text wie im Dateiformat; Punktlisten (Kurven, `[[x, y], …]` bzw. `[{x, y}, …]`) als `GPLv`
+                let vals: Vec<(String, fp_model::DataValue)> = match p.get("params") {
+                    Some(Value::Object(m)) => m.iter().map(|(k, v)| (k.clone(), effect_param_value(v))).collect(),
                     _ => return Err(bad(p, fp_i18n::t("err-param-params"))),
                 };
                 edit_effects(s, p, move |l| match l.effects.get_mut(i) {
                     Some(e) => {
                         for (k, v) in &vals {
-                            e.set(k, v.clone());
+                            match v {
+                                fp_model::DataValue::Scalar(t) => e.set(k, t.clone()),
+                                other => e.params.set_structured(k, other.clone()),
+                            }
                         }
                         Ok(())
                     }
