@@ -4,17 +4,17 @@ Auftrag: „Vergleich mal alle Funktionen vom Original und Firepixel, damit sie 
 
 ## Übergabe (Stand 12.10.2026, Arbeit auf Nutzerwunsch angehalten)
 
-**Zahlen je Bereich** (117 Zeilen, neu gezählt von PM-1 am 12.10. nach dem Stand der Tabellen inkl. FV-1/FV-3-Nachmessungen; ✅ gleich, ⚠️ Abweichung im Detail, ❌ fehlt bzw. falsch, ⏳ nicht fertig gemessen):
+**Zahlen je Bereich** (117 Zeilen, neu gezählt von PM-1 am 12.10. nach dem Stand der Tabellen inkl. FV-1/FV-3-Nachmessungen; T, L und K nachgeführt von FV-6; ✅ gleich, ⚠️ Abweichung im Detail, ❌ fehlt bzw. falsch, ⏳ nicht fertig gemessen):
 
 | Bereich | ✅ | ⚠️ | ❌ | ⏳ |
 |---|---|---|---|---|
 | 1 Inspektor je Werkzeug (W1–W38) | 9 | 10 | 19 | 0 |
 | 2 Feldverhalten (F1–F15) | 9 | 6 | 0 | 0 |
-| 3 Text: Schriftgröße (T1–T6) | 3 | 0 | 3 | 0 |
+| 3 Text: Schriftgröße (T1–T6) | 4 | 0 | 2 | 0 |
 | 4 Inspektor je Objektart (O1–O17) | 6 | 4 | 7 | 0 |
-| 5 Leinwand/Werkzeugverhalten (L1–L30) | 18 | 5 | 7 | 0 |
-| 6 Mauszeiger (K1–K11) | 9 | 2 | 0 | 0 |
-| **Summe** | **54** | **27** | **36** | **0** |
+| 5 Leinwand/Werkzeugverhalten (L1–L30) | 20 | 4 | 6 | 0 |
+| 6 Mauszeiger (K1–K11) | 11 | 0 | 0 | 0 |
+| **Summe** | **59** | **24** | **34** | **0** |
 
 **Geprüft sind:**
 - der Werkzeug-Inspektor ohne Auswahl für alle Werkzeuge der Werkzeugleiste, Vorgaben gegen die Werkseinstellungen;
@@ -185,7 +185,7 @@ Eingabe wie bei F1–F11 (Klick, Ende, Umschalt+Pos1, Tippen, Eingabe). Strich i
 | T3 | Größe „200“ eintippen | angenommen (200), obwohl der Schieber nur bis 96 reicht | angenommen | ✅ | |
 | T4 | Pfeil neben „Größe“ | **senkrechter** Popup-Schieber über dem Feld | waagerechter Schieber mit Zahl darunter | ❌ | o_t1_c / f_t2_d |
 | T5 | Esc im geöffneten Größen-Schieber | schließt den Schieber, Auswahl bleibt | schließt den Schieber **und hebt die Auswahl auf** (Inspektor springt auf „Dokument“) | ❌ | f_t2_d → f_t2_e |
-| T6 | Größe ändern bei Einfügemarke ohne markierten Text („Abc“, Größe 48 + Eingabe, „D“, Esc) | wirkt nur auf neu getippte Zeichen: Läufe [Abc 24 pt][D 48 pt]; Eingabe im Feld gibt den Fokus an den Text zurück; Werkzeug bleibt Text | ganzer Text 48 pt, ein Lauf [AbcD 48 pt] (PM-1) | ❌ | a_T6_groesse_einfuegemarke |
+| T6 | Größe ändern bei Einfügemarke ohne markierten Text („Abc“, Größe 48 + Eingabe, „D“, Esc) | wirkt nur auf neu getippte Zeichen: Läufe [Abc 24 pt][D 48 pt]; Eingabe im Feld gibt den Fokus an den Text zurück; Werkzeug bleibt Text | ganzer Text 48 pt, ein Lauf [AbcD 48 pt] (PM-1) → **FV-6:** ausstehende Attribute an der Einfügemarke; echtes Fenster (eigene Instanz, SendInput, Größe wie das Inspektorfeld per `text.setAttributes`): [Abc 12 pt][D 48 pt] (Werkzeugvorgabe dort 12 pt), Werkzeug bleibt Text; Rahmen wächst erst mit dem „D“ | ✅ gemessen (FV-6) | a_T6_groesse_einfuegemarke, phase5_fv6_groesse_einfuegemarke |
 
 ## 4. Inspektor je Objektart
 
@@ -230,7 +230,7 @@ Testdokument mit denselben Objekten in beiden Programmen (per JSF angelegt): R1,
 | L13 | danach **Esc** | „Bitmapmodus beenden“: Auswahlrahmen weg, Werkzeug wechselt zum Zeiger, Bitmap bleibt als Objekt gewählt | Auswahlrahmen bleibt, Werkzeug bleibt Zauberstab | ❌ | a_321 |
 | L14 | danach Strg+D | Auswahl aufheben | Auswahl aufheben | ✅ | |
 | L15 | Rechteck, Umschalt gehalten, Ziehen 240,145 → +60/+30 | Quadrat 60 × 60 ab dem Startpunkt | 250,150–300,175: kein Quadrat, Startpunkt um 10/5 px verschoben (rastet an E1-Mitte x=250 und R2-Oberkante y=150 ein) | ✅ nachgemessen (FV-3, echtes Fenster, Umschalt vor dem Drücken): 240,145–300,205 | |
-| L16 | Rechteck, Alt gehalten | von der Mitte aus: 180–300 × 125–175 | wie ohne Alt (250,150–300,175) | ⚠️ **PM-1, Fangregel im Original (14 Fälle, `uxp_pm_l16.ps1`):** Start- und Endpunkt rasten getrennt in x und y an Kanten und Mitten anderer Objekte ein, Fangabstand **≤ 5** px (5 rastet, 6 nicht); mit **Umschalt rastet nichts** (weder Start noch Ende, auch mit Alt+Umschalt nicht); mit Alt rastet der Mittelpunkt wie sonst der Start, das Ende ebenfalls. Firepixel (echtes Fenster): bei genau 5 px kein Fang (115–175), mit Umschalt rastet es weiter (240,147 → 240,150; Ende 298 → 300), ein Ende bei y = 173 rastet an 170 statt an der näheren 175 (halber Pixel Versatz); Abstand 1–4 und ≥ 6 gleich. Befunde LW | |
+| L16 | Rechteck, Alt gehalten | von der Mitte aus: 180–300 × 125–175 | wie ohne Alt (250,150–300,175) | ⚠️ **PM-1, Fangregel im Original (14 Fälle, `uxp_pm_l16.ps1`):** Start- und Endpunkt rasten getrennt in x und y an Kanten und Mitten anderer Objekte ein, Fangabstand **≤ 5** px (5 rastet, 6 nicht); mit **Umschalt rastet nichts** (weder Start noch Ende, auch mit Alt+Umschalt nicht); mit Alt rastet der Mittelpunkt wie sonst der Start, das Ende ebenfalls. Firepixel (echtes Fenster): bei genau 5 px kein Fang (115–175), mit Umschalt rastet es weiter (240,147 → 240,150; Ende 298 → 300), ein Ende bei y = 173 rastet an 170 statt an der näheren 175 (halber Pixel Versatz); Abstand 1–4 und ≥ 6 gleich. Befunde LW. **✅ FV-6 nachgemessen** (echtes Fenster, eigene Instanz, `uxp_pm_l16`-Fälle, Seite jetzt auf ganzen Pixeln 497,322): A1 240,150–300,175, A2 Umschalt 240,145–300,205, A3 Alt 180,125–300,175, A4 180,85–300,205, B1 180,125–300,175, B2 180,113–300,175, B3 (Gleichstand) 180,111–300,175, C2 Umschalt 240,147–300,207, Alt+Umschalt 180,87–300,207, Umschalt Ende 298,160 → 240,135–298,193 – alle wie im Original; Fälle am Text T1 hängen an dessen Grenzen (2-px-Rand, Befund EB). Nebenbefund: bei SendInput mit `SetCursorPos` geht selten (1 von 5) die letzte Bewegung vor dem Loslassen verloren (Ende 297 statt 300, nur ohne Fang sichtbar; winit meldet die Lage des Loslassens aus der letzten Bewegung) | |
 | L17 | Rechteck, 5× Pfeil hoch während des Ziehens | Rundung bleibt 0 (in CS6 live keine Wirkung) | Rundung 0,145 | ⚠️ | |
 | L18 | Rechteck, Leertaste während des Ziehens | Startpunkt wandert mit (Form verschoben) | Startpunkt wandert mit | ✅ | |
 | L19 | Rechteck, Esc während des Ziehens | wird ignoriert, Rechteck entsteht beim Loslassen | Aufziehen abgebrochen, kein Rechteck | ⚠️ | |
@@ -241,10 +241,10 @@ Testdokument mit denselben Objekten in beiden Programmen (per JSF angelegt): R1,
 | L24 | Stift: Klick, Klick, Doppelklick | offener Pfad mit 3 Punkten bis 330,220 | **kein Pfad** (nach dem Doppelklick ist nichts da) | ✅ nachgemessen (FV-3, echtes Fenster): offener Pfad 250,260–330,330, Werkzeug bleibt Stift | |
 | L25 | Zoomwerkzeug: Rahmen 50,50–150,120 aufziehen | 1150 % (stufenlos eingepasst) | 800 % (Tabellenstufe) | ❌ | |
 | L26 | Zeiger: Eckgriff eines gewählten Rechtecks um +40/+30 ziehen | Rechteck wird **größer** (bis 193,153), Rundung bleibt 0 | keine Änderung (weder Größe noch Rundung) | ✅ nachgemessen (FV-3, echtes Fenster): 50,50–190,150, Rundung 0 | |
-| L27 | Zeiger: Doppelklick auf Bitmap | Bitmapmodus, Werkzeug wechselt zum Auswahlrahmen; danach Esc: Werkzeug bleibt Auswahlrahmen, Bitmap bleibt gewählt | Bitmapmodus und Auswahlrahmen (PM-1, echtes Fenster); danach Esc: Werkzeug wechselt zum Zeiger | ✅ (Esc danach ⚠️, Befund LW) | a_L27_doppelklick_bitmap |
+| L27 | Zeiger: Doppelklick auf Bitmap | Bitmapmodus, Werkzeug wechselt zum Auswahlrahmen; danach Esc: Werkzeug bleibt Auswahlrahmen, Bitmap bleibt gewählt | Bitmapmodus und Auswahlrahmen (PM-1, echtes Fenster); danach Esc: Werkzeug wechselt zum Zeiger → **FV-6:** Esc ohne Auswahlrahmen ohne Wirkung; echtes Fenster: Doppelklick → B gewählt, `tool.marquee`; Esc → B gewählt, `tool.marquee` | ✅ gemessen (FV-6) | a_L27_doppelklick_bitmap |
 | L28 | Zuschneiden: Rahmen ziehen, Esc | Leinwand unverändert, Werkzeug wechselt zum Zeiger | Leinwand unverändert, Werkzeug bleibt Zuschneiden | ✅ nachgemessen (FV-3, echtes Fenster): Werkzeug Zeiger, Breite 600 | |
 | L29 | Zuschneiden: Rahmen 20,20–300,200, Eingabe, Strg+Z | 280 × 180, Rückgängig stellt 600 × 400 her | ebenso | ✅ | |
-| L30 | Frei transformieren (Strg+T) an R1 50,50–150,120, Eckgriff von 151,121 nach 191,151 | **Ecke skaliert immer proportional** (50,50–193,150, größerer Faktor), Umschalt ändert nichts; Alt = proportional von der Mitte (7,20–193,150); Kante rechts → 191 (Zeigerlage); die Änderung wirkt schon beim Ziehen; **Esc behält die Änderung** und beendet den Modus (Werkzeug Zeiger); Eingabe und Doppelklick innen übernehmen, Strg+Z = ein Schritt; Ziehen am Mittelpunkt verschiebt nur den Drehpunkt (`uxp_pm_3.ps1`) | Ecke unproportional (190,150), nur mit Umschalt proportional (193,150); Alt 10,20–190,150 (Alt+Umschalt 7,20–193,150 gleich); Kante → 188; nach dem Loslassen zeigt die Leinwand bis zur Eingabe die alte Größe; Esc verwirft, Werkzeug bleibt „Skalieren“; Eingabe/Doppelklick, ein Schritt und Mittelpunkt gleich (PM-1) | ❌ | a_L30_frei_transformieren |
+| L30 | Frei transformieren (Strg+T) an R1 50,50–150,120, Eckgriff von 151,121 nach 191,151 | **Ecke skaliert immer proportional** (50,50–193,150, größerer Faktor), Umschalt ändert nichts; Alt = proportional von der Mitte (7,20–193,150); Kante rechts → 191 (Zeigerlage); die Änderung wirkt schon beim Ziehen; **Esc behält die Änderung** und beendet den Modus (Werkzeug Zeiger); Eingabe und Doppelklick innen übernehmen, Strg+Z = ein Schritt; Ziehen am Mittelpunkt verschiebt nur den Drehpunkt (`uxp_pm_3.ps1`) | Ecke unproportional (190,150), nur mit Umschalt proportional (193,150); Alt 10,20–190,150 (Alt+Umschalt 7,20–193,150 gleich); Kante → 188; nach dem Loslassen zeigt die Leinwand bis zur Eingabe die alte Größe; Esc verwirft, Werkzeug bleibt „Skalieren“; Eingabe/Doppelklick, ein Schritt und Mittelpunkt gleich (PM-1) → **FV-6, echtes Fenster (`uxp_pm_3`-Fälle):** Ecke 50,50–193,150, Umschalt 193,150, Alt 7,20–193,150, Alt+Umschalt gleich, Kante rechts 191; nach dem Loslassen zeigt die Leinwand die neue Größe; Esc → 50,50–193,150 und `tool.pointer`, Klick danach wählt; Strg+Z = ein Schritt zurück auf 150,120; Eingabe und Doppelklick innen übernehmen (Zeiger). Gilt für Skalieren/Neigen/Verzerren (Esc behält, A für Neigen/Verzerren: nicht gemessen); JSF `pixelRect` meldet während der offenen Vorschau noch die alte Größe (im Original nicht gemessen) | ✅ gemessen (FV-6) | a_L30_frei_transformieren, phase5_fv6_frei_transformieren_nach_loslassen |
 
 ## 6. Mauszeiger (echte Maus, Bild `a_400_mauszeiger.png`)
 
@@ -253,14 +253,14 @@ Das Original zeichnet einige Zeiger invertiert (XOR); auf weißem Grund sind sie
 | Nr | Lage | Original | Firepixel | |
 |---|---|---|---|---|
 | K1 | Zeiger über leerer Leinwand / über Objekt / im gewählten Objekt / mit Alt | schwarzer Pfeil | schwarzer Pfeil | ✅ |
-| K2 | Zeiger über Eckgriff eines gewählten Rechtecks | Pfeil ohne Zusatz, **weiß mit schwarzem Rand** | schwarzer Pfeil ohne Zusatz (PM-1, echtes Fenster, `a_401_mauszeiger_nachmessung`) | ⚠️ |
+| K2 | Zeiger über Eckgriff eines gewählten Rechtecks | Pfeil ohne Zusatz, **weiß mit schwarzem Rand** | schwarzer Pfeil ohne Zusatz (PM-1, echtes Fenster, `a_401_mauszeiger_nachmessung`) → **FV-6:** über Eckgriffen weißer Pfeil mit schwarzem Rand, über Kantengriffen schwarz (K3), echtes Fenster `phase5_fv6_mauszeiger_k2_k3_k9` | ✅ gemessen (FV-6) |
 | K3 | Zeiger über Kantengriff | Pfeil | Pfeil (PM-1, echtes Fenster) | ✅ |
 | K4 | Teilauswahl über Objekt | weißer Pfeil | weißer Pfeil mit Zusatz | ✅ |
 | K5 | Zoom / Zoom mit Alt | Lupe + / Lupe − | Lupe + / Lupe − | ✅ |
 | K6 | Hand-Werkzeug bzw. Leertaste, ohne Maustaste | **offene** Hand | offene Hand, auch mit Leertaste (PM-1, echtes Fenster; Zeichnung etwas gröber) | ✅ |
 | K7 | Stift über leerer Leinwand | Federspitze | Federspitze (PM-1, echtes Fenster) | ✅ |
 | K8 | Füllwerkzeug über leerer Leinwand (kein Objekt) | Verbotszeichen ⊘ | ⊘ (PM-1, echtes Fenster) | ✅ |
-| K9 | Zuschneiden | Zuschneide-Symbol: zwei kräftige Winkel (2 px) mit Diagonale | dünnes Symbol (1 px), ohne Diagonale, mit Kreuz in der Mitte (PM-1, echtes Fenster) | ⚠️ |
+| K9 | Zuschneiden | Zuschneide-Symbol: zwei kräftige Winkel (2 px) mit Diagonale | dünnes Symbol (1 px), ohne Diagonale, mit Kreuz in der Mitte (PM-1, echtes Fenster) → **FV-6:** pixelgleich zum Original (16×16-Raster: zwei 2-px-Winkel, 1-px-Diagonale links oben), echtes Fenster `phase5_fv6_mauszeiger_k2_k3_k9` | ✅ gemessen (FV-6) |
 | K10 | Radiergummi über Bitmap | Kreis in Pinselgröße | Kreis in Pinselgröße mit Mittelkreuz | ✅ |
 | K11 | Zauberstab, Pipette | Zauberstab / Pipette | Zauberstab / Pipette (eigene Form) | ✅ |
 
