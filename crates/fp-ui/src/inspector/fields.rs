@@ -182,6 +182,26 @@ pub fn field_frame(ui: &Ui, r: Rect, enabled: bool, focused: bool) {
 /// darf nicht an Leinwand oder Werkzeug gehen).
 pub const TEXT_FILTER: egui::EventFilter = egui::EventFilter { horizontal_arrows: true, vertical_arrows: true, tab: false, escape: true };
 
+/// Ein Feld hat in diesem Bild durch einen Mausklick daneben übernommen: der Inspektor führt die
+/// Befehle sofort aus ([`take_commit_now`]), **bevor** die Leinwand (im selben Bild danach
+/// gezeichnet) den Klick verarbeitet und die Auswahl ändert. Sonst ginge der Wert bei schnellen
+/// echten Klicks (Drücken und Loslassen in einem Bild) ins Leere (PARITAET_A F7/F9; im Original
+/// übernimmt das Feld bei WM_KILLFOCUS vor dem Mausklick der Leinwand).
+const COMMIT_NOW: &str = "pi-commit-now";
+
+fn request_commit_now(ctx: &egui::Context) {
+    ctx.data_mut(|d| d.insert_temp(Id::new(COMMIT_NOW), true));
+}
+
+/// Soll der Inspektor die Befehle dieses Bildes sofort ausführen? (setzt die Anfrage zurück)
+pub fn take_commit_now(ctx: &egui::Context) -> bool {
+    ctx.data_mut(|d| {
+        let v = d.get_temp::<bool>(Id::new(COMMIT_NOW)).unwrap_or(false);
+        d.remove::<bool>(Id::new(COMMIT_NOW));
+        v
+    })
+}
+
 /// Eingabefeld mit Puffer. `numeric`: Zahlenfeld des Inspektors – wie im Original verwirft Esc den
 /// getippten Wert nicht (übernommen wird beim Fokusverlust bzw. mit Eingabe/Tab, PARITAET_A F7).
 /// Strg+A markiert wie in jedem Windows-Eingabefeld den Feldtext (F10, im Original von PM-2 in
@@ -245,10 +265,19 @@ fn buffered_edit(ui: &mut Ui, id: Id, r: Rect, current: &str, enabled: bool, rig
     if resp.has_focus() && !resp.hovered() && ui.input(|i| i.pointer.any_pressed()) {
         ui.memory_mut(|m| m.surrender_focus(te_id));
         ui.data_mut(|d| d.remove::<String>(id));
-        return ((buf != current).then_some(buf), resp);
+        let out = (buf != current).then_some(buf);
+        if out.is_some() {
+            request_commit_now(ui.ctx());
+        }
+        return (out, resp);
     }
     if resp.lost_focus() && (numeric || !esc) && buf != current {
         out = Some(buf.clone());
+        // Fokusverlust durch einen Klick (Drücken und Loslassen im selben Bild, egui nimmt den
+        // Fokus beim Loslassen): ebenfalls sofort übernehmen
+        if ui.input(|i| i.pointer.any_pressed() || i.pointer.any_released()) {
+            request_commit_now(ui.ctx());
+        }
     }
     if resp.has_focus() {
         ui.data_mut(|d| d.insert_temp(id, buf));

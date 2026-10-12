@@ -17,6 +17,7 @@ pub mod popups;
 pub mod scale;
 mod quads;
 pub use quads::tool_header_lines;
+pub use quads::selection_thumb_rect;
 pub mod texte;
 mod tool_quads;
 
@@ -200,6 +201,11 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
             let (r, _) = ui.allocate_exact_size(vec2(BODY_WIDTH, body.height()), Sense::hover());
             quadrants(ui, st, r, &state, half, &theme);
         });
+    }
+    // Übernahme durch einen Klick daneben (z. B. auf die Leinwand) sofort ausführen, damit der
+    // Wert noch das gezeigte Objekt trifft (die Leinwand verarbeitet den Klick erst danach)
+    if fields::take_commit_now(ui.ctx()) {
+        st.process_actions(ui.ctx());
     }
     ui.allocate_rect(full, Sense::hover());
 }

@@ -71,9 +71,10 @@ fn click(h: &mut H, p: Pos2) {
     h.run_steps(2);
 }
 
-/// Klick wie ein schneller SendInput-Klick: Bewegen, Drücken und Loslassen in **einem** Bild.
+/// Klick wie ein schneller SendInput-Klick (Messhilfe `Klick`: Zeiger setzen, 90 ms, Drücken,
+/// 30 ms, Loslassen): Bewegen in einem eigenen Bild, Drücken und Loslassen in **einem** Bild.
 fn fast_click(h: &mut H, p: Pos2) {
-    h.event(Event::PointerMoved(p));
+    ev(h, Event::PointerMoved(p));
     h.event(Event::PointerButton { pos: p, button: PointerButton::Primary, pressed: true, modifiers: Modifiers::NONE });
     h.event(Event::PointerButton { pos: p, button: PointerButton::Primary, pressed: false, modifiers: Modifiers::NONE });
     h.run_steps(3);
@@ -195,12 +196,20 @@ fn f10_ctrl_a_selects_field_text() {
 /// und Loslassen in einem Bild) und langsamem Klick, im Dokument und daneben (grau).
 #[test]
 fn f7_escape_then_canvas_click_commits() {
-    for (variant, fast, x, y) in [("langsam im Dokument", false, 450.0, 260.0), ("schnell im Dokument", true, 450.0, 260.0), ("schnell daneben", true, 560.0, 330.0), ("langsam daneben", false, 560.0, 330.0)] {
+    for (variant, esc, fast, x, y) in [
+        ("langsam im Dokument", true, false, 450.0, 260.0),
+        ("schnell im Dokument", true, true, 450.0, 260.0),
+        ("schnell daneben", true, true, 560.0, 330.0),
+        ("langsam daneben", true, false, 560.0, 330.0),
+        ("F9 ohne Esc, schnell", false, true, 450.0, 260.0),
+    ] {
         let (mut h, r1, _) = two_rects();
         let n0 = undo_count(&h);
         let f = input_with(&h, "100");
         type_into(&mut h, f, "7");
-        key(&mut h, Key::Escape, Modifiers::NONE);
+        if esc {
+            key(&mut h, Key::Escape, Modifiers::NONE);
+        }
         h.run_steps(6);
         assert_eq!(sel(&h), vec![r1], "{variant}: Esc im Feld hebt die Auswahl nicht auf");
         assert_eq!(opacity(&h, r1), 100.0, "{variant}: noch nicht übernommen");
@@ -210,7 +219,7 @@ fn f7_escape_then_canvas_click_commits() {
         } else {
             click(&mut h, p);
         }
-        assert_eq!(opacity(&h, r1), 7.0, "{variant}: Esc + Klick auf die Leinwand übernimmt 7");
+        assert_eq!(opacity(&h, r1), 7.0, "{variant}: Klick auf die Leinwand übernimmt 7 (Auswahl danach {:?})", sel(&h));
         assert_eq!(undo_count(&h), n0 + 1, "{variant}: ein Schritt");
     }
 }
