@@ -213,6 +213,12 @@ fn buffered_edit(ui: &mut Ui, id: Id, r: Rect, current: &str, enabled: bool, rig
     // Puffer beim Tippen; ändert sich der Wert von außen (Schieber, Pfeil) und wurde noch nichts
     // getippt, folgt der Puffer – sonst überschriebe der Fokusverlust den neuen Wert mit dem alten
     let orig_id = id.with("orig");
+    // Puffer und Ausgangswert aus dem letzten Bild: Holt sich ein **vorher** gezeichnetes Feld den
+    // Fokus per Mausklick, hat dieses Feld ihn schon zu Beginn seines Aufrufs verloren; der
+    // getippte Wert steht dann nur noch im Puffer und wird unten übernommen (wie Tab, Win32-Felder
+    // behalten den Wert; Befund PM-6 „Wert geht beim Klick in ein anderes Feld verloren“).
+    let stored_prev = ui.data(|d| d.get_temp::<String>(id));
+    let orig_prev = ui.data(|d| d.get_temp::<String>(orig_id));
     let mut buf: String = if focused {
         let stored = ui.data(|d| d.get_temp::<String>(id));
         let orig = ui.data(|d| d.get_temp::<String>(orig_id));
@@ -275,6 +281,14 @@ fn buffered_edit(ui: &mut Ui, id: Id, r: Rect, current: &str, enabled: bool, rig
             request_commit_now(ui.ctx());
         }
         return (out, resp);
+    }
+    if !focused
+        && resp.lost_focus()
+        && let Some(b) = stored_prev
+        // nur Getipptes: hat sich der Wert von außen geändert und wurde nichts getippt, nicht zurück
+        && !(orig_prev.as_deref() == Some(b.as_str()) && orig_prev.as_deref() != Some(current))
+    {
+        buf = b;
     }
     if resp.lost_focus() && (numeric || !esc) && buf != current {
         out = Some(buf.clone());

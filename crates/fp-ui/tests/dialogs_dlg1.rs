@@ -465,3 +465,157 @@ fn new_document_tab_order_like_the_original() {
     // Umlauf zurück zur Breite
     assert_eq!(cycle[9].0, R::TextInput, "nach Vorlagen… wieder Breite: {cycle:?}");
 }
+
+// ---------------------------------------------------------------------- Mausklick in ein anderes Feld (PM-6)
+
+/// Mittelpunkte aller Textfelder im obersten Dialog.
+fn field_centers(h: &H) -> Vec<Pos2> {
+    let Some(dr) = dialog_area(h) else { return vec![] };
+    h.get_all(By::new().role(egui::accesskit::Role::TextInput))
+        .filter(|n| dr.contains(n.rect().center()))
+        .map(|n| {
+            let c = n.rect().center();
+            egui::pos2(c.x as f32, c.y as f32)
+        })
+        .collect()
+}
+
+/// Befund PM-6: Ein getippter Wert ging verloren, sobald man mit der Maus in ein anderes Feld
+/// klickte (nur Tab übernahm). Jetzt übernimmt der Fokusverlust per Klick wie Tab – in beide
+/// Richtungen (früher und später gezeichnetes Feld), in jedem Dialog mit ≥ 2 Feldern.
+#[test]
+fn typed_value_survives_mouse_click_into_another_field() {
+    let (mut h, _) = harness(false);
+    h.state_mut().state.session.execute("select.all", json!({})).expect("alles");
+    let mut checked = Vec::new();
+    for name in DIALOG_COMMANDS {
+        h.state_mut().state.run(name, json!({}));
+        h.run_steps(4);
+        if !st(&h).dialogs.any_open() {
+            continue;
+        }
+        let n = field_centers(&h).len();
+        if n < 2 {
+            key(&mut h, Key::Escape);
+            h.run_steps(3);
+            continue;
+        }
+        for (a, b) in [(1usize, 0usize), (0, 1), (n - 1, 0)] {
+            let before = field_values(&h);
+            let typed = if before.get(a).map(String::as_str) == Some("7") { "8" } else { "7" };
+            let c = field_centers(&h);
+            click(&mut h, c[a]);
+            key_m(&mut h, Key::A, ctrl());
+            typ(&mut h, typed);
+            h.run_steps(2);
+            let c = field_centers(&h);
+            click(&mut h, c[b]);
+            h.run_steps(3);
+            let after = field_values(&h);
+            assert_ne!(after.get(a), before.get(a), "{name}: Feld {a} nach Klick in Feld {b} wieder auf dem alten Wert ({before:?} → {after:?})");
+        }
+        checked.push(*name);
+        key(&mut h, Key::Escape);
+        h.run_steps(4);
+        assert!(!st(&h).dialogs.any_open(), "{name}: Esc schließt");
+    }
+    eprintln!("geprüft {}: {checked:?}", checked.len());
+    for must in ["modify.transform.numericTransform", "modify.alterPath.expandStroke", "filter.adjustColor.brightnessContrast", "filter.adjustColor.hueSaturation", "filter.sharpen.unsharpMask", "modify.animation.animateSelection", "modify.canvas.canvasSize", "modify.canvas.imageSize"] {
+        assert!(checked.contains(&must), "{must} nicht geprüft: {checked:?}");
+    }
+}
+
+/// Die Beispiele aus dem Befund genau: Numerisch transformieren „Größe ändern“ ohne Proportionen,
+/// Höhe 70 tippen, Breite anklicken → Höhe bleibt 70 und wirkt bei OK; Helligkeit/Kontrast,
+/// Kontrast −30, Helligkeit anklicken → −30.
+#[test]
+fn pm6_examples_keep_value_after_click() {
+    let (mut h, _) = harness(false);
+    let r1 = {
+        let d = st(&h).session.active().expect("doc");
+        fp_engine::docops::selectable_ids(&d.doc, d.page, d.frame).into_iter().find(|id| fp_engine::docops::element_on_page(&d.doc, d.page, *id).is_some_and(|e| e.common.name.as_deref() == Some("R1"))).expect("R1")
+    };
+    h.state_mut().state.session.execute("select.set", json!({"ids": [r1.0]})).expect("Auswahl");
+    h.run_steps(2);
+    open(&mut h, "modify.transform.numericTransform");
+    {
+        let d = h.state_mut().state.dialogs.numeric_transform.as_mut().expect("Dialog");
+        d.mode = 1;
+        d.constrain = false;
+    }
+    h.run_steps(3);
+    let c = field_centers(&h);
+    click(&mut h, c[1]);
+    key_m(&mut h, Key::A, ctrl());
+    typ(&mut h, "70");
+    let c = field_centers(&h);
+    click(&mut h, c[0]);
+    h.run_steps(3);
+    assert_eq!(field_values(&h).get(1).map(String::as_str), Some("70"), "Höhe bleibt 70");
+    key(&mut h, Key::Enter);
+    h.run_steps(4);
+    let d = st(&h).session.active().expect("doc");
+    let e = fp_engine::docops::element_on_page(&d.doc, d.page, r1).expect("R1");
+    let b = fp_engine::docops::element_bounds(&d.doc, &e).expect("Grenzen");
+    assert_eq!((b.bottom - b.top).round(), 70.0, "OK übernimmt die Höhe 70");
+
+    open(&mut h, "filter.adjustColor.brightnessContrast");
+    let c = field_centers(&h);
+    click(&mut h, c[1]);
+    key_m(&mut h, Key::A, ctrl());
+    typ(&mut h, "-30");
+    let c = field_centers(&h);
+    click(&mut h, c[0]);
+    h.run_steps(3);
+    assert_eq!(field_values(&h).get(1).map(String::as_str), Some("-30"), "Kontrast bleibt −30");
+    let f = st(&h).dialogs.form.as_ref().expect("Formular");
+    assert_eq!(f.fields.iter().filter(|x| matches!(x.kind, fp_ui::dialogs::form::FieldKind::Number { .. })).nth(1).and_then(|x| x.value.as_f64()), Some(-30.0), "Wert im Formular");
+    key(&mut h, Key::Escape);
+    h.run_steps(4);
+}
+
+/// Inspektor (F7): B tippen, dann in H klicken bzw. auf die Leinwand → B ist übernommen; H tippen
+/// und in das vorher gezeichnete B klicken → H übernommen.
+#[test]
+fn inspector_field_keeps_value_after_click_elsewhere() {
+    let (mut h, _) = harness(false);
+    let r1 = {
+        let d = st(&h).session.active().expect("doc");
+        fp_engine::docops::selectable_ids(&d.doc, d.page, d.frame).into_iter().find(|id| fp_engine::docops::element_on_page(&d.doc, d.page, *id).is_some_and(|e| e.common.name.as_deref() == Some("R1"))).expect("R1")
+    };
+    h.state_mut().state.session.execute("select.set", json!({"ids": [r1.0]})).expect("Auswahl");
+    h.run_steps(4);
+    let size = |h: &H| {
+        let d = st(h).session.active().expect("doc");
+        let e = fp_engine::docops::element_on_page(&d.doc, d.page, r1).expect("R1");
+        let b = fp_engine::docops::element_bounds(&d.doc, &e).expect("Grenzen");
+        ((b.right - b.left).round(), (b.bottom - b.top).round())
+    };
+    // B (100) und H (60) des Inspektors: Textfelder mit diesen Werten unten im Fenster
+    let find = |h: &H, v: &str| -> Pos2 {
+        let c = h.get_all(By::new().role(egui::accesskit::Role::TextInput)).filter(|n| n.accesskit_node().value().as_deref() == Some(v) && n.rect().center().y > 500.0).map(|n| n.rect().center()).next().unwrap_or_else(|| panic!("Feld {v}"));
+        egui::pos2(c.x as f32, c.y as f32)
+    };
+    let (w0, h0) = size(&h);
+    assert_eq!((w0, h0), (100.0, 60.0));
+    let wp = find(&h, "100");
+    let hp = find(&h, "60");
+    click(&mut h, wp);
+    key_m(&mut h, Key::A, ctrl());
+    typ(&mut h, "150");
+    click(&mut h, hp);
+    h.run_steps(3);
+    assert_eq!(size(&h).0, 150.0, "B übernommen beim Klick in H");
+    key_m(&mut h, Key::A, ctrl());
+    typ(&mut h, "70");
+    let wp = find(&h, "150");
+    click(&mut h, wp);
+    h.run_steps(3);
+    assert_eq!(size(&h).1, 70.0, "H übernommen beim Klick in das vorher gezeichnete B");
+    key_m(&mut h, Key::A, ctrl());
+    typ(&mut h, "160");
+    // leere Stelle der Leinwand (unter der Seite rechts unten neben R2 nichts)
+    click(&mut h, egui::pos2(700.0, 120.0));
+    h.run_steps(3);
+    assert_eq!(size(&h).0, 160.0, "B übernommen beim Klick auf die Leinwand");
+}
