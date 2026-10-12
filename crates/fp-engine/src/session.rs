@@ -44,6 +44,61 @@ fn nudge_delta(name: &str) -> Option<(f64, f64)> {
     })
 }
 
+/// Hat sich am Text etwas geändert, das den Satz ändert (Inhalt, Attribute, Rahmenart, Größe des
+/// festen Rahmens, Richtung)? Reines Verschieben zählt nicht – dann bleibt der gespeicherte Rahmen
+/// (Rundreise mit dem Original).
+fn text_layout_changed(a: &fp_model::TextElem, b: &fp_model::TextElem) -> bool {
+    let dims = |t: &fp_model::TextElem| t.anchor_rect.map(|r| if r.right == 0.0 && r.bottom == 0.0 { (0.0, 0.0) } else { (r.right - r.left, r.bottom - r.top) });
+    let on_path = |t: &fp_model::TextElem| t.on_path.as_ref().map(|o| (o.mode, o.offset));
+    a.runs != b.runs
+        || a.initial != b.initial
+        || a.frame_type != b.frame_type
+        || a.orientation != b.orientation
+        || a.auto_kern != b.auto_kern
+        || dims(a) != dims(b)
+        || on_path(a) != on_path(b)
+}
+
+/// Setzt `TextElem::bounds` neuer bzw. inhaltlich geänderter Texte auf den Rahmen des echten Satzes
+/// (09 §5.3: `LFTf…BOTf` = Ergebnis des Satzes). Vorher stand dort nur die Schätzung von
+/// `Element::new_text` bzw. der alte Rahmen – der Auswahlrahmen eines 200-pt-Texts blieb winzig.
+fn refresh_text_frames(r: &dyn PageRenderer, before: &Document, doc: &mut Arc<Document>) {
+    use fp_model::element::ElementKind;
+    use std::collections::HashMap;
+    let mut old: HashMap<fp_model::ElementId, Arc<fp_model::Element>> = HashMap::new();
+    before.walk_elements(|_, _, e| {
+        if matches!(e.kind, ElementKind::Text(_)) {
+            old.insert(e.id, Arc::clone(e));
+        }
+    });
+    let mut todo = Vec::new();
+    doc.walk_elements(|_, path, e| {
+        let ElementKind::Text(t) = &e.kind else { return };
+        let changed = match old.get(&e.id) {
+            Some(o) if Arc::ptr_eq(o, e) => false,
+            Some(o) => match &o.kind {
+                ElementKind::Text(ot) => text_layout_changed(ot, t),
+                _ => true,
+            },
+            None => true,
+        };
+        if changed && let Some(f) = r.text_frame(doc, t) && f != t.bounds {
+            todo.push((path.clone(), f));
+        }
+    });
+    if todo.is_empty() {
+        return;
+    }
+    let d = Arc::make_mut(doc);
+    for (path, f) in todo {
+        crate::docops::edit_at(d, &path, |e| {
+            if let ElementKind::Text(t) = &mut e.kind {
+                t.bounds = f;
+            }
+        });
+    }
+}
+
 /// Ein offenes Dokument mit Verlauf, Auswahl und Ansicht.
 #[derive(Clone, Debug)]
 pub struct DocumentState {
@@ -513,6 +568,17 @@ impl Session {
         if !info.implemented {
             return Err(EngineError::NotImplemented(name.into()));
         }
+        // Offener Text-Editor: Textattribute aus Inspektor und Menü „Text“ gehen live an den
+        // Editor (Markierung bzw. ganzer Text), der Editor bleibt offen; kein Verlaufsschritt –
+        // übernommen wird beim Beenden der Bearbeitung.
+        if let Some(cur) = self.tools.machine.text_edit_attrs()
+            && let Some(patch) = crate::commands::editor_patch(name, &params, &cur)
+        {
+            let ev = ToolEvent { input: tools::ToolInput::Edit(tools::EditOp::Attrs(patch)), mods: Default::default(), pressure: 1.0, time_ms: 0 };
+            self.tool_event(&ev)?;
+            self.events.push(SessionEvent::CommandExecuted(name.into()));
+            return Ok(CommandOutput::value(Value::Null));
+        }
         // Gesperrte Objekte sind wie im Original nicht ausgewählt (z. B. nach dem Sperren oder bei
         // Auswahl über Ebenen/Skripte) – kein Befehl verändert sie über die Auswahl.
         if name != "element.setLocked"
@@ -796,6 +862,25 @@ impl Session {
     /// Läuft im aktiven Werkzeug ein Text-Editor (Tasten an das Werkzeug statt an Menükürzel)?
     pub fn tool_is_editing_text(&self) -> bool {
         self.tools.machine.is_editing_text()
+    }
+
+    /// Attribute im offenen Text-Editor an der Markierung bzw. am Caret (Inspektor zeigt sie
+    /// während der Bearbeitung statt der des Objekts).
+    pub fn text_edit_attrs(&self) -> Option<fp_model::text::TextAttrs> {
+        self.tools.machine.text_edit_attrs()
+    }
+
+    /// Rahmen des Texts im offenen Editor (Satz mit allen Änderungen, Dokumentkoordinaten vor
+    /// `MTXv`) – für Info-Bedienfeld und B/H/X/Y während der Bearbeitung.
+    pub fn text_edit_frame(&self) -> Option<fp_geom::Rect> {
+        let d = self.active()?;
+        let v = self.tools.machine.overlay().into_iter().find_map(|o| match o {
+            tools::Overlay::TextEdit(v) => Some(v),
+            _ => None,
+        })?;
+        let e = v.preview_element(&d.doc)?;
+        let fp_model::element::ElementKind::Text(t) = &e.kind else { return None };
+        self.renderer.as_ref()?.text_frame(&d.doc, t)
     }
 
     /// Laufenden Werkzeugvorgang abschließen (vor einem Menübefehl, 10 §2.2 „Werkzeug vs.

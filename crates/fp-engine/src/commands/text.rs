@@ -49,7 +49,7 @@ fn first_size(t: &TextElem) -> f32 {
     t.resolved_runs().first().and_then(|(a, _)| a.size).or(t.initial.size).unwrap_or(12.0)
 }
 
-fn attrs_from_params(p: &Params) -> Result<TextAttrs> {
+pub(crate) fn attrs_from_params(p: &Params) -> Result<TextAttrs> {
     Ok(TextAttrs {
         font: p.opt_str("font")?,
         ps_font: None,
@@ -259,8 +259,10 @@ pub(super) fn register(r: &mut CommandRegistry) {
             .requires(crate::commands::DOC)
             .opt("id", ParamKind::Integer { min: Some(0), max: None }, "Textobjekt (Vorgabe: Auswahl)")
             .param("text", ParamKind::String, "neuer Text (Absätze mit \\r)")
+            .opt("runs", ParamKind::Json, "formatierte Läufe [{attrs, text}] (Text-Editor); Vorgabe: ein Lauf mit den Attributen des ersten")
             .run(|s, p| {
                 let txt = p.str("text")?;
+                let runs = parse_runs(p, &txt)?;
                 with_doc(s, |d| {
                     let id = match p.opt_i64("id")? {
                         Some(v) => fp_model::ElementId(v as u64),
@@ -275,9 +277,14 @@ pub(super) fn register(r: &mut CommandRegistry) {
                     }
                     docops::edit_by_id(doc, page, id, |e| {
                         if let ElementKind::Text(t) = &mut e.kind {
-                            let attrs = t.runs.first().map(|r| r.attrs.clone()).unwrap_or_else(|| t.initial.clone());
-                            t.runs = vec![TextRun { attrs, text: txt.clone(), extra: Extra::default() }];
-                            t.detach_story();
+                            match runs {
+                                Some(r) => crate::tools::text::apply_runs(t, r),
+                                None => {
+                                    let attrs = t.runs.first().map(|r| r.attrs.clone()).unwrap_or_else(|| t.initial.clone());
+                                    t.runs = vec![TextRun { attrs, text: txt.clone(), extra: Extra::default() }];
+                                    t.detach_story();
+                                }
+                            }
                         }
                     })
                     .ok_or(EngineError::ElementNotFound(id.0))?;
@@ -526,6 +533,57 @@ fn convert_to_paths(s: &mut Session) -> Result<CommandOutput> {
         d.selection.set(new_sel);
         Ok(CommandOutput::doc())
     })
+}
+
+/// Menü-/Inspektor-Befehl als Attributänderung für den offenen Text-Editor (`cur` = Attribute an
+/// der Markierung): `text.setAttributes` (ohne `ids`), `text.font`, `text.size.*`, `text.style.*`,
+/// `text.align.*` (horizontal). `None` = kein Textattribut-Befehl.
+pub(crate) fn editor_patch(name: &str, params: &serde_json::Value, cur: &TextAttrs) -> Option<TextAttrs> {
+    if params.get("ids").is_some_and(|v| !v.is_null()) {
+        return None;
+    }
+    let p = Params::new(name, params.clone());
+    let mut a = TextAttrs::default();
+    match name {
+        "text.setAttributes" => a = attrs_from_params(&p).ok()?,
+        "text.font" => a.font = Some(p.str("font").ok()?),
+        "text.size.other" => a.size = Some(p.f64("size").ok()? as f32),
+        "text.size.larger" | "text.size.smaller" => {
+            let c = cur.size.unwrap_or(12.0);
+            a.size = Some(if name.ends_with("larger") {
+                SIZES.iter().copied().find(|&x| x > c).unwrap_or(c * 1.2)
+            } else {
+                SIZES.iter().rev().copied().find(|&x| x < c).unwrap_or((c / 1.2).max(1.0))
+            });
+        }
+        "text.style.plain" => {
+            a.bold = Some(false);
+            a.italic = Some(false);
+            a.underline = Some(false);
+        }
+        "text.style.fauxBold" => a.bold = Some(!cur.bold.unwrap_or(false)),
+        "text.style.fauxItalic" => a.italic = Some(!cur.italic.unwrap_or(false)),
+        "text.style.underline" => a.underline = Some(!cur.underline.unwrap_or(false)),
+        "text.align.left" => a.alignment = Some(0),
+        "text.align.centeredHorizontally" => a.alignment = Some(1),
+        "text.align.right" => a.alignment = Some(2),
+        "text.align.justified" => a.alignment = Some(3),
+        "text.align.stretched" => a.alignment = Some(4),
+        _ => a.size = Some(name.strip_prefix("text.size.")?.parse::<f32>().ok()?),
+    }
+    (a != TextAttrs::default()).then_some(a)
+}
+
+/// Parameter `runs` (Liste von `TextRun`); der Text der Läufe muss `text` ergeben.
+pub(crate) fn parse_runs(p: &Params, text: &str) -> Result<Option<Vec<TextRun>>> {
+    let Some(v) = p.get("runs") else { return Ok(None) };
+    let bad = |m: String| EngineError::InvalidParams { name: p.command.clone(), message: m };
+    let runs: Vec<TextRun> = serde_json::from_value(v.clone()).map_err(|e| bad(e.to_string()))?;
+    let joined: String = runs.iter().map(|r| r.text.as_str()).collect();
+    if joined != text {
+        return Err(bad("runs ≠ text".into()));
+    }
+    Ok(Some(runs))
 }
 
 fn text_info(t: &TextElem) -> serde_json::Value {

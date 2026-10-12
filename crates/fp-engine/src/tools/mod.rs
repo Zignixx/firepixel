@@ -93,6 +93,10 @@ pub enum EditOp {
     /// Rückgängig/Wiederholen innerhalb des Text-Editors (Strg+Z, Strg+Y bzw. Umschalt+Strg+Z).
     Undo,
     Redo,
+    /// Zeichen-/Absatzattribute im Text-Editor setzen (Inspektor, Menü „Text“ während der
+    /// Bearbeitung): mit Markierung nur die Markierung (Absatzattribute: ganze Absätze), ohne
+    /// Markierung der ganze Text; der Editor bleibt offen.
+    Attrs(fp_model::text::TextAttrs),
 }
 
 /// Eingabe an ein Werkzeug.
@@ -404,6 +408,10 @@ pub trait ToolMachine: Send {
     /// Läuft ein Text-Editor (Tasten gehen dann an das Werkzeug statt an Menükürzel)?
     fn is_editing_text(&self) -> bool {
         false
+    }
+    /// Attribute im Text-Editor am Anfang der Markierung bzw. am Caret (für den Inspektor).
+    fn text_edit_attrs(&self) -> Option<fp_model::text::TextAttrs> {
+        None
     }
 }
 

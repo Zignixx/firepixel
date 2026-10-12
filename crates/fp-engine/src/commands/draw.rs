@@ -341,8 +341,10 @@ pub(super) fn register(r: &mut CommandRegistry) {
             .opt("font", ParamKind::String, "Schrift")
             .opt("size", ParamKind::Number { min: Some(1.0), max: Some(5000.0) }, "Schriftgröße in px")
             .opt("color", ParamKind::Color, "Textfarbe (Vorgabe: Füllfarbe)")
+            .opt("runs", ParamKind::Json, "formatierte Läufe [{attrs, text}] (Text-Editor)")
             .run(|s, p| {
                 let text = p.str("text")?;
+                let runs = super::text::parse_runs(p, &text)?;
                 let font = p.opt_str("font")?.unwrap_or_else(|| s.tools.options.text_font.clone());
                 let size = p.f64_or("size", s.tools.options.text_size as f64)? as f32;
                 let color = p.opt_color("color")?.unwrap_or(s.tools.fill_color);
@@ -358,6 +360,9 @@ pub(super) fn register(r: &mut CommandRegistry) {
                         t.frame_type = Some(1);
                         t.bounds = Rect::new(r.left, r.top, r.right, r.bottom.max(r.top + size * 1.2));
                         t.anchor_rect = Some(t.bounds);
+                    }
+                    if let (Some(runs), ElementKind::Text(t)) = (runs, &mut e.kind) {
+                        crate::tools::text::apply_runs(t, runs);
                     }
                     e
                 };

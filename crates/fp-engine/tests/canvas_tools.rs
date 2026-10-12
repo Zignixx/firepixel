@@ -480,6 +480,152 @@ fn text_tool_editor_keys_clipboard_and_undo() {
     assert!(matches!(&el(&s, t).kind, ElementKind::Text(x) if x.plain_text() == "Neu"));
 }
 
+fn text_of(s: &Session, id: ElementId) -> fp_model::TextElem {
+    match &el(s, id).kind {
+        ElementKind::Text(t) => (**t).clone(),
+        _ => panic!("kein Text"),
+    }
+}
+
+fn send_in(s: &mut Session, i: ToolInput) {
+    s.tool_event(&ToolEvent { input: i, mods: Default::default(), pressure: 1.0, time_ms: 0 }).expect("Ereignis");
+}
+
+/// Nutzerbefund: 200-pt-Text „Ha“ – Grenzen kommen aus dem Satz (Auswahlrahmen, Treffertest,
+/// Ausrichten, Info), sofort nach jeder Größen-/Text-Änderung; Inspektor-Größe während der
+/// Bearbeitung wirkt live im Editor (ohne Markierung auf den ganzen Text), der Editor bleibt offen.
+#[test]
+fn text_bounds_follow_layout_and_live_size_in_editor() {
+    let mut s = doc_session(1200.0, 800.0);
+    tool(&mut s, ToolId::Text);
+    let before = doc(&s);
+    click(&mut s, 50.0, 50.0);
+    send_in(&mut s, ToolInput::Text("Ha".into()));
+    let small = s.text_edit_frame().expect("Rahmen im Editor");
+    // Inspektor ändert die Größe (so wie das Feld es schickt: text.setAttributes ohne ids)
+    ex(&mut s, "text.setAttributes", json!({"size": 200}));
+    assert!(s.tool_is_editing_text(), "Editor bleibt offen");
+    assert_eq!(doc(&s), before, "während der Bearbeitung kein Dokumentschritt");
+    assert_eq!(s.text_edit_attrs().and_then(|a| a.size), Some(200.0), "Inspektor zeigt die Editor-Größe");
+    let big = s.text_edit_frame().expect("Rahmen im Editor");
+    assert!(big.height() > small.height() * 8.0 && big.width() > small.width() * 8.0, "Rahmen wächst mit: {small:?} → {big:?}");
+    // weitertippen behält die neue Größe
+    send_in(&mut s, ToolInput::Text("!".into()));
+    s.tool_event(&ToolEvent::key(ToolKey::Escape)).expect("übernehmen");
+    let t = last(&s);
+    let tx = text_of(&s, t);
+    assert_eq!(tx.plain_text(), "Ha!");
+    assert!(tx.resolved_runs().iter().all(|(a, _)| a.size == Some(200.0)), "{:?}", tx.runs);
+    let b = bounds(&s, t);
+    assert!(b.height() > 180.0 && b.width() > 250.0, "Grenzen aus dem Satz, nicht geschätzt: {b:?}");
+    let frame = s.renderer().and_then(|r| r.text_frame(&s.active().unwrap().doc, &tx)).expect("Satz");
+    assert_eq!(b, frame, "Grenzen = Layout-Rahmen");
+    // Treffertest in der unteren rechten Ecke des großen Rahmens (vorher außerhalb der Schätzung)
+    tool(&mut s, ToolId::Pointer);
+    select(&mut s, &[]);
+    click(&mut s, b.right - 20.0, b.bottom - 30.0);
+    assert_eq!(sel(&s), vec![t], "Klick in den großen Text trifft ihn");
+    // ein Verlaufsschritt für den ganzen Text
+    s.undo().expect("Rückgängig");
+    assert_eq!(doc(&s), before);
+    s.redo().expect("Wiederholen");
+    assert_eq!(bounds(&s, t), b);
+    // Größe per Inspektor ohne Editor (Auswahl): Grenzen sofort neu, Rückgängig exakt
+    select(&mut s, &[t]);
+    let big_doc = doc(&s);
+    ex(&mut s, "text.setAttributes", json!({"size": 20}));
+    let b20 = bounds(&s, t);
+    assert!(b20.height() < 40.0 && b20.width() < 60.0, "{b20:?}");
+    s.undo().expect("Rückgängig");
+    assert_eq!(doc(&s), big_doc);
+    // Menü Text ▸ Größe und Text ▸ Schrift ändern die Grenzen ebenfalls
+    ex(&mut s, "text.size.12", json!({}));
+    assert!(bounds(&s, t).height() < 25.0);
+    // Verschieben behält den Rahmen (keine Neuberechnung → Rundreise stabil)
+    let b12 = bounds(&s, t);
+    ex(&mut s, "edit.move", json!({"dx": 10, "dy": 5}));
+    assert_eq!(bounds(&s, t), b12.translate(10.0, 5.0));
+}
+
+/// Markierung im Editor: Größe/Farbe nur für die Markierung, Ausrichtung für den Absatz, Strg+Z
+/// im Editor nimmt die Formatierung zurück; beim Übernehmen entstehen mehrere Läufe.
+#[test]
+fn text_editor_attributes_apply_to_selection_only() {
+    let mut s = doc_session(800.0, 400.0);
+    ex(&mut s, "draw.text", json!({"text": "Hallo Welt", "anchor": [40, 100], "size": 20}));
+    let t = last(&s);
+    let b0 = bounds(&s, t);
+    tool(&mut s, ToolId::Text);
+    click(&mut s, b0.left + 3.0, b0.top + 5.0);
+    assert!(s.tool_is_editing_text());
+    // „Welt“ markieren
+    send_in(&mut s, ToolInput::TextCaret { index: 6, extend: false });
+    send_in(&mut s, ToolInput::TextCaret { index: 10, extend: true });
+    ex(&mut s, "text.setAttributes", json!({"size": 60, "color": "#ff0000"}));
+    // Menü während der Bearbeitung: Fett für die Markierung
+    ex(&mut s, "text.style.fauxBold", json!({}));
+    let a = s.text_edit_attrs().expect("Attribute");
+    assert_eq!((a.size, a.color, a.bold), (Some(60.0), Some(0xffff_0000), Some(true)));
+    // Strg+Z im Editor: Fett zurück, Größe bleibt
+    send_in(&mut s, ToolInput::Edit(EditOp::Undo));
+    assert_eq!(s.text_edit_attrs().and_then(|a| a.bold), Some(false));
+    // Ausrichtung zentriert (Absatzattribut) gilt für den ganzen Absatz
+    ex(&mut s, "text.align.centeredHorizontally", json!({}));
+    tool(&mut s, ToolId::Pointer);
+    let tx = text_of(&s, t);
+    assert_eq!(tx.plain_text(), "Hallo Welt");
+    let runs = tx.resolved_runs();
+    let hallo = runs.iter().find(|(_, s)| s.starts_with("Hallo")).expect("Lauf Hallo");
+    let welt = runs.iter().find(|(_, s)| s.contains("Welt")).expect("Lauf Welt");
+    assert_eq!(hallo.0.size, Some(20.0));
+    assert_eq!(welt.0.size, Some(60.0));
+    assert_eq!(welt.0.color, Some(0xffff_0000));
+    assert!(runs.iter().all(|(a, _)| a.alignment == Some(1)), "Absatz zentriert");
+    assert!(bounds(&s, t).height() > b0.height() * 2.0, "Rahmen wächst mit der größten Schrift");
+    // ein Verlaufsschritt
+    s.undo().expect("Rückgängig");
+    assert_eq!(text_of(&s, t).runs.len(), 1);
+    assert_eq!(bounds(&s, t), b0);
+}
+
+/// Logikfehler (§4b): Formatieren ohne offenen Editor ändert den Editor nicht; Esc ohne Änderung
+/// erzeugt keinen Schritt; leerer neuer Text mit geänderter Größe erzeugt nichts; Werkzeugwechsel
+/// übernimmt die Formatierung.
+#[test]
+fn text_editor_attribute_edge_cases() {
+    let mut s = doc_session(600.0, 300.0);
+    ex(&mut s, "draw.text", json!({"text": "Abc", "anchor": [40, 100], "size": 30}));
+    let t = last(&s);
+    let b0 = bounds(&s, t);
+    // unveränderter Editor: kein Schritt
+    tool(&mut s, ToolId::Text);
+    let d0 = doc(&s);
+    let hist = s.active().unwrap().history.len();
+    click(&mut s, b0.left + 3.0, b0.top + 5.0);
+    s.tool_event(&ToolEvent::key(ToolKey::Escape)).expect("Esc");
+    assert_eq!(doc(&s), d0);
+    assert_eq!(s.active().unwrap().history.len(), hist, "kein Schritt ohne Änderung");
+    // leerer neuer Text: Größe ändern, dann Esc → nichts
+    tool(&mut s, ToolId::Text);
+    click(&mut s, 300.0, 200.0);
+    ex(&mut s, "text.setAttributes", json!({"size": 90}));
+    s.tool_event(&ToolEvent::key(ToolKey::Escape)).expect("Esc");
+    assert_eq!(doc(&s), d0);
+    // neuer Text: erst Größe, dann tippen → Text in 90 px; Werkzeugwechsel übernimmt
+    tool(&mut s, ToolId::Text);
+    click(&mut s, 300.0, 200.0);
+    ex(&mut s, "text.size.other", json!({"size": 90}));
+    send_in(&mut s, ToolInput::Text("X".into()));
+    tool(&mut s, ToolId::Rectangle);
+    let x = last(&s);
+    assert_ne!(x, t);
+    assert_eq!(text_of(&s, x).resolved_runs()[0].0.size, Some(90.0));
+    assert!(bounds(&s, x).height() > 60.0);
+    // ids-Parameter: wirkt auf das Objekt, nicht auf einen Editor (hier keiner offen)
+    ex(&mut s, "text.setAttributes", json!({"ids": [t.0], "size": 10}));
+    assert!(bounds(&s, t).height() < b0.height());
+}
+
 #[test]
 fn freehand_tools() {
     let mut s = doc_session(300.0, 200.0);
