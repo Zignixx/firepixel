@@ -739,9 +739,9 @@ pub fn button_bar_width(ctx: &egui::Context, left: &[BarButton], right: &[BarBut
 /// gleich breit (längste Beschriftung, mindestens 76 px), Höhe 23 px. Eingabetaste löst den
 /// Standardknopf aus (über `dialogs::push_button`).
 pub fn button_bar(ui: &mut Ui, rect: Rect, left: &[BarButton], right: &[BarButton]) -> BarClick {
-    let theme = Theme::current(ui.ctx());
     let bar = Rect::from_min_max(pos2(rect.left(), rect.bottom() - sp::BUTTON_BAR_H), rect.max);
-    hline(ui.painter(), bar.x_range(), bar.top() - 1.0, &theme);
+    // Fläche und geätzte Linie zeichnet der Dialograhmen als Fußleiste (DES-1) unter dem Inhalt
+    crate::dialogs::set_footer(ui, Rect::from_min_max(pos2(bar.left(), bar.top() - 1.0), bar.max));
     let labels: Vec<&str> = left.iter().chain(right.iter()).map(|b| b.label).collect();
     let w = crate::dialogs::buttons_w(ui.ctx(), &labels, sp::BUTTON_MIN_W);
     let top = bar.bottom() - sp::M - sp::BUTTON_H;

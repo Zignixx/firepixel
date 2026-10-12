@@ -506,12 +506,15 @@ fn dialog_frame_ex(ctx: &egui::Context, id: &str, title: &str, size: egui::Vec2,
         .movable(false)
         .constrain(false)
         .current_pos(pos);
-    let frame = egui::Frame::new().fill(c.frame_bg).stroke(Stroke::new(1.0, if theme.glow { c.focus } else { c.line_dark })).inner_margin(egui::Margin::ZERO);
+    // DES-1: Schatten (OLED: Akzentschein) um den Rahmen; Lage und Größe bleiben gleich
+    let frame = egui::Frame::new().fill(c.frame_bg).stroke(Stroke::new(1.0, if theme.glow { c.focus } else { c.line_dark })).inner_margin(egui::Margin::ZERO).shadow(theme.dialog_shadow());
     let resp = egui::Modal::new(Id::new(id)).area(area).frame(frame).backdrop_color(egui::Color32::from_black_alpha(if theme.glow { 150 } else { 40 })).show(ctx, |ui| {
         let (rect, _) = ui.allocate_exact_size(vec2(shown.x, shown.y + title_h), Sense::hover());
         let tr = Rect::from_min_size(rect.min, vec2(rect.width(), title_h));
-        ui.painter().rect_filled(tr, 0.0, c.app_bar_bg);
-        ui.painter().hline(tr.x_range(), tr.bottom() - 0.5, Stroke::new(1.0, if theme.glow { c.focus } else { c.line_mid }));
+        // DES-1: Titelleiste als ruhiger Verlauf, im Dunkel-Design deutlich von der Fläche abgesetzt
+        let (tt, tb) = theme.dialog_title_gradient();
+        crate::widgets::vgradient(ui.painter(), tr, tt, tb);
+        ui.painter().hline(tr.x_range(), tr.bottom() - 0.5, Stroke::new(1.0, theme.dialog_title_line()));
         ui.painter().text(pos2(tr.left() + 10.0, tr.center().y), Align2::LEFT_CENTER, title, theme.menu_font(), c.app_bar_text);
         let xr = Rect::from_center_size(pos2(tr.right() - 18.0, tr.center().y), vec2(30.0, 22.0));
         // Titelleiste ziehen verschiebt den Dialog (ohne das Schließen-Kreuz)
@@ -532,12 +535,31 @@ fn dialog_frame_ex(ctx: &egui::Context, id: &str, title: &str, size: egui::Vec2,
             close = DialogClose::Cancelled;
         }
         let body = Rect::from_min_max(pos2(rect.left(), tr.bottom()), rect.max);
-        if scroll {
-            scrolled_body(ui, id, body, client, bar, if theme.glow { c.focus } else { c.line_mid }, content);
+        // DES-1: Platz für die Fußleiste vor dem Inhalt reservieren (liegt so unter allem
+        // Gezeichneten); gefüllt wird sie nach dem Inhalt, wenn eine untere Knopfzeile da ist
+        let layer = ui.layer_id();
+        ui.ctx().data_mut(|d| {
+            d.remove::<Vec<Rect>>(footer_buttons_id(layer));
+            d.remove::<Rect>(footer_explicit_id(layer));
+        });
+        let slot = ui.painter().add(egui::Shape::Noop);
+        let first_shape = ui.ctx().graphics(|g| g.get(layer).map(|p| p.next_idx().0).unwrap_or(0));
+        let band = if scroll {
+            // RAND-2b: feste Knopfzeile unten = Fußleiste
+            Some(scrolled_body(ui, id, body, client, bar, content))
         } else {
             let mut child = ui.new_child(egui::UiBuilder::new().max_rect(body).layout(egui::Layout::top_down(egui::Align::Min)));
             content(&mut child, body);
+            let explicit = ui.ctx().data(|d| d.get_temp::<Rect>(footer_explicit_id(layer)));
+            explicit.or_else(|| {
+                let buttons = ui.ctx().data(|d| d.get_temp::<Vec<Rect>>(footer_buttons_id(layer))).unwrap_or_default();
+                footer_top(body, &buttons, &painted_rects(ui.ctx(), layer, first_shape)).map(|top| Rect::from_min_max(pos2(body.left(), top), body.max))
+            })
+        };
+        if let Some(b) = band {
+            ui.painter().set(slot, footer_shape(b, &theme));
         }
+        ui.ctx().data_mut(|d| d.insert_temp(Id::new((id, "fp-dialog-footer")), band.map(|b| b.top())));
         // Größe an Rändern und Ecken ändern (nach dem Inhalt registriert, damit die Griffe oben liegen)
         if resizable {
             const G: f32 = 5.0;
@@ -631,8 +653,9 @@ fn pin_id() -> Id {
 }
 
 /// Inhalt eines Dialogs, der größer als das Hauptfenster ist: der Inhalt behält seine volle Größe
-/// (`client`) und läuft in einem Bildlaufbereich; die Knopfzeile bleibt unten sichtbar.
-fn scrolled_body(ui: &mut Ui, id: &str, body: Rect, client: egui::Vec2, bar: f32, line: egui::Color32, content: impl FnOnce(&mut Ui, Rect)) {
+/// (`client`) und läuft in einem Bildlaufbereich; die Knopfzeile bleibt unten sichtbar. Liefert
+/// den Streifen der Knopfzeile (Fläche und Linie zeichnet der Rahmen als Fußleiste, DES-1).
+fn scrolled_body(ui: &mut Ui, id: &str, body: Rect, client: egui::Vec2, bar: f32, content: impl FnOnce(&mut Ui, Rect)) -> Rect {
     let strip_h = DIALOG_PIN_STRIP.min(body.height() / 2.0);
     let view = Rect::from_min_max(body.min, pos2(body.right(), body.bottom() - strip_h));
     let strip = Rect::from_min_max(pos2(body.left(), view.bottom()), body.max);
@@ -653,7 +676,102 @@ fn scrolled_body(ui: &mut Ui, id: &str, body: Rect, client: egui::Vec2, bar: f32
         content(&mut child, vbody);
         ctx.data_mut(|d| d.remove::<PinStrip>(pin_id()));
     });
-    ui.painter().hline(strip.x_range(), strip.top() + 0.5, Stroke::new(1.0, line));
+    strip
+}
+
+// ---------------------------------------------------------------------- Fußleiste (DES-1)
+
+/// Knöpfe eines Dialogs im laufenden Bild (für die Fußleiste, je Ebene).
+fn footer_buttons_id(layer: egui::LayerId) -> Id {
+    Id::new(("fp-dialog-footer-buttons", layer.id))
+}
+
+/// Ausdrücklich gesetzte Fußleiste ([`set_footer`], z. B. aus `ui_kit::button_bar`).
+fn footer_explicit_id(layer: egui::LayerId) -> Id {
+    Id::new(("fp-dialog-footer-explicit", layer.id))
+}
+
+/// Oberkante der zuletzt gezeichneten Fußleiste eines Dialogs (für Tests; `None` = keine).
+pub fn dialog_footer_top(ctx: &egui::Context, id: &str) -> Option<f32> {
+    ctx.data(|d| d.get_temp::<Option<f32>>(Id::new((id, "fp-dialog-footer")))).flatten()
+}
+
+/// Legt die Fußleiste des Dialogs ausdrücklich fest (Knopfleisten mit reserviertem Platz).
+pub fn set_footer(ui: &Ui, band: Rect) {
+    ui.ctx().data_mut(|d| d.insert_temp(footer_explicit_id(ui.layer_id()), band));
+}
+
+/// Merkt einen Knopf für die Fußleiste (aus [`push_button`]).
+fn note_footer_button(ui: &Ui, rect: Rect) {
+    ui.ctx().data_mut(|d| d.get_temp_mut_or_default::<Vec<Rect>>(footer_buttons_id(ui.layer_id())).push(rect));
+}
+
+/// Oberkante der Fußleiste aus den Knöpfen und dem Gezeichneten: Knöpfe, die bis auf 18 px an
+/// die Unterkante reichen, bilden die untere Knopfzeile; die Leiste beginnt 12 px darüber, aber
+/// nie über Gezeichnetem (Felder, Beschriftungen, Listen). Ragt etwas Gezeichnetes oder ein
+/// anderer Knopf in die Knopfzeile hinein (Knöpfe rechts untereinander, Liste bis unten), gibt
+/// es keine Leiste – die Anordnung des Originals bleibt unberührt.
+pub fn footer_top(body: Rect, buttons: &[Rect], shapes: &[Rect]) -> Option<f32> {
+    let row: Vec<Rect> = buttons.iter().copied().filter(|r| r.bottom() >= body.bottom() - 18.0 && r.bottom() <= body.bottom() + 0.5 && r.top() > body.center().y).collect();
+    let row_top = row.iter().map(|r| r.top()).fold(f32::INFINITY, f32::min);
+    if !row_top.is_finite() {
+        return None;
+    }
+    let mut lim = body.top();
+    // andere Knöpfe darüber zählen wie Gezeichnetes (Spalte rechts untereinander → keine Leiste)
+    for b in buttons.iter().filter(|b| !row.contains(b) && b.intersects(body)) {
+        if b.bottom() > row_top {
+            return None;
+        }
+        lim = lim.max(b.bottom());
+    }
+    for s in shapes {
+        if s.top() >= row_top - 4.0 || !s.intersects(body) {
+            continue; // liegt in der Knopfzeile (Kästchen „Vorschau“, Knöpfe) bzw. außerhalb
+        }
+        if s.bottom() > row_top {
+            return None; // reicht von oben bis in die Knopfzeile
+        }
+        lim = lim.max(s.bottom());
+    }
+    let top = (row_top - 12.0).max((lim + 3.0).ceil()).round();
+    (top <= row_top - 5.0).then_some(top)
+}
+
+/// Sichtbare Rechtecke aller ab `from` gezeichneten Formen der Ebene.
+fn painted_rects(ctx: &egui::Context, layer: egui::LayerId, from: usize) -> Vec<Rect> {
+    fn walk(s: &egui::Shape, clip: Rect, out: &mut Vec<Rect>) {
+        match s {
+            egui::Shape::Vec(v) => v.iter().for_each(|s| walk(s, clip, out)),
+            egui::Shape::Noop => {}
+            s => {
+                let r = s.visual_bounding_rect().intersect(clip);
+                if r.is_positive() {
+                    out.push(r);
+                }
+            }
+        }
+    }
+    let mut out = Vec::new();
+    ctx.graphics(|g| {
+        if let Some(pl) = g.get(layer) {
+            for cs in pl.all_entries().skip(from) {
+                walk(&cs.shape, cs.clip_rect, &mut out);
+            }
+        }
+    });
+    out
+}
+
+/// Fläche und geätzte Linie der Fußleiste.
+fn footer_shape(band: Rect, theme: &Theme) -> egui::Shape {
+    let (dark, light) = theme.dialog_footer_lines();
+    let top = band.top().round();
+    let mut v = vec![egui::Shape::rect_filled(band, 0.0, theme.dialog_footer_bg()), egui::Shape::hline(band.x_range(), top + 0.5, Stroke::new(1.0, dark))];
+    if let Some(l) = light {
+        v.push(egui::Shape::hline(band.x_range(), top + 1.5, Stroke::new(1.0, l)));
+    }
+    egui::Shape::Vec(v)
 }
 
 /// Setzt ein Widget linksbündig oben in `rect`. Anders als `ui.put` (zentriertes,
@@ -677,12 +795,21 @@ pub fn group_box(ui: &Ui, rect: Rect, label: &str) {
     let font = theme.ui_font();
     let tw = crate::widgets::text_width(ui, label, &font);
     let p = ui.painter();
-    let stroke = Stroke::new(1.0, if theme.glow { c.line_dark } else { c.line_mid });
-    p.line_segment([pos2(r.left(), top), pos2(r.left() + 6.0, top)], stroke);
-    p.line_segment([pos2(r.left() + 10.0 + tw + 4.0, top), pos2(r.right(), top)], stroke);
-    p.line_segment([pos2(r.right(), top), pos2(r.right(), r.bottom())], stroke);
-    p.line_segment([pos2(r.right(), r.bottom()), pos2(r.left(), r.bottom())], stroke);
-    p.line_segment([pos2(r.left(), r.bottom()), pos2(r.left(), top)], stroke);
+    // DES-1: geätzter Rahmen wie ein Windows-Gruppenfeld (dunkle Linie + Lichtkante), OLED fein
+    let (dark, light) = theme.group_box_lines();
+    let edges = |o: f32, col: egui::Color32| {
+        let s = Stroke::new(1.0, col);
+        let (l, t, rr, b) = (r.left() + o, top + o, r.right() + o, r.bottom() + o);
+        p.line_segment([pos2(l, t), pos2(r.left() + 6.0, t)], s);
+        p.line_segment([pos2(r.left() + 10.0 + tw + 4.0, t), pos2(rr, t)], s);
+        p.line_segment([pos2(rr, t), pos2(rr, b)], s);
+        p.line_segment([pos2(rr, b), pos2(l, b)], s);
+        p.line_segment([pos2(l, b), pos2(l, t)], s);
+    };
+    if let Some(l) = light {
+        edges(1.0, l);
+    }
+    edges(0.0, dark);
     p.text(pos2(r.left() + 10.0, top), Align2::LEFT_CENTER, label, font, c.text);
 }
 
@@ -708,7 +835,14 @@ fn push_button_at(ui: &mut Ui, rect: Rect, label: &str, default: bool, enabled: 
     }
     // gesperrt: grau wie im Original
     let text = access_key_text(ui, label, enabled);
-    let resp = ui.add_enabled_ui(enabled, |ui| ui.put(rect, egui::Button::new(text).min_size(rect.size()))).inner;
+    note_footer_button(ui, rect);
+    // DES-1: Standardknopf leicht in der Fokusfarbe getönt (wie der Standardknopf unter Windows)
+    let mut button = egui::Button::new(text).min_size(rect.size());
+    if default && enabled {
+        let hovered = ui.rect_contains_pointer(rect) && !ui.input(|i| i.pointer.any_down());
+        button = button.fill(theme.default_button_fill(hovered));
+    }
+    let resp = ui.add_enabled_ui(enabled, |ui| ui.put(rect, button)).inner;
     // Knöpfe merken: hat einer davon (per Tab) den Fokus, löst Eingabe ihn aus statt des Standardknopfs
     let key = Id::new("fp-dialog-buttons");
     if !ui.ctx().data(|d| d.get_temp::<std::collections::HashSet<Id>>(key)).is_some_and(|s| s.contains(&resp.id)) {

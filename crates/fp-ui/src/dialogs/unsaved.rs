@@ -92,7 +92,7 @@ pub fn show(ctx: &egui::Context, st: &mut AppState) {
         crate::ui_kit::paint_icon(ui.painter(), icon, crate::ui_kit::KitIcon::Warning, &crate::icons::IconStyle::new(&theme, None, true));
         let ty = if th < icon.height() { icon.center().y - th / 2.0 } else { icon.top() };
         super::put_left(ui, Rect::from_min_size(egui::pos2(body.left() + 60.0, ty), vec2(body.width() - 76.0, th.max(20.0) + 4.0)), egui::Label::new(text.as_str()).wrap());
-        crate::ui_kit::hline(ui.painter(), body.x_range(), body.bottom() - 46.0, &theme);
+        // Linie und Fläche über den Knöpfen zeichnet der Dialograhmen als Fußleiste (DES-1)
         let b = super::button_row(ui.ctx(), body.right() - 12.0, body.bottom() - 34.0, &[&yes, &no, &cancel], 76.0, 23.0, 6.0);
         if push_button(ui, b[0], &yes, true, true) || access(ui, super::access_key(&yes)) {
             answer = Some(0);

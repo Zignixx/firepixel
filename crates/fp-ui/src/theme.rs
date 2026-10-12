@@ -998,6 +998,87 @@ pub fn install_fallback_fonts(ctx: &egui::Context) {
     ctx.set_fonts(defs);
 }
 
+// ---------------------------------------------------------------------- Dialoge (DES-1)
+
+/// Farben und Schatten des Dialograhmens (DES-1, `docs\DESIGN.md` §6/§11), aus der Palette
+/// abgeleitet; keine eigenen Farbwerte.
+impl Theme {
+    /// Titelleiste der Dialoge als Verlauf (oben, unten). Normal: hell auf Rahmengrau, Dunkel:
+    /// deutlich dunkler als die Dialogfläche (vorher kaum Kontrast), OLED: schwarz.
+    pub fn dialog_title_gradient(&self) -> (Color32, Color32) {
+        let c = &self.colors;
+        match self.kind {
+            ThemeKind::Normal => (mix(c.app_bar_bg, c.field_bg, 0.55), mix(c.app_bar_bg, c.field_bg, 0.18)),
+            ThemeKind::Dark => (mix(c.app_bar_bg, c.canvas_bg, 0.2), mix(c.app_bar_bg, c.canvas_bg, 0.6)),
+            ThemeKind::Oled => (c.app_bar_bg, c.app_bar_bg),
+        }
+    }
+
+    /// Linie unter der Titelleiste der Dialoge.
+    pub fn dialog_title_line(&self) -> Color32 {
+        let c = &self.colors;
+        match self.kind {
+            ThemeKind::Normal => c.line_mid,
+            ThemeKind::Dark => c.line_dark,
+            ThemeKind::Oled => c.focus,
+        }
+    }
+
+    /// Fläche der Fußleiste hinter der unteren Knopfzeile eines Dialogs.
+    pub fn dialog_footer_bg(&self) -> Color32 {
+        let c = &self.colors;
+        match self.kind {
+            ThemeKind::Normal => mix(c.frame_bg, c.header_bottom, 0.14),
+            ThemeKind::Dark => mix(c.frame_bg, c.canvas_bg, 0.45),
+            ThemeKind::Oled => mix(c.frame_bg, c.list_hover_bg, 0.5),
+        }
+    }
+
+    /// Geätzte Linie über der Fußleiste: dunkle Linie und (außer OLED) Lichtkante darunter.
+    pub fn dialog_footer_lines(&self) -> (Color32, Option<Color32>) {
+        let c = &self.colors;
+        match self.kind {
+            ThemeKind::Normal => (mix(c.line_mid, c.frame_bg, 0.45), Some(c.line_light)),
+            ThemeKind::Dark => (c.line_dark, Some(mix(c.line_light, self.dialog_footer_bg(), 0.5))),
+            ThemeKind::Oled => (mix(c.line_dark, c.focus, 0.3), None),
+        }
+    }
+
+    /// Schatten um den Dialog (OLED: Akzentschein statt Schatten).
+    pub fn dialog_shadow(&self) -> egui::Shadow {
+        match self.kind {
+            ThemeKind::Normal => egui::Shadow { offset: [0, 6], blur: 20, spread: 0, color: Color32::from_black_alpha(70) },
+            ThemeKind::Dark => egui::Shadow { offset: [0, 6], blur: 22, spread: 0, color: Color32::from_black_alpha(160) },
+            ThemeKind::Oled => egui::Shadow { offset: [0, 0], blur: 18, spread: 1, color: with_alpha(self.colors.focus, 46) },
+        }
+    }
+
+    /// Fläche des Standardknopfs (OK): leicht in der Fokusfarbe getönt, beim Überfahren stärker.
+    pub fn default_button_fill(&self, hovered: bool) -> Color32 {
+        let c = &self.colors;
+        let base = if hovered && self.kind != ThemeKind::Oled { c.button_hover_bg } else { c.button_bg };
+        let t = match (self.kind, hovered) {
+            (ThemeKind::Normal, false) => 0.12,
+            (ThemeKind::Normal, true) => 0.2,
+            (ThemeKind::Dark, false) => 0.28,
+            (ThemeKind::Dark, true) => 0.4,
+            (ThemeKind::Oled, false) => 0.2,
+            (ThemeKind::Oled, true) => 0.32,
+        };
+        mix(base, c.focus, t)
+    }
+
+    /// Gruppenrahmen in Dialogen: dunkle Linie und (außer OLED) Lichtkante.
+    pub fn group_box_lines(&self) -> (Color32, Option<Color32>) {
+        let c = &self.colors;
+        match self.kind {
+            ThemeKind::Normal => (mix(c.line_mid, c.frame_bg, 0.35), Some(c.line_light)),
+            ThemeKind::Dark => (c.line_dark, Some(c.line_light)),
+            ThemeKind::Oled => (c.line_dark, None),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

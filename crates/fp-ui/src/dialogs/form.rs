@@ -713,8 +713,12 @@ pub fn draw_fields(ui: &mut Ui, st: &AppState, d: &mut FormDialog, area: Rect) -
         let id = (dlg_id.as_str(), i);
         match &f.kind {
             FieldKind::Caption => {
-                ui.painter().text(pos2(x0, y + 12.0), Align2::LEFT_CENTER, &f.label, theme.bold(theme.fonts.ui), c.text);
-                ui.painter().hline((x0 + crate::widgets::text_width(ui, &f.label, &theme.bold(theme.fonts.ui)) + 8.0)..=(area.right() - 14.0), y + 12.5, Stroke::new(1.0, c.line_mid));
+                // Abschnittsüberschrift wie `ui_kit::section` (DES-1, DESIGN.md §4): Abschnittsfarbe, geätzte Linie
+                ui.painter().text(pos2(x0, y + 12.0), Align2::LEFT_CENTER, &f.label, theme.bold(theme.fonts.ui), c.section_label);
+                let lx = x0 + crate::widgets::text_width(ui, &f.label, &theme.bold(theme.fonts.ui)) + 8.0;
+                if lx < area.right() - 18.0 {
+                    crate::ui_kit::hline(ui.painter(), egui::Rangef::new(lx, area.right() - 14.0), y + 12.0, &theme);
+                }
             }
             FieldKind::Note => {
                 super::put_left(ui, Rect::from_min_size(pos2(x0, y), vec2(area.width() - 28.0, h - 4.0)), egui::Label::new(egui::RichText::new(&f.label).color(c.text_weak).font(theme.small_font())).wrap());
