@@ -219,28 +219,31 @@ fn box_q2(ui: &mut Ui, st: &mut AppState, r: Rect) {
     fields::label(ui, d.r(43.0, 3.0, 8.0, 8.0), &t("pi-box-x"), en);
     fields::label(ui, d.r(43.0, 16.0, 8.0, 8.0), &t("pi-box-y"), en);
     let val = |v: f64| en.then_some(v.round());
-    // B/H wie im Original 1 … 6000; zu große Werte werden begrenzt und gemeldet (nicht still)
-    let limit = |st: &mut AppState, v: f64| -> f64 {
-        let c = v.clamp(1.0, BOX_MAX);
+    // B/H wie im Original 1 … 6000: Werte unter 1 („-5“, „0“, „x“) werden verworfen, zu große
+    // begrenzt und gemeldet (nicht still); PARITAET_A F12
+    let limit = |st: &mut AppState, v: f64| -> Option<f64> {
+        if v < 1.0 {
+            return None;
+        }
+        let c = v.min(BOX_MAX);
         if c != v {
             st.push(crate::app_state::Action::Status(fp_i18n::tr!("pi-box-limit", max = format!("{BOX_MAX}"), value = format!("{c}"))));
         }
-        c
+        Some(c)
     };
-    if let Some(v) = fields::number(ui, "pi-box-w", d.r(17.0, 1.0, 24.0, 12.0), None, val(w), (f64::MIN, f64::MAX), 0, en) {
-        let v = limit(st, v);
+    if let Some(v) = fields::number_box(ui, "pi-box-w", d.r(17.0, 1.0, 24.0, 12.0), val(w), en).and_then(|v| limit(st, v)) {
         let p = if prop && w > 0.0 { json!({"width": v, "height": (h * v / w).round()}) } else { json!({"width": v}) };
         st.run("element.setBounds", p);
     }
-    if let Some(v) = fields::number(ui, "pi-box-h", d.r(17.0, 15.0, 24.0, 12.0), None, val(h), (f64::MIN, f64::MAX), 0, en) {
-        let v = limit(st, v);
+    if let Some(v) = fields::number_box(ui, "pi-box-h", d.r(17.0, 15.0, 24.0, 12.0), val(h), en).and_then(|v| limit(st, v)) {
         let p = if prop && h > 0.0 { json!({"height": v, "width": (w * v / h).round()}) } else { json!({"height": v}) };
         st.run("element.setBounds", p);
     }
-    if let Some(v) = fields::number(ui, "pi-box-x", d.r(52.0, 1.0, 24.0, 12.0), None, val(x), (-30000.0, 30000.0), 0, en) {
+    // X/Y ohne Grenze im Original (9999 und -5 erlaubt, „x“ → 0); F13
+    if let Some(v) = fields::number_box(ui, "pi-box-x", d.r(52.0, 1.0, 24.0, 12.0), val(x), en).map(|v| fields::clamp_range(v, (-30000.0, 30000.0))) {
         st.run("element.setBounds", json!({"x": v}));
     }
-    if let Some(v) = fields::number(ui, "pi-box-y", d.r(52.0, 15.0, 24.0, 12.0), None, val(y), (-30000.0, 30000.0), 0, en) {
+    if let Some(v) = fields::number_box(ui, "pi-box-y", d.r(52.0, 15.0, 24.0, 12.0), val(y), en).map(|v| fields::clamp_range(v, (-30000.0, 30000.0))) {
         st.run("element.setBounds", json!({"y": v}));
     }
 }

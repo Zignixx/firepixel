@@ -267,3 +267,62 @@ fn resizable_dialog_resizes_at_edges() {
     let (_, s1) = current(&h);
     assert!((s1.size() - s0.size()).length() < 1.0, "Bildgröße ist fest");
 }
+
+/// Nutzerbefund N02 (PM-1): im echten Fenster folgte „Bildgröße“ nur zu ~80 % der Maus, weil die
+/// Bewegung bis zum Erkennen des Ziehens verloren ging (Drücken und erste Bewegungen kommen oft
+/// gebündelt in einem Bild an). Erwartet wie bei einem Windows-Dialog: Der gegriffene Punkt bleibt
+/// unter dem Zeiger, Versatz = Mausweg – bei 100 % und 150 % Skalierung, auch mit Rückweg.
+#[test]
+fn drag_follows_pointer_one_to_one() {
+    for ppp in [1.0_f32, 1.5] {
+        for batched in [0usize, 1, 5] {
+            let ctx = egui::Context::default();
+            let mut a = FirepixelApp::with_session(&ctx, session(), UiSettings::default(), false);
+            a.state.sync_render = true;
+            let mut h = Harness::builder()
+                .with_size(vec2(1500.0, 950.0))
+                .with_pixels_per_point(ppp)
+                .with_max_steps(16)
+                .build_ui_state(|ui, app: &mut FirepixelApp| app.root_ui(ui), a);
+            h.run_steps(2);
+            open(&mut h, "modify.canvas.imageSize");
+            let (_, r0) = current(&h);
+            let grab = pos2(r0.left() + 40.0, r0.top() + 12.0);
+            let delta = vec2(-160.0, 90.0);
+            const STEPS: usize = 25;
+            let at = |i: usize| grab + delta * (i as f32 / STEPS as f32);
+            h.event(egui::Event::PointerMoved(grab));
+            h.run_steps(1);
+            // Drücken und die ersten `batched` Bewegungen im selben Bild
+            h.event(egui::Event::PointerButton { pos: grab, button: egui::PointerButton::Primary, pressed: true, modifiers: Default::default() });
+            for i in 1..=batched {
+                h.event(egui::Event::PointerMoved(at(i)));
+            }
+            h.run_steps(1);
+            for i in batched + 1..=STEPS {
+                h.event(egui::Event::PointerMoved(at(i)));
+                h.run_steps(1);
+                let (_, r) = current(&h);
+                // nach dem Erkennen des Ziehens liegt der gegriffene Punkt genau unter dem Zeiger
+                if i > batched + 1 {
+                    assert!(((r.min - r0.min) - (at(i) - grab)).length() < 1.01, "ppp {ppp}, gebündelt {batched}, Schritt {i}: Versatz {:?} statt {:?}", r.min - r0.min, at(i) - grab);
+                }
+            }
+            // Rückweg im selben Zug
+            for i in 1..=10 {
+                h.event(egui::Event::PointerMoved(at(STEPS) - delta * 0.5 * (i as f32 / 10.0)));
+                h.run_steps(1);
+            }
+            let end = at(STEPS) - delta * 0.5;
+            h.event(egui::Event::PointerButton { pos: end, button: egui::PointerButton::Primary, pressed: false, modifiers: Default::default() });
+            h.run_steps(2);
+            let (_, r1) = current(&h);
+            assert!(((r1.min - r0.min) - (end - grab)).length() < 1.01, "ppp {ppp}, gebündelt {batched}: Endlage {:?} statt {:?}", r1.min - r0.min, end - grab);
+            // zweites Ziehen setzt mit neuem Griffpunkt an (kein Sprung)
+            let g2 = pos2(r1.left() + 100.0, r1.top() + 8.0);
+            drag(&mut h, g2, g2 + vec2(30.0, -20.0));
+            let (_, r2) = current(&h);
+            assert!(((r2.min - r1.min) - vec2(30.0, -20.0)).length() < 1.01, "ppp {ppp}: zweites Ziehen {:?}", r2.min - r1.min);
+        }
+    }
+}

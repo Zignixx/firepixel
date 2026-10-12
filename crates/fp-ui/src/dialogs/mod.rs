@@ -302,7 +302,27 @@ fn dialog_frame_ex(ctx: &egui::Context, id: &str, title: &str, size: egui::Vec2,
     let opened = stored.is_none();
     let client = if resizable { stored.map(|g| g.client).unwrap_or(size).max(size) } else { size };
     let outer = vec2(client.x, client.y + title_h) + vec2(2.0, 2.0);
-    let pos = clamp_dialog_pos(stored.map(|g| g.pos).unwrap_or_else(|| screen.center() - outer / 2.0), outer, screen);
+    let mut pos = clamp_dialog_pos(stored.map(|g| g.pos).unwrap_or_else(|| screen.center() - outer / 2.0), outer, screen);
+    // Titelleiste ziehen wie bei einem Windows-Dialog: der gegriffene Punkt bleibt unter dem
+    // Zeiger. Versatz beim Drücken merken und die Lage schon vor dem Zeichnen aus der Zeigerlage
+    // rechnen (kein Nachlaufen um ein Bild). Summieren der Bild-Deltas verlor die Bewegung bis zum
+    // Erkennen des Ziehens, wenn Drücken und erste Bewegungen gebündelt ankommen (N02: ~80 %).
+    let drag_id = Id::new((id, "title-drag"));
+    let grab_id = Id::new((id, "title-grab"));
+    if ctx.is_being_dragged(drag_id) {
+        let grab = ctx.data(|d| d.get_temp::<egui::Vec2>(grab_id)).or_else(|| {
+            let g = ctx.input(|i| i.pointer.press_origin()).map(|o| o - pos);
+            if let Some(g) = g {
+                ctx.data_mut(|d| d.insert_temp(grab_id, g));
+            }
+            g
+        });
+        if let (Some(g), Some(p)) = (grab, ctx.input(|i| i.pointer.latest_pos())) {
+            pos = clamp_dialog_pos(p - g, outer, screen);
+        }
+    } else {
+        ctx.data_mut(|d| d.remove::<egui::Vec2>(grab_id));
+    }
     let mut geom = DialogGeom { pos, client, pass };
     let af = autofocus_id(egui::LayerId::new(egui::Order::Foreground, Id::new(id)));
     if opened {
@@ -326,10 +346,9 @@ fn dialog_frame_ex(ctx: &egui::Context, id: &str, title: &str, size: egui::Vec2,
         let xr = Rect::from_center_size(pos2(tr.right() - 18.0, tr.center().y), vec2(30.0, 22.0));
         // Titelleiste ziehen verschiebt den Dialog (ohne das Schließen-Kreuz)
         let drag_r = Rect::from_min_max(tr.min, pos2(xr.left() - 2.0, tr.bottom()));
-        let dresp = ui.interact(drag_r, Id::new((id, "title-drag")), Sense::drag());
+        let dresp = ui.interact(drag_r, drag_id, Sense::drag());
         dresp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Other, true, fp_i18n::tr!("dlg-titlebar", title = title)));
         if dresp.dragged() {
-            geom.pos += dresp.drag_delta();
             ui.ctx().request_repaint();
         }
         let xresp = ui.interact(xr, Id::new((id, "x")), Sense::click());

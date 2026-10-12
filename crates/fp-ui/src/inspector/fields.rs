@@ -301,6 +301,74 @@ pub fn parse_digits(s: &str) -> Option<f64> {
     if d.is_empty() { None } else { d.parse::<f64>().ok() }
 }
 
+/// Ganzzahl lesen wie C-`atoi` (Ziffernfelder B/H/X/Y des Originals): führende Leerzeichen,
+/// Vorzeichen, Ziffern; der Rest wird ignoriert, ohne Ziffern ergibt sich 0 („x“ → 0).
+pub fn parse_atoi(s: &str) -> f64 {
+    let t = s.trim_start();
+    let (neg, rest) = match t.chars().next() {
+        Some('-') => (true, &t[1..]),
+        Some('+') => (false, &t[1..]),
+        _ => (false, t),
+    };
+    let d: String = rest.chars().take_while(|c| c.is_ascii_digit()).collect();
+    let v = d.parse::<f64>().unwrap_or(0.0);
+    if neg { -v } else { v }
+}
+
+/// Ganzzahlfeld B/H/X/Y des Inspektors wie im Original (PARITAET_A F12/F13): gelesen wird wie
+/// [`parse_atoi`], und ein getipptes Komma fügt kein Zeichen ein, sondern setzt die Schreibmarke
+/// an den Anfang („12,5“ → „512“). Liefert den getippten Wert **ungeklemmt** nach Eingabe/Tab/
+/// Fokusverlust; Grenzen setzt der Aufrufer.
+pub fn number_box(ui: &mut Ui, id: impl Hash + std::fmt::Debug, edit: Rect, value: Option<f64>, enabled: bool) -> Option<f64> {
+    let id = Id::new(id);
+    let cur = value.map(|v| fmt_num(v, 0)).unwrap_or_default();
+    let te_id = id.with("te");
+    if enabled && ui.memory(|m| m.has_focus(te_id)) {
+        comma_moves_caret_home(ui, id, te_id, &cur);
+    }
+    let (txt, _) = buffered_edit(ui, id, edit, &cur, enabled, false, true);
+    txt.map(|s| parse_atoi(&s))
+}
+
+/// Getippte Zeichen eines fokussierten [`number_box`] selbst einfügen, sobald ein Komma darunter
+/// ist: Komma = Schreibmarke an den Anfang (Verhalten des Originals), sonst Auswahl ersetzen.
+fn comma_moves_caret_home(ui: &mut Ui, id: Id, te_id: Id, current: &str) {
+    let has_comma = ui.input(|i| i.events.iter().any(|e| matches!(e, egui::Event::Text(t) if t.contains(','))));
+    if !has_comma {
+        return;
+    }
+    let mut buf: Vec<char> = ui.data(|d| d.get_temp::<String>(id)).unwrap_or_else(|| current.to_string()).chars().collect();
+    let mut state = egui::TextEdit::load_state(ui.ctx(), te_id).unwrap_or_default();
+    let n = buf.len();
+    let (mut a, mut b) = state
+        .cursor
+        .char_range()
+        .map(|r| (r.primary.index.0.min(r.secondary.index.0).min(n), r.primary.index.0.max(r.secondary.index.0).min(n)))
+        .unwrap_or((n, n));
+    let events = ui.input_mut(|i| std::mem::take(&mut i.events));
+    let mut keep = Vec::with_capacity(events.len());
+    for e in events {
+        match e {
+            egui::Event::Text(t) => {
+                for ch in t.chars() {
+                    if ch == ',' {
+                        (a, b) = (0, 0);
+                    } else {
+                        buf.splice(a..b, [ch]);
+                        a += 1;
+                        b = a;
+                    }
+                }
+            }
+            other => keep.push(other),
+        }
+    }
+    ui.input_mut(|i| i.events = keep);
+    ui.data_mut(|d| d.insert_temp(id, buf.into_iter().collect::<String>()));
+    state.cursor.set_char_range(Some(egui::text::CCursorRange::one(egui::text::CCursor::new(a))));
+    state.store(ui.ctx(), te_id);
+}
+
 /// Wert auf einen Bereich klemmen (konservativ wie 11 §6: Eingaben auf den Schieberbereich).
 pub fn clamp_range(v: f64, range: (f64, f64)) -> f64 {
     v.clamp(range.0.min(range.1), range.0.max(range.1))
@@ -612,6 +680,8 @@ pub fn checkbox(ui: &mut Ui, id: impl Hash + std::fmt::Debug, r: Rect, text: &st
     let t = Theme::current(ui.ctx());
     let c = &t.colors;
     let resp = ui.interact(r, Id::new(id), if enabled { Sense::click() } else { Sense::hover() });
+    // Barrierefreiheit (und egui_kittest/`ui_find`): Kästchen mit Beschriftung und Zustand
+    resp.widget_info(|| egui::WidgetInfo::selected(egui::WidgetType::Checkbox, enabled, checked, text));
     let bx = Rect::from_min_size(pos2(r.left(), r.center().y - 6.5), vec2(13.0, 13.0));
     ui.painter().rect_filled(bx, 0.0, if enabled { c.field_bg } else { c.frame_bg });
     ui.painter().rect_stroke(bx, 0.0, Stroke::new(1.0, if enabled && resp.hovered() { c.focus } else if enabled { c.field_border } else { c.line_light }), StrokeKind::Inside);
@@ -632,6 +702,7 @@ pub fn radio(ui: &mut Ui, id: impl Hash + std::fmt::Debug, r: Rect, text: &str, 
     let t = Theme::current(ui.ctx());
     let c = &t.colors;
     let resp = ui.interact(r, Id::new(id), if enabled { Sense::click() } else { Sense::hover() });
+    resp.widget_info(|| egui::WidgetInfo::selected(egui::WidgetType::RadioButton, enabled, on, text));
     let center = pos2(r.left() + 6.5, r.center().y);
     ui.painter().circle_filled(center, 6.0, if enabled { c.field_bg } else { c.frame_bg });
     ui.painter().circle_stroke(center, 6.0, Stroke::new(1.0, if enabled && resp.hovered() { c.focus } else { c.field_border }));

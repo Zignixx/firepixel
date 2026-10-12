@@ -6,7 +6,7 @@
 //! Windows (je Ereignis ein Bild, Tippen als `Event::Text`, Ziehen über viele Bilder).
 
 use egui::{Event, Key, Modifiers, PointerButton, Pos2};
-use egui_kittest::kittest::{By, Queryable};
+use egui_kittest::kittest::{By, NodeT, Queryable};
 use egui_kittest::Harness;
 use fp_engine::ToolId;
 use fp_ui::app_state::{AppState, UiSettings};
@@ -535,4 +535,125 @@ fn n14_font_size_slider_fine_steps() {
     type_into(&mut h, f2, "200");
     key(&mut h, Key::Enter, Modifiers::NONE);
     assert_eq!(text_size(&h, id), 200.0);
+}
+
+// ------------------------------------------------------------------ FV-7: B/X wie im Original
+
+fn bounds(h: &H, id: u64) -> (f64, f64, f64, f64) {
+    let d = st(h).session.active().expect("Dokument");
+    let e = element(h, id);
+    let b = fp_engine::docops::element_bounds(&d.doc, &e).expect("Grenzen");
+    (b.left as f64, b.top as f64, (b.right - b.left) as f64, (b.bottom - b.top) as f64)
+}
+
+/// Felder B, X, H, Y (Index 0–3) im Inspektor-Quadranten links unten.
+fn box_fields(h: &H) -> Vec<(egui::Rect, String)> {
+    let mut v: Vec<_> = inputs(h).into_iter().filter(|(r, _)| r.left() < 220.0 && r.top() > HH - 70.0).collect();
+    v.sort_by(|a, b| a.0.top().total_cmp(&b.0.top()).then(a.0.left().total_cmp(&b.0.left())));
+    assert_eq!(v.len(), 4, "B/X/H/Y: {v:?}");
+    v
+}
+
+fn box_field(h: &H, i: usize) -> egui::Rect {
+    box_fields(h)[i].0
+}
+
+fn box_text(h: &H, i: usize) -> String {
+    box_fields(h)[i].1.clone()
+}
+
+/// PARITAET_A F12/F13 (Messung PM-1, R1 100 × 70 bei x = 50): Klick, Ende, Umschalt+Pos1,
+/// Tippen, Eingabe. B: „-5“ und „0“ verworfen, „12,5“ → 512 (Komma = Schreibmarke an den
+/// Anfang), „x“ verworfen, 9999 → 6000; X: „12,5“ → 512, „x“ → 0, -5 und 9999 erlaubt;
+/// Pfeiltasten und Mausrad ohne Wirkung.
+#[test]
+fn f12_f13_width_and_x_fields_like_original() {
+    let mut id = 0;
+    let mut h = harness(|s| {
+        id = rect(s, [50, 20, 150, 90], "#ff0000");
+        s.execute("select.set", json!({"ids": [id]})).expect("Auswahl");
+    });
+    assert_eq!(bounds(&h, id), (50.0, 20.0, 100.0, 70.0));
+    // B
+    for (typed, want) in [("-5", 100.0), ("0", 100.0), ("x", 100.0)] {
+        let n0 = undo_count(&h);
+        let f = box_field(&h, 0);
+        type_into(&mut h, f, typed);
+        key(&mut h, Key::Enter, Modifiers::NONE);
+        h.run_steps(2);
+        assert_eq!(bounds(&h, id).2, want, "B „{typed}“ verworfen");
+        assert_eq!(undo_count(&h), n0, "B „{typed}“: kein Verlaufsschritt");
+    }
+    let f = box_field(&h, 0);
+    type_into(&mut h, f, "12,5");
+    assert_eq!(box_text(&h, 0), "512", "Feldtext nach „12,5“");
+    key(&mut h, Key::Enter, Modifiers::NONE);
+    h.run_steps(2);
+    assert_eq!(bounds(&h, id).2, 512.0, "B „12,5“ → 512");
+    let f = box_field(&h, 0);
+    type_into(&mut h, f, "9999");
+    key(&mut h, Key::Enter, Modifiers::NONE);
+    h.run_steps(2);
+    assert_eq!(bounds(&h, id).2, 6000.0, "B 9999 → 6000");
+    let _ = h.state_mut().state.session.execute("element.setBounds", json!({"width": 100}));
+    h.run_steps(3);
+    // X
+    for (typed, want) in [("12,5", 512.0), ("-5", -5.0), ("9999", 9999.0), ("x", 0.0), ("50", 50.0)] {
+        let f = box_field(&h, 1);
+        type_into(&mut h, f, typed);
+        key(&mut h, Key::Enter, Modifiers::NONE);
+        h.run_steps(2);
+        assert_eq!(bounds(&h, id).0, want, "X „{typed}“");
+        assert_eq!(bounds(&h, id).2, 100.0, "X ändert die Breite nicht");
+    }
+    // Pfeiltasten und Mausrad im fokussierten Feld: nichts
+    let before = doc(&h);
+    let f = box_field(&h, 0);
+    click(&mut h, f.center());
+    key(&mut h, Key::ArrowUp, Modifiers::NONE);
+    key(&mut h, Key::ArrowDown, Modifiers::NONE);
+    ev(&mut h, Event::MouseWheel { unit: egui::MouseWheelUnit::Line, delta: egui::vec2(0.0, 1.0), modifiers: Modifiers::NONE, phase: egui::TouchPhase::Move });
+    h.run_steps(4);
+    key(&mut h, Key::Enter, Modifiers::NONE);
+    h.run_steps(2);
+    assert!(Arc::ptr_eq(&before, &doc(&h)) || *before == *doc(&h), "Pfeil/Rad ändern nichts");
+    // 50 Eingaben hintereinander → wie einmal der Endwert, je ein Schritt
+    for i in 0..50 {
+        let n0 = undo_count(&h);
+        let f = box_field(&h, 0);
+        type_into(&mut h, f, &format!("{}", 101 + i));
+        key(&mut h, Key::Enter, Modifiers::NONE);
+        // Verlaufslänge ist begrenzt: bis dahin genau ein Schritt je Eingabe
+        assert!(undo_count(&h) == n0 + 1 || undo_count(&h) == n0, "ein Schritt je Eingabe");
+    }
+    assert_eq!(bounds(&h, id).2.round(), 150.0, "Endwert (Gleitkomma-Rest der Skalierung)");
+}
+
+/// PARITAET_A W23: Rechteck-Werkzeug ohne Auswahl zeigt keine „Eckrundung des Rechtecks“.
+#[test]
+fn w23_rectangle_tool_without_roundness_row() {
+    let mut h = harness(|_| {});
+    let _ = h.state_mut().state.session.set_tool(ToolId::Rectangle);
+    fp_ui::inspector::fields::set_audit(&h.ctx, true);
+    h.run_steps(3);
+    let log: Vec<String> = fp_ui::inspector::fields::take_audit(&h.ctx).into_iter().map(|a| a.text).collect();
+    fp_ui::inspector::fields::set_audit(&h.ctx, false);
+    assert!(log.iter().any(|t| t.contains("Füllung") || t.contains("Kante") || !t.is_empty()), "Werkzeug-Inspektor gezeichnet: {log:?}");
+    assert!(!log.iter().any(|t| t.contains("Eckrundung")), "keine Eckrundung im Werkzeug-Inspektor: {log:?}");
+}
+
+/// FV-4-Befund: Kästchen und Optionsfelder stehen mit Beschriftung und Zustand im
+/// Barrierefreiheitsbaum (egui_kittest, `ui_find`).
+#[test]
+fn checkboxes_have_accessibility_info() {
+    let mut h = harness(|_| {});
+    let _ = h.state_mut().state.session.set_tool(ToolId::Gradient);
+    h.run_steps(3);
+    let n = h.get_by_role_and_label(egui::accesskit::Role::CheckBox, "Auswahl füllen");
+    assert_eq!(n.accesskit_node().toggled(), Some(egui::accesskit::Toggled::True), "Verlauf: Vorgabe ☑");
+    n.click();
+    h.run_steps(3);
+    assert!(!st(&h).session.tools.options.fill_selection, "Klick über den Baum schaltet um");
+    let n = h.get_by_role_and_label(egui::accesskit::Role::CheckBox, "Auswahl füllen");
+    assert_eq!(n.accesskit_node().toggled(), Some(egui::accesskit::Toggled::False));
 }

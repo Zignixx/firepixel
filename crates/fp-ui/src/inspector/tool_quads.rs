@@ -98,13 +98,8 @@ fn rect_tool_q4(ui: &mut Ui, st: &mut AppState, r: Rect) {
     obj_quads::column_seps(ui, d, r);
     obj_quads::fill_texture_panel(ui, st, d.offset(1.0, 0.0), Target::Tool, true);
     obj_quads::stroke_texture_panel(ui, st, d.offset(125.0, 0.0), Target::Tool, true);
-    if st.session.tools.active == ToolId::Rectangle {
-        fields::label_right(ui, d.r(123.0, 17.0, 105.0, 8.0), &tx("pi-rect-roundness"), true);
-        let v = (st.session.tools.options.rect_roundness * 100.0).round() as f64;
-        if let Some(n) = fields::number(ui, "pi-tool-round", d.r(231.0, 15.0, 15.0, 13.0), Some(d.r(247.0, 15.0, 9.0, 13.0)), Some(v), (0.0, 100.0), 0, true) {
-            st.session.tools.options.rect_roundness = (n / 100.0) as f32;
-        }
-    }
+    // Keine Eckrundung im Werkzeug-Inspektor: Im Original sind Feld 14795 und Beschriftung 15079
+    // des Quadranten unsichtbar (PARITAET_A W23); die Rundung des gewählten Rechtecks bleibt (O1).
 }
 
 fn pen_q4(ui: &mut Ui, st: &mut AppState, r: Rect) {
