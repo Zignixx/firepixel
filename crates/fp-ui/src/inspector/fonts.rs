@@ -117,6 +117,27 @@ struct SearchState {
     offset: f32,
 }
 
+/// Bildlaufleiste der Schriftliste sichtbar machen (Nutzerbefund N24). egui zeichnet die feste
+/// Leiste mit `extreme_bg_color` als Spur und `widgets.inactive.bg_fill` als Griff; in allen drei
+/// Designs sind das beide `field_bg`, der Griff war also unsichtbar, solange die Maus nicht darauf
+/// lag. Hier gelten die Farben der Leinwand-Bildlaufleisten (`scrollbar_bg`/`scrollbar_thumb`),
+/// unter der Maus bzw. beim Ziehen etwas dunkler (heller in Dunkel/OLED). Gilt nur für diese `Ui`;
+/// die Zeilen zeichnen mit eigenen Farben und bleiben unverändert.
+pub fn list_scrollbar_style(ui: &mut egui::Ui, c: &crate::theme::Palette) {
+    use crate::theme::mix;
+    let v = ui.visuals_mut();
+    v.extreme_bg_color = c.scrollbar_bg;
+    v.widgets.inactive.bg_fill = c.scrollbar_thumb;
+    v.widgets.hovered.bg_fill = mix(c.scrollbar_thumb, c.text, 0.3);
+    v.widgets.active.bg_fill = mix(c.scrollbar_thumb, c.text, 0.5);
+    let sc = &mut ui.spacing_mut().scroll;
+    sc.floating = false;
+    sc.bar_width = sc.bar_width.max(LIST_BAR_W);
+}
+
+/// Breite der Bildlaufleiste der Schriftliste (wie die Leinwandleisten, 8 px; gut zu greifen).
+pub const LIST_BAR_W: f32 = 8.0;
+
 /// Fundstelle von `needle` (schon klein geschrieben) in `hay`, ohne Groß-/Kleinschreibung, als
 /// Byte-Bereich in `hay`. Eine leere Suche passt immer (leerer Bereich).
 pub fn find_ci(hay: &str, needle: &str) -> Option<(usize, usize)> {
@@ -284,6 +305,7 @@ pub fn family_combo(ui: &mut egui::Ui, id: impl std::hash::Hash + std::fmt::Debu
                 nresp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Label, true, msg.clone()));
             }
             let q = s.query.trim().to_lowercase();
+            list_scrollbar_style(ui, c);
             let mut area = egui::ScrollArea::vertical().id_salt(sid.with("list")).max_height(LIST_MAX_H).auto_shrink([false, true]);
             if let Some(off) = s.scroll.take() {
                 area = area.vertical_scroll_offset(off);
