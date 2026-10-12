@@ -85,6 +85,12 @@ impl FirepixelApp {
         let mut prefs = prefs_path.as_deref().map(Preferences::load_or_default).unwrap_or_default();
         dialogs::preferences::apply_original_dir(&prefs);
         if language::init(&mut prefs) != fp_i18n::SOURCE_LANG { theme::install_fonts(&cc.egui_ctx); }
+        // eigene Befehle (Befehle-Menü) beim ersten Start in den Befehlsordner legen (einmal je
+        // Ordner, gelöschte kommen nicht wieder; nur die echte App, nicht die Tests) – nach der
+        // Sprachwahl, damit die Namen in der Sprache der Oberfläche stehen
+        if let Err(e) = fp_script::install_builtin_commands() {
+            log::warn!("Befehlsordner nicht angelegt: {e}");
+        }
         let mut cli_design = None;
         if let Some(d) = design {
             cli_design = Some((prefs.theme, d.to_engine()));
