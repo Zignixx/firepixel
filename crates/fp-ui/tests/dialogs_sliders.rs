@@ -393,7 +393,7 @@ fn canvas_color_custom_from_prefs() {
     assert_eq!(st(&h).dialogs.form.as_ref().expect("offen").get("_color").as_str().map(|s| s[..7].to_ascii_lowercase()), Some("#336699".into()));
     // „Benutzerdefiniert“ + OK: Leinwand wird so, Farbe bleibt gemerkt; ein Verlaufsschritt
     let n0 = undo_count(&h);
-    click_label(&mut h, "Benutzerdefiniert");
+    click_label(&mut h, "Benutzerdefiniert:");
     ok(&mut h);
     assert_eq!(undo_count(&h), n0 + 1);
     assert_eq!(st(&h).session.prefs.get_str("CustomCanvasColor", "").to_ascii_lowercase(), "#336699");

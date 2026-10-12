@@ -591,6 +591,7 @@ dlg-md-selective-jpeg = Selective JPEG Settings
 dlg-md-enable-selective = Enable selective quality
 dlg-md-preserve-text = Preserve text quality
 dlg-md-preserve-buttons = Preserve button quality
+dlg-md-overlay-color = Overlay color:
 dlg-md-page-setup = Page Setup
 dlg-md-paper = Paper:
 dlg-md-orientation = Orientation:

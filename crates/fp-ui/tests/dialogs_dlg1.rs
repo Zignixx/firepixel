@@ -100,14 +100,15 @@ fn dialog_area(h: &H) -> Option<egui::Rect> {
 }
 
 /// Werte der Textfelder im obersten Dialog (in Zeichenreihenfolge).
+/// Bedienbare Eingabefelder im Dialog (gesperrte wie Selektives JPEG ohne Haken zählen nicht).
 fn field_values(h: &H) -> Vec<String> {
     let Some(dr) = dialog_area(h) else { return vec![] };
-    h.get_all(By::new().role(egui::accesskit::Role::TextInput)).filter(|n| dr.contains(n.rect().center())).map(|n| n.accesskit_node().value().unwrap_or_default().to_string()).collect()
+    h.get_all(By::new().role(egui::accesskit::Role::TextInput)).filter(|n| dr.contains(n.rect().center()) && !n.accesskit_node().is_disabled()).map(|n| n.accesskit_node().value().unwrap_or_default().to_string()).collect()
 }
 
 fn field_center(h: &H, k: usize) -> Option<Pos2> {
     let dr = dialog_area(h)?;
-    h.get_all(By::new().role(egui::accesskit::Role::TextInput)).filter(|n| dr.contains(n.rect().center())).nth(k).map(|n| {
+    h.get_all(By::new().role(egui::accesskit::Role::TextInput)).filter(|n| dr.contains(n.rect().center()) && !n.accesskit_node().is_disabled()).nth(k).map(|n| {
         let c = n.rect().center();
         egui::pos2(c.x as f32, c.y as f32)
     })

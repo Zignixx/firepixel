@@ -5,10 +5,13 @@
 //! (5987, 19128, 5990, 5991, 6021), Statusleistentext (6012), HTML-Segment (14139),
 //! Strichoptionen (5963–5965), Neuer Stil (19123).
 
-use super::form::{Field, FormDialog, Pict};
+use super::form::{number_input, CustomLayout, Field, FormDialog, Pict};
 use crate::inspector::scale;
-use super::t;
+use super::{dlu, dlu_rect, t, text_w};
 use crate::app_state::AppState;
+use crate::inspector::fields;
+use crate::theme::Theme;
+use egui::{pos2, vec2, Align2, Rect, Stroke, Ui};
 use serde_json::{json, Map, Value};
 
 fn defaults<T: serde::Serialize + Default>() -> Value {
@@ -172,7 +175,9 @@ fn plain_form(st: &AppState, cmd: &str) -> Option<FormDialog> {
         )
         .with_width(400.0)
         .with_prefs(&[("width", "ExpandWidth"), ("join", "ExpandJoinType"), ("miter", "ExpandMiterLimit"), ("cap", "ExpandCapType")]),
-        "text.size.other" => FormDialog::new("6073", t("dlg-title-text-size").as_str(), cmd, vec![Field::number("size", t("dlg-lbl-size").as_str(), 12.0, 8.0, 96.0).unit("dlg-unit-points")]),
+        // Vorgabe wie im Original: Größe des gewählten Texts, sonst der zuletzt bestätigte Wert;
+        // Feld mit Popup-Schieber 8..96 (11 §3.5.5), ohne Einheit, Knöpfe rechts untereinander
+        "text.size.other" => FormDialog::new("6073", t("dlg-title-text-size").as_str(), cmd, vec![Field::number("size", t("dlg-lbl-size").as_str(), text_size_default(st), 8.0, 96.0).popup()]).with_layout(TEXT_SIZE_LAYOUT).with_store_hook(remember_text_size),
         "modify.symbol.tweenInstances" => FormDialog::new("6005", t("dlg-title-tween-instances").as_str(), cmd, vec![Field::number("steps", t("dlg-lbl-steps").as_str(), 1.0, 1.0, 1000.0), Field::check("_distribute", t("dlg-lbl-distribute-states").as_str(), false)]).with_transform(tween_params),
         "modify.symbol.convertToSymbol" => FormDialog::new(
             "19104",
@@ -236,26 +241,28 @@ fn plain_form(st: &AppState, cmd: &str) -> Option<FormDialog> {
                 t("dlg-canvas-color-group").as_str(),
                 cmd,
                 vec![
-                    Field::radio_of("_mode", "", &[t("dlg-canvas-white").as_str(), t("dlg-canvas-transparent").as_str(), t("dlg-canvas-custom-plain").as_str()], vec![json!(0), json!(1), json!(2)], idx),
+                    // untereinander, Farbfeld eingerückt unter „Benutzerdefiniert:“ (Vorlage 5977)
+                    Field::radio_of("_mode", "", &[t("dlg-canvas-white").as_str(), t("dlg-canvas-transparent").as_str(), t("dlg-canvas-custom").as_str()], vec![json!(0), json!(1), json!(2)], idx).vertical(),
                     // benutzerdefinierte Farbe: die der Seite, sonst die gemerkte (`CustomCanvasColor`, Vorgabe schwarz)
-                    Field::color("_color", t("dlg-lbl-color").as_str(), &hex_of(if idx == 2 { bg } else { st.session.prefs.get_color("CustomCanvasColor", fp_color::Argb(0xff00_0000)) })),
+                    Field::color("_color", "", &hex_of(if idx == 2 { bg } else { st.session.prefs.get_color("CustomCanvasColor", fp_color::Argb(0xff00_0000)) })),
                 ],
             )
-            .with_width(380.0)
+            .with_width(230.0)
             .with_transform(canvas_color_params)
             .with_store_hook(store_custom_canvas_color)
         }
         "view.grid.editGrid" => {
             let g = d.and_then(|d| d.doc.pages.get(d.page)).and_then(|p| p.root.grid.clone());
             let (gw, gh, col) = g.map(|g| (g.size.x as f64, g.size.y as f64, g.color)).unwrap_or((36.0, 36.0, fp_color::Argb(0xff00_ffff)));
-            let show = d.is_some_and(|d| d.view.show_grid);
-            let snap = d.is_some_and(|d| d.view.snap_to_grid);
+            // wie im Original nur Farbe und die beiden Abstände (↔/↕-Symbole statt Beschriftung);
+            // „Raster anzeigen“/„Am Raster ausrichten“ stehen nur im Menü Ansicht ▸ Raster
             FormDialog::new(
                 "5984",
                 t("dlg-title-edit-grid").as_str(),
                 cmd,
-                vec![Field::color("color", t("dlg-lbl-color").as_str(), &hex_of(col)), Field::check("show", t("dlg-lbl-show-grid").as_str(), show), Field::check("snap", t("dlg-lbl-snap-grid").as_str(), snap), Field::number("width", t("dlg-lbl-grid-h").as_str(), gw, 1.0, 10000.0).unit("dlg-unit-pixels"), Field::number("height", t("dlg-lbl-grid-v").as_str(), gh, 1.0, 10000.0).unit("dlg-unit-pixels")],
+                vec![Field::color("color", t("dlg-lbl-color").as_str(), &hex_of(col)), Field::number("width", t("dlg-lbl-grid-h").as_str(), gw, 1.0, 10000.0).unit("dlg-unit-pixels"), Field::number("height", t("dlg-lbl-grid-v").as_str(), gh, 1.0, 10000.0).unit("dlg-unit-pixels")],
             )
+            .with_layout(GRID_LAYOUT)
         }
         "view.guides.editGuides" => {
             let g = d.and_then(|d| d.doc.pages.get(d.page)).and_then(|p| p.root.guides.clone());
@@ -410,6 +417,269 @@ fn copy_states_params(d: &FormDialog) -> Value {
         _ => (0, n - 1),
     };
     json!({"from": from.max(0), "to": to.max(0)})
+}
+
+// ------------------------------------------------- eigene Anordnungen nach der Vorlage (P-DLG2)
+//
+// Lage und Größe in Dialogeinheiten aus `dialoge.json` (Vorlagen 5984, 6073, 19147); längere Texte
+// anderer Sprachen schieben die Spalte rechts davon und verbreitern den Dialog.
+
+fn field_at(d: &FormDialog, key: &str) -> usize {
+    d.fields.iter().position(|f| f.key == key).unwrap_or(usize::MAX)
+}
+
+fn label_of(d: &FormDialog, key: &str) -> String {
+    d.fields.get(field_at(d, key)).map(|f| f.label.clone()).unwrap_or_default()
+}
+
+/// OK und Abbrechen: gemeinsame Breite (mindestens 50 DLU wie in den Vorlagen).
+fn ok_cancel_w(ctx: &egui::Context) -> f32 {
+    let (ok, cancel) = (t("btn-ok"), t("btn-cancel"));
+    super::buttons_w(ctx, &[&ok, &cancel], dlu(50.0, 0.0).x)
+}
+
+/// Farbfeld `key` (Farbknopf mit Farbwahl wie im Inspektor).
+fn color_input(ui: &mut Ui, st: &AppState, d: &mut FormDialog, key: &str, r: Rect, enabled: bool) -> bool {
+    let i = field_at(d, key);
+    let id = d.id.clone();
+    let Some(f) = d.fields.get_mut(i) else { return false };
+    let cur = f.value.as_str().and_then(fp_color::Rgba8::parse_hex).map(|c| c.to_argb());
+    if let Some(crate::inspector::popups::ColorChoice::Color(col)) = crate::inspector::popups::color_button(ui, (id.as_str(), i), r, st, cur, enabled, false, false) {
+        let a = cur.map(|c| c.a()).unwrap_or(255) as u32;
+        f.value = json!(crate::ui_commands::hex(fp_color::Argb((col.0 & 0x00ff_ffff) | a << 24)));
+        return true;
+    }
+    false
+}
+
+/// Zahlenfeld `key` (siehe [`number_input`]).
+fn number_at(ui: &mut Ui, d: &mut FormDialog, key: &str, r: Rect, enabled: bool) -> bool {
+    let i = field_at(d, key);
+    let id = d.id.clone();
+    d.fields.get_mut(i).is_some_and(|f| number_input(ui, &id, i, f, r, enabled))
+}
+
+/// Kontrollkästchen `key`.
+fn check_at(ui: &mut Ui, d: &mut FormDialog, key: &str, r: Rect, enabled: bool) -> bool {
+    let i = field_at(d, key);
+    let id = d.id.clone();
+    let Some(f) = d.fields.get_mut(i) else { return false };
+    if let Some(b) = fields::checkbox(ui, (id.as_str(), i), r, &f.label, f.value.as_bool().unwrap_or(false), enabled) {
+        f.value = json!(b);
+        return true;
+    }
+    false
+}
+
+/// Beschriftung rechtsbündig im Rechteck (wie `SS_RIGHT` der Vorlage), gesperrt grau.
+fn right_label(ui: &Ui, r: Rect, text: &str, enabled: bool) {
+    if text_w(ui.ctx(), text) > r.width() + 0.5 {
+        super::report_overflow(ui.ctx(), format!("Beschriftung „{text}“ breiter als {:.0} px", r.width()));
+    }
+    let theme = Theme::current(ui.ctx());
+    let col = if enabled { theme.colors.text } else { theme.colors.text_disabled };
+    ui.painter().text(pos2(r.right(), r.center().y), Align2::RIGHT_CENTER, text.replace('&', ""), theme.ui_font(), col);
+}
+
+/// Doppelpfeil ↔ bzw. ↕ (Bildchen 5948/5949 der Vorlage 5984).
+fn paint_double_arrow(ui: &Ui, r: Rect, horizontal: bool, col: egui::Color32) {
+    let p = ui.painter();
+    let s = Stroke::new(1.0, col);
+    let c = r.center();
+    if horizontal {
+        let (a, b) = (pos2(r.left(), c.y), pos2(r.right(), c.y));
+        p.line_segment([a, b], s);
+        for (tip, dir) in [(a, 1.0), (b, -1.0)] {
+            p.line_segment([tip, pos2(tip.x + 3.0 * dir, tip.y - 3.0)], s);
+            p.line_segment([tip, pos2(tip.x + 3.0 * dir, tip.y + 3.0)], s);
+        }
+    } else {
+        let (a, b) = (pos2(c.x, r.top()), pos2(c.x, r.bottom()));
+        p.line_segment([a, b], s);
+        for (tip, dir) in [(a, 1.0), (b, -1.0)] {
+            p.line_segment([tip, pos2(tip.x - 3.0, tip.y + 3.0 * dir)], s);
+            p.line_segment([tip, pos2(tip.x + 3.0, tip.y + 3.0 * dir)], s);
+        }
+    }
+}
+
+// Raster bearbeiten (5984): 151 × 89 DLU. „Farbe:“ [9,9], Farbfeld [38,8,13,11]; ↔ [24,29,10,4],
+// Feld [38,25,30,13], „Pixel“ [82,27]; ↕ [29,43,5,9], Feld [38,41,30,13], „Pixel“ [82,43];
+// OK [37,68,50,14], Abbrechen [92,68,50,14]. Die Rahmen 5769/5814 neben den Feldern (Popup-Schieber)
+// haben in der Vorlage keinen Bereich und 11 beschreibt sie nicht: sie bleiben weg, die Einheit
+// rückt an ihre Stelle.
+
+/// Verschiebung der Feldspalte, wenn „Farbe:“ nicht in die 29 DLU vor den Feldern passt.
+fn grid_dx(ctx: &egui::Context) -> f32 {
+    (text_w(ctx, &t("dlg-lbl-color")) + 6.0 - dlu(29.0, 0.0).x).max(0.0).ceil()
+}
+
+fn grid_size(ctx: &egui::Context, _d: &FormDialog) -> egui::Vec2 {
+    let dx = grid_dx(ctx);
+    let unit = dlu(72.0, 0.0).x + dx + text_w(ctx, &super::form::unit_text("dlg-unit-pixels")) + dlu(9.0, 0.0).x;
+    let buttons = dlu(37.0, 0.0).x + 2.0 * ok_cancel_w(ctx) + dlu(5.0 + 9.0, 0.0).x;
+    vec2(dlu(151.0, 0.0).x.max(unit).max(buttons).ceil(), dlu(0.0, 89.0).y.ceil())
+}
+
+fn grid_draw(ui: &mut Ui, st: &AppState, d: &mut FormDialog, body: Rect) -> (bool, [Rect; 2]) {
+    let o = body.min;
+    let dx = grid_dx(ui.ctx());
+    let theme = Theme::current(ui.ctx());
+    let sh = |r: Rect| r.translate(vec2(dx, 0.0));
+    let mut changed = false;
+    let sw = sh(dlu_rect(o, [38.0, 7.0, 16.0, 12.0]));
+    let lx = o.x + dlu(9.0, 0.0).x;
+    super::fit_label(ui, Rect::from_min_max(pos2(lx, sw.center().y - 10.0), pos2(sw.left() - 2.0, sw.center().y + 10.0)), &t("dlg-lbl-color"), true);
+    // das Farbfeld ist im Original kein Tab-Stopp (Tab: Feld › Feld › OK › Abbrechen)
+    let skip = egui::Id::new((d.id.as_str(), "swatch-skip"));
+    super::skip_tab_stop_before(ui, skip);
+    changed |= color_input(ui, st, d, "color", sw, true);
+    let swatch_id = egui::Id::new(egui::Id::new((d.id.as_str(), field_at(d, "color"))));
+    if let Some(resp) = ui.ctx().read_response(swatch_id) {
+        super::skip_tab_stop_after(ui, skip, &resp);
+    }
+    let unit = super::form::unit_text("dlg-unit-pixels");
+    for (key, arrow, y, horizontal) in [("width", [24.0, 29.0, 10.0, 4.0], 25.0, true), ("height", [29.0, 43.0, 5.0, 9.0], 41.0, false)] {
+        let er = sh(dlu_rect(o, [38.0, y, 30.0, 13.0]));
+        // Symbol statt Beschriftung; der bisherige Text („Abstand ↔:“) bleibt Tooltip und Name
+        let ar = sh(dlu_rect(o, arrow));
+        paint_double_arrow(ui, ar, horizontal, theme.colors.text);
+        let label = label_of(d, key);
+        let hover = ui.interact(ar.expand(3.0), egui::Id::new((d.id.as_str(), key, "symbol")), egui::Sense::hover());
+        hover.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Label, true, label.as_str()));
+        let _ = hover.on_hover_text(label.as_str());
+        changed |= number_at(ui, d, key, er, true);
+        ui.painter().text(pos2(er.right() + dlu(4.0, 0.0).x, er.center().y), Align2::LEFT_CENTER, &unit, theme.ui_font(), theme.colors.text);
+    }
+    let bw = ok_cancel_w(ui.ctx());
+    let top = o.y + dlu(0.0, 68.0).y;
+    let h = dlu(0.0, 14.0).y;
+    let cancel = Rect::from_min_size(pos2(body.right() - dlu(9.0, 0.0).x - bw, top), vec2(bw, h));
+    let ok = Rect::from_min_size(pos2(cancel.left() - dlu(5.0, 0.0).x - bw, top), vec2(bw, h));
+    (changed, [ok, cancel])
+}
+
+const GRID_LAYOUT: CustomLayout = CustomLayout { size: grid_size, draw: grid_draw };
+
+// Textgröße (6073): 183 × 50 DLU. „Größe:“ rechtsbündig [3,17,55,8], Feld [62,15,30,13] mit
+// Popup-Schieber [93,15,10,13] (Bereich 8..96), OK [121,5,50,14] und Abbrechen [121,23,50,14]
+// rechts untereinander.
+
+fn text_size_dx(ctx: &egui::Context) -> f32 {
+    (text_w(ctx, &t("dlg-lbl-size")) - dlu(55.0, 0.0).x).max(0.0).ceil()
+}
+
+fn text_size_size(ctx: &egui::Context, _d: &FormDialog) -> egui::Vec2 {
+    let bx = dlu(121.0, 0.0).x + text_size_dx(ctx) + ok_cancel_w(ctx) + dlu(12.0, 0.0).x;
+    vec2(dlu(183.0, 0.0).x.max(bx).ceil(), dlu(0.0, 50.0).y.ceil())
+}
+
+fn text_size_draw(ui: &mut Ui, _st: &AppState, d: &mut FormDialog, body: Rect) -> (bool, [Rect; 2]) {
+    let o = body.min;
+    let er = dlu_rect(o, [62.0, 15.0, 30.0, 13.0]).translate(vec2(text_size_dx(ui.ctx()), 0.0));
+    right_label(ui, Rect::from_min_max(pos2(o.x + dlu(3.0, 0.0).x, er.top()), pos2(er.left() - dlu(4.0, 0.0).x, er.bottom())), &label_of(d, "size"), true);
+    let changed = number_at(ui, d, "size", er, true);
+    let bw = ok_cancel_w(ui.ctx());
+    let x = body.right() - dlu(12.0, 0.0).x - bw;
+    let h = dlu(0.0, 14.0).y;
+    (changed, [Rect::from_min_size(pos2(x, o.y + dlu(0.0, 5.0).y), vec2(bw, h)), Rect::from_min_size(pos2(x, o.y + dlu(0.0, 23.0).y), vec2(bw, h))])
+}
+
+const TEXT_SIZE_LAYOUT: CustomLayout = CustomLayout { size: text_size_size, draw: text_size_draw };
+
+thread_local! {
+    /// Textgröße: zuletzt bestätigter Wert und die Vorgabe des Textwerkzeugs danach. Ohne
+    /// Textauswahl zeigt der Dialog diesen Wert, solange die Vorgabe seitdem gleich blieb.
+    static LAST_TEXT_SIZE: std::cell::Cell<(Option<f64>, f64)> = const { std::cell::Cell::new((None, 0.0)) };
+    /// Beim Öffnen: Vorgabe des Textwerkzeugs und ob Text gewählt war.
+    static OPEN_TEXT_SIZE: std::cell::Cell<(f64, bool)> = const { std::cell::Cell::new((0.0, false)) };
+}
+
+/// Vorgabe des Dialogs „Textgröße“ wie im Original: Größe des ersten gewählten Texts (erster
+/// Lauf), sonst der zuletzt bestätigte Wert, sonst die Vorgabe des Textwerkzeugs.
+fn text_size_default(st: &AppState) -> f64 {
+    let tool = st.session.tools.options.text_size as f64;
+    let sel = crate::inspector::obj_quads::selection(st).iter().find_map(|e| match &e.kind {
+        fp_model::ElementKind::Text(t) => Some(t.resolved_runs().first().and_then(|(a, _)| a.size).or(t.initial.size).unwrap_or(12.0) as f64),
+        _ => None,
+    });
+    OPEN_TEXT_SIZE.with(|c| c.set((tool, sel.is_some())));
+    let (last, tool_then) = LAST_TEXT_SIZE.with(|c| c.get());
+    match (sel, last) {
+        (Some(v), _) => v,
+        (None, Some(v)) if tool_then == tool => v,
+        _ => tool,
+    }
+}
+
+/// OK in „Textgröße“: Wert merken. Ohne Textauswahl setzt der Befehl die Vorgabe des Werkzeugs
+/// auf denselben Wert, mit Auswahl bleibt sie.
+fn remember_text_size(d: &FormDialog, _p: &mut fp_engine::Preferences) {
+    if let Some(v) = d.get("size").as_f64() {
+        let (tool, had_text) = OPEN_TEXT_SIZE.with(|c| c.get());
+        LAST_TEXT_SIZE.with(|c| c.set((Some(v), if had_text { tool } else { v as f32 as f64 })));
+    }
+}
+
+// Selektive JPEG-Einstellungen (19147): 196 × 94 DLU. „Selektive Qualität aktivieren“ [9,8,114,10]
+// mit Qualität [137,5,40,14] daneben; „Überlagerungsfarbe:“ rechtsbündig [18,26,116,8] mit Farbfeld
+// [137,23,16,13]; Trennlinie [6,40,184,1]; Text-/Schaltflächenqualität [9,44] und [9,54];
+// OK [85,75,50,14], Abbrechen [141,75,50,14]. Ohne Haken sind Qualität, Überlagerungsfarbe und die
+// beiden Kästchen gesperrt (Original gemessen, PM-5).
+
+fn jpeg_dx(ctx: &egui::Context, d: &FormDialog) -> f32 {
+    let check = dlu(9.0, 0.0).x + 18.0 + text_w(ctx, &label_of(d, "enabled")) + 8.0 - dlu(137.0, 0.0).x;
+    let overlay = text_w(ctx, &label_of(d, "_overlay")) - dlu(116.0, 0.0).x;
+    check.max(overlay).max(0.0).ceil()
+}
+
+fn jpeg_size(ctx: &egui::Context, d: &FormDialog) -> egui::Vec2 {
+    let dx = jpeg_dx(ctx, d);
+    let checks = dlu(9.0 + 6.0, 0.0).x + 18.0 + text_w(ctx, &label_of(d, "preserveText")).max(text_w(ctx, &label_of(d, "preserveButtons"))) + 4.0;
+    let buttons = dlu(85.0, 0.0).x + 2.0 * ok_cancel_w(ctx) + dlu(6.0 + 5.0, 0.0).x;
+    vec2((dlu(196.0, 0.0).x + dx).max(checks).max(buttons).ceil(), dlu(0.0, 94.0).y.ceil())
+}
+
+fn jpeg_draw(ui: &mut Ui, st: &AppState, d: &mut FormDialog, body: Rect) -> (bool, [Rect; 2]) {
+    let o = body.min;
+    let dx = jpeg_dx(ui.ctx(), d);
+    let theme = Theme::current(ui.ctx());
+    let sh = |r: Rect| r.translate(vec2(dx, 0.0));
+    let mut changed = false;
+    let er = sh(dlu_rect(o, [137.0, 5.0, 40.0, 14.0]));
+    let cr = dlu_rect(o, [9.0, 8.0, 114.0, 10.0]);
+    changed |= check_at(ui, d, "enabled", Rect::from_min_max(pos2(cr.left(), er.center().y - 8.0), pos2(er.left() - 8.0, er.center().y + 8.0)), true);
+    let on = d.get("enabled").as_bool().unwrap_or(false);
+    changed |= number_at(ui, d, "quality", er, on);
+    let sw = sh(dlu_rect(o, [137.0, 23.0, 16.0, 13.0]));
+    right_label(ui, Rect::from_min_max(pos2(o.x + dlu(18.0, 0.0).x, sw.top()), pos2(sw.left() - dlu(3.0, 0.0).x, sw.bottom())), &label_of(d, "_overlay"), on);
+    changed |= color_input(ui, st, d, "_overlay", sw, on);
+    let y = (o.y + dlu(0.0, 40.0).y).round() + 0.5;
+    ui.painter().hline((o.x + dlu(6.0, 0.0).x)..=(body.right() - dlu(6.0, 0.0).x), y, Stroke::new(1.0, theme.colors.line_mid));
+    let w = body.right() - dlu(6.0, 0.0).x;
+    changed |= check_at(ui, d, "preserveText", dlu_rect(o, [9.0, 44.0, 181.0, 10.0]).with_max_x(w), on);
+    changed |= check_at(ui, d, "preserveButtons", dlu_rect(o, [9.0, 54.0, 180.0, 10.0]).with_max_x(w), on);
+    let bw = ok_cancel_w(ui.ctx());
+    let top = o.y + dlu(0.0, 75.0).y;
+    let h = dlu(0.0, 14.0).y;
+    let cancel = Rect::from_min_size(pos2(body.right() - dlu(5.0, 0.0).x - bw, top), vec2(bw, h));
+    let ok = Rect::from_min_size(pos2(cancel.left() - dlu(6.0, 0.0).x - bw, top), vec2(bw, h));
+    (changed, [ok, cancel])
+}
+
+/// Anordnung von „Selektive JPEG-Einstellungen“ (19147).
+pub const SELECTIVE_JPEG_LAYOUT: CustomLayout = CustomLayout { size: jpeg_size, draw: jpeg_draw };
+
+/// Überlagerungsfarbe der JPEG-Maske (`SelectiveJPEGColor`, Vorgabe #ff0080) als Farbfeld `_overlay`.
+pub fn selective_jpeg_overlay_field(st: &AppState) -> Field {
+    Field::color("_overlay", t("dlg-md-overlay-color").as_str(), &st.session.prefs.get_str("SelectiveJPEGColor", "#ff0080"))
+}
+
+/// OK in „Selektive JPEG-Einstellungen“: Überlagerungsfarbe merken (`#rrggbb` wie die Vorgabe).
+pub fn store_selective_jpeg_overlay(d: &FormDialog, p: &mut fp_engine::Preferences) {
+    if let Some(c) = d.get("_overlay").as_str().and_then(fp_color::Rgba8::parse_hex) {
+        p.set("SelectiveJPEGColor", fp_engine::PrefValue::Str(format!("#{:02x}{:02x}{:02x}", c.r, c.g, c.b)));
+    }
 }
 
 /// Basisparameter abhängig vom Dokument (aktueller Status, Anzahl) nachtragen.

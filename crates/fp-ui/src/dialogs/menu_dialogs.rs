@@ -207,10 +207,14 @@ pub fn open(st: &mut AppState, name: &str) -> bool {
                     vec![
                         Field::check("enabled", t("dlg-md-enable-selective").as_str(), e.jpeg_sel_enabled),
                         Field::number("quality", t("dlg-lbl-quality").as_str(), e.jpeg_sel_quality as f64, 1.0, 100.0),
+                        super::catalog::selective_jpeg_overlay_field(st),
                         Field::check("preserveText", t("dlg-md-preserve-text").as_str(), e.jpeg_sel_preserve_text),
                         Field::check("preserveButtons", t("dlg-md-preserve-buttons").as_str(), e.jpeg_sel_preserve_buttons),
                     ],
                 )
+                // Anordnung der Vorlage, ohne Haken gesperrt; Überlagerungsfarbe der Maske gemerkt
+                .with_layout(super::catalog::SELECTIVE_JPEG_LAYOUT)
+                .with_store_hook(super::catalog::store_selective_jpeg_overlay)
                 .with_width(400.0)
                 .with_focus_ok(),
             )

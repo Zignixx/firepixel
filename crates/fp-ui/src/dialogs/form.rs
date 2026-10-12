@@ -58,6 +58,8 @@ pub struct Field {
     pub icons: Option<Vec<Pict>>,
     /// Zahlencodes der Einträge in der Voreinstellung (z. B. `ExpandJoinType`), sonst der Index.
     pub pref_codes: Option<Vec<i64>>,
+    /// Optionsfelder untereinander statt nebeneinander (z. B. Leinwandfarbe, 5977).
+    pub vertical: bool,
 }
 
 /// Bildchen der Symbolknöpfe (selbst gezeichnet).
@@ -112,11 +114,11 @@ fn paint_pict(p: &egui::Painter, r: Rect, k: Pict, col: egui::Color32) {
 impl Field {
     /// Zahlenfeld.
     pub fn number(key: &str, label: &str, value: f64, min: f64, max: f64) -> Field {
-        Field { key: key.into(), label: label.into(), kind: FieldKind::Number { min, max, decimals: 0, slider: false, unit: "" }, value: json!(value), choice_values: None, error: false, scale: None, popup: false, icons: None, pref_codes: None }
+        Field { key: key.into(), label: label.into(), kind: FieldKind::Number { min, max, decimals: 0, slider: false, unit: "" }, value: json!(value), choice_values: None, error: false, scale: None, popup: false, icons: None, pref_codes: None, vertical: false }
     }
     /// Zahlenfeld mit Schieber.
     pub fn slider(key: &str, label: &str, value: f64, min: f64, max: f64) -> Field {
-        Field { key: key.into(), label: label.into(), kind: FieldKind::Number { min, max, decimals: 0, slider: true, unit: "" }, value: json!(value), choice_values: None, error: false, scale: None, popup: false, icons: None, pref_codes: None }
+        Field { key: key.into(), label: label.into(), kind: FieldKind::Number { min, max, decimals: 0, slider: true, unit: "" }, value: json!(value), choice_values: None, error: false, scale: None, popup: false, icons: None, pref_codes: None, vertical: false }
     }
     /// Nachkommastellen setzen.
     pub fn decimals(mut self, d: usize) -> Field {
@@ -138,6 +140,11 @@ impl Field {
     /// Codes der Einträge in der Voreinstellung.
     pub fn pref_codes(mut self, c: &[i64]) -> Field {
         self.pref_codes = Some(c.to_vec());
+        self
+    }
+    /// Optionsfelder untereinander (ohne Beschriftungsspalte).
+    pub fn vertical(mut self) -> Field {
+        self.vertical = true;
         self
     }
     /// Popup-Schieber ▾ neben dem Feld statt fester Leiste.
@@ -165,39 +172,39 @@ impl Field {
     }
     /// Kontrollkästchen.
     pub fn check(key: &str, label: &str, value: bool) -> Field {
-        Field { key: key.into(), label: label.into(), kind: FieldKind::Check, value: json!(value), choice_values: None, error: false, scale: None, popup: false, icons: None, pref_codes: None }
+        Field { key: key.into(), label: label.into(), kind: FieldKind::Check, value: json!(value), choice_values: None, error: false, scale: None, popup: false, icons: None, pref_codes: None, vertical: false }
     }
     /// Auswahlliste mit Index als Wert.
     pub fn choice(key: &str, label: &str, items: &[&str], index: usize) -> Field {
-        Field { key: key.into(), label: label.into(), kind: FieldKind::Choice(items.iter().map(|s| s.to_string()).collect()), value: json!(index), choice_values: None, error: false, scale: None, popup: false, icons: None, pref_codes: None }
+        Field { key: key.into(), label: label.into(), kind: FieldKind::Choice(items.iter().map(|s| s.to_string()).collect()), value: json!(index), choice_values: None, error: false, scale: None, popup: false, icons: None, pref_codes: None, vertical: false }
     }
     /// Auswahlliste mit eigenen Werten.
     pub fn choice_of(key: &str, label: &str, items: &[&str], values: Vec<Value>, index: usize) -> Field {
-        Field { key: key.into(), label: label.into(), kind: FieldKind::Choice(items.iter().map(|s| s.to_string()).collect()), value: json!(index), choice_values: Some(values), error: false, scale: None, popup: false, icons: None, pref_codes: None }
+        Field { key: key.into(), label: label.into(), kind: FieldKind::Choice(items.iter().map(|s| s.to_string()).collect()), value: json!(index), choice_values: Some(values), error: false, scale: None, popup: false, icons: None, pref_codes: None, vertical: false }
     }
     /// Optionsfelder mit eigenen Werten.
     pub fn radio_of(key: &str, label: &str, items: &[&str], values: Vec<Value>, index: usize) -> Field {
-        Field { key: key.into(), label: label.into(), kind: FieldKind::Radio(items.iter().map(|s| s.to_string()).collect()), value: json!(index), choice_values: Some(values), error: false, scale: None, popup: false, icons: None, pref_codes: None }
+        Field { key: key.into(), label: label.into(), kind: FieldKind::Radio(items.iter().map(|s| s.to_string()).collect()), value: json!(index), choice_values: Some(values), error: false, scale: None, popup: false, icons: None, pref_codes: None, vertical: false }
     }
     /// Textfeld.
     pub fn text(key: &str, label: &str, value: &str) -> Field {
-        Field { key: key.into(), label: label.into(), kind: FieldKind::Text { multiline: false }, value: json!(value), choice_values: None, error: false, scale: None, popup: false, icons: None, pref_codes: None }
+        Field { key: key.into(), label: label.into(), kind: FieldKind::Text { multiline: false }, value: json!(value), choice_values: None, error: false, scale: None, popup: false, icons: None, pref_codes: None, vertical: false }
     }
     /// Mehrzeiliges Textfeld.
     pub fn multiline(key: &str, label: &str, value: &str) -> Field {
-        Field { key: key.into(), label: label.into(), kind: FieldKind::Text { multiline: true }, value: json!(value), choice_values: None, error: false, scale: None, popup: false, icons: None, pref_codes: None }
+        Field { key: key.into(), label: label.into(), kind: FieldKind::Text { multiline: true }, value: json!(value), choice_values: None, error: false, scale: None, popup: false, icons: None, pref_codes: None, vertical: false }
     }
     /// Farbfeld.
     pub fn color(key: &str, label: &str, hex: &str) -> Field {
-        Field { key: key.into(), label: label.into(), kind: FieldKind::Color, value: json!(hex), choice_values: None, error: false, scale: None, popup: false, icons: None, pref_codes: None }
+        Field { key: key.into(), label: label.into(), kind: FieldKind::Color, value: json!(hex), choice_values: None, error: false, scale: None, popup: false, icons: None, pref_codes: None, vertical: false }
     }
     /// Überschrift.
     pub fn caption(label: &str) -> Field {
-        Field { key: "_caption".into(), label: label.into(), kind: FieldKind::Caption, value: Value::Null, choice_values: None, error: false, scale: None, popup: false, icons: None, pref_codes: None }
+        Field { key: "_caption".into(), label: label.into(), kind: FieldKind::Caption, value: Value::Null, choice_values: None, error: false, scale: None, popup: false, icons: None, pref_codes: None, vertical: false }
     }
     /// Hinweis.
     pub fn note(label: &str) -> Field {
-        Field { key: "_note".into(), label: label.into(), kind: FieldKind::Note, value: Value::Null, choice_values: None, error: false, scale: None, popup: false, icons: None, pref_codes: None }
+        Field { key: "_note".into(), label: label.into(), kind: FieldKind::Note, value: Value::Null, choice_values: None, error: false, scale: None, popup: false, icons: None, pref_codes: None, vertical: false }
     }
 
     /// Wert für den Befehl.
@@ -266,6 +273,19 @@ pub struct FormDialog {
     pub store_hook: Option<fn(&FormDialog, &mut fp_engine::Preferences)>,
     /// Startfokus auf OK statt auf das erste Feld (wie im Original gemessen, PM-5).
     pub focus_ok: bool,
+    /// Eigene Anordnung nach der Vorlage des Originals statt der Standardzeilen.
+    pub custom: Option<CustomLayout>,
+}
+
+/// Eigene Anordnung eines Formulars (Felder an den Stellen der Vorlage, z. B. Raster bearbeiten,
+/// Textgröße, Selektives JPEG). Werte, Prüfung, Voreinstellungen und OK bleiben die des Formulars.
+#[derive(Clone, Copy, Debug)]
+pub struct CustomLayout {
+    /// Größe des Client-Bereichs für die Texte der aktuellen Sprache.
+    pub size: fn(&egui::Context, &FormDialog) -> egui::Vec2,
+    /// Zeichnet die Felder in den Client-Bereich; liefert „geändert“ und die Rechtecke von OK und
+    /// Abbrechen.
+    pub draw: fn(&mut Ui, &AppState, &mut FormDialog, Rect) -> (bool, [Rect; 2]),
 }
 
 /// Pseudo-Feldschlüssel des Kästchens „Vorschau“ in [`FormDialog::with_prefs`]
@@ -275,12 +295,17 @@ pub const PREVIEW_FIELD: &str = "_preview";
 impl FormDialog {
     /// Neuer Dialog.
     pub fn new(id: &str, title: &str, command: &str, fields: Vec<Field>) -> FormDialog {
-        FormDialog { id: id.into(), title: title.into(), fields, command: command.into(), base: json!({}), preview: false, preview_on: false, applied: None, applied_params: None, applied_doc: None, stale: None, width: 340.0, transform: None, prefs: Vec::new(), store_hook: None, focus_ok: false }
+        FormDialog { id: id.into(), title: title.into(), fields, command: command.into(), base: json!({}), preview: false, preview_on: false, applied: None, applied_params: None, applied_doc: None, stale: None, width: 340.0, transform: None, prefs: Vec::new(), store_hook: None, focus_ok: false, custom: None }
     }
     /// Startfokus auf OK (Original: Exportassistent, HTML-Einrichtung, Selektives JPEG,
     /// Rechtschreibung einrichten).
     pub fn with_focus_ok(mut self) -> FormDialog {
         self.focus_ok = true;
+        self
+    }
+    /// Eigene Anordnung (siehe [`CustomLayout`]).
+    pub fn with_layout(mut self, l: CustomLayout) -> FormDialog {
+        self.custom = Some(l);
         self
     }
     /// Mit Umformung der Parameter.
@@ -457,6 +482,7 @@ impl FormDialog {
         match &f.kind {
             FieldKind::Text { multiline: true } => 120.0,
             FieldKind::Number { slider: true, .. } => 46.0,
+            FieldKind::Radio(items) if f.vertical => RADIO_ROW_H * items.len() as f32,
             FieldKind::Caption => 24.0,
             FieldKind::Note => 34.0,
             _ => 26.0,
@@ -488,6 +514,7 @@ impl FormDialog {
                     let refs: Vec<&str> = items.iter().map(|s| s.as_str()).collect();
                     ctrl = ctrl.max(super::combo_fit_w(ctx, &refs, 80.0));
                 }
+                FieldKind::Radio(items) if f.vertical => full = full.max(items.iter().map(|it| tw(it) + 26.0).fold(0.0, f32::max)),
                 FieldKind::Radio(items) => {
                     let w: f32 = items.iter().map(|it| tw(it) + 26.0 + 8.0).sum();
                     if f.label.is_empty() {
@@ -497,6 +524,8 @@ impl FormDialog {
                         ctrl = ctrl.max(w);
                     }
                 }
+                // Farbfeld ohne Beschriftung: eingerückt unter der Zeile davor (Leinwandfarbe)
+                FieldKind::Color if f.label.is_empty() => full = full.max(COLOR_INDENT + 26.0),
                 FieldKind::Text { multiline: false } | FieldKind::Color => lw = lw.max(tw(&f.label)),
                 FieldKind::Text { multiline: true } => full = full.max(tw(&f.label)),
                 FieldKind::Check => full = full.max(18.0 + tw(&f.label)),
@@ -524,6 +553,11 @@ impl FormDialog {
         FormLayout { label_w, width, height, rows }
     }
 }
+
+/// Zeilenhöhe untereinander stehender Optionsfelder (Original 14 DLU).
+const RADIO_ROW_H: f32 = 22.0;
+/// Einrückung eines Farbfelds ohne Beschriftung (Original 12 DLU).
+const COLOR_INDENT: f32 = 18.0;
 
 /// Maße eines Formulars (siehe [`FormDialog::layout`]).
 #[derive(Clone, Debug, PartialEq)]
@@ -625,48 +659,22 @@ pub fn draw_fields(ui: &mut Ui, st: &AppState, d: &mut FormDialog, area: Rect) -
             FieldKind::Number { min, max, decimals, slider, unit } => {
                 label(ui, &f.label);
                 let v = f.value.as_f64().unwrap_or(*min);
+                let (min, max, decimals, slider, unit) = (*min, *max, *decimals, *slider, *unit);
                 let er = Rect::from_min_size(pos2(ctrl_x, y), vec2(60.0, 20.0));
-                // beim Ziehen im Popup-Schieber zeigt das Feld den Wert schon mit (wie im Inspektor)
-                let popup_id = egui::Id::new((dlg_id.as_str(), i, "popup"));
-                let live = if f.popup { ui.data(|d| d.get_temp::<f64>(popup_id.with("val"))) } else { None };
-                let txt = fields::fmt_num(live.unwrap_or(v), *decimals);
-                if let Some(t) = fields::text(ui, id, er, &txt, true) {
-                    let mut ff = f.clone();
-                    ff.set_number_text(&t);
-                    f.value = ff.value;
-                    f.error = ff.error;
-                    changed = true;
-                }
-                if f.error {
-                    ui.painter().rect_stroke(er, 0.0, Stroke::new(1.5, c.icon_red), StrokeKind::Inside);
-                }
-                let scale = f.effective_scale();
-                // Popup-Schieber ▾ direkt rechts am Feld, senkrecht über dem Feld wie im Original und
-                // im Inspektor (gleiche Komponente); Einheit dahinter
-                let unit_x = if f.popup {
-                    let ar = Rect::from_min_size(pos2(er.right() + 1.0, y), vec2(14.0, 20.0));
-                    if let Some(nv) = fields::slider_arrow_vertical(ui, popup_id, ar, v, (*min, *max), scale, true) {
-                        let p = 10f64.powi(*decimals as i32);
-                        f.value = json!((nv * p).round() / p);
-                        f.error = false;
-                        changed = true;
-                    }
-                    ar.right()
-                } else {
-                    er.right()
-                };
+                changed |= number_input(ui, &dlg_id, i, f, er, true);
+                let unit_x = if f.popup { er.right() + 15.0 } else { er.right() };
                 if !unit.is_empty() {
                     ui.painter().text(pos2(unit_x + 6.0, er.center().y), Align2::LEFT_CENTER, unit_text(unit), theme.ui_font(), c.text);
                 }
-                if *slider {
+                if slider {
                     let sr = Rect::from_min_size(pos2(x0, y + 24.0), vec2(area.width() - 28.0, 18.0));
                     let mut val = v;
                     let mut child = ui.new_child(egui::UiBuilder::new().max_rect(sr));
                     child.spacing_mut().slider_width = sr.width() - 8.0;
                     // Kennlinie des Originals (stückweise linear, z. B. Weichzeichnungsradius)
-                    let r = crate::inspector::scale::slider(&mut child, &mut val, (*min, *max), scale);
+                    let r = crate::inspector::scale::slider(&mut child, &mut val, (min, max), f.effective_scale());
                     if r.changed() {
-                        let p = 10f64.powi(*decimals as i32);
+                        let p = 10f64.powi(decimals as i32);
                         f.value = json!((val * p).round() / p);
                         f.error = false;
                         changed = true;
@@ -715,12 +723,18 @@ pub fn draw_fields(ui: &mut Ui, st: &AppState, d: &mut FormDialog, area: Rect) -
                     y += h;
                     continue;
                 }
-                // eine Optionsgruppe = ein Tab-Stopp, Pfeiltasten innerhalb (wie im Original)
+                // eine Optionsgruppe = ein Tab-Stopp, Pfeiltasten innerhalb (wie im Original);
+                // nebeneinander bzw. untereinander (`vertical`, Zeilenabstand wie im Original)
                 let mut rects = Vec::with_capacity(items.len());
+                let mut ry = y + 2.0;
                 for it in items.iter() {
                     let w = crate::widgets::text_width(ui, it, &theme.ui_font()) + 26.0;
-                    rects.push(Rect::from_min_size(pos2(x, y + 2.0), vec2(w, 16.0)));
-                    x += w + 8.0;
+                    rects.push(Rect::from_min_size(pos2(x, ry), vec2(w, 16.0)));
+                    if f.vertical {
+                        ry += RADIO_ROW_H;
+                    } else {
+                        x += w + 8.0;
+                    }
                 }
                 let labels: Vec<&str> = items.iter().map(|s| s.as_str()).collect();
                 if let Some(k) = super::radio_group(ui, (dlg_id.as_str(), i, "radio"), &rects, &labels, sel, true) {
@@ -750,8 +764,10 @@ pub fn draw_fields(ui: &mut Ui, st: &AppState, d: &mut FormDialog, area: Rect) -
             }
             FieldKind::Color => {
                 label(ui, &f.label);
+                // ohne Beschriftung eingerückt unter dem Feld davor (Leinwandfarbe: unter „Benutzerdefiniert:“)
+                let cx = if f.label.is_empty() { x0 + COLOR_INDENT } else { ctrl_x };
                 let cur = f.value.as_str().and_then(fp_color::Rgba8::parse_hex).map(|c| c.to_argb());
-                if let Some(crate::inspector::popups::ColorChoice::Color(col)) = crate::inspector::popups::color_button(ui, id, Rect::from_min_size(pos2(ctrl_x, y), vec2(26.0, 20.0)), st, cur, true, false, false) {
+                if let Some(crate::inspector::popups::ColorChoice::Color(col)) = crate::inspector::popups::color_button(ui, id, Rect::from_min_size(pos2(cx, y), vec2(26.0, 20.0)), st, cur, true, false, false) {
                     let a = cur.map(|c| c.a()).unwrap_or(255) as u32;
                     f.value = json!(crate::ui_commands::hex(fp_color::Argb((col.0 & 0x00ff_ffff) | a << 24)));
                     changed = true;
@@ -763,10 +779,51 @@ pub fn draw_fields(ui: &mut Ui, st: &AppState, d: &mut FormDialog, area: Rect) -
     changed
 }
 
+/// Zahlenfeld `i` eines Formulars im Rechteck `er`, mit Popup-Schieber ▾ direkt rechts daneben
+/// (14 px breit), wenn das Feld einen hat; ungültige Eingaben rot umrandet. Liefert `true`, wenn
+/// sich der Wert geändert hat. Auch für eigene Anordnungen ([`CustomLayout`]).
+pub fn number_input(ui: &mut Ui, dlg_id: &str, i: usize, f: &mut Field, er: Rect, enabled: bool) -> bool {
+    let FieldKind::Number { min, max, decimals, .. } = f.kind else { return false };
+    let theme = Theme::current(ui.ctx());
+    let mut changed = false;
+    let v = f.value.as_f64().unwrap_or(min);
+    // beim Ziehen im Popup-Schieber zeigt das Feld den Wert schon mit (wie im Inspektor)
+    let popup_id = egui::Id::new((dlg_id, i, "popup"));
+    let live = if f.popup { ui.data(|d| d.get_temp::<f64>(popup_id.with("val"))) } else { None };
+    let txt = fields::fmt_num(live.unwrap_or(v), decimals);
+    if let Some(t) = fields::text(ui, (dlg_id, i), er, &txt, enabled) {
+        let mut ff = f.clone();
+        ff.set_number_text(&t);
+        f.value = ff.value;
+        f.error = ff.error;
+        changed = true;
+    }
+    if f.error {
+        ui.painter().rect_stroke(er, 0.0, Stroke::new(1.5, theme.colors.icon_red), StrokeKind::Inside);
+    }
+    // Popup-Schieber ▾ direkt rechts am Feld, senkrecht über dem Feld wie im Original und im
+    // Inspektor (gleiche Komponente)
+    if f.popup {
+        let ar = Rect::from_min_size(pos2(er.right() + 1.0, er.top()), vec2(14.0, er.height()));
+        if let Some(nv) = fields::slider_arrow_vertical(ui, popup_id, ar, v, (min, max), f.effective_scale(), enabled) {
+            let p = 10f64.powi(decimals as i32);
+            f.value = json!((nv * p).round() / p);
+            f.error = false;
+            changed = true;
+        }
+    }
+    changed
+}
+
 /// Zeigt einen Formular-Dialog; liefert `Some(true)` bei OK, `Some(false)` bei Abbrechen.
 pub fn show_form(ctx: &egui::Context, st: &mut AppState, d: &mut FormDialog) -> Option<bool> {
-    let lay = d.layout(ctx);
-    let size = vec2(lay.width, lay.height);
+    let size = match d.custom {
+        Some(l) => (l.size)(ctx, d),
+        None => {
+            let lay = d.layout(ctx);
+            vec2(lay.width, lay.height)
+        }
+    };
     let mut result = None;
     let mut changed = false;
     let id = format!("fp-form-{}", d.id);
@@ -775,7 +832,11 @@ pub fn show_form(ctx: &egui::Context, st: &mut AppState, d: &mut FormDialog) -> 
         if d.focus_ok {
             super::autofocus_default_button(ui);
         }
-        changed = draw_fields(ui, st, d, body);
+        let custom = d.custom.map(|l| (l.draw)(ui, st, d, body));
+        changed = match custom {
+            Some((ch, _)) => ch,
+            None => draw_fields(ui, st, d, body),
+        };
         let y = body.bottom() - 36.0;
         if d.preview {
             let pl = t("dlg-preview");
@@ -787,7 +848,10 @@ pub fn show_form(ctx: &egui::Context, st: &mut AppState, d: &mut FormDialog) -> 
         }
         let valid = d.valid();
         let (ok_l, cancel_l) = (t("btn-ok"), t("btn-cancel"));
-        let b = super::button_row(ui.ctx(), body.right() - 16.0, y, &[&ok_l, &cancel_l], 76.0, 23.0, 8.0);
+        let b = match custom {
+            Some((_, b)) => b.to_vec(),
+            None => super::button_row(ui.ctx(), body.right() - 16.0, y, &[&ok_l, &cancel_l], 76.0, 23.0, 8.0),
+        };
         if push_button(ui, b[0], &ok_l, true, valid) {
             result = Some(true);
         }
