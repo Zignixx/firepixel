@@ -73,7 +73,7 @@ pub enum UiRequest {
     Input(serde_json::Value),
     /// Widgets/Texte der Oberfläche suchen (`ui_find`): `{"text": "Datei", "role": "button"}`.
     Find(serde_json::Value),
-    /// Datei-Dialog der Oberfläche abfragen/beantworten (`ui_file_dialog`): `{"action": "status"|"cancel"|"choose", "path"?}`.
+    /// Datei-Dialog der Oberfläche abfragen/beantworten (`ui_file_dialog`): `{"action": "status"|"set"|"cancel"|"choose", "path"?, "append_fw_png"?, "open_untitled"?, "open_as_animation"?}`.
     FileDialog(serde_json::Value),
 }
 

@@ -373,6 +373,11 @@ die Brücke antwortet. Leinwand, Menüs und Kürzel sind wie bei einem modalen D
   Startordner, vorgeschlagenen Namen und die letzten Ereignisse. Beantworten:
   `{"action": "choose", "path": "…"}` (mehrere bei `open_many`: `"paths": […]`) oder `{"action": "cancel"}`.
   Der Nutzer kann denselben Dialog auch selbst ausfüllen.
+  Zusatzkästchen (nur im Dialog in der App; `ui_file_dialog {}` zeigt ihren Stand): `"append_fw_png"`
+  („.fw.png anhängen“, Speichern unter mit Typ FW-PNG), `"open_untitled"` („Als „Unbenannt“ öffnen“) und
+  `"open_as_animation"` („Als Animation öffnen“, wirkt ab zwei Dateien). Sie gelten zusammen mit `choose`,
+  z. B. `{"action": "choose", "paths": ["a.png", "b.png"], "open_as_animation": true}`, oder einzeln mit
+  `{"action": "set", "open_untitled": true}` (Dialog bleibt offen).
 * **Ohne Brücke** bzw. mit `FP_FILE_DIALOG=native`: der Windows-Dialog läuft in einem eigenen Thread, mit
   dem Hauptfenster als Besitzer (zentriert darüber, modal, kein eigener Taskleisten-Knopf).
   `ui_file_dialog` kann ihn auch dann beantworten, das Windows-Fenster bleibt aber sichtbar, bis es

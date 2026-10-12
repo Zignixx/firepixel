@@ -398,10 +398,33 @@ pub(crate) fn at(key: &str) -> String {
     agent_text(|| fp_i18n::t(key))
 }
 
+/// Kästchen des Datei-Dialogs aus den Parametern von `ui_file_dialog` (NZ-5):
+/// `append_fw_png` („.fw.png anhängen“, Speichern unter), `open_untitled` („Als „Unbenannt“ öffnen“)
+/// und `open_as_animation` („Als Animation öffnen“). Fehlt ein Parameter, bleibt das Kästchen, wie es ist.
+pub fn file_dialog_flags(a: &Value) -> [Option<bool>; 3] {
+    ["append_fw_png", "open_untitled", "open_as_animation"].map(|k| a.get(k).and_then(Value::as_bool))
+}
+
+/// Setzt die Kästchen aus `a`, wenn welche angegeben sind ([`file_dialog_flags`]).
+fn apply_file_dialog_flags(a: &Value) -> Result<(), String> {
+    match file_dialog_flags(a) {
+        [None, None, None] => Ok(()),
+        [fw, untitled, animation] => crate::file_dialog::set_flags(fw, untitled, animation),
+    }
+}
+
 /// MCP-Werkzeug `ui_file_dialog`: Zustand des Datei-Dialogs bzw. Antwort darauf.
 fn ui_file_dialog(a: &Value) -> UiReply {
     match a.get("action").and_then(Value::as_str).unwrap_or("status") {
         "status" => UiReply::Json(crate::file_dialog::status_json()),
+        // nur die Kästchen setzen, Dialog bleibt offen
+        "set" => match file_dialog_flags(a) {
+            [None, None, None] => UiReply::Error("append_fw_png | open_untitled | open_as_animation".into()),
+            _ => match apply_file_dialog_flags(a) {
+                Ok(()) => UiReply::Json(crate::file_dialog::status_json()),
+                Err(e) => UiReply::Error(e),
+            },
+        },
         "cancel" => match crate::file_dialog::answer(Vec::new()) {
             Ok(v) => UiReply::Json(v),
             Err(e) => UiReply::Error(e),
@@ -418,11 +441,15 @@ fn ui_file_dialog(a: &Value) -> UiReply {
             // „Speichern unter“: Dateityp (Index in den Filtern) und „Als Kopie speichern“ (EB-2)
             let filter = a.get("filter").and_then(Value::as_u64).map(|i| i as usize);
             let copy = a.get("save_as_copy").and_then(Value::as_bool);
+            // Kästchen vor der Antwort setzen, damit sie in die Wahl eingehen (NZ-5)
+            if let Err(e) = apply_file_dialog_flags(a) {
+                return UiReply::Error(e);
+            }
             match crate::file_dialog::answer_with(paths, filter, copy) {
                 Ok(v) => UiReply::Json(v),
                 Err(e) => UiReply::Error(e),
             }
         }
-        other => UiReply::Error(format!("action: status | cancel | choose ({other})")),
+        other => UiReply::Error(format!("action: status | set | cancel | choose ({other})")),
     }
 }

@@ -87,6 +87,10 @@ mcp-tool-ui_file_dialog-path = Datei oder Ordner für choose
 mcp-tool-ui_file_dialog-paths = mehrere Dateien (Öffnen-Dialoge mit Mehrfachauswahl)
 mcp-tool-ui_file_dialog-filter = Speichern unter: Dateityp als Index in filters (z. B. Reduziertes PNG); ohne = der im Dialog gewählte
 mcp-tool-ui_file_dialog-save_as_copy = Speichern unter: „Als Kopie speichern“ (das Dokument behält Namen und Art)
+mcp-tool-ui_file_dialog-action = status (Vorgabe), set (nur Kästchen setzen, Dialog bleibt offen), cancel oder choose
+mcp-tool-ui_file_dialog-append_fw_png = Speichern unter, Typ FW-PNG: „.fw.png anhängen“ (Vorgabe an); mit set oder choose
+mcp-tool-ui_file_dialog-open_untitled = Öffnen: „Als „Unbenannt“ öffnen“ (Dokument ohne Dateinamen); mit set oder choose
+mcp-tool-ui_file_dialog-open_as_animation = Öffnen mit mehreren Dateien: „Als Animation öffnen“ (je Datei ein Status in einem unbenannten Dokument); mit set oder choose
 # <<< UE-3 Werkzeuge
 
 # >>> UE-3 Meldungen

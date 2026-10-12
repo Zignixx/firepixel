@@ -106,6 +106,31 @@ fn runtime_sources_build_profile_paths_only_centrally() {
     assert!(hits.is_empty(), "profile paths outside fp_i18n::profile:\n{}", hits.join("\n"));
 }
 
+/// Home folder and known user folders (Documents, Pictures …) also come only from
+/// `fp_i18n::profile` (`known_folder`), so that test runs see the test profile (NZ-5).
+#[test]
+fn runtime_sources_take_user_folders_from_the_profile_guard() {
+    let root = root();
+    let needles = ["home_dir(", "dirs::", "directories::", "SHGetKnownFolderPath", "var_os(\"HOME\")", "var(\"HOME\")"];
+    let mut hits = Vec::new();
+    for f in files(&root, "src") {
+        let r = rel(&root, &f);
+        if r.ends_with("fp-i18n/src/profile.rs") {
+            continue;
+        }
+        let Ok(text) = std::fs::read_to_string(&f) else { continue };
+        for (i, line) in text.lines().enumerate() {
+            let c = code(line);
+            // whole word only (`model_dirs::` or `my_home_dir(` are not meant)
+            let word = |n: &str| c.match_indices(n).any(|(p, _)| !c[..p].ends_with(|ch: char| ch.is_alphanumeric() || ch == '_'));
+            for n in needles.iter().filter(|n| word(n)) {
+                hits.push(format!("{r}:{}: {n} – use fp_i18n::profile::known_folder(): {}", i + 1, line.trim()));
+            }
+        }
+    }
+    assert!(hits.is_empty(), "user folders outside fp_i18n::profile:\n{}", hits.join("\n"));
+}
+
 #[test]
 fn tests_use_no_direct_profile_paths() {
     let root = root();

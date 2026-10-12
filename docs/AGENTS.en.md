@@ -372,6 +372,11 @@ answering. Canvas, menus and shortcuts are locked as with a modal dialog
   title, filters, start folder, suggested name and the latest events. Answer it with
   `{"action": "choose", "path": "…"}` (several for `open_many`: `"paths": […]`) or `{"action": "cancel"}`.
   The user can also fill in the same dialog.
+  Extra check boxes (only in the dialog inside the app; `ui_file_dialog {}` shows their state):
+  `"append_fw_png"` ("Append .fw.png", Save As with type FW-PNG), `"open_untitled"` ("Open as Untitled")
+  and `"open_as_animation"` ("Open as Animation", takes effect from two files on). They apply together with
+  `choose`, e.g. `{"action": "choose", "paths": ["a.png", "b.png"], "open_as_animation": true}`, or on
+  their own with `{"action": "set", "open_untitled": true}` (the dialog stays open).
 * **Without the bridge** or with `FP_FILE_DIALOG=native`: the Windows dialog runs in its own thread, owned
   by the main window (centered above it, modal, no taskbar button of its own). `ui_file_dialog` can
   answer it then as well, but the Windows window stays visible until it is closed

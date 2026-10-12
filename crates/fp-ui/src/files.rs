@@ -97,12 +97,11 @@ impl DialogKind {
     }
 }
 
-/// Ordner „Dokumente“ des Nutzers (Rückfall aller Datei-Dialoge).
+/// Ordner „Dokumente“ des Nutzers (Rückfall aller Datei-Dialoge), sonst sein Home-Ordner.
+/// Über den Profil-Wächter: im Testlauf liegt er im Testprofil, nie im echten Profil (NZ-5).
 pub fn documents_dir() -> Option<PathBuf> {
     // nur gelesen, nie beschrieben (Startordner des Dialogs)
-    let home = std::env::home_dir()?;
-    let docs = home.join("Documents");
-    Some(if docs.is_dir() { docs } else { home })
+    fp_i18n::profile::known_folder(fp_i18n::profile::KnownFolder::Documents)
 }
 
 /// Vorlagenordner (`%APPDATA%\Firepixel\Templates`, im Testlauf im Testprofil).

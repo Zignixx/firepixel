@@ -408,11 +408,14 @@ pub fn tool_defs() -> Vec<ToolDef> {
             description: String::new(),
             schema: obj(
                 json!({
-                    "action": {"type": "string", "enum": ["status", "cancel", "choose"], "default": "status"},
+                    "action": {"type": "string", "enum": ["status", "set", "cancel", "choose"], "default": "status"},
                     "path": {"type": "string"},
                     "paths": {"type": "array", "items": {"type": "string"}},
                     "filter": {"type": "integer", "minimum": 0},
-                    "save_as_copy": {"type": "boolean"}
+                    "save_as_copy": {"type": "boolean"},
+                    "append_fw_png": {"type": "boolean"},
+                    "open_untitled": {"type": "boolean"},
+                    "open_as_animation": {"type": "boolean"}
                 }),
                 &[],
             ),
