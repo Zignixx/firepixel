@@ -32,6 +32,7 @@ Stand: 39 Zeilen (vorher 42), davon 1 ✅ und 38 ⏳. Bereiche: 1 Leinwand und W
 | NZ-1 | `ec4ac99` | W21: Rechteck-Werkzeug, Texturliste aufklappen → so breit wie der längste Name („Kreuzschraffur 3“, „Linie waagerecht …“ ganz lesbar, vgl. `fv10_W21_original_texturliste.png`); Musterliste am gewählten Rechteck ebenso; in en und qps nichts abgeschnitten (sonst „…“ mit Tooltip) | Brücke + Bild | ⏳ |
 | NZ-1 | `ec4ac99` | Barrierefreiheit: `ui_find {"role": "button"}` findet im Text-Inspektor „+“/„−“ (Live-Filter), F/K/U, „ab/cd“, Ausrichtungen, Stil-Knöpfe, Werkzeugknöpfe, Fensterknöpfe, Dock- und Fußleistenknöpfe mit übersetztem Namen (de und en); Klick über `center` von „Live-Filter hinzufügen …“ öffnet das Menü | Brücke | ⏳ |
 | KI-2 | `39c6e6a` | N21 Toleranz/Ausdehnen per **Tippen** ins Inspektorfeld (Klick, Strg+A, „80“, Eingabe) bei Motiv und Objekt → Wert bleibt stehen, Auswahl wird nachgestellt (in der Brücken-Instanz auf Stand vor `fc7df14` sprang das Feld zurück; mit DLG-1 behoben, nachprüfen) | Brücke | ⏳ |
+| NZ-2 | `8a79ab9` | N24 Schriftliste: Text wählen bzw. Textwerkzeug, Schriftliste im Inspektor aufklappen → rechts eine sichtbare Leiste mit Griff (Normal, Dunkel, OLED; ohne Maus darüber), Griff kurz = Liste geht weiter; Griff ziehen blättert flüssig, Liste bleibt offen, Auswahl unverändert; Mausrad blättert; „ar“ tippen → Leiste verschwindet bzw. wird kürzer, wenn die Treffer passen; dasselbe im Texteditor (Text ▸ Editor). Keine Bilder mit echten Schriftnamen ablegen (§1a) | Brücke | ⏳ |
 
 ## 3. Dialoge
 

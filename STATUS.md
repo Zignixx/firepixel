@@ -1083,3 +1083,38 @@ Dialog `crates\fp-ui\src\dialogs\trace.rs` mit der Logo-Nachbearbeitung von VT-3
 - **Fremde Dateien (im Auftrag):** `fp-export\src\lib.rs` (eine `pub mod`-Zeile), `fp-ui\src\bridge.rs` (Parameter `filter`/`save_as_copy`), `fp-mcp\src\tools.rs` (Schema), `fp-ui\tests\file_dialogs_dlg3.rs` (Typliste um Reduziertes PNG erweitert), `docs\AGENTS(.en).md` (Ablauf).
 - **Geprüft (§7a):** neu `crates\fp-ui\tests\flattened_png_eb2.rs` 8 Tests (Formatabbildung inkl. Farbtyp/sBIT/PLTE in der Datei, Chunk-Liste ohne private Chunks und tEXt-Reihenfolge/Datum, Pixel gleich `file.export` für PNG 32/24/8 und GIF→PNG 8, Kopie ja/nein mit Pfad/Titel/Art/geändert/Ebenen und Strg+S wieder flach, zurück zu FW-PNG, Engine-Parameter, Typ über Filter, Dialogbeschreibung de/en, kittest der Zusatzfelder de/en), `fp-export` `flat_png` 1, `file_dialogs_dlg3` 9 grün; `cargo check --workspace --all-targets`, `cargo test -p fp-i18n -p fp-neutral`, `fp-mcp`, Scanner `i18n_keine_festen_texte` grün; clippy ohne Warnungen in eigenen Dateien. Nachprüfung im Fenster: `docs\NACHPRUEFUNG.md` §4 (3 Zeilen EB-2).
 - **Aufgeräumt:** Worktree `..\fp-eb2` und `target-eb2` gelöscht.
+
+## Phase 7 – NZ-2 (rote Tests wieder grün, N24, ai_tuning_ki2) – Stand 12.10.2026
+
+- **`image_preview_p2` (2 Tests), `56ce03e`: Fehler im Test, nicht im Code.**
+  - Ursache: Seit NZ-1 (`ec4ac99`) haben die Symbolknöpfe des Optimieren-Bedienfelds (`fields::icon_button`) Barrierefreiheits-Knoten. Ihre Namen lauten wie die Knöpfe der Bildvorschau („Farbe bearbeiten“, „Farbe zu Transparenz hinzufügen“, „Farbe sperren“ …). Der Test nahm den ersten Treffer. Das war der graue Knopf im Bedienfeld hinter dem Dialog: „… aktiv“ schlug fehl, und der Klick darauf traf den Hintergrund des modalen Dialogs und schloss ihn („Bildvorschau offen“).
+  - Korrektur: Die Hilfsfunktionen suchen nur innerhalb von `dialog_rect(DIALOG_ID)`.
+  - Der Code ist richtig. Dass ein Klick neben einen modalen Dialog ihn schließt, ist aber ein eigener Befund für DLG (`Modal::should_close`).
+- **`clipping_audit`, `efbe9e8`:** 8 neue Funde, alle begründet in die Erlaubnisliste aufgenommen, mit Kommentar.
+  - KI-Hinweis `pi-ai-object-hint2` (neuer Wortlaut) → R2-1
+  - Dokumentbibliothek „Grafik/Schaltfläche“ (6): `panels\common.rs` `list_frame` hält 24 px Mindesthöhe und reicht im 800 × 512-pt-Fenster über die Fußleiste. Das ist alt, sichtbar erst seit NZ-1 durch die neuen Knoten der Fußleistenknöpfe. Befund IBD/RAND-2.
+  - Bildvorschau „Browseranzeige mit Zeilensprungverfahren“: Das Kästchen ist 30 px zu schmal, `options.rs` ist gerade bei BV-3 in Arbeit. Befund BV.
+  - Kein reiner Abstandsfehler darunter, deshalb nichts im Code geändert. Schneller Lauf grün auf `1a56ce8`.
+- **`ux_b_abgleich`, `1a56ce8`: Ursache gefunden.**
+  - Jede Sonde macht Bilder. Dabei legt egui_kittest je Harness einen eigenen wgpu-Renderer an, mit eigener Instanz und eigenem Gerät. Neun gleichzeitig führen zu einer Zugriffsverletzung.
+  - Gemessen: 6/30 Läufe stürzen ab, mit abgeschalteten Bildern 0/30.
+  - Korrektur: Ein Mutex in `shell_off()` hält jeden Test vom Anfang bis nach dem Abbau des Harness. Danach 30/30 grün, Laufzeit 8 → 13 s. Kein `--test-threads 1` mehr nötig.
+  - Die Datei bleibt eigener Prozess, Grund steht im `Cargo.toml`: Im Programm `all` kämen die Renderer anderer Dateien dazu. Für INF ist das ein Befund, mögliche Ursache für Abstürze von `all`.
+- **`canvas::tests::shortcuts_respect_focus_text_editor_and_dialogs`, `5b41c8a`/`12f01dd`: Die Systemzwischenablage war nicht die Ursache.**
+  - Der Test fasst sie nachweislich nicht an: `os_clipboard = false`, Text-Kopieren erzeugt nur `OutputCommand::CopyText`, Einfügen kommt als `Event::Paste`.
+  - Ursache: `file_dialog::is_open()` nutzte `try_lock` und meldete bei belegter Sperre „offen“. `file_dialog::frame` sperrt in jedem Bild jeder App-Instanz, also auch in parallel laufenden Oberflächentests. Für dieses Bild war `DialogState::any_open()` dann wahr, und `input::handle` verwarf Strg+C/V, Text und Esc.
+  - Korrektur: `is_open` wartet auf die Sperre. Fortsetzungen laufen erst nach dem Freigeben, unter der Sperre ruft niemand `is_open`. Neuer Einheitstest `is_open_ignores_a_lock_held_by_another_instance`.
+  - Nicht nachgestellt: in 14 Läufen der lib-Tests rot, davon 9 gleichzeitig. Die Ursache ist aus dem Code belegt. Dieselbe Sperre erklärt auch das gelegentliche Wackeln anderer Oberflächentests (INF-1-Hinweis zu `dialogs_ux`/`_move`/`_open`).
+  - Panne: `5b41c8a` hatte die frisch committeten EB-2-Änderungen (`f5169d8`) in `file_dialog.rs` überschrieben. Ich hatte die Datei aus dem älteren Worktree kopiert. `12f01dd` stellt sie wieder her; der Unterschied zu `f5169d8` sind jetzt nur die 30 Zeilen von NZ-2.
+- **Nutzerbefund N24, `8a79ab9`: Schriftliste ohne Bildlaufleiste.**
+  - Ursache: egui zeichnet den Griff in `widgets.inactive.bg_fill`, die Spur in `extreme_bg_color`, und in allen drei Designs sind beide `field_bg`. Der Griff war also unsichtbar, bis die Maus darauf lag.
+  - Korrektur: `inspector\fonts.rs` `list_scrollbar_style`, nur für diese Liste. Spur und Griff haben die Farben der Leinwand-Bildlaufleisten (`scrollbar_bg`/`scrollbar_thumb`), 8 px breit; unter der Maus bzw. beim Ziehen ist der Griff kräftiger. Weiter `show_rows`, es werden also nur die sichtbaren Zeilen gezeichnet.
+  - Test `font_list_scroll_nz2` (2): Erfundene Namen („Testschrift 000…299“) statt Systemschriften (§1a). Geprüft in 3 Designs: Leiste da, Griff < 20 % der Spur, Kontrast zu Spur und Menügrund, höchstens 22 gezeichnete Zeilen. Griff über 20 Bilder ziehen → Mitte der Liste, Liste bleibt offen, nichts gewählt. Mausrad blättert zurück.
+  - Dasselbe Problem gilt app-weit für alle egui-Listen: Befund HG (`theme.rs`).
+  - Nachprüfung im echten Fenster steht in `NACHPRUEFUNG.md` §2. N24 steht auf 🔧.
+- **Zusatz `ai_tuning_ki2` (fp-engine), `1a56ce8`:** Die Datei ist jetzt ein eigener Prozess (`[[test]]` mit Grund: prozessweiter KI-Zwischenspeicher), `mod common;` statt `use crate::common;`. 5/5 grün, nicht mehr in `all`.
+- **Geprüft:**
+  - Grün: `cargo check --workspace --all-targets` ohne Warnungen (Stand `12f01dd`), `cargo test -p fp-i18n -p fp-neutral`, Scanner `i18n_keine_festen_texte`
+  - Grün: `image_preview_p2` 7/7, `font_list_scroll_nz2` 2/2, `clipping_audit` (schnell), `ux_b_abgleich` 30/30 parallel, `fp-ui --lib` (`canvas::`, `file_dialog::`), `ai_tuning_ki2` 5/5
+  - Keine Prüfung im Fenster. Worktree `..\fp-nz2` und `target-nz2` sind gelöscht.
+- **Offen (Befunde):** IBD `list_frame`, DLG Klick neben modalen Dialog, HG Bildlaufleisten app-weit, INF wgpu-Renderer im Programm `all` (und AGENTEN_REGELN §2 zu `ux_b_abgleich` aktualisieren), BV Zeilensprung-Kästchen.
