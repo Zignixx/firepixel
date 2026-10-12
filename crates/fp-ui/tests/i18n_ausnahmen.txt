@@ -1,0 +1,32 @@
+# Ausnahmen für den Scanner i18n_keine_festen_texte.rs (I18N-KERN pflegt die Liste).
+#
+# Zeilen ohne Präfix: erlaubte Wörter (Eigennamen, Formatnamen, Einheiten, Symbole), getrennt
+# durch Leerzeichen, Groß-/Kleinschreibung zählt.
+# „text <Datei> | <Literal>“: genau dieses Literal in dieser Datei erlauben (z. B. `text menu.rs | Firepixel Hilfe`),
+# „text <Literal>“: überall. Bitte mit Kommentar, warum der Text fest bleibt.
+
+# Eigennamen
+Firepixel Segoe UI Arial Tahoma Verdana Times New Roman Consolas Courier Microsoft YaHei Yu Gothic Malgun Gothic Meiryo
+Claude MCP JSF JavaScript Windows Explorer Unicode UTF ASCII SAM BiRefNet ONNX GitHub Hugging Face
+
+# Sprachen in ihrem Eigennamen (Sprachwahl)
+Deutsch English Français Español Italiano Português Nederlands Polski Русский Ελληνικά
+
+# Dateiformate und Fachkürzel
+PNG FW-PNG JPEG JPG GIF WebP AVIF BMP TIFF TIF SVG PSD ICO QOI APNG JXL TGA EPS PDF HTML HTM CSS URL XML JSON
+RGB RGBA ARGB HSB HSL HSV CMYK Hex LAB sRGB DPI PPI dpi ppi Lab
+fw png jpg gif webp avif bmp tiff svg psd ico qoi apng jxl tga eps htm html css jsf js
+
+# Einheiten und Symbole
+px pt mm cm in ms KB MB GB TB
+
+# Tasten (stehen in key-* bzw. kommen aus shortcut_label)
+Ctrl Shift Alt Esc Tab Num
+
+# Dateien, die nur auf UI-Aufrufe geprüft werden (Fehlertexte für KI-Agenten der MCP-Brücke, Sprache
+# der Agenten: siehe fp_i18n::with_language)
+nur-ui fp-ui/src/bridge
+
+# Symbole
+text glyphs.rs | AV
+text styles.rs | Aa
