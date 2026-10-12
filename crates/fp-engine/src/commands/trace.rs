@@ -1,7 +1,9 @@
 //! Modifizieren ▸ Bitmap nachzeichnen… (`modify.traceBitmap`): ausgewählte Bitmaps über
 //! [`fp_trace`] in gefüllte Vektorpfade umwandeln. Ergebnis je Bitmap eine Gruppe gefüllter
 //! Pfade (ohne Strich) auf einer neuen Ebene über der aktuellen; ein Verlaufsschritt.
-//! Der Dialog mit Live-Vorschau (fp-ui) ruft diesen Befehl mit den gewählten Optionen auf.
+//! Der Dialog mit Live-Vorschau (fp-ui) ruft diesen Befehl mit den gewählten Optionen auf und
+//! bietet vorher sein fertiges Vorschauergebnis an ([`offer_prepared`]): Stimmen Bild und Optionen
+//! überein, wird es übernommen statt neu gerechnet (VT-4).
 
 use super::edit::add_layer;
 use super::{ids_json, sel_err, selected_elements, take_ids, with_doc};
@@ -13,7 +15,53 @@ use fp_model::layer::LayerKind;
 use fp_model::{Element, ElementId, Fill, PathAttrs};
 use fp_trace::{ColorMode, CurveMode, Hierarchy, Preset, TraceOptions};
 use serde_json::{json, Map, Value};
+use std::cell::{Cell, RefCell};
 use std::sync::Arc;
+
+/// Fertiges Ergebnis der Dialog-Vorschau für genau ein Bild und genau diese Optionen.
+struct Prepared {
+    image: Arc<fp_raster::RgbaImage>,
+    opts: TraceOptions,
+    result: Arc<fp_trace::TraceResult>,
+}
+
+thread_local! {
+    // Befehle laufen im Thread der Oberfläche (bzw. des Aufrufers): je Thread ein Angebot.
+    static PREPARED: RefCell<Option<Prepared>> = const { RefCell::new(None) };
+    static COMPUTED: Cell<u64> = const { Cell::new(0) };
+}
+
+/// Bietet dem nächsten `modify.traceBitmap` in diesem Thread ein fertiges Ergebnis an (Dialog:
+/// letzte Vorschau). Der Befehl übernimmt es für eine Bitmap mit genau diesem Bild, wenn seine
+/// Optionen (validiert) gleich sind; sonst rechnet er wie immer. Das Angebot gilt für einen Aufruf.
+pub fn offer_prepared(image: Arc<fp_raster::RgbaImage>, opts: &TraceOptions, result: Arc<fp_trace::TraceResult>) {
+    PREPARED.with(|p| *p.borrow_mut() = Some(Prepared { image, opts: opts.validated(), result }));
+}
+
+/// Verwirft ein nicht benutztes Angebot.
+pub fn clear_prepared() {
+    PREPARED.with(|p| p.borrow_mut().take());
+}
+
+/// Zahl der Bilder, die `modify.traceBitmap` in diesem Thread tatsächlich nachgezeichnet hat
+/// (übernommene Vorschauergebnisse zählen nicht) – für Tests und Diagnose.
+pub fn computed_traces() -> u64 {
+    COMPUTED.with(Cell::get)
+}
+
+/// Ergebnis für ein Bild: das angebotene, wenn Bild und Optionen passen, sonst neu gerechnet.
+fn trace_or_prepared(img: &fp_raster::RgbaImage, opts: &TraceOptions) -> Result<fp_trace::TraceResult> {
+    let hit = PREPARED.with(|p| {
+        let mut p = p.borrow_mut();
+        let ok = p.as_ref().is_some_and(|q| q.opts == *opts && *q.image == *img);
+        if ok { p.take().map(|q| q.result) } else { None }
+    });
+    if let Some(r) = hit {
+        return Ok((*r).clone());
+    }
+    COMPUTED.with(|c| c.set(c.get() + 1));
+    fp_trace::trace(img, opts).map_err(|e| EngineError::Failed(e.to_string()))
+}
 
 fn enum_kind(values: &[&str]) -> ParamKind {
     ParamKind::Enum { values: values.iter().map(|s| s.to_string()).collect() }
@@ -121,6 +169,20 @@ pub(crate) fn options_from_params(p: &Params) -> Result<TraceOptions> {
     if let Some(v) = p.opt_bool("downscale")? {
         o.downscale = v;
     }
+    // Logo-Nachbearbeitung: `true`/`false` schaltet sie mit den Werten der Vorgabe, ein Objekt
+    // überschreibt einzelne Schalter (camelCase wie in `RefineOptions`).
+    match p.get("refine") {
+        None | Some(Value::Null) => {}
+        Some(Value::Bool(b)) => o.refine.enabled = *b,
+        Some(Value::Object(m)) => {
+            let mut base = serde_json::to_value(&o.refine).map_err(|_| bad("refine"))?;
+            for (k, v) in m {
+                base[k.as_str()] = v.clone();
+            }
+            o.refine = serde_json::from_value(base).map_err(|_| bad("refine"))?;
+        }
+        Some(_) => return Err(bad("refine")),
+    }
     Ok(o.validated())
 }
 
@@ -169,6 +231,7 @@ pub(crate) fn register(r: &mut CommandRegistry) {
             .opt("threshold", int(0, 255), "Schwarzweiß: Helligkeitsschwelle")
             .opt("maxPixels", ParamKind::Integer { min: Some(0), max: Some(fp_trace::HARD_PIXEL_LIMIT as i64) }, "größere Bilder herunterskalieren (0 = nur feste Obergrenze)")
             .opt("downscale", ParamKind::Bool, "zu große Bilder herunterskalieren statt abzulehnen")
+            .opt("refine", ParamKind::Json, "Logo-Nachbearbeitung: true/false oder Objekt (enabled, snapColors, colorTolerance, straighten, snapAngle, shapes, shapeTolerance, reduceNodes, fitTolerance, closeGaps, symmetry, fast); fehlt: wie die Vorgabe")
             .opt_default("keepOriginal", ParamKind::Bool, json!(true), "Original-Bitmap behalten (false = löschen)")
             .opt("layerName", ParamKind::String, "Name der neuen Ebene")
             .run(|s, p| {
@@ -190,9 +253,17 @@ pub(crate) fn register(r: &mut CommandRegistry) {
                     // Erst alles nachzeichnen (ohne Dokumentänderung), dann einfügen.
                     let mut results = Vec::with_capacity(bitmaps.len());
                     for (id, img, name) in &bitmaps {
-                        let r = fp_trace::trace(img, &opts).map_err(|e| EngineError::Failed(e.to_string()))?;
+                        let r = trace_or_prepared(img, &opts);
+                        let r = match r {
+                            Ok(r) => r,
+                            Err(e) => {
+                                clear_prepared();
+                                return Err(e);
+                            }
+                        };
                         results.push((*id, r, name.clone()));
                     }
+                    clear_prepared();
                     let (mut paths, mut nodes, mut downscaled) = (0usize, 0usize, false);
                     let mut groups = Vec::new();
                     {
@@ -238,4 +309,62 @@ pub(crate) fn register(r: &mut CommandRegistry) {
                 })
             }),
     );
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn opts(v: Value) -> TraceOptions {
+        options_from_params(&Params::new("modify.traceBitmap", v)).expect("Optionen")
+    }
+
+    #[test]
+    fn refine_parameter_and_dialog_round_trip() {
+        // fehlt: wie die Vorgabe
+        assert!(opts(json!({})).refine.enabled);
+        assert!(!opts(json!({"preset": "photo"})).refine.enabled);
+        // true/false und Objekt über der Vorgabe
+        assert!(!opts(json!({"refine": false})).refine.enabled);
+        assert!(opts(json!({"preset": "illustration", "refine": true})).refine.enabled);
+        let o = opts(json!({"refine": {"shapes": false, "snapAngle": 9.0}}));
+        assert!(o.refine.enabled && !o.refine.shapes && o.refine.snap_angle == 9.0 && o.refine.straighten);
+        assert!(options_from_params(&Params::new("modify.traceBitmap", json!({"refine": 3}))).is_err());
+        // alle Optionen des Dialogs (serialisiert) kommen unverändert an – Voraussetzung dafür,
+        // dass OK das Vorschauergebnis übernehmen darf
+        for p in Preset::ALL {
+            let mut d = TraceOptions::from_preset(p);
+            d.colors = 23;
+            d.corner_threshold = 77.5;
+            d.max_pixels = 1_234_567;
+            d.refine.enabled = !d.refine.enabled;
+            d.refine.fit_tolerance = 1.7;
+            d.refine.symmetry = true;
+            assert_eq!(opts(serde_json::to_value(&d).expect("JSON")), d.validated(), "{p:?}");
+        }
+    }
+
+    #[test]
+    fn prepared_result_is_used_once_and_only_for_the_same_image_and_options() {
+        let img = fp_raster::RgbaImage::filled(fp_geom::IRect::from_xywh(0, 0, 8, 8), fp_color::Rgba8::new(0, 0, 0, 255)).expect("Bild");
+        let o = TraceOptions::from_preset(Preset::Logo).validated();
+        let fake = Arc::new(fp_trace::TraceResult { paths: Vec::new(), bounds: img.bounds(), traced_width: 8, traced_height: 8 });
+        let n0 = computed_traces();
+        offer_prepared(Arc::new(img.clone()), &o, Arc::clone(&fake));
+        // andere Optionen: neu gerechnet, Angebot bleibt
+        let mut other = o.clone();
+        other.colors = 5;
+        assert!(trace_or_prepared(&img, &other.validated()).expect("Ergebnis").node_count() > 0);
+        assert_eq!(computed_traces(), n0 + 1);
+        // gleiche Optionen und gleiches Bild: übernommen (das leere Kunstergebnis), dann verbraucht
+        assert!(trace_or_prepared(&img, &o).expect("Ergebnis").paths.is_empty());
+        assert_eq!(computed_traces(), n0 + 1);
+        assert!(!trace_or_prepared(&img, &o).expect("Ergebnis").paths.is_empty());
+        assert_eq!(computed_traces(), n0 + 2);
+        // anderes Bild
+        offer_prepared(Arc::new(img.clone()), &o, fake);
+        let img2 = fp_raster::RgbaImage::filled(fp_geom::IRect::from_xywh(0, 0, 8, 8), fp_color::Rgba8::new(9, 0, 0, 255)).expect("Bild");
+        assert!(!trace_or_prepared(&img2, &o).expect("Ergebnis").paths.is_empty());
+        clear_prepared();
+    }
 }

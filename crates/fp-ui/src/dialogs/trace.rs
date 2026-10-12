@@ -12,12 +12,17 @@
 //!   Ziehen verschiebt, Doppelklick passt ein; darunter die **Kennzahlen** (Pfade, Punkte,
 //!   Farben, Übereinstimmung),
 //! * Knopfleiste: „Als SVG speichern…“ und „Original behalten“ links, OK/Abbrechen rechts.
+//! * **Aufräumen** (VT-4, Logo-Nachbearbeitung [`fp_trace::RefineOptions`]): Hauptschalter bei den
+//!   Einstellungen, die einzelnen Schritte mit Toleranzreglern im Abschnitt „Erweitert“; die
+//!   Kennzahlen zeigen dann zusätzlich erkannte Grundformen, eingerastete Geraden und die Knoten
+//!   vorher → nachher ([`fp_trace::RefineReport`]).
 //!
 //! Die Rechnung läuft in einem **Hintergrund-Thread** je Lauf mit eigenem `AtomicBool`; ein neuer
 //! Lauf bricht den alten ab, Regleränderungen werden kurz gesammelt (kein Ruckeln). Die Vorschau
 //! wird überabgetastet gerastert (Kantenglättung) und auf höchstens [`PREVIEW_MAX`] Pixel begrenzt.
-//! **OK** führt `modify.traceBitmap` mit denselben Optionen aus (ein Verlaufsschritt),
-//! **Abbrechen** ändert nichts. Vorgabe, Optionen und „Original behalten“ werden in den
+//! **OK** führt `modify.traceBitmap` mit denselben Optionen aus (ein Verlaufsschritt); passt das
+//! letzte Vorschauergebnis zu den Optionen, wird es dem Befehl angeboten und nicht neu gerechnet
+//! ([`fp_engine::commands::trace::offer_prepared`]). **Abbrechen** ändert nichts. Vorgabe, Optionen und „Original behalten“ werden in den
 //! Voreinstellungen gemerkt ([`PREF_OPTIONS`], [`PREF_KEEP`]).
 
 use super::{dialog_frame_resizable, report_overflow, t, DialogClose, DIALOG_TITLE_H};
@@ -28,7 +33,7 @@ use crate::theme::{mix, with_alpha, Theme};
 use crate::ui_kit::{self, sp, type_scale, BarButton, HeaderIcon, KitIcon, Tone};
 use egui::{pos2, vec2, Align2, Color32, CornerRadius, FontId, Id, Pos2, Rect, Sense, Shape, Stroke, StrokeKind, TextureHandle, Ui, Vec2};
 use fp_raster::RgbaImage;
-use fp_trace::{ColorMode, CurveMode, Hierarchy, Preset, Stage, TraceOptions, TraceResult};
+use fp_trace::{ColorMode, CurveMode, Hierarchy, Preset, RefineReport, Stage, TraceOptions, TraceResult};
 use serde_json::json;
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::sync::mpsc::{self, Receiver, TryRecvError};
@@ -49,6 +54,8 @@ pub const MATCH_TOLERANCE: i32 = 40;
 pub const PREVIEW_MAX: f32 = 1600.0;
 /// Regleränderungen so lange sammeln, bevor ein laufender Lauf ersetzt wird (Sekunden).
 const DEBOUNCE: f64 = 0.15;
+/// Höhe einer Zeile der Kennzahlen.
+const STATS_ROW_H: f32 = 38.0;
 /// Höchstzahl der Konturpunkte in der Konturenansicht.
 const OUTLINE_POINTS_MAX: usize = 150_000;
 
@@ -88,10 +95,14 @@ pub struct Stats {
     pub ms: u64,
     /// Nachgezeichnete Größe, falls verkleinert.
     pub downscaled: Option<(u32, u32)>,
+    /// Kennzahlen des Aufräumens (nur wenn es eingeschaltet war).
+    pub refine: Option<RefineReport>,
 }
 
 /// Fertiges Ergebnis eines Laufs.
 struct Ready {
+    /// Optionen, mit denen gerechnet wurde (validiert).
+    opts: TraceOptions,
     result: Arc<TraceResult>,
     preview: RgbaImage,
     outlines: Vec<Vec<Pos2>>,
@@ -144,6 +155,8 @@ pub struct TraceDialog {
     original_tex: Option<TextureHandle>,
     vector_tex: Option<TextureHandle>,
     result: Option<Arc<TraceResult>>,
+    /// Optionen des Ergebnisses `result` (für die Übernahme bei OK).
+    result_opts: Option<TraceOptions>,
     outlines: Vec<Vec<Pos2>>,
     job: Option<Job>,
     next_run: u64,
@@ -171,8 +184,18 @@ fn selected_bitmaps(st: &AppState) -> Vec<RgbaImage> {
 
 /// Gemerkte Optionen aus den Voreinstellungen (sonst die Vorgabe „Logo“).
 pub fn remembered_options(st: &AppState) -> TraceOptions {
-    let s = st.session.prefs.get_str(PREF_OPTIONS, "");
-    serde_json::from_str::<TraceOptions>(&s).map(|o| o.validated()).unwrap_or_default()
+    options_from_json(&st.session.prefs.get_str(PREF_OPTIONS, ""))
+}
+
+/// Gemerkte Optionen lesen. Ältere Einträge (vor dem Aufräumen) haben kein `refine`: sie bekommen
+/// die Werte der gewählten Vorgabe (Logo: an), nicht „aus“. Ungültig/leer → Vorgabe „Logo“.
+pub fn options_from_json(s: &str) -> TraceOptions {
+    let Ok(v) = serde_json::from_str::<serde_json::Value>(s) else { return TraceOptions::default() };
+    let Ok(mut o) = serde_json::from_value::<TraceOptions>(v.clone()) else { return TraceOptions::default() };
+    if v.get("refine").is_none_or(|r| r.is_null()) {
+        o.refine = TraceOptions::from_preset(o.preset).refine;
+    }
+    o.validated()
 }
 
 /// Öffnet den Dialog für die ausgewählten Bitmaps; `false` ohne Bitmap (der Befehl meldet dann
@@ -207,6 +230,7 @@ impl TraceDialog {
             original_tex: None,
             vector_tex: None,
             result: None,
+            result_opts: None,
             outlines: Vec::new(),
             job: None,
             next_run: 1,
@@ -224,6 +248,16 @@ impl TraceDialog {
     /// Letztes Ergebnis.
     pub fn result(&self) -> Option<&Arc<TraceResult>> {
         self.result.as_ref()
+    }
+
+    /// Letztes Vorschauergebnis, wenn es genau zu den aktuellen Optionen gehört und nichts mehr
+    /// rechnet – OK übernimmt es dann, statt neu zu rechnen.
+    pub fn reusable_result(&self) -> Option<&Arc<TraceResult>> {
+        if self.dirty || self.job.is_some() || self.error.is_some() {
+            return None;
+        }
+        let r = self.result.as_ref()?;
+        (self.result_opts.as_ref() == Some(&self.opts.validated())).then_some(r)
     }
 
     /// Vorgabe wählen: alle Optionen auf deren Werte, sofort neu berechnen.
@@ -299,6 +333,7 @@ impl TraceDialog {
                 let img = egui::ColorImage::from_rgba_unmultiplied([r.preview.width(), r.preview.height()], r.preview.as_bytes());
                 self.vector_tex = Some(ctx.load_texture("fp-trace-vector", img, egui::TextureOptions::LINEAR));
                 self.result = Some(r.result);
+                self.result_opts = Some(r.opts);
                 self.outlines = r.outlines;
                 self.stats = Some(r.stats);
                 self.error = None;
@@ -331,9 +366,16 @@ impl TraceDialog {
 
     // ------------------------------------------------------------------ Anwenden
 
-    /// OK: Befehl ausführen und Werte merken.
+    /// OK: Befehl ausführen und Werte merken. Das fertige Vorschauergebnis wird angeboten
+    /// (keine zweite Rechnung, wenn sich seither nichts geändert hat).
     pub fn apply(&self, st: &mut AppState) -> Result<(), String> {
-        crate::ui_commands::execute(&mut st.session, "modify.traceBitmap", self.command_params()).map_err(|e| e.to_string())?;
+        use fp_engine::commands::trace as cmd_trace;
+        if let Some(r) = self.reusable_result() {
+            cmd_trace::offer_prepared(Arc::clone(&self.source), &self.opts, Arc::clone(r));
+        }
+        let out = crate::ui_commands::execute(&mut st.session, "modify.traceBitmap", self.command_params());
+        cmd_trace::clear_prepared();
+        out.map_err(|e| e.to_string())?;
         self.remember(st);
         Ok(())
     }
@@ -374,7 +416,7 @@ fn stage_code(s: Stage) -> u32 {
 
 fn compute(img: &RgbaImage, opts: &TraceOptions, cancel: &AtomicBool, progress: &AtomicU32, stage: &AtomicU32) -> Option<Result<Ready, String>> {
     let t0 = Instant::now();
-    let res = match fp_trace::trace_with(img, opts, cancel, &mut |p| {
+    let (res, report) = match fp_trace::trace_with_report(img, opts, cancel, &mut |p| {
         // Bild für die Vorschau kommt noch dazu: 90 % für das Nachzeichnen
         progress.store((p.fraction * 0.9).to_bits(), Ordering::Relaxed);
         stage.store(stage_code(p.stage), Ordering::Relaxed);
@@ -405,9 +447,10 @@ fn compute(img: &RgbaImage, opts: &TraceOptions, cancel: &AtomicBool, progress: 
         match_pct,
         ms: t0.elapsed().as_millis() as u64,
         downscaled: res.downscaled().then_some((res.traced_width, res.traced_height)),
+        refine: report,
     };
     progress.store(1f32.to_bits(), Ordering::Relaxed);
-    Some(Ok(Ready { result: Arc::new(res), preview, outlines, stats }))
+    Some(Ok(Ready { opts: opts.clone(), result: Arc::new(res), preview, outlines, stats }))
 }
 
 /// Ergebnis mit Maßstab `s` in ein Bild ab (0, 0) rastern.
@@ -687,6 +730,11 @@ impl TraceDialog {
         ui_kit::section(ui, &t("trace-dlg-presets"));
         ui.add_space(sp::XS);
         self.preset_cards(ui, &theme);
+        if self.opts.preset == Preset::Foto {
+            // ehrlicher Hinweis: Fotos werden zu Farbflächen (kein Pixelbild mehr)
+            ui.add_space(sp::S);
+            ui_kit::notice(ui, Tone::Info, None, &t("trace-photo-note"));
+        }
         ui.add_space(sp::L);
         ui_kit::section(ui, &t("trace-dlg-settings"));
         ui.add_space(sp::XS);
@@ -700,7 +748,13 @@ impl TraceDialog {
         } else if let Some(v) = slider_row(ui, "colors", &t("trace-opt-colors"), o.colors as f64, (2.0, 64.0), 0, 1.0, "", None, true) {
             o.colors = v.round() as u32;
         }
-        if let Some(v) = slider_row(ui, "smooth", &t("trace-opt-smoothness"), o.length_threshold, (3.5, 10.0), 1, 0.5, &px, Some((&t("trace-opt-smoothness-low"), &t("trace-opt-smoothness-high"))), true) {
+        // „Detail und Glätte“: beim Aufräumen die Kurventoleranz, sonst die Mindestlänge der Segmente
+        let ends = (t("trace-opt-smoothness-low"), t("trace-opt-smoothness-high"));
+        if o.refine.enabled {
+            if let Some(v) = slider_row(ui, "smooth", &t("trace-opt-smoothness"), o.refine.fit_tolerance, (0.2, 4.0), 1, 0.1, &px, Some((&ends.0, &ends.1)), true) {
+                o.refine.fit_tolerance = v;
+            }
+        } else if let Some(v) = slider_row(ui, "smooth", &t("trace-opt-smoothness"), o.length_threshold, (3.5, 10.0), 1, 0.5, &px, Some((&ends.0, &ends.1)), true) {
             o.length_threshold = v;
         }
         let deg = fp_i18n::unit("deg");
@@ -711,6 +765,11 @@ impl TraceDialog {
         if let Some(v) = slider_row(ui, "speckle", &t("trace-opt-speckle"), o.filter_speckle as f64, (0.0, 32.0), 0, 1.0, &px, None, true) {
             o.filter_speckle = v.round() as u32;
         }
+        // Aufräumen (Hauptschalter), darunter ein Satz, was es tut
+        if let Some(v) = check_row(ui, "trace-refine", &t("trace-refine"), o.refine.enabled, true) {
+            o.refine.enabled = v;
+        }
+        caption_text(ui, &t("trace-refine-hint"), CHECK_INDENT, true);
         ui.add_space(sp::S);
         // Erweitert (einklappbar)
         let (hr, hresp) = ui.allocate_exact_size(vec2(ui.available_width(), 22.0), Sense::click());
@@ -781,7 +840,49 @@ impl TraceDialog {
         }
     }
 
+    /// Abschnitt „Aufräumen“ im Bereich „Erweitert“: die einzelnen Schritte mit Toleranzreglern.
+    fn refine_ui(&mut self, ui: &mut Ui, o: &mut TraceOptions) {
+        ui_kit::section(ui, &t("trace-refine-section"));
+        ui.add_space(sp::XS);
+        let on = o.refine.enabled;
+        if !on {
+            caption_text(ui, &t("trace-refine-off-hint"), 0.0, true);
+            ui.add_space(sp::XS);
+        }
+        let rf = &mut o.refine;
+        let px = fp_i18n::unit("px");
+        let deg = fp_i18n::unit("deg");
+        let check = |ui: &mut Ui, id: &str, label: &str, v: &mut bool| {
+            if let Some(nv) = check_row(ui, &format!("trace-refine-{id}"), label, *v, on) {
+                *v = nv;
+            }
+        };
+        check(ui, "colors", &t("trace-refine-colors"), &mut rf.snap_colors);
+        if let Some(v) = tolerance_row(ui, "colors", &t("trace-refine-colors-tol"), rf.color_tolerance, (8.0, 128.0), 0, 1.0, "", on && rf.snap_colors) {
+            rf.color_tolerance = v;
+        }
+        check(ui, "lines", &t("trace-refine-lines"), &mut rf.straighten);
+        if let Some(v) = tolerance_row(ui, "lines", &t("trace-refine-lines-tol"), rf.snap_angle, (0.0, 15.0), 1, 0.5, &deg, on && rf.straighten) {
+            rf.snap_angle = v;
+        }
+        check(ui, "shapes", &t("trace-refine-shapes"), &mut rf.shapes);
+        if let Some(v) = tolerance_row(ui, "shapes", &t("trace-refine-shapes-tol"), rf.shape_tolerance, (0.25, 5.0), 2, 0.25, &px, on && rf.shapes) {
+            rf.shape_tolerance = v;
+        }
+        check(ui, "nodes", &t("trace-refine-nodes"), &mut rf.reduce_nodes);
+        if let Some(v) = tolerance_row(ui, "nodes", &t("trace-refine-nodes-tol"), rf.fit_tolerance, (0.2, 4.0), 1, 0.1, &px, on) {
+            rf.fit_tolerance = v;
+        }
+        check(ui, "gaps", &t("trace-refine-gaps"), &mut rf.close_gaps);
+        check(ui, "symmetry", &t("trace-refine-symmetry"), &mut rf.symmetry);
+        caption_text(ui, &t("trace-refine-tol-hint"), 0.0, on);
+        ui.add_space(sp::M);
+        ui_kit::section(ui, &t("trace-dlg-tracing"));
+        ui.add_space(sp::XS);
+    }
+
     fn advanced_ui(&mut self, ui: &mut Ui, o: &mut TraceOptions) {
+        self.refine_ui(ui, o);
         let labels = [
             t("trace-opt-color-mode"),
             t("trace-opt-curves"),
@@ -924,8 +1025,8 @@ impl TraceDialog {
             let shown = ui_kit::elide(&ctx, &txt, &font, state_r.width());
             ui.painter().text(pos2(state_r.right(), state_r.center().y), Align2::RIGHT_CENTER, shown, font, col);
         }
-        // Kennzahlen unten, Hinweise darüber
-        let stats_h = 38.0;
+        // Kennzahlen unten (mit Aufräumen zweizeilig), Hinweise darüber
+        let stats_h = if self.stats.as_ref().is_some_and(|s| s.refine.is_some()) { 2.0 * STATS_ROW_H } else { STATS_ROW_H };
         let stats_r = Rect::from_min_max(pos2(area.left(), area.bottom() - stats_h), area.max);
         let mut notices: Vec<(Tone, String)> = Vec::new();
         if self.bitmaps > 1 {
@@ -1208,7 +1309,31 @@ impl TraceDialog {
         let p = ui.painter();
         p.rect_filled(r, CornerRadius::same(4), ui_kit::card_bg(theme));
         p.rect_stroke(r, CornerRadius::same(4), Stroke::new(1.0, if theme.glow { c.line_dark } else { c.list_border }), StrokeKind::Inside);
+        let line = if theme.glow { c.line_dark } else { c.list_border };
         let s = self.stats.as_ref();
+        let r = if let Some(rep) = s.and_then(|s| s.refine.as_ref()) {
+            // zweite Zeile: Aufräumen (Grundformen, Geraden, Knoten vorher → nachher); die
+            // Trennlinien stehen unter denen der ersten Zeile
+            let top = Rect::from_min_size(r.min, vec2(r.width(), STATS_ROW_H));
+            let low = Rect::from_min_max(pos2(r.left(), top.bottom()), r.max);
+            p.hline((low.left() + 8.0)..=(low.right() - 8.0), low.top(), Stroke::new(1.0, line));
+            let n = |v: usize| fp_i18n::fmt_number(v as f64, 0, 0);
+            let cells = [
+                (t("trace-stat-shapes"), n(rep.shape_count()), fp_i18n::tr!("trace-stat-shapes-tip", circles = rep.circles as f64, ellipses = rep.ellipses as f64, rectangles = rep.rectangles as f64, rounded = rep.rounded_rectangles as f64)),
+                (t("trace-stat-lines"), n(rep.snapped_lines), fp_i18n::tr!("trace-stat-lines-tip", snapped = rep.snapped_lines as f64, lines = rep.lines as f64)),
+                (t("trace-stat-nodes"), format!("{} → {}", n(rep.nodes_before), n(rep.nodes_after)), t("trace-stat-nodes-tip")),
+            ];
+            let weights = [1.0f32, 1.0, 2.45];
+            self.stat_cells(ui, low, theme, &weights, cells.iter().map(|(l, v, _)| (l.as_str(), v.as_str())), None);
+            for (i, (_, _, tip)) in cells.iter().enumerate() {
+                let x0 = low.left() + low.width() * weights[..i].iter().sum::<f32>() / weights.iter().sum::<f32>();
+                let cr = Rect::from_min_size(pos2(x0, low.top()), vec2(low.width() * weights[i] / weights.iter().sum::<f32>(), low.height()));
+                let _ = ui.interact(cr, Id::new(("trace-refine-tip", i)), Sense::hover()).on_hover_text(tip.as_str());
+            }
+            top
+        } else {
+            r
+        };
         let dash = "–".to_string();
         let items = [
             (t("trace-stat-paths"), s.map(|s| fp_i18n::fmt_number(s.paths as f64, 0, 0)).unwrap_or_else(|| dash.clone())),
@@ -1218,36 +1343,45 @@ impl TraceDialog {
         ];
         // „Übereinstimmung“ bekommt mehr Platz (längste Beschriftung)
         let weights = [1.0f32, 1.0, 1.0, 1.45];
+        let dot = s.map(|s| if s.match_pct >= 97.0 { c.icon_green } else if s.match_pct >= 85.0 { c.icon_yellow } else { c.icon_red });
+        self.stat_cells(ui, r, theme, &weights, items.iter().map(|(l, v)| (l.as_str(), v.as_str())), dot.map(|d| (3, d)));
+        let total: f32 = weights.iter().sum();
+        let x0 = r.left() + r.width() * weights[..3].iter().sum::<f32>() / total;
+        let cr = Rect::from_min_max(pos2(x0, r.top()), r.max);
+        let _ = ui.interact(cr, Id::new("trace-match-tip"), Sense::hover()).on_hover_text(t("trace-stat-match-tip"));
+    }
+
+    /// Eine Zeile Kennzahlen: Wert fett oben, Beschriftung gedämpft darunter, Trennlinien;
+    /// `dot` = Ampelpunkt vor dem Wert der Zelle `dot.0`.
+    fn stat_cells<'a>(&self, ui: &Ui, r: Rect, theme: &Theme, weights: &[f32], items: impl Iterator<Item = (&'a str, &'a str)>, dot: Option<(usize, Color32)>) {
+        let c = &theme.colors;
+        let p = ui.painter();
         let total: f32 = weights.iter().sum();
         let vfont = theme.bold(13.0);
         let lfont = theme.font(type_scale::CAPTION);
-        for (i, (label, value)) in items.iter().enumerate() {
+        for (i, (label, value)) in items.enumerate() {
             let x0 = r.left() + r.width() * weights[..i].iter().sum::<f32>() / total;
             let cr = Rect::from_min_size(pos2(x0, r.top()), vec2(r.width() * weights[i] / total, r.height()));
             if i > 0 {
                 p.vline(cr.left(), (cr.top() + 7.0)..=(cr.bottom() - 7.0), Stroke::new(1.0, if theme.glow { c.line_dark } else { c.list_border }));
             }
             let inner = cr.shrink2(vec2(6.0, 0.0));
-            if i == 3
-                && let Some(s) = s
+            if let Some((k, col)) = dot
+                && k == i
             {
-                // Ampel als Punkt vor dem Wert
-                let dot = if s.match_pct >= 97.0 { c.icon_green } else if s.match_pct >= 85.0 { c.icon_yellow } else { c.icon_red };
                 let vw = ui_kit::text_w(ui.ctx(), value, &vfont);
-                let dx = inner.center().x - vw / 2.0 - 7.0;
-                p.circle_filled(pos2(dx, inner.top() + 12.0), 3.5, dot);
+                p.circle_filled(pos2(inner.center().x - vw / 2.0 - 7.0, inner.top() + 12.0), 3.5, col);
             }
             let v = ui_kit::elide(ui.ctx(), value, &vfont, inner.width());
+            if v != value {
+                report_overflow(ui.ctx(), format!("trace stat value {:.0}", inner.width()));
+            }
             p.text(pos2(inner.center().x, inner.top() + 12.0), Align2::CENTER_CENTER, v, vfont.clone(), c.text);
             let l = ui_kit::elide(ui.ctx(), label, &lfont, inner.width());
-            if l != *label {
+            if l != label {
                 report_overflow(ui.ctx(), format!("trace stat {:.0}", inner.width()));
             }
             p.text(pos2(inner.center().x, inner.bottom() - 10.0), Align2::CENTER_CENTER, l, lfont.clone(), c.text_weak);
-            if i == 3 {
-                let tip = t("trace-stat-match-tip");
-                let _ = ui.interact(cr, Id::new("trace-match-tip"), Sense::hover()).on_hover_text(tip);
-            }
         }
     }
 }
@@ -1427,6 +1561,56 @@ fn slider_row(ui: &mut Ui, key: &str, label: &str, value: f64, range: (f64, f64)
         ui.painter().text(pos2(er.right() - 2.0, er.center().y), Align2::RIGHT_CENTER, b2, cf, col);
     }
     ui.add_space(sp::S);
+    out
+}
+
+/// Einzug der Erklärsätze unter einem Kontrollkästchen (Kästchen 13 px + 5 px Abstand).
+const CHECK_INDENT: f32 = 18.0;
+
+/// Zeile mit Kontrollkästchen (wie `fields::checkbox`), zusätzlich mit Rolle und Beschriftung für
+/// Barrierefreiheit, Tests und `ui_find`.
+fn check_row(ui: &mut Ui, id: &str, label: &str, checked: bool, enabled: bool) -> Option<bool> {
+    let (r, _) = ui.allocate_exact_size(vec2(ui.available_width(), sp::ROW), Sense::hover());
+    let out = fields::checkbox(ui, id, r, label, checked, enabled);
+    // dieselbe Kennung und dasselbe Rechteck: dieselbe Schaltfläche, nur mit Beschreibung
+    let resp = ui.interact(r, Id::new(id), if enabled { Sense::click() } else { Sense::hover() });
+    let now = out.unwrap_or(checked);
+    resp.widget_info(|| egui::WidgetInfo::selected(egui::WidgetType::Checkbox, enabled, now, label));
+    out
+}
+
+/// Umbrochener Erklärsatz (Stufe CAPTION, gedämpft), um `indent` eingerückt.
+fn caption_text(ui: &mut Ui, text: &str, indent: f32, enabled: bool) {
+    let theme = Theme::current(ui.ctx());
+    let c = &theme.colors;
+    let w = ui.available_width();
+    let col = if enabled { c.text_weak } else { c.text_disabled };
+    let g = ui.ctx().fonts_mut(|f| f.layout(text.to_string(), theme.font(type_scale::CAPTION), col, (w - indent).max(40.0)));
+    let (r, _) = ui.allocate_exact_size(vec2(w, g.size().y), Sense::hover());
+    ui.painter().galley(pos2(r.left() + indent, r.top()), g, col);
+}
+
+/// Eingerückte Toleranzzeile unter einem Schalter: Schieber, Zahlenfeld, Einheit (eine Zeile).
+#[allow(clippy::too_many_arguments)]
+fn tolerance_row(ui: &mut Ui, key: &str, label: &str, value: f64, range: (f64, f64), decimals: usize, step: f64, unit: &str, enabled: bool) -> Option<f64> {
+    let theme = Theme::current(ui.ctx());
+    let c = &theme.colors;
+    let w = ui.available_width();
+    let font = theme.font(type_scale::BODY);
+    let (r, _) = ui.allocate_exact_size(vec2(w, 22.0), Sense::hover());
+    let unit_w = if unit.is_empty() { 0.0 } else { ui_kit::text_w(ui.ctx(), unit, &font).max(10.0) + sp::XS };
+    let field_w = 46.0;
+    let fr = Rect::from_min_size(pos2(r.right() - unit_w - field_w, r.top() + 1.0), vec2(field_w, 20.0));
+    // die Spur beginnt unter der Beschriftung des Schalters (der Schieber rückt sie 8 px ein)
+    let sr = Rect::from_min_max(pos2(r.left() + CHECK_INDENT - 8.0, r.top()), pos2(fr.left() - sp::XS, r.bottom()));
+    let mut out = fields::number(ui, ("trace-tol", key), fr, None, Some(value), range, decimals, enabled);
+    if !unit.is_empty() {
+        ui.painter().text(pos2(fr.right() + sp::XS, fr.center().y), Align2::LEFT_CENTER, unit, font, if enabled { c.text_weak } else { c.text_disabled });
+    }
+    if let Some(v) = slider(ui, Id::new(("trace-tol-slider", key)), sr, value.clamp(range.0, range.1), range, step, enabled, label) {
+        out = Some(v);
+    }
+    ui.add_space(sp::XS);
     out
 }
 

@@ -23,7 +23,7 @@ pub mod panel;
 mod select;
 mod text;
 mod tooling;
-mod trace;
+pub mod trace;
 mod view;
 
 pub use export::PageSetup;

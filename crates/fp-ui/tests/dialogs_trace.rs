@@ -323,8 +323,144 @@ fn layout_fits_in_de_en_all_themes_and_small_screens() {
                         }
                     }
                 }
+                // mit Aufräumen zweizeilige Kennzahlen; Foto mit Hinweis unter den Karten, ohne Aufräumen
+                assert!(st(&mut h).dialogs.trace.as_ref().is_some_and(|d| d.stats.as_ref().is_some_and(|s| s.refine.is_some())), "Logo: Aufräum-Kennzahlen");
+                if let Some(d) = st(&mut h).dialogs.trace.as_mut() {
+                    d.set_preset(fp_trace::Preset::Foto);
+                }
+                wait_idle(&mut h);
+                let _ = dialogs::take_overflows(&h.ctx);
+                h.run_steps(2);
+                let over = dialogs::take_overflows(&h.ctx);
+                assert!(over.is_empty(), "Foto {lang} {theme:?} {w}×{hh}: Überlauf {over:?}");
+                let rect2 = dialogs::dialog_rect(&h.ctx, trace::DIALOG_ID).expect("Dialog gezeichnet");
+                assert!(screen.expand(0.5).contains_rect(rect2));
                 h.state_mut().only_dialogs = false;
             }
         }
     }
+}
+
+// ---------------------------------------------------------------------- Aufräumen (VT-4)
+
+fn dialog(h: &mut H) -> &mut trace::TraceDialog {
+    st(h).dialogs.trace.as_mut().expect("Dialog")
+}
+
+/// Wie ein Mensch: Bedienelement in der Einstellungsspalte erst in den sichtbaren Bereich rollen,
+/// dann anklicken.
+fn click_in_view(h: &mut H, label: &str) {
+    h.get_by_label(label).scroll_to_me();
+    h.run_steps(3);
+    h.get_by_label(label).click();
+    h.run_steps(2);
+}
+
+#[test]
+fn clean_up_switch_changes_stats() {
+    let _g = lock();
+    let mut h = harness();
+    open(&mut h);
+    wait_idle(&mut h);
+    // Vorgabe „Logo“: Aufräumen an, Kennzahlen mit Grundformen und Knoten vorher → nachher
+    let d = dialog(&mut h);
+    assert_eq!(d.opts.preset, fp_trace::Preset::Logo);
+    assert!(d.opts.refine.enabled, "Logo räumt auf");
+    let on = d.stats.clone().expect("Kennzahlen");
+    let rep = on.refine.clone().expect("Kennzahlen des Aufräumens");
+    assert!(rep.shape_count() >= 2, "Kreis und Rechteck erkannt: {rep:?}");
+    assert!(rep.nodes_before > rep.nodes_after && rep.nodes_after == on.points, "{rep:?} / {on:?}");
+    let runs = d.runs_started;
+    // Schalter „Aufräumen“ aus: genau eine neue Rechnung, keine Aufräum-Kennzahlen, mehr Knoten
+    click_in_view(&mut h, &fp_i18n::t("trace-refine"));
+    assert_eq!(dialog(&mut h).runs_started, runs + 1);
+    wait_idle(&mut h);
+    let d = dialog(&mut h);
+    assert!(!d.opts.refine.enabled);
+    let off = d.stats.clone().expect("Kennzahlen");
+    assert!(off.refine.is_none(), "ohne Aufräumen keine Grundformen-Zeile");
+    assert!(off.points > on.points, "ohne Aufräumen mehr Knoten: {} gegen {}", off.points, on.points);
+    // Einzelschritt im Bereich „Erweitert“ (gesperrt, solange Aufräumen aus ist)
+    d.advanced = true;
+    h.run_steps(2);
+    click_in_view(&mut h, &fp_i18n::t("trace-refine-shapes"));
+    assert!(dialog(&mut h).opts.refine.shapes, "gesperrter Schalter ändert nichts");
+    click_in_view(&mut h, &fp_i18n::t("trace-refine"));
+    wait_idle(&mut h);
+    click_in_view(&mut h, &fp_i18n::t("trace-refine-shapes"));
+    wait_idle(&mut h);
+    let d = dialog(&mut h);
+    assert!(d.opts.refine.enabled && !d.opts.refine.shapes);
+    let rep = d.stats.as_ref().and_then(|s| s.refine.clone()).expect("Kennzahlen");
+    assert_eq!(rep.shape_count(), 0, "ohne Grundformen keine erkannt");
+    // OK übernimmt die Schalter in den Befehl (Parameter `refine`)
+    assert_eq!(d.command_params()["refine"]["shapes"], json!(false));
+    assert_eq!(d.command_params()["refine"]["enabled"], json!(true));
+}
+
+#[test]
+fn ok_without_changes_reuses_the_preview() {
+    let _g = lock();
+    let mut h = harness();
+    let steps = undo_count(st(&mut h));
+    open(&mut h);
+    wait_idle(&mut h);
+    let paths = dialog(&mut h).stats.as_ref().map(|s| s.paths).expect("Kennzahlen");
+    assert!(dialog(&mut h).reusable_result().is_some(), "Vorschau passt zu den Optionen");
+    let computed = fp_engine::commands::trace::computed_traces();
+    let runs = dialog(&mut h).runs_started;
+    h.get_by_label(&fp_i18n::t("btn-ok")).click();
+    h.run_steps(3);
+    assert!(st(&mut h).dialogs.trace.is_none() && st(&mut h).dialogs.message.is_none(), "{:?}", st(&mut h).dialogs.message);
+    assert_eq!(fp_engine::commands::trace::computed_traces(), computed, "OK ohne Änderung rechnet nicht neu");
+    assert_eq!(undo_count(st(&mut h)), steps + 1, "ein Verlaufsschritt");
+    let d = st(&mut h).session.active().expect("Dokument");
+    let g = d.selection.elements.iter().filter_map(|id| fp_engine::docops::element_on_page(&d.doc, d.page, *id)).next().expect("Gruppe");
+    match &g.kind {
+        fp_model::ElementKind::Group(g) => assert_eq!(g.children.len(), paths, "Ergebnis der Vorschau übernommen"),
+        k => panic!("Gruppe erwartet, nicht {k:?}"),
+    }
+    assert!(runs >= 1);
+    // Optionen weichen von der letzten Vorschau ab (z. B. OK, bevor die neue fertig ist): der
+    // Befehl rechnet selbst
+    st(&mut h).session.execute("edit.undo", json!({})).expect("Rückgängig");
+    open(&mut h);
+    wait_idle(&mut h);
+    assert!(dialog(&mut h).reusable_result().is_some());
+    dialog(&mut h).opts.colors = 9;
+    assert!(dialog(&mut h).reusable_result().is_none(), "Vorschau gehört zu alten Optionen");
+    let computed = fp_engine::commands::trace::computed_traces();
+    h.get_by_label(&fp_i18n::t("btn-ok")).click();
+    h.run_steps(3);
+    assert!(st(&mut h).dialogs.trace.is_none());
+    assert_eq!(fp_engine::commands::trace::computed_traces(), computed + 1, "neu gerechnet");
+    assert_eq!(undo_count(st(&mut h)), steps + 1);
+}
+
+#[test]
+fn old_remembered_options_get_the_presets_clean_up() {
+    let _g = lock();
+    // Eintrag aus der Zeit vor dem Aufräumen (ohne `refine`)
+    let mut old = serde_json::to_value(fp_trace::TraceOptions::from_preset(fp_trace::Preset::Logo)).expect("JSON");
+    old.as_object_mut().expect("Objekt").remove("refine");
+    old["colors"] = json!(12);
+    let o = trace::options_from_json(&old.to_string());
+    assert_eq!(o.colors, 12, "gemerkte Werte bleiben");
+    assert_eq!(o.refine, fp_trace::RefineOptions::logo(), "Logo: Aufräumen wie die Vorgabe (an)");
+    old["preset"] = json!("photo");
+    assert!(!trace::options_from_json(&old.to_string()).refine.enabled, "Foto: Vorgabe ohne Aufräumen");
+    // ausdrücklich ausgeschaltet bleibt aus; leer/ungültig → Vorgabe „Logo“
+    let mut off = fp_trace::TraceOptions::from_preset(fp_trace::Preset::Logo);
+    off.refine.enabled = false;
+    assert!(!trace::options_from_json(&serde_json::to_string(&off).expect("JSON")).refine.enabled);
+    assert_eq!(trace::options_from_json(""), fp_trace::TraceOptions::default());
+    // über die Voreinstellungen beim Öffnen des Dialogs
+    let mut h = harness();
+    old["preset"] = json!("logo");
+    st(&mut h).session.prefs.set(trace::PREF_OPTIONS, fp_engine::prefs::PrefValue::Str(old.to_string()));
+    open(&mut h);
+    let d = dialog(&mut h);
+    assert!(d.opts.refine.enabled && d.opts.colors == 12, "{:?}", d.opts);
+    wait_idle(&mut h);
+    assert!(dialog(&mut h).stats.as_ref().is_some_and(|s| s.refine.is_some()));
 }
