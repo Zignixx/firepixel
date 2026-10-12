@@ -1264,7 +1264,9 @@ fn rectangle_start_snap_shift_alt_like_original() {
     select(&mut s, &[]);
     tool(&mut s, ToolId::Rectangle);
     let r = |l, t, rr, b| Rect::new(l, t, rr, b);
-    let cases: [(&str, (f32, f32), (f32, f32), &str, Rect); 17] = [
+    // (Name, Start, Ende, Tasten s/a, erwartetes Rechteck)
+    type Case<'a> = (&'a str, (f32, f32), (f32, f32), &'a str, Rect);
+    let cases: [Case; 17] = [
         // Messwerte des Originals (Befund PM-1)
         ("A1 ohne", (240.0, 145.0), (300.0, 175.0), "", r(240.0, 150.0, 300.0, 175.0)),
         ("A2 Umschalt", (240.0, 145.0), (300.0, 175.0), "s", r(240.0, 145.0, 300.0, 205.0)),

@@ -316,6 +316,28 @@ fn clamp_view(view: &mut fp_engine::ViewState, pr: IRect) {
     }
 }
 
+/// Ansichtsursprung so verschieben (um weniger als einen halben Gerätepixel), dass die linke obere
+/// Seitenecke genau auf einem Gerätepixel liegt. Die Seite wird ohnehin auf ganze Gerätepixel
+/// gezeichnet; ohne diesen Abgleich lag der Zeiger bei ungerader Leinwandgröße einen halben Pixel
+/// neben dem gezeichneten Dokumentpunkt (Bildschirmpixel l + x ergab x + 0,5 – PM-1, L16:
+/// Gleichstand beim Fang). Bei 100 % entspricht damit Zeiger (l + x, t + y) genau Punkt (x, y).
+fn align_view_to_pixels(view: &mut fp_engine::ViewState, pr: IRect, area_min: Pos2, ppp: f64) {
+    let z = view.zoom.max(1e-6);
+    let ppp = ppp.max(1e-6);
+    for (axis, a) in [(0, area_min.x as f64), (1, area_min.y as f64)] {
+        let (o, edge) = if axis == 0 { (view.origin.0, pr.left as f64) } else { (view.origin.1, pr.top as f64) };
+        let dev = (a + (edge - o) * z) * ppp;
+        let fix = (dev - dev.round()) / (ppp * z);
+        if fix.abs() > 1e-9 {
+            if axis == 0 {
+                view.origin.0 += fix;
+            } else {
+                view.origin.1 += fix;
+            }
+        }
+    }
+}
+
 fn to_screen(view: &fp_engine::ViewState, origin: Pos2, x: f64, y: f64) -> Pos2 {
     let (sx, sy) = view.doc_to_screen(Point::new(x as f32, y as f32));
     pos2(origin.x + sx as f32, origin.y + sy as f32)
@@ -363,6 +385,7 @@ fn canvas_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
                 }
             }
             clamp_view(&mut d.view, pr);
+            align_view_to_pixels(&mut d.view, pr, area.min, ppp);
         }
     }
     if needs_fit && let Some(cc) = st.canvases.get_mut(&id) {
@@ -379,6 +402,7 @@ fn canvas_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
     {
         d.view.viewport = (area.width().max(1.0) as f64, area.height().max(1.0) as f64);
         clamp_view(&mut d.view, pr);
+        align_view_to_pixels(&mut d.view, pr, area.min, ppp);
     }
     // Rückmeldung des Werkzeugs (auch ohne Ereignis) und im Hintergrund auszublendende Elemente
     let feedback = st.session.tool_feedback();
@@ -445,6 +469,11 @@ fn canvas_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
     // Ausschnitt der Textur und Vorschauen nutzen alle dieses eine Rechteck – keine Lücke und kein
     // Überstand an den Kanten, auch bei Bruchteil-Zoom und 125/150 % DPI.
     let cc = st.canvases.entry(id).or_default();
+    // bis das Ergebnis des Hintergrund-Threads abgeholt ist, weiter Bilder anfordern (auf den
+    // Weckruf des Threads allein ist kein Verlass, PM-1 N13)
+    if cc.requested.is_some() && cc.requested != cc.shown {
+        ui.ctx().request_repaint_after(std::time::Duration::from_millis(16));
+    }
     let tex_now = match (&cc.texture, &cc.shown) {
         (Some(tex), Some(k)) if k.doc == id && k.page == page => Some((tex.clone(), *k)),
         _ => None,
@@ -1328,9 +1357,24 @@ fn overlays(ui: &Ui, st: &mut AppState, painter: &egui::Painter, area: Rect, vie
             }
         }
     }
-    if !had_text {
-        cc.text = None;
-        cc.ghosts.text = None;
+    if had_text {
+        cc.text_linger = Some(time);
+    } else {
+        // Nach dem Ende der Bearbeitung (Esc, Klick daneben): die Textvorschau stehen lassen, bis
+        // das Hintergrundbild mit dem übernommenen Text da ist – sonst war der Text bis zum
+        // nächsten Neuzeichnen unsichtbar (PM-1, N13). Höchstens 2 s.
+        let waiting = cc.text_linger.is_some_and(|t0| time - t0 < 2.0) && cc.shown.is_none_or(|k| k.generation != generation || k.variant != 0);
+        match cc.ghosts.text.as_ref() {
+            Some(s) if waiting => {
+                ghost::paint_at(&page_painter, s, &spp);
+                ctx.request_repaint_after(std::time::Duration::from_millis(16));
+            }
+            _ => {
+                cc.text = None;
+                cc.ghosts.text = None;
+                cc.text_linger = None;
+            }
+        }
     }
     // Nach dem Loslassen: Vorschau stehen lassen, bis das Hintergrundbild ohne Ausblendung da ist
     if !had_ghost && let Some(l) = &cc.ghosts.linger {

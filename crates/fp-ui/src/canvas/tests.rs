@@ -463,10 +463,11 @@ fn space_during_drag_moves_the_shape_in_ui() {
 
 /// UX-A L15/L16 mit egui-winit-genauer Folge: Umschalt/Alt nur als `ModifiersChanged` (eigenes
 /// Bild, vor dem Mausdruck), Zeigerereignisse mit denselben Modifikatoren, Loslassen der Taste erst
-/// nach dem Loslassen der Maus. Umschalt = Quadrat ab dem Startpunkt, Alt = von der Mitte aus.
+/// nach dem Loslassen der Maus. Umschalt = Quadrat ab dem Startpunkt (ohne Fang), Alt = von der
+/// Mitte aus; die Mitte y = 145 rastet mit Abstand 5 an der Seitenmitte 150 ein (PM-1, L16).
 #[test]
 fn rectangle_shift_alt_held_before_press_winit_sequence() {
-    for (m, expect) in [(Modifiers::SHIFT, (240.0, 145.0, 300.0, 205.0)), (Modifiers::ALT, (180.0, 115.0, 300.0, 175.0))] {
+    for (m, expect) in [(Modifiers::SHIFT, (240.0, 145.0, 300.0, 205.0)), (Modifiers::ALT, (180.0, 125.0, 300.0, 175.0))] {
         let mut h = harness();
         let _ = h.state_mut().state.session.execute("view.setZoom", json!({"zoom": 1.0}));
         set_tool(&mut h, ToolId::Rectangle);
@@ -486,6 +487,54 @@ fn rectangle_shift_alt_held_before_press_winit_sequence() {
         let d = h.state().state.session.active().expect("d");
         let r = fp_engine::docops::element_bounds(&d.doc, &top(&h)[0]).expect("Rechteck");
         assert_eq!((r.left, r.top, r.right, r.bottom), expect, "{m:?}");
+    }
+}
+
+/// PM-1 (L16, halber Pixel): Ein Zeiger auf Bildschirmpunkt (l + x, t + y) ist bei 100 % genau der
+/// Dokumentpunkt (x, y) – auch bei ungerader Leinwandgröße, bei der die zentrierte Seite sonst
+/// einen halben Pixel neben dem Zeiger lag. Dazu der Gleichstand-Fall aus der Messung: Alt-Rechteck
+/// 240,143 → 300,173 (Ende 2 px von R2-Mitte 175, 3 px von T1-Oberkante 170) ergibt wie im Original
+/// 180,111–300,175 (mit dem halben Pixel kam 180,116–300,170 heraus).
+#[test]
+fn pointer_maps_to_whole_document_pixels_and_tie_snaps_like_original() {
+    for (w, hh) in [(1500.0, 950.0), (1501.0, 951.0), (1500.0, 951.0), (1499.0, 948.0)] {
+        let mut session = fp_engine::Session::default();
+        let _ = session.execute("file.new", json!({"width": 600, "height": 400, "background": "#ffffff"}));
+        for (r, c) in [([50, 50, 150, 120], "#ff0000"), ([450, 150, 520, 200], "#0000ff"), ([50, 170, 110, 230], "#000000")] {
+            let _ = session.execute("draw.rectangle", json!({"rect": r, "fillColor": c}));
+        }
+        let _ = session.execute("draw.ellipse", json!({"rect": [200, 50, 300, 120]}));
+        let _ = session.execute("select.set", json!({"ids": []}));
+        let ctx = egui::Context::default();
+        let mut app = FirepixelApp::with_session(&ctx, session, UiSettings::default(), false);
+        app.state.os_clipboard = false;
+        let mut h = Harness::builder().with_size(egui::vec2(w, hh)).with_pixels_per_point(1.0).with_max_steps(8).with_step_dt(1.0 / 60.0).build_ui_state(|ui, app: &mut FirepixelApp| app.root_ui(ui), app);
+        h.run_steps(4);
+        let _ = h.state_mut().state.session.execute("view.setZoom", json!({"zoom": 1.0}));
+        h.run_steps(3);
+        let o = at(&h, 0.0, 0.0);
+        assert_eq!((o.x.fract(), o.y.fract()), (0.0, 0.0), "{w}×{hh}: Seitenecke {o:?} nicht auf ganzen Pixeln");
+        // gezeichnete Seite liegt genau dort
+        let page = h.state().state.canvases.values().next().and_then(|c| c.page_screen).expect("Seite gezeichnet");
+        assert_eq!(page.min, o, "{w}×{hh}: gezeichnete Seite");
+        mv(&mut h, o + egui::vec2(123.0, 77.0));
+        assert_eq!(h.state().state.pointer_doc, Some(fp_geom::Point::new(123.0, 77.0)), "{w}×{hh}");
+        // Gleichstand-Fall mit Alt, ganzzahlige Zeigerlagen wie SendInput
+        set_tool(&mut h, ToolId::Rectangle);
+        let p = |x: f32, y: f32| o + egui::vec2(x, y);
+        let m = Modifiers::ALT;
+        ev(&mut h, Event::PointerMoved(p(240.0, 143.0)));
+        ev(&mut h, Event::ModifiersChanged(m));
+        ev(&mut h, Event::PointerButton { pos: p(240.0, 143.0), button: PointerButton::Primary, pressed: true, modifiers: m });
+        for i in 1..=20 {
+            ev(&mut h, Event::PointerMoved(p((240.0 + 3.0 * i as f32).round(), (143.0 + 1.5 * i as f32).round())));
+        }
+        ev(&mut h, Event::PointerButton { pos: p(300.0, 173.0), button: PointerButton::Primary, pressed: false, modifiers: m });
+        ev(&mut h, Event::ModifiersChanged(Modifiers::NONE));
+        h.run_steps(2);
+        let d = h.state().state.session.active().expect("d");
+        let r = fp_engine::docops::element_bounds(&d.doc, &top(&h)[0]).expect("Rechteck");
+        assert_eq!((r.left, r.top, r.right, r.bottom), (180.0, 111.0, 300.0, 175.0), "{w}×{hh}");
     }
 }
 
@@ -771,9 +820,9 @@ fn double_click_text_starts_editing_hg_sequence() {
     assert!(caret.is_some_and(|c| c > 0 && c < "Firepixel Test".chars().count()), "Caret {caret:?}");
 }
 
-/// Nutzerbefund: Text beginnen, „Ha“ tippen, im Inspektor 200 pt wählen → der Text ändert sich
-/// live, der Editor bleibt offen, der Editorrahmen wächst mit; nach Esc ist der Auswahlrahmen
-/// so groß wie der gesetzte Text (nicht die alte Schätzung).
+/// Nutzerbefund: Text beginnen, „Ha“ tippen, Strg+A, im Inspektor 200 pt wählen → der markierte
+/// Text ändert sich live (N15), der Editor bleibt offen, der Editorrahmen wächst mit; nach Esc ist
+/// der Auswahlrahmen so groß wie der gesetzte Text (nicht die alte Schätzung).
 #[test]
 fn inspector_size_while_typing_grows_text_live() {
     let mut h = harness();
@@ -786,6 +835,7 @@ fn inspector_size_while_typing_grows_text_live() {
     h.run_steps(2);
     let frame = |h: &Harness<'static, FirepixelApp>| h.state().state.canvases.values().next().and_then(|c| c.text.as_ref().map(|t| t.frame)).expect("Editor-Satz");
     let small = frame(&h);
+    key(&mut h, Key::A, Modifiers::CTRL);
     // genau das, was das Größenfeld des Inspektors schickt
     h.state_mut().state.run("text.setAttributes", json!({"size": 200}));
     h.run_steps(3);
@@ -801,6 +851,38 @@ fn inspector_size_while_typing_grows_text_live() {
     let sel = h.state().state.canvases.values().next().and_then(|c| c.sel_frames.first().copied()).expect("Auswahlrahmen");
     let (w, hgt) = (sel[1].x - sel[0].x, sel[2].y - sel[1].y);
     assert!(hgt > 180.0 && w > big.width() - 2.0, "Auswahlrahmen {w}×{hgt}, Satz {big:?}");
+}
+
+/// PARITAET_A T6 (PM-1): ohne Markierung gilt die im Inspektor gewählte Größe nur für die danach
+/// getippten Zeichen – „Abc“, 48, „D“, Esc ergibt [Abc][D 48]; der Rahmen wächst erst mit dem „D“.
+#[test]
+fn inspector_size_at_caret_applies_to_next_characters() {
+    let mut h = harness();
+    set_tool(&mut h, ToolId::Text);
+    let p = at(&h, 40.0, 60.0);
+    hg_click(&mut h, p);
+    h.run_steps(2);
+    for c in ["A", "b", "c"] {
+        hg_ev(&mut h, Event::Text(c.into()));
+    }
+    h.run_steps(2);
+    let frame = |h: &Harness<'static, FirepixelApp>| h.state().state.canvases.values().next().and_then(|c| c.text.as_ref().map(|t| t.frame)).expect("Editor-Satz");
+    let small = frame(&h);
+    let size0 = h.state().state.session.text_edit_attrs().and_then(|a| a.size).expect("Größe");
+    h.state_mut().state.run("text.setAttributes", json!({"size": 48}));
+    h.run_steps(3);
+    assert_eq!(frame(&h), small, "vorhandene Zeichen bleiben");
+    assert_eq!(h.state().state.session.text_edit_attrs().and_then(|a| a.size), Some(48.0), "Inspektor zeigt 48");
+    hg_ev(&mut h, Event::Text("D".into()));
+    h.run_steps(3);
+    assert!(frame(&h).height() > small.height() * 1.5, "Rahmen wächst mit dem großen D");
+    key(&mut h, Key::Escape, Modifiers::NONE);
+    h.run_steps(3);
+    let d = h.state().state.session.active().expect("d");
+    let ElementKind::Text(t) = &top(&h)[0].kind else { panic!("kein Text") };
+    let runs: Vec<(String, Option<f32>)> = t.resolved_runs().into_iter().map(|(a, s)| (s.to_string(), a.size)).collect();
+    assert_eq!(runs, vec![("Abc".to_string(), Some(size0)), ("D".to_string(), Some(48.0))]);
+    assert_eq!(d.selection.elements.len(), 1);
 }
 
 /// Ausgewähltes Objekt auf den Reiter eines anderen Dokuments ziehen: Dokument wird aktiv, Ablegen

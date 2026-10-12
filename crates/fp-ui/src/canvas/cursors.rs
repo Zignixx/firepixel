@@ -199,12 +199,33 @@ fn open_hand(p: &Painter, at: Pos2, c: &Palette) {
     p.rect_filled(palm, 2.5, f);
 }
 
-/// Zuschneide-Symbol: zwei verschränkte Winkel, Hotspot in der Mitte (PARITAET_A K9).
+/// Zuschneide-Symbol wie im Original (PARITAET_A K9, im echten Fenster nachgemessen): zwei
+/// verschränkte, 2 px kräftige Winkel und eine kurze Diagonale links oben, pixelgenau auf einem
+/// 16×16-Raster; Hotspot in der Mitte des inneren Felds.
 fn crop(p: &Painter, at: Pos2, c: &Palette) {
-    for (a, b, d) in [((-7.0, -3.0), (3.0, -3.0), (3.0, 7.0)), ((-3.0, -7.0), (-3.0, 3.0), (7.0, 3.0))] {
-        line(p, at, a, b, c);
-        line(p, at, b, d, c);
+    // Rechtecke im Raster (Spalte, Zeile, Breite, Höhe); Raster-Ursprung 8 px links/oben vom Hotspot
+    const PARTS: [(f32, f32, f32, f32); 9] = [
+        (0.0, 0.0, 1.0, 1.0),
+        (1.0, 1.0, 1.0, 1.0),
+        (2.0, 2.0, 1.0, 1.0),
+        (3.0, 3.0, 7.0, 2.0),
+        (3.0, 3.0, 2.0, 13.0),
+        (0.0, 11.0, 13.0, 1.0),
+        (3.0, 12.0, 10.0, 1.0),
+        (11.0, 0.0, 2.0, 13.0),
+        (11.0, 3.0, 5.0, 2.0),
+    ];
+    // Ursprung auf ganze Pixel (der Hotspot liegt auf einer Pixelmitte)
+    let o = pos2(at.x - 8.5, at.y - 8.5);
+    let rect = |&(x, y, w, h): &(f32, f32, f32, f32)| egui::Rect::from_min_size(pos2(o.x + x, o.y + y), vec2(w, h));
+    // als Netz ohne Kantenglättung: einzelne Pixel der Diagonale bleiben kräftig
+    let mut mesh = egui::Mesh::default();
+    for (grow, col) in [(1.0, c.cursor_outline), (0.0, c.cursor_fill)] {
+        for r in PARTS.iter().map(rect) {
+            mesh.add_colored_rect(r.expand(grow), col);
+        }
     }
+    p.add(Shape::mesh(mesh));
 }
 
 /// Federspitze (Stift über leerer Leinwand, PARITAET_A K7): Spitze im Hotspot, nach unten

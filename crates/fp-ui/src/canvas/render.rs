@@ -150,6 +150,9 @@ pub struct CanvasCache {
     pub click_press: Option<egui::Pos2>,
     /// Farbfeld-Rückmeldung (Optimieren-Bedienfeld).
     pub swatch: Option<super::overlay::SwatchCache>,
+    /// Zeit des letzten Bildes mit offenem Text-Editor (Textvorschau nach dem Übernehmen stehen
+    /// lassen, bis das neue Hintergrundbild da ist).
+    pub text_linger: Option<f64>,
 }
 
 impl CanvasCache {
