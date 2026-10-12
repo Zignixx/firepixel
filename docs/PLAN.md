@@ -106,6 +106,20 @@ Fertig seit dem Plan: ☑ **FV-8** Tippverzögerung (`8f6bcfc`, `5a821e0`): Ursa
 
 ---
 
+## 4b. Gekürzt bzw. verkleinert (Nutzerentscheidung 12.10.2026 ≈ 18:45)
+
+| Paket | Entscheidung |
+|---|---|
+| EB-2 (P-EB1) | **Nur „Reduziertes PNG“ bauen.** SWF und Illustrator 8 fallen weg: Flash ist tot, AI8 stammt von 1998, und SVG-Export gibt es schon. Die Spezifikation `re\20-ai8-swf.md` bleibt für später erhalten. |
+| HTML-Teil | Für HTML-Einrichtung (D13), HTML-Code kopieren (D15), HTML aktualisieren (D09), Export „HTML und Bilder“ und Exportassistent (D11) gilt: **funktioniert, aber kein Feld-für-Feld-Abgleich** mit dem Original. |
+| CI-1 (P-CI) | → **Später**, zusammen mit den Builds für macOS und Linux; sinnvoll erst, wenn es ein GitHub-Repository gibt. |
+| AU-3 (P-AU1) | Nur F7 (Feldübernahme beim Objektwechsel) und die vertauschte JSF-Textrichtung. **Weg fallen:** `pixelRect` bei Text, `setActiveViewScale` in der Brücke, Hotspot-Typ „slice“ und JSF-Doppelaufruf. |
+| PERF-1 (P-PERF) | Nur „Seiten mit Tausenden Objekten“ (Alles auswählen, Pfeiltasten). Der Rest kommt hauptsächlich vom Software-Rasterer dieses Servers. |
+| TE-2 (P-TE2) | Englische Namen für Sprachdateien, Quelldateien, Anleitung und Umgebungsvariablen. **Testdateien und Testfunktionen behalten ihre Namen.** |
+| VT-5 | **Gestrichen** (KI-Vektorisieren mit StarVector). |
+| D12 Batch-Verarbeitung | Bleibt wie vom Nutzer zurückgestellt unter „Später“ (P-AU2) und gehört nicht zu DLX-5. |
+| Nicht gekürzt | Seltene Dialoge D26–D50 bleiben **feldgenau** wie im Original. |
+
 ## 5. Warteschlange (in dieser Reihenfolge; jedes Paket = ein kleiner Agent)
 
 Die Reihenfolge gilt, solange nichts Dringenderes vom Nutzer kommt. Sobald ein Platz frei wird, startet das oberste Paket, dessen Dateien nicht gerade ein anderer Agent bearbeitet.
