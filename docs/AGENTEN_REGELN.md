@@ -64,6 +64,7 @@ Nutzerwunsch: Firepixel mehrsprachig – Deutsch (bisher) + Englisch, neue Sprac
 
 `firepixel\` ist ein lokales git-Repository (Branch `main`, kein Remote, nichts hochladen). Git liegt unter `C:\Program Files\Git` (PATH wie in §2 nachladen).
 - Nach jedem fertigen, baubaren Arbeitsschritt **nur die eigenen Dateien** committen: `git add <eigene Pfade>` und `git commit -m "<Kürzel>: <was>"` mit der Zeile `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>` am Ende. Nie `git add -A` über fremde Bereiche, nie `git reset --hard`, `git checkout -- .`, `git clean`, Rebase oder Force – andere Agenten arbeiten gleichzeitig.
+- **Gemeinsamer Index (Vorfall 12.10. ≈ 18:15):** Alle teilen sich einen git-Index, und vorgemerkte Dateien anderer würden sonst mitcommittet. Deshalb immer **mit Pfadangabe committen**: `git commit -m "…" -- <eigene Pfade>`. Kein blankes `git commit`, und nicht erst stagen und dann später committen.
 - Meldet git `index.lock`, kurz warten und erneut versuchen.
 - Versehentlich zerstörte Datei: `git log -- <datei>` und `git show <commit>:<pfad>` zum Wiederherstellen; im Bericht erwähnen.
 - Build-Ordner und `tools\golden\*\out` sind per `.gitignore` ausgeschlossen.
