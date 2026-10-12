@@ -231,11 +231,20 @@ pub fn preview(ctx: &egui::Context, st: &AppState, s: &OptimizeSettings, with_im
     {
         return Some(r.clone());
     }
-    let r = ExportRenderer { normal: Arc::clone(&st.renderer) };
-    let req = RenderRequest { page: d.page, frame: d.frame, background: if s.matte.is_some() { Background::Transparent } else { Background::Canvas }, ..Default::default() };
-    let res = match r.render(&d.doc, &req) {
+    let res = compute_preview(&st.renderer, &d.doc, d.page, d.frame, s, with_image);
+    if let Ok(mut g) = cache.lock() {
+        *g = Some((key, res.clone()));
+    }
+    Some(res)
+}
+
+/// Rechnet die Exportvorschau (auch im Hintergrund, siehe [`preview_nonblocking`]).
+fn compute_preview(renderer: &Arc<fp_render::Renderer>, doc: &fp_model::Document, page: usize, frame: usize, s: &OptimizeSettings, with_image: bool) -> PreviewResult {
+    let r = ExportRenderer { normal: Arc::clone(renderer) };
+    let req = RenderRequest { page, frame, background: if s.matte.is_some() { Background::Transparent } else { Background::Canvas }, ..Default::default() };
+    match r.render(doc, &req) {
         Ok(img) => {
-            let ctxe = fp_export::doc_export::page_context(&d.doc, d.page);
+            let ctxe = fp_export::doc_export::page_context(doc, page);
             match fp_export::export::export_image(&img, s, &ctxe, &fp_export::export::EncodeExtras::standalone()) {
                 Ok(ex) => {
                     let palette = match &ex.optimized {
@@ -250,11 +259,59 @@ pub fn preview(ctx: &egui::Context, st: &AppState, s: &OptimizeSettings, with_im
             }
         }
         Err(e) => PreviewResult { bytes: 0, colors: 0, palette: Vec::new(), entries: Vec::new(), image: None, error: Some(e) },
-    };
-    if let Ok(mut g) = cache.lock() {
-        *g = Some((key, res.clone()));
     }
-    Some(res)
+}
+
+type PendingPreview = Arc<Mutex<Option<(String, std::sync::mpsc::Receiver<PreviewResult>)>>>;
+
+/// Wie [`preview`] ohne Bild, aber ein neuer Stand wird im Hintergrund gerechnet; bis dahin bleibt
+/// das letzte Ergebnis desselben Dokuments stehen (PERF-1: die Vorschau rendert und quantisiert die
+/// ganze Seite – bei Seiten mit Tausenden Objekten nach jeder Pfeiltaste Sekunden im UI-Thread).
+/// Ohne früheres Ergebnis und in Tests (`sync_render`) wie [`preview`].
+pub fn preview_nonblocking(ctx: &egui::Context, st: &AppState, s: &OptimizeSettings) -> Option<PreviewResult> {
+    if st.sync_render {
+        return preview(ctx, st, s, false);
+    }
+    let d = st.session.active()?;
+    let key = format!("{}-{}-{}-{}-{:?}-false", d.id.0, d.generation, d.page, d.frame, s);
+    let doc_prefix = format!("{}-", d.id.0);
+    let cache = preview_cache(ctx);
+    let pid = Id::new("optimize-preview-pending");
+    let pending: PendingPreview = ctx.data_mut(|dd| dd.get_temp_mut_or_insert_with(pid, || Arc::new(Mutex::new(None))).clone());
+    let Ok(mut pg) = pending.lock() else { return preview(ctx, st, s, false) };
+    // fertige Hintergrundrechnung übernehmen
+    if let Some((k, rx)) = pg.as_ref() {
+        match rx.try_recv() {
+            Ok(res) => {
+                if let Ok(mut g) = cache.lock() {
+                    *g = Some((k.clone(), res));
+                }
+                *pg = None;
+            }
+            Err(std::sync::mpsc::TryRecvError::Disconnected) => *pg = None,
+            Err(std::sync::mpsc::TryRecvError::Empty) => {}
+        }
+    }
+    let cached = cache.lock().ok().and_then(|g| g.clone());
+    match &cached {
+        Some((k, r)) if *k == key => return Some(r.clone()),
+        Some((k, _)) if k.starts_with(&doc_prefix) && k.ends_with("-false") => {}
+        _ => {
+            drop(pg);
+            return preview(ctx, st, s, false);
+        }
+    }
+    if pg.is_none() {
+        let (tx, rx) = std::sync::mpsc::channel();
+        let (r, doc, page, frame, s2, ctx2) = (Arc::clone(&st.renderer), Arc::clone(&d.doc), d.page, d.frame, s.clone(), ctx.clone());
+        std::thread::spawn(move || {
+            let _ = tx.send(compute_preview(&r, &doc, page, frame, &s2, false));
+            ctx2.request_repaint();
+        });
+        *pg = Some((key, rx));
+    }
+    ctx.request_repaint_after(std::time::Duration::from_millis(50));
+    cached.map(|(_, r)| r)
 }
 
 // ---------------------------------------------------------------------- Bedienfeld
@@ -424,7 +481,7 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
     }
     // Farbtabelle (4758) mit Auswahl, Markierungen (gesperrt, bearbeitet, transparent),
     // Sortierung und Anzahl; Kontextmenü 6942
-    let pv = if indexed { preview(ui.ctx(), st, &s, false) } else { None };
+    let pv = if indexed { preview_nonblocking(ui.ctx(), st, &s) } else { None };
     let sort_i = st.session.prefs.get_int("Firepixel_OptimizeSort", 0).clamp(0, 2) as usize;
     let model = st.session.active().and_then(|d| d.doc.pages.get(d.page)).and_then(|p| p.root.export.as_deref().cloned()).unwrap_or_default();
     let mut sel: Vec<u32> = st.dialogs.panel_sel.palette.clone();

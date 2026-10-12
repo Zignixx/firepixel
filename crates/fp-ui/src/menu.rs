@@ -333,8 +333,8 @@ pub fn note_font_choice(st: &mut AppState, a: &Action) {
 /// die Vorgabe des Textwerkzeugs (PostScript- oder Familienname).
 pub fn current_font(st: &AppState) -> String {
     let from_text = st.session.active().and_then(|d| {
-        d.selection.elements.iter().find_map(|id| {
-            let e = fp_engine::docops::element_on_page(&d.doc, d.page, *id)?;
+        // ein Durchlauf statt einer Suche je ID (PERF-1)
+        fp_engine::docops::elements_on_page(&d.doc, d.page, &d.selection.elements).into_iter().find_map(|e| {
             match &e.kind {
                 fp_model::element::ElementKind::Text(t) => t.resolved_runs().first().and_then(|(a, _)| a.font.clone()).or_else(|| t.initial.font.clone()),
                 _ => None,
@@ -500,14 +500,25 @@ fn panel_item(st: &AppState, p: PanelId) -> Node {
 
 /// Der aufbereitete Hauptmenübaum (je Frame neu, damit Zustände stimmen).
 pub fn build_main_menu(st: &AppState) -> Vec<(String, Vec<Node>)> {
+    build_main_menu_where(st, &|_| true)
+}
+
+/// Wie [`build_main_menu`], aber die Einträge (mit Freigabe/Häkchen aller Befehle) nur für die Menüs,
+/// für die `want(index)` gilt; die übrigen haben nur ihren Titel (PERF-1: geschlossene Menüs je Bild
+/// vollständig aufzubauen kostete bei Tausenden gewählten Objekten den größten Teil der Bildzeit).
+pub fn build_main_menu_where(st: &AppState, want: &dyn Fn(usize) -> bool) -> Vec<(String, Vec<Node>)> {
     let mut out = Vec::new();
     // Menüeintrag eines Befehls, der zur Laufzeit dazukommt (Text = `cmd-…`)
     let runtime_item = |cmd: &str| {
         let (en, ck, sc) = command_state(st, cmd, None);
         Node::Item { label: clean_label(&t(&fp_i18n::command_key(cmd))).0, shortcut: sc, action: ItemAction::Command(cmd.into()), enabled: en, checked: ck }
     };
-    for top in main_menu() {
+    for (ti, top) in main_menu().iter().enumerate() {
         let (label, _) = clean_label(&top.local_text());
+        if !want(ti) {
+            out.push((label, Vec::new()));
+            continue;
+        }
         let mut nodes = convert(st, top.children.as_deref().unwrap_or(&[]));
         match top.key.as_str() {
             "menu-view" => {
@@ -752,9 +763,16 @@ pub const MENU_FIT_ID: &str = "fp-menu-bar-fit";
 pub fn show_menu_bar(ui: &mut Ui, st: &mut AppState) {
     let theme = Theme::current(ui.ctx());
     let c = &theme.colors;
-    let mut menus = build_main_menu(st);
-    let all_menus = menus.clone();
     let kbd = crate::menu_kbd::state(ui.ctx());
+    // Einträge nur aufbauen, wenn ein Menü offen ist, gleich aufgehen kann (Zeiger über der
+    // Menüleiste, Klick) oder per Tastatur bedient wird (PERF-1); sonst reichen die Titel
+    let ids_all: Vec<egui::Id> = (0..main_menu().len() + 1).map(|i| egui::Id::new(("fp-main-menu", i))).collect();
+    let bar = ui.max_rect();
+    let want_all = kbd.active
+        || ids_all.iter().any(|id| Popup::is_id_open(ui.ctx(), *id))
+        || ui.input(|i| i.pointer.hover_pos().is_some_and(|p| bar.expand(4.0).contains(p)) || i.pointer.any_pressed());
+    let mut menus = build_main_menu_where(st, &|_| want_all);
+    let all_menus = menus.clone();
     let show_access = crate::menu_kbd::show_access_keys(ui.ctx());
     let mut anchors: Vec<Rect> = Vec::new();
     let mut out = Vec::new();

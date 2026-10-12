@@ -199,9 +199,12 @@ pub(crate) fn move_selection(s: &mut Session, dx: f32, dy: f32, copy: bool) -> R
     with_doc(s, |d| {
         let page = d.page;
         let ids = d.selection.elements.clone();
+        // Adressen in einem Durchlauf (PERF-1: Pfeiltaste mit Tausenden gewählten Objekten);
+        // Verschieben ändert die Baumstruktur nicht, die Adressen bleiben gültig
+        let paths = docops::find_many_on_page(&d.doc, page, &ids);
         let doc = Arc::make_mut(&mut d.doc);
-        for id in &ids {
-            docops::edit_by_id(doc, page, *id, |e| docops::translate_element(e, dx, dy));
+        for path in paths.iter().flatten() {
+            docops::edit_at(doc, path, |e| docops::translate_element(e, dx, dy));
         }
         if let Some(m) = &mut d.selection.pixels
             && ids.is_empty()

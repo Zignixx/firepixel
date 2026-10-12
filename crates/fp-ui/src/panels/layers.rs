@@ -76,6 +76,8 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
     let (doc_id, doc_gen, page, frame) = (d.id, d.generation, d.page, d.frame);
     let layers = doc.resolved_layers(page);
     let selected: Vec<fp_model::ElementId> = d.selection.elements.clone();
+    // Nachschlagen je Zeile ohne lineare Suche (PERF-1: Tausende Zeilen × Tausende gewählte)
+    let selected_set: std::collections::HashSet<fp_model::ElementId> = selected.iter().copied().collect();
     let active_layer = d.layer;
     // „Ebene gewählt“: Auswahl = alle (ungesperrten) Objekte der aktiven Ebene, auch leer
     let layer_objects = |lid: LayerId| -> Vec<fp_model::ElementId> {
@@ -225,7 +227,7 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
             }
             if let Some(cel) = l.cel(frame) {
                 for (idx, e) in cel.elements.iter().enumerate() {
-                    let sel = selected.contains(&e.id);
+                    let sel = selected_set.contains(&e.id);
                     let (r2, resp2) = common::row(ui, erow_h, sel);
                     let eye2 = Rect::from_min_size(r2.min, vec2(20.0, r2.height()));
                     let lock2 = Rect::from_min_size(pos2(r2.left() + 21.0, r2.top()), vec2(19.0, r2.height()));

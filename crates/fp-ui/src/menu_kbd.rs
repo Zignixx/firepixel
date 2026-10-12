@@ -207,7 +207,9 @@ fn activate(n: &Node, out: &mut Vec<Action>) {
 pub fn keyboard(ctx: &egui::Context, st: &mut AppState) {
     let mut s = state(ctx);
     let (events, alt_now, pointer_pressed) = ctx.input(|i| (i.events.clone(), i.modifiers.alt, i.pointer.any_pressed()));
-    let menus = menu::build_main_menu(st);
+    // Einträge nur bei Tastaturbedienung bzw. gehaltener Alt-Taste/F10 (PERF-1), sonst reichen die Titel
+    let want_all = s.active || alt_now || events.iter().any(|e| matches!(e, Event::Key { key: Key::F10, pressed: true, .. }));
+    let menus = menu::build_main_menu_where(st, &|_| want_all);
     let n_top = menus.len().max(1);
     let mut out: Vec<Action> = Vec::new();
     let mut consumed: Vec<usize> = Vec::new();

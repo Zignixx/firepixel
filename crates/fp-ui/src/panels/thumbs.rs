@@ -16,6 +16,8 @@ struct Cache {
     map: HashMap<(u64, u64, u32), (u64, TextureHandle)>,
     frame: u64,
     used: u32,
+    /// Seitenminiaturen, die im Hintergrund neu gerechnet werden (Schlüssel → Stand, Ergebnis).
+    pending: HashMap<(u64, u64, u32), (u64, std::sync::mpsc::Receiver<Option<RgbaImage>>)>,
 }
 
 const MAX_PER_FRAME: u32 = 6;
@@ -68,6 +70,52 @@ fn get(ctx: &Context, st: &AppState, key: (u64, u64, u32), generation: u64, rend
         c.map.clear();
     }
     Some(tex)
+}
+
+/// Wie [`get`], aber eine **vorhandene** Miniatur wird im Hintergrund erneuert; bis dahin bleibt die
+/// alte stehen (PERF-1: die Seitenminiatur rechnet die ganze Seite 1:1 – bei Seiten mit Tausenden
+/// Objekten nach jeder Pfeiltaste Hunderte ms im UI-Thread). Erste Miniatur und Tests
+/// (`sync_render`) rechnen wie bisher sofort.
+fn get_refresh_async(ctx: &Context, st: &AppState, key: (u64, u64, u32), generation: u64, render: impl FnOnce() -> Option<RgbaImage> + Send + 'static) -> Option<TextureHandle> {
+    let c = cache(ctx);
+    let Ok(mut guard) = c.lock() else { return None };
+    // fertige Hintergrundrechnung übernehmen
+    if let Some((g, rx)) = guard.pending.get(&key) {
+        match rx.try_recv() {
+            Ok(img) => {
+                let g = *g;
+                guard.pending.remove(&key);
+                if let Some(tex) = img.and_then(|img| to_texture(ctx, format!("thumb-{}-{}-{}", key.0, key.1, key.2), &img, key.2)) {
+                    guard.map.insert(key, (g, tex));
+                }
+            }
+            Err(std::sync::mpsc::TryRecvError::Disconnected) => {
+                guard.pending.remove(&key);
+            }
+            Err(std::sync::mpsc::TryRecvError::Empty) => {}
+        }
+    }
+    let existing = guard.map.get(&key).cloned();
+    match &existing {
+        Some((g, t)) if *g == generation => return Some(t.clone()),
+        Some(_) if !st.sync_render => {}
+        _ => {
+            drop(guard);
+            return get(ctx, st, key, generation, render);
+        }
+    }
+    if !guard.pending.contains_key(&key) {
+        let (tx, rx) = std::sync::mpsc::channel();
+        let ctx2 = ctx.clone();
+        std::thread::spawn(move || {
+            let _ = tx.send(render());
+            ctx2.request_repaint();
+        });
+        guard.pending.insert(key, (generation, rx));
+    }
+    // läuft noch (ggf. für einen älteren Stand – danach startet die nächste Rechnung)
+    ctx.request_repaint_after(std::time::Duration::from_millis(50));
+    existing.map(|(_, t)| t)
 }
 
 /// Miniatur eines Elements.
@@ -124,8 +172,9 @@ pub fn page_thumb(ctx: &Context, st: &AppState, doc: DocId, generation: u64, d: 
     let r = Arc::clone(&st.renderer);
     let _ = generation;
     let key_gen = d.pages.get(page).map(|p| Arc::as_ptr(p) as usize as u64).unwrap_or(0) ^ ((Arc::as_ptr(d) as usize as u64).rotate_left(17) * u64::from(!d.symbols.is_empty() || !d.shared_layers.is_empty()));
-    get(ctx, st, (doc.0, u64::MAX - page as u64, size), key_gen, || {
-        let out = r.render_page(d, page, 0);
+    let d = Arc::clone(d);
+    get_refresh_async(ctx, st, (doc.0, u64::MAX - page as u64, size), key_gen, move || {
+        let out = r.render_page(&d, page, 0);
         Some(out.image)
     })
 }

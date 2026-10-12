@@ -30,6 +30,15 @@ use std::sync::Arc;
 pub struct DocId(pub u64);
 
 /// Verschiebung eines Pfeiltasten-Befehls (`edit.nudge.*`), sonst `None`.
+/// Adressen aller Elemente der Auswahl (Objekte und Punkte) in einem Durchlauf (PERF-1: vor und
+/// nach jedem Befehl; eine Suche je ID kostete bei Tausenden gewählten Objekten Sekunden).
+fn selection_paths(doc: &fp_model::Document, page: usize, sel: &crate::selection::Selection) -> std::collections::HashMap<fp_model::ElementId, Option<fp_model::traverse::ElementPath>> {
+    let mut ids: Vec<fp_model::ElementId> = sel.elements.clone();
+    ids.extend(sel.points.iter().map(|p| p.element));
+    let paths = crate::docops::find_many_on_page(doc, page, &ids);
+    ids.into_iter().zip(paths).collect()
+}
+
 fn nudge_delta(name: &str) -> Option<(f64, f64)> {
     Some(match name.strip_prefix("edit.nudge.")? {
         "left" => (-1.0, 0.0),
@@ -538,16 +547,11 @@ impl Session {
             Requirement::PixelSelection => d.is_some_and(|d| d.selection.has_pixels()),
             Requirement::SelectionOrPixels => d.is_some_and(|d| !d.selection.is_empty()),
             Requirement::AllOf(k) => d.is_some_and(|d| {
-                let els: Vec<_> = d.selection.elements.iter().filter_map(|id| crate::docops::element_on_page(&d.doc, d.page, *id)).collect();
+                // ein Durchlauf statt einer Suche je ID (PERF-1: Menüs/Werkzeugleisten fragen das je Bild)
+                let els = crate::docops::elements_on_page(&d.doc, d.page, &d.selection.elements);
                 !els.is_empty() && els.iter().all(|e| crate::command::element_is(e, *k, &d.doc))
             }),
-            Requirement::AnyOf(k) => d.is_some_and(|d| {
-                d.selection
-                    .elements
-                    .iter()
-                    .filter_map(|id| crate::docops::element_on_page(&d.doc, d.page, *id))
-                    .any(|e| crate::command::element_is(&e, *k, &d.doc))
-            }),
+            Requirement::AnyOf(k) => d.is_some_and(|d| crate::docops::elements_on_page(&d.doc, d.page, &d.selection.elements).iter().any(|e| crate::command::element_is(e, *k, &d.doc))),
             Requirement::Clipboard => !self.clipboard.is_empty(),
             Requirement::CanUndo => d.is_some_and(|d| d.history.can_undo()),
             Requirement::CanRedo => d.is_some_and(|d| d.history.can_redo()),
@@ -610,7 +614,8 @@ impl Session {
             && !d.selection.elements.is_empty()
         {
             let (doc, page) = (Arc::clone(&d.doc), d.page);
-            d.selection.retain_existing(|id| crate::docops::find_on_page(&doc, page, id).is_none_or(|p| !crate::docops::is_locked(&doc, page, &p)));
+            let paths = selection_paths(&doc, page, &d.selection);
+            d.selection.retain_existing(|id| paths.get(&id).and_then(|p| p.as_ref()).is_none_or(|p| !crate::docops::is_locked(&doc, page, p)));
         }
         if let Some(reason) = self.unmet(cmd.as_ref()) {
             return Err(EngineError::Unavailable { name: name.into(), reason });
@@ -690,7 +695,8 @@ impl Session {
         }
         let page = d.page;
         let doc = Arc::clone(&d.doc);
-        d.selection.retain_existing(|eid| crate::docops::find_on_page(&doc, page, eid).is_some());
+        let paths = selection_paths(&doc, page, &d.selection);
+        d.selection.retain_existing(|eid| paths.get(&eid).is_some_and(Option::is_some));
         let doc_changed = !Arc::ptr_eq(&before.doc, &d.doc);
         let sel_changed = before.selection != d.selection;
         let loc_changed = before.page != d.page || before.frame != d.frame || before.layer != d.layer;

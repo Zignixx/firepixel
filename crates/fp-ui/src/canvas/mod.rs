@@ -1142,22 +1142,39 @@ fn overlays(ui: &Ui, st: &mut AppState, painter: &egui::Painter, area: Rect, vie
             | fp_engine::ToolId::RedEyeRemoval
     );
     if view.show_edges {
-        for eid in &d.selection.elements {
+        // alle gewählten Elemente in einem Durchlauf (PERF-1: eine Suche je ID kostete bei
+        // Tausenden gewählten Objekten O(Objekte × Auswahl) je Bild)
+        let found = fp_engine::docops::find_many_on_page(&d.doc, d.page, &d.selection.elements);
+        let moving_ids: std::collections::HashSet<u64> = moving.as_ref().map(|(ids, _)| ids.iter().copied().collect()).unwrap_or_default();
+        // Rahmen/Griffe ganz außerhalb der Leinwand zeichnet der Painter ohnehin nicht (Clip = `area`):
+        // gar nicht erst anlegen (gleiches Bild, weniger Formen bei Tausenden gewählten Objekten)
+        let cull = painter.clip_rect().expand(theme.metrics.handle_size + 2.0);
+        // viele Objekte: Rahmen und Griffe als ein Mesh (PERF-1, pixelgleich bei ganzzahliger Skalierung)
+        let ppp = ui.ctx().pixels_per_point();
+        let mut batch = (!theme.glow && ppp.fract() == 0.0 && d.selection.elements.len() >= overlay::FRAME_BATCH_MIN.load(std::sync::atomic::Ordering::Relaxed)).then(overlay::FrameBatch::default);
+        for (eid, path) in d.selection.elements.iter().zip(&found) {
             if editing_target == Some(eid.0) {
                 continue;
             }
-            let Some(e) = fp_engine::docops::element_on_page(&d.doc, d.page, *eid) else { continue };
+            let Some(e) = path.as_ref().and_then(|p| d.doc.element_at(p)).cloned() else { continue };
             if paint_tool && matches!(e.kind, fp_model::ElementKind::Bitmap(_)) {
                 continue;
             }
             let Some(b) = fp_engine::docops::element_bounds(&d.doc, &e) else { continue };
-            let corners = match moving.as_ref().filter(|(ids, _)| ids.contains(&eid.0)) {
+            let is_moving = moving_ids.contains(&eid.0);
+            let corners = match moving.as_ref().filter(|_| is_moving) {
                 Some((_, m)) => b.corners().map(|p| m.apply(p)),
                 None => b.corners(),
             };
             frames.push(corners);
-            if moving.as_ref().is_some_and(|(ids, _)| ids.contains(&eid.0)) {
+            if is_moving {
                 let q: Vec<Pos2> = corners.iter().map(|p| spp(*p)).collect();
+                if !cull.intersects(Rect::from_points(&q)) {
+                    continue;
+                }
+                if let Some(bt) = batch.as_mut() {
+                    bt.flush(painter);
+                }
                 painter.add(egui::Shape::closed_line(q.clone(), Stroke::new(1.0, c.selection)));
                 for p in q {
                     painter.rect_filled(Rect::from_center_size(p, vec2(theme.metrics.handle_size, theme.metrics.handle_size)), 0.0, c.handle_fill);
@@ -1166,8 +1183,17 @@ fn overlays(ui: &Ui, st: &mut AppState, painter: &egui::Painter, area: Rect, vie
             }
             let r = Rect::from_min_max(sp(b.left as f64, b.top as f64), sp(b.right as f64, b.bottom as f64));
             let r = Rect::from_min_max(pos2(r.left().round() + 0.5, r.top().round() + 0.5), pos2(r.right().round() - 0.5, r.bottom().round() - 0.5));
-            painter.rect_stroke(r, 0.0, Stroke::new(1.0, c.selection), StrokeKind::Middle);
+            if !cull.intersects(Rect::from_two_pos(r.min, r.max)) {
+                continue;
+            }
             let hs = theme.metrics.handle_size;
+            if let Some(bt) = batch.as_mut() {
+                if bt.frame(r, c.selection, hs, c.handle_fill) {
+                    continue;
+                }
+                bt.flush(painter);
+            }
+            painter.rect_stroke(r, 0.0, Stroke::new(1.0, c.selection), StrokeKind::Middle);
             for p in [r.left_top(), r.right_top(), r.left_bottom(), r.right_bottom()] {
                 let h = Rect::from_center_size(p, vec2(hs, hs));
                 painter.rect_filled(h, 0.0, c.handle_fill);
@@ -1175,6 +1201,9 @@ fn overlays(ui: &Ui, st: &mut AppState, painter: &egui::Painter, area: Rect, vie
                     painter.rect_stroke(h.expand(1.0), 0.0, Stroke::new(1.0, with_alpha(c.handle_fill, 90)), StrokeKind::Outside);
                 }
             }
+        }
+        if let Some(bt) = batch.as_mut() {
+            bt.flush(painter);
         }
     }
     st.canvases.entry(id).or_default().sel_frames = frames;

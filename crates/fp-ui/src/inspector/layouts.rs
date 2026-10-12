@@ -149,7 +149,12 @@ pub fn matches(pred: &Pred, s: &Session) -> bool {
             if ids.is_empty() || (matches!(pred, Multi(_)) && ids.len() < 2) {
                 return false;
             }
-            ids.iter().all(|id| fp_engine::docops::element_on_page(&d.doc, d.page, *id).is_some_and(|e| element_is(&e, *k, &d.doc)))
+            // erst das erste Objekt (schnelle Absage), dann alle in einem Durchlauf statt einer
+            // Suche je ID (PERF-1: Tausende gewählte Objekte)
+            if !fp_engine::docops::element_on_page(&d.doc, d.page, ids[0]).is_some_and(|e| element_is(&e, *k, &d.doc)) {
+                return false;
+            }
+            fp_engine::docops::find_many_on_page(&d.doc, d.page, ids).iter().all(|p| p.as_ref().and_then(|p| d.doc.element_at(p)).is_some_and(|e| element_is(e, *k, &d.doc)))
         }
     }
 }

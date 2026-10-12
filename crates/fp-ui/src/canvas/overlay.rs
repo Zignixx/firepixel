@@ -27,6 +27,53 @@ fn mask_key(m: &fp_raster::Mask) -> (usize, i32, i32, i32, i32) {
     (h, b.left, b.top, b.right, b.bottom)
 }
 
+/// Ab so vielen gewählten Objekten zeichnet die Leinwand Auswahlrahmen und Eckgriffe gebündelt
+/// als ein Mesh ([`FrameBatch`], PERF-1). `usize::MAX` schaltet das ab (Bildvergleich im Test).
+pub static FRAME_BATCH_MIN: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(32);
+
+/// Auswahlrahmen (1 px, Mitte auf ,5) und Eckgriffe vieler Objekte als **ein** Mesh ohne
+/// Kantenglättung (PERF-1: Tausende gewählte Objekte = Zehntausende Formen mit ~50 Eckpunkten je
+/// Objekt, auf dem Software-Rasterer 200 ms je Bild). Bei ganzzahliger Skalierung liegen alle
+/// Kanten auf Pixelgrenzen; egui tastet dort genau dieselben Pixel ab wie bei `rect_stroke` bzw.
+/// `rect_filled` (Kantenglättung halb innen, halb außen). Die Reihenfolge (Rahmen, dann seine Griffe,
+/// Objekt für Objekt) bleibt; die Rahmenstreifen überlappen sich nicht (auch halbtransparent gleich).
+#[derive(Default)]
+pub struct FrameBatch {
+    mesh: egui::Mesh,
+}
+
+impl FrameBatch {
+    fn quad(&mut self, r: Rect, c: Color32) {
+        if r.width() > 0.0 && r.height() > 0.0 {
+            self.mesh.add_colored_rect(r, c);
+        }
+    }
+
+    /// Rahmen `r` (Ecken auf ,5) mit Griffen der Kantenlänge `hs`. `false`: zu klein für die
+    /// gebündelte Form – dann wie bisher mit einzelnen Formen zeichnen (vorher [`Self::flush`]).
+    pub fn frame(&mut self, r: Rect, stroke: Color32, hs: f32, handle: Color32) -> bool {
+        if !(r.width() >= 1.0 && r.height() >= 1.0) {
+            return false;
+        }
+        let (l, t, rr, b) = (r.left(), r.top(), r.right(), r.bottom());
+        self.quad(Rect::from_min_max(Pos2::new(l - 0.5, t - 0.5), Pos2::new(rr + 0.5, t + 0.5)), stroke);
+        self.quad(Rect::from_min_max(Pos2::new(l - 0.5, b - 0.5), Pos2::new(rr + 0.5, b + 0.5)), stroke);
+        self.quad(Rect::from_min_max(Pos2::new(l - 0.5, t + 0.5), Pos2::new(l + 0.5, b - 0.5)), stroke);
+        self.quad(Rect::from_min_max(Pos2::new(rr - 0.5, t + 0.5), Pos2::new(rr + 0.5, b - 0.5)), stroke);
+        for p in [r.left_top(), r.right_top(), r.left_bottom(), r.right_bottom()] {
+            self.quad(Rect::from_center_size(p, egui::vec2(hs, hs)), handle);
+        }
+        true
+    }
+
+    /// Bisher Gesammeltes als eine Form ausgeben.
+    pub fn flush(&mut self, painter: &Painter) {
+        if !self.mesh.is_empty() {
+            painter.add(egui::Shape::mesh(std::mem::take(&mut self.mesh)));
+        }
+    }
+}
+
 /// Umriss der Maske (aus dem Cache bzw. neu berechnet).
 pub fn ants_for<'a>(slot: &'a mut Option<AntsCache>, mask: &fp_raster::Mask) -> &'a [Vec<Point>] {
     let key = mask_key(mask);

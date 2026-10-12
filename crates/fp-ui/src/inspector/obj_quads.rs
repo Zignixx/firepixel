@@ -53,7 +53,8 @@ pub(super) fn register(r: &mut QuadrantRegistry) {
 
 /// Ausgewählte Elemente (oben zuerst wie die Auswahl).
 pub fn selection(st: &AppState) -> Vec<Arc<Element>> {
-    st.session.active().map(|d| d.selection.elements.iter().filter_map(|id| fp_engine::docops::element_on_page(&d.doc, d.page, *id)).collect()).unwrap_or_default()
+    // ein Durchlauf statt einer Suche je ID (PERF-1: Tausende gewählte Objekte)
+    st.session.active().map(|d| fp_engine::docops::elements_on_page(&d.doc, d.page, &d.selection.elements)).unwrap_or_default()
 }
 
 fn first(st: &AppState) -> Option<Arc<Element>> {

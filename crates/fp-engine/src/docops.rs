@@ -87,6 +87,52 @@ pub fn element_on_page(doc: &Document, page: usize, id: ElementId) -> Option<Arc
     find_on_page(doc, page, id).and_then(|p| doc.element_at(&p).cloned())
 }
 
+/// Adressen vieler IDs einer Seite in **einem** Durchlauf (PERF-1): je ID dasselbe Ergebnis wie
+/// [`find_on_page`], aber bei großer Auswahl O(Objekte) statt O(Objekte × Auswahl).
+pub fn find_many_on_page(doc: &Document, page: usize, ids: &[ElementId]) -> Vec<Option<ElementPath>> {
+    if ids.len() < 4 {
+        return ids.iter().map(|id| find_on_page(doc, page, *id)).collect();
+    }
+    let Some(p) = doc.pages.get(page) else { return vec![None; ids.len()] };
+    let wanted: std::collections::HashSet<ElementId> = ids.iter().copied().collect();
+    let mut found: std::collections::HashMap<ElementId, ElementPath> = std::collections::HashMap::with_capacity(wanted.len());
+    walk_root(&p.root, RootRef::Page(page), &mut |_, path, e| {
+        if wanted.contains(&e.id) && !found.contains_key(&e.id) {
+            found.insert(e.id, path.clone());
+        }
+    });
+    if found.len() < wanted.len() {
+        // geteilte Ebenen wie in `find_on_page`
+        let refs: Vec<(usize, usize)> = p.root.layers.iter().enumerate().filter_map(|(slot, s)| match s {
+            LayerSlot::Shared(r) => shared_def_index(doc, &r.id).map(|i| (i, slot)),
+            _ => None,
+        }).collect();
+        if !refs.is_empty() {
+            let mut shared: std::collections::HashMap<ElementId, ElementPath> = std::collections::HashMap::new();
+            doc.walk_elements(|_, path, e| {
+                if wanted.contains(&e.id)
+                    && !found.contains_key(&e.id)
+                    && !shared.contains_key(&e.id)
+                    && let RootRef::SharedLayer(i) = path.root
+                    && let Some((_, slot)) = refs.iter().find(|(d, _)| *d == i)
+                {
+                    let mut p = path.clone();
+                    p.slot = *slot;
+                    shared.insert(e.id, p);
+                }
+            });
+            found.extend(shared);
+        }
+    }
+    ids.iter().map(|id| found.get(id).cloned()).collect()
+}
+
+/// Elemente vieler IDs einer Seite in einem Durchlauf, in der Reihenfolge von `ids`; fehlende
+/// fallen weg (wie `ids.iter().filter_map(|id| element_on_page(…))`, PERF-1).
+pub fn elements_on_page(doc: &Document, page: usize, ids: &[ElementId]) -> Vec<Arc<Element>> {
+    find_many_on_page(doc, page, ids).into_iter().flatten().filter_map(|p| doc.element_at(&p).cloned()).collect()
+}
+
 /// Liegt das Element direkt in einem Cel (nicht in einer Gruppe)?
 pub fn is_top_level(path: &ElementPath) -> bool {
     path.steps.len() == 1
@@ -108,7 +154,7 @@ pub fn z_key(path: &ElementPath) -> (std::cmp::Reverse<usize>, usize, Vec<usize>
 
 /// Adressen der ausgewählten Elemente auf einer Seite, oben zuerst.
 pub fn paths_sorted(doc: &Document, page: usize, ids: &[ElementId]) -> Vec<ElementPath> {
-    let mut v: Vec<ElementPath> = ids.iter().filter_map(|id| find_on_page(doc, page, *id)).collect();
+    let mut v: Vec<ElementPath> = find_many_on_page(doc, page, ids).into_iter().flatten().collect();
     v.sort_by_key(z_key);
     v
 }
@@ -468,7 +514,7 @@ fn bounds_depth(doc: &Document, e: &Element, depth: u32) -> Option<Rect> {
 
 /// Vereinigte Grenzen mehrerer Elemente einer Seite.
 pub fn ids_bounds(doc: &Document, page: usize, ids: &[ElementId]) -> Option<Rect> {
-    ids.iter().filter_map(|id| element_on_page(doc, page, *id)).fold(None, |acc, e| union_opt(acc, element_bounds(doc, &e)))
+    elements_on_page(doc, page, ids).iter().fold(None, |acc, e| union_opt(acc, element_bounds(doc, e)))
 }
 
 /// Grenzen aller Elemente einer Seite (alle Status, ohne Web-Ebene).
