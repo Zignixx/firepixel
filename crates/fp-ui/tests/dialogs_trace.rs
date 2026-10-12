@@ -350,9 +350,11 @@ fn dialog(h: &mut H) -> &mut trace::TraceDialog {
 /// Wie ein Mensch: Bedienelement in der Einstellungsspalte erst in den sichtbaren Bereich rollen,
 /// dann anklicken.
 fn click_in_view(h: &mut H, label: &str) {
-    h.get_by_label(label).scroll_to_me();
+    // als Kästchen suchen: Abschnittsüberschriften (z. B. „Aufräumen“) stehen jetzt ebenfalls im
+    // Barrierefreiheitsbaum (FV-7)
+    h.get_by_role_and_label(egui::accesskit::Role::CheckBox, label).scroll_to_me();
     h.run_steps(3);
-    h.get_by_label(label).click();
+    h.get_by_role_and_label(egui::accesskit::Role::CheckBox, label).click();
     h.run_steps(2);
 }
 

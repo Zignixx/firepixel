@@ -163,6 +163,9 @@ pub struct TraceDialog {
     dirty: bool,
     last_edit: f64,
     scroll_acc: f32,
+    /// Einstellungsspalte beim ersten Zeichnen nach oben rollen (egui merkt sich die Lage
+    /// sonst über das Schließen hinaus).
+    scroll_top: bool,
 }
 
 // ---------------------------------------------------------------------- Öffnen, Schließen
@@ -237,6 +240,7 @@ impl TraceDialog {
             dirty: true,
             last_edit: f64::NEG_INFINITY,
             scroll_acc: 0.0,
+            scroll_top: true,
         }
     }
 
@@ -708,7 +712,11 @@ impl TraceDialog {
         let right_r = Rect::from_min_max(pos2(left_r.right() + sp::L, mid.top()), mid.max);
         {
             let mut lui = ui.new_child(egui::UiBuilder::new().id_salt("trace-left").max_rect(left_r).layout(egui::Layout::top_down(egui::Align::Min)));
-            egui::ScrollArea::vertical().id_salt("trace-settings").auto_shrink([false, false]).max_height(left_r.height()).show(&mut lui, |ui| {
+            let mut area = egui::ScrollArea::vertical().id_salt("trace-settings").auto_shrink([false, false]).max_height(left_r.height());
+            if std::mem::take(&mut self.scroll_top) {
+                area = area.vertical_scroll_offset(0.0);
+            }
+            area.show(&mut lui, |ui| {
                 ui.set_width(left_r.width() - 12.0);
                 self.settings_ui(ui, now);
             });
@@ -1598,7 +1606,9 @@ fn tolerance_row(ui: &mut Ui, key: &str, label: &str, value: f64, range: (f64, f
     let w = ui.available_width();
     let font = theme.font(type_scale::BODY);
     let (r, _) = ui.allocate_exact_size(vec2(w, 22.0), Sense::hover());
-    let unit_w = if unit.is_empty() { 0.0 } else { ui_kit::text_w(ui.ctx(), unit, &font).max(10.0) + sp::XS };
+    // feste Einheitenspalte (breiteste Einheit der Zeilen), damit Felder und Schieber aller
+    // Toleranzzeilen auf denselben Kanten stehen
+    let unit_w = [fp_i18n::unit("px"), fp_i18n::unit("deg")].iter().map(|u| ui_kit::text_w(ui.ctx(), u, &font)).fold(10.0, f32::max) + sp::XS;
     let field_w = 46.0;
     let fr = Rect::from_min_size(pos2(r.right() - unit_w - field_w, r.top() + 1.0), vec2(field_w, 20.0));
     // die Spur beginnt unter der Beschriftung des Schalters (der Schieber rückt sie 8 px ein)
