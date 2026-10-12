@@ -45,6 +45,8 @@ impl QuadrantRegistry {
         obj_quads::register(&mut r);
         tool_quads::register(&mut r);
         ai_quads::register(&mut r);
+        // Bitmap: Knopf „Nachzeichnen…“ (VT-2)
+        r.register(crate::dialogs::trace::INSPECTOR_Q5, crate::dialogs::trace::inspector_q5);
         r
     }
 

@@ -19,6 +19,7 @@ pub mod popup_menu;
 pub(crate) mod preferences;
 pub mod shortcuts;
 pub mod spelling;
+pub mod trace;
 mod unsaved;
 
 pub use misc::Confirm;
@@ -70,6 +71,8 @@ pub struct Dialogs {
     pub popup_editor: Option<popup_menu::PopupEditor>,
     /// KI-Auswahl: Hintergrundrechnung, Dialoge „KI-Modell fehlt“ und „KI-Modelle verwalten“ (Agent KI).
     pub ai: models::AiDialogs,
+    /// „Bitmap nachzeichnen…“ mit Live-Vorschau (VT-2).
+    pub trace: Option<trace::TraceDialog>,
 }
 
 /// Verzögert zu öffnendes Formular.
@@ -105,6 +108,7 @@ impl Dialogs {
             || self.spelling.is_some()
             || self.popup_editor.is_some()
             || self.ai.modal_open()
+            || self.trace.is_some()
             || crate::file_dialog::is_open() // AU: offener Datei-Dialog sperrt wie ein modaler Dialog
     }
 
@@ -153,6 +157,7 @@ pub fn open_for_command(st: &mut AppState, name: &str) -> bool {
                 st.dialogs.message = Some((t("dlg-popup-title"), t("dlg-popup-need-selection")));
             }
         }
+        "modify.traceBitmap" => return trace::open(st),
         "text.spellingSetup" => {
             if let Some(f) = spelling::setup_form(st) {
                 st.dialogs.form = Some(f);
@@ -644,6 +649,7 @@ pub fn show_all(ctx: &egui::Context, st: &mut AppState) {
     spelling::show_check(ctx, st);
     popup_menu::show(ctx, st);
     models::show(ctx, st);
+    trace::show(ctx, st);
     show_message(ctx, st);
     save_workspace(ctx, st);
     if let Some(t) = st.dialogs.clipboard.take() {

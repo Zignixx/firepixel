@@ -112,7 +112,10 @@ pub fn build(st: &AppState, entries: &[MenuEntry]) -> Vec<Node> {
             out.push(Node::Item { label, shortcut: sc, action: ItemAction::Ui(Action::Run("ui.toolKey".into(), serde_json::json!({"key": k}))), enabled: true, checked: None });
             continue;
         }
-        let name = e.id.and_then(|id| st.session.registry().by_fw_id(id).map(|c| c.info().name.clone()));
+        // Einträge ohne Original-ID (z. B. „Bitmap nachzeichnen…“, VT-2) über ihren `cmd-…`-Schlüssel
+        let name = e.id.and_then(|id| st.session.registry().by_fw_id(id).map(|c| c.info().name.clone())).or_else(|| {
+            (e.id.is_none() && e.key.starts_with("cmd-")).then(|| st.session.registry().iter().find(|c| fp_i18n::command_key(&c.info().name) == e.key).map(|c| c.info().name.clone())).flatten()
+        });
         match name {
             Some(n) => {
                 let (enabled, checked, shortcut) = state(st, &n, sc);

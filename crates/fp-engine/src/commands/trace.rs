@@ -148,7 +148,7 @@ fn result_group(ids: &mut fp_model::IdGen, r: &fp_trace::TraceResult, name: Opti
 pub(crate) fn register(r: &mut CommandRegistry) {
     r.add(
         cmd("modify.traceBitmap")
-            .label("Bitmap nachzeichnen...")
+            .label("Bitmap nachzeichnen")
             .describe("Zeichnet die ausgewählte Bitmap als gefüllte, bearbeitbare Vektorpfade auf einer neuen Ebene nach")
             .requires(&[Requirement::Document, Requirement::AnyOf(ObjectKind::Bitmap)])
             .opt_default("preset", enum_kind(&["logo", "blackWhite", "illustration", "photo"]), json!("logo"), "Vorgabe; die übrigen Optionen überschreiben einzelne Werte")

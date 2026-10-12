@@ -518,6 +518,14 @@ pub fn build_main_menu(st: &AppState) -> Vec<(String, Vec<Node>)> {
                     nodes.insert(pos + k, n);
                 }
             }
+            "menu-modify" => {
+                // Bitmap nachzeichnen (VT-2, ohne Original-ID) nach „Pfad ändern“; öffnet den Dialog
+                let alter = clean_label(&t("menu-modify-alterPath")).0;
+                let pos = nodes.iter().position(|n| matches!(n, Node::Sub { label, .. } if *label == alter)).map(|i| i + 1).unwrap_or(nodes.len());
+                if st.session.registry().get("modify.traceBitmap").is_some() {
+                    nodes.insert(pos, runtime_item("modify.traceBitmap"));
+                }
+            }
             "menu-filter" => nodes.extend(filter_submenus(st)),
             "menu-window" => {
                 // Flash-Bedienfelder (Laufzeit) nach „Suchen und ersetzen“, Dokumentliste am Ende

@@ -20,6 +20,8 @@ fp-engine = { workspace = true }
 fp-i18n = { workspace = true }
 # Optimieren/Export (Phase 4) und Compound Shapes im Inspektor (Pfadoperationen)
 fp-export = { workspace = true }
+# Bitmap nachzeichnen (VT-2): Live-Vorschau im Dialog dialogs\trace.rs
+fp-trace = { workspace = true }
 fp-vector = { workspace = true }
 # Schriftenliste im Text-Inspektor (Index der Systemschriften, zur Laufzeit)
 fp-text = { workspace = true }

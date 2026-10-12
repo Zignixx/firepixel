@@ -1515,6 +1515,10 @@
       "id": 35781
      },
      {
+      "text": "Bitmap nachzeichnen...",
+      "key": "cmd-modify-traceBitmap"
+     },
+     {
       "sep": true
      },
      {
