@@ -3,6 +3,8 @@
 //! Schlüsselwörter und Copyright-Vermerk; darunter stehen Datei, Seiten, Symbole, Formatversion,
 //! Erstellt/Geändert und Anwendung. OK schreibt die Felder über `file.fileInfo` als XMP-Paket ins
 //! Dokument (ein Verlaufsschritt, nur wenn sich etwas geändert hat); Abbrechen/Esc ändert nichts.
+//! Gemessen und umgesetzt (DLG-11): Fenster außen 680 × 620, Titel = Dateiname des Dokuments.
+//! Register und Felder je Register des Originals sind nicht gemessen (docs\berichte\dlg11.md).
 
 use super::{button_row, dialog_frame, fit_label, group_box, push_button, t, DialogClose};
 use crate::app_state::AppState;
@@ -25,8 +27,19 @@ pub struct FileInfoDialog {
     pub info: Value,
 }
 
-/// Größe des Fensters (Client-Bereich).
-pub const SIZE: [f32; 2] = [560.0, 470.0];
+/// Größe des Fensters (Client-Bereich). Gemessen ist das Fenster des Originals außen 680 × 620
+/// (PARITAET_B D10); abzüglich Rahmen und Titelleiste wie bei der Bildvorschau
+/// (außen 714 × 621 → Client ≈ 698 × 582) ergibt das ≈ 664 × 581.
+pub const SIZE: [f32; 2] = [664.0, 581.0];
+
+/// Fenstertitel: wie im Original der Dateiname des Dokuments (gemessen „Unbenannt-77.fw.png“),
+/// ohne Namen der allgemeine Titel „Datei-Info“.
+pub fn window_title(info: &Value) -> String {
+    match info["title"].as_str().map(str::trim) {
+        Some(n) if !n.is_empty() => n.to_string(),
+        _ => t("dlg-fileinfo-window-title"),
+    }
+}
 
 impl FileInfoDialog {
     /// Liest die Angaben des aktiven Dokuments.
@@ -97,12 +110,13 @@ pub fn show(ctx: &egui::Context, st: &mut AppState) {
     let lw = (super::max_text_w(ctx, &super::refs(&labels)).max(super::max_text_w(ctx, &super::refs(&info_l))) + 8.0).max(130.0).ceil();
     let width = SIZE[0].max(16.0 + lw + 320.0 + 16.0);
     let mut outcome: Option<bool> = None;
-    let r = dialog_frame(ctx, "fp-file-info", &t("dlg-fileinfo-window-title"), vec2(width, SIZE[1]), |ui, body| {
+    let title = window_title(&d.info);
+    let r = dialog_frame(ctx, "fp-file-info", &title, vec2(width, SIZE[1]), |ui, body| {
         let o = body.min;
         let fx = 16.0 + lw;
         let fw = body.width() - fx - 16.0;
-        group_box(ui, rr(o, 8.0, 8.0, body.width() - 16.0, 262.0), &t("dlg-fileinfo-group-description"));
-        let rows: [(f32, f32); 5] = [(28.0, 22.0), (56.0, 22.0), (84.0, 70.0), (160.0, 46.0), (212.0, 46.0)];
+        group_box(ui, rr(o, 8.0, 8.0, body.width() - 16.0, 336.0), &t("dlg-fileinfo-group-description"));
+        let rows: [(f32, f32); 5] = [(28.0, 22.0), (56.0, 22.0), (84.0, 130.0), (222.0, 50.0), (280.0, 50.0)];
         let vals = [&mut d.title, &mut d.author, &mut d.description, &mut d.keywords, &mut d.copyright];
         let keys = ["title", "author", "description", "keywords", "copyright"];
         for (k, (y, h)) in rows.iter().enumerate() {
@@ -110,7 +124,7 @@ pub fn show(ctx: &egui::Context, st: &mut AppState) {
             edit(ui, keys[k], rr(o, fx, *y, fw, *h), vals[k], *h > 22.0, k == 0);
         }
         // nur angezeigte Angaben
-        group_box(ui, rr(o, 8.0, 280.0, body.width() - 16.0, 140.0), &t("dlg-fileinfo-group-file"));
+        group_box(ui, rr(o, 8.0, 354.0, body.width() - 16.0, 146.0), &t("dlg-fileinfo-group-file"));
         let v = &d.info;
         let m = &v["metadata"];
         let txt = |x: &Value| x.as_str().map(str::to_string).unwrap_or_else(|| if x.is_null() { "—".to_string() } else { x.to_string() });
@@ -118,7 +132,7 @@ pub fn show(ctx: &egui::Context, st: &mut AppState) {
         let vals_ro = [path, txt(&v["pages"]), txt(&v["symbols"]), txt(&v["formatVersion"]), txt(&m["created"]), txt(&m["modified"]), txt(&m["application"])];
         let theme = Theme::current(ui.ctx());
         for (k, val) in vals_ro.iter().enumerate() {
-            let y = 298.0 + k as f32 * 17.0;
+            let y = 374.0 + k as f32 * 17.0;
             fit_label(ui, rr(o, 16.0, y, lw - 4.0, 16.0), &info_l[k], true);
             let vr = rr(o, fx, y, fw, 16.0);
             super::put_left(ui, vr, egui::Label::new(egui::RichText::new(val).font(theme.ui_font()).color(theme.colors.text)).truncate());
