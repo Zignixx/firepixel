@@ -287,5 +287,5 @@ Erzeugt von `crates\fp-ui\tests\gesamt_menu.rs` (`cargo test -p fp-ui --test ges
 | Kontextmenü Zoom ▸ Auswahl anpassen | `view.fitSelection` | ✅ Ui | Rechteck |
 | Kontextmenü Zoom ▸ Alles anpassen | `view.fitAll` | ✅ Ui | ohne Auswahl |
 | Kontextmenü Pipette ▸ Farbe kopieren | `ui.copyColor {"which":"sample"}` | ✅ Ui | ohne Auswahl: in die Zwischenablage |
-| Kontextmenü Pipette ▸ Füllfarbe kopieren | `ui.copyColor {"which":"fill"}` | ✅ Ui | ohne Auswahl: Meldung „[!! Farbe #999999 kopiert ········!!]“ |
-| Kontextmenü Pipette ▸ Strichfarbe kopieren | `ui.copyColor {"which":"stroke"}` | ✅ Ui | ohne Auswahl: Meldung „[!! Farbe #000000 kopiert ········!!]“ |
+| Kontextmenü Pipette ▸ Füllfarbe kopieren | `ui.copyColor {"which":"fill"}` | ✅ Ui | ohne Auswahl: Meldung „Farbe #999999 kopiert“ |
+| Kontextmenü Pipette ▸ Strichfarbe kopieren | `ui.copyColor {"which":"stroke"}` | ✅ Ui | ohne Auswahl: Meldung „Farbe #000000 kopiert“ |
