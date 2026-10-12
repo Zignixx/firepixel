@@ -15,6 +15,7 @@ pub mod layouts;
 pub mod obj_quads;
 pub mod popups;
 mod quads;
+pub mod texte;
 mod tool_quads;
 
 use crate::app_state::{Action, AppState};
@@ -118,9 +119,11 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
     let header = Rect::from_min_size(full.min, vec2(full.width(), theme.metrics.inspector_header_height));
     let sym_visible = st.settings.workspace.is_visible(PanelId::SymbolProperties);
     // führende Leerzeichen lassen Platz für das ◊-Einklappsymbol
-    let mut tabs: Vec<(&str, ToolGroup)> = vec![("  Eigenschaften", ToolGroup::Select)];
+    let tab_props = format!("  {}", texte::t("pi-tab-properties"));
+    let tab_sym = texte::t("pi-tab-symbol-properties");
+    let mut tabs: Vec<(&str, ToolGroup)> = vec![(tab_props.as_str(), ToolGroup::Select)];
     if sym_visible {
-        tabs.push(("Symboleigenschaften", ToolGroup::Bitmap));
+        tabs.push((tab_sym.as_str(), ToolGroup::Bitmap));
     }
     let active = st.settings.workspace.bottom_active.min(tabs.len() - 1);
     // Platz für das Einklapp-Symbol vor dem ersten Reiter
@@ -151,10 +154,10 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
         let mut nodes = crate::panels::common::resource_menu_nodes(st, "6921");
         let half = st.settings.workspace.inspector_half;
         nodes.push(crate::menu::Node::Separator);
-        nodes.push(crate::menu::Node::Item { label: "Volle Höhe".into(), shortcut: None, action: crate::menu::ItemAction::Ui(Action::Run("ui.inspector.half".into(), serde_json::json!({"half": false}))), enabled: true, checked: Some(!half) });
-        nodes.push(crate::menu::Node::Item { label: "Halbe Höhe".into(), shortcut: None, action: crate::menu::ItemAction::Ui(Action::Run("ui.inspector.half".into(), serde_json::json!({"half": true}))), enabled: true, checked: Some(half) });
+        nodes.push(crate::menu::Node::Item { label: texte::t("pi-menu-full-height"), shortcut: None, action: crate::menu::ItemAction::Ui(Action::Run("ui.inspector.half".into(), serde_json::json!({"half": false}))), enabled: true, checked: Some(!half) });
+        nodes.push(crate::menu::Node::Item { label: texte::t("pi-menu-half-height"), shortcut: None, action: crate::menu::ItemAction::Ui(Action::Run("ui.inspector.half".into(), serde_json::json!({"half": true}))), enabled: true, checked: Some(half) });
         nodes.push(crate::menu::Node::Separator);
-        nodes.push(crate::menu::Node::Item { label: "Schließen".into(), shortcut: None, action: crate::menu::ItemAction::Command("window.properties".into()), enabled: true, checked: None });
+        nodes.push(crate::menu::Node::Item { label: texte::t("btn-close"), shortcut: None, action: crate::menu::ItemAction::Command("window.properties".into()), enabled: true, checked: None });
         let mut acts = Vec::new();
         crate::menu::popup_menu(ui, resp, &nodes, &mut acts);
         for a in acts {
@@ -248,7 +251,10 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
         if let Some(f) = reg.get(t) {
             let mut child = ui.new_child(egui::UiBuilder::new().id_salt(("quad", i, t)).max_rect(*r).layout(egui::Layout::top_down(egui::Align::Min)));
             child.set_clip_rect(r.intersect(ui.clip_rect()));
+            // lange (übersetzte) Beschriftungen in die festen Felder einpassen
+            fields::set_fit(ui.ctx(), true);
             f(&mut child, st, *r);
+            fields::set_fit(ui.ctx(), false);
         } else if cfg!(debug_assertions) {
             let name = layouts::template_name(t);
             if !name.is_empty() {

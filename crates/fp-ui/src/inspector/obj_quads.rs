@@ -10,6 +10,7 @@
 use super::fields::{self, Dl};
 use super::glyphs::Glyph;
 use super::popups::{self, ColorChoice};
+use super::texte::{self, refs, t, tl};
 use super::QuadrantRegistry;
 use crate::app_state::{Action, AppState};
 use crate::theme::Theme;
@@ -249,7 +250,7 @@ pub const BLEND_ITEMS: &[(&str, i32)] = &[
     ("Radieren", 25),
 ];
 
-/// Namen der Mischmodus-Liste.
+/// Deutsche Namen der Mischmodus-Liste (für Anzeigen [`texte::blend_labels`] verwenden).
 pub fn blend_names() -> Vec<&'static str> {
     BLEND_ITEMS.iter().map(|b| b.0).collect()
 }
@@ -259,7 +260,7 @@ pub fn blend_index(m: BlendMode) -> Option<usize> {
     BLEND_ITEMS.iter().position(|b| b.1 == m.0 as i32)
 }
 
-const EDGE_ITEMS: [&str; 3] = ["Hart", "Anti-Alias", "Weiche Kte."];
+const EDGE_ITEMS: [&str; 3] = ["pi-edge-hard", "pi-edge-antialias", "pi-edge-feather-short"];
 const TARGETS: [&str; 4] = ["_blank", "_parent", "_self", "_top"];
 
 fn targets_list() -> Vec<String> {
@@ -415,8 +416,10 @@ pub fn fill_panel(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target, enabled: b
         }
     }
     // Füllart-Knöpfe Keine / Einfarbig / Verlauf / Muster
-    let kinds = [(54.0, Glyph::FillNone, 0u8, "Keine Füllung", "none"), (70.0, Glyph::FillSolid, 1, "Einfarbige Füllung", "solid"), (86.0, Glyph::FillGradient, 2, "Verlaufsfläche", "gradient"), (102.0, Glyph::FillPattern, 3, "Muster", "")];
+    let kinds = [(54.0, Glyph::FillNone, 0u8, "pi-fill-none", "none"), (70.0, Glyph::FillSolid, 1, "pi-fill-solid", "solid"), (86.0, Glyph::FillGradient, 2, "pi-fill-gradient", "gradient"), (102.0, Glyph::FillPattern, 3, "pi-fill-pattern", "")];
     for (x, g, k, tip, cat) in kinds {
+        let tip = t(tip);
+        let tip = tip.as_str();
         let pattern = k == 3;
         if pattern {
             // Muster: Liste aus dem Ressourcenordner des Originals (zur Laufzeit) + „Andere…“
@@ -437,13 +440,16 @@ pub fn fill_panel(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target, enabled: b
                         ui.close();
                     }
                 }
-                if fields::list_item(ui, "Andere...", false).clicked() {
+                if fields::list_item(ui, &t("pi-pattern-other"), false).clicked() {
                     other = true;
                     ui.close();
                 }
             });
             if other {
-                chosen = crate::dialogs::panel_menus::pick_open(st, "Muster wählen", &[("Bilder", &["png", "jpg", "jpeg", "gif", "bmp"])]);
+                chosen = {
+                let (title, images) = (t("pi-pattern-pick-title"), t("pi-filter-images"));
+                crate::dialogs::panel_menus::pick_open(st, &title, &[(images.as_str(), &["png", "jpg", "jpeg", "gif", "bmp"])])
+            };
             }
             if let Some(p) = chosen {
                 st.run("element.setPattern", json!({"image": p.to_string_lossy()}));
@@ -464,8 +470,9 @@ pub fn fill_panel(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target, enabled: b
     }
     // Rand: Hart / Anti-Alias / Weiche Kante + Breite
     let fen = en && kind != 0;
-    fields::label(ui, d.r(0.0, 17.0, 31.0, 8.0), "Rand:", fen);
-    if let Some(i) = fields::combo(ui, id.with("edge"), d.r(33.0, 15.0, 55.0, 13.0), &EDGE_ITEMS, Some(edge.clamp(0, 2) as usize), fen) {
+    fields::label(ui, d.r(0.0, 17.0, 31.0, 8.0), &t("pi-edge"), fen);
+    let edge_items = tl(&EDGE_ITEMS);
+    if let Some(i) = fields::combo(ui, id.with("edge"), d.r(33.0, 15.0, 55.0, 13.0), &refs(&edge_items), Some(edge.clamp(0, 2) as usize), fen) {
         let mut p = json!({"edge": i});
         if i == 2 && feather == 0 {
             p["feather"] = json!(10);
@@ -497,22 +504,20 @@ pub fn fill_texture_panel(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target, en
     };
     let en = enabled && kind != 0 && (tgt == Target::Tool || attrs.is_some());
     let id = Id::new(("pi-ftex", tgt == Target::Tool));
-    fields::label(ui, d.r(0.0, 2.0, 30.0, 8.0), "Textur:", en);
+    fields::label(ui, d.r(0.0, 2.0, 30.0, 8.0), &t("pi-texture"), en);
     let names = texture_items();
-    let shown = if tex.is_empty() { "Ohne".to_string() } else { tex.clone() };
-    let refs: Vec<&str> = names.iter().map(|s| s.as_str()).collect();
-    let sel = refs.iter().position(|n| *n == shown);
-    if let Some(i) = fields::combo(ui, id.with("name"), d.r(31.0, 0.0, 55.0, 14.0), &refs, sel.or(Some(0)), en) {
+    let sel = texture_index(&names, &tex);
+    if let Some(i) = fields::combo(ui, id.with("name"), d.r(31.0, 0.0, 55.0, 14.0), &refs(&names), sel.or(Some(0)), en) {
         let v = if i == 0 { String::new() } else { names[i].clone() };
         apply_fill(ui, st, tgt, json!({"texture": v}));
     }
     if let Some(v) = fields::number(ui, id.with("amt"), d.r(87.0, 0.0, 22.0, 13.0), Some(d.r(109.0, 0.0, 9.0, 13.0)), Some(amount as f64), (0.0, 100.0), 0, en) {
         apply_fill(ui, st, tgt, json!({"textureAmount": v as i64}));
     }
-    if let Some(v) = fields::checkbox(ui, id.with("tr"), d.r(33.0, 15.0, 62.0, 10.0), "Transparent", transparent, en && amount > 0) {
+    if let Some(v) = fields::checkbox(ui, id.with("tr"), d.r(33.0, 15.0, 62.0, 10.0), &t("pi-texture-transparent"), transparent, en && amount > 0) {
         apply_fill(ui, st, tgt, json!({"textureTransparent": v}));
     }
-    if fields::toggle(ui, id.with("dither"), d.r(102.0, 14.0, 16.0, 12.0), Glyph::FillPattern, dither, en && kind == 2 && tgt == Target::Selection, "Verlauf – Dither") {
+    if fields::toggle(ui, id.with("dither"), d.r(102.0, 14.0, 16.0, 12.0), Glyph::FillPattern, dither, en && kind == 2 && tgt == Target::Selection, &t("pi-gradient-dither")) {
         st.run("pi.fill", json!({"dither": !dither}));
     }
 }
@@ -532,9 +537,14 @@ pub fn pattern_files() -> Vec<std::path::PathBuf> {
 }
 
 fn texture_items() -> Vec<String> {
-    let mut v = vec!["Ohne".to_string()];
+    let mut v = vec![t("pi-none")];
     v.extend(popups::texture_names().iter().cloned());
     v
+}
+
+/// Listenplatz der Textur (0 = „Ohne“; die Texturnamen selbst stammen aus Dateien).
+fn texture_index(names: &[String], tex: &str) -> Option<usize> {
+    if tex.is_empty() { Some(0) } else { names.iter().skip(1).position(|n| n == tex).map(|i| i + 1) }
 }
 
 // ---------------------------------------------------------------------- Teilfeld Strich (14010)
@@ -611,7 +621,7 @@ pub fn stroke_panel(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target, enabled:
     let ta = tool_attrs(ui.ctx());
     let attrs = first_attrs(st);
     let first_el = first(st);
-    let (has, color, width, label, soft, place) = match tgt {
+    let (has, color, width, label, soft, place, cur_preset) = match tgt {
         Target::Selection => {
             let a = attrs.as_deref();
             let b = a.and_then(|a| a.brush.as_ref());
@@ -619,16 +629,17 @@ pub fn stroke_panel(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target, enabled:
                 b.is_some(),
                 a.map(|a| a.stroke_color).filter(|_| b.is_some()),
                 b.map(|b| b.diameter).unwrap_or(1),
-                b.map(ui_commands::brush_label).unwrap_or_else(|| "Ohne".into()),
+                b.map(texte::brush_label).unwrap_or_else(|| t("pi-none")),
                 b.map(|b| b.softness / 10).unwrap_or(0),
                 first_el.as_deref().map(placement_of).unwrap_or(1),
+                b.and_then(texte::brush_preset_index),
             )
         }
         Target::Tool => {
             let c = st.session.tools.stroke_color;
             let has = c.a() > 0 && ta.stroke_preset.is_some();
-            let lab = ta.stroke_preset.and_then(|i| BRUSH_PRESETS.get(i)).map(|b| b.name_de.to_string()).unwrap_or_else(|| "Ohne".into());
-            (has, has.then_some(c), ta.stroke_width, if has { lab } else { "Ohne".into() }, ta.softness, ta.placement)
+            let lab = ta.stroke_preset.and_then(|i| BRUSH_PRESETS.get(i)).map(texte::brush_preset_label).unwrap_or_else(|| t("pi-none"));
+            (has, has.then_some(c), ta.stroke_width, if has { lab } else { t("pi-none") }, ta.softness, ta.placement, ta.stroke_preset.filter(|_| has))
         }
     };
     let en = enabled && (tgt == Target::Tool || attrs.is_some());
@@ -656,7 +667,7 @@ pub fn stroke_panel(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target, enabled:
         apply_stroke(ui, st, tgt, json!({"width": v}));
     }
     let saved = saved_brushes(st);
-    if let Some(choice) = popups::stroke_category(ui, id.with("cat"), d.r(64.0, 0.0, 65.0, 14.0), &label, en, &saved) {
+    if let Some(choice) = popups::stroke_category(ui, id.with("cat"), d.r(64.0, 0.0, 65.0, 14.0), &label, has, cur_preset, en, &saved) {
         match choice {
             None => apply_stroke(ui, st, tgt, json!({"none": true})),
             Some(i) if i >= BRUSH_PRESETS.len() => {
@@ -678,12 +689,12 @@ pub fn stroke_panel(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target, enabled:
             }
         }
     }
-    for (x, g, v, tip, name) in [(2.0, Glyph::StrokeInside, 0, "Pinselstrich innen ausrichten", "inside"), (18.0, Glyph::StrokeCenter, 1, "Pinselstrich mittig ausrichten", "center"), (34.0, Glyph::StrokeOutside, 2, "Pinselstrich außen ausrichten", "outside")] {
-        if fields::toggle(ui, id.with(("place", v)), d.r(x, 16.0, 16.0, 12.0), g, place == v, en, tip) {
+    for (x, g, v, tip, name) in [(2.0, Glyph::StrokeInside, 0, "pi-stroke-inside", "inside"), (18.0, Glyph::StrokeCenter, 1, "pi-stroke-center", "center"), (34.0, Glyph::StrokeOutside, 2, "pi-stroke-outside", "outside")] {
+        if fields::toggle(ui, id.with(("place", v)), d.r(x, 16.0, 16.0, 12.0), g, place == v, en, &t(tip)) {
             apply_stroke(ui, st, tgt, json!({"placement": name}));
         }
     }
-    fields::label(ui, d.r(53.0, 17.0, 26.0, 8.0), "Rand:", en && has);
+    fields::label(ui, d.r(53.0, 17.0, 26.0, 8.0), &t("pi-edge"), en && has);
     // Pinselvorschau (Kante)
     let pv = d.r(82.0, 15.0, 15.0, 14.0);
     ui.painter().rect_filled(pv, 0.0, theme.colors.field_bg);
@@ -717,12 +728,10 @@ pub fn stroke_texture_panel(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target, 
     };
     let en = enabled && has;
     let id = Id::new(("pi-stex", tgt == Target::Tool));
-    fields::label(ui, d.r(1.0, 3.0, 30.0, 8.0), "Textur:", en);
+    fields::label(ui, d.r(1.0, 3.0, 30.0, 8.0), &t("pi-texture"), en);
     let names = texture_items();
-    let refs: Vec<&str> = names.iter().map(|s| s.as_str()).collect();
-    let shown = if tex.is_empty() { "Ohne".to_string() } else { tex };
-    let sel = refs.iter().position(|n| *n == shown);
-    if let Some(i) = fields::combo(ui, id.with("name"), d.r(33.0, 0.0, 64.0, 14.0), &refs, sel.or(Some(0)), en) {
+    let sel = texture_index(&names, &tex);
+    if let Some(i) = fields::combo(ui, id.with("name"), d.r(33.0, 0.0, 64.0, 14.0), &refs(&names), sel.or(Some(0)), en) {
         let v = if i == 0 { String::new() } else { names[i].clone() };
         apply_stroke(ui, st, tgt, json!({"texture": v}));
     }
@@ -741,16 +750,17 @@ pub fn stroke_edit_row(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target, enabl
     let edit_en = enabled && has;
     let en = edit_en && tgt == Target::Selection;
     let id = Id::new(("pi-sedit", tgt == Target::Tool));
-    if fields::button(ui, id.with("edit"), d.r(0.0, 2.0, 80.0, 13.0), "Pinselstrich bearbeiten", edit_en) {
+    if fields::button(ui, id.with("edit"), d.r(0.0, 2.0, 80.0, 13.0), &t("pi-stroke-edit"), edit_en) {
         st.dialogs.open_stroke_options(st.session.active().is_some());
     }
-    if fields::icon_button(ui, id.with("save"), d.r(84.0, 2.0, 13.0, 13.0), Glyph::StyleNew, en, "Pinselstrich speichern").clicked() && en {
+    if fields::icon_button(ui, id.with("save"), d.r(84.0, 2.0, 13.0, 13.0), Glyph::StyleNew, en, &t("pi-stroke-save")).clicked() && en {
         let n = saved_brushes(st).len() + 1;
-        st.dialogs.form = Some(crate::dialogs::form::FormDialog::new("5974", "Pinselstrich speichern", "pi.brush.save", vec![crate::dialogs::form::Field::text("name", "Name:", &format!("Pinselstrich {n}"))]));
+        let (title, name_label, name) = (t("pi-stroke-save"), t("pi-stroke-save-name"), fp_i18n::tr!("pi-stroke-default-name", n = n));
+        st.dialogs.form = Some(crate::dialogs::form::FormDialog::new("5974", &title, "pi.brush.save", vec![crate::dialogs::form::Field::text("name", &name_label, &name)]));
     }
     // Löschen: der aktuelle Pinsel ist ein gespeicherter Pinselstrich
     let cur = first_attrs(st).and_then(|a| a.brush.as_ref().and_then(|b| b.user_name.clone())).filter(|n| saved_brushes(st).contains(n));
-    if fields::icon_button(ui, id.with("del"), d.r(98.0, 2.0, 13.0, 13.0), Glyph::Trash, en && cur.is_some(), "Pinselstrich löschen").clicked()
+    if fields::icon_button(ui, id.with("del"), d.r(98.0, 2.0, 13.0, 13.0), Glyph::Trash, en && cur.is_some(), &t("pi-stroke-delete")).clicked()
         && let Some(n) = cur
     {
         st.run("pi.brush.delete", json!({"name": n}));
@@ -775,8 +785,8 @@ pub fn opacity_panel(ui: &mut Ui, st: &mut AppState, d: Dl) {
     if let Some(v) = fields::number(ui, "pi-opacity", d.r(11.0, 0.0, 19.0, 13.0), Some(d.r(31.0, 0.0, 9.0, 13.0)), en.then_some(op), (0.0, 100.0), 0, en) {
         st.run("element.setOpacity", json!({"opacity": v}));
     }
-    let names = blend_names();
-    if let Some(i) = fields::combo(ui, "pi-blend", d.r(43.0, 0.0, 81.0, 13.0), &names, Some(bl), en) {
+    let names = texte::blend_labels();
+    if let Some(i) = fields::combo(ui, "pi-blend", d.r(43.0, 0.0, 81.0, 13.0), &refs(&names), Some(bl), en) {
         let m = BLEND_ITEMS[i].1;
         if m >= 0 {
             st.run("element.setBlendMode", json!({"mode": m.to_string()}));
@@ -794,8 +804,8 @@ pub fn tool_opacity_panel(ui: &mut Ui, st: &mut AppState, d: Dl, with_blend: boo
     }
     if with_blend {
         let ta = tool_attrs(ui.ctx());
-        let names = blend_names();
-        if let Some(i) = fields::combo(ui, "pi-tool-blend", d.r(42.0, 0.0, 81.0, 13.0), &names, Some(ta.blend), true)
+        let names = texte::blend_labels();
+        if let Some(i) = fields::combo(ui, "pi-tool-blend", d.r(42.0, 0.0, 81.0, 13.0), &refs(&names), Some(ta.blend), true)
             && BLEND_ITEMS[i].1 >= 0
         {
             edit_tool_attrs(ui.ctx(), |a| a.blend = i);
@@ -811,17 +821,17 @@ const FX_SEL: &str = "pi-fx-sel";
 pub fn effect_header(ui: &mut Ui, st: &mut AppState, d: Dl) {
     let f = first(st);
     let en = f.is_some();
-    fields::label(ui, d.r(3.0, 4.0, 25.0, 8.0), "Filter:", en);
-    let resp = fields::icon_button(ui, "pi-fx-add", d.r(28.0, 2.0, 14.0, 13.0), Glyph::Plus, en, "Live-Filter hinzufügen oder Vorgabe wählen");
-    let t = Theme::current(ui.ctx());
-    ui.painter().rect_stroke(d.r(28.0, 2.0, 14.0, 13.0), 2.0, Stroke::new(1.0, t.colors.button_border), StrokeKind::Inside);
+    fields::label(ui, d.r(3.0, 4.0, 25.0, 8.0), &t("pi-filters"), en);
+    let resp = fields::icon_button(ui, "pi-fx-add", d.r(28.0, 2.0, 14.0, 13.0), Glyph::Plus, en, &t("pi-fx-add"));
+    let th = Theme::current(ui.ctx());
+    ui.painter().rect_stroke(d.r(28.0, 2.0, 14.0, 13.0), 2.0, Stroke::new(1.0, th.colors.button_border), StrokeKind::Inside);
     if en {
         crate::dialogs::effects::add_menu(ui, &resp, st);
     }
     let n = f.as_ref().and_then(|e| e.common.effects.as_ref()).map(|l| l.effects.len()).unwrap_or(0);
     let sel: Option<usize> = ui.data(|d| d.get_temp(Id::new(FX_SEL)));
     let can_del = en && sel.is_some_and(|i| i < n);
-    if fields::icon_button(ui, "pi-fx-del", d.r(42.0, 2.0, 14.0, 13.0), Glyph::Minus, can_del, "Aktuell ausgewählten Live-Filter löschen").clicked()
+    if fields::icon_button(ui, "pi-fx-del", d.r(42.0, 2.0, 14.0, 13.0), Glyph::Minus, can_del, &t("pi-fx-delete")).clicked()
         && let Some(i) = sel
     {
         st.run("element.removeEffect", json!({"index": i}));
@@ -922,7 +932,7 @@ fn rect_q4(ui: &mut Ui, st: &mut AppState, r: Rect) {
     let (w, h) = prim.as_ref().map(|p| (p.rect.width().abs(), p.rect.height().abs())).unwrap_or((0.0, 0.0));
     let frac = prim.as_ref().map(|p| p.roundness).unwrap_or(0.0) as f64;
     let shown = if px_mode { frac * (w.min(h) as f64) / 2.0 } else { frac * 100.0 };
-    fields::label_right(ui, d.r(128.0, 17.0, 63.0, 8.0), "Rundung:", en);
+    fields::label_right(ui, d.r(128.0, 17.0, 63.0, 8.0), &t("pi-roundness"), en);
     let range = if px_mode { (0.0, (w.min(h) / 2.0).max(1.0) as f64) } else { (0.0, 100.0) };
     if let Some(v) = fields::number(ui, "pi-round", d.r(193.0, 15.0, 19.0, 13.0), Some(d.r(213.0, 15.0, 9.0, 13.0)), en.then_some(shown.round()), range, 0, en) {
         st.run("pi.roundness", json!({"value": v, "pixels": px_mode}));
@@ -950,14 +960,16 @@ fn pathops_q5(ui: &mut Ui, st: &mut AppState, r: Rect) {
         }),
         _ => None,
     });
-    let buttons = [(0.0, Glyph::OpNormal, 0u32, "Normal"), (20.0, Glyph::OpUnion, 1, "Hinzufügen/Vereinigen"), (40.0, Glyph::OpPunch, 3, "Subtrahieren/Ausstanzen"), (60.0, Glyph::OpIntersect, 2, "Überschneiden"), (80.0, Glyph::OpCrop, 4, "Zuschneiden")];
+    let buttons = [(0.0, Glyph::OpNormal, 0u32, "pi-pathop-normal"), (20.0, Glyph::OpUnion, 1, "pi-pathop-union"), (40.0, Glyph::OpPunch, 3, "pi-pathop-punch"), (60.0, Glyph::OpIntersect, 2, "pi-pathop-intersect"), (80.0, Glyph::OpCrop, 4, "pi-pathop-crop")];
     for (x, g, op, tip) in buttons {
+        let tip = t(tip);
+        let tip = tip.as_str();
         let on = cur_op == Some(op) || (cur_op.is_none() && op == 0 && !tool_mode);
         if fields::toggle(ui, ("pi-pathop", op), d.r(x, 0.0, 16.0, 12.0), g, on, en || tool_mode, tip) && en {
             st.run("pi.compound.setOp", json!({"op": op}));
         }
     }
-    if fields::button(ui, "pi-combine", d.r(25.0, 15.0, 47.0, 14.0), "Kombinieren", compound) {
+    if fields::button(ui, "pi-combine", d.r(25.0, 15.0, 47.0, 14.0), &t("pi-combine"), compound) {
         st.run("pi.compound.combine", json!({}));
     }
 }
@@ -969,33 +981,33 @@ fn style_q6(ui: &mut Ui, st: &mut AppState, r: Rect) {
     let f = first(st);
     let en = f.is_some();
     let styles: Vec<String> = st.session.active().and_then(|d| d.doc.styles.as_ref()).map(|v| v.iter().map(|s| s.name.clone()).collect()).unwrap_or_default();
-    let mut items: Vec<String> = vec!["Kein Stil".into()];
+    let mut items: Vec<String> = vec![t("pi-style-none")];
     items.extend(styles.iter().cloned());
     let cur = f.as_ref().and_then(|e| e.common.style.clone());
-    let sel = cur.as_ref().and_then(|n| items.iter().position(|x| x == n)).unwrap_or(0);
+    let sel = cur.as_ref().and_then(|n| items.iter().skip(1).position(|x| x == n).map(|i| i + 1)).unwrap_or(0);
     let refs: Vec<&str> = items.iter().map(|s| s.as_str()).collect();
     if let Some(i) = fields::combo(ui, "pi-style", d.r(1.0, 0.0, 92.0, 13.0), &refs, Some(sel), en) {
         st.run("pi.style.apply", json!({"name": if i == 0 { String::new() } else { items[i].clone() }}));
     }
     let has = cur.is_some();
     let y = 16.0;
-    if fields::icon_button(ui, "pi-style-new", d.r(0.0, y, 16.0, 12.0), Glyph::StyleNew, en, "Neuer Stil").clicked() {
+    if fields::icon_button(ui, "pi-style-new", d.r(0.0, y, 16.0, 12.0), Glyph::StyleNew, en, &t("pi-style-new")).clicked() {
         st.dialogs.open_new_style();
     }
-    if fields::icon_button(ui, "pi-style-redef", d.r(20.0, y, 16.0, 12.0), Glyph::StyleRedefine, en && has, "Stil neu definieren").clicked()
+    if fields::icon_button(ui, "pi-style-redef", d.r(20.0, y, 16.0, 12.0), Glyph::StyleRedefine, en && has, &t("pi-style-redefine")).clicked()
         && let Some(n) = &cur
     {
         st.run("pi.style.new", json!({"name": n}));
     }
-    if fields::icon_button(ui, "pi-style-clear", d.r(40.0, y, 16.0, 12.0), Glyph::StyleClear, en && has, "Abweichungen löschen").clicked()
+    if fields::icon_button(ui, "pi-style-clear", d.r(40.0, y, 16.0, 12.0), Glyph::StyleClear, en && has, &t("pi-style-clear")).clicked()
         && let Some(n) = &cur
     {
         st.run("pi.style.apply", json!({"name": n}));
     }
-    if fields::icon_button(ui, "pi-style-unlink", d.r(60.0, y, 16.0, 12.0), Glyph::StyleUnlink, en && has, "Verknüpfung zu Stil aufheben").clicked() {
+    if fields::icon_button(ui, "pi-style-unlink", d.r(60.0, y, 16.0, 12.0), Glyph::StyleUnlink, en && has, &t("pi-style-unlink")).clicked() {
         st.run("pi.style.apply", json!({"name": ""}));
     }
-    if fields::icon_button(ui, "pi-style-del", d.r(80.0, y, 16.0, 12.0), Glyph::Trash, en && has, "Stil löschen").clicked()
+    if fields::icon_button(ui, "pi-style-del", d.r(80.0, y, 16.0, 12.0), Glyph::Trash, en && has, &t("pi-style-delete")).clicked()
         && let Some(n) = &cur
     {
         st.run("pi.style.delete", json!({"name": n}));
@@ -1013,31 +1025,31 @@ fn animation_q3(ui: &mut Ui, st: &mut AppState, r: Rect) {
     let en = anim.is_some();
     let a = anim.unwrap_or(fp_model::AnimParams { frames: 1, offset: fp_geom::Point::new(0.0, 0.0), rotation: 0, scale: 100.0, start_opacity: 1000, end_opacity: 1000 });
     let mut out: Option<Value> = None;
-    fields::label_right(ui, d.r(13.0, 2.0, 32.0, 8.0), "Status:", en);
+    fields::label_right(ui, d.r(13.0, 2.0, 32.0, 8.0), &t("pi-anim-states"), en);
     if let Some(v) = fields::number(ui, "pi-anim-frames", d.r(48.0, 0.0, 24.0, 13.0), Some(d.r(73.0, 0.0, 9.0, 13.0)), Some(a.frames as f64), (1.0, 60.0), 0, en) {
         out = Some(json!({"frames": v as i64}));
     }
-    fields::label_right(ui, d.r(88.0, 2.0, 40.0, 8.0), "Deckkraft:", en);
+    fields::label_right(ui, d.r(88.0, 2.0, 40.0, 8.0), &t("pi-opacity"), en);
     if let Some(v) = fields::number(ui, "pi-anim-op0", d.r(131.0, 0.0, 24.0, 13.0), Some(d.r(156.0, 0.0, 9.0, 13.0)), Some((a.start_opacity as f64 / 10.0).round()), (0.0, 100.0), 0, en) {
         out = Some(json!({"startOpacity": v}));
     }
-    fields::label(ui, d.r(166.0, 2.0, 10.0, 8.0), "bis", en);
+    fields::label(ui, d.r(166.0, 2.0, 10.0, 8.0), &t("pi-anim-to"), en);
     if let Some(v) = fields::number(ui, "pi-anim-op1", d.r(177.0, 0.0, 24.0, 13.0), Some(d.r(202.0, 0.0, 9.0, 13.0)), Some((a.end_opacity as f64 / 10.0).round()), (0.0, 100.0), 0, en) {
         out = Some(json!({"endOpacity": v}));
     }
-    fields::label_right(ui, d.r(0.0, 17.0, 45.0, 8.0), "Skalierung:", en);
+    fields::label_right(ui, d.r(0.0, 17.0, 45.0, 8.0), &t("pi-anim-scaling"), en);
     if let Some(v) = fields::number(ui, "pi-anim-scale", d.r(48.0, 15.0, 24.0, 13.0), Some(d.r(73.0, 15.0, 9.0, 13.0)), Some(a.scale as f64), (0.0, 250.0), 0, en) {
         out = Some(json!({"scale": v}));
     }
-    fields::label_right(ui, d.r(89.0, 17.0, 39.0, 8.0), "Drehung:", en);
+    fields::label_right(ui, d.r(89.0, 17.0, 39.0, 8.0), &t("pi-anim-rotation"), en);
     let rot = a.rotation;
     if let Some(v) = fields::number(ui, "pi-anim-rot", d.r(131.0, 15.0, 24.0, 13.0), Some(d.r(156.0, 15.0, 9.0, 13.0)), Some(rot.abs() as f64), (0.0, 360.0), 0, en) {
         out = Some(json!({"rotation": if rot < 0 { -(v as i64) } else { v as i64 }}));
     }
-    if fields::toggle(ui, "pi-anim-cw", d.r(177.0, 15.0, 15.0, 13.0), Glyph::RotateCw, rot >= 0, en, "Im Uhrzeigersinn drehen") && rot < 0 {
+    if fields::toggle(ui, "pi-anim-cw", d.r(177.0, 15.0, 15.0, 13.0), Glyph::RotateCw, rot >= 0, en, &t("pi-anim-cw")) && rot < 0 {
         out = Some(json!({"rotation": -rot}));
     }
-    if fields::toggle(ui, "pi-anim-ccw", d.r(192.0, 15.0, 15.0, 13.0), Glyph::RotateCcw, rot < 0, en, "Entgegen dem Uhrzeigersinn drehen") && rot > 0 {
+    if fields::toggle(ui, "pi-anim-ccw", d.r(192.0, 15.0, 15.0, 13.0), Glyph::RotateCcw, rot < 0, en, &t("pi-anim-ccw")) && rot > 0 {
         out = Some(json!({"rotation": -rot}));
     }
     if let Some(p) = out {
@@ -1061,18 +1073,20 @@ fn button_q3(ui: &mut Ui, st: &mut AppState, r: Rect) {
     let b = button_strings(st);
     let en = b.is_some();
     let (bs, _) = b.unwrap_or_default();
-    fields::label(ui, d.r(2.0, 2.0, 21.0, 8.0), "Text:", en);
+    fields::label(ui, d.r(2.0, 2.0, 21.0, 8.0), &t("pi-btn-text"), en);
     if let Some(v) = fields::text(ui, "pi-btn-text", d.r(25.0, 0.0, 124.0, 13.0), bs.text.as_deref().unwrap_or(""), en) {
         st.run("pi.button", json!({"text": v}));
     }
-    let presets: Vec<&str> = fp_export::options::builtin_presets().iter().map(|p| p.name).collect();
-    let _ = fields::combo(ui, "pi-btn-export", d.r(25.0, 14.0, 86.0, 13.0), &presets, Some(0), false);
-    let _ = fields::button(ui, "pi-btn-export-edit", d.r(114.0, 14.0, 35.0, 13.0), "Bearbeiten...", false);
-    fields::label_right(ui, d.r(152.0, 2.0, 39.0, 8.0), "Hyperlink:", en);
+    let presets: Vec<String> = fp_export::options::builtin_presets().iter().map(|p| crate::panels::optimize::preset_label(p.name)).collect();
+    let presets = refs(&presets);
+    // Kombifeld etwas schmaler als in dialoge.json, damit „Bearbeiten...“ ungekürzt passt
+    let _ = fields::combo(ui, "pi-btn-export", d.r(25.0, 14.0, 74.0, 13.0), &presets, Some(0), false);
+    let _ = fields::button(ui, "pi-btn-export-edit", d.r(101.0, 14.0, 48.0, 13.0), &t("pi-edit"), false);
+    fields::label_right(ui, d.r(152.0, 2.0, 39.0, 8.0), &t("pi-link"), en);
     if let Some(v) = fields::combo_edit(ui, "pi-btn-url", d.r(195.0, 0.0, 156.0, 13.0), bs.url.as_deref().unwrap_or(""), &known_urls(st), en) {
         st.run("pi.web", json!({"url": v}));
     }
-    fields::label_right(ui, d.r(174.0, 16.0, 17.0, 8.0), "Alt:", en);
+    fields::label_right(ui, d.r(174.0, 16.0, 17.0, 8.0), &t("pi-alt"), en);
     if let Some(v) = fields::text(ui, "pi-btn-alt", d.r(195.0, 14.0, 156.0, 12.0), bs.alt.as_deref().unwrap_or(""), en) {
         st.run("pi.web", json!({"alt": v}));
     }
@@ -1084,11 +1098,11 @@ fn button_q4(ui: &mut Ui, st: &mut AppState, r: Rect) {
     let en = b.is_some();
     let (bs, down) = b.unwrap_or_default();
     opacity_panel(ui, st, d.offset(17.0, 1.0));
-    fields::label_right(ui, d.r(147.0, 3.0, 33.0, 8.0), "Ziel:", en);
+    fields::label_right(ui, d.r(147.0, 3.0, 33.0, 8.0), &t("pi-target"), en);
     if let Some(v) = fields::combo_edit(ui, "pi-btn-target", d.r(182.0, 1.0, 106.0, 13.0), bs.target.as_deref().unwrap_or(""), &targets_list(), en) {
         st.run("pi.web", json!({"target": v}));
     }
-    if let Some(v) = fields::checkbox(ui, "pi-btn-down", d.r(182.0, 16.0, 140.0, 10.0), "Down-Status beim Laden anzeigen", down, en) {
+    if let Some(v) = fields::checkbox(ui, "pi-btn-down", d.r(182.0, 16.0, 140.0, 10.0), &t("pi-btn-show-down"), down, en) {
         st.run("pi.button", json!({"showDownOnLoad": v}));
     }
 }
@@ -1104,8 +1118,8 @@ fn web_object(st: &AppState) -> Option<fp_model::WebObjectElem> {
 
 fn link_alt(ui: &mut Ui, st: &mut AppState, d: Dl, w: Option<&fp_model::WebObjectElem>, width: f32, key: &str) {
     let en = w.is_some();
-    fields::label(ui, d.r(0.0, 2.0, 39.0, 8.0), "Hyperlink:", en);
-    fields::label_right(ui, d.r(16.0, 16.0, 23.0, 8.0), "Alt:", en);
+    fields::label(ui, d.r(0.0, 2.0, 39.0, 8.0), &t("pi-link"), en);
+    fields::label_right(ui, d.r(16.0, 16.0, 23.0, 8.0), &t("pi-alt"), en);
     let url = w.and_then(|w| w.url.clone()).unwrap_or_default();
     if let Some(v) = fields::combo_edit(ui, (key, "url"), d.r(43.0, 0.0, width, 13.0), &url, &known_urls(st), en) {
         st.run("pi.web", json!({"url": v}));
@@ -1119,7 +1133,7 @@ fn link_alt(ui: &mut Ui, st: &mut AppState, d: Dl, w: Option<&fp_model::WebObjec
 #[allow(clippy::too_many_arguments)]
 fn target_field(ui: &mut Ui, st: &mut AppState, d: Dl, w: Option<&fp_model::WebObjectElem>, x_label: f32, x_field: f32, width: f32, key: &str) {
     let en = w.is_some();
-    fields::label_right(ui, d.r(x_label, 2.0, x_field - x_label - 4.0, 8.0), "Ziel:", en);
+    fields::label_right(ui, d.r(x_label, 2.0, x_field - x_label - 4.0, 8.0), &t("pi-target"), en);
     let tg = w.and_then(|w| w.target.clone()).unwrap_or_default();
     if let Some(v) = fields::combo_edit(ui, (key, "target"), d.r(x_field, 0.0, width, 13.0), &tg, &targets_list(), en) {
         st.run("pi.web", json!({"target": v}));
@@ -1136,9 +1150,9 @@ fn slice_q3(ui: &mut Ui, st: &mut AppState, r: Rect) {
     let d = Dl::at(r.min);
     let w = web_object(st);
     let en = w.is_some();
-    fields::label(ui, d.r(0.0, 2.0, 23.0, 8.0), "Typ:", en);
+    fields::label(ui, d.r(0.0, 2.0, 23.0, 8.0), &t("pi-slice-type"), en);
     let ty = w.as_ref().and_then(|w| w.slice.as_ref()).map(|s| s.slice_type.clamp(0, 2) as usize).unwrap_or(0);
-    if let Some(i) = fields::combo(ui, "pi-slice-type", d.r(27.0, 0.0, 108.0, 13.0), &["Vordergrundbild", "Hintergrundbild", "HTML"], Some(ty), en) {
+    if let Some(i) = fields::combo(ui, "pi-slice-type", d.r(27.0, 0.0, 108.0, 13.0), &refs(&[t("pi-slice-foreground"), t("pi-slice-background"), "HTML".to_string()]), Some(ty), en) {
         st.run("pi.web", json!({"sliceType": i}));
     }
     web_color(ui, st, d.r(137.0, 0.0, 14.0, 13.0), w.as_ref(), "pi-slice");
@@ -1153,8 +1167,8 @@ fn slice_q4(ui: &mut Ui, st: &mut AppState, r: Rect) {
     let ty = sp.as_ref().map(|s| s.slice_type).unwrap_or(0);
     match ty {
         2 => {
-            fields::label(ui, d.r(1.0, 5.0, 24.0, 8.0), "HTML:", en);
-            if fields::button(ui, "pi-slice-html", d.r(27.0, 2.0, 54.0, 14.0), "Bearbeiten...", en) {
+            fields::label_name(ui, d.r(1.0, 5.0, 24.0, 8.0), "HTML:", en);
+            if fields::button(ui, "pi-slice-html", d.r(27.0, 2.0, 54.0, 14.0), &t("pi-edit"), en) {
                 let html = sp.as_ref().and_then(|s| s.html.clone()).unwrap_or_default();
                 st.dialogs.open_html_slice(html);
             }
@@ -1162,14 +1176,14 @@ fn slice_q4(ui: &mut Ui, st: &mut AppState, r: Rect) {
         1 => {
             let bg = sp.as_ref().and_then(|s| s.background).unwrap_or_default();
             let dd = d.offset(1.0, 0.0);
-            fields::label_right(ui, dd.r(0.0, 1.0, 67.0, 8.0), "Horizontale Position:", en);
+            fields::label_right(ui, dd.r(0.0, 1.0, 67.0, 8.0), &t("pi-slice-hpos"), en);
             if let Some(i) = fields::combo(ui, "pi-bg-h", dd.r(70.0, 0.0, 55.0, 12.0), &["left", "center", "right", "value"], Some(bg.h_align.clamp(0, 3) as usize), en) {
                 st.run("pi.web", json!({"bgHAlign": i}));
             }
             if let Some(v) = fields::number(ui, "pi-bg-hv", dd.r(127.0, 0.0, 17.0, 12.0), None, Some(bg.h_value as f64), (0.0, 100.0), 0, en && bg.h_align == 3) {
                 st.run("pi.web", json!({"bgHValue": v as i64}));
             }
-            fields::label_right(ui, dd.r(0.0, 16.0, 67.0, 8.0), "Vertikale Position:", en);
+            fields::label_right(ui, dd.r(0.0, 16.0, 67.0, 8.0), &t("pi-slice-vpos"), en);
             if let Some(i) = fields::combo(ui, "pi-bg-v", dd.r(70.0, 14.0, 55.0, 12.0), &["top", "center", "bottom", "value"], Some(bg.v_align.clamp(0, 3) as usize), en) {
                 st.run("pi.web", json!({"bgVAlign": i}));
             }
@@ -1178,11 +1192,13 @@ fn slice_q4(ui: &mut Ui, st: &mut AppState, r: Rect) {
             }
         }
         _ => {
-            let presets: Vec<&'static str> = fp_export::options::builtin_presets().iter().map(|p| p.name).collect();
+            let presets: Vec<String> = fp_export::options::builtin_presets().iter().map(|p| crate::panels::optimize::preset_label(p.name)).collect();
+            let presets = refs(&presets);
             let cur = sp.as_ref().and_then(|s| s.export.as_ref()).map(|e| fp_export::OptimizeSettings::from_model(e, None));
             let sel = cur.as_ref().and_then(|c| fp_export::options::builtin_presets().iter().position(|p| p.settings.format == c.format && p.settings.color_mode == c.color_mode));
-            let _ = fields::combo(ui, "pi-slice-export", d.r(26.0, 1.0, 108.0, 13.0), &presets, sel, false);
-            let _ = fields::button(ui, "pi-slice-export-edit", d.r(136.0, 1.0, 53.0, 13.0), "Bearbeiten...", false);
+            // Knopf endet vor der Beschriftung „Ziel:“ (vorher überlappten sich beide)
+            let _ = fields::combo(ui, "pi-slice-export", d.r(26.0, 1.0, 86.0, 13.0), &presets, sel, false);
+            let _ = fields::button(ui, "pi-slice-export-edit", d.r(114.0, 1.0, 52.0, 13.0), &t("pi-edit"), false);
         }
     }
     target_field(ui, st, d.offset(154.0, 1.0), w.as_ref(), 15.0, 45.0, 143.0, "pi-slice");
@@ -1193,9 +1209,9 @@ fn hotspot_q3(ui: &mut Ui, st: &mut AppState, r: Rect) {
     let w = web_object(st);
     let en = w.is_some();
     let dd = d.offset(2.0, 0.0);
-    fields::label(ui, dd.r(1.0, 2.0, 22.0, 11.0), "Form:", en);
+    fields::label(ui, dd.r(1.0, 2.0, 22.0, 11.0), &t("pi-shape"), en);
     let sh = w.as_ref().map(|w| w.shape.code().clamp(0, 2) as usize).unwrap_or(0);
-    if let Some(i) = fields::combo(ui, "pi-hot-shape", dd.r(26.0, 0.0, 106.0, 13.0), &["Rechteck", "Ellipse", "Polygon"], Some(sh), en) {
+    if let Some(i) = fields::combo(ui, "pi-hot-shape", dd.r(26.0, 0.0, 106.0, 13.0), &refs(&tl(&["pi-shape-rectangle", "pi-shape-ellipse", "pi-shape-polygon"])), Some(sh), en) {
         st.run("pi.web", json!({"shape": i}));
     }
     web_color(ui, st, dd.r(133.0, 0.0, 14.0, 13.0), w.as_ref(), "pi-hot");
@@ -1232,6 +1248,31 @@ struct TextVals {
 }
 
 fn text_vals(st: &AppState, ctx: &egui::Context, tgt: Target) -> Option<TextVals> {
+    // Offener Text-Editor: Werte an der Markierung bzw. am Caret (ändern sich live mit)
+    if let Some(a) = st.session.text_edit_attrs() {
+        let e = first(st);
+        let t = e.as_ref().and_then(|e| if let ElementKind::Text(t) = &e.kind { Some(t) } else { None });
+        return Some(TextVals {
+            font: a.font.clone().unwrap_or_default(),
+            size: a.size.unwrap_or(12.0),
+            color: a.color.map(Argb),
+            bold: a.bold.unwrap_or(false),
+            italic: a.italic.unwrap_or(false),
+            underline: a.underline.unwrap_or(false),
+            tracking: a.tracking.unwrap_or(0.0),
+            leading: a.leading.unwrap_or(1.0),
+            leading_px: a.leading_mode == Some(1),
+            align: a.alignment.unwrap_or(0),
+            indent: a.indent.unwrap_or(0.0),
+            space_before: a.space_before.unwrap_or(0.0),
+            space_after: a.space_after.unwrap_or(0.0),
+            hscale: a.horizontal_scale.unwrap_or(1.0),
+            baseline: a.baseline_shift.unwrap_or(0.0),
+            aa: t.map_or(3, |t| t.antialias),
+            auto_kern: t.is_none_or(|t| t.auto_kern),
+            on_path: t.and_then(|t| t.on_path.as_ref().map(|o| o.offset.unwrap_or(0.0))),
+        });
+    }
     match tgt {
         Target::Tool => {
             let ta = tool_attrs(ctx);
@@ -1290,6 +1331,11 @@ fn set_text(ui: &Ui, st: &mut AppState, tgt: Target, p: Value) {
     match tgt {
         Target::Selection => st.run("text.setAttributes", p),
         Target::Tool => {
+            // offener Text-Editor (neuer Text): live auf Markierung bzw. ganzen Text (fp-engine
+            // leitet text.setAttributes an den Editor); zusätzlich als Vorgabe des Werkzeugs
+            if st.session.tool_is_editing_text() {
+                st.run("text.setAttributes", p.clone());
+            }
             if let Some(f) = p.get("font").and_then(|v| v.as_str()) {
                 st.session.tools.options.text_font = f.to_string();
             }
@@ -1342,7 +1388,13 @@ pub fn text_row1(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target) {
     if let Some(i) = fields::combo(ui, id.with("style"), d.r(122.0, 0.0, 77.0, 13.0), &srefs, ssel, en) {
         set_text(ui, st, tgt, json!({"font": super::fonts::ps_name(&family, srefs[i])}));
     }
-    if let Some(s) = fields::number(ui, id.with("size"), d.r(202.0, 0.0, 27.0, 13.0), Some(d.r(230.0, 0.0, 9.0, 13.0)), en.then_some(v.size as f64), (1.0, 5000.0), 1, en) {
+    // Feld nimmt 1..5000 an; der Schieber hat wie im Original 8..96 in ganzen Schritten (11 §3.5.5,
+    // 09: Schieberbereiche der Text-Inspektorfelder) – vorher 1..5000 auf 130 px ≈ 38 pt je Pixel
+    let mut size = fields::number(ui, id.with("size"), d.r(202.0, 0.0, 27.0, 13.0), None, en.then_some(v.size as f64), (1.0, 5000.0), 1, en);
+    if let Some(s) = fields::slider_arrow(ui, id.with("size-arrow"), d.r(230.0, 0.0, 9.0, 13.0), (v.size as f64).clamp(8.0, 96.0), (8.0, 96.0), 0, en) {
+        size = Some(s);
+    }
+    if let Some(s) = size {
         set_text(ui, st, tgt, json!({"size": s}));
     }
     match popups::color_button(ui, id.with("color"), d.r(240.0, 0.0, 15.0, 13.0), st, v.color, en, false, true) {
@@ -1370,18 +1422,18 @@ pub fn text_row1(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target) {
         let val = if i == 1 { v.leading * v.size } else { v.leading / v.size.max(1.0) };
         set_text(ui, st, tgt, json!({"leading": if (i == 1) == v.leading_px { v.leading } else { val }, "leadingMode": i}));
     }
-    if fields::toggle(ui, id.with("b"), d.r(140.0, 15.0, 13.0, 12.0), Glyph::Bold, v.bold, en, "Faux Fett") {
+    if fields::toggle(ui, id.with("b"), d.r(140.0, 15.0, 13.0, 12.0), Glyph::Bold, v.bold, en, &t("pi-text-bold")) {
         set_text(ui, st, tgt, json!({"bold": !v.bold}));
     }
-    if fields::toggle(ui, id.with("i"), d.r(154.0, 15.0, 13.0, 12.0), Glyph::Italic, v.italic, en, "Faux Kursiv") {
+    if fields::toggle(ui, id.with("i"), d.r(154.0, 15.0, 13.0, 12.0), Glyph::Italic, v.italic, en, &t("pi-text-italic")) {
         set_text(ui, st, tgt, json!({"italic": !v.italic}));
     }
-    if fields::toggle(ui, id.with("u"), d.r(168.0, 15.0, 13.0, 12.0), Glyph::Underline, v.underline, en, "Unterstrichen") {
+    if fields::toggle(ui, id.with("u"), d.r(168.0, 15.0, 13.0, 12.0), Glyph::Underline, v.underline, en, &t("pi-text-underline")) {
         set_text(ui, st, tgt, json!({"underline": !v.underline}));
     }
-    let aligns = [(184.0, Glyph::AlignLeft, 0, "Linksbündig"), (198.0, Glyph::AlignCenter, 1, "Zentrieren"), (212.0, Glyph::AlignRight, 2, "Rechtsbündig"), (226.0, Glyph::AlignJustify, 3, "Blocksatz"), (240.0, Glyph::AlignStretch, 4, "Gestreckte Ausrichtung")];
+    let aligns = [(184.0, Glyph::AlignLeft, 0, "pi-text-align-left"), (198.0, Glyph::AlignCenter, 1, "pi-text-align-center"), (212.0, Glyph::AlignRight, 2, "pi-text-align-right"), (226.0, Glyph::AlignJustify, 3, "pi-text-align-justify"), (240.0, Glyph::AlignStretch, 4, "pi-text-align-stretch")];
     for (x, g, a, tip) in aligns {
-        if fields::toggle(ui, id.with(("al", a)), d.r(x, 15.0, 13.0, 12.0), g, v.align == a, en, tip) {
+        if fields::toggle(ui, id.with(("al", a)), d.r(x, 15.0, 13.0, 12.0), g, v.align == a, en, &t(tip)) {
             set_text(ui, st, tgt, json!({"alignment": a}));
         }
     }
@@ -1414,7 +1466,9 @@ pub fn text_row2(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target) {
     if let Some(x) = fields::number(ui, id.with("bl"), d.r(124.0, 1.0, 27.0, 13.0), Some(d.r(152.0, 1.0, 9.0, 13.0)), Some(v.baseline as f64), (-99.0, 100.0), 0, en) {
         set_text(ui, st, tgt, json!({"baselineShift": x}));
     }
-    let aa_items = ["Kein Anti-Alias", "Anti-Alias scharf", "Anti-Alias stark", "Anti-Alias glatt", "----", "Benutzerdef. Anti-Alias..."];
+    let mut aa_items = tl(&["pi-aa-none", "pi-aa-crisp", "pi-aa-strong", "pi-aa-smooth", "", "pi-aa-custom"]);
+    aa_items[4] = "----".into();
+    let aa_items = refs(&aa_items);
     let aa_sel = match v.aa {
         0 => 0,
         1 => 1,
@@ -1433,12 +1487,12 @@ pub fn text_row2(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target) {
         st.run("pi.text.antialias", json!({"mode": mode}));
     }
     if let Some(off) = v.on_path {
-        fields::label_right(ui, d.r(102.0, 18.0, 44.0, 8.0), "Textversatz:", en);
+        fields::label_right(ui, d.r(102.0, 18.0, 44.0, 8.0), &t("pi-text-offset"), en);
         if let Some(x) = fields::number(ui, id.with("po"), d.r(148.0, 16.0, 14.0, 13.0), None, Some(off as f64), (-10000.0, 10000.0), 0, en) {
             st.run("pi.text.pathOffset", json!({"offset": x}));
         }
     }
-    if let Some(b) = fields::checkbox(ui, id.with("ak"), d.r(165.0, 18.0, 92.0, 10.0), "Autom. Unterschneidung", v.auto_kern, en) {
+    if let Some(b) = fields::checkbox(ui, id.with("ak"), d.r(165.0, 18.0, 92.0, 10.0), &t("pi-text-autokern"), v.auto_kern, en) {
         st.run("pi.text.autoKern", json!({"on": b}));
     }
 }
@@ -1468,24 +1522,24 @@ fn text_tool_q3(ui: &mut Ui, st: &mut AppState, r: Rect) {
 
 fn mask_q3(ui: &mut Ui, st: &mut AppState, r: Rect) {
     let d = Dl::at(r.min);
-    fields::label(ui, d.r(2.0, 2.0, 140.0, 10.0), "Bitmapmaske wird bearbeitet", true);
+    fields::label(ui, d.r(2.0, 2.0, 140.0, 10.0), &t("pi-mask-editing"), true);
     opacity_panel(ui, st, d.offset(260.0, 0.0));
 }
 
 /// Für Tests: Text einer Elementart im Inspektor (Q1).
 pub fn type_label(e: &Element) -> String {
     match &e.kind {
-        ElementKind::Bitmap(_) => "Bitmap".into(),
-        ElementKind::Path(p) if p.primitive.is_some() => "Rechteck".into(),
-        ElementKind::Path(_) => "Pfad".into(),
-        ElementKind::Text(_) => "Text".into(),
-        ElementKind::Group(g) => format!("Gruppieren ({})", g.children.len()),
-        ElementKind::CompoundShape(_) => "Zusammengesetzte Form".into(),
-        ElementKind::Instance(_) => "Symbol".into(),
-        ElementKind::WebObject(w) if w.slice.is_some() => "Segment".into(),
-        ElementKind::WebObject(_) => "Hotspot".into(),
-        ElementKind::SubLayer(_) => "Unterebene".into(),
-        ElementKind::Raw(_) => "Objekt".into(),
+        ElementKind::Bitmap(_) => t("pi-type-bitmap"),
+        ElementKind::Path(p) if p.primitive.is_some() => t("pi-type-rectangle"),
+        ElementKind::Path(_) => t("pi-type-path"),
+        ElementKind::Text(_) => t("pi-type-text"),
+        ElementKind::Group(g) => fp_i18n::tr!("pi-type-group", n = g.children.len()),
+        ElementKind::CompoundShape(_) => t("pi-type-compound"),
+        ElementKind::Instance(_) => t("pi-type-symbol"),
+        ElementKind::WebObject(w) if w.slice.is_some() => t("pi-type-slice"),
+        ElementKind::WebObject(_) => t("pi-type-hotspot"),
+        ElementKind::SubLayer(_) => t("pi-type-sublayer"),
+        ElementKind::Raw(_) => t("pi-type-object"),
     }
 }
 
@@ -1494,7 +1548,8 @@ pub fn swatch_color(c: Argb) -> Color32 {
     c32(c)
 }
 
-/// Nicht genutzte Liste der Verlaufsformen (Export für Dialoge).
-pub fn gradient_names() -> Vec<&'static str> {
-    GRADIENT_SHAPES.iter().map(|g| g.0).collect()
+/// Liste der Verlaufsformen in der aktuellen Sprache (Export für Dialoge).
+pub fn gradient_names() -> Vec<String> {
+    let _ = GRADIENT_SHAPES;
+    texte::gradient_labels()
 }

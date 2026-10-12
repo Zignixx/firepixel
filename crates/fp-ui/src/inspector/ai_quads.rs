@@ -4,6 +4,7 @@
 //! Menü, MCP und Skripte. Eigene Vorlagen-IDs 19001–19006 (keine Vorlagen des Originals).
 
 use super::fields::{self, Dl};
+use super::texte::{refs, t, tl};
 use super::QuadrantRegistry;
 use crate::app_state::AppState;
 use egui::{Rect, Ui};
@@ -40,18 +41,18 @@ fn set_model(st: &mut AppState, key: &str, id: ModelId) {
 
 fn model_combo(ui: &mut Ui, st: &mut AppState, d: Dl, id: &str, key: &str, label: &str, options: &[(ModelId, &str)]) {
     let choices: Vec<ModelId> = options.iter().map(|o| o.0).collect();
-    let names: Vec<&str> = options.iter().map(|o| o.1).collect();
-    fields::label_right(ui, d.r(2.0, 2.0, 40.0, 8.0), label, true);
+    let names: Vec<String> = options.iter().map(|o| t(o.1)).collect();
+    fields::label_right(ui, d.r(2.0, 2.0, 40.0, 8.0), &t(label), true);
     let cur = pref_model(st, key, &choices);
-    if let Some(i) = fields::combo(ui, (id, "model"), d.r(44.0, 0.0, 112.0, 13.0), &names, Some(cur), true) {
+    if let Some(i) = fields::combo(ui, (id, "model"), d.r(44.0, 0.0, 112.0, 13.0), &refs(&names), Some(cur), true) {
         set_model(st, key, choices[i]);
     }
 }
 
 fn source_combo(ui: &mut Ui, st: &mut AppState, d: Dl, id: &str) {
-    fields::label_right(ui, d.r(2.0, 17.0, 40.0, 8.0), "Quelle:", true);
+    fields::label_right(ui, d.r(2.0, 17.0, 40.0, 8.0), &t("pi-ai-source"), true);
     let cur = if st.session.prefs.get_str("AiSource", "auto") == "page" { 1 } else { 0 };
-    if let Some(i) = fields::combo(ui, (id, "source"), d.r(44.0, 15.0, 112.0, 13.0), &["Bitmap, sonst Seite", "Sichtbare Seite"], Some(cur), true) {
+    if let Some(i) = fields::combo(ui, (id, "source"), d.r(44.0, 15.0, 112.0, 13.0), &refs(&tl(&["pi-ai-source-auto", "pi-ai-source-page"])), Some(cur), true) {
         st.session.prefs.set("AiSource", PrefValue::Str(if i == 1 { "page".into() } else { "auto".into() }));
     }
 }
@@ -59,9 +60,13 @@ fn source_combo(ui: &mut Ui, st: &mut AppState, d: Dl, id: &str) {
 /// Stand des gewählten Modells + Knopf „KI-Modelle…“.
 fn model_state(ui: &mut Ui, st: &mut AppState, d: Dl, id: &str, model: ModelId) {
     let ok = models::available(model);
-    let text = if ok { format!("{} ({})", models::info(model).name, models::human_size(models::info(model).size)) } else { "Modell fehlt – wird beim ersten Benutzen angeboten".to_string() };
-    fields::label(ui, d.r(160.0, 2.0, 170.0, 8.0), &text, true);
-    if fields::button(ui, (id, "models"), d.r(160.0, 14.0, 60.0, 13.0), "KI-Modelle…", true) {
+    if ok {
+        let text = format!("{} ({})", models::info(model).name, models::human_size(models::info(model).size));
+        fields::label_name(ui, d.r(160.0, 2.0, 170.0, 8.0), &text, true);
+    } else {
+        fields::label(ui, d.r(160.0, 2.0, 170.0, 8.0), &t("pi-ai-model-missing"), true);
+    }
+    if fields::button(ui, (id, "models"), d.r(160.0, 14.0, 60.0, 13.0), &t("pi-ai-models"), true) {
         crate::dialogs::models::open_manager(st);
     }
 }
@@ -76,7 +81,7 @@ const MATTING_MODELS: [ModelId; 2] = [ModelId::BiRefNetLiteMatting, ModelId::BiR
 
 fn object_q3(ui: &mut Ui, st: &mut AppState, r: Rect) {
     let d = Dl::at(r.min);
-    model_combo(ui, st, d, "ai-obj", "AiObjectModel", "Modell:", &[(OBJECT_MODELS[0], "SAM 2.1 Tiny (schnell)"), (OBJECT_MODELS[1], "SAM 2.1 Small (genauer)")]);
+    model_combo(ui, st, d, "ai-obj", "AiObjectModel", "pi-ai-model", &[(OBJECT_MODELS[0], "pi-ai-sam-tiny"), (OBJECT_MODELS[1], "pi-ai-sam-small")]);
     source_combo(ui, st, d, "ai-obj");
     let m = current(st, "AiObjectModel", &OBJECT_MODELS);
     model_state(ui, st, d, "ai-obj", m);
@@ -84,13 +89,13 @@ fn object_q3(ui: &mut Ui, st: &mut AppState, r: Rect) {
 
 fn object_q4(ui: &mut Ui, _st: &mut AppState, r: Rect) {
     let d = Dl::at(r.min);
-    fields::label(ui, d.r(4.0, 2.0, 330.0, 8.0), "Klick: Objekt auswählen · Rahmen aufziehen: Objekt im Rahmen", true);
-    fields::label(ui, d.r(4.0, 14.0, 330.0, 8.0), "Umschalt+Klick: hinzufügen · Alt+Klick: abziehen · Esc: neues Objekt", true);
+    fields::label(ui, d.r(4.0, 2.0, 330.0, 8.0), &t("pi-ai-object-hint1"), true);
+    fields::label(ui, d.r(4.0, 14.0, 330.0, 8.0), &t("pi-ai-object-hint2"), true);
 }
 
 fn subject_q3(ui: &mut Ui, st: &mut AppState, r: Rect) {
     let d = Dl::at(r.min);
-    model_combo(ui, st, d, "ai-subj", "AiSubjectModel", "Qualität:", &[(SUBJECT_MODELS[0], "Schnell (BiRefNet lite)"), (SUBJECT_MODELS[1], "Hoch (BiRefNet, langsam)")]);
+    model_combo(ui, st, d, "ai-subj", "AiSubjectModel", "pi-ai-quality", &[(SUBJECT_MODELS[0], "pi-ai-subject-fast"), (SUBJECT_MODELS[1], "pi-ai-subject-high")]);
     source_combo(ui, st, d, "ai-subj");
     let m = current(st, "AiSubjectModel", &SUBJECT_MODELS);
     model_state(ui, st, d, "ai-subj", m);
@@ -98,35 +103,35 @@ fn subject_q3(ui: &mut Ui, st: &mut AppState, r: Rect) {
 
 fn subject_q4(ui: &mut Ui, st: &mut AppState, r: Rect) {
     let d = Dl::at(r.min);
-    fields::label(ui, d.r(4.0, 2.0, 330.0, 8.0), "Klick: Hauptmotiv als weiche Pixelauswahl · Umschalt: hinzufügen · Alt: abziehen", true);
-    if fields::button(ui, "ai-subj-run", d.r(4.0, 14.0, 80.0, 13.0), "Motiv auswählen", st.session.active().is_some()) {
+    fields::label(ui, d.r(4.0, 2.0, 330.0, 8.0), &t("pi-ai-subject-hint"), true);
+    if fields::button(ui, "ai-subj-run", d.r(4.0, 14.0, 80.0, 13.0), &t("pi-ai-subject-run"), st.session.active().is_some()) {
         crate::dialogs::models::request(st, &fp_engine::tools::Invocation::new("select.aiSubject", serde_json::json!({})));
     }
 }
 
 fn refine_q3(ui: &mut Ui, st: &mut AppState, r: Rect) {
     let d = Dl::at(r.min);
-    model_combo(ui, st, d, "ai-ref", "AiMattingModel", "Qualität:", &[(MATTING_MODELS[0], "Schnell (Matting lite)"), (MATTING_MODELS[1], "Hoch (HR-Matting, langsam)")]);
-    fields::label_right(ui, d.r(2.0, 17.0, 40.0, 8.0), "Radius:", true);
+    model_combo(ui, st, d, "ai-ref", "AiMattingModel", "pi-ai-quality", &[(MATTING_MODELS[0], "pi-ai-matting-fast"), (MATTING_MODELS[1], "pi-ai-matting-high")]);
+    fields::label_right(ui, d.r(2.0, 17.0, 40.0, 8.0), &t("pi-ai-radius"), true);
     let rad = st.session.prefs.get_int("AiRefineRadius", 0) as f64;
     if let Some(v) = fields::number(ui, "ai-ref-radius", d.r(44.0, 15.0, 21.0, 13.0), Some(d.r(66.0, 15.0, 9.0, 13.0)), Some(rad), (0.0, 200.0), 0, true) {
         st.session.prefs.set("AiRefineRadius", PrefValue::Int(v as i64));
     }
-    fields::label(ui, d.r(78.0, 17.0, 60.0, 8.0), if rad <= 0.0 { "(0 = automatisch)" } else { "Pixel" }, true);
+    fields::label(ui, d.r(78.0, 17.0, 60.0, 8.0), &t(if rad <= 0.0 { "pi-ai-radius-auto" } else { "pi-ai-pixels" }), true);
     let m = current(st, "AiMattingModel", &MATTING_MODELS);
     model_state(ui, st, d, "ai-ref", m);
 }
 
 fn refine_q4(ui: &mut Ui, st: &mut AppState, r: Rect) {
     let d = Dl::at(r.min);
-    fields::label_right(ui, d.r(2.0, 2.0, 40.0, 8.0), "Ausgabe:", true);
+    fields::label_right(ui, d.r(2.0, 2.0, 40.0, 8.0), &t("pi-ai-output"), true);
     let cur = if st.session.prefs.get_str("AiRefineOutput", "selection") == "mask" { 1 } else { 0 };
-    if let Some(i) = fields::combo(ui, "ai-ref-out", d.r(44.0, 0.0, 112.0, 13.0), &["Weiche Pixelauswahl", "Bitmapmaske"], Some(cur), true) {
+    if let Some(i) = fields::combo(ui, "ai-ref-out", d.r(44.0, 0.0, 112.0, 13.0), &refs(&tl(&["pi-ai-output-selection", "pi-ai-output-mask"])), Some(cur), true) {
         st.session.prefs.set("AiRefineOutput", PrefValue::Str(if i == 1 { "mask".into() } else { "selection".into() }));
     }
     let has_sel = st.session.active().is_some_and(|d| d.selection.has_pixels());
-    if fields::button(ui, "ai-ref-run", d.r(44.0, 15.0, 112.0, 13.0), "Kante jetzt verfeinern", has_sel) {
+    if fields::button(ui, "ai-ref-run", d.r(44.0, 15.0, 112.0, 13.0), &t("pi-ai-refine-run"), has_sel) {
         crate::dialogs::models::request(st, &fp_engine::tools::Invocation::new("select.aiRefineEdge", serde_json::json!({})));
     }
-    fields::label(ui, d.r(160.0, 2.0, 180.0, 8.0), if has_sel { "Klick in die Auswahl: Kante verfeinern" } else { "Erst eine Pixelauswahl erstellen" }, true);
+    fields::label(ui, d.r(160.0, 2.0, 180.0, 8.0), &t(if has_sel { "pi-ai-refine-hint" } else { "pi-ai-need-selection" }), true);
 }

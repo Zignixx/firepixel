@@ -33,18 +33,129 @@ impl Dl {
     }
 }
 
+// ---------------------------------------------------------------------- Einpassen und Prüfprotokoll
+//
+// Die Felder haben feste Lagen nach dem Original. Übersetzte Beschriftungen können länger sein als
+// die deutschen: Im Inspektor ([`set_fit`]) wird ein zu langer Text erst leicht verkleinert, dann
+// mit „…“ gekürzt (voller Text als Tooltip). Ohne `set_fit` (Bedienfelder, Dialoge) bleibt alles
+// wie bisher. Für Layout-Tests schreibt [`set_audit`] jede Beschriftung und jedes Feld mit Lage
+// in ein Protokoll ([`take_audit`]).
+
+const FIT_ID: &str = "pi-fit-scope";
+const AUDIT_ON: &str = "pi-audit-on";
+const AUDIT_LOG: &str = "pi-audit-log";
+
+/// Ein Eintrag des Layout-Protokolls.
+#[derive(Clone, Debug, PartialEq)]
+pub struct TextAudit {
+    /// `label`, `check`, `radio`, `button`, `combo-item`, `field`.
+    pub kind: &'static str,
+    /// Text vor dem Einpassen.
+    pub text: String,
+    /// Für den Text vorgesehene Fläche.
+    pub avail: Rect,
+    /// Tatsächlich gezeichnete Fläche (bei `combo-item`: benötigte Fläche des ungekürzten Texts).
+    pub drawn: Rect,
+    /// Sichtbarer Bereich (Quadrant).
+    pub clip: Rect,
+    /// 0 = passt, 1 = verkleinert, 2 = mit „…“ gekürzt.
+    pub fit: u8,
+    /// Im Inspektor gezeichnet (innerhalb von [`set_fit`]).
+    pub inspector: bool,
+}
+
+/// Einpassen langer Beschriftungen ein-/ausschalten (der Inspektor schaltet es für seine
+/// Quadranten ein).
+pub fn set_fit(ctx: &egui::Context, on: bool) {
+    ctx.data_mut(|d| d.insert_temp(Id::new(FIT_ID), on));
+}
+
+fn fit_on(ui: &Ui) -> bool {
+    ui.ctx().data(|d| d.get_temp::<bool>(Id::new(FIT_ID))).unwrap_or(false)
+}
+
+/// Layout-Protokoll ein-/ausschalten (Tests).
+pub fn set_audit(ctx: &egui::Context, on: bool) {
+    ctx.data_mut(|d| {
+        d.insert_temp(Id::new(AUDIT_ON), on);
+        d.remove::<Vec<TextAudit>>(Id::new(AUDIT_LOG));
+    });
+}
+
+/// Protokoll abholen und leeren.
+pub fn take_audit(ctx: &egui::Context) -> Vec<TextAudit> {
+    ctx.data_mut(|d| {
+        let v = d.get_temp::<Vec<TextAudit>>(Id::new(AUDIT_LOG)).unwrap_or_default();
+        d.remove::<Vec<TextAudit>>(Id::new(AUDIT_LOG));
+        v
+    })
+}
+
+fn audit(ui: &Ui, kind: &'static str, text: &str, avail: Rect, drawn: Rect, fit: u8) {
+    if !ui.ctx().data(|d| d.get_temp::<bool>(Id::new(AUDIT_ON))).unwrap_or(false) {
+        return;
+    }
+    let e = TextAudit { kind, text: text.to_string(), avail, drawn, clip: ui.clip_rect(), fit, inspector: fit_on(ui) };
+    ui.ctx().data_mut(|d| d.get_temp_mut_or_default::<Vec<TextAudit>>(Id::new(AUDIT_LOG)).push(e));
+}
+
+fn text_w(ui: &Ui, s: &str, font: &egui::FontId) -> f32 {
+    ui.ctx().fonts_mut(|f| f.layout_no_wrap(s.to_string(), font.clone(), Color32::WHITE).size().x)
+}
+
+/// Passt `text` in `max_w` ein: unverändert, leicht verkleinert (bis 85 %, mind. 8 px) oder mit „…“.
+fn fit_text(ui: &Ui, text: &str, font: egui::FontId, max_w: f32) -> (String, egui::FontId, u8) {
+    if !fit_on(ui) || text_w(ui, text, &font) <= max_w + 0.5 {
+        return (text.to_string(), font, 0);
+    }
+    let min = (font.size * 0.85).max(8.0).min(font.size);
+    let mut size = font.size - 0.5;
+    while size >= min {
+        let f = egui::FontId::new(size, font.family.clone());
+        if text_w(ui, text, &f) <= max_w + 0.5 {
+            return (text.to_string(), f, 1);
+        }
+        size -= 0.5;
+    }
+    let f = egui::FontId::new(min, font.family.clone());
+    let mut s: String = text.to_string();
+    while !s.is_empty() && text_w(ui, &format!("{}…", s.trim_end()), &f) > max_w {
+        s.pop();
+    }
+    (format!("{}…", s.trim_end()), f, 2)
+}
+
+/// Text eingepasst zeichnen (`anchor` an `align`), protokollieren, bei Kürzung Tooltip.
+#[allow(clippy::too_many_arguments)]
+fn fitted_text(ui: &Ui, kind: &'static str, avail: Rect, anchor: Pos2, align: Align2, text: &str, font: egui::FontId, col: Color32) -> Rect {
+    let (shown, f, fit) = fit_text(ui, text, font, avail.width());
+    let drawn = ui.painter().text(anchor, align, &shown, f, col);
+    if fit == 2 {
+        let _ = ui.interact(drawn, Id::new(("pi-fit-tip", kind, avail.min.x as i32, avail.min.y as i32)), Sense::hover()).on_hover_text(text);
+    }
+    audit(ui, kind, text, avail, drawn, fit);
+    drawn
+}
+
 /// Beschriftung links ausgerichtet, senkrecht mittig.
 pub fn label(ui: &Ui, r: Rect, text: &str, enabled: bool) {
     let t = Theme::current(ui.ctx());
     let col = if enabled { t.colors.text } else { t.colors.text_disabled };
-    ui.painter().text(pos2(r.left(), r.center().y), Align2::LEFT_CENTER, text, t.ui_font(), col);
+    fitted_text(ui, "label", r, pos2(r.left(), r.center().y), Align2::LEFT_CENTER, text, t.ui_font(), col);
+}
+
+/// Beschriftung mit Eigennamen/Messwerten (wird in der Testsprache nicht markiert erwartet).
+pub fn label_name(ui: &Ui, r: Rect, text: &str, enabled: bool) {
+    let t = Theme::current(ui.ctx());
+    let col = if enabled { t.colors.text } else { t.colors.text_disabled };
+    fitted_text(ui, "name", r, pos2(r.left(), r.center().y), Align2::LEFT_CENTER, text, t.ui_font(), col);
 }
 
 /// Beschriftung rechts ausgerichtet (wie die Original-Labels vor Feldern).
 pub fn label_right(ui: &Ui, r: Rect, text: &str, enabled: bool) {
     let t = Theme::current(ui.ctx());
     let col = if enabled { t.colors.text } else { t.colors.text_disabled };
-    ui.painter().text(pos2(r.right(), r.center().y), Align2::RIGHT_CENTER, text, t.ui_font(), col);
+    fitted_text(ui, "label", r, pos2(r.right(), r.center().y), Align2::RIGHT_CENTER, text, t.ui_font(), col);
 }
 
 /// Rahmen eines Eingabefelds.
@@ -87,6 +198,7 @@ fn buffered_edit(ui: &mut Ui, id: Id, r: Rect, current: &str, enabled: bool, rig
         ui.data_mut(|d| d.insert_temp(orig_id, current.to_string()));
     }
     field_frame(ui, r, enabled, focused && t.glow);
+    audit(ui, "field", "", r, r, 0);
     let inner = r.shrink2(vec2(3.0, 1.0));
     let col = if enabled { t.colors.field_text } else { t.colors.text_disabled };
     let te = egui::TextEdit::singleline(&mut buf)
@@ -132,7 +244,10 @@ pub fn text(ui: &mut Ui, id: impl Hash + std::fmt::Debug, r: Rect, current: &str
 pub fn fmt_num(v: f64, decimals: usize) -> String {
     let s = format!("{v:.decimals$}");
     let s = if decimals > 0 { s.trim_end_matches('0').trim_end_matches('.').to_string() } else { s };
-    s.replace('.', ",")
+    // Dezimaltrennzeichen der Sprache (Deutsch „,“, Englisch „.“); Eingaben akzeptieren beides
+    let sep = fp_i18n::t("fmt-decimal-separator");
+    let sep = if sep == "." || sep == "," { sep } else { ",".to_string() };
+    s.replace('.', &sep)
 }
 
 /// Zahl lesen (Komma oder Punkt; Rest nach der Zahl wird ignoriert wie `%d`).
@@ -167,6 +282,7 @@ pub fn number(ui: &mut Ui, id: impl Hash + std::fmt::Debug, edit: Rect, arrow: O
 pub fn slider_arrow(ui: &mut Ui, id: Id, r: Rect, value: f64, range: (f64, f64), decimals: usize, enabled: bool) -> Option<f64> {
     let t = Theme::current(ui.ctx());
     let resp = ui.interact(r, id, if enabled { Sense::click() } else { Sense::hover() });
+    audit(ui, "field", "", r, r, 0);
     let c = &t.colors;
     if resp.hovered() && enabled {
         ui.painter().rect_filled(r, 0.0, c.button_hover_bg);
@@ -206,6 +322,7 @@ pub fn combo_box_frame(ui: &mut Ui, id: Id, r: Rect, text: &str, enabled: bool) 
     let t = Theme::current(ui.ctx());
     let c = &t.colors;
     let resp = ui.interact(r, id, if enabled { Sense::click() } else { Sense::hover() });
+    audit(ui, "field", "", r, r, 0);
     let open = egui::Popup::is_id_open(ui.ctx(), egui::Popup::default_response_id(&resp));
     let hot = enabled && (resp.hovered() || open);
     ui.painter().rect_filled(r, 0.0, if enabled { c.field_bg } else { c.frame_bg });
@@ -228,6 +345,16 @@ pub fn combo(ui: &mut Ui, id: impl Hash + std::fmt::Debug, r: Rect, items: &[&st
     let resp = combo_box_frame(ui, id, r, text, enabled);
     let mut out = None;
     let t = Theme::current(ui.ctx());
+    if ui.ctx().data(|d| d.get_temp::<bool>(Id::new(AUDIT_ON))).unwrap_or(false) {
+        // jeder Eintrag muss in das geschlossene Feld passen (Text links, Chevron rechts)
+        let avail = Rect::from_min_max(pos2(r.left() + 4.0, r.top()), pos2(r.right() - 18.0, r.bottom()));
+        let font = t.ui_font();
+        for it in items.iter().filter(|s| !is_separator(s)) {
+            let w = text_w(ui, it, &font);
+            let need = Rect::from_min_size(avail.min, vec2(w, avail.height()));
+            audit(ui, "combo-item", it, avail, need, if w > avail.width() + 0.5 { 2 } else { 0 });
+        }
+    }
     egui::Popup::menu(&resp).frame(crate::menu::menu_frame(&t)).width(r.width().max(60.0)).show(|ui| {
         ui.spacing_mut().item_spacing = vec2(0.0, 0.0);
         egui::ScrollArea::vertical().max_height(360.0).show(ui, |ui| {
@@ -270,13 +397,14 @@ pub fn combo_edit(ui: &mut Ui, id: impl Hash + std::fmt::Debug, r: Rect, current
     let ar = Rect::from_min_max(pos2(r.right() - 17.0, r.top()), r.max);
     let t = Theme::current(ui.ctx());
     let resp = ui.interact(ar, id.with("arrow"), if enabled { Sense::click() } else { Sense::hover() });
+    audit(ui, "field", "", ar, ar, 0);
     ui.painter().rect_filled(ar, 0.0, if enabled { t.colors.field_bg } else { t.colors.frame_bg });
     ui.painter().rect_stroke(ar, 0.0, Stroke::new(1.0, if enabled { t.colors.field_border } else { t.colors.line_light }), StrokeKind::Inside);
     glyphs::chevron_down(ui.painter(), ar, if enabled { t.colors.icon_fg } else { t.colors.icon_disabled });
     egui::Popup::menu(&resp).frame(crate::menu::menu_frame(&t)).width(r.width()).show(|ui| {
         ui.spacing_mut().item_spacing = vec2(0.0, 0.0);
         if items.is_empty() {
-            ui.label(egui::RichText::new("(keine Einträge)").color(t.colors.menu_text_disabled));
+            ui.label(egui::RichText::new(fp_i18n::t("pi-no-entries")).color(t.colors.menu_text_disabled));
         }
         for it in items {
             if list_item(ui, it, it == current).clicked() {
@@ -293,6 +421,7 @@ pub fn toggle(ui: &mut Ui, id: impl Hash + std::fmt::Debug, r: Rect, glyph: Glyp
     let t = Theme::current(ui.ctx());
     let c = &t.colors;
     let resp = ui.interact(r, Id::new(id), if enabled { Sense::click() } else { Sense::hover() });
+    audit(ui, "field", "", r, r, 0);
     let hot = enabled && resp.hovered();
     if on {
         if t.glow {
@@ -319,6 +448,7 @@ pub fn icon_button(ui: &mut Ui, id: impl Hash + std::fmt::Debug, r: Rect, glyph:
     let t = Theme::current(ui.ctx());
     let c = &t.colors;
     let resp = ui.interact(r, Id::new(id), if enabled { Sense::click() } else { Sense::hover() });
+    audit(ui, "field", "", r, r, 0);
     if enabled && resp.hovered() {
         ui.painter().rect_filled(r, 2.0, c.button_hover_bg);
         ui.painter().rect_stroke(r, 2.0, Stroke::new(1.0, c.button_hover_border), StrokeKind::Inside);
@@ -338,7 +468,13 @@ pub fn button(ui: &mut Ui, id: impl Hash + std::fmt::Debug, r: Rect, text: &str,
     ui.painter().rect_filled(r, 2.0, bg);
     ui.painter().rect_stroke(r, 2.0, Stroke::new(1.0, if hot { c.button_hover_border } else { c.button_border }), StrokeKind::Inside);
     let col = if enabled { c.text } else { c.text_disabled };
-    crate::widgets::text_clipped(ui.painter(), r.center(), Align2::CENTER_CENTER, text, t.ui_font(), col, r.width() - 6.0);
+    audit(ui, "field", "", r, r, 0);
+    if fit_on(ui) {
+        fitted_text(ui, "button", r.shrink2(vec2(3.0, 0.0)), r.center(), Align2::CENTER_CENTER, text, t.ui_font(), col);
+    } else {
+        let drawn = crate::widgets::text_clipped(ui.painter(), r.center(), Align2::CENTER_CENTER, text, t.ui_font(), col, r.width() - 6.0);
+        audit(ui, "button", text, r.shrink2(vec2(3.0, 0.0)), drawn, 0);
+    }
     enabled && resp.clicked()
 }
 
@@ -354,7 +490,11 @@ pub fn checkbox(ui: &mut Ui, id: impl Hash + std::fmt::Debug, r: Rect, text: &st
         let col = if enabled { c.field_text } else { c.text_disabled };
         ui.painter().line(vec![pos2(bx.left() + 3.0, bx.center().y), pos2(bx.left() + 5.5, bx.bottom() - 3.5), pos2(bx.right() - 3.0, bx.top() + 3.5)], Stroke::new(1.6, col));
     }
-    ui.painter().text(pos2(bx.right() + 5.0, r.center().y), Align2::LEFT_CENTER, text, t.ui_font(), if enabled { c.text } else { c.text_disabled });
+    audit(ui, "field", "", bx, bx, 0);
+    if !text.is_empty() {
+        let avail = Rect::from_min_max(pos2(bx.right() + 5.0, r.top()), pos2(r.right().max(bx.right() + 5.0), r.bottom()));
+        fitted_text(ui, "check", avail, pos2(bx.right() + 5.0, r.center().y), Align2::LEFT_CENTER, text, t.ui_font(), if enabled { c.text } else { c.text_disabled });
+    }
     (enabled && resp.clicked()).then_some(!checked)
 }
 
@@ -370,7 +510,8 @@ pub fn radio(ui: &mut Ui, id: impl Hash + std::fmt::Debug, r: Rect, text: &str, 
         ui.painter().circle_filled(center, 3.0, if enabled { c.field_text } else { c.text_disabled });
     }
     if !text.is_empty() {
-        ui.painter().text(pos2(r.left() + 17.0, r.center().y), Align2::LEFT_CENTER, text, t.ui_font(), if enabled { c.text } else { c.text_disabled });
+        let avail = Rect::from_min_max(pos2(r.left() + 17.0, r.top()), pos2(r.right().max(r.left() + 17.0), r.bottom()));
+        fitted_text(ui, "radio", avail, pos2(r.left() + 17.0, r.center().y), Align2::LEFT_CENTER, text, t.ui_font(), if enabled { c.text } else { c.text_disabled });
     }
     enabled && resp.clicked()
 }
@@ -379,6 +520,7 @@ pub fn radio(ui: &mut Ui, id: impl Hash + std::fmt::Debug, r: Rect, text: &str, 
 pub fn swatch(ui: &mut Ui, id: impl Hash + std::fmt::Debug, r: Rect, color: Option<fp_color::Argb>, enabled: bool) -> Response {
     let t = Theme::current(ui.ctx());
     let resp = ui.interact(r, Id::new(id), if enabled { Sense::click() } else { Sense::hover() });
+    audit(ui, "field", "", r, r, 0);
     let col = match color {
         Some(c) => Color32::from_rgba_unmultiplied(c.r(), c.g(), c.b(), c.a()),
         None => Color32::TRANSPARENT,
