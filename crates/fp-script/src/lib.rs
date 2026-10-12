@@ -179,7 +179,7 @@ impl fp_engine::ScriptHost for JsfHost {
 
     fn builtin_commands(&self) -> Vec<String> {
         // nur die oberste Ebene: Unterordner sind Untermenüs und werden nie als gespeichert gelistet
-        builtin_commands::BUILTIN.iter().map(|(rel, _)| *rel).chain(builtin_commands::BUILTIN_EN.iter().copied()).filter(|rel| !rel.contains('/')).map(|rel| rel.trim_end_matches(".jsf").to_string()).collect()
+        builtin_commands::BUILTIN.iter().map(|(rel, _)| *rel).chain(builtin_commands::BUILTIN_EN.iter().copied()).chain(builtin_commands::RENAMED_DE.iter().map(|(_, old)| *old)).filter(|rel| !rel.contains('/')).map(|rel| rel.trim_end_matches(".jsf").to_string()).collect()
     }
 }
 

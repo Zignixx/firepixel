@@ -174,7 +174,7 @@ fn menu_test_uses_test_commands_folder() {
         assert!(!dir.starts_with(app), "nie %APPDATA%: {dir:?}");
     }
     assert!(fp_engine::commands::misc::extensions_dir().starts_with(test_profile()));
-    for p in [&["Befehle", "Dokument", "Andere Ebenen ausblenden"][..], &["Befehle", "Dokument", "Andere Ebenen sperren"], &["Befehle", "Warndialoge zurücksetzen"]] {
+    for p in [&["Befehle", "Dokument", "Andere Ebenen ausblenden"][..], &["Befehle", "Dokument", "Andere Ebenen sperren"], &["Befehle", "Warnmeldungen zurücksetzen"]] {
         let (en, action) = menu_item(&st, p);
         assert!(en, "{p:?}");
         let ItemAction::Ui(Action::Run(name, params)) = action else { panic!("{p:?}: {action:?}") };
@@ -226,7 +226,7 @@ fn reset_warning_dialogs_script_reenables_notices() {
     st.session.execute("edit.preferences", json!({ "key": "DisableNoticeCombinePaths", "value": true })).unwrap();
     st.session.execute("edit.preferences", json!({ "key": "DisableConfirmDeleteLayer", "value": true })).unwrap();
     assert!(st.session.prefs.get_bool("DisableNoticeCombinePaths", false));
-    let params = script_path(&st, &["Befehle", "Warndialoge zurücksetzen"]);
+    let params = script_path(&st, &["Befehle", "Warnmeldungen zurücksetzen"]);
     let before = doc_json(&st);
     run(&mut st, &ctx, "commands.runScript", params);
     assert!(!st.session.prefs.get_bool("DisableNoticeCombinePaths", false), "Hinweis wieder eingeschaltet");
@@ -237,7 +237,7 @@ fn reset_warning_dialogs_script_reenables_notices() {
 #[test]
 fn command_scripts_pass_in_menu_test() {
     let (st, _ctx, _f) = fixture();
-    for p in [&["Befehle", "Dokument", "Andere Ebenen ausblenden"][..], &["Befehle", "Dokument", "Andere Ebenen sperren"], &["Befehle", "Warndialoge zurücksetzen"]] {
+    for p in [&["Befehle", "Dokument", "Andere Ebenen ausblenden"][..], &["Befehle", "Dokument", "Andere Ebenen sperren"], &["Befehle", "Warnmeldungen zurücksetzen"]] {
         let ItemAction::Ui(a) = menu_item(&st, p).1 else { panic!() };
         let (o, note) = run_item(a, Some("commands.runScript"));
         assert!(o.ok(), "{p:?}: {o:?} {note}");

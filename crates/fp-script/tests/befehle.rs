@@ -50,7 +50,7 @@ fn text_case_and_shadow_commands_change_document() {
         let p = rel.split('/').fold(dir.clone(), |a, x| a.join(x));
         s.execute("commands.runScript", json!({"path": p.to_string_lossy()})).unwrap_or_else(|e| panic!("{rel}: {e}"));
     };
-    run(&mut s, "Text/Großbuchstaben.jsf");
+    run(&mut s, "Text/Als Großbuchstaben.jsf");
     let out = fp_script::run_source(&mut s, "var t = ''; for (var i = 0; i < fw.selection.length; i++) if (fw.selection[i].textChars !== undefined) t = fw.selection[i].textChars; t", &fp_script::ScriptOptions::default());
     assert_eq!(out.result.as_deref(), Some("HALLO WELT"), "{out:?}");
     run(&mut s, "Kreativ/Schatten hinzufügen.jsf");

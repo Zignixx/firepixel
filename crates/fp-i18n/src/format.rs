@@ -76,6 +76,9 @@ const KEY_ALIASES: &[(&str, &[&str])] = &[
     ("right", &["right", "rechts", "arrowright", "nach-rechts", "nach-rechts-taste"]),
     ("up", &["up", "oben", "arrowup", "nach-oben", "nach-oben-taste"]),
     ("down", &["down", "unten", "arrowdown", "nach-unten", "nach-unten-taste"]),
+    // Tasten neben Rück bzw. 1 auf der deutschen Tastatur: im Original „AKUT“/„ZIRKUMFLEX“ (PM-7, MN-4)
+    ("acute", &["´", "akut", "acute"]),
+    ("circumflex", &["^", "zirkumflex", "circumflex"]),
 ];
 
 /// Ziffernblock-Tasten in englischer Kurzform (`NumAdd` …) → Zeichen.

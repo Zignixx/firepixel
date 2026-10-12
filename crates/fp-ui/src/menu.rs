@@ -219,9 +219,11 @@ pub fn menu_shortcut(st: &AppState, name: &str) -> Option<fp_engine::shortcuts::
 fn with_step_name(st: &AppState, name: &str, label: String) -> String {
     let doc = st.session.active();
     let step = match name {
-        "edit.undo" => doc.and_then(|d| d.history.undo_label()),
+        "edit.undo" => doc.and_then(|d| d.history.undo_label()).map(|s| s.to_string()),
         // ohne zurückgenommenen Schritt wiederholt das Original den letzten Befehl
         "edit.redo" => return with_redo_step(st, label),
+        // „Filter wiederholen: <zuletzt benutzter Filter>“ (PM-7, MN-4)
+        "filter.repeat" => st.session.last_filter.as_ref().map(|f| plain_label(&t(&fp_i18n::command_key(&f.command)))),
         _ => None,
     };
     match step {
@@ -462,7 +464,9 @@ fn scan_commands(dir: &std::path::Path, depth: usize) -> Vec<Node> {
     entries.sort_by_key(|p| p.file_name().map(|n| n.to_string_lossy().to_lowercase()).unwrap_or_default());
     let mut out = Vec::new();
     for p in entries {
-        let name = p.file_stem().map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
+        // „∕“ (U+2215) im Dateinamen steht für „/“, das Dateinamen nicht enthalten dürfen
+        // („Feste Breite ein/aus“ wie im Original, MN-4)
+        let name = p.file_stem().map(|n| n.to_string_lossy().replace('\u{2215}', "/")).unwrap_or_default();
         if p.is_dir() && depth < 4 {
             let children = scan_commands(&p, depth + 1);
             if !children.is_empty() {
@@ -477,10 +481,11 @@ fn scan_commands(dir: &std::path::Path, depth: usize) -> Vec<Node> {
 }
 
 /// Feste Einträge am Ende des Befehle-Menüs (nicht zwischengespeichert: Sprache und Zustand).
+/// „Warnmeldungen zurücksetzen“ steht wie im Original nur einmal, als mitgelieferter Befehl im
+/// Befehlsordner (MN-4; vorher zusätzlich hier).
 fn command_tail() -> Vec<Node> {
     let on = crate::bridge::running_url().is_some();
     vec![
-        item(&clean_label(&t("menu-commands-resetWarnings")).0, ItemAction::Ui(Action::Run("ui.resetWarnings".into(), json!({}))), true, None),
         Node::Separator,
         item(&clean_label(&t("menu-commands-mcp")).0, ItemAction::Ui(Action::Run("ui.mcpToggle".into(), json!({}))), true, Some(on)),
     ]

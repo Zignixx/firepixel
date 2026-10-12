@@ -56,6 +56,8 @@ key-right = Nach-rechts-Taste
 key-up = Nach-oben-Taste
 key-down = Nach-unten-Taste
 key-num = Num
+key-acute = AKUT
+key-circumflex = ZIRKUMFLEX
 
 # Sprachwahl (Ansicht ▸ Sprache, Voreinstellungen)
 lang-menu = Spra&che

@@ -59,6 +59,8 @@ key-right = Right
 key-up = Up
 key-down = Down
 key-num = Num
+key-acute = Acute
+key-circumflex = Circumflex
 
 # language selection (View ▸ Language, Preferences)
 lang-menu = La&nguage

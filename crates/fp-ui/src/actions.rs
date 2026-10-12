@@ -412,9 +412,19 @@ fn run_command(st: &mut AppState, ctx: &egui::Context, name: &str, params: Value
         return;
     }
     match crate::ui_commands::execute(&mut st.session, name, params) {
-        Ok(_) => {
+        Ok(out) => {
             if matches!(name, "edit.copy" | "edit.cut" | "edit.copyAsVectors") {
                 crate::os_clipboard::after_copy(st);
+            }
+            // alert() eines Befehlsskripts als Meldung zeigen (Titel = Programmname wie im Original, MN-4)
+            if name == "commands.runScript" {
+                let alerts: Vec<String> = out.value["result"]["alerts"]
+                    .as_array()
+                    .map(|a| a.iter().filter_map(|v| v.as_str()).filter(|s| !s.starts_with("confirm: ") && !s.starts_with("yesNoDialog: ") && !s.starts_with("prompt: ")).map(str::to_string).collect())
+                    .unwrap_or_default();
+                if !alerts.is_empty() {
+                    st.dialogs.message = Some(("Firepixel".into(), alerts.join("\n\n")));
+                }
             }
         }
         Err(EngineError::NotImplemented(n)) => {

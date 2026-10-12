@@ -189,6 +189,12 @@ pub fn vk_from_name(name: &str) -> Option<u16> {
         .iter()
         .find(|(_, de, en)| de.eq_ignore_ascii_case(n) || en.eq_ignore_ascii_case(n))
         .map(|(v, _, _)| *v)
+        // Anzeigenamen wie im Original („Strg+AKUT“, „Strg+ZIRKUMFLEX“, MN-4) bleiben lesbar
+        .or_else(|| match n.to_lowercase().as_str() {
+            "akut" | "acute" => Some(221),
+            "zirkumflex" | "circumflex" => Some(220),
+            _ => None,
+        })
 }
 
 /// Ein Tastenkürzel-Set.

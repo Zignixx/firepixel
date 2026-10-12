@@ -127,7 +127,7 @@ fn d25_message_without_own_commands_list_with_own() {
     let mut h = harness();
     // mitgelieferte Befehle-Menü-Skripte liegen im Befehlsordner, zählen aber nicht
     let dir = fp_engine::commands::misc::commands_dir();
-    assert!(dir.join(format!("{}.jsf", "Warndialoge zurücksetzen")).exists(), "mitgelieferter Befehl vorhanden");
+    assert!(dir.join(format!("{}.jsf", "Warnmeldungen zurücksetzen")).exists(), "mitgelieferter Befehl vorhanden");
     let own = format!("DLG4 Testbefehl {}", std::process::id());
     let _ = std::fs::remove_file(dir.join(format!("{own}.jsf")));
     run(&mut h, "commands.manageSavedCommands");
@@ -150,7 +150,7 @@ fn d25_message_without_own_commands_list_with_own() {
     assert!(!st(&h).dialogs.any_open());
     // Liste über die Engine (MCP) ebenso ohne mitgelieferte Skripte
     let v = h.state_mut().state.session.execute("commands.manageSavedCommands", json!({})).expect("list").value;
-    assert!(v["commands"].as_array().is_some_and(|a| !a.iter().any(|x| x == "Warndialoge zurücksetzen" || x == "Größe ausgewählter Objekte ändern")));
+    assert!(v["commands"].as_array().is_some_and(|a| !a.iter().any(|x| x == "Warnmeldungen zurücksetzen" || x == "Größe ausgewählter Objekte ändern")));
 }
 
 // ------------------------------------------------------------------ D16 Voreinstellungen

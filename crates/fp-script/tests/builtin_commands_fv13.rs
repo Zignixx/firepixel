@@ -93,7 +93,7 @@ fn outdated_builtin_commands_are_replaced_but_user_edits_kept() {
 fn reset_warning_dialogs_command_clears_disabled_notices() {
     let mut s = setup();
     s.execute("edit.preferences", json!({"key": "DisableNoticeCombinePaths", "value": true})).unwrap();
-    s.execute("commands.runScript", json!({"code": source("Warndialoge zurücksetzen.jsf")})).unwrap();
+    s.execute("commands.runScript", json!({"code": source("Warnmeldungen zurücksetzen.jsf")})).unwrap();
     assert!(!s.prefs.get_bool("DisableNoticeCombinePaths", false));
 }
 

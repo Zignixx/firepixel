@@ -136,7 +136,7 @@ fn warnung_mit_nicht_mehr_anzeigen_und_zuruecksetzen() {
         click(&mut h, b);
         assert!(st(&h).dialogs.warning.is_none(), "OK schließt");
         assert!(st(&h).session.prefs.get_bool("DisableNoticeCombinePaths", false));
-        // Befehle ▸ Warndialoge zurücksetzen (mitgeliefertes Befehlsskript `fw.resetWarnings()`)
+        // Befehle ▸ Warnmeldungen zurücksetzen (mitgeliefertes Befehlsskript `fw.resetWarnings()`)
         h.state_mut().state.run("commands.runScript", json!({"code": "fw.resetWarnings();
 "}));
         h.run_steps(3);

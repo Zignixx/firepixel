@@ -78,7 +78,6 @@ const RUNTIME_ACCESS: &[(&str, &str)] = &[
     ("menu-view", "lang-menu"),
     ("menu-window", "menu-window-other"),
     ("menu-window", "menu-window-workspaceLayouts"),
-    ("menu-commands", "menu-commands-resetWarnings"),
     ("menu-commands", "menu-commands-mcp"),
     ("menu-filter", "menu-filter-other"),
     ("menu-filter", "menu-filter-adjustColor"),
