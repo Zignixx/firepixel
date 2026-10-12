@@ -6,7 +6,8 @@
 //!   Erweiterungen liegen in `Extensions` (oder `FP_EXTENSIONS_DIR`).
 //! * Fenster: Anordnung und zusätzliche Fenster stehen in [`crate::session::UiState`]; die
 //!   Oberfläche zeigt sie an.
-//! * Hilfe: lokale Anleitung (`ANLEITUNG.md` neben dem Programm bzw. im Ordner `docs`), sonst eine
+//! * Hilfe: lokale Anleitung (`ANLEITUNG.md`, bei anderer Oberflächensprache zuerst `ANLEITUNG.en.md`,
+//!   neben dem Programm bzw. im Ordner `docs`), sonst eine
 //!   eingebaute Kurzhilfe. Firepixel sendet keine Nutzungsdaten.
 //! * Durchsuchen: listet öffnbare Bilddateien eines Ordners (Ersatz für den externen Dateibrowser).
 //! * Scannen: Windows-Bilderfassung (WIA) über PowerShell; das erfasste Bild wird ein neues Dokument.
@@ -111,15 +112,33 @@ pub fn help_file() -> PathBuf {
         dirs.push(cwd.join("docs"));
         dirs.push(cwd);
     }
-    for d in dirs {
-        let f = d.join("ANLEITUNG.md");
-        if f.is_file() {
-            return f;
-        }
+    if let Some(f) = find_help(&dirs, &fp_i18n::current_language()) {
+        return f;
     }
     let f = temp_dir("Hilfe").join("KURZHILFE.md");
     let _ = std::fs::write(&f, builtin_help());
     f
+}
+
+/// Dateinamen der Anleitung in Suchreihenfolge für eine Oberflächensprache: Deutsch (Ausgangssprache)
+/// `ANLEITUNG.md`; sonst `ANLEITUNG.<sprache>.md`, dann `ANLEITUNG.en.md`, zuletzt `ANLEITUNG.md`.
+fn help_names(lang: &str) -> Vec<String> {
+    let base = lang.split(['-', '_']).next().unwrap_or("").to_ascii_lowercase();
+    let mut names = Vec::new();
+    if !base.is_empty() && base != fp_i18n::SOURCE_LANG {
+        if base != "en" {
+            names.push(format!("ANLEITUNG.{base}.md"));
+        }
+        names.push("ANLEITUNG.en.md".to_string());
+    }
+    names.push("ANLEITUNG.md".to_string());
+    names
+}
+
+/// Erste Anleitung in `dirs` (je Ordner die Sprachfassung vor dem deutschen Rückfall).
+fn find_help(dirs: &[PathBuf], lang: &str) -> Option<PathBuf> {
+    let names = help_names(lang);
+    dirs.iter().find_map(|d| names.iter().map(|n| d.join(n)).find(|f| f.is_file()))
 }
 
 /// Abschnitte (`#`-Überschriften) einer Markdown-Datei.
@@ -463,5 +482,54 @@ fn wia(script: &str) -> Result<String> {
     {
         let _ = script;
         Err(EngineError::Failed(fp_i18n::t("err-scan-windows-only")))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// UE-5: Hilfe-Menü wählt die Anleitung in der Oberflächensprache (Rückfall Deutsch), ohne etwas zu öffnen.
+    #[test]
+    fn anleitung_je_sprache() {
+        let root = std::env::temp_dir().join(format!("fp-ue5-hilfe-{}", std::process::id()));
+        let (a, b) = (root.join("a"), root.join("b"));
+        std::fs::create_dir_all(&a).unwrap();
+        std::fs::create_dir_all(&b).unwrap();
+        std::fs::write(a.join("ANLEITUNG.md"), "# Anleitung").unwrap();
+        std::fs::write(a.join("ANLEITUNG.en.md"), "# Manual").unwrap();
+        std::fs::write(b.join("ANLEITUNG.md"), "# Anleitung").unwrap();
+        let dirs = vec![a.clone(), b.clone()];
+        assert_eq!(find_help(&dirs, "de"), Some(a.join("ANLEITUNG.md")));
+        assert_eq!(find_help(&dirs, "en"), Some(a.join("ANLEITUNG.en.md")));
+        assert_eq!(find_help(&dirs, "en-US"), Some(a.join("ANLEITUNG.en.md")));
+        assert_eq!(find_help(&dirs, "fr"), Some(a.join("ANLEITUNG.en.md")));
+        assert_eq!(find_help(&dirs, "qps"), Some(a.join("ANLEITUNG.en.md")));
+        // nur deutsche Fassung vorhanden → Rückfall Deutsch
+        assert_eq!(find_help(&dirs[1..], "en"), Some(b.join("ANLEITUNG.md")));
+        // eigene Sprachfassung vor Englisch
+        std::fs::write(a.join("ANLEITUNG.fr.md"), "# Manuel").unwrap();
+        assert_eq!(find_help(&dirs, "fr"), Some(a.join("ANLEITUNG.fr.md")));
+        assert_eq!(find_help(&[root.join("fehlt")], "en"), None);
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    /// Über den Befehl: Pfad der englischen Anleitung bei englischer Oberfläche (FP_HELP nicht gesetzt,
+    /// `open: false`, also kein Fremdprogramm).
+    #[test]
+    fn hilfe_befehl_liefert_englische_anleitung() {
+        if std::env::var_os("FP_HELP").is_some() {
+            return;
+        }
+        let f = fp_i18n::with_language("en", help_file);
+        let name = f.file_name().and_then(|n| n.to_str()).unwrap_or("").to_string();
+        // im Repository liegen beide Fassungen unter docs\ (über current_dir/current_exe gefunden)
+        if f.parent().is_some_and(|d| d.join("ANLEITUNG.en.md").is_file()) {
+            assert_eq!(name, "ANLEITUNG.en.md", "{f:?}");
+        }
+        let de = fp_i18n::with_language("de", help_file);
+        if de.parent().is_some_and(|d| d.join("ANLEITUNG.md").is_file()) {
+            assert_eq!(de.file_name().and_then(|n| n.to_str()), Some("ANLEITUNG.md"), "{de:?}");
+        }
     }
 }

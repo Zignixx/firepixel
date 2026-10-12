@@ -95,6 +95,9 @@ fn not_implemented_throws_clear_error() {
     // bewusst ausgelassener Member (Flash-Export)
     let r = exc("fw.exportSWF(null, \"file:///C|/x.swf\")");
     assert!(r.contains("nicht implementiert: Firepixel.exportSWF"), "{r}");
+    // UE-5: Meldung folgt der Sprache (Schlüssel err-script-not-implemented)
+    let en = fp_i18n::with_language("en", || exc("fw.exportSWF(null, \"file:///C|/x.swf\")"));
+    assert!(en.contains("not implemented: Firepixel.exportSWF"), "{en}");
     assert!(exc("fw.throwInternalError()").contains("-2147221484"));
 }
 

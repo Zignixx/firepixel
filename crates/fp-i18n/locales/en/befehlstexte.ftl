@@ -534,3 +534,10 @@ cmdtext-schwarzweiss-helligkeitsschwelle = Black and white: brightness threshold
 cmdtext-vektorobjekte-brauchen-einen-renderer-fp-render = Vector objects need a renderer (fp-render)
 cmdtext-menue-platzhalter-zur-laufzeit-ersetzt = Menu placeholder, replaced at run time
 cmdtext-logo-nachbearbeitung-true-false-oder-obj-cdb621 = Logo clean-up: true/false or an object (enabled, snapColors, colorTolerance, straighten, snapAngle, shapes, shapeTolerance, reduceNodes, fitTolerance, closeGaps, symmetry, fast); missing: as the preset
+# UE-5: Text tool defaults (text.setToolDefaults, draw.text)
+cmdtext-glaettung-neuer-texte = Anti-aliasing of new texts
+cmdtext-automatische-unterschneidung-neuer-texte = automatic kerning of new texts
+cmdtext-textrichtung-neuer-texte = Text orientation of new texts
+cmdtext-glaettung-vorgabe-textwerkzeug-text-anti-d915dd = Anti-aliasing (default: Text tool, Text_AntiAliasLevel)
+cmdtext-automatische-unterschneidung-vorgabe-tex-fe97e1 = automatic kerning (default: Text tool, Text_AutoKern)
+cmdtext-textrichtung-vorgabe-textwerkzeug-text-o-89d01a = Text orientation (default: Text tool, Text_Orientation)

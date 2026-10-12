@@ -44,3 +44,5 @@ err-script-hr-eno-active-selection = Es ist nichts ausgewählt.
 err-script-hr-could-not-complete-your-request = Die Anforderung konnte nicht ausgeführt werden.
 err-script-hr-internal = Es ist ein interner Fehler aufgetreten.
 # <<< UE-3 HR
+# JSF-Laufzeit: nicht umgesetzter API-Member (UE-5)
+err-script-not-implemented = nicht implementiert: { $member }

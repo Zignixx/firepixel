@@ -534,3 +534,10 @@ cmdtext-schwarzweiss-helligkeitsschwelle = Schwarzweiß: Helligkeitsschwelle
 cmdtext-vektorobjekte-brauchen-einen-renderer-fp-render = Vektorobjekte brauchen einen Renderer (fp-render)
 cmdtext-menue-platzhalter-zur-laufzeit-ersetzt = Menü-Platzhalter, zur Laufzeit ersetzt
 cmdtext-logo-nachbearbeitung-true-false-oder-obj-cdb621 = Logo-Nachbearbeitung: true/false oder Objekt (enabled, snapColors, colorTolerance, straighten, snapAngle, shapes, shapeTolerance, reduceNodes, fitTolerance, closeGaps, symmetry, fast); fehlt: wie die Vorgabe
+# UE-5: Textwerkzeug-Vorgaben (text.setToolDefaults, draw.text)
+cmdtext-glaettung-neuer-texte = Glättung neuer Texte
+cmdtext-automatische-unterschneidung-neuer-texte = automatische Unterschneidung neuer Texte
+cmdtext-textrichtung-neuer-texte = Textrichtung neuer Texte
+cmdtext-glaettung-vorgabe-textwerkzeug-text-anti-d915dd = Glättung (Vorgabe: Textwerkzeug, Text_AntiAliasLevel)
+cmdtext-automatische-unterschneidung-vorgabe-tex-fe97e1 = automatische Unterschneidung (Vorgabe: Textwerkzeug, Text_AutoKern)
+cmdtext-textrichtung-vorgabe-textwerkzeug-text-o-89d01a = Textrichtung (Vorgabe: Textwerkzeug, Text_Orientation)

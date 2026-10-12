@@ -26,7 +26,7 @@ pub fn throw(e: FwErr, member: &str) -> JsError {
             let _ = with_state(|st| {
                 st.not_implemented.insert(what.clone());
             });
-            JsNativeError::error().with_message(format!("nicht implementiert: {what}")).into()
+            JsNativeError::error().with_message(fp_i18n::tr!("err-script-not-implemented", member = what)).into()
         }
         FwErr::Js(m) => JsNativeError::error().with_message(m).into(),
     }
