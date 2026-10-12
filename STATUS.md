@@ -836,3 +836,52 @@ Dialog `crates\fp-ui\src\dialogs\trace.rs` mit der Logo-Nachbearbeitung von VT-3
   - Firepixel-Instanz beendet.
   - Testdokument im Original ohne Speichern geschlossen; am Ende keine Dialoge und Menüs offen (`dialog.ps1`).
   - Worktree `..\fp-pm7` und `target-pm7` gelöscht.
+
+## Phase 7 – PM-6 (P-PM4 Teil 2: Nachmessung Dialoge D26–D50 in beiden Programmen) – Stand 12.10.2026
+- **Gemessen:** D26–D50 aus `docs\PARITAET_B.md` §2 Feld für Feld neu, ohne Umbau, mit den Werkzeugen von PM-5.
+  - **Original:** eigene Kopie des PM-5-Testdokuments (`pm6_test.fw`: R1, R2, T1, B1; Doppel aus der Datei entfernt), geöffnet mit `fw.openDocument`, am Ende ohne Speichern geschlossen. Kurze Sitzungen unter `gui-sitzung.ps1` (meist 1–4 min, eine 7 min; mehrere brachen wegen fremder Dialoge sofort ab). Je Dialog: Steuerelemente, Fokus, Standardknopf, Tab-Folge, Schieber (Bereich und Lage) per Win32; Tab/Enter/Esc als Fensternachricht an das fokussierte Element; Wirkung per JSF (Rechtecke, Elementtyp) und „Rückgängig: …“ aus dem Bearbeiten-Menü; dann zweites Öffnen (gemerkt?), Änderung + Esc (ohne Wirkung?), drittes Öffnen; Vorgaben am Ende wiederhergestellt.
+  - **Firepixel:** eigene Debug-Instanz aus einem sauberen Worktree, zuerst `8b03953`, dann HEAD `60365e8` mit der Zahlenfeld-Korrektur `fc7df14`. Eigenes APPDATA/LOCALAPPDATA, `--mcp`, Fenster 1032 × 748 sichtbar und nicht aktiviert unten rechts (1520,650). Echtes Fenster, Brücke: `ui_find`, `ui_input` (Klick, Strg+A, Tippen, Tab, Enter, Esc, Strg+Z, Ziehen am Popup-Schieber), `screenshot`; Wirkung über `run_script`, `get_document` (`pixelSelection`) und `history`.
+- **Ergebnis D26–D50:** 3 ✅ / 16 ⚠️ / 6 ❌ / 0 ⏳.
+  - Vorher: 3 ✅ / 1 ⚠️ / 5 ❌ / 16 🔧.
+  - ✅: D33, D36, D37. ❌: D32 (kein Dialog), D40 (Ziel/Vorgang fehlen), D43, D44 (Neubau nach `re\19`), D47 und D49 (Wirkung falsch).
+  - Bestätigt aus FV-4/FV-5: Popup-Schieber ▾ senkrecht, Vorgaben 10 (D29, D31, D36–D39), Richtung 0 (D28), Symbolknöpfe (D30/D31), Schieber-Kennlinie D46/D48, Meldungen D33/D34.
+  - Neu bewertet: D41/D42 von ✅ auf ⚠️, weil Werte nicht gemerkt werden.
+  - Zähltabelle oben in PARITAET_B: Dialoge 50 = 3 ✅ / 21 ⚠️ / 15 ❌ / 5 ⏳ / 6 🔧 (D01–D25 inklusive der 🔧/⏳ aus DLG-2/DLG-3).
+- **Zahlenfeld-Fehler von PM-5:**
+  - Auf `8b03953` nahm D26 teils schon beim ersten Öffnen nichts an (Fokus der nicht aktivierten Instanz).
+  - Auf `60365e8` tritt er in keinem Dialog D26–D50 auf: jeder Dialog mit Zahlenfeldern wurde 4–8× geöffnet und jedes Mal getippt, alle Werte kamen an.
+  - **Neuer Fehler (hoch):** Ein getippter Wert geht verloren, wenn man mit der Maus in ein anderes Feld klickt. Mit Tab bleibt er. Nachgestellt in D26, D28, D30, D31, D41, D42 und D46; betrifft jeden Dialog mit mehreren Zahlenfeldern. Dem Koordinator für DLG-1 gemeldet.
+- **Wichtigste Abweichungen** (11 neue Befunde „von PM-6“: 6 IBD, 3 EB, 2 RF):
+  1. **hoch:** Zahlenfeld verliert den Wert beim Klick ins nächste Feld.
+  2. **Gemerkte Werte fehlen** in allen Filterdialogen (D41, D42, D45–D50) sowie in Weiche Kante (D35) und Numerisch transformieren (D26). Das Original merkt die per OK bestätigten Werte, Firepixel nur „Vorschau“.
+  3. **Wirkung:**
+     - Bewegungsunschärfe wächst nach allen Seiten statt nur in Bewegungsrichtung (Original 320,200,420,319; Firepixel 300,180,440,320).
+     - Radiales Weichzeichnen vergrößert die Bitmap viel zu stark (Original 317,197,424,304; Firepixel 299,179,441,321).
+     - Gauß, Zentriert, Strich erweitern, Pfad einlassen, Numerisch transformieren und Auswahl verkleinern sind gleich.
+  4. Sättigungs-Schieber in Farbton/Sättigung mit falscher Kennlinie (Original linear −100…100).
+  5. D26: Objektgröße B/H, Symbole und Kette fehlen; das zweite Feld folgt nicht beim Tippen.
+  6. Beschriftungen und Anordnung (Sammelbefund): D27–D31, D38, D39, D41, D45–D50; Startfokus OK bei D45/D47/D49/D50; Dezimalpunkt „4.1“.
+  7. D34: zweite Meldung nach Abbrechen fehlt. D28: Rechteck des Animationssymbols ohne Bewegungsweg.
+  8. Zu prüfen bzw. zu entscheiden: Auswahlrahmen erweitern/begrenzen +6 statt +5 px; Verlaufsnamen (Original bei Filtern „Bild filtern“).
+- **Abgehakt** im UX-B-Eintrag „Dialoge D26–D50“ (I18N-DIALOGE): D28, D29/D31/D36–D39, Symbolknöpfe D30/D31, D33, D34-Rückfrage, Popup-Schieber („erledigt laut Nachmessung PM-6“). D26, D32, D40, D43 und D44 sind dort als „weiter offen“ vermerkt.
+- **Paarbilder:** `docs\screenshots\paritaet\pm6_D26…D50_*.png` (25 Stück, links Original, rechts Firepixel). Bei D33/D34 ist die Titelleiste des Originals mit dem Programmnamen grau überdeckt. Bei D32 gibt es in Firepixel keinen Dialog.
+- **Nicht gemessen:**
+  - Popup-Schieber ▾ des Originals mit der Maus (kein Vordergrund)
+  - Grenzen der Pixelauswahl im Original (`convertMarqueeToPath` bricht per JSF ab, nur der Verlaufsschritt verglichen)
+  - Wirkung der Knöpfe Hotspot/Segment (D34)
+  - Inhalt der kurzen Meldung des Originals nach OK in Animieren (per WM_CLOSE geschlossen)
+- **Beobachtungen im Original:**
+  - Hinterlassene fremde Dialoge (6 Bildvorschauen, mehrfach „Es ist ein interner Fehler aufgetreten“) verhinderten drei Sitzungen.
+  - `jsf-ausfuehren.ps1` schließt bei jedem Lauf offene Dialoge mit Abbrechen. Dabei wurde einmal eine fremde Bildvorschau abgebrochen; das wurde dem Koordinator gemeldet.
+  - Meine Skripte brechen jetzt bei fremden Arbeitsdialogen sofort ab und schließen nur reine Fehlermeldungen.
+- **Aufgeräumt:**
+  - Firepixel-Instanz beendet, Worktree `..\fp-pm6` und `target-pm6` gelöscht.
+  - Testdokument im Original geschlossen; beim Abschluss war es schon zu, das Original hatte keine Dokumente offen.
+  - Keine Dialoge offen (laut `dialog.ps1` nach jeder Sitzung).
+- **Paketvorschläge** (je 3–5 Dialoge, nach Alltagswichtigkeit; vorher global: Klick-Verlust der Zahlenfelder in DLG-1):
+  - **P-DLG5 Farbe und Schärfe** (IBD): D41 Farbton/Sättigung (Kennlinie, „Kolorieren“), D42 Helligkeit/Kontrast, D46 Unscharf maskieren, D48 Gaußscher Weichzeichner, D45 Rauschen. Alle mit gemerkten Werten nach OK, Feld rechts neben dem Schieber, Knöpfe rechts, Beschriftungen und Startfokus wie im Original.
+  - **P-DLG6 Weichzeichner-Wirkung** (RF + IBD): D47 Bewegungsunschärfe (Richtung der Unschärfe, „Umfang“), D49 Radial (Stärke/Grenzen, „Menge“), D50 Zentriert („Anzahl“), jeweils mit gemerkten Werten.
+  - **P-DLG7 Pfad und Transformieren** (IBD): D26 Numerisch transformieren (B/H live, Symbole, Kette, gemerkt), D29 „Menge“, D30/D31 („Winkelgrenze“ 10.00, Anordnung) und D32 Pfad in Auswahlrahmen als neuer Dialog (Rand + Breite).
+  - **P-DLG8 Auswahl** (IBD + EB): D35 Weiche Kante (gemerkt), D38/D39 Beschriftungen, D40 Auswahl speichern mit Ziel und Vorgang, D36 Pixelfrage klären.
+  - **P-DLG9 Symbol, Animation, Verhalten** (IBD + EB): D27 Anordnung, D28 Beschriftungen/Trennlinien/Startfokus/Symbolrechteck, D34 zweite Meldung, D33 (nur Tab).
+  - D43/D44 bleiben in **P-DLG-X** (Spezifikation `re\19`, RE-KT). Verlaufsnamen als kleine Entscheidung für EB.
