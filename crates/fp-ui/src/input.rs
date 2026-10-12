@@ -246,6 +246,12 @@ pub fn handle(ctx: &egui::Context, st: &mut AppState) {
                     st.flyout = None;
                     continue;
                 }
+                // Esc in einem offenen Popup (Popup-Schieber, Kombifeld-Liste, Farbfeld-Popup)
+                // schließt nur das Popup (egui erledigt das selbst), wie im Original; die Auswahl
+                // auf der Leinwand bleibt
+                if key == Key::Escape && egui::Popup::is_any_open(ctx) {
+                    continue;
+                }
                 let ctrl = modifiers.ctrl || modifiers.command;
                 if editing {
                     // Text-Editor: Tasten gehen an das Werkzeug; Strg+A markiert alles
