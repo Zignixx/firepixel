@@ -19,7 +19,7 @@ Legende: ✅ behoben **und** im echten Fenster nachgeprüft · 🔧 laut Befund 
 | N11 | Dialoge sehen „zusammengebastelt“ aus, Startbildschirm „ohne Liebe“ → schöner machen | 14–17 | ❌ teilweise | DESIGN begonnen (`docs\DESIGN.md` §13, Nachher-Bilder fehlen) |
 | N12 | KI-Zauberstab: nach einem Klick kann man nicht erneut woanders klicken (beim normalen Zauberstab geht es) – soll genau so wie der normale funktionieren | – | ❌ | kein Befund gefunden → FV |
 | N13 | Großer Text: Auswahlrahmen bleibt klein (Bild 18) | 18 | 🔧 | LW `19536aa` „Textgrenzen aus dem Satz“ – nachprüfen |
-| N14 | Schriftgrößen-Schieber im Inspektor springt in 100er-Schritten (Bild 19) | 19 | ❌ | Kennlinie des Popup-Schiebers wie im Original (siehe FV-1 T4) |
+| N14 | Schriftgrößen-Schieber im Inspektor springt in 100er-Schritten (Bild 19) | 19 | 🔧 | FV-1 6902897: senkrechter Popup-Schieber 8–96 in ganzen Schritten (≈ 2,3 px je Punkt, linear wie im Original gemessen, o_t1_c), Wert live im Feld; Test `inspector_paritaet::n14_font_size_slider_fine_steps` |
 | N15 | Text anfangen, dann unten im Inspektor die Größe ändern → oben muss es live mitändern | 18 | 🔧 | LW `19536aa` „Textattribute live im Editor“ – nachprüfen |
 | N16 | Agenten öffnen „Speichern unter“ und bleiben hängen | – | 🔧 | AU: nicht blockierende Datei-Dialoge (`file_dialog.rs`) |
 | N17 | Nirgends der Name des Originals oder seines Herstellers in UI und Quelltext | – | 🔧 | `cargo test -p fp-neutral` |
