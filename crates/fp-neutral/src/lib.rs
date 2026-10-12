@@ -100,7 +100,14 @@ impl std::fmt::Display for Finding {
 /// Prüft alle Dateien und Namen unter `root` (ohne `target*` und die Versionsverwaltung `.git`
 /// direkt unter `root`).
 pub fn scan(root: &Path) -> Vec<Finding> {
+    scan_with_files(root).0
+}
+
+/// Wie [`scan`], liefert zusätzlich alle geprüften Dateien (relativ), damit Tests die Abdeckung
+/// nachweisen können (STATUS.md, `docs\*.md`, `docs\berichte`, `docs\funktionstest`, Bilder).
+pub fn scan_with_files(root: &Path) -> (Vec<Finding>, Vec<PathBuf>) {
     let mut out = Vec::new();
+    let mut files = Vec::new();
     let mut stack = vec![root.to_path_buf()];
     while let Some(dir) = stack.pop() {
         let Ok(rd) = std::fs::read_dir(&dir) else { continue };
@@ -118,6 +125,7 @@ pub fn scan(root: &Path) -> Vec<Finding> {
             if p.is_dir() {
                 stack.push(p);
             } else if let Ok(data) = std::fs::read(&p) {
+                files.push(rel.clone());
                 let mut last = None;
                 for off in find_in_bytes(&data) {
                     let line = 1 + data[..off].iter().filter(|&&b| b == b'\n').count();
@@ -129,7 +137,12 @@ pub fn scan(root: &Path) -> Vec<Finding> {
             }
         }
     }
-    out
+    (out, files)
+}
+
+/// FNV-1a 64 über beliebige Bytes (z. B. als Schlüssel eines Prüf-Zwischenspeichers).
+pub fn fnv64(data: &[u8]) -> u64 {
+    fnv(data.iter().copied())
 }
 
 #[cfg(test)]
