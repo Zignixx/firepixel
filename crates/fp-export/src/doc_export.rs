@@ -230,6 +230,54 @@ pub struct DocExportOptions {
     pub measure: Option<MeasureFn>,
     /// Unterpaneel des Exportdialogs (Dateinamen wie gemessen, re\18 §3); `None` = bisher.
     pub panel: Option<PanelOptions>,
+    /// Programmweite Werte der HTML-Einrichtung (Voreinstellungen, re\18 §6.5).
+    pub html_prefs: HtmlPrefs,
+}
+
+/// Werte der HTML-Einrichtung, die in den Voreinstellungen stehen (re\18 §6.5): Endung
+/// (`HTMLExtension`), Kommentare (`HTMLCommentsOn`), Kleinbuchstaben (`ForceLowercaseFilenames`),
+/// leere Zellen (`HTMLEmptyCellColor`, `HTMLEmptyCellUsesCanvasColor`, `HTMLEmptyCellContents`).
+#[derive(Clone, Debug, PartialEq)]
+pub struct HtmlPrefs {
+    /// Endung mit oder ohne Punkt; gilt, wenn das Dokument keine eigene hat.
+    pub extension: String,
+    pub comments: bool,
+    pub lowercase: bool,
+    /// Zellfarbe `0xRRGGBB` (nur ohne „Leinwandfarbe verwenden“).
+    pub empty_cell_color: u32,
+    pub empty_cell_canvas: bool,
+    /// 0 Ohne, 1 Platzhalter-Grafik, 2 Geschütztes Leerzeichen.
+    pub empty_cell_contents: i32,
+}
+
+impl Default for HtmlPrefs {
+    fn default() -> Self {
+        HtmlPrefs { extension: ".htm".into(), comments: false, lowercase: false, empty_cell_color: 0xFF_FFFF, empty_cell_canvas: true, empty_cell_contents: 1 }
+    }
+}
+
+/// HTML-Endung ohne Punkt: die des Dokuments, sonst die der Voreinstellungen, sonst „htm“.
+pub fn html_extension(html: Option<&fp_model::HtmlSettings>, prefs: &HtmlPrefs) -> String {
+    let e = html.and_then(|h| h.file_extension.clone()).filter(|e| !e.trim().is_empty()).unwrap_or_else(|| prefs.extension.clone());
+    let e = e.trim().trim_start_matches('.').to_string();
+    if e.is_empty() { "htm".into() } else { e }
+}
+
+/// CSS für `body` aus den Dokumenteigenschaften der HTML-Einrichtung (re\18 §6.2); leer, wenn
+/// alles auf den Vorgaben steht.
+pub fn body_css(h: &fp_model::HtmlSettings) -> String {
+    let mut css = Vec::new();
+    if let Some(u) = h.background_url.as_deref().map(str::trim).filter(|u| !u.is_empty()) {
+        css.push(format!("background-image: url(\"{}\");", u.replace('"', "%22")));
+        css.push(format!("background-repeat: {};", ["no-repeat", "repeat", "repeat-x", "repeat-y"][h.background_repeat.unwrap_or(0).clamp(0, 3) as usize]));
+        css.push(format!("background-attachment: {};", if h.background_attachment == Some(1) { "fixed" } else { "scroll" }));
+    }
+    match h.page_alignment.unwrap_or(0) {
+        1 => css.push("text-align: center;".into()),
+        2 => css.push("text-align: right;".into()),
+        _ => {}
+    }
+    css.join(" ")
 }
 
 impl DocExportOptions {
@@ -244,6 +292,7 @@ impl DocExportOptions {
             settings: None,
             measure: None,
             panel: None,
+            html_prefs: HtmlPrefs::default(),
         }
     }
 }
@@ -769,6 +818,8 @@ pub fn export_document_noted(doc: &Document, r: &dyn PageRenderer, o: &DocExport
         }
         FilesStyle::HtmlAndImages | FilesStyle::ImagesOnly | FilesStyle::CssAndImages | FilesStyle::CssSprites => {
             let pn = o.panel.as_ref();
+            // „Dateiname in Kleinbuchstaben“ (HTML-Einrichtung, re\18 §6.2)
+            let base = if o.html_prefs.lowercase { base.to_lowercase() } else { base };
             let slices = match pn.map(|x| x.slices) {
                 None if o.use_slices => collect_slices(doc, page),
                 Some(SliceMode::Export) => collect_slices(doc, page),
@@ -798,7 +849,8 @@ pub fn export_document_noted(doc: &Document, r: &dyn PageRenderer, o: &DocExport
             let images_dir = if images_dir.is_empty() || images_dir.ends_with('/') { images_dir } else { format!("{images_dir}/") };
             let discard = pn.map(|x| !x.include_unsliced).unwrap_or_else(|| html_set.discard_unspecified_slices.unwrap_or(false));
             let total = grid.cells.iter().flatten().filter(|c| !c.skip).count();
-            let letter = if pn.is_some() { 's' } else { 'f' };
+            // Statusteil der Rollover-Bilder wie gemessen „_s2“, auch ohne Exportdialog (re\18 §3)
+            let letter = 's';
             let one_frame = pn.is_some_and(|x| x.current_frame_only);
             let base_frame = pn.filter(|x| x.current_frame_only).map(|x| x.frame.min(frame_count(doc, page) - 1)).unwrap_or(0);
             // Status-Bilder rendern (Grundbild immer, weitere nach Bedarf)
@@ -817,6 +869,7 @@ pub fn export_document_noted(doc: &Document, r: &dyn PageRenderer, o: &DocExport
                     seq += 1;
                     let spec = cell.slice().and_then(|id| slices.iter().find(|x| x.id == id));
                     let name = spec.and_then(|x| x.base_name.clone()).unwrap_or_else(|| auto_name(&tokens, ri + 1, ci + 1, &base, seq, total, date));
+                    let name = if o.html_prefs.lowercase { name.to_lowercase() } else { name };
                     let mut cc = CellContent { name: safe_name(&name), image: None, html: None, slice: cell.slice() };
                     if let Some(x) = spec
                         && x.kind == 3
@@ -864,8 +917,22 @@ pub fn export_document_noted(doc: &Document, r: &dyn PageRenderer, o: &DocExport
                 images_dir: images_dir.clone(),
                 table_align: html_set.table_alignment.unwrap_or(0),
                 now: o.date,
+                comments: o.html_prefs.comments,
+                empty_cells: crate::html::EmptyCells {
+                    color: (!o.html_prefs.empty_cell_canvas).then(|| format!("#{:06x}", o.html_prefs.empty_cell_color & 0xFF_FFFF)),
+                    contents: match o.html_prefs.empty_cell_contents {
+                        0 => crate::html::EmptyContents::None,
+                        2 => crate::html::EmptyContents::Nbsp,
+                        _ => crate::html::EmptyContents::Spacer,
+                    },
+                },
+                default_alt: html_set.default_alt.clone().unwrap_or_default(),
+                body_css: body_css(&html_set),
                 ..HtmlOptions::default()
             };
+            if o.html_prefs.empty_cell_canvas {
+                ho.empty_cells.color = Some(ho.bgcolor.clone());
+            }
             ho.spacer = format!("{images_dir}spacer.gif");
             ho.arrow = "arrows.gif".into();
             let measure = o.measure.unwrap_or(default_measure);
@@ -953,7 +1020,7 @@ pub fn export_document_noted(doc: &Document, r: &dyn PageRenderer, o: &DocExport
                     files.push(ExportFile { path, bytes });
                 }
             }
-            let html_ext = pn.map(|x| x.html_ext.trim_start_matches('.').to_string()).filter(|e| !e.is_empty()).unwrap_or_else(|| "htm".into());
+            let html_ext = pn.map(|x| x.html_ext.trim_start_matches('.').to_string()).filter(|e| !e.is_empty()).unwrap_or_else(|| html_extension(Some(&html_set), &o.html_prefs));
             match o.style {
                 FilesStyle::CssSprites if pn.is_some() => {
                     let so = pn.map(|x| x.sprite.clone()).unwrap_or_default();

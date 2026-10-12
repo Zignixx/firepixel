@@ -59,6 +59,7 @@ err-nf-brush = Brush stroke “{ $name }”
 err-nf-preset = Preset “{ $name }”
 err-nf-folder = Folder { $path }
 err-nf-html-file = HTML file { $path }
+err-update-html-no-table = { $path } is not an HTML page (neither </body> nor </html> found). The file was not changed.
 
 ## Weitere Fehler mit Werten
 err-unsaved-discard = “{ $name }” has unsaved changes (discard: true to discard)

@@ -251,9 +251,10 @@ pub fn auto_name(tokens: &[i32], row: usize, col: usize, doc_name: &str, seq: us
     out.chars().take(240).collect()
 }
 
-/// Status-Suffix (`NMFi`, 2 Bausteine), `frame` 1-basiert; Vorgabe `[5, 1]` ⇒ „_f2“.
+/// Status-Suffix (`NMFi`, 2 Bausteine), `frame` 1-basiert; Vorgabe `[5, 1]` ⇒ „_s2“ (gemessen,
+/// re\18 §3 und §6.4).
 pub fn frame_suffix(tokens: &[i32], frame: usize, state_names: &[String; 4]) -> String {
-    frame_suffix_with(tokens, frame, state_names, 'f')
+    frame_suffix_with(tokens, frame, state_names, 's')
 }
 
 /// Wie [`frame_suffix`], Buchstabe des Bausteins „Status-Nr.“ frei wählbar (der Exportdialog
@@ -264,11 +265,11 @@ pub fn frame_suffix_with(tokens: &[i32], frame: usize, state_names: &[String; 4]
         match k {
             1 => out.push_str(&format!("{letter}{frame}")),
             2 => out.push_str(&frame.to_string()),
-            3 | 4 => {
-                if frame > 1 {
-                    out.push_str(&state_names[(frame - 1).min(3)]);
-                }
-            }
+            // Rollover (over, down, overdown) und abgekürzt (o, d, od), re\18 §6.4
+            3 => out.push_str(["", "over", "down", "overdown"][(frame.max(1) - 1).min(3)]),
+            4 => out.push_str(["", "o", "d", "od"][(frame.max(1) - 1).min(3)]),
+            // Benutzerdefiniert: eigene Statusnamen (Up, Over, Down, OverDown)
+            9 => out.push_str(&state_names[(frame.max(1) - 1).min(3)]),
             5 => out.push('_'),
             6 => out.push('.'),
             7 => out.push(' '),
@@ -399,8 +400,10 @@ mod tests {
         assert_eq!(auto_name(&[2], 0, 0, "", 28, 30, d), "BB"); // wie fw_slices.auto_name
         assert_eq!(auto_name(&[8], 0, 0, "", 1, 1, d), "101126");
         let names = [String::new(), "_o".into(), "_d".into(), "_od".into()];
-        assert_eq!(frame_suffix(&[5, 1], 2, &names), "_f2");
-        assert_eq!(frame_suffix(&[3, 0], 2, &names), "_o");
+        assert_eq!(frame_suffix(&[5, 1], 2, &names), "_s2");
+        assert_eq!(frame_suffix(&[5, 3], 2, &names), "_over");
+        assert_eq!(frame_suffix(&[5, 4], 4, &names), "_od");
+        assert_eq!(frame_suffix(&[9, 0], 2, &names), names[1]);
         let one = build_grid([0.0, 0.0, 50.0, 50.0], &[]);
         assert_eq!((one.rows(), one.cols()), (1, 1));
     }

@@ -59,6 +59,7 @@ err-nf-brush = Pinselstrich „{ $name }“
 err-nf-preset = Vorgabe „{ $name }“
 err-nf-folder = Ordner { $path }
 err-nf-html-file = HTML-Datei { $path }
+err-update-html-no-table = { $path } ist keine HTML-Seite (weder </body> noch </html> gefunden). Die Datei bleibt unverändert.
 
 ## Weitere Fehler mit Werten
 err-unsaved-discard = „{ $name }“ hat ungespeicherte Änderungen (discard: true zum Verwerfen)

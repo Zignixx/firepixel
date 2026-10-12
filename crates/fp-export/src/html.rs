@@ -92,6 +92,34 @@ pub struct HtmlOptions {
     pub now: MenuDate,
     /// Schalter `param_6` (expliziter Austausch auf Status 1 statt `MM_swapImgRestore`).
     pub explicit_restore: bool,
+    /// „HTML-Kommentare einschließen“ (HTML-Einrichtung, re\18 §6.2): Hinweise um die Tabelle.
+    pub comments: bool,
+    /// Leere Zellen (HTML-Einrichtung „Tabelle“, re\18 §6.3).
+    pub empty_cells: EmptyCells,
+    /// „Standard-ALT-Tag“ für Bilder ohne eigenen Alt-Text (re\18 §6.4).
+    pub default_alt: String,
+    /// CSS-Regeln für `body` (Dokumenteigenschaften: Hintergrundbild, Wiederholen, Anhang,
+    /// Seitenausrichtung, re\18 §6.2); leer = keine.
+    pub body_css: String,
+}
+
+/// Inhalt leerer Tabellenzellen (re\18 §6.3 „Inhalt:“).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+pub enum EmptyContents {
+    /// „Ohne“: `<td></td>`.
+    #[default]
+    None,
+    /// „Platzhalter-Grafik“: transparenter Abstandhalter in Zellgröße.
+    Spacer,
+    /// „Geschütztes Leerzeichen“: `&nbsp;`.
+    Nbsp,
+}
+
+/// Leere Zellen: Hintergrundfarbe (`None` = keine) und Inhalt.
+#[derive(Clone, Debug, PartialEq, Default)]
+pub struct EmptyCells {
+    pub color: Option<String>,
+    pub contents: EmptyContents,
 }
 
 impl Default for HtmlOptions {
@@ -114,6 +142,10 @@ impl Default for HtmlOptions {
             table_align: 0,
             now: MenuDate { year: 2026, month: 1, day: 1, ..MenuDate::default() },
             explicit_restore: false,
+            comments: false,
+            empty_cells: EmptyCells::default(),
+            default_alt: String::new(),
+            body_css: String::new(),
         }
     }
 }
@@ -330,7 +362,17 @@ pub fn write_html(
         if let Some(html) = &cc.html {
             return format!("<td{attrs} width=\"{w}\" height=\"{h}\">{html}</td>");
         }
-        let Some(src) = &cc.image else { return format!("<td{attrs}></td>") };
+        let Some(src) = &cc.image else {
+            let mut attrs = attrs;
+            if let Some(c) = &o.empty_cells.color {
+                attrs.push_str(&format!(" bgcolor=\"{}\"", esc_attr(c)));
+            }
+            return match o.empty_cells.contents {
+                EmptyContents::None => format!("<td{attrs}></td>"),
+                EmptyContents::Spacer => format!("<td{attrs}><img src=\"{}\" width=\"{w}\" height=\"{h}\" alt=\"\"{close}</td>", o.spacer),
+                EmptyContents::Nbsp => format!("<td{attrs}>&nbsp;</td>"),
+            };
+        };
         let spec = cell.slice().and_then(|id| slices.iter().find(|s| s.id == id));
         let ec = cell.slice().and_then(|id| slice_events.get(&id));
         let mut src = src.clone();
@@ -342,7 +384,7 @@ pub fn write_html(
             img_onload = format!(" {}=\"{}\"", ev("onLoad"), onload);
         }
         let usemap = if maps.contains_key(&(r, c)) { format!(" usemap=\"#m_{}\"", cc.name) } else { String::new() };
-        let alt = spec.map(|s| esc_attr(&s.alt)).unwrap_or_default();
+        let alt = esc_attr(spec.map(|s| s.alt.as_str()).filter(|a| !a.is_empty()).unwrap_or(&o.default_alt));
         let img = format!(
             "<img name=\"{n}\" src=\"{src}\" width=\"{w}\" height=\"{h}\" id=\"{n}\"{usemap}{img_onload} alt=\"{alt}\"{close}",
             n = cc.name
@@ -461,7 +503,8 @@ pub fn write_html(
     // Kopf und Skripte
     let mut head = String::new();
     let mut support: Vec<(String, Vec<u8>)> = Vec::new();
-    if o.shims == Shims::Transparent || o.shims == Shims::Internal {
+    let has_empty = grid.cells.iter().enumerate().any(|(r, row)| row.iter().enumerate().any(|(c, cell)| !cell.skip && cells.get(r).and_then(|v| v.get(c)).is_none_or(|cc| cc.image.is_none() && cc.html.is_none())));
+    if o.shims == Shims::Transparent || o.shims == Shims::Internal || (has_empty && o.empty_cells.contents == EmptyContents::Spacer) {
         support.push((o.spacer.clone(), spacer_gif()));
     }
     let rt = runtime_js(&needs);
@@ -506,6 +549,9 @@ pub fn write_html(
     html.push_str(&format!("<title>{}</title>\n", esc_attr(&o.title)));
     html.push_str(&format!("<meta http-equiv=\"Content-Type\" content=\"text/html; charset={}\"{close}\n", o.charset));
     html.push_str("<style type=\"text/css\">td img {display: block;}</style>\n");
+    if !o.body_css.is_empty() {
+        html.push_str(&format!("<style type=\"text/css\">body {{ {} }}</style>\n", o.body_css));
+    }
     html.push_str("<!--Firepixel HTML-Export (eigene Vorlage)-->\n");
     html.push_str(&head);
     html.push_str("</head>\n");
@@ -516,7 +562,13 @@ pub fn write_html(
     if !menus_html.is_empty() && !o.css_popups {
         html.push_str("<script type=\"text/javascript\">mmLoadMenus();</script>\n");
     }
+    if o.comments {
+        html.push_str("<!-- Firepixel: begin of the sliced table. To reuse it, copy this table and the scripts from the head into the target page. -->\n");
+    }
     html.push_str(&table);
+    if o.comments {
+        html.push_str("<!-- Firepixel: end of the sliced table -->\n");
+    }
     html.push_str(&menus_html);
     if !menus_html.is_empty() {
         html.push_str("</div>\n");

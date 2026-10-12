@@ -301,6 +301,79 @@ fn today() -> fp_export::popup::MenuDate {
     fp_export::popup::MenuDate { year: y as i32, month: m as u32, day: d as u32, ..Default::default() }
 }
 
+/// Programmweite Werte der HTML-Einrichtung aus den Voreinstellungen (re\18 §6.5). Die Liste
+/// „Inhalt:“ leerer Zellen steht 1-basiert in `HTMLEmptyCellContents` (Vorgabe 2 = Platzhalter-Grafik).
+pub fn html_prefs(prefs: &crate::prefs::Preferences) -> fp_export::doc_export::HtmlPrefs {
+    fp_export::doc_export::HtmlPrefs {
+        extension: prefs.get_str("HTMLExtension", ".htm"),
+        comments: prefs.get_bool("HTMLCommentsOn", false),
+        lowercase: prefs.get_bool("ForceLowercaseFilenames", false),
+        empty_cell_color: prefs.get("HTMLEmptyCellColor").and_then(|v| v.as_color()).map(|c| c.0 & 0xFF_FFFF).unwrap_or(0xFF_FFFF),
+        empty_cell_canvas: prefs.get_bool("HTMLEmptyCellUsesCanvasColor", true),
+        empty_cell_contents: (prefs.get_int("HTMLEmptyCellContents", 2) - 1).clamp(0, 2) as i32,
+    }
+}
+
+/// HTML-Endung (ohne Punkt) des aktiven Dokuments: Dokument, sonst Voreinstellung (re\18 §6.5).
+pub fn html_ext_of(s: &Session) -> Result<String> {
+    let d = s.doc()?;
+    let h = d.doc.pages.get(d.page).and_then(|p| p.root.export.as_ref()).and_then(|e| e.html.as_deref());
+    Ok(fp_export::doc_export::html_extension(h, &html_prefs(&s.prefs)))
+}
+
+/// Ersetzt in einer vorhandenen HTML-Seite die von Firepixel geschriebene Tabelle (erkannt am
+/// Kommentar `<!-- fwtable …`) durch die neue und ergänzt fehlende Skripte im Kopf; der übrige
+/// Inhalt bleibt. Ohne solche Tabelle wird sie vor `</body>` bzw. `</html>` eingefügt; `None`,
+/// wenn die Datei auch das nicht enthält (keine HTML-Seite).
+pub fn replace_html_table(old: &str, new: &str) -> Option<String> {
+    fn table_span(html: &str) -> Option<(usize, usize)> {
+        let lower = html.to_ascii_lowercase();
+        let mark = lower.find("<!-- fwtable")?;
+        let start = lower[..mark].rfind("<table")?;
+        // passendes </table> (verschachtelte Tabellen mitzählen)
+        let mut depth = 0usize;
+        let mut i = start;
+        while i < lower.len() {
+            let open = lower[i..].find("<table").map(|k| i + k);
+            let close = lower[i..].find("</table>").map(|k| i + k)?;
+            match open {
+                Some(o) if o < close => {
+                    depth += 1;
+                    i = o + 6;
+                }
+                _ => {
+                    depth = depth.saturating_sub(1);
+                    i = close + 8;
+                    if depth == 0 {
+                        return Some((start, i));
+                    }
+                }
+            }
+        }
+        None
+    }
+    let (ns, ne) = table_span(new)?;
+    let mut out = match table_span(old) {
+        Some((os, oe)) => format!("{}{}{}", &old[..os], &new[ns..ne], &old[oe..]),
+        None => {
+            // noch keine Firepixel-Tabelle: am Ende des Body (bzw. vor </html>) einfügen
+            let lower = old.to_ascii_lowercase();
+            let at = lower.rfind("</body>").or_else(|| lower.rfind("</html>"))?;
+            format!("{}{}\n{}", &old[..at], &new[ns..ne], &old[at..])
+        }
+    };
+    // Skripte des Kopfes (Rollover, Pop-up-Menüs) übernehmen, wenn die Seite noch keine hat
+    let lower_new = new.to_ascii_lowercase();
+    let scripts = lower_new.find("</head>").and_then(|h| Some((lower_new[..h].find("<script")?, lower_new[..h].rfind("</script>")? + 9)));
+    if let Some((a, e)) = scripts.filter(|(a, e)| a < e)
+        && !out.to_ascii_lowercase().contains("<script")
+        && let Some(h) = out.to_ascii_lowercase().find("</head>")
+    {
+        out.insert_str(h, &format!("{}\n", &new[a..e]));
+    }
+    Some(out)
+}
+
 /// Exportiert das aktive Dokument (Grundlage von „Exportieren“, „HTML aktualisieren“, Vorschau …).
 pub fn export_active(s: &Session, style: FilesStyle, base: &str, page: usize, settings: Option<OptimizeSettings>, use_slices: bool) -> Result<Vec<ExportFile>> {
     let d = s.doc()?;
@@ -312,6 +385,7 @@ pub fn export_active(s: &Session, style: FilesStyle, base: &str, page: usize, se
     o.settings = settings;
     o.date = today();
     o.src_file = d.path.as_ref().map(|p| p.to_string_lossy().to_string()).unwrap_or_default();
+    o.html_prefs = html_prefs(&s.prefs);
     export_document(&d.doc, &r, &o, &EncodeExtras::default()).map_err(|e| EngineError::Failed(e.to_string()))
 }
 
@@ -697,15 +771,22 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 let base = path.file_stem().map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
                 let dir = path.parent().map(Path::to_path_buf).unwrap_or_default();
                 let page = s.doc()?.page;
+                let old = String::from_utf8_lossy(&std::fs::read(&path)?).into_owned();
                 let mut files = export_active(s, FilesStyle::HtmlAndImages, &base, page, None, true)?;
                 let html_name = path.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
+                let ext = html_ext_of(s)?;
+                let inserted = !old.to_ascii_lowercase().contains("<!-- fwtable");
                 for f in files.iter_mut() {
-                    if f.path == format!("{base}.htm") {
+                    if !f.path.contains('/') && f.path.eq_ignore_ascii_case(&format!("{base}.{ext}")) {
+                        // nur die Firepixel-Tabelle austauschen, der übrige Inhalt der Seite bleibt
+                        let new = String::from_utf8_lossy(&f.bytes).into_owned();
+                        let merged = replace_html_table(&old, &new).ok_or_else(|| bad("file.updateHtml", fp_i18n::tr!("err-update-html-no-table", path = path.display().to_string())))?;
+                        f.bytes = merged.into_bytes();
                         f.path = html_name.clone();
                     }
                 }
                 let written = write_files(&dir, &files)?;
-                Ok(CommandOutput::value(json!({"files": written})))
+                Ok(CommandOutput::value(json!({"files": written, "inserted": inserted})))
             }),
     );
     r.add(
@@ -741,14 +822,22 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 Ok(super::view::doc_without_step(s, !same, out))
             }),
     );
-    r.add(cmd("edit.copyHtmlCode").requires(DOC).opt_default("style", ParamKind::Enum { values: vec!["htmlAndImages".into(), "cssAndImages".into()] }, json!("htmlAndImages"), "HTML-Art").run(|s, p| {
+    r.add(cmd("edit.copyHtmlCode").requires(DOC).opt_default("style", ParamKind::Enum { values: vec!["htmlAndImages".into(), "cssAndImages".into()] }, json!("htmlAndImages"), "HTML-Art").opt("dir", ParamKind::Path, "Ordner für die Bilder (ohne: nur der Code)").run(|s, p| {
         let style = style_of(&p.opt_str("style")?.unwrap_or_else(|| "htmlAndImages".into())).unwrap_or(FilesStyle::HtmlAndImages);
         let base = base_name_of(s)?;
         let page = s.doc()?.page;
         let files = export_active(s, style, &base, page, None, true)?;
-        let html = files.iter().find(|f| f.path.ends_with(".htm")).map(|f| String::from_utf8_lossy(&f.bytes).into_owned()).ok_or_else(|| EngineError::Failed(fp_i18n::t("err-no-html")))?;
+        let ext = format!(".{}", html_ext_of(s)?.to_ascii_lowercase());
+        let is_html = |f: &ExportFile| !f.path.contains('/') && f.path.to_ascii_lowercase().ends_with(&ext);
+        let html = files.iter().find(|f| is_html(f)).map(|f| String::from_utf8_lossy(&f.bytes).into_owned()).ok_or_else(|| EngineError::Failed(fp_i18n::t("err-no-html")))?;
+        // mit Zielordner: die Bilder dorthin schreiben, damit der kopierte Code sie findet
+        let others: Vec<ExportFile> = files.iter().filter(|f| !is_html(f)).cloned().collect();
+        let written = match p.opt_str("dir")? {
+            Some(dir) => write_files(Path::new(&dir), &others)?,
+            None => Vec::new(),
+        };
         s.clipboard.text = Some(html.clone());
-        Ok(CommandOutput::session_with(json!({"html": html, "images": files.iter().filter(|f| !f.path.ends_with(".htm")).map(|f| f.path.clone()).collect::<Vec<_>>()})))
+        Ok(CommandOutput::session_with(json!({"html": html, "images": others.iter().map(|f| f.path.clone()).collect::<Vec<_>>(), "written": written})))
     }));
     r.add(
         cmd("modify.selectiveJpeg.settings")

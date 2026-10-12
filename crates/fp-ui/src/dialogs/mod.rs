@@ -12,6 +12,8 @@ pub mod effects;
 pub mod export;
 pub mod export_options;
 pub mod file_info;
+pub mod export_wizard;
+pub mod html_setup;
 pub mod image_preview;
 pub mod form;
 pub mod levels;
@@ -81,6 +83,10 @@ pub struct Dialogs {
     pub clipboard: Option<String>,
     /// „Gespeicherte Befehle verwalten“.
     pub saved_commands: Option<menu_dialogs::SavedCommandsDialog>,
+    /// „HTML-Einrichtung“ (E3).
+    pub html_setup: Option<html_setup::HtmlSetupDialog>,
+    /// „Exportassistent“ (E3).
+    pub wizard: Option<export_wizard::ExportWizard>,
     /// Rechtschreibprüfung.
     pub spelling: Option<spelling::SpellingDialog>,
     /// „Rechtschreibprüfung einrichten“ (D24, DLG-10).
@@ -128,6 +134,8 @@ impl Dialogs {
             || self.text_editor.is_some()
             || self.html_slice.is_some()
             || self.saved_commands.is_some()
+            || self.html_setup.is_some()
+            || self.wizard.is_some()
             || self.spelling.is_some()
             || self.spelling_setup.is_some()
             || self.file_info.is_some()
@@ -173,6 +181,8 @@ pub fn open_for_command(st: &mut AppState, name: &str) -> bool {
             });
         }
         "file.imagePreview" => st.dialogs.preview = image_preview::ImagePreview::new(st),
+        "file.htmlSetup" => return html_setup::open(st),
+        "file.exportWizard" | "panel.optimize.exportWizard" => return export_wizard::open(st),
         "edit.keyboardShortcuts" => st.dialogs.shortcuts = Some(shortcuts::ShortcutsDialog::new(st)),
         "text.editor" => st.dialogs.text_editor = misc::TextEditorDialog::new(st),
         "text.checkSpelling" => spelling::open_check(st),
@@ -904,6 +914,8 @@ pub fn show_all(ctx: &egui::Context, st: &mut AppState) {
     curves::show_curves(ctx, st);
     bitmap_selection::show(ctx, st);
     export::show_export(ctx, st);
+    html_setup::show(ctx, st);
+    export_wizard::show(ctx, st);
     image_preview::show(ctx, st);
     shortcuts::show(ctx, st);
     misc::show_confirm(ctx, st);

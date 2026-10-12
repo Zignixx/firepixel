@@ -386,7 +386,17 @@ fn title_bar_is_never_a_tab_stop() {
 #[test]
 fn start_focus_like_the_original() {
     let ok = fp_i18n::t("btn-ok");
-    for name in ["file.exportWizard", "file.htmlSetup", "modify.selectiveJpeg.settings", "text.spellingSetup"] {
+    // Exportassistent (E3): ein Fenster mit Zurück/Weiter/Abbrechen, Startfokus auf „Weiter“
+    {
+        let (mut h, _) = harness(true);
+        open(&mut h, "file.exportWizard");
+        h.run_steps(3);
+        assert_eq!(focused(&h), Some((egui::accesskit::Role::Button, fp_i18n::t("dlg-wiz-continue"))), "Exportassistent: Startfokus Weiter");
+        key(&mut h, Key::Escape);
+        h.run_steps(4);
+        assert!(!st(&h).dialogs.any_open(), "Exportassistent: Esc schließt");
+    }
+    for name in ["file.htmlSetup", "modify.selectiveJpeg.settings", "text.spellingSetup"] {
         let (mut h, _) = harness(true);
         open(&mut h, name);
         h.run_steps(3);

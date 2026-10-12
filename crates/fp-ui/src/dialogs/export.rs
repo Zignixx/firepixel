@@ -964,10 +964,12 @@ fn show_full(ctx: &egui::Context, st: &mut AppState, mut d: ExportDialog) {
             });
         }
         (Some(Act::Options), _) => {
-            if d.open_options() == OptionsTarget::ImagePreview {
-                st.push(Action::Run("file.imagePreview".into(), serde_json::json!({})));
-            }
+            // HTML-Arten: „Optionen…“ öffnet die HTML-Einrichtung (re\18 §6.1, E3)
+            let html = d.open_options() == OptionsTarget::ImagePreview;
             st.dialogs.export = Some(d);
+            if html {
+                super::html_setup::open(st);
+            }
         }
         _ => st.dialogs.export = Some(d),
     }

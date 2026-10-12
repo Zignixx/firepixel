@@ -35,25 +35,6 @@ fn refresh_saved(st: &mut AppState) -> SavedCommandsDialog {
     SavedCommandsDialog { names, selected: None, rename: None, folder: v.get("folder").and_then(|f| f.as_str()).unwrap_or("").to_string() }
 }
 
-fn wizard_params(d: &FormDialog) -> Value {
-    let mut v = json!({"destination": d.get("destination"), "apply": true});
-    if d.get("_limit").as_bool() == Some(true) {
-        v["targetSize"] = json!((d.get("_kb").as_f64().unwrap_or(32.0) * 1024.0).round() as i64);
-    }
-    v
-}
-
-fn html_setup_params(d: &FormDialog) -> Value {
-    json!({"settings": {
-        "file_extension": d.get("file_extension"),
-        "images_dir": d.get("images_dir"),
-        "xhtml": if d.get("_xhtml").as_bool() == Some(true) { 1 } else { 0 },
-        "slice_along_guides": d.get("slice_along_guides"),
-        "discard_unspecified_slices": d.get("discard_unspecified_slices"),
-        "generate_demo_html": d.get("generate_demo_html"),
-    }})
-}
-
 fn page_setup_params(d: &FormDialog) -> Value {
     json!({"orientation": d.get("orientation"), "scale": d.get("scale"), "fit": d.get("fit"), "paper": d.get("paper"), "margins": d.get("margins"), "dpi": d.get("dpi")})
 }
@@ -88,6 +69,41 @@ fn batch_params(d: &FormDialog) -> Value {
     v
 }
 
+/// „HTML-Code kopieren“: HTML in die Zwischenablage, Bilder in den Ordner `dir` (ohne: nur der
+/// Code). Erfolg in der Statuszeile, Fehler als Meldung.
+pub fn copy_html(st: &mut AppState, dir: Option<&str>) {
+    let mut params = json!({"style": "htmlAndImages"});
+    if let Some(d) = dir {
+        params["dir"] = json!(d);
+    }
+    match crate::ui_commands::execute(&mut st.session, "edit.copyHtmlCode", params) {
+        Ok(o) => {
+            st.dialogs.clipboard = o.value.get("html").and_then(|h| h.as_str()).map(|s| s.to_string());
+            let n = o.value.get("written").and_then(|w| w.as_array()).map(|a| a.len()).unwrap_or(0);
+            let msg = match dir {
+                Some(d) if n > 0 => fp_i18n::tr!("dlg-md-html-copied-images", n = n, path = d),
+                _ => t("dlg-md-html-copied"),
+            };
+            st.push(Action::Status(msg));
+        }
+        Err(e) => st.dialogs.message = Some((t("dlg-md-copy-html"), e.to_string())),
+    }
+}
+
+/// „HTML aktualisieren“: tauscht in der gewählten Seite die Firepixel-Tabelle aus und schreibt
+/// die Bilder neu (ohne Tabelle: am Ende eingefügt). Erfolg in der Statuszeile, Fehler (keine
+/// HTML-Seite, Datei fehlt) als Meldung.
+pub fn update_html(st: &mut AppState, path: &str) {
+    match crate::ui_commands::execute(&mut st.session, "file.updateHtml", json!({ "path": path })) {
+        Ok(o) => {
+            let n = o.value.get("files").and_then(|w| w.as_array()).map(|a| a.len()).unwrap_or(0);
+            let key = if o.value.get("inserted").and_then(|v| v.as_bool()) == Some(true) { "dlg-md-html-inserted" } else { "dlg-md-html-updated" };
+            st.push(Action::Status(fp_i18n::tr!(key, n = n, path = path)));
+        }
+        Err(e) => st.dialogs.message = Some((t("dlg-md-update-html"), e.to_string())),
+    }
+}
+
 /// Öffnet den Dialog zu einem Menübefehl ohne Parameter; `true`, wenn übernommen.
 pub fn open(st: &mut AppState, name: &str) -> bool {
     let form = match name {
@@ -99,8 +115,7 @@ pub fn open(st: &mut AppState, name: &str) -> bool {
             return true;
         }
         "file.updateHtml" => {
-            let n = name.to_string();
-            pick_open(st, &t("dlg-md-pick-html"), &[(t("dlg-filter-html").as_str(), &["htm", "html"])], move |st, p| st.run(&n, json!({"path": p.to_string_lossy()})));
+            pick_open(st, &t("dlg-md-pick-html"), &[(t("dlg-filter-html").as_str(), &["htm", "html"])], move |st, p| update_html(st, &p.to_string_lossy()));
             return true;
         }
         "commands.runScript" => {
@@ -118,13 +133,15 @@ pub fn open(st: &mut AppState, name: &str) -> bool {
             return true;
         }
         "edit.copyHtmlCode" => {
-            match crate::ui_commands::execute(&mut st.session, name, json!({"style": "htmlAndImages"})) {
-                Ok(o) => {
-                    st.dialogs.clipboard = o.value.get("html").and_then(|h| h.as_str()).map(|s| s.to_string());
-                    st.push(Action::Status(t("dlg-md-html-copied")));
-                }
-                Err(e) => st.dialogs.message = Some((t("dlg-md-copy-html"), e.to_string())),
+            // erst den Ordner für die Bilder wählen, dann den Code kopieren (E3)
+            if st.session.active().is_none() {
+                return true;
             }
+            crate::file_dialog::request(st, crate::file_dialog::Request::folder(t("dlg-md-copy-html-folder")), |st, r| {
+                if let Some(p) = r.into_iter().next() {
+                    copy_html(st, Some(&p.to_string_lossy()));
+                }
+            });
             return true;
         }
         "commands.manageExtensions" | "help.manageExtensions" => {
@@ -143,44 +160,6 @@ pub fn open(st: &mut AppState, name: &str) -> bool {
                 st.dialogs.saved_commands = Some(d);
             }
             return true;
-        }
-        "file.exportWizard" => Some(
-            FormDialog::new(
-                "4717",
-                t("dlg-md-export-wizard").as_str(),
-                name,
-                vec![
-                    Field::radio_of("destination", t("dlg-md-destination").as_str(), &[t("dlg-md-dest-web").as_str(), t("dlg-md-dest-image").as_str(), t("dlg-md-dest-html").as_str()], vec![json!("web"), json!("image"), json!("dreamweaver")], 0),
-                    Field::check("_limit", t("dlg-md-limit-size").as_str(), false),
-                    Field::number("_kb", t("dlg-md-target-size").as_str(), 32.0, 0.1, 100000.0).decimals(1).unit("K"),
-                ],
-            )
-            .with_width(480.0)
-            .with_transform(wizard_params)
-            .with_focus_ok(),
-        ),
-        "file.htmlSetup" => {
-            let h = st.session.active().and_then(|d| d.doc.pages.get(d.page)).and_then(|p| p.root.export.as_ref()).and_then(|e| e.html.as_deref().cloned()).unwrap_or_else(fp_model::HtmlSettings::cs6_default);
-            Some(
-                FormDialog::new(
-                    "4766",
-                    t("dlg-md-html-setup").as_str(),
-                    name,
-                    vec![
-                        Field::caption(t("dlg-md-cap-general").as_str()),
-                        Field::text("file_extension", t("dlg-md-extension").as_str(), h.file_extension.as_deref().unwrap_or(".htm")),
-                        Field::check("_xhtml", t("dlg-md-xhtml").as_str(), h.xhtml.unwrap_or(1) != 0),
-                        Field::caption(t("dlg-md-cap-document").as_str()),
-                        Field::text("images_dir", t("dlg-md-images-dir").as_str(), h.images_dir.as_deref().unwrap_or("")),
-                        Field::check("slice_along_guides", t("dlg-md-slice-guides").as_str(), h.slice_along_guides.unwrap_or(false)),
-                        Field::check("discard_unspecified_slices", t("dlg-md-discard-slices").as_str(), h.discard_unspecified_slices.unwrap_or(false)),
-                        Field::check("generate_demo_html", t("dlg-md-demo-html").as_str(), h.generate_demo_html.unwrap_or(false)),
-                    ],
-                )
-                .with_width(440.0)
-                .with_transform(html_setup_params)
-                .with_focus_ok(),
-            )
         }
         "modify.selectiveJpeg.settings" => {
             let e = st.session.active().and_then(|d| d.doc.pages.get(d.page)).and_then(|p| p.root.export.as_deref().cloned()).unwrap_or_default();
@@ -306,8 +285,6 @@ pub fn handles(name: &str) -> bool {
             | "commands.manageExtensions"
             | "help.manageExtensions"
             | "commands.manageSavedCommands"
-            | "file.exportWizard"
-            | "file.htmlSetup"
             | "modify.selectiveJpeg.settings"
             | "file.pageSetup"
             | "file.print"
