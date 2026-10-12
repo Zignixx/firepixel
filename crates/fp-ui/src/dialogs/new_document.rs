@@ -50,7 +50,9 @@ impl NewDocumentDialog {
             fp_engine::prefs::CanvasDefault::Transparent => CanvasChoice::Transparent,
             fp_engine::prefs::CanvasDefault::Custom => CanvasChoice::Custom,
         };
-        let bg = p.new_document_background();
+        // Farbfeld „Benutzerdefiniert“ zeigt immer die gemerkte Farbe (Vorgabe schwarz), auch wenn
+        // Weiß oder Transparent gewählt ist (D01)
+        let bg = p.get_color("CustomCanvasColor", fp_color::Argb(0xff00_0000));
         NewDocumentDialog {
             width: fmt_num(w as f64),
             height: fmt_num(h as f64),

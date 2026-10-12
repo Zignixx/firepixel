@@ -73,6 +73,16 @@ pub fn filter_form(cmd: &str, live: bool) -> Option<FormDialog> {
         _ => return None,
     };
     let mut f = FormDialog::new(id, &title, cmd, fields).with_preview();
+    // Kästchen „Vorschau“ gemerkt wie im Original (nur diese drei Filter haben eine Voreinstellung)
+    let preview_pref = match id {
+        "6525" => Some("MotionBlurShowPreview"),
+        "19159" => Some("RadialBlurShowPreview"),
+        "19160" => Some("ZoomBlurShowPreview"),
+        _ => None,
+    };
+    if let Some(k) = preview_pref {
+        f = f.with_prefs(&[(super::form::PREVIEW_FIELD, k)]);
+    }
     if live {
         f = f.with_base(json!({"live": true}));
     }
@@ -91,11 +101,25 @@ fn hex_of(c: fp_color::Argb) -> String {
     crate::ui_commands::hex(c)
 }
 
-/// Formular zu einem Menübefehl (falls der Befehl ohne Parameter aufgerufen wurde).
+/// Filterdialog mit den gemerkten Werten aus den Voreinstellungen.
+pub fn filter_form_with_prefs(st: &AppState, cmd: &str, live: bool) -> Option<FormDialog> {
+    let mut f = filter_form(cmd, live)?;
+    f.load_prefs(&st.session.prefs);
+    Some(f)
+}
+
+/// Formular zu einem Menübefehl (falls der Befehl ohne Parameter aufgerufen wurde), mit den
+/// gemerkten Werten aus den Voreinstellungen (wie im Original).
 pub fn form_for(st: &AppState, cmd: &str) -> Option<FormDialog> {
-    if let Some(f) = filter_form(cmd, false) {
+    if let Some(f) = filter_form_with_prefs(st, cmd, false) {
         return Some(f);
     }
+    let mut f = plain_form(st, cmd)?;
+    f.load_prefs(&st.session.prefs);
+    Some(f)
+}
+
+fn plain_form(st: &AppState, cmd: &str) -> Option<FormDialog> {
     let d = st.session.active();
     let f = match cmd {
         "select.feather" => FormDialog::new("5976", t("dlg-title-feather").as_str(), cmd, vec![Field::number("radius", t("dlg-lbl-radius").as_str(), 10.0, 1.0, 1000.0).unit("dlg-unit-pixels")]),
@@ -213,11 +237,13 @@ pub fn form_for(st: &AppState, cmd: &str) -> Option<FormDialog> {
                 cmd,
                 vec![
                     Field::radio_of("_mode", "", &[t("dlg-canvas-white").as_str(), t("dlg-canvas-transparent").as_str(), t("dlg-canvas-custom-plain").as_str()], vec![json!(0), json!(1), json!(2)], idx),
-                    Field::color("_color", t("dlg-lbl-color").as_str(), &hex_of(if bg.a() == 0 { fp_color::Argb(0xff00_0000) } else { bg })),
+                    // benutzerdefinierte Farbe: die der Seite, sonst die gemerkte (`CustomCanvasColor`, Vorgabe schwarz)
+                    Field::color("_color", t("dlg-lbl-color").as_str(), &hex_of(if idx == 2 { bg } else { st.session.prefs.get_color("CustomCanvasColor", fp_color::Argb(0xff00_0000)) })),
                 ],
             )
             .with_width(380.0)
             .with_transform(canvas_color_params)
+            .with_store_hook(store_custom_canvas_color)
         }
         "view.grid.editGrid" => {
             let g = d.and_then(|d| d.doc.pages.get(d.page)).and_then(|p| p.root.grid.clone());
@@ -288,9 +314,6 @@ pub fn form_for(st: &AppState, cmd: &str) -> Option<FormDialog> {
         "panel.behaviors.statusText" => FormDialog::new("6012", t("dlg-title-status-text").as_str(), "pi.behavior.add", vec![Field::text("statusText", t("dlg-lbl-message").as_str(), "")]).with_base(json!({"action": 1, "event": 0})).with_width(400.0),
         _ => return None,
     };
-    // gemerkte Werte aus den Voreinstellungen (wie im Original)
-    let mut f = f;
-    f.load_prefs(&st.session.prefs);
     Some(f)
 }
 
@@ -352,6 +375,15 @@ fn canvas_color_params(d: &FormDialog) -> Value {
         1 => json!({"color": "#ffffff00"}),
         2 => json!({"color": d.get("_color")}),
         _ => json!({"color": "#ffffffff"}),
+    }
+}
+
+/// Leinwandfarbe: die benutzerdefinierte Farbe nur merken, wenn sie gewählt ist.
+fn store_custom_canvas_color(d: &FormDialog, p: &mut fp_engine::Preferences) {
+    if d.get("_mode").as_i64() == Some(2)
+        && let Some(c) = d.get("_color").as_str().and_then(fp_color::Rgba8::parse_hex)
+    {
+        p.set("CustomCanvasColor", fp_engine::PrefValue::Str(format!("#{:02x}{:02x}{:02x}", c.r, c.g, c.b)));
     }
 }
 

@@ -55,7 +55,7 @@ impl CanvasSizeDialog {
         let d = st.session.active()?;
         let c = &d.doc.pages.get(d.page)?.canvas;
         let ppi = if c.resolution_unit == 1 { c.resolution as f64 * 2.54 } else { c.resolution as f64 };
-        Some(CanvasSizeDialog { width: c.width as f64, height: c.height as f64, cur_w: c.width as f64, cur_h: c.height as f64, unit: 0, anchor: 4, current_page_only: true, resolution: ppi.max(1.0) })
+        Some(CanvasSizeDialog { width: c.width as f64, height: c.height as f64, cur_w: c.width as f64, cur_h: c.height as f64, unit: 0, anchor: 4, current_page_only: st.session.prefs.get_bool("ResizeCanvasCurrentPageOnly", true), resolution: ppi.max(1.0) })
     }
 
     /// Parameter (Pixel, gerundet, 1 … 30000) oder `None` bei ungültigen Werten.
@@ -143,6 +143,7 @@ pub fn show_canvas_size(ctx: &egui::Context, st: &mut AppState) {
         (Some(true), _) => {
             st.dialogs.canvas_size = None;
             if let Some(p) = d.params() {
+                st.session.prefs.set("ResizeCanvasCurrentPageOnly", fp_engine::PrefValue::Bool(d.current_page_only));
                 st.push(Action::Run("modify.canvas.canvasSize".into(), p));
             }
         }
@@ -190,10 +191,10 @@ impl ImageSizeDialog {
             print_unit: 1,
             resolution: c.resolution.max(1.0) as f64,
             res_unit: if c.resolution_unit == 1 { 1 } else { 0 },
-            constrain: true,
-            resample: true,
+            constrain: st.session.prefs.get_bool("ResizeConstrain", true),
+            resample: st.session.prefs.get_bool("ResizeResample", true),
             method,
-            current_page_only: true,
+            current_page_only: st.session.prefs.get_bool("ResizeImageCurrentPageOnly", true),
         })
     }
 
@@ -366,6 +367,9 @@ pub fn show_image_size(ctx: &egui::Context, st: &mut AppState) {
             st.dialogs.image_size = None;
             if let Some(p) = d.params() {
                 st.session.prefs.set("ImageSizeTransformMode", fp_engine::PrefValue::Int(d.method as i64 + 1));
+                st.session.prefs.set("ResizeConstrain", fp_engine::PrefValue::Bool(d.constrain));
+                st.session.prefs.set("ResizeResample", fp_engine::PrefValue::Bool(d.resample));
+                st.session.prefs.set("ResizeImageCurrentPageOnly", fp_engine::PrefValue::Bool(d.current_page_only));
                 st.push(Action::Run("modify.canvas.imageSize".into(), p));
             }
         }
@@ -398,7 +402,7 @@ impl NumericTransformDialog {
     pub fn new(st: &AppState) -> Option<NumericTransformDialog> {
         let d = st.session.active()?;
         let b = fp_engine::docops::ids_bounds(&d.doc, d.page, &d.selection.elements)?;
-        Some(NumericTransformDialog { mode: 0, sx: 100.0, sy: 100.0, w: b.width() as f64, h: b.height() as f64, cur_w: b.width() as f64, cur_h: b.height() as f64, angle: 0.0, scale_attrs: st.session.prefs.get_bool("XformToolXformsBFE", true), constrain: true, interpolate: true })
+        Some(NumericTransformDialog { mode: 0, sx: 100.0, sy: 100.0, w: b.width() as f64, h: b.height() as f64, cur_w: b.width() as f64, cur_h: b.height() as f64, angle: 0.0, scale_attrs: st.session.prefs.get_bool("XformToolXformsBFE", true), constrain: st.session.prefs.get_bool("TransformConstrain", true), interpolate: true })
     }
 
     /// Parameter für `modify.transform.numericTransform`.
@@ -504,6 +508,7 @@ pub fn show_numeric_transform(ctx: &egui::Context, st: &mut AppState) {
         (Some(true), _) => {
             st.dialogs.numeric_transform = None;
             if let Some(p) = d.params() {
+                st.session.prefs.set("TransformConstrain", fp_engine::PrefValue::Bool(d.constrain));
                 st.push(Action::Run("modify.transform.numericTransform".into(), p));
             }
         }

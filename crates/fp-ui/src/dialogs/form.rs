@@ -259,13 +259,21 @@ pub struct FormDialog {
     /// Umformung der Feldwerte in die Befehlsparameter (z. B. verschachtelte Effektparameter).
     pub transform: Option<fn(&FormDialog) -> Value>,
     /// Feld ↔ Voreinstellung (Vorgabe beim Öffnen, Zurückschreiben bei OK, wie im Original).
+    /// Der Feldschlüssel [`PREVIEW_FIELD`] steht für das Kästchen „Vorschau“.
     pub prefs: Vec<(String, String)>,
+    /// Zusätzliches Zurückschreiben bei OK, wenn es vom Zustand abhängt (z. B. die benutzerdefinierte
+    /// Leinwandfarbe nur, wenn „Benutzerdefiniert“ gewählt ist).
+    pub store_hook: Option<fn(&FormDialog, &mut fp_engine::Preferences)>,
 }
+
+/// Pseudo-Feldschlüssel des Kästchens „Vorschau“ in [`FormDialog::with_prefs`]
+/// (z. B. `MotionBlurShowPreview`).
+pub const PREVIEW_FIELD: &str = "_preview";
 
 impl FormDialog {
     /// Neuer Dialog.
     pub fn new(id: &str, title: &str, command: &str, fields: Vec<Field>) -> FormDialog {
-        FormDialog { id: id.into(), title: title.into(), fields, command: command.into(), base: json!({}), preview: false, preview_on: false, applied: None, applied_params: None, applied_doc: None, stale: None, width: 340.0, transform: None, prefs: Vec::new() }
+        FormDialog { id: id.into(), title: title.into(), fields, command: command.into(), base: json!({}), preview: false, preview_on: false, applied: None, applied_params: None, applied_doc: None, stale: None, width: 340.0, transform: None, prefs: Vec::new(), store_hook: None }
     }
     /// Mit Umformung der Parameter.
     pub fn with_transform(mut self, f: fn(&FormDialog) -> Value) -> FormDialog {
@@ -274,13 +282,26 @@ impl FormDialog {
     }
     /// Felder mit Voreinstellungen verknüpfen: `(Feldschlüssel, Voreinstellung)`.
     pub fn with_prefs(mut self, pairs: &[(&str, &str)]) -> FormDialog {
-        self.prefs = pairs.iter().map(|(f, k)| (f.to_string(), k.to_string())).collect();
+        self.prefs.extend(pairs.iter().map(|(f, k)| (f.to_string(), k.to_string())));
+        self
+    }
+    /// Zusätzliches Zurückschreiben bei OK (siehe [`FormDialog::store_hook`]).
+    pub fn with_store_hook(mut self, f: fn(&FormDialog, &mut fp_engine::Preferences)) -> FormDialog {
+        self.store_hook = Some(f);
         self
     }
     /// Vorgaben aus den Voreinstellungen lesen (fehlt der Schlüssel, bleibt die Feldvorgabe).
     pub fn load_prefs(&mut self, p: &fp_engine::Preferences) {
         for (fk, pk) in self.prefs.clone() {
             let Some(pv) = p.get(&pk) else { continue };
+            if fk == PREVIEW_FIELD {
+                if let Some(b) = pv.as_bool()
+                    && self.preview
+                {
+                    self.preview_on = b;
+                }
+                continue;
+            }
             let Some(f) = self.fields.iter_mut().find(|f| f.key == fk) else { continue };
             match &f.kind {
                 FieldKind::Number { min, max, .. } => {
@@ -319,10 +340,21 @@ impl FormDialog {
     /// Feldwerte in die Voreinstellungen zurückschreiben (bei OK).
     pub fn store_prefs(&self, p: &mut fp_engine::Preferences) {
         use fp_engine::prefs::PrefValue;
+        if let Some(h) = self.store_hook {
+            h(self, p);
+        }
         for (fk, pk) in &self.prefs {
+            if fk == PREVIEW_FIELD {
+                if self.preview {
+                    p.set(pk, PrefValue::Bool(self.preview_on));
+                }
+                continue;
+            }
             let Some(f) = self.fields.iter().find(|f| &f.key == fk) else { continue };
             let v = match &f.kind {
                 FieldKind::Number { decimals: 0, .. } => f.value.as_f64().map(|v| PrefValue::Int(v.round() as i64)),
+                // Ganzzahl-Voreinstellungen (z. B. `InsetMiterLimit`) bleiben ganzzahlig
+                FieldKind::Number { .. } if fp_engine::prefs::definition(pk).is_some_and(|d| d.kind == fp_engine::prefs::PrefType::Integer) => f.value.as_f64().map(|v| PrefValue::Int(v.round() as i64)),
                 FieldKind::Number { .. } => f.value.as_f64().map(PrefValue::Real),
                 FieldKind::Check => f.value.as_bool().map(PrefValue::Bool),
                 FieldKind::Choice(_) | FieldKind::Radio(_) if f.pref_codes.is_some() => {
@@ -586,7 +618,10 @@ pub fn draw_fields(ui: &mut Ui, st: &AppState, d: &mut FormDialog, area: Rect) -
                 label(ui, &f.label);
                 let v = f.value.as_f64().unwrap_or(*min);
                 let er = Rect::from_min_size(pos2(ctrl_x, y), vec2(60.0, 20.0));
-                let txt = fields::fmt_num(v, *decimals);
+                // beim Ziehen im Popup-Schieber zeigt das Feld den Wert schon mit (wie im Inspektor)
+                let popup_id = egui::Id::new((dlg_id.as_str(), i, "popup"));
+                let live = if f.popup { ui.data(|d| d.get_temp::<f64>(popup_id.with("val"))) } else { None };
+                let txt = fields::fmt_num(live.unwrap_or(v), *decimals);
                 if let Some(t) = fields::text(ui, id, er, &txt, true) {
                     let mut ff = f.clone();
                     ff.set_number_text(&t);
@@ -598,11 +633,13 @@ pub fn draw_fields(ui: &mut Ui, st: &AppState, d: &mut FormDialog, area: Rect) -
                     ui.painter().rect_stroke(er, 0.0, Stroke::new(1.5, c.icon_red), StrokeKind::Inside);
                 }
                 let scale = f.effective_scale();
-                // Popup-Schieber ▾ direkt rechts am Feld (wie im Original), Einheit dahinter
+                // Popup-Schieber ▾ direkt rechts am Feld, senkrecht über dem Feld wie im Original und
+                // im Inspektor (gleiche Komponente); Einheit dahinter
                 let unit_x = if f.popup {
                     let ar = Rect::from_min_size(pos2(er.right() + 1.0, y), vec2(14.0, 20.0));
-                    if let Some(nv) = fields::slider_arrow_scaled(ui, egui::Id::new((dlg_id.as_str(), i, "popup")), ar, v, (*min, *max), *decimals, scale, true) {
-                        f.value = json!(nv);
+                    if let Some(nv) = fields::slider_arrow_vertical(ui, popup_id, ar, v, (*min, *max), scale, true) {
+                        let p = 10f64.powi(*decimals as i32);
+                        f.value = json!((nv * p).round() / p);
                         f.error = false;
                         changed = true;
                     }

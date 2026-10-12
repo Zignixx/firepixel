@@ -168,7 +168,7 @@ pub fn begin_add(st: &mut AppState, index: usize) {
     match f.kind {
         FxKind::Simple(name) => st.run("element.addEffect", json!({"effect": name})),
         FxKind::Filter(cmd) => {
-            if let Some(d) = super::catalog::filter_form(cmd, true) {
+            if let Some(d) = super::catalog::filter_form_with_prefs(st, cmd, true) {
                 st.dialogs.form = Some(d);
             } else {
                 st.run(cmd, json!({"live": true}));

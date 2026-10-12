@@ -166,7 +166,7 @@ pub fn open_for_command(st: &mut AppState, name: &str) -> bool {
         _ if models::handles(name) => return models::open_command(st, name),
         _ if menu_dialogs::handles(name) => return menu_dialogs::open(st, name),
         _ if panel_menus::needs_ui(name) => return panel_menus::open(st, name),
-        _ => match catalog::filter_form(name, false).or_else(|| catalog::form_for(st, name)) {
+        _ => match catalog::form_for(st, name) {
             Some(f) => st.dialogs.form = Some(catalog::with_doc_base(st, f)),
             None => return false,
         },
