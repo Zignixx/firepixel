@@ -45,6 +45,7 @@ Neue Namen nur noch englisch. Beim Umbenennen bestehender Pfade wird migriert: d
 - **Eigener Build-Ordner je Agent** (seit dem Neustart: C: 499 GB, ~329 GB frei; 24 GB RAM, 24 Kerne): in jeder Shell vor cargo `$env:CARGO_TARGET_DIR = 'C:\Users\Administrator\Desktop\REA\firepixel\target-<kürzel>'` (z. B. `target-lw`). Dann blockiert niemand mehr die anderen. Kein `cargo clean` in fremden Ordnern. Ausnahme: HG baut die Release-exe am Ende im normalen `target\`.
 - Immer `cargo … -j 4` (6 Agenten × 4 = 24 Kerne).
 - **Platz (12.10.: C: lief voll, alle Agenten standen):** je Build-Ordner höchstens ein Profil bauen (debug für Tests; release nur wenn wirklich nötig, danach `target-<kürzel>\release` löschen); `$env:CARGO_INCREMENTAL = '0'` setzen; wenn du fertig bist, deinen eigenen `target-<kürzel>` löschen (nur deinen!). Vor großen Builds freien Platz prüfen (`(Get-PSDrive C).Free`), unter 30 GB dem Koordinator melden. Keine parallelen Korpus-Volltests; `--ignored`-Korpustests nur für das eigene Crate.
+- **Build-Cache (seit 12.10. ≈ 17:00, Nutzer hat zugestimmt):** vor cargo zusätzlich `$env:RUSTC_WRAPPER = 'C:\Users\Administrator\Desktop\REA\tools\sccache\sccache.exe'` und `$env:SCCACHE_CACHE_SIZE = '40G'` setzen. Dann übersetzt ein neuer Agent die Fremd-Crates nicht neu, sondern nimmt sie aus dem gemeinsamen Cache. Das funktioniert mit `CARGO_INCREMENTAL=0` und eigenen Worktrees. Meldet sccache einen Fehler, ohne `RUSTC_WRAPPER` weiterbauen und das in BEFUNDE (HG) melden. Nicht in `.cargo\config.toml` eintragen, sonst baut es ohne sccache nicht mehr.
 - „Blocking waiting for file lock“ ist normal: warten.
 - **Code muss bei jedem Speichern kompilieren** (kleine, in sich geschlossene Schritte). Bricht der Build wegen der Datei eines anderen Agenten: 5–10 min warten und erneut versuchen, nicht in dessen Datei eingreifen; bleibt es > 20 min kaputt, Befund eintragen.
 - Python immer mit vollem Pfad `C:\Users\Administrator\AppData\Local\Programs\Python\Python314\python.exe -I …`.
@@ -105,6 +106,17 @@ HG verantwortet die Gesamtprüfung und verteilt Befunde; jeder Agent prüft sein
 ## 4d. Echte Eingaben nur ins richtige Fenster (Vorfall 11.10., 20:40)
 
 Tastendrücke eines Agenten (Alt+Buchstabe, Esc) sind im Claude-Fenster des Nutzers gelandet, weil Windows das Zielfenster nicht nach vorn geholt hatte. Daher gilt: Vor **jeder einzelnen** echten Eingabe (Taste, Klick, Ziehen) per `GetForegroundWindow` prüfen, dass Prozess-ID **und** Fensterklasse die des Originals bzw. der eigenen Firepixel-Testinstanz sind; sonst nichts senden und abbrechen. Wo möglich `PostMessage` an das Zielfenster bzw. für Firepixel die Eingabe-Einspeisung der MCP-Brücke verwenden. Nie Prozesse beenden, ohne dass der Nutzer zustimmt. **Keine nativen Datei-Dialoge offen lassen** (Speichern unter, Öffnen, Importieren, Exportieren, HTML aktualisieren …): nur auslösen, wenn genau dieser Dialog geprüft wird, und im selben Schritt schließen; vor jeder Sitzung auf offene `#32770`-Fenster prüfen (Nutzerhinweis 12.10.). **Strg+Alt+Leertaste nie senden** (globale Taste der Claude-App). Vor jeder GUI-Sitzung das eigene Testdokument aktivieren (mehrere Agenten teilen sich das Original).
+
+## 4e. Firepixel über die Brücke prüfen, Sperre nur fürs Original (Nutzerentscheidung 12.10. ≈ 17:00)
+
+Damit die GUI-Sperre nicht alle ausbremst:
+- **Firepixel-Seite ohne Sperre, parallel:** eigene Firepixel-Instanz mit eigenem APPDATA/LOCALAPPDATA und `--mcp` (siehe `re\_testdateien\ux\uxa\werkzeug\fpmcp.ps1`), bedient über die Brücke mit `ui_find`, `ui_input`, `screenshot` und `ui_state`. `ui_input` läuft über denselben Eingabeweg wie echte Maus und Tastatur (siehe `docs\AGENTS.md` §5a). Das gilt als **Prüfung im echten Fenster**. Ins Protokoll schreiben: „echtes Fenster, Brücke“.
+- **Die Sperre `gui-sitzung.ps1` brauchen nur:**
+  1. alles, was das **Original** bedient (JSF-Läufe, Klicks, Bildschirmfotos)
+  2. Prüfungen mit **echter Systemmaus/-tastatur** (SetCursorPos/SendInput). Pflicht ist das nur, wo die Brücke das Verhalten nicht abbildet: Zeitverhalten und Verzögerung, Fensterverschieben bzw. -größe durch das Betriebssystem, Fokus und Taskleiste, Drag & Drop aus dem Explorer, Doppelklick-Zeiten, Mausrad-Hardware, IME, Startverhalten des Fensters.
+  3. das abschließende Durchklicken (PLAN §5 Z), das bleibt mit echter Maus.
+- Eine Brücken-Instanz darf kein sichtbares Fenster über das Original legen. Sie läuft verkleinert hinter dem Original, auf einer Lage außerhalb oder minimiert, wenn die Brücke dann weiter zeichnet; sonst nicht im Vordergrund. Echte Eingaben anderer Agenten dürfen nie in eine Brücken-Instanz gehen (§4d).
+- Instanzen am Ende immer beenden.
 
 ## 4a. Keine fremden Programme/Fenster aus Tests
 
