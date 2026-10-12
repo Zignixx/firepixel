@@ -50,7 +50,7 @@ pub const PREVIEW_MAX: f32 = 1600.0;
 /// Regleränderungen so lange sammeln, bevor ein laufender Lauf ersetzt wird (Sekunden).
 const DEBOUNCE: f64 = 0.15;
 /// Höchstzahl der Konturpunkte in der Konturenansicht.
-const OUTLINE_POINTS_MAX: usize = 250_000;
+const OUTLINE_POINTS_MAX: usize = 150_000;
 
 /// Ansicht der Vorschau.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -459,8 +459,8 @@ fn downsample2(src: &RgbaImage, w: u32, h: u32) -> RgbaImage {
                     acc[3] += a;
                 }
             }
-            if acc[3] > 0 {
-                od[y * w as usize + x] = [(acc[0] / acc[3]) as u8, (acc[1] / acc[3]) as u8, (acc[2] / acc[3]) as u8, (acc[3] / 4) as u8];
+            if let (Some(r), Some(g), Some(b)) = (acc[0].checked_div(acc[3]), acc[1].checked_div(acc[3]), acc[2].checked_div(acc[3])) {
+                od[y * w as usize + x] = [r as u8, g as u8, b as u8, (acc[3] / 4) as u8];
             }
         }
     }
@@ -1069,17 +1069,9 @@ impl TraceDialog {
                 draw_original(&p, img, full_uv, Color32::from_white_alpha(255));
                 // Original etwas abdunkeln, damit die Konturen hervortreten
                 p.rect_filled(img, 0.0, Color32::from_black_alpha(if crate::ui_kit::is_light(theme) { 40 } else { 90 }));
-                let halo = Stroke::new(2.5, Color32::from_black_alpha(110));
-                let line = Stroke::new(1.0, c.focus);
-                for poly in &self.outlines {
-                    let pts: Vec<Pos2> = poly.iter().map(|q| img.min + q.to_vec2() * scale).collect();
-                    let bb = Rect::from_points(&pts);
-                    if !bb.intersects(canvas) {
-                        continue;
-                    }
-                    p.add(Shape::closed_line(pts.clone(), halo));
-                    p.add(Shape::closed_line(pts, line));
-                }
+                // Konturen als einzelne Segmente (ohne Gehrung: spitze Kehren erzeugen sonst Zacken)
+                p.add(Shape::mesh(segments_mesh(&self.outlines, img.min, scale, canvas, 2.6, Color32::from_black_alpha(110))));
+                p.add(Shape::mesh(segments_mesh(&self.outlines, img.min, scale, canvas, 1.1, c.focus)));
             }
             _ => {
                 // Original bzw. noch kein Ergebnis
@@ -1271,6 +1263,34 @@ fn preset_key(p: Preset) -> &'static str {
     }
 }
 
+/// Dreiecksnetz aus allen Kontursegmenten (je Segment ein Rechteck der Breite `w`), auf `clip` beschränkt.
+fn segments_mesh(polys: &[Vec<Pos2>], origin: Pos2, scale: f32, clip: Rect, w: f32, color: Color32) -> egui::epaint::Mesh {
+    let mut mesh = egui::epaint::Mesh::default();
+    let h = w / 2.0;
+    let clip = clip.expand(w);
+    for poly in polys {
+        let n = poly.len();
+        for i in 0..n {
+            let a = origin + poly[i].to_vec2() * scale;
+            let b = origin + poly[(i + 1) % n].to_vec2() * scale;
+            let d = b - a;
+            let len = d.length();
+            if len < 0.05 || (!clip.contains(a) && !clip.contains(b) && !Rect::from_two_pos(a, b).intersects(clip)) {
+                continue;
+            }
+            let t = d / len * (h * 0.5);
+            let nrm = vec2(-d.y, d.x) / len * h;
+            let base = mesh.vertices.len() as u32;
+            for q in [a - t + nrm, b + t + nrm, b + t - nrm, a - t - nrm] {
+                mesh.colored_vertex(q, color);
+            }
+            mesh.add_triangle(base, base + 1, base + 2);
+            mesh.add_triangle(base, base + 2, base + 3);
+        }
+    }
+    mesh
+}
+
 /// Halbtransparente Beschriftung („Pille“) über dem Bild.
 fn pill(p: &egui::Painter, at: Pos2, align: Align2, text: &str, font: FontId) {
     let g = p.layout_no_wrap(text.to_string(), font, Color32::WHITE);
@@ -1323,6 +1343,7 @@ fn segmented(ui: &mut Ui, id: Id, rect: Rect, items: &[&str], selected: usize, e
 }
 
 /// Waagerechter Schieber (Spur mit Akzentfüllung, runder Knopf). Pfeiltasten bei Fokus.
+#[allow(clippy::too_many_arguments)]
 fn slider(ui: &mut Ui, id: Id, rect: Rect, value: f64, range: (f64, f64), step: f64, enabled: bool, label: &str) -> Option<f64> {
     let theme = Theme::current(ui.ctx());
     let c = &theme.colors;
@@ -1501,32 +1522,41 @@ fn paint_preset_icon(p: &egui::Painter, r: Rect, preset: Preset, theme: &Theme) 
     }
 }
 
-/// Kopfsymbol: Treppe aus Pixeln links, glatte Kurve mit Ankerpunkten rechts.
+/// Kopfsymbol wie die Vergleichsansicht: ein Kreis, links aus Pixeln (Original), rechts glatt
+/// mit Ankerpunkten (Vektor).
 fn paint_header_icon(p: &egui::Painter, r: Rect, theme: &Theme) {
     let c = &theme.colors;
     let s = r.width() / 32.0;
     let at = |x: f32, y: f32| r.min + vec2(x * s, y * s);
-    let px = 4.0;
-    for (x, y) in [(2.0, 24.0), (6.0, 24.0), (6.0, 20.0), (10.0, 20.0), (10.0, 16.0), (14.0, 16.0)] {
-        p.rect_filled(Rect::from_min_size(at(x, y), vec2(px * s - 0.5, px * s - 0.5)), 0.0, with_alpha(c.icon_fg, 200));
+    let (cx, cy, rad) = (16.0f32, 16.0f32, 12.5f32);
+    // linke Hälfte: Pixel auf einem 4er-Raster
+    let g = 3.0;
+    let mut y = cy - 12.0;
+    while y < cy + 12.0 {
+        let mut x = cx - 12.0;
+        while x < cx - 0.5 {
+            let (mx, my) = (x + g / 2.0, y + g / 2.0);
+            if (mx - cx).hypot(my - cy) <= rad {
+                p.rect_filled(Rect::from_min_max(at(x, y), at(x + g, y + g)).shrink((0.3 * s).max(0.25)), 0.0, with_alpha(c.icon_fg, 190));
+            }
+            x += g;
+        }
+        y += g;
     }
-    // Kurve (kubisch) von unten links nach oben rechts
-    let (p0, p1, p2, p3) = (at(4.0, 29.0), at(14.0, 29.0), at(18.0, 5.0), at(29.0, 5.0));
-    let pts: Vec<Pos2> = (0..=24)
-        .map(|k| {
-            let u = k as f32 / 24.0;
-            let m = 1.0 - u;
-            pos2(m * m * m * p0.x + 3.0 * m * m * u * p1.x + 3.0 * m * u * u * p2.x + u * u * u * p3.x, m * m * m * p0.y + 3.0 * m * m * u * p1.y + 3.0 * m * u * u * p2.y + u * u * u * p3.y)
-        })
-        .collect();
-    p.add(Shape::line(pts, Stroke::new(2.2 * s, c.focus)));
-    // Henkel und Anker
-    p.line_segment([p3, at(21.0, 5.0)], Stroke::new(1.0, c.icon_fg));
-    p.circle_filled(at(21.0, 5.0), 1.6 * s, c.icon_fg);
-    for a in [p0, p3] {
-        let ar = Rect::from_center_size(a, vec2(5.0 * s, 5.0 * s));
+    // rechte Hälfte: glatter Halbkreis in der Akzentfarbe
+    let n = 28;
+    let mut pts = Vec::with_capacity(n + 1);
+    for k in 0..=n {
+        let a = -std::f32::consts::FRAC_PI_2 + std::f32::consts::PI * k as f32 / n as f32;
+        pts.push(at(cx + 1.0 + a.cos() * rad, cy + a.sin() * rad));
+    }
+    p.add(Shape::convex_polygon(pts, c.focus, Stroke::NONE));
+    // Ankerpunkte
+    let k = (4.0 * s).round().max(3.0);
+    for (x, y) in [(cx + 1.0, cy - rad), (cx + 1.0 + rad, cy), (cx + 1.0, cy + rad)] {
+        let ar = Rect::from_center_size(at(x, y).round(), vec2(k, k));
         p.rect_filled(ar, 0.0, c.icon_paper);
-        p.rect_stroke(ar, 0.0, Stroke::new(1.2, c.focus), StrokeKind::Inside);
+        p.rect_stroke(ar, 0.0, Stroke::new(1.0, c.icon_fg), StrokeKind::Inside);
     }
 }
 
