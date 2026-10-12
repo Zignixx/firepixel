@@ -4,17 +4,19 @@ Auftrag: „Vergleich mal alle Funktionen vom Original und Firepixel, damit sie 
 
 ## Übergabe (Stand 12.10.2026, Arbeit auf Nutzerwunsch angehalten)
 
-**Zahlen je Bereich** (117 Zeilen, neu gezählt von PM-1 am 12.10. nach dem Stand der Tabellen inkl. FV-1/FV-3-Nachmessungen; T, L und K nachgeführt von FV-6; ✅ gleich, ⚠️ Abweichung im Detail, ❌ fehlt bzw. falsch, ⏳ nicht fertig gemessen):
+**Zahlen je Bereich** (117 Zeilen, neu gezählt von PM-1 am 12.10. nach dem Stand der Tabellen inkl. FV-1/FV-3-Nachmessungen; T, L und K nachgeführt von FV-6; Abschnitte 1–4 von PM-2 am 12.10. in beiden Programmen im echten Fenster nachgemessen, Firepixel-Release vom Stand `771bf08` + Arbeitsstand; ✅ gleich, ⚠️ Abweichung im Detail, ❌ fehlt bzw. falsch, ⏳ nicht fertig gemessen):
 
 | Bereich | ✅ | ⚠️ | ❌ | ⏳ |
 |---|---|---|---|---|
-| 1 Inspektor je Werkzeug (W1–W38) | 10 | 10 | 18 | 0 |
-| 2 Feldverhalten (F1–F15) | 11 | 4 | 0 | 0 |
-| 3 Text: Schriftgröße (T1–T6) | 4 | 0 | 2 | 0 |
-| 4 Inspektor je Objektart (O1–O17) | 6 | 4 | 7 | 0 |
+| 1 Inspektor je Werkzeug (W1–W38) | 24 | 13 | 1 | 0 |
+| 2 Feldverhalten (F1–F15) | 13 | 1 | 1 | 0 |
+| 3 Text: Schriftgröße (T1–T6) | 6 | 0 | 0 | 0 |
+| 4 Inspektor je Objektart (O1–O17) | 12 | 4 | 1 | 0 |
 | 5 Leinwand/Werkzeugverhalten (L1–L30) | 20 | 4 | 6 | 0 |
 | 6 Mauszeiger (K1–K11) | 11 | 0 | 0 | 0 |
-| **Summe** | **62** | **22** | **33** | **0** |
+| **Summe** | **86** | **22** | **9** | **0** |
+
+**PM-2 (12.10.):** Vorher in 1–4: 31 ✅ / 18 ⚠️ / 27 ❌, nachher 55 ✅ / 18 ⚠️ / 3 ❌. Neue Befunde in `BEFUNDE.md` (Kennung „von PM-2“): LW 1 (W8), IBD 14 (F10, F7, W14, W10/W27/W28, W16, W19, W21, W22, W24, W26, W29, O2, O8, O16), EB 1 (prefs.json W8). W15, W17 und O6 hängen an den offenen IBD-Befunden von EB-1, O11 am offenen AU-Befund. **F10 im Original neu gemessen:** Strg+A im Zahlenfeld markiert den Feldtext (die frühere Angabe „Alles auswählen“, nach der FV-1 umgebaut hat, ließ sich in 3 Läufen nicht bestätigen). Messhinweise: Firepixel zeichnet den Inspektor nach einem Werkzeugwechsel (auch per echtem Klick) erst nach 0,3–1,5 s neu; Fotos früher zeigen noch Werte des vorigen Werkzeugs – mindestens 1,5 s warten. Im Original übernimmt ein noch fokussiertes, geändertes Inspektorfeld seinen Text beim Klick auf ein anderes Objekt – vor jeder Feldprobe die Objekte neu anlegen. Skripte: `..\re\_testdateien\ux\uxa\werkzeug\pm2\` (`env.ps1`, `sitz.ps1`, `w.ps1`, `o.ps1`, `f.ps1`, `f2.ps1`, `x.ps1`, `rc.ps1`), Ablauf wie unten.
 
 **Geprüft sind:**
 - der Werkzeug-Inspektor ohne Auswahl für alle Werkzeuge der Werkzeugleiste, Vorgaben gegen die Werkseinstellungen;
@@ -108,35 +110,35 @@ Legende: ✅ gleich · ⚠️ kleine Abweichung · ❌ anders · ⏳ wartet auf 
 
 | Nr | Werkzeug | Element | Original | Firepixel | | Bild |
 |---|---|---|---|---|---|---|
-| W1 | alle Bitmap- und Auswahlwerkzeuge (Rahmen, Lasso, Zauberstab, Pinsel, Bleistift, Radiergummi, Weich-/Scharfzeichner, Abwedler, Nachbelichter, Verwischen, Stempel, Farbe ersetzen, Rote Augen, Pipette, Füllwerkzeug, Verlauf) | 2. Zeile rechts | leer (Masken-Teilfeld 14119 erscheint nur bei Maskenbearbeitung) | zeigt immer grau „Maske: ○ Alphakanal ○ Graustufen“ | ❌ | a_109, a_111, a_113, a_116 |
-| W2 | Radiergummi, Weichzeichner, Scharfzeichner, Abwedler, Nachbelichter, Verwischen, Farbe ersetzen | „Form“ rund/eckig | gewählte Form als gedrückter Knopf erkennbar (Rahmen) | beide Knöpfe gleich, Auswahl nicht sichtbar | ❌ | a_116, a_117, a_119, a_121 |
-| W3 | Radiergummi | Größe / Rand | 13 / 2 (PREF `EraserToolDiameter=13`, `SoftEdge=20` → 2) | 10 / 0 | ❌ | a_116 |
-| W4 | Weichzeichner, Scharfzeichner | Größe / Rand / Intensität | 13 / 100 / 50 (PREF) | 10 / 0 / 50 | ❌ | a_117, a_118 |
-| W5 | Abwedler, Nachbelichter | Größe / Rand / Belichtung / Bereich | 13 / 100 / 50 / Mitteltonfarben | 10 / 0 / 50 / Mitteltonfarben | ❌ | a_119, a_120 |
-| W6 | Verwischen | Größe / Rand / Druck / Farbe | 22 / 50 / 50 / Farbfeld zeigt Farbe | 10 / 0 / 50 / grau | ❌ | a_121 |
-| W7 | Stempel | Größe / Rand | 16 / 50 (PREF `StampToolSize=16`, `Edge=500`) | 10 / 0 | ❌ | a_122 |
-| W8 | Farbe ersetzen | Größe / Toleranz / Stärke | 13 / 32 / 200 | 10 / 70 / 50 | ❌ | a_123 |
-| W9 | Rote Augen entfernen | Toleranz / Stärke | 50 / 50 | 70 / 50 | ❌ | a_124 |
-| W10 | Rote Augen entfernen | Name im Kopf | zweizeilig „Rote Augen / entfernen“ | einzeilig gekürzt „Rote Augen en…“ | ⚠️ | a_124 |
-| W11 | Freiform | Größe / Druck / Vorschau | 72 / ☑ / ☑ | 10 / ☐ / ☑ | ❌ | a_134 |
-| W12 | Bereich umformen | Größe / Stärke / Druck Größe / Druck Stärke | 72 / 80 / ☑ / ☐ | 10 / 50 / ☐ / ☐ | ❌ | a_135 |
-| W13 | Pfadausbesserung (additiv/subtraktiv) | Druck / Geschwindigkeit / Rate | ☑ / ☑ / 10 | ☐ / ☐ / 1 | ❌ | a_136, a_137 |
-| W14 | Text | Schriftfamilie | Myriad Pro (Vorgabeschrift) | Arial | ❌ | a_133 |
-| W15 | Text | Laufweite, Zeilenabstand (+Einheit), Absatzeinzug, Abstand vor/nach, Horizontalskala, Grundlinie, Anti-Alias, Autom. Unterschneidung | alle **bedienbar**, bevor man tippt (Vorgabe für den neuen Text) | alle grau | ❌ | a_133 |
-| W16 | Text | Kurzzeichen Fett/Kursiv | „F“ / „K“ (deutsch) | „B“ / „I“ | ⚠️ | a_133 |
-| W17 | Text | Knopf Textausrichtung (horizontal/vertikal, „ab/cd“) neben U | vorhanden | fehlt | ❌ | a_133 |
-| W18 | Text | Textfarbe | eigenes Farbfeld des Textwerkzeugs (schwarz) | übernimmt die Füllfarbe (grau #999999) | ❌ | a_133, a_200 |
-| W19 | Polygon | „Winkel“ und „Autom.“ bei Form = Polygon | bedienbar (Winkel 38, Autom. ☑) | grau | ⚠️ | a_131 |
-| W20 | Linie, Stift, Vektorpfad, Rechteck, Ellipse, Polygon, Auto-Form, Pinsel | Strichposition innen/mitte/außen im Werkzeug-Inspektor | nicht vorhanden (nur am Objekt) | drei Knöpfe vorhanden | ❌ | a_125, a_126, a_129 |
-| W21 | alle Vektorwerkzeuge, Füllwerkzeug, Verlauf | Textur bei „keiner“ | zeigt Texturnamen („Ader“) mit 0 % | „Ohne“ | ⚠️ | a_126 |
-| W22 | Rechteck, Ellipse, Auto-Form, Rahmen, Lasso, Zuschneiden, Exportbereich | B/H/X/Y | Felder weiß/bedienbar (leer) | grau | ⚠️ | a_107, a_129 |
+| W1 | alle Bitmap- und Auswahlwerkzeuge (Rahmen, Lasso, Zauberstab, Pinsel, Bleistift, Radiergummi, Weich-/Scharfzeichner, Abwedler, Nachbelichter, Verwischen, Stempel, Farbe ersetzen, Rote Augen, Pipette, Füllwerkzeug, Verlauf) | 2. Zeile rechts | leer (Masken-Teilfeld 14119 erscheint nur bei Maskenbearbeitung) | PM-2 (12.10., echtes Fenster): Teilfeld nicht mehr sichtbar (Rahmen, Lasso, Zauberstab, Pinsel, Radiergummi, Weich-/Scharfzeichner, Abwedler, Nachbelichter, Verwischen, Stempel, Farbe ersetzen, Rote Augen, Pipette, Füllwerkzeug, Verlauf) | ✅ | a_W1_auswahlrahmen, a_W1_W3_radiergummi |
+| W2 | Radiergummi, Weichzeichner, Scharfzeichner, Abwedler, Nachbelichter, Verwischen, Farbe ersetzen | „Form“ rund/eckig | gewählte Form als gedrückter Knopf erkennbar (Rahmen) | PM-2 (12.10., echtes Fenster): gewählte Form als gedrückter Knopf mit blauem Rand erkennbar | ✅ | a_W1_W3_radiergummi, a_W4_weichzeichner, a_W6_verwischen |
+| W3 | Radiergummi | Größe / Rand | 13 / 2 (PREF `EraserToolDiameter=13`, `SoftEdge=20` → 2) | PM-2 (12.10., echtes Fenster): 13 / 2 | ✅ | a_W1_W3_radiergummi |
+| W4 | Weichzeichner, Scharfzeichner | Größe / Rand / Intensität | 13 / 100 / 50 (PREF) | PM-2 (12.10., echtes Fenster): 13 / 100 / 50 (beide) | ✅ | a_W4_weichzeichner |
+| W5 | Abwedler, Nachbelichter | Größe / Rand / Belichtung / Bereich | 13 / 100 / 50 / Mitteltonfarben | PM-2 (12.10., echtes Fenster): 13 / 100 / 50 / Mitteltonfarben (beide) | ✅ | a_W5_abwedler |
+| W6 | Verwischen | Größe / Rand / Druck / Farbe | 22 / 50 / 50 / Farbfeld zeigt Farbe | PM-2 (12.10., echtes Fenster): 22 / 50 / 50; Farbfeld grau – die grüne Farbe im Original stammt aus dessen gespeicherten Voreinstellungen (`SmudgeToolFingerPaintColor` hat keinen Werkswert), Zustand, kein Befund | ✅ | a_W6_verwischen |
+| W7 | Stempel | Größe / Rand | 16 / 50 (PREF `StampToolSize=16`, `Edge=500`) | PM-2 (12.10., echtes Fenster): 16 / 50 | ✅ | a_W7_stempel |
+| W8 | Farbe ersetzen | Größe / Toleranz / Stärke | 13 / 32 / 200 | PM-2 (12.10., echtes Fenster): 13 / 32 / **100**; „Von“-Farbe schwarz, „in“ grau (Original #00FF00 / #FF0000) – Befunde PM-2 (LW W8, EB prefs.json) | ❌ | a_W8_farbe_ersetzen |
+| W9 | Rote Augen entfernen | Toleranz / Stärke | 50 / 50 | PM-2 (12.10., echtes Fenster): 50 / 50 | ✅ | a_W9_rote_augen |
+| W10 | Rote Augen entfernen | Name im Kopf | zweizeilig „Rote Augen / entfernen“ | PM-2 (12.10., echtes Fenster): unverändert „Rote Augen en…“ – Befund PM-2 (IBD W10/W27/W28) | ⚠️ | a_W9_rote_augen |
+| W11 | Freiform | Größe / Druck / Vorschau | 72 / ☑ / ☑ | PM-2 (12.10., echtes Fenster): 72 / ☑ / ☑ | ✅ | a_W11_freiform |
+| W12 | Bereich umformen | Größe / Stärke / Druck Größe / Druck Stärke | 72 / 80 / ☑ / ☐ | PM-2 (12.10., echtes Fenster): 72 / 80 / ☑ / ☐ (Kopf gekürzt, siehe W28) | ✅ | a_W12_bereich_umformen |
+| W13 | Pfadausbesserung (additiv/subtraktiv) | Druck / Geschwindigkeit / Rate | ☑ / ☑ / 10 | PM-2 (12.10., echtes Fenster): ☑ / ☑ / 10 (additiv und subtraktiv) | ✅ | a_W13_pfadausbesserung |
+| W14 | Text | Schriftfamilie | Myriad Pro (Vorgabeschrift) | PM-2 (12.10., echtes Fenster): Myriad Pro; aber Schnitt „**Bold**“ statt „Regular“ (Text ist nicht fett) – Befund PM-2 (IBD W14) | ⚠️ | a_W14_W18_textwerkzeug |
+| W15 | Text | Laufweite, Zeilenabstand (+Einheit), Absatzeinzug, Abstand vor/nach, Horizontalskala, Grundlinie, Anti-Alias, Autom. Unterschneidung | alle **bedienbar**, bevor man tippt (Vorgabe für den neuen Text) | PM-2 (12.10., echtes Fenster): Laufweite, Zeilenabstand + Einheit, Einzug, Abstand vor/nach, Horizontalskala bedienbar; **Anti-Alias und Autom. Unterschneidung grau** (Anbindung offen, IBD-Befund von EB-1) | ⚠️ | a_W14_W18_textwerkzeug |
+| W16 | Text | Kurzzeichen Fett/Kursiv | „F“ / „K“ (deutsch) | PM-2 (12.10., echtes Fenster): unverändert „B“ / „I“ – Befund PM-2 (IBD W16) | ⚠️ | a_W14_W18_textwerkzeug |
+| W17 | Text | Knopf Textausrichtung (horizontal/vertikal, „ab/cd“) neben U | vorhanden | PM-2 (12.10., echtes Fenster): Knopf „ab/cd ▾“ vorhanden, ohne Auswahl aber grau (Anbindung offen, IBD-Befund von EB-1) | ⚠️ | a_W14_W18_textwerkzeug |
+| W18 | Text | Textfarbe | eigenes Farbfeld des Textwerkzeugs (schwarz) | PM-2 (12.10., echtes Fenster): eigenes Farbfeld des Textwerkzeugs, schwarz | ✅ | a_W14_W18_textwerkzeug |
+| W19 | Polygon | „Winkel“ und „Autom.“ bei Form = Polygon | bedienbar (Winkel 38, Autom. ☑) | PM-2 (12.10., echtes Fenster): unverändert grau – Befund PM-2 (IBD W19) | ⚠️ | a_131 |
+| W20 | Linie, Stift, Vektorpfad, Rechteck, Ellipse, Polygon, Auto-Form, Pinsel | Strichposition innen/mitte/außen im Werkzeug-Inspektor | nicht vorhanden (nur am Objekt) | PM-2 (12.10., echtes Fenster): keine Knöpfe mehr im Werkzeug-Inspektor (Linie, Stift, Rechteck, Ellipse, Polygon, Auto-Form, Pinsel) | ✅ | a_W20_rechteck_werkzeug |
+| W21 | alle Vektorwerkzeuge, Füllwerkzeug, Verlauf | Textur bei „keiner“ | zeigt Texturnamen („Ader“) mit 0 % | PM-2 (12.10., echtes Fenster): unverändert „Ohne“ (auch am gewählten Rechteck) – Befund PM-2 (IBD W21) | ⚠️ | a_W20_rechteck_werkzeug |
+| W22 | Rechteck, Ellipse, Auto-Form, Rahmen, Lasso, Zuschneiden, Exportbereich | B/H/X/Y | Felder weiß/bedienbar (leer) | PM-2 (12.10., echtes Fenster): unverändert grau – Befund PM-2 (IBD W22) | ⚠️ | a_W1_auswahlrahmen, a_W20_rechteck_werkzeug |
 | W23 | Rechteck | „Eckrundung des Rechtecks“ im Werkzeug | Feld 14795 und Beschriftung 15079 existieren (Wert 0, Lage 536,1054 im Inspektor), sind aber **unsichtbar** (`IsWindowVisible` = 0); der Werkzeug-Inspektor zeigt keine Rundung (PM-1, frisch gestartetes Original) | FV-7: Zeile entfernt, Werkzeug-Inspektor ohne Rundung wie im Original; die Rundung des gewählten Rechtecks (O1) bleibt (Test `inspector_paritaet::w23_rectangle_tool_without_roundness_row`) | ✅ | a_W23_rechteck_werkzeug_inspektor |
-| W24 | Auswahlrahmen | Feste Breite/Höhe | Symbole ↔ ↕, Werte 0/0, grau bei „Normal“ | Beschriftung „B“/„H“, Werte 64/64 | ⚠️ | a_109 |
-| W25 | Verlauf | „Auswahl füllen“ / Toleranz | ☑ / Toleranz grau (hängt davon ab) | ☐ / Toleranz bedienbar | ❌ | a_146 |
-| W26 | Verlauf | Füllfarbfeld | zeigt den Verlauf | zeigt einfarbig grau | ⚠️ | a_146 |
-| W27 | Auto-Form | Kopf | Name der gewählten Form („Abgefastes Rechteck“) | „Automatische …“ gekürzt | ⚠️ | a_132 |
-| W28 | Pfadausbesserung, Polygon-Segment, Hotspot-Rechteck | Name im Kopf | zweizeilig voll | gekürzt mit „…“ | ⚠️ | a_136, a_139, a_143 |
-| W29 | Zeiger (Dokument) | Exportformat-Liste | Format des Dokuments | „GIF Adaptiv 256“ (neues Dokument) und zusätzlicher Knopf „Bearbeiten…“ | ⚠️ | a_100 |
+| W24 | Auswahlrahmen | Feste Breite/Höhe | Symbole ↔ ↕, Werte 0/0, grau bei „Normal“ | PM-2 (12.10., echtes Fenster): unverändert „B“/„H“ 64/64 (grau) – Befund PM-2 (IBD W24) | ⚠️ | a_W1_auswahlrahmen |
+| W25 | Verlauf | „Auswahl füllen“ / Toleranz | ☑ / Toleranz grau (hängt davon ab) | PM-2 (12.10., echtes Fenster): ☑ / Toleranz grau; Füllwerkzeug ☐ / Toleranz bedienbar | ✅ | a_W25_verlauf |
+| W26 | Verlauf | Füllfarbfeld | zeigt den Verlauf | PM-2 (12.10., echtes Fenster): unverändert grau – Befund PM-2 (IBD W26) | ⚠️ | a_W25_verlauf |
+| W27 | Auto-Form | Kopf | Name der gewählten Form („Abgefastes Rechteck“) | PM-2 (12.10., echtes Fenster): unverändert „Automatische …“ – Befund PM-2 (IBD W10/W27/W28) | ⚠️ | a_132 |
+| W28 | Pfadausbesserung, Polygon-Segment, Hotspot-Rechteck | Name im Kopf | zweizeilig voll | PM-2 (12.10., echtes Fenster): unverändert gekürzt („Pfadausbesser…“, „Polygon-Segm…“, „Hotspot-Recht…“, auch „Bereich umfor…“) – Befund PM-2 (IBD W10/W27/W28) | ⚠️ | a_W13_pfadausbesserung, a_W12_bereich_umformen |
+| W29 | Zeiger (Dokument) | Exportformat-Liste | Format des Dokuments | PM-2 (12.10., echtes Fenster): Knopf „Bearbeiten…“ weiter vorhanden – Befund PM-2 (IBD W29); das Format selbst ist nicht vergleichbar (Testdokument im Original PNG32, neues Firepixel-Dokument GIF Adaptiv 256) | ⚠️ | a_100 |
 | W30 | Zauberstab | Toleranz 32, Rand Hart, Live-Auswahlrahmen ☑ | so | so | ✅ | a_113 |
 | W31 | Pipette | Auswahl „1 Pixel“, Farbformat „HEX“ | so | so (außer W1) | ✅ | a_144 |
 | W32 | Füllwerkzeug | Toleranz 32, Auswahl füllen ☐, Transparenz beibehalten ☐, Deckkraft 100, Normal | so | so (außer W1) | ✅ | a_145 |
@@ -154,15 +156,15 @@ Gemessen mit echter Eingabe: Klick ins Feld, Ende, Umschalt+Pos1, Tippen, Abschl
 | Nr | Eingabe | Original | Firepixel | | Bild |
 |---|---|---|---|---|---|
 | F1 | „9999“ + Eingabe | 100 (geklemmt) | 100 | ✅ | |
-| F2 | „-5“ + Eingabe | 5 (Feld nimmt nur Ziffern an, das Minus wird verworfen) | 0 | ⚠️ | |
-| F3 | „12,5“ + Eingabe | 100 (Komma wird verworfen → 125 → 100) | 12,5 % (Bruchteil gespeichert) | ⚠️ | |
+| F2 | „-5“ + Eingabe | 5 (Feld nimmt nur Ziffern an, das Minus wird verworfen) | PM-2 (12.10., echtes Fenster): 5 | ✅ |  |
+| F3 | „12,5“ + Eingabe | 100 (Komma wird verworfen → 125 → 100) | PM-2 (12.10., echtes Fenster): 100 | ✅ |  |
 | F4 | „x“ + Eingabe | Buchstabe wird nicht angenommen, Wert bleibt | Wert bleibt, kein Verlaufsschritt | ✅ | |
 | F5 | Pfeil hoch im Feld | keine Änderung | keine Änderung | ✅ | |
 | F6 | Mausrad über dem Feld | keine Änderung | keine Änderung | ✅ | |
-| F7 | „7“ + Esc, dann Klick auf die Leinwand | 7 wird übernommen (Esc verwirft nicht) | verworfen, Wert bleibt | ⚠️ | |
+| F7 | „7“ + Esc, dann Klick auf die Leinwand | 7 wird übernommen (Esc verwirft nicht) | PM-2 (12.10., echtes Fenster): Esc verwirft nicht mehr (Esc + Tab übernimmt 7), aber **Esc + Klick auf die Leinwand verwirft** (Deckkraft bleibt 100) – Befund PM-2 (IBD F7) | ⚠️ | a_F7_esc_dann_leinwand |
 | F8 | „60“ + Tab | übernommen | übernommen | ✅ | |
 | F9 | „40“, Klick auf die Leinwand | übernommen | übernommen | ✅ | |
-| F10 | Strg+A im Feld | **Alles auswählen** (Objekte); das Feld markiert nichts | markiert den Feldtext | ⚠️ | |
+| F10 | Strg+A im Feld | **markiert den Feldtext**, Objektauswahl bleibt; getippter Wert bleibt und wird mit Eingabe übernommen (PM-2, 12.10., 3 Läufe; die frühere Angabe „Alles auswählen“ ließ sich nicht bestätigen) | PM-2 (12.10., echtes Fenster): **wählt alle Objekte** (9), der getippte Wert geht verloren – Befund PM-2 (IBD F10) | ❌ | a_F10_strg_a_im_feld |
 | F11 | jede Übernahme | ein Verlaufsschritt | ein Schritt „Deckkraft“ | ✅ | |
 
 ### 2a. Feldprobe B, X, Rundung, Strich (PM-1, Rechteck R1 50,50–150,120, `uxp_pm_v7.ps1`)
@@ -183,8 +185,8 @@ Eingabe wie bei F1–F11 (Klick, Ende, Umschalt+Pos1, Tippen, Eingabe). Strich i
 | T1 | Text tippen, Strg+A im Editor, Größe 48 + Eingabe | markierter Text wird sofort 48 pt | ebenso, Rahmen wächst mit | ✅ | a_200 |
 | T2 | Textobjekt mit dem Zeiger gewählt, Größe 24 | ganzer Text 24 pt, Rahmen passt (69 × 31) | ganzer Text 24 pt, Rahmen passt (53 × 29, Arial) | ✅ | a_201 |
 | T3 | Größe „200“ eintippen | angenommen (200), obwohl der Schieber nur bis 96 reicht | angenommen | ✅ | |
-| T4 | Pfeil neben „Größe“ | **senkrechter** Popup-Schieber über dem Feld | waagerechter Schieber mit Zahl darunter | ❌ | o_t1_c / f_t2_d |
-| T5 | Esc im geöffneten Größen-Schieber | schließt den Schieber, Auswahl bleibt | schließt den Schieber **und hebt die Auswahl auf** (Inspektor springt auf „Dokument“) | ❌ | f_t2_d → f_t2_e |
+| T4 | Pfeil neben „Größe“ | **senkrechter** Popup-Schieber über dem Feld | PM-2 (12.10., echtes Fenster): senkrechter Schieber über dem Feld | ✅ | a_T4_T5_popup_schieber |
+| T5 | Esc im geöffneten Größen-Schieber | schließt den Schieber, Auswahl bleibt | PM-2 (12.10., echtes Fenster): schließt nur den Schieber, T1 bleibt gewählt | ✅ | a_T4_T5_popup_schieber |
 | T6 | Größe ändern bei Einfügemarke ohne markierten Text („Abc“, Größe 48 + Eingabe, „D“, Esc) | wirkt nur auf neu getippte Zeichen: Läufe [Abc 24 pt][D 48 pt]; Eingabe im Feld gibt den Fokus an den Text zurück; Werkzeug bleibt Text | ganzer Text 48 pt, ein Lauf [AbcD 48 pt] (PM-1) → **FV-6:** ausstehende Attribute an der Einfügemarke; echtes Fenster (eigene Instanz, SendInput, Größe wie das Inspektorfeld per `text.setAttributes`): [Abc 12 pt][D 48 pt] (Werkzeugvorgabe dort 12 pt), Werkzeug bleibt Text; Rahmen wächst erst mit dem „D“ | ✅ gemessen (FV-6) | a_T6_groesse_einfuegemarke, phase5_fv6_groesse_einfuegemarke |
 
 ## 4. Inspektor je Objektart
@@ -194,22 +196,22 @@ Testdokument mit denselben Objekten in beiden Programmen (per JSF angelegt): R1,
 | Nr | Objekt | Element | Original | Firepixel | | Bild |
 |---|---|---|---|---|---|---|
 | O1 | Rechteck | Felder Füllung, Strich, Strichposition, Deckkraft, Filter, Rundung + Einheit, Pfadoperationen | so | so | ✅ | a_300 |
-| O2 | Rechteck | Vorschaubild oben links | Objekt an seiner Lage im verkleinerten Dokument | Objekt formatfüllend | ⚠️ | a_300 |
+| O2 | Rechteck | Vorschaubild oben links | Objekt an seiner Lage im verkleinerten Dokument | PM-2 (12.10., echtes Fenster): unverändert formatfüllend; bei Mehrfachauswahl Schachbrett statt keinem Bild – Befund PM-2 (IBD O2) | ⚠️ | a_O14_O16_mehrfachauswahl |
 | O3 | Ellipse (Pfad) | alle Felder inkl. „Pinselstrich bearbeiten“, Stil | so | so | ✅ | a_301 |
-| O4 | Text | Zeilenabstand eines neuen Textes | 120 % | 100 % | ❌ | a_302 |
-| O5 | Text | Grenzen eines Textrahmens 50,170–200,200 | X 48, Y 168, B 154, H 28 (2 px Rand um den Textbereich) | X 50, Y 170, B 150, H 24 | ❌ | a_302 |
-| O6 | Text | Anti-Alias / Autom. Unterschneidung eines per Skript angelegten Textes (`addNewText(…, true)` = aus den Voreinstellungen) | „Anti-Alias glatt“ / ☐ | „Kein Anti-Alias“ / ☑ | ❌ | a_302 |
-| O7 | Text | Pinselstrich-Feld (Stift + Farbe) in Zeile 2 | vorhanden | fehlt | ❌ | a_302 |
-| O8 | Text | Horizontalskala | „100%“ | „100“ | ⚠️ | a_302 |
+| O4 | Text | Zeilenabstand eines neuen Textes | 120 % | PM-2 (12.10., echtes Fenster): 120 % | ✅ | a_O4_O8_text |
+| O5 | Text | Grenzen eines Textrahmens 50,170–200,200 | X 48, Y 168, B 154, H 28 (2 px Rand um den Textbereich) | PM-2 (12.10., echtes Fenster): X 48, Y 168, B 154, H 28 (EB-1: angezeigte Grenzen ± 2 px) | ✅ | a_O4_O8_text |
+| O6 | Text | Anti-Alias / Autom. Unterschneidung eines per Skript angelegten Textes (`addNewText(…, true)` = aus den Voreinstellungen) | „Anti-Alias glatt“ / ☐ | PM-2 (12.10., echtes Fenster): Autom. Unterschneidung ☐ wie im Original; Glättung zeigt weiter „Kein Anti-Alias“ (JSF `antiAliased` false; Zuordnung `TAAi` im Inspektor falsch, IBD-Befund von EB-1; AU-Befund O11/O6) | ⚠️ | a_O4_O8_text |
+| O7 | Text | Pinselstrich-Feld (Stift + Farbe) in Zeile 2 | vorhanden | PM-2 (12.10., echtes Fenster): Stift + Strichfarbfeld in Zeile 2 vorhanden | ✅ | a_O4_O8_text |
+| O8 | Text | Horizontalskala | „100%“ | PM-2 (12.10., echtes Fenster): unverändert „100“ – Befund PM-2 (IBD O8) | ⚠️ | a_O4_O8_text |
 | O9 | Gruppe | „Gruppieren (2)“, Füllung/Strich/Deckkraft/Filter/Stil | so | so | ✅ | a_303 |
 | O10 | Bitmap | Deckkraft, Mischmodus, Filter, Stil, B/H/X/Y | so | so | ✅ | a_304 |
-| O11 | Segment (per Skript `addNewHotspot("slice", …)`) | Objektart | Segment (Typ Vordergrundbild, Exportformat, Hyperlink, Alt, Ziel; automatischer Name „_r2_c2“) | wird als **Hotspot** angelegt | ❌ | a_305 |
+| O11 | Segment (per Skript `addNewHotspot("slice", …)`) | Objektart | Segment (Typ Vordergrundbild, Exportformat, Hyperlink, Alt, Ziel; automatischer Name „_r2_c2“) | PM-2 (12.10., echtes Fenster): unverändert, `addNewHotspot("slice", …)` ergibt `[object Hotspot]` (Original `[object SliceHotspot]`); AU-Befund O11/O6 weiter offen | ❌ | a_305 |
 | O12 | Hotspot | Form, Farbe, Hyperlink, Alt, Ziel | so | so | ✅ | a_306 |
 | O13 | Symbol | Deckkraft, Mischmodus, Filter, Stil | so | so | ✅ | a_307 |
-| O14 | 2 Rechtecke, Deckkraft 100 und 50 | Deckkraft-Feld | **leer** (gemischte Werte) | „100“ | ❌ | a_308 |
-| O15 | 2 Rechtecke | Füllfarbfeld | Farbe des zuletzt gewählten Objekts | Farbe des ersten | ⚠️ | a_308 |
-| O16 | 2 Rechtecke | Stil-Liste | leer (gemischt) | „Kein Stil“ | ⚠️ | a_308 |
-| O17 | Segmente und Hotspots | Überlagerung auf der Leinwand (grün/cyan) | sichtbar | unsichtbar (Webebene enthält H und S) | ❌ | a_309, a_330 |
+| O14 | 2 Rechtecke, Deckkraft 100 und 50 | Deckkraft-Feld | **leer** (gemischte Werte) | PM-2 (12.10., echtes Fenster): leer | ✅ | a_O14_O16_mehrfachauswahl |
+| O15 | 2 Rechtecke | Füllfarbfeld | Farbe des zuletzt gewählten Objekts | PM-2 (12.10., echtes Fenster): blau = Farbe des zuletzt gewählten Objekts R2 (JSF `fw.selection` liefert die Reihenfolge allerdings R1, R2; Original R2, R1) | ✅ | a_O14_O16_mehrfachauswahl |
+| O16 | 2 Rechtecke | Stil-Liste | leer (gemischt) | PM-2 (12.10., echtes Fenster): unverändert „Kein Stil“ (beide Objekte ohne Stil; das Original lässt die Liste trotzdem leer) – Befund PM-2 (IBD O16) | ⚠️ | a_O14_O16_mehrfachauswahl |
+| O17 | Segmente und Hotspots | Überlagerung auf der Leinwand (grün/cyan) | sichtbar | PM-2 (12.10., echtes Fenster): Hotspots cyan sichtbar; ein mit dem Segment-Werkzeug gezogenes Segment grün mit roten Segment-Hilfslinien wie im Original (das JSF-„Segment“ S ist wegen O11 ein Hotspot) | ✅ | a_O17_segment_hotspot |
 
 ## 5. Leinwand und Werkzeugverhalten (echte Maus und Tastatur)
 
@@ -269,7 +271,7 @@ Das Original zeichnet einige Zeiger invertiert (XOR); auf weißem Grund sind sie
 | | Anzahl |
 |---|---|
 | geprüfte Elemente | 117 Zeilen (rund 300 einzelne Felder, Vorgaben, Abläufe bzw. Zeiger) |
-| ✅ | 54 |
-| ⚠️ | 27 |
-| ❌ | 36 |
+| ✅ | 86 |
+| ⚠️ | 22 |
+| ❌ | 9 |
 | ⏳ | 0 |
