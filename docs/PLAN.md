@@ -106,6 +106,17 @@ Fertig seit dem Plan: ☑ **FV-8** Tippverzögerung (`8f6bcfc`, `5a821e0`): Ursa
 
 ---
 
+## 4a. Pause ≈ 20:30 (Nutzerentscheidung 12.10.2026 ≈ 19:15)
+
+Ab ≈ 19:15 startet der Koordinator **keine neuen Agenten** mehr. Die laufenden Agenten machen ihren Auftrag fertig und übernehmen nichts zusätzlich: DLG-1, DLG-1b, DLG-3, NZ-1, FV-16, INF-1, PM-6, PM-7, RE-EX und RE-KT.
+
+Wenn der letzte fertig ist, beginnt die **Pause**. In der Pause:
+1. **Aufräumen:** übrig gebliebene Worktrees, `target-*`-Ordner und Testinstanzen. Im Original lagen am Abend viele leere Testdokumente; bei Bedarf startet der Nutzer es neu.
+2. **Stand prüfen:** `cargo check --workspace --all-targets`, fp-i18n, fp-neutral, i18n-Scanner.
+3. **Testversion:** Release-Build aus einer sauberen Kopie von HEAD, auf den Desktop, Ordnername mit Datum und Uhrzeit, mit `NEU.md`.
+
+Danach geht es weiter, wenn der Nutzer „weiter“ sagt, mit EB-2, DLX-2, DLX-1, BV-3, DLG-4 und dann Welle B.
+
 ## 4b. Gekürzt bzw. verkleinert (Nutzerentscheidung 12.10.2026 ≈ 18:45)
 
 | Paket | Entscheidung |
