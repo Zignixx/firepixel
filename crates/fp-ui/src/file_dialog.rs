@@ -68,6 +68,9 @@ pub struct Request {
     pub default_filter: usize,
     /// Zusatzfelder von „Speichern unter“ (Typliste, „Als Kopie speichern“, „Optionen…“, Hinweis).
     pub save_extras: Option<SaveExtras>,
+    /// Zusatzfelder von „Öffnen“ („Als ‚Unbenannt‘ öffnen“, „Als Animation öffnen“); nur im Dialog
+    /// in der App (der Windows-Dialog kann ohne `unsafe` keine Zusatzfelder zeigen).
+    pub open_extras: bool,
 }
 
 /// Kästchen „Als Kopie speichern“ je Dateityp (re\20 §1.1).
@@ -87,6 +90,8 @@ pub struct TypeExtras {
     pub options: bool,
     /// Hinweis „… auf die Hintergrundebene reduziert“ sichtbar
     pub hint: bool,
+    /// Kästchen „.fw.png anhängen“ sichtbar (FW-PNG; Vorgabe an)
+    pub append_fw: bool,
 }
 
 /// Zusatzfelder von „Speichern unter“. Der Windows-Dialog kann ohne `unsafe` weder Zusatzfelder
@@ -114,11 +119,42 @@ pub struct SaveChoice {
     pub filter: Option<usize>,
     /// „Als Kopie speichern“
     pub copy: bool,
+    /// „.fw.png anhängen“ (Vorgabe an; aus nur im Dialog in der App oder per Agent)
+    pub append_fw_png: bool,
+}
+
+/// Wahl der Zusatzfelder von „Öffnen“ (Dialog in der App bzw. Agent; sonst beide aus).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct OpenChoice {
+    /// „Als ‚Unbenannt‘ öffnen“
+    pub untitled: bool,
+    /// „Als Animation öffnen“ (nur bei mehreren Dateien wirksam, sonst grau)
+    pub animation: bool,
+}
+
+/// Zustand aller Kästchen eines Dialogs (an die Fortsetzung übergeben).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Flags {
+    pub copy: bool,
+    pub append_fw_png: bool,
+    pub untitled: bool,
+    pub animation: bool,
+}
+
+impl Default for Flags {
+    fn default() -> Flags {
+        Flags { copy: false, append_fw_png: true, untitled: false, animation: false }
+    }
 }
 
 impl Request {
     pub fn new(kind: Kind, title: impl Into<String>) -> Request {
-        Request { kind, title: title.into(), filters: Vec::new(), dir: None, file_name: None, default_filter: 0, save_extras: None }
+        Request { kind, title: title.into(), filters: Vec::new(), dir: None, file_name: None, default_filter: 0, save_extras: None, open_extras: false }
+    }
+    /// Zusatzfelder von „Öffnen“ („Als ‚Unbenannt‘ öffnen“, „Als Animation öffnen“).
+    pub fn open_extras(mut self) -> Request {
+        self.open_extras = true;
+        self
     }
     /// Zusatzfelder von „Speichern unter“.
     pub fn save_extras(mut self, extras: SaveExtras) -> Request {
@@ -185,8 +221,8 @@ impl Request {
 /// Fortsetzung mit dem Ergebnis (leer = abgebrochen).
 pub type Done = Box<dyn FnOnce(&mut AppState, Vec<PathBuf>) + Send>;
 
-/// Fortsetzung mit Ergebnis, gewähltem Filter (falls bekannt) und „Als Kopie speichern“.
-type DoneEx = Box<dyn FnOnce(&mut AppState, Vec<PathBuf>, Option<usize>, bool) + Send>;
+/// Fortsetzung mit Ergebnis, gewähltem Filter (falls bekannt) und den Kästchen.
+type DoneEx = Box<dyn FnOnce(&mut AppState, Vec<PathBuf>, Option<usize>, Flags) + Send>;
 
 enum Mode {
     /// Nativer Dialog im eigenen Thread.
@@ -197,8 +233,8 @@ enum Mode {
     Followup { path: PathBuf, choices: Vec<usize> },
 }
 
-/// Antwort: Pfade, gewählter Filter, „Als Kopie speichern“, von wem.
-type Answer = (Vec<PathBuf>, Option<usize>, bool, &'static str);
+/// Antwort: Pfade, gewählter Filter, Kästchen, von wem.
+type Answer = (Vec<PathBuf>, Option<usize>, Flags, &'static str);
 
 struct Pending {
     id: u64,
@@ -212,6 +248,10 @@ struct Pending {
     filter: usize,
     /// Kästchen „Als Kopie speichern“
     copy: bool,
+    /// Kästchen „.fw.png anhängen“, „Als ‚Unbenannt‘ öffnen“, „Als Animation öffnen“
+    append_fw: bool,
+    untitled: bool,
+    animation: bool,
     /// „Optionen…“ geklickt (wird im nächsten Schritt mit `AppState` ausgeführt)
     options_clicked: bool,
 }
@@ -226,6 +266,11 @@ impl Pending {
             Some(CopyBox::Locked) => true,
             _ => self.copy,
         }
+    }
+    /// Kästchen für die Fortsetzung („.fw.png anhängen“ nur bei FW-PNG wirksam, sonst an).
+    fn flags(&self) -> Flags {
+        let append = self.append_fw || !self.extras().is_some_and(|e| e.append_fw);
+        Flags { copy: self.copy_value(), append_fw_png: append, untitled: self.req.open_extras && self.untitled, animation: self.req.open_extras && self.animation }
     }
 }
 
@@ -339,11 +384,17 @@ pub fn request_save(st: &mut AppState, req: Request, done: impl FnOnce(&mut AppS
     request_ex(
         st,
         req,
-        Box::new(move |st, r, filter, copy| {
-            let choice = r.into_iter().next().map(|path| SaveChoice { path, filter, copy });
+        Box::new(move |st, r, filter, f: Flags| {
+            let choice = r.into_iter().next().map(|path| SaveChoice { path, filter, copy: f.copy, append_fw_png: f.append_fw_png });
             done(st, choice)
         }),
     );
+}
+
+/// „Öffnen“ mit Zusatzfeldern ([`Request::open_extras`]): `done` bekommt die Dateien (leer =
+/// abgebrochen) und die Kästchen (Testvorgaben, Testmodus und Windows-Dialog: beide aus).
+pub fn request_open(st: &mut AppState, req: Request, done: impl FnOnce(&mut AppState, Vec<PathBuf>, OpenChoice) + Send + 'static) {
+    request_ex(st, req.open_extras(), Box::new(move |st, r, _, f: Flags| done(st, r, OpenChoice { untitled: f.untitled, animation: f.animation })));
 }
 
 fn request_ex(st: &mut AppState, req: Request, done: DoneEx) {
@@ -355,7 +406,7 @@ fn request_ex(st: &mut AppState, req: Request, done: DoneEx) {
             Kind::OpenMany => o.open.clone(),
             Kind::Open => o.open.iter().find(|p| req.matches(p)).or(o.open.first()).cloned().into_iter().collect(),
         };
-        done(st, r, None, false);
+        done(st, r, None, Flags::default());
         return;
     }
     let mode = env_mode();
@@ -365,21 +416,21 @@ fn request_ex(st: &mut AppState, req: Request, done: DoneEx) {
             // nur ein Dialog zur Zeit (wie modal): der zweite wird abgebrochen
             log_event(&mut g, json!({"event": "rejected", "reason": "busy", "request": req.json()}));
             drop(g);
-            done(st, Vec::new(), None, false);
+            done(st, Vec::new(), None, Flags::default());
             return;
         }
         match &mode {
             EnvMode::Cancel => {
                 log_event(&mut g, json!({"event": "cancelled", "by": ENV_FILE_DIALOG, "request": req.json()}));
                 drop(g);
-                done(st, Vec::new(), None, false);
+                done(st, Vec::new(), None, Flags::default());
                 return;
             }
             EnvMode::Path(dir) => {
                 let r = auto_answer(&req, dir);
                 log_event(&mut g, json!({"event": if r.is_empty() { "cancelled" } else { "chosen" }, "by": ENV_FILE_DIALOG, "request": req.json(), "paths": r.iter().map(|p| p.display().to_string()).collect::<Vec<_>>()}));
                 drop(g);
-                done(st, r, None, false);
+                done(st, r, None, Flags::default());
                 return;
             }
             _ => {}
@@ -398,7 +449,7 @@ fn request_ex(st: &mut AppState, req: Request, done: DoneEx) {
         };
         log_event(&mut g, json!({"event": "opened", "id": id, "mode": if internal { "internal" } else { "native" }, "request": req.json()}));
         let filter = req.default_filter;
-        g.pending = Some(Pending { id, req, mode: m, done: Some(done), answer: None, started: Instant::now(), filter, copy: false, options_clicked: false });
+        g.pending = Some(Pending { id, req, mode: m, done: Some(done), answer: None, started: Instant::now(), filter, copy: false, append_fw: true, untitled: false, animation: false, options_clicked: false });
         if let Some(c) = &g.ctx {
             c.request_repaint();
         }
@@ -445,7 +496,7 @@ fn spawn_native(req: &Request, parent: Option<Arc<winit::window::Window>>, ctx: 
 /// Je Frame (aus [`crate::bridge::frame`]): Ergebnis abholen, Fortsetzung ausführen, modale Sperre
 /// bzw. den Dialog in der App zeigen.
 pub fn frame(ctx: &egui::Context, st: &mut AppState) {
-    type Finished = (DoneEx, Vec<PathBuf>, Option<usize>, bool);
+    type Finished = (DoneEx, Vec<PathBuf>, Option<usize>, Flags);
     let finished: Option<Finished> = {
         let mut g = state();
         g.ctx = Some(ctx.clone());
@@ -455,8 +506,8 @@ pub fn frame(ctx: &egui::Context, st: &mut AppState) {
             && let Mode::Native(rx) = &p.mode
         {
             match rx.try_recv() {
-                Ok(r) => result = Some((r, None, false, "user")),
-                Err(TryRecvError::Disconnected) => result = Some((Vec::new(), None, false, "error")),
+                Ok(r) => result = Some((r, None, Flags::default(), "user")),
+                Err(TryRecvError::Disconnected) => result = Some((Vec::new(), None, Flags::default(), "error")),
                 Err(TryRecvError::Empty) => {}
             }
             // Windows-Dialog meldet den Dateityp nicht: passt der Name zu mehreren Typen, fragt ein
@@ -479,7 +530,7 @@ pub fn frame(ctx: &egui::Context, st: &mut AppState) {
         match result {
             Some((paths, filter, copy, by)) => match g.pending.take() {
                 Some(mut p) => {
-                    let ev = json!({"event": if paths.is_empty() { "cancelled" } else { "chosen" }, "by": by, "id": p.id, "request": p.req.json(), "paths": paths.iter().map(|x| x.display().to_string()).collect::<Vec<_>>(), "filter": filter, "copy": copy, "seconds": p.started.elapsed().as_secs_f64()});
+                    let ev = json!({"event": if paths.is_empty() { "cancelled" } else { "chosen" }, "by": by, "id": p.id, "request": p.req.json(), "paths": paths.iter().map(|x| x.display().to_string()).collect::<Vec<_>>(), "filter": filter, "copy": copy.copy, "append_fw_png": copy.append_fw_png, "untitled": copy.untitled, "animation": copy.animation, "seconds": p.started.elapsed().as_secs_f64()});
                     log_event(&mut g, ev);
                     p.done.take().map(|d| (d, paths, filter, copy))
                 }
@@ -514,6 +565,11 @@ pub fn frame(ctx: &egui::Context, st: &mut AppState) {
 /// Zusatzfelder eines Dateityps unter der Typliste wie im Original: Hinweis (Symbol + Text),
 /// „Optionen…“ und „Als Kopie speichern“. Gibt `true` zurück, wenn „Optionen…“ geklickt wurde.
 pub fn save_extras_ui(ui: &mut egui::Ui, extras: TypeExtras, copy: &mut bool) -> bool {
+    save_extras_ui_ex(ui, extras, copy, &mut true)
+}
+
+/// Wie [`save_extras_ui`], dazu „.fw.png anhängen“ (nur bei FW-PNG sichtbar).
+pub fn save_extras_ui_ex(ui: &mut egui::Ui, extras: TypeExtras, copy: &mut bool, append_fw: &mut bool) -> bool {
     if extras.hint {
         ui.horizontal_wrapped(|ui| {
             ui.label(egui::RichText::new("ⓘ").strong());
@@ -521,6 +577,9 @@ pub fn save_extras_ui(ui: &mut egui::Ui, extras: TypeExtras, copy: &mut bool) ->
         });
     }
     let mut clicked = false;
+    if extras.append_fw {
+        ui.checkbox(append_fw, fp_i18n::t("fdlg-append-fw-png"));
+    }
     ui.horizontal(|ui| {
         clicked = ui.add_enabled(extras.options, egui::Button::new(fp_i18n::t("fdlg-options"))).clicked();
         match extras.copy {
@@ -537,7 +596,7 @@ pub fn save_extras_ui(ui: &mut egui::Ui, extras: TypeExtras, copy: &mut bool) ->
 }
 
 /// Typliste und Zusatzfelder (Dialog in der App bzw. Folgedialog); `choices` = wählbare Filter.
-fn save_type_ui(ui: &mut egui::Ui, filters: &[String], choices: &[usize], x: &SaveExtras, filter: &mut usize, copy: &mut bool) -> bool {
+fn save_type_ui(ui: &mut egui::Ui, filters: &[String], choices: &[usize], x: &SaveExtras, filter: &mut usize, copy: &mut bool, append_fw: &mut bool) -> bool {
     ui.horizontal(|ui| {
         ui.label(fp_i18n::t("fdlg-file-type"));
         let current = filters.get(*filter).cloned().unwrap_or_default();
@@ -550,7 +609,7 @@ fn save_type_ui(ui: &mut egui::Ui, filters: &[String], choices: &[usize], x: &Sa
         });
     });
     match x.types.get(*filter) {
-        Some(t) => save_extras_ui(ui, *t, copy),
+        Some(t) => save_extras_ui_ex(ui, *t, copy, append_fw),
         None => false,
     }
 }
@@ -564,6 +623,8 @@ fn show_modal(ctx: &egui::Context) {
     let filters: Vec<String> = p.req.filters.iter().map(|(n, _)| n.clone()).collect();
     let extras = p.req.save_extras.clone();
     let (mut filter, mut copy, mut options) = (p.filter, p.copy, false);
+    let (mut append_fw, mut untitled, mut animation) = (p.append_fw, p.untitled, p.animation);
+    let open_extras = p.req.open_extras;
     let mut answer: Option<Vec<PathBuf>> = None;
     match &mut p.mode {
         Mode::Native(_) => {
@@ -580,7 +641,7 @@ fn show_modal(ctx: &egui::Context) {
                     // Speichern unter: Typliste und Zusatzfelder
                     Some(x) => {
                         let all: Vec<usize> = (0..filters.len()).collect();
-                        options = save_type_ui(ui, &filters, &all, x, &mut filter, &mut copy);
+                        options = save_type_ui(ui, &filters, &all, x, &mut filter, &mut copy, &mut append_fw);
                     }
                     None if !filters.is_empty() => {
                         ui.label(filters.join(" · "));
@@ -588,6 +649,14 @@ fn show_modal(ctx: &egui::Context) {
                     None => {}
                 }
                 let r = ui.add(egui::TextEdit::singleline(path).desired_width(480.0));
+                if open_extras {
+                    // Original: „Als Animation öffnen“ grau, bis mehrere Dateien gewählt sind
+                    let many = kind == Kind::OpenMany && split_paths(kind, path).len() > 1;
+                    ui.horizontal(|ui| {
+                        ui.checkbox(&mut untitled, fp_i18n::t("fdlg-open-untitled"));
+                        ui.add_enabled(many, egui::Checkbox::new(&mut animation, fp_i18n::t("fdlg-open-as-animation")));
+                    });
+                }
                 ui.horizontal(|ui| {
                     let ok = ui.button(fp_i18n::t("btn-ok")).clicked() || (r.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter)));
                     if ok && !path.trim().is_empty() {
@@ -608,7 +677,7 @@ fn show_modal(ctx: &egui::Context) {
                 ui.heading(&title);
                 ui.label(fp_i18n::tr!("fdlg-followup-question", name = name));
                 if let Some(x) = &extras {
-                    options = save_type_ui(ui, &filters, &choices, x, &mut filter, &mut copy);
+                    options = save_type_ui(ui, &filters, &choices, x, &mut filter, &mut copy, &mut append_fw);
                 }
                 ui.horizontal(|ui| {
                     if ui.button(fp_i18n::t("btn-ok")).clicked() || ui.input(|i| i.key_pressed(egui::Key::Enter)) {
@@ -623,14 +692,19 @@ fn show_modal(ctx: &egui::Context) {
     }
     p.filter = filter;
     p.copy = copy;
+    p.append_fw = append_fw;
+    p.untitled = untitled;
+    p.animation = animation;
     if options {
         p.options_clicked = true;
         ctx.request_repaint();
     }
     if let Some(a) = answer {
         let with_type = p.req.save_extras.is_some() && !a.is_empty();
-        let copy = p.copy_value();
-        p.answer = Some((a, with_type.then_some(filter), with_type && copy, "user"));
+        let mut f = p.flags();
+        f.copy &= with_type;
+        f.append_fw_png |= !with_type;
+        p.answer = Some((a, with_type.then_some(filter), f, "user"));
         ctx.request_repaint();
     }
 }
@@ -660,6 +734,11 @@ pub fn status_json() -> Value {
         if p.req.save_extras.is_some() {
             v["filter"] = json!(p.filter);
             v["save_as_copy"] = json!(p.copy_value());
+            v["append_fw_png"] = json!(p.flags().append_fw_png);
+        }
+        if p.req.open_extras {
+            v["open_untitled"] = json!(p.untitled);
+            v["open_as_animation"] = json!(p.animation);
         }
         v["seconds_open"] = json!((p.started.elapsed().as_secs_f64() * 10.0).round() / 10.0);
         v
@@ -674,6 +753,23 @@ pub fn answer(paths: Vec<PathBuf>) -> Result<Value, String> {
     answer_with(paths, None, None)
 }
 
+/// Kästchen des offenen Dialogs von außen setzen (`ui_file_dialog`, Tests): „.fw.png anhängen“,
+/// „Als ‚Unbenannt‘ öffnen“, „Als Animation öffnen“. Liefert eine Fehlermeldung, wenn keiner offen ist.
+pub fn set_flags(append_fw_png: Option<bool>, untitled: Option<bool>, animation: Option<bool>) -> Result<(), String> {
+    let mut g = state();
+    let Some(p) = g.pending.as_mut() else { return Err(fp_i18n::t("fdlg-none-open")) };
+    if let Some(v) = append_fw_png {
+        p.append_fw = v;
+    }
+    if let Some(v) = untitled {
+        p.untitled = v;
+    }
+    if let Some(v) = animation {
+        p.animation = v;
+    }
+    Ok(())
+}
+
 /// Wie [`answer`], bei „Speichern unter“ mit Dateityp (`filter`, Index in den Filtern; ohne =
 /// der im Dialog gewählte) und „Als Kopie speichern“ (ohne = das Kästchen im Dialog).
 pub fn answer_with(paths: Vec<PathBuf>, filter: Option<usize>, copy: Option<bool>) -> Result<Value, String> {
@@ -683,18 +779,21 @@ pub fn answer_with(paths: Vec<PathBuf>, filter: Option<usize>, copy: Option<bool
     if p.req.kind == Kind::Open && paths.len() > 1 {
         return Err(fp_i18n::t("fdlg-only-one"));
     }
-    let (f, c) = if p.req.save_extras.is_some() && !paths.is_empty() {
+    let (f, flags) = if p.req.save_extras.is_some() && !paths.is_empty() {
         if let Some(i) = filter.filter(|i| *i < p.req.filters.len()) {
             p.filter = i;
         }
         if let Some(c) = copy {
             p.copy = c;
         }
-        (Some(p.filter), p.copy_value())
+        (Some(p.filter), p.flags())
     } else {
-        (None, false)
+        let mut fl = p.flags();
+        fl.copy = false;
+        fl.append_fw_png = true;
+        (None, fl)
     };
-    p.answer = Some((paths, f, c, "mcp"));
+    p.answer = Some((paths, f, flags, "mcp"));
     let id = p.id;
     if native {
         // Ergebnis des nativen Dialogs wird verworfen, sobald er schließt

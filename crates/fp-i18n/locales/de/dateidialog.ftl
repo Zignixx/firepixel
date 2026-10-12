@@ -9,3 +9,7 @@ fdlg-save-as-copy = Als Kopie speichern
 fdlg-options = Optionen...
 fdlg-flatten-hint = Bei diesem Dateiformat werden Ebenen, Vektoren und andere bearbeitbare Objekte auf die Hintergrundebene reduziert.
 fdlg-followup-question = Unter welchem Dateityp soll „{ $name }“ gespeichert werden?
+# Zusatzfelder (Dialog in der App, NZ-4)
+fdlg-append-fw-png = .fw.png anhängen
+fdlg-open-untitled = Als „Unbenannt“ öffnen
+fdlg-open-as-animation = Als Animation öffnen

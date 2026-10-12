@@ -496,21 +496,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 if p.bool_or("edit", false)? {
                     // Original (PM-5 D14): OK legt ein leeres Symbol an und öffnet dessen Bearbeitung;
                     // keine Instanz im Dokument, die Auswahl bleibt unberührt
-                    let nine = p.bool_or("nineSlice", false)?;
-                    let sid = with_doc(s, |d| {
-                        let doc = Arc::make_mut(&mut d.doc);
-                        let sid = doc.new_symbol_id();
-                        let mut idg = take_ids(doc);
-                        let mut sym = Symbol::new(&mut idg, &name, sid, kind);
-                        doc.ids = idg;
-                        if nine {
-                            super::panel::set_nine_slice(&mut sym, true);
-                        }
-                        doc.symbols.push(Arc::new(sym));
-                        Ok(sid)
-                    })?;
-                    let view = super::symbol_edit::begin_edit(s, sid, false, None)?;
-                    return Ok(CommandOutput::doc_with(json!({"symbol": sid.0, "doc": view.0})));
+                    return new_empty_symbol(s, &name, kind, p.bool_or("nineSlice", false)?);
                 }
                 with_doc(s, |d| {
                     let ids = d.selection.elements.clone();
@@ -519,14 +505,24 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 })
             }),
     );
-    r.add(cmd("edit.insert.newButton").requires(DOC).opt("name", ParamKind::String, "Name der Schaltfläche").run(|s, p| {
+    r.add(
+        cmd("edit.insert.newButton")
+            .requires(DOC)
+            .opt("name", ParamKind::String, "Name der Schaltfläche")
+            .opt_default("edit", ParamKind::Bool, json!(false), "leere Schaltfläche in der Bibliothek anlegen und ihre Symbolbearbeitung öffnen (Menü wie im Original)")
+            .run(|s, p| {
         let name = p.opt_str("name")?.unwrap_or_else(|| "Schaltfläche".into());
+        // Original: „Erstellt ein neues Schaltflächenobjekt im Schaltflächeneditor“ – wie „Neues Symbol“
+        if p.bool_or("edit", false)? {
+            return new_empty_symbol(s, &name, SymbolKind::Button, false);
+        }
         with_doc(s, |d| {
             let ids = d.selection.elements.clone();
             let id = make_symbol(d, &name, SymbolKind::Button, &ids)?;
             Ok(CommandOutput::doc_with(json!({"id": id.0})))
         })
-    }));
+            }),
+    );
     // im Original immer aktiv; ohne Auswahl Meldung statt Wirkung
     r.add(cmd("edit.insert.hotspot").requires(DOC).run(|s, _| web_from_selection(s, false, false)));
     r.add(cmd("edit.insert.slice").requires(DOC).run(|s, _| web_from_selection(s, true, false)));
@@ -678,3 +674,21 @@ pub(crate) fn add_layer(d: &mut DocumentState, name: Option<&str>, kind: LayerKi
     Ok(id)
 }
 
+/// Leeres Symbol in der Bibliothek anlegen und seine Symbolbearbeitung öffnen („Neues Symbol“,
+/// „Neue Schaltfläche“ aus dem Menü). Keine Instanz im Dokument, die Auswahl bleibt unberührt.
+fn new_empty_symbol(s: &mut Session, name: &str, kind: SymbolKind, nine: bool) -> Result<CommandOutput> {
+    let sid = with_doc(s, |d| {
+        let doc = Arc::make_mut(&mut d.doc);
+        let sid = doc.new_symbol_id();
+        let mut idg = take_ids(doc);
+        let mut sym = Symbol::new(&mut idg, name, sid, kind);
+        doc.ids = idg;
+        if nine {
+            super::panel::set_nine_slice(&mut sym, true);
+        }
+        doc.symbols.push(Arc::new(sym));
+        Ok(sid)
+    })?;
+    let view = super::symbol_edit::begin_edit(s, sid, false, None)?;
+    Ok(CommandOutput::doc_with(json!({"symbol": sid.0, "doc": view.0})))
+}

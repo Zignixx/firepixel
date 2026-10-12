@@ -251,6 +251,15 @@ pub fn save_kind_for(p: &Path, filter: Option<usize>) -> SaveKind {
 /// Gewählter Name → Ziel für eine Art: FW-PNG bekommt `.fw.png`, Reduziertes PNG endet auf `.png`
 /// (ohne `.fw.png`), andere Typen bekommen ohne Endung ihre erste Endung.
 pub fn save_target_for(p: PathBuf, kind: SaveKind) -> PathBuf {
+    save_target_for_ex(p, kind, true)
+}
+
+/// Wie [`save_target_for`]; `append_fw_png` = Kästchen „.fw.png anhängen“. Aus: FW-PNG behält den
+/// gewählten Namen (ohne Endung bekommt er `.png`).
+pub fn save_target_for_ex(p: PathBuf, kind: SaveKind, append_fw_png: bool) -> PathBuf {
+    if kind == SaveKind::FwPng && !append_fw_png {
+        return if p.extension().is_some() { p } else { p.with_extension("png") };
+    }
     let name = p.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
     let lower = name.to_lowercase();
     match kind {
@@ -283,9 +292,9 @@ fn ambiguous_save_types(p: &Path) -> Vec<usize> {
 pub fn save_type_extras(kind: SaveKind) -> file_dialog::TypeExtras {
     use file_dialog::{CopyBox, TypeExtras};
     match kind {
-        SaveKind::FwPng => TypeExtras { copy: CopyBox::Off, options: false, hint: false },
-        SaveKind::FlatPng => TypeExtras { copy: CopyBox::Off, options: true, hint: true },
-        _ => TypeExtras { copy: CopyBox::Locked, options: false, hint: true },
+        SaveKind::FwPng => TypeExtras { copy: CopyBox::Off, options: false, hint: false, append_fw: true },
+        SaveKind::FlatPng => TypeExtras { copy: CopyBox::Off, options: true, hint: true, append_fw: false },
+        _ => TypeExtras { copy: CopyBox::Locked, options: false, hint: true, append_fw: false },
     }
 }
 
@@ -440,7 +449,7 @@ pub fn pick_save_as(st: &mut AppState, file_name: &str, done: impl FnOnce(&mut A
 /// Typ, Ziel mit passender Endung, „Als Kopie speichern“. `true` = gespeichert.
 pub fn save_chosen(st: &mut AppState, c: file_dialog::SaveChoice) -> bool {
     let kind = save_kind_for(&c.path, c.filter);
-    let target = save_target_for(c.path, kind);
+    let target = save_target_for_ex(c.path, kind, c.append_fw_png);
     write_active(st, Some(target), kind, c.copy)
 }
 
@@ -489,6 +498,48 @@ pub fn save_all(st: &mut AppState, mut ids: Vec<fp_engine::DocId>, active: Optio
         let _ = st.session.activate(a);
     }
 }
+/// Datei ▸ Öffnen: Dialog (Startordner und Merken wie [`pick`]) mit den Zusatzfeldern „Als
+/// ‚Unbenannt‘ öffnen“ und „Als Animation öffnen“ (nur im Dialog in der App), dann öffnen.
+pub fn pick_and_open(st: &mut AppState) {
+    let kind = DialogKind::Open;
+    let doc_path = st.session.active().and_then(|d| d.path.clone());
+    let dir = start_dir(&st.session.prefs, kind, doc_path.as_deref());
+    let req = kind.request("").dir(dir.as_deref());
+    file_dialog::request_open(st, req, move |st, paths, choice| {
+        if let Some(first) = paths.first()
+            && remember_dir(&mut st.session.prefs, kind, first)
+        {
+            st.session.prefs_changed();
+        }
+        open_chosen(st, &paths, choice);
+    });
+}
+
+/// Öffnet die gewählten Dateien nach den Kästchen von „Öffnen“: „Als Animation öffnen“ (ab zwei
+/// Dateien) legt ein unbenanntes Dokument mit einem Status je Datei an, „Als ‚Unbenannt‘ öffnen“
+/// öffnet jede Datei ohne Dateinamen, sonst normal.
+pub fn open_chosen(st: &mut AppState, paths: &[PathBuf], choice: file_dialog::OpenChoice) {
+    let failed = |st: &mut AppState, p: &Path, e: fp_engine::EngineError| {
+        st.dialogs.message = Some(("Firepixel".into(), fp_i18n::tr!("ui-file-open-failed", path = p.display().to_string(), error = e.to_string())));
+    };
+    if choice.animation && paths.len() > 1 {
+        let rest: Vec<String> = paths[1..].iter().map(|p| p.to_string_lossy().to_string()).collect();
+        if let Err(e) = st.session.execute("file.open", json!({ "path": paths[0].to_string_lossy(), "frames": rest })) {
+            failed(st, &paths[0], e);
+        }
+        return;
+    }
+    for p in paths {
+        if choice.untitled {
+            if let Err(e) = st.session.execute("file.open", json!({ "path": p.to_string_lossy(), "untitled": true })) {
+                failed(st, p, e);
+            }
+        } else {
+            open_path(st, p);
+        }
+    }
+}
+
 /// Öffnet eine Datei über das Befehlsregister (Fehler als Meldung).
 pub fn open_path(st: &mut AppState, p: &Path) {
     // schon offen? → aktivieren

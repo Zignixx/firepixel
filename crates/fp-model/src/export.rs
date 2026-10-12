@@ -226,7 +226,8 @@ pub struct HtmlSettings {
     pub matte_color: Option<u32>,
     /// Exportoptionen für CSS-Sprites (re\18 §4.2, §7.2: `spriteExportSelectorIsClass`,
     /// `…CSSPrefix`, `…CSSSuffix`, `…Padding`, `…Orientation` 1 waagerecht / 2 senkrecht /
-    /// 3 Raster, `…PresetName`). Im FW-PNG noch ohne Tag (nur im Dokument der Sitzung).
+    /// 3 Raster, `…PresetName`). Tags des Originals unbekannt; im FW-PNG als Firepixel-eigene
+    /// Erweiterung `fpSv` im `EXPv` gespeichert (fp-fwpng `write::SPRITE_EXT`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub sprite_selector_is_class: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]

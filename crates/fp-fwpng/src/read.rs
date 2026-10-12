@@ -1724,8 +1724,8 @@ fn read_palette(v: &[RawNode], _ctx: &mut ReadCtx) -> Option<Vec<PaletteEntry>> 
 }
 
 fn read_html(r: &mut Rd, ctx: &mut ReadCtx) -> Option<Box<HtmlSettings>> {
-    const HTML_KEYS: [&[u8; 4]; 38] = [
-        b"GSLb", b"LSUb", b"DSUb", b"LSDb", b"CSMb", b"ECSi", b"NYSb", b"LSSi", b"HTMi", b"HTTs", b"IMDs", b"XFSi", b"LXDs",
+    const HTML_KEYS: [&[u8; 4]; 39] = [
+        b"fpSv", b"GSLb", b"LSUb", b"DSUb", b"LSDb", b"CSMb", b"ECSi", b"NYSb", b"LSSi", b"HTMi", b"HTTs", b"IMDs", b"XFSi", b"LXDs",
         b"XMDi", b"TRMb", b"HTMb", b"XDAb", b"EFBs", b"EFXs", b"NM4v", b"NMFv", b"NS0s", b"NS1s", b"NS2s", b"NS3s", b"ENCi",
         b"TALi", b"TPWi", b"XTMi", b"CBUs", b"CBRi", b"CBAi", b"CDAi", b"CDMv", b"CXBb", b"CXFs", b"CBDs", b"FCLi",
     ];
@@ -1793,6 +1793,17 @@ fn read_html(r: &mut Rd, ctx: &mut ReadCtx) -> Option<Box<HtmlSettings>> {
     h.external_css_filename = r.str(k!(b"CXFs"));
     h.css_dir = r.str(k!(b"CBDs"));
     h.matte_color = r.int(k!(b"FCLi"));
+    // Firepixel-eigene Sprite-Erweiterung (siehe `write::SPRITE_EXT`)
+    if let Some(n) = r.list(crate::write::SPRITE_EXT) {
+        let mut s = Rd::new(n);
+        h.sprite_selector_is_class = s.bool(k!(b"SSCb"));
+        h.sprite_css_prefix = s.str(k!(b"SPXs"));
+        h.sprite_css_suffix = s.str(k!(b"SSXs"));
+        h.sprite_padding = s.i32(k!(b"SPDi"));
+        h.sprite_orientation = s.i32(k!(b"SORi"));
+        h.sprite_preset = s.str(k!(b"SPRs"));
+        let _ = ctx.finish(s);
+    }
     Some(Box::new(h))
 }
 

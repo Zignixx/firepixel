@@ -247,7 +247,7 @@ impl ExportDialog {
         let kind = if svg_last { FilesStyle::Svg } else { FilesStyle::from_code(html.export_files_style.unwrap_or(1)) };
         let has_slices = page.root.layers.iter().any(|s| matches!(s, fp_model::LayerSlot::Own(l) if l.kind == fp_model::LayerKind::Web && l.cels.iter().any(|c| c.elements.iter().any(|e| matches!(&e.kind, fp_model::ElementKind::WebObject(w) if w.slice.is_some())))));
         let slice_selected = selected_slice_ids(st).next().is_some();
-        // Ordner: zuletzt benutzter Exportordner, sonst der des Dokuments bzw. seiner Datei, sonst der letzte Öffnen-Ordner (§7.1; „Bilder“ fehlt noch)
+        // Ordner: zuletzt benutzter Exportordner, sonst der des Dokuments bzw. seiner Datei, sonst der letzte Öffnen-Ordner, sonst „Bilder“ (§7.1)
         let use_last = st.session.prefs.get_bool("UseLastExportDirectory", true);
         let folder = use_last
             .then(|| st.session.prefs.get_str("LastExportDirectory", ""))
@@ -255,6 +255,7 @@ impl ExportDialog {
             .or_else(|| page.last_export_dir.as_deref().and_then(existing_dir))
             .or_else(|| d.path.as_ref().and_then(|p| p.parent()).and_then(|p| existing_dir(&p.to_string_lossy())))
             .or_else(|| existing_dir(&st.session.prefs.get_str("LastOpenLocation", "")))
+            .or_else(|| fp_i18n::profile::known_folder(fp_i18n::profile::KnownFolder::Pictures).map(|p| p.display().to_string()))
             .unwrap_or_default();
         let html_ext = html
             .file_extension

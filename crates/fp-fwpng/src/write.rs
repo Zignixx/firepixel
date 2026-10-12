@@ -1335,8 +1335,32 @@ pub fn write_export(e: &ExportSettings) -> Vec<RawNode> {
         w.opt_str(k!(b"CXFs"), h.external_css_filename.as_deref());
         w.opt_str(k!(b"CBDs"), h.css_dir.as_deref());
         w.opt_int(k!(b"FCLi"), h.matte_color);
+        if let Some(kids) = write_sprite_ext(h) {
+            w.list(SPRITE_EXT, kids);
+        }
     }
     w.finish()
+}
+
+/// Firepixel-eigene Erweiterung im `EXPv`: Exportoptionen für CSS-Sprites. Das Original hält diese
+/// Felder im Dokument, ihre Tags sind aber nicht bekannt (`re 8` §1.5 „Tags ?“, nicht im
+/// Vokabular). Der Container beginnt mit Kleinbuchstaben und kann daher mit keinem Tag des
+/// Originals (immer drei Großbuchstaben/Ziffern) zusammenfallen.
+pub const SPRITE_EXT: TagKey = k!(b"fpSv");
+
+fn write_sprite_ext(h: &HtmlSettings) -> Option<Vec<RawNode>> {
+    if h.sprite_selector_is_class.is_none() && h.sprite_css_prefix.is_none() && h.sprite_css_suffix.is_none() && h.sprite_padding.is_none() && h.sprite_orientation.is_none() && h.sprite_preset.is_none() {
+        return None;
+    }
+    let empty = Extra::default();
+    let mut w = Wr::new(&empty);
+    w.opt_bool(k!(b"SSCb"), h.sprite_selector_is_class);
+    w.opt_str(k!(b"SPXs"), h.sprite_css_prefix.as_deref());
+    w.opt_str(k!(b"SSXs"), h.sprite_css_suffix.as_deref());
+    w.opt_i32(k!(b"SPDi"), h.sprite_padding);
+    w.opt_i32(k!(b"SORi"), h.sprite_orientation);
+    w.opt_str(k!(b"SPRs"), h.sprite_preset.as_deref());
+    Some(w.finish())
 }
 
 /// Symbol `MSTv` (Kinder).

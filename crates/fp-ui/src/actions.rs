@@ -154,11 +154,8 @@ fn run_command(st: &mut AppState, ctx: &egui::Context, name: &str, params: Value
             return;
         }
         "file.open" if !has_param(&params, "path") => {
-            crate::files::pick(st, crate::files::DialogKind::Open, "", |st, paths| {
-                for p in paths {
-                    crate::files::open_path(st, &p);
-                }
-            });
+            // mit „Als ‚Unbenannt‘ öffnen“/„Als Animation öffnen“ (Dialog in der App, NZ-4)
+            crate::files::pick_and_open(st);
             return;
         }
         "file.newFromTemplate" if !has_param(&params, "path") => {

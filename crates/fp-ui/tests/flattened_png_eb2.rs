@@ -44,7 +44,7 @@ fn flat_index() -> usize {
 
 /// Speichert über den Weg des Dialogs „Speichern unter“ (Typ „Reduziertes PNG“).
 fn save_flat(st: &mut AppState, path: &Path, copy: bool) {
-    assert!(files::save_chosen(st, SaveChoice { path: path.to_path_buf(), filter: Some(flat_index()), copy }));
+    assert!(files::save_chosen(st, SaveChoice { path: path.to_path_buf(), filter: Some(flat_index()), copy, append_fw_png: true }));
 }
 
 fn chunks(bytes: &[u8]) -> Vec<fp_fwpng::png::Chunk> {
@@ -126,11 +126,10 @@ fn no_private_chunks() {
     assert_eq!(texts[0].0, "Creation Time");
     assert_eq!(texts[0].1, fp_export::flat_png::creation_time_today(), "neues Dokument: heute (MM/DD/YY)");
     assert_eq!(texts[1], ("Software".to_string(), "Firepixel".to_string()));
-    // pHYs wie beim PNG-Export (72 dpi, Einheit 1). Das Original schreibt 2834 Pixel/m (abgeschnitten),
-    // der gemeinsame PNG-Schreiber rundet auf 2835 – Befund an RF, gilt für beide Wege gleich.
+    // pHYs wie beim PNG-Export (72 dpi, Einheit 1): 2834 Pixel/m, abgeschnitten wie im Original (NZ-4).
     let phys = chunks(&bytes).into_iter().find(|c| &c.kind == b"pHYs").unwrap();
     let ppm = u32::from_be_bytes([phys.data[0], phys.data[1], phys.data[2], phys.data[3]]);
-    assert!((2834..=2835).contains(&ppm) && phys.data[8] == 1, "{:?}", phys.data);
+    assert!(ppm == 2834 && phys.data[8] == 1, "{:?}", phys.data);
     let exp = dir.join("export.png");
     st.session.execute("file.export", json!({"path": exp.to_string_lossy()})).unwrap();
     let phys_export = chunks(&std::fs::read(&exp).unwrap()).into_iter().find(|c| &c.kind == b"pHYs").unwrap();
@@ -221,13 +220,13 @@ fn save_as_copy_yes_no() {
     assert!(!st.session.active().unwrap().is_dirty());
 
     // wieder als FW-PNG gespeichert: Art zurück, `.fw.png` angehängt
-    assert!(files::save_chosen(&mut st, SaveChoice { path: dir.join("wieder.png"), filter: Some(0), copy: false }));
+    assert!(files::save_chosen(&mut st, SaveChoice { path: dir.join("wieder.png"), filter: Some(0), copy: false, append_fw_png: true }));
     let d = st.session.active().unwrap();
     assert_eq!((d.path.clone(), d.flattened), (Some(dir.join("wieder.fw.png")), false));
     assert!(fp_fwpng::is_fwpng(&std::fs::read(dir.join("wieder.fw.png")).unwrap()));
 
     // FW-PNG als Kopie: Dokument behält Namen
-    assert!(files::save_chosen(&mut st, SaveChoice { path: dir.join("fwkopie.fw.png"), filter: Some(0), copy: true }));
+    assert!(files::save_chosen(&mut st, SaveChoice { path: dir.join("fwkopie.fw.png"), filter: Some(0), copy: true, append_fw_png: true }));
     assert!(dir.join("fwkopie.fw.png").is_file());
     assert_eq!(st.session.active().unwrap().path.clone(), Some(dir.join("wieder.fw.png")));
 
@@ -280,7 +279,7 @@ fn type_by_filter_not_only_extension() {
     let dir = tmp("filter");
     let mut st = state();
     document(&mut st, "png32");
-    assert!(files::save_chosen(&mut st, SaveChoice { path: dir.join("x.png"), filter: None, copy: false }));
+    assert!(files::save_chosen(&mut st, SaveChoice { path: dir.join("x.png"), filter: None, copy: false, append_fw_png: true }));
     assert_eq!(st.session.active().unwrap().path.clone(), Some(dir.join("x.fw.png")));
     let _ = std::fs::remove_dir_all(&dir);
 }
@@ -294,8 +293,8 @@ fn dialog_types_and_extras() {
     assert_eq!(r.filters[i].0, "Reduziertes PNG (*.png)");
     assert_eq!(r.filters[i].1, ["png"]);
     assert_eq!(i, 4, "nach JPEG wie im Original");
-    assert_eq!(x.types[i], TypeExtras { copy: CopyBox::Off, options: true, hint: true });
-    assert_eq!(x.types[0], TypeExtras { copy: CopyBox::Off, options: false, hint: false });
+    assert_eq!(x.types[i], TypeExtras { copy: CopyBox::Off, options: true, hint: true, append_fw: false });
+    assert_eq!(x.types[0], TypeExtras { copy: CopyBox::Off, options: false, hint: false, append_fw: true });
     let j = files::save_type_index(SaveKind::Export("jpeg")).unwrap();
     assert_eq!(x.types[j].copy, CopyBox::Locked);
     // Nachfrage nach dem Windows-Dialog nur bei mehrdeutigem `.png`
@@ -318,7 +317,7 @@ fn dialog_types_and_extras() {
 fn extras_ui_kittest() {
     for lang in ["de", "en"] {
         fp_i18n::set_language(lang);
-        let flat = TypeExtras { copy: CopyBox::Off, options: true, hint: true };
+        let flat = TypeExtras { copy: CopyBox::Off, options: true, hint: true, append_fw: false };
         let mut h = Harness::builder().with_size(egui::vec2(520.0, 160.0)).build_ui_state(
             move |ui, s: &mut (bool, usize)| {
                 if save_extras_ui(ui, flat, &mut s.0) {
@@ -341,7 +340,7 @@ fn extras_ui_kittest() {
         assert_eq!(h.state().1, 1, "{lang}: Optionen… geklickt");
 
         // gesperrt (Exportformate): an, Klick ändert nichts; ohne Hinweis bei FW-PNG
-        let locked = TypeExtras { copy: CopyBox::Locked, options: false, hint: false };
+        let locked = TypeExtras { copy: CopyBox::Locked, options: false, hint: false, append_fw: false };
         let mut h = Harness::builder().with_size(egui::vec2(520.0, 160.0)).build_ui_state(
             move |ui, s: &mut (bool, usize)| {
                 if save_extras_ui(ui, locked, &mut s.0) {

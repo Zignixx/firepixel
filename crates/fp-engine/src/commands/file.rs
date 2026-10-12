@@ -66,6 +66,33 @@ fn open_path(s: &mut Session, path: PathBuf, as_template: bool) -> Result<Comman
     Ok(CommandOutput::session_with(json!({"doc": id.0})))
 }
 
+/// Hängt die erste Seite von `other` als neuen letzten Status an `doc` an (Elemente aller eigenen
+/// Ebenen, oberste zuerst, mit neuen IDs; „Als Animation öffnen“).
+fn append_as_frame(doc: &mut Document, other: Document) {
+    let Some(page) = other.pages.first() else { return };
+    let mut elements: Vec<Element> = Vec::new();
+    for slot in &page.root.layers {
+        if let fp_model::layer::LayerSlot::Own(l) = slot
+            && l.kind == fp_model::layer::LayerKind::Normal
+            && let Some(c) = l.cel(0)
+        {
+            elements.extend(c.elements.iter().map(|e| (**e).clone()));
+        }
+    }
+    let at = doc.pages.first().map(|p| p.root.frame_count as usize).unwrap_or(1);
+    if crate::docops::insert_frames(doc, 0, at, 1).is_none() {
+        return;
+    }
+    let mut ids = std::mem::take(&mut doc.ids);
+    for e in &mut elements {
+        e.reassign_ids(&mut ids);
+    }
+    doc.ids = ids;
+    for (i, e) in elements.into_iter().enumerate() {
+        crate::docops::insert_element(doc, 0, at, None, i, Arc::new(e));
+    }
+}
+
 /// Schreibt Bytes über eine Zwischendatei (kein halb geschriebenes Ziel bei Fehlern).
 fn write_atomic(path: &Path, bytes: &[u8]) -> Result<()> {
     fp_i18n::profile::guard_write(path);
@@ -170,7 +197,34 @@ pub(super) fn register(r: &mut CommandRegistry) {
             .param("path", ParamKind::Path, "Vorlagendatei (.fw.png)")
             .run(|s, p| open_path(s, PathBuf::from(p.str("path")?), true)),
     );
-    r.add(cmd("file.open").param("path", ParamKind::Path, "Datei (.fw.png oder .png)").run(|s, p| open_path(s, PathBuf::from(p.str("path")?), false)));
+    r.add(
+        cmd("file.open")
+            .param("path", ParamKind::Path, "Datei (.fw.png oder .png)")
+            .opt_default("untitled", ParamKind::Bool, json!(false), "als „Unbenannt“ öffnen (ohne Dateinamen; Speichern fragt nach einem Namen)")
+            .opt("frames", ParamKind::Json, "weitere Dateien [Pfad, …]: „Als Animation öffnen“, je Datei ein Status nach dem ersten")
+            .run(|s, p| {
+                let path = PathBuf::from(p.str("path")?);
+                let untitled = p.bool_or("untitled", false)?;
+                let frames: Vec<PathBuf> = match p.get("frames") {
+                    Some(Value::Array(a)) => a.iter().filter_map(|v| v.as_str()).map(PathBuf::from).collect(),
+                    Some(Value::String(one)) => vec![PathBuf::from(one)],
+                    _ => Vec::new(),
+                };
+                if !untitled && frames.is_empty() {
+                    return open_path(s, path, false);
+                }
+                // Original: „Als Animation öffnen“ legt die gewählten Dateien als Status eines
+                // unbenannten Dokuments an; „Als ‚Unbenannt‘ öffnen“ öffnet ohne Dateinamen
+                let mut doc = load_document(&path)?;
+                for f in &frames {
+                    append_as_frame(&mut doc, load_document(f)?);
+                }
+                let id = s.add_document(doc, None);
+                s.prefs.add_recent_file(&path);
+                s.prefs_changed();
+                Ok(CommandOutput::session_with(json!({"doc": id.0})))
+            }),
+    );
     r.add(
         cmd("file.openRecent")
             .opt_default("index", ParamKind::Integer { min: Some(0), max: Some(9) }, json!(0), "Index in der Liste zuletzt geöffneter Dateien")

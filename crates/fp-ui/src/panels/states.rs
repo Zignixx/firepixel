@@ -149,7 +149,7 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
     let text = loop_text(loop_count);
     let (tip_dist, tip_new, tip_del) = (common::t("panel-states-distribute"), common::t("panel-states-new"), common::t("panel-states-delete"));
     let buttons = [
-        FooterButton { glyph: Glyph::Distribute, tip: &tip_dist, enabled: st.session.active().is_some_and(|d| d.selection.elements.len() > 1), action: Some(Action::Run("pi.state.distribute".into(), json!({}))) },
+        FooterButton { glyph: Glyph::Distribute, tip: &tip_dist, enabled: distribute_enabled(st), action: Some(Action::Run("pi.state.distribute".into(), json!({}))) },
         FooterButton { glyph: Glyph::NewLayer, tip: &tip_new, enabled: true, action: Some(if ui.input(|i| i.modifiers.alt) { Action::Run("state.duplicate".into(), json!({})) } else { Action::Run("state.add".into(), json!({})) }) },
         FooterButton { glyph: Glyph::Trash, tip: &tip_del, enabled: n > 1, action: Some(Action::Run("state.delete".into(), json!({}))) },
     ];
@@ -159,4 +159,9 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
     for a in actions {
         st.push(a);
     }
+}
+
+/// Fußknopf „Auf Status verteilen“ aktiv: wie der Menübefehl (ab einem gewählten Objekt; MN-3/NZ-4).
+pub fn distribute_enabled(st: &AppState) -> bool {
+    st.session.is_available("pi.state.distribute")
 }

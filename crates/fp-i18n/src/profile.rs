@@ -162,6 +162,40 @@ pub fn real_local_dir() -> Option<PathBuf> {
     }
 }
 
+/// Known user folders (only read, e.g. as start folder of a file dialog).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum KnownFolder {
+    /// `%USERPROFILE%\Pictures` (`$HOME/Pictures`)
+    Pictures,
+    /// `%USERPROFILE%\Documents` (`$HOME/Documents`)
+    Documents,
+}
+
+impl KnownFolder {
+    fn dir_name(self) -> &'static str {
+        match self {
+            KnownFolder::Pictures => "Pictures",
+            KnownFolder::Documents => "Documents",
+        }
+    }
+}
+
+/// A known user folder: `<home>\Pictures` or `<home>\Documents` if it exists, else the home
+/// folder itself (home = `%USERPROFILE%` on Windows, else `$HOME`). In a test run the test
+/// profile root stands in for the home folder, so tests never see the user's real folders.
+/// Never creates anything.
+pub fn known_folder(f: KnownFolder) -> Option<PathBuf> {
+    let home = if is_test_run() {
+        redirected_root().unwrap_or_else(use_test_profile)
+    } else if cfg!(windows) {
+        env_path("USERPROFILE").or_else(|| env_path("HOME"))?
+    } else {
+        env_path("HOME")?
+    };
+    let dir = home.join(f.dir_name());
+    Some(if dir.is_dir() { dir } else { home })
+}
+
 fn resolve(sub: &str, env: Option<PathBuf>) -> Option<PathBuf> {
     if let Some(r) = redirected_root() {
         return Some(r.join(sub).join(APP_DIR));

@@ -144,22 +144,7 @@ fn plain_form(st: &AppState, cmd: &str) -> Option<FormDialog> {
         "select.contractMarquee" => FormDialog::new("19106", t("dlg-title-contract-marquee").as_str(), cmd, vec![Field::number("amount", t("dlg-lbl-contract-by").as_str(), 10.0, 1.0, 100.0).unit("dlg-unit-pixels")]).with_prefs(&[("amount", "ContractSelectionAmount")]).with_layout(super::marquee::LAYOUT),
         "select.borderMarquee" => FormDialog::new("19107", t("dlg-title-border-marquee").as_str(), cmd, vec![Field::number("amount", t("dlg-lbl-border-width").as_str(), 10.0, 1.0, 100.0).unit("dlg-unit-pixels")]).with_prefs(&[("amount", "BorderSelectionAmount")]).with_layout(super::marquee::LAYOUT),
         "select.smoothMarquee" => FormDialog::new("19108", t("dlg-title-smooth-marquee").as_str(), cmd, vec![Field::number("amount", t("dlg-lbl-selection-radius").as_str(), 10.0, 1.0, 100.0).unit("dlg-unit-pixels")]).with_prefs(&[("amount", "SmoothSelectionAmount")]).with_layout(super::marquee::LAYOUT),
-        "select.saveBitmapSelection" => FormDialog::new("6541", t("dlg-title-save-selection").as_str(), cmd, vec![Field::text("name", t("dlg-lbl-name").as_str(), &fp_i18n::tr!("dlg-selection-default-name", n = 1))]),
-        "select.restoreBitmapSelection" | "select.deleteBitmapSelection" => {
-            let names: Vec<String> = d.and_then(|d| d.doc.pages.get(d.page)).and_then(|p| p.saved_selections.as_ref()).map(|v| v.iter().enumerate().map(|(i, s)| s.name.clone().unwrap_or_else(|| fp_i18n::tr!("dlg-selection-default-name", n = i + 1))).collect()).unwrap_or_default();
-            if names.is_empty() {
-                return Some(FormDialog::new("6540", t("dlg-title-selection").as_str(), "", vec![Field::note(t("dlg-no-saved-selections").as_str())]));
-            }
-            let refs: Vec<&str> = names.iter().map(|s| s.as_str()).collect();
-            let idx: Vec<Value> = (0..names.len()).map(|i| json!(i)).collect();
-            let mut v = vec![Field::choice_of("index", t("dlg-lbl-selection").as_str(), &refs, idx, 0)];
-            if cmd == "select.restoreBitmapSelection" {
-                v.push(Field::radio_of("mode", t("dlg-lbl-operation").as_str(), &[t("dlg-op-replace").as_str(), t("dlg-op-add").as_str(), t("dlg-op-subtract").as_str(), t("dlg-op-intersect").as_str()], vec![json!("replace"), json!("add"), json!("subtract"), json!("intersect")], 0));
-                FormDialog::new("6540", t("dlg-title-restore-selection").as_str(), cmd, v).with_width(420.0)
-            } else {
-                FormDialog::new("6542", t("dlg-title-delete-selection").as_str(), cmd, v)
-            }
-        }
+        // Bitmap-Auswahl speichern/wiederherstellen/löschen: eigener Dialog in `bitmap_selection.rs` (KV-3)
         // Pfad-Dialoge mit Anordnung des Originals (DLG-7, PM-6 D29–D32): eigene Datei
         "modify.alterPath.simplify" => super::path_dialogs::simplify(cmd),
         "modify.alterPath.insetPath" => super::path_dialogs::inset(cmd),

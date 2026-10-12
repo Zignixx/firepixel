@@ -9,3 +9,7 @@ fdlg-save-as-copy = Save as a copy
 fdlg-options = Options...
 fdlg-flatten-hint = This file format will flatten layers, vectors and other editable objects to the background layer.
 fdlg-followup-question = Which file type should “{ $name }” be saved as?
+# Extra fields (in-app dialog, NZ-4)
+fdlg-append-fw-png = Append .fw.png
+fdlg-open-untitled = Open as “Untitled”
+fdlg-open-as-animation = Open as Animation

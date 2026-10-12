@@ -258,7 +258,9 @@ pub fn open(st: &mut AppState, name: &str) -> bool {
             .with_base(json!({"edit": true}))
             .with_width(420.0),
         ),
-        "edit.insert.newButton" => Some(FormDialog::new("19104", &t("dlg-md-new-button"), name, vec![Field::text("name", &t("dlg-lbl-name"), &t("dlg-md-button-default-name"))]).with_width(380.0)),
+        // Neue Schaltfläche: wie „Neues Symbol“ eine leere Schaltfläche anlegen und ihre
+        // Symbolbearbeitung öffnen (Original: „im Schaltflächeneditor“)
+        "edit.insert.newButton" => Some(FormDialog::new("19104", &t("dlg-md-new-button"), name, vec![Field::text("name", &t("dlg-lbl-name"), &t("dlg-md-button-default-name"))]).with_base(json!({"edit": true})).with_width(380.0)),
         _ => return false,
     };
     if let Some(f) = form {
