@@ -1,5 +1,56 @@
 # Firepixel: Stand
 
+## Gesamtübersicht – Stand 12.10.2026 abends (DOC-1)
+
+**Was Firepixel ist:** ein nativer Nachbau des klassischen Grafikprogramms (im Folgenden „das Original“) in Rust: eine einzelne EXE ohne Installation, dazu `firepixel-cli`. Er öffnet und speichert FW-PNG (`.fw.png`) und wird bedient wie das Original. Umfang: 19 Crates, ≈ 196.000 Zeilen Rust, 161 Testdateien, 192 Commits (davon ≈ 150 am 12.10.).
+
+**Was Firepixel kann:**
+- **Dokumente:** Vektor und Bitmap, Seiten, Status (Animation), Ebenen, Symbole, Live-Filter, 41 automatische Formen. Rendertreue 648/651 Korpusseiten pixelgenau.
+- **Formate:** Öffnen PNG, GIF, JPEG, BMP, TIFF, TGA, WBMP, PSD, SVG, WebP, APNG, AVIF, HEIC, JPEG XL, QOI, ICO. Export über Optimieren/Bildvorschau, SVG.
+- **Oberfläche wie im Original:** Menüs, Werkzeuge inkl. Bitmap-Malwerkzeuge, Bedienfelder, Inspektor, Dialoge, Kontextmenüs, Kürzel; 3 Designs (Normal, Dunkel, OLED).
+- **Deutsch und Englisch** vollständig (Fluent, 0 feste Texte, Scanner scharf). Sprache in der UI umschaltbar, MCP antwortet englisch, CLI mit `--lang`. Technisches ist immer englisch (§1c), alte Ordner werden beim ersten Start migriert.
+- **Bitmap nachzeichnen** (Bild → Vektor/SVG) mit Live-Vorschau, 4 Vorgaben und Logo-Aufräumen.
+- **KI-Auswahl** (Objekt, Motiv, Kante; SAM 2.1 / BiRefNet lokal) mit Fortschrittskarte und Feineinstellungen.
+- **Bildvorschau** mit 1/2/4 Feldern, Registerkarte Optionen, Farbtabelle, Pipetten und Optimieren auf Größe.
+- **Automatisierung:** ein Befehlsregister für UI, CLI, MCP (headless und Brücke zur laufenden App mit `ui_find`/`ui_input`/`screenshot`) und JSF (550/565 Methoden).
+- **Leistung:** Tippen auf Rechnern ohne Grafikkarte ≈ 77 ms je Zeichen (vorher 640 ms).
+
+**Parität mit dem Original (Stand in den Dateien):**
+
+| Abgleich | ✅ | ⚠️ | ❌ | sonst |
+|---|---:|---:|---:|---|
+| PARITAET_A Werkzeuge, Inspektor, Leinwand, Zeiger (126 Zeilen) | 123 | 1 | 2 | 0 ⏳ |
+| PARITAET_B Hauptmenüs (350 Zeilen, 9 Lagen, PM-7) | 276 | 20 | 25 | 29 ℹ️ |
+| PARITAET_B Dialoge (50, Feld für Feld, PM-5/PM-6) | 3 | 21 | 15 | 5 ⏳, 6 🔧 (umgesetzt, Nachmessung offen) |
+| PARITAET_B Bedienfeldmenüs ≡ (10) | 1 | 4 | 4 | 1 ❔ |
+
+Automatischer Gesamttest: Menüs 345/345, Kontextmenüs 283/283. BEFUNDE.md: 296 erledigt, 77 offen. Nutzerbefunde: 18 ✅, 2 🔧 (N01, N21), 2 ⚠️ (N22, N23), 1 ❌ (N11).
+
+**Was offen ist** (Reihenfolge nach der Pause, Einzelheiten in `docs\PLAN.md` §5):
+1. EB-2: Speichern unter ▸ Reduziertes PNG
+2. KT-1/KT-2: Kurven und Tonwertkorrektur neu nach `re\19`
+3. E1: Export-Dialog neu nach `re\18`
+4. BV-3: Bildvorschau Teil 3 (Datei, Exportbereich, Animation), dann BV-4
+5. DLG-4: Neues Symbol, gespeicherte Befehle
+6. MN-2: Menüfreigabe bei Pixelauswahl/Segment/Gruppe, Untermenü-Köpfe, Text ▸ Schrift
+7. P-DLG5–9: Dialoge D26–D50, gemerkte Werte in allen Filterdialogen
+8. danach E2/E3, KT-3, MN-3/MN-4, RAND-2, P-DESIGN (N11), P-PERF, P-TE2, P-NEUTRAL
+9. Abschluss Z: Gesamttest, Release, komplettes Durchklicken im echten Fenster (de/en, 3 Designs)
+
+Bekannte Grenzen: Datei-Dialoge erscheinen nicht mittig (nur mit `unsafe`), SWF/AI8 gestrichen, HTML-Teil nur funktional.
+
+**Wo was steht:**
+- `docs\PLAN.md`: Fahrplan
+- `docs\NACHPRUEFUNG.md`: Prüfungen im echten Fenster für den Nachtlauf
+- `docs\TESTLEITFADEN_2026-10-12.md`: Hands-on-Test für den Nutzer, alles seit 12.10. 04:00
+- `docs\NUTZERBEFUNDE.md`: Meldungen des Nutzers
+- `docs\PARITAET_A.md`/`PARITAET_B.md`: Abgleich mit dem Original
+- `docs\AGENTEN_REGELN.md`: Regeln für die Agenten
+
+Die Abschnitte darunter sind die Berichte je Crate und je Agent, unverändert.
+
+---
+
 Je Crate ein Abschnitt. Der zuständige Agent pflegt Stand, Messzahlen gegen die Referenzen und offene Punkte.
 
 ## Nacharbeiten für die Integrationsphase (vom Koordinator gesammelt)
