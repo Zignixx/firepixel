@@ -260,7 +260,8 @@ impl Layout {
         }
         let ctrl_off = 230f32.max(label_w + 10.0).ceil();
         let reset_w = 220f32.max(tw("dlg-pref-reset-warnings") + 16.0).ceil();
-        page_w = page_w.max(ctrl_off + cw).max(reset_w).max(super::text_w(ctx, &t("dlg-pref-cap-ui")) * 1.1);
+        // Kombifelder: bisher auf die Seitenbreite gekürzt (198 px); mehr Platz nur für längere Einträge
+        page_w = page_w.max(ctrl_off + if cw > 220.0 { cw } else { 198.0 }).max(reset_w).max(super::text_w(ctx, &t("dlg-pref-cap-ui")) * 1.1);
         let w = 640f32.max(12.0 + list_w + 16.0 + page_w + 14.0).ceil();
         // Seiten mit vielen Einträgen: Platz bis über die Knöpfe
         let h = 500f32.max(12.0 + page_h + 60.0).ceil();

@@ -80,7 +80,7 @@ pub fn show_export(ctx: &egui::Context, st: &mut AppState) {
     let names: Vec<String> = STYLES.iter().map(|s| t(s.0)).collect();
     let (style_l, file_l, slices_l, options_l, export_l, cancel_l) = (t("dlg-export-style"), t("dlg-export-file-name"), t("dlg-export-slices"), t("dlg-export-options"), t("dlg-export-button"), t("btn-cancel"));
     let pset = st.session.active().map(|x| fp_export::doc_export::page_settings(&x.doc, x.page));
-    let preset = pset.as_ref().map(|s| optimize::preset_index(s).map(|i| optimize::preset_label(&fp_export::options::builtin_presets()[i].name)).unwrap_or_else(|| optimize::settings_label(s))).unwrap_or_default();
+    let preset = pset.as_ref().map(|s| optimize::preset_index(s).map(|i| optimize::preset_label(fp_export::options::builtin_presets()[i].name)).unwrap_or_else(|| optimize::settings_label(s))).unwrap_or_default();
     let opt_text = fp_i18n::tr!("dlg-export-optimize", preset = preset.as_str());
     // Spalten wachsen mit den Texten (Deutsch: wie bisher)
     let dx = super::extra_w(ctx, &[&style_l, &file_l], 110.0 - 4.0);

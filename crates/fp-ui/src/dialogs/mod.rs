@@ -501,7 +501,8 @@ pub fn extra_w(ctx: &egui::Context, texts: &[&str], avail: f32) -> f32 {
     (max_text_w(ctx, texts) - avail).max(0.0).ceil()
 }
 
-/// Breite eines Kombifelds (Feld + Pfeil 22 px), damit der längste Eintrag ganz passt.
+/// Breite eines Kombifelds (Feld + Pfeil 22 px, wie `fields::combo` kürzt), damit der längste
+/// Eintrag ganz passt; passt er schon, bleibt die Mindestbreite (Deutsch: wie bisher).
 pub fn combo_fit_w(ctx: &egui::Context, items: &[&str], min: f32) -> f32 {
     min.max((max_text_w(ctx, items) + 26.0).ceil())
 }

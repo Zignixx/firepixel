@@ -5,6 +5,7 @@
 //! - kein Knopf und keine Beschriftung meldet einen Überlauf (`dialogs::take_overflows`),
 //! - kein Rohschlüssel ist sichtbar (Text = Schlüssel, z. B. `dlg-…`),
 //! - in Deutsch bleiben Wortlaut und Maße wie bisher.
+//!
 //! Gezeichnet werden nur die Dialoge (ohne Hauptfenster), damit dessen Texte nicht mitzählen.
 //! Wie alle Testläufe mit `FP_NO_SHELL_OPEN=1` starten (AGENTEN_REGELN §4a).
 

@@ -554,10 +554,7 @@ dlg-md-output-export = Exportieren
 dlg-md-output-fwpng = Als FW-PNG speichern
 dlg-md-batch-files = Zu verarbeitende Dateien
 dlg-md-batch-folder = Batch
-dlg-md-files-selected = { $n ->
-        [one] { $n } Datei ausgewählt.
-       *[other] { $n } Dateien ausgewählt.
-    }
+dlg-md-files-selected = { $n } Datei(en) ausgewählt.
 dlg-md-swap-symbol = Symbol austauschen
 dlg-md-no-symbols = Das Dokument enthält keine Symbole.
 dlg-md-new-button = Neue Schaltfläche
