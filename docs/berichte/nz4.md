@@ -3,7 +3,7 @@
 Slot s10. Das Original wurde nicht benutzt. Quellen: `docs\BEFUNDE.md`, `docs\berichte\dlg4.md`/`mn3.md`/`kv3.md`/`e2.md`,
 `re\08-export.md` §1.5, `re\18-export-dialoge.md` §4.2, `re\format\vocabulary.md` (nur gelesen).
 
-Commit: siehe Ende (ein Commit `NZ-4: …` auf main).
+Commits auf main: `08187d5` (alles), `a285413` (Zeilenenden von `fp-fwpng/src/write.rs` wieder CRLF, ein NUL-Byte im Kommentar korrigiert).
 
 ## Umgesetzt
 
