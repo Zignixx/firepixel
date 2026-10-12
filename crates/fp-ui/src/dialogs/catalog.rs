@@ -84,6 +84,14 @@ pub fn filter_form(cmd: &str, live: bool) -> Option<FormDialog> {
     if matches!(id, "19157" | "6525" | "19159" | "19160") {
         f = f.with_focus_ok();
     }
+    // Tab-Folge wie im Original (PM-6): D42 Schieber vor dem Feld und Vorschau vor OK, D46 erst die
+    // Felder, dann Vorschau und Schieber, D41 Schieber keine Tab-Stopps
+    match id {
+        "6074" => f = f.with_side_order(super::form::SideOrder::SlidersFirst),
+        "5972" => f = f.with_side_order(super::form::SideOrder::FieldsPreviewSliders),
+        "19110" => f = f.without_slider_tab_stops(),
+        _ => {}
+    }
     // zuletzt per OK bestätigte Werte, app-weit wie im Original (PM-6 D41/D42/D45–D50); Abbrechen
     // merkt nichts. Eigene Schlüssel (das Original legt sie nicht in seiner Voreinstellungsdatei ab).
     let remembered: &[(&str, &str)] = match id {
@@ -140,10 +148,10 @@ fn plain_form(st: &AppState, cmd: &str) -> Option<FormDialog> {
     let d = st.session.active();
     let f = match cmd {
         "select.feather" => FormDialog::new("5976", t("dlg-title-feather").as_str(), cmd, vec![Field::number("radius", t("dlg-lbl-radius").as_str(), 10.0, 1.0, 1000.0).unit("dlg-unit-pixels")]).with_prefs(&[("radius", "FeatherSelectionAmount")]).with_layout(super::marquee::LAYOUT),
-        "select.expandMarquee" => FormDialog::new("19105", t("dlg-title-expand-marquee").as_str(), cmd, vec![Field::number("amount", t("dlg-lbl-expand-by").as_str(), 10.0, 1.0, 100.0).unit("dlg-unit-pixels")]).with_prefs(&[("amount", "ExpandSelectionAmount")]).with_layout(super::marquee::LAYOUT),
-        "select.contractMarquee" => FormDialog::new("19106", t("dlg-title-contract-marquee").as_str(), cmd, vec![Field::number("amount", t("dlg-lbl-contract-by").as_str(), 10.0, 1.0, 100.0).unit("dlg-unit-pixels")]).with_prefs(&[("amount", "ContractSelectionAmount")]).with_layout(super::marquee::LAYOUT),
-        "select.borderMarquee" => FormDialog::new("19107", t("dlg-title-border-marquee").as_str(), cmd, vec![Field::number("amount", t("dlg-lbl-border-width").as_str(), 10.0, 1.0, 100.0).unit("dlg-unit-pixels")]).with_prefs(&[("amount", "BorderSelectionAmount")]).with_layout(super::marquee::LAYOUT),
-        "select.smoothMarquee" => FormDialog::new("19108", t("dlg-title-smooth-marquee").as_str(), cmd, vec![Field::number("amount", t("dlg-lbl-selection-radius").as_str(), 10.0, 1.0, 100.0).unit("dlg-unit-pixels")]).with_prefs(&[("amount", "SmoothSelectionAmount")]).with_layout(super::marquee::LAYOUT),
+        "select.expandMarquee" => FormDialog::new("19105", t("dlg-title-expand-marquee").as_str(), cmd, vec![Field::number("amount", t("dlg-lbl-expand-by").as_str(), 10.0, 1.0, 100.0).unit("dlg-unit-pixels").clamp_on_ok()]).with_prefs(&[("amount", "ExpandSelectionAmount")]).with_layout(super::marquee::LAYOUT),
+        "select.contractMarquee" => FormDialog::new("19106", t("dlg-title-contract-marquee").as_str(), cmd, vec![Field::number("amount", t("dlg-lbl-contract-by").as_str(), 10.0, 1.0, 100.0).unit("dlg-unit-pixels").clamp_on_ok()]).with_prefs(&[("amount", "ContractSelectionAmount")]).with_layout(super::marquee::LAYOUT),
+        "select.borderMarquee" => FormDialog::new("19107", t("dlg-title-border-marquee").as_str(), cmd, vec![Field::number("amount", t("dlg-lbl-border-width").as_str(), 10.0, 1.0, 100.0).unit("dlg-unit-pixels").clamp_on_ok()]).with_prefs(&[("amount", "BorderSelectionAmount")]).with_layout(super::marquee::LAYOUT),
+        "select.smoothMarquee" => FormDialog::new("19108", t("dlg-title-smooth-marquee").as_str(), cmd, vec![Field::number("amount", t("dlg-lbl-selection-radius").as_str(), 10.0, 1.0, 100.0).unit("dlg-unit-pixels").clamp_on_ok()]).with_prefs(&[("amount", "SmoothSelectionAmount")]).with_layout(super::marquee::LAYOUT),
         // Bitmap-Auswahl speichern/wiederherstellen/löschen: eigener Dialog in `bitmap_selection.rs` (KV-3)
         // Pfad-Dialoge mit Anordnung des Originals (DLG-7, PM-6 D29–D32): eigene Datei
         "modify.alterPath.simplify" => super::path_dialogs::simplify(cmd),

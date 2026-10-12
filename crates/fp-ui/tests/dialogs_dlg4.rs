@@ -86,7 +86,9 @@ fn d14_new_symbol_ok_opens_symbol_editing() {
     // Dialog wie „In Symbol konvertieren“: Name, Typ Grafik/Animation/Schaltfläche, 9-Slice
     assert_eq!(f.title, fp_i18n::t("dlg-title-convert-to-symbol"));
     let keys: Vec<&str> = f.fields.iter().map(|x| x.key.as_str()).collect();
-    assert_eq!(keys, ["name", "kind", "nineSlice"]);
+    // dazu „In allgemeiner Bibliothek speichern“ gesperrt wie im Original (FORM-1, nur Oberfläche)
+    assert_eq!(keys, ["name", "kind", "nineSlice", "_common"]);
+    assert!(f.fields[3].disabled);
     // Typ „Schaltfläche“ per Klick, dann Enter = OK
     let p = in_dialog(&h, Role::RadioButton, &fp_i18n::t("dlg-symbol-button"));
     click(&mut h, p);

@@ -676,6 +676,8 @@ pub fn show_numeric_transform(ctx: &egui::Context, st: &mut AppState) {
         if let Some(m) = fields::combo(ui, "nt-mode", Rect::from_min_size(dlu_rect(o, [8.0, 8.0, 120.0, 13.0]).min, vec2(mw, dlu(0.0, 13.0).y)), &refs(&modes), Some(d.mode), true) {
             d.mode = m;
         }
+        // Startfokus auf der Liste wie im Original (PM-6 D26); Pfeiltasten wählen
+        super::autofocus_widget(ui, egui::Id::new("nt-mode"));
         let frame = Rect::from_min_max(dlu_rect(o, [8.0, 26.0, 0.0, 0.0]).min, egui::pos2(o.x + frame_r, dlu_rect(o, [0.0, 68.0, 0.0, 0.0]).top()));
         ui.painter().rect_stroke(frame, 2.0, egui::Stroke::new(1.0, if theme.glow { theme.colors.line_dark } else { theme.colors.line_mid }), egui::StrokeKind::Inside);
         let row = |k: usize| dlu_rect(o, [0.0, 32.0 + k as f32 * 18.0, 0.0, 13.0]);

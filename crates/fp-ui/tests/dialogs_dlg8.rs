@@ -230,17 +230,19 @@ fn layout_like_original() {
     fp_i18n::set_language("de");
 }
 
-/// Grenzen: 19105–19108 1…100 (Original klemmt beim OK), Weiche Kante 1…1000; Vorgabe 10.
+/// Grenzen: 19105–19108 1…100 (Original klemmt erst beim OK, FORM-1: Feld zeigt bis dahin den
+/// getippten Wert, `form_form1` prüft das OK), Weiche Kante 1…1000 sofort; Vorgabe 10.
 #[test]
 fn limits_clamp() {
     let mut h = harness();
     for (cmd, key, _, _, _, max) in DIALOGS {
+        let on_ok = max == 100.0;
         open(&mut h, cmd);
         assert_eq!(form_value(&h, key).as_f64(), Some(10.0), "{cmd}: Vorgabe 10");
         type_field(&mut h, "5000");
-        assert_eq!(form_value(&h, key).as_f64(), Some(max), "{cmd}: oben geklemmt");
+        assert_eq!(form_value(&h, key).as_f64(), Some(if on_ok { 5000.0 } else { max }), "{cmd}: oben");
         type_field(&mut h, "0");
-        assert_eq!(form_value(&h, key).as_f64(), Some(1.0), "{cmd}: unten geklemmt");
+        assert_eq!(form_value(&h, key).as_f64(), Some(if on_ok { 0.0 } else { 1.0 }), "{cmd}: unten");
         close(&mut h);
     }
 }

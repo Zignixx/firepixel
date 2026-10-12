@@ -449,7 +449,8 @@ const VSLIDER_MARGIN: f32 = 1.0;
 #[allow(clippy::too_many_arguments)]
 pub fn slider_arrow_vertical(ui: &mut Ui, id: Id, r: Rect, value: f64, range: (f64, f64), scale: crate::inspector::scale::Scale, enabled: bool) -> Option<f64> {
     let t = Theme::current(ui.ctx());
-    let resp = ui.interact(r, id, if enabled { Sense::click() } else { Sense::hover() });
+    // wie im Original kein Tab-Stopp (PM-6 D30: Breite › Ecken), nur per Maus bedienbar
+    let resp = ui.interact(r, id, if enabled { Sense::CLICK } else { Sense::hover() });
     audit(ui, "field", "", r, r, 0);
     let c = t.colors.clone();
     if resp.hovered() && enabled {
@@ -509,7 +510,7 @@ pub fn slider_arrow_vertical(ui: &mut Ui, id: Id, r: Rect, value: f64, range: (f
 #[allow(clippy::too_many_arguments)]
 pub fn slider_arrow_scaled(ui: &mut Ui, id: Id, r: Rect, value: f64, range: (f64, f64), decimals: usize, scale: crate::inspector::scale::Scale, enabled: bool) -> Option<f64> {
     let t = Theme::current(ui.ctx());
-    let resp = ui.interact(r, id, if enabled { Sense::click() } else { Sense::hover() });
+    let resp = ui.interact(r, id, if enabled { Sense::CLICK } else { Sense::hover() });
     audit(ui, "field", "", r, r, 0);
     let c = &t.colors;
     if resp.hovered() && enabled {
@@ -595,6 +596,44 @@ pub fn combo(ui: &mut Ui, id: impl Hash + std::fmt::Debug, r: Rect, items: &[&st
     let mut out = None;
     let t = Theme::current(ui.ctx());
     audit_combo_items(ui, r, items);
+    // per Tab bzw. Startfokus fokussiert (Original D26): Pfeiltasten wählen den vorigen/nächsten
+    // Eintrag ohne Umlauf (Trenner übersprungen), wie ein geschlossenes Windows-Kombifeld
+    if enabled && ui.memory(|m| m.has_focus(id)) && !egui::Popup::is_id_open(ui.ctx(), egui::Popup::default_response_id(&resp)) {
+        ui.memory_mut(|m| m.set_focus_lock_filter(id, egui::EventFilter { horizontal_arrows: true, vertical_arrows: true, tab: false, escape: false }));
+        if ui.ctx().memory(|m| m.top_modal_layer()) == Some(ui.layer_id()) {
+            ui.painter().rect_stroke(r.shrink(2.0), 0.0, Stroke::new(1.0, t.colors.focus), StrokeKind::Inside);
+        }
+        let step = ui.input_mut(|i| {
+            let mut s = 0i32;
+            for (key, d) in [(egui::Key::ArrowDown, 1), (egui::Key::ArrowRight, 1), (egui::Key::ArrowUp, -1), (egui::Key::ArrowLeft, -1)] {
+                if i.consume_key(egui::Modifiers::NONE, key) {
+                    s += d;
+                }
+            }
+            s
+        });
+        if step != 0 {
+            let mut k = selected.map(|s| s as i32).unwrap_or(-1);
+            let mut moved = None;
+            for _ in 0..items.len() {
+                k += step.signum();
+                if k < 0 {
+                    break;
+                }
+                match items.get(k as usize) {
+                    Some(s) if is_separator(s) => continue,
+                    Some(_) => {
+                        moved = Some(k as usize);
+                        break;
+                    }
+                    None => break,
+                }
+            }
+            if let Some(n) = moved.filter(|n| Some(*n) != selected) {
+                out = Some(n);
+            }
+        }
+    }
     egui::Popup::menu(&resp).frame(crate::menu::menu_frame(&t)).width(r.width().max(60.0)).show(|ui| {
         ui.spacing_mut().item_spacing = vec2(0.0, 0.0);
         egui::ScrollArea::vertical().max_height(360.0).show(ui, |ui| {

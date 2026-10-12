@@ -65,6 +65,13 @@ pub struct Field {
     /// Kästchen in der Knopfspalte rechts statt links bei den Feldern ([`FormDialog::with_side_buttons`],
     /// z. B. „Kolorieren“ unter Abbrechen).
     pub side: bool,
+    /// Gesperrt (grau, kein Tab-Stopp, Klick ohne Wirkung), z. B. „In allgemeiner Bibliothek
+    /// speichern“ in „Neues Symbol“ (PARITAET_B D14).
+    pub disabled: bool,
+    /// Zahlenfeld, das wie im Original erst **beim OK** auf den Bereich geklemmt wird: das Feld wird
+    /// korrigiert und der Dialog bleibt offen (Vorlagen 19105–19108, re\11 §3.5.5). Bis dahin zeigt
+    /// es den getippten Wert.
+    pub clamp_ok: bool,
 }
 
 /// Bildchen der Symbolknöpfe (selbst gezeichnet).
@@ -119,11 +126,11 @@ pub(crate) fn paint_pict(p: &egui::Painter, r: Rect, k: Pict, col: egui::Color32
 impl Field {
     /// Zahlenfeld.
     pub fn number(key: &str, label: &str, value: f64, min: f64, max: f64) -> Field {
-        Field { key: key.into(), label: label.into(), kind: FieldKind::Number { min, max, decimals: 0, slider: false, unit: "" }, value: json!(value), choice_values: None, error: false, scale: None, popup: false, icons: None, pref_codes: None, vertical: false, dot: false, side: false }
+        Field { key: key.into(), label: label.into(), kind: FieldKind::Number { min, max, decimals: 0, slider: false, unit: "" }, value: json!(value), choice_values: None, error: false, scale: None, popup: false, icons: None, pref_codes: None, vertical: false, dot: false, side: false, disabled: false, clamp_ok: false }
     }
     /// Zahlenfeld mit Schieber.
     pub fn slider(key: &str, label: &str, value: f64, min: f64, max: f64) -> Field {
-        Field { key: key.into(), label: label.into(), kind: FieldKind::Number { min, max, decimals: 0, slider: true, unit: "" }, value: json!(value), choice_values: None, error: false, scale: None, popup: false, icons: None, pref_codes: None, vertical: false, dot: false, side: false }
+        Field { key: key.into(), label: label.into(), kind: FieldKind::Number { min, max, decimals: 0, slider: true, unit: "" }, value: json!(value), choice_values: None, error: false, scale: None, popup: false, icons: None, pref_codes: None, vertical: false, dot: false, side: false, disabled: false, clamp_ok: false }
     }
     /// Nachkommastellen setzen.
     pub fn decimals(mut self, d: usize) -> Field {
@@ -162,6 +169,28 @@ impl Field {
         self.side = true;
         self
     }
+    /// Gesperrt (siehe [`Field::disabled`]).
+    pub fn disabled(mut self) -> Field {
+        self.disabled = true;
+        self
+    }
+    /// Erst beim OK klemmen (siehe [`Field::clamp_ok`]).
+    pub fn clamp_on_ok(mut self) -> Field {
+        self.clamp_ok = true;
+        self
+    }
+    /// Liegt der Wert außerhalb des Bereichs, wird er geklemmt; liefert `true`, wenn sich etwas
+    /// geändert hat (OK-Prüfung von [`Field::clamp_ok`]).
+    pub fn clamp_now(&mut self) -> bool {
+        let FieldKind::Number { min, max, .. } = self.kind else { return false };
+        let Some(v) = self.value.as_f64() else { return false };
+        let c = fields::clamp_range(v, (min, max));
+        if c == v {
+            return false;
+        }
+        self.value = json!(c);
+        true
+    }
     /// Popup-Schieber ▾ neben dem Feld statt fester Leiste.
     pub fn popup(mut self) -> Field {
         if let FieldKind::Number { slider, .. } = &mut self.kind {
@@ -187,39 +216,39 @@ impl Field {
     }
     /// Kontrollkästchen.
     pub fn check(key: &str, label: &str, value: bool) -> Field {
-        Field { key: key.into(), label: label.into(), kind: FieldKind::Check, value: json!(value), choice_values: None, error: false, scale: None, popup: false, icons: None, pref_codes: None, vertical: false, dot: false, side: false }
+        Field { key: key.into(), label: label.into(), kind: FieldKind::Check, value: json!(value), choice_values: None, error: false, scale: None, popup: false, icons: None, pref_codes: None, vertical: false, dot: false, side: false, disabled: false, clamp_ok: false }
     }
     /// Auswahlliste mit Index als Wert.
     pub fn choice(key: &str, label: &str, items: &[&str], index: usize) -> Field {
-        Field { key: key.into(), label: label.into(), kind: FieldKind::Choice(items.iter().map(|s| s.to_string()).collect()), value: json!(index), choice_values: None, error: false, scale: None, popup: false, icons: None, pref_codes: None, vertical: false, dot: false, side: false }
+        Field { key: key.into(), label: label.into(), kind: FieldKind::Choice(items.iter().map(|s| s.to_string()).collect()), value: json!(index), choice_values: None, error: false, scale: None, popup: false, icons: None, pref_codes: None, vertical: false, dot: false, side: false, disabled: false, clamp_ok: false }
     }
     /// Auswahlliste mit eigenen Werten.
     pub fn choice_of(key: &str, label: &str, items: &[&str], values: Vec<Value>, index: usize) -> Field {
-        Field { key: key.into(), label: label.into(), kind: FieldKind::Choice(items.iter().map(|s| s.to_string()).collect()), value: json!(index), choice_values: Some(values), error: false, scale: None, popup: false, icons: None, pref_codes: None, vertical: false, dot: false, side: false }
+        Field { key: key.into(), label: label.into(), kind: FieldKind::Choice(items.iter().map(|s| s.to_string()).collect()), value: json!(index), choice_values: Some(values), error: false, scale: None, popup: false, icons: None, pref_codes: None, vertical: false, dot: false, side: false, disabled: false, clamp_ok: false }
     }
     /// Optionsfelder mit eigenen Werten.
     pub fn radio_of(key: &str, label: &str, items: &[&str], values: Vec<Value>, index: usize) -> Field {
-        Field { key: key.into(), label: label.into(), kind: FieldKind::Radio(items.iter().map(|s| s.to_string()).collect()), value: json!(index), choice_values: Some(values), error: false, scale: None, popup: false, icons: None, pref_codes: None, vertical: false, dot: false, side: false }
+        Field { key: key.into(), label: label.into(), kind: FieldKind::Radio(items.iter().map(|s| s.to_string()).collect()), value: json!(index), choice_values: Some(values), error: false, scale: None, popup: false, icons: None, pref_codes: None, vertical: false, dot: false, side: false, disabled: false, clamp_ok: false }
     }
     /// Textfeld.
     pub fn text(key: &str, label: &str, value: &str) -> Field {
-        Field { key: key.into(), label: label.into(), kind: FieldKind::Text { multiline: false }, value: json!(value), choice_values: None, error: false, scale: None, popup: false, icons: None, pref_codes: None, vertical: false, dot: false, side: false }
+        Field { key: key.into(), label: label.into(), kind: FieldKind::Text { multiline: false }, value: json!(value), choice_values: None, error: false, scale: None, popup: false, icons: None, pref_codes: None, vertical: false, dot: false, side: false, disabled: false, clamp_ok: false }
     }
     /// Mehrzeiliges Textfeld.
     pub fn multiline(key: &str, label: &str, value: &str) -> Field {
-        Field { key: key.into(), label: label.into(), kind: FieldKind::Text { multiline: true }, value: json!(value), choice_values: None, error: false, scale: None, popup: false, icons: None, pref_codes: None, vertical: false, dot: false, side: false }
+        Field { key: key.into(), label: label.into(), kind: FieldKind::Text { multiline: true }, value: json!(value), choice_values: None, error: false, scale: None, popup: false, icons: None, pref_codes: None, vertical: false, dot: false, side: false, disabled: false, clamp_ok: false }
     }
     /// Farbfeld.
     pub fn color(key: &str, label: &str, hex: &str) -> Field {
-        Field { key: key.into(), label: label.into(), kind: FieldKind::Color, value: json!(hex), choice_values: None, error: false, scale: None, popup: false, icons: None, pref_codes: None, vertical: false, dot: false, side: false }
+        Field { key: key.into(), label: label.into(), kind: FieldKind::Color, value: json!(hex), choice_values: None, error: false, scale: None, popup: false, icons: None, pref_codes: None, vertical: false, dot: false, side: false, disabled: false, clamp_ok: false }
     }
     /// Überschrift.
     pub fn caption(label: &str) -> Field {
-        Field { key: "_caption".into(), label: label.into(), kind: FieldKind::Caption, value: Value::Null, choice_values: None, error: false, scale: None, popup: false, icons: None, pref_codes: None, vertical: false, dot: false, side: false }
+        Field { key: "_caption".into(), label: label.into(), kind: FieldKind::Caption, value: Value::Null, choice_values: None, error: false, scale: None, popup: false, icons: None, pref_codes: None, vertical: false, dot: false, side: false, disabled: false, clamp_ok: false }
     }
     /// Hinweis.
     pub fn note(label: &str) -> Field {
-        Field { key: "_note".into(), label: label.into(), kind: FieldKind::Note, value: Value::Null, choice_values: None, error: false, scale: None, popup: false, icons: None, pref_codes: None, vertical: false, dot: false, side: false }
+        Field { key: "_note".into(), label: label.into(), kind: FieldKind::Note, value: Value::Null, choice_values: None, error: false, scale: None, popup: false, icons: None, pref_codes: None, vertical: false, dot: false, side: false, disabled: false, clamp_ok: false }
     }
 
     /// Wert für den Befehl.
@@ -240,7 +269,7 @@ impl Field {
         let FieldKind::Number { min, max, decimals, .. } = self.kind else { return false };
         match fields::parse_num(text) {
             Some(v) => {
-                let v = fields::clamp_range(v, (min, max));
+                let v = if self.clamp_ok { v } else { fields::clamp_range(v, (min, max)) };
                 let p = 10f64.powi(decimals as i32);
                 self.value = json!((v * p).round() / p);
                 self.error = false;
@@ -311,6 +340,13 @@ pub struct FormDialog {
     pub custom: Option<CustomLayout>,
     /// Anordnung der Filterdialoge des Originals ([`FormDialog::with_side_buttons`]).
     pub side: bool,
+    /// Tab-Folge der Filteranordnung ([`SideOrder`]).
+    pub side_order: SideOrder,
+    /// Schieberleisten der Filteranordnung sind Tab-Stopps (Original D42/D46; D41 nicht).
+    pub slider_tabs: bool,
+    /// Nur während des Zeichnens: OK/Abbrechen hat die eigene Anordnung schon selbst an ihrer Stelle
+    /// der Tab-Folge gezeichnet ([`ok_cancel`]); `Some(Some(true))` = OK gedrückt.
+    pub pressed: Option<Option<bool>>,
 }
 
 /// Eigene Anordnung eines Formulars (Felder an den Stellen der Vorlage, z. B. Raster bearbeiten,
@@ -324,6 +360,33 @@ pub struct CustomLayout {
     pub draw: fn(&mut Ui, &AppState, &mut FormDialog, Rect) -> (bool, [Rect; 2]),
 }
 
+/// Entspricht der Wert eines Listeneintrags dem gemerkten Wert? Zahlen werden als Zahl, Texte als
+/// Text, Wahrheitswerte als Wahrheitswert verglichen.
+fn pref_matches(v: &Value, pv: &fp_engine::prefs::PrefValue) -> bool {
+    use fp_engine::prefs::PrefValue;
+    match v {
+        Value::Number(n) => !matches!(pv, PrefValue::Bool(_)) && n.as_f64().is_some_and(|a| pv.as_real() == Some(a)),
+        Value::String(s) => matches!(pv, PrefValue::Str(p) if p == s),
+        Value::Bool(b) => matches!(pv, PrefValue::Bool(p) if p == b),
+        _ => false,
+    }
+}
+
+/// Reihenfolge der Bedienelemente (Tab-Folge) in der Filteranordnung
+/// ([`FormDialog::with_side_buttons`]), je Vorlage wie im Original gemessen (PARITAET_B §2).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum SideOrder {
+    /// Je Zeile Feld, dann Schieber; OK › Abbrechen › Kästchen der Knopfspalte › Vorschau
+    /// (D41 Farbton/Sättigung).
+    #[default]
+    FieldsFirst,
+    /// Je Zeile Schieber, dann Feld; Vorschau › OK › Abbrechen (D42 Helligkeit/Kontrast,
+    /// Startfokus Schieber).
+    SlidersFirst,
+    /// Alle Felder › Vorschau › alle Schieber › OK › Abbrechen (D46 Unscharf maskieren).
+    FieldsPreviewSliders,
+}
+
 /// Pseudo-Feldschlüssel des Kästchens „Vorschau“ in [`FormDialog::with_prefs`]
 /// (z. B. `MotionBlurShowPreview`).
 pub const PREVIEW_FIELD: &str = "_preview";
@@ -331,7 +394,17 @@ pub const PREVIEW_FIELD: &str = "_preview";
 impl FormDialog {
     /// Neuer Dialog.
     pub fn new(id: &str, title: &str, command: &str, fields: Vec<Field>) -> FormDialog {
-        FormDialog { id: id.into(), title: title.into(), fields, command: command.into(), base: json!({}), preview: false, preview_on: false, applied: None, applied_params: None, applied_doc: None, stale: None, width: 340.0, transform: None, prefs: Vec::new(), store_hook: None, focus_ok: false, initial: None, custom: None, side: false }
+        FormDialog { id: id.into(), title: title.into(), fields, command: command.into(), base: json!({}), preview: false, preview_on: false, applied: None, applied_params: None, applied_doc: None, stale: None, width: 340.0, transform: None, prefs: Vec::new(), store_hook: None, focus_ok: false, initial: None, custom: None, side: false, side_order: SideOrder::FieldsFirst, slider_tabs: true, pressed: None }
+    }
+    /// Tab-Folge der Filteranordnung (siehe [`SideOrder`]).
+    pub fn with_side_order(mut self, o: SideOrder) -> FormDialog {
+        self.side_order = o;
+        self
+    }
+    /// Schieberleisten der Filteranordnung sind keine Tab-Stopps (Original D41: „Tab nur Felder“).
+    pub fn without_slider_tab_stops(mut self) -> FormDialog {
+        self.slider_tabs = false;
+        self
     }
     /// Startfokus auf OK (Original: Exportassistent, HTML-Einrichtung, Selektives JPEG,
     /// Rechtschreibung einrichten).
@@ -402,7 +475,9 @@ impl FormDialog {
                     let idx = match (&f.pref_codes, &f.choice_values) {
                         (Some(codes), _) => pv.as_int().and_then(|c| codes.iter().position(|x| *x == c)),
                         (None, vals) => match vals {
-                        Some(vals) => vals.iter().position(|v| v.as_i64() == pv.as_int() || v.as_str().map(|s| s.to_string()) == pv.as_str()),
+                        // Zahl mit Zahl, Text mit Text vergleichen (vorher war bei Text-Werten
+                        // `None == None` wahr und es blieb immer Eintrag 0, Befund DLG-7)
+                        Some(vals) => vals.iter().position(|v| pref_matches(v, &pv)),
                         None => pv.as_int().map(|i| i as usize),
                         },
                     };
@@ -750,7 +825,7 @@ pub fn draw_fields(ui: &mut Ui, st: &AppState, d: &mut FormDialog, area: Rect) -
             }
             FieldKind::Check => {
                 let on = f.value.as_bool().unwrap_or(false);
-                if let Some(b) = fields::checkbox(ui, id, Rect::from_min_size(pos2(x0, y + 2.0), vec2(area.width() - 28.0, 16.0)), &f.label, on, true) {
+                if let Some(b) = fields::checkbox(ui, id, Rect::from_min_size(pos2(x0, y + 2.0), vec2(area.width() - 28.0, 16.0)), &f.label, on, !f.disabled) {
                     f.value = json!(b);
                     changed = true;
                 }
@@ -944,36 +1019,138 @@ impl FormDialog {
     }
 }
 
-/// Felder der Filteranordnung im Gruppenrahmen; liefert „geändert“. Je Schieberzeile zuerst das
-/// Feld (Startfokus und Tab-Folge wie im Original: Felder vor den Knöpfen), dann die Leiste.
-pub fn draw_side_fields(ui: &mut Ui, d: &mut FormDialog, body: Rect) -> bool {
+/// Ein Bedienelement der Filteranordnung an seiner Stelle der Tab-Folge.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum SideStop {
+    /// Zahlenfeld (mit Einheit und ggf. ▾) der Zeile `i`.
+    Field(usize),
+    /// Schieberleiste der Zeile `i`.
+    Slider(usize),
+    /// Kästchen im Gruppenrahmen.
+    Check(usize),
+    Ok,
+    Cancel,
+    /// Kästchen der Knopfspalte (z. B. „Kolorieren“).
+    Column,
+    Preview,
+}
+
+/// Tab-Folge der Filteranordnung nach [`FormDialog::side_order`]. egui führt den Fokus in der
+/// Reihenfolge, in der die Bedienelemente angelegt werden; gezeichnet wird deshalb in dieser Folge.
+fn side_stops(d: &FormDialog, rows: &[Option<(f32, f32)>]) -> Vec<SideStop> {
+    use SideStop::*;
+    let (mut v, mut sliders) = (Vec::new(), Vec::new());
+    for (i, f) in d.fields.iter().enumerate() {
+        if !matches!(rows.get(i), Some(Some(_))) {
+            continue;
+        }
+        match &f.kind {
+            FieldKind::Number { slider: true, .. } => match d.side_order {
+                SideOrder::FieldsFirst => v.extend([Field(i), Slider(i)]),
+                SideOrder::SlidersFirst => v.extend([Slider(i), Field(i)]),
+                SideOrder::FieldsPreviewSliders => {
+                    v.push(Field(i));
+                    sliders.push(Slider(i));
+                }
+            },
+            FieldKind::Number { .. } => v.push(Field(i)),
+            FieldKind::Check => v.push(Check(i)),
+            _ => {}
+        }
+    }
+    match d.side_order {
+        SideOrder::FieldsFirst => v.extend([Ok, Cancel, Column, Preview]),
+        SideOrder::SlidersFirst => v.extend([Column, Preview, Ok, Cancel]),
+        SideOrder::FieldsPreviewSliders => {
+            v.extend([Column, Preview]);
+            v.extend(sliders);
+            v.extend([Ok, Cancel]);
+        }
+    }
+    v
+}
+
+/// Filteranordnung ([`FormDialog::with_side_buttons`]): Felder im Gruppenrahmen, OK/Abbrechen
+/// rechts oben, Kästchen der Knopfspalte und „Vorschau“ rechts unten (bündig mit dem Rahmen); alle
+/// Bedienelemente in der Tab-Folge des Originals ([`SideOrder`]). Liefert „geändert“ und den
+/// gedrückten Knopf (`Some(true)` = OK).
+fn draw_side(ui: &mut Ui, d: &mut FormDialog, body: Rect, id: &str) -> (bool, Option<bool>) {
     let theme = Theme::current(ui.ctx());
-    let c = &theme.colors;
+    let c = theme.colors.clone();
     let sl = d.side_layout(ui.ctx());
     let group = sl.group.translate(body.min.to_vec2());
     ui.painter().rect_stroke(group, 2.0, Stroke::new(1.0, if theme.glow { c.line_dark } else { c.line_mid }), StrokeKind::Inside);
     let x0 = group.left() + SIDE_PAD;
     let right = group.right() - SIDE_PAD;
     let dlg_id = d.id.clone();
-    let mut changed = false;
-    for (i, f) in d.fields.iter_mut().enumerate() {
-        let Some(Some((top, _))) = sl.rows.get(i).copied() else { continue };
+    let ctx = ui.ctx().clone();
+    let slider_tabs = d.slider_tabs;
+    // Lage je Zeile: Feld, Schieber (bei Schieberzeilen), Kästchen
+    let geom = |d: &FormDialog, i: usize| -> Option<(Rect, Option<Rect>)> {
+        let Some(Some((top, _))) = sl.rows.get(i).copied() else { return None };
         let y = group.top() + top;
+        let f = &d.fields[i];
         match &f.kind {
-            FieldKind::Number { min, max, decimals, slider: true, unit } => {
-                let (min, max, decimals, unit) = (*min, *max, *decimals, *unit);
-                let uw = if unit.is_empty() { 0.0 } else { 6.0 + super::text_w(ui.ctx(), &unit_text(unit)) };
-                super::fit_label(ui, Rect::from_min_size(pos2(x0, y), vec2(right - x0, 16.0)), &f.label, true);
+            FieldKind::Number { slider: true, unit, .. } => {
+                let uw = if unit.is_empty() { 0.0 } else { 6.0 + super::text_w(&ctx, &unit_text(unit)) };
                 let er = Rect::from_min_size(pos2(right - uw - SIDE_FIELD_W, y + 18.0), vec2(SIDE_FIELD_W, 20.0));
-                changed |= number_input(ui, &dlg_id, i, f, er, true);
-                if !unit.is_empty() {
-                    ui.painter().text(pos2(er.right() + 6.0, er.center().y), Align2::LEFT_CENTER, unit_text(unit), theme.ui_font(), c.text);
+                Some((er, Some(Rect::from_min_max(pos2(x0, y + 19.0), pos2(er.left() - 8.0, y + 37.0)))))
+            }
+            FieldKind::Number { .. } => Some((Rect::from_min_size(pos2(x0 + sl.label_w + 6.0, y), vec2(50.0, 20.0)), None)),
+            FieldKind::Check => Some((Rect::from_min_size(pos2(x0, y + 2.0), vec2(right - x0, 16.0)), None)),
+            _ => None,
+        }
+    };
+    // Beschriftungen und Einheiten (nicht bedienbar, Reihenfolge egal)
+    for i in 0..d.fields.len() {
+        let Some((er, slider)) = geom(d, i) else { continue };
+        let f = &d.fields[i];
+        let FieldKind::Number { unit, .. } = &f.kind else { continue };
+        if slider.is_some() {
+            super::fit_label(ui, Rect::from_min_size(pos2(x0, er.top() - 18.0), vec2(right - x0, 16.0)), &f.label, true);
+        } else {
+            super::fit_label(ui, Rect::from_min_size(pos2(x0, er.top() + 2.0), vec2(sl.label_w, 16.0)), &f.label, true);
+        }
+        if !unit.is_empty() {
+            let ux = if slider.is_none() && f.popup { er.right() + 15.0 } else { er.right() };
+            ui.painter().text(pos2(ux + 6.0, er.center().y), Align2::LEFT_CENTER, unit_text(unit), theme.ui_font(), c.text);
+        }
+    }
+    // Knopfspalte
+    let bx = body.left() + sl.col_x;
+    let by = body.top() + SIDE_M;
+    let buttons = [Rect::from_min_size(pos2(bx, by), vec2(sl.button_w, 23.0)), Rect::from_min_size(pos2(bx, by + 29.0), vec2(sl.button_w, 23.0))];
+    let col_w = body.right() - SIDE_M - bx;
+    let col: Vec<usize> = d.fields.iter().enumerate().filter(|(_, f)| f.side && f.kind == FieldKind::Check).map(|(i, _)| i).collect();
+    let col_top = body.top() + sl.group.bottom() - (col.len() + usize::from(d.preview)) as f32 * SIDE_CHECK_ROW + 3.0;
+    let valid = d.valid();
+    let (ok_l, cancel_l) = (t("btn-ok"), t("btn-cancel"));
+    let (mut changed, mut result) = (false, None);
+    for stop in side_stops(d, &sl.rows) {
+        match stop {
+            SideStop::Field(i) => {
+                let Some((er, _)) = geom(d, i) else { continue };
+                changed |= number_input(ui, &dlg_id, i, &mut d.fields[i], er, true);
+            }
+            SideStop::Slider(i) => {
+                let Some((_, Some(sr))) = geom(d, i) else { continue };
+                let f = &mut d.fields[i];
+                let FieldKind::Number { min, max, decimals, .. } = f.kind else { continue };
+                // keine Tab-Stopps (D41): erreicht Tab die Leiste, geht der Fokus weiter
+                let skip = egui::Id::new((dlg_id.as_str(), i, "fp-slider-tab"));
+                if !slider_tabs {
+                    super::skip_tab_stop_before(ui, skip);
                 }
-                let sr = Rect::from_min_max(pos2(x0, y + 19.0), pos2(er.left() - 8.0, y + 37.0));
                 let mut val = f.value.as_f64().unwrap_or(min);
                 let mut child = ui.new_child(egui::UiBuilder::new().max_rect(sr));
                 child.spacing_mut().slider_width = sr.width() - 8.0;
                 let r = crate::inspector::scale::slider(&mut child, &mut val, (min, max), f.effective_scale());
+                if slider_tabs {
+                    // erstes Bedienelement (D42): Startfokus auf der Leiste
+                    super::autofocus_widget(&child, r.id);
+                } else {
+                    super::skip_tab_stop_after(ui, skip, &r);
+                }
                 if r.changed() {
                     let p = 10f64.powi(decimals as i32);
                     f.value = json!((val * p).round() / p);
@@ -981,63 +1158,62 @@ pub fn draw_side_fields(ui: &mut Ui, d: &mut FormDialog, body: Rect) -> bool {
                     changed = true;
                 }
             }
-            FieldKind::Number { unit, .. } => {
-                let unit = *unit;
-                super::fit_label(ui, Rect::from_min_size(pos2(x0, y + 2.0), vec2(sl.label_w, 16.0)), &f.label, true);
-                let er = Rect::from_min_size(pos2(x0 + sl.label_w + 6.0, y), vec2(50.0, 20.0));
-                changed |= number_input(ui, &dlg_id, i, f, er, true);
-                if !unit.is_empty() {
-                    let ux = if f.popup { er.right() + 15.0 } else { er.right() };
-                    ui.painter().text(pos2(ux + 6.0, er.center().y), Align2::LEFT_CENTER, unit_text(unit), theme.ui_font(), c.text);
-                }
-            }
-            FieldKind::Check => {
-                let on = f.value.as_bool().unwrap_or(false);
-                if let Some(b) = fields::checkbox(ui, (dlg_id.as_str(), i), Rect::from_min_size(pos2(x0, y + 2.0), vec2(right - x0, 16.0)), &f.label, on, true) {
+            SideStop::Check(i) => {
+                let Some((cr, _)) = geom(d, i) else { continue };
+                let f = &mut d.fields[i];
+                if let Some(b) = fields::checkbox(ui, (dlg_id.as_str(), i), cr, &f.label, f.value.as_bool().unwrap_or(false), !f.disabled) {
                     f.value = json!(b);
                     changed = true;
                 }
             }
-            _ => {}
+            SideStop::Ok => {
+                if push_button(ui, buttons[0], &ok_l, true, valid) {
+                    result = Some(true);
+                }
+            }
+            SideStop::Cancel => {
+                if push_button(ui, buttons[1], &cancel_l, false, true) {
+                    result = Some(false);
+                }
+            }
+            SideStop::Column => {
+                for (k, &i) in col.iter().enumerate() {
+                    let f = &mut d.fields[i];
+                    let r = Rect::from_min_size(pos2(bx, col_top + k as f32 * SIDE_CHECK_ROW), vec2(col_w, 16.0));
+                    if let Some(b) = fields::checkbox(ui, (dlg_id.as_str(), i), r, &f.label, f.value.as_bool().unwrap_or(false), !f.disabled) {
+                        f.value = json!(b);
+                        changed = true;
+                    }
+                }
+            }
+            SideStop::Preview => {
+                let r = Rect::from_min_size(pos2(bx, col_top + col.len() as f32 * SIDE_CHECK_ROW), vec2(col_w, 16.0));
+                if d.preview
+                    && let Some(b) = fields::checkbox(ui, (id, "preview"), r, &t("dlg-preview"), d.preview_on, true)
+                {
+                    d.preview_on = b;
+                    changed = true;
+                }
+            }
         }
     }
-    changed
+    (changed, result)
 }
 
-/// Rechtecke von OK und Abbrechen in der Knopfspalte.
-pub fn side_buttons(ctx: &egui::Context, d: &FormDialog, body: Rect) -> [Rect; 2] {
-    let sl = d.side_layout(ctx);
-    let x = body.left() + sl.col_x;
-    let y = body.top() + SIDE_M;
-    [Rect::from_min_size(pos2(x, y), vec2(sl.button_w, 23.0)), Rect::from_min_size(pos2(x, y + 29.0), vec2(sl.button_w, 23.0))]
-}
-
-/// Kästchen der Knopfspalte und „Vorschau“ (unten bündig mit dem Gruppenrahmen); nach den Knöpfen
-/// zeichnen (Tab-Folge OK › Abbrechen › Kolorieren › Vorschau wie im Original). Liefert „geändert“.
-pub fn draw_side_column(ui: &mut Ui, d: &mut FormDialog, body: Rect, id: &str) -> bool {
-    let sl = d.side_layout(ui.ctx());
-    let x = body.left() + sl.col_x;
-    let w = body.right() - SIDE_M - x;
-    let side: Vec<usize> = d.fields.iter().enumerate().filter(|(_, f)| f.side && f.kind == FieldKind::Check).map(|(i, _)| i).collect();
-    let n = side.len() + usize::from(d.preview);
-    let mut y = body.top() + sl.group.bottom() - n as f32 * SIDE_CHECK_ROW + 3.0;
-    let mut changed = false;
-    for i in side {
-        let f = &mut d.fields[i];
-        let on = f.value.as_bool().unwrap_or(false);
-        if let Some(b) = fields::checkbox(ui, (d.id.as_str(), i), Rect::from_min_size(pos2(x, y), vec2(w, 16.0)), &f.label, on, true) {
-            f.value = json!(b);
-            changed = true;
-        }
-        y += SIDE_CHECK_ROW;
+/// OK und Abbrechen eines Formulars an den Rechtecken `rects` zeichnen – für eigene Anordnungen
+/// ([`CustomLayout`]), deren Vorlage die Knöpfe in der Tab-Folge vor bzw. zwischen den Feldern führt
+/// (D27 Name › Typ › OK › Abbrechen › Kästchen, D28 OK › Abbrechen › Felder). Ohne diesen Aufruf
+/// zeichnet [`show_form`] die Knöpfe nach den Feldern.
+pub fn ok_cancel(ui: &mut Ui, d: &mut FormDialog, rects: [Rect; 2]) {
+    let valid = d.valid();
+    let mut r = None;
+    if push_button(ui, rects[0], &t("btn-ok"), true, valid) {
+        r = Some(true);
     }
-    if d.preview
-        && let Some(b) = fields::checkbox(ui, (id, "preview"), Rect::from_min_size(pos2(x, y), vec2(w, 16.0)), &t("dlg-preview"), d.preview_on, true)
-    {
-        d.preview_on = b;
-        changed = true;
+    if push_button(ui, rects[1], &t("btn-cancel"), false, true) {
+        r = Some(false);
     }
-    changed
+    d.pressed = Some(r);
 }
 
 /// Zahlenfeld `i` eines Formulars im Rechteck `er`, mit Popup-Schieber ▾ direkt rechts daneben
@@ -1096,14 +1272,28 @@ pub fn show_form(ctx: &egui::Context, st: &mut AppState, d: &mut FormDialog) -> 
         if d.focus_ok {
             super::autofocus_default_button(ui);
         }
+        if side {
+            // Felder, Knöpfe und Kästchen in der Tab-Folge des Originals
+            let (ch, res) = draw_side(ui, d, body, &id);
+            changed = ch;
+            result = res;
+            let _ = ui.allocate_rect(body, Sense::hover());
+            return;
+        }
+        d.pressed = None;
         let custom = d.custom.map(|l| (l.draw)(ui, st, d, body));
         changed = match custom {
             Some((ch, _)) => ch,
-            None if side => draw_side_fields(ui, d, body),
             None => draw_fields(ui, st, d, body),
         };
+        // eigene Anordnung hat OK/Abbrechen schon an ihrer Stelle der Tab-Folge gezeichnet
+        if let Some(res) = d.pressed.take() {
+            result = res;
+            let _ = ui.allocate_rect(body, Sense::hover());
+            return;
+        }
         let y = body.bottom() - 36.0;
-        if d.preview && !side {
+        if d.preview {
             let pl = t("dlg-preview");
             let pw = (18.0 + super::text_w(ui.ctx(), &pl)).max(90.0);
             if let Some(b) = fields::checkbox(ui, (id.as_str(), "preview"), Rect::from_min_size(pos2(body.left() + 14.0, y + 3.0), vec2(pw, 16.0)), &pl, d.preview_on, true) {
@@ -1115,7 +1305,6 @@ pub fn show_form(ctx: &egui::Context, st: &mut AppState, d: &mut FormDialog) -> 
         let (ok_l, cancel_l) = (t("btn-ok"), t("btn-cancel"));
         let b = match custom {
             Some((_, b)) => b.to_vec(),
-            None if side => side_buttons(ui.ctx(), d, body).to_vec(),
             None => super::button_row(ui.ctx(), body.right() - 16.0, y, &[&ok_l, &cancel_l], 76.0, 23.0, 8.0),
         };
         if push_button(ui, b[0], &ok_l, true, valid) {
@@ -1124,13 +1313,28 @@ pub fn show_form(ctx: &egui::Context, st: &mut AppState, d: &mut FormDialog) -> 
         if push_button(ui, b[1], &cancel_l, false, true) {
             result = Some(false);
         }
-        if side {
-            changed |= draw_side_column(ui, d, body, &id);
-        }
         let _ = ui.allocate_rect(body, Sense::hover());
     });
     if r == DialogClose::Cancelled {
         result = Some(false);
+    }
+    // Felder, die erst beim OK geklemmt werden (19105–19108): Wert korrigieren, Dialog bleibt offen,
+    // Fokus mit markiertem Inhalt im ersten korrigierten Feld (re\11 §3.5.5)
+    if result == Some(true) {
+        let mut first = None;
+        for (i, f) in d.fields.iter_mut().enumerate() {
+            if f.clamp_ok && f.clamp_now() && first.is_none() {
+                first = Some(i);
+            }
+        }
+        if let Some(i) = first {
+            result = None;
+            let te = egui::Id::new((d.id.as_str(), i)).with("te");
+            let len = d.fields[i].value.as_f64().map(|v| fields::fmt_num(v, 0).chars().count()).unwrap_or(0);
+            ctx.memory_mut(|m| m.request_focus(te));
+            super::select_all(ctx, te, len);
+            ctx.request_repaint();
+        }
     }
     let dragging = ctx.input(|i| i.pointer.any_down());
     if d.preview && result.is_none() {

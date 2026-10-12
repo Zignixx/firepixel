@@ -278,6 +278,17 @@ pub fn autofocus_field(ui: &Ui, resp: &egui::Response, text_len: usize) {
     select_all(ui.ctx(), resp.id, text_len);
 }
 
+/// Wie [`autofocus_field`] für Bedienelemente ohne Text (Liste, Schieber; Original D26 Startfokus
+/// auf der Liste, D42 auf dem Schieber): bekommt den Startfokus, wenn es als erstes danach fragt.
+pub fn autofocus_widget(ui: &Ui, id: Id) {
+    let key = autofocus_id(ui.layer_id());
+    if !ui.is_enabled() || ui.ctx().data(|d| d.get_temp::<u64>(key)).is_none() {
+        return;
+    }
+    ui.ctx().data_mut(|d| d.remove::<u64>(key));
+    ui.memory_mut(|m| m.request_focus(id));
+}
+
 /// Per Tab erreichtes Feld: Inhalt ganz markieren (Windows-Verhalten); ein Mausklick setzt dagegen
 /// nur die Schreibmarke.
 pub fn select_on_tab(ui: &Ui, resp: &egui::Response, text_len: usize) {
@@ -627,7 +638,11 @@ fn dialog_frame_ex(ctx: &egui::Context, id: &str, title: &str, size: egui::Vec2,
         d.insert_temp(geom_id(id), geom);
         d.insert_temp(Id::new(LAST_DIALOG), id.to_string());
     });
-    if resp.should_close() {
+    // Schließen nur mit Esc (oberster Dialog, kein Popup offen) bzw. Kreuz/Abbrechen. Ein Klick auf
+    // den abgedunkelten Hintergrund schließt einen modalen Windows-Dialog nicht (Signalton, Befund
+    // NZ-2); `Modal::should_close` zählte ihn als Abbrechen.
+    let esc = resp.is_top_modal && !resp.any_popup_open && ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, egui::Key::Escape));
+    if esc || resp.response.should_close() {
         close = DialogClose::Cancelled;
     }
     close
@@ -994,7 +1009,9 @@ fn enter_confirms(ui: &Ui, own: Id) -> bool {
     if let Some(p) = ctx.data(|d| d.get_temp::<u64>(key)) {
         if p + 1 == nr {
             ctx.data_mut(|d| d.remove::<u64>(key));
-            return true;
+            // ein einzeiliges Feld gibt den Fokus mit Eingabe ab; ein mehrzeiliges behält ihn
+            // (Zeilenumbruch) und bestätigt nicht
+            return !ctx.text_edit_focused();
         }
         if p != nr {
             ctx.data_mut(|d| d.remove::<u64>(key));
@@ -1008,7 +1025,9 @@ fn enter_confirms(ui: &Ui, own: Id) -> bool {
     // (der fokussierte Standardknopf selbst zählt nicht: hat er den Fokus erst in diesem Bild
     // bekommen, klickt egui ihn nicht)
     let other_focus = ctx.memory(|m| m.focused()).is_some_and(|f| f != own && buttons.contains(&f));
-    if enter && !ctx.text_edit_focused() && !other_focus {
+    // auch wenn ein Feld den Fokus hat, das erst nach dem Knopf gezeichnet wird (Knöpfe vorn in der
+    // Tab-Folge, D28): ob es den Fokus abgegeben hat, zählt im nächsten Bild
+    if enter && !other_focus {
         ctx.data_mut(|d| d.insert_temp(key, nr));
         ctx.request_repaint();
     }

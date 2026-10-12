@@ -232,10 +232,14 @@ pub fn open(st: &mut AppState, name: &str) -> bool {
                     Field::text("name", t("dlg-lbl-name").as_str(), t("dlg-symbol-default-name").as_str()),
                     Field::radio_of("kind", t("dlg-lbl-type").as_str(), &[t("dlg-symbol-graphic").as_str(), t("dlg-symbol-animation").as_str(), t("dlg-symbol-button").as_str()], vec![json!("graphic"), json!("animation"), json!("button")], 0),
                     Field::check("nineSlice", t("dlg-lbl-enable-nineslice").as_str(), false),
+                    // im Original vorhanden, aber grau (PM-5 D14)
+                    Field::check("_common", t("dlg-lbl-save-common-library").as_str(), false).disabled(),
                 ],
             )
             .with_base(json!({"edit": true}))
-            .with_width(420.0),
+            .with_width(420.0)
+            // Anordnung und Tab-Folge der Vorlage 19104 wie „In Symbol konvertieren“
+            .with_layout(super::symbol_anim::CONVERT_LAYOUT),
         ),
         // Neue Schaltfläche: wie „Neues Symbol“ eine leere Schaltfläche anlegen und ihre
         // Symbolbearbeitung öffnen (Original: „im Schaltflächeneditor“)
