@@ -398,8 +398,15 @@ dlg-channel-rgb = RGB
 dlg-channel-red = Red
 dlg-channel-green = Green
 dlg-channel-blue = Blue
-dlg-levels-input = Input levels:
-dlg-levels-output = Output levels:
+dlg-levels-input = Input Levels:
+dlg-levels-output = Output Levels:
+dlg-levels-auto = &Auto
+dlg-levels-auto-tip = Adjust levels automatically
+dlg-levels-min-tip = Minimum intensity
+dlg-levels-gamma-tip = Gamma
+dlg-levels-max-tip = Maximum intensity
+dlg-levels-input-tip = Set input levels
+dlg-levels-output-tip = Set output levels
 dlg-auto = Auto
 ## Curves and Levels shared (levels_common.rs)
 dlg-adjust-channel-tip = Color channels to edit

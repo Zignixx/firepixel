@@ -398,8 +398,15 @@ dlg-channel-rgb = RGB
 dlg-channel-red = Rot
 dlg-channel-green = Grün
 dlg-channel-blue = Blau
-dlg-levels-input = Tonwertspreizung:
-dlg-levels-output = Tonwertumfang:
+dlg-levels-input = Eingabetonwerte:
+dlg-levels-output = Ausgabetonwerte:
+dlg-levels-auto = &Auto
+dlg-levels-auto-tip = Tonwerte automatisch anpassen
+dlg-levels-min-tip = Mindestintensität
+dlg-levels-gamma-tip = Gamma
+dlg-levels-max-tip = Höchstintensität
+dlg-levels-input-tip = Eingabetonwerte festlegen
+dlg-levels-output-tip = Ausgabetonwerte festlegen
 dlg-auto = Auto
 ## Kurven und Tonwertkorrektur gemeinsam (levels_common.rs)
 dlg-adjust-channel-tip = Zu bearbeitende Farbkanäle

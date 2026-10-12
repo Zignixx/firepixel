@@ -32,6 +32,7 @@ pub mod curve_edit;
 pub mod gauss;
 pub mod noise;
 pub mod table;
+pub mod levels_math;
 
 use std::collections::BTreeMap;
 
