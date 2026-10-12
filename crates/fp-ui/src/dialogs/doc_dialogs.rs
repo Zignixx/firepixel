@@ -528,6 +528,12 @@ pub fn show_image_size(ctx: &egui::Context, st: &mut AppState) {
 
 // ---------------------------------------------------------------------- Numerisch transformieren
 
+/// Gemerkte Werte von „Numerisch transformieren“ (eigene Schlüssel, technisch englisch).
+const NT_MODE: &str = "NumericTransformMode";
+const NT_SCALE_X: &str = "NumericTransformScaleX";
+const NT_SCALE_Y: &str = "NumericTransformScaleY";
+const NT_ANGLE: &str = "NumericTransformAngle";
+
 /// Numerisch transformieren (6002).
 #[derive(Clone, Debug, PartialEq)]
 pub struct NumericTransformDialog {
@@ -550,7 +556,36 @@ impl NumericTransformDialog {
     pub fn new(st: &AppState) -> Option<NumericTransformDialog> {
         let d = st.session.active()?;
         let b = fp_engine::docops::ids_bounds(&d.doc, d.page, &d.selection.elements)?;
-        Some(NumericTransformDialog { mode: 0, sx: 100.0, sy: 100.0, w: b.width() as f64, h: b.height() as f64, cur_w: b.width() as f64, cur_h: b.height() as f64, angle: 0.0, scale_attrs: st.session.prefs.get_bool("XformToolXformsBFE", true), constrain: st.session.prefs.get_bool("TransformConstrain", true), interpolate: true })
+        // Art, Prozentwerte und Winkel: zuletzt per OK bestätigt (PM-6 D26, Original 50/50 gemerkt)
+        let p = &st.session.prefs;
+        let pct = |k: &str| p.get_real(k, 100.0).clamp(1.0, 10000.0);
+        Some(NumericTransformDialog {
+            mode: p.get_int(NT_MODE, 0).clamp(0, 2) as usize,
+            sx: pct(NT_SCALE_X),
+            sy: pct(NT_SCALE_Y),
+            w: b.width() as f64,
+            h: b.height() as f64,
+            cur_w: b.width() as f64,
+            cur_h: b.height() as f64,
+            angle: p.get_real(NT_ANGLE, 0.0).clamp(-360.0, 360.0),
+            scale_attrs: p.get_bool("XformToolXformsBFE", true),
+            constrain: p.get_bool("TransformConstrain", true),
+            interpolate: true,
+        })
+    }
+
+    /// Bestätigte Werte merken (nur bei OK).
+    pub fn remember(&self, p: &mut fp_engine::Preferences) {
+        p.set("TransformConstrain", fp_engine::PrefValue::Bool(self.constrain));
+        p.set(NT_MODE, fp_engine::PrefValue::Int(self.mode as i64));
+        match self.mode {
+            0 => {
+                p.set(NT_SCALE_X, fp_engine::PrefValue::Real(self.sx));
+                p.set(NT_SCALE_Y, fp_engine::PrefValue::Real(self.sy));
+            }
+            2 => p.set(NT_ANGLE, fp_engine::PrefValue::Real(self.angle)),
+            _ => {}
+        }
     }
 
     /// Parameter für `modify.transform.numericTransform`.
@@ -656,7 +691,7 @@ pub fn show_numeric_transform(ctx: &egui::Context, st: &mut AppState) {
         (Some(true), _) => {
             st.dialogs.numeric_transform = None;
             if let Some(p) = d.params() {
-                st.session.prefs.set("TransformConstrain", fp_engine::PrefValue::Bool(d.constrain));
+                d.remember(&mut st.session.prefs);
                 st.push(Action::Run("modify.transform.numericTransform".into(), p));
             }
         }

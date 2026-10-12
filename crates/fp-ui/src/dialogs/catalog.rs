@@ -28,7 +28,7 @@ pub fn filter_form(cmd: &str, live: bool) -> Option<FormDialog> {
     let (id, title, fields): (&str, String, Vec<Field>) = match cmd {
         "filter.blur.gaussian" => {
             let d = defaults::<GaussianBlurParams>();
-            ("5971", t("dlg-title-gaussian-blur"), vec![Field::slider("radius", t("dlg-lbl-radius").as_str(), dnum(&d, "radius", 1.0), 0.1, 250.0).decimals(1).scale(scale::BLUR_RADIUS)])
+            ("5971", t("dlg-title-gaussian-blur"), vec![Field::slider("radius", t("dlg-lbl-blur-radius").as_str(), dnum(&d, "radius", 1.0), 0.1, 250.0).decimals(1).dot_decimal().scale(scale::BLUR_RADIUS)])
         }
         "filter.sharpen.unsharpMask" => {
             let d = defaults::<UnsharpMaskParams>();
@@ -36,8 +36,8 @@ pub fn filter_form(cmd: &str, live: bool) -> Option<FormDialog> {
                 "5972",
                 t("dlg-title-unsharp-mask"),
                 vec![
-                    Field::slider("amount", t("dlg-lbl-sharpen-amount").as_str(), dnum(&d, "amount", 50.0), 1.0, 500.0).unit("%").scale(scale::SHARPEN_AMOUNT),
-                    Field::slider("radius", t("dlg-lbl-pixel-radius").as_str(), dnum(&d, "radius", 1.0), 0.1, 250.0).decimals(1).scale(scale::BLUR_RADIUS),
+                    Field::slider("amount", t("dlg-lbl-sharpen-amount").as_str(), dnum(&d, "amount", 50.0), 1.0, 500.0).scale(scale::SHARPEN_AMOUNT),
+                    Field::slider("radius", t("dlg-lbl-pixel-radius").as_str(), dnum(&d, "radius", 1.0), 0.1, 250.0).decimals(1).dot_decimal().scale(scale::BLUR_RADIUS),
                     Field::slider("threshold", t("dlg-lbl-threshold").as_str(), dnum(&d, "threshold", 0.0), 0.0, 255.0).scale(scale::THRESHOLD),
                 ],
             )
@@ -57,8 +57,8 @@ pub fn filter_form(cmd: &str, live: bool) -> Option<FormDialog> {
             vec![
                 Field::slider("hue", t("dlg-lbl-hue").as_str(), 0.0, -180.0, 180.0).scale(scale::HUE),
                 Field::slider("saturation", t("dlg-lbl-saturation").as_str(), 0.0, -100.0, 100.0).scale(scale::SATURATION),
-                Field::slider("lightness", t("dlg-lbl-brightness").as_str(), 0.0, -100.0, 100.0),
-                Field::check("colorize", t("dlg-lbl-colorize").as_str(), false),
+                Field::slider("lightness", t("dlg-lbl-lightness").as_str(), 0.0, -100.0, 100.0),
+                Field::check("colorize", t("dlg-lbl-colorize").as_str(), false).beside_buttons(),
             ],
         ),
         "filter.noise.addNoise" => {
@@ -76,6 +76,27 @@ pub fn filter_form(cmd: &str, live: bool) -> Option<FormDialog> {
         _ => return None,
     };
     let mut f = FormDialog::new(id, &title, cmd, fields).with_preview();
+    // Anordnung des Originals (PM-6): Felder links, Knöpfe rechts; Rauschen mit Startfokus OK
+    if matches!(id, "5971" | "5972" | "6074" | "19110" | "19157") {
+        f = f.with_side_buttons();
+    }
+    if id == "19157" {
+        f = f.with_focus_ok();
+    }
+    // zuletzt per OK bestätigte Werte, app-weit wie im Original (PM-6 D41/D42/D45–D50); Abbrechen
+    // merkt nichts. Eigene Schlüssel (das Original legt sie nicht in seiner Voreinstellungsdatei ab).
+    let remembered: &[(&str, &str)] = match id {
+        "5971" => &[("radius", "GaussianBlurRadius")],
+        "5972" => &[("amount", "UnsharpMaskAmount"), ("radius", "UnsharpMaskRadius"), ("threshold", "UnsharpMaskThreshold")],
+        "6074" => &[("brightness", "BrightnessContrastBrightness"), ("contrast", "BrightnessContrastContrast")],
+        "6525" => &[("angle", "MotionBlurAngle"), ("distance", "MotionBlurDistance")],
+        "19110" => &[("hue", "HueSaturationHue"), ("saturation", "HueSaturationSaturation"), ("lightness", "HueSaturationLightness"), ("colorize", "HueSaturationColorize")],
+        "19157" => &[("amount", "AddNoiseAmount"), ("use_color", "AddNoiseColor")],
+        "19159" => &[("amount", "RadialBlurAmount"), ("quality", "RadialBlurQuality")],
+        "19160" => &[("amount", "ZoomBlurAmount"), ("quality", "ZoomBlurQuality")],
+        _ => &[],
+    };
+    f = f.with_prefs(remembered);
     // Kästchen „Vorschau“ gemerkt wie im Original (nur diese drei Filter haben eine Voreinstellung)
     let preview_pref = match id {
         "6525" => Some("MotionBlurShowPreview"),
@@ -125,7 +146,7 @@ pub fn form_for(st: &AppState, cmd: &str) -> Option<FormDialog> {
 fn plain_form(st: &AppState, cmd: &str) -> Option<FormDialog> {
     let d = st.session.active();
     let f = match cmd {
-        "select.feather" => FormDialog::new("5976", t("dlg-title-feather").as_str(), cmd, vec![Field::number("radius", t("dlg-lbl-radius").as_str(), 10.0, 1.0, 1000.0).unit("dlg-unit-pixels")]),
+        "select.feather" => FormDialog::new("5976", t("dlg-title-feather").as_str(), cmd, vec![Field::number("radius", t("dlg-lbl-radius").as_str(), 10.0, 1.0, 1000.0).unit("dlg-unit-pixels")]).with_prefs(&[("radius", "FeatherSelectionAmount")]),
         "select.expandMarquee" => FormDialog::new("19105", t("dlg-title-expand-marquee").as_str(), cmd, vec![Field::number("amount", t("dlg-lbl-expand-by").as_str(), 10.0, 1.0, 100.0).unit("dlg-unit-pixels")]).with_prefs(&[("amount", "ExpandSelectionAmount")]),
         "select.contractMarquee" => FormDialog::new("19106", t("dlg-title-contract-marquee").as_str(), cmd, vec![Field::number("amount", t("dlg-lbl-contract-by").as_str(), 10.0, 1.0, 100.0).unit("dlg-unit-pixels")]).with_prefs(&[("amount", "ContractSelectionAmount")]),
         "select.borderMarquee" => FormDialog::new("19107", t("dlg-title-border-marquee").as_str(), cmd, vec![Field::number("amount", t("dlg-lbl-border").as_str(), 10.0, 1.0, 100.0).unit("dlg-unit-pixels")]).with_prefs(&[("amount", "BorderSelectionAmount")]),

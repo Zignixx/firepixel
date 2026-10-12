@@ -246,6 +246,7 @@ msg-step-move = Move
 msg-step-move-copy = Move Copy
 msg-step-new-layer = New Layer
 msg-step-refine-edge = Refine Edge
+msg-step-filter-image = Filter Image
 msg-step-repeat-filter = Repeat Filter
 msg-step-spelling = Spelling
 

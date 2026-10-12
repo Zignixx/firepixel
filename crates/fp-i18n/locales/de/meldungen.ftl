@@ -246,6 +246,7 @@ msg-step-move = Verschieben
 msg-step-move-copy = Kopie verschieben
 msg-step-new-layer = Neue Ebene
 msg-step-refine-edge = Kante verfeinern
+msg-step-filter-image = Bild filtern
 msg-step-repeat-filter = Filter wiederholen
 msg-step-spelling = Rechtschreibung
 

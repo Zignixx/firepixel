@@ -434,7 +434,7 @@ pub fn effect_form(name: &str, bevel: Option<i32>, e: Option<&Effect>, index: Op
 fn filter_effect_form(e: &Effect, index: usize) -> Option<FormDialog> {
     let n = |k: &str, d: f64| e.get_f64(k).unwrap_or(d);
     let (title, keys, fields): (String, Vec<(&str, &str)>, Vec<Field>) = match e.kind() {
-        EffectKind::GaussianBlur => (t("dlg-title-gaussian-blur"), vec![("radius", "gaussian_blur_radius")], vec![Field::slider("radius", t("dlg-lbl-radius").as_str(), n("gaussian_blur_radius", 1.0), 0.1, 250.0).decimals(1).scale(crate::inspector::scale::BLUR_RADIUS)]),
+        EffectKind::GaussianBlur => (t("dlg-title-gaussian-blur"), vec![("radius", "gaussian_blur_radius")], vec![Field::slider("radius", t("dlg-lbl-blur-radius").as_str(), n("gaussian_blur_radius", 1.0), 0.1, 250.0).decimals(1).dot_decimal().scale(crate::inspector::scale::BLUR_RADIUS)]),
         EffectKind::MotionBlur => (
 t("dlg-title-motion-blur"),
             vec![("angle", "motion_blur_angle"), ("distance", "motion_blur_distance")],
@@ -455,7 +455,7 @@ t("dlg-title-unsharp-mask"),
             vec![("amount", "unsharp_mask_amount"), ("radius", "unsharp_mask_radius"), ("threshold", "unsharp_mask_threshold")],
             vec![
                 Field::slider("amount", t("dlg-lbl-sharpen-amount").as_str(), n("unsharp_mask_amount", 50.0), 1.0, 500.0).scale(crate::inspector::scale::SHARPEN_AMOUNT),
-                Field::slider("radius", t("dlg-lbl-pixel-radius").as_str(), n("unsharp_mask_radius", 1.0), 0.1, 250.0).decimals(1).scale(crate::inspector::scale::BLUR_RADIUS),
+                Field::slider("radius", t("dlg-lbl-pixel-radius").as_str(), n("unsharp_mask_radius", 1.0), 0.1, 250.0).decimals(1).dot_decimal().scale(crate::inspector::scale::BLUR_RADIUS),
                 Field::slider("threshold", t("dlg-lbl-threshold").as_str(), n("unsharp_mask_threshold", 0.0), 0.0, 255.0).scale(crate::inspector::scale::THRESHOLD),
             ],
         ),
@@ -475,14 +475,17 @@ t("dlg-title-hue-saturation"),
             vec![
                 Field::slider("hue", t("dlg-lbl-hue").as_str(), n("hue_amount", 0.0), -180.0, 180.0).scale(crate::inspector::scale::HUE),
                 Field::slider("saturation", t("dlg-lbl-saturation").as_str(), n("saturation_amount", 0.0), -100.0, 100.0).scale(crate::inspector::scale::SATURATION),
-                Field::slider("lightness", t("dlg-lbl-brightness").as_str(), n("lightness_amount", 0.0), -100.0, 100.0),
-                Field::check("colorize", t("dlg-lbl-colorize").as_str(), e.get_bool("hls_colorize").unwrap_or(false)),
+                Field::slider("lightness", t("dlg-lbl-lightness").as_str(), n("lightness_amount", 0.0), -100.0, 100.0),
+                Field::check("colorize", t("dlg-lbl-colorize").as_str(), e.get_bool("hls_colorize").unwrap_or(false)).beside_buttons(),
             ],
         ),
         _ => return None,
     };
     let mapping: Vec<Value> = keys.iter().map(|(a, b)| json!([a, b])).collect();
-    Some(FormDialog::new("fx-filter", &title, "pi.effect.set", fields).with_base(json!({"index": index, "map": mapping})).with_transform(filter_effect_params).with_preview())
+    let f = FormDialog::new("fx-filter", &title, "pi.effect.set", fields).with_base(json!({"index": index, "map": mapping})).with_transform(filter_effect_params).with_preview();
+    // dieselbe Anordnung wie der Filterdialog aus dem Menü (PM-6)
+    let side = matches!(e.kind(), EffectKind::GaussianBlur | EffectKind::UnsharpMask | EffectKind::AddNoise | EffectKind::BrightnessContrast | EffectKind::HueSaturation);
+    Some(if side { f.with_side_buttons() } else { f })
 }
 
 fn filter_effect_params(d: &FormDialog) -> Value {

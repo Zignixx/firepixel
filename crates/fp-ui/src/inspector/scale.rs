@@ -26,8 +26,9 @@ pub const SHARPEN_AMOUNT: Scale = Scale::Piecewise(&[(0.0, 0.0), (170.0, 170.0)]
 pub const THRESHOLD: Scale = Scale::Piecewise(&[(0.0, 0.0), (172.0, 172.0)]);
 /// Farbton: Position = Wert + 180 (0 … 360).
 pub const HUE: Scale = Scale::Piecewise(&[(0.0, -180.0), (360.0, 180.0)]);
-/// Sättigung: Position 25 bei Wert 0 (0 … 100), unten in 4er-, oben in 4/3-Schritten.
-pub const SATURATION: Scale = Scale::Piecewise(&[(0.0, -100.0), (25.0, 0.0), (100.0, 100.0)]);
+/// Sättigung: linear wie Helligkeit, Position = Wert + 100 (0 … 200, 0 in der Mitte, 50 → ¾).
+/// Gemessen von PM-6 (Trackbar gelesen, PARITAET_B D41); die frühere Annahme „0 bei ¼“ war falsch.
+pub const SATURATION: Scale = Scale::Piecewise(&[(0.0, -100.0), (200.0, 100.0)]);
 
 impl Default for Scale {
     fn default() -> Self {
@@ -136,9 +137,10 @@ mod tests {
     #[test]
     fn hue_and_saturation() {
         assert_eq!(HUE.to_pos(0.0, -180.0, 180.0), 180.0);
-        assert_eq!(SATURATION.to_pos(0.0, -100.0, 100.0), 25.0);
+        assert_eq!(SATURATION.to_pos(0.0, -100.0, 100.0), 100.0);
+        assert_eq!(SATURATION.to_pos(50.0, -100.0, 100.0), 150.0);
         assert_eq!(SATURATION.to_value(0.0, -100.0, 100.0), -100.0);
-        assert_eq!(SATURATION.to_value(100.0, -100.0, 100.0), 100.0);
+        assert_eq!(SATURATION.to_value(200.0, -100.0, 100.0), 100.0);
     }
 
     #[test]

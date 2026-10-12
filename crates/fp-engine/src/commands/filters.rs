@@ -170,6 +170,9 @@ pub fn apply_filter(s: &mut Session, f: &Filter, live: bool) -> Result<CommandOu
         if bitmaps.is_empty() && others.is_empty() {
             return Err(super::sel_err("err-sel-nothing-to-filter"));
         }
+        // Pixel gefiltert: Verlaufsname „Bild filtern“ wie im Original (String 10438, `re` §4,
+        // PM-6); als Live-Filter bleibt der Filtername
+        let filtered = !bitmaps.is_empty();
         let doc = Arc::make_mut(&mut d.doc);
         for (path, _) in bitmaps {
             docops::edit_at(doc, &path, |e| {
@@ -189,7 +192,7 @@ pub fn apply_filter(s: &mut Session, f: &Filter, live: bool) -> Result<CommandOu
                 super::draw::set_effects(x, Some(l));
             });
         }
-        Ok(CommandOutput::doc())
+        Ok(if filtered { CommandOutput::doc().labeled(fp_i18n::t("msg-step-filter-image")) } else { CommandOutput::doc() })
     })
 }
 

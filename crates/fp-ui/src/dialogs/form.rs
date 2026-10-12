@@ -60,6 +60,11 @@ pub struct Field {
     pub pref_codes: Option<Vec<i64>>,
     /// Optionsfelder untereinander statt nebeneinander (z. B. Leinwandfarbe, 5977).
     pub vertical: bool,
+    /// Dezimalpunkt in jeder Sprache („4.1“ wie im Original, PM-6 D46/D48); Eingabe mit Komma geht weiter.
+    pub dot: bool,
+    /// Kästchen in der Knopfspalte rechts statt links bei den Feldern ([`FormDialog::with_side_buttons`],
+    /// z. B. „Kolorieren“ unter Abbrechen).
+    pub side: bool,
 }
 
 /// Bildchen der Symbolknöpfe (selbst gezeichnet).
@@ -114,11 +119,11 @@ fn paint_pict(p: &egui::Painter, r: Rect, k: Pict, col: egui::Color32) {
 impl Field {
     /// Zahlenfeld.
     pub fn number(key: &str, label: &str, value: f64, min: f64, max: f64) -> Field {
-        Field { key: key.into(), label: label.into(), kind: FieldKind::Number { min, max, decimals: 0, slider: false, unit: "" }, value: json!(value), choice_values: None, error: false, scale: None, popup: false, icons: None, pref_codes: None, vertical: false }
+        Field { key: key.into(), label: label.into(), kind: FieldKind::Number { min, max, decimals: 0, slider: false, unit: "" }, value: json!(value), choice_values: None, error: false, scale: None, popup: false, icons: None, pref_codes: None, vertical: false, dot: false, side: false }
     }
     /// Zahlenfeld mit Schieber.
     pub fn slider(key: &str, label: &str, value: f64, min: f64, max: f64) -> Field {
-        Field { key: key.into(), label: label.into(), kind: FieldKind::Number { min, max, decimals: 0, slider: true, unit: "" }, value: json!(value), choice_values: None, error: false, scale: None, popup: false, icons: None, pref_codes: None, vertical: false }
+        Field { key: key.into(), label: label.into(), kind: FieldKind::Number { min, max, decimals: 0, slider: true, unit: "" }, value: json!(value), choice_values: None, error: false, scale: None, popup: false, icons: None, pref_codes: None, vertical: false, dot: false, side: false }
     }
     /// Nachkommastellen setzen.
     pub fn decimals(mut self, d: usize) -> Field {
@@ -147,6 +152,16 @@ impl Field {
         self.vertical = true;
         self
     }
+    /// Dezimalpunkt in jeder Sprache (siehe [`Field::dot`]).
+    pub fn dot_decimal(mut self) -> Field {
+        self.dot = true;
+        self
+    }
+    /// Kästchen in der Knopfspalte (siehe [`Field::side`]).
+    pub fn beside_buttons(mut self) -> Field {
+        self.side = true;
+        self
+    }
     /// Popup-Schieber ▾ neben dem Feld statt fester Leiste.
     pub fn popup(mut self) -> Field {
         if let FieldKind::Number { slider, .. } = &mut self.kind {
@@ -172,39 +187,39 @@ impl Field {
     }
     /// Kontrollkästchen.
     pub fn check(key: &str, label: &str, value: bool) -> Field {
-        Field { key: key.into(), label: label.into(), kind: FieldKind::Check, value: json!(value), choice_values: None, error: false, scale: None, popup: false, icons: None, pref_codes: None, vertical: false }
+        Field { key: key.into(), label: label.into(), kind: FieldKind::Check, value: json!(value), choice_values: None, error: false, scale: None, popup: false, icons: None, pref_codes: None, vertical: false, dot: false, side: false }
     }
     /// Auswahlliste mit Index als Wert.
     pub fn choice(key: &str, label: &str, items: &[&str], index: usize) -> Field {
-        Field { key: key.into(), label: label.into(), kind: FieldKind::Choice(items.iter().map(|s| s.to_string()).collect()), value: json!(index), choice_values: None, error: false, scale: None, popup: false, icons: None, pref_codes: None, vertical: false }
+        Field { key: key.into(), label: label.into(), kind: FieldKind::Choice(items.iter().map(|s| s.to_string()).collect()), value: json!(index), choice_values: None, error: false, scale: None, popup: false, icons: None, pref_codes: None, vertical: false, dot: false, side: false }
     }
     /// Auswahlliste mit eigenen Werten.
     pub fn choice_of(key: &str, label: &str, items: &[&str], values: Vec<Value>, index: usize) -> Field {
-        Field { key: key.into(), label: label.into(), kind: FieldKind::Choice(items.iter().map(|s| s.to_string()).collect()), value: json!(index), choice_values: Some(values), error: false, scale: None, popup: false, icons: None, pref_codes: None, vertical: false }
+        Field { key: key.into(), label: label.into(), kind: FieldKind::Choice(items.iter().map(|s| s.to_string()).collect()), value: json!(index), choice_values: Some(values), error: false, scale: None, popup: false, icons: None, pref_codes: None, vertical: false, dot: false, side: false }
     }
     /// Optionsfelder mit eigenen Werten.
     pub fn radio_of(key: &str, label: &str, items: &[&str], values: Vec<Value>, index: usize) -> Field {
-        Field { key: key.into(), label: label.into(), kind: FieldKind::Radio(items.iter().map(|s| s.to_string()).collect()), value: json!(index), choice_values: Some(values), error: false, scale: None, popup: false, icons: None, pref_codes: None, vertical: false }
+        Field { key: key.into(), label: label.into(), kind: FieldKind::Radio(items.iter().map(|s| s.to_string()).collect()), value: json!(index), choice_values: Some(values), error: false, scale: None, popup: false, icons: None, pref_codes: None, vertical: false, dot: false, side: false }
     }
     /// Textfeld.
     pub fn text(key: &str, label: &str, value: &str) -> Field {
-        Field { key: key.into(), label: label.into(), kind: FieldKind::Text { multiline: false }, value: json!(value), choice_values: None, error: false, scale: None, popup: false, icons: None, pref_codes: None, vertical: false }
+        Field { key: key.into(), label: label.into(), kind: FieldKind::Text { multiline: false }, value: json!(value), choice_values: None, error: false, scale: None, popup: false, icons: None, pref_codes: None, vertical: false, dot: false, side: false }
     }
     /// Mehrzeiliges Textfeld.
     pub fn multiline(key: &str, label: &str, value: &str) -> Field {
-        Field { key: key.into(), label: label.into(), kind: FieldKind::Text { multiline: true }, value: json!(value), choice_values: None, error: false, scale: None, popup: false, icons: None, pref_codes: None, vertical: false }
+        Field { key: key.into(), label: label.into(), kind: FieldKind::Text { multiline: true }, value: json!(value), choice_values: None, error: false, scale: None, popup: false, icons: None, pref_codes: None, vertical: false, dot: false, side: false }
     }
     /// Farbfeld.
     pub fn color(key: &str, label: &str, hex: &str) -> Field {
-        Field { key: key.into(), label: label.into(), kind: FieldKind::Color, value: json!(hex), choice_values: None, error: false, scale: None, popup: false, icons: None, pref_codes: None, vertical: false }
+        Field { key: key.into(), label: label.into(), kind: FieldKind::Color, value: json!(hex), choice_values: None, error: false, scale: None, popup: false, icons: None, pref_codes: None, vertical: false, dot: false, side: false }
     }
     /// Überschrift.
     pub fn caption(label: &str) -> Field {
-        Field { key: "_caption".into(), label: label.into(), kind: FieldKind::Caption, value: Value::Null, choice_values: None, error: false, scale: None, popup: false, icons: None, pref_codes: None, vertical: false }
+        Field { key: "_caption".into(), label: label.into(), kind: FieldKind::Caption, value: Value::Null, choice_values: None, error: false, scale: None, popup: false, icons: None, pref_codes: None, vertical: false, dot: false, side: false }
     }
     /// Hinweis.
     pub fn note(label: &str) -> Field {
-        Field { key: "_note".into(), label: label.into(), kind: FieldKind::Note, value: Value::Null, choice_values: None, error: false, scale: None, popup: false, icons: None, pref_codes: None, vertical: false }
+        Field { key: "_note".into(), label: label.into(), kind: FieldKind::Note, value: Value::Null, choice_values: None, error: false, scale: None, popup: false, icons: None, pref_codes: None, vertical: false, dot: false, side: false }
     }
 
     /// Wert für den Befehl.
@@ -294,6 +309,8 @@ pub struct FormDialog {
     pub initial: Option<Value>,
     /// Eigene Anordnung nach der Vorlage des Originals statt der Standardzeilen.
     pub custom: Option<CustomLayout>,
+    /// Anordnung der Filterdialoge des Originals ([`FormDialog::with_side_buttons`]).
+    pub side: bool,
 }
 
 /// Eigene Anordnung eines Formulars (Felder an den Stellen der Vorlage, z. B. Raster bearbeiten,
@@ -314,7 +331,7 @@ pub const PREVIEW_FIELD: &str = "_preview";
 impl FormDialog {
     /// Neuer Dialog.
     pub fn new(id: &str, title: &str, command: &str, fields: Vec<Field>) -> FormDialog {
-        FormDialog { id: id.into(), title: title.into(), fields, command: command.into(), base: json!({}), preview: false, preview_on: false, applied: None, applied_params: None, applied_doc: None, stale: None, width: 340.0, transform: None, prefs: Vec::new(), store_hook: None, focus_ok: false, initial: None, custom: None }
+        FormDialog { id: id.into(), title: title.into(), fields, command: command.into(), base: json!({}), preview: false, preview_on: false, applied: None, applied_params: None, applied_doc: None, stale: None, width: 340.0, transform: None, prefs: Vec::new(), store_hook: None, focus_ok: false, initial: None, custom: None, side: false }
     }
     /// Startfokus auf OK (Original: Exportassistent, HTML-Einrichtung, Selektives JPEG,
     /// Rechtschreibung einrichten).
@@ -326,6 +343,13 @@ impl FormDialog {
     /// Ausgangsstand; nach den Feldern und Voreinstellungen aufrufen).
     pub fn with_skip_unchanged(mut self) -> FormDialog {
         self.initial = Some(self.params());
+        self
+    }
+    /// Anordnung der Filterdialoge des Originals (PM-6 D41/D42/D45/D46/D48): Felder links in einem
+    /// Gruppenrahmen, bei Schiebern die Beschriftung über der Leiste und das Feld rechts daneben;
+    /// OK/Abbrechen rechts oben, Kästchen der Knopfspalte und „Vorschau“ rechts unten.
+    pub fn with_side_buttons(mut self) -> FormDialog {
+        self.side = true;
         self
     }
     /// Eigene Anordnung (siehe [`CustomLayout`]).
@@ -818,6 +842,200 @@ pub fn draw_fields(ui: &mut Ui, st: &AppState, d: &mut FormDialog, area: Rect) -
     changed
 }
 
+// ------------------------------------------------- Anordnung der Filterdialoge (PM-6, DLG-5)
+
+/// Rand um Gruppenrahmen und Knopfspalte.
+const SIDE_M: f32 = 10.0;
+/// Innenabstand des Gruppenrahmens.
+const SIDE_PAD: f32 = 10.0;
+/// Zahlenfeld neben einer Schieberleiste.
+const SIDE_FIELD_W: f32 = 44.0;
+/// Zeile „Beschriftung über Schieber + Feld“.
+const SIDE_SLIDER_ROW: f32 = 46.0;
+/// Zeile „Beschriftung: Feld ▾“.
+const SIDE_ROW: f32 = 26.0;
+/// Zeile eines Kästchens.
+const SIDE_CHECK_ROW: f32 = 22.0;
+/// Mindestbreite des Inhalts mit Schiebern (Original D41/D42/D46/D48: Gruppe ≈ 280–330 px).
+const SIDE_MIN_SLIDER_W: f32 = 280.0;
+/// Mindestbreite des Inhalts ohne Schieber (Original D45: Gruppe ≈ 190 px).
+const SIDE_MIN_W: f32 = 160.0;
+
+/// Maße der Filteranordnung ([`FormDialog::with_side_buttons`]), relativ zum Client-Bereich.
+#[derive(Clone, Debug, PartialEq)]
+pub struct SideLayout {
+    /// Größe des Client-Bereichs.
+    pub size: egui::Vec2,
+    /// Gruppenrahmen der Felder.
+    pub group: Rect,
+    /// Oberkante und Höhe je Feld im Gruppenrahmen (`None`: Kästchen der Knopfspalte).
+    pub rows: Vec<Option<(f32, f32)>>,
+    /// Breite der Beschriftung vor Feldern ohne Schieber.
+    pub label_w: f32,
+    /// Knopfspalte: linke Kante und Breite der Knöpfe.
+    pub col_x: f32,
+    pub button_w: f32,
+}
+
+impl FormDialog {
+    /// Maße der Filteranordnung für die Texte der aktuellen Sprache.
+    pub fn side_layout(&self, ctx: &egui::Context) -> SideLayout {
+        let tw = |s: &str| super::text_w(ctx, s);
+        let (ok, cancel) = (t("btn-ok"), t("btn-cancel"));
+        let button_w = super::buttons_w(ctx, &[&ok, &cancel], 76.0);
+        let mut col_w = button_w;
+        let mut col_checks = 0usize;
+        let (mut slider_lbl, mut lw, mut ctrl, mut check_w, mut any_slider) = (0f32, 0f32, 0f32, 0f32, false);
+        for f in &self.fields {
+            match &f.kind {
+                FieldKind::Number { slider: true, unit, .. } => {
+                    any_slider = true;
+                    slider_lbl = slider_lbl.max(tw(&f.label));
+                    if !unit.is_empty() {
+                        ctrl = ctrl.max(SIDE_FIELD_W + 6.0 + tw(&unit_text(unit)));
+                    }
+                }
+                FieldKind::Number { unit, .. } => {
+                    lw = lw.max(tw(&f.label));
+                    ctrl = ctrl.max(50.0 + if f.popup { 16.0 } else { 0.0 } + if unit.is_empty() { 0.0 } else { 6.0 + tw(&unit_text(unit)) });
+                }
+                FieldKind::Check if f.side => {
+                    col_w = col_w.max(18.0 + tw(&f.label));
+                    col_checks += 1;
+                }
+                FieldKind::Check => check_w = check_w.max(18.0 + tw(&f.label)),
+                _ => lw = lw.max(tw(&f.label)),
+            }
+        }
+        if self.preview {
+            col_w = col_w.max(18.0 + tw(&t("dlg-preview")));
+            col_checks += 1;
+        }
+        let inner = if any_slider { SIDE_MIN_SLIDER_W } else { SIDE_MIN_W }.max(slider_lbl + 8.0).max(lw + 6.0 + ctrl).max(check_w);
+        let label_w = lw.ceil();
+        let mut y = SIDE_PAD;
+        let rows: Vec<Option<(f32, f32)>> = self
+            .fields
+            .iter()
+            .map(|f| {
+                let h = match &f.kind {
+                    FieldKind::Check if f.side => return None,
+                    FieldKind::Number { slider: true, .. } => SIDE_SLIDER_ROW,
+                    FieldKind::Check => SIDE_CHECK_ROW,
+                    _ => SIDE_ROW,
+                };
+                let r = (y, h);
+                y += h;
+                Some(r)
+            })
+            .collect();
+        let group_h = (y + SIDE_PAD - 4.0).ceil();
+        let col_h = 23.0 + 6.0 + 23.0 + 12.0 + col_checks as f32 * SIDE_CHECK_ROW;
+        let h = group_h.max(col_h);
+        let gw = (inner + 2.0 * SIDE_PAD).ceil();
+        let group = Rect::from_min_size(pos2(SIDE_M, SIDE_M), vec2(gw, h));
+        let col_x = group.right() + SIDE_M;
+        let size = vec2((col_x + col_w + SIDE_M).ceil(), (h + 2.0 * SIDE_M).ceil());
+        SideLayout { size, group, rows, label_w, col_x, button_w }
+    }
+}
+
+/// Felder der Filteranordnung im Gruppenrahmen; liefert „geändert“. Je Schieberzeile zuerst das
+/// Feld (Startfokus und Tab-Folge wie im Original: Felder vor den Knöpfen), dann die Leiste.
+pub fn draw_side_fields(ui: &mut Ui, d: &mut FormDialog, body: Rect) -> bool {
+    let theme = Theme::current(ui.ctx());
+    let c = &theme.colors;
+    let sl = d.side_layout(ui.ctx());
+    let group = sl.group.translate(body.min.to_vec2());
+    ui.painter().rect_stroke(group, 2.0, Stroke::new(1.0, if theme.glow { c.line_dark } else { c.line_mid }), StrokeKind::Inside);
+    let x0 = group.left() + SIDE_PAD;
+    let right = group.right() - SIDE_PAD;
+    let dlg_id = d.id.clone();
+    let mut changed = false;
+    for (i, f) in d.fields.iter_mut().enumerate() {
+        let Some(Some((top, _))) = sl.rows.get(i).copied() else { continue };
+        let y = group.top() + top;
+        match &f.kind {
+            FieldKind::Number { min, max, decimals, slider: true, unit } => {
+                let (min, max, decimals, unit) = (*min, *max, *decimals, *unit);
+                let uw = if unit.is_empty() { 0.0 } else { 6.0 + super::text_w(ui.ctx(), &unit_text(unit)) };
+                super::fit_label(ui, Rect::from_min_size(pos2(x0, y), vec2(right - x0, 16.0)), &f.label, true);
+                let er = Rect::from_min_size(pos2(right - uw - SIDE_FIELD_W, y + 18.0), vec2(SIDE_FIELD_W, 20.0));
+                changed |= number_input(ui, &dlg_id, i, f, er, true);
+                if !unit.is_empty() {
+                    ui.painter().text(pos2(er.right() + 6.0, er.center().y), Align2::LEFT_CENTER, unit_text(unit), theme.ui_font(), c.text);
+                }
+                let sr = Rect::from_min_max(pos2(x0, y + 19.0), pos2(er.left() - 8.0, y + 37.0));
+                let mut val = f.value.as_f64().unwrap_or(min);
+                let mut child = ui.new_child(egui::UiBuilder::new().max_rect(sr));
+                child.spacing_mut().slider_width = sr.width() - 8.0;
+                let r = crate::inspector::scale::slider(&mut child, &mut val, (min, max), f.effective_scale());
+                if r.changed() {
+                    let p = 10f64.powi(decimals as i32);
+                    f.value = json!((val * p).round() / p);
+                    f.error = false;
+                    changed = true;
+                }
+            }
+            FieldKind::Number { unit, .. } => {
+                let unit = *unit;
+                super::fit_label(ui, Rect::from_min_size(pos2(x0, y + 2.0), vec2(sl.label_w, 16.0)), &f.label, true);
+                let er = Rect::from_min_size(pos2(x0 + sl.label_w + 6.0, y), vec2(50.0, 20.0));
+                changed |= number_input(ui, &dlg_id, i, f, er, true);
+                if !unit.is_empty() {
+                    let ux = if f.popup { er.right() + 15.0 } else { er.right() };
+                    ui.painter().text(pos2(ux + 6.0, er.center().y), Align2::LEFT_CENTER, unit_text(unit), theme.ui_font(), c.text);
+                }
+            }
+            FieldKind::Check => {
+                let on = f.value.as_bool().unwrap_or(false);
+                if let Some(b) = fields::checkbox(ui, (dlg_id.as_str(), i), Rect::from_min_size(pos2(x0, y + 2.0), vec2(right - x0, 16.0)), &f.label, on, true) {
+                    f.value = json!(b);
+                    changed = true;
+                }
+            }
+            _ => {}
+        }
+    }
+    changed
+}
+
+/// Rechtecke von OK und Abbrechen in der Knopfspalte.
+pub fn side_buttons(ctx: &egui::Context, d: &FormDialog, body: Rect) -> [Rect; 2] {
+    let sl = d.side_layout(ctx);
+    let x = body.left() + sl.col_x;
+    let y = body.top() + SIDE_M;
+    [Rect::from_min_size(pos2(x, y), vec2(sl.button_w, 23.0)), Rect::from_min_size(pos2(x, y + 29.0), vec2(sl.button_w, 23.0))]
+}
+
+/// Kästchen der Knopfspalte und „Vorschau“ (unten bündig mit dem Gruppenrahmen); nach den Knöpfen
+/// zeichnen (Tab-Folge OK › Abbrechen › Kolorieren › Vorschau wie im Original). Liefert „geändert“.
+pub fn draw_side_column(ui: &mut Ui, d: &mut FormDialog, body: Rect, id: &str) -> bool {
+    let sl = d.side_layout(ui.ctx());
+    let x = body.left() + sl.col_x;
+    let w = body.right() - SIDE_M - x;
+    let side: Vec<usize> = d.fields.iter().enumerate().filter(|(_, f)| f.side && f.kind == FieldKind::Check).map(|(i, _)| i).collect();
+    let n = side.len() + usize::from(d.preview);
+    let mut y = body.top() + sl.group.bottom() - n as f32 * SIDE_CHECK_ROW + 3.0;
+    let mut changed = false;
+    for i in side {
+        let f = &mut d.fields[i];
+        let on = f.value.as_bool().unwrap_or(false);
+        if let Some(b) = fields::checkbox(ui, (d.id.as_str(), i), Rect::from_min_size(pos2(x, y), vec2(w, 16.0)), &f.label, on, true) {
+            f.value = json!(b);
+            changed = true;
+        }
+        y += SIDE_CHECK_ROW;
+    }
+    if d.preview
+        && let Some(b) = fields::checkbox(ui, (id, "preview"), Rect::from_min_size(pos2(x, y), vec2(w, 16.0)), &t("dlg-preview"), d.preview_on, true)
+    {
+        d.preview_on = b;
+        changed = true;
+    }
+    changed
+}
+
 /// Zahlenfeld `i` eines Formulars im Rechteck `er`, mit Popup-Schieber ▾ direkt rechts daneben
 /// (14 px breit), wenn das Feld einen hat; ungültige Eingaben rot umrandet. Liefert `true`, wenn
 /// sich der Wert geändert hat. Auch für eigene Anordnungen ([`CustomLayout`]).
@@ -830,6 +1048,7 @@ pub fn number_input(ui: &mut Ui, dlg_id: &str, i: usize, f: &mut Field, er: Rect
     let popup_id = egui::Id::new((dlg_id, i, "popup"));
     let live = if f.popup { ui.data(|d| d.get_temp::<f64>(popup_id.with("val"))) } else { None };
     let txt = fields::fmt_num(live.unwrap_or(v), decimals);
+    let txt = if f.dot { txt.replace(',', ".") } else { txt };
     if let Some(t) = fields::text(ui, (dlg_id, i), er, &txt, enabled) {
         let mut ff = f.clone();
         ff.set_number_text(&t);
@@ -856,8 +1075,10 @@ pub fn number_input(ui: &mut Ui, dlg_id: &str, i: usize, f: &mut Field, er: Rect
 
 /// Zeigt einen Formular-Dialog; liefert `Some(true)` bei OK, `Some(false)` bei Abbrechen.
 pub fn show_form(ctx: &egui::Context, st: &mut AppState, d: &mut FormDialog) -> Option<bool> {
+    let side = d.side && d.custom.is_none();
     let size = match d.custom {
         Some(l) => (l.size)(ctx, d),
+        None if side => d.side_layout(ctx).size,
         None => {
             let lay = d.layout(ctx);
             vec2(lay.width, lay.height)
@@ -874,10 +1095,11 @@ pub fn show_form(ctx: &egui::Context, st: &mut AppState, d: &mut FormDialog) -> 
         let custom = d.custom.map(|l| (l.draw)(ui, st, d, body));
         changed = match custom {
             Some((ch, _)) => ch,
+            None if side => draw_side_fields(ui, d, body),
             None => draw_fields(ui, st, d, body),
         };
         let y = body.bottom() - 36.0;
-        if d.preview {
+        if d.preview && !side {
             let pl = t("dlg-preview");
             let pw = (18.0 + super::text_w(ui.ctx(), &pl)).max(90.0);
             if let Some(b) = fields::checkbox(ui, (id.as_str(), "preview"), Rect::from_min_size(pos2(body.left() + 14.0, y + 3.0), vec2(pw, 16.0)), &pl, d.preview_on, true) {
@@ -889,6 +1111,7 @@ pub fn show_form(ctx: &egui::Context, st: &mut AppState, d: &mut FormDialog) -> 
         let (ok_l, cancel_l) = (t("btn-ok"), t("btn-cancel"));
         let b = match custom {
             Some((_, b)) => b.to_vec(),
+            None if side => side_buttons(ui.ctx(), d, body).to_vec(),
             None => super::button_row(ui.ctx(), body.right() - 16.0, y, &[&ok_l, &cancel_l], 76.0, 23.0, 8.0),
         };
         if push_button(ui, b[0], &ok_l, true, valid) {
@@ -896,6 +1119,9 @@ pub fn show_form(ctx: &egui::Context, st: &mut AppState, d: &mut FormDialog) -> 
         }
         if push_button(ui, b[1], &cancel_l, false, true) {
             result = Some(false);
+        }
+        if side {
+            changed |= draw_side_column(ui, d, body, &id);
         }
         let _ = ui.allocate_rect(body, Sense::hover());
     });
