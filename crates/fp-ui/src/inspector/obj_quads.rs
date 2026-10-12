@@ -61,7 +61,13 @@ fn first(st: &AppState) -> Option<Arc<Element>> {
 }
 
 fn first_attrs(st: &AppState) -> Option<Arc<PathAttrs>> {
-    selection(st).iter().find_map(|e| fp_engine::docops::path_attrs_of(e))
+    shown_attrs(st)
+}
+
+/// Füll-/Strichattribute, die der Inspektor zeigt: bei Mehrfachauswahl die des **zuletzt**
+/// gewählten Objekts (Auswahlreihenfolge), wie im Original (UX-A O14/O15, a_308).
+pub fn shown_attrs(st: &AppState) -> Option<Arc<PathAttrs>> {
+    selection(st).iter().rev().find_map(|e| fp_engine::docops::path_attrs_of(e))
 }
 
 fn placement_of(e: &Element) -> i32 {
@@ -1265,6 +1271,8 @@ struct TextVals {
     aa: i32,
     auto_kern: bool,
     on_path: Option<f32>,
+    /// Textausrichtung `ORIi` (0 horizontal l→r, 1 vertikal r→l, 2 horizontal r→l, 3 vertikal l→r).
+    orientation: i32,
 }
 
 fn text_vals(st: &AppState, ctx: &egui::Context, tgt: Target) -> Option<TextVals> {
@@ -1291,12 +1299,15 @@ fn text_vals(st: &AppState, ctx: &egui::Context, tgt: Target) -> Option<TextVals
             aa: t.map_or(3, |t| t.antialias),
             auto_kern: t.is_none_or(|t| t.auto_kern),
             on_path: t.and_then(|t| t.on_path.as_ref().map(|o| o.offset.unwrap_or(0.0))),
+            orientation: t.map_or(0, |t| t.orientation),
         });
     }
     match tgt {
         Target::Tool => {
             let ta = tool_attrs(ctx);
             let o = &st.session.tools.options;
+            let (leading, leading_px) = tool_leading(st);
+            let pr = |k: &str, d: f64| st.session.prefs.get_real(k, d) as f32;
             Some(TextVals {
                 font: o.text_font.clone(),
                 size: o.text_size,
@@ -1304,18 +1315,19 @@ fn text_vals(st: &AppState, ctx: &egui::Context, tgt: Target) -> Option<TextVals
                 bold: ta.bold,
                 italic: ta.italic,
                 underline: ta.underline,
-                tracking: 0.0,
-                leading: 1.0,
-                leading_px: false,
+                tracking: pr("Text_RangeKerning", 0.0),
+                leading,
+                leading_px,
                 align: ta.align,
-                indent: 0.0,
-                space_before: 0.0,
-                space_after: 0.0,
-                hscale: 1.0,
-                baseline: 0.0,
+                indent: pr("Text_ParagraphIndent", 0.0),
+                space_before: pr("Text_ParagraphSpacingBefore", 0.0),
+                space_after: pr("Text_ParagraphSpacingAfter", 0.0),
+                hscale: pr("Text_HorizScale", 1.0),
+                baseline: pr("Text_BaselineShift", 0.0),
                 aa: 3,
                 auto_kern: true,
                 on_path: None,
+                orientation: 0,
             })
         }
         Target::Selection => {
@@ -1342,8 +1354,67 @@ fn text_vals(st: &AppState, ctx: &egui::Context, tgt: Target) -> Option<TextVals
                 aa: t.antialias,
                 auto_kern: t.auto_kern,
                 on_path: t.on_path.as_ref().map(|o| o.offset.unwrap_or(0.0)),
+                orientation: t.orientation,
             })
         }
+    }
+}
+
+/// Zeilenabstand des Textwerkzeugs aus den Voreinstellungen (fp-engine legt ihn auf neue Texte).
+fn tool_leading(st: &AppState) -> (f32, bool) {
+    (st.session.prefs.get_real("Text_Leading", 1.2) as f32, st.session.prefs.get_int("Text_LeadingMode", 0) == 1)
+}
+
+/// Absatz-/Zeichenvorgaben des Textwerkzeugs: Voreinstellung und Parameter von `text.setAttributes`
+/// (wie im Original in den Voreinstellungen gemerkt, UX-A W15).
+const TEXT_TOOL_PREFS: [(&str, &str, f64); 6] = [
+    ("Text_RangeKerning", "tracking", 0.0),
+    ("Text_ParagraphIndent", "indent", 0.0),
+    ("Text_ParagraphSpacingBefore", "spaceBefore", 0.0),
+    ("Text_ParagraphSpacingAfter", "spaceAfter", 0.0),
+    ("Text_HorizScale", "horizontalScale", 1.0),
+    ("Text_BaselineShift", "baselineShift", 0.0),
+];
+
+/// Vorgaben des Textwerkzeugs als Parameter für `text.setAttributes` (nur abweichende Werte;
+/// Schrift, Größe, Farbe und Zeilenabstand setzt fp-engine selbst).
+pub fn text_tool_defaults(ctx: &egui::Context, st: &AppState) -> serde_json::Map<String, Value> {
+    let ta = tool_attrs(ctx);
+    let mut m = serde_json::Map::new();
+    for (k, on) in [("bold", ta.bold), ("italic", ta.italic), ("underline", ta.underline)] {
+        if on {
+            m.insert(k.into(), json!(true));
+        }
+    }
+    if ta.align != 0 {
+        m.insert("alignment".into(), json!(ta.align));
+    }
+    for (pref, k, d) in TEXT_TOOL_PREFS {
+        let v = st.session.prefs.get_real(pref, d);
+        if (v - d).abs() > 1e-6 {
+            m.insert(k.into(), json!(v));
+        }
+    }
+    m
+}
+
+/// Beginnt das Textwerkzeug einen **neuen** Text, bekommt er die Vorgaben aus dem Inspektor
+/// (Laufweite, Absatzeinzug, Abstände, Horizontalskala, Grundlinie, F/K/U, Ausrichtung) – über
+/// `text.setAttributes` an den Editor (Grundattribute, kein Verlaufsschritt). Einmal je Editor.
+pub fn apply_text_tool_defaults(ctx: &egui::Context, st: &mut AppState) {
+    let key = Id::new("fv1-text-defaults-applied");
+    if !st.session.tool_is_editing_text() {
+        ctx.data_mut(|d| d.remove::<bool>(key));
+        return;
+    }
+    if ctx.data(|d| d.get_temp::<bool>(key)).unwrap_or(false) {
+        return;
+    }
+    ctx.data_mut(|d| d.insert_temp(key, true));
+    let new_text = st.session.tool_feedback().into_iter().any(|o| matches!(o, fp_engine::Overlay::TextEdit(v) if v.target.is_none()));
+    let p = text_tool_defaults(ctx, st);
+    if new_text && !p.is_empty() {
+        st.run("text.setAttributes", Value::Object(p));
     }
 }
 
@@ -1365,6 +1436,17 @@ fn set_text(ui: &Ui, st: &mut AppState, tgt: Target, p: Value) {
             if let Some(c) = p.get("color").and_then(|v| v.as_str()).and_then(fp_color::Rgba8::parse_hex) {
                 // eigene Textfarbe des Textwerkzeugs (wie im Original), nicht die Füllfarbe
                 st.session.tools.options.text_color = c.to_argb();
+            }
+            if let Some(v) = p.get("leading").and_then(|v| v.as_f64()) {
+                st.session.prefs.set("Text_Leading", fp_engine::prefs::PrefValue::Real(v));
+            }
+            if let Some(v) = p.get("leadingMode").and_then(|v| v.as_i64()) {
+                st.session.prefs.set("Text_LeadingMode", fp_engine::prefs::PrefValue::Int(v));
+            }
+            for (pref, k, _) in TEXT_TOOL_PREFS {
+                if let Some(v) = p.get(k).and_then(|v| v.as_f64()) {
+                    st.session.prefs.set(pref, fp_engine::prefs::PrefValue::Real(v));
+                }
             }
             edit_tool_attrs(ui.ctx(), |a| {
                 if let Some(v) = p.get("bold").and_then(|v| v.as_bool()) {
@@ -1389,7 +1471,7 @@ pub fn text_row1(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target) {
     let theme = Theme::current(ui.ctx());
     let tv = text_vals(st, ui.ctx(), tgt);
     let en = tv.is_some();
-    let v = tv.unwrap_or(TextVals { font: String::new(), size: 12.0, color: None, bold: false, italic: false, underline: false, tracking: 0.0, leading: 1.0, leading_px: false, align: 0, indent: 0.0, space_before: 0.0, space_after: 0.0, hscale: 1.0, baseline: 0.0, aa: 3, auto_kern: true, on_path: None });
+    let v = tv.unwrap_or(TextVals { font: String::new(), size: 12.0, color: None, bold: false, italic: false, underline: false, tracking: 0.0, leading: 1.0, leading_px: false, align: 0, indent: 0.0, space_before: 0.0, space_after: 0.0, hscale: 1.0, baseline: 0.0, aa: 3, auto_kern: true, on_path: None, orientation: 0 });
     let id = Id::new(("pi-text", tgt == Target::Tool));
     let fams = super::fonts::families();
     let (family, style) = super::fonts::lookup(&v.font);
@@ -1411,7 +1493,10 @@ pub fn text_row1(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target) {
     }
     // Feld nimmt 1..5000 an; der Schieber hat wie im Original 8..96 in ganzen Schritten (11 §3.5.5,
     // 09: Schieberbereiche der Text-Inspektorfelder) – vorher 1..5000 auf 130 px ≈ 38 pt je Pixel
-    let mut size = fields::number(ui, id.with("size"), d.r(202.0, 0.0, 27.0, 13.0), None, en.then_some(v.size as f64), (1.0, 5000.0), 1, en);
+    // senkrechter Popup-Schieber 8..96 in ganzen Schritten (Nutzerbefund N14: vorher 100er-Sprünge);
+    // beim Ziehen zeigt das Feld den Wert schon mit
+    let live = ui.data(|dd| dd.get_temp::<f64>(id.with("size-arrow").with("val")));
+    let mut size = fields::number(ui, id.with("size"), d.r(202.0, 0.0, 27.0, 13.0), None, en.then(|| live.unwrap_or(v.size as f64)), (1.0, 5000.0), 1, en);
     if let Some(s) = fields::slider_arrow(ui, id.with("size-arrow"), d.r(230.0, 0.0, 9.0, 13.0), (v.size as f64).clamp(8.0, 96.0), (8.0, 96.0), 0, en) {
         size = Some(s);
     }
@@ -1430,16 +1515,16 @@ pub fn text_row1(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target) {
         _ => {}
     }
     super::glyphs::paint(ui.painter(), d.r(1.0, 16.0, 12.0, 11.0), Glyph::Tracking, &theme, en);
-    if let Some(x) = fields::number(ui, id.with("track"), d.r(15.0, 15.0, 27.0, 13.0), Some(d.r(43.0, 15.0, 9.0, 13.0)), en.then_some(v.tracking as f64), (-99.0, 200.0), 0, en && tgt == Target::Selection) {
+    if let Some(x) = fields::number(ui, id.with("track"), d.r(15.0, 15.0, 27.0, 13.0), Some(d.r(43.0, 15.0, 9.0, 13.0)), en.then_some(v.tracking as f64), (-99.0, 200.0), 0, en) {
         set_text(ui, st, tgt, json!({"tracking": x}));
     }
     super::glyphs::paint(ui.painter(), d.r(55.0, 16.0, 12.0, 11.0), Glyph::Leading, &theme, en);
     let lead_shown = if v.leading_px { v.leading as f64 } else { (v.leading as f64 * 100.0).round() };
-    if let Some(x) = fields::number(ui, id.with("lead"), d.r(69.0, 15.0, 27.0, 13.0), Some(d.r(97.0, 15.0, 9.0, 13.0)), en.then_some(lead_shown), (0.0, 250.0), 0, en && tgt == Target::Selection) {
+    if let Some(x) = fields::number(ui, id.with("lead"), d.r(69.0, 15.0, 27.0, 13.0), Some(d.r(97.0, 15.0, 9.0, 13.0)), en.then_some(lead_shown), (0.0, 250.0), 0, en) {
         let val = if v.leading_px { x } else { x / 100.0 };
         set_text(ui, st, tgt, json!({"leading": val, "leadingMode": v.leading_px as i64}));
     }
-    if let Some(i) = fields::combo(ui, id.with("leadu"), d.r(109.0, 15.0, 28.0, 13.0), &["%", "px"], Some(v.leading_px as usize), en && tgt == Target::Selection) {
+    if let Some(i) = fields::combo(ui, id.with("leadu"), d.r(109.0, 15.0, 28.0, 13.0), &["%", "px"], Some(v.leading_px as usize), en) {
         let val = if i == 1 { v.leading * v.size } else { v.leading / v.size.max(1.0) };
         set_text(ui, st, tgt, json!({"leading": if (i == 1) == v.leading_px { v.leading } else { val }, "leadingMode": i}));
     }
@@ -1452,7 +1537,14 @@ pub fn text_row1(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target) {
     if fields::toggle(ui, id.with("u"), d.r(168.0, 15.0, 13.0, 12.0), Glyph::Underline, v.underline, en, &t("pi-text-underline")) {
         set_text(ui, st, tgt, json!({"underline": !v.underline}));
     }
-    let aligns = [(184.0, Glyph::AlignLeft, 0, "pi-text-align-left"), (198.0, Glyph::AlignCenter, 1, "pi-text-align-center"), (212.0, Glyph::AlignRight, 2, "pi-text-align-right"), (226.0, Glyph::AlignJustify, 3, "pi-text-align-justify"), (240.0, Glyph::AlignStretch, 4, "pi-text-align-stretch")];
+    // Knopf „Textausrichtung festlegen“ (ab/cd ▾, 15077) neben U, rechts davon die vier
+    // Ausrichtungen (Teilfeld 14944 ab DLU 200) wie im Original (UX-A W17, a_133); „Erzwungener
+    // Blocksatz“ bleibt im Menü Text ▸ Ausrichten
+    let editing = st.session.tool_is_editing_text();
+    if let Some(o) = orientation_button(ui, id.with("orient"), d.r(184.0, 15.0, 13.0, 12.0), v.orientation, en && tgt == Target::Selection && !editing) {
+        st.run("text.setProperties", json!({"orientation": ORIENTATIONS[o as usize].0}));
+    }
+    let aligns = [(200.0, Glyph::AlignLeft, 0, "pi-text-align-left"), (214.0, Glyph::AlignCenter, 1, "pi-text-align-center"), (228.0, Glyph::AlignRight, 2, "pi-text-align-right"), (242.0, Glyph::AlignJustify, 3, "pi-text-align-justify")];
     for (x, g, a, tip) in aligns {
         if fields::toggle(ui, id.with(("al", a)), d.r(x, 15.0, 13.0, 12.0), g, v.align == a, en, &t(tip)) {
             set_text(ui, st, tgt, json!({"alignment": a}));
@@ -1460,12 +1552,52 @@ pub fn text_row1(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target) {
     }
 }
 
+/// Textausrichtungen (`text.setProperties {orientation}`, `ORIi` 0–3) mit Menütext.
+pub const ORIENTATIONS: [(&str, &str); 4] = [("horizontalLtr", "pi-text-orient-hlr"), ("verticalRtl", "pi-text-orient-vrl"), ("horizontalRtl", "pi-text-orient-hrl"), ("verticalLtr", "pi-text-orient-vlr")];
+
+/// Knopf „ab/cd ▾“: öffnet das Menü der vier Textausrichtungen; liefert die gewählte (0–3).
+fn orientation_button(ui: &mut Ui, id: Id, r: Rect, current: i32, enabled: bool) -> Option<i32> {
+    let theme = Theme::current(ui.ctx());
+    let c = &theme.colors;
+    let resp = ui.interact(r, id, if enabled { egui::Sense::click() } else { egui::Sense::hover() });
+    let open = egui::Popup::is_id_open(ui.ctx(), egui::Popup::default_response_id(&resp));
+    let hot = enabled && (resp.hovered() || open);
+    ui.painter().rect_filled(r, 2.0, if hot { c.button_hover_bg } else { c.button_bg });
+    ui.painter().rect_stroke(r, 2.0, Stroke::new(1.0, if hot { c.button_hover_border } else { c.button_border }), StrokeKind::Inside);
+    let col = if enabled { c.icon_fg } else { c.icon_disabled };
+    let f = egui::FontId::proportional(7.5);
+    let vertical = current == 1 || current == 3;
+    let (a, b) = if vertical { ("ac", "bd") } else { ("ab", "cd") };
+    ui.painter().text(pos2(r.left() + 3.0, r.top() + 1.0), Align2::LEFT_TOP, a, f.clone(), col);
+    ui.painter().text(pos2(r.left() + 3.0, r.bottom() - 1.0), Align2::LEFT_BOTTOM, b, f, col);
+    let tri = vec![pos2(r.right() - 6.0, r.bottom() - 5.0), pos2(r.right() - 2.0, r.bottom() - 5.0), pos2(r.right() - 4.0, r.bottom() - 3.0)];
+    ui.painter().add(egui::Shape::convex_polygon(tri, col, Stroke::NONE));
+    let mut out = None;
+    let resp = resp.on_hover_text(t("pi-text-orientation"));
+    egui::Popup::menu(&resp).frame(crate::menu::menu_frame(&theme)).show(|ui| {
+        ui.spacing_mut().item_spacing = vec2(0.0, 0.0);
+        ui.set_min_width(200.0);
+        for (i, (_, key)) in ORIENTATIONS.iter().enumerate() {
+            if fields::list_item(ui, &t(key), i as i32 == current).clicked() {
+                out = Some(i as i32);
+                ui.close();
+            }
+        }
+    });
+    out
+}
+
 /// Text Zeile 2 (14144): Einzug, Abstände, Horizontalskala, Grundlinie, Glättung, Unterschneidung, Textversatz.
 pub fn text_row2(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target) {
     let theme = Theme::current(ui.ctx());
     let tv = text_vals(st, ui.ctx(), tgt);
-    let en = tv.is_some() && tgt == Target::Selection;
+    // im Textwerkzeug schon vor dem Tippen bedienbar (Vorgabe für den neuen Text, UX-A W15)
+    let en = tv.is_some();
     let Some(v) = tv else { return };
+    let editing = st.session.text_edit_attrs().is_some();
+    // Glättung und Unterschneidung gehören zum Textobjekt (nicht zum Editor) – als Vorgabe des
+    // Werkzeugs braucht es fp-engine (Befund EB)
+    let en_obj = en && tgt == Target::Selection;
     let id = Id::new(("pi-text2", tgt == Target::Tool));
     super::glyphs::paint(ui.painter(), d.r(1.0, 1.0, 12.0, 11.0), Glyph::Indent, &theme, en);
     if let Some(x) = fields::number(ui, id.with("ind"), d.r(16.0, 1.0, 26.0, 13.0), Some(d.r(43.0, 1.0, 9.0, 13.0)), Some(v.indent as f64), (-99.0, 100.0), 0, en) {
@@ -1483,9 +1615,16 @@ pub fn text_row2(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target) {
     if let Some(x) = fields::number(ui, id.with("sa"), d.r(71.0, 16.0, 23.0, 13.0), Some(d.r(95.0, 16.0, 9.0, 13.0)), Some(v.space_after as f64), (-99.0, 100.0), 0, en) {
         set_text(ui, st, tgt, json!({"spaceAfter": x}));
     }
-    super::glyphs::paint(ui.painter(), d.r(110.0, 1.0, 12.0, 11.0), Glyph::Baseline, &theme, en);
-    if let Some(x) = fields::number(ui, id.with("bl"), d.r(124.0, 1.0, 27.0, 13.0), Some(d.r(152.0, 1.0, 9.0, 13.0)), Some(v.baseline as f64), (-99.0, 100.0), 0, en) {
-        set_text(ui, st, tgt, json!({"baselineShift": x}));
+    // Grundlinienverschiebung (14618) nur während der Textbearbeitung; am gewählten Textobjekt
+    // liegt an derselben Stelle der Strich (Stift 14932 + Strichfarbe 14931, UX-A O7, a_302); im
+    // Textwerkzeug ohne Text ist die Stelle leer (a_133)
+    if editing {
+        super::glyphs::paint(ui.painter(), d.r(110.0, 1.0, 12.0, 11.0), Glyph::Baseline, &theme, en);
+        if let Some(x) = fields::number(ui, id.with("bl"), d.r(124.0, 1.0, 27.0, 13.0), Some(d.r(152.0, 1.0, 9.0, 13.0)), Some(v.baseline as f64), (-99.0, 100.0), 0, en) {
+            set_text(ui, st, tgt, json!({"baselineShift": x}));
+        }
+    } else if tgt == Target::Selection {
+        text_stroke_field(ui, st, d, id);
     }
     let mut aa_items = tl(&["pi-aa-none", "pi-aa-crisp", "pi-aa-strong", "pi-aa-smooth", "", "pi-aa-custom"]);
     aa_items[4] = "----".into();
@@ -1497,7 +1636,7 @@ pub fn text_row2(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target) {
         4 => 5,
         _ => 3,
     };
-    if let Some(i) = fields::combo(ui, id.with("aa"), d.r(165.0, 1.0, 90.0, 13.0), &aa_items, Some(aa_sel), en) {
+    if let Some(i) = fields::combo(ui, id.with("aa"), d.r(165.0, 1.0, 90.0, 13.0), &aa_items, Some(aa_sel), en_obj) {
         let mode = match i {
             0 => 0,
             1 => 1,
@@ -1508,13 +1647,39 @@ pub fn text_row2(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target) {
         st.run("pi.text.antialias", json!({"mode": mode}));
     }
     if let Some(off) = v.on_path {
-        fields::label_right(ui, d.r(102.0, 18.0, 44.0, 8.0), &t("pi-text-offset"), en);
-        if let Some(x) = fields::number(ui, id.with("po"), d.r(148.0, 16.0, 14.0, 13.0), None, Some(off as f64), (-10000.0, 10000.0), 0, en) {
+        fields::label_right(ui, d.r(102.0, 18.0, 44.0, 8.0), &t("pi-text-offset"), en_obj);
+        if let Some(x) = fields::number(ui, id.with("po"), d.r(148.0, 16.0, 14.0, 13.0), None, Some(off as f64), (-10000.0, 10000.0), 0, en_obj) {
             st.run("pi.text.pathOffset", json!({"offset": x}));
         }
     }
-    if let Some(b) = fields::checkbox(ui, id.with("ak"), d.r(165.0, 18.0, 92.0, 10.0), &t("pi-text-autokern"), v.auto_kern, en) {
+    if let Some(b) = fields::checkbox(ui, id.with("ak"), d.r(165.0, 18.0, 92.0, 10.0), &t("pi-text-autokern"), v.auto_kern, en_obj) {
         st.run("pi.text.autoKern", json!({"on": b}));
+    }
+}
+
+/// Strich des Textobjekts (Stift + Farbfeld) in Zeile 2: Farbe wählen legt einen Strich an
+/// (1-Pixel weich, wie das Strich-Teilfeld), „keine“ entfernt ihn.
+fn text_stroke_field(ui: &mut Ui, st: &mut AppState, d: Dl, id: Id) {
+    let theme = Theme::current(ui.ctx());
+    let attrs = shown_attrs(st);
+    let en = attrs.is_some();
+    let has = attrs.as_ref().is_some_and(|a| a.brush.is_some());
+    let color = attrs.as_ref().filter(|_| has).map(|a| a.stroke_color);
+    super::glyphs::paint(ui.painter(), d.r(121.0, 1.0, 12.0, 11.0), Glyph::Pencil, &theme, en);
+    match popups::color_button(ui, id.with("stroke"), d.r(135.0, 1.0, 14.0, 13.0), st, color, en, true, true) {
+        Some(ColorChoice::Color(c)) => {
+            let mut p = json!({"color": ui_commands::hex(c)});
+            if !has {
+                p["preset"] = json!("Bleistift/1-Pixel weich");
+            }
+            st.run("pi.stroke", p);
+        }
+        Some(ColorChoice::None) => st.run("pi.stroke", json!({"none": true})),
+        Some(ColorChoice::Pipette) => {
+            let ctx = ui.ctx().clone();
+            popups::start_pick(&ctx, st, "pi.stroke", json!({}), "color");
+        }
+        None => {}
     }
 }
 

@@ -315,6 +315,31 @@ fn marquee_q3(ui: &mut Ui, st: &mut AppState, r: Rect) {
     live_marquee(ui, d.r(139.0, 17.0, 93.0, 10.0), "marq");
 }
 
+/// Voreinstellung „Ausgewählten Bereich füllen“ je Werkzeug: Farbeimer `FillToolFillsSelection`
+/// (Werksvorgabe aus), Verlauf `GradientToolFillsSelection` (Werksvorgabe an, UX-A W25, a_146).
+fn fill_selection_pref(tool: ToolId) -> Option<&'static str> {
+    match tool {
+        ToolId::PaintBucket => Some("FillToolFillsSelection"),
+        ToolId::Gradient => Some("GradientToolFillsSelection"),
+        _ => None,
+    }
+}
+
+/// Beim Wechsel zu Farbeimer bzw. Verlauf gilt dessen eigene Vorgabe „Auswahl füllen“
+/// (`ToolOptions::fill_selection` ist in fp-engine ein gemeinsames Feld beider Werkzeuge).
+pub fn sync_fill_selection(ctx: &egui::Context, st: &mut AppState) {
+    let key = Id::new("fv1-fill-selection-tool");
+    let tool = st.session.tools.active;
+    if ctx.data(|d| d.get_temp::<ToolId>(key)) == Some(tool) {
+        return;
+    }
+    ctx.data_mut(|d| d.insert_temp(key, tool));
+    if let Some(k) = fill_selection_pref(tool) {
+        let def = tool == ToolId::Gradient;
+        st.session.tools.options.fill_selection = st.session.prefs.get_bool(k, def);
+    }
+}
+
 fn fill_tool_q3(ui: &mut Ui, st: &mut AppState, r: Rect) {
     let d = Dl::at(r.min);
     obj_quads::fill_panel(ui, st, d.offset(1.0, 0.0), Target::Tool, true);
@@ -327,6 +352,10 @@ fn fill_tool_q3(ui: &mut Ui, st: &mut AppState, r: Rect) {
     }
     if let Some(b) = fields::checkbox(ui, "fill-sel", d.r(167.0, 16.0, 65.0, 10.0), &tx("pi-fill-selection"), st.session.tools.options.fill_selection, true) {
         st.session.tools.options.fill_selection = b;
+        // je Werkzeug gemerkt (Farbeimer und Verlauf haben eigene Vorgaben)
+        if let Some(k) = fill_selection_pref(st.session.tools.active) {
+            st.session.prefs.set(k, fp_engine::prefs::PrefValue::Bool(b));
+        }
     }
     obj_quads::tool_opacity_panel(ui, st, d.offset(261.0, 0.0), true);
     keep_transparency(ui, d.r(260.0, 16.0, 102.0, 10.0), "fill");

@@ -113,6 +113,9 @@ pub fn height(theme: &Theme, st: &AppState) -> f32 {
 
 /// Zeichnet den Inspektor in die verfügbare Fläche (unterer Bereich).
 pub fn show(ui: &mut Ui, st: &mut AppState) {
+    // Werkzeugvorgaben, die beim Werkzeugwechsel bzw. beim Beginn eines neuen Texts gelten
+    tool_quads::sync_fill_selection(ui.ctx(), st);
+    obj_quads::apply_text_tool_defaults(ui.ctx(), st);
     let theme = Theme::current(ui.ctx());
     let c = theme.colors.clone();
     let full = ui.max_rect();
@@ -194,6 +197,12 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
             let (r, _) = ui.allocate_exact_size(vec2(BODY_WIDTH, body.height()), Sense::hover());
             quadrants(ui, st, r, &state, half, &theme);
         });
+    }
+    // Strg+A in einem Zahlenfeld wählt wie im Original alle Objekte aus (UX-A F10)
+    if fields::take_select_all_request(ui.ctx()) {
+        let sc = fp_engine::Shortcut { ctrl: true, alt: false, shift: false, vk: 0x41 };
+        let cmd = st.session.command_for_shortcut(&sc).unwrap_or_else(|| "select.all".into());
+        st.push(Action::Run(cmd, serde_json::json!({})));
     }
     ui.allocate_rect(full, Sense::hover());
 }

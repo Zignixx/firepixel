@@ -182,10 +182,29 @@ pub fn field_frame(ui: &Ui, r: Rect, enabled: bool, focused: bool) {
 /// darf nicht an Leinwand oder Werkzeug gehen).
 pub const TEXT_FILTER: egui::EventFilter = egui::EventFilter { horizontal_arrows: true, vertical_arrows: true, tab: false, escape: true };
 
-fn buffered_edit(ui: &mut Ui, id: Id, r: Rect, current: &str, enabled: bool, right: bool) -> (Option<String>, Response) {
+/// Anfrage eines Zahlenfelds „Strg+A = Alles auswählen“ (wie im Original geht das Kürzel aus dem
+/// Feld an das Dokument); der Inspektor führt sie aus ([`take_select_all_request`]).
+const SELECT_ALL_REQ: &str = "pi-select-all-request";
+
+/// Hat ein Zahlenfeld in diesem Bild Strg+A erhalten? (setzt die Anfrage zurück)
+pub fn take_select_all_request(ctx: &egui::Context) -> bool {
+    ctx.data_mut(|d| {
+        let v = d.get_temp::<bool>(Id::new(SELECT_ALL_REQ)).unwrap_or(false);
+        d.remove::<bool>(Id::new(SELECT_ALL_REQ));
+        v
+    })
+}
+
+/// Eingabefeld mit Puffer. `numeric`: Zahlenfeld des Inspektors – wie im Original verwirft Esc den
+/// getippten Wert nicht (übernommen wird beim Fokusverlust bzw. mit Eingabe/Tab), und Strg+A
+/// markiert nicht den Feldtext, sondern wählt alle Objekte aus (PARITAET_A F7/F10).
+fn buffered_edit(ui: &mut Ui, id: Id, r: Rect, current: &str, enabled: bool, right: bool, numeric: bool) -> (Option<String>, Response) {
     let t = Theme::current(ui.ctx());
     let te_id = id.with("te");
     let focused = ui.memory(|m| m.has_focus(te_id));
+    if numeric && focused && enabled && ui.input_mut(|i| i.consume_key(egui::Modifiers::COMMAND, egui::Key::A)) {
+        ui.ctx().data_mut(|d| d.insert_temp(Id::new(SELECT_ALL_REQ), true));
+    }
     // Puffer beim Tippen; ändert sich der Wert von außen (Schieber, Pfeil) und wurde noch nichts
     // getippt, folgt der Puffer – sonst überschriebe der Fokusverlust den neuen Wert mit dem alten
     let orig_id = id.with("orig");
@@ -229,13 +248,21 @@ fn buffered_edit(ui: &mut Ui, id: Id, r: Rect, current: &str, enabled: bool, rig
     crate::dialogs::autofocus_field(ui, &resp, current.chars().count());
     crate::dialogs::select_on_tab(ui, &resp, current.chars().count());
     let esc = ui.input(|i| i.key_pressed(egui::Key::Escape));
-    if esc && resp.has_focus() {
+    if esc && resp.has_focus() && !numeric {
         ui.memory_mut(|m| m.surrender_focus(te_id));
         ui.data_mut(|d| d.remove::<String>(id));
         return (None, resp);
     }
     let mut out = None;
-    if resp.lost_focus() && !esc && buf != current {
+    // Klick daneben (z. B. auf die Leinwand): schon beim Drücken übernehmen – egui nimmt den Fokus
+    // erst beim Loslassen weg, und dann hat die Leinwand die Auswahl schon geändert (der Wert
+    // ginge ins Leere; Original: übernommen, PARITAET_A F7/F9)
+    if resp.has_focus() && !resp.hovered() && ui.input(|i| i.pointer.any_pressed()) {
+        ui.memory_mut(|m| m.surrender_focus(te_id));
+        ui.data_mut(|d| d.remove::<String>(id));
+        return ((buf != current).then_some(buf), resp);
+    }
+    if resp.lost_focus() && (numeric || !esc) && buf != current {
         out = Some(buf.clone());
     }
     if resp.has_focus() {
@@ -248,7 +275,7 @@ fn buffered_edit(ui: &mut Ui, id: Id, r: Rect, current: &str, enabled: bool, rig
 
 /// Textfeld; liefert den neuen Text nach Eingabe/Fokusverlust.
 pub fn text(ui: &mut Ui, id: impl Hash + std::fmt::Debug, r: Rect, current: &str, enabled: bool) -> Option<String> {
-    buffered_edit(ui, Id::new(id), r, current, enabled, false).0
+    buffered_edit(ui, Id::new(id), r, current, enabled, false, false).0
 }
 
 /// Zahl formatieren (Komma, ohne überflüssige Nachkommastellen).
@@ -284,8 +311,10 @@ pub fn clamp_range(v: f64, range: (f64, f64)) -> f64 {
 #[allow(clippy::too_many_arguments)]
 pub fn number(ui: &mut Ui, id: impl Hash + std::fmt::Debug, edit: Rect, arrow: Option<Rect>, value: Option<f64>, range: (f64, f64), decimals: usize, enabled: bool) -> Option<f64> {
     let id = Id::new(id);
-    let cur = value.map(|v| fmt_num(v, decimals)).unwrap_or_default();
-    let (txt, _) = buffered_edit(ui, id, edit, &cur, enabled, false);
+    // beim Ziehen im Popup-Schieber zeigt das Feld den Wert schon mit (übernommen wird beim Loslassen)
+    let live = arrow.and_then(|_| ui.data(|d| d.get_temp::<f64>(id.with("arrow").with("val"))));
+    let cur = live.or(value).map(|v| fmt_num(v, decimals)).unwrap_or_default();
+    let (txt, _) = buffered_edit(ui, id, edit, &cur, enabled, false, true);
     // nicht negative Ganzzahlfelder sind im Original Ziffernfelder: nur Ziffern zählen
     // („-5“ → 5, „12,5“ → 125 → auf den Bereich begrenzt)
     let digits_only = decimals == 0 && range.0 >= 0.0;
@@ -298,9 +327,81 @@ pub fn number(ui: &mut Ui, id: impl Hash + std::fmt::Debug, edit: Rect, arrow: O
     out
 }
 
-/// Pfeilknopf ▾ mit Popup-Schieber (linear). Übernommen wird beim Loslassen.
+/// Pfeilknopf ▾ mit senkrechtem Popup-Schieber (linear) wie im Original. Übernommen wird beim
+/// Loslassen.
 pub fn slider_arrow(ui: &mut Ui, id: Id, r: Rect, value: f64, range: (f64, f64), decimals: usize, enabled: bool) -> Option<f64> {
-    slider_arrow_scaled(ui, id, r, value, range, decimals, crate::inspector::scale::Scale::linear(decimals), enabled)
+    slider_arrow_vertical(ui, id, r, value, range, crate::inspector::scale::Scale::linear(decimals), enabled)
+}
+
+/// Breite des senkrechten Popup-Schiebers, Länge der Spur und Rand über/unter der Spur (Pixel;
+/// Original `re\_testdateien\ux\uxa\werkzeug\bilder\o_t1_c.png`: Popup 24 × 222, Spur ≈ 209).
+pub const VSLIDER_W: f32 = 20.0;
+pub const VSLIDER_TRACK: f32 = 206.0;
+pub const VSLIDER_PAD: f32 = 6.0;
+const VSLIDER_MARGIN: f32 = 1.0;
+
+/// Pfeilknopf ▾ mit **senkrechtem** Popup-Schieber über dem Feld (Inspektor, PARITAET_A T4): oben
+/// der größte, unten der kleinste Wert; das Popup liegt so, dass der Schieberknopf beim aktuellen
+/// Wert auf Höhe des Pfeils steht (am Fensterrand verschoben). Ziehen zeigt den Wert live im Feld,
+/// Loslassen bzw. ein Klick auf die Spur übernimmt und schließt; Esc oder ein Klick daneben
+/// schließt ohne Änderung.
+#[allow(clippy::too_many_arguments)]
+pub fn slider_arrow_vertical(ui: &mut Ui, id: Id, r: Rect, value: f64, range: (f64, f64), scale: crate::inspector::scale::Scale, enabled: bool) -> Option<f64> {
+    let t = Theme::current(ui.ctx());
+    let resp = ui.interact(r, id, if enabled { Sense::click() } else { Sense::hover() });
+    audit(ui, "field", "", r, r, 0);
+    let c = t.colors.clone();
+    if resp.hovered() && enabled {
+        ui.painter().rect_filled(r, 0.0, c.button_hover_bg);
+        ui.painter().rect_stroke(r, 0.0, Stroke::new(1.0, c.button_hover_border), StrokeKind::Inside);
+    }
+    glyphs::chevron_down(ui.painter(), r, if enabled { c.icon_fg } else { c.icon_disabled });
+    let key = id.with("val");
+    let popup_id = egui::Popup::default_response_id(&resp);
+    if !egui::Popup::is_id_open(ui.ctx(), popup_id) {
+        ui.data_mut(|d| d.remove::<f64>(key));
+    }
+    let (min, max) = (range.0.min(range.1), range.0.max(range.1));
+    let max_pos = scale.max_pos(min, max).max(1.0);
+    let frac_of = |v: f64| (scale.to_pos(v, min, max) / max_pos).clamp(0.0, 1.0) as f32;
+    // Lage nach dem Wert beim Öffnen (das Popup springt beim Ziehen nicht mit)
+    let top = r.center().y - (VSLIDER_MARGIN + VSLIDER_PAD + (1.0 - frac_of(value)) * VSLIDER_TRACK);
+    let left = r.center().x - VSLIDER_W / 2.0 - VSLIDER_MARGIN;
+    let frame = egui::Frame::NONE.fill(c.frame_bg).stroke(Stroke::new(1.0, c.menu_border)).inner_margin(egui::Margin::same(VSLIDER_MARGIN as i8));
+    let mut out = None;
+    egui::Popup::from_toggle_button_response(&resp)
+        .close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside)
+        .frame(frame)
+        .at_position(pos2(left, top))
+        .align(egui::RectAlign::BOTTOM_START)
+        .gap(0.0)
+        .show(|ui| {
+            let mut v: f64 = ui.data(|d| d.get_temp(key)).unwrap_or(value);
+            let (sr, sresp) = ui.allocate_exact_size(vec2(VSLIDER_W, VSLIDER_TRACK + 2.0 * VSLIDER_PAD), Sense::click_and_drag());
+            let track_top = sr.top() + VSLIDER_PAD;
+            if (sresp.dragged() || sresp.drag_started() || sresp.clicked())
+                && let Some(p) = sresp.interact_pointer_pos()
+            {
+                let f = (1.0 - (p.y - track_top) / VSLIDER_TRACK).clamp(0.0, 1.0) as f64;
+                v = scale.to_value((f * max_pos).round(), min, max);
+                ui.data_mut(|d| d.insert_temp(key, v));
+            }
+            // Rille und Knopf (Pfeil nach links wie im Original)
+            let cx = sr.center().x.floor() + 0.5;
+            ui.painter().vline(cx - 0.5, track_top..=track_top + VSLIDER_TRACK, Stroke::new(1.0, c.line_mid));
+            ui.painter().vline(cx + 0.5, track_top..=track_top + VSLIDER_TRACK, Stroke::new(1.0, c.line_light));
+            let y = track_top + (1.0 - frac_of(v)) * VSLIDER_TRACK;
+            let col = if sresp.hovered() || sresp.dragged() { c.focus } else { c.icon_fg };
+            let pts = vec![pos2(cx - 6.0, y), pos2(cx - 2.0, y - 4.0), pos2(cx + 5.0, y - 4.0), pos2(cx + 5.0, y + 4.0), pos2(cx - 2.0, y + 4.0)];
+            ui.painter().add(egui::Shape::convex_polygon(pts, col, Stroke::NONE));
+            sresp.widget_info(|| egui::WidgetInfo::slider(true, v, ""));
+            if sresp.drag_stopped() || sresp.clicked() {
+                out = Some(v);
+                ui.data_mut(|d| d.remove::<f64>(key));
+                ui.close();
+            }
+        });
+    out
 }
 
 /// Pfeilknopf ▾ mit Popup-Schieber und Kennlinie des Originals ([`crate::inspector::scale`]).
@@ -410,6 +511,7 @@ pub fn list_item(ui: &mut Ui, text: &str, selected: bool) -> Response {
     }
     let col = if resp.hovered() { c.menu_hover_text } else { c.menu_text };
     ui.painter().text(pos2(r.left() + 6.0, r.center().y), Align2::LEFT_CENTER, text, t.ui_font(), col);
+    resp.widget_info(|| egui::WidgetInfo::selected(egui::WidgetType::SelectableLabel, true, selected, text));
     resp
 }
 
@@ -417,7 +519,7 @@ pub fn list_item(ui: &mut Ui, text: &str, selected: bool) -> Response {
 pub fn combo_edit(ui: &mut Ui, id: impl Hash + std::fmt::Debug, r: Rect, current: &str, items: &[String], enabled: bool) -> Option<String> {
     let id = Id::new(id);
     let er = Rect::from_min_max(r.min, pos2(r.right() - 16.0, r.bottom()));
-    let mut out = buffered_edit(ui, id, er, current, enabled, false).0;
+    let mut out = buffered_edit(ui, id, er, current, enabled, false, false).0;
     let ar = Rect::from_min_max(pos2(r.right() - 17.0, r.top()), r.max);
     let t = Theme::current(ui.ctx());
     let resp = ui.interact(ar, id.with("arrow"), if enabled { Sense::click() } else { Sense::hover() });
@@ -452,8 +554,11 @@ pub fn toggle(ui: &mut Ui, id: impl Hash + std::fmt::Debug, r: Rect, glyph: Glyp
             ui.painter().rect_filled(r, 2.0, crate::theme::with_alpha(c.focus, 40));
             ui.painter().rect_stroke(r, 2.0, Stroke::new(1.0, c.focus), StrokeKind::Inside);
         } else {
+            // gedrückt wie im Original (UX-A W2, a_116): blauer Rand mit hellblauem Innenrand –
+            // vorher kaum von „aus“ zu unterscheiden (weiß statt hellgrau)
             ui.painter().rect_filled(r, 2.0, c.tool_selected_bg);
-            ui.painter().rect_stroke(r, 2.0, Stroke::new(1.0, c.tool_selected_border), StrokeKind::Inside);
+            ui.painter().rect_stroke(r.shrink(1.0), 1.0, Stroke::new(2.0, crate::theme::with_alpha(c.focus, 60)), StrokeKind::Inside);
+            ui.painter().rect_stroke(r, 2.0, Stroke::new(1.0, c.focus), StrokeKind::Inside);
         }
     } else {
         ui.painter().rect_filled(r, 2.0, if hot { c.button_hover_bg } else { c.button_bg });
