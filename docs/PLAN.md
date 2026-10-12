@@ -84,7 +84,9 @@ Umfang heute: 19 Crates, ≈ 169.000 Zeilen Rust, 132 Testdateien, 16 Sprachdate
 | Agent | Auftrag | Schreibt in |
 |---|---|---|
 | **FV-8** | Tippen im echten Fenster 0,3–0,5 s verzögert: Ursache messen, beheben (Ziel ≤ 16–33 ms), andere Eingaben prüfen | fp-ui (canvas, lib.rs, Tests `tippen_messung`) |
-| **FV-11** | Bitmap-Werkzeuge: Pinsel malt Bitmap statt Vektorpfad (L36, hoch), Radiergummi, Weichzeichner, Stempel inkl. Esc (L37–L39) | fp-engine/fp-ui Werkzeuge, `bitmapwerkzeuge_fv11.rs` |
+| **PM-4** | P-PRUEF: Nachprüfung im echten Fenster (FV-10 W19…O16, FV-9 W10/W15/W17/W27/W28, FV-11 kurz, N01/N13/N14/N16–N18), Zähltabelle PARITAET_A nachführen | nur Doku + Bilder |
+
+Fertig seit dem Plan: ☑ **RE-BV** (`re\17-bildvorschau.md`) · ☑ **FV-11** Bitmap-Werkzeuge: Pinsel malt Pixel, Esc in allen Malwerkzeugen, Abdruckmodell für Radiergummi/Weichzeichner/Stempel, kein Rahmen beim Malen; L-Abschnitt 30/7/2 → 34/4/1 (`24e9524`, `37aaac0`, `8072c14`, `a6c6a61`). Neuer Rest LW: Zeiger-Klick auf ein transparentes Bitmap-Pixel wählt nichts (Original: Bitmap); Abdruckmodell für Scharfzeichner, Abwedler usw. ungemessen → in P-LW1.
 | **BV-1** (Cleanroom) | Bildvorschau Paket P1: 1/2/4-fach, eigene Einstellungen je Feld, Kopfzeile mit genauer Größen-/Ladezeitformel, aktives Feld, synchroner Zoom und Bildlauf, Hintergrundrechnung, gleiche Kodierung wie der Export. Quelle **nur** `re\17-bildvorschau.md` (☑ RE-BV, 13 Abschnitte, im Original nachgeprüft) | neues Modul `fp-ui\src\dialogs\image_preview\`, `image_preview.ftl`, fp-export |
 | **TE-1** | Technisches auf Englisch: Bestandsaufnahme `docs\TECHNISCH_ENGLISCH.md`, Laufzeitpfade umbenennen (`Sprachen` → `Languages`, `Modelle` → `Models` …) mit Migration, Wächter-Test | fp-i18n, fp-ai, fp-neutral, CLI/MCP |
 
