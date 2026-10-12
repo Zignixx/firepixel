@@ -376,6 +376,10 @@ fn run_command(st: &mut AppState, ctx: &egui::Context, name: &str, params: Value
         }
         _ => {}
     }
+    // Immer aktive Befehle ohne passendes Ziel: Warnung des Originals statt Dialog/Wirkung (FV-5)
+    if crate::dialogs::warning::intercept(st, name) {
+        return;
+    }
     // Befehle ohne Parameter aus Menü/Kürzel: zugehörigen Dialog öffnen (dialoge.json)
     let empty = params.as_object().is_none_or(|o| o.is_empty()) || params.is_null();
     if empty && crate::dialogs::open_for_command(st, name) {

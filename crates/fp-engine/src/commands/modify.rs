@@ -1080,8 +1080,13 @@ pub(super) fn register(r: &mut CommandRegistry) {
     }));
 
     // Selektives JPEG
-    // Selektives JPEG: im Original immer aktiv; ohne Pixelauswahl bzw. Maske Meldung statt Wirkung
+    // Selektives JPEG: im Original immer aktiv (gemessen ohne Auswahl, BEFUNDE EB Z11–Z13):
+    // Speichern ohne Pixelauswahl tut still nichts, Wiederherstellen und Entfernen ohne Maske
+    // legen trotzdem den Verlaufsschritt „JPEG-Maske laden“ bzw. „JPEG-Maske löschen“ an.
     r.add(cmd("modify.selectiveJpeg.saveSelectionAsJpegMask").requires(DOC).run(|s, _| {
+        if !s.active().is_some_and(|d| d.selection.has_pixels()) {
+            return Ok(CommandOutput::value(serde_json::Value::Null));
+        }
         with_doc(s, |d| {
             let m = d.selection.pixels.clone().filter(|_| d.selection.has_pixels()).ok_or_else(|| sel_err("err-req-pixel-selection"))?;
             let page = d.page;
@@ -1095,11 +1100,13 @@ pub(super) fn register(r: &mut CommandRegistry) {
         cmd("modify.selectiveJpeg.restoreJpegMaskAsSelection")
             .requires(DOC)
             .run(|s, _| {
+                s.force_history_step();
                 with_doc(s, |d| {
-                    let jm = d.doc.pages.get(d.page).and_then(|p| p.jpeg_mask.clone()).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-jpeg-mask")))?;
-                    let m = jm.mask.as_ref().and_then(|md| super::select::data_to_mask(md, jm.left, jm.top)).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-mask")))?;
-                    d.selection.pixels = Some(m);
-                    Ok(CommandOutput::doc())
+                    if let Some(jm) = d.doc.pages.get(d.page).and_then(|p| p.jpeg_mask.clone()) {
+                        let m = jm.mask.as_ref().and_then(|md| super::select::data_to_mask(md, jm.left, jm.top)).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-mask")))?;
+                        d.selection.pixels = Some(m);
+                    }
+                    Ok(CommandOutput::doc().labeled(fp_i18n::t("msg-step-jpeg-mask-load")))
                 })
             }),
     );
@@ -1107,13 +1114,13 @@ pub(super) fn register(r: &mut CommandRegistry) {
         cmd("modify.selectiveJpeg.removeJpegMask")
             .requires(DOC)
             .run(|s, _| {
+                s.force_history_step();
                 with_doc(s, |d| {
                     let page = d.page;
-                    if d.doc.pages.get(page).is_none_or(|p| p.jpeg_mask.is_none()) {
-                        return Err(EngineError::NotFound(fp_i18n::t("err-nf-jpeg-mask")));
+                    if d.doc.pages.get(page).is_some_and(|p| p.jpeg_mask.is_some()) {
+                        Arc::make_mut(&mut d.doc).page_mut(page).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-page")))?.jpeg_mask = None;
                     }
-                    Arc::make_mut(&mut d.doc).page_mut(page).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-page")))?.jpeg_mask = None;
-                    Ok(CommandOutput::doc())
+                    Ok(CommandOutput::doc().labeled(fp_i18n::t("msg-step-jpeg-mask-delete")))
                 })
             }),
     );

@@ -318,8 +318,16 @@ pub(super) fn method(name: &str, args: &[Arg], ctx: &mut Context) -> FwResult<Js
         "shiftKeyDown" | "ctrlCmdKeyDown" | "altOptKeyDown" | "isPIExpanded" | "getHideAllFloaters" | "takeScreenshot" | "associatePngwithFw" => Ok(JsValue::from(false)),
         "isPIVisible" | "getFloaterVisibility" | "checkFwJsVersion" => Ok(JsValue::from(name != "getFloaterVisibility")),
         "setFloaterVisibility" | "toggleFloater" | "setHideAllFloaters" | "growPIWindow" | "shrinkPIWindow" | "setPIPosition" | "showPIWindow" | "hidePIWindow" | "reloadPatterns"
-        | "reloadTextures" | "reloadCommonLibrary" | "logPipEvent" | "enableFlashDebugging" | "disableFlashDebugging" | "quit" | "quitApplication" | "resetWarnings"
+        | "reloadTextures" | "reloadCommonLibrary" | "logPipEvent" | "enableFlashDebugging" | "disableFlashDebugging" | "quit" | "quitApplication"
         | "addProjectEntry" | "logChangeInProject" | "removeAllProjectEntries" | "setActiveViewScale" => Ok(JsValue::undefined()),
+        // „Warndialoge zurücksetzen“ (Befehle-Menü): abgeschaltete Warnungen wieder zeigen (FV-5)
+        "resetWarnings" => {
+            with_state(|s| {
+                s.session.prefs.reset_warnings();
+                s.session.prefs_changed();
+            })?;
+            Ok(JsValue::undefined())
+        }
         "getProjectEntries" => Ok(conv::array(Vec::new(), ctx)),
         "getPIPosition" => conv::point_js(0.0, 0.0, ctx).map_err(|e| FwErr::Js(e.to_string())),
         "getFWLaunchLanguage" => Ok(conv::s("de_DE")),

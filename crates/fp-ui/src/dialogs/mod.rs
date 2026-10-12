@@ -20,6 +20,7 @@ pub(crate) mod preferences;
 pub mod shortcuts;
 pub mod spelling;
 pub mod trace;
+pub mod warning;
 mod unsaved;
 
 pub use misc::Confirm;
@@ -73,6 +74,8 @@ pub struct Dialogs {
     pub ai: models::AiDialogs,
     /// „Bitmap nachzeichnen…“ mit Live-Vorschau (VT-2).
     pub trace: Option<trace::TraceDialog>,
+    /// Warnung „Befehl ohne passendes Ziel“ mit „Nicht mehr anzeigen“ (FV-5).
+    pub warning: Option<warning::WarningDialog>,
 }
 
 /// Verzögert zu öffnendes Formular.
@@ -109,6 +112,7 @@ impl Dialogs {
             || self.popup_editor.is_some()
             || self.ai.modal_open()
             || self.trace.is_some()
+            || self.warning.is_some()
             || crate::file_dialog::is_open() // AU: offener Datei-Dialog sperrt wie ein modaler Dialog
     }
 
@@ -650,6 +654,7 @@ pub fn show_all(ctx: &egui::Context, st: &mut AppState) {
     popup_menu::show(ctx, st);
     models::show(ctx, st);
     trace::show(ctx, st);
+    warning::show(ctx, st);
     show_message(ctx, st);
     save_workspace(ctx, st);
     if let Some(t) = st.dialogs.clipboard.take() {

@@ -220,10 +220,18 @@ fn with_step_name(st: &AppState, name: &str, label: String) -> String {
     let doc = st.session.active();
     let step = match name {
         "edit.undo" => doc.and_then(|d| d.history.undo_label()),
-        "edit.redo" => doc.and_then(|d| d.history.redo_label()),
+        // ohne zurückgenommenen Schritt wiederholt das Original den letzten Befehl
+        "edit.redo" => return with_redo_step(st, label),
         _ => None,
     };
     match step {
+        Some(s) if !s.is_empty() => fp_i18n::tr!("menu-edit-withStep", label = label, step = s),
+        _ => label,
+    }
+}
+
+fn with_redo_step(st: &AppState, label: String) -> String {
+    match st.session.undo_redo_labels().1 {
         Some(s) if !s.is_empty() => fp_i18n::tr!("menu-edit-withStep", label = label, step = s),
         _ => label,
     }

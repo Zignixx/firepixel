@@ -218,6 +218,8 @@ pub enum SessionEvent {
     QuitRequested,
     /// Befehl ausgeführt (für Statuszeile/Protokoll).
     CommandExecuted(String),
+    /// Befehl ohne passendes Ziel: Warnung wie im Original (siehe [`crate::warnings`]).
+    Warning(crate::warnings::TargetWarning),
 }
 
 /// UI-Zustand, den Befehle schalten (Bedienfelder, Bildschirmmodus).
@@ -309,6 +311,9 @@ pub struct Session {
     pub last_command_label: Option<String>,
     group_depth: u32,
     group_log: Vec<RecordedCommand>,
+    /// Nächster Befehl legt auch ohne Änderung einen Verlaufsschritt an (Original: z. B.
+    /// „JPEG-Maske löschen“ ohne Maske).
+    force_step: bool,
     next_doc: u64,
     untitled: u32,
 }
@@ -353,6 +358,7 @@ impl Session {
             last_command_label: None,
             group_depth: 0,
             group_log: Vec::new(),
+            force_step: false,
             next_doc: 1,
             untitled: 0,
             prefs,
@@ -598,7 +604,16 @@ impl Session {
         if let Some(reason) = self.unmet(cmd.as_ref()) {
             return Err(EngineError::Unavailable { name: name.into(), reason });
         }
+        // Immer aktive Befehle ohne Ziel: Warnung des Originals statt Wirkung
+        if let Some(w) = self.target_warning(name) {
+            let text = w.text.clone();
+            if !w.suppressed {
+                self.events.push(SessionEvent::Warning(w));
+            }
+            return Err(EngineError::Selection(text));
+        }
         let p = Params::new(name, params);
+        self.force_step = false;
         validate(info, &p)?;
         let doc_id = self.active_id();
         let before = self.active().map(|d| d.snapshot());
@@ -668,7 +683,8 @@ impl Session {
         let doc_changed = !Arc::ptr_eq(&before.doc, &d.doc);
         let sel_changed = before.selection != d.selection;
         let loc_changed = before.page != d.page || before.frame != d.frame || before.layer != d.layer;
-        if !doc_changed && !sel_changed && !loc_changed {
+        let forced = std::mem::take(&mut self.force_step) && !grouping;
+        if !doc_changed && !sel_changed && !loc_changed && !forced {
             return;
         }
         if doc_changed {
@@ -715,7 +731,7 @@ impl Session {
             self.events.push(SessionEvent::HistoryChanged(id));
             return;
         }
-        if doc_changed || sel_changed {
+        if doc_changed || sel_changed || forced {
             let after = now;
             d.history.push(crate::history::HistoryStep {
                 label,
@@ -727,6 +743,11 @@ impl Session {
             });
             self.events.push(SessionEvent::HistoryChanged(id));
         }
+    }
+
+    /// Der laufende Befehl legt auch ohne Änderung einen Verlaufsschritt an.
+    pub(crate) fn force_history_step(&mut self) {
+        self.force_step = true;
     }
 
     /// Führt mehrere Befehle als **einen** Verlaufsschritt aus (wie ein Skript im Original,

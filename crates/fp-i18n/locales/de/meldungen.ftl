@@ -542,3 +542,22 @@ err-import-part-height = Höhe
 err-import-part-file-too-short = Datei zu kurz
 err-import-part-header-not-object = Kopf ist kein Objekt
 # <<< UE-3 Dateiteile
+
+# >>> FV-5 Warnungen ohne Ziel
+# Warnungen bei immer aktiven Menübefehlen ohne passendes Ziel (Wortlaut des Originals, BEFUNDE EB Z01–Z18), FV-5
+msg-warn-combine-paths = Zum Öffnen, Vereinigen, Überschneiden und Zuschneiden müssen zwei oder mehr Pfade ausgewählt werden.
+msg-warn-alter-path = Zum Vereinfachen, Erweitern und Einlassen ist mindestens ein Pfad erforderlich.
+msg-warn-tween-instances = Wählen Sie zwei oder mehr Instanzen desselben Bibliothekssymbols aus, bevor Sie den Tween-Befehl verwenden.
+msg-warn-break-apart = Um die Verknüpfung zwischen einem Bibliothekssymbol und den Instanzen zu entfernen, müssen Sie zuerst ein Symbol bzw. eine Instanz auswählen.
+msg-warn-insert-hotspot = Wählen Sie mindestens ein Objekt aus, bevor Sie den Befehl zum Einfügen von Hotspots verwenden.
+msg-warn-insert-slice = Wählen Sie mindestens ein Objekt aus, bevor Sie den Befehl zum Einfügen eines Segments verwenden.
+msg-warn-select-similar = Nehmen Sie mit dem Auswahlrahmen, dem Lasso oder dem Zauberstab eine Pixelauswahl vor, bevor Sie den Befehl "Ähnliches auswählen" verwenden.
+msg-warn-feather = Bevor Sie den Befehl "Weiche Kante" verwenden, nehmen Sie mit dem Auswahlrahmen, dem Lasso oder dem Zauberstab eine Pixelauswahl vor.
+msg-warn-popup-hotspot-or-slice = Verhalten werden über das Verhalten-Bedienfeld auf Hotspot- oder Segmentobjekte angewendet. Hotspot oder Segment erstellen?
+msg-warn-choice-hotspot = &Hotspot
+msg-warn-choice-slice = &Segment
+msg-warn-choice-cancel = &Abbrechen
+msg-warn-dont-show = Nicht me&hr anzeigen
+msg-step-jpeg-mask-load = JPEG-Maske laden
+msg-step-jpeg-mask-delete = JPEG-Maske löschen
+# <<< FV-5 Warnungen ohne Ziel

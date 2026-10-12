@@ -54,6 +54,7 @@ pub mod tools;
 #[cfg(feature = "vector")]
 pub mod vector_backend;
 pub mod view;
+pub mod warnings;
 
 pub use command::{Command, CommandInfo, CommandOutput, CommandRegistry, Effect, ObjectKind, ParamKind, ParamSpec, Params, Requirement};
 pub use error::{EngineError, Result};
@@ -64,3 +65,4 @@ pub use session::{DocId, DocumentState, ScriptHost, Session, SessionEvent};
 pub use shortcuts::{Shortcut, ShortcutSet};
 pub use tools::{Modifiers, Overlay, ToolEvent, ToolId, ToolKey, ToolResponse};
 pub use view::ViewState;
+pub use warnings::{TargetWarning, WarningChoice};

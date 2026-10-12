@@ -542,3 +542,22 @@ err-import-part-height = height
 err-import-part-file-too-short = file too short
 err-import-part-header-not-object = header is not an object
 # <<< UE-3 Dateiteile
+
+# >>> FV-5 Warnungen ohne Ziel
+# Warnings for always-enabled menu commands without a suitable target (BEFUNDE EB Z01–Z18), FV-5
+msg-warn-combine-paths = Two or more paths must be selected to punch, union, intersect or crop.
+msg-warn-alter-path = Simplify, Expand Stroke and Inset Path require at least one path.
+msg-warn-tween-instances = Select two or more instances of the same library symbol before using the Tween command.
+msg-warn-break-apart = To break the link between a library symbol and its instances, first select a symbol or an instance.
+msg-warn-insert-hotspot = Select at least one object before using the command to insert hotspots.
+msg-warn-insert-slice = Select at least one object before using the command to insert a slice.
+msg-warn-select-similar = Make a pixel selection with the Marquee, Lasso or Magic Wand before using the "Select Similar" command.
+msg-warn-feather = Before using the "Feather" command, make a pixel selection with the Marquee, Lasso or Magic Wand.
+msg-warn-popup-hotspot-or-slice = Behaviors are applied to hotspot or slice objects through the Behaviors panel. Create a hotspot or a slice?
+msg-warn-choice-hotspot = &Hotspot
+msg-warn-choice-slice = S&lice
+msg-warn-choice-cancel = &Cancel
+msg-warn-dont-show = Don't s&how again
+msg-step-jpeg-mask-load = Load JPEG Mask
+msg-step-jpeg-mask-delete = Delete JPEG Mask
+# <<< FV-5 Warnungen ohne Ziel
