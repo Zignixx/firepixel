@@ -249,11 +249,16 @@ fn buffered_edit(ui: &mut Ui, id: Id, r: Rect, current: &str, enabled: bool, rig
         // Taste erreicht zusätzlich die Leinwand (Auswahl aufheben)
         .event_filter(crate::inspector::fields::TEXT_FILTER);
     let resp = ui.add_enabled_ui(enabled, |ui| ui.put(inner, te)).inner;
+    // Fokus des Felds selbst, ohne den Fensterfokus: `Response::has_focus` ist auch `false`, solange
+    // das Hauptfenster nicht den Systemfokus hat (RDP ohne Vordergrund, Brücke, Alt+Tab). Dann ging
+    // der Puffer nach jedem Bild verloren und jede getippte Ziffer landete wieder auf dem alten Wert
+    // (P-DLG1, Befund PM-5 „Zahlenfelder nehmen keine Eingabe mehr an“).
+    let has_focus = |ui: &Ui| ui.memory(|m| m.has_focus(te_id));
     // erstes Feld eines frisch geöffneten Dialogs: Fokus, Inhalt ganz markiert
     crate::dialogs::autofocus_field(ui, &resp, current.chars().count());
     crate::dialogs::select_on_tab(ui, &resp, current.chars().count());
     let esc = ui.input(|i| i.key_pressed(egui::Key::Escape));
-    if esc && resp.has_focus() && !numeric {
+    if esc && has_focus(ui) && !numeric {
         ui.memory_mut(|m| m.surrender_focus(te_id));
         ui.data_mut(|d| d.remove::<String>(id));
         return (None, resp);
@@ -262,7 +267,7 @@ fn buffered_edit(ui: &mut Ui, id: Id, r: Rect, current: &str, enabled: bool, rig
     // Klick daneben (z. B. auf die Leinwand): schon beim Drücken übernehmen – egui nimmt den Fokus
     // erst beim Loslassen weg, und dann hat die Leinwand die Auswahl schon geändert (der Wert
     // ginge ins Leere; Original: übernommen, PARITAET_A F7/F9)
-    if resp.has_focus() && !resp.hovered() && ui.input(|i| i.pointer.any_pressed()) {
+    if has_focus(ui) && !resp.hovered() && ui.input(|i| i.pointer.any_pressed()) {
         ui.memory_mut(|m| m.surrender_focus(te_id));
         ui.data_mut(|d| d.remove::<String>(id));
         let out = (buf != current).then_some(buf);
@@ -279,7 +284,7 @@ fn buffered_edit(ui: &mut Ui, id: Id, r: Rect, current: &str, enabled: bool, rig
             request_commit_now(ui.ctx());
         }
     }
-    if resp.has_focus() {
+    if has_focus(ui) {
         ui.data_mut(|d| d.insert_temp(id, buf));
     } else {
         ui.data_mut(|d| d.remove::<String>(id));
