@@ -12,8 +12,10 @@ fn u32le(d: &[u8], o: usize) -> Option<u32> {
     d.get(o..o + 4).map(|b| u32::from_le_bytes([b[0], b[1], b[2], b[3]]))
 }
 
+use crate::part;
+
 fn bad(s: &str) -> ImportError {
-    ImportError::Corrupt(format!("BMP: {s}"))
+    ImportError::Corrupt(format!("BMP: {}", part(s)))
 }
 
 /// Datei mit `BITMAPFILEHEADER` lesen.
@@ -21,8 +23,8 @@ pub fn decode(data: &[u8]) -> Result<RasterImage> {
     if data.get(..2) != Some(b"BM") {
         return Err(bad(&fp_i18n::t("err-import-signature-missing")));
     }
-    let off = u32le(data, 10).ok_or_else(|| bad("Kopf abgeschnitten"))? as usize;
-    decode_dib(data.get(14..).ok_or_else(|| bad("Kopf abgeschnitten"))?, Some(off.saturating_sub(14)), false)
+    let off = u32le(data, 10).ok_or_else(|| bad("err-import-part-header-truncated"))? as usize;
+    decode_dib(data.get(14..).ok_or_else(|| bad("err-import-part-header-truncated"))?, Some(off.saturating_sub(14)), false)
 }
 
 fn mask_shift(m: u32) -> (u32, u32) {
@@ -47,7 +49,7 @@ fn scale(v: u32, bits: u32) -> u8 {
 /// Kopf und Palette). `alpha32`: bei 32 Bit `BI_RGB` das vierte Byte als Alpha deuten (Symbole,
 /// Zwischenablage); sind dann alle Alphawerte 0, gilt das Bild als deckend.
 pub fn decode_dib(d: &[u8], pixel_offset: Option<usize>, alpha32: bool) -> Result<RasterImage> {
-    let hsize = u32le(d, 0).ok_or_else(|| bad("Kopf abgeschnitten"))? as usize;
+    let hsize = u32le(d, 0).ok_or_else(|| bad("err-import-part-header-truncated"))? as usize;
     let (w, h, bpp, comp, ncolors) = if hsize == 12 {
         (u16le(d, 4).unwrap_or(0) as i32, u16le(d, 6).unwrap_or(0) as i16 as i32, u16le(d, 10).unwrap_or(0), 0u32, 0u32)
     } else if hsize >= 40 {
@@ -100,7 +102,7 @@ pub fn decode_dib(d: &[u8], pixel_offset: Option<usize>, alpha32: bool) -> Resul
         palette.push([c[2], c[1], c[0]]);
     }
     let pix_off = pixel_offset.unwrap_or(after_header + pal_n * entry);
-    let pix = d.get(pix_off..).ok_or_else(|| bad("Pixeldaten fehlen"))?;
+    let pix = d.get(pix_off..).ok_or_else(|| bad("err-import-part-pixels-missing"))?;
     let (w, h) = (wu as usize, hu as usize);
     let mut idx: Vec<u8> = Vec::new();
     let mut rgba = vec![0u8; w * h * 4];
@@ -156,7 +158,7 @@ pub fn decode_dib(d: &[u8], pixel_offset: Option<usize>, alpha32: bool) -> Resul
             let stride = (w * bpp as usize).div_ceil(32) * 4;
             idx = vec![0u8; w * h];
             for r in 0..h {
-                let row = pix.get(r * stride..r * stride + stride).ok_or_else(|| bad("Pixeldaten abgeschnitten"))?;
+                let row = pix.get(r * stride..r * stride + stride).ok_or_else(|| bad("err-import-part-pixels-truncated"))?;
                 let y = row_of(r);
                 for x in 0..w {
                     let bit = x * bpp as usize;
@@ -168,7 +170,7 @@ pub fn decode_dib(d: &[u8], pixel_offset: Option<usize>, alpha32: bool) -> Resul
         (0, 24) => {
             let stride = (w * 3).div_ceil(4) * 4;
             for r in 0..h {
-                let row = pix.get(r * stride..r * stride + w * 3).ok_or_else(|| bad("Pixeldaten abgeschnitten"))?;
+                let row = pix.get(r * stride..r * stride + w * 3).ok_or_else(|| bad("err-import-part-pixels-truncated"))?;
                 let y = row_of(r);
                 for x in 0..w {
                     let o = (y * w + x) * 4;
@@ -181,7 +183,7 @@ pub fn decode_dib(d: &[u8], pixel_offset: Option<usize>, alpha32: bool) -> Resul
             let stride = (w * bytes).div_ceil(4) * 4;
             let ms: Vec<(u32, u32)> = masks.iter().map(|&m| mask_shift(m)).collect();
             for r in 0..h {
-                let row = pix.get(r * stride..r * stride + w * bytes).ok_or_else(|| bad("Pixeldaten abgeschnitten"))?;
+                let row = pix.get(r * stride..r * stride + w * bytes).ok_or_else(|| bad("err-import-part-pixels-truncated"))?;
                 let y = row_of(r);
                 for x in 0..w {
                     let v = if bytes == 2 { u16::from_le_bytes([row[x * 2], row[x * 2 + 1]]) as u32 } else { u32::from_le_bytes([row[x * 4], row[x * 4 + 1], row[x * 4 + 2], row[x * 4 + 3]]) };

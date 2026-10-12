@@ -32,7 +32,7 @@ pub struct PdfPage<'a> {
 /// PDF 1.4 mit je einem Bild pro Seite.
 pub fn write_pdf(pages: &[PdfPage], title: &str) -> Result<Vec<u8>> {
     if pages.is_empty() {
-        return Err(ExportError::Encode("PDF ohne Seite".into()));
+        return Err(ExportError::Encode(fp_i18n::t("err-export-d-pdf-no-page")));
     }
     let mut objs: Vec<Vec<u8>> = Vec::new();
     // 1 Katalog, 2 Seitenbaum, 3 Info, dann je Seite: Seite, Inhalt, Bild, Maske
@@ -224,7 +224,7 @@ fn element_svg(out: &mut String, e: &Element, ox: f32, oy: f32, depth: u32) {
 
 /// SVG einer Seite. `flat` = optional flach gerechnetes Seitenbild (dann nur dieses, als Bild).
 pub fn write_svg(doc: &Document, page: usize, frame: usize, flat: Option<&RgbaImage>) -> Result<String> {
-    let p = doc.pages.get(page).ok_or_else(|| ExportError::Encode(format!("Seite {page} fehlt")))?;
+    let p = doc.pages.get(page).ok_or_else(|| ExportError::Encode(fp_i18n::tr!("err-export-d-page-missing", page = page.to_string())))?;
     let (w, h) = (p.canvas.width, p.canvas.height);
     let (ox, oy) = (p.canvas.origin.x, p.canvas.origin.y);
     let mut out = format!("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{w}\" height=\"{h}\" viewBox=\"0 0 {w} {h}\">\n");

@@ -322,9 +322,9 @@ pub struct ApngFrame {
 /// APNG (RGBA, 8 Bit) mit `num_plays` Wiederholungen (0 = endlos). Das erste Einzelbild muss die ganze
 /// Leinwand abdecken (es ist zugleich das Standardbild).
 pub fn write_apng(width: u32, height: u32, frames: &[ApngFrame], num_plays: u32, opts: &PngOptions) -> Result<Vec<u8>> {
-    let first = frames.first().ok_or_else(|| ExportError::Encode("APNG ohne Einzelbild".into()))?;
+    let first = frames.first().ok_or_else(|| ExportError::Encode(fp_i18n::t("err-export-d-apng-no-frame")))?;
     if first.x != 0 || first.y != 0 || first.w != width || first.h != height {
-        return Err(ExportError::Encode("erstes APNG-Einzelbild muss die Leinwand abdecken".into()));
+        return Err(ExportError::Encode(fp_i18n::t("err-export-d-apng-first-frame")));
     }
     let mut out = Vec::new();
     header(&mut out, width as usize, height as usize, Kind::Rgba, false)?;

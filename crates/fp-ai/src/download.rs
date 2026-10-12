@@ -118,7 +118,7 @@ fn fetch(url: &str, part: &Path, size: u64, sha: &str, prog: &Progress) -> Resul
     f.flush()?;
     drop(f);
     if done != size {
-        return Err(AiError::Download(format!("Größe {done} statt {size} Byte")));
+        return Err(AiError::Download(fp_i18n::tr!("ai-err-d-download-size", done = done.to_string(), size = size.to_string())));
     }
     let got = hex(&h.finalize());
     if got != sha {

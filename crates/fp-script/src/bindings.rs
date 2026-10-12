@@ -149,28 +149,29 @@ pub mod hr {
     pub const E_ARRAY_INDEX: u32 = 0x8004_1410;
 }
 
-/// Kurzer deutscher Text zu einem Errors-Namen (eigene Formulierung).
+/// Kurzer Text zu einem Errors-Namen (eigene Formulierung) in der aktuellen Sprache (skript.ftl, `err-script-hr-*`).
 pub fn error_text(name: &str) -> String {
-    match name {
-        "EBadParam" | "EBadParamCount" => "Ein Parameter ist ungültig.".into(),
-        "EBadParamType" => "Ein Parameter hat den falschen Typ.".into(),
-        "EOutOfMem" | "ELowOnMem" => "Nicht genügend Arbeitsspeicher.".into(),
-        "EFileNotFound" => "Die Datei wurde nicht gefunden.".into(),
-        "EDiskFull" => "Der Datenträger ist voll.".into(),
-        "EGenericErrorOccurred" => "Es ist ein Fehler aufgetreten.".into(),
-        "ENoSliceableElems" => "Es gibt keine Objekte, aus denen Segmente erstellt werden können.".into(),
-        "ESharingViolation" => "Die Datei wird von einem anderen Programm verwendet.".into(),
-        "EUnknownReaderFormat" => "Das Dateiformat ist unbekannt.".into(),
-        "EBadFileContents" => "Der Dateiinhalt ist beschädigt.".into(),
-        "EFileIsReadOnly" => "Die Datei ist schreibgeschützt.".into(),
-        "ENoFilesSelected" => "Es wurden keine Dateien ausgewählt.".into(),
-        "EBadSelection" => "Die Auswahl passt nicht zu diesem Vorgang.".into(),
-        "EBadJsVersion" => "Die Skriptversion wird nicht unterstützt.".into(),
-        "ENoActiveDocument" => "Es ist kein Dokument geöffnet.".into(),
-        "ENoActiveSelection" => "Es ist nichts ausgewählt.".into(),
-        "CouldNotCompleteYourRequest" => "Die Anforderung konnte nicht ausgeführt werden.".into(),
-        _ => "Es ist ein interner Fehler aufgetreten.".into(),
-    }
+    let key = match name {
+        "EBadParam" | "EBadParamCount" => "err-script-hr-ebad-param",
+        "EBadParamType" => "err-script-hr-ebad-param-type",
+        "EOutOfMem" | "ELowOnMem" => "err-script-hr-eout-of-mem",
+        "EFileNotFound" => "err-script-hr-efile-not-found",
+        "EDiskFull" => "err-script-hr-edisk-full",
+        "EGenericErrorOccurred" => "err-script-hr-egeneric-error-occurred",
+        "ENoSliceableElems" => "err-script-hr-eno-sliceable-elems",
+        "ESharingViolation" => "err-script-hr-esharing-violation",
+        "EUnknownReaderFormat" => "err-script-hr-eunknown-reader-format",
+        "EBadFileContents" => "err-script-hr-ebad-file-contents",
+        "EFileIsReadOnly" => "err-script-hr-efile-is-read-only",
+        "ENoFilesSelected" => "err-script-hr-eno-files-selected",
+        "EBadSelection" => "err-script-hr-ebad-selection",
+        "EBadJsVersion" => "err-script-hr-ebad-js-version",
+        "ENoActiveDocument" => "err-script-hr-eno-active-document",
+        "ENoActiveSelection" => "err-script-hr-eno-active-selection",
+        "CouldNotCompleteYourRequest" => "err-script-hr-could-not-complete-your-request",
+        _ => "err-script-hr-internal",
+    };
+    fp_i18n::t(key)
 }
 
 #[cfg(test)]

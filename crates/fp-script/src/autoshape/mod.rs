@@ -541,7 +541,7 @@ fn shape_of(session: &Session, id: ElementId) -> R<(Element, usize)> {
     let e = docops::element_on_page(&d.doc, d.page, id).ok_or(EngineError::ElementNotFound(id.0))?;
     match &e.kind {
         ElementKind::Group(g) if g.smart_shape.is_some() => Ok(((*e).clone(), d.page)),
-        _ => Err(EngineError::Selection(format!("Element {} ist keine automatische Form", id.0))),
+        _ => Err(EngineError::Selection(fp_i18n::tr!("err-script-element-not-autoshape", id = id.0.to_string()))),
     }
 }
 

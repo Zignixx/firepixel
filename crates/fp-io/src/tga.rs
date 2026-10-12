@@ -4,8 +4,10 @@
 use crate::raster::RasterImage;
 use crate::{check_size, ImportError, Result};
 
+use crate::part;
+
 fn bad(s: &str) -> ImportError {
-    ImportError::Corrupt(format!("TGA: {s}"))
+    ImportError::Corrupt(format!("TGA: {}", part(s)))
 }
 
 fn px16(v: u16, alpha_bits: u8) -> [u8; 4] {
@@ -18,7 +20,7 @@ fn px16(v: u16, alpha_bits: u8) -> [u8; 4] {
 
 /// TGA lesen.
 pub fn decode(d: &[u8]) -> Result<RasterImage> {
-    let h = d.get(..18).ok_or_else(|| bad("Kopf abgeschnitten"))?;
+    let h = d.get(..18).ok_or_else(|| bad("err-import-part-header-truncated"))?;
     let (id_len, cmap_type, typ) = (h[0] as usize, h[1], h[2]);
     let (cmap_first, cmap_len, cmap_bits) = (u16::from_le_bytes([h[3], h[4]]) as usize, u16::from_le_bytes([h[5], h[6]]) as usize, h[7]);
     let (w, hh) = (u16::from_le_bytes([h[12], h[13]]) as u32, u16::from_le_bytes([h[14], h[15]]) as u32);
@@ -33,7 +35,7 @@ pub fn decode(d: &[u8]) -> Result<RasterImage> {
     if cmap_type == 1 {
         let eb = (cmap_bits as usize).div_ceil(8);
         for i in 0..cmap_len {
-            let e = d.get(p + i * eb..p + i * eb + eb).ok_or_else(|| bad("Farbtabelle abgeschnitten"))?;
+            let e = d.get(p + i * eb..p + i * eb + eb).ok_or_else(|| bad("err-import-part-color-table-truncated"))?;
             cmap.push(match eb {
                 2 => px16(u16::from_le_bytes([e[0], e[1]]), 0),
                 3 => [e[2], e[1], e[0], 255],
@@ -55,13 +57,13 @@ pub fn decode(d: &[u8]) -> Result<RasterImage> {
             p += 1;
             let count = (hdr & 0x7F) as usize + 1;
             if hdr & 0x80 != 0 {
-                let v = d.get(p..p + bytes).ok_or_else(|| bad("RLE abgeschnitten"))?;
+                let v = d.get(p..p + bytes).ok_or_else(|| bad("err-import-part-rle-truncated"))?;
                 for _ in 0..count {
                     raw.extend_from_slice(v);
                 }
                 p += bytes;
             } else {
-                let v = d.get(p..p + bytes * count).ok_or_else(|| bad("RLE abgeschnitten"))?;
+                let v = d.get(p..p + bytes * count).ok_or_else(|| bad("err-import-part-rle-truncated"))?;
                 raw.extend_from_slice(v);
                 p += bytes * count;
             }
@@ -69,7 +71,7 @@ pub fn decode(d: &[u8]) -> Result<RasterImage> {
         raw.truncate(n * bytes);
         raw.resize(n * bytes, 0);
     } else {
-        raw.extend_from_slice(d.get(p..p + n * bytes).ok_or_else(|| bad("Pixeldaten abgeschnitten"))?);
+        raw.extend_from_slice(d.get(p..p + n * bytes).ok_or_else(|| bad("err-import-part-pixels-truncated"))?);
     }
     let mut rgba = vec![0u8; n * 4];
     let top = desc & 0x20 != 0;

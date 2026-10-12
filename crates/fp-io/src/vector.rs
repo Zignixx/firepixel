@@ -95,7 +95,7 @@ fn paint_color(p: &usvg::Paint, opacity: f32, warnings: &mut Vec<String>) -> Opt
         usvg::Paint::LinearGradient(g) => stop_color(g.stops(), opacity, warnings),
         usvg::Paint::RadialGradient(g) => stop_color(g.stops(), opacity, warnings),
         usvg::Paint::Pattern(_) => {
-            warnings.push("SVG-Muster werden nicht übernommen".into());
+            warnings.push(fp_i18n::t("msg-import-warn-svg-pattern"));
             None
         }
     }
@@ -103,7 +103,7 @@ fn paint_color(p: &usvg::Paint, opacity: f32, warnings: &mut Vec<String>) -> Opt
 
 /// Nur noch für Striche (das Original kennt keine Verlaufsstriche).
 fn stop_color(stops: &[usvg::Stop], opacity: f32, warnings: &mut Vec<String>) -> Option<Argb> {
-    warnings.push("SVG-Verlaufsstriche werden durch ihre erste Farbe ersetzt (A)".into());
+    warnings.push(fp_i18n::t("msg-import-warn-svg-gradient-stroke"));
     let s = stops.first()?;
     let c = s.color();
     let a = ((opacity * s.opacity().get()).clamp(0.0, 1.0) * 255.0).round() as u32;
@@ -133,7 +133,7 @@ fn svg_gradient(p: &usvg::Paint, opacity: f32, path_t: &usvg::Transform, warning
     let (shape, cat, name, start, end, second) = match p {
         usvg::Paint::LinearGradient(g) => {
             if g.spread_method() != usvg::SpreadMethod::Pad {
-                warnings.push("SVG-Verläufe mit Wiederholung werden ohne Wiederholung übernommen".into());
+                warnings.push(fp_i18n::t("msg-import-warn-svg-gradient-repeat"));
             }
             let (a, b) = (tf(&t, g.x1(), g.y1()), tf(&t, g.x2(), g.y2()));
             let perp = Point::new(a.x - (b.y - a.y), a.y + (b.x - a.x));
@@ -141,7 +141,7 @@ fn svg_gradient(p: &usvg::Paint, opacity: f32, path_t: &usvg::Transform, warning
         }
         usvg::Paint::RadialGradient(g) => {
             if (g.fx() - g.cx()).abs() > 1e-3 || (g.fy() - g.cy()).abs() > 1e-3 {
-                warnings.push("SVG-Verläufe mit verschobenem Brennpunkt werden zentriert übernommen (A)".into());
+                warnings.push(fp_i18n::t("msg-import-warn-svg-gradient-focus"));
             }
             let r = g.r().get();
             let c = tf(&t, g.cx(), g.cy());
@@ -241,7 +241,7 @@ fn svg_image(ids: &mut IdGen, img: &usvg::Image, tile: &mut u32, warnings: &mut 
     let data = match img.kind() {
         usvg::ImageKind::PNG(d) | usvg::ImageKind::JPEG(d) => d.clone(),
         _ => {
-            warnings.push("eingebettete SVG-Bilder dieses Typs werden nicht übernommen".into());
+            warnings.push(fp_i18n::t("msg-import-warn-svg-image"));
             return None;
         }
     };
@@ -263,7 +263,7 @@ fn svg_group(ids: &mut IdGen, g: &usvg::Group, tile: &mut u32, warnings: &mut Ve
         return Vec::new();
     }
     if g.clip_path().is_some() || g.mask().is_some() || !g.filters().is_empty() {
-        warnings.push("SVG-Schnittpfade, Masken und Filter werden nicht übernommen".into());
+        warnings.push(fp_i18n::t("msg-import-warn-svg-clip"));
     }
     let mut out = Vec::new();
     // SVG: spätere Kinder liegen oben ⇒ Reihenfolge des Originals oben → unten umkehren
@@ -296,7 +296,7 @@ fn svg_group(ids: &mut IdGen, g: &usvg::Group, tile: &mut u32, warnings: &mut Ve
                     out.push(ge);
                 }
             }
-            usvg::Node::Text(_) => warnings.push("SVG-Text wird nicht übernommen (ohne Textmodul)".into()),
+            usvg::Node::Text(_) => warnings.push(fp_i18n::t("msg-import-warn-svg-text")),
         }
     }
     out
@@ -552,8 +552,8 @@ fn import_ai_text(text: &str, opts: &ImportOptions) -> Result<ImportResult> {
                 "Xa" if n >= 3 => fill = rgb(arg(3), arg(2), arg(1)),
                 "XA" if n >= 3 => stroke = rgb(arg(3), arg(2), arg(1)),
                 "w" if n >= 1 => width = arg(1),
-                "Tx" | "Tj" | "TX" => warnings.push("Illustrator-Text wird nicht übernommen".into()),
-                "XI" | "XG" | "%%BeginRaster" => warnings.push("platzierte Bilder/Raster werden nicht übernommen".into()),
+                "Tx" | "Tj" | "TX" => warnings.push(fp_i18n::t("msg-import-warn-ai-text")),
+                "XI" | "XG" | "%%BeginRaster" => warnings.push(fp_i18n::t("msg-import-warn-ai-raster")),
                 _ => {}
             }
             if !matches!(tok, "Xa" | "XA") || n >= 3 {
@@ -595,7 +595,7 @@ pub fn import_postscript(data: &[u8], fmt: FileFormat, opts: &ImportOptions) -> 
     if let Some(t) = tiff {
         let img = crate::tiff_in::decode(t, opts.cmyk_table.as_deref())?;
         let mut r = ImportResult { document: document_from_raster(img, FileFormat::Eps), format: FileFormat::Eps, content: ImportedContent::Bitmap, warnings: vec![] };
-        r.warnings.push("EPS ohne Illustrator-Daten: nur die eingebettete TIFF-Vorschau wurde übernommen (kein PostScript-Interpreter)".into());
+        r.warnings.push(fp_i18n::t("msg-import-warn-eps-preview"));
         if let Some(p) = r.document.page_mut(0)
             && let Some(fp_model::LayerSlot::Own(l)) = p.root.layers.get_mut(0)
         {

@@ -102,3 +102,21 @@ zlib
 text main.rs | FP_ARG
 text sprache.rs | language-name = {code}\n
 text inject.rs | rück
+# Formatkennungen in Fehlerdetails (fp-color, fp-io)
+ASE ACO HEIC HEIF XL WBMP
+# UE-3: technische Detailtexte der FW-PNG-Leser (siehe UE-1 oben) und interne serde-Fehler von fp-model (nie angezeigt, nur Rohdaten-Roundtrip)
+text file.rs | keine FW-PNG (mkTS fehlt)
+text png.rs | Bild zu groß
+text png.rs | Palette nicht expandiert
+text read.rs | mkTS beginnt nicht mit MKBv
+text zlib.rs | Strom größer als {limit} Byte
+text raw.rs | ungültiger Tag-Schlüssel {s:?}
+text chunks.rs | Magic FADECAFE fehlt
+text chunks.rs | Kopf ungültig (FACECAFE)
+text chunks.rs | Magic CAFEBEEF fehlt
+text chunks.rs | zu kurz ({} Byte)
+text chunks.rs | Größe {w}×{h} über 128
+# Parametername + Parser-Fehler bzw. Formel (technisch, in übersetzter Hülle err-param-*)
+text popup.rs | menu: {e}
+text tooling.rs | brush: {e}
+text text.rs | runs ≠ text

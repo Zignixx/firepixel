@@ -205,7 +205,7 @@ pub fn range_composite(layers: &[PsdLayer], base: usize, top: usize, warnings: &
         }
         if let Some((k, d)) = &l.adjustment {
             if !matches!(k.as_str(), "levl" | "nvrt" | "thrs" | "post" | "brit") {
-                warnings.push(format!("Einstellungsebene „{}“ ({k}) wird nicht angewendet", l.name));
+                warnings.push(fp_i18n::tr!("msg-import-warn-psd-adjustment", name = l.name.as_str(), kind = k.as_str()));
             }
             for p in acc.data_mut() {
                 let a = adjust(k, d, [p[0], p[1], p[2]]);
@@ -429,7 +429,7 @@ impl Ctx<'_> {
                 let Some((m, text, _, engine)) = &l.text else { return None };
                 let (font, size, color) = text_style(engine, m);
                 el = Element::new_text(&mut self.ids, text, &font, size, color, Point::new(m[4] as f32, m[5] as f32));
-                self.warnings.push(format!("Text „{}“: Absatz-/Zeichenformate nur vereinfacht übernommen (A)", l.name));
+                self.warnings.push(fp_i18n::tr!("msg-import-warn-psd-text", name = l.name.as_str()));
             }
             _ => {
                 let img = layer_image(l)?;
@@ -517,10 +517,10 @@ pub fn import(data: &[u8], opts: &ImportOptions) -> Result<ImportResult> {
     let mut doc = empty_document(f.width, f.height);
     let mut warnings = Vec::new();
     if f.mode == 9 {
-        warnings.push("Lab-Farbmodus: Werte werden ohne Umrechnung übernommen".into());
+        warnings.push(fp_i18n::t("msg-import-warn-psd-lab"));
     }
     if f.mode == 4 {
-        warnings.push("CMYK-PSD: naive Umrechnung (das Original rechnet über die PSL-Bibliothek mit Profil, 12 §7a T7)".into());
+        warnings.push(fp_i18n::t("msg-import-warn-psd-cmyk"));
     }
     let flatten = o.flatten || f.layers.is_empty() || matches!(f.mode, 4 | 9);
     let mut ids = std::mem::take(&mut doc.ids);

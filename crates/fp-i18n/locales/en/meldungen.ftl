@@ -437,3 +437,108 @@ err-color-swatch-no-palette = no palette included
 err-text-font-io = font file { $path } not readable: { $error }
 err-text-bad-font = invalid font: { $detail }
 # <<< UE-3 Farben und Schriften
+
+# >>> UE-3 Import-Hinweise
+# Import notes (fp-io, field warnings in the command result), UE-3
+msg-import-warn-psd-adjustment = adjustment layer “{ $name }” ({ $kind }) is not applied
+msg-import-warn-psd-text = text “{ $name }”: paragraph/character formats only imported in simplified form (A)
+msg-import-warn-psd-lab = Lab color mode: values are imported without conversion
+msg-import-warn-psd-cmyk = CMYK PSD: naive conversion (the original converts through the PSL library with a profile, 12 §7a T7)
+msg-import-warn-svg-pattern = SVG patterns are not imported
+msg-import-warn-svg-gradient-stroke = SVG gradient strokes are replaced by their first color (A)
+msg-import-warn-svg-gradient-repeat = repeating SVG gradients are imported without repetition
+msg-import-warn-svg-gradient-focus = SVG gradients with a moved focal point are imported centered (A)
+msg-import-warn-svg-image = embedded SVG images of this type are not imported
+msg-import-warn-svg-clip = SVG clipping paths, masks and filters are not imported
+msg-import-warn-svg-text = SVG text is not imported (no text module)
+msg-import-warn-ai-text = Illustrator text is not imported
+msg-import-warn-ai-raster = placed images/rasters are not imported
+msg-import-warn-eps-preview = EPS without Illustrator data: only the embedded TIFF preview was imported (no PostScript interpreter)
+# <<< UE-3 Import-Hinweise
+
+# >>> UE-3 Detailtexte
+# Detail texts in AI, export and import errors (fp-ai, fp-export, fp-io), UE-3
+ai-err-d-birefnet-size = BiRefNet needs a square with an edge length that is a multiple of 32 (got { $size })
+ai-err-d-download-size = size { $done } instead of { $size } bytes
+ai-err-d-thread = background thread: { $error }
+ai-err-d-job-cancelled = background job cancelled
+ai-err-d-result-taken = result already collected
+ai-err-d-empty-region = image region is empty
+ai-err-d-no-sam = no SAM model
+ai-err-d-point-or-box = object selection needs a click point or a box
+ai-err-d-no-birefnet = no BiRefNet model
+ai-err-d-no-pixel-selection = no pixel selection
+ai-err-d-sam-size = unknown SAM 2 size ({ $n } blocks)
+ai-err-d-sam-input = SAM 2 needs an image of 1024 × 1024
+ai-err-d-no-point-no-box = no point and no box
+ai-err-d-header = header: { $error }
+ai-err-d-data-outside = data of { $name } outside the file
+ai-err-d-dtype = data type { $dtype } of { $name } not supported
+ai-err-d-size-mismatch = size of { $name } does not match
+ai-err-d-weight-missing = weight { $name } missing
+ai-err-d-not-matrix = { $name } is not a matrix
+ai-err-d-not-square = { $name } is not a square convolution
+err-export-d-no-visible-states = no visible states
+err-export-d-page-missing = page { $page } missing
+err-export-d-ico-count = ICO needs 1…255 images
+err-export-d-webp-no-frame = animated WebP without a frame
+err-export-d-webp-config = WebP configuration
+err-export-d-webp-anim = animated WebP: { $error }
+err-export-d-apng-no-frame = APNG without a frame
+err-export-d-apng-first-frame = the first APNG frame must cover the canvas
+err-export-d-pdf-no-page = PDF without a page
+err-import-d-av1 = AV1 decoder: { $error }
+# <<< UE-3 Detailtexte
+
+# >>> UE-3 Kurzhilfe
+# Built-in quick help (Help menu without ANLEITUNG.md), UE-3
+msg-help-title = Firepixel – quick help
+msg-help-intro = The detailed guide is `ANLEITUNG.md` next to the program or in the folder `docs` (in German).
+msg-help-topic-start = Getting started
+msg-help-topic-tools = Tools
+msg-help-topic-menus = Menus
+msg-help-topic-panels = Panels
+msg-help-topic-export = Export
+msg-help-topic-automation = Automation (scripts, command line, MCP)
+msg-help-topic-support = Troubleshooting
+msg-help-body-start = File ▸ New creates a document, File ▸ Open reads FW-PNG and common image formats.
+msg-help-body-tools = On the left the Tools panel; keyboard shortcuts are shown in the tooltip.
+msg-help-body-menus = All commands can also be reached through the command line `firepixel-cli` and MCP.
+msg-help-body-panels = The Window menu shows and hides panels.
+msg-help-body-export = File ▸ Export or Image Preview; the settings come from the Optimize panel.
+msg-help-body-automation = Commands ▸ Run Script starts `.jsf` files.
+msg-help-body-support = Preferences are stored in `%APPDATA%\Firepixel\preferences.json`; deleting the file resets them.
+# <<< UE-3 Kurzhilfe
+
+# >>> UE-3 HEIF
+# HEIF container (fp-io isobmff.rs), UE-3
+err-import-heif-container = HEIF container: { $detail }
+err-import-d-box-short = box too short
+err-import-d-item-no-location = item without location
+err-import-d-item-outside = item data outside the file
+err-import-d-sample-outside = sample outside the file
+# <<< UE-3 HEIF
+
+# >>> UE-3 Dateiteile
+# File structure parts in decoder error messages (fp-io BMP/PSD/TGA/WBMP, fp-ai weights), UE-3
+err-import-part-header = header
+err-import-part-header-truncated = header truncated
+err-import-part-pixels-missing = pixel data missing
+err-import-part-pixels-truncated = pixel data truncated
+err-import-part-color-mode-data = color mode data
+err-import-part-resources = resources
+err-import-part-layer-section = layer section
+err-import-part-layer-count = layer count
+err-import-part-layer = layer
+err-import-part-channel = channel
+err-import-part-mask = mask
+err-import-part-blending-ranges = blending ranges
+err-import-part-name = name
+err-import-part-channel-data = channel data
+err-import-part-color-table-truncated = color table truncated
+err-import-part-rle-truncated = RLE truncated
+err-import-part-width = width
+err-import-part-height = height
+err-import-part-file-too-short = file too short
+err-import-part-header-not-object = header is not an object
+# <<< UE-3 Dateiteile

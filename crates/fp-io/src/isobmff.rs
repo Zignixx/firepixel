@@ -10,7 +10,7 @@ use std::collections::BTreeMap;
 use crate::{ImportError, Result};
 
 fn corrupt(s: &str) -> ImportError {
-    ImportError::Corrupt(format!("HEIF-Container: {s}"))
+    ImportError::Corrupt(fp_i18n::tr!("err-import-heif-container", detail = s))
 }
 
 /// Byte-Leser mit Grenzprüfung (Big Endian).
@@ -25,7 +25,7 @@ impl<'a> Rd<'a> {
     }
     fn bytes(&mut self, n: usize) -> Result<&'a [u8]> {
         let end = self.p.checked_add(n).ok_or_else(|| corrupt(&fp_i18n::t("err-import-length")))?;
-        let s = self.d.get(self.p..end).ok_or_else(|| corrupt("Box zu kurz"))?;
+        let s = self.d.get(self.p..end).ok_or_else(|| corrupt(&fp_i18n::t("err-import-d-box-short")))?;
         self.p = end;
         Ok(s)
     }
@@ -270,7 +270,7 @@ impl<'a> Heif<'a> {
 
     /// Daten eines Items (alle Ausdehnungen aneinander).
     pub fn data(&self, id: u32) -> Result<Vec<u8>> {
-        let loc = self.locs.get(&id).ok_or_else(|| corrupt("Item ohne Ort"))?;
+        let loc = self.locs.get(&id).ok_or_else(|| corrupt(&fp_i18n::t("err-import-d-item-no-location")))?;
         let src = match loc.method {
             0 => self.file,
             1 => self.idat,
@@ -280,7 +280,7 @@ impl<'a> Heif<'a> {
         for &(off, len) in &loc.extents {
             let (o, l) = (usize::try_from(off).map_err(|_| corrupt(&fp_i18n::t("err-import-offset")))?, usize::try_from(len).map_err(|_| corrupt(&fp_i18n::t("err-import-length")))?);
             let end = if l == 0 && loc.extents.len() == 1 { src.len() } else { o.checked_add(l).ok_or_else(|| corrupt(&fp_i18n::t("err-import-length")))? };
-            out.extend_from_slice(src.get(o..end).ok_or_else(|| corrupt("Item-Daten außerhalb der Datei"))?);
+            out.extend_from_slice(src.get(o..end).ok_or_else(|| corrupt(&fp_i18n::t("err-import-d-item-outside")))?);
         }
         Ok(out)
     }
@@ -548,7 +548,7 @@ pub fn tracks(file: &[u8]) -> Result<Vec<Track>> {
 /// Daten eines Samples.
 pub fn sample(file: &[u8], s: (u64, u32)) -> Result<&[u8]> {
     let o = usize::try_from(s.0).map_err(|_| corrupt(&fp_i18n::t("err-import-sample-offset")))?;
-    file.get(o..o.saturating_add(s.1 as usize)).ok_or_else(|| corrupt("Sample außerhalb der Datei"))
+    file.get(o..o.saturating_add(s.1 as usize)).ok_or_else(|| corrupt(&fp_i18n::t("err-import-d-sample-outside")))
 }
 
 /// Eigenschafts-Transformationen (`clap`, `irot`, `imir` in Dateireihenfolge) auf ein RGBA-Bild.

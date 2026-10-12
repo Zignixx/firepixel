@@ -29,7 +29,7 @@ impl<T: Send + 'static> Job<T> {
             Ok(_) => Some(rx),
             Err(e) => {
                 let (tx2, rx2) = mpsc::channel();
-                let _ = tx2.send(Err(AiError::Input(format!("Hintergrund-Thread: {e}"))));
+                let _ = tx2.send(Err(AiError::Input(fp_i18n::tr!("ai-err-d-thread", error = e.to_string()))));
                 Some(rx2)
             }
         };
@@ -54,7 +54,7 @@ impl<T> Job<T> {
             Err(TryRecvError::Empty) => None,
             Err(TryRecvError::Disconnected) => {
                 self.rx = None;
-                Some(Err(AiError::Input("Hintergrund-Auftrag abgebrochen".into())))
+                Some(Err(AiError::Input(fp_i18n::t("ai-err-d-job-cancelled"))))
             }
         }
     }
@@ -62,8 +62,8 @@ impl<T> Job<T> {
     /// Blockierend warten (Tests, CLI).
     pub fn wait(mut self) -> Result<T> {
         match self.rx.take() {
-            Some(rx) => rx.recv().unwrap_or_else(|_| Err(AiError::Input("Hintergrund-Auftrag abgebrochen".into()))),
-            None => Err(AiError::Input("Ergebnis bereits abgeholt".into())),
+            Some(rx) => rx.recv().unwrap_or_else(|_| Err(AiError::Input(fp_i18n::t("ai-err-d-job-cancelled")))),
+            None => Err(AiError::Input(fp_i18n::t("ai-err-d-result-taken"))),
         }
     }
 

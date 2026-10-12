@@ -437,3 +437,108 @@ err-color-swatch-no-palette = keine Palette enthalten
 err-text-font-io = Schriftdatei { $path } nicht lesbar: { $error }
 err-text-bad-font = ungültige Schrift: { $detail }
 # <<< UE-3 Farben und Schriften
+
+# >>> UE-3 Import-Hinweise
+# Hinweise beim Import (fp-io, Feld warnings im Befehlsergebnis), UE-3
+msg-import-warn-psd-adjustment = Einstellungsebene „{ $name }“ ({ $kind }) wird nicht angewendet
+msg-import-warn-psd-text = Text „{ $name }“: Absatz-/Zeichenformate nur vereinfacht übernommen (A)
+msg-import-warn-psd-lab = Lab-Farbmodus: Werte werden ohne Umrechnung übernommen
+msg-import-warn-psd-cmyk = CMYK-PSD: naive Umrechnung (das Original rechnet über die PSL-Bibliothek mit Profil, 12 §7a T7)
+msg-import-warn-svg-pattern = SVG-Muster werden nicht übernommen
+msg-import-warn-svg-gradient-stroke = SVG-Verlaufsstriche werden durch ihre erste Farbe ersetzt (A)
+msg-import-warn-svg-gradient-repeat = SVG-Verläufe mit Wiederholung werden ohne Wiederholung übernommen
+msg-import-warn-svg-gradient-focus = SVG-Verläufe mit verschobenem Brennpunkt werden zentriert übernommen (A)
+msg-import-warn-svg-image = eingebettete SVG-Bilder dieses Typs werden nicht übernommen
+msg-import-warn-svg-clip = SVG-Schnittpfade, Masken und Filter werden nicht übernommen
+msg-import-warn-svg-text = SVG-Text wird nicht übernommen (ohne Textmodul)
+msg-import-warn-ai-text = Illustrator-Text wird nicht übernommen
+msg-import-warn-ai-raster = platzierte Bilder/Raster werden nicht übernommen
+msg-import-warn-eps-preview = EPS ohne Illustrator-Daten: nur die eingebettete TIFF-Vorschau wurde übernommen (kein PostScript-Interpreter)
+# <<< UE-3 Import-Hinweise
+
+# >>> UE-3 Detailtexte
+# Detailtexte in KI-, Export- und Importfehlern (fp-ai, fp-export, fp-io), UE-3
+ai-err-d-birefnet-size = BiRefNet braucht ein Quadrat mit Kantenlänge Vielfaches von 32 (erhalten { $size })
+ai-err-d-download-size = Größe { $done } statt { $size } Byte
+ai-err-d-thread = Hintergrund-Thread: { $error }
+ai-err-d-job-cancelled = Hintergrund-Auftrag abgebrochen
+ai-err-d-result-taken = Ergebnis bereits abgeholt
+ai-err-d-empty-region = Bildausschnitt ist leer
+ai-err-d-no-sam = kein SAM-Modell
+ai-err-d-point-or-box = Objektauswahl braucht einen Klickpunkt oder einen Rahmen
+ai-err-d-no-birefnet = kein BiRefNet-Modell
+ai-err-d-no-pixel-selection = keine Pixelauswahl
+ai-err-d-sam-size = unbekannte SAM-2-Größe ({ $n } Blöcke)
+ai-err-d-sam-input = SAM 2 braucht ein Bild mit 1024 × 1024
+ai-err-d-no-point-no-box = kein Punkt und kein Rahmen
+ai-err-d-header = Kopf: { $error }
+ai-err-d-data-outside = Daten von { $name } außerhalb der Datei
+ai-err-d-dtype = Datentyp { $dtype } von { $name } nicht unterstützt
+ai-err-d-size-mismatch = Größe von { $name } passt nicht
+ai-err-d-weight-missing = Gewicht { $name } fehlt
+ai-err-d-not-matrix = { $name } ist keine Matrix
+ai-err-d-not-square = { $name } ist keine quadratische Faltung
+err-export-d-no-visible-states = keine sichtbaren Status
+err-export-d-page-missing = Seite { $page } fehlt
+err-export-d-ico-count = ICO braucht 1…255 Bilder
+err-export-d-webp-no-frame = animiertes WebP ohne Einzelbild
+err-export-d-webp-config = WebP-Konfiguration
+err-export-d-webp-anim = animiertes WebP: { $error }
+err-export-d-apng-no-frame = APNG ohne Einzelbild
+err-export-d-apng-first-frame = erstes APNG-Einzelbild muss die Leinwand abdecken
+err-export-d-pdf-no-page = PDF ohne Seite
+err-import-d-av1 = AV1-Dekoder: { $error }
+# <<< UE-3 Detailtexte
+
+# >>> UE-3 Kurzhilfe
+# Eingebaute Kurzhilfe (Hilfe-Menü ohne ANLEITUNG.md), UE-3
+msg-help-title = Firepixel – Kurzhilfe
+msg-help-intro = Die ausführliche Anleitung liegt als `ANLEITUNG.md` neben dem Programm bzw. im Ordner `docs`.
+msg-help-topic-start = Erste Schritte
+msg-help-topic-tools = Werkzeuge
+msg-help-topic-menus = Menüs
+msg-help-topic-panels = Bedienfelder
+msg-help-topic-export = Exportieren
+msg-help-topic-automation = Automatisierung (Skripte, Kommandozeile, MCP)
+msg-help-topic-support = Fehlerbehebung
+msg-help-body-start = Datei ▸ Neu legt ein Dokument an, Datei ▸ Öffnen liest FW-PNG und gängige Bildformate.
+msg-help-body-tools = Links das Werkzeugbedienfeld; Tastenkürzel stehen im QuickInfo.
+msg-help-body-menus = Alle Befehle sind auch über die Kommandozeile `firepixel-cli` und MCP erreichbar.
+msg-help-body-panels = Fenster-Menü blendet Bedienfelder ein und aus.
+msg-help-body-export = Datei ▸ Exportieren bzw. Bildvorschau; die Einstellungen kommen aus dem Bedienfeld Optimieren.
+msg-help-body-automation = Befehle ▸ Skript ausführen startet `.jsf`-Dateien.
+msg-help-body-support = Voreinstellungen liegen in `%APPDATA%\Firepixel\preferences.json`; Löschen setzt sie zurück.
+# <<< UE-3 Kurzhilfe
+
+# >>> UE-3 HEIF
+# HEIF-Container (fp-io isobmff.rs), UE-3
+err-import-heif-container = HEIF-Container: { $detail }
+err-import-d-box-short = Box zu kurz
+err-import-d-item-no-location = Item ohne Ort
+err-import-d-item-outside = Item-Daten außerhalb der Datei
+err-import-d-sample-outside = Sample außerhalb der Datei
+# <<< UE-3 HEIF
+
+# >>> UE-3 Dateiteile
+# Strukturteile in Fehlermeldungen der Dekoder (fp-io BMP/PSD/TGA/WBMP, fp-ai Gewichte), UE-3
+err-import-part-header = Kopf
+err-import-part-header-truncated = Kopf abgeschnitten
+err-import-part-pixels-missing = Pixeldaten fehlen
+err-import-part-pixels-truncated = Pixeldaten abgeschnitten
+err-import-part-color-mode-data = Farbmodusdaten
+err-import-part-resources = Ressourcen
+err-import-part-layer-section = Ebenenbereich
+err-import-part-layer-count = Ebenenzahl
+err-import-part-layer = Ebene
+err-import-part-channel = Kanal
+err-import-part-mask = Maske
+err-import-part-blending-ranges = Mischbereiche
+err-import-part-name = Name
+err-import-part-channel-data = Kanaldaten
+err-import-part-color-table-truncated = Farbtabelle abgeschnitten
+err-import-part-rle-truncated = RLE abgeschnitten
+err-import-part-width = Breite
+err-import-part-height = Höhe
+err-import-part-file-too-short = Datei zu kurz
+err-import-part-header-not-object = Kopf ist kein Objekt
+# <<< UE-3 Dateiteile

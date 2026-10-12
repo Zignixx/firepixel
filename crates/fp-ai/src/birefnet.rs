@@ -531,7 +531,7 @@ impl BiRefNet {
     /// Vorwärtsrechnung: `x[3, s, s]` (normalisiert, `s` Vielfaches von 32) → Logits `[s, s]`.
     pub fn forward(&self, x: &[f32], s: usize, prog: &Progress) -> Result<Vec<f32>> {
         if !s.is_multiple_of(32) || x.len() != 3 * s * s {
-            return Err(AiError::Input(format!("BiRefNet braucht ein Quadrat mit Kantenlänge Vielfaches von 32 (erhalten {s})")));
+            return Err(AiError::Input(fp_i18n::tr!("ai-err-d-birefnet-size", size = s)));
         }
         // Encoder: volle und halbe Auflösung
         let t0 = std::time::Instant::now();

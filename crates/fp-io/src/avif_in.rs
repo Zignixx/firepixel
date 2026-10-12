@@ -38,7 +38,7 @@ pub struct Planes {
 }
 
 fn err(e: Rav1dError) -> ImportError {
-    ImportError::Decode("AVIF", format!("AV1-Dekoder: {e:?}"))
+    ImportError::Decode("AVIF", fp_i18n::tr!("err-import-d-av1", error = format!("{e:?}")))
 }
 
 fn planes_of(p: &rav1d::Picture) -> Result<Planes> {

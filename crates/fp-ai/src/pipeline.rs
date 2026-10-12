@@ -119,7 +119,7 @@ pub fn clip_region(img: &RgbaImage, region: Option<IRect>) -> Result<IRect> {
         None => b,
     };
     if r.is_empty() || r.width() < 2 || r.height() < 2 {
-        return Err(AiError::Input("Bildausschnitt ist leer".into()));
+        return Err(AiError::Input(fp_i18n::t("ai-err-d-empty-region")));
     }
     Ok(r)
 }
@@ -192,7 +192,7 @@ pub fn image_key(img: &RgbaImage, r: IRect, model: ModelId) -> u64 {
 fn sam_model(id: ModelId) -> Result<std::sync::Arc<Loaded>> {
     let m = cache::model(id)?;
     if !matches!(*m, Loaded::Sam2(_)) {
-        return Err(AiError::Input("kein SAM-Modell".into()));
+        return Err(AiError::Input(fp_i18n::t("ai-err-d-no-sam")));
     }
     Ok(m)
 }
@@ -210,7 +210,7 @@ pub fn object_prepare(img: &RgbaImage, region: Option<IRect>, model: ModelId, pr
         return Ok(true);
     }
     let m = sam_model(model)?;
-    let Loaded::Sam2(sam) = &*m else { return Err(AiError::Input("kein SAM-Modell".into())) };
+    let Loaded::Sam2(sam) = &*m else { return Err(AiError::Input(fp_i18n::t("ai-err-d-no-sam"))) };
     nn::pool().install(|| {
         cache::embedding(key, || {
             let x = model_input(img, r, sam2::SIZE);
@@ -223,13 +223,13 @@ pub fn object_prepare(img: &RgbaImage, region: Option<IRect>, model: ModelId, pr
 /// Objektauswahl: Punkte/Rahmen (Dokumentkoordinaten) → Maske des Ausschnitts.
 pub fn object_mask(img: &RgbaImage, region: Option<IRect>, prompt: &ObjectPrompt, model: ModelId, prog: &Progress) -> Result<ObjectResult> {
     if prompt.points.is_empty() && prompt.boxx.is_none() {
-        return Err(AiError::Input("Objektauswahl braucht einen Klickpunkt oder einen Rahmen".into()));
+        return Err(AiError::Input(fp_i18n::t("ai-err-d-point-or-box")));
     }
     let r = clip_region(img, region)?;
     let key = image_key(img, r, model);
     let cached = cache::embedding_cached(key).is_some();
     let m = sam_model(model)?;
-    let Loaded::Sam2(sam) = &*m else { return Err(AiError::Input("kein SAM-Modell".into())) };
+    let Loaded::Sam2(sam) = &*m else { return Err(AiError::Input(fp_i18n::t("ai-err-d-no-sam"))) };
     let (w, h) = (r.width() as f32, r.height() as f32);
     let sx = sam2::SIZE as f32 / w;
     let sy = sam2::SIZE as f32 / h;
@@ -265,7 +265,7 @@ fn birefnet_alpha(img: &RgbaImage, r: IRect, model: ModelId, size: usize, prog: 
         return Ok(a);
     }
     let m = cache::model(model)?;
-    let Loaded::BiRefNet(net) = &*m else { return Err(AiError::Input("kein BiRefNet-Modell".into())) };
+    let Loaded::BiRefNet(net) = &*m else { return Err(AiError::Input(fp_i18n::t("ai-err-d-no-birefnet"))) };
     nn::pool().install(|| {
         cache::alpha(key, || {
             let x = model_input(img, r, size);
@@ -358,7 +358,7 @@ fn edt_sq(feature: &[bool], w: usize, h: usize) -> Vec<f32> {
 fn refine_region(img: &RgbaImage, sel: &Mask, radius: f32) -> Result<(IRect, f32)> {
     let tb = sel.tight_bounds();
     if tb.is_empty() {
-        return Err(AiError::Input("keine Pixelauswahl".into()));
+        return Err(AiError::Input(fp_i18n::t("ai-err-d-no-pixel-selection")));
     }
     let diag = ((tb.width() as f32).powi(2) + (tb.height() as f32).powi(2)).sqrt();
     let radius = if radius > 0.0 { radius } else { (diag * 0.025).clamp(4.0, 48.0) };

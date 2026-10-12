@@ -211,13 +211,13 @@ const UI_SINKS: &[&str] = &[
 /// Aufrufe, deren Fehlertext beim Nutzer landet (UI-nahe Crates).
 const MSG_SINKS: &[&str] = &[
     "Failed", "Err", "Selection", "NotFound", "Io", "Format", "NotImplemented", "Unavailable", "InvalidParams", "set_status", "Status", "msg", "fail", "bail",
-    "#[error]",
+    "#[error]", "warnings.push", "*Error::*", "corrupt", "bad",
 ];
 
 /// Zusätzliche Ziele in Kommandozeile und MCP-Server (Ausgaben an Nutzer bzw. KI-Agenten).
 const OUT_SINKS: &[&str] = &[
     "Failed", "Err", "Selection", "NotFound", "Io", "Format", "NotImplemented", "Unavailable", "InvalidParams", "set_status", "Status", "msg", "fail", "bail",
-    "#[error]", "Fail", "error", "error_output", "invalid_params", "internal_error", "Config", "Protocol", "println", "eprintln", "print", "eprint", "writeln",
+    "#[error]", "*Error::*", "Fail", "error", "error_output", "invalid_params", "internal_error", "Config", "Protocol", "println", "eprintln", "print", "eprint", "writeln",
     "write", "push_str", "push", "about", "after_help", "help", "long_about", "with_instructions", "with_title", "with_description", "ToolOutput::error",
     "McpError::Config", "McpError::Protocol", "ErrorData::invalid_params", "ErrorData::internal_error", "EngineError::Failed", "ok_or", "ok_or_else",
     "map_err",
@@ -319,7 +319,12 @@ fn enclosing_sink(m: &[u8], pos: usize, sinks: &[&str]) -> Option<String> {
 
 /// Wie [`enclosing_sink`], mit Originaltext zusätzlich JSON-Schlüssel (`JSON_KEYS`) als Ziel.
 fn enclosing_sink_src(m: &[u8], src: Option<&[u8]>, pos: usize, sinks: &[&str]) -> Option<String> {
-    let matches_sink = |n: &str| sinks.contains(&n) || n.rsplit("::").next().is_some_and(|last| sinks.contains(&last) && !n.contains("::"));
+    // `XyzError::Variante(…)`: jede Fehlervariante ist ein Ziel (Bibliotheken, CLI, MCP)
+    let matches_sink = |n: &str| {
+        sinks.contains(&n)
+            || n.rsplit("::").next().is_some_and(|last| sinks.contains(&last) && !n.contains("::"))
+            || (sinks.contains(&"*Error::*") && n.split("::").next().is_some_and(|t| t.ends_with("Error")) && n.contains("::"))
+    };
     let mut child_start = pos;
     for _ in 0..8 {
         if let Some(f) = field_before(m, child_start)
@@ -358,6 +363,10 @@ fn enclosing_sink_src(m: &[u8], src: Option<&[u8]>, pos: usize, sinks: &[&str]) 
                 let (name, name_start) = ident_before(m, open);
                 if is_error_attr(m, &name, name_start) {
                     return sinks.contains(&"#[error]").then(|| "#[error]".to_string());
+                }
+                // Warnungslisten (`warnings.push(…)`, z. B. Import-Hinweise für Agenten)
+                if name == "push" && name_start >= 9 && &m[name_start - 9..name_start] == b"warnings." && sinks.contains(&"warnings.push") {
+                    return Some("warnings.push".to_string());
                 }
                 if matches_sink(&name) {
                     return Some(name);

@@ -41,12 +41,12 @@ pub struct WebpFrame {
 /// Animiertes WebP; `loop_count` 0 = endlos (wie GIF), `None` ⇒ einmal (WebP-Schleife 1).
 pub fn write_animated_webp(w: usize, h: usize, frames: &[WebpFrame], lossless: bool, quality: i32, loop_count: Option<u16>) -> Result<Vec<u8>> {
     if frames.is_empty() {
-        return Err(ExportError::Encode("animiertes WebP ohne Einzelbild".into()));
+        return Err(ExportError::Encode(fp_i18n::t("err-export-d-webp-no-frame")));
     }
     for f in frames {
         check(w, h, f.pixels.len())?;
     }
-    let mut cfg = webp::WebPConfig::new().map_err(|_| ExportError::Encode("WebP-Konfiguration".into()))?;
+    let mut cfg = webp::WebPConfig::new().map_err(|_| ExportError::Encode(fp_i18n::t("err-export-d-webp-config")))?;
     cfg.lossless = i32::from(lossless);
     cfg.quality = quality.clamp(0, 100) as f32;
     let data: Vec<Vec<u8>> = frames.iter().map(|f| rgba_bytes(&f.pixels[..w * h])).collect();
@@ -60,7 +60,7 @@ pub fn write_animated_webp(w: usize, h: usize, frames: &[WebpFrame], lossless: b
         enc.add_frame(webp::AnimFrame::from_rgba(d, w as u32, h as u32, t));
         t = t.saturating_add(f.delay_cs.max(1) as i32 * 10);
     }
-    let mem = enc.try_encode().map_err(|e| ExportError::Encode(format!("animiertes WebP: {e:?}")))?;
+    let mem = enc.try_encode().map_err(|e| ExportError::Encode(fp_i18n::tr!("err-export-d-webp-anim", error = format!("{e:?}"))))?;
     Ok(mem.to_vec())
 }
 

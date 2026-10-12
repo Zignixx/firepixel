@@ -79,25 +79,17 @@ pub fn run_script_source(s: &mut Session, code: &str, path: Option<&Path>, label
     Ok(out)
 }
 
-const HELP_TOPICS: &[(&str, &str)] = &[
-    ("start", "Erste Schritte"),
-    ("tools", "Werkzeuge"),
-    ("menus", "Menüs"),
-    ("panels", "Bedienfelder"),
-    ("export", "Exportieren"),
-    ("automation", "Automatisierung (Skripte, Kommandozeile, MCP)"),
-    ("support", "Fehlerbehebung"),
-];
+/// Themen der Hilfe (Titel `msg-help-topic-<id>`, Text der Kurzhilfe `msg-help-body-<id>`).
+const HELP_TOPICS: &[&str] = &["start", "tools", "menus", "panels", "export", "automation", "support"];
 
-const BUILTIN_HELP: &str = "# Firepixel – Kurzhilfe\n\n\
-Die ausführliche Anleitung liegt als `ANLEITUNG.md` neben dem Programm bzw. im Ordner `docs`.\n\n\
-## Erste Schritte\n\nDatei ▸ Neu legt ein Dokument an, Datei ▸ Öffnen liest FW-PNG und gängige Bildformate.\n\n\
-## Werkzeuge\n\nLinks das Werkzeugbedienfeld; Tastenkürzel stehen im QuickInfo.\n\n\
-## Menüs\n\nAlle Befehle sind auch über die Kommandozeile `firepixel-cli` und MCP erreichbar.\n\n\
-## Bedienfelder\n\nFenster-Menü blendet Bedienfelder ein und aus.\n\n\
-## Exportieren\n\nDatei ▸ Exportieren bzw. Bildvorschau; die Einstellungen kommen aus dem Bedienfeld Optimieren.\n\n\
-## Automatisierung (Skripte, Kommandozeile, MCP)\n\nBefehle ▸ Skript ausführen startet `.jsf`-Dateien.\n\n\
-## Fehlerbehebung\n\nVoreinstellungen liegen in `%APPDATA%\\Firepixel\\preferences.json`; Löschen setzt sie zurück.\n";
+/// Kurzhilfe (Markdown) in der aktuellen Sprache, falls keine `ANLEITUNG.md` gefunden wird.
+fn builtin_help() -> String {
+    let mut out = format!("# {}\n\n{}\n", fp_i18n::t("msg-help-title"), fp_i18n::t("msg-help-intro"));
+    for id in HELP_TOPICS {
+        out.push_str(&format!("\n## {}\n\n{}\n", fp_i18n::t(&format!("msg-help-topic-{id}")), fp_i18n::t(&format!("msg-help-body-{id}"))));
+    }
+    out
+}
 
 /// Sucht die lokale Anleitung (`FP_HELP`, neben dem Programm, `docs` darüber); sonst die Kurzhilfe
 /// im temporären Ordner.
@@ -126,7 +118,7 @@ pub fn help_file() -> PathBuf {
         }
     }
     let f = temp_dir("Hilfe").join("KURZHILFE.md");
-    let _ = std::fs::write(&f, BUILTIN_HELP);
+    let _ = std::fs::write(&f, builtin_help());
     f
 }
 
@@ -137,11 +129,13 @@ fn headings(text: &str) -> Vec<String> {
 
 fn help_topic(s: &mut Session, p: &Params, default_topic: &str) -> Result<CommandOutput> {
     let f = help_file();
-    let text = std::fs::read_to_string(&f).unwrap_or_else(|_| BUILTIN_HELP.to_string());
+    let text = std::fs::read_to_string(&f).unwrap_or_else(|_| builtin_help());
     let topic = p.opt_str("topic")?.unwrap_or_else(|| default_topic.to_string());
-    let title = HELP_TOPICS.iter().find(|(k, _)| *k == topic).map(|(_, t)| t.to_string()).unwrap_or(topic.clone());
+    // Abschnitt über den Titel in der Sprache der Oberfläche oder (Anleitung auf Deutsch) im Deutschen
+    let key = format!("msg-help-topic-{topic}");
+    let titles: Vec<String> = if HELP_TOPICS.contains(&topic.as_str()) { vec![fp_i18n::t(&key), fp_i18n::with_language(fp_i18n::SOURCE_LANG, || fp_i18n::t(&key))] } else { vec![topic.clone()] };
     let heads = headings(&text);
-    let section = heads.iter().find(|h| h.to_lowercase().contains(&title.to_lowercase())).cloned();
+    let section = heads.iter().find(|h| titles.iter().any(|t| h.to_lowercase().contains(&t.to_lowercase()))).cloned();
     if launch_allowed(p)? {
         open_with_system(&f, None)?;
     }
@@ -366,7 +360,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
         if let Some(name) = catalog_name(id) {
             r.add(
                 cmd(&name)
-                    .opt("topic", ParamKind::Enum { values: HELP_TOPICS.iter().map(|(k, _)| k.to_string()).collect() }, "Thema")
+                    .opt("topic", ParamKind::Enum { values: HELP_TOPICS.iter().map(|k| k.to_string()).collect() }, "Thema")
                     .opt_default("open", ParamKind::Bool, json!(true), "Anleitung öffnen")
                     .run(move |s, p| help_topic(s, p, topic)),
             );

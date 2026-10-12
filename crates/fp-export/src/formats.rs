@@ -371,7 +371,7 @@ impl Default for IcoOptions {
 /// ICO mit mehreren Größen; Bilder ≥ `png_from` als PNG, sonst als 32-Bit-DIB mit AND-Maske.
 pub fn write_ico(images: &[IcoImage], png_from: u32) -> Result<Vec<u8>> {
     if images.is_empty() || images.len() > 255 {
-        return Err(ExportError::Encode("ICO braucht 1…255 Bilder".into()));
+        return Err(ExportError::Encode(fp_i18n::t("err-export-d-ico-count")));
     }
     let mut blobs = Vec::new();
     for im in images {

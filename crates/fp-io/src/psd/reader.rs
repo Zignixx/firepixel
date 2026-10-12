@@ -187,7 +187,7 @@ pub struct PsdFile {
 }
 
 fn bad(s: &str) -> ImportError {
-    ImportError::Corrupt(format!("PSD: {s}"))
+    ImportError::Corrupt(format!("PSD: {}", crate::part(s)))
 }
 
 fn packbits(data: &[u8], expected: usize) -> Vec<u8> {
@@ -403,52 +403,52 @@ pub fn read(b: &[u8]) -> Result<PsdFile> {
     if r.take(4) != Some(b"8BPS") {
         return Err(bad(&fp_i18n::t("err-import-signature-missing")));
     }
-    let ver = r.u16().ok_or_else(|| bad("Kopf"))?;
+    let ver = r.u16().ok_or_else(|| bad("err-import-part-header"))?;
     let psb = ver == 2;
-    r.take(6).ok_or_else(|| bad("Kopf"))?;
-    let ch = r.u16().ok_or_else(|| bad("Kopf"))?;
-    let h = r.u32().ok_or_else(|| bad("Kopf"))?;
-    let w = r.u32().ok_or_else(|| bad("Kopf"))?;
-    let depth = r.u16().ok_or_else(|| bad("Kopf"))?;
-    let mode = r.u16().ok_or_else(|| bad("Kopf"))?;
+    r.take(6).ok_or_else(|| bad("err-import-part-header"))?;
+    let ch = r.u16().ok_or_else(|| bad("err-import-part-header"))?;
+    let h = r.u32().ok_or_else(|| bad("err-import-part-header"))?;
+    let w = r.u32().ok_or_else(|| bad("err-import-part-header"))?;
+    let depth = r.u16().ok_or_else(|| bad("err-import-part-header"))?;
+    let mode = r.u16().ok_or_else(|| bad("err-import-part-header"))?;
     crate::check_size(w, h)?;
-    let n = r.u32().ok_or_else(|| bad("Farbmodusdaten"))? as usize;
-    let cmd = r.take(n).ok_or_else(|| bad("Farbmodusdaten"))?;
+    let n = r.u32().ok_or_else(|| bad("err-import-part-color-mode-data"))? as usize;
+    let cmd = r.take(n).ok_or_else(|| bad("err-import-part-color-mode-data"))?;
     let color_table: Vec<[u8; 3]> = if mode == 2 && cmd.len() >= 768 { (0..256).map(|i| [cmd[i], cmd[256 + i], cmd[512 + i]]).collect() } else { Vec::new() };
-    let n = r.u32().ok_or_else(|| bad("Ressourcen"))? as usize;
-    let res_end = r.o.checked_add(n).ok_or_else(|| bad("Ressourcen"))?;
+    let n = r.u32().ok_or_else(|| bad("err-import-part-resources"))? as usize;
+    let res_end = r.o.checked_add(n).ok_or_else(|| bad("err-import-part-resources"))?;
     let resources = parse_resources(&mut Reader::sub(b, r.o, res_end), res_end);
     r.o = res_end.min(b.len());
-    let lm_len = if psb { r.u64().map(|v| v as usize) } else { r.u32().map(|v| v as usize) }.ok_or_else(|| bad("Ebenenbereich"))?;
+    let lm_len = if psb { r.u64().map(|v| v as usize) } else { r.u32().map(|v| v as usize) }.ok_or_else(|| bad("err-import-part-layer-section"))?;
     let lm_end = r.o.saturating_add(lm_len).min(b.len());
     let mut layers: Vec<PsdLayer> = Vec::new();
     if lm_len > 0 {
         let li_len = if psb { r.u64().map(|v| v as usize) } else { r.u32().map(|v| v as usize) }.unwrap_or(0);
         let li_end = r.o.saturating_add(li_len).min(b.len());
         if li_len > 0 {
-            let cnt = r.i16().ok_or_else(|| bad("Ebenenzahl"))?.unsigned_abs() as usize;
+            let cnt = r.i16().ok_or_else(|| bad("err-import-part-layer-count"))?.unsigned_abs() as usize;
             let mut chans: Vec<Vec<(i16, usize)>> = Vec::new();
             for _ in 0..cnt.min(16_000) {
                 let rect = [0; 4].map(|_: i32| 0);
-                let (t, l, bt, rt) = (r.i32().ok_or_else(|| bad("Ebene"))?, r.i32().ok_or_else(|| bad("Ebene"))?, r.i32().ok_or_else(|| bad("Ebene"))?, r.i32().ok_or_else(|| bad("Ebene"))?);
+                let (t, l, bt, rt) = (r.i32().ok_or_else(|| bad("err-import-part-layer"))?, r.i32().ok_or_else(|| bad("err-import-part-layer"))?, r.i32().ok_or_else(|| bad("err-import-part-layer"))?, r.i32().ok_or_else(|| bad("err-import-part-layer"))?);
                 let _ = rect;
-                let nch = r.u16().ok_or_else(|| bad("Ebene"))? as usize;
+                let nch = r.u16().ok_or_else(|| bad("err-import-part-layer"))? as usize;
                 let mut cl = Vec::with_capacity(nch);
                 for _ in 0..nch.min(64) {
-                    let id = r.i16().ok_or_else(|| bad("Kanal"))?;
-                    let len = if psb { r.u64().map(|v| v as usize) } else { r.u32().map(|v| v as usize) }.ok_or_else(|| bad("Kanal"))?;
+                    let id = r.i16().ok_or_else(|| bad("err-import-part-channel"))?;
+                    let len = if psb { r.u64().map(|v| v as usize) } else { r.u32().map(|v| v as usize) }.ok_or_else(|| bad("err-import-part-channel"))?;
                     cl.push((id, len));
                 }
-                r.key4().ok_or_else(|| bad("Ebene"))?;
-                let bkey = r.key4().ok_or_else(|| bad("Ebene"))?;
-                let opacity = r.u8().ok_or_else(|| bad("Ebene"))?;
-                let clipping = r.u8().ok_or_else(|| bad("Ebene"))? != 0;
-                let flags = r.u8().ok_or_else(|| bad("Ebene"))?;
+                r.key4().ok_or_else(|| bad("err-import-part-layer"))?;
+                let bkey = r.key4().ok_or_else(|| bad("err-import-part-layer"))?;
+                let opacity = r.u8().ok_or_else(|| bad("err-import-part-layer"))?;
+                let clipping = r.u8().ok_or_else(|| bad("err-import-part-layer"))? != 0;
+                let flags = r.u8().ok_or_else(|| bad("err-import-part-layer"))?;
                 r.u8();
-                let elen = r.u32().ok_or_else(|| bad("Ebene"))? as usize;
+                let elen = r.u32().ok_or_else(|| bad("err-import-part-layer"))? as usize;
                 let eend = r.o.saturating_add(elen).min(li_end);
-                let ml = r.u32().ok_or_else(|| bad("Maske"))? as usize;
-                let mdata = r.take(ml).ok_or_else(|| bad("Maske"))?;
+                let ml = r.u32().ok_or_else(|| bad("err-import-part-mask"))? as usize;
+                let mdata = r.take(ml).ok_or_else(|| bad("err-import-part-mask"))?;
                 let mask = if ml >= 18 {
                     let mut m = Reader::new(mdata);
                     let (mt, mlft, mb, mr) = (m.i32().unwrap_or(0), m.i32().unwrap_or(0), m.i32().unwrap_or(0), m.i32().unwrap_or(0));
@@ -456,10 +456,10 @@ pub fn read(b: &[u8]) -> Result<PsdFile> {
                 } else {
                     None
                 };
-                let bl = r.u32().ok_or_else(|| bad("Mischbereiche"))? as usize;
-                r.take(bl).ok_or_else(|| bad("Mischbereiche"))?;
-                let nl = r.u8().ok_or_else(|| bad("Name"))? as usize;
-                let pname: String = r.take(nl).ok_or_else(|| bad("Name"))?.iter().map(|&c| c as char).collect();
+                let bl = r.u32().ok_or_else(|| bad("err-import-part-blending-ranges"))? as usize;
+                r.take(bl).ok_or_else(|| bad("err-import-part-blending-ranges"))?;
+                let nl = r.u8().ok_or_else(|| bad("err-import-part-name"))? as usize;
+                let pname: String = r.take(nl).ok_or_else(|| bad("err-import-part-name"))?.iter().map(|&c| c as char).collect();
                 let pad = (4 - (nl + 1) % 4) % 4;
                 r.take(pad);
                 let blocks = read_blocks(&mut r, eend, psb, 1);
@@ -559,7 +559,7 @@ pub fn read(b: &[u8]) -> Result<PsdFile> {
                         (-2 | -3, Some(m)) => ((m.rect[2] - m.rect[0]).max(0) as usize, (m.rect[3] - m.rect[1]).max(0) as usize),
                         _ => (lw, lh),
                     };
-                    let data = channel(&mut r, cw, chh, depth, len, psb).ok_or_else(|| bad("Kanaldaten"))?;
+                    let data = channel(&mut r, cw, chh, depth, len, psb).ok_or_else(|| bad("err-import-part-channel-data"))?;
                     match id {
                         0..=2 => planes[id as usize] = Some(data),
                         -1 => planes[3] = Some(data),

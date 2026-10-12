@@ -53,12 +53,12 @@ impl Weights {
 
     /// Aus Bytes.
     pub fn parse(bytes: &[u8]) -> Result<Weights> {
-        let bad = |m: &str| AiError::Weights(m.to_string());
-        let n = u64::from_le_bytes(bytes.get(..8).ok_or_else(|| bad("Datei zu kurz"))?.try_into().map_err(|_| bad("Kopf"))?) as usize;
-        let head = bytes.get(8..8 + n).ok_or_else(|| bad("Kopf abgeschnitten"))?;
+        let bad = |m: &str| AiError::Weights(if m.starts_with("err-") { fp_i18n::t(m) } else { m.to_string() });
+        let n = u64::from_le_bytes(bytes.get(..8).ok_or_else(|| bad("err-import-part-file-too-short"))?.try_into().map_err(|_| bad("err-import-part-header"))?) as usize;
+        let head = bytes.get(8..8 + n).ok_or_else(|| bad("err-import-part-header-truncated"))?;
         let data = &bytes[8 + n..];
-        let json: serde_json::Value = serde_json::from_slice(head).map_err(|e| AiError::Weights(format!("Kopf: {e}")))?;
-        let obj = json.as_object().ok_or_else(|| bad("Kopf ist kein Objekt"))?;
+        let json: serde_json::Value = serde_json::from_slice(head).map_err(|e| AiError::Weights(fp_i18n::tr!("ai-err-d-header", error = e.to_string())))?;
+        let obj = json.as_object().ok_or_else(|| bad("err-import-part-header-not-object"))?;
         let mut map = HashMap::with_capacity(obj.len());
         for (name, v) in obj {
             if name == "__metadata__" {
@@ -68,17 +68,17 @@ impl Weights {
             let shape: Vec<usize> = v["shape"].as_array().ok_or_else(|| bad("shape"))?.iter().map(|x| x.as_u64().unwrap_or(0) as usize).collect();
             let off = v["data_offsets"].as_array().ok_or_else(|| bad("data_offsets"))?;
             let (a, b) = (off.first().and_then(|x| x.as_u64()).unwrap_or(0) as usize, off.get(1).and_then(|x| x.as_u64()).unwrap_or(0) as usize);
-            let raw = data.get(a..b).ok_or_else(|| AiError::Weights(format!("Daten von {name} außerhalb der Datei")))?;
+            let raw = data.get(a..b).ok_or_else(|| AiError::Weights(fp_i18n::tr!("ai-err-d-data-outside", name = name.as_str())))?;
             let count: usize = shape.iter().product();
             let vals: Vec<f32> = match dtype {
                 "F32" => raw.as_chunks::<4>().0.iter().map(|c| f32::from_le_bytes(*c)).collect(),
                 "F16" => raw.as_chunks::<2>().0.iter().map(|c| f16_to_f32(u16::from_le_bytes(*c))).collect(),
                 "BF16" => raw.as_chunks::<2>().0.iter().map(|c| f32::from_bits((u16::from_le_bytes(*c) as u32) << 16)).collect(),
                 "I64" => raw.as_chunks::<8>().0.iter().map(|c| i64::from_le_bytes(*c) as f32).collect(),
-                other => return Err(AiError::Weights(format!("Datentyp {other} von {name} nicht unterstützt"))),
+                other => return Err(AiError::Weights(fp_i18n::tr!("ai-err-d-dtype", dtype = other, name = name.as_str()))),
             };
             if vals.len() != count {
-                return Err(AiError::Weights(format!("Größe von {name} passt nicht")));
+                return Err(AiError::Weights(fp_i18n::tr!("ai-err-d-size-mismatch", name = name.as_str())));
             }
             map.insert(name.clone(), Weight { shape, data: vals });
         }
@@ -97,12 +97,12 @@ impl Weights {
 
     /// Tensor holen.
     pub fn get(&self, name: &str) -> Result<&Weight> {
-        self.map.get(name).ok_or_else(|| AiError::Weights(format!("Gewicht {name} fehlt")))
+        self.map.get(name).ok_or_else(|| AiError::Weights(fp_i18n::tr!("ai-err-d-weight-missing", name = name)))
     }
 
     /// Tensor herausnehmen (jedes Gewicht wird beim Aufbau genau einmal gebraucht).
     pub fn take(&mut self, name: &str) -> Result<Weight> {
-        self.map.remove(name).ok_or_else(|| AiError::Weights(format!("Gewicht {name} fehlt")))
+        self.map.remove(name).ok_or_else(|| AiError::Weights(fp_i18n::tr!("ai-err-d-weight-missing", name = name)))
     }
 
     /// Tensor-Daten herausnehmen.
@@ -119,7 +119,7 @@ impl Weights {
     pub fn linear(&mut self, prefix: &str) -> Result<Linear> {
         let w = self.take(&format!("{prefix}.weight"))?;
         if w.shape.len() != 2 {
-            return Err(AiError::Weights(format!("{prefix}.weight ist keine Matrix")));
+            return Err(AiError::Weights(fp_i18n::tr!("ai-err-d-not-matrix", name = format!("{prefix}.weight"))));
         }
         Ok(Linear::new(w.data, self.opt(&format!("{prefix}.bias")), w.shape[0], w.shape[1]))
     }
@@ -133,7 +133,7 @@ impl Weights {
     pub fn conv(&mut self, prefix: &str, stride: usize, pad: usize, dil: usize) -> Result<Conv2d> {
         let w = self.take(&format!("{prefix}.weight"))?;
         if w.shape.len() != 4 || w.shape[2] != w.shape[3] {
-            return Err(AiError::Weights(format!("{prefix}.weight ist keine quadratische Faltung")));
+            return Err(AiError::Weights(fp_i18n::tr!("ai-err-d-not-square", name = format!("{prefix}.weight"))));
         }
         Ok(Conv2d { cout: w.shape[0], cin: w.shape[1], k: w.shape[2], w: w.data, b: self.opt(&format!("{prefix}.bias")), stride, pad, dil })
     }

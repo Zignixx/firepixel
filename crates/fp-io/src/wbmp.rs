@@ -18,13 +18,13 @@ fn mbi(d: &[u8], p: &mut usize) -> Option<u32> {
 
 /// WBMP lesen.
 pub fn decode(d: &[u8]) -> Result<RasterImage> {
-    let bad = |s: &str| ImportError::Corrupt(format!("WBMP: {s}"));
+    let bad = |s: &str| ImportError::Corrupt(format!("WBMP: {}", crate::part(s)));
     let mut p = 0usize;
-    let typ = mbi(d, &mut p).ok_or_else(|| bad("Kopf"))?;
+    let typ = mbi(d, &mut p).ok_or_else(|| bad("err-import-part-header"))?;
     if typ != 0 {
         return Err(ImportError::Unsupported(fp_i18n::tr!("err-import-wbmp-type", kind = typ.to_string())));
     }
-    let fix = *d.get(p).ok_or_else(|| bad("Kopf"))?;
+    let fix = *d.get(p).ok_or_else(|| bad("err-import-part-header"))?;
     p += 1;
     if fix & 0x80 != 0 {
         // Erweiterungsköpfe überspringen
@@ -33,13 +33,13 @@ pub fn decode(d: &[u8]) -> Result<RasterImage> {
         }
         p += 1;
     }
-    let w = mbi(d, &mut p).ok_or_else(|| bad("Breite"))?;
-    let h = mbi(d, &mut p).ok_or_else(|| bad("Höhe"))?;
+    let w = mbi(d, &mut p).ok_or_else(|| bad("err-import-part-width"))?;
+    let h = mbi(d, &mut p).ok_or_else(|| bad("err-import-part-height"))?;
     check_size(w, h)?;
     let stride = (w as usize).div_ceil(8);
     let mut rgba = Vec::with_capacity(w as usize * h as usize * 4);
     for y in 0..h as usize {
-        let row = d.get(p + y * stride..p + (y + 1) * stride).ok_or_else(|| bad("Pixeldaten abgeschnitten"))?;
+        let row = d.get(p + y * stride..p + (y + 1) * stride).ok_or_else(|| bad("err-import-part-pixels-truncated"))?;
         for x in 0..w as usize {
             let v = if row[x / 8] & (0x80 >> (x % 8)) != 0 { 255 } else { 0 };
             rgba.extend_from_slice(&[v, v, v, 255]);

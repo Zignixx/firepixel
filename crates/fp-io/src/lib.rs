@@ -77,6 +77,12 @@ pub enum ImportError {
 fn m0(key: &str) -> String {
     fp_i18n::t(key)
 }
+/// Strukturteil einer Datei in Fehlermeldungen der Dekoder: Schlüssel (`err-import-part-*`) → Text
+/// in der aktuellen Sprache, sonst unverändert.
+pub(crate) fn part(s: &str) -> String {
+    if s.starts_with("err-") { fp_i18n::t(s) } else { s.to_string() }
+}
+
 fn m1(key: &str, a: &str, va: &dyn std::fmt::Display) -> String {
     fp_i18n::t_args(key, &[(a, fp_i18n::Value::from(va.to_string()))])
 }

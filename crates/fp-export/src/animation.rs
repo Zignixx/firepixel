@@ -115,7 +115,7 @@ pub fn animated_gif(frames: &[AnimFrameSrc], w: usize, h: usize, s: &OptimizeSet
     }
     let prepared = prepare_frames(frames, w, h, s.anim.auto_crop, s.lossy);
     if prepared.is_empty() {
-        return Err(ExportError::Encode("keine sichtbaren Status".into()));
+        return Err(ExportError::Encode(fp_i18n::t("err-export-d-no-visible-states")));
     }
     let mut stacked = Vec::with_capacity(w * h * prepared.len());
     for p in &prepared {
@@ -182,7 +182,7 @@ pub fn animated_gif(frames: &[AnimFrameSrc], w: usize, h: usize, s: &OptimizeSet
 pub fn apng(frames: &[AnimFrameSrc], w: usize, h: usize, ctx: &ExportContext, loop_count: i32) -> Result<Vec<u8>> {
     let vis: Vec<&AnimFrameSrc> = frames.iter().filter(|f| f.info.visible).collect();
     if vis.is_empty() {
-        return Err(ExportError::Encode("keine sichtbaren Status".into()));
+        return Err(ExportError::Encode(fp_i18n::t("err-export-d-no-visible-states")));
     }
     let mut out = Vec::with_capacity(vis.len());
     let mut prev: Option<Vec<u32>> = None;

@@ -200,7 +200,7 @@ fn safe_name(s: &str) -> String {
 /// Dokument exportieren.
 pub fn export_document(doc: &Document, r: &dyn PageRenderer, o: &DocExportOptions, ex: &EncodeExtras) -> Result<Vec<ExportFile>> {
     let page = o.page;
-    let p = doc.pages.get(page).ok_or_else(|| ExportError::Encode(format!("Seite {page} fehlt")))?;
+    let p = doc.pages.get(page).ok_or_else(|| ExportError::Encode(fp_i18n::tr!("err-export-d-page-missing", page = page.to_string())))?;
     let s = o.settings.clone().unwrap_or_else(|| page_settings(doc, page));
     let ext = s.format.extension();
     let ctx = page_context(doc, page);

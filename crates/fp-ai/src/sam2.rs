@@ -212,7 +212,7 @@ impl Sam2 {
         let cfg = match n_blocks {
             12 => HieraConfig::tiny(),
             16 => HieraConfig::small(),
-            n => return Err(AiError::Weights(format!("unbekannte SAM-2-Größe ({n} Blöcke)"))),
+            n => return Err(AiError::Weights(fp_i18n::tr!("ai-err-d-sam-size", n = n))),
         };
         let bb = "vision_encoder.backbone";
         let patch = wt.conv(&format!("{bb}.patch_embed.projection"), 4, 3, 1)?;
@@ -361,7 +361,7 @@ impl Sam2 {
     /// Bild-Encoder: `x[3, 1024, 1024]` (normalisiert).
     pub fn encode(&self, x: &[f32], prog: &Progress) -> Result<ImageEmbedding> {
         if x.len() != 3 * SIZE * SIZE {
-            return Err(AiError::Input("SAM 2 braucht ein Bild mit 1024 × 1024".into()));
+            return Err(AiError::Input(fp_i18n::t("ai-err-d-sam-input")));
         }
         let (pe, mut h, mut w) = self.patch.forward(x, SIZE, SIZE);
         let c0 = self.cfg.embed[0];
@@ -460,7 +460,7 @@ impl Sam2 {
             n_sparse += 1;
         }
         if p.points.is_empty() && p.boxx.is_none() {
-            return Err(AiError::Input("kein Punkt und kein Rahmen".into()));
+            return Err(AiError::Input(fp_i18n::t("ai-err-d-no-point-no-box")));
         }
         let nt = 6 + n_sparse;
         let mut point_emb = self.tokens.clone();
