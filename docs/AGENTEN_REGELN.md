@@ -31,6 +31,15 @@ Spezifikationen werden als `re\<Nr>-….md` zitiert, ohne Produktnamen. Die Prü
 
 Vom Nutzer genehmigte Ausnahme (11.10.): Treffer in der fertigen exe, die nur aus Fremd-Crates stammen (zune-jpeg, image, brotli – Formatkennungen), dürfen bleiben. Eigener Code, eigene Daten und die UI müssen sauber sein.
 
+## 1c. Technisches immer Englisch (Nutzerwunsch 12.10.2026, verbindlich)
+
+Übersetzt wird nur, was der Nutzer in der Oberfläche liest. **Alles Technische ist immer Englisch**, unabhängig von der UI-Sprache:
+- Ordner und Dateien, die die App anlegt oder liest: `%APPDATA%\Firepixel\…`, `%LOCALAPPDATA%\Firepixel\…`, neben der EXE, `~/.config/firepixel/…`. Beispiele: `Sprachen` → `Languages`, `Modelle` → `Models`.
+- Namen und Schlüssel der Einstellungsdateien, Vorgabe-, Export- und Protokolldateien
+- CLI-Befehle, -Optionen und JSON-Ausgabeschlüssel, MCP-Werkzeug- und Parameternamen, Umgebungsvariablen
+- `.ftl`-Dateinamen, Fluent-IDs, Rust-Bezeichner, Datei- und Testnamen im Quelltext
+
+Neue Namen nur noch englisch. Beim Umbenennen bestehender Pfade wird migriert: den alten deutschen Ordner als Rückfall lesen oder einmalig verschieben, damit Sprachpakete, KI-Modelle und Einstellungen des Nutzers erhalten bleiben. Kommentare und deutsche Doku sind davon nicht betroffen.
 ## 2. Bauen ohne sich gegenseitig zu stören
 
 - **Eigener Build-Ordner je Agent** (seit dem Neustart: C: 499 GB, ~329 GB frei; 24 GB RAM, 24 Kerne): in jeder Shell vor cargo `$env:CARGO_TARGET_DIR = 'C:\Users\Administrator\Desktop\REA\firepixel\target-<kürzel>'` (z. B. `target-lw`). Dann blockiert niemand mehr die anderen. Kein `cargo clean` in fremden Ordnern. Ausnahme: HG baut die Release-exe am Ende im normalen `target\`.
