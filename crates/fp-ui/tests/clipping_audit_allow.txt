@@ -1,23 +1,18 @@
 # Erlaubnisliste des Prüfers clipping_audit.rs (RAND-1, N23): bekannte Funde `Art|Ansicht|Text`.
 # Behobene Zeilen streichen (der Bericht docs\funktionstest\rand_auto.md nennt sie unter „nicht mehr gefunden“).
+and_auto.md nennt sie unter „nicht mehr gefunden“).
 # Neu schreiben: FP_RAND_FULL=1 FP_RAND_UPDATE_ALLOW=1 cargo test -p fp-ui --test clipping_audit
 # RAND-2a (13.10.): 61 erledigte Zeilen gestrichen (R2-1 Inspektor im schmalen Fenster, R2-2 Text/Segment, dazu inzwischen behobene Funde anderer Pakete).
-abgeschnitten|Dialog modify.traceBitmap|Flecken entfernen
-dialog-ragt-hinaus|Dialog Voreinstellungen 1|
-dialog-ragt-hinaus|Dialog Voreinstellungen 2|
-dialog-ragt-hinaus|Dialog Voreinstellungen 3|
-dialog-ragt-hinaus|Dialog Voreinstellungen 4|
-dialog-ragt-hinaus|Dialog Voreinstellungen 5|
-dialog-ragt-hinaus|Dialog Voreinstellungen 6|
-dialog-ragt-hinaus|Dialog Voreinstellungen|
-dialog-ragt-hinaus|Dialog ai.manageModels|
-dialog-ragt-hinaus|Dialog edit.keyboardShortcuts|
-rand-knapp|Dialog ai.manageModels|Entfernen
-# NZ-2 (12.10.): neue Funde nach DLG-1/1b/2/3, NZ-1 und KI-2, begründet aufgenommen.
-# RAND-2 (Bedienfeld zu niedrig im 800×512-pt-Fenster, 150 %): panels\common.rs list_frame hält die Liste mindestens 24 px hoch, auch wenn sie dann über die Fußleiste reicht; seit NZ-1 (ec4ac99) haben die Fußleistenknöpfe Barrierefreiheits-Knoten, deshalb sieht der Prüfer die Überdeckung erst jetzt (Befund IBD/RAND-2).
-ragt-heraus|Bedienfeld DocumentLibrary (Dock)|Grafik
-ragt-heraus|Bedienfeld DocumentLibrary (schmales Dock)|Grafik
-ueberlappt-element|Bedienfeld DocumentLibrary (Dock)|Grafik
-ueberlappt-element|Bedienfeld DocumentLibrary (Dock)|Schaltfläche
-ueberlappt-element|Bedienfeld DocumentLibrary (schmales Dock)|Grafik
-ueberlappt-element|Bedienfeld DocumentLibrary (schmales Dock)|Schaltfläche
+# RAND-2b (13.10.): die übrigen 17 Zeilen gestrichen: R2-3 (Voreinstellungen, Tastaturbefehle, KI-Modelle
+# ragten aus dem 800 × 512-pt-Fenster; jetzt begrenzt, Inhalt mit Bildlauf, Knopfzeile fest), R2-4
+# (Entfernen…), R2-5 (Flecken entfernen: Zeile an der Kante des Bildlaufs, jetzt Hinweis) und NZ-2
+# (Dokumentbibliothek: die Liste reichte mit der Mindesthöhe der ScrollArea über die Fußleiste).
+# RAND-2b, neue Ansichten Menüs: Menüs höher als das Hauptfenster (egui-Popups ohne Bildlauf), die
+# unteren Einträge sind dann nicht erreichbar: Hauptmenü 1 (Datei) und das zweite Bedienfeldmenü bei
+# 800 × 512 pt, Hauptmenü 9 auch bei 1024 × 768; das Kontextmenü der Leinwand (bei 800 × 512 pt 694 pt
+# hoch) meldete der Prüfer nur in einem Teillauf, die Zeile bleibt deshalb vorsorglich stehen.
+# Kein Abstandsfehler; Befund HG (menu.rs: Menü auf die Fensterhöhe begrenzen, Bildlauf bzw. Pfeile).
+dialog-ragt-hinaus|Bedienfeldmenü 2|
+dialog-ragt-hinaus|Hauptmenü 1|
+dialog-ragt-hinaus|Hauptmenü 9|
+dialog-ragt-hinaus|Kontextmenü Leinwand|
