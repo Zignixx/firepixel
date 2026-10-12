@@ -10,4 +10,3 @@ trace-err-unknown-preset = Unknown preset “{ $name }”.
 trace-err-bad-options = Invalid options: { $detail }
 trace-layer-name = Traced
 trace-group-name = Traced: { $name }
-trace-path-name = Area { $color }

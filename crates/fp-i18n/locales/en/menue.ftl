@@ -1174,3 +1174,6 @@ cmd-ai-models = AI Models
     .description = List of AI models with source, size, license and availability
 cmd-ai-setModelFolder = Set Model Folder
 cmd-ai-clearCache = Clear AI Cache
+# Trace Bitmap (VT-1)
+cmd-modify-traceBitmap = Trac&e Bitmap...
+    .description = Traces the selected bitmap as filled, editable vector paths on a new layer

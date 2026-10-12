@@ -10,4 +10,3 @@ trace-err-unknown-preset = Unbekannte Vorgabe „{ $name }“.
 trace-err-bad-options = Ungültige Optionen: { $detail }
 trace-layer-name = Nachgezeichnet
 trace-group-name = Nachgezeichnet: { $name }
-trace-path-name = Fläche { $color }

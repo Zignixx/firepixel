@@ -1857,6 +1857,7 @@ dependencies = [
  "fp-raster",
  "fp-render",
  "fp-text",
+ "fp-trace",
  "fp-vector",
  "serde",
  "serde_json",

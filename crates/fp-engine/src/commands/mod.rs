@@ -23,6 +23,7 @@ pub mod panel;
 mod select;
 mod text;
 mod tooling;
+mod trace;
 mod view;
 
 pub use export::PageSetup;
@@ -62,6 +63,7 @@ pub fn register_all(r: &mut CommandRegistry) {
     tooling::register(r);
     panel::register(r);
     ai::register(r);
+    trace::register(r);
 }
 
 pub(crate) const DOC: &[Requirement] = &[Requirement::Document];

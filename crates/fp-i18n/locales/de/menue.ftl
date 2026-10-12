@@ -1174,3 +1174,6 @@ cmd-ai-models = KI-Modelle
     .description = Liste der KI-Modelle mit Quelle, Größe, Lizenz und Verfügbarkeit
 cmd-ai-setModelFolder = Modellordner festlegen
 cmd-ai-clearCache = KI-Zwischenspeicher leeren
+# Bitmap nachzeichnen (VT-1)
+cmd-modify-traceBitmap = Bitmap na&chzeichnen...
+    .description = Zeichnet die ausgewählte Bitmap als gefüllte, bearbeitbare Vektorpfade auf einer neuen Ebene nach

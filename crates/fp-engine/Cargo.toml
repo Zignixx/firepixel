@@ -36,6 +36,8 @@ serde_json = { workspace = true }
 thiserror = { workspace = true }
 # Mehrsprachigkeit: Fehlertexte, Verlaufsschritte, Statushinweise, Standardnamen
 fp-i18n = { workspace = true }
+# Bitmap nachzeichnen (Vektorisierung, Agent VT)
+fp-trace = { workspace = true }
 
 [lints]
 workspace = true
