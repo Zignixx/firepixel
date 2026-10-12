@@ -400,8 +400,8 @@ fn w15_text_tool_defaults_before_typing() {
     let row = inputs(&h).into_iter().filter(|(r, _)| (r.center().y - lead.center().y).abs() < 1.0 && r.right() < lead.left()).max_by(|a, b| a.0.left().total_cmp(&b.0.left())).expect("Laufweite").0;
     type_into(&mut h, row, "25");
     key(&mut h, Key::Enter, Modifiers::NONE);
-    // Horizontalskala 100 → 80 (unten links in Zeile 2; das andere „100“ ist die Deckkraft)
-    let hs = inputs(&h).into_iter().filter(|(_, v)| v == "100").max_by(|a, b| a.0.top().total_cmp(&b.0.top())).expect("Horizontalskala").0;
+    // Horizontalskala 100 % → 80 (unten links in Zeile 2; das Feld zeigt wie im Original „100%“, O8)
+    let hs = inputs(&h).into_iter().filter(|(_, v)| v == "100%").max_by(|a, b| a.0.top().total_cmp(&b.0.top())).expect("Horizontalskala").0;
     type_into(&mut h, hs, "80");
     key(&mut h, Key::Enter, Modifiers::NONE);
     // Vorgaben in den Voreinstellungen des Textwerkzeugs (wie im Original)

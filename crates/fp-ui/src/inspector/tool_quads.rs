@@ -142,13 +142,15 @@ fn polygon_q4(ui: &mut Ui, st: &mut AppState, r: Rect) {
     if let Some(v) = fields::number(ui, "pi-poly-sides", d.r(288.0, 0.0, 19.0, 13.0), Some(d.r(308.0, 0.0, 9.0, 13.0)), Some(o.polygon_sides as f64), (3.0, 360.0), 0, true) {
         st.session.tools.options.polygon_sides = v as u32;
     }
-    fields::label_right(ui, d.r(255.0, 17.0, 31.0, 8.0), &tx("pi-poly-angle"), o.polygon_star);
+    // Winkel und „Autom.“ sind im Original bei beiden Formen bedienbar, auch bei Form = Polygon
+    // und mit gesetztem „Autom.“ (Winkel 38, PARITAET_A W19, a_131)
+    fields::label_right(ui, d.r(255.0, 17.0, 31.0, 8.0), &tx("pi-poly-angle"), true);
     let auto = o.polygon_spikiness.is_none();
     let ang = o.polygon_spikiness.map(|s| (s * 100.0).round() as f64).unwrap_or(38.0);
-    if let Some(v) = fields::number(ui, "pi-poly-angle", d.r(288.0, 14.0, 19.0, 13.0), Some(d.r(308.0, 15.0, 9.0, 13.0)), Some(ang), (0.0, 100.0), 0, o.polygon_star && !auto) {
+    if let Some(v) = fields::number(ui, "pi-poly-angle", d.r(288.0, 14.0, 19.0, 13.0), Some(d.r(308.0, 15.0, 9.0, 13.0)), Some(ang), (0.0, 100.0), 0, true) {
         st.session.tools.options.polygon_spikiness = Some((v / 100.0) as f32);
     }
-    if let Some(b) = fields::checkbox(ui, "pi-poly-auto", d.r(320.0, 16.0, 40.0, 10.0), &tx("pi-poly-auto"), auto, o.polygon_star) {
+    if let Some(b) = fields::checkbox(ui, "pi-poly-auto", d.r(320.0, 16.0, 40.0, 10.0), &tx("pi-poly-auto"), auto, true) {
         st.session.tools.options.polygon_spikiness = if b { None } else { Some(0.38) };
     }
 }
@@ -278,30 +280,47 @@ fn wand_q3(ui: &mut Ui, st: &mut AppState, r: Rect) {
     live_marquee(ui, d.r(10.0, 17.0, 83.0, 10.0), "wand");
 }
 
+/// Symbol vor der festen Breite des Auswahlrahmens (Original: ↔, Symbol statt Text).
+pub const MARQUEE_W_SYMBOL: &str = "\u{2194}";
+/// Symbol vor der festen Höhe des Auswahlrahmens (Original: ↕).
+pub const MARQUEE_H_SYMBOL: &str = "\u{2195}";
+
+/// Voreinstellungen der festen Auswahlrahmen-Werte: Verhältnis X/Y, Größe B/H.
+const MARQUEE_PREFS: [&str; 4] = ["MarqueeToolModeRatioX", "MarqueeToolModeRatioY", "MarqueeToolModeWidthX", "MarqueeToolModeWidthY"];
+
 fn marquee_q3(ui: &mut Ui, st: &mut AppState, r: Rect) {
     let d = Dl::at(r.min);
     let style = st.session.tools.options.marquee_style;
     fields::label(ui, d.r(2.0, 2.0, 29.0, 8.0), &tx("pi-marquee-style"), true);
+    // bei „Normal“ zeigt das Original 0/0 in grauen Feldern (PARITAET_A W24)
     let (si, w, h) = match style {
-        MarqueeStyle::Normal => (0, 64.0, 64.0),
+        MarqueeStyle::Normal => (0, 0.0, 0.0),
         MarqueeStyle::FixedRatio(a, b) => (1, a, b),
         MarqueeStyle::FixedSize(a, b) => (2, a, b),
     };
     if let Some(i) = fields::combo(ui, "marq-style", d.r(33.0, 0.0, 92.0, 13.0), &refs(&tl(&["pi-marquee-normal", "pi-marquee-fixed-ratio", "pi-marquee-fixed-size"])), Some(si), true) {
+        // Werte wie im Original aus den Voreinstellungen (Werksvorgabe Verhältnis 1:2, Größe 64 × 64)
+        let p = &st.session.prefs;
         st.session.tools.options.marquee_style = match i {
-            1 => MarqueeStyle::FixedRatio(1.0, 1.0),
-            2 => MarqueeStyle::FixedSize(64.0, 64.0),
+            1 => MarqueeStyle::FixedRatio(p.get_int(MARQUEE_PREFS[0], 1) as f32, p.get_int(MARQUEE_PREFS[1], 2) as f32),
+            2 => MarqueeStyle::FixedSize(p.get_int(MARQUEE_PREFS[2], 64) as f32, p.get_int(MARQUEE_PREFS[3], 64) as f32),
             _ => MarqueeStyle::Normal,
         };
     }
     let en = si != 0;
-    fields::label(ui, d.r(23.0, 16.0, 9.0, 8.0), &tx("pi-marquee-w"), en);
+    // Breite/Höhe wie im Original mit den Symbolen ↔/↕ statt Buchstaben (immer schwarz, auch
+    // wenn die Felder grau sind)
+    fields::label_name(ui, d.r(21.0, 16.0, 11.0, 8.0), MARQUEE_W_SYMBOL, true);
     let nw = fields::number(ui, "marq-w", d.r(33.0, 14.0, 22.0, 13.0), None, Some(w as f64), (1.0, 30000.0), 0, en);
-    fields::label(ui, d.r(62.0, 16.0, 9.0, 8.0), &tx("pi-marquee-h"), en);
+    fields::label_name(ui, d.r(61.0, 16.0, 10.0, 8.0), MARQUEE_H_SYMBOL, true);
     let nh = fields::number(ui, "marq-h", d.r(72.0, 14.0, 22.0, 13.0), None, Some(h as f64), (1.0, 30000.0), 0, en);
     if nw.is_some() || nh.is_some() {
         let (a, b) = (nw.unwrap_or(w as f64) as f32, nh.unwrap_or(h as f64) as f32);
         st.session.tools.options.marquee_style = if si == 1 { MarqueeStyle::FixedRatio(a, b) } else { MarqueeStyle::FixedSize(a, b) };
+        // gemerkt je Stil, damit ein Wechsel hin und zurück die Werte behält
+        let k = if si == 1 { 0 } else { 2 };
+        st.session.prefs.set(MARQUEE_PREFS[k], fp_engine::prefs::PrefValue::Int(a as i64));
+        st.session.prefs.set(MARQUEE_PREFS[k + 1], fp_engine::prefs::PrefValue::Int(b as i64));
     }
     fields::label_right(ui, d.r(129.0, 2.0, 28.0, 8.0), &tx("pi-edge"), true);
     if let Some(e) = edge_fields(ui, "marq", d.r(159.0, 0.0, 71.0, 13.0), d.r(233.0, 0.0, 19.0, 13.0), d.r(253.0, 0.0, 9.0, 13.0), st.session.tools.options.marquee_edge) {

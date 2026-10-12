@@ -324,6 +324,15 @@ fn draw_gradient_swatch(ui: &Ui, r: Rect, f: &fp_model::Fill) {
     }
 }
 
+/// Schlüssel: Farben des zuletzt im Werkzeug-Füllfarbfeld gezeichneten Verlaufs (Tests).
+const TOOL_SWATCH_GRADIENT: &str = "pi-tool-swatch-gradient";
+
+/// Farben (ARGB) des Verlaufs, den das Füllfarbfeld des Werkzeug-Inspektors zuletzt zeigte;
+/// `None`, wenn es einfarbig war (nur das Verlauf-Werkzeug zeigt einen Verlauf). Für Tests.
+pub fn tool_swatch_gradient(ctx: &egui::Context) -> Option<Vec<u32>> {
+    ctx.data(|d| d.get_temp::<Option<Vec<u32>>>(Id::new(TOOL_SWATCH_GRADIENT))).flatten()
+}
+
 fn apply_fill(ui: &Ui, st: &mut AppState, tgt: Target, params: Value) {
     match tgt {
         Target::Selection => st.run("pi.fill", params),
@@ -410,6 +419,18 @@ pub fn fill_panel(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target, enabled: b
         }
     } else {
         let choice = popups::color_button(ui, id.with("sw"), sw, st, color, en, true, true);
+        // Verlauf-Werkzeug: das Farbfeld zeigt wie im Original den Verlauf, hier den, den das
+        // Werkzeug malt (Füll- → Strichfarbe), statt eines einfarbigen Felds (PARITAET_A W26)
+        if tgt == Target::Tool {
+            let grad = (st.session.tools.active == fp_engine::ToolId::Gradient).then(|| {
+                let (a, b) = (Argb(st.session.tools.fill_color.0 | 0xff00_0000), Argb(st.session.tools.stroke_color.0 | 0xff00_0000));
+                let mut f = fp_model::Fill::solid();
+                f.gradient = Some(ui_commands::make_gradient(0, &[(0.0, a), (1.0, b)], None));
+                draw_gradient_swatch(ui, sw, &f);
+                vec![a.0, b.0]
+            });
+            ui.ctx().data_mut(|dd| dd.insert_temp(Id::new(TOOL_SWATCH_GRADIENT), grad));
+        }
         match choice {
             Some(ColorChoice::Color(c)) => {
                 let mut p = json!({"color": ui_commands::hex(c)});
@@ -520,11 +541,12 @@ pub fn fill_texture_panel(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target, en
     let en = enabled && kind != 0 && (tgt == Target::Tool || attrs.is_some());
     let id = Id::new(("pi-ftex", tgt == Target::Tool));
     fields::label(ui, d.r(0.0, 2.0, 30.0, 8.0), &t("pi-texture"), en);
-    let names = texture_items();
-    let sel = texture_index(&names, &tex);
-    if let Some(i) = fields::combo(ui, id.with("name"), d.r(31.0, 0.0, 55.0, 14.0), &refs(&names), sel.or(Some(0)), en) {
-        let v = if i == 0 { String::new() } else { names[i].clone() };
-        apply_fill(ui, st, tgt, json!({"texture": v}));
+    let (items, sel) = texture_items(&tex);
+    let labels: Vec<&str> = items.iter().map(|(_, l)| l.as_str()).collect();
+    if let Some(i) = fields::combo(ui, id.with("name"), d.r(31.0, 0.0, 55.0, 14.0), &labels, Some(sel), en)
+        && i != sel
+    {
+        apply_fill(ui, st, tgt, json!({"texture": items[i].0}));
     }
     if let Some(v) = fields::number(ui, id.with("amt"), d.r(87.0, 0.0, 22.0, 13.0), Some(d.r(109.0, 0.0, 9.0, 13.0)), Some(amount as f64), (0.0, 100.0), 0, en) {
         apply_fill(ui, st, tgt, json!({"textureAmount": v as i64}));
@@ -551,15 +573,41 @@ pub fn pattern_files() -> Vec<std::path::PathBuf> {
     .clone()
 }
 
-fn texture_items() -> Vec<String> {
-    let mut v = vec![t("pi-none")];
-    v.extend(popups::texture_names().iter().cloned());
-    v
+/// Vorgabetextur des Originals: neue Füllungen und Striche tragen sie mit Menge 0 (im Original
+/// gemessen: `fillTexture`/`brushTexture` „Vein“, `textureBlend` 0), die Liste zeigt dann deren
+/// Namen statt „keine“ (PARITAET_A W21).
+pub const DEFAULT_TEXTURE: &str = "Vein";
+
+/// Angezeigter Name einer Textur (Dateiname ohne Endung): übersetzt, wenn die Sprache ihn kennt
+/// (`pi-texture-name-<name>`, deutsch z. B. „Ader“), sonst der Dateiname.
+pub fn texture_label(name: &str) -> String {
+    let mut slug = String::new();
+    for c in name.chars().flat_map(|c| c.to_lowercase()) {
+        if c.is_ascii_alphanumeric() {
+            slug.push(c);
+        } else if !slug.ends_with('-') && !slug.is_empty() {
+            slug.push('-');
+        }
+    }
+    let key = format!("pi-texture-name-{}", slug.trim_end_matches('-'));
+    if fp_i18n::has(&key) { t(&key) } else { name.to_string() }
 }
 
-/// Listenplatz der Textur (0 = „Ohne“; die Texturnamen selbst stammen aus Dateien).
-fn texture_index(names: &[String], tex: &str) -> Option<usize> {
-    if tex.is_empty() { Some(0) } else { names.iter().skip(1).position(|n| n == tex).map(|i| i + 1) }
+/// Einträge der Texturliste (Dateiname, angezeigter Name), nach dem angezeigten Namen geordnet wie
+/// im Original, und der Platz der aktuellen Textur (leer = Vorgabetextur). Die Vorgabe und eine
+/// aktuelle Textur, die nicht im Ordner liegt, stehen immer in der Liste; einen Eintrag „keine“ gibt
+/// es wie im Original nicht (Menge 0 = ohne Wirkung).
+pub fn texture_items(current: &str) -> (Vec<(String, String)>, usize) {
+    let current = if current.is_empty() { DEFAULT_TEXTURE } else { current };
+    let mut v: Vec<(String, String)> = popups::texture_names().iter().map(|n| (n.clone(), texture_label(n))).collect();
+    for n in [DEFAULT_TEXTURE, current] {
+        if !v.iter().any(|(x, _)| x.eq_ignore_ascii_case(n)) {
+            v.push((n.to_string(), texture_label(n)));
+        }
+    }
+    v.sort_by(|a, b| a.1.to_lowercase().cmp(&b.1.to_lowercase()).then_with(|| a.0.cmp(&b.0)));
+    let sel = v.iter().position(|(x, _)| x.eq_ignore_ascii_case(current)).unwrap_or(0);
+    (v, sel)
 }
 
 // ---------------------------------------------------------------------- Teilfeld Strich (14010)
@@ -748,11 +796,12 @@ pub fn stroke_texture_panel(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target, 
     let en = enabled && has;
     let id = Id::new(("pi-stex", tgt == Target::Tool));
     fields::label(ui, d.r(1.0, 3.0, 30.0, 8.0), &t("pi-texture"), en);
-    let names = texture_items();
-    let sel = texture_index(&names, &tex);
-    if let Some(i) = fields::combo(ui, id.with("name"), d.r(33.0, 0.0, 64.0, 14.0), &refs(&names), sel.or(Some(0)), en) {
-        let v = if i == 0 { String::new() } else { names[i].clone() };
-        apply_stroke(ui, st, tgt, json!({"texture": v}));
+    let (items, sel) = texture_items(&tex);
+    let labels: Vec<&str> = items.iter().map(|(_, l)| l.as_str()).collect();
+    if let Some(i) = fields::combo(ui, id.with("name"), d.r(33.0, 0.0, 64.0, 14.0), &labels, Some(sel), en)
+        && i != sel
+    {
+        apply_stroke(ui, st, tgt, json!({"texture": items[i].0}));
     }
     if let Some(v) = fields::number(ui, id.with("amt"), d.r(100.0, 0.0, 19.0, 13.0), Some(d.r(120.0, 0.0, 9.0, 13.0)), Some(amount as f64), (0.0, 100.0), 0, en) {
         apply_stroke(ui, st, tgt, json!({"textureAmount": v as i64}));
@@ -1007,16 +1056,17 @@ fn style_q6(ui: &mut Ui, st: &mut AppState, r: Rect) {
     let mut items: Vec<String> = vec![t("pi-style-none")];
     items.extend(styles.iter().cloned());
     let cur = f.as_ref().and_then(|e| e.common.style.clone());
-    // verschiedene Stile in der Auswahl: Liste leer wie im Original
-    let mixed = selection(st).windows(2).any(|w| w[0].common.style != w[1].common.style);
+    // mehr als ein Objekt: Liste leer wie im Original, auch wenn alle denselben bzw. keinen Stil
+    // haben; „Neuer Stil“ ist dann grau (PARITAET_A O16, a_O14_O16)
+    let multi = selection(st).len() > 1;
     let sel = cur.as_ref().and_then(|n| items.iter().skip(1).position(|x| x == n).map(|i| i + 1)).unwrap_or(0);
     let refs: Vec<&str> = items.iter().map(|s| s.as_str()).collect();
-    if let Some(i) = fields::combo(ui, "pi-style", d.r(1.0, 0.0, 92.0, 13.0), &refs, (!mixed).then_some(sel), en) {
+    if let Some(i) = fields::combo(ui, "pi-style", d.r(1.0, 0.0, 92.0, 13.0), &refs, (!multi).then_some(sel), en) {
         st.run("pi.style.apply", json!({"name": if i == 0 { String::new() } else { items[i].clone() }}));
     }
     let has = cur.is_some();
     let y = 16.0;
-    if fields::icon_button(ui, "pi-style-new", d.r(0.0, y, 16.0, 12.0), Glyph::StyleNew, en, &t("pi-style-new")).clicked() {
+    if fields::icon_button(ui, "pi-style-new", d.r(0.0, y, 16.0, 12.0), Glyph::StyleNew, en && !multi, &t("pi-style-new")).clicked() {
         st.dialogs.open_new_style();
     }
     if fields::icon_button(ui, "pi-style-redef", d.r(20.0, y, 16.0, 12.0), Glyph::StyleRedefine, en && has, &t("pi-style-redefine")).clicked()
@@ -1639,7 +1689,7 @@ pub fn text_row2(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target) {
         set_text(ui, st, tgt, json!({"spaceBefore": x}));
     }
     super::glyphs::paint(ui.painter(), d.r(1.0, 16.0, 12.0, 11.0), Glyph::HScale, &theme, en);
-    if let Some(x) = fields::number(ui, id.with("hs"), d.r(16.0, 16.0, 26.0, 13.0), Some(d.r(43.0, 16.0, 9.0, 13.0)), Some((v.hscale as f64 * 100.0).round()), (50.0, 300.0), 0, en) {
+    if let Some(x) = hscale_field(ui, id.with("hs"), d, (v.hscale as f64 * 100.0).round(), en) {
         set_text(ui, st, tgt, json!({"horizontalScale": x / 100.0}));
     }
     super::glyphs::paint(ui.painter(), d.r(56.0, 16.0, 12.0, 11.0), Glyph::SpaceAfter, &theme, en);
@@ -1686,6 +1736,21 @@ pub fn text_row2(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target) {
 
 /// Strich des Textobjekts (Stift + Farbfeld) in Zeile 2: Farbe wählen legt einen Strich an
 /// (1-Pixel weich, wie das Strich-Teilfeld), „keine“ entfernt ihn.
+/// Horizontalskala mit „%“ im Feld wie im Original („100%“, PARITAET_A O8), Objekt und Werkzeug:
+/// getippt zählen nur die Ziffern („120“ und „120%“ → 120), begrenzt auf 50 … 300; der Pfeil ▾
+/// öffnet den Popup-Schieber (beim Ziehen zeigt das Feld den Wert live mit).
+fn hscale_field(ui: &mut Ui, id: Id, d: Dl, value: f64, en: bool) -> Option<f64> {
+    const RANGE: (f64, f64) = (50.0, 300.0);
+    let arrow = id.with("arrow");
+    let live = ui.data(|dd| dd.get_temp::<f64>(arrow.with("val")));
+    let shown = format!("{}%", fields::fmt_num(live.unwrap_or(value), 0));
+    let mut out = fields::text(ui, id, d.r(16.0, 16.0, 26.0, 13.0), &shown, en).and_then(|s| fields::parse_digits(&s)).map(|x| fields::clamp_range(x, RANGE));
+    if let Some(x) = fields::slider_arrow(ui, arrow, d.r(43.0, 16.0, 9.0, 13.0), value, RANGE, 0, en) {
+        out = Some(x);
+    }
+    out.filter(|x| (x - value).abs() > f64::EPSILON)
+}
+
 fn text_stroke_field(ui: &mut Ui, st: &mut AppState, d: Dl, id: Id) {
     let theme = Theme::current(ui.ctx());
     let attrs = shown_attrs(st);

@@ -82,6 +82,43 @@ pub fn element_thumb(ctx: &Context, st: &AppState, doc: DocId, generation: u64, 
     })
 }
 
+/// Schlüsselbit der Miniaturen „Element auf der Seite“ (getrennt von Element-, Seiten- und
+/// Symbolminiaturen im selben Zwischenspeicher).
+const ON_PAGE: u64 = 1 << 62;
+
+/// Miniatur eines Elements an seiner Lage auf der verkleinerten Seite (Vorschaubild im Inspektor wie
+/// im Original, PARITAET_A O2): transparentes Bild im Seitenformat (längste Seite `size`), darin nur
+/// das Element an seinem Platz.
+pub fn element_on_page_thumb(ctx: &Context, st: &AppState, doc: DocId, d: &Arc<Document>, page: usize, e: &Arc<Element>, size: u32) -> Option<TextureHandle> {
+    let r = Arc::clone(&st.renderer);
+    let frame = st.session.document(doc).map(|x| x.frame).unwrap_or(0);
+    let cv = d.pages.get(page)?.canvas;
+    let (pw, ph, ox, oy) = (cv.width, cv.height, cv.origin.x, cv.origin.y);
+    let dep = if matches!(e.kind, fp_model::ElementKind::Instance(_) | fp_model::ElementKind::Group(_)) { (Arc::as_ptr(d) as usize as u64).rotate_left(29) } else { 0 };
+    let geom = (u64::from(pw.to_bits()) << 32 | u64::from(ph.to_bits())) ^ (u64::from(ox.to_bits()) << 16) ^ u64::from(oy.to_bits()).rotate_left(48);
+    get(ctx, st, (doc.0, e.id.0 | ON_PAGE, size), (Arc::as_ptr(e) as usize as u64) ^ (frame as u64) ^ dep ^ geom, || element_on_page_image(&r, d, page, e, frame, size))
+}
+
+/// Bild zu [`element_on_page_thumb`]: Seitenformat mit der längsten Seite `size` (höchstens 1:1),
+/// transparent, das Element verkleinert an seiner Lage. `None` ohne Seite.
+pub fn element_on_page_image(r: &fp_render::Renderer, d: &Document, page: usize, e: &Arc<Element>, frame: usize, size: u32) -> Option<RgbaImage> {
+    let cv = &d.pages.get(page)?.canvas;
+    let (pw, ph, ox, oy) = (cv.width.max(1.0), cv.height.max(1.0), cv.origin.x, cv.origin.y);
+    let s = (size as f32 / pw.max(ph)).min(1.0);
+    let (w, h) = (((pw * s).round() as i32).max(1), ((ph * s).round() as i32).max(1));
+    let mut canvas = RgbaImage::new(fp_raster::IRect::from_xywh(0, 0, w, h)).ok()?;
+    let out = r.render_element(d, e, &fp_render::PointMap::identity(), frame);
+    if !out.image.is_empty() {
+        let b = out.image.bounds();
+        let (x0, y0) = (((b.left as f32 - ox) * s).floor() as i32, ((b.top as f32 - oy) * s).floor() as i32);
+        let (x1, y1) = (((b.right as f32 - ox) * s).ceil() as i32, ((b.bottom as f32 - oy) * s).ceil() as i32);
+        let mut small = fp_raster::resample::resize(&out.image, (x1 - x0).max(1) as u32, (y1 - y0).max(1) as u32, fp_raster::resample::Sampler::Bilinear);
+        small.set_origin(x0, y0);
+        canvas.paste(&small);
+    }
+    Some(canvas)
+}
+
 /// Miniatur einer Seite (Status 0).
 pub fn page_thumb(ctx: &Context, st: &AppState, doc: DocId, generation: u64, d: &Arc<Document>, page: usize, size: u32) -> Option<TextureHandle> {
     let r = Arc::clone(&st.renderer);

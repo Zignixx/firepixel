@@ -98,9 +98,8 @@ fn document_q3(ui: &mut Ui, st: &mut AppState, r: Rect) {
     if let Some(i) = chosen {
         crate::panels::optimize::apply_settings(st, &presets[i].settings);
     }
-    if fields::button(ui, "pi-export-edit", d.r(227.0, 17.0, 51.0, 12.0), &t("pi-edit"), en) {
-        st.push(Action::Run("file.imagePreview".into(), json!({})));
-    }
+    // Kein Knopf „Bearbeiten…“ neben der Liste: das Original hat dort keinen (PARITAET_A W29);
+    // die Exporteinstellungen bearbeitet man im Optimieren-Bedienfeld bzw. in der Bildvorschau.
 }
 
 /// Dokument Zeile 2 (6564): Status.
@@ -178,18 +177,23 @@ fn tool_q1_label(st: &AppState) -> String {
 fn selection_q1(ui: &mut Ui, st: &mut AppState, r: Rect) {
     let theme = Theme::current(ui.ctx());
     let c = &theme.colors;
+    ui.ctx().data_mut(|dd| dd.insert_temp(egui::Id::new(THUMB_RECT), None::<Rect>));
     let Some(doc) = st.session.active() else { return };
-    let (doc_id, doc_gen) = (doc.id, doc.generation);
+    let (doc_id, page) = (doc.id, doc.page);
     let Some(e) = doc.selection.elements.first().and_then(|id| fp_engine::docops::element_on_page(&doc.doc, doc.page, *id)) else { return };
     let docref = std::sync::Arc::clone(&doc.doc);
     let d = Dl::at(r.min + vec2(6.0, 0.0));
     let thumb = d.r(0.0, 3.0, 27.0, 23.0);
     thumb_frame(ui, thumb);
-    if let Some(tex) = crate::panels::thumbs::element_thumb(ui.ctx(), st, doc_id, doc_gen, &docref, &e, 64) {
+    // wie im Original: das Objekt an seiner Lage im verkleinerten Dokument auf Schachbrett, nicht
+    // formatfüllend (PARITAET_A O2)
+    if let Some(tex) = crate::panels::thumbs::element_on_page_thumb(ui.ctx(), st, doc_id, &docref, page, &e, 96) {
+        let inner = thumb.shrink(1.0);
         let ts = tex.size_vec2();
-        let s = (thumb.width() / ts.x).min(thumb.height() / ts.y).min(1.0) * 0.95;
-        let ir = Rect::from_center_size(thumb.center(), ts * s);
+        let s = (inner.width() / ts.x).min(inner.height() / ts.y);
+        let ir = Rect::from_center_size(inner.center(), ts * s);
         ui.painter().image(tex.id(), ir, Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0)), Color32::WHITE);
+        ui.ctx().data_mut(|dd| dd.insert_temp(egui::Id::new(THUMB_RECT), Some(ir)));
     }
     let label = super::obj_quads::type_label(&e);
     let label = match &e.kind {
@@ -215,10 +219,23 @@ fn multi_q1(ui: &mut Ui, st: &mut AppState, r: Rect) {
     let n = st.session.active().map(|d| d.selection.elements.len()).unwrap_or(0);
     let d = Dl::at(r.min + vec2(6.0, 0.0));
     let thumb = d.r(0.0, 3.0, 27.0, 23.0);
-    thumb_frame(ui, thumb);
+    // wie im Original ohne Vorschaubild, „n Objekte“ mittig im Quadranten (PARITAET_A O2)
+    ui.ctx().data_mut(|dd| dd.insert_temp(egui::Id::new(THUMB_RECT), None::<Rect>));
     let _ = &theme;
-    let row = Rect::from_center_size(thumb.center(), egui::vec2(thumb.width(), 14.0));
-    fields::label(ui, Rect::from_min_max(pos2(thumb.right() + 6.0, row.top()), pos2(r.right() - 3.0, row.bottom())), &fp_i18n::tr!("pi-multi-objects", n = n), true);
+    let text = fp_i18n::tr!("pi-multi-objects", n = n);
+    let row = Rect::from_min_max(pos2(r.left() + 3.0, thumb.center().y - 7.0), pos2(r.right() - 3.0, thumb.center().y + 7.0));
+    let tw = widgets::text_width(ui, &text, &theme.ui_font()).min(row.width());
+    let x = row.center().x - tw / 2.0;
+    fields::label(ui, Rect::from_min_max(pos2(x, row.top()), pos2(row.right(), row.bottom())), &text, true);
+}
+
+/// Schlüssel: Lage des zuletzt gezeichneten Vorschaubilds im Auswahl-Quadranten (Tests).
+const THUMB_RECT: &str = "pi-sel-thumb-rect";
+
+/// Lage des zuletzt gezeichneten Objekt-Vorschaubilds im Inspektor (`None`: keins, z. B. bei
+/// Mehrfachauswahl). Für Tests.
+pub fn selection_thumb_rect(ctx: &egui::Context) -> Option<Rect> {
+    ctx.data(|d| d.get_temp::<Option<Rect>>(egui::Id::new(THUMB_RECT))).flatten()
 }
 
 /// Obergrenze der B/H-Felder des Inspektors (Original: 6000).
@@ -231,7 +248,11 @@ fn box_q2(ui: &mut Ui, st: &mut AppState, r: Rect) {
     // Änderungen) – wie außerhalb der Bearbeitung mit 2-px-Rand (Textgrenzen des Originals)
     let editing = if st.session.tool_is_editing_text() { st.session.text_edit_bounds() } else { None };
     let b = editing.or_else(|| st.session.active().and_then(|d| fp_engine::docops::ids_bounds(&d.doc, d.page, &d.selection.elements)));
-    let en = b.is_some();
+    // ohne Auswahl (Rechteck, Ellipse, Auto-Form, Auswahlrahmen, Lasso, Zuschneiden, Exportbereich)
+    // sind die Felder wie im Original weiß, leer und bedienbar (PARITAET_A W22); eine Eingabe ohne
+    // Auswahl hat kein Ziel und wird verworfen
+    let has = b.is_some();
+    let en = true;
     let (w, h, x, y) = b.map(|b| (b.width() as f64, b.height() as f64, b.left as f64, b.top as f64)).unwrap_or((0.0, 0.0, 0.0, 0.0));
     let d = Dl::at(r.min + vec2(6.0, 2.0));
     let key = egui::Id::new("pi-box-prop");
@@ -249,7 +270,7 @@ fn box_q2(ui: &mut Ui, st: &mut AppState, r: Rect) {
     fields::label(ui, d.r(9.0, 16.0, 8.0, 8.0), &t("pi-box-h"), en);
     fields::label(ui, d.r(43.0, 3.0, 8.0, 8.0), &t("pi-box-x"), en);
     fields::label(ui, d.r(43.0, 16.0, 8.0, 8.0), &t("pi-box-y"), en);
-    let val = |v: f64| en.then_some(v.round());
+    let val = |v: f64| has.then_some(v.round());
     // B/H wie im Original 1 … 6000: Werte unter 1 („-5“, „0“, „x“) werden verworfen, zu große
     // begrenzt und gemeldet (nicht still); PARITAET_A F12
     let limit = |st: &mut AppState, v: f64| -> Option<f64> {
@@ -262,19 +283,19 @@ fn box_q2(ui: &mut Ui, st: &mut AppState, r: Rect) {
         }
         Some(c)
     };
-    if let Some(v) = fields::number_box(ui, "pi-box-w", d.r(17.0, 1.0, 24.0, 12.0), val(w), en).and_then(|v| limit(st, v)) {
+    if let Some(v) = fields::number_box(ui, "pi-box-w", d.r(17.0, 1.0, 24.0, 12.0), val(w), en).filter(|_| has).and_then(|v| limit(st, v)) {
         let p = if prop && w > 0.0 { json!({"width": v, "height": (h * v / w).round()}) } else { json!({"width": v}) };
         st.run("element.setBounds", p);
     }
-    if let Some(v) = fields::number_box(ui, "pi-box-h", d.r(17.0, 15.0, 24.0, 12.0), val(h), en).and_then(|v| limit(st, v)) {
+    if let Some(v) = fields::number_box(ui, "pi-box-h", d.r(17.0, 15.0, 24.0, 12.0), val(h), en).filter(|_| has).and_then(|v| limit(st, v)) {
         let p = if prop && h > 0.0 { json!({"height": v, "width": (w * v / h).round()}) } else { json!({"height": v}) };
         st.run("element.setBounds", p);
     }
     // X/Y ohne Grenze im Original (9999 und -5 erlaubt, „x“ → 0); F13
-    if let Some(v) = fields::number_box(ui, "pi-box-x", d.r(52.0, 1.0, 24.0, 12.0), val(x), en).map(|v| fields::clamp_range(v, (-30000.0, 30000.0))) {
+    if let Some(v) = fields::number_box(ui, "pi-box-x", d.r(52.0, 1.0, 24.0, 12.0), val(x), en).filter(|_| has).map(|v| fields::clamp_range(v, (-30000.0, 30000.0))) {
         st.run("element.setBounds", json!({"x": v}));
     }
-    if let Some(v) = fields::number_box(ui, "pi-box-y", d.r(52.0, 15.0, 24.0, 12.0), val(y), en).map(|v| fields::clamp_range(v, (-30000.0, 30000.0))) {
+    if let Some(v) = fields::number_box(ui, "pi-box-y", d.r(52.0, 15.0, 24.0, 12.0), val(y), en).filter(|_| has).map(|v| fields::clamp_range(v, (-30000.0, 30000.0))) {
         st.run("element.setBounds", json!({"y": v}));
     }
 }
