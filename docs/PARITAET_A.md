@@ -4,7 +4,7 @@ Auftrag: „Vergleich mal alle Funktionen vom Original und Firepixel, damit sie 
 
 ## Übergabe (Stand 12.10.2026, Arbeit auf Nutzerwunsch angehalten)
 
-**Zahlen je Bereich** (117 Zeilen, neu gezählt von PM-1 am 12.10. nach dem Stand der Tabellen inkl. FV-1/FV-3-Nachmessungen; T, L und K nachgeführt von FV-6; Abschnitte 1–4 von PM-2 am 12.10. in beiden Programmen im echten Fenster nachgemessen, Firepixel-Release vom Stand `771bf08` + Arbeitsstand; ✅ gleich, ⚠️ Abweichung im Detail, ❌ fehlt bzw. falsch, ⏳ nicht fertig gemessen):
+**Zahlen je Bereich** (126 Zeilen; Abschnitt 5 von PM-3 am 12.10. in beiden Programmen nachgemessen und um L31–L39 ergänzt; neu gezählt von PM-1 am 12.10. nach dem Stand der Tabellen inkl. FV-1/FV-3-Nachmessungen; T, L und K nachgeführt von FV-6; Abschnitte 1–4 von PM-2 am 12.10. in beiden Programmen im echten Fenster nachgemessen, Firepixel-Release vom Stand `771bf08` + Arbeitsstand; ✅ gleich, ⚠️ Abweichung im Detail, ❌ fehlt bzw. falsch, ⏳ nicht fertig gemessen):
 
 | Bereich | ✅ | ⚠️ | ❌ | ⏳ |
 |---|---|---|---|---|
@@ -12,11 +12,13 @@ Auftrag: „Vergleich mal alle Funktionen vom Original und Firepixel, damit sie 
 | 2 Feldverhalten (F1–F15) | 13 | 1 | 1 | 0 |
 | 3 Text: Schriftgröße (T1–T6) | 6 | 0 | 0 | 0 |
 | 4 Inspektor je Objektart (O1–O17) | 12 | 4 | 1 | 0 |
-| 5 Leinwand/Werkzeugverhalten (L1–L30) | 20 | 4 | 6 | 0 |
+| 5 Leinwand/Werkzeugverhalten (L1–L39) | 30 | 7 | 2 | 0 |
 | 6 Mauszeiger (K1–K11) | 11 | 0 | 0 | 0 |
-| **Summe** | **86** | **22** | **9** | **0** |
+| **Summe** | **96** | **25** | **5** | **0** |
 
 **PM-2 (12.10.):** Vorher in 1–4: 31 ✅ / 18 ⚠️ / 27 ❌, nachher 55 ✅ / 18 ⚠️ / 3 ❌. Neue Befunde in `BEFUNDE.md` (Kennung „von PM-2“): LW 1 (W8), IBD 14 (F10, F7, W14, W10/W27/W28, W16, W19, W21, W22, W24, W26, W29, O2, O8, O16), EB 1 (prefs.json W8). W15, W17 und O6 hängen an den offenen IBD-Befunden von EB-1, O11 am offenen AU-Befund. **F10 im Original neu gemessen:** Strg+A im Zahlenfeld markiert den Feldtext (die frühere Angabe „Alles auswählen“, nach der FV-1 umgebaut hat, ließ sich in 3 Läufen nicht bestätigen). Messhinweise: Firepixel zeichnet den Inspektor nach einem Werkzeugwechsel (auch per echtem Klick) erst nach 0,3–1,5 s neu; Fotos früher zeigen noch Werte des vorigen Werkzeugs – mindestens 1,5 s warten. Im Original übernimmt ein noch fokussiertes, geändertes Inspektorfeld seinen Text beim Klick auf ein anderes Objekt – vor jeder Feldprobe die Objekte neu anlegen. Skripte: `..\re\_testdateien\ux\uxa\werkzeug\pm2\` (`env.ps1`, `sitz.ps1`, `w.ps1`, `o.ps1`, `f.ps1`, `f2.ps1`, `x.ps1`, `rc.ps1`), Ablauf wie unten.
+
+**PM-3 (12.10.):** Abschnitt 5 vorher 20 ✅ / 4 ⚠️ / 6 ❌ (L1–L30), nachher 27 ✅ / 3 ⚠️ / 0 ❌; neu L31–L39 (Stift, Unterauswahl, Pinsel, Radiergummi, Weichzeichner, Stempel): 3 ✅ / 4 ⚠️ / 2 ❌. Abschnitt 6 war schon vollständig ✅ (11/0/0), nichts nachzumessen. Neue Befunde in `BEFUNDE.md` (Kennung „von PM-3“): LW 10 (L4/L35, L7, L13, L25, L33, L34, L36, L37, L38, L39), AU 2 (JSF `setActiveViewScale` in der Brücke ohne Wirkung, `pixelRect` beim Text). Firepixel-Release vom Arbeitsstand auf `e8e69b6`. Skripte: `..\re\_testdateien\ux\uxa\werkzeug\pm3\` (`env.ps1`, `sitz.ps1`, `start.ps1`, `l.ps1 -Seite o|f -Teil 1–4`, `n.ps1` Nachmessungen). Messhinweise: Im Original haben neue Objekte je nach gespeichertem Zustand Strich und Deckkraft (am 12.10. vormittags 7 %, nach dem Neustart 100 % mit Strich) – für Pixelmessungen Deckkraft 100 und `setBrush(null)` setzen. Bei Segmenten auf der Webebene hellt das Original alles außerhalb der Segmente auf; die Bitmapmessungen löschen deshalb die Webebene. In Firepixel wirkt `fw.setActiveViewScale` über die Brücke nicht – zum Zurücksetzen `ui_action {"zoom": 1}` nehmen. Die Paarbilder L31–L34 stammen im Original noch aus dem Lauf mit 7 % Deckkraft.
 
 **Geprüft sind:**
 - der Werkzeug-Inspektor ohne Auswahl für alle Werkzeuge der Werkzeugleiste, Vorgaben gegen die Werkseinstellungen;
@@ -85,8 +87,8 @@ Auftrag: „Vergleich mal alle Funktionen vom Original und Firepixel, damit sie 
 - Rückgängig-Granularität je Feld (außer Deckkraft).
 - Skalieren, Verzerren und Drehen mit Modifikatoren; Ebenen-Interaktion auf der Leinwand.
 - Inspektor für Schaltfläche, Animationssymbol, Segment und Instanz mit Eigenschaften.
-- Stift- und Unterauswahl-Feinheiten: Kurvenpunkte, Alt-Ziehen an Griffen, Pfad fortsetzen.
-- Bitmapwerkzeuge im Detail: Pinsel, Radierer, Weichzeichner, Stempel, Ersetzen.
+- ~~Stift- und Unterauswahl-Feinheiten: Kurvenpunkte, Alt-Ziehen an Griffen, Pfad fortsetzen~~ – PM-3, L31–L35.
+- Bitmapwerkzeuge im Detail: Pinsel, Radierer, Weichzeichner, Stempel – PM-3, L36–L39; offen: Farbe ersetzen, Bleistift, Abwedler/Nachbelichter, Verwischen.
 - Text: Kanten, Rücktaste und Pfeiltasten im Text, Textfluss im Rahmen.
 
 ---
@@ -217,36 +219,45 @@ Testdokument mit denselben Objekten in beiden Programmen (per JSF angelegt): R1,
 
 | Nr | Ablauf | Original | Firepixel | | Bild |
 |---|---|---|---|---|---|
-| L1 | Gummiband 20,20→100,100 (R1 50–150 nur teilweise darin) | R1 gewählt (berührte Objekte zählen) | nichts gewählt | ❌ | |
+| L1 | Gummiband 20,20→100,100 (R1 50–150 nur teilweise darin) | R1 gewählt (berührte Objekte zählen) | PM-3 (12.10., echtes Fenster, beide Programme): R1 gewählt | ✅ | |
 | L2 | Gummiband um R1 und E1 | beide | beide | ✅ | |
-| L3 | R1 ziehen, Umschalt **während** des Ziehens, +40/+10 | +40/0 (auf 0° eingerastet, ganzzahlig) | +40/+9 (Umschalt wirkungslos) | ❌ | |
-| L4 | Alt-Ziehen R1 +40/+20 | Kopie bei +40/+20 | Kopie bei +40/+15 (rastet an etwas ein) | ⚠️ | |
+| L3 | R1 ziehen, Umschalt **während** des Ziehens, +40/+10 | +40/0 (auf 0° eingerastet, ganzzahlig) | PM-3 (12.10., echtes Fenster, beide Programme): 90,50–190,120 (+40/0), Strg+Z stellt her | ✅ | |
+| L4 | Alt-Ziehen R1 +40/+20 | Kopie bei +40/+20 (90,70–190,140); auch +40/+21 → 90,71 und ohne Alt +40/+20 → 90,70: beim Verschieben kein Fang an der G-Mitte y = 75 (Abstand 5 bzw. 4) | PM-3 (12.10., echtes Fenster, beide Programme): Kopie 90,75–190,145; auch +40/+21 und ohne Alt → y 75 (Oberkante rastet an der G-Mitte ein) – Befund PM-3 (LW L4/L35) | ⚠️ | |
 | L5 | 3× Pfeil rechts, einmal Strg+Z | +3, ein Rückgängig stellt alles her | ebenso (von UX-A behoben) | ✅ | |
 | L6 | Rechtsklick auf nicht gewählte Ellipse | Ellipse gewählt, Kontextmenü | ebenso (kittest) | ✅ | |
-| L7 | Strg+Leertaste+Klick | vorübergehend Zoom: 100 → 150 % | nichts | ❌ | |
+| L7 | Strg+Leertaste+Klick | vorübergehend Zoom: 100 → 150 % (auch wenn Tasten und Klick im selben Augenblick kommen) | PM-3 (12.10., echtes Fenster, beide Programme): Tasten 0,4 s vor dem Klick gehalten → 150 %; Tasten und Klick ohne Pause (ein SendInput direkt vor dem Mausdruck) → bleibt 100 % – Befund PM-3 (LW L7, klein) | ✅ | |
 | L8 | Strg+Alt+Leertaste+Klick | verkleinert (150 → 100 %); live nicht messbar, weil die globale Taste der Claude-App die Kombination abfängt (§4d) | über die Eingabe-Einspeisung der Brücke (`ui_input`, keine echte Taste): 150 → 100 %; Gegenprobe Strg+Leertaste+Klick 100 → 150 % (PM-1) | ✅ | |
 | L9 | Mausrad 1 Rastung ohne Taste (400 %) | senkrechter Bildlauf um 52 Bildschirmpixel | **kein Bildlauf** (echte Radereignisse; HG-Befund ist im aktuellen Stand noch offen) | ✅ nachgemessen (FV-3, echtes Fenster, SendInput 120 je Rastung, 400 %): 52 px senkrecht, 3 Rastungen 156 px | a_330, a_331 |
 | L10 | Umschalt+Mausrad | nichts | waagerechter Bildlauf 40 px | ✅ nachgemessen (FV-3, echtes Fenster): kein Bildlauf | a_332 |
 | L11 | Alt+Mausrad | senkrechter Bildlauf (wie ohne Taste) | senkrechter Bildlauf 40 px | ✅ nachgemessen (FV-3, echtes Fenster): 52 px senkrecht | a_333 |
 | L12 | Zauberstab-Klick auf Bitmap | Bitmapmodus („Bitmap bearbeiten“ + „Zauberstab“ im Verlauf), Auswahlrahmen | Auswahlrahmen | ✅ | a_320 |
-| L13 | danach **Esc** | „Bitmapmodus beenden“: Auswahlrahmen weg, Werkzeug wechselt zum Zeiger, Bitmap bleibt als Objekt gewählt | Auswahlrahmen bleibt, Werkzeug bleibt Zauberstab | ❌ | a_321 |
+| L13 | danach **Esc** | „Bitmapmodus beenden“: Auswahlrahmen weg, Werkzeug wechselt zum Zeiger, Bitmap bleibt als Objekt gewählt | PM-3 (12.10., echtes Fenster, beide Programme): Auswahlrahmen weg, Werkzeug Zeiger; **B ist danach nicht gewählt** (keine Griffe, `fw.selection` leer; schon im Bitmapmodus meldet JSF keine Auswahl, Original [B]) – Befund PM-3 (LW L13) | ⚠️ | a_L13_zauberstab_esc |
 | L14 | danach Strg+D | Auswahl aufheben | Auswahl aufheben | ✅ | |
 | L15 | Rechteck, Umschalt gehalten, Ziehen 240,145 → +60/+30 | Quadrat 60 × 60 ab dem Startpunkt | 250,150–300,175: kein Quadrat, Startpunkt um 10/5 px verschoben (rastet an E1-Mitte x=250 und R2-Oberkante y=150 ein) | ✅ nachgemessen (FV-3, echtes Fenster, Umschalt vor dem Drücken): 240,145–300,205 | |
-| L16 | Rechteck, Alt gehalten | von der Mitte aus: 180–300 × 125–175 | wie ohne Alt (250,150–300,175) | ⚠️ **PM-1, Fangregel im Original (14 Fälle, `uxp_pm_l16.ps1`):** Start- und Endpunkt rasten getrennt in x und y an Kanten und Mitten anderer Objekte ein, Fangabstand **≤ 5** px (5 rastet, 6 nicht); mit **Umschalt rastet nichts** (weder Start noch Ende, auch mit Alt+Umschalt nicht); mit Alt rastet der Mittelpunkt wie sonst der Start, das Ende ebenfalls. Firepixel (echtes Fenster): bei genau 5 px kein Fang (115–175), mit Umschalt rastet es weiter (240,147 → 240,150; Ende 298 → 300), ein Ende bei y = 173 rastet an 170 statt an der näheren 175 (halber Pixel Versatz); Abstand 1–4 und ≥ 6 gleich. Befunde LW. **✅ FV-6 nachgemessen** (echtes Fenster, eigene Instanz, `uxp_pm_l16`-Fälle, Seite jetzt auf ganzen Pixeln 497,322): A1 240,150–300,175, A2 Umschalt 240,145–300,205, A3 Alt 180,125–300,175, A4 180,85–300,205, B1 180,125–300,175, B2 180,113–300,175, B3 (Gleichstand) 180,111–300,175, C2 Umschalt 240,147–300,207, Alt+Umschalt 180,87–300,207, Umschalt Ende 298,160 → 240,135–298,193 – alle wie im Original; Fälle am Text T1 hängen an dessen Grenzen (2-px-Rand, Befund EB). Nebenbefund: bei SendInput mit `SetCursorPos` geht selten (1 von 5) die letzte Bewegung vor dem Loslassen verloren (Ende 297 statt 300, nur ohne Fang sichtbar; winit meldet die Lage des Loslassens aus der letzten Bewegung) | |
-| L17 | Rechteck, 5× Pfeil hoch während des Ziehens | Rundung bleibt 0 (in CS6 live keine Wirkung) | Rundung 0,145 | ⚠️ | |
+| L16 | Rechteck, Alt gehalten | von der Mitte aus: 180–300 × 125–175 | wie ohne Alt (250,150–300,175) | ⚠️ **PM-1, Fangregel im Original (14 Fälle, `uxp_pm_l16.ps1`):** Start- und Endpunkt rasten getrennt in x und y an Kanten und Mitten anderer Objekte ein, Fangabstand **≤ 5** px (5 rastet, 6 nicht); mit **Umschalt rastet nichts** (weder Start noch Ende, auch mit Alt+Umschalt nicht); mit Alt rastet der Mittelpunkt wie sonst der Start, das Ende ebenfalls. Firepixel (echtes Fenster): bei genau 5 px kein Fang (115–175), mit Umschalt rastet es weiter (240,147 → 240,150; Ende 298 → 300), ein Ende bei y = 173 rastet an 170 statt an der näheren 175 (halber Pixel Versatz); Abstand 1–4 und ≥ 6 gleich. Befunde LW. **✅ FV-6 nachgemessen** (echtes Fenster, eigene Instanz, `uxp_pm_l16`-Fälle, Seite jetzt auf ganzen Pixeln 497,322): A1 240,150–300,175, A2 Umschalt 240,145–300,205, A3 Alt 180,125–300,175, A4 180,85–300,205, B1 180,125–300,175, B2 180,113–300,175, B3 (Gleichstand) 180,111–300,175, C2 Umschalt 240,147–300,207, Alt+Umschalt 180,87–300,207, Umschalt Ende 298,160 → 240,135–298,193 – alle wie im Original; Fälle am Text T1 hängen an dessen Grenzen (2-px-Rand, Befund EB). Nebenbefund: bei SendInput mit `SetCursorPos` geht selten (1 von 5) die letzte Bewegung vor dem Loslassen verloren (Ende 297 statt 300, nur ohne Fang sichtbar; winit meldet die Lage des Loslassens aus der letzten Bewegung) | ✅ (FV-6) | |
+| L17 | Rechteck, 5× Pfeil hoch während des Ziehens | Rundung bleibt 0 (in CS6 live keine Wirkung) | PM-3 (12.10., echtes Fenster, beide Programme): Rechteck 320,140–400,220, Rundung 0 | ✅ | |
 | L18 | Rechteck, Leertaste während des Ziehens | Startpunkt wandert mit (Form verschoben) | Startpunkt wandert mit | ✅ | |
-| L19 | Rechteck, Esc während des Ziehens | wird ignoriert, Rechteck entsteht beim Loslassen | Aufziehen abgebrochen, kein Rechteck | ⚠️ | |
+| L19 | Rechteck, Esc während des Ziehens | wird ignoriert, Rechteck entsteht beim Loslassen | PM-3 (12.10., echtes Fenster, beide Programme): Rechteck 320,140–400,220 entsteht | ✅ | |
 | L20 | Rechteck, Klick ohne Ziehen | kein neues Objekt | kein neues Objekt | ✅ | |
-| L21 | Textwerkzeug: Klick, Esc ohne Text | kein Objekt, Werkzeug bleibt Text | kein Objekt, Werkzeug wechselt zum Zeiger | ⚠️ | |
-| L22 | Textwerkzeug: Klick bei 300,340, „Abc“, Esc | Text 300,323–339,341 (Klickpunkt ≈ Grundlinie), Werkzeug bleibt Text | Text 299,341–321,356 (Klickpunkt = Oberkante), Werkzeug wechselt zum Zeiger | ❌ | |
+| L21 | Textwerkzeug: Klick, Esc ohne Text | kein Objekt, Werkzeug bleibt Text | PM-3 (12.10., echtes Fenster, beide Programme): kein Objekt, Werkzeug bleibt Text | ✅ | |
+| L22 | Textwerkzeug: Klick bei 300,340, „Abc“, Esc | Text 300,323–339,341 (Klickpunkt ≈ Grundlinie), Werkzeug bleibt Text | PM-3 (12.10., echtes Fenster, beide Programme): Grundlinie auf dem Klickpunkt (y 340), Werkzeug bleibt Text; JSF `pixelRect` 298,327–322,345 (12 pt Werksvorgabe, das Original steht auf größerer Schrift; Firepixel meldet den Rahmen mit 2-px-Rand, das Original die Glyphengrenzen – Befund PM-3 an AU) | ✅ | a_L22_text_klickpunkt |
 | L23 | Stift: 2 Klicks, Esc | offener Pfad 250,150–330,150 | ebenso | ✅ | |
 | L24 | Stift: Klick, Klick, Doppelklick | offener Pfad mit 3 Punkten bis 330,220 | **kein Pfad** (nach dem Doppelklick ist nichts da) | ✅ nachgemessen (FV-3, echtes Fenster): offener Pfad 250,260–330,330, Werkzeug bleibt Stift | |
-| L25 | Zoomwerkzeug: Rahmen 50,50–150,120 aufziehen | 1150 % (stufenlos eingepasst) | 800 % (Tabellenstufe) | ❌ | |
+| L25 | Zoomwerkzeug: Rahmen 50,50–150,120 aufziehen | 1150 % (stufenlos eingepasst); Rahmen 50,50–250,120 → 722,5 %, 320,140–420,160 → 1445 % (Einpassen in ≈ 1445 × 805 Bildschirmpixel) | PM-3 (12.10., echtes Fenster, beide Programme): 1142,9 %, 717 %, 1434 % (Einpassen in 1434 × 800 = Leinwandbereich 1464 × 830 minus 15 px Rand) – Befund PM-3 (LW L25, klein) | ⚠️ | |
 | L26 | Zeiger: Eckgriff eines gewählten Rechtecks um +40/+30 ziehen | Rechteck wird **größer** (bis 193,153), Rundung bleibt 0 | keine Änderung (weder Größe noch Rundung) | ✅ nachgemessen (FV-3, echtes Fenster): 50,50–190,150, Rundung 0 | |
 | L27 | Zeiger: Doppelklick auf Bitmap | Bitmapmodus, Werkzeug wechselt zum Auswahlrahmen; danach Esc: Werkzeug bleibt Auswahlrahmen, Bitmap bleibt gewählt | Bitmapmodus und Auswahlrahmen (PM-1, echtes Fenster); danach Esc: Werkzeug wechselt zum Zeiger → **FV-6:** Esc ohne Auswahlrahmen ohne Wirkung; echtes Fenster: Doppelklick → B gewählt, `tool.marquee`; Esc → B gewählt, `tool.marquee` | ✅ gemessen (FV-6) | a_L27_doppelklick_bitmap |
 | L28 | Zuschneiden: Rahmen ziehen, Esc | Leinwand unverändert, Werkzeug wechselt zum Zeiger | Leinwand unverändert, Werkzeug bleibt Zuschneiden | ✅ nachgemessen (FV-3, echtes Fenster): Werkzeug Zeiger, Breite 600 | |
 | L29 | Zuschneiden: Rahmen 20,20–300,200, Eingabe, Strg+Z | 280 × 180, Rückgängig stellt 600 × 400 her | ebenso | ✅ | |
 | L30 | Frei transformieren (Strg+T) an R1 50,50–150,120, Eckgriff von 151,121 nach 191,151 | **Ecke skaliert immer proportional** (50,50–193,150, größerer Faktor), Umschalt ändert nichts; Alt = proportional von der Mitte (7,20–193,150); Kante rechts → 191 (Zeigerlage); die Änderung wirkt schon beim Ziehen; **Esc behält die Änderung** und beendet den Modus (Werkzeug Zeiger); Eingabe und Doppelklick innen übernehmen, Strg+Z = ein Schritt; Ziehen am Mittelpunkt verschiebt nur den Drehpunkt (`uxp_pm_3.ps1`) | Ecke unproportional (190,150), nur mit Umschalt proportional (193,150); Alt 10,20–190,150 (Alt+Umschalt 7,20–193,150 gleich); Kante → 188; nach dem Loslassen zeigt die Leinwand bis zur Eingabe die alte Größe; Esc verwirft, Werkzeug bleibt „Skalieren“; Eingabe/Doppelklick, ein Schritt und Mittelpunkt gleich (PM-1) → **FV-6, echtes Fenster (`uxp_pm_3`-Fälle):** Ecke 50,50–193,150, Umschalt 193,150, Alt 7,20–193,150, Alt+Umschalt gleich, Kante rechts 191; nach dem Loslassen zeigt die Leinwand die neue Größe; Esc → 50,50–193,150 und `tool.pointer`, Klick danach wählt; Strg+Z = ein Schritt zurück auf 150,120; Eingabe und Doppelklick innen übernehmen (Zeiger). Gilt für Skalieren/Neigen/Verzerren (Esc behält, A für Neigen/Verzerren: nicht gemessen); JSF `pixelRect` meldet während der offenen Vorschau noch die alte Größe (im Original nicht gemessen) | ✅ gemessen (FV-6) | a_L30_frei_transformieren, phase5_fv6_frei_transformieren_nach_loslassen |
+| L31 | Stift: Klick 320,140, Ziehen 400,140 → 440,180, Esc | offener Pfad, Punkt 2 mit Griffen 360,100 / 440,180 | PM-3 (12.10., echtes Fenster, beide Programme): gleich | ✅ | a_L31_L34_stift |
+| L32 | Unterauswahl: Griff 440,180 → 460,160 ziehen; dasselbe mit Alt; Punkt 1 ziehen | ohne Taste: Gegengriff dreht mit (346,3,122,1 \| 460,160); mit Alt: nur dieser Griff (360,100 \| 460,160); Punkt 330,130 ohne Griffe | PM-3 (12.10., echtes Fenster, beide Programme): alle drei Werte gleich, Strg+Z stellt her | ✅ | |
+| L33 | Unterauswahl: Alt-Ziehen aus Eckpunkt 1 (320,140 → 350,140) | zieht **nur den Ausgangsgriff** heraus: 320,140 (320,140 \| 350,140) | PM-3 (12.10., echtes Fenster, beide Programme): **beide Griffe symmetrisch** (290,140 \| 350,140) – Befund PM-3 (LW L33) | ❌ | |
+| L34 | Stift: offenen Pfad 320,140–400,140 gewählt, Klick auf den Endpunkt, Klick 400,220, Esc | Pfad fortgesetzt: 320,140 · 400,140 · 400,220 | PM-3 (12.10., echtes Fenster, beide Programme): gleich. Sonderfall (einmal gemessen): direkt nach Unterauswahl-Schritten und Strg+Z legt das Original beim Klick auf den Endpunkt einen **neuen** Pfad an (nur 400,220), Firepixel setzt fort – Befund PM-3 (LW L34, Beobachtung) | ✅ | |
+| L35 | Stift: Klicks 545,30 · 585,30 · 585,80, Klick auf den Startpunkt | geschlossener Pfad 545,30 · 585,30 · 585,80, Werkzeug bleibt Stift | PM-3 (12.10., echtes Fenster, beide Programme): geschlossen, aber dritter Punkt **585,75** (rastet bei 5 px an der G-Mitte y = 75 ein; Original kein Fang) – Befund PM-3 (LW L4/L35) | ⚠️ | a_L31_L34_stift |
+| L36 | Pinsel (Bitmap) ohne Auswahl: Ziehen 300,20 → 400,20 | **neues Bitmapobjekt** (`[object Image]` 300,20–400,21) mit dem aktuellen Strich | PM-3 (12.10., echtes Fenster, beide Programme): **Vektorpfad** (`[object Path]` 300,20–400,20, „1-Pixel hart“) – Befund PM-3 (LW L36, hoch) | ❌ | a_L35_pinsel |
+| L37 | Radiergummi (13 / Rand 2 / 100 %) waagerecht durch die gewählte Bitmap B2 bei y 367 | Spalte x 185: voll gelöscht 361–371, Übergang 360 (FFCECE), 372 (FFCECE), 373 (FF2020); Zeile: gelöscht 154–264, Übergang 153, 265–266; Strg+Z stellt her | PM-3 (12.10., echtes Fenster, beide Programme): voll gelöscht 361–372, Übergang nur 360 und 373 (FF7B7B); Zeile 154–265, Übergang 153 und 266; Strg+Z stellt her – Befund PM-3 (LW L37, klein) | ⚠️ | a_L36_radiergummi |
+| L38 | Weichzeichner (13 / 100 / Intensität 50) senkrecht an der Farbgrenze rot/blau x = 210 | 208 FC0002, 209 D60028, 210 2800D6, 211 0200FC; Bitmap wächst um 1 px nach oben (150,339–270,395) | PM-3 (12.10., echtes Fenster, beide Programme): 208 F60009, 209 BD0042, 210 4200BD, 211 0900F6 (deutlich stärker); Bitmap bleibt 150,340–270,395 – Befund PM-3 (LW L38) | ⚠️ | a_L37_weichzeichner |
+| L39 | Stempel (16 / Rand 50): Alt+Klick Quelle 180,367 (rot), Ziehen 240,350 → 240,385 (blau), danach Esc | Kern rot 235–244, Übergang je 3 px (232–234, 245–247); senkrecht 345–377; nach Esc Werkzeug **Zeiger** | PM-3 (12.10., echtes Fenster, beide Programme): Kern 236–243, Übergang je 4 px (232–235, 244–247); senkrecht 346–377; nach Esc bleibt der Stempel – Befund PM-3 (LW L39) | ⚠️ | a_L38_stempel |
 
 ## 6. Mauszeiger (echte Maus, Bild `a_400_mauszeiger.png`)
 
@@ -270,8 +281,8 @@ Das Original zeichnet einige Zeiger invertiert (XOR); auf weißem Grund sind sie
 
 | | Anzahl |
 |---|---|
-| geprüfte Elemente | 117 Zeilen (rund 300 einzelne Felder, Vorgaben, Abläufe bzw. Zeiger) |
-| ✅ | 86 |
-| ⚠️ | 22 |
-| ❌ | 9 |
+| geprüfte Elemente | 126 Zeilen (rund 320 einzelne Felder, Vorgaben, Abläufe bzw. Zeiger) |
+| ✅ | 96 |
+| ⚠️ | 25 |
+| ❌ | 5 |
 | ⏳ | 0 |
