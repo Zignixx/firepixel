@@ -67,6 +67,37 @@ impl PreviewInfo {
     }
 }
 
+// ---------------------------------------------------------------------- Kopfzeile der Bildvorschau
+
+/// Byte je Sekunde der festen Modemrate der Bildvorschau („56 KBit/s“, re\17-bildvorschau.md §5.4):
+/// etwa 49,8 kbit/s nutzbare Rate einer 56k-Verbindung.
+pub const MODEM_BYTES_PER_SECOND: usize = 6222;
+
+/// Größenangabe der Kopfzeile (re\17 §5.4) vor dem Übersetzen der Einheit.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum SizeLabel {
+    /// Unter 1000 Byte: Zahl für „… Byte“ (wie im Original `n + 10`).
+    Bytes(usize),
+    /// Sonst „x.yyK“ mit Punkt und K = 1000 Byte (abgeschnitten, nicht gerundet).
+    Kilo(String),
+}
+
+/// Größe der Kopfzeile aus der Dateigröße `n` in Byte (re\17 §5.4):
+/// `k = n + 5`; unter 1000 → „n + 10 Byte“, sonst `k / 1000` „.“ `(k % 1000) / 10` zweistellig „K“.
+pub fn size_label(n: usize) -> SizeLabel {
+    let k = n.saturating_add(5);
+    if k < 1000 {
+        SizeLabel::Bytes(n + 10)
+    } else {
+        SizeLabel::Kilo(format!("{}.{:02}K", k / 1000, (k % 1000) / 10))
+    }
+}
+
+/// Ladezeit der Kopfzeile in ganzen Sekunden bei 56 KBit/s: `(n + 5) / 6222`, abgeschnitten.
+pub fn modem_seconds(n: usize) -> usize {
+    n.saturating_add(5) / MODEM_BYTES_PER_SECOND
+}
+
 /// JPEG dekodieren (RGB) → (Breite, Höhe, Pixel `0xFFRRGGBB`).
 pub fn decode_jpeg(data: &[u8]) -> Option<(usize, usize, Vec<u32>)> {
     let opts = DecoderOptions::default().jpeg_set_out_colorspace(ColorSpace::RGB);
@@ -93,6 +124,40 @@ mod tests {
         let i = PreviewInfo::new("GIF", 10_000, 64, 2);
         assert_eq!(i.seconds, 2);
         assert!(i.text().contains("64 Farben"));
+    }
+
+    /// Alle Beispielwerte aus re\17-bildvorschau.md §5.4 und die Grenzen der Formel.
+    #[test]
+    fn header_size_and_modem_time_match_spec_examples() {
+        let kilo = |s: &str| SizeLabel::Kilo(s.to_string());
+        // BMP 24, 480 × 320 · 3 + 54 Byte: „460.85K  74 s“
+        assert_eq!(480 * 320 * 3 + 54, 460_854);
+        assert_eq!(size_label(460_854), kilo("460.85K"));
+        assert_eq!(modem_seconds(460_854), 74);
+        // eigenes GIF 8 × 8 mit 48 Byte: „58 Byte  0 s“ (sic: n + 10)
+        assert_eq!(size_label(48), SizeLabel::Bytes(58));
+        assert_eq!(modem_seconds(48), 0);
+        // GIF Web 216 aus dem Nutzerbild: „612.08K  98 s“
+        assert_eq!(size_label(612_080), kilo("612.08K"));
+        assert_eq!(modem_seconds(612_080), 98);
+        // PNG: „1459.04K  234 s“ (Byte-Zahl nicht notiert; jede aus 1 459 035 … 1 459 044 passt)
+        for n in 1_459_035..=1_459_044 {
+            assert_eq!(size_label(n), kilo("1459.04K"), "{n}");
+            assert_eq!(modem_seconds(n), 234, "{n}");
+        }
+        // Grenzen: k = n + 5 < 1000 → Byte; zweistellige Hundertstel, abgeschnitten, Punkt fest
+        assert_eq!(size_label(0), SizeLabel::Bytes(10));
+        assert_eq!(size_label(994), SizeLabel::Bytes(1004));
+        assert_eq!(size_label(995), kilo("1.00K"));
+        assert_eq!(size_label(1_004), kilo("1.00K"));
+        assert_eq!(size_label(1_005), kilo("1.01K"));
+        assert_eq!(size_label(1_094), kilo("1.09K"));
+        assert_eq!(size_label(1_099_994), kilo("1099.99K"));
+        assert_eq!(modem_seconds(6_216), 0);
+        assert_eq!(modem_seconds(6_217), 1);
+        assert_eq!(modem_seconds(12_438), 1);
+        assert_eq!(modem_seconds(12_439), 2);
+        assert_eq!(size_label(usize::MAX), size_label(usize::MAX - 5));
     }
 
     #[test]

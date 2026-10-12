@@ -176,20 +176,70 @@ fn frames_of(r: &dyn PageRenderer, doc: &Document, page: usize, s: &OptimizeSett
 /// Exportiert ein ganzes Bild bzw. eine Animation.
 pub fn export_whole(r: &dyn PageRenderer, doc: &Document, page: usize, s: &OptimizeSettings, ex: &EncodeExtras) -> Result<Vec<u8>> {
     let ctx = page_context(doc, page);
-    match s.format {
-        ExportFormat::AnimatedGif | ExportFormat::Apng | ExportFormat::AnimatedWebP => {
-            let (w, h, fr) = frames_of(r, doc, page, s)?;
-            match s.format {
-                ExportFormat::AnimatedGif => animated_gif(&fr, w, h, s, &ctx),
-                ExportFormat::Apng => apng(&fr, w, h, &ctx, s.anim.loop_count),
-                _ => animated_webp(&fr, w, h, s.webp.lossless, s.webp.quality, s.anim.loop_count),
-            }
-        }
-        _ => {
-            let img = apply_crop_scale(render(r, doc, page, 0, s, LayerFilter::All)?, s);
-            Ok(export_image(&img, s, &ctx, ex)?.bytes)
-        }
+    if s.format.is_animated() {
+        return export_animation(r, doc, page, s, &ctx);
     }
+    Ok(export_still(r, doc, page, 0, s, ex, &ctx)?.bytes)
+}
+
+/// Animation (alle Status) wie [`export_whole`].
+fn export_animation(r: &dyn PageRenderer, doc: &Document, page: usize, s: &OptimizeSettings, ctx: &ExportContext) -> Result<Vec<u8>> {
+    let (w, h, fr) = frames_of(r, doc, page, s)?;
+    match s.format {
+        ExportFormat::AnimatedGif => animated_gif(&fr, w, h, s, ctx),
+        ExportFormat::Apng => apng(&fr, w, h, ctx, s.anim.loop_count),
+        _ => animated_webp(&fr, w, h, s.webp.lossless, s.webp.quality, s.anim.loop_count),
+    }
+}
+
+/// Ein Status: rendern, Exportbereich/Skalierung, optimieren, kodieren – die Kette von
+/// [`export_whole`] und [`preview_whole`].
+fn export_still(r: &dyn PageRenderer, doc: &Document, page: usize, frame: usize, s: &OptimizeSettings, ex: &EncodeExtras, ctx: &ExportContext) -> Result<crate::export::ExportedImage> {
+    let img = apply_crop_scale(render(r, doc, page, frame, s, LayerFilter::All)?, s);
+    export_image(&img, s, ctx, ex)
+}
+
+/// Ergebnis der Bildvorschau eines Feldes (re\17-bildvorschau.md §5.7, §9).
+#[derive(Clone, Debug, PartialEq)]
+pub struct WholePreview {
+    /// Dateigröße in Byte, genau wie [`export_whole`] mit denselben Einstellungen und Kodierern
+    /// (bei Animationen die ganze Datei mit allen Status).
+    pub bytes: usize,
+    /// Anzahl Farben der Palette (indiziert) bzw. 0.
+    pub colors: usize,
+    /// Palette (indiziert, `0xAARRGGBB`), sonst leer.
+    pub palette: Vec<u32>,
+    /// Angezeigtes Bild: Indexbild durch die Palette aufgelöst, JPEG echt dekodiert.
+    pub image: RgbaImage,
+}
+
+/// Bildvorschau eines Feldes: dieselbe Kette wie [`export_whole`] (gleiche Kodierer und
+/// Parameter, damit die Größe stimmt), dazu das Bild des Status `frame` für die Anzeige.
+/// `cancelled` wird zwischen den Schritten gefragt; `Ok(None)` = abgebrochen.
+///
+/// Bei Einzelbildern ist die Größe die des Status `frame` (beim Export Status 1 = `frame` 0); bei
+/// animierten Formaten die der ganzen Animation, das Bild zeigt den Status `frame`.
+pub fn preview_whole(r: &dyn PageRenderer, doc: &Document, page: usize, frame: usize, s: &OptimizeSettings, ex: &EncodeExtras, cancelled: &dyn Fn() -> bool) -> Result<Option<WholePreview>> {
+    let ctx = page_context(doc, page);
+    let still = export_still(r, doc, page, frame.min(frame_count(doc, page) - 1), s, ex, &ctx)?;
+    if cancelled() {
+        return Ok(None);
+    }
+    let bytes = if s.format.is_animated() {
+        let b = export_animation(r, doc, page, s, &ctx)?.len();
+        if cancelled() {
+            return Ok(None);
+        }
+        b
+    } else {
+        still.bytes.len()
+    };
+    let palette = match &still.optimized {
+        crate::Optimized::Indexed(ix) => ix.palette.clone(),
+        _ => Vec::new(),
+    };
+    let image = crate::export::preview(&still, s, (0, 0));
+    Ok(Some(WholePreview { bytes, colors: still.colors, palette, image }))
 }
 
 fn safe_name(s: &str) -> String {
@@ -468,6 +518,58 @@ mod tests {
             Arc::make_mut(&mut Arc::make_mut(l).cels[0]).elements.push(Arc::new(sl));
         }
         d
+    }
+
+    /// Bildvorschau: dieselbe Byte-Zahl wie der echte Export (re\17 §9 „Größe = echte Kodierung“,
+    /// P4.3: gleiche `EncodeExtras`), für jedes Format; Abbruch liefert `None`.
+    #[test]
+    fn preview_size_equals_real_export_for_every_format() {
+        use crate::options::{ColorMode, Dither};
+        let d = doc();
+        let ex = EncodeExtras::default();
+        let mut cases: Vec<OptimizeSettings> = Vec::new();
+        for (f, m) in [
+            (ExportFormat::Gif, ColorMode::Indexed),
+            (ExportFormat::AnimatedGif, ColorMode::Indexed),
+            (ExportFormat::Jpeg, ColorMode::Rgb24),
+            (ExportFormat::Png, ColorMode::Indexed),
+            (ExportFormat::Png, ColorMode::Rgb24),
+            (ExportFormat::Png, ColorMode::Rgba32),
+            (ExportFormat::Tiff, ColorMode::Rgba32),
+            (ExportFormat::Bmp, ColorMode::Rgb24),
+            (ExportFormat::Wbmp, ColorMode::Indexed),
+            (ExportFormat::WebP, ColorMode::Rgba32),
+            (ExportFormat::Apng, ColorMode::Rgba32),
+            (ExportFormat::Qoi, ColorMode::Rgba32),
+        ] {
+            cases.push(OptimizeSettings { format: f, color_mode: m, ..OptimizeSettings::default() });
+        }
+        let mut jpeg = cases[2].clone();
+        jpeg.jpeg.quality = 37;
+        jpeg.jpeg.smoothing = 3;
+        jpeg.jpeg.subsampling = 1;
+        cases.push(jpeg);
+        let mut gif = cases[0].clone();
+        gif.max_colors = 7;
+        gif.dither = Dither::Diffusion(100);
+        cases.push(gif);
+        for s in &cases {
+            let real = export_whole(&SimpleRenderer, &d, 0, s, &ex).unwrap();
+            let p = preview_whole(&SimpleRenderer, &d, 0, 0, s, &ex, &|| false).unwrap().expect("nicht abgebrochen");
+            assert_eq!(p.bytes, real.len(), "{:?} {:?}", s.format, s.color_mode);
+            assert_eq!((p.image.width(), p.image.height()), (40, 20), "{:?}", s.format);
+            assert_eq!(p.colors > 0, s.format == ExportFormat::Gif || s.format == ExportFormat::AnimatedGif || s.color_mode == ColorMode::Indexed, "{:?}", s.format);
+            assert_eq!(p.colors, p.palette.len());
+        }
+        // andere Tabellen (IJG-Ersatz) ändern die JPEG-Größe nicht zwingend, die Vorschau nimmt aber
+        // genau die übergebenen: dieselben Extras → dieselbe Größe auch mit `standalone()`
+        let sa = EncodeExtras::standalone();
+        let real = export_whole(&SimpleRenderer, &d, 0, &cases[2], &sa).unwrap();
+        assert_eq!(preview_whole(&SimpleRenderer, &d, 0, 0, &cases[2], &sa, &|| false).unwrap().map(|p| p.bytes), Some(real.len()));
+        // Abbruch
+        assert!(preview_whole(&SimpleRenderer, &d, 0, 0, &cases[0], &ex, &|| true).unwrap().is_none());
+        // Status außerhalb: letzter Status statt Panik
+        assert!(preview_whole(&SimpleRenderer, &d, 0, 9, &cases[0], &ex, &|| false).unwrap().is_some());
     }
 
     #[test]
