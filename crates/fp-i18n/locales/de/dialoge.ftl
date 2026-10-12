@@ -399,10 +399,6 @@ dlg-channel-blue = Blau
 dlg-levels-input = Tonwertspreizung:
 dlg-levels-output = Tonwertumfang:
 dlg-auto = Auto
-dlg-reset = Zurücksetzen
-dlg-curves-io =
-    Eingabe: { $input }
-    Ausgabe: { $output }
 ## Kurven und Tonwertkorrektur gemeinsam (levels_common.rs)
 dlg-adjust-channel-tip = Zu bearbeitende Farbkanäle
 dlg-pipette-shadow = Schattenfarbe auswählen

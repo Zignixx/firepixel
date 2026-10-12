@@ -13,6 +13,7 @@ pub mod image_preview;
 pub mod form;
 pub mod levels;
 pub mod levels_common;
+pub mod curves;
 pub mod menu_dialogs;
 pub mod misc;
 pub mod models;
@@ -55,7 +56,7 @@ pub struct Dialogs {
     pub image_size: Option<doc_dialogs::ImageSizeDialog>,
     pub numeric_transform: Option<doc_dialogs::NumericTransformDialog>,
     pub levels: Option<levels::LevelsDialog>,
-    pub curves: Option<levels::CurvesDialog>,
+    pub curves: Option<curves::CurvesDialog>,
     pub export: Option<export::ExportDialog>,
     /// Bildvorschau (BV-1).
     pub preview: Option<image_preview::ImagePreview>,
@@ -145,7 +146,7 @@ pub fn open_for_command(st: &mut AppState, name: &str) -> bool {
         "modify.canvas.imageSize" => st.dialogs.image_size = doc_dialogs::ImageSizeDialog::new(st),
         "modify.transform.numericTransform" => st.dialogs.numeric_transform = doc_dialogs::NumericTransformDialog::new(st),
         "filter.adjustColor.levels" => st.dialogs.levels = Some(levels::LevelsDialog::new(st, false)),
-        "filter.adjustColor.curves" => st.dialogs.curves = Some(levels::CurvesDialog::new(st, false)),
+        "filter.adjustColor.curves" => st.dialogs.curves = Some(curves::CurvesDialog::new(st, false)),
         "file.export" => {
             // Bereich des Werkzeugs „Exportbereich“ übernehmen
             let area = st.session.active_id().and_then(|id| st.canvases.get_mut(&id)).and_then(|c| c.export_area.take());
@@ -816,7 +817,7 @@ pub fn show_all(ctx: &egui::Context, st: &mut AppState) {
     doc_dialogs::show_image_size(ctx, st);
     doc_dialogs::show_numeric_transform(ctx, st);
     levels::show_levels(ctx, st);
-    levels::show_curves(ctx, st);
+    curves::show_curves(ctx, st);
     export::show_export(ctx, st);
     image_preview::show(ctx, st);
     shortcuts::show(ctx, st);

@@ -399,10 +399,6 @@ dlg-channel-blue = Blue
 dlg-levels-input = Input levels:
 dlg-levels-output = Output levels:
 dlg-auto = Auto
-dlg-reset = Reset
-dlg-curves-io =
-    Input: { $input }
-    Output: { $output }
 ## Curves and Levels shared (levels_common.rs)
 dlg-adjust-channel-tip = Color channels to edit
 dlg-pipette-shadow = Select shadow color
