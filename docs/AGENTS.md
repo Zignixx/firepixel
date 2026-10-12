@@ -348,14 +348,15 @@ die Brücke antwortet. Leinwand, Menüs und Kürzel sind wie bei einem modalen D
   Startordner, vorgeschlagenen Namen und die letzten Ereignisse. Beantworten:
   `{"action": "choose", "path": "…"}` (mehrere bei `open_many`: `"paths": […]`) oder `{"action": "cancel"}`.
   Der Nutzer kann denselben Dialog auch selbst ausfüllen.
-* **Ohne Brücke** bzw. mit `FP_DATEIDIALOG=nativ`: der Windows-Dialog läuft in einem eigenen Thread, mit
+* **Ohne Brücke** bzw. mit `FP_FILE_DIALOG=native`: der Windows-Dialog läuft in einem eigenen Thread, mit
   dem Hauptfenster als Besitzer (zentriert darüber, modal, kein eigener Taskleisten-Knopf).
   `ui_file_dialog` kann ihn auch dann beantworten, das Windows-Fenster bleibt aber sichtbar, bis es
   geschlossen wird (`native_window_still_open`); sein Ergebnis wird verworfen.
-* **Testmodus** (Umgebungsvariable vor dem Start): `FP_DATEIDIALOG=abbrechen` bricht jeden Dialog sofort
-  ab. `FP_DATEIDIALOG=pfad:C:\ordner` beantwortet ihn sofort: Speichern mit dem vorgeschlagenen Namen
+* **Testmodus** (Umgebungsvariable vor dem Start): `FP_FILE_DIALOG=cancel` bricht jeden Dialog sofort
+  ab. `FP_FILE_DIALOG=path:C:\ordner` beantwortet ihn sofort: Speichern mit dem vorgeschlagenen Namen
   im Ordner, Öffnen mit der ersten passenden Datei (Mehrfachauswahl: alle passenden), Ordner mit dem
-  Ordner selbst. Jedes Ereignis steht im Log und in `ui_file_dialog` → `last_events`.
+  Ordner selbst. Jedes Ereignis steht im Log und in `ui_file_dialog` → `last_events`. Der alte Name
+  `FP_DATEIDIALOG` (Werte `abbrechen`, `pfad:`, `nativ`) wird weiter gelesen.
 
 Ablauf „Speichern unter“ über die Oberfläche:
 `ui_action {"run": "file.saveAs"}` → `ui_file_dialog {}` → `ui_file_dialog {"action": "choose", "path": "C:\\out\\bild.fw.png"}`
@@ -381,7 +382,7 @@ firepixel-cli render <datei> [--page N] [--state N] [--zoom Z] [--rect l,t,r,b] 
 firepixel-cli convert <ein> <aus>
 firepixel-cli script <x.jsf> [datei] [--code JS] [--out datei] [--arg WERT]
 firepixel-cli mcp [--http [--port N] [--token T] [--token-file DATEI]] | --bridge [--token-file DATEI]
-firepixel-cli sprache pruefen|vorlage|liste …   (englisch: language check|template|list)
+firepixel-cli language check|template|list …   (alte Namen: sprache pruefen|vorlage|liste)
 ```
 
 `--json` liefert überall maschinenlesbare Ausgaben; Exit-Code 0 = Erfolg, 1 = Fehler, 2 = falscher Aufruf.

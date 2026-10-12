@@ -31,7 +31,7 @@
 //!
 //! # Prüfen
 //! [`check`] prüft Sprachdateien (fehlende/verwaiste Schlüssel, Platzhalter, Syntax,
-//! Zugriffstasten-Konflikte) – für Tests und `firepixel-cli sprache pruefen`.
+//! Zugriffstasten-Konflikte) – für Tests und `firepixel-cli language check`.
 
 use fluent_bundle::concurrent::FluentBundle;
 use fluent_bundle::{FluentArgs, FluentResource};
@@ -46,6 +46,7 @@ pub use fluent_bundle::FluentValue as Value;
 
 pub mod check;
 mod format;
+pub mod paths;
 pub use format::{
     fmt_date, fmt_datetime, fmt_number, fmt_size, fmt_time, shortcut_label, strip_access, t_access, unit, AccessText,
 };
@@ -547,29 +548,55 @@ pub fn load_external_dir(dir: &Path) -> Vec<String> {
     codes
 }
 
-/// Nutzerordner für zusätzliche Sprachen: `%APPDATA%\Firepixel\Sprachen`
-/// (sonst `$XDG_CONFIG_HOME/firepixel/Sprachen` bzw. `$HOME/.config/firepixel/Sprachen`).
-pub fn user_language_dir() -> Option<std::path::PathBuf> {
+/// Name des Sprachordners (technisch immer englisch, AGENTEN_REGELN §1c).
+pub const LANGUAGE_DIR: &str = "Languages";
+/// Alter deutscher Name des Sprachordners (wird beim Start einmal umbenannt, sonst als Rückfall gelesen).
+pub const LEGACY_LANGUAGE_DIR: &str = "Sprachen";
+
+/// Nutzerordner von Firepixel: `%APPDATA%\Firepixel` (sonst `$XDG_CONFIG_HOME/firepixel` bzw.
+/// `$HOME/.config/firepixel`).
+pub fn user_config_dir() -> Option<std::path::PathBuf> {
     use std::path::PathBuf;
     if let Some(app) = std::env::var_os("APPDATA") {
-        return Some(PathBuf::from(app).join("Firepixel").join("Sprachen"));
+        return Some(PathBuf::from(app).join("Firepixel"));
     }
     if let Some(x) = std::env::var_os("XDG_CONFIG_HOME") {
-        return Some(PathBuf::from(x).join("firepixel").join("Sprachen"));
+        return Some(PathBuf::from(x).join("firepixel"));
     }
-    std::env::var_os("HOME").map(|h| PathBuf::from(h).join(".config").join("firepixel").join("Sprachen"))
+    std::env::var_os("HOME").map(|h| PathBuf::from(h).join(".config").join("firepixel"))
 }
 
-/// Ordner `Sprachen` neben der laufenden exe (für tragbare Installationen).
+/// Sprachordner in `base`: `Languages`, alter Ordner `Sprachen` wird migriert bzw. als Rückfall benutzt.
+pub fn language_dir_in(base: &std::path::Path) -> std::path::PathBuf {
+    paths::migrate_dir(&base.join(LANGUAGE_DIR), &base.join(LEGACY_LANGUAGE_DIR))
+}
+
+/// Nutzerordner für zusätzliche Sprachen: `%APPDATA%\Firepixel\Languages`
+/// (sonst `$XDG_CONFIG_HOME/firepixel/Languages` bzw. `$HOME/.config/firepixel/Languages`;
+/// alter Name `Sprachen` siehe [`language_dir_in`]).
+pub fn user_language_dir() -> Option<std::path::PathBuf> {
+    user_config_dir().map(|b| language_dir_in(&b))
+}
+
+/// Ordner `Languages` neben der laufenden exe (für tragbare Installationen; alter Name `Sprachen`).
 pub fn exe_language_dir() -> Option<std::path::PathBuf> {
-    std::env::current_exe().ok().and_then(|p| p.parent().map(|d| d.join("Sprachen")))
+    std::env::current_exe().ok().and_then(|p| p.parent().map(language_dir_in))
 }
 
 /// Lädt beide Sprachordner (neben der exe, dann Nutzerordner – der Nutzerordner gewinnt bei
-/// gleichen Schlüsseln). Gibt die geladenen Sprachcodes zurück.
+/// gleichen Schlüsseln). Liegt neben einem neuen `Languages` noch ein alter `Sprachen`, wird dieser
+/// vorher mitgelesen (der neue gewinnt). Gibt die geladenen Sprachcodes zurück.
 pub fn load_default_dirs() -> Vec<String> {
     let mut codes = Vec::new();
-    for dir in [exe_language_dir(), user_language_dir()].into_iter().flatten() {
+    let exe_base = std::env::current_exe().ok().and_then(|p| p.parent().map(std::path::Path::to_path_buf));
+    let mut dirs = Vec::new();
+    for (base, chosen) in [(exe_base, exe_language_dir()), (user_config_dir(), user_language_dir())] {
+        if let (Some(b), Some(c)) = (base, &chosen) {
+            dirs.extend(paths::leftover_dir(c, &b.join(LEGACY_LANGUAGE_DIR)));
+        }
+        dirs.extend(chosen);
+    }
+    for dir in dirs {
         if dir.is_dir() {
             for c in load_external_dir(&dir) {
                 if !codes.contains(&c) {

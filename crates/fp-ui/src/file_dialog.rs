@@ -12,8 +12,8 @@
 //!   modalen Dialog gesperrt (egui-Modal, `Dialogs::any_open`).
 //! - Bei laufendem KI-Steuerkanal (MCP-Brücke) erscheint statt des nativen Dialogs ein Dialog in
 //!   der App, den Agenten mit dem Werkzeug `ui_file_dialog` (oder der Nutzer per Eingabe)
-//!   beantworten. `FP_DATEIDIALOG=nativ` erzwingt auch dann den nativen Dialog.
-//! - Testmodus `FP_DATEIDIALOG=abbrechen` bzw. `FP_DATEIDIALOG=pfad:<ordner>`: kein Dialog, sofort
+//!   beantworten. `FP_FILE_DIALOG=native` (alt `FP_DATEIDIALOG=nativ`) erzwingt auch dann den nativen Dialog.
+//! - Testmodus `FP_FILE_DIALOG=cancel` bzw. `FP_FILE_DIALOG=path:<ordner>`: kein Dialog, sofort
 //!   abgebrochen bzw. mit einer Datei im Ordner beantwortet (Speichern: vorgeschlagener Name,
 //!   Öffnen: passende Dateien des Ordners, Ordner: der Ordner selbst). Jedes Ereignis wird geloggt
 //!   und steht in `ui_state` (`file_dialog`).
@@ -160,7 +160,7 @@ fn log_event(g: &mut Inner, ev: Value) {
     }
 }
 
-/// Testmodus aus `FP_DATEIDIALOG`.
+/// Testmodus aus `FP_FILE_DIALOG` (alt `FP_DATEIDIALOG`).
 enum EnvMode {
     Cancel,
     Path(PathBuf),
@@ -168,8 +168,13 @@ enum EnvMode {
     Normal,
 }
 
+/// Umgebungsvariable des Testmodus (technisch englisch, AGENTEN_REGELN §1c).
+pub const ENV_FILE_DIALOG: &str = "FP_FILE_DIALOG";
+/// Alter deutscher Name, wird weiter gelesen (wenn `FP_FILE_DIALOG` nicht gesetzt ist).
+pub const LEGACY_ENV_FILE_DIALOG: &str = "FP_DATEIDIALOG";
+
 fn env_mode() -> EnvMode {
-    let v = std::env::var("FP_DATEIDIALOG").unwrap_or_default();
+    let v = std::env::var(ENV_FILE_DIALOG).or_else(|_| std::env::var(LEGACY_ENV_FILE_DIALOG)).unwrap_or_default();
     let t = v.trim();
     let lower = t.to_lowercase();
     if lower == "abbrechen" || lower == "cancel" {
@@ -183,7 +188,7 @@ fn env_mode() -> EnvMode {
     }
 }
 
-/// Antwort im Testmodus `pfad:<ordner>`.
+/// Antwort im Testmodus `path:<ordner>`.
 fn auto_answer(req: &Request, dir: &Path) -> Vec<PathBuf> {
     match req.kind {
         Kind::Folder => vec![dir.to_path_buf()],
@@ -225,14 +230,14 @@ pub fn request(st: &mut AppState, req: Request, done: impl FnOnce(&mut AppState,
         }
         match &mode {
             EnvMode::Cancel => {
-                log_event(&mut g, json!({"event": "cancelled", "by": "FP_DATEIDIALOG", "request": req.json()}));
+                log_event(&mut g, json!({"event": "cancelled", "by": ENV_FILE_DIALOG, "request": req.json()}));
                 drop(g);
                 done(st, Vec::new());
                 return;
             }
             EnvMode::Path(dir) => {
                 let r = auto_answer(&req, dir);
-                log_event(&mut g, json!({"event": if r.is_empty() { "cancelled" } else { "chosen" }, "by": "FP_DATEIDIALOG", "request": req.json(), "paths": r.iter().map(|p| p.display().to_string()).collect::<Vec<_>>()}));
+                log_event(&mut g, json!({"event": if r.is_empty() { "cancelled" } else { "chosen" }, "by": ENV_FILE_DIALOG, "request": req.json(), "paths": r.iter().map(|p| p.display().to_string()).collect::<Vec<_>>()}));
                 drop(g);
                 done(st, r);
                 return;

@@ -347,14 +347,15 @@ answering. Canvas, menus and shortcuts are locked as with a modal dialog
   title, filters, start folder, suggested name and the latest events. Answer it with
   `{"action": "choose", "path": "…"}` (several for `open_many`: `"paths": […]`) or `{"action": "cancel"}`.
   The user can also fill in the same dialog.
-* **Without the bridge** or with `FP_DATEIDIALOG=nativ`: the Windows dialog runs in its own thread, owned
+* **Without the bridge** or with `FP_FILE_DIALOG=native`: the Windows dialog runs in its own thread, owned
   by the main window (centered above it, modal, no taskbar button of its own). `ui_file_dialog` can
   answer it then as well, but the Windows window stays visible until it is closed
   (`native_window_still_open`); its result is discarded.
-* **Test mode** (environment variable before starting): `FP_DATEIDIALOG=abbrechen` cancels every dialog
-  immediately. `FP_DATEIDIALOG=pfad:C:\folder` answers it immediately: Save with the suggested name in the
+* **Test mode** (environment variable before starting): `FP_FILE_DIALOG=cancel` cancels every dialog
+  immediately. `FP_FILE_DIALOG=path:C:\folder` answers it immediately: Save with the suggested name in the
   folder, Open with the first matching file (multiple selection: all matching ones), folder with the
-  folder itself. Every event is logged and listed in `ui_file_dialog` → `last_events`.
+  folder itself. Every event is logged and listed in `ui_file_dialog` → `last_events`. The old name
+  `FP_DATEIDIALOG` (values `abbrechen`, `pfad:`, `nativ`) is still read.
 
 Workflow "Save As" through the user interface:
 `ui_action {"run": "file.saveAs"}` → `ui_file_dialog {}` → `ui_file_dialog {"action": "choose", "path": "C:\\out\\image.fw.png"}`
@@ -380,7 +381,7 @@ firepixel-cli render <file> [--page N] [--state N] [--zoom Z] [--rect l,t,r,b] [
 firepixel-cli convert <in> <out>
 firepixel-cli script <x.jsf> [file] [--code JS] [--out file] [--arg VALUE]
 firepixel-cli mcp [--http [--port N] [--token T] [--token-file FILE]] | --bridge [--token-file FILE]
-firepixel-cli language check|template|list …   (German: sprache pruefen|vorlage|liste)
+firepixel-cli language check|template|list …   (old names: sprache pruefen|vorlage|liste)
 ```
 
 `--json` gives machine-readable output everywhere; exit code 0 = success, 1 = error, 2 = wrong call.

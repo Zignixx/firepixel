@@ -9,6 +9,7 @@ rust-version.workspace = true
 [dependencies]
 eframe.workspace = true
 fp-ui.workspace = true
+fp-i18n.workspace = true
 
 [build-dependencies]
 # App-Icon + Versionsangaben als Windows-Ressource (ruft rc.exe aus dem Windows SDK)

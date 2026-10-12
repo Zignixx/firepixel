@@ -1,4 +1,4 @@
-//! `firepixel-cli sprache …`: Sprachdateien prüfen, Vorlage für eine neue Sprache anlegen,
+//! `firepixel-cli language …` (alt `sprache`): Sprachdateien prüfen, Vorlage für eine neue Sprache anlegen,
 //! verfügbare Sprachen auflisten (Phase 6, I18N-KERN). Die Prüfungen stehen in `fp_i18n::check`.
 
 use clap::Subcommand;
@@ -7,39 +7,41 @@ use fp_i18n::{t, tr};
 use serde_json::{json, Value};
 use std::path::{Path, PathBuf};
 
-/// Unterbefehle von `sprache`.
+/// Unterbefehle von `language` (technisch englisch, AGENTEN_REGELN §1c; die alten deutschen
+/// Namen `sprache pruefen|vorlage|liste`, `--eingebaut`, `--kurz`, `--streng`, `--ueberschreiben`,
+/// `--von` bleiben als versteckte Aliasse gültig).
 #[derive(Subcommand, Debug)]
-pub enum SpracheCmd {
-    // Hilfetexte: kommandozeile.ftl (`cli-sprache-…`), englische Namen als Alias
-    #[command(alias = "check")]
-    Pruefen {
-        pfad: Option<PathBuf>,
-        #[arg(long, alias = "builtin")]
-        eingebaut: bool,
-        #[arg(long, alias = "short")]
-        kurz: bool,
-        #[arg(long, alias = "strict")]
-        streng: bool,
+pub enum LanguageCmd {
+    // Hilfetexte: kommandozeile.ftl (`cli-language-…`)
+    #[command(alias = "pruefen")]
+    Check {
+        path: Option<PathBuf>,
+        #[arg(long, alias = "eingebaut")]
+        builtin: bool,
+        #[arg(long, alias = "kurz")]
+        short: bool,
+        #[arg(long, alias = "streng")]
+        strict: bool,
     },
-    #[command(alias = "template")]
-    Vorlage {
+    #[command(alias = "vorlage")]
+    Template {
         code: String,
-        zielordner: PathBuf,
-        #[arg(long, alias = "overwrite")]
-        ueberschreiben: bool,
-        #[arg(long, alias = "from", default_value = "en")]
-        von: String,
+        target_dir: PathBuf,
+        #[arg(long, alias = "ueberschreiben")]
+        overwrite: bool,
+        #[arg(long, alias = "von", default_value = "en")]
+        from: String,
     },
-    #[command(alias = "list")]
-    Liste,
+    #[command(alias = "liste")]
+    List,
 }
 
-/// Führt einen `sprache`-Unterbefehl aus. `Err` = Fehlermeldung (Exit-Code 1).
-pub fn run(cmd: SpracheCmd, json_out: bool) -> Result<Value, String> {
+/// Führt einen `language`-Unterbefehl aus. `Err` = Fehlermeldung (Exit-Code 1).
+pub fn run(cmd: LanguageCmd, json_out: bool) -> Result<Value, String> {
     match cmd {
-        SpracheCmd::Pruefen { pfad, eingebaut, kurz, streng } => pruefen(pfad.as_deref(), eingebaut, kurz, streng, json_out),
-        SpracheCmd::Vorlage { code, zielordner, ueberschreiben, von } => vorlage(&code, &zielordner, ueberschreiben, &von),
-        SpracheCmd::Liste => liste(json_out),
+        LanguageCmd::Check { path, builtin, short, strict } => pruefen(path.as_deref(), builtin, short, strict, json_out),
+        LanguageCmd::Template { code, target_dir, overwrite, from } => vorlage(&code, &target_dir, overwrite, &from),
+        LanguageCmd::List => liste(json_out),
     }
 }
 

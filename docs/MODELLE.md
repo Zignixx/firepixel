@@ -11,8 +11,11 @@ bestätigt nach Anzeige der Details).
 ## Modellordner (Suchreihenfolge)
 
 1. Voreinstellung `AiModelFolder` (Dialog „KI-Modelle verwalten“ bzw. `ai.setModelFolder {path}`),
-2. `%LOCALAPPDATA%\Firepixel\Modelle`,
-3. `Modelle\` neben `firepixel.exe`.
+2. `%LOCALAPPDATA%\Firepixel\Models`,
+3. `Models\` neben `firepixel.exe`.
+
+Ältere Versionen hießen die Ordner `Modelle`; sie werden beim ersten Start einmal in `Models`
+umbenannt (geht das nicht, z. B. ohne Schreibrecht neben der exe, wird der alte Ordner weiter benutzt).
 
 Heruntergeladen wird in den ersten Ordner der Liste. Eine Datei gilt als vorhanden, wenn Name und
 Größe stimmen; der Download prüft zusätzlich die SHA-256-Summe (fest im Code, `fp_ai::models::MODELS`)

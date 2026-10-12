@@ -117,39 +117,39 @@ cli-mcp-arg-bridge = stdio-Weiterleitung zur laufenden Firepixel-Oberfläche (Br
 cli-mcp-arg-port = Port auf 127.0.0.1 (0 = frei wählen)
 cli-mcp-arg-token = Festes Token (mindestens 16 Zeichen; Vorgabe: zufällig)
 cli-mcp-arg-token-file = Datei für Adresse und Token (Vorgabe im Benutzerprofil)
-cli-sprache = Sprachdateien prüfen, Vorlage für eine neue Sprache anlegen, Sprachen auflisten
-cli-sprache-pruefen = Sprachdateien prüfen: fehlende/verwaiste Schlüssel, Platzhalter, Syntax, Zugriffstasten
+cli-language = Sprachdateien prüfen, Vorlage für eine neue Sprache anlegen, Sprachen auflisten
+cli-language-check = Sprachdateien prüfen: fehlende/verwaiste Schlüssel, Platzhalter, Syntax, Zugriffstasten
     .examples = 
         Beispiele:
-          firepixel-cli sprache pruefen %APPDATA%\Firepixel\Sprachen          (alle Sprachen im Ordner)
-          firepixel-cli sprache pruefen Sprachen\fr                             (eine Sprache, Ordner mit *.ftl)
-          firepixel-cli sprache pruefen fr.ftl                                  (eine Sprache in einer Datei)
-          firepixel-cli sprache pruefen Sprachen\fr\menue.ftl                   (nur dieser Bereich)
-          firepixel-cli sprache pruefen --eingebaut                             (die eingebauten Sprachen)
+          firepixel-cli language check %APPDATA%\Firepixel\Languages         (alle Sprachen im Ordner)
+          firepixel-cli language check Languages\fr                            (eine Sprache, Ordner mit *.ftl)
+          firepixel-cli language check fr.ftl                                 (eine Sprache in einer Datei)
+          firepixel-cli language check Languages\fr\menue.ftl                  (nur dieser Bereich)
+          firepixel-cli language check --builtin                              (die eingebauten Sprachen)
 
         Maßstab ist das eingebaute Deutsch. Fehler (Exit-Code 1): Syntax, doppelte Schlüssel, Platzhalter,
         die das Programm nicht kennt. Warnungen: fehlende/verwaiste Schlüssel, fehlende Platzhalter oder
         Zugriffstasten (&), doppelte Zugriffstasten in einem Menü bzw. Dialog.
-cli-sprache-pruefen-arg-pfad = Ordner oder .ftl-Datei
+cli-language-check-arg-path = Ordner oder .ftl-Datei
     .value = PFAD
-cli-sprache-pruefen-arg-eingebaut = Die eingebauten Sprachen prüfen
-cli-sprache-pruefen-arg-kurz = Fehlende Schlüssel nicht einzeln auflisten (nur zählen)
-cli-sprache-pruefen-arg-streng = Warnungen als Fehler werten (Exit-Code 1)
-cli-sprache-vorlage = Vorlage für eine neue Sprache anlegen (Kopie der englischen Dateien)
+cli-language-check-arg-builtin = Die eingebauten Sprachen prüfen
+cli-language-check-arg-short = Fehlende Schlüssel nicht einzeln auflisten (nur zählen)
+cli-language-check-arg-strict = Warnungen als Fehler werten (Exit-Code 1)
+cli-language-template = Vorlage für eine neue Sprache anlegen (Kopie der englischen Dateien)
     .examples = 
         Beispiel:
-          firepixel-cli sprache vorlage fr %APPDATA%\Firepixel\Sprachen
-        legt %APPDATA%\Firepixel\Sprachen\fr\*.ftl an (englische Texte als Ausgangspunkt).
+          firepixel-cli language template fr %APPDATA%\Firepixel\Languages
+        legt %APPDATA%\Firepixel\Languages\fr\*.ftl an (englische Texte als Ausgangspunkt).
         Danach rechts vom = übersetzen, language-name setzen, prüfen und Firepixel neu starten
         (oder Ansicht ▸ Sprache ▸ Sprachordner öffnen...).
-cli-sprache-vorlage-arg-code = Sprachcode (z. B. fr, es, pt-BR, ja)
+cli-language-template-arg-code = Sprachcode (z. B. fr, es, pt-BR, ja)
     .value = CODE
-cli-sprache-vorlage-arg-zielordner = Zielordner (darin entsteht der Unterordner <code>)
+cli-language-template-arg-target-dir = Zielordner (darin entsteht der Unterordner <code>)
     .value = ZIELORDNER
-cli-sprache-vorlage-arg-ueberschreiben = Vorhandene Dateien überschreiben
-cli-sprache-vorlage-arg-von = Ausgangssprache der Vorlage (Vorgabe: en)
+cli-language-template-arg-overwrite = Vorhandene Dateien überschreiben
+cli-language-template-arg-from = Ausgangssprache der Vorlage (Vorgabe: en)
     .value = VON
-cli-sprache-liste = Verfügbare Sprachen (eingebaut und aus den Sprachordnern) mit Vollständigkeit
+cli-language-list = Verfügbare Sprachen (eingebaut und aus den Sprachordnern) mit Vollständigkeit
 cli-root-arg-json = Ausgabe als JSON (maschinenlesbar)
 cli-root-arg-lang = Sprache der Ausgaben (z. B. de, en; Vorgabe: FIREPIXEL_LANG bzw. Systemsprache)
     .value = CODE
@@ -231,18 +231,18 @@ cli-lang-no-name = ohne language-name
 cli-lang-summary = Sprache { $code } ({ $name }): { $keys } Schlüssel, { NUMBER($percent, minimumFractionDigits: 1, maximumFractionDigits: 1) } % übersetzt, { $missing } fehlen – { $files } Datei(en)
 cli-lang-result = Ergebnis: { $errors } Fehler, { $warnings } Warnungen
 cli-lang-errors-warnings = { $errors } Fehler, { $warnings } Warnungen
-cli-lang-path-missing = Pfad angeben (Ordner oder .ftl-Datei) oder --eingebaut
+cli-lang-path-missing = Pfad angeben (Ordner oder .ftl-Datei) oder --builtin
 cli-lang-bad-code = „{ $code }“ ist kein gültiger Sprachcode (Beispiele: fr, es, pt-BR, zh-TW)
 cli-lang-no-builtin = keine eingebaute Sprache „{ $code }“
 cli-lang-template-header = 
     # Firepixel – Sprache „{ $code }“ (Vorlage aus „{ $from }“, Datei { $file }).
     # Rechts vom = übersetzen; Schlüssel links, Platzhalter {"{"} $name {"}"} und Auswahl-Varianten [one]/[other] beibehalten.
-    # & markiert die Zugriffstaste (Alt+Buchstabe), && ist ein wörtliches &. Prüfen: firepixel-cli sprache pruefen <ordner>
-cli-lang-template-skipped = , { $n } vorhandene übersprungen (--ueberschreiben)
+    # & markiert die Zugriffstaste (Alt+Buchstabe), && ist ein wörtliches &. Prüfen: firepixel-cli language check <ordner>
+cli-lang-template-skipped = , { $n } vorhandene übersprungen (--overwrite)
 cli-lang-template-done = 
     Vorlage für „{ $code }“ in { $dir }: { $n } Datei(en) geschrieben{ $skipped }.
     Nächste Schritte: language-name in allgemein.ftl setzen, übersetzen, dann
-      firepixel-cli sprache pruefen "{ $dir }"
+      firepixel-cli language check "{ $dir }"
 cli-lang-col-code = Code
 cli-lang-col-name = Name
 cli-lang-col-origin = Herkunft

@@ -718,7 +718,7 @@ dlg-ai-remove = Entfernen…
 dlg-ai-remove-tip = Modelldatei löschen
 dlg-ai-confirm-download = „{ $model }“ herunterladen? { $size } von { $source } (SHA-256 { $sha }…). { $license }
 dlg-ai-location = Speicherort
-dlg-ai-folder-hint = leer = %LOCALAPPDATA%\Firepixel\Modelle
+dlg-ai-folder-hint = leer = %LOCALAPPDATA%\Firepixel\Models
 dlg-ai-default-folder = Standard
 dlg-ai-current-folder = Aktuell: { $path }
 dlg-ai-open-folder = Ordner öffnen

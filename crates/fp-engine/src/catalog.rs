@@ -47,8 +47,9 @@ pub struct CatalogEntry {
 /// Eintrag der Bedienfeld-Tabelle (10 §4.5).
 #[derive(Clone, Debug, Deserialize)]
 pub struct PanelEntry {
-    /// Befehls-ID des Bedienfelds.
-    pub befehl_id: u32,
+    /// Befehls-ID des Bedienfelds (alter Schlüssel `befehl_id` wird weiter gelesen).
+    #[serde(alias = "befehl_id")]
+    pub command_id: u32,
     /// JS-Name für `fw.toggleFloater`.
     pub js_floater_name: Option<String>,
     /// `cmd_`-Name.

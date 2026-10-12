@@ -115,7 +115,7 @@ pub fn help_file() -> PathBuf {
     if let Some(f) = find_help(&dirs, &fp_i18n::current_language()) {
         return f;
     }
-    let f = temp_dir("Hilfe").join("KURZHILFE.md");
+    let f = temp_dir("Help").join("QUICK_HELP.md");
     let _ = std::fs::write(&f, builtin_help());
     f
 }

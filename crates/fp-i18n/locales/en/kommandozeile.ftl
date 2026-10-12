@@ -117,39 +117,39 @@ cli-mcp-arg-bridge = stdio forwarding to the running Firepixel user interface (b
 cli-mcp-arg-port = Port on 127.0.0.1 (0 = pick a free one)
 cli-mcp-arg-token = Fixed token (at least 16 characters; default: random)
 cli-mcp-arg-token-file = File for address and token (default in the user profile)
-cli-sprache = Check language files, create a template for a new language, list languages (alias: language)
-cli-sprache-pruefen = Check language files: missing/orphaned keys, placeholders, syntax, access keys (alias: check)
+cli-language = Check language files, create a template for a new language, list languages
+cli-language-check = Check language files: missing/orphaned keys, placeholders, syntax, access keys
     .examples = 
         Examples:
-          firepixel-cli sprache pruefen %APPDATA%\Firepixel\Sprachen          (all languages in the folder)
-          firepixel-cli sprache pruefen Sprachen\fr                             (one language, folder with *.ftl)
-          firepixel-cli sprache pruefen fr.ftl                                  (one language in one file)
-          firepixel-cli sprache pruefen Sprachen\fr\menue.ftl                   (only this area)
-          firepixel-cli sprache pruefen --eingebaut                             (the built-in languages)
+          firepixel-cli language check %APPDATA%\Firepixel\Languages         (all languages in the folder)
+          firepixel-cli language check Languages\fr                            (one language, folder with *.ftl)
+          firepixel-cli language check fr.ftl                                 (one language in one file)
+          firepixel-cli language check Languages\fr\menue.ftl                  (only this area)
+          firepixel-cli language check --builtin                              (the built-in languages)
 
         The reference is the built-in German. Errors (exit code 1): syntax, duplicate keys, placeholders
         the program does not know. Warnings: missing/orphaned keys, missing placeholders or
         access keys (&), duplicate access keys in one menu or dialog.
-cli-sprache-pruefen-arg-pfad = Folder or .ftl file
+cli-language-check-arg-path = Folder or .ftl file
     .value = PATH
-cli-sprache-pruefen-arg-eingebaut = Check the built-in languages (alias: --builtin)
-cli-sprache-pruefen-arg-kurz = Do not list missing keys one by one (count only; alias: --short)
-cli-sprache-pruefen-arg-streng = Treat warnings as errors (exit code 1; alias: --strict)
-cli-sprache-vorlage = Create a template for a new language (copy of the English files; alias: template)
+cli-language-check-arg-builtin = Check the built-in languages
+cli-language-check-arg-short = Do not list missing keys one by one (count only)
+cli-language-check-arg-strict = Treat warnings as errors (exit code 1)
+cli-language-template = Create a template for a new language (copy of the English files)
     .examples = 
         Example:
-          firepixel-cli sprache vorlage fr %APPDATA%\Firepixel\Sprachen
-        creates %APPDATA%\Firepixel\Sprachen\fr\*.ftl (English texts as a starting point).
+          firepixel-cli language template fr %APPDATA%\Firepixel\Languages
+        creates %APPDATA%\Firepixel\Languages\fr\*.ftl (English texts as a starting point).
         Then translate to the right of the =, set language-name, check and restart Firepixel
         (or View ▸ Language ▸ Open Language Folder...).
-cli-sprache-vorlage-arg-code = Language code (e.g. fr, es, pt-BR, ja)
+cli-language-template-arg-code = Language code (e.g. fr, es, pt-BR, ja)
     .value = CODE
-cli-sprache-vorlage-arg-zielordner = Target folder (the subfolder <code> is created in it)
+cli-language-template-arg-target-dir = Target folder (the subfolder <code> is created in it)
     .value = TARGET_FOLDER
-cli-sprache-vorlage-arg-ueberschreiben = Overwrite existing files (alias: --overwrite)
-cli-sprache-vorlage-arg-von = Source language of the template (default: en; alias: --from)
+cli-language-template-arg-overwrite = Overwrite existing files
+cli-language-template-arg-from = Source language of the template (default: en)
     .value = FROM
-cli-sprache-liste = Available languages (built-in and from the language folders) with completeness (alias: list)
+cli-language-list = Available languages (built-in and from the language folders) with completeness
 cli-root-arg-json = Output as JSON (machine-readable)
 cli-root-arg-lang = Language of the output (e.g. de, en; default: FIREPIXEL_LANG or the system language)
     .value = CODE
@@ -231,18 +231,18 @@ cli-lang-no-name = without language-name
 cli-lang-summary = Language { $code } ({ $name }): { $keys } keys, { NUMBER($percent, minimumFractionDigits: 1, maximumFractionDigits: 1) } % translated, { $missing } missing – { $files } file(s)
 cli-lang-result = Result: { $errors } errors, { $warnings } warnings
 cli-lang-errors-warnings = { $errors } errors, { $warnings } warnings
-cli-lang-path-missing = give a path (folder or .ftl file) or --eingebaut
+cli-lang-path-missing = give a path (folder or .ftl file) or --builtin
 cli-lang-bad-code = “{ $code }” is not a valid language code (examples: fr, es, pt-BR, zh-TW)
 cli-lang-no-builtin = no built-in language “{ $code }”
 cli-lang-template-header = 
     # Firepixel – language “{ $code }” (template from “{ $from }”, file { $file }).
     # Translate to the right of the =; keep the keys on the left, placeholders {"{"} $name {"}"} and selector variants [one]/[other].
-    # & marks the access key (Alt+letter), && is a literal &. Check: firepixel-cli sprache pruefen <folder>
-cli-lang-template-skipped = , { $n } existing skipped (--ueberschreiben)
+    # & marks the access key (Alt+letter), && is a literal &. Check: firepixel-cli language check <folder>
+cli-lang-template-skipped = , { $n } existing skipped (--overwrite)
 cli-lang-template-done = 
     Template for “{ $code }” in { $dir }: { $n } file(s) written{ $skipped }.
     Next steps: set language-name in allgemein.ftl, translate, then
-      firepixel-cli sprache pruefen "{ $dir }"
+      firepixel-cli language check "{ $dir }"
 cli-lang-col-code = Code
 cli-lang-col-name = Name
 cli-lang-col-origin = Source

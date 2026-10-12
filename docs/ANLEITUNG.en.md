@@ -18,7 +18,7 @@ needed for the user interface.
 
 **Language:** *View ▸ Language* or *Edit ▸ Preferences ▸ General*. Firepixel ships with German
 and English; on first start it uses the Windows language. The switch takes effect immediately.
-More languages are plain `.ftl` text files in `%APPDATA%\Firepixel\Sprachen\` (*View ▸ Language ▸
+More languages are plain `.ftl` text files in `%APPDATA%\Firepixel\Languages\` (*View ▸ Language ▸
 Open Language Folder…*); a guide for translators is in `crates\fp-i18n\README.md`. This guide is also
 available in German (`ANLEITUNG.md`).
 

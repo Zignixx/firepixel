@@ -136,7 +136,7 @@ ui-cli-help =
     Aufruf: firepixel [Optionen] [Datei …]
 
     Optionen:
-      --design=normal|dunkel|oled   Design nur für diese Sitzung
+      --design=normal|dark|oled     Design nur für diese Sitzung
       --mcp[=PORT]                  KI-Steuerkanal starten (MCP über HTTP, nur 127.0.0.1, mit Token)
       --help, -h                    diese Hilfe anzeigen
 

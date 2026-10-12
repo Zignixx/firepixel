@@ -49,7 +49,7 @@ pub fn is_rtl(code: &str) -> bool {
     matches!(base.as_str(), "ar" | "he" | "iw" | "fa" | "ur" | "ps" | "sd" | "yi" | "dv" | "ug" | "ckb")
 }
 
-/// Start: Sprachordner laden (`Sprachen\` neben der exe, `%APPDATA%\Firepixel\Sprachen`), dann
+/// Start: Sprachordner laden (`Languages\` neben der exe, `%APPDATA%\Firepixel\Languages`), dann
 /// die Sprache wählen und in `prefs` festhalten (bleibt so beim nächsten Start):
 /// * gespeicherte Sprache, falls es sie (noch) gibt;
 /// * sonst beim **ersten Start** (noch keine Voreinstellungsdatei) die Systemsprache;

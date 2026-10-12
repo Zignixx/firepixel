@@ -3,7 +3,7 @@
 //! - Dokumentbibliothek: Vorschau des gewählten Symbols (fp-render), Liste mit Name und Art,
 //!   Doppelklick/„Einfügen“ setzt eine Instanz in die Leinwandmitte, Umbenennen, Löschen (mit
 //!   Instanzen), Neues Symbol aus der Auswahl (Dialog „In Symbol konvertieren“).
-//! - Allgemeine Bibliothek: eigene Bibliotheksordner (`%APPDATA%\Firepixel\Allgemeine Bibliothek`)
+//! - Allgemeine Bibliothek: eigene Bibliotheksordner (`%APPDATA%\Firepixel\Common Library`, alt `Allgemeine Bibliothek`)
 //!   und – nur zur Laufzeit, falls vorhanden – die Ordner im Ressourcenordner des Originals
 //!   (`Configuration\Libraries`). Es wird nichts eingebettet. Einfügen über `pi.symbol.import`.
 //! - Automatische Formen: Liste der Formen; die Skripte brauchen fp-script („noch nicht verfügbar“).
@@ -124,10 +124,21 @@ pub fn document(ui: &mut Ui, st: &mut AppState) {
 
 // ---------------------------------------------------------------------- Allgemeine Bibliothek
 
+/// Name des eigenen Bibliotheksordners (technisch englisch, AGENTEN_REGELN §1c).
+pub const COMMON_LIBRARY_DIR: &str = "Common Library";
+/// Alter deutscher Name des Bibliotheksordners.
+pub const LEGACY_COMMON_LIBRARY_DIR: &str = "Allgemeine Bibliothek";
+
+/// Eigener Bibliotheksordner in `base` (`%APPDATA%\Firepixel`): `Common Library`; ein alter
+/// `Allgemeine Bibliothek` wird einmal umbenannt bzw. weiter benutzt.
+pub fn common_library_dir_in(base: &std::path::Path) -> PathBuf {
+    fp_i18n::paths::migrate_dir(&base.join(COMMON_LIBRARY_DIR), &base.join(LEGACY_COMMON_LIBRARY_DIR))
+}
+
 /// Bibliotheksordner: eigener Ordner und (zur Laufzeit) der Ressourcenordner des Originals.
 pub fn library_roots() -> Vec<(String, PathBuf)> {
     let mut v = Vec::new();
-    if let Some(dir) = fp_engine::Preferences::default_path().and_then(|p| p.parent().map(|d| d.join("Allgemeine Bibliothek"))) {
+    if let Some(dir) = fp_engine::Preferences::default_path().and_then(|p| p.parent().map(common_library_dir_in)) {
         let _ = std::fs::create_dir_all(&dir);
         v.push((common::t("panel-commonlib-own"), dir));
     }

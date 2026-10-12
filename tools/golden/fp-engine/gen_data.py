@@ -216,7 +216,8 @@ def main():
             if not c["main_menu"]:
                 c["menu_label_de"] = c["label_de"]
     zoom = [z["faktor"] for z in menu["zoomtabelle"]]
-    panels = menu["bedienfelder"]
+    # technische Schluessel immer englisch (AGENTEN_REGELN 1c)
+    panels = [{("command_id" if k == "befehl_id" else k): v for k, v in p.items()} for p in menu["bedienfelder"]]
 
     # Tastenkuerzel-Sets
     sets = {}

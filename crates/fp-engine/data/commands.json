@@ -6211,121 +6211,121 @@
 ],
 "panels": [
 {
-"befehl_id": 35058,
+"command_id": 35058,
 "registriert_in_00f190e0": false,
 "js_floater_name": "toolbox",
 "cmd_name": "cmd_Toolbars_Art"
 },
 {
-"befehl_id": 35059,
+"command_id": 35059,
 "registriert_in_00f190e0": false,
 "js_floater_name": "toolbar",
 "cmd_name": "cmd_Toolbars_Main"
 },
 {
-"befehl_id": 35425,
+"command_id": 35425,
 "registriert_in_00f190e0": false,
 "js_floater_name": "whatsnew",
 "cmd_name": "cmd_Help_WhatsNew"
 },
 {
-"befehl_id": 35586,
+"command_id": 35586,
 "registriert_in_00f190e0": false,
 "js_floater_name": "property inspector",
 "cmd_name": "cmd_PropertyInspector"
 },
 {
-"befehl_id": 35798,
+"command_id": 35798,
 "registriert_in_00f190e0": true,
 "js_floater_name": "pages",
 "cmd_name": "cmd_Panels_Pages"
 },
 {
-"befehl_id": 43402,
+"command_id": 43402,
 "registriert_in_00f190e0": true,
 "js_floater_name": "find",
 "cmd_name": "cmd_PanelFind"
 },
 {
-"befehl_id": 43404,
+"command_id": 43404,
 "registriert_in_00f190e0": true,
 "js_floater_name": "info",
 "cmd_name": "cmd_PanelInfo"
 },
 {
-"befehl_id": 43405,
+"command_id": 43405,
 "registriert_in_00f190e0": true,
 "js_floater_name": "mixer",
 "cmd_name": "cmd_Panels_ColorMixer"
 },
 {
-"befehl_id": 43408,
+"command_id": 43408,
 "registriert_in_00f190e0": true,
 "js_floater_name": "swatches",
 "cmd_name": "cmd_Panels_Swatches"
 },
 {
-"befehl_id": 43409,
+"command_id": 43409,
 "registriert_in_00f190e0": true,
 "js_floater_name": "optimize",
 "cmd_name": "cmd_Panels_ExportPanel"
 },
 {
-"befehl_id": 43410,
+"command_id": 43410,
 "registriert_in_00f190e0": true,
 "js_floater_name": "states",
 "cmd_name": "cmd_Panels_Frames"
 },
 {
-"befehl_id": 43412,
+"command_id": 43412,
 "registriert_in_00f190e0": true,
 "js_floater_name": "layers",
 "cmd_name": "cmd_Panels_Layers"
 },
 {
-"befehl_id": 43413,
+"command_id": 43413,
 "registriert_in_00f190e0": true,
 "js_floater_name": "behaviors",
 "cmd_name": "cmd_Panels_Behaviors"
 },
 {
-"befehl_id": 43414,
+"command_id": 43414,
 "registriert_in_00f190e0": true,
 "js_floater_name": "url",
 "cmd_name": "cmd_Panels_URLMgr"
 },
 {
-"befehl_id": 43415,
+"command_id": 43415,
 "registriert_in_00f190e0": true,
 "js_floater_name": "styles",
 "cmd_name": "cmd_Panels_Styles"
 },
 {
-"befehl_id": 43416,
+"command_id": 43416,
 "registriert_in_00f190e0": true,
 "js_floater_name": "library",
 "cmd_name": "cmd_Panels_SymLibrary"
 },
 {
-"befehl_id": 43418,
+"command_id": 43418,
 "registriert_in_00f190e0": true,
 "js_floater_name": "history",
 "cmd_name": "cmd_Panels_History"
 },
 {
-"befehl_id": 43421,
+"command_id": 43421,
 "registriert_in_00f190e0": false,
 "js_floater_name": "answers",
 "cmd_name": "cmd_Panels_Answers"
 },
 {
-"befehl_id": 43422,
+"command_id": 43422,
 "registriert_in_00f190e0": true,
 "js_floater_name": "auto shapes",
 "cmd_name": null
 },
 {
-"befehl_id": 45816,
+"command_id": 45816,
 "registriert_in_00f190e0": true,
 "js_floater_name": "Common Library",
 "cmd_name": "cmd_commonlib_form_elements"

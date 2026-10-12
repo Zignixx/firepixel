@@ -227,12 +227,18 @@ pub fn install_into_lang(dir: &Path, lang: &str) -> std::io::Result<usize> {
     Ok(n)
 }
 
+/// Markierungsdatei im Befehlsordner: eingebaute Befehle sind schon installiert.
+pub const MARKER_FILE: &str = ".firepixel-commands";
+/// Alter deutscher Name der Markierungsdatei.
+pub const LEGACY_MARKER_FILE: &str = ".firepixel-befehle";
+
 /// Wie [`install_into`] für den Befehlsordner der Anwendung. Einmal je Ordner: eine Markierungsdatei
 /// verhindert, dass gelöschte Befehle beim nächsten Start wiederkommen. Die Namen folgen der
 /// aktuellen Sprache (`fp_i18n::current_language`) – deshalb erst nach der Sprachwahl aufrufen.
 pub fn install_builtin_commands() -> std::io::Result<usize> {
     let dir = fp_engine::commands::misc::commands_dir();
-    let marker = dir.join(".firepixel-befehle");
+    // Markierung technisch englisch (AGENTEN_REGELN §1c); die alte `.firepixel-befehle` zählt weiter
+    let marker = fp_i18n::paths::migrate_file(&dir.join(MARKER_FILE), &dir.join(LEGACY_MARKER_FILE));
     if marker.exists() {
         return Ok(0);
     }

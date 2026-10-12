@@ -3,11 +3,15 @@
 //! Die Gewichte werden nicht in die exe eingebettet (zu groß). Firepixel sucht sie in dieser
 //! Reihenfolge:
 //! 1. eingestellter Modellordner ([`set_user_folder`], Voreinstellung `AiModelFolder`),
-//! 2. `%LOCALAPPDATA%\Firepixel\Modelle`,
-//! 3. `Modelle\` neben der exe.
+//! 2. `%LOCALAPPDATA%\Firepixel\Models`,
+//! 3. `Models\` neben der exe.
+//!
+//! Die alten deutschen Ordner `Modelle` werden beim Start einmal umbenannt; geht das nicht, werden
+//! sie weiter benutzt (siehe `fp_i18n::paths`). Liegen alter und neuer Ordner nebeneinander, wird
+//! der alte zusätzlich durchsucht.
 //!
 //! Heruntergeladen wird nur nach Zustimmung in den ersten beschreibbaren Ordner (Voreinstellung,
-//! sonst `%LOCALAPPDATA%\Firepixel\Modelle`). Alle Quellen sind offizielle Veröffentlichungen der
+//! sonst `%LOCALAPPDATA%\Firepixel\Models`). Alle Quellen sind offizielle Veröffentlichungen der
 //! Urheber (Meta auf Hugging Face bzw. `ZhengPeng7`), Prüfsummen = LFS-SHA-256 der Dateien.
 
 use serde::{Deserialize, Serialize};
@@ -235,14 +239,32 @@ pub fn set_search_override(folders: Vec<PathBuf>) {
     }
 }
 
-/// `%LOCALAPPDATA%\Firepixel\Modelle`.
-pub fn local_folder() -> Option<PathBuf> {
-    std::env::var_os("LOCALAPPDATA").map(|d| PathBuf::from(d).join("Firepixel").join("Modelle"))
+/// Name des Modellordners (technisch immer englisch, AGENTEN_REGELN §1c).
+pub const MODELS_DIR: &str = "Models";
+/// Alter deutscher Name des Modellordners.
+pub const LEGACY_MODELS_DIR: &str = "Modelle";
+
+fn local_base() -> Option<PathBuf> {
+    std::env::var_os("LOCALAPPDATA").map(|d| PathBuf::from(d).join("Firepixel"))
 }
 
-/// `Modelle\` neben der exe.
+fn exe_base() -> Option<PathBuf> {
+    std::env::current_exe().ok().and_then(|e| e.parent().map(Path::to_path_buf))
+}
+
+/// Modellordner in `base`: `Models`, ein alter `Modelle` wird migriert bzw. als Rückfall benutzt.
+pub fn folder_in(base: &Path) -> PathBuf {
+    fp_i18n::paths::migrate_dir(&base.join(MODELS_DIR), &base.join(LEGACY_MODELS_DIR))
+}
+
+/// `%LOCALAPPDATA%\Firepixel\Models` (alter Name `Modelle`, siehe [`folder_in`]).
+pub fn local_folder() -> Option<PathBuf> {
+    local_base().map(|b| folder_in(&b))
+}
+
+/// `Models\` neben der exe (alter Name `Modelle\`).
 pub fn exe_folder() -> Option<PathBuf> {
-    std::env::current_exe().ok().and_then(|e| e.parent().map(|p| p.join("Modelle")))
+    exe_base().map(|b| folder_in(&b))
 }
 
 /// Suchreihenfolge der Modellordner.
@@ -256,18 +278,19 @@ pub fn search_folders() -> Vec<PathBuf> {
     if let Some(u) = user_folder() {
         v.push(u);
     }
-    if let Some(l) = local_folder() {
-        v.push(l);
-    }
-    if let Some(e) = exe_folder() {
-        v.push(e);
+    for (base, chosen) in [(local_base(), local_folder()), (exe_base(), exe_folder())] {
+        if let Some(c) = chosen {
+            v.push(c.clone());
+            // alter Ordner neben einem schon vorhandenen neuen: mit durchsuchen (nichts geht verloren)
+            v.extend(base.and_then(|b| fp_i18n::paths::leftover_dir(&c, &b.join(LEGACY_MODELS_DIR))));
+        }
     }
     v
 }
 
 /// Zielordner für Downloads.
 pub fn download_folder() -> PathBuf {
-    search_folders().into_iter().next().unwrap_or_else(|| PathBuf::from("Modelle"))
+    search_folders().into_iter().next().unwrap_or_else(|| PathBuf::from(MODELS_DIR))
 }
 
 /// Datei eines Modells, falls vorhanden (Größe muss stimmen).

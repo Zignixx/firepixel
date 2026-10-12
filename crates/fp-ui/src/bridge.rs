@@ -264,7 +264,7 @@ fn argb_hex(c: fp_color::Argb) -> String {
 fn theme_name(k: crate::theme::ThemeKind) -> &'static str {
     match k {
         crate::theme::ThemeKind::Normal => "normal",
-        crate::theme::ThemeKind::Dark => "dunkel",
+        crate::theme::ThemeKind::Dark => "dark",
         crate::theme::ThemeKind::Oled => "oled",
     }
 }
@@ -365,7 +365,7 @@ pub fn ui_action(ctx: &egui::Context, st: &mut AppState, a: &Value) -> UiReply {
     if let Some(t) = a.get("theme").and_then(Value::as_str) {
         let k = match t.to_lowercase().as_str() {
             "normal" | "hell" => crate::theme::ThemeKind::Normal,
-            "dunkel" | "dark" => crate::theme::ThemeKind::Dark,
+            "dark" | "dunkel" => crate::theme::ThemeKind::Dark,
             "oled" => crate::theme::ThemeKind::Oled,
             other => return UiReply::Error(agent_text(|| fp_i18n::tr!("err-mcp-ui-unknown-theme", name = other))),
         };

@@ -124,7 +124,7 @@ pub fn paste_foreign(st: &mut AppState) -> bool {
     let Some((w, h, bytes)) = foreign_image() else { return false };
     let dir = std::env::temp_dir().join("Firepixel");
     let _ = std::fs::create_dir_all(&dir);
-    let path = dir.join(format!("zwischenablage-{}.png", std::process::id()));
+    let path = dir.join(format!("clipboard-{}.png", std::process::id()));
     if write_png(&path, w, h, &bytes).is_err() {
         return false;
     }

@@ -1646,6 +1646,7 @@ version = "0.1.0"
 dependencies = [
  "eframe",
  "embed-resource",
+ "fp-i18n",
  "fp-ui",
 ]
 

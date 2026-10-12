@@ -362,7 +362,7 @@ pub fn tool_defs() -> Vec<ToolDef> {
             schema: obj(
                 json!({
                     "run": {"type": "string"}, "params": {"type": "object"}, "zoom": {"type": "number"}, "fit": {"type": "boolean"},
-                    "panel": {"type": "string"}, "tool": {"type": "string"}, "theme": {"type": "string", "enum": ["normal", "dunkel", "oled"]},
+                    "panel": {"type": "string"}, "tool": {"type": "string"}, "theme": {"type": "string", "enum": ["normal", "dark", "oled"]},
                     "close_dialogs": {"type": "boolean"}, "status": {"type": "string"}
                 }),
                 &[],
@@ -690,7 +690,7 @@ fn example_value(p: &fp_engine::ParamSpec) -> Value {
         K::Point => json!([10, 10]),
         K::Rect => json!([10, 10, 110, 60]),
         K::Ids => json!([1]),
-        K::Path => json!("C:\\pfad\\datei.fw.png"),
+        K::Path => json!("C:\\path\\file.fw.png"),
         K::Json => json!({}),
     }
 }

@@ -754,7 +754,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
         // Sekundärbrowser: im Menü wie im Original nur, wenn einer festgelegt ist
         r.add(cmd(name).requires(DOC).menu_when(move |s| browser == 0 || s.ui.browsers[browser].is_some()).opt_default("open", ParamKind::Bool, json!(true), "Browser starten").run(move |s, p| {
             let base = base_name_of(s)?;
-            let dir = temp_dir("Vorschau").join(format!("dok{}", s.doc()?.id.0));
+            let dir = temp_dir("Preview").join(format!("doc{}", s.doc()?.id.0));
             let _ = std::fs::remove_dir_all(&dir);
             let pages: Vec<usize> = if all { (0..s.doc()?.doc.pages.len()).filter(|&i| !s.doc().map(|d| d.doc.pages[i].master()).unwrap_or(false)).collect() } else { vec![s.doc()?.page] };
             let mut written = Vec::new();
@@ -788,7 +788,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                     let (file_name, data) = match kind {
                         0 => {
                             let doc = Arc::clone(&d.doc);
-                            let tmp = temp_dir("EMail").join(format!("{base}.fw.png"));
+                            let tmp = temp_dir("Email").join(format!("{base}.fw.png"));
                             super::file::save_document(s, &doc, page, &tmp)?;
                             (format!("{base}.fw.png"), std::fs::read(&tmp)?)
                         }
@@ -806,7 +806,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                     };
                     let ext = file_name.rsplit('.').next().unwrap_or("");
                     let eml = build_eml(&p.opt_str("to")?.unwrap_or_default(), &file_name, &format!("Anhang: {file_name}"), &file_name, mime_of(ext), &data);
-                    let path = temp_dir("EMail").join(format!("{base}.eml"));
+                    let path = temp_dir("Email").join(format!("{base}.eml"));
                     std::fs::write(&path, eml)?;
                     if launch_allowed(p)? {
                         open_with_system(&path, None)?;
@@ -890,7 +890,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 }
                 let ps = s.ui.page_setup.clone();
                 let printer = p.opt_str("printer")?.unwrap_or_else(|| ps.printer.clone());
-                let dir = p.opt_str("outDir")?.map(PathBuf::from).unwrap_or_else(|| temp_dir("Druck"));
+                let dir = p.opt_str("outDir")?.map(PathBuf::from).unwrap_or_else(|| temp_dir("Print"));
                 std::fs::create_dir_all(&dir)?;
                 let base = base_name_of(s)?;
                 let mut out = Vec::new();
@@ -899,7 +899,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                     let img = render_page_image(s, pg, 0, false)?;
                     let dpi = page_context(&s.doc()?.doc, pg).resolution_dpi as f64;
                     let paper = print_image(&img, dpi, &ps);
-                    let path = dir.join(format!("{base}_druck_{}.png", pg + 1));
+                    let path = dir.join(format!("{base}_print_{}.png", pg + 1));
                     std::fs::write(&path, png_bytes(&paper)?)?;
                     if launch_allowed(p)? {
                         method = json!(system_print(&path, &printer)?);

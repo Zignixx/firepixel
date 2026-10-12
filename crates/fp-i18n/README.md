@@ -10,9 +10,9 @@ in **Ansicht ▸ Sprache** (oder in den Voreinstellungen), sofort und ohne Neust
 
 ### 1. Vorlage anlegen
 ```
-firepixel-cli sprache vorlage fr "%APPDATA%\Firepixel\Sprachen"
+firepixel-cli language template fr "%APPDATA%\Firepixel\Languages"
 ```
-legt `%APPDATA%\Firepixel\Sprachen\fr\*.ftl` an – eine Kopie der englischen Texte (`--von de`
+legt `%APPDATA%\Firepixel\Languages\fr\*.ftl` an – eine Kopie der englischen Texte (`--from de`
 nimmt Deutsch als Vorlage). Sprachcodes nach BCP 47: `fr`, `es`, `it`, `pt-BR`, `zh-TW`, `ja` …
 Ohne Kommandozeile: den Ordner `crates\fp-i18n\locales\en\` kopieren und umbenennen.
 
@@ -48,18 +48,22 @@ Regeln:
 
 ### 3. Prüfen
 ```
-firepixel-cli sprache pruefen "%APPDATA%\Firepixel\Sprachen\fr"
+firepixel-cli language check "%APPDATA%\Firepixel\Languages\fr"
 ```
 meldet je Datei:Zeile **Fehler** (Syntax, doppelte Schlüssel, Platzhalter, die das Programm nicht
 kennt) und **Warnungen** (fehlende/verwaiste Schlüssel, fehlende Platzhalter oder Zugriffstasten,
 doppelte Zugriffstasten in einem Menü/Dialog) und den übersetzten Anteil. `--kurz` zählt fehlende
 Schlüssel nur, `--json` liefert alles maschinenlesbar, `--streng` wertet Warnungen als Fehler.
-`firepixel-cli sprache liste` zeigt alle Sprachen mit Vollständigkeit.
+`firepixel-cli language list` zeigt alle Sprachen mit Vollständigkeit.
 
 ### 4. Benutzen
 Der Ordner wird beim Start geladen aus
-- `%APPDATA%\Firepixel\Sprachen\` (je Benutzer; **Ansicht ▸ Sprache ▸ Sprachordner öffnen...** öffnet ihn und lädt Änderungen sofort nach) und
-- `Sprachen\` neben `firepixel.exe` (tragbare Installation).
+- `%APPDATA%\Firepixel\Languages\` (je Benutzer; **Ansicht ▸ Sprache ▸ Sprachordner öffnen...** öffnet ihn und lädt Änderungen sofort nach) und
+- `Languages\` neben `firepixel.exe` (tragbare Installation).
+
+Alte Ordner `Sprachen` (bis 12.10.2026) werden beim Start einmal in `Languages` umbenannt bzw.,
+wenn das nicht geht, weiter gelesen (`fp_i18n::paths`). Die alten Befehle `sprache pruefen|vorlage|liste`
+und Optionen `--eingebaut`, `--kurz`, `--streng`, `--ueberschreiben`, `--von` gehen weiter.
 
 Erlaubt sind ein Unterordner je Sprache (`fr\*.ftl`) oder eine einzige Datei `fr.ftl`. Gleiche
 Schlüssel überschreiben eingebaute Texte – so lassen sich auch einzelne deutsche oder englische

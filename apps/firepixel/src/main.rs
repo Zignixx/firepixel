@@ -1,6 +1,6 @@
 //! Firepixel: Grafik- und Webdesign-Programm.
 //!
-//! Aufruf: `firepixel [--design=normal|dunkel|oled] [--mcp[=PORT]] [--help] [Datei …]`
+//! Aufruf: `firepixel [--design=normal|dark|oled] [--mcp[=PORT]] [--help] [Datei …]`
 //! (Hilfetext: Schlüssel `ui-cli-help` in `crates\fp-i18n\locales\<sprache>\oberflaeche.ftl`)
 //!
 //! * `--design=…` überschreibt das gespeicherte Design (z. B. für Bildschirmfotos).
@@ -11,6 +11,9 @@
 use fp_ui::theme::ThemeKind;
 
 fn main() -> eframe::Result {
+    // alte deutsche Ordnernamen (Sprachen, Modelle, …) beim ersten Zugriff einmal auf die englischen
+    // umbenennen (AGENTEN_REGELN §1c; nicht in Testläufen mit FP_NO_SHELL_OPEN)
+    fp_i18n::paths::enable_migration();
     let mut design = None;
     let mut files = Vec::new();
     for a in std::env::args_os().skip(1) {
@@ -23,7 +26,7 @@ fn main() -> eframe::Result {
         if let Some(d) = s.strip_prefix("--design=") {
             design = match d.to_lowercase().as_str() {
                 "normal" => Some(ThemeKind::Normal),
-                "dunkel" | "dark" => Some(ThemeKind::Dark),
+                "dark" | "dunkel" => Some(ThemeKind::Dark), // `dunkel`: alter Wert, weiter gültig
                 "oled" => Some(ThemeKind::Oled),
                 _ => None,
             };

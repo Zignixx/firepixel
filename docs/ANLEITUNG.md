@@ -14,11 +14,11 @@ daneben, wird für die Oberfläche aber nicht gebraucht.
 **Start:**
 
 - Doppelklick auf `firepixel.exe`, oder Dateien auf die exe bzw. das offene Fenster ziehen.
-- Aus der Eingabeaufforderung: `firepixel [--design=normal|dunkel|oled] [--mcp[=PORT]] [Datei …]`.
+- Aus der Eingabeaufforderung: `firepixel [--design=normal|dark|oled] [--mcp[=PORT]] [Datei …]`.
 
 **Sprache:** *Ansicht ▸ Sprache* bzw. *Bearbeiten ▸ Voreinstellungen ▸ Allgemein*. Firepixel bringt
 Deutsch und Englisch mit; beim ersten Start gilt die Sprache von Windows. Der Wechsel wirkt sofort,
-ohne Neustart. Weitere Sprachen sind einfache `.ftl`-Textdateien in `%APPDATA%\Firepixel\Sprachen\`
+ohne Neustart. Weitere Sprachen sind einfache `.ftl`-Textdateien in `%APPDATA%\Firepixel\Languages\`
 (*Ansicht ▸ Sprache ▸ Sprachordner öffnen…*); eine Anleitung für Übersetzer steht in
 `crates\fp-i18n\README.md`. Diese Anleitung gibt es auch auf Englisch (`ANLEITUNG.en.md`).
 
@@ -160,7 +160,7 @@ nebeneinander.
   Rückgängig-Schritt.
 - **Kommandozeile:** `firepixel-cli` kann Dokumente prüfen (`info`), Befehle anwenden (`run`,
   `batch`), Bilder rendern (`render`), umwandeln (`convert`), Skripte starten (`script`) und
-  Übersetzungen prüfen (`sprache pruefen`). `firepixel-cli <befehl> --help` zeigt Beispiele;
+  Übersetzungen prüfen (`language check`). `firepixel-cli <befehl> --help` zeigt Beispiele;
   `--lang de|en` wählt die Sprache der Ausgaben.
 - **KI-Steuerung (MCP):** `firepixel-cli mcp` (stdio) oder in der laufenden Oberfläche
   *Befehle ▸ KI-Steuerkanal (MCP)* bzw. der Start mit `--mcp`. Der Server lauscht nur auf

@@ -13,7 +13,7 @@ use serde_json::{json, Value};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
-mod sprache;
+mod sprache; // Unterbefehl `language` (Dateiname: TE-2)
 
 #[derive(Parser, Debug)]
 #[command(name = "firepixel-cli", version)]
@@ -38,21 +38,21 @@ enum Cmd {
         cmds: Vec<String>,
         #[arg(long = "params", value_name = "JSON")]
         params: Vec<String>,
-        #[arg(long, value_name = "JSON|DATEI")]
+        #[arg(long, value_name = "JSON|FILE")]
         steps: Option<String>,
         #[arg(long)]
         group: bool,
-        #[arg(long, value_name = "DATEI")]
+        #[arg(long, value_name = "FILE")]
         out: Option<PathBuf>,
         #[arg(long)]
         in_place: bool,
     },
     Batch {
-        #[arg(long, value_name = "JSON|DATEI")]
+        #[arg(long, value_name = "JSON|FILE")]
         actions: String,
-        #[arg(long = "in", value_name = "ORDNER")]
+        #[arg(long = "in", value_name = "FOLDER")]
         input: PathBuf,
-        #[arg(long = "out", value_name = "ORDNER")]
+        #[arg(long = "out", value_name = "FOLDER")]
         output: PathBuf,
         #[arg(long, default_value = "fwpng")]
         format: String,
@@ -71,7 +71,7 @@ enum Cmd {
         rect: Option<String>,
         #[arg(long)]
         element: Option<u64>,
-        #[arg(long, value_name = "DATEI")]
+        #[arg(long, value_name = "FILE")]
         out: PathBuf,
     },
     Info {
@@ -101,7 +101,7 @@ enum Cmd {
         file: Option<PathBuf>,
         #[arg(long)]
         code: Option<String>,
-        #[arg(long, value_name = "DATEI")]
+        #[arg(long, value_name = "FILE")]
         out: Option<PathBuf>,
         #[arg(long)]
         arg: Option<String>,
@@ -118,8 +118,8 @@ enum Cmd {
         #[arg(long)]
         token_file: Option<PathBuf>,
     },
-    #[command(subcommand, alias = "language")]
-    Sprache(sprache::SpracheCmd),
+    #[command(subcommand, alias = "sprache")]
+    Language(sprache::LanguageCmd),
 }
 
 /// Fehler mit Meldung.
@@ -134,6 +134,9 @@ impl<E: std::fmt::Display> From<E> for Fail {
 type Res<T> = Result<T, Fail>;
 
 fn main() -> ExitCode {
+    // alte deutsche Ordnernamen einmal auf die englischen umbenennen (AGENTEN_REGELN §1c; nicht in
+    // Testläufen mit FP_NO_SHELL_OPEN, siehe fp_i18n::paths)
+    fp_i18n::paths::enable_migration();
     init_language();
     let matches = match localized_command().try_get_matches() {
         Ok(m) => m,
@@ -171,7 +174,7 @@ fn main() -> ExitCode {
 // ------------------------------------------------------------------ Sprache und Hilfe
 
 /// Sprache der Kommandozeile: `--lang <code>` (auch `--lang=<code>`), sonst `FIREPIXEL_LANG`, sonst
-/// die Systemsprache. Sprachordner (`Sprachen\` neben der exe, `%APPDATA%\Firepixel\Sprachen`)
+/// die Systemsprache. Sprachordner (`Languages\` neben der exe, `%APPDATA%\Firepixel\Languages`; alt `Sprachen`)
 /// werden vorher geladen, damit auch eigene Sprachen gehen.
 fn init_language() {
     fp_i18n::load_default_dirs();
@@ -195,7 +198,7 @@ fn localized_command() -> clap::Command {
 
 /// Setzt Beschreibung (`<key>`), Beispiele (`<key>.examples`), Optionstexte (`<key>-arg-<id>`, Wertname
 /// `.value`), Überschriften, Hilfe-Option und Vorlage – rekursiv für alle Unterbefehle
-/// (`cli-<befehl>`, `cli-sprache-<befehl>`).
+/// (`cli-<befehl>`, `cli-language-<befehl>`).
 fn localize(mut c: clap::Command, key: &str) -> clap::Command {
     use fp_i18n::has;
     if has(key) {
@@ -298,7 +301,7 @@ fn run(cli: Cli, sub: Option<&ArgMatches>) -> Res<Value> {
                 cmd_mcp(http, port, token, token_file)
             }
         }
-        Cmd::Sprache(c) => sprache::run(c, json_out).map_err(Fail),
+        Cmd::Language(c) => sprache::run(c, json_out).map_err(Fail),
     }
 }
 
@@ -738,7 +741,7 @@ mod tests {
         let help = fp_i18n::with_language("en", || {
             let mut c = localized_command();
             let mut s = c.render_help().to_string();
-            for sub in ["run", "batch", "render", "info", "commands", "convert", "script", "mcp", "sprache"] {
+            for sub in ["run", "batch", "render", "info", "commands", "convert", "script", "mcp", "language"] {
                 if let Some(sc) = c.find_subcommand_mut(sub) {
                     s += &sc.render_help().to_string();
                 }

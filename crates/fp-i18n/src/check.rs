@@ -1,7 +1,7 @@
 //! Prüfung von Sprachdateien unabhängig vom laufenden Sprachzustand: fehlende und verwaiste
 //! Schlüssel, Platzhalter-Abweichungen (`{ $name }` je Schlüssel), Syntaxfehler, doppelte
 //! Schlüssel und Zugriffstasten-Konflikte (zwei Einträge desselben Menüs bzw. Dialogs mit
-//! derselben `&`-Taste). Grundlage für die Kerntests und `firepixel-cli sprache pruefen`.
+//! derselben `&`-Taste). Grundlage für die Kerntests und `firepixel-cli language check`.
 //!
 //! Maßstab ist die eingebaute Ausgangssprache ([`crate::SOURCE_LANG`]).
 
@@ -436,7 +436,7 @@ fn file_name(p: &Path) -> String {
 /// Sprachen aus einem Pfad lesen:
 /// * Datei `<code>.ftl` → eine Sprache in einer Datei; Bereichsdatei (`fr\menue.ftl`) → nur dieser Bereich.
 /// * Ordner mit Bereichsdateien (`fr\`) → eine Sprache (Code = Ordnername).
-/// * Ordner mit Sprachordnern bzw. `<code>.ftl`-Dateien (`Sprachen\`, `locales\`) → alle.
+/// * Ordner mit Sprachordnern bzw. `<code>.ftl`-Dateien (`Languages\`, `locales\`) → alle.
 ///
 /// Rückgabe: (Sprache, nur diese Bereichsdatei prüfen).
 pub fn load_path(path: &Path) -> Result<Vec<(LangData, Option<String>)>, String> {
