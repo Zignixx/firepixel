@@ -70,6 +70,8 @@ pi-edge-antialias = Anti-Alias
 pi-edge-feather-short = Weiche Kte.
 pi-edge-feather = Weiche Kante
 pi-texture-transparent = Transparent
+pi-texture-other = Andere...
+pi-texture-pick-title = Textur wählen
 # Texturnamen (Dateinamen der Texturen ohne Endung) in der Texturliste
 pi-texture-name-argyle-01 = Rautenmuster 01
 pi-texture-name-argyle-02 = Rautenmuster 02
@@ -345,7 +347,7 @@ pi-ai-matting-high = Hoch (HR-Matting, langsam)
 pi-ai-model-missing = Modell fehlt – wird beim ersten Benutzen angeboten
 pi-ai-models = KI-Modelle…
 pi-ai-object-hint1 = Klick: Objekt auswählen · Rahmen aufziehen: Objekt im Rahmen
-pi-ai-object-hint2 = Umschalt+Klick: hinzufügen · Alt+Klick: abziehen · Esc: neues Objekt
+pi-ai-object-hint2 = Umschalt+Klick: hinzufügen · Alt+Klick: abziehen · Esc: Bitmapmodus beenden
 pi-ai-subject-hint = Klick: Hauptmotiv als weiche Pixelauswahl · Umschalt: hinzufügen · Alt: abziehen
 pi-ai-subject-run = Motiv auswählen
 pi-ai-radius = Radius:

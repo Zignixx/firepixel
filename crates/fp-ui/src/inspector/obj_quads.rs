@@ -460,7 +460,7 @@ pub fn fill_panel(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target, enabled: b
         let tip = tip.as_str();
         let pattern = k == 3;
         if pattern {
-            // Muster: Liste aus dem Ressourcenordner des Originals (zur Laufzeit) + „Andere…“
+            // Muster: Liste aus den Musterordnern (zur Laufzeit, popups::pattern_files) + „Andere…“
             let r = d.r(x, 0.0, 16.0, 12.0);
             let pen = en && tgt == Target::Selection;
             if kind == 3 {
@@ -471,13 +471,15 @@ pub fn fill_panel(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target, enabled: b
             let mut other = false;
             egui::Popup::menu(&resp).frame(crate::menu::menu_frame(&theme)).show(|ui| {
                 ui.spacing_mut().item_spacing = egui::vec2(0.0, 0.0);
-                for p in pattern_files() {
-                    let name = p.file_stem().map(|s| s.to_string_lossy().to_string()).unwrap_or_default();
-                    if fields::list_item(ui, &name, false).clicked() {
-                        chosen = Some(p.clone());
-                        ui.close();
+                egui::ScrollArea::vertical().max_height(360.0).show(ui, |ui| {
+                    for (name, p) in popups::pattern_files() {
+                        if fields::list_item(ui, name, false).clicked() {
+                            chosen = Some(p.clone());
+                            ui.close();
+                        }
                     }
-                }
+                });
+                list_separator(ui);
                 if fields::list_item(ui, &t("pi-pattern-other"), false).clicked() {
                     other = true;
                     ui.close();
@@ -541,12 +543,10 @@ pub fn fill_texture_panel(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target, en
     let en = enabled && kind != 0 && (tgt == Target::Tool || attrs.is_some());
     let id = Id::new(("pi-ftex", tgt == Target::Tool));
     fields::label(ui, d.r(0.0, 2.0, 30.0, 8.0), &t("pi-texture"), en);
-    let (items, sel) = texture_items(&tex);
-    let labels: Vec<&str> = items.iter().map(|(_, l)| l.as_str()).collect();
-    if let Some(i) = fields::combo(ui, id.with("name"), d.r(31.0, 0.0, 55.0, 14.0), &labels, Some(sel), en)
-        && i != sel
-    {
-        apply_fill(ui, st, tgt, json!({"texture": items[i].0}));
+    match texture_combo(ui, id.with("name"), d.r(31.0, 0.0, 55.0, 14.0), &tex, en) {
+        Some(TextureChoice::Named(name)) => choose_texture(ui, st, tgt, false, &name),
+        Some(TextureChoice::Other) => pick_other_texture(ui, st, tgt, false),
+        None => {}
     }
     if let Some(v) = fields::number(ui, id.with("amt"), d.r(87.0, 0.0, 22.0, 13.0), Some(d.r(109.0, 0.0, 9.0, 13.0)), Some(amount as f64), (0.0, 100.0), 0, en) {
         apply_fill(ui, st, tgt, json!({"textureAmount": v as i64}));
@@ -559,18 +559,10 @@ pub fn fill_texture_panel(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target, en
     }
 }
 
-/// Musterdateien aus dem Ressourcenordner des Originals (nur zur Laufzeit gelesen, nichts eingebettet).
+/// Musterdateien aus den Musterordnern ([`popups::pattern_files`]: Original, dessen Benutzervorlage,
+/// `%APPDATA%\Firepixel\Patterns`; nur zur Laufzeit gelesen, nichts eingebettet).
 pub fn pattern_files() -> Vec<std::path::PathBuf> {
-    static P: std::sync::OnceLock<Vec<std::path::PathBuf>> = std::sync::OnceLock::new();
-    P.get_or_init(|| {
-        let mut v: Vec<std::path::PathBuf> = fp_color::install::original_subdir("Configuration\\Patterns")
-            .and_then(|d| std::fs::read_dir(d).ok())
-            .map(|entries| entries.flatten().map(|e| e.path()).filter(|p| p.extension().is_some_and(|x| ["png", "jpg", "gif", "bmp"].iter().any(|e| x.eq_ignore_ascii_case(e)))).collect())
-            .unwrap_or_default();
-        v.sort();
-        v
-    })
-    .clone()
+    popups::pattern_files().iter().map(|(_, p)| p.clone()).collect()
 }
 
 /// Vorgabetextur des Originals: neue Füllungen und Striche tragen sie mit Menge 0 (im Original
@@ -608,6 +600,94 @@ pub fn texture_items(current: &str) -> (Vec<(String, String)>, usize) {
     v.sort_by(|a, b| a.1.to_lowercase().cmp(&b.1.to_lowercase()).then_with(|| a.0.cmp(&b.0)));
     let sel = v.iter().position(|(x, _)| x.eq_ignore_ascii_case(current)).unwrap_or(0);
     (v, sel)
+}
+
+/// Wahl in der Texturliste.
+#[derive(Clone, Debug, PartialEq)]
+pub enum TextureChoice {
+    /// Eine Textur der Liste (Dateiname ohne Endung).
+    Named(String),
+    /// „Andere…“: Textur aus einer Datei wählen.
+    Other,
+}
+
+/// Beschriftungen der Texturliste wie im Original: die Texturen ([`texture_items`]), eine Trennlinie
+/// und „Andere…“ (Textur aus Datei). Liefert die Einträge und den Platz der aktuellen Textur.
+pub fn texture_list_labels(current: &str) -> (Vec<(String, String)>, Vec<String>, usize) {
+    let (items, sel) = texture_items(current);
+    let mut labels: Vec<String> = items.iter().map(|(_, l)| l.clone()).collect();
+    labels.push("-".into());
+    labels.push(t("pi-texture-other"));
+    (items, labels, sel)
+}
+
+/// Trennlinie in einer Aufklappliste (wie die Trenner in `fields::combo`).
+fn list_separator(ui: &mut Ui) {
+    let th = Theme::current(ui.ctx());
+    let (sr, _) = ui.allocate_exact_size(vec2(ui.available_width(), 7.0), egui::Sense::hover());
+    ui.painter().hline(sr.x_range().shrink(4.0), sr.center().y.floor() + 0.5, Stroke::new(1.0, th.colors.menu_separator));
+}
+
+/// Kombifeld „Textur“ (Füllung bzw. Strich): Texturen mit Bildlauf, darunter wie im Original eine
+/// Trennlinie und „Andere…“ (immer sichtbar, außerhalb des Bildlaufs).
+fn texture_combo(ui: &mut Ui, id: Id, r: Rect, current: &str, enabled: bool) -> Option<TextureChoice> {
+    let (items, labels, sel) = texture_list_labels(current);
+    let text = labels.get(sel).cloned().unwrap_or_default();
+    let resp = fields::combo_box_frame(ui, id, r, &text, enabled);
+    let th = Theme::current(ui.ctx());
+    let mut out = None;
+    egui::Popup::menu(&resp).frame(crate::menu::menu_frame(&th)).width(r.width().max(60.0)).show(|ui| {
+        ui.spacing_mut().item_spacing = vec2(0.0, 0.0);
+        egui::ScrollArea::vertical().max_height(360.0).show(ui, |ui| {
+            for (i, (name, label)) in items.iter().enumerate() {
+                if fields::list_item(ui, label, i == sel).clicked() {
+                    if i != sel {
+                        out = Some(TextureChoice::Named(name.clone()));
+                    }
+                    ui.close();
+                }
+            }
+        });
+        list_separator(ui);
+        if fields::list_item(ui, labels.last().map(|s| s.as_str()).unwrap_or_default(), false).clicked() {
+            out = Some(TextureChoice::Other);
+            ui.close();
+        }
+    });
+    out
+}
+
+/// Setzt eine Textur der Liste an der Auswahl bzw. als Werkzeugvorgabe. Für die Auswahl wird die
+/// Bilddatei aus den Texturordnern mit `element.setTexture` geladen, damit die Textur eine Maske hat
+/// und gezeichnet wird; ohne Datei bleibt es beim Namen (`pi.fill`/`pi.stroke`).
+fn choose_texture(ui: &Ui, st: &mut AppState, tgt: Target, stroke: bool, name: &str) {
+    match (tgt, popups::texture_file(name)) {
+        (Target::Selection, Some(f)) => st.run("element.setTexture", json!({"target": if stroke { "stroke" } else { "fill" }, "image": f.to_string_lossy(), "name": name})),
+        _ if stroke => apply_stroke(ui, st, tgt, json!({"texture": name})),
+        _ => apply_fill(ui, st, tgt, json!({"texture": name})),
+    }
+}
+
+/// „Andere…“ in der Texturliste: Bilddatei wählen; der Dateiname ohne Endung ist der Texturname.
+fn pick_other_texture(ui: &Ui, st: &mut AppState, tgt: Target, stroke: bool) {
+    let (title, images) = (t("pi-texture-pick-title"), t("pi-filter-images"));
+    let ctx = ui.ctx().clone();
+    crate::dialogs::panel_menus::pick_open(st, &title, &[(images.as_str(), &popups::RESOURCE_IMAGE_EXTS)], move |st, p| {
+        let name = p.file_stem().map(|s| s.to_string_lossy().to_string()).unwrap_or_default();
+        if name.is_empty() {
+            return;
+        }
+        match tgt {
+            Target::Selection => st.run("element.setTexture", json!({"target": if stroke { "stroke" } else { "fill" }, "image": p.to_string_lossy(), "name": name})),
+            Target::Tool => edit_tool_attrs(&ctx, |a| {
+                if stroke {
+                    a.stroke_texture = name.clone();
+                } else {
+                    a.fill_texture = name.clone();
+                }
+            }),
+        }
+    });
 }
 
 // ---------------------------------------------------------------------- Teilfeld Strich (14010)
@@ -796,12 +876,10 @@ pub fn stroke_texture_panel(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target, 
     let en = enabled && has;
     let id = Id::new(("pi-stex", tgt == Target::Tool));
     fields::label(ui, d.r(1.0, 3.0, 30.0, 8.0), &t("pi-texture"), en);
-    let (items, sel) = texture_items(&tex);
-    let labels: Vec<&str> = items.iter().map(|(_, l)| l.as_str()).collect();
-    if let Some(i) = fields::combo(ui, id.with("name"), d.r(33.0, 0.0, 64.0, 14.0), &labels, Some(sel), en)
-        && i != sel
-    {
-        apply_stroke(ui, st, tgt, json!({"texture": items[i].0}));
+    match texture_combo(ui, id.with("name"), d.r(33.0, 0.0, 64.0, 14.0), &tex, en) {
+        Some(TextureChoice::Named(name)) => choose_texture(ui, st, tgt, true, &name),
+        Some(TextureChoice::Other) => pick_other_texture(ui, st, tgt, true),
+        None => {}
     }
     if let Some(v) = fields::number(ui, id.with("amt"), d.r(100.0, 0.0, 19.0, 13.0), Some(d.r(120.0, 0.0, 9.0, 13.0)), Some(amount as f64), (0.0, 100.0), 0, en) {
         apply_stroke(ui, st, tgt, json!({"textureAmount": v as i64}));

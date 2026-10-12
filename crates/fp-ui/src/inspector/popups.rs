@@ -451,27 +451,79 @@ pub fn stroke_category(ui: &mut Ui, id: Id, r: Rect, label: &str, has: bool, pre
     out
 }
 
-/// Liest die Texturnamen aus dem Ressourcenordner des Originals zur Laufzeit (nur die Namen;
-/// nichts wird eingebettet; Ordner aus `fp_color::install`). Ohne Ordner: leere Liste.
-pub fn texture_names() -> &'static [String] {
-    static N: std::sync::OnceLock<Vec<String>> = std::sync::OnceLock::new();
-    N.get_or_init(|| {
-        let mut v = Vec::new();
-        if let Some(base) = fp_color::install::original_subdir("Configuration\\Textures")
-            && let Ok(rd) = std::fs::read_dir(base)
-        {
-            {
-                for e in rd.flatten() {
-                    if let Some(stem) = e.path().file_stem().map(|s| s.to_string_lossy().to_string()) {
-                        v.push(stem);
-                    }
-                }
+/// Name des eigenen Benutzer-Texturordners in `%APPDATA%\Firepixel` (technisch englisch, §1c).
+pub const USER_TEXTURES_DIR: &str = "Textures";
+/// Name des eigenen Benutzer-Musterordners in `%APPDATA%\Firepixel`.
+pub const USER_PATTERNS_DIR: &str = "Patterns";
+
+/// Bildendungen, die als Textur bzw. Muster gelesen werden.
+pub const RESOURCE_IMAGE_EXTS: [&str; 5] = ["png", "jpg", "jpeg", "gif", "bmp"];
+
+/// Ordner einer Ressourcenart (`kind` = `Textures` bzw. `Patterns`) in Leserichtung: der
+/// Ressourcenordner des Originals (`Configuration\<kind>`), dessen Vorlage für den
+/// Benutzerordner (`First Run\<kind>`; das Original kopiert sie beim ersten Start in seinen
+/// Benutzerordner und listet beide zusammen, gemessen 52 + 74 → 77 Texturen bzw. 50 + 60 → 60
+/// Muster) und der eigene Benutzerordner `%APPDATA%\Firepixel\<kind>` (`user_base`).
+pub fn resource_dirs(original: Option<&std::path::Path>, user_base: Option<&std::path::Path>, kind: &str) -> Vec<std::path::PathBuf> {
+    let mut v = Vec::new();
+    if let Some(o) = original {
+        v.push(o.join("Configuration").join(kind));
+        v.push(o.join("First Run").join(kind));
+    }
+    if let Some(u) = user_base {
+        v.push(u.join(kind));
+    }
+    v
+}
+
+/// Bilddateien der Ordner (Name = Dateiname ohne Endung, Pfad), je Name nur die erste Fundstelle
+/// (ohne Rücksicht auf Groß-/Kleinschreibung), nach Namen geordnet. Fehlende Ordner zählen nicht.
+pub fn resource_files_in(dirs: &[std::path::PathBuf]) -> Vec<(String, std::path::PathBuf)> {
+    let mut v: Vec<(String, std::path::PathBuf)> = Vec::new();
+    for dir in dirs {
+        let Ok(rd) = std::fs::read_dir(dir) else { continue };
+        let mut files: Vec<std::path::PathBuf> = rd.flatten().map(|e| e.path()).filter(|p| p.is_file() && p.extension().is_some_and(|x| RESOURCE_IMAGE_EXTS.iter().any(|e| x.eq_ignore_ascii_case(e)))).collect();
+        files.sort();
+        for p in files {
+            let Some(stem) = p.file_stem().map(|s| s.to_string_lossy().to_string()) else { continue };
+            if !v.iter().any(|(n, _)| n.eq_ignore_ascii_case(&stem)) {
+                v.push((stem, p));
             }
         }
-        v.sort();
-        v.dedup();
-        v
-    })
+    }
+    v.sort_by(|a, b| a.0.to_lowercase().cmp(&b.0.to_lowercase()).then_with(|| a.0.cmp(&b.0)));
+    v
+}
+
+fn resource_files(kind: &str) -> Vec<(String, std::path::PathBuf)> {
+    let original = fp_color::install::original_dir();
+    let user = fp_i18n::user_config_dir();
+    resource_files_in(&resource_dirs(original.as_deref(), user.as_deref(), kind))
+}
+
+/// Texturen (Name, Datei) aus dem Ressourcenordner des Originals, dessen Benutzervorlage und dem
+/// eigenen Benutzerordner `%APPDATA%\Firepixel\Textures` (nur zur Laufzeit gelesen, nichts
+/// eingebettet; Ordner aus `fp_color::install`). Ohne Ordner: leere Liste.
+pub fn texture_files() -> &'static [(String, std::path::PathBuf)] {
+    static N: std::sync::OnceLock<Vec<(String, std::path::PathBuf)>> = std::sync::OnceLock::new();
+    N.get_or_init(|| resource_files(USER_TEXTURES_DIR))
+}
+
+/// Datei einer Textur nach ihrem Namen (ohne Rücksicht auf Groß-/Kleinschreibung).
+pub fn texture_file(name: &str) -> Option<&'static std::path::Path> {
+    texture_files().iter().find(|(n, _)| n.eq_ignore_ascii_case(name)).map(|(_, p)| p.as_path())
+}
+
+/// Texturnamen (Dateinamen ohne Endung) aus [`texture_files`].
+pub fn texture_names() -> &'static [String] {
+    static N: std::sync::OnceLock<Vec<String>> = std::sync::OnceLock::new();
+    N.get_or_init(|| texture_files().iter().map(|(n, _)| n.clone()).collect())
+}
+
+/// Musterdateien (Name, Datei) wie [`texture_files`], aus `Patterns`.
+pub fn pattern_files() -> &'static [(String, std::path::PathBuf)] {
+    static N: std::sync::OnceLock<Vec<(String, std::path::PathBuf)>> = std::sync::OnceLock::new();
+    N.get_or_init(|| resource_files(USER_PATTERNS_DIR))
 }
 
 /// Inhalt eines Popups als Antwort-Platzhalter (für Tests: Fläche reservieren).

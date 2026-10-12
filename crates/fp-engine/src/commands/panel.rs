@@ -1157,10 +1157,19 @@ pub fn register(r: &mut CommandRegistry) {
         ids(cmd("pi.text.antialias").label("Glättung").requires(DOC))
             .param("mode", ParamKind::Integer { min: Some(0), max: Some(4) }, "0 kein, 1 scharf, 2 stark, 3 glatt, 4 benutzerdefiniert")
             .run(|s, p| {
-                let m = p.i64("mode")? as i32;
+                // Zuordnung wie `text.setProperties {antialias}` (re\09 §3.5): „kein“ ist die harte
+                // Füllkante, kein `TAAi`-Wert; `TAAi` 0 ist glatt (BEFUNDE EB, FV-9)
+                let code = match p.i64("mode")? {
+                    0 => "none",
+                    1 => "crisp",
+                    2 => "strong",
+                    3 => "smooth",
+                    _ => "custom",
+                };
+                let v = super::text::antialias_code(code);
                 edit_each(s, p, |e, _| {
                     if let ElementKind::Text(t) = &mut e.kind {
-                        t.antialias = m;
+                        super::text::apply_antialias(t, v);
                         t.detach_story();
                     }
                 })

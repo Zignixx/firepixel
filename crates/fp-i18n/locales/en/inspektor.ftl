@@ -73,6 +73,8 @@ pi-edge-antialias = Anti-Alias
 pi-edge-feather-short = Feather
 pi-edge-feather = Feather
 pi-texture-transparent = Transparent
+pi-texture-other = Other...
+pi-texture-pick-title = Choose Texture
 # Texturnamen (Dateinamen der Texturen ohne Endung) in der Texturliste
 pi-texture-name-argyle-01 = Argyle 01
 pi-texture-name-argyle-02 = Argyle 02
@@ -348,7 +350,7 @@ pi-ai-matting-high = High (HR matting, slow)
 pi-ai-model-missing = Model missing – offered on first use
 pi-ai-models = AI Models…
 pi-ai-object-hint1 = Click: select object · Drag a box: object inside the box
-pi-ai-object-hint2 = Shift+click: add · Alt+click: subtract · Esc: new object
+pi-ai-object-hint2 = Shift+click: add · Alt+click: subtract · Esc: exit bitmap mode
 pi-ai-subject-hint = Click: main subject as soft pixel selection · Shift: add · Alt: subtract
 pi-ai-subject-run = Select Subject
 pi-ai-radius = Radius:
