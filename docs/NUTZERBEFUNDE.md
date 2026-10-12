@@ -22,7 +22,7 @@ Legende: ✅ behoben **und** im echten Fenster nachgeprüft · 🔧 laut Befund 
 | N14 | Schriftgrößen-Schieber im Inspektor springt in 100er-Schritten (Bild 19) | 19 | ❌ | Kennlinie des Popup-Schiebers wie im Original (siehe FV-1 T4) |
 | N15 | Text anfangen, dann unten im Inspektor die Größe ändern → oben muss es live mitändern | 18 | 🔧 | LW `19536aa` „Textattribute live im Editor“ – nachprüfen |
 | N16 | Agenten öffnen „Speichern unter“ und bleiben hängen | – | 🔧 | AU: nicht blockierende Datei-Dialoge (`file_dialog.rs`) |
-| N17 | Nirgends „Adobe“/„Fireworks“ in UI und Quelltext | – | 🔧 | `cargo test -p fp-neutral` |
+| N17 | Nirgends der Name des Originals oder seines Herstellers in UI und Quelltext | – | 🔧 | `cargo test -p fp-neutral` |
 | N18 | Viele „Pick an app“-Fenster beim Testen | – | 🔧 | AGENTEN_REGELN §4a, `FP_NO_SHELL_OPEN` |
 
 Wer einen Punkt bearbeitet: Spalte „Stand“ und „Nachweis“ aktualisieren (Commit, Test, Bild aus dem echten Fenster).
