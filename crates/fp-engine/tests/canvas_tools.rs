@@ -130,9 +130,10 @@ fn pointer_select_move_copy_and_corner_handle_scales() {
     tool(&mut s, ToolId::Pointer);
     let fb = s.tool_feedback();
     assert!(fb.iter().any(|o| matches!(o, Overlay::PathPoints { contours, .. } if contours[0].nodes.len() == 4)), "Eckpunkte der Grundform");
-    // Überfahren des Eckgriffs: einfacher Pfeil (K2), Kantengriff ebenso (K3)
+    // Überfahren des Eckgriffs: Pfeil ohne Zusatz, weiß mit schwarzem Rand (K2, PM-1 im echten
+    // Fenster); Kantengriff: schwarzer Pfeil (K3)
     let r = s.tool_event(&ToolEvent::drag(250.0, 170.0)).expect("hover");
-    assert_eq!(r.cursor, fp_engine::tools::Cursor::Arrow, "Eckgriff");
+    assert_eq!(r.cursor, fp_engine::tools::Cursor::Subselect, "Eckgriff");
     let r = s.tool_event(&ToolEvent::drag(250.0, 135.0)).expect("hover");
     assert_eq!(r.cursor, fp_engine::tools::Cursor::Arrow, "Kantengriff");
     let before = doc(&s);
@@ -314,7 +315,7 @@ fn shapes_line_and_modifiers() {
     let mut s = doc_session(300.0, 200.0);
     for (t, a, b, want) in [
         (ToolId::Rectangle, (10.0, 10.0), (60.0, 40.0), Rect::new(10.0, 10.0, 60.0, 40.0)),
-        (ToolId::Ellipse, (100.0, 10.0), (140.0, 30.0), Rect::new(100.0, 10.0, 140.0, 30.0)),
+        (ToolId::Ellipse, (100.0, 10.0), (140.0, 32.0), Rect::new(100.0, 10.0, 140.0, 32.0)),
     ] {
         tool(&mut s, t);
         let before = doc(&s);
@@ -528,7 +529,8 @@ fn send_in(s: &mut Session, i: ToolInput) {
 
 /// Nutzerbefund: 200-pt-Text „Ha“ – Grenzen kommen aus dem Satz (Auswahlrahmen, Treffertest,
 /// Ausrichten, Info), sofort nach jeder Größen-/Text-Änderung; Inspektor-Größe während der
-/// Bearbeitung wirkt live im Editor (ohne Markierung auf den ganzen Text), der Editor bleibt offen.
+/// Bearbeitung wirkt live im Editor (mit Markierung Strg+A auf den ganzen Text, N15), der Editor
+/// bleibt offen.
 #[test]
 fn text_bounds_follow_layout_and_live_size_in_editor() {
     let mut s = doc_session(1200.0, 800.0);
@@ -538,13 +540,15 @@ fn text_bounds_follow_layout_and_live_size_in_editor() {
     send_in(&mut s, ToolInput::Text("Ha".into()));
     let small = s.text_edit_frame().expect("Rahmen im Editor");
     // Inspektor ändert die Größe (so wie das Feld es schickt: text.setAttributes ohne ids)
+    send_in(&mut s, ToolInput::Edit(EditOp::SelectAll));
     ex(&mut s, "text.setAttributes", json!({"size": 200}));
     assert!(s.tool_is_editing_text(), "Editor bleibt offen");
     assert_eq!(doc(&s), before, "während der Bearbeitung kein Dokumentschritt");
     assert_eq!(s.text_edit_attrs().and_then(|a| a.size), Some(200.0), "Inspektor zeigt die Editor-Größe");
     let big = s.text_edit_frame().expect("Rahmen im Editor");
     assert!(big.height() > small.height() * 8.0 && big.width() > small.width() * 8.0, "Rahmen wächst mit: {small:?} → {big:?}");
-    // weitertippen behält die neue Größe
+    // weitertippen (Einfügemarke ans Ende) behält die neue Größe
+    s.tool_event(&ToolEvent::key(ToolKey::End)).expect("Ende");
     send_in(&mut s, ToolInput::Text("!".into()));
     s.tool_event(&ToolEvent::key(ToolKey::Escape)).expect("übernehmen");
     let t = last(&s);
@@ -580,6 +584,45 @@ fn text_bounds_follow_layout_and_live_size_in_editor() {
     let b12 = bounds(&s, t);
     ex(&mut s, "edit.move", json!({"dx": 10, "dy": 5}));
     assert_eq!(bounds(&s, t), b12.translate(10.0, 5.0));
+}
+
+/// PARITAET_A T6 (PM-1, Original gemessen): Text „Abc“ tippen, Größe 48 im Inspektor ohne
+/// Markierung, „D“ tippen, Esc → Läufe [Abc 24 pt][D 48 pt]: die neue Größe gilt nur für danach
+/// getippte Zeichen; der Inspektor zeigt sie schon an der Einfügemarke. Wandert die Einfügemarke
+/// vorher weg, gilt sie nicht mehr.
+#[test]
+fn text_size_at_caret_applies_to_next_characters_only() {
+    let mut s = doc_session(800.0, 400.0);
+    s.tools.options.text_size = 24.0;
+    tool(&mut s, ToolId::Text);
+    click(&mut s, 50.0, 100.0);
+    send_in(&mut s, ToolInput::Text("A".into()));
+    send_in(&mut s, ToolInput::Text("b".into()));
+    send_in(&mut s, ToolInput::Text("c".into()));
+    let frame = s.text_edit_frame().expect("Rahmen");
+    ex(&mut s, "text.setAttributes", json!({"size": 48}));
+    assert_eq!(s.text_edit_attrs().and_then(|a| a.size), Some(48.0), "Inspektor zeigt 48 an der Einfügemarke");
+    assert_eq!(s.text_edit_frame(), Some(frame), "vorhandener Text bleibt 24 pt");
+    // jede Taste ein Ereignis, wie das Feld beim Tippen von „48“: wiederholt = einmal
+    ex(&mut s, "text.setAttributes", json!({"size": 4}));
+    ex(&mut s, "text.setAttributes", json!({"size": 48}));
+    send_in(&mut s, ToolInput::Text("D".into()));
+    s.tool_event(&ToolEvent::key(ToolKey::Escape)).expect("Esc");
+    let tx = text_of(&s, last(&s));
+    let runs: Vec<(String, Option<f32>)> = tx.resolved_runs().into_iter().map(|(a, t)| (t.to_string(), a.size)).collect();
+    assert_eq!(runs, vec![("Abc".to_string(), Some(24.0)), ("D".to_string(), Some(48.0))]);
+    assert_eq!(s.tools.active, ToolId::Text);
+    // Einfügemarke verschoben: die ausstehende Größe verfällt
+    tool(&mut s, ToolId::Text);
+    click(&mut s, 50.0, 300.0);
+    send_in(&mut s, ToolInput::Text("xy".into()));
+    ex(&mut s, "text.setAttributes", json!({"size": 60}));
+    s.tool_event(&ToolEvent::key(ToolKey::Left)).expect("links");
+    send_in(&mut s, ToolInput::Text("z".into()));
+    s.tool_event(&ToolEvent::key(ToolKey::Escape)).expect("Esc");
+    let tx = text_of(&s, last(&s));
+    assert_eq!(tx.plain_text(), "xzy");
+    assert!(tx.resolved_runs().iter().all(|(a, _)| a.size == Some(24.0)), "{:?}", tx.runs);
 }
 
 /// Markierung im Editor: Größe/Farbe nur für die Markierung, Ausrichtung für den Absatz, Strg+Z
@@ -767,6 +810,86 @@ fn freehand_tools() {
 
 // ------------------------------------------------------------------ Transformieren
 
+/// PARITAET_A L30 (PM-1, `uxp_pm_3.ps1`): Frei transformieren (Strg+T) an R1 50,50–150,120, Eckgriff
+/// von 151,121 nach 191,151. Original: Ecke immer proportional mit dem größeren Faktor
+/// (50,50–193,150), Umschalt ändert nichts; Alt = proportional von der Mitte (7,20–193,150); Kante
+/// rechts folgt dem Zeiger (191); die Änderung ist schon nach dem Loslassen sichtbar; Esc behält sie
+/// und wechselt zum Zeiger; Eingabe/Doppelklick übernehmen, ein Verlaufsschritt.
+#[test]
+fn free_transform_like_original() {
+    fn setup() -> (Session, ElementId) {
+        let mut s = doc_session(600.0, 400.0);
+        let r1 = rect(&mut s, 50.0, 50.0, 150.0, 120.0);
+        rect(&mut s, 450.0, 150.0, 520.0, 200.0); // R2 (Oberkante 150)
+        ellipse(&mut s, 200.0, 50.0, 300.0, 120.0); // E1
+        select(&mut s, &[r1]);
+        ex(&mut s, "modify.transform.freeTransform", json!({}));
+        assert_eq!(s.tools.active, ToolId::Scale);
+        (s, r1)
+    }
+    fn pull(s: &mut Session, from: (f32, f32), to: (f32, f32), mods: &str) {
+        let m = |e: ToolEvent| {
+            let e = if mods.contains('s') { e.shift() } else { e };
+            if mods.contains('a') { e.alt() } else { e }
+        };
+        let mut seq = vec![m(ToolEvent::drag(from.0, from.1)), m(ToolEvent::down(from.0, from.1))];
+        for i in 1..=20 {
+            let f = i as f32 / 20.0;
+            seq.push(m(ToolEvent::drag((from.0 + (to.0 - from.0) * f).round(), (from.1 + (to.1 - from.1) * f).round())));
+        }
+        seq.push(m(ToolEvent::up(to.0, to.1)));
+        events(s, &seq);
+    }
+    let px = |r: Rect| (r.left.round(), r.top.round(), r.right.round(), r.bottom.round());
+    for (mods, want) in [("", (50.0, 50.0, 193.0, 150.0)), ("s", (50.0, 50.0, 193.0, 150.0)), ("a", (7.0, 20.0, 193.0, 150.0)), ("as", (7.0, 20.0, 193.0, 150.0))] {
+        let (mut s, r1) = setup();
+        let n = s.active().unwrap().history.undo_count();
+        pull(&mut s, (151.0, 121.0), (191.0, 151.0), mods);
+        // nach dem Loslassen: Vorschau mit der neuen Größe sichtbar
+        let fb = s.tool_feedback();
+        let ghost = fb.iter().find_map(|o| match o {
+            Overlay::Ghost { quad, .. } => Rect::from_points(*quad),
+            _ => None,
+        });
+        assert_eq!(ghost.map(px), Some(want), "Vorschau nach dem Loslassen, Tasten {mods:?}");
+        s.tool_event(&ToolEvent::key(ToolKey::Enter)).expect("Eingabe");
+        assert_eq!(px(bounds(&s, r1)), want, "Tasten {mods:?}");
+        assert_eq!(s.tools.active, ToolId::Pointer);
+        assert_eq!(s.active().unwrap().history.undo_count(), n + 1, "ein Schritt");
+        s.undo().expect("undo");
+        assert_eq!(px(bounds(&s, r1)), (50.0, 50.0, 150.0, 120.0));
+    }
+    // Kantengriff rechts: die Kante folgt dem Zeiger
+    let (mut s, r1) = setup();
+    pull(&mut s, (151.0, 85.0), (191.0, 85.0), "");
+    s.tool_event(&ToolEvent::key(ToolKey::Enter)).expect("Eingabe");
+    assert_eq!(px(bounds(&s, r1)), (50.0, 50.0, 191.0, 120.0));
+    // Esc behält die Änderung, beendet den Modus (Zeiger), ein Schritt; Strg+Z nimmt alles zurück
+    let (mut s, r1) = setup();
+    let n = s.active().unwrap().history.undo_count();
+    pull(&mut s, (151.0, 121.0), (191.0, 151.0), "");
+    s.tool_event(&ToolEvent::key(ToolKey::Escape)).expect("Esc");
+    assert_eq!(px(bounds(&s, r1)), (50.0, 50.0, 193.0, 150.0), "Esc behält");
+    assert_eq!(s.tools.active, ToolId::Pointer, "Werkzeug danach Zeiger");
+    assert_eq!(s.active().unwrap().history.undo_count(), n + 1);
+    // der nächste Klick wählt (Zeiger) statt zu skalieren
+    click(&mut s, 400.0, 300.0);
+    assert!(sel(&s).is_empty(), "Klick ins Leere hebt die Auswahl auf");
+    s.undo().expect("undo");
+    assert_eq!(px(bounds(&s, r1)), (50.0, 50.0, 150.0, 120.0));
+    // Doppelklick innen übernimmt
+    let (mut s, r1) = setup();
+    pull(&mut s, (151.0, 121.0), (191.0, 151.0), "");
+    events(&mut s, &[ToolEvent::down(100.0, 85.0), ToolEvent::up(100.0, 85.0), ToolEvent::double(100.0, 85.0)]);
+    assert_eq!(px(bounds(&s, r1)), (50.0, 50.0, 193.0, 150.0));
+    assert_eq!(s.tools.active, ToolId::Pointer);
+    // Esc ohne Änderung: Modus beenden, Dokument unverändert
+    let (mut s, _) = setup();
+    let before = doc(&s);
+    s.tool_event(&ToolEvent::key(ToolKey::Escape)).expect("Esc");
+    assert_eq!((doc(&s), s.tools.active), (before, ToolId::Pointer));
+}
+
 #[test]
 fn scale_skew_distort_and_rotate() {
     let mut s = doc_session(300.0, 200.0);
@@ -792,15 +915,15 @@ fn scale_skew_distort_and_rotate() {
     assert!(approx(b.width(), b.height()) && approx(b.right, c.x + 10.0), "proportional, zweiter Zug auf der Vorschau {b:?} {c:?}");
     assert_eq!(s.active().map(|d| d.history.undo_count()).unwrap_or(0), hist + 1, "ein Schritt");
     undo_redo(&mut s, &before);
-    // Esc verwirft die Vorschau: Ausgangslage
+    // Esc mitten im Zug bricht nur den Zug ab: Ausgangslage
     tool(&mut s, ToolId::Scale);
     let before = doc(&s);
     let b0 = bounds(&s, a);
-    drag(&mut s, (b0.right, b0.bottom), (b0.right + 40.0, b0.bottom + 40.0));
-    events(&mut s, &[ToolEvent::key(ToolKey::Escape)]);
+    events(&mut s, &[ToolEvent::down(b0.right, b0.bottom), ToolEvent::drag(b0.right + 20.0, b0.bottom + 20.0), ToolEvent::key(ToolKey::Escape)]);
     s.finish_tool().expect("Werkzeugwechsel");
-    assert_eq!(doc(&s), before, "Esc bricht das Skalieren ab");
+    assert_eq!(doc(&s), before, "Esc im Zug bricht das Skalieren ab");
     // Alt = um die Mitte (Werkzeugwechsel übernimmt)
+    tool(&mut s, ToolId::Scale);
     events(&mut s, &[ToolEvent::down(b0.right, b0.bottom), ToolEvent::drag(b0.right + 5.0, b0.bottom + 5.0).alt(), ToolEvent::drag(b0.right + 10.0, b0.bottom + 10.0).alt(), ToolEvent::up(b0.right + 10.0, b0.bottom + 10.0).alt()]);
     tool(&mut s, ToolId::Skew);
     assert!(approx(bounds(&s, a).center().x, b0.center().x));
@@ -1009,7 +1132,8 @@ fn hand_and_zoom() {
 }
 
 /// UX-A L27: Doppelklick mit dem Zeiger auf eine Bitmap (Folge der Leinwand) öffnet den
-/// Bitmapmodus, das Werkzeug wechselt zum Auswahlrahmen; Esc beendet ihn wieder (L13).
+/// Bitmapmodus, das Werkzeug wechselt zum Auswahlrahmen; Esc ohne Auswahlrahmen ändert nichts,
+/// mit Rahmen beendet es den Bitmapmodus (L13).
 #[test]
 fn pointer_double_click_bitmap_enters_bitmap_mode() {
     let mut s = doc_session(400.0, 300.0);
@@ -1030,10 +1154,19 @@ fn pointer_double_click_bitmap_enters_bitmap_mode() {
     assert!(d.bitmap_mode, "Bitmapmodus");
     assert_eq!(d.selection.elements, vec![b]);
     assert_eq!(s.tools.active, ToolId::Marquee, "Werkzeug Auswahlrahmen");
-    // im Bitmapmodus mit dem Auswahlrahmen weiterarbeiten, Esc ohne Rahmen beendet ihn
+    // Esc ohne Auswahlrahmen: im Original bleibt alles (Werkzeug Auswahlrahmen, Bitmap gewählt; PM-1)
+    let n = s.active().unwrap().history.len();
     s.tool_event(&ToolEvent::key(ToolKey::Escape)).expect("Esc");
-    assert!(!s.active().unwrap().bitmap_mode);
-    assert_eq!(s.tools.active, ToolId::Pointer);
+    let d = s.active().unwrap();
+    assert_eq!((s.tools.active, d.selection.elements.clone(), d.history.len()), (ToolId::Marquee, vec![b], n));
+    assert!(d.bitmap_mode, "Bitmapmodus bleibt");
+    // mit Auswahlrahmen beendet Esc den Bitmapmodus wie nach dem Zauberstab (L13)
+    drag(&mut s, (110.0, 110.0), (140.0, 140.0));
+    assert!(s.active().unwrap().selection.has_pixels());
+    s.tool_event(&ToolEvent::key(ToolKey::Escape)).expect("Esc");
+    let d = s.active().unwrap();
+    assert!(!d.bitmap_mode && !d.selection.has_pixels());
+    assert_eq!((s.tools.active, d.selection.elements.clone()), (ToolId::Pointer, vec![b]));
 }
 
 /// PARITAET_A K6–K9: Mauszeiger beim Überfahren wie im Original.
@@ -1099,41 +1232,65 @@ fn pen_double_click_keeps_open_path_like_original() {
     assert_eq!(path_of(&s, last(&s)).contours[0].nodes.len(), 2);
 }
 
-/// UX-A L15/L16: Rechteck von 240,145 um +60/+30 neben E1 (Mitte x = 250) und R2 (Oberkante
-/// y = 150). Der Startpunkt rastet nur innerhalb von 5 Bildschirmpixeln ein (Original), Umschalt =
-/// Quadrat ab dem Startpunkt, Alt = von der Mitte aus. Viele kleine Bewegungen wie mit der Maus.
+/// UX-A L15/L16, PM-1 (14 Messfälle im Original, `uxp_pm_l16.ps1`): Start- und Endpunkt rasten
+/// getrennt in x und y an Kanten und Mitten anderer Objekte ein, bei Abstand ≤ 5 Bildschirmpixel
+/// (5 rastet, 6 nicht); mit Alt rastet der Mittelpunkt wie sonst der Start; mit Umschalt rastet
+/// nichts (auch nicht mit Alt+Umschalt). Testdokument wie R1/R2/E1/T1 der Messung, viele kleine
+/// Bewegungen wie mit der Maus.
 #[test]
 fn rectangle_start_snap_shift_alt_like_original() {
-    fn draw(s: &mut Session, from: (f32, f32), d: (f32, f32), shift: bool, alt: bool) -> Rect {
+    fn draw(s: &mut Session, from: (f32, f32), to: (f32, f32), mods: &str) -> Rect {
+        let (shift, alt) = (mods.contains('s'), mods.contains('a'));
         let m = |e: ToolEvent| {
             let e = if shift { e.shift() } else { e };
             if alt { e.alt() } else { e }
         };
         let mut seq = vec![m(ToolEvent::drag(from.0, from.1)), m(ToolEvent::down(from.0, from.1))];
-        for i in 1..=12 {
-            let f = i as f32 / 12.0;
-            seq.push(m(ToolEvent::drag(from.0 + d.0 * f, from.1 + d.1 * f)));
+        for i in 1..=20 {
+            let f = i as f32 / 20.0;
+            seq.push(m(ToolEvent::drag((from.0 + (to.0 - from.0) * f).round(), (from.1 + (to.1 - from.1) * f).round())));
         }
-        seq.push(m(ToolEvent::up(from.0 + d.0, from.1 + d.1)));
+        seq.push(m(ToolEvent::up(to.0, to.1)));
         events(s, &seq);
         let r = bounds(s, last(s));
         s.undo().expect("undo");
         r
     }
     let mut s = doc_session(600.0, 400.0);
-    ellipse(&mut s, 200.0, 20.0, 300.0, 80.0);
-    rect(&mut s, 330.0, 150.0, 400.0, 220.0);
+    rect(&mut s, 50.0, 50.0, 150.0, 120.0); // R1
+    rect(&mut s, 450.0, 150.0, 520.0, 200.0); // R2: Oberkante 150, Mitte 175
+    ellipse(&mut s, 200.0, 50.0, 300.0, 120.0); // E1: Mitte x 250, rechts 300
+    rect(&mut s, 50.0, 170.0, 110.0, 230.0); // T1: Oberkante 170
     select(&mut s, &[]);
     tool(&mut s, ToolId::Rectangle);
-    // 10 bzw. 5 px entfernt: kein Einrasten (strikt kleiner als der Fangabstand)
-    assert_eq!(draw(&mut s, (240.0, 145.0), (60.0, 30.0), false, false), Rect::new(240.0, 145.0, 300.0, 175.0));
-    assert_eq!(draw(&mut s, (240.0, 145.0), (60.0, 30.0), true, false), Rect::new(240.0, 145.0, 300.0, 205.0), "Umschalt: Quadrat");
-    assert_eq!(draw(&mut s, (240.0, 145.0), (60.0, 30.0), false, true), Rect::new(180.0, 115.0, 300.0, 175.0), "Alt: von der Mitte");
-    // innerhalb von 5 Bildschirmpixeln rastet der Start ein
-    assert_eq!(draw(&mut s, (247.0, 148.0), (53.0, 27.0), false, false), Rect::new(250.0, 150.0, 300.0, 175.0));
-    // bei 200 % sind 4 Dokumentpixel 8 Bildschirmpixel: kein Einrasten
+    let r = |l, t, rr, b| Rect::new(l, t, rr, b);
+    let cases: [(&str, (f32, f32), (f32, f32), &str, Rect); 17] = [
+        // Messwerte des Originals (Befund PM-1)
+        ("A1 ohne", (240.0, 145.0), (300.0, 175.0), "", r(240.0, 150.0, 300.0, 175.0)),
+        ("A2 Umschalt", (240.0, 145.0), (300.0, 175.0), "s", r(240.0, 145.0, 300.0, 205.0)),
+        ("A3 Alt", (240.0, 145.0), (300.0, 175.0), "a", r(180.0, 125.0, 300.0, 175.0)),
+        ("A4 Alt+Umschalt", (240.0, 145.0), (300.0, 175.0), "as", r(180.0, 85.0, 300.0, 205.0)),
+        ("B1 Alt d=4", (240.0, 146.0), (300.0, 176.0), "a", r(180.0, 125.0, 300.0, 175.0)),
+        ("B2 Alt d=6", (240.0, 144.0), (300.0, 174.0), "a", r(180.0, 113.0, 300.0, 175.0)),
+        ("B3 Alt d=7 (Gleichstand 175/170 nicht)", (240.0, 143.0), (300.0, 173.0), "a", r(180.0, 111.0, 300.0, 175.0)),
+        ("B4 Alt d=3 unten", (240.0, 153.0), (300.0, 183.0), "a", r(180.0, 117.0, 300.0, 183.0)),
+        ("C1 ohne d=3", (240.0, 147.0), (300.0, 190.0), "", r(240.0, 150.0, 300.0, 190.0)),
+        ("C2 Umschalt d=3", (240.0, 147.0), (300.0, 177.0), "s", r(240.0, 147.0, 300.0, 207.0)),
+        ("C3 ohne d=6", (240.0, 144.0), (300.0, 190.0), "", r(240.0, 144.0, 300.0, 190.0)),
+        ("D1 ohne x d=4", (246.0, 135.0), (300.0, 185.0), "", r(250.0, 135.0, 300.0, 185.0)),
+        ("D2 Alt x d=4", (246.0, 135.0), (300.0, 185.0), "a", r(200.0, 85.0, 300.0, 185.0)),
+        ("E1 Ende nahe E1-Rand 300", (240.0, 135.0), (298.0, 185.0), "", r(240.0, 135.0, 300.0, 185.0)),
+        ("Umschalt, Ende 298,160", (240.0, 135.0), (298.0, 160.0), "s", r(240.0, 135.0, 298.0, 193.0)),
+        ("Alt+Umschalt, Start 240,147", (240.0, 147.0), (300.0, 175.0), "as", r(180.0, 87.0, 300.0, 207.0)),
+        ("Abstand 5 am Ende rastet", (240.0, 135.0), (295.0, 185.0), "", r(240.0, 135.0, 300.0, 185.0)),
+    ];
+    for (name, a, b, mods, want) in cases {
+        assert_eq!(draw(&mut s, a, b, mods), want, "{name}");
+    }
+    // bei 200 % sind 4 Dokumentpixel 8 Bildschirmpixel: kein Einrasten, 2 Dokumentpixel = 4: Einrasten
     ex(&mut s, "view.setZoom", json!({"zoom": 2.0}));
-    assert_eq!(draw(&mut s, (246.0, 146.0), (54.0, 29.0), false, false), Rect::new(246.0, 146.0, 300.0, 175.0));
+    assert_eq!(draw(&mut s, (246.0, 136.0), (290.0, 160.0), ""), Rect::new(246.0, 136.0, 290.0, 160.0));
+    assert_eq!(draw(&mut s, (248.0, 136.0), (290.0, 160.0), ""), Rect::new(250.0, 136.0, 290.0, 160.0));
 }
 
 // ------------------------------------------------------------------ Fang und Vollständigkeit
@@ -1237,12 +1394,14 @@ fn repeated_drags_no_duplicates_and_undo_chain() {
     assert_eq!(top_elements(&s).len(), 1);
     // Skalieren und 9-Slice mehrmals
     tool(&mut s, ToolId::Scale);
-    drag(&mut s, (150.0, 120.0), (170.0, 140.0));
+    // Ecke skaliert proportional (L30): 100 × 70 → 130 × 91 → 110 × 77
+    drag(&mut s, (150.0, 120.0), (180.0, 141.0));
     s.finish_tool().expect("übernehmen");
-    drag(&mut s, (170.0, 140.0), (160.0, 130.0));
+    drag(&mut s, (180.0, 141.0), (160.0, 127.0));
     s.finish_tool().expect("übernehmen");
+    assert!(rect_approx(bounds(&s, a), Rect::new(50.0, 50.0, 160.0, 127.0)), "{:?}", bounds(&s, a));
     tool(&mut s, ToolId::NineSliceScale);
-    drag(&mut s, (160.0, 130.0), (200.0, 150.0));
+    drag(&mut s, (160.0, 127.0), (200.0, 150.0));
     s.finish_tool().expect("übernehmen");
     drag(&mut s, (200.0, 150.0), (220.0, 160.0));
     s.finish_tool().expect("übernehmen");
@@ -1310,9 +1469,10 @@ fn locked_hidden_groups_and_multi_selection() {
     select(&mut s, &[c, f]);
     tool(&mut s, ToolId::Pointer);
     let n = top_elements(&s).len();
-    drag(&mut s, (310.0, 210.0), (320.0, 230.0));
+    // um 10/18 (bei 20 rastete die Oberkante mit Abstand 5 an der Mitte von a ein, wie im Original)
+    drag(&mut s, (310.0, 210.0), (320.0, 228.0));
     assert_eq!(top_elements(&s).len(), n);
-    assert!(rect_approx(bounds(&s, f), Rect::new(310.0, 220.0, 330.0, 240.0)));
+    assert!(rect_approx(bounds(&s, f), Rect::new(310.0, 218.0, 330.0, 238.0)), "{:?} {:?}", bounds(&s, f), bounds(&s, c));
     assert!(approx(bounds(&s, c).left, 210.0));
     // Auswahl wechselt mitten im Ziehen (z. B. über ein Bedienfeld): kein Fehler, nichts verschoben
     events(&mut s, &[ToolEvent::down(320.0, 230.0), ToolEvent::drag(330.0, 240.0)]);
@@ -1406,22 +1566,24 @@ fn shared_layer_elements_are_editable() {
     click(&mut s, 100.0, 80.0);
     assert_eq!(sel(&s), vec![a], "Element der geteilten Ebene getroffen");
     let before = doc(&s);
+    // die Mitte (95) rastet mit Abstand 5 an der Seitenmitte 100 ein (Fangabstand ≤ 5 wie im Original)
     drag(&mut s, (100.0, 80.0), (120.0, 90.0));
-    assert!(rect_approx(bounds(&s, a), Rect::new(70.0, 60.0, 170.0, 130.0)), "{:?}", bounds(&s, a));
+    assert!(rect_approx(bounds(&s, a), Rect::new(70.0, 65.0, 170.0, 135.0)), "{:?}", bounds(&s, a));
     undo_redo(&mut s, &before);
     // Eckgriff skaliert (auch auf der geteilten Ebene), die Rundung bleibt
     let before = doc(&s);
-    events(&mut s, &[ToolEvent::down(70.0, 60.0), ToolEvent::drag(75.0, 61.0), ToolEvent::drag(80.0, 62.0), ToolEvent::up(80.0, 62.0)]);
-    assert!(rect_approx(bounds(&s, a), Rect::new(80.0, 62.0, 170.0, 130.0)), "{:?}", bounds(&s, a));
+    events(&mut s, &[ToolEvent::down(70.0, 65.0), ToolEvent::drag(75.0, 66.0), ToolEvent::drag(80.0, 67.0), ToolEvent::up(80.0, 67.0)]);
+    assert!(rect_approx(bounds(&s, a), Rect::new(80.0, 67.0, 170.0, 135.0)), "{:?}", bounds(&s, a));
     assert!(path_of(&s, a).primitive.as_ref().is_some_and(|p| p.roundness == 0.0));
     undo_redo(&mut s, &before);
     s.undo().expect("undo");
     // Skalieren und Teilauswahl-Punkt
     tool(&mut s, ToolId::Scale);
     let before = doc(&s);
-    drag(&mut s, (170.0, 130.0), (190.0, 150.0));
+    // Ecke skaliert proportional (L30): 100 × 70 → 130 × 91
+    drag(&mut s, (170.0, 135.0), (200.0, 156.0));
     s.finish_tool().expect("übernehmen");
-    assert!(rect_approx(bounds(&s, a), Rect::new(70.0, 60.0, 190.0, 150.0)), "{:?}", bounds(&s, a));
+    assert!(rect_approx(bounds(&s, a), Rect::new(70.0, 65.0, 200.0, 156.0)), "{:?}", bounds(&s, a));
     undo_redo(&mut s, &before);
     // auf der zweiten Seite ist dasselbe Element zu sehen und greifbar
     ex(&mut s, "page.setCurrent", json!({"index": 1}));

@@ -385,11 +385,15 @@ impl PointerTool {
             self.hover_cursor = Cursor::PointerPoint;
             return ToolResponse { cursor: self.hover_cursor, ..ToolResponse::default() };
         }
-        // Über den Griffen der Auswahl zeigt das Original den einfachen Pfeil (PARITAET_A K2/K3)
+        // Über den Griffen der Auswahl zeigt das Original einen Pfeil ohne Zusatz: über den Ecken
+        // weiß mit schwarzem Rand (K2, wie die Teilauswahl), über den Kanten schwarz (K3)
         if self.paint_handles(ctx)
             && let Some(b) = Self::selection_bounds(ctx)
-            && handle_at(&b, p, tol).is_some()
+            && let Some(h) = handle_at(&b, p, tol)
         {
+            if h % 2 == 0 && self.hover_cursor == Cursor::Arrow {
+                self.hover_cursor = Cursor::Subselect;
+            }
             return ToolResponse { cursor: self.hover_cursor, ..ToolResponse::default() };
         }
         if self.id != ToolId::SelectBehind && point_hit(ctx, p, self.id == ToolId::Subselection, self.id == ToolId::Subselection).is_some() {
@@ -969,6 +973,16 @@ impl TransformTool {
         self.id == ToolId::NineSliceScale
     }
 
+    /// Zeigerlage für einen Zug: beim Skalieren folgt der Griff dem eingerasteten Zeiger (wie die
+    /// Griffe des Zeigers), sonst die rohe Lage.
+    fn handle_pos(&self, ctx: &ToolContext, k: TDrag, p: Point) -> Point {
+        if self.id == ToolId::Scale && matches!(k, TDrag::Corner(_) | TDrag::Edge(_)) {
+            Snapper::new(ctx, &ctx.selection.elements).point(p).point
+        } else {
+            p
+        }
+    }
+
     fn insets_of(&self, b: &Rect) -> [f32; 4] {
         match self.insets {
             Some((i, r)) if (r.left - b.left).abs() + (r.top - b.top).abs() + (r.right - b.right).abs() + (r.bottom - b.bottom).abs() < 2.0 => i,
@@ -1086,6 +1100,12 @@ impl TransformTool {
                     docops::about(c, &Matrix3::shear(k, 0.0))
                 }
             }
+            TDrag::Corner(h) | TDrag::Edge(h) if self.id == ToolId::Scale => {
+                // Frei transformieren/Skalieren wie im Original (PARITAET_A L30, gemessen): der Griff
+                // folgt dem (eingerasteten) Zeiger, Ecken skalieren immer proportional mit dem
+                // größeren Faktor, Umschalt ändert nichts, Alt skaliert von der Mitte aus
+                docops::rect_to_rect(b, scale_by_handle(b, h, cur, true, ev.mods.alt))
+            }
             TDrag::Corner(h) | TDrag::Edge(h) => {
                 let hp = handles(&b)[h];
                 let target = Point::new(hp.x + cur.x - start.x, hp.y + cur.y - start.y);
@@ -1193,7 +1213,7 @@ impl ToolMachine for TransformTool {
             }
             ToolInput::Pointer { kind: PointerKind::Move, pos } => {
                 if let Some((k, s, _)) = self.drag {
-                    let cur = if k == TDrag::Move && ev.mods.shift { constrain_angle(s, *pos, 45.0) } else { *pos };
+                    let cur = if k == TDrag::Move && ev.mods.shift { constrain_angle(s, *pos, 45.0) } else { self.handle_pos(ctx, k, *pos) };
                     self.drag = Some((k, s, cur));
                     if let TDrag::Guide(i) = k {
                         // 9-Slice-Hilfslinie verschieben (innerhalb des Rahmens, Linien kreuzen sich nicht)
@@ -1247,7 +1267,7 @@ impl ToolMachine for TransformTool {
             }
             ToolInput::Pointer { kind: PointerKind::Up, pos } => {
                 let Some((k, s, cur)) = self.drag.take() else { return ToolResponse::default() };
-                let cur = if dist(cur, *pos) > 0.0 && !(k == TDrag::Move && ev.mods.shift) { *pos } else { cur };
+                let cur = if dist(cur, *pos) > 0.0 && !(k == TDrag::Move && ev.mods.shift) { self.handle_pos(ctx, k, *pos) } else { cur };
                 if k == TDrag::Pivot || matches!(k, TDrag::Guide(_)) || (self.nine() && k == TDrag::Rotate) || dist(s, cur) < ctx.drag_threshold() {
                     self.overlay = if self.pending.is_some() { self.pending_overlay(ctx, q_cur) } else { self.idle_overlay(&b) };
                     return ToolResponse::with_overlay(self.overlay.clone(), self.cursor);
@@ -1276,9 +1296,18 @@ impl ToolMachine for TransformTool {
                 self.overlay.clear();
                 ToolResponse { commands: cmds, switch_tool: Some(ToolId::Pointer), ..ToolResponse::default() }
             }
+            ToolInput::Key(ToolKey::Escape) if self.drag.is_none() && !self.nine() => {
+                // Esc beendet den Transformationsmodus wie im Original und **behält** die Änderung
+                // (PARITAET_A L30, gemessen mit Strg+T); danach ist der Zeiger aktiv
+                let cmds: Vec<Invocation> = self.commit_pending().into_iter().collect();
+                self.pivot = None;
+                self.bounds = None;
+                self.overlay.clear();
+                ToolResponse { commands: cmds, switch_tool: Some(ToolId::Pointer), ..ToolResponse::default() }
+            }
             ToolInput::Key(ToolKey::Escape) => {
                 if self.drag.take().is_none() {
-                    // Esc ohne laufenden Zug: Vorschau verwerfen, Ausgangslage bleibt
+                    // 9-Slice: Esc ohne laufenden Zug verwirft die Vorschau, Ausgangslage bleibt
                     self.pending = None;
                     self.pivot = None;
                 }

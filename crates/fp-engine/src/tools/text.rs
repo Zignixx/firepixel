@@ -61,6 +61,11 @@ pub struct TextEditView {
     /// L22). Bleibt fest, wenn sich die Größe ändert.
     #[serde(default)]
     pub baseline: Option<Point>,
+    /// Ausstehende Zeichenattribute an der Einfügemarke (Zeichenindex, Attribute): Formatieren ohne
+    /// Markierung wirkt wie im Original nur auf die danach getippten Zeichen (PARITAET_A T6, PM-1).
+    /// Gilt, solange die Einfügemarke dort steht und nichts markiert ist.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pending: Option<(usize, TextAttrs)>,
 }
 
 /// Grundattribute eines neuen Texts (wie `draw.text`).
@@ -187,15 +192,30 @@ impl TextEditView {
         }
     }
 
-    /// Attribute am Anfang der Markierung bzw. am Caret.
+    /// Ausstehende Attribute, wenn sie an der jetzigen Einfügemarke gelten.
+    fn pending_here(&self) -> Option<&TextAttrs> {
+        match &self.pending {
+            Some((at, a)) if *at == self.caret && self.caret == self.sel_anchor => Some(a),
+            _ => None,
+        }
+    }
+
+    /// Attribute am Anfang der Markierung bzw. am Caret (mit ausstehenden Attributen).
     pub fn current_attrs(&self) -> TextAttrs {
+        if let Some(p) = self.pending_here() {
+            return p.clone();
+        }
         let (a, b) = self.selection();
         self.insert_attrs(a, b)
     }
 
     /// Ersetzt die Zeichen `a..b` durch `s` (Formatierung wie [`Self::insert_attrs`]).
     fn splice(&mut self, a: usize, b: usize, s: &str) {
-        let attrs = self.insert_attrs(a, b);
+        let attrs = match self.pending_here() {
+            Some(p) if a == b && a == self.caret && !s.is_empty() => p.clone(),
+            _ => self.insert_attrs(a, b),
+        };
+        self.pending = None;
         self.sanitize();
         let (ba, bb) = (byte_at(&self.text, a), byte_at(&self.text, b));
         self.text.replace_range(ba..bb, s);
@@ -219,18 +239,26 @@ impl TextEditView {
     }
 
     /// Attribute anwenden: mit Markierung auf die Markierung (Absatzattribute auf die berührten
-    /// Absätze), ohne Markierung auf den ganzen Text und die Grundattribute.
+    /// Absätze); ohne Markierung Zeichenattribute wie im Original nur für die danach getippten
+    /// Zeichen (ausstehend an der Einfügemarke, PARITAET_A T6), Absatzattribute auf den ganzen Text;
+    /// bei leerem Text auf die Grundattribute.
     fn apply_attrs(&mut self, patch: &TextAttrs) {
         self.sanitize();
         let cs: Vec<char> = self.text.chars().collect();
         let n = cs.len();
         let (mut a, mut b) = self.selection();
         let whole = a == b;
+        let (mut ch, para) = para_part(patch);
+        if whole && n > 0 && ch != TextAttrs::default() {
+            let mut p = self.current_attrs();
+            p.apply(&ch);
+            self.pending = Some((self.caret, p));
+            ch = TextAttrs::default();
+        }
         if whole {
             a = 0;
             b = n;
         }
-        let (ch, para) = para_part(patch);
         let mut pa = a;
         while pa > 0 && cs[pa - 1] != '\r' {
             pa -= 1;
@@ -257,9 +285,12 @@ impl TextEditView {
             }
         }
         normalize(&mut self.spans);
-        if whole || (a == 0 && b == n) {
+        if (whole && n == 0) || (!whole && a == 0 && b == n) {
             self.base.apply(patch);
             self.sync_base();
+        } else if whole {
+            // Absatzattribute gelten für den ganzen Text, auch für die Grundattribute
+            self.base.apply(&para);
         }
     }
 
@@ -544,6 +575,7 @@ impl TextTool {
                 spans,
                 base,
                 baseline: None,
+                pending: None,
             };
             v.sync_base();
             v.sanitize();
@@ -643,6 +675,7 @@ impl TextTool {
                         spans: Vec::new(),
                         base,
                         baseline,
+                        pending: None,
                     }));
                 }
                 self.drag = None;

@@ -2,7 +2,7 @@
 //! Rechteck vor dem Setzen ein – an Hilfslinien (`SnapToGuides`), am Raster (`SnapToGrids`), an
 //! intelligenten Hilfslinien (`SnapToSmartGuides`: Kanten und Mitten anderer Objekte sowie Rand und
 //! Mitte der Seite) und an ganzen Pixeln. Fangabstand `SnapDistance` Bildschirmpixel (Vorgabe 5),
-//! umgerechnet in Dokumentpixel über den Zoom. Die Rückmeldung (magentafarbene Linien wie in CS6,
+//! umgerechnet in Dokumentpixel über den Zoom, einschließlich (≤). Die Rückmeldung (magentafarbene Linien wie in CS6,
 //! Farbe `SmartGuideColor`) liefert der Fang als [`Overlay::SmartGuide`]; Abstände zu Nachbarn als
 //! [`Overlay::Label`].
 
@@ -142,7 +142,9 @@ impl Snapper {
     fn best(&self, val: f32, vertical: bool) -> Option<Hit> {
         let mut best: Option<Hit> = None;
         let mut offer = |h: Hit| {
-            if h.dist < self.tol && best.is_none_or(|b| h.dist < b.dist - 1e-6 || ((h.dist - b.dist).abs() <= 1e-6 && h.rank < b.rank)) {
+            // Fangabstand einschließlich: im Original rastet ein Abstand von genau 5 Bildschirmpixeln
+            // noch ein, 6 nicht mehr (PARITAET_A L16, gemessen)
+            if h.dist <= self.tol + 1e-4 && best.is_none_or(|b| h.dist < b.dist - 1e-6 || ((h.dist - b.dist).abs() <= 1e-6 && h.rank < b.rank)) {
                 best = Some(h);
             }
         };

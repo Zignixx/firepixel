@@ -32,9 +32,9 @@ fn rectangle_tool_modifiers() {
     // Umschalt = Quadrat
     events(&mut s, &[ToolEvent::down(0.0, 100.0), ToolEvent::drag(30.0, 110.0).shift(), ToolEvent::up(30.0, 110.0).shift()]);
     assert!(rect_approx(bounds(&s, last(&s)), Rect::new(0.0, 100.0, 30.0, 130.0)));
-    // Alt = von der Mitte
-    events(&mut s, &[ToolEvent::down(200.0, 100.0), ToolEvent::drag(210.0, 120.0).alt(), ToolEvent::up(210.0, 120.0).alt()]);
-    assert!(rect_approx(bounds(&s, last(&s)), Rect::new(190.0, 80.0, 210.0, 120.0)));
+    // Alt = von der Mitte (Ende y 122: 7 px von der Quadratmitte 115, rastet nicht ein – Fang ≤ 5)
+    events(&mut s, &[ToolEvent::down(200.0, 100.0), ToolEvent::drag(210.0, 122.0).alt(), ToolEvent::up(210.0, 122.0).alt()]);
+    assert!(rect_approx(bounds(&s, last(&s)), Rect::new(190.0, 78.0, 210.0, 122.0)));
     // Leertaste verschiebt die Form beim Aufziehen
     events(&mut s, &[
         ToolEvent::down(100.0, 10.0),
@@ -205,9 +205,9 @@ fn select_behind_and_subselection() {
     tool(&mut s, ToolId::Subselection);
     events(&mut s, &[ToolEvent::down(5.0, 5.0), ToolEvent::up(5.0, 5.0)]);
     assert_eq!(sel(&s), vec![a]);
-    // Punkt ziehen
-    drag(&mut s, (0.0, 0.0), (-10.0, -5.0));
-    assert!(rect_approx(bounds(&s, a), Rect::new(-10.0, -5.0, 50.0, 50.0)), "{:?}", bounds(&s, a));
+    // Punkt ziehen (−7: außerhalb des Fangabstands 5 zur Seitenkante 0)
+    drag(&mut s, (0.0, 0.0), (-10.0, -7.0));
+    assert!(rect_approx(bounds(&s, a), Rect::new(-10.0, -7.0, 50.0, 50.0)), "{:?}", bounds(&s, a));
 }
 
 #[test]

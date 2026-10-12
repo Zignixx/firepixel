@@ -77,12 +77,14 @@ pub struct ShapeTool {
     guides: Vec<Overlay>,
     /// Automatische Form: gezogener Steuerpunkt.
     control: Option<super::pointer::ControlDrag>,
+    /// Rohe Drückposition (ihr Fang gilt für den Startpunkt, auch wenn die Leertaste ihn verschiebt).
+    press: Option<Point>,
 }
 
 impl ShapeTool {
     /// Neues Werkzeug (Rectangle, Ellipse, Polygon, AutoShape).
     pub fn new(id: ToolId) -> ShapeTool {
-        ShapeTool { id, drag: DragTracker::new(), overlay: Vec::new(), guides: Vec::new(), control: None }
+        ShapeTool { id, drag: DragTracker::new(), overlay: Vec::new(), guides: Vec::new(), control: None, press: None }
     }
 
     fn roundness(&self, _r: &Rect, ctx: &ToolContext) -> f32 {
@@ -170,17 +172,28 @@ impl ToolMachine for ShapeTool {
                         return ToolResponse::with_overlay(control_points_feedback(ctx, None), Cursor::PointerPoint);
                     }
                 }
-                let sp = Snapper::new(ctx, &[]).point(*pos);
+                // Fang wie im Original (PARITAET_A L16, gemessen): Start- und Endpunkt rasten je
+                // Ereignis getrennt ein (bzw. mit Alt der Mittelpunkt); mit Umschalt rastet keiner
+                // an intelligenten Hilfslinien. Der Automat führt daher die rohen Zeigerpunkte.
+                let snapper = Snapper::new(ctx, &[]);
+                let snapper = if ev.mods.shift { snapper.without_smart() } else { snapper };
+                let sp = snapper.point(*pos);
                 if !self.drag.active() && *kind != PointerKind::Down {
                     // Überfahren: nur Fanglinien zeigen
                     self.guides = sp.guides;
                     return ToolResponse::with_overlay(self.guides.clone(), Cursor::Crosshair);
                 }
                 let pressed_at = match self.drag.state {
-                    Drag::Pressed { start, .. } => Some(start),
+                    Drag::Pressed { start, .. } => Some(snapper.point(start).point),
                     _ => None,
                 };
-                let d = self.drag.update(*kind, sp.point, ev, ctx.drag_threshold());
+                if *kind == PointerKind::Down {
+                    self.press = Some(*pos);
+                }
+                let press = self.press.unwrap_or(*pos);
+                let fix = snapper.point(press).point;
+                let (fx, fy) = (fix.x - press.x, fix.y - press.y);
+                let d = self.drag.update(*kind, *pos, ev, ctx.drag_threshold()).map(|(s, _)| (Point::new(s.x + fx, s.y + fy), sp.point));
                 if *kind == PointerKind::Up && d.is_none() && self.id == ToolId::AutoShape
                     && let Some(at) = pressed_at
                 {

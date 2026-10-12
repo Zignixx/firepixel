@@ -38,9 +38,12 @@ fn bitmap_target(ctx: &ToolContext) -> bool {
 
 /// Esc in einem Bitmap-Auswahlwerkzeug ohne laufenden Vorgang: wie im Original „Bitmapmodus
 /// beenden“ (Verlaufsschritt; Auswahlrahmen weg, Bitmap bleibt ausgewählt, Werkzeug → Zeiger;
-/// UX-A L13, `a_321`). Ohne Bitmapmodus und Pixelauswahl: nichts.
+/// UX-A L13, `a_321`). Ohne Pixelauswahl: nichts (auch im Bitmapmodus, L27).
 pub(crate) fn escape_bitmap_mode(ctx: &ToolContext) -> ToolResponse {
-    if !(ctx.bitmap_mode || ctx.selection.has_pixels()) {
+    // Nur mit Auswahlrahmen (z. B. nach dem Zauberstab, L13): Rahmen weg, Bitmapmodus beenden,
+    // Zeiger. Ohne Rahmen (Bitmapmodus per Doppelklick, L27) bleibt im Original alles, wie es ist:
+    // Werkzeug Auswahlrahmen, Bitmap gewählt (PM-1, gemessen).
+    if !ctx.selection.has_pixels() {
         return ToolResponse::default();
     }
     ToolResponse { commands: vec![Invocation::new("modify.exitBitmapMode", json!({}))], switch_tool: Some(ToolId::Pointer), ..ToolResponse::default() }
