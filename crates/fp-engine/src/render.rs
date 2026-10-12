@@ -31,6 +31,22 @@ pub trait PageRenderer: Send + Sync {
     fn text_outlines(&self, _doc: &Document, _text: &fp_model::TextElem) -> Option<Vec<Vec<fp_geom::BezierContour>>> {
         None
     }
+
+    /// Layout-Rahmen eines Textes (`LFTf TOPf RITf BOTf`, vor `MTXv`) aus dem echten Satz. Die
+    /// Sitzung setzt damit `TextElem::bounds` nach jeder Text-/Attributänderung (Auswahlrahmen,
+    /// Treffertest, Ausrichten, Info). `None` = keine Textauslegung verfügbar.
+    fn text_frame(&self, _doc: &Document, _text: &fp_model::TextElem) -> Option<fp_geom::Rect> {
+        None
+    }
+}
+
+/// Satzrahmen über fp-render/fp-text (für alle Renderer mit fp-render gleich).
+#[cfg(feature = "render")]
+pub fn fp_text_frame(fonts: &fp_text::FontDb, doc: &Document, t: &fp_model::TextElem) -> Option<fp_geom::Rect> {
+    let block = fp_render::convert::text_block(doc, t);
+    let lay = fp_text::layout(&block, fonts, &fp_text::LayoutOptions::default());
+    let f = lay.frame;
+    (f.right > f.left || f.bottom > f.top).then_some(f)
 }
 
 /// Vorgabe-Renderer der Sitzung: mit Feature `render` fp-render, sonst keiner.

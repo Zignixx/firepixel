@@ -63,4 +63,8 @@ impl PageRenderer for FpRenderer {
         }
         Some(fp_text::render::glyph_contours(&lay))
     }
+
+    fn text_frame(&self, doc: &Document, t: &fp_model::TextElem) -> Option<fp_geom::Rect> {
+        crate::render::fp_text_frame(self.0.fonts(), doc, t)
+    }
 }

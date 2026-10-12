@@ -109,7 +109,7 @@ impl fp_export::render::PageRenderer for ExportRenderer<'_> {
             return SimpleRenderer.render(doc, req);
         };
         let d = prepared_document(doc, req);
-        let img = r.render_page(&d, req.page, req.frame).ok_or_else(|| "Renderer nicht verfügbar".to_string())?;
+        let img = r.render_page(&d, req.page, req.frame).ok_or_else(|| fp_i18n::t("err-renderer-unavailable"))?;
         Ok(match req.area {
             Some(a) => crop_to(img, a),
             None => img,

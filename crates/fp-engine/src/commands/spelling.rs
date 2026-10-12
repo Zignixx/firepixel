@@ -357,7 +357,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 let value = json!({
                     "language": language(s), "dictionary": ck.dict.is_some(), "checked": texts.len(),
                     "misspelled": issues, "replaced": replaced,
-                    "note": if ck.dict.is_none() { Some("kein Wörterbuch gefunden: <sprache>.aff/.dic über „Rechtschreibprüfung einrichten“ angeben") } else { None },
+                    "note": if ck.dict.is_none() { Some(fp_i18n::t("msg-spelling-no-dictionary")) } else { None },
                 });
                 if replaced > 0 {
                     return Ok(CommandOutput::doc_with(value).labeled(fp_i18n::t("msg-step-spelling")));

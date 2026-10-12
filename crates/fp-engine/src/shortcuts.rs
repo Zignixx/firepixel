@@ -226,7 +226,7 @@ impl ShortcutSet {
     /// Setzt die Kürzel eines Menübefehls. Menükürzel brauchen Modifikatoren (String 10219).
     pub fn set_command(&mut self, cmd: &str, shortcuts: Vec<Shortcut>) -> Result<(), String> {
         if shortcuts.iter().any(|s| !s.has_modifiers() && !(112..=135).contains(&s.vk) && s.vk != 46 && s.vk != 8 && s.vk != 9) {
-            return Err("Menükurzbefehle müssen Modifizierungstasten enthalten.".into());
+            return Err(fp_i18n::t("err-shortcut-menu-needs-modifier"));
         }
         self.menu.insert(cmd.to_string(), shortcuts);
         Ok(())
@@ -235,7 +235,7 @@ impl ShortcutSet {
     /// Setzt die Kürzel eines Werkzeugs. Werkzeugkürzel: Buchstaben/Zahlen ohne Modifikatoren (10218).
     pub fn set_tool(&mut self, guid: &str, shortcuts: Vec<Shortcut>) -> Result<(), String> {
         if shortcuts.iter().any(|s| s.has_modifiers() || !(48..=57).contains(&s.vk) && !(65..=90).contains(&s.vk)) {
-            return Err("Werkzeugkurzbefehle müssen aus Buchstaben oder Zahlen ohne Modifizierungstasten bestehen.".into());
+            return Err(fp_i18n::t("err-shortcut-tool-plain"));
         }
         self.tools.insert(normalize_guid(guid), shortcuts);
         Ok(())
@@ -365,7 +365,7 @@ pub fn save_custom_set(set: &ShortcutSet) -> Result<&'static ShortcutSet, String
 /// Löscht ein eigenes Set.
 pub fn delete_custom_set(name: &str) -> Result<(), String> {
     if builtin_set(name).is_some() {
-        return Err("mitgelieferte Sets können nicht gelöscht werden".into());
+        return Err(fp_i18n::t("err-shortcut-builtin-no-delete"));
     }
     if let Ok(mut m) = custom_map().lock() {
         m.retain(|k, _| !k.eq_ignore_ascii_case(name));

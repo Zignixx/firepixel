@@ -87,6 +87,10 @@ err-page-missing = Seite { $n } fehlt
 err-invalid-set-name = „{ $name }“ ist kein zulässiger Name für ein eigenes Set
 err-set-not-found = Set „{ $name }“ nicht gefunden
 err-style-library = Stilbibliothek: { $detail }
+err-shortcut-menu-needs-modifier = Menükurzbefehle müssen Modifizierungstasten enthalten.
+err-shortcut-tool-plain = Werkzeugkurzbefehle müssen aus Buchstaben oder Zahlen ohne Modifizierungstasten bestehen.
+err-shortcut-builtin-no-delete = mitgelieferte Sets können nicht gelöscht werden
+err-renderer-unavailable = Renderer nicht verfügbar
 
 ## Import (fp-io), Export (fp-export)
 err-import-unknown-format = unbekanntes Dateiformat
@@ -124,6 +128,7 @@ msg-wizard-png32-edit = Weiterbearbeitung: verlustfreies PNG32
 msg-wizard-png8 = wenige Farben (Grafik): PNG8 mit exakter Farbzahl
 msg-wizard-png32-alpha = viele Farben mit Transparenz: PNG32
 msg-wizard-jpeg = viele Farben (Foto): JPEG Qualität 80
+msg-spelling-no-dictionary = kein Wörterbuch gefunden: <sprache>.aff/.dic über „Rechtschreibprüfung einrichten“ angeben
 msg-no-usage-data = Firepixel erfasst und sendet keine Nutzungsdaten.
 
 ## Standardnamen neuer Ebenen, Seiten und Status

@@ -863,7 +863,8 @@ pub fn fmt_num(v: f32) -> String {
     if (v - v.round()).abs() < 0.05 {
         format!("{:.0}", v.round())
     } else {
-        format!("{v:.1}").replace('.', ",")
+        // Dezimaltrennzeichen der Oberflächensprache (Deutsch „,“ wie bisher)
+        fp_i18n::fmt_decimal(v as f64, 1)
     }
 }
 

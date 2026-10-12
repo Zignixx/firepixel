@@ -578,7 +578,13 @@ impl Session {
 
     fn finish_step(&mut self, id: DocId, before: Snapshot, label: String, name: &str, params: &Value) {
         let grouping = self.group_depth > 0;
+        let renderer = self.renderer.clone();
         let Some(d) = self.docs.iter_mut().find(|d| d.id == id) else { return };
+        if let Some(r) = &renderer
+            && !Arc::ptr_eq(&before.doc, &d.doc)
+        {
+            refresh_text_frames(r.as_ref(), &before.doc, &mut d.doc);
+        }
         let page = d.page;
         let doc = Arc::clone(&d.doc);
         d.selection.retain_existing(|eid| crate::docops::find_on_page(&doc, page, eid).is_some());
