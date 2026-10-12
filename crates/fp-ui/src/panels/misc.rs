@@ -145,7 +145,8 @@ pub fn info(ui: &mut Ui, st: &mut AppState) {
     fields::label_right(ui, d.r(84.0, 16.0, 10.0, 8.0), "Y:", true);
     fields::label(ui, d.r(99.0, 16.0, 30.0, 8.0), &fmt_u(y as f64), true);
     ui.painter().hline(d.r(0.0, 0.0, 139.0, 1.0).x_range(), d.r(0.0, 35.0, 1.0, 1.0).top(), Stroke::new(1.0, c.line_mid));
-    let b = st.session.active().and_then(|d| fp_engine::docops::ids_bounds(&d.doc, d.page, &d.selection.elements));
+    // im offenen Text-Editor: Rahmen des Texts mit allen Änderungen (wächst live mit), sonst die Auswahl
+    let b = if st.session.tool_is_editing_text() { st.session.text_edit_frame() } else { None }.or_else(|| st.session.active().and_then(|d| fp_engine::docops::ids_bounds(&d.doc, d.page, &d.selection.elements)));
     let en = b.is_some();
     let (bw, bh, bx, by) = b.map(|r| (r.width() as f64, r.height() as f64, r.left as f64, r.top as f64)).unwrap_or((0.0, 0.0, 0.0, 0.0));
     let (lw, lh) = (common::t("panel-info-width"), common::t("panel-info-height"));
