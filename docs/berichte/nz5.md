@@ -3,7 +3,7 @@
 Slot s10. Das Original wurde nicht benutzt. Quellen: `docs\berichte\nz4.md` (Neue Befunde), `re\11-bedienfelder-dialoge.md`,
 `re\12-import.md`, `re\04-objektmodell.md`, `re\18-export-dialoge.md`, `re\_testdateien\ux\paritaet\dialoge\o_dialoge_bericht.txt` (nur gelesen).
 
-Commit auf main: siehe `git log --grep "NZ-5"` (ein Commit mit Code, Tests, Doku und diesem Bericht).
+Commit auf main: `cbcc2b4` (Code, Tests, Doku, Bericht).
 
 ## Umgesetzt
 
@@ -66,9 +66,9 @@ Rot, aber nicht von NZ-5: `-p fp-mcp --test sprache` → `file.browseInBridge: B
 
 ## Nachprüfung (Zeilen für NACHPRUEFUNG.md)
 
-| NZ-5 | `<commit>` | Brücke: Datei ▸ Öffnen, `ui_file_dialog {"action": "set", "open_untitled": true}` → Kästchen im Dialog sichtbar an, `status` zeigt `open_untitled: true`; `{"action": "choose", "path": "<a.fw.png>"}` → Titel ohne Dateinamen | Brücke | ⏳ |
-| NZ-5 | `<commit>` | Brücke: Datei ▸ Öffnen, `{"action": "choose", "paths": ["a.png", "b.png", "c.png"], "open_as_animation": true}` → ein unbenanntes Dokument mit 3 Status | Brücke | ⏳ |
-| NZ-5 | `<commit>` | Brücke: Speichern unter, Typ FW-PNG, `{"action": "choose", "path": "C:\\out\\x.png", "append_fw_png": false}` → Datei `x.png` (FW-PNG), nicht `x.fw.png` | Brücke | ⏳ |
+| NZ-5 | `cbcc2b4` | Brücke: Datei ▸ Öffnen, `ui_file_dialog {"action": "set", "open_untitled": true}` → Kästchen im Dialog sichtbar an, `status` zeigt `open_untitled: true`; `{"action": "choose", "path": "<a.fw.png>"}` → Titel ohne Dateinamen | Brücke | ⏳ |
+| NZ-5 | `cbcc2b4` | Brücke: Datei ▸ Öffnen, `{"action": "choose", "paths": ["a.png", "b.png", "c.png"], "open_as_animation": true}` → ein unbenanntes Dokument mit 3 Status | Brücke | ⏳ |
+| NZ-5 | `cbcc2b4` | Brücke: Speichern unter, Typ FW-PNG, `{"action": "choose", "path": "C:\\out\\x.png", "append_fw_png": false}` → Datei `x.png` (FW-PNG), nicht `x.fw.png` | Brücke | ⏳ |
 | NZ-5 | – | Original messen: „Als Animation öffnen“ mit Dateien unterschiedlicher Größe und mit Symbolen → Leinwandgröße (erste Datei / umfassend?) und ob Symbole der weiteren Dateien in die Bibliothek kommen | Original | ⏳ |
 
 ## Neue Befunde
