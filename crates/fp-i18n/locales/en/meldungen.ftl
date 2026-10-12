@@ -254,6 +254,7 @@ msg-step-border-selection = Border Selection
 msg-step-smooth-selection = Smooth Selection
 msg-step-repeat-filter = Repeat Filter
 msg-step-spelling = Spelling
+msg-step-file-info = File Info
 
 ## Statushinweise der Werkzeuge
 msg-tool-knife-needs-paths = Knife: select paths first.

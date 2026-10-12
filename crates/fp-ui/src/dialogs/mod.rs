@@ -10,6 +10,7 @@ pub mod doc_dialogs;
 pub mod effects;
 pub mod export;
 pub mod export_options;
+pub mod file_info;
 pub mod image_preview;
 pub mod form;
 pub mod levels;
@@ -27,6 +28,7 @@ pub mod popup_menu;
 pub(crate) mod preferences;
 pub mod shortcuts;
 pub mod spelling;
+pub mod spelling_setup;
 pub mod symbol_anim;
 pub mod trace;
 pub mod warning;
@@ -80,6 +82,10 @@ pub struct Dialogs {
     pub saved_commands: Option<menu_dialogs::SavedCommandsDialog>,
     /// Rechtschreibprüfung.
     pub spelling: Option<spelling::SpellingDialog>,
+    /// „Rechtschreibprüfung einrichten“ (D24, DLG-10).
+    pub spelling_setup: Option<spelling_setup::SpellingSetupDialog>,
+    /// „Datei-Info“ mit den Metadaten (D10, DLG-10).
+    pub file_info: Option<file_info::FileInfoDialog>,
     /// Pop-up-Menü-Editor.
     pub popup_editor: Option<popup_menu::PopupEditor>,
     /// KI-Auswahl: Hintergrundrechnung, Dialoge „KI-Modell fehlt“ und „KI-Modelle verwalten“ (Agent KI).
@@ -122,6 +128,8 @@ impl Dialogs {
             || self.html_slice.is_some()
             || self.saved_commands.is_some()
             || self.spelling.is_some()
+            || self.spelling_setup.is_some()
+            || self.file_info.is_some()
             || self.popup_editor.is_some()
             || self.ai.modal_open()
             || self.trace.is_some()
@@ -175,11 +183,8 @@ pub fn open_for_command(st: &mut AppState, name: &str) -> bool {
             }
         }
         "modify.traceBitmap" => return trace::open(st),
-        "text.spellingSetup" => {
-            if let Some(f) = spelling::setup_form(st) {
-                st.dialogs.form = Some(f);
-            }
-        }
+        "text.spellingSetup" => return spelling_setup::open(st),
+        "file.fileInfo" => return file_info::open(st),
         _ if models::handles(name) => return models::open_command(st, name),
         _ if bitmap_selection::handles(name) => return bitmap_selection::open(st, name),
         _ if menu_dialogs::handles(name) => return menu_dialogs::open(st, name),
@@ -836,6 +841,8 @@ pub fn show_all(ctx: &egui::Context, st: &mut AppState) {
     misc::show_html_slice(ctx, st);
     menu_dialogs::show_saved_commands(ctx, st);
     spelling::show_check(ctx, st);
+    spelling_setup::show(ctx, st);
+    file_info::show(ctx, st);
     popup_menu::show(ctx, st);
     models::show(ctx, st);
     trace::show(ctx, st);

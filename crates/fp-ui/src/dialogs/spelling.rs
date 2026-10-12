@@ -4,9 +4,8 @@
 //! gemeldeten Wörter nacheinander durch: Ignorieren, Alle ignorieren, Ändern, Alle ändern,
 //! Hinzufügen (persönliches Wörterbuch), Löschen (Wort entfernen).
 
-use super::form::{Field, FormDialog};
 use super::{dialog_frame, push_button, t, DialogClose};
-use crate::app_state::{Action, AppState};
+use crate::app_state::AppState;
 use crate::inspector::fields;
 use crate::theme::Theme;
 use egui::{pos2, vec2, Align2, Rect};
@@ -18,6 +17,8 @@ pub struct Issue {
     pub id: u64,
     pub word: String,
     pub suggestions: Vec<String>,
+    /// Doppeltes Wort („der der“, Option „Doppelte Wörter finden“).
+    pub duplicate: bool,
 }
 
 /// Zustand der Rechtschreibprüfung.
@@ -44,6 +45,7 @@ fn parse(v: &Value) -> Vec<Issue> {
                         id: x.get("id")?.as_u64()?,
                         word: x.get("word")?.as_str()?.to_string(),
                         suggestions: x.get("suggestions").and_then(|s| s.as_array()).map(|s| s.iter().filter_map(|w| w.as_str().map(|w| w.to_string())).collect()).unwrap_or_default(),
+                        duplicate: x.get("duplicate").and_then(|b| b.as_bool()).unwrap_or(false),
                     })
                 })
                 .collect()
@@ -111,7 +113,7 @@ pub fn show_check(ctx: &egui::Context, st: &mut AppState) {
     let Some(mut d) = st.dialogs.spelling.clone() else { return };
     let mut op: Option<&str> = None;
     // Texte der aktuellen Sprache; Beschriftungsspalte und Knöpfe wachsen mit (Deutsch: wie bisher)
-    let labs = super::tl(&["dlg-spell-not-found", "dlg-spell-change-to", "dlg-spell-suggestions"]);
+    let labs = super::tl(&["dlg-spell-not-found", "dlg-spell-change-to", "dlg-spell-suggestions", "dlg-spell-duplicate"]);
     let btn_l = super::tl(&["dlg-spell-ignore", "dlg-spell-ignore-all", "dlg-spell-change", "dlg-spell-change-all", "dlg-spell-add", "dlg-spell-delete", "btn-close"]);
     let dx = super::extra_w(ctx, &super::refs(&labs), 150.0 - 4.0);
     let bw = super::buttons_w(ctx, &super::refs(&btn_l), 108.0);
@@ -121,7 +123,7 @@ pub fn show_check(ctx: &egui::Context, st: &mut AppState) {
         let theme = Theme::current(ui.ctx());
         let o = body.min + vec2(12.0, 12.0);
         let cur = d.current().cloned();
-        super::fit_label(ui, Rect::from_min_size(o, vec2(lx - 4.0, 18.0)), &labs[0], true);
+        super::fit_label(ui, Rect::from_min_size(o, vec2(lx - 4.0, 18.0)), if cur.as_ref().is_some_and(|c| c.duplicate) { &labs[3] } else { &labs[0] }, true);
         let wr = Rect::from_min_size(o + vec2(lx, 0.0), vec2(170.0, 20.0));
         fields::field_frame(ui, wr, false, false);
         ui.painter().text(pos2(wr.left() + 4.0, wr.center().y), Align2::LEFT_CENTER, cur.as_ref().map(|c| c.word.as_str()).unwrap_or(""), theme.bold(theme.fonts.ui), theme.colors.icon_red);
@@ -173,14 +175,14 @@ pub fn show_check(ctx: &egui::Context, st: &mut AppState) {
             d.reset_choice();
         }
         (Some("change"), Some(c)) => {
-            let p = json!({"replace": [{"word": c.word, "with": d.change_to, "id": c.id}]});
+            let p = json!({"replace": [{"word": c.word, "with": d.change_to, "id": c.id, "duplicate": c.duplicate}]});
             recheck(st, &mut d, p)
         }
         (Some("changeAll"), Some(c)) => {
-            let p = json!({"replace": [{"word": c.word, "with": d.change_to}]});
+            let p = json!({"replace": [{"word": c.word, "with": d.change_to, "duplicate": c.duplicate}]});
             recheck(st, &mut d, p)
         }
-        (Some("delete"), Some(c)) => recheck(st, &mut d, json!({"replace": [{"word": c.word, "with": "", "id": c.id}]})),
+        (Some("delete"), Some(c)) => recheck(st, &mut d, json!({"replace": [{"word": c.word, "with": "", "id": c.id, "duplicate": c.duplicate}]})),
         (Some("add"), Some(c)) => recheck(st, &mut d, json!({"addToDictionary": [c.word]})),
         _ => {}
     }
@@ -192,51 +194,4 @@ pub fn show_check(ctx: &egui::Context, st: &mut AppState) {
         d.done = true;
     }
     st.dialogs.spelling = if d.done { None } else { Some(d) };
-}
-
-fn setup_params(d: &FormDialog) -> Value {
-    let old: Vec<String> = d.base.get("_words").and_then(|w| w.as_array()).map(|a| a.iter().filter_map(|x| x.as_str().map(|s| s.to_string())).collect()).unwrap_or_default();
-    let new: Vec<String> = d.get("_dict").as_str().unwrap_or("").lines().map(|l| l.trim().to_string()).filter(|l| !l.is_empty()).collect();
-    let add: Vec<&String> = new.iter().filter(|w| !old.contains(w)).collect();
-    let rem: Vec<&String> = old.iter().filter(|w| !new.contains(w)).collect();
-    json!({
-        "language": d.get("language"),
-        "dictionaryDir": d.get("dictionaryDir"),
-        "ignoreUppercase": d.get("ignoreUppercase"),
-        "ignoreNumbers": d.get("ignoreNumbers"),
-        "addWords": add,
-        "removeWords": rem,
-    })
-}
-
-/// „Rechtschreibprüfung einrichten“ (6516) mit persönlichem Wörterbuch (6519) als Formular.
-pub fn setup_form(st: &mut AppState) -> Option<FormDialog> {
-    let v = match crate::ui_commands::execute(&mut st.session, "text.spellingSetup", json!({})) {
-        Ok(o) => o.value,
-        Err(e) => {
-            st.push(Action::Status(e.to_string()));
-            return None;
-        }
-    };
-    let s = |k: &str| v.get(k).and_then(|x| x.as_str()).unwrap_or("").to_string();
-    let b = |k: &str, d: bool| v.get(k).and_then(|x| x.as_bool()).unwrap_or(d);
-    let words: Vec<String> = v.get("userWords").or_else(|| v.get("personalWords")).or_else(|| v.get("words")).and_then(|w| w.as_array()).map(|a| a.iter().filter_map(|x| x.as_str().map(|s| s.to_string())).collect()).unwrap_or_default();
-    Some(
-        FormDialog::new(
-            "6516",
-            &t("dlg-spell-setup-title"),
-            "text.spellingSetup",
-            vec![
-                Field::text("language", &t("dlg-spell-setup-language"), &s("language")),
-                Field::text("dictionaryDir", &t("dlg-spell-setup-folder"), &s("dictionaryDir")),
-                Field::check("ignoreUppercase", &t("dlg-spell-setup-ignore-upper"), b("ignoreUppercase", true)),
-                Field::check("ignoreNumbers", &t("dlg-spell-setup-ignore-numbers"), b("ignoreNumbers", true)),
-                Field::multiline("_dict", &t("dlg-spell-setup-personal"), &words.join("\n")),
-            ],
-        )
-        .with_base(json!({"_words": words}))
-        .with_width(460.0)
-        .with_transform(setup_params)
-        .with_focus_ok(),
-    )
 }

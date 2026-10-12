@@ -33,14 +33,52 @@ fn pref_bool(s: &Session, k: &str, d: bool) -> bool {
     }
 }
 
-/// Eingestellte Sprache (Vorgabe `de_DE`).
+/// Eingestellte Sprache (erstes aktives Wörterbuch, Vorgabe `de_DE`).
 pub fn language(s: &Session) -> String {
-    pref_str(s, "SpellingLanguage").filter(|l| !l.is_empty()).unwrap_or_else(|| "de_DE".into())
+    languages(s).into_iter().next().unwrap_or_else(|| "de_DE".into())
 }
 
-/// Persönliches Wörterbuch.
+/// Aktive Wörterbücher (Kästchen in „Rechtschreibprüfung einrichten“). Ohne eigene Liste die
+/// einzelne Sprache `SpellingLanguage` (Vorgabe `de_DE`); eine leere Liste heißt: keins.
+pub fn languages(s: &Session) -> Vec<String> {
+    if let Some(l) = pref_str(s, "SpellingLanguages") {
+        return l.lines().map(str::trim).filter(|x| !x.is_empty()).map(str::to_string).collect();
+    }
+    vec![pref_str(s, "SpellingLanguage").filter(|l| !l.is_empty()).unwrap_or_else(|| "de_DE".into())]
+}
+
+/// Datei des persönlichen Wörterbuchs (leer = in den Voreinstellungen).
+pub fn personal_dictionary(s: &Session) -> Option<PathBuf> {
+    pref_str(s, "SpellingPersonalDictionary").filter(|p| !p.trim().is_empty()).map(PathBuf::from)
+}
+
+/// Persönliches Wörterbuch (aus der eingestellten Datei, sonst aus den Voreinstellungen).
 pub fn user_words(s: &Session) -> Vec<String> {
-    pref_str(s, "SpellingUserWords").map(|t| t.lines().map(str::trim).filter(|w| !w.is_empty()).map(str::to_string).collect()).unwrap_or_default()
+    let text = match personal_dictionary(s) {
+        Some(p) => std::fs::read_to_string(p).ok(),
+        None => pref_str(s, "SpellingUserWords"),
+    };
+    text.map(|t| t.lines().map(str::trim).filter(|w| !w.is_empty()).map(str::to_string).collect()).unwrap_or_default()
+}
+
+/// Alle gefundenen Wörterbücher (`<sprache>.aff` + `.dic` in den Suchordnern), sortiert.
+pub fn available_dictionaries(s: &Session) -> Vec<String> {
+    let mut v: Vec<String> = Vec::new();
+    for d in search_dirs(s, &language(s)) {
+        let Ok(it) = std::fs::read_dir(&d) else { continue };
+        for e in it.flatten() {
+            let p = e.path();
+            if p.extension().is_some_and(|x| x.eq_ignore_ascii_case("dic"))
+                && p.with_extension("aff").is_file()
+                && let Some(stem) = p.file_stem().map(|x| x.to_string_lossy().to_string())
+                && !v.contains(&stem)
+            {
+                v.push(stem);
+            }
+        }
+    }
+    v.sort();
+    v
 }
 
 fn search_dirs(s: &Session, lang: &str) -> Vec<PathBuf> {
@@ -136,10 +174,43 @@ pub fn words(text: &str) -> Vec<(usize, String)> {
 }
 
 struct Checker {
-    dict: Option<Arc<spellbook::Dictionary>>,
+    dicts: Vec<Arc<spellbook::Dictionary>>,
     user: Vec<String>,
     ignore_upper: bool,
     ignore_numbers: bool,
+    ignore_urls: bool,
+    find_duplicates: bool,
+}
+
+/// Zeichenbereiche (Start, Ende) von Internet- und Dateiadressen: Stücke ohne Leerraum mit `://`,
+/// `www.`, `@` und Punkt, Laufwerksbuchstabe, `\\` am Anfang oder `/` bzw. `\` zusammen mit einem Punkt.
+pub fn address_ranges(text: &str) -> Vec<(usize, usize)> {
+    let chars: Vec<char> = text.chars().collect();
+    let mut out = Vec::new();
+    let mut i = 0;
+    while i < chars.len() {
+        if chars[i].is_whitespace() {
+            i += 1;
+            continue;
+        }
+        let start = i;
+        while i < chars.len() && !chars[i].is_whitespace() {
+            i += 1;
+        }
+        let tok: String = chars[start..i].iter().collect::<String>().to_lowercase();
+        let b = tok.as_bytes();
+        let drive = b.len() > 2 && b[0].is_ascii_alphabetic() && b[1] == b':' && (b[2] == b'\\' || b[2] == b'/');
+        let is_addr = tok.contains("://")
+            || tok.starts_with("www.")
+            || (tok.contains('@') && tok.contains('.'))
+            || drive
+            || tok.starts_with("\\\\")
+            || ((tok.contains('/') || tok.contains('\\')) && tok.contains('.'));
+        if is_addr {
+            out.push((start, i));
+        }
+    }
+    out
 }
 
 impl Checker {
@@ -153,28 +224,92 @@ impl Checker {
         if self.ignore_upper && w.chars().count() > 1 && w.chars().all(|c| !c.is_lowercase()) {
             return true;
         }
-        match &self.dict {
-            Some(d) => d.check(w),
-            None => true,
+        if self.dicts.is_empty() {
+            return true;
         }
+        self.dicts.iter().any(|d| d.check(w))
     }
     fn suggest(&self, w: &str) -> Vec<String> {
-        let mut v = Vec::new();
-        if let Some(d) = &self.dict {
-            d.suggest(w, &mut v);
+        let mut v: Vec<String> = Vec::new();
+        for d in &self.dicts {
+            let mut s = Vec::new();
+            d.suggest(w, &mut s);
+            for x in s {
+                if !v.contains(&x) {
+                    v.push(x);
+                }
+            }
         }
         v.truncate(8);
         v
     }
+
+    /// Gemeldete Wörter eines Textes: (Versatz, Wort, doppelt?).
+    fn issues(&self, text: &str) -> Vec<(usize, String, bool)> {
+        let skip = if self.ignore_urls { address_ranges(text) } else { Vec::new() };
+        let chars: Vec<char> = text.chars().collect();
+        let mut out = Vec::new();
+        let mut prev: Option<(usize, String)> = None;
+        for (off, w) in words(text) {
+            if skip.iter().any(|(a, b)| off >= *a && off < *b) {
+                prev = None;
+                continue;
+            }
+            // doppeltes Wort: dasselbe Wort direkt davor, nur Leerraum dazwischen
+            let dup = self.find_duplicates
+                && prev.as_ref().is_some_and(|(po, pw)| pw.to_lowercase() == w.to_lowercase() && chars[po + pw.chars().count()..off].iter().all(|c| c.is_whitespace()));
+            if dup {
+                out.push((off, w.clone(), true));
+            } else if !self.ok(&w) {
+                out.push((off, w.clone(), false));
+            }
+            prev = Some((off, w));
+        }
+        out
+    }
 }
 
 fn checker(s: &Session) -> Result<Checker> {
-    let lang = language(s);
-    let dict = match find_dictionary(s, &lang) {
-        Some((a, d)) => Some(load(&a, &d)?),
-        None => None,
-    };
-    Ok(Checker { dict, user: user_words(s), ignore_upper: pref_bool(s, "SpellingIgnoreUppercase", true), ignore_numbers: pref_bool(s, "SpellingIgnoreNumbers", true) })
+    let mut dicts = Vec::new();
+    for lang in languages(s) {
+        if let Some((a, d)) = find_dictionary(s, &lang) {
+            dicts.push(load(&a, &d)?);
+        }
+    }
+    Ok(Checker {
+        dicts,
+        user: user_words(s),
+        ignore_upper: pref_bool(s, "SpellingIgnoreUppercase", true),
+        ignore_numbers: pref_bool(s, "SpellingIgnoreNumbers", true),
+        ignore_urls: pref_bool(s, "SpellingIgnoreUrls", true),
+        find_duplicates: pref_bool(s, "SpellingFindDuplicates", true),
+    })
+}
+
+/// Fasst ein doppeltes Wort zusammen („der der“ → „der“, mit `to` ≠ Wort → „der <to>“).
+pub fn collapse_duplicate(text: &str, word: &str, to: &str) -> (String, usize) {
+    let chars: Vec<char> = text.chars().collect();
+    let ws = words(text);
+    let mut out = String::with_capacity(text.len());
+    let mut last = 0;
+    let mut n = 0;
+    for k in 1..ws.len() {
+        let (po, pw) = &ws[k - 1];
+        let (off, w) = &ws[k];
+        let pend = po + pw.chars().count();
+        if w == word && pw.to_lowercase() == w.to_lowercase() && pend >= last && chars[pend..*off].iter().all(|c| c.is_whitespace()) {
+            if to.is_empty() || to == word {
+                out.extend(&chars[last..pend]);
+            } else {
+                out.extend(&chars[last..*off]);
+                out.push_str(to);
+            }
+            last = off + w.chars().count();
+            n += 1;
+        }
+    }
+    out.extend(&chars[last..]);
+    (out, n)
 }
 
 /// Ersetzt ganze Wörter `from` durch `to` in einem Text.
@@ -201,15 +336,32 @@ fn setup_json(s: &Session) -> Value {
     json!({
         "language": lang,
         "dictionary": dict.as_ref().map(|(_, d)| d.to_string_lossy().to_string()),
+        "languages": languages(s),
+        "available": available_dictionaries(s),
         "dictionaryDir": pref_str(s, "SpellingDictionaryDir"),
+        "personalDictionary": personal_dictionary(s).map(|p| p.to_string_lossy().to_string()),
         "userWords": user_words(s),
         "ignoreUppercase": pref_bool(s, "SpellingIgnoreUppercase", true),
         "ignoreNumbers": pref_bool(s, "SpellingIgnoreNumbers", true),
+        "ignoreUrls": pref_bool(s, "SpellingIgnoreUrls", true),
+        "findDuplicates": pref_bool(s, "SpellingFindDuplicates", true),
     })
 }
 
 fn set_user_words(s: &mut Session, w: Vec<String>) {
-    s.prefs.set("SpellingUserWords", PrefValue::Str(w.join("\n")));
+    match personal_dictionary(s) {
+        Some(p) => {
+            if let Some(dir) = p.parent().filter(|d| !d.as_os_str().is_empty()) {
+                let _ = std::fs::create_dir_all(dir);
+            }
+            let mut text = w.join("\n");
+            if !text.is_empty() {
+                text.push('\n');
+            }
+            let _ = std::fs::write(&p, text);
+        }
+        None => s.prefs.set("SpellingUserWords", PrefValue::Str(w.join("\n"))),
+    }
 }
 
 fn texts_of(s: &Session, p: &Params) -> Result<Vec<(fp_model::ElementId, String)>> {
@@ -247,17 +399,45 @@ pub(super) fn register(r: &mut CommandRegistry) {
             .opt("removeWords", ParamKind::Json, "Wörter aus dem persönlichen Wörterbuch entfernen")
             .opt("ignoreUppercase", ParamKind::Bool, "Wörter in Großbuchstaben überspringen")
             .opt("ignoreNumbers", ParamKind::Bool, "Wörter mit Ziffern überspringen")
+            .opt("languages", ParamKind::Json, "Aktive Wörterbücher (Liste der Sprachen)")
+            .opt("personalDictionary", ParamKind::Path, "Datei des persönlichen Wörterbuchs (leer: in den Voreinstellungen)")
+            .opt("ignoreUrls", ParamKind::Bool, "Internet- und Dateiadressen überspringen")
+            .opt("findDuplicates", ParamKind::Bool, "Doppelte Wörter melden")
             .run(|s, p| {
                 let mut changed = false;
                 if let Some(l) = p.opt_str("language")? {
-                    s.prefs.set("SpellingLanguage", PrefValue::Str(l));
+                    s.prefs.set("SpellingLanguage", PrefValue::Str(l.clone()));
+                    if p.get("languages").is_none() {
+                        s.prefs.set("SpellingLanguages", PrefValue::Str(l));
+                    }
+                    changed = true;
+                }
+                if let Some(list) = p.parse::<Vec<String>>("languages")? {
+                    if let Some(first) = list.first() {
+                        s.prefs.set("SpellingLanguage", PrefValue::Str(first.clone()));
+                    }
+                    s.prefs.set("SpellingLanguages", PrefValue::Str(list.join("\n")));
+                    changed = true;
+                }
+                if let Some(d) = p.opt_str("personalDictionary")? {
+                    // Wortliste beim Wechsel mitnehmen, wenn die neue Datei noch nicht existiert
+                    let words = user_words(s);
+                    s.prefs.set("SpellingPersonalDictionary", PrefValue::Str(d.clone()));
+                    if !d.trim().is_empty() && !Path::new(&d).exists() {
+                        set_user_words(s, words);
+                    }
                     changed = true;
                 }
                 if let Some(d) = p.opt_str("dictionaryDir")? {
                     s.prefs.set("SpellingDictionaryDir", PrefValue::Str(d));
                     changed = true;
                 }
-                for (k, key) in [("ignoreUppercase", "SpellingIgnoreUppercase"), ("ignoreNumbers", "SpellingIgnoreNumbers")] {
+                for (k, key) in [
+                    ("ignoreUppercase", "SpellingIgnoreUppercase"),
+                    ("ignoreNumbers", "SpellingIgnoreNumbers"),
+                    ("ignoreUrls", "SpellingIgnoreUrls"),
+                    ("findDuplicates", "SpellingFindDuplicates"),
+                ] {
                     if let Some(b) = p.opt_bool(k)? {
                         s.prefs.set(key, PrefValue::Bool(b));
                         changed = true;
@@ -318,12 +498,13 @@ pub(super) fn register(r: &mut CommandRegistry) {
                         for rep in &reps {
                             let (Some(from), Some(to)) = (rep.get("word").and_then(Value::as_str), rep.get("with").and_then(Value::as_str)) else { continue };
                             let only = rep.get("id").and_then(Value::as_u64).map(fp_model::ElementId);
+                            let dup = rep.get("duplicate").and_then(Value::as_bool).unwrap_or(false);
                             for id in target_ids.iter().filter(|i| only.is_none_or(|o| o == **i)) {
                                 docops::edit_by_id(doc, page, *id, |e| {
                                     if let ElementKind::Text(t) = &mut e.kind {
                                         let mut n = 0;
                                         for run in t.runs.iter_mut() {
-                                            let (nt, k) = replace_word(&run.text, from, to);
+                                            let (nt, k) = if dup { collapse_duplicate(&run.text, from, to) } else { replace_word(&run.text, from, to) };
                                             if k > 0 {
                                                 run.text = nt;
                                                 n += k;
@@ -348,16 +529,18 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 let texts = texts_of(s, p)?;
                 let mut issues = Vec::new();
                 for (id, text) in &texts {
-                    for (off, w) in words(text) {
-                        if !ck.ok(&w) {
+                    for (off, w, dup) in ck.issues(text) {
+                        if dup {
+                            issues.push(json!({"id": id.0, "word": w, "offset": off, "suggestions": [], "duplicate": true}));
+                        } else {
                             issues.push(json!({"id": id.0, "word": w, "offset": off, "suggestions": ck.suggest(&w)}));
                         }
                     }
                 }
                 let value = json!({
-                    "language": language(s), "dictionary": ck.dict.is_some(), "checked": texts.len(),
+                    "language": language(s), "languages": languages(s), "dictionary": !ck.dicts.is_empty(), "checked": texts.len(),
                     "misspelled": issues, "replaced": replaced,
-                    "note": if ck.dict.is_none() { Some(fp_i18n::t("msg-spelling-no-dictionary")) } else { None },
+                    "note": if ck.dicts.is_empty() { Some(fp_i18n::t("msg-spelling-no-dictionary")) } else { None },
                 });
                 if replaced > 0 {
                     return Ok(CommandOutput::doc_with(value).labeled(fp_i18n::t("msg-step-spelling")));
@@ -376,5 +559,7 @@ mod tests {
         let w: Vec<String> = words("Hallo Wlet, it's e-mail 42!").into_iter().map(|x| x.1).collect();
         assert_eq!(w, vec!["Hallo", "Wlet", "it's", "e-mail", "42"]);
         assert_eq!(replace_word("Wlet und Wlet, Wletter", "Wlet", "Welt"), ("Welt und Welt, Wletter".to_string(), 2));
+        assert_eq!(collapse_duplicate("das ist der der Baum", "der", ""), ("das ist der Baum".to_string(), 1));
+        assert_eq!(address_ranges("siehe www.beispiel.de und C:\\a\\b.txt"), vec![(6, 21), (26, 36)]);
     }
 }

@@ -273,16 +273,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
         s.emit(SessionEvent::HistoryChanged(id));
         Ok(CommandOutput::session())
     }));
-    r.add(cmd("file.fileInfo").requires(DOC).run(|s, _| {
-        let d = s.doc()?;
-        let m = &d.doc.file_meta;
-        Ok(CommandOutput::value(json!({
-            "title": d.title, "path": d.path.as_ref().map(|p| p.to_string_lossy().to_string()),
-            "pages": d.doc.pages.len(), "symbols": d.doc.symbols.len(), "formatVersion": d.doc.format_version(),
-            "text": m.text_chunks.iter().map(|(k, v)| json!({"key": k, "text": v})).collect::<Vec<_>>(),
-            "xmp": m.xmp_chunk.is_some(), "dirty": d.is_dirty(),
-        })))
-    }));
+    // „Datei-Info“ (file.fileInfo) steht in `file_info.rs`.
     for (name, i) in [("file.previewInBrowser.setPrimaryBrowser", 0usize), ("file.previewInBrowser.setSecondaryBrowser", 1)] {
         r.add(cmd(name).param("path", ParamKind::Path, "Programmdatei des Browsers").run(move |s, p| {
             s.ui.browsers[i] = Some(p.str("path")?);

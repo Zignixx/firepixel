@@ -16,6 +16,7 @@ pub mod spelling;
 pub mod attrs;
 mod autoshape;
 mod file;
+pub mod file_info;
 mod filters;
 pub mod misc;
 mod modify;
@@ -45,6 +46,7 @@ use std::sync::Arc;
 /// Registriert alle eingebauten Befehle.
 pub fn register_all(r: &mut CommandRegistry) {
     file::register(r);
+    file_info::register(r);
     export::register(r);
     misc::register(r);
     import::register(r);

@@ -127,27 +127,6 @@ pub fn open(st: &mut AppState, name: &str) -> bool {
             }
             return true;
         }
-        "file.fileInfo" => {
-            match crate::ui_commands::execute(&mut st.session, name, json!({})) {
-                Ok(o) => {
-                    let v = &o.value;
-                    let mut text = fp_i18n::tr!(
-                        "dlg-md-file-info-text",
-                        title = v["title"].as_str().unwrap_or(""),
-                        path = v["path"].as_str().map(str::to_string).unwrap_or_else(|| t("dlg-md-not-saved")),
-                        pages = v["pages"].to_string(),
-                        symbols = v["symbols"].to_string(),
-                        version = v["formatVersion"].to_string()
-                    );
-                    for e in v["text"].as_array().into_iter().flatten() {
-                        text.push_str(&format!("\n{}: {}", e["key"].as_str().unwrap_or(""), e["text"].as_str().unwrap_or("")));
-                    }
-                    st.dialogs.message = Some((t("dlg-md-file-info"), text));
-                }
-                Err(e) => st.dialogs.message = Some((t("dlg-md-file-info"), e.to_string())),
-            }
-            return true;
-        }
         "commands.manageExtensions" | "help.manageExtensions" => {
             let v = crate::ui_commands::execute(&mut st.session, name, json!({"action": "list"})).map(|o| o.value).unwrap_or(Value::Null);
             let list: Vec<String> = v.get("extensions").and_then(|a| a.as_array()).map(|a| a.iter().map(|x| x.as_str().map(|s| s.to_string()).unwrap_or_else(|| x.get("name").and_then(|n| n.as_str()).unwrap_or("?").to_string())).collect()).unwrap_or_default();
@@ -322,7 +301,6 @@ pub fn handles(name: &str) -> bool {
             | "file.previewInBrowser.setSecondaryBrowser"
             | "file.browseInBridge"
             | "edit.copyHtmlCode"
-            | "file.fileInfo"
             | "commands.manageExtensions"
             | "help.manageExtensions"
             | "commands.manageSavedCommands"
