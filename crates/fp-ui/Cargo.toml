@@ -5,6 +5,8 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 rust-version.workspace = true
+# Integrationstests als ein Testprogramm (tests\all.rs), Einzelprozess-Tests unten (INF-1)
+autotests = false
 
 [dependencies]
 eframe = { workspace = true }
@@ -47,6 +49,60 @@ egui_kittest = { version = "0.36", features = ["wgpu", "snapshot"] }
 fp-neutral = { path = "../fp-neutral" }
 # Bildtyp des Testrenderers (egui_kittest::TestRenderer), schon über egui_kittest im Baum (FV-8)
 image = { workspace = true }
+# Liste aller tests\*.rs fuer tests\all.rs (INF-1)
+fp-testlist = { path = "../fp-testlist", features = ["fp-ui"] }
 
 [lints]
 workspace = true
+
+# Alle tests\*.rs laufen als EIN Testprogramm (INF-1, docs\AGENTEN_REGELN.md §2): neue Dateien
+# einfach unter tests\ anlegen, sie werden automatisch eingebunden (crates\fp-testlist).
+# `cargo test -p fp-ui --test all <datei>::`
+[[test]]
+name = "all"
+path = "tests/all.rs"
+
+# Eigener Prozess nur, wenn ein Test prozessweiten Zustand umstellt, den parallel laufende Tests
+# anderer Dateien sehen würden. Jede Datei hier mit Grund; die Liste klein halten.
+
+# Sonden mit Fensterzustand, wackeln parallel (Aufruf laut Datei mit --test-threads 1)
+[[test]]
+name = "ux_b_abgleich"
+path = "tests/ux_b_abgleich.rs"
+
+# stellt die prozessweite KI-Modellsuche auf einen leeren Ordner um (fp_ai::models::set_search_override)
+[[test]]
+name = "ai_kittest_missing"
+path = "tests/ai_kittest_missing.rs"
+
+# KI-Rechnung mit echten Modellen: prozessweiter KI-Zwischenspeicher und Rechenpool (fp_ai), den
+# die Menue-Gesamttests mit ai.clearCache leeren; im gemeinsamen Programm haengt die Rechnung dann
+[[test]]
+name = "ai_kittest"
+path = "tests/ai_kittest.rs"
+
+# wie ai_kittest (Klickfolgen waehrend einer laufenden KI-Rechnung)
+[[test]]
+name = "ai_kittest_klickfolgen"
+path = "tests/ai_kittest_klickfolgen.rs"
+
+# oeffnet jeden Dialog aller Befehle des Registers in drei Sprachen; haengt im gemeinsamen Programm
+# (prozessweiter Zustand der Datei-Dialoge bzw. des Systems, file_dialog.rs), allein gruen
+[[test]]
+name = "dialogs_i18n"
+path = "tests/dialogs_i18n.rs"
+
+# stellt die prozessweite KI-Modellsuche um (fp_ai::models::set_search_override)
+[[test]]
+name = "ai_kittest_dialogs"
+path = "tests/ai_kittest_dialogs.rs"
+
+# KI-Fortschrittskarte: Zeitverhalten (kein Aufblitzen unter 300 ms) und, wenn vorhanden, echte Modelle
+[[test]]
+name = "ai_progress_ki2"
+path = "tests/ai_progress_ki2.rs"
+
+# stellt den prozessweiten Testmodus der Datei-Dialoge um (fp_ui::file_dialog::set_test_mode)
+[[test]]
+name = "file_dialogs_dlg3"
+path = "tests/file_dialogs_dlg3.rs"

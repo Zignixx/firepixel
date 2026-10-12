@@ -4,8 +4,7 @@
 //! `cargo test -j 4 -p fp-ui --test i18n_qa_de -- --ignored --test-threads 4`
 //! Basis erzeugen (im Stand vor Phase 6): `FP_QA_MODUS=basis`. Bericht: Test `i18n_qa_bericht`.
 
-#[macro_use]
-mod i18n_qa_common;
+use crate::i18n_qa_common;
 
 qa_tests!("de");
 

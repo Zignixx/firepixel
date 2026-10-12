@@ -3,7 +3,7 @@
 //! Auswahl“ → Warnung mit dem Wortlaut des Originals, kein Verlaufsschritt; „Nicht mehr anzeigen“
 //! schaltet sie ab, „Warnmeldungen zurücksetzen“ wieder ein.
 
-mod common;
+use crate::common;
 
 use common::*;
 use fp_engine::{EngineError, Session, SessionEvent};

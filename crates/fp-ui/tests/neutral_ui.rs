@@ -64,9 +64,12 @@ fn harness(app: FirepixelApp) -> Harness<'static, FirepixelApp> {
 fn oberflaeche_ist_neutral() {
     let mut found: Vec<String> = Vec::new();
     let mut checked = 0usize;
+    // Namen installierter Systemschriften (Schriftmenü, Schriftenliste) sind Daten des Rechners,
+    // keine Texte von Firepixel; im gemeinsamen Testprogramm ist die Liste meist schon geladen (INF-1)
+    let system_font = |s: &str| fp_ui::inspector::fonts::families().iter().any(|f| bad(&f.name) && s.contains(f.name.as_str()));
     let mut check = |what: &str, s: &str, found: &mut Vec<String>| {
         checked += 1;
-        if bad(s) {
+        if bad(s) && !system_font(s) {
             found.push(format!("{what}: {s}"));
         }
     };

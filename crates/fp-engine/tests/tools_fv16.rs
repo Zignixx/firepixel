@@ -2,7 +2,7 @@
 //! getrennte Optionen „Auswahl füllen“/Toleranz für Farbeimer und Verlauf, Verlauf auf Bitmaps
 //! mit beiden Optionen, Texturen und Muster nur per Name aus den Ressourcenordnern.
 
-mod common;
+use crate::common;
 use common::*;
 use fp_engine::prefs::{PrefValue, Preferences};
 use fp_engine::tools::ToolOptions;

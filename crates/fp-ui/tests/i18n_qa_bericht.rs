@@ -3,7 +3,7 @@
 //! Markierungen `<!-- AUTO:START -->` und `<!-- AUTO:END -->`).
 //! `cargo test -j 4 -p fp-ui --test i18n_qa_bericht -- --ignored`
 
-mod i18n_qa_common;
+use crate::i18n_qa_common;
 
 use i18n_qa_common::{AreaResult, Finding};
 use std::collections::{BTreeMap, BTreeSet};

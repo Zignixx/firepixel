@@ -1,6 +1,6 @@
 //! Befehle mit Wirkung: Dokument vorher/nachher.
 
-mod common;
+use crate::common;
 use common::*;
 use fp_engine::{EngineError, Session};
 use fp_geom::Rect;

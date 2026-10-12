@@ -10,7 +10,7 @@
 //!
 //! Ergebnis: `docs\funktionstest\logik_auto.md`.
 
-mod gesamt_common;
+use crate::gesamt_common;
 
 use fp_ui::app_state::{Action, AppState};
 use fp_ui::dialogs::effects::{begin_add, begin_edit, FxKind, FX};

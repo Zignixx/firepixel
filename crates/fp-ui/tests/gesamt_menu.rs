@@ -9,7 +9,7 @@
 //! `docs\FUNKTIONSTEST.md`). Der Test schlägt nur bei Paniken fehl; fehlende Funktionen werden als
 //! Befund gemeldet und im Bericht gezählt.
 
-mod gesamt_common;
+use crate::gesamt_common;
 
 use fp_ui::menu;
 use fp_ui::panels::PanelId;

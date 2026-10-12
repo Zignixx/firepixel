@@ -2,7 +2,7 @@
 //! gefüllter Pfade, Original bleibt bzw. wird gelöscht, ein Verlaufsschritt, Rückgängig/Wiederholen
 //! exakt, Optionen, Verfügbarkeit.
 
-mod common;
+use crate::common;
 
 use common::*;
 use fp_engine::Session;

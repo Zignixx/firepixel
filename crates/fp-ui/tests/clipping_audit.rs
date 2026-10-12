@@ -52,7 +52,7 @@
 //! Die Sprache ist prozessweit: erst alle deutschen, dann alle englischen Varianten; eigene
 //! Test-Binärdatei.
 
-mod gesamt_common;
+use crate::gesamt_common;
 
 use egui::accesskit::Role;
 use egui::{pos2, vec2, Id, LayerId, Order, Pos2, Rect, Shape};

@@ -2,7 +2,7 @@
 //! (per `re\scripts\fwsteuerung\jsf-ausfuehren.ps1` im Original ausgeführt, Protokoll
 //! `re\_testdateien\stichproben.log`); die erwarteten Grenzen stehen unten als Zahlen.
 
-mod common;
+use crate::common;
 
 use common::*;
 use fp_engine::Session;

@@ -1,6 +1,6 @@
 //! Werkzeug-Zustandsautomaten mit synthetischen Ereignisfolgen.
 
-mod common;
+use crate::common;
 use common::*;
 use fp_engine::tools::{info, ToolId, TOOLS};
 use fp_engine::{Shortcut, ToolEvent, ToolKey};

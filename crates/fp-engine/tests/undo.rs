@@ -1,6 +1,6 @@
 //! Undo/Redo-Verlauf (10 §3, Laufzeit T6).
 
-mod common;
+use crate::common;
 use common::*;
 use fp_engine::{PrefValue, Preferences, Session, SessionEvent};
 use serde_json::json;

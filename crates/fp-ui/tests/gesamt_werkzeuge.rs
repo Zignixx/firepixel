@@ -5,7 +5,7 @@
 //! Auswahl, Farbe, Ansicht) und dass das Werkzeug ein Icon und einen Platz im Werkzeugbedienfeld
 //! hat. Ergebnis: `docs\funktionstest\werkzeuge_auto.md`.
 
-mod gesamt_common;
+use crate::gesamt_common;
 
 use fp_engine::tools::{ToolEvent, ToolKey, TOOLS};
 use fp_engine::ToolId;

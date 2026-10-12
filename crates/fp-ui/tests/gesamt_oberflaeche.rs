@@ -8,7 +8,7 @@
 //!
 //! Ergebnis: `docs\funktionstest\oberflaeche_auto.md`.
 
-mod gesamt_common;
+use crate::gesamt_common;
 
 use egui_kittest::Harness;
 use fp_engine::view::PreviewMode;

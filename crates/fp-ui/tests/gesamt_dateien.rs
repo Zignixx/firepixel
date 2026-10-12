@@ -7,7 +7,7 @@
 //!
 //! Ergebnis: `docs\funktionstest\dateien_auto.md`.
 
-mod gesamt_common;
+use crate::gesamt_common;
 
 use egui_kittest::Harness;
 use fp_ui::app_state::{Action, AppState, UiSettings};

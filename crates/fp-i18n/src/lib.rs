@@ -482,6 +482,9 @@ pub fn generation() -> u64 {
 /// Sprache wechseln; `false`, wenn es den Code nicht gibt. [`PSEUDO_LANG`] ist immer erlaubt.
 /// Groß-/Kleinschreibung des Codes ist egal (`pt-br` = `pt-BR`).
 pub fn set_language(code: &str) -> bool {
+    if language_per_thread() {
+        return set_thread_language(code);
+    }
     let Ok(mut st) = state().write() else { return false };
     let code = if code == PSEUDO_LANG {
         PSEUDO_LANG.to_string()
@@ -493,6 +496,43 @@ pub fn set_language(code: &str) -> bool {
     };
     if st.current != code {
         st.current = code;
+        bump_generation();
+    }
+    true
+}
+
+/// Sprache je Thread statt je Prozess (INF-1): nur im gemeinsamen Testprogramm eines Crates
+/// (`tests\all.rs`, exe `…\deps\all-<hash>.exe`, siehe `crates\fp-testlist`) bzw. mit
+/// `FP_LANGUAGE_PER_THREAD=1`. Dort laufen die Tests vieler Dateien parallel in einem Prozess; ein
+/// Test, der auf Englisch umschaltet, darf die gleichzeitig laufenden deutschen Tests nicht
+/// stören. Jeder Test läuft in einem eigenen Thread und beginnt mit der Ausgangssprache.
+/// Alle anderen Programme (App, CLI, einzelne Testprogramme): Sprache prozessweit wie bisher.
+fn language_per_thread() -> bool {
+    static ON: OnceLock<bool> = OnceLock::new();
+    *ON.get_or_init(|| {
+        if let Some(v) = std::env::var_os("FP_LANGUAGE_PER_THREAD") {
+            return !v.is_empty() && v != "0";
+        }
+        let Ok(exe) = std::env::current_exe() else { return false };
+        let in_deps = exe.parent().and_then(|d| d.file_name()).is_some_and(|n| n.eq_ignore_ascii_case("deps"));
+        let stem = exe.file_stem().map(|s| s.to_string_lossy().to_string()).unwrap_or_default();
+        in_deps && stem.strip_prefix("all-").is_some_and(|h| !h.is_empty() && h.chars().all(|c| c.is_ascii_hexdigit()))
+    })
+}
+
+/// [`set_language`] für den aufrufenden Thread ([`language_per_thread`]).
+fn set_thread_language(code: &str) -> bool {
+    let code = if code == PSEUDO_LANG {
+        PSEUDO_LANG.to_string()
+    } else {
+        let Ok(st) = state().read() else { return false };
+        match st.langs.iter().find(|l| l.info.code.eq_ignore_ascii_case(code)) {
+            Some(l) => l.info.code.clone(),
+            None => return false,
+        }
+    };
+    let changed = OVERRIDE.with(|o| o.borrow_mut().replace(code.clone()).as_deref() != Some(code.as_str()));
+    if changed {
         bump_generation();
     }
     true

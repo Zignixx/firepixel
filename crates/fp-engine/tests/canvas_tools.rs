@@ -1,7 +1,7 @@
 //! Alle 49 Werkzeuge auf der Leinwand: synthetische Zeigerfolgen wie von der Oberfläche, Prüfung des
 //! Ergebnisses am Dokument, der Modifikatoren (Umschalt/Alt/Strg) und von Rückgängig/Wiederholen.
 
-mod common;
+use crate::common;
 use common::*;
 use fp_engine::tools::{EditOp, ToolId, ToolInput, TOOLS};
 use fp_engine::{Overlay, Session, ToolEvent, ToolKey};

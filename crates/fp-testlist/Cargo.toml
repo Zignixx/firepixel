@@ -1,0 +1,17 @@
+[package]
+name = "fp-testlist"
+description = "Build helper of the tests: one test program per crate, generated list of all tests\\*.rs files (INF-1)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+build = "build.rs"
+publish = false
+
+# One feature per crate whose tests\*.rs run as one test program (tests\all.rs).
+[features]
+fp-ui = []
+fp-engine = []
+
+[lints]
+workspace = true

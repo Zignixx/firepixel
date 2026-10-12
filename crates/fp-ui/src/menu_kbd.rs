@@ -92,7 +92,8 @@ const RUNTIME_ACCESS: &[(&str, &str)] = &[
 type AccessMap = Arc<HashMap<String, (usize, char)>>;
 
 fn access_map() -> AccessMap {
-    static M: Mutex<Option<(u64, AccessMap)>> = Mutex::new(None);
+    // Sprache mit im Schlüssel: im gemeinsamen Testprogramm gilt die Sprache je Thread (fp_i18n, INF-1)
+    static M: Mutex<Option<(u64, String, AccessMap)>> = Mutex::new(None);
     fn walk(entries: &[MenuEntry], prefix: &str, out: &mut HashMap<String, (usize, char)>) {
         for e in entries {
             if e.sep {
@@ -110,9 +111,11 @@ fn access_map() -> AccessMap {
         }
     }
     let generation = fp_i18n::generation();
+    let lang = fp_i18n::current_language();
     let Ok(mut m) = M.lock() else { return Arc::new(HashMap::new()) };
-    if let Some((g, map)) = m.as_ref()
+    if let Some((g, l, map)) = m.as_ref()
         && *g == generation
+        && *l == lang
     {
         return map.clone();
     }
@@ -129,7 +132,7 @@ fn access_map() -> AccessMap {
         }
     }
     let map = Arc::new(out);
-    *m = Some((generation, map.clone()));
+    *m = Some((generation, lang, map.clone()));
     map
 }
 

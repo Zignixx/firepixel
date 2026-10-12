@@ -300,6 +300,11 @@ pub fn available(st: &AppState, name: &str) -> bool {
 /// Befehle, die externe Programme öffnen könnten (Browser, Drucker, Hilfe-Webseiten): nur von Hand.
 pub fn external(name: &str) -> bool {
     let n = name.to_lowercase();
+    // KI-Steuerkanal: startet einen prozessweiten HTTP-Server (fp_ui::bridge) mit Token-Datei; im
+    // gemeinsamen Testprogramm (tests\all.rs) bedient er dann die Oberflächen anderer Tests mit (INF-1)
+    if n == "ui.mcptoggle" {
+        return true;
+    }
     if std::env::var("FP_NO_SHELL_OPEN").as_deref() == Ok("1") {
         // die Engine startet dann keine Fremdprogramme (AGENTEN_REGELN §4a, `shell::disable`)
         return false;
@@ -567,6 +572,12 @@ pub fn run_nodes(items: Vec<(String, ItemAction)>) -> Vec<Row> {
     let mut fonts = 0;
     for (path, action) in items {
         if path.contains("Schrift ▸") {
+            // Systemschriften mit dem Namen des Herstellers des Originals nicht in den Bericht
+            // (docs\funktionstest, fp-neutral); im gemeinsamen Testprogramm ist die Schriftenliste
+            // meist schon geladen (INF-1)
+            if !fp_neutral::find_in_bytes(path.as_bytes()).is_empty() {
+                continue;
+            }
             fonts += 1;
             if fonts > 3 {
                 continue;

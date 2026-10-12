@@ -5,7 +5,7 @@
 //! Braucht die echten Modelle (sonst übersprungen). Die Tests dieser Datei laufen nacheinander
 //! (gemeinsame Sperre), damit „kein Modell geladen“ eindeutig prüfbar ist.
 
-mod common;
+use crate::common;
 
 use common::*;
 use fp_engine::commands::ai as ai;

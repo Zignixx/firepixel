@@ -1,6 +1,6 @@
 //! Rundreise: Korpusdatei öffnen → Befehle → speichern → mit fp-fwpng wieder lesen.
 
-mod common;
+use crate::common;
 use common::*;
 use fp_engine::Session;
 use serde_json::json;

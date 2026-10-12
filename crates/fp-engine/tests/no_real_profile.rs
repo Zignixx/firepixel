@@ -10,7 +10,7 @@
 //! The static half (no direct profile paths in tests, child processes get the test profile) is
 //! `crates\fp-neutral\tests\no_real_profile.rs`.
 
-mod common;
+use crate::common;
 
 use common::*;
 use fp_i18n::profile;

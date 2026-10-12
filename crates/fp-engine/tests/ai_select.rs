@@ -4,7 +4,7 @@
 //!
 //! Testbild: eine Bitmap mit unruhigem Hintergrund, einer roten Scheibe und einem blauen Quadrat.
 
-mod common;
+use crate::common;
 
 use common::*;
 use fp_engine::commands::ai as ai;

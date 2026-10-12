@@ -12,7 +12,7 @@
 //! Geprüft wird, was ein Mensch erwartet (eine Rastung = eine Zoomstufe, Einfügen fügt ein …).
 //! Ergebnis: `docs\funktionstest\alltag_auto.md`.
 
-mod gesamt_common;
+use crate::gesamt_common;
 
 use egui::{Event, Key, Modifiers, PointerButton, Pos2};
 use egui_kittest::Harness;

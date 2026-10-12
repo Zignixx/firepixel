@@ -15,7 +15,7 @@
 //! Ergebnis: `docs\funktionstest\groessen_auto.md`; mit `FP_SNAPSHOTS=1` zusätzlich Bilder je
 //! Größe/Design nach `target\fp-ui-groessen\`.
 
-mod gesamt_common;
+use crate::gesamt_common;
 
 use egui::{Rect, Sense};
 use egui_kittest::Harness;

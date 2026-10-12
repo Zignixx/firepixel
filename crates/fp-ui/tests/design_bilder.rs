@@ -12,8 +12,7 @@
 //! Die Szenen (Testdokument, Dialogsuche) kommen aus dem Prüfgerüst der Mehrsprachigkeit.
 
 #[allow(unused_macros, unused_imports)]
-#[macro_use]
-mod i18n_qa_common;
+use crate::i18n_qa_common;
 
 use fp_ui::theme::ThemeKind;
 use i18n_qa_common::{build_scene, repo, scenes_dialogs, scenes_main, Cfg, Scene};

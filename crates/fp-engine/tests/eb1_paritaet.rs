@@ -1,6 +1,6 @@
 //! EB-1: kleine Engine-Befunde aus dem Funktionsvergleich mit dem Original (PM-1, FV-1, FV-3, FV-4).
 
-mod common;
+use crate::common;
 use common::*;
 use serde_json::json;
 

@@ -11,7 +11,7 @@
 //! * deutsche Tastennamen (Strg, Umschalt, Entf …) oder deutsche Wörter im englischen Text,
 //! * eindeutige Zugriffstasten je Menü (Menüs aus `menue.ftl`, gleiche Gruppe = gleiches Präfix).
 
-mod i18n_qa_common;
+use crate::i18n_qa_common;
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;

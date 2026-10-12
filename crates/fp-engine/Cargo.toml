@@ -5,6 +5,8 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 rust-version.workspace = true
+# Integrationstests als ein Testprogramm (tests\all.rs), Einzelprozess-Tests unten (INF-1)
+autotests = false
 
 [features]
 default = ["vector", "render"]
@@ -39,5 +41,24 @@ fp-i18n = { workspace = true }
 # Bitmap nachzeichnen (Vektorisierung, Agent VT)
 fp-trace = { workspace = true }
 
+[dev-dependencies]
+# Liste aller tests\*.rs fuer tests\all.rs (INF-1)
+fp-testlist = { path = "../fp-testlist", features = ["fp-engine"] }
+
 [lints]
 workspace = true
+
+# Alle tests\*.rs laufen als EIN Testprogramm (INF-1, docs\AGENTEN_REGELN.md §2): neue Dateien
+# einfach unter tests\ anlegen, sie werden automatisch eingebunden (crates\fp-testlist).
+# `cargo test -p fp-engine --test all <datei>::`
+[[test]]
+name = "all"
+path = "tests/all.rs"
+
+# Eigener Prozess nur, wenn ein Test prozessweiten Zustand umstellt, den parallel laufende Tests
+# anderer Dateien sehen würden. Jede Datei hier mit Grund; die Liste klein halten.
+
+# stellt die prozessweite KI-Modellsuche auf einen leeren Ordner um (fp_ai::models::set_search_override)
+[[test]]
+name = "ai_missing"
+path = "tests/ai_missing.rs"

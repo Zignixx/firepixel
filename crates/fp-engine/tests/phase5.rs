@@ -1,6 +1,6 @@
 //! Fachtests der in Phase 5 verdrahteten Befehle (Ergebnis am Dokument bzw. an den Dateien).
 
-mod common;
+use crate::common;
 
 use common::*;
 use fp_engine::Session;

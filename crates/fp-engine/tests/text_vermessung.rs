@@ -11,7 +11,7 @@
 //! Die alten Maße 202/306 waren also die Schätzung; die neuen sind die Maße des Satzes. Diese Tests
 //! sichern die Satzmaße und dass die Sprache der Oberfläche sie nicht beeinflusst.
 
-mod common;
+use crate::common;
 use common::*;
 use fp_engine::Session;
 use fp_geom::Rect;

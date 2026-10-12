@@ -14,7 +14,7 @@
 //!
 //! Ergebnis als Zahl `geprüft/gesamt` (mit `--nocapture`).
 
-mod common;
+use crate::common;
 
 use common::*;
 use fp_engine::{CommandRegistry, ObjectKind, Requirement, Session};

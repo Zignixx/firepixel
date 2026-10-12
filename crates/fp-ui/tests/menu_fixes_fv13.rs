@@ -2,7 +2,7 @@
 //! Original (grau ohne Ziel, aktiv mit Ziel), Wirkung am Dokument bzw. an den Voreinstellungen,
 //! Rückgängig stellt exakt her; der Gesamttest liest nie das echte Nutzerprofil.
 
-mod gesamt_common;
+use crate::gesamt_common;
 
 use fp_ui::app_state::{Action, AppState};
 use fp_ui::menu::{self, ItemAction, Node};

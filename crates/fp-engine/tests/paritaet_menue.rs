@@ -2,7 +2,7 @@
 //! gemessen im Original mit gleichem Testdokument) gegen `Session::command_state` in fünf Lagen:
 //! S1 ohne Auswahl, S2 ein Rechteck, S3 zwei Rechtecke, S4 Text, S5 Bitmap.
 
-mod common;
+use crate::common;
 
 use common::*;
 use fp_engine::Session;
