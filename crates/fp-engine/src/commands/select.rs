@@ -205,7 +205,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
             Ok(CommandOutput::doc())
         })
     }));
-    r.add(cmd("select.superselect").requires(SEL).run(|s, _| {
+    r.add(cmd("select.superselect").requires(SEL).menu_when(super::no_pixel_selection).run(|s, _| {
         with_doc(s, |d| {
             let mut out = Vec::new();
             for (path, e) in selected_elements(d) {

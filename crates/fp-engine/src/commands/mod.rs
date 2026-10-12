@@ -97,6 +97,24 @@ pub(crate) fn sel_err(key: &str) -> EngineError {
     EngineError::Selection(fp_i18n::t(key))
 }
 
+/// Menüfreigabe wie im Original (PM-7, MN-2): Bei einer Pixelauswahl sperrt das Original die
+/// Objektbefehle (Duplizieren, Klonen, Als Vektoren kopieren, Gesamtauswahl treffen, Auswahl
+/// animieren, In Symbol konvertieren, Auswahl auf Hintergrund reduzieren, Anordnen, Gruppieren).
+/// Ausschneiden, Kopieren und Löschen bleiben aktiv.
+pub(crate) fn no_pixel_selection(s: &Session) -> bool {
+    s.active().is_none_or(|d| !d.selection.has_pixels())
+}
+
+/// Nicht nur Web-Objekte (Segmente, Hotspots) ausgewählt: Befehle, die das Original bei einem
+/// Segment sperrt (Als Vektoren kopieren, In Symbol konvertieren, Auswahl auf Hintergrund
+/// reduzieren, Maske ▸ Alles ein-/ausblenden, Transformationen entfernen).
+pub(crate) fn not_only_web(s: &Session) -> bool {
+    s.active().is_none_or(|d| {
+        let els = selected_elements(d);
+        els.is_empty() || !els.iter().all(|(_, e)| matches!(e.kind, fp_model::element::ElementKind::WebObject(_)))
+    })
+}
+
 /// Attribute für neue Formen aus den Werkzeugfarben: Füllung (wenn `fill`), Strich (wenn
 /// `stroke_width > 0` und die Strichfarbe nicht transparent ist).
 pub(crate) fn shape_attrs(s: &Session, fill: bool, stroke_width: f32) -> PathAttrs {

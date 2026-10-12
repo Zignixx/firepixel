@@ -7,10 +7,10 @@ Erzeugt von `crates\fp-ui\tests\gesamt_menu.rs` (`cargo test -p fp-ui --test ges
 | Eintrag | Befehl | Ergebnis | Hinweis |
 |---|---|---|---|
 | Situation „leere Auswahl“ | `107 verfügbare Menübefehle` | ✅ Doc | 107/107 ohne Befund |
-| Situation „alles ausgewählt“ | `190 verfügbare Menübefehle` | ✅ Doc | 190/190 ohne Befund |
+| Situation „alles ausgewählt“ | `188 verfügbare Menübefehle` | ✅ Doc | 188/188 ohne Befund |
 | Situation „gesperrtes Rechteck“ | `107 verfügbare Menübefehle` | ✅ Doc | 107/107 ohne Befund |
 | Situation „ausgeblendetes Rechteck“ | `167 verfügbare Menübefehle` | ✅ Doc | 167/167 ohne Befund |
-| Situation „Gruppe“ | `165 verfügbare Menübefehle` | ✅ Doc | 165/165 ohne Befund |
+| Situation „Gruppe“ | `166 verfügbare Menübefehle` | ✅ Doc | 166/166 ohne Befund |
 | Situation „Symbolinstanz“ | `166 verfügbare Menübefehle` | ✅ Doc | 166/166 ohne Befund |
 | Situation „Seite 2 mit Objekt“ | `167 verfügbare Menübefehle` | ✅ Doc | 167/167 ohne Befund |
 | Situation „Status 2“ | `167 verfügbare Menübefehle` | ✅ Doc | 167/167 ohne Befund |

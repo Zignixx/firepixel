@@ -462,6 +462,19 @@ fn snap_to_pixel(d: &mut DocumentState) -> Result<()> {
         let m = docops::rect_to_rect(b, t);
         docops::edit_by_id(doc, page, e.id, |x| docops::transform_element(x, &m, fp_raster::Sampler::Nearest));
     }
+    // Gruppen (im Original aktiv, PM-7 S7): die Gruppe als Ganzes an Pixeln ausrichten
+    let groups: Vec<Arc<Element>> = selected_elements(d).into_iter().filter(|(_, e)| matches!(e.kind, ElementKind::Group(_))).map(|(_, e)| e).collect();
+    let page = d.page;
+    let doc = Arc::make_mut(&mut d.doc);
+    for g in groups {
+        let Some(b) = docops::element_bounds(doc, &g) else { continue };
+        let t = snap_rect(b);
+        if t.width() <= 0.0 || t.height() <= 0.0 || t == b {
+            continue;
+        }
+        let m = docops::rect_to_rect(b, t);
+        docops::edit_by_id(doc, page, g.id, |x| docops::transform_element(x, &m, fp_raster::Sampler::Nearest));
+    }
     Ok(())
 }
 
@@ -828,7 +841,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
     r.add(cmd("modify.canvas.rotate90DegreeCcw").requires(DOC).run(|s, _| rotate_canvas(s, -90)));
 
     // Animation
-    r.add(with_anim_params(cmd("modify.animation.animateSelection").requires(SEL)).opt("name", ParamKind::String, "Symbolname").run(|s, p| {
+    r.add(with_anim_params(cmd("modify.animation.animateSelection").requires(SEL).menu_when(super::no_pixel_selection)).opt("name", ParamKind::String, "Symbolname").run(|s, p| {
         let name = p.opt_str("name")?.unwrap_or_else(|| "Animation".into());
         let a = anim_params(p, fp_model::AnimParams::default())?;
         with_doc(s, |d| {
@@ -893,6 +906,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
     r.add(
         cmd("modify.symbol.convertToSymbol")
             .requires(SEL)
+            .menu_when(|s| super::no_pixel_selection(s) && super::not_only_web(s))
             .opt("name", ParamKind::String, "Symbolname")
             .opt_default("kind", ParamKind::Enum { values: vec!["graphic".into(), "button".into(), "animation".into()] }, json!("graphic"), "Symboltyp")
             .run(|s, p| {
@@ -1024,7 +1038,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 })
             }),
     );
-    r.add(cmd("modify.popUpMenu.deletePopUpMenu").requires(&[Requirement::Document, Requirement::AnyOf(ObjectKind::WebObject)]).run(|s, _| {
+    r.add(cmd("modify.popUpMenu.deletePopUpMenu").requires(&[Requirement::Document, Requirement::AnyOf(ObjectKind::WebObject)]).menu_when(super::popup::has_popup_menu).run(|s, _| {
         with_doc(s, |d| {
             let (page, ids) = (d.page, d.selection.elements.clone());
             let doc = Arc::make_mut(&mut d.doc);
@@ -1043,8 +1057,8 @@ pub(super) fn register(r: &mut CommandRegistry) {
 
     // Maske
     // wie im Original nur bei genau einem Objekt
-    r.add(cmd("modify.mask.revealAll").requires(SEL).available(|s| s.active().is_some_and(|d| d.selection.elements.len() == 1)).run(|s, _| mask_from_selection(s, Some(true))));
-    r.add(cmd("modify.mask.hideAll").requires(SEL).available(|s| s.active().is_some_and(|d| d.selection.elements.len() == 1)).run(|s, _| mask_from_selection(s, Some(false))));
+    r.add(cmd("modify.mask.revealAll").requires(SEL).available(|s| s.active().is_some_and(|d| d.selection.elements.len() == 1)).menu_when(super::not_only_web).run(|s, _| mask_from_selection(s, Some(true))));
+    r.add(cmd("modify.mask.hideAll").requires(SEL).available(|s| s.active().is_some_and(|d| d.selection.elements.len() == 1)).menu_when(super::not_only_web).run(|s, _| mask_from_selection(s, Some(false))));
     r.add(cmd("modify.mask.revealSelection").requires(&[Requirement::Document, Requirement::Selection, Requirement::PixelSelection]).run(|s, _| mask_from_pixels(s, true)));
     r.add(cmd("modify.mask.hideSelection").requires(&[Requirement::Document, Requirement::Selection, Requirement::PixelSelection]).run(|s, _| mask_from_pixels(s, false)));
     r.add(cmd("modify.mask.groupAsMask").requires(&[Requirement::Document, Requirement::MinSelected(2)]).run(|s, _| {
@@ -1143,7 +1157,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
             Ok(CommandOutput::doc())
         })
     }));
-    r.add(cmd("modify.flattenSelection").requires(SEL).note("Vektorobjekte brauchen einen Renderer (fp-render)").run(|s, _| {
+    r.add(cmd("modify.flattenSelection").requires(SEL).menu_when(|s| super::no_pixel_selection(s) && super::not_only_web(s)).note("Vektorobjekte brauchen einen Renderer (fp-render)").run(|s, _| {
         let (els, first, ids) = {
             let d = s.doc()?;
             let els = selected_elements(d);
@@ -1273,8 +1287,9 @@ pub(super) fn register(r: &mut CommandRegistry) {
     r.add(cmd("modify.transform.rotate90DegreeCcw").requires(SEL).run(|s, _| about_selection(s, Matrix3::rotation_degrees(-90.0))));
     r.add(cmd("modify.transform.flipHorizontal").requires(SEL).run(|s, _| about_selection(s, Matrix3::scaling(-1.0, 1.0))));
     r.add(cmd("modify.transform.flipVertical").requires(SEL).run(|s, _| about_selection(s, Matrix3::scaling(1.0, -1.0))));
-    // Bitmaps haben im Original keine entfernbaren Transformationen
-    r.add(cmd("modify.transform.removeTransformations").requires(SEL).available(|s| s.active().is_some_and(|d| selected_elements(d).iter().any(|(_, e)| !matches!(e.kind, ElementKind::Bitmap(_))))).run(|s, _| {
+    // Bitmaps haben im Original keine entfernbaren Transformationen; im Menü grau auch bei Gruppe
+    // und Segment (PM-7: ○ in S5, S7, S9)
+    r.add(cmd("modify.transform.removeTransformations").requires(SEL).available(|s| s.active().is_some_and(|d| selected_elements(d).iter().any(|(_, e)| !matches!(e.kind, ElementKind::Bitmap(_))))).menu_when(|s| s.active().is_some_and(|d| selected_elements(d).iter().any(|(_, e)| !matches!(e.kind, ElementKind::Bitmap(_) | ElementKind::Group(_) | ElementKind::WebObject(_))))).run(|s, _| {
         with_doc(s, |d| {
             let (page, ids) = (d.page, d.selection.elements.clone());
             let doc = Arc::make_mut(&mut d.doc);
@@ -1324,10 +1339,10 @@ pub(super) fn register(r: &mut CommandRegistry) {
     );
 
     // Anordnen / Ausrichten
-    r.add(cmd("modify.arrange.bringToFront").requires(SEL).run(|s, _| arrange(s, "front")));
-    r.add(cmd("modify.arrange.bringForward").requires(SEL).run(|s, _| arrange(s, "forward")));
-    r.add(cmd("modify.arrange.sendBackward").requires(SEL).run(|s, _| arrange(s, "backward")));
-    r.add(cmd("modify.arrange.sendToBack").requires(SEL).run(|s, _| arrange(s, "back")));
+    r.add(cmd("modify.arrange.bringToFront").requires(SEL).menu_when(super::no_pixel_selection).run(|s, _| arrange(s, "front")));
+    r.add(cmd("modify.arrange.bringForward").requires(SEL).menu_when(super::no_pixel_selection).run(|s, _| arrange(s, "forward")));
+    r.add(cmd("modify.arrange.sendBackward").requires(SEL).menu_when(super::no_pixel_selection).run(|s, _| arrange(s, "backward")));
+    r.add(cmd("modify.arrange.sendToBack").requires(SEL).menu_when(super::no_pixel_selection).run(|s, _| arrange(s, "back")));
     for (name, how) in [
         ("modify.align.left", "left"),
         ("modify.align.centerVertical", "centerVertical"),
@@ -1367,7 +1382,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
             Ok(CommandOutput::doc())
         })
     }));
-    r.add(cmd("modify.combinePaths.join").requires(SEL).available(|s| s.active().is_some_and(|d| selected_elements(d).iter().any(|(_, e)| matches!(e.kind, ElementKind::Path(_) | ElementKind::Text(_))))).run(|s, _| {
+    r.add(cmd("modify.combinePaths.join").requires(SEL).available(|s| s.active().is_some_and(|d| selected_elements(d).iter().any(|(_, e)| matches!(e.kind, ElementKind::Path(_) | ElementKind::Text(_) | ElementKind::Group(_) | ElementKind::WebObject(_))))).run(|s, _| {
         with_doc(s, join)?;
         Ok(CommandOutput::doc())
     }));
@@ -1472,11 +1487,11 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 }),
         );
     }
-    r.add(cmd("modify.snapToPixel").requires(&[Requirement::Document, Requirement::AnyOf(ObjectKind::Path)]).run(|s, _| {
+    r.add(cmd("modify.snapToPixel").requires(SEL).available(|s| s.active().is_some_and(|d| selected_elements(d).iter().any(|(_, e)| matches!(e.kind, ElementKind::Path(_) | ElementKind::Group(_))))).run(|s, _| {
         with_doc(s, snap_to_pixel)?;
         Ok(CommandOutput::doc())
     }));
-    r.add(cmd("modify.group").requires(SEL).run(|s, _| {
+    r.add(cmd("modify.group").requires(SEL).menu_when(super::no_pixel_selection).run(|s, _| {
         with_doc(s, |d| {
             let id = group(d, false)?;
             Ok(CommandOutput::doc_with(json!({"id": id.0})))

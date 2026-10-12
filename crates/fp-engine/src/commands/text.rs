@@ -65,6 +65,15 @@ fn texts_or_defaults(s: &mut Session, on_text: impl Fn(&mut TextElem), on_defaul
     Ok(CommandOutput::session())
 }
 
+/// Familienname zu einem Schriftnamen (PostScript- oder Familienname); unbekannt → unverändert.
+fn font_family_of(name: &str) -> String {
+    let db = fp_text::FontDb::shared();
+    match db.find_ps(name).and_then(|i| db.faces().get(i)) {
+        Some(f) if !f.names.family.is_empty() => f.names.family.clone(),
+        _ => name.to_string(),
+    }
+}
+
 fn set_default_size(s: &mut Session, v: f32) {
     s.prefs.set("Text_Size", crate::prefs::PrefValue::Real(v as f64));
     s.tools.options.text_size = v;
@@ -229,13 +238,23 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 })))
             }),
     );
-    r.add(cmd("text.font").requires(TEXT_SEL).param("font", ParamKind::String, "Schriftname (PostScript- oder Familienname)").run(|s, p| {
+    // Im Original immer aktiv: ohne ausgewählten Text setzt die Wahl die Vorgabe des Textwerkzeugs
+    // (`Text_Font`, PM-7/MN-2).
+    r.add(cmd("text.font").requires(DOC).param("font", ParamKind::String, "Schriftname (PostScript- oder Familienname)").run(|s, p| {
         let f = p.str("font")?;
-        edit_texts(s, move |t| {
-            let f = f.clone();
-            set_attr(t, &move |a| a.font = Some(f.clone()));
-            t.initial.ps_font = Some(p_font(&t.initial));
-        })
+        let family = font_family_of(&f);
+        texts_or_defaults(
+            s,
+            move |t| {
+                let f = f.clone();
+                set_attr(t, &move |a| a.font = Some(f.clone()));
+                t.initial.ps_font = Some(p_font(&t.initial));
+            },
+            move |s| {
+                s.prefs.set("Text_Font", crate::prefs::PrefValue::Str(family.clone()));
+                s.tools.options.text_font = family;
+            },
+        )
     }));
     // Größe/Stil/Ausrichtung sind im Original immer aktiv: ohne ausgewählten Text setzen sie die
     // Vorgaben des Textwerkzeugs (`Text_Size`, `Text_Bold` …).

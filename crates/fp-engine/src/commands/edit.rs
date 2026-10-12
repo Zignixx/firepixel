@@ -359,7 +359,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
             }),
     );
     r.add(cmd("edit.copy").requires(&[Requirement::Document, Requirement::SelectionOrPixels]).run(|s, _| copy_to_clipboard(s, false)));
-    r.add(cmd("edit.copyAsVectors").requires(SEL).run(|s, _| copy_to_clipboard(s, true)));
+    r.add(cmd("edit.copyAsVectors").requires(SEL).menu_when(|s| super::no_pixel_selection(s) && super::not_only_web(s)).run(|s, _| copy_to_clipboard(s, true)));
     r.add(cmd("edit.cut").requires(&[Requirement::Document, Requirement::SelectionOrPixels]).run(|s, _| {
         copy_to_clipboard(s, false)?;
         with_doc(s, clear_selection)?;
@@ -453,8 +453,8 @@ pub(super) fn register(r: &mut CommandRegistry) {
             Ok(CommandOutput::doc())
         })
     }));
-    r.add(cmd("edit.duplicate").requires(SEL).run(|s, _| duplicate(s, (10.0, 10.0))));
-    r.add(cmd("edit.clone").requires(SEL).run(|s, _| duplicate(s, (0.0, 0.0))));
+    r.add(cmd("edit.duplicate").requires(SEL).menu_when(super::no_pixel_selection).run(|s, _| duplicate(s, (10.0, 10.0))));
+    r.add(cmd("edit.clone").requires(SEL).menu_when(super::no_pixel_selection).run(|s, _| duplicate(s, (0.0, 0.0))));
     r.add(
         cmd("edit.move")
             .label("Verschieben")

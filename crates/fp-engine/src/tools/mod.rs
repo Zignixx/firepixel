@@ -534,6 +534,10 @@ pub fn default_gradient_colors() -> Vec<Argb> {
 /// `docs\screenshots\paritaet\a_133`), sonst `Text_Font` (Werksvorgabe Arial).
 pub fn default_text_font(p: &Preferences) -> String {
     const ORIGINAL: &str = "Myriad Pro";
+    // im Menü Text ▸ Schrift ohne Text gewählt (MN-2): gespeicherte Vorgabe gilt
+    if let Some(f) = p.values.get("Text_Font").and_then(|v| v.as_str()).filter(|f| !f.trim().is_empty()) {
+        return f;
+    }
     if fp_text::FontDb::shared().find_family(ORIGINAL, false, false).is_some() {
         ORIGINAL.to_string()
     } else {

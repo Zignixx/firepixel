@@ -278,8 +278,8 @@ fn convert(st: &AppState, entries: &[MenuEntry]) -> Vec<Node> {
                 KEY_EXTENSIONS => kids = vec![item(&t("menu-window-extensions-none"), ItemAction::None, false, None)],
                 _ => {}
             }
-            let enabled = kids.iter().any(|k| matches!(k, Node::Item { enabled: true, .. } | Node::Sub { enabled: true, .. }));
-            out.push(Node::Sub { label, children: kids, enabled });
+            // Untermenü-Köpfe sind im Original immer aktiv, auch wenn alles darin grau ist (PM-7)
+            out.push(Node::Sub { label, children: kids, enabled: true });
             continue;
         }
         let Some(id) = e.id else {
@@ -327,21 +327,48 @@ pub fn note_font_choice(st: &mut AppState, a: &Action) {
     st.session.prefs.set("RecentFontList", fp_engine::prefs::PrefValue::Str(s));
 }
 
-/// Text ▸ Schrift: oben die zuletzt benutzten Schriften (wie im Original), dann die
-/// Systemschriften (fp-text, im Hintergrund indiziert) – bei vielen Familien nach Anfangsbuchstaben
-/// in Untermenüs, damit das Menü auf den Bildschirm passt. Familien mit mehreren Schnitten zeigen
-/// die Schnitte als Untermenü. Klick setzt `text.font` für die ausgewählten Texte.
+/// Aktuelle Schrift für das Häkchen in Text ▸ Schrift: die des ersten ausgewählten Texts, sonst
+/// die Vorgabe des Textwerkzeugs (PostScript- oder Familienname).
+pub fn current_font(st: &AppState) -> String {
+    let from_text = st.session.active().and_then(|d| {
+        d.selection.elements.iter().find_map(|id| {
+            let e = fp_engine::docops::element_on_page(&d.doc, d.page, *id)?;
+            match &e.kind {
+                fp_model::element::ElementKind::Text(t) => t.resolved_runs().first().and_then(|(a, _)| a.font.clone()).or_else(|| t.initial.font.clone()),
+                _ => None,
+            }
+        })
+    });
+    from_text.unwrap_or_else(|| st.session.tools.options.text_font.clone())
+}
+
+/// Text ▸ Schrift wie im Original: oben die zuletzt benutzten Schriften (Voreinstellung
+/// `RecentFontList`), Trennlinie, dann alle Familien **flach** (lange Liste mit Bildlauf, siehe
+/// [`show_nodes`]); Familien mit mehreren Schnitten zeigen die Schnitte als Untermenü. Die aktuelle
+/// Schrift trägt ein Häkchen. Die Einträge sind auch ohne Text aktiv: dann setzt `text.font` die
+/// Vorgabe des Textwerkzeugs.
 fn font_menu(st: &AppState) -> Vec<Node> {
     let enabled = st.session.is_available("text.font");
     let fams = crate::inspector::fonts::families();
+    let cur = current_font(st);
     let pick = |ps: &str| ItemAction::Ui(Action::Run("text.font".into(), json!({ "font": ps })));
     let entry = |f: &crate::inspector::fonts::Family| {
+        let is_family = f.name.eq_ignore_ascii_case(&cur);
         if f.styles.len() > 1 {
-            let children = f.styles.iter().map(|(style, ps)| item(style, pick(ps), enabled, None)).collect();
-            return Node::Sub { label: f.name.clone(), children, enabled };
+            let base = crate::inspector::fonts::base_style(f);
+            let children = f
+                .styles
+                .iter()
+                .map(|(style, ps)| {
+                    let on = ps.eq_ignore_ascii_case(&cur) || (is_family && *style == base);
+                    item(style, pick(ps), enabled, Some(on))
+                })
+                .collect();
+            return Node::Sub { label: f.name.clone(), children, enabled: true };
         }
         let ps = f.styles.first().map(|s| s.1.clone()).unwrap_or_else(|| f.name.clone());
-        item(&f.name, pick(&ps), enabled, None)
+        let on = is_family || ps.eq_ignore_ascii_case(&cur);
+        item(&f.name, pick(&ps), enabled, Some(on))
     };
     let mut out: Vec<Node> = Vec::new();
     let recent: Vec<Node> = recent_fonts(st).iter().filter_map(|n| fams.iter().find(|f| f.name.eq_ignore_ascii_case(n))).map(entry).collect();
@@ -349,27 +376,7 @@ fn font_menu(st: &AppState) -> Vec<Node> {
         out.extend(recent);
         out.push(Node::Separator);
     }
-    if fams.len() <= 40 {
-        out.extend(fams.iter().map(entry));
-        return out;
-    }
-    let mut cur: Option<(String, Vec<Node>)> = None;
-    for f in fams.iter() {
-        let first = f.name.chars().next().map(|c| c.to_uppercase().to_string()).unwrap_or_default();
-        let key = if first.chars().all(|c| c.is_alphabetic()) { first } else { "#".to_string() };
-        if cur.as_ref().is_none_or(|(k, _)| *k != key) {
-            if let Some((k, v)) = cur.take() {
-                out.push(Node::Sub { label: k, children: v, enabled });
-            }
-            cur = Some((key, Vec::new()));
-        }
-        if let Some((_, v)) = cur.as_mut() {
-            v.push(entry(f));
-        }
-    }
-    if let Some((k, v)) = cur {
-        out.push(Node::Sub { label: k, children: v, enabled });
-    }
+    out.extend(fams.iter().map(entry));
     out
 }
 
@@ -424,8 +431,8 @@ fn filter_submenus(st: &AppState) -> Vec<Node> {
                     }
                 })
                 .collect();
-            let enabled = children.iter().any(|k| matches!(k, Node::Item { enabled: true, .. }));
-            Node::Sub { label: clean_label(&t(key)).0, children, enabled }
+            // Kopf immer aktiv wie im Original (PM-7)
+            Node::Sub { label: clean_label(&t(key)).0, children, enabled: true }
         })
         .collect()
 }
@@ -598,6 +605,8 @@ pub fn menu_frame(theme: &Theme) -> egui::Frame {
 }
 
 const CHECK_COL: f32 = 28.0;
+/// Ab so vielen Einträgen bekommt ein Untermenü einen Bildlauf.
+pub const LONG_SUBMENU: usize = 40;
 const RIGHT_PAD: f32 = 22.0;
 
 /// Zeichnet einen Menüeintrag und liefert die Antwort.
@@ -666,10 +675,21 @@ pub fn show_nodes(ui: &mut Ui, nodes: &[Node], out: &mut Vec<Action>) {
                 let open = egui::containers::menu::MenuState::from_ui(ui, |s, _| s.open_item == Some(SubMenu::id_from_widget_id(id)));
                 let resp = paint_item(ui, label, None, None, *enabled, true, open);
                 if *enabled {
-                    SubMenu::new().show(ui, &resp, |ui| show_nodes(ui, children, out));
+                    SubMenu::new().show(ui, &resp, |ui| show_submenu_body(ui, children, out));
                 }
             }
         }
+    }
+}
+
+/// Inhalt eines Untermenüs; lange Untermenüs (Text ▸ Schrift: alle Familien flach, ab
+/// [`LONG_SUBMENU`] Einträgen) bekommen wie im Original einen Bildlauf und bleiben im Fenster.
+pub fn show_submenu_body(ui: &mut Ui, children: &[Node], out: &mut Vec<Action>) {
+    if children.len() > LONG_SUBMENU {
+        let max_h = (ui.ctx().content_rect().height() - 40.0).max(120.0);
+        egui::ScrollArea::vertical().max_height(max_h).auto_shrink([true, true]).show(ui, |ui| show_nodes(ui, children, out));
+    } else {
+        show_nodes(ui, children, out);
     }
 }
 

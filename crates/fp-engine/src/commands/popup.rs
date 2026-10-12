@@ -16,6 +16,17 @@ use std::sync::Arc;
 
 const WEB_SEL: &[Requirement] = &[Requirement::Document, Requirement::AnyOf(ObjectKind::WebObject)];
 
+/// Hat ein ausgewähltes Web-Objekt ein Popupmenü? Menüfreigabe von „Popupmenü bearbeiten/löschen“
+/// wie im Original (PM-7: ohne Popupmenü grau).
+pub(super) fn has_popup_menu(s: &crate::session::Session) -> bool {
+    s.active().is_some_and(|d| {
+        selected_elements(d).iter().any(|(_, e)| match &e.kind {
+            ElementKind::WebObject(w) => w.behaviors.as_ref().is_some_and(|b| b.items.iter().any(|x| x.popup.is_some() || x.action == BehaviorAction::PopupMenu.code())),
+            _ => false,
+        })
+    })
+}
+
 fn bad(p: &Params, m: impl Into<String>) -> EngineError {
     EngineError::InvalidParams { name: p.command.clone(), message: m.into() }
 }
@@ -128,6 +139,8 @@ pub(super) fn register(r: &mut CommandRegistry) {
     r.add(
         cmd("modify.popUpMenu.editPopUpMenu")
             .requires(WEB_SEL)
+            // im Original grau, solange das Segment kein Popupmenü hat (PM-7)
+            .menu_when(has_popup_menu)
             .opt("items", ParamKind::Json, "neue Einträge")
             .opt("menu", ParamKind::Json, "geänderte Darstellungsfelder")
             .opt_default("index", ParamKind::Integer { min: Some(0), max: None }, json!(0), "welches Pop-up-Menü des Objekts")
