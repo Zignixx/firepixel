@@ -786,8 +786,7 @@ pub(super) fn method(doc: DocId, name: &str, args: &[Arg], ctx: &mut Context) ->
             u()
         }
         "setTextFlow" | "setTextStream" => {
-            let v = arg_str(args, 0).to_lowercase();
-            let o = if v.contains("vert") { if v.contains("left") { "verticalLtr" } else { "verticalRtl" } } else if v.contains("right") { "horizontalRtl" } else { "horizontalLtr" };
+            let o = super::orientation_name(super::orientation_code_from_jsf(&arg_str(args, 0)));
             on_selection(doc, "text.setProperties", json!({"orientation": o}))
         }
         "insertText" | "replaceTextString" => {

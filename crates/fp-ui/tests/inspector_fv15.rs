@@ -220,7 +220,9 @@ fn w21_other_texture_from_file() {
     let other = h.get_by_label("Andere...").rect();
     click(&mut h, other.center());
     h.run_steps(2);
-    assert_eq!(obj_quads::tool_attrs(&h.ctx).fill_texture, "Meine Textur");
+    // AU-3: als Vorgabe wird der volle Pfad gemerkt, angezeigt wird der Name
+    assert_eq!(obj_quads::tool_attrs(&h.ctx).fill_texture, file.to_string_lossy());
+    assert_eq!(obj_quads::texture_display_name(&obj_quads::tool_attrs(&h.ctx).fill_texture), "Meine Textur");
     assert_eq!(undo_count(&h), n1, "Werkzeugvorgabe ohne Verlaufsschritt");
     assert!(combos(&h).iter().any(|(_, v, _)| v == "Meine Textur"), "Liste zeigt die gewählte Datei: {:?}", combos(&h));
     let _ = std::fs::remove_dir_all(&base);

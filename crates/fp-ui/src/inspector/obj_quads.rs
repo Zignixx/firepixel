@@ -680,7 +680,7 @@ fn list_separator(ui: &mut Ui) {
 /// Kombifeld „Textur“ (Füllung bzw. Strich): Texturen mit Bildlauf, darunter wie im Original eine
 /// Trennlinie und „Andere…“ (immer sichtbar, außerhalb des Bildlaufs).
 fn texture_combo(ui: &mut Ui, id: Id, r: Rect, current: &str, enabled: bool) -> Option<TextureChoice> {
-    let (items, labels, sel) = texture_list_labels(current);
+    let (items, labels, sel) = texture_list_labels(&texture_display_name(current));
     let text = labels.get(sel).cloned().unwrap_or_default();
     let resp = fields::combo_box_frame(ui, id, r, &text, enabled);
     let th = Theme::current(ui.ctx());
@@ -719,7 +719,19 @@ fn choose_texture(ui: &Ui, st: &mut AppState, tgt: Target, stroke: bool, name: &
     }
 }
 
+/// Anzeigename einer Textur-Werkzeugvorgabe: Bei einem vollen Pfad („Andere…“) der Dateiname ohne
+/// Endung, sonst der Name selbst.
+pub fn texture_display_name(value: &str) -> String {
+    let p = std::path::Path::new(value);
+    match p.file_stem() {
+        Some(stem) if p.is_absolute() => stem.to_string_lossy().to_string(),
+        _ => value.to_string(),
+    }
+}
+
 /// „Andere…“ in der Texturliste: Bilddatei wählen; der Dateiname ohne Endung ist der Texturname.
+/// Als Werkzeugvorgabe wird der volle Pfad gemerkt (Anzeige weiter der Name), damit `pi.fill`/
+/// `pi.stroke` die Datei für neue Objekte auch außerhalb der Texturordner finden.
 fn pick_other_texture(ui: &Ui, st: &mut AppState, tgt: Target, stroke: bool) {
     let (title, images) = (t("pi-texture-pick-title"), t("pi-filter-images"));
     let ctx = ui.ctx().clone();
@@ -730,13 +742,16 @@ fn pick_other_texture(ui: &Ui, st: &mut AppState, tgt: Target, stroke: bool) {
         }
         match tgt {
             Target::Selection => st.run("element.setTexture", json!({"target": if stroke { "stroke" } else { "fill" }, "image": p.to_string_lossy(), "name": name})),
-            Target::Tool => edit_tool_attrs(&ctx, |a| {
-                if stroke {
-                    a.stroke_texture = name.clone();
-                } else {
-                    a.fill_texture = name.clone();
-                }
-            }),
+            Target::Tool => {
+                let full = p.to_string_lossy().to_string();
+                edit_tool_attrs(&ctx, |a| {
+                    if stroke {
+                        a.stroke_texture = full.clone();
+                    } else {
+                        a.fill_texture = full.clone();
+                    }
+                })
+            }
         }
     });
 }

@@ -244,6 +244,32 @@ pub(crate) fn orientation_name(code: i32) -> &'static str {
     }
 }
 
+/// Richtungs-Code (ORIi) → JSF-Name, gemessen in `re\09-text.md` T5:
+/// 1 = „vertical right to left“, 3 = „vertical left to right“.
+pub(crate) fn orientation_jsf_name(code: i32) -> &'static str {
+    match code {
+        1 => "vertical right to left",
+        2 => "horizontal right to left",
+        3 => "vertical left to right",
+        _ => "horizontal left to right",
+    }
+}
+
+/// JSF-Name → Richtungs-Code (ORIi). Vertikal ohne ausdrückliches
+/// „left to right“ gilt als rechts→links (1), horizontal ohne „right to left“
+/// als links→rechts (0). Nicht nach einzelnen Wörtern suchen: „right to left“
+/// enthält auch „left“.
+pub(crate) fn orientation_code_from_jsf(name: &str) -> i32 {
+    let v = name.trim().to_ascii_lowercase();
+    if v.starts_with("vert") {
+        if v.contains("left to right") || v.ends_with("ltr") { 3 } else { 1 }
+    } else if v.contains("right to left") || v.ends_with("rtl") {
+        2
+    } else {
+        0
+    }
+}
+
 /// Ebene (Platz auf der aktuellen Seite) auf- oder zuklappen über `layer.setExpanded`.
 pub(crate) fn set_layers_expanded(doc: DocId, slots: Option<usize>, open: bool) -> FwResult<()> {
     let ids: Vec<u64> = st(|s| {

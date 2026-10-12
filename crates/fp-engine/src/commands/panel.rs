@@ -164,7 +164,16 @@ fn set_handles(e: &mut Element, h: fp_model::FillHandles) {
 
 /// Textur nach Namen: mit Maske aus den Texturordnern (`crate::resources`), sonst nur der Name
 /// (ohne Datei bleibt die Textur ohne Wirkung, wie bisher).
+/// Ein absoluter Pfad („Andere…“ mit einer Datei außerhalb der Texturordner) lädt diese Datei;
+/// Name ist dann der Dateiname ohne Endung.
 fn texture(name: &str) -> Texture {
+    let path = std::path::Path::new(name.trim());
+    if path.is_absolute()
+        && let Some(stem) = path.file_stem().map(|s| s.to_string_lossy().to_string())
+        && let Some(t) = crate::resources::texture_from_file(path, &stem)
+    {
+        return t;
+    }
     crate::resources::load_texture(name).unwrap_or_else(|| Texture { name: name.to_string(), user_name: Some(name.to_string()), mask: None, extra: Default::default() })
 }
 

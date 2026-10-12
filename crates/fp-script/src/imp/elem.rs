@@ -606,12 +606,7 @@ fn element_get(cls: &str, name: &str, doc: DocId, id: ElementId, ctx: &mut Conte
         "autoKern" => JsValue::from(matches!(&e.kind, ElementKind::Text(t) if t.auto_kern)),
         "autoExpand" => JsValue::from(matches!(&e.kind, ElementKind::Text(t) if t.frame_type.unwrap_or(0) == 0)),
         "orientation" => conv::s(match &e.kind {
-            ElementKind::Text(t) => match t.orientation {
-                1 => "vertical left to right",
-                2 => "horizontal right to left",
-                3 => "vertical right to left",
-                _ => "horizontal left to right",
-            },
+            ElementKind::Text(t) => super::orientation_jsf_name(t.orientation as i32),
             _ => "horizontal left to right",
         }),
         "transformMode" => conv::s("paths"),
@@ -950,12 +945,7 @@ fn element_set(cls: &str, name: &str, doc: DocId, id: ElementId, a: Arg, raw: &J
             text_prop(doc, id, cls, name, json!({"antialias": super::aa_name(code)}))
         }
         "orientation" => {
-            let code = match a.str().unwrap_or_default().as_str() {
-                "vertical left to right" => 1,
-                "horizontal right to left" => 2,
-                "vertical right to left" => 3,
-                _ => 0,
-            };
+            let code = super::orientation_code_from_jsf(&a.str().unwrap_or_default());
             text_prop(doc, id, cls, name, json!({"orientation": super::orientation_name(code)}))
         }
         "alignment" | "justify" => {

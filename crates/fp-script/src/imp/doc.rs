@@ -47,6 +47,31 @@ pub(super) fn set_defaults(doc: DocId, f: impl FnOnce(&mut DefaultAttrs)) -> FwR
     with_state(|s| f(s.defaults.entry(doc.0).or_default()))
 }
 
+/// Füll- bzw. Strichtextur nach Namen (`""` = keine) auf die Auswahl, ohne Auswahl in die
+/// Vorgaben für neue Objekte. `pi.fill`/`pi.stroke` laden die Maske mit
+/// `fp_engine::resources::load_texture` aus den Texturordnern (ohne Datei bleibt nur der Name).
+fn set_texture(doc: DocId, stroke: bool, name: &str) -> FwResult<()> {
+    let name = name.trim().to_string();
+    if selection(doc)?.is_empty() {
+        return set_defaults(doc, |d| if stroke { d.stroke_texture = Some(name) } else { d.fill_texture = Some(name) });
+    }
+    exec(Some(doc), if stroke { "pi.stroke" } else { "pi.fill" }, json!({"texture": name}))?;
+    Ok(())
+}
+
+/// Neue Form zeichnen und die Texturvorgaben (setFillTexture/setBrushTexture ohne Auswahl) anwenden.
+fn draw_shape(doc: DocId, cmd: &str, p: Map<String, Value>, closed: bool) -> FwResult<()> {
+    exec(Some(doc), cmd, shape_params(doc, p, closed))?;
+    let d = defaults(doc);
+    if let Some(t) = d.fill_texture.filter(|t| !t.is_empty() && closed) {
+        exec(Some(doc), "pi.fill", json!({"texture": t}))?;
+    }
+    if let Some(t) = d.stroke_texture.filter(|t| !t.is_empty()) {
+        exec(Some(doc), "pi.stroke", json!({"texture": t}))?;
+    }
+    Ok(())
+}
+
 /// Parameter für neue Formen aus den Vorgaben (setBrush/setFill ohne Auswahl).
 pub(super) fn shape_params(doc: DocId, mut p: Map<String, Value>, closed: bool) -> Value {
     let d = defaults(doc);
@@ -437,14 +462,14 @@ pub(super) fn method(doc: DocId, name: &str, args: &[Arg], ctx: &mut Context) ->
             if round > 0.0 {
                 p.insert("roundness".into(), json!(round.clamp(0.0, 1.0)));
             }
-            exec(Some(doc), "draw.rectangle", shape_params(doc, p, true))?;
+            draw_shape(doc, "draw.rectangle", p, true)?;
             u()
         }
         "addNewOval" => {
             let r = a(0).rect().ok_or_else(|| FwErr::Hr(hr::E_BAD_PARAM_TYPE, "Rechteck".into()))?;
             let mut p = Map::new();
             p.insert("rect".into(), rect_arr(r));
-            exec(Some(doc), "draw.ellipse", shape_params(doc, p, true))?;
+            draw_shape(doc, "draw.ellipse", p, true)?;
             u()
         }
         "addNewLine" => {
@@ -453,7 +478,7 @@ pub(super) fn method(doc: DocId, name: &str, args: &[Arg], ctx: &mut Context) ->
             let mut p = Map::new();
             p.insert("from".into(), json!([x0, y0]));
             p.insert("to".into(), json!([x1, y1]));
-            exec(Some(doc), "draw.line", shape_params(doc, p, false))?;
+            draw_shape(doc, "draw.line", p, false)?;
             u()
         }
         "addNewStar" | "addNewPolygon" => {
@@ -466,7 +491,7 @@ pub(super) fn method(doc: DocId, name: &str, args: &[Arg], ctx: &mut Context) ->
             p.insert("corner".into(), json!([c.0, c.1 - r1.abs().max(1.0)]));
             p.insert("sides".into(), json!(n));
             p.insert("star".into(), json!(name == "addNewStar"));
-            exec(Some(doc), "draw.polygon", shape_params(doc, p, true))?;
+            draw_shape(doc, "draw.polygon", p, true)?;
             u()
         }
         "addNewText" => {
@@ -677,7 +702,14 @@ pub(super) fn method(doc: DocId, name: &str, args: &[Arg], ctx: &mut Context) ->
         }
         "setFillNColor" | "setFillNColorNTexture" => {
             let c = a(1).str().and_then(|c| conv::norm_color(&c));
-            apply_fill(doc, &a(0).json(), c)?;
+            let fill = a(0).json();
+            apply_fill(doc, &fill, c)?;
+            if name == "setFillNColorNTexture"
+                && !fill.is_null()
+                && let Some(t) = a(2).str()
+            {
+                set_texture(doc, false, &t)?;
+            }
             u()
         }
         "setFillColor" => {
@@ -702,14 +734,27 @@ pub(super) fn method(doc: DocId, name: &str, args: &[Arg], ctx: &mut Context) ->
             }
             u()
         }
-        "setFillEdgeMode" | "setFillTexture" | "setBrushTexture" | "setFillPlacement" | "setDefaultFillVector" => u(),
+        "setFillTexture" | "setBrushTexture" => {
+            if let Some(t) = a(0).str() {
+                set_texture(doc, name == "setBrushTexture", &t)?;
+            }
+            u()
+        }
+        "setFillEdgeMode" | "setFillPlacement" | "setDefaultFillVector" => u(),
         "setBrush" => {
             apply_brush(doc, &a(0).json(), None)?;
             u()
         }
         "setBrushNColor" | "setBrushNColorNTexture" => {
             let c = a(1).str().and_then(|c| conv::norm_color(&c));
-            apply_brush(doc, &a(0).json(), c)?;
+            let brush = a(0).json();
+            apply_brush(doc, &brush, c)?;
+            if name == "setBrushNColorNTexture"
+                && !brush.is_null()
+                && let Some(t) = a(2).str()
+            {
+                set_texture(doc, true, &t)?;
+            }
             u()
         }
         "setBrushColor" => {
@@ -866,12 +911,7 @@ pub(super) fn method(doc: DocId, name: &str, args: &[Arg], ctx: &mut Context) ->
             u()
         }
         "setTextOrientation" => {
-            let code = match arg_str(args, 0).as_str() {
-                "vertical left to right" => 1,
-                "horizontal right to left" => 2,
-                "vertical right to left" => 3,
-                _ => 0,
-            };
+            let code = super::orientation_code_from_jsf(&arg_str(args, 0));
             super::set_text_props(doc, None, json!({"orientation": super::orientation_name(code)}))?;
             u()
         }

@@ -99,6 +99,10 @@ pub struct DefaultAttrs {
     pub fill: Option<Option<String>>,
     /// `Some(None)` = kein Strich; sonst (Breite, Farbe).
     pub stroke: Option<Option<(f64, Option<String>)>>,
+    /// Fülltextur nach Namen (`""` = keine), `None` = unverändert.
+    pub fill_texture: Option<String>,
+    /// Strichtextur nach Namen (`""` = keine), `None` = unverändert.
+    pub stroke_texture: Option<String>,
 }
 
 /// Zustand eines Laufs.
