@@ -204,7 +204,7 @@ Die Reihenfolge gilt, solange nichts Dringenderes vom Nutzer kommt. Sobald ein P
 | ☐ **E1** | Export-Dialog (von RE-EX, `re\18` §9.6): ein Ablauf mit Artenliste (PDF, HTML und Bilder, Nur Bilder, CSS und Bilder, CSS-Sprites, Ebenen/Status/Seiten in Dateien, PSD, SVG), Unterpaneele mit Grau-Regeln, Ordner + Name in einem Dialog, Dateien je Art |
 | ☐ **E2** | Optionen-Dialoge (von RE-EX): PDF-, CSS-Sprite-, „Ebenen/Status/Seiten in Dateien“-, Photoshop-Optionen; „Optionen…“ je Art richtig verdrahten |
 | ☐ **E3** | HTML-Einrichtung (D13) und Exportassistent (D11) **nur funktional** (von RE-EX, §4b): Felder, die der HTML-Export auswertet; Assistent als Zustandsautomat, „Beenden“ öffnet die Bildvorschau |
-| ☐ **KT-1** | Kurven originalgetreu (von RE-KT, `re\19` §7.4): Layout, Zeichnung, Mausregeln, Felder, Auto und Pipetten im Dialog, Tests aus `ktref.py` |
+| ☑ **KT-1** (KV-1) | Kurven originalgetreu (von RE-KT, `re\19` §7.4): Layout, Zeichnung, Mausregeln, Felder, Auto und Pipetten im Dialog, Tests aus `ktref.py` – umgesetzt (KV-1, `5548dab`, `0afa445`; Tests `curves_kv1.rs`, `fp-raster` `curve_edit`), Nachprüfung im Fenster in NACHPRUEFUNG §3 |
 | ☐ **KT-2** | Tonwertkorrektur originalgetreu (von RE-KT): Histogramm, Schieber-Widget mit Griffen, Gamma-Abbildung, Auto und Pipetten, gemeinsamer Vorschau-Schalter |
 | ☐ **KT-3** | Live-Bearbeitung und Auswahl-Dialoge (von RE-KT): Kurven/Tonwert als bearbeitbare Live-Filter, Dialoge „Bitmap-Auswahl speichern/wiederherstellen/löschen“ |
 | ☐ **P-DLG-X Rest** | laut PM-5 außerdem unvollständig: D07, D10 (XMP-Fenster fehlt), D12 (Batch, „Später“), D15 (nur funktional, §4b); Bildvorschau D24 siehe P-BV |
