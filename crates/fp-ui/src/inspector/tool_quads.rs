@@ -189,7 +189,7 @@ fn brush_q4(ui: &mut Ui, st: &mut AppState, r: Rect) {
     let d = Dl::at(r.min);
     obj_quads::stroke_texture_panel(ui, st, d.offset(125.0, 0.0), Target::Tool, true);
     obj_quads::stroke_edit_row(ui, st, d.offset(125.0, 14.0), Target::Tool, true);
-    mask_sub(ui, d.offset(258.0, 0.0));
+    mask_sub(ui, st, d.offset(258.0, 0.0));
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -319,8 +319,10 @@ fn fill_tool_q3(ui: &mut Ui, st: &mut AppState, r: Rect) {
     let d = Dl::at(r.min);
     obj_quads::fill_panel(ui, st, d.offset(1.0, 0.0), Target::Tool, true);
     fields::vsep(ui, d.r(122.0, 0.0, 1.0, 1.0).left(), r.top() + 1.0, r.bottom());
-    fields::label_right(ui, d.r(122.0, 2.0, 43.0, 8.0), &tx("pi-tolerance"), true);
-    if let Some(v) = fields::number(ui, "fill-tol", d.r(167.0, 0.0, 21.0, 13.0), Some(d.r(189.0, 0.0, 9.0, 13.0)), Some(st.session.tools.options.fill_tolerance as f64), (0.0, 255.0), 0, true) {
+    // Toleranz gilt nur ohne „Auswahl füllen“ (Original: dann grau)
+    let tol_en = !st.session.tools.options.fill_selection;
+    fields::label_right(ui, d.r(122.0, 2.0, 43.0, 8.0), &tx("pi-tolerance"), tol_en);
+    if let Some(v) = fields::number(ui, "fill-tol", d.r(167.0, 0.0, 21.0, 13.0), Some(d.r(189.0, 0.0, 9.0, 13.0)), Some(st.session.tools.options.fill_tolerance as f64), (0.0, 255.0), 0, tol_en) {
         st.session.tools.options.fill_tolerance = v as u32;
     }
     if let Some(b) = fields::checkbox(ui, "fill-sel", d.r(167.0, 16.0, 65.0, 10.0), &tx("pi-fill-selection"), st.session.tools.options.fill_selection, true) {
@@ -334,7 +336,7 @@ fn fill_tool_q4(ui: &mut Ui, st: &mut AppState, r: Rect) {
     let d = Dl::at(r.min);
     fields::vsep(ui, d.r(122.0, 0.0, 1.0, 1.0).left(), r.top() + 1.0, r.bottom());
     obj_quads::fill_texture_panel(ui, st, d.offset(1.0, 0.0), Target::Tool, true);
-    mask_sub(ui, d.offset(254.0, 0.0));
+    mask_sub(ui, st, d.offset(254.0, 0.0));
 }
 
 fn stamp_q3(ui: &mut Ui, st: &mut AppState, r: Rect) {
@@ -611,13 +613,33 @@ fn url_tool_q3(ui: &mut Ui, st: &mut AppState, r: Rect) {
     }
 }
 
-/// Masken-Teilfeld (14117): nur beim Bearbeiten einer Maske aktiv.
-fn mask_sub(ui: &mut Ui, d: Dl) {
+/// Wird gerade eine Maske bearbeitet (Auswahl = Maskenelement einer Gruppe, „Maske bearbeiten“)?
+fn editing_mask(st: &AppState) -> bool {
+    let Some(d) = st.session.active() else { return false };
+    let Some(id) = d.selection.elements.first().copied() else { return false };
+    let Some(pg) = d.doc.pages.get(d.page) else { return false };
+    let mut found = false;
+    fp_model::traverse::walk_root(&pg.root, fp_model::RootRef::Page(d.page), &mut |_, _, e| {
+        if let fp_model::ElementKind::Group(g) = &e.kind
+            && g.mask.as_ref().is_some_and(|m| m.id == id)
+        {
+            found = true;
+        }
+    });
+    found
+}
+
+/// Masken-Teilfeld (14117): wie im Original nur sichtbar, während eine Maske bearbeitet wird
+/// (sonst bleibt die Fläche leer).
+fn mask_sub(ui: &mut Ui, st: &AppState, d: Dl) {
+    if !editing_mask(st) {
+        return;
+    }
     fields::label(ui, d.r(2.0, 2.0, 29.0, 8.0), &tx("pi-mask"), false);
     let _ = fields::radio(ui, Id::new("mask-alpha"), d.r(39.0, 2.0, 80.0, 10.0), &tx("pi-mask-alpha"), true, false);
     let _ = fields::radio(ui, Id::new("mask-gray"), d.r(39.0, 15.0, 80.0, 10.0), &tx("pi-mask-gray"), false, false);
 }
 
-fn mask_sub_q4(ui: &mut Ui, _st: &mut AppState, r: Rect) {
-    mask_sub(ui, Dl::at(r.min).offset(254.0, 0.0));
+fn mask_sub_q4(ui: &mut Ui, st: &mut AppState, r: Rect) {
+    mask_sub(ui, st, Dl::at(r.min).offset(254.0, 0.0));
 }

@@ -14,6 +14,7 @@ pub mod glyphs;
 pub mod layouts;
 pub mod obj_quads;
 pub mod popups;
+pub mod scale;
 mod quads;
 pub mod texte;
 mod tool_quads;
@@ -183,14 +184,38 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
     state.update(&st.session);
     ui.ctx().data_mut(|d| d.insert_temp(Id::new("inspector-state"), state.clone()));
     let half = st.settings.workspace.inspector_half;
+    if body.width() + 0.5 >= BODY_WIDTH {
+        quadrants(ui, st, body, &state, half, &theme);
+    } else {
+        // schmales Fenster: die Quadranten behalten ihre Breite nach dem Original, der Inspektor
+        // bekommt einen waagerechten Bildlauf (statt Quadrant 3/4 abzuschneiden)
+        let mut child = ui.new_child(egui::UiBuilder::new().id_salt("inspector-scroll").max_rect(body).layout(egui::Layout::left_to_right(egui::Align::Min)));
+        egui::ScrollArea::horizontal().id_salt("inspector-hscroll").auto_shrink([false, false]).show(&mut child, |ui| {
+            let (r, _) = ui.allocate_exact_size(vec2(BODY_WIDTH, body.height()), Sense::hover());
+            quadrants(ui, st, r, &state, half, &theme);
+        });
+    }
+    ui.allocate_rect(full, Sense::hover());
+}
+
+/// Breite der Quadranten Q1/Q2, Q3/Q4 und Q5/Q6 (Pixel) und die nötige Gesamtbreite.
+const W1: f32 = 126.0;
+const W3: f32 = 590.0;
+const W5: f32 = 180.0;
+/// Breite, die der Inspektor ohne Bildlauf braucht.
+pub const BODY_WIDTH: f32 = 2.0 + W1 + W3 + W5 + 4.0;
+
+/// Trennlinien und Quadranten in `body` zeichnen.
+fn quadrants(ui: &mut Ui, st: &mut AppState, body: Rect, state: &InspectorState, half: bool, theme: &Theme) {
+    let c = &theme.colors;
     let rh = theme.metrics.inspector_row_height;
     let top = body.top() + 2.0;
-    let w1 = 126.0;
-    let w5 = 180.0;
+    let w1 = W1;
+    let w5 = W5;
     let x0 = body.left() + 2.0;
     let x1 = x0 + w1;
     let x3 = (body.right() - 4.0 - w5).max(x1 + 200.0);
-    let x2 = (x1 + 590.0).min(x3);
+    let x2 = (x1 + W3).min(x3);
     let rects = [
         Rect::from_min_max(pos2(x0, top), pos2(x1, top + rh)),
         Rect::from_min_max(pos2(x0, top + rh), pos2(x1, top + 2.0 * rh)),
@@ -262,5 +287,4 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
             }
         }
     }
-    ui.allocate_rect(full, Sense::hover());
 }

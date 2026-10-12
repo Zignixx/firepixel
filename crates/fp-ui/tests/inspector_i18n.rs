@@ -4,8 +4,8 @@
 //! - keine Rohschlüssel (`pi-…`, `blend-…`) in der Oberfläche,
 //! - keine Beschriftung ragt aus ihrer Fläche, aus dem Quadranten oder in ein Feld bzw. eine andere
 //!   Beschriftung,
-//! - Deutsch und Englisch werden nicht gekürzt (Deutsch höchstens leicht verkleinert, wo der Text
-//!   schon vorher nicht in sein Feld passte und abgeschnitten war),
+//! - Deutsch sieht aus wie bisher (kein Einpassen; bekannte Mängel von vorher in `KNOWN_DE`),
+//!   Englisch wird nicht gekürzt,
 //! - in `qps` ist jede feste Beschriftung markiert (kein fest eingebauter Text mehr).
 
 use egui_kittest::Harness;
@@ -88,8 +88,31 @@ fn cases() -> Vec<(&'static str, Session)> {
     let mut s = new_doc();
     ex(&mut s, "web.addHotspot", json!({"shape": "rect", "rect": [10, 10, 90, 60]}));
     v.push(("Hotspot", s));
+    // Maske bearbeiten (Pinsel): Masken-Teilfeld sichtbar
+    let mut s = new_doc();
+    ex(&mut s, "draw.rectangle", json!({"rect": [20, 20, 120, 80]}));
+    ex(&mut s, "draw.ellipse", json!({"rect": [30, 30, 100, 70]}));
+    ex(&mut s, "select.all", json!({}));
+    ex(&mut s, "modify.mask.groupAsMask", json!({}));
+    ex(&mut s, "panel.layers.editMask", json!({}));
+    s.set_tool(fp_engine::ToolId::Brush).expect("Pinsel");
+    v.push(("Maske bearbeiten (Pinsel)", s));
     v
 }
+
+/// Die Sprache ist prozessweit: Tests dieser Datei laufen nacheinander.
+static LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+/// Bekannte Mängel der deutschen Darstellung, die schon vor Phase 6 bestanden (Regel „Deutsch
+/// unverändert“, daher nicht geändert; Befund an den Koordinator): (Fall, Text).
+const KNOWN_DE: &[(&str, &str)] = &[
+    ("Gruppe", "Gruppieren (2)"),
+    ("Segment Bild", "Bearbeiten..."),
+    ("Segment Bild", "Ziel:"),
+    ("Segment Hintergrund", "Horizontale Position:"),
+    ("Text", "Autom. Unterschneidung"),
+    ("Werkzeug tool.text", "Autom. Unterschneidung"),
+];
 
 const TEXT_KINDS: [&str; 5] = ["label", "name", "check", "radio", "button"];
 
@@ -123,8 +146,13 @@ fn shrink(r: egui::Rect, x: f32, y: f32) -> egui::Rect {
 fn check(lang: &str, case: &str, log: &[TextAudit], de_overflow: &mut std::collections::HashMap<String, f32>, errors: &mut Vec<String>) {
     let fields_r: Vec<egui::Rect> = log.iter().filter(|e| e.kind == "field").map(|e| e.avail).collect();
     let texts: Vec<&TextAudit> = log.iter().filter(|e| TEXT_KINDS.contains(&e.kind)).collect();
+    let known = |e: &TextAudit| lang == "de" && KNOWN_DE.iter().any(|(c, t)| *c == case && *t == e.text);
     for e in log.iter().filter(|e| e.kind != "field") {
         let at = format!("[{lang}] {case}: {} „{}“", e.kind, e.text);
+        if known(e) {
+            eprintln!("Hinweis {at}: bekannter Mangel vor Phase 6 (Deutsch unverändert)");
+            continue;
+        }
         if is_raw_key(&e.text) {
             errors.push(format!("{at}: Rohschlüssel"));
         }
@@ -152,8 +180,7 @@ fn check(lang: &str, case: &str, log: &[TextAudit], de_overflow: &mut std::colle
         }
         match lang {
             // Deutsch: höchstens leicht verkleinert (nur wo der Text schon vorher nicht in sein Feld passte)
-            "de" if e.fit == 2 => errors.push(format!("{at}: im Deutschen gekürzt")),
-            "de" if e.fit == 1 => eprintln!("Hinweis {at}: leicht verkleinert"),
+            "de" if e.fit != 0 => errors.push(format!("{at}: im Deutschen verkleinert/gekürzt (Deutsch muss aussehen wie bisher)")),
             "en" if e.fit == 2 => errors.push(format!("{at}: im Englischen gekürzt")),
             "qps" if e.kind != "name" && !e.text.starts_with("[!!") && !e.text.trim().is_empty() => errors.push(format!("{at}: fester, nicht übersetzter Text")),
             _ => {}
@@ -177,7 +204,7 @@ fn check(lang: &str, case: &str, log: &[TextAudit], de_overflow: &mut std::colle
             }
         }
         for o in &texts {
-            if std::ptr::eq(*o, e) {
+            if std::ptr::eq(*o, e) || known(o) {
                 continue;
             }
             if shrink(o.drawn, 1.0, 3.0).intersects(core) {
@@ -188,8 +215,42 @@ fn check(lang: &str, case: &str, log: &[TextAudit], de_overflow: &mut std::colle
     }
 }
 
+/// Schmales Fenster (800 × 600): Die Quadranten behalten ihre Breite, der Inspektor lässt sich
+/// waagerecht verschieben; jede Beschriftung, die links nicht zu sehen ist, ist nach dem Bildlauf
+/// ganz sichtbar (vorher wurden Quadrant 3/4 abgeschnitten).
+#[test]
+fn inspector_narrow_window_scrolls() {
+    let _g = LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    fp_i18n::set_language("de");
+    let mut s = new_doc();
+    ex(&mut s, "draw.text", json!({"text": "Hallo", "anchor": [30, 60], "size": 24}));
+    let mut h = Harness::builder().with_size(egui::vec2(800.0, 600.0)).with_pixels_per_point(1.0).with_max_steps(16).build_ui_state(|ui, app: &mut FirepixelApp| app.root_ui(ui), app(s));
+    let before = audit(&mut h);
+    let visible = |e: &TextAudit| e.drawn.left() >= e.clip.left() - 1.0 && e.drawn.right() <= e.clip.right() + 1.0;
+    let hidden: Vec<(&'static str, String)> = before.iter().filter(|e| TEXT_KINDS.contains(&e.kind) && !visible(e)).map(|e| (e.kind, e.text.clone())).collect();
+    assert!(!hidden.is_empty(), "bei 800 px sollte rechts etwas außerhalb liegen");
+    // Mausrad waagerecht über dem Inspektor
+    let over = before.iter().find(|e| e.kind == "field").map(|e| e.avail.center()).expect("Feld im Inspektor");
+    h.hover_at(over);
+    h.run_steps(1);
+    // in kleinen Schritten nach rechts; jede vorher verdeckte Beschriftung muss irgendwann ganz zu sehen sein
+    let mut seen: Vec<(&'static str, String)> = Vec::new();
+    for _ in 0..24 {
+        h.event(egui::Event::MouseWheel { unit: egui::MouseWheelUnit::Point, delta: egui::vec2(-60.0, 0.0), phase: egui::TouchPhase::Move, modifiers: egui::Modifiers::NONE });
+        h.run_steps(4);
+        for e in audit(&mut h).iter().filter(|e| TEXT_KINDS.contains(&e.kind) && visible(e)) {
+            if !seen.iter().any(|(k, t)| *k == e.kind && *t == e.text) {
+                seen.push((e.kind, e.text.clone()));
+            }
+        }
+    }
+    let never: Vec<&String> = hidden.iter().filter(|h| !seen.contains(h)).map(|h| &h.1).collect();
+    assert!(never.is_empty(), "auch mit Bildlauf nie ganz sichtbar: {never:?}");
+}
+
 #[test]
 fn inspector_layouts_in_all_languages() {
+    let _g = LOCK.lock().unwrap_or_else(|e| e.into_inner());
     let mut errors = Vec::new();
     let mut de_overflow = std::collections::HashMap::new();
     let mut counts = Vec::new();

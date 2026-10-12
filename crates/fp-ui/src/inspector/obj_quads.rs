@@ -250,9 +250,20 @@ pub const BLEND_ITEMS: &[(&str, i32)] = &[
     ("Radieren", 25),
 ];
 
-/// Deutsche Namen der Mischmodus-Liste (für Anzeigen [`texte::blend_labels`] verwenden).
+/// Namen der Mischmodus-Liste in der aktuellen Sprache (wie [`texte::blend_labels`], als
+/// `&'static str` für ältere Aufrufer; je Sprachstand einmal abgelegt).
 pub fn blend_names() -> Vec<&'static str> {
-    BLEND_ITEMS.iter().map(|b| b.0).collect()
+    use std::collections::HashMap;
+    use std::sync::{Mutex, OnceLock};
+    static CACHE: OnceLock<Mutex<HashMap<String, &'static [&'static str]>>> = OnceLock::new();
+    // Schlüssel: Sprache und Stand der Sprachdateien (Nachladen eines Sprachordners)
+    let lang = format!("{}#{}", fp_i18n::current_language(), fp_i18n::generation());
+    let mut m = CACHE.get_or_init(|| Mutex::new(HashMap::new())).lock().unwrap_or_else(|e| e.into_inner());
+    let v = m.entry(lang).or_insert_with(|| {
+        let names: Vec<&'static str> = texte::blend_labels().into_iter().map(|s| &*Box::leak(s.into_boxed_str())).collect();
+        Box::leak(names.into_boxed_slice())
+    });
+    v.to_vec()
 }
 
 /// Listenindex eines Mischmodus.
@@ -446,10 +457,8 @@ pub fn fill_panel(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target, enabled: b
                 }
             });
             if other {
-                chosen = {
                 let (title, images) = (t("pi-pattern-pick-title"), t("pi-filter-images"));
-                crate::dialogs::panel_menus::pick_open(st, &title, &[(images.as_str(), &["png", "jpg", "jpeg", "gif", "bmp"])])
-            };
+                crate::dialogs::panel_menus::pick_open(st, &title, &[(images.as_str(), &["png", "jpg", "jpeg", "gif", "bmp"])], |st, p| st.run("element.setPattern", json!({"image": p.to_string_lossy()})));
             }
             if let Some(p) = chosen {
                 st.run("element.setPattern", json!({"image": p.to_string_lossy()}));
@@ -689,7 +698,11 @@ pub fn stroke_panel(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target, enabled:
             }
         }
     }
+    // Strichposition gibt es wie im Original nur für gewählte Objekte, nicht im Werkzeug-Inspektor
     for (x, g, v, tip, name) in [(2.0, Glyph::StrokeInside, 0, "pi-stroke-inside", "inside"), (18.0, Glyph::StrokeCenter, 1, "pi-stroke-center", "center"), (34.0, Glyph::StrokeOutside, 2, "pi-stroke-outside", "outside")] {
+        if tgt == Target::Tool {
+            break;
+        }
         if fields::toggle(ui, id.with(("place", v)), d.r(x, 16.0, 16.0, 12.0), g, place == v, en, &t(tip)) {
             apply_stroke(ui, st, tgt, json!({"placement": name}));
         }
@@ -779,14 +792,18 @@ pub fn opacity_panel(ui: &mut Ui, st: &mut AppState, d: Dl) {
     let theme = Theme::current(ui.ctx());
     let f = first(st);
     let en = f.is_some();
+    // gemischte Werte (Mehrfachauswahl mit verschiedenen Werten) zeigen wie im Original ein leeres Feld
+    let sel = selection(st);
+    let mixed_op = sel.windows(2).any(|w| w[0].common.opacity != w[1].common.opacity);
+    let mixed_bl = sel.windows(2).any(|w| w[0].common.blend != w[1].common.blend);
     let op = f.as_ref().map(|e| (e.common.opacity.to_percent()).round()).unwrap_or(100.0);
     let bl = f.as_ref().and_then(|e| blend_index(e.common.blend)).unwrap_or(0);
     super::glyphs::paint(ui.painter(), d.r(0.0, 1.0, 9.0, 11.0), Glyph::Opacity, &theme, en);
-    if let Some(v) = fields::number(ui, "pi-opacity", d.r(11.0, 0.0, 19.0, 13.0), Some(d.r(31.0, 0.0, 9.0, 13.0)), en.then_some(op), (0.0, 100.0), 0, en) {
+    if let Some(v) = fields::number(ui, "pi-opacity", d.r(11.0, 0.0, 19.0, 13.0), Some(d.r(31.0, 0.0, 9.0, 13.0)), (en && !mixed_op).then_some(op), (0.0, 100.0), 0, en) {
         st.run("element.setOpacity", json!({"opacity": v}));
     }
     let names = texte::blend_labels();
-    if let Some(i) = fields::combo(ui, "pi-blend", d.r(43.0, 0.0, 81.0, 13.0), &refs(&names), Some(bl), en) {
+    if let Some(i) = fields::combo(ui, "pi-blend", d.r(43.0, 0.0, 81.0, 13.0), &refs(&names), (!mixed_bl).then_some(bl), en) {
         let m = BLEND_ITEMS[i].1;
         if m >= 0 {
             st.run("element.setBlendMode", json!({"mode": m.to_string()}));
@@ -984,9 +1001,11 @@ fn style_q6(ui: &mut Ui, st: &mut AppState, r: Rect) {
     let mut items: Vec<String> = vec![t("pi-style-none")];
     items.extend(styles.iter().cloned());
     let cur = f.as_ref().and_then(|e| e.common.style.clone());
+    // verschiedene Stile in der Auswahl: Liste leer wie im Original
+    let mixed = selection(st).windows(2).any(|w| w[0].common.style != w[1].common.style);
     let sel = cur.as_ref().and_then(|n| items.iter().skip(1).position(|x| x == n).map(|i| i + 1)).unwrap_or(0);
     let refs: Vec<&str> = items.iter().map(|s| s.as_str()).collect();
-    if let Some(i) = fields::combo(ui, "pi-style", d.r(1.0, 0.0, 92.0, 13.0), &refs, Some(sel), en) {
+    if let Some(i) = fields::combo(ui, "pi-style", d.r(1.0, 0.0, 92.0, 13.0), &refs, (!mixed).then_some(sel), en) {
         st.run("pi.style.apply", json!({"name": if i == 0 { String::new() } else { items[i].clone() }}));
     }
     let has = cur.is_some();
@@ -1079,9 +1098,8 @@ fn button_q3(ui: &mut Ui, st: &mut AppState, r: Rect) {
     }
     let presets: Vec<String> = fp_export::options::builtin_presets().iter().map(|p| crate::panels::optimize::preset_label(p.name)).collect();
     let presets = refs(&presets);
-    // Kombifeld etwas schmaler als in dialoge.json, damit „Bearbeiten...“ ungekürzt passt
-    let _ = fields::combo(ui, "pi-btn-export", d.r(25.0, 14.0, 74.0, 13.0), &presets, Some(0), false);
-    let _ = fields::button(ui, "pi-btn-export-edit", d.r(101.0, 14.0, 48.0, 13.0), &t("pi-edit"), false);
+    let _ = fields::combo(ui, "pi-btn-export", d.r(25.0, 14.0, 86.0, 13.0), &presets, Some(0), false);
+    let _ = fields::button(ui, "pi-btn-export-edit", d.r(114.0, 14.0, 35.0, 13.0), &t("pi-edit"), false);
     fields::label_right(ui, d.r(152.0, 2.0, 39.0, 8.0), &t("pi-link"), en);
     if let Some(v) = fields::combo_edit(ui, "pi-btn-url", d.r(195.0, 0.0, 156.0, 13.0), bs.url.as_deref().unwrap_or(""), &known_urls(st), en) {
         st.run("pi.web", json!({"url": v}));
@@ -1196,9 +1214,11 @@ fn slice_q4(ui: &mut Ui, st: &mut AppState, r: Rect) {
             let presets = refs(&presets);
             let cur = sp.as_ref().and_then(|s| s.export.as_ref()).map(|e| fp_export::OptimizeSettings::from_model(e, None));
             let sel = cur.as_ref().and_then(|c| fp_export::options::builtin_presets().iter().position(|p| p.settings.format == c.format && p.settings.color_mode == c.color_mode));
-            // Knopf endet vor der Beschriftung „Ziel:“ (vorher überlappten sich beide)
-            let _ = fields::combo(ui, "pi-slice-export", d.r(26.0, 1.0, 86.0, 13.0), &presets, sel, false);
-            let _ = fields::button(ui, "pi-slice-export-edit", d.r(114.0, 1.0, 52.0, 13.0), &t("pi-edit"), false);
+            // Deutsch: Lage aus dialoge.json (der Knopf reicht dort unter „Ziel:“); übersetzt endet der
+            // Knopf vor der längeren Beschriftung („Edit...“ passt auch so)
+            let bt = if fields::source_language() { d.r(136.0, 1.0, 53.0, 13.0) } else { d.r(136.0, 1.0, 30.0, 13.0) };
+            let _ = fields::combo(ui, "pi-slice-export", d.r(26.0, 1.0, 108.0, 13.0), &presets, sel, false);
+            let _ = fields::button(ui, "pi-slice-export-edit", bt, &t("pi-edit"), false);
         }
     }
     target_field(ui, st, d.offset(154.0, 1.0), w.as_ref(), 15.0, 45.0, 143.0, "pi-slice");

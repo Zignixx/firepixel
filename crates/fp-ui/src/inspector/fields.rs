@@ -37,8 +37,8 @@ impl Dl {
 //
 // Die Felder haben feste Lagen nach dem Original. Übersetzte Beschriftungen können länger sein als
 // die deutschen: Im Inspektor ([`set_fit`]) wird ein zu langer Text erst leicht verkleinert, dann
-// mit „…“ gekürzt (voller Text als Tooltip). Ohne `set_fit` (Bedienfelder, Dialoge) bleibt alles
-// wie bisher. Für Layout-Tests schreibt [`set_audit`] jede Beschriftung und jedes Feld mit Lage
+// mit „…“ gekürzt (voller Text als Tooltip). Ohne `set_fit` (Bedienfelder, Dialoge) und in der
+// Ausgangssprache Deutsch bleibt alles wie bisher. Für Layout-Tests schreibt [`set_audit`] jede Beschriftung und jedes Feld mit Lage
 // in ein Protokoll ([`take_audit`]).
 
 const FIT_ID: &str = "pi-fit-scope";
@@ -65,13 +65,24 @@ pub struct TextAudit {
 }
 
 /// Einpassen langer Beschriftungen ein-/ausschalten (der Inspektor schaltet es für seine
-/// Quadranten ein).
+/// Quadranten ein; in der Ausgangssprache bleibt alles wie bisher).
 pub fn set_fit(ctx: &egui::Context, on: bool) {
     ctx.data_mut(|d| d.insert_temp(Id::new(FIT_ID), on));
 }
 
-fn fit_on(ui: &Ui) -> bool {
+fn fit_scope(ui: &Ui) -> bool {
     ui.ctx().data(|d| d.get_temp::<bool>(Id::new(FIT_ID))).unwrap_or(false)
+}
+
+/// Einpassen aktiv: im Inspektor und nicht in der Ausgangssprache (Deutsch sieht exakt aus wie
+/// bisher, Regel „Deutsch unverändert“; die Felder sind für die deutschen Texte bemessen).
+fn fit_on(ui: &Ui) -> bool {
+    fit_scope(ui) && !source_language()
+}
+
+/// Ist die Ausgangssprache (Deutsch) eingestellt?
+pub fn source_language() -> bool {
+    fp_i18n::current_language() == fp_i18n::SOURCE_LANG
 }
 
 /// Layout-Protokoll ein-/ausschalten (Tests).
@@ -95,7 +106,7 @@ fn audit(ui: &Ui, kind: &'static str, text: &str, avail: Rect, drawn: Rect, fit:
     if !ui.ctx().data(|d| d.get_temp::<bool>(Id::new(AUDIT_ON))).unwrap_or(false) {
         return;
     }
-    let e = TextAudit { kind, text: text.to_string(), avail, drawn, clip: ui.clip_rect(), fit, inspector: fit_on(ui) };
+    let e = TextAudit { kind, text: text.to_string(), avail, drawn, clip: ui.clip_rect(), fit, inspector: fit_scope(ui) };
     ui.ctx().data_mut(|d| d.get_temp_mut_or_default::<Vec<TextAudit>>(Id::new(AUDIT_LOG)).push(e));
 }
 
@@ -257,6 +268,12 @@ pub fn parse_num(s: &str) -> Option<f64> {
     t[..end].parse::<f64>().ok().filter(|v| v.is_finite())
 }
 
+/// Ziffernfeld lesen: alle Nicht-Ziffern werden ignoriert (wie ein Windows-Ziffernfeld).
+pub fn parse_digits(s: &str) -> Option<f64> {
+    let d: String = s.chars().filter(|c| c.is_ascii_digit()).collect();
+    if d.is_empty() { None } else { d.parse::<f64>().ok() }
+}
+
 /// Wert auf einen Bereich klemmen (konservativ wie 11 §6: Eingaben auf den Schieberbereich).
 pub fn clamp_range(v: f64, range: (f64, f64)) -> f64 {
     v.clamp(range.0.min(range.1), range.0.max(range.1))
@@ -269,7 +286,10 @@ pub fn number(ui: &mut Ui, id: impl Hash + std::fmt::Debug, edit: Rect, arrow: O
     let id = Id::new(id);
     let cur = value.map(|v| fmt_num(v, decimals)).unwrap_or_default();
     let (txt, _) = buffered_edit(ui, id, edit, &cur, enabled, false);
-    let mut out = txt.and_then(|s| parse_num(&s)).map(|v| clamp_range(v, range));
+    // nicht negative Ganzzahlfelder sind im Original Ziffernfelder: nur Ziffern zählen
+    // („-5“ → 5, „12,5“ → 125 → auf den Bereich begrenzt)
+    let digits_only = decimals == 0 && range.0 >= 0.0;
+    let mut out = txt.and_then(|s| if digits_only { parse_digits(&s) } else { parse_num(&s) }).map(|v| clamp_range(v, range));
     if let Some(a) = arrow
         && let Some(v) = slider_arrow(ui, id.with("arrow"), a, value.unwrap_or(range.0), range, decimals, enabled)
     {
@@ -278,8 +298,14 @@ pub fn number(ui: &mut Ui, id: impl Hash + std::fmt::Debug, edit: Rect, arrow: O
     out
 }
 
-/// Pfeilknopf ▾ mit Popup-Schieber. Übernommen wird beim Loslassen.
+/// Pfeilknopf ▾ mit Popup-Schieber (linear). Übernommen wird beim Loslassen.
 pub fn slider_arrow(ui: &mut Ui, id: Id, r: Rect, value: f64, range: (f64, f64), decimals: usize, enabled: bool) -> Option<f64> {
+    slider_arrow_scaled(ui, id, r, value, range, decimals, crate::inspector::scale::Scale::linear(decimals), enabled)
+}
+
+/// Pfeilknopf ▾ mit Popup-Schieber und Kennlinie des Originals ([`crate::inspector::scale`]).
+#[allow(clippy::too_many_arguments)]
+pub fn slider_arrow_scaled(ui: &mut Ui, id: Id, r: Rect, value: f64, range: (f64, f64), decimals: usize, scale: crate::inspector::scale::Scale, enabled: bool) -> Option<f64> {
     let t = Theme::current(ui.ctx());
     let resp = ui.interact(r, id, if enabled { Sense::click() } else { Sense::hover() });
     audit(ui, "field", "", r, r, 0);
@@ -297,9 +323,7 @@ pub fn slider_arrow(ui: &mut Ui, id: Id, r: Rect, value: f64, range: (f64, f64),
         .show(|ui| {
             let mut v: f64 = ui.data(|d| d.get_temp(key)).unwrap_or(value);
             ui.spacing_mut().slider_width = 130.0;
-            let s = egui::Slider::new(&mut v, range.0..=range.1).show_value(false);
-            let s = if decimals == 0 { s.step_by(1.0) } else { s };
-            let r2 = ui.add(s);
+            let r2 = crate::inspector::scale::slider(ui, &mut v, range, scale);
             ui.label(egui::RichText::new(fmt_num(v, decimals)).font(t.small_font()).color(c.text));
             if r2.dragged() || r2.changed() {
                 ui.data_mut(|d| d.insert_temp(key, v));
@@ -557,6 +581,9 @@ mod tests {
         assert_eq!(parse_num(" 40 px"), Some(40.0));
         assert_eq!(parse_num("-3"), Some(-3.0));
         assert_eq!(parse_num("abc"), None);
+        assert_eq!(parse_digits("-5"), Some(5.0));
+        assert_eq!(parse_digits("12,5"), Some(125.0));
+        assert_eq!(parse_digits("x"), None);
         assert_eq!(fmt_num(4.10, 1), "4,1");
         assert_eq!(fmt_num(100.0, 0), "100");
         assert_eq!(clamp_range(150.0, (0.0, 100.0)), 100.0);

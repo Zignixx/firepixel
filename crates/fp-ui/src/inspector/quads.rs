@@ -130,10 +130,10 @@ fn tool_q1(ui: &mut Ui, st: &mut AppState, r: Rect) {
     let lr = d.r(21.0, 1.0, 54.0, 26.0);
     let font = theme.small_font();
     let col = theme.colors.text;
-    if widgets::text_width(ui, &label, &font) <= lr.width() {
+    if fields::source_language() || widgets::text_width(ui, &label, &font) <= lr.width() {
         widgets::text_clipped(ui.painter(), pos2(lr.left(), lr.top() + 8.0), Align2::LEFT_CENTER, &label, font, col, lr.width());
     } else {
-        // längere (übersetzte) Werkzeugnamen in bis zu zwei Zeilen umbrechen, wie im Original
+        // längere übersetzte Werkzeugnamen in bis zu zwei Zeilen umbrechen (Deutsch wie bisher mit „…“)
         let g = ui.painter().layout(label.clone(), font.clone(), col, lr.width());
         if g.rows.len() <= 2 {
             let top = lr.top() + 8.0 - g.rows.first().map(|r| r.height()).unwrap_or(10.0) / 2.0;
@@ -197,7 +197,9 @@ pub const BOX_MAX: f64 = 6000.0;
 /// B/H/X/Y der Auswahl mit „Proportionen beibehalten“ (14007).
 fn box_q2(ui: &mut Ui, st: &mut AppState, r: Rect) {
     let theme = Theme::current(ui.ctx());
-    let b = st.session.active().and_then(|d| fp_engine::docops::ids_bounds(&d.doc, d.page, &d.selection.elements));
+    // während der Textbearbeitung der Rahmen des Texts im Editor (mit allen ungespeicherten Änderungen)
+    let editing = if st.session.tool_is_editing_text() { st.session.text_edit_frame() } else { None };
+    let b = editing.or_else(|| st.session.active().and_then(|d| fp_engine::docops::ids_bounds(&d.doc, d.page, &d.selection.elements)));
     let en = b.is_some();
     let (w, h, x, y) = b.map(|b| (b.width() as f64, b.height() as f64, b.left as f64, b.top as f64)).unwrap_or((0.0, 0.0, 0.0, 0.0));
     let d = Dl::at(r.min + vec2(6.0, 2.0));
