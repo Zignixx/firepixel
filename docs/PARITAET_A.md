@@ -8,13 +8,13 @@ Auftrag: „Vergleich mal alle Funktionen vom Original und Firepixel, damit sie 
 
 | Bereich | ✅ | ⚠️ | ❌ | ⏳ |
 |---|---|---|---|---|
-| 1 Inspektor je Werkzeug (W1–W38) | 9 | 10 | 19 | 0 |
-| 2 Feldverhalten (F1–F15) | 9 | 6 | 0 | 0 |
+| 1 Inspektor je Werkzeug (W1–W38) | 10 | 10 | 18 | 0 |
+| 2 Feldverhalten (F1–F15) | 11 | 4 | 0 | 0 |
 | 3 Text: Schriftgröße (T1–T6) | 4 | 0 | 2 | 0 |
 | 4 Inspektor je Objektart (O1–O17) | 6 | 4 | 7 | 0 |
 | 5 Leinwand/Werkzeugverhalten (L1–L30) | 20 | 4 | 6 | 0 |
 | 6 Mauszeiger (K1–K11) | 11 | 0 | 0 | 0 |
-| **Summe** | **59** | **24** | **34** | **0** |
+| **Summe** | **62** | **22** | **33** | **0** |
 
 **Geprüft sind:**
 - der Werkzeug-Inspektor ohne Auswahl für alle Werkzeuge der Werkzeugleiste, Vorgaben gegen die Werkseinstellungen;
@@ -130,7 +130,7 @@ Legende: ✅ gleich · ⚠️ kleine Abweichung · ❌ anders · ⏳ wartet auf 
 | W20 | Linie, Stift, Vektorpfad, Rechteck, Ellipse, Polygon, Auto-Form, Pinsel | Strichposition innen/mitte/außen im Werkzeug-Inspektor | nicht vorhanden (nur am Objekt) | drei Knöpfe vorhanden | ❌ | a_125, a_126, a_129 |
 | W21 | alle Vektorwerkzeuge, Füllwerkzeug, Verlauf | Textur bei „keiner“ | zeigt Texturnamen („Ader“) mit 0 % | „Ohne“ | ⚠️ | a_126 |
 | W22 | Rechteck, Ellipse, Auto-Form, Rahmen, Lasso, Zuschneiden, Exportbereich | B/H/X/Y | Felder weiß/bedienbar (leer) | grau | ⚠️ | a_107, a_129 |
-| W23 | Rechteck | „Eckrundung des Rechtecks“ im Werkzeug | Feld 14795 und Beschriftung 15079 existieren (Wert 0, Lage 536,1054 im Inspektor), sind aber **unsichtbar** (`IsWindowVisible` = 0); der Werkzeug-Inspektor zeigt keine Rundung (PM-1, frisch gestartetes Original) | 4. Zeile „Eckrundung des Rechtecks: 0“ sichtbar | ❌ | a_W23_rechteck_werkzeug_inspektor |
+| W23 | Rechteck | „Eckrundung des Rechtecks“ im Werkzeug | Feld 14795 und Beschriftung 15079 existieren (Wert 0, Lage 536,1054 im Inspektor), sind aber **unsichtbar** (`IsWindowVisible` = 0); der Werkzeug-Inspektor zeigt keine Rundung (PM-1, frisch gestartetes Original) | FV-7: Zeile entfernt, Werkzeug-Inspektor ohne Rundung wie im Original; die Rundung des gewählten Rechtecks (O1) bleibt (Test `inspector_paritaet::w23_rectangle_tool_without_roundness_row`) | ✅ | a_W23_rechteck_werkzeug_inspektor |
 | W24 | Auswahlrahmen | Feste Breite/Höhe | Symbole ↔ ↕, Werte 0/0, grau bei „Normal“ | Beschriftung „B“/„H“, Werte 64/64 | ⚠️ | a_109 |
 | W25 | Verlauf | „Auswahl füllen“ / Toleranz | ☑ / Toleranz grau (hängt davon ab) | ☐ / Toleranz bedienbar | ❌ | a_146 |
 | W26 | Verlauf | Füllfarbfeld | zeigt den Verlauf | zeigt einfarbig grau | ⚠️ | a_146 |
@@ -171,8 +171,8 @@ Eingabe wie bei F1–F11 (Klick, Ende, Umschalt+Pos1, Tippen, Eingabe). Strich i
 
 | Nr | Feld | Original | Firepixel | |
 |---|---|---|---|---|
-| F12 | B | „9999“ → 6000 (Feld zeigt schon beim Tippen 6000); „-5“ und „0“ werden **verworfen** (Breite bleibt 100); „12,5“ → **512** (Feldtext „512“, das Komma setzt die Schreibmarke an den Anfang); „x“ → Feld „0“, verworfen; Pfeil hoch und Rad: nichts | 9999 → 6000 ✅; „-5“ und „0“ → **1** (Meldung „auf 1 begrenzt“); „12,5“ → 13; „x“ bleibt; Pfeil und Rad: nichts ✅ | ⚠️ |
-| F13 | X | „9999“ → 9999 und „-5“ → -5 (keine Grenze); „12,5“ → 512; „x“ → Feld „0“, Objekt nach **x = 0**; „0“ → 0; Pfeil und Rad: nichts | 9999 ✅, -5 ✅, 0 ✅, Pfeil/Rad ✅; „12,5“ → 12; „x“ bleibt 50 | ⚠️ |
+| F12 | B | „9999“ → 6000 (Feld zeigt schon beim Tippen 6000); „-5“ und „0“ werden **verworfen** (Breite bleibt 100); „12,5“ → **512** (Feldtext „512“, das Komma setzt die Schreibmarke an den Anfang); „x“ → Feld „0“, verworfen; Pfeil hoch und Rad: nichts | FV-7: 9999 → 6000 (mit Meldung); „-5“, „0“ und „x“ verworfen (Breite bleibt 100, kein Verlaufsschritt); „12,5“ → Feldtext „512“, Breite 512 (Komma setzt die Schreibmarke an den Anfang); Pfeil und Rad: nichts. Rest: nach „x“ zeigt das Feld wieder „100“ statt „0“ (Test `inspector_paritaet::f12_f13_width_and_x_fields_like_original`) | ✅ |
+| F13 | X | „9999“ → 9999 und „-5“ → -5 (keine Grenze); „12,5“ → 512; „x“ → Feld „0“, Objekt nach **x = 0**; „0“ → 0; Pfeil und Rad: nichts | FV-7: 9999 ✅, -5 ✅, 0 ✅, Pfeil/Rad ✅; „12,5“ → 512 ✅; „x“ → Feld „0“, x = 0 ✅ (gelesen wie `atoi`; gleicher Test) | ✅ |
 | F14 | Rundung | „9999“ → 100 %; „-5“ → 5 % (Minus verworfen); „12,5“ → 100 % (Komma verworfen → 125); „0“ → 0; Pfeil und Rad: nichts | gleich | ✅ |
 | F15 | Strichstärke | „9999“ → 100, „-5“ → 5 (UX-A); Pfeil und Rad: nichts | 9999 → 100, „-5“ → 5, „12,5“ → 100, „x“ bleibt, „0“ → 1; Pfeil/Rad nichts | ✅ |
 
