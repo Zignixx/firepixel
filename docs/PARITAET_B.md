@@ -134,11 +134,11 @@ Lagen: S1 Dokument ohne Auswahl · S2 ein Rechteck · S3 zwei Rechtecke · S4 Te
   - Neu gewertet: Untermenü-Köpfe bleiben im Original immer aktiv, auch wenn alle Einträge grau sind (11 ⚠️).
   - Offen geblieben: Schrift-Menü und „Bridge durchsuchen“.
 
-Zählung (PM-7, 12.10.): ✅ 276, ⚠️ 20, ❌ 25, ℹ️ 29 (350 Zeilen)
+Zählung (PM-7, 12.10.; MN-2 nachgetragen): ✅ 276, ⚠️ 9, ❌ 4, ℹ️ 29, umgesetzt und Nachprüfung ausstehend 32 (MN-2: 21 ❌ + 11 ⚠️) (350 Zeilen)
 
 | Element | Original | Firepixel | | Bild |
 |---|---|---|---|---|
-| Text > Schrift > (Liste) | 3 zuletzt benutzte Schriften oben (Arial, Myriad Pro, Times New Roman), Trennlinie, dann alle Familien **flach**, Familien mit mehreren Schnitten als Untermenü; aktuelle Schrift ✓; Einträge **auch ohne Text aktiv** (setzen die Vorgabe des Textwerkzeugs) | Familien weiter nach Anfangsbuchstaben gruppiert (A ▸, B ▸ … Y ▸), Schnitte als Untermenü; im frischen Profil keine zuletzt benutzten Schriften; ohne ausgewählten Text grau (S1–S3, S5–S9), kein ✓ für die aktuelle Schrift (PM-7, 12.10.) | ❌ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
+| Text > Schrift > (Liste) | 3 zuletzt benutzte Schriften oben (Arial, Myriad Pro, Times New Roman), Trennlinie, dann alle Familien **flach**, Familien mit mehreren Schnitten als Untermenü; aktuelle Schrift ✓; Einträge **auch ohne Text aktiv** (setzen die Vorgabe des Textwerkzeugs) | Familien weiter nach Anfangsbuchstaben gruppiert (A ▸, B ▸ … Y ▸), Schnitte als Untermenü; im frischen Profil keine zuletzt benutzten Schriften; ohne ausgewählten Text grau (S1–S3, S5–S9), kein ✓ für die aktuelle Schrift (PM-7, 12.10.) | umgesetzt, Nachprüfung ausstehend (MN-2: Familien flach (Bildlauf ab 40 Einträgen), zuletzt benutzte oben (`RecentFontList`), ✓ an der Schrift des ausgewählten Texts bzw. der Vorgabe des Textwerkzeugs, auch ohne Text aktiv (setzt `Text_Font`); bei Familien mit Schnitten trägt der Schnitt das ✓); vorher ❌ PM-7 | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
 | Befehle > (Liste im frischen Profil) | 12 Einträge unter „Skript ausführen…“: Auswahl ▸, Batch-Befehle ▸, Bildschirmfoto, Demo - aktuelles Dokument, Dokument ▸, Größe ausgewählter Objekte ändern, jQuery Mobile-Thema ▸, Kreativ ▸, Symbolskript erstellen, Text ▸, Warnmeldungen zurücksetzen, Web ▸ | jetzt vorhanden (frisches Profil, eigene Instanz, echtes Fenster, Brücke): KI-Modelle verwalten…, Auswahl ▸, Batch-Befehle ▸, Dokument ▸, Größe ausgewählter Objekte ändern, Kreativ ▸, Text ▸, **Warndialoge zurücksetzen**, Web ▸, dazu am Ende **Warnmeldungen zurücksetzen** und KI-Steuerkanal ✓ – „Warnmeldungen zurücksetzen“ steht damit doppelt (einmal unter anderem Namen); es fehlen Bildschirmfoto, Demo - aktuelles Dokument, Symbolskript erstellen (PM-7, 12.10.) | ❌ | [Bild](screenshots/paritaet/pm7_M07_befehle_firepixel.png) |
 | Befehle > Auswahl ▸ | Früheres Vektorrendern verwenden, Verbessertes Vektorrendern verwenden | Bisheriges Vektor-Rendering verwenden, Verbessertes Vektor-Rendering verwenden – Beschriftung anders (PM-7, 12.10.) | ⚠️ | [Bild](screenshots/paritaet/pm7_M07_befehle_firepixel.png) |
 | Befehle > Batch-Befehle ▸ | 11: 180°-Drehung, 270°-Drehung, 90°-Drehung, Alles auswählen, Auswahl scharfzeichnen, Auswahl um 180/270/90 Grad drehen, Auswahl weichzeichnen, Auswahlfarbe umkehren, Auto-Tonwertauswahl | 11, gleiche Befehle, andere Namen und damit andere Reihenfolge: Dokument um 180°/270°/90° drehen, Auswahl um 180°/270°/90° drehen, Farbe der Auswahl umkehren, Auswahl automatisch tonwertkorrigieren (PM-7, 12.10.) | ⚠️ | – |
@@ -200,15 +200,15 @@ Zählung (PM-7, 12.10.): ✅ 276, ⚠️ 20, ❌ 25, ℹ️ 29 (350 Zeilen)
 | Bearbeiten > Suchen und ersetzen | Kürzel Strg+F; ●●●●●●●●● | Kürzel Strg+F; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M02_menue_bearbeiten.png) |
 | Bearbeiten > Ausschneiden | Kürzel Strg+X; ○●●●●●●●● | Kürzel Strg+X; ○●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M02_menue_bearbeiten.png) |
 | Bearbeiten > Kopieren | Kürzel Strg+C; ○●●●●●●●● | Kürzel Strg+C; ○●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M02_menue_bearbeiten.png) |
-| Bearbeiten > Als Vektoren kopieren | Kürzel –; ○●●●●○●●○ | Kürzel –; ○●●●●●●●● – aktiv weicht ab in S6,S9 (PM-7, 12.10.) | ❌ | [Bild](screenshots/paritaet/b_M02_menue_bearbeiten.png) |
+| Bearbeiten > Als Vektoren kopieren | Kürzel –; ○●●●●○●●○ | Kürzel –; ○●●●●●●●● – aktiv weicht ab in S6,S9 (PM-7, 12.10.) | umgesetzt, Nachprüfung ausstehend (MN-2: grau bei Pixelauswahl und bei nur Segmenten); vorher ❌ PM-7 | [Bild](screenshots/paritaet/b_M02_menue_bearbeiten.png) |
 | Bearbeiten > HTML-Code kopieren | Kürzel Strg+Alt+C; ●●●●●●●●● | Kürzel Strg+Alt+C; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M02_menue_bearbeiten.png) |
 | Bearbeiten > Einfügen | Kürzel Strg+V; ●●●●●●●●● | Kürzel Strg+V; ○○○○○○○○○ | ✅ | [Bild](screenshots/paritaet/b_M02_menue_bearbeiten.png) |
 | Bearbeiten > Löschen | Kürzel Löschen-Taste; ○●●●●●●●● | Kürzel Löschen-Taste; ○●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M02_menue_bearbeiten.png) |
 | Bearbeiten > Als Maske einfügen | Kürzel Strg+Alt+V; ○●○●●○●●○ | Kürzel Strg+Alt+V; ○○○○○○○○○ | ✅ | [Bild](screenshots/paritaet/b_M02_menue_bearbeiten.png) |
 | Bearbeiten > Innen einfügen | Kürzel Strg+Umschalt+V; ○●○●●○●●○ | Kürzel Strg+Umschalt+V; ○○○○○○○○○ | ✅ | [Bild](screenshots/paritaet/b_M02_menue_bearbeiten.png) |
 | Bearbeiten > Attribute einfügen | Kürzel Strg+Alt+Umschalt+V; ●●●●●○●●● | Kürzel Strg+Alt+Umschalt+V; ○○○○○○○○○ | ✅ | [Bild](screenshots/paritaet/b_M02_menue_bearbeiten.png) |
-| Bearbeiten > Duplizieren | Kürzel Strg+Alt+D; ○●●●●○●●● | Kürzel Strg+Alt+D; ○●●●●●●●● – aktiv weicht ab in S6 (PM-7, 12.10.) | ❌ | [Bild](screenshots/paritaet/b_M02_menue_bearbeiten.png) |
-| Bearbeiten > Klonen | Kürzel Strg+Umschalt+D; ○●●●●○●●● | Kürzel Strg+Umschalt+D; ○●●●●●●●● – aktiv weicht ab in S6 (PM-7, 12.10.) | ❌ | [Bild](screenshots/paritaet/b_M02_menue_bearbeiten.png) |
+| Bearbeiten > Duplizieren | Kürzel Strg+Alt+D; ○●●●●○●●● | Kürzel Strg+Alt+D; ○●●●●●●●● – aktiv weicht ab in S6 (PM-7, 12.10.) | umgesetzt, Nachprüfung ausstehend (MN-2: grau bei Pixelauswahl); vorher ❌ PM-7 | [Bild](screenshots/paritaet/b_M02_menue_bearbeiten.png) |
+| Bearbeiten > Klonen | Kürzel Strg+Umschalt+D; ○●●●●○●●● | Kürzel Strg+Umschalt+D; ○●●●●●●●● – aktiv weicht ab in S6 (PM-7, 12.10.) | umgesetzt, Nachprüfung ausstehend (MN-2: grau bei Pixelauswahl); vorher ❌ PM-7 | [Bild](screenshots/paritaet/b_M02_menue_bearbeiten.png) |
 | Bearbeiten > Ausgewählte Bitmap zuschneiden | Kürzel –; ○○○○●●○○○ | Kürzel –; ○○○○●●○○○ | ✅ | [Bild](screenshots/paritaet/b_M02_menue_bearbeiten.png) |
 | Bearbeiten > Dokument zuschneiden | Kürzel –; ○●●●●●●●● | Kürzel –; ○●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M02_menue_bearbeiten.png) |
 | Bearbeiten > Voreinstellungen | Kürzel Strg+U; ●●●●●●●●● | Kürzel Strg+U; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M02_menue_bearbeiten.png) |
@@ -256,7 +256,7 @@ Zählung (PM-7, 12.10.): ✅ 276, ⚠️ 20, ❌ 25, ℹ️ 29 (350 Zeilen)
 | Ansicht > Ränder | Kürzel Strg+H; ●●●●●●●●●; Häkchen ✓✓✓✓✓✓✓✓✓ | Kürzel Strg+H; ●●●●●●●●●; Häkchen ✓✓✓✓✓✓✓✓✓ | ✅ | [Bild](screenshots/paritaet/b_M03_menue_ansicht.png) |
 | Auswählen > Alles auswählen | Kürzel Strg+A; ●●●●●●●●● | Kürzel Strg+A; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M04_menue_auswaehlen.png) |
 | Auswählen > Auswahl aufheben | Kürzel Strg+D; ○●●●●●●●● | Kürzel Strg+D; ○●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M04_menue_auswaehlen.png) |
-| Auswählen > Gesamtauswahl treffen | Kürzel Strg+Nach-rechts-Taste; ○●●●●○●●● | Kürzel Strg+Nach-rechts-Taste; ○●●●●●●●● – aktiv weicht ab in S6 (PM-7, 12.10.) | ❌ | [Bild](screenshots/paritaet/b_M04_menue_auswaehlen.png) |
+| Auswählen > Gesamtauswahl treffen | Kürzel Strg+Nach-rechts-Taste; ○●●●●○●●● | Kürzel Strg+Nach-rechts-Taste; ○●●●●●●●● – aktiv weicht ab in S6 (PM-7, 12.10.) | umgesetzt, Nachprüfung ausstehend (MN-2: grau bei Pixelauswahl); vorher ❌ PM-7 | [Bild](screenshots/paritaet/b_M04_menue_auswaehlen.png) |
 | Auswählen > Teilauswahl treffen | Kürzel Strg+Nach-links-Taste; ○○○○○○●○○ | Kürzel Strg+Nach-links-Taste; ○○○○○○●○○ | ✅ | [Bild](screenshots/paritaet/b_M04_menue_auswaehlen.png) |
 | Auswählen > Ähnliches auswählen | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M04_menue_auswaehlen.png) |
 | Auswählen > Auswahl umkehren | Kürzel Strg+Umschalt+I; ●●●●●●●●● | Kürzel Strg+Umschalt+I; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M04_menue_auswaehlen.png) |
@@ -278,12 +278,12 @@ Zählung (PM-7, 12.10.): ✅ 276, ⚠️ 20, ❌ 25, ℹ️ 29 (350 Zeilen)
 | Modifizieren > Leinwand > 180° drehen | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
 | Modifizieren > Leinwand > 90° im UZS drehen | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
 | Modifizieren > Leinwand > 90° gegen UZS drehen | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Animation | Kürzel –; ●●●●●●●●● | Kürzel –; ○●●●●●●●● – Untermenü-Kopf grau in S1 (Original: Kopf aktiv, alle Einträge grau) (PM-7, 12.10.) | ⚠️ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Animation > Auswahl animieren | Kürzel Alt+Umschalt+F8; ○●●●●○●●● | Kürzel Alt+Umschalt+F8; ○●●●●●●●● – aktiv weicht ab in S6 (PM-7, 12.10.) | ❌ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Animation | Kürzel –; ●●●●●●●●● | Kürzel –; ○●●●●●●●● – Untermenü-Kopf grau in S1 (Original: Kopf aktiv, alle Einträge grau) (PM-7, 12.10.) | umgesetzt, Nachprüfung ausstehend (MN-2: Untermenü-Kopf immer aktiv); vorher ⚠️ PM-7 | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Animation > Auswahl animieren | Kürzel Alt+Umschalt+F8; ○●●●●○●●● | Kürzel Alt+Umschalt+F8; ○●●●●●●●● – aktiv weicht ab in S6 (PM-7, 12.10.) | umgesetzt, Nachprüfung ausstehend (MN-2: grau bei Pixelauswahl); vorher ❌ PM-7 | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
 | Modifizieren > Animation > Einstellungen | Kürzel –; ○○○○○○○○○ | Kürzel –; ○○○○○○○○○ | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
 | Modifizieren > Animation > Animation entfernen | Kürzel –; ○○○○○○○○○ | Kürzel –; ○○○○○○○○○ | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
 | Modifizieren > Symbol | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Symbol > In Symbol konvertieren | Kürzel F8; ○●●●●○●●○ | Kürzel F8; ○●●●●●●●● – aktiv weicht ab in S6,S9 (PM-7, 12.10.) | ❌ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Symbol > In Symbol konvertieren | Kürzel F8; ○●●●●○●●○ | Kürzel F8; ○●●●●●●●● – aktiv weicht ab in S6,S9 (PM-7, 12.10.) | umgesetzt, Nachprüfung ausstehend (MN-2: grau bei Pixelauswahl und bei nur Segmenten); vorher ❌ PM-7 | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
 | Modifizieren > Symbol > Symbol bearbeiten | Kürzel –; ○○○○○○○●○ | Kürzel –; ○○○○○○○●○ | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
 | Modifizieren > Symbol > An Position bearbeiten | Kürzel –; ○○○○○○○●○ | Kürzel –; ○○○○○○○●○ | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
 | Modifizieren > Symbol > Instanzen tweenen | Kürzel Strg+Alt+Umschalt+T; ●●●●●●●●● | Kürzel Strg+Alt+Umschalt+T; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
@@ -291,11 +291,11 @@ Zählung (PM-7, 12.10.): ✅ 276, ⚠️ 20, ❌ 25, ℹ️ 29 (350 Zeilen)
 | Modifizieren > Symbol > Symbol austauschen | Kürzel –; ○○○○○○○●○ | Kürzel –; ○○○○○○○●○ | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
 | Modifizieren > Popupmenü | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
 | Modifizieren > Popupmenü > Popupmenü hinzufügen | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Popupmenü > Popupmenü bearbeiten | Kürzel –; ○○○○○○○○○ | Kürzel –; ○○○○○○○○● – aktiv weicht ab in S9 (PM-7, 12.10.) | ❌ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Popupmenü > Popupmenü löschen | Kürzel –; ○○○○○○○○○ | Kürzel –; ○○○○○○○○● – aktiv weicht ab in S9 (PM-7, 12.10.) | ❌ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Maske | Kürzel –; ●●●●●●●●● | Kürzel –; ○●●●●●●●● – Untermenü-Kopf grau in S1 (Original: Kopf aktiv, alle Einträge grau) (PM-7, 12.10.) | ⚠️ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Maske > Alles einblenden | Kürzel –; ○●○●●●●●○ | Kürzel –; ○●○●●●●●● – aktiv weicht ab in S9 (PM-7, 12.10.) | ❌ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Maske > Alles ausblenden | Kürzel –; ○●○●●●●●○ | Kürzel –; ○●○●●●●●● – aktiv weicht ab in S9 (PM-7, 12.10.) | ❌ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Popupmenü > Popupmenü bearbeiten | Kürzel –; ○○○○○○○○○ | Kürzel –; ○○○○○○○○● – aktiv weicht ab in S9 (PM-7, 12.10.) | umgesetzt, Nachprüfung ausstehend (MN-2: nur mit Popupmenü am Segment aktiv); vorher ❌ PM-7 | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Popupmenü > Popupmenü löschen | Kürzel –; ○○○○○○○○○ | Kürzel –; ○○○○○○○○● – aktiv weicht ab in S9 (PM-7, 12.10.) | umgesetzt, Nachprüfung ausstehend (MN-2: nur mit Popupmenü am Segment aktiv); vorher ❌ PM-7 | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Maske | Kürzel –; ●●●●●●●●● | Kürzel –; ○●●●●●●●● – Untermenü-Kopf grau in S1 (Original: Kopf aktiv, alle Einträge grau) (PM-7, 12.10.) | umgesetzt, Nachprüfung ausstehend (MN-2: Untermenü-Kopf immer aktiv); vorher ⚠️ PM-7 | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Maske > Alles einblenden | Kürzel –; ○●○●●●●●○ | Kürzel –; ○●○●●●●●● – aktiv weicht ab in S9 (PM-7, 12.10.) | umgesetzt, Nachprüfung ausstehend (MN-2: grau bei nur Segmenten); vorher ❌ PM-7 | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Maske > Alles ausblenden | Kürzel –; ○●○●●●●●○ | Kürzel –; ○●○●●●●●● – aktiv weicht ab in S9 (PM-7, 12.10.) | umgesetzt, Nachprüfung ausstehend (MN-2: grau bei nur Segmenten); vorher ❌ PM-7 | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
 | Modifizieren > Maske > Als Maske einfügen | Kürzel Strg+Alt+V; ○●○●●○●●○ | Kürzel Strg+Alt+V; ○○○○○○○○○ | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
 | Modifizieren > Maske > Als Maske gruppieren | Kürzel –; ○○●○○○○○○ | Kürzel –; ○○●○○○○○○ | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
 | Modifizieren > Maske > Auswahl einblenden | Kürzel –; ○○○○○●○○○ | Kürzel –; ○○○○○●○○○ | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
@@ -308,10 +308,10 @@ Zählung (PM-7, 12.10.): ✅ 276, ⚠️ 20, ❌ 25, ℹ️ 29 (350 Zeilen)
 | Modifizieren > Selektives JPEG > Einstellungen | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
 | Modifizieren > Selektives JPEG > JPEG-Maske entfernen | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
 | Modifizieren > Auswahl sperren | Kürzel Strg+Alt+L; ○●●●●●●●● | Kürzel Strg+Alt+L; ○●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Auswahl auf Hintergrund reduzieren | Kürzel Strg+Alt+Umschalt+Z; ○●●●●○●●○ | Kürzel Strg+Alt+Umschalt+Z; ○●●●●●●●● – aktiv weicht ab in S6,S9 (PM-7, 12.10.) | ❌ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Auswahl auf Hintergrund reduzieren | Kürzel Strg+Alt+Umschalt+Z; ○●●●●○●●○ | Kürzel Strg+Alt+Umschalt+Z; ○●●●●●●●● – aktiv weicht ab in S6,S9 (PM-7, 12.10.) | umgesetzt, Nachprüfung ausstehend (MN-2: grau bei Pixelauswahl und bei nur Segmenten); vorher ❌ PM-7 | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
 | Modifizieren > Mit darunter liegender auf eine Ebene reduzieren | Kürzel Strg+E; ○○○○○○●○○ | Kürzel Strg+E; ○○○○○○●○○ | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
 | Modifizieren > Ebenen als Hintergrund | Kürzel Strg+Alt+E; ○○○○○○○○○ | Kürzel Strg+Alt+E; ○○○○○○○○○ | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Transformieren | Kürzel –; ●●●●●●●●● | Kürzel –; ○●●●●●●●● – Untermenü-Kopf grau in S1 (Original: Kopf aktiv, alle Einträge grau) (PM-7, 12.10.) | ⚠️ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Transformieren | Kürzel –; ●●●●●●●●● | Kürzel –; ○●●●●●●●● – Untermenü-Kopf grau in S1 (Original: Kopf aktiv, alle Einträge grau) (PM-7, 12.10.) | umgesetzt, Nachprüfung ausstehend (MN-2: Untermenü-Kopf immer aktiv); vorher ⚠️ PM-7 | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
 | Modifizieren > Transformieren > Frei transformieren | Kürzel Strg+T; ○●●●●●●●● | Kürzel Strg+T; ○●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
 | Modifizieren > Transformieren > Skalieren | Kürzel –; ○●●●●●●●● | Kürzel –; ○●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
 | Modifizieren > Transformieren > Neigen | Kürzel –; ○●●●●●●●● | Kürzel –; ○●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
@@ -322,13 +322,13 @@ Zählung (PM-7, 12.10.): ✅ 276, ⚠️ 20, ❌ 25, ℹ️ 29 (350 Zeilen)
 | Modifizieren > Transformieren > 90° gegen UZS drehen | Kürzel Strg+Umschalt+7; ○●●●●●●●● | Kürzel Strg+Umschalt+7; ○●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
 | Modifizieren > Transformieren > Horizontal spiegeln | Kürzel –; ○●●●●●●●● | Kürzel –; ○●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
 | Modifizieren > Transformieren > Vertikal spiegeln | Kürzel –; ○●●●●●●●● | Kürzel –; ○●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Transformieren > Transformationen entfernen | Kürzel –; ○●●●○○○●○ | Kürzel –; ○●●●○○●●● – aktiv weicht ab in S7,S9 (PM-7, 12.10.) | ❌ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Anordnen | Kürzel –; ●●●●●●●●● | Kürzel –; ○●●●●●●●● – Untermenü-Kopf grau in S1 (Original: Kopf aktiv, alle Einträge grau) (PM-7, 12.10.) | ⚠️ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Anordnen > In den Vordergrund | Kürzel Strg+Umschalt+Nach-oben-Taste; ○●●●●○●●● | Kürzel Strg+Umschalt+Nach-oben-Taste; ○●●●●●●●● – aktiv weicht ab in S6 (PM-7, 12.10.) | ❌ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Anordnen > Schrittweise nach vorne | Kürzel Strg+Nach-oben-Taste; ○●●●●○●●● | Kürzel Strg+Nach-oben-Taste; ○●●●●●●●● – aktiv weicht ab in S6 (PM-7, 12.10.) | ❌ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Anordnen > Schrittweise nach hinten | Kürzel Strg+Nach-unten-Taste; ○●●●●○●●● | Kürzel Strg+Nach-unten-Taste; ○●●●●●●●● – aktiv weicht ab in S6 (PM-7, 12.10.) | ❌ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Anordnen > In den Hintergrund | Kürzel Strg+Umschalt+Nach-unten-Taste; ○●●●●○●●● | Kürzel Strg+Umschalt+Nach-unten-Taste; ○●●●●●●●● – aktiv weicht ab in S6 (PM-7, 12.10.) | ❌ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Ausrichten | Kürzel –; ●●●●●●●●● | Kürzel –; ○○●○○○○○○ – Untermenü-Kopf grau in S1,S2,S4,S5,S6,S7,S8,S9 (Original: Kopf aktiv, alle Einträge grau) (PM-7, 12.10.) | ⚠️ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Transformieren > Transformationen entfernen | Kürzel –; ○●●●○○○●○ | Kürzel –; ○●●●○○●●● – aktiv weicht ab in S7,S9 (PM-7, 12.10.) | umgesetzt, Nachprüfung ausstehend (MN-2: im Menü grau bei Bitmap, Gruppe und Segment); vorher ❌ PM-7 | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Anordnen | Kürzel –; ●●●●●●●●● | Kürzel –; ○●●●●●●●● – Untermenü-Kopf grau in S1 (Original: Kopf aktiv, alle Einträge grau) (PM-7, 12.10.) | umgesetzt, Nachprüfung ausstehend (MN-2: Untermenü-Kopf immer aktiv); vorher ⚠️ PM-7 | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Anordnen > In den Vordergrund | Kürzel Strg+Umschalt+Nach-oben-Taste; ○●●●●○●●● | Kürzel Strg+Umschalt+Nach-oben-Taste; ○●●●●●●●● – aktiv weicht ab in S6 (PM-7, 12.10.) | umgesetzt, Nachprüfung ausstehend (MN-2: grau bei Pixelauswahl); vorher ❌ PM-7 | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Anordnen > Schrittweise nach vorne | Kürzel Strg+Nach-oben-Taste; ○●●●●○●●● | Kürzel Strg+Nach-oben-Taste; ○●●●●●●●● – aktiv weicht ab in S6 (PM-7, 12.10.) | umgesetzt, Nachprüfung ausstehend (MN-2: grau bei Pixelauswahl); vorher ❌ PM-7 | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Anordnen > Schrittweise nach hinten | Kürzel Strg+Nach-unten-Taste; ○●●●●○●●● | Kürzel Strg+Nach-unten-Taste; ○●●●●●●●● – aktiv weicht ab in S6 (PM-7, 12.10.) | umgesetzt, Nachprüfung ausstehend (MN-2: grau bei Pixelauswahl); vorher ❌ PM-7 | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Anordnen > In den Hintergrund | Kürzel Strg+Umschalt+Nach-unten-Taste; ○●●●●○●●● | Kürzel Strg+Umschalt+Nach-unten-Taste; ○●●●●●●●● – aktiv weicht ab in S6 (PM-7, 12.10.) | umgesetzt, Nachprüfung ausstehend (MN-2: grau bei Pixelauswahl); vorher ❌ PM-7 | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Ausrichten | Kürzel –; ●●●●●●●●● | Kürzel –; ○○●○○○○○○ – Untermenü-Kopf grau in S1,S2,S4,S5,S6,S7,S8,S9 (Original: Kopf aktiv, alle Einträge grau) (PM-7, 12.10.) | umgesetzt, Nachprüfung ausstehend (MN-2: Untermenü-Kopf immer aktiv); vorher ⚠️ PM-7 | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
 | Modifizieren > Ausrichten > Links | Kürzel Strg+Alt+1; ○○●○○○○○○ | Kürzel Strg+Alt+1; ○○●○○○○○○ | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
 | Modifizieren > Ausrichten > Vertikal zentrieren | Kürzel Strg+Alt+2; ○○●○○○○○○ | Kürzel Strg+Alt+2; ○○●○○○○○○ | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
 | Modifizieren > Ausrichten > Rechts | Kürzel Strg+Alt+3; ○○●○○○○○○ | Kürzel Strg+Alt+3; ○○●○○○○○○ | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
@@ -339,7 +339,7 @@ Zählung (PM-7, 12.10.): ✅ 276, ⚠️ 20, ❌ 25, ℹ️ 29 (350 Zeilen)
 | Modifizieren > Ausrichten > Höhen verteilen | Kürzel Strg+Alt+9; ○○○○○○○○○ | Kürzel Strg+Alt+9; ○○○○○○○○○ | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
 | Modifizieren > Pfad in Auswahlrahmen konvertieren | Kürzel –; ○●●○○○○○○ | Kürzel –; ○●●○○○○○○ | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
 | Modifizieren > Pfade kombinieren | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Pfade kombinieren > Verbinden | Kürzel Strg+Umschalt+J; ○●●●○○●○● | Kürzel Strg+Umschalt+J; ○●●●○○○○○ – aktiv weicht ab in S7,S9 (PM-7, 12.10.) | ❌ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Pfade kombinieren > Verbinden | Kürzel Strg+Umschalt+J; ○●●●○○●○● | Kürzel Strg+Umschalt+J; ○●●●○○○○○ – aktiv weicht ab in S7,S9 (PM-7, 12.10.) | umgesetzt, Nachprüfung ausstehend (MN-2: auch bei Gruppe und Segment aktiv, ohne Pfad Meldung statt Wirkung); vorher ❌ PM-7 | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
 | Modifizieren > Pfade kombinieren > Teilen | Kürzel Strg+Alt+J; ○○○○○○○○○ | Kürzel Strg+Alt+J; ○○○○○○○○○ | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
 | Modifizieren > Pfade kombinieren > Vereinigen | Kürzel Strg+Alt+U; ●●●●●●●●● | Kürzel Strg+Alt+U; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
 | Modifizieren > Pfade kombinieren > Überschneiden | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
@@ -352,10 +352,10 @@ Zählung (PM-7, 12.10.): ✅ 276, ⚠️ 20, ❌ 25, ℹ️ 29 (350 Zeilen)
 | Modifizieren > Pfad ändern > Präzise Füllung | Kürzel –; ○○○●○○○○○ | Kürzel –; ○○○●○○○○○ | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
 | Modifizieren > Pfad ändern > Anti-Alias-Füllung | Kürzel –; ○○○●○○○○○ | Kürzel –; ○○○●○○○○○; Häkchen ·✓✓✓··✓·· | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
 | Modifizieren > Pfad ändern > Weiche-Kante-Füllung | Kürzel –; ○○○●○○○○○ | Kürzel –; ○○○●○○○○○ | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > An Pixeln ausrichten | Kürzel Strg+K; ○●●○○○●○○ | Kürzel Strg+K; ○●●○○○○○○ – aktiv weicht ab in S7 (PM-7, 12.10.) | ❌ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Modifizieren > Gruppieren | Kürzel Strg+G; ○●●●●○●●● | Kürzel Strg+G; ○●●●●●●●● – aktiv weicht ab in S6 (PM-7, 12.10.) | ❌ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > An Pixeln ausrichten | Kürzel Strg+K; ○●●○○○●○○ | Kürzel Strg+K; ○●●○○○○○○ – aktiv weicht ab in S7 (PM-7, 12.10.) | umgesetzt, Nachprüfung ausstehend (MN-2: auch bei Gruppe aktiv, richtet die Gruppe als Ganzes aus); vorher ❌ PM-7 | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
+| Modifizieren > Gruppieren | Kürzel Strg+G; ○●●●●○●●● | Kürzel Strg+G; ○●●●●●●●● – aktiv weicht ab in S6 (PM-7, 12.10.) | umgesetzt, Nachprüfung ausstehend (MN-2: grau bei Pixelauswahl); vorher ❌ PM-7 | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
 | Modifizieren > Gruppierung aufheben | Kürzel Strg+Umschalt+G; ○●●○○○●○○ | Kürzel Strg+Umschalt+G; ○●●○○○●○○ | ✅ | [Bild](screenshots/paritaet/b_M05_menue_modifizieren.png) |
-| Text > Schrift | Kürzel –; ●●●●●●●●● | Kürzel –; ○○○●○○○○○ – aktiv weicht ab in S1,S2,S3,S5,S6,S7,S8,S9 (PM-7, 12.10.) | ❌ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
+| Text > Schrift | Kürzel –; ●●●●●●●●● | Kürzel –; ○○○●○○○○○ – aktiv weicht ab in S1,S2,S3,S5,S6,S7,S8,S9 (PM-7, 12.10.) | umgesetzt, Nachprüfung ausstehend (MN-2: immer aktiv (Kopf und Einträge, ohne Text Vorgabe des Textwerkzeugs)); vorher ❌ PM-7 | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
 | Text > Größe | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
 | Text > Größe > Andere | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
 | Text > Größe > Kleiner | Kürzel Strg+Umschalt+,; ○○○●○○○○○ | Kürzel Strg+Umschalt+,; ○○○●○○○○○ | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
@@ -389,7 +389,7 @@ Zählung (PM-7, 12.10.): ✅ 276, ⚠️ 20, ❌ 25, ℹ️ 29 (350 Zeilen)
 | Text > In Pfad einfügen | Kürzel –; ○○○○○○○○○ | Kürzel –; ○○○○○○○○○ | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
 | Text > An Pfad anfügen | Kürzel Strg+Umschalt+Y; ○○○○○○○○○ | Kürzel Strg+Umschalt+Y; ○○○○○○○○○ | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
 | Text > Von Pfad lösen | Kürzel –; ○○○○○○○○○ | Kürzel –; ○○○○○○○○○ | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
-| Text > Richtung | Kürzel –; ●●●●●●●●● | Kürzel –; ○○○○○○○○○ – Untermenü-Kopf grau in S1,S2,S3,S4,S5,S6,S7,S8,S9 (Original: Kopf aktiv, alle Einträge grau) (PM-7, 12.10.) | ⚠️ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
+| Text > Richtung | Kürzel –; ●●●●●●●●● | Kürzel –; ○○○○○○○○○ – Untermenü-Kopf grau in S1,S2,S3,S4,S5,S6,S7,S8,S9 (Original: Kopf aktiv, alle Einträge grau) (PM-7, 12.10.) | umgesetzt, Nachprüfung ausstehend (MN-2: Untermenü-Kopf immer aktiv); vorher ⚠️ PM-7 | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
 | Text > Richtung > Um Pfad drehen | Kürzel –; ○○○○○○○○○ | Kürzel –; ○○○○○○○○○ | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
 | Text > Richtung > Vertikal | Kürzel –; ○○○○○○○○○ | Kürzel –; ○○○○○○○○○ | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
 | Text > Richtung > Vertikal neigen | Kürzel –; ○○○○○○○○○ | Kürzel –; ○○○○○○○○○ | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
@@ -399,23 +399,23 @@ Zählung (PM-7, 12.10.): ✅ 276, ⚠️ 20, ❌ 25, ℹ️ 29 (350 Zeilen)
 | Text > Rechtschreibprüfung | Kürzel Umschalt+F7; ●●●●●●●●● | Kürzel Umschalt+F7; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
 | Text > Rechtschreibprüfung einrichten | Kürzel –; ●●●●●●●●● | Kürzel –; ●●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M06_menue_text.png) |
 | Filter > Filter wiederholen | Kürzel Strg+Alt+Umschalt+X; ○○○○○?○○○ | Kürzel Strg+Alt+Umschalt+X; ○○○○○○○○○ | ✅ | [Bild](screenshots/paritaet/b_M08_menue_filter.png) |
-| Filter > Andere | Kürzel –; ●●●●●●●●● | Kürzel –; ○●●●●●●●● – Untermenü-Kopf grau in S1 (Original: Kopf aktiv, alle Einträge grau) (PM-7, 12.10.) | ⚠️ | [Bild](screenshots/paritaet/b_M08_menue_filter.png) |
+| Filter > Andere | Kürzel –; ●●●●●●●●● | Kürzel –; ○●●●●●●●● – Untermenü-Kopf grau in S1 (Original: Kopf aktiv, alle Einträge grau) (PM-7, 12.10.) | umgesetzt, Nachprüfung ausstehend (MN-2: Untermenü-Kopf immer aktiv); vorher ⚠️ PM-7 | [Bild](screenshots/paritaet/b_M08_menue_filter.png) |
 | Filter > Andere > In Alphakanal konv. | Kürzel –; ○●●●●●●●● | Kürzel –; ○●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M08_menue_filter.png) |
 | Filter > Andere > Ränder suchen | Kürzel –; ○●●●●●●●● | Kürzel –; ○●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M08_menue_filter.png) |
-| Filter > Farbe anpassen | Kürzel –; ●●●●●●●●● | Kürzel –; ○●●●●●●●● – Untermenü-Kopf grau in S1 (Original: Kopf aktiv, alle Einträge grau) (PM-7, 12.10.) | ⚠️ | [Bild](screenshots/paritaet/b_M08_menue_filter.png) |
+| Filter > Farbe anpassen | Kürzel –; ●●●●●●●●● | Kürzel –; ○●●●●●●●● – Untermenü-Kopf grau in S1 (Original: Kopf aktiv, alle Einträge grau) (PM-7, 12.10.) | umgesetzt, Nachprüfung ausstehend (MN-2: Untermenü-Kopf immer aktiv); vorher ⚠️ PM-7 | [Bild](screenshots/paritaet/b_M08_menue_filter.png) |
 | Filter > Farbe anpassen > Auto-Tonwertkorrektur | Kürzel –; ○●●●●●●●● | Kürzel –; ○●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M08_menue_filter.png) |
 | Filter > Farbe anpassen > Farbton/Sättigung | Kürzel –; ○●●●●●●●● | Kürzel –; ○●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M08_menue_filter.png) |
 | Filter > Farbe anpassen > Helligkeit/Kontrast | Kürzel –; ○●●●●●●●● | Kürzel –; ○●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M08_menue_filter.png) |
 | Filter > Farbe anpassen > Kurven | Kürzel –; ○●●●●●●●● | Kürzel –; ○●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M08_menue_filter.png) |
 | Filter > Farbe anpassen > Tonwertkorrektur | Kürzel –; ○●●●●●●●● | Kürzel –; ○●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M08_menue_filter.png) |
 | Filter > Farbe anpassen > Umkehren | Kürzel –; ○●●●●●●●● | Kürzel –; ○●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M08_menue_filter.png) |
-| Filter > Rauschen | Kürzel –; ●●●●●●●●● | Kürzel –; ○●●●●●●●● – Untermenü-Kopf grau in S1 (Original: Kopf aktiv, alle Einträge grau) (PM-7, 12.10.) | ⚠️ | [Bild](screenshots/paritaet/b_M08_menue_filter.png) |
+| Filter > Rauschen | Kürzel –; ●●●●●●●●● | Kürzel –; ○●●●●●●●● – Untermenü-Kopf grau in S1 (Original: Kopf aktiv, alle Einträge grau) (PM-7, 12.10.) | umgesetzt, Nachprüfung ausstehend (MN-2: Untermenü-Kopf immer aktiv); vorher ⚠️ PM-7 | [Bild](screenshots/paritaet/b_M08_menue_filter.png) |
 | Filter > Rauschen > Rauschen hinzufügen | Kürzel –; ○●●●●●●●● | Kürzel –; ○●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M08_menue_filter.png) |
-| Filter > Scharfzeichnen | Kürzel –; ●●●●●●●●● | Kürzel –; ○●●●●●●●● – Untermenü-Kopf grau in S1 (Original: Kopf aktiv, alle Einträge grau) (PM-7, 12.10.) | ⚠️ | [Bild](screenshots/paritaet/b_M08_menue_filter.png) |
+| Filter > Scharfzeichnen | Kürzel –; ●●●●●●●●● | Kürzel –; ○●●●●●●●● – Untermenü-Kopf grau in S1 (Original: Kopf aktiv, alle Einträge grau) (PM-7, 12.10.) | umgesetzt, Nachprüfung ausstehend (MN-2: Untermenü-Kopf immer aktiv); vorher ⚠️ PM-7 | [Bild](screenshots/paritaet/b_M08_menue_filter.png) |
 | Filter > Scharfzeichnen > Scharfzeichnen | Kürzel –; ○●●●●●●●● | Kürzel –; ○●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M08_menue_filter.png) |
 | Filter > Scharfzeichnen > Stark scharfzeichnen | Kürzel –; ○●●●●●●●● | Kürzel –; ○●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M08_menue_filter.png) |
 | Filter > Scharfzeichnen > Unscharf maskieren | Kürzel –; ○●●●●●●●● | Kürzel –; ○●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M08_menue_filter.png) |
-| Filter > Weichzeichnen | Kürzel –; ●●●●●●●●● | Kürzel –; ○●●●●●●●● – Untermenü-Kopf grau in S1 (Original: Kopf aktiv, alle Einträge grau) (PM-7, 12.10.) | ⚠️ | [Bild](screenshots/paritaet/b_M08_menue_filter.png) |
+| Filter > Weichzeichnen | Kürzel –; ●●●●●●●●● | Kürzel –; ○●●●●●●●● – Untermenü-Kopf grau in S1 (Original: Kopf aktiv, alle Einträge grau) (PM-7, 12.10.) | umgesetzt, Nachprüfung ausstehend (MN-2: Untermenü-Kopf immer aktiv); vorher ⚠️ PM-7 | [Bild](screenshots/paritaet/b_M08_menue_filter.png) |
 | Filter > Weichzeichnen > Bewegungsunschärfe | Kürzel –; ○●●●●●●●● | Kürzel –; ○●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M08_menue_filter.png) |
 | Filter > Weichzeichnen > Gaußscher Weichz. | Kürzel –; ○●●●●●●●● | Kürzel –; ○●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M08_menue_filter.png) |
 | Filter > Weichzeichnen > Radiales Weichz. | Kürzel –; ○●●●●●●●● | Kürzel –; ○●●●●●●●● | ✅ | [Bild](screenshots/paritaet/b_M08_menue_filter.png) |
