@@ -250,8 +250,14 @@ impl FirepixelApp {
         docking::show_floating(&ctx, st);
         docking::finish_drag(&ctx, st);
         dialogs::show_all(&ctx, st);
+        // Öffnet/schließt eine Aktion am Ende des Bildes einen Dialog (z. B. Strg+W → Rückfrage),
+        // sofort noch ein Bild zeichnen, auch ohne Folgeereignis (z. B. Aufträge der MCP-Brücke)
+        let dialogs_before = st.dialogs.any_open();
         st.process_actions(&ctx);
         st.handle_session_events();
+        if st.dialogs.any_open() != dialogs_before {
+            ctx.request_repaint();
+        }
         if st.close_window {
             st.close_window = false;
             ctx.send_viewport_cmd(egui::ViewportCommand::Close);
@@ -351,6 +357,11 @@ pub fn native_options() -> eframe::NativeOptions {
             .with_drag_and_drop(true)
             .with_icon(Arc::new(icons::app_icon_data())),
         persist_window: true,
+        // Fensterlage und Arbeitsbereich unter %APPDATA%\Firepixel\data wie die Voreinstellungen.
+        // eframe fragt sonst den Systemordner direkt ab und übergeht eine umgesetzte
+        // APPDATA-Variable: Testinstanzen mit eigenem APPDATA überschrieben dann die Fensterlage
+        // des Nutzers (beobachtet 12.10.).
+        persistence_path: std::env::var_os("APPDATA").filter(|a| !a.is_empty()).map(|a| PathBuf::from(a).join("Firepixel").join("data").join("app.ron")),
         // maximiert erst nach dem Erscheinen (sonst blitzt das Fenster beim Start zweimal auf)
         window_builder: Some(Box::new(start_window::strip_maximized)),
         ..Default::default()

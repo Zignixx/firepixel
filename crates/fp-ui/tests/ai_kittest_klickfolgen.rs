@@ -170,14 +170,19 @@ fn shift_alt() -> Modifiers {
     Modifiers { shift: true, alt: true, ..Modifiers::NONE }
 }
 
-/// Was tut Esc beim klassischen Zauberstab (Auswahl aufheben oder nicht)?
-fn wand_esc_clears(h: &mut H) -> bool {
+/// Was tut Esc beim klassischen Zauberstab: Auswahl aufheben oder nicht, und welches Werkzeug ist
+/// danach aktiv (Esc beendet den Bitmapmodus und wechselt zum Zeiger, UX-A L13)?
+fn wand_esc(h: &mut H) -> (bool, ToolId) {
     tool(h, ToolId::MagicWand);
     click(h, A, NONE);
     assert!(sel(h).is_some(), "Zauberstab wählt");
     key(h, Key::Escape);
     h.run_steps(2);
-    sel(h).is_none()
+    (sel(h).is_none(), h.state().state.session.tools.active)
+}
+
+fn active_tool(h: &H) -> ToolId {
+    h.state().state.session.tools.active
 }
 
 #[test]
@@ -187,8 +192,8 @@ fn objektauswahl_wie_der_zauberstab() {
         return;
     }
     let mut h = harness(11);
-    let esc_clears = wand_esc_clears(&mut h);
-    eprintln!("Zauberstab: Esc hebt die Auswahl auf = {esc_clears}");
+    let (esc_clears, esc_tool) = wand_esc(&mut h);
+    eprintln!("Zauberstab: Esc hebt die Auswahl auf = {esc_clears}, Werkzeug danach {esc_tool:?}");
     let _ = h.state_mut().state.session.execute("select.none", json!({}));
     tool(&mut h, ToolId::AiObject);
     // erster Klick: Rechnung im Hintergrund, danach A
@@ -222,7 +227,11 @@ fn objektauswahl_wie_der_zauberstab() {
     key(&mut h, Key::Escape);
     h.run_steps(2);
     assert_eq!(sel(&h).is_none(), esc_clears, "Esc wie beim Zauberstab (hebt auf: {esc_clears})");
+    assert_eq!(active_tool(&h), esc_tool, "Werkzeug nach Esc wie beim Zauberstab");
+    // wieder zur Objektauswahl: der erste Klick wählt sofort (N12)
+    tool(&mut h, ToolId::AiObject);
     click(&mut h, A, NONE);
+    wait(&mut h);
     expect(&h, true, false, "Klick nach Esc");
     // Werkzeugwechsel und zurück: sofort klickbereit
     tool(&mut h, ToolId::MagicWand);
@@ -308,7 +317,7 @@ fn motiv_und_kante_wie_der_zauberstab() {
         return;
     }
     let mut h = harness(31);
-    let esc_clears = wand_esc_clears(&mut h);
+    let (esc_clears, esc_tool) = wand_esc(&mut h);
     let _ = h.state_mut().state.session.execute("select.none", json!({}));
     // Motiv auswählen
     tool(&mut h, ToolId::AiSubject);
@@ -328,6 +337,7 @@ fn motiv_und_kante_wie_der_zauberstab() {
     key(&mut h, Key::Escape);
     h.run_steps(2);
     assert_eq!(sel(&h).is_none(), esc_clears, "Esc wie beim Zauberstab");
+    assert_eq!(active_tool(&h), esc_tool, "Werkzeug nach Esc wie beim Zauberstab");
     // Kante verfeinern auf einer Objektauswahl
     tool(&mut h, ToolId::AiObject);
     click(&mut h, A, NONE);
