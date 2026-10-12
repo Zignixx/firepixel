@@ -531,7 +531,7 @@ pub fn list() -> Value {
     Value::Array(
         SHAPES
             .iter()
-            .map(|s| json!({"name": s.en, "label": s.de, "group": s.group, "params": s.params.iter().map(|p| json!({"key": p.key, "label": p.label, "type": p.kind})).collect::<Vec<_>>()}))
+            .map(|s| json!({"name": s.en, "label": s.de, "group": s.group, "params": s.params.iter().map(|p| json!({"key": p.key, "label": p.label, "labelKey": p.label_key(), "type": p.kind})).collect::<Vec<_>>()}))
             .collect(),
     )
 }
@@ -703,7 +703,7 @@ pub fn describe(session: &Session, p: &Value) -> R<Value> {
             .params
             .iter()
             .map(|pd| {
-                let mut v = json!({"key": pd.key, "label": pd.label, "type": pd.kind, "value": cd.get(pd.key).cloned().unwrap_or(Value::Null)});
+                let mut v = json!({"key": pd.key, "label": pd.label, "labelKey": pd.label_key(), "type": pd.kind, "value": cd.get(pd.key).cloned().unwrap_or(Value::Null)});
                 if let Some(m) = pd.min {
                     v["min"] = json!(m);
                 }
@@ -712,6 +712,7 @@ pub fn describe(session: &Session, p: &Value) -> R<Value> {
                 }
                 if !pd.options.is_empty() {
                     v["options"] = json!(pd.options);
+                    v["optionKeys"] = json!(pd.options.iter().map(|o| shapes::option_key(o)).collect::<Vec<_>>());
                 }
                 v
             })

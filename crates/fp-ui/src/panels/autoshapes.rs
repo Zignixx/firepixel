@@ -69,99 +69,16 @@ pub fn shape_label(name: &str, fallback: &str) -> String {
     if fallback.is_empty() { name.to_string() } else { fallback.to_string() }
 }
 
-/// Parameterbeschriftungen der Formen (deutsch aus fp-script) → Schlüssel in `bedienfelder.ftl`.
-const PARAM_KEYS: &[(&str, &str)] = &[
-    ("Drehung", "rotation"),
-    ("Scheitelpunkt", "apex"),
-    ("Scheitelbogen", "apex-arc"),
-    ("Bogen", "arc"),
-    ("Länge der Spitze", "tip-length"),
-    ("Breite der Spitze", "tip-width"),
-    ("Anzahl", "count"),
-    ("Im Uhrzeigersinn", "clockwise"),
-    ("Geschlossen", "closed"),
-    ("Eckgröße", "corner-size"),
-    ("Ecke oben links", "corner-tl"),
-    ("Ecke oben rechts", "corner-tr"),
-    ("Ecke unten rechts", "corner-br"),
-    ("Ecke unten links", "corner-bl"),
-    ("Rundung Knick 1", "bend1"),
-    ("Rundung Knick 2", "bend2"),
-    ("Eckenart", "corner-type"),
-    ("Krümmung", "curvature"),
-    ("Kurve", "curve"),
-    ("Kurvenradius", "curve-radius"),
-    ("Zahntiefe", "tooth-depth"),
-    ("Unterteilungen", "subdivisions"),
-    ("Versatz X", "offset-x"),
-    ("Versatz Y", "offset-y"),
-    ("Format", "format"),
-    ("Brennweite", "focal"),
-    ("Rahmenbreite", "frame-width"),
-    ("Spalt", "gap"),
-    ("Höhe", "height"),
-    ("Anfang", "start"),
-    ("Ende", "end"),
-    ("Schaftdicke", "shaft-thickness"),
-    ("Loch", "hole"),
-    ("Hohl (0–1)", "hollow"),
-    ("Stunde", "hour"),
-    ("Farbton", "hue"),
-    ("Innenausschnitt", "inner-cutout"),
-    ("Innerer Radius (Röhre)", "inner-radius-tube"),
-    ("Länge", "length"),
-    ("Ecken gemeinsam", "link-corners"),
-    ("Minute", "minute"),
-    ("Richtung", "direction"),
-    ("Monat (0–11)", "month"),
-    ("Zacken", "points"),
-    ("Rahmenversatz", "frame-offset"),
-    ("Überhang", "overhang"),
-    ("Größe", "size"),
-    ("Radius", "radius"),
-    ("Radius 1", "radius1"),
-    ("Radius 2", "radius2"),
-    ("Innerer Radius", "inner-radius"),
-    ("Drehung X", "rotation-x"),
-    ("Drehung Y", "rotation-y"),
-    ("Rundung", "roundness"),
-    ("Rundung 1", "roundness1"),
-    ("Rundung 2", "roundness2"),
-    ("Breite", "width"),
-    ("Zufallswert", "seed"),
-    ("Symbol (-1 = Auswahl)", "symbol"),
-    ("Seiten", "sides"),
-    ("Spitzengröße", "tip-size"),
-    ("Stil (0 einfarbig, 1 zweifarbig)", "style"),
-    ("Zähne", "teeth"),
-    ("Text", "text"),
-    ("Dicke", "thickness"),
-    ("Windungen", "turns"),
-    ("Zeiger X", "pointer-x"),
-    ("Zeiger Y", "pointer-y"),
-    ("Einheit", "unit"),
-    ("Schaftlänge", "shaft-length"),
-    ("Wellenlänge", "wavelength"),
-    ("Jahr", "year"),
-];
 
-/// Auswahlwerte (gespeichert wird der deutsche Wert) → Schlüssel in `bedienfelder.ftl`.
-const OPTION_KEYS: &[(&str, &str)] = &[
-    ("gerade", "straight"),
-    ("rund", "round"),
-    ("nach innen", "inverted"),
-    ("waagerecht – senkrecht – waagerecht", "hvh"),
-    ("senkrecht – waagerecht – senkrecht", "vhv"),
-];
 
 /// Übersetzte Parameterbeschriftung (unbekannte Beschriftungen bleiben, wie sie sind).
 pub fn param_label(label: &str) -> String {
-    PARAM_KEYS.iter().find(|(de, _)| *de == label).map(|(_, k)| fp_i18n::t(&format!("panel-asp-p-{k}"))).unwrap_or_else(|| label.to_string())
+    fp_script::autoshape::shapes::label_key(label).map(fp_i18n::t).unwrap_or_else(|| label.to_string())
 }
 
 /// Übersetzter Auswahlwert (Einheiten wie „px“ bleiben).
 pub fn option_label(value: &str) -> String {
-    OPTION_KEYS.iter().find(|(de, _)| *de == value).map(|(_, k)| fp_i18n::t(&format!("panel-asp-o-{k}"))).unwrap_or_else(|| value.to_string())
+    fp_script::autoshape::shapes::option_key(value).map(fp_i18n::t).unwrap_or_else(|| value.to_string())
 }
 
 type PreviewCache = Arc<Mutex<HashMap<String, Option<TextureHandle>>>>;
@@ -313,7 +230,11 @@ pub fn properties(ui: &mut Ui, st: &mut AppState) {
     let mut change: Option<(String, Value)> = None;
     for (i, p) in params.iter().enumerate() {
         let k = p.get("key").and_then(|v| v.as_str()).unwrap_or("").to_string();
-        let label = param_label(p.get("label").and_then(|v| v.as_str()).unwrap_or(&k));
+        // Beschriftung über den Schlüssel aus fp-script (`labelKey`), sonst der gelieferte Text
+        let label = match p.get("labelKey").and_then(|v| v.as_str()) {
+            Some(key) => fp_i18n::t(key),
+            None => param_label(p.get("label").and_then(|v| v.as_str()).unwrap_or(&k)),
+        };
         let kind = p.get("type").and_then(|v| v.as_str()).unwrap_or("number");
         let value = p.get("value").cloned().unwrap_or(Value::Null);
         let (row, _) = ui.allocate_exact_size(vec2(ui.available_width(), 24.0), Sense::hover());
@@ -331,7 +252,8 @@ pub fn properties(ui: &mut Ui, st: &mut AppState) {
             "choice" => {
                 common::label_fit(ui, lr, &label, true);
                 let opts: Vec<String> = p.get("options").and_then(|o| o.as_array()).map(|a| a.iter().map(|x| x.as_str().map(|s| s.to_string()).unwrap_or_else(|| x.to_string())).collect()).unwrap_or_default();
-                let shown: Vec<String> = opts.iter().map(|o| option_label(o)).collect();
+                let keys = p.get("optionKeys").and_then(|o| o.as_array());
+                let shown: Vec<String> = opts.iter().enumerate().map(|(j, o)| keys.and_then(|a| a.get(j)).and_then(|v| v.as_str()).map(fp_i18n::t).unwrap_or_else(|| option_label(o))).collect();
                 let refs: Vec<&str> = shown.iter().map(|s| s.as_str()).collect();
                 let cur = value.as_str().map(|s| s.to_string()).unwrap_or_else(|| value.to_string());
                 let sel = opts.iter().position(|o| *o == cur);

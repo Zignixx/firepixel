@@ -30,6 +30,115 @@ const fn text(key: &'static str, label: &'static str) -> ParamDef {
     ParamDef { key, label, kind: "text", min: None, max: None, options: &[] }
 }
 
+/// Parameterbeschriftungen (deutsch) → Schlüssel in `bedienfelder.ftl` (`labelKey` in
+/// `autoShape.list`/`describe`; Befund I18N-BEDIENFELDER, UE-1).
+pub const PARAM_LABEL_KEYS: &[(&str, &str)] = &[
+    ("Drehung", "panel-asp-p-rotation"),
+    ("Scheitelpunkt", "panel-asp-p-apex"),
+    ("Scheitelbogen", "panel-asp-p-apex-arc"),
+    ("Bogen", "panel-asp-p-arc"),
+    ("Länge der Spitze", "panel-asp-p-tip-length"),
+    ("Breite der Spitze", "panel-asp-p-tip-width"),
+    ("Anzahl", "panel-asp-p-count"),
+    ("Im Uhrzeigersinn", "panel-asp-p-clockwise"),
+    ("Geschlossen", "panel-asp-p-closed"),
+    ("Eckgröße", "panel-asp-p-corner-size"),
+    ("Ecke oben links", "panel-asp-p-corner-tl"),
+    ("Ecke oben rechts", "panel-asp-p-corner-tr"),
+    ("Ecke unten rechts", "panel-asp-p-corner-br"),
+    ("Ecke unten links", "panel-asp-p-corner-bl"),
+    ("Rundung Knick 1", "panel-asp-p-bend1"),
+    ("Rundung Knick 2", "panel-asp-p-bend2"),
+    ("Eckenart", "panel-asp-p-corner-type"),
+    ("Krümmung", "panel-asp-p-curvature"),
+    ("Kurve", "panel-asp-p-curve"),
+    ("Kurvenradius", "panel-asp-p-curve-radius"),
+    ("Zahntiefe", "panel-asp-p-tooth-depth"),
+    ("Unterteilungen", "panel-asp-p-subdivisions"),
+    ("Versatz X", "panel-asp-p-offset-x"),
+    ("Versatz Y", "panel-asp-p-offset-y"),
+    ("Format", "panel-asp-p-format"),
+    ("Brennweite", "panel-asp-p-focal"),
+    ("Rahmenbreite", "panel-asp-p-frame-width"),
+    ("Spalt", "panel-asp-p-gap"),
+    ("Höhe", "panel-asp-p-height"),
+    ("Anfang", "panel-asp-p-start"),
+    ("Ende", "panel-asp-p-end"),
+    ("Schaftdicke", "panel-asp-p-shaft-thickness"),
+    ("Loch", "panel-asp-p-hole"),
+    ("Hohl (0–1)", "panel-asp-p-hollow"),
+    ("Stunde", "panel-asp-p-hour"),
+    ("Farbton", "panel-asp-p-hue"),
+    ("Innenausschnitt", "panel-asp-p-inner-cutout"),
+    ("Innerer Radius (Röhre)", "panel-asp-p-inner-radius-tube"),
+    ("Länge", "panel-asp-p-length"),
+    ("Ecken gemeinsam", "panel-asp-p-link-corners"),
+    ("Minute", "panel-asp-p-minute"),
+    ("Richtung", "panel-asp-p-direction"),
+    ("Monat (0–11)", "panel-asp-p-month"),
+    ("Zacken", "panel-asp-p-points"),
+    ("Rahmenversatz", "panel-asp-p-frame-offset"),
+    ("Überhang", "panel-asp-p-overhang"),
+    ("Größe", "panel-asp-p-size"),
+    ("Radius", "panel-asp-p-radius"),
+    ("Radius 1", "panel-asp-p-radius1"),
+    ("Radius 2", "panel-asp-p-radius2"),
+    ("Innerer Radius", "panel-asp-p-inner-radius"),
+    ("Drehung X", "panel-asp-p-rotation-x"),
+    ("Drehung Y", "panel-asp-p-rotation-y"),
+    ("Rundung", "panel-asp-p-roundness"),
+    ("Rundung 1", "panel-asp-p-roundness1"),
+    ("Rundung 2", "panel-asp-p-roundness2"),
+    ("Breite", "panel-asp-p-width"),
+    ("Zufallswert", "panel-asp-p-seed"),
+    ("Symbol (-1 = Auswahl)", "panel-asp-p-symbol"),
+    ("Seiten", "panel-asp-p-sides"),
+    ("Spitzengröße", "panel-asp-p-tip-size"),
+    ("Stil (0 einfarbig, 1 zweifarbig)", "panel-asp-p-style"),
+    ("Zähne", "panel-asp-p-teeth"),
+    ("Text", "panel-asp-p-text"),
+    ("Dicke", "panel-asp-p-thickness"),
+    ("Windungen", "panel-asp-p-turns"),
+    ("Zeiger X", "panel-asp-p-pointer-x"),
+    ("Zeiger Y", "panel-asp-p-pointer-y"),
+    ("Einheit", "panel-asp-p-unit"),
+    ("Schaftlänge", "panel-asp-p-shaft-length"),
+    ("Wellenlänge", "panel-asp-p-wavelength"),
+    ("Jahr", "panel-asp-p-year"),
+    ("Farbe", "panel-asp-p-color"),
+];
+
+/// Auswahlwerte (gespeichert wird der deutsche Wert) → Schlüssel in `bedienfelder.ftl` (`optionKeys`).
+pub const OPTION_LABEL_KEYS: &[(&str, &str)] = &[
+    ("gerade", "panel-asp-o-straight"),
+    ("rund", "panel-asp-o-round"),
+    ("nach innen", "panel-asp-o-inverted"),
+    ("waagerecht – senkrecht – waagerecht", "panel-asp-o-hvh"),
+    ("senkrecht – waagerecht – senkrecht", "panel-asp-o-vhv"),
+    ("Ohne", "panel-asp-o-none"),
+    ("Spitze 1", "panel-asp-o-head1"),
+    ("Spitze 2", "panel-asp-o-head2"),
+    ("Querstrich", "panel-asp-o-bar"),
+    ("Kästchen", "panel-asp-o-box"),
+];
+
+impl ParamDef {
+    /// Schlüssel der Beschriftung (`panel-asp-p-…`), `None` = Beschriftung ohne Übersetzung.
+    pub fn label_key(&self) -> Option<&'static str> {
+        label_key(self.label)
+    }
+}
+
+/// Schlüssel einer deutschen Parameterbeschriftung.
+pub fn label_key(label: &str) -> Option<&'static str> {
+    PARAM_LABEL_KEYS.iter().find(|(de, _)| *de == label).map(|(_, k)| *k)
+}
+
+/// Schlüssel eines (deutschen) Auswahlwerts.
+pub fn option_key(value: &str) -> Option<&'static str> {
+    OPTION_LABEL_KEYS.iter().find(|(de, _)| *de == value).map(|(_, k)| *k)
+}
+
 /// Eine Form.
 #[derive(Clone, Copy, Debug)]
 pub struct ShapeDef {

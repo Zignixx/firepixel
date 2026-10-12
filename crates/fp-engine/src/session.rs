@@ -454,10 +454,11 @@ impl Session {
         let id = DocId(self.next_doc);
         self.next_doc += 1;
         let title = match &path {
-            Some(p) => p.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_else(|| "Dokument".into()),
+            Some(p) => p.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_else(|| fp_i18n::t("msg-default-document-nameless")),
             None => {
+                // Vorgabetitel in der Sprache der Oberfläche beim Anlegen (wie die übrigen Standardnamen)
                 self.untitled += 1;
-                format!("Unbenannt-{}.png", self.untitled)
+                format!("{}.png", fp_i18n::tr!("msg-default-document", n = self.untitled.to_string()))
             }
         };
         let mut st = DocumentState::new(id, doc, path, title, &self.prefs);

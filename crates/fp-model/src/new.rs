@@ -84,10 +84,10 @@ fn random_u32() -> u32 {
 }
 
 impl Document {
-    /// Neues einseitiges Dokument (Seite „Seite 1“, 72 ppi, Formatversion 10 wie CS6).
+    /// Neues einseitiges Dokument (Seite „Seite 1“ bzw. `msg-default-page` in der Sprache der Oberfläche, 72 ppi, Formatversion 10 wie CS6).
     pub fn new(width: f32, height: f32, background: Argb) -> Document {
         let mut ids = IdGen::new();
-        let page = Page::new(&mut ids, "Seite 1", width, height, background);
+        let page = Page::new(&mut ids, &fp_i18n::tr!("msg-default-page", n = "1"), width, height, background);
         Document {
             pages: vec![Arc::new(page)],
             current_page: 0,

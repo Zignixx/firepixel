@@ -61,7 +61,7 @@ fn source_combo(ui: &mut Ui, st: &mut AppState, d: Dl, id: &str) {
 fn model_state(ui: &mut Ui, st: &mut AppState, d: Dl, id: &str, model: ModelId) {
     let ok = models::available(model);
     if ok {
-        let text = format!("{} ({})", models::info(model).name, models::human_size(models::info(model).size));
+        let text = format!("{} ({})", models::info(model).display_name(), models::human_size(models::info(model).size));
         fields::label_name(ui, d.r(160.0, 2.0, 170.0, 8.0), &text, true);
     } else {
         fields::label(ui, d.r(160.0, 2.0, 170.0, 8.0), &t("pi-ai-model-missing"), true);

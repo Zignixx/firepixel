@@ -113,7 +113,7 @@ err-script-doc-closed = document is closed
 err-script-doc-n-closed = document { $id } is closed
 
 ## KI-Auswahl (fp-ai)
-ai-err-model-missing = AI model “{ $name }” is missing ({ $file }). Please load it via “Manage Models” or put the file into the model folder: { $folder }
+ai-err-model-missing = AI model “{ $name }” is missing ({ $file }). Please load it via “Manage AI Models” or put the file into the model folder: { $folder }
 ai-err-weights = invalid AI model: { $detail }
 ai-err-download = download failed: { $detail }
 ai-err-download-disabled = download is disabled (test or batch mode)
@@ -121,6 +121,20 @@ ai-err-checksum = checksum of file { $file } does not match (expected { $expecte
 ai-err-cancelled = cancelled
 ai-err-input = { $detail }
 ai-err-io = File: { $detail }
+
+## AI models (fp-ai models.rs; model names stay, additions translated)
+ai-model-sam2-tiny = SAM 2.1 Hiera Tiny
+ai-model-sam2-small = SAM 2.1 Hiera Small
+ai-model-birefnet-lite = BiRefNet lite (general)
+ai-model-birefnet = BiRefNet (general, high quality)
+ai-model-birefnet-lite-matting = BiRefNet lite Matting
+ai-model-birefnet-hr-matting = BiRefNet HR Matting (high quality)
+ai-model-sam2-tiny-note = Meta (facebookresearch/sam2): code and weights Apache-2.0, commercial use allowed; trained on SA-1B/SA-V
+ai-model-sam2-small-note = Meta (facebookresearch/sam2): code and weights Apache-2.0, commercial use allowed; trained on SA-1B/SA-V
+ai-model-birefnet-lite-note = ZhengPeng7/BiRefNet, Swin-T; weights MIT. Training data according to the author include DIS5K, DUTS, HRSOD, UHRSD, HRS10K, P3M-10k, humans (P3M-10k is licensed for non-commercial research only)
+ai-model-birefnet-note = ZhengPeng7/BiRefNet, Swin-L (slower); weights MIT. Training data as for BiRefNet lite (including P3M-10k, non-commercial research only)
+ai-model-birefnet-lite-matting-note = ZhengPeng7/BiRefNet, Swin-T, for hair and fur; weights MIT. Training data according to the author: P3M-10k, humans, AM-2k, Distinctions-646, HIM2K (partly non-commercial research only)
+ai-model-birefnet-hr-matting-note = ZhengPeng7/BiRefNet, Swin-L, for hair and fur (slower); weights MIT. Training data as for Matting lite (partly non-commercial research only)
 
 ## Hinweise und Rückgaben von Befehlen
 msg-wizard-animated-gif = several states: animated GIF
@@ -130,6 +144,7 @@ msg-wizard-png32-alpha = many colors with transparency: PNG32
 msg-wizard-jpeg = many colors (photo): JPEG quality 80
 msg-spelling-no-dictionary = no dictionary found: specify <language>.aff/.dic via “Spelling Setup”
 msg-no-usage-data = Firepixel neither collects nor sends usage data.
+msg-panel-alias = Panel menu: same as “{ $target }”
 
 ## Standardnamen neuer Ebenen, Seiten und Status
 msg-default-layer = Layer { $n }
@@ -140,6 +155,8 @@ msg-default-background = Background
 msg-default-copy = { $name } copy
 msg-default-copy-n = { $name } copy { $n }
 msg-default-sublayer = Sub-layer
+msg-default-document = Untitled-{ $n }
+msg-default-document-nameless = Document
 msg-tool-roundness = Roundness { $px } px
 
 ## Import-Details (fp-io, $detail in err-import-corrupt/-unsupported/-decode)

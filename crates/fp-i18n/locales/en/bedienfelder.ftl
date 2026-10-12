@@ -243,12 +243,18 @@ panel-asp-p-unit = Unit
 panel-asp-p-shaft-length = Shaft length
 panel-asp-p-wavelength = Wavelength
 panel-asp-p-year = Year
+panel-asp-p-color = Color
 # Choice values (the German value is stored, the translation is shown)
 panel-asp-o-straight = straight
 panel-asp-o-round = round
 panel-asp-o-inverted = inverted
 panel-asp-o-hvh = horizontal – vertical – horizontal
 panel-asp-o-vhv = vertical – horizontal – vertical
+panel-asp-o-none = None
+panel-asp-o-head1 = Arrowhead 1
+panel-asp-o-head2 = Arrowhead 2
+panel-asp-o-bar = Crossbar
+panel-asp-o-box = Box
 
 ## Optimize
 panel-opt-no-document = No document open.

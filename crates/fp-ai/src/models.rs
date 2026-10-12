@@ -153,6 +153,49 @@ pub fn info(id: ModelId) -> &'static ModelInfo {
     MODELS.iter().find(|m| m.id == id).unwrap_or(&MODELS[0])
 }
 
+impl ModelId {
+    /// Schlüssel des Anzeigenamens (`meldungen.ftl`; Modellnamen bleiben, Zusätze werden übersetzt).
+    pub fn name_key(self) -> &'static str {
+        match self {
+            ModelId::Sam2Tiny => "ai-model-sam2-tiny",
+            ModelId::Sam2Small => "ai-model-sam2-small",
+            ModelId::BiRefNetLite => "ai-model-birefnet-lite",
+            ModelId::BiRefNet => "ai-model-birefnet",
+            ModelId::BiRefNetLiteMatting => "ai-model-birefnet-lite-matting",
+            ModelId::BiRefNetHrMatting => "ai-model-birefnet-hr-matting",
+        }
+    }
+
+    /// Schlüssel des Hinweises (Lizenz, Trainingsdaten).
+    pub fn note_key(self) -> &'static str {
+        match self {
+            ModelId::Sam2Tiny => "ai-model-sam2-tiny-note",
+            ModelId::Sam2Small => "ai-model-sam2-small-note",
+            ModelId::BiRefNetLite => "ai-model-birefnet-lite-note",
+            ModelId::BiRefNet => "ai-model-birefnet-note",
+            ModelId::BiRefNetLiteMatting => "ai-model-birefnet-lite-matting-note",
+            ModelId::BiRefNetHrMatting => "ai-model-birefnet-hr-matting-note",
+        }
+    }
+
+    /// Anzeigename in der Sprache der Oberfläche (Deutsch = [`ModelInfo::name`]).
+    pub fn display_name(self) -> String {
+        fp_i18n::t(self.name_key())
+    }
+}
+
+impl ModelInfo {
+    /// Anzeigename in der Sprache der Oberfläche (Deutsch = `name`).
+    pub fn display_name(&self) -> String {
+        self.id.display_name()
+    }
+
+    /// Hinweis in der Sprache der Oberfläche (Deutsch = `note`).
+    pub fn display_note(&self) -> String {
+        fp_i18n::t(self.id.note_key())
+    }
+}
+
 /// Vorgabemodell einer Aufgabe.
 pub fn default_for(task: Task) -> ModelId {
     MODELS.iter().find(|m| m.task == task && m.default).map(|m| m.id).unwrap_or(ModelId::Sam2Tiny)
@@ -273,5 +316,24 @@ mod tests {
         }
         assert_eq!(by_name("birefnet_lite"), Some(ModelId::BiRefNetLite));
         assert_eq!(human_size(155_908_064), "156 MB");
+    }
+
+    /// Deutsch wortgleich mit `name`/`note`, Englisch ohne deutsche Zusätze.
+    #[test]
+    fn display_texts_follow_language() {
+        for m in MODELS {
+            fp_i18n::with_language("de", || {
+                assert_eq!(m.display_name(), m.name);
+                assert_eq!(m.display_note(), m.note);
+            });
+            fp_i18n::with_language("en", || {
+                let (n, t) = (m.display_name(), m.display_note());
+                for w in ["allgemein", "hohe Qualität", "Gewichte", "Trainingsdaten", "nichtkommerziell"] {
+                    assert!(!n.contains(w) && !t.contains(w), "{n} / {t}");
+                }
+            });
+        }
+        let e = fp_i18n::with_language("en", || missing(ModelId::BiRefNet).to_string());
+        assert!(e.contains("BiRefNet (general, high quality)") && e.contains("Manage AI Models"), "{e}");
     }
 }

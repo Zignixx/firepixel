@@ -2081,7 +2081,7 @@ fn merged(fixed: &Value, p: &Params) -> Value {
 
 /// Bedienfeldmenü-Eintrag als Verweis auf einen vorhandenen Befehl (gleiche Wirkung, eigene ID).
 fn alias(r: &mut CommandRegistry, id: u32, name: &str, label: &str, target: &'static str, fixed: Value) {
-    let c = cmd(name).label(label).describe(&format!("Bedienfeldmenü: wie „{target}“")).available(move |s| s.command_state(target).0).run(move |s, p| s.execute(target, merged(&fixed, p)).map(passthrough));
+    let c = cmd(name).label(label).describe(&fp_i18n::tr!("msg-panel-alias", target = target)).available(move |s| s.command_state(target).0).run(move |s, p| s.execute(target, merged(&fixed, p)).map(passthrough));
     add_fw(r, id, c);
 }
 

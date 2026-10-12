@@ -194,3 +194,24 @@ fn every_shape_works() {
         assert!(["File Info", "Perspective"].contains(&def.en) || b.right > 50.0 && b.left < 170.0 && b.bottom > 60.0 && b.top < 140.0, "{}: Rahmen {b:?}", def.en);
     }
 }
+
+/// Jede Parameterbeschriftung und jeder Auswahlwert hat einen Schlüssel (`labelKey`/`optionKeys`,
+/// UE-1); Deutsch = bisherige Beschriftung (Vollständigkeit de/en prüft fp-i18n).
+#[test]
+fn param_labels_have_translation_keys() {
+    for sd in autoshape::SHAPES {
+        for p in sd.params {
+            let key = p.label_key().unwrap_or_else(|| panic!("{}: Beschriftung „{}“ ohne Schlüssel", sd.en, p.label));
+            fp_i18n::with_language("de", || assert_eq!(fp_i18n::t(key), p.label, "{key}"));
+            fp_i18n::with_language("en", || assert_ne!(fp_i18n::t(key), key));
+            for o in p.options {
+                if !["px", "inch", "cm"].contains(o) {
+                    assert!(autoshape::shapes::option_key(o).is_some(), "{}: Auswahlwert „{o}“ ohne Schlüssel", sd.en);
+                }
+            }
+        }
+    }
+    let v = autoshape::list();
+    let first = &v[0]["params"][0];
+    assert!(first["labelKey"].as_str().is_some_and(|k| k.starts_with("panel-asp-p-")), "{first}");
+}

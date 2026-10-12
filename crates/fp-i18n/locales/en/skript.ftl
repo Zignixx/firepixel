@@ -15,3 +15,5 @@ err-script-png-only = { $path }: only PNG without fp-io
 err-script-page-empty = Page is empty or missing
 err-script-export-unsupported = Export format .{ $ext } is not supported
 err-script-export-needs-feature = Export format .{ $ext } requires fp-export (feature “formats”)
+err-script-open-failed = Opening failed
+err-script-page-missing = Page is missing

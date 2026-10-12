@@ -243,12 +243,18 @@ panel-asp-p-unit = Einheit
 panel-asp-p-shaft-length = Schaftlänge
 panel-asp-p-wavelength = Wellenlänge
 panel-asp-p-year = Jahr
+panel-asp-p-color = Farbe
 # Auswahlwerte (gespeichert wird der deutsche Wert, angezeigt die Übersetzung)
 panel-asp-o-straight = gerade
 panel-asp-o-round = rund
 panel-asp-o-inverted = nach innen
 panel-asp-o-hvh = waagerecht – senkrecht – waagerecht
 panel-asp-o-vhv = senkrecht – waagerecht – senkrecht
+panel-asp-o-none = Ohne
+panel-asp-o-head1 = Spitze 1
+panel-asp-o-head2 = Spitze 2
+panel-asp-o-bar = Querstrich
+panel-asp-o-box = Kästchen
 
 ## Optimieren
 panel-opt-no-document = Kein Dokument geöffnet.

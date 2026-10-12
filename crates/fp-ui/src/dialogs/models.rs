@@ -216,7 +216,7 @@ fn start(st: &mut AppState, mut queue: Vec<Invocation>) {
             },
             Ok(Some(prep)) => {
                 let title = title_for(&inv.command);
-                let model = models::info(prep.model).name;
+                let model = models::info(prep.model).display_name();
                 let key = prep.key;
                 let job = Job::spawn(format!("{title} ({model})"), move |p| eng::run_prepared(&prep, p));
                 queue.insert(0, inv);
@@ -295,7 +295,7 @@ fn poll_job(ctx: &egui::Context, st: &mut AppState) {
 
 /// Startet den Download eines Modells (nur aus den Dialogen nach Klick auf „Herunterladen“).
 fn start_download(model: ModelId) -> Download {
-    let job = Job::spawn(format!("Download {}", models::info(model).name), move |p| fp_ai::download::download(model, p));
+    let job = Job::spawn(format!("Download {}", models::info(model).display_name()), move |p| fp_ai::download::download(model, p));
     Download { job, model }
 }
 
@@ -458,7 +458,7 @@ fn show_missing(ctx: &egui::Context, st: &mut AppState) {
     let r = dialog_frame(ctx, "fp-ai-missing", &t("dlg-ai-missing-title"), vec2(600.0, 410.0), |ui, body| {
         let inner = Rect::from_min_max(body.min + vec2(PAD, PAD), body.max - vec2(PAD, PAD + BTN.y + 12.0));
         let mut c = ui.new_child(egui::UiBuilder::new().max_rect(inner).layout(egui::Layout::top_down(egui::Align::Min)));
-        header(&mut c, &fp_i18n::tr!("dlg-ai-needed", model = m.name), &fp_i18n::tr!("dlg-ai-missing-text", task = tool.as_str()));
+        header(&mut c, &fp_i18n::tr!("dlg-ai-needed", model = m.display_name()), &fp_i18n::tr!("dlg-ai-missing-text", task = tool.as_str()));
         c.add_space(10.0);
         c.separator();
         c.add_space(6.0);
@@ -470,7 +470,7 @@ fn show_missing(ctx: &egui::Context, st: &mut AppState) {
             "fp-ai-missing-grid",
             &mut [
                 (gl[0].as_str(), &mut |ui: &mut egui::Ui| {
-                    ui.label(egui::RichText::new(m.name).strong());
+                    ui.label(egui::RichText::new(m.display_name()).strong());
                 }),
                 (gl[1].as_str(), &mut |ui: &mut egui::Ui| {
                     ui.label(task_text(m.task));
@@ -494,7 +494,7 @@ fn show_missing(ctx: &egui::Context, st: &mut AppState) {
         hint_block(&mut c, &license_note(m));
         c.add_space(8.0);
         if d.done.is_some() {
-            crate::ui_kit::notice(&mut c, crate::ui_kit::Tone::Success, None, &fp_i18n::tr!("dlg-ai-loaded-running", model = m.name, task = tool.as_str()));
+            crate::ui_kit::notice(&mut c, crate::ui_kit::Tone::Success, None, &fp_i18n::tr!("dlg-ai-loaded-running", model = m.display_name(), task = tool.as_str()));
         } else if let Some((p, t)) = dl_state {
             let w = c.available_width();
             progress_bar(&mut c, p, w);
@@ -553,7 +553,7 @@ fn show_missing(ctx: &egui::Context, st: &mut AppState) {
     }
     if let Some(t) = d.done {
         if t.elapsed() >= std::time::Duration::from_millis(900) {
-            status(st, fp_i18n::tr!("dlg-ai-loaded", model = m.name));
+            status(st, fp_i18n::tr!("dlg-ai-loaded", model = m.display_name()));
             if let Some(inv) = d.pending.take() {
                 request(st, &inv);
             }
@@ -663,10 +663,10 @@ fn show_manager(ctx: &egui::Context, st: &mut AppState) {
             u.painter().rect_filled(rr, 0.0, bg);
             u.painter().hline(rr.x_range(), rr.bottom() - 0.5, Stroke::new(1.0, c.list_row_line));
             let y = rr.center().y;
-            let name = if m.default { fp_i18n::tr!("dlg-ai-default-model", model = m.name) } else { m.name.to_string() };
+            let name = if m.default { fp_i18n::tr!("dlg-ai-default-model", model = m.display_name()) } else { m.display_name() };
             let name_rect = Rect::from_min_size(pos2(rr.left() + cl.name.0, rr.top()), vec2(cl.name.1, row_h));
             u.painter().with_clip_rect(name_rect).text(pos2(name_rect.left(), y), egui::Align2::LEFT_CENTER, name, font.clone(), c.text);
-            u.interact(name_rect, egui::Id::new(("fp-ai-row", i)), Sense::hover()).on_hover_text(format!("{}\n{}", short_source(m), m.note));
+            u.interact(name_rect, egui::Id::new(("fp-ai-row", i)), Sense::hover()).on_hover_text(format!("{}\n{}", short_source(m), m.display_note()));
             u.painter().text(pos2(rr.left() + cl.task.0, y), egui::Align2::LEFT_CENTER, task_text(m.task), font.clone(), c.text);
             u.painter().text(pos2(rr.left() + cl.size_right, y), egui::Align2::RIGHT_CENTER, size_text(m.size), font.clone(), c.text);
             u.painter().text(pos2(rr.left() + cl.license.0, y), egui::Align2::LEFT_CENTER, m.license, font.clone(), c.text);
@@ -704,7 +704,7 @@ fn show_manager(ctx: &egui::Context, st: &mut AppState) {
         // laufender Download: Kennzahlen
         if let Some((id, pr, el)) = dl {
             u.add_space(4.0);
-            u.label(egui::RichText::new(format!("{}: {}", models::info(id).name, progress_text(pr, models::info(id).size, el))).color(c.text_weak));
+            u.label(egui::RichText::new(format!("{}: {}", models::info(id).display_name(), progress_text(pr, models::info(id).size, el))).color(c.text_weak));
         }
         // Bestätigung eines Downloads mit allen Angaben
         if let Some(id) = d.confirm {
@@ -712,7 +712,7 @@ fn show_manager(ctx: &egui::Context, st: &mut AppState) {
             u.add_space(8.0);
             hint_block(
                 &mut u,
-                &fp_i18n::tr!("dlg-ai-confirm-download", model = m.name, size = size_text(m.size), source = short_source(m), sha = &m.sha256[..12], license = license_note(m)),
+                &fp_i18n::tr!("dlg-ai-confirm-download", model = m.display_name(), size = size_text(m.size), source = short_source(m), sha = &m.sha256[..12], license = license_note(m)),
             );
             u.horizontal(|ui| {
                 if ui.add_sized(btn, egui::Button::new(dl_l.as_str())).clicked() {
@@ -804,7 +804,7 @@ fn show_manager(ctx: &egui::Context, st: &mut AppState) {
         d.confirm_remove = None;
         fp_ai::cache::unload(id);
         d.info = Some(match models::find(id).map(std::fs::remove_file) {
-            Some(Ok(())) => fp_i18n::tr!("dlg-ai-removed", model = models::info(id).name),
+            Some(Ok(())) => fp_i18n::tr!("dlg-ai-removed", model = models::info(id).display_name()),
             Some(Err(e)) => fp_i18n::tr!("dlg-ai-remove-failed", error = e.to_string()),
             None => t("dlg-ai-file-not-found"),
         });
@@ -852,7 +852,7 @@ fn show_manager(ctx: &egui::Context, st: &mut AppState) {
     if let Some(x) = d.download.as_mut()
         && let Some(res) = x.job.poll()
     {
-        let name = models::info(x.model).name;
+        let name = models::info(x.model).display_name();
         d.info = Some(match res {
             Ok(_) => fp_i18n::tr!("dlg-ai-loaded-checked", model = name),
             Err(fp_ai::AiError::Cancelled) => t("dlg-ai-download-aborted"),

@@ -112,7 +112,7 @@ pub fn model_for(s: &Session, p: Option<&Params>, task: Task) -> Result<ModelId>
     .unwrap_or_else(|| s.prefs.get_str(key, ""));
     let id = if name.is_empty() { models::default_for(task) } else { models::by_name(&name).ok_or_else(|| EngineError::InvalidParams { name: "model".into(), message: fp_i18n::tr!("err-unknown-model", name = name.as_str()) })? };
     if models::info(id).task != task {
-        return Err(EngineError::InvalidParams { name: "model".into(), message: fp_i18n::tr!("err-model-wrong-task", name = models::info(id).name) });
+        return Err(EngineError::InvalidParams { name: "model".into(), message: fp_i18n::tr!("err-model-wrong-task", name = models::info(id).display_name()) });
     }
     Ok(id)
 }
@@ -575,8 +575,8 @@ pub(super) fn register(r: &mut CommandRegistry) {
             .iter()
             .map(|m| {
                 json!({
-                    "id": m.id, "name": m.name, "task": m.task, "file": m.file, "url": m.url, "page": m.page,
-                    "size": m.size, "sha256": m.sha256, "license": m.license, "note": m.note, "default": m.default,
+                    "id": m.id, "name": m.display_name(), "task": m.task, "file": m.file, "url": m.url, "page": m.page,
+                    "size": m.size, "sha256": m.sha256, "license": m.license, "note": m.display_note(), "default": m.default,
                     "available": models::available(m.id),
                     "path": models::find(m.id).map(|p| p.display().to_string()),
                 })

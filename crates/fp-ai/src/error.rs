@@ -7,7 +7,7 @@ use crate::models::ModelId;
 #[derive(Debug, thiserror::Error)]
 pub enum AiError {
     /// Modelldatei fehlt im Modellordner.
-    #[error("{}", m3("ai-err-model-missing", "name", .name, "file", .file, "folder", .folder))]
+    #[error("{}", m3("ai-err-model-missing", "name", &.model.display_name(), "file", .file, "folder", .folder))]
     ModelMissing { model: ModelId, name: &'static str, file: &'static str, folder: String },
     /// Modelldatei beschädigt oder unpassend.
     #[error("{}", m1("ai-err-weights", "detail", .0))]

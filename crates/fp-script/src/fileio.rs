@@ -41,7 +41,7 @@ pub fn open_document(s: &mut Session, path: &Path) -> Result<DocId, String> {
     let ext = ext_of(path);
     if ext == "fw.png" || ext == "png" || !cfg!(feature = "formats") {
         let v = s.execute("file.open", serde_json::json!({"path": path.to_string_lossy()})).map_err(|e| e.to_string())?;
-        return v.value.get("doc").and_then(|d| d.as_u64()).map(DocId).ok_or_else(|| "Öffnen fehlgeschlagen".into());
+        return v.value.get("doc").and_then(|d| d.as_u64()).map(DocId).ok_or_else(|| fp_i18n::t("err-script-open-failed"));
     }
     #[cfg(feature = "formats")]
     {
@@ -122,7 +122,7 @@ impl ExportSpec {
 
 /// Flaches Bild der Seite: PNG32 direkt, andere Formate über fp-export.
 pub fn export_page(s: &Session, doc: DocId, page: Option<usize>, frame: Option<usize>, path: &Path, opts: &Value) -> Result<usize, String> {
-    let d = s.document(doc).ok_or("Dokument ist geschlossen")?;
+    let d = s.document(doc).ok_or_else(|| fp_i18n::t("err-script-doc-closed"))?;
     let page = page.unwrap_or(d.page);
     let frame = frame.unwrap_or(if page == d.page { d.frame } else { 0 });
     let spec = ExportSpec::from(path, opts);
@@ -196,7 +196,7 @@ pub fn encode(doc: &fp_model::Document, page: usize, frame: usize, spec: &Export
                 fp_export::render::Background::Transparent => &transparent,
                 _ => &opaque,
             };
-            let area = req.area.or_else(|| fp_render::Renderer::page_rect(d, req.page)).ok_or("Seite fehlt")?;
+            let area = req.area.or_else(|| fp_render::Renderer::page_rect(d, req.page)).ok_or_else(|| fp_i18n::t("err-script-page-missing"))?;
             Ok(r.render_rect(d, req.page, req.frame, area).image)
         };
         let _ = frame;
