@@ -571,9 +571,11 @@ fn rgb_to_hsv(p: [u8; 4]) -> (f32, f32, f32) {
 /// 3×3-Mittels ein (gemessen am Original: Intensität 50 an einer Farbkante → 15/255, an der
 /// Bitmapkante → 30/255; FV-11, PARITAET_A L38).
 const BLUR_GAIN: f32 = 0.353;
-/// Abstand der Abdrücke: `Durchmesser × Abstand % × SPACING_GAIN` (an den Strichmessungen des
-/// Originals kalibriert: Weichzeichner 13 → ≈ 2 px, Stempel 16 → ≈ 2,4 px).
-const SPACING_GAIN: f32 = 0.75;
+/// Abstand der Abdrücke: `Durchmesser × Abstand % × Faktor` (an den Strichmessungen des Originals
+/// kalibriert, Vorgabe 20 %: Weichzeichner 13 → ≈ 2 px, Stempel 16 → ≈ 2,1 px).
+fn spacing_gain(mode: &str) -> f32 {
+    if mode == "stamp" { 0.65 } else { 0.75 }
+}
 /// Farbe außerhalb der Bitmap beim Weichzeichnen: transparentes Weiß (das Original hellt die
 /// Bitmapkante dabei auf und lässt die Bitmap um 1 px wachsen).
 const OUTSIDE: [f32; 4] = [255.0, 255.0, 255.0, 0.0];
@@ -587,7 +589,7 @@ fn in_rect(r: &fp_geom::IRect, x: i32, y: i32) -> bool {
 /// am Ende.
 fn retouch(img: &mut RgbaImage, pts: &[Point], prm: &Retouch, sel: Option<&fp_raster::Mask>) {
     let dab = Dab::new(prm.size, prm.round, prm.soft * 100.0);
-    let step = (prm.size * prm.spacing / 100.0 * SPACING_GAIN).max(1.0);
+    let step = (prm.size * prm.spacing / 100.0 * spacing_gain(&prm.mode)).max(1.0);
     let stamps = dab_points(pts, step);
     let reach = stamps.iter().fold(fp_geom::IRect::default(), |r, s| r.union(&dab.bounds(*s)));
     let orig = img.bounds();
