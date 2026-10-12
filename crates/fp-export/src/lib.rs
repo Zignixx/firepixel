@@ -35,6 +35,7 @@ pub mod animation;
 pub mod behavior;
 pub mod doc_export;
 pub mod export;
+pub mod flat_png; // EB-2: „Reduziertes PNG“ (re\20 §5)
 pub mod formats;
 pub mod gif;
 pub mod html;

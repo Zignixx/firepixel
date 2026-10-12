@@ -386,6 +386,11 @@ die Brücke antwortet. Leinwand, Menüs und Kürzel sind wie bei einem modalen D
 Ablauf „Speichern unter“ über die Oberfläche:
 `ui_action {"run": "file.saveAs"}` → `ui_file_dialog {}` → `ui_file_dialog {"action": "choose", "path": "C:\\out\\bild.fw.png"}`
 → `ui_state {}` (Titel ohne Stern). Ohne Oberfläche geht es direkt: `save {"path": …}`.
+Dateityp „Reduziertes PNG“ (aktuelle Seite flach mit den Optimierungseinstellungen des Dokuments,
+Format PNG, ohne private Chunks): `ui_file_dialog {"action": "choose", "path": "C:\\out\\flach.png", "filter": 4}`
+(Index in `filters`), dazu `"save_as_copy": true`, damit das Dokument Namen und Art behält; ohne
+Oberfläche `run_command {"name": "file.saveAs", "params": {"path": "C:\\out\\flach.png", "flattened": true, "copy": false}}`.
+Ohne Kopie gehört das Dokument danach zur PNG-Datei, und `file.save` schreibt wieder flach.
 
 ## 6. Befehle-Menü und gespeicherte Befehle
 

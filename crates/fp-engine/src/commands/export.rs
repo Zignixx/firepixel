@@ -353,6 +353,30 @@ fn render_page_image(s: &Session, page: usize, frame: usize, transparent: bool) 
         .map_err(EngineError::Failed)
 }
 
+/// Erstellungsdatum des Dokuments für `Creation Time` des reduzierten PNG: der Text aus der
+/// geöffneten Datei, sonst heute (neu angelegtes Dokument).
+pub fn creation_time_of(doc: &Document) -> String {
+    doc.file_meta
+        .text_chunks
+        .iter()
+        .find(|(k, v)| k == "Creation Time" && !v.trim().is_empty())
+        .map(|(_, v)| v.clone())
+        .unwrap_or_else(fp_export::flat_png::creation_time_today)
+}
+
+/// „Reduziertes PNG“ (re\20 §5.3): aktuelle Seite im aktuellen Status, gerendert wie beim Export,
+/// mit den Optimierungseinstellungen der Seite, Format immer PNG.
+pub(super) fn flattened_png_bytes(s: &Session) -> Result<Vec<u8>> {
+    let d = s.doc()?;
+    let (page, frame) = (d.page, d.frame);
+    let doc = Arc::clone(&d.doc);
+    let settings = page_settings(&doc, page);
+    let flat = fp_export::flat_png::flattened_png_settings(&settings);
+    let img = render_page_image(s, page, frame, flat.matte.is_some())?;
+    let ctx = page_context(&doc, page);
+    fp_export::flat_png::write_flattened_png(&img, &settings, &ctx, &creation_time_of(&doc)).map_err(|e| EngineError::Failed(e.to_string()))
+}
+
 // ------------------------------------------------------------------ Druck
 
 /// Seiteneinrichtung für „Drucken“ (das Original speichert sie als `printer_data` der Seite; Firepixel

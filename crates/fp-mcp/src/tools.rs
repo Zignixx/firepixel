@@ -410,7 +410,9 @@ pub fn tool_defs() -> Vec<ToolDef> {
                 json!({
                     "action": {"type": "string", "enum": ["status", "cancel", "choose"], "default": "status"},
                     "path": {"type": "string"},
-                    "paths": {"type": "array", "items": {"type": "string"}}
+                    "paths": {"type": "array", "items": {"type": "string"}},
+                    "filter": {"type": "integer", "minimum": 0},
+                    "save_as_copy": {"type": "boolean"}
                 }),
                 &[],
             ),

@@ -91,13 +91,7 @@ impl DialogKind {
             DialogKind::Import => readable_filters(Request::open(self.title())),
             DialogKind::NewFromTemplate => Request::open(self.title()).filter(fp_i18n::t("ui-filter-fw-png"), &["png"]),
             DialogKind::SaveAsTemplate => Request::save(self.title(), file_name).filter(fp_i18n::t("ui-filter-fw-png"), &["png"]),
-            DialogKind::SaveAs => {
-                let mut r = Request::save(self.title(), file_name);
-                for (label, exts, _) in SAVE_TYPES {
-                    r = r.filter(*label, exts);
-                }
-                r
-            }
+            DialogKind::SaveAs => save_type_filters(Request::save(self.title(), file_name)).save_extras(save_as_extras()),
             DialogKind::UpdateHtml => Request::open(self.title()).filter(fp_i18n::t("ui-filter-html"), &["htm", "html"]).filter(fp_i18n::t("ui-filter-all-files"), &["*"]),
         }
     }
@@ -184,19 +178,24 @@ pub fn pick(st: &mut AppState, kind: DialogKind, file_name: &str, done: impl FnO
 pub enum SaveKind {
     /// FW-PNG mit allen Ebenen (das Dokument trägt danach diesen Namen).
     FwPng,
+    /// „Reduziertes PNG“ (re\20 §5): aktuelle Seite flach mit den Optimierungseinstellungen des
+    /// Dokuments, Format PNG. Ohne „Als Kopie speichern“ gehört das Dokument danach zur PNG-Datei.
+    FlatPng,
     /// Reduziertes Bild über den Export (`file.export` mit Format), als Kopie.
     Export(&'static str),
     /// Export-Art (`file.export` mit `style`), als Kopie.
     Style(&'static str),
 }
 
-/// Dateitypen von „Speichern unter“: die Typen des Originals, soweit Firepixel sie schreibt, und
-/// die modernen Formate (Beschriftung, Endungen, Art).
+/// Dateitypen von „Speichern unter“: die Typen des Originals, soweit Firepixel sie schreibt, in
+/// dessen Reihenfolge, und die modernen Formate (Beschriftung, Endungen, Art). Übersetzte
+/// Beschriftungen (leer hier) liefert [`save_type_label`].
 pub const SAVE_TYPES: &[(&str, &[&str], SaveKind)] = &[
     ("FW-PNG (*.png)", &["png"], SaveKind::FwPng),
     ("BMP (*.bmp)", &["bmp"], SaveKind::Export("bmp")),
     ("GIF (*.gif)", &["gif"], SaveKind::Export("gif")),
     ("JPEG (*.jpg; *.jpeg; *.jpe)", &["jpg", "jpeg", "jpe"], SaveKind::Export("jpeg")),
+    ("", &["png"], SaveKind::FlatPng),
     ("Photoshop PSD (*.psd)", &["psd"], SaveKind::Style("psd")),
     ("TIFF (*.tif; *.tiff)", &["tif", "tiff"], SaveKind::Export("tiff")),
     ("WBMP (*.wbmp)", &["wbmp"], SaveKind::Export("wbmp")),
@@ -212,6 +211,103 @@ pub const SAVE_TYPES: &[(&str, &[&str], SaveKind)] = &[
 pub fn save_kind(p: &Path) -> SaveKind {
     let n = p.to_string_lossy().to_lowercase();
     SAVE_TYPES.iter().find(|(_, exts, _)| exts.iter().any(|e| n.ends_with(&format!(".{e}")))).map(|t| t.2).unwrap_or(SaveKind::FwPng)
+}
+
+/// Beschriftung eines Dateityps von „Speichern unter“ in der Sprache der Oberfläche.
+pub fn save_type_label(i: usize) -> String {
+    match SAVE_TYPES.get(i) {
+        Some((_, _, SaveKind::FlatPng)) => fp_i18n::t("ui-filter-flattened-png"),
+        Some((label, _, _)) => label.to_string(),
+        None => String::new(),
+    }
+}
+
+/// Filter von „Speichern unter“ (alle Dateitypen in [`SAVE_TYPES`]-Reihenfolge).
+fn save_type_filters(mut r: Request) -> Request {
+    for (i, (_, exts, _)) in SAVE_TYPES.iter().enumerate() {
+        r = r.filter(save_type_label(i), exts);
+    }
+    r
+}
+
+/// Index eines Dateityps in [`SAVE_TYPES`].
+pub fn save_type_index(kind: SaveKind) -> Option<usize> {
+    SAVE_TYPES.iter().position(|t| t.2 == kind)
+}
+
+/// Art zum gewählten Namen und Dateityp (wie im Original entscheidet der gewählte Typ, nicht nur die
+/// Endung: `.png` unter „Reduziertes PNG“ ist flach, unter „FW-PNG“ nicht). Passt der Name nicht
+/// zum Typ (andere Endung), entscheidet die Endung; ohne Endung der Typ.
+pub fn save_kind_for(p: &Path, filter: Option<usize>) -> SaveKind {
+    let n = p.file_name().map(|n| n.to_string_lossy().to_lowercase()).unwrap_or_default();
+    if let Some((_, exts, kind)) = filter.and_then(|i| SAVE_TYPES.get(i))
+        && (exts.iter().any(|e| n.ends_with(&format!(".{e}"))) || p.extension().is_none())
+    {
+        return *kind;
+    }
+    save_kind(p)
+}
+
+/// Gewählter Name → Ziel für eine Art: FW-PNG bekommt `.fw.png`, Reduziertes PNG endet auf `.png`
+/// (ohne `.fw.png`), andere Typen bekommen ohne Endung ihre erste Endung.
+pub fn save_target_for(p: PathBuf, kind: SaveKind) -> PathBuf {
+    let name = p.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
+    let lower = name.to_lowercase();
+    match kind {
+        SaveKind::FwPng => ensure_fw_png(p),
+        SaveKind::FlatPng if lower.ends_with(".fw.png") => p.with_file_name(format!("{}.png", &name[..name.len() - ".fw.png".len()])),
+        SaveKind::FlatPng if lower.ends_with(".png") => p,
+        SaveKind::FlatPng => p.with_file_name(format!("{name}.png")),
+        _ if p.extension().is_some() => p,
+        _ => match SAVE_TYPES.iter().find(|t| t.2 == kind).and_then(|t| t.1.first()) {
+            Some(e) => p.with_file_name(format!("{name}.{e}")),
+            None => p,
+        },
+    }
+}
+
+/// Typen, zwischen denen nach dem Windows-Dialog nachgefragt wird: ein Name auf `.png` (nicht
+/// `.fw.png`) passt zu FW-PNG und Reduziertes PNG.
+fn ambiguous_save_types(p: &Path) -> Vec<usize> {
+    let n = p.file_name().map(|n| n.to_string_lossy().to_lowercase()).unwrap_or_default();
+    if n.ends_with(".png") && !n.ends_with(".fw.png") {
+        [SaveKind::FwPng, SaveKind::FlatPng].into_iter().filter_map(save_type_index).collect()
+    } else {
+        Vec::new()
+    }
+}
+
+/// Zusatzfelder je Dateityp wie im Original (re\20 §1.1): FW-PNG „Als Kopie speichern“ wählbar;
+/// Reduziertes PNG zusätzlich Hinweis und „Optionen…“ (Bildvorschau); alle anderen Typen sind
+/// immer Kopien (Kästchen an und gesperrt) und reduzieren ebenfalls (Hinweis).
+pub fn save_type_extras(kind: SaveKind) -> file_dialog::TypeExtras {
+    use file_dialog::{CopyBox, TypeExtras};
+    match kind {
+        SaveKind::FwPng => TypeExtras { copy: CopyBox::Off, options: false, hint: false },
+        SaveKind::FlatPng => TypeExtras { copy: CopyBox::Off, options: true, hint: true },
+        _ => TypeExtras { copy: CopyBox::Locked, options: false, hint: true },
+    }
+}
+
+/// „Optionen…“ bei Reduziertes PNG: Bildvorschau mit den Optimierungseinstellungen des Dokuments.
+fn open_save_options(st: &mut AppState, i: usize) {
+    if SAVE_TYPES.get(i).map(|t| t.2) == Some(SaveKind::FlatPng) {
+        st.dialogs.preview = crate::dialogs::image_preview::ImagePreview::new(st);
+    }
+}
+
+fn save_options_open(st: &AppState) -> bool {
+    st.dialogs.preview.is_some()
+}
+
+/// Zusatzfelder des Dialogs „Speichern unter“.
+pub fn save_as_extras() -> file_dialog::SaveExtras {
+    file_dialog::SaveExtras {
+        types: SAVE_TYPES.iter().map(|t| save_type_extras(t.2)).collect(),
+        ambiguous: ambiguous_save_types,
+        on_options: open_save_options,
+        options_open: save_options_open,
+    }
 }
 
 /// Vorgegebene Ergebnisse statt nativer Dateidialoge (Tests, Automatisierung).
@@ -260,10 +356,7 @@ pub fn pick_save(st: &mut AppState, title: &str, default_name: &str, dir: Option
         done(st, p);
         return;
     }
-    let mut req = Request::save(title, default_name).dir(dir);
-    for (label, exts, _) in SAVE_TYPES {
-        req = req.filter(*label, exts);
-    }
+    let req = save_type_filters(Request::save(title, default_name).dir(dir));
     file_dialog::request(st, req, move |st, r| {
         let p = r.into_iter().next().map(save_target);
         done(st, p);
@@ -313,53 +406,72 @@ pub fn save_active(st: &mut AppState, force_dialog: bool, done: impl FnOnce(&mut
     let title = d.title.clone();
     let id = d.id;
     if has_path && !force_dialog {
-        let ok = write_active(st, None);
+        let ok = write_active(st, None, SaveKind::FwPng, false);
         done(st, ok);
         return;
     }
-    pick(st, DialogKind::SaveAs, &suggested_name(&title), move |st, r| {
-        let p = r.into_iter().next().map(save_target);
+    pick_save_as(st, &suggested_name(&title), move |st, choice| {
         // das Dokument kann während des Dialogs gewechselt haben: wieder aktivieren
-        let ok = match p {
-            Some(p) if st.session.activate(id).is_ok() => write_active(st, Some(p)),
+        let ok = match choice {
+            Some(c) if st.session.activate(id).is_ok() => save_chosen(st, c),
             _ => false,
         };
         done(st, ok);
     });
 }
 
-/// Schreibt das aktive Dokument (`None` = unter seinem Namen).
-fn write_active(st: &mut AppState, path: Option<PathBuf>) -> bool {
-    // anderer Dateityp: reduziert exportieren (Kopie, das Dokument behält Namen und Status)
-    if let Some(p) = &path
-        && save_kind(p) != SaveKind::FwPng
-    {
-        let args = match save_kind(p) {
-            SaveKind::Export(f) => json!({ "path": p.to_string_lossy(), "settings": { "format": f } }),
-            SaveKind::Style(s) => json!({ "path": p.to_string_lossy(), "style": s }),
-            SaveKind::FwPng => json!({}),
-        };
-        return match st.session.execute("file.export", args) {
-            Ok(_) => {
-                st.status = Some((fp_i18n::tr!("ui-file-saved-copy", path = p.display().to_string()), 0.0));
-                true
-            }
-            Err(e) => {
-                st.dialogs.message = Some(("Firepixel".into(), fp_i18n::tr!("ui-file-save-failed", error = e.to_string())));
-                false
-            }
-        };
-    }
-    let (name, params) = match &path {
-        Some(p) => ("file.saveAs", json!({ "path": p.to_string_lossy() })),
-        None => ("file.save", json!({})),
-    };
-    match st.session.execute(name, params) {
-        Ok(_) => true,
-        Err(e) => {
-            st.dialogs.message = Some(("Firepixel".into(), fp_i18n::tr!("ui-file-save-failed", error = e.to_string())));
-            false
+/// Dialog „Speichern unter“ mit Typliste und Zusatzfeldern (Startordner und Merken wie [`pick`]).
+pub fn pick_save_as(st: &mut AppState, file_name: &str, done: impl FnOnce(&mut AppState, Option<file_dialog::SaveChoice>) + Send + 'static) {
+    let kind = DialogKind::SaveAs;
+    let doc_path = st.session.active().and_then(|d| d.path.clone());
+    let dir = start_dir(&st.session.prefs, kind, doc_path.as_deref());
+    let req = kind.request(file_name).dir(dir.as_deref());
+    file_dialog::request_save(st, req, move |st, c| {
+        if let Some(c) = &c
+            && remember_dir(&mut st.session.prefs, kind, &c.path)
+        {
+            st.session.prefs_changed();
         }
+        done(st, c);
+    });
+}
+
+/// Speichert das aktive Dokument nach der Wahl in „Speichern unter“: Art aus Name und gewähltem
+/// Typ, Ziel mit passender Endung, „Als Kopie speichern“. `true` = gespeichert.
+pub fn save_chosen(st: &mut AppState, c: file_dialog::SaveChoice) -> bool {
+    let kind = save_kind_for(&c.path, c.filter);
+    let target = save_target_for(c.path, kind);
+    write_active(st, Some(target), kind, c.copy)
+}
+
+/// Schreibt das aktive Dokument (`None` = unter seinem Namen und in seiner Art).
+fn write_active(st: &mut AppState, path: Option<PathBuf>, kind: SaveKind, copy: bool) -> bool {
+    let failed = |st: &mut AppState, e: fp_engine::EngineError| {
+        st.dialogs.message = Some(("Firepixel".into(), fp_i18n::tr!("ui-file-save-failed", error = e.to_string())));
+        false
+    };
+    let Some(p) = path else {
+        return match st.session.execute("file.save", json!({})) {
+            Ok(_) => true,
+            Err(e) => failed(st, e),
+        };
+    };
+    let (name, args) = match kind {
+        SaveKind::FwPng => ("file.saveAs", json!({ "path": p.to_string_lossy(), "copy": copy })),
+        SaveKind::FlatPng => ("file.saveAs", json!({ "path": p.to_string_lossy(), "flattened": true, "copy": copy })),
+        // anderer Dateityp: reduziert exportieren (immer Kopie, das Dokument behält Namen und Status)
+        SaveKind::Export(f) => ("file.export", json!({ "path": p.to_string_lossy(), "settings": { "format": f } })),
+        SaveKind::Style(s) => ("file.export", json!({ "path": p.to_string_lossy(), "style": s })),
+    };
+    let is_copy = copy || name == "file.export";
+    match st.session.execute(name, args) {
+        Ok(_) => {
+            if is_copy {
+                st.status = Some((fp_i18n::tr!("ui-file-saved-copy", path = p.display().to_string()), 0.0));
+            }
+            true
+        }
+        Err(e) => failed(st, e),
     }
 }
 

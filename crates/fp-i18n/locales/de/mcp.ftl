@@ -85,6 +85,8 @@ mcp-tool-ui_file_dialog = Datei-Dialog der laufenden App
     .description = Nur im Brückenmodus: zeigt, ob in der laufenden App ein Datei-Dialog offen ist (Öffnen, Speichern unter, Importieren, Exportieren, Ordner …) – Art, Titel, Filter, Startordner, vorgeschlagener Name, letzte Ereignisse – und beantwortet ihn. Solange ein Dialog offen ist, zeichnet die App weiter, Leinwand und Menüs sind wie bei einem modalen Dialog gesperrt. Bei aktivem KI-Steuerkanal zeigt die App einen eigenen Dialog statt des nativen (FP_FILE_DIALOG=native erzwingt den nativen). Beispiele: {"{"}"action":"status"{"}"} · {"{"}"action":"cancel"{"}"} · {"{"}"action":"choose","path":"C:\\out\\banner.fw.png"{"}"} · {"{"}"action":"choose","paths":["C:\\in\\a.png","C:\\in\\b.png"]{"}"}
 mcp-tool-ui_file_dialog-path = Datei oder Ordner für choose
 mcp-tool-ui_file_dialog-paths = mehrere Dateien (Öffnen-Dialoge mit Mehrfachauswahl)
+mcp-tool-ui_file_dialog-filter = Speichern unter: Dateityp als Index in filters (z. B. Reduziertes PNG); ohne = der im Dialog gewählte
+mcp-tool-ui_file_dialog-save_as_copy = Speichern unter: „Als Kopie speichern“ (das Dokument behält Namen und Art)
 # <<< UE-3 Werkzeuge
 
 # >>> UE-3 Meldungen

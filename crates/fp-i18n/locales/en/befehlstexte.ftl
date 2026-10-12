@@ -551,3 +551,5 @@ cmdtext-automatische-unterschneidung-vorgabe-tex-fe97e1 = automatic kerning (def
 cmdtext-textrichtung-vorgabe-textwerkzeug-text-o-89d01a = Text orientation (default: Text tool, Text_Orientation)
 cmdtext-strich-als-zeichenbefehl-command-draw-pa-7d1c61 = Stroke as a drawing command {"{"}command: draw.path|tool.shape, params{"}"} – rendered with the tool stroke
 cmdtext-rand-0-100-vorgabe-werkzeugeinstellung = Edge 0..100 (default: tool setting)
+cmdtext-reduziertes-png-speichern = save as flattened PNG
+cmdtext-als-kopie-speichern = save as a copy

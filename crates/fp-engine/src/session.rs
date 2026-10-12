@@ -126,6 +126,9 @@ pub struct DocumentState {
     pub bitmap_mode: bool,
     /// Symbol-Bearbeitungsmodus: dieses Dokument ist die Bearbeitungsansicht eines Symbols.
     pub symbol_edit: Option<SymbolEdit>,
+    /// Art der Datei: `true` = „Reduziertes PNG“ (re\20 §5.3, EB-2) – `file.save` schreibt wieder
+    /// flach, bis unter einem anderen Typ gespeichert wird; `false` = FW-PNG.
+    pub flattened: bool,
 }
 
 /// Verknüpfung einer Symbol-Bearbeitungsansicht mit ihrem Dokument („Symbol bearbeiten“,
@@ -165,6 +168,7 @@ impl DocumentState {
             saved_generation: 0,
             bitmap_mode: false,
             symbol_edit: None,
+            flattened: false,
         }
     }
 

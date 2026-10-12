@@ -139,7 +139,8 @@ fn titles_filters_and_order_per_kind() {
     let s = DialogKind::SaveAs.request("a.fw.png");
     assert_eq!((s.kind, s.title.as_str(), s.file_name.as_deref()), (Kind::Save, "Speichern unter", Some("a.fw.png")));
     let sn = names(&s);
-    assert_eq!(&sn[..7], &["FW-PNG (*.png)", "BMP (*.bmp)", "GIF (*.gif)", "JPEG (*.jpg; *.jpeg; *.jpe)", "Photoshop PSD (*.psd)", "TIFF (*.tif; *.tiff)", "WBMP (*.wbmp)"]);
+    // EB-2: „Reduziertes PNG“ an seiner Stelle aus dem Original (nach JPEG, vor PSD)
+    assert_eq!(&sn[..8], &["FW-PNG (*.png)", "BMP (*.bmp)", "GIF (*.gif)", "JPEG (*.jpg; *.jpeg; *.jpe)", "Reduziertes PNG (*.png)", "Photoshop PSD (*.psd)", "TIFF (*.tif; *.tiff)", "WBMP (*.wbmp)"]);
     // D05 Als Vorlage speichern: im Original der Standardtitel „Speichern unter“, nur FW-PNG
     let v = DialogKind::SaveAsTemplate.request("a.fw.png");
     assert_eq!((v.kind, v.title.as_str()), (Kind::Save, "Speichern unter"));

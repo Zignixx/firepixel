@@ -89,6 +89,7 @@ ui-dock-collapse-icons = Auf Symbole minimieren
 ## Datei-Dialoge (Titel und Filter; Formatnamen bleiben)
 ui-filter-all-readable = Alle lesbaren Dateien
 ui-filter-fw-png = FW-PNG (*.png)
+ui-filter-flattened-png = Reduziertes PNG (*.png)
 ui-filter-all-files = Alle Dateien (*.*)
 ui-filter-html = HTML-Dateien (*.htm)
 ui-filter-scripts = Skripte (*.jsf, *.js)

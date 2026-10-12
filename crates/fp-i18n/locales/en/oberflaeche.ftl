@@ -89,6 +89,7 @@ ui-dock-collapse-icons = Collapse to Icons
 ## File dialogs (titles and filters; format names stay)
 ui-filter-all-readable = All readable files
 ui-filter-fw-png = FW-PNG (*.png)
+ui-filter-flattened-png = Flattened PNG (*.png)
 ui-filter-all-files = All Files (*.*)
 ui-filter-html = HTML files (*.htm)
 ui-filter-scripts = Scripts (*.jsf, *.js)

@@ -415,7 +415,10 @@ fn ui_file_dialog(a: &Value) -> UiReply {
             if paths.is_empty() {
                 return UiReply::Error("path".into());
             }
-            match crate::file_dialog::answer(paths) {
+            // „Speichern unter“: Dateityp (Index in den Filtern) und „Als Kopie speichern“ (EB-2)
+            let filter = a.get("filter").and_then(Value::as_u64).map(|i| i as usize);
+            let copy = a.get("save_as_copy").and_then(Value::as_bool);
+            match crate::file_dialog::answer_with(paths, filter, copy) {
                 Ok(v) => UiReply::Json(v),
                 Err(e) => UiReply::Error(e),
             }

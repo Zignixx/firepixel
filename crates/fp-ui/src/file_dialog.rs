@@ -18,6 +18,10 @@
 //!   Öffnen: passende Dateien des Ordners, Ordner: der Ordner selbst). Jedes Ereignis wird geloggt
 //!   und steht in `ui_state` (`file_dialog`).
 //! - [`crate::files::FilePickOverride`] (Tests) beantwortet wie bisher sofort.
+//! - „Speichern unter“ mit Zusatzfeldern ([`SaveExtras`], EB-2): der Dialog in der App zeigt Typliste,
+//!   Hinweis, „Optionen…“ und „Als Kopie speichern“; nach dem Windows-Dialog (der weder Zusatzfelder
+//!   noch den gewählten Typ liefert, rfd ohne `unsafe`) fragt ein Folgedialog nach, wenn der Name zu
+//!   mehreren Typen passt. Ergebnis über [`request_save`] als [`SaveChoice`].
 
 use crate::app_state::AppState;
 use serde_json::{json, Value};
@@ -62,11 +66,64 @@ pub struct Request {
     pub file_name: Option<String>,
     /// Vorgewählter Filter (Index in `filters`; Original: „Alle lesbaren Dateien“ an 13. Stelle).
     pub default_filter: usize,
+    /// Zusatzfelder von „Speichern unter“ (Typliste, „Als Kopie speichern“, „Optionen…“, Hinweis).
+    pub save_extras: Option<SaveExtras>,
+}
+
+/// Kästchen „Als Kopie speichern“ je Dateityp (re\20 §1.1).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum CopyBox {
+    /// wählbar, Vorgabe aus (FW-PNG, Reduziertes PNG)
+    Off,
+    /// an und gesperrt (Typen, die immer eine Kopie schreiben)
+    Locked,
+}
+
+/// Zusatzfelder eines Dateityps.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct TypeExtras {
+    pub copy: CopyBox,
+    /// „Optionen…“ aktiv
+    pub options: bool,
+    /// Hinweis „… auf die Hintergrundebene reduziert“ sichtbar
+    pub hint: bool,
+}
+
+/// Zusatzfelder von „Speichern unter“. Der Windows-Dialog kann ohne `unsafe` weder Zusatzfelder
+/// zeigen noch den gewählten Dateityp melden (rfd); darum zeigt der Dialog in der App (Brücke) die
+/// Felder selbst, und nach dem Windows-Dialog fragt ein kleiner Folgedialog nach, wenn der Name zu
+/// mehreren Typen passt (`.png`: FW-PNG oder Reduziertes PNG).
+#[derive(Clone, Debug)]
+pub struct SaveExtras {
+    /// je Filter (gleiche Reihenfolge wie `Request::filters`)
+    pub types: Vec<TypeExtras>,
+    /// Filter, zu denen ein gewählter Name passt, wenn der Typ nicht eindeutig ist (sonst leer).
+    pub ambiguous: fn(&Path) -> Vec<usize>,
+    /// „Optionen…“ geklickt (Filterindex): öffnet den Optionsdialog des Typs.
+    pub on_options: fn(&mut AppState, usize),
+    /// Ist der Optionsdialog offen? Solange ist der Datei-Dialog ausgeblendet; danach (OK oder
+    /// Abbrechen) erscheint er wieder.
+    pub options_open: fn(&AppState) -> bool,
+}
+
+/// Ergebnis von „Speichern unter“ mit Zusatzfeldern.
+#[derive(Clone, Debug, PartialEq)]
+pub struct SaveChoice {
+    pub path: PathBuf,
+    /// gewählter Filter, wenn bekannt (Dialog in der App, Folgedialog, Agent); `None` = nur der Name
+    pub filter: Option<usize>,
+    /// „Als Kopie speichern“
+    pub copy: bool,
 }
 
 impl Request {
     pub fn new(kind: Kind, title: impl Into<String>) -> Request {
-        Request { kind, title: title.into(), filters: Vec::new(), dir: None, file_name: None, default_filter: 0 }
+        Request { kind, title: title.into(), filters: Vec::new(), dir: None, file_name: None, default_filter: 0, save_extras: None }
+    }
+    /// Zusatzfelder von „Speichern unter“.
+    pub fn save_extras(mut self, extras: SaveExtras) -> Request {
+        self.save_extras = Some(extras);
+        self
     }
     pub fn open(title: impl Into<String>) -> Request {
         Request::new(Kind::Open, title)
@@ -128,21 +185,48 @@ impl Request {
 /// Fortsetzung mit dem Ergebnis (leer = abgebrochen).
 pub type Done = Box<dyn FnOnce(&mut AppState, Vec<PathBuf>) + Send>;
 
+/// Fortsetzung mit Ergebnis, gewähltem Filter (falls bekannt) und „Als Kopie speichern“.
+type DoneEx = Box<dyn FnOnce(&mut AppState, Vec<PathBuf>, Option<usize>, bool) + Send>;
+
 enum Mode {
     /// Nativer Dialog im eigenen Thread.
     Native(Receiver<Vec<PathBuf>>),
     /// Dialog in der App (Brückenmodus): Pfad-Eingabe.
     Internal { path: String },
+    /// Folgedialog nach dem Windows-Dialog: Dateityp unter `choices` wählen (Name passt zu mehreren).
+    Followup { path: PathBuf, choices: Vec<usize> },
 }
+
+/// Antwort: Pfade, gewählter Filter, „Als Kopie speichern“, von wem.
+type Answer = (Vec<PathBuf>, Option<usize>, bool, &'static str);
 
 struct Pending {
     id: u64,
     req: Request,
     mode: Mode,
-    done: Option<Done>,
+    done: Option<DoneEx>,
     /// Antwort von außen (MCP `ui_file_dialog`) oder aus dem Dialog in der App.
-    answer: Option<(Vec<PathBuf>, &'static str)>,
+    answer: Option<Answer>,
     started: Instant,
+    /// gewählter Dateityp (Typliste im Dialog in der App bzw. Folgedialog)
+    filter: usize,
+    /// Kästchen „Als Kopie speichern“
+    copy: bool,
+    /// „Optionen…“ geklickt (wird im nächsten Schritt mit `AppState` ausgeführt)
+    options_clicked: bool,
+}
+
+impl Pending {
+    fn extras(&self) -> Option<TypeExtras> {
+        self.req.save_extras.as_ref().and_then(|x| x.types.get(self.filter).copied())
+    }
+    /// Wert des Kästchens (gesperrt = immer an).
+    fn copy_value(&self) -> bool {
+        match self.extras().map(|e| e.copy) {
+            Some(CopyBox::Locked) => true,
+            _ => self.copy,
+        }
+    }
 }
 
 struct Inner {
@@ -239,6 +323,23 @@ fn auto_answer(req: &Request, dir: &Path) -> Vec<PathBuf> {
 /// Öffnet einen Datei-Dialog. `done` läuft mit dem Ergebnis – sofort (Testvorgaben, Testmodus)
 /// oder in einem späteren Frame, wenn der Nutzer bzw. Agent geantwortet hat.
 pub fn request(st: &mut AppState, req: Request, done: impl FnOnce(&mut AppState, Vec<PathBuf>) + Send + 'static) {
+    request_ex(st, req, Box::new(move |st, r, _, _| done(st, r)));
+}
+
+/// „Speichern unter“ mit Zusatzfeldern ([`Request::save_extras`]): `done` bekommt die Wahl oder
+/// `None` (abgebrochen). Testvorgaben und Testmodus liefern nur den Namen (`filter: None`).
+pub fn request_save(st: &mut AppState, req: Request, done: impl FnOnce(&mut AppState, Option<SaveChoice>) + Send + 'static) {
+    request_ex(
+        st,
+        req,
+        Box::new(move |st, r, filter, copy| {
+            let choice = r.into_iter().next().map(|path| SaveChoice { path, filter, copy });
+            done(st, choice)
+        }),
+    );
+}
+
+fn request_ex(st: &mut AppState, req: Request, done: DoneEx) {
     // Testvorgaben der Oberfläche (unverändert wie bisher)
     if let Some(o) = &st.file_override {
         let r: Vec<PathBuf> = match req.kind {
@@ -247,7 +348,7 @@ pub fn request(st: &mut AppState, req: Request, done: impl FnOnce(&mut AppState,
             Kind::OpenMany => o.open.clone(),
             Kind::Open => o.open.iter().find(|p| req.matches(p)).or(o.open.first()).cloned().into_iter().collect(),
         };
-        done(st, r);
+        done(st, r, None, false);
         return;
     }
     let mode = env_mode();
@@ -257,21 +358,21 @@ pub fn request(st: &mut AppState, req: Request, done: impl FnOnce(&mut AppState,
             // nur ein Dialog zur Zeit (wie modal): der zweite wird abgebrochen
             log_event(&mut g, json!({"event": "rejected", "reason": "busy", "request": req.json()}));
             drop(g);
-            done(st, Vec::new());
+            done(st, Vec::new(), None, false);
             return;
         }
         match &mode {
             EnvMode::Cancel => {
                 log_event(&mut g, json!({"event": "cancelled", "by": ENV_FILE_DIALOG, "request": req.json()}));
                 drop(g);
-                done(st, Vec::new());
+                done(st, Vec::new(), None, false);
                 return;
             }
             EnvMode::Path(dir) => {
                 let r = auto_answer(&req, dir);
                 log_event(&mut g, json!({"event": if r.is_empty() { "cancelled" } else { "chosen" }, "by": ENV_FILE_DIALOG, "request": req.json(), "paths": r.iter().map(|p| p.display().to_string()).collect::<Vec<_>>()}));
                 drop(g);
-                done(st, r);
+                done(st, r, None, false);
                 return;
             }
             _ => {}
@@ -289,7 +390,8 @@ pub fn request(st: &mut AppState, req: Request, done: impl FnOnce(&mut AppState,
             Mode::Native(spawn_native(&req, g.parent.as_ref().and_then(Weak::upgrade), g.ctx.clone()))
         };
         log_event(&mut g, json!({"event": "opened", "id": id, "mode": if internal { "internal" } else { "native" }, "request": req.json()}));
-        g.pending = Some(Pending { id, req, mode: m, done: Some(Box::new(done)), answer: None, started: Instant::now() });
+        let filter = req.default_filter;
+        g.pending = Some(Pending { id, req, mode: m, done: Some(done), answer: None, started: Instant::now(), filter, copy: false, options_clicked: false });
         if let Some(c) = &g.ctx {
             c.request_repaint();
         }
@@ -336,41 +438,114 @@ fn spawn_native(req: &Request, parent: Option<Arc<winit::window::Window>>, ctx: 
 /// Je Frame (aus [`crate::bridge::frame`]): Ergebnis abholen, Fortsetzung ausführen, modale Sperre
 /// bzw. den Dialog in der App zeigen.
 pub fn frame(ctx: &egui::Context, st: &mut AppState) {
-    let finished: Option<(Done, Vec<PathBuf>)> = {
+    type Finished = (DoneEx, Vec<PathBuf>, Option<usize>, bool);
+    let finished: Option<Finished> = {
         let mut g = state();
         g.ctx = Some(ctx.clone());
         let Some(p) = g.pending.as_mut() else { return };
-        let mut result: Option<(Vec<PathBuf>, &'static str)> = p.answer.take();
+        let mut result: Option<Answer> = p.answer.take();
         if result.is_none()
             && let Mode::Native(rx) = &p.mode
         {
             match rx.try_recv() {
-                Ok(r) => result = Some((r, "user")),
-                Err(TryRecvError::Disconnected) => result = Some((Vec::new(), "error")),
+                Ok(r) => result = Some((r, None, false, "user")),
+                Err(TryRecvError::Disconnected) => result = Some((Vec::new(), None, false, "error")),
                 Err(TryRecvError::Empty) => {}
+            }
+            // Windows-Dialog meldet den Dateityp nicht: passt der Name zu mehreren Typen, fragt ein
+            // Folgedialog nach (Typ, „Als Kopie speichern“, „Optionen…“)
+            if let Some((paths, None, _, "user")) = &result
+                && let (Some(path), Some(x)) = (paths.first(), p.req.save_extras.as_ref())
+            {
+                let choices = (x.ambiguous)(path);
+                if choices.len() > 1 {
+                    let path = path.clone();
+                    p.filter = choices[0];
+                    p.copy = false;
+                    p.mode = Mode::Followup { path: path.clone(), choices };
+                    result = None;
+                    let id = p.id;
+                    log_event(&mut g, json!({"event": "followup", "id": id, "path": path.display().to_string()}));
+                }
             }
         }
         match result {
-            Some((paths, by)) => {
-                let p = g.pending.take();
-                match p {
-                    Some(mut p) => {
-                        let ev = json!({"event": if paths.is_empty() { "cancelled" } else { "chosen" }, "by": by, "id": p.id, "request": p.req.json(), "paths": paths.iter().map(|x| x.display().to_string()).collect::<Vec<_>>(), "seconds": p.started.elapsed().as_secs_f64()});
-                        log_event(&mut g, ev);
-                        p.done.take().map(|d| (d, paths))
-                    }
-                    None => None,
+            Some((paths, filter, copy, by)) => match g.pending.take() {
+                Some(mut p) => {
+                    let ev = json!({"event": if paths.is_empty() { "cancelled" } else { "chosen" }, "by": by, "id": p.id, "request": p.req.json(), "paths": paths.iter().map(|x| x.display().to_string()).collect::<Vec<_>>(), "filter": filter, "copy": copy, "seconds": p.started.elapsed().as_secs_f64()});
+                    log_event(&mut g, ev);
+                    p.done.take().map(|d| (d, paths, filter, copy))
                 }
-            }
+                None => None,
+            },
             None => None,
         }
     };
-    if let Some((done, paths)) = finished {
-        done(st, paths);
+    if let Some((done, paths, filter, copy)) = finished {
+        done(st, paths, filter, copy);
         ctx.request_repaint();
         return;
     }
+    // „Optionen…“: Optionsdialog öffnen; solange er offen ist, bleibt der Datei-Dialog verborgen
+    let (options, extras) = {
+        let mut g = state();
+        match g.pending.as_mut() {
+            Some(p) => (std::mem::take(&mut p.options_clicked).then_some(p.filter), p.req.save_extras.clone()),
+            None => (None, None),
+        }
+    };
+    if let (Some(i), Some(x)) = (options, &extras) {
+        (x.on_options)(st, i);
+        ctx.request_repaint();
+    }
+    if extras.as_ref().is_some_and(|x| (x.options_open)(st)) {
+        return;
+    }
     show_modal(ctx);
+}
+
+/// Zusatzfelder eines Dateityps unter der Typliste wie im Original: Hinweis (Symbol + Text),
+/// „Optionen…“ und „Als Kopie speichern“. Gibt `true` zurück, wenn „Optionen…“ geklickt wurde.
+pub fn save_extras_ui(ui: &mut egui::Ui, extras: TypeExtras, copy: &mut bool) -> bool {
+    if extras.hint {
+        ui.horizontal_wrapped(|ui| {
+            ui.label(egui::RichText::new("ⓘ").strong());
+            ui.label(fp_i18n::t("fdlg-flatten-hint"));
+        });
+    }
+    let mut clicked = false;
+    ui.horizontal(|ui| {
+        clicked = ui.add_enabled(extras.options, egui::Button::new(fp_i18n::t("fdlg-options"))).clicked();
+        match extras.copy {
+            CopyBox::Off => {
+                ui.checkbox(copy, fp_i18n::t("fdlg-save-as-copy"));
+            }
+            CopyBox::Locked => {
+                let mut on = true;
+                ui.add_enabled(false, egui::Checkbox::new(&mut on, fp_i18n::t("fdlg-save-as-copy")));
+            }
+        }
+    });
+    clicked
+}
+
+/// Typliste und Zusatzfelder (Dialog in der App bzw. Folgedialog); `choices` = wählbare Filter.
+fn save_type_ui(ui: &mut egui::Ui, filters: &[String], choices: &[usize], x: &SaveExtras, filter: &mut usize, copy: &mut bool) -> bool {
+    ui.horizontal(|ui| {
+        ui.label(fp_i18n::t("fdlg-file-type"));
+        let current = filters.get(*filter).cloned().unwrap_or_default();
+        egui::ComboBox::from_id_salt("fp-file-dialog-type").selected_text(current).width(260.0).show_ui(ui, |ui| {
+            for &i in choices {
+                if let Some(n) = filters.get(i) {
+                    ui.selectable_value(filter, i, n);
+                }
+            }
+        });
+    });
+    match x.types.get(*filter) {
+        Some(t) => save_extras_ui(ui, *t, copy),
+        None => false,
+    }
 }
 
 /// Modale Sperre bzw. Dialog in der App.
@@ -380,6 +555,8 @@ fn show_modal(ctx: &egui::Context) {
     let title = p.req.title.clone();
     let kind = p.req.kind;
     let filters: Vec<String> = p.req.filters.iter().map(|(n, _)| n.clone()).collect();
+    let extras = p.req.save_extras.clone();
+    let (mut filter, mut copy, mut options) = (p.filter, p.copy, false);
     let mut answer: Option<Vec<PathBuf>> = None;
     match &mut p.mode {
         Mode::Native(_) => {
@@ -392,8 +569,16 @@ fn show_modal(ctx: &egui::Context) {
             egui::Modal::new(egui::Id::new("fp-file-dialog-internal")).show(ctx, |ui| {
                 ui.heading(&title);
                 ui.label(fp_i18n::t("fdlg-internal-hint"));
-                if !filters.is_empty() {
-                    ui.label(filters.join(" · "));
+                match &extras {
+                    // Speichern unter: Typliste und Zusatzfelder
+                    Some(x) => {
+                        let all: Vec<usize> = (0..filters.len()).collect();
+                        options = save_type_ui(ui, &filters, &all, x, &mut filter, &mut copy);
+                    }
+                    None if !filters.is_empty() => {
+                        ui.label(filters.join(" · "));
+                    }
+                    None => {}
                 }
                 let r = ui.add(egui::TextEdit::singleline(path).desired_width(480.0));
                 ui.horizontal(|ui| {
@@ -407,9 +592,38 @@ fn show_modal(ctx: &egui::Context) {
                 });
             });
         }
+        Mode::Followup { path, choices } => {
+            let name = path.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
+            let path = path.clone();
+            let choices = choices.clone();
+            egui::Modal::new(egui::Id::new("fp-file-dialog-followup")).show(ctx, |ui| {
+                ui.set_max_width(460.0);
+                ui.heading(&title);
+                ui.label(fp_i18n::tr!("fdlg-followup-question", name = name));
+                if let Some(x) = &extras {
+                    options = save_type_ui(ui, &filters, &choices, x, &mut filter, &mut copy);
+                }
+                ui.horizontal(|ui| {
+                    if ui.button(fp_i18n::t("btn-ok")).clicked() || ui.input(|i| i.key_pressed(egui::Key::Enter)) {
+                        answer = Some(vec![path.clone()]);
+                    }
+                    if ui.button(fp_i18n::t("btn-cancel")).clicked() || ui.input(|i| i.key_pressed(egui::Key::Escape)) {
+                        answer = Some(Vec::new());
+                    }
+                });
+            });
+        }
+    }
+    p.filter = filter;
+    p.copy = copy;
+    if options {
+        p.options_clicked = true;
+        ctx.request_repaint();
     }
     if let Some(a) = answer {
-        p.answer = Some((a, "user"));
+        let with_type = p.req.save_extras.is_some() && !a.is_empty();
+        let copy = p.copy_value();
+        p.answer = Some((a, with_type.then_some(filter), with_type && copy, "user"));
         ctx.request_repaint();
     }
 }
@@ -431,7 +645,15 @@ pub fn status_json() -> Value {
         v["mode"] = json!(match p.mode {
             Mode::Native(_) => "native",
             Mode::Internal { .. } => "internal",
+            Mode::Followup { .. } => "followup",
         });
+        if let Mode::Followup { path, choices } = &p.mode {
+            v["followup"] = json!({"path": path.display().to_string(), "choices": choices});
+        }
+        if p.req.save_extras.is_some() {
+            v["filter"] = json!(p.filter);
+            v["save_as_copy"] = json!(p.copy_value());
+        }
         v["seconds_open"] = json!((p.started.elapsed().as_secs_f64() * 10.0).round() / 10.0);
         v
     });
@@ -442,13 +664,30 @@ pub fn status_json() -> Value {
 /// Ein nativer Dialog bleibt dabei sichtbar, bis der Nutzer ihn schließt; sein Ergebnis wird dann
 /// verworfen. Liefert eine Fehlermeldung, wenn keiner offen ist.
 pub fn answer(paths: Vec<PathBuf>) -> Result<Value, String> {
+    answer_with(paths, None, None)
+}
+
+/// Wie [`answer`], bei „Speichern unter“ mit Dateityp (`filter`, Index in den Filtern; ohne =
+/// der im Dialog gewählte) und „Als Kopie speichern“ (ohne = das Kästchen im Dialog).
+pub fn answer_with(paths: Vec<PathBuf>, filter: Option<usize>, copy: Option<bool>) -> Result<Value, String> {
     let mut g = state();
     let Some(p) = g.pending.as_mut() else { return Err(fp_i18n::t("fdlg-none-open")) };
     let native = matches!(p.mode, Mode::Native(_));
     if p.req.kind == Kind::Open && paths.len() > 1 {
         return Err(fp_i18n::t("fdlg-only-one"));
     }
-    p.answer = Some((paths, "mcp"));
+    let (f, c) = if p.req.save_extras.is_some() && !paths.is_empty() {
+        if let Some(i) = filter.filter(|i| *i < p.req.filters.len()) {
+            p.filter = i;
+        }
+        if let Some(c) = copy {
+            p.copy = c;
+        }
+        (Some(p.filter), p.copy_value())
+    } else {
+        (None, false)
+    };
+    p.answer = Some((paths, f, c, "mcp"));
     let id = p.id;
     if native {
         // Ergebnis des nativen Dialogs wird verworfen, sobald er schließt

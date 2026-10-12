@@ -53,16 +53,7 @@ pub fn save_document(s: &Session, doc: &Document, page: usize, path: &Path) -> R
         },
         None => fp_fwpng::write(&d, &opts, &fp_fwpng::NoFlattener)?,
     };
-    fp_i18n::profile::guard_write(path);
-    if let Some(dir) = path.parent()
-        && !dir.as_os_str().is_empty()
-    {
-        std::fs::create_dir_all(dir)?;
-    }
-    let tmp = path.with_extension("fpsave.tmp");
-    std::fs::write(&tmp, bytes)?;
-    std::fs::rename(&tmp, path)?;
-    Ok(())
+    write_atomic(path, &bytes)
 }
 
 fn open_path(s: &mut Session, path: PathBuf, as_template: bool) -> Result<CommandOutput> {
@@ -75,23 +66,48 @@ fn open_path(s: &mut Session, path: PathBuf, as_template: bool) -> Result<Comman
     Ok(CommandOutput::session_with(json!({"doc": id.0})))
 }
 
-fn save_active(s: &mut Session, path: Option<PathBuf>, adopt: bool) -> Result<CommandOutput> {
+/// Schreibt Bytes über eine Zwischendatei (kein halb geschriebenes Ziel bei Fehlern).
+fn write_atomic(path: &Path, bytes: &[u8]) -> Result<()> {
+    fp_i18n::profile::guard_write(path);
+    if let Some(dir) = path.parent()
+        && !dir.as_os_str().is_empty()
+    {
+        std::fs::create_dir_all(dir)?;
+    }
+    let tmp = path.with_extension("fpsave.tmp");
+    std::fs::write(&tmp, bytes)?;
+    std::fs::rename(&tmp, path)?;
+    Ok(())
+}
+
+/// Speichert das aktive Dokument. `flattened`: `Some(true)` = „Reduziertes PNG“ (re\20 §5),
+/// `Some(false)` = FW-PNG, `None` = Art des Dokuments (nach einem Speichern als reduziertes PNG
+/// wieder flach). `adopt` = das Dokument gehört danach zur Datei (Pfad, Titel, Art, gespeichert);
+/// sonst bleibt es unverändert („Als Kopie speichern“).
+fn save_active(s: &mut Session, path: Option<PathBuf>, adopt: bool, flattened: Option<bool>) -> Result<CommandOutput> {
     let d = s.doc()?;
     let target = path.or_else(|| d.path.clone()).ok_or_else(|| EngineError::InvalidParams {
         name: "file.save".into(),
         message: fp_i18n::t("err-param-path-needed"),
     })?;
+    let flat = flattened.unwrap_or(d.flattened);
     let (doc, page, id) = (Arc::clone(&d.doc), d.page, d.id);
-    save_document(s, &doc, page, &target)?;
+    if flat {
+        let bytes = super::export::flattened_png_bytes(s)?;
+        write_atomic(&target, &bytes)?;
+    } else {
+        save_document(s, &doc, page, &target)?;
+    }
     if adopt {
         let d = s.doc_mut()?;
         d.path = Some(target.clone());
         d.title = target.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
         d.saved_generation = d.generation;
+        d.flattened = flat;
         s.prefs.add_recent_file(&target);
     }
     s.emit(SessionEvent::Saved { doc: id, path: target.clone() });
-    Ok(CommandOutput::session_with(json!({"path": target.to_string_lossy()})))
+    Ok(CommandOutput::session_with(json!({"path": target.to_string_lossy(), "flattened": flat, "copy": !adopt})))
 }
 
 fn toggle_panel(s: &mut Session, name: &str, default: bool) -> Result<CommandOutput> {
@@ -205,16 +221,26 @@ pub(super) fn register(r: &mut CommandRegistry) {
         cmd("file.save")
             .requires(DOC)
             .opt("path", ParamKind::Path, "Zieldatei (nötig, wenn das Dokument noch keinen Namen hat)")
-            .run(|s, p| save_active(s, p.opt_str("path")?.map(PathBuf::from), true)),
+            .run(|s, p| save_active(s, p.opt_str("path")?.map(PathBuf::from), true, None)),
     );
-    r.add(cmd("file.saveAs").requires(DOC).param("path", ParamKind::Path, "Zieldatei").run(|s, p| save_active(s, Some(PathBuf::from(p.str("path")?)), true)));
+    r.add(
+        cmd("file.saveAs")
+            .requires(DOC)
+            .param("path", ParamKind::Path, "Zieldatei")
+            .opt_default("flattened", ParamKind::Bool, json!(false), "reduziertes PNG speichern")
+            .opt_default("copy", ParamKind::Bool, json!(false), "als Kopie speichern")
+            .run(|s, p| {
+                let copy = p.bool_or("copy", false)?;
+                save_active(s, Some(PathBuf::from(p.str("path")?)), !copy, Some(p.bool_or("flattened", false)?))
+            }),
+    );
     r.add(cmd("file.saveAll").requires(DOC).run(|s, _| {
         let ids: Vec<_> = s.documents().iter().filter(|d| d.path.is_some()).map(|d| d.id).collect();
         let active = s.active_id();
         let mut saved = Vec::new();
         for id in ids {
             s.activate(id)?;
-            if let Ok(o) = save_active(s, None, true) {
+            if let Ok(o) = save_active(s, None, true, None) {
                 saved.push(o.value);
             }
         }
@@ -227,7 +253,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
         cmd("file.saveAsTemplate")
             .requires(DOC)
             .param("path", ParamKind::Path, "Vorlagendatei")
-            .run(|s, p| save_active(s, Some(PathBuf::from(p.str("path")?)), false)),
+            .run(|s, p| save_active(s, Some(PathBuf::from(p.str("path")?)), false, Some(false))),
     );
     r.add(cmd("file.revert").requires(&[Requirement::Document, Requirement::HasPath]).run(|s, _| {
         let path = s.doc()?.path.clone().ok_or_else(|| EngineError::Failed(fp_i18n::t("err-no-filename")))?;

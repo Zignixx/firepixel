@@ -385,6 +385,11 @@ answering. Canvas, menus and shortcuts are locked as with a modal dialog
 Workflow "Save As" through the user interface:
 `ui_action {"run": "file.saveAs"}` → `ui_file_dialog {}` → `ui_file_dialog {"action": "choose", "path": "C:\\out\\image.fw.png"}`
 → `ui_state {}` (title without asterisk). Without the user interface it is direct: `save {"path": …}`.
+File type "Flattened PNG" (current page flattened with the document's optimize settings, format PNG,
+no private chunks): `ui_file_dialog {"action": "choose", "path": "C:\\out\\flat.png", "filter": 4}`
+(index into `filters`), plus `"save_as_copy": true` to keep the document's name and type; without the
+user interface `run_command {"name": "file.saveAs", "params": {"path": "C:\\out\\flat.png", "flattened": true, "copy": false}}`.
+Without a copy the document belongs to the PNG file afterwards, and `file.save` writes it flattened again.
 
 ## 6. Commands menu and saved commands
 

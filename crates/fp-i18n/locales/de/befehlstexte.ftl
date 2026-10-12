@@ -551,3 +551,5 @@ cmdtext-automatische-unterschneidung-vorgabe-tex-fe97e1 = automatische Unterschn
 cmdtext-textrichtung-vorgabe-textwerkzeug-text-o-89d01a = Textrichtung (Vorgabe: Textwerkzeug, Text_Orientation)
 cmdtext-strich-als-zeichenbefehl-command-draw-pa-7d1c61 = Strich als Zeichenbefehl {"{"}command: draw.path|tool.shape, params{"}"} – wird mit dem Werkzeugstrich gerendert
 cmdtext-rand-0-100-vorgabe-werkzeugeinstellung = Rand 0..100 (Vorgabe: Werkzeugeinstellung)
+cmdtext-reduziertes-png-speichern = reduziertes PNG speichern
+cmdtext-als-kopie-speichern = als Kopie speichern

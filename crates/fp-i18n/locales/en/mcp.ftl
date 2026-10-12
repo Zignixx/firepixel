@@ -85,6 +85,8 @@ mcp-tool-ui_file_dialog = File dialog of the running app
     .description = Bridge mode only: shows whether a file dialog (Open, Save As, Import, Export, folder …) is open in the running app – kind, title, filters, start folder, suggested name, recent events – and answers it. While a dialog is open the app keeps drawing, the canvas and menus are locked like with a modal dialog. With the AI control channel active the app shows its own dialog instead of the native one (FP_FILE_DIALOG=native forces the native one). Examples: {"{"}"action":"status"{"}"} · {"{"}"action":"cancel"{"}"} · {"{"}"action":"choose","path":"C:\\out\\banner.fw.png"{"}"} · {"{"}"action":"choose","paths":["C:\\in\\a.png","C:\\in\\b.png"]{"}"}
 mcp-tool-ui_file_dialog-path = file or folder for choose
 mcp-tool-ui_file_dialog-paths = several files (open dialogs with multiple selection)
+mcp-tool-ui_file_dialog-filter = Save As: file type as index into filters (e.g. Flattened PNG); omitted = the one chosen in the dialog
+mcp-tool-ui_file_dialog-save_as_copy = Save As: “Save as a copy” (the document keeps its name and type)
 # <<< UE-3 Werkzeuge
 
 # >>> UE-3 Meldungen
