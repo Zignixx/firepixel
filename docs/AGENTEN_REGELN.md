@@ -115,7 +115,11 @@ Damit die GUI-Sperre nicht alle ausbremst:
   1. alles, was das **Original** bedient (JSF-Läufe, Klicks, Bildschirmfotos)
   2. Prüfungen mit **echter Systemmaus/-tastatur** (SetCursorPos/SendInput). Pflicht ist das nur, wo die Brücke das Verhalten nicht abbildet: Zeitverhalten und Verzögerung, Fensterverschieben bzw. -größe durch das Betriebssystem, Fokus und Taskleiste, Drag & Drop aus dem Explorer, Doppelklick-Zeiten, Mausrad-Hardware, IME, Startverhalten des Fensters.
   3. das abschließende Durchklicken (PLAN §5 Z), das bleibt mit echter Maus.
-- Eine Brücken-Instanz darf kein sichtbares Fenster über das Original legen. Sie läuft verkleinert hinter dem Original, auf einer Lage außerhalb oder minimiert, wenn die Brücke dann weiter zeichnet; sonst nicht im Vordergrund. Echte Eingaben anderer Agenten dürfen nie in eine Brücken-Instanz gehen (§4d).
+- **Die Brücke antwortet nur, solange das Fenster sichtbar ist** (BV-1, 12.10.): Ist das Fenster verdeckt, minimiert oder außerhalb des Bildschirms, zeichnet egui nicht. Deshalb:
+  - Die Brücken-Instanz läuft **sichtbar, aber nicht aktiviert**, in einer freien Bildschirmecke, z. B. 900 × 650 unten rechts. Sie liegt nicht über dem Original und nicht maximiert im Vordergrund.
+  - Sie nimmt nicht den Fokus, also kein SetForegroundWindow.
+  - Laufen mehrere Brücken-Instanzen gleichzeitig, bekommt jede eine andere Ecke bzw. Lage.
+  - Echte Eingaben anderer Agenten dürfen nie in eine Brücken-Instanz gehen (§4d).
 - Instanzen am Ende immer beenden.
 
 ## 4a. Keine fremden Programme/Fenster aus Tests
@@ -124,6 +128,7 @@ Am 11.10. hat ein Test ~80 „Pick an app“-Fenster beim Nutzer geöffnet (E-Ma
 - Befehle, die etwas extern öffnen (Browser, E-Mail, Explorer, Drucken, Hilfe, Datei-Zuordnungen, `start`, ShellExecute), öffnen **nur**, wenn die Umgebungsvariable `FP_NO_SHELL_OPEN` **nicht** gesetzt ist. EB baut die zentrale Prüfung in fp-engine ein (eine Funktion, die alle solchen Stellen benutzen).
 - Jeder Testlauf (cargo test, kittest, CLI-/MCP-Tests, GUI-Sitzungen) setzt vorher `$env:FP_NO_SHELL_OPEN = '1'`. Tests prüfen nur, dass die Datei erzeugt wurde.
 - Nie in einer Schleife Programme starten, ohne die Prozesse am Ende zu beenden.
+- **Tests nie ins echte Profil** (Wächter `fp_i18n::profile`, EB-3, 12.10.): Testläufe (cargo-Testbinaries und -Beispiele, `FP_TEST_PROFILE`, `FP_NO_SHELL_OPEN`) bekommen automatisch ein eigenes Testprofil `%TEMP%\firepixel-test-profiles\<pid>`; jeder Schreibzugriff unter dem echten `%APPDATA%\Firepixel` bzw. `%LOCALAPPDATA%\Firepixel` endet mit einer Panik (KI-Modelle bleiben lesbar). Profilpfade nur über `fp_i18n::profile::roaming_dir()`/`local_dir()`, gestartete Programme aus Tests mit `fp_i18n::profile::child_env(&mut cmd)`; geprüft von `cargo test -p fp-neutral --test no_real_profile` und `-p fp-engine --test no_real_profile`.
 
 ## 5. Oberfläche testen
 
