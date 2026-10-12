@@ -447,3 +447,42 @@ fn o16_style_list_empty_for_multiple_objects() {
     let right: Vec<(egui::Rect, String, bool)> = combos(&h).into_iter().filter(|(r, _, _)| r.left() > W * 0.4).collect();
     assert!(right.iter().any(|(_, v, e)| v.is_empty() && *e), "leere, bedienbare Stil-Liste: {right:?}");
 }
+
+// ------------------------------------------------------------------ Bilder (Nachweis)
+
+/// Nachher-Bilder des Inspektors (offscreen gerendert) nach `target-fv10\fv10_bilder\` für die
+/// Vorher/Nachher-Montagen in `docs\screenshots\paritaet\fv10_*.png`. Aufruf:
+/// `cargo test -p fp-ui --test inspector_fv10 -- --ignored bilder`
+#[test]
+#[ignore]
+fn bilder_nachher() {
+    let dir = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../target-fv10/fv10_bilder");
+    let _ = std::fs::create_dir_all(&dir);
+    let save = |h: &mut H, name: &str| {
+        h.run_steps(8);
+        match h.render() {
+            Ok(img) => {
+                let _ = img.save(dir.join(format!("{name}.png")));
+            }
+            Err(e) => eprintln!("kein Grafikadapter: {e}"),
+        }
+    };
+    let mut h = harness(|_| {});
+    for (t, n) in [(ToolId::Polygon, "w19_polygon"), (ToolId::Rectangle, "w21_w22_rechteck"), (ToolId::Marquee, "w24_rahmen"), (ToolId::Gradient, "w26_verlauf"), (ToolId::Pointer, "w29_dokument"), (ToolId::Text, "o8_textwerkzeug")] {
+        tool(&mut h, t);
+        save(&mut h, n);
+    }
+    let (mut a, mut b, mut t) = (0, 0, 0);
+    let mut h = harness(|s| {
+        a = rect(s, [50, 50, 150, 120], "#ff0000");
+        b = rect(s, [300, 150, 450, 280], "#0000ff");
+        let v = s.execute("draw.text", json!({"text": "Hallo", "anchor": [200, 60], "size": 24})).expect("Text");
+        t = v.value.get("id").and_then(|x| x.as_u64()).unwrap_or(0);
+        s.execute("select.set", json!({"ids": [a]})).expect("Auswahl");
+    });
+    save(&mut h, "o2_r1");
+    h.state_mut().state.session.execute("select.set", json!({"ids": [a, b]})).expect("Auswahl");
+    save(&mut h, "o2_o16_mehrfach");
+    h.state_mut().state.session.execute("select.set", json!({"ids": [t]})).expect("Auswahl");
+    save(&mut h, "o8_text");
+}
