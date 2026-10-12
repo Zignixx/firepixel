@@ -109,6 +109,16 @@ pub fn show(ctx: &egui::Context, st: &mut AppState) {
     if d.dont_show {
         st.session.set_warning_disabled(&d.warning, true);
     }
+    if question && matches!(outcome, Outcome::Close) {
+        // Rückfrage abgebrochen (Knopf oder Esc): wie im Original folgt eine zweite Meldung
+        // (Popupmenü: „Wählen Sie ein Segment oder einen Hotspot aus …“, PM-6 D34)
+        if let Some(next) = st.session.warning_after_cancel(&d.warning)
+            && !next.suppressed
+        {
+            st.dialogs.warning = Some(WarningDialog::new(next));
+        }
+        return;
+    }
     if let Outcome::Choice(i) = outcome {
         // Rückfrage (Popupmenü): Hotspot/Segment aus der Auswahl anlegen, dann der ursprüngliche
         // Befehl mit dem neuen Objekt; fehlt auch dafür das Ziel, kommt dessen Warnung.

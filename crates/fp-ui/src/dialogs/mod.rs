@@ -25,6 +25,7 @@ pub mod popup_menu;
 pub(crate) mod preferences;
 pub mod shortcuts;
 pub mod spelling;
+pub mod symbol_anim;
 pub mod trace;
 pub mod warning;
 mod unsaved;

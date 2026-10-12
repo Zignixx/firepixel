@@ -161,6 +161,21 @@ const ENTRIES: &[Entry] = &[
     },
 ];
 
+/// Zweite Meldung nach „Abbrechen“/Esc einer Rückfrage: (Schlüssel der Rückfrage, Folgemeldung).
+/// Original: „Popupmenü hinzufügen“ abgebrochen → „Wählen Sie ein Segment oder einen Hotspot aus,
+/// bevor Sie den Befehl „Verhalten einfügen“ verwenden.“ mit „Nicht mehr anzeigen“ (PM-6 D34).
+const AFTER_CANCEL: &[(&str, Entry)] = &[(
+    "addPopUpMenu",
+    Entry {
+        key: "insertBehavior",
+        commands: &[],
+        text: "msg-warn-insert-behavior",
+        pref: Some("DisableNoticeInsertBehavior"),
+        choices: &[],
+        missing: |_| true,
+    },
+)];
+
 /// Alle Warnschlüssel mit ihren Befehlen (für Tests und Dokumentation).
 pub fn all() -> Vec<(&'static str, &'static [&'static str])> {
     ENTRIES.iter().map(|e| (e.key, e.commands)).collect()
@@ -186,6 +201,20 @@ impl Session {
             text: fp_i18n::t(e.text),
             pref: e.pref.map(str::to_string),
             choices: e.choices.iter().map(|(l, c)| WarningChoice { label: fp_i18n::t(l), command: (*c).to_string() }).collect(),
+            suppressed: e.pref.is_some_and(|p| self.prefs.get_bool(p, false)),
+        })
+    }
+
+    /// Meldung, die das Original zeigt, nachdem die Rückfrage `warning` abgebrochen wurde (siehe
+    /// `AFTER_CANCEL`); `None`, wenn es keine gibt. Abgeschaltet: `suppressed` = `true`.
+    pub fn warning_after_cancel(&self, warning: &TargetWarning) -> Option<TargetWarning> {
+        let (_, e) = AFTER_CANCEL.iter().find(|(k, _)| *k == warning.key)?;
+        Some(TargetWarning {
+            key: e.key.to_string(),
+            command: warning.command.clone(),
+            text: fp_i18n::t(e.text),
+            pref: e.pref.map(str::to_string),
+            choices: Vec::new(),
             suppressed: e.pref.is_some_and(|p| self.prefs.get_bool(p, false)),
         })
     }

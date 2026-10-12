@@ -198,6 +198,11 @@ fn run_all(size: egui::Vec2, theme: ThemeKind) {
         assert_eq!((before.1.clone(), before.2, before.3.clone()), (after.1, after.2, after.3), "{name}: Auswahl/Verlauf/Werkzeug geändert");
         h.key_press(egui::Key::Escape);
         h.run_steps(3);
+        // Popupmenü: nach Esc der Rückfrage folgt wie im Original eine zweite Meldung (DLG-9)
+        if h.state().state.dialogs.warning.as_ref().is_some_and(|w| w.warning.key == "insertBehavior") {
+            h.key_press(egui::Key::Escape);
+            h.run_steps(3);
+        }
         assert!(!h.state().state.dialogs.any_open(), "{name}: Esc schließt nicht");
         if !name.starts_with('@') || *name == "@about" {
             open(&mut h, name);
@@ -209,6 +214,10 @@ fn run_all(size: egui::Vec2, theme: ThemeKind) {
                 }
                 h.key_press(egui::Key::Escape);
                 h.run_steps(3);
+                if h.state().state.dialogs.warning.as_ref().is_some_and(|w| w.warning.key == "insertBehavior") {
+                    h.key_press(egui::Key::Escape);
+                    h.run_steps(3);
+                }
             }
         }
         checked += 1;

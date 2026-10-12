@@ -564,6 +564,7 @@ msg-warn-insert-slice = Wählen Sie mindestens ein Objekt aus, bevor Sie den Bef
 msg-warn-select-similar = Nehmen Sie mit dem Auswahlrahmen, dem Lasso oder dem Zauberstab eine Pixelauswahl vor, bevor Sie den Befehl "Ähnliches auswählen" verwenden.
 msg-warn-feather = Bevor Sie den Befehl "Weiche Kante" verwenden, nehmen Sie mit dem Auswahlrahmen, dem Lasso oder dem Zauberstab eine Pixelauswahl vor.
 msg-warn-popup-hotspot-or-slice = Verhalten werden über das Verhalten-Bedienfeld auf Hotspot- oder Segmentobjekte angewendet. Hotspot oder Segment erstellen?
+msg-warn-insert-behavior = Wählen Sie ein Segment oder einen Hotspot aus, bevor Sie den Befehl „Verhalten einfügen“ verwenden.
 msg-warn-choice-hotspot = &Hotspot
 msg-warn-choice-slice = &Segment
 msg-warn-choice-cancel = &Abbrechen

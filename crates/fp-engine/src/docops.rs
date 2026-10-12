@@ -428,7 +428,26 @@ fn bounds_depth(doc: &Document, e: &Element, depth: u32) -> Option<Rect> {
                     }
                 }
             }
-            r.map(|b| i.transform.transform_rect_bounds(&b))
+            let b = r?;
+            let base = i.transform.transform_rect_bounds(&b);
+            if sym.kind() != fp_model::SymbolKind::Animation || i.anim.frames <= 1 {
+                return Some(base);
+            }
+            // Animationsinstanz: Grenzen schließen den Bewegungsweg ein (alle Status, wie das
+            // Original `pixelRect` meldet, PM-6 D28); Zustand je Status wie beim Zeichnen
+            // (Skalierung/Drehung um die Symbolmitte, dann Instanzmatrix, dann Versatz)
+            let c = b.center();
+            let mut out = base;
+            for k in 0..i.anim.frames.min(360) as usize {
+                let Some(af) = i.anim.frame(k, sym.root.frame_count) else { continue };
+                let local = Matrix3::translation(-c.x, -c.y)
+                    .then(&Matrix3::scaling(af.scale as f32, af.scale as f32))
+                    .then(&Matrix3::rotation_degrees(af.rotation))
+                    .then(&Matrix3::translation(c.x, c.y));
+                let m = local.then(&i.transform).then(&Matrix3::translation(af.offset.x, af.offset.y));
+                out = out.union(&m.transform_rect_bounds(&b));
+            }
+            Some(out)
         }
         ElementKind::WebObject(w) => match &w.polygon {
             Some(c) if !c.nodes.is_empty() => geometry::contours_bounds(std::slice::from_ref(c)),

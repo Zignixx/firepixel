@@ -844,7 +844,9 @@ pub(super) fn register(r: &mut CommandRegistry) {
     r.add(with_anim_params(cmd("modify.animation.animateSelection").requires(SEL).menu_when(super::no_pixel_selection)).opt("name", ParamKind::String, "Symbolname").run(|s, p| {
         let name = p.opt_str("name")?.unwrap_or_else(|| "Animation".into());
         let a = anim_params(p, fp_model::AnimParams::default())?;
-        with_doc(s, |d| {
+        // Verlaufsschritt wie im Original „In Symbol konvertieren“ (PM-6 D28)
+        let label = s.registry().get("modify.symbol.convertToSymbol").map(|c| c.info().step_label());
+        let out = with_doc(s, |d| {
             let ids = d.selection.elements.clone();
             let id = make_symbol(d, &name, SymbolKind::Animation, &ids)?;
             let page = d.page;
@@ -855,6 +857,10 @@ pub(super) fn register(r: &mut CommandRegistry) {
             });
             ensure_frames(d, a.frames as usize);
             Ok(CommandOutput::doc_with(json!({"id": id.0})))
+        })?;
+        Ok(match label {
+            Some(l) => out.labeled(l),
+            None => out,
         })
     }));
     r.add(with_anim_params(cmd("modify.animation.settings").requires(&[Requirement::Document, Requirement::AllOf(ObjectKind::AnimationInstance)])).run(|s, p| {

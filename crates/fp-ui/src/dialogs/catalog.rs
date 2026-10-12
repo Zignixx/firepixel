@@ -217,6 +217,7 @@ fn plain_form(st: &AppState, cmd: &str) -> Option<FormDialog> {
             "_dir": crate::panels::library::library_roots().into_iter().next().map(|(_, p)| p.to_string_lossy().to_string()).unwrap_or_default(),
         }))
         .with_width(420.0)
+        .with_layout(super::symbol_anim::CONVERT_LAYOUT)
         .with_transform(convert_symbol_params),
         "modify.animation.animateSelection" | "modify.animation.settings" => {
             let a = crate::inspector::obj_quads::selection(st).first().and_then(|e| match &e.kind {
@@ -247,6 +248,8 @@ fn plain_form(st: &AppState, cmd: &str) -> Option<FormDialog> {
                 ],
             )
             .with_width(380.0)
+            .with_layout(super::symbol_anim::ANIMATE_LAYOUT)
+            .with_focus_ok()
             .with_transform(animate_params)
         }
         "modify.canvas.canvasColor" => {

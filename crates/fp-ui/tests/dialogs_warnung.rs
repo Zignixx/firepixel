@@ -194,9 +194,12 @@ fn popupmenue_rueckfrage_hotspot() {
         for b in ["Hotspot", "Segment", "Abbrechen"] {
             assert!(find(&h, b).is_some(), "Knopf {b}");
         }
-        // Abbrechen (Zugriffstaste a): nichts passiert
+        // Abbrechen (Zugriffstaste a): keine Wirkung, wie im Original folgt die zweite Meldung
+        // „Wählen Sie ein Segment oder einen Hotspot aus …“ (PM-6 D34, DLG-9); OK schließt sie
         let steps = history_len(&h);
         key(&mut h, Key::A);
+        assert_eq!(st(&h).dialogs.warning.as_ref().map(|w| w.warning.key.as_str()), Some("insertBehavior"));
+        key(&mut h, Key::Enter);
         assert!(st(&h).dialogs.warning.is_none());
         assert_eq!(history_len(&h), steps);
         assert!(st(&h).dialogs.popup_editor.is_none());
