@@ -269,7 +269,9 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
     };
     let mut ns = s.clone();
     let mut custom_preset: Option<String> = None;
-    let (area, _) = ui.allocate_exact_size(vec2(ui.available_width(), 128.0), Sense::hover());
+    // Optionsbereich bis unter die Kästchen „Zeilensprung/Progressiv“ (DLU 79 + 10) mit 2 px Luft;
+    // vorher 128 px, die Kästchen reichten 19 px darüber hinaus (N23)
+    let (area, _) = ui.allocate_exact_size(vec2(ui.available_width(), (2.0 + 89.0 * fields::DLU_Y + 2.0).ceil()), Sense::hover());
     let d = Dl::at(area.min + vec2(4.0, 2.0));
     // Gespeicherte Einstellungen (4749)
     let presets = builtin_presets();
@@ -426,8 +428,11 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
     let sort_i = st.session.prefs.get_int("Firepixel_OptimizeSort", 0).clamp(0, 2) as usize;
     let model = st.session.active().and_then(|d| d.doc.pages.get(d.page)).and_then(|p| p.root.export.as_deref().cloned()).unwrap_or_default();
     let mut sel: Vec<u32> = st.dialogs.panel_sel.palette.clone();
+    // Farbtabelle immer unter dem Optionsbereich (N23: bei JPEG/PNG 24/32/WebP/AVIF rückte der
+    // Layout-Cursor nicht über die Kästchen hinaus und die Tabelle verdeckte ihre untere Hälfte)
     let avail = ui.available_rect_before_wrap();
-    let table = Rect::from_min_max(pos2(avail.left() + 2.0, avail.top() + 2.0), pos2(avail.right() - 2.0, (avail.bottom() - 44.0).max(avail.top() + 30.0)));
+    let top = avail.top().max(area.bottom()) + 2.0;
+    let table = Rect::from_min_max(pos2(avail.left() + 2.0, top), pos2(avail.right() - 2.0, (avail.bottom() - 44.0).max(top + 30.0)));
     let inner = fields::list_box(ui, table);
     let tresp = ui.interact(inner, Id::new("opt-table"), Sense::click());
     if let Some(p) = &pv {

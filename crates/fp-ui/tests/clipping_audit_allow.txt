@@ -1,0 +1,73 @@
+# Erlaubnisliste des Prüfers clipping_audit.rs (RAND-1, N23): bekannte Funde `Art|Ansicht|Text`.
+# Behobene Zeilen streichen (der Bericht docs\funktionstest\rand_auto.md nennt sie unter „nicht mehr gefunden“).
+# Neu schreiben: FP_RAND_FULL=1 FP_RAND_UPDATE_ALLOW=1 cargo test -p fp-ui --test clipping_audit
+abgeschnitten|Bedienfeld DocumentLibrary (Dock)|Graphic
+abgeschnitten|Bedienfeld DocumentLibrary (schmales Dock)|Graphic
+abgeschnitten|Dialog modify.traceBitmap|Flecken entfernen
+abgeschnitten|Dialog modify.traceBitmap|Remove speckles
+abgeschnitten|Inspektor Pfad|1-Pixel Hard
+abgeschnitten|Inspektor Pfad|1-Pixel hart
+abgeschnitten|Inspektor Text|Anti-Alias glatt
+abgeschnitten|Inspektor Text|Smooth Anti-Alias
+abgeschnitten|Inspektor Werkzeug tool.aiObject|Klick: Objekt auswählen · Rahmen aufziehen: Objekt im Rahmen
+abgeschnitten|Inspektor Werkzeug tool.aiObject|SAM 2.1 Hiera Tiny (156 MB)
+abgeschnitten|Inspektor Werkzeug tool.aiObject|Umschalt+Klick: hinzufügen · Alt+Klick: abziehen · Esc: neu…
+abgeschnitten|Inspektor Werkzeug tool.aiRefineEdge|BiRefNet lite Matting (89 MB)
+abgeschnitten|Inspektor Werkzeug tool.aiSubject|BiRefNet lite (general) (178 MB)
+abgeschnitten|Inspektor Werkzeug tool.aiSubject|Click: main subject as soft pixel selection · Shift: add · …
+abgeschnitten|Inspektor Werkzeug tool.aiSubject|Klick: Hauptmotiv als weiche Pixelauswahl · Umschalt: hinzu…
+abgeschnitten|Inspektor Werkzeug tool.autoShape|1-Pixel Hard
+abgeschnitten|Inspektor Werkzeug tool.autoShape|1-Pixel hart
+abgeschnitten|Inspektor Werkzeug tool.brush|1-Pixel Hard
+abgeschnitten|Inspektor Werkzeug tool.brush|1-Pixel hart
+abgeschnitten|Inspektor Werkzeug tool.ellipse|1-Pixel Hard
+abgeschnitten|Inspektor Werkzeug tool.ellipse|1-Pixel hart
+abgeschnitten|Inspektor Werkzeug tool.gradient|Auswahl füllen
+abgeschnitten|Inspektor Werkzeug tool.gradient|Fill selection
+abgeschnitten|Inspektor Werkzeug tool.line|1-Pixel Hard
+abgeschnitten|Inspektor Werkzeug tool.line|1-Pixel hart
+abgeschnitten|Inspektor Werkzeug tool.marquee|Live-Auswahlrahmen
+abgeschnitten|Inspektor Werkzeug tool.ovalMarquee|Live-Auswahlrahmen
+abgeschnitten|Inspektor Werkzeug tool.paintBucket|Auswahl füllen
+abgeschnitten|Inspektor Werkzeug tool.paintBucket|Fill selection
+abgeschnitten|Inspektor Werkzeug tool.pencil|Preserve transparency
+abgeschnitten|Inspektor Werkzeug tool.pencil|Transparenz beibehalten
+abgeschnitten|Inspektor Werkzeug tool.pen|1-Pixel Hard
+abgeschnitten|Inspektor Werkzeug tool.pen|1-Pixel hart
+abgeschnitten|Inspektor Werkzeug tool.polygon|1-Pixel Hard
+abgeschnitten|Inspektor Werkzeug tool.polygon|1-Pixel hart
+abgeschnitten|Inspektor Werkzeug tool.rectangle|1-Pixel Hard
+abgeschnitten|Inspektor Werkzeug tool.rectangle|1-Pixel hart
+abgeschnitten|Inspektor Werkzeug tool.redrawPath|1-Pixel Hard
+abgeschnitten|Inspektor Werkzeug tool.redrawPath|1-Pixel hart
+abgeschnitten|Inspektor Werkzeug tool.rubberStamp|Gesamtes Dokument
+abgeschnitten|Inspektor Werkzeug tool.scale|1-Pixel Hard
+abgeschnitten|Inspektor Werkzeug tool.scale|1-Pixel hart
+abgeschnitten|Inspektor Werkzeug tool.skew|1-Pixel Hard
+abgeschnitten|Inspektor Werkzeug tool.skew|1-Pixel hart
+abgeschnitten|Inspektor Werkzeug tool.text|Anti-Alias glatt
+abgeschnitten|Inspektor Werkzeug tool.text|Smooth Anti-Alias
+abgeschnitten|Inspektor Werkzeug tool.vectorPath|1-Pixel Hard
+abgeschnitten|Inspektor Werkzeug tool.vectorPath|1-Pixel hart
+abgeschnitten|Inspektor zwei offene Pfade|1-Pixel Hard
+abgeschnitten|Inspektor zwei offene Pfade|1-Pixel hart
+dialog-ragt-hinaus|Dialog Voreinstellungen 1|
+dialog-ragt-hinaus|Dialog Voreinstellungen 2|
+dialog-ragt-hinaus|Dialog Voreinstellungen 3|
+dialog-ragt-hinaus|Dialog Voreinstellungen 4|
+dialog-ragt-hinaus|Dialog Voreinstellungen 5|
+dialog-ragt-hinaus|Dialog Voreinstellungen 6|
+dialog-ragt-hinaus|Dialog Voreinstellungen|
+dialog-ragt-hinaus|Dialog ai.manageModels|
+dialog-ragt-hinaus|Dialog edit.keyboardShortcuts|
+kaestchen|Inspektor Text|
+kaestchen|Inspektor Text|Auto kern
+kaestchen|Inspektor Text|Autom. Unterschneidung
+kaestchen|Inspektor Werkzeug tool.text|
+kaestchen|Inspektor Werkzeug tool.text|Auto kern
+kaestchen|Inspektor Werkzeug tool.text|Autom. Unterschneidung
+ragt-heraus|Inspektor Text|Autom. Unterschneidung
+ragt-heraus|Inspektor Werkzeug tool.text|Autom. Unterschneidung
+rand-knapp|Dialog ai.manageModels|Entfernen…
+rand-knapp|Dialog ai.manageModels|Remove…
+ueberlappt-text|Inspektor Segment|Bearbeiten...
