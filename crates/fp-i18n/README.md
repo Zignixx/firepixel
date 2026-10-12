@@ -58,7 +58,7 @@ Schlüssel nur, `--json` liefert alles maschinenlesbar, `--streng` wertet Warnun
 
 ### 4. Benutzen
 Der Ordner wird beim Start geladen aus
-- `%APPDATA%\Firepixel\Sprachen\` (je Benutzer; **Ansicht ▸ Sprache ▸ Sprachordner öffnen…** öffnet ihn und lädt Änderungen sofort nach) und
+- `%APPDATA%\Firepixel\Sprachen\` (je Benutzer; **Ansicht ▸ Sprache ▸ Sprachordner öffnen...** öffnet ihn und lädt Änderungen sofort nach) und
 - `Sprachen\` neben `firepixel.exe` (tragbare Installation).
 
 Erlaubt sind ein Unterordner je Sprache (`fr\*.ftl`) oder eine einzige Datei `fr.ftl`. Gleiche
@@ -141,6 +141,9 @@ Schlüssel: Kleinbuchstaben, Bindestriche, Bereichspräfix. Attribute mit Punkt 
 | `meldungen.ftl` | `err-` (Fehler aus fp-engine/fp-io/fp-export/fp-script), `msg-` (Status-/Infomeldungen), `ai-` (KI-Auswahl) | I18N-ENGINE |
 | `filter.ftl` | `filter-`, `effect-`, `blend-` (Filter-, Effekt- und Mischmodusnamen, Parameter) | I18N-ENGINE |
 | `willkommen.ftl` | `welcome-` (Startbildschirm) | DESIGN |
+| `skript.ftl` | `err-script-` (Meldungen aus fp-script: automatische Formen, Dateien) | AU |
+| `mcp.ftl` | `msg-mcp-`, `err-mcp-` (Antworten des MCP-Servers an KI-Agenten) | AU |
+| `dateidialog.ftl` | `fdlg-` (Datei-Dialog in der App bei aktivem KI-Steuerkanal) | AU |
 
 Jeder Agent schreibt nur in seine Dateien (in `de` **und** `en`).
 

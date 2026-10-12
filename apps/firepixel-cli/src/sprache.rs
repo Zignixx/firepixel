@@ -38,7 +38,7 @@ Zugriffstasten (&), doppelte Zugriffstasten in einem Menü bzw. Dialog.")]
   firepixel-cli sprache vorlage fr %APPDATA%\\Firepixel\\Sprachen
 legt %APPDATA%\\Firepixel\\Sprachen\\fr\\*.ftl an (englische Texte als Ausgangspunkt).
 Danach rechts vom = übersetzen, language-name setzen, prüfen und Firepixel neu starten
-(oder Ansicht ▸ Sprache ▸ Sprachordner öffnen…).")]
+(oder Ansicht ▸ Sprache ▸ Sprachordner öffnen...).")]
     Vorlage {
         /// Sprachcode (z. B. fr, es, pt-BR, ja)
         code: String,

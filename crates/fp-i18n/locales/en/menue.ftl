@@ -9,7 +9,7 @@
 ## Hauptmenü Datei
 
 menu-file = &File
-cmd-file-new = &New
+cmd-file-new = &New...
     .description = Creates a new document
 cmd-file-newFromTemplate = New from Template...
     .description = Opens a new document from a template
@@ -227,7 +227,7 @@ cmd-select-similar = Select Si&milar
     .description = Selects pixels with colors similar to the current selection
 cmd-select-inverse = Select &Inverse
     .description = Inverts the pixel selection
-cmd-select-feather = &Feather…
+cmd-select-feather = &Feather...
     .description = Gives the pixel selection a soft edge
 cmd-select-expandMarquee = &Expand Marquee...
     .description = Expands the pixel selection

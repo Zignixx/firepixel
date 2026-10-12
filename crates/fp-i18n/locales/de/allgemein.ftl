@@ -36,7 +36,7 @@ unit-mb = MB
 unit-gb = GB
 unit-tb = TB
 
-# Tastennamen in Kürzeln (shortcut_label in fp-i18n; Wortlaut wie bisher in den Menüs)
+# Tastennamen in Kürzeln (shortcut_label in fp-i18n; Wortlaut wie im Original, gemessen in allen Menüs)
 key-ctrl = Strg
 key-alt = Alt
 key-shift = Umschalt
@@ -45,21 +45,21 @@ key-esc = Esc
 key-space = Leertaste
 key-backspace = Rück
 key-tab = Tab
-key-del = Entf
+key-del = Löschen-Taste
 key-ins = Einfg
 key-home = Pos1
 key-end = Ende
 key-pageup = Bild auf
 key-pagedown = Bild ab
-key-left = Links
-key-right = Rechts
-key-up = Oben
-key-down = Unten
+key-left = Nach-links-Taste
+key-right = Nach-rechts-Taste
+key-up = Nach-oben-Taste
+key-down = Nach-unten-Taste
 key-num = Num
 
 # Sprachwahl (Ansicht ▸ Sprache, Voreinstellungen)
 lang-menu = Spra&che
-lang-open-folder = Sprachordner öffnen…
+lang-open-folder = Sprachordner öffnen...
 lang-pseudo = Testsprache (qps)
 lang-label = Sprache:
 lang-system = Systemsprache ({ $name })

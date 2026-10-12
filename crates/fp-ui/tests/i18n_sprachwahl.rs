@@ -63,7 +63,7 @@ fn menu_lists_languages_and_switches_immediately() {
     let it = items(&kids);
     assert!(it.contains(&("Deutsch".to_string(), Some(true), "ui.setLanguage:de".to_string())), "{it:?}");
     assert!(it.contains(&("English".to_string(), Some(false), "ui.setLanguage:en".to_string())), "{it:?}");
-    assert!(it.iter().any(|(l, _, a)| l == "Sprachordner öffnen…" && a.starts_with("ui.openLanguageFolder")), "{it:?}");
+    assert!(it.iter().any(|(l, _, a)| l == "Sprachordner öffnen..." && a.starts_with("ui.openLanguageFolder")), "{it:?}");
     // Testsprache nur im Debug-Build bzw. mit Entwickleroptionen
     assert_eq!(it.iter().any(|(_, _, a)| a == "ui.setLanguage:qps"), cfg!(debug_assertions), "{it:?}");
 
@@ -76,7 +76,7 @@ fn menu_lists_languages_and_switches_immediately() {
     assert_eq!(label, "Language");
     let it = items(&kids);
     assert!(it.contains(&("English".to_string(), Some(true), "ui.setLanguage:en".to_string())), "{it:?}");
-    assert!(it.iter().any(|(l, _, _)| l == "Open Language Folder…"));
+    assert!(it.iter().any(|(l, _, _)| l == "Open Language Folder..."));
     // 50× hin und her: keine doppelten Einträge, Zustand stimmt
     for i in 0..50 {
         let code = if i % 2 == 0 { "de" } else { "en" };
@@ -138,7 +138,7 @@ fn external_language_folder_appears_in_menu() {
     h.run_steps(2);
     assert_eq!(language_menu(&h.state().state).map(|m| m.0).as_deref(), Some("Langue"));
     // fehlt im Französischen → Englisch
-    assert_eq!(fp_i18n::t("lang-open-folder"), "Open Language Folder…");
+    assert_eq!(fp_i18n::t("lang-open-folder"), "Open Language Folder...");
     fp_i18n::set_language("de");
     let _ = std::fs::remove_dir_all(&dir);
 }

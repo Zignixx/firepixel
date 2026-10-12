@@ -777,7 +777,7 @@ fn list_commands(s: &Session, a: &Value) -> ToolOutput {
         return ToolOutput::json(json!({
             "total": reg.len(),
             "categories": list,
-            "hint": "list_commands mit {\"category\":\"draw\"} oder {\"filter\":\"…\"} aufrufen; Parameter mit describe_command"
+            "hint": fp_i18n::t("msg-mcp-categories-hint")
         }));
     }
     let mut out = Vec::new();
@@ -796,11 +796,12 @@ fn list_commands(s: &Session, a: &Value) -> ToolOutput {
         }
         if let Some(f) = &filter {
             let hay = format!(
-                "{} {} {} {} {} {}",
+                "{} {} {} {} {} {} {}",
                 i.name.to_lowercase(),
                 i.label.to_lowercase(),
                 command_label(&i).to_lowercase(),
                 i.description.clone().unwrap_or_default().to_lowercase(),
+                command_description(&i).unwrap_or_default().to_lowercase(),
                 i.js.join(" ").to_lowercase(),
                 i.menu_path.join(" ").to_lowercase()
             );
@@ -1330,11 +1331,19 @@ mod tests {
     }
 }
 
-/// Menütext eines Befehls in der Sprache der Antwort (`cmd-…`, ohne Zugriffstaste); sonst der
-/// Text aus dem Register.
+/// Beschriftung eines Befehls in der Sprache der Antwort: `cmd-….label` (eindeutige Beschriftung,
+/// z. B. „State Properties“ statt des Bedienfeldmenütexts „Properties...“), sonst der Menütext
+/// `cmd-…` ohne Zugriffstaste und „...“; sonst der Text aus dem Register.
 pub fn command_label(i: &fp_engine::CommandInfo) -> String {
     let k = fp_i18n::command_key(&i.name);
-    if fp_i18n::has(&k) { strip_amp(&fp_i18n::t(&k)) } else { i.label.clone() }
+    let label = format!("{k}.label");
+    if fp_i18n::has(&label) {
+        strip_amp(&fp_i18n::t(&label))
+    } else if fp_i18n::has(&k) {
+        strip_amp(&fp_i18n::t(&k))
+    } else {
+        i.label.clone()
+    }
 }
 
 /// Beschreibung eines Befehls in der Sprache der Antwort (`cmd-….description`, sonst `.tooltip`).

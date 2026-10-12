@@ -3,3 +3,4 @@ msg-mcp-legend = params: * = Pflicht; available = im aktuellen Zustand ausführb
 err-mcp-param-missing = Parameter { $param } fehlt
 err-mcp-unknown-command = unbekannter Befehl „{ $name }“; ähnlich: { $similar }
 err-mcp-unknown-tool = unbekanntes Werkzeug „{ $name }“
+msg-mcp-categories-hint = list_commands mit {"{"}"category":"draw"{"}"} oder {"{"}"filter":"…"{"}"} aufrufen; Parameter mit describe_command

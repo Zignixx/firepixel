@@ -415,7 +415,7 @@ fn duplicate_german_access_key_cycles_instead_of_running() {
     assert_ne!(a.path, b.path, "zweites L springt zum nächsten Eintrag");
 }
 
-/// Befund UX-B (Parität): „Rückgängig: <Schritt>“, Löschen zeigt Entf, Alt+B ▸ R bleibt bedienbar.
+/// Befund UX-B (Parität): „Rückgängig: <Schritt>“, Löschen zeigt die Löschen-Taste, Alt+B ▸ R bleibt bedienbar.
 #[test]
 fn undo_shows_step_name_and_delete_key() {
     let _g = lock();
@@ -437,7 +437,9 @@ fn undo_shows_step_name_and_delete_key() {
     // Zugriffstaste bleibt die von „&Rückgängig“
     assert_eq!(fp_ui::menu_kbd::access_of(&format!("/Bearbeiten/{undo}")).map(|a| a.1), Some('r'));
     let (_, del) = find(&app, "edit.clear").expect("Löschen im Menü");
-    assert_eq!(del, Some(fp_i18n::shortcut_label("Entf")), "Löschen zeigt die Entf-Taste wie das Original");
+    assert_eq!(del.as_deref(), Some("Löschen-Taste"), "Löschen zeigt die Löschen-Taste wie das Original");
+    let (_, sup) = find(&app, "select.superselect").expect("Gesamtauswahl treffen");
+    assert_eq!(sup.as_deref(), Some("Strg+Nach-rechts-Taste"), "Pfeiltasten heißen wie im Original");
     let (_, guides) = find(&app, "view.guides.showGuides").expect("Hilfslinien anzeigen");
     assert_eq!(guides.as_deref(), Some("Strg+ü"), "Umlaut-Taste klein wie im Original");
     fp_i18n::set_language("en");
@@ -445,7 +447,7 @@ fn undo_shows_step_name_and_delete_key() {
     assert!(undo_en.starts_with("Undo: "), "{undo_en}");
     assert_eq!(fp_ui::menu_kbd::access_of(&format!("/Edit/{undo_en}")).map(|a| a.1), Some('u'));
     let (_, del_en) = find(&app, "edit.clear").expect("Clear");
-    assert_eq!(del_en, Some(fp_i18n::shortcut_label("Del")));
+    assert_eq!(del_en.as_deref(), Some("Del"));
 }
 
 #[test]

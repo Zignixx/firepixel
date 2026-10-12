@@ -66,16 +66,16 @@ const KEY_ALIASES: &[(&str, &[&str])] = &[
     ("space", &["space", "leertaste", "leer"]),
     ("backspace", &["backspace", "rück", "rücktaste"]),
     ("tab", &["tab", "tabulator"]),
-    ("del", &["del", "delete", "entf"]),
+    ("del", &["del", "delete", "entf", "löschen-taste"]),
     ("ins", &["ins", "insert", "einfg"]),
     ("home", &["home", "pos1"]),
     ("end", &["end", "ende"]),
     ("pageup", &["pageup", "page up", "pgup", "bild auf", "bild↑"]),
     ("pagedown", &["pagedown", "page down", "pgdn", "bild ab", "bild↓"]),
-    ("left", &["left", "links", "arrowleft", "nach-links"]),
-    ("right", &["right", "rechts", "arrowright", "nach-rechts"]),
-    ("up", &["up", "oben", "arrowup", "nach-oben"]),
-    ("down", &["down", "unten", "arrowdown", "nach-unten"]),
+    ("left", &["left", "links", "arrowleft", "nach-links", "nach-links-taste"]),
+    ("right", &["right", "rechts", "arrowright", "nach-rechts", "nach-rechts-taste"]),
+    ("up", &["up", "oben", "arrowup", "nach-oben", "nach-oben-taste"]),
+    ("down", &["down", "unten", "arrowdown", "nach-unten", "nach-unten-taste"]),
 ];
 
 /// Ziffernblock-Tasten in englischer Kurzform (`NumAdd` …) → Zeichen.

@@ -94,7 +94,11 @@ fn shortcuts_units_sizes_dates() {
     assert_eq!(shortcut_label("Ctrl+Shift+S"), "Strg+Umschalt+S");
     assert_eq!(shortcut_label("Strg+Umschalt+S"), "Strg+Umschalt+S");
     assert_eq!(shortcut_label("Strg++"), "Strg++");
-    assert_eq!(shortcut_label("Entf"), "Entf");
+    // Tastennamen wie im Original (Befund I18N-MENUE, gemessen in allen Menüs)
+    assert_eq!(shortcut_label("Entf"), "Löschen-Taste");
+    assert_eq!(shortcut_label("Strg+Umschalt+Oben"), "Strg+Umschalt+Nach-oben-Taste");
+    assert_eq!(shortcut_label("Strg+Links"), "Strg+Nach-links-Taste");
+    assert_eq!(shortcut_label("Strg+Nach-rechts-Taste"), "Strg+Nach-rechts-Taste");
     assert_eq!(shortcut_label("Ctrl+NumAdd"), "Strg+Num +");
     assert_eq!(shortcut_label("Strg+Y, Strg+Umschalt+Z"), "Strg+Y, Strg+Umschalt+Z");
     assert_eq!(unit("px"), "px");
@@ -109,6 +113,9 @@ fn shortcuts_units_sizes_dates() {
     assert_eq!(shortcut_label("Strg+Umschalt+Bild ab"), "Ctrl+Shift+Page Down");
     assert_eq!(shortcut_label("Alt+F4"), "Alt+F4");
     assert_eq!(shortcut_label("Rück"), "Backspace");
+    assert_eq!(shortcut_label("Löschen-Taste"), "Del");
+    assert_eq!(shortcut_label("Strg+Nach-unten-Taste"), "Ctrl+Down");
+    assert_eq!(shortcut_label("Strg+Unten"), "Ctrl+Down");
     assert_eq!(unit("ppi"), "Pixels/Inch");
     assert_eq!(fmt_size(1), "1 byte");
     assert_eq!(fmt_size(1536), "1.5 KB");
