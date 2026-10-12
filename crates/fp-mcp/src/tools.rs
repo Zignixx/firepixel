@@ -820,7 +820,7 @@ fn describe_command(s: &Session, a: &Value) -> ToolOutput {
         "name": i.name, "label": command_label(i), "menu": command_menu_path(i), "description": command_description(i),
         "implemented": i.implemented, "availableNow": enabled, "checked": checked,
         "requires": reqs, "params": i.params_schema(), "shortcuts": shortcuts,
-        "js": i.js, "fwId": i.fw_id, "fwCmd": i.fw_cmd, "note": i.note,
+        "js": i.js, "fwId": i.fw_id, "fwCmd": i.fw_cmd, "note": i.note.as_deref().map(fp_engine::command::source_text),
         "example": example,
     }))
 }

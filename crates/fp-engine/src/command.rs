@@ -98,7 +98,7 @@ impl ParamSpec {
             ParamKind::Json => json!({}),
         };
         if let Value::Object(o) = &mut s {
-            o.insert("description".into(), json!(self.description));
+            o.insert("description".into(), json!(source_text(&self.description)));
             if let Some(d) = &self.default {
                 o.insert("default".into(), d.clone());
             }
@@ -264,6 +264,50 @@ impl CommandInfo {
     pub fn shortcuts<'a>(&self, set: &'a ShortcutSet) -> &'a [Shortcut] {
         self.fw_cmd.as_deref().map(|c| set.command(c)).unwrap_or(&[])
     }
+}
+
+/// Schlüssel eines deutschen Quelltexts der Befehlsbeschreibungen (Parameter, Hinweise) in
+/// `befehlstexte.ftl`: `cmdtext-` + Text in Kleinbuchstaben (ä → ae …, andere Buchstaben → `u<hex>`,
+/// sonstige Zeichen → `-`); längere
+/// Texte werden nach 40 Zeichen gekürzt und bekommen eine Prüfsumme (FNV-1a, 6 Hex-Ziffern), damit
+/// der Schlüssel eindeutig bleibt.
+pub fn source_text_key(de: &str) -> String {
+    let mut slug = String::new();
+    for c in de.chars().flat_map(char::to_lowercase) {
+        match c {
+            'ä' => slug.push_str("ae"),
+            'ö' => slug.push_str("oe"),
+            'ü' => slug.push_str("ue"),
+            'ß' => slug.push_str("ss"),
+            c if c.is_ascii_alphanumeric() => slug.push(c),
+            c if c.is_alphanumeric() => slug.push_str(&format!("u{:x}", c as u32)),
+            _ => {
+                if !slug.is_empty() && !slug.ends_with('-') {
+                    slug.push('-');
+                }
+            }
+        }
+    }
+    let slug = slug.trim_end_matches('-').to_string();
+    if slug.len() <= 48 {
+        return format!("cmdtext-{slug}");
+    }
+    let mut h: u32 = 0x811c_9dc5;
+    for b in de.as_bytes() {
+        h ^= u32::from(*b);
+        h = h.wrapping_mul(0x0100_0193);
+    }
+    format!("cmdtext-{}-{:06x}", slug[..40].trim_end_matches('-'), h & 0x00ff_ffff)
+}
+
+/// Deutscher Quelltext einer Befehlsbeschreibung (Parameter, Hinweis) in der aktuellen Sprache
+/// (`befehlstexte.ftl`); Deutsch bleibt wortgleich, fehlt ein Schlüssel, bleibt der Quelltext.
+pub fn source_text(de: &str) -> String {
+    if de.is_empty() || fp_i18n::current_language() == fp_i18n::SOURCE_LANG {
+        return de.to_string();
+    }
+    let key = source_text_key(de);
+    if fp_i18n::has(&key) { fp_i18n::t(&key) } else { de.to_string() }
 }
 
 /// Menütext ohne Zugriffstaste (`&`, `&&` = `&`) und ohne abschließendes „…“/„...“.

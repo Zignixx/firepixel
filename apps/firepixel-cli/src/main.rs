@@ -585,14 +585,25 @@ fn cmd_commands(filter: Option<&str>, category: Option<&str>, all: bool, json_ou
             }
         }
         if let Some(f) = &f {
-            let hay = format!("{} {} {} {}", i.name, i.label, i.description.clone().unwrap_or_default(), i.menu_path.join(" ")).to_lowercase();
+            let hay = format!(
+                "{} {} {} {} {} {} {}",
+                i.name,
+                i.label,
+                fp_mcp::tools::command_label(i),
+                i.description.clone().unwrap_or_default(),
+                fp_mcp::tools::command_description(i).unwrap_or_default(),
+                i.menu_path.join(" "),
+                fp_mcp::tools::command_menu_path(i).join(" ")
+            )
+            .to_lowercase();
             if !hay.contains(f.as_str()) {
                 continue;
             }
         }
         let ps: Vec<String> = i.params.iter().map(|p| if p.required { format!("{}*", p.name) } else { p.name.clone() }).collect();
-        lines.push(format!("{:<44} {}{}", i.name, i.label, if ps.is_empty() { String::new() } else { format!("  ({})", ps.join(", ")) }));
-        list.push(json!({"name": i.name, "label": i.label, "menu": i.menu_path, "implemented": i.implemented, "params": i.params_schema(), "requires": i.requires, "description": i.description}));
+        let label = fp_mcp::tools::command_label(i);
+        lines.push(format!("{:<44} {}{}", i.name, label, if ps.is_empty() { String::new() } else { format!("  ({})", ps.join(", ")) }));
+        list.push(json!({"name": i.name, "label": label, "menu": fp_mcp::tools::command_menu_path(i), "implemented": i.implemented, "params": i.params_schema(), "requires": i.requires, "description": fp_mcp::tools::command_description(i)}));
     }
     if json_out {
         Ok(json!({"count": list.len(), "commands": list}))
@@ -738,5 +749,33 @@ mod tests {
         assert!(!help.chars().any(|c| "äöüÄÖÜß„".contains(c)), "{help}");
         let de = fp_i18n::with_language("de", || localized_command().render_help().to_string());
         assert!(de.contains("Aufruf:") && de.contains("Beispiele:") && de.contains("Ausgabe als JSON (maschinenlesbar)"), "{de}");
+    }
+    /// UE-3: jede Parameterbeschreibung und jeder Hinweis aller Befehle (Engine + JSF-Laufzeit) hat
+    /// einen Schlüssel in befehlstexte.ftl (de wortgleich, en ohne deutsche Reste).
+    #[test]
+    fn parameterbeschreibungen_in_de_und_en() {
+        let s = new_session();
+        let german = |t: &str| t.chars().any(|c| "äöüÄÖÜß„".contains(c));
+        let mut bad = Vec::new();
+        for c in s.registry().iter() {
+            let i = c.info();
+            let texts = i.params.iter().map(|p| p.description.clone()).chain(i.note.clone());
+            for de in texts.filter(|t| !t.is_empty()) {
+                let key = fp_engine::command::source_text_key(&de);
+                let (has_de, has_en) = (fp_i18n::keys("de").contains(&key), fp_i18n::keys("en").contains(&key));
+                if !has_de || !has_en {
+                    bad.push(format!("{}: {key} ({de})", i.name));
+                    continue;
+                }
+                assert_eq!(fp_i18n::with_language("de", || fp_engine::command::source_text(&de)), de);
+                let en = fp_i18n::with_language("en", || fp_engine::command::source_text(&de));
+                if german(&en) {
+                    bad.push(format!("{}: en „{en}“", i.name));
+                }
+            }
+        }
+        assert!(bad.is_empty(), "{} Texte ohne Übersetzung:\n{}", bad.len(), bad.join("\n"));
+        let schema = fp_i18n::with_language("en", || s.registry().get("file.new").map(|c| c.info().params_schema()).unwrap_or_default());
+        assert_eq!(schema["properties"]["height"]["description"], "Height in pixels", "{schema}");
     }
 }

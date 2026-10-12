@@ -79,7 +79,7 @@ text jpeg_ijg.rs | Spektralauswahl
 text jpeg_ijg.rs | JPEG ohne Bild
 text jpeg_ijg.rs | nicht ganzzahliges Abtastverhältnis
 # I18N-ENGINE: Strichvorgaben (BRUSH_PRESETS category_de/name_de) und Verlaufsformen (GRADIENT_SHAPES) in fp-engine\src\commands\panel.rs sind feste Kennungen („Kategorie/Name“ als Parameter `preset`, gespeicherter Pinselname wie im Original); die Anzeige übersetzt der Inspektor (inspector\texte.rs, pi-*).
-# I18N-ENGINE: Parameterbeschreibungen der Befehle (.opt/.param/.describe in fp-engine) gehen nur ins MCP-/CLI-Schema für Agenten und Entwickler, nicht in die Oberfläche (Filterparameter sind übersetzt, filter-param-*).
+# I18N-ENGINE/UE-3: Parameterbeschreibungen und Hinweise der Befehle (.opt/.param/.note in fp-engine) sind deutsche Quelltexte; MCP, Kommandozeile und Befehlskatalog zeigen sie über fp_engine::command::source_text aus befehlstexte.ftl (Test parameterbeschreibungen_in_de_und_en in firepixel-cli).
 # UE-1 (12.10.): Detailtexte der FW-PNG-Leser in fp-fwpng (tree.rs, ate.rs, chunks.rs, png.rs, file.rs, read.rs: „Tag-Baum …“,
 # „unpassendes >>“, „Magic FADECAFE fehlt“ …) bleiben deutsch: technische Ursache für Entwickler, eingebettet in die
 # übersetzte Hülle err-fwpng-* (Detail als Platzhalter). fp-io-Präfixe „BMP: …“ sind Formatname + übersetzter Text.
