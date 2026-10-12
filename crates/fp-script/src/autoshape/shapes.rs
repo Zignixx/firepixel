@@ -23,6 +23,9 @@ const fn int(key: &'static str, label: &'static str, min: f64, max: f64) -> Para
 const fn flag(key: &'static str, label: &'static str) -> ParamDef {
     ParamDef { key, label, kind: "bool", min: None, max: None, options: &[] }
 }
+const fn color(key: &'static str, label: &'static str) -> ParamDef {
+    ParamDef { key, label, kind: "color", min: None, max: None, options: &[] }
+}
 const fn text(key: &'static str, label: &'static str) -> ParamDef {
     ParamDef { key, label, kind: "text", min: None, max: None, options: &[] }
 }
@@ -233,7 +236,7 @@ pub static SHAPES: &[ShapeDef] = &[
         de: "Rahmen",
         group: "panel",
         source: concat!("var __miscKind = \"frame\";\n", include_str!("shapes/misc.js")),
-        params: &[num("fw", "Rahmenbreite", 1.0, W), num("w", "Breite", 4.0, W), num("h", "Höhe", 4.0, W), ParamDef { key: "color", label: "Farbe", kind: "color", min: None, max: None, options: &[] }],
+        params: &[num("fw", "Rahmenbreite", 1.0, W), num("w", "Breite", 4.0, W), num("h", "Höhe", 4.0, W), color("color", "Farbe")],
     },
     ShapeDef {
         en: "Frame 2",

@@ -65,3 +65,16 @@ fn text_case_and_shadow_commands_change_document() {
     assert_eq!(out.result.as_deref(), Some("1"), "{out:?}");
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+/// Englische Namen: gleiche Zahl, eindeutig, alle Dateien landen im Ordner.
+#[test]
+fn englische_namen() {
+    assert_eq!(fp_script::builtin_commands::BUILTIN_EN.len(), fp_script::builtin_commands::BUILTIN.len());
+    let dir = std::env::temp_dir().join(format!("fp-befehle-en-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    let n = fp_script::builtin_commands::install_into_lang(&dir, "en").unwrap_or_else(|e| panic!("{e}"));
+    assert_eq!(n, fp_script::builtin_commands::BUILTIN.len());
+    assert!(dir.join("Creative").join("Add Drop Shadow.jsf").exists());
+    assert!(dir.join("Reset Warning Dialogs.jsf").exists());
+    let _ = std::fs::remove_dir_all(&dir);
+}

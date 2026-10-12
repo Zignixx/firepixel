@@ -64,11 +64,14 @@ pub struct ToolEnv {
     pub renderer: Arc<Renderer>,
     /// JSF-Skripte über `run_script` erlauben.
     pub allow_scripts: bool,
+    /// Sprache der Antworten und Meldungen (nur dieser Thread, die Oberfläche bleibt unverändert);
+    /// Vorgabe `en` für KI-Agenten, je Aufruf überschreibbar mit dem Argument `language`.
+    pub language: String,
 }
 
 impl Default for ToolEnv {
     fn default() -> Self {
-        ToolEnv { renderer: Arc::new(Renderer::default()), allow_scripts: true }
+        ToolEnv { renderer: Arc::new(Renderer::default()), allow_scripts: true, language: std::env::var("FIREPIXEL_MCP_LANG").ok().filter(|l| !l.trim().is_empty()).unwrap_or_else(|| "en".into()) }
     }
 }
 
@@ -707,6 +710,11 @@ fn example_value(p: &fp_engine::ParamSpec) -> Value {
 
 /// Führt ein Werkzeug aus.
 pub fn call(s: &mut Session, env: &ToolEnv, name: &str, args: &Value) -> ToolOutput {
+    let lang = arg_str(args, "language").map(str::to_string).unwrap_or_else(|| env.language.clone());
+    fp_i18n::with_language(&lang, || call_inner(s, env, name, args))
+}
+
+fn call_inner(s: &mut Session, env: &ToolEnv, name: &str, args: &Value) -> ToolOutput {
     let empty = json!({});
     let args = if args.is_null() { &empty } else { args };
     match name {
@@ -726,7 +734,7 @@ pub fn call(s: &mut Session, env: &ToolEnv, name: &str, args: &Value) -> ToolOut
         "documents" => documents(s, args),
         "run_script" => run_script(s, env, args),
         "screenshot" | "ui_state" | "ui_action" | "ui_input" | "ui_find" => ToolOutput::error(crate::McpError::NoUi.to_string()),
-        other => ToolOutput::error(format!("unbekanntes Werkzeug „{other}“")),
+        other => ToolOutput::error(fp_i18n::tr!("err-mcp-unknown-tool", name = other)),
     }
 }
 
@@ -770,9 +778,10 @@ fn list_commands(s: &Session, a: &Value) -> ToolOutput {
         }
         if let Some(f) = &filter {
             let hay = format!(
-                "{} {} {} {} {}",
+                "{} {} {} {} {} {}",
                 i.name.to_lowercase(),
                 i.label.to_lowercase(),
+                command_label(&i).to_lowercase(),
                 i.description.clone().unwrap_or_default().to_lowercase(),
                 i.js.join(" ").to_lowercase(),
                 i.menu_path.join(" ").to_lowercase()
@@ -790,7 +799,7 @@ fn list_commands(s: &Session, a: &Value) -> ToolOutput {
             continue;
         }
         let params: Vec<String> = i.params.iter().map(|p| if p.required { format!("{}*", p.name) } else { p.name.clone() }).collect();
-        let mut o = json!({"name": i.name, "label": i.label, "params": params, "available": available});
+        let mut o = json!({"name": i.name, "label": command_label(&i), "params": params, "available": available});
         if !i.implemented {
             o["implemented"] = json!(false);
         }
@@ -799,13 +808,13 @@ fn list_commands(s: &Session, a: &Value) -> ToolOutput {
         }
         out.push(o);
     }
-    ToolOutput::json(json!({"count": total, "shown": out.len(), "commands": out, "legend": "params: * = Pflicht; available = im aktuellen Zustand ausführbar"}))
+    ToolOutput::json(json!({"count": total, "shown": out.len(), "commands": out, "legend": fp_i18n::t("msg-mcp-legend")}))
 }
 
 fn describe_command(s: &Session, a: &Value) -> ToolOutput {
-    let Some(name) = arg_str(a, "name") else { return ToolOutput::error("Parameter name fehlt") };
+    let Some(name) = arg_str(a, "name") else { return ToolOutput::error(fp_i18n::tr!("err-mcp-param-missing", param = "name")) };
     let Some(i) = resolve_command(s, name) else {
-        return ToolOutput::error(format!("unbekannter Befehl „{name}“; ähnlich: {}", suggestions(s, name).join(", ")));
+        return ToolOutput::error(fp_i18n::tr!("err-mcp-unknown-command", name = name, similar = suggestions(s, name).join(", ")));
     };
     let (enabled, checked) = s.command_state(&i.name);
     let reqs: Vec<Value> = i.requires.iter().map(|r| json!({"requirement": r, "met": s.requirement_met(r), "reason": r.reason()})).collect();
@@ -816,7 +825,7 @@ fn describe_command(s: &Session, a: &Value) -> ToolOutput {
     }
     let example = if ex.is_empty() { json!({"name": i.name}) } else { json!({"name": i.name, "params": ex}) };
     ToolOutput::json(json!({
-        "name": i.name, "label": i.label, "menu": i.menu_path, "description": i.description,
+        "name": i.name, "label": command_label(&i), "menu": i.menu_path, "description": command_description(&i),
         "implemented": i.implemented, "availableNow": enabled, "checked": checked,
         "requires": reqs, "params": i.params_schema(), "shortcuts": shortcuts,
         "js": i.js, "fwId": i.fw_id, "fwCmd": i.fw_cmd, "note": i.note,
@@ -836,7 +845,7 @@ fn run_command(s: &mut Session, a: &Value) -> ToolOutput {
             let Some(n) = st.get("name").and_then(|v| v.as_str()) else { return ToolOutput::error("jeder Schritt braucht name") };
             match resolve_command(s, n) {
                 Some(i) => names.push((i.name.clone(), st.get("params").cloned().unwrap_or(Value::Null))),
-                None => return ToolOutput::error(format!("unbekannter Befehl „{n}“; ähnlich: {}", suggestions(s, n).join(", "))),
+                None => return ToolOutput::error(fp_i18n::tr!("err-mcp-unknown-command", name = n, similar = suggestions(s, n).join(", "))),
             }
         }
         let r = s.run_group(&label, |s| {
@@ -853,7 +862,7 @@ fn run_command(s: &mut Session, a: &Value) -> ToolOutput {
     }
     let Some(name) = arg_str(a, "name") else { return ToolOutput::error("name oder steps angeben") };
     let Some(info) = resolve_command(s, name) else {
-        return ToolOutput::error(format!("unbekannter Befehl „{name}“; ähnlich: {}", suggestions(s, name).join(", ")));
+        return ToolOutput::error(fp_i18n::tr!("err-mcp-unknown-command", name = name, similar = suggestions(s, name).join(", ")));
     };
     let real = info.name.clone();
     let params = a.get("params").cloned().unwrap_or(Value::Null);
@@ -1301,4 +1310,40 @@ mod tests {
         let steps = run(&mut s, "run_command", json!({"steps": [{"name": "select.all"}, {"name": "modify.transform.flipHorizontal"}]}));
         assert!(!steps.is_error, "{}", steps.text());
     }
+}
+
+/// Menütext eines Befehls in der Sprache der Antwort (`cmd-…`, ohne Zugriffstaste); sonst der
+/// Text aus dem Register.
+pub fn command_label(i: &fp_engine::CommandInfo) -> String {
+    let k = fp_i18n::command_key(&i.name);
+    if fp_i18n::has(&k) { strip_amp(&fp_i18n::t(&k)) } else { i.label.clone() }
+}
+
+/// Beschreibung eines Befehls in der Sprache der Antwort (`cmd-….description`, sonst `.tooltip`).
+pub fn command_description(i: &fp_engine::CommandInfo) -> Option<String> {
+    let k = fp_i18n::command_key(&i.name);
+    for attr in ["description", "tooltip"] {
+        let key = format!("{k}.{attr}");
+        if fp_i18n::has(&key) {
+            return Some(fp_i18n::t(&key));
+        }
+    }
+    i.description.clone()
+}
+
+/// `&Datei` → `Datei`, `&&` → `&`.
+fn strip_amp(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    let mut it = s.chars().peekable();
+    while let Some(c) = it.next() {
+        if c == '&' {
+            if it.peek() == Some(&'&') {
+                out.push('&');
+                it.next();
+            }
+            continue;
+        }
+        out.push(c);
+    }
+    out.trim_end_matches("...").trim_end_matches('…').trim().to_string()
 }

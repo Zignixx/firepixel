@@ -81,6 +81,12 @@ verlangt bei jeder Anfrage das Token (`Authorization: Bearer …` oder `X-Firepi
 Vergleich in konstanter Zeit), prüft den `Host`-Header (Schutz vor DNS-Rebinding) und führt keine
 Shell-Befehle aus. Dateizugriffe gibt es nur über Öffnen, Speichern, Exportieren und JSF-`Files`.
 
+Sprache: Antworten, Befehlsbeschriftungen (`label`, `description` in `list_commands`/`describe_command`)
+und Fehlermeldungen kommen standardmäßig auf **Englisch** – unabhängig von der Sprache der Oberfläche,
+die dabei nicht umschaltet. Jedes Werkzeug nimmt optional `"language": "de"` (oder einen anderen
+Sprachcode); die Vorgabe des Servers lässt sich mit der Umgebungsvariablen `FIREPIXEL_MCP_LANG` ändern.
+Befehlsnamen (`file.open` …) und Parameter sind sprachunabhängig.
+
 Hinweis: Anfragen werden nebenläufig angenommen. Abhängige Aufrufe (z. B. `render` nach
 `new_document`) erst nach der Antwort des vorigen senden – MCP-Clients wie Claude tun das von selbst.
 

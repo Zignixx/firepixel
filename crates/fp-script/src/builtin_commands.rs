@@ -161,11 +161,59 @@ fw.selection = pick;\n",
     ("Warndialoge zurücksetzen.jsf", "fw.resetWarnings();\n"),
 ];
 
-/// Schreibt die mitgelieferten Befehle in `dir`, soweit sie dort noch fehlen; liefert die Zahl der
-/// neu geschriebenen Dateien.
+/// Englische Datei- und Ordnernamen (Menütexte) der mitgelieferten Befehle, gleiche Reihenfolge wie
+/// [`BUILTIN`]. Wie im Original liegen die Befehle in der Sprache der Installation im Befehlsordner.
+pub const BUILTIN_EN: &[&str] = &[
+    "Batch Commands/Select All.jsf",
+    "Batch Commands/Auto Levels Selection.jsf",
+    "Batch Commands/Blur Selection.jsf",
+    "Batch Commands/Sharpen Selection.jsf",
+    "Batch Commands/Invert Selection Color.jsf",
+    "Batch Commands/Rotate Document 90°.jsf",
+    "Batch Commands/Rotate Document 180°.jsf",
+    "Batch Commands/Rotate Document 270°.jsf",
+    "Batch Commands/Rotate Selection 90°.jsf",
+    "Batch Commands/Rotate Selection 180°.jsf",
+    "Batch Commands/Rotate Selection 270°.jsf",
+    "Creative/Add Drop Shadow.jsf",
+    "Creative/Convert to Grayscale.jsf",
+    "Creative/Convert to Sepia Tone.jsf",
+    "Creative/Add Picture Frame.jsf",
+    "Creative/Twist and Fade.jsf",
+    "Creative/Add Arrowheads.jsf",
+    "Document/Distribute to Layers.jsf",
+    "Document/Hide Other Layers.jsf",
+    "Document/Lock Other Layers.jsf",
+    "Document/Reverse States.jsf",
+    "Selection/Use Improved Vector Rendering.jsf",
+    "Selection/Use Legacy Vector Rendering.jsf",
+    "Text/Lowercase.jsf",
+    "Text/Uppercase.jsf",
+    "Text/Capitalize First Letter.jsf",
+    "Text/Placeholder Text.jsf",
+    "Text/Convert to Paths.jsf",
+    "Text/Convert to Pixels.jsf",
+    "Text/Set Width.jsf",
+    "Text/Toggle Fixed Width.jsf",
+    "Text/Flatten.jsf",
+    "Web/Select Blank ALT Text.jsf",
+    "Web/Set ALT Text.jsf",
+    "Resize Selected Objects.jsf",
+    "Reset Warning Dialogs.jsf",
+];
+
+/// Schreibt die mitgelieferten Befehle (deutsche Namen) in `dir`, soweit sie dort noch fehlen;
+/// liefert die Zahl der neu geschriebenen Dateien.
 pub fn install_into(dir: &Path) -> std::io::Result<usize> {
+    install_into_lang(dir, "de")
+}
+
+/// Wie [`install_into`] mit Datei-/Ordnernamen in der Sprache `lang` (`de`, sonst Englisch).
+pub fn install_into_lang(dir: &Path, lang: &str) -> std::io::Result<usize> {
+    let german = lang == "de" || lang.starts_with("de-");
     let mut n = 0;
-    for (rel, src) in BUILTIN {
+    for (i, (rel_de, src)) in BUILTIN.iter().enumerate() {
+        let rel = if german { rel_de } else { BUILTIN_EN.get(i).unwrap_or(rel_de) };
         let p: PathBuf = rel.split('/').fold(dir.to_path_buf(), |acc, part| acc.join(part));
         if p.exists() {
             continue;
@@ -180,14 +228,15 @@ pub fn install_into(dir: &Path) -> std::io::Result<usize> {
 }
 
 /// Wie [`install_into`] für den Befehlsordner der Anwendung. Einmal je Ordner: eine Markierungsdatei
-/// verhindert, dass gelöschte Befehle beim nächsten Start wiederkommen.
+/// verhindert, dass gelöschte Befehle beim nächsten Start wiederkommen. Die Namen folgen der
+/// aktuellen Sprache (`fp_i18n::current_language`) – deshalb erst nach der Sprachwahl aufrufen.
 pub fn install_builtin_commands() -> std::io::Result<usize> {
     let dir = fp_engine::commands::misc::commands_dir();
     let marker = dir.join(".firepixel-befehle");
     if marker.exists() {
         return Ok(0);
     }
-    let n = install_into(&dir)?;
+    let n = install_into_lang(&dir, &fp_i18n::current_language())?;
     std::fs::write(marker, env!("CARGO_PKG_VERSION"))?;
     Ok(n)
 }

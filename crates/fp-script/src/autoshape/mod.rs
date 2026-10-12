@@ -49,8 +49,8 @@ impl Engine {
         let mut ctx = Context::default();
         ctx.runtime_limits_mut().set_loop_iteration_limit(20_000_000);
         ctx.runtime_limits_mut().set_recursion_limit(1024);
-        for (what, src) in [("Laufzeit", PRELUDE), ("Hilfen", HELPERS)] {
-            ctx.eval(Source::from_bytes(src)).map_err(|e| fail(format!("automatische Formen ({what}): {e}")))?;
+        for (what, src) in [("prelude", PRELUDE), ("helpers", HELPERS)] {
+            ctx.eval(Source::from_bytes(src)).map_err(|e| fail(fp_i18n::tr!("err-script-autoshape-runtime", part = what, error = e.to_string())))?;
         }
         // Kompatibilität mit eingebetteten Skripten des Originals: dessen Programmname als Alias
         if let Some(n) = fp_color::install::original_app_name() {
@@ -63,17 +63,17 @@ impl Engine {
     /// Führt ein Ereignis aus und liefert den neuen Zustand (`__dump()`).
     fn event(&mut self, state: &Value) -> R<Value> {
         let begin = format!("__begin({});", state);
-        self.ctx.eval(Source::from_bytes(&begin)).map_err(|e| fail(format!("automatische Form: {e}")))?;
+        self.ctx.eval(Source::from_bytes(&begin)).map_err(|e| fail(fp_i18n::tr!("err-script-autoshape", error = e.to_string())))?;
         let r = match &self.compiled {
             Some(s) => s.evaluate(&mut self.ctx),
             None => self.ctx.eval(Source::from_bytes(&self.script)),
         };
         if let Err(e) = r {
-            return Err(fail(format!("Skript der automatischen Form ({}): {e}", state["operation"].as_str().unwrap_or(""))));
+            return Err(fail(fp_i18n::tr!("err-script-autoshape-script", operation = state["operation"].as_str().unwrap_or("").to_string(), error = e.to_string())));
         }
-        let out = self.ctx.eval(Source::from_bytes("__dump()")).map_err(|e| fail(format!("automatische Form: {e}")))?;
+        let out = self.ctx.eval(Source::from_bytes("__dump()")).map_err(|e| fail(fp_i18n::tr!("err-script-autoshape", error = e.to_string())))?;
         let text = out.to_string(&mut self.ctx).map(|s| s.to_std_string_escaped()).map_err(|e| fail(e.to_string()))?;
-        serde_json::from_str(&text).map_err(|e| fail(format!("automatische Form: {e}")))
+        serde_json::from_str(&text).map_err(|e| fail(fp_i18n::tr!("err-script-autoshape", error = e.to_string())))
     }
 }
 
@@ -555,8 +555,8 @@ fn replace_shape(session: &mut Session, page: usize, new: Element) -> R<()> {
 
 /// Fügt eine Form ein (`rect` = aufgezogener Rahmen, sonst `at`). Liefert `{id}` und wählt sie aus.
 pub fn insert(session: &mut Session, p: &Value) -> R<Value> {
-    let name = p.get("shape").or_else(|| p.get("name")).and_then(Value::as_str).ok_or_else(|| fail("shape fehlt (Name der automatischen Form)"))?;
-    let def = find_shape(name).ok_or_else(|| fail(format!("unbekannte automatische Form „{name}“ – autoShape.list zeigt alle")))?;
+    let name = p.get("shape").or_else(|| p.get("name")).and_then(Value::as_str).ok_or_else(|| fail(fp_i18n::t("err-script-shape-missing")))?;
+    let def = find_shape(name).ok_or_else(|| fail(fp_i18n::tr!("err-script-shape-unknown", name = name)))?;
     let rect = p.get("rect").and_then(fp_engine::command::parse_rect).filter(|r| r.width() >= 2.0 || r.height() >= 2.0);
     let at = p.get("at").and_then(point_of).or_else(|| rect.map(|r| Point::new(r.left, r.top))).unwrap_or(Point::new(0.0, 0.0));
     let mods = mods_of(p);
@@ -588,25 +588,25 @@ pub fn insert(session: &mut Session, p: &Value) -> R<Value> {
     let doc = d.doc_mut();
     let g = build_group(doc, tpl, None, def.en, def.source, &elem, Matrix3::IDENTITY);
     let id = g.id;
-    docops::insert_element(doc, page, frame, layer, 0, Arc::new(g)).ok_or_else(|| fail("keine Ebene zum Einfügen (Ebene gesperrt oder Webebene aktiv?)"))?;
+    docops::insert_element(doc, page, frame, layer, 0, Arc::new(g)).ok_or_else(|| fail(fp_i18n::t("err-script-no-layer")))?;
     d.selection.elements = vec![id];
     Ok(json!({"id": id.0, "shape": def.en}))
 }
 
 /// Steuerpunkt `index` von `from` nach `to` ziehen (optional über Zwischenpunkte `points`).
 pub fn drag_control_point(session: &mut Session, p: &Value) -> R<Value> {
-    let id = ElementId(p.get("id").and_then(Value::as_u64).ok_or_else(|| fail("id fehlt"))?);
-    let index = p.get("index").and_then(Value::as_i64).ok_or_else(|| fail("index fehlt"))?;
+    let id = ElementId(p.get("id").and_then(Value::as_u64).ok_or_else(|| fail(fp_i18n::tr!("err-script-param-missing", param = "id")))?);
+    let index = p.get("index").and_then(Value::as_i64).ok_or_else(|| fail(fp_i18n::tr!("err-script-param-missing", param = "index")))?;
     let (e, page) = shape_of(session, id)?;
-    let mut elem = elem_json(&e).ok_or_else(|| fail("keine automatische Form"))?;
+    let mut elem = elem_json(&e).ok_or_else(|| fail(fp_i18n::t("err-script-not-autoshape")))?;
     let ncp = elem["controlPoints"].as_array().map(|a| a.len()).unwrap_or(0) as i64;
     if index < 0 || index >= ncp {
-        return Err(fail(format!("Steuerpunkt {index} gibt es nicht (Form hat {ncp})")));
+        return Err(fail(fp_i18n::tr!("err-script-control-point", index = index, count = ncp)));
     }
     let cp = &elem["controlPoints"][index as usize];
     let cp_pos = Point::new(cp["x"].as_f64().unwrap_or(0.0) as f32, cp["y"].as_f64().unwrap_or(0.0) as f32);
     let from = p.get("from").and_then(point_of).unwrap_or(cp_pos);
-    let to = p.get("to").and_then(point_of).ok_or_else(|| fail("to fehlt"))?;
+    let to = p.get("to").and_then(point_of).ok_or_else(|| fail(fp_i18n::tr!("err-script-param-missing", param = "to")))?;
     let mut path: Vec<Point> = p.get("points").and_then(Value::as_array).map(|a| a.iter().filter_map(point_of).collect()).unwrap_or_default();
     // höchstens 24 Zwischenschritte (das Ergebnis hängt nur vom letzten Punkt ab, die Zwischen-
     // schritte sind für Skripte da, die Mausbewegungen mitzählen)
@@ -661,7 +661,7 @@ fn finish(session: &mut Session, e: &Element, page: usize, elem: &Value) -> R<()
 /// Ereignis ohne Maus (Neuzeichnen nach Parameteränderung).
 fn redraw_with(session: &mut Session, id: ElementId, change: impl FnOnce(&mut Value)) -> R<Value> {
     let (e, page) = shape_of(session, id)?;
-    let mut elem = elem_json(&e).ok_or_else(|| fail("keine automatische Form"))?;
+    let mut elem = elem_json(&e).ok_or_else(|| fail(fp_i18n::t("err-script-not-autoshape")))?;
     change(&mut elem);
     let defaults = default_attrs_json(session, Some(&e));
     let size = doc_size(session);
@@ -679,8 +679,8 @@ fn redraw_with(session: &mut Session, id: ElementId, change: impl FnOnce(&mut Va
 
 /// Parameter (customData) setzen und neu zeichnen.
 pub fn set_params(session: &mut Session, p: &Value) -> R<Value> {
-    let id = ElementId(p.get("id").and_then(Value::as_u64).ok_or_else(|| fail("id fehlt"))?);
-    let params = p.get("params").and_then(Value::as_object).cloned().ok_or_else(|| fail("params fehlt ({schlüssel: wert})"))?;
+    let id = ElementId(p.get("id").and_then(Value::as_u64).ok_or_else(|| fail(fp_i18n::tr!("err-script-param-missing", param = "id")))?);
+    let params = p.get("params").and_then(Value::as_object).cloned().ok_or_else(|| fail(fp_i18n::t("err-script-params-missing")))?;
     redraw_with(session, id, |elem| {
         for (k, v) in params {
             elem["customData"][k] = v;
@@ -690,7 +690,7 @@ pub fn set_params(session: &mut Session, p: &Value) -> R<Value> {
 
 /// Beschreibung für Inspektor/Bedienfeld: Parameter mit Werten und Steuerpunkte.
 pub fn describe(session: &Session, p: &Value) -> R<Value> {
-    let id = ElementId(p.get("id").and_then(Value::as_u64).ok_or_else(|| fail("id fehlt"))?);
+    let id = ElementId(p.get("id").and_then(Value::as_u64).ok_or_else(|| fail(fp_i18n::tr!("err-script-param-missing", param = "id")))?);
     let (e, _) = shape_of(session, id)?;
     let elem = elem_json(&e).unwrap_or(Value::Null);
     let name = match &e.kind {
@@ -740,11 +740,11 @@ pub fn op(session: &mut Session, p: &Value) -> R<Value> {
         "dragControlPoint" => drag_control_point(session, p),
         "setParams" => set_params(session, p),
         "redraw" => {
-            let id = ElementId(p.get("id").and_then(Value::as_u64).ok_or_else(|| fail("id fehlt"))?);
+            let id = ElementId(p.get("id").and_then(Value::as_u64).ok_or_else(|| fail(fp_i18n::tr!("err-script-param-missing", param = "id")))?);
             redraw_with(session, id, |_| {})
         }
         "describe" => describe(session, p),
-        other => Err(fail(format!("unbekannter Vorgang „{other}“ (list, insert, dragControlPoint, setParams, redraw, describe)"))),
+        other => Err(fail(fp_i18n::tr!("err-script-op-unknown", op = other, ops = "list, insert, dragControlPoint, setParams, redraw, describe"))),
     }
 }
 

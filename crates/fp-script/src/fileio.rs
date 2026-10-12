@@ -50,7 +50,7 @@ pub fn open_document(s: &mut Session, path: &Path) -> Result<DocId, String> {
     }
     #[cfg(not(feature = "formats"))]
     {
-        Err(format!("Format .{ext} wird ohne fp-io nicht gelesen"))
+        Err(fp_i18n::tr!("err-script-format-needs-io", ext = ext.to_string()))
     }
 }
 
@@ -72,7 +72,7 @@ pub fn read_pixels(path: &Path) -> Result<(u32, u32, Vec<u8>), String> {
     }
     #[cfg(not(feature = "formats"))]
     {
-        Err(format!("{}: nur PNG ohne fp-io", path.display()))
+        Err(fp_i18n::tr!("err-script-png-only", path = path.display().to_string()))
     }
 }
 
@@ -154,7 +154,7 @@ pub fn encode(doc: &fp_model::Document, page: usize, frame: usize, spec: &Export
     if spec.ext == "png" && spec.png_bits == 32 {
         let img = renderer.render_page(doc, page, frame).image;
         if img.is_empty() {
-            return Err("Seite ist leer oder fehlt".into());
+            return Err(fp_i18n::t("err-script-page-empty"));
         }
         return png32(&img);
     }
@@ -174,7 +174,7 @@ pub fn encode(doc: &fp_model::Document, page: usize, frame: usize, spec: &Export
             "qoi" => ExportFormat::Qoi,
             "ico" => ExportFormat::Ico,
             "apng" => ExportFormat::Apng,
-            other => return Err(format!("Exportformat .{other} wird nicht unterstützt")),
+            other => return Err(fp_i18n::tr!("err-script-export-unsupported", ext = other.to_string())),
         };
         s.color_mode = match (s.format, spec.png_bits) {
             (ExportFormat::Png, 8) | (ExportFormat::Gif | ExportFormat::AnimatedGif, _) => ColorMode::Indexed,
@@ -205,7 +205,7 @@ pub fn encode(doc: &fp_model::Document, page: usize, frame: usize, spec: &Export
     #[cfg(not(feature = "formats"))]
     {
         let _ = (renderer, frame);
-        Err(format!("Exportformat .{} braucht fp-export (Feature „formats“)", spec.ext))
+        Err(fp_i18n::tr!("err-script-export-needs-feature", ext = spec.ext.to_string()))
     }
 }
 
