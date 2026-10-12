@@ -29,58 +29,142 @@ pub struct PdfPage<'a> {
     pub height_pt: f64,
 }
 
+/// Bildkomprimierung im PDF (re\18 §4.1 „Komprimierung:“).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+pub enum PdfCompression {
+    None,
+    #[default]
+    Zip,
+    Jpeg,
+    /// „JPEG 2000“: Firepixel hat keinen JPEG-2000-Kodierer und schreibt JPEG (DCT) in der
+    /// gewählten Qualität.
+    Jpeg2000,
+}
+
+/// PDF-Exportoptionen (re\18 §4.1). [`Default`] = bisheriges Verhalten des Befehls `file.export`
+/// (PDF 1.4, ZIP, ohne Kennwort).
+#[derive(Clone, Debug, PartialEq)]
+pub struct PdfOptions {
+    /// PDF-Version 3…6 (1.3 … 1.6).
+    pub minor_version: u8,
+    pub compression: PdfCompression,
+    /// JPEG-Qualität 1…100.
+    pub jpeg_quality: i32,
+    pub grayscale: bool,
+    /// Anschnitt in Punkt rund um die Seite (`/MediaBox` wächst, `/TrimBox` = Seite).
+    pub bleed_pt: f64,
+    /// Kennwort zum Öffnen (leer = ohne).
+    pub open_password: String,
+    /// Kennwort zum Einschränken von Aufgaben mit den erlaubten Aufgaben.
+    pub permissions_password: Option<(String, crate::pdf_crypt::PdfPermissions)>,
+}
+
+impl Default for PdfOptions {
+    fn default() -> Self {
+        PdfOptions { minor_version: 4, compression: PdfCompression::Zip, jpeg_quality: 90, grayscale: false, bleed_pt: 0.0, open_password: String::new(), permissions_password: None }
+    }
+}
+
 /// PDF 1.4 mit je einem Bild pro Seite.
 pub fn write_pdf(pages: &[PdfPage], title: &str) -> Result<Vec<u8>> {
+    write_pdf_with(pages, title, &PdfOptions::default())
+}
+
+/// PDF mit je einem Bild pro Seite nach den Exportoptionen (Version, Komprimierung, Qualität,
+/// Graustufen, Anschnitt, Kennwörter).
+pub fn write_pdf_with(pages: &[PdfPage], title: &str, opt: &PdfOptions) -> Result<Vec<u8>> {
     if pages.is_empty() {
         return Err(ExportError::Encode(fp_i18n::t("err-export-d-pdf-no-page")));
     }
+    let minor = opt.minor_version.clamp(3, 6);
+    // Weiche Masken (SMask) gibt es erst ab PDF 1.4: bei 1.3 über Weiß gemischt
+    let smask_ok = minor >= 4;
+    let protect = !opt.open_password.is_empty() || opt.permissions_password.as_ref().is_some_and(|p| !p.0.is_empty());
+    let sec = protect.then(|| {
+        let owner = opt.permissions_password.as_ref().filter(|p| !p.0.is_empty()).map(|(pw, perm)| (pw.as_str(), *perm));
+        crate::pdf_crypt::PdfSecurity::new(&opt.open_password, owner, minor >= 4, format!("{title}|{}|{}", pages.len(), pages[0].image.width()).as_bytes())
+    });
+    let stream = |num: usize, dict: &str, data: Vec<u8>| -> Vec<u8> {
+        let data = match &sec {
+            Some(s) => s.encrypt(num, &data),
+            None => data,
+        };
+        let mut o = format!("<< {dict} /Length {} >>\nstream\n", data.len()).into_bytes();
+        o.extend_from_slice(&data);
+        o.extend_from_slice(b"\nendstream");
+        o
+    };
+    let flate = opt.compression != PdfCompression::None;
     let mut objs: Vec<Vec<u8>> = Vec::new();
-    // 1 Katalog, 2 Seitenbaum, 3 Info, dann je Seite: Seite, Inhalt, Bild, Maske
+    // 1 Katalog, 2 Seitenbaum, 3 Info, dann je Seite: Seite, Inhalt, Bild, Maske; zuletzt Encrypt
     let n = pages.len();
     let page_obj = |i: usize| 4 + i * 4;
     let kids: Vec<String> = (0..n).map(|i| format!("{} 0 R", page_obj(i))).collect();
     objs.push(b"<< /Type /Catalog /Pages 2 0 R >>".to_vec());
     objs.push(format!("<< /Type /Pages /Kids [{}] /Count {n} >>", kids.join(" ")).into_bytes());
     let t: String = title.chars().filter(|c| c.is_ascii() && *c != '(' && *c != ')' && *c != '\\').collect();
-    objs.push(format!("<< /Title ({t}) /Producer (Firepixel) >>").into_bytes());
+    let info = match &sec {
+        Some(s) => {
+            let enc = |num: usize, txt: &str| s.encrypt(num, txt.as_bytes()).iter().map(|b| format!("{b:02X}")).collect::<String>();
+            format!("<< /Title <{}> /Producer <{}> >>", enc(3, &t), enc(3, "Firepixel"))
+        }
+        None => format!("<< /Title ({t}) /Producer (Firepixel) >>"),
+    };
+    objs.push(info.into_bytes());
+    let b = opt.bleed_pt.max(0.0);
     for (i, p) in pages.iter().enumerate() {
         let (w, h) = (p.image.width(), p.image.height());
         if w == 0 || h == 0 {
             return Err(ExportError::BadSize(w, h));
         }
         let base = page_obj(i);
-        let content = format!("q {:.4} 0 0 {:.4} 0 0 cm /Im{i} Do Q", p.width_pt, p.height_pt);
-        objs.push(
-            format!(
-                "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {:.4} {:.4}] /Resources << /XObject << /Im{i} {} 0 R >> >> /Contents {} 0 R >>",
-                p.width_pt,
-                p.height_pt,
-                base + 2,
-                base + 1
-            )
-            .into_bytes(),
-        );
-        let cdata = deflate(content.as_bytes())?;
-        let mut o = format!("<< /Length {} /Filter /FlateDecode >>\nstream\n", cdata.len()).into_bytes();
-        o.extend_from_slice(&cdata);
-        o.extend_from_slice(b"\nendstream");
-        objs.push(o);
-        let rgb: Vec<u8> = p.image.data().iter().flat_map(|px| [px[0], px[1], px[2]]).collect();
+        let content = format!("q {:.4} 0 0 {:.4} {b:.4} {b:.4} cm /Im{i} Do Q", p.width_pt, p.height_pt);
+        let (mw, mh) = (p.width_pt + 2.0 * b, p.height_pt + 2.0 * b);
+        let boxes = if b > 0.0 { format!(" /BleedBox [0 0 {mw:.4} {mh:.4}] /TrimBox [{b:.4} {b:.4} {:.4} {:.4}]", b + p.width_pt, b + p.height_pt) } else { String::new() };
+        objs.push(format!("<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {mw:.4} {mh:.4}]{boxes} /Resources << /XObject << /Im{i} {} 0 R >> >> /Contents {} 0 R >>", base + 2, base + 1).into_bytes());
+        objs.push(if flate { stream(base + 1, "/Filter /FlateDecode", deflate(content.as_bytes())?) } else { stream(base + 1, "", content.into_bytes()) });
         let alpha: Vec<u8> = p.image.data().iter().map(|px| px[3]).collect();
         let has_alpha = alpha.iter().any(|&a| a != 255);
-        let idata = deflate(&rgb)?;
-        let smask = if has_alpha { format!(" /SMask {} 0 R", base + 3) } else { String::new() };
-        let mut o = format!("<< /Type /XObject /Subtype /Image /Width {w} /Height {h} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /FlateDecode{smask} /Length {} >>\nstream\n", idata.len()).into_bytes();
-        o.extend_from_slice(&idata);
-        o.extend_from_slice(b"\nendstream");
-        objs.push(o);
-        let adata = deflate(if has_alpha { &alpha } else { &[] })?;
-        let mut o = format!("<< /Type /XObject /Subtype /Image /Width {w} /Height {h} /ColorSpace /DeviceGray /BitsPerComponent 8 /Filter /FlateDecode /Length {} >>\nstream\n", adata.len()).into_bytes();
-        o.extend_from_slice(&adata);
-        o.extend_from_slice(b"\nendstream");
-        objs.push(o);
+        let use_smask = has_alpha && smask_ok;
+        // Farbwerte: ohne SMask über Weiß gemischt; Graustufen nach Rec. 601
+        let rgb_of = |px: &[u8; 4]| -> [u8; 3] {
+            let mix = |c: u8| if use_smask { c } else { ((c as u32 * px[3] as u32 + 255 * (255 - px[3] as u32)) / 255) as u8 };
+            let (r, g, bb) = (mix(px[0]), mix(px[1]), mix(px[2]));
+            if opt.grayscale {
+                let y = ((r as u32 * 299 + g as u32 * 587 + bb as u32 * 114) / 1000) as u8;
+                [y, y, y]
+            } else {
+                [r, g, bb]
+            }
+        };
+        let smask = if use_smask { format!(" /SMask {} 0 R", base + 3) } else { String::new() };
+        let cs = if opt.grayscale { "/DeviceGray" } else { "/DeviceRGB" };
+        let img = match opt.compression {
+            PdfCompression::Jpeg | PdfCompression::Jpeg2000 => {
+                let px: Vec<u32> = p.image.data().iter().map(|q| {
+                    let c = rgb_of(q);
+                    crate::px::argb(255, c[0] as u32, c[1] as u32, c[2] as u32)
+                }).collect();
+                let params = crate::jpeg::JpegParams { quality: opt.jpeg_quality.clamp(1, 100), optimize: true, ..crate::jpeg::JpegParams::default() };
+                let jpg = crate::jpeg::encode_jpeg(&px, w, h, &params, &crate::jpeg_tables::FwJpegTables::ijg_fallback())?;
+                stream(base + 2, &format!("/Type /XObject /Subtype /Image /Width {w} /Height {h} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode{smask}"), jpg)
+            }
+            c => {
+                let data: Vec<u8> = if opt.grayscale { p.image.data().iter().map(|q| rgb_of(q)[0]).collect() } else { p.image.data().iter().flat_map(|q| rgb_of(q)).collect() };
+                let (filter, data) = if c == PdfCompression::None { ("", data) } else { (" /Filter /FlateDecode", deflate(&data)?) };
+                stream(base + 2, &format!("/Type /XObject /Subtype /Image /Width {w} /Height {h} /ColorSpace {cs} /BitsPerComponent 8{filter}{smask}"), data)
+            }
+        };
+        objs.push(img);
+        let adata = if use_smask { alpha } else { Vec::new() };
+        let (filter, adata) = if flate { (" /Filter /FlateDecode", deflate(&adata)?) } else { ("", adata) };
+        objs.push(stream(base + 3, &format!("/Type /XObject /Subtype /Image /Width {w} /Height {h} /ColorSpace /DeviceGray /BitsPerComponent 8{filter}"), adata));
     }
-    let mut out = b"%PDF-1.4\n%\xE2\xE3\xCF\xD3\n".to_vec();
+    if let Some(s) = &sec {
+        objs.push(s.dict().into_bytes());
+    }
+    let mut out = format!("%PDF-1.{minor}\n").into_bytes();
+    out.extend_from_slice(b"%\xE2\xE3\xCF\xD3\n");
     let mut offsets = Vec::with_capacity(objs.len());
     for (i, o) in objs.iter().enumerate() {
         offsets.push(out.len());
@@ -93,7 +177,11 @@ pub fn write_pdf(pages: &[PdfPage], title: &str) -> Result<Vec<u8>> {
     for off in offsets {
         out.extend_from_slice(format!("{off:010} 00000 n \n").as_bytes());
     }
-    out.extend_from_slice(format!("trailer\n<< /Size {} /Root 1 0 R /Info 3 0 R >>\nstartxref\n{xref}\n%%EOF\n", objs.len() + 1).as_bytes());
+    let extra = match &sec {
+        Some(s) => format!(" /Encrypt {} 0 R /ID [<{id}> <{id}>]", objs.len(), id = s.id_hex()),
+        None => String::new(),
+    };
+    out.extend_from_slice(format!("trailer\n<< /Size {} /Root 1 0 R /Info 3 0 R{extra} >>\nstartxref\n{xref}\n%%EOF\n", objs.len() + 1).as_bytes());
     Ok(out)
 }
 

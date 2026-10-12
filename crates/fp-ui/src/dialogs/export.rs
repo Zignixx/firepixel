@@ -3,17 +3,19 @@
 //! Endung je Art (§1.4), den gemessenen Dateinamen (§3, Schreiber in `fp_export::doc_export`), der
 //! Rückfrage bei vorhandenen Dateien (§5.1) und dem Merken von Ordner und Art (§7). Kein
 //! Verlaufsschritt (§5.3).
-//! - „Optionen…“ öffnet vorerst die Bildvorschau (eigene Optionen-Dialoge: Paket E2).
+//! - „Optionen…“ öffnet je Art den eigenen Optionen-Dialog ([`super::export_options`], Paket E2);
+//!   bei den HTML-Arten vorerst die Bildvorschau.
 //! - Mit Exportbereich (Werkzeug „Exportbereich“) bleibt der kurze Ablauf mit Speichern-Dialog.
 //! - **Bildvorschau**: eigenes Modul [`super::image_preview`] (hier nur die alten Namen).
 
+use super::export_options::{self, FilesOpts, OptionsDialog, OptionsTarget, PdfOpts, PsdOpts, SpriteOpts};
 use super::{dialog_frame, push_button, refs, t, DialogClose};
 use crate::app_state::{Action, AppState};
 use crate::inspector::fields;
 use crate::panels::optimize::{self, ExportRenderer};
 use crate::theme::Theme;
 use egui::{pos2, vec2, Align2, Rect};
-use fp_export::doc_export::{export_document, DocExportOptions, ExportFile, FilesStyle, PageScope, PanelOptions, SliceMode};
+use fp_export::doc_export::{export_document_noted, DocExportOptions, ExportFile, ExportNotes, FilesStyle, PageScope, PanelOptions, SliceMode};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -79,6 +81,17 @@ pub struct ExportDialog {
     /// Exportbereich (Werkzeug „Exportbereich“, Dokumentkoordinaten): exportiert nur diesen
     /// Ausschnitt über `file.exportArea`.
     pub area: Option<fp_geom::Rect>,
+    /// Optionen je Art (re\18 §4): PDF, CSS-Sprites, Ebenen/Status/Seiten in Dateien, Photoshop.
+    pub pdf: PdfOpts,
+    pub sprite: SpriteOpts,
+    pub files_layers: FilesOpts,
+    pub files_frames: FilesOpts,
+    pub files_pages: FilesOpts,
+    pub psd: PsdOpts,
+    /// Offener Optionen-Dialog (Arbeitskopie).
+    pub options: Option<OptionsDialog>,
+    /// Hinweis nach dem Export (geänderte Selektornamen, §4.2), mit OK zu schließen.
+    pub notice: Option<String>,
 }
 
 /// Sichtbarkeit eines Bedienelements im Unterpaneel.
@@ -252,6 +265,7 @@ impl ExportDialog {
             .trim_start_matches('.')
             .to_string();
         let page_ext = fp_export::doc_export::page_settings(&d.doc, d.page).format.extension().to_string();
+        let sprite = SpriteOpts::load(st, &html);
         let images_dir = html.images_dir.clone().filter(|s| !s.trim().is_empty()).map(|s| if s.ends_with('/') { s } else { format!("{s}/") }).unwrap_or_else(|| default_images_dir(st));
         Some(ExportDialog {
             style: style_index(kind),
@@ -266,7 +280,8 @@ impl ExportDialog {
                 1
             },
             pages: 1,
-            pdf_pages: 0,
+            // „Seiten:“ und „PDF nach Export anzeigen“ der PDF-Art aus den Voreinstellungen (§2.10)
+            pdf_pages: (st.session.prefs.get_int("PDFExport_PagesToExport", 1) - 1).clamp(0, 2) as usize,
             selected_slices_only: false,
             current_frame_only: false,
             include_unsliced: !html.discard_unspecified_slices.unwrap_or(false),
@@ -274,7 +289,7 @@ impl ExportDialog {
             images_dir,
             trim: true,
             pages_as: 0,
-            open_pdf: true,
+            open_pdf: st.session.prefs.get_bool("PDFExport_OpenPDFAfterExport", true),
             has_slices,
             slice_selected,
             html_ext: if html_ext.is_empty() { "htm".into() } else { html_ext },
@@ -282,6 +297,14 @@ impl ExportDialog {
             confirm: None,
             message: None,
             area: None,
+            pdf: PdfOpts::from_prefs(st),
+            sprite,
+            files_layers: FilesOpts::from_prefs(st, FilesStyle::LayersToFiles),
+            files_frames: FilesOpts::from_prefs(st, FilesStyle::FramesToFiles),
+            files_pages: FilesOpts::from_prefs(st, FilesStyle::PagesToFiles),
+            psd: PsdOpts::from_prefs(st),
+            options: None,
+            notice: None,
         })
     }
 
@@ -297,7 +320,69 @@ impl ExportDialog {
             FilesStyle::HtmlAndImages | FilesStyle::CssAndImages => self.html_ext.clone(),
             FilesStyle::Psd => "psd".into(),
             FilesStyle::Svg => "svg".into(),
+            FilesStyle::CssSprites => self.sprite.ext(),
+            FilesStyle::LayersToFiles | FilesStyle::FramesToFiles | FilesStyle::PagesToFiles => self.files_opts(self.kind()).ext().unwrap_or_else(|| self.page_ext.clone()),
             _ => self.page_ext.clone(),
+        }
+    }
+
+    /// Präfix/Suffix/Dateityp der Art (Ebenen/Status/Seiten in Dateien).
+    pub fn files_opts(&self, kind: FilesStyle) -> &FilesOpts {
+        match kind {
+            FilesStyle::LayersToFiles => &self.files_layers,
+            FilesStyle::FramesToFiles => &self.files_frames,
+            _ => &self.files_pages,
+        }
+    }
+
+    fn files_opts_mut(&mut self, kind: FilesStyle) -> &mut FilesOpts {
+        match kind {
+            FilesStyle::LayersToFiles => &mut self.files_layers,
+            FilesStyle::FramesToFiles => &mut self.files_frames,
+            _ => &mut self.files_pages,
+        }
+    }
+
+    /// „Optionen…“: öffnet den Optionen-Dialog der Art mit einer Arbeitskopie (§2, §4) und
+    /// liefert das Ziel. Bei den HTML-Arten öffnet der Aufrufer die Bildvorschau.
+    pub fn open_options(&mut self) -> OptionsTarget {
+        let kind = self.kind();
+        let target = export_options::options_target(kind);
+        self.options = match target {
+            OptionsTarget::Pdf => Some(OptionsDialog::Pdf(self.pdf.clone())),
+            OptionsTarget::Sprites => Some(OptionsDialog::Sprites(self.sprite.clone())),
+            OptionsTarget::Files => Some(OptionsDialog::Files(kind, self.files_opts(kind).clone())),
+            OptionsTarget::Psd => Some(OptionsDialog::Psd(self.psd.clone())),
+            OptionsTarget::ImagePreview | OptionsTarget::None => None,
+        };
+        target
+    }
+
+    /// Schließt den Optionen-Dialog: OK übernimmt die Werte (PDF, Photoshop und Ebenen/Status/
+    /// Seiten zusätzlich in die Voreinstellungen), Abbrechen verwirft sie.
+    pub fn close_options(&mut self, st: &mut AppState, ok: bool) {
+        let Some(o) = self.options.take() else { return };
+        if !ok {
+            return;
+        }
+        match o {
+            OptionsDialog::Pdf(v) => {
+                v.to_prefs(st);
+                self.pdf = v;
+            }
+            OptionsDialog::Sprites(v) => self.sprite = v,
+            OptionsDialog::Files(kind, v) => {
+                v.to_prefs(st, kind);
+                *self.files_opts_mut(kind) = v;
+            }
+            OptionsDialog::Psd(v) => {
+                v.to_prefs(st);
+                self.psd = v;
+            }
+        }
+        // die Endung im Namen folgt einem geänderten Dateityp bzw. Sprite-Format
+        if !self.file_name.trim().is_empty() {
+            self.file_name = with_ext(&self.file_name, &self.ext());
         }
     }
 
@@ -349,7 +434,14 @@ impl ExportDialog {
             },
             html_ext: self.html_ext.clone(),
             selected_elements: d.map(|x| x.selection.elements.clone()).unwrap_or_default(),
-            sprite_padding: 10,
+            sprite: self.sprite.writer(),
+            sprite_settings: self.sprite.settings(),
+            file_prefix: FilesOpts::affix(self.files_opts(k).add_prefix, self.files_opts(k).prefix),
+            file_suffix: FilesOpts::affix(self.files_opts(k).add_suffix, self.files_opts(k).suffix),
+            file_settings: self.files_opts(k).settings(),
+            doc_name: d.map(|x| file_stem(&x.path.as_ref().and_then(|p| p.file_name()).map(|n| n.to_string_lossy().to_string()).unwrap_or_else(|| x.title.clone()))).unwrap_or_default(),
+            pdf: self.pdf.writer(d.map(|x| fp_export::doc_export::page_context(&x.doc, x.page).resolution_dpi).unwrap_or(72.0)),
+            psd_flatten: self.psd.objects == 1,
         }
     }
 }
@@ -378,6 +470,11 @@ fn selected_slice_ids(st: &AppState) -> impl Iterator<Item = fp_model::ElementId
 
 /// Erzeugt die Dateien des Exports (Pfade relativ zum Ordner), ohne zu schreiben.
 pub fn export_files(st: &AppState, dlg: &ExportDialog) -> Result<Vec<ExportFile>, String> {
+    export_files_noted(st, dlg).map(|r| r.0)
+}
+
+/// Wie [`export_files`], dazu die Hinweise des Schreibers (geänderte Selektornamen).
+pub fn export_files_noted(st: &AppState, dlg: &ExportDialog) -> Result<(Vec<ExportFile>, ExportNotes), String> {
     let d = st.session.active().ok_or_else(|| t("dlg-export-no-document"))?;
     let stem = file_stem(&dlg.file_name);
     let mut o = DocExportOptions::new(&stem);
@@ -387,15 +484,16 @@ pub fn export_files(st: &AppState, dlg: &ExportDialog) -> Result<Vec<ExportFile>
     o.panel = Some(dlg.panel_options(st));
     let r = ExportRenderer { normal: Arc::clone(&st.renderer) };
     if dlg.kind() == FilesStyle::PagesToFiles && dlg.pages_as == 1 {
-        return pages_as_fwpng(&st.session, &d.doc, d.page, &stem, o.panel.as_ref().map(|p| p.pages).unwrap_or_default());
+        return pages_as_fwpng(&st.session, &d.doc, d.page, &stem, o.panel.as_ref().map(|p| p.pages).unwrap_or_default()).map(|f| (f, ExportNotes::default()));
     }
-    let mut files = export_document(&d.doc, &r, &o, &fp_export::export::EncodeExtras::default()).map_err(|e| e.to_string())?;
+    let mut notes = ExportNotes::default();
+    let mut files = export_document_noted(&d.doc, &r, &o, &fp_export::export::EncodeExtras::default(), &mut notes).map_err(|e| e.to_string())?;
     // „HTML: In Zwischenablage kopieren“: die HTML-Datei wird nicht geschrieben (§3)
     if dlg.kind() == FilesStyle::HtmlAndImages && dlg.html_dest == 1 {
         let ext = format!(".{}", dlg.html_ext.to_lowercase());
         files.retain(|f| !(f.path.to_lowercase().ends_with(&ext) && !f.path.contains('/')));
     }
-    Ok(files)
+    Ok((files, notes))
 }
 
 /// HTML für die Zwischenablage (Art HTML und Bilder, „In Zwischenablage kopieren“).
@@ -457,8 +555,12 @@ pub fn begin_export(st: &mut AppState, dlg: &mut ExportDialog) -> ExportStep {
     if file_stem(&dlg.file_name).trim().is_empty() {
         return ExportStep::Error(fp_i18n::tr!("dlg-export-failed", error = t("dlg-export-file-name")));
     }
-    let files = match export_files(st, dlg) {
-        Ok(f) => f,
+    let files = match export_files_noted(st, dlg) {
+        Ok((f, notes)) => {
+            // Meldung nach dem Export (§3, §4.2)
+            dlg.notice = notes.selectors_modified.then(|| t("dlg-expopt-sprite-modified"));
+            f
+        }
         Err(e) => return ExportStep::Error(fp_i18n::tr!("dlg-export-failed", error = e)),
     };
     // Firepixel prüft alle Dateien (strenger als das Original, §11), fragt aber nur einmal und
@@ -534,10 +636,17 @@ pub fn remember(st: &mut AppState, dlg: &ExportDialog) {
                 if dlg.subfolder && matches!(kind, FilesStyle::HtmlAndImages | FilesStyle::CssAndImages) {
                     h.images_dir = Some(dlg.images_dir.clone());
                 }
+                if kind == FilesStyle::CssSprites {
+                    dlg.sprite.store(h);
+                }
             }
         }
     }
     st.session.prefs.set("LastExportDirectory", fp_engine::prefs::PrefValue::Str(folder));
+    if kind == FilesStyle::Pdf {
+        st.session.prefs.set("PDFExport_PagesToExport", fp_engine::prefs::PrefValue::Int(dlg.pdf_pages as i64 + 1));
+        st.session.prefs.set("PDFExport_OpenPDFAfterExport", fp_engine::prefs::PrefValue::Bool(dlg.open_pdf));
+    }
     st.session.prefs_changed();
 }
 
@@ -609,7 +718,7 @@ fn show_full(ctx: &egui::Context, st: &mut AppState, mut d: ExportDialog) {
         let o = body.min + vec2(16.0, 14.0);
         let fx = lw + 8.0;
         let bx = fx + fw + 16.0;
-        let modal = d.confirm.is_none();
+        let modal = d.confirm.is_none() && d.options.is_none() && d.notice.is_none();
         let row = |y: f32| (Rect::from_min_size(o + vec2(0.0, y + 1.0), vec2(lw, 20.0)), Rect::from_min_size(o + vec2(fx, y), vec2(fw, 22.0)), Rect::from_min_size(o + vec2(bx, y - 1.0), vec2(bw, 23.0)));
         // Ordner
         let (lr, fr, br) = row(0.0);
@@ -754,7 +863,7 @@ fn show_full(ctx: &egui::Context, st: &mut AppState, mut d: ExportDialog) {
                 ui.painter().text(pos2(br.right() + 8.0, br.center().y), Align2::LEFT_CENTER, d.images_dir.as_str(), theme.ui_font(), theme.colors.text);
             }
         }
-        // „Optionen…“ rechts (§2), vorerst Bildvorschau
+        // „Optionen…“ rechts (§2): eigener Dialog je Art (export_options)
         if fields::button(ui, "ex-options", Rect::from_min_size(o + vec2(bx, opt_y - 1.0), vec2(bw, 23.0)), &options_l, rules.options && modal) {
             act = Some(Act::Options);
         }
@@ -762,6 +871,31 @@ fn show_full(ctx: &egui::Context, st: &mut AppState, mut d: ExportDialog) {
             super::put_left(ui, Rect::from_min_size(pos2(o.x, body.bottom() - 44.0), vec2(body.width() - 32.0, 36.0)), egui::Label::new(egui::RichText::new(m).color(theme.colors.text_weak)).wrap());
         }
     });
+    // Optionen-Dialog der Art (§4) über dem Exportdialog
+    if let Some(mut o) = d.options.take() {
+        let kind_name = STYLES.get(d.style).map(|s| t(s.0)).unwrap_or_default();
+        let ans = export_options::show(ctx, &mut o, &kind_name);
+        d.options = Some(o);
+        if let Some(ok) = ans {
+            d.close_options(st, ok);
+        }
+        st.dialogs.export = Some(d);
+        return;
+    }
+    // Hinweis nach dem Export (geänderte Selektornamen, §4.2): OK schließt den Exportdialog
+    if let Some(n) = d.notice.clone() {
+        let ok_l = t("btn-ok");
+        let w = 420f32.max(32.0 + super::text_w(ctx, &n).min(560.0)).ceil();
+        let h = 64.0 + super::wrapped_h(ctx, &n, w - 32.0);
+        let mut done = false;
+        let c = dialog_frame(ctx, "fp-export-notice", "Firepixel", vec2(w, h + 40.0), |ui, body| {
+            super::put_left(ui, Rect::from_min_size(body.min + vec2(16.0, 16.0), vec2(body.width() - 32.0, h - 48.0)), egui::Label::new(n.as_str()).wrap());
+            let rects = super::button_row(ui.ctx(), body.right() - 12.0, body.bottom() - 35.0, &[&ok_l], 75.0, 23.0, 8.0);
+            done = push_button(ui, rects[0], &ok_l, true, true);
+        });
+        st.dialogs.export = if done || c == DialogClose::Cancelled { None } else { Some(d) };
+        return;
+    }
     // Rückfrage „… ist bereits vorhanden“ (§5.1): OK / Abbrechen
     let mut answer = None;
     if let Some((q, _)) = &d.confirm {
@@ -786,8 +920,8 @@ fn show_full(ctx: &egui::Context, st: &mut AppState, mut d: ExportDialog) {
     if let Some(ok) = answer {
         match answer_confirm(st, &mut d, ok) {
             ExportStep::Done(n) => {
-                st.dialogs.export = None;
                 st.push(Action::Status(fp_i18n::tr!("dlg-export-done", n = n, path = d.folder.trim())));
+                st.dialogs.export = d.notice.is_some().then_some(d);
                 return;
             }
             ExportStep::Error(e) => d.message = (!e.is_empty()).then_some(e),
@@ -797,8 +931,8 @@ fn show_full(ctx: &egui::Context, st: &mut AppState, mut d: ExportDialog) {
     match (act, r) {
         (Some(Act::Export), _) => match begin_export(st, &mut d) {
             ExportStep::Done(n) => {
-                st.dialogs.export = None;
                 st.push(Action::Status(fp_i18n::tr!("dlg-export-done", n = n, path = d.folder.trim())));
+                st.dialogs.export = d.notice.is_some().then_some(d);
             }
             ExportStep::Confirm(_) => st.dialogs.export = Some(d),
             ExportStep::Error(e) => {
@@ -807,7 +941,7 @@ fn show_full(ctx: &egui::Context, st: &mut AppState, mut d: ExportDialog) {
             }
         },
         (Some(Act::Cancel), _) => st.dialogs.export = None,
-        (_, DialogClose::Cancelled) if d.confirm.is_none() => st.dialogs.export = None,
+        (_, DialogClose::Cancelled) if d.confirm.is_none() && d.options.is_none() && d.notice.is_none() => st.dialogs.export = None,
         (Some(Act::Browse), _) => {
             let start = existing_dir(&d.folder).map(PathBuf::from);
             st.dialogs.export = Some(d);
@@ -829,8 +963,10 @@ fn show_full(ctx: &egui::Context, st: &mut AppState, mut d: ExportDialog) {
             });
         }
         (Some(Act::Options), _) => {
+            if d.open_options() == OptionsTarget::ImagePreview {
+                st.push(Action::Run("file.imagePreview".into(), serde_json::json!({})));
+            }
             st.dialogs.export = Some(d);
-            st.push(Action::Run("file.imagePreview".into(), serde_json::json!({})));
         }
         _ => st.dialogs.export = Some(d),
     }

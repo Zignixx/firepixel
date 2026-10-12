@@ -45,6 +45,7 @@ pub mod modern;
 pub mod options;
 pub mod palette_edit;
 pub mod palettes;
+pub mod pdf_crypt; // E2: Kennwortschutz der PDF-Optionen (re\18 §4.1)
 pub mod pipeline;
 pub mod popup;
 pub mod popup_images;

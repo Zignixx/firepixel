@@ -224,6 +224,21 @@ pub struct HtmlSettings {
     /// Matte-Farbe (`FCLi` direkt im `EXPv`, nur wenn `useMatteColor`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub matte_color: Option<u32>,
+    /// Exportoptionen für CSS-Sprites (re\18 §4.2, §7.2: `spriteExportSelectorIsClass`,
+    /// `…CSSPrefix`, `…CSSSuffix`, `…Padding`, `…Orientation` 1 waagerecht / 2 senkrecht /
+    /// 3 Raster, `…PresetName`). Im FW-PNG noch ohne Tag (nur im Dokument der Sitzung).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sprite_selector_is_class: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sprite_css_prefix: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sprite_css_suffix: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sprite_padding: Option<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sprite_orientation: Option<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sprite_preset: Option<String>,
 }
 
 impl Default for ExportSettings {

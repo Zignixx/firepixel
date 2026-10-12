@@ -491,6 +491,7 @@ err-export-d-webp-anim = animiertes WebP: { $error }
 err-export-d-apng-no-frame = APNG ohne Einzelbild
 err-export-d-apng-first-frame = erstes APNG-Einzelbild muss die Leinwand abdecken
 err-export-d-pdf-no-page = PDF ohne Seite
+err-export-d-psd-background = Hintergrund
 err-import-d-av1 = AV1-Dekoder: { $error }
 # <<< UE-3 Detailtexte
 

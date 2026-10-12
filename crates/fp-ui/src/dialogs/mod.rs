@@ -9,6 +9,7 @@ pub mod catalog;
 pub mod doc_dialogs;
 pub mod effects;
 pub mod export;
+pub mod export_options;
 pub mod image_preview;
 pub mod form;
 pub mod levels;

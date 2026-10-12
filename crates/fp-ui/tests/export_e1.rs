@@ -80,7 +80,7 @@ fn endung_folgt_der_art_name_bleibt() {
     assert!(!d.file_name.contains('.'), "{}", d.file_name);
     d.file_name = "bild".into();
     let ext = d.page_ext.clone();
-    for (k, e) in [(FilesStyle::Pdf, "pdf".to_string()), (FilesStyle::HtmlAndImages, "htm".into()), (FilesStyle::ImagesOnly, ext.clone()), (FilesStyle::CssAndImages, "htm".into()), (FilesStyle::CssSprites, ext.clone()), (FilesStyle::LayersToFiles, ext.clone()), (FilesStyle::FramesToFiles, ext.clone()), (FilesStyle::PagesToFiles, ext.clone()), (FilesStyle::Psd, "psd".into()), (FilesStyle::Svg, "svg".into())] {
+    for (k, e) in [(FilesStyle::Pdf, "pdf".to_string()), (FilesStyle::HtmlAndImages, "htm".into()), (FilesStyle::ImagesOnly, ext.clone()), (FilesStyle::CssAndImages, "htm".into()), (FilesStyle::CssSprites, "png".into()), (FilesStyle::LayersToFiles, ext.clone()), (FilesStyle::FramesToFiles, ext.clone()), (FilesStyle::PagesToFiles, ext.clone()), (FilesStyle::Psd, "psd".into()), (FilesStyle::Svg, "svg".into())] {
         d.set_style(style_index(k));
         assert_eq!(d.file_name, format!("bild.{e}"), "{k:?}");
     }
