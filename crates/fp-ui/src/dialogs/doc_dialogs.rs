@@ -12,6 +12,53 @@ fn label(ui: &mut Ui, _o: egui::Pos2, r: Rect, text: &str) {
     super::fit_label(ui, r, text, true);
 }
 
+/// Eingabefeld, das **bei jeder Änderung** den getippten Text meldet (Original: Bildgröße rechnet
+/// Höhe und Druckgröße beim Tippen nach, PM-5 D19). Mit Fokus zeigt es den Puffer, sonst `current`.
+/// Startfokus, Markieren per Tab und Tab-Folge wie die übrigen Dialogfelder.
+fn live_text(ui: &mut Ui, id: impl std::hash::Hash + std::fmt::Debug, r: Rect, current: &str, enabled: bool) -> Option<String> {
+    let id = Id::new(id);
+    let te_id = id.with("te");
+    let theme = crate::theme::Theme::current(ui.ctx());
+    let focused = ui.memory(|m| m.has_focus(te_id));
+    let mut buf = if focused { ui.data(|d| d.get_temp::<String>(id)).unwrap_or_else(|| current.to_string()) } else { current.to_string() };
+    fields::field_frame(ui, r, enabled, focused && theme.glow);
+    let inner = r.shrink2(vec2(3.0, 1.0));
+    let te = egui::TextEdit::singleline(&mut buf)
+        .id(te_id)
+        .frame(egui::Frame::NONE)
+        .font(theme.ui_font())
+        .text_color(if enabled { theme.colors.field_text } else { theme.colors.text_disabled })
+        .margin(egui::Margin::ZERO)
+        .vertical_align(egui::Align::Center)
+        .desired_width(inner.width())
+        .event_filter(fields::TEXT_FILTER);
+    let resp = ui.add_enabled_ui(enabled, |ui| ui.put(inner, te)).inner;
+    super::autofocus_field(ui, &resp, current.chars().count());
+    super::select_on_tab(ui, &resp, current.chars().count());
+    let changed = resp.changed();
+    if ui.memory(|m| m.has_focus(te_id)) {
+        ui.data_mut(|d| d.insert_temp(id, buf.clone()));
+    } else {
+        ui.data_mut(|d| d.remove::<String>(id));
+    }
+    changed.then_some(buf)
+}
+
+/// Kettensymbol „Proportionen beibehalten“ rechts neben zwei Zeilen (Original: Symbole 5871/5872
+/// neben den Einheiten der Pixelabmessungen und der Druckgröße), nur bei angehaktem Kästchen.
+fn chain(ui: &Ui, first: Rect, second: Rect, enabled: bool) {
+    let theme = crate::theme::Theme::current(ui.ctx());
+    let r = Rect::from_min_max(egui::pos2(first.right() + 4.0, first.center().y - 2.0), egui::pos2(first.right() + 12.0, second.center().y + 2.0));
+    crate::icons::paint(ui.painter(), r, crate::icons::Icon::LinkProportions, &crate::icons::IconStyle::new(&theme, None, enabled));
+}
+
+/// Druckgröße wie im Original: 3 Nachkommastellen, Punkt, ohne überflüssige Nullen
+/// (500 px bei 72 ppi → „6.944“, 266,4 px → „3.7“; PM-5 D19).
+pub fn fmt_print(v: f64) -> String {
+    let s = format!("{v:.3}");
+    s.trim_end_matches('0').trim_end_matches('.').to_string()
+}
+
 // ---------------------------------------------------------------------- Leinwandgröße
 
 /// Leinwandgröße (5989).
@@ -66,6 +113,74 @@ impl CanvasSizeDialog {
     }
 }
 
+/// Symbol vor der Breite (Original: ↔).
+const W_SYMBOL: &str = "\u{2194}";
+/// Symbol vor der Höhe (Original: ↕).
+const H_SYMBOL: &str = "\u{2195}";
+
+/// Anker 3 × 3 wie im Original: Optionsfelder mit Pfeilen, die vom gewählten Anker wegzeigen (dort
+/// ein Kreuz aus vier Pfeilen). Wie [`super::radio_group`] **ein** Tab-Stopp (das gewählte Feld);
+/// die Pfeiltasten wählen im Raster, ein Klick wählt und setzt den Fokus. Liefert die neue Wahl.
+fn anchor_grid(ui: &mut Ui, id: &str, cells: &[Rect], tips: &[&str], sel: usize) -> Option<usize> {
+    use egui::{Sense, Stroke, StrokeKind};
+    let theme = crate::theme::Theme::current(ui.ctx());
+    let c = theme.colors.clone();
+    let gid = Id::new(id);
+    let sel = sel.min(8);
+    let (sx, sy) = ((sel % 3) as i32, (sel / 3) as i32);
+    let mut out = None;
+    let mut focus_to = None;
+    for (k, r) in cells.iter().copied().enumerate().take(9) {
+        let kid = gid.with(k);
+        let tip = tips.get(k).copied().unwrap_or("").to_string();
+        // nur das gewählte Feld ist fokussierbar (ein Tab-Stopp für das ganze Raster)
+        let resp = ui.interact(r, kid, if k == sel { Sense::click() } else { Sense::CLICK }).on_hover_text(&tip);
+        resp.widget_info(|| egui::WidgetInfo::selected(egui::WidgetType::RadioButton, true, k == sel, &tip));
+        ui.painter().rect_filled(r, 2.0, if k == sel { c.list_selected_bg } else { c.field_bg });
+        ui.painter().rect_stroke(r, 2.0, Stroke::new(1.0, if k == sel || resp.hovered() { c.focus } else { c.field_border }), StrokeKind::Inside);
+        let (ddx, ddy) = ((k % 3) as i32 - sx, (k / 3) as i32 - sy);
+        let stroke = Stroke::new(1.0, c.field_text);
+        let m = r.center();
+        if (ddx, ddy) == (0, 0) {
+            for dir in [vec2(1.0, 0.0), vec2(-1.0, 0.0), vec2(0.0, 1.0), vec2(0.0, -1.0)] {
+                ui.painter().arrow(m, dir * 5.0, stroke);
+            }
+        } else if ddx.abs() <= 1 && ddy.abs() <= 1 {
+            let v = vec2(ddx as f32, ddy as f32).normalized() * 8.0;
+            ui.painter().arrow(m - v * 0.5, v, stroke);
+        }
+        if k == sel && ui.memory(|mm| mm.has_focus(kid)) {
+            ui.painter().rect_stroke(r.shrink(2.0), 1.0, Stroke::new(1.0, c.focus), StrokeKind::Inside);
+            // Pfeiltasten bleiben im Raster (sonst sucht egui das nächste Feld in der Richtung)
+            ui.memory_mut(|mm| mm.set_focus_lock_filter(kid, egui::EventFilter { horizontal_arrows: true, vertical_arrows: true, tab: false, escape: false }));
+            let (mut nx, mut ny) = (sx, sy);
+            ui.input_mut(|i| {
+                for (key, mx, my) in [(egui::Key::ArrowLeft, -1, 0), (egui::Key::ArrowRight, 1, 0), (egui::Key::ArrowUp, 0, -1), (egui::Key::ArrowDown, 0, 1)] {
+                    if i.consume_key(egui::Modifiers::NONE, key) {
+                        nx = (nx + mx).clamp(0, 2);
+                        ny = (ny + my).clamp(0, 2);
+                    }
+                }
+            });
+            let to = (ny * 3 + nx) as usize;
+            if to != sel {
+                out = Some(to);
+                focus_to = Some(to);
+            }
+        }
+        if resp.clicked() {
+            if k != sel {
+                out = Some(k);
+            }
+            focus_to = Some(k);
+        }
+    }
+    if let Some(k) = focus_to {
+        ui.memory_mut(|mm| mm.request_focus(gid.with(k)));
+    }
+    out
+}
+
 /// Zeigt den Dialog.
 pub fn show_canvas_size(ctx: &egui::Context, st: &mut AppState) {
     let Some(mut d) = st.dialogs.canvas_size.clone() else { return };
@@ -73,36 +188,46 @@ pub fn show_canvas_size(ctx: &egui::Context, st: &mut AppState) {
     // Texte der aktuellen Sprache; längere Texte schieben die Spalten (Deutsch: Lage wie bisher)
     let units = tl(&UNITS);
     let wh = tl(&["dlg-short-w", "dlg-short-h"]);
+    // Felder mit ↔/↕ wie im Original (Symbole 5950/5951); „B:/H:“ steht rechts als Live-Anzeige
+    let syms = [W_SYMBOL, H_SYMBOL];
     let (anchor_l, page_l, hint_l, ok_l, cancel_l) = (t("dlg-canvas-size-anchor"), t("dlg-only-current-page"), t("dlg-canvas-size-range"), t("btn-ok"), t("btn-cancel"));
-    let dx = extra_w(ctx, &refs(&wh), dlu(14.0, 0.0).x - 2.0);
+    let dx = extra_w(ctx, &syms, dlu(14.0, 0.0).x - 2.0);
     let cw = combo_fit_w(ctx, &refs(&units), dlu(60.0, 0.0).x);
     let dc = cw - dlu(60.0, 0.0).x;
-    let da = extra_w(ctx, &[&anchor_l], dlu(215.0 - 158.0, 0.0).x - 4.0);
+    // Live-Anzeige „B: 30000“ rechts der Einheiten (Platz bis zum Gruppenrand)
+    let live_w = super::max_text_w(ctx, &[&format!("{} 30000", wh[0]), &format!("{} 30000", wh[1])]);
+    let dl = (live_w + 4.0 - dlu(208.0 + 7.0 - 152.0 - 4.0, 0.0).x).max(0.0);
+    // „Anker:“ links des Rasters (Platz 20 … 66 DLU)
+    let da = extra_w(ctx, &[&anchor_l], dlu(46.0, 0.0).x - 4.0);
     let bw = super::buttons_w(ctx, &[&ok_l, &cancel_l], dlu(50.0, 0.0).x);
-    let ex = (dx + dc + da).max(2.0 * bw + dlu(5.0 + 9.0, 0.0).x - dlu(222.0 - 7.0, 0.0).x).max(super::text_w(ctx, &page_l) + 24.0 - dlu(222.0 - 9.0, 0.0).x).max(0.0);
-    let shift = move |x: f32| if x >= 158.0 { dx + dc } else if x >= 34.0 { dx } else { 0.0 };
+    let ex = (dx + dc + dl)
+        .max(da)
+        .max(2.0 * bw + dlu(5.0 + 9.0, 0.0).x - dlu(222.0 - 7.0, 0.0).x)
+        .max(super::text_w(ctx, &page_l) + 24.0 + da - dlu(208.0 + 7.0 - 70.0 - 4.0, 0.0).x)
+        .max(0.0);
+    let shift = move |x: f32| if x >= 150.0 { dx + dc } else if x >= 34.0 { dx } else { 0.0 };
     let rr = move |o: egui::Pos2, r: [f32; 4]| dlu_rect(o, r).translate(vec2(shift(r[0]), 0.0));
-    let r = dialog_frame(ctx, "fp-canvas-size", &t("dlg-canvas-size-title"), dlu(222.0, 196.0) + vec2(ex, 0.0), |ui, body| {
+    let r = dialog_frame(ctx, "fp-canvas-size", &t("dlg-canvas-size-title"), dlu(222.0, 218.0) + vec2(ex, 0.0), |ui, body| {
         let o = body.min;
         let gw = |r: Rect| r.with_max_x(body.right() - dlu(7.0, 0.0).x);
-        group_box(ui, gw(dlu_rect(o, [7.0, 6.0, 208.0, 66.0])), &t("dlg-canvas-size-new"));
+        // Gruppe „Neue Größe“ mit Feldern, Anker und „Nur aktuelle Seite“ (Original 5989)
+        group_box(ui, gw(dlu_rect(o, [7.0, 6.0, 208.0, 118.0])), &t("dlg-canvas-size-new"));
         let short = |r: Rect| Rect::from_min_size(r.min, vec2(r.width() + dx, r.height()));
-        label(ui, o, short(dlu_rect(o, [20.0, 22.0, 14.0, 10.0])), &wh[0]);
-        let wtxt = fields::fmt_num(d.width, if d.unit == 0 { 0 } else { 2 });
-        if let Some(t) = fields::text(ui, "cs-w", rr(o, [34.0, 20.0, 50.0, 13.0]), &wtxt, true)
+        let dec = if d.unit == 0 { 0 } else { 2 };
+        label(ui, o, short(dlu_rect(o, [20.0, 22.0, 14.0, 10.0])), W_SYMBOL);
+        if let Some(t) = live_text(ui, "cs-w", rr(o, [34.0, 20.0, 50.0, 13.0]), &fields::fmt_num(d.width, dec), true)
             && let Some(v) = fields::parse_num(&t)
         {
             d.width = v.max(0.0);
         }
-        label(ui, o, short(dlu_rect(o, [20.0, 42.0, 14.0, 10.0])), &wh[1]);
-        let htxt = fields::fmt_num(d.height, if d.unit == 0 { 0 } else { 2 });
-        if let Some(t) = fields::text(ui, "cs-h", rr(o, [34.0, 40.0, 50.0, 13.0]), &htxt, true)
+        label(ui, o, short(dlu_rect(o, [20.0, 40.0, 14.0, 10.0])), H_SYMBOL);
+        if let Some(t) = live_text(ui, "cs-h", rr(o, [34.0, 38.0, 50.0, 13.0]), &fields::fmt_num(d.height, dec), true)
             && let Some(v) = fields::parse_num(&t)
         {
             d.height = v.max(0.0);
         }
         for (k, key) in [(0usize, "cs-wu"), (1, "cs-hu")] {
-            let cr = rr(o, [88.0, 20.0 + k as f32 * 20.0, 60.0, 13.0]);
+            let cr = rr(o, [88.0, 20.0 + k as f32 * 18.0, 60.0, 13.0]);
             if let Some(u) = fields::combo(ui, key, Rect::from_min_size(cr.min, vec2(cw, cr.height())), &refs(&units), Some(d.unit), true) {
                 let (w, h) = (from_unit(d.width, d.unit, d.resolution), from_unit(d.height, d.unit, d.resolution));
                 d.unit = u;
@@ -110,28 +235,32 @@ pub fn show_canvas_size(ctx: &egui::Context, st: &mut AppState) {
                 d.height = to_unit(h, u, d.resolution);
             }
         }
-        // Anker 3 × 3 (5791–5800)
-        let ar = rr(o, [158.0, 14.0, 57.0, 10.0]);
-        label(ui, o, Rect::from_min_size(ar.min, vec2(ar.width() + da, ar.height())), &anchor_l);
-        for (i, tip) in ANCHOR_TIPS.iter().enumerate() {
-            let r = rr(o, [158.0 + (i % 3) as f32 * 16.0, 24.0 + (i / 3) as f32 * 14.0, 14.0, 12.0]);
-            if fields::toggle(ui, ("cs-anchor", i), r, crate::inspector::glyphs::Glyph::FillSolid, d.anchor == i, true, &t(tip)) {
-                d.anchor = i;
-            }
+        // Live-Anzeige des neuen Maßes in Pixeln (Original 5780/5781: „B: 600“, beim Tippen)
+        for (k, v) in [d.width, d.height].into_iter().enumerate() {
+            let px = from_unit(v, d.unit, d.resolution).round();
+            let lr = rr(o, [152.0, 22.0 + k as f32 * 18.0, 56.0, 10.0]);
+            label(ui, o, Rect::from_min_size(lr.min, vec2(lr.width() + dl, lr.height())), &format!("{} {px:.0}", wh[k]));
         }
-        group_box(ui, gw(dlu_rect(o, [7.0, 78.0, 208.0, 42.0])), &t("dlg-canvas-size-current"));
-        label(ui, o, dlu_rect(o, [20.0, 92.0, 190.0, 10.0]), &fp_i18n::tr!("dlg-canvas-size-cur-w", w = format!("{:.0}", d.cur_w)));
-        label(ui, o, dlu_rect(o, [20.0, 104.0, 190.0, 10.0]), &fp_i18n::tr!("dlg-canvas-size-cur-h", h = format!("{:.0}", d.cur_h)));
-        if let Some(b) = fields::checkbox(ui, "cs-page", dlu_rect(o, [9.0, 128.0, 150.0, 10.0]).with_max_x(body.right() - 8.0), &page_l, d.current_page_only, true) {
+        // Anker 3 × 3 mit Pfeilen (5791–5800): ein Tab-Stopp, Pfeiltasten wählen
+        label(ui, o, Rect::from_min_size(dlu_rect(o, [20.0, 62.0, 0.0, 10.0]).min, vec2(dlu(46.0, 0.0).x - 4.0 + da, dlu(0.0, 10.0).y)), &anchor_l);
+        let cells: Vec<Rect> = (0..9).map(|i| dlu_rect(o, [70.0 + (i % 3) as f32 * 16.0, 58.0 + (i / 3) as f32 * 15.0, 15.0, 14.0]).translate(vec2(da, 0.0))).collect();
+        let tips: Vec<String> = ANCHOR_TIPS.iter().map(|k| t(k)).collect();
+        if let Some(a) = anchor_grid(ui, "cs-anchor", &cells, &refs(&tips), d.anchor) {
+            d.anchor = a;
+        }
+        if let Some(b) = fields::checkbox(ui, "cs-page", dlu_rect(o, [70.0, 108.0, 140.0, 10.0]).translate(vec2(da, 0.0)).with_max_x(body.right() - dlu(9.0, 0.0).x), &page_l, d.current_page_only, true) {
             d.current_page_only = b;
         }
+        group_box(ui, gw(dlu_rect(o, [7.0, 128.0, 208.0, 40.0])), &t("dlg-canvas-size-current"));
+        label(ui, o, dlu_rect(o, [20.0, 141.0, 190.0, 10.0]), &fp_i18n::tr!("dlg-canvas-size-cur-w", w = format!("{:.0}", d.cur_w)));
+        label(ui, o, dlu_rect(o, [20.0, 153.0, 190.0, 10.0]), &fp_i18n::tr!("dlg-canvas-size-cur-h", h = format!("{:.0}", d.cur_h)));
         let p = d.params();
         if p.is_none() {
             // Hinweis umbricht bei längeren Texten (Platz bis zu den Knöpfen)
-            let hr = dlu_rect(o, [9.0, 144.0, 0.0, 26.0]);
+            let hr = dlu_rect(o, [9.0, 172.0, 0.0, 22.0]);
             super::text_block(ui, Rect::from_min_max(hr.min, egui::pos2(body.right() - 8.0, hr.bottom())), hint_l.as_str());
         }
-        let b = super::button_row(ui.ctx(), body.right() - dlu(7.0, 0.0).x, dlu_rect(o, [0.0, 172.0, 0.0, 0.0]).top(), &[&ok_l, &cancel_l], bw, dlu(0.0, 14.0).y, dlu(5.0, 0.0).x);
+        let b = super::button_row(ui.ctx(), body.right() - dlu(7.0, 0.0).x, dlu_rect(o, [0.0, 196.0, 0.0, 0.0]).top(), &[&ok_l, &cancel_l], bw, dlu(0.0, 14.0).y, dlu(5.0, 0.0).x);
         if push_button(ui, b[0], &ok_l, true, p.is_some()) {
             result = Some(true);
         }
@@ -173,6 +302,8 @@ pub struct ImageSizeDialog {
     pub resample: bool,
     pub method: usize,
     pub current_page_only: bool,
+    /// Auflösung beim Öffnen (Pixel/Zoll): OK ohne Änderung führt keinen Befehl aus.
+    pub cur_ppi: f64,
 }
 
 
@@ -195,6 +326,7 @@ impl ImageSizeDialog {
             resample: st.session.prefs.get_bool("ResizeResample", true),
             method,
             current_page_only: st.session.prefs.get_bool("ResizeImageCurrentPageOnly", true),
+            cur_ppi: if c.resolution_unit == 1 { c.resolution.max(1.0) as f64 * 2.54 } else { c.resolution.max(1.0) as f64 },
         })
     }
 
@@ -202,20 +334,28 @@ impl ImageSizeDialog {
         if self.res_unit == 1 { self.resolution * 2.54 } else { self.resolution }
     }
 
-    /// Breite neu setzen (mit Proportionen).
+    /// Breite neu setzen (mit Proportionen). Die Höhe bleibt ungerundet: das Original zeigt für
+    /// B 333 bei 500 × 400 die Pixelhöhe 266, aber die Druckhöhe 3.7 (= 266,4 px / 72, PM-5 D19);
+    /// gerundet wird erst beim Ausführen.
     pub fn set_width(&mut self, w: f64) {
         if self.constrain && self.cur_w > 0.0 {
-            self.h = (w * self.cur_h / self.cur_w).round();
+            self.h = w * self.cur_h / self.cur_w;
         }
         self.w = w;
     }
 
-    /// Höhe neu setzen (mit Proportionen).
+    /// Höhe neu setzen (mit Proportionen, Breite ungerundet wie bei [`Self::set_width`]).
     pub fn set_height(&mut self, h: f64) {
         if self.constrain && self.cur_h > 0.0 {
-            self.w = (h * self.cur_w / self.cur_h).round();
+            self.w = h * self.cur_w / self.cur_h;
         }
         self.h = h;
+    }
+
+    /// Nichts geändert (gleiche Pixelgröße und Auflösung): OK führt keinen Befehl aus, wie im
+    /// Original (kein Verlaufsschritt, PM-5 D19).
+    pub fn unchanged(&self) -> bool {
+        self.w.round() == self.cur_w.round() && self.h.round() == self.cur_h.round() && (self.ppi() - self.cur_ppi).abs() < 1e-6
     }
 
     /// Parameter für `modify.canvas.imageSize` oder `None` bei ungültigen Werten.
@@ -266,7 +406,7 @@ pub fn show_image_size(ctx: &egui::Context, st: &mut AppState) {
             let px = if k == 0 { d.w } else { d.h };
             let cur = if k == 0 { d.cur_w } else { d.cur_h };
             let shown = if d.px_unit == 1 { px / cur.max(1.0) * 100.0 } else { px };
-            if let Some(t) = fields::text(ui, ("is-px", *key), rr(o, [60.0, y, 50.0, 13.0]), &fields::fmt_num(shown, if d.px_unit == 1 { 1 } else { 0 }), en_px)
+            if let Some(t) = live_text(ui, ("is-px", *key), rr(o, [60.0, y, 50.0, 13.0]), &fields::fmt_num(shown, if d.px_unit == 1 { 1 } else { 0 }), en_px)
                 && let Some(v) = fields::parse_num(&t)
             {
                 let v = if d.px_unit == 1 { v / 100.0 * cur } else { v };
@@ -280,7 +420,13 @@ pub fn show_image_size(ctx: &egui::Context, st: &mut AppState) {
                 d.px_unit = u;
             }
         }
+        if d.constrain {
+            chain(ui, cr(o, 20.0), cr(o, 38.0), en_px);
+        }
         group_box(ui, gw(dlu_rect(o, [7.0, 62.0, 218.0, 70.0])), &t("dlg-image-size-print"));
+        if d.constrain {
+            chain(ui, cr(o, 76.0), cr(o, 94.0), true);
+        }
         let ppi = d.ppi();
         for (k, lab) in wh.iter().enumerate() {
             let y = 76.0 + k as f32 * 18.0;
@@ -292,7 +438,7 @@ pub fn show_image_size(ctx: &egui::Context, st: &mut AppState) {
                 2 => px / ppi * 2.54,
                 _ => px / ppi,
             };
-            if let Some(t) = fields::text(ui, ("is-pr", k), rr(o, [60.0, y, 50.0, 13.0]), &fields::fmt_num(shown, 2), true)
+            if let Some(t) = live_text(ui, ("is-pr", k), rr(o, [60.0, y, 50.0, 13.0]), &fmt_print(shown), true)
                 && let Some(v) = fields::parse_num(&t)
             {
                 let px = match d.print_unit {
@@ -370,7 +516,9 @@ pub fn show_image_size(ctx: &egui::Context, st: &mut AppState) {
                 st.session.prefs.set("ResizeConstrain", fp_engine::PrefValue::Bool(d.constrain));
                 st.session.prefs.set("ResizeResample", fp_engine::PrefValue::Bool(d.resample));
                 st.session.prefs.set("ResizeImageCurrentPageOnly", fp_engine::PrefValue::Bool(d.current_page_only));
-                st.push(Action::Run("modify.canvas.imageSize".into(), p));
+                if !d.unchanged() {
+                    st.push(Action::Run("modify.canvas.imageSize".into(), p));
+                }
             }
         }
         (Some(false), _) | (_, DialogClose::Cancelled) => st.dialogs.image_size = None,

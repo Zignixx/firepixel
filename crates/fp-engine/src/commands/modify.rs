@@ -789,6 +789,12 @@ pub(super) fn register(r: &mut CommandRegistry) {
                     let x0 = c.left + (c.width() - w) * ax;
                     let y0 = c.top + (c.height() - h) * ay;
                     crop_page(d, Rect::new(x0, y0, x0 + w, y0 + h).round_nearest())?;
+                    // Original: danach sind alle Objekte der Seite ausgewählt (PM-5 D20; gehört
+                    // zum selben Verlaufsschritt, Rückgängig stellt die alte Auswahl wieder her)
+                    if !d.bitmap_mode {
+                        let ids = docops::selectable_ids(&d.doc, d.page, d.frame);
+                        d.selection.set(ids);
+                    }
                     Ok(CommandOutput::doc())
                 })
             }),

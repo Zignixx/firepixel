@@ -267,7 +267,8 @@ fn deutsch_unveraendert() {
     reset(&mut h);
     assert!(dialogs::open_for_command(st(&mut h), "modify.canvas.canvasSize"));
     h.run_steps(3);
-    assert_eq!(size_of(&mut h, "fp-canvas-size"), dialogs::dlu(222.0, 196.0), "Leinwandgröße");
+    // DLG-1b: Anker und „Nur aktuelle Seite“ in der Gruppe „Neue Größe“ wie im Original (PM-5 D20)
+    assert_eq!(size_of(&mut h, "fp-canvas-size"), dialogs::dlu(222.0, 218.0), "Leinwandgröße");
     reset(&mut h);
     assert!(dialogs::open_for_command(st(&mut h), "modify.transform.numericTransform"));
     h.run_steps(3);
