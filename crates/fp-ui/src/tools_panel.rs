@@ -54,22 +54,64 @@ const SECTIONS: &[(ToolGroup, &[Slot])] = &[
     (ToolGroup::Colors, &[Slot::Tool("Pipette", ToolId::Eyedropper), Slot::Tool("Füllwerkzeug", ToolId::PaintBucket)]),
 ];
 
-/// Automatische Formen im Rechteck-Flyout (Laufzeit T3; Logik in fp-script, `autoShape.insert`).
-pub const AUTO_SHAPES: &[&str] = &[
-    "Abgefastes Rechteck",
-    "Abgeflachtes Rechteck",
-    "Abgerundetes Rechteck",
-    "Donut",
-    "Intelligentes Polygon",
-    "L-Form",
-    "Messwerkzeug",
-    "Pfeil",
-    "Pfeillinie",
-    "Spirale",
-    "Stern",
-    "Torte",
-    "Verbindungslinie",
+/// Automatische Formen im Rechteck-Flyout (Laufzeit T3; Logik in fp-script, `autoShape.insert`):
+/// deutscher Name (Kennung für `autoShape.insert`, Reihenfolge wie im Original) und englischer
+/// Name (daraus der Schlüssel `shape-…`, siehe [`shape_key`]).
+pub const AUTO_SHAPES: &[(&str, &str)] = &[
+    ("Abgefastes Rechteck", "Chamfer Rectangle"),
+    ("Abgeflachtes Rechteck", "Beveled Rectangle"),
+    ("Abgerundetes Rechteck", "Rounded Rectangle"),
+    ("Donut", "Doughnut"),
+    ("Intelligentes Polygon", "Smart Polygon"),
+    ("L-Form", "L-Shape"),
+    ("Messwerkzeug", "Measure Tool"),
+    ("Pfeil", "Arrow"),
+    ("Pfeillinie", "Arrow Line"),
+    ("Spirale", "Spiral"),
+    ("Stern", "Star"),
+    ("Torte", "Pie"),
+    ("Verbindungslinie", "Connector Line"),
 ];
+
+/// Schlüssel einer automatischen Form aus ihrem englischen Namen (`autoShape.list` → `en`):
+/// „Rounded Rectangle“ → `shape-rounded-rectangle`, „3D Box“ → `shape-3d-box`.
+pub fn shape_key(en_name: &str) -> String {
+    let mut s = String::from("shape-");
+    let mut dash = false;
+    for c in en_name.chars() {
+        if c.is_ascii_alphanumeric() {
+            if dash && !s.ends_with('-') {
+                s.push('-');
+            }
+            dash = false;
+            s.push(c.to_ascii_lowercase());
+        } else {
+            dash = true;
+        }
+    }
+    s
+}
+
+/// Angezeigter Name einer automatischen Form in der aktuellen Sprache (englischer Name als
+/// Schlüssel, deutscher als Rückfall).
+pub fn shape_label(en_name: &str, de_name: &str) -> String {
+    let k = shape_key(en_name);
+    let s = fp_i18n::t(&k);
+    if s == k { de_name.to_string() } else { s }
+}
+
+/// Schlüssel eines Werkzeugs: `tool.polygonLasso` → `tool-polygonLasso`.
+pub fn tool_key(id: ToolId) -> String {
+    let name = tools::info(id).map(|i| i.name).unwrap_or("tool.unknown");
+    name.replace(['.', '_'], "-")
+}
+
+/// Name eines Werkzeugs in der aktuellen Sprache (`werkzeuge.ftl`, Rückfall: deutscher Name).
+pub fn tool_label(id: ToolId) -> String {
+    let k = tool_key(id);
+    let s = fp_i18n::t(&k);
+    if s == k { tools::info(id).map(|i| i.label.to_string()).unwrap_or_default() } else { s }
+}
 
 /// Welche Farbe die Knöpfe „Keine“/Pipette betreffen (zuletzt angeklicktes Farbfeld).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
@@ -85,14 +127,14 @@ fn slot_tool(st: &AppState, group: &str, default: ToolId) -> ToolId {
 
 fn shortcut_text(st: &AppState, id: ToolId) -> String {
     let set = st.session.shortcut_set();
-    tools::tool_shortcuts(set, id).iter().map(|s| s.display_de()).collect::<Vec<_>>().join(", ")
+    tools::tool_shortcuts(set, id).iter().map(crate::menu::shortcut_text).collect::<Vec<_>>().join(", ")
 }
 
 /// Tooltip eines Werkzeugs wie in CS6: „Name (Kürzel)“.
 pub fn tool_tooltip(st: &AppState, id: ToolId) -> String {
-    let label = tools::info(id).map(|i| i.label).unwrap_or("");
+    let label = tool_label(id);
     let sc = shortcut_text(st, id);
-    if sc.is_empty() { label.to_string() } else { format!("{label} ({sc})") }
+    if sc.is_empty() { label } else { format!("{label} ({sc})") }
 }
 
 fn argb_to_color(a: fp_color::Argb) -> Color32 {
@@ -143,8 +185,8 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                     let selected = if *show { !hidden } else { hidden };
                     let mut child = ui.new_child(egui::UiBuilder::new().max_rect(r));
                     let icon = if *show { Icon::ShowSlices } else { Icon::HideSlices };
-                    let tip = if *show { "Segmente und Hotspots einblenden (2)" } else { "Segmente und Hotspots ausblenden (2)" };
-                    if widgets::icon_button(&mut child, icon, cell - vec2(2.0, 2.0), theme.metrics.icon_size, ButtonLook { selected, enabled: st.session.active().is_some(), group: Some(*group) }, tip).clicked() && !selected {
+                    let tip = fp_i18n::t(if *show { "tool-tip-showSlices" } else { "tool-tip-hideSlices" });
+                    if widgets::icon_button(&mut child, icon, cell - vec2(2.0, 2.0), theme.metrics.icon_size, ButtonLook { selected, enabled: st.session.active().is_some(), group: Some(*group) }, &tip).clicked() && !selected {
                         st.push(Action::Run("view.toggleSlices".into(), json!({})));
                     }
                 }
@@ -162,14 +204,14 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
     y += 5.0;
     section_label(ui, full, y, ToolGroup::View, &theme);
     y += theme.metrics.tool_section_label_height;
-    let modes = [(Icon::ScreenStandard, "Standardbildschirmmodus"), (Icon::ScreenFullMenus, "Vollbildmodus mit Menüs"), (Icon::ScreenFull, "Vollbildmodus")];
+    let modes = [(Icon::ScreenStandard, "tool-tip-screenStandard"), (Icon::ScreenFullMenus, "tool-tip-screenFullMenus"), (Icon::ScreenFull, "tool-tip-screenFull")];
     let small = vec2(18.0, 18.0);
     let total = small.x * 3.0 + 2.0 * 2.0;
     for (i, (icon, tip)) in modes.iter().enumerate() {
         let r = Rect::from_min_size(pos2(full.center().x - total / 2.0 + i as f32 * (small.x + 2.0), y), small);
         let mut child = ui.new_child(egui::UiBuilder::new().max_rect(r));
         let selected = st.session.ui.screen_mode as usize == i;
-        if widgets::icon_button(&mut child, *icon, small, 13.0, ButtonLook { selected, enabled: true, group: Some(ToolGroup::View) }, tip).clicked() {
+        if widgets::icon_button(&mut child, *icon, small, 13.0, ButtonLook { selected, enabled: true, group: Some(ToolGroup::View) }, &fp_i18n::t(tip)).clicked() {
             st.session.ui.screen_mode = i as u8;
             st.session.emit(fp_engine::SessionEvent::PanelsChanged);
         }
@@ -206,11 +248,40 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
 
 fn section_label(ui: &Ui, full: Rect, y: f32, group: ToolGroup, theme: &Theme) {
     let color = if theme.glow { theme.accent(group) } else { theme.colors.section_label };
-    ui.painter().text(pos2(full.center().x, y + theme.metrics.tool_section_label_height / 2.0), Align2::CENTER_CENTER, group.label(), theme.font(theme.fonts.section), color);
+    // Überschrift in der aktuellen Sprache (`ui-toolgroup-…`, theme.rs); Breite des Bedienfelds
+    // ist fest – zu lange Übersetzungen werden mit „…“ gekürzt statt überzulaufen
+    let font = theme.font(theme.fonts.section);
+    let name = group.name();
+    let text = elide(ui, &name, &font, full.width() - 4.0);
+    if text != name {
+        // für Tests: Überschrift musste gekürzt werden
+        ui.ctx().data_mut(|d| d.insert_temp(Id::new(SECTION_ELIDED_ID), true));
+    }
+    ui.painter().text(pos2(full.center().x, y + theme.metrics.tool_section_label_height / 2.0), Align2::CENTER_CENTER, text, font, color);
     if theme.glow {
         let w = 18.0;
         ui.painter().hline((full.center().x - w)..=(full.center().x + w), y + theme.metrics.tool_section_label_height - 2.5, Stroke::new(1.0, with_alpha(theme.accent(group), 120)));
     }
+}
+
+/// Kennung im egui-Speicher: `true`, sobald eine Abschnittsüberschrift gekürzt werden musste.
+pub const SECTION_ELIDED_ID: &str = "fp-tools-section-elided";
+
+/// Text auf `max_w` kürzen (mit „…“), damit nichts über den Rand läuft.
+fn elide(ui: &Ui, text: &str, font: &egui::FontId, max_w: f32) -> String {
+    if widgets::text_width(ui, text, font) <= max_w {
+        return text.to_string();
+    }
+    let chars: Vec<char> = text.chars().collect();
+    let mut n = chars.len();
+    while n > 1 {
+        n -= 1;
+        let s: String = chars[..n].iter().collect::<String>() + "…";
+        if widgets::text_width(ui, &s, font) <= max_w {
+            return s;
+        }
+    }
+    "…".to_string()
 }
 
 fn section_separator(ui: &Ui, full: Rect, y: f32, theme: &Theme) {
@@ -288,28 +359,31 @@ fn flyout_popup(ctx: &egui::Context, st: &mut AppState) {
     let area = egui::Area::new(Id::new("tool-flyout")).fixed_pos(pos).order(egui::Order::Foreground).show(ctx, |ui| {
         crate::menu::menu_frame(&theme).show(ui, |ui| {
             ui.spacing_mut().item_spacing = vec2(0.0, 0.0);
-            let rows: Vec<(String, Option<ToolId>, bool)> = {
-                let mut v: Vec<(String, Option<ToolId>, bool)> = members.iter().map(|t| {
-                    let label = tools::info(*t).map(|i| i.label).unwrap_or("").to_string();
-                    let sc = shortcut_text(st, *t);
-                    let text = if sc.is_empty() { label } else { format!("{label} ({sc})") };
-                    (text, Some(*t), false)
-                }).filter(|(_, t, _)| *t != Some(ToolId::AutoShape)).collect();
+            // (Anzeigetext, Werkzeug, Trenner, Kennung der automatischen Form)
+            let rows: Vec<(String, Option<ToolId>, bool, &str)> = {
+                let mut v: Vec<(String, Option<ToolId>, bool, &str)> = members
+                    .iter()
+                    .filter(|t| **t != ToolId::AutoShape)
+                    .map(|t| (tool_tooltip(st, *t), Some(*t), false, ""))
+                    .collect();
                 if f.group == "Rechteck" {
-                    v.push((String::new(), None, true));
-                    for s in AUTO_SHAPES {
-                        v.push((s.to_string(), Some(ToolId::AutoShape), false));
+                    v.push((String::new(), None, true, ""));
+                    for (de, en) in AUTO_SHAPES {
+                        v.push((shape_label(en, de), Some(ToolId::AutoShape), false, de));
                     }
                 }
                 v
             };
-            for (text, tool, sep) in rows {
+            // Breite nach dem längsten Eintrag (Übersetzungen sind oft länger), mindestens 200
+            let font = theme.menu_font();
+            let width = rows.iter().map(|(t, ..)| crate::widgets::text_width(ui, t, &font) + 60.0).fold(200.0_f32, f32::max);
+            for (text, tool, sep, shape) in rows {
                 if sep {
-                    let (r, _) = ui.allocate_exact_size(vec2(200.0, 9.0), Sense::hover());
+                    let (r, _) = ui.allocate_exact_size(vec2(width, 9.0), Sense::hover());
                     ui.painter().hline((r.left() + 26.0)..=(r.right() - 6.0), r.center().y.floor() + 0.5, Stroke::new(1.0, c.menu_separator));
                     continue;
                 }
-                let resp = ui.allocate_response(vec2(200.0, 22.0), Sense::click());
+                let resp = ui.allocate_response(vec2(width, 22.0), Sense::click());
                 let r = resp.rect;
                 if resp.hovered() {
                     ui.painter().rect_filled(r.shrink2(vec2(1.0, 0.0)), 0.0, c.menu_hover_bg);
@@ -329,8 +403,9 @@ fn flyout_popup(ctx: &egui::Context, st: &mut AppState) {
                 if resp.clicked() {
                     chosen = tool;
                     if tool == Some(ToolId::AutoShape) {
-                        // das Werkzeug zieht die gewählte Form auf (autoShape.insert, fp-script)
-                        auto_shape = Some(text.clone());
+                        // das Werkzeug zieht die gewählte Form auf (autoShape.insert, fp-script);
+                        // Kennung bleibt der deutsche Name, unabhängig von der Sprache
+                        auto_shape = Some(shape.to_string());
                     }
                 }
             }
@@ -355,7 +430,8 @@ fn color_section(ui: &mut Ui, st: &mut AppState, full: Rect, mut y: f32, theme: 
     let left = full.left() + (full.width() - 2.0 * cell.x) / 2.0;
     let well_id = Id::new("active-color-well");
     let active_well: ActiveWell = ui.ctx().data(|d| d.get_temp(well_id)).unwrap_or_default();
-    for (is_stroke, icon, tip) in [(true, Icon::StrokeColor, "Strichfarbe"), (false, Icon::FillColor, "Füllfarbe")] {
+    for (is_stroke, icon, tip_key) in [(true, Icon::StrokeColor, "tool-tip-strokeColor"), (false, Icon::FillColor, "tool-tip-fillColor")] {
+        let tip = fp_i18n::t(tip_key);
         let row = Rect::from_min_size(pos2(left, y), vec2(cell.x * 2.0, cell.y));
         let is_active = (active_well == ActiveWell::Stroke) == is_stroke;
         if is_active {
@@ -393,11 +469,11 @@ fn color_section(ui: &mut Ui, st: &mut AppState, full: Rect, mut y: f32, theme: 
     // Standardfarben, Keine, Tauschen
     let small = vec2(17.0, 16.0);
     let total = small.x * 3.0 + 4.0;
-    let items = [(Icon::DefaultColors, "Standardfarben für Pinselstrich und Füllung anwenden (D)"), (Icon::NoColor, "Keine Pinselstriche oder Füllungen"), (Icon::SwapColors, "Pinselstrich-/Füllfarben austauschen (X)")];
+    let items = [(Icon::DefaultColors, "tool-tip-defaultColors"), (Icon::NoColor, "tool-tip-noColor"), (Icon::SwapColors, "tool-tip-swapColors")];
     for (i, (icon, tip)) in items.iter().enumerate() {
         let r = Rect::from_min_size(pos2(full.center().x - total / 2.0 + i as f32 * (small.x + 2.0), y + 2.0), small);
         let mut child = ui.new_child(egui::UiBuilder::new().max_rect(r));
-        if widgets::icon_button(&mut child, *icon, small, 12.0, ButtonLook { selected: false, enabled: true, group: Some(ToolGroup::Colors) }, tip).clicked() {
+        if widgets::icon_button(&mut child, *icon, small, 12.0, ButtonLook { selected: false, enabled: true, group: Some(ToolGroup::Colors) }, &fp_i18n::t(tip)).clicked() {
             match i {
                 0 => {
                     let (s, f) = st.session.prefs.default_colors();

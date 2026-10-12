@@ -6,12 +6,20 @@
 //! Die Menüdaten stehen in `data/menu_main.json` (aus `re\inventory\resources_de.json`, nur Texte,
 //! IDs und Trenner). Ein Eintrag führt den Befehl aus, dessen Original-ID im Register steht
 //! ([`fp_engine::CommandRegistry::by_fw_id`]); fehlt der Befehl, ist der Eintrag gesperrt.
+//!
+//! # Sprachen
+//! Jeder Eintrag der Menüdaten trägt einen Schlüssel (`key`) aus `locales\<sprache>\menue.ftl`:
+//! Befehle `cmd-…` ([`fp_i18n::command_key`], Wert = Menütext mit `&`), Untermenüs und Einträge
+//! an anderer Stelle `menu-…`, Kontextmenüs `ctx-…`, Bedienfeldmenüs `pmenu-…`. Angezeigt wird
+//! [`MenuEntry::local_text`]; `text` bleibt der deutsche Ausgangstext (Kürzel nach dem Tabulator).
+//! Die Menüs werden in jedem Bild neu gebildet, ein Sprachwechsel wirkt sofort.
 
 use crate::app_state::{Action, AppState};
 use crate::panels::PanelId;
 use crate::theme::{with_alpha, Theme, ThemeKind};
 use egui::containers::menu::{MenuConfig, SubMenu};
 use egui::{pos2, vec2, Align2, Popup, Rect, Response, Sense, Stroke, Ui, UiKind, UiStackInfo};
+use fp_i18n::t;
 use serde::Deserialize;
 use serde_json::{json, Value};
 use std::sync::OnceLock;
@@ -19,14 +27,97 @@ use std::sync::OnceLock;
 /// Ein Eintrag der Menüressource.
 #[derive(Clone, Debug, Deserialize)]
 pub struct MenuEntry {
+    /// Deutscher Ausgangstext (mit `&` und ggf. Kürzel nach `\t`).
     #[serde(default)]
     pub text: String,
+    /// Schlüssel des Texts in `menue.ftl` (leer = `text` unverändert anzeigen).
+    #[serde(default)]
+    pub key: String,
     #[serde(default)]
     pub id: Option<u32>,
     #[serde(default)]
     pub sep: bool,
     #[serde(default)]
     pub children: Option<Vec<MenuEntry>>,
+}
+
+impl MenuEntry {
+    /// Text in der aktuellen Sprache, mit Zugriffstaste (`&`) und ggf. Kürzel nach dem Tabulator.
+    pub fn local_text(&self) -> String {
+        let (de, sc) = match self.text.split_once('\t') {
+            Some((a, b)) => (a, Some(b)),
+            None => (self.text.as_str(), None),
+        };
+        let base = if self.key.is_empty() { de.to_string() } else { t(&self.key) };
+        match sc {
+            Some(sc) => format!("{base}\t{}", fp_i18n::shortcut_label(sc)),
+            None => base,
+        }
+    }
+}
+
+/// Tastenkürzel in der aktuellen Sprache (`Strg+Umschalt+S` bzw. `Ctrl+Shift+S`).
+pub fn shortcut_text(sc: &fp_engine::shortcuts::Shortcut) -> String {
+    fp_i18n::shortcut_label(&sc.display_de())
+}
+
+/// Menütext ohne Zugriffstaste, Kürzel und abschließendes „…“/„...“ (Beschriftung).
+pub fn plain_label(menu_text: &str) -> String {
+    let s = clean_label(menu_text).0;
+    let s = s.trim_end();
+    let s = s.strip_suffix('…').or_else(|| s.strip_suffix("...")).unwrap_or(s);
+    s.trim_end().to_string()
+}
+
+/// Text eines Schlüssels, `None` wenn es ihn in keiner Sprache gibt.
+fn t_opt(key: &str) -> Option<String> {
+    let s = t(key);
+    (s != key).then_some(s)
+}
+
+/// Beschriftung eines Befehls in der aktuellen Sprache (ohne `&` und „…“), z. B. für
+/// Werkzeugtipps, die Kürzelliste und Verlaufsschritte: `cmd-….label`, sonst der Menütext
+/// `cmd-…` bereinigt, sonst die deutsche Beschriftung aus dem Register.
+pub fn command_label(st: &AppState, name: &str) -> String {
+    let key = fp_i18n::command_key(name);
+    if let Some(s) = t_opt(&format!("{key}.label")) {
+        return s;
+    }
+    if let Some(s) = t_opt(&key) {
+        return plain_label(&s);
+    }
+    st.session.registry().get(name).map(|c| c.info().label.clone()).unwrap_or_else(|| name.to_string())
+}
+
+/// Statuszeilen-/Hilfetext eines Befehls in der aktuellen Sprache (`cmd-….description`).
+pub fn command_description(st: &AppState, name: &str) -> Option<String> {
+    t_opt(&format!("{}.description", fp_i18n::command_key(name))).or_else(|| st.session.registry().get(name).and_then(|c| c.info().description.clone()))
+}
+
+/// Menüpfad eines Befehls in der aktuellen Sprache („Modifizieren ▸ Ausrichten ▸ Links“), wie er
+/// im Hauptmenü steht; Befehle außerhalb des Hauptmenüs → ihre Beschriftung.
+pub fn command_path(st: &AppState, name: &str) -> String {
+    fn walk(st: &AppState, entries: &[MenuEntry], name: &str, prefix: &mut Vec<String>) -> Option<String> {
+        for e in entries {
+            if e.sep {
+                continue;
+            }
+            let label = clean_label(&e.local_text()).0;
+            if let Some(c) = &e.children {
+                prefix.push(label);
+                if let Some(p) = walk(st, c, name, prefix) {
+                    return Some(p);
+                }
+                prefix.pop();
+            } else if e.id.and_then(|id| st.session.registry().by_fw_id(id)).is_some_and(|c| c.info().name == name) {
+                let mut parts = prefix.clone();
+                parts.push(label);
+                return Some(parts.join(" ▸ "));
+            }
+        }
+        None
+    }
+    walk(st, main_menu(), name, &mut Vec::new()).unwrap_or_else(|| command_label(st, name))
 }
 
 #[derive(Deserialize)]
@@ -100,8 +191,8 @@ fn item(label: &str, action: ItemAction, enabled: bool, checked: Option<bool>) -
 }
 
 /// Zustand eines Befehls für das Menü: (aktiv, Häkchen, Kürzel).
-fn command_state(st: &AppState, name: &str, fallback_sc: Option<String>) -> (bool, Option<bool>, Option<String>) {
-    let sc = st.session.command_shortcuts(name).first().map(|s| s.display_de()).or(fallback_sc);
+pub(crate) fn command_state(st: &AppState, name: &str, fallback_sc: Option<String>) -> (bool, Option<bool>, Option<String>) {
+    let sc = st.session.command_shortcuts(name).first().map(shortcut_text).or(fallback_sc);
     if let Some((en, ck)) = crate::actions::ui_command_state(st, name) {
         return (en, ck, sc);
     }
@@ -109,23 +200,27 @@ fn command_state(st: &AppState, name: &str, fallback_sc: Option<String>) -> (boo
     (en, ck, sc)
 }
 
-fn convert(st: &AppState, entries: &[MenuEntry], top: &str) -> Vec<Node> {
+/// Schlüssel der Untermenüs, die zur Laufzeit gefüllt werden.
+const KEY_RECENT: &str = "menu-file-openRecent";
+const KEY_FONT: &str = "menu-text-font";
+const KEY_EXTENSIONS: &str = "menu-window-extensions";
+
+fn convert(st: &AppState, entries: &[MenuEntry]) -> Vec<Node> {
     let mut out = Vec::new();
     for e in entries {
         if e.sep {
             out.push(Node::Separator);
             continue;
         }
-        let (label, sc) = clean_label(&e.text);
+        let (label, sc) = clean_label(&e.local_text());
         if let Some(children) = &e.children {
-            let mut kids = convert(st, children, top);
+            let mut kids = convert(st, children);
             // Laufzeit-Untermenüs
-            if label == "Zuletzt geöffnete Dateien" {
-                kids = recent_files(st);
-            } else if label == "Schrift" && top == "Text" {
-                kids = font_menu(st);
-            } else if label == "Erweiterungen" {
-                kids = vec![item("Keine Erweiterungen", ItemAction::None, false, None)];
+            match e.key.as_str() {
+                KEY_RECENT => kids = recent_files(st),
+                KEY_FONT => kids = font_menu(st),
+                KEY_EXTENSIONS => kids = vec![item(&t("menu-window-extensions-none"), ItemAction::None, false, None)],
+                _ => {}
             }
             let enabled = kids.iter().any(|k| matches!(k, Node::Item { enabled: true, .. } | Node::Sub { enabled: true, .. }));
             out.push(Node::Sub { label, children: kids, enabled });
@@ -183,7 +278,7 @@ fn font_menu(st: &AppState) -> Vec<Node> {
 fn recent_files(st: &AppState) -> Vec<Node> {
     let files = &st.session.prefs.recent_files;
     if files.is_empty() {
-        return vec![item("Keine", ItemAction::None, false, None)];
+        return vec![item(&t("menu-file-openRecent-none"), ItemAction::None, false, None)];
     }
     files
         .iter()
@@ -193,12 +288,12 @@ fn recent_files(st: &AppState) -> Vec<Node> {
         .collect()
 }
 
-/// Untermenü-Inhalte, die das Original zur Laufzeit aus Skripten bzw. Filtern füllt.
-fn filter_submenus(st: &AppState) -> Vec<Node> {
-    let groups: [(&str, &[(&str, &str)]); 5] = [
-        ("Andere", &[("Kanten finden", "filter.other.findEdges"), ("In Alpha konvertieren", "filter.other.convertToAlpha")]),
+/// Filter-Untermenüs: (Schlüssel des Untermenüs, [(deutscher Menütext zum Auflösen, Befehl)]); angezeigt
+/// wird der Menütext `cmd-…` des Befehls.
+const FILTER_GROUPS: [(&str, &[(&str, &str)]); 5] = [
+        ("menu-filter-other", &[("Kanten finden", "filter.other.findEdges"), ("In Alpha konvertieren", "filter.other.convertToAlpha")]),
         (
-            "Farbe anpassen",
+            "menu-filter-adjustColor",
             &[
                 ("Auto-Tonwertkorrektur", "filter.adjustColor.autoLevels"),
                 ("Farbfüllung...", "filter.adjustColor.colorFill"),
@@ -209,10 +304,10 @@ fn filter_submenus(st: &AppState) -> Vec<Node> {
                 ("Umkehren", "filter.adjustColor.invert"),
             ],
         ),
-        ("Rauschen", &[("Rauschen hinzufügen...", "filter.noise.addNoise")]),
-        ("Scharfzeichnen", &[("Scharfzeichnen", "filter.sharpen.sharpen"), ("Stark scharfzeichnen", "filter.sharpen.sharpenMore"), ("Unscharf maskieren...", "filter.sharpen.unsharpMask")]),
+        ("menu-filter-noise", &[("Rauschen hinzufügen...", "filter.noise.addNoise")]),
+        ("menu-filter-sharpen", &[("Scharfzeichnen", "filter.sharpen.sharpen"), ("Stark scharfzeichnen", "filter.sharpen.sharpenMore"), ("Unscharf maskieren...", "filter.sharpen.unsharpMask")]),
         (
-            "Weichzeichnen",
+            "menu-filter-blur",
             &[
                 ("Bewegungsunschärfe...", "filter.blur.motion"),
                 ("Gaußscher Weichzeichner...", "filter.blur.gaussian"),
@@ -223,24 +318,27 @@ fn filter_submenus(st: &AppState) -> Vec<Node> {
             ],
         ),
     ];
-    groups
+
+/// Untermenü-Inhalte, die das Original zur Laufzeit aus Skripten bzw. Filtern füllt.
+fn filter_submenus(st: &AppState) -> Vec<Node> {
+    FILTER_GROUPS
         .iter()
-        .map(|(label, items)| {
+        .map(|(key, items)| {
             let children: Vec<Node> = items
                 .iter()
                 .map(|(l, name)| {
-                    let resolved = resolve_filter(st, name, l);
-                    match resolved {
+                    let label = t_opt(&fp_i18n::command_key(name)).map(|s| clean_label(&s).0).unwrap_or_else(|| l.to_string());
+                    match resolve_filter(st, name, l) {
                         Some(n) => {
                             let (en, ck, sc) = command_state(st, &n, None);
-                            Node::Item { label: l.to_string(), shortcut: sc, action: ItemAction::Command(n), enabled: en, checked: ck }
+                            Node::Item { label, shortcut: sc, action: ItemAction::Command(n), enabled: en, checked: ck }
                         }
-                        None => item(l, ItemAction::None, false, None),
+                        None => item(&label, ItemAction::None, false, None),
                     }
                 })
                 .collect();
             let enabled = children.iter().any(|k| matches!(k, Node::Item { enabled: true, .. }));
-            Node::Sub { label: label.to_string(), children, enabled }
+            Node::Sub { label: clean_label(&t(key)).0, children, enabled }
         })
         .collect()
 }
@@ -291,16 +389,21 @@ fn scan_commands(dir: &std::path::Path, depth: usize) -> Vec<Node> {
             out.push(item(&name, ItemAction::Ui(Action::Run("commands.runScript".into(), json!({ "path": p.to_string_lossy() }))), true, None));
         }
     }
-    if depth == 0 {
-        out.push(item("Warnmeldungen zurücksetzen", ItemAction::Ui(Action::Run("ui.resetWarnings".into(), json!({}))), true, None));
-        out.push(Node::Separator);
-        let on = crate::bridge::running_url().is_some();
-        out.push(item("KI-Steuerkanal (MCP)", ItemAction::Ui(Action::Run("ui.mcpToggle".into(), json!({}))), true, Some(on)));
-    }
     out
 }
 
+/// Feste Einträge am Ende des Befehle-Menüs (nicht zwischengespeichert: Sprache und Zustand).
+fn command_tail() -> Vec<Node> {
+    let on = crate::bridge::running_url().is_some();
+    vec![
+        item(&clean_label(&t("menu-commands-resetWarnings")).0, ItemAction::Ui(Action::Run("ui.resetWarnings".into(), json!({}))), true, None),
+        Node::Separator,
+        item(&clean_label(&t("menu-commands-mcp")).0, ItemAction::Ui(Action::Run("ui.mcpToggle".into(), json!({}))), true, Some(on)),
+    ]
+}
+
 fn panel_item(st: &AppState, p: PanelId) -> Node {
+    // Titel kommt aus `bedienfelder.ftl` (PanelId::title)
     let checked = st.settings.workspace.is_visible(p);
     item(p.title(), ItemAction::Ui(Action::TogglePanel(p)), true, Some(checked))
 }
@@ -308,47 +411,52 @@ fn panel_item(st: &AppState, p: PanelId) -> Node {
 /// Der aufbereitete Hauptmenübaum (je Frame neu, damit Zustände stimmen).
 pub fn build_main_menu(st: &AppState) -> Vec<(String, Vec<Node>)> {
     let mut out = Vec::new();
+    // Menüeintrag eines Befehls, der zur Laufzeit dazukommt (Text = `cmd-…`)
+    let runtime_item = |cmd: &str| {
+        let (en, ck, sc) = command_state(st, cmd, None);
+        Node::Item { label: clean_label(&t(&fp_i18n::command_key(cmd))).0, shortcut: sc, action: ItemAction::Command(cmd.into()), enabled: en, checked: ck }
+    };
     for top in main_menu() {
-        let (label, _) = clean_label(&top.text);
-        let mut nodes = convert(st, top.children.as_deref().unwrap_or(&[]), &label);
-        match label.as_str() {
-            "Ansicht" => {
+        let (label, _) = clean_label(&top.local_text());
+        let mut nodes = convert(st, top.children.as_deref().unwrap_or(&[]));
+        match top.key.as_str() {
+            "menu-view" => {
                 nodes.push(Node::Separator);
-                let children = ThemeKind::ALL.iter().map(|k| item(k.label(), ItemAction::Ui(Action::SetTheme(*k)), true, Some(st.settings.theme == *k))).collect();
-                nodes.push(Node::Sub { label: "Design".into(), children, enabled: true });
+                let children = ThemeKind::ALL.iter().map(|k| item(&k.name(), ItemAction::Ui(Action::SetTheme(*k)), true, Some(st.settings.theme == *k))).collect();
+                nodes.push(Node::Sub { label: clean_label(&t("menu-view-theme")).0, children, enabled: true });
+                nodes.push(crate::language::menu_node(st));
             }
-            "Befehle" => {
+            "menu-commands" => {
                 // KI-Modelle (Agent KI) vor den Befehlen aus dem Befehlsordner
                 if st.session.registry().get("ai.manageModels").is_some() {
-                    let (en, ck, sc) = command_state(st, "ai.manageModels", None);
                     nodes.push(Node::Separator);
-                    nodes.push(Node::Item { label: "KI-Modelle verwalten...".into(), shortcut: sc, action: ItemAction::Command("ai.manageModels".into()), enabled: en, checked: ck });
+                    nodes.push(runtime_item("ai.manageModels"));
                 }
-                nodes.extend(command_submenus())
+                nodes.extend(command_submenus());
+                nodes.extend(command_tail());
             }
-            "Auswählen" => {
+            "menu-select" => {
                 // KI-Auswahl nach „Ähnliches auswählen“
                 let pos = nodes.iter().position(|n| matches!(n, Node::Item { action: ItemAction::Command(c), .. } if c == "select.similar")).map(|i| i + 1).unwrap_or(nodes.len());
                 let mut extra = Vec::new();
-                for (label, cmd) in [("Motiv auswählen", "select.aiSubject"), ("Kante verfeinern...", "select.aiRefineEdge")] {
+                for cmd in ["select.aiSubject", "select.aiRefineEdge"] {
                     if st.session.registry().get(cmd).is_some() {
-                        let (en, ck, sc) = command_state(st, cmd, None);
-                        extra.push(Node::Item { label: label.into(), shortcut: sc, action: ItemAction::Command(cmd.into()), enabled: en, checked: ck });
+                        extra.push(runtime_item(cmd));
                     }
                 }
                 for (k, n) in extra.into_iter().enumerate() {
                     nodes.insert(pos + k, n);
                 }
             }
-            "Filter" => nodes.extend(filter_submenus(st)),
-            "Fenster" => {
+            "menu-filter" => nodes.extend(filter_submenus(st)),
+            "menu-window" => {
                 // Flash-Bedienfelder (Laufzeit) nach „Suchen und ersetzen“, Dokumentliste am Ende
                 let pos = nodes.iter().position(|n| matches!(n, Node::Item { action: ItemAction::Command(c), .. } if c == "edit.findAndReplace")).map(|i| i + 1).unwrap_or(nodes.len());
                 let extra = vec![
                     Node::Separator,
                     panel_item(st, PanelId::Align),
                     panel_item(st, PanelId::AutoShapeProperties),
-                    Node::Sub { label: "Sonstige".into(), children: vec![panel_item(st, PanelId::ImageEditing), panel_item(st, PanelId::ColorPalette), panel_item(st, PanelId::SpecialCharacters)], enabled: true },
+                    Node::Sub { label: clean_label(&t("menu-window-other")).0, children: vec![panel_item(st, PanelId::ImageEditing), panel_item(st, PanelId::ColorPalette), panel_item(st, PanelId::SpecialCharacters)], enabled: true },
                     panel_item(st, PanelId::Path),
                     panel_item(st, PanelId::SymbolProperties),
                 ];
@@ -356,8 +464,9 @@ pub fn build_main_menu(st: &AppState) -> Vec<(String, Vec<Node>)> {
                     nodes.insert(pos + k, n);
                 }
                 // Arbeitsbereichlayouts (Ordner der Layouts, 11 §4.2) vor „Erweiterungen“
-                let at = nodes.iter().position(|n| matches!(n, Node::Sub { label, .. } if label == "Erweiterungen")).unwrap_or(0);
-                nodes.insert(at, Node::Sub { label: "Arbeitsbereichlayouts".into(), children: crate::appbar::workspace_menu(st), enabled: true });
+                let ext = clean_label(&t(KEY_EXTENSIONS)).0;
+                let at = nodes.iter().position(|n| matches!(n, Node::Sub { label, .. } if *label == ext)).unwrap_or(0);
+                nodes.insert(at, Node::Sub { label: clean_label(&t("menu-window-workspaceLayouts")).0, children: crate::appbar::workspace_menu(st), enabled: true });
                 let docs = st.session.documents();
                 if !docs.is_empty() {
                     nodes.push(Node::Separator);
@@ -378,16 +487,16 @@ pub fn build_main_menu(st: &AppState) -> Vec<(String, Vec<Node>)> {
 /// Bedienfeldmenü (≡) eines Bedienfelds: Einträge der Ressource plus Schließen.
 pub fn build_panel_menu(st: &AppState, panel: PanelId) -> Vec<Node> {
     let mut nodes = match panel.menu_resource().and_then(context_menu) {
-        Some(entries) => convert(st, entries, ""),
+        Some(entries) => convert(st, entries),
         None => Vec::new(),
     };
     if !nodes.is_empty() {
         nodes.push(Node::Separator);
     }
-    nodes.push(item("Hilfe", ItemAction::Ui(Action::Run("help.firepixelHelp".into(), json!({ "topic": "panels" }))), true, None));
+    nodes.push(item(&t("pmenu-help"), ItemAction::Ui(Action::Run("help.firepixelHelp".into(), json!({ "topic": "panels" }))), true, None));
     nodes.push(Node::Separator);
-    nodes.push(item("Schließen", ItemAction::Ui(Action::TogglePanel(panel)), true, None));
-    nodes.push(item("Registerkartengruppe schließen", ItemAction::Ui(Action::Run("ui.closeGroup".into(), json!({ "panel": format!("{panel:?}") }))), true, None));
+    nodes.push(item(&t("pmenu-close"), ItemAction::Ui(Action::TogglePanel(panel)), true, None));
+    nodes.push(item(&t("pmenu-closeGroup"), ItemAction::Ui(Action::Run("ui.closeGroup".into(), json!({ "panel": format!("{panel:?}") }))), true, None));
     nodes
 }
 
@@ -487,6 +596,9 @@ pub fn popup_menu(ui: &Ui, resp: &Response, nodes: &[Node], out: &mut Vec<Action
         .show(|ui| show_nodes(ui, nodes, out));
 }
 
+/// Kennung im egui-Speicher: (Zahl der Menütitel, die in die Leiste passen, Zahl aller Titel).
+pub const MENU_FIT_ID: &str = "fp-menu-bar-fit";
+
 /// Menüleiste in der Anwendungsleiste. Fährt man bei offenem Menü über einen anderen Titel,
 /// öffnet sich dessen Menü (Windows-Verhalten).
 pub fn show_menu_bar(ui: &mut Ui, st: &mut AppState) {
@@ -515,6 +627,8 @@ pub fn show_menu_bar(ui: &mut Ui, st: &mut AppState) {
             fit += 1;
         }
     }
+    // für Tests: wie viele Menütitel passen (Überlauf bei langen Übersetzungen erkennen)
+    ui.ctx().data_mut(|d| d.insert_temp(egui::Id::new(MENU_FIT_ID), (fit, menus.len())));
     let overflow: Vec<(String, Vec<Node>)> = menus.split_off(fit);
     if !overflow.is_empty() {
         let children = overflow.into_iter().map(|(label, nodes)| Node::Sub { label, children: nodes, enabled: true }).collect();

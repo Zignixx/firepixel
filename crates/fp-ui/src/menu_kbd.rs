@@ -1,13 +1,14 @@
 //! Hauptmenü per Tastatur wie unter Windows (und im Original):
 //!
-//! * Alt+Buchstabe öffnet das Menü mit dieser Zugriffstaste (unterstrichener Buchstabe, `&` in
-//!   `data\menu_main.json`), z. B. Alt+D = „Datei“,
+//! * Alt+Buchstabe öffnet das Menü mit dieser Zugriffstaste (unterstrichener Buchstabe, `&` im
+//!   Menütext der aktuellen Sprache aus `menue.ftl`), z. B. Alt+D = „Datei“, englisch Alt+F = „File“,
 //! * Alt allein (drücken und loslassen) bzw. F10 aktiviert die Menüleiste (erster Titel markiert),
 //! * ←/→ wechseln das Menü (bei offenem Menü öffnet das Nachbarmenü), → öffnet ein Untermenü,
 //!   ← schließt es,
 //! * ↑/↓ wandern über die Einträge (Trenner und graue Einträge werden übersprungen), Pos1/Ende,
 //! * Eingabe bzw. Leertaste führt aus bzw. öffnet, Esc schließt stufenweise,
-//! * Buchstaben wirken in offenen Menüs als Zugriffstasten.
+//! * Buchstaben wirken in offenen Menüs als Zugriffstasten; haben mehrere Einträge dieselbe Taste
+//!   (einige deutsche Menüs des Originals), springt die Taste wie unter Windows nur weiter.
 //!
 //! [`keyboard`] läuft vor der übrigen Tastaturverarbeitung und nimmt die Tasten, die es verwendet,
 //! aus der Ereignisliste (Werkzeuge und Kürzel sehen sie dann nicht). [`show`] zeichnet die per
@@ -19,7 +20,7 @@ use crate::theme::Theme;
 use egui::{pos2, vec2, Event, Id, Key, Rect};
 use serde_json::Value;
 use std::collections::HashMap;
-use std::sync::OnceLock;
+use std::sync::{Arc, Mutex};
 
 /// Zustand der Tastaturbedienung (egui-Speicher).
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -70,32 +71,67 @@ pub fn access_key(raw: &str) -> Option<(usize, char)> {
     None
 }
 
-/// Zugriffstasten aller Menüeinträge, Schlüssel = Pfad der bereinigten Beschriftungen.
-fn access_map() -> &'static HashMap<String, (usize, char)> {
-    static M: OnceLock<HashMap<String, (usize, char)>> = OnceLock::new();
-    M.get_or_init(|| {
-        fn walk(entries: &[MenuEntry], prefix: &str, out: &mut HashMap<String, (usize, char)>) {
-            for e in entries {
-                if e.sep {
-                    continue;
-                }
-                let (label, _) = menu::clean_label(&e.text);
-                let key = format!("{prefix}/{label}");
-                if let Some(a) = access_key(&e.text) {
-                    out.insert(key.clone(), a);
-                }
-                if let Some(c) = &e.children {
-                    walk(c, &key, out);
-                }
+/// Laufzeit-Einträge des Hauptmenüs mit eigenem Schlüssel: (Schlüssel des Menüs, Schlüssel des
+/// Eintrags). Steht im Text ein `&`, gilt die Taste wie bei den Einträgen der Menüdaten.
+const RUNTIME_ACCESS: &[(&str, &str)] = &[
+    ("menu-view", "menu-view-theme"),
+    ("menu-view", "lang-menu"),
+    ("menu-window", "menu-window-other"),
+    ("menu-window", "menu-window-workspaceLayouts"),
+    ("menu-commands", "menu-commands-resetWarnings"),
+    ("menu-commands", "menu-commands-mcp"),
+    ("menu-filter", "menu-filter-other"),
+    ("menu-filter", "menu-filter-adjustColor"),
+    ("menu-filter", "menu-filter-noise"),
+    ("menu-filter", "menu-filter-sharpen"),
+    ("menu-filter", "menu-filter-blur"),
+];
+
+/// Zugriffstasten aller Menüeinträge in der aktuellen Sprache, Schlüssel = Pfad der bereinigten
+/// Beschriftungen. Neu gebildet, sobald sich die Sprache ändert ([`fp_i18n::generation`]).
+fn access_map() -> Arc<HashMap<String, (usize, char)>> {
+    static M: Mutex<Option<(u64, Arc<HashMap<String, (usize, char)>>)>> = Mutex::new(None);
+    fn walk(entries: &[MenuEntry], prefix: &str, out: &mut HashMap<String, (usize, char)>) {
+        for e in entries {
+            if e.sep {
+                continue;
+            }
+            let raw = e.local_text();
+            let (label, _) = menu::clean_label(&raw);
+            let key = format!("{prefix}/{label}");
+            if let Some(a) = access_key(&raw) {
+                out.entry(key.clone()).or_insert(a);
+            }
+            if let Some(c) = &e.children {
+                walk(c, &key, out);
             }
         }
-        let mut out = HashMap::new();
-        walk(menu::main_menu(), "", &mut out);
-        out
-    })
+    }
+    let generation = fp_i18n::generation();
+    let Ok(mut m) = M.lock() else { return Arc::new(HashMap::new()) };
+    if let Some((g, map)) = m.as_ref()
+        && *g == generation
+    {
+        return map.clone();
+    }
+    let mut out = HashMap::new();
+    walk(menu::main_menu(), "", &mut out);
+    // Untermenüs, die erst zur Laufzeit dazukommen (Text aus einem Schlüssel)
+    for (parent, child) in RUNTIME_ACCESS {
+        if let Some(top) = menu::main_menu().iter().find(|e| e.key == *parent) {
+            let title = menu::clean_label(&top.local_text()).0;
+            let raw = fp_i18n::t(child);
+            if let Some(a) = access_key(&raw) {
+                out.entry(format!("/{title}/{}", menu::clean_label(&raw).0)).or_insert(a);
+            }
+        }
+    }
+    let map = Arc::new(out);
+    *m = Some((generation, map.clone()));
+    map
 }
 
-/// Zugriffstaste eines Eintrags im Menübaum (Pfad wie `/Datei/Öffnen...`).
+/// Zugriffstaste eines Eintrags im Menübaum (Pfad der angezeigten Texte, z. B. `/Datei/Öffnen...`).
 pub fn access_of(path: &str) -> Option<(usize, char)> {
     access_map().get(path).copied()
 }
@@ -307,8 +343,13 @@ pub fn keyboard(ctx: &egui::Context, st: &mut AppState) {
                         s.path = vec![first_selectable(&menus[t].1)];
                     }
                 } else if let Some((nodes, key_path)) = level_nodes(&menus, s.top, &s.path, s.path.len() - 1) {
-                    let hit = nodes.iter().position(|nd| selectable(nd) && access_of(&format!("{key_path}/{}", label_of(nd))).map(|a| a.1) == Some(ch));
-                    if let Some(i) = hit {
+                    let hits: Vec<usize> = nodes.iter().enumerate().filter(|(_, nd)| selectable(nd) && access_of(&format!("{key_path}/{}", label_of(nd))).map(|a| a.1) == Some(ch)).map(|(i, _)| i).collect();
+                    if hits.len() > 1 {
+                        // mehrere Einträge mit derselben Taste (wie unter Windows): nur weiterspringen
+                        if let Some(last) = s.path.last_mut() {
+                            *last = hits.iter().copied().find(|&i| i > *last).unwrap_or(hits[0]);
+                        }
+                    } else if let Some(&i) = hits.first() {
                         match &nodes[i] {
                             Node::Sub { children, .. } => {
                                 if let Some(last) = s.path.last_mut() {
@@ -432,6 +473,6 @@ mod tests {
         assert_eq!(access_key("&Datei"), Some((0, 'd')));
         assert_eq!(access_key("Ö&ffnen...\tStrg+O"), Some((1, 'f')));
         assert_eq!(access_key("A && B"), None);
-        assert_eq!(access_of("/Datei").map(|a| a.1), Some('d'));
+        assert_eq!(access_key("[!! &Datei ···!!]"), Some((4, 'd')));
     }
 }

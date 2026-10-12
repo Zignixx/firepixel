@@ -80,15 +80,10 @@ pub fn menu_for(st: &AppState) -> &'static str {
 }
 
 fn state(st: &AppState, name: &str, fallback_sc: Option<String>) -> (bool, Option<bool>, Option<String>) {
-    let sc = st.session.command_shortcuts(name).first().map(|s| s.display_de()).or(fallback_sc);
-    if let Some((en, ck)) = crate::actions::ui_command_state(st, name) {
-        return (en, ck, sc);
-    }
-    let (en, ck) = st.session.command_state(name);
-    (en, ck, sc)
+    crate::menu::command_state(st, name, fallback_sc)
 }
 
-/// Aufbereiteter Menübaum (Zustand je Frame).
+/// Aufbereiteter Menübaum (Zustand je Frame; Texte in der aktuellen Sprache, `ctx-…`/`cmd-…`).
 pub fn build(st: &AppState, entries: &[MenuEntry]) -> Vec<Node> {
     let mut out = Vec::new();
     for e in entries {
@@ -98,7 +93,7 @@ pub fn build(st: &AppState, entries: &[MenuEntry]) -> Vec<Node> {
             }
             continue;
         }
-        let (label, sc) = clean_label(&e.text);
+        let (label, sc) = clean_label(&e.local_text());
         if let Some(children) = &e.children {
             let kids = build(st, children);
             let enabled = kids.iter().any(|k| matches!(k, Node::Item { enabled: true, .. } | Node::Sub { enabled: true, .. }));
@@ -184,9 +179,9 @@ fn copy_color(ctx: &egui::Context, st: &mut AppState, which: &str, at: Option<fp
     match c {
         Some(c) => {
             ctx.copy_text(hex(c));
-            st.push(Action::Status(format!("Farbe {} kopiert.", hex(c))));
+            st.push(Action::Status(fp_i18n::tr!("ctx-msg-colorCopied", color = hex(c))));
         }
-        None => st.push(Action::Status("Keine Farbe an dieser Stelle.".into())),
+        None => st.push(Action::Status(fp_i18n::t("ctx-msg-noColor"))),
     }
 }
 

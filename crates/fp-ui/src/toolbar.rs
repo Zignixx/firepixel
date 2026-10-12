@@ -57,15 +57,31 @@ fn resolve(st: &AppState, name: &str) -> Option<String> {
     st.session.registry().iter().find(|c| c.info().name.to_lowercase() == lower).map(|c| c.info().name.clone())
 }
 
+/// Werkzeugtipp „Beschriftung (Kürzel)“ in der aktuellen Sprache (`cmd-…` aus `menue.ftl`).
 fn tooltip(st: &AppState, name: &str) -> String {
-    let Some(c) = st.session.registry().get(name) else { return String::new() };
-    let i = c.info();
-    let mut t = i.label.clone();
+    if st.session.registry().get(name).is_none() {
+        return String::new();
+    }
+    let mut t = menu::command_label(st, name);
     if let Some(sc) = st.session.command_shortcuts(name).first() {
-        t.push_str(&format!(" ({})", sc.display_de()));
+        t.push_str(&format!(" ({})", menu::shortcut_text(sc)));
     }
     t
 }
+
+/// Einträge des Ausrichten-Menüs (Trenner = leerer Name).
+const ALIGN_ITEMS: [&str; 10] = [
+    "modify.align.left",
+    "modify.align.centerVertical",
+    "modify.align.right",
+    "",
+    "modify.align.top",
+    "modify.align.centerHorizontal",
+    "modify.align.bottom",
+    "",
+    "modify.align.distributeWidths",
+    "modify.align.distributeHeights",
+];
 
 /// Zeichnet die Symbolleiste in die verfügbare Fläche.
 pub fn show(ui: &mut Ui, st: &mut AppState) {
@@ -110,28 +126,17 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                 let ir = Rect::from_center_size(pos2(r.left() + 14.0, r.center().y), vec2(16.0, 16.0));
                 crate::icons::paint(ui.painter(), ir, Icon::AlignLeft, &crate::icons::IconStyle::new(&theme, Some(ToolGroup::Select), any));
                 widgets::drop_arrow(ui.painter(), Rect::from_center_size(pos2(r.right() - 8.0, r.center().y), vec2(8.0, 8.0)), c.icon_fg);
-                let resp = resp.on_hover_text("Ausrichten");
-                let nodes: Vec<Node> = [
-                    ("Links", "modify.align.left"),
-                    ("Vertikal zentrieren", "modify.align.centerVertical"),
-                    ("Rechts", "modify.align.right"),
-                    ("", ""),
-                    ("Oben", "modify.align.top"),
-                    ("Horizontal zentrieren", "modify.align.centerHorizontal"),
-                    ("Unten", "modify.align.bottom"),
-                    ("", ""),
-                    ("Breiten verteilen", "modify.align.distributeWidths"),
-                    ("Höhen verteilen", "modify.align.distributeHeights"),
-                ]
-                .iter()
-                .map(|(l, n)| {
-                    if n.is_empty() {
-                        Node::Separator
-                    } else {
-                        Node::Item { label: l.to_string(), shortcut: st.session.command_shortcuts(n).first().map(|s| s.display_de()), action: ItemAction::Command(n.to_string()), enabled: st.session.is_available(n), checked: None }
-                    }
-                })
-                .collect();
+                let resp = resp.on_hover_text(menu::clean_label(&fp_i18n::t("menu-modify-align")).0);
+                let nodes: Vec<Node> = ALIGN_ITEMS
+                    .iter()
+                    .map(|n| {
+                        if n.is_empty() {
+                            Node::Separator
+                        } else {
+                            Node::Item { label: menu::command_label(st, n), shortcut: st.session.command_shortcuts(n).first().map(menu::shortcut_text), action: ItemAction::Command(n.to_string()), enabled: st.session.is_available(n), checked: None }
+                        }
+                    })
+                    .collect();
                 let mut acts = Vec::new();
                 menu::popup_menu(ui, &resp, &nodes, &mut acts);
                 for a in acts {
