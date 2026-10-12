@@ -2,6 +2,92 @@
 
 Auftrag: „Vergleich mal alle Funktionen vom Original und Firepixel, damit sie wirklich 1:1 sind.“ Für die Nacht hat der Nutzer echte Maus- und Tastatureingabe freigegeben.
 
+## Übergabe (Stand 12.10.2026, Arbeit auf Nutzerwunsch angehalten)
+
+**Zahlen je Bereich** (113 Zeilen; ✅ gleich, ⚠️ Abweichung im Detail, ❌ fehlt bzw. falsch, ⏳ begonnen, aber nicht fertig gemessen):
+
+| Bereich | ✅ | ⚠️ | ❌ | ⏳ |
+|---|---|---|---|---|
+| 1 Inspektor je Werkzeug (W1–W38) | 9 | 10 | 18 | 1 |
+| 2 Feldverhalten Deckkraft (F1–F11) | 7 | 4 | 0 | 0 |
+| 3 Text: Schriftgröße (T1–T6) | 3 | 0 | 2 | 1 |
+| 4 Inspektor je Objektart (O1–O17) | 6 | 4 | 7 | 0 |
+| 5 Leinwand/Werkzeugverhalten (L1–L30) | 9 | 7 | 12 | 2 |
+| 6 Mauszeiger (K1–K11) | 5 | 6 | 0 | 0 |
+| **Summe** | **39** | **31** | **39** | **4** |
+
+**Geprüft sind:**
+- der Werkzeug-Inspektor ohne Auswahl für alle Werkzeuge der Werkzeugleiste, Vorgaben gegen die Werkseinstellungen;
+- das Feld „Deckkraft“ vollständig (Tippen, Klemmen, Pfeiltasten, Rad, Popup-Schieber, Esc/Tab, Rückgängig);
+- die Schriftgröße beim Textobjekt und bei markiertem Text;
+- der Inspektor für Rechteck, Pfad, Text, Bitmap, Gruppe, Symbol, Hotspot und Mehrfachauswahl;
+- Zeichnen mit Umschalt/Alt, Esc/Enter, Pfeiltasten, Mausrad, Zoomrahmen, Zauberstab, Bitmapmodus, Zuschneiden und Eckgriffe mit echter Maus;
+- die Mauszeiger je Werkzeug.
+
+**Befunde und Verbleib** (alle Einträge in `docs\BEFUNDE.md`, Abschnitt UX-A; beim Anhalten war keiner als behoben gemeldet):
+- **LW (Leinwand/Werkzeuge), offen:**
+  - Werkzeugvorgaben aus den Voreinstellungen;
+  - Textwerkzeug: Schrift und Farbe; Zeilenabstand 120 % und 2 px Rand; Textlage und Werkzeug nach Esc;
+  - Gummiband „berührt“; Umschalt während des Ziehens;
+  - **hoch:** Rechteck mit Umschalt/Alt und Fang am Startpunkt;
+  - Pfeiltasten/Esc beim Aufziehen;
+  - **hoch:** Stift-Doppelklick verwirft den Pfad;
+  - **hoch:** Eckgriff am Rechteck ändert nichts;
+  - Strg+Leertaste-Zoom; Zoomrahmen auf Tabellenstufe; Mausrad ohne Taste;
+  - Esc bei Zauberstab bzw. im Bitmapmodus; Doppelklick auf Bitmap; Zuschneiden + Esc;
+  - Segmente/Hotspots unsichtbar;
+  - Mauszeiger.
+- **I18N-INSPEKTOR („Funktion, nicht Text“), offen:**
+  - Masken-Teilfeld; Zustand der Pinselform; Text-Zeile 2 grau;
+  - Knopf „ab/cd“ fehlt; Pinselstrich-Feld im Text-Inspektor;
+  - Strichposition im Werkzeug-Inspektor;
+  - Toleranz beim Verlauf an „Auswahl füllen“;
+  - Popup-Schieber senkrecht; **hoch:** Esc im Popup hebt die Auswahl auf;
+  - Ziffernfelder; gemischte Werte leer.
+- **AU (Skript):** `addNewHotspot("slice")` erzeugt einen Hotspot; das JSF-Anlegen von Text übernimmt die Voreinstellungen nicht. Beide offen.
+- **Phase 1 (`docs\UX_ABGLEICH_A.md`):**
+  - von UX-A selbst behoben: Einfügeversatz, Einpassen mit 15 px Rand, Verschmelzen der Pfeiltasten im Verlauf;
+  - HG C22 und Z26 erledigt;
+  - die übrigen Phase-1-Befunde stehen dort mit Status.
+
+**Als Nächstes prüfen, in dieser Reihenfolge:**
+1. Erneut prüfen, sobald LW und I18N-INSPEKTOR ihre Befunde als behoben melden: zuerst die „hoch“-Punkte (Eckgriff, Stift-Doppelklick, Rechteck Umschalt/Alt, Esc im Popup).
+2. Feldprobe auf der Firepixel-Seite für B, X, Rundung und Strich (Skript `uxp_v7.ps1 -Seite f`). Messwerte des Originals: B höchstens 6000, X negativ erlaubt, Rundung klemmt auf 100 %, Strich 9999 → 100, „-5“ → 5; Pfeiltasten und Rad wirken nicht.
+3. Offene ⏳-Zeilen: L30 (Skalieren/Transformieren im Original, `uxp_v6.ps1`), L8, W23, T6.
+4. Text: Kanten, Rücktaste, Live-Wirkung weiterer Felder während der Bearbeitung.
+5. Inspektor für Schaltfläche, Animation und Segment in Firepixel.
+6. Popup-Schieber der übrigen Felder (Kante, Textur, Strich).
+7. Mauszeiger in XOR-Darstellung.
+
+**So benutzt man die Hilfen.** Alles liegt dauerhaft unter `..\re\_testdateien\ux\uxa\werkzeug\`; JSF-Dateien in `jsf\`, Rohbilder in `bilder\`. In den Skripten steht noch der alte Scratchpad-Pfad in `$S`; auf diesen Ordner umstellen.
+- `uxa2.ps1` ist die Eingabebibliothek: `Ziel`, `Klick`, `Ziehe`, `Druecke`, `Tippe`, `Rad`, `Foto`, `ZeigerBild`, `Loesen`, `FP-Dialoge-Schliessen`.
+  - Vor **jeder** Eingabe prüft sie, ob Vordergrundfenster und Fenster unter dem Punkt (WindowFromPoint) zum Zielprozess gehören; sonst bricht sie ab.
+  - `Tippe` arbeitet mit VkKeyScan, weil das Original Unicode-Eingabe ignoriert.
+  - RDP darf nicht minimiert sein.
+- `fpmcp.ps1`: `FP-Start` startet eine eigene Release-Instanz mit `--mcp`, eigenem APPDATA und Sprache de. `FP <werkzeug> @{…}` ruft die MCP-Brücke auf. Die Instanz am Ende beenden.
+- `pi.ps1` liest den Inspektor des Originals per Fensternachricht. `paar.ps1` → `Paarbild` setzt zwei Aufnahmen übereinander, das Original oben.
+- `sitzung.ps1 -Skript <x.ps1> -Seite o|f` wartet 60 s ohne Nutzereingabe, nimmt die gemeinsame Sperre (gui-sitzung) und räumt danach Tasten und Dialoge auf. Sitzungen dauern höchstens 5 Minuten.
+- **Ablauf einer Messung:**
+  1. Original: `jsf\uxp_aktiv.jsf` holt das eigene Testdokument nach vorn, `jsf\uxp_objekte.jsf` baut die Ausgangslage.
+  2. Firepixel: `FP-Start`, dann `fp_objekte.ps1` (gleiche Objekte).
+  3. `uxp_vN.ps1 -Seite o`, danach `-Seite f`, jeweils über `sitzung.ps1`.
+  4. Die Ausgaben vergleichen, `Paarbild` nach `docs\screenshots\paritaet\a_<nr>_<name>.png`, die Zeile hier eintragen und den Befund in BEFUNDE.md.
+- Keine Befehle, die Datei-Dialoge öffnen. Den Prozess des Originals nie beenden.
+- **Messdaten:** `..\re\_testdateien\ux\uxa\o_ergebnisse.txt` (Phase 1) und `werkzeug\pi_inventar.txt` (Inspektor-Steuerelemente). Belegbilder: `docs\screenshots\paritaet\a_*.png`.
+
+## Noch nicht geprüft
+
+- Werkzeuge mit Auswahl: der Inspektor nach dem Zeichnen für jedes einzelne Werkzeug (bisher nur stichprobenartig).
+- Felder außer Deckkraft und Schriftgröße im vollen Feldprobenumfang: B, H, X, Y, Rundung, Strichstärke, Kante, Textur, Laufweite, Zeilenabstand, Grundlinie, Einzug, Absatzabstände.
+- Rückgängig-Granularität je Feld (außer Deckkraft).
+- Skalieren, Verzerren und Drehen mit Modifikatoren; Ebenen-Interaktion auf der Leinwand.
+- Inspektor für Schaltfläche, Animationssymbol, Segment und Instanz mit Eigenschaften.
+- Stift- und Unterauswahl-Feinheiten: Kurvenpunkte, Alt-Ziehen an Griffen, Pfad fortsetzen.
+- Bitmapwerkzeuge im Detail: Pinsel, Radierer, Weichzeichner, Stempel, Ersetzen.
+- Text: Kanten, Rücktaste und Pfeiltasten im Text, Textfluss im Rahmen.
+
+---
+
 Dieser Katalog wird laufend ergänzt. Jede Zeile beschreibt ein Element mit dem Verhalten im Original und in Firepixel, dazu das Ergebnis und das Belegbild.
 
 ## Aufbau der Messung
@@ -142,13 +228,36 @@ Testdokument mit denselben Objekten in beiden Programmen (per JSF angelegt): R1,
 | L23 | Stift: 2 Klicks, Esc | offener Pfad 250,150–330,150 | ebenso | ✅ | |
 | L24 | Stift: Klick, Klick, Doppelklick | offener Pfad mit 3 Punkten bis 330,220 | **kein Pfad** (nach dem Doppelklick ist nichts da) | ❌ | |
 | L25 | Zoomwerkzeug: Rahmen 50,50–150,120 aufziehen | 1150 % (stufenlos eingepasst) | 800 % (Tabellenstufe) | ❌ | |
+| L26 | Zeiger: Eckgriff eines gewählten Rechtecks um +40/+30 ziehen | Rechteck wird **größer** (bis 193,153), Rundung bleibt 0 | keine Änderung (weder Größe noch Rundung) | ❌ | |
+| L27 | Zeiger: Doppelklick auf Bitmap | Bitmapmodus, Werkzeug wechselt zum Auswahlrahmen | nichts | ❌ | |
+| L28 | Zuschneiden: Rahmen ziehen, Esc | Leinwand unverändert, Werkzeug wechselt zum Zeiger | Leinwand unverändert, Werkzeug bleibt Zuschneiden | ⚠️ | |
+| L29 | Zuschneiden: Rahmen 20,20–300,200, Eingabe, Strg+Z | 280 × 180, Rückgängig stellt 600 × 400 her | ebenso | ✅ | |
+| L30 | Skalieren: Eckgriff ziehen, Esc bzw. Eingabe | ⏳ (Werkzeug lässt sich im laufenden Original nicht per Skript wählen) | Esc verwirft, Eingabe übernimmt, ein Schritt | ⏳ | |
+
+## 6. Mauszeiger (echte Maus, Bild `a_400_mauszeiger.png`)
+
+Das Original zeichnet einige Zeiger invertiert (XOR); auf weißem Grund sind sie im Bild kaum zu sehen (Auswahlrahmen, Rechteck, Pinsel, Text). Diese Zeiger sind hier nicht bewertet.
+
+| Nr | Lage | Original | Firepixel | |
+|---|---|---|---|---|
+| K1 | Zeiger über leerer Leinwand / über Objekt / im gewählten Objekt / mit Alt | schwarzer Pfeil | schwarzer Pfeil | ✅ |
+| K2 | Zeiger über Eckgriff eines gewählten Rechtecks | Pfeil (ohne Zusatz) | Pfeil mit schwarzem Quadrat | ⚠️ |
+| K3 | Zeiger über Kantengriff | Pfeil | Doppelpfeil ↔ | ⚠️ |
+| K4 | Teilauswahl über Objekt | weißer Pfeil | weißer Pfeil mit Zusatz | ✅ |
+| K5 | Zoom / Zoom mit Alt | Lupe + / Lupe − | Lupe + / Lupe − | ✅ |
+| K6 | Hand-Werkzeug bzw. Leertaste, ohne Maustaste | **offene** Hand | geschlossene Faust | ⚠️ |
+| K7 | Stift über leerer Leinwand | Federspitze | Stift mit Kreuz (wie „Pfad schließen/entfernen“) | ⚠️ |
+| K8 | Füllwerkzeug über leerer Leinwand (kein Objekt) | Verbotszeichen ⊘ | Farbeimer | ⚠️ |
+| K9 | Zuschneiden | Zuschneide-Symbol | Fadenkreuz | ⚠️ |
+| K10 | Radiergummi über Bitmap | Kreis in Pinselgröße | Kreis in Pinselgröße mit Mittelkreuz | ✅ |
+| K11 | Zauberstab, Pipette | Zauberstab / Pipette | Zauberstab / Pipette (eigene Form) | ✅ |
 
 ## Zählung (laufend)
 
 | | Anzahl |
 |---|---|
-| geprüfte Elemente | 97 Zeilen (rund 270 einzelne Felder, Vorgaben bzw. Abläufe) |
-| ✅ | 33 |
-| ⚠️ | 24 |
-| ❌ | 37 |
-| ⏳ | 3 |
+| geprüfte Elemente | 113 Zeilen (rund 300 einzelne Felder, Vorgaben, Abläufe bzw. Zeiger) |
+| ✅ | 39 |
+| ⚠️ | 31 |
+| ❌ | 39 |
+| ⏳ | 4 |
