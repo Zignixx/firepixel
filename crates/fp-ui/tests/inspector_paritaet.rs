@@ -280,17 +280,19 @@ fn number_fields_behave_like_digit_fields() {
     click(&mut h, p);
     assert_eq!(opacity(&h, r1), 7.0, "F7: Esc verwirft nicht, Fokusverlust übernimmt");
     assert_eq!(undo_count(&h), n0 + 1, "ein Schritt");
-    // F10: Strg+A im Feld wählt alle Objekte, das Feld bleibt unverändert
+    // F10 (PM-2, im Original neu gemessen): Strg+A im Feld markiert den Feldtext, die
+    // Objektauswahl bleibt; Tippen ersetzt den markierten Text (genauer: inspector_fv9.rs)
     let _ = h.state_mut().state.session.execute("select.set", json!({"ids": [r1]}));
     h.run_steps(2);
     let f = input_with(&h, "7");
     click(&mut h, f.center());
     key(&mut h, Key::A, ctrl());
     h.run_steps(2);
-    let mut s = sel(&h);
-    s.sort();
-    assert_eq!(s, vec![r1, r2], "F10: Strg+A = Alles auswählen");
-    assert_eq!(opacity(&h, r1), 7.0);
+    assert_eq!(sel(&h), vec![r1], "F10: Strg+A wählt keine Objekte aus");
+    text(&mut h, "33");
+    key(&mut h, Key::Enter, Modifiers::NONE);
+    assert_eq!(opacity(&h, r1), 33.0, "F10: Feldtext war markiert und wurde ersetzt");
+    let _ = r2;
     // Textfelder (Name) behalten Strg+A und Esc wie bisher (nur Zahlenfelder wie im Original)
 }
 

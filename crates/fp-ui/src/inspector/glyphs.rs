@@ -196,15 +196,26 @@ pub fn paint(p: &Painter, r: Rect, g: Glyph, t: &Theme, enabled: bool) {
                 p.hline(x0..=x0 + w, y, s1);
             }
         }
+        Glyph::Italic if fp_i18n::t("pi-text-italic-glyph") == "K" => {
+            // kursives „K“ (deutsche Oberfläche wie im Original, PARITAET_A W16): schräge Striche,
+            // egui hat keine kursive Schrift
+            let sk = |x: f32, y: f32| z(x - y * 0.3, y);
+            let s = Stroke::new(1.3, fg);
+            p.line_segment([sk(-2.5, -4.5), sk(-2.5, 4.5)], s);
+            p.line_segment([sk(3.5, -4.5), sk(-2.0, 0.5)], s);
+            p.line_segment([sk(-0.6, -0.8), sk(3.8, 4.5)], s);
+        }
         Glyph::Bold | Glyph::Italic | Glyph::Underline | Glyph::TextT => {
+            // Kurzzeichen je Sprache (deutsch F/K wie im Original, englisch B/I)
+            let (b, i) = (fp_i18n::t("pi-text-bold-glyph"), fp_i18n::t("pi-text-italic-glyph"));
             let (txt, font) = match g {
-                Glyph::Bold => ("B", t.bold(11.0 * k.max(1.0))),
-                Glyph::Italic => ("I", egui::FontId::proportional(11.0 * k.max(1.0))),
+                Glyph::Bold => (b.as_str(), t.bold(11.0 * k.max(1.0))),
+                Glyph::Italic => (i.as_str(), egui::FontId::proportional(11.0 * k.max(1.0))),
                 Glyph::Underline => ("U", t.font(11.0 * k.max(1.0))),
                 _ => ("T", t.bold(12.0 * k.max(1.0))),
             };
             p.text(m, Align2::CENTER_CENTER, txt, font, fg);
-            if g == Glyph::Italic {
+            if g == Glyph::Italic && i == "I" {
                 p.line_segment([z(1.5, -4.5), z(-1.5, 4.5)], Stroke::new(1.3, fg));
             }
             if g == Glyph::Underline {

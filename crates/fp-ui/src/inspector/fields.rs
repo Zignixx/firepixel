@@ -182,29 +182,14 @@ pub fn field_frame(ui: &Ui, r: Rect, enabled: bool, focused: bool) {
 /// darf nicht an Leinwand oder Werkzeug gehen).
 pub const TEXT_FILTER: egui::EventFilter = egui::EventFilter { horizontal_arrows: true, vertical_arrows: true, tab: false, escape: true };
 
-/// Anfrage eines Zahlenfelds „Strg+A = Alles auswählen“ (wie im Original geht das Kürzel aus dem
-/// Feld an das Dokument); der Inspektor führt sie aus ([`take_select_all_request`]).
-const SELECT_ALL_REQ: &str = "pi-select-all-request";
-
-/// Hat ein Zahlenfeld in diesem Bild Strg+A erhalten? (setzt die Anfrage zurück)
-pub fn take_select_all_request(ctx: &egui::Context) -> bool {
-    ctx.data_mut(|d| {
-        let v = d.get_temp::<bool>(Id::new(SELECT_ALL_REQ)).unwrap_or(false);
-        d.remove::<bool>(Id::new(SELECT_ALL_REQ));
-        v
-    })
-}
-
 /// Eingabefeld mit Puffer. `numeric`: Zahlenfeld des Inspektors – wie im Original verwirft Esc den
-/// getippten Wert nicht (übernommen wird beim Fokusverlust bzw. mit Eingabe/Tab), und Strg+A
-/// markiert nicht den Feldtext, sondern wählt alle Objekte aus (PARITAET_A F7/F10).
+/// getippten Wert nicht (übernommen wird beim Fokusverlust bzw. mit Eingabe/Tab, PARITAET_A F7).
+/// Strg+A markiert wie in jedem Windows-Eingabefeld den Feldtext (F10, im Original von PM-2 in
+/// 3 Läufen gemessen; die Taste bleibt im Feld, kein „Alles auswählen“ im Dokument).
 fn buffered_edit(ui: &mut Ui, id: Id, r: Rect, current: &str, enabled: bool, right: bool, numeric: bool) -> (Option<String>, Response) {
     let t = Theme::current(ui.ctx());
     let te_id = id.with("te");
     let focused = ui.memory(|m| m.has_focus(te_id));
-    if numeric && focused && enabled && ui.input_mut(|i| i.consume_key(egui::Modifiers::COMMAND, egui::Key::A)) {
-        ui.ctx().data_mut(|d| d.insert_temp(Id::new(SELECT_ALL_REQ), true));
-    }
     // Puffer beim Tippen; ändert sich der Wert von außen (Schieber, Pfeil) und wurde noch nichts
     // getippt, folgt der Puffer – sonst überschriebe der Fokusverlust den neuen Wert mit dem alten
     let orig_id = id.with("orig");
@@ -515,6 +500,14 @@ pub fn combo_box_frame(ui: &mut Ui, id: Id, r: Rect, text: &str, enabled: bool) 
     let t = Theme::current(ui.ctx());
     let c = &t.colors;
     let resp = ui.interact(r, id, if enabled { Sense::click() } else { Sense::hover() });
+    // Barrierefreiheit (und egui_kittest): Kombifeld mit angezeigtem Wert (ohne Beschriftung,
+    // damit Suchen nach Beschriftungen eindeutig bleiben)
+    resp.widget_info(|| {
+        let mut i = egui::WidgetInfo::new(egui::WidgetType::ComboBox);
+        i.enabled = enabled;
+        i.current_text_value = Some(text.to_string());
+        i
+    });
     audit(ui, "field", "", r, r, 0);
     let open = egui::Popup::is_id_open(ui.ctx(), egui::Popup::default_response_id(&resp));
     let hot = enabled && (resp.hovered() || open);

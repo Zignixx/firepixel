@@ -173,6 +173,9 @@ pi-shape-polygon = Polygon
 pi-text-bold = Faux Fett
 pi-text-italic = Faux Kursiv
 pi-text-underline = Unterstrichen
+# Kurzzeichen auf den Knöpfen Faux Fett/Kursiv (deutsch F/K wie im Original)
+pi-text-bold-glyph = F
+pi-text-italic-glyph = K
 pi-text-align-left = Linksbündig
 pi-text-align-center = Zentrieren
 pi-text-align-right = Rechtsbündig

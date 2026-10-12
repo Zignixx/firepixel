@@ -58,12 +58,26 @@ pub fn families() -> Arc<Vec<Family>> {
     })
 }
 
-/// Familie und Stil zu einem Schriftnamen (PostScript- oder Familienname).
+/// Grundschnitt einer Familie: „Regular“ bzw. der gleichwertige Name (Normal, Roman, Book,
+/// Standard, Medium), sonst der erste Schnitt. Die Reihenfolge der Schnitte im Index folgt den
+/// Schriftdateien (bei Myriad Pro z. B. „Bold“ zuerst) und taugt nicht als Vorgabe.
+pub fn base_style(f: &Family) -> String {
+    for want in ["regular", "normal", "roman", "book", "standard", "medium"] {
+        if let Some((s, _)) = f.styles.iter().find(|(s, _)| s.eq_ignore_ascii_case(want)) {
+            return s.clone();
+        }
+    }
+    f.styles.first().map(|s| s.0.clone()).unwrap_or_else(|| "Regular".into())
+}
+
+/// Familie und Stil zu einem Schriftnamen (PostScript- oder Familienname). Ein reiner
+/// Familienname (z. B. „Myriad Pro“ eines neuen Texts) zeigt wie im Original den Grundschnitt
+/// „Regular“ (PARITAET_A W14); Fett/Kursiv des Inspektors sind Faux-Schnitte und ändern ihn nicht.
 pub fn lookup(name: &str) -> (String, String) {
     let fams = families();
     for f in fams.iter() {
         if f.name.eq_ignore_ascii_case(name) {
-            return (f.name.clone(), f.styles.first().map(|s| s.0.clone()).unwrap_or_else(|| "Regular".into()));
+            return (f.name.clone(), base_style(f));
         }
         if let Some((s, _)) = f.styles.iter().find(|(_, ps)| ps.eq_ignore_ascii_case(name)) {
             return (f.name.clone(), s.clone());

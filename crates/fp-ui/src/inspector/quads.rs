@@ -126,22 +126,52 @@ fn tool_q1(ui: &mut Ui, st: &mut AppState, r: Rect) {
     let group = info.map(|i| ToolGroup::from_section(i.section));
     let d = Dl::at(r.min + vec2(6.0, 0.0));
     icons::paint(ui.painter(), d.r(0.0, 5.0, 14.0, 13.0), icons::tool_icon(id), &IconStyle::new(&theme, group, true));
-    let label = info.map(super::texte::tool_label).unwrap_or_default();
+    let label = tool_q1_label(st);
     let lr = d.r(21.0, 1.0, 54.0, 26.0);
     let font = theme.small_font();
     let col = theme.colors.text;
-    if fields::source_language() || widgets::text_width(ui, &label, &font) <= lr.width() {
+    let lines: Vec<String> = if widgets::text_width(ui, &label, &font) <= lr.width() {
         widgets::text_clipped(ui.painter(), pos2(lr.left(), lr.top() + 8.0), Align2::LEFT_CENTER, &label, font, col, lr.width());
+        vec![label.clone()]
     } else {
-        // längere übersetzte Werkzeugnamen in bis zu zwei Zeilen umbrechen (Deutsch wie bisher mit „…“)
+        // lange Werkzeugnamen bricht das Original in zwei Zeilen um („Rote Augen / entfernen“,
+        // „Pfadausbesserung / - additiv“, PARITAET_A W10/W28); erst ab drei Zeilen „…“
         let g = ui.painter().layout(label.clone(), font.clone(), col, lr.width());
         if g.rows.len() <= 2 {
+            let rows: Vec<String> = g.rows.iter().map(|r| r.text().trim_end().to_string()).collect();
             let top = lr.top() + 8.0 - g.rows.first().map(|r| r.height()).unwrap_or(10.0) / 2.0;
             ui.painter().galley(pos2(lr.left(), top), g, col);
+            rows
         } else {
             widgets::text_clipped(ui.painter(), pos2(lr.left(), lr.top() + 8.0), Align2::LEFT_CENTER, &label, font, col, lr.width());
+            vec![format!("{label}…")]
+        }
+    };
+    ui.ctx().data_mut(|dd| dd.insert_temp(egui::Id::new(TOOL_Q1_LINES), lines));
+}
+
+/// Schlüssel der zuletzt im Werkzeugkopf gezeichneten Zeilen (für Tests: [`tool_header_lines`]).
+const TOOL_Q1_LINES: &str = "pi-tool-q1-lines";
+
+/// Zeilen des Werkzeugnamens im Inspektorkopf, wie zuletzt gezeichnet (Tests).
+pub fn tool_header_lines(ctx: &egui::Context) -> Vec<String> {
+    ctx.data(|d| d.get_temp::<Vec<String>>(egui::Id::new(TOOL_Q1_LINES))).unwrap_or_default()
+}
+
+/// Name im Werkzeugkopf: Werkzeugname; bei der automatischen Form wie im Original der Name der
+/// gewählten Form („Abgefastes Rechteck“, PARITAET_A W27).
+fn tool_q1_label(st: &AppState) -> String {
+    let id = st.session.tools.active;
+    if id == fp_engine::ToolId::AutoShape {
+        let shape = st.session.tools.options.auto_shape.as_str();
+        if let Some((de, en)) = crate::tools_panel::AUTO_SHAPES.iter().find(|(de, _)| *de == shape) {
+            return crate::tools_panel::shape_label(en, de);
+        }
+        if !shape.is_empty() {
+            return shape.to_string();
         }
     }
+    fp_engine::tools::info(id).map(super::texte::tool_label).unwrap_or_default()
 }
 
 /// Auswahl (14101): Miniatur, Typtext, Objektname (editierbar).
@@ -197,8 +227,9 @@ pub const BOX_MAX: f64 = 6000.0;
 /// B/H/X/Y der Auswahl mit „Proportionen beibehalten“ (14007).
 fn box_q2(ui: &mut Ui, st: &mut AppState, r: Rect) {
     let theme = Theme::current(ui.ctx());
-    // während der Textbearbeitung der Rahmen des Texts im Editor (mit allen ungespeicherten Änderungen)
-    let editing = if st.session.tool_is_editing_text() { st.session.text_edit_frame() } else { None };
+    // während der Textbearbeitung der Rahmen des Texts im Editor (mit allen ungespeicherten
+    // Änderungen) – wie außerhalb der Bearbeitung mit 2-px-Rand (Textgrenzen des Originals)
+    let editing = if st.session.tool_is_editing_text() { st.session.text_edit_bounds() } else { None };
     let b = editing.or_else(|| st.session.active().and_then(|d| fp_engine::docops::ids_bounds(&d.doc, d.page, &d.selection.elements)));
     let en = b.is_some();
     let (w, h, x, y) = b.map(|b| (b.width() as f64, b.height() as f64, b.left as f64, b.top as f64)).unwrap_or((0.0, 0.0, 0.0, 0.0));

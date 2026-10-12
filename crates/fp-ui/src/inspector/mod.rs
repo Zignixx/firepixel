@@ -16,6 +16,7 @@ pub mod obj_quads;
 pub mod popups;
 pub mod scale;
 mod quads;
+pub use quads::tool_header_lines;
 pub mod texte;
 mod tool_quads;
 
@@ -199,12 +200,6 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
             let (r, _) = ui.allocate_exact_size(vec2(BODY_WIDTH, body.height()), Sense::hover());
             quadrants(ui, st, r, &state, half, &theme);
         });
-    }
-    // Strg+A in einem Zahlenfeld wählt wie im Original alle Objekte aus (UX-A F10)
-    if fields::take_select_all_request(ui.ctx()) {
-        let sc = fp_engine::Shortcut { ctrl: true, alt: false, shift: false, vk: 0x41 };
-        let cmd = st.session.command_for_shortcut(&sc).unwrap_or_else(|| "select.all".into());
-        st.push(Action::Run(cmd, serde_json::json!({})));
     }
     ui.allocate_rect(full, Sense::hover());
 }

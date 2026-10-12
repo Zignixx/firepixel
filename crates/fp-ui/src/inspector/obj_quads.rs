@@ -1275,11 +1275,37 @@ struct TextVals {
     orientation: i32,
 }
 
+/// Glättung eines Textobjekts für die Liste: −1 = keine (harte Füllkante `FETi 0`, kein
+/// `TAAi`-Wert), sonst `TAAi` (re 9 §3.5: 0 glatt, 1 scharf, 2 stark, 3 System, 4 benutzerdef.).
+fn text_aa(t: &fp_model::TextElem) -> i32 {
+    if t.attrs.fill.as_ref().is_some_and(|f| f.edge == 0) { -1 } else { t.antialias }
+}
+
+/// Einträge der Glättungsliste (Reihenfolge wie im Original) mit den Namen von
+/// `text.setProperties`/`text.setToolDefaults {antialias}`; Index 4 ist der Trenner.
+const AA_NAMES: [&str; 6] = ["none", "crisp", "strong", "smooth", "", "custom"];
+
+/// Listenindex zur Glättung ([`text_aa`] bzw. `tool_text_defaults`): System (3) zeigt das Original
+/// als „scharf“.
+pub fn aa_index(aa: i32) -> usize {
+    match aa {
+        -1 => 0,
+        1 | 3 => 1,
+        2 => 2,
+        4 => 5,
+        _ => 3,
+    }
+}
+
 fn text_vals(st: &AppState, ctx: &egui::Context, tgt: Target) -> Option<TextVals> {
+    // Vorgaben des Textwerkzeugs für neue Texte (Glättung, Unterschneidung, Richtung; fp-engine)
+    let (tool_aa, tool_kern, tool_ori) = fp_engine::commands::tool_text_defaults(&st.session.prefs);
     // Offener Text-Editor: Werte an der Markierung bzw. am Caret (ändern sich live mit)
     if let Some(a) = st.session.text_edit_attrs() {
         let e = first(st);
         let t = e.as_ref().and_then(|e| if let ElementKind::Text(t) = &e.kind { Some(t) } else { None });
+        // neuer Text (noch kein Objekt): die Werkzeugvorgaben, die er beim Übernehmen bekommt
+        let t = t.filter(|_| tgt == Target::Selection);
         return Some(TextVals {
             font: a.font.clone().unwrap_or_default(),
             size: a.size.unwrap_or(12.0),
@@ -1296,10 +1322,10 @@ fn text_vals(st: &AppState, ctx: &egui::Context, tgt: Target) -> Option<TextVals
             space_after: a.space_after.unwrap_or(0.0),
             hscale: a.horizontal_scale.unwrap_or(1.0),
             baseline: a.baseline_shift.unwrap_or(0.0),
-            aa: t.map_or(3, |t| t.antialias),
-            auto_kern: t.is_none_or(|t| t.auto_kern),
+            aa: t.map_or(tool_aa, |t| text_aa(t)),
+            auto_kern: t.map_or(tool_kern, |t| t.auto_kern),
             on_path: t.and_then(|t| t.on_path.as_ref().map(|o| o.offset.unwrap_or(0.0))),
-            orientation: t.map_or(0, |t| t.orientation),
+            orientation: t.map_or(tool_ori, |t| t.orientation),
         });
     }
     match tgt {
@@ -1324,10 +1350,10 @@ fn text_vals(st: &AppState, ctx: &egui::Context, tgt: Target) -> Option<TextVals
                 space_after: pr("Text_ParagraphSpacingAfter", 0.0),
                 hscale: pr("Text_HorizScale", 1.0),
                 baseline: pr("Text_BaselineShift", 0.0),
-                aa: 3,
-                auto_kern: true,
+                aa: tool_aa,
+                auto_kern: tool_kern,
                 on_path: None,
-                orientation: 0,
+                orientation: tool_ori,
             })
         }
         Target::Selection => {
@@ -1351,7 +1377,7 @@ fn text_vals(st: &AppState, ctx: &egui::Context, tgt: Target) -> Option<TextVals
                 space_after: a.space_after.unwrap_or(0.0),
                 hscale: a.horizontal_scale.unwrap_or(1.0),
                 baseline: a.baseline_shift.unwrap_or(0.0),
-                aa: t.antialias,
+                aa: text_aa(t),
                 auto_kern: t.auto_kern,
                 on_path: t.on_path.as_ref().map(|o| o.offset.unwrap_or(0.0)),
                 orientation: t.orientation,
@@ -1540,9 +1566,14 @@ pub fn text_row1(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target) {
     // Knopf „Textausrichtung festlegen“ (ab/cd ▾, 15077) neben U, rechts davon die vier
     // Ausrichtungen (Teilfeld 14944 ab DLU 200) wie im Original (UX-A W17, a_133); „Erzwungener
     // Blocksatz“ bleibt im Menü Text ▸ Ausrichten
+    // im Textwerkzeug die Vorgabe für neue Texte (`text.setToolDefaults`, kein Verlaufsschritt)
     let editing = st.session.tool_is_editing_text();
-    if let Some(o) = orientation_button(ui, id.with("orient"), d.r(184.0, 15.0, 13.0, 12.0), v.orientation, en && tgt == Target::Selection && !editing) {
-        st.run("text.setProperties", json!({"orientation": ORIENTATIONS[o as usize].0}));
+    if let Some(o) = orientation_button(ui, id.with("orient"), d.r(184.0, 15.0, 13.0, 12.0), v.orientation, en && (tgt == Target::Tool || !editing)) {
+        let name = ORIENTATIONS[o as usize].0;
+        match tgt {
+            Target::Selection => st.run("text.setProperties", json!({"orientation": name})),
+            Target::Tool => st.run("text.setToolDefaults", json!({"orientation": name})),
+        }
     }
     let aligns = [(200.0, Glyph::AlignLeft, 0, "pi-text-align-left"), (214.0, Glyph::AlignCenter, 1, "pi-text-align-center"), (228.0, Glyph::AlignRight, 2, "pi-text-align-right"), (242.0, Glyph::AlignJustify, 3, "pi-text-align-justify")];
     for (x, g, a, tip) in aligns {
@@ -1595,9 +1626,9 @@ pub fn text_row2(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target) {
     let en = tv.is_some();
     let Some(v) = tv else { return };
     let editing = st.session.text_edit_attrs().is_some();
-    // Glättung und Unterschneidung gehören zum Textobjekt (nicht zum Editor) – als Vorgabe des
-    // Werkzeugs braucht es fp-engine (Befund EB)
-    let en_obj = en && tgt == Target::Selection;
+    // Glättung und Unterschneidung gehören zum Textobjekt (nicht zum Editor); im Textwerkzeug sind
+    // sie die Vorgabe für neue Texte (`text.setToolDefaults`, fp-engine legt sie in `draw.text` an)
+    let en_obj = en;
     let id = Id::new(("pi-text2", tgt == Target::Tool));
     super::glyphs::paint(ui.painter(), d.r(1.0, 1.0, 12.0, 11.0), Glyph::Indent, &theme, en);
     if let Some(x) = fields::number(ui, id.with("ind"), d.r(16.0, 1.0, 26.0, 13.0), Some(d.r(43.0, 1.0, 9.0, 13.0)), Some(v.indent as f64), (-99.0, 100.0), 0, en) {
@@ -1629,22 +1660,15 @@ pub fn text_row2(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target) {
     let mut aa_items = tl(&["pi-aa-none", "pi-aa-crisp", "pi-aa-strong", "pi-aa-smooth", "", "pi-aa-custom"]);
     aa_items[4] = "----".into();
     let aa_items = refs(&aa_items);
-    let aa_sel = match v.aa {
-        0 => 0,
-        1 => 1,
-        2 => 2,
-        4 => 5,
-        _ => 3,
-    };
-    if let Some(i) = fields::combo(ui, id.with("aa"), d.r(165.0, 1.0, 90.0, 13.0), &aa_items, Some(aa_sel), en_obj) {
-        let mode = match i {
-            0 => 0,
-            1 => 1,
-            2 => 2,
-            5 => 4,
-            _ => 3,
-        };
-        st.run("pi.text.antialias", json!({"mode": mode}));
+    // Zuordnung wie `text.setProperties {antialias}` (EB-1, PARITAET_A O6): „Kein Anti-Alias“ ist
+    // die harte Füllkante, `TAAi` 0 = glatt
+    if let Some(i) = fields::combo(ui, id.with("aa"), d.r(165.0, 1.0, 90.0, 13.0), &aa_items, Some(aa_index(v.aa)), en_obj)
+        && let Some(name) = AA_NAMES.get(i).filter(|n| !n.is_empty())
+    {
+        match tgt {
+            Target::Selection => st.run("text.setProperties", json!({"antialias": name})),
+            Target::Tool => st.run("text.setToolDefaults", json!({"antialias": name})),
+        }
     }
     if let Some(off) = v.on_path {
         fields::label_right(ui, d.r(102.0, 18.0, 44.0, 8.0), &t("pi-text-offset"), en_obj);
@@ -1653,7 +1677,10 @@ pub fn text_row2(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target) {
         }
     }
     if let Some(b) = fields::checkbox(ui, id.with("ak"), d.r(165.0, 18.0, 92.0, 10.0), &t("pi-text-autokern"), v.auto_kern, en_obj) {
-        st.run("pi.text.autoKern", json!({"on": b}));
+        match tgt {
+            Target::Selection => st.run("pi.text.autoKern", json!({"on": b})),
+            Target::Tool => st.run("text.setToolDefaults", json!({"autoKern": b})),
+        }
     }
 }
 
