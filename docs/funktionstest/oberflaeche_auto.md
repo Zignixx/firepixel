@@ -2,7 +2,7 @@
 
 Erzeugt von `crates\fp-ui\tests\gesamt_oberflaeche.rs` (`cargo test -p fp-ui --test gesamt_oberflaeche`). Nicht von Hand ändern.
 
-**353/353 Einträge ✅**
+**361/361 Einträge ✅**
 
 | Eintrag | Befehl | Ergebnis | Hinweis |
 |---|---|---|---|
@@ -313,35 +313,43 @@ Erzeugt von `crates\fp-ui\tests\gesamt_oberflaeche.rs` (`cargo test -p fp-ui --t
 | Dialog ▸ Datei ▸ Beenden | `file.exit` | ✅ Ui | ohne Auswahl: gezeichnet, Esc |
 | Dialog ▸ Bearbeiten ▸ Objekt einfügen ▸ Neue Schaltfläche... | `edit.insert.newButton` | ✅ Ui | ohne Auswahl: gezeichnet, Esc |
 | Dialog ▸ Bearbeiten ▸ Objekt einfügen ▸ Neues Symbol... | `edit.insert.newSymbol` | ✅ Ui | ohne Auswahl: gezeichnet, Esc |
+| Dialog ▸ Bearbeiten ▸ Objekt einfügen ▸ Hotspot | `edit.insert.hotspot` | ✅ Ui | ohne Auswahl: gezeichnet, Esc |
+| Dialog ▸ Bearbeiten ▸ Objekt einfügen ▸ Rechteckiges Segment | `edit.insert.slice` | ✅ Ui | ohne Auswahl: gezeichnet, Esc |
+| Dialog ▸ Bearbeiten ▸ Objekt einfügen ▸ Polygonsegment | `edit.insert.polygonSlice` | ✅ Ui | ohne Auswahl: gezeichnet, Esc |
 | Dialog ▸ Bearbeiten ▸ Objekt einfügen ▸ Ebene | `edit.insert.layer` | ✅ Ui | ohne Auswahl: gezeichnet, Esc |
 | Dialog ▸ Bearbeiten ▸ Objekt einfügen ▸ Status | `edit.insert.state` | ✅ Ui | ohne Auswahl: gezeichnet, Esc |
 | Dialog ▸ Bearbeiten ▸ Voreinstellungen... | `edit.preferences` | ✅ Ui | ohne Auswahl: gezeichnet, Esc |
 | Dialog ▸ Bearbeiten ▸ Tastaturkurzbefehle... | `edit.keyboardShortcuts` | ✅ Ui | ohne Auswahl: gezeichnet, Esc |
 | Dialog ▸ Ansicht ▸ Raster ▸ Raster bearbeiten... | `view.grid.editGrid` | ✅ Ui | ohne Auswahl: gezeichnet, Esc |
-| Dialog ▸ Auswählen ▸ Weiche Kante… | `select.feather` | ✅ Ui | Pixelauswahl: gezeichnet, Esc |
+| Dialog ▸ Auswählen ▸ Ähnliches auswählen | `select.similar` | ✅ Ui | ohne Auswahl: gezeichnet, Esc |
+| Dialog ▸ Auswählen ▸ Weiche Kante… | `select.feather` | ✅ Ui | ohne Auswahl: gezeichnet, Esc |
 | Dialog ▸ Auswählen ▸ Auswahlrahmen erweitern... | `select.expandMarquee` | ✅ Ui | Pixelauswahl: gezeichnet, Esc |
 | Dialog ▸ Auswählen ▸ Auswahlrahmen verkleinern... | `select.contractMarquee` | ✅ Ui | Pixelauswahl: gezeichnet, Esc |
 | Dialog ▸ Auswählen ▸ Auswahlrahmen begrenzen... | `select.borderMarquee` | ✅ Ui | Pixelauswahl: gezeichnet, Esc |
 | Dialog ▸ Auswählen ▸ Auswahlrahmen glätten... | `select.smoothMarquee` | ✅ Ui | Pixelauswahl: gezeichnet, Esc |
 | Dialog ▸ Auswählen ▸ Bitmap-Auswahl speichern... | `select.saveBitmapSelection` | ✅ Ui | Pixelauswahl: gezeichnet, Esc |
-| Dialog ▸ Auswählen ▸ Bitmap-Auswahl wiederherstellen... | `select.restoreBitmapSelection` | ✅ Ui | ohne Auswahl: gezeichnet, Esc |
-| Dialog ▸ Auswählen ▸ Bitmap-Auswahl löschen... | `select.deleteBitmapSelection` | ✅ Ui | ohne Auswahl: gezeichnet, Esc |
 | Dialog ▸ Modifizieren ▸ Leinwand ▸ Bildgröße... | `modify.canvas.imageSize` | ✅ Ui | ohne Auswahl: gezeichnet, Esc |
 | Dialog ▸ Modifizieren ▸ Leinwand ▸ Leinwandgröße... | `modify.canvas.canvasSize` | ✅ Ui | ohne Auswahl: gezeichnet, Esc |
 | Dialog ▸ Modifizieren ▸ Leinwand ▸ Leinwandfarbe... | `modify.canvas.canvasColor` | ✅ Ui | ohne Auswahl: gezeichnet, Esc |
 | Dialog ▸ Modifizieren ▸ Animation ▸ Auswahl animieren... | `modify.animation.animateSelection` | ✅ Ui | Rechteck: gezeichnet, Esc |
 | Dialog ▸ Modifizieren ▸ Animation ▸ Einstellungen... | `modify.animation.settings` | ✅ Ui | Animationssymbol: gezeichnet, Esc |
 | Dialog ▸ Modifizieren ▸ Symbol ▸ In Symbol konvertieren... | `modify.symbol.convertToSymbol` | ✅ Ui | Rechteck: gezeichnet, Esc |
-| Dialog ▸ Modifizieren ▸ Symbol ▸ Instanzen tweenen... | `modify.symbol.tweenInstances` | ✅ Ui | zwei Instanzen: gezeichnet, Esc |
+| Dialog ▸ Modifizieren ▸ Symbol ▸ Instanzen tweenen... | `modify.symbol.tweenInstances` | ✅ Ui | ohne Auswahl: gezeichnet, Esc |
+| Dialog ▸ Modifizieren ▸ Symbol ▸ Teilen | `modify.symbol.breakApart` | ✅ Ui | ohne Auswahl: gezeichnet, Esc |
 | Dialog ▸ Modifizieren ▸ Symbol ▸ Symbol austauschen... | `modify.symbol.swapSymbol` | ✅ Ui | Grafiksymbol: gezeichnet, Esc |
-| Dialog ▸ Modifizieren ▸ Popupmenü ▸ Popupmenü hinzufügen... | `modify.popUpMenu.addPopUpMenu` | ✅ Ui | Segment: gezeichnet, Esc |
+| Dialog ▸ Modifizieren ▸ Popupmenü ▸ Popupmenü hinzufügen... | `modify.popUpMenu.addPopUpMenu` | ✅ Ui | ohne Auswahl: gezeichnet, Esc |
 | Dialog ▸ Modifizieren ▸ Popupmenü ▸ Popupmenü bearbeiten... | `modify.popUpMenu.editPopUpMenu` | ✅ Ui | Segment: gezeichnet, Esc |
 | Dialog ▸ Modifizieren ▸ Selektives JPEG ▸ Einstellungen... | `modify.selectiveJpeg.settings` | ✅ Ui | ohne Auswahl: gezeichnet, Esc |
 | Dialog ▸ Modifizieren ▸ Transformieren ▸ Numerisch transformieren... | `modify.transform.numericTransform` | ✅ Ui | Rechteck: gezeichnet, Esc |
-| Dialog ▸ Modifizieren ▸ Pfad ändern ▸ Vereinfachen... | `modify.alterPath.simplify` | ✅ Ui | Rechteck: gezeichnet, Esc |
-| Dialog ▸ Modifizieren ▸ Pfad ändern ▸ Strich erweitern... | `modify.alterPath.expandStroke` | ✅ Ui | Rechteck: gezeichnet, Esc |
-| Dialog ▸ Modifizieren ▸ Pfad ändern ▸ Pfad einlassen... | `modify.alterPath.insetPath` | ✅ Ui | Rechteck: gezeichnet, Esc |
-| Dialog ▸ Text ▸ Größe ▸ Andere... | `text.size.other` | ✅ Ui | Text: gezeichnet, Esc |
+| Dialog ▸ Modifizieren ▸ Pfade kombinieren ▸ Vereinigen | `modify.combinePaths.union` | ✅ Ui | ohne Auswahl: gezeichnet, Esc |
+| Dialog ▸ Modifizieren ▸ Pfade kombinieren ▸ Überschneiden | `modify.combinePaths.intersect` | ✅ Ui | ohne Auswahl: gezeichnet, Esc |
+| Dialog ▸ Modifizieren ▸ Pfade kombinieren ▸ Öffnen | `modify.combinePaths.punch` | ✅ Ui | ohne Auswahl: gezeichnet, Esc |
+| Dialog ▸ Modifizieren ▸ Pfade kombinieren ▸ Zuschneiden | `modify.combinePaths.crop` | ✅ Ui | ohne Auswahl: gezeichnet, Esc |
+| Dialog ▸ Modifizieren ▸ Pfad ändern ▸ Vereinfachen... | `modify.alterPath.simplify` | ✅ Ui | ohne Auswahl: gezeichnet, Esc |
+| Dialog ▸ Modifizieren ▸ Pfad ändern ▸ Strich erweitern... | `modify.alterPath.expandStroke` | ✅ Ui | ohne Auswahl: gezeichnet, Esc |
+| Dialog ▸ Modifizieren ▸ Pfad ändern ▸ Pfad einlassen... | `modify.alterPath.insetPath` | ✅ Ui | ohne Auswahl: gezeichnet, Esc |
+| Dialog ▸ Modifizieren ▸ Bitmap nachzeichnen... | `modify.traceBitmap` | ✅ Ui | Bitmap: gezeichnet, Esc |
+| Dialog ▸ Text ▸ Größe ▸ Andere... | `text.size.other` | ✅ Ui | ohne Auswahl: gezeichnet, Esc |
 | Dialog ▸ Text ▸ Rechtschreibprüfung... | `text.checkSpelling` | ✅ Ui | ohne Auswahl: gezeichnet, Esc |
 | Dialog ▸ Text ▸ Rechtschreibprüfung einrichten... | `text.spellingSetup` | ✅ Ui | ohne Auswahl: gezeichnet, Esc |
 | Dialog ▸ Befehle ▸ Gespeicherte Befehle verwalten... | `commands.manageSavedCommands` | ✅ Ui | ohne Auswahl: gezeichnet, Esc |
@@ -353,9 +361,9 @@ Erzeugt von `crates\fp-ui\tests\gesamt_oberflaeche.rs` (`cargo test -p fp-ui --t
 | Dialog ▸ Filter ▸ Farbe anpassen ▸ Tonwertkorrektur... | `filter.adjustColor.levels` | ✅ Ui | Rechteck: gezeichnet, Esc |
 | Dialog ▸ Filter ▸ Rauschen ▸ Rauschen hinzufügen... | `filter.noise.addNoise` | ✅ Ui | Rechteck: gezeichnet, Esc |
 | Dialog ▸ Filter ▸ Scharfzeichnen ▸ Unscharf maskieren... | `filter.sharpen.unsharpMask` | ✅ Ui | Rechteck: gezeichnet, Esc |
-| Dialog ▸ Filter ▸ Weichzeichnen ▸ Bewegungsunschärfe... | `filter.blur.motion` | ✅ Ui | Rechteck: gezeichnet, Esc |
-| Dialog ▸ Filter ▸ Weichzeichnen ▸ Gaußscher Weichzeichner... | `filter.blur.gaussian` | ✅ Ui | Rechteck: gezeichnet, Esc |
-| Dialog ▸ Filter ▸ Weichzeichnen ▸ Radiales Weichzeichnen... | `filter.blur.radial` | ✅ Ui | Rechteck: gezeichnet, Esc |
-| Dialog ▸ Filter ▸ Weichzeichnen ▸ Zentriertes Weichzeichnen... | `filter.blur.zoom` | ✅ Ui | Rechteck: gezeichnet, Esc |
+| Dialog ▸ Filter ▸ Weichzeichnen ▸ Bewegungsunschärfe… | `filter.blur.motion` | ✅ Ui | Rechteck: gezeichnet, Esc |
+| Dialog ▸ Filter ▸ Weichzeichnen ▸ Gaußscher Weichz. ... | `filter.blur.gaussian` | ✅ Ui | Rechteck: gezeichnet, Esc |
+| Dialog ▸ Filter ▸ Weichzeichnen ▸ Radiales Weichz. ... | `filter.blur.radial` | ✅ Ui | Rechteck: gezeichnet, Esc |
+| Dialog ▸ Filter ▸ Weichzeichnen ▸ Zentriertes Weichz. ... | `filter.blur.zoom` | ✅ Ui | Rechteck: gezeichnet, Esc |
 | Dialog ▸ Hilfe ▸ Erweiterungen verwalten... | `help.manageExtensions` | ✅ Ui | ohne Auswahl: gezeichnet, Esc |
 | Dialog ▸ Hilfe ▸ Über Firepixel... | `help.about` | ✅ Ui | ohne Auswahl: gezeichnet, Esc |

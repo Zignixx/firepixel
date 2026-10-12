@@ -19,7 +19,7 @@ Erzeugt von `crates\fp-ui\tests\gesamt_alltag.rs` (`cargo test -p fp-ui --test g
 | Strg+Z macht den letzten Schritt rückgängig, Strg+Y wiederholt | `realistische Eingabe` | ✅ Ui | rückgängig/wiederholt |
 | Strg+Mausrad: eine Rastung = eine Zoomstufe (100 % → 150 % bzw. 66 %) | `realistische Eingabe` | ✅ Ui | 100 % → 150 % → 66 % |
 | Strg+Touchpad (10 kleine Schritte à 12 Punkte) zoomt höchstens wenige Stufen | `realistische Eingabe` | ✅ Ui | 100 % → 150 % |
-| Mausrad ohne Strg rollt die Ansicht um ein Stück (kein Sprung) | `realistische Eingabe` | ✅ Ui | Bildlauf 40 Bildschirmpunkte |
+| Mausrad ohne Strg rollt die Ansicht um ein Stück (kein Sprung) | `realistische Eingabe` | ✅ Ui | Bildlauf 52 Bildschirmpunkte |
 | Dialog (Leinwandgröße) an der Titelleiste verschiebbar, OK übernimmt | `realistische Eingabe` | ✅ Ui | verschoben um (-120, 60), mit Eingabe geschlossen: true |
 | Bilddatei auf die Leinwand ziehen importiert sie dort (linke obere Ecke), ein Verlaufsschritt, ausgewählt | `realistische Eingabe` | ✅ Ui | Dokumente 1 → 1, Schritte +1, Grenzen Some(Rect { left: 300.0, top: 250.0, right: 310.0, bottom: 258.0 }) |
 | Datei außerhalb der Leinwand (Bedienfeld) ablegen öffnet sie als Dokument | `realistische Eingabe` | ✅ Ui | als Dokument geöffnet |

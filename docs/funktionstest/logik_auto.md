@@ -2,7 +2,7 @@
 
 Erzeugt von `crates\fp-ui\tests\gesamt_logik.rs` (`cargo test -p fp-ui --test gesamt_logik`). Nicht von Hand ändern.
 
-**72/72 Einträge ✅**
+**70/70 Einträge ✅**
 
 | Eintrag | Befehl | Ergebnis | Hinweis |
 |---|---|---|---|
@@ -20,8 +20,6 @@ Erzeugt von `crates\fp-ui\tests\gesamt_logik.rs` (`cargo test -p fp-ui --test ge
 | Auswählen ▸ Auswahlrahmen begrenzen... | `select.borderMarquee` | ✅ Doc | Pixelauswahl |
 | Auswählen ▸ Auswahlrahmen glätten... | `select.smoothMarquee` | ✅ Doc | Pixelauswahl |
 | Auswählen ▸ Bitmap-Auswahl speichern... | `select.saveBitmapSelection` | ✅ Doc | Pixelauswahl |
-| Auswählen ▸ Bitmap-Auswahl wiederherstellen... | `select.restoreBitmapSelection` | ✅ Ui | Hinweisdialog ohne Befehl |
-| Auswählen ▸ Bitmap-Auswahl löschen... | `select.deleteBitmapSelection` | ✅ Ui | Hinweisdialog ohne Befehl |
 | Modifizieren ▸ Leinwand ▸ Leinwandfarbe... | `modify.canvas.canvasColor` | ✅ Doc | ohne Auswahl |
 | Modifizieren ▸ Animation ▸ Auswahl animieren... | `modify.animation.animateSelection` | ✅ Doc | Rechteck |
 | Modifizieren ▸ Animation ▸ Einstellungen... | `modify.animation.settings` | ✅ Doc | Animationssymbol |
@@ -32,16 +30,16 @@ Erzeugt von `crates\fp-ui\tests\gesamt_logik.rs` (`cargo test -p fp-ui --test ge
 | Modifizieren ▸ Pfad ändern ▸ Vereinfachen... | `modify.alterPath.simplify` | ✅ Doc | Rechteck |
 | Modifizieren ▸ Pfad ändern ▸ Strich erweitern... | `modify.alterPath.expandStroke` | ✅ Doc | Rechteck |
 | Modifizieren ▸ Pfad ändern ▸ Pfad einlassen... | `modify.alterPath.insetPath` | ✅ Doc | Rechteck |
-| Text ▸ Größe ▸ Andere... | `text.size.other` | ✅ Doc | Text |
+| Text ▸ Größe ▸ Andere... | `text.size.other` | ✅ Doc | ohne Auswahl |
 | Text ▸ Rechtschreibprüfung einrichten... | `text.spellingSetup` | ✅ Doc | ohne Auswahl |
 | Filter ▸ Farbe anpassen ▸ Farbton/Sättigung... | `filter.adjustColor.hueSaturation` | ✅ Doc | Rechteck, mit Vorschau |
 | Filter ▸ Farbe anpassen ▸ Helligkeit/Kontrast... | `filter.adjustColor.brightnessContrast` | ✅ Doc | Rechteck, mit Vorschau |
 | Filter ▸ Rauschen ▸ Rauschen hinzufügen... | `filter.noise.addNoise` | ✅ Doc | Rechteck, mit Vorschau |
 | Filter ▸ Scharfzeichnen ▸ Unscharf maskieren... | `filter.sharpen.unsharpMask` | ✅ Doc | Rechteck, mit Vorschau |
-| Filter ▸ Weichzeichnen ▸ Bewegungsunschärfe... | `filter.blur.motion` | ✅ Doc | Rechteck, mit Vorschau |
-| Filter ▸ Weichzeichnen ▸ Gaußscher Weichzeichner... | `filter.blur.gaussian` | ✅ Doc | Rechteck, mit Vorschau |
-| Filter ▸ Weichzeichnen ▸ Radiales Weichzeichnen... | `filter.blur.radial` | ✅ Doc | Rechteck, mit Vorschau |
-| Filter ▸ Weichzeichnen ▸ Zentriertes Weichzeichnen... | `filter.blur.zoom` | ✅ Doc | Rechteck, mit Vorschau |
+| Filter ▸ Weichzeichnen ▸ Bewegungsunschärfe… | `filter.blur.motion` | ✅ Doc | Rechteck, mit Vorschau |
+| Filter ▸ Weichzeichnen ▸ Gaußscher Weichz. ... | `filter.blur.gaussian` | ✅ Doc | Rechteck, mit Vorschau |
+| Filter ▸ Weichzeichnen ▸ Radiales Weichz. ... | `filter.blur.radial` | ✅ Doc | Rechteck, mit Vorschau |
+| Filter ▸ Weichzeichnen ▸ Zentriertes Weichz. ... | `filter.blur.zoom` | ✅ Doc | Rechteck, mit Vorschau |
 | Filter (+) ▸ effect-group-bevel ▸ effect-bevel-inner – hinzufügen | `Effect { name: "bevel", bevel: Some(0) }` | ✅ Doc | ohne Auswahl, mit Vorschau |
 | Filter (+) ▸ effect-group-bevel ▸ effect-bevel-inner – bearbeiten | `Effect { name: "bevel", bevel: Some(0) }` | ✅ Doc | ohne Auswahl, mit Vorschau |
 | Filter (+) ▸ effect-group-bevel ▸ effect-bevel-outer – hinzufügen | `Effect { name: "bevel", bevel: Some(1) }` | ✅ Doc | ohne Auswahl, mit Vorschau |

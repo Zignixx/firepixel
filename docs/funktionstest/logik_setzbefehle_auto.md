@@ -2,7 +2,7 @@
 
 Erzeugt von `crates\fp-ui\tests\gesamt_logik.rs` (`cargo test -p fp-ui --test gesamt_logik`). Nicht von Hand ändern.
 
-**32/32 Einträge ✅**
+**33/33 Einträge ✅**
 
 | Eintrag | Befehl | Ergebnis | Hinweis |
 |---|---|---|---|
@@ -15,7 +15,8 @@ Erzeugt von `crates\fp-ui\tests\gesamt_logik.rs` (`cargo test -p fp-ui --test ge
 | Ansicht ▸ Raster ▸ Raster bearbeiten... | `view.grid.editGrid` | ✅ Doc | ohne Auswahl; 50 Verlaufsschritte für 50 Änderungen |
 | Hilfslinien bearbeiten | `view.guides.editGuides` | ✅ Doc | ohne Auswahl; 50 Verlaufsschritte für 50 Änderungen |
 | Modifizieren ▸ Animation ▸ Einstellungen... | `modify.animation.settings` | ✅ Doc | Animationssymbol; 50 Verlaufsschritte für 50 Änderungen |
-| Text ▸ Größe ▸ Andere... | `text.size.other` | ✅ Doc | Text; 50 Verlaufsschritte für 50 Änderungen |
+| Textwerkzeug-Vorgaben | `text.setToolDefaults` | ✅ Doc | ohne Auswahl; 0 Verlaufsschritte für 50 Änderungen |
+| Text ▸ Größe ▸ Andere... | `text.size.other` | ✅ Doc | ohne Auswahl; 0 Verlaufsschritte für 50 Änderungen |
 | Texteditor | `text.editor` | ✅ Doc | Text; 50 Verlaufsschritte für 50 Änderungen |
 | Texteigenschaften | `text.setProperties` | ✅ Doc | Text; 50 Verlaufsschritte für 50 Änderungen |
 | Textattribute | `text.setAttributes` | ✅ Doc | Rechteck; 50 Verlaufsschritte für 50 Änderungen |

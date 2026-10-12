@@ -2,7 +2,7 @@
 
 Erzeugt von `crates\fp-ui\tests\gesamt_menu.rs` (`cargo test -p fp-ui --test gesamt_menu`). Nicht von Hand ändern.
 
-**281/282 Einträge ✅**
+**282/283 Einträge ✅**
 
 | Eintrag | Befehl | Ergebnis | Hinweis |
 |---|---|---|---|
@@ -93,6 +93,7 @@ Erzeugt von `crates\fp-ui\tests\gesamt_menu.rs` (`cargo test -p fp-ui --test ges
 | Kontextmenü Objekt ausgewählt ▸ Auswahl ausblenden | `view.hideSelection` | ✅ Doc | Rechteck |
 | Kontextmenü Objekt ausgewählt ▸ Kanten | `view.edges` | ✅ Ui | ohne Auswahl |
 | Kontextmenü Objekt ausgewählt ▸ Pfad in Auswahlrahmen konvertieren... | `modify.convertPathToMarquee` | ✅ Doc | Rechteck |
+| Kontextmenü Objekt ausgewählt ▸ Bitmap nachzeichnen... | `modify.traceBitmap` | ✅ Dialog | Bitmap |
 | Kontextmenü Objekt ausgewählt ▸ Anordnen ▸ In den Vordergrund | `modify.arrange.bringToFront` | ✅ Doc | Rechteck |
 | Kontextmenü Objekt ausgewählt ▸ Anordnen ▸ Schrittweise nach vorne | `modify.arrange.bringForward` | ✅ Doc | Rechteck |
 | Kontextmenü Objekt ausgewählt ▸ Anordnen ▸ Schrittweise nach hinten | `modify.arrange.sendBackward` | ✅ Doc | Rechteck |
@@ -124,10 +125,10 @@ Erzeugt von `crates\fp-ui\tests\gesamt_menu.rs` (`cargo test -p fp-ui --test ges
 | Kontextmenü Objekt ausgewählt ▸ Symbol ▸ Symbol bearbeiten | `modify.symbol.editSymbol` | ✅ Ui | Grafiksymbol: Dokument geöffnet/gewechselt |
 | Kontextmenü Objekt ausgewählt ▸ Symbol ▸ An Position bearbeiten | `modify.symbol.editInPlace` | ✅ Ui | Grafiksymbol: Dokument geöffnet/gewechselt |
 | Kontextmenü Objekt ausgewählt ▸ Symbol ▸ Instanzen tweenen... | `modify.symbol.tweenInstances` | ✅ Dialog | ohne Auswahl |
-| Kontextmenü Objekt ausgewählt ▸ Symbol ▸ Teilen | `modify.symbol.breakApart` | ✅ Doc | Grafiksymbol |
-| Kontextmenü Objekt ausgewählt ▸ Hotspot einfügen | `edit.insert.hotspot` | ✅ Doc | Rechteck |
-| Kontextmenü Objekt ausgewählt ▸ Rechteckiges Segment einfügen | `edit.insert.slice` | ✅ Doc | Rechteck |
-| Kontextmenü Objekt ausgewählt ▸ Polygonsegment einfügen | `edit.insert.polygonSlice` | ✅ Doc | Rechteck |
+| Kontextmenü Objekt ausgewählt ▸ Symbol ▸ Teilen | `modify.symbol.breakApart` | ✅ Dialog | ohne Auswahl |
+| Kontextmenü Objekt ausgewählt ▸ Hotspot einfügen | `edit.insert.hotspot` | ✅ Dialog | ohne Auswahl |
+| Kontextmenü Objekt ausgewählt ▸ Rechteckiges Segment einfügen | `edit.insert.slice` | ✅ Dialog | ohne Auswahl |
+| Kontextmenü Objekt ausgewählt ▸ Polygonsegment einfügen | `edit.insert.polygonSlice` | ✅ Dialog | ohne Auswahl |
 | Kontextmenü Objekt ausgewählt ▸ Ausgewähltes Segment exportieren... | `file.export {}` | ✅ Dialog | ohne Auswahl |
 | Kontextmenü Objekt ausgewählt ▸ CSS-Sprites exportieren... | `file.export {}` | ✅ Dialog | ohne Auswahl |
 | Kontextmenü Objekt ausgewählt ▸ Auswahl sperren | `modify.lockSelection` | ✅ Doc | Rechteck |
@@ -203,8 +204,8 @@ Erzeugt von `crates\fp-ui\tests\gesamt_menu.rs` (`cargo test -p fp-ui --test ges
 | Kontextmenü Text ▸ Numerisch transformieren... | `modify.transform.numericTransform` | ✅ Dialog | Rechteck |
 | Kontextmenü Text ▸ Transformationen entfernen | `modify.transform.removeTransformations` | ✅ Doc | Rechteck |
 | Kontextmenü Text ▸ In Symbol konvertieren | `modify.symbol.convertToSymbol` | ✅ Dialog | Rechteck |
-| Kontextmenü Text ▸ Hotspot einfügen | `edit.insert.hotspot` | ✅ Doc | Rechteck |
-| Kontextmenü Text ▸ Segment einfügen | `edit.insert.slice` | ✅ Doc | Rechteck |
+| Kontextmenü Text ▸ Hotspot einfügen | `edit.insert.hotspot` | ✅ Dialog | ohne Auswahl |
+| Kontextmenü Text ▸ Segment einfügen | `edit.insert.slice` | ✅ Dialog | ohne Auswahl |
 | Kontextmenü Text ▸ Vollbildmodus beenden | `view.exitFullScreen` | ✅ Ui | ohne Auswahl |
 | Kontextmenü Pixel ▸ Bearbeiten ▸ Ausschneiden | `edit.cut` | ✅ Doc | Rechteck |
 | Kontextmenü Pixel ▸ Bearbeiten ▸ Kopieren | `edit.copy` | ✅ Ui | Rechteck |
@@ -235,7 +236,7 @@ Erzeugt von `crates\fp-ui\tests\gesamt_menu.rs` (`cargo test -p fp-ui --test ges
 | Kontextmenü Pixel ▸ Mit darunter liegender auf eine Ebene reduzieren | `modify.mergeDown` | ✅ Doc | Rechteck über Bitmap |
 | Kontextmenü Pixel ▸ Alles auswählen | `select.all` | ✅ Doc | ohne Auswahl |
 | Kontextmenü Pixel ▸ Auswahl aufheben | `select.none` | ✅ Doc | Rechteck |
-| Kontextmenü Pixel ▸ Ähnliches auswählen | `select.similar` | ✅ Doc | Rechteck + Ellipse |
+| Kontextmenü Pixel ▸ Ähnliches auswählen | `select.similar` | ✅ Dialog | ohne Auswahl |
 | Kontextmenü Pixel ▸ Auswahlrahmen modifizieren ▸ Auswahl umkehren | `select.inverse` | ✅ Doc | ohne Auswahl |
 | Kontextmenü Pixel ▸ Auswahlrahmen modifizieren ▸ Weiche Kante... | `select.feather` | ✅ Dialog | ohne Auswahl |
 | Kontextmenü Pixel ▸ Auswahlrahmen modifizieren ▸ Erweitern... | `select.expandMarquee` | ✅ Dialog | Pixelauswahl |
@@ -247,13 +248,13 @@ Erzeugt von `crates\fp-ui\tests\gesamt_menu.rs` (`cargo test -p fp-ui --test ges
 | Kontextmenü Pixel ▸ Auswahl speichern | `select.saveBitmapSelection` | ✅ Dialog | Pixelauswahl |
 | Kontextmenü Pixel ▸ Auswahl wiederherstellen | `select.restoreBitmapSelection` | ❌ NeverAvailable | in keiner Testsituation verfügbar |
 | Kontextmenü Pixel ▸ Selektives JPEG ▸ Auswahl als JPEG-Maske speichern | `modify.selectiveJpeg.saveSelectionAsJpegMask` | ✅ Doc | Pixelauswahl |
-| Kontextmenü Pixel ▸ Selektives JPEG ▸ JPEG-Maske als Auswahl wiederherstellen | `modify.selectiveJpeg.restoreJpegMaskAsSelection` | ✅ Doc | mit JPEG-Maske |
+| Kontextmenü Pixel ▸ Selektives JPEG ▸ JPEG-Maske als Auswahl wiederherstellen | `modify.selectiveJpeg.restoreJpegMaskAsSelection` | ✅ Doc | ohne Auswahl |
 | Kontextmenü Pixel ▸ Selektives JPEG ▸ Einstellungen... | `modify.selectiveJpeg.settings` | ✅ Dialog | ohne Auswahl |
-| Kontextmenü Pixel ▸ Selektives JPEG ▸ JPEG-Maske entfernen | `modify.selectiveJpeg.removeJpegMask` | ✅ Doc | mit JPEG-Maske |
+| Kontextmenü Pixel ▸ Selektives JPEG ▸ JPEG-Maske entfernen | `modify.selectiveJpeg.removeJpegMask` | ✅ Doc | ohne Auswahl |
 | Kontextmenü Pixel ▸ Frei transformieren | `modify.transform.freeTransform` | ✅ Ui | Rechteck |
 | Kontextmenü Pixel ▸ Numerisch transformieren... | `modify.transform.numericTransform` | ✅ Dialog | Rechteck |
-| Kontextmenü Pixel ▸ Hotspot einfügen | `edit.insert.hotspot` | ✅ Doc | Rechteck |
-| Kontextmenü Pixel ▸ Segment einfügen | `edit.insert.slice` | ✅ Doc | Rechteck |
+| Kontextmenü Pixel ▸ Hotspot einfügen | `edit.insert.hotspot` | ✅ Dialog | ohne Auswahl |
+| Kontextmenü Pixel ▸ Segment einfügen | `edit.insert.slice` | ✅ Dialog | ohne Auswahl |
 | Kontextmenü Pixel ▸ Vollbildmodus beenden | `view.exitFullScreen` | ✅ Ui | ohne Auswahl |
 | Kontextmenü Transformieren ▸ Skalieren | `modify.transform.scale` | ✅ Ui | Rechteck |
 | Kontextmenü Transformieren ▸ Neigen | `modify.transform.skew` | ✅ Ui | Rechteck |
