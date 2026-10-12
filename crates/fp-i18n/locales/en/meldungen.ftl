@@ -483,6 +483,7 @@ ai-err-d-not-matrix = { $name } is not a matrix
 ai-err-d-not-square = { $name } is not a square convolution
 err-export-d-no-visible-states = no visible states
 err-export-d-page-missing = page { $page } missing
+err-export-d-no-slices = No valid slices were found to export.
 err-export-d-ico-count = ICO needs 1…255 images
 err-export-d-webp-no-frame = animated WebP without a frame
 err-export-d-webp-config = WebP configuration

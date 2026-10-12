@@ -253,10 +253,16 @@ pub fn auto_name(tokens: &[i32], row: usize, col: usize, doc_name: &str, seq: us
 
 /// Status-Suffix (`NMFi`, 2 Bausteine), `frame` 1-basiert; Vorgabe `[5, 1]` ⇒ „_f2“.
 pub fn frame_suffix(tokens: &[i32], frame: usize, state_names: &[String; 4]) -> String {
+    frame_suffix_with(tokens, frame, state_names, 'f')
+}
+
+/// Wie [`frame_suffix`], Buchstabe des Bausteins „Status-Nr.“ frei wählbar (der Exportdialog
+/// schreibt gemessen „_s2“, re\18 §3).
+pub fn frame_suffix_with(tokens: &[i32], frame: usize, state_names: &[String; 4], letter: char) -> String {
     let mut out = String::new();
     for &k in tokens {
         match k {
-            1 => out.push_str(&format!("f{frame}")),
+            1 => out.push_str(&format!("{letter}{frame}")),
             2 => out.push_str(&frame.to_string()),
             3 | 4 => {
                 if frame > 1 {

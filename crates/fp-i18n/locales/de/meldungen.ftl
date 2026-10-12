@@ -483,6 +483,7 @@ ai-err-d-not-matrix = { $name } ist keine Matrix
 ai-err-d-not-square = { $name } ist keine quadratische Faltung
 err-export-d-no-visible-states = keine sichtbaren Status
 err-export-d-page-missing = Seite { $page } fehlt
+err-export-d-no-slices = Es wurden keine gültigen Segmente zum Exportieren gefunden.
 err-export-d-ico-count = ICO braucht 1…255 Bilder
 err-export-d-webp-no-frame = animiertes WebP ohne Einzelbild
 err-export-d-webp-config = WebP-Konfiguration

@@ -26,6 +26,48 @@ pub fn pack_sprites(parts: &[(String, RgbaImage)], sprite_url: &str) -> (RgbaIma
     (img, css)
 }
 
+/// Gültiger CSS-Klassenname (Buchstaben, Ziffern, `-`, `_`; nicht mit Ziffer beginnend).
+pub fn css_ident(name: &str) -> String {
+    let mut s: String = name.chars().map(|c| if c.is_ascii_alphanumeric() || c == '-' || c == '_' { c } else { '_' }).collect();
+    if s.is_empty() || s.starts_with(|c: char| c.is_ascii_digit()) {
+        s.insert(0, '_');
+    }
+    s
+}
+
+/// Sprite-Bild und CSS wie der Exportdialog (re\18 §3, gemessen): Teile untereinander mit
+/// `padding` als Rand und Abstand; CSS zuerst `.<basis>{ background:url("<bild>") top left
+/// no-repeat; }`, dann je Teil `.<name>{ width:…px; height:…px; background-position:-<p>px -<y>px; }`.
+/// Liefert (Bild, CSS, Selektornamen wurden geändert).
+pub fn pack_sprites_css(parts: &[(String, RgbaImage)], base: &str, image_url: &str, padding: usize) -> (RgbaImage, String, bool) {
+    let w = parts.iter().map(|p| p.1.width()).max().unwrap_or(0) + 2 * padding;
+    let h: usize = parts.iter().map(|p| p.1.height()).sum::<usize>() + padding * (parts.len() + 1);
+    let mut img = RgbaImage::new(IRect::new(0, 0, w.max(1) as i32, h.max(1) as i32)).unwrap_or_else(|_| RgbaImage::empty_at(0, 0));
+    let mut css = format!(".{}{{ background:url(\"{image_url}\") top left no-repeat; }}\n", css_ident(base));
+    let mut used = std::collections::HashSet::new();
+    let mut modified = false;
+    let mut y = padding;
+    for (name, part) in parts {
+        let mut sel = css_ident(name);
+        if sel != *name {
+            modified = true;
+        }
+        if !used.insert(sel.clone()) {
+            modified = true;
+            let mut n = 1;
+            while !used.insert(format!("{sel}_{n}")) {
+                n += 1;
+            }
+            sel = format!("{sel}_{n}");
+        }
+        let placed = part.translated(padding as i32 - part.bounds().left, y as i32 - part.bounds().top);
+        img.paste(&placed);
+        css.push_str(&format!(".{sel}{{ width:{}px; height:{}px; background-position:-{padding}px -{y}px; }}\n", part.width(), part.height()));
+        y += part.height() + padding;
+    }
+    (img, css, modified)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -13,7 +13,7 @@ use crate::options::{ExportFormat, OptimizeSettings};
 use crate::pipeline::ExportContext;
 use crate::popup::MenuDate;
 use crate::render::{page_rect, Background, LayerFilter, PageRenderer, RenderRequest};
-use crate::slices::{auto_name, build_grid, collect_hotspots, collect_slices, frame_suffix, NameDate};
+use crate::slices::{auto_name, build_grid, collect_hotspots, collect_slices, frame_suffix_with, NameDate};
 use crate::{ExportError, Result};
 
 /// Exportart (`exportFilesStyle`).
@@ -58,6 +58,89 @@ impl FilesStyle {
     }
 }
 
+impl FilesStyle {
+    /// Wert für `XFSi` (08 §1.5); SVG hat keinen (Firepixel-Erweiterung).
+    pub fn code(self) -> Option<i32> {
+        Some(match self {
+            FilesStyle::Pdf => 0,
+            FilesStyle::HtmlAndImages => 1,
+            FilesStyle::ImagesOnly => 2,
+            FilesStyle::CssAndImages => 5,
+            FilesStyle::CssSprites => 6,
+            FilesStyle::LayersToFiles => 7,
+            FilesStyle::FramesToFiles => 8,
+            FilesStyle::PagesToFiles => 9,
+            FilesStyle::Psd => 15,
+            FilesStyle::Svg => return None,
+        })
+    }
+}
+
+/// „Seiten:“ des Exportdialogs (re\18 §2.1). Bei SVG steht `Selected` für „Ausgewählte Objekte
+/// auf aktueller Seite“ (wie FXG, §2.7).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+pub enum PageScope {
+    All,
+    #[default]
+    Current,
+    Selected,
+}
+
+/// „Segmente:“ des Exportdialogs (re\18 §2.1).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+pub enum SliceMode {
+    None,
+    #[default]
+    Export,
+    AlongGuides,
+}
+
+/// Einstellungen des Unterpaneels im Exportdialog (re\18 §2, Dateien nach §3). Ohne Paneel
+/// (`DocExportOptions::panel = None`) gilt das bisherige Verhalten (Befehl `file.export`).
+#[derive(Clone, Debug, PartialEq)]
+pub struct PanelOptions {
+    pub pages: PageScope,
+    /// Ausgewählte Seiten (Indizes) für [`PageScope::Selected`].
+    pub selected_pages: Vec<usize>,
+    pub slices: SliceMode,
+    /// „Nur ausgewählte Segmente“: Element-IDs der ausgewählten Segmente.
+    pub selected_slices: Option<Vec<fp_model::ElementId>>,
+    /// „Nur aktueller Status“ mit dem aktuellen Status `frame` (0-basiert).
+    pub current_frame_only: bool,
+    pub frame: usize,
+    /// „Bereiche ohne Segmente einschließen“.
+    pub include_unsliced: bool,
+    /// Bildordner relativ zur HTML-Datei, leer oder mit „/“ am Ende.
+    pub images_dir: String,
+    /// „Bilder zuschneiden“.
+    pub trim_images: bool,
+    /// HTML-Endung ohne Punkt (HTML-Einrichtung, Vorgabe „htm“).
+    pub html_ext: String,
+    /// SVG „Ausgewählte Objekte“: Element-IDs.
+    pub selected_elements: Vec<fp_model::ElementId>,
+    /// Auffüllung der CSS-Sprites in px.
+    pub sprite_padding: usize,
+}
+
+impl Default for PanelOptions {
+    fn default() -> Self {
+        PanelOptions {
+            pages: PageScope::Current,
+            selected_pages: Vec::new(),
+            slices: SliceMode::Export,
+            selected_slices: None,
+            current_frame_only: false,
+            frame: 0,
+            include_unsliced: true,
+            images_dir: String::new(),
+            trim_images: true,
+            html_ext: "htm".into(),
+            selected_elements: Vec::new(),
+            sprite_padding: 10,
+        }
+    }
+}
+
 /// Eine erzeugte Datei (Pfad relativ zum Zielordner).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ExportFile {
@@ -85,6 +168,8 @@ pub struct DocExportOptions {
     pub settings: Option<OptimizeSettings>,
     /// Textbreite für Pop-up-Menüs (Text, Schrift, Größe, fett, kursiv); Vorgabe 0,55·Größe je Zeichen.
     pub measure: Option<MeasureFn>,
+    /// Unterpaneel des Exportdialogs (Dateinamen wie gemessen, re\18 §3); `None` = bisher.
+    pub panel: Option<PanelOptions>,
 }
 
 impl DocExportOptions {
@@ -98,6 +183,7 @@ impl DocExportOptions {
             use_slices: true,
             settings: None,
             measure: None,
+            panel: None,
         }
     }
 }
@@ -310,8 +396,259 @@ fn safe_name(s: &str) -> String {
     if v.is_empty() { "unbenannt".into() } else { v }
 }
 
+/// Photoshop-Datei einer Seite (Ebenen einzeln, Hilfslinien).
+fn psd_bytes(doc: &Document, r: &dyn PageRenderer, page: usize) -> Result<Vec<u8>> {
+    let p = doc.pages.get(page).ok_or_else(|| ExportError::Encode(fp_i18n::tr!("err-export-d-page-missing", page = page.to_string())))?;
+    let ctx = page_context(doc, page);
+    let rect = page_rect(doc, page).unwrap_or_default();
+    let mut layers = Vec::new();
+    for slot in &p.root.layers {
+        let LayerSlot::Own(l) = slot else { continue };
+        if l.kind == LayerKind::Web {
+            continue;
+        }
+        let img = r
+            .render(doc, &RenderRequest { page, frame: 0, layers: LayerFilter::Only(vec![l.id]), background: Background::Transparent, area: Some(rect) })
+            .map_err(ExportError::Render)?;
+        let ab = img.alpha_bounds();
+        let img = if ab.is_empty() { RgbaImage::empty_at(rect.left, rect.top) } else { img.cropped(ab) };
+        let img = img.translated(-rect.left, -rect.top);
+        layers.push(crate::psd_out::PsdLayer { name: l.name.clone(), image: img, opacity: l.opacity.0, blend: l.blend.0, visible: l.is_visible() });
+    }
+    let comp = r.render(doc, &RenderRequest { page, frame: 0, ..Default::default() }).map_err(ExportError::Render)?.translated(-rect.left, -rect.top);
+    let guides: Vec<crate::psd_out::PsdGuide> = p
+        .root
+        .guides
+        .as_ref()
+        .map(|g| g.vertical.iter().map(|&v| crate::psd_out::PsdGuide { pos: v - p.canvas.origin.x, vertical: true }).chain(g.horizontal.iter().map(|&v| crate::psd_out::PsdGuide { pos: v - p.canvas.origin.y, vertical: false })).collect())
+        .unwrap_or_default();
+    crate::psd_out::write_psd(rect.width() as usize, rect.height() as usize, &layers, &comp, ctx.resolution_dpi, &guides)
+}
+
+/// PDF mit je einer Seite für `pages`.
+fn pdf_bytes(doc: &Document, r: &dyn PageRenderer, pages: &[usize], title: &str) -> Result<Vec<u8>> {
+    let mut imgs = Vec::new();
+    let mut sizes = Vec::new();
+    for &i in pages {
+        let img = r.render(doc, &RenderRequest { page: i, ..Default::default() }).map_err(ExportError::Render)?;
+        let c = page_context(doc, i);
+        let k = 72.0 / c.resolution_dpi.max(1.0) as f64;
+        sizes.push((img.width() as f64 * k, img.height() as f64 * k));
+        imgs.push(img);
+    }
+    let pages: Vec<crate::vector_out::PdfPage> = imgs.iter().zip(&sizes).map(|(i, &(w, h))| crate::vector_out::PdfPage { image: i, width_pt: w, height_pt: h }).collect();
+    crate::vector_out::write_pdf(&pages, title)
+}
+
+/// Segmente entlang der Hilfslinien (re\18 §2.1 „Segmente entlang Hilfslinien erstellen“).
+fn guide_slices(doc: &Document, page: usize) -> Vec<crate::slices::SliceSpec> {
+    let Some(rect) = page_rect(doc, page) else { return Vec::new() };
+    let (l, t, r, b) = (rect.left as f32, rect.top as f32, rect.right as f32, rect.bottom as f32);
+    let g = doc.pages.get(page).and_then(|p| p.root.guides.clone()).unwrap_or_default();
+    let mut xs: Vec<f32> = std::iter::once(l).chain(g.vertical.iter().copied().filter(|&v| v > l && v < r)).chain(std::iter::once(r)).collect();
+    let mut ys: Vec<f32> = std::iter::once(t).chain(g.horizontal.iter().copied().filter(|&v| v > t && v < b)).chain(std::iter::once(b)).collect();
+    for v in [&mut xs, &mut ys] {
+        v.sort_by(|a, b| a.total_cmp(b));
+        v.dedup();
+    }
+    let mut out = Vec::new();
+    for y in ys.windows(2) {
+        for x in xs.windows(2) {
+            out.push(crate::slices::SliceSpec {
+                rect: [x[0], y[0], x[1], y[1]],
+                id: out.len() as u32 + 1,
+                poly: false,
+                base_name: None,
+                url: String::new(),
+                alt: String::new(),
+                target: String::new(),
+                kind: 0,
+                html: String::new(),
+                polygon: Vec::new(),
+                behaviors: Vec::new(),
+            });
+        }
+    }
+    out
+}
+
+/// Kennungen der Segmente zu Element-IDs (gleiche Zählung wie [`collect_slices`]).
+fn slice_ids_of(doc: &Document, page: usize, elements: &[fp_model::ElementId]) -> std::collections::HashSet<u32> {
+    let mut out = std::collections::HashSet::new();
+    let Some(p) = doc.pages.get(page) else { return out };
+    let mut next = 1u32;
+    for slot in p.root.layers.iter().rev() {
+        let LayerSlot::Own(l) = slot else { continue };
+        if l.kind != LayerKind::Web {
+            continue;
+        }
+        let Some(cel) = l.cels.first() else { continue };
+        for e in &cel.elements {
+            let ElementKind::WebObject(w) = &e.kind else { continue };
+            let Some(sp) = &w.slice else { continue };
+            if !e.common.visible {
+                continue;
+            }
+            let id = sp.slice_id.unwrap_or_else(|| {
+                next += 1;
+                next - 1
+            });
+            if elements.contains(&e.id) {
+                out.insert(id);
+            }
+        }
+    }
+    out
+}
+
+/// Eindeutiger Dateiname: Doppelte bekommen „_1“, „_2“ … (gemessen bei Ebenen in Dateien).
+fn unique(name: String, used: &mut std::collections::HashSet<String>) -> String {
+    if used.insert(name.to_lowercase()) {
+        return name;
+    }
+    let mut n = 1;
+    loop {
+        let c = format!("{name}_{n}");
+        if used.insert(c.to_lowercase()) {
+            return c;
+        }
+        n += 1;
+    }
+}
+
+/// Seiten nach „Seiten:“ (ohne Masterseite).
+fn scope_pages(doc: &Document, page: usize, pn: &PanelOptions) -> Vec<usize> {
+    let all: Vec<usize> = (0..doc.pages.len()).filter(|&i| !doc.pages[i].master()).collect();
+    match pn.pages {
+        PageScope::All => all,
+        PageScope::Current => vec![page],
+        PageScope::Selected => {
+            let v: Vec<usize> = pn.selected_pages.iter().copied().filter(|i| all.contains(i)).collect();
+            if v.is_empty() { vec![page] } else { v }
+        }
+    }
+}
+
+/// Dateiname einer Seite (Seitenname, bereinigt).
+fn page_stem(doc: &Document, i: usize) -> String {
+    safe_name(doc.pages.get(i).and_then(|p| p.name.clone()).filter(|n| !n.trim().is_empty()).as_deref().unwrap_or(&format!("{}", i + 1)))
+}
+
+/// Einzelbild-Einstellung (animierte Formate ⇒ Einzelbild desselben Formats).
+fn still(s: &OptimizeSettings) -> OptimizeSettings {
+    let mut s = s.clone();
+    if s.format.is_animated() {
+        s.format = match s.format {
+            ExportFormat::AnimatedGif => ExportFormat::Gif,
+            ExportFormat::Apng => ExportFormat::Png,
+            _ => ExportFormat::WebPLossless,
+        };
+    }
+    s
+}
+
+/// Ein Status/Ebenenbild, mit „Bilder zuschneiden“ auf den deckenden Inhalt beschnitten.
+fn layer_image(r: &dyn PageRenderer, doc: &Document, page: usize, frame: usize, s: &OptimizeSettings, layers: LayerFilter, trim: bool) -> Result<RgbaImage> {
+    let img = render(r, doc, page, frame, s, layers.clone())?;
+    if !trim {
+        return Ok(img);
+    }
+    let t = r.render(doc, &RenderRequest { page, frame, layers, background: Background::Transparent, area: None }).map_err(ExportError::Render)?;
+    let ab = t.alpha_bounds();
+    Ok(if ab.is_empty() { img } else { img.cropped(ab) })
+}
+
+/// Arten mit eigenem Ablauf im Exportdialog (Seitenwahl, gemessene Dateinamen, re\18 §3).
+/// `None` = weiter wie ohne Paneel für die eine Seite.
+fn export_with_panel(doc: &Document, r: &dyn PageRenderer, o: &DocExportOptions, pn: &PanelOptions, ex: &EncodeExtras) -> Result<Option<Vec<ExportFile>>> {
+    let page = o.page;
+    let base = safe_name(&o.base_name);
+    let s = o.settings.clone().unwrap_or_else(|| page_settings(doc, page));
+    let ctx = page_context(doc, page);
+    let mut files = Vec::new();
+    let mut used = std::collections::HashSet::new();
+    match o.style {
+        FilesStyle::FramesToFiles => {
+            // gemessen: s01.png, s02.png … (zweistellig)
+            let ss = still(&s);
+            for f in 0..frame_count(doc, page) {
+                let img = apply_crop_scale(layer_image(r, doc, page, f, &s, LayerFilter::All, pn.trim_images)?, &s);
+                files.push(ExportFile { path: format!("s{:02}.{}", f + 1, ss.format.extension()), bytes: export_image(&img, &ss, &ctx, ex)?.bytes });
+            }
+        }
+        FilesStyle::LayersToFiles => {
+            // gemessen: Dateiname = Ebenenname (Leerzeichen ⇒ „_“), Doppelte „_1“, Web-Ebene übersprungen
+            let p = &doc.pages[page];
+            let ss = still(&s);
+            let frame = pn.frame.min(frame_count(doc, page) - 1);
+            for slot in &p.root.layers {
+                let LayerSlot::Own(l) = slot else { continue };
+                if l.kind == LayerKind::Web {
+                    continue;
+                }
+                let img = apply_crop_scale(layer_image(r, doc, page, frame, &s, LayerFilter::Only(vec![l.id]), pn.trim_images)?, &s);
+                let name = unique(safe_name(&l.name), &mut used);
+                files.push(ExportFile { path: format!("{name}.{}", ss.format.extension()), bytes: export_image(&img, &ss, &ctx, ex)?.bytes });
+            }
+        }
+        FilesStyle::PagesToFiles => {
+            // gemessen: „Aktuelle Seite“ ⇒ eingegebener Name; mehrere Seiten ⇒ Seitennamen (A)
+            for i in scope_pages(doc, page, pn) {
+                let sp = o.settings.clone().unwrap_or_else(|| page_settings(doc, i));
+                let stem = if pn.pages == PageScope::Current { base.clone() } else { unique(page_stem(doc, i), &mut used) };
+                files.push(ExportFile { path: format!("{stem}.{}", sp.format.extension()), bytes: export_whole(r, doc, i, &sp, ex)? });
+            }
+        }
+        FilesStyle::Pdf => {
+            files.push(ExportFile { path: format!("{base}.pdf"), bytes: pdf_bytes(doc, r, &scope_pages(doc, page, pn), &o.base_name)? });
+        }
+        FilesStyle::Svg if pn.pages == PageScope::Selected => {
+            let d = only_elements(doc, page, &pn.selected_elements);
+            let frame = pn.frame.min(frame_count(doc, page) - 1);
+            files.push(ExportFile { path: format!("{base}.svg"), bytes: crate::vector_out::write_svg(&d, page, frame, None)?.into_bytes() });
+        }
+        _ if pn.pages == PageScope::Current => return Ok(None),
+        _ => {
+            // HTML-Arten, PSD, SVG über mehrere Seiten: je Seite mit dem Seitennamen (A, re\18 §3)
+            let mut seen = std::collections::HashSet::new();
+            for i in scope_pages(doc, page, pn) {
+                let mut sub = PanelOptions { pages: PageScope::Current, ..pn.clone() };
+                sub.selected_slices = None;
+                let o2 = DocExportOptions { page: i, base_name: unique(page_stem(doc, i), &mut used), settings: None, panel: Some(sub), ..o.clone() };
+                for f in export_document(doc, r, &o2, ex)? {
+                    if seen.insert(f.path.to_lowercase()) {
+                        files.push(f);
+                    }
+                }
+            }
+        }
+    }
+    Ok(Some(files))
+}
+
+/// Kopie des Dokuments, in der auf Seite `page` nur die Elemente `ids` stehen (SVG „Ausgewählte
+/// Objekte auf aktueller Seite“).
+fn only_elements(doc: &Document, page: usize, ids: &[fp_model::ElementId]) -> Document {
+    let mut d = doc.clone();
+    if let Some(p) = d.page_mut(page) {
+        for slot in p.root.layers.iter_mut() {
+            let LayerSlot::Own(l) = slot else { continue };
+            let l = std::sync::Arc::make_mut(l);
+            for cel in l.cels.iter_mut() {
+                std::sync::Arc::make_mut(cel).elements.retain(|e| ids.contains(&e.id));
+            }
+        }
+    }
+    d
+}
+
 /// Dokument exportieren.
 pub fn export_document(doc: &Document, r: &dyn PageRenderer, o: &DocExportOptions, ex: &EncodeExtras) -> Result<Vec<ExportFile>> {
+    if let Some(pn) = &o.panel
+        && let Some(files) = export_with_panel(doc, r, o, pn, ex)?
+    {
+        return Ok(files);
+    }
     let page = o.page;
     let p = doc.pages.get(page).ok_or_else(|| ExportError::Encode(fp_i18n::tr!("err-export-d-page-missing", page = page.to_string())))?;
     let s = o.settings.clone().unwrap_or_else(|| page_settings(doc, page));
@@ -347,53 +684,29 @@ pub fn export_document(doc: &Document, r: &dyn PageRenderer, o: &DocExportOption
             }
         }
         FilesStyle::Psd => {
-            let rect = page_rect(doc, page).unwrap_or_default();
-            let mut layers = Vec::new();
-            for slot in &p.root.layers {
-                let LayerSlot::Own(l) = slot else { continue };
-                if l.kind == LayerKind::Web {
-                    continue;
-                }
-                let img = r
-                    .render(doc, &RenderRequest { page, frame: 0, layers: LayerFilter::Only(vec![l.id]), background: Background::Transparent, area: Some(rect) })
-                    .map_err(ExportError::Render)?;
-                let ab = img.alpha_bounds();
-                let img = if ab.is_empty() { RgbaImage::empty_at(rect.left, rect.top) } else { img.cropped(ab) };
-                let img = img.translated(-rect.left, -rect.top);
-                layers.push(crate::psd_out::PsdLayer { name: l.name.clone(), image: img, opacity: l.opacity.0, blend: l.blend.0, visible: l.is_visible() });
-            }
-            let comp = r.render(doc, &RenderRequest { page, frame: 0, ..Default::default() }).map_err(ExportError::Render)?.translated(-rect.left, -rect.top);
-            let guides: Vec<crate::psd_out::PsdGuide> = p
-                .root
-                .guides
-                .as_ref()
-                .map(|g| {
-                    g.vertical.iter().map(|&v| crate::psd_out::PsdGuide { pos: v - p.canvas.origin.x, vertical: true }).chain(g.horizontal.iter().map(|&v| crate::psd_out::PsdGuide { pos: v - p.canvas.origin.y, vertical: false })).collect()
-                })
-                .unwrap_or_default();
-            files.push(ExportFile { path: format!("{base}.psd"), bytes: crate::psd_out::write_psd(rect.width() as usize, rect.height() as usize, &layers, &comp, ctx.resolution_dpi, &guides)? });
+            files.push(ExportFile { path: format!("{base}.psd"), bytes: psd_bytes(doc, r, page)? });
         }
         FilesStyle::Pdf => {
-            let mut imgs = Vec::new();
-            let mut sizes = Vec::new();
-            for (i, pg) in doc.pages.iter().enumerate() {
-                if pg.master() {
-                    continue;
-                }
-                let img = r.render(doc, &RenderRequest { page: i, ..Default::default() }).map_err(ExportError::Render)?;
-                let c = page_context(doc, i);
-                let k = 72.0 / c.resolution_dpi.max(1.0) as f64;
-                sizes.push((img.width() as f64 * k, img.height() as f64 * k));
-                imgs.push(img);
-            }
-            let pages: Vec<crate::vector_out::PdfPage> = imgs.iter().zip(&sizes).map(|(i, &(w, h))| crate::vector_out::PdfPage { image: i, width_pt: w, height_pt: h }).collect();
-            files.push(ExportFile { path: format!("{base}.pdf"), bytes: crate::vector_out::write_pdf(&pages, &o.base_name)? });
+            let pages: Vec<usize> = (0..doc.pages.len()).filter(|&i| !doc.pages[i].master()).collect();
+            files.push(ExportFile { path: format!("{base}.pdf"), bytes: pdf_bytes(doc, r, &pages, &o.base_name)? });
         }
         FilesStyle::Svg => {
-            files.push(ExportFile { path: format!("{base}.svg"), bytes: crate::vector_out::write_svg(doc, page, 0, None)?.into_bytes() });
+            let frame = o.panel.as_ref().map(|pn| pn.frame.min(frame_count(doc, page) - 1)).unwrap_or(0);
+            files.push(ExportFile { path: format!("{base}.svg"), bytes: crate::vector_out::write_svg(doc, page, frame, None)?.into_bytes() });
         }
         FilesStyle::HtmlAndImages | FilesStyle::ImagesOnly | FilesStyle::CssAndImages | FilesStyle::CssSprites => {
-            let slices = if o.use_slices { collect_slices(doc, page) } else { Vec::new() };
+            let pn = o.panel.as_ref();
+            let slices = match pn.map(|x| x.slices) {
+                None if o.use_slices => collect_slices(doc, page),
+                Some(SliceMode::Export) => collect_slices(doc, page),
+                Some(SliceMode::AlongGuides) => guide_slices(doc, page),
+                _ => Vec::new(),
+            };
+            // „Nur ausgewählte Segmente“ (Kennungen der Segmente)
+            let only: Option<std::collections::HashSet<u32>> = pn.and_then(|x| x.selected_slices.as_ref()).map(|ids| slice_ids_of(doc, page, ids));
+            if pn.is_some() && (only.as_ref().is_some_and(|s| s.is_empty()) || (o.style == FilesStyle::CssSprites && slices.is_empty())) {
+                return Err(ExportError::Encode(fp_i18n::t("err-export-d-no-slices")));
+            }
             if slices.is_empty() && o.style == FilesStyle::ImagesOnly {
                 files.push(ExportFile { path: format!("{base}.{ext}"), bytes: export_whole(r, doc, page, &s, ex)? });
                 return Ok(files);
@@ -405,12 +718,19 @@ pub fn export_document(doc: &Document, r: &dyn PageRenderer, o: &DocExportOption
             let ftokens = html_set.frame_naming.clone().unwrap_or_else(|| vec![5, 1]);
             let state_names = html_set.state_names.clone().unwrap_or_else(|| [String::new(), "_o".into(), "_d".into(), "_od".into()]);
             let date = NameDate { year: o.date.year, month: o.date.month, day: o.date.day };
-            let images_dir = html_set.images_dir.clone().filter(|d| !d.is_empty()).map(|d| if d.ends_with('/') { d } else { format!("{d}/") }).unwrap_or_default();
-            let discard = html_set.discard_unspecified_slices.unwrap_or(false);
+            let images_dir = match pn {
+                Some(x) => x.images_dir.clone(),
+                None => html_set.images_dir.clone().unwrap_or_default(),
+            };
+            let images_dir = if images_dir.is_empty() || images_dir.ends_with('/') { images_dir } else { format!("{images_dir}/") };
+            let discard = pn.map(|x| !x.include_unsliced).unwrap_or_else(|| html_set.discard_unspecified_slices.unwrap_or(false));
             let total = grid.cells.iter().flatten().filter(|c| !c.skip).count();
+            let letter = if pn.is_some() { 's' } else { 'f' };
+            let one_frame = pn.is_some_and(|x| x.current_frame_only);
+            let base_frame = pn.filter(|x| x.current_frame_only).map(|x| x.frame.min(frame_count(doc, page) - 1)).unwrap_or(0);
             // Status-Bilder rendern (Grundbild immer, weitere nach Bedarf)
             let mut frame_imgs: Vec<Option<RgbaImage>> = vec![None; frame_count(doc, page)];
-            frame_imgs[0] = Some(render(r, doc, page, 0, &s, LayerFilter::All)?);
+            frame_imgs[0] = Some(render(r, doc, page, base_frame, &s, LayerFilter::All)?);
             let mut cells: Vec<Vec<CellContent>> = Vec::new();
             let mut seq = 0;
             let mut cell_of: std::collections::HashMap<Option<u32>, (usize, usize, String)> = Default::default();
@@ -445,7 +765,7 @@ pub fn export_document(doc: &Document, r: &dyn PageRenderer, o: &DocExportOption
                 if frame <= 0 {
                     Some(format!("{images_dir}{n}.{ext_s}"))
                 } else {
-                    Some(format!("{images_dir}{n}{}.{ext_s}", frame_suffix(&ftokens, frame as usize + 1, &state_names)))
+                    Some(format!("{images_dir}{n}{}.{ext_s}", frame_suffix_with(&ftokens, frame as usize + 1, &state_names, letter)))
                 }
             };
             let areas: Vec<MapArea> = collect_hotspots(doc, page)
@@ -486,9 +806,22 @@ pub fn export_document(doc: &Document, r: &dyn PageRenderer, o: &DocExportOption
                     if cell.skip || cc.image.is_none() {
                         continue;
                     }
+                    if only.as_ref().is_some_and(|set| !cell.slice().is_some_and(|id| set.contains(&id))) {
+                        continue;
+                    }
+                    if pn.is_some() && o.style == FilesStyle::CssSprites && cell.slice().is_none() {
+                        continue;
+                    }
                     let (w, h) = grid.span_size(ri, ci);
                     let crect = IRect::new(grid.xs[ci], grid.ys[ri], grid.xs[ci] + w, grid.ys[ri] + h);
-                    let frames: Vec<i32> = std::iter::once(0).chain(out.needed_frames.iter().filter(|(sl, _)| *sl == cell.slice() && cell.slice().is_some()).map(|(_, f)| *f)).collect();
+                    let frames: Vec<i32> = if one_frame {
+                        vec![0]
+                    } else if pn.is_some() && matches!(o.style, FilesStyle::ImagesOnly | FilesStyle::CssSprites) {
+                        // gemessen: je weiterem Status ein Bild „_s<Nr>“ (re\18 §3)
+                        (0..frame_imgs.len() as i32).collect()
+                    } else {
+                        std::iter::once(0).chain(out.needed_frames.iter().filter(|(sl, _)| *sl == cell.slice() && cell.slice().is_some()).map(|(_, f)| *f)).collect()
+                    };
                     let spec = cell.slice().and_then(|id| slices.iter().find(|x| x.id == id));
                     let own = spec.and_then(|x| {
                         doc.pages[page].root.layers.iter().find_map(|slot| match slot {
@@ -512,7 +845,19 @@ pub fn export_document(doc: &Document, r: &dyn PageRenderer, o: &DocExportOption
                         }
                         let Some(full) = &frame_imgs[fi] else { continue };
                         let part = full.cropped(crect);
-                        let path = if f == 0 { cc.image.clone().unwrap_or_default() } else { frame_name(cell.slice(), f).unwrap_or_default() };
+                        let path = if f == 0 {
+                            cc.image.clone().unwrap_or_default()
+                        } else if pn.is_some() {
+                            format!("{images_dir}{}{}.{ext}", cc.name, frame_suffix_with(&ftokens, f as usize + 1, &state_names, letter))
+                        } else {
+                            frame_name(cell.slice(), f).unwrap_or_default()
+                        };
+                        if o.style == FilesStyle::CssSprites && pn.is_some() {
+                            // Selektor je Segment und Status: Status 2, 3 … ⇒ „_1“, „_2“ (gemessen)
+                            let n = if f == 0 { cc.name.clone() } else { format!("{}_{f}", cc.name) };
+                            sprite_parts.push((n, part.clone()));
+                            continue;
+                        }
                         if o.style == FilesStyle::CssSprites && f == 0 {
                             sprite_parts.push((cc.name.clone(), part.clone()));
                             continue;
@@ -535,15 +880,24 @@ pub fn export_document(doc: &Document, r: &dyn PageRenderer, o: &DocExportOption
                     files.push(ExportFile { path, bytes });
                 }
             }
+            let html_ext = pn.map(|x| x.html_ext.trim_start_matches('.').to_string()).filter(|e| !e.is_empty()).unwrap_or_else(|| "htm".into());
             match o.style {
+                FilesStyle::CssSprites if pn.is_some() => {
+                    let pad = pn.map(|x| x.sprite_padding).unwrap_or(10);
+                    let (img, css, _modified) = crate::sprites::pack_sprites_css(&sprite_parts, &base, &format!("{base}.png"), pad);
+                    let px = crate::pipeline::image_pixels(&img);
+                    let png = crate::png_out::write_png_truecolor(&px, img.width().max(1), img.height().max(1), true, &crate::png_out::PngOptions::from_context(&ctx, false))?;
+                    files.push(ExportFile { path: format!("{base}.png"), bytes: png });
+                    files.push(ExportFile { path: format!("{base}.css"), bytes: css.into_bytes() });
+                }
                 FilesStyle::HtmlAndImages => {
-                    files.push(ExportFile { path: format!("{base}.htm"), bytes: out.html.into_bytes() });
+                    files.push(ExportFile { path: format!("{base}.{html_ext}"), bytes: out.html.into_bytes() });
                     for (n, b) in out.support_files {
                         files.push(ExportFile { path: n, bytes: b });
                     }
                 }
                 FilesStyle::CssAndImages => {
-                    files.push(ExportFile { path: format!("{base}.htm"), bytes: write_css_layers(&grid, &cells, &ho).into_bytes() });
+                    files.push(ExportFile { path: format!("{base}.{html_ext}"), bytes: write_css_layers(&grid, &cells, &ho).into_bytes() });
                 }
                 FilesStyle::CssSprites => {
                     let (img, css) = crate::sprites::pack_sprites(&sprite_parts, &format!("{images_dir}{base}_sprite.png"));
