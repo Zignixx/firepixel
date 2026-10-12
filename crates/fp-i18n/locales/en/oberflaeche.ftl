@@ -1,4 +1,4 @@
-# User interface shell: application bar, workspaces, document tabs, view bar, start page, footer,
+# User interface shell: application bar, workspaces, document tabs, view bar, footer,
 # docking, file dialogs, status messages of the app layer. Owner: I18N-SHELL.
 
 ## Application bar
@@ -10,7 +10,6 @@ ui-window-minimize = Minimize
 ui-window-maximize = Maximize
 ui-window-restore = Restore Down
 ui-window-close = Close
-ui-appbar-more-menus = More menus
 
 ## Workspaces
 ui-workspace-switcher = Choose a workspace ({ $name })
@@ -58,12 +57,6 @@ ui-preview-original = Original
 ui-preview-caption = { $label }  { $size }  { $secs } sec @ 56 kbps
 ui-preview-colors = { $n } colors
 ui-preview-failed = Preview not possible: { $error }
-
-## Start page (no document open)
-ui-start-recent = Open a Recent Item
-ui-start-open = Open...
-ui-start-create-new = Create New
-ui-start-new-document = Firepixel Document (FW-PNG)
 
 ## Footer: selection info, magnification, state controls
 ui-sel-bitmap-mode = Bitmap mode

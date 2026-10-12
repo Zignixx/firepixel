@@ -1,4 +1,4 @@
-# Oberfläche (Shell): Anwendungsleiste, Arbeitsbereiche, Dokumentreiter, Ansichtsleiste, Startseite,
+# Oberfläche (Shell): Anwendungsleiste, Arbeitsbereiche, Dokumentreiter, Ansichtsleiste,
 # Fußleiste, Docking, Datei-Dialoge, Statusmeldungen der App-Schicht. Zuständig: I18N-SHELL.
 
 ## Anwendungsleiste
@@ -10,7 +10,6 @@ ui-window-minimize = Minimieren
 ui-window-maximize = Maximieren
 ui-window-restore = Wiederherstellen
 ui-window-close = Schließen
-ui-appbar-more-menus = Weitere Menüs
 
 ## Arbeitsbereiche
 ui-workspace-switcher = Einen Arbeitsbereich auswählen ({ $name })
@@ -58,12 +57,6 @@ ui-preview-original = Original
 ui-preview-caption = { $label }  { $size }  { $secs } s bei 56 kbit/s
 ui-preview-colors = { $n } Farben
 ui-preview-failed = Vorschau nicht möglich: { $error }
-
-## Startseite (kein Dokument offen)
-ui-start-recent = Zuletzt verwendete Datei öffnen
-ui-start-open = Öffnen...
-ui-start-create-new = Neu erstellen
-ui-start-new-document = Firepixel-Dokument (FW-PNG)
 
 ## Fußleiste: Auswahlinfo, Vergrößerung, Status-Steuerung
 ui-sel-bitmap-mode = Bitmapmodus

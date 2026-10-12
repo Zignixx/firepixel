@@ -41,7 +41,8 @@ pub fn show_document_area(ui: &mut Ui, st: &mut AppState) {
     }
     if st.session.active().is_none() {
         let rest = Rect::from_min_max(pos2(full.left(), tabs.bottom()), full.max);
-        start_page(ui, st, rest);
+        // Startbildschirm (DESIGN, `welcome.rs`): zuletzt geöffnet, Neu erstellen, Erweitern
+        crate::welcome::show(ui, st, rest);
         return;
     }
     let view_bar = Rect::from_min_size(pos2(full.left(), tabs.bottom()), vec2(full.width(), m.view_bar_height));
@@ -286,44 +287,6 @@ fn view_bar_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
     icons::paint(ui.painter(), nav.shrink(2.0), Icon::PageNavigate, &IconStyle::new(&theme, Some(ToolGroup::View), names.len() > 1));
     if resp.on_hover_text(fp_i18n::t("ui-page-nav")).clicked() && names.len() > 1 {
         st.push(Action::SetPage((page + 1) % names.len()));
-    }
-}
-
-// ---------------------------------------------------------------------- Startseite
-
-fn start_page(ui: &mut Ui, st: &mut AppState, rect: Rect) {
-    let theme = Theme::current(ui.ctx());
-    let c = &theme.colors;
-    ui.painter().rect_filled(rect, 0.0, c.canvas_bg);
-    let panel = Rect::from_center_size(rect.center(), vec2(560.0f32.min(rect.width() - 40.0), 300.0f32.min(rect.height() - 40.0)));
-    if panel.width() < 200.0 || panel.height() < 120.0 {
-        return;
-    }
-    ui.painter().rect_filled(panel, 0.0, c.frame_bg);
-    ui.painter().rect_stroke(panel, 0.0, Stroke::new(1.0, if theme.glow { c.focus } else { c.line_dark }), StrokeKind::Inside);
-    let head = Rect::from_min_size(panel.min, vec2(panel.width(), 54.0));
-    ui.painter().rect_filled(head, 0.0, c.app_bar_bg);
-    icons::paint(ui.painter(), Rect::from_min_size(head.min + vec2(14.0, 11.0), vec2(32.0, 32.0)), Icon::Logo, &IconStyle::new(&theme, Some(ToolGroup::Select), true));
-    ui.painter().text(pos2(head.left() + 56.0, head.center().y), Align2::LEFT_CENTER, "Firepixel", theme.bold(20.0), c.app_bar_text);
-    let col_w = (panel.width() - 48.0) / 2.0;
-    let mut child = ui.new_child(egui::UiBuilder::new().max_rect(Rect::from_min_size(pos2(panel.left() + 16.0, head.bottom() + 14.0), vec2(col_w, panel.height() - 70.0))).layout(egui::Layout::top_down(egui::Align::Min)));
-    child.label(egui::RichText::new(fp_i18n::t("ui-start-recent")).font(theme.bold(theme.fonts.ui)));
-    child.add_space(6.0);
-    let recent: Vec<std::path::PathBuf> = st.session.prefs.recent_files.iter().take(8).cloned().collect();
-    for p in recent {
-        let name = p.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
-        if child.link(name).on_hover_text(p.display().to_string()).clicked() {
-            st.push(Action::OpenPath(p));
-        }
-    }
-    if child.link(fp_i18n::t("ui-start-open")).clicked() {
-        st.run("file.open", json!({}));
-    }
-    let mut child2 = ui.new_child(egui::UiBuilder::new().max_rect(Rect::from_min_size(pos2(panel.left() + 32.0 + col_w, head.bottom() + 14.0), vec2(col_w, panel.height() - 70.0))).layout(egui::Layout::top_down(egui::Align::Min)));
-    child2.label(egui::RichText::new(fp_i18n::t("ui-start-create-new")).font(theme.bold(theme.fonts.ui)));
-    child2.add_space(6.0);
-    if child2.link(fp_i18n::t("ui-start-new-document")).clicked() {
-        st.run("file.new", json!({}));
     }
 }
 
