@@ -211,14 +211,14 @@ Testdokument mit denselben Objekten in beiden Programmen (per JSF angelegt): R1,
 | L6 | Rechtsklick auf nicht gewählte Ellipse | Ellipse gewählt, Kontextmenü | ebenso (kittest) | ✅ | |
 | L7 | Strg+Leertaste+Klick | vorübergehend Zoom: 100 → 150 % | nichts | ❌ | |
 | L8 | Strg+Alt+Leertaste+Klick | verkleinert (150 → 100 %) | nicht geprüft: Die Kombination öffnet auf diesem Rechner das Schnellfenster der Claude-App (globale Taste) | ⏳ | |
-| L9 | Mausrad 1 Rastung ohne Taste (400 %) | senkrechter Bildlauf um 52 Bildschirmpixel | **kein Bildlauf** (echte Radereignisse; HG-Befund ist im aktuellen Stand noch offen) | ❌ | a_330, a_331 |
-| L10 | Umschalt+Mausrad | nichts | waagerechter Bildlauf 40 px | ⚠️ | a_332 |
-| L11 | Alt+Mausrad | senkrechter Bildlauf (wie ohne Taste) | senkrechter Bildlauf 40 px | ⚠️ (Schrittweite) | a_333 |
+| L9 | Mausrad 1 Rastung ohne Taste (400 %) | senkrechter Bildlauf um 52 Bildschirmpixel | **kein Bildlauf** (echte Radereignisse; HG-Befund ist im aktuellen Stand noch offen) | ✅ nachgemessen (FV-3, echtes Fenster, SendInput 120 je Rastung, 400 %): 52 px senkrecht, 3 Rastungen 156 px | a_330, a_331 |
+| L10 | Umschalt+Mausrad | nichts | waagerechter Bildlauf 40 px | ✅ nachgemessen (FV-3, echtes Fenster): kein Bildlauf | a_332 |
+| L11 | Alt+Mausrad | senkrechter Bildlauf (wie ohne Taste) | senkrechter Bildlauf 40 px | ✅ nachgemessen (FV-3, echtes Fenster): 52 px senkrecht | a_333 |
 | L12 | Zauberstab-Klick auf Bitmap | Bitmapmodus („Bitmap bearbeiten“ + „Zauberstab“ im Verlauf), Auswahlrahmen | Auswahlrahmen | ✅ | a_320 |
 | L13 | danach **Esc** | „Bitmapmodus beenden“: Auswahlrahmen weg, Werkzeug wechselt zum Zeiger, Bitmap bleibt als Objekt gewählt | Auswahlrahmen bleibt, Werkzeug bleibt Zauberstab | ❌ | a_321 |
 | L14 | danach Strg+D | Auswahl aufheben | Auswahl aufheben | ✅ | |
-| L15 | Rechteck, Umschalt gehalten, Ziehen 240,145 → +60/+30 | Quadrat 60 × 60 ab dem Startpunkt | 250,150–300,175: kein Quadrat, Startpunkt um 10/5 px verschoben (rastet an E1-Mitte x=250 und R2-Oberkante y=150 ein) | 🔧 behoben, Nachmessung im echten Fenster offen | |
-| L16 | Rechteck, Alt gehalten | von der Mitte aus: 180–300 × 125–175 | wie ohne Alt (250,150–300,175) | 🔧 behoben, Nachmessung im echten Fenster offen | |
+| L15 | Rechteck, Umschalt gehalten, Ziehen 240,145 → +60/+30 | Quadrat 60 × 60 ab dem Startpunkt | 250,150–300,175: kein Quadrat, Startpunkt um 10/5 px verschoben (rastet an E1-Mitte x=250 und R2-Oberkante y=150 ein) | ✅ nachgemessen (FV-3, echtes Fenster, Umschalt vor dem Drücken): 240,145–300,205 | |
+| L16 | Rechteck, Alt gehalten | von der Mitte aus: 180–300 × 125–175 | wie ohne Alt (250,150–300,175) | ⚠️ nachgemessen (FV-3, echtes Fenster): 180–300 × 115–175, also von der Mitte aus und ohne Sprung des Startpunkts; das Original ergab 125–175. Vermutlich rastet dort der Start bei genau 5 px auf R2-Oberkante y = 150 ein, bei Umschalt (L15) aber nicht. Die Fangregel muss im Original nachgemessen werden | |
 | L17 | Rechteck, 5× Pfeil hoch während des Ziehens | Rundung bleibt 0 (in CS6 live keine Wirkung) | Rundung 0,145 | ⚠️ | |
 | L18 | Rechteck, Leertaste während des Ziehens | Startpunkt wandert mit (Form verschoben) | Startpunkt wandert mit | ✅ | |
 | L19 | Rechteck, Esc während des Ziehens | wird ignoriert, Rechteck entsteht beim Loslassen | Aufziehen abgebrochen, kein Rechteck | ⚠️ | |
@@ -226,11 +226,11 @@ Testdokument mit denselben Objekten in beiden Programmen (per JSF angelegt): R1,
 | L21 | Textwerkzeug: Klick, Esc ohne Text | kein Objekt, Werkzeug bleibt Text | kein Objekt, Werkzeug wechselt zum Zeiger | ⚠️ | |
 | L22 | Textwerkzeug: Klick bei 300,340, „Abc“, Esc | Text 300,323–339,341 (Klickpunkt ≈ Grundlinie), Werkzeug bleibt Text | Text 299,341–321,356 (Klickpunkt = Oberkante), Werkzeug wechselt zum Zeiger | ❌ | |
 | L23 | Stift: 2 Klicks, Esc | offener Pfad 250,150–330,150 | ebenso | ✅ | |
-| L24 | Stift: Klick, Klick, Doppelklick | offener Pfad mit 3 Punkten bis 330,220 | **kein Pfad** (nach dem Doppelklick ist nichts da) | 🔧 behoben, Nachmessung im echten Fenster offen | |
+| L24 | Stift: Klick, Klick, Doppelklick | offener Pfad mit 3 Punkten bis 330,220 | **kein Pfad** (nach dem Doppelklick ist nichts da) | ✅ nachgemessen (FV-3, echtes Fenster): offener Pfad 250,260–330,330, Werkzeug bleibt Stift | |
 | L25 | Zoomwerkzeug: Rahmen 50,50–150,120 aufziehen | 1150 % (stufenlos eingepasst) | 800 % (Tabellenstufe) | ❌ | |
-| L26 | Zeiger: Eckgriff eines gewählten Rechtecks um +40/+30 ziehen | Rechteck wird **größer** (bis 193,153), Rundung bleibt 0 | keine Änderung (weder Größe noch Rundung) | 🔧 behoben, Nachmessung im echten Fenster offen | |
+| L26 | Zeiger: Eckgriff eines gewählten Rechtecks um +40/+30 ziehen | Rechteck wird **größer** (bis 193,153), Rundung bleibt 0 | keine Änderung (weder Größe noch Rundung) | ✅ nachgemessen (FV-3, echtes Fenster): 50,50–190,150, Rundung 0 | |
 | L27 | Zeiger: Doppelklick auf Bitmap | Bitmapmodus, Werkzeug wechselt zum Auswahlrahmen | nichts | 🔧 behoben, Nachmessung im echten Fenster offen | |
-| L28 | Zuschneiden: Rahmen ziehen, Esc | Leinwand unverändert, Werkzeug wechselt zum Zeiger | Leinwand unverändert, Werkzeug bleibt Zuschneiden | 🔧 behoben, Nachmessung im echten Fenster offen | |
+| L28 | Zuschneiden: Rahmen ziehen, Esc | Leinwand unverändert, Werkzeug wechselt zum Zeiger | Leinwand unverändert, Werkzeug bleibt Zuschneiden | ✅ nachgemessen (FV-3, echtes Fenster): Werkzeug Zeiger, Breite 600 | |
 | L29 | Zuschneiden: Rahmen 20,20–300,200, Eingabe, Strg+Z | 280 × 180, Rückgängig stellt 600 × 400 her | ebenso | ✅ | |
 | L30 | Skalieren: Eckgriff ziehen, Esc bzw. Eingabe | ⏳ (Werkzeug lässt sich im laufenden Original nicht per Skript wählen) | Esc verwirft, Eingabe übernimmt, ein Schritt | ⏳ | |
 
