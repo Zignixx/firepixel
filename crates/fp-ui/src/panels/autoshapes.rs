@@ -298,8 +298,11 @@ pub fn properties(ui: &mut Ui, st: &mut AppState) {
         None if !de_label.is_empty() => de_label.to_string(),
         None => common::t("panel-asp-default-title"),
     };
-    let (tr_, _) = ui.allocate_exact_size(vec2(ui.available_width(), 18.0), Sense::hover());
-    common::fit_text(ui, tr_.shrink2(vec2(2.0, 0.0)), Align2::LEFT_CENTER, &title, theme.bold(theme.fonts.ui), theme.colors.text);
+    // gleiche Höhe wie die bisherige Beschriftung (eine Zeile der fetten Schrift), lange Namen mit „…“
+    let title_font = theme.bold(theme.fonts.ui);
+    let row_h = ui.ctx().fonts_mut(|f| f.layout_no_wrap(title.clone(), title_font.clone(), theme.colors.text).size().y);
+    let (tr_, _) = ui.allocate_exact_size(vec2(ui.available_width(), row_h), Sense::hover());
+    common::fit_text(ui, tr_, Align2::LEFT_CENTER, &title, title_font, theme.colors.text);
     let params = desc.get("params").and_then(|p| p.as_array()).cloned().unwrap_or_default();
     if params.is_empty() {
         common::not_available(ui, &common::t("panel-asp-no-params"));

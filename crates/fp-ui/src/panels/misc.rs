@@ -79,17 +79,24 @@ pub fn path(ui: &mut Ui, st: &mut AppState) {
     cmd_buttons(ui, st, "panel-path-edit-points", &[("panel-path-snap-pixel", "modify.snapToPixel"), ("panel-path-to-marquee", "modify.convertPathToMarquee")]);
     let compound = first(st).is_some_and(|e| matches!(e.kind, ElementKind::CompoundShape(_)));
     caption_key(ui, "panel-path-compound");
-    // Knöpfe brechen bei schmalen Bedienfeldern um (statt über den Rand zu laufen)
-    ui.horizontal_wrapped(|ui| {
-        let w = ui.available_width().clamp(30.0, 84.0);
-        for (key, op) in [("panel-path-union", 1), ("panel-path-punch", 3), ("panel-path-intersect", 2), ("panel-path-crop", 4)] {
-            let (r, _) = ui.allocate_exact_size(vec2(w, 20.0), Sense::hover());
-            let paths = crate::inspector::obj_quads::selection(st).iter().filter(|e| matches!(e.kind, ElementKind::Path(_))).count();
-            if fields::button(ui, ("pathop", op), r, &common::t(key), compound || paths >= 2) {
-                st.run("pi.compound.setOp", json!({"op": op}));
+    // Knöpfe 84 px breit wie bisher; passen nicht alle vier in eine Zeile, so viele je Zeile wie
+    // möglich (statt über den Rand zu laufen), bei sehr schmalen Bedienfeldern etwas schmaler
+    let ops = [("panel-path-union", 1), ("panel-path-punch", 3), ("panel-path-intersect", 2), ("panel-path-crop", 4)];
+    let gap = ui.spacing().item_spacing.x;
+    let avail = ui.available_width();
+    let per_row = (1..=4usize).rev().find(|n| *n as f32 * 78.0 + (*n as f32 - 1.0) * gap <= avail + 0.5).unwrap_or(1);
+    let w = ((avail - (per_row as f32 - 1.0) * gap) / per_row as f32).min(84.0).floor().max(30.0);
+    let paths = crate::inspector::obj_quads::selection(st).iter().filter(|e| matches!(e.kind, ElementKind::Path(_))).count();
+    for chunk in ops.chunks(per_row) {
+        ui.horizontal(|ui| {
+            for (key, op) in chunk {
+                let (r, _) = ui.allocate_exact_size(vec2(w, 20.0), Sense::hover());
+                if fields::button(ui, ("pathop", *op), r, &common::t(key), compound || paths >= 2) {
+                    st.run("pi.compound.setOp", json!({"op": op}));
+                }
             }
-        }
-    });
+        });
+    }
     ui.horizontal(|ui| {
         let (r, _) = ui.allocate_exact_size(vec2(ui.available_width().clamp(30.0, 84.0), 20.0), Sense::hover());
         if fields::button(ui, "pathop-combine", r, &common::t("panel-path-combine-compound"), compound) {

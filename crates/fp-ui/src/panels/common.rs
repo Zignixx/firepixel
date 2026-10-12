@@ -121,7 +121,8 @@ pub fn resource_menu_nodes(st: &crate::app_state::AppState, id: &str) -> Vec<cra
                 out.push(crate::menu::Node::Separator);
                 continue;
             }
-            let (label, _) = crate::menu::clean_label(&e.text);
+            // Text der aktuellen Sprache (Schlüssel aus den Menüdaten, I18N-MENUE)
+            let (label, _) = crate::menu::clean_label(&e.local_text());
             if let Some(ch) = &e.children {
                 let children = conv(st, ch);
                 out.push(crate::menu::Node::Sub { label, children, enabled: true });
