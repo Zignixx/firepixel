@@ -739,6 +739,8 @@ dlg-pmenu-swatches-file = Farbfelder
 dlg-pmenu-own-setting = Eigene Einstellung
 dlg-pmenu-delete-settings = Einstellungen löschen
 dlg-pmenu-no-settings = Es gibt keine gespeicherten Einstellungen.
+# Rückfrage vor dem Löschen einer gespeicherten Optimierungseinstellung (wie im Original, Text 3169)
+dlg-pmenu-delete-settings-confirm = Aktuelle Einstellungen löschen? Dies kann nicht rückgängig gemacht werden.
 dlg-pmenu-need-color = Bitte zuerst eine Farbe in der Farbtabelle auswählen.
 dlg-pmenu-locate-plugins = Zusatzmodule suchen
 dlg-pmenu-load-palette = Palette laden

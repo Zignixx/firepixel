@@ -110,7 +110,7 @@ pub fn new_context(loop_limit: u64) -> JsResult<Context> {
     ctx.register_global_property(js_string!("App"), fw_obj, Attribute::WRITABLE | Attribute::CONFIGURABLE)?;
     // fp: direkter Zugang zum Befehlsregister (gespeicherte Befehle, „Schritte kopieren“)
     let fp = JsObject::with_object_proto(ctx.intrinsics());
-    for (name, f) in [("run", imp::global_fp_run as boa_engine::native_function::NativeFunctionPointer), ("available", imp::global_fp_available)] {
+    for (name, f) in [("run", imp::global_fp_run as boa_engine::native_function::NativeFunctionPointer), ("available", imp::global_fp_available), ("t", imp::global_fp_t)] {
         let func = FunctionObjectBuilder::new(ctx.realm(), NativeFunction::from_fn_ptr(f)).name(JsString::from(name)).length(2).build();
         fp.define_property_or_throw(JsString::from(name), PropertyDescriptor::builder().value(func).writable(true).enumerable(false).configurable(true), &mut ctx)?;
     }

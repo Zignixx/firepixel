@@ -579,6 +579,8 @@ menu-file-previewIn = Vorschau in { $browser }
 menu-file-previewAllIn = Vorschau aller Seiten in { $browser } anzeigen
 menu-file-defaultBrowser = Standardbrowser
 menu-edit-withStep = { $label }: { $step }
+# Filter-Menü nach einem Filter, wie im Original (Text 10722): Menütext des Filters samt „...“
+menu-filter-repeatWith = Wiederholen: { $filter }
 menu-window-extensions-none = Keine Erweiterungen
 menu-view-theme = Design
 menu-window-other = Sonstige

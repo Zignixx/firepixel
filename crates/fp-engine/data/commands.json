@@ -69,12 +69,12 @@
 "name": "file.browseInBridge",
 "path_de": [
 "Datei",
-"Bridge durchsuchen..."
+"Im Dateibrowser durchsuchen..."
 ],
-"path_en": "File::Browse in Bridge",
-"status_de": "Mit Bridge durchsuchen",
-"label_de": "Bridge durchsuchen",
-"menu_label_de": "Bridge durchsuchen...",
+"path_en": "File::Browse in File Browser",
+"status_de": "Öffnet den Ordner des aktuellen Dokuments im Dateibrowser des Systems",
+"label_de": "Im Dateibrowser durchsuchen",
+"menu_label_de": "Im Dateibrowser durchsuchen...",
 "main_menu": true,
 "js": [],
 "undo_classes": [],

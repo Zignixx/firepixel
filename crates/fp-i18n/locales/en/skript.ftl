@@ -46,3 +46,16 @@ err-script-hr-internal = An internal error occurred.
 # <<< UE-3 HR
 # JSF runtime: API member not implemented (UE-5)
 err-script-not-implemented = not implemented: { $member }
+# Built-in command scripts in the Commands menu, read with fp.t(…) in the UI language (MN-5)
+builtin-cmd-frame-layer = Frame
+builtin-cmd-twist-copies = Number of copies
+builtin-cmd-text-width = Width in pixels
+builtin-cmd-alt-text = ALT text for the selected hotspots and slices
+builtin-cmd-resize-percent = New size in percent
+builtin-cmd-screenshot-unavailable = Screenshot: Firepixel cannot capture the screen itself.
+builtin-cmd-screenshot-howto = Capture the image with the system (Windows: Win+Shift+S) and paste it with File ▸ New and Edit ▸ Paste (Ctrl+V).
+builtin-cmd-demo-no-document = Demo Current Document: Open a document first.
+builtin-cmd-symbol-script-no-instance = Create Symbol Script: Select an instance of a graphic symbol first.
+builtin-cmd-symbol-script-unsupported = Create Symbol Script: Firepixel cannot create symbol scripts for the symbol “{ $name }” yet. Edit the properties of the instance in the Symbol Properties panel.
+builtin-cmd-auto-mask-no-selection = Auto Vector Mask: Select one or more objects first.
+builtin-cmd-shared-palette = Shared Palette: Firepixel does not create a shared color table for multiple slices. To make slices use the same colors, set the same color table for each slice in the Optimize panel.

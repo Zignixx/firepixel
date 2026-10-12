@@ -210,6 +210,11 @@ pub(crate) fn command_state(st: &AppState, name: &str, fallback_sc: Option<Strin
 /// Rücktaste (z. B. „Löschen“ mit Entf und Rück → Entf).
 pub fn menu_shortcut(st: &AppState, name: &str) -> Option<fp_engine::shortcuts::Shortcut> {
     const VK_BACK: u16 = 8;
+    // „Maske deaktivieren“ zeigt im Original kein Kürzel (UX-B und PM-7 gemessen); die Taste aus dem
+    // Kürzelsatz bleibt wirksam (MN-5)
+    if name == "modify.mask.disableMask" {
+        return None;
+    }
     let all = st.session.command_shortcuts(name);
     all.iter().find(|s| s.vk != VK_BACK).or(all.first()).copied()
 }
@@ -222,8 +227,13 @@ fn with_step_name(st: &AppState, name: &str, label: String) -> String {
         "edit.undo" => doc.and_then(|d| d.history.undo_label()).map(|s| s.to_string()),
         // ohne zurückgenommenen Schritt wiederholt das Original den letzten Befehl
         "edit.redo" => return with_redo_step(st, label),
-        // „Filter wiederholen: <zuletzt benutzter Filter>“ (PM-7, MN-4)
-        "filter.repeat" => st.session.last_filter.as_ref().map(|f| plain_label(&t(&fp_i18n::command_key(&f.command)))),
+        // wie im Original „Wiederholen: <Menütext des zuletzt benutzten Filters>“ (Text 10722, PM-7, MN-5)
+        "filter.repeat" => {
+            return match st.session.last_filter.as_ref().map(|f| clean_label(&t(&fp_i18n::command_key(&f.command))).0) {
+                Some(f) if !f.trim().is_empty() => fp_i18n::tr!("menu-filter-repeatWith", filter = f.trim()),
+                _ => label,
+            };
+        }
         _ => None,
     };
     match step {

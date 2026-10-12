@@ -46,3 +46,16 @@ err-script-hr-internal = Es ist ein interner Fehler aufgetreten.
 # <<< UE-3 HR
 # JSF-Laufzeit: nicht umgesetzter API-Member (UE-5)
 err-script-not-implemented = nicht implementiert: { $member }
+# Mitgelieferte Befehlsskripte im Menü „Befehle“, abgerufen mit fp.t(…) in der Sprache der Oberfläche (MN-5)
+builtin-cmd-frame-layer = Rahmen
+builtin-cmd-twist-copies = Anzahl der Kopien
+builtin-cmd-text-width = Breite in Pixel
+builtin-cmd-alt-text = ALT-Text für die ausgewählten Hotspots und Segmente
+builtin-cmd-resize-percent = Neue Größe in Prozent
+builtin-cmd-screenshot-unavailable = Bildschirmfoto: Firepixel kann den Bildschirm nicht selbst aufnehmen.
+builtin-cmd-screenshot-howto = Nehmen Sie das Bild mit dem System auf (Windows: Win+Umschalt+S) und fügen Sie es mit Datei ▸ Neu und Bearbeiten ▸ Einfügen (Strg+V) ein.
+builtin-cmd-demo-no-document = Demo - aktuelles Dokument: Öffnen Sie zuerst ein Dokument.
+builtin-cmd-symbol-script-no-instance = Symbolskript erstellen: Wählen Sie zuerst eine Instanz eines Grafiksymbols aus.
+builtin-cmd-symbol-script-unsupported = Symbolskript erstellen: Für das Symbol „{ $name }“ kann Firepixel noch keine Symbolskripte anlegen. Eigenschaften der Instanz bearbeiten Sie im Bedienfeld „Symboleigenschaften“.
+builtin-cmd-auto-mask-no-selection = Autom. Vektormaske: Wählen Sie zuerst ein oder mehrere Objekte aus.
+builtin-cmd-shared-palette = Gemeinsame Palette: Firepixel legt keine eigene gemeinsame Farbtabelle für mehrere Segmente an. Damit Segmente dieselben Farben verwenden, stellen Sie für jedes Segment im Bedienfeld „Optimieren“ dieselbe Farbtabelle ein.

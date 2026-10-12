@@ -279,14 +279,14 @@ fn repeat_filter_shows_last_filter_name() {
     let _ = st.session.execute("select.set", json!({ "ids": f.bitmap }));
     st.session.execute("filter.adjustColor.invert", json!({})).expect("Filter");
     let (label, enabled) = repeat_label(&st);
-    assert_eq!(label, "Filter wiederholen: Umkehren");
+    assert_eq!(label, "Wiederholen: Umkehren"); // Wortlaut des Originals seit MN-5
     assert!(enabled);
     st.session.execute("filter.blur.blur", json!({})).expect("Filter");
-    let name = menu::plain_label(&fp_i18n::t(&fp_i18n::command_key("filter.blur.blur")));
-    assert_eq!(repeat_label(&st).0, format!("Filter wiederholen: {name}"));
+    let name = menu::clean_label(&fp_i18n::t(&fp_i18n::command_key("filter.blur.blur"))).0;
+    assert_eq!(repeat_label(&st).0, format!("Wiederholen: {name}"));
     // Wiederholen selbst ändert den Namen nicht
     st.session.execute("filter.repeat", json!({})).expect("wiederholen");
-    assert_eq!(repeat_label(&st).0, format!("Filter wiederholen: {name}"));
+    assert_eq!(repeat_label(&st).0, format!("Wiederholen: {name}"));
 }
 
 // ------------------------------------------------------------------ Datei ▸ Im Dateibrowser durchsuchen

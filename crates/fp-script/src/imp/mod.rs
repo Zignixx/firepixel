@@ -398,6 +398,38 @@ pub(crate) fn global_fp_run(_this: &JsValue, args: &[JsValue], ctx: &mut Context
     conv::json_to_js(&v, ctx)
 }
 
+/// `fp.t(key, args)`: übersetzter Text aus den Sprachdateien in der aktuellen Sprache der Oberfläche
+/// (z. B. für die mitgelieferten Befehlsskripte, MN-5). `args` ist ein Objekt mit Fluent-Variablen
+/// (`{ name: "Knopf" }`); ein unbekannter Schlüssel liefert den Schlüssel selbst.
+pub(crate) fn global_fp_t(_this: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+    let key = match args.first() {
+        Some(v) if !v.is_undefined() => v.to_string(ctx)?.to_std_string_escaped(),
+        _ => return Err(runtime::throw(FwErr::Hr(crate::bindings::hr::E_BAD_PARAM_COUNT, "fp.t(key, args)".into()), "fp.t")),
+    };
+    let vars = match args.get(1) {
+        Some(v) if v.is_object() => conv::js_to_json(v, ctx, 0)?,
+        _ => Value::Null,
+    };
+    let owned: Vec<(String, fp_i18n::Value<'static>)> = vars
+        .as_object()
+        .map(|m| {
+            m.iter()
+                .map(|(k, v)| {
+                    let fv = match v {
+                        Value::Number(n) => fp_i18n::Value::from(n.as_f64().unwrap_or(0.0)),
+                        Value::String(s) => fp_i18n::Value::from(s.clone()),
+                        other => fp_i18n::Value::from(other.to_string()),
+                    };
+                    (k.clone(), fv)
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+    let refs: Vec<(&str, fp_i18n::Value<'_>)> = owned.iter().map(|(k, v)| (k.as_str(), v.clone())).collect();
+    let text = if refs.is_empty() { fp_i18n::t(&key) } else { fp_i18n::t_args(&key, &refs) };
+    Ok(conv::s(&text))
+}
+
 /// `fp.available(name)`: ist der Befehl im aktuellen Zustand ausführbar?
 pub(crate) fn global_fp_available(_this: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
     let name = args.first().map(|v| v.to_string(ctx).map(|s| s.to_std_string_escaped())).transpose()?.unwrap_or_default();

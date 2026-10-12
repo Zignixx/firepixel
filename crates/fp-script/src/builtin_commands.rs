@@ -44,7 +44,7 @@ if (fw.selection.length) {\n\
         "// Rahmen um die Leinwand auf einer eigenen Ebene\n\
 var d = fw.getDocumentDOM();\n\
 var w = Math.max(4, Math.round(Math.min(d.width, d.height) * 0.05));\n\
-d.addNewLayer(\"Rahmen\", false);\n\
+d.addNewLayer(fp.t(\"builtin-cmd-frame-layer\"), false);\n\
 d.addNewRectanglePrimitive({ left: w / 2, top: w / 2, right: d.width - w / 2, bottom: d.height - w / 2 }, 0);\n\
 d.setFill(null);\n\
 d.setBrushNColor({ category: \"bc_Pencil\", name: \"bn_1-Pixel Hard\", diameter: w, softness: 0, shape: \"square\", type: \"simple\" }, \"#5a3a1e\");\n",
@@ -53,7 +53,7 @@ d.setBrushNColor({ category: \"bc_Pencil\", name: \"bn_1-Pixel Hard\", diameter:
         "Kreativ/Drehen und Ausblenden.jsf",
         "// Kopien der Auswahl, jeweils gedreht, verschoben und blasser\n\
 var d = fw.getDocumentDOM();\n\
-var n = parseInt(prompt(\"Anzahl der Kopien\", \"5\"), 10) || 5;\n\
+var n = parseInt(prompt(fp.t(\"builtin-cmd-twist-copies\"), \"5\"), 10) || 5;\n\
 if (fw.selection.length) {\n\
   for (var i = 1; i <= n; i++) {\n\
     d.cloneSelection();\n\
@@ -134,7 +134,7 @@ if (!done) { d.addNewText({ left: 10, top: 10, right: Math.min(d.width - 10, 310
     ("Text/Als Pixel wiedergeben.jsf", "if (fw.selection.length) fw.getDocumentDOM().flattenSelection();\n"),
     (
         "Text/Breite festlegen.jsf",
-        "var w = parseFloat(prompt(\"Breite in Pixel\", \"200\"));\nvar d = fw.getDocumentDOM(), sel = fw.selection;\nif (w > 0) for (var i = 0; i < sel.length; i++) if (sel[i].textChars !== undefined) { fw.selection = [sel[i]]; d.setTextRectangle({ left: sel[i].left, top: sel[i].top, right: sel[i].left + w, bottom: sel[i].top + sel[i].height }); }\nfw.selection = sel;\n",
+        "var w = parseFloat(prompt(fp.t(\"builtin-cmd-text-width\"), \"200\"));\nvar d = fw.getDocumentDOM(), sel = fw.selection;\nif (w > 0) for (var i = 0; i < sel.length; i++) if (sel[i].textChars !== undefined) { fw.selection = [sel[i]]; d.setTextRectangle({ left: sel[i].left, top: sel[i].top, right: sel[i].left + w, bottom: sel[i].top + sel[i].height }); }\nfw.selection = sel;\n",
     ),
     (
         "Text/Feste Breite ein\u{2215}aus.jsf",
@@ -151,12 +151,12 @@ fw.selection = pick;\n",
     ),
     (
         "Web/ALT-Text festlegen.jsf",
-        "var t = prompt(\"ALT-Text für die ausgewählten Hotspots und Segmente\", \"\");\nif (t !== null) { var sel = fw.selection; for (var i = 0; i < sel.length; i++) if (sel[i].altText !== undefined) sel[i].altText = t; }\n",
+        "var t = prompt(fp.t(\"builtin-cmd-alt-text\"), \"\");\nif (t !== null) { var sel = fw.selection; for (var i = 0; i < sel.length; i++) if (sel[i].altText !== undefined) sel[i].altText = t; }\n",
     ),
     // ------------------------------------------------------------- oberste Ebene
     (
         "Größe ausgewählter Objekte ändern.jsf",
-        "var p = parseFloat(prompt(\"Neue Größe in Prozent\", \"50\"));\nif (p > 0 && fw.selection.length) fw.getDocumentDOM().scaleSelection(p / 100, p / 100, \"autoTrimImages transformAttributes\");\n",
+        "var p = parseFloat(prompt(fp.t(\"builtin-cmd-resize-percent\"), \"50\"));\nif (p > 0 && fw.selection.length) fw.getDocumentDOM().scaleSelection(p / 100, p / 100, \"autoTrimImages transformAttributes\");\n",
     ),
     ("Warnmeldungen zurücksetzen.jsf", "fw.resetWarnings();\n"),
     // ------------------------------------------------------------- seit MN-4 (Index ab ADDED_FROM)
@@ -164,14 +164,14 @@ fw.selection = pick;\n",
         "Bildschirmfoto.jsf",
         "// Bildschirmfoto als neues Dokument, sofern Firepixel den Bildschirm aufnehmen kann\n\
 if (!fw.takeScreenshot()) {\n\
-  alert(\"Bildschirmfoto: Firepixel kann den Bildschirm nicht selbst aufnehmen.\\n\\nNehmen Sie das Bild mit dem System auf (Windows: Win+Umschalt+S) und fügen Sie es mit Datei ▸ Neu und Bearbeiten ▸ Einfügen (Strg+V) ein.\");\n\
+  alert(fp.t(\"builtin-cmd-screenshot-unavailable\") + \"\\n\\n\" + fp.t(\"builtin-cmd-screenshot-howto\"));\n\
 }\n",
     ),
     (
         "Demo - aktuelles Dokument.jsf",
         "// alle Seiten des aktuellen Dokuments als klickbare Vorschau im Browser\n\
 if (!fw.getDocumentDOM()) {\n\
-  alert(\"Demo - aktuelles Dokument: Öffnen Sie zuerst ein Dokument.\");\n\
+  alert(fp.t(\"builtin-cmd-demo-no-document\"));\n\
 } else {\n\
   fp.run(\"file.previewInBrowser.previewAllPagesInPrimaryBrowser\", {});\n\
 }\n",
@@ -182,13 +182,102 @@ if (!fw.getDocumentDOM()) {\n\
 var sel = fw.getDocumentDOM() ? fw.selection : [], inst = null;\n\
 for (var i = 0; i < sel.length; i++) if (sel[i].symbolName) { inst = sel[i]; break; }\n\
 if (!inst) {\n\
+  alert(fp.t(\"builtin-cmd-symbol-script-no-instance\"));\n\
+} else {\n\
+  alert(fp.t(\"builtin-cmd-symbol-script-unsupported\", { name: inst.symbolName }));\n\
+}\n",
+    ),
+    (
+        "Kreativ/Autom. Vektormaske.jsf",
+        "// Auswahl mit einer Vektormaske nach rechts weich ausblenden (linearer Verlauf deckend → transparent)\n\
+var d = fw.getDocumentDOM();\n\
+var sel = d ? fw.selection.slice(0) : [];\n\
+var b = sel.length ? d.getSelectionBounds() : null;\n\
+if (!b) {\n\
+  alert(fp.t(\"builtin-cmd-auto-mask-no-selection\"));\n\
+} else {\n\
+  d.addNewRectanglePrimitive({ left: b.left, top: b.top, right: b.right, bottom: b.bottom }, 0);\n\
+  var m = fw.selection[0];\n\
+  d.setFill({ category: \"fc_Linear\", gradient: { nodes: [{ color: \"#ffffffff\", position: 0 }, { color: \"#ffffff00\", position: 1 }] } });\n\
+  fw.selection = sel.concat([m]);\n\
+  d.group(\"mask to path\");\n\
+}\n",
+    ),
+    (
+        "Web/Gemeinsame Palette.jsf",
+        "// gemeinsame Farbtabelle für mehrere Segmente\n\
+alert(fp.t(\"builtin-cmd-shared-palette\"));\n",
+    ),
+];
+
+/// Fassungen bis MN-4 mit festen deutschen Texten (MN-5: Texte jetzt über `fp.t` in der Sprache der
+/// Oberfläche). Wortgleiche Dateien werden beim Start ersetzt ([`update_outdated`]).
+const FIXED_GERMAN: &[(usize, &str)] = &[
+    (
+        14,
+        "// Rahmen um die Leinwand auf einer eigenen Ebene\n\
+var d = fw.getDocumentDOM();\n\
+var w = Math.max(4, Math.round(Math.min(d.width, d.height) * 0.05));\n\
+d.addNewLayer(\"Rahmen\", false);\n\
+d.addNewRectanglePrimitive({ left: w / 2, top: w / 2, right: d.width - w / 2, bottom: d.height - w / 2 }, 0);\n\
+d.setFill(null);\n\
+d.setBrushNColor({ category: \"bc_Pencil\", name: \"bn_1-Pixel Hard\", diameter: w, softness: 0, shape: \"square\", type: \"simple\" }, \"#5a3a1e\");\n",
+    ),
+    (
+        15,
+        "// Kopien der Auswahl, jeweils gedreht, verschoben und blasser\n\
+var d = fw.getDocumentDOM();\n\
+var n = parseInt(prompt(\"Anzahl der Kopien\", \"5\"), 10) || 5;\n\
+if (fw.selection.length) {\n\
+  for (var i = 1; i <= n; i++) {\n\
+    d.cloneSelection();\n\
+    d.rotateSelection(10, \"autoTrimImages transformAttributes\");\n\
+    d.moveSelectionBy({ x: 6, y: 6 }, false, false);\n\
+    d.setOpacity(Math.max(5, 100 - i * Math.floor(90 / n)));\n\
+  }\n\
+}\n",
+    ),
+    (
+        29,
+        "var w = parseFloat(prompt(\"Breite in Pixel\", \"200\"));\nvar d = fw.getDocumentDOM(), sel = fw.selection;\nif (w > 0) for (var i = 0; i < sel.length; i++) if (sel[i].textChars !== undefined) { fw.selection = [sel[i]]; d.setTextRectangle({ left: sel[i].left, top: sel[i].top, right: sel[i].left + w, bottom: sel[i].top + sel[i].height }); }\nfw.selection = sel;\n",
+    ),
+    (
+        33,
+        "var t = prompt(\"ALT-Text für die ausgewählten Hotspots und Segmente\", \"\");\nif (t !== null) { var sel = fw.selection; for (var i = 0; i < sel.length; i++) if (sel[i].altText !== undefined) sel[i].altText = t; }\n",
+    ),
+    (
+        34,
+        "var p = parseFloat(prompt(\"Neue Größe in Prozent\", \"50\"));\nif (p > 0 && fw.selection.length) fw.getDocumentDOM().scaleSelection(p / 100, p / 100, \"autoTrimImages transformAttributes\");\n",
+    ),
+    (
+        36,
+        "// Bildschirmfoto als neues Dokument, sofern Firepixel den Bildschirm aufnehmen kann\n\
+if (!fw.takeScreenshot()) {\n\
+  alert(\"Bildschirmfoto: Firepixel kann den Bildschirm nicht selbst aufnehmen.\\n\\nNehmen Sie das Bild mit dem System auf (Windows: Win+Umschalt+S) und fügen Sie es mit Datei ▸ Neu und Bearbeiten ▸ Einfügen (Strg+V) ein.\");\n\
+}\n",
+    ),
+    (
+        37,
+        "// alle Seiten des aktuellen Dokuments als klickbare Vorschau im Browser\n\
+if (!fw.getDocumentDOM()) {\n\
+  alert(\"Demo - aktuelles Dokument: Öffnen Sie zuerst ein Dokument.\");\n\
+} else {\n\
+  fp.run(\"file.previewInBrowser.previewAllPagesInPrimaryBrowser\", {});\n\
+}\n",
+    ),
+    (
+        38,
+        "// Symbolskript für die ausgewählte Symbolinstanz\n\
+var sel = fw.getDocumentDOM() ? fw.selection : [], inst = null;\n\
+for (var i = 0; i < sel.length; i++) if (sel[i].symbolName) { inst = sel[i]; break; }\n\
+if (!inst) {\n\
   alert(\"Symbolskript erstellen: Wählen Sie zuerst eine Instanz eines Grafiksymbols aus.\");\n\
 } else {\n\
   alert(\"Symbolskript erstellen: Für das Symbol „\" + inst.symbolName + \"“ kann Firepixel noch keine Symbolskripte anlegen. Eigenschaften der Instanz bearbeiten Sie im Bedienfeld „Symboleigenschaften“.\");\n\
 }\n",
     ),
     (
-        "Kreativ/Autom. Vektormaske.jsf",
+        39,
         "// Auswahl mit einer Vektormaske nach rechts weich ausblenden (linearer Verlauf deckend → transparent)\n\
 var d = fw.getDocumentDOM();\n\
 var sel = d ? fw.selection.slice(0) : [];\n\
@@ -204,11 +293,16 @@ if (!b) {\n\
 }\n",
     ),
     (
-        "Web/Gemeinsame Palette.jsf",
+        40,
         "// gemeinsame Farbtabelle für mehrere Segmente\n\
 alert(\"Gemeinsame Palette: Firepixel legt keine eigene gemeinsame Farbtabelle für mehrere Segmente an. Damit Segmente dieselben Farben verwenden, stellen Sie für jedes Segment im Bedienfeld „Optimieren“ dieselbe Farbtabelle ein.\");\n",
     ),
 ];
+
+/// Ist `text` eine frühere, unveränderte Fassung des mitgelieferten Befehls `i`?
+fn is_old_version(i: usize, text: &str) -> bool {
+    OUTDATED.iter().chain(FIXED_GERMAN).any(|(k, o)| *k == i && text == *o)
+}
 
 /// Erster Index in [`BUILTIN`], der nach der ersten Ausgabe dazukam (MN-4). Diese Befehle werden auch
 /// in schon eingerichtete Befehlsordner einmal geschrieben ([`install_builtin_commands`]).
@@ -344,7 +438,7 @@ const OUTDATED: &[(usize, &str)] = &[
 /// der neue Name frei ist. Liefert die Zahl der ersetzten bzw. umbenannten Dateien.
 pub fn update_outdated(dir: &Path) -> std::io::Result<usize> {
     let mut n = 0;
-    for (i, old) in OUTDATED {
+    for (i, old) in OUTDATED.iter().chain(FIXED_GERMAN) {
         let Some((rel_de, src)) = BUILTIN.get(*i) else { continue };
         for rel in [Some(*rel_de), BUILTIN_EN.get(*i).copied()].into_iter().flatten() {
             let p = rel_path(dir, rel);
@@ -358,7 +452,7 @@ pub fn update_outdated(dir: &Path) -> std::io::Result<usize> {
     for (i, old_rel) in RENAMED_DE {
         let Some((rel_de, src)) = BUILTIN.get(*i) else { continue };
         let (old_p, new_p) = (rel_path(dir, old_rel), rel_path(dir, rel_de));
-        let unchanged = std::fs::read_to_string(&old_p).is_ok_and(|s| s == *src || OUTDATED.iter().any(|(k, o)| k == i && s == *o));
+        let unchanged = std::fs::read_to_string(&old_p).is_ok_and(|s| s == *src || is_old_version(*i, &s));
         if unchanged && !new_p.exists() {
             fp_i18n::profile::guard_write(&new_p);
             std::fs::rename(&old_p, &new_p)?;

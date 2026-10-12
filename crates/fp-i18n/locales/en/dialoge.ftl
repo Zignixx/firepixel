@@ -748,6 +748,8 @@ dlg-pmenu-swatches-file = Swatches
 dlg-pmenu-own-setting = Custom setting
 dlg-pmenu-delete-settings = Delete Settings
 dlg-pmenu-no-settings = There are no saved settings.
+# Confirmation before deleting saved optimize settings (original text 3169)
+dlg-pmenu-delete-settings-confirm = Delete current settings? This cannot be undone.
 dlg-pmenu-need-color = Please select a color in the color table first.
 dlg-pmenu-locate-plugins = Locate Plug-ins
 dlg-pmenu-load-palette = Load Palette

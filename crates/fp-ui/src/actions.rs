@@ -201,6 +201,14 @@ fn run_command(st: &mut AppState, ctx: &egui::Context, name: &str, params: Value
             });
             return;
         }
+        // Optimieren-Bedienfeld ▸ Einstellungen löschen: Rückfrage 3169 wie im Original (re\17 §7, MN-5);
+        // „Nein“/Schließen löscht nichts. Skripte und MCP rufen den Befehl ohne Rückfrage auf.
+        "panel.optimize.deleteSettings" if has_param(&params, "name") && !has_param(&params, "confirmed") => {
+            let mut p = params;
+            p["confirmed"] = json!(true);
+            st.dialogs.confirm = Some(crate::dialogs::Confirm { title: "Firepixel".into(), text: fp_i18n::t("dlg-pmenu-delete-settings-confirm"), command: name.into(), params: p });
+            return;
+        }
         "file.revert" => {
             let _ = params;
             if let Err(e) = crate::ui_commands::execute(&mut st.session, "file.revert", json!({})) {
