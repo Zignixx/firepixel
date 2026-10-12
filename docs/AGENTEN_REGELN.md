@@ -152,6 +152,29 @@ Am 11.10. hat ein Test ~80 „Pick an app“-Fenster beim Nutzer geöffnet (E-Ma
 
 `STATUS.md`-Abschnitt aktualisieren (Stand, Messzahlen, was geprüft ist, was offen bleibt mit Grund). Vorher: eigenes Crate/eigene Dateien `cargo build -j 3` und `cargo test -j 3 -p <crate>` grün, `cargo clippy -j 3 -p <crate>` ohne Warnungen in eigenen Dateien.
 
+## 7b. Schneller arbeiten (ab Welle 2, 12.10.2026 ≈ 22:30; gilt vor §2 und §6)
+
+**1. Warme Bau-Slots statt eigener Worktree:** Es gibt 8 vorgebaute Slots, Worktree `C:\Users\Administrator\Desktop\REA\fp-s<N>` mit `target-s<N>` (N = 1…8). Der Koordinator nennt dir deinen Slot im Auftrag.
+- **Zu Beginn:** `git -C ..\fp-s<N> status --short` muss leer sein, dann `git -C ..\fp-s<N> checkout -q --detach main`.
+- **Bauen:** `CARGO_TARGET_DIR=…\target-s<N>`, `CARGO_INCREMENTAL=1`, `-j 3`. Der Slot ist vorgebaut, nur Geändertes wird neu übersetzt.
+- **Arbeiten und committen:**
+  - Du bearbeitest die Dateien **im Slot** und testest dort.
+  - Committet wird auf `main` im Haupt-Arbeitsbaum. Dafür übernimmst du deine Änderungen per `git -C ..\fp-s<N> diff > patch` und `git apply` in den Hauptbaum, oder du committest im Slot und bringst den Commit per `git cherry-pick` nach main.
+  - Immer mit Pfadangabe (§2a).
+- **Am Ende:** Slot und `target-s<N>` **nicht löschen**, denn der nächste Agent nutzt sie warm weiter. Nur den Slot sauber hinterlassen: `git -C ..\fp-s<N> checkout -q --detach main` und keine offenen Änderungen.
+
+**2. Keine Arbeit in gemeinsamen Doku-Dateien:**
+- Du änderst **nicht** `PARITAET_*.md`, `PLAN.md`, `STATUS.md`, `NUTZERBEFUNDE.md`, `NACHPRUEFUNG.md` und `BEFUNDE.md`.
+- Stattdessen schreibst du **eine neue Datei** `docs\berichte\<kürzel>.md` mit:
+  - Was umgesetzt ist, mit Commits.
+  - Welche Befunde erledigt sind (Wortlaut-Anfang).
+  - Welche Zeilen in PARITAET auf „umgesetzt, Nachprüfung ausstehend“ gehören.
+  - Was in die Nachprüfung kommt (Ablauf, erwartetes Ergebnis).
+  - Neue Befunde.
+- Ein Doku-Agent überträgt das am Ende der Welle gesammelt.
+
+**3. Prüfen:** wie §7a, aber nur die eigenen Testmodule (`--test all <modul>::`), dazu `cargo check --workspace --all-targets`, und bei neuen Texten fp-i18n und der Scanner. `fp-neutral` nur, wenn Texte oder Bilder dazukommen.
+
 ## 7a. Prüfungen gesammelt am Ende (Nutzerwunsch 12.10.2026 ≈ 18:00, gilt vor §4, §4c und §4e)
 
 Damit tagsüber mehr umgesetzt wird, laufen die teuren Prüfungen gesammelt am Ende, über Nacht.
