@@ -386,7 +386,15 @@ fn run_case(reg: &CommandRegistry, name: &str) -> Result<(), String> {
         }
         s.undo().map_err(|e| format!("Rückgängig: {e}"))?;
         let u = snap(&s);
-        if !(u.doc.as_ref().zip(before.doc.as_ref()).is_some_and(|(x, y)| Arc::ptr_eq(x, y)) && u.sel == before.sel) {
+        // Einfügen zurücknehmen hebt im Original die Objektauswahl auf (PM-1, `UNDO_CLEARS_SELECTION`).
+        let mut want_sel = before.sel.clone();
+        if fp_engine::history::UNDO_CLEARS_SELECTION.contains(&name)
+            && let Some(w) = &mut want_sel
+        {
+            w.elements.clear();
+            w.points.clear();
+        }
+        if !(u.doc.as_ref().zip(before.doc.as_ref()).is_some_and(|(x, y)| Arc::ptr_eq(x, y)) && u.sel == want_sel) {
             return Err("Rückgängig stellt den Zustand nicht exakt wieder her".into());
         }
         s.redo().map_err(|e| format!("Wiederholen: {e}"))?;
@@ -954,7 +962,8 @@ fn overrides(name: &str, ids: &Ids) -> Option<(Value, Option<Setup>)> {
         // Kontextmenü „Pfad kombinieren“ (LW)
         "path.combine.union" | "path.combine.intersect" | "path.combine.punch" | "path.combine.crop" | "path.combine.normal" => rs(json!({}), sel_ids(vec![rect, ellipse])),
         "pi.text.antialias" => rs(json!({"mode": 2}), sel_ids(vec![text])),
-        "pi.text.autoKern" => rs(json!({"on": false}), sel_ids(vec![text])),
+        // neue Texte haben wie im Original keine Autom. Unterschneidung (Text_AutoKern, EB-1)
+        "pi.text.autoKern" => rs(json!({"on": true}), sel_ids(vec![text])),
         "pi.text.pathOffset" => rs(json!({"offset": 12}), Box::new(move |s: &mut Session| {
             select(s, &[text, ellipse]);
             ex(s, "text.attachToPath", json!({}));

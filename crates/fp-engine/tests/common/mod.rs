@@ -63,8 +63,22 @@ pub fn el(s: &Session, id: ElementId) -> Arc<Element> {
     fp_engine::docops::element_on_page(&d.doc, d.page, id).unwrap_or_else(|| panic!("Element {} fehlt", id.0))
 }
 
-/// Grenzen eines Elements.
+/// Geometrische Grenzen eines Elements; bei Texten der gespeicherte Satzrahmen ohne den
+/// angezeigten 2-px-Textrand (`docops::TEXT_MARGIN`, EB-1). Angezeigte Grenzen: [`visible_bounds`].
 pub fn bounds(s: &Session, id: ElementId) -> Rect {
+    let e = el(s, id);
+    let b = visible_bounds(s, id);
+    match &e.kind {
+        fp_model::element::ElementKind::Text(t) if t.transform.is_none_or(|m| m.is_identity()) => {
+            let m = fp_engine::docops::TEXT_MARGIN;
+            Rect::new(b.left + m, b.top + m, b.right - m, b.bottom - m)
+        }
+        _ => b,
+    }
+}
+
+/// Angezeigte Grenzen wie Inspektor/Info (`docops::element_bounds`, Texte mit 2 px Rand).
+pub fn visible_bounds(s: &Session, id: ElementId) -> Rect {
     let d = s.active().expect("Dokument");
     fp_engine::docops::element_bounds(&d.doc, &el(s, id)).unwrap_or_default()
 }

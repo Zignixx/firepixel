@@ -364,7 +364,18 @@ fn union_opt(a: Option<Rect>, b: Option<Rect>) -> Option<Rect> {
     }
 }
 
+/// Textrand je Seite: Das Original zeigt Texte (Inspektor, Info, Auswahlrahmen, JSF `left/top/width/height`)
+/// mit 2 px Rand um den gespeicherten Textrahmen (Rahmen 50,170–200,194 → X 48, Y 168, B 154, H 28).
+/// Der gespeicherte Rahmen bleibt exakt (re\09 §5.3, JSF `rawLeft/rawTop/rawWidth/rawHeight`).
+pub const TEXT_MARGIN: f32 = 2.0;
+
+/// Sichtbare Grenzen eines Textrahmens (ohne Transformation): Rahmen + [`TEXT_MARGIN`] je Seite.
+pub fn text_visible_frame(frame: &Rect) -> Rect {
+    Rect::new(frame.left - TEXT_MARGIN, frame.top - TEXT_MARGIN, frame.right + TEXT_MARGIN, frame.bottom + TEXT_MARGIN)
+}
+
 /// Grenzen eines Elements in Dokumentkoordinaten (ohne Strich- und Effektausdehnung).
+/// Texte mit [`TEXT_MARGIN`] (sichtbare Grenzen wie im Original).
 pub fn element_bounds(doc: &Document, e: &Element) -> Option<Rect> {
     bounds_depth(doc, e, 0)
 }
@@ -375,10 +386,13 @@ fn bounds_depth(doc: &Document, e: &Element, depth: u32) -> Option<Rect> {
     }
     match &e.kind {
         ElementKind::Path(p) => geometry::contours_bounds(&p.contours),
-        ElementKind::Text(t) => Some(match t.transform {
-            Some(m) if !m.is_identity() => m.transform_rect_bounds(&t.bounds),
-            _ => t.bounds,
-        }),
+        ElementKind::Text(t) => {
+            let b = text_visible_frame(&t.bounds);
+            Some(match t.transform {
+                Some(m) if !m.is_identity() => m.transform_rect_bounds(&b),
+                _ => b,
+            })
+        }
         ElementKind::Bitmap(b) => {
             let p = b.image.position();
             Some(Rect::from_xywh(p.x, p.y, b.image.grid.width as f32, b.image.grid.height as f32))

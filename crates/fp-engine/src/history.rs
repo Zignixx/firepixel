@@ -29,6 +29,9 @@ pub struct Snapshot {
     pub layer: Option<fp_model::LayerId>,
 }
 
+/// Befehle, nach deren Rückgängigmachen keine Objekte gewählt sind (im Original gemessen: Einfügen).
+pub const UNDO_CLEARS_SELECTION: &[&str] = &["edit.paste"];
+
 /// Ein aufgezeichneter Befehlsaufruf (für Aktionen, MCP und „Befehl speichern“).
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct RecordedCommand {
@@ -101,7 +104,14 @@ impl History {
     /// Nimmt den letzten Schritt zurück und liefert den Zustand davor.
     pub fn undo(&mut self) -> Option<Snapshot> {
         let step = self.undo.pop()?;
-        let snap = step.before.clone();
+        let mut snap = step.before.clone();
+        // Einfügen merkt sich im Original keine Vorher-Auswahl (Auswahl-Schritt ohne Slots 7/8,
+        // re\10 §Undo-Klassen „clipPaste“): Rückgängig hebt die Objektauswahl auf, statt die Auswahl
+        // vor dem Einfügen herzustellen (PM-1: R1, Strg+C, Strg+V, Strg+V, 2× Strg+Z → nichts gewählt).
+        if UNDO_CLEARS_SELECTION.contains(&step.command.as_str()) {
+            snap.selection.elements.clear();
+            snap.selection.points.clear();
+        }
         self.redo.push(step);
         Some(snap)
     }

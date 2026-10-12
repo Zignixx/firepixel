@@ -555,11 +555,15 @@ pub(super) fn register(r: &mut CommandRegistry) {
     );
     r.add(cmd("edit.insert.page").requires(DOC).opt("name", ParamKind::String, "Seitenname").run(|s, p| {
         let name = p.opt_str("name")?;
+        let grid = s.prefs.new_document_grid();
         with_doc(s, |d| {
             let n = d.doc.pages.len() + 1;
             let name = name.unwrap_or_else(|| fp_i18n::tr!("msg-default-page", n = n.to_string()));
             let doc = Arc::make_mut(&mut d.doc);
             let at = doc.add_page(&name);
+            if let Some(pg) = doc.pages.get_mut(at) {
+                Arc::make_mut(pg).root.grid = Some(grid);
+            }
             d.page = at;
             d.frame = 0;
             d.layer = docops::top_normal_layer(&d.doc, at);

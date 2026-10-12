@@ -36,11 +36,13 @@ fn installed(family: &str) -> bool {
 #[test]
 fn point_text_bounds_come_from_layout_not_estimate() {
     let mut s = doc_session(500.0, 500.0);
+    // Maße mit Autom. Unterschneidung; neue Texte haben sie wie im Original nicht (Text_AutoKern, EB-1)
     if installed("Arial") {
-        assert_eq!(draw(&mut s, json!({"font": "Arial"})), Rect::new(40.0, 309.0, 179.0, 338.0));
+        assert_eq!(draw(&mut s, json!({"font": "Arial", "autoKern": true})), Rect::new(40.0, 309.0, 179.0, 338.0));
+        assert_eq!(draw(&mut s, json!({"font": "Arial"})), Rect::new(40.0, 309.0, 183.0, 338.0), "ohne Unterschneidung breiter");
     }
     if installed("Myriad Pro") {
-        assert_eq!(draw(&mut s, json!({"font": "Myriad Pro"})), Rect::new(40.0, 309.0, 170.0, 336.0));
+        assert_eq!(draw(&mut s, json!({"font": "Myriad Pro", "autoKern": true})), Rect::new(40.0, 309.0, 170.0, 336.0));
     }
     let b = draw(&mut s, json!({}));
     assert!(b.width() < 180.0 && b.top > 306.0, "Schätzung statt Satz: {b:?}");

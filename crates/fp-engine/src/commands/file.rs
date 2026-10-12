@@ -142,6 +142,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                     let pg = Arc::make_mut(pg);
                     pg.canvas.resolution = p.f64_or("resolution", res.value as f64)? as f32;
                     pg.canvas.resolution_unit = if res.per_cm && !p.has("resolution") { 1 } else { 0 };
+                    pg.root.grid = Some(s.prefs.new_document_grid());
                 }
                 let id = s.add_document(doc, None);
                 Ok(CommandOutput::session_with(json!({"doc": id.0})))

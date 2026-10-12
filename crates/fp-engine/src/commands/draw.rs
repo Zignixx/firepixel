@@ -342,8 +342,17 @@ pub(super) fn register(r: &mut CommandRegistry) {
             .opt("size", ParamKind::Number { min: Some(1.0), max: Some(5000.0) }, "Schriftgröße in px")
             .opt("color", ParamKind::Color, "Textfarbe (Vorgabe: Textfarbe des Textwerkzeugs)")
             .opt("runs", ParamKind::Json, "formatierte Läufe [{attrs, text}] (Text-Editor)")
+            .opt("antialias", ParamKind::Enum { values: super::text::antialias_names() }, "Glättung (Vorgabe: Textwerkzeug, Text_AntiAliasLevel)")
+            .opt("autoKern", ParamKind::Bool, "automatische Unterschneidung (Vorgabe: Textwerkzeug, Text_AutoKern)")
+            .opt("orientation", ParamKind::Enum { values: super::text::orientation_names() }, "Textrichtung (Vorgabe: Textwerkzeug, Text_Orientation)")
             .run(|s, p| {
                 let text = p.str("text")?;
+                // Glättung, Unterschneidung und Richtung sind Objektattribute; neue Texte bekommen die
+                // Vorgaben des Textwerkzeugs (Original `a_133`, O6), Parameter überschreiben sie.
+                let (d_aa, d_kern, d_ori) = super::text::tool_text_defaults(&s.prefs);
+                let aa = p.opt_str("antialias")?.map(|n| super::text::antialias_code(&n)).unwrap_or(d_aa);
+                let auto_kern = p.opt_bool("autoKern")?.unwrap_or(d_kern);
+                let ori = p.opt_str("orientation")?.map(|n| super::text::orientation_code(&n)).unwrap_or(d_ori);
                 let runs = super::text::parse_runs(p, &text)?;
                 let font = p.opt_str("font")?.unwrap_or_else(|| s.tools.options.text_font.clone());
                 let size = p.f64_or("size", s.tools.options.text_size as f64)? as f32;
@@ -357,6 +366,11 @@ pub(super) fn register(r: &mut CommandRegistry) {
                     let mut idg = take_ids(doc);
                     let mut e = Element::new_text(&mut idg, &text, &font, size, color, anchor);
                     doc.ids = idg;
+                    if let ElementKind::Text(t) = &mut e.kind {
+                        super::text::apply_antialias(t, aa);
+                        t.auto_kern = auto_kern;
+                        t.orientation = ori;
+                    }
                     if let (Some(r), ElementKind::Text(t)) = (rect, &mut e.kind) {
                         t.frame_type = Some(1);
                         t.bounds = Rect::new(r.left, r.top, r.right, r.bottom.max(r.top + size * 1.2));

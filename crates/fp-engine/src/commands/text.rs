@@ -138,7 +138,97 @@ fn attach(s: &mut Session, inside: bool) -> Result<CommandOutput> {
     })
 }
 
+/// Namen der Glättung (JS `antiAliasMode` bzw. „none“ = keine Kantenglättung).
+pub(super) fn antialias_names() -> Vec<String> {
+    ["none", "crisp", "strong", "smooth", "custom", "system"].iter().map(|s| s.to_string()).collect()
+}
+
+/// Namen der Textrichtung (`ORIi` 0–3).
+pub(super) fn orientation_names() -> Vec<String> {
+    ["horizontalLtr", "verticalRtl", "horizontalRtl", "verticalLtr"].iter().map(|s| s.to_string()).collect()
+}
+
+/// Glättungsname → `TAAi` (re\09 §3.5: 0 glatt, 1 scharf, 2 stark, 3 System, 4 benutzerdefiniert);
+/// „none“ = −1 (harte Füllkante `FETi 0`, kein `TAAi`-Wert).
+pub(super) fn antialias_code(name: &str) -> i32 {
+    match name {
+        "none" => -1,
+        "crisp" => 1,
+        "strong" => 2,
+        "system" => 3,
+        "custom" => 4,
+        _ => 0,
+    }
+}
+
+/// Richtungsname → `ORIi`.
+pub(super) fn orientation_code(name: &str) -> i32 {
+    match name {
+        "verticalRtl" => 1,
+        "horizontalRtl" => 2,
+        "verticalLtr" => 3,
+        _ => 0,
+    }
+}
+
+/// Setzt die Glättung eines Textobjekts: −1 = harte Füllkante, sonst `TAAi` mit weicher Kante.
+pub(super) fn apply_antialias(t: &mut TextElem, v: i32) {
+    let edge = if v < 0 { 0 } else { 1 };
+    if v >= 0 {
+        t.antialias = v;
+    }
+    let at = Arc::make_mut(&mut t.attrs);
+    if let Some(f) = at.fill.as_mut() {
+        f.edge = edge;
+    }
+}
+
+/// Vorgaben des Textwerkzeugs für neue Texte aus den Voreinstellungen wie im Original:
+/// Glättung (`Text_AntiAliasLevel` = `TAAi`, `Text_AntiAliasedFill` aus = keine Kantenglättung → −1),
+/// `Text_AutoKern`, `Text_Orientation`. Werksvorgabe: glatt, ohne Unterschneidung, waagerecht (O6).
+pub fn tool_text_defaults(prefs: &crate::prefs::Preferences) -> (i32, bool, i32) {
+    let aa = if prefs.get_bool("Text_AntiAliasedFill", true) { prefs.get_int("Text_AntiAliasLevel", 0).clamp(0, 4) as i32 } else { -1 };
+    (aa, prefs.get_bool("Text_AutoKern", false), prefs.get_int("Text_Orientation", 0).clamp(0, 3) as i32)
+}
+
 pub(super) fn register(r: &mut CommandRegistry) {
+    r.add(
+        cmd("text.setToolDefaults")
+            .label("Textwerkzeug-Vorgaben")
+            .opt("antialias", ParamKind::Enum { values: antialias_names() }, "Glättung neuer Texte")
+            .opt("autoKern", ParamKind::Bool, "automatische Unterschneidung neuer Texte")
+            .opt("orientation", ParamKind::Enum { values: orientation_names() }, "Textrichtung neuer Texte")
+            .run(|s, p| {
+                use crate::prefs::PrefValue;
+                if let Some(n) = p.opt_str("antialias")? {
+                    let v = antialias_code(&n);
+                    s.prefs.set("Text_AntiAliasedFill", PrefValue::Bool(v >= 0));
+                    if v >= 0 {
+                        s.prefs.set("Text_AntiAliasLevel", PrefValue::Int(v as i64));
+                    }
+                }
+                if let Some(v) = p.opt_bool("autoKern")? {
+                    s.prefs.set("Text_AutoKern", PrefValue::Bool(v));
+                }
+                if let Some(n) = p.opt_str("orientation")? {
+                    s.prefs.set("Text_Orientation", PrefValue::Int(orientation_code(&n) as i64));
+                }
+                let (aa, kern, ori) = tool_text_defaults(&s.prefs);
+                let aa_name = match aa {
+                    -1 => "none",
+                    1 => "crisp",
+                    2 => "strong",
+                    3 => "system",
+                    4 => "custom",
+                    _ => "smooth",
+                };
+                Ok(CommandOutput::session_with(serde_json::json!({
+                    "antialias": aa_name,
+                    "autoKern": kern,
+                    "orientation": orientation_names()[ori as usize],
+                })))
+            }),
+    );
     r.add(cmd("text.font").requires(TEXT_SEL).param("font", ParamKind::String, "Schriftname (PostScript- oder Familienname)").run(|s, p| {
         let f = p.str("font")?;
         edit_texts(s, move |t| {
@@ -422,33 +512,21 @@ pub(super) fn register(r: &mut CommandRegistry) {
             .opt("ids", ParamKind::Ids, "Textobjekte (Vorgabe: Auswahl)")
             .opt("frameType", ParamKind::Enum { values: vec!["auto".into(), "fixed".into()] }, "Rahmenart: automatisch (Punkttext) oder feste Breite")
             .opt("width", ParamKind::Number { min: Some(1.0), max: None }, "Rahmenbreite bei fester Breite")
-            .opt("antialias", ParamKind::Enum { values: vec!["none".into(), "crisp".into(), "strong".into(), "smooth".into(), "custom".into(), "system".into()] }, "Glättung")
+            .opt("antialias", ParamKind::Enum { values: antialias_names() }, "Glättung")
             .opt("sharpness", ParamKind::Integer { min: Some(0), max: Some(255) }, "Schärfe (benutzerdefiniert)")
             .opt("strength", ParamKind::Integer { min: Some(0), max: Some(255) }, "Stärke (benutzerdefiniert)")
             .opt("oversample", ParamKind::Integer { min: Some(1), max: Some(64) }, "Überabtastung (benutzerdefiniert)")
             .opt("autoKern", ParamKind::Bool, "automatische Unterschneidung")
             .opt("kerning", ParamKind::Number { min: None, max: None }, "Unterschneidung (Tausendstel em) für alle Zeichen")
-            .opt("orientation", ParamKind::Enum { values: vec!["horizontalLtr".into(), "verticalRtl".into(), "horizontalRtl".into(), "verticalLtr".into()] }, "Textrichtung (ORIi 0–3)")
+            .opt("orientation", ParamKind::Enum { values: orientation_names() }, "Textrichtung (ORIi 0–3)")
             .run(|s, p| {
                 let frame = p.opt_str("frameType")?;
                 let width = p.opt_f64("width")?;
-                let aa = p.opt_str("antialias")?.map(|n| match n.as_str() {
-                    "none" => -1,
-                    "crisp" => 1,
-                    "strong" => 2,
-                    "system" => 3,
-                    "custom" => 4,
-                    _ => 0,
-                });
+                let aa = p.opt_str("antialias")?.map(|n| antialias_code(&n));
                 let (sharp, strength, over) = (p.opt_i64("sharpness")?, p.opt_i64("strength")?, p.opt_i64("oversample")?);
                 let auto_kern = p.opt_bool("autoKern")?;
                 let kerning = p.opt_f64("kerning")?.map(|v| v as f32);
-                let ori = p.opt_str("orientation")?.map(|n| match n.as_str() {
-                    "verticalRtl" => 1,
-                    "horizontalRtl" => 2,
-                    "verticalLtr" => 3,
-                    _ => 0,
-                });
+                let ori = p.opt_str("orientation")?.map(|n| orientation_code(&n));
                 with_doc(s, |d| {
                     let (page, ids) = (d.page, target_ids(d, p)?);
                     let doc = Arc::make_mut(&mut d.doc);
@@ -469,14 +547,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                                 }
                                 if let Some(v) = aa {
                                     // „Keine Kantenglättung“ = harte Füllkante (FETi 0), sonst Modus TAAi
-                                    let edge = if v < 0 { 0 } else { 1 };
-                                    if v >= 0 {
-                                        t.antialias = v;
-                                    }
-                                    let at = Arc::make_mut(&mut t.attrs);
-                                    if let Some(f) = at.fill.as_mut() {
-                                        f.edge = edge;
-                                    }
+                                    apply_antialias(t, v);
                                 }
                                 if let Some(v) = sharp {
                                     t.aa_sharpness = v as i32;

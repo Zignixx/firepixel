@@ -30,6 +30,7 @@ pub use export::PageSetup;
 pub use file::{load_document, save_document};
 pub use filters::{whole_numbers_as_ints, FILTERS};
 pub(crate) use text::editor_patch;
+pub use text::tool_text_defaults;
 
 use crate::command::{CommandRegistry, Requirement};
 use crate::docops;

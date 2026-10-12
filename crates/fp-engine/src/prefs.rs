@@ -383,6 +383,13 @@ impl Preferences {
         }
     }
 
+    /// Raster neuer Dokumente und Seiten wie im Original: Farbe `GridColor` (Vorgabe #00ffff),
+    /// Abstände `GridHorizontalDistance`/`GridVerticalDistance` (36 px), Ursprung 0,0.
+    pub fn new_document_grid(&self) -> fp_model::Grid {
+        let size = fp_geom::Point::new(self.get_int("GridHorizontalDistance", 36).max(1) as f32, self.get_int("GridVerticalDistance", 36).max(1) as f32);
+        fp_model::Grid { size, color: self.get_color("GridColor", Argb(0xff00_ffff)), ..fp_model::Grid::default() }
+    }
+
     /// Auflösung neuer Dokumente (`DefaultDocRes`, `DefaultDocResUnitName`).
     pub fn new_document_resolution(&self) -> Resolution {
         Resolution {

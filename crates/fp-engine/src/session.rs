@@ -924,6 +924,12 @@ impl Session {
         self.renderer.as_ref()?.text_frame(&d.doc, t)
     }
 
+    /// Angezeigte Grenzen des Texts im offenen Editor wie im Original (Rahmen + 2 px Rand je Seite,
+    /// `docops::TEXT_MARGIN`) – für B/H/X/Y im Inspektor und das Info-Bedienfeld während der Bearbeitung.
+    pub fn text_edit_bounds(&self) -> Option<fp_geom::Rect> {
+        self.text_edit_frame().map(|f| crate::docops::text_visible_frame(&f))
+    }
+
     /// Laufenden Werkzeugvorgang abschließen (vor einem Menübefehl, 10 §2.2 „Werkzeug vs.
     /// Menübefehl“), z. B. Text übernehmen oder einen offenen Stiftpfad beenden.
     pub fn finish_tool(&mut self) -> Result<ToolResponse> {

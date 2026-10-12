@@ -50,6 +50,22 @@ fn bounds(doc: DocId, e: &Element) -> FwResult<[f64; 4]> {
     })
 }
 
+/// `RectanglePrimitive.originalSides` wie im Original: Seiten in absoluten Dokumentkoordinaten
+/// (R1 → {50, 50, 150, 120}, nach dem Ziehen eines Eckgriffs die neuen Seiten). Gespeichert ist das
+/// Rechteck lokal um die Mitte samt Abbildung (`RCTv` + `MTXv`): Ohne Drehung/Scherung sind die Seiten
+/// das abgebildete Rechteck; mit Drehung/Scherung (Frei transformieren) bleibt das ungedrehte Rechteck
+/// in seiner Größe um den abgebildeten Mittelpunkt (die Transformation steht separat in `transform`).
+pub(super) fn original_sides(r: &fp_model::element::RectPrimitive) -> fp_geom::Rect {
+    let m = r.transform;
+    let axis_aligned = m.m[0][1].abs() < 1e-6 && m.m[1][0].abs() < 1e-6;
+    if axis_aligned {
+        return m.transform_rect_bounds(&r.rect);
+    }
+    let c = m.apply(fp_geom::Point::new((r.rect.left + r.rect.right) / 2.0, (r.rect.top + r.rect.bottom) / 2.0));
+    let (hw, hh) = ((r.rect.right - r.rect.left) / 2.0, (r.rect.bottom - r.rect.top) / 2.0);
+    fp_geom::Rect::new(c.x - hw, c.y - hh, c.x + hw, c.y + hh)
+}
+
 /// Element vorübergehend auswählen und einen Auswahl-Befehl ausführen (Auswahl danach zurück).
 fn with_selected(doc: DocId, ids: &[ElementId], name: &str, params: Value) -> FwResult<()> {
     st(|s| {
@@ -515,7 +531,10 @@ fn element_get(cls: &str, name: &str, doc: DocId, id: ElementId, ctx: &mut Conte
         }),
         "originalSides" => match &e.kind {
             ElementKind::Path(p) => match &p.primitive {
-                Some(r) => conv::rect_js([r.rect.left as f64, r.rect.top as f64, r.rect.right as f64, r.rect.bottom as f64], ctx).map_err(jserr)?,
+                Some(r) => {
+                    let b = original_sides(r);
+                    conv::rect_js([r6(b.left as f64), r6(b.top as f64), r6(b.right as f64), r6(b.bottom as f64)], ctx).map_err(jserr)?
+                }
                 None => JsValue::null(),
             },
             _ => JsValue::null(),
@@ -997,7 +1016,14 @@ fn element_set(cls: &str, name: &str, doc: DocId, id: ElementId, a: Arg, raw: &J
                 }),
                 _ => {
                     let e = element(doc, id)?;
-                    let b = bounds(doc, &e)?;
+                    // raw* = gespeicherter Textrahmen ohne den angezeigten 2-px-Rand (EB-1)
+                    let b = match &e.kind {
+                        ElementKind::Text(t) => [t.bounds.left as f64, t.bounds.top as f64],
+                        _ => {
+                            let b = bounds(doc, &e)?;
+                            [b[0], b[1]]
+                        }
+                    };
                     let (dx, dy) = if name == "rawLeft" { (v - b[0], 0.0) } else { (0.0, v - b[1]) };
                     exec(Some(doc), "edit.move", json!({"dx": dx, "dy": dy, "ids": [id.0]})).map(|_| ())
                 }
