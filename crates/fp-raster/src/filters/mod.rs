@@ -28,6 +28,7 @@
 pub mod blur;
 pub mod color;
 pub mod convolve;
+pub mod curve_edit;
 pub mod gauss;
 pub mod noise;
 pub mod table;

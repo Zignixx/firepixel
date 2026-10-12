@@ -403,6 +403,19 @@ dlg-reset = Reset
 dlg-curves-io =
     Input: { $input }
     Output: { $output }
+## Curves and Levels shared (levels_common.rs)
+dlg-adjust-channel-tip = Color channels to edit
+dlg-pipette-shadow = Select shadow color
+dlg-pipette-midtone = Select midtone color
+dlg-pipette-highlight = Select highlight color
+## Curves (curves.rs)
+dlg-curves-input = &Input:
+dlg-curves-output = &Output:
+dlg-curves-input-tip = Input intensity
+dlg-curves-output-tip = Output intensity
+dlg-curves-auto = A&uto
+dlg-curves-auto-tip = Adjust curves automatically
+dlg-curves-preview = &Preview
 ## Export, Image Preview (export.rs)
 dlg-export-title = Export
 dlg-export-area-title = Export Area

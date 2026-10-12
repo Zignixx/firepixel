@@ -390,7 +390,7 @@ dlg-preview-cancel-failed = Abbrechen: die Vorschau konnte nicht zurückgenommen
 
 ## Tonwertkorrektur, Gradationskurven (levels.rs)
 dlg-levels-title = Tonwertkorrektur
-dlg-curves-title = Gradationskurven
+dlg-curves-title = Kurven
 dlg-channel = Kanal:
 dlg-channel-rgb = RGB
 dlg-channel-red = Rot
@@ -403,6 +403,19 @@ dlg-reset = Zurücksetzen
 dlg-curves-io =
     Eingabe: { $input }
     Ausgabe: { $output }
+## Kurven und Tonwertkorrektur gemeinsam (levels_common.rs)
+dlg-adjust-channel-tip = Zu bearbeitende Farbkanäle
+dlg-pipette-shadow = Schattenfarbe auswählen
+dlg-pipette-midtone = Mitteltonfarbe auswählen
+dlg-pipette-highlight = Lichterfarbe auswählen
+## Kurven (curves.rs)
+dlg-curves-input = &Eingabe:
+dlg-curves-output = &Ausgabe:
+dlg-curves-input-tip = Eingabeintensität
+dlg-curves-output-tip = Ausgabeintensität
+dlg-curves-auto = A&uto
+dlg-curves-auto-tip = Kurven automatisch anpassen
+dlg-curves-preview = &Vorschau
 ## Exportieren, Bildvorschau (export.rs)
 dlg-export-title = Exportieren
 dlg-export-area-title = Exportbereich exportieren
