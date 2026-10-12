@@ -216,12 +216,13 @@ fn size_edge_shape(ui: &mut Ui, d: Dl, key: &str, size: f64, edge: f64, round: b
 fn eraser_q3(ui: &mut Ui, st: &mut AppState, r: Rect) {
     let d = Dl::at(r.min);
     let o = st.session.tools.options.clone();
-    let soft = if o.brush_soft { 50.0 } else { 0.0 };
-    let (s, e, sh) = size_edge_shape(ui, d, "eraser", o.eraser_size as f64, soft, o.eraser_round, 138.0, (1.0, 100.0));
+    // Rand aus `EraserToolSoftEdge` (Werksvorgabe 2, UX-A W3)
+    let (s, e, sh) = size_edge_shape(ui, d, "eraser", o.eraser_size as f64, o.eraser_edge as f64, o.eraser_round, 138.0, (1.0, 100.0));
     if let Some(v) = s {
         st.session.tools.options.eraser_size = v as f32;
     }
     if let Some(v) = e {
+        st.session.tools.options.eraser_edge = v.clamp(0.0, 100.0) as u32;
         st.session.tools.options.brush_soft = v > 0.0;
     }
     if let Some(v) = sh {

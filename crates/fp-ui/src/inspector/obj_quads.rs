@@ -1280,7 +1280,7 @@ fn text_vals(st: &AppState, ctx: &egui::Context, tgt: Target) -> Option<TextVals
             Some(TextVals {
                 font: o.text_font.clone(),
                 size: o.text_size,
-                color: Some(st.session.tools.fill_color),
+                color: Some(o.text_color),
                 bold: ta.bold,
                 italic: ta.italic,
                 underline: ta.underline,
@@ -1343,7 +1343,8 @@ fn set_text(ui: &Ui, st: &mut AppState, tgt: Target, p: Value) {
                 st.session.tools.options.text_size = s as f32;
             }
             if let Some(c) = p.get("color").and_then(|v| v.as_str()).and_then(fp_color::Rgba8::parse_hex) {
-                st.push(Action::SetColors { stroke: None, fill: Some(c.to_argb()) });
+                // eigene Textfarbe des Textwerkzeugs (wie im Original), nicht die Füllfarbe
+                st.session.tools.options.text_color = c.to_argb();
             }
             edit_tool_attrs(ui.ctx(), |a| {
                 if let Some(v) = p.get("bold").and_then(|v| v.as_bool()) {

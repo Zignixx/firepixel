@@ -615,8 +615,10 @@ impl TextTool {
                     let width = if dist(start, *pos) >= ctx.drag_threshold() { Some((e.x - s.x).abs().max(1.0)) } else { None };
                     // Klickpunkt bzw. aufgezogener Rahmen = linke obere Ecke des Textblocks
                     let anchor = if width.is_some() { Point::new(s.x.min(e.x), s.y.min(e.y)) } else { s };
-                    let mut base = new_attrs(&ctx.options.text_font, ctx.options.text_size, ctx.fill_color);
-                    base.color = Some(ctx.fill_color.0);
+                    // eigene Textfarbe des Werkzeugs (wie im Original), nicht die Füllfarbe
+                    let color = ctx.options.text_color;
+                    let mut base = new_attrs(&ctx.options.text_font, ctx.options.text_size, color);
+                    base.color = Some(color.0);
                     self.state = TextState::Editing(Box::new(TextEditView {
                         target: None,
                         anchor,
@@ -627,7 +629,7 @@ impl TextTool {
                         preedit: None,
                         font: ctx.options.text_font.clone(),
                         size: ctx.options.text_size,
-                        color: ctx.fill_color,
+                        color,
                         spans: Vec::new(),
                         base,
                     }));

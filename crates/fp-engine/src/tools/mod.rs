@@ -457,10 +457,17 @@ pub struct ToolOptions {
     pub eraser_size: f32,
     pub eraser_round: bool,
     pub eraser_opacity: u8,
+    /// Rand des Radiergummis 0..100 (`EraserToolSoftEdge` / 10).
+    #[serde(default)]
+    pub eraser_edge: u32,
     /// Pipette: 1, 3 oder 5 Pixel.
     pub eyedropper_samples: u32,
     pub text_font: String,
     pub text_size: f32,
+    /// Eigene Textfarbe des Textwerkzeugs (`Text_FillColor`, Werksvorgabe schwarz) – nicht die
+    /// Füllfarbe des Werkzeugbedienfelds.
+    #[serde(default = "black")]
+    pub text_color: Argb,
     /// Genauigkeit der Freihand-Kurvenanpassung (`PathToolPrecision`, 1..10).
     pub path_precision: u32,
     /// Formwerkzeuge: Hintergrund-Deckkraft (0..100).
@@ -487,6 +494,21 @@ pub struct ToolOptions {
 impl Default for ToolOptions {
     fn default() -> Self {
         ToolOptions::from_prefs(&Preferences::new())
+    }
+}
+
+fn black() -> Argb {
+    Argb(0xff00_0000)
+}
+
+/// Vorgabeschrift des Textwerkzeugs: wie im Original „Myriad Pro“, wenn installiert (UX-A W14,
+/// `docs\screenshots\paritaet\a_133`), sonst `Text_Font` (Werksvorgabe Arial).
+pub fn default_text_font(p: &Preferences) -> String {
+    const ORIGINAL: &str = "Myriad Pro";
+    if fp_text::FontDb::shared().find_family(ORIGINAL, false, false).is_some() {
+        ORIGINAL.to_string()
+    } else {
+        p.get_str("Text_Font", "Arial")
     }
 }
 
@@ -526,13 +548,15 @@ impl ToolOptions {
             eraser_size: p.get_int("EraserToolDiameter", 13).max(1) as f32,
             eraser_round: p.get_bool("EraserToolIsCircle", true),
             eraser_opacity: p.get_int("EraserToolOpacity", 100).clamp(0, 100) as u8,
+            eraser_edge: (p.get_int("EraserToolSoftEdge", 20).clamp(0, 1000) / 10) as u32,
             eyedropper_samples: match p.get_int("EyeDropperExtraSamples", 0) {
                 1 => 3,
                 2 => 5,
                 _ => 1,
             },
-            text_font: p.get_str("DefaultMissingFont", "Arial"),
+            text_font: default_text_font(p),
             text_size: p.get_real("Text_Size", 12.0) as f32,
+            text_color: p.get_color("Text_FillColor", black()),
             path_precision: p.get_int("PathToolPrecision", 5).clamp(1, 10) as u32,
             opacity: 100,
             new_fill: None,

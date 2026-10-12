@@ -195,6 +195,20 @@ pub fn sync_tool_attrs(ctx: &egui::Context, st: &mut crate::app_state::AppState)
     // Retusche-Werkzeuge lesen ihre Werte aus den Voreinstellungen: Änderungen im Inspektor für das
     // aktive Werkzeug dorthin übertragen (nur bei Änderung, damit gespeicherte Werte gelten)
     let last_id = egui::Id::new("lw-last-tool-attrs");
+    // Werkzeugwechsel: Werte des neuen Werkzeugs aus dessen Voreinstellungen laden (Werksvorgaben
+    // des Originals bzw. zuletzt eingestellt) – jedes Werkzeug behält eigene Werte
+    let tool = st.session.tools.active;
+    let tool_key = egui::Id::new("lw-tool-attrs-tool");
+    if ctx.data(|d| d.get_temp::<fp_engine::ToolId>(tool_key)) != Some(tool) {
+        ctx.data_mut(|d| d.insert_temp(tool_key, tool));
+        let mut ta = crate::inspector::obj_quads::tool_attrs(ctx);
+        if attrs_from_prefs(tool, &st.session.prefs, &mut ta) {
+            let t2 = ta.clone();
+            crate::inspector::obj_quads::edit_tool_attrs(ctx, |a| *a = t2);
+        }
+        ctx.data_mut(|d| d.insert_temp(last_id, ta));
+        return;
+    }
     let last: Option<crate::inspector::obj_quads::ToolAttrs> = ctx.data(|d| d.get_temp(last_id));
     if last.as_ref() != Some(&ta) {
         if last.is_some() {
@@ -206,10 +220,107 @@ pub fn sync_tool_attrs(ctx: &egui::Context, st: &mut crate::app_state::AppState)
     }
 }
 
+/// Werkzeugattribute des Inspektors aus den Voreinstellungen des Werkzeugs (Umkehrung von
+/// [`retouch_prefs`]; Werksvorgaben = PREF-Daten des Originals, UX-A W3–W13). `false` = das Werkzeug
+/// hat keine solchen Voreinstellungen.
+pub fn attrs_from_prefs(tool: fp_engine::ToolId, p: &fp_engine::prefs::Preferences, ta: &mut crate::inspector::obj_quads::ToolAttrs) -> bool {
+    use fp_engine::ToolId as T;
+    let int = |k: &str, d: i64| p.get_int(k, d) as i32;
+    match tool {
+        T::Freeform => {
+            ta.freeform_size = int("FreeFormPushNPullLen", 72);
+            ta.pressure = p.get_bool("FreeFormPushNPullLen_Sens", true);
+            ta.preview = p.get_bool("FreeFormPushNPull_Preview", true);
+            return true;
+        }
+        T::Reshape => {
+            ta.freeform_size = int("FreeFormGravDiameter", 72);
+            ta.strength = int("FreeFormGravPower", 80);
+            ta.pressure = p.get_bool("FreeFormGravDiameter_Sens", true);
+            ta.velocity = p.get_bool("FreeFormGravPower_Sens", false);
+            ta.preview = p.get_bool("FreeFormGravity_Preview", true);
+            return true;
+        }
+        T::PathScrubAdd | T::PathScrubSubtract => {
+            ta.pressure = p.get_bool("ScrubPressure", true);
+            ta.velocity = p.get_bool("ScrubVelocity", true);
+            ta.rate = int("ScrubRate", 10);
+            return true;
+        }
+        _ => {}
+    }
+    let pre = match tool {
+        T::Blur => "BlurTool",
+        T::Sharpen => "SharpenTool",
+        T::Dodge => "DodgeTool",
+        T::Burn => "BurnTool",
+        T::Smudge => "SmudgeTool",
+        T::RubberStamp => "StampTool",
+        T::ReplaceColor => "ReplaceColorTool",
+        T::RedEyeRemoval => "RedEyeRemovalTool",
+        _ => return false,
+    };
+    let k = |s: &str| format!("{pre}{s}");
+    if tool == T::RubberStamp {
+        ta.retouch_size = int("StampToolSize", 16);
+        ta.retouch_edge = int("StampToolEdge", 500) / 10;
+        ta.source_aligned = p.get_int("StampToolSource", 0) == 0;
+    } else {
+        ta.retouch_size = int(&k("Diameter"), 13);
+        ta.retouch_edge = int(&k("SoftEdge"), 1000) / 10;
+    }
+    ta.retouch_round = p.get_bool(&k("IsCircle"), true);
+    match tool {
+        T::Blur | T::Sharpen => ta.intensity = int(&k("Intensity"), 50),
+        T::Dodge | T::Burn => {
+            ta.exposure = int(&k("Exposure"), 50);
+            ta.range = p.get_int(&k("Range"), 1).clamp(0, 2) as usize;
+        }
+        T::Smudge => ta.strength = int(&k("Pressure"), 50),
+        T::RedEyeRemoval => {
+            ta.strength = int(&k("Strength"), 50);
+            ta.tolerance = int(&k("Tolerance"), 50);
+        }
+        T::ReplaceColor => {
+            // In den PREF-Daten sind Toleranz/Stärke als Wahrheitswert abgelegt; das Original zeigt
+            // Toleranz 32 (UX-A a_123). Stärke wirkt über `ReplaceColorToolTransparant` (100).
+            ta.tolerance = match p.get(&k("Tolerance")) {
+                Some(fp_engine::prefs::PrefValue::Int(v)) => v as i32,
+                _ => 32,
+            };
+            ta.strength = int(&k("Transparant"), 100);
+            ta.colorize = p.get_bool(&k("Colorize"), false);
+        }
+        _ => {}
+    }
+    true
+}
+
 /// Voreinstellungen eines Retusche-Werkzeugs aus den Werkzeugattributen des Inspektors.
 pub fn retouch_prefs(tool: fp_engine::ToolId, ta: &crate::inspector::obj_quads::ToolAttrs) -> Vec<(String, fp_engine::prefs::PrefValue)> {
     use fp_engine::prefs::PrefValue::{Bool, Int};
     use fp_engine::ToolId as T;
+    match tool {
+        T::Freeform => {
+            return vec![
+                ("FreeFormPushNPullLen".into(), Int(ta.freeform_size.max(1) as i64)),
+                ("FreeFormPushNPullLen_Sens".into(), Bool(ta.pressure)),
+                ("FreeFormPushNPull_Preview".into(), Bool(ta.preview)),
+            ];
+        }
+        T::Reshape => {
+            return vec![
+                ("FreeFormGravDiameter".into(), Int(ta.freeform_size.max(1) as i64)),
+                ("FreeFormGravPower".into(), Int(ta.strength as i64)),
+                ("FreeFormGravDiameter_Sens".into(), Bool(ta.pressure)),
+                ("FreeFormGravPower_Sens".into(), Bool(ta.velocity)),
+            ];
+        }
+        T::PathScrubAdd | T::PathScrubSubtract => {
+            return vec![("ScrubPressure".into(), Bool(ta.pressure)), ("ScrubVelocity".into(), Bool(ta.velocity)), ("ScrubRate".into(), Int(ta.rate as i64))];
+        }
+        _ => {}
+    }
     let pre = match tool {
         T::Blur => "BlurTool",
         T::Sharpen => "SharpenTool",
@@ -267,6 +378,43 @@ mod tests {
         assert_eq!(s.as_ref().and_then(|v| v.get("width")).and_then(|v| v.as_i64()), Some(4));
         let none = crate::inspector::obj_quads::ToolAttrs { stroke_preset: None, ..Default::default() };
         assert_eq!(attrs_params(&none).1, Some(json!({"none": true})));
+    }
+
+    /// UX-A W3–W13: Werkzeugwechsel lädt die Werksvorgaben (PREF) je Werkzeug; Änderungen bleiben
+    /// je Werkzeug erhalten (keine gemeinsame Pinselgröße).
+    #[test]
+    fn tool_attrs_follow_prefs_per_tool() {
+        use fp_engine::ToolId as T;
+        let ctx = egui::Context::default();
+        let mut st = crate::app_state::AppState::new(fp_engine::Session::default(), crate::app_state::UiSettings::default(), None);
+        let switch =|st: &mut crate::app_state::AppState, t: T| {
+            st.session.tools.active = t;
+            sync_tool_attrs(&ctx, st);
+            crate::inspector::obj_quads::tool_attrs(&ctx)
+        };
+        let a = switch(&mut st, T::Blur);
+        assert_eq!((a.retouch_size, a.retouch_edge, a.intensity), (13, 100, 50));
+        let a = switch(&mut st, T::RubberStamp);
+        assert_eq!((a.retouch_size, a.retouch_edge), (16, 50));
+        let a = switch(&mut st, T::Smudge);
+        assert_eq!((a.retouch_size, a.retouch_edge, a.strength), (22, 50, 50));
+        let a = switch(&mut st, T::ReplaceColor);
+        assert_eq!((a.retouch_size, a.tolerance), (13, 32));
+        let a = switch(&mut st, T::RedEyeRemoval);
+        assert_eq!((a.tolerance, a.strength), (50, 50));
+        let a = switch(&mut st, T::Freeform);
+        assert_eq!((a.freeform_size, a.pressure, a.preview), (72, true, true));
+        let a = switch(&mut st, T::Reshape);
+        assert_eq!((a.freeform_size, a.strength, a.pressure), (72, 80, true));
+        let a = switch(&mut st, T::PathScrubAdd);
+        assert_eq!((a.pressure, a.velocity, a.rate), (true, true, 10));
+        // Weichzeichner auf 30 stellen, zum Abwedler und zurück: jeder behält seinen Wert
+        switch(&mut st, T::Blur);
+        crate::inspector::obj_quads::edit_tool_attrs(&ctx, |a| a.retouch_size = 30);
+        sync_tool_attrs(&ctx, &mut st);
+        assert_eq!(st.session.prefs.get_int("BlurToolDiameter", 0), 30);
+        assert_eq!(switch(&mut st, T::Dodge).retouch_size, 13);
+        assert_eq!(switch(&mut st, T::Blur).retouch_size, 30);
     }
 
     #[test]

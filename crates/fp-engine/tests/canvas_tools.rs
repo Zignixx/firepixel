@@ -626,6 +626,33 @@ fn text_editor_attribute_edge_cases() {
     assert!(bounds(&s, t).height() < b0.height());
 }
 
+/// UX-A W14/W18, W3: Textwerkzeug mit Vorgabeschrift des Originals (Myriad Pro, falls installiert,
+/// sonst `Text_Font`) und eigener Textfarbe (schwarz) statt der Füllfarbe; Radiergummi-Rand 2.
+#[test]
+fn text_tool_uses_original_font_and_own_text_color() {
+    let mut s = doc_session(400.0, 200.0);
+    let o = &s.tools.options;
+    let myriad = fp_text::FontDb::shared().find_family("Myriad Pro", false, false).is_some();
+    assert_eq!(o.text_font, if myriad { "Myriad Pro" } else { "Arial" });
+    assert_eq!(o.text_color, fp_color::Argb(0xff00_0000));
+    assert_eq!((o.eraser_size, o.eraser_edge), (13.0, 2));
+    // Füllfarbe grau wie im Werkzeugbedienfeld
+    s.set_colors(None, Some(fp_color::Argb(0xff99_9999)));
+    tool(&mut s, ToolId::Text);
+    click(&mut s, 20.0, 60.0);
+    send_in(&mut s, ToolInput::Text("Hallo".into()));
+    s.tool_event(&ToolEvent::key(ToolKey::Escape)).expect("übernehmen");
+    let tx = text_of(&s, last(&s));
+    let (a, _) = &tx.resolved_runs()[0];
+    assert_eq!(a.color, Some(0xff00_0000), "Text schwarz, nicht die Füllfarbe");
+    assert_eq!(tx.attrs.fill_color, fp_color::Argb(0xff00_0000));
+    assert_eq!(a.font.as_deref(), Some(s.tools.options.text_font.as_str()));
+    // eigene Textfarbe des Werkzeugs gilt auch für draw.text ohne Farbe
+    s.tools.options.text_color = fp_color::Argb(0xff12_3456);
+    ex(&mut s, "draw.text", json!({"text": "X", "anchor": [10, 150]}));
+    assert_eq!(text_of(&s, last(&s)).resolved_runs()[0].0.color, Some(0xff12_3456));
+}
+
 #[test]
 fn freehand_tools() {
     let mut s = doc_session(300.0, 200.0);
