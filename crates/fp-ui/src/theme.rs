@@ -890,7 +890,10 @@ fn system_fonts() -> &'static Vec<(&'static str, Arc<egui::FontData>)> {
     static FONTS: std::sync::OnceLock<Vec<(&'static str, Arc<egui::FontData>)>> = std::sync::OnceLock::new();
     FONTS.get_or_init(|| {
         let dir = std::env::var_os("WINDIR").map(std::path::PathBuf::from).unwrap_or_else(|| std::path::PathBuf::from(r"C:\Windows")).join("Fonts");
-        SYSTEM_FONTS.iter().filter_map(|(name, file)| std::fs::read(dir.join(file)).ok().map(|b| (*name, Arc::new(egui::FontData::from_owned(b))))).collect()
+        // als `'static` geliehen: epaint kopiert eigene (`Owned`) Schriftdaten in jeden egui-Kontext
+        // (bei ≈ 50 MB je Kontext liefen die Gesamttests mit vielen Kontexten in Speichermangel);
+        // die Dateien leben ohnehin bis zum Programmende
+        SYSTEM_FONTS.iter().filter_map(|(name, file)| std::fs::read(dir.join(file)).ok().map(|b| (*name, Arc::new(egui::FontData::from_static(Box::leak(b.into_boxed_slice())))))).collect()
     })
 }
 

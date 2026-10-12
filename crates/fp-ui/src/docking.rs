@@ -34,6 +34,57 @@ pub struct DockUi {
     pub last_zones: Vec<(Rect, DropTarget)>,
     /// Im Symbolmodus aufgeklapptes Bedienfeld.
     pub iconic_open: Option<PanelId>,
+    /// Gemessene Inhaltsbreite von Bedienfeldern, deren Inhalt breiter war als ihr Platz
+    /// (gilt für den Sprachstand `measured_generation`; beim Sprachwechsel neu gemessen).
+    pub measured: std::collections::BTreeMap<PanelId, f32>,
+    pub measured_generation: u64,
+}
+
+/// Innenabstand des Bedienfeldinhalts links und rechts (Gruppe → Inhalt).
+pub const PANEL_INSET: f32 = 4.0;
+
+/// Breite, die der Inhalt eines Bedienfelds mindestens braucht (ohne Innenabstand): die feste
+/// Anordnung nach Vorlage (DLU, schon auf Deutsch breiter als die alte Dock-Mindestbreite von
+/// 172 px) bzw. die gemessene Breite, wenn der Inhalt in der aktuellen Sprache mehr brauchte.
+pub fn panel_min_width(st: &AppState, p: PanelId) -> f32 {
+    let fixed: f32 = match p {
+        PanelId::Align | PanelId::ColorPalette => 196.0,
+        PanelId::Info | PanelId::Url => 216.0,
+        PanelId::FindReplace => 218.0,
+        PanelId::Optimize => 228.0,
+        PanelId::Layers => 232.0,
+        PanelId::ColorMixer => 246.0,
+        _ => 172.0,
+    };
+    let measured = if st.dock.measured_generation == fp_i18n::generation() { st.dock.measured.get(&p).copied().unwrap_or(0.0) } else { 0.0 };
+    fixed.max(measured)
+}
+
+/// Mindestbreite des Docks wie im Original: so breit wie das breiteste angedockte (offene)
+/// Bedienfeld, mindestens `metrics.dock_min_width`.
+pub fn dock_min_width(st: &AppState, theme: &Theme) -> f32 {
+    let ws = &st.settings.workspace;
+    ws.dock.iter().flat_map(|g| ws.visible_panels(g)).map(|p| panel_min_width(st, p) + 2.0 * PANEL_INSET).fold(theme.metrics.dock_min_width, f32::max)
+}
+
+/// Mindestbreite einer schwebenden Gruppe (breitestes Bedienfeld, mindestens [`FLOAT_MIN`]).
+pub fn floating_min_width(st: &AppState, g: &PanelGroup) -> f32 {
+    st.settings.workspace.visible_panels(g).into_iter().map(|p| panel_min_width(st, p) + 2.0 * PANEL_INSET + 2.0).fold(FLOAT_MIN[0], f32::max)
+}
+
+/// Merkt sich, dass der Inhalt von `p` `w` Punkte breit war (nur wenn er nicht passte).
+fn record_width(st: &mut AppState, p: PanelId, w: f32) {
+    let g = fp_i18n::generation();
+    if st.dock.measured_generation != g {
+        st.dock.measured.clear();
+        st.dock.measured_generation = g;
+    }
+    // begrenzt, damit ein Inhalt, der sich an der verfügbaren Breite orientiert, das Dock nicht aufschaukelt
+    let w = w.min(600.0);
+    let e = st.dock.measured.entry(p).or_insert(0.0);
+    if w > *e {
+        *e = w;
+    }
 }
 
 /// Höhe einer Reiterleiste.
@@ -210,10 +261,26 @@ fn group_ui(ui: &mut Ui, st: &mut AppState, rect: Rect, group: &PanelGroup, gid:
         let content = Rect::from_min_max(pos2(rect.left(), strip.bottom()), rect.max);
         if content.height() > 4.0 {
             ui.painter().rect_filled(content, 0.0, theme.colors.frame_bg);
-            let inner = content.shrink2(vec2(4.0, 3.0));
+            let inner = content.shrink2(vec2(PANEL_INSET, 3.0));
+            let need = panel_min_width(st, p);
             let mut child = ui.new_child(egui::UiBuilder::new().id_salt(("panel", p)).max_rect(inner).layout(egui::Layout::top_down(egui::Align::Min)));
             child.set_clip_rect(inner.intersect(ui.clip_rect()));
-            panels::show(&mut child, st, p);
+            if inner.width() + 0.5 >= need {
+                panels::show(&mut child, st, p);
+                // Inhalt breiter als sein Platz (z. B. längere Texte nach Sprachwechsel): merken
+                let used = child.min_rect().width();
+                if used > inner.width() + 1.0 {
+                    record_width(st, p, used);
+                }
+            } else {
+                // zu wenig Platz (Fenster schmaler als das Bedienfeld): waagerechter Bildlauf
+                egui::ScrollArea::horizontal().id_salt(("panel-hscroll", p)).auto_shrink([false, false]).show(&mut child, |ui| {
+                    let r = Rect::from_min_size(ui.cursor().min, vec2(need, ui.available_height()));
+                    let mut c = ui.new_child(egui::UiBuilder::new().id_salt(("panel", p)).max_rect(r).layout(egui::Layout::top_down(egui::Align::Min)));
+                    panels::show(&mut c, st, p);
+                    ui.allocate_rect(r, Sense::hover());
+                });
+            }
         }
     }
     out.background
@@ -341,7 +408,7 @@ fn iconic_dock(ui: &mut Ui, st: &mut AppState, area: Rect) {
             }
             if open {
                 // aufgeklapptes Bedienfeld links neben dem Dock
-                let size = vec2(250.0, p.preferred_height() + tab_strip_height(&theme));
+                let size = vec2(250.0f32.max(panel_min_width(st, p) + 2.0 * PANEL_INSET), p.preferred_height() + tab_strip_height(&theme));
                 let pos = pos2(area.left() - size.x - 2.0, r.top().min(area.bottom() - size.y).max(area.top()));
                 let mut gcopy = g.clone();
                 gcopy.collapsed = false;
@@ -375,7 +442,8 @@ pub fn show_floating(ctx: &egui::Context, st: &mut AppState) {
         let id = Id::new(("float", fi, f.group.panels.first().copied()));
         // Mindestgröße und Lage im Fenster (Kopfleiste bleibt greifbar), wie das Original
         let screen = ctx.content_rect();
-        let size = vec2(f.size[0].clamp(FLOAT_MIN[0], screen.width().max(FLOAT_MIN[0])), if f.group.collapsed { tab_strip_height(&theme) + 2.0 } else { f.size[1].clamp(FLOAT_MIN[1], (screen.height() - 40.0).max(FLOAT_MIN[1])) });
+        let min_w = floating_min_width(st, &f.group);
+        let size = vec2(f.size[0].clamp(min_w, screen.width().max(min_w)), if f.group.collapsed { tab_strip_height(&theme) + 2.0 } else { f.size[1].clamp(FLOAT_MIN[1], (screen.height() - 40.0).max(FLOAT_MIN[1])) });
         let pos = pos2(f.pos[0].clamp(screen.left() - size.x + 80.0, (screen.right() - 80.0).max(screen.left())), f.pos[1].clamp(screen.top() + 31.0, (screen.bottom() - 30.0).max(screen.top() + 31.0)));
         egui::Area::new(id).fixed_pos(pos).order(egui::Order::Middle).show(ctx, |ui| {
             let rect = Rect::from_min_size(pos, size);
@@ -423,7 +491,7 @@ pub fn show_floating(ctx: &egui::Context, st: &mut AppState) {
                 if resp.dragged() {
                     let d = resp.drag_delta();
                     if let Some(x) = st.settings.workspace.floating.get_mut(fi) {
-                        x.size[0] = (x.size[0] + d.x).max(FLOAT_MIN[0]);
+                        x.size[0] = (x.size[0] + d.x).max(min_w);
                         x.size[1] = (x.size[1] + d.y).max(FLOAT_MIN[1]);
                     }
                 }

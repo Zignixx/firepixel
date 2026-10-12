@@ -200,6 +200,81 @@ fn sprachwechsel_zur_laufzeit() {
     let _: &AppState = &h.state().state;
 }
 
+/// Texte in `area`, die abgeschnitten sind (weder ganz sichtbar noch mit „…“ gekürzt).
+fn cut_texts(texts: &[Painted], area: Rect) -> Vec<String> {
+    texts
+        .iter()
+        .filter(|t| area.contains(t.rect.center()) && !t.text.ends_with('…'))
+        .filter(|t| {
+            let vis = t.clip.intersect(area);
+            // ganz weggescrollte (senkrechte Listen) zählen nicht
+            vis.is_positive() && t.rect.bottom() > vis.top() && t.rect.top() < vis.bottom() && (t.rect.right() > vis.right() + 1.0 || t.rect.left() < vis.left() - 1.0)
+        })
+        .map(|t| format!("„{}“ ({:.0}–{:.0}, sichtbar bis {:.0})", t.text, t.rect.left(), t.rect.right(), t.clip.intersect(area).right()))
+        .collect()
+}
+
+/// Jedes Bedienfeld bei kleinster Dockbreite (angedockt) und als sehr kleine schwebende Gruppe:
+/// das Dock bzw. die Gruppe wird nie schmaler als das Bedienfeld, nichts wird abgeschnitten.
+#[test]
+fn bedienfelder_bei_minimaler_dockbreite() {
+    let _g = LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    let mut problems = Vec::new();
+    for lang in LANGS {
+        assert!(fp_i18n::set_language(lang));
+        for &p in fp_ui::panels::PanelId::ALL {
+            if p == fp_ui::panels::PanelId::SymbolProperties {
+                continue;
+            }
+            for floating in [false, true] {
+                let mut a = app();
+                let _ = a.state.session.execute("select.all", json!({}));
+                {
+                    let ws = &mut a.state.settings.workspace;
+                    ws.dock_width = 60.0;
+                    if floating {
+                        ws.float_panel(p, [300.0, 150.0]);
+                        if let Some(f) = ws.floating.last_mut() {
+                            f.size = [20.0, 380.0];
+                        }
+                    } else {
+                        ws.move_to_dock_group(p, 0, 0);
+                        ws.show(p);
+                    }
+                }
+                let mut h = harness(a, 1600.0, 900.0, 1.0);
+                h.run_steps(4);
+                let ctx = h.ctx.clone();
+                let screen = ctx.content_rect();
+                let area = if floating {
+                    let st = &h.state().state;
+                    let f = st.settings.workspace.floating.last().cloned();
+                    let w = f.as_ref().map(|f| f.size[0].max(fp_ui::docking::floating_min_width(st, &f.group))).unwrap_or(0.0);
+                    if w + 1.0 < fp_ui::docking::panel_min_width(st, p) + 2.0 * fp_ui::docking::PANEL_INSET {
+                        problems.push(format!("[{lang}] {p:?}: schwebende Gruppe {w:.0} px schmaler als das Bedienfeld"));
+                    }
+                    Rect::from_min_size(Pos2::new(300.0, 150.0), egui::vec2(w, 380.0))
+                } else {
+                    // Dock: rechts neben dem Greifer der Dockbreite
+                    let left = widget_rect(&ctx, Id::new("dock-width")).map(|r| r.left()).unwrap_or(screen.right() - 300.0);
+                    let w = screen.right() - left;
+                    let need = fp_ui::docking::panel_min_width(&h.state().state, p) + 2.0 * fp_ui::docking::PANEL_INSET;
+                    if w + 1.0 < need {
+                        problems.push(format!("[{lang}] {p:?}: Dock {w:.0} px schmaler als das Bedienfeld ({need:.0} px)"));
+                    }
+                    Rect::from_min_max(Pos2::new(left, screen.top() + 60.0), screen.max)
+                };
+                for c in cut_texts(&painted_texts(&h), area) {
+                    problems.push(format!("[{lang}] {p:?} {}: {c}", if floating { "schwebend" } else { "angedockt" }));
+                }
+            }
+        }
+    }
+    fp_i18n::set_language("de");
+    problems.dedup();
+    assert!(problems.is_empty(), "{} Befunde:\n{}", problems.len(), problems.join("\n"));
+}
+
 #[test]
 fn deutsch_wortlaut_unveraendert() {
     let _g = LOCK.lock().unwrap_or_else(|e| e.into_inner());

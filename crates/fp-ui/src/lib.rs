@@ -200,8 +200,10 @@ impl FirepixelApp {
             });
         }
         if !hidden {
+            // wie im Original: nicht schmaler als das breiteste angedockte Bedienfeld
+            let dock_min = docking::dock_min_width(st, &theme);
             let dock_w = if st.settings.workspace.dock_mode == workspace::DockMode::Expanded {
-                st.settings.workspace.dock_width
+                st.settings.workspace.dock_width.max(dock_min)
             } else if st.settings.workspace.dock_mode == workspace::DockMode::IconicWithNames {
                 150.0
             } else {
@@ -226,7 +228,7 @@ impl FirepixelApp {
                 ctx.set_cursor_icon(egui::CursorIcon::ResizeHorizontal);
             }
             if g.dragged() && st.settings.workspace.dock_mode == workspace::DockMode::Expanded {
-                let w = (st.settings.workspace.dock_width - g.drag_delta().x).clamp(m.dock_min_width, 600.0);
+                let w = (st.settings.workspace.dock_width.max(dock_min) - g.drag_delta().x).clamp(dock_min, 600.0f32.max(dock_min));
                 st.settings.workspace.dock_width = w;
             }
         }
