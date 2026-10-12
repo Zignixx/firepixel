@@ -85,7 +85,7 @@ Umfang heute: 19 Crates, ≈ 169.000 Zeilen Rust, 132 Testdateien, 16 Sprachdate
 |---|---|---|
 | **FV-8** | Tippen im echten Fenster 0,3–0,5 s verzögert: Ursache messen, beheben (Ziel ≤ 16–33 ms), andere Eingaben prüfen | fp-ui (canvas, lib.rs, Tests `tippen_messung`) |
 | **FV-11** | Bitmap-Werkzeuge: Pinsel malt Bitmap statt Vektorpfad (L36, hoch), Radiergummi, Weichzeichner, Stempel inkl. Esc (L37–L39) | fp-engine/fp-ui Werkzeuge, `bitmapwerkzeuge_fv11.rs` |
-| **RE-BV** | Spezifikation `re\17-bildvorschau.md` aus Code und laufendem Original, mit Lückenliste und Umsetzungspaketen | nur `re\` |
+| **BV-1** (Cleanroom) | Bildvorschau Paket P1: 1/2/4-fach, eigene Einstellungen je Feld, Kopfzeile mit genauer Größen-/Ladezeitformel, aktives Feld, synchroner Zoom und Bildlauf, Hintergrundrechnung, gleiche Kodierung wie der Export. Quelle **nur** `re\17-bildvorschau.md` (☑ RE-BV, 13 Abschnitte, im Original nachgeprüft) | neues Modul `fp-ui\src\dialogs\image_preview\`, `image_preview.ftl`, fp-export |
 | **TE-1** | Technisches auf Englisch: Bestandsaufnahme `docs\TECHNISCH_ENGLISCH.md`, Laufzeitpfade umbenennen (`Sprachen` → `Languages`, `Modelle` → `Models` …) mit Migration, Wächter-Test | fp-i18n, fp-ai, fp-neutral, CLI/MCP |
 
 ---
@@ -122,7 +122,7 @@ Die Reihenfolge gilt, solange nichts Dringenderes vom Nutzer kommt. Sobald ein P
 |---|---|
 | ☐ **P-N19-20** | N19 Suche in der Schriftarten-Liste (Inspektor und Text-Menü, Tippen filtert, Pfeiltasten/Eingabe); N20 Nachzeichnen-Dialog standardmäßig ≈ 1050 × 830, Vorschau größer, „Aufräumen“ ohne Scrollen sichtbar, Größe gemerkt |
 | ☐ **P-KI** | N21: Fortschrittsfenster der KI-Werkzeuge schön gestalten (Design wie der Nachzeichnen-Dialog, alle 3 Designs); prüfen, welche Stellschrauben SAM 2.1/BiRefNet wirklich hergeben (Maskenschwelle, Kante weich/ausdehnen/zusammenziehen, Maskenvariante bei SAM), nur diese im Inspektor anbieten; optional: Vorschau der Objektmaske beim Überfahren |
-| ☐ **P-BV1…3** | N22 Bildvorschau: **Cleanroom**-Agenten, die *nur* `re\17-bildvorschau.md` lesen, in den dort vorgeschlagenen 2–4 Paketen (z. B. 1: Fensteraufbau, 1/2/4-fach, Feld-Vorgaben, Kopfzeilen; 2: Optionen mit Palette, Farbtabelle, Transparenz-Pipetten; 3: Datei/Exportbereich, Animation, Werkzeuge, Zoom) |
+| ☐ **P-BV1…4** | N22 Bildvorschau, **Cleanroom**-Agenten, die *nur* `re\17-bildvorschau.md` (§10) lesen. P1 Mehrfachansicht und Kern (läuft, BV-1); P2 Registerkarte Optionen vollständig (Format/Palette/Rastern/Glättung/Transparenz mit 3 Pipetten, Farbtabelle mit Menü und Statuszeile, „Optimieren auf Größe“); P3 Datei (Skalieren, Exportbereich mit Werkzeug) und Animation; P4 Verhalten (OK schreibt die Einstellung des aktiven Feldes, Exportieren, Esc schließt), Vorgaben, Texte. Nebenbefund: PARITAET_B D08 „Esc schließt nicht“ ist falsch, im Original schließt Esc |
 | ☐ **P-TE2** | Technisches Englisch, Teil 2: `.ftl`-Dateinamen (`befehlstexte.ftl`, `nachzeichnen.ftl` …) und deutsche Datei- und Testnamen im Quelltext umbenennen, nach der Liste von TE-1. Erst wenn wenige Agenten in den `.ftl`-Dateien arbeiten |
 
 ### D. Gestaltung und Feinschliff
