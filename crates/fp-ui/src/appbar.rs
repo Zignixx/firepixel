@@ -131,6 +131,7 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
             ui.painter().vline(r.left() + 0.5, r.y_range(), Stroke::new(1.0, c.line_mid));
         }
         let col = if cmd == 2 && resp.hovered() { egui::Color32::WHITE } else { c.app_bar_text };
+        crate::ui_kit::icon_button_info(&resp, true, &tip, None);
         icons::paint(ui.painter(), Rect::from_center_size(r.center(), vec2(12.0, 12.0)), icon, &IconStyle::mono(col, c.app_bar_bg));
         if resp.on_hover_text(tip).clicked() {
             match cmd {

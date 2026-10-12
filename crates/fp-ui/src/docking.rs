@@ -161,6 +161,7 @@ pub fn tab_strip(ui: &mut Ui, rect: Rect, id: Id, tabs: &[(&str, ToolGroup)], ac
         let resp = ui.interact(mr, id.with("menu"), Sense::click());
         let st = IconStyle::mono(if resp.hovered() { c.focus } else { c.tab_text }, c.frame_bg);
         icons::paint(ui.painter(), mr, Icon::PanelMenu, &st);
+        crate::ui_kit::icon_button_info(&resp, true, &fp_i18n::t("ui-dock-panel-menu"), None);
         out.menu_clicked = Some(resp.on_hover_text(fp_i18n::t("ui-dock-panel-menu")));
     }
     out.background = Some(bg);
@@ -297,6 +298,7 @@ pub fn show_dock(ui: &mut Ui, st: &mut AppState) {
     let bresp = ui.interact(br, Id::new("dock-collapse"), Sense::click());
     let st_icon = IconStyle::mono(theme.colors.dock_strip_arrow, theme.colors.frame_bg);
     icons::paint(ui.painter(), br, if iconic { Icon::CollapseLeft } else { Icon::CollapseRight }, &st_icon);
+    crate::ui_kit::icon_button_info(&bresp, true, &fp_i18n::t(if iconic { "ui-dock-expand" } else { "ui-dock-collapse-icons" }), None);
     if bresp.on_hover_text(fp_i18n::t(if iconic { "ui-dock-expand" } else { "ui-dock-collapse-icons" })).clicked() {
         st.push(Action::Run("ui.dock.toggleIconic".into(), serde_json::json!({})));
     }
@@ -403,6 +405,7 @@ fn iconic_dock(ui: &mut Ui, st: &mut AppState, area: Rect) {
             if with_names {
                 widgets::text_clipped(ui.painter(), pos2(r.left() + 28.0, r.center().y), Align2::LEFT_CENTER, p.title(), theme.ui_font(), theme.colors.text, r.width() - 30.0);
             }
+            crate::ui_kit::icon_button_info(&resp, true, &p.title(), Some(open));
             if resp.on_hover_text(p.title()).clicked() {
                 st.dock.iconic_open = if open { None } else { Some(p) };
             }

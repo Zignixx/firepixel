@@ -317,6 +317,7 @@ fn tool_slot(ui: &mut Ui, st: &mut AppState, r: Rect, fly: &str, default: ToolId
         widgets::corner_triangle(ui.painter(), r, col);
     }
     let tip = tool_tooltip(st, shown);
+    crate::ui_kit::icon_button_info(&resp, true, &tip, Some(selected));
     let resp = resp.on_hover_text(tip);
     // Drücken und Halten (0,4 s) bzw. Klick auf das Dreieck öffnet den Flyout
     let mut open_flyout = false;
@@ -448,7 +449,8 @@ fn color_section(ui: &mut Ui, st: &mut AppState, full: Rect, mut y: f32, theme: 
         let well = Rect::from_center_size(pos2(left + cell.x * 1.5, row.center().y), vec2(20.0, 18.0));
         let argb = if is_stroke { st.session.tools.stroke_color } else { st.session.tools.fill_color };
         widgets::color_well(ui.painter(), well, argb_to_color(argb), theme);
-        let resp = ui.interact(row, Id::new(("well", is_stroke)), Sense::click()).on_hover_text(tip);
+        let resp = ui.interact(row, Id::new(("well", is_stroke)), Sense::click()).on_hover_text(&tip);
+        crate::ui_kit::icon_button_info(&resp, true, &tip, None);
         if resp.clicked() {
             ui.ctx().data_mut(|d| d.insert_temp(well_id, if is_stroke { ActiveWell::Stroke } else { ActiveWell::Fill }));
         }

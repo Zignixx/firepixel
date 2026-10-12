@@ -113,6 +113,17 @@ pub fn tint(theme: &Theme, color: Color32) -> Color32 {
     mix(card_bg(theme), color, t)
 }
 
+/// Barrierefreiheit für selbst gezeichnete Symbolknöpfe („+“, „−“, F/K/U, „ab/cd“, Fenster-,
+/// Werkzeug- und Bedienfeldknöpfe): Rolle „Knopf“ mit dem übersetzten Namen (meist der Tooltip),
+/// bei Umschaltern mit dem Zustand (gedrückt) wie bei Kästchen. Damit finden Bildschirmleser,
+/// egui_kittest und `ui_find` den Knopf.
+pub fn icon_button_info(resp: &Response, enabled: bool, name: &str, pressed: Option<bool>) {
+    resp.widget_info(|| match pressed {
+        Some(on) => egui::WidgetInfo::selected(egui::WidgetType::Button, enabled, on, name),
+        None => egui::WidgetInfo::labeled(egui::WidgetType::Button, enabled, name),
+    });
+}
+
 /// Zeichnet eine „geätzte“ waagerechte Linie (dunkel + Lichtkante; OLED nur eine Linie).
 pub fn hline(painter: &Painter, x: egui::Rangef, y: f32, theme: &Theme) {
     let c = &theme.colors;

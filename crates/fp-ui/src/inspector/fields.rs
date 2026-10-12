@@ -611,9 +611,27 @@ pub fn list_item(ui: &mut Ui, text: &str, selected: bool) -> Response {
         ui.painter().rect_filled(r, 0.0, c.list_selected_bg);
     }
     let col = if resp.hovered() { c.menu_hover_text } else { c.menu_text };
-    ui.painter().text(pos2(r.left() + 6.0, r.center().y), Align2::LEFT_CENTER, text, t.ui_font(), col);
+    // zu lange Einträge mit „…“ und dem vollen Namen als Tooltip (nie stumm abgeschnitten)
+    let font = t.ui_font();
+    let avail = r.width() - LIST_ITEM_PAD;
+    let clipped = crate::widgets::text_width(ui, text, &font) > avail;
+    crate::widgets::text_clipped(ui.painter(), pos2(r.left() + 6.0, r.center().y), Align2::LEFT_CENTER, text, font, col, avail);
     resp.widget_info(|| egui::WidgetInfo::selected(egui::WidgetType::SelectableLabel, true, selected, text));
-    resp
+    if clipped { resp.on_hover_text(text) } else { resp }
+}
+
+/// Innenabstand eines Listeneintrags ([`list_item`]): 6 px links, 4 px rechts.
+const LIST_ITEM_PAD: f32 = 10.0;
+
+/// Breite einer Aufklappliste aus [`list_item`]s: so breit wie der längste Eintrag (wie ein
+/// Windows-Kombifeld), mindestens `min` (Feldbreite), Platz für den Bildlauf, höchstens die halbe
+/// Fensterbreite (darüber „…“ mit Tooltip).
+pub fn list_width<'a>(ui: &Ui, items: impl IntoIterator<Item = &'a str>, min: f32) -> f32 {
+    let font = Theme::current(ui.ctx()).ui_font();
+    let longest = items.into_iter().map(|s| crate::widgets::text_width(ui, s, &font)).fold(0.0_f32, f32::max);
+    let scroll = ui.spacing().scroll.bar_width + ui.spacing().scroll.bar_outer_margin + ui.spacing().scroll.bar_inner_margin;
+    let cap = (ui.ctx().content_rect().width() * 0.5).max(min);
+    (longest + LIST_ITEM_PAD + scroll + 2.0).clamp(min, cap)
 }
 
 /// Kombifeld mit Eingabe (ComboDropDown, z. B. Hyperlink): Text frei, Liste zur Auswahl.
@@ -666,6 +684,9 @@ pub fn toggle(ui: &mut Ui, id: impl Hash + std::fmt::Debug, r: Rect, glyph: Glyp
         ui.painter().rect_stroke(r, 2.0, Stroke::new(1.0, if hot { c.button_hover_border } else { c.button_border }), StrokeKind::Inside);
     }
     glyphs::paint(ui.painter(), r, glyph, &t, enabled);
+    // Barrierefreiheit (und `ui_find`): Knopf mit dem übersetzten Tooltip als Namen und Zustand
+    // (gedrückt) wie bei Kästchen
+    crate::ui_kit::icon_button_info(&resp, enabled, tip, Some(on));
     let clicked = enabled && resp.clicked();
     if !tip.is_empty() {
         resp.on_hover_text(tip);
@@ -684,6 +705,8 @@ pub fn icon_button(ui: &mut Ui, id: impl Hash + std::fmt::Debug, r: Rect, glyph:
         ui.painter().rect_stroke(r, 2.0, Stroke::new(1.0, c.button_hover_border), StrokeKind::Inside);
     }
     glyphs::paint(ui.painter(), r, glyph, &t, enabled);
+    // Barrierefreiheit (und `ui_find`): Knopf mit dem übersetzten Tooltip als Namen
+    crate::ui_kit::icon_button_info(&resp, enabled, tip, None);
     if tip.is_empty() { resp } else { resp.on_hover_text(tip) }
 }
 

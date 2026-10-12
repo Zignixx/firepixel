@@ -563,3 +563,5 @@ msg-warn-dont-show = Don't s&how again
 msg-step-jpeg-mask-load = Load JPEG Mask
 msg-step-jpeg-mask-delete = Delete JPEG Mask
 # <<< FV-5 Warnungen ohne Ziel
+# Wächter des Testprofils (fp_i18n::profile::check_write, NZ-1)
+err-test-profile-write = test run must not write to the real user profile: { $path } (use fp_i18n::profile::use_test_profile() or FP_TEST_PROFILE, AGENTEN_REGELN §4a)

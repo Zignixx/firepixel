@@ -154,6 +154,8 @@ Schlüssel: Kleinbuchstaben, Bindestriche, Bereichspräfix. Attribute mit Punkt 
 | `kommandozeile.ftl` | `cli-` (Hilfe von `firepixel-cli`: `cli-<befehl>`, `.examples`, `cli-<befehl>-arg-<option>`, `.value`; Meldungen; `cli-lang-*`, `cli-check-*` Sprachprüfung) | UE-3 |
 | `befehlstexte.ftl` | `cmdtext-` (Parameterbeschreibungen und Hinweise der Befehle für MCP/CLI; Schlüssel aus dem deutschen Quelltext, `fp_engine::command::source_text_key`) | UE-3 |
 | `dateidialog.ftl` | `fdlg-` (Datei-Dialog in der App bei aktivem KI-Steuerkanal) | AU |
+| `image_preview.ftl` | `image-preview-` (Bildvorschau, Datei ▸ Bildvorschau…; die Beschriftungen der linken Spalte stehen in `dialoge.ftl` unter `dlg-preview-`) | BV-<n> |
+| `nachzeichnen.ftl` | `trace-` (Bitmap nachzeichnen; die Befehlsbeschriftung steht in `menue.ftl` unter `cmd-modify-traceBitmap`) | VT-<n> |
 
 Jeder Agent schreibt nur in seine Dateien (in `de` **und** `en`).
 

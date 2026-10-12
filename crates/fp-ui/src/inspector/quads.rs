@@ -134,12 +134,23 @@ fn tool_q1(ui: &mut Ui, st: &mut AppState, r: Rect) {
         vec![label.clone()]
     } else {
         // lange Werkzeugnamen bricht das Original in zwei Zeilen um („Rote Augen / entfernen“,
-        // „Pfadausbesserung / - additiv“, PARITAET_A W10/W28); erst ab drei Zeilen „…“
-        let g = ui.painter().layout(label.clone(), font.clone(), col, lr.width());
-        if g.rows.len() <= 2 {
-            let rows: Vec<String> = g.rows.iter().map(|r| r.text().trim_end().to_string()).collect();
-            let top = lr.top() + 8.0 - g.rows.first().map(|r| r.height()).unwrap_or(10.0) / 2.0;
-            ui.painter().galley(pos2(lr.left(), top), g, col);
+        // „Pfadausbesserung / - additiv“, PARITAET_A W10/W28), und zwar nur an Leerzeichen bzw.
+        // nach einem Bindestrich im Wort, nie mitten im Wort; erst ab drei Zeilen „…“. Ein Wort,
+        // das allein breiter als das Feld ist, darf bis an den Rand des Quadranten reichen, sonst
+        // wird die Schrift für diese Zeile kleiner.
+        let max_w = (r.right() - 2.0 - lr.left()).max(lr.width());
+        let rows = word_wrap(ui, &label, &font, lr.width());
+        if rows.len() <= 2 {
+            let row_h = ui.ctx().fonts_mut(|f| f.row_height(&font));
+            let top = lr.top() + 8.0 - row_h / 2.0;
+            for (k, row) in rows.iter().enumerate() {
+                let mut f = font.clone();
+                while widgets::text_width(ui, row, &f) > max_w && f.size > 6.0 {
+                    f.size -= 0.5;
+                }
+                let y = top + k as f32 * row_h + (row_h - ui.ctx().fonts_mut(|x| x.row_height(&f))) / 2.0;
+                widgets::text_clipped(ui.painter(), pos2(lr.left(), y), Align2::LEFT_TOP, row, f, col, max_w);
+            }
             rows
         } else {
             widgets::text_clipped(ui.painter(), pos2(lr.left(), lr.top() + 8.0), Align2::LEFT_CENTER, &label, font, col, lr.width());
@@ -147,6 +158,40 @@ fn tool_q1(ui: &mut Ui, st: &mut AppState, r: Rect) {
         }
     };
     ui.ctx().data_mut(|dd| dd.insert_temp(egui::Id::new(TOOL_Q1_LINES), lines));
+}
+
+/// Bricht `text` wie ein Windows-Textfeld mit Wortumbruch um: nur nach Leerzeichen und nach einem
+/// Bindestrich zwischen zwei Buchstaben, nie mitten im Wort (PARITAET_A W28). Ein einzelnes Wort,
+/// das breiter als `width` ist, steht allein in seiner Zeile (ungekürzt).
+fn word_wrap(ui: &Ui, text: &str, font: &egui::FontId, width: f32) -> Vec<String> {
+    let chars: Vec<char> = text.chars().collect();
+    let mut segs: Vec<String> = Vec::new();
+    let mut cur = String::new();
+    for (i, &ch) in chars.iter().enumerate() {
+        cur.push(ch);
+        let after_hyphen = ch == '-' && i > 0 && chars[i - 1].is_alphabetic() && chars.get(i + 1).is_some_and(|c| c.is_alphabetic());
+        if ch == ' ' || after_hyphen {
+            segs.push(std::mem::take(&mut cur));
+        }
+    }
+    if !cur.is_empty() {
+        segs.push(cur);
+    }
+    let mut lines: Vec<String> = Vec::new();
+    let mut line = String::new();
+    for seg in segs {
+        let cand = format!("{line}{seg}");
+        if line.trim().is_empty() || widgets::text_width(ui, cand.trim_end(), font) <= width {
+            line = cand;
+        } else {
+            lines.push(line.trim_end().to_string());
+            line = seg.trim_start().to_string();
+        }
+    }
+    if !line.trim().is_empty() {
+        lines.push(line.trim_end().to_string());
+    }
+    lines
 }
 
 /// Schlüssel der zuletzt im Werkzeugkopf gezeichneten Zeilen (für Tests: [`tool_header_lines`]).
@@ -259,6 +304,7 @@ fn box_q2(ui: &mut Ui, st: &mut AppState, r: Rect) {
     let prop: bool = ui.data(|dd| dd.get_temp(key)).unwrap_or(false);
     let link = d.r(-2.0, 0.0, 7.0, 27.0);
     let lresp = ui.interact(link, key.with("btn"), egui::Sense::click()).on_hover_text(t("pi-box-keep-proportions"));
+    crate::ui_kit::icon_button_info(&lresp, en, &t("pi-box-keep-proportions"), Some(prop));
     icons::paint(ui.painter(), link, icons::Icon::LinkProportions, &IconStyle::new(&theme, None, en));
     if prop {
         ui.painter().rect_stroke(link, 1.0, Stroke::new(1.0, theme.colors.focus), StrokeKind::Inside);

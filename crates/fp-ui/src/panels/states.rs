@@ -142,6 +142,8 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
     glyphs::paint(ui.painter(), onion_r.shrink(1.0), Glyph::Onion, &theme, true);
     let lp = ui.interact(loop_r, Id::new("states-loop"), Sense::click()).on_hover_text(common::t("panel-states-loop"));
     glyphs::paint(ui.painter(), loop_r.shrink(1.0), Glyph::Loop, &theme, true);
+    crate::ui_kit::icon_button_info(&onion, true, &common::t("panel-states-onion"), None);
+    crate::ui_kit::icon_button_info(&lp, true, &common::t("panel-states-loop"), None);
     common::resource_menu(ui, &onion, st, "6933");
     common::resource_menu(ui, &lp, st, "6940");
     let text = loop_text(loop_count);

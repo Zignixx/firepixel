@@ -148,6 +148,7 @@ fn doc_tabs(ui: &mut Ui, st: &mut AppState, rect: Rect) {
         let xresp = ui.interact(xr, Id::new(("doc-tab-x", id.0)), Sense::click());
         let xc = if xresp.hovered() { c.icon_red } else { c.text_weak };
         icons::paint(ui.painter(), xr.shrink(1.0), Icon::Close, &IconStyle::mono(xc, c.frame_bg));
+        crate::ui_kit::icon_button_info(&xresp, true, &fp_i18n::t("ui-tab-close"), None);
         if xresp.on_hover_text(fp_i18n::t("ui-tab-close")).clicked() {
             st.push(Action::CloseDocument(*id));
         } else if resp.clicked() {
@@ -164,6 +165,7 @@ fn doc_tabs(ui: &mut Ui, st: &mut AppState, rect: Rect) {
     if overflow {
         let mr = Rect::from_min_size(pos2(rect.right() - more_w - 2.0, rect.top() + 3.0), vec2(more_w, rect.height() - 5.0));
         let mresp = ui.interact(mr, Id::new("doc-tabs-more"), Sense::click()).on_hover_text(fp_i18n::t("ui-tab-more"));
+        crate::ui_kit::icon_button_info(&mresp, true, &fp_i18n::t("ui-tab-more"), None);
         if mresp.hovered() {
             ui.painter().rect_filled(mr, 0.0, c.tab_hover_bg);
         }
@@ -243,7 +245,8 @@ fn view_bar_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
         let selected = mode == *m;
         widgets::button_frame(ui.painter(), r, &resp, ButtonLook { selected, enabled: true, group: Some(ToolGroup::View) }, &theme);
         icons::paint(ui.painter(), Rect::from_center_size(pos2(r.left() + 11.0, r.center().y), vec2(14.0, 14.0)), *icon, &IconStyle::new(&theme, Some(ToolGroup::View), true));
-        ui.painter().text(pos2(r.left() + 20.0, r.center().y), Align2::LEFT_CENTER, label, font.clone(), c.text);
+        ui.painter().text(pos2(r.left() + 20.0, r.center().y), Align2::LEFT_CENTER, &label, font.clone(), c.text);
+        crate::ui_kit::icon_button_info(&resp, true, &label, Some(selected));
         if resp.on_hover_text(tip).clicked() {
             chosen = Some(*m);
         }
@@ -286,6 +289,7 @@ fn view_bar_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
     let resp = ui.interact(nav, Id::new("page-nav"), Sense::click());
     widgets::button_frame(ui.painter(), nav, &resp, ButtonLook { selected: false, enabled: names.len() > 1, group: Some(ToolGroup::View) }, &theme);
     icons::paint(ui.painter(), nav.shrink(2.0), Icon::PageNavigate, &IconStyle::new(&theme, Some(ToolGroup::View), names.len() > 1));
+    crate::ui_kit::icon_button_info(&resp, names.len() > 1, &fp_i18n::t("ui-page-nav"), None);
     if resp.on_hover_text(fp_i18n::t("ui-page-nav")).clicked() && names.len() > 1 {
         st.push(Action::SetPage((page + 1) % names.len()));
     }

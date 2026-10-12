@@ -134,6 +134,8 @@ pub fn icon_button(ui: &mut Ui, icon: Icon, size: egui::Vec2, icon_size: f32, lo
         let ir = Rect::from_center_size(rect.center(), vec2(icon_size, icon_size));
         icons::paint(painter, ir, icon, &st);
     }
+    // Barrierefreiheit (und `ui_find`): Knopf mit dem übersetzten Tooltip als Namen
+    crate::ui_kit::icon_button_info(&resp, look.enabled, tooltip, look.selected.then_some(true));
     if tooltip.is_empty() { resp } else { resp.on_hover_text(tooltip) }
 }
 

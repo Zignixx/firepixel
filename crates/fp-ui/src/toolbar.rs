@@ -126,6 +126,7 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                 let ir = Rect::from_center_size(pos2(r.left() + 14.0, r.center().y), vec2(16.0, 16.0));
                 crate::icons::paint(ui.painter(), ir, Icon::AlignLeft, &crate::icons::IconStyle::new(&theme, Some(ToolGroup::Select), any));
                 widgets::drop_arrow(ui.painter(), Rect::from_center_size(pos2(r.right() - 8.0, r.center().y), vec2(8.0, 8.0)), c.icon_fg);
+                crate::ui_kit::icon_button_info(&resp, true, &menu::clean_label(&fp_i18n::t("menu-modify-align")).0, None);
                 let resp = resp.on_hover_text(menu::clean_label(&fp_i18n::t("menu-modify-align")).0);
                 let nodes: Vec<Node> = ALIGN_ITEMS
                     .iter()

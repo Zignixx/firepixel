@@ -110,6 +110,7 @@ fn mode_button(ui: &mut Ui, st: &mut AppState, r: Rect, mode: &str, tip: &str, e
         ui.painter().rect_stroke(r, 2.0, Stroke::new(1.0, t.colors.button_hover_border), StrokeKind::Inside);
     }
     paint_mode(ui.painter(), r, mode, &t, enabled);
+    crate::ui_kit::icon_button_info(&resp, enabled, tip, None);
     let resp = resp.on_hover_text(tip);
     if enabled && resp.clicked() {
         st.run("pi.align", json!({"mode": mode, "toCanvas": to_canvas}));

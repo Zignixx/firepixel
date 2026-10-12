@@ -278,10 +278,7 @@ pub fn check_write(path: &Path) -> std::io::Result<()> {
     }
     Err(std::io::Error::new(
         std::io::ErrorKind::PermissionDenied,
-        format!(
-            "test run must not write to the real user profile: {} (use fp_i18n::profile::use_test_profile() or FP_TEST_PROFILE, AGENTEN_REGELN §4a)",
-            path.display()
-        ),
+        crate::tr!("err-test-profile-write", path = path.display().to_string()),
     ))
 }
 

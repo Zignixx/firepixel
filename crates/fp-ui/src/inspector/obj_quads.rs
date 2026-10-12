@@ -469,7 +469,9 @@ pub fn fill_panel(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target, enabled: b
             let resp = fields::icon_button(ui, id.with(("kind", k)), r, g, pen, tip);
             let mut chosen: Option<std::path::PathBuf> = None;
             let mut other = false;
-            egui::Popup::menu(&resp).frame(crate::menu::menu_frame(&theme)).width(150.0).show(|ui| {
+            let other_l = t("pi-pattern-other");
+            let list_w = fields::list_width(ui, popups::pattern_files().iter().map(|(n, _)| n.as_str()).chain([other_l.as_str()]), 150.0);
+            egui::Popup::menu(&resp).frame(crate::menu::menu_frame(&theme)).width(list_w).show(|ui| {
                 ui.spacing_mut().item_spacing = egui::vec2(0.0, 0.0);
                 egui::ScrollArea::vertical().max_height(360.0).show(ui, |ui| {
                     for (name, p) in popups::pattern_files() {
@@ -636,7 +638,9 @@ fn texture_combo(ui: &mut Ui, id: Id, r: Rect, current: &str, enabled: bool) -> 
     let resp = fields::combo_box_frame(ui, id, r, &text, enabled);
     let th = Theme::current(ui.ctx());
     let mut out = None;
-    egui::Popup::menu(&resp).frame(crate::menu::menu_frame(&th)).width(r.width().max(60.0)).show(|ui| {
+    // so breit wie der längste Name (Windows-Kombifeld im Original), nicht nur wie das Feld
+    let list_w = fields::list_width(ui, labels.iter().map(|s| s.as_str()), r.width().max(60.0));
+    egui::Popup::menu(&resp).frame(crate::menu::menu_frame(&th)).width(list_w).show(|ui| {
         ui.spacing_mut().item_spacing = vec2(0.0, 0.0);
         egui::ScrollArea::vertical().max_height(360.0).show(ui, |ui| {
             for (i, (name, label)) in items.iter().enumerate() {
@@ -1732,7 +1736,9 @@ fn orientation_button(ui: &mut Ui, id: Id, r: Rect, current: i32, enabled: bool)
     let tri = vec![pos2(r.right() - 6.0, r.bottom() - 5.0), pos2(r.right() - 2.0, r.bottom() - 5.0), pos2(r.right() - 4.0, r.bottom() - 3.0)];
     ui.painter().add(egui::Shape::convex_polygon(tri, col, Stroke::NONE));
     let mut out = None;
-    let resp = resp.on_hover_text(t("pi-text-orientation"));
+    let name = t("pi-text-orientation");
+    crate::ui_kit::icon_button_info(&resp, enabled, &name, None);
+    let resp = resp.on_hover_text(&name);
     egui::Popup::menu(&resp).frame(crate::menu::menu_frame(&theme)).show(|ui| {
         ui.spacing_mut().item_spacing = vec2(0.0, 0.0);
         ui.set_min_width(200.0);
