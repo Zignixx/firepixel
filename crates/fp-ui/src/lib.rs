@@ -247,10 +247,15 @@ impl FirepixelApp {
         dialogs::show_all(&ctx, st);
         // Öffnet/schließt eine Aktion am Ende des Bildes einen Dialog (z. B. Strg+W → Rückfrage),
         // sofort noch ein Bild zeichnen, auch ohne Folgeereignis (z. B. Aufträge der MCP-Brücke)
+        // Noch im selben Bild zeigen: egui verwirft diesen Durchgang und zeichnet sofort einen
+        // zweiten (ohne die schon verarbeiteten Eingaben), statt auf das nächste Bild zu warten –
+        // so steht die Rückfrage nach Strg+W ein Bild früher da (P-HG1)
         let dialogs_before = st.dialogs.any_open();
+        let title_before = st.window_title();
         st.process_actions(&ctx);
         st.handle_session_events();
-        if st.dialogs.any_open() != dialogs_before {
+        if st.dialogs.any_open() != dialogs_before || st.window_title() != title_before {
+            ctx.request_discard("dialog or document changed by an action");
             ctx.request_repaint();
         }
         if st.close_window {
@@ -267,6 +272,20 @@ impl FirepixelApp {
 }
 
 impl eframe::App for FirepixelApp {
+    /// Läuft vor jedem Bild, bei minimiertem Fenster als Einziges (eframe ruft dann `ui` nicht).
+    /// Schließen über die Taskleiste bei minimiertem Fenster: mit ungespeicherten Dokumenten nicht
+    /// sofort beenden (eframe schlösse ohne `CancelClose` gleich), sondern das Fenster
+    /// wiederherstellen; die Rückfrage stellt `root_ui` im nächsten Bild (eframe reicht das
+    /// Schließen-Ereignis dorthin weiter).
+    fn logic(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        let (minimized, close) = ctx.input(|i| (i.viewport().minimized == Some(true), i.viewport().close_requested()));
+        if minimized && close && !self.state.quit_confirmed && self.state.any_dirty() {
+            ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
+            ctx.send_viewport_cmd(egui::ViewportCommand::Minimized(false));
+            ctx.request_repaint();
+        }
+    }
+
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         self.frames = self.frames.saturating_add(1);
         self.root_ui(ui);

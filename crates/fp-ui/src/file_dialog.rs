@@ -7,7 +7,7 @@
 //! - Ein Aufrufer beschreibt den Dialog ([`Request`]) und gibt eine Fortsetzung mit, die das
 //!   Ergebnis bekommt (leere Liste = abgebrochen). [`request`] kehrt sofort zurück.
 //! - Der native Dialog läuft in einem eigenen Thread, mit dem Hauptfenster als Besitzer
-//!   (`set_parent`): er erscheint zentriert über Firepixel, modal zum Hauptfenster und ohne eigenen
+//!   (`set_parent`): er erscheint über Firepixel (Windows legt ihn an dessen linke obere Ecke), modal zum Hauptfenster und ohne eigenen
 //!   Taskleisten-Knopf. Die App zeichnet weiter; Leinwand, Menüs und Kürzel sind wie bei einem
 //!   modalen Dialog gesperrt (egui-Modal, `Dialogs::any_open`).
 //! - Bei laufendem KI-Steuerkanal (MCP-Brücke) erscheint statt des nativen Dialogs ein Dialog in
@@ -23,7 +23,7 @@ use crate::app_state::AppState;
 use serde_json::{json, Value};
 use std::path::{Path, PathBuf};
 use std::sync::mpsc::{Receiver, TryRecvError};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, Weak};
 use std::time::Instant;
 
 /// Art des Dialogs.
@@ -60,11 +60,13 @@ pub struct Request {
     pub dir: Option<PathBuf>,
     /// Vorgeschlagener Dateiname (Speichern).
     pub file_name: Option<String>,
+    /// Vorgewählter Filter (Index in `filters`; Original: „Alle lesbaren Dateien“ an 13. Stelle).
+    pub default_filter: usize,
 }
 
 impl Request {
     pub fn new(kind: Kind, title: impl Into<String>) -> Request {
-        Request { kind, title: title.into(), filters: Vec::new(), dir: None, file_name: None }
+        Request { kind, title: title.into(), filters: Vec::new(), dir: None, file_name: None, default_filter: 0 }
     }
     pub fn open(title: impl Into<String>) -> Request {
         Request::new(Kind::Open, title)
@@ -86,6 +88,22 @@ impl Request {
         self.dir = dir.map(Path::to_path_buf);
         self
     }
+    /// Vorgewählter Filter (Index in `filters`).
+    pub fn default_filter(mut self, index: usize) -> Request {
+        self.default_filter = index;
+        self
+    }
+
+    /// Filter in der Reihenfolge des nativen Dialogs: rfd kann keinen Filter vorwählen und nimmt
+    /// den ersten, darum steht der vorgewählte dort vorn, die übrigen in ihrer Reihenfolge.
+    pub fn native_filters(&self) -> Vec<(String, Vec<String>)> {
+        let mut f = self.filters.clone();
+        if self.default_filter > 0 && self.default_filter < f.len() {
+            let d = f.remove(self.default_filter);
+            f.insert(0, d);
+        }
+        f
+    }
 
     fn json(&self) -> Value {
         json!({
@@ -93,6 +111,7 @@ impl Request {
             "filters": self.filters.iter().map(|(n, e)| json!({"name": n, "extensions": e})).collect::<Vec<_>>(),
             "directory": self.dir.as_ref().map(|d| d.display().to_string()),
             "file_name": self.file_name,
+            "default_filter": self.default_filter,
         })
     }
 
@@ -130,7 +149,10 @@ struct Inner {
     pending: Option<Pending>,
     next_id: u64,
     log: Vec<Value>,
-    parent: Option<Arc<winit::window::Window>>,
+    /// Nur schwach gehalten: ein starker Verweis hielte das Fenster nach dem Schließen am Leben;
+    /// eframe beendet die Ereignisschleife erst, wenn das Fenster zerstört ist (WindowEvent::
+    /// Destroyed), sonst lief Firepixel nach WM_CLOSE von außen weiter (P-HG1).
+    parent: Option<Weak<winit::window::Window>>,
     /// egui-Kontext (aus [rame]) für Neuzeichnen aus dem Dialog-Thread.
     ctx: Option<egui::Context>,
 }
@@ -143,7 +165,7 @@ fn state() -> std::sync::MutexGuard<'static, Inner> {
 
 /// Hauptfenster als Besitzer der nativen Dialoge (einmal beim Start).
 pub fn set_parent_window(window: Arc<winit::window::Window>) {
-    state().parent = Some(window);
+    state().parent = Some(Arc::downgrade(&window));
 }
 
 /// Ist gerade ein Datei-Dialog offen?
@@ -173,8 +195,18 @@ pub const ENV_FILE_DIALOG: &str = "FP_FILE_DIALOG";
 /// Alter deutscher Name, wird weiter gelesen (wenn `FP_FILE_DIALOG` nicht gesetzt ist).
 pub const LEGACY_ENV_FILE_DIALOG: &str = "FP_DATEIDIALOG";
 
+/// Testmodus ohne Umgebungsvariable (Tests im selben Prozess; `std::env::set_var` ist dort
+/// `unsafe`): gleiche Werte wie `FP_FILE_DIALOG`, `None` = wieder die Umgebungsvariable.
+static TEST_MODE: Mutex<Option<String>> = Mutex::new(None);
+
+/// Setzt den Testmodus (siehe [`ENV_FILE_DIALOG`]) für diesen Prozess.
+pub fn set_test_mode(mode: Option<&str>) {
+    *TEST_MODE.lock().unwrap_or_else(std::sync::PoisonError::into_inner) = mode.map(str::to_string);
+}
+
 fn env_mode() -> EnvMode {
-    let v = std::env::var(ENV_FILE_DIALOG).or_else(|_| std::env::var(LEGACY_ENV_FILE_DIALOG)).unwrap_or_default();
+    let forced = TEST_MODE.lock().unwrap_or_else(std::sync::PoisonError::into_inner).clone();
+    let v = forced.unwrap_or_else(|| std::env::var(ENV_FILE_DIALOG).or_else(|_| std::env::var(LEGACY_ENV_FILE_DIALOG)).unwrap_or_default());
     let t = v.trim();
     let lower = t.to_lowercase();
     if lower == "abbrechen" || lower == "cancel" {
@@ -254,7 +286,7 @@ pub fn request(st: &mut AppState, req: Request, done: impl FnOnce(&mut AppState,
             };
             Mode::Internal { path }
         } else {
-            Mode::Native(spawn_native(&req, g.parent.clone(), g.ctx.clone()))
+            Mode::Native(spawn_native(&req, g.parent.as_ref().and_then(Weak::upgrade), g.ctx.clone()))
         };
         log_event(&mut g, json!({"event": "opened", "id": id, "mode": if internal { "internal" } else { "native" }, "request": req.json()}));
         g.pending = Some(Pending { id, req, mode: m, done: Some(Box::new(done)), answer: None, started: Instant::now() });
@@ -267,7 +299,7 @@ pub fn request(st: &mut AppState, req: Request, done: impl FnOnce(&mut AppState,
 /// Startet den nativen Dialog in einem eigenen Thread (Besitzer = Hauptfenster).
 fn spawn_native(req: &Request, parent: Option<Arc<winit::window::Window>>, ctx: Option<egui::Context>) -> Receiver<Vec<PathBuf>> {
     let mut d = rfd::FileDialog::new().set_title(&req.title);
-    for (n, e) in &req.filters {
+    for (n, e) in &req.native_filters() {
         let exts: Vec<&str> = e.iter().map(String::as_str).collect();
         d = d.add_filter(n, &exts);
     }
