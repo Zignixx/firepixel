@@ -221,6 +221,14 @@ impl AppState {
                 SessionEvent::DocumentOpened(id) => {
                     self.canvases.entry(id).or_default().needs_initial_fit = true;
                 }
+                // Vorschau im Browser (auch aus „Demo – aktuelles Dokument“): Rückmeldung mit dem
+                // Ordner, auch wenn kein Browser startet (CT-1b MN-4)
+                SessionEvent::CommandExecuted(name) if name.starts_with("file.previewInBrowser.preview") => {
+                    if let Some(id) = self.session.active_id() {
+                        let dir = fp_engine::commands::export::preview_dir(id.0);
+                        self.actions.push(Action::Status(fp_i18n::tr!("ui-preview-created", path = dir.to_string_lossy().to_string())));
+                    }
+                }
                 _ => {}
             }
         }

@@ -703,8 +703,12 @@ fn paint_item(ui: &mut Ui, label: &str, shortcut: Option<&str>, checked: Option<
 
 fn paint_separator(ui: &mut Ui) {
     let theme = Theme::current(ui.ctx());
+    // Klicks auf den Trenner fängt er selbst ab (tut nichts, Menü bleibt offen); sonst nähme egui
+    // den nächsten Eintrag im Fangradius (Bedienfeld-≡-Menüs, CT-1b MN-6)
     let resp = ui.allocate_response(vec2(10.0, crate::menu_scroll::SEPARATOR_H), Sense::hover());
     let r = resp.rect;
+    let row = Rect::from_x_y_ranges(ui.max_rect().x_range(), r.y_range());
+    let _ = ui.interact(row, resp.id.with("sep-click"), Sense::CLICK);
     ui.painter().hline((r.left() + CHECK_COL)..=(r.right() - 8.0), r.center().y.floor() + 0.5, Stroke::new(1.0, theme.colors.menu_separator));
 }
 

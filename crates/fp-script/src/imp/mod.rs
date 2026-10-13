@@ -366,8 +366,18 @@ pub(crate) fn global_confirm(_this: &JsValue, args: &[JsValue], ctx: &mut Contex
 pub(crate) fn global_prompt(_this: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
     let t = arg_text(&args[..args.len().min(1)], ctx);
     let _ = with_state(|s| s.alerts.push(format!("prompt: {t}")));
-    // ohne Oberfläche: Vorgabewert (2. Argument) bzw. null
-    Ok(args.get(1).cloned().unwrap_or_else(JsValue::null))
+    let default = match args.get(1) {
+        Some(v) if !v.is_undefined() && !v.is_null() => Some(v.to_string(ctx)?.to_std_string_escaped()),
+        _ => None,
+    };
+    match fp_engine::script_prompt::next(&t, default.as_deref()) {
+        // ohne Oberfläche: Vorgabewert (2. Argument) bzw. null
+        fp_engine::script_prompt::Answer::Headless => Ok(args.get(1).cloned().unwrap_or_else(JsValue::null)),
+        fp_engine::script_prompt::Answer::Value(Some(a)) => Ok(JsValue::from(boa_engine::JsString::from(a.as_str()))),
+        fp_engine::script_prompt::Answer::Value(None) => Ok(JsValue::null()),
+        // die Oberfläche fragt zuerst: Lauf abbrechen (das Dokument bleibt unverändert)
+        fp_engine::script_prompt::Answer::Pending => Err(boa_engine::JsNativeError::error().with_message("prompt: input required").into()),
+    }
 }
 
 pub(crate) fn global_write(_this: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {

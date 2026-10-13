@@ -46,6 +46,7 @@ pub mod paint;
 pub mod prefs;
 pub mod render;
 pub mod resources;
+pub mod script_prompt;
 #[cfg(feature = "render")]
 pub mod render_backend;
 pub mod selection;

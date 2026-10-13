@@ -172,6 +172,27 @@ fn with_language_is_thread_local_and_nested() {
     assert_eq!(with_language("EN", || tr!("test-zoom", z = 12.5)), "Zoom 12.5%");
 }
 
+/// Sprache der Oberfläche mitten in einer vorübergehenden Sprache (Verlaufsnamen über die Brücke).
+#[test]
+fn with_ui_language_inside_with_language() {
+    let _g = LOCK.lock();
+    set_language("de");
+    assert_eq!(with_ui_language(|| t("btn-cancel")), "Abbrechen");
+    let (agent, ui, nested) = with_language("en", || {
+        let ui = with_ui_language(|| t("btn-cancel"));
+        let nested = with_language("en", || with_ui_language(|| t("btn-cancel")));
+        (t("btn-cancel"), ui, nested)
+    });
+    assert_eq!((agent.as_str(), ui.as_str(), nested.as_str()), ("Cancel", "Abbrechen", "Abbrechen"));
+    assert_eq!(t("btn-cancel"), "Abbrechen");
+    // Verlaufsnamen aus msg-step-* zurück in die Oberflächensprache
+    let de_move = t("msg-step-move");
+    let back = with_language("en", || step_label_in_ui_language(&t("msg-step-move")));
+    assert_eq!(back, de_move);
+    assert_eq!(with_language("en", || step_label_in_ui_language("frei")), "frei");
+    assert_eq!(step_label_in_ui_language(&de_move), de_move);
+}
+
 /// Platzhalter je Schlüssel gleich, keine neuen Zugriffstasten-Konflikte, Syntax sauber.
 #[test]
 fn builtin_placeholders_and_access_keys() {

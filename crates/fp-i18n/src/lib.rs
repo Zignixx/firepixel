@@ -285,9 +285,52 @@ pub fn with_language<R>(code: &str, f: impl FnOnce() -> R) -> R {
         fn drop(&mut self) {
             let prev = self.0.take();
             OVERRIDE.with(|o| *o.borrow_mut() = prev);
+            OUTER.with(|o| o.borrow_mut().pop());
         }
     }
     let prev = OVERRIDE.with(|o| o.borrow_mut().replace(code.to_string()));
+    OUTER.with(|o| o.borrow_mut().push(prev.clone()));
+    let _restore = Restore(prev);
+    f()
+}
+
+thread_local! {
+    /// Sprachen vor den offenen [with_language]-Aufrufen dieses Threads (außen zuerst).
+    static OUTER: RefCell<Vec<Option<String>>> = const { RefCell::new(Vec::new()) };
+}
+
+/// Verlaufsname eines Schritts (`msg-step-*`), der innerhalb von [with_language] in einer anderen
+/// Sprache entstand, in der Sprache der Oberfläche; unbekannte Texte bleiben unverändert.
+pub fn step_label_in_ui_language(text: &str) -> String {
+    let Some(base) = OUTER.with(|o| o.borrow().first().cloned()) else { return text.to_string() };
+    let agent = current_language();
+    if base.as_deref() == Some(agent.as_str()) {
+        return text.to_string();
+    }
+    let ui = with_ui_language(current_language);
+    if ui == agent {
+        return text.to_string();
+    }
+    keys(&agent)
+        .iter()
+        .filter(|k| k.starts_with("msg-step-"))
+        .find(|k| t(k) == text)
+        .map(|k| with_ui_language(|| t(k)))
+        .unwrap_or_else(|| text.to_string())
+}
+
+/// Führt `f` in der Sprache der Oberfläche aus, auch innerhalb von [with_language] (z. B.
+/// Verlaufsnamen von Schritten, die über die MCP-Brücke in der Antwortsprache der Agenten laufen).
+pub fn with_ui_language<R>(f: impl FnOnce() -> R) -> R {
+    let Some(base) = OUTER.with(|o| o.borrow().first().cloned()) else { return f() };
+    struct Restore(Option<String>);
+    impl Drop for Restore {
+        fn drop(&mut self) {
+            let prev = self.0.take();
+            OVERRIDE.with(|o| *o.borrow_mut() = prev);
+        }
+    }
+    let prev = OVERRIDE.with(|o| std::mem::replace(&mut *o.borrow_mut(), base));
     let _restore = Restore(prev);
     f()
 }

@@ -29,6 +29,7 @@ mod new_document;
 pub mod panel_menus;
 pub mod path_dialogs;
 pub mod popup_menu;
+pub mod script_prompt;
 pub(crate) mod preferences;
 pub mod shortcuts;
 pub mod spelling;
@@ -104,6 +105,8 @@ pub struct Dialogs {
     pub warning: Option<warning::WarningDialog>,
     /// „Pinselstrich bearbeiten“ mit Registerkarten Optionen/Form/Empfindlichkeit (PINSEL-1).
     pub brush_edit: Option<brush_edit::BrushEditDialog>,
+    /// Eingabeaufforderung `prompt()` eines Befehlsskripts (CT-1b MN-5).
+    pub script_prompt: Option<script_prompt::ScriptPrompt>,
 }
 
 /// Verzögert zu öffnendes Formular.
@@ -149,6 +152,7 @@ impl Dialogs {
             || self.trace.is_some()
             || self.warning.is_some()
             || self.brush_edit.is_some()
+            || self.script_prompt.is_some()
             || crate::file_dialog::is_open() // AU: offener Datei-Dialog sperrt wie ein modaler Dialog
     }
 
@@ -1091,6 +1095,7 @@ pub fn show_all(ctx: &egui::Context, st: &mut AppState) {
     models::show(ctx, st);
     trace::show(ctx, st);
     warning::show(ctx, st);
+    script_prompt::show(ctx, st);
     show_message(ctx, st);
     save_workspace(ctx, st);
     if let Some(t) = st.dialogs.clipboard.take() {

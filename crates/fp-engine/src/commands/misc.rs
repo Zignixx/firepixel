@@ -105,6 +105,31 @@ pub fn run_script_source(s: &mut Session, code: &str, path: Option<&Path>, label
     Ok(out)
 }
 
+/// Wie [`run_script_source`]; mit `prompts` (aus der Oberfläche) beantworten diese der Reihe nach
+/// die Fragen von `prompt()`. Fragt das Skript öfter, bleibt das Dokument unverändert und das
+/// Ergebnis meldet die offene Frage: `{"promptNeeded": {"text", "default"}, "prompts": [...]}`.
+fn run_script_prompting(s: &mut Session, p: &Params, code: &str, path: Option<&Path>, label: &str) -> Result<Value> {
+    let answers: Option<Vec<Value>> = match p.value.get("prompts") {
+        None | Some(Value::Null) => None,
+        Some(Value::Array(a)) => Some(a.clone()),
+        Some(_) => return Err(bad(p, "prompts")),
+    };
+    let Some(answers) = answers else { return run_script_source(s, code, path, label) };
+    let texts: Vec<Option<String>> = answers.iter().map(|v| match v {
+        Value::Null => None,
+        Value::String(t) => Some(t.clone()),
+        other => Some(other.to_string()),
+    }).collect();
+    if !crate::script_prompt::begin(texts) {
+        return run_script_source(s, code, path, label);
+    }
+    let r = run_script_source(s, code, path, label);
+    match crate::script_prompt::end() {
+        Some((text, default)) => Ok(json!({"promptNeeded": {"text": text, "default": default}, "prompts": answers})),
+        None => r,
+    }
+}
+
 /// Themen der Hilfe (Titel `msg-help-topic-<id>`, Text der Kurzhilfe `msg-help-body-<id>`).
 const HELP_TOPICS: &[&str] = &["start", "tools", "menus", "panels", "export", "automation", "support"];
 
@@ -271,6 +296,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
         cmd("commands.runScript")
             .opt("path", ParamKind::Path, "Skriptdatei (.jsf)")
             .opt("code", ParamKind::String, "Skriptquelltext (statt path)")
+            .opt("prompts", ParamKind::Json, "Antworten der Oberfläche für prompt() (Liste aus Text/null); ohne: Vorgabewerte")
             .run(|s, p| {
                 let (code, path) = match (p.opt_str("code")?, p.opt_str("path")?) {
                     (Some(c), _) => (c, None),
@@ -278,7 +304,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                     _ => return Err(bad(p, fp_i18n::t("err-param-path-or-code"))),
                 };
                 let label = path.as_ref().and_then(|f| f.file_stem()).map(|n| n.to_string_lossy().to_string()).unwrap_or_else(|| "Skript".into());
-                let v = run_script_source(s, &code, path.as_deref(), &label)?;
+                let v = run_script_prompting(s, &p, &code, path.as_deref(), &label)?;
                 Ok(CommandOutput::session_with(json!({"result": v})))
             }),
     );
@@ -286,11 +312,12 @@ pub(super) fn register(r: &mut CommandRegistry) {
         cmd("commands.run")
             .label("Gespeicherten Befehl ausführen")
             .param("name", ParamKind::String, "Name des gespeicherten Befehls")
+            .opt("prompts", ParamKind::Json, "Antworten der Oberfläche für prompt() (Liste aus Text/null); ohne: Vorgabewerte")
             .run(|s, p| {
                 let name = safe_file_name(&p.str("name")?)?;
                 let f = commands_dir().join(format!("{name}.jsf"));
                 let code = std::fs::read_to_string(&f).map_err(|_| EngineError::NotFound(fp_i18n::tr!("err-nf-saved-command", name = name.as_str())))?;
-                let v = run_script_source(s, &code, Some(&f), &name)?;
+                let v = run_script_prompting(s, &p, &code, Some(&f), &name)?;
                 Ok(CommandOutput::session_with(json!({"result": v})))
             }),
     );

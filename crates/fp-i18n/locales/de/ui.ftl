@@ -117,6 +117,7 @@ ui-file-import-failed =
     { $error }
 ui-revert-confirm = Letzte gespeicherte Version von "{ $name }" wiederherstellen?
 ui-not-implemented = „{ $label }“ ist noch nicht umgesetzt.
+ui-preview-created = Vorschau erstellt: { $path }
 ui-color-copied = Farbe { $hex } kopiert
 ui-warnings-reset = Warnmeldungen zurückgesetzt
 ui-clip-no-document = kein Dokument geöffnet

@@ -251,6 +251,12 @@ pub fn temp_dir(kind: &str) -> PathBuf {
     d
 }
 
+/// Ordner der Browser-Vorschau eines Dokuments: je Prozess eindeutig (parallele Instanzen
+/// überschreiben sich nicht, CT-1b MN-4), `%TEMP%\Firepixel\Preview\<pid>-doc<n>`.
+pub fn preview_dir(doc: u64) -> PathBuf {
+    temp_dir("Preview").join(format!("{}-doc{doc}", std::process::id()))
+}
+
 fn launch_allowed(p: &Params) -> Result<bool> {
     Ok(p.bool_or("open", true)? && crate::shell::allowed())
 }
@@ -880,7 +886,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
         // Sekundärbrowser: im Menü wie im Original nur, wenn einer festgelegt ist
         r.add(cmd(name).requires(DOC).menu_when(move |s| browser == 0 || s.ui.browsers[browser].is_some()).opt_default("open", ParamKind::Bool, json!(true), "Browser starten").run(move |s, p| {
             let base = base_name_of(s)?;
-            let dir = temp_dir("Preview").join(format!("doc{}", s.doc()?.id.0));
+            let dir = preview_dir(s.doc()?.id.0);
             let _ = std::fs::remove_dir_all(&dir);
             let pages: Vec<usize> = if all { (0..s.doc()?.doc.pages.len()).filter(|&i| !s.doc().map(|d| d.doc.pages[i].master()).unwrap_or(false)).collect() } else { vec![s.doc()?.page] };
             let mut written = Vec::new();

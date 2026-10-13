@@ -117,6 +117,7 @@ ui-file-import-failed =
     { $error }
 ui-revert-confirm = Revert to the last saved version of "{ $name }"?
 ui-not-implemented = “{ $label }” is not implemented yet.
+ui-preview-created = Preview created: { $path }
 ui-color-copied = Color { $hex } copied
 ui-warnings-reset = Warning dialogs reset
 ui-clip-no-document = no document open

@@ -422,13 +422,31 @@ fn run_command(st: &mut AppState, ctx: &egui::Context, name: &str, params: Value
         }
         return;
     }
+    // Befehlsskripte aus der Oberfläche: prompt() fragt im Dialog (CT-1b MN-5); ohne Antworten
+    // meldet der Befehl die erste Frage, der Dialog startet das Skript dann erneut
+    let script = matches!(name, "commands.runScript" | "commands.run");
+    let mut params = params;
+    if script && params.is_object() && params.get("prompts").is_none() {
+        params["prompts"] = json!([]);
+    }
+    let script_params = script.then(|| params.clone());
     match crate::ui_commands::execute(&mut st.session, name, params) {
         Ok(out) => {
             if matches!(name, "edit.copy" | "edit.cut" | "edit.copyAsVectors") {
                 crate::os_clipboard::after_copy(st);
             }
+            if let Some(q) = out.value["result"].get("promptNeeded").filter(|q| q.is_object())
+                && let Some(mut p) = script_params
+            {
+                let answers = out.value["result"]["prompts"].as_array().cloned().unwrap_or_default();
+                if let Some(m) = p.as_object_mut() {
+                    m.remove("prompts");
+                }
+                st.dialogs.script_prompt = Some(crate::dialogs::script_prompt::ScriptPrompt::new(name, p, answers, q["text"].as_str().unwrap_or_default(), q["default"].as_str()));
+                return;
+            }
             // alert() eines Befehlsskripts als Meldung zeigen (Titel = Programmname wie im Original, MN-4)
-            if name == "commands.runScript" {
+            if script {
                 let alerts: Vec<String> = out.value["result"]["alerts"]
                     .as_array()
                     .map(|a| a.iter().filter_map(|v| v.as_str()).filter(|s| !s.starts_with("confirm: ") && !s.starts_with("yesNoDialog: ") && !s.starts_with("prompt: ")).map(str::to_string).collect())

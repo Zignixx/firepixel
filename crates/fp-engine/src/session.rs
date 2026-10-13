@@ -655,7 +655,13 @@ impl Session {
         match out.effect {
             Effect::Document => {
                 if let (Some(id), Some(b)) = (doc_id, before) {
-                    self.finish_step(id, b, out.label.clone().unwrap_or_else(|| info.step_label()), name, &p.value);
+                    // Verlaufsname in der Sprache der Oberfläche, auch wenn der Befehl über die
+                    // MCP-Brücke in der Antwortsprache der Agenten lief (CT-1b N1)
+                    let label = match &out.label {
+                        Some(l) if *l != info.step_label() => fp_i18n::step_label_in_ui_language(l),
+                        _ => fp_i18n::with_ui_language(|| info.step_label()),
+                    };
+                    self.finish_step(id, b, label, name, &p.value);
                 }
             }
             Effect::View => {
