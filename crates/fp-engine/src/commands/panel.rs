@@ -72,20 +72,78 @@ pub fn hex(c: Argb) -> String {
 
 // ---------------------------------------------------------------------- Füllung
 
-/// Verlaufsformen in der Reihenfolge des Verlaufs-Menüs: (Anzeigename, `FSHi`, `CATs`, `INMs`).
+/// Verlaufsformen in der Reihenfolge der Liste „Verlauf:“ im Verlaufs-Popup des Originals (12 Arten,
+/// PAR 18/02): (Anzeigename, Formkennung, `CATs`, `INMs`). Die Formkennung ist `FSHi`; nur der
+/// Konturverlauf hat die Kennung [`CONTOUR_SHAPE`] (gespeichert als `FSHi` 3 mit `FSXi` 17).
 pub const GRADIENT_SHAPES: &[(&str, i32, &str, &str)] = &[
     ("Linear", 2, "fc_Linear", "Linear"),
     ("Radial", 3, "fc_Circular", "Radial"),
-    ("Kegelförmig", 4, "fc_Cone", "Cone"),
-    ("Satin", 5, "fc_Satin", "Satin"),
-    ("Lamellen", 7, "fc_Starburst", "Starburst"),
+    ("Rechteck", 10, "fc_Rectangular", "Rectangular"),
+    ("Kegel", 4, "fc_Conical", "Conical"),
+    ("Kontur", CONTOUR_SHAPE, "fc_ContourGrad", "Contour"),
+    ("Glanz", 5, "fc_Satin", "Satin"),
+    ("Supernova", 7, "fc_Pinch", "Pinch"),
     ("Falten", 8, "fc_Folds", "Folds"),
-    ("Ellipsenförmig", 9, "fc_Elliptical", "Elliptical"),
-    ("Rechteckig", 10, "fc_Rectangle", "Rectangle"),
-    ("Balken", 12, "fc_Bars", "Bars"),
-    ("Kräuseln", 13, "fc_Ripples", "Ripples"),
+    ("Ellipse", 9, "fc_Elliptical", "Elliptical"),
+    ("Streifen", 12, "fc_Bars", "Bars"),
+    ("Kleine Wellen", 13, "fc_Ripple", "Ripple"),
     ("Wellen", 14, "fc_Waves", "Waves"),
 ];
+
+/// Formkennung des Konturverlaufs in [`GRADIENT_SHAPES`] und im Parameter `shape` von `pi.fill`.
+pub const CONTOUR_SHAPE: i32 = 17;
+
+/// Formkennung einer Füllung wie in [`GRADIENT_SHAPES`] (Konturverlauf: [`CONTOUR_SHAPE`]).
+pub fn shape_id(f: &Fill) -> i32 {
+    if f.is_contour_gradient() { CONTOUR_SHAPE } else { f.shape }
+}
+
+/// Setzt die Form einer Füllung aus der Formkennung (`FSHi`/`FSXi`).
+fn set_shape_id(f: &mut Fill, id: i32) {
+    if id == CONTOUR_SHAPE {
+        f.shape = 3;
+        f.shape_ext = 17;
+    } else {
+        f.shape = id;
+        f.shape_ext = 0;
+    }
+}
+
+/// Name des Vorgabemusters beim Umschalten auf „Muster“ (Original: „Baumwolle“, JSF „Cotton“).
+pub const DEFAULT_PATTERN: &str = "Cotton";
+
+/// Winkel des Verlaufsvektors in Grad wie im Verlaufs-Popup des Originals (0 = nach rechts,
+/// 90 = nach oben, Vorgabe senkrecht nach unten = 270).
+pub fn handles_angle(h: &fp_model::FillHandles) -> f64 {
+    let (dx, dy) = ((h.end.x - h.start.x) as f64, (h.end.y - h.start.y) as f64);
+    if dx.abs() < 1e-9 && dy.abs() < 1e-9 {
+        return 0.0;
+    }
+    let a = (-dy).atan2(dx).to_degrees().rem_euclid(360.0);
+    if (a - 360.0).abs() < 1e-6 { 0.0 } else { a }
+}
+
+/// Dreht die Griffe um den Startpunkt, sodass der Vektor den Winkel `deg` hat (Länge bleibt).
+fn rotate_handles(h: &mut fp_model::FillHandles, deg: f64) {
+    let cur = handles_angle(h);
+    let d = (cur - deg).to_radians();
+    let (s, c) = d.sin_cos();
+    let rot = |p: Point| {
+        let (x, y) = ((p.x - h.start.x) as f64, (p.y - h.start.y) as f64);
+        // Bildschirmkoordinaten (y nach unten): Drehung um −d im mathematischen Sinn
+        Point::new(h.start.x + (x * c - y * s) as f32, h.start.y + (x * s + y * c) as f32)
+    };
+    h.end = rot(h.end);
+    h.second = rot(h.second);
+}
+
+/// Sind die Griffe entartet (Start = Ende oder keine zweite Achse)? Dann zeichnet ein Verlauf bzw.
+/// ein Muster nur eine Farbe (PAR 18/03).
+fn degenerate(h: &fp_model::FillHandles) -> bool {
+    let (ax, ay) = (h.end.x - h.start.x, h.end.y - h.start.y);
+    let (bx, by) = (h.second.x - h.start.x, h.second.y - h.start.y);
+    !h.valid || (ax * by - ay * bx).abs() < 1e-6
+}
 
 /// Kategorie einer Füllung für die Füllart-Knöpfe: 0 keine, 1 einfarbig, 2 Verlauf, 3 Muster, 4 Web-Dither.
 pub fn fill_kind(f: Option<&Fill>) -> u8 {
@@ -132,30 +190,58 @@ fn parse_stops(v: Option<&Value>) -> Option<Vec<(f32, Argb)>> {
     (out.len() >= 2).then_some(out)
 }
 
-fn default_handles(b: Option<Rect>, shape: i32) -> fp_model::FillHandles {
+/// Vorgabegriffe eines neuen Verlaufs wie im Original (PAR 18/03, 18/07): senkrecht nach unten
+/// (Winkel 270°); lineare Arten von der Ober- zur Unterkante, die übrigen von der Mitte zur
+/// Unterkante; die zweite Achse steht senkrecht dazu.
+pub fn default_handles(b: Option<Rect>, shape: i32) -> fp_model::FillHandles {
     let r = b.unwrap_or(Rect::new(0.0, 0.0, 100.0, 100.0));
     let cy = (r.top + r.bottom) / 2.0;
     let cx = (r.left + r.right) / 2.0;
-    let (start, end) = if shape == 2 || shape == 5 || shape == 12 || shape == 14 { (Point::new(r.left, cy), Point::new(r.right, cy)) } else { (Point::new(cx, cy), Point::new(r.right, cy)) };
+    let (start, end) = if shape == 2 || shape == 5 || shape == 12 || shape == 14 { (Point::new(cx, r.top), Point::new(cx, r.bottom)) } else { (Point::new(cx, cy), Point::new(cx, r.bottom)) };
     let second = Point::new(start.x - (end.y - start.y), start.y + (end.x - start.x));
     fp_model::FillHandles { valid: true, start, end, second }
 }
 
-fn set_handles(e: &mut Element, h: fp_model::FillHandles) {
+/// Griffe setzen: `force` immer (Umschalten auf Verlauf), sonst nur ungültige bzw. entartete.
+fn set_handles(e: &mut Element, h: fp_model::FillHandles, force: bool) {
     match &mut e.kind {
         ElementKind::Path(pe) => {
-            if !pe.fill_handles.valid {
+            if force || degenerate(&pe.fill_handles) {
                 pe.fill_handles = h;
             }
         }
         ElementKind::Text(t) => {
-            if !t.fill_handles.valid {
+            if force || degenerate(&t.fill_handles) {
                 t.fill_handles = h;
             }
         }
         ElementKind::Group(g) => {
             for c in &mut g.children {
-                set_handles(Element::edit(c), h);
+                set_handles(Element::edit(c), h, force);
+            }
+        }
+        _ => {}
+    }
+}
+
+/// Griffe eines Elements (erstes Kind einer Gruppe).
+pub fn handles_of(e: &Element) -> Option<fp_model::FillHandles> {
+    match &e.kind {
+        ElementKind::Path(pe) => Some(pe.fill_handles),
+        ElementKind::Text(t) => Some(t.fill_handles),
+        ElementKind::Group(g) => g.children.iter().find_map(|c| handles_of(c)),
+        _ => None,
+    }
+}
+
+/// Dreht die Griffe eines Elements (und der Kinder einer Gruppe) auf den Winkel `deg`.
+fn rotate_element_handles(e: &mut Element, deg: f64) {
+    match &mut e.kind {
+        ElementKind::Path(pe) => rotate_handles(&mut pe.fill_handles, deg),
+        ElementKind::Text(t) => rotate_handles(&mut t.fill_handles, deg),
+        ElementKind::Group(g) => {
+            for c in &mut g.children {
+                rotate_element_handles(Element::edit(c), deg);
             }
         }
         _ => {}
@@ -863,6 +949,23 @@ pub fn tool_brush_from(new_stroke: Option<&Value>, new_brush: Option<&Value>) ->
     b
 }
 
+/// Aktuelle Breite und Höhe einer Rechteck-Grundform in Dokumentpixeln (Rechteck durch die Matrix).
+pub fn primitive_size(pr: &fp_model::RectPrimitive) -> (f32, f32) {
+    let m = pr.transform;
+    let r = pr.rect;
+    let tl = m.apply(Point::new(r.left, r.top));
+    let tr = m.apply(Point::new(r.right, r.top));
+    let bl = m.apply(Point::new(r.left, r.bottom));
+    let d = |a: Point, b: Point| ((b.x - a.x).powi(2) + (b.y - a.y).powi(2)).sqrt();
+    (d(tl, tr), d(tl, bl))
+}
+
+/// Rundung einer Rechteck-Grundform in Pixeln (halbe kürzere Seite × Anteil).
+pub fn primitive_roundness_px(pr: &fp_model::RectPrimitive) -> f32 {
+    let (w, h) = primitive_size(pr);
+    pr.roundness * w.min(h) / 2.0
+}
+
 // ---------------------------------------------------------------------- Effekte
 
 /// Effektliste eines Elements setzen (Rechteck-Grundformen: Kopie in `PRIv/EFLv`, Befund fp-render).
@@ -1058,10 +1161,11 @@ pub fn register(r: &mut CommandRegistry) {
 
     // Füllung (Teilfeld 14011, Fülltextur 14013, Verlaufs-Popup 5980)
     r.add(
-        ids(cmd("pi.fill").label("Füllung ändern").requires(DOC))
-            .opt("category", ParamKind::Enum { values: ["none", "solid", "gradient", "webDither"].iter().map(|s| s.to_string()).collect() }, "Füllart")
+        ids(cmd("pi.fill").label("Füllen").requires(DOC))
+            .opt("category", ParamKind::Enum { values: ["none", "solid", "gradient", "pattern", "webDither"].iter().map(|s| s.to_string()).collect() }, "Füllart (pattern: Vorgabemuster „Cotton“, wenn noch kein Muster)")
             .opt("color", ParamKind::Color, "Füllfarbe")
-            .opt("shape", ParamKind::Integer { min: Some(2), max: Some(17) }, "Verlaufsform (FSHi)")
+            .opt("shape", ParamKind::Integer { min: Some(2), max: Some(17) }, "Verlaufsform (FSHi; 17 = Konturverlauf)")
+            .opt("angle", ParamKind::Number { min: Some(-360.0), max: Some(720.0) }, "Winkel des Verlaufs in Grad (0 = nach rechts, 270 = nach unten)")
             .opt("stops", ParamKind::Json, "Farbstopps [[Position 0..1, \"#rrggbbaa\"], …]")
             .opt("opacityStops", ParamKind::Json, "Deckkraftstopps [[Position, \"#ffffffaa\"], …]")
             .opt("reverse", ParamKind::Bool, "Verlauf umkehren")
@@ -1074,13 +1178,27 @@ pub fn register(r: &mut CommandRegistry) {
             .opt("pattern", ParamKind::String, "Musterfüllung nach Name (Datei aus den Musterordnern)")
             .run(|s, p| {
                 let cat = p.opt_str("category")?;
-                // Muster nur per Name: Datei aus den Musterordnern laden (`crate::resources`)
-                let pattern = match p.opt_str("pattern")? {
-                    Some(n) if !n.is_empty() => Some(crate::resources::load_pattern(&n).ok_or_else(|| EngineError::InvalidParams { name: p.command.clone(), message: fp_i18n::tr!("err-not-found", what = n.as_str()) })?),
+                // Muster nur per Name: Datei aus den Musterordnern laden (`crate::resources`);
+                // „Muster“ ohne Namen = Vorgabemuster des Originals (nur, wenn noch kein Muster da ist)
+                let pat_name = match p.opt_str("pattern")? {
+                    Some(n) if !n.is_empty() => Some(n),
+                    _ if cat.as_deref() == Some("pattern") => Some(DEFAULT_PATTERN.to_string()),
                     _ => None,
                 };
+                let pattern = match pat_name {
+                    // „Andere…“ als Werkzeugvorgabe: voller Pfad einer Bilddatei
+                    Some(n) if std::path::Path::new(&n).is_absolute() => {
+                        let path = std::path::PathBuf::from(&n);
+                        let stem = path.file_stem().map(|s| s.to_string_lossy().to_string()).unwrap_or_default();
+                        Some(crate::resources::pattern_from_file(&path, &stem).ok_or_else(|| EngineError::InvalidParams { name: p.command.clone(), message: fp_i18n::tr!("err-not-found", what = n.as_str()) })?)
+                    }
+                    Some(n) => Some(crate::resources::load_pattern(&n).ok_or_else(|| EngineError::InvalidParams { name: p.command.clone(), message: fp_i18n::tr!("err-not-found", what = n.as_str()) })?),
+                    None => None,
+                };
+                let keep_pattern = cat.as_deref() == Some("pattern") && p.opt_str("pattern")?.is_none_or(|n| n.is_empty());
                 let color = p.opt_color("color")?;
                 let shape = p.opt_i64("shape")?.map(|v| v as i32);
+                let angle = p.opt_f64("angle")?;
                 let stops = parse_stops(p.get("stops"));
                 let ostops = parse_stops(p.get("opacityStops"));
                 let reverse = p.opt_bool("reverse")?.unwrap_or(false);
@@ -1091,9 +1209,10 @@ pub fn register(r: &mut CommandRegistry) {
                 let tex_tr = p.opt_bool("textureTransparent")?;
                 let dither = p.opt_bool("dither")?;
                 let fallback_fill = s.tools.fill_color;
-                let fallback_stroke = s.tools.stroke_color;
                 edit_each(s, p, |e, bounds| {
-                    let mut need_handles = None;
+                    let before = docops::path_attrs_of(e).map(|a| fill_kind(a.fill.as_ref())).unwrap_or(0);
+                    // „Muster“ an einer Musterfüllung: Muster behalten (nur das Popup öffnet sich)
+                    let pattern = if keep_pattern && before == 3 { None } else { pattern.clone() };
                     docops::edit_path_attrs(e, &|a| {
                         match cat.as_deref() {
                             Some("none") => {
@@ -1127,13 +1246,15 @@ pub fn register(r: &mut CommandRegistry) {
                                     let mut f = a.fill.clone().unwrap_or_else(Fill::solid);
                                     let sh = shape.unwrap_or(2);
                                     let base = if a.fill.is_some() { a.fill_color } else { fallback_fill };
-                                    let other = if fallback_stroke == base { Argb(0xffff_ffff) } else { fallback_stroke };
-                                    let g = make_gradient(sh, &[(0.0, Argb(base.0 | 0xff00_0000)), (1.0, Argb(other.0 | 0xff00_0000))], None);
+                                    // wie im Original: Weiß → Füllfarbe (bei weißer Füllfarbe Weiß → Schwarz)
+                                    let base = Argb(base.0 | 0xff00_0000);
+                                    let end = if base == Argb(0xffff_ffff) { Argb(0xff00_0000) } else { base };
+                                    let g = make_gradient(sh, &[(0.0, Argb(0xffff_ffff)), (1.0, end)], None);
                                     f.category = g.category.clone();
                                     f.name = g.name.clone();
                                     f.user_name = Some(g.name.clone());
-                                    f.shape = sh;
-                                    f.shape_ext = 0;
+                                    set_shape_id(&mut f, sh);
+                                    f.pattern = None;
                                     f.gradient = Some(g);
                                     a.fill = Some(f);
                                 }
@@ -1161,7 +1282,7 @@ pub fn register(r: &mut CommandRegistry) {
                         if let Some(sh) = shape
                             && f.gradient.is_some()
                         {
-                            f.shape = sh;
+                            set_shape_id(f, sh);
                             if let Some((_, _, c, n)) = GRADIENT_SHAPES.iter().find(|g| g.1 == sh) {
                                 f.category = (*c).into();
                                 f.name = (*n).into();
@@ -1203,8 +1324,15 @@ pub fn register(r: &mut CommandRegistry) {
                         }
                         if let Some(ed) = edge {
                             f.edge = ed;
+                            // Hart/Anti-Alias: die Breite der weichen Kante gilt nicht mehr (PAR 18/11;
+                            // das Original setzt sie beim Wechsel zurück)
+                            if ed != 2 {
+                                f.feather = 0;
+                            }
                         }
-                        if let Some(fe) = feather {
+                        if let Some(fe) = feather
+                            && edge.is_none_or(|ed| ed == 2)
+                        {
                             f.feather = fe;
                             if fe > 0 && edge.is_none() {
                                 f.edge = 2;
@@ -1224,11 +1352,19 @@ pub fn register(r: &mut CommandRegistry) {
                             f.transparent_dither = Some(tt);
                         }
                     });
-                    if cat.as_deref() == Some("gradient") || shape.is_some() {
-                        need_handles = Some(default_handles(bounds, shape.unwrap_or(2)));
+                    let after = docops::path_attrs_of(e).map(|a| fill_kind(a.fill.as_ref())).unwrap_or(0);
+                    if after == 2 || after == 3 {
+                        // neu auf Verlauf/Muster umgestellt: Vorgabegriffe des Originals; sonst nur
+                        // ungültige bzw. entartete Griffe ersetzen (Objekte aus Dateien, PAR 18/03)
+                        let force = after != before;
+                        let sh = docops::path_attrs_of(e).and_then(|a| a.fill.as_ref().map(shape_id)).unwrap_or(2);
+                        let h = if after == 3 { bounds.map(fp_model::new::default_fill_handles).unwrap_or_else(|| default_handles(None, 2)) } else { default_handles(bounds, sh) };
+                        set_handles(e, h, force);
                     }
-                    if let Some(h) = need_handles {
-                        set_handles(e, h);
+                    if let Some(deg) = angle
+                        && (after == 2 || after == 3)
+                    {
+                        rotate_element_handles(e, deg.rem_euclid(360.0));
                     }
                 })
             }),
@@ -1471,7 +1607,9 @@ pub fn register(r: &mut CommandRegistry) {
                 edit_each(s, p, |e, _| {
                     let ElementKind::Path(pe) = &mut e.kind else { return };
                     let Some(pr) = pe.primitive.as_mut() else { return };
-                    let (w, h) = (pr.rect.width().abs(), pr.rect.height().abs());
+                    // Pixel beziehen sich auf die aktuelle Größe (nach B/H-Änderungen steckt die
+                    // Skalierung in der Matrix, PAR 17/05)
+                    let (w, h) = primitive_size(pr);
                     let half = (w.min(h) / 2.0).max(1e-6);
                     let frac = if px { (v as f32 / half).clamp(0.0, 1.0) } else { (v as f32 / 100.0).clamp(0.0, 1.0) };
                     pr.roundness = frac;

@@ -527,6 +527,16 @@ pub fn element_frame_bounds(doc: &Document, e: &Element) -> Option<Rect> {
 pub fn element_pixel_rect(doc: &Document, e: &Element) -> Option<Rect> {
     match &e.kind {
         ElementKind::Bitmap(b) => b.image.visible_bounds().map(|r| Rect::new(r.left.floor(), r.top.floor(), r.right.ceil(), r.bottom.ceil())),
+        // Pfade: mit dem Strich wie im Original (mittig + halbe, außen + ganze Pinselstärke; innen
+        // nichts, PAR 17/08)
+        ElementKind::Path(p) => {
+            let grow = match (&p.attrs.brush, p.stroke_placement) {
+                (Some(b), 1) => b.diameter.max(0) as f32 / 2.0,
+                (Some(b), 2) => b.diameter.max(0) as f32,
+                _ => 0.0,
+            };
+            element_bounds(doc, e).map(|r| Rect::new((r.left - grow).floor(), (r.top - grow).floor(), (r.right + grow).ceil(), (r.bottom + grow).ceil()))
+        }
         _ => element_bounds(doc, e).map(|r| Rect::new(r.left.floor(), r.top.floor(), r.right.ceil(), r.bottom.ceil())),
     }
 }

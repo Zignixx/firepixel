@@ -88,20 +88,21 @@ fn fill_json(f: &fp_model::Fill) -> Value {
         "fc_Radial" => "radial",
         "fc_Conical" => "conical",
         "fc_Satin" => "satin",
-        "fc_Starburst" => "starburst",
+        "fc_Starburst" | "fc_Pinch" => "starburst",
         "fc_Bars" => "bars",
-        "fc_Ripples" => "ripples",
+        "fc_Ripples" | "fc_Ripple" => "ripples",
         "fc_Waves" => "waves",
         "fc_Elliptical" => "elliptical",
         "fc_Rectangular" => "rectangular",
-        "fc_ContourGradient" => "contour",
+        "fc_Folds" => "folds",
+        "fc_ContourGradient" | "fc_ContourGrad" => "contour",
         "fc_Pattern" => "pattern",
         "fc_WebDither" => "web dither",
         _ => "solid",
     };
+    // wie das Original: eine weiche Kante meldet „antialiased“ mit `feather` > 0 (PAR 18/11)
     let edge = match f.edge {
         0 => "hard",
-        2 => "feathered",
         _ => "antialiased",
     };
     let gradient = f.gradient.as_ref().map(|g| {
@@ -538,8 +539,13 @@ fn element_get(cls: &str, name: &str, doc: DocId, id: ElementId, ctx: &mut Conte
             _ => 0.0,
         }),
         "textureOffset" => conv::point_js(0.0, 0.0, ctx).map_err(jserr)?,
+        // Einheit px: Rundung in Pixeln der aktuellen Größe, `mode` „exact“ (wie das Original, PAR 17/05)
         "roundness" => conv::n(match &e.kind {
-            ElementKind::Path(p) => p.primitive.as_ref().map(|r| r6(r.roundness as f64)).unwrap_or(0.0),
+            ElementKind::Path(p) => p
+                .primitive
+                .as_ref()
+                .map(|r| if r.roundness_pixels == Some(true) { r6(fp_engine::commands::panel::primitive_roundness_px(r) as f64) } else { r6(r.roundness as f64) })
+                .unwrap_or(0.0),
             _ => 0.0,
         }),
         "originalSides" => match &e.kind {
@@ -552,7 +558,10 @@ fn element_get(cls: &str, name: &str, doc: DocId, id: ElementId, ctx: &mut Conte
             },
             _ => JsValue::null(),
         },
-        "mode" => conv::s("percentage"),
+        "mode" => conv::s(match &e.kind {
+            ElementKind::Path(p) if p.primitive.as_ref().is_some_and(|r| r.roundness_pixels == Some(true)) => "exact",
+            _ => "percentage",
+        }),
         "transform" => {
             let m = match &e.kind {
                 ElementKind::Instance(i) => Some(i.transform),
@@ -1144,12 +1153,19 @@ fn element_set(cls: &str, name: &str, doc: DocId, id: ElementId, a: Arg, raw: &J
                 }
             })
         }
-        "roundness" => exec(Some(doc), "pi.roundness", json!({"ids": [id.0], "value": a.f64().max(0.0)})).map(|_| ()),
+        // wie das Original: Anteil 0…1 (Einheit %) bzw. Pixel (Einheit px, `mode` „exact“)
+        "roundness" => {
+            let e = element(doc, id)?;
+            let px = matches!(&e.kind, ElementKind::Path(p) if p.primitive.as_ref().is_some_and(|r| r.roundness_pixels == Some(true)));
+            let v = a.f64().max(0.0);
+            exec(Some(doc), "pi.roundness", json!({"ids": [id.0], "value": if px { v } else { v * 100.0 }, "pixels": px})).map(|_| ())
+        }
         "mode" => {
             let px = a.str().unwrap_or_default().to_lowercase().contains("pixel");
             let e = element(doc, id)?;
+            // gleiche Rundung, nur die Einheit wechselt
             let r = match &e.kind {
-                ElementKind::Path(p) => p.primitive.as_ref().map(|pr| pr.roundness),
+                ElementKind::Path(p) => p.primitive.as_ref().map(|pr| if px { fp_engine::commands::panel::primitive_roundness_px(pr) } else { pr.roundness * 100.0 }),
                 _ => None,
             };
             match r {

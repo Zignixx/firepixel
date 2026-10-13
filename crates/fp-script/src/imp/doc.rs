@@ -1182,7 +1182,21 @@ pub(super) fn get(doc: DocId, name: &str, ctx: &mut Context) -> FwResult<JsValue
             conv::object(vec![("fill", fill), ("fillColor", conv::s(&fc)), ("brushColor", conv::s(&sc)), ("brush", JsValue::null())], ctx).map_err(jserr)?
         }
         "exportOptions" | "exportSettings" | "exportFormatOptions" => {
-            let v = with_state(|s| s.export_options.get(&doc.0).cloned())?.unwrap_or_else(|| json!({"exportFormat": "PNG", "colorMode": "32 bit", "jpegQuality": 80}));
+            // folgt den Exporteinstellungen der Seite (Exportformat im Dokument-Inspektor,
+            // Optimieren-Bedienfeld; PAR 16/08); per Skript gesetzte Werte gelten, solange das
+            // Format dazu passt
+            // wie `fp_export::doc_export::page_settings`: Exporteinstellungen der Seite (ältere Dateien:
+            // `legacy_export` zuerst)
+            let page = with_state(|s| s.session.document(doc).and_then(|d| d.doc.pages.get(d.page).map(|p| p.legacy_export.as_ref().or(p.root.export.as_ref()).map(|e| (**e).clone()))))?.flatten();
+            let mut v = export_options_json(page.as_ref());
+            if let Some(Value::Object(set)) = with_state(|s| s.export_options.get(&doc.0).cloned())?
+                && set.get("exportFormat").is_none_or(|f| Some(f) == v.get("exportFormat"))
+                && let Value::Object(m) = &mut v
+            {
+                for (k, x) in set {
+                    m.insert(k, x);
+                }
+            }
             let o = conv::json_to_js(&v, ctx).map_err(jserr)?;
             // ExportOptions.loadColorPalette(url) / saveColorPalette(url): Palette des Optimieren-Bedienfelds
             if let Some(obj) = o.as_object() {
@@ -1251,6 +1265,53 @@ pub(super) fn set(doc: DocId, name: &str, a: Arg, raw: &JsValue, ctx: &mut Conte
         | "lastExportDirectory" | "onionSkinBefore" | "onionSkinAfter" | "frameLoopingCount" | "backgroundUrl" | "VectorOperation" | "pngText" => Ok(()),
         _ => super::doc2::set(doc, name, a, ctx),
     }
+}
+
+/// `dom.exportOptions` aus den Exporteinstellungen der Seite (ohne Einstellungen: PNG 32 Bit wie
+/// ein neues Dokument). `name` ist der Name der eingebauten Vorgabe, wenn eine passt.
+pub(super) fn export_options_json(e: Option<&fp_model::ExportSettings>) -> Value {
+    let Some(e) = e else {
+        return json!({"exportFormat": "PNG", "colorMode": "32 bit", "jpegQuality": 80, "numEntriesRequested": 0, "webSnapAdaptive": false, "name": "PNG32"});
+    };
+    let format = match e.format {
+        0 => "GIF",
+        1 => "JPEG",
+        2 => "PNG",
+        4 => "Animated GIF",
+        _ => "Custom",
+    };
+    let mode = match e.color_mode {
+        0 => "indexed",
+        1 => "24 bit",
+        _ => "32 bit",
+    };
+    let palette = match e.palette_mode {
+        1 => "adaptive",
+        2 => "uniform",
+        3 => "grayscale",
+        4 => "macintosh",
+        5 => "windows",
+        6 => "exact",
+        7 => "web216",
+        _ => "custom",
+    };
+    let gif = |n: i32| e.color_mode == 0 && e.entries_requested == n;
+    let name = match (e.format, e.color_mode) {
+        (2, 2) => "PNG32",
+        (1, _) if e.jpeg_quality >= 80 => "JPEG - Höhere Qualität",
+        (1, _) => "JPEG - Kleinere Datei",
+        (0, _) if e.palette_mode == 7 => "GIF Web 216",
+        (0, _) if e.palette_mode == 1 && e.websnap_adaptive && gif(256) => "GIF WebSnap 256",
+        (0, _) if e.palette_mode == 1 && e.websnap_adaptive && gif(128) => "GIF WebSnap 128",
+        (0, _) if e.palette_mode == 1 && !e.websnap_adaptive && gif(256) => "GIF Adaptiv 256",
+        (4, _) if e.palette_mode == 1 && e.websnap_adaptive && gif(128) => "Animiertes GIF WebSnap 128",
+        _ => "",
+    };
+    json!({
+        "exportFormat": format, "colorMode": mode, "paletteMode": palette, "numEntriesRequested": e.entries_requested,
+        "webSnapAdaptive": e.websnap_adaptive, "webSnapTolerance": e.websnap_tolerance, "jpegQuality": e.jpeg_quality,
+        "lossyGifAmount": e.lossy, "interlacedGIF": e.interlaced, "name": name,
+    })
 }
 
 /// Element-Wrapper zur ID (für Rückgaben).

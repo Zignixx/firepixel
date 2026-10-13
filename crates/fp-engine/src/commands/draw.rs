@@ -565,7 +565,21 @@ pub(super) fn register(r: &mut CommandRegistry) {
                     let y = p.f64_or("y", b.top as f64)? as f32;
                     let w = p.f64_or("width", b.width() as f64)? as f32;
                     let h = p.f64_or("height", b.height() as f64)? as f32;
-                    super::modify::transform_selection(s, docops::rect_to_rect(b, Rect::new(x, y, x + w, y + h)))
+                    let out = super::modify::transform_selection(s, docops::rect_to_rect(b, Rect::new(x, y, x + w, y + h)))?;
+                    // Strich mitskalieren wie im Original („Attribute skalieren“, Vorgabe ein; Faktor
+                    // √(sx·sy), z. B. 8 px bei doppelter Breite → 11 px, PAR 17/16)
+                    let (sx, sy) = (if b.width() > 0.0 { w / b.width() } else { 1.0 }, if b.height() > 0.0 { h / b.height() } else { 1.0 });
+                    let f = (sx * sy).abs().sqrt();
+                    if (f - 1.0).abs() > 1e-6 && s.prefs.get_bool("Firepixel_InfoScaleAttributes", true) {
+                        let d = s.doc_mut()?;
+                        let ids = d.selection.elements.clone();
+                        let page = d.page;
+                        let doc = Arc::make_mut(&mut d.doc);
+                        for id in ids {
+                            docops::edit_by_id(doc, page, id, |e| scale_stroke_width(e, f));
+                        }
+                    }
+                    Ok(out)
                 })
             }),
     );
@@ -1048,4 +1062,14 @@ fn common_edit(s: &mut Session, p: &Params, f: impl Fn(&mut Element)) -> Result<
         }
         Ok(CommandOutput::doc())
     })
+}
+
+/// Pinselstärke eines Elements (und der Kinder einer Gruppe) mit dem Faktor `f` skalieren
+/// (gerundet, mindestens 1 px; „Attribute skalieren“ beim Ändern von B/H, PAR 17/16).
+pub(crate) fn scale_stroke_width(e: &mut Element, f: f32) {
+    docops::edit_path_attrs(e, &|a| {
+        if let Some(b) = a.brush.as_mut() {
+            b.diameter = ((b.diameter as f32) * f).round().max(1.0) as i32;
+        }
+    });
 }

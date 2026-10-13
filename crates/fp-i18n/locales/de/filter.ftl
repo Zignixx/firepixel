@@ -69,11 +69,11 @@ effect-photoshop-live = Photoshop-Live-Effekte
 effect-generic = Effekt
 
 ## Live-Filter (Effekte): Gruppen im Menü „+“
-effect-group-bevel = Abschrägung und Prägung
-effect-group-adjust-color = Anpassen der Farbe
+effect-group-bevel = Abgeflachte Kante und Relief
+effect-group-adjust-color = Farbe anpassen
 effect-group-other = Andere
 effect-group-noise = Rauschen
-effect-group-sharpen = Schärfen
+effect-group-sharpen = Scharfzeichnen
 effect-group-shadow-glow = Schatten und Glühen
 effect-group-blur = Weichzeichnen
 
