@@ -806,7 +806,10 @@ fn batch_studio(st: &mut AppState) {
     fp_ui::batch::open_with_files(st, &paths);
     if let Some(s) = fp_ui::batch::studio_mut(st) {
         fp_ui::batch::recipe::add_step(s, "file.copyOnly");
-        s.open_card = Some(fp_ui::batch::CardId::Output);
+        // BATCH-11a: Formular mit Schieber/Feld/Einheit, Farbe, Schaltern und Liste prüfen
+        fp_ui::batch::recipe::add_step(s, "overlay.text");
+        s.mode = fp_ui::batch::Mode::Pro;
+        s.open_card = Some(fp_ui::batch::CardId::Step(1));
     }
 }
 

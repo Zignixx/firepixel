@@ -118,6 +118,7 @@ pub fn show(ui: &mut Ui, st: &mut AppState, s: &mut Studio, rect: Rect, now: f64
     let enabled = !running;
     let mut acts: Vec<Act> = Vec::new();
     let mut card_rects: Vec<Rect> = Vec::new();
+    let app: &AppState = st; // BATCH-11a: Farbwähler des Originals im Formular
     let mut child = ui.new_child(egui::UiBuilder::new().max_rect(inner).layout(egui::Layout::top_down(egui::Align::Min)));
     child.set_clip_rect(inner.intersect(ui.clip_rect()));
     egui::ScrollArea::vertical().id_salt("fp-batch-recipe-scroll").auto_shrink([false, false]).show(&mut child, |ui| {
@@ -131,7 +132,7 @@ pub fn show(ui: &mut Ui, st: &mut AppState, s: &mut Studio, rect: Rect, now: f64
             ui_kit::empty_state_at(ui.painter(), r, KitIcon::EmptyTray, &title, Some(&hint), &theme);
         }
         for i in 0..n {
-            let r = step_card(ui, s, i, w, &issues, &files, enabled, &mut acts, &reg);
+            let r = step_card(ui, s, i, w, &issues, &files, enabled, &mut acts, &reg, app);
             card_rects.push(r);
         }
         // „+ Schritt hinzufügen“
@@ -146,8 +147,8 @@ pub fn show(ui: &mut Ui, st: &mut AppState, s: &mut Studio, rect: Rect, now: f64
         ui.add_space(sp::XS);
         let (cap, _) = ui.allocate_exact_size(vec2(w, 18.0), Sense::hover());
         ui_kit::section_at(ui.painter(), cap, &t("batch-ui-end-section"), &theme);
-        rename_card(ui, s, w, &files, enabled);
-        output_card(ui, s, w, &files, enabled);
+        rename_card(ui, s, w, &files, enabled, app);
+        output_card(ui, s, w, &files, enabled, app);
     });
     // Einfügelinie beim Ziehen
     if let Some(d) = s.drag {
@@ -166,6 +167,17 @@ pub fn show(ui: &mut Ui, st: &mut AppState, s: &mut Studio, rect: Rect, now: f64
     for a in acts {
         apply(st, s, a);
     }
+}
+
+/// Namen der Parameter, die sich zwischen `a` und `b` unterscheiden (sortiert) – Schlüssel der Geste
+/// für den Rezept-Verlauf: Schieber A ziehen, dann Feld B tippen = zwei Rückgängig-Schritte.
+pub fn changed_names(a: &Value, b: &Value) -> Vec<String> {
+    let empty = serde_json::Map::new();
+    let (ao, bo) = (a.as_object().unwrap_or(&empty), b.as_object().unwrap_or(&empty));
+    let mut v: Vec<String> = ao.keys().chain(bo.keys()).filter(|k| ao.get(*k) != bo.get(*k)).cloned().collect();
+    v.sort();
+    v.dedup();
+    v
 }
 
 /// Einfügeposition beim Ziehen (Index nach dem Verschieben).
@@ -256,7 +268,7 @@ fn card_head(ui: &mut Ui, r: Rect, id: Id, col: egui::Color32, icon: RowIcon, ti
 }
 
 #[allow(clippy::too_many_arguments)]
-fn step_card(ui: &mut Ui, s: &mut Studio, i: usize, w: f32, issues: &[fp_batch::Issue], files: &[ItemInfo], enabled: bool, acts: &mut Vec<Act>, reg: &StepRegistry) -> Rect {
+fn step_card(ui: &mut Ui, s: &mut Studio, i: usize, w: f32, issues: &[fp_batch::Issue], files: &[ItemInfo], enabled: bool, acts: &mut Vec<Act>, reg: &StepRegistry, app: &AppState) -> Rect {
     let theme = Theme::current(ui.ctx());
     let c = &theme.colors;
     let cfg = s.recipe.steps[i].clone();
@@ -354,7 +366,7 @@ fn step_card(ui: &mut Ui, s: &mut Studio, i: usize, w: f32, issues: &[fp_batch::
                 }
                 return;
             }
-            let mut ctx = CardCtx { step_id: &cfg.id, index: Some(i), params: &mut params_v, defs: &defs, mode: s.mode, show_more: &mut show_more, files, recipe: &recipe_snapshot, enabled, pick_path: None };
+            let mut ctx = CardCtx { step_id: &cfg.id, index: Some(i), params: &mut params_v, defs: &defs, mode: s.mode, show_more: &mut show_more, files, recipe: &recipe_snapshot, enabled, pick_path: None, app: Some(app) };
             changed = match params::card_body(&cfg.id) {
                 Some(f) => f(ui, &mut ctx),
                 None => params::generic_body(ui, &mut ctx),
@@ -376,7 +388,8 @@ fn step_card(ui: &mut Ui, s: &mut Studio, i: usize, w: f32, issues: &[fp_batch::
         bottom = resp.response.rect.bottom().max(body_top + sp::S);
         s.show_more = show_more;
         if changed && enabled {
-            let key = format!("step{i}");
+            // ein Rückgängig-Schritt je Geste und Parameter (BATCH-11a)
+            let key = format!("step{i}:{}", changed_names(&cfg.params, &params_v).join(","));
             s.edit(&key, |r| {
                 if let Some(st) = r.steps.get_mut(i) {
                     st.params = params_v;
@@ -449,7 +462,7 @@ fn end_finish(ui: &mut Ui, head: Rect, bottom: f32, bg: egui::layers::ShapeIdx, 
     ui.painter().set(bg, Shape::Vec(vec![Shape::rect_filled(card, cr, fill), Shape::rect_stroke(card, cr, Stroke::new(1.0, border), StrokeKind::Inside), Shape::rect_filled(stripe, CornerRadius::same(2), col)]));
 }
 
-fn rename_card(ui: &mut Ui, s: &mut Studio, w: f32, files: &[ItemInfo], enabled: bool) {
+fn rename_card(ui: &mut Ui, s: &mut Studio, w: f32, files: &[ItemInfo], enabled: bool, app: &AppState) {
     let ex = example_name(&s.recipe, files.first());
     let summary = match &ex {
         Some((a, b)) if a == b => fp_i18n::tr!("batch-ui-rename-same", name = b.clone()),
@@ -471,7 +484,7 @@ fn rename_card(ui: &mut Ui, s: &mut Studio, w: f32, files: &[ItemInfo], enabled:
             let changed = match params::card_body(fp_batch::steps::files::RENAME) {
                 Some(f) => {
                     let mut v = serde_json::to_value(&spec).unwrap_or(Value::Null);
-                    let mut ctx = CardCtx { step_id: fp_batch::steps::files::RENAME, index: None, params: &mut v, defs: &[], mode, show_more: &mut show_more, files, recipe: &snapshot, enabled, pick_path: None };
+                    let mut ctx = CardCtx { step_id: fp_batch::steps::files::RENAME, index: None, params: &mut v, defs: &[], mode, show_more: &mut show_more, files, recipe: &snapshot, enabled, pick_path: None, app: Some(app) };
                     let ch = f(ui, &mut ctx);
                     if ch && let Ok(n) = serde_json::from_value::<RenameSpec>(v) {
                         spec = n;
@@ -601,7 +614,7 @@ pub fn output_summary(recipe: &Recipe) -> String {
     }
 }
 
-fn output_card(ui: &mut Ui, s: &mut Studio, w: f32, files: &[ItemInfo], enabled: bool) {
+fn output_card(ui: &mut Ui, s: &mut Studio, w: f32, files: &[ItemInfo], enabled: bool, app: &AppState) {
     let summary = output_summary(&s.recipe);
     let (head, open, bg) = end_head(ui, s, w, CardId::Output, RowIcon::Icon(crate::icons::Icon::Save), &t("batch-ui-end-output"), &summary, enabled);
     let mut bottom = head.bottom();
@@ -618,7 +631,7 @@ fn output_card(ui: &mut Ui, s: &mut Studio, w: f32, files: &[ItemInfo], enabled:
         let resp = ui.scope_builder(egui::UiBuilder::new().max_rect(Rect::from_min_size(pos2(x0, head.bottom()), vec2(bw, 4000.0))).layout(egui::Layout::top_down(egui::Align::Min)), |ui| {
             ui.spacing_mut().item_spacing = vec2(sp::S, sp::XS + 2.0);
             ui.set_width(bw);
-            let mut ctx = CardCtx { step_id: fp_batch::steps::files::OUTPUT, index: None, params: &mut v, defs: &defs, mode, show_more: &mut show_more, files, recipe: &snapshot, enabled, pick_path: None };
+            let mut ctx = CardCtx { step_id: fp_batch::steps::files::OUTPUT, index: None, params: &mut v, defs: &defs, mode, show_more: &mut show_more, files, recipe: &snapshot, enabled, pick_path: None, app: Some(app) };
             let ch = match params::card_body(fp_batch::steps::files::OUTPUT) {
                 Some(f) => f(ui, &mut ctx),
                 None => params::generic_body(ui, &mut ctx),
@@ -629,7 +642,10 @@ fn output_card(ui: &mut Ui, s: &mut Studio, w: f32, files: &[ItemInfo], enabled:
         s.show_more = show_more;
         bottom = resp.response.rect.bottom();
         if resp.inner && enabled {
-            s.edit("output", |r| {
+            let mut old = Value::Object(s.recipe.output.options.clone());
+            old["format"] = json!(s.recipe.output.format);
+            let key = format!("output:{}", changed_names(&old, &v).join(","));
+            s.edit(&key, |r| {
                 if let Some(o) = v.as_object() {
                     for (k, val) in o {
                         if k == "format" {
