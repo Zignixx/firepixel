@@ -362,3 +362,55 @@ fn opacity_slider_stays_in_window() {
     assert!(r.bottom() <= 650.0 && r.top() >= 0.0, "{r:?}");
     assert_eq!(r.height(), 222.0, "volle Höhe, alle Werte erreichbar");
 }
+
+/// CT-2: Nach „Pinselstrich bearbeiten“ (Werkzeugvorgabe, Größe 30) zeigt das Größenfeld des
+/// Inspektors 30 statt der alten 35; Abbrechen lässt 35 stehen.
+#[test]
+fn brush_edit_dialog_updates_inspector_size() {
+    use egui_kittest::kittest::Queryable;
+    let (a, _) = app_with_bitmap([200, 200, 200, 255]);
+    let mut h = harness(a);
+    h.state_mut().state.session.execute("select.none", json!({})).expect("nichts");
+    h.state_mut().state.session.set_tool(ToolId::Brush).expect("Pinsel");
+    h.run_steps(3);
+    let ctx = h.ctx.clone();
+    fp_ui::inspector::obj_quads::edit_tool_attrs(&ctx, |t| t.stroke_width = 35);
+    h.run_steps(2);
+    for (ok, want) in [(false, 35), (true, 30)] {
+        fp_ui::dialogs::brush_edit::open(&mut h.state_mut().state, true);
+        if let Some(d) = h.state_mut().state.dialogs.brush_edit.as_mut() {
+            d.brush.diameter = 30;
+        }
+        h.run_steps(3);
+        let label = if ok { "OK" } else { "Abbrechen" };
+        h.get_all(egui_kittest::kittest::By::new().label(label)).last().unwrap_or_else(|| panic!("{label}")).click();
+        h.run_steps(4);
+        assert!(h.state().state.dialogs.brush_edit.is_none(), "Dialog zu");
+        assert_eq!(fp_ui::inspector::obj_quads::tool_attrs(&ctx).stroke_width, want, "Größenfeld nach {label}");
+    }
+}
+
+/// CT-2: Die Zeile eines Live-Filters im Inspektor und ihr ⓘ (Einstellungen) haben Namen für
+/// die Barrierefreiheit; ein Klick auf ⓘ öffnet weiter die Einstellungen.
+#[test]
+fn live_filter_row_info_has_accessible_name() {
+    use egui_kittest::kittest::Queryable;
+    let mut s = Session::default();
+    s.execute("file.new", json!({"width": 300, "height": 200, "background": "#ffffff"})).expect("Dokument");
+    let v = s.execute("draw.rectangle", json!({"rect": [20, 20, 120, 80], "fillColor": "#3a7bd5"})).expect("Rechteck");
+    let r = v.value["id"].as_u64().expect("id");
+    s.execute("select.set", json!({"ids": [r]})).expect("Auswahl");
+    s.execute("element.addEffect", json!({"effect": "glow"})).expect("Glühen");
+    let ctx = egui::Context::default();
+    let mut a = FirepixelApp::with_session(&ctx, s, UiSettings::default(), false);
+    a.state.sync_render = true;
+    let mut h = harness(a);
+    h.run_steps(4);
+    let name = fp_i18n::t("pi-fx-edit");
+    let info = h.get_by_label(&name).rect();
+    assert!(h.query_all(egui_kittest::kittest::By::new().role(egui::accesskit::Role::Button).label(&name)).next().is_some(), "ⓘ als Knopf mit Namen");
+    assert!(h.state().state.dialogs.form.is_none());
+    click_at(&mut h, info.center());
+    h.run_steps(3);
+    assert!(h.state().state.dialogs.form.is_some(), "Klick auf ⓘ öffnet die Einstellungen");
+}

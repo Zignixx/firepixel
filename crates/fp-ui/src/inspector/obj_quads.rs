@@ -1235,10 +1235,18 @@ pub fn effect_list(ui: &mut Ui, st: &mut AppState, r: Rect) {
         // Einstellungen; Klick darauf bzw. Doppelklick öffnet sie (CT-1a: vorher Zahnrad am rechten
         // Rand, im schmalen Inspektor außerhalb des sichtbaren Bereichs)
         let info = Rect::from_min_size(pos2(cb.right() + 4.0, rr.top() + 2.0), vec2(13.0, 13.0));
+        let label = crate::dialogs::effects::effect_label(fx);
+        // Barrierefreiheit (CT-2): Zeile mit dem Namen des Filters, ⓘ als Knopf „Live-Filter
+        // bearbeiten“ (nur Zeigen/Tooltip; den Klick wertet weiter die Zeile aus)
+        resp.widget_info(|| egui::WidgetInfo::selected(egui::WidgetType::SelectableLabel, true, sel == Some(i), label.as_str()));
         if crate::dialogs::effects::editable(fx) {
             super::glyphs::paint(ui.painter(), info, Glyph::Info, &t, true);
+            let tip = fp_i18n::t("pi-fx-edit");
+            let ir = ui.interact(info, Id::new(("pi-fx-edit", i)), egui::Sense::hover());
+            ir.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, true, tip.as_str()));
+            ir.on_hover_text(tip.as_str());
         }
-        ui.painter().text(pos2(info.right() + 5.0, rr.center().y), Align2::LEFT_CENTER, crate::dialogs::effects::effect_label(fx), t.ui_font(), c.text);
+        ui.painter().text(pos2(info.right() + 5.0, rr.center().y), Align2::LEFT_CENTER, label, t.ui_font(), c.text);
         if resp.clicked() {
             ui.data_mut(|d| d.insert_temp(Id::new(FX_SEL), i));
             if resp.interact_pointer_pos().is_some_and(|p| info.contains(p)) {

@@ -319,6 +319,7 @@ pi-brush-random-squares = Quadrate
 pi-filters = Filter:
 pi-fx-add = Live-Filter hinzufügen oder Vorgabe wählen
 pi-fx-delete = Aktuell ausgewählten Live-Filter löschen
+pi-fx-edit = Live-Filter bearbeiten
 pi-roundness = Rundung:
 pi-pathop-normal = Normal
 pi-pathop-union = Hinzufügen/Vereinigen

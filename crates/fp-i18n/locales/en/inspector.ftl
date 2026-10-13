@@ -322,6 +322,7 @@ pi-brush-random-squares = Squares
 pi-filters = Filters:
 pi-fx-add = Add Live Filters or choose a preset
 pi-fx-delete = Delete the selected Live Filter
+pi-fx-edit = Edit Live Filter
 pi-roundness = Roundness:
 pi-pathop-normal = Normal
 pi-pathop-union = Add/Union

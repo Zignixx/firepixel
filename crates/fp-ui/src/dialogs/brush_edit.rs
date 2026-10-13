@@ -358,6 +358,11 @@ pub fn show(ctx: &egui::Context, st: &mut AppState) {
             if d.changed() {
                 let (cmd, p) = d.invocation();
                 st.run(&cmd, p);
+                // Werkzeugvorgabe: das Größenfeld im Inspektor zeigt die neue Größe (CT-2)
+                if d.tool {
+                    let w = d.effective().diameter.clamp(1, 1000);
+                    crate::inspector::obj_quads::edit_tool_attrs(ctx, |a| a.stroke_width = w);
+                }
             }
         }
         (Some(false), _) | (_, DialogClose::Cancelled) => st.dialogs.brush_edit = None,
