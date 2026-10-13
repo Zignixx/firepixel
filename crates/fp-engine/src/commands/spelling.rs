@@ -52,6 +52,13 @@ pub fn personal_dictionary(s: &Session) -> Option<PathBuf> {
     pref_str(s, "SpellingPersonalDictionary").filter(|p| !p.trim().is_empty()).map(PathBuf::from)
 }
 
+/// Vorgeschlagener Ort des persönlichen Wörterbuchs im Firepixel-Profil
+/// (`%APPDATA%\Firepixel\Dictionaries\Personal.dic`, neben den Wörterbuch-Ordnern der Suche).
+/// Der Dialog zeigt ihn vorbelegt wie das Original (TW-13); erst OK legt die Datei an.
+pub fn default_personal_dictionary() -> Option<PathBuf> {
+    crate::prefs::Preferences::default_path().and_then(|p| p.parent().map(|d| d.join("Dictionaries").join("Personal.dic")))
+}
+
 /// Persönliches Wörterbuch (aus der eingestellten Datei, sonst aus den Voreinstellungen).
 pub fn user_words(s: &Session) -> Vec<String> {
     let text = match personal_dictionary(s) {
@@ -339,7 +346,7 @@ fn setup_json(s: &Session) -> Value {
         "languages": languages(s),
         "available": available_dictionaries(s),
         "dictionaryDir": pref_str(s, "SpellingDictionaryDir"),
-        "personalDictionary": personal_dictionary(s).map(|p| p.to_string_lossy().to_string()),
+        "personalDictionary": personal_dictionary(s).or_else(default_personal_dictionary).map(|p| p.to_string_lossy().to_string()),
         "userWords": user_words(s),
         "ignoreUppercase": pref_bool(s, "SpellingIgnoreUppercase", true),
         "ignoreNumbers": pref_bool(s, "SpellingIgnoreNumbers", true),

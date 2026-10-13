@@ -205,6 +205,7 @@ pub struct HtmlSettings {
     pub background_url: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub background_repeat: Option<i32>,
+    /// `backgroundAttachment` (`CBAi`): 0 fixed, 1 scroll.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub background_attachment: Option<i32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -315,7 +316,8 @@ impl HtmlSettings {
             xhtml: Some(1),
             background_url: Some(String::new()),
             background_repeat: Some(0),
-            background_attachment: Some(0),
+            // `CBAi`: 0 fixed, 1 scroll (re 8 §1.5); neue Dokumente des Originals schreiben 1
+            background_attachment: Some(1),
             page_alignment: Some(0),
             margins: Some([0.5, 0.5, 0.5, 0.5]),
             external_css_for_doc: Some(false),

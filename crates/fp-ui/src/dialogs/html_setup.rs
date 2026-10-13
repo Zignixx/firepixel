@@ -24,6 +24,10 @@ pub const SHIM_CODES: [i32; 3] = [3, 0, 1];
 /// Endungen der Liste „Erweiterung:“ (editierbar).
 const EXTENSIONS: [&str; 11] = [".htm", ".HTM", ".html", ".HTML", ".asp", ".jsp", ".php", ".shtml", ".xhtml", ".cfm", ".XHTML"];
 
+/// Breite der linken Spalte (Feld „HTML-Stil:“) und Abstand zur rechten Spalte (Karte „Allgemein“).
+const COL1_W: f32 = 190.0;
+const COL_GAP: f32 = 18.0;
+
 /// Zustand des Dialogs (eine Arbeitskopie aller drei Karten).
 #[derive(Clone, Debug, PartialEq)]
 pub struct HtmlSetupDialog {
@@ -34,9 +38,11 @@ pub struct HtmlSetupDialog {
     pub comments: bool,
     pub lowercase: bool,
     pub css_popups: bool,
+    /// „CSS in externe Datei schreiben“ (`externalCSS`, grau solange `css_popups` aus ist).
+    pub external_css: bool,
     pub background_url: String,
     pub background_repeat: usize,
-    /// Liste „Anhang:“: 0 fixed, 1 scroll.
+    /// Liste „Anhang:“: 0 fixed, 1 scroll (= Wert von `CBAi`).
     pub attachment: usize,
     pub page_alignment: usize,
     // Tabelle
@@ -81,9 +87,10 @@ impl HtmlSetupDialog {
             comments: hp.comments,
             lowercase: hp.lowercase,
             css_popups: h.css_popups.unwrap_or(true),
+            external_css: h.external_css.unwrap_or(1) != 0,
             background_url: h.background_url.clone().unwrap_or_default(),
             background_repeat: h.background_repeat.unwrap_or(0).clamp(0, 3) as usize,
-            attachment: if h.background_attachment == Some(1) { 0 } else { 1 },
+            attachment: if h.background_attachment == Some(0) { 0 } else { 1 },
             page_alignment: h.page_alignment.unwrap_or(0).clamp(0, 2) as usize,
             shims: idx_of(&SHIM_CODES, h.shim_generation.unwrap_or(1), 2),
             cell_color: format!("#{:06x}", hp.empty_cell_color),
@@ -144,9 +151,10 @@ impl HtmlSetupDialog {
         };
         put("xhtml", self.xhtml != b.xhtml, json!(i32::from(self.xhtml)));
         put("css_popups", self.css_popups != b.css_popups, json!(self.css_popups));
+        put("external_css", self.external_css != b.external_css, json!(i32::from(self.external_css)));
         put("background_url", self.background_url != b.background_url, json!(self.background_url.trim()));
         put("background_repeat", self.background_repeat != b.background_repeat, json!(self.background_repeat));
-        put("background_attachment", self.attachment != b.attachment, json!(if self.attachment == 0 { 1 } else { 0 }));
+        put("background_attachment", self.attachment != b.attachment, json!(self.attachment));
         put("page_alignment", self.page_alignment != b.page_alignment, json!(self.page_alignment));
         put("shim_generation", self.shims != b.shims, json!(SHIM_CODES[self.shims]));
         put("slice_naming", self.slice_naming != b.slice_naming, json!(self.slice_naming.iter().map(|i| SLICE_TOKENS[*i]).collect::<Vec<_>>()));
@@ -242,11 +250,14 @@ pub fn show_dialog(ctx: &egui::Context, d: &mut HtmlSetupDialog, doc_name: &str)
     let d_labels = [l("dlg-hs-slice-names"), l("dlg-hs-frame-names"), l("dlg-hs-alt")];
     let all: Vec<&str> = g_labels.iter().chain(t_labels.iter()).chain(d_labels.iter()).map(|s| s.as_str()).collect();
     let lw = super::max_text_w(ctx, &all).max(110.0).ceil();
+    // rechte Spalte der Karte „Allgemein“: Beschriftungen und Kontrollkästchen
+    let lw2 = super::max_text_w(ctx, &[g_labels[1].as_str(), g_labels[4].as_str()]).ceil();
+    let cw2 = (super::max_text_w(ctx, &[l("dlg-hs-css-popups").as_str(), l("dlg-hs-external-css").as_str()]) + 26.0).max(lw2 + 8.0 + 100.0).ceil();
     let slice_items: Vec<String> = ["none", "doc-name", "slice", "num", "num2", "upper", "lower", "row-col", "underscore", "period", "space", "hyphen"].iter().map(|k| l(&format!("dlg-hs-n-{k}"))).collect();
     let frame1_items: Vec<String> = ["none", "frame-s", "frame-n", "rollover", "abbrev", "underscore", "period", "space", "hyphen", "custom"].iter().map(|k| l(&format!("dlg-hs-f-{k}"))).collect();
     let frame2_items: Vec<String> = ["none", "frame-s", "frame-n", "rollover", "abbrev", "underscore", "custom"].iter().map(|k| l(&format!("dlg-hs-f-{k}"))).collect();
     let nw = super::combo_fit_w(ctx, &refs(&slice_items), 150.0).max(super::combo_fit_w(ctx, &refs(&frame1_items), 150.0));
-    let width = (32.0 + (nw + 8.0) * 3.0).max(32.0 + lw + 8.0 + 330.0).max(560.0).ceil();
+    let width = (32.0 + (nw + 8.0) * 3.0).max(32.0 + lw + 8.0 + 330.0).max(32.0 + lw + 8.0 + COL1_W + COL_GAP + cw2).max(560.0).ceil();
     let mut ans = None;
     let c = dialog_frame(ctx, "fp-html-setup", &t("dlg-md-html-setup"), vec2(width, 430.0), |ui, body| {
         // Startfokus auf OK wie im Original (Enter = OK)
@@ -264,43 +275,52 @@ pub fn show_dialog(ctx: &egui::Context, d: &mut HtmlSetupDialog, doc_name: &str)
         let label = |y: f32| Rect::from_min_size(o + vec2(0.0, y + 1.0), vec2(lw, 20.0));
         let field = |y: f32, w: f32| Rect::from_min_size(o + vec2(lw + 8.0, y), vec2(w, 22.0));
         let fx = o.x + lw + 8.0;
-        let check_w = body.width() - 32.0 - lw - 8.0;
         match d.tab {
             0 => {
+                // zweispaltig wie das Original: links Stil + Kommentare/Kleinbuchstaben,
+                // rechts Endung + die beiden CSS-Schalter
                 let style_items = [l("dlg-hs-style-html"), l("dlg-hs-style-xhtml")];
                 super::fit_label(ui, label(0.0), &g_labels[0], true);
-                if let Some(i) = fields::combo(ui, "hs-style", field(0.0, 220.0), &refs(&style_items), Some(usize::from(d.xhtml)), true) {
+                if let Some(i) = fields::combo(ui, "hs-style", field(0.0, COL1_W), &refs(&style_items), Some(usize::from(d.xhtml)), true) {
                     d.xhtml = i == 1;
                 }
-                super::fit_label(ui, label(28.0), &g_labels[1], true);
+                let x2 = fx + COL1_W + COL_GAP;
+                let label2 = |y: f32| Rect::from_min_size(pos2(x2, o.y + y + 1.0), vec2(lw2, 20.0));
+                let field2 = |y: f32, w: f32| Rect::from_min_size(pos2(x2 + lw2 + 8.0, o.y + y), vec2(w, 22.0));
+                super::fit_label(ui, label2(0.0), &g_labels[1], true);
                 let exts: Vec<String> = EXTENSIONS.iter().map(|s| s.to_string()).collect();
-                if let Some(v) = fields::combo_edit(ui, "hs-ext", field(28.0, 100.0), &d.extension, &exts, true) {
+                if let Some(v) = fields::combo_edit(ui, "hs-ext", field2(0.0, 100.0), &d.extension, &exts, true) {
                     d.extension = v;
                 }
-                let cb = |ui: &mut egui::Ui, id: &str, y: f32, text: &str, v: &mut bool, on: bool| {
-                    if let Some(b) = fields::checkbox(ui, id, Rect::from_min_size(pos2(fx, o.y + y), vec2(check_w, 18.0)), text, *v, on) {
+                let w1 = COL1_W + COL_GAP - 8.0;
+                let w2 = body.right() - 16.0 - x2;
+                let cb = |ui: &mut egui::Ui, id: &str, x: f32, w: f32, y: f32, text: &str, v: &mut bool, on: bool| {
+                    if let Some(b) = fields::checkbox(ui, id, Rect::from_min_size(pos2(x, o.y + y), vec2(w, 18.0)), text, *v, on) {
                         *v = b;
                     }
                 };
-                cb(ui, "hs-comments", 60.0, &l("dlg-hs-comments"), &mut d.comments, true);
-                cb(ui, "hs-lower", 82.0, &l("dlg-hs-lowercase"), &mut d.lowercase, true);
-                cb(ui, "hs-css-popups", 104.0, &l("dlg-hs-css-popups"), &mut d.css_popups, true);
+                cb(ui, "hs-comments", fx, w1, 30.0, &l("dlg-hs-comments"), &mut d.comments, true);
+                cb(ui, "hs-lower", fx, w1, 52.0, &l("dlg-hs-lowercase"), &mut d.lowercase, true);
+                cb(ui, "hs-css-popups", x2, w2, 30.0, &l("dlg-hs-css-popups"), &mut d.css_popups, true);
+                // grau, solange „CSS für Popupmenüs“ aus ist; das Häkchen bleibt stehen (re8 §6.2)
+                let css_on = d.css_popups;
+                cb(ui, "hs-external-css", x2, w2, 52.0, &l("dlg-hs-external-css"), &mut d.external_css, css_on);
                 // Dokumenteigenschaften (CSS der Seite)
-                super::fit_label(ui, Rect::from_min_size(o + vec2(0.0, 138.0), vec2(body.width() - 32.0, 20.0)), &l("dlg-hs-doc-props"), true);
-                super::fit_label(ui, label(164.0), &g_labels[2], true);
-                if let Some(v) = fields::text(ui, "hs-bg-url", field(164.0, 280.0), &d.background_url, true) {
+                super::fit_label(ui, Rect::from_min_size(o + vec2(0.0, 88.0), vec2(body.width() - 32.0, 20.0)), &l("dlg-hs-doc-props"), true);
+                super::fit_label(ui, label(114.0), &g_labels[2], true);
+                if let Some(v) = fields::text(ui, "hs-bg-url", field(114.0, (body.right() - 16.0 - fx).min(COL1_W + COL_GAP + lw2 + 8.0 + 100.0)), &d.background_url, true) {
                     d.background_url = v;
                 }
-                super::fit_label(ui, label(192.0), &g_labels[3], true);
-                if let Some(i) = fields::combo(ui, "hs-repeat", field(192.0, 110.0), &["no-repeat", "repeat", "repeat-x", "repeat-y"], Some(d.background_repeat), true) {
+                super::fit_label(ui, label(142.0), &g_labels[3], true);
+                if let Some(i) = fields::combo(ui, "hs-repeat", field(142.0, 110.0), &["no-repeat", "repeat", "repeat-x", "repeat-y"], Some(d.background_repeat), true) {
                     d.background_repeat = i;
                 }
-                super::fit_label(ui, label(220.0), &g_labels[4], true);
-                if let Some(i) = fields::combo(ui, "hs-attach", field(220.0, 110.0), &["fixed", "scroll"], Some(d.attachment), true) {
+                super::fit_label(ui, label2(142.0), &g_labels[4], true);
+                if let Some(i) = fields::combo(ui, "hs-attach", field2(142.0, 100.0), &["fixed", "scroll"], Some(d.attachment), true) {
                     d.attachment = i;
                 }
-                super::fit_label(ui, label(248.0), &g_labels[5], true);
-                if let Some(i) = fields::combo(ui, "hs-align", field(248.0, 110.0), &["left", "center", "right"], Some(d.page_alignment), true) {
+                super::fit_label(ui, label(176.0), &g_labels[5], true);
+                if let Some(i) = fields::combo(ui, "hs-align", field(176.0, 110.0), &["left", "center", "right"], Some(d.page_alignment), true) {
                     d.page_alignment = i;
                 }
             }

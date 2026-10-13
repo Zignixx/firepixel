@@ -981,6 +981,7 @@ dlg-hs-extension = Extension:
 dlg-hs-comments = Include HTML comments
 dlg-hs-lowercase = Lowercase file name
 dlg-hs-css-popups = Use CSS for popups
+dlg-hs-external-css = Write CSS to external file
 dlg-hs-doc-props = Document properties
 dlg-hs-bg-image = Background image:
 dlg-hs-repeat = Repeat:

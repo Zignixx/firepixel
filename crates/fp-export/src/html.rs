@@ -101,6 +101,9 @@ pub struct HtmlOptions {
     /// CSS-Regeln für `body` (Dokumenteigenschaften: Hintergrundbild, Wiederholen, Anhang,
     /// Seitenausrichtung, re\18 §6.2); leer = keine.
     pub body_css: String,
+    /// „CSS in externe Datei schreiben“ (`externalCSS`, re8 §6.2): Name der CSS-Datei für die
+    /// Stile der CSS-Pop-up-Menüs (im Kopf nur `@import`); leer = Stile im Kopf.
+    pub external_css: String,
 }
 
 /// Inhalt leerer Tabellenzellen (re\18 §6.3 „Inhalt:“).
@@ -146,6 +149,7 @@ impl Default for HtmlOptions {
             empty_cells: EmptyCells::default(),
             default_alt: String::new(),
             body_css: String::new(),
+            external_css: String::new(),
         }
     }
 }
@@ -516,12 +520,19 @@ pub fn write_html(
         support.push((o.arrow.clone(), arrow_gif()));
         if o.css_popups {
             support.push(("fp_css_menu.js".into(), CSS_MENU_RUNTIME.as_bytes().to_vec()));
-            head.push_str("<script type=\"text/javascript\" src=\"fp_css_menu.js\"></script>\n<style type=\"text/css\">\n");
+            head.push_str("<script type=\"text/javascript\" src=\"fp_css_menu.js\"></script>\n");
+            let mut css = String::new();
             for (v, sl, st) in &menu_views {
-                head.push_str(&v.css(*sl, *st, &o.images_dir));
+                css.push_str(&v.css(*sl, *st, &o.images_dir));
                 menus_html.push_str(&v.html(o.xhtml, &format!("{}{}", o.images_dir, o.arrow)));
             }
-            head.push_str("</style>\n");
+            if o.external_css.is_empty() {
+                head.push_str(&format!("<style type=\"text/css\">\n{css}</style>\n"));
+            } else {
+                // wie die Original-Vorlage: im Kopf nur der Import, die Regeln in der eigenen Datei
+                head.push_str(&format!("<style type=\"text/css\" media=\"screen\">\n\t@import url(\"{}\");\n</style>\n", o.external_css.replace('"', "%22")));
+                support.push((o.external_css.clone(), css.into_bytes()));
+            }
         } else {
             support.push(("fp_menu.js".into(), JS_MENU_RUNTIME.as_bytes().to_vec()));
             let views: Vec<MenuView> = menu_views.iter().map(|m| m.0.clone()).collect();
@@ -729,5 +740,30 @@ mod tests {
         assert!(nested.html.contains("fwnested=\"1\""));
         let css = write_css_layers(&g, &cells, &o);
         assert!(css.contains("#slices_spacer_r3_c2"));
+    }
+
+    /// „CSS in externe Datei schreiben“ (TW-03): Stile der CSS-Pop-up-Menüs in eine eigene Datei,
+    /// im Kopf nur `@import`; aus bzw. bei JS-Menüs bleibt alles wie bisher.
+    #[test]
+    fn external_css_for_popup_menus() {
+        let (g, cells, mut s) = t5();
+        let mut b = fp_model::Behavior::new(fp_model::BehaviorAction::PopupMenu, 1);
+        b.popup = Some(Box::new(PopupMenu::default()));
+        s[0].behaviors = vec![b];
+        let run = |o: &HtmlOptions| write_html(&g, &cells, &s, &[], 1, &|_, _| None, &|t, _, _, _, _| t.len() as f64 * 6.0, o);
+        let inline = run(&HtmlOptions::default());
+        assert!(inline.html.contains("<style type=\"text/css\">
+#"), "{}", inline.html);
+        assert!(!inline.support_files.iter().any(|f| f.0.ends_with(".css")));
+        let ext = run(&HtmlOptions { external_css: "par_vector.css".into(), ..HtmlOptions::default() });
+        assert!(ext.html.contains("<style type=\"text/css\" media=\"screen\">
+	@import url(\"par_vector.css\");
+</style>"), "{}", ext.html);
+        let (_, css) = ext.support_files.iter().find(|f| f.0 == "par_vector.css").expect("CSS-Datei");
+        let css = String::from_utf8_lossy(css);
+        assert!(css.contains("position:absolute"), "{css}");
+        assert!(!ext.html.contains(css.lines().next().unwrap_or("-")), "Regeln nicht doppelt im Kopf");
+        let js = run(&HtmlOptions { external_css: "par_vector.css".into(), css_popups: false, ..HtmlOptions::default() });
+        assert!(!js.support_files.iter().any(|f| f.0.ends_with(".css")), "nur mit CSS-Pop-ups");
     }
 }

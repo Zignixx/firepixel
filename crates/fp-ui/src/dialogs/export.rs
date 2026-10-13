@@ -244,8 +244,17 @@ impl ExportDialog {
         let base = file_stem(&base);
         let html = page.root.export.as_ref().and_then(|e| e.html.as_deref()).cloned().unwrap_or_else(fp_model::HtmlSettings::cs6_default);
         let svg_last = page.last_export_file.as_deref().is_some_and(|f| f.to_lowercase().ends_with(".svg"));
-        let kind = if svg_last { FilesStyle::Svg } else { FilesStyle::from_code(html.export_files_style.unwrap_or(1)) };
         let has_slices = page.root.layers.iter().any(|s| matches!(s, fp_model::LayerSlot::Own(l) if l.kind == fp_model::LayerKind::Web && l.cels.iter().any(|c| c.elements.iter().any(|e| matches!(&e.kind, fp_model::ElementKind::WebObject(w) if w.slice.is_some())))));
+        // Vorgabe wie im Original: ohne Segmente „Nur Bilder“ (HTML „Ohne“), solange im Dokument
+        // noch keine Art gewählt wurde (`setByUser`); danach die zuletzt gewählte Art (Q-07)
+        let user_set = html.not_yet_set == Some(false);
+        let kind = if svg_last {
+            FilesStyle::Svg
+        } else if !has_slices && !user_set {
+            FilesStyle::ImagesOnly
+        } else {
+            FilesStyle::from_code(html.export_files_style.unwrap_or(1))
+        };
         let slice_selected = selected_slice_ids(st).next().is_some();
         // Ordner: zuletzt benutzter Exportordner, sonst der des Dokuments bzw. seiner Datei, sonst der letzte Öffnen-Ordner, sonst „Bilder“ (§7.1)
         let use_last = st.session.prefs.get_bool("UseLastExportDirectory", true);
@@ -625,7 +634,9 @@ pub fn remember(st: &mut AppState, dlg: &ExportDialog) {
         if let Some(p) = doc.page_mut(page) {
             p.last_export_dir = Some(folder.clone());
             p.last_export_file = Some(file);
-            if let Some(e) = p.root.export.as_mut() {
+            // auch ohne bisherige Exporteinstellungen merken (letzte Wahl, Q-07)
+            {
+                let e = p.root.export.get_or_insert_with(|| Box::new(fp_model::ExportSettings::default()));
                 let h = e.html.get_or_insert_with(|| Box::new(fp_model::HtmlSettings::cs6_default()));
                 if let Some(c) = kind.code() {
                     h.export_files_style = Some(c);

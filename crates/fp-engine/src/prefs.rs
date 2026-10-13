@@ -297,6 +297,31 @@ pub struct Preferences {
     pub values: BTreeMap<String, PrefValue>,
 }
 
+/// Zuletzt per OK bestätigte Werte der Filterdialoge (Menü „Filter“): app-weit gemerkt, aber nur
+/// für die Sitzung. Das Original legt sie nicht in seiner Voreinstellungsdatei ab und öffnet nach
+/// einem Neustart wieder mit den Vorgaben (z. B. Rauschen 50, TW-09); darum schreibt
+/// [`Preferences::save`] sie nicht mit.
+pub const SESSION_ONLY_KEYS: &[&str] = &[
+    "GaussianBlurRadius",
+    "UnsharpMaskAmount",
+    "UnsharpMaskRadius",
+    "UnsharpMaskThreshold",
+    "BrightnessContrastBrightness",
+    "BrightnessContrastContrast",
+    "MotionBlurAngle",
+    "MotionBlurDistance",
+    "HueSaturationHue",
+    "HueSaturationSaturation",
+    "HueSaturationLightness",
+    "HueSaturationColorize",
+    "AddNoiseAmount",
+    "AddNoiseColor",
+    "RadialBlurAmount",
+    "RadialBlurQuality",
+    "ZoomBlurAmount",
+    "ZoomBlurQuality",
+];
+
 impl Preferences {
     /// Vorgaben (keine Abweichungen).
     pub fn new() -> Preferences {
@@ -468,9 +493,17 @@ impl Preferences {
         Ok(p)
     }
 
-    /// Als JSON-Text (formatiert).
+    /// Als JSON-Text (formatiert); ohne die nur für die Sitzung gemerkten Werte
+    /// ([`SESSION_ONLY_KEYS`]).
     pub fn to_json(&self) -> String {
-        serde_json::to_string_pretty(self).unwrap_or_else(|_| "{}".to_string())
+        let out = if self.values.keys().any(|k| SESSION_ONLY_KEYS.contains(&k.as_str())) {
+            let mut c = self.clone();
+            c.values.retain(|k, _| !SESSION_ONLY_KEYS.contains(&k.as_str()));
+            serde_json::to_string_pretty(&c)
+        } else {
+            serde_json::to_string_pretty(self)
+        };
+        out.unwrap_or_else(|_| "{}".to_string())
     }
 
     /// Schreibt die Datei (über eine temporäre Datei, damit ein Abbruch keine halbe Datei hinterlässt).
@@ -510,5 +543,16 @@ mod tests {
         let back = Preferences::from_json(&p.to_json()).unwrap_or_default();
         assert_eq!(back, p);
         assert_eq!(Unit::Cm.to_pixels(2.54, 72.0), 72.0);
+    }
+
+    #[test]
+    fn filter_memory_is_session_only() {
+        let mut p = Preferences::new();
+        p.set("AddNoiseAmount", PrefValue::Int(20));
+        p.set("MaxUndos", PrefValue::Int(5));
+        assert_eq!(p.get_int("AddNoiseAmount", 50), 20, "in der Sitzung gemerkt");
+        let back = Preferences::from_json(&p.to_json()).unwrap_or_default();
+        assert_eq!(back.get_int("AddNoiseAmount", 50), 50, "nach Neustart wieder die Vorgabe");
+        assert_eq!(back.max_undos(), 5);
     }
 }

@@ -270,7 +270,7 @@ pub fn body_css(h: &fp_model::HtmlSettings) -> String {
     if let Some(u) = h.background_url.as_deref().map(str::trim).filter(|u| !u.is_empty()) {
         css.push(format!("background-image: url(\"{}\");", u.replace('"', "%22")));
         css.push(format!("background-repeat: {};", ["no-repeat", "repeat", "repeat-x", "repeat-y"][h.background_repeat.unwrap_or(0).clamp(0, 3) as usize]));
-        css.push(format!("background-attachment: {};", if h.background_attachment == Some(1) { "fixed" } else { "scroll" }));
+        css.push(format!("background-attachment: {};", if h.background_attachment == Some(0) { "fixed" } else { "scroll" }));
     }
     match h.page_alignment.unwrap_or(0) {
         1 => css.push("text-align: center;".into()),
@@ -278,6 +278,19 @@ pub fn body_css(h: &fp_model::HtmlSettings) -> String {
         _ => {}
     }
     css.join(" ")
+}
+
+/// Name der externen CSS-Datei („CSS in externe Datei schreiben“, `externalCSS`, Vorgabe an):
+/// der gespeicherte Name (`externalCSSFilename`), sonst `<Basisname>.css` neben der HTML-Datei;
+/// leer, wenn die Option aus ist (Stile bleiben im Kopf).
+pub fn external_css_file(h: &fp_model::HtmlSettings, base: &str) -> String {
+    if h.external_css.unwrap_or(1) == 0 {
+        return String::new();
+    }
+    match h.external_css_filename.as_deref().map(str::trim).filter(|f| !f.is_empty()) {
+        Some(f) => f.to_string(),
+        None => format!("{base}.css"),
+    }
 }
 
 impl DocExportOptions {
@@ -928,6 +941,7 @@ pub fn export_document_noted(doc: &Document, r: &dyn PageRenderer, o: &DocExport
                 },
                 default_alt: html_set.default_alt.clone().unwrap_or_default(),
                 body_css: body_css(&html_set),
+                external_css: external_css_file(&html_set, &base),
                 ..HtmlOptions::default()
             };
             if o.html_prefs.empty_cell_canvas {
@@ -1190,6 +1204,46 @@ mod tests {
             let f = export_document(&d, &SimpleRenderer, &o, &EncodeExtras::standalone());
             assert!(f.as_ref().is_ok_and(|v| !v.is_empty()), "{style:?}: {:?}", f.err());
         }
+    }
+
+    /// HTML-Export mit CSS-Pop-up-Menü: „CSS in externe Datei schreiben“ (Vorgabe an) legt
+    /// `<Basisname>.css` an und importiert sie; aus = Stile im Kopf, keine Datei (TW-03).
+    #[test]
+    fn external_css_file_in_html_export() {
+        let mut d = doc();
+        let pg = d.page_mut(0).unwrap();
+        if let LayerSlot::Own(l) = &mut pg.root.layers[1] {
+            let el = Arc::make_mut(&mut Arc::make_mut(&mut Arc::make_mut(l).cels[0]).elements[0]);
+            if let fp_model::ElementKind::WebObject(w) = &mut el.kind {
+                let mut b = fp_model::Behavior::new(fp_model::BehaviorAction::PopupMenu, 1);
+                b.popup = Some(Box::new(fp_model::PopupMenu::default()));
+                w.behaviors = Some(fp_model::Behaviors { items: vec![b], ..Default::default() });
+            }
+        }
+        let run = |d: &Document| export_document(d, &SimpleRenderer, &DocExportOptions::new("test"), &EncodeExtras::standalone()).unwrap();
+        let files = run(&d);
+        let css = files.iter().find(|f| f.path == "test.css").expect("test.css");
+        assert!(String::from_utf8_lossy(&css.bytes).contains("position:absolute"));
+        let html = String::from_utf8_lossy(&files.iter().find(|f| f.path == "test.htm").unwrap().bytes).into_owned();
+        assert!(html.contains("@import url(\"test.css\");"), "{html}");
+        // Option aus: keine Datei, Regeln im Kopf
+        let pg = d.page_mut(0).unwrap();
+        let e = pg.root.export.get_or_insert_with(|| Box::new(fp_model::ExportSettings::default()));
+        e.html.get_or_insert_with(|| Box::new(fp_model::HtmlSettings::cs6_default())).external_css = Some(0);
+        let files = run(&d);
+        assert!(!files.iter().any(|f| f.path.ends_with(".css")));
+        let html = String::from_utf8_lossy(&files.iter().find(|f| f.path == "test.htm").unwrap().bytes).into_owned();
+        assert!(!html.contains("@import") && html.contains("position:absolute"), "{html}");
+    }
+
+    /// `CBAi`: 0 fixed, 1 scroll (Vorgabe neuer Dokumente 1 = scroll, TW-06).
+    #[test]
+    fn background_attachment_codes() {
+        let mut h = fp_model::HtmlSettings::cs6_default();
+        h.background_url = Some("bg.png".into());
+        assert!(body_css(&h).contains("background-attachment: scroll;"));
+        h.background_attachment = Some(0);
+        assert!(body_css(&h).contains("background-attachment: fixed;"));
     }
 
     #[test]
