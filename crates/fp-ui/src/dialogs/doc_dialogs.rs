@@ -44,12 +44,35 @@ fn live_text(ui: &mut Ui, id: impl std::hash::Hash + std::fmt::Debug, r: Rect, c
     changed.then_some(buf)
 }
 
-/// Kettensymbol „Proportionen beibehalten“ rechts neben zwei Zeilen (Original: Symbole 5871/5872
-/// neben den Einheiten der Pixelabmessungen und der Druckgröße), nur bei angehaktem Kästchen.
-fn chain(ui: &Ui, first: Rect, second: Rect, enabled: bool) {
+/// Platz rechts der Zeilen für [`chain`] (Klammer und Schloss).
+const CHAIN_W: f32 = 26.0;
+
+/// Kettensymbol „Proportionen beibehalten“ rechts neben zwei Zeilen wie im Original (Symbole
+/// 5871/5872 neben den Einheiten): Klammer von der Mitte der ersten zur Mitte der zweiten Zeile,
+/// rechts daneben ein Schloss; nur bei angehaktem Kästchen. Der Tooltip nennt das Kästchen.
+fn chain(ui: &Ui, first: Rect, second: Rect, enabled: bool, tip: &str) {
     let theme = crate::theme::Theme::current(ui.ctx());
-    let r = Rect::from_min_max(egui::pos2(first.right() + 4.0, first.center().y - 2.0), egui::pos2(first.right() + 12.0, second.center().y + 2.0));
-    crate::icons::paint(ui.painter(), r, crate::icons::Icon::LinkProportions, &crate::icons::IconStyle::new(&theme, None, enabled));
+    let col = if enabled { theme.colors.text } else { theme.colors.text_disabled };
+    let s = egui::Stroke::new(2.0, col);
+    let (x0, x1) = (first.right() + 4.0, first.right() + 9.0);
+    let (y0, y1) = (first.center().y, second.center().y);
+    ui.painter().line(vec![egui::pos2(x0, y0), egui::pos2(x1, y0), egui::pos2(x1, y1), egui::pos2(x0, y1)], s);
+    let lock = Rect::from_center_size(egui::pos2(x1 + 9.0, (y0 + y1) / 2.0), vec2(14.0, 14.0));
+    crate::icons::paint(ui.painter(), lock, crate::icons::Icon::Lock, &crate::icons::IconStyle::new(&theme, None, enabled));
+    let r = Rect::from_min_max(egui::pos2(x0, y0), egui::pos2(lock.right(), y1));
+    let _ = ui.interact(r, Id::new(("chain", first.min.x as i32, first.min.y as i32)), egui::Sense::hover()).on_hover_text(tip);
+}
+
+/// Doppelpfeil ↔ (waagerecht) bzw. ↕ statt der Beschriftung „Breite:/Höhe:“, rechtsbündig vor
+/// `field` wie im Original; der Text bleibt Tooltip und Name (Barrierefreiheit).
+fn dim_symbol(ui: &Ui, id: impl std::hash::Hash + std::fmt::Debug, field: Rect, horizontal: bool, name: &str) {
+    let theme = crate::theme::Theme::current(ui.ctx());
+    let c = egui::pos2(field.left() - 14.0, field.center().y);
+    let sr = Rect::from_center_size(c, if horizontal { vec2(13.0, 7.0) } else { vec2(7.0, 13.0) });
+    super::path_dialogs::paint_double_arrow(ui, sr, horizontal, theme.colors.text);
+    let hover = ui.interact(sr.expand(3.0), Id::new(("dim-symbol", id)), egui::Sense::hover());
+    hover.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Label, true, name));
+    let _ = hover.on_hover_text(name);
 }
 
 /// Druckgröße wie im Original: 3 Nachkommastellen, Punkt, ohne überflüssige Nullen
@@ -113,13 +136,33 @@ impl CanvasSizeDialog {
     }
 }
 
-/// Symbol vor der Breite (Original: ↔).
-const W_SYMBOL: &str = "\u{2194}";
-/// Symbol vor der Höhe (Original: ↕).
-const H_SYMBOL: &str = "\u{2195}";
+/// Ankerbild eines Feldes wie im Original (Bildchen der Knöpfe 5791–5800): ein schwarzes Quadrat
+/// an der Lage des Ankers (Ecke, Kante, Mitte) und graue Pfeile in die Richtungen, in die die
+/// Leinwand von dort aus wächst. Das Bild hängt nur vom Feld ab, nicht von der Wahl.
+fn paint_anchor_icon(ui: &Ui, r: Rect, k: usize, dot: egui::Color32, arrow: egui::Color32) {
+    let (cx, cy) = ((k % 3) as i32, (k / 3) as i32);
+    let off = |c: i32| match c {
+        0 => -3.0,
+        2 => 3.0,
+        _ => 0.0,
+    };
+    let m = r.center() + vec2(off(cx), off(cy));
+    let p = ui.painter();
+    let s = egui::Stroke::new(1.0, arrow);
+    for (dir, ok) in [(vec2(1.0, 0.0), cx < 2), (vec2(-1.0, 0.0), cx > 0), (vec2(0.0, 1.0), cy < 2), (vec2(0.0, -1.0), cy > 0)] {
+        if !ok {
+            continue;
+        }
+        let tip = m + dir * 7.0;
+        p.line_segment([m + dir * 2.0, tip - dir * 2.0], s);
+        let n = vec2(-dir.y, dir.x);
+        p.add(egui::Shape::convex_polygon(vec![tip, tip - dir * 3.0 + n * 2.5, tip - dir * 3.0 - n * 2.5], arrow, egui::Stroke::NONE));
+    }
+    p.rect_filled(Rect::from_center_size(m, vec2(3.0, 3.0)), 0.0, dot);
+}
 
-/// Anker 3 × 3 wie im Original: Optionsfelder mit Pfeilen, die vom gewählten Anker wegzeigen (dort
-/// ein Kreuz aus vier Pfeilen). Wie [`super::radio_group`] **ein** Tab-Stopp (das gewählte Feld);
+/// Anker 3 × 3 wie im Original: Optionsfelder mit Ankerbildern ([`paint_anchor_icon`]), das
+/// gewählte hervorgehoben. Wie [`super::radio_group`] **ein** Tab-Stopp (das gewählte Feld);
 /// die Pfeiltasten wählen im Raster, ein Klick wählt und setzt den Fokus. Liefert die neue Wahl.
 fn anchor_grid(ui: &mut Ui, id: &str, cells: &[Rect], tips: &[&str], sel: usize) -> Option<usize> {
     use egui::{Sense, Stroke, StrokeKind};
@@ -138,17 +181,7 @@ fn anchor_grid(ui: &mut Ui, id: &str, cells: &[Rect], tips: &[&str], sel: usize)
         resp.widget_info(|| egui::WidgetInfo::selected(egui::WidgetType::RadioButton, true, k == sel, &tip));
         ui.painter().rect_filled(r, 2.0, if k == sel { c.list_selected_bg } else { c.field_bg });
         ui.painter().rect_stroke(r, 2.0, Stroke::new(1.0, if k == sel || resp.hovered() { c.focus } else { c.field_border }), StrokeKind::Inside);
-        let (ddx, ddy) = ((k % 3) as i32 - sx, (k / 3) as i32 - sy);
-        let stroke = Stroke::new(1.0, c.field_text);
-        let m = r.center();
-        if (ddx, ddy) == (0, 0) {
-            for dir in [vec2(1.0, 0.0), vec2(-1.0, 0.0), vec2(0.0, 1.0), vec2(0.0, -1.0)] {
-                ui.painter().arrow(m, dir * 5.0, stroke);
-            }
-        } else if ddx.abs() <= 1 && ddy.abs() <= 1 {
-            let v = vec2(ddx as f32, ddy as f32).normalized() * 8.0;
-            ui.painter().arrow(m - v * 0.5, v, stroke);
-        }
+        paint_anchor_icon(ui, r, k, c.field_text, c.text_disabled);
         if k == sel && ui.memory(|mm| mm.has_focus(kid)) {
             ui.painter().rect_stroke(r.shrink(2.0), 1.0, Stroke::new(1.0, c.focus), StrokeKind::Inside);
             // Pfeiltasten bleiben im Raster (sonst sucht egui das nächste Feld in der Richtung)
@@ -188,10 +221,12 @@ pub fn show_canvas_size(ctx: &egui::Context, st: &mut AppState) {
     // Texte der aktuellen Sprache; längere Texte schieben die Spalten (Deutsch: Lage wie bisher)
     let units = tl(&UNITS);
     let wh = tl(&["dlg-short-w", "dlg-short-h"]);
-    // Felder mit ↔/↕ wie im Original (Symbole 5950/5951); „B:/H:“ steht rechts als Live-Anzeige
-    let syms = [W_SYMBOL, H_SYMBOL];
+    // Felder mit ↔/↕ wie im Original (Symbole 5950/5951, gezeichnet); „B:/H:“ steht rechts als
+    // Live-Anzeige. Die Symbole haben feste Breite, die Feldspalte rückt nicht.
+    let names = tl(&["dlg-new-doc-width", "dlg-new-doc-height"]);
     let (anchor_l, page_l, hint_l, ok_l, cancel_l) = (t("dlg-canvas-size-anchor"), t("dlg-only-current-page"), t("dlg-canvas-size-range"), t("btn-ok"), t("btn-cancel"));
-    let dx = extra_w(ctx, &syms, dlu(14.0, 0.0).x - 2.0);
+    let unit_px = t("dlg-unit-pixels");
+    let dx = 0.0f32;
     let cw = combo_fit_w(ctx, &refs(&units), dlu(60.0, 0.0).x);
     let dc = cw - dlu(60.0, 0.0).x;
     // Live-Anzeige „B: 30000“ rechts der Einheiten (Platz bis zum Gruppenrand)
@@ -212,15 +247,14 @@ pub fn show_canvas_size(ctx: &egui::Context, st: &mut AppState) {
         let gw = |r: Rect| r.with_max_x(body.right() - dlu(7.0, 0.0).x);
         // Gruppe „Neue Größe“ mit Feldern, Anker und „Nur aktuelle Seite“ (Original 5989)
         group_box(ui, gw(dlu_rect(o, [7.0, 6.0, 208.0, 118.0])), &t("dlg-canvas-size-new"));
-        let short = |r: Rect| Rect::from_min_size(r.min, vec2(r.width() + dx, r.height()));
         let dec = if d.unit == 0 { 0 } else { 2 };
-        label(ui, o, short(dlu_rect(o, [20.0, 22.0, 14.0, 10.0])), W_SYMBOL);
+        dim_symbol(ui, "cs-w", rr(o, [34.0, 20.0, 50.0, 13.0]), true, &names[0]);
         if let Some(t) = live_text(ui, "cs-w", rr(o, [34.0, 20.0, 50.0, 13.0]), &fields::fmt_num(d.width, dec), true)
             && let Some(v) = fields::parse_num(&t)
         {
             d.width = v.max(0.0);
         }
-        label(ui, o, short(dlu_rect(o, [20.0, 40.0, 14.0, 10.0])), H_SYMBOL);
+        dim_symbol(ui, "cs-h", rr(o, [34.0, 38.0, 50.0, 13.0]), false, &names[1]);
         if let Some(t) = live_text(ui, "cs-h", rr(o, [34.0, 38.0, 50.0, 13.0]), &fields::fmt_num(d.height, dec), true)
             && let Some(v) = fields::parse_num(&t)
         {
@@ -252,8 +286,15 @@ pub fn show_canvas_size(ctx: &egui::Context, st: &mut AppState) {
             d.current_page_only = b;
         }
         group_box(ui, gw(dlu_rect(o, [7.0, 128.0, 208.0, 40.0])), &t("dlg-canvas-size-current"));
-        label(ui, o, dlu_rect(o, [20.0, 141.0, 190.0, 10.0]), &fp_i18n::tr!("dlg-canvas-size-cur-w", w = format!("{:.0}", d.cur_w)));
-        label(ui, o, dlu_rect(o, [20.0, 153.0, 190.0, 10.0]), &fp_i18n::tr!("dlg-canvas-size-cur-h", h = format!("{:.0}", d.cur_h)));
+        // „Aktuelle Größe“ wie im Original: ↔ 800  Pixel / ↕ 600  Pixel (Symbol, Zahl, Einheit);
+        // der bisherige Text „B: 800 Pixel“ bleibt Tooltip und Name des Symbols
+        let num_w = super::max_text_w(ui.ctx(), &["30000"]).ceil() + 6.0;
+        for (k, (v, name)) in [(d.cur_w, fp_i18n::tr!("dlg-canvas-size-cur-w", w = format!("{:.0}", d.cur_w))), (d.cur_h, fp_i18n::tr!("dlg-canvas-size-cur-h", h = format!("{:.0}", d.cur_h)))].into_iter().enumerate() {
+            let nr = dlu_rect(o, [34.0, 141.0 + k as f32 * 12.0, 0.0, 10.0]);
+            dim_symbol(ui, ("cs-cur", k), nr, k == 0, &name);
+            label(ui, o, Rect::from_min_size(nr.min, vec2(num_w, nr.height())), &format!("{v:.0}"));
+            label(ui, o, Rect::from_min_max(egui::pos2(nr.left() + num_w, nr.top()), egui::pos2(body.right() - dlu(12.0, 0.0).x, nr.bottom())), &unit_px);
+        }
         let p = d.params();
         if p.is_none() {
             // Hinweis umbricht bei längeren Texten (Platz bis zu den Knöpfen)
@@ -379,14 +420,15 @@ pub fn show_image_size(ctx: &egui::Context, st: &mut AppState) {
     let res_units = tl(&super::new_document::RES_UNITS);
     let methods = tl(super::preferences::INTERP);
     let (constrain_l, resample_l, page_l, ok_l, cancel_l) = (t("dlg-image-size-constrain"), t("dlg-image-size-resample"), t("dlg-only-current-page"), t("btn-ok"), t("btn-cancel"));
-    let dx = extra_w(ctx, &[&wh[0], &wh[1], &res_l], dlu(46.0, 0.0).x - 4.0);
+    // ↔/↕ statt „Breite:/Höhe:“ (Original 6011); nur „Auflösung:“ kann die Feldspalte schieben
+    let dx = extra_w(ctx, &[&res_l], dlu(46.0, 0.0).x - 4.0);
     let all_units: Vec<&str> = px_units.iter().chain(pr_units.iter()).chain(res_units.iter()).map(|s| s.as_str()).collect();
     let cw = combo_fit_w(ctx, &all_units, dlu(54.0, 0.0).x);
     let mx = dlu(84.0, 0.0).x.max((dlu(9.0, 0.0).x + 18.0 + super::text_w(ctx, &resample_l) + 8.0).ceil());
     let mw = combo_fit_w(ctx, &refs(&methods), dlu(84.0, 0.0).x);
     let bw = super::buttons_w(ctx, &[&ok_l, &cancel_l], dlu(50.0, 0.0).x);
     let checks_w = super::max_text_w(ctx, &[&constrain_l, &page_l]) + 18.0 + dlu(9.0, 0.0).x;
-    let ex = (dx + cw - dlu(54.0, 0.0).x)
+    let ex = (dx + cw - dlu(54.0, 0.0).x + (CHAIN_W - dlu(225.0 - 168.0 - 7.0, 0.0).x).max(0.0))
         .max(mx + mw - dlu(168.0, 0.0).x)
         .max(checks_w + 8.0 - dlu(232.0, 0.0).x)
         .max(2.0 * bw + dlu(5.0 + 7.0 + 7.0, 0.0).x - dlu(232.0, 0.0).x)
@@ -402,7 +444,7 @@ pub fn show_image_size(ctx: &egui::Context, st: &mut AppState) {
         group_box(ui, gw(dlu_rect(o, [7.0, 6.0, 218.0, 50.0])), &t("dlg-image-size-pixels"));
         for (k, (lab, key)) in [(&wh[0], "w"), (&wh[1], "h")].iter().enumerate() {
             let y = 20.0 + k as f32 * 18.0;
-            label(ui, o, lr(y + 2.0), lab);
+            dim_symbol(ui, ("is-px", k), rr(o, [60.0, y, 50.0, 13.0]), k == 0, lab);
             let px = if k == 0 { d.w } else { d.h };
             let cur = if k == 0 { d.cur_w } else { d.cur_h };
             let shown = if d.px_unit == 1 { px / cur.max(1.0) * 100.0 } else { px };
@@ -421,16 +463,16 @@ pub fn show_image_size(ctx: &egui::Context, st: &mut AppState) {
             }
         }
         if d.constrain {
-            chain(ui, cr(o, 20.0), cr(o, 38.0), en_px);
+            chain(ui, cr(o, 20.0), cr(o, 38.0), en_px, &constrain_l);
         }
         group_box(ui, gw(dlu_rect(o, [7.0, 62.0, 218.0, 70.0])), &t("dlg-image-size-print"));
         if d.constrain {
-            chain(ui, cr(o, 76.0), cr(o, 94.0), true);
+            chain(ui, cr(o, 76.0), cr(o, 94.0), true, &constrain_l);
         }
         let ppi = d.ppi();
         for (k, lab) in wh.iter().enumerate() {
             let y = 76.0 + k as f32 * 18.0;
-            label(ui, o, lr(y + 2.0), lab);
+            dim_symbol(ui, ("is-pr", k), rr(o, [60.0, y, 50.0, 13.0]), k == 0, lab);
             let px = if k == 0 { d.w } else { d.h };
             let cur = if k == 0 { d.cur_w } else { d.cur_h };
             let shown = match d.print_unit {
@@ -581,6 +623,7 @@ impl NumericTransformDialog {
     /// Bestätigte Werte merken (nur bei OK).
     pub fn remember(&self, p: &mut fp_engine::Preferences) {
         p.set("TransformConstrain", fp_engine::PrefValue::Bool(self.constrain));
+        p.set("XformToolXformsBFE", fp_engine::PrefValue::Bool(self.scale_attrs));
         p.set(NT_MODE, fp_engine::PrefValue::Int(self.mode as i64));
         match self.mode {
             0 => {
@@ -598,9 +641,9 @@ impl NumericTransformDialog {
     /// Parameter für `modify.transform.numericTransform`.
     pub fn params(&self) -> Option<serde_json::Value> {
         match self.mode {
-            1 => ((1.0..=30000.0).contains(&self.w) && (1.0..=30000.0).contains(&self.h)).then(|| json!({"mode": "resize", "width": self.w, "height": self.h, "constrain": self.constrain})),
+            1 => ((1.0..=30000.0).contains(&self.w) && (1.0..=30000.0).contains(&self.h)).then(|| json!({"mode": "resize", "width": self.w, "height": self.h, "constrain": self.constrain, "scaleAttributes": self.scale_attrs})),
             2 => self.angle.is_finite().then(|| json!({"mode": "rotate", "angle": self.angle})),
-            _ => (self.sx > 0.0 && self.sy > 0.0 && self.sx <= 10000.0 && self.sy <= 10000.0).then(|| json!({"mode": "scale", "scaleX": self.sx, "scaleY": self.sy, "constrain": self.constrain})),
+            _ => (self.sx > 0.0 && self.sy > 0.0 && self.sx <= 10000.0 && self.sy <= 10000.0).then(|| json!({"mode": "scale", "scaleX": self.sx, "scaleY": self.sy, "constrain": self.constrain, "scaleAttributes": self.scale_attrs})),
         }
     }
 }
@@ -667,7 +710,7 @@ pub fn show_numeric_transform(ctx: &egui::Context, st: &mut AppState) {
     let angle_x = field_x.max(dlu(14.0, 0.0).x + super::text_w(ctx, &angle_l) + 6.0).ceil();
     let field_w = dlu(34.0, 0.0).x;
     let unit_w = super::max_text_w(ctx, &["%", &px_l]).ceil();
-    let size_x = field_x + field_w + 6.0 + unit_w + 22.0;
+    let size_x = field_x + field_w + 6.0 + unit_w + CHAIN_W + 6.0;
     let size_w = super::max_text_w(ctx, &[&fp_i18n::tr!("dlg-numeric-size-w", v = "00000"), &fp_i18n::tr!("dlg-numeric-size-h", v = "00000")]).ceil();
     let frame_r = (size_x + size_w + 10.0).max(dlu(8.0, 0.0).x + mw).ceil();
     // Knopfspalte rechts von Rahmen und Modusliste
@@ -702,11 +745,7 @@ pub fn show_numeric_transform(ctx: &egui::Context, st: &mut AppState) {
                 for (k, v) in [a, b].into_iter().enumerate() {
                     let f = fr(k);
                     // Symbol ↔ bzw. ↕ statt „Breite:/Höhe:“ (Text bleibt Tooltip und Name)
-                    let sr = Rect::from_center_size(egui::pos2(o.x + dlu(14.0, 0.0).x + 6.0, f.center().y), if k == 0 { vec2(13.0, 7.0) } else { vec2(7.0, 13.0) });
-                    super::path_dialogs::paint_double_arrow(ui, sr, k == 0, theme.colors.text);
-                    let hover = ui.interact(sr.expand(3.0), Id::new(("nt-symbol", k)), egui::Sense::hover());
-                    hover.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Label, true, wh[k].as_str()));
-                    let _ = hover.on_hover_text(wh[k].as_str());
+                    dim_symbol(ui, ("nt", k), f, k == 0, wh[k].as_str());
                     if let Some(t) = live_text(ui, ("nt-v", m, k), f, &fields::fmt_num(v, 1), true)
                         && let Some(nv) = fields::parse_num(&t)
                     {
@@ -716,7 +755,7 @@ pub fn show_numeric_transform(ctx: &egui::Context, st: &mut AppState) {
                     label(ui, o, units[k], unit);
                 }
                 if d.constrain {
-                    chain(ui, units[0], units[1], true);
+                    chain(ui, units[0], units[1], true, &constrain_l);
                 }
                 if let Some((w, h)) = d.object_size() {
                     for (k, (key, v)) in [("dlg-numeric-size-w", w), ("dlg-numeric-size-h", h)].into_iter().enumerate() {
@@ -782,5 +821,20 @@ mod tests {
         assert_eq!((i.w, i.h), (400.0, 50.0));
         i.w = 40000.0;
         assert!(i.params().is_none());
+    }
+
+    /// TW-01: „Attribute skalieren“ geht als `scaleAttributes` an den Befehl und wird bei OK gemerkt.
+    #[test]
+    fn numeric_transform_passes_scale_attributes() {
+        let mut st = st_with_doc();
+        let _ = st.session.execute("draw.rectangle", json!({"rect": [10, 10, 60, 40], "fillColor": "#808080"}));
+        let mut d = NumericTransformDialog::new(&st).expect("Dialog");
+        assert!(d.scale_attrs, "Vorgabe ein");
+        d.scale_attrs = false;
+        assert_eq!(d.params().map(|p| p["scaleAttributes"].clone()), Some(json!(false)));
+        d.mode = 1;
+        assert_eq!(d.params().map(|p| p["scaleAttributes"].clone()), Some(json!(false)));
+        d.remember(&mut st.session.prefs);
+        assert!(!NumericTransformDialog::new(&st).expect("Dialog").scale_attrs, "gemerkt");
     }
 }

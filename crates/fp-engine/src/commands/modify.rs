@@ -1260,10 +1260,12 @@ pub(super) fn register(r: &mut CommandRegistry) {
             .opt("height", ParamKind::Number { min: Some(0.0), max: None }, "neue Höhe (resize)")
             .opt("angle", ParamKind::Number { min: None, max: None }, "Winkel in Grad (rotate)")
             .opt_default("constrain", ParamKind::Bool, json!(true), "Proportionen beibehalten")
+            .opt_default("scaleAttributes", ParamKind::Bool, json!(true), "Attribute skalieren (Strichbreite mit)")
             .run(|s, p| {
                 let b = sel_bounds(s)?;
                 let c = b.center();
                 let constrain = p.bool_or("constrain", true)?;
+                let scale_attrs = p.bool_or("scaleAttributes", true)?;
                 let m = match p.opt_str("mode")?.as_deref() {
                     Some("rotate") => Matrix3::rotation_degrees(p.f64_or("angle", 0.0)?),
                     Some("resize") => {
@@ -1285,7 +1287,18 @@ pub(super) fn register(r: &mut CommandRegistry) {
                         Matrix3::scaling((sx.unwrap_or(100.0) / 100.0) as f32, (sy.unwrap_or(100.0) / 100.0) as f32)
                     }
                 };
-                transform_selection(s, docops::about(c, &m))
+                let out = transform_selection(s, docops::about(c, &m))?;
+                // „Attribute skalieren“ wie Info-Bedienfeld/Werkzeug: Strich mit √(sx·sy)
+                let f = (m.m[0][0] * m.m[1][1] - m.m[0][1] * m.m[1][0]).abs().sqrt();
+                if scale_attrs && (f - 1.0).abs() > 1e-6 {
+                    let d = s.doc_mut()?;
+                    let (page, ids) = (d.page, d.selection.elements.clone());
+                    let doc = Arc::make_mut(&mut d.doc);
+                    for id in ids {
+                        docops::edit_by_id(doc, page, id, |e| super::draw::scale_stroke_width(e, f));
+                    }
+                }
+                Ok(out)
             }),
     );
     r.add(cmd("modify.transform.rotate180Degree").requires(SEL).run(|s, _| about_selection(s, Matrix3::rotation_degrees(180.0))));

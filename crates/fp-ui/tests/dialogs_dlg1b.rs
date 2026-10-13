@@ -174,7 +174,9 @@ fn canvas_size_live_anchor_keys_and_select_all() {
     open(&mut h, "modify.canvas.canvasSize");
     let texts = drawn_texts(&mut h);
     assert!(texts.iter().any(|t| t == "B: 500") && texts.iter().any(|t| t == "H: 400"), "Live-Anzeige vorhanden: {texts:?}");
-    assert!(texts.iter().any(|t| t == "\u{2194}") && texts.iter().any(|t| t == "\u{2195}"), "↔/↕ vor den Feldern");
+    // ↔/↕ sind gezeichnete Symbole (TW-12); „Aktuelle Größe“: Symbol, Zahl, Einheit getrennt
+    assert!(texts.iter().any(|t| t == "500") && texts.iter().any(|t| t == "400"), "Aktuelle Größe als Zahl: {texts:?}");
+    assert!(!texts.iter().any(|t| t.starts_with("B: 500 ")), "keine Zeile „B: 500 Pixel“ mehr: {texts:?}");
     typ(&mut h, "600");
     assert_eq!(st(&h).dialogs.canvas_size.as_ref().expect("offen").width, 600.0, "Breite beim Tippen übernommen");
     let texts = drawn_texts(&mut h);

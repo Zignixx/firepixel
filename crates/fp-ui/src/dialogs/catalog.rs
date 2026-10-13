@@ -250,7 +250,7 @@ fn plain_form(st: &AppState, cmd: &str) -> Option<FormDialog> {
                 "5984",
                 t("dlg-title-edit-grid").as_str(),
                 cmd,
-                vec![Field::color("color", t("dlg-lbl-color").as_str(), &hex_of(col)), Field::number("width", t("dlg-lbl-grid-h").as_str(), gw, 1.0, 10000.0).unit("dlg-unit-pixels"), Field::number("height", t("dlg-lbl-grid-v").as_str(), gh, 1.0, 10000.0).unit("dlg-unit-pixels")],
+                vec![Field::color("color", t("dlg-lbl-color").as_str(), &hex_of(col)), Field::number("width", t("dlg-lbl-grid-h").as_str(), gw, 1.0, 10000.0).unit("dlg-unit-pixels").popup().scale(GRID_SPACING), Field::number("height", t("dlg-lbl-grid-v").as_str(), gh, 1.0, 10000.0).unit("dlg-unit-pixels").popup().scale(GRID_SPACING)],
             )
             .with_layout(GRID_LAYOUT)
             .with_skip_unchanged()
@@ -496,9 +496,12 @@ fn paint_double_arrow(ui: &Ui, r: Rect, horizontal: bool, col: egui::Color32) {
 
 // Raster bearbeiten (5984): 151 × 89 DLU. „Farbe:“ [9,9], Farbfeld [38,8,13,11]; ↔ [24,29,10,4],
 // Feld [38,25,30,13], „Pixel“ [82,27]; ↕ [29,43,5,9], Feld [38,41,30,13], „Pixel“ [82,43];
-// OK [37,68,50,14], Abbrechen [92,68,50,14]. Die Rahmen 5769/5814 neben den Feldern (Popup-Schieber)
-// haben in der Vorlage keinen Bereich und 11 beschreibt sie nicht: sie bleiben weg, die Einheit
-// rückt an ihre Stelle.
+// OK [37,68,50,14], Abbrechen [92,68,50,14]. Neben den Feldern die Popup-Schieber ▾ (Rahmen
+// 5769/5814, TW-10); die Einheit steht rechts davon.
+
+/// Kennlinie der Popup-Schieber der Rasterabstände: 1 … 100 linear (Annahme FIX-G1, der Bereich
+/// im Original ist noch nicht gemessen, BEFUNDE DLG-2); getippt bleibt 1 … 10000 erlaubt.
+const GRID_SPACING: crate::inspector::scale::Scale = crate::inspector::scale::Scale::Piecewise(&[(0.0, 1.0), (99.0, 100.0)]);
 
 /// Verschiebung der Feldspalte, wenn „Farbe:“ nicht in die 29 DLU vor den Feldern passt.
 fn grid_dx(ctx: &egui::Context) -> f32 {
@@ -507,7 +510,7 @@ fn grid_dx(ctx: &egui::Context) -> f32 {
 
 fn grid_size(ctx: &egui::Context, _d: &FormDialog) -> egui::Vec2 {
     let dx = grid_dx(ctx);
-    let unit = dlu(72.0, 0.0).x + dx + text_w(ctx, &super::form::unit_text("dlg-unit-pixels")) + dlu(9.0, 0.0).x;
+    let unit = dlu(72.0, 0.0).x + dx + 15.0 + text_w(ctx, &super::form::unit_text("dlg-unit-pixels")) + dlu(9.0, 0.0).x;
     let buttons = dlu(37.0, 0.0).x + 2.0 * ok_cancel_w(ctx) + dlu(5.0 + 9.0, 0.0).x;
     vec2(dlu(151.0, 0.0).x.max(unit).max(buttons).ceil(), dlu(0.0, 89.0).y.ceil())
 }
@@ -540,7 +543,8 @@ fn grid_draw(ui: &mut Ui, st: &AppState, d: &mut FormDialog, body: Rect) -> (boo
         hover.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Label, true, label.as_str()));
         let _ = hover.on_hover_text(label.as_str());
         changed |= number_at(ui, d, key, er, true);
-        ui.painter().text(pos2(er.right() + dlu(4.0, 0.0).x, er.center().y), Align2::LEFT_CENTER, &unit, theme.ui_font(), theme.colors.text);
+        // Einheit rechts vom Popup-Schieber ▾ (der liegt direkt am Feld, 14 px breit)
+        ui.painter().text(pos2(er.right() + 15.0 + dlu(3.0, 0.0).x, er.center().y), Align2::LEFT_CENTER, &unit, theme.ui_font(), theme.colors.text);
     }
     let bw = ok_cancel_w(ui.ctx());
     let top = o.y + dlu(0.0, 68.0).y;
