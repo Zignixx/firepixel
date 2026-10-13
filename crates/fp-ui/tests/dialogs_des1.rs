@@ -1,4 +1,4 @@
-//! DES-1 (N11, `docs\DESIGN.md`): Gestaltung der Dialoge zentral im Dialograhmen â€“ FuÃŸleiste hinter
+//! DES-1 (N11, `docs\DESIGN.md`): Gestaltung der Dialoge zentral im Dialograhmen – Fußleiste hinter
 //! der unteren Knopfzeile, Titelleiste, Rahmen mit Schatten, Standardknopf, Gruppenrahmen,
 //! Meldung mit Symbol. Bedienung, Beschriftungen und Anordnung bleiben wie im Original.
 //!
@@ -110,8 +110,8 @@ fn scene_for(name: &'static str, prep: Prep, kind: ThemeKind) -> Scene {
     )
 }
 
-/// FuÃŸleiste je Dialog im Normal-Design: (Dialogkennung, Oberkante der Leiste relativ zur
-/// Dialogunterkante) â€“ `None` heiÃŸt keine Leiste.
+/// Fußleiste je Dialog im Normal-Design: (Dialogkennung, Oberkante der Leiste relativ zur
+/// Dialogunterkante) – `None` heißt keine Leiste.
 fn footer_of(name: &'static str, prep: Prep) -> (String, Option<f32>, egui::Rect) {
     let sc = scene_for(name, prep, ThemeKind::Normal);
     let mut h = build_scene(&sc, Cfg { w: 1280.0, h: 900.0, ppp: 1.0 }, false).unwrap_or_else(|e| panic!("{name}: {e}"));
@@ -129,14 +129,14 @@ fn footer_under_bottom_button_rows() {
             assert_eq!(id, want_id, "{name}");
         }
         match name {
-            // KnÃ¶pfe unten rechts: FuÃŸleiste, 40â€¦60 px Ã¼ber der Unterkante (12 px Ã¼ber den KnÃ¶pfen)
+            // Knöpfe unten rechts: Fußleiste, 40…60 px über der Unterkante (12 px über den Knöpfen)
             "message" | "confirm_history_clear" | "unsaved" | "save_workspace" | "image_size" | "canvas_size" | "warning_no_target" | "new_document" => {
-                let top = top.unwrap_or_else(|| panic!("{name}: keine FuÃŸleiste"));
+                let top = top.unwrap_or_else(|| panic!("{name}: keine Fußleiste"));
                 let from_bottom = r.bottom() - 1.0 - top;
-                assert!((28.0..=60.0).contains(&from_bottom), "{name}: FuÃŸleiste {from_bottom} px Ã¼ber der Unterkante");
+                assert!((28.0..=60.0).contains(&from_bottom), "{name}: Fußleiste {from_bottom} px über der Unterkante");
             }
             // OK/Abbrechen rechts untereinander wie im Original: keine Leiste
-            "gaussian_blur" => assert_eq!(top, None, "{name}: KnÃ¶pfe rechts oben, keine FuÃŸleiste"),
+            "gaussian_blur" => assert_eq!(top, None, "{name}: Knöpfe rechts oben, keine Fußleiste"),
             _ => {}
         }
     }
@@ -148,16 +148,16 @@ fn footer_top_rules() {
     let body = Rect::from_min_max(pos2(0.0, 0.0), pos2(400.0, 200.0));
     let ok = Rect::from_min_max(pos2(220.0, 166.0), pos2(296.0, 189.0));
     let cancel = Rect::from_min_max(pos2(304.0, 166.0), pos2(380.0, 189.0));
-    // Inhalt endet weit oben: 12 px Ã¼ber den KnÃ¶pfen
+    // Inhalt endet weit oben: 12 px über den Knöpfen
     assert_eq!(fp_ui::dialogs::footer_top(body, &[ok, cancel], &[Rect::from_min_max(pos2(16.0, 16.0), pos2(300.0, 60.0))]), Some(154.0));
-    // Inhalt knapp darÃ¼ber: Leiste rÃ¼ckt bis 3 px unter den Inhalt
+    // Inhalt knapp darüber: Leiste rückt bis 3 px unter den Inhalt
     assert_eq!(fp_ui::dialogs::footer_top(body, &[ok, cancel], &[Rect::from_min_max(pos2(16.0, 16.0), pos2(300.0, 156.0))]), Some(159.0));
     // Inhalt reicht in die Knopfzeile (Liste bis unten): keine Leiste
     assert_eq!(fp_ui::dialogs::footer_top(body, &[ok, cancel], &[Rect::from_min_max(pos2(16.0, 16.0), pos2(200.0, 190.0))]), None);
-    // KnÃ¶pfe rechts untereinander, der untere endet unten: keine Leiste
+    // Knöpfe rechts untereinander, der untere endet unten: keine Leiste
     let ok_top = Rect::from_min_max(pos2(304.0, 136.0), pos2(380.0, 159.0));
     assert_eq!(fp_ui::dialogs::footer_top(body, &[ok_top, cancel], &[]), None);
-    // keine KnÃ¶pfe unten
+    // keine Knöpfe unten
     assert_eq!(fp_ui::dialogs::footer_top(body, &[ok_top], &[]), None);
 }
 
@@ -206,7 +206,7 @@ fn des1_images() {
         }
         let file = format!("{stage}_{name}.png");
         match Img::hstack(&parts, 6).save(&dir.join(&file)) {
-            Ok(()) => report.push(format!("{name} â†’ {file}")),
+            Ok(()) => report.push(format!("{name} → {file}")),
             Err(e) => report.push(format!("{name}: {e}")),
         }
     }

@@ -1,6 +1,6 @@
 [package]
 name = "fp-mcp"
-description = "MCP-Server von Firepixel (rmcp): stdio und Streamable HTTP nur auf 127.0.0.1 mit Token, headless oder als BrÃ¼cke zur laufenden OberflÃ¤che"
+description = "MCP-Server von Firepixel (rmcp): stdio und Streamable HTTP nur auf 127.0.0.1 mit Token, headless oder als Brücke zur laufenden Oberfläche"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

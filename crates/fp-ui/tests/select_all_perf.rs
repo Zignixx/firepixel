@@ -1,13 +1,13 @@
-//! PERF-1: "Alles auswÃ¤hlen" auf Seiten mit Tausenden Objekten â€“ Zeit je Bild.
+//! PERF-1: "Alles auswählen" auf Seiten mit Tausenden Objekten – Zeit je Bild.
 //!
 //! Messung (Release): `cargo test -p fp-ui --release --test all select_all_perf:: -- --ignored --nocapture`
 //!
-//! Je Bild: OberflÃ¤che (`Harness::step`, CPU) und Zeichnen mit egui-wgpu wie im echten Fenster
-//! (Zerlegen in Dreiecke, Puffer/Texturen hochladen, Zeichnen, auf das Ende warten, ohne RÃ¼cklesen),
-//! mit der Anpassung fÃ¼r Software-Rasterer (`vendor\egui-wgpu`). Dokumente: ein erzeugtes mit
+//! Je Bild: Oberfläche (`Harness::step`, CPU) und Zeichnen mit egui-wgpu wie im echten Fenster
+//! (Zerlegen in Dreiecke, Puffer/Texturen hochladen, Zeichnen, auf das Ende warten, ohne Rücklesen),
+//! mit der Anpassung für Software-Rasterer (`vendor\egui-wgpu`). Dokumente: ein erzeugtes mit
 //! 3200 Rechtecken (100 · 2^5) und, falls vorhanden, die Korpusseite `Wireframes\iPad.png`.
 //!
-//! Die nicht ignorierten Tests prÃ¼fen ohne Zeitmessung, dass bei groÃŸer Auswahl das Bild klein bleibt
+//! Die nicht ignorierten Tests prüfen ohne Zeitmessung, dass bei großer Auswahl das Bild klein bleibt
 //! (Anzahl Formen/Eckpunkte) und dass Auswahl und Darstellung dieselben bleiben.
 
 use eframe::egui_wgpu;
@@ -28,7 +28,7 @@ fn corpus_page() -> Option<std::path::PathBuf> {
     p.is_file().then_some(p)
 }
 
-/// Zeichnet wie eframe in ein Ziel in FenstergrÃ¶ÃŸe, ohne zurÃ¼ckzulesen; merkt sich Dauer und Eckpunkte.
+/// Zeichnet wie eframe in ein Ziel in Fenstergröße, ohne zurückzulesen; merkt sich Dauer und Eckpunkte.
 struct PaintOnly {
     rs: egui_wgpu::RenderState,
     renderer: egui_wgpu::Renderer,
@@ -99,7 +99,7 @@ impl egui_kittest::TestRenderer for PaintOnly {
     }
 }
 
-/// Sitzung mit einem erzeugten Dokument: `n` Rechtecke im Raster auf einer 6000Ã—1600-Seite.
+/// Sitzung mit einem erzeugten Dokument: `n` Rechtecke im Raster auf einer 6000×1600-Seite.
 fn many_rects_state(n: usize) -> AppState {
     fp_engine::shell::disable();
     let session = fp_ui::ui_commands::new_session(fp_engine::Preferences::new());
@@ -107,7 +107,7 @@ fn many_rects_state(n: usize) -> AppState {
     st.sync_render = true;
     st.os_clipboard = false;
     st.session.execute("file.new", json!({ "width": 6000, "height": 1600, "background": "#ffffff" })).expect("new doc");
-    // eine Zeile mit 100 Rechtecken, dann Zeilen verdoppeln (Klonen + Verschieben): 100 Â· 2^k
+    // eine Zeile mit 100 Rechtecken, dann Zeilen verdoppeln (Klonen + Verschieben): 100 · 2^k
     let cols = 100;
     for i in 0..cols {
         let x = i as f64 * 60.0;
@@ -193,7 +193,7 @@ fn key(h: &mut H, k: Key, m: Modifiers) {
     h.event(Event::Key { key: k, physical_key: None, pressed: false, repeat: false, modifiers: m });
 }
 
-/// Ein Bild: (OberflÃ¤che, Zeichnen, Eckpunkte).
+/// Ein Bild: (Oberfläche, Zeichnen, Eckpunkte).
 fn frame(h: &mut H, last: &Arc<Mutex<(f64, usize)>>) -> (f64, f64, usize) {
     let t = Instant::now();
     h.step();
@@ -203,21 +203,21 @@ fn frame(h: &mut H, last: &Arc<Mutex<(f64, usize)>>) -> (f64, f64, usize) {
     (ui, gpu, v)
 }
 
-/// Strg+A, dann Ruhebilder und 10Ã— Pfeil rechts; gibt den Median der Bildzeit (OberflÃ¤che + Zeichnen) zurÃ¼ck.
+/// Strg+A, dann Ruhebilder und 10× Pfeil rechts; gibt den Median der Bildzeit (Oberfläche + Zeichnen) zurück.
 fn measure(name: &str, st: AppState) -> (f64, f64) {
     eprintln!("== {name}");
     let (mut h, last) = harness_gpu(st);
     let n_objects = h.state().state.session.active().map(|d| fp_engine::docops::selectable_ids(&d.doc, d.page, d.frame).len()).unwrap_or(0);
     let idle: Vec<_> = (0..5).map(|_| frame(&mut h, &last)).collect();
-    eprintln!("   ohne Auswahl ({n_objects} Objekte): OberflÃ¤che {}, Zeichnen {}, Eckpunkte {}", stat(&idle.iter().map(|f| f.0).collect::<Vec<_>>()), stat(&idle.iter().map(|f| f.1).collect::<Vec<_>>()), idle[0].2);
+    eprintln!("   ohne Auswahl ({n_objects} Objekte): Oberfläche {}, Zeichnen {}, Eckpunkte {}", stat(&idle.iter().map(|f| f.0).collect::<Vec<_>>()), stat(&idle.iter().map(|f| f.1).collect::<Vec<_>>()), idle[0].2);
     let t = Instant::now();
     key(&mut h, Key::A, Modifiers::COMMAND);
     let (ui_a, gpu_a, _) = frame(&mut h, &last);
-    eprintln!("   Strg+A: Bild {:.1} ms (OberflÃ¤che {ui_a:.1}, Zeichnen {gpu_a:.1}), gesamt mit Befehl {:.1} ms", ui_a + gpu_a, ms(t));
+    eprintln!("   Strg+A: Bild {:.1} ms (Oberfläche {ui_a:.1}, Zeichnen {gpu_a:.1}), gesamt mit Befehl {:.1} ms", ui_a + gpu_a, ms(t));
     let sel = h.state().state.session.active().map(|d| d.selection.elements.len()).unwrap_or(0);
     let idle: Vec<_> = (0..8).map(|_| frame(&mut h, &last)).collect();
     let tot: Vec<f64> = idle.iter().map(|f| f.0 + f.1).collect();
-    eprintln!("   alles gewÃ¤hlt ({sel}): OberflÃ¤che {}, Zeichnen {}, Eckpunkte {}", stat(&idle.iter().map(|f| f.0).collect::<Vec<_>>()), stat(&idle.iter().map(|f| f.1).collect::<Vec<_>>()), idle[0].2);
+    eprintln!("   alles gewählt ({sel}): Oberfläche {}, Zeichnen {}, Eckpunkte {}", stat(&idle.iter().map(|f| f.0).collect::<Vec<_>>()), stat(&idle.iter().map(|f| f.1).collect::<Vec<_>>()), idle[0].2);
     let mut arrows = Vec::new();
     for _ in 0..10 {
         let t = Instant::now();
@@ -227,7 +227,7 @@ fn measure(name: &str, st: AppState) -> (f64, f64) {
         arrows.push((ui, gpu, ms(t), ui2 + gpu2));
     }
     eprintln!(
-        "   Pfeil rechts: Bild mit Taste {} (OberflÃ¤che {}, Zeichnen {}), folgendes Bild {}",
+        "   Pfeil rechts: Bild mit Taste {} (Oberfläche {}, Zeichnen {}), folgendes Bild {}",
         stat(&arrows.iter().map(|a| a.0 + a.1).collect::<Vec<_>>()),
         stat(&arrows.iter().map(|a| a.0).collect::<Vec<_>>()),
         stat(&arrows.iter().map(|a| a.1).collect::<Vec<_>>()),
@@ -249,7 +249,7 @@ fn drag_first_object(h: &mut H, last: &Arc<Mutex<(f64, usize)>>) {
         let r = fp_render::Renderer::page_rect(&d.doc, d.page)?;
         Some((pr, r, ((b.left + b.right) / 2.0, (b.top + b.bottom) / 2.0)))
     })() else {
-        eprintln!("   Ziehen: keine Seitenlage â€“ Ã¼bersprungen");
+        eprintln!("   Ziehen: keine Seitenlage – übersprungen");
         return;
     };
     let (w, ht) = ((r.right - r.left) as f32, (r.bottom - r.top) as f32);
@@ -270,7 +270,7 @@ fn drag_first_object(h: &mut H, last: &Arc<Mutex<(f64, usize)>>) {
     h.event(Event::PointerButton { pos: p, button: egui::PointerButton::Primary, pressed: false, modifiers: Modifiers::NONE });
     let _ = frame(h, last);
     eprintln!(
-        "   Ziehen (nur gemessen): erster Mausschritt {:.1} ms (OberflÃ¤che {:.1}, Zeichnen {:.1}), weitere {}",
+        "   Ziehen (nur gemessen): erster Mausschritt {:.1} ms (Oberfläche {:.1}, Zeichnen {:.1}), weitere {}",
         steps[0].0 + steps[0].1,
         steps[0].0,
         steps[0].1,
@@ -289,7 +289,7 @@ fn select_all_3000_objects_frame_time() {
     }
 }
 
-/// Einzelne Bausteine je Bild mit allen 3200 Objekten gewÃ¤hlt (CPU, ohne Zeichnen).
+/// Einzelne Bausteine je Bild mit allen 3200 Objekten gewählt (CPU, ohne Zeichnen).
 #[test]
 #[ignore = "Messung: cargo test -p fp-ui --test all select_all_perf::probe -- --ignored --nocapture"]
 fn probe_parts_with_large_selection() {
@@ -303,7 +303,7 @@ fn probe_parts_with_large_selection() {
         }
         eprintln!("   {name}: {:.2} ms", ms(t) / reps as f64);
     };
-    eprintln!("== Bausteine, {n} gewÃ¤hlt");
+    eprintln!("== Bausteine, {n} gewählt");
     time("inspector::layouts::select_layout", 3, &mut || {
         let _ = fp_ui::inspector::layouts::select_layout(&st.session);
     });
@@ -364,8 +364,8 @@ fn probe_parts_with_large_selection() {
     t(&mut h, "mit Bedienfeldern, Zoom 400 %");
 }
 
-/// GebÃ¼ndelte Auswahlrahmen (`FrameBatch`) ergeben dasselbe Bild wie einzelne Formen: 300 gewÃ¤hlte
-/// Objekte bei 100 % und bei 37 % (Rahmen kleiner, Griffe Ã¼berlappen).
+/// Gebündelte Auswahlrahmen (`FrameBatch`) ergeben dasselbe Bild wie einzelne Formen: 300 gewählte
+/// Objekte bei 100 % und bei 37 % (Rahmen kleiner, Griffe überlappen).
 #[test]
 fn frame_batch_draws_same_pixels() {
     use std::sync::atomic::Ordering::Relaxed;
@@ -394,7 +394,7 @@ fn frame_batch_draws_same_pixels() {
     }
 }
 
-/// Ohne Zeitmessung: Mit 3000 gewÃ¤hlten Objekten bleibt das Bild klein, Auswahl und Pfeiltaste
+/// Ohne Zeitmessung: Mit 3000 gewählten Objekten bleibt das Bild klein, Auswahl und Pfeiltaste
 /// wirken auf alle Objekte.
 #[test]
 fn select_all_3000_objects_stays_light() {
@@ -402,7 +402,7 @@ fn select_all_3000_objects_stays_light() {
     key(&mut h, Key::A, Modifiers::COMMAND);
     h.run_steps(2);
     let d = h.state().state.session.active().expect("doc");
-    assert!(d.selection.elements.len() >= 3000, "Strg+A wÃ¤hlt alle");
+    assert!(d.selection.elements.len() >= 3000, "Strg+A wählt alle");
     let before: Vec<_> = d.selection.elements.iter().filter_map(|id| fp_engine::docops::element_on_page(&d.doc, d.page, *id)).filter_map(|e| fp_engine::docops::element_bounds(&d.doc, &e)).collect();
     key(&mut h, Key::ArrowRight, Modifiers::NONE);
     h.run_steps(2);
@@ -411,6 +411,6 @@ fn select_all_3000_objects_stays_light() {
     let after: Vec<_> = d.selection.elements.iter().filter_map(|id| fp_engine::docops::element_on_page(&d.doc, d.page, *id)).filter_map(|e| fp_engine::docops::element_bounds(&d.doc, &e)).collect();
     assert_eq!(before.len(), after.len());
     for (b, a) in before.iter().zip(&after) {
-        assert!((a.left - b.left - 1.0).abs() < 1e-3 && (a.top - b.top).abs() < 1e-3, "um 1 px nach rechts: {b:?} â†’ {a:?}");
+        assert!((a.left - b.left - 1.0).abs() < 1e-3 && (a.top - b.top).abs() < 1e-3, "um 1 px nach rechts: {b:?} → {a:?}");
     }
 }

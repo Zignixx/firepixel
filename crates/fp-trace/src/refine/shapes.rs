@@ -1,16 +1,16 @@
 //! Grundformen erkennen: geschlossene Randketten, die (innerhalb der Formtoleranz) Kreis, Ellipse,
 //! Rechteck oder abgerundetes Rechteck sind, werden durch die exakte Form ersetzt.
 //!
-//! - **Ellipse/Kreis:** FlÃ¤che, Schwerpunkt und zweite Momente des Pixelumrisses (exakt Ã¼ber die
-//!   Eckpunkte) ergeben Mittelpunkt, Halbachsen und Drehung; fast gleiche Achsen â†’ Kreis mit dem
-//!   Radius aus der FlÃ¤che, fast achsparallel â†’ exakt achsparallel. Ausgabe: 4 Knoten
-//!   (Henkel Îº = 0,5523 Ã— Halbachse).
-//! - **Rechteck/abgerundetes Rechteck:** kleinstes umschlieÃŸendes Rechteck der Kantenmitten
-//!   (Drehschieber Ã¼ber die konvexe HÃ¼lle), Eckradius durch Minimieren der mittleren Abweichung.
+//! - **Ellipse/Kreis:** Fläche, Schwerpunkt und zweite Momente des Pixelumrisses (exakt über die
+//!   Eckpunkte) ergeben Mittelpunkt, Halbachsen und Drehung; fast gleiche Achsen → Kreis mit dem
+//!   Radius aus der Fläche, fast achsparallel → exakt achsparallel. Ausgabe: 4 Knoten
+//!   (Henkel κ = 0,5523 × Halbachse).
+//! - **Rechteck/abgerundetes Rechteck:** kleinstes umschließendes Rechteck der Kantenmitten
+//!   (Drehschieber über die konvexe Hülle), Eckradius durch Minimieren der mittleren Abweichung.
 //!   Ausgabe: 4 Ecken bzw. 8 Knoten (je Ecke ein Viertelbogen).
 //!
-//! Angenommen wird eine Form nur, wenn **jede** Kantenmitte hÃ¶chstens `tol` (+0,4 % der GrÃ¶ÃŸe)
-//! von ihr entfernt liegt und die FlÃ¤che auf 3 % stimmt.
+//! Angenommen wird eine Form nur, wenn **jede** Kantenmitte höchstens `tol` (+0,4 % der Größe)
+//! von ihr entfernt liegt und die Fläche auf 3 % stimmt.
 
 use super::fit::{Seg, V};
 
@@ -23,16 +23,16 @@ pub(crate) enum Shape {
     RoundedRect,
 }
 
-/// Îº fÃ¼r Viertelkreise aus einer kubischen Kurve.
+/// κ für Viertelkreise aus einer kubischen Kurve.
 const KAPPA: f64 = 0.552_284_749_830_793_4;
 
-/// Auf 0,5 px runden, wenn hÃ¶chstens 0,12 px entfernt (saubere Zahlen bei Pixelkanten).
+/// Auf 0,5 px runden, wenn höchstens 0,12 px entfernt (saubere Zahlen bei Pixelkanten).
 fn tidy(v: f64) -> f64 {
     let r = (v * 2.0).round() / 2.0;
     if (v - r).abs() <= 0.12 { r } else { v }
 }
 
-/// FlÃ¤che (mit Vorzeichen), Schwerpunkt und zentrale zweite Momente eines Polygons.
+/// Fläche (mit Vorzeichen), Schwerpunkt und zentrale zweite Momente eines Polygons.
 fn moments(c: &[(i32, i32)]) -> (f64, V, f64, f64, f64) {
     let n = c.len();
     let (mut a, mut cx, mut cy, mut ixx, mut iyy, mut ixy) = (0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
@@ -103,7 +103,7 @@ fn ellipse(area: f64, c: V, cxx: f64, cyy: f64, cxy: f64, samples: &[V], tol: f6
         ang = 0.0;
         center = V::new(tidy(c.x), tidy(c.y));
     } else {
-        // nahe an den Achsen â†’ exakt achsparallel
+        // nahe an den Achsen → exakt achsparallel
         let q = (ang / std::f64::consts::FRAC_PI_2).round();
         if snap_deg > 0.0 && (ang - q * std::f64::consts::FRAC_PI_2).abs().to_degrees() <= snap_deg {
             let (sa, sb) = (2.0 * cxx.sqrt(), 2.0 * cyy.sqrt());
@@ -112,7 +112,7 @@ fn ellipse(area: f64, c: V, cxx: f64, cyy: f64, cxy: f64, samples: &[V], tol: f6
             b = sb;
             center = V::new(tidy(c.x), tidy(c.y));
         }
-        // FlÃ¤che angleichen
+        // Fläche angleichen
         let k = (area / (std::f64::consts::PI * a * b)).sqrt();
         a = tidy(a * k);
         b = tidy(b * k);
@@ -194,8 +194,8 @@ fn rect(area: f64, samples: &[V], tol: f64, snap_deg: f64, allow_curves: bool) -
     if h.len() < 3 {
         return None;
     }
-    // kleinstes umschlieÃŸendes Rechteck (Richtungen der HÃ¼llkanten)
-    let mut best: Option<(f64, f64)> = None; // (FlÃ¤che, Winkel)
+    // kleinstes umschließendes Rechteck (Richtungen der Hüllkanten)
+    let mut best: Option<(f64, f64)> = None; // (Fläche, Winkel)
     for i in 0..h.len() {
         let e = h[(i + 1) % h.len()] - h[i];
         if e.len() < 1e-9 {
@@ -217,7 +217,7 @@ fn rect(area: f64, samples: &[V], tol: f64, snap_deg: f64, allow_curves: bool) -
         }
     }
     let (_, mut ang) = best?;
-    // Winkel nach [-45Â°, 45Â°)
+    // Winkel nach [-45°, 45°)
     let q = (ang / std::f64::consts::FRAC_PI_2).round();
     ang -= q * std::f64::consts::FRAC_PI_2;
     if snap_deg > 0.0 && ang.abs().to_degrees() <= snap_deg {
@@ -292,7 +292,7 @@ fn rect(area: f64, samples: &[V], tol: f64, snap_deg: f64, allow_curves: bool) -
         }
         return Some((Shape::Rect, segs));
     }
-    // oben â†’ rechts â†’ unten â†’ links, je Ecke ein Viertelbogen
+    // oben → rechts → unten → links, je Ecke ein Viertelbogen
     line(g(-hw + r, -hh), g(hw - r, -hh), &mut segs);
     segs.push(Seg { p0: g(hw - r, -hh), c1: g(hw - r + k, -hh), c2: g(hw, -hh + r - k), p3: g(hw, -hh + r) });
     line(g(hw, -hh + r), g(hw, hh - r), &mut segs);
