@@ -239,6 +239,35 @@ fn legacy_draw_brush(p: &mut serde_json::Value) {
     }
 }
 
+/// Rand „Anti-Alias“ des Farbeimers (PAR 07/05, Näherung an die Messungen des Originals): Pixel
+/// rechts bzw. unterhalb des gefüllten Bereichs werden mitgemischt, umso stärker, je knapper sie die
+/// Toleranz verfehlen (Deckung 1 − Überschreitung/255; Auge 120,268: 489 + 58 Mischpixel,
+/// Verlauf 160,120 bei 32: 5 323 + 195 statt 230).
+pub(crate) fn bucket_antialias(img: &RgbaImage, region: Mask, sx: i32, sy: i32, tol: u32) -> Mask {
+    let Some(seed) = img.get(sx, sy) else { return region };
+    let b = region.bounds().inflate(1, 1).intersect(&img.bounds());
+    let Ok(mut out) = Mask::new(b) else { return region };
+    for y in b.top..b.bottom {
+        for x in b.left..b.right {
+            let v = region.get(x, y);
+            if v > 0 {
+                out.set(x, y, v);
+                continue;
+            }
+            if region.get(x - 1, y) == 0 && region.get(x, y - 1) == 0 {
+                continue;
+            }
+            let Some(px) = img.get(x, y) else { continue };
+            let ex = super::select::wand_excess(px, seed, tol).max(0);
+            // Toleranz 0: nur knapp verfehlende Pixel (gemessen 160,120: 6 + 1 px)
+            if ex < 255 && (tol > 0 || ex <= 1) {
+                out.set(x, y, (255 - ex) as u8);
+            }
+        }
+    }
+    out
+}
+
 /// Beschränkt eine Deckung auf die Pixelauswahl (falls vorhanden).
 fn clip_to_selection(m: Mask, d: &DocumentState) -> Mask {
     match d.selection.pixels.as_ref().filter(|_| d.selection.has_pixels()) {
@@ -395,11 +424,15 @@ pub(super) fn register(r: &mut CommandRegistry) {
             .opt_default("tolerance", ParamKind::Integer { min: Some(0), max: Some(255) }, json!(32), "Farbtoleranz")
             .opt("color", ParamKind::Color, "Farbe (Vorgabe: Füllfarbe)")
             .opt_default("fillSelection", ParamKind::Bool, json!(false), "ausgewählten Bereich füllen")
+            .opt_default("edge", ParamKind::Integer { min: Some(0), max: Some(2) }, json!(0), "Rand: 0 hart, 1 Anti-Alias, 2 weiche Kante")
+            .opt_default("feather", ParamKind::Integer { min: Some(0), max: Some(1000) }, json!(10), "Breite der weichen Kante")
             .run(|s, p| {
                 let pt = p.point("point")?;
                 let tol = p.i64_or("tolerance", 32)?.clamp(0, 255) as u32;
                 let color = p.opt_color("color")?.unwrap_or(s.tools.fill_color);
                 let fill_sel = p.bool_or("fillSelection", false)?;
+                let edge = p.i64_or("edge", 0)?.clamp(0, 2);
+                let feather = p.i64_or("feather", 10)?.clamp(0, 1000) as u32;
                 with_doc(s, |d| {
                     let cov = if fill_sel && d.selection.has_pixels() {
                         d.selection.pixels.clone().unwrap_or_default()
@@ -407,7 +440,13 @@ pub(super) fn register(r: &mut CommandRegistry) {
                         let (_, e) = bitmap_for(d, Some(pt), &BasicGeometry).ok_or_else(|| sel_err("err-sel-no-bitmap"))?;
                         let ElementKind::Bitmap(b) = &e.kind else { return Err(sel_err("err-sel-no-bitmap")) };
                         let img = bitmap_image(b).ok_or_else(|| EngineError::Failed(fp_i18n::t("err-bitmap-unreadable-short")))?;
-                        flood_region(&img, pt.x.floor() as i32, pt.y.floor() as i32, tol).ok_or_else(|| sel_err("err-sel-point-outside-bitmap"))?
+                        let (x, y) = (pt.x.floor() as i32, pt.y.floor() as i32);
+                        let region = flood_region(&img, x, y, tol).ok_or_else(|| sel_err("err-sel-point-outside-bitmap"))?;
+                        match edge {
+                            1 => bucket_antialias(&img, region, x, y, tol),
+                            2 => super::select::feather_mask(region, feather),
+                            _ => region,
+                        }
                     };
                     paint_mask(d, cov, color, 255)?;
                     Ok(CommandOutput::doc())

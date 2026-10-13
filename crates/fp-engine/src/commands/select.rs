@@ -94,6 +94,14 @@ fn set_pixels(d: &mut DocumentState, m: Option<Mask>, mode: SelectMode, feather:
     }
 }
 
+/// Weiche Kante wie beim Aufziehen eines Rahmens (gemessen 06/19: Rahmen + `f` px nach außen).
+pub(crate) fn feather_mask(m: Mask, f: u32) -> Mask {
+    if f == 0 {
+        return m;
+    }
+    m.extended(f as i32).and_then(|x| x.feather(f)).unwrap_or(m)
+}
+
 trait MaskExt {
     fn extended(&self, by: i32) -> std::result::Result<Mask, fp_raster::RasterError>;
 }
@@ -112,14 +120,28 @@ impl MaskExt for Mask {
     }
 }
 
-/// Zauberstab-Region: zusammenhängende Pixel mit max. Kanalabstand ≤ `tol` ab `(x, y)`.
+/// Farbabstand des Zauberstabs und Farbeimers zum Klickpixel, gemessen am Original (PAR 06/10,
+/// 07/02; Klick 160,120 im Verlauf von T02 pixelgleich für Toleranz 0/32/100): ein Pixel gehört dazu,
+/// wenn jeder Kanal höchstens `tol` abweicht **und** die Abweichungen der Farbkanäle untereinander
+/// höchstens `tol` auseinanderliegen (max(d) − min(d) ≤ tol mit d = Pixel − Klickpixel je Kanal).
+/// Rückgabe: wie weit die Toleranz überschritten ist (≤ 0 = innerhalb).
+pub(crate) fn wand_excess(p: [u8; 4], seed: [u8; 4], tol: u32) -> i32 {
+    let d = [0, 1, 2].map(|k| p[k] as i32 - seed[k] as i32);
+    let da = (p[3] as i32 - seed[3] as i32).abs();
+    let mx = d.iter().map(|v| v.abs()).max().unwrap_or(0).max(da);
+    let spread = d.iter().max().unwrap_or(&0) - d.iter().min().unwrap_or(&0);
+    mx.max(spread) - tol as i32
+}
+
+/// Zauberstab-Region: zusammenhängende Pixel (4er-Nachbarschaft) innerhalb der Toleranz
+/// ([`wand_excess`]) ab `(x, y)`.
 pub(crate) fn flood_region(img: &fp_raster::RgbaImage, x: i32, y: i32, tol: u32) -> Option<Mask> {
     let b = img.bounds();
     let seed = img.get(x, y)?;
     let mut m = Mask::new(b).ok()?;
     let w = img.width();
     let mut stack = vec![(x, y)];
-    let near = |p: [u8; 4]| (0..4).all(|k| (p[k] as i32 - seed[k] as i32).unsigned_abs() <= tol);
+    let near = |p: [u8; 4]| wand_excess(p, seed, tol) <= 0;
     let mut seen = vec![false; img.width() * img.height()];
     while let Some((cx, cy)) = stack.pop() {
         if !b.contains(cx, cy) {

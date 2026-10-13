@@ -806,9 +806,13 @@ impl ToolMachine for FillTool {
                     return ToolResponse::default();
                 }
                 if bitmap_target(ctx) {
+                    // Rand aus dem Füllbereich des Inspektors (Werksvorgabe Anti-Alias, weiche Kante 10)
+                    let nf = ctx.options.new_fill.as_ref();
+                    let edge = nf.and_then(|v| v.get("edge")).and_then(Value::as_i64).unwrap_or(1);
+                    let feather = nf.and_then(|v| v.get("feather")).and_then(Value::as_i64).filter(|f| *f > 0).unwrap_or(10);
                     return ToolResponse::commit(vec![Invocation::new(
                         "bitmap.floodFill",
-                        json!({"point": pt_json(*pos), "tolerance": ctx.options.tolerance_of(self.id), "fillSelection": ctx.options.fills_selection(self.id)}),
+                        json!({"point": pt_json(*pos), "tolerance": ctx.options.tolerance_of(self.id), "fillSelection": ctx.options.fills_selection(self.id), "edge": edge, "feather": feather}),
                     )]);
                 }
                 let opt = HitOptions { tolerance: ctx.pick_tolerance(), ..HitOptions::default() };
