@@ -175,6 +175,11 @@ pub fn mixer(ui: &mut Ui, st: &mut AppState) {
         if resp.clicked() {
             ui.data_mut(|d| d.insert_temp(Id::new(MIXER_ACTIVE), *is_stroke));
         }
+        // Farbwähler-Popup des Originals (N27b) wie an jedem anderen Farbfeld
+        let choice = crate::inspector::color_picker::popup(ui, &resp, st, (col.a() > 0).then_some(*col), crate::inspector::color_picker::Footer::Plain);
+        if let Some(crate::inspector::popups::ColorChoice::Color(nc)) = choice {
+            apply_color(st, nc, *is_stroke);
+        }
     }
     // Standardfarben / Tauschen
     let br = Rect::from_min_size(pos2(area.left() + 4.0, area.top() + 66.0), vec2(18.0, 16.0));

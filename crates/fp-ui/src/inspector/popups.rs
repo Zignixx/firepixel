@@ -1,12 +1,11 @@
 //! Popups des Inspektors (11 §2.3.3 „Strich-, Füllungs- und Effekt-Popups“):
-//! - Farbfelder-Popup (6010): Farbfelder des Farbfelder-Bedienfelds, Hex-Feld, „Keine“,
-//!   Systemfarbwähler und Pipette,
+//! - Farbfeld mit dem Farbwähler-Popup des Originals (Umsetzung in [`super::color_picker`], N27b),
 //! - Verlaufs-Editor (5980): Form, Umkehren, Farb- und Deckkraftstopps,
 //! - Strichkategorien (4116) mit Vorgaben je Kategorie,
 //! - Pipette über die Leinwand (Werkzeug Pipette vorübergehend, danach Rückkehr).
 
 use super::fields::{self, Dl};
-use super::glyphs::Glyph;
+use super::color_picker::Footer;
 use super::texts::{self, refs};
 use crate::app_state::{Action, AppState};
 use crate::theme::Theme;
@@ -16,164 +15,53 @@ use fp_color::{Argb, Rgba8};
 use fp_engine::ToolId;
 use serde_json::{json, Value};
 
-/// Ergebnis des Farbfelder-Popups.
+/// Ergebnis des Farbwähler-Popups ([`super::color_picker`]).
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum ColorChoice {
     Color(Argb),
-    /// Keine Farbe (transparent).
+    /// Keine Farbe (transparent, Knopf „Ohne“).
     None,
-    /// Pipette starten.
+    /// Pipette starten (älterer Ablauf; das Popup des Originals ist selbst schon Pipette und liefert
+    /// die aufgenommene Farbe direkt als [`ColorChoice::Color`]).
     Pipette,
+    /// Werkzeugleiste Füllung: Knopf „Verlauf“.
+    Gradient,
+    /// Werkzeugleiste Füllung: Knopf „Muster“.
+    Pattern,
+    /// Kontur: Strichlage 0 innen, 1 mittig, 2 außen.
+    Placement(u8),
 }
 
 fn c32(c: Argb) -> Color32 {
     Color32::from_rgba_unmultiplied(c.r(), c.g(), c.b(), c.a())
 }
 
-/// Deckende Farbe aus dem Systemfarbwähler.
-fn argb_of(col: Color32) -> Argb {
-    Argb(0xff00_0000 | (col.r() as u32) << 16 | (col.g() as u32) << 8 | col.b() as u32)
-}
-
-/// Id des Farbwählers in einem Farbfelder-Popup (für Tests und Aufräumen).
+/// Id-Basis des Farbwählers eines Farbfelds (für Tests und Aufräumen; Farbdialog: `.with("sys")`,
+/// `.with("sysb")`, `.with("syscol")`).
 pub fn picker_id(id: Id) -> Id {
     id.with("picker")
 }
 
-/// Inhalt des Farbfelder-Popups. `allow_none`: Knopf „Keine“; `allow_pipette`: Pipette.
-pub fn color_picker_ui(ui: &mut Ui, id: Id, st: &AppState, current: Option<Argb>, allow_none: bool, allow_pipette: bool) -> Option<ColorChoice> {
-    let t = Theme::current(ui.ctx());
-    let c = &t.colors;
-    let mut out = None;
-    let swatches = crate::panels::swatch_colors(ui.ctx(), st);
-    let cols = 21usize;
-    let cell = 10.0;
-    let rows = swatches.len().div_ceil(cols).max(1);
-    let width = cols as f32 * cell + 2.0;
-    let (head, _) = ui.allocate_exact_size(vec2(width, 24.0), Sense::hover());
-    // Vorschau der aktuellen bzw. überfahrenen Farbe
-    let hover_key = id.with("hover");
-    let hovered: Option<Argb> = ui.data(|d| d.get_temp(hover_key));
-    // Arbeitsfarbe des genauen Farbwählers (Nutzerbefund N27a): solange gezogen wird, gilt sie,
-    // nicht `current` – sonst sprang das Feld jeden Frame auf die Ausgangsfarbe zurück.
-    let sys_col_key = id.with("syscol");
-    let pending: Option<Argb> = ui.data(|d| d.get_temp::<Color32>(sys_col_key)).map(argb_of);
-    let current_shown = pending.or(current);
-    let pv = Rect::from_min_size(head.min + vec2(1.0, 2.0), vec2(34.0, 20.0));
-    match hovered.or(current_shown) {
-        Some(col) => {
-            crate::widgets::checker(ui.painter(), pv, 4.0, &t);
-            ui.painter().rect_filled(pv, 0.0, c32(col));
-        }
-        None => {
-            ui.painter().rect_filled(pv, 0.0, Color32::WHITE);
-            ui.painter().line_segment([pv.left_bottom(), pv.right_top()], Stroke::new(1.5, c.icon_red));
-        }
-    }
-    ui.painter().rect_stroke(pv, 0.0, Stroke::new(1.0, c.field_border), StrokeKind::Inside);
-    let hex_r = Rect::from_min_size(pos2(pv.right() + 6.0, head.top() + 3.0), vec2(70.0, 19.0));
-    let cur_hex = hovered.or(current_shown).map(|x| format!("#{:02X}{:02X}{:02X}", x.r(), x.g(), x.b())).unwrap_or_default();
-    if let Some(s) = fields::text(ui, id.with("hex"), hex_r, &cur_hex, true) {
-        let s = s.trim().to_string();
-        let s = if s.starts_with('#') { s } else { format!("#{s}") };
-        if let Some(col) = Rgba8::parse_hex(&s) {
-            out = Some(ColorChoice::Color(Argb(col.to_argb().0 | 0xff00_0000)));
-        }
-    }
-    let mut x = head.right() - 22.0;
-    if allow_pipette {
-        if fields::icon_button(ui, id.with("pip"), Rect::from_min_size(pos2(x, head.top() + 2.0), vec2(20.0, 20.0)), Glyph::Eyedropper, true, &texts::t("pi-color-pipette")).clicked() {
-            out = Some(ColorChoice::Pipette);
-        }
-        x -= 22.0;
-    }
-    let sys_key = id.with("sys");
-    let mut sys: bool = ui.data(|d| d.get_temp(sys_key)).unwrap_or(false);
-    if fields::icon_button(ui, id.with("sysb"), Rect::from_min_size(pos2(x, head.top() + 2.0), vec2(20.0, 20.0)), Glyph::Picker, true, &texts::t("pi-color-system")).clicked() {
-        sys = !sys;
-        ui.data_mut(|d| {
-            d.insert_temp(sys_key, sys);
-            d.remove::<Color32>(sys_col_key);
-        });
-    }
-    x -= 22.0;
-    if allow_none && fields::icon_button(ui, id.with("none"), Rect::from_min_size(pos2(x, head.top() + 2.0), vec2(20.0, 20.0)), Glyph::FillNone, true, &texts::t("pi-color-transparent")).clicked() {
-        out = Some(ColorChoice::None);
-    }
-    // Farbfelder
-    let (grid, resp) = ui.allocate_exact_size(vec2(width, rows as f32 * cell + 2.0), Sense::click());
-    ui.painter().rect_filled(grid, 0.0, c.line_dark);
-    let mut hov = None;
-    for (i, col) in swatches.iter().enumerate() {
-        let r = Rect::from_min_size(pos2(grid.left() + 1.0 + (i % cols) as f32 * cell, grid.top() + 1.0 + (i / cols) as f32 * cell), vec2(cell, cell));
-        ui.painter().rect_filled(r.shrink(0.5), 0.0, c32(*col));
-        if resp.hover_pos().is_some_and(|p| r.contains(p)) {
-            hov = Some(*col);
-            ui.painter().rect_stroke(r, 0.0, Stroke::new(1.0, Color32::WHITE), StrokeKind::Inside);
-        }
-    }
-    ui.data_mut(|d| match hov {
-        Some(h) => {
-            d.insert_temp(hover_key, h);
-        }
-        None => {
-            d.remove::<Argb>(hover_key);
-        }
-    });
-    if resp.clicked()
-        && let Some(h) = hov
-    {
-        out = Some(ColorChoice::Color(h));
-    }
-    if sys {
-        // Ausgangswert nur beim ersten Frame aus `current`, danach die gemerkte Arbeitsfarbe
-        let mut rgb = ui.data(|d| d.get_temp::<Color32>(sys_col_key)).or_else(|| current.map(|x| Color32::from_rgb(x.r(), x.g(), x.b()))).unwrap_or(Color32::WHITE);
-        ui.add_space(4.0);
-        if egui::color_picker::color_picker_color32(ui, &mut rgb, egui::color_picker::Alpha::Opaque) {
-            ui.data_mut(|d| d.insert_temp(sys_col_key, rgb));
-        }
-        if let Some(col) = ui.data(|d| d.get_temp::<Color32>(sys_col_key))
-            && ui.button(texts::t("btn-apply")).clicked()
-        {
-            ui.data_mut(|d| d.remove::<Color32>(sys_col_key));
-            out = Some(ColorChoice::Color(argb_of(col)));
-        }
-    }
-    out
-}
-
-/// Farbfeld mit Popup. Liefert die Wahl beim Anklicken eines Farbfelds.
+/// Farbfeld mit dem Farbwähler-Popup des Originals. `allow_none`: Fußleiste mit „Ohne“; die Pipette
+/// ist immer aktiv (`allow_pipette` bleibt nur für ältere Aufrufer).
 #[allow(clippy::too_many_arguments)]
 pub fn color_button(ui: &mut Ui, id: impl std::hash::Hash + std::fmt::Debug, r: Rect, st: &AppState, color: Option<Argb>, enabled: bool, allow_none: bool, allow_pipette: bool) -> Option<ColorChoice> {
+    let _ = allow_pipette;
+    color_button_with(ui, id, r, st, color, enabled, if allow_none { Footer::NoneOnly } else { Footer::Plain })
+}
+
+/// Farbfeld mit dem Farbwähler-Popup und einer bestimmten Fußleiste.
+pub fn color_button_with(ui: &mut Ui, id: impl std::hash::Hash + std::fmt::Debug, r: Rect, st: &AppState, color: Option<Argb>, enabled: bool, footer: Footer) -> Option<ColorChoice> {
     let id = Id::new(id);
     let resp = fields::swatch(ui, id, r, color, enabled);
-    color_popup(ui, &resp, id, st, color, allow_none, allow_pipette)
+    super::color_picker::popup(ui, &resp, st, color, footer)
 }
 
-/// Farbfelder-Popup an einer Antwort.
+/// Farbwähler-Popup an einer Antwort (öffnet beim Klick darauf).
 pub fn color_popup(ui: &mut Ui, resp: &Response, id: Id, st: &AppState, color: Option<Argb>, allow_none: bool, allow_pipette: bool) -> Option<ColorChoice> {
-    let t = Theme::current(ui.ctx());
-    let mut out = None;
-    let shown = egui::Popup::from_toggle_button_response(resp)
-        .close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside)
-        .frame(crate::menu::menu_frame(&t).inner_margin(egui::Margin::same(4)))
-        .show(|ui| {
-            out = color_picker_ui(ui, picker_id(id), st, color, allow_none, allow_pipette);
-            if out.is_some() {
-                ui.close();
-            }
-        });
-    if shown.is_none() {
-        // Popup zu (Esc, Klick daneben, Übernehmen): nicht übernommene Arbeitsfarbe verwerfen,
-        // damit das nächste Öffnen wieder bei der aktuellen Farbe beginnt
-        let key = picker_id(id).with("syscol");
-        if ui.data(|d| d.get_temp::<Color32>(key)).is_some() {
-            ui.data_mut(|d| d.remove::<Color32>(key));
-        }
-    }
-    out
+    let _ = (id, allow_pipette);
+    super::color_picker::popup(ui, resp, st, color, if allow_none { Footer::NoneOnly } else { Footer::Plain })
 }
-
 // ---------------------------------------------------------------------- Pipette über die Leinwand
 
 #[derive(Clone, Debug)]

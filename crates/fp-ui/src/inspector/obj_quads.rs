@@ -471,7 +471,7 @@ pub fn fill_panel(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target, enabled: b
             apply_fill(ui, st, tgt, p);
         }
     } else {
-        let choice = popups::color_button(ui, id.with("sw"), sw, st, color, en, true, true);
+        let choice = popups::color_button_with(ui, id.with("sw"), sw, st, color, en, super::color_picker::Footer::Plain);
         if tgt == Target::Tool {
             ui.ctx().data_mut(|dd| dd.insert_temp(Id::new(TOOL_SWATCH_GRADIENT), None::<Vec<u32>>));
         }
@@ -494,7 +494,7 @@ pub fn fill_panel(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target, enabled: b
                     Target::Tool => popups::start_pick(&ctx, st, "color.set", json!({}), "fill"),
                 }
             }
-            None => {}
+            Some(_) | None => {}
         }
     }
     // Füllart-Knöpfe Keine / Einfarbig / Verlauf / Muster; der Werkzeug-Inspektor des Verlaufs
@@ -855,7 +855,8 @@ pub fn stroke_panel(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target, enabled:
     let en = enabled && (tgt == Target::Tool || attrs.is_some());
     let id = Id::new(("pi-stroke", tgt == Target::Tool));
     super::glyphs::paint(ui.painter(), d.r(0.0, 0.0, 12.0, 11.0), Glyph::Pencil, &theme, en);
-    match popups::color_button(ui, id.with("sw"), d.r(14.0, 0.0, 16.0, 13.0), st, color, en, true, true) {
+    let footer = super::color_picker::Footer::Stroke { placement: (tgt == Target::Selection && has).then_some(place.clamp(0, 2) as u8), enabled: en && tgt == Target::Selection };
+    match popups::color_button_with(ui, id.with("sw"), d.r(14.0, 0.0, 16.0, 13.0), st, color, en, footer) {
         Some(ColorChoice::Color(c)) => {
             let mut p = json!({"color": ui_commands::hex(c)});
             if !has {
@@ -871,7 +872,8 @@ pub fn stroke_panel(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target, enabled:
                 Target::Tool => popups::start_pick(&ctx, st, "color.set", json!({}), "stroke"),
             }
         }
-        None => {}
+        Some(ColorChoice::Placement(k)) => apply_stroke(ui, st, tgt, json!({"placement": crate::inspector::color_picker::placement_name(k)})),
+        Some(_) | None => {}
     }
     if let Some(v) = fields::number(ui, id.with("w"), d.r(32.0, 0.0, 19.0, 13.0), Some(d.r(52.0, 0.0, 9.0, 13.0)), has.then_some(width as f64), (1.0, 100.0), 0, en && has) {
         apply_stroke(ui, st, tgt, json!({"width": v}));
@@ -1908,7 +1910,7 @@ fn text_stroke_field(ui: &mut Ui, st: &mut AppState, d: Dl, id: Id) {
     let has = attrs.as_ref().is_some_and(|a| a.brush.is_some());
     let color = attrs.as_ref().filter(|_| has).map(|a| a.stroke_color);
     super::glyphs::paint(ui.painter(), d.r(121.0, 1.0, 12.0, 11.0), Glyph::Pencil, &theme, en);
-    match popups::color_button(ui, id.with("stroke"), d.r(135.0, 1.0, 14.0, 13.0), st, color, en, true, true) {
+    match popups::color_button_with(ui, id.with("stroke"), d.r(135.0, 1.0, 14.0, 13.0), st, color, en, super::color_picker::Footer::Stroke { placement: None, enabled: en }) {
         Some(ColorChoice::Color(c)) => {
             let mut p = json!({"color": ui_commands::hex(c)});
             if !has {
@@ -1921,7 +1923,8 @@ fn text_stroke_field(ui: &mut Ui, st: &mut AppState, d: Dl, id: Id) {
             let ctx = ui.ctx().clone();
             popups::start_pick(&ctx, st, "pi.stroke", json!({}), "color");
         }
-        None => {}
+        Some(ColorChoice::Placement(k)) => st.run("pi.stroke", json!({"placement": crate::inspector::color_picker::placement_name(k)})),
+        Some(_) | None => {}
     }
 }
 

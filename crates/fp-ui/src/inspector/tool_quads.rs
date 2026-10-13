@@ -448,7 +448,7 @@ fn pencil_q3(ui: &mut Ui, st: &mut AppState, r: Rect) {
             let ctx = ui.ctx().clone();
             super::popups::start_pick(&ctx, st, "color.set", serde_json::json!({}), "stroke");
         }
-        None => {}
+        Some(_) | None => {}
     }
     if let Some(b) = fields::checkbox(ui, "pencil-aa", d.r(43.0, 2.0, 90.0, 10.0), &tx("pi-antialias"), st.session.tools.options.pencil_antialias, true) {
         st.session.tools.options.pencil_antialias = b;

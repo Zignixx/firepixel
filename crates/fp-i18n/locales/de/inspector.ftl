@@ -281,6 +281,12 @@ pi-mask-editing = Bitmapmaske wird bearbeitet
 pi-color-pipette = Pipette
 pi-color-system = Systemfarbwähler
 pi-color-transparent = Transparent
+pi-color-hex = HEX:
+pi-color-rgb = RGB:
+pi-color-copy-hex = HEX-Wert kopieren
+pi-color-copy-rgb = RGB-Wert kopieren
+pi-color-opacity = Deckkraft
+pi-color-dialog-title = Farbe
 
 ## Werkzeugoptionen
 pi-rect-roundness = Eckrundung des Rechtecks:

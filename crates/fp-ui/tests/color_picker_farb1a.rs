@@ -1,7 +1,8 @@
 //! FARB-1a, Nutzerbefund N27a: Im Farbfelder-Popup sprang der genaue Farbwähler (Systemfarbwähler)
 //! beim Ziehen jeden Frame auf die Ausgangsfarbe zurück. Geprüft am Glühen-Dialog (dieselbe
 //! zentrale Funktion `inspector::popups::color_popup` nutzen Inspektor, Bedienfelder und Dialoge)
-//! mit echtem Ziehen über viele Frames (AGENTEN_REGELN §4b).
+//! mit echtem Ziehen über viele Frames (AGENTEN_REGELN §4b). Seit FARB-1b ist der genaue Farbwähler der
+//! Farbdialog hinter dem Farbkreis-Knopf des Popups; Esc schließt dort zuerst nur den Farbdialog.
 
 use egui::{Color32, Event, Id, Key, Modifiers, PointerButton, Pos2, Rect};
 use egui_kittest::kittest::Queryable;
@@ -64,7 +65,7 @@ fn form_color(h: &Harness<'_, FirepixelApp>) -> String {
 
 /// Arbeitsfarbe des genauen Farbwählers (noch nicht übernommen).
 fn pending(h: &Harness<'_, FirepixelApp>) -> Option<Color32> {
-    let key = fp_ui::inspector::popups::picker_id(color_base_id(h)).with("syscol");
+    let key = fp_ui::inspector::popups::picker_id(Id::new(color_base_id(h))).with("syscol");
     h.ctx.data(|d| d.get_temp::<Color32>(key))
 }
 
@@ -105,14 +106,14 @@ fn open_sys_picker(h: &mut Harness<'_, FirepixelApp>) {
     // das Popup findet seinen Platz erst nach dem ersten Bild (Größe noch unbekannt)
     h.run_steps(3);
     assert!(egui::Popup::is_id_open(&h.ctx, Id::new(base).with("popup")), "Farbfelder-Popup offen");
-    let sysb = Id::new(fp_ui::inspector::popups::picker_id(base).with("sysb"));
+    let sysb = Id::new(fp_ui::inspector::popups::picker_id(Id::new(base)).with("sysb"));
     let r = rect_of(h, sysb);
     // Der Umschalter bleibt zwischen Öffnungen gemerkt: nur einschalten, wenn noch aus
-    let sys_on = h.ctx.data(|d| d.get_temp::<bool>(fp_ui::inspector::popups::picker_id(base).with("sys"))).unwrap_or(false);
+    let sys_on = h.ctx.data(|d| d.get_temp::<bool>(fp_ui::inspector::popups::picker_id(Id::new(base)).with("sys"))).unwrap_or(false);
     if !sys_on {
         click_at(h, r.center());
     }
-    assert!(h.ctx.data(|d| d.get_temp::<bool>(fp_ui::inspector::popups::picker_id(base).with("sys"))).unwrap_or(false), "genauer Farbwähler offen");
+    assert!(h.ctx.data(|d| d.get_temp::<bool>(fp_ui::inspector::popups::picker_id(Id::new(base)).with("sys"))).unwrap_or(false), "genauer Farbwähler offen");
     h.run_steps(3);
 }
 
@@ -199,6 +200,10 @@ fn escape_discards_and_reopen_starts_at_old_color() {
     h.event(Event::Key { key: Key::Escape, physical_key: None, pressed: false, repeat: false, modifiers: Modifiers::NONE });
     h.run_steps(3);
     assert_eq!(pending(&h), None, "Esc verwirft die Arbeitsfarbe");
+    // zweites Esc schließt das Popup (das erste nur den Farbdialog, FARB-1b)
+    h.event(Event::Key { key: Key::Escape, physical_key: None, pressed: true, repeat: false, modifiers: Modifiers::NONE });
+    h.event(Event::Key { key: Key::Escape, physical_key: None, pressed: false, repeat: false, modifiers: Modifiers::NONE });
+    h.run_steps(3);
     assert_eq!(form_color(&h), start, "Esc stellt den alten Wert her");
     assert_eq!(effects_of(st(&h)), fx0, "Vorschau unverändert");
     assert_eq!(undo_count(st(&h)), u0);
@@ -223,7 +228,7 @@ fn apply_sets_color_and_ok_is_one_history_step_even_after_50_drags() {
         let (sv, _) = sv_and_hue(&h);
         let y = sv.top() + 2.0 + (k % 10) as f32 * (sv.height() - 4.0) / 10.0;
         drag(&mut h, sv.left_center() + egui::vec2(2.0, 0.0), egui::pos2(sv.right() - 2.0 - (k % 7) as f32, y), 4, |_, _| {});
-        let c = pending(&h).expect("Arbeitsfarbe");
+        let c = pending(&h).unwrap_or_else(|| panic!("Arbeitsfarbe, Durchgang {k}"));
         h.run_steps(1);
         let b: Vec<_> = h.get_all(egui_kittest::kittest::By::new().label("Übernehmen")).collect();
         b.last().expect("Knopf Übernehmen").click();

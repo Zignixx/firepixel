@@ -231,7 +231,9 @@ fn run_clip(st: &mut AppState, key: Key, m: egui::Modifiers, default: &str, para
 pub fn handle(ctx: &egui::Context, st: &mut AppState) {
     let editing = st.session.tool_is_editing_text();
     st.space_down = ctx.input(|i| i.key_down(Key::Space)) && !ctx.text_edit_focused() && !editing;
-    if ctx.text_edit_focused() || st.dialogs.any_open() {
+    // offenes Farbwähler-Popup: Tippen ohne Feldklick wird ignoriert, Esc/Enter gehören dem Popup
+    // (Original, re\22 §2.3; FARB-1b)
+    if ctx.text_edit_focused() || st.dialogs.any_open() || crate::inspector::color_picker::any_open(ctx) {
         return;
     }
     let events = ctx.input(|i| i.events.clone());

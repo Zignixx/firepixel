@@ -5,6 +5,8 @@
 
 use crate::app_state::{Action, AppState};
 use crate::icons::{self, tool_icon, Icon, IconStyle};
+use crate::inspector::color_picker::Footer;
+use crate::inspector::popups::ColorChoice;
 use crate::theme::{with_alpha, Theme, ToolGroup};
 use crate::widgets::{self, ButtonLook};
 use egui::{pos2, vec2, Align2, Color32, Id, Rect, Sense, Stroke, StrokeKind, Ui};
@@ -141,11 +143,6 @@ pub fn tool_tooltip(st: &AppState, id: ToolId) -> String {
 
 fn argb_to_color(a: fp_color::Argb) -> Color32 {
     Color32::from_rgba_unmultiplied((a.0 >> 16 & 0xff) as u8, (a.0 >> 8 & 0xff) as u8, (a.0 & 0xff) as u8, (a.0 >> 24) as u8)
-}
-
-fn color_to_argb(c: Color32) -> fp_color::Argb {
-    let [r, g, b, a] = c.to_srgba_unmultiplied();
-    fp_color::Argb((a as u32) << 24 | (r as u32) << 16 | (g as u32) << 8 | b as u32)
 }
 
 /// Zeichnet das Werkzeugbedienfeld.
@@ -454,19 +451,25 @@ fn color_section(ui: &mut Ui, st: &mut AppState, full: Rect, mut y: f32, theme: 
         if resp.clicked() {
             ui.ctx().data_mut(|d| d.insert_temp(well_id, if is_stroke { ActiveWell::Stroke } else { ActiveWell::Fill }));
         }
-        let popup_id = Id::new(("well-popup", is_stroke));
-        if resp.clicked() && resp.interact_pointer_pos().is_some_and(|p| well.contains(p)) {
-            egui::Popup::toggle_id(ui.ctx(), popup_id);
-        }
-        let mut new_color = None;
-        egui::Popup::new(popup_id, ui.ctx().clone(), egui::PopupAnchor::from(well), ui.layer_id()).open_memory(None).show(|ui| {
-            let mut col = argb_to_color(argb);
-            if egui::color_picker::color_picker_color32(ui, &mut col, egui::color_picker::Alpha::OnlyBlend) {
-                new_color = Some(color_to_argb(col));
+        // Farbwähler-Popup des Originals (N27b): Fußleiste Füllung bzw. Kontur, Pipette ab dem Öffnen
+        let open_at = resp.clicked().then(|| resp.interact_pointer_pos()).flatten().filter(|p| well.contains(*p)).map(|p| p.x);
+        let has_sel = st.session.active().is_some_and(|d| !d.selection.elements.is_empty());
+        let footer = if is_stroke { Footer::Stroke { placement: None, enabled: has_sel } } else { Footer::Fill { kinds: has_sel } };
+        let shown_col = (argb.a() > 0).then_some(argb);
+        let choice = crate::inspector::color_picker::show(ui, Id::new(("well", is_stroke)), well, open_at, st, shown_col, footer);
+        let none = fp_color::Argb(0x00ff_ffff);
+        let set = |c| if is_stroke { Action::SetColors { stroke: Some(c), fill: None } } else { Action::SetColors { stroke: None, fill: Some(c) } };
+        match choice {
+            Some(ColorChoice::Color(nc)) => st.push(set(nc)),
+            Some(ColorChoice::None) => st.push(set(none)),
+            Some(ColorChoice::Gradient) => st.run("pi.fill", serde_json::json!({"category": "gradient"})),
+            Some(ColorChoice::Pattern) => {
+                if let Some((_, p)) = crate::inspector::popups::pattern_files().first() {
+                    st.run("element.setPattern", serde_json::json!({"image": p.to_string_lossy()}));
+                }
             }
-        });
-        if let Some(nc) = new_color {
-            st.push(if is_stroke { Action::SetColors { stroke: Some(nc), fill: None } } else { Action::SetColors { stroke: None, fill: Some(nc) } });
+            Some(ColorChoice::Placement(k)) => st.run("pi.stroke", serde_json::json!({"placement": crate::inspector::color_picker::placement_name(k)})),
+            Some(ColorChoice::Pipette) | None => {}
         }
         y += cell.y;
     }

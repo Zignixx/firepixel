@@ -8,6 +8,7 @@
 //! bleiben leer.
 
 pub mod ai_quads;
+pub mod color_picker;
 pub mod fields;
 pub mod fonts;
 pub mod glyphs;

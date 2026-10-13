@@ -271,16 +271,14 @@ pub fn show(ctx: &egui::Context, st: &mut AppState) {
             underline_access(ui, egui::pos2(r.left() + 17.0, r.center().y), raw);
         }
         let sw = dlu_rect(o, [96.0, 116.0, 14.0, 14.0]).translate(vec2(dsw, 0.0));
-        let mut child = ui.new_child(egui::UiBuilder::new().max_rect(sw));
-        let mut rgb = [d.custom.r(), d.custom.g(), d.custom.b()];
-        // das Farbfeld ist im Original kein Tab-Stopp
+        // das Farbfeld ist im Original kein Tab-Stopp; Klick öffnet das Farbwähler-Popup (N27b)
         let skip = egui::Id::new("nd-swatch");
         super::skip_tab_stop_before(ui, skip);
-        crate::theme::field_widgets(&mut child);
-        let sresp = child.color_edit_button_srgb(&mut rgb);
+        let cur = fp_color::Argb(0xff00_0000 | (d.custom.r() as u32) << 16 | (d.custom.g() as u32) << 8 | d.custom.b() as u32);
+        let sresp = crate::inspector::fields::swatch(ui, "nd-custom-color", sw, Some(cur), true);
         super::skip_tab_stop_after(ui, skip, &sresp);
-        if sresp.changed() {
-            d.custom = Color32::from_rgb(rgb[0], rgb[1], rgb[2]);
+        if let Some(crate::inspector::popups::ColorChoice::Color(c)) = crate::inspector::color_picker::popup(ui, &sresp, st, Some(cur), crate::inspector::color_picker::Footer::Plain) {
+            d.custom = Color32::from_rgb(c.r(), c.g(), c.b());
             d.canvas = CanvasChoice::Custom;
         }
         let _ = ui.allocate_rect(body, Sense::hover());
