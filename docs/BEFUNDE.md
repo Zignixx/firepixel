@@ -831,3 +831,11 @@ Eingetragen von DOC-4 (13.10.) aus den Berichten `berichte\batch1.md`, `batch2.m
 - [ ] (von PAR-X-INSP-1) Verlaufs-/Mustergriffe auf der Leinwand werden gezeichnet, lassen sich aber noch nicht ziehen – `canvas\mod.rs` `fill_handles` + Zeiger-Werkzeug – erwartet wie im Original: Start/Ende/zweite Achse ziehen ändert den Verlauf (ein Schritt)
 - [ ] (von PAR-X-INSP-1) Wahl im Exportformat des Dokument-Inspektors legt einen Verlaufsschritt „Optimieren“ an – im Original nicht gemessen (PAR 16/08) – im Original nachmessen
 - [ ] (von PAR-X-INSP-1) `crates\fp-engine\src\commands\bitmap.rs`: Beschriftungen doppelt kodiert (z. B. `bitmap.floodFill` „FÃ¼llen“, ≈ 30 Stellen); `i18n_menue::every_command_and_tool_has_texts_in_de_and_en` schlägt deshalb fehl – Datei als UTF-8 reparieren
+
+## CT – Klicktests im echten Fenster (Nachtlauf 13.10.)
+
+- [ ] (von CT-1b) Befehle ▸ Demo – aktuelles Dokument: Vorschau entsteht, aber keine Statusmeldung (bei `FP_NO_SHELL_OPEN` sieht man nichts); Vorschauordner `%TEMP%\Firepixel\Preview\doc<N>` ist zwischen parallelen Instanzen nicht eindeutig – Vorschau im Browser (fp-ui/fp-engine) – `docs\funktionstest\ct1b_2026-10-13.md`
+- [ ] (von CT-1b) `prompt()` in Befehlsskripten zeigt keine Eingabe, liefert still den Vorgabewert: „Größe ausgewählter Objekte ändern“ verkleinert sofort auf 50 % ohne „Neue Größe in Prozent“/„New size in percent“ (ebenso Drehen und Ausblenden, Breite festlegen, ALT-Text festlegen) – `crates\fp-script\src\runtime.rs` `global_prompt`, `crates\fp-ui\src\actions.rs`
+- [ ] (von CT-1b) Bedienfeld-≡-Menüs: Trenner sind nicht wirkungslos – Klick auf die Trennlinie bzw. 1 px darunter führt den nächsten Eintrag aus (Ebenen-≡: „Auswahl auf Hintergrund reduzieren“, „Alles ausblenden“); Hauptmenüs richtig (≈ 8 px wirkungslos) – Bedienfeldmenüs in fp-ui
+- [ ] (von CT-1b) Verlauf-Bedienfeld zeigt über die Brücke ausgeführte Schritte englisch in deutscher Oberfläche („Move“, „Deselect“, „Add Filter“, „Rectangle Slice“) – Beschriftung in Oberflächensprache – Verlauf-Bedienfeld / Brücke
+- [ ] (von CT-1b, niedrig) Inspektor „+“ (Live-Filter): Eintrag „Photoshop-Live-Effekte (noch nicht verfügbar)“ nennt ein Produkt des Herstellers des Originals – neutral benennen wie „Bridge“ bei MN-4 (ftl de/en)
