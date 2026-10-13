@@ -326,7 +326,12 @@ fn paint_field(ui: &Ui, d: &CurvesDialog, inner: Rect) {
     let p = ui.painter_at(inner);
     p.rect_filled(inner, 0.0, Color32::from_gray(240));
     let w = FIELD as i32;
-    let px = |x: i32, y: i32, c: Color32| p.rect_filled(Rect::from_min_size(inner.min + vec2(x as f32, y as f32), vec2(1.0, 1.0)), 0.0, c);
+    // Einzelpixel als ungeglättete Vierecke in einem Netz: `rect_filled` mit 1 × 1 wird vom
+    // Tessellator als Linienstück mit Kantenglättung gezeichnet und ist dann kaum sichtbar (CT-1a).
+    let mut mesh = egui::epaint::Mesh::default();
+    let mut px = |x: i32, y: i32, c: Color32| {
+        mesh.add_colored_rect(Rect::from_min_size(inner.min + vec2(x as f32, y as f32), vec2(1.0, 1.0)), c);
+    };
     let grid = Color32::from_gray(0x80);
     for k in 1..4 {
         let at = (w >> 2) * k;
@@ -342,6 +347,7 @@ fn paint_field(ui: &Ui, d: &CurvesDialog, inner: Rect) {
         let (x, y) = if d.reversed { (w - 1 - i, w - 1 - y) } else { (i, y) };
         px(x, y, Color32::BLACK);
     }
+    p.add(Shape::mesh(mesh));
     for q in d.points() {
         let (cx, cy) = d.to_px(*q);
         p.rect_filled(Rect::from_min_size(inner.min + vec2(cx - 2.0, cy - 2.0), vec2(4.0, 4.0)), 0.0, Color32::BLACK);
