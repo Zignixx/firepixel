@@ -100,7 +100,16 @@ impl ServerHandler for FirepixelMcp {
             return Ok(to_result(out).into());
         }
         let env = self.env.clone();
-        let out = with_session(self.host.as_ref(), move |s| tools::call(s, &env, &name, &args))
+        let bridge = self.host.mode() == "bridge";
+        let out = with_session(self.host.as_ref(), move |s| {
+            if bridge {
+                // Brücke: Standardnamen neuer Dokumente/Ebenen in der Sprache der Oberfläche (der
+                // Auftrag läuft im UI-Thread), Antworten weiter in der Sprache des Agenten (CT-3)
+                fp_i18n::with_content_language(&fp_i18n::current_language(), || tools::call(s, &env, &name, &args))
+            } else {
+                tools::call(s, &env, &name, &args)
+            }
+        })
             .await
             .map_err(|e| ErrorData::internal_error(fp_i18n::with_language(&self.env.language, || e.to_string()), None))?;
         Ok(to_result(out).into())

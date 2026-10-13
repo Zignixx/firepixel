@@ -270,6 +270,29 @@ pub fn pseudo(text: &str) -> String {
 thread_local! {
     /// Sprache, die in diesem Thread vorübergehend gilt ([with_language]).
     static OVERRIDE: RefCell<Option<String>> = const { RefCell::new(None) };
+    /// Sprache für Dokumentinhalte ([with_content_language]).
+    static CONTENT: RefCell<Option<String>> = const { RefCell::new(None) };
+}
+
+/// Präfix der Standardnamen, die als Inhalt ins Dokument wandern (Ebene 1, Hintergrund,
+/// Unbenannt-1, Seite 1, … Kopie).
+const CONTENT_PREFIX: &str = "msg-default-";
+
+/// Führt `f` so aus, dass **Standardnamen im Dokument** (Schlüssel `msg-default-…`: neue Ebenen,
+/// Seiten, Status, „Unbenannt-1“, „Hintergrund“, „… Kopie“) in der Sprache `code` entstehen, auch
+/// wenn darin [`with_language`] eine andere Sprache für Meldungen setzt. Für die MCP-Brücke: der
+/// Agent bekommt Antworten auf Englisch, die Dokumente heißen wie in der Oberfläche (CT-3).
+pub fn with_content_language<R>(code: &str, f: impl FnOnce() -> R) -> R {
+    struct Restore(Option<String>);
+    impl Drop for Restore {
+        fn drop(&mut self) {
+            let prev = self.0.take();
+            CONTENT.with(|o| *o.borrow_mut() = prev);
+        }
+    }
+    let prev = CONTENT.with(|o| o.borrow_mut().replace(code.to_string()));
+    let _restore = Restore(prev);
+    f()
 }
 
 fn override_lang() -> Option<String> {
@@ -336,7 +359,8 @@ pub fn with_ui_language<R>(f: impl FnOnce() -> R) -> R {
 }
 
 fn lookup(st: &State, key: &str, args: Option<&FluentArgs>) -> Option<String> {
-    let ov = override_lang();
+    let content = if key.starts_with(CONTENT_PREFIX) { CONTENT.with(|o| o.borrow().clone()) } else { None };
+    let ov = content.or_else(override_lang);
     let current = ov.as_deref().unwrap_or(st.current.as_str());
     if current == PSEUDO_LANG {
         return st.langs.iter().find(|l| l.info.code == SOURCE_LANG).and_then(|l| format_in(l, key, args)).map(|s| pseudo(&s));
@@ -354,7 +378,7 @@ fn lookup(st: &State, key: &str, args: Option<&FluentArgs>) -> Option<String> {
 
 /// Nachschlagen über den Thread-Cache: (Text, gefunden). Im Normalfall ohne Sperre.
 fn cached(key: &str) -> (Arc<str>, bool) {
-    if OVERRIDE.with(|o| o.borrow().is_some()) {
+    if OVERRIDE.with(|o| o.borrow().is_some()) || CONTENT.with(|o| o.borrow().is_some()) {
         // vorübergehende Sprache: am Cache vorbei
         return match state().read().ok().and_then(|st| lookup(&st, key, None)) {
             Some(s) => (Arc::from(s), true),

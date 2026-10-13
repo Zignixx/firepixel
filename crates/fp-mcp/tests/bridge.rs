@@ -116,3 +116,50 @@ fn proxy_reports_missing_app() {
     assert_eq!(v["id"], 9);
     assert!(v["error"]["message"].as_str().is_some_and(|m| m.contains("keine Verbindung")), "{v}");
 }
+
+/// CT-3 (FIX-E): Über die Brücke angelegte Dokumente heißen wie in der Oberfläche („Unbenannt-1“,
+/// „Ebene 1“, „Webebene“ bei deutscher Oberfläche), die Antworten an den Agenten bleiben Englisch.
+#[test]
+fn bridge_names_new_documents_in_the_ui_language() {
+    assert!(fp_i18n::set_language("de"));
+    let (host, receiver) = BridgeHost::new();
+    let host = Arc::new(host);
+    let stop = Arc::new(AtomicBool::new(false));
+    let st = Arc::clone(&stop);
+    let ui = std::thread::spawn(move || {
+        let mut session = fp_engine::Session::default();
+        while !st.load(Ordering::SeqCst) {
+            receiver.process_one_blocking(&mut session, Duration::from_millis(10));
+            for p in receiver.take_ui_requests() {
+                p.respond(UiReply::Error("keine Oberfläche im Test".into()));
+            }
+        }
+        let d = session.active().map(|d| (d.title.clone(), d.doc.pages[0].root.layers.iter().filter_map(|l| match l { fp_model::LayerSlot::Own(l) => Some(l.name.clone()), _ => None }).collect::<Vec<_>>()));
+        d.unwrap_or_default()
+    });
+    let dir = std::env::temp_dir().join(format!("fp-mcp-bridge-names-{}", std::process::id()));
+    let token_file = dir.join("mcp-bridge.json");
+    let srv = fp_mcp::start_http_background(host, HttpOptions { port: 0, token: None, token_file: Some(token_file.clone()), write_token_file: true })
+        .unwrap_or_else(|e| panic!("start: {e}"));
+    let target = BridgeTarget::from_token_file(&token_file).unwrap_or_else(|e| panic!("token: {e}"));
+    let input = [
+        line(1, "initialize", json!({"protocolVersion": "2025-06-18", "capabilities": {}, "clientInfo": {"name": "t", "version": "1"}})),
+        json!({"jsonrpc": "2.0", "method": "notifications/initialized"}).to_string(),
+        call(2, "new_document", json!({"width": 50, "height": 40})),
+        call(3, "run_command", json!({"name": "layer.add", "params": {}})),
+        call(4, "run_command", json!({"name": "gibt.esNicht"})),
+    ]
+    .join("\n");
+    let mut out = Vec::new();
+    run_proxy(target, std::io::Cursor::new(input), &mut out).unwrap_or_else(|e| panic!("proxy: {e}"));
+    let text = String::from_utf8_lossy(&out).to_string();
+    stop.store(true, Ordering::SeqCst);
+    let (title, layers) = ui.join().unwrap_or_default();
+    srv.shutdown();
+    let _ = std::fs::remove_dir_all(dir);
+    assert!(title.starts_with("Unbenannt-"), "Titel in der Sprache der Oberfläche: {title}");
+    assert!(layers.iter().any(|l| l == "Ebene 1") && layers.iter().any(|l| l == "Ebene 2"), "{layers:?}");
+    assert!(!layers.iter().any(|l| l.starts_with("Layer")), "{layers:?}");
+    // Antwort an den Agenten weiter auf Englisch
+    assert!(text.contains("unknown command") || text.contains("Unknown command"), "{text}");
+}
