@@ -57,3 +57,7 @@ Slot `fp-s3`. Commit: siehe `git log --grep FIX-G2`.
 - Der Dialog „HTML-Einrichtung“ behält seine feste Höhe (430 px, für die Register Tabelle und Dokumentspezifisch). Unter „Allgemein“ bleibt dadurch unten etwas mehr Luft als im Original.
 - „Durchsuchen…“ neben „Hintergrundbild“ fehlt weiter (nicht im Auftrag).
 - Offen bleibt, ob das Original die letzte Exportart auch dokumentübergreifend für neue Dokumente merkt. Umgesetzt ist die Wahl je Dokument, wie im Datenmodell des Originals (`exportFilesStyle` + `setByUser`).
+
+## Nachtrag: roter Test `canvas::tests::open_dialog_blocks_canvas_and_export_area_opens_dialog`
+
+Der Test hat nichts mit Q-07 zu tun. Er war veraltet: Seit PAR-X (`a0c725f`, PAR 08/20) öffnet Enter bzw. ein Doppelklick im Exportbereich wie im Original die **Bildvorschau**, Register „Datei“, mit gesetztem Exportbereich, und nicht mehr den Export-Dialog. Deshalb war `dialogs.export.area` leer. Der Test prüft jetzt die Bildvorschau: Register 1 und Zuschnitt `[20, 20, 120, 90]` in allen Ansichten. Danach ist er grün.

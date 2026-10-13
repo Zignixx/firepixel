@@ -1257,18 +1257,18 @@ fn screenshots() {
 #[test]
 fn open_dialog_blocks_canvas_and_export_area_opens_dialog() {
     let mut h = harness();
-    // Exportbereich: Rahmen + Eingabe → Export-Dialog mit Bereich
+    // Exportbereich: Rahmen + Eingabe → Bildvorschau, Register „Datei“, Exportbereich gesetzt
+    // (wie das Original, PAR 08/20; früher öffnete sich der Export-Dialog)
     set_tool(&mut h, ToolId::ExportArea);
     let (a, b) = (at(&h, 20.0, 20.0), at(&h, 120.0, 90.0));
     mouse_drag(&mut h, a, b, Modifiers::NONE);
     key(&mut h, Key::Enter, Modifiers::NONE);
     h.step();
     let st = &h.state().state;
-    // der Export-Dialog hat den Bereich übernommen
-    let area = st.dialogs.export.as_ref().and_then(|d| d.area);
-    assert!(area.is_some_and(|r| r.left == 20.0 && r.bottom == 90.0), "{area:?}");
-    assert!(st.canvases.values().next().is_some_and(|c| c.export_area.is_none()), "Bereich nur einmal übernommen");
-    assert!(st.dialogs.any_open(), "Export-Dialog offen");
+    let p = st.dialogs.preview.as_ref().expect("Bildvorschau offen");
+    assert_eq!(p.tab, 1, "Register Datei");
+    assert!(p.panes.iter().all(|x| x.settings.crop == Some([20, 20, 120, 90])), "Exportbereich übernommen");
+    assert!(st.dialogs.any_open(), "Dialog offen");
     // solange ein Dialog offen ist, erreicht kein Klick die Leinwand
     set_tool(&mut h, ToolId::Rectangle);
     let (a, b) = (at(&h, 200.0, 150.0), at(&h, 260.0, 200.0));
