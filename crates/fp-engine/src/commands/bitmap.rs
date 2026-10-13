@@ -1,4 +1,4 @@
-//! Pixelbefehle der Bitmapwerkzeuge: Malen (Pinsel/Bleistift), Radieren, FÃ¼llen, Verlauf, Pipette.
+//! Pixelbefehle der Bitmapwerkzeuge: Malen (Pinsel/Bleistift), Radieren, Füllen, Verlauf, Pipette.
 
 use super::edit::insert_bitmap;
 use super::select::{bitmap_for, flood_region};
@@ -15,8 +15,8 @@ use fp_raster::{CompositeOptions, Mask, RgbaImage};
 use serde_json::json;
 use std::sync::Arc;
 
-/// Deckungsmaske eines Pinselstrichs: KreisabdrÃ¼cke (Durchmesser `size`) entlang der Punktfolge im
-/// Abstand Â¼ Durchmesser; geglÃ¤ttet oder hart (Pixelmitte im Kreis).
+/// Deckungsmaske eines Pinselstrichs: Kreisabdrücke (Durchmesser `size`) entlang der Punktfolge im
+/// Abstand ¼ Durchmesser; geglättet oder hart (Pixelmitte im Kreis).
 #[cfg_attr(all(feature = "vector", feature = "render"), allow(dead_code))]
 pub fn stroke_mask(points: &[Point], size: f32, antialias: bool, round: bool) -> Option<Mask> {
     let r = (size / 2.0).max(0.5);
@@ -64,11 +64,11 @@ pub fn stroke_mask(points: &[Point], size: f32, antialias: bool, round: bool) ->
 }
 
 /// Pinselabdruck der pinselbasierten Bitmapwerkzeuge (Radiergummi, Weichzeichner & Co., Stempel),
-/// nach Messungen am Original (FV-11, PARITAET_A L37â€“L39, einzelne AbdrÃ¼cke 13/Rand 2, 13/Rand 100
-/// und 16/Rand 50): Das Raster hat `D + 1` Zellen je Achse ab `floor(p âˆ’ D/2)`, die Mitte liegt bei
-/// `start + D/2` (D = 13 bei Mauspunkt 185 â†’ Mitte auf Pixel 184, D = 16 bei 240 â†’ zwischen 239
-/// und 240). Bis zum Kernradius deckt der Abdruck voll, danach fÃ¤llt er exponentiell ab; Kern und
-/// Abfallbreite hÃ¤ngen vom Rand (0..100) ab und skalieren unter 13 und Ã¼ber 16 px mit der GrÃ¶ÃŸe.
+/// nach Messungen am Original (FV-11, PARITAET_A L37–L39, einzelne Abdrücke 13/Rand 2, 13/Rand 100
+/// und 16/Rand 50): Das Raster hat `D + 1` Zellen je Achse ab `floor(p − D/2)`, die Mitte liegt bei
+/// `start + D/2` (D = 13 bei Mauspunkt 185 → Mitte auf Pixel 184, D = 16 bei 240 → zwischen 239
+/// und 240). Bis zum Kernradius deckt der Abdruck voll, danach fällt er exponentiell ab; Kern und
+/// Abfallbreite hängen vom Rand (0..100) ab und skalieren unter 13 und über 16 px mit der Größe.
 #[derive(Clone, Copy, Debug)]
 pub(crate) struct Dab {
     cells: i32,
@@ -84,7 +84,7 @@ impl Dab {
         let size = size.max(1.0);
         let e = edge.clamp(0.0, 100.0);
         let r = size / 2.0;
-        // gemessen bei Durchmesser 13 und 16; kleinere und grÃ¶ÃŸere Spitzen skalieren mit
+        // gemessen bei Durchmesser 13 und 16; kleinere und größere Spitzen skalieren mit
         let scale = if r < 6.5 { r / 6.5 } else if r > 8.0 { r / 8.0 } else { 1.0 };
         Dab {
             cells: size.ceil() as i32,
@@ -112,7 +112,7 @@ impl Dab {
         IRect::new(sx, sy, sx + self.cells + 1, sy + self.cells + 1)
     }
 
-    /// Ruft `f(x, y, deckung)` fÃ¼r jede Zelle mit sichtbarer Deckung (â‰¥ Â½/255) auf.
+    /// Ruft `f(x, y, deckung)` für jede Zelle mit sichtbarer Deckung (≥ ½/255) auf.
     pub(crate) fn each(&self, p: Point, mut f: impl FnMut(i32, i32, f32)) {
         let (sx, sy, cx, cy) = self.origin(p);
         for y in sy..=sy + self.cells {
@@ -151,12 +151,12 @@ pub(crate) fn dab_points(pts: &[Point], step: f32) -> Vec<Point> {
     stamps
 }
 
-/// Abstand der Radiergummi-AbdrÃ¼cke: das Original setzt je Pixel einen Abdruck (gemessen: Strich
-/// 13 / Rand 2 lÃ¶scht bei 6 px Abstand 81 %, bei 7 px 13 %).
+/// Abstand der Radiergummi-Abdrücke: das Original setzt je Pixel einen Abdruck (gemessen: Strich
+/// 13 / Rand 2 löscht bei 6 px Abstand 81 %, bei 7 px 13 %).
 pub(crate) const ERASER_STEP: f32 = 1.0;
 
-/// Radiert mit den AbdrÃ¼cken: jeder Abdruck nimmt `deckung Ã— Deckkraft` der verbliebenen Deckkraft
-/// weg (Ã¼berlappende AbdrÃ¼cke verstÃ¤rken sich wie im Original).
+/// Radiert mit den Abdrücken: jeder Abdruck nimmt `deckung × Deckkraft` der verbliebenen Deckkraft
+/// weg (überlappende Abdrücke verstärken sich wie im Original).
 pub(crate) fn erase_dabs(img: &mut RgbaImage, dab: &Dab, stamps: &[Point], op: f32, sel: Option<&Mask>) {
     let ib = img.bounds();
     let region = stamps.iter().fold(IRect::default(), |r, s| r.union(&dab.bounds(*s))).intersect(&ib);
@@ -188,9 +188,9 @@ pub(crate) fn erase_dabs(img: &mut RgbaImage, dab: &Dab, stamps: &[Point], op: f
 
 /// Pinsel, Bleistift und Radiergummi wie im Original: Der Strich wird mit allen Werkzeugwerten
 /// ([`crate::paint::PaintJob`]: Spitze, Weichheit, Strichart, Textur, Deckkraft, Mischmodus,
-/// â€žTransparenz beibehaltenâ€œ) in die ausgewÃ¤hlte Bitmap gemalt; ohne ausgewÃ¤hlte Bitmap entsteht eine
-/// neue Bitmap in StrichgrÃ¶ÃŸe (oben auf der Ebene, ausgewÃ¤hlt; PARITAET_A L36). Ohne Ã„nderung
-/// (z. B. â€žTransparenz beibehaltenâ€œ auf leerer FlÃ¤che) gibt es keinen Verlaufsschritt.
+/// „Transparenz beibehalten“) in die ausgewählte Bitmap gemalt; ohne ausgewählte Bitmap entsteht eine
+/// neue Bitmap in Strichgröße (oben auf der Ebene, ausgewählt; PARITAET_A L36). Ohne Änderung
+/// (z. B. „Transparenz beibehalten“ auf leerer Fläche) gibt es keinen Verlaufsschritt.
 fn apply_paint_job(s: &mut Session, job: crate::paint::PaintJob, new_bitmap: bool) -> Result<CommandOutput> {
     with_doc(s, |d| {
         let sel = d.selection.pixels.clone().filter(|_| d.selection.has_pixels());
@@ -220,7 +220,7 @@ fn apply_paint_job(s: &mut Session, job: crate::paint::PaintJob, new_bitmap: boo
     })
 }
 
-/// Pinsel aus einem Ã¤lteren `draw`-Parameter (`tool.shape` mit Strich-/Pinselvorgabe).
+/// Pinsel aus einem älteren `draw`-Parameter (`tool.shape` mit Strich-/Pinselvorgabe).
 fn legacy_draw_brush(p: &mut serde_json::Value) {
     if p.get("brush").is_some() {
         return;
@@ -239,7 +239,7 @@ fn legacy_draw_brush(p: &mut serde_json::Value) {
     }
 }
 
-/// BeschrÃ¤nkt eine Deckung auf die Pixelauswahl (falls vorhanden).
+/// Beschränkt eine Deckung auf die Pixelauswahl (falls vorhanden).
 fn clip_to_selection(m: Mask, d: &DocumentState) -> Mask {
     match d.selection.pixels.as_ref().filter(|_| d.selection.has_pixels()) {
         Some(sel) => m.multiply(sel).unwrap_or(m),
@@ -278,8 +278,8 @@ fn paint_mask(d: &mut DocumentState, cov: Mask, color: Argb, opacity: u8) -> Res
     Ok(())
 }
 
-/// Farbe an einem Punkt: Renderer (Komposit) oder oberste Bitmap/FÃ¼llung unter dem Punkt, sonst
-/// Leinwandfarbe. `n` = 1, 3 oder 5 (Mittelwert Ã¼ber nÃ—n, am Bild beschnitten).
+/// Farbe an einem Punkt: Renderer (Komposit) oder oberste Bitmap/Füllung unter dem Punkt, sonst
+/// Leinwandfarbe. `n` = 1, 3 oder 5 (Mittelwert über n×n, am Bild beschnitten).
 pub fn sample_color(s: &Session, p: Point, n: i32) -> Result<Argb> {
     let d = s.doc()?;
     let avg = |img: &RgbaImage| -> Option<Argb> {
@@ -339,20 +339,20 @@ pub(super) fn register(r: &mut CommandRegistry) {
         cmd("bitmap.paint")
             .label("Pinsel")
             .requires(DOC)
-            .param("points", ParamKind::Json, "Punktfolge [[x, y], â€¦]")
+            .param("points", ParamKind::Json, "Punktfolge [[x, y], …]")
             .opt("size", ParamKind::Number { min: Some(0.5), max: Some(5000.0) }, "Durchmesser")
             .opt("color", ParamKind::Color, "Farbe (Vorgabe: Strichfarbe)")
-            .opt_default("antialias", ParamKind::Bool, json!(true), "geglÃ¤ttete Kante")
+            .opt_default("antialias", ParamKind::Bool, json!(true), "geglättete Kante")
             .opt_default("opacity", ParamKind::Number { min: Some(0.0), max: Some(100.0) }, json!(100), "Deckkraft in %")
             .opt("brush", ParamKind::Json, "Pinsel (Spitze, Weichheit, Strichart, Empfindlichkeiten) wie `element.brush`; Vorgabe: einfacher Pinsel in `size`")
-            .opt("texture", ParamKind::String, "Strichtextur (Name oder Datei); Menge Ã¼ber brush.textureBlend")
+            .opt("texture", ParamKind::String, "Strichtextur (Name oder Datei); Menge über brush.textureBlend")
             .opt("blend", ParamKind::Integer { min: Some(0), max: Some(55) }, "Mischmodus (Nummer wie element.setBlendMode)")
             .opt("preserveTransparency", ParamKind::Bool, "Transparenz beibehalten: nur auf deckende Pixel malen")
             .opt("trimEnd", ParamKind::Bool, "Endpunkt weglassen (Vorgabe aus: echte Züge malen bis einschließlich Endpunkt)")
             .opt("seed", ParamKind::Integer { min: Some(0), max: None }, "Zufalls-Startwert des Zugs (natürliche Pinsel; Vorgabe aus den Punkten)")
             .opt("newBitmap", ParamKind::Bool, "in ein neues Bitmap malen, auch wenn eine Bitmap ausgewählt ist (Zug außerhalb der Bitmap)")
             .opt("tool", ParamKind::Enum { values: vec!["brush".into(), "pencil".into()] }, "Werkzeug (Vorgabe: Pinsel)")
-            .opt("draw", ParamKind::Json, "Ã¤lterer Aufruf: Strich als Zeichenbefehl {command: tool.shape, params} â€“ der Pinsel wird daraus gebildet")
+            .opt("draw", ParamKind::Json, "älterer Aufruf: Strich als Zeichenbefehl {command: tool.shape, params} – der Pinsel wird daraus gebildet")
             .run(|s, p| {
                 let (_pts, _size) = points_size(p, s)?;
                 let mut v = if p.value.is_object() { p.value.clone() } else { json!({}) };
@@ -389,12 +389,12 @@ pub(super) fn register(r: &mut CommandRegistry) {
     );
     r.add(
         cmd("bitmap.floodFill")
-            .label("FÃ¼llen")
+            .label("Füllen")
             .requires(DOC)
             .param("point", ParamKind::Point, "Klickpunkt")
             .opt_default("tolerance", ParamKind::Integer { min: Some(0), max: Some(255) }, json!(32), "Farbtoleranz")
-            .opt("color", ParamKind::Color, "Farbe (Vorgabe: FÃ¼llfarbe)")
-            .opt_default("fillSelection", ParamKind::Bool, json!(false), "ausgewÃ¤hlten Bereich fÃ¼llen")
+            .opt("color", ParamKind::Color, "Farbe (Vorgabe: Füllfarbe)")
+            .opt_default("fillSelection", ParamKind::Bool, json!(false), "ausgewählten Bereich füllen")
             .run(|s, p| {
                 let pt = p.point("point")?;
                 let tol = p.i64_or("tolerance", 32)?.clamp(0, 255) as u32;
@@ -420,9 +420,9 @@ pub(super) fn register(r: &mut CommandRegistry) {
             .requires(DOC)
             .param("from", ParamKind::Point, "Anfang")
             .param("to", ParamKind::Point, "Ende")
-            .opt("colors", ParamKind::Json, "Farben [#rrggbb, â€¦] (Vorgabe: FÃ¼ll- â†’ Strichfarbe)")
-            .opt_default("fillSelection", ParamKind::Bool, json!(true), "ausgewÃ¤hlten Bereich fÃ¼llen (aus: Farbbereich am Anfangspunkt nach Toleranz)")
-            .opt_default("tolerance", ParamKind::Integer { min: Some(0), max: Some(255) }, json!(32), "Farbtoleranz (nur ohne â€žausgewÃ¤hlten Bereich fÃ¼llenâ€œ)")
+            .opt("colors", ParamKind::Json, "Farben [#rrggbb, …] (Vorgabe: Füll- → Strichfarbe)")
+            .opt_default("fillSelection", ParamKind::Bool, json!(true), "ausgewählten Bereich füllen (aus: Farbbereich am Anfangspunkt nach Toleranz)")
+            .opt_default("tolerance", ParamKind::Integer { min: Some(0), max: Some(255) }, json!(32), "Farbtoleranz (nur ohne „ausgewählten Bereich füllen“)")
             .run(|s, p| {
                 let (a, b) = (p.point("from")?, p.point("to")?);
                 let colors = super::draw::colors_param(p, &[s.tools.fill_color, s.tools.stroke_color])?;
@@ -430,8 +430,8 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 let tol = p.i64_or("tolerance", 32)?.clamp(0, 255) as u32;
                 with_doc(s, |d| {
                     let (path, e) = bitmap_for(d, Some(a), &BasicGeometry).ok_or_else(|| sel_err("err-sel-no-bitmap"))?;
-                    // wie der Farbeimer: mit â€žAuswahl fÃ¼llenâ€œ die Pixelauswahl (ohne: die ganze
-                    // Bitmap), sonst der zusammenhÃ¤ngende Farbbereich am Anfangspunkt
+                    // wie der Farbeimer: mit „Auswahl füllen“ die Pixelauswahl (ohne: die ganze
+                    // Bitmap), sonst der zusammenhängende Farbbereich am Anfangspunkt
                     let region = if !fill_sel {
                         let ElementKind::Bitmap(bm) = &e.kind else { return Err(sel_err("err-sel-no-bitmap")) };
                         let img = bitmap_image(bm).ok_or_else(|| EngineError::Failed(fp_i18n::t("err-bitmap-unreadable-short")))?;
