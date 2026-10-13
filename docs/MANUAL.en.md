@@ -74,6 +74,9 @@ has its own colors (default black → white, a click on the swatch opens the gra
 "Fill selection" and tolerance are separate from the Paint Bucket. **Replace Color** has its own
 "From" and "To" colors (default green → red).
 
+**Default stroke:** Line, Pen, Vector Path, Rectangle, Ellipse and Polygon draw with the stroke
+*Basic ▸ Hard Rounded* (1 px), as in the original; a choice of your own in the inspector still applies.
+
 ## Menus
 
 - **File:** New, Open, Open Recent, Save, Import, Export, Image Preview, HTML Setup, Batch Process,
@@ -86,6 +89,11 @@ has its own colors (default black → white, a click on the swatch opens the gra
   via its shortcut shows the reason in the status bar. Commands that can always be chosen but find
   no suitable target (e.g. *Simplify...* without a path) report this with a warning, like the
   original; "Don't show again" switches it off.
+- *Modify ▸ Transform ▸ Numeric Transform...:* with "Scale attributes" the stroke width grows with
+  the scaling (rotating never changes it); the checkbox is remembered.
+- *Modify ▸ Mask ▸ Reveal All / Hide All* puts an empty mask over the selected object. The Layers
+  panel and the inspector still show the object itself (e.g. the bitmap) with the mask as a second
+  thumbnail.
 - **Commands:** Run Script (`.jsf`), saved commands from the commands folder
   (`%APPDATA%\Firepixel\Commands`, subfolders become submenus), Manage AI Models, Reset Warning
   Dialogs and the AI control channel.
@@ -110,7 +118,8 @@ with the layout format of the original.
 
 Important panels:
 
-- **Layers:** visibility (eye), lock, sub-layers; drag to reorder.
+- **Layers:** visibility (eye), lock, sub-layers; drag to reorder. Sub-layers are indented folder
+  rows with an expander; double-click a row to rename it.
 - **Pages / States:** pages and animation frames, master page, onion skinning.
 - **Optimize:** export format and colors.
 - **History:** step back, replay steps or save them as a command.
@@ -178,7 +187,9 @@ In the **Optimize** panel you set the export format:
 The tabs **Preview**, **2-Up** and **4-Up** above the document show the result before exporting,
 each with file size and download time. 4-Up shows three settings side by side for comparison.
 
-*File ▸ Export* writes images, slices including HTML/CSS, and all pages.
+*File ▸ Export* writes images, slices including HTML/CSS, and all pages. In *File ▸ HTML Setup...*
+(tab *General*), "Write CSS to external file" (on by default, works together with "Use CSS for
+popups") writes the styles to a separate `.css` file next to the HTML file, included via `@import`.
 
 **Image Preview** (*File ▸ Image Preview...*): with the buttons at the bottom (1, 2 or 4 preview
 windows) you compare formats and qualities side by side. Each pane has its own setting; the pane you
@@ -197,6 +208,9 @@ Choose saved settings from the list at the top; "+" saves the current one.
 
 - **Scripts:** *Commands ▸ Run Script* runs JSF scripts (object `fw`). Each script is one undo
   step.
+- **Batch Processing** (*File ▸ Batch Process...*): drag files in or add them with "Files..." or
+  "Folder...", choose the steps and "Save as", look at the before/after preview and run. The
+  target folder then holds the report `batch-report.html` with preview images.
 - **Command line:** `firepixel-cli` can inspect documents (`info`), apply commands (`run`,
   `batch`), render images (`render`), convert (`convert`), run scripts (`script`) and check
   translations (`language check`). `firepixel-cli <command> --help` shows examples; `--lang en|de`

@@ -74,6 +74,9 @@ weichem Rand wie im Original; Esc beendet das Malen und wechselt zum Zeiger. Das
 Verlaufseditor), „Auswahl füllen“ und Toleranz gelten getrennt vom Farbeimer. **Farbe ersetzen**
 hat eigene Farben „Von“ und „in“ (Vorgabe Grün → Rot).
 
+**Strich ab Werk:** Linie, Stift, Vektorpfad, Rechteck, Ellipse und Polygon zeichnen wie im Original
+mit der Strichart *Einfach ▸ Präzise abger.* (1 px); eine eigene Wahl im Inspektor gilt weiter.
+
 ## Menüs
 
 - **Datei:** Neu, Öffnen, Zuletzt geöffnete Dateien, Speichern, Importieren, Exportieren,
@@ -87,6 +90,11 @@ hat eigene Farben „Von“ und „in“ (Vorgabe Grün → Rot).
   Statuszeile beim Ausführen über das Kürzel den Grund. Befehle, die immer anwählbar sind, aber
   kein passendes Ziel finden (z. B. *Vereinfachen…* ohne Pfad), melden das wie im Original mit einer
   Warnung; mit „Nicht mehr anzeigen“ lässt sie sich abschalten.
+- *Modifizieren ▸ Transformieren ▸ Numerisch transformieren…:* Mit „Attribute skalieren“ wächst die
+  Strichbreite beim Skalieren mit (Drehen ändert sie nie); der Haken wird gemerkt.
+- *Modifizieren ▸ Maske ▸ Alles einblenden / Alles ausblenden* legt eine leere Maske über das
+  gewählte Objekt. Ebenen-Bedienfeld und Inspektor zeigen weiter das Objekt selbst (z. B. die Bitmap)
+  mit der Maske als zweiter Miniatur.
 - **Befehle:** Skript ausführen (`.jsf`), gespeicherte Befehle aus dem Befehlsordner
   (`%APPDATA%\Firepixel\Commands`, Unterordner werden Untermenüs), KI-Modelle verwalten,
   Warnmeldungen zurücksetzen und der KI-Steuerkanal.
@@ -111,7 +119,8 @@ Layoutformat des Originals austauschbar.
 
 Wichtige Bedienfelder:
 
-- **Ebenen:** Sichtbarkeit (Auge), Sperre (Schloss), Unterebenen; Ziehen ordnet um.
+- **Ebenen:** Sichtbarkeit (Auge), Sperre (Schloss), Unterebenen; Ziehen ordnet um. Unterebenen
+  stehen eingerückt als Ordnerzeile mit Aufklapper; Doppelklick auf die Zeile benennt sie um.
 - **Seiten / Status:** Seiten und Animationsbilder, Masterseite, Zwiebelschicht.
 - **Optimieren:** Exportformat und Farben.
 - **Verlauf:** Schritte zurückspulen, wiederholen oder als Befehl speichern.
@@ -181,7 +190,10 @@ Die Reiter **Vorschau**, **2-fach** und **4-fach** über dem Dokument zeigen das
 Export, jeweils mit Dateigröße und Ladezeit. Bei 4-fach stehen drei Einstellungen zum Vergleich
 nebeneinander.
 
-*Datei ▸ Exportieren* schreibt Bilder, Segmente samt HTML/CSS und alle Seiten.
+*Datei ▸ Exportieren* schreibt Bilder, Segmente samt HTML/CSS und alle Seiten. In
+*Datei ▸ HTML-Einrichtung…* (Register *Allgemein*) schreibt „CSS in externe Datei schreiben“
+(Vorgabe an, wirkt mit „CSS für Popupmenüs verwenden“) die Stile in eine eigene `.css`-Datei neben
+der HTML-Datei, die per `@import` eingebunden wird.
 
 **Bildvorschau** (*Datei ▸ Bildvorschau…*): Mit den Knöpfen unten (1, 2 oder 4 Vorschaufenster)
 vergleichst du Formate und Qualitäten nebeneinander. Jedes Feld hat seine eigene Einstellung, das
@@ -200,6 +212,9 @@ Gespeicherte Einstellungen wählst du aus der Liste oben, „+“ speichert die 
 
 - **Skripte:** *Befehle ▸ Skript ausführen* führt JSF-Skripte aus (Objekt `fw`). Jedes Skript ist ein
   Rückgängig-Schritt.
+- **Batch-Verarbeitung** (*Datei ▸ Batch-Verarbeitung…*): Dateien hineinziehen oder mit
+  „Dateien…“ bzw. „Ordner…“ hinzufügen, Schritte und „Speichern als“ wählen, Vorschau vorher/nachher
+  ansehen und ausführen. Im Zielordner liegt danach der Bericht `batch-report.html` mit Vorschaubildern.
 - **Kommandozeile:** `firepixel-cli` kann Dokumente prüfen (`info`), Befehle anwenden (`run`,
   `batch`), Bilder rendern (`render`), umwandeln (`convert`), Skripte starten (`script`) und
   Übersetzungen prüfen (`language check`). `firepixel-cli <befehl> --help` zeigt Beispiele;

@@ -53,6 +53,7 @@ cli-batch-arg-output = Output folder (created if needed)
     .value = FOLDER
 cli-batch-arg-format = Output format: fwpng (default, editable), png, gif, jpg, webp, avif, bmp, tiff, qoi, ico, apng
 cli-batch-arg-filter = Only files whose name contains this text
+    .value = TEXT
 cli-render = Render a page, region or element as PNG (offscreen)
     .examples = 
         Examples:
@@ -62,6 +63,7 @@ cli-render = Render a page, region or element as PNG (offscreen)
           firepixel-cli render file.fw.png --element 17 --out element.png
 cli-render-arg-rect = Region l,t,r,b in document pixels
 cli-render-arg-element = Only this element (ID from `info`)
+    .value = ID
 cli-info = Show the document tree (pages, states, layers, elements with IDs)
     .examples = 
         Examples:
@@ -69,6 +71,7 @@ cli-info = Show the document tree (pages, states, layers, elements with IDs)
           firepixel-cli info file.fw.png --json --depth 1
           firepixel-cli info file.fw.png --json --all-pages --types text
 cli-info-arg-types = Only these element types (comma-separated: text,path,rectangle,bitmap,group,instance …)
+    .value = TYPES
 cli-info-arg-custom-data = Output customData
 cli-commands = Show the command catalog
     .examples = 
@@ -77,7 +80,9 @@ cli-commands = Show the command catalog
           firepixel-cli commands --category modify.align
           firepixel-cli commands --filter blur --json
 cli-commands-arg-filter = Search text in name, label, status text, menu
+    .value = TEXT
 cli-commands-arg-category = Name prefix (draw, modify, filter …)
+    .value = CATEGORY
 cli-commands-arg-all = Also placeholders without effect
 cli-convert = Convert a file (format from the extension)
     .examples = 
@@ -102,6 +107,7 @@ cli-script-arg-code = Script as text instead of a file
 cli-script-arg-out = Save the active document afterwards
     .value = FILE
 cli-script-arg-arg = Value of the global variable FP_ARG
+    .value = VALUE
 cli-mcp = MCP server for AI agents (stdio or HTTP on 127.0.0.1 with token)
     .examples = 
         Examples – setup in Claude Code (stdio):
@@ -116,7 +122,9 @@ cli-mcp-arg-http = Streamable HTTP instead of stdio
 cli-mcp-arg-bridge = stdio forwarding to the running Firepixel user interface (bridge mode)
 cli-mcp-arg-port = Port on 127.0.0.1 (0 = pick a free one)
 cli-mcp-arg-token = Fixed token (at least 16 characters; default: random)
+    .value = TOKEN
 cli-mcp-arg-token-file = File for address and token (default in the user profile)
+    .value = FILE
 cli-language = Check language files, create a template for a new language, list languages
 cli-language-check = Check language files: missing/orphaned keys, placeholders, syntax, access keys
     .examples = 
@@ -147,7 +155,7 @@ cli-language-template-arg-code = Language code (e.g. fr, es, pt-BR, ja)
 cli-language-template-arg-target-dir = Target folder (the subfolder <code> is created in it)
     .value = TARGET_FOLDER
 cli-language-template-arg-overwrite = Overwrite existing files
-cli-language-template-arg-from = Source language of the template (default: en)
+cli-language-template-arg-from = Source language of the template
     .value = FROM
 cli-language-list = Available languages (built-in and from the language folders) with completeness
 cli-root-arg-json = Output as JSON (machine-readable)
@@ -158,13 +166,18 @@ cli-render-arg-out = Target file (PNG)
 cli-render-arg-file = Input file
     .value = FILE
 cli-render-arg-page = Page index (default: current page)
+    .value = N
 cli-render-arg-state = State index
+    .value = N
 cli-render-arg-zoom = Magnification (1 = 100 %)
+    .value = FACTOR
 cli-info-arg-file = Input file
     .value = FILE
 cli-info-arg-depth = Depth of the tree (0 = layers only)
+    .value = N
 cli-info-arg-all-pages = All pages in detail
 cli-info-arg-page = Page shown in detail
+    .value = N
 cli-convert-arg-input = Input file
     .value = INPUT
 cli-convert-arg-output = Output file (format from the extension)
@@ -172,6 +185,9 @@ cli-convert-arg-output = Output file (format from the extension)
 cli-help = Show help
 cli-version = Show version
 cli-usage = Usage:
+cli-usage-options = [OPTIONS]
+cli-help-default = default
+cli-help-possible-values = possible values
 cli-heading-arguments = Arguments
 cli-heading-options = Options
 cli-heading-commands = Commands

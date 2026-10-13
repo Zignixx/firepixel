@@ -248,16 +248,38 @@ fn localize(mut c: clap::Command, key: &str) -> clap::Command {
     c
 }
 
+/// Feste Bausteine der clap-Hilfe in der aktuellen Sprache (I18N-CHECK): `[OPTIONS]` im Aufruf,
+/// `[default: …]` und `[possible values: …]` hinter den Optionen.
+pub(crate) fn localize_help_text(s: &str) -> String {
+    s.replace("[OPTIONS]", &t("cli-usage-options"))
+        .replace("[default: ", &format!("[{}: ", t("cli-help-default")))
+        .replace("[possible values: ", &format!("[{}: ", t("cli-help-possible-values")))
+}
+
+/// Gerüst einer clap-Hilfe in der aktuellen Sprache (Hilfe-Option, Überschriften, Vorlage) – für
+/// eigenständige Befehle wie `batch --recipe`, die nicht über `localize` laufen.
+pub(crate) fn localize_scaffold(c: clap::Command) -> clap::Command {
+    let (h_args, h_opts) = (t("cli-heading-arguments"), t("cli-heading-options"));
+    let ids: Vec<(String, bool)> = c.get_arguments().map(|a| (a.get_id().to_string(), a.is_positional())).collect();
+    let mut c = c;
+    for (id, positional) in ids {
+        let heading = if positional { h_args.clone() } else { h_opts.clone() };
+        c = c.mut_arg(&id, |a| a.help_heading(heading));
+    }
+    let help = clap::Arg::new("help").short('h').long("help").action(clap::ArgAction::Help).help(t("cli-help")).help_heading(h_opts);
+    c.disable_help_flag(true).arg(help).help_template(format!("{{about-with-newline}}\n{} {{usage}}\n\n{{all-args}}{{after-help}}", t("cli-usage")))
+}
+
 /// Fehler beim Lesen der Kommandozeile in der aktuellen Sprache (Hilfe/Version unverändert).
 fn clap_error(e: clap::Error) -> ExitCode {
     use clap::error::{ContextKind, ContextValue, ErrorKind};
     match e.kind() {
         ErrorKind::DisplayHelp | ErrorKind::DisplayVersion => {
-            let _ = e.print();
+            print!("{}", localize_help_text(&e.render().to_string()));
             return ExitCode::SUCCESS;
         }
         ErrorKind::DisplayHelpOnMissingArgumentOrSubcommand => {
-            let _ = e.print();
+            eprint!("{}", localize_help_text(&e.render().to_string()));
             return ExitCode::from(2);
         }
         _ => {}
@@ -784,5 +806,36 @@ mod tests {
         assert!(bad.is_empty(), "{} Texte ohne Übersetzung:\n{}", bad.len(), bad.join("\n"));
         let schema = fp_i18n::with_language("en", || s.registry().get("file.new").map(|c| c.info().params_schema()).unwrap_or_default());
         assert_eq!(schema["properties"]["height"]["description"], "Height in pixels", "{schema}");
+    }
+
+    /// I18N-CHECK: Beschriftung, Beschreibung und Menüpfad jedes Befehls (wie in `commands`,
+    /// MCP `list_commands`/`describe_command`) kommen in Englisch aus den ftl-Dateien und nicht
+    /// als deutscher Registertext.
+    #[test]
+    fn labels_and_descriptions_in_en() {
+        let s = new_session();
+        let german = |t: &str| t.chars().any(|c| "äöüÄÖÜß„".contains(c));
+        let mut bad = Vec::new();
+        for c in s.registry().iter() {
+            let i = c.info();
+            let (label, desc, menu) = fp_i18n::with_language("en", || {
+                (fp_mcp::tools::command_label(&i), fp_mcp::tools::command_description(&i), fp_mcp::tools::command_menu_path(&i))
+            });
+            let k = fp_i18n::command_key(&i.name);
+            let has_label = ["", ".label"].iter().any(|a| fp_i18n::keys("en").contains(&format!("{k}{a}")));
+            if !i.label.is_empty() && (!has_label || german(&label)) {
+                bad.push(format!("{}: label „{label}“", i.name));
+            }
+            if let Some(d) = &desc {
+                let has_desc = [".description", ".tooltip"].iter().any(|a| fp_i18n::keys("en").contains(&format!("{k}{a}")));
+                if !has_desc || german(d) {
+                    bad.push(format!("{}: description „{d}“", i.name));
+                }
+            }
+            for seg in menu.iter().filter(|m| german(m)) {
+                bad.push(format!("{}: menu „{seg}“", i.name));
+            }
+        }
+        assert!(bad.is_empty(), "{} Befehlstexte ohne Englisch:\n{}", bad.len(), bad.join("\n"));
     }
 }

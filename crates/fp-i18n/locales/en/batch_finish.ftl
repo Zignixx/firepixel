@@ -41,7 +41,7 @@ batch-template-video-to-gif = Video → small GIF
 
 ## HTML report batch-report.html
 batch-html-title = Batch report
-batch-html-recipe = Recipe "{ $name }"
+batch-html-recipe = Recipe “{ $name }”
 batch-html-when = { $start } to { $end }
 batch-html-dry-run = Dry run – nothing written
 batch-html-cancelled-run = Cancelled

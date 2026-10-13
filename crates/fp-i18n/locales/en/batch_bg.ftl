@@ -237,9 +237,9 @@ batch-bg-summary-kind-image = Fill with image
 batch-bg-summary-kind-blur = Fill with blurred copy
 
 ## Messages
-batch-bg-err-model-missing = AI model missing: "{ $model }". Please load it via "Manage AI models…" or put the file into the models folder: { $folder }
-batch-bg-warn-matting-missing = "Refine edge" skipped: AI model "{ $model }" is missing.
+batch-bg-err-model-missing = AI model missing: “{ $model }”. Please load it via “Manage AI Models...” or put the file into the model folder: { $folder }
+batch-bg-warn-matting-missing = “Refine edge” skipped: AI model “{ $model }” is missing.
 batch-bg-err-no-image = Please choose an image.
-batch-bg-err-image-read = The image "{ $path }" cannot be read: { $error }
+batch-bg-err-image-read = The image “{ $path }” cannot be read: { $error }
 batch-bg-err-image-data = The embedded image is damaged.
 batch-overlay-warn-no-font = Text not set: no suitable font found.

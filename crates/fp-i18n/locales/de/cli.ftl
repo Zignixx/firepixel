@@ -26,7 +26,7 @@ cli-run = Befehle auf eine Datei anwenden und speichern
         --params gehört zum vorangehenden --cmd. --out mit Endung .png (ohne .fw) schreibt ein flaches PNG,
         sonst eine FW-PNG. --steps nimmt eine JSON-Liste [{"{"}"cmd": …, "params": {"{"}…{"}"}{"}"}, …] (Datei oder Text).
 cli-run-arg-file = Eingabedatei (.fw.png oder .png); entfällt mit --new
-    .value = FILE
+    .value = DATEI
 cli-run-arg-new = Neues Dokument BREITExHÖHE[:#farbe] statt einer Datei, z. B. 800x600 oder 64x64:#00000000
 cli-run-arg-cmds = Befehlsname (mehrfach möglich)
 cli-run-arg-params = JSON-Parameter für das vorangehende --cmd
@@ -53,6 +53,7 @@ cli-batch-arg-output = Ausgangsordner (wird angelegt)
     .value = ORDNER
 cli-batch-arg-format = Ausgabeformat: fwpng (Vorgabe, editierbar), png, gif, jpg, webp, avif, bmp, tiff, qoi, ico, apng
 cli-batch-arg-filter = Nur Dateien, deren Name diesen Text enthält
+    .value = TEXT
 cli-render = Seite, Ausschnitt oder Element als PNG rendern (offscreen)
     .examples = 
         Beispiele:
@@ -62,6 +63,7 @@ cli-render = Seite, Ausschnitt oder Element als PNG rendern (offscreen)
           firepixel-cli render datei.fw.png --element 17 --out element.png
 cli-render-arg-rect = Ausschnitt l,t,r,b in Dokumentpixeln
 cli-render-arg-element = Nur dieses Element (ID aus `info`)
+    .value = ID
 cli-info = Dokumentbaum anzeigen (Seiten, Status, Ebenen, Elemente mit IDs)
     .examples = 
         Beispiele:
@@ -69,6 +71,7 @@ cli-info = Dokumentbaum anzeigen (Seiten, Status, Ebenen, Elemente mit IDs)
           firepixel-cli info datei.fw.png --json --depth 1
           firepixel-cli info datei.fw.png --json --all-pages --types text
 cli-info-arg-types = Nur diese Elementtypen (kommagetrennt: text,path,rectangle,bitmap,group,instance …)
+    .value = TYPEN
 cli-info-arg-custom-data = customData ausgeben
 cli-commands = Befehlskatalog anzeigen
     .examples = 
@@ -77,7 +80,9 @@ cli-commands = Befehlskatalog anzeigen
           firepixel-cli commands --category modify.align
           firepixel-cli commands --filter weich --json
 cli-commands-arg-filter = Suchtext in Name, Beschriftung, Statustext, Menü
+    .value = TEXT
 cli-commands-arg-category = Namenspräfix (draw, modify, filter …)
+    .value = KATEGORIE
 cli-commands-arg-all = Auch Platzhalter ohne Wirkung
 cli-convert = Datei umwandeln (Format aus der Endung)
     .examples = 
@@ -95,13 +100,14 @@ cli-script = JSF-JavaScript (.jsf) ausführen
           firepixel-cli script makro.jsf entwurf.fw.png --out ergebnis.fw.png
           firepixel-cli script --code "fw.createFirepixelDocument({"{"}x:100,y:100{"}"},{"{"}pixelsPerUnit:72,units:'inch'{"}"},'#ffffff').width"
 cli-script-arg-script = Skriptdatei
-    .value = SCRIPT
+    .value = SKRIPT
 cli-script-arg-file = Dokument, das vorher geöffnet wird
-    .value = FILE
+    .value = DATEI
 cli-script-arg-code = Skript als Text statt Datei
 cli-script-arg-out = Aktives Dokument danach speichern
     .value = DATEI
 cli-script-arg-arg = Wert der globalen Variable FP_ARG
+    .value = WERT
 cli-mcp = MCP-Server für KI-Agenten (stdio oder HTTP auf 127.0.0.1 mit Token)
     .examples = 
         Beispiele – Einrichtung in Claude Code (stdio):
@@ -116,7 +122,9 @@ cli-mcp-arg-http = Streamable HTTP statt stdio
 cli-mcp-arg-bridge = stdio-Weiterleitung zur laufenden Firepixel-Oberfläche (Brückenmodus)
 cli-mcp-arg-port = Port auf 127.0.0.1 (0 = frei wählen)
 cli-mcp-arg-token = Festes Token (mindestens 16 Zeichen; Vorgabe: zufällig)
+    .value = TOKEN
 cli-mcp-arg-token-file = Datei für Adresse und Token (Vorgabe im Benutzerprofil)
+    .value = DATEI
 cli-language = Sprachdateien prüfen, Vorlage für eine neue Sprache anlegen, Sprachen auflisten
 cli-language-check = Sprachdateien prüfen: fehlende/verwaiste Schlüssel, Platzhalter, Syntax, Zugriffstasten
     .examples = 
@@ -147,7 +155,7 @@ cli-language-template-arg-code = Sprachcode (z. B. fr, es, pt-BR, ja)
 cli-language-template-arg-target-dir = Zielordner (darin entsteht der Unterordner <code>)
     .value = ZIELORDNER
 cli-language-template-arg-overwrite = Vorhandene Dateien überschreiben
-cli-language-template-arg-from = Ausgangssprache der Vorlage (Vorgabe: en)
+cli-language-template-arg-from = Ausgangssprache der Vorlage
     .value = VON
 cli-language-list = Verfügbare Sprachen (eingebaut und aus den Sprachordnern) mit Vollständigkeit
 cli-root-arg-json = Ausgabe als JSON (maschinenlesbar)
@@ -156,22 +164,30 @@ cli-root-arg-lang = Sprache der Ausgaben (z. B. de, en; Vorgabe: FIREPIXEL_LANG 
 cli-render-arg-out = Zieldatei (PNG)
     .value = DATEI
 cli-render-arg-file = Eingabedatei
-    .value = FILE
+    .value = DATEI
 cli-render-arg-page = Seitenindex (Vorgabe: aktuelle Seite)
+    .value = N
 cli-render-arg-state = Statusindex
+    .value = N
 cli-render-arg-zoom = Vergrößerung (1 = 100 %)
+    .value = FAKTOR
 cli-info-arg-file = Eingabedatei
-    .value = FILE
+    .value = DATEI
 cli-info-arg-depth = Tiefe des Baums (0 = nur Ebenen)
+    .value = N
 cli-info-arg-all-pages = Alle Seiten ausführlich
 cli-info-arg-page = Ausführlich gezeigte Seite
+    .value = N
 cli-convert-arg-input = Eingabedatei
-    .value = INPUT
+    .value = EINGABE
 cli-convert-arg-output = Ausgabedatei (Format aus der Endung)
-    .value = OUTPUT
+    .value = AUSGABE
 cli-help = Hilfe anzeigen
 cli-version = Version anzeigen
 cli-usage = Aufruf:
+cli-usage-options = [OPTIONEN]
+cli-help-default = Vorgabe
+cli-help-possible-values = mögliche Werte
 cli-heading-arguments = Argumente
 cli-heading-options = Optionen
 cli-heading-commands = Befehle

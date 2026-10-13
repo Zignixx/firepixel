@@ -152,7 +152,10 @@ Resources (Markdown): `firepixel://docs/agents.md` (this file), `firepixel://doc
   * Selection: `select.set {ids, mode?}`, `select.inRect {rect}`, `select.pointAt {point}`
   * Structure: `layer.add {name?}`, `layer.setVisible {layer, visible}`, `layer.setActive {layer}`,
     `page.add`, `page.setCurrent {index}`, `state.add {count?}`, `state.setCurrent {index}`
-  * Moving/transforming: `edit.move {dx, dy}`, `transform.matrix {matrix}`, `path.setContours {id, contours}`
+  * Moving/transforming: `edit.move {dx, dy}`, `transform.matrix {matrix}`, `path.setContours {id, contours}`,
+    `modify.transform.numericTransform {mode: scale|resize|rotate, scaleX?, scaleY?, width?, height?, angle?, constrain?, scaleAttributes?}`
+    (`scaleAttributes`, default `true`: the stroke width scales along, like "Scale attributes" in the dialog),
+    `modify.mask.revealAll` / `modify.mask.hideAll` (empty mask over the selected object)
   * Choosing a tool: `tool.select {tool: "tool.pen"}`; colors: `color.set`, `color.swap`, `color.defaults`
   * **Auto shapes** (41 shapes, own implementation; list: `autoShape.list`):
     `autoShape.insert {shape, at | rect}` (English or German name, e.g. `"Star"`/`"Stern"`,

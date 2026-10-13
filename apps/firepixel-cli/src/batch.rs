@@ -41,7 +41,7 @@ pub fn intercept() -> Option<ExitCode> {
     // `batch --help` ohne `--actions`: Hilfe des Rezept-Modus samt Vorlagen und der älteren Form (BATCH-11b)
     if !legacy && rest.iter().any(|a| a == "--help" || a == "-h") {
         let mut c = command();
-        println!("{}", c.render_long_help());
+        println!("{}", crate::localize_help_text(&c.render_long_help().to_string()));
         println!("{}", t("batch-cli-help-templates"));
         for tpl in fp_batch::templates::all() {
             println!("  {:<22} {}", tpl.id, tpl.title);
@@ -58,7 +58,7 @@ pub fn intercept() -> Option<ExitCode> {
         Err(e) => {
             use clap::error::ErrorKind;
             if matches!(e.kind(), ErrorKind::DisplayHelp | ErrorKind::DisplayVersion) {
-                let _ = e.print();
+                print!("{}", crate::localize_help_text(&e.render().to_string()));
                 return Some(ExitCode::SUCCESS);
             }
             eprintln!("{}", tr!("batch-cli-err-args", error = e.to_string().trim().to_string()));
@@ -69,23 +69,25 @@ pub fn intercept() -> Option<ExitCode> {
 }
 
 fn command() -> Command {
-    Command::new("batch")
+    let c = Command::new("batch")
+        .bin_name("firepixel-cli batch")
         .about(t("batch-cli-about"))
         .after_help(t("batch-cli-examples"))
         .disable_version_flag(true)
-        .arg(Arg::new("recipe").long("recipe").value_name("FILE|JSON").help(t("batch-cli-arg-recipe")))
+        .arg(Arg::new("recipe").long("recipe").value_name(t("batch-cli-value-recipe")).help(t("batch-cli-arg-recipe")))
         .arg(Arg::new("steps").long("steps").action(ArgAction::SetTrue).help(t("batch-cli-arg-steps")))
         .arg(Arg::new("templates").long("templates").action(ArgAction::SetTrue).help(t("batch-cli-arg-templates"))) // BATCH-9
-        .arg(Arg::new("in").long("in").value_name("FOLDER").help(t("batch-cli-arg-in")))
+        .arg(Arg::new("in").long("in").value_name(t("batch-cli-value-folder")).help(t("batch-cli-arg-in")))
         .arg(Arg::new("recursive").long("recursive").action(ArgAction::SetTrue).help(t("batch-cli-arg-recursive")))
-        .arg(Arg::new("files").num_args(0..).value_name("FILES").help(t("batch-cli-arg-files")))
-        .arg(Arg::new("out").long("out").value_name("FOLDER").help(t("batch-cli-arg-out")))
-        .arg(Arg::new("conflict").long("conflict").value_parser(["rename", "skip", "overwrite"]).help(t("batch-cli-arg-conflict")))
+        .arg(Arg::new("files").num_args(0..).value_name(t("batch-cli-value-files")).help(t("batch-cli-arg-files")))
+        .arg(Arg::new("out").long("out").value_name(t("batch-cli-value-folder")).help(t("batch-cli-arg-out")))
+        .arg(Arg::new("conflict").long("conflict").value_parser(["rename", "skip", "overwrite"]).value_name(t("batch-cli-value-rule")).help(t("batch-cli-arg-conflict")))
         .arg(Arg::new("dry-run").long("dry-run").action(ArgAction::SetTrue).help(t("batch-cli-arg-dry-run")))
-        .arg(Arg::new("threads").long("threads").value_parser(clap::value_parser!(usize)).help(t("batch-cli-arg-threads")))
-        .arg(Arg::new("report").long("report").value_name("FILE").help(t("batch-cli-arg-report")))
+        .arg(Arg::new("threads").long("threads").value_parser(clap::value_parser!(usize)).value_name("N").help(t("batch-cli-arg-threads")))
+        .arg(Arg::new("report").long("report").value_name(t("batch-cli-value-file")).help(t("batch-cli-arg-report")))
         .arg(Arg::new("json").long("json").action(ArgAction::SetTrue).help(t("batch-cli-arg-json")))
-        .arg(Arg::new("lang").long("lang").value_name("CODE").help(t("batch-cli-arg-lang")))
+        .arg(Arg::new("lang").long("lang").value_name("CODE").help(t("batch-cli-arg-lang")));
+    crate::localize_scaffold(c)
 }
 
 fn fail(json_out: bool, code: u8, msg: String) -> ExitCode {
