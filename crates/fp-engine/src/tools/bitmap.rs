@@ -30,7 +30,7 @@ fn edge_params(e: EdgeMode) -> (bool, u32) {
 }
 
 /// Bitmap als Ziel (Bitmapmodus oder genau eine ausgewählte Bitmap)?
-fn bitmap_target(ctx: &ToolContext) -> bool {
+pub(crate) fn bitmap_target(ctx: &ToolContext) -> bool {
     ctx.bitmap_mode
         || ctx.selection.elements.iter().any(|id| docops::element_on_page(ctx.doc, ctx.page, *id).is_some_and(|e| matches!(e.kind, ElementKind::Bitmap(_))))
 }

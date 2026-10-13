@@ -1356,6 +1356,11 @@ fn escape_mid_drag_leaves_document_unchanged() {
             continue;
         }
         assert_eq!(doc(&s), before, "{t:?}: Esc mitten im Ziehen hat das Dokument geändert");
+        if t == ToolId::Blur {
+            // Retusche auf einem Vektor hebt wie im Original schon beim Drücken die Auswahl auf (PAR 04/15)
+            assert!(sel(&s).is_empty(), "{t:?}: Auswahl aufgehoben");
+            continue;
+        }
         assert_eq!(sel(&s), sel0, "{t:?}: Auswahl geändert");
     }
 }

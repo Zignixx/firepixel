@@ -341,7 +341,11 @@ pub fn attrs_from_prefs(tool: fp_engine::ToolId, p: &fp_engine::prefs::Preferenc
             ta.exposure = int(&k("Exposure"), 50);
             ta.range = p.get_int(&k("Range"), 1).clamp(0, 2) as usize;
         }
-        T::Smudge => ta.strength = int(&k("Pressure"), 50),
+        T::Smudge => {
+            ta.strength = int(&k("Pressure"), 50);
+            ta.smudge_color = p.get_bool("SmudgeToolFingerPaint", false);
+            ta.whole_doc = p.get_bool("SmudgeToolUseEntireDocument", false);
+        }
         T::RedEyeRemoval => {
             ta.strength = int(&k("Strength"), 50);
             ta.tolerance = int(&k("Tolerance"), 50);
@@ -447,7 +451,12 @@ pub fn retouch_prefs(tool: fp_engine::ToolId, ta: &crate::inspector::obj_quads::
             v.push((k("Exposure"), Int(ta.exposure as i64)));
             v.push((k("Range"), Int(ta.range as i64)));
         }
-        T::Smudge => v.push((k("Pressure"), Int(ta.strength as i64))),
+        T::Smudge => {
+            v.push((k("Pressure"), Int(ta.strength as i64)));
+            // „Farbe verwischen“ und „Gesamtes Dokument“ wirken auf den Zug (PAR 04/10, 04/11)
+            v.push(("SmudgeToolFingerPaint".into(), Bool(ta.smudge_color)));
+            v.push(("SmudgeToolUseEntireDocument".into(), Bool(ta.whole_doc)));
+        }
         T::RedEyeRemoval => {
             v.push((k("Strength"), Int(ta.strength as i64)));
             v.push((k("Tolerance"), Int(ta.tolerance as i64)));

@@ -139,6 +139,17 @@ impl ToolMachine for RetouchTool {
         let ToolInput::Pointer { kind, pos } = &ev.input else { return ToolResponse::default() };
         self.hover = Some(*pos);
         match kind {
+            PointerKind::Down if !ctx.selection.elements.is_empty() && !super::bitmap::bitmap_target(ctx) && !(self.id == ToolId::RubberStamp && ev.mods.alt) => {
+                // Vektor o. Ä. gewählt: keine Wirkung, keine Meldung, die Auswahl wird aufgehoben
+                // (Original, wie beim Radiergummi; PAR 04/15)
+                self.points.clear();
+                self.active = false;
+                return ToolResponse {
+                    commands: vec![Invocation::new("tool.pick", json!({"command": "select.set", "params": {"ids": []}}))],
+                    cursor: self.cursor(),
+                    ..ToolResponse::default()
+                };
+            }
             PointerKind::Down => {
                 if self.id == ToolId::RubberStamp && ev.mods.alt {
                     // Alt+Klick: Quelle setzen
@@ -194,6 +205,12 @@ impl ToolMachine for RetouchTool {
                     }
                     ToolId::RedEyeRemoval => {
                         p["tolerance"] = json!(ctx.prefs.get_int("RedEyeRemovalToolTolerance", 50));
+                    }
+                    ToolId::Smudge => {
+                        // „Farbe verwischen“ (Farbfeld = Füllfarbe) und „Gesamtes Dokument“ (PAR 04/10, 04/11)
+                        p["fingerPaint"] = json!(ctx.prefs.get_bool("SmudgeToolFingerPaint", false));
+                        p["color"] = json!(ctx.fill_color.to_rgba8().to_hex_rgba());
+                        p["wholeDocument"] = json!(ctx.prefs.get_bool("SmudgeToolUseEntireDocument", false));
                     }
                     _ => {}
                 }
