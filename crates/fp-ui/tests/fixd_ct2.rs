@@ -103,3 +103,84 @@ fn replace_color_mouse_drag_replaces_whole_stroke() {
         assert!(p[1] < 10 && p[2] > 240, "x {x}: {p:?} statt blau");
     }
 }
+
+fn small_harness(a: FirepixelApp) -> H {
+    Harness::builder().with_size(egui::vec2(900.0, 650.0)).with_pixels_per_point(1.0).with_max_steps(16).build_ui_state(|ui, app: &mut FirepixelApp| app.root_ui(ui), a)
+}
+
+fn click_at(h: &mut H, p: Pos2) {
+    h.event(Event::PointerMoved(p));
+    h.run_steps(1);
+    h.event(Event::PointerButton { pos: p, button: PointerButton::Primary, pressed: true, modifiers: Modifiers::NONE });
+    h.run_steps(1);
+    h.event(Event::PointerButton { pos: p, button: PointerButton::Primary, pressed: false, modifiers: Modifiers::NONE });
+    h.run_steps(3);
+}
+
+
+/// CT-2: Das Untermenü des Strichart-Menüs öffnet im 900 × 650-Fenster neben dem Hauptmenü (rechts,
+/// ohne Platz dort links), nicht darüber; Haupt- und Untermenü sind so breit wie ihre Einträge,
+/// auch nach mehrmaligem Öffnen und Wählen.
+#[test]
+fn stroke_category_submenu_beside_main_menu() {
+    use egui_kittest::kittest::Queryable;
+    let (a, _) = app_with_bitmap([200, 200, 200, 255]);
+    let mut h = small_harness(a);
+    h.state_mut().state.session.execute("select.none", json!({})).expect("nichts");
+    h.state_mut().state.session.set_tool(ToolId::Brush).expect("Pinsel");
+    h.run_steps(4);
+    let combos: Vec<(String, egui::Rect)> = h
+        .query_all(egui_kittest::kittest::By::new().role(egui::accesskit::Role::ComboBox))
+        .map(|n| (n.value().unwrap_or_default().to_string(), n.rect()))
+        .collect();
+    let cat = combos.iter().find(|(v, _)| v == "1-Pixel hart").map(|(_, r)| *r).expect("Strichart-Knopf");
+    click_at(&mut h, cat.center());
+    let popups = |h: &H| -> Vec<egui::Rect> {
+        h.ctx.memory(|m| {
+            m.areas()
+                .visible_layer_ids()
+                .into_iter()
+                .filter(|l| l.order == egui::Order::Foreground)
+                .filter_map(|l| m.area_rect(l.id))
+                .filter(|r| r.width() > 40.0 && r.height() > 40.0)
+                .collect()
+        })
+    };
+    let main = popups(&h);
+    assert_eq!(main.len(), 1, "ein Menü offen: {main:?}");
+    let m = main[0];
+    assert!(m.width() < 300.0, "Hauptmenü so breit wie seine Einträge, nicht {:.0} px", m.width());
+    // über die Einträge fahren, bis das Untermenü „Einfach“ aufgeht
+    let mut sub = None;
+    let mut y = m.top() + 4.0;
+    while y < m.top() + 90.0 && sub.is_none() {
+        h.event(Event::PointerMoved(egui::pos2(m.left() + 40.0, y)));
+        h.run_steps(4);
+        sub = popups(&h).into_iter().find(|r| *r != m);
+        y += 4.0;
+    }
+    let sub = sub.expect("Untermenü geht auf");
+    eprintln!("Hauptmenü {m:?} Untermenü {sub:?}");
+    // Art wählen und erneut öffnen (CT-2: mehrmals geöffnet, Artwechsel)
+    for round in 0..3 {
+        let first = egui::pos2(sub.center().x, sub.top() + 14.0);
+        h.event(Event::PointerMoved(egui::pos2(sub.left() + 10.0, y)));
+        h.run_steps(2);
+        click_at(&mut h, first);
+        h.run_steps(4);
+        let cats: Vec<(String, egui::Rect)> = h
+            .query_all(egui_kittest::kittest::By::new().role(egui::accesskit::Role::ComboBox))
+            .map(|n| (n.value().unwrap_or_default().to_string(), n.rect()))
+            .collect();
+        let cat2 = cats.iter().find(|(_, r)| (r.center().y - cat.center().y).abs() < 3.0 && (r.left() - cat.left()).abs() < 3.0).map(|(_, r)| *r).expect("Strichart-Knopf");
+        click_at(&mut h, cat2.center());
+        let again = popups(&h);
+        assert!(again.len() == 1 && (again[0].width() - m.width()).abs() < 1.0, "Runde {round}: {again:?}");
+        h.event(Event::Key { key: egui::Key::Escape, physical_key: None, pressed: true, repeat: false, modifiers: Modifiers::NONE });
+        h.run_steps(3);
+    }
+    assert!(sub.left() >= m.right() - 4.0 || sub.right() <= m.left() + 4.0, "Untermenü neben dem Hauptmenü: {m:?} / {sub:?}");
+    let room_right = m.right() + sub.width() <= 900.0;
+    assert_eq!(sub.left() >= m.right() - 4.0, room_right, "rechts daneben, wenn Platz ist, sonst links: {m:?} / {sub:?}");
+    assert!(sub.right() <= 900.0 && sub.bottom() <= 650.0, "im Fenster: {sub:?}");
+}

@@ -664,14 +664,34 @@ const CHECK_COL: f32 = 28.0;
 pub const LONG_SUBMENU: usize = 40;
 const RIGHT_PAD: f32 = 22.0;
 
+/// Gewünschte Breite eines Menüeintrags (Häkchenspalte, Text, Kürzel, Rand; mindestens die
+/// Menü-Mindestbreite).
+fn item_width(ui: &Ui, label: &str, shortcut: Option<&str>) -> f32 {
+    let theme = Theme::current(ui.ctx());
+    let font = theme.menu_font();
+    let lw = crate::widgets::text_width(ui, label, &font);
+    let sw = shortcut.map(|s| crate::widgets::text_width(ui, s, &font) + 30.0).unwrap_or(0.0);
+    (CHECK_COL + lw + sw + RIGHT_PAD + 10.0).max(theme.metrics.menu_min_width - 8.0)
+}
+
+/// Breite eines Menüs: der breiteste Eintrag.
+fn natural_width(ui: &Ui, nodes: &[Node]) -> f32 {
+    nodes
+        .iter()
+        .map(|n| match n {
+            Node::Separator => 0.0,
+            Node::Item { label, shortcut, .. } => item_width(ui, label, shortcut.as_deref()),
+            Node::Sub { label, .. } => item_width(ui, label, None),
+        })
+        .fold(10.0, f32::max)
+}
+
 /// Zeichnet einen Menüeintrag und liefert die Antwort.
 fn paint_item(ui: &mut Ui, label: &str, shortcut: Option<&str>, checked: Option<bool>, enabled: bool, submenu: bool, open: bool) -> Response {
     let theme = Theme::current(ui.ctx());
     let c = &theme.colors;
     let font = theme.menu_font();
-    let lw = crate::widgets::text_width(ui, label, &font);
-    let sw = shortcut.map(|s| crate::widgets::text_width(ui, s, &font) + 30.0).unwrap_or(0.0);
-    let want = (CHECK_COL + lw + sw + RIGHT_PAD + 10.0).max(theme.metrics.menu_min_width - 8.0);
+    let want = item_width(ui, label, shortcut);
     let resp = ui.allocate_response(vec2(want, theme.metrics.menu_item_height), if enabled { Sense::click() } else { Sense::hover() });
     let rect = resp.rect;
     let hot = enabled && (resp.hovered() || open);
@@ -722,6 +742,10 @@ pub fn show_nodes(ui: &mut Ui, nodes: &[Node], out: &mut Vec<Action>) {
 
 /// Wie [`show_nodes`], Inhalt höchstens `max_h` hoch (Hauptmenü: Platz unter dem Titel).
 pub fn show_nodes_max(ui: &mut Ui, nodes: &[Node], out: &mut Vec<Action>, max_h: f32) {
+    // Breite = breitester Eintrag: Die Einträge füllen die Menübreite (bündige Anordnung); ohne
+    // Grenze nähme egui in einem Bild ohne Messdurchlauf seine Vorgabe von 600 px, und das Menü
+    // samt Untermenü wird so breit, dass das Untermenü das Hauptmenü verdeckt (CT-2, Stricharten)
+    ui.set_max_width(natural_width(ui, nodes));
     let natural = crate::menu_scroll::natural_height(ui.ctx(), nodes);
     crate::menu_scroll::body(ui, natural, max_h, |ui| show_list(ui, nodes, out));
 }
@@ -782,6 +806,7 @@ pub fn show_submenu_body(ui: &mut Ui, children: &[Node], out: &mut Vec<Action>) 
 pub fn popup_menu(ui: &Ui, resp: &Response, nodes: &[Node], out: &mut Vec<Action>) {
     let theme = Theme::current(ui.ctx());
     Popup::menu(resp)
+        .width(natural_width(ui, nodes))
         .frame(menu_frame(&theme))
         .close_behavior(MENU_CLOSE)
         .info(menu_info())
