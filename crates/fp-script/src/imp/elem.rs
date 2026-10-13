@@ -183,7 +183,8 @@ pub(crate) fn path_attrs_json(e: &Element) -> Value {
         "brushColor": hex(a.stroke_color),
         "fill": a.fill.as_ref().map(fill_json),
         "fillColor": hex(a.fill_color),
-        "brushPlacement": match placement { 1 => "inside", 2 => "outside", _ => "center" },
+        // BRPi: 0 innen, 1 mittig, 2 außen (PAR 17/08b)
+        "brushPlacement": match placement { 0 => "inside", 2 => "outside", _ => "center" },
         "fillOnTop": fill_on_top,
         "brushTexture": a.stroke_texture.as_ref().map(|t| json!({"name": t.name})),
         "fillTexture": a.fill_texture.as_ref().map(|t| json!({"name": t.name})),
