@@ -79,16 +79,53 @@ pub struct ShapeTool {
     control: Option<super::pointer::ControlDrag>,
     /// Rohe Drückposition (ihr Fang gilt für den Startpunkt, auch wenn die Leertaste ihn verschiebt).
     press: Option<Point>,
+    /// Rundung, die ↑/↓ während des Aufziehens hinzugefügt haben (PAR 10/05).
+    round_add: f32,
+    /// Letzte ↑/↓-Taste mit Zeit (gehaltene Taste: Wiederholungen addieren nach der Haltedauer).
+    last_key: Option<(ToolKey, u64)>,
+    /// Letzter Zug (Start, aktueller Punkt, Umschalttasten) für die Vorschau nach einer Taste.
+    last: Option<(Point, Point, super::Modifiers)>,
+    /// Aufgezogener Rahmen (Inspektor live, PAR 10/15).
+    live: Option<Rect>,
 }
+
+/// Rundung je Sekunde gehaltener ↑-Taste (Original: 1,5 s → 0,97, PAR 10/05).
+const ROUND_RATE: f32 = 0.65;
+/// Rundung je kurzem Tastendruck (Original: drei Tipper → 0,01).
+const ROUND_TAP: f32 = 0.004;
 
 impl ShapeTool {
     /// Neues Werkzeug (Rectangle, Ellipse, Polygon, AutoShape).
     pub fn new(id: ToolId) -> ShapeTool {
-        ShapeTool { id, drag: DragTracker::new(), overlay: Vec::new(), guides: Vec::new(), control: None, press: None }
+        ShapeTool { id, drag: DragTracker::new(), overlay: Vec::new(), guides: Vec::new(), control: None, press: None, round_add: 0.0, last_key: None, last: None, live: None }
     }
 
     fn roundness(&self, _r: &Rect, ctx: &ToolContext) -> f32 {
-        ctx.options.rect_roundness.clamp(0.0, 1.0)
+        (ctx.options.rect_roundness + self.round_add).clamp(0.0, 1.0)
+    }
+
+    /// Objektname neuer Formen wie im Original: Ellipse „Ellipse“, Polygon/Stern „Polygon“;
+    /// Rechteck-Grundformen bleiben ohne Namen (PAR 10/08).
+    fn object_name(&self) -> Option<String> {
+        match self.id {
+            ToolId::Ellipse => Some(fp_i18n::t("tool-ellipse")),
+            ToolId::Polygon => Some(fp_i18n::t("tool-polygon")),
+            _ => None,
+        }
+    }
+
+    /// Befehl beim Loslassen: Strich 1 px aus der Strichfarbe wie im Original (PAR 10/12) und der
+    /// Objektname (PAR 10/08).
+    fn finalize(&self, mut inv: Invocation) -> Invocation {
+        if matches!(inv.command.as_str(), "draw.rectangle" | "draw.ellipse" | "draw.polygon")
+            && let Some(o) = inv.params.as_object_mut()
+        {
+            o.entry("strokeWidth").or_insert(json!(1));
+            if let Some(n) = self.object_name() {
+                o.insert("name".into(), json!(n));
+            }
+        }
+        inv
     }
 
     fn preview(&self, start: Point, cur: Point, ev: &ToolEvent, ctx: &ToolContext) -> (Vec<Overlay>, Option<Invocation>) {
@@ -176,7 +213,9 @@ impl ToolMachine for ShapeTool {
                 // Ereignis getrennt ein (bzw. mit Alt der Mittelpunkt); mit Umschalt rastet keiner
                 // an intelligenten Hilfslinien. Der Automat führt daher die rohen Zeigerpunkte.
                 let snapper = Snapper::new(ctx, &[]);
-                let snapper = if ev.mods.shift { snapper.without_smart() } else { snapper };
+                // Polygon: Mittelpunkt und Ecke folgen genau der Maus (PAR 10/10: 600,150→650,200
+                // ergibt die Ecke 650,200, kein Einrasten an Punkten anderer Formen)
+                let snapper = if ev.mods.shift || self.id == ToolId::Polygon { snapper.without_smart() } else { snapper };
                 let sp = snapper.point(*pos);
                 if !self.drag.active() && *kind != PointerKind::Down {
                     // Überfahren: nur Fanglinien zeigen
@@ -189,6 +228,10 @@ impl ToolMachine for ShapeTool {
                 };
                 if *kind == PointerKind::Down {
                     self.press = Some(*pos);
+                    self.round_add = 0.0;
+                    self.last_key = None;
+                    self.last = None;
+                    self.live = None;
                 }
                 let press = self.press.unwrap_or(*pos);
                 let fix = snapper.point(press).point;
@@ -205,21 +248,48 @@ impl ToolMachine for ShapeTool {
                     self.drag.reset();
                     self.overlay.clear();
                     self.guides.clear();
-                    return match d {
-                        Some((s, c)) => ToolResponse::commit(self.preview(s, c, ev, ctx).1.into_iter().map(|i| super::styled(i, ctx.options)).collect()),
+                    self.live = None;
+                    self.last = None;
+                    let resp = match d {
+                        Some((s, c)) => ToolResponse::commit(self.preview(s, c, ev, ctx).1.into_iter().map(|i| super::styled(self.finalize(i), ctx.options)).collect()),
                         None => ToolResponse::default(),
                     };
+                    self.round_add = 0.0;
+                    return resp;
                 }
                 self.guides = sp.guides;
                 if let Some((s, c)) = d {
                     self.overlay = self.preview(s, c, ev, ctx).0;
+                    self.last = Some((s, c, ev.mods));
+                    self.live = (self.id != ToolId::Polygon).then(|| constrain_rect(s, c, ev.mods.shift, ev.mods.alt).normalized());
                 }
                 ToolResponse::with_overlay(self.overlay(), Cursor::Crosshair)
             }
-            // Pfeil auf/ab während des Aufziehens: im laufenden Original ohne
-            // Wirkung (PARITAET_A L17, live gemessen; re\10 ist hier überholt).
-            ToolInput::Key(ToolKey::Up | ToolKey::Down) if self.drag.active() => {
-                ToolResponse::with_overlay(self.overlay(), Cursor::Crosshair)
+            // ↑/↓ während des Aufziehens ändern die Eckrundung des Rechtecks, solange gehalten
+            // (PAR 10/05: 1,5 s → 0,97; kurzer Tipper ≈ 0–1 %); ← → ohne Wirkung (kein Verschieben)
+            ToolInput::Key(k @ (ToolKey::Up | ToolKey::Down | ToolKey::Left | ToolKey::Right)) if self.drag.active() => {
+                if self.id == ToolId::Rectangle && matches!(k, ToolKey::Up | ToolKey::Down) {
+                    let t = ev.time_ms;
+                    let step = match self.last_key {
+                        Some((lk, lt)) if lk == *k && t >= lt && t - lt <= 250 => ROUND_RATE * (t - lt) as f32 / 1000.0,
+                        _ => ROUND_TAP,
+                    };
+                    self.last_key = Some((*k, t));
+                    let base = ctx.options.rect_roundness.clamp(0.0, 1.0);
+                    let sign = if *k == ToolKey::Up { 1.0 } else { -1.0 };
+                    self.round_add = (base + self.round_add + sign * step).clamp(0.0, 1.0) - base;
+                    if let Some((s, c, m)) = self.last {
+                        let mut e2 = ev.clone();
+                        e2.mods = m;
+                        self.overlay = self.preview(s, c, &e2, ctx).0;
+                    }
+                }
+                let mut o = self.overlay();
+                if o.is_empty() {
+                    // Taste verbraucht (sonst verschöbe das Menükürzel die Auswahl)
+                    o.push(Overlay::Label { at: self.press.unwrap_or_default(), text: String::new() });
+                }
+                ToolResponse::with_overlay(o, Cursor::Crosshair)
             }
             // Esc während des Aufziehens wird im Original ignoriert, die Form
             // entsteht beim Loslassen (PARITAET_A L19, gemessen am Rechteck).
@@ -231,6 +301,8 @@ impl ToolMachine for ShapeTool {
                 self.control = None;
                 self.overlay.clear();
                 self.guides.clear();
+                self.live = None;
+                self.last = None;
                 ToolResponse::default()
             }
             _ => ToolResponse::default(),
@@ -243,6 +315,10 @@ impl ToolMachine for ShapeTool {
         v
     }
 
+    fn live_rect(&self) -> Option<Rect> {
+        self.live
+    }
+
     fn feedback(&self, ctx: &ToolContext) -> Vec<Overlay> {
         let mut v = self.overlay();
         if self.id == ToolId::AutoShape {
@@ -250,6 +326,28 @@ impl ToolMachine for ShapeTool {
             v.extend(super::pointer::control_points_feedback(ctx, drag));
         }
         v
+    }
+}
+
+/// Mitte des Pixels unter `p` (Linie, Vektorpfad: Knoten auf ,5 wie im Original).
+pub(crate) fn pixel_center(p: Point) -> Point {
+    Point::new(p.x.floor() + 0.5, p.y.floor() + 0.5)
+}
+
+/// Umschalt-Linie wie im Original (PAR 09/01): waagrecht/senkrecht, schräg genau 45° mit der
+/// **größeren** Komponente als Kantenlänge (100,300→200,390 ergibt 200,400).
+pub(crate) fn constrain_line(s: Point, c: Point) -> Point {
+    let (dx, dy) = (c.x - s.x, c.y - s.y);
+    let a = (dy as f64).atan2(dx as f64).to_degrees();
+    let k = ((a / 45.0).round() as i64).rem_euclid(8);
+    match k {
+        0 | 4 => Point::new(c.x, s.y),
+        2 | 6 => Point::new(s.x, c.y),
+        _ => {
+            let m = dx.abs().max(dy.abs());
+            let (sx, sy) = if k == 1 { (1.0, 1.0) } else if k == 3 { (-1.0, 1.0) } else if k == 5 { (-1.0, -1.0) } else { (1.0, -1.0) };
+            Point::new(s.x + sx * m, s.y + sy * m)
+        }
     }
 }
 
@@ -287,12 +385,16 @@ impl ToolMachine for LineTool {
             return ToolResponse::with_overlay(self.overlay.clone(), Cursor::Crosshair);
         }
         let d = self.drag.update(*kind, sp.point, ev, ctx.drag_threshold());
-        let line = d.map(|(s, c)| (s, if ev.mods.shift { constrain_angle(s, c, 45.0) } else { c }));
+        let line = d.map(|(s, c)| (s, if ev.mods.shift { constrain_line(s, c) } else { c }));
         if *kind == PointerKind::Up {
             self.drag.reset();
             self.overlay.clear();
             return match line {
-                Some((a, b)) => ToolResponse::commit(vec![super::styled(Invocation::new("draw.line", json!({"from": pt_json(a), "to": pt_json(b)})), ctx.options)]),
+                Some((a, b)) => {
+                    // wie im Original: Knoten auf Pixelmitten (100.5,100.5), Name „Linie“ (PAR 09/01)
+                    let (a, b) = (pixel_center(a), pixel_center(b));
+                    ToolResponse::commit(vec![super::styled(Invocation::new("draw.line", json!({"from": pt_json(a), "to": pt_json(b), "name": fp_i18n::t("tool-line")})), ctx.options)])
+                }
                 None => ToolResponse::default(),
             };
         }
@@ -333,6 +435,37 @@ pub struct PenTool {
     target: Option<PenTarget>,
     cursor: Cursor,
     guides: Vec<Overlay>,
+    /// Nach Esc/Eingabe bleibt der offene Pfad gewählt; der nächste Klick setzt ihn am Endpunkt
+    /// fort (Konturindex; PAR 09/07). Doppelklick, Schließen oder Abwählen beenden das.
+    resume: Option<usize>,
+    /// Alt-Ziehen auf dem soeben gesetzten Punkt: nur dessen Ausgangshenkel ändern (PAR 09/09).
+    edit_last: bool,
+}
+
+/// Biegt ein Henkel des Knotens das Segment (liegt nicht auf der Geraden zum Nachbarpunkt)?
+/// Ein auf einer Geraden eingefügter Punkt ist so ein Eckpunkt, ein Bogenpunkt wie 370,200 von P1
+/// ein Kurvenpunkt.
+fn is_curve_node(c: &Contour, i: usize) -> bool {
+    let n = c.nodes.len();
+    let Some(k) = c.nodes.get(i) else { return false };
+    let bends = |h: Point, other: Option<usize>| -> bool {
+        if dist(h, k.anchor) < 1e-3 {
+            return false;
+        }
+        let Some(o) = other.and_then(|j| c.nodes.get(j)) else { return true };
+        let (ux, uy) = (h.x - k.anchor.x, h.y - k.anchor.y);
+        let (vx, vy) = (o.anchor.x - k.anchor.x, o.anchor.y - k.anchor.y);
+        let cross = (ux * vy - uy * vx).abs();
+        cross > 1e-3 * (ux.hypot(uy) * vx.hypot(vy)).max(1e-6)
+    };
+    let prev = if i > 0 { Some(i - 1) } else if c.closed && n > 1 { Some(n - 1) } else { None };
+    let next = if i + 1 < n { Some(i + 1) } else if c.closed && n > 1 { Some(0) } else { None };
+    bends(k.pred, prev) || bends(k.succ, next)
+}
+
+/// `tool.pick` (Auswahl ohne Verlaufsschritt).
+fn pick_select(id: ElementId) -> Invocation {
+    Invocation::new("tool.pick", json!({"command": "select.set", "params": {"ids": [id.0], "mode": "replace"}}))
 }
 
 /// Was unter dem Stift liegt (nur bei genau einem ausgewählten Pfad und ohne laufenden Pfad).
@@ -349,6 +482,36 @@ impl PenTool {
     }
 
     fn pen_hit(ctx: &ToolContext, p: Point) -> Option<PenHit> {
+        Self::pen_hit_selected(ctx, p).or_else(|| Self::open_end_any(ctx, p))
+    }
+
+    /// Endpunkt eines offenen, **nicht** gewählten Pfads unter `p` (oberstes zuerst): der Stift setzt
+    /// ihn fort wie im Original (PAR 09/08).
+    fn open_end_any(ctx: &ToolContext, p: Point) -> Option<PenHit> {
+        let tol = ctx.pick_tolerance() as f32;
+        for id in docops::selectable_ids(ctx.doc, ctx.page, ctx.frame) {
+            let Some(e) = docops::element_on_page(ctx.doc, ctx.page, id) else { continue };
+            let ElementKind::Path(pe) = &e.kind else { continue };
+            if pe.primitive.is_some() {
+                continue;
+            }
+            for (ci, c) in pe.contours.iter().enumerate() {
+                let n = c.nodes.len();
+                if c.closed || n < 2 {
+                    continue;
+                }
+                if dist(c.nodes[n - 1].anchor, p) <= tol {
+                    return Some(PenHit::End { id, contour: ci, at_start: false });
+                }
+                if dist(c.nodes[0].anchor, p) <= tol {
+                    return Some(PenHit::End { id, contour: ci, at_start: true });
+                }
+            }
+        }
+        None
+    }
+
+    fn pen_hit_selected(ctx: &ToolContext, p: Point) -> Option<PenHit> {
         if ctx.selection.elements.len() != 1 {
             return None;
         }
@@ -406,13 +569,37 @@ impl PenTool {
             if let Some(c) = cs.get_mut(t.contour) {
                 *c = geometry::contour_from_nodes(&nodes, closed);
             }
-            return ToolResponse::commit(vec![Invocation::new("path.setContours", json!({"id": t.id.0, "contours": contours_json(&cs)}))]);
+            // Verlaufsschritt „Stift“ wie im Original (PAR 09/05); der Pfad wird gewählt
+            return ToolResponse::commit(vec![pick_select(t.id), Invocation::new("path.setContours", json!({"id": t.id.0, "contours": contours_json(&cs), "step": "pen"}))]);
         }
         if nodes.len() < 2 {
             return ToolResponse::default();
         }
         let c = json!({"closed": closed, "nodes": nodes.iter().map(|(a, i, o)| json!({"anchor": pt_json(*a), "in": pt_json(*i), "out": pt_json(*o)})).collect::<Vec<Value>>()});
-        ToolResponse::commit(vec![super::styled(Invocation::new("draw.path", json!({"contours": [c]})), opts)])
+        ToolResponse::commit(vec![super::styled(Invocation::new("draw.path", json!({"contours": [c], "step": "pen"})), opts)])
+    }
+
+    /// Esc/Eingabe: Pfad beenden, aber zum Fortsetzen merken (PAR 09/07).
+    fn commit_resumable(&mut self, opts: &super::ToolOptions) -> ToolResponse {
+        let contour = self.target.as_ref().map(|t| t.contour).unwrap_or(0);
+        let had = self.nodes.len() >= 2;
+        let r = self.commit(false, opts);
+        if had {
+            self.resume = Some(contour);
+        }
+        r
+    }
+
+    /// Konturen des Pfads mit eingezogenen Henkeln am Knoten (Kurvenpunkt → Eckpunkt).
+    fn corner_contours(ctx: &ToolContext, id: ElementId, contour: usize, node: usize) -> Option<Vec<Contour>> {
+        let e = docops::element_on_page(ctx.doc, ctx.page, id)?;
+        let ElementKind::Path(pe) = &e.kind else { return None };
+        let mut cs = pe.contours.clone();
+        let n = cs.get_mut(contour)?.nodes.get_mut(node)?;
+        n.pred = n.anchor;
+        n.succ = n.anchor;
+        n.curve = false;
+        Some(cs)
     }
 
     /// Fortsetzen: Knoten der Kontur übernehmen (am Anfang begonnen → umgedreht).
@@ -459,30 +646,63 @@ impl ToolMachine for PenTool {
         match &ev.input {
             ToolInput::Pointer { kind: PointerKind::Down, pos } => {
                 self.button = true;
+                self.edit_last = false;
                 if self.nodes.len() >= 2 && dist(*pos, self.nodes[0].0) <= tol {
                     self.closing = true;
                     return ToolResponse { cursor: Cursor::PenClose, ..ToolResponse::default() };
                 }
+                // Alt-Ziehen auf dem soeben gesetzten Punkt: dessen Ausgangshenkel neu (PAR 09/09)
+                if ev.mods.alt
+                    && let Some(last) = self.nodes.last()
+                    && dist(*pos, last.0) <= tol
+                {
+                    self.edit_last = true;
+                    return ToolResponse::with_overlay(self.overlay(), Cursor::Pen);
+                }
                 if self.nodes.is_empty() {
+                    let resume = self.resume.take();
                     match Self::pen_hit(ctx, *pos) {
                         Some(PenHit::End { id, contour, at_start }) => {
                             if self.start_continue(ctx, id, contour, at_start) {
-                                return ToolResponse::with_overlay(self.overlay(), Cursor::PenContinue);
+                                let cmds = if ctx.selection.elements == [id] { Vec::new() } else { vec![pick_select(id)] };
+                                return ToolResponse { commands: cmds, overlay: self.overlay(), cursor: Cursor::PenContinue, ..ToolResponse::default() };
                             }
                         }
                         Some(PenHit::Point { id, contour, node }) => {
                             self.button = false;
-                            return ToolResponse::commit(vec![Invocation::new("path.removeNode", json!({"id": id.0, "contour": contour, "node": node}))]);
+                            // Kurvenpunkt → Eckpunkt (Henkel eingezogen), Eckpunkt → entfernen; Schritt
+                            // „Stift“ (PAR 09/10)
+                            let curve = docops::element_on_page(ctx.doc, ctx.page, id)
+                                .and_then(|e| match &e.kind {
+                                    ElementKind::Path(pe) => pe.contours.get(contour).map(|c| is_curve_node(c, node)),
+                                    _ => None,
+                                })
+                                .unwrap_or(false);
+                            if curve && let Some(cs) = Self::corner_contours(ctx, id, contour, node) {
+                                return ToolResponse::commit(vec![Invocation::new("path.setContours", json!({"id": id.0, "contours": contours_json(&cs), "step": "pen"}))]);
+                            }
+                            return ToolResponse::commit(vec![Invocation::new("path.removeNode", json!({"id": id.0, "contour": contour, "node": node, "step": "pen"}))]);
                         }
                         Some(PenHit::Segment { id, contour, segment, t }) => {
                             self.button = false;
-                            return ToolResponse::commit(vec![Invocation::new("path.insertNode", json!({"id": id.0, "contour": contour, "segment": segment, "t": t}))]);
+                            return ToolResponse::commit(vec![Invocation::new("path.insertNode", json!({"id": id.0, "contour": contour, "segment": segment, "t": t, "step": "pen"}))]);
                         }
-                        None => {}
+                        _ => {}
+                    }
+                    // Esc/Eingabe davor: der gewählte offene Pfad wird am Endpunkt fortgesetzt (PAR 09/07)
+                    if let Some(ci) = resume
+                        && ctx.selection.elements.len() == 1
+                        && let Some(e) = docops::element_on_page(ctx.doc, ctx.page, ctx.selection.elements[0])
+                        && let ElementKind::Path(pe) = &e.kind
+                        && pe.primitive.is_none()
+                        && pe.contours.get(ci).is_some_and(|c| !c.closed && !c.nodes.is_empty())
+                    {
+                        let id = e.id;
+                        self.start_continue(ctx, id, ci, false);
                     }
                 }
-                // Stiftpunkte rasten nicht an Objektmitten (PARITAET_A L35)
-                let snapped = Snapper::new(ctx, &[]).without_centers().point(*pos);
+                // Stiftpunkte rasten nicht an Objekten (PAR 09/11: 102,207 und 152,122 bleiben)
+                let snapped = Snapper::new(ctx, &[]).without_smart().point(*pos);
                 let p = match self.nodes.last() {
                     Some(last) if ev.mods.shift => constrain_angle(last.0, *pos, 45.0),
                     _ => snapped.point,
@@ -497,7 +717,10 @@ impl ToolMachine for PenTool {
                     if let Some(n) = self.nodes.get_mut(idx) {
                         let a = n.0;
                         let q = if ev.mods.shift { constrain_angle(a, *pos, 45.0) } else { *pos };
-                        if self.closing {
+                        if self.edit_last {
+                            // nur der Ausgangshenkel, der Eingangshenkel bleibt (PAR 09/09)
+                            n.2 = q;
+                        } else if self.closing {
                             // Schließen mit Ziehen: Eingangshenkel des Startpunkts (gespiegelt)
                             n.1 = Point::new(2.0 * a.x - q.x, 2.0 * a.y - q.y);
                             if !ev.mods.alt {
@@ -513,7 +736,7 @@ impl ToolMachine for PenTool {
                     self.guides.clear();
                     self.cursor = if self.closing { Cursor::PenClose } else { Cursor::Pen };
                 } else {
-                    let sp = Snapper::new(ctx, &[]).without_centers().point(*pos);
+                    let sp = Snapper::new(ctx, &[]).without_smart().point(*pos);
                     let h = match self.nodes.last() {
                         Some(last) if ev.mods.shift => constrain_angle(last.0, *pos, 45.0),
                         _ => sp.point,
@@ -526,7 +749,9 @@ impl ToolMachine for PenTool {
             }
             ToolInput::Pointer { kind: PointerKind::Up, .. } => {
                 self.button = false;
+                self.edit_last = false;
                 if self.closing {
+                    self.resume = None;
                     return self.commit(true, ctx.options);
                 }
                 ToolResponse::with_overlay(self.overlay(), Cursor::Pen)
@@ -539,9 +764,11 @@ impl ToolMachine for PenTool {
                         self.nodes.pop();
                     }
                 }
+                // Doppelklick beendet endgültig: nächster Klick beginnt einen neuen Pfad (PAR 09/06)
+                self.resume = None;
                 self.commit(false, ctx.options)
             }
-            ToolInput::Key(ToolKey::Enter) | ToolInput::Key(ToolKey::Escape) => self.commit(false, ctx.options),
+            ToolInput::Key(ToolKey::Enter) | ToolInput::Key(ToolKey::Escape) => self.commit_resumable(ctx.options),
             ToolInput::Key(ToolKey::Backspace) | ToolInput::Key(ToolKey::Delete) if !self.nodes.is_empty() => {
                 // letzten gesetzten Punkt zurücknehmen
                 self.nodes.pop();
@@ -605,10 +832,96 @@ pub fn freehand_contour_json(points: &[Point], precision: u32, closed: bool) -> 
     if points.len() < 2 {
         return None;
     }
-    let tol = (11 - precision.clamp(1, 10)) as f64 * 0.4;
-    let simple = geometry::simplify_polyline(points, tol);
-    let c = geometry::smooth_contour(&simple, closed);
+    let c = freehand_contour(points, precision, closed)?;
     Some(json!({"closed": closed, "nodes": c.nodes.iter().map(|n| json!({"anchor": pt_json(n.anchor), "in": pt_json(n.pred), "out": pt_json(n.succ)})).collect::<Vec<Value>>()}))
+}
+
+/// Freihand-Kontur wie im Original (PAR 09/12): vereinfachte Punktfolge mit Knoten auf
+/// Pixelmitten; an scharfen Knicken (ab 50°) Eckpunkte ohne Henkel, sonst glatte Kurvenpunkte.
+pub fn freehand_contour(points: &[Point], precision: u32, closed: bool) -> Option<Contour> {
+    if points.len() < 2 {
+        return None;
+    }
+    let tol = (11 - precision.clamp(1, 10)) as f64 * 0.4;
+    let mut simple: Vec<Point> = geometry::simplify_polyline(points, tol).into_iter().map(pixel_center).collect();
+    simple.dedup_by(|a, b| dist(*a, *b) < 0.5);
+    if simple.len() < 2 {
+        return None;
+    }
+    let n = simple.len();
+    let smooth = geometry::smooth_contour(&simple, closed);
+    let nodes: Vec<PenNode> = (0..n)
+        .map(|i| {
+            let a = simple[i];
+            let inner = closed || (i > 0 && i + 1 < n);
+            if !inner {
+                return (a, a, a);
+            }
+            let (p, q) = (simple[(i + n - 1) % n], simple[(i + 1) % n]);
+            let (ux, uy) = ((a.x - p.x) as f64, (a.y - p.y) as f64);
+            let (vx, vy) = ((q.x - a.x) as f64, (q.y - a.y) as f64);
+            let turn = (ux * vy - uy * vx).atan2(ux * vx + uy * vy).abs().to_degrees();
+            match smooth.nodes.get(i) {
+                Some(s) if turn < 50.0 => (a, s.pred, s.succ),
+                _ => (a, a, a),
+            }
+        })
+        .collect();
+    Some(geometry::contour_from_nodes(&nodes, closed))
+}
+
+/// Pfad nachzeichnen wie im Original (PAR 09/14): beginnt der Zug am gewählten Pfad, wird nur der
+/// Abschnitt zwischen Anfangs- und Endpunkt des Zugs ersetzt (endet der Zug abseits, ab dem
+/// Anfangspunkt bis zum Konturende). `None`: Zug beginnt nicht an einer offenen Kontur.
+fn redraw_section(contours: &[Contour], new: &Contour, start: Point, end: Point, tol: f64) -> Option<Vec<Contour>> {
+    let near = |c: &Contour, p: Point| -> Option<(usize, f64, f64)> {
+        let bc = geometry::to_bezier(c);
+        bc.nearest(fp_geom::Vec2::from(p)).map(|(seg, nr)| (seg, nr.t, nr.distance))
+    };
+    let (ci, (s_seg, s_t, _)) = contours
+        .iter()
+        .enumerate()
+        .filter(|(_, c)| !c.closed && c.nodes.len() >= 2)
+        .filter_map(|(i, c)| near(c, start).filter(|h| h.2 <= tol).map(|h| (i, h)))
+        .min_by(|a, b| a.1 .2.total_cmp(&b.1 .2))?;
+    let c = &contours[ci];
+    let end_hit = near(c, end).filter(|h| h.2 <= tol);
+    let s_par = s_seg as f64 + s_t;
+    let mut new_nodes = new.nodes.clone();
+    let (lo, hi, reversed) = match end_hit {
+        Some((e_seg, e_t, _)) => {
+            let e_par = e_seg as f64 + e_t;
+            if e_par >= s_par { (s_par, e_par, false) } else { (e_par, s_par, true) }
+        }
+        None => (s_par, (c.nodes.len() - 1) as f64, false),
+    };
+    if reversed {
+        new_nodes.reverse();
+        for k in &mut new_nodes {
+            std::mem::swap(&mut k.pred, &mut k.succ);
+        }
+    }
+    let split = |par: f64| -> (usize, f64) {
+        let seg = (par.floor() as usize).min(c.nodes.len().saturating_sub(2));
+        (seg, (par - seg as f64).clamp(0.0, 1.0))
+    };
+    let last = (c.nodes.len() - 1) as f64;
+    // Stück vor dem Anfang bzw. nach dem Ende (an den Nahtstellen Eckpunkte)
+    let mut nodes = if lo > 1e-6 { super::pathedit::split_at(c, &[split(lo)]).first().map(|h| h.nodes.clone()).unwrap_or_default() } else { Vec::new() };
+    if let Some(l) = nodes.last_mut() {
+        l.succ = l.anchor;
+    }
+    nodes.extend(new_nodes);
+    if end_hit.is_some() && hi < last - 1e-6 {
+        let mut t = super::pathedit::split_at(c, &[split(hi)]).last().map(|t| t.nodes.clone()).unwrap_or_default();
+        if let Some(f) = t.first_mut() {
+            f.pred = f.anchor;
+        }
+        nodes.extend(t);
+    }
+    let mut out = contours.to_vec();
+    out[ci] = Contour { closed: false, nodes, ..c.clone() };
+    Some(out)
 }
 
 impl ToolMachine for FreehandTool {
@@ -648,15 +961,25 @@ impl ToolMachine for FreehandTool {
                     self.points.push(*pos);
                 }
                 let pts = std::mem::take(&mut self.points);
+                let Some(contour) = freehand_contour(&pts, ctx.options.path_precision, false) else { return ToolResponse::default() };
                 let Some(c) = freehand_contour_json(&pts, ctx.options.path_precision, false) else { return ToolResponse::default() };
-                // Pfad nachzeichnen: genau ein ausgewählter Pfad → dessen Konturen ersetzen
+                // Pfad nachzeichnen: genau ein ausgewählter Pfad → nur den nachgezeichneten Abschnitt
+                // ersetzen (PAR 09/14); beginnt der Zug abseits, wie bisher die ganze Kontur
                 if self.id == ToolId::RedrawPath
                     && ctx.selection.elements.len() == 1
-                    && docops::element_on_page(ctx.doc, ctx.page, ctx.selection.elements[0]).is_some_and(|e| matches!(e.kind, ElementKind::Path(_)))
+                    && let Some(e) = docops::element_on_page(ctx.doc, ctx.page, ctx.selection.elements[0])
+                    && let ElementKind::Path(pe) = &e.kind
                 {
+                    let tol = (ctx.pick_tolerance() * 1.5).max(3.0);
+                    if let (Some(a), Some(b)) = (pts.first(), pts.last())
+                        && let Some(cs) = redraw_section(&pe.contours, &contour, *a, *b, tol)
+                    {
+                        return ToolResponse::commit(vec![Invocation::new("path.setContours", json!({"id": e.id.0, "contours": contours_json(&cs)}))]);
+                    }
                     return ToolResponse::commit(vec![Invocation::new("path.setContours", json!({"contours": [c]}))]);
                 }
-                return ToolResponse::commit(vec![super::styled(Invocation::new("draw.path", json!({"contours": [c], "fill": false})), ctx.options)]);
+                // Vektorpfad: Verlaufsschritt „Pinsel“ wie im Original (PAR 09/12)
+                return ToolResponse::commit(vec![super::styled(Invocation::new("draw.path", json!({"contours": [c], "fill": false, "step": "brush"})), ctx.options)]);
             }
             _ => {}
         }
