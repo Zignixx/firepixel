@@ -6,9 +6,10 @@ var PIE_ANGLES = typeof __pieAngles === "object" ? __pieAngles : [-90, 0, 270];
 var PIE_CENTERED = typeof __pieCentered === "boolean" ? __pieCentered : false;
 SS.run({
   init: function (cd, r, at) {
-    var rad = r ? Math.max(1, Math.min(r.right - r.left, r.bottom - r.top) / 2) : 100;
+    var q = r ? SS.radial(r, at) : null;
+    var rad = Math.max(1, q ? q.rad : 100);
     var off = PIE_CENTERED ? 0 : rad;
-    cd.cx = r ? (r.left + r.right) / 2 : at.x + off; cd.cy = r ? (r.top + r.bottom) / 2 : at.y + off;
+    cd.cx = q ? q.cx : at.x + off; cd.cy = q ? q.cy : at.y + off;
     cd.radius0 = rad; cd.radius1 = rad * PIE_INNER;
     cd.angles = PIE_ANGLES.slice(0);
     cd.shapeName = PIE_CENTERED ? "piechart" : PIE_INNER > 0 ? "doughnut" : "pie";

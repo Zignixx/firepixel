@@ -553,6 +553,22 @@ fn replace_shape(session: &mut Session, page: usize, new: Element) -> R<()> {
     Ok(())
 }
 
+/// Start- und Endpunkt des Zugs zu einem aufgezogenen Rahmen: `from` (Startpunkt des Zugs) wählt
+/// die Startecke, damit die Formskripte die Zugrichtung kennen (runde Formen liegen im Original in
+/// Zugrichtung ab dem Startpunkt). Ohne `from` oder bei einem Start im Rahmen (Alt = von der Mitte)
+/// links oben → rechts unten.
+fn drag_corners(r: fp_geom::Rect, from: Option<Point>) -> (Point, Point) {
+    let pick = |f: f32, lo: f32, hi: f32| if (f - hi).abs() < (f - lo).abs() { (hi, lo) } else { (lo, hi) };
+    match from {
+        Some(f) if !(f.x > r.left + 0.5 && f.x < r.right - 0.5) && !(f.y > r.top + 0.5 && f.y < r.bottom - 0.5) => {
+            let (x0, x1) = pick(f.x, r.left, r.right);
+            let (y0, y1) = pick(f.y, r.top, r.bottom);
+            (Point::new(x0, y0), Point::new(x1, y1))
+        }
+        _ => (Point::new(r.left, r.top), Point::new(r.right, r.bottom)),
+    }
+}
+
 /// Fügt eine Form ein (`rect` = aufgezogener Rahmen, sonst `at`). Liefert `{id}` und wählt sie aus.
 pub fn insert(session: &mut Session, p: &Value) -> R<Value> {
     let name = p.get("shape").or_else(|| p.get("name")).and_then(Value::as_str).ok_or_else(|| fail(fp_i18n::t("err-script-shape-missing")))?;
@@ -566,7 +582,7 @@ pub fn insert(session: &mut Session, p: &Value) -> R<Value> {
     let mut elem = json!({"elements": [], "controlPoints": [], "customData": {}, "transform": mat_json(&Matrix3::IDENTITY)});
     match rect {
         Some(r) => {
-            let (a, b) = (Point::new(r.left, r.top), Point::new(r.right, r.bottom));
+            let (a, b) = drag_corners(r, p.get("from").and_then(point_of));
             let mut prev = a;
             for (op, cur) in [("BeginDragInsert", a), ("DragInsert", b), ("EndDragInsert", b)] {
                 let out = eng.event(&state(op, &elem, a, prev, cur, -1, mods, false, &defaults, size))?;

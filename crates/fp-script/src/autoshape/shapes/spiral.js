@@ -2,8 +2,9 @@
 // turns (Windungen, auch gebrochen), clockwise, closed (Ende mit der Mitte verbunden).
 SS.run({
   init: function (cd, r, at) {
-    var rad = r ? Math.max(2, Math.min(r.right - r.left, r.bottom - r.top) / 2) : 100;
-    cd.cx = r ? (r.left + r.right) / 2 : at.x + rad; cd.cy = r ? (r.top + r.bottom) / 2 : at.y + rad;
+    var q = r ? SS.radial(r, at) : null;
+    var rad = Math.max(2, q ? q.rad : 100);
+    cd.cx = q ? q.cx : at.x + rad; cd.cy = q ? q.cy : at.y + rad;
     cd.radius = rad;
     if (cd.turns === undefined) { cd.turns = 6; cd.clockwise = true; cd.closed = false; }
     cd.shapeName = "spiral";

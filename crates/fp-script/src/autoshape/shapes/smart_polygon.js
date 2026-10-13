@@ -2,8 +2,9 @@
 // rotation (Grad), inner (0 = voll, sonst Radius eines ausgesparten inneren Vielecks).
 SS.run({
   init: function (cd, r, at) {
-    var rad = r ? Math.max(1, Math.min(r.right - r.left, r.bottom - r.top) / 2) : 100;
-    cd.cx = r ? (r.left + r.right) / 2 : at.x + rad; cd.cy = r ? (r.top + r.bottom) / 2 : at.y + rad;
+    var q = r ? SS.radial(r, at) : null;
+    var rad = Math.max(1, q ? q.rad : 100);
+    cd.cx = q ? q.cx : at.x + rad; cd.cy = q ? q.cy : at.y + rad;
     cd.radius = rad;
     if (cd.sides === undefined) { cd.sides = 5; cd.rotation = -90; cd.inner = 0; }
     cd.shapeName = "polygon";

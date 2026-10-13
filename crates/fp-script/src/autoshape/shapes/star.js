@@ -2,10 +2,10 @@
 // round0/round1 (Rundung außen/innen: Abstand der Ankerpunkte; ≠ Radius ergibt gerundete Spitzen).
 SS.run({
   init: function (cd, r, at) {
-    var rad = r ? Math.min(r.right - r.left, r.bottom - r.top) / 2 : 100;
-    rad = Math.max(1, rad);
-    cd.cx = r ? (r.left + r.right) / 2 : at.x + rad;
-    cd.cy = r ? (r.top + r.bottom) / 2 : at.y + rad;
+    var q = r ? SS.radial(r, at) : null;
+    var rad = Math.max(1, q ? q.rad : 100);
+    cd.cx = q ? q.cx : at.x + rad;
+    cd.cy = q ? q.cy : at.y + rad;
     if (cd.nodes === undefined) cd.nodes = 5;
     var ratio = (cd.radius0 && cd.radius1) ? cd.radius1 / cd.radius0 : 0.5;
     cd.radius0 = rad; cd.radius1 = rad * ratio; cd.round0 = cd.radius0; cd.round1 = cd.radius1;

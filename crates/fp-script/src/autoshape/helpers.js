@@ -109,6 +109,21 @@ var SS = {
     return { left: Math.min(l, r), top: Math.min(t, bt), right: Math.max(l, r), bottom: Math.max(t, bt) };
   },
 
+  // Runde Formen (Stern, Torte/Donut, Intelligentes Polygon, Spirale) aus dem Ziehrahmen wie im
+  // Original: Radius = halbe längere Seite, der Kreis beginnt am Startpunkt und liegt in Zugrichtung
+  // (120 × 100 ab 100,100 → Mitte 160,160, Radius 60; senkrechter Zug ohne Breite: waagrecht in
+  // Richtung des senkrechten Zugs). Rahmen um den Startpunkt (Alt = von der Mitte): Mitte = Startpunkt.
+  radial: function (r, at) {
+    var e = 1e-9, rad = Math.max(r.right - r.left, r.bottom - r.top) / 2;
+    if ((r.left < at.x - e && r.right > at.x + e) || (r.top < at.y - e && r.bottom > at.y + e))
+      return { cx: (r.left + r.right) / 2, cy: (r.top + r.bottom) / 2, rad: rad };
+    var sx = r.right > at.x + e ? 1 : r.left < at.x - e ? -1 : 0;
+    var sy = r.bottom > at.y + e ? 1 : r.top < at.y - e ? -1 : 0;
+    if (sx === 0) sx = sy || 1;
+    if (sy === 0) sy = sx;
+    return { cx: at.x + sx * rad, cy: at.y + sy * rad, rad: rad };
+  },
+
   // Ereignisverteilung. def: { init(cd, rect|null, at, S), build(el, cd, S), drag(cd, index, mouse, down, start, S),
   //   click(cd, index, S) (optional, Steuerpunkt ohne Bewegung angeklickt), defaultSize: [w, h] }
   run: function (def) {

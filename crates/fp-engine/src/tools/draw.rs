@@ -150,7 +150,7 @@ impl ShapeTool {
                 let r = constrain_rect(start, cur, ev.mods.shift, ev.mods.alt);
                 (
                     vec![Overlay::Rect { rect: r, dashed: false }, size_label(r)],
-                    Some(Invocation::new("autoShape.insert", json!({"shape": ctx.options.auto_shape, "rect": rect_json(r)}))),
+                    Some(Invocation::new("autoShape.insert", json!({"shape": ctx.options.auto_shape, "rect": rect_json(r), "from": pt_json(start)}))),
                 )
             }
             ToolId::Ellipse => {

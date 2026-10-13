@@ -242,3 +242,48 @@ fn param_labels_have_translation_keys() {
     let first = &v[0]["params"][0];
     assert!(first["labelKey"].as_str().is_some_and(|k| k.starts_with("panel-asp-p-")), "{first}");
 }
+
+/// FIX-R1: Runde Formen aus dem Ziehrahmen wie im Original (a1run tool-autoshapes 02, paths.json):
+/// Zug 100,100 → 220,200 (120 × 100) ergibt Radius 60 und Mitte 160,160 (halbe längere Seite, Kreis
+/// ab dem Startpunkt in Zugrichtung). Senkrechter Zug ohne Breite (b05): 100,212.8 → +40 ergibt
+/// Radius 20, Mitte 120,232.8; 160,100 → −20 ergibt Radius 10, Mitte 150,90.
+#[test]
+fn radial_shapes_from_frame_like_original() {
+    let ins = |s: &mut Session, name: &str, rect: [f32; 4], from: Option<[f32; 2]>| {
+        let mut p = json!({"op": "insert", "shape": name, "rect": rect});
+        if let Some(f) = from {
+            p["from"] = json!(f);
+        }
+        let id = id_of(&autoshape::op_with_history(s, &p).unwrap_or_else(|e| panic!("{e}")));
+        shape(s, id)
+    };
+    let mut s = session();
+    // Stern: Radius 1 bei 160,100, Mitte (unsichtbarer Griff 5) 160,160, Grenzen 102,100–218,209
+    let e = ins(&mut s, "Stern", [100.0, 100.0, 220.0, 200.0], Some([100.0, 100.0]));
+    let c = cps(&e);
+    assert!(near(c[0], (160.0, 100.0)) && near(c[5], (160.0, 160.0)) && near(c[4], (100.0, 212.8)), "{c:?}");
+    assert_eq!(e.common.custom_data.get_str("radius0").and_then(|v| v.parse::<f64>().ok()), Some(60.0));
+    // ohne `from` (Skript-Aufruf mit Rahmen) gleich
+    let c = cps(&ins(&mut s, "Star", [100.0, 100.0, 220.0, 200.0], None));
+    assert!(near(c[0], (160.0, 100.0)) && near(c[5], (160.0, 160.0)), "{c:?}");
+    // Torte/Donut 120 × 120 (Griffe 160,160 / 220,160 bzw. Innenradius 184,160)
+    let c = cps(&ins(&mut s, "Torte", [100.0, 100.0, 220.0, 200.0], None));
+    assert!(near(c[0], (160.0, 160.0)) && near(c[3], (220.0, 160.0)), "{c:?}");
+    let c = cps(&ins(&mut s, "Donut", [100.0, 100.0, 220.0, 200.0], None));
+    assert!(near(c[0], (160.0, 160.0)) && near(c[1], (184.0, 160.0)) && near(c[2], (160.0, 100.0)), "{c:?}");
+    // Intelligentes Polygon: Mitte 160,160, Ecke oben 160,100 (Griff-Reihenfolge hier eigene)
+    let c = cps(&ins(&mut s, "Intelligentes Polygon", [100.0, 100.0, 220.0, 200.0], None));
+    assert!(c.iter().any(|&p| near(p, (160.0, 160.0))) && c.iter().any(|&p| near(p, (160.0, 100.0))), "{c:?}");
+    // Spirale: Mitte 160,160, Radius 60
+    let e = ins(&mut s, "Spirale", [100.0, 100.0, 220.0, 200.0], None);
+    assert!(near(cps(&e)[0], (160.0, 160.0)), "{:?}", cps(&e));
+    assert_eq!(e.common.custom_data.get_str("radius").and_then(|v| v.parse::<f64>().ok()), Some(60.0));
+    // senkrechte Züge ohne Breite (Original b05_star_points_drag40 / b05_star_r0_up20)
+    let c = cps(&ins(&mut s, "Stern", [100.0, 212.8, 100.0, 252.8], Some([100.0, 212.8])));
+    assert!(near(c[0], (120.0, 212.8)) && near(c[5], (120.0, 232.8)), "{c:?}");
+    let c = cps(&ins(&mut s, "Stern", [160.0, 80.0, 160.0, 100.0], Some([160.0, 100.0])));
+    assert!(near(c[0], (150.0, 80.0)) && near(c[5], (150.0, 90.0)), "{c:?}");
+    // Zug nach links oben: Kreis liegt links oberhalb des Startpunkts
+    let c = cps(&ins(&mut s, "Stern", [100.0, 100.0, 220.0, 200.0], Some([220.0, 200.0])));
+    assert!(near(c[5], (160.0, 140.0)), "{c:?}");
+}
