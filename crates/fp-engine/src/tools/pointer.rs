@@ -106,6 +106,30 @@ pub fn scale_by_handle(b: Rect, handle: usize, cur: Point, proportional: bool, f
     Rect::new(l, t, r, bo)
 }
 
+/// Skalieren-Werkzeug am Eckgriff wie im Original (PAR 08/10, 08/16 gemessen): proportional mit der
+/// **Projektion** des Zeigers auf die Diagonale (R1 50,50–150,120, Ecke → 200,140 ergibt 193,150;
+/// B1 → 603,415), Alt von der Mitte aus; Seitengriffe ändern nur ihre Richtung.
+pub fn scale_projected(b: Rect, handle: usize, cur: Point, from_center: bool) -> Rect {
+    if !matches!(handle, 0 | 2 | 4 | 6) || b.width() == 0.0 || b.height() == 0.0 {
+        return scale_by_handle(b, handle, cur, false, from_center);
+    }
+    let hs = handles(&b);
+    let corner = hs[handle];
+    let anchor = if from_center { b.center() } else { hs[(handle + 4) % 8] };
+    let (dx, dy) = ((corner.x - anchor.x) as f64, (corner.y - anchor.y) as f64);
+    let (vx, vy) = ((cur.x - anchor.x) as f64, (cur.y - anchor.y) as f64);
+    let s = (vx * dx + vy * dy) / (dx * dx + dy * dy).max(1e-12);
+    // die gezogene Ecke landet auf ganzen Pixeln (192.95,150.07 → 193,150; B1 603,415)
+    let p = Point::new((anchor.x as f64 + s * dx).round() as f32, (anchor.y as f64 + s * dy).round() as f32);
+    let o = if from_center { Point::new(2.0 * anchor.x - p.x, 2.0 * anchor.y - p.y) } else { anchor };
+    match handle {
+        0 => Rect::new(p.x, p.y, o.x, o.y),
+        2 => Rect::new(o.x, p.y, p.x, o.y),
+        4 => Rect::new(o.x, o.y, p.x, p.y),
+        _ => Rect::new(p.x, o.y, o.x, p.y),
+    }
+}
+
 fn matrix_json(m: &Matrix3) -> serde_json::Value {
     json!(m.to_affine())
 }
@@ -266,12 +290,13 @@ fn ghost(ctx: &ToolContext, rect: Rect, quad: [Point; 4], copy: bool) -> Overlay
 #[derive(Clone, Debug, PartialEq)]
 enum PState {
     Idle,
-    /// Gedrückt auf einem (dann ausgewählten) Element.
-    PressedObject { start: Point, copy: bool },
+    /// Gedrückt auf einem (dann ausgewählten) Element; `toggle`: beim Loslassen ohne Ziehen
+    /// abwählen (Umschalt auf gewähltem Objekt); `fresh`: erst mit diesem Druck gewählt.
+    PressedObject { start: Point, copy: bool, toggle: Option<ElementId>, fresh: bool },
     PressedEmpty { start: Point, add: bool },
     PressedHandle { start: Point, handle: usize, bounds: Rect },
     PressedPoint { start: Point, hit: PointHit, pull: bool },
-    Moving { start: Point, cur: Point, copy: bool, bounds: Option<Rect>, guides: Vec<Overlay> },
+    Moving { start: Point, cur: Point, copy: bool, bounds: Option<Rect>, guides: Vec<Overlay>, fresh: bool },
     Rubber { start: Point, cur: Point, add: bool },
     Scaling { handle: usize, bounds: Rect, cur: Rect },
     DraggingPoint { start: Point, cur: Point, hit: PointHit, pull: bool, guides: Vec<Overlay> },
@@ -368,6 +393,16 @@ impl PointerTool {
         docops::ids_bounds(ctx.doc, ctx.page, &ctx.selection.elements)
     }
 
+    /// Ist unter der Auswahl ein gewöhnlicher Pfad (keine Rechteck-Grundform)?
+    fn has_plain_path(ctx: &ToolContext) -> bool {
+        ctx.selection.elements.iter().any(|id| docops::element_on_page(ctx.doc, ctx.page, *id).is_some_and(|e| matches!(&e.kind, ElementKind::Path(p) if p.primitive.is_none())))
+    }
+
+    /// Ist das Element eine Rechteck-Grundform?
+    fn is_rect_primitive(ctx: &ToolContext, id: ElementId) -> bool {
+        docops::element_on_page(ctx.doc, ctx.page, id).is_some_and(|e| matches!(&e.kind, ElementKind::Path(p) if p.primitive.is_some()))
+    }
+
     fn hit_opts(ctx: &ToolContext) -> HitOptions {
         HitOptions { tolerance: ctx.pick_tolerance(), skip_locked: true, skip_hidden: true }
     }
@@ -390,13 +425,14 @@ impl PointerTool {
         if self.paint_handles(ctx)
             && let Some(b) = Self::selection_bounds(ctx)
             && let Some(h) = handle_at(&b, p, tol)
+            && !(h % 2 == 0 && Self::has_plain_path(ctx))
         {
             if h % 2 == 0 && self.hover_cursor == Cursor::Arrow {
                 self.hover_cursor = Cursor::Subselect;
             }
             return ToolResponse { cursor: self.hover_cursor, ..ToolResponse::default() };
         }
-        if self.id != ToolId::SelectBehind && point_hit(ctx, p, self.id == ToolId::Subselection, self.id == ToolId::Subselection).is_some() {
+        if self.id != ToolId::SelectBehind && point_hit(ctx, p, false, self.id == ToolId::Subselection).is_some() {
             self.hover_cursor = Cursor::PointerPoint;
             return ToolResponse { cursor: self.hover_cursor, ..ToolResponse::default() };
         }
@@ -428,16 +464,20 @@ impl PointerTool {
         }
         // Griffe der Auswahl (nur Zeiger, PointerToolPaintHandles); auch die Eckgriffe eines
         // Rechtecks skalieren – im Original live gemessen, die Rundung bleibt (PARITAET_A L26)
+        // Am Eckpunkt eines gewöhnlichen Pfads verschiebt der Zeiger dagegen das Objekt (PAR 08/04)
         if self.paint_handles(ctx)
             && let Some(b) = Self::selection_bounds(ctx)
             && let Some(h) = handle_at(&b, p, tol)
+            && !(h % 2 == 0 && Self::has_plain_path(ctx))
         {
             self.state = PState::PressedHandle { start: p, handle: h, bounds: b };
             return ToolResponse { cursor: handle_cursor(h), ..ToolResponse::default() };
         }
-        // Pfadpunkte ausgewählter Pfade (Zeiger: Anker; Teilauswahl: Anker und Henkel)
+        // Pfadpunkte ausgewählter Pfade (Zeiger: Anker; Teilauswahl: Anker und Henkel). Die
+        // Eckpunkte einer Rechteck-Grundform verschieben mit der Teilauswahl das ganze Rechteck
+        // (PAR 10/06), sie sind hier also keine Pfadpunkte.
         if self.id != ToolId::SelectBehind
-            && let Some(hit) = point_hit(ctx, p, self.id == ToolId::Subselection, self.id == ToolId::Subselection)
+            && let Some(hit) = point_hit(ctx, p, false, self.id == ToolId::Subselection)
         {
             let pull = self.id == ToolId::Subselection && ev.mods.alt && hit.part == Part::Anchor;
             self.state = PState::PressedPoint { start: p, hit, pull };
@@ -478,8 +518,13 @@ impl PointerTool {
         match target.and_then(|t| ctx.doc.element_at(&t).map(|e| e.id)) {
             Some(id) => {
                 let already = ctx.selection.contains(id);
-                self.state = PState::PressedObject { start: p, copy: ev.mods.alt };
-                let cmds = if ev.mods.shift {
+                // Umschalt auf einem gewählten Objekt: Abwählen erst beim Loslassen ohne Ziehen –
+                // Umschalt-Ziehen verschiebt waagrecht/45° (PAR 08/03)
+                let toggle_on_up = ev.mods.shift && already;
+                self.state = PState::PressedObject { start: p, copy: ev.mods.alt, toggle: toggle_on_up.then_some(id), fresh: !already };
+                let cmds = if toggle_on_up {
+                    vec![]
+                } else if ev.mods.shift {
                     vec![pick("select.set", json!({"ids": [id.0], "mode": "toggle"}))]
                 } else if !already {
                     vec![pick("select.set", json!({"ids": [id.0], "mode": "replace"}))]
@@ -500,8 +545,13 @@ impl PointerTool {
         let st = self.state.clone();
         match st {
             PState::Idle => self.hover(p, ctx),
-            PState::PressedObject { start, copy } if dist(start, p) >= thr => {
-                self.state = PState::Moving { start, cur: p, copy: copy || ev.mods.alt, bounds: Self::selection_bounds(ctx), guides: Vec::new() };
+            PState::PressedObject { start, copy, fresh, .. } if dist(start, p) >= thr => {
+                self.state = PState::Moving { start, cur: p, copy: copy || ev.mods.alt, bounds: Self::selection_bounds(ctx), guides: Vec::new(), fresh };
+                self.moved(p, ev, ctx)
+            }
+            // Zeiger am Punkt eines gewählten Pfads: Ziehen verschiebt das ganze Objekt (PAR 08/04)
+            PState::PressedPoint { start, .. } if self.id == ToolId::Pointer && dist(start, p) >= thr => {
+                self.state = PState::Moving { start, cur: p, copy: ev.mods.alt, bounds: Self::selection_bounds(ctx), guides: Vec::new(), fresh: false };
                 self.moved(p, ev, ctx)
             }
             PState::PressedEmpty { start, add } if dist(start, p) >= thr => {
@@ -526,7 +576,7 @@ impl PointerTool {
                 self.state = PState::DraggingPoint { start, cur: p, hit, pull, guides: Vec::new() };
                 self.moved(p, ev, ctx)
             }
-            PState::Moving { start, copy, bounds, .. } => {
+            PState::Moving { start, copy, bounds, fresh, .. } => {
                 let copy = copy || ev.mods.alt;
                 let mut cur = if ev.mods.shift { constrain_angle(start, p, 45.0) } else { p };
                 let mut guides = Vec::new();
@@ -539,7 +589,7 @@ impl PointerTool {
                     cur = Point::new(start.x + rx + dx, start.y + ry + dy);
                     guides = g;
                 }
-                self.state = PState::Moving { start, cur, copy, bounds, guides: guides.clone() };
+                self.state = PState::Moving { start, cur, copy, bounds, guides: guides.clone(), fresh };
                 self.overlay = Vec::new();
                 if let Some(b) = bounds {
                     let q = b.translate(cur.x - start.x, cur.y - start.y);
@@ -685,8 +735,11 @@ impl PointerTool {
                 {
                     return ToolResponse::commit(vec![Invocation::new("select.movePixels", json!({"dx": dx.round(), "dy": dy.round()}))]);
                 }
-                ToolResponse::commit(vec![Invocation::new("edit.move", json!({"dx": dx, "dy": dy, "copy": copy}))])
+                // Alt-Ziehen heißt im Original „Duplizieren“ (PAR 08/03)
+                let params = if copy { json!({"dx": dx, "dy": dy, "copy": true, "step": "duplicate"}) } else { json!({"dx": dx, "dy": dy, "copy": false}) };
+                ToolResponse::commit(vec![Invocation::new("edit.move", params)])
             }
+            PState::PressedObject { toggle: Some(id), .. } => ToolResponse::commit(vec![pick("select.set", json!({"ids": [id.0], "mode": "toggle"}))]),
             PState::Rubber { start, cur, add } => {
                 let r = Rect::new(start.x, start.y, cur.x, cur.y).normalized();
                 if self.id == ToolId::Subselection {
@@ -726,11 +779,15 @@ impl PointerTool {
                     return ToolResponse::default();
                 }
                 let m = docops::rect_to_rect(bounds, cur);
-                ToolResponse::commit(vec![Invocation::new("transform.matrix", json!({"matrix": matrix_json(&m)}))])
+                // Eckpunkt einer Rechteck-Grundform: „Rechteck modifizieren“ (PAR 10/06)
+                let rect_only = ctx.selection.elements.len() == 1 && Self::is_rect_primitive(ctx, ctx.selection.elements[0]);
+                let params = if rect_only { json!({"matrix": matrix_json(&m), "step": "modify-rect"}) } else { json!({"matrix": matrix_json(&m)}) };
+                ToolResponse::commit(vec![Invocation::new("transform.matrix", params)])
             }
             PState::DraggingPoint { start, cur, hit, pull, .. } => {
                 let Some(cs) = self.dragged_contours(ctx, &hit, cur.x - start.x, cur.y - start.y, pull, ev.mods.alt) else { return ToolResponse::default() };
-                ToolResponse::commit(vec![Invocation::new("path.setContours", json!({"id": hit.id.0, "contours": contours_json(&cs)}))])
+                // Teilauswahl: Punkt bzw. Henkel ziehen heißt im Original „Punkt verschieben“ (PAR 08/06)
+                ToolResponse::commit(vec![Invocation::new("path.setContours", json!({"id": hit.id.0, "contours": contours_json(&cs), "step": "move-point"}))])
             }
             PState::PressedPoint { hit, .. } if self.id == ToolId::Pointer => {
                 // Klick auf einen Punkt mit dem Zeiger: Punkt unterauswählen (zum Löschen mit Entf)
@@ -923,6 +980,10 @@ impl ToolMachine for PointerTool {
         v
     }
 
+    fn inspector_hold(&self) -> bool {
+        matches!(self.state, PState::Moving { fresh: true, .. } | PState::PressedObject { fresh: true, .. })
+    }
+
     fn feedback(&self, ctx: &ToolContext) -> Vec<Overlay> {
         let mut v = Vec::new();
         let dragging_points = matches!(self.state, PState::DraggingPoint { .. });
@@ -969,12 +1030,14 @@ pub struct TransformTool {
     /// Noch nicht übernommene Transformation (wie im Original eine Vorschau bis Eingabe,
     /// Doppelklick oder Werkzeugwechsel; Esc verwirft): Ausgangsrahmen, Ziel-Viereck, Auswahl.
     pending: Option<(Rect, [Point; 4], Vec<ElementId>)>,
+    /// Ein Bildschirmpixel in Dokumentpixeln (letzter Zoom).
+    px: f32,
 }
 
 impl TransformTool {
     /// Neues Werkzeug (Scale, Skew oder Distort).
     pub fn new(id: ToolId) -> TransformTool {
-        TransformTool { id, bounds: None, pivot: None, drag: None, overlay: Vec::new(), cursor: Cursor::Arrow, insets: None, pending: None }
+        TransformTool { id, bounds: None, pivot: None, drag: None, overlay: Vec::new(), cursor: Cursor::Arrow, insets: None, pending: None, px: 1.0 }
     }
 
     fn pivot_of(&self, b: &Rect) -> Point {
@@ -1024,7 +1087,9 @@ impl TransformTool {
             }
             return if b.contains(p) { TDrag::Move } else { TDrag::Rotate };
         }
-        if dist(self.pivot_of(b), p) <= tol {
+        // Drehpunkt nur direkt auf dem kleinen Kreis greifen; daneben im Rahmen verschiebt
+        // (PAR 08/10: Ziehen innen = Verschieben)
+        if dist(self.pivot_of(b), p) <= tol.min(4.0 * self.px) {
             return TDrag::Pivot;
         }
         match handle_at(b, p, tol) {
@@ -1099,24 +1164,26 @@ impl TransformTool {
             TDrag::Rotate if self.nine() => Matrix3::IDENTITY,
             TDrag::Rotate => docops::about(self.pivot_of(&b), &Matrix3::rotation_degrees(self.angle(&b, start, cur, ev))),
             TDrag::Edge(h) | TDrag::Corner(h) if self.id == ToolId::Skew => {
+                // Neigen am Seitengriff wie im Original (PAR 08/13): nur die gegriffene Kante wandert,
+                // die gegenüberliegende bleibt (Mittelgriff oben +30 → 80,50/180,50, unten fest).
+                // Ecken bilden ein Trapez (siehe `drag_quad`).
                 let (w, hgt) = (b.width().max(1e-6), b.height().max(1e-6));
+                let _ = c;
                 if matches!(h, 3 | 7) {
-                    // linke/rechte Kante: senkrecht neigen
                     let dy = cur.y - start.y;
-                    let k = if h == 7 { -2.0 * dy / w } else { 2.0 * dy / w };
-                    docops::about(c, &Matrix3::shear(0.0, k))
+                    let (k, ax) = if h == 7 { (-dy / w, b.right) } else { (dy / w, b.left) };
+                    docops::about(Point::new(ax, b.top), &Matrix3::shear(0.0, k))
                 } else {
-                    // obere/untere Kante (und Ecken): waagerecht neigen
                     let dx = cur.x - start.x;
-                    let k = if h <= 2 { -2.0 * dx / hgt } else { 2.0 * dx / hgt };
-                    docops::about(c, &Matrix3::shear(k, 0.0))
+                    let (k, ay) = if h <= 2 { (-dx / hgt, b.bottom) } else { (dx / hgt, b.top) };
+                    docops::about(Point::new(b.left, ay), &Matrix3::shear(k, 0.0))
                 }
             }
             TDrag::Corner(h) | TDrag::Edge(h) if self.id == ToolId::Scale => {
-                // Frei transformieren/Skalieren wie im Original (PARITAET_A L30, gemessen): der Griff
-                // folgt dem (eingerasteten) Zeiger, Ecken skalieren immer proportional mit dem
-                // größeren Faktor, Umschalt ändert nichts, Alt skaliert von der Mitte aus
-                docops::rect_to_rect(b, scale_by_handle(b, h, cur, true, ev.mods.alt))
+                // Skalieren wie im Original (PAR 08/10, 08/16 gemessen): der Griff folgt dem
+                // (eingerasteten) Zeiger, Ecken skalieren proportional mit der Projektion auf die
+                // Diagonale, Umschalt ändert nichts, Alt skaliert von der Mitte aus
+                docops::rect_to_rect(b, scale_projected(b, h, cur, ev.mods.alt))
             }
             TDrag::Corner(h) | TDrag::Edge(h) => {
                 let hp = handles(&b)[h];
@@ -1165,9 +1232,10 @@ impl TransformTool {
                 if m.is_identity() {
                     return None;
                 }
-                Some(Invocation::new("transform.matrix", json!({"matrix": matrix_json(&m)})))
+                Some(Invocation::new("transform.matrix", json!({"matrix": matrix_json(&m), "step": "transform"})))
             }
-            _ => Some(Invocation::new("transform.distort", json!({"rect": rect_json(orig), "quad": q.iter().map(|p| pt_json(*p)).collect::<Vec<_>>()}))),
+            // Skalieren, Drehen, Neigen und Verzerren heißen im Original immer „Transformieren“ (PAR 08/11)
+            _ => Some(Invocation::new("transform.distort", json!({"rect": rect_json(orig), "quad": q.iter().map(|p| pt_json(*p)).collect::<Vec<_>>(), "step": "transform"}))),
         }
     }
 
@@ -1212,6 +1280,7 @@ impl ToolMachine for TransformTool {
             self.bounds = self.current(ctx).map(|c| c.0);
         }
         let Some(b) = self.bounds else { return ToolResponse { cursor: Cursor::NotAllowed, ..ToolResponse::default() } };
+        self.px = (1.0 / ctx.zoom.max(1e-6)) as f32;
         let q_cur = self.current(ctx).map(|c| c.1).unwrap_or_else(|| b.corners());
         let orig = self.pending.as_ref().map(|p| p.0).unwrap_or(b);
         let tol = ctx.pick_tolerance() as f32;
@@ -1290,7 +1359,8 @@ impl ToolMachine for TransformTool {
                 } else {
                     let m = self.matrix_for(b, k, s, cur, ev);
                     if let Some(pv) = self.pivot
-                        && !(self.id == ToolId::Distort && matches!(k, TDrag::Corner(_)))
+                        && !(self.id == ToolId::Distort && matches!(k, TDrag::Corner(_) | TDrag::Edge(_)))
+                        && !(self.id == ToolId::Skew && matches!(k, TDrag::Corner(_)))
                     {
                         self.pivot = Some(m.apply(pv));
                     }
@@ -1309,13 +1379,13 @@ impl ToolMachine for TransformTool {
                 ToolResponse { commands: cmds, switch_tool: Some(ToolId::Pointer), ..ToolResponse::default() }
             }
             ToolInput::Key(ToolKey::Escape) if self.drag.is_none() && !self.nine() => {
-                // Esc beendet den Transformationsmodus wie im Original und **behält** die Änderung
-                // (PARITAET_A L30, gemessen mit Strg+T); danach ist der Zeiger aktiv
-                let cmds: Vec<Invocation> = self.commit_pending().into_iter().collect();
+                // Esc beendet den Transformationsmodus und **verwirft** die Vorschau wie im Original
+                // (PAR 08/15: Objekt unverändert, kein Verlaufsschritt); danach ist der Zeiger aktiv
+                self.pending = None;
                 self.pivot = None;
                 self.bounds = None;
                 self.overlay.clear();
-                ToolResponse { commands: cmds, switch_tool: Some(ToolId::Pointer), ..ToolResponse::default() }
+                ToolResponse { switch_tool: Some(ToolId::Pointer), ..ToolResponse::default() }
             }
             ToolInput::Key(ToolKey::Escape) => {
                 if self.drag.take().is_none() {
@@ -1364,13 +1434,48 @@ impl TransformTool {
     /// Ziel-Viereck eines Zuges: Verzerren bewegt die gegriffene Ecke des aktuellen Vierecks,
     /// sonst wird das aktuelle Viereck mit der Zugmatrix abgebildet.
     fn drag_quad(&self, b: Rect, q_cur: [Point; 4], k: TDrag, s: Point, cur: Point, ev: &ToolEvent) -> [Point; 4] {
+        let (dx, dy) = (cur.x - s.x, cur.y - s.y);
+        // Ecke des aktuellen Vierecks zum Griff `h` (Reihenfolge LO, RO, RU, LU)
+        let corner_of = |h: usize| {
+            let hp = handles(&b)[h];
+            (0..4).min_by(|a, c| dist(q_cur[*a], hp).total_cmp(&dist(q_cur[*c], hp))).unwrap_or(0)
+        };
         if self.id == ToolId::Distort
             && let TDrag::Corner(h) = k
         {
-            let hp = handles(&b)[h];
-            let ci = (0..4).min_by(|a, c| dist(q_cur[*a], hp).total_cmp(&dist(q_cur[*c], hp))).unwrap_or(0);
+            let ci = corner_of(h);
             let mut q = q_cur;
-            q[ci] = Point::new(q[ci].x + cur.x - s.x, q[ci].y + cur.y - s.y);
+            q[ci] = Point::new(q[ci].x + dx, q[ci].y + dy);
+            return q;
+        }
+        if self.id == ToolId::Distort
+            && let TDrag::Edge(h) = k
+        {
+            // Verzerren am Seitengriff (PAR 08/14): beide Ecken der Kante wandern mit dem Zeiger
+            // (oben +20,−10 → 70,40/170,40)
+            let mut q = q_cur;
+            for c in [corner_of((h + 7) % 8), corner_of((h + 1) % 8)] {
+                q[c] = Point::new(q[c].x + dx, q[c].y + dy);
+            }
+            return q;
+        }
+        if self.id == ToolId::Skew
+            && let TDrag::Corner(h) = k
+        {
+            // Neigen an der Ecke (PAR 08/13): Trapez – die Ecke wandert entlang ihrer Kante, die
+            // andere Ecke derselben Kante spiegelbildlich (senkrecht −20 → 150,30/150,140;
+            // waagrecht +20 → 30,50/170,50)
+            let ci = corner_of(h);
+            let mut q = q_cur;
+            if dx.abs() >= dy.abs() {
+                let pi = ci ^ 1;
+                q[ci].x += dx;
+                q[pi].x -= dx;
+            } else {
+                let pi = 3 - ci;
+                q[ci].y += dy;
+                q[pi].y -= dy;
+            }
             return q;
         }
         let m = self.matrix_for(b, k, s, cur, ev);
@@ -1408,7 +1513,8 @@ impl CropTool {
         self.drag = None;
         let inv = |name: &str| Invocation::new(name, json!({"rect": rect_json(r.normalized())}));
         if self.id == ToolId::Crop {
-            ToolResponse::commit(vec![inv("edit.cropDocument")])
+            // Rahmen auf die Leinwand begrenzen, Objekte außerhalb löschen, danach alles gewählt (PAR 08/18)
+            ToolResponse::commit(vec![Invocation::new("edit.cropDocument", json!({"rect": rect_json(r.normalized()), "tool": true}))])
         } else {
             // Exportbereich: wie im Original öffnet die Oberfläche den Export-Dialog für den Bereich
             ToolResponse { ui_request: Some(inv("file.exportArea")), ..ToolResponse::default() }
@@ -1434,7 +1540,7 @@ impl ToolMachine for CropTool {
                     (Some(_), Some(r)) => r,
                     _ if inside => self.rect.unwrap_or_default(),
                     _ => {
-                        let p = Snapper::new(ctx, &[]).point(*pos).point;
+                        let p = Snapper::new(ctx, &[]).without_smart().point(*pos).point;
                         Rect::new(p.x, p.y, p.x, p.y)
                     }
                 };
@@ -1450,7 +1556,9 @@ impl ToolMachine for CropTool {
             ToolInput::Pointer { kind: PointerKind::Move, pos } | ToolInput::Pointer { kind: PointerKind::Up, pos } => {
                 let mut extra = Vec::new();
                 if let Some((h, start, base)) = self.drag {
-                    let sp = Snapper::new(ctx, &[]).point(*pos);
+                    // Zuschneiden/Exportbereich rasten nicht an Objekten (PAR 08/20: 50,50→300,200
+                    // ergibt genau 250 × 150)
+                    let sp = Snapper::new(ctx, &[]).without_smart().point(*pos);
                     extra = sp.guides;
                     let r = match h {
                         Some(8) => base.translate(pos.x - start.x, pos.y - start.y),
@@ -1508,5 +1616,9 @@ impl ToolMachine for CropTool {
             Some(r) => vec![Overlay::Shade { rect: r }, Overlay::Rect { rect: r, dashed: false }, Overlay::Handles { points: handles(&r).to_vec() }],
             None => Vec::new(),
         }
+    }
+
+    fn live_rect(&self) -> Option<Rect> {
+        self.rect
     }
 }

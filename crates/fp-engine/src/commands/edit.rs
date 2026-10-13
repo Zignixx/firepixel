@@ -651,8 +651,10 @@ pub(super) fn register(r: &mut CommandRegistry) {
             // Menü wie im Original nur mit Auswahl; das Zuschneiden-Werkzeug übergibt `rect`
             .menu_when(|s| s.active().is_some_and(|d| !d.selection.is_empty()))
             .opt("rect", ParamKind::Rect, "Zuschnitt (Vorgabe: Pixelauswahl bzw. Grenzen der Auswahl)")
+            .opt("tool", ParamKind::Bool, "Zuschneiden-Werkzeug: Rahmen auf die Leinwand begrenzen, Objekte ganz außerhalb löschen, Bitmaps beschneiden, danach alles auswählen")
             .run(|s, p| {
                 let rect = p.opt_rect("rect")?;
+                let tool = p.bool_or("tool", false)?;
                 with_doc(s, |d| {
                     let r = match rect {
                         Some(r) => r.normalized().round_nearest(),
@@ -661,12 +663,55 @@ pub(super) fn register(r: &mut CommandRegistry) {
                             _ => docops::ids_bounds(&d.doc, d.page, &d.selection.elements).ok_or_else(|| sel_err("err-sel-no-crop-area"))?.round_out(),
                         },
                     };
+                    // Werkzeug wie im Original (PAR 08/18): ein Rahmen über den Rand hinaus wird auf
+                    // die Leinwand begrenzt (−50,−50→300,200 ergibt 300 × 200 ohne Verschiebung)
+                    let r = if tool { r.intersect(&super::canvas_rect(&d.doc, d.page).round_nearest()) } else { r };
                     crop_page(d, r)?;
                     d.selection.pixels = None;
+                    if tool {
+                        crop_tool_cleanup(d);
+                    }
                     Ok(CommandOutput::doc())
                 })
             }),
     );
+}
+
+/// Nach dem Zuschneiden mit dem Werkzeug (PAR 08/18, 08/19, im Original gemessen): Objekte ganz
+/// außerhalb der neuen Leinwand werden gelöscht, Bitmaps auf die Leinwand beschnitten, danach sind
+/// alle Objekte gewählt.
+fn crop_tool_cleanup(d: &mut DocumentState) {
+    let page = d.page;
+    let canvas = super::canvas_rect(&d.doc, page);
+    let ican = canvas.round_nearest();
+    let snapshot = Arc::clone(&d.doc);
+    let doc = Arc::make_mut(&mut d.doc);
+    if let Some(p) = doc.page_mut(page) {
+        for slot in &mut p.root.layers {
+            let LayerSlot::Own(l) = slot else { continue };
+            if l.kind == LayerKind::Web {
+                continue;
+            }
+            let l = Arc::make_mut(l);
+            for cel in &mut l.cels {
+                let cel = Arc::make_mut(cel);
+                cel.elements.retain(|e| docops::element_bounds(&snapshot, e).is_none_or(|b| b.right > canvas.left && b.left < canvas.right && b.bottom > canvas.top && b.top < canvas.bottom));
+                for e in &mut cel.elements {
+                    if let ElementKind::Bitmap(b) = &e.kind
+                        && let Some(img) = bitmap_image(b)
+                        && img.bounds().intersect(&ican) != img.bounds()
+                    {
+                        let cut = img.cropped(ican);
+                        if let ElementKind::Bitmap(b) = &mut Arc::make_mut(e).kind {
+                            set_bitmap_image(b, &cut);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    let ids = docops::selectable_ids(&d.doc, d.page, d.frame);
+    d.selection.set(ids);
 }
 
 /// Neue Ebene über der aktiven; wird aktiv.

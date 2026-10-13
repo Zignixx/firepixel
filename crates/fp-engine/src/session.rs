@@ -469,6 +469,7 @@ impl Session {
     pub fn activate(&mut self, id: DocId) -> Result<()> {
         let i = self.docs.iter().position(|d| d.id == id).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-document")))?;
         if self.active != Some(i) {
+            self.leave_document();
             self.active = Some(i);
             self.events.push(SessionEvent::ActiveDocumentChanged(Some(id)));
         }
@@ -489,6 +490,7 @@ impl Session {
         };
         let mut st = DocumentState::new(id, doc, path, title, &self.prefs);
         st.view.viewport = self.active().map(|d| d.view.viewport).unwrap_or(st.view.viewport);
+        self.leave_document();
         self.docs.push(st);
         self.active = Some(self.docs.len() - 1);
         self.events.push(SessionEvent::DocumentOpened(id));
@@ -499,6 +501,10 @@ impl Session {
     /// Schließt ein Dokument (ohne Rückfrage; die UI fragt vorher nach `is_dirty`).
     pub fn close_document(&mut self, id: DocId) -> Result<()> {
         let i = self.docs.iter().position(|d| d.id == id).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-document")))?;
+        if self.active == Some(i) {
+            // laufender Werkzeugvorgang gehört zum geschlossenen Dokument (PAR 09/06)
+            self.tools.machine = tools::make_machine(self.tools.active);
+        }
         self.docs.remove(i);
         self.events.push(SessionEvent::DocumentClosed(id));
         self.active = if self.docs.is_empty() { None } else { Some(i.min(self.docs.len() - 1)) };
@@ -634,7 +640,7 @@ impl Session {
         let doc_id = self.active_id();
         let before = self.active().map(|d| d.snapshot());
         let res = cmd.apply(self, &p);
-        let out = match res {
+        let mut out = match res {
             Ok(o) => o,
             Err(e) => {
                 if let (Some(id), Some(b)) = (doc_id, before)
@@ -645,6 +651,11 @@ impl Session {
                 return Err(e);
             }
         };
+        // Werkzeuge benennen den Verlaufsschritt wie das Original (`step`: Endung eines
+        // `msg-step-…`-Schlüssels, z. B. Stift-Klick auf ein Segment → „Stift“, PAR 09/05)
+        if let Some(k) = p.value.get("step").and_then(|v| v.as_str()).map(|k| format!("msg-step-{k}")).filter(|k| fp_i18n::has(k)) {
+            out.label = Some(fp_i18n::t(&k));
+        }
         if out.effect == Effect::Document && !matches!(name, "edit.undo" | "edit.redo") && !name.starts_with("history.") {
             self.last_command = Some(RecordedCommand { command: name.into(), params: p.value.clone() });
             self.last_command_label = Some(out.label.clone().unwrap_or_else(|| info.label.clone()));
@@ -938,6 +949,25 @@ impl Session {
     /// Läuft im aktiven Werkzeug ein Text-Editor (Tasten an das Werkzeug statt an Menükürzel)?
     pub fn tool_is_editing_text(&self) -> bool {
         self.tools.machine.is_editing_text()
+    }
+
+    /// Rahmen, den das aktive Werkzeug gerade aufzieht (Inspektor B/H/X/Y live, PAR 08/17, 10/15).
+    pub fn tool_live_rect(&self) -> Option<fp_geom::Rect> {
+        self.tools.machine.live_rect()
+    }
+
+    /// Soll der Inspektor während des laufenden Zugs den Zustand vor dem Druck zeigen (PAR 08/21)?
+    pub fn tool_inspector_hold(&self) -> bool {
+        self.tools.machine.inspector_hold()
+    }
+
+    /// Vor einem Dokumentwechsel: laufenden Werkzeugvorgang im bisherigen Dokument abschließen und
+    /// das Werkzeug zurücksetzen – ein offener Stiftpfad wandert nicht ins nächste Dokument (PAR 09/06).
+    fn leave_document(&mut self) {
+        if self.active().is_some() {
+            let _ = self.finish_tool();
+        }
+        self.tools.machine = tools::make_machine(self.tools.active);
     }
 
     /// Attribute im offenen Text-Editor an der Markierung bzw. am Caret (Inspektor zeigt sie

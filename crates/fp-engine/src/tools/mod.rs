@@ -418,6 +418,16 @@ pub trait ToolMachine: Send {
     fn text_edit_attrs(&self) -> Option<fp_model::text::TextAttrs> {
         None
     }
+    /// Rahmen, den das Werkzeug gerade aufzieht (Zuschneiden, Exportbereich, Rechteck/Ellipse beim
+    /// Aufziehen) – der Inspektor zeigt ihn wie das Original live in B/H/X/Y (PAR 08/17, 10/15).
+    fn live_rect(&self) -> Option<Rect> {
+        None
+    }
+    /// Zeigt der Inspektor während des laufenden Zugs noch den Zustand vor dem Druck? (Zeiger zieht
+    /// ein eben erst gewähltes Objekt: im Original bleibt „Dokument“ stehen, PAR 08/21.)
+    fn inspector_hold(&self) -> bool {
+        false
+    }
 }
 
 
@@ -662,10 +672,13 @@ pub fn styled(inv: Invocation, opts: &ToolOptions) -> Invocation {
     if !inv.command.starts_with("draw.") || (opts.new_fill.is_none() && opts.new_stroke.is_none() && opts.new_brush.is_none()) {
         return inv;
     }
-    Invocation::new(
-        "tool.shape",
-        serde_json::json!({"draw": inv.command, "params": inv.params, "fill": opts.new_fill, "stroke": opts.new_stroke, "brush": opts.new_brush}),
-    )
+    // Name des Verlaufsschritts (`step`) gilt für den ganzen Schritt
+    let step = inv.params.get("step").cloned();
+    let mut v = serde_json::json!({"draw": inv.command, "params": inv.params, "fill": opts.new_fill, "stroke": opts.new_stroke, "brush": opts.new_brush});
+    if let (Some(s), Some(o)) = (step, v.as_object_mut()) {
+        o.insert("step".into(), s);
+    }
+    Invocation::new("tool.shape", v)
 }
 
 // ------------------------------------------------------------------ Werkzeugtabelle
