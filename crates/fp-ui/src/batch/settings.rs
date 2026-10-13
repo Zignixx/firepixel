@@ -69,6 +69,7 @@ pub fn open(ctx: &egui::Context, s: &mut Studio) {
 
 /// Antwort des Datei-Dialogs „ffmpeg-Datei…“: speichern und neu prüfen.
 pub fn set_ffmpeg_path(ctx: &egui::Context, s: &mut Studio, path: Option<&std::path::Path>, now: f64) {
+    s.forget_ffmpeg();
     match ffmpeg::set_configured_path(path) {
         Ok(()) => s.notify(Tone::Success, t(if path.is_some() { "batch-settings-ffmpeg-saved" } else { "batch-settings-ffmpeg-cleared" }), now),
         Err(e) => s.notify(Tone::Error, e.to_string(), now),

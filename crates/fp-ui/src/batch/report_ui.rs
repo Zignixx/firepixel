@@ -79,10 +79,11 @@ pub fn summary_card(ui: &mut Ui, st: &mut AppState, s: &mut Studio, r: Rect, now
     }
     y += sp::M;
     // Knöpfe (zwei Spalten)
-    let labels = [t("batch-ui-done-open-folder"), t("batch-ui-done-save-report"), t("batch-ui-done-retry"), t("batch-ui-done-new"), t("batch-ui-done-close")];
+    let labels = [t("batch-ui-done-open-folder"), t("batch-ui-done-open-report"), t("batch-ui-done-save-report"), t("batch-ui-done-retry"), t("batch-ui-done-new"), t("batch-ui-done-close")];
     let bw = ((r.width() - sp::S) / 2.0).floor().max(60.0);
     let can_open = fp_engine::shell::allowed() && !rep.output_dirs.is_empty();
-    let enabled = [can_open, true, tt.failed > 0, true, true];
+    let can_report = fp_engine::shell::allowed() && rep.report_html.as_ref().is_some_and(|p| p.exists());
+    let enabled = [can_open, can_report, true, tt.failed > 0, true, true];
     for (k, l) in labels.iter().enumerate() {
         let col = (k % 2) as f32;
         let row = (k / 2) as f32;
@@ -90,8 +91,10 @@ pub fn summary_card(ui: &mut Ui, st: &mut AppState, s: &mut Studio, r: Rect, now
         if br.bottom() > r.bottom() + 0.5 {
             break;
         }
-        let kind = if k == 4 { BtnKind::Ghost } else { BtnKind::Secondary };
-        if kit::button(ui, br, Id::new(("fp-batch-done-btn", k)), l, None, kind, enabled[k], l).clicked() {
+        let kind = if k == 5 { BtnKind::Ghost } else { BtnKind::Secondary };
+        let resp = kit::button(ui, br, Id::new(("fp-batch-done-btn", k)), l, None, kind, enabled[k], l);
+        let resp = if k == 1 { resp.on_hover_text(t("batch-ui-done-open-report.tooltip")) } else { resp };
+        if resp.clicked() {
             match k {
                 0 => {
                     if let Some(d) = rep.output_dirs.first() {
@@ -99,6 +102,12 @@ pub fn summary_card(ui: &mut Ui, st: &mut AppState, s: &mut Studio, r: Rect, now
                     }
                 }
                 1 => {
+                    // HTML-Bericht mit Vorschaubildern (BATCH-11b)
+                    if let Some(p) = &rep.report_html {
+                        let _ = fp_engine::shell::shell_open(p, None);
+                    }
+                }
+                2 => {
                     let inbox = s.inbox_sender();
                     crate::files::pick_save(st, &t("batch-ui-done-save-report"), fp_batch::report::REPORT_FILE, rep.output_dirs.first().map(|p| p.as_path()), move |_st, path| {
                         if let Some(p) = path {
@@ -106,7 +115,7 @@ pub fn summary_card(ui: &mut Ui, st: &mut AppState, s: &mut Studio, r: Rect, now
                         }
                     });
                 }
-                2 => {
+                3 => {
                     // nur die fehlgeschlagenen erneut: diese aktivieren, alle anderen aus
                     for f in &mut s.files {
                         f.enabled = f.status == EntryStatus::Failed;
@@ -116,7 +125,7 @@ pub fn summary_card(ui: &mut Ui, st: &mut AppState, s: &mut Studio, r: Rect, now
                     super::output_bar::start(st, now);
                     return;
                 }
-                3 => {
+                4 => {
                     s.set_recipe(fp_batch::Recipe::default(), None);
                     s.show_summary = false;
                 }

@@ -200,6 +200,8 @@ pub struct Studio {
     pub close_ask: Option<settings::CloseAsk>,
     /// Schließen trotz Lauf bestätigt.
     pub close_confirmed: bool,
+    /// Ergebnis der ffmpeg-Suche (Zeit, gefunden) für Videozeilen und Karte „Video lesen“.
+    pub(crate) ffmpeg_cache: Option<(f64, bool)>,
 }
 
 impl Studio {
@@ -250,7 +252,32 @@ impl Studio {
             settings: None,
             close_ask: None,
             close_confirmed: false,
+            ffmpeg_cache: None,
         }
+    }
+
+    /// Ist ffmpeg auffindbar (Einstellung, `FIREPIXEL_FFMPEG`, `PATH`, neben der exe)? Nur Dateisuche,
+    /// kein Prozessstart; zwischengespeichert für 3 s (Videozeilen und Karte „Video lesen“, BATCH-11b).
+    pub fn ffmpeg_available(&mut self, now: f64) -> bool {
+        match self.ffmpeg_cache {
+            Some((t, ok)) if now - t < 3.0 && now >= t => ok,
+            _ => {
+                let ok = fp_batch::video::ffmpeg::find().is_ok();
+                self.ffmpeg_cache = Some((now, ok));
+                ok
+            }
+        }
+    }
+
+    /// Zwischenspeicher der ffmpeg-Suche verwerfen (nach „ffmpeg-Datei…“ bzw. „Automatisch suchen“).
+    pub fn forget_ffmpeg(&mut self) {
+        self.ffmpeg_cache = None;
+    }
+
+    /// Ergebnis der ffmpeg-Suche vorgeben (Ergebnis der Prüfung in den Einstellungen bzw. Tests);
+    /// gilt 3 s ab `now`.
+    pub fn set_ffmpeg_known(&mut self, ok: bool, now: f64) {
+        self.ffmpeg_cache = Some((now, ok));
     }
 
     // ------------------------------------------------------------------ Dateien
@@ -323,7 +350,7 @@ impl Studio {
 
     /// Sichtbare Dateien (Filter, Sortierung) als Indizes in `files`.
     pub fn visible(&mut self) -> Vec<usize> {
-        let key = self.files_version ^ self.filter.version().rotate_left(17) ^ (self.sort as u64).rotate_left(40);
+        let key = self.files_version ^ self.filter.version().rotate_left(17) ^ (self.sort as u64).rotate_left(40) ^ (self.mode as u64).rotate_left(52);
         if let Some((k, v)) = &self.order_cache
             && *k == key
         {

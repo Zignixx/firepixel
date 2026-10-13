@@ -289,7 +289,10 @@ fn step_card(ui: &mut Ui, s: &mut Studio, i: usize, w: f32, issues: &[fp_batch::
         None => (fp_i18n::tr!("batch-ui-step-unknown", id = cfg.id.clone()), t("batch-ui-step-unknown-hint")),
     };
     let my_issues: Vec<&fp_batch::Issue> = issues.iter().filter(|x| x.step == Some(i)).collect();
-    let warn = my_issues.iter().find(|x| x.severity == Severity::Error).or(my_issues.first()).map(|x| x.message.clone());
+    // „Video lesen“ ohne ffmpeg: Hinweis im Kopf und in der Karte (BATCH-11b)
+    let now_s = ui.input(|i| i.time);
+    let ffmpeg_missing = cfg.id == fp_batch::steps::anim::VIDEO_IMPORT && cfg.enabled && !s.ffmpeg_available(now_s);
+    let warn = my_issues.iter().find(|x| x.severity == Severity::Error).or(my_issues.first()).map(|x| x.message.clone()).or_else(|| ffmpeg_missing.then(|| t("batch-ui-ffmpeg-missing-row")));
     let dim = !cfg.enabled || step.is_none();
     // Kopf: Klick klappt auf/zu
     let hresp = card_head(ui, head, Id::new(("fp-batch-step", i)), col, kit::group_icon(group), &title, &summary, open, warn.as_deref(), dim);
@@ -355,6 +358,7 @@ fn step_card(ui: &mut Ui, s: &mut Studio, i: usize, w: f32, issues: &[fp_batch::
         let recipe_snapshot = s.recipe.clone();
         let mut pick: Option<String> = None;
         let mut changed = false;
+        let mut open_settings = false;
         let resp = ui.scope_builder(egui::UiBuilder::new().max_rect(Rect::from_min_size(pos2(x0, body_top), vec2(bw, 4000.0))).layout(egui::Layout::top_down(egui::Align::Min)), |ui| {
             ui.spacing_mut().item_spacing = vec2(sp::S, sp::XS + 2.0);
             ui.set_width(bw);
@@ -383,6 +387,16 @@ fn step_card(ui: &mut Ui, s: &mut Studio, i: usize, w: f32, issues: &[fp_batch::
                     ui_kit::notice(ui, tone, None, &iss.message);
                 }
             }
+            if ffmpeg_missing {
+                ui.add_space(sp::XS);
+                ui_kit::notice(ui, ui_kit::Tone::Warning, None, &t("batch-ui-ffmpeg-missing-card"));
+                let l = t("batch-ui-ffmpeg-choose");
+                let bw = kit::btn_w(ui.ctx(), &l, true);
+                let (br, _) = ui.allocate_exact_size(vec2(bw, kit::BTN_H), Sense::hover());
+                if kit::button(ui, br, Id::new(("fp-batch-step-ffmpeg", i)), &l, Some(RowIcon::Icon(crate::icons::Icon::Folder)), BtnKind::Secondary, enabled, &l).on_hover_text(t("batch-ui-ffmpeg-choose.tooltip")).clicked() {
+                    open_settings = true;
+                }
+            }
             ui.add_space(sp::S);
         });
         bottom = resp.response.rect.bottom().max(body_top + sp::S);
@@ -399,6 +413,9 @@ fn step_card(ui: &mut Ui, s: &mut Studio, i: usize, w: f32, issues: &[fp_batch::
         }
         if let Some(pn) = pick {
             acts.push(Act::PickPath(i, pn));
+        }
+        if open_settings {
+            super::settings::open(ui.ctx(), s);
         }
     }
     let card = Rect::from_min_max(head.min, pos2(head.right(), bottom));
@@ -581,25 +598,41 @@ fn quick_rename(ui: &mut Ui, spec: &mut RenameSpec, mode: Mode, enabled: bool) -
     changed
 }
 
-/// Parameter der Endkarte „Speichern als“, die zum Format passen.
-fn output_defs(fmt: OutputFormat) -> Vec<ParamDef> {
-    let reg = StepRegistry::global();
-    let all = reg.get(fp_batch::steps::files::OUTPUT).map(|s| s.params()).unwrap_or_default();
-    all.into_iter()
-        .filter(|d| match d.name.as_str() {
-            "format" => true,
-            "quality" => matches!(fmt, OutputFormat::Jpeg | OutputFormat::WebP | OutputFormat::Avif),
-            "lossless" => matches!(fmt, OutputFormat::WebP),
-            "bitDepth" => matches!(fmt, OutputFormat::Png),
-            "colors" | "dither" | "ditherAmount" | "transparency" => matches!(fmt, OutputFormat::Gif),
-            "interlace" => matches!(fmt, OutputFormat::Png | OutputFormat::Gif),
-            "progressive" | "subsampling" => matches!(fmt, OutputFormat::Jpeg),
-            "background" => matches!(fmt, OutputFormat::Jpeg | OutputFormat::Bmp | OutputFormat::Wbmp),
-            "speed" => matches!(fmt, OutputFormat::Avif),
-            "compression" => matches!(fmt, OutputFormat::Tiff | OutputFormat::Png),
-            _ => false,
-        })
-        .collect()
+/// Schema der Endkarte „Speichern als“ (Felder je Format über `when("format", …)`, BATCH-11b).
+pub fn output_defs() -> Vec<ParamDef> {
+    StepRegistry::global().get(fp_batch::steps::files::OUTPUT).map(|s| s.params()).unwrap_or_default()
+}
+
+/// Schema der GIF-Optionen (`output.gif`), bei Format GIF unter „Speichern als“.
+pub fn gif_defs() -> Vec<ParamDef> {
+    StepRegistry::global().get(fp_batch::steps::gifopt::OUTPUT_GIF).map(|s| s.params()).unwrap_or_default()
+}
+
+/// Qualität einer GIF-Voreinstellung (wie `GifOptions::base_quality`).
+pub fn gif_preset_quality(preset: &str) -> i64 {
+    match preset {
+        "smallest" => 60,
+        "best" => 100,
+        _ => 80,
+    }
+}
+
+/// Nach einem Formatwechsel: Optionen entfernen, die das neue Format so nicht annimmt (z. B.
+/// Kompression „LZW“ von TIFF bei PNG). Werte ohne passendes Feld bleiben erhalten.
+pub fn clean_output_options(v: &mut Value) {
+    let mut defs = output_defs();
+    if v.get("format").and_then(Value::as_str) == Some("gif") {
+        defs.extend(gif_defs());
+    }
+    let snapshot = v.clone();
+    let Some(o) = v.as_object_mut() else { return };
+    o.retain(|k, val| {
+        if k == "format" || val.is_null() {
+            return true;
+        }
+        let visible: Vec<&ParamDef> = defs.iter().filter(|d| d.name == *k && d.is_visible(&defs, &snapshot)).collect();
+        visible.is_empty() || visible.iter().any(|d| d.check(val).is_none())
+    });
 }
 
 /// Zusammenfassung „Speichern als“.
@@ -622,20 +655,60 @@ fn output_card(ui: &mut Ui, s: &mut Studio, w: f32, files: &[ItemInfo], enabled:
         let x0 = head.left() + 26.0;
         let bw = (head.right() - sp::M - x0).max(60.0);
         let fmt = OutputFormat::parse(&s.recipe.output.format).unwrap_or(OutputFormat::Same);
-        let defs = output_defs(fmt);
+        let defs = output_defs();
+        let gdefs = if fmt == OutputFormat::Gif { gif_defs() } else { Vec::new() };
         let mut v = Value::Object(s.recipe.output.options.clone());
         v["format"] = json!(s.recipe.output.format);
         let snapshot = s.recipe.clone();
         let mode = s.mode;
         let mut show_more = s.show_more;
+        let size_line = gif_size_line(s, fmt);
+        let hints = output_hints(&s.recipe, fmt);
         let resp = ui.scope_builder(egui::UiBuilder::new().max_rect(Rect::from_min_size(pos2(x0, head.bottom()), vec2(bw, 4000.0))).layout(egui::Layout::top_down(egui::Align::Min)), |ui| {
             ui.spacing_mut().item_spacing = vec2(sp::S, sp::XS + 2.0);
             ui.set_width(bw);
-            let mut ctx = CardCtx { step_id: fp_batch::steps::files::OUTPUT, index: None, params: &mut v, defs: &defs, mode, show_more: &mut show_more, files, recipe: &snapshot, enabled, pick_path: None, app: Some(app) };
-            let ch = match params::card_body(fp_batch::steps::files::OUTPUT) {
-                Some(f) => f(ui, &mut ctx),
-                None => params::generic_body(ui, &mut ctx),
-            };
+            if let Some(f) = params::card_body(fp_batch::steps::files::OUTPUT) {
+                let mut ctx = CardCtx { step_id: fp_batch::steps::files::OUTPUT, index: None, params: &mut v, defs: &defs, mode, show_more: &mut show_more, files, recipe: &snapshot, enabled, pick_path: None, app: Some(app) };
+                let ch = f(ui, &mut ctx);
+                ui.add_space(sp::S);
+                return ch;
+            }
+            // eigene Felder je Format (BATCH-11b): „Speichern als“ + bei GIF der GIF-Optimierer
+            let cur = v.clone();
+            let (main, hid_main) = params::form_defs(&defs, &cur, mode, show_more);
+            let (gif, hid_gif) = params::form_defs(&gdefs, &cur, mode, show_more);
+            let main: Vec<ParamDef> = main.into_iter().cloned().collect();
+            let gif: Vec<ParamDef> = gif.into_iter().cloned().collect();
+            let mut labels: Vec<String> = main.iter().map(|d| params::param_label(fp_batch::steps::files::OUTPUT, &d.name)).collect();
+            labels.extend(gif.iter().map(|d| params::param_label(fp_batch::steps::gifopt::OUTPUT_GIF, &d.name)));
+            let label_w = params::label_column(ui, &labels);
+            let mut ch;
+            {
+                let mut ctx = CardCtx { step_id: fp_batch::steps::files::OUTPUT, index: None, params: &mut v, defs: &defs, mode, show_more: &mut show_more, files, recipe: &snapshot, enabled, pick_path: None, app: Some(app) };
+                ch = params::form_rows(ui, &mut ctx, &main, label_w);
+            }
+            if !gif.is_empty() {
+                section_caption(ui, &t("batch-ui-gif-section"));
+                let before_preset = v.get("preset").cloned();
+                let mut ctx = CardCtx { step_id: fp_batch::steps::gifopt::OUTPUT_GIF, index: None, params: &mut v, defs: &gdefs, mode, show_more: &mut show_more, files, recipe: &snapshot, enabled, pick_path: None, app: Some(app) };
+                ch |= params::form_rows(ui, &mut ctx, &gif, label_w);
+                // Voreinstellung gewählt → Qualität folgt ihr (der Schieber zeigt den wirksamen Wert)
+                let after_preset = v.get("preset").cloned();
+                if after_preset != before_preset {
+                    let q = gif_preset_quality(after_preset.as_ref().and_then(Value::as_str).unwrap_or("balanced"));
+                    ch |= params::set_param(&mut v, "quality", json!(q));
+                }
+                if let Some((tone, text)) = &size_line {
+                    ui.add_space(sp::XS);
+                    ui_kit::notice(ui, *tone, None, text);
+                }
+            }
+            for h in &hints {
+                ui.add_space(sp::XS);
+                ui_kit::notice(ui, ui_kit::Tone::Info, None, h);
+            }
+            let any_pro = defs.iter().chain(gdefs.iter()).any(|d| !d.beginner);
+            params::more_toggle(ui, mode, &mut show_more, hid_main + hid_gif, any_pro);
             ui.add_space(sp::S);
             ch
         });
@@ -644,24 +717,75 @@ fn output_card(ui: &mut Ui, s: &mut Studio, w: f32, files: &[ItemInfo], enabled:
         if resp.inner && enabled {
             let mut old = Value::Object(s.recipe.output.options.clone());
             old["format"] = json!(s.recipe.output.format);
-            let key = format!("output:{}", changed_names(&old, &v).join(","));
+            if old.get("format") != v.get("format") {
+                clean_output_options(&mut v);
+            }
+            let names = changed_names(&old, &v);
+            let key = format!("output:{}", names.join(","));
             s.edit(&key, |r| {
                 if let Some(o) = v.as_object() {
+                    let mut opts = serde_json::Map::new();
                     for (k, val) in o {
                         if k == "format" {
                             if let Some(f) = val.as_str() {
                                 r.output.format = f.to_string();
                             }
                         } else {
-                            r.output.options.insert(k.clone(), val.clone());
+                            opts.insert(k.clone(), val.clone());
                         }
                     }
+                    // entfernte Werte (↺, Formatwechsel) gelten wieder als Vorgabe bzw. „Automatisch“
+                    r.output.options = opts;
                 }
                 true
             });
         }
     }
     end_finish(ui, head, bottom, bg, open);
+}
+
+/// Abschnittsüberschrift innerhalb einer Karte (fett in `section_label`, feine Linie dahinter).
+fn section_caption(ui: &mut Ui, text: &str) {
+    let theme = Theme::current(ui.ctx());
+    ui.add_space(sp::XS);
+    let (r, _) = ui.allocate_exact_size(vec2(ui.available_width(), 20.0), Sense::hover());
+    let font = theme.bold(type_scale::CAPTION + 0.5);
+    let shown = ui_kit::elide(ui.ctx(), text, &font, r.width());
+    let tw = ui_kit::text_w(ui.ctx(), &shown, &font);
+    ui.painter().text(r.left_center(), Align2::LEFT_CENTER, &shown, font, theme.colors.section_label);
+    let x = (r.left() + tw + sp::S).min(r.right());
+    if x < r.right() {
+        ui.painter().line_segment([pos2(x, r.center().y), pos2(r.right(), r.center().y)], Stroke::new(1.0, mix(kit::card_fill(&theme), theme.colors.line_mid, 0.6)));
+    }
+}
+
+/// GIF: erreichte Größe der Vorschaudatei bzw. ⚠ Zielgröße nicht erreichbar.
+fn gif_size_line(s: &Studio, fmt: OutputFormat) -> Option<(ui_kit::Tone, String)> {
+    if fmt != OutputFormat::Gif {
+        return None;
+    }
+    let max_kb = s.recipe.output.options.get("maxKB").and_then(Value::as_f64).unwrap_or(0.0).max(0.0) as u64;
+    let shown = s.preview.shown.as_ref()?;
+    let target = fp_i18n::fmt_size(max_kb * 1024);
+    Some(match shown.bytes_after {
+        None => (ui_kit::Tone::Info, t("batch-ui-gif-size-pending")),
+        Some(b) if max_kb == 0 => (ui_kit::Tone::Info, fp_i18n::tr!("batch-ui-gif-size", size = fp_i18n::fmt_size(b))),
+        Some(b) if b <= max_kb * 1024 => (ui_kit::Tone::Success, fp_i18n::tr!("batch-ui-gif-reached", size = fp_i18n::fmt_size(b), target = target)),
+        Some(b) => (ui_kit::Tone::Warning, fp_i18n::tr!("batch-ui-gif-missed", size = fp_i18n::fmt_size(b), target = target)),
+    })
+}
+
+/// Hinweise der Endkarte: „Nachzeichnen“ mit Pixelformat, JPEG füllt Transparenz.
+pub fn output_hints(recipe: &Recipe, fmt: OutputFormat) -> Vec<String> {
+    let mut out = Vec::new();
+    let has = |id: &str| recipe.steps.iter().any(|st| st.enabled && st.id == id);
+    if has("vector.trace") && !matches!(fmt, OutputFormat::Svg | OutputFormat::FwPng) {
+        out.push(t("batch-ui-trace-pixel-hint"));
+    }
+    if fmt == OutputFormat::Jpeg && !has("background.flatten") {
+        out.push(t("batch-ui-jpeg-white-hint"));
+    }
+    out
 }
 
 /// Schritt-Galerie als Überlagerung der Rezept-Karte: Suchfeld, Gruppen, Kacheln, Pfeiltasten.

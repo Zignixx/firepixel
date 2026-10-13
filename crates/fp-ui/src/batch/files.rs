@@ -49,6 +49,12 @@ pub struct Filter {
     pub regex: String,
     /// Nur Dateien mit Fehler (nach einem Lauf).
     pub only_failed: bool,
+    /// Profi: Dateigröße ab/bis (MB; Befund BATCH-2, SPEC §2.3).
+    pub min_mb: Option<f64>,
+    pub max_mb: Option<f64>,
+    /// Profi: längste Seite ab/bis (Pixel; unbekannte Maße passen immer).
+    pub min_px: Option<u32>,
+    pub max_px: Option<u32>,
 }
 
 impl Filter {
@@ -60,23 +66,74 @@ impl Filter {
         self.kind.map(|k| k as u8).hash(&mut h);
         self.regex.hash(&mut h);
         self.only_failed.hash(&mut h);
+        self.min_mb.map(f64::to_bits).hash(&mut h);
+        self.max_mb.map(f64::to_bits).hash(&mut h);
+        self.min_px.hash(&mut h);
+        self.max_px.hash(&mut h);
         h.finish()
     }
 
     pub fn is_active(&self) -> bool {
-        !self.text.is_empty() || self.kind.is_some() || !self.regex.is_empty() || self.only_failed
+        !self.text.is_empty() || self.kind.is_some() || !self.regex.is_empty() || self.only_failed || self.has_size_filter()
     }
+
+    /// Filter nach Größe bzw. Pixeln gesetzt?
+    pub fn has_size_filter(&self) -> bool {
+        self.min_mb.is_some() || self.max_mb.is_some() || self.min_px.is_some() || self.max_px.is_some()
+    }
+
+    /// Passt eine Datei zu Größe und Pixeln?
+    pub fn size_ok(&self, info: &fp_batch::ItemInfo) -> bool {
+        let mb = info.bytes as f64 / (1024.0 * 1024.0);
+        let long = info.width.max(info.height);
+        self.min_mb.is_none_or(|m| mb >= m)
+            && self.max_mb.is_none_or(|m| mb <= m)
+            && (long == 0 || (self.min_px.is_none_or(|m| long >= m) && self.max_px.is_none_or(|m| long <= m)))
+    }
+}
+
+/// Einfache Platzhalter im Suchtext: `*` (beliebig viele Zeichen) und `?` (ein Zeichen), ohne
+/// Groß-/Kleinschreibung, über den ganzen Namen (`*.png`, `urlaub_??.*`).
+pub fn glob_match(pattern: &str, name: &str) -> bool {
+    let p: Vec<char> = pattern.to_lowercase().chars().collect();
+    let n: Vec<char> = name.to_lowercase().chars().collect();
+    let (mut pi, mut ni) = (0usize, 0usize);
+    let (mut star, mut mark) = (None::<usize>, 0usize);
+    while ni < n.len() {
+        if pi < p.len() && (p[pi] == '?' || p[pi] == n[ni]) {
+            pi += 1;
+            ni += 1;
+        } else if pi < p.len() && p[pi] == '*' {
+            star = Some(pi);
+            mark = ni;
+            pi += 1;
+        } else if let Some(st) = star {
+            pi = st + 1;
+            mark += 1;
+            ni = mark;
+        } else {
+            return false;
+        }
+    }
+    while pi < p.len() && p[pi] == '*' {
+        pi += 1;
+    }
+    pi == p.len()
 }
 
 /// Filtert und sortiert: Indizes in `files`.
 pub fn order(files: &[FileEntry], f: &Filter, sort: SortKey, mode: Mode) -> Vec<usize> {
     let needle = f.text.to_lowercase();
+    // Suchtext mit * oder ? = Platzhalter über den ganzen Namen (BATCH-11b)
+    let glob = needle.contains(['*', '?']);
+    let size_filter = mode == Mode::Pro && f.has_size_filter();
     let re = if mode == Mode::Pro && !f.regex.is_empty() { fp_batch::naming::compile_regex(&fp_batch::recipe::RegexRename { find: f.regex.clone(), ignore_case: true, ..Default::default() }).ok() } else { None };
     let mut v: Vec<usize> = (0..files.len())
         .filter(|&i| {
             let e = &files[i];
             let name = e.info.file_name();
-            (needle.is_empty() || name.to_lowercase().contains(&needle))
+            (needle.is_empty() || if glob { glob_match(&needle, &name) } else { name.to_lowercase().contains(&needle) })
+                && (!size_filter || f.size_ok(&e.info))
                 && f.kind.is_none_or(|k| e.info.kind == k)
                 && re.as_ref().is_none_or(|r| r.is_match(&name))
                 && (!f.only_failed || e.status == EntryStatus::Failed)
@@ -254,18 +311,25 @@ fn filter_row(ui: &mut Ui, s: &mut Studio, r: Rect) {
     let field = if pro && f.text.is_empty() && !f.regex.is_empty() { &mut f.regex } else { &mut f.text };
     let resp = child.add_sized(text_r.size(), egui::TextEdit::singleline(field).hint_text(hint.clone()).desired_width(text_r.width()));
     resp.widget_info(|| egui::WidgetInfo::text_edit(true, "", &hint, ""));
+    let resp = resp.on_hover_text(t("batch-ui-filter-glob-hint"));
+    let _ = resp;
     let _ = theme;
     // Typ
     let kr = Rect::from_min_size(pos2(text_r.right() + sp::XS, r.top()), vec2(kind_w, r.height()));
     let mut kc = ui.new_child(egui::UiBuilder::new().max_rect(kr));
     crate::theme::field_widgets(&mut kc);
-    egui::ComboBox::from_id_salt("fp-batch-filter-kind").selected_text(kind_label(f.kind)).width(kind_w - 8.0).show_ui(&mut kc, |ui| {
+    let kind_text = if pro && f.has_size_filter() { format!("{} •", kind_label(f.kind)) } else { kind_label(f.kind) };
+    egui::ComboBox::from_id_salt("fp-batch-filter-kind").selected_text(kind_text).width(kind_w - 8.0).close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside).show_ui(&mut kc, |ui| {
         for k in [None, Some(ItemKind::Image), Some(ItemKind::Animation), Some(ItemKind::Video), Some(ItemKind::Document)] {
             ui.selectable_value(&mut f.kind, k, kind_label(k));
         }
         if s.files.iter().any(|e| e.status == EntryStatus::Failed) {
             ui.separator();
             ui.checkbox(&mut f.only_failed, t("batch-ui-filter-failed"));
+        }
+        if pro {
+            ui.separator();
+            size_filter_fields(ui, &mut f);
         }
     });
     // Sortierung
@@ -294,6 +358,53 @@ fn filter_row(ui: &mut Ui, s: &mut Studio, r: Rect) {
     if sort != s.sort {
         s.sort = sort;
         s.files_changed();
+    }
+}
+
+/// Profi: Felder „Dateigröße (MB) ab … bis …“ und „Längste Seite (px) ab … bis …“ in der Typ-Liste.
+fn size_filter_fields(ui: &mut Ui, f: &mut Filter) {
+    let theme = Theme::current(ui.ctx());
+    let num = |ui: &mut Ui, id: &str, label: &str, v: &mut Option<f64>| {
+        let buf_id = Id::new(("fp-batch-filter-num", id));
+        let focused = ui.memory(|m| m.has_focus(buf_id));
+        let cur = v.map(|x| super::params::format_number(x, false)).unwrap_or_default();
+        let mut buf = if focused { ui.ctx().data(|m| m.get_temp::<String>(buf_id.with("b"))).unwrap_or(cur.clone()) } else { cur };
+        let r = ui.add(egui::TextEdit::singleline(&mut buf).id(buf_id).desired_width(52.0).horizontal_align(egui::Align::RIGHT));
+        r.widget_info(|| super::params::text_info(label));
+        if r.changed() {
+            *v = super::params::parse_number(&buf, None).filter(|x| *x >= 0.0);
+            ui.ctx().data_mut(|m| m.insert_temp(buf_id.with("b"), buf.clone()));
+        } else if !r.has_focus() {
+            ui.ctx().data_mut(|m| m.remove::<String>(buf_id.with("b")));
+        }
+    };
+    let from = t("batch-ui-filter-min");
+    let to = t("batch-ui-filter-max");
+    egui::Grid::new("fp-batch-filter-size-grid").num_columns(5).spacing(vec2(sp::XS + 2.0, sp::XS)).show(ui, |ui| {
+        let size_l = t("batch-ui-filter-size");
+        ui.label(egui::RichText::new(&size_l).color(kit::weak(&theme)));
+        ui.label(&from);
+        num(ui, "min-mb", &format!("{size_l} {from}"), &mut f.min_mb);
+        ui.label(&to);
+        num(ui, "max-mb", &format!("{size_l} {to}"), &mut f.max_mb);
+        ui.end_row();
+        let px_l = t("batch-ui-filter-pixels");
+        ui.label(egui::RichText::new(&px_l).color(kit::weak(&theme)));
+        let mut lo = f.min_px.map(|x| x as f64);
+        let mut hi = f.max_px.map(|x| x as f64);
+        ui.label(&from);
+        num(ui, "min-px", &format!("{px_l} {from}"), &mut lo);
+        ui.label(&to);
+        num(ui, "max-px", &format!("{px_l} {to}"), &mut hi);
+        f.min_px = lo.map(|x| x.round() as u32);
+        f.max_px = hi.map(|x| x.round() as u32);
+        ui.end_row();
+    });
+    if f.has_size_filter() && ui.button(t("batch-ui-filter-reset")).clicked() {
+        f.min_mb = None;
+        f.max_mb = None;
+        f.min_px = None;
+        f.max_px = None;
     }
 }
 
@@ -374,12 +485,15 @@ fn file_list(ui: &mut Ui, s: &mut Studio, r: Rect, vis: &[usize], theme: &Theme,
     }
     let mut clicked: Option<usize> = None;
     let mut toggled: Option<usize> = None;
+    let mut ffmpeg_click = false;
+    let ffmpeg_missing = vis.iter().any(|&i| s.files[i].info.kind == ItemKind::Video) && !s.ffmpeg_available(now);
     let out = area.show_rows(&mut child, ROW_H, vis.len(), |ui, range| {
         for k in range {
             let i = vis[k];
             let (row, _) = ui.allocate_exact_size(vec2(ui.available_width(), ROW_H), Sense::hover());
             let e = &s.files[i];
-            let (row_click, box_click) = file_row(ui, row, i, e, s.selected == Some(i), theme, now, enabled);
+            let (row_click, box_click, ff) = file_row(ui, row, i, e, s.selected == Some(i), theme, now, enabled, ffmpeg_missing);
+            ffmpeg_click |= ff;
             if row_click {
                 clicked = Some(i);
             }
@@ -396,11 +510,15 @@ fn file_list(ui: &mut Ui, s: &mut Studio, r: Rect, vis: &[usize], theme: &Theme,
         s.files[i].enabled = !s.files[i].enabled;
         s.files_changed();
     }
+    if ffmpeg_click {
+        // ffmpeg fehlt: Batch-Einstellungen mit Abschnitt „Videos (ffmpeg)“ (BATCH-11b)
+        super::settings::open(ui.ctx(), s);
+    }
 }
 
 /// Eine Zeile: Kästchen, Miniatur 36 px, Name, Maße · Größe · Format, Zustand rechts.
 #[allow(clippy::too_many_arguments)]
-fn file_row(ui: &mut Ui, rect: Rect, i: usize, e: &FileEntry, selected: bool, theme: &Theme, now: f64, enabled: bool) -> (bool, bool) {
+fn file_row(ui: &mut Ui, rect: Rect, i: usize, e: &FileEntry, selected: bool, theme: &Theme, now: f64, enabled: bool, ffmpeg_missing: bool) -> (bool, bool, bool) {
     let c = &theme.colors;
     let name = e.info.file_name();
     let resp = ui.interact(rect, Id::new(("fp-batch-file", i)), Sense::click());
@@ -492,8 +610,29 @@ fn file_row(ui: &mut Ui, rect: Rect, i: usize, e: &FileEntry, selected: bool, th
         meta.push(rel.display().to_string());
     }
     let f = theme.font(type_scale::CAPTION);
-    let meta = ui_kit::elide(ui.ctx(), &meta.join(" · "), &f, tw);
-    p.text(pos2(x, rect.center().y + 9.0), Align2::LEFT_CENTER, meta, f, if e.enabled { kit::weak(theme) } else { c.text_disabled });
+    let mut ffmpeg_click = false;
+    if ffmpeg_missing && e.info.kind == ItemKind::Video {
+        // ffmpeg fehlt: Hinweis statt der Angaben, Klick öffnet die Einstellungen (BATCH-11b)
+        let txt = format!("⚠ {}", t("batch-ui-ffmpeg-missing-row"));
+        let shown = ui_kit::elide(ui.ctx(), &txt, &f, tw);
+        let lw = ui_kit::text_w(ui.ctx(), &shown, &f);
+        let lr = Rect::from_min_size(pos2(x, rect.center().y + 2.0), vec2(lw.min(tw), 14.0));
+        let lresp = ui.interact(lr, Id::new(("fp-batch-file-ffmpeg", i)), if enabled { Sense::click() } else { Sense::hover() });
+        let choose = t("batch-ui-ffmpeg-choose");
+        lresp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Link, enabled, &choose));
+        let warn = if theme.kind == ThemeKind::Normal { mix(c.icon_yellow, Color32::BLACK, 0.4) } else { c.icon_yellow };
+        let col = if lresp.hovered() { c.focus } else { warn };
+        ui.painter().text(pos2(x, rect.center().y + 9.0), Align2::LEFT_CENTER, &shown, f.clone(), col);
+        if lresp.hovered() {
+            ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand);
+            ui.painter().line_segment([pos2(x, lr.bottom() - 1.0), pos2(x + lw.min(tw), lr.bottom() - 1.0)], Stroke::new(1.0, col));
+        }
+        ffmpeg_click = lresp.on_hover_text(format!("{choose}\n{}", t("batch-ui-ffmpeg-choose.tooltip"))).clicked();
+    } else {
+        let meta = ui_kit::elide(ui.ctx(), &meta.join(" · "), &f, tw);
+        p.text(pos2(x, rect.center().y + 9.0), Align2::LEFT_CENTER, meta, f, if e.enabled { kit::weak(theme) } else { c.text_disabled });
+    }
+    let p = ui.painter();
     kit::status_mark(p, pos2(rect.right() - sp::XS - 8.0, rect.center().y), e.status, theme, now);
     let mut tip = e.info.path.display().to_string();
     if let Some(m) = &e.message {
@@ -504,7 +643,7 @@ fn file_row(ui: &mut Ui, rect: Rect, i: usize, e: &FileEntry, selected: bool, th
     }
     let resp = resp.on_hover_text(tip);
     let box_click = cresp.clicked();
-    (resp.clicked() && !box_click, box_click)
+    (resp.clicked() && !box_click && !ffmpeg_click, box_click, ffmpeg_click)
 }
 
 fn footer(ui: &mut Ui, s: &mut Studio, r: Rect, total_bytes: u64, enabled: bool) {

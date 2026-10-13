@@ -167,11 +167,39 @@ pub fn generic_body(ui: &mut Ui, ctx: &mut CardCtx) -> bool {
     }
     let snapshot = ctx.params.clone();
     let (shown, hidden) = form_defs(ctx.defs, &snapshot, ctx.mode, *ctx.show_more);
-    let mut changed = false;
     let labels: Vec<String> = shown.iter().map(|d| param_label(ctx.step_id, &d.name)).collect();
+    let label_w = label_column(ui, &labels);
+    let shown: Vec<ParamDef> = shown.into_iter().cloned().collect();
+    let changed = form_rows(ui, ctx, &shown, label_w);
+    let any_pro = ctx.defs.iter().any(|d| !d.beginner);
+    more_toggle(ui, ctx.mode, ctx.show_more, hidden, any_pro);
+    changed
+}
+
+/// Breite der Beschriftungsspalte für diese Beschriftungen (höchstens 40 % der Breite).
+pub fn label_column(ui: &Ui, labels: &[String]) -> f32 {
     let refs: Vec<&str> = labels.iter().map(|s| s.as_str()).collect();
     let avail = ui.available_width();
-    let label_w = ui_kit::label_width(ui.ctx(), &refs, 70.0).min((avail * 0.4).max(60.0)).floor();
+    ui_kit::label_width(ui.ctx(), &refs, 70.0).min((avail * 0.4).max(60.0)).floor()
+}
+
+/// Link „Mehr Optionen (n)“ / „Weniger Optionen“ im Anfänger-Modus.
+pub fn more_toggle(ui: &mut Ui, mode: Mode, show_more: &mut bool, hidden: usize, any_pro: bool) {
+    if mode == Mode::Beginner && (hidden > 0 || *show_more) && any_pro {
+        ui.add_space(sp::XS);
+        let text = if *show_more { t("batch-ui-step-less") } else { fp_i18n::tr!("batch-form-more-count", label = t("batch-ui-step-more"), n = hidden) };
+        if ui_kit::more_link(ui, &text, None).clicked() {
+            *show_more = !*show_more;
+        }
+    }
+}
+
+/// Zeilen des Formulars (Beschriftung, Eingabe, ↺) für die Felder `shown`; Fehler darunter.
+/// Liefert `true` bei Änderung.
+pub fn form_rows(ui: &mut Ui, ctx: &mut CardCtx, shown: &[ParamDef], label_w: f32) -> bool {
+    let theme = Theme::current(ui.ctx());
+    let mut changed = false;
+    let labels: Vec<String> = shown.iter().map(|d| param_label(ctx.step_id, &d.name)).collect();
     let mut errors: Vec<String> = Vec::new();
     for (d, label) in shown.iter().zip(&labels) {
         let row = ui.horizontal(|ui| {
@@ -222,14 +250,17 @@ pub fn generic_body(ui: &mut Ui, ctx: &mut CardCtx) -> bool {
         ui.add_space(sp::XS);
         ui.label(egui::RichText::new(e).color(theme.colors.icon_red).size(type_scale::CAPTION));
     }
-    if ctx.mode == Mode::Beginner && (hidden > 0 || *ctx.show_more) && ctx.defs.iter().any(|d| !d.beginner) {
-        ui.add_space(sp::XS);
-        let text = if *ctx.show_more { t("batch-ui-step-less") } else { fp_i18n::tr!("batch-form-more-count", label = t("batch-ui-step-more"), n = hidden) };
-        if ui_kit::more_link(ui, &text, None).clicked() {
-            *ctx.show_more = !*ctx.show_more;
-        }
-    }
     changed
+}
+
+/// Setzt einen Parameter (true = geändert).
+pub fn set_param(params: &mut Value, name: &str, v: Value) -> bool {
+    set(params, name, v)
+}
+
+/// Entfernt einen Parameter (Vorgabe bzw. „Automatisch“ gilt wieder; true = geändert).
+pub fn unset_param(params: &mut Value, name: &str) -> bool {
+    unset(params, name)
 }
 
 fn set(params: &mut Value, name: &str, v: Value) -> bool {
@@ -394,7 +425,9 @@ fn number_widget(ui: &mut Ui, ctx: &mut CardCtx, d: &ParamDef, label: &str, w: f
     let font = theme.font(type_scale::BODY);
     let unit_w = unit.as_deref().map(|u| ui_kit::text_w(ui.ctx(), u, &font) + 2.0).unwrap_or(0.0);
     let gap = sp::S - 2.0;
-    let slider_w = w - FIELD_W - unit_w - if unit.is_some() { 2.0 * gap } else { gap };
+    // „Automatisch“ passt ganz ins Feld (BATCH-11b: nichts abschneiden)
+    let field_w = if auto { FIELD_W.max(ui_kit::text_w(ui.ctx(), &t("batch-form-auto"), &font) + 14.0).min((w * 0.5).max(FIELD_W)) } else { FIELD_W };
+    let slider_w = w - field_w - unit_w - if unit.is_some() { 2.0 * gap } else { gap };
     let mut ch = false;
     let mut error = None;
     let r = ui.horizontal(|ui| {
@@ -425,7 +458,7 @@ fn number_widget(ui: &mut Ui, ctx: &mut CardCtx, d: &ParamDef, label: &str, w: f
         let cur_text = if auto { String::new() } else { format_number(current(ctx.params, d).as_f64().unwrap_or(x), int) };
         let mut buf = if focused { ui.ctx().data(|m| m.get_temp::<String>(buf_id)).unwrap_or_else(|| cur_text.clone()) } else { cur_text };
         let hint = if auto { t("batch-form-auto") } else { String::new() };
-        let tr = ui.add(egui::TextEdit::singleline(&mut buf).id(fid).desired_width(FIELD_W).horizontal_align(egui::Align::RIGHT).hint_text(hint));
+        let tr = ui.add(egui::TextEdit::singleline(&mut buf).id(fid).desired_width(field_w).horizontal_align(egui::Align::RIGHT).hint_text(hint));
         tr.widget_info(|| text_info(label));
         if tr.changed() {
             match parse_number(&buf, unit.as_deref()) {
@@ -647,7 +680,8 @@ pub fn auto_summary(step_id: &str, defs: &[ParamDef], params: &Value, mode: Mode
 }
 
 /// Barrierefreiheit eines Eingabefelds: Rolle Textfeld mit dem Namen des Parameters (für `ui_find`).
-fn text_info(label: &str) -> egui::WidgetInfo {
+/// Barrierefreiheit eines Textfelds mit Beschriftung (für `ui_find`/Tests).
+pub fn text_info(label: &str) -> egui::WidgetInfo {
     let mut i = egui::WidgetInfo::new(egui::WidgetType::TextEdit);
     i.label = Some(label.to_string());
     i
