@@ -34,6 +34,28 @@ fn undo_count(st: &AppState) -> usize {
     st.session.active().map(|d| d.history.undo_count()).unwrap_or(0)
 }
 
+/// Inhalt eines bestimmten Dokuments (auch wenn inzwischen eine Symbolbearbeitung aktiv ist).
+fn doc_json_of(st: &AppState, id: Option<fp_engine::DocId>) -> Value {
+    id.and_then(|i| st.session.document(i)).map(|d| serde_json::to_value(&*d.doc).unwrap_or(Value::Null)).unwrap_or(Value::Null)
+}
+
+fn undo_count_of(st: &AppState, id: Option<fp_engine::DocId>) -> usize {
+    id.and_then(|i| st.session.document(i)).map(|d| d.history.undo_count()).unwrap_or(0)
+}
+
+/// Befehle, die laut Messung im Original **keinen** Verlaufsschritt anlegen, obwohl sie das
+/// Dokument ändern: erwartet werden 0 Schritte, und Rückgängig lässt die Änderung stehen.
+const NO_STEP_BY_DESIGN: &[(&str, &str)] = &[("view.grid.editGrid", "PM-5 D18: Raster bearbeiten ohne Verlaufsschritt, Strg+Z ändert das Raster nicht")];
+
+fn no_step_by_design(cmd: &str) -> bool {
+    NO_STEP_BY_DESIGN.iter().any(|(c, _)| *c == cmd)
+}
+
+/// Raster aller Seiten (was „Raster bearbeiten“ ändert; ein früherer Schritt darf zurückgenommen werden).
+fn grids(v: &Value) -> Vec<Value> {
+    v["pages"].as_array().map(|a| a.iter().map(|p| p["root"]["grid"].clone()).collect()).unwrap_or_default()
+}
+
 /// Öffnet den Dialog in einem frischen Testdokument (`cand` = Index der Testsituation).
 fn open(src: &Source, cand: usize) -> Option<(AppState, egui::Context, Fix, FormDialog)> {
     let (mut st, ctx, f) = fixture();
@@ -130,12 +152,29 @@ fn protocol(src: &Source, cand: usize) -> Option<(Outcome, String)> {
         return Some((Outcome::Ui, "Hinweisdialog ohne Befehl".into()));
     }
     let _ = last;
+    // Gemessen wird am Ausgangsdokument: „Neues Symbol…“/„Neue Schaltfläche…“ öffnen nach OK wie
+    // im Original die Symbolbearbeitung (eigenes Dokumentfenster); der Schritt gehört dem Dokument.
+    let orig = st.session.active_id();
     if let Err(e) = fp_ui::ui_commands::execute(&mut st.session, &cmd, p) {
         return Some((Outcome::Error(e.to_string()), format!("OK mit Endwert: {e}")));
     }
-    let steps = undo_count(&st) as i64 - base_undo as i64;
-    let reference = doc_json(&st);
-    if steps == 0 && reference == base {
+    let editor = st.session.active_id().filter(|a| Some(*a) != orig);
+    if let (Some(e), Some(o)) = (editor, orig) {
+        // Symbolbearbeitung schließen (wie „Fertig“), zurück ins Dokument
+        let _ = st.session.close_document(e);
+        let _ = st.session.activate(o);
+    }
+    let steps = undo_count_of(&st, orig) as i64 - base_undo as i64;
+    let reference = doc_json_of(&st, orig);
+    if no_step_by_design(&cmd) {
+        if steps != 0 {
+            problems.push(format!("OK: {steps} Verlaufsschritte statt 0 (wie im Original)"));
+        }
+        let _ = st.session.undo();
+        if grids(&doc_json(&st)) != grids(&reference) {
+            problems.push("Rückgängig nimmt die Änderung zurück (Original: bleibt)".into());
+        }
+    } else if steps == 0 && reference == base {
         // reine Einstellung ohne Dokumentänderung (z. B. Seite einrichten): richtig ohne Verlaufsschritt
     } else {
         if steps != 1 {
@@ -328,11 +367,23 @@ fn gesamt_logik_setzbefehle() {
             if errors > 0 {
                 problems.push(format!("{errors} von 50 Aufrufen mit Fehler"));
             }
-            for _ in 0..fifty_steps {
+            if no_step_by_design(&info.name) {
+                // wie im Original ohne Verlaufsschritt: 0 Schritte, Rückgängig ändert nichts
+                if fifty_steps != 0 {
+                    problems.push(format!("{fifty_steps} Verlaufsschritte statt 0 (wie im Original)"));
+                }
+                let after = grids(&doc_json(&st));
                 let _ = st.session.undo();
-            }
-            if doc_json(&st) != base {
-                problems.push("Rückgängig nach 50× stellt nicht exakt her".to_string());
+                if grids(&doc_json(&st)) != after {
+                    problems.push("Rückgängig nimmt die Änderung zurück (Original: bleibt)".to_string());
+                }
+            } else {
+                for _ in 0..fifty_steps {
+                    let _ = st.session.undo();
+                }
+                if doc_json(&st) != base {
+                    problems.push("Rückgängig nach 50× stellt nicht exakt her".to_string());
+                }
             }
             for _ in 0..fifty_steps {
                 let _ = st.session.redo();

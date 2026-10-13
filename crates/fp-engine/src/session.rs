@@ -841,7 +841,19 @@ impl Session {
 
     fn apply_history_snapshot(&mut self, snap: Snapshot) {
         let Some(d) = self.active_mut() else { return };
+        // Das Raster gehört wie im Original nicht zum Verlauf (PM-5 D18: „Raster bearbeiten“ legt
+        // keinen Schritt an, Strg+Z ändert das Raster nicht) – es bleibt beim Springen im Verlauf
+        // stehen, solange die Seiten dieselben sind.
+        let grids: Vec<Option<fp_model::Grid>> = d.doc.pages.iter().map(|p| p.root.grid.clone()).collect();
         d.restore(snap);
+        if d.doc.pages.len() == grids.len() && d.doc.pages.iter().zip(&grids).any(|(p, g)| p.root.grid != *g) {
+            let doc = Arc::make_mut(&mut d.doc);
+            for (p, g) in doc.pages.iter_mut().zip(grids) {
+                if p.root.grid != g {
+                    Arc::make_mut(p).root.grid = g;
+                }
+            }
+        }
         d.generation += 1;
         let (id, g) = (d.id, d.generation);
         self.events.push(SessionEvent::DocumentChanged { doc: id, generation: g });

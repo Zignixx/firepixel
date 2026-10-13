@@ -254,15 +254,31 @@ fn cases() -> Vec<Case> {
         Case {
             name: "Objekt mit der Maus ziehen (20 Bilder) verschiebt um die Mausstrecke",
             run: || {
-                let (mut h, f) = fresh();
-                let b0 = bounds(st(&h), f.rect[0]).ok_or("keine Grenzen")?;
-                let a = screen(&h, 120.0, 100.0);
-                drag(&mut h, a, a + egui::vec2(40.0, 25.0), 20, Modifiers::NONE);
-                let b1 = bounds(st(&h), f.rect[0]).ok_or("keine Grenzen")?;
-                let z = zoom(st(&h)) as f32;
-                let (dx, dy) = (b1.left - b0.left, b1.top - b0.top);
-                let msg = format!("Δ ({dx:.1}, {dy:.1}), erwartet ({:.1}, {:.1})", 40.0 / z, 25.0 / z);
-                if (dx - 40.0 / z).abs() < 1.5 && (dy - 25.0 / z).abs() < 1.5 { Ok(msg) } else { Err(msg) }
+                // Ohne Einrasten genau die Mausstrecke. Mit den intelligenten Hilfslinien (Vorgabe ein)
+                // rastet die Oberkante 65 an der Kante 60 des gelben Rechtecks über der Bitmap ein
+                // (FV-14: Kante an Kante, Fangabstand 5 px) – das ist richtig, kein Verlust.
+                let mut msgs = Vec::new();
+                for snap in [false, true] {
+                    let (mut h, f) = fresh();
+                    let on = st(&h).session.active().is_some_and(|d| d.view.snap_to_smart_guides);
+                    if on != snap {
+                        let _ = h.state_mut().state.session.execute("view.smartGuides.snapToSmartGuides", json!({}));
+                        h.run_steps(1);
+                    }
+                    let b0 = bounds(st(&h), f.rect[0]).ok_or("keine Grenzen")?;
+                    let a = screen(&h, 120.0, 100.0);
+                    drag(&mut h, a, a + egui::vec2(40.0, 25.0), 20, Modifiers::NONE);
+                    let b1 = bounds(st(&h), f.rect[0]).ok_or("keine Grenzen")?;
+                    let z = zoom(st(&h)) as f32;
+                    let (dx, dy) = (b1.left - b0.left, b1.top - b0.top);
+                    let want_dy = if snap { 60.0 - b0.top } else { 25.0 / z };
+                    let msg = format!("{} Δ ({dx:.1}, {dy:.1}), erwartet ({:.1}, {want_dy:.1})", if snap { "mit Einrasten" } else { "ohne Einrasten" }, 40.0 / z);
+                    if (dx - 40.0 / z).abs() >= 1.5 || (dy - want_dy).abs() >= 1.5 {
+                        return Err(msg);
+                    }
+                    msgs.push(msg);
+                }
+                Ok(msgs.join("; "))
             },
         },
         Case {

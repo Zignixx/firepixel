@@ -209,6 +209,12 @@ impl Request {
     }
 
     /// Passt eine Datei zu den Filtern?
+    /// Passt die Datei zu einem Filter mit Endungen (ohne „*“)?
+    fn matches_specific(&self, p: &Path) -> bool {
+        let n = p.to_string_lossy().to_lowercase();
+        self.filters.iter().any(|(_, exts)| exts.iter().any(|e| e != "*" && n.ends_with(&format!(".{}", e.to_lowercase()))))
+    }
+
     fn matches(&self, p: &Path) -> bool {
         if self.filters.is_empty() {
             return true;
@@ -404,7 +410,8 @@ fn request_ex(st: &mut AppState, req: Request, done: DoneEx) {
             Kind::Save => o.save.clone().into_iter().collect(),
             Kind::Folder => o.save.as_ref().and_then(|p| p.parent().map(Path::to_path_buf)).or_else(|| o.open.first().and_then(|p| p.parent().map(Path::to_path_buf))).into_iter().collect(),
             Kind::OpenMany => o.open.clone(),
-            Kind::Open => o.open.iter().find(|p| req.matches(p)).or(o.open.first()).cloned().into_iter().collect(),
+            // zuerst eine Datei, die zu einem eigenen Filter passt (nicht nur zu „Alle Dateien“)
+            Kind::Open => o.open.iter().find(|p| req.matches_specific(p)).or_else(|| o.open.iter().find(|p| req.matches(p))).or(o.open.first()).cloned().into_iter().collect(),
         };
         done(st, r, None, Flags::default());
         return;

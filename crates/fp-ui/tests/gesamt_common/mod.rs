@@ -378,7 +378,7 @@ pub fn probe(st: &AppState) -> Probe {
         (st.session.clipboard.elements.iter().map(|e| std::sync::Arc::as_ptr(e) as usize).collect::<Vec<_>>(), st.session.clipboard.pixels.is_some(), st.session.prefs.recent_files.len()),
         st.session.prefs.theme,
         st.close_window,
-    ) + &format!("|{:?}|{:?}", st.session.prefs, st.dialogs.panel_sel);
+    ) + &format!("|{:?}|{:?}|batch {}", st.session.prefs, st.dialogs.panel_sel, st.batch.is_some());
     let docs = format!("{:?}|{}", st.session.active_id(), st.session.documents().len());
     let files = st
         .file_override
