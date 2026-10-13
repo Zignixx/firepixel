@@ -758,8 +758,27 @@ impl Element {
         }
     }
 
-    /// JS-Typname wie `"[object Path]"` ohne Klammern (A, 04 §1.4).
+    /// Maskengruppe mit genau einem Inhalt ohne eigene Maske, ohne Gruppeneffekte und ohne Smart
+    /// Shape: im Original ein **maskiertes Einzelelement** (04 §1.6b; „Maske ▸ Alles einblenden“ auf
+    /// einer Bitmap bleibt `[object Image]` mit `mask`, gemessen FIX-G5). Liefert (Inhalt, Maske).
+    pub fn masked_single(&self) -> Option<(&Arc<Element>, &Arc<Element>)> {
+        let ElementKind::Group(g) = &self.kind else { return None };
+        if !g.kind.is_mask() || g.children.len() != 1 || g.smart_shape.is_some() || self.common.effects.as_ref().is_some_and(|l| !l.effects.is_empty()) {
+            return None;
+        }
+        let child = &g.children[0];
+        if matches!(&child.kind, ElementKind::Group(c) if c.kind.is_mask()) {
+            return None;
+        }
+        g.mask.as_ref().map(|m| (child, m))
+    }
+
+    /// JS-Typname wie `"[object Path]"` ohne Klammern (A, 04 §1.4). Ein maskiertes Einzelelement
+    /// ([`Element::masked_single`]) zeigt den Typ seines Inhalts wie im Original.
     pub fn js_type(&self) -> &'static str {
+        if let Some((child, _)) = self.masked_single() {
+            return child.js_type();
+        }
         match &self.kind {
             ElementKind::Bitmap(_) => "Image",
             ElementKind::Path(p) if p.primitive.is_some() => "RectanglePrimitive",

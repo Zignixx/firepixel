@@ -133,7 +133,7 @@ fn stroke_category_submenu_beside_main_menu() {
         .query_all(egui_kittest::kittest::By::new().role(egui::accesskit::Role::ComboBox))
         .map(|n| (n.value().unwrap_or_default().to_string(), n.rect()))
         .collect();
-    let cat = combos.iter().find(|(v, _)| v == "1-Pixel hart").map(|(_, r)| *r).expect("Strichart-Knopf");
+    let cat = combos.iter().find(|(v, _)| v == "Präzise abger.").map(|(_, r)| *r).expect("Strichart-Knopf"); // Werksvorgabe seit FIX-G5
     click_at(&mut h, cat.center());
     let popups = |h: &H| -> Vec<egui::Rect> {
         h.ctx.memory(|m| {

@@ -79,7 +79,11 @@ fn inspector_shows_effective_tool_brush() {
     let ta = fp_ui::inspector::obj_quads::tool_attrs(&ctx);
     assert_eq!((ta.stroke_preset, ta.softness, ta.stroke_texture_amount), (Some(preset_index("Einfach/Präzise abger.")), 0, 0), "Präzise abger.: Rand 0 wie gemalt");
     let o = &st(&h).session.tools.options;
-    assert_eq!(o.new_stroke.as_ref().and_then(|v| v.get("softness")).and_then(|v| v.as_i64()), Some(0), "Strichvorgabe = Anzeige");
+    // „Präzise abger.“ ist seit FIX-G5 die Werksvorgabe: keine eigene Strichvorgabe nötig, der
+    // Werkzeugpinsel ist trotzdem „Präzise abger.“ mit Rand 0
+    assert_eq!(o.new_stroke.as_ref().and_then(|v| v.get("softness")).and_then(|v| v.as_i64()).unwrap_or(0), 0, "Strichvorgabe = Anzeige");
+    let b0 = fp_engine::commands::panel::tool_brush(o);
+    assert_eq!((b0.name.as_str(), b0.softness), ("bn_Hard Rounded", 0), "Werkzeugpinsel = Anzeige");
     // Werte aus `pi.tool.brush` (Vorgabepinsel) zeigt der Inspektor
     h.state_mut().state.session.execute("pi.tool.brush", json!({"preset": "Einfach/Weich abger.", "width": 35, "softness": 37})).expect("pi.tool.brush");
     h.run_steps(3);

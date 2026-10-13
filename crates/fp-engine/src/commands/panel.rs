@@ -988,8 +988,21 @@ fn full_brush(p: &Params) -> Result<Option<Brush>> {
     }
 }
 
+/// Strichart der Werksvorgabe für neue Linien, Stiftpfade und Formen wie im Original:
+/// „Einfach/Präzise abger.“ (`bc_Basic`/`bn_Hard Rounded`, tool-line-pen Frage 1, tool-shapes 12).
+pub const DEFAULT_TOOL_PRESET: (&str, &str) = ("bc_Basic", "bn_Hard Rounded");
+
+/// Pinsel der Werksvorgabe ([`DEFAULT_TOOL_PRESET`]) in der Größe `width`.
+pub fn default_tool_brush(width: i32) -> Brush {
+    let mut b = Brush::basic(width.max(1));
+    if let Some(p) = BRUSH_PRESETS.iter().find(|p| (p.category, p.name) == DEFAULT_TOOL_PRESET) {
+        apply_preset(&mut b, p);
+    }
+    b
+}
+
 /// Pinsel der Werkzeugvorgabe: `new_brush`, sonst aus der Strichvorgabe `new_stroke`
-/// (Vorgabe, Stärke, Weichheit) gebildet, sonst ein einfacher 1-px-Pinsel.
+/// (Vorgabe, Stärke, Weichheit) gebildet, sonst die Werksvorgabe „Präzise abger.“ 1 px.
 pub fn tool_brush(o: &crate::tools::ToolOptions) -> Brush {
     tool_brush_from(o.new_stroke.as_ref(), o.new_brush.as_ref())
 }
@@ -999,7 +1012,10 @@ pub fn tool_brush_from(new_stroke: Option<&Value>, new_brush: Option<&Value>) ->
     if let Some(b) = new_brush.and_then(|v| serde_json::from_value::<Brush>(v.clone()).ok()) {
         return b;
     }
-    let st = new_stroke;
+    let Some(st) = new_stroke else {
+        return default_tool_brush(1);
+    };
+    let st = Some(st);
     let get = |k: &str| st.and_then(|v| v.get(k));
     let preset = get("preset").and_then(|v| v.as_str()).and_then(find_preset);
     let width = get("width").and_then(|v| v.as_f64()).map(|w| w.round().clamp(1.0, 1000.0) as i32);

@@ -45,6 +45,10 @@ fn element_label(e: &Element) -> String {
     {
         return n.clone();
     }
+    // maskiertes Einzelelement (Bitmap/Pfad mit Maske): wie im Original Zeile des Inhalts (FIX-G5, Q-02)
+    if let Some((child, _)) = e.masked_single() {
+        return element_label(child);
+    }
     let t = common::t;
     match &e.kind {
         ElementKind::Bitmap(_) => t("panel-layers-kind-bitmap"),
@@ -226,8 +230,55 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                 continue;
             }
             if let Some(cel) = l.cel(frame) {
-                for (idx, e) in cel.elements.iter().enumerate() {
+                // Unterebenen wie im Original als Ordner mit Aufklapper, ihre Objekte eingerückt darunter
+                let mut flat = Vec::new();
+                flatten(&cel.elements, frame, 0, &collapsed, &mut flat);
+                for (depth, idx, e) in flat {
+                    let e = &e;
                     let sel = selected_set.contains(&e.id);
+                    if let ElementKind::SubLayer(sl) = &e.kind {
+                        let (r2, resp2) = common::row(ui, 23.0, sel);
+                        let eye2 = Rect::from_min_size(r2.min, vec2(20.0, r2.height()));
+                        let lock2 = Rect::from_min_size(pos2(r2.left() + 21.0, r2.top()), vec2(19.0, r2.height()));
+                        ui.painter().vline(r2.left() + 20.5, r2.y_range(), Stroke::new(1.0, c.list_row_line));
+                        ui.painter().vline(r2.left() + 40.5, r2.y_range(), Stroke::new(1.0, c.list_row_line));
+                        if e.common.visible {
+                            glyphs::paint(ui.painter(), eye2.shrink(3.0), Glyph::Eye, &theme, true);
+                        }
+                        if e.common.locked {
+                            glyphs::paint(ui.painter(), lock2.shrink(4.0), Glyph::Lock, &theme, true);
+                        }
+                        let x0 = r2.left() + SUB_INDENT * (depth + 1) as f32;
+                        let tri2 = Rect::from_center_size(pos2(x0 + 50.0, r2.center().y), vec2(10.0, 10.0));
+                        let open = !collapsed.contains(&sub_key(e.id));
+                        paint_triangle(ui, tri2, open, c.icon_fg);
+                        glyphs::paint(ui.painter(), Rect::from_center_size(pos2(x0 + 66.0, r2.center().y), vec2(16.0, 14.0)), Glyph::Folder, &theme, true);
+                        let nr = Rect::from_min_max(pos2(x0 + 78.0, r2.top() + 2.0), pos2(r2.right() - 4.0, r2.bottom() - 2.0));
+                        let font = if sel { theme.bold(theme.fonts.ui) } else { theme.ui_font() };
+                        crate::widgets::text_clipped(ui.painter(), pos2(nr.left(), r2.center().y), Align2::LEFT_CENTER, &sl.name, font, if editable { c.text } else { c.text_weak }, nr.width());
+                        let kind = RowKind::Element { id: e.id, layer: l.id, index: idx, editable };
+                        if resp2.clicked()
+                            && let Some(p) = resp2.interact_pointer_pos()
+                        {
+                            if eye2.contains(p) && editable {
+                                actions.push(Action::Run("element.setVisible".into(), json!({"ids": [e.id.0], "visible": !e.common.visible})));
+                            } else if lock2.contains(p) && editable {
+                                actions.push(Action::Run("element.setLocked".into(), json!({"ids": [e.id.0], "locked": !e.common.locked})));
+                            } else if tri2.expand(3.0).contains(p) {
+                                toggle_collapse = Some(sub_key(e.id));
+                            } else if editable {
+                                actions.push(Action::Run("select.set".into(), json!({"ids": [e.id.0]})));
+                            }
+                        }
+                        if resp2.drag_started() && editable && depth == 0 {
+                            start_drag = Some(Drag::Element { id: e.id });
+                        }
+                        menu_rows.push(resp2.clone());
+                        if depth == 0 {
+                            rows.push(RowInfo { kind, rect: r2 });
+                        }
+                        continue;
+                    }
                     let (r2, resp2) = common::row(ui, erow_h, sel);
                     let eye2 = Rect::from_min_size(r2.min, vec2(20.0, r2.height()));
                     let lock2 = Rect::from_min_size(pos2(r2.left() + 21.0, r2.top()), vec2(19.0, r2.height()));
@@ -239,7 +290,7 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                     if e.common.locked {
                         glyphs::paint(ui.painter(), lock2.shrink2(vec2(4.0, 8.0)), Glyph::Lock, &theme, true);
                     }
-                    let thumb = Rect::from_min_size(pos2(r2.left() + 78.0, r2.top() + 3.0), vec2(tpx, tpx));
+                    let thumb = Rect::from_min_size(pos2(r2.left() + 78.0 + THUMB_INDENT * depth as f32, r2.top() + 3.0), vec2(tpx, tpx));
                     // Miniaturen nur für sichtbare Zeilen (FV-8: bei Seiten mit Tausenden Objekten
                     // rechnete und lud jedes Bild sonst ständig Miniaturen nach)
                     if tpx > 0.0 && ui.is_rect_visible(thumb) {
@@ -251,6 +302,24 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                         }
                         ui.painter().rect_stroke(thumb, 0.0, Stroke::new(1.0, c.list_border), StrokeKind::Inside);
                     }
+                    // Maske am Objekt: zweite Miniatur (Maske) rechts daneben wie im Original
+                    let mask_thumb = e.masked_single().map(|(_, m)| Arc::clone(m));
+                    let thumb = match &mask_thumb {
+                        Some(m) if tpx > 0.0 => {
+                            let mt = Rect::from_min_size(pos2(thumb.right() + 6.0, thumb.top()), thumb.size());
+                            if ui.is_rect_visible(mt) {
+                                ui.painter().rect_filled(mt, 0.0, Color32::BLACK);
+                                if let Some(tex) = thumbs::element_thumb(ui.ctx(), st, doc_id, doc_gen, &doc, m, (tpx as u32 * 2).max(16)) {
+                                    let ts = tex.size_vec2();
+                                    let s = (mt.width() / ts.x).min(mt.height() / ts.y);
+                                    ui.painter().image(tex.id(), Rect::from_center_size(mt.center(), ts * s), Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0)), Color32::WHITE);
+                                }
+                                ui.painter().rect_stroke(mt, 0.0, Stroke::new(1.0, c.list_border), StrokeKind::Inside);
+                            }
+                            mt
+                        }
+                        _ => thumb,
+                    };
                     let name = element_label(e);
                     // Umbenennen: unbenannte Objekte beginnen mit leerem Feld (der Typname wird nicht vorbelegt)
                     let own_name = e.common.name.clone().unwrap_or_default();
@@ -288,11 +357,14 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                     if (resp2.double_clicked() || resp2.triple_clicked()) && editable {
                         rename_start = Some(kind.clone());
                     }
-                    if resp2.drag_started() && editable {
+                    if resp2.drag_started() && editable && depth == 0 {
                         start_drag = Some(Drag::Element { id: e.id });
                     }
                     menu_rows.push(resp2.clone());
-                    rows.push(RowInfo { kind, rect: r2 });
+                    // Ziehen/Ablegen nur in der obersten Ebene der Objekte (Index in der Ebene)
+                    if depth == 0 {
+                        rows.push(RowInfo { kind, rect: r2 });
+                    }
                 }
             }
         }
@@ -361,6 +433,30 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
     }
 }
 
+/// Einrückung einer Unterebene (Aufklapper/Ordner) bzw. ihrer Objekt-Miniaturen je Stufe, gemessen am
+/// Original (panel-layers/01: Aufklapper 50 → 78 px, Miniatur 82 → 98 px).
+const SUB_INDENT: f32 = 28.0;
+const THUMB_INDENT: f32 = 16.0;
+
+/// Schlüssel einer Unterebene in der Menge der zugeklappten Zeilen (getrennt von Ebenen-IDs).
+fn sub_key(id: fp_model::ElementId) -> u64 {
+    id.0 | (1 << 62)
+}
+
+/// Objekte einer Ebene mit ihren aufgeklappten Unterebenen der Reihe nach: (Tiefe, Index in der
+/// eigenen Liste, Objekt).
+fn flatten(els: &[Arc<Element>], frame: usize, depth: usize, collapsed: &BTreeSet<u64>, out: &mut Vec<(usize, usize, Arc<Element>)>) {
+    for (i, e) in els.iter().enumerate() {
+        out.push((depth, i, Arc::clone(e)));
+        if let ElementKind::SubLayer(l) = &e.kind
+            && !collapsed.contains(&sub_key(e.id))
+            && let Some(cel) = l.cel(frame)
+        {
+            flatten(&cel.elements, frame, depth + 1, collapsed, out);
+        }
+    }
+}
+
 fn paint_triangle(ui: &Ui, r: Rect, open: bool, col: Color32) {
     let c = r.center();
     let pts = if open { vec![pos2(c.x - 4.0, c.y - 2.0), pos2(c.x + 4.0, c.y - 2.0), pos2(c.x, c.y + 3.0)] } else { vec![pos2(c.x - 2.0, c.y - 4.0), pos2(c.x + 3.0, c.y), pos2(c.x - 2.0, c.y + 4.0)] };
@@ -425,4 +521,36 @@ fn footer_with_state(ui: &mut Ui, st: &mut AppState, text: &str, buttons: &[Foot
         }
     });
     out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn sub(ids: &mut fp_model::IdGen, name: &str, children: Vec<Arc<Element>>) -> Arc<Element> {
+        let mut l = fp_model::Layer::new(ids, name, LayerKind::Normal, 1);
+        if let Some(c) = l.cels.first_mut() {
+            Arc::make_mut(c).elements = children;
+        }
+        Arc::new(Element::new(ids.element(), ElementKind::SubLayer(Arc::new(l))))
+    }
+
+    /// Unterebenen als Ordner mit ihren Objekten eingerückt darunter; zugeklappt ohne Kinder (FIX-G5, Q-05).
+    #[test]
+    fn sublayers_flatten_with_depth_and_collapse() {
+        let mut ids = fp_model::IdGen::default();
+        let inner = sub(&mut ids, "Pfad", Vec::new());
+        let a = sub(&mut ids, "Gemeinsam", vec![Arc::clone(&inner)]);
+        let b = sub(&mut ids, "Unterebene", Vec::new());
+        let els = vec![Arc::clone(&a), Arc::clone(&b)];
+        let mut out = Vec::new();
+        flatten(&els, 0, 0, &BTreeSet::new(), &mut out);
+        let got: Vec<(usize, usize, u64)> = out.iter().map(|(d, i, e)| (*d, *i, e.id.0)).collect();
+        assert_eq!(got, vec![(0, 0, a.id.0), (1, 0, inner.id.0), (0, 1, b.id.0)]);
+        let mut closed = BTreeSet::new();
+        closed.insert(sub_key(a.id));
+        let mut out = Vec::new();
+        flatten(&els, 0, 0, &closed, &mut out);
+        assert_eq!(out.iter().map(|(d, _, e)| (*d, e.id.0)).collect::<Vec<_>>(), vec![(0, a.id.0), (0, b.id.0)]);
+    }
 }

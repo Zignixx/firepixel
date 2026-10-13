@@ -148,8 +148,8 @@ impl Default for ToolAttrs {
             fill_texture_amount: 0,
             fill_texture_transparent: false,
             pattern: String::new(),
-            // Werksvorgabe „1-Pixel hart“ (wie bisher; Index in der Vorlagentabelle)
-            stroke_preset: fp_engine::commands::panel::preset_index_of("bc_Pencil", "bn_1-Pixel"),
+            // Werksvorgabe „Präzise abger.“ wie im Original (FIX-G5; Index in der Vorlagentabelle)
+            stroke_preset: fp_engine::commands::panel::preset_index_of(fp_engine::commands::panel::DEFAULT_TOOL_PRESET.0, fp_engine::commands::panel::DEFAULT_TOOL_PRESET.1),
             stroke_width: 1,
             softness: 0,
             placement: 1,
@@ -1330,11 +1330,23 @@ fn rect_q4(ui: &mut Ui, st: &mut AppState, r: Rect) {
 fn pathops_q5(ui: &mut Ui, st: &mut AppState, r: Rect) {
     let d = Dl::at(r.min + vec2(4.0, 0.0));
     let sel = selection(st);
-    // Werkzeug-Inspektor (Rechteck, Ellipse, Stift …): wie im Original ohne Pfadoperationen (PAR 18/21)
-    if sel.is_empty() {
+    // Werkzeug-Inspektor (Rechteck, Stift …): wie im Original mit „Kombinieren“ und den 5
+    // Pfadknöpfen (Referenzbilder tool-shapes/07, inspector-fill/21, inspector-stroke/20; FIX-G5).
+    // Bedienbar wirken sie nur, wenn die Seite Pfade enthält (leeres Dokument: grau, 07); ausgelöst
+    // wird im Werkzeug-Inspektor nichts.
+    let tool_mode = sel.is_empty();
+    if tool_mode {
+        let has_paths = st.session.active().is_some_and(|d| {
+            d.doc.resolved_layers(d.page).iter().any(|rl| rl.layer.cel(d.frame).is_some_and(|c| c.elements.iter().any(|e| matches!(e.kind, ElementKind::Path(_) | ElementKind::CompoundShape(_)))))
+        });
+        let buttons = [(0.0, Glyph::OpNormal, 0u32, "pi-pathop-normal"), (20.0, Glyph::OpUnion, 1, "pi-pathop-union"), (40.0, Glyph::OpPunch, 3, "pi-pathop-punch"), (60.0, Glyph::OpIntersect, 2, "pi-pathop-intersect"), (80.0, Glyph::OpCrop, 4, "pi-pathop-crop")];
+        for (x, g, op, tip) in buttons {
+            let tip = t(tip);
+            fields::toggle(ui, ("pi-pathop", op), d.r(x, 0.0, 16.0, 12.0), g, has_paths && op == 0, has_paths, tip.as_str());
+        }
+        fields::button(ui, "pi-combine", d.r(25.0, 15.0, 47.0, 14.0), &t("pi-combine"), false);
         return;
     }
-    let tool_mode = false;
     let compound = sel.len() == 1 && matches!(sel[0].kind, ElementKind::CompoundShape(_));
     let paths = sel.iter().filter(|e| matches!(e.kind, ElementKind::Path(_))).count();
     // wie im Original schon bei einem gewählten Pfad bedienbar (PAR 17/02); zusammengefasst wird
@@ -1352,8 +1364,8 @@ fn pathops_q5(ui: &mut Ui, st: &mut AppState, r: Rect) {
     for (x, g, op, tip) in buttons {
         let tip = t(tip);
         let tip = tip.as_str();
-        let on = cur_op == Some(op) || (cur_op.is_none() && op == 0 && !tool_mode);
-        if fields::toggle(ui, ("pi-pathop", op), d.r(x, 0.0, 16.0, 12.0), g, on, en || tool_mode, tip) && en && can_run {
+        let on = cur_op == Some(op) || (cur_op.is_none() && op == 0);
+        if fields::toggle(ui, ("pi-pathop", op), d.r(x, 0.0, 16.0, 12.0), g, on, en, tip) && en && can_run {
             st.run("pi.compound.setOp", json!({"op": op}));
         }
     }

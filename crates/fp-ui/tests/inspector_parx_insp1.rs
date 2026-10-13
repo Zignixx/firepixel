@@ -178,16 +178,29 @@ fn new_objects_take_last_fill() {
     assert_eq!(f.as_ref().and_then(|v| v["shape"].as_i64()), Some(14));
 }
 
-/// Rechteck-Werkzeug ohne Auswahl: keine Pfadoperationen, „Muster“ bedienbar (PAR 18/21); ein
-/// gewählter Pfad: Pfadoperationen und „Pinselstrich löschen“ bedienbar (PAR 17/02).
+/// Rechteck-Werkzeug ohne Auswahl: „Kombinieren“ + 5 Pfadknöpfe wie im Original (Referenzbilder
+/// tool-shapes/07, inspector-fill/21; FIX-G5), im leeren Dokument grau, mit Pfaden auf der Seite
+/// bedienbar; „Muster“ bedienbar (PAR 18/21); ein gewählter Pfad: Pfadoperationen und „Pinselstrich
+/// löschen“ bedienbar (PAR 17/02).
 #[test]
-fn rect_tool_without_pathops_and_path_ops_enabled_for_one_path() {
+fn rect_tool_pathops_and_path_ops_enabled_for_one_path() {
     let union = fp_i18n::t("pi-pathop-union");
     let mut h = harness(|_| {});
     let _ = h.state_mut().state.session.set_tool(ToolId::Rectangle);
     h.run_steps(4);
-    assert!(button(&h, &union).is_none(), "keine Pfadoperationen im Werkzeug-Inspektor");
+    assert!(button(&h, &union).is_some_and(|b| !b.1), "Pfadknöpfe im Werkzeug-Inspektor, im leeren Dokument grau");
     assert!(button(&h, "Muster").is_some_and(|b| b.1), "Muster bedienbar");
+    let mut h = harness(|s| {
+        rect(s, [10, 10, 60, 60]);
+        s.execute("select.none", json!({})).expect("abwählen");
+    });
+    let _ = h.state_mut().state.session.set_tool(ToolId::Rectangle);
+    h.run_steps(4);
+    let n0 = undo_count(&h);
+    let (b, en) = button(&h, &union).expect("Vereinigen im Werkzeug-Inspektor");
+    assert!(en, "mit Pfaden auf der Seite bedienbar");
+    click(&mut h, b.center());
+    assert_eq!(undo_count(&h), n0, "im Werkzeug-Inspektor ohne Wirkung");
     let mut h = harness(|s| {
         s.execute("draw.ellipse", json!({"rect": [50, 50, 150, 120]})).expect("Ellipse");
         s.execute("pi.stroke", json!({"preset": "Bleistift/1-Pixel hart", "color": "#000000"})).expect("Strich");

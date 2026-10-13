@@ -591,7 +591,8 @@ fn element_get(cls: &str, name: &str, doc: DocId, id: ElementId, ctx: &mut Conte
         "locked" => JsValue::from(e.common.locked),
         "opacity" => conv::n((e.common.opacity.to_percent() * 100.0).round() / 100.0),
         "blendMode" => conv::s(e.common.blend.name().unwrap_or("normal")),
-        "name" => e.common.name.as_ref().map(|n| conv::s(n)).unwrap_or_else(JsValue::null),
+        // maskiertes Einzelelement: Name des Inhalts, wie im Original (FIX-G5, Q-02)
+        "name" => e.common.name.as_ref().or_else(|| e.masked_single().and_then(|(c, _)| c.common.name.as_ref())).map(|n| conv::s(n)).unwrap_or_else(JsValue::null),
         "isLayer" => JsValue::from(matches!(e.kind, ElementKind::SubLayer(_))),
         "isSmartShape" => JsValue::from(matches!(&e.kind, ElementKind::Group(g) if g.smart_shape.is_some())),
         "effectList" => j(effects_json(&e), ctx)?,
