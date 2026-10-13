@@ -609,7 +609,7 @@ pub fn effect_form(name: &str, bevel: Option<i32>, e: Option<&Effect>, index: Op
 fn filter_effect_form(e: &Effect, index: usize) -> Option<FormDialog> {
     let n = |k: &str, d: f64| e.get_f64(k).unwrap_or(d);
     let (title, keys, fields): (String, Vec<(&str, &str)>, Vec<Field>) = match e.kind() {
-        EffectKind::GaussianBlur => (t("dlg-title-gaussian-blur"), vec![("radius", "gaussian_blur_radius")], vec![Field::slider("radius", t("dlg-lbl-blur-radius").as_str(), n("gaussian_blur_radius", 1.0), 0.1, 250.0).decimals(1).dot_decimal().scale(crate::inspector::scale::BLUR_RADIUS)]),
+        EffectKind::GaussianBlur => (t("dlg-title-gaussian-blur"), vec![("radius", "gaussian_blur_radius")], vec![Field::slider("radius", t("dlg-lbl-blur-radius").as_str(), n("gaussian_blur_radius", 4.1), 0.1, 250.0).decimals(1).dot_decimal().scale(crate::inspector::scale::BLUR_RADIUS)]),
         EffectKind::MotionBlur => (
 t("dlg-title-motion-blur"),
             vec![("angle", "motion_blur_angle"), ("distance", "motion_blur_distance")],
@@ -630,7 +630,7 @@ t("dlg-title-unsharp-mask"),
             vec![("amount", "unsharp_mask_amount"), ("radius", "unsharp_mask_radius"), ("threshold", "unsharp_mask_threshold")],
             vec![
                 Field::slider("amount", t("dlg-lbl-sharpen-amount").as_str(), n("unsharp_mask_amount", 50.0), 1.0, 500.0).scale(crate::inspector::scale::SHARPEN_AMOUNT),
-                Field::slider("radius", t("dlg-lbl-pixel-radius").as_str(), n("unsharp_mask_radius", 1.0), 0.1, 250.0).decimals(1).dot_decimal().scale(crate::inspector::scale::BLUR_RADIUS),
+                Field::slider("radius", t("dlg-lbl-pixel-radius").as_str(), n("unsharp_mask_radius", 4.1), 0.1, 250.0).decimals(1).dot_decimal().scale(crate::inspector::scale::BLUR_RADIUS),
                 Field::slider("threshold", t("dlg-lbl-threshold").as_str(), n("unsharp_mask_threshold", 0.0), 0.0, 255.0).scale(crate::inspector::scale::THRESHOLD),
             ],
         ),

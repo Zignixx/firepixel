@@ -232,6 +232,16 @@ pub fn average_color(src: &RgbaImage, region: IRect) -> Px {
     [m(0), m(1), m(2), 255]
 }
 
+/// Grenzen der Pixel mit Alpha > 0 innerhalb von `region`.
+fn alpha_bounds_in(src: &RgbaImage, region: IRect) -> IRect {
+    let r = region.intersect(&src.bounds());
+    if r.is_empty() {
+        return r;
+    }
+    let sub = src.cropped(r);
+    sub.alpha_bounds()
+}
+
 /// Parameter des Gaußschen Weichzeichners.
 #[derive(Debug, Clone, Copy, PartialEq, serde::Serialize, serde::Deserialize)]
 #[serde(default)]
@@ -272,9 +282,16 @@ impl PixelFilter for GaussianBlurParams {
     fn process(&self, src: &RgbaImage, region: IRect) -> RgbaImage {
         match effective_sigma(self.radius) {
             None => {
+                // Gefüllt wird das Pixelrechteck des Objekts (Alpha > 0) im Rechenbereich, gemittelt
+                // über genau dieses Rechteck (`re\23` Gruppe 3, Text: 43,60–148,98 statt des
+                // größeren Textpuffers). Ohne deckende Pixel: der ganze Rechenbereich (wie bisher).
+                let mut rect = alpha_bounds_in(src, region);
+                if rect.is_empty() {
+                    rect = region;
+                }
                 let mut out = start(src);
-                let avg = average_color(src, region);
-                out.fill_rect(region, fp_color::Rgba8::from_array(avg));
+                let avg = average_color(src, rect);
+                out.fill_rect(rect, fp_color::Rgba8::from_array(avg));
                 out
             }
             Some(s) => gaussian_blur_raw(src, region, s, self.precision),
@@ -421,9 +438,18 @@ mod tests {
 
     #[test]
     fn radius_over_200_fills_input_rect() {
-        let img = RgbaImage::from_raw(IRect::new(0, 0, 2, 1), vec![[255, 0, 0, 255], [0, 0, 255, 0]]).unwrap();
+        // Gemittelt und gefüllt wird das Pixelrechteck (Alpha > 0); durchsichtige Pixel darin zählen mit.
+        let img = RgbaImage::from_raw(
+            IRect::new(0, 0, 4, 1),
+            vec![[255, 0, 0, 255], [0, 0, 255, 0], [0, 0, 254, 255], [9, 9, 9, 0]],
+        )
+        .unwrap();
         let out = GaussianBlurParams { radius: 210.0, ..Default::default() }.apply(&img, None);
         assert_eq!(out.bounds(), img.bounds());
-        assert_eq!(out.data(), &[[127, 0, 127, 255], [127, 0, 127, 255]]);
+        assert_eq!(out.data(), &[[85, 0, 169, 255], [85, 0, 169, 255], [85, 0, 169, 255], [9, 9, 9, 0]]);
+        // ganz durchsichtig: der ganze Bereich (leer bleibt Mittelwert der Farben)
+        let empty = RgbaImage::from_raw(IRect::new(0, 0, 2, 1), vec![[10, 20, 30, 0], [30, 40, 50, 0]]).unwrap();
+        let out = GaussianBlurParams { radius: 210.0, ..Default::default() }.apply(&empty, None);
+        assert_eq!(out.data(), &[[20, 30, 40, 255], [20, 30, 40, 255]]);
     }
 }

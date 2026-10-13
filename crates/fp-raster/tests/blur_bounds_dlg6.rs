@@ -18,11 +18,13 @@ fn menu<F: PixelFilter>(f: F, img: &RgbaImage) -> RgbaImage {
 fn d47_motion_blur_grows_only_along_the_motion() {
     let out = menu(MotionBlurParams { angle: 90, distance: 20 }, &b1());
     assert_eq!(out.bounds(), IRect::new(320, 200, 420, 319));
-    // die letzte Zeile hat genau eine deckende Probe von 20 (Proben i = 0 … 19)
-    assert_eq!(out.pixel(370, 318).a, 255 / 20);
+    // Proben i = 0 … 20 mit float-Winkel: trunc(i·sin 90°) = i − 1, die letzte Zeile hat eine
+    // deckende Probe von 21 (FX-3, re\23 Gruppe 3: Alpha-Stufen 255·k/11 bei 90°/10)
+    assert_eq!(out.pixel(370, 318).a, 255 / 21);
     assert_eq!(out.pixel(370, 250).a, 255);
-    // Winkel 0: nach rechts (Probe x + i), Winkel 180 nach links
-    assert_eq!(menu(MotionBlurParams { angle: 0, distance: 20 }, &b1()).bounds(), IRect::new(301, 200, 420, 300));
+    // Winkel 0: Proben x + i, volle 20 px nach links (cos 0 = 1 exakt; FX-3: 0°/1 → 1 px);
+    // Winkel 180: cos knapp über −1 → nur 19 px nach rechts
+    assert_eq!(menu(MotionBlurParams { angle: 0, distance: 20 }, &b1()).bounds(), IRect::new(300, 200, 420, 300));
     assert_eq!(menu(MotionBlurParams { angle: 180, distance: 20 }, &b1()).bounds(), IRect::new(320, 200, 439, 300));
     // Vorgabe 90/10
     assert_eq!(menu(MotionBlurParams::default(), &b1()).bounds(), IRect::new(320, 200, 420, 309));

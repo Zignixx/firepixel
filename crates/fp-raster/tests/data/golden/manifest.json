@@ -3773,8 +3773,8 @@
 },
 "output": "out_zoom0_rnd.png",
 "output_origin": [
-0,
-0
+-76,
+-79
 ]
 },
 {
@@ -3794,8 +3794,8 @@
 },
 "output": "out_zoom0_disc.png",
 "output_origin": [
-0,
-0
+-76,
+-78
 ]
 },
 {
@@ -3815,8 +3815,8 @@
 },
 "output": "out_zoom1_rnd.png",
 "output_origin": [
-0,
-0
+-245,
+-248
 ]
 },
 {
@@ -3836,8 +3836,8 @@
 },
 "output": "out_zoom1_disc.png",
 "output_origin": [
-0,
-0
+-245,
+-247
 ]
 },
 {
@@ -3857,8 +3857,8 @@
 },
 "output": "out_zoom2_rnd.png",
 "output_origin": [
-0,
-0
+-149,
+-152
 ]
 },
 {
@@ -3878,8 +3878,8 @@
 },
 "output": "out_zoom2_disc.png",
 "output_origin": [
-0,
-0
+-148,
+-150
 ]
 },
 {

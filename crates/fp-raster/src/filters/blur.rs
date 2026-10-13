@@ -53,9 +53,7 @@ impl PixelFilter for MotionBlurParams {
             return out;
         }
         let a = self.angle.rem_euclid(360);
-        let th = a as f64 / 360.0 * std::f64::consts::TAU;
-        let (s, c) = (th.sin(), th.cos());
-        let dist = self.distance as f64;
+        let (s, c) = motion_sin_cos(a);
         let b = src.bounds();
         let r = region.intersect(&b);
         if r.is_empty() {
@@ -63,16 +61,13 @@ impl PixelFilter for MotionBlurParams {
         }
         let (w, h) = (src.width() as i64, src.height() as i64);
         let wu = src.width();
-        // Versätze je Probe (abgeschnitten wie `_ftol`). Proben `i = 0 … abstand − 1`: Die
-        // Spezifikation (06 §4.11) nennt `i ≤ abstand`, gemessen reicht die Unschärfe im Original
-        // aber nur `abstand − 1` Pixel weit (PM-6, PARITAET_B D47: B1 320,200,420,300, Winkel 90,
-        // Umfang 20 → 320,200,420,319). Die x87-Vergleichsflags sind die naheliegende Lesefehlerquelle.
-        let mut offs = Vec::new();
-        let mut i = 0i64;
-        while (i as f64) < dist {
-            offs.push(if i == 0 { (0, 0) } else { ((i as f64 * c) as i64, (i as f64 * s) as i64) });
-            i += 1;
-        }
+        // Versätze je Probe (abgeschnitten wie `_ftol`), Proben `i = 0 … abstand` (06 §4.11). Der
+        // Winkel liegt im Original als `float` vor: sin(90°) bzw. cos(180°) sind dadurch knapp
+        // unter 1, `trunc(i·sin)` ergibt `i − 1`, die Unschärfe reicht dort nur `abstand − 1` weit
+        // und das Pixel selbst zählt doppelt (FX-3, `re\23` Gruppe 3: 90°/10 → Vektor +9 unten,
+        // Alpha-Stufen 255·k/11; 0°/1 → 1 px nach links mit Alpha 127; PM-6 D47 90°/20 → +19).
+        let offs: Vec<(i64, i64)> =
+            (0..=self.distance as i64).map(|i| ((i as f64 * c) as i64, (i as f64 * s) as i64)).collect();
         let sdata = src.data();
         let (x0, x1) = ((r.left - b.left) as usize, (r.right - b.left) as usize);
         let (y0, y1) = ((r.top - b.top) as usize, (r.bottom - b.top) as usize);
@@ -101,6 +96,13 @@ impl PixelFilter for MotionBlurParams {
         });
         out
     }
+}
+
+/// Sinus/Kosinus des Winkels wie im Original: `θ = a/360·2π` in einfacher Genauigkeit, die
+/// Winkelfunktionen dann in doppelter (so liegen sin 90° und −cos 180° knapp unter 1).
+fn motion_sin_cos(angle: i32) -> (f64, f64) {
+    let th = (angle as f32 / 360.0f32 * std::f32::consts::TAU) as f64;
+    (th.sin(), th.cos())
 }
 
 /// Bewegungsunschärfe anwenden (Ergebnis um `distance` größer).
@@ -260,8 +262,34 @@ impl ZoomBlurParams {
 }
 
 impl PixelFilter for ZoomBlurParams {
-    // Ausgabegrenzen = Eingabegrenzen: Die Formel aus `@00b2c9e0` (06 §4.13) ist ungeprüft, und
-    // der Laufzeittest T4 (100/100) zeigt kein Ergebnis außerhalb der Bildgrenzen.
+    /// `@00b2c9e0` (06 §4.13): Rechteck um `menge` erweitert, dann Quadrat um dessen Mitte mit
+    /// Halbkante `⌊√(((H'+1)/2)² + ((B'+1)/2)²) + 0,5⌋ + menge`. Bestätigt durch `re\23` Gruppe 3
+    /// (100/100 am Vektor 75,55–165,125 → sichtbar 32,21–207,158, weit über das Objekt hinaus).
+    fn output_bounds(&self, input: IRect) -> IRect {
+        if input.is_empty() {
+            return input;
+        }
+        let m = self.amount.clamp(0, 100_000) as i64;
+        let (l, t) = (input.left as i64 - m, input.top as i64 - m);
+        let (r, b) = (input.right as i64 + m, input.bottom as i64 + m);
+        let (w, h) = (r - l, b - t);
+        let (hx, hy) = ((w + 1) / 2, (h + 1) / 2);
+        let half = (((hx * hx + hy * hy) as f64).sqrt() + 0.5).floor() as i64 + m;
+        let (cx, cy) = (l + w / 2, t + h / 2);
+        let c = |v: i64| v.clamp(i32::MIN as i64 / 2, i32::MAX as i64 / 2) as i32;
+        IRect::new(c(cx - half), c(cy - half), c(cx + half), c(cy + half))
+    }
+
+    /// Mittelpunkt ohne gespeicherte Schlüssel = Mitte der **Eingabe**grenzen (nicht des
+    /// vergrößerten Puffers), daher hier vor dem Rahmen festgelegt.
+    fn apply(&self, img: &RgbaImage, mask: Option<&Mask>) -> RgbaImage {
+        let mut p = *self;
+        if p.center.is_none() {
+            let b = img.bounds();
+            p.center = Some((b.left + (b.width() as i32 + 1) / 2, b.top + (b.height() as i32 + 1) / 2));
+        }
+        super::apply_framework(&p, img, mask)
+    }
 
     fn process(&self, src: &RgbaImage, region: IRect) -> RgbaImage {
         let mut out = start(src);

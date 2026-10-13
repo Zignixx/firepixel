@@ -546,6 +546,7 @@ impl Renderer {
                         }
                     }
                 }
+                img = effect_buffer(img, &e.kind, &effects);
                 let res = apply_chain(&img, &effects, &self.options.effect_context);
                 for i in &res.issues {
                     rep.miss(format!("effect:{i}"));
@@ -558,7 +559,38 @@ impl Renderer {
         }
         Some(Look { image: Arc::new(img), extra_opacity })
     }
+}
 
+/// Puffergrenzen der Effektkette wie im Original (FX-3, `re` Gruppe 3; die Farbe durchsichtiger
+/// Pixel setzt der Aufrufer, FX-4). Nur wenn die Kette einen Bitmap-Filter enthält (dort zählen die
+/// Grenzen: Randwiederholung der 3×3-Faltung, Mitte von Radial/Zoom, Gauß > 200, Randnormierung
+/// des Gauß in Unscharf maskieren; Schatten/Glühen/Abschrägung bleiben unberührt):
+/// - **Bitmap**: Puffer = Pixelgrenzen (Alpha > 0), gemessen an Weichzeichnen (keine Ausdehnung),
+///   Gauß > 200 (Mittelwert über das zugeschnittene Rechteck) und Radial (Mitte).
+/// - **Text**: Puffer = Pixelgrenzen + 15 px (rechts 16 px), angepasst an Radial (Mitte: rechts ein
+///   Pixel mehr) und Unscharf maskieren (Vorgabe exakt, 20/500/10 bis 5 Stufen). Annahme (A):
+///   Textpuffer des Originals für andere Schriften/Größen nicht gemessen.
+/// - **Pfad**: Puffer = Pfadgrenzen (unverändert).
+fn effect_buffer(img: RgbaImage, kind: &ElementKind, effects: &[EffectEntry]) -> RgbaImage {
+    let has_filter = effects.iter().any(|x| x.visible && matches!(x.effect, fp_effects::LiveEffect::Filter(_)));
+    if !has_filter {
+        return img;
+    }
+    let a = img.alpha_bounds();
+    if a.is_empty() {
+        return img;
+    }
+    match kind {
+        ElementKind::Bitmap(_) if a != img.bounds() => img.cropped(a),
+        ElementKind::Text(_) => {
+            let want = IRect::new(a.left - 15, a.top - 15, a.right + 16, a.bottom + 15);
+            img.cropped(a).extended_to(want).unwrap_or(img)
+        }
+        _ => img,
+    }
+}
+
+impl Renderer {
     /// Gespeicherten Cache mit der Abbildung `map` platzieren: ganzzahlige Verschiebung direkt;
     /// sonst neu rechnen lassen (`None`), wenn das Element selbst gerastert werden kann, oder
     /// resampeln (Näherung).

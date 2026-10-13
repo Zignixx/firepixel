@@ -377,6 +377,9 @@ impl PixelFilter for Filter {
     fn process(&self, src: &RgbaImage, region: IRect) -> RgbaImage {
         self.as_pixel_filter().process(src, region)
     }
+    fn apply(&self, img: &RgbaImage, mask: Option<&Mask>) -> RgbaImage {
+        self.as_pixel_filter().apply(img, mask)
+    }
 }
 
 /// Wendet eine Live-Filter-Liste in Listenreihenfolge an (erster Eintrag zuerst, 06 §2.4); die

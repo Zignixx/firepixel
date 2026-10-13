@@ -28,7 +28,7 @@ pub fn filter_form(cmd: &str, live: bool) -> Option<FormDialog> {
     let (id, title, fields): (&str, String, Vec<Field>) = match cmd {
         "filter.blur.gaussian" => {
             let d = defaults::<GaussianBlurParams>();
-            ("5971", t("dlg-title-gaussian-blur"), vec![Field::slider("radius", t("dlg-lbl-blur-radius").as_str(), dnum(&d, "radius", 1.0), 0.1, 250.0).decimals(1).dot_decimal().scale(scale::BLUR_RADIUS)])
+            ("5971", t("dlg-title-gaussian-blur"), vec![Field::slider("radius", t("dlg-lbl-blur-radius").as_str(), dnum(&d, "radius", 4.1), 0.1, 250.0).decimals(1).dot_decimal().scale(scale::BLUR_RADIUS)])
         }
         "filter.sharpen.unsharpMask" => {
             let d = defaults::<UnsharpMaskParams>();
@@ -37,7 +37,7 @@ pub fn filter_form(cmd: &str, live: bool) -> Option<FormDialog> {
                 t("dlg-title-unsharp-mask"),
                 vec![
                     Field::slider("amount", t("dlg-lbl-sharpen-amount").as_str(), dnum(&d, "amount", 50.0), 1.0, 500.0).scale(scale::SHARPEN_AMOUNT),
-                    Field::slider("radius", t("dlg-lbl-pixel-radius").as_str(), dnum(&d, "radius", 1.0), 0.1, 250.0).decimals(1).dot_decimal().scale(scale::BLUR_RADIUS),
+                    Field::slider("radius", t("dlg-lbl-pixel-radius").as_str(), dnum(&d, "radius", 4.1), 0.1, 250.0).decimals(1).dot_decimal().scale(scale::BLUR_RADIUS),
                     Field::slider("threshold", t("dlg-lbl-threshold").as_str(), dnum(&d, "threshold", 0.0), 0.0, 255.0).scale(scale::THRESHOLD),
                 ],
             )

@@ -190,10 +190,11 @@ fn motion_blur_twice_grows_downward_only() {
     s.execute("filter.blur.motion", json!({"angle": 90, "distance": 20})).expect("1");
     assert_eq!(b1_bounds(&s), IRect::new(320, 200, 420, 319));
     s.execute("filter.blur.motion", json!({"angle": 90, "distance": 20})).expect("2");
-    // die neue letzte Zeile (Alpha 12) trägt eine Zeile weiter nur noch 12 / 20 = 0 bei
+    // die neue letzte Zeile (Alpha 12) trägt eine Zeile weiter nur noch 12 / 21 = 0 bei
     assert_eq!(b1_bounds(&s), IRect::new(320, 200, 420, 337));
     s.execute("filter.blur.motion", json!({"angle": 0, "distance": 10})).expect("3");
-    assert_eq!(b1_bounds(&s), IRect::new(311, 200, 420, 337), "Winkel 0: Unschärfe nach links");
+    // Winkel 0: volle 10 px nach links (cos 0 = 1 exakt, FX-3: Proben i = 0 … abstand)
+    assert_eq!(b1_bounds(&s), IRect::new(310, 200, 420, 337), "Winkel 0: Unschärfe nach links");
 }
 
 /// Beschriftungen wie im Original: „Winkel“/„Umfang“ (ohne „°“), „Menge“/„Qualität“,

@@ -171,9 +171,24 @@ for r in (2.0, 3.5, 1.3):
         out = F.gaussian_blur_raw_pc24(big, rr)
         add("gauss_s%s_%s" % (str(r).replace(".", "p"), s), s,
             {"filter": "gaussian_blur", "params": {"radius": r, "precision": "Single"}}, out, (-m, -m))
+def gauss_over_200_measured(img):
+    """r > 200 (FX-3, re\\23 Gruppe 3): gefuellt und gemittelt wird nur das Pixelrechteck (Alpha > 0)
+    der Eingabe; durchsichtige Pixel darin zaehlen mit. Ganz durchsichtig: die ganze Eingabe."""
+    out = img.copy()
+    ys, xs = np.nonzero(img[..., 3])
+    if xs.size:
+        y0, y1, x0, x1 = ys.min(), ys.max() + 1, xs.min(), xs.max() + 1
+    else:
+        y0, y1, x0, x1 = 0, img.shape[0], 0, img.shape[1]
+    reg = img[y0:y1, x0:x1].astype(np.int64)
+    n = reg.shape[0] * reg.shape[1]
+    col = [int(reg[..., ch].sum()) // n for ch in range(3)] if n else [255, 255, 255]
+    out[y0:y1, x0:x1] = (min(col[0], 255), min(col[1], 255), min(col[2], 255), 255)
+    return out
+
+
 for s in ("rnd", "disc"):
-    out, m = F.gaussian_blur(IMGS[s], 210.0)
-    add("gauss_210_" + s, s, {"filter": "gaussian_blur", "params": {"radius": 210.0}}, out, (-m, -m))
+    add("gauss_210_" + s, s, {"filter": "gaussian_blur", "params": {"radius": 210.0}}, gauss_over_200_measured(IMGS[s]))
 
 for i, (r, a, t) in enumerate([(4.1, 50, 0), (1.5, 200, 10), (2.0, 500, 0), (0.7, 1, 3)]):
     for s in ("rnd", "grad", "disc"):
@@ -182,8 +197,9 @@ for i, (r, a, t) in enumerate([(4.1, 50, 0), (1.5, 200, 10), (2.0, 500, 0), (0.7
             F.unsharp_mask(IMGS[s], r, a, t))
 
 def motion_blur_measured(img, ang, d):
-    """Wie F.motion_blur, aber Proben i = 0 .. abstand-1 statt i <= abstand (DLG-6, Messung PM-6
-    PARITAET_B D47: Winkel 90, Umfang 20 an 320,200,420,300 ergibt 320,200,420,319)."""
+    """Wie F.motion_blur (Proben i = 0 .. abstand), aber der Winkel als float wie im Original:
+    sin 90 Grad und -cos 180 Grad liegen knapp unter 1, trunc(i*sin) = i - 1 (FX-3, re\\23 Gruppe 3:
+    90/10 -> +9 mit Alpha-Stufen 255*k/11, 0/1 -> 1 px nach links; PM-6 D47 90/20 -> +19)."""
     import math
     m = max(0, int(d))
     H, W = img.shape[:2]
@@ -195,7 +211,7 @@ def motion_blur_measured(img, ang, d):
         a %= 360
     if a < 0:
         a = a + 360 + ((-a - 1) // 360) * 360
-    th = a / 360.0 * 6.283185307179586
+    th = float(np.float32(np.float32(a) / np.float32(360.0)) * np.float32(6.2831855))
     sn, cs = math.sin(th), math.cos(th)
     out = big.copy()
     if int(d) < 0:
@@ -206,8 +222,8 @@ def motion_blur_measured(img, ang, d):
     alive = np.ones((H, W), bool)
     ys, xs = np.mgrid[0:H, 0:W]
     i = 0
-    while float(i) < float(int(d)):
-        dx, dy = (0, 0) if i == 0 else (int(i * cs), int(i * sn))
+    while i <= int(d):
+        dx, dy = (int(i * cs), int(i * sn))
         sx, sy = xs + dx, ys - dy
         alive &= (sx >= 0) & (sx < W) & (sy >= 0) & (sy < H)
         acc += np.where(alive[..., None], src[np.clip(sy, 0, H - 1), np.clip(sx, 0, W - 1)], 0)
@@ -228,10 +244,27 @@ for i, (a, q) in enumerate([(30, 20), (100, 100), (10, 50)]):
         out, (ox, oy) = F.radial_blur(IMGS[s], a, q)
         add("radial%d_%s" % (i, s), s, {"filter": "radial_blur", "params": {"amount": a, "quality": q}}, out, (-ox, -oy))
 
+def zoom_blur_measured(img, a, q):
+    """Wie F.zoom_blur, aber auf dem vergroesserten Puffer (06 4.13, 00b2c9e0: Rechteck + Menge, dann
+    Quadrat mit Halbkante floor(sqrt(((H'+1)/2)^2 + ((B'+1)/2)^2) + 0,5) + Menge) und Mitte der
+    Eingabegrenzen (FX-3, re\\23 Gruppe 3: 100/100 am Vektor -> sichtbar 32,21-207,158)."""
+    import math
+    H, W = img.shape[:2]
+    l, t, r, b = -a, -a, W + a, H + a
+    w, h = r - l, b - t
+    half = int(math.floor(math.sqrt(((h + 1) // 2) ** 2 + ((w + 1) // 2) ** 2) + 0.5)) + a
+    cx, cy = l + w // 2, t + h // 2
+    L, T = cx - half, cy - half
+    big = np.zeros((2 * half, 2 * half, 4), np.uint8)
+    big[-T:-T + H, -L:-L + W] = img
+    out = F.zoom_blur_raw(big, a, q, ((W + 1) // 2 - L, (H + 1) // 2 - T))
+    return out, (L, T)
+
+
 for i, (a, q) in enumerate([(30, 20), (100, 100), (60, 40)]):
     for s in ("rnd", "disc"):
-        add("zoom%d_%s" % (i, s), s, {"filter": "zoom_blur", "params": {"amount": a, "quality": q}},
-            F.zoom_blur(IMGS[s], a, q))
+        out, org = zoom_blur_measured(IMGS[s], a, q)
+        add("zoom%d_%s" % (i, s), s, {"filter": "zoom_blur", "params": {"amount": a, "quality": q}}, out, org)
 
 # ---------------------------------------------------------------- Rauschen
 for i, (a, col, org) in enumerate([(50, False, (0, 0)), (100, True, (-13, 7)), (400, False, (5, -3)), (1, True, (300, 400))]):
