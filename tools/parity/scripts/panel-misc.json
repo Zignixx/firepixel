@@ -1,0 +1,783 @@
+{
+ "unit": "panel-misc",
+ "testfile": "T04",
+ "testfiles": [
+  "T04",
+  "T05",
+  "T06",
+  "T02"
+ ],
+ "note": "Action verbs (both/orig/fp): open_testfile <T..> (close docs unsaved, open fresh, base settings) / close_all; menu 'A > B'; command <id from commands.json>; panel <window.* id or title>; panel_menu <panel> (open its menu); select <object name|[names]>; select_none; tool <tool id>; open <logical ui key>; click/double_click/right_click/hover/mouse_down/mouse_up <label|{key}|{popup_swatch:#hex}|{area,pos}>; drag {from,to,mods}; canvas_click/canvas_move [x,y] (document px); canvas_drag {from,to,mods}; scroll {area,delta}; key <combo>; type <text>; wait <ms>; choose {target,item} (pick list entry); file_dialog <path> (choose file in open dialog); export_png doc (export + hash); resize_panel {panel,width}; set_field {target,value}; export {dir,name,type,...} (File > Export dialog); clear_dir/record_dir <dir>; record_file <path> (size+hash+pixels); record_file_text <path>; restart_app; resize_dialog {width,height}; target forms {canvas:[x,y]|name}, {pref_category}, {tree_item:[path]}, hold_key in drag/click; log_value <JSF expression, logged in both>; record_ui <logical ui key> (orig window text/UIA, fp ui_find/ui_state); jsf <code> (in both = fp run_script); fp-only ui_action {...}, ui_find_click <text>. Step keys: after = actions after the shot; log_menu_items = item texts + enabled/checked of the open menu; shot omitted = value-only checkpoint.",
+ "steps": [
+  {
+   "id": "00_overview_normal",
+   "check": "overview after opening the test file",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "panel": "window.autoShapes"
+    }
+   ],
+   "shot": {
+    "area": "window"
+   }
+  },
+  {
+   "id": "01_autoshapes_grid_normal",
+   "check": "autoshapes grid",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "panel": "window.autoShapes"
+    }
+   ],
+   "shot": {
+    "area": "panel:auto-shapes"
+   }
+  },
+  {
+   "id": "02_autoshapes_drag_result",
+   "check": "autoshapes drag",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "panel": "window.autoShapes"
+    },
+    {
+     "drag": {
+      "from": {
+       "autoshape_cell": 0
+      },
+      "to": {
+       "canvas": [
+        600,
+        500
+       ]
+      }
+     }
+    },
+    {
+     "log_value": "fw.getDocumentDOM().layers.map(function(l){return l.frames[0].elements.length}).join('|')"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "03_autoshape_props_star_normal",
+   "check": "autoshape props - star",
+   "method": {
+    "orig": "W, B",
+    "fp": "S, B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "menu": "Fenster > Eigenschaften für automatische Form"
+    },
+    {
+     "select": "ST"
+    },
+    {
+     "record_ui": "panel.fields"
+    }
+   ],
+   "shot": {
+    "area": "panel:auto-shape-properties"
+   }
+  },
+  {
+   "id": "03_autoshape_props_none_normal",
+   "check": "autoshape props - none",
+   "method": {
+    "orig": "W, B",
+    "fp": "S, B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "menu": "Fenster > Eigenschaften für automatische Form"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "record_ui": "panel.fields"
+    }
+   ],
+   "shot": {
+    "area": "panel:auto-shape-properties"
+   },
+   "note": "second shape: plain rect (no autoshape) to see empty state; T04 has only the star"
+  },
+  {
+   "id": "04_autoshape_props_edit_result",
+   "check": "autoshape props edit",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "menu": "Fenster > Eigenschaften für automatische Form"
+    },
+    {
+     "select": "ST"
+    },
+    {
+     "click": "autoshape_props.field.0"
+    },
+    {
+     "key": "Ctrl+A"
+    },
+    {
+     "type": "7"
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "log_value": "fw.selection[0].smartShape ? fw.selection[0].smartShape.getControlPoints ? 'cp' : 'ss' : 'none'"
+    }
+   ],
+   "shot": null,
+   "note": "record point count via JSF unsure; fallback E (export) not needed"
+  },
+  {
+   "id": "05_special_chars_result",
+   "check": "special chars",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T05"
+    },
+    {
+     "menu": "Fenster > Sonstige > Sonderzeichen"
+    },
+    {
+     "select": "TX1"
+    },
+    {
+     "tool": "tool.text"
+    },
+    {
+     "canvas_click": [
+      70,
+      62
+     ]
+    },
+    {
+     "click": {
+      "char_cell": 10
+     }
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "log_value": "fw.selection[0].textRuns.textRuns.map(function(r){return r.characters}).join('')"
+    }
+   ],
+   "shot": {
+    "area": "panel:special-characters"
+   }
+  },
+  {
+   "id": "06_image_editing_normal",
+   "check": "image editing",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T02"
+    },
+    {
+     "menu": "Fenster > Sonstige > Bildbearbeitung"
+    }
+   ],
+   "shot": {
+    "area": "panel:image-editing"
+   }
+  },
+  {
+   "id": "07_image_editing_click_result",
+   "check": "image editing click",
+   "method": {
+    "orig": "J",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T02"
+    },
+    {
+     "menu": "Fenster > Sonstige > Bildbearbeitung"
+    },
+    {
+     "select": "B1"
+    },
+    {
+     "click": {
+      "panel_button": 0
+     }
+    },
+    {
+     "record_ui": "ui_state.tool"
+    }
+   ],
+   "shot": null,
+   "note": "first button selects a tool; fp: ui_state.tool"
+  },
+  {
+   "id": "08_css_props_normal",
+   "check": "css props",
+   "method": {
+    "orig": "W, B",
+    "fp": "S, B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "panel": "window.cssProperties"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "record_ui": "panel.text"
+    }
+   ],
+   "shot": {
+    "area": "panel:css-properties"
+   }
+  },
+  {
+   "id": "09_css_copy_result",
+   "check": "css copy",
+   "method": {
+    "orig": "J",
+    "fp": "R"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "panel": "window.cssProperties"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "click": "css.copy_all"
+    },
+    {
+     "record_ui": "clipboard.text"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "10_find_layout_normal",
+   "check": "find layout",
+   "method": {
+    "orig": "W, B",
+    "fp": "S, B"
+   },
+   "both": [
+    {
+     "open_testfile": "T05"
+    },
+    {
+     "menu": "Fenster > Suchen und ersetzen"
+    },
+    {
+     "record_ui": "panel.fields"
+    }
+   ],
+   "shot": {
+    "area": "panel:find"
+   }
+  },
+  {
+   "id": "11_find_text_result",
+   "check": "find text",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T05"
+    },
+    {
+     "menu": "Fenster > Suchen und ersetzen"
+    },
+    {
+     "choose": {
+      "target": "find.scope",
+      "item": "Dokument durchsuchen"
+     }
+    },
+    {
+     "choose": {
+      "target": "find.kind",
+      "item": "Text suchen"
+     }
+    },
+    {
+     "click": "find.find_field"
+    },
+    {
+     "type": "Abc"
+    },
+    {
+     "click": "find.replace_field"
+    },
+    {
+     "type": "Xyz"
+    },
+    {
+     "click": "Alle ersetzen"
+    },
+    {
+     "log_value": "fw.getDocumentDOM().layers[0].frames[0].elements.map(function(e){return e.textChars||''}).join('|')"
+    }
+   ],
+   "shot": null,
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "list item labels unsure"
+  },
+  {
+   "id": "12_find_font_color_url_result",
+   "check": "find font color url",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T05"
+    },
+    {
+     "menu": "Fenster > Suchen und ersetzen"
+    },
+    {
+     "choose": {
+      "target": "find.kind",
+      "item": "Farbe suchen"
+     }
+    }
+   ],
+   "shot": {
+    "area": "panel:find"
+   },
+   "note": "color/font/url variants; shot shows colour mode fields"
+  },
+  {
+   "id": "13_behaviors_layout_normal",
+   "check": "behaviors layout",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "panel": "window.behaviors"
+    },
+    {
+     "select": "S1"
+    }
+   ],
+   "shot": {
+    "area": "panel:behaviors"
+   }
+  },
+  {
+   "id": "14_behaviors_add_open",
+   "check": "behaviors add",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "panel": "window.behaviors"
+    },
+    {
+     "select": "S1"
+    },
+    {
+     "click": "behaviors.add"
+    },
+    {
+     "log_menu_items": true
+    }
+   ],
+   "shot": {
+    "area": "menu"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "14_behaviors_add_swap_open",
+   "check": "behaviors add - swap",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "panel": "window.behaviors"
+    },
+    {
+     "select": "S1"
+    },
+    {
+     "click": "behaviors.add"
+    },
+    {
+     "click": "Bild austauschen"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "label 'Bild austauschen' unsure"
+  },
+  {
+   "id": "15_behaviors_events_open",
+   "check": "behaviors events",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "panel": "window.behaviors"
+    },
+    {
+     "select": "S1"
+    },
+    {
+     "click": "behaviors.add"
+    },
+    {
+     "click": "Einfaches Rollover"
+    },
+    {
+     "click": {
+      "list_row": 0
+     }
+    },
+    {
+     "click": "behaviors.event_list"
+    },
+    {
+     "log_menu_items": true
+    }
+   ],
+   "shot": {
+    "area": "panel:behaviors"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "16_symbol_props_normal",
+   "check": "symbol props",
+   "method": {
+    "orig": "W, B",
+    "fp": "S, B"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "menu": "Fenster > Symboleigenschaften"
+    },
+    {
+     "select": "I1"
+    },
+    {
+     "record_ui": "panel.fields"
+    }
+   ],
+   "shot": {
+    "area": "panel:symbol-properties"
+   }
+  },
+  {
+   "id": "17_symbol_props_edit_result",
+   "check": "symbol props edit",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "menu": "Fenster > Symboleigenschaften"
+    },
+    {
+     "select": "I1"
+    },
+    {
+     "click": "symbol_props.field.0"
+    },
+    {
+     "key": "Ctrl+A"
+    },
+    {
+     "type": "1"
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "log_value": "fw.selection[0].symbolParams ? JSON.stringify(fw.selection[0].symbolParams) : null"
+    }
+   ],
+   "shot": null,
+   "note": "Grafik1 may have no parameters"
+  },
+  {
+   "id": "18_menus_find_open",
+   "check": "menus - find",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "open_testfile": "T05"
+    },
+    {
+     "menu": "Fenster > Suchen und ersetzen"
+    },
+    {
+     "panel_menu": "find"
+    },
+    {
+     "log_menu_items": true
+    }
+   ],
+   "shot": {
+    "area": "menu"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "18_menus_behaviors_open",
+   "check": "menus - behaviors",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "panel": "window.behaviors"
+    },
+    {
+     "panel_menu": "behaviors"
+    },
+    {
+     "log_menu_items": true
+    }
+   ],
+   "shot": {
+    "area": "menu"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "18_menus_auto_shapes_open",
+   "check": "menus - auto shapes",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "panel": "window.autoShapes"
+    },
+    {
+     "panel_menu": "auto-shapes"
+    },
+    {
+     "log_menu_items": true
+    }
+   ],
+   "shot": {
+    "area": "menu"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "19_no_selection_css_disabled",
+   "check": "no selection - css",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "panel": "window.cssProperties"
+    },
+    {
+     "select_none": true
+    }
+   ],
+   "shot": {
+    "area": "panel:css-properties"
+   }
+  },
+  {
+   "id": "19_no_selection_symbol_disabled",
+   "check": "no selection - symbol",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "menu": "Fenster > Symboleigenschaften"
+    },
+    {
+     "select_none": true
+    }
+   ],
+   "shot": {
+    "area": "panel:symbol-properties"
+   }
+  },
+  {
+   "id": "20_undo_result",
+   "check": "undo",
+   "method": {
+    "orig": "J",
+    "fp": "H"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "menu": "Fenster > Eigenschaften für automatische Form"
+    },
+    {
+     "select": "ST"
+    },
+    {
+     "log_value": "fw.historyPalette.getStepCount()"
+    },
+    {
+     "click": "autoshape_props.field.0"
+    },
+    {
+     "key": "Ctrl+A"
+    },
+    {
+     "type": "7"
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "log_value": "fw.historyPalette.getStepCount()"
+    },
+    {
+     "key": "Ctrl+Z"
+    }
+   ],
+   "shot": null,
+   "note": "record of undo step count via JSF unsure; fp may use ui_state history length instead"
+  }
+ ]
+}

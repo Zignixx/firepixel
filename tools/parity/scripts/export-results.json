@@ -1,0 +1,673 @@
+{
+ "unit": "export-results",
+ "testfile": "T09",
+ "testfiles": [
+  "T09",
+  "T06"
+ ],
+ "note": "Action verbs (both/orig/fp): open_testfile <T..> (close docs unsaved, open fresh, base settings) / close_all; menu 'A > B'; command <id from commands.json>; panel <window.* id or title>; panel_menu <panel> (open its menu); select <object name|[names]>; select_none; tool <tool id>; open <logical ui key>; click/double_click/right_click/hover/mouse_down/mouse_up <label|{key}|{popup_swatch:#hex}|{area,pos}>; drag {from,to,mods}; canvas_click/canvas_move [x,y] (document px); canvas_drag {from,to,mods}; scroll {area,delta}; key <combo>; type <text>; wait <ms>; choose {target,item} (pick list entry); file_dialog <path> (choose file in open dialog); export_png doc (export + hash); resize_panel {panel,width}; set_field {target,value}; export {dir,name,type,...} (File > Export dialog); clear_dir/record_dir <dir>; record_file <path> (size+hash+pixels); record_file_text <path>; restart_app; resize_dialog {width,height}; target forms {canvas:[x,y]|name}, {pref_category}, {tree_item:[path]}, hold_key in drag/click; log_value <JSF expression, logged in both>; record_ui <logical ui key> (orig window text/UIA, fp ui_find/ui_state); jsf <code> (in both = fp run_script); fp-only ui_action {...}, ui_find_click <text>. Step keys: after = actions after the shot; log_menu_items = item texts + enabled/checked of the open menu; shot omitted = value-only checkpoint. Export targets: work folder per side (re _testdateien par work <side> <unit>); runner substitutes {side} and {unit} and clears it (clear_dir). record_dir/record_file/record_file_text = list, hash+size+pixels, text of produced files.",
+ "steps": [
+  {
+   "id": "00_overview_normal",
+   "check": "overview after opening the test file",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "panel": "window.optimize"
+    }
+   ],
+   "shot": {
+    "area": "window"
+   }
+  },
+  {
+   "id": "01_images_only_result",
+   "check": "images only",
+   "method": {
+    "orig": "J (Dateiliste)",
+    "fp": "R"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "clear_dir": "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\work\\{side}\\{unit}"
+    },
+    {
+     "export": {
+      "dir": "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\work\\{side}\\{unit}",
+      "name": "par",
+      "type": "Nur Bilder",
+      "slices": "Ohne"
+     }
+    },
+    {
+     "record_dir": "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\work\\{side}\\{unit}"
+    }
+   ],
+   "shot": null,
+   "note": "export = File > Export dialog: type list, slices list, options; runner fills dialog"
+  },
+  {
+   "id": "02_slices_names_result",
+   "check": "slices names",
+   "method": {
+    "orig": "J",
+    "fp": "R"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "clear_dir": "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\work\\{side}\\{unit}"
+    },
+    {
+     "export": {
+      "dir": "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\work\\{side}\\{unit}",
+      "name": "par",
+      "type": "Nur Bilder",
+      "slices": "Segmente exportieren"
+     }
+    },
+    {
+     "record_dir": "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\work\\{side}\\{unit}"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "03_html_images_result",
+   "check": "html images",
+   "method": {
+    "orig": "J (Text)",
+    "fp": "R"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "clear_dir": "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\work\\{side}\\{unit}"
+    },
+    {
+     "export": {
+      "dir": "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\work\\{side}\\{unit}",
+      "name": "par",
+      "type": "HTML und Bilder",
+      "slices": "Segmente exportieren"
+     }
+    },
+    {
+     "record_dir": "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\work\\{side}\\{unit}"
+    },
+    {
+     "record_file_text": "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\work\\{side}\\{unit}\\par.htm"
+    }
+   ],
+   "shot": null,
+   "note": "HTML text compared after normalising generator comments"
+  },
+  {
+   "id": "04_states_files_result",
+   "check": "states files",
+   "method": {
+    "orig": "J",
+    "fp": "R"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "clear_dir": "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\work\\{side}\\{unit}"
+    },
+    {
+     "export": {
+      "dir": "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\work\\{side}\\{unit}",
+      "name": "par",
+      "type": "Status in Dateien"
+     }
+    },
+    {
+     "record_dir": "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\work\\{side}\\{unit}"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "05_layers_files_result",
+   "check": "layers files",
+   "method": {
+    "orig": "J",
+    "fp": "R"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "clear_dir": "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\work\\{side}\\{unit}"
+    },
+    {
+     "export": {
+      "dir": "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\work\\{side}\\{unit}",
+      "name": "par",
+      "type": "Ebenen in Dateien"
+     }
+    },
+    {
+     "record_dir": "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\work\\{side}\\{unit}"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "06_pages_files_result",
+   "check": "pages files",
+   "method": {
+    "orig": "J",
+    "fp": "R"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "clear_dir": "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\work\\{side}\\{unit}"
+    },
+    {
+     "export": {
+      "dir": "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\work\\{side}\\{unit}",
+      "name": "par",
+      "type": "Seiten in Dateien"
+     }
+    },
+    {
+     "record_dir": "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\work\\{side}\\{unit}"
+    }
+   ],
+   "shot": null,
+   "note": "T09 has one page; T06 has two"
+  },
+  {
+   "id": "07_gif_anim_result",
+   "check": "gif anim",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "clear_dir": "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\work\\{side}\\{unit}"
+    },
+    {
+     "jsf": "fw.getDocumentDOM().setExportOptions({exportFormat:'GIF', animAutoCrop:false})"
+    },
+    {
+     "panel": "window.optimize"
+    },
+    {
+     "choose": {
+      "target": "optimize.format",
+      "item": "Animiertes GIF"
+     }
+    },
+    {
+     "export": {
+      "dir": "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\work\\{side}\\{unit}",
+      "name": "par",
+      "type": "Nur Bilder",
+      "slices": "Ohne"
+     }
+    },
+    {
+     "record_dir": "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\work\\{side}\\{unit}"
+    },
+    {
+     "record_file": "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\work\\{side}\\{unit}\\par.gif"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "note": "shot not of the file: canvas only for context; file compared by frames/delay/loop"
+  },
+  {
+   "id": "08_png_variants_png8_result",
+   "check": "png variants - png8",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "clear_dir": "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\work\\{side}\\{unit}"
+    },
+    {
+     "panel": "window.optimize"
+    },
+    {
+     "choose": {
+      "target": "optimize.format",
+      "item": "PNG 8"
+     }
+    },
+    {
+     "export": {
+      "dir": "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\work\\{side}\\{unit}",
+      "name": "par",
+      "type": "Nur Bilder",
+      "slices": "Ohne"
+     }
+    },
+    {
+     "record_file": "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\work\\{side}\\{unit}\\par.png"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "note": "E: bytes/pixel; canvas shot for context"
+  },
+  {
+   "id": "08_png_variants_png24_result",
+   "check": "png variants - png24",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "clear_dir": "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\work\\{side}\\{unit}"
+    },
+    {
+     "panel": "window.optimize"
+    },
+    {
+     "choose": {
+      "target": "optimize.format",
+      "item": "PNG 24"
+     }
+    },
+    {
+     "export": {
+      "dir": "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\work\\{side}\\{unit}",
+      "name": "par",
+      "type": "Nur Bilder",
+      "slices": "Ohne"
+     }
+    },
+    {
+     "record_file": "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\work\\{side}\\{unit}\\par.png"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "note": "E: bytes/pixel; canvas shot for context"
+  },
+  {
+   "id": "08_png_variants_png32_result",
+   "check": "png variants - png32",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "clear_dir": "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\work\\{side}\\{unit}"
+    },
+    {
+     "panel": "window.optimize"
+    },
+    {
+     "choose": {
+      "target": "optimize.format",
+      "item": "PNG 32"
+     }
+    },
+    {
+     "export": {
+      "dir": "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\work\\{side}\\{unit}",
+      "name": "par",
+      "type": "Nur Bilder",
+      "slices": "Ohne"
+     }
+    },
+    {
+     "record_file": "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\work\\{side}\\{unit}\\par.png"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "note": "E: bytes/pixel; canvas shot for context"
+  },
+  {
+   "id": "09_jpeg_result",
+   "check": "jpeg",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "clear_dir": "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\work\\{side}\\{unit}"
+    },
+    {
+     "panel": "window.optimize"
+    },
+    {
+     "choose": {
+      "target": "optimize.format",
+      "item": "JPEG"
+     }
+    },
+    {
+     "set_field": {
+      "target": "optimize.quality",
+      "value": "80"
+     }
+    },
+    {
+     "export": {
+      "dir": "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\work\\{side}\\{unit}",
+      "name": "par",
+      "type": "Nur Bilder",
+      "slices": "Ohne"
+     }
+    },
+    {
+     "record_file": "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\work\\{side}\\{unit}\\par.jpg"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "10_pdf_result",
+   "check": "pdf",
+   "method": {
+    "orig": "J",
+    "fp": "R"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "clear_dir": "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\work\\{side}\\{unit}"
+    },
+    {
+     "export": {
+      "dir": "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\work\\{side}\\{unit}",
+      "name": "par",
+      "type": "pdf",
+      "open_options": true
+     }
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "type key 'pdf': runner maps to the PDF entry of the export type list; options dialog shot"
+  },
+  {
+   "id": "11_css_sprites_result",
+   "check": "css sprites",
+   "method": {
+    "orig": "J",
+    "fp": "R"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "clear_dir": "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\work\\{side}\\{unit}"
+    },
+    {
+     "export": {
+      "dir": "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\work\\{side}\\{unit}",
+      "name": "par",
+      "type": "CSS-Sprites",
+      "open_options": true
+     }
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "label unsure"
+  },
+  {
+   "id": "12_selected_slices_result",
+   "check": "selected slices",
+   "method": {
+    "orig": "J",
+    "fp": "R"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "clear_dir": "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\work\\{side}\\{unit}"
+    },
+    {
+     "select": "slice:0"
+    },
+    {
+     "export": {
+      "dir": "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\work\\{side}\\{unit}",
+      "name": "par",
+      "type": "Nur Bilder",
+      "slices": "Segmente exportieren",
+      "selected_slices_only": true
+     }
+    },
+    {
+     "record_dir": "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\work\\{side}\\{unit}"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "13_export_area_result_result",
+   "check": "export area result",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "clear_dir": "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\work\\{side}\\{unit}"
+    },
+    {
+     "tool": "tool.exportArea"
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       20,
+       20
+      ],
+      "to": [
+       220,
+       170
+      ]
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "wait": 800
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "export area opens preview; file hash recorded after export by runner (record_file not possible before dialog)"
+  },
+  {
+   "id": "14_wizard_flow_result",
+   "check": "wizard flow",
+   "method": {
+    "orig": "W",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "command": "file.exportWizard"
+    },
+    {
+     "wait": 500
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "15_html_setup_effect_result",
+   "check": "html setup effect",
+   "method": {
+    "orig": "J",
+    "fp": "R"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "clear_dir": "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\work\\{side}\\{unit}"
+    },
+    {
+     "command": "file.htmlSetup"
+    },
+    {
+     "click": "Dokumentspezifisch"
+    },
+    {
+     "choose": {
+      "target": "dialog.extension",
+      "item": ".html"
+     }
+    },
+    {
+     "click": "OK"
+    },
+    {
+     "export": {
+      "dir": "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\work\\{side}\\{unit}",
+      "name": "par",
+      "type": "HTML und Bilder",
+      "slices": "Segmente exportieren"
+     }
+    },
+    {
+     "record_dir": "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\work\\{side}\\{unit}"
+    }
+   ],
+   "shot": null,
+   "note": "tab/field labels of HTML setup unsure"
+  },
+  {
+   "id": "16_copy_html_result",
+   "check": "copy html",
+   "method": {
+    "orig": "J",
+    "fp": "R"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "clear_dir": "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\work\\{side}\\{unit}"
+    },
+    {
+     "command": "edit.copyHtmlCode"
+    },
+    {
+     "wait": 500
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "wizard dialog; clipboard text recorded only if runner finishes the wizard to WORK"
+  }
+ ]
+}

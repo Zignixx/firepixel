@@ -1,0 +1,655 @@
+{
+ "unit": "color-popup-contexts",
+ "testfile": "T04",
+ "testfiles": [
+  "T04",
+  "T05",
+  "T06",
+  "T08",
+  "T09",
+  "T02"
+ ],
+ "note": "Action verbs (both/orig/fp): open_testfile <T..> (close docs unsaved, open fresh, base settings) / close_all; menu 'A > B'; command <id from commands.json>; panel <window.* id or title>; panel_menu <panel> (open its menu); select <object name|[names]>; select_none; tool <tool id>; open <logical ui key>; click/double_click/right_click/hover/mouse_down/mouse_up <label|{key}|{popup_swatch:#hex}|{area,pos}>; drag {from,to,mods}; canvas_click/canvas_move [x,y] (document px); canvas_drag {from,to,mods}; scroll {area,delta}; key <combo>; type <text>; wait <ms>; choose {target,item} (pick list entry); file_dialog <path> (choose file in open dialog); export_png doc (export + hash); resize_panel {panel,width}; set_field {target,value}; export {dir,name,type,...} (File > Export dialog); clear_dir/record_dir <dir>; record_file <path> (size+hash+pixels); record_file_text <path>; restart_app; resize_dialog {width,height}; target forms {canvas:[x,y]|name}, {pref_category}, {tree_item:[path]}, hold_key in drag/click; log_value <JSF expression, logged in both>; record_ui <logical ui key> (orig window text/UIA, fp ui_find/ui_state); jsf <code> (in both = fp run_script); fp-only ui_action {...}, ui_find_click <text>. Step keys: after = actions after the shot; log_menu_items = item texts + enabled/checked of the open menu; shot omitted = value-only checkpoint.",
+ "steps": [
+  {
+   "id": "00_overview_normal",
+   "check": "overview after opening the test file",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    }
+   ],
+   "shot": {
+    "area": "window"
+   }
+  },
+  {
+   "id": "01_toolbox_stroke_open",
+   "check": "toolbox stroke",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "panel": "window.tools"
+    },
+    {
+     "open": "toolbox.stroke_color"
+    }
+   ],
+   "shot": {
+    "area": "popup"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "02_toolbox_fill_open",
+   "check": "toolbox fill",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "panel": "window.tools"
+    },
+    {
+     "open": "toolbox.fill_color"
+    }
+   ],
+   "shot": {
+    "area": "popup"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "03_toolbox_swap_default_swap_result",
+   "check": "toolbox swap default - swap",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "click": "toolbox.swap_colors"
+    },
+    {
+     "log_value": "fw.getDocumentDOM().fillColorDefault"
+    },
+    {
+     "log_value": "fw.getDocumentDOM().brushColorDefault"
+    }
+   ],
+   "shot": {
+    "area": "panel:tools"
+   },
+   "note": "JSF names of default colors unsure"
+  },
+  {
+   "id": "03_toolbox_swap_default_default_result",
+   "check": "toolbox swap default - default",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "click": "toolbox.default_colors"
+    },
+    {
+     "log_value": "fw.getDocumentDOM().fillColorDefault"
+    },
+    {
+     "log_value": "fw.getDocumentDOM().brushColorDefault"
+    }
+   ],
+   "shot": {
+    "area": "panel:tools"
+   }
+  },
+  {
+   "id": "03_toolbox_swap_default_none_result",
+   "check": "toolbox swap default - none",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "click": "toolbox.no_color"
+    },
+    {
+     "log_value": "fw.selection.length ? fw.selection[0].pathAttributes.fillColor : null"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "04_toolbox_active_normal",
+   "check": "toolbox active",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "click": "toolbox.stroke_icon"
+    }
+   ],
+   "shot": {
+    "area": "panel:tools"
+   },
+   "note": "stroke field becomes active; marker look"
+  },
+  {
+   "id": "05_inspector_fill_open",
+   "check": "inspector fill",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "open": "inspector.fill_color"
+    }
+   ],
+   "shot": {
+    "area": "popup"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "06_inspector_stroke_open",
+   "check": "inspector stroke",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "E1"
+    },
+    {
+     "open": "inspector.stroke_color"
+    }
+   ],
+   "shot": {
+    "area": "popup"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "07_inspector_text_open",
+   "check": "inspector text",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T05"
+    },
+    {
+     "select": "TX1"
+    },
+    {
+     "open": "inspector.text_color"
+    }
+   ],
+   "shot": {
+    "area": "popup"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "08_effect_shadow_open",
+   "check": "effect shadow",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T08"
+    },
+    {
+     "select": "FX"
+    },
+    {
+     "double_click": "inspector.fx_row.0"
+    },
+    {
+     "click": "fx_popup.color"
+    },
+    {
+     "open": "fx_popup.color"
+    }
+   ],
+   "shot": {
+    "area": "popup"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "fx row 0 = drop shadow; opening its color well from the effect popup"
+  },
+  {
+   "id": "09_gradient_stop_open",
+   "check": "gradient stop",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "choose": {
+      "target": "inspector.fill_category",
+      "item": "Linear"
+     }
+    },
+    {
+     "open": "inspector.fill_color"
+    },
+    {
+     "click": "gradient_editor.stop.0"
+    }
+   ],
+   "shot": {
+    "area": "popup"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "gradient editor opens from the fill swatch; stop 0 = left color stop"
+  },
+  {
+   "id": "10_dialog_canvas_open",
+   "check": "dialog canvas",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "command": "modify.canvas.canvasColor"
+    },
+    {
+     "click": "dialog.color_well"
+    }
+   ],
+   "shot": {
+    "area": "popup"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "11_dialog_grid_open",
+   "check": "dialog grid",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "command": "view.grid.editGrid"
+    },
+    {
+     "click": "dialog.color_well"
+    }
+   ],
+   "shot": {
+    "area": "popup"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "12_panel_mixer_open",
+   "check": "panel mixer",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "panel": "window.colorMixer"
+    },
+    {
+     "open": "mixer.fill_color"
+    }
+   ],
+   "shot": {
+    "area": "popup"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "13_panel_layers_color_open",
+   "check": "panel layers color",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "select": "S1"
+    },
+    {
+     "open": "inspector.slice_color"
+    }
+   ],
+   "shot": {
+    "area": "popup"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "layer colour has no well in the layers panel; segment colour in inspector used"
+  },
+  {
+   "id": "14_preview_matte_open",
+   "check": "preview matte",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "panel": "window.optimize"
+    },
+    {
+     "open": "optimize.matte"
+    }
+   ],
+   "shot": {
+    "area": "popup"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "15_tool_colors_text_open",
+   "check": "tool colors - text",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "tool": "tool.text"
+    },
+    {
+     "open": "inspector.text_color"
+    }
+   ],
+   "shot": {
+    "area": "popup"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "15_tool_colors_replace_open",
+   "check": "tool colors - replace",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T02"
+    },
+    {
+     "select": "B1"
+    },
+    {
+     "tool": "tool.replaceColor"
+    },
+    {
+     "open": "inspector.replace_from_color"
+    }
+   ],
+   "shot": {
+    "area": "popup"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "tool id and field key for replace color unsure"
+  },
+  {
+   "id": "16_same_popup_normal",
+   "check": "same popup",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "open": "toolbox.fill_color"
+    },
+    {
+     "record_ui": "popup.rect"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "open": "inspector.fill_color"
+    },
+    {
+     "record_ui": "popup.rect"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "panel": "window.colorMixer"
+    },
+    {
+     "open": "mixer.fill_color"
+    },
+    {
+     "record_ui": "popup.rect"
+    }
+   ],
+   "shot": null,
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "17_system_picker_open",
+   "check": "system picker",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "panel": "window.colorMixer"
+    },
+    {
+     "open": "mixer.fill_color"
+    },
+    {
+     "click": "popup.system_picker_button"
+    },
+    {
+     "wait": 500
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "18_ctrl_click_result",
+   "check": "ctrl click",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "click": {
+      "target": "toolbox.fill_color",
+      "mods": [
+       "ctrl"
+      ]
+     }
+    },
+    {
+     "log_value": "fw.selection.length ? fw.selection[0].pathAttributes.fillColor : null"
+    },
+    {
+     "record_ui": "popup.visible"
+    }
+   ],
+   "shot": null,
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  }
+ ]
+}
