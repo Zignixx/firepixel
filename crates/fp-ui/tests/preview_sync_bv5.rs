@@ -191,20 +191,35 @@ fn doc_offsets(h: &mut H) -> Vec<(Vec2, Vec2)> {
         (std::sync::Arc::clone(&d.doc), d.page)
     };
     let settings = fp_ui::preview::tile_settings(&fp_export::doc_export::page_settings(&d_doc, page), mode);
-    let mut out = Vec::new();
-    for (i, p) in panes.iter().enumerate() {
-        let body = fp_ui::preview::pane_body(*p);
-        let r = if i == 0 {
-            st(h).canvases.get(&id).and_then(|c| c.page_screen).expect("Seite gezeichnet")
-        } else {
-            let ctx = h.ctx.clone();
-            let tile = fp_ui::preview::tile(&ctx, st(h), &settings[i - 1]).expect("Kachel");
-            let tex = tile.texture.expect("Textur").id();
-            *painted_images(h, tex).first().unwrap_or_else(|| panic!("Feld {i}: Exportbild nicht gezeichnet"))
-        };
-        out.push((r.min - body.center(), r.size()));
+    // Die Exportbilder der Kacheln rechnet ein Hintergrund-Thread; unter Last (Gesamtlauf) sind sie
+    // nach zwei Bildern evtl. noch nicht da. Darum weiterzeichnen, bis jedes Feld sein aktuelles
+    // Exportbild zeigt (höchstens ≈ 20 s), und erst dann die Lage vergleichen.
+    let mut missing = Vec::new();
+    for attempt in 0..400 {
+        missing.clear();
+        let mut out = Vec::new();
+        for (i, p) in panes.iter().enumerate() {
+            let body = fp_ui::preview::pane_body(*p);
+            let r = if i == 0 {
+                st(h).canvases.get(&id).and_then(|c| c.page_screen)
+            } else {
+                let ctx = h.ctx.clone();
+                fp_ui::preview::tile(&ctx, st(h), &settings[i - 1]).and_then(|t| t.texture).and_then(|tex| painted_images(h, tex.id()).first().copied())
+            };
+            match r {
+                Some(r) => out.push((r.min - body.center(), r.size())),
+                None => missing.push(i),
+            }
+        }
+        if missing.is_empty() {
+            return out;
+        }
+        if attempt > 0 {
+            std::thread::sleep(std::time::Duration::from_millis(50));
+        }
+        h.run_steps(1);
     }
-    out
+    panic!("Feld {missing:?}: Exportbild nach 20 s nicht gezeichnet")
 }
 
 fn assert_doc_synced(h: &mut H, what: &str) -> Vec2 {
