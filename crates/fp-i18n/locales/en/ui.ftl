@@ -142,6 +142,11 @@ ui-cli-help =
     Options:
       --design=normal|dark|oled     theme for this session only
       --mcp[=PORT]                  start the AI control channel (MCP over HTTP, 127.0.0.1 only, with token)
+      --batch [RECIPE] [FILE …]     open the Batch Studio: RECIPE is a .fpbatch.json or the name of
+                                    a template (e.g. web-webp, logos-to-svg, video-to-gif);
+                                    the following files and folders are added to the list
       --help, -h                    show this help
 
     Files are opened at startup.
+    Example: firepixel --batch web-webp C:\Photos
+    Without a window: firepixel-cli batch --recipe <recipe> … (firepixel-cli batch --help)

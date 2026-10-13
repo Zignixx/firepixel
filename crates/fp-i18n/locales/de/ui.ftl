@@ -142,6 +142,11 @@ ui-cli-help =
     Optionen:
       --design=normal|dark|oled     Design nur für diese Sitzung
       --mcp[=PORT]                  KI-Steuerkanal starten (MCP über HTTP, nur 127.0.0.1, mit Token)
+      --batch [REZEPT] [DATEI …]    Batch-Studio öffnen: REZEPT ist eine .fpbatch.json oder der Name
+                                    einer Vorlage (z. B. web-webp, logos-to-svg, video-to-gif);
+                                    die folgenden Dateien und Ordner kommen in die Liste
       --help, -h                    diese Hilfe anzeigen
 
     Dateien werden beim Start geöffnet.
+    Beispiel: firepixel --batch web-webp C:\Fotos
+    Ohne Fenster: firepixel-cli batch --recipe <rezept> … (firepixel-cli batch --help)

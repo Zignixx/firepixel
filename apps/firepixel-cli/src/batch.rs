@@ -37,6 +37,19 @@ pub fn intercept() -> Option<ExitCode> {
         return None;
     }
     let rest = &args[i + 1..];
+    let legacy = rest.iter().any(|a| a == "--actions" || a.starts_with("--actions="));
+    // `batch --help` ohne `--actions`: Hilfe des Rezept-Modus samt Vorlagen und der älteren Form (BATCH-11b)
+    if !legacy && rest.iter().any(|a| a == "--help" || a == "-h") {
+        let mut c = command();
+        println!("{}", c.render_long_help());
+        println!("{}", t("batch-cli-help-templates"));
+        for tpl in fp_batch::templates::all() {
+            println!("  {:<22} {}", tpl.id, tpl.title);
+        }
+        println!();
+        println!("{}", t("batch-cli-help-legacy"));
+        return Some(ExitCode::SUCCESS);
+    }
     if !rest.iter().any(|a| a == "--recipe" || a.starts_with("--recipe=") || a == "--steps" || a == "--templates") {
         return None;
     }
