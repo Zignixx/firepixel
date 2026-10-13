@@ -919,10 +919,21 @@ pub fn draw_fields(ui: &mut Ui, st: &AppState, d: &mut FormDialog, area: Rect) -
                 // ohne Beschriftung eingerückt unter dem Feld davor (Leinwandfarbe: unter „Benutzerdefiniert:“)
                 let cx = if f.label.is_empty() { x0 + COLOR_INDENT } else { ctrl_x };
                 let cur = f.value.as_str().and_then(fp_color::Rgba8::parse_hex).map(|c| c.to_argb());
+                // eingerücktes Farbfeld (D21) ist wie im Original kein Tab-Stopp: Tab geht von der
+                // Optionsgruppe direkt zu OK (CT-1a: vorher ein unsichtbarer Stopp)
+                let skip = egui::Id::new((dlg_id.as_str(), i, "fp-color-tab"));
+                let no_tab = f.label.is_empty();
+                if no_tab {
+                    super::skip_tab_stop_before(ui, skip);
+                }
                 if let Some(crate::inspector::popups::ColorChoice::Color(col)) = crate::inspector::popups::color_button(ui, id, Rect::from_min_size(pos2(cx, y), vec2(26.0, 20.0)), st, cur, true, false, false) {
                     let a = cur.map(|c| c.a()).unwrap_or(255) as u32;
                     f.value = json!(crate::ui_commands::hex(fp_color::Argb((col.0 & 0x00ff_ffff) | a << 24)));
                     changed = true;
+                }
+                // Kennung wie in `color_button_with` → `fields::swatch` (zweimal gehasht)
+                if no_tab && let Some(resp) = ui.ctx().read_response(egui::Id::new(egui::Id::new(id))) {
+                    super::skip_tab_stop_after(ui, skip, &resp);
                 }
             }
         }

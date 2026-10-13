@@ -138,3 +138,25 @@ fn d42_arrow_keys_move_focused_slider() {
     assert_eq!(form_value(&h, "brightness").as_f64(), Some(v + 1.0), "→ nach Klick");
     key(&mut h, Key::Escape);
 }
+
+/// D21 Leinwandfarbe: Startfokus „Weiß“, ↓ → Transparent, Tab → OK (das eingerückte Farbfeld ist
+/// kein Tab-Stopp), Umschalt+Tab zurück zur Gruppe.
+#[test]
+fn d21_canvas_color_no_hidden_tab_stop() {
+    let mut h = harness_with(bitmap_session());
+    open(&mut h, "modify.canvas.canvasColor");
+    assert_eq!(focused(&h), Some((Role::RadioButton, fp_i18n::t("dlg-canvas-white"))), "Startfokus Weiß");
+    key(&mut h, Key::ArrowDown);
+    assert_eq!(focused(&h), Some((Role::RadioButton, fp_i18n::t("dlg-canvas-transparent"))), "↓ Transparent");
+    key(&mut h, Key::Tab);
+    assert_eq!(focused(&h), Some((Role::Button, fp_i18n::t("btn-ok"))), "Tab → OK");
+    key(&mut h, Key::Tab);
+    assert_eq!(focused(&h), Some((Role::Button, fp_i18n::t("btn-cancel"))), "Tab → Abbrechen");
+    ev(&mut h, Event::ModifiersChanged(Modifiers::SHIFT));
+    ev(&mut h, Event::Key { key: Key::Tab, physical_key: Some(Key::Tab), pressed: true, repeat: false, modifiers: Modifiers::SHIFT });
+    ev(&mut h, Event::Key { key: Key::Tab, physical_key: Some(Key::Tab), pressed: false, repeat: false, modifiers: Modifiers::SHIFT });
+    ev(&mut h, Event::ModifiersChanged(Modifiers::NONE));
+    h.run_steps(2);
+    assert_eq!(focused(&h), Some((Role::Button, fp_i18n::t("btn-ok"))), "Umschalt+Tab → OK");
+    key(&mut h, Key::Escape);
+}
