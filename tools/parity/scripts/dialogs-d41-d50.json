@@ -1333,7 +1333,7 @@
      "key": "Enter"
     },
     {
-     "log_value": "(function(){var s=fw.historyPalette.getSteps(),r=[];for(var i=0;i<s.length;i++)r.push(s[i].name);return r.toSource();})()"
+     "log_value": "(function(){var h=fw.historyPalette,n=h.getStepCount(),a=[],js;for(var i=0;i<n;i++)a.push(i);try{js=h.getStepsAsJavaScript(a);}catch(e){js=\"ERR \"+e;}return [n,js].toSource();})()"
     }
    ],
    "fp": [
@@ -1350,11 +1350,11 @@
      "key": "Enter"
     },
     {
-     "log_value": "(function(){var s=fw.historyPalette.getSteps(),r=[];for(var i=0;i<s.length;i++)r.push(s[i].name);return r.toSource();})()"
+     "log_value": "(function(){var h=fw.historyPalette,n=h.getStepCount(),a=[],js;for(var i=0;i<n;i++)a.push(i);try{js=h.getStepsAsJavaScript(a);}catch(e){js=\"ERR \"+e;}return [n,js].toSource();})()"
     }
    ],
    "shot": null,
-   "note": "history read-out via fw.historyPalette.getSteps()/step.name is unverified in both programs"
+   "note": "history read-out via fw.historyPalette.getStepCount()/getStepsAsJavaScript()"
   }
  ]
 }

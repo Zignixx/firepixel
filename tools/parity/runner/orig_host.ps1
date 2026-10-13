@@ -58,12 +58,25 @@ public static class N {
   public static uint Pid(IntPtr h) { uint p; GetWindowThreadProcessId(h, out p); return p; }
   public static List<IntPtr> Tops(uint pid) { var l = new List<IntPtr>(); EnumWindows((h, x) => { if (IsWindowVisible(h) && Pid(h) == pid) l.Add(h); return true; }, IntPtr.Zero); return l; }
   public static List<IntPtr> Kids(IntPtr p) { var l = new List<IntPtr>(); EnumChildWindows(p, (h, x) => { if (IsWindowVisible(h)) l.Add(h); return true; }, IntPtr.Zero); return l; }
-  public static uint TargetPid = 0; public static string TargetClass = "";
+  public static uint TargetPid = 0; public static string TargetClass = ""; public static IntPtr MainHwnd = IntPtr.Zero;
   public static string Guard() { if (TargetPid == 0) return "no target"; IntPtr f = GetForegroundWindow(); if (f == IntPtr.Zero) return "no foreground window";
     if (Pid(f) != TargetPid) return "foreground belongs to process " + Pid(f) + " (" + Cls(f) + ")";
-    string c = Cls(f); if (TargetClass != "" && c != TargetClass && c != "#32770" && c != "#32768" && !c.StartsWith("Afx:")) return "foreground class " + c; return ""; }
-  public static void Send(INPUT[] a) { string g = Guard(); if (g != "") throw new Exception("input refused: " + g);
+    // own windows of the target process only: main window, dialogs, popup menus, MFC tool windows, panels
+    // (OWL.*) and the Flash based panels (SWFPLAYER*)
+    string c = Cls(f); if (TargetClass != "" && c != TargetClass && c != "#32770" && c != "#32768" && !c.StartsWith("Afx:") && !c.StartsWith("OWL.") && !c.StartsWith("SWFPLAYER")) return "foreground class " + c; return ""; }
+  // The foreground is briefly empty while a dialog/menu closes or a window is activated: wait for it
+  // (up to ~2 s); when it stays empty, give it back to the target's main window. A foreground of another
+  // process is never overridden here.
+  public static void Send(INPUT[] a) { string g = Guard();
+    for (int k = 0; k < 20 && g != ""; k++) {
+      if (g == "no foreground window" && MainHwnd != IntPtr.Zero && k == 6) { keybd_event(0x12, 0, 0, IntPtr.Zero); keybd_event(0x12, 0, 2, IntPtr.Zero); SetForegroundWindow(MainHwnd); }
+      if (g != "no foreground window" && !g.StartsWith("foreground class")) break;
+      System.Threading.Thread.Sleep(100); g = Guard(); }
+    if (g != "") throw new Exception("input refused: " + g);
     uint r = SendInput((uint)a.Length, a, Marshal.SizeOf(typeof(INPUT))); if (r != a.Length) throw new Exception("SendInput " + r + "/" + a.Length); }
+  [StructLayout(LayoutKind.Sequential)] public struct GUITHREADINFO { public int cbSize, flags; public IntPtr hwndActive, hwndFocus, hwndCapture, hwndMenuOwner, hwndMoveSize, hwndCaret; public RECT rcCaret; }
+  [DllImport("user32.dll")] public static extern bool GetGUIThreadInfo(uint tid, ref GUITHREADINFO g);
+  public static IntPtr FocusOf(IntPtr top) { uint p; uint tid = GetWindowThreadProcessId(top, out p); var g = new GUITHREADINFO(); g.cbSize = Marshal.SizeOf(typeof(GUITHREADINFO)); if (!GetGUIThreadInfo(tid, ref g)) return IntPtr.Zero; return g.hwndFocus; }
   public static INPUT Key(ushort vk, bool up) { var i = new INPUT(); i.type = 1; i.u.ki.wVk = vk; i.u.ki.dwFlags = up ? 2u : 0u;
     if ((vk >= 0x21 && vk <= 0x28) || vk == 0x2D || vk == 0x2E) i.u.ki.dwFlags |= 1; return i; }
   public static INPUT Uni(char c, bool up) { var i = new INPUT(); i.type = 1; i.u.ki.wScan = c; i.u.ki.dwFlags = 4u | (up ? 2u : 0u); return i; }
@@ -122,7 +135,7 @@ function DialogTexts($h) { (([PR.N]::Kids($h) | % { [PR.N]::Txt($_) } | ? { $_ }
 
 function Focus {
   $h = MainWin
-  [PR.N]::TargetClass = $S.main_class
+  [PR.N]::TargetClass = $S.main_class; [PR.N]::MainHwnd = $h
   if ([PR.N]::IsIconic($h)) { [PR.N]::ShowWindow($h, 9) | Out-Null }
   # a dialog of the target may legitimately own the foreground
   $f = [PR.N]::GetForegroundWindow()
@@ -254,24 +267,41 @@ function MenuPath($path, $final, $bar) {
   $cr = CRect (MainWin)
   Click ($cr[0] + [int]$pos[1]) ($cr[1] + [int]$pos[2]) 'left' @() 1; Start-Sleep -Milliseconds 350
   if ((MenuWins).Count -eq 0) { throw "menu did not open: $top" }
+  $invoked = $false; $seen = @()
   for ($k = 1; $k -lt $path.Count; $k++) {
     $want = Clean $path[$k]; $hit = $null
     for ($t = 0; $t -lt 10 -and -not $hit; $t++) {
-      foreach ($mw in (OpenMenus).menus) { foreach ($it in $mw.items) { if (-not $it.separator -and $it.text -eq $want) { $hit = $it } } }
+      # newest (innermost) menu last: exact text first, then an abbreviated entry ("Gaußscher Weichz." for
+      # "Gaußscher Weichzeichner") or a longer one that starts with the wanted text
+      # menus opened by the previous step first (a sub menu entry wins over an equally named parent entry)
+      $all = @((OpenMenus).menus); $menus = @($all | ? { $seen -notcontains $_.hwnd }) + @($all | ? { $seen -contains $_.hwnd })
+      [array]::Reverse($menus)
+      foreach ($mw in $menus) { foreach ($it in $mw.items) { if (-not $it.separator -and $it.text -eq $want) { $hit = $it } } }
+      if (-not $hit) { foreach ($mw in $menus) { foreach ($it in $mw.items) { if ($it.separator -or -not $it.text) { continue }
+        $a = $it.text.TrimEnd('.'); if (($it.text.EndsWith('.') -and $a.Length -ge 4 -and $want.StartsWith($a, [StringComparison]::OrdinalIgnoreCase)) -or ($want.Length -ge 4 -and $it.text.StartsWith($want, [StringComparison]::OrdinalIgnoreCase))) { $hit = $it } } } }
       if (-not $hit) { Start-Sleep -Milliseconds 150 }
     }
     if (-not $hit) { throw "menu item not found: $want" }
+    $seen = @($all | % { $_.hwnd })
     $r = $hit.rect; $x = [int](($r[0] + $r[2]) / 2); $y = [int](($r[1] + $r[3]) / 2)
     $last = ($k -eq $path.Count - 1)
-    if ($last -and $final -eq 'invoke') {
+    # 'auto': a leaf entry at the end of the path is executed, a sub menu is left open
+    if ($last -and ($final -eq 'invoke' -or ($final -eq 'auto' -and -not $hit.submenu))) {
       if ($hit.grayed) { throw "menu item disabled: $want" }
+      # hover first (the item gets highlighted), then click; if the menu is still open afterwards the click
+      # did not arrive: execute the highlighted item with Enter
+      [PR.N]::SetCursorPos($x, $y) | Out-Null; [PR.N]::Send(@([PR.N]::Mouse(0x1, 0))); Start-Sleep -Milliseconds 250
       Click $x $y 'left' @() 1
+      for ($t = 0; $t -lt 8 -and (MenuWins).Count; $t++) { Start-Sleep -Milliseconds 100 }
+      if ((MenuWins).Count) { [PR.N]::SetCursorPos($x, $y) | Out-Null; [PR.N]::Send(@([PR.N]::Mouse(0x1, 0))); Start-Sleep -Milliseconds 200; Combo 'enter'; Start-Sleep -Milliseconds 300 }
+      if ((MenuWins).Count) { throw "menu item did not execute (menu still open): $want" }
+      $invoked = $true
     } else {
       [PR.N]::SetCursorPos($x, $y) | Out-Null; [PR.N]::Send(@([PR.N]::Mouse(0x1, 0))); Start-Sleep -Milliseconds 500
       if ($hit.submenu -and -not $last) { } elseif ($hit.submenu) { Start-Sleep -Milliseconds 200 }
     }
   }
-  @{ menus = @(MenuWins | % { WRect $_ }) }
+  @{ menus = @(MenuWins | % { WRect $_ }); invoked = $invoked }
 }
 function Handle($c) {
   switch ($c.cmd) {
@@ -325,7 +355,18 @@ function Handle($c) {
         $kids = @([PR.N]::Kids($h) | ? { [PR.N]::Cls($_) -eq 'Button' }); $btn = $null
         foreach ($names in $lists) { if (-not $btn) { $btn = $kids | ? { $names -contains (Clean ([PR.N]::Txt($_))) } | Select-Object -First 1 } }
         if ($btn) { [PR.N]::PostMessage($btn, 0x00F5, [IntPtr]::Zero, [IntPtr]::Zero) | Out-Null } else { [PR.N]::PostMessage($h, 0x111, [IntPtr]$cmdId, [IntPtr]::Zero) | Out-Null }; $n++ }
+      # property-sheet style dialogs (e.g. the brush stroke editor) ignore a posted click on their Cancel
+      # button: IDCANCEL to the dialog, then the system close command
+      if ($n -and $c.mode -ne 'ok') { Start-Sleep -Milliseconds 400
+        foreach ($h in @(Dialogs)) { $t = "$([PR.N]::Txt($h)) | $(DialogTexts $h)"; if ($c.except -and $t -match $c.except) { continue }
+          [PR.N]::PostMessage($h, 0x111, [IntPtr]2, [IntPtr]::Zero) | Out-Null; Start-Sleep -Milliseconds 300
+          if ([PR.N]::IsWindowVisible($h)) { [PR.N]::PostMessage($h, 0x0112, [IntPtr]0xF060, [IntPtr]::Zero) | Out-Null; Start-Sleep -Milliseconds 300 } } }
       return $n }
+    'focused' { $f = [PR.N]::GetForegroundWindow(); if ($f -eq [IntPtr]::Zero -or [PR.N]::Pid($f) -ne [uint32]$S.pid) { $f = MainWin }
+                $h = [PR.N]::FocusOf($f); if ($h -eq [IntPtr]::Zero) { return $null }
+                $i = WinInfo $h; $p = [PR.N]::GetParent($h); if ($p -ne [IntPtr]::Zero) { $i.parent = @{ class = [PR.N]::Cls($p); title = [PR.N]::Txt($p) } }; return $i }
+    'close_window' { $h = [IntPtr][int64]$c.hwnd; if ([PR.N]::Pid($h) -ne [uint32]$S.pid -or $h -eq (MainWin)) { throw 'not a tool window of the target' }
+                     [PR.N]::PostMessage($h, 0x0010, [IntPtr]::Zero, [IntPtr]::Zero) | Out-Null; Start-Sleep -Milliseconds 300; return [PR.N]::IsWindowVisible($h) }
     'menus' { return (OpenMenus) }
     'close_menus' { return (CloseMenus) }
     'menu' { return (MenuPath @($c.path) $c.final @($c.bar)) }
@@ -350,6 +391,14 @@ function Handle($c) {
     'menu_tree' { $out = New-Object Collections.ArrayList; foreach ($w in (MenuWins)) { $m = [PR.N]::SendMessage($w, 0x01E1, [IntPtr]::Zero, [IntPtr]::Zero); if ($m -ne [IntPtr]::Zero) { TreeOf $m '' $out } }; return ,$out.ToArray() }
     'at' { $pt = New-Object PR.N+POINT; $pt.X = [int]$c.x; $pt.Y = [int]$c.y; $h = [PR.N]::WindowFromPoint($pt); if ($h -eq [IntPtr]::Zero) { return $null }
            $i = WinInfo $h; $i.title = [PR.N]::Txt($h); $p = [PR.N]::GetParent($h); if ($p -ne [IntPtr]::Zero) { $i.parent = WinInfo $p }; $i.pid = [PR.N]::Pid($h); return $i }
+    # smallest visible Edit/ComboBox child of the target containing the point (WindowFromPoint may hit a tooltip
+    # or a transparent overlay instead)
+    'field_at' { $best = $null; $area = [int64]::MaxValue; $m = MainWin
+      foreach ($top in @($m) + @([PR.N]::Tops([uint32]$S.pid) | ? { $_ -ne $m })) { foreach ($k in [PR.N]::Kids($top)) {
+        $cl = [PR.N]::Cls($k); if ($cl -ne 'Edit' -and $cl -ne 'ComboBox') { continue }
+        $r = WRect $k; if ($c.x -lt $r[0] -or $c.x -ge $r[2] -or $c.y -lt $r[1] -or $c.y -ge $r[3]) { continue }
+        $a = [int64]($r[2] - $r[0]) * ($r[3] - $r[1]); if ($a -lt $area) { $area = $a; $best = $k } } }
+      if (-not $best) { return $null }; $i = WinInfo $best; $p = [PR.N]::GetParent($best); if ($p -ne [IntPtr]::Zero) { $i.parent = WinInfo $p }; return $i }
     'park' { [PR.N]::SetCursorPos([int]$c.x, [int]$c.y) | Out-Null; return 'ok' }
     'shot' { $r = @($c.rect); $b = [PR.N]::Screen($r[0], $r[1], $r[2], $r[3]); $b.Save($c.path, [System.Drawing.Imaging.ImageFormat]::Png); $b.Dispose(); return $c.path }
     default { throw "unknown command $($c.cmd)" }

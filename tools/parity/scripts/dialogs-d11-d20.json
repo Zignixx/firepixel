@@ -153,7 +153,7 @@
      "menu_item": "Datei > Exportassistent..."
     },
     {
-     "log_value": "(function(){var s=fw.historyPalette.getSteps(),r=[];for(var i=0;i<s.length;i++)r.push(s[i].name);return r.toSource();})()"
+     "log_value": "(function(){var h=fw.historyPalette,n=h.getStepCount(),a=[],js;for(var i=0;i<n;i++)a.push(i);try{js=h.getStepsAsJavaScript(a);}catch(e){js=\"ERR \"+e;}return [n,js].toSource();})()"
     }
    ],
    "fp": [
@@ -161,11 +161,11 @@
      "command": "file.exportWizard"
     },
     {
-     "log_value": "(function(){var s=fw.historyPalette.getSteps(),r=[];for(var i=0;i<s.length;i++)r.push(s[i].name);return r.toSource();})()"
+     "log_value": "(function(){var h=fw.historyPalette,n=h.getStepCount(),a=[],js;for(var i=0;i<n;i++)a.push(i);try{js=h.getStepsAsJavaScript(a);}catch(e){js=\"ERR \"+e;}return [n,js].toSource();})()"
     }
    ],
    "shot": null,
-   "note": "click Weiter until the end, then Fertig/Abbrechen; history read-out via fw.historyPalette.getSteps()/step.name is unverified in both programs"
+   "note": "click Weiter until the end, then Fertig/Abbrechen; history read-out via fw.historyPalette.getStepCount()/getStepsAsJavaScript()"
   },
   {
    "id": "03_d12_reach_open",

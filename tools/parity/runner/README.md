@@ -42,8 +42,10 @@ in a row the program is restarted cleanly and the unit goes on. A script whose h
 (launcher ended, script never started) is handed over again; a `.started` marker makes the second copy
 a no-op.
 
-Real input to the reference program (SendInput) is only sent while its window (or one of its dialogs/menus)
-owns the foreground; otherwise the action fails with "input refused". Ctrl+Alt+Space is never sent.
+Real input to the reference program (SendInput) is only sent while its window (or one of its dialogs/menus/
+panels) owns the foreground; otherwise the action fails with "input refused". A briefly empty foreground
+(dialog or menu just closed) is waited for (≤ 2 s) and then given back to the main window; a foreground of
+another process is never taken over. Ctrl+Alt+Space is never sent.
 Firepixel never gets real input: everything goes through `ui_input`/`ui_action` of the bridge.
 
 ## Results
@@ -86,7 +88,15 @@ Shot areas: `window` (client area), `canvas` (document view), `inspector` (= `pa
 `panel:<id>` (panel group incl. tab header; ids see `ui_map.json → panels`), `dialog` (top dialog), `menu`
 (union of open menus), `popup` (other top-level windows of the reference program; Firepixel: difference box).
 For `menu`/`popup` in Firepixel, and whenever no window is found, the area is the bounding box of what
-changed compared to a window image taken before the step's actions (`area_from: difference` in the log).
+changed compared to a window image taken before the step's actions (`area_from: difference` in the log;
+the image is taken 0.3 s after the previous action so that pending repaints are not counted).
+Firepixel `dialog`: the frame is found in the window image starting at the title bar node (which covers only
+the title text) incl. close button and button row; the in-app file dialog is anchored at its title text.
+Firepixel `panel:<id>` of a panel group floating over the canvas: its own frame (window image), not the column.
+
+Defined layout: Firepixel starts with a fresh profile for every unit (`fp.fresh_profile`, default true:
+`runner_work\fp\profile` is deleted). In the reference program floating panel groups (`orig.floating_dock_class`,
+default `OWL.Dock`) are closed at the start of every unit, and before every step when they cover the document view.
 
 An action is an object whose first known key is the verb; further keys are options (`mods`, `repeat`,
 `item`, `value`, `target`, `by`, `hold_key`, `ms`). A plain string is a verb without argument.
@@ -100,14 +110,15 @@ Aliases: `reset <T..|null>` = `open_testfile` (null: only close menus/dialogs), 
 |---|---|---|---|
 | `open_testfile` / `reopen` | `"T04"` (or `true` = unit file) | close same file unsaved, `fw.openDocument(url)` | `documents close` + `open` |
 | `close_all` / `close_all_documents` | – | closes the test files opened in this unit | same |
-| `menu` / `menu_open` / `hover_menu` | `"A > B > C"` (also `A/B`, list) | click bar entry, hover sub menus (leaves the last open) | `ui_find` + `ui_input` |
+| `menu` | `"A > B > C"` (also `A/B` without `>`, list) | click bar entry, hover sub menus; a **leaf entry at the end is executed** (hover + click, Enter if the menu stays open), a sub menu at the end stays open; abbreviated entries (`Gaußscher Weichz.`) match | same; leaf = no new texts appear next to the hovered entry |
+| `menu_open` / `hover_menu` | same | only opens/hovers (leaves the last open, for menu shots) | same |
 | `menu_item` | `"A > B"` | like `menu`, last entry clicked | same |
 | `command` | Firepixel command id | menu path from `ui_map.json → commands` | `ui_action {run}` |
 | `close_dialogs` | – | cancel dialogs, close menus | `ui_action {close_dialogs}` |
-| `key` | `"ctrl+shift+z"`, `"Escape"`, `"F1"` (`repeat`) | SendInput | `ui_input key` (egui names) |
+| `key` | `"ctrl+shift+z"`, `"Escape"`, `"F1"` (`repeat`) | SendInput; plain Enter/Escape with a dialog open (no popup menu) press its OK/Cancel button (the program's dialogs ignore the keys) | `ui_input key` (egui names) |
 | `type` | text | Unicode SendInput | `ui_input type` |
 | `wait` | ms | sleep | sleep |
-| `select` | object name or list | JSF `fw.selection` by name | `get_document` + `select {ids}` |
+| `select` | object name or list | JSF `fw.selection` by name | same JSF via `run_script` (exactly the named objects; `select {ids}` only as fallback) |
 | `select_none` / `select_all` | – | JSF | `select` |
 | `tool` | `tool.rectangle` | click on the toolbox button (`ui_map.json → tools`; single-key shortcuts do not reliably reach the program) | `ui_action {tool}` |
 | `panel` | `window.layers` / id / title | visible? else menu `Fenster > …` | `ui_action {panel}` if not visible |
@@ -119,7 +130,7 @@ Aliases: `reset <T..|null>` = `open_testfile` (null: only close menus/dialogs), 
 | `drag` / `canvas_drag` | `{from, to | by, mods, steps}` (points = `[x,y]` document px or targets) | SendInput drag | `ui_input drag` |
 | `choose` | `{target, item}` (`item` may be `A > B`) | Win32 combo box: select entry | click target, click item texts |
 | `set_field` / `set` / `set_dialog_field` | `{target, value}` | Win32 edit: text; else double click, Ctrl+A, type, Enter | click, Ctrl+A, type, Enter |
-| `record_ui` | logical key (`ui_state.*`, `document.summary`, `menu.open`, `dialog.fields`, …) | dialogs/menus/title | `ui_state`/`get_document`/menu items |
+| `record_ui` | logical key (`ui_state.*`, `document.summary`, `menu.open`, `dialog.fields`, `focus`, …) or `{"focus_cycle": n}` | dialogs (title + control texts)/menu items/focused control (Tab n times) | `dialog.*`: title, texts in reading order and controls (role, text, state) from `ui_find` inside the dialog; `menu.*`: texts of the open menus (columns, shortcuts) inside the difference box; `focus_cycle`: `focus_gained` of `ui_input`; else `ui_state`/`get_document` |
 | `clear_dir` / `record_dir` / `record_file` / `record_file_text` | path (relative = `run\<unit>\files\…`, only below the test folder) | file listing / size + SHA-1 + pixels | same |
 | `file_dialog` / `file_dialog_choose` / `file_dialog_cancel` | path | edit field of the open file dialog + OK / Cancel | `ui_file_dialog` |
 | `ui_action`, `ui_find`, `ui_state`, `get_document`, `ui_file_dialog`, `ui_find_click` | bridge arguments | – (put under `fp`) | bridge tool |

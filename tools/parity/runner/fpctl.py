@@ -75,6 +75,10 @@ class Firepixel:
         return dst
 
     def _profile(self):
+        """A fresh profile for every start (= every unit): default panel layout, no floating panels left over from
+        earlier units, theme and language from the config."""
+        if self.home.exists() and self.cfg.get("fresh_profile", True):
+            shutil.rmtree(self.home, ignore_errors=True)
         roaming = self.home / "Roaming" / "Firepixel"
         local = self.home / "Local" / "Firepixel"
         roaming.mkdir(parents=True, exist_ok=True)

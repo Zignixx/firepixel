@@ -49,7 +49,8 @@ def clean_label(s: str) -> str:
 def split_path(p) -> list[str]:
     if isinstance(p, list):
         return [clean_label(x) for x in p]
-    parts = re.split(r"\s*(?:>|▸|/)\s*", str(p)) if (">" in str(p) or "▸" in str(p)) else str(p).split("/")
+    # 'A > B > C' (entries may contain '/', e.g. 'Farbton/Sättigung'); 'A/B' only without '>'
+    parts = re.split(r"\s*(?:>|▸)\s*", str(p)) if (">" in str(p) or "▸" in str(p)) else str(p).split("/")
     return [clean_label(x) for x in parts if x.strip()]
 
 
@@ -121,6 +122,20 @@ def pick_handle(h, pts, rect, roles):
         if any(tip.startswith(w) for w in want):
             return p[0], p[1]
     raise RuntimeError(f"handle '{h}' not found among {[p[2] for p in pts]}")
+
+
+def scan_edge(img: Image.Image, x: int, y: int, dx: int, dy: int, thr: int = 30, ref=None):
+    """Walk from (x, y) in direction (dx, dy) until the luminance differs from the start colour by more than
+    `thr` (frame line / shadow of a dialog or floating panel). Returns the last point inside."""
+    g = img.convert("L") if img.mode != "L" else img
+    w, h = g.size
+    x, y = max(0, min(w - 1, int(x))), max(0, min(h - 1, int(y)))
+    ref = g.getpixel((x, y)) if ref is None else ref
+    while 0 <= x + dx < w and 0 <= y + dy < h:
+        if abs(g.getpixel((x + dx, y + dy)) - ref) > thr:
+            return x, y
+        x, y = x + dx, y + dy
+    return x, y
 
 
 def slider_points(r, frac, from_frac=None):
@@ -195,6 +210,47 @@ class OrigSide(Side):
             pass
         self.h.call("dialog_close", mode="cancel")
         time.sleep(0.2)
+        # closing a dialog may raise a message box (e.g. "internal error" after cancelling the brush stroke
+        # editor): repeat until no dialog is left
+        for _ in range(4):
+            try:
+                if not self.h.list("dialogs"):
+                    break
+            except OrigError:
+                break
+            time.sleep(0.5)
+            self.h.call("dialog_close", mode="cancel")
+        try:
+            self.close_floating(only_over_view=True)
+        except OrigError:
+            pass
+
+    def close_floating(self, only_over_view=False):
+        """Floating panel groups (top-level dock windows of the program, e.g. Info/Farbmischer/URL) that cover the
+        document view are closed with their own close button (WM_CLOSE as fallback), so canvas clicks and canvas
+        shots are not blocked. Docked panels are child windows and are never touched."""
+        cls = self.r.cfg["orig"].get("floating_dock_class", "OWL.Dock")
+        main = self.h.call("main")["hwnd"]
+        try:
+            v = self.h.call("view") if only_over_view else None
+        except OrigError:
+            v = None
+        n = 0
+        for w in self.h.list("windows"):
+            r = w["rect"]
+            if w["hwnd"] == main or w["class"] != cls or (r[2] - r[0]) < 20:
+                continue
+            if v and (r[2] <= v[0] or r[0] >= v[2] or r[3] <= v[1] or r[1] >= v[3]):
+                continue
+            try:
+                self.click_at((r[2] - 9, r[1] + 7))
+                time.sleep(0.4)
+            except OrigError:
+                pass
+            if any(x["hwnd"] == w["hwnd"] for x in self.h.list("windows")):
+                self.h.call("close_window", hwnd=w["hwnd"])
+            n += 1
+        return n
 
     def open_testfile(self, path: Path):
         self.reset_light()
@@ -316,17 +372,29 @@ class OrigSide(Side):
             w = self.h.call("at", x=int(pt[0]), y=int(pt[1]))
         except OrigError:
             return None
-        if not w:
-            return None
-        if w.get("class") == "Edit" and (w.get("parent") or {}).get("class") == "ComboBox":
+        if w and w.get("class") == "Edit" and (w.get("parent") or {}).get("class") == "ComboBox":
             w = dict(w["parent"], title="")
-        return w if w.get("class") in ("Edit", "ComboBox") else None
+        if w and w.get("class") in ("Edit", "ComboBox"):
+            return w
+        try:
+            w = self.h.call("field_at", x=int(pt[0]), y=int(pt[1]))
+        except OrigError:
+            return None
+        if w and w.get("class") == "Edit" and (w.get("parent") or {}).get("class") == "ComboBox":
+            w = dict(w["parent"], title="")
+        return w or None
 
     def locate(self, loc):
         if "rel" in loc and "panel" in loc:
-            p = self.h.call("panel", name=self.panel_info(loc["panel"]).get("title") or loc["panel"])
-            pt = (p["palette"][0] + loc["rel"][0], p["palette"][1] + loc["rel"][1])
-            return pt, self.win_at(pt)
+            # the inspector recreates its child windows after a selection change: wait for a field under the point
+            for k in range(8):
+                p = self.h.call("panel", name=self.panel_info(loc["panel"]).get("title") or loc["panel"])
+                pt = (p["palette"][0] + loc["rel"][0], p["palette"][1] + loc["rel"][1])
+                w = self.win_at(pt)
+                if w or loc.get("no_field"):
+                    return pt, w
+                time.sleep(0.3)
+            return pt, None
         if "dialog_rel" in loc:
             ds = self.h.list("dialogs")
             if not ds:
@@ -351,10 +419,19 @@ class OrigSide(Side):
             return self.doc_to_screen(*loc["canvas"]), None
         raise Unmapped(f"orig locator not understood: {loc}")
 
-    def menu_item_point(self, label):
+    def menu_item_point(self, label, skip=()):
+        """Item by text in the open popup menus; menus in `skip` (the ones already walked) are searched last, so a
+        sub menu entry wins over an equally named entry of its parent ('Airbrush > Einfach')."""
         lab = clean_label(label)
         for _ in range(8):
-            for m in self.h.call("menus").get("menus") or []:
+            ms = self.h.call("menus").get("menus") or []
+            ms = [m for m in ms if m.get("hwnd") not in skip] + [m for m in ms if m.get("hwnd") in skip]
+            new = [m for m in ms if m.get("hwnd") not in skip]
+            for m in ms:
+                if skip and new and m.get("hwnd") in skip and all(not (it.get("text") or it.get("separator"))
+                                                                  for m2 in new for it in m2.get("items") or []):
+                    # the sub menu that just opened is owner-drawn (no texts): never fall back to the parent
+                    raise Unmapped(f"sub menu without item texts (owner-drawn), '{label}' needs orig_index")
                 for it in m.get("items") or []:
                     if not it.get("separator") and it.get("text") == lab:
                         r = it["rect"]
@@ -498,6 +575,16 @@ class OrigSide(Side):
         mods, k = parse_combo(combo)
         if set(mods) >= {"ctrl", "alt"} and k == "space":
             raise Unsupported("Ctrl+Alt+Space is forbidden")
+        if not mods and k in ("enter", "esc"):
+            # the program's dialogs ignore Enter/Escape sent as keys (default button is not triggered): with a
+            # dialog open and no popup menu, press its OK / Cancel button instead
+            try:
+                if self.h.list("dialogs") and not self.h.call("menus").get("menus"):
+                    self.h.call("dialog_close", mode="ok" if k == "enter" else "cancel")
+                    time.sleep(0.5)
+                    return
+            except OrigError:
+                pass
         self.o.focus()
         self.h.call("key", combo="+".join(mods + [k]))
 
@@ -517,6 +604,8 @@ class OrigSide(Side):
         n = [ln for ln in lines if ln.startswith("RET ")]
         if not n or n[-1] == "RET 0":
             raise OrigError(f"objects not found: {names}")
+        # the inspector rebuilds its child windows for the new selection after the script returns
+        time.sleep(0.6)
 
     # ------------------------------------------------------------ verbs
     def do(self, verb, arg, act):
@@ -527,14 +616,21 @@ class OrigSide(Side):
             for p in r.opened.get(self.name, set()):
                 self.close_doc(p)
         elif verb in ("menu", "menu_open", "hover_menu"):
-            self.h.call("menu", path=split_path(arg), final="open", bar=r.ui_map["menu_bar"]["orig"], timeout=40)
+            # `menu`: a leaf entry at the end of the path is executed (scripts check the result), a sub menu
+            # stays open; `menu_open`/`hover_menu` only open/hover
+            self.h.call("menu", path=split_path(arg), final="auto" if verb == "menu" else "open",
+                        bar=r.ui_map["menu_bar"]["orig"], timeout=40)
+            if verb == "menu":
+                self.after_menu()
         elif verb == "menu_item":
             self.h.call("menu", path=split_path(arg), final="invoke", bar=r.ui_map["menu_bar"]["orig"], timeout=40)
+            self.after_menu()
         elif verb == "command":
             path = r.ui_map.get("commands", {}).get(arg)
             if not path:
                 raise Unmapped(f"command {arg} has no orig menu path in ui_map.json")
             self.h.call("menu", path=split_path(path), final="invoke", bar=r.ui_map["menu_bar"]["orig"], timeout=40)
+            self.after_menu()
         elif verb == "close_dialogs":
             self.reset_light()
         elif verb == "key":
@@ -700,6 +796,18 @@ class OrigSide(Side):
         else:
             raise Unsupported(verb)
 
+    def after_menu(self):
+        """An executed menu command (filters, transforms) is processed by the program's UI thread: give it time,
+        and wait until no busy/progress window is left (dialogs the command opens stay open)."""
+        time.sleep(0.5)
+        for _ in range(20):
+            try:
+                if not (self.h.call("menus").get("menus")):
+                    break
+            except OrigError:
+                break
+            time.sleep(0.2)
+
     def pointer(self, verb, arg, act):
         mods = act.get("mods") or act.get("hold_key") or []
         if isinstance(mods, str):
@@ -751,8 +859,10 @@ class OrigSide(Side):
 
     def menu_path(self, parts, final_click=True):
         """Walk open popup menus by item text: hover sub menus, click the last entry."""
+        walked = set()
         for i, part in enumerate(parts):
-            pt, info = self.menu_item_point(part)
+            pt, info = self.menu_item_point(part, walked)
+            walked = {m.get("hwnd") for m in self.h.call("menus").get("menus") or []}
             last = i == len(parts) - 1
             if last and final_click:
                 if (info.get("menu_item") or {}).get("grayed"):
@@ -768,8 +878,18 @@ class OrigSide(Side):
         target, item = a.get("target"), a.get("item")
         pt, info = self.resolve(target) if target else (None, None)
         if info and info.get("class") == "ComboBox":
-            self.h.call("combo_select", hwnd=info["hwnd"], text=clean_label(item))
-            return
+            try:
+                self.h.call("combo_select", hwnd=info["hwnd"], text=clean_label(item))
+                return
+            except OrigError:
+                # owner-drawn combo boxes with one entry (stroke/fill category, texture) open a popup menu
+                # when clicked: walk it like a menu
+                self.click_at(pt)
+                time.sleep(0.5)
+                if not self.h.call("menus").get("menus"):
+                    raise
+                self.menu_path(split_path(item or ""))
+                return
         if target:
             self.pointer("open", target, {})
             time.sleep(0.3)
@@ -792,12 +912,33 @@ class OrigSide(Side):
         self.h.call("key", combo="ctrl+a")
         self.h.call("type", text=str(value))
         self.h.call("key", combo="enter")
+        loc = self.loc_of(target)
+        if loc.get("jsf_set"):
+            # some inspector fields keep typed text without applying it to the selection (no commit from
+            # synthetic input): apply the value with the equivalent JSF call (ui_map `jsf_set`, %s = value)
+            v = str(value)
+            lit = v if re.fullmatch(r"-?\d+(\.\d+)?", v) else json.dumps(v)
+            self.o.jsf(loc["jsf_set"].replace("%s", lit))
+            self.values.append({"set_field_via": "jsf", "target": target, "value": value})
 
     def record_ui(self, key):
-        if key in ("dialog.fields", "dialog.open", "dialog.title"):
+        if isinstance(key, dict):
+            if "focus_cycle" in key:
+                out = []
+                for _ in range(int(key["focus_cycle"] or 1)):
+                    self.key("tab")
+                    time.sleep(0.12)
+                    f = self.h.call("focused") or {}
+                    out.append({"class": f.get("class"), "text": f.get("title")})
+                return {"focus_cycle": out}
+            raise Unsupported(f"record_ui {key}")
+        if key in ("dialog.fields", "dialog.open", "dialog.title", "dialog.text"):
             return self.h.list("dialogs")
         if key in ("menu.open", "menu.disabled_items"):
             return self.menu_items()
+        if key == "focus":
+            f = self.h.call("focused") or {}
+            return {"class": f.get("class"), "text": f.get("title")}
         if key == "list.items":
             return None
         return {"title": self.h.call("main")["title"], "dialogs": [d.get("title") for d in self.h.list("dialogs")]}
@@ -891,6 +1032,13 @@ class FpSide(Side):
             raise Unmapped(f"fp ui_find: '{text}' not found")
         return hits[index]
 
+    def texts_right_of(self, hit):
+        """Texts right of a menu entry at its height; compared before/after hovering, new texts = a sub menu opened
+        (shortcut texts of the entry itself are there in both)."""
+        r = hit["rect"]
+        hits = (self.call("ui_find", {"region": [r[2] + 1, r[1] - 6, r[2] + 600, r[3] + 60], "limit": 40}) or {}).get("hits") or []
+        return {(h.get("text"), round(h["rect"][0]), round(h["rect"][1])) for h in hits if h.get("text")}
+
     def script_value(self, code):
         v = self.call("run_script", {"code": code})
         sc = v.get("script") if isinstance(v, dict) else None
@@ -970,21 +1118,60 @@ class FpSide(Side):
         if area.startswith("panel:"):
             return self.panel_rect(self.panel_info(area[6:]), st, doc)
         if area == "dialog":
-            hits = (self.call("ui_find", {"role": "window", "limit": 50}) or {}).get("hits") or []
-            hits = [h for h in hits if h.get("text")]
-            if hits:
-                return hits[0]["rect"]
-            tb = [h for h in (self.call("ui_find", {"text": "Titelleiste", "exact": False, "limit": 20}) or {}).get("hits") or []
-                  if str(h.get("text", "")).startswith("Titelleiste")]
-            if not tb:
-                raise BridgeError("no dialog window found")
-            l, t, r, _ = tb[0]["rect"]
-            inside = (self.call("ui_find", {"region": [l, t, r, H], "limit": 600}) or {}).get("hits") or []
-            bottom = max([h["rect"][3] for h in inside if h["rect"][0] >= l - 2 and h["rect"][2] <= r + 2] + [t + 40])
-            return [l - 1, t - 1, r + 1, min(H, bottom + 12)]
+            return self.dialog_rect(st)
         if area in ("menu", "popup"):
             return None  # difference box
         raise Unsupported(f"shot area {area}")
+
+    def dialog_rect(self, st=None):
+        """Whole dialog incl. close button and button row. The accessibility node 'Titelleiste <title>' covers
+        only the title text part; the frame is found in the window image (scan from the title bar to the frame
+        line). The in-app file dialog has no title bar: anchored at its title text."""
+        st = st or self.state()
+        W, H = st["window"]["width"], st["window"]["height"]
+        img = self.window_image()[0]
+        tb = [h for h in (self.call("ui_find", {"text": "Titelleiste", "exact": False, "limit": 20}) or {}).get("hits") or []
+              if str(h.get("text", "")).startswith("Titelleiste")]
+        if tb:
+            l, t, r, b = tb[0]["rect"]
+            y = t + 3
+            left = scan_edge(img, l + 4, y, -1, 0)[0]
+            right = scan_edge(img, r - 2, y, 1, 0)[0]
+            top = scan_edge(img, l + 4, y, 0, -1)[1]
+            # along both side borders (a control or page header may touch one of them): the longer run wins
+            bottom = max(scan_edge(img, left + 3, b + 4, 0, 1)[1], scan_edge(img, right - 3, b + 4, 0, 1)[1])
+        else:
+            fd = (st.get("file_dialog") or {}).get("open") or {}
+            title = fd.get("title")
+            if not (st.get("dialog_open") and title):
+                raise BridgeError("no dialog window found")
+            tr = self.find(title, None, True)["rect"]
+            left = scan_edge(img, tr[0] - 1, tr[1] - 2, -1, 0)[0]
+            right = scan_edge(img, tr[0] - 1, tr[1] - 2, 1, 0)[0]
+            top = scan_edge(img, tr[0] - 1, tr[1] - 2, 0, -1)[1]
+            # bottom: below the first OK/Cancel button pair (the frame line is too close to the texts to scan)
+            ok = [h["rect"] for h in (self.call("ui_find", {"region": [left, top, right, H], "role": "button", "limit": 40}) or {}).get("hits") or []
+                  if clean_label(h.get("text") or "") in ("OK", "Abbrechen", "Öffnen", "Speichern")]
+            bottom = (min(x[3] for x in ok) + 4) if ok else scan_edge(img, left + 1, tr[3] + 1, 0, 1)[1]
+            return [max(0, left - 1), max(0, top - 1), min(W, right + 2), min(H, bottom + 2)]
+        # never cut off the dialog's own controls (buttons at the bottom/right, inside the dialog's height)
+        ins = (self.call("ui_find", {"region": [left, top, right + 200, min(H, bottom + 40)], "role": "button", "limit": 200}) or {}).get("hits") or []
+        btn = [h["rect"] for h in ins if h["rect"][0] >= left - 2 and h["rect"][0] < right and h["rect"][1] < bottom + 30]
+        if btn:
+            right = max(right, max(x[2] for x in btn) + 4)
+            bottom = max(bottom, max(x[3] for x in btn) + 4)
+        return [max(0, left - 1), max(0, top - 1), min(W, right + 2), min(H, bottom + 2)]
+
+    def floating_panel_rect(self, tab_rect):
+        """Panel group floating over the canvas: its frame from the window image (from the tab to the frame line)."""
+        img = self.window_image()[0]
+        l, t, r, b = tab_rect
+        left = scan_edge(img, l - 2, (t + b) / 2, -1, 0)[0]
+        right = scan_edge(img, r + 8, t - 1, 1, 0)[0]
+        top = scan_edge(img, l - 2, (t + b) / 2, 0, -1)[1]
+        # bottom: scan near both side borders (controls may touch one of them), the longer run wins
+        bottom = max(scan_edge(img, left + 2, b + 6, 0, 1)[1], scan_edge(img, right - 3, b + 6, 0, 1)[1])
+        return [left - 1, top - 1, right + 2, bottom + 2]
 
     def panel_rect(self, info, st, doc):
         W, H = st["window"]["width"], st["window"]["height"]
@@ -1008,6 +1195,13 @@ class FpSide(Side):
                 below.append(h["rect"][1])
         bottom = min(below) - 4 if below else H
         if cx >= ca[0] and cx <= ca[2]:
+            # floating over the canvas: the group's own frame (not the whole canvas column)
+            try:
+                fr = self.floating_panel_rect(r)
+                if fr[2] - fr[0] > 60 and fr[3] - fr[1] > 40:
+                    return fr
+            except Exception:  # noqa: BLE001
+                pass
             return [ca[0] - 26, r[1] - 4, ca[2] + 12, H]
         return [col[0] + 1, r[1] - 4, col[1], bottom]
 
@@ -1039,7 +1233,21 @@ class FpSide(Side):
         self.inp([{"type": "key", "key": name, "modifiers": mods}])
 
     def select(self, names):
+        """Exactly the named objects, chosen like in the reference program (JSF fw.selection by name on the
+        current state of all layers); the bridge's `select {ids}` is only the fallback."""
         names = names if isinstance(names, list) else [names]
+        code = ("(function(){var d = fw.getDocumentDOM(); var want = %s; var sel = [];"
+                "for (var i = 0; i < d.layers.length; i++) { var fr = d.layers[i].frames[d.currentFrameNum];"
+                "  for (var j = 0; j < fr.elements.length; j++) { var e = fr.elements[j];"
+                "    for (var k = 0; k < want.length; k++) if (e.name == want[k]) sel.push(e); } }"
+                "d.selectNone(); fw.selection = sel; return [sel.length, fw.selection.length].join(',');})()") % json.dumps(names, ensure_ascii=True)
+        try:
+            v = str(self.script_value(code))
+            n, got = (v.split(",") + ["0"])[:2]
+            if int(n) > 0 and int(got) == int(n):
+                return
+        except (BridgeError, ValueError):
+            pass
         doc = self.call("get_document", {"depth": 6})
         ids = []
 
@@ -1077,7 +1285,11 @@ class FpSide(Side):
                 if last and verb == "menu_item":
                     self.inp([{"type": "click", "pos": hit["center"]}, {"type": "wait", "ms": 200}])
                 else:
+                    before = self.texts_right_of(hit) if last and verb == "menu" else None
                     self.inp([{"type": "move", "pos": hit["center"]}, {"type": "wait", "ms": 350}])
+                    if last and verb == "menu" and not (self.texts_right_of(hit) - before):
+                        # a leaf entry at the end of `menu` is executed (like the reference side)
+                        self.inp([{"type": "click", "pos": hit["center"]}, {"type": "wait", "ms": 250}])
         elif verb == "command":
             self.call("ui_action", {"run": arg} if isinstance(arg, str) else arg)
         elif verb == "close_dialogs":
@@ -1346,19 +1558,103 @@ class FpSide(Side):
             self.inp([{"type": "click", "pos": hit["center"]}, {"type": "wait", "ms": 200}])
 
     def record_ui(self, key):
+        if isinstance(key, dict):
+            if "focus_cycle" in key:
+                out = []
+                for _ in range(int(key["focus_cycle"] or 1)):
+                    res = self.inp([{"type": "key", "key": "Tab"}, {"type": "wait", "ms": 80}]) or {}
+                    ev = [e for e in (res.get("widget_events") or []) if isinstance(e, dict) and e.get("event") == "focus_gained"]
+                    e = ev[-1] if ev else {}
+                    out.append({"role": e.get("widget"), "text": e.get("label") or e.get("text")})
+                return {"focus_cycle": out}
+            raise Unsupported(f"record_ui {key}")
         if key.startswith("ui_state"):
             st = self.state()
             sub = key.split(".", 1)[1] if "." in key else "summary"
             return st if sub == "summary" else st.get(sub)
         if key in ("menu.open", "menu.disabled_items"):
             return self.menu_items()
+        if key in ("dialog.fields", "dialog.open", "dialog.title", "dialog.text"):
+            return self.dialog_fields()
         if key == "document.summary":
             return self.call("get_document", {"depth": 1})
         return self.state()
 
+    def dialog_fields(self):
+        """Like the reference side's dialog list: title and the texts of the dialog's controls/labels in reading
+        order (top to bottom, left to right), plus the controls with role, text and state."""
+        st = self.state()
+        if not st.get("dialog_open"):
+            return []
+        try:
+            rect = self.dialog_rect(st)
+        except BridgeError:
+            return [{"title": None, "texts": "", "controls": []}]
+        hits = (self.call("ui_find", {"region": rect, "limit": 600}) or {}).get("hits") or []
+        hits = [h for h in hits if h["rect"][0] >= rect[0] - 1 and h["rect"][2] <= rect[2] + 1
+                and h["rect"][1] >= rect[1] - 1 and h["rect"][3] <= rect[3] + 1 and h.get("role") != "text_run"]
+        hits.sort(key=lambda h: (round(h["rect"][1] / 6), h["rect"][0]))
+        title = next((h["text"][len("Titelleiste "):] for h in hits if str(h.get("text", "")).startswith("Titelleiste ")),
+                     ((st.get("file_dialog") or {}).get("open") or {}).get("title"))
+        seen, texts, controls = set(), [], []
+        for h in hits:
+            t = h.get("text") or ""
+            if t.startswith("Titelleiste"):
+                continue
+            k = (t, round(h["rect"][0]), round(h["rect"][1]))
+            if t and (t, round(h["rect"][1] / 6)) not in seen:
+                seen.add((t, round(h["rect"][1] / 6)))
+                texts.append(t)
+            if h.get("role") not in (None, "text", "label", "unknown"):
+                controls.append({"role": h.get("role"), "text": t, "enabled": h.get("enabled"), "checked": h.get("toggled")})
+        return [{"title": title, "rect": [round(v) for v in rect], "texts": " | ".join(texts), "controls": controls}]
+
     def menu_items(self):
+        """Texts of the open menus. egui menus expose plain texts (no menu_item role): the menu region is what
+        changed against the window image before the opening action; its texts are grouped by row (entry left,
+        shortcut right)."""
         hits = (self.call("ui_find", {"role": "menu_item", "limit": 200}) or {}).get("hits") or []
-        return [{"text": h.get("text"), "enabled": h.get("enabled"), "checked": h.get("toggled")} for h in hits]
+        if hits:
+            return [{"text": h.get("text"), "enabled": h.get("enabled"), "checked": h.get("toggled")} for h in hits]
+        before = getattr(self, "before_img", None)
+        img, _ = self.window_image()
+        bb = diff_bbox(before, img, pad=2) if before is not None else None
+        if not bb:
+            return []
+        try:
+            bar = self.find(self.r.ui_map["menu_bar"]["orig"][0][0], None, True, [0, 0, 2000, 40])["rect"]
+            bb[1] = max(bb[1], bar[3] + 2)
+        except Exception:  # noqa: BLE001
+            pass
+        hits = (self.call("ui_find", {"region": bb, "limit": 400}) or {}).get("hits") or []
+        # menu entries are painted texts; accessibility nodes in the box are toolbar/panel controls
+        hits = [h for h in hits if h.get("text") and h["rect"][1] >= bb[1] - 1 and h.get("source") != "accesskit"]
+        def count(h, i, tol):
+            return sum(1 for o in hits if abs(o["rect"][i] - h["rect"][i]) <= tol)
+
+        def row_of(h):
+            return (h["rect"][1] + h["rect"][3]) / 2
+
+        # entries are left aligned (shared left edge per column), shortcuts right aligned (shared right edge)
+        short = [h for h in hits if count(h, 2, 1.5) >= 2 and count(h, 0, 2) < 3
+                 and any(o is not h and o["rect"][0] < h["rect"][0] and abs(row_of(o) - row_of(h)) < 4 for o in hits)]
+        entries = [h for h in hits if not any(h is s for s in short)]
+        cols: dict = {}
+        for h in sorted(entries, key=lambda h: (h["rect"][0], h["rect"][1])):
+            col = next((c for c in cols if abs(c - h["rect"][0]) <= 2), h["rect"][0])
+            cols.setdefault(col, []).append({"text": h["text"], "enabled": h.get("enabled"), "checked": h.get("toggled"),
+                                             "_r": h["rect"]})
+        for s in short:
+            cand = [e for c in cols.values() for e in c if e["_r"][0] < s["rect"][0] and abs((e["_r"][1] + e["_r"][3]) / 2 - row_of(s)) < 4]
+            if cand:
+                max(cand, key=lambda e: e["_r"][0])["shortcut"] = s["text"]
+        out = []
+        for c in sorted(cols):
+            col = sorted(cols[c], key=lambda e: e["_r"][1])
+            for e in col:
+                e.pop("_r")
+            out.append(col)
+        return out
 
 
 # --------------------------------------------------------------------------- runner
@@ -1510,7 +1806,10 @@ class Runner:
             if rec.get("want_before") and verb in OPENERS:
                 # the difference box is measured against the state right before the opening action
                 try:
-                    rec["_before"] = side.window_image()[0]
+                    # let pending repaints (selection handles, inspector after `select`) settle first, otherwise
+                    # they end up in the difference box
+                    time.sleep(0.3)
+                    rec["_before"] = side.before_img = side.window_image()[0]
                 except Exception:  # noqa: BLE001
                     pass
             side.do(verb, arg, act)
@@ -1526,6 +1825,7 @@ class Runner:
         rec = {"side": side.name, "actions": [], "status": "ok", "want_before": before_img is not None}
         actions = list(step.get("both") or []) + list(step.get(side.name) or [])
         side.values = []
+        side.before_img = before_img
         t0 = time.time()
         try:
             if side.name == "orig":
@@ -1606,6 +1906,11 @@ class Runner:
                         # defined start state: no questions open, every document closed without saving
                         side.reset_light()
                         self.orig.close_all_docs()
+                        # defined layout: no floating panel groups left over from earlier units
+                        try:
+                            side.close_floating()
+                        except Exception as e:  # noqa: BLE001
+                            self.log(f"close floating panels: {e}")
                     if unit.get("testfile"):
                         self.open_testfile(side, unit["testfile"])
                 except Exception as e:  # noqa: BLE001
@@ -1637,7 +1942,8 @@ class Runner:
                                 side.windows_before = {w["hwnd"] for w in side.h.list("windows")}
                             except Exception:  # noqa: BLE001
                                 pass
-                    if (step.get("shot") or {}).get("area") in ("menu", "popup"):
+                    if (step.get("shot") or {}).get("area") in ("menu", "popup") or step.get("log_menu_items") \
+                            or re.search(r'"(log_menu_items|menu\.open|menu\.disabled_items)"', json.dumps(step)):
                         try:
                             before, _ = side.window_image()
                         except Exception:  # noqa: BLE001
