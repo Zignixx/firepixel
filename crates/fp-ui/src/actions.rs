@@ -120,6 +120,9 @@ pub fn execute(st: &mut AppState, ctx: &egui::Context, a: Action) {
             st.settings.workspace.name = name;
         }
         Action::Quit => {
+            if crate::batch::settings::intercept_quit(st) {
+                return; // BATCH-11a: Batch läuft noch → erst Rückfrage im Studio
+            }
             let ids: Vec<_> = st.session.documents().iter().map(|d| d.id).collect();
             if ids.iter().any(|id| st.session.document(*id).is_some_and(|d| d.is_dirty())) {
                 st.dialogs.unsaved = Some(UnsavedFlow::new(ids, PendingClose::Quit));

@@ -31,6 +31,7 @@ pub mod preview;
 pub mod recipe;
 pub mod rename_ui;
 pub mod report_ui;
+pub mod settings; // BATCH-11a: Einstellungen (ffmpeg), Rückfrage beim Schließen
 pub mod timeline; // BATCH-7
 mod thumbs;
 
@@ -108,6 +109,8 @@ pub(crate) enum Inbox {
     TargetFolder(PathBuf),
     SaveReport(PathBuf),
     ParamPath { step: usize, param: String, path: PathBuf },
+    /// Einstellungen: gewählte ffmpeg-Datei (None = automatisch suchen).
+    FfmpegPath(Option<PathBuf>),
 }
 
 /// Vorlage (eingebaut oder von BATCH-9 geliefert) für das Menü „Rezepte“.
@@ -191,6 +194,12 @@ pub struct Studio {
     pub(crate) close_requested: bool,
     /// Dateiliste zur markierten Datei blättern (Pfeiltasten).
     pub(crate) scroll_to_selected: bool,
+    /// Einstellungen-Überlagerung (Banner ⋯ ▸ „Einstellungen…“).
+    pub settings: Option<settings::SettingsState>,
+    /// Offene Rückfrage „Batch läuft noch – abbrechen und schließen?“.
+    pub close_ask: Option<settings::CloseAsk>,
+    /// Schließen trotz Lauf bestätigt.
+    pub close_confirmed: bool,
 }
 
 impl Studio {
@@ -238,6 +247,9 @@ impl Studio {
             next_added: 0,
             close_requested: false,
             scroll_to_selected: false,
+            settings: None,
+            close_ask: None,
+            close_confirmed: false,
         }
     }
 
@@ -606,7 +618,16 @@ fn consume(ctx: &egui::Context, m: Modifiers, k: Key) -> bool {
 fn keyboard(ctx: &egui::Context, st: &mut AppState, now: f64) {
     let Some(s) = st.batch.as_mut() else { return };
     let ctrl = Modifiers::COMMAND;
-    // Esc schließt Überlagerungen (Galerie, Ende-Karte), nie den Lauf
+    // Esc schließt Überlagerungen (Einstellungen, Galerie, Ende-Karte), nie den Lauf
+    if s.close_ask.is_some() {
+        return; // Rückfrage beim Schließen: Esc wertet die Überlagerung selbst aus
+    }
+    if s.settings.is_some() {
+        if consume(ctx, Modifiers::NONE, Key::Escape) {
+            s.settings = None;
+        }
+        return;
+    }
     if s.gallery.is_some() {
         if consume(ctx, Modifiers::NONE, Key::Escape) {
             s.gallery = None;
@@ -728,7 +749,7 @@ pub fn doc_tab(ui: &mut Ui, st: &mut AppState, rect: Rect) -> Rect {
     if s.front && ui.input(|i| i.pointer.primary_clicked() && i.pointer.interact_pos().is_some_and(|p| rest.contains(p) && p.x > tr.right() + 2.0)) && active.is_some() {
         s.front = false;
     }
-    let close = s.close_requested;
+    let close = s.close_requested && settings::may_close_studio(s);
     if close {
         close_studio(st);
     }
@@ -859,7 +880,14 @@ pub fn show(ui: &mut Ui, st: &mut AppState, rect: Rect) {
         }
     }
     output_bar::show(ui, st, &mut s, lay.bar, now);
-    output_bar::ask_overlay(ui, &mut s, rect);
+    if s.close_ask.is_none() {
+        output_bar::ask_overlay(ui, &mut s, rect); // Rückfrage beim Schließen liegt darüber
+    }
+    settings::show(ui, st, &mut s, rect, now);
+    if s.close_requested {
+        settings::may_close_studio(&mut s); // läuft ein Auftrag: erst fragen
+    }
+    settings::close_overlay(ui, st, &mut s, rect);
     // Geste beendet: Maus los und kein Feld im Fokus → nächste Änderung ist ein neuer Schritt
     if !ui.input(|i| i.pointer.any_down()) && !ui.ctx().text_edit_focused() {
         s.end_gesture();
@@ -915,6 +943,7 @@ fn poll(ctx: &egui::Context, st: &mut AppState, now: f64) {
                 s.end_gesture();
             }
             Inbox::SaveReport(p) => report_ui::save_report(s, &p, now),
+            Inbox::FfmpegPath(p) => settings::set_ffmpeg_path(ctx, s, p.as_deref(), now),
             Inbox::ParamPath { step, param, path } => {
                 s.edit("path", |r| r.set_param(step, &param, serde_json::json!(path.to_string_lossy())));
                 s.end_gesture();

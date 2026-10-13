@@ -197,6 +197,10 @@ pub fn show(ui: &mut Ui, st: &mut AppState, s: &mut Studio, r: Rect, now: f64) {
             s.redo();
         }
         ui.separator();
+        // BATCH-11a: Batch-Einstellungen (ffmpeg-Datei …)
+        if ui.button(t("batch-settings-open")).clicked() {
+            super::settings::open(ui.ctx(), s);
+        }
         if ui.button(t("batch-ui-close")).clicked() {
             s.close_requested = true;
         }
