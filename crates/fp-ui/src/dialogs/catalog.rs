@@ -105,7 +105,11 @@ pub fn filter_form(cmd: &str, live: bool) -> Option<FormDialog> {
         "19160" => &[("amount", "ZoomBlurAmount"), ("quality", "ZoomBlurQuality")],
         _ => &[],
     };
-    f = f.with_prefs(remembered);
+    // Live-Effekt: ein neuer Effekt beginnt mit den Vorgaben des Effekts (Rauschen 50, CT-1a FX-4)
+    // und merkt nichts; nur der Menüfilter nimmt die zuletzt bestätigten Werte
+    if !live {
+        f = f.with_prefs(remembered);
+    }
     // Kästchen „Vorschau“ gemerkt wie im Original (nur diese drei Filter haben eine Voreinstellung)
     let preview_pref = match id {
         "6525" => Some("MotionBlurShowPreview"),
@@ -696,6 +700,15 @@ mod tests {
         assert_eq!(f.command, "filter.blur.gaussian");
         let g = filter_form("filter.noise.addNoise", true).expect("Rauschen");
         assert_eq!(g.params()["live"], json!(true));
+        // Live-Effekt: Vorgabe 50 auch wenn der Menüfilter zuletzt 20 bestätigt hat (CT-1a FX-4)
+        let mut p = fp_engine::Preferences::new();
+        p.set("AddNoiseAmount", fp_engine::PrefValue::Real(20.0));
+        let mut live = filter_form("filter.noise.addNoise", true).expect("Rauschen");
+        live.load_prefs(&p);
+        assert_eq!(live.get("amount").as_f64(), Some(50.0), "Live-Effekt mit Vorgabe");
+        let mut menu = filter_form("filter.noise.addNoise", false).expect("Rauschen");
+        menu.load_prefs(&p);
+        assert_eq!(menu.get("amount").as_f64(), Some(20.0), "Menüfilter mit gemerktem Wert");
         assert!(filter_form("filter.unknown", false).is_none());
     }
 }
