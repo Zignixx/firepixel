@@ -282,6 +282,16 @@ Nutzervorgabe: aufschreiben, nicht sofort starten; diese Punkte laufen **vor** d
 
 Gesamt Welle 5 ≈ 2–3 h. Danach Doku-Übertrag (kurz), Slots vorwärmen, neue Testversion, dann Nachtlauf nach „los“.
 
+## 4e. Moderner Batch-Modus (Nutzerwunsch 13.10. ≈ 03:00, ersetzt BATCH-1)
+
+Spezifikation `docs\BATCH_MODERN.md` (SPEC-BATCH). **Gebaut während der Nachttests** als eigene Spur, je Paket ein frischer Agent nacheinander (Nutzer: „mit einem Subagenten während die UI-Tests laufen“); eigenes Crate/eigene Dateien, keine Überschneidung mit den FIX-Agenten. **Getestet erst, wenn alle UI-Tests und FIX vorbei sind** (Paket BATCH-T), danach GT-2.
+
+## 4f. Reihenfolge ab 13.10. ≈ 03:05 (Nutzerwunsch)
+
+1. TE2-C/D/E und SPEC-BATCH fertig laufen lassen; Koordinator: Restsuche alte Namen, TECHNISCH_ENGLISCH §E abgleichen, §7 Zahlen, Testleitfaden auf neue Namen. **Stopp → Freigabe Welle 5.**
+2. Welle 5a (§4d), 3. Welle 5b, 4. Doku-Übertrag Welle 5 (DOC-4), 5. Slots vorwärmen + neue Testversion. **Stopp → „los“.**
+6. Nachtlauf: GT-1 · CT-1a/1b (Dialoge, Menüs) · CT-2 · CT-3 · CT-4, parallel Spur BATCH-1…n (Bau) → FIX-1…n → BATCH-T (Batch testen und beheben) → GT-2 (Gesamtlauf inkl. Batch, Endversion auf den Desktop, Bericht im Chat).
+
 **Nachtlauf (Abschluss Z), Ablauf laut `progress-2026-10-13.md` §4:**
 
 1. Testversion vom 13.10. liegt auf dem Desktop (`Firepixel-Vorschau-2026-10-13_HH-MM`, mit `NEU.md`).
