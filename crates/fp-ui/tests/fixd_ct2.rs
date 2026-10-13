@@ -346,3 +346,19 @@ fn toolbar_color_applies_to_selection() {
     assert_eq!(fill_of(&h, r), fp_color::Argb(0xff3a_7bd5), "ohne Auswahl bleibt das Rechteck");
     assert_eq!(st(&h).session.active().map(|d| d.history.undo_count()).unwrap_or(0), n1, "kein Verlaufsschritt");
 }
+
+/// CT-2 FARB-1b (6): Der Klappschieber der Deckkraft bleibt im Fenster – reicht der Platz unter dem
+/// Knopf nicht (900 × 650, Popup unten), wird er nach oben geschoben; sonst unverändert darunter.
+#[test]
+fn opacity_slider_stays_in_window() {
+    use fp_ui::inspector::color_picker::{slider_rect, POPUP_H};
+    let screen = egui::Rect::from_min_size(egui::Pos2::ZERO, egui::vec2(900.0, 650.0));
+    // Popup weit oben: Schieber direkt unter dem Knopf (Lage wie bisher)
+    let r = slider_rect(egui::pos2(100.0, 40.0), screen);
+    assert_eq!((r.left(), r.top(), r.width(), r.height()), (147.0, 275.0, 24.0, 222.0));
+    // Popup unten im 900 × 650-Fenster (wie im Klicktest, Schieber ab y ≈ 480): ganz im Fenster
+    let o = egui::pos2(60.0, 650.0 - POPUP_H - 2.0);
+    let r = slider_rect(o, screen);
+    assert!(r.bottom() <= 650.0 && r.top() >= 0.0, "{r:?}");
+    assert_eq!(r.height(), 222.0, "volle Höhe, alle Werte erreichbar");
+}

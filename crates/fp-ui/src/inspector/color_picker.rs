@@ -447,7 +447,7 @@ fn body(ui: &mut Ui, ctx: &egui::Context, swatch: Id, st: &AppState, s: &mut CpS
     let o = s.pos;
     let rect = Rect::from_min_size(o, vec2(POPUP_W, POPUP_H));
     let grid = Rect::from_min_max(o + vec2(3.0, 3.0), o + vec2(256.0, 184.0));
-    let slider_rect = Rect::from_min_size(o + vec2(47.0, 235.0), vec2(24.0, 222.0));
+    let slider_rect = slider_rect(o, ctx.content_rect());
     let sys_rect = sys_rect(o, ctx.content_rect());
     // Bildschirmfotos für die Pipette über dem App-Fenster einsammeln
     let shots: Vec<Arc<egui::ColorImage>> = ctx.input(|i| {
@@ -752,6 +752,14 @@ fn body(ui: &mut Ui, ctx: &egui::Context, swatch: Id, st: &AppState, s: &mut CpS
     }
     let _ = ui;
     (None, false)
+}
+
+/// Klappschieber der Deckkraft (24 × 222) unter seinem Knopf; reicht das Fenster nach unten nicht,
+/// wird er wie das Popup selbst nach oben in das Fenster geschoben (CT-2, 900 × 650).
+pub fn slider_rect(o: Pos2, screen: Rect) -> Rect {
+    let size = vec2(24.0, 222.0);
+    let top = (o.y + 235.0).min(screen.bottom() - size.y - 2.0).max(screen.top());
+    Rect::from_min_size(pos2(o.x + 47.0, top), size)
 }
 
 fn sys_rect(o: Pos2, screen: Rect) -> Rect {
