@@ -240,6 +240,8 @@ fn radiergummi_abdruck_und_strich_wie_im_original() {
     esc(s);
     assert_eq!(s.tools.active, ToolId::Pointer, "Esc nach dem Radieren: Zeiger");
     assert_eq!(sel(s), vec![b]);
+    // Esc nach dem Radieren legt „Bitmapmodus beenden“ an (Original, PAR 03/16)
+    s.undo().expect("undo");
     s.undo().expect("undo");
     assert_eq!(px(s, b, 184, 366), [255, 0, 0, 255], "Strg+Z stellt her");
     // Strich 160 → 260 bei y 367 (PM-3): Spalte 185 voll gelöscht 361–371, 360/372 ≈ 81 %, 373 ≈ 13 %
