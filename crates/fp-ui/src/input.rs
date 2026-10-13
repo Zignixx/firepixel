@@ -362,6 +362,15 @@ pub fn handle(ctx: &egui::Context, st: &mut AppState) {
             _ => {}
         }
     }
+    // Rechteck aufziehen mit gehaltener ↑/↓-Taste: die Rundung wächst, solange die Taste gehalten
+    // wird (PAR 10/05, Original 1,5 s → 0,97) – auch ohne Tastenwiederholung des Systems je Bild
+    if st.session.tools.active == ToolId::Rectangle && ctx.input(|i| i.pointer.primary_down()) {
+        let (up, down, m) = ctx.input(|i| (i.key_down(Key::ArrowUp), i.key_down(Key::ArrowDown), i.modifiers));
+        if up != down {
+            send(ctx, st, ToolInput::Key(if up { ToolKey::Up } else { ToolKey::Down }), tool_mods(m));
+            ctx.request_repaint();
+        }
+    }
 }
 
 #[cfg(test)]

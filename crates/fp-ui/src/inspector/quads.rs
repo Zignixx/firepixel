@@ -276,7 +276,9 @@ fn selection_q1(ui: &mut Ui, st: &mut AppState, r: Rect) {
     let _ = c;
     let row = d.r(0.0, 3.0, 1.0, 10.0);
     fields::label(ui, Rect::from_min_max(pos2(thumb.right() + 5.0, row.top()), pos2(r.right() - 3.0, row.bottom())), &label, true);
-    let name = e.common.name.clone().unwrap_or_default();
+    // Rechteck-Grundform ohne Namen: das Feld zeigt wie im Original „Rechteck“ (PAR 10/07)
+    let unnamed_rect = || matches!(&e.kind, fp_model::ElementKind::Path(p) if p.primitive.is_some()).then(|| t("tool-rectangle"));
+    let name = e.common.name.clone().or_else(unnamed_rect).unwrap_or_default();
     if let Some(n) = fields::text(ui, "pi-objname", d.r(30.0, 14.0, 46.0, 12.0), &name, true) {
         st.run("element.setName", json!({"name": n}));
     }
@@ -319,6 +321,9 @@ fn box_q2(ui: &mut Ui, st: &mut AppState, r: Rect) {
     // mit Auswahlrahmen dessen Maße (Original: nach dem Aufziehen B/H/X/Y des Rahmens, PAR 06/02);
     // Eingaben wirken dann nicht auf das Objekt
     let marq = if editing.is_some() { None } else { st.session.active().filter(|d| d.selection.has_pixels()).and_then(|d| d.selection.pixels.as_ref().map(|m| m.tight_bounds().to_rect())).filter(|r| r.width() > 0.0) };
+    // Rahmen, den das Werkzeug gerade aufzieht (Zuschneiden, Exportbereich, Rechteck/Ellipse): wie
+    // im Original live in B/H/X/Y (PAR 08/17, 08/20, 10/15); Eingaben wirken dann nicht
+    let marq = if editing.is_some() { marq } else { st.session.tool_live_rect().map(|r| r.normalized()).or(marq) };
     let b = editing.or(marq).or_else(|| st.session.active().and_then(|d| fp_engine::docops::ids_bounds(&d.doc, d.page, &d.selection.elements)));
     // ohne Auswahl (Rechteck, Ellipse, Auto-Form, Auswahlrahmen, Lasso, Zuschneiden, Exportbereich)
     // sind die Felder wie im Original weiß, leer und bedienbar (PARITAET_A W22); eine Eingabe ohne

@@ -739,10 +739,22 @@ pub fn ui_request(st: &mut AppState, req: &fp_engine::tools::Invocation) {
     }
     if req.command == "file.exportArea" {
         let rect = crate::canvas::parse_rect(&req.params["rect"]);
+        // Wie im Original öffnet der Doppelklick die **Bildvorschau** mit Register „Datei“ und
+        // gesetztem „Exportbereich“ (X/Y/B/H des Rahmens, PAR 08/20)
+        if let (Some(r), Some(mut p)) = (rect, crate::dialogs::image_preview::ImagePreview::new(st)) {
+            let origin = st.session.active().and_then(|d| d.doc.pages.get(d.page).map(|pg| pg.canvas.origin)).unwrap_or_default();
+            let r = r.normalized();
+            let area = [(r.left - origin.x).round() as i32, (r.top - origin.y).round() as i32, (r.right - origin.x).round() as i32, (r.bottom - origin.y).round() as i32];
+            for pane in p.panes.iter_mut() {
+                pane.settings.crop = Some(area);
+            }
+            p.tab = 1;
+            st.dialogs.preview = Some(p);
+            return;
+        }
         if let (Some(id), Some(r)) = (st.session.active_id(), rect) {
             st.canvases.entry(id).or_default().export_area = Some(r);
         }
-        // Export-Dialog wie im Original (der Dialog übernimmt den Bereich aus `export_area`)
         if !crate::dialogs::open_for_command(st, "file.export") {
             st.push(Action::Status(fp_i18n::t("ui-export-area-set")));
         }

@@ -146,12 +146,33 @@ fn polygon_q4(ui: &mut Ui, st: &mut AppState, r: Rect) {
     // und mit gesetztem „Autom.“ (Winkel 38, PARITAET_A W19, a_131)
     fields::label_right(ui, d.r(255.0, 17.0, 31.0, 8.0), &tx("pi-poly-angle"), true);
     let auto = o.polygon_spikiness.is_none();
-    let ang = o.polygon_spikiness.map(|s| (s * 100.0).round() as f64).unwrap_or(38.0);
+    // „Autom.“ zeigt den Winkel des regelmäßigen Sterns zur Seitenzahl (5 → 38, 6 → 57, PAR 10/09)
+    let auto_ang = auto_star_angle(o.polygon_sides);
+    let ang = o.polygon_spikiness.map(|s| (s * 100.0).round() as f64).unwrap_or(auto_ang);
     if let Some(v) = fields::number(ui, "pi-poly-angle", d.r(288.0, 14.0, 19.0, 13.0), Some(d.r(308.0, 15.0, 9.0, 13.0)), Some(ang), (0.0, 100.0), 0, true) {
         st.session.tools.options.polygon_spikiness = Some((v / 100.0) as f32);
     }
     if let Some(b) = fields::checkbox(ui, "pi-poly-auto", d.r(320.0, 16.0, 40.0, 10.0), &tx("pi-poly-auto"), auto, true) {
-        st.session.tools.options.polygon_spikiness = if b { None } else { Some(0.38) };
+        st.session.tools.options.polygon_spikiness = if b { None } else { Some((auto_ang / 100.0) as f32) };
+    }
+}
+
+/// Winkel, den „Autom.“ beim Stern setzt: Verhältnis Innen-/Außenradius des regelmäßigen Sterns
+/// in Prozent, abgeschnitten (wie `geometry::polygon_tool_contour`; 5 Seiten → 38, 6 → 57).
+pub fn auto_star_angle(sides: u32) -> f64 {
+    let n = sides.max(5) as f64;
+    let r = (2.0 * std::f64::consts::PI / n).cos() / (std::f64::consts::PI / n).cos();
+    (r * 100.0 + 1e-9).floor().max(0.0)
+}
+
+#[cfg(test)]
+mod parx_tools3 {
+    /// PAR 10/09: „Autom.“ setzt den Winkel je Seitenzahl wie im Original (5 → 38, 6 → 57).
+    #[test]
+    fn auto_angle_follows_sides() {
+        assert_eq!(super::auto_star_angle(5), 38.0);
+        assert_eq!(super::auto_star_angle(6), 57.0);
+        assert!(super::auto_star_angle(12) > super::auto_star_angle(6));
     }
 }
 

@@ -92,6 +92,11 @@ impl Default for InspectorState {
 impl InspectorState {
     /// Layout nach der aktuellen Sitzung aktualisieren.
     pub fn update(&mut self, s: &fp_engine::Session) {
+        // Zeiger zieht ein eben erst gewähltes Objekt: wie im Original bleibt der bisherige
+        // Inspektor (z. B. „Dokument“) bis zum Loslassen stehen (PAR 08/21)
+        if s.tool_inspector_hold() {
+            return;
+        }
         if let Some(l) = layouts::select_layout(s) {
             for (i, q) in l.quads.iter().enumerate() {
                 if *q != 0 {
