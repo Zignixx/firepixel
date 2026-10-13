@@ -226,3 +226,49 @@ fn texture_list_as_wide_as_longest_name() {
     }
     fp_i18n::set_language("de");
 }
+
+/// CT-2 KI-2: Esc während „Bild analysieren“ bricht nur die KI-Rechnung ab; die vorhandene
+/// Pixelauswahl und der Bitmapmodus bleiben (wie der Knopf „Abbrechen“), kein Verlaufsschritt.
+#[test]
+fn escape_in_ai_progress_keeps_pixel_selection() {
+    use fp_engine::commands::ai::fp_ai::{self, models::ModelId, Stage};
+    let (a, id) = app_with_bitmap([90, 140, 200, 255]);
+    let mut h = harness(a);
+    {
+        let s = &mut h.state_mut().state.session;
+        s.execute("select.set", json!({"ids": [id.0]})).expect("Bitmap");
+        s.execute("select.pixels", json!({"shape": "rect", "rect": [219, 29, 371, 141]})).expect("Pixelauswahl");
+        s.set_tool(ToolId::AiObject).expect("KI-Objektauswahl");
+    }
+    h.run_steps(3);
+    let before = st(&h).session.active().map(|d| (d.selection.has_pixels(), d.selection.pixels.clone(), d.history.undo_count())).expect("Dokument");
+    assert!(before.0, "Pixelauswahl vorhanden");
+    fp_ui::dialogs::models::start_demo(&mut h.state_mut().state, "select.aiObject", ModelId::Sam2Tiny, |pr| {
+        pr.set_stage(Stage::Analyze);
+        pr.set(0.45);
+        while !pr.cancel.is_cancelled() {
+            std::thread::sleep(std::time::Duration::from_millis(5));
+        }
+        Err(fp_ai::AiError::Cancelled)
+    });
+    let t = std::time::Instant::now();
+    while t.elapsed() < std::time::Duration::from_millis(400) {
+        h.step();
+        std::thread::sleep(std::time::Duration::from_millis(16));
+    }
+    assert!(st(&h).dialogs.ai.busy(), "Rechnung läuft");
+    h.event(Event::Key { key: egui::Key::Escape, physical_key: None, pressed: true, repeat: false, modifiers: Modifiers::NONE });
+    h.step();
+    h.event(Event::Key { key: egui::Key::Escape, physical_key: None, pressed: false, repeat: false, modifiers: Modifiers::NONE });
+    let t = std::time::Instant::now();
+    while st(&h).dialogs.ai.busy() && t.elapsed() < std::time::Duration::from_secs(3) {
+        h.step();
+        std::thread::sleep(std::time::Duration::from_millis(16));
+    }
+    assert!(!st(&h).dialogs.ai.busy(), "Esc bricht ab");
+    let after = st(&h).session.active().map(|d| (d.selection.has_pixels(), d.selection.pixels.clone(), d.history.undo_count())).expect("Dokument");
+    assert!(after.0, "Pixelauswahl bleibt");
+    assert!(after.1 == before.1, "Pixelauswahl unverändert");
+    assert_eq!(after.2, before.2, "kein Verlaufsschritt");
+    assert_eq!(st(&h).session.tools.active, ToolId::AiObject, "Werkzeug bleibt");
+}

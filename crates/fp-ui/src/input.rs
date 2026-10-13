@@ -260,6 +260,12 @@ pub fn handle(ctx: &egui::Context, st: &mut AppState) {
                 if key == Key::Escape && (egui::Popup::is_any_open(ctx) || crate::inspector::popups::fill_popup_open(ctx)) {
                     continue;
                 }
+                // Esc während einer KI-Rechnung gehört der Fortschrittskarte (bricht nur ab,
+                // `dialogs::models`); das Werkzeug beendet nicht zusätzlich den Bitmapmodus und die
+                // Pixelauswahl bleibt (CT-2, wie der Knopf „Abbrechen“)
+                if key == Key::Escape && st.dialogs.ai.job.is_some() {
+                    continue;
+                }
                 let ctrl = modifiers.ctrl || modifiers.command;
                 if editing {
                     // Text-Editor: Tasten gehen an das Werkzeug; Strg+A markiert alles
