@@ -10,6 +10,7 @@ mod fw;
 use crate::conv::{self, Arg};
 use crate::runtime;
 use crate::state::{st, with_state, FwErr, FwResult, Handle};
+use boa_engine::property::PropertyKey;
 use boa_engine::{js_string, Context, JsResult, JsValue};
 use fp_engine::DocId;
 use fp_model::{Element, ElementId};
@@ -452,49 +453,157 @@ pub(crate) fn global_noop(_this: &JsValue, _args: &[JsValue], _ctx: &mut Context
 
 pub(crate) fn global_uneval(_this: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
     let v = args.first().cloned().unwrap_or_default();
-    let j = conv::js_to_json(&v, ctx, 0)?;
-    Ok(conv::s(&to_source_text(&j)))
+    Ok(conv::s(&to_source_js(&v, ctx)?))
 }
 
-/// `toSource` wie im Original (`[ 1, "zwei", { x:3 } ]`, Schlüssel ohne Anführungszeichen). Objekte
-/// stehen wie die Wirtobjekte des Originals (`guides`, `gridSize`, `textRuns`) ohne umschließende
-/// Klammern: `{ x:36, y:36 }` statt `({ x:36, y:36 })` (TW-08).
+/// `toSource` wie im Original. Zwei Formen (FIX-R2, Belege Paarlauf 13.10.2026):
+/// - **Wirtwerte** (von Firepixel geliefert: `guides`, `gridSize`, `textRuns`, `customData`, …) wie
+///   der Serialisierer des Originals: `{ x:36, y:36 }` ohne Klammern, `[ 300 ]` mit Innenabstand,
+///   leer `[  ]`/`{  }`, Steuerzeichen in Zeichenketten als `\u000D` (TW-08).
+/// - **Reine JS-Werte** wie SpiderMonkey 1.5: `[800, 600, , 2, 1]` (kein Innenabstand, `undefined`
+///   als Lücke), Objektliterale außen mit Klammern `({a:1, b:[1, 2]})`, verschachtelt ohne,
+///   Zeichenketten mit `\n`/`\r`/`\t`.
 pub(crate) fn to_source(this: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
-    let j = conv::js_to_json(this, ctx, 0)?;
-    Ok(conv::s(&to_source_text(&j)))
+    Ok(conv::s(&to_source_js(this, ctx)?))
 }
 
-/// Quelltextform eines JSON-Werts.
+/// Quelltextform eines JS-Werts (siehe [`to_source`]).
+pub fn to_source_js(v: &JsValue, ctx: &mut Context) -> JsResult<String> {
+    src_value(v, ctx, 0, false, true, false)
+}
+
+/// `host`: innerhalb eines Wirtwerts (vererbt sich nach innen); `top`: äußerste Ebene;
+/// `in_js_array`: Element eines reinen JS-Arrays (dort wird `undefined` zur Lücke).
+fn src_value(v: &JsValue, ctx: &mut Context, depth: u32, host: bool, top: bool, in_js_array: bool) -> JsResult<String> {
+    if depth > 24 {
+        return Ok("null".into());
+    }
+    if v.is_undefined() {
+        return Ok(if in_js_array { String::new() } else { "null".into() });
+    }
+    if v.is_null() {
+        return Ok("null".into());
+    }
+    if let Some(b) = v.as_boolean() {
+        return Ok(b.to_string());
+    }
+    if let Some(x) = v.as_number() {
+        return Ok(conv::fmt_num(x));
+    }
+    if let Some(st) = v.as_string() {
+        let t = st.to_std_string_escaped();
+        return Ok(if host { quote_host(&t) } else { quote_js(&t) });
+    }
+    let Some(o) = v.as_object() else { return Ok("null".into()) };
+    if o.is_callable() {
+        return Ok("null".into());
+    }
+    if conv::handle_of(v, ctx).is_some() {
+        let j = conv::js_to_json(v, ctx, depth)?;
+        return Ok(to_source_text(&j));
+    }
+    let host = host || conv::is_host(v, ctx);
+    let len_v = o.get(js_string!("length"), ctx)?;
+    if o.is_array() || (len_v.as_number().is_some() && conv::is_fwarray(v, ctx)) {
+        let len = len_v.as_number().unwrap_or(0.0).clamp(0.0, 1.0e6) as u32;
+        let mut parts = Vec::with_capacity(len as usize);
+        for i in 0..len {
+            let e = o.get(i, ctx)?;
+            parts.push(src_value(&e, ctx, depth + 1, host, false, !host)?);
+        }
+        return Ok(if host { format!("[ {} ]", parts.join(", ")) } else { format!("[{}]", parts.join(", ")) });
+    }
+    let keys = o.own_property_keys(ctx)?;
+    let mut parts = Vec::new();
+    for k in keys {
+        let name = match &k {
+            PropertyKey::String(s) => s.to_std_string_escaped(),
+            PropertyKey::Index(i) => i.get().to_string(),
+            PropertyKey::Symbol(_) => continue,
+        };
+        if name == conv::HANDLE_KEY || name == conv::HOST_KEY {
+            continue;
+        }
+        let e = o.get(k, ctx)?;
+        if e.is_undefined() || e.as_object().is_some_and(|x| x.is_callable()) {
+            continue;
+        }
+        parts.push(format!("{}:{}", source_key(&name, host), src_value(&e, ctx, depth + 1, host, false, false)?));
+    }
+    Ok(if host {
+        format!("{{ {} }}", parts.join(", "))
+    } else if top {
+        format!("({{{}}})", parts.join(", "))
+    } else {
+        format!("{{{}}}", parts.join(", "))
+    })
+}
+
+/// Eigenschaftsname: Bezeichner (und bei JS-Objekten Indizes) ohne Anführungszeichen.
+fn source_key(k: &str, host: bool) -> String {
+    let ident = !k.is_empty()
+        && k.chars().all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '$')
+        && !k.starts_with(|c: char| c.is_ascii_digit());
+    let index = !host && !k.is_empty() && k.chars().all(|c| c.is_ascii_digit()) && (k == "0" || !k.starts_with('0'));
+    if ident || index {
+        k.to_string()
+    } else if host {
+        quote_host(k)
+    } else {
+        quote_js(k)
+    }
+}
+
+/// Zeichenkette im Wirt-Serialisierer des Originals: Steuerzeichen als `\u000D` (Hex in Großbuchstaben).
+fn quote_host(t: &str) -> String {
+    let mut out = String::with_capacity(t.len() + 2);
+    out.push('"');
+    for c in t.chars() {
+        match c {
+            '\\' => out.push_str("\\\\"),
+            '"' => out.push_str("\\\""),
+            c if (c as u32) < 0x20 || c as u32 == 0x7f => out.push_str(&format!("\\u{:04X}", c as u32)),
+            c => out.push(c),
+        }
+    }
+    out.push('"');
+    out
+}
+
+/// Zeichenkette wie SpiderMonkey 1.5 (`js_QuoteString`): `\b \f \n \r \t \v`, übrige
+/// Steuerzeichen als `\xHH`.
+fn quote_js(t: &str) -> String {
+    let mut out = String::with_capacity(t.len() + 2);
+    out.push('"');
+    for c in t.chars() {
+        match c {
+            '\\' => out.push_str("\\\\"),
+            '"' => out.push_str("\\\""),
+            '\u{8}' => out.push_str("\\b"),
+            '\u{c}' => out.push_str("\\f"),
+            '\n' => out.push_str("\\n"),
+            '\r' => out.push_str("\\r"),
+            '\t' => out.push_str("\\t"),
+            '\u{b}' => out.push_str("\\v"),
+            c if (c as u32) < 0x20 || c as u32 == 0x7f => out.push_str(&format!("\\x{:02X}", c as u32)),
+            c => out.push(c),
+        }
+    }
+    out.push('"');
+    out
+}
+
+/// Quelltextform eines JSON-Werts in Wirtform (für Wrapper-Handles und Rust-Aufrufer).
 pub fn to_source_text(v: &Value) -> String {
     match v {
         Value::Null => "null".into(),
         Value::Bool(b) => b.to_string(),
         Value::Number(x) => conv::fmt_num(x.as_f64().unwrap_or(0.0)),
-        Value::String(t) => format!("\"{}\"", t.replace('\\', "\\\\").replace('"', "\\\"").replace('\n', "\\n").replace('\r', "\\r")),
-        Value::Array(a) => {
-            if a.is_empty() {
-                "[]".into()
-            } else {
-                format!("[ {} ]", a.iter().map(to_source_text).collect::<Vec<_>>().join(", "))
-            }
-        }
+        Value::String(t) => quote_host(t),
+        Value::Array(a) => format!("[ {} ]", a.iter().map(to_source_text).collect::<Vec<_>>().join(", ")),
         Value::Object(m) => {
-            if m.is_empty() {
-                "{}".into()
-            } else {
-                let parts: Vec<String> = m
-                    .iter()
-                    .map(|(k, v)| {
-                        let key = if k.chars().all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '$') && !k.starts_with(|c: char| c.is_ascii_digit()) {
-                            k.clone()
-                        } else {
-                            format!("\"{k}\"")
-                        };
-                        format!("{key}:{}", to_source_text(v))
-                    })
-                    .collect();
-                format!("{{ {} }}", parts.join(", "))
-            }
+            let parts: Vec<String> = m.iter().map(|(k, v)| format!("{}:{}", source_key(k, true), to_source_text(v))).collect();
+            format!("{{ {} }}", parts.join(", "))
         }
     }
 }

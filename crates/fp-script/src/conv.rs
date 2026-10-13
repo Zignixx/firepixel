@@ -11,6 +11,28 @@ use serde_json::{Map, Number, Value};
 /// Name der versteckten Handle-Eigenschaft der Wrapper.
 pub const HANDLE_KEY: &str = "__fp";
 
+/// Name der versteckten Markierung für Wirtobjekte/-Arrays (von Firepixel erzeugte Werte). `toSource`
+/// gibt sie wie die Wirtobjekte des Originals aus (`{ x:1 }`, `[ 1 ]`, leer `[  ]`), reine JS-Werte
+/// dagegen wie SpiderMonkey (`({x:1})`, `[1, , 2]`).
+pub const HOST_KEY: &str = "__fpHost";
+
+/// Markiert ein Objekt/Array als Wirtwert (nicht aufzählbar, unsichtbar für `for…in`/`Object.keys`).
+pub fn mark_host(o: &boa_engine::JsObject, ctx: &mut Context) -> JsResult<()> {
+    use boa_engine::property::PropertyDescriptor;
+    o.define_property_or_throw(
+        JsString::from(HOST_KEY),
+        PropertyDescriptor::builder().value(true).writable(false).enumerable(false).configurable(true),
+        ctx,
+    )?;
+    Ok(())
+}
+
+/// Ist der Wert ein Wirtobjekt/-array (markiert oder FwArray)?
+pub fn is_host(v: &JsValue, ctx: &mut Context) -> bool {
+    let Some(o) = v.as_object() else { return false };
+    o.has_own_property(JsString::from(HOST_KEY), ctx).unwrap_or(false) || is_fwarray(v, ctx)
+}
+
 /// String als JS-Wert.
 pub fn s(v: &str) -> JsValue {
     JsValue::from(JsString::from(v))
@@ -77,7 +99,7 @@ pub fn js_to_json(v: &JsValue, ctx: &mut Context, depth: u32) -> JsResult<Value>
             PropertyKey::Index(i) => i.get().to_string(),
             PropertyKey::Symbol(_) => continue,
         };
-        if name == HANDLE_KEY {
+        if name == HANDLE_KEY || name == HOST_KEY {
             continue;
         }
         let e = o.get(k, ctx)?;
@@ -101,7 +123,7 @@ pub fn is_fwarray(v: &JsValue, ctx: &mut Context) -> bool {
     }
 }
 
-/// JSON → JS (Objekte und Arrays als normale JS-Objekte).
+/// JSON → JS (Objekte und Arrays als normale JS-Objekte, als Wirtwerte markiert).
 pub fn json_to_js(v: &Value, ctx: &mut Context) -> JsResult<JsValue> {
     Ok(match v {
         Value::Null => JsValue::null(),
@@ -113,7 +135,9 @@ pub fn json_to_js(v: &Value, ctx: &mut Context) -> JsResult<JsValue> {
             for e in a {
                 items.push(json_to_js(e, ctx)?);
             }
-            JsArray::from_iter(items, ctx).into()
+            let arr = JsArray::from_iter(items, ctx);
+            mark_host(&arr, ctx)?;
+            arr.into()
         }
         Value::Object(m) => {
             let o = boa_engine::JsObject::with_object_proto(ctx.intrinsics());
@@ -121,14 +145,17 @@ pub fn json_to_js(v: &Value, ctx: &mut Context) -> JsResult<JsValue> {
                 let jv = json_to_js(e, ctx)?;
                 o.create_data_property_or_throw(JsString::from(k.as_str()), jv, ctx)?;
             }
+            mark_host(&o, ctx)?;
             o.into()
         }
     })
 }
 
-/// Normales JS-Array.
+/// Normales JS-Array (als Wirtwert markiert).
 pub fn array(items: Vec<JsValue>, ctx: &mut Context) -> JsValue {
-    JsArray::from_iter(items, ctx).into()
+    let arr = JsArray::from_iter(items, ctx);
+    let _ = mark_host(&arr, ctx);
+    arr.into()
 }
 
 /// Objekt aus Schlüssel-Wert-Paaren.
@@ -137,6 +164,7 @@ pub fn object(pairs: Vec<(&str, JsValue)>, ctx: &mut Context) -> JsResult<JsValu
     for (k, v) in pairs {
         o.create_data_property_or_throw(JsString::from(k), v, ctx)?;
     }
+    mark_host(&o, ctx)?;
     Ok(o.into())
 }
 

@@ -1,5 +1,5 @@
 //! TW-02 (`textRuns` mit allen Eigenschaften des Originals, `face` als PostScript-Name) und TW-08
-//! (`toSource` ohne umschließende Klammern).
+//! (`toSource` von Wirtobjekten ohne umschließende Klammern).
 
 use fp_script::{run_source, ScriptOptions};
 
@@ -89,9 +89,11 @@ fn text_runs_to_source_has_original_shape() {
 
 #[test]
 fn to_source_objects_without_parentheses() {
-    assert_eq!(result("({a: 1, b: [1, 2], c: {d: 'x'}}).toSource()"), "{ a:1, b:[ 1, 2 ], c:{ d:\"x\" } }");
-    assert_eq!(result("({}).toSource()"), "{}");
-    assert_eq!(result("uneval({x: 36, y: 36})"), "{ x:36, y:36 }");
+    // Wirtobjekte ohne Klammern (TW-08); reine JS-Objektliterale behalten sie (FIX-R2, siehe fixr2_to_source.rs).
+    let src = format!("{NEW} dom.gridSize.toSource()");
+    assert!(result(&src).starts_with("{ x:"));
+    assert_eq!(result("({a: 1, b: [1, 2], c: {d: 'x'}}).toSource()"), "({a:1, b:[1, 2], c:{d:\"x\"}})");
+    assert_eq!(result("uneval({x: 36, y: 36})"), "({x:36, y:36})");
 }
 
 #[test]
@@ -102,7 +104,8 @@ fn to_source_guides_like_original() {
 
 #[test]
 fn to_source_arrays_and_strings_unchanged() {
-    assert_eq!(result("[1, 'zwei', {x: 3}].toSource()"), "[ 1, \"zwei\", { x:3 } ]");
+    // Reine JS-Arrays wie im Original ohne Innenabstand (Logs dialogs-d01-d10/11, menu-edit/03).
+    assert_eq!(result("[1, 'zwei', {x: 3}].toSource()"), "[1, \"zwei\", {x:3}]");
     assert_eq!(result("[].toSource()"), "[]");
     assert_eq!(result("uneval('a\"b')"), "\"a\\\"b\"");
 }
