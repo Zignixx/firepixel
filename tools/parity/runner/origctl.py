@@ -33,6 +33,10 @@ class OrigError(RuntimeError):
     pass
 
 
+class CrashError(OrigError):
+    pass
+
+
 class Lock:
     """Named Win32 mutex (same one the PowerShell helpers use)."""
 
@@ -241,29 +245,36 @@ class Original:
             raise OrigError(f"JSF timeout after {timeout}s")
         errs = [ln for ln in lines if ln.startswith("ERROR")]
         if errs:
-            raise OrigError("JSF: " + "; ".join(errs)[:500])
+            msg = "JSF: " + "; ".join(errs)[:500]
+            if "-1073741819" in msg:  # access violation inside the program: it is damaged until restarted
+                raise CrashError(msg)
+            raise OrigError(msg)
         return lines
 
+    def jsf_retry(self, code: str, timeout: float = 60) -> list[str]:
+        """jsf(); after an internal access violation restart the program once and retry."""
+        try:
+            return self.jsf(code, timeout)
+        except CrashError:
+            self.restart()
+            return self.jsf(code, timeout)
+
     # ------------------------------------------------------------- documents
-    def open_doc(self, path: Path):
-        url = file_url(path)
-        # close earlier copies of the same file without saving, then open (never with the 3rd argument)
-        self.jsf(f"""
+    @staticmethod
+    def _close_code(url: str) -> str:
+        return f"""
 var u = {js_str(url)};
 for (var i = fw.documents.length - 1; i >= 0; i--) {{
   var d = fw.documents[i];
   if (String(d.filePathForSave || "").toLowerCase() == u.toLowerCase()) {{ d.close(false); }}
 }}
-fw.openDocument(u);
-fp_log("RET " + fw.documents.length);
-""", timeout=90)
+"""
+
+    def open_doc(self, path: Path):
+        """Close earlier copies of the file unsaved, then open it (never with the third argument)."""
+        url = file_url(path)
+        self.jsf_retry(self._close_code(url) + f"fw.openDocument({js_str(url)});\n", timeout=90)
+        time.sleep(1.0)
 
     def close_doc(self, path: Path):
-        url = file_url(path)
-        self.jsf(f"""
-var u = {js_str(url)};
-for (var i = fw.documents.length - 1; i >= 0; i--) {{
-  var d = fw.documents[i];
-  if (String(d.filePathForSave || "").toLowerCase() == u.toLowerCase()) {{ d.close(false); }}
-}}
-""", timeout=60)
+        self.jsf_retry(self._close_code(file_url(path)), timeout=60)

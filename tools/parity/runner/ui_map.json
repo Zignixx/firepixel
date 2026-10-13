@@ -41,14 +41,21 @@
   },
 
   "tools": {
-    "_doc": "fp tool id -> orig: single-key shortcut (sent after a click-free focus) or {\"jsf\": \"...\"}. Unknown ids are logged as unmapped for orig; fp always uses ui_action {tool}.",
-    "tool.pointer": "v", "tool.subselection": "a", "tool.scale": "q", "tool.crop": "c",
-    "tool.marquee": "m", "tool.lasso": "l", "tool.magicWand": "w", "tool.brush": "b", "tool.pencil": "y",
-    "tool.eraser": "e", "tool.blur": "r", "tool.rubberStamp": "s", "tool.eyedropper": "i", "tool.paintBucket": "g",
-    "tool.line": "n", "tool.pen": "p", "tool.rectangle": "u", "tool.text": "t", "tool.hand": "h", "tool.zoom": "z",
-    "tool.slice": "k", "tool.hotspot": "j"
+    "_doc": "fp tool id -> orig: {\"window_rel\": [x, y]} = click on the toolbox button (client coordinates, window 1600x1000 at 0,0, toolbox docked left), or a shortcut key string, or {\"jsf\": ...}. Tools hidden in a flyout (null) need the flyout. Single-key shortcuts proved unreliable in the reference program (only some reach it), so clicks are used.",
+    "tool.pointer": {"window_rel": [22, 124]}, "tool.subselection": {"window_rel": [49, 124]},
+    "tool.scale": {"window_rel": [22, 149]}, "tool.crop": {"window_rel": [49, 149]},
+    "tool.marquee": {"window_rel": [22, 199]}, "tool.lasso": {"window_rel": [49, 199]},
+    "tool.magicWand": {"window_rel": [22, 224]}, "tool.brush": {"window_rel": [49, 224]},
+    "tool.pencil": {"window_rel": [22, 249]}, "tool.eraser": {"window_rel": [49, 249]},
+    "tool.blur": {"window_rel": [22, 274]}, "tool.rubberStamp": {"window_rel": [49, 274]},
+    "tool.line": {"window_rel": [22, 324]}, "tool.pen": {"window_rel": [49, 324]},
+    "tool.rectangle": {"window_rel": [22, 349]}, "tool.text": {"window_rel": [49, 349]},
+    "tool.freeform": {"window_rel": [22, 374]}, "tool.knife": {"window_rel": [49, 374]},
+    "tool.hotspot": {"window_rel": [22, 424]}, "tool.slice": {"window_rel": [49, 424]},
+    "tool.eyedropper": {"window_rel": [22, 496]}, "tool.paintBucket": {"window_rel": [49, 496]},
+    "tool.hand": {"window_rel": [22, 637]}, "tool.zoom": {"window_rel": [49, 637]},
+    "tool.exportArea": null, "tool.replaceColor": null
   },
-
   "commands": {
     "_doc": "fp command id -> orig menu path ('A > B > C'), used by the verb 'command' on the orig side. fp uses ui_action {run}.",
     "modify.canvas.imageSize": "Modifizieren > Leinwand > Bildgröße",
@@ -61,6 +68,7 @@
 
   "targets": {
     "_doc": "logical ui key -> {orig: locator, fp: locator}. orig locators: {panel, rel:[x,y]} (offset from the panel window's top-left), {window_rel:[x,y]} (client of main window), {child:{title,class,index}, panel?}, {dialog_child:{title,class,index}}, {label:'text'}. fp locators: {find:'text', role?, exact?, panel?, index?}, {window_rel:[x,y]}, {canvas:[x,y]}. A missing side or null = unmapped.",
+    "dialog.field.<i>": "pattern, built in: orig = i-th Win32 Edit in the open dialog, fp = i-th text_input (top-to-bottom, left-to-right); also dialog.combo.<i> (ComboBox / combo_box), dialog.check.<i>, dialog.button.<i>",
     "dialog.ok":     {"orig": {"dialog_button": "ok"},     "fp": {"find": "OK", "role": "button", "exact": true}},
     "dialog.cancel": {"orig": {"dialog_button": "cancel"}, "fp": {"find": "Abbrechen", "role": "button", "exact": true}},
     "inspector.fill_color": null,

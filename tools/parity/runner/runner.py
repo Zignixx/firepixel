@@ -79,6 +79,9 @@ def diff_bbox(a: Image.Image | None, b: Image.Image | None, pad: int = 6):
     return [max(0, bb[0] - pad), max(0, bb[1] - pad), min(a.width, bb[2] + pad), min(a.height, bb[3] + pad)]
 
 
+OPENERS = {"menu", "menu_open", "hover_menu", "open", "click", "right_click", "double_click", "click_text", "right_click_text",
+           "click_button", "toolbox_click", "choose", "key", "ui_find_click", "ui_action", "command", "menu_item", "hover"}
+
 KEY_ALIASES = {"escape": "esc", "enter": "enter", "return": "enter", "del": "delete", "control": "ctrl", "strg": "ctrl",
                "cmd": "ctrl", "umschalt": "shift", "option": "alt"}
 EGUI_KEYS = {"esc": "Escape", "enter": "Enter", "tab": "Tab", "space": "Space", "delete": "Delete", "backspace": "Backspace",
@@ -112,7 +115,7 @@ class Side:
         if key not in t:
             raise Unmapped(f"ui key not in ui_map.json: {key}")
         e = t[key]
-        loc = (e or {}).get(self.name)
+        loc = e.get(self.name) if isinstance(e, dict) else None
         if not loc:
             raise Unmapped(f"ui key {key} not located for {self.name}")
         return loc
@@ -163,6 +166,9 @@ class OrigSide(Side):
             w, h = ret[-1].split(",")
             self.doc_size = (float(w), float(h))
         self.o.focus()
+        self.fitted = self.fit_if_needed()
+        self.page = None
+        self.calibrate()
 
     def close_doc(self, path: Path):
         self.o.close_doc(path)
@@ -171,15 +177,49 @@ class OrigSide(Side):
     def client(self):
         return self.h.call("main")["client"]
 
-    def doc_to_screen(self, x, y):
+    def calibrate(self):
+        """Page rectangle on screen: bounding box of everything that differs from the pasteboard colour
+        in the document view (works at any zoom as long as the page is fully visible)."""
         v = self.h.call("view")
+        tmp = Path(self.r.cfg["tmp_dir"]) / "orig_view.png"
+        self.grab(v, tmp)
+        with Image.open(tmp) as im:
+            im = im.convert("RGB")
+            bg = im.getpixel((3, 3))
+            d = ImageChops.difference(im, Image.new("RGB", im.size, bg)).convert("L").point(lambda q: 255 if q > 10 else 0)
+            bb = d.getbbox()
+        w, h = self.doc_size
+        if bb and w:
+            page = [v[0] + bb[0], v[1] + bb[1], v[0] + bb[2], v[1] + bb[3]]
+            # a page touching the view border is cut off (scrolled) - then the centre rule below is used
+            cut = bb[0] <= 1 or bb[1] <= 1 or bb[2] >= im.width - 1 or bb[3] >= im.height - 1
+            if not cut:
+                self.page = page
+                return page
+        ox = (v[0] + v[2]) / 2 - w / 2
+        oy = (v[1] + v[3]) / 2 - h / 2
+        self.page = [ox, oy, ox + w, oy + h]
+        return self.page
+
+    def fit_if_needed(self):
+        """Large documents (e.g. T10): 'fit all' in both programs so that every document point is reachable."""
+        v = self.h.call("view")
+        w, h = self.doc_size
+        if w > (v[2] - v[0]) or h > (v[3] - v[1]):
+            self.key(self.r.cfg["orig"].get("fit_all_key", "ctrl+alt+0"))
+            time.sleep(0.6)
+            return True
+        return False
+
+    def doc_to_screen(self, x, y):
         w, h = self.doc_size
         if not w:
             raise OrigError("document size unknown")
-        ox = (v[0] + v[2]) / 2 - w / 2
-        oy = (v[1] + v[3]) / 2 - h / 2
+        if getattr(self, "page", None) is None:
+            self.calibrate()
+        l, t, r, b = self.page
         dx, dy = self.r.cfg["orig"].get("canvas_offset", [0, 0])
-        return int(round(ox + x + dx)), int(round(oy + y + dy))
+        return int(round(l + (r - l) * x / w + dx)), int(round(t + (b - t) * y / h + dy))
 
     def resolve(self, target):
         """target -> screen point (x, y) [, hwnd info]."""
@@ -205,6 +245,12 @@ class OrigSide(Side):
                 if k in target:
                     raise Unsupported(f"target form {{{k}}} not supported for orig yet")
             loc = target
+        elif isinstance(target, str) and re.match(r"^dialog\.(field|combo|check|button)\.\d+$", target):
+            kind, i = target.split(".")[1:]
+            cls = {"field": "Edit", "combo": "ComboBox", "check": "Button", "button": "Button"}[kind]
+            ch = self.h.call("find_child", scope="dialog", title=None, **{"class": cls}, index=int(i))
+            r = ch["rect"]
+            return ((r[0] + r[2]) // 2, (r[1] + r[3]) // 2), ch
         elif isinstance(target, str) and target in self.r.ui_map.get("targets", {}):
             loc = self.ui(target)
         elif isinstance(target, str) and re.match(r"^[a-z_]+(\.[a-z0-9_]+)+$", target):
@@ -366,6 +412,9 @@ class OrigSide(Side):
                 raise Unmapped(f"tool {t} has no orig shortcut in ui_map.json")
             if isinstance(k, dict) and "jsf" in k:
                 self.o.jsf(k["jsf"])
+            elif isinstance(k, dict):
+                self.reset_light()
+                self.click_at(self.locate(k)[0])
             else:
                 self.reset_light()
                 self.key(k)
@@ -529,6 +578,12 @@ class FpSide(Side):
         self.doc_id = d.get("doc")
         self.doc_size = (d.get("width", 0), d.get("height", 0))
         self.call("ui_action", {"zoom": 1.0})
+        st = self.state()
+        doc = next((x for x in st.get("documents", []) if x.get("active")), None)
+        if doc:
+            ca = doc["canvas_area"]
+            if self.doc_size[0] > ca[2] - ca[0] or self.doc_size[1] > ca[3] - ca[1]:
+                self.call("ui_action", {"fit": True})
 
     def close_doc(self, path: Path):
         docs = self.call("documents") or {}
@@ -561,6 +616,16 @@ class FpSide(Side):
         if len(hits) <= index:
             raise Unmapped(f"fp ui_find: '{text}' not found")
         return hits[index]
+
+    def script_value(self, code):
+        v = self.call("run_script", {"code": code})
+        sc = v.get("script") if isinstance(v, dict) else None
+        if isinstance(sc, dict):
+            if sc.get("error") or sc.get("thrown"):
+                raise BridgeError(f"run_script: {sc.get('error') or sc.get('thrown')}")
+            out = sc.get("result")
+            return out if not sc.get("notImplemented") else {"result": out, "notImplemented": sc["notImplemented"]}
+        return v
 
     def find_role(self, role, index=0):
         hits = (self.call("ui_find", {"role": role, "limit": 200}) or {}).get("hits") or []
@@ -597,6 +662,10 @@ class FpSide(Side):
                     v = target[k]
                     return self.find(v[-1] if isinstance(v, list) else v)["center"]
             raise Unsupported(f"fp target form {list(target)}")
+        if isinstance(target, str) and re.match(r"^dialog\.(field|combo|check|button)\.\d+$", target):
+            kind, i = target.split(".")[1:]
+            role = {"field": "text_input", "combo": "combo_box", "check": "check_box", "button": "button"}[kind]
+            return self.find_role(role, int(i))["center"]
         if isinstance(target, str) and target in self.r.ui_map.get("targets", {}):
             return self.resolve(self.ui(target))
         if isinstance(target, str) and re.match(r"^[a-z_]+(\.[a-z0-9_]+)+$", target):
@@ -710,7 +779,6 @@ class FpSide(Side):
                 self.close_doc(p)
         elif verb in ("menu", "menu_open", "hover_menu", "menu_item"):
             parts = split_path(arg)
-            self.reset_light()
             h = self.find(parts[0], None, True, [0, 0, 2000, 40])
             self.inp([{"type": "click", "pos": h["center"]}, {"type": "wait", "ms": 150}])
             for i, p in enumerate(parts[1:], 1):
@@ -748,13 +816,12 @@ class FpSide(Side):
                 self.call("ui_action", {"panel": pid})
         elif verb in ("jsf", "run_script"):
             code = arg if isinstance(arg, str) else arg.get("code")
-            v = self.call("run_script", {"code": code})
-            self.values.append({"jsf": code[:200], "out": v})
+            self.values.append({"jsf": code[:200], "out": self.script_value(code)})
         elif verb in ("log_value", "log"):
             expr = arg if isinstance(arg, str) else arg.get("value") or arg.get("expr")
             if isinstance(arg, dict) and not expr:
                 raise Unsupported(f"log {arg}")
-            self.values.append({"expr": expr, "value": self.call("run_script", {"code": expr})})
+            self.values.append({"expr": expr, "value": self.script_value(expr)})
         elif verb in ("click", "double_click", "right_click", "hover", "mouse_down", "mouse_up", "click_text",
                       "double_click_text", "right_click_text", "hover_text", "click_button", "toolbox_click",
                       "open", "canvas_click", "canvas_double_click", "canvas_move", "canvas_hover", "window_click",
@@ -978,11 +1045,19 @@ class Runner:
             if verb == "choose" and not isinstance(arg, dict):
                 arg = {"target": arg, "item": act.get("item")}
             t0 = time.time()
+            if verb in ("key", "menu_item", "command", "panel", "ui_action") and hasattr(side, "page"):
+                side.page = None
+            if rec.get("want_before") and verb in OPENERS:
+                # the difference box is measured against the state right before the opening action
+                try:
+                    rec["_before"] = side.window_image()[0]
+                except Exception:  # noqa: BLE001
+                    pass
             side.do(verb, arg, act)
             rec["actions"].append({"verb": verb, "ms": int((time.time() - t0) * 1000)})
 
     def step_side(self, side: Side, step, before_img):
-        rec = {"side": side.name, "actions": [], "status": "ok"}
+        rec = {"side": side.name, "actions": [], "status": "ok", "want_before": before_img is not None}
         actions = list(step.get("both") or []) + list(step.get(side.name) or [])
         side.values = []
         t0 = time.time()
@@ -999,11 +1074,18 @@ class Runner:
                 rect = side.area_rect(area)
                 if rect is None:
                     img, wr = side.window_image()
-                    bb = diff_bbox(before_img, img)
+                    bb = diff_bbox(rec.get("_before") or before_img, img)
                     if not bb:
                         raise RuntimeError(f"area {area}: nothing opened (no difference to the state before)")
                     rect = [wr[0] + bb[0], wr[1] + bb[1], wr[0] + bb[2], wr[1] + bb[3]]
                     rec["area_from"] = "difference"
+                    if area == "menu" and side.name == "fp":
+                        # like the reference (popup windows only): leave out the highlighted menu bar entry
+                        try:
+                            bar = side.find(self.ui_map["menu_bar"]["orig"][0][0], None, True, [0, 0, 2000, 40])["rect"]
+                            rect[1] = max(rect[1], bar[3] + 2)
+                        except Exception:  # noqa: BLE001
+                            pass
                 rec["rect"] = [round(v) for v in rect]
                 out = self.out / self.unit["unit"] / side.name / f"{step['id']}.png"
                 side.grab(rect, out)
@@ -1015,6 +1097,8 @@ class Runner:
             rec.update(status="unmapped", error=str(e))
         except Exception as e:  # noqa: BLE001
             rec.update(status="error", error=f"{type(e).__name__}: {e}", trace=traceback.format_exc(limit=3)[-600:])
+        rec.pop("_before", None)
+        rec.pop("want_before", None)
         rec["values"] = side.values
         rec["s"] = round(time.time() - t0, 2)
         limit = float(self.cfg.get("step_timeout_s", 90))
@@ -1048,9 +1132,13 @@ class Runner:
         try:
             self.ensure_programs()
             for side in self.sides.values():
-                side.prepare()
-                if unit.get("testfile"):
-                    self.open_testfile(side, unit["testfile"])
+                try:
+                    side.prepare()
+                    if unit.get("testfile"):
+                        self.open_testfile(side, unit["testfile"])
+                except Exception as e:  # noqa: BLE001
+                    self.log(f"start {side.name}: {e} - recovering")
+                    self.recover(side)
             for i, step in enumerate(steps):
                 entry = {"unit": unit_name, "step": step["id"], "n": i, "check": step.get("check"),
                          "area": (step.get("shot") or {}).get("area"), "time": time.strftime("%Y-%m-%d %H:%M:%S")}

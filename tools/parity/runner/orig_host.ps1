@@ -128,7 +128,7 @@ function Click($x, $y, $button, $mods, $count) {
   [PR.N]::Send(@([PR.N]::Mouse(0x1, 0)))
   Mods $mods $false
   $d, $u = 0x2, 0x4; if ($button -eq 'right') { $d, $u = 0x8, 0x10 } elseif ($button -eq 'middle') { $d, $u = 0x20, 0x40 }
-  for ($i = 0; $i -lt [Math]::Max(1, [int]$count); $i++) { [PR.N]::Send(@([PR.N]::Mouse($d, 0), [PR.N]::Mouse($u, 0))); Start-Sleep -Milliseconds 40 }
+  for ($i = 0; $i -lt [Math]::Max(1, [int]$count); $i++) { [PR.N]::Send(@([PR.N]::Mouse($d, 0))); Start-Sleep -Milliseconds 70; [PR.N]::Send(@([PR.N]::Mouse($u, 0))); Start-Sleep -Milliseconds 50 }
   Mods $mods $true; Start-Sleep -Milliseconds 120
 }
 function Drag($x1, $y1, $x2, $y2, $mods, $steps, $button) {

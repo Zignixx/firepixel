@@ -83,6 +83,9 @@ An action is an object whose first known key is the verb; further keys are optio
 
 ### Verbs
 
+Aliases: `reset <T..|null>` = `open_testfile` (null: only close menus/dialogs), `record` = `log_value`,
+`command` with `orig_menu` uses that menu path on the reference side, `file_dialog "cancel"`, step key `cleanup` = `after`.
+
 | verb | argument | reference program | Firepixel |
 |---|---|---|---|
 | `open_testfile` / `reopen` | `"T04"` (or `true` = unit file) | close same file unsaved, `fw.openDocument(url)` | `documents close` + `open` |
@@ -96,13 +99,13 @@ An action is an object whose first known key is the verb; further keys are optio
 | `wait` | ms | sleep | sleep |
 | `select` | object name or list | JSF `fw.selection` by name | `get_document` + `select {ids}` |
 | `select_none` / `select_all` | – | JSF | `select` |
-| `tool` | `tool.rectangle` | shortcut key from `ui_map.json → tools` | `ui_action {tool}` |
+| `tool` | `tool.rectangle` | click on the toolbox button (`ui_map.json → tools`; single-key shortcuts do not reliably reach the program) | `ui_action {tool}` |
 | `panel` | `window.layers` / id / title | visible? else menu `Fenster > …` | `ui_action {panel}` if not visible |
 | `jsf` / `run_script` | code | JSF in the running instance | `run_script` |
 | `log_value` / `log` | JSF expression | value into `values` | `run_script` value |
 | `click` / `double_click` / `right_click` / `hover` / `open` / `click_text` / `click_button` / `toolbox_click` | target | SendInput at the target | `ui_input` at the target |
 | `mouse_down` / `mouse_up` | target | unsupported | `ui_input down/up` |
-| `canvas_click` / `canvas_double_click` / `canvas_move` / `canvas_hover` | `[x, y]` document px (+`mods`) | view centre − doc/2 (+ `orig.canvas_offset`) | `page_on_screen` |
+| `canvas_click` / `canvas_double_click` / `canvas_move` / `canvas_hover` | `[x, y]` document px (+`mods`) | page rectangle measured in the view image (+ `orig.canvas_offset`) | `page_on_screen` |
 | `drag` / `canvas_drag` | `{from, to | by, mods, steps}` (points = `[x,y]` document px or targets) | SendInput drag | `ui_input drag` |
 | `choose` | `{target, item}` (`item` may be `A > B`) | Win32 combo box: select entry | click target, click item texts |
 | `set_field` / `set` / `set_dialog_field` | `{target, value}` | Win32 edit: text; else double click, Ctrl+A, type, Enter | click, Ctrl+A, type, Enter |
@@ -126,7 +129,13 @@ A target is either
   reference program = text of a Win32 child window or of an item in an open menu; Firepixel = `ui_find`,
 * `{"canvas": [x, y]}` (document pixels), `{"window_rel": [x, y]}` (client coordinates),
   `{"area": "panel:layers", "pos": [x, y]}` (offset inside a shot area),
-* `{"target": <target>, "mods": ["shift"]}`.
+* `{"target": <target>, "mods": ["shift"]}`,
+* `dialog.field.<i>` / `dialog.combo.<i>` / `dialog.check.<i>` / `dialog.button.<i>` (built-in pattern, no map entry
+  needed): reference = i-th Win32 `Edit` / `ComboBox` / `Button` child of the open dialog (window order);
+  Firepixel = i-th `text_input` / `combo_box` / `check_box` / `button` from `ui_find`, sorted top-to-bottom,
+  left-to-right. `choose {target: "dialog.combo.0", item}` selects the entry directly in the reference program,
+  `set_field {target: "dialog.field.1", value}` sets the edit text,
+* `{"dialog_field": i}`, `{"button": "OK"}`, `{"text": "…"}` (forms used by some scripts).
 
 ## ui_map.json
 
@@ -175,7 +184,12 @@ Self test: `python -I runner.py --units _selftest_menu,_selftest_inspector`.
 
 ## Limits
 
-* Document → screen mapping in the reference program assumes zoom 100 % and a centred document that
-  fits into the view (true for T01–T09 at 1600 × 1000; not for T10).
+* Document → screen: after opening, documents larger than the view (T10, 2400 × 1600) are fitted in both
+  programs (reference: `orig.fit_all_key`, default Ctrl+Alt+0; Firepixel: `ui_action {fit}`); the reference
+  page rectangle is then measured from the view image (pixels differing from the pasteboard colour) and
+  re-measured after keys/menus/commands. If the page touches the view border (scrolled), the centre rule
+  is used, which is only right at 100 %.
+* `log_menu_items` in Firepixel only finds entries exposed as `menu_item` by `ui_find` (often none);
+  the reference side reads the real popup menu items.
 * Hover-only states (tooltips, flyouts after press-and-hold) and mouse pointer images are not captured.
 * The reference program must not be used by a person while the runner holds the lock (it needs the foreground).

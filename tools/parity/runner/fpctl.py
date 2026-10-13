@@ -130,13 +130,20 @@ class Firepixel:
 
     def place(self):
         x, y, w, h = self.cfg.get("rect", [960, 400, 1600, 1000])
+        rc = wt.RECT()
         for _ in range(40):
             hw = self.hwnd()
             if hw:
-                # SWP_NOZORDER|SWP_NOACTIVATE, then push to the bottom of the z-order (HWND_BOTTOM=1)
+                if user32.IsZoomed(hw):
+                    user32.ShowWindow(hw, 4)  # SW_SHOWNOACTIVATE: restore without activating
+                # SWP_NOACTIVATE, bottom of the z-order (HWND_BOTTOM=1)
                 user32.SetWindowPos(hw, 1, x, y, w, h, 0x0010)
-                return
+                time.sleep(0.4)
+                user32.GetWindowRect(hw, ctypes.byref(rc))
+                if not user32.IsZoomed(hw) and rc.right - rc.left == w and rc.bottom - rc.top == h:
+                    return
             time.sleep(0.25)
+        self.log("firepixel window could not be placed")
 
     def stop(self):
         if self.proc is None:
