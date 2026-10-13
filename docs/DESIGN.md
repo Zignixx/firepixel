@@ -142,23 +142,137 @@ Nur diese Stufen; keine kursiven oder farbigen Fließtexte (außer Links und Hin
 - Jedes überarbeitete Fenster wird in allen drei Designs, in Deutsch, Englisch und `qps`, bei
   1024×768 und 1920×1080 sowie 100 % und 150 % geprüft (keine Überläufe, nichts abgeschnitten).
 
-## 12. Startbildschirm (neu, `src\welcome.rs`)
+## 12. Umsetzung: Startbildschirm und Dialograhmen (Stand 13.10.2026)
 
-Aufbau wie im Original, eigenes Branding:
-- **Kopfbanner**: ruhige, dunkle Fläche aus dem Theme (Normal: dunkles Schieferblau aus `text`,
-  `line_dark` und `focus`; Dunkel: aus `app_bar_bg`/`canvas_bg`; OLED: Schwarz), Struktur aus
-  einem nach rechts dichter werdenden **Pixelfeld** (OLED in den Gruppenfarben), das eigene
-  **Flammen-Pixel-Logo** (`assets\icon`), „Firepixel“ und ein Leitsatz.
-- **Links** „Zuletzt geöffnete Dateien“ (bis 8, Symbol je Dateiart: FW-PNG, Bild, Skript;
-  Tooltip mit vollem Pfad; lange Namen mit „…“; fehlende Dateien gedämpft; **leerer Zustand**),
-  darunter „Öffnen...“.
-- **Rechts** „Neu erstellen“ (Firepixel-Dokument, Aus Vorlage...) und „Erweitern“ (Gespeicherte
-  Befehle, Erweiterungen verwalten).
-- **Unten** »-Links zu eigenen Zielen: Kurzanleitung (`docs\ANLEITUNG.md`), Tastenkürzel,
-  KI-Modelle verwalten, Automatisierung und KI-Steuerung; rechts das Logo mit Version.
-- **Fußzeile** „Nicht mehr anzeigen“ = Voreinstellung `ShowStartPage` (wieder einschalten:
-  Voreinstellungen ▸ Allgemein). In der laufenden Sitzung bleibt der Bildschirm sichtbar.
-- Zwei Spalten ab 540 px Kartenbreite, darunter einspaltig; Bildlauf, wenn die Höhe nicht reicht.
+Die Regeln in §12.1–§12.3 gelten jetzt. Neue und überarbeitete Fenster halten sich daran. Die
+Werte stehen im Code als Konstanten bzw. Theme-Funktionen und werden dort geändert, nicht hier.
+
+### 12.1 Startbildschirm (DES-2, `a728586`, `crates\fp-ui\src\welcome.rs`)
+
+Aufbau (ersetzt den ersten Entwurf „zwei Spalten in einer Karte“):
+
+- **Kopfbanner**: abgerundetes Banner mit dem eigenen Flammen-Pixel-Logo (`assets\icon`),
+  „Firepixel“ und Leitsatz. Das Pixelfeld wird nach rechts dichter. Logo 64 px, im schmalen
+  Fenster 48 px, sehr schmal 36 px. Im OLED-Design leuchtet der Rand. `paint_banner` nutzt auch
+  „Über Firepixel“.
+- **Drei Karten**:
+  - **Neu erstellen**: zwei große Einträge (Firepixel-Dokument, Aus Vorlage...), Höhe 54 px, mit
+    Symbolchip, fettem Titel und gedämpfter Erklärung (vorhandene `.tooltip`-Texte).
+  - **Zuletzt geöffnete Dateien**: bis 8 Zeilen à 44 px mit Vorschaubild 36 px (PNG/FW-PNG, JPEG,
+    BMP, QOI; Schachbrett hinter Transparenz; sonst Symbol der Dateiart). Darunter steht der
+    Ordner gedämpft, in der Mitte gekürzt. Fehlende Dateien sind gedämpft, der Tooltip zeigt den
+    vollen Pfad. Es gibt einen leeren Zustand. „Öffnen...“ steht unten in der Karte. Die
+    Vorschaubilder werden im Hintergrund gelesen (`welcome\thumbs.rs`), zwischengespeichert nach
+    Pfad und Änderungszeit; Dateien über 48 MB werden nicht gelesen.
+  - **Hilfe und Lernen**: vier »-Links (Kurzanleitung, Tastenkürzel, KI-Modelle,
+    Automatisierung), Höhe 26 px; darunter Abschnitt „Erweitern“ (Gespeicherte Befehle,
+    Erweiterungen; nur wenn der Befehl registriert ist).
+- **Fußzeile** 28 px: „Nicht mehr anzeigen“ links (Voreinstellung `ShowStartPage`), Version rechts.
+- **Maße**: höchstens 940 px breit, Abstand zwischen Karten und Innenrand je `sp::L` (16 px),
+  Kartenkopf 34 px, Eckenradius 8 px. Zwei Spalten ab 600 px Inhaltsbreite, darunter einspaltig
+  in der Reihenfolge Neu, Zuletzt, Hilfe; Bildlauf, wenn die Höhe nicht reicht.
+- **Zustände**: Hover getönt in der Leitfarbe der Karte, Handcursor; Fokusrahmen in `focus` für
+  jeden Eintrag. **Tastatur**: Tab/Umschalt+Tab, Pfeiltasten auch zwischen den Spalten,
+  Eingabe/Leertaste lösen aus.
+- **Designs**:
+  - Normal: helle Karten (`ui_kit::card_bg`) mit weichem Schatten (Versatz 2 px, Weichzeichnung
+    10 px) auf der grauen Fläche.
+  - Dunkel: Karten heller als die Leinwand, sonst verschwinden sie.
+  - OLED: schwarz, kein Schatten. Jede Karte hat einen eigenen Leuchtrand und einen Titel in ihrer
+    Gruppenfarbe (grün, cyan, orange). Die Symbole sind farbig.
+
+| Design | Deutsch | Englisch |
+|---|---|---|
+| Normal (hell) | [N11_start_normal_de](screenshots/nutzerbefunde/N11_start_normal_de.png) | [N11_start_normal_en](screenshots/nutzerbefunde/N11_start_normal_en.png) |
+| Dunkel | [N11_start_dunkel_de](screenshots/nutzerbefunde/N11_start_dunkel_de.png) | [N11_start_dunkel_en](screenshots/nutzerbefunde/N11_start_dunkel_en.png) |
+| OLED | [N11_start_oled_de](screenshots/nutzerbefunde/N11_start_oled_de.png) | [N11_start_oled_en](screenshots/nutzerbefunde/N11_start_oled_en.png) |
+
+Je 1280 × 860, mit Vorschaubildern und Hover über einer Datei. Erzeugen:
+`cargo test -p fp-ui --test all welcome_des2::n11_start_bilder -- --ignored`.
+Vorher: [design_vorher_startbildschirm](screenshots/design_vorher_startbildschirm.png).
+Die Bilder `design_nachher_startbildschirm*.png` zeigen noch den ersten Entwurf (vor DES-2) und
+gelten nicht mehr als Nachweis.
+
+![Startbildschirm, Normal, Deutsch](screenshots/nutzerbefunde/N11_start_normal_de.png)
+
+### 12.2 Dialograhmen (DES-1, `4109217`, `dialogs\mod.rs`, `theme.rs`)
+
+Die Gestaltung sitzt zentral im Rahmen (`dialog_frame_ex`) und in den gemeinsamen Bausteinen.
+Einzelne Dialoge brauchen dafür keinen eigenen Code. Bedienung, Beschriftungen, Lage und Größe
+der Felder und Knöpfe sowie die Dialoggrößen bleiben gleich.
+
+- **Fußleiste** hinter der unteren Knopfzeile (`footer_top`):
+  - Zur unteren Knopfzeile zählen Knöpfe aus `push_button`, die bis auf 18 px an die Unterkante
+    des Inhalts reichen.
+  - Die Leiste beginnt 12 px über der Knopfzeile, aber mindestens 3 px unter allem Gezeichneten
+    darüber. Bleiben weniger als 5 px über den Knöpfen, entfällt sie.
+  - **Keine Leiste**, wenn etwas Gezeichnetes oder ein anderer Knopf in die Knopfzeile ragt
+    (Knöpfe rechts untereinander wie bei den Filtern, Liste bis unten). Die Anordnung des
+    Originals hat Vorrang.
+  - Fläche `dialog_footer_bg`, oben eine geätzte Linie `dialog_footer_lines` (dunkle Linie +
+    Lichtkante; OLED nur eine Linie). Sie wird in einen vor dem Inhalt reservierten Platz
+    gezeichnet und liegt daher unter allem.
+  - `ui_kit::button_bar` zeichnet keine eigene Linie mehr und meldet seine Leiste über
+    `dialogs::set_footer` (Rückfrage, Warnung, Über, Bitmap nachzeichnen). „Ungespeichert“ hat
+    keine eigene Linie mehr.
+- **Titelleiste**: Verlauf `dialog_title_gradient`, 1 px Linie `dialog_title_line` darunter.
+  Dunkel ist sie jetzt klar dunkler als die Fläche (Befund §13: „kaum Kontrast“). OLED: schwarz,
+  Linie in `focus`.
+- **Schatten** `dialog_shadow`: Normal Versatz 6 px, Weichzeichnung 20 px, Schwarz α 70; Dunkel
+  6 px / 22 px / α 160; OLED statt Schatten Akzentschein in `focus` (α 46, 18 px, Ausdehnung 1 px).
+  Lage und Rechteck des Dialogs bleiben unverändert.
+- **Standardknopf (OK)** `default_button_fill`: Knopffläche in Richtung `focus` gemischt, Normal
+  12 % (unter der Maus 20 %), Dunkel 28 % (40 %), OLED 20 % (32 %). Der Fokusrahmen bleibt.
+- **Gruppenrahmen** `group_box_lines`: geätzt wie ein Windows-Gruppenfeld (dunkle Linie +
+  Lichtkante); OLED fein, eine Linie.
+- **Abschnittsüberschrift im Formular** (`FieldKind::Caption`, `form.rs`): Farbe `section_label`,
+  geätzte Linie (§4).
+- Alle Tokens sind aus der Palette abgeleitet (`impl Theme`-Block „Dialoge (DES-1)“ am Ende von
+  `theme.rs`). Es gibt keine eigenen Farbwerte.
+
+Bilder: je Bild **Normal | Dunkel | OLED** nebeneinander, links vorher (Stand `42dabe7`),
+rechts nachher. Erzeugen: `FP_DES1_STAGE=before|after cargo test -p fp-ui --test all
+dialogs_des1::des1_images -- --ignored`.
+
+| Dialog | Vorher | Nachher | Hinweis |
+|---|---|---|---|
+| Meldung | [vorher](screenshots/des1/before_message.png) | [nachher](screenshots/des1/after_message.png) | Info-Symbol von NZ-3, jetzt mit Fußleiste |
+| Rückfrage „Verlauf löschen“ | [vorher](screenshots/des1/before_confirm_history_clear.png) | [nachher](screenshots/des1/after_confirm_history_clear.png) | `button_bar` als Fußleiste |
+| Warnung „kein Ziel“ | [vorher](screenshots/des1/before_warning_no_target.png) | [nachher](screenshots/des1/after_warning_no_target.png) | |
+| Ungespeichert | [vorher](screenshots/des1/before_unsaved.png) | [nachher](screenshots/des1/after_unsaved.png) | eigene Linie entfernt |
+| Arbeitsbereich speichern | [vorher](screenshots/des1/before_save_workspace.png) | [nachher](screenshots/des1/after_save_workspace.png) | |
+| Bildgröße | [vorher](screenshots/des1/before_image_size.png) | [nachher](screenshots/des1/after_image_size.png) | geätzte Gruppenrahmen |
+| Leinwandgröße | [vorher](screenshots/des1/before_canvas_size.png) | [nachher](screenshots/des1/after_canvas_size.png) | |
+| Neues Dokument | [vorher](screenshots/des1/before_new_document.png) | [nachher](screenshots/des1/after_new_document.png) | |
+| Gaußscher Weichzeichner | [vorher](screenshots/des1/before_gaussian_blur.png) | [nachher](screenshots/des1/after_gaussian_blur.png) | Knöpfe rechts oben → **keine** Leiste |
+| Voreinstellungen | [vorher](screenshots/des1/before_preferences.png) | [nachher](screenshots/des1/after_preferences.png) | **keine** Leiste (Liste reicht bis 3 px an die Knopfzeile), offen → DES-3 |
+
+![Bildgröße nachher: Normal | Dunkel | OLED](screenshots/des1/after_image_size.png)
+
+### 12.3 Nichts abschneiden: Dialoge im Fenster (RAND-2a `21edb24`, RAND-2b `247ce0c`)
+
+- **Ein Dialog liegt immer ganz im Hauptfenster.** Ist er größer, wird seine sichtbare Größe auf
+  das Fenster begrenzt. Der Inhalt behält seine volle Größe und läuft in einem Bildlaufbereich in
+  beide Richtungen (`scrolled_body`). Mausrad und Bildlaufleiste blättern.
+- **Feste Knopfzeile**: Unten bleibt ein Streifen von 48 px stehen (`DIALOG_PIN_STRIP`, höchstens
+  die halbe Inhaltshöhe). `push_button` verschiebt Knöpfe aus dem unteren Inhaltsstreifen dorthin:
+  rechte bleiben rechts, linke („Hilfe“) links. OK, Abbrechen, Hilfe und Schließen sind immer
+  sichtbar und bedienbar; Enter löst den Standardknopf aus, der Fokus bleibt gleich. Dieser Streifen
+  ist zugleich die Fußleiste aus §12.2, mit einfacher statt geätzter Linie.
+- Dialoge, die passen, bleiben unverändert (kein zweiter Code-Pfad).
+- **Waagerechter Bildlauf in schmalen Bereichen** (Inspektor): Die Bildlaufleiste schwebt über
+  dem Inhalt und belegt keine Höhe. In Ruhe ist sie 3 px breit (Deckkraft 0,7), unter der Maus
+  6 px. Das Mausrad blättert ohne Umschalttaste waagerecht, wenn nur diese Richtung geht.
+- **Listen** reichen nie über eine Fußleiste. Ist ein Bedienfeld zu niedrig, wird die Liste
+  kleiner (kein Mindestwert der Bildlaufhöhe).
+- Menüs folgen derselben Regel: Sie werden auf das Fenster begrenzt und haben Pfeilleisten (MN-6
+  `a6fd9d3`).
+- **Prüfer**: `crates\fp-ui\tests\clipping_audit.rs` prüft alle Bedienfelder, den Inspektor, die
+  Dialoge, die Startseite, die Menüs und die Tooltips in 24 Varianten (3 Designs × de/en ×
+  100/150 % × Fenster 1024 × 768 und 1920 × 1080). Ein Text, der genau an der Kante eines Bildlaufbereichs angeschnitten
+  ist, gilt als `hinweis-bildlauf` und nicht als Fehler. Neue Fenster müssen dort **0 Funde**
+  haben. Die Erlaubnisliste `clipping_audit_allow.txt` wird nicht erweitert, sondern abgebaut.
+  Tests zur Regel: `dialog_scroll_rand2b` (800 × 512: Dialog im Fenster, OK unten wirkt).
 
 ---
 
@@ -168,27 +282,34 @@ Bestand am 12.10.2026: **79 Bilder** (`design_vorher_*.png`) – Startbildschirm
 Bedienfeldmenüs und Kontextmenüs erreichbare Dialogarten (automatisch gefunden, Liste in
 `target-design\design-qa\dialoge.json`) und die 7 Seiten der Voreinstellungen, je Normal | Dunkel | OLED.
 
-Gesamteindruck: Die Dialoge des Originals (Neues Dokument, Leinwand-/Bildgröße, Numerisch,
-Tonwert, Kurven, Filter) sind ordentlich und nah am Vorbild. „Lieblos“ wirken vor allem die
+Gesamteindruck vorher: Die Dialoge des Originals (Neues Dokument, Leinwand-/Bildgröße, Numerisch,
+Tonwert, Kurven, Filter) sind ordentlich und nah am Vorbild. „Lieblos“ wirkten vor allem die
 **eigenen und generischen Fenster**: Meldungen ohne Symbol, Rückfragen ohne Gliederung, Listen ohne
-Kopf und leere Zustände, große Leerflächen, uneinheitliche Knopfbreiten. Das Dunkel-Design hat kaum
-Kontrast zwischen Titelleiste und Fläche; OLED ist stimmig.
+Kopf und leere Zustände, große Leerflächen, uneinheitliche Knopfbreiten. Das Dunkel-Design hatte
+kaum Kontrast zwischen Titelleiste und Fläche; OLED war stimmig.
 
-| Prio | Fenster (Datei) | Befund | Maßnahme |
-|---|---|---|---|
-| 1 | **Startbildschirm** (`canvas\mod.rs` → neu `welcome.rs`) | Überschrift + zwei Spalten blauer Textlinks, sonst leer | **erledigt** (§12), Umschaltung beim Zuständigen |
-| 2 | **Meldung** (`dialogs\mod.rs::show_message`; Datei-Info, Rechtschreibung, Pop-up-Menü, Optimieren) | kein Symbol, Text klebt oben links, „Schlüssel: Wert“-Zeilen als Fließtext (Datei-Info), viel Leerraum, Hinweistext ohne Hervorhebung | Symbol 32 px je Art, Text senkrecht am Symbol, Wertepaare als Raster, Knopfleiste |
-| 3 | **Rückfragen** (`misc.rs::Confirm`: Wiederherstellen, Verlauf löschen, Bibliothek löschen …) | kein Symbol, Text ohne Abstand zur Titelleiste, Knöpfe rechts unten mit großem Loch darüber | Warn-/Fragesymbol, kompaktere Höhe, Knopfleiste |
-| 4 | **Ungespeichert** (`unsaved.rs`) | Info-Symbol (passt nicht zur Frage), Text nicht mittig zum Symbol, Leerraum | Warnsymbol, Erklärsatz klein darunter, Knopfleiste (Wortlaut unverändert) |
-| 5 | **KI-Modelle verwalten** (`models.rs`) | gute Basis, aber Tabelle ohne Zebra/Hover, Kopf ohne Kopfstil, Gruppe „Speicherort“ mit vier ungleich breiten Knöpfen gequetscht, ~100 px Leerraum unten, Kopfsymbol unklar | `dialog_header` (KI-Chip), `ui_kit::table`, Abschnitte „Modelle“/„Speicherort“/„Arbeitsspeicher“, Knopfleiste |
-| 6 | **Gespeicherte Befehle verwalten** (`menu_dialogs.rs`) | nackte Liste ohne Kopf, ohne leeren Zustand, ohne Auswahlhervorhebung; Knöpfe rechts oben grau | Kopf, Tabelle (Name, Datei), leerer Zustand, Knöpfe einheitlich |
-| 7 | **Über Firepixel** (`about.rs`) | ordentlich, aber flach; Satz bricht hässlich („in Rust.“) | Banner wie Startbildschirm, Version/Lizenz als Raster |
-| 8 | **Tastenkürzel** (`shortcuts.rs`, Original) | Liste ohne Kopf/Zebra, sehr dicht; unterer Bereich (Kürzel, „Drücken Sie die Taste“) gequetscht | nur Ausführung: Zebra/Hover, Abstände, Abschnittslinie |
-| 9 | **Export** (`export.rs`, Original) | ~80 px Leerraum über den Knöpfen, „Optimieren:“-Zeile gedämpft ohne Bezug | Höhe an Inhalt, Knopfleiste |
-| 10 | **Formulardialoge** (`form.rs`: Exportassistent, Neue Schaltfläche, Stil, Seiten/Status-Eigenschaften, Filter …) | einheitlich, aber Beschriftungsspalte je Dialog verschieden, Knöpfe ohne Trennlinie | Beschriftung-Wert-Raster, Knopfleiste |
-| 11 | **Pop-up-Menü-Editor** (`popup_menu.rs`, Original) | Reiter wie Knöpfe, Liste ohne Kopf, winzige Pfeilknöpfe | Reiterstil, Liste mit Zebra, Symbolknöpfe 24 px |
-| 12 | **Voreinstellungen** (`preferences.rs`, Original) | sauber; Überschrift „Benutzeroberfläche“ ohne Linie | Abschnittslinien |
-| 13 | Neues Dokument, Leinwand-/Bildgröße, Numerisch, Tonwert, Kurven, Bildvorschau, Arbeitsbereich speichern | nah am Original, ordentlich | nur bei Bedarf (Knopfbreiten) |
+**Stand 13.10.2026 (N11):** Startbildschirm und Dialograhmen sind erledigt (DES-2, DES-1). Alle
+Dialoge bekommen Fußleiste, Titelleiste, Schatten und getönten OK-Knopf automatisch. Offen
+bleiben die Tabellen und Listen einzelner Dialoge (Prio 5–11), die Fußleiste der Voreinstellungen
+und die einheitlichen Knopfbreiten → künftiges Paket **DES-3**. N11 bleibt bis dahin „teilweise“.
 
-Die Dialogdateien bearbeitet zurzeit I18N-DIALOGE; die Überarbeitung (Prio 2 ff.) beginnt, sobald
-sie fertig gemeldet sind (Regel: keine Datei ändern, die gerade umgestellt wird).
+| Prio | Fenster (Datei) | Befund (vorher) | Maßnahme | Stand |
+|---|---|---|---|---|
+| 1 | **Startbildschirm** (`welcome.rs`) | Überschrift + zwei Spalten blauer Textlinks, sonst leer | Banner, drei Karten mit Vorschaubildern, Tastatur (§12.1) | **erledigt** DES-2 `a728586` |
+| 2 | **Meldung** (`dialogs\mod.rs::show_message`; Datei-Info, Rechtschreibung, Pop-up-Menü, Optimieren) | kein Symbol, Text klebt oben links, „Schlüssel: Wert“-Zeilen als Fließtext (Datei-Info), viel Leerraum | Symbol 32 px, Text mittig am Symbol, Fußleiste | **erledigt**: Symbol NZ-3 `3a3342b`, Fußleiste DES-1 `4109217`; Wertepaare als Raster (Datei-Info) offen → DES-3 |
+| 3 | **Rückfragen** (`misc.rs::Confirm`) | kein Symbol, Text ohne Abstand zur Titelleiste, Loch über den Knöpfen | Fußleiste über `button_bar` | **erledigt** DES-1 `4109217` |
+| 4 | **Ungespeichert** (`unsaved.rs`) | Info-Symbol, Text nicht mittig, Leerraum | automatische Fußleiste statt eigener Linie | **erledigt** DES-1 `4109217` (Wortlaut unverändert) |
+| 5 | **KI-Modelle verwalten** (`models.rs`) | Tabelle ohne Zebra/Hover, Kopf ohne Kopfstil, Gruppe „Speicherort“ gequetscht, Leerraum unten | `dialog_header`, `ui_kit::table`, Abschnitte, Knopfleiste | Rahmen/Fußleiste automatisch (DES-1), Bildlauf (RAND-2b); **Tabelle offen → DES-3** |
+| 6 | **Gespeicherte Befehle verwalten** (`menu_dialogs.rs`) | nackte Liste ohne Kopf, ohne leeren Zustand, ohne Auswahlhervorhebung | Kopf, Tabelle (Name, Datei), leerer Zustand, Knöpfe einheitlich | **offen → DES-3** |
+| 7 | **Über Firepixel** (`about.rs`) | flach; Satz bricht hässlich | Banner wie Startbildschirm, Version/Lizenz als Raster | Banner und Fußleiste vorhanden (`paint_banner`, `button_bar`); **Raster offen → DES-3** |
+| 8 | **Tastenkürzel** (`shortcuts.rs`, Original) | Liste ohne Kopf/Zebra, sehr dicht; unterer Bereich gequetscht | Zebra/Hover, Abstände, Abschnittslinie | Bildlauf im kleinen Fenster (RAND-2b); **Liste offen → DES-3** |
+| 9 | **Export** (`export.rs`, Original) | ~80 px Leerraum über den Knöpfen, „Optimieren:“-Zeile ohne Bezug | Höhe an Inhalt, Knopfleiste | Fußleiste automatisch (DES-1); **Leerraum offen → DES-3** |
+| 10 | **Formulardialoge** (`form.rs`) | Beschriftungsspalte je Dialog verschieden, Knöpfe ohne Trennlinie | Beschriftung-Wert-Raster, Knopfleiste | Fußleiste und Abschnittsüberschriften (DES-1), Tab-Folge (FORM-1 `64d5511`); **Raster offen → DES-3** |
+| 11 | **Pop-up-Menü-Editor** (`popup_menu.rs`, Original) | Reiter wie Knöpfe, Liste ohne Kopf, winzige Pfeilknöpfe | Reiterstil, Liste mit Zebra, Symbolknöpfe 24 px | **offen → DES-3** |
+| 12 | **Voreinstellungen** (`preferences.rs`, Original) | Überschrift „Benutzeroberfläche“ ohne Linie | Abschnittslinien | Bildlauf mit fester Knopfzeile (RAND-2b); **keine Fußleiste** (Kategorienliste reicht bis 3 px an die Knopfzeile; Liste ca. 10 px kürzen = Anordnungsänderung) **→ DES-3** |
+| 13 | Neues Dokument, Leinwand-/Bildgröße, Numerisch, Tonwert, Kurven, Bildvorschau, Arbeitsbereich speichern | nah am Original, ordentlich | nur bei Bedarf (Knopfbreiten) | Rahmen, Fußleiste, Gruppenrahmen **erledigt** DES-1; Knopfbreiten (§6) offen → DES-3 |
+
+**DES-3 (künftig)**: Prio 5–11 einzeln (Tabellen/Listen mit `ui_kit::table`, Kopf, Zebra/Hover,
+leere Zustände, Raster), Voreinstellungen mit Fußleiste, Knopfbreiten nach §6. Jede Änderung
+mit Vorher-/Nachher-Bildern in 3 Designs (Muster `docs\screenshots\des1\`) und 0 Funden im
+`clipping_audit`. Nachweis im echten Fenster: `docs\NACHPRUEFUNG.md`.
