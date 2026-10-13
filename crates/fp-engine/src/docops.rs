@@ -530,12 +530,26 @@ pub fn element_pixel_rect(doc: &Document, e: &Element) -> Option<Rect> {
         // Pfade: mit dem Strich wie im Original (mittig + halbe, außen + ganze Pinselstärke; innen
         // nichts, PAR 17/08)
         ElementKind::Path(p) => {
-            let grow = match (&p.attrs.brush, p.stroke_placement) {
-                (Some(b), 1) => b.diameter.max(0) as f32 / 2.0,
-                (Some(b), 2) => b.diameter.max(0) as f32,
+            let r = element_bounds(doc, e)?;
+            let Some(b) = &p.attrs.brush else {
+                return Some(Rect::new(r.left.floor(), r.top.floor(), r.right.ceil(), r.bottom.ceil()));
+            };
+            let d = b.diameter.max(0);
+            let grow = match p.stroke_placement {
+                1 => d as f32 / 2.0,
+                2 => d as f32,
                 _ => 0.0,
             };
-            element_bounds(doc, e).map(|r| Rect::new((r.left - grow).floor(), (r.top - grow).floor(), (r.right + grow).ceil(), (r.bottom + grow).ceil()))
+            // Rundung wie im Original (TW-05, aus menu-edit/02 u. a. abgeleitet): Strichkante auf die
+            // nächste Pixelgrenze (½ nach innen), also E1 (geschlossen, 1 px mittig) 50,170,150,240 und
+            // PG 465.36…534.64 → 465…535; offene Pfade mit ungerader Strichstärke liegen auf
+            // Pixelmitten und reichen rechts/unten 1 px weiter (L1 50,300,301,361; P1 200,170,421,241).
+            // Nur der gemeldete Rahmen, die Pixelausgabe ist davon unberührt.
+            let open = p.contours.iter().any(|c| !c.closed);
+            let extra = if open && d % 2 == 1 { 1.0 } else { 0.0 };
+            let lo = |v: f32| (v - grow + 0.5).floor();
+            let hi = |v: f32| (v + grow - 0.5).ceil() + extra;
+            Some(Rect::new(lo(r.left), lo(r.top), hi(r.right), hi(r.bottom)))
         }
         _ => element_bounds(doc, e).map(|r| Rect::new(r.left.floor(), r.top.floor(), r.right.ceil(), r.bottom.ceil())),
     }

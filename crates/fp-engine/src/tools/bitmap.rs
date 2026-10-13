@@ -137,7 +137,13 @@ impl ToolMachine for MarqueeTool {
         let ToolInput::Pointer { kind, pos } = &ev.input else {
             if ev.input == ToolInput::Key(ToolKey::Escape) {
                 if self.start.is_none() {
-                    return escape_bitmap_mode(ctx);
+                    // Esc nach dem Aufziehen eines Rahmens: im Original ist danach auch die Objektauswahl
+                    // leer (menu-modify-a/22, `fw.selection` = [], TW-04)
+                    let mut r = escape_bitmap_mode(ctx);
+                    for c in &mut r.commands {
+                        c.params["deselect"] = json!(true);
+                    }
+                    return r;
                 }
                 self.start = None;
                 self.overlay.clear();

@@ -89,9 +89,36 @@ fn star_like_original() {
     let ElementKind::Path(p) = &g.children[0].kind else { panic!() };
     let n1 = &p.contours[0].nodes[1];
     assert!(near((n1.anchor.x, n1.anchor.y), (441.0, 343.56)) && near((n1.pred.x, n1.pred.y), (410.59, 321.47)), "{n1:?}");
-    // Punkte: nach rechts ziehen verringert die Zacken (5 → 3)
-    autoshape::op_with_history(&mut s, &json!({"op": "dragControlPoint", "id": id, "index": 4, "to": [317, 499]})).unwrap_or_else(|e| panic!("{e}"));
+    // Punkte: nach unten ziehen verringert die Zacken (5 → 3)
+    autoshape::op_with_history(&mut s, &json!({"op": "dragControlPoint", "id": id, "index": 4, "to": [300, 528]})).unwrap_or_else(|e| panic!("{e}"));
     assert_eq!(nodes(&shape(&s, id)).len(), 6);
+}
+
+/// Punkte-Griff wie im Original (a1run tool-autoshapes 05, paths.json d05_star_points_*): nur
+/// senkrecht; Radius 60: +40 → 3 Punkte, −80 → 34 Punkte, waagrecht keine Änderung; danach steht
+/// der Griff bei Mitte + Radius − (n − 3) · 2 · Radius / 47 (3 → 220, 5 → 214,89, 34 → 140,85).
+#[test]
+fn star_points_handle_vertical_like_original() {
+    let star = |s: &mut Session| id_of(&autoshape::op_with_history(s, &json!({"op": "insert", "shape": "Star", "rect": [100, 100, 220, 220]})).unwrap_or_else(|e| panic!("{e}")));
+    let drag = |s: &mut Session, id: u64, to: [f32; 2]| {
+        autoshape::op_with_history(s, &json!({"op": "dragControlPoint", "id": id, "index": 4, "to": to})).unwrap_or_else(|e| panic!("{e}"));
+    };
+    let mut s = session();
+    let id = star(&mut s);
+    assert!(near(cps(&shape(&s, id))[4], (100.0, 212.8)), "{:?}", cps(&shape(&s, id)));
+    drag(&mut s, id, [140.0, 212.8]);
+    assert_eq!(nodes(&shape(&s, id)).len(), 10, "waagrecht: keine Änderung");
+    assert!(near(cps(&shape(&s, id))[4], (100.0, 214.89)), "{:?}", cps(&shape(&s, id)));
+    let mut s = session();
+    let id = star(&mut s);
+    drag(&mut s, id, [100.0, 252.8]);
+    assert_eq!(nodes(&shape(&s, id)).len(), 6, "+40 → 3 Punkte");
+    assert!(near(cps(&shape(&s, id))[4], (100.0, 220.0)));
+    let mut s = session();
+    let id = star(&mut s);
+    drag(&mut s, id, [100.0, 132.8]);
+    assert_eq!(nodes(&shape(&s, id)).len(), 68, "−80 → 34 Punkte");
+    assert!(near(cps(&shape(&s, id))[4], (100.0, 140.85)), "{:?}", cps(&shape(&s, id)));
 }
 
 #[test]

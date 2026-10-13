@@ -1556,14 +1556,18 @@ pub(super) fn register(r: &mut CommandRegistry) {
         d.bitmap_mode = true;
         Ok(CommandOutput::session())
     }));
-    r.add(cmd("modify.exitBitmapMode").requires(DOC).available(|s| s.active().is_some_and(|d| d.bitmap_mode || d.selection.has_pixels())).opt("step", ParamKind::Bool, "immer einen Verlaufsschritt anlegen (Esc nach einem Pinselzug)").run(|s, p| {
+    r.add(cmd("modify.exitBitmapMode").requires(DOC).available(|s| s.active().is_some_and(|d| d.bitmap_mode || d.selection.has_pixels())).opt("step", ParamKind::Bool, "immer einen Verlaufsschritt anlegen (Esc nach einem Pinselzug)").opt("deselect", ParamKind::Bool, "auch die Objektauswahl leeren (Esc nach dem Auswahlrahmen, TW-04)").run(|s, p| {
         // Pinsel: Esc nach dem Zug legt im Original den Schritt „Bitmapmodus beenden“ an (01/14)
         if p.opt_bool("step")?.unwrap_or(false) {
             s.force_history_step();
         }
+        let deselect = p.opt_bool("deselect")?.unwrap_or(false);
         with_doc(s, |d| {
             d.bitmap_mode = false;
             d.selection.pixels = None;
+            if deselect {
+                d.selection.elements.clear();
+            }
             Ok(CommandOutput::doc())
         })
     }));

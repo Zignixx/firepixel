@@ -18,7 +18,10 @@ SS.run({
     else if (i === 1) { cd.radius1 = Math.max(0, dist); cd.round1 = cd.radius1 + (start.round1 - start.radius1); }
     else if (i === 2) cd.round0 = dist;
     else if (i === 3) cd.round1 = dist;
-    else if (i === 4) cd.nodes = SS.clamp(Math.round(start.nodes - (m.x - d.x) / 8.5), 3, 50);
+    // Punkte-Griff wie im Original nur senkrecht: nach oben mehr, nach unten weniger Zacken (Radius 60:
+    // +40 → 3, −80 → 34; waagrecht keine Änderung). Danach steht der Griff auf der Skala 3…50.
+    else if (i === 4) cd.nodes = SS.clamp(Math.round(start.nodes - (m.y - d.y) * 21.75 / Math.max(1, start.radius0)), 3, 50);
+    cd.pointsScale = true;
   },
   build: function (el, cd) {
     var n = SS.clamp(Math.round(SS.num(cd.nodes, 5)), 3, 50), c = { x: cd.cx, y: cd.cy };
@@ -49,7 +52,10 @@ SS.run({
     SS.cp(el, 1, i1.x, i1.y, "Radius 2");
     SS.cp(el, 2, o1.x, o1.y, "Rundung 1", "", true);
     SS.cp(el, 3, i2.x, i2.y, "Rundung 2", "", true);
-    SS.cp(el, 4, c.x - r0, c.y + r0 * 0.88, "Punkte: " + n, n, true);
+    // frisch eingefügt bei 0,88 · Radius unter der Mitte, nach einem Griffzug auf der Skala von
+    // 3 (Mitte + Radius) bis 50 (Mitte − Radius), wie die Griffdaten des Originals
+    var py = cd.pointsScale ? c.y + r0 - (n - 3) * 2 * r0 / 47 : c.y + r0 * 0.88;
+    SS.cp(el, 4, c.x - r0, py, "Punkte: " + n, n, true);
     SS.cp(el, 5, c.x, c.y, "", "", false, false);
     SS.cpTrim(el, 6);
   }

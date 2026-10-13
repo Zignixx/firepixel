@@ -579,6 +579,9 @@ menu-file-previewIn = Preview in { $browser }
 menu-file-previewAllIn = Preview All Pages in { $browser }
 menu-file-defaultBrowser = Default Browser
 menu-edit-withStep = { $label }: { $step }
+# Edit menu without history (TW-07)
+menu-edit-undoImpossible = Can't &Undo
+menu-edit-redoImpossible = Can't &Redo
 # Filter menu after a filter (original text 10722): the filter's menu text including "..."
 menu-filter-repeatWith = Repeat: { $filter }
 menu-window-extensions-none = No Extensions

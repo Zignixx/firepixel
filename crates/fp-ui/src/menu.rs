@@ -224,7 +224,11 @@ pub fn menu_shortcut(st: &AppState, name: &str) -> Option<fp_engine::shortcuts::
 fn with_step_name(st: &AppState, name: &str, label: String) -> String {
     let doc = st.session.active();
     let step = match name {
-        "edit.undo" => doc.and_then(|d| d.history.undo_label()).map(|s| s.to_string()),
+        // ohne Verlauf wie im Original „Rückgängig nicht möglich“ (TW-07)
+        "edit.undo" => match doc.and_then(|d| d.history.undo_label()) {
+            Some(s) => Some(s.to_string()),
+            None => return t("menu-edit-undoImpossible"),
+        },
         // ohne zurückgenommenen Schritt wiederholt das Original den letzten Befehl
         "edit.redo" => return with_redo_step(st, label),
         // wie im Original „Wiederholen: <Menütext des zuletzt benutzten Filters>“ (Text 10722, PM-7, MN-5)
@@ -245,7 +249,8 @@ fn with_step_name(st: &AppState, name: &str, label: String) -> String {
 fn with_redo_step(st: &AppState, label: String) -> String {
     match st.session.undo_redo_labels().1 {
         Some(s) if !s.is_empty() => fp_i18n::tr!("menu-edit-withStep", label = label, step = s),
-        _ => label,
+        // weder Schritt noch letzter Befehl: wie im Original „Wiederholen nicht möglich“ (TW-07)
+        _ => t("menu-edit-redoImpossible"),
     }
 }
 
