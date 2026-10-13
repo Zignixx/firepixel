@@ -538,7 +538,15 @@ pub(super) fn register(r: &mut CommandRegistry) {
     }));
     r.add(ids_opt(cmd("element.setName").label("Objektname").requires(DOC)).param("name", ParamKind::String, "Name").run(|s, p| {
         let n = p.str("name")?;
-        common_edit(s, p, move |e| e.common.name = if n.is_empty() { None } else { Some(n.clone()) })
+        common_edit(s, p, move |e| {
+            e.common.name = if n.is_empty() { None } else { Some(n.clone()) };
+            // Unterebene: der angezeigte Name ist der Ebenenname (fixg5 Q-05, Umbenennen im Ebenen-Bedienfeld)
+            if let fp_model::ElementKind::SubLayer(sl) = &mut e.kind
+                && !n.is_empty()
+            {
+                Arc::make_mut(sl).name = n.clone();
+            }
+        })
     }));
     r.add(ids_opt(cmd("element.setVisible").label("Sichtbarkeit").requires(DOC)).param("visible", ParamKind::Bool, "sichtbar").run(|s, p| {
         let v = p.bool_or("visible", true)?;

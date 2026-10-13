@@ -278,7 +278,8 @@ fn selection_q1(ui: &mut Ui, st: &mut AppState, r: Rect) {
     fields::label(ui, Rect::from_min_max(pos2(thumb.right() + 5.0, row.top()), pos2(r.right() - 3.0, row.bottom())), &label, true);
     // Rechteck-Grundform ohne Namen: das Feld zeigt wie im Original „Rechteck“ (PAR 10/07)
     let unnamed_rect = || matches!(&e.kind, fp_model::ElementKind::Path(p) if p.primitive.is_some()).then(|| t("tool-rectangle"));
-    let name = e.common.name.clone().or_else(unnamed_rect).unwrap_or_default();
+    // maskiertes Einzelelement: Name des Inhalts wie JS `name` (fixg5 Q-02)
+    let name = e.common.name.clone().or_else(|| e.masked_single().and_then(|(c, _)| c.common.name.clone())).or_else(unnamed_rect).unwrap_or_default();
     if let Some(n) = fields::text(ui, "pi-objname", d.r(30.0, 14.0, 46.0, 12.0), &name, true) {
         st.run("element.setName", json!({"name": n}));
     }

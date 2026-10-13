@@ -130,6 +130,30 @@ pub fn element_thumb(ctx: &Context, st: &AppState, doc: DocId, generation: u64, 
     })
 }
 
+/// Miniatur der Maske eines maskierten Objekts (Ebenen-Bedienfeld): weiß = sichtbar wie im Original.
+/// Bitmapmasken mit `MNAb` speichern invertiertes Grau (07 §7.5), daher hier zurückgedreht.
+pub fn mask_thumb(ctx: &Context, st: &AppState, doc: DocId, d: &Arc<Document>, group: &fp_model::Element, mask: &Arc<Element>, size: u32) -> Option<TextureHandle> {
+    let invert = matches!(&group.kind, fp_model::ElementKind::Group(g) if g.kind == fp_model::GroupKind::BitmapMask && g.mask_flags.hide_attrs)
+        && matches!(mask.kind, fp_model::ElementKind::Bitmap(_));
+    if !invert {
+        return element_thumb(ctx, st, doc, 0, d, mask, size);
+    }
+    let r = Arc::clone(&st.renderer);
+    let frame = st.session.document(doc).map(|x| x.frame).unwrap_or(0);
+    get(ctx, st, (doc.0, mask.id.0 | MASK_INV, size), (Arc::as_ptr(mask) as usize as u64) ^ (frame as u64), || {
+        let mut img = r.render_element(d, mask, &fp_render::PointMap::identity(), frame).image;
+        for p in img.data_mut() {
+            p[0] = 255 - p[0];
+            p[1] = 255 - p[1];
+            p[2] = 255 - p[2];
+        }
+        Some(img)
+    })
+}
+
+/// Schlüsselbit der invertierten Maskenminiaturen.
+const MASK_INV: u64 = 1 << 61;
+
 /// Schlüsselbit der Miniaturen „Element auf der Seite“ (getrennt von Element-, Seiten- und
 /// Symbolminiaturen im selben Zwischenspeicher).
 const ON_PAGE: u64 = 1 << 62;

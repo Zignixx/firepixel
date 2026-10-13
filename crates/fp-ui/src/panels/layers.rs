@@ -254,8 +254,19 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                         paint_triangle(ui, tri2, open, c.icon_fg);
                         glyphs::paint(ui.painter(), Rect::from_center_size(pos2(x0 + 66.0, r2.center().y), vec2(16.0, 14.0)), Glyph::Folder, &theme, true);
                         let nr = Rect::from_min_max(pos2(x0 + 78.0, r2.top() + 2.0), pos2(r2.right() - 4.0, r2.bottom() - 2.0));
-                        let font = if sel { theme.bold(theme.fonts.ui) } else { theme.ui_font() };
-                        crate::widgets::text_clipped(ui.painter(), pos2(nr.left(), r2.center().y), Align2::LEFT_CENTER, &sl.name, font, if editable { c.text } else { c.text_weak }, nr.width());
+                        // Umbenennen per Doppelklick wie bei Ebenen und Objekten (fixg5 Q-05)
+                        let renaming = rename.as_ref().is_some_and(|k| matches!(k, RowKind::Element { id, .. } if *id == e.id));
+                        if renaming {
+                            if let Some(res) = common::inline_rename(ui, Id::new(("sub-rename", e.id.0)), nr, &sl.name) {
+                                if let Some(n) = res.filter(|n| !n.is_empty()) {
+                                    actions.push(Action::Run("element.setName".into(), json!({"ids": [e.id.0], "name": n})));
+                                }
+                                ui.data_mut(|dd| dd.remove::<RowKind>(Id::new(RENAME)));
+                            }
+                        } else {
+                            let font = if sel { theme.bold(theme.fonts.ui) } else { theme.ui_font() };
+                            crate::widgets::text_clipped(ui.painter(), pos2(nr.left(), r2.center().y), Align2::LEFT_CENTER, &sl.name, font, if editable { c.text } else { c.text_weak }, nr.width());
+                        }
                         let kind = RowKind::Element { id: e.id, layer: l.id, index: idx, editable };
                         if resp2.clicked()
                             && let Some(p) = resp2.interact_pointer_pos()
@@ -269,6 +280,9 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                             } else if editable {
                                 actions.push(Action::Run("select.set".into(), json!({"ids": [e.id.0]})));
                             }
+                        }
+                        if (resp2.double_clicked() || resp2.triple_clicked()) && editable && !tri2.expand(3.0).contains(resp2.interact_pointer_pos().unwrap_or(r2.center())) {
+                            rename_start = Some(kind.clone());
                         }
                         if resp2.drag_started() && editable && depth == 0 {
                             start_drag = Some(Drag::Element { id: e.id });
@@ -309,7 +323,7 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                             let mt = Rect::from_min_size(pos2(thumb.right() + 6.0, thumb.top()), thumb.size());
                             if ui.is_rect_visible(mt) {
                                 ui.painter().rect_filled(mt, 0.0, Color32::BLACK);
-                                if let Some(tex) = thumbs::element_thumb(ui.ctx(), st, doc_id, doc_gen, &doc, m, (tpx as u32 * 2).max(16)) {
+                                if let Some(tex) = thumbs::mask_thumb(ui.ctx(), st, doc_id, &doc, &e, m, (tpx as u32 * 2).max(16)) {
                                     let ts = tex.size_vec2();
                                     let s = (mt.width() / ts.x).min(mt.height() / ts.y);
                                     ui.painter().image(tex.id(), Rect::from_center_size(mt.center(), ts * s), Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0)), Color32::WHITE);

@@ -573,12 +573,25 @@ fn element_get(cls: &str, name: &str, doc: DocId, id: ElementId, ctx: &mut Conte
         "pixelRect" => {
             // Bitmaps: Rechteck der sichtbaren Pixel (Alpha ≥ 2), unabhängig von den Objektgrenzen;
             // leere Bitmap wie im Original ±2³¹ (re\22 §1.2 Regel 3)
+            // Maskiertes Einzelelement (Maske ▸ Alles einblenden/ausblenden, fixg5 Q-02): die nach der
+            // Maske sichtbaren Pixel; ganz ausgeblendet wie im Original das leere Rechteck ±2³¹.
+            let masked = e.masked_single().is_some();
             let r = st(|s| {
                 let d = s.session.document(doc).ok_or_else(|| FwErr::bad("Dokument"))?;
+                if masked {
+                    let r = fp_render::Renderer::new(fp_render::RenderOptions { background: fp_render::BackgroundMode::Transparent, ..fp_render::RenderOptions::default() });
+                    let img = r.render_element(&d.doc, &e, &fp_render::PointMap::identity(), d.frame).image;
+                    let b = img.alpha_bounds_min(2);
+                    return Ok((!b.is_empty()).then(|| fp_geom::Rect::new(b.left as f32, b.top as f32, b.right as f32, b.bottom as f32)));
+                }
                 Ok(fp_engine::docops::element_pixel_rect(&d.doc, &e))
             })?;
             let b = match (r, &e.kind) {
                 (Some(r), _) => [r.left as f64, r.top as f64, r.right as f64, r.bottom as f64],
+                (None, _) if masked => {
+                    let m = 2f64.powi(31);
+                    [-m, -m, m, m]
+                }
                 (None, ElementKind::Bitmap(_)) => {
                     let m = 2f64.powi(31);
                     [-m, -m, m, m]

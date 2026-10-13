@@ -151,12 +151,19 @@ pub fn matches(pred: &Pred, s: &Session) -> bool {
             }
             // erst das erste Objekt (schnelle Absage), dann alle in einem Durchlauf statt einer
             // Suche je ID (PERF-1: Tausende gewählte Objekte)
-            if !fp_engine::docops::element_on_page(&d.doc, d.page, ids[0]).is_some_and(|e| element_is(&e, *k, &d.doc)) {
+            if !fp_engine::docops::element_on_page(&d.doc, d.page, ids[0]).is_some_and(|e| element_is(insp_elem(&e), *k, &d.doc)) {
                 return false;
             }
-            fp_engine::docops::find_many_on_page(&d.doc, d.page, ids).iter().all(|p| p.as_ref().and_then(|p| d.doc.element_at(p)).is_some_and(|e| element_is(e, *k, &d.doc)))
+            fp_engine::docops::find_many_on_page(&d.doc, d.page, ids).iter().all(|p| p.as_ref().and_then(|p| d.doc.element_at(p)).is_some_and(|e| element_is(insp_elem(e), *k, &d.doc)))
         }
     }
+}
+
+/// Element, nach dessen Art der Inspektor gewählt wird: Ein maskiertes Einzelelement (Maske ▸ Alles
+/// einblenden/ausblenden auf einem Objekt, fixg5 Q-02) zeigt wie im Original den Inspektor seines
+/// Inhalts (Bild mit Maske), nicht den der Gruppe.
+pub fn insp_elem(e: &fp_model::Element) -> &fp_model::Element {
+    e.masked_single().map(|(c, _)| &**c).unwrap_or(e)
 }
 
 /// Erste passende Zeile.
@@ -254,5 +261,27 @@ mod tests {
         let l = select_layout(&s).map(|l| l.number);
         // ein neu gezeichnetes Rechteck ist ausgewählt (Rechteck-Grundform bzw. Pfad)
         assert!(matches!(l, Some(58) | Some(26) | Some(30)), "{l:?}");
+    }
+
+    /// FIX-R1 (fixg5 Q-02): nach Maske ▸ Alles einblenden/ausblenden zeigt der Inspektor das Bild
+    /// (Bitmap-Inspektor 27, Typ „Bitmap“) wie im Original, nicht die Gruppe (26).
+    #[test]
+    fn masked_bitmap_shows_bitmap_inspector() {
+        for cmd in ["modify.mask.revealAll", "modify.mask.hideAll"] {
+            let mut s = Session::default();
+            let _ = s.execute("file.new", serde_json::json!({"width": 200, "height": 200}));
+            let img = fp_raster::RgbaImage::filled(fp_geom::IRect::from_xywh(10, 10, 50, 40), fp_color::Rgba8::new(200, 30, 30, 255)).ok();
+            s.clipboard.clear();
+            s.clipboard.pixels = img;
+            assert!(s.execute("edit.paste", serde_json::json!({})).is_ok());
+            assert_eq!(select_layout(&s).map(|l| l.number), Some(27));
+            assert!(s.execute(cmd, serde_json::json!({})).is_ok(), "{cmd}");
+            assert_eq!(select_layout(&s).map(|l| l.number), Some(27), "{cmd}");
+            let d = s.active().map(|d| (std::sync::Arc::clone(&d.doc), d.page, d.selection.elements[0]));
+            let (doc, page, id) = d.unwrap_or_else(|| panic!("Dokument"));
+            let e = fp_engine::docops::element_on_page(&doc, page, id).unwrap_or_else(|| panic!("Element"));
+            assert!(e.masked_single().is_some());
+            assert_eq!(super::super::obj_quads::type_label(&e), fp_i18n::t("pi-type-bitmap"), "{cmd}");
+        }
     }
 }

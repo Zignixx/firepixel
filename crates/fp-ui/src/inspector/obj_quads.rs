@@ -2140,6 +2140,7 @@ fn mask_q3(ui: &mut Ui, st: &mut AppState, r: Rect) {
 
 /// Für Tests: Text einer Elementart im Inspektor (Q1).
 pub fn type_label(e: &Element) -> String {
+    let e = super::layouts::insp_elem(e);
     match &e.kind {
         ElementKind::Bitmap(_) => t("pi-type-bitmap"),
         ElementKind::Path(p) if p.primitive.is_some() => t("pi-type-rectangle"),

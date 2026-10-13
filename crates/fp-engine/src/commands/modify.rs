@@ -503,8 +503,9 @@ fn mask_from_selection(s: &mut Session, reveal_all: Option<bool>) -> Result<Comm
         let target = d.selection.elements.first().copied().ok_or_else(|| sel_err("err-sel-no-object"))?;
         let e = docops::element_on_page(&d.doc, d.page, target).ok_or(EngineError::ElementNotFound(target.0))?;
         let b = docops::element_bounds(&d.doc, &e).ok_or_else(|| sel_err("err-sel-no-bounds-short"))?.round_out();
+        // Gespeichertes Masken-IMGv = invertiertes Grau (07 §7.5, Laufzeit T3): schwarz = sichtbar
         let img = match reveal_all {
-            Some(reveal) => RgbaImage::filled(b, if reveal { fp_color::Rgba8::new(255, 255, 255, 255) } else { fp_color::Rgba8::new(0, 0, 0, 255) })?,
+            Some(reveal) => RgbaImage::filled(b, if reveal { fp_color::Rgba8::new(0, 0, 0, 255) } else { fp_color::Rgba8::new(255, 255, 255, 255) })?,
             None => return Err(EngineError::Failed(fp_i18n::t("err-internal"))),
         };
         let id = mask_bitmap(d, img, target)?;
@@ -523,7 +524,8 @@ pub(crate) fn mask_from_pixels(s: &mut Session, reveal: bool) -> Result<CommandO
         for (i, px) in img.data_mut().iter_mut().enumerate() {
             let (x, y) = (b.left + (i % w) as i32, b.top + (i / w) as i32);
             let v = m.get(x, y);
-            let g = if reveal { v } else { 255 - v };
+            // invertiertes Grau wie oben: gewählt + einblenden → schwarz (sichtbar)
+            let g = if reveal { 255 - v } else { v };
             *px = [g, g, g, 255];
         }
         d.selection.pixels = None;
