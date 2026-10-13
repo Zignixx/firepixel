@@ -832,6 +832,37 @@ Eingetragen von DOC-4 (13.10.) aus den Berichten `berichte\batch1.md`, `batch2.m
 - [ ] (von PAR-X-INSP-1) Wahl im Exportformat des Dokument-Inspektors legt einen Verlaufsschritt „Optimieren“ an – im Original nicht gemessen (PAR 16/08) – im Original nachmessen
 - [x] (von PAR-X-INSP-1) `crates\fp-engine\src\commands\bitmap.rs`: Beschriftungen doppelt kodiert (z. B. `bitmap.floodFill` „FÃ¼llen“, ≈ 30 Stellen); `i18n_menue::every_command_and_tool_has_texts_in_de_and_en` schlägt deshalb fehl – Datei als UTF-8 reparieren – erledigt (PAR-X-TOOLS-2, fcf0f86)
 
+- [ ] (von PAR-F) tool-pointer-transform-crop/03 Umschalt-Ziehen am gewählten Objekt (R1, 100,85 → +60,+20) hebt die Auswahl auf und verschiebt nichts; Alt-Ziehen-Schritt heißt „Kopie verschieben“ – Zeiger – erwartet: Umschalt beschränkt waagrecht/45° (+60,0 bzw. +45,+45), Schritt „Duplizieren“
+- [ ] (von PAR-F) tool-pointer-transform-crop/04 Zeiger am Eckpunkt eines gewählten Pfads skaliert (R1 → 90,85–150,120, „Transformieren“); am Knoten von P1 wird nur der Knoten verschoben – erwartet: ganzes Objekt verschieben (R1 → 90,80–190,150, P1 +0,+35), „Verschieben“
+- [ ] (von PAR-F) tool-pointer-transform-crop/06 Teilauswahl: Verlaufsschritt beim Knoten-/Henkelziehen heißt „Pfad nachzeichnen“ (Ergebnis stimmt) – erwartet: „Punkt verschieben“
+- [ ] (von PAR-F) tool-pointer-transform-crop/10 Skalieren-Eckgriff nimmt den größeren Faktor (150,120→200,140 → 50,50–200,155; Alt 0,15–200,155; Bitmap B1 → 40,40–610,420) und Ziehen innerhalb tut nichts – erwartet: Projektion auf die Diagonale (50,50–193,150; Alt 7,20–193,150; B1 40,40–603,415), innen ziehen verschiebt (90,60)
+- [ ] (von PAR-F) tool-pointer-transform-crop/11 Drehen mit dem Skalieren-Werkzeug legt Schritt „Verzerren“ an (auch Verzerren-Werkzeug, Neigen teils) – erwartet: immer „Transformieren“
+- [ ] (von PAR-F) tool-pointer-transform-crop/13 Neigen: Mittelgriff oben +30 verschiebt oben +30 und unten −30; Eckgriff senkrecht ohne Wirkung; Eckgriff waagrecht verschiebt auch die untere Kante – erwartet: nur obere Kante (80,50/180,50); Ecke senkrecht → 150,30/150,140; waagrecht → oben 30,50/170,50, unten bleibt
+- [ ] (von PAR-F) tool-pointer-transform-crop/14 Verzerren: Mittelgriff oben (+20,−10) bewegt nur senkrecht (50,40/150,40) – erwartet: beide oberen Ecken +20,−10 (70,40/170,40)
+- [ ] (von PAR-F) tool-pointer-transform-crop/15 Esc im Skalieren/Transformieren übernimmt die Änderung („Transformieren“) – erwartet: verwerfen, kein Verlaufsschritt
+- [ ] (von PAR-F) tool-pointer-transform-crop/17 Zuschneiden/Exportbereich: Inspektorfelder B/H/X/Y bleiben beim Aufziehen leer – erwartet: live 400/300/100/100 bzw. 250/150/50/50
+- [ ] (von PAR-F) tool-pointer-transform-crop/18 Zuschneiden: Objekte ganz außerhalb (ST) bleiben, danach nichts gewählt; Rahmen über den Leinwandrand (−50,−50→300,200) erweitert auf 350 × 255 und verschiebt alles +50 – erwartet: ST gelöscht, alle Objekte gewählt; Rahmen auf die Leinwand begrenzt → 300 × 200 ohne Verschiebung
+- [ ] (von PAR-F) tool-pointer-transform-crop/19 Zuschneiden mit gewählter Bitmap: B1 bleibt ganz (−60,−60–420,260), nur verschoben (Pixel stimmen) – erwartet: B1 auf 0,0–200,200 beschnitten
+- [ ] (von PAR-F) tool-pointer-transform-crop/20 Doppelklick in den Exportbereich öffnet eigenen Dialog „Exportbereich exportieren“ (Höhe 155 statt 150) – erwartet: „Bildvorschau“ mit Register Datei, „Exportbereich“ ☑, X 50 Y 50 B 250 H 150
+- [ ] (von PAR-F) tool-pointer-transform-crop/21 Inspektor zeigt beim Drücken auf ein ungewähltes Objekt schon dessen Werte („Pfad R1“) – erwartet: während des Zeiger-Zugs noch „Dokument“
+- [ ] (von PAR-F) tool-line-pen/01 Linie: Knoten ganzzahlig (100,100) statt auf Pixelmitten (100.5,100.5), Name leer statt „Linie“, Umschalt-45° ergibt 195,395 statt 200.5,400.5 (Länge = größere Komponente)
+- [ ] (von PAR-F) tool-line-pen/05 Stift: Verlaufsschritt „Pfad“ – erwartet: „Stift“ (auch Punkt einfügen/umwandeln); Vektorpfad „Pfad“ – erwartet „Pinsel“
+- [ ] (von PAR-F) tool-line-pen/06 Unbeendeter Stiftpfad wandert beim Schließen/Öffnen ins nächste Dokument (Punkte aus Dokument A als Pfadanfang in Dokument B) – erwartet: Zug endet mit dem Dokument
+- [ ] (von PAR-F) tool-line-pen/07 Stift: nach Esc, Enter oder 2 × Esc beginnt der nächste Klick einen neuen Pfad – erwartet: offener Pfad bleibt gewählt und wird am Endpunkt fortgesetzt (erst Strg+D/Doppelklick → neuer Pfad)
+- [ ] (von PAR-F) tool-line-pen/08 Stift-Klick auf den Endpunkt eines nicht gewählten offenen Pfads (P1 420,240) beginnt einen neuen Pfad – erwartet: P1 fortsetzen (5. Knoten 480,280)
+- [ ] (von PAR-F) tool-line-pen/09 Alt-Ziehen auf dem soeben gesetzten Kurvenpunkt legt einen zweiten Knoten an – erwartet: Ausgangshenkel dieses Punkts neu (200,450 [200,445 | 200,520]), 3 Knoten
+- [ ] (von PAR-F) tool-line-pen/10 Stift-Klick auf inneren Kurvenpunkt löscht ihn („Punkt entfernen“) – erwartet: in Eckpunkt umwandeln (Henkel eingezogen), Schritt „Stift“
+- [ ] (von PAR-F) tool-line-pen/11 Stift rastet an Objektmitte/-ecke (102,207 → 102,205; 152,122 → 150,120) – erwartet: kein Fang
+- [ ] (von PAR-F) tool-line-pen/12 Vektorpfad glättet Zickzack zu 7 Kurvenknoten – erwartet: 8 Eckknoten auf Pixelmitten (Spitze geteilt), 1 px hart (`re\_testdateien\par\px\tool-line-pen\l12_vpath.png`)
+- [ ] (von PAR-F) tool-line-pen/14 Pfad nachzeichnen ersetzt den ganzen P1 (3 Knoten) – erwartet: nur den Abschnitt 290,200…370,200 ersetzen, P1 bleibt mit 10 Knoten
+- [ ] (von PAR-F) tool-shapes/05 Rechteck aufziehen: gehaltenes ↑ erhöht die Rundung nicht (nur je Tastendruck), ← verschiebt das Rechteck um 1 px – erwartet: Rundung steigt solange gehalten (1,5 s → 0,97), ← → ohne Wirkung
+- [ ] (von PAR-F) tool-shapes/06 Rechteck-Eckpunkt mit Zeiger: Schritt „Transformieren“ – erwartet „Rechteck modifizieren“; mit Teilauswahl wird das Rechteck zum Pfad und nur die Ecke verschoben – erwartet: ganzes Rechteck verschieben („Verschieben“)
+- [ ] (von PAR-F) tool-shapes/07 Werkzeug-Inspektor Rechteck ohne „Kombinieren“ + 5 Pfadknöpfe (grau); gewähltes Rechteck mit leerem Namensfeld – erwartet: wie Original, Name „Rechteck“
+- [ ] (von PAR-F) tool-shapes/08 Neue Ellipse/Polygon/Linie ohne Objektnamen – erwartet: „Ellipse“, „Polygon“, „Linie“ (Rechteck ohne Namen wie Original)
+- [ ] (von PAR-F) tool-shapes/09 Polygon „Autom.“ passt den Winkel bei 6 Seiten nicht an (bleibt 38) – erwartet 57 (5 → 38)
+- [ ] (von PAR-F) tool-shapes/10 Polygon schräg (600,150→650,200): Ecke 650,201.96 – erwartet 650,200 (Drehung folgt genau der Maus)
+- [ ] (von PAR-F) tool-shapes/12 Rechteck/Ellipse/Polygon entstehen ohne Strich, obwohl Werkzeug-Inspektor „1-Pixel hart“ 1 #C04040 zeigt (Linie/Stift bekommen ihn) – erwartet: Strich #C04040 1 px aus der Vorgabe (`s_rect_ellipse_poly.png`)
+- [ ] (von PAR-F) tool-shapes/15 Inspektor während des Rechteck-Zugs leer – erwartet: live „Rechteck“ B 75 H 50 X 100 Y 100
 ## CT – Klicktests im echten Fenster (Nachtlauf 13.10.)
 
 - [ ] (von CT-1b) Befehle ▸ Demo – aktuelles Dokument: Vorschau entsteht, aber keine Statusmeldung (bei `FP_NO_SHELL_OPEN` sieht man nichts); Vorschauordner `%TEMP%\Firepixel\Preview\doc<N>` ist zwischen parallelen Instanzen nicht eindeutig – Vorschau im Browser (fp-ui/fp-engine) – `docs\funktionstest\ct1b_2026-10-13.md`
