@@ -473,6 +473,10 @@ fn set_text_runs(doc: DocId, runs: &Value) -> FwResult<()> {
     if attrs.as_object().is_some_and(|m| !m.is_empty()) {
         exec(Some(doc), "text.setAttributes", attrs)?;
     }
+    let aa = super::elem::text_aa_params(runs.get("initialAttrs"));
+    if !aa.is_empty() {
+        exec(Some(doc), "text.setProperties", Value::Object(aa))?;
+    }
     Ok(())
 }
 

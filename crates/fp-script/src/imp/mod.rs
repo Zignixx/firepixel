@@ -456,11 +456,12 @@ pub(crate) fn global_uneval(_this: &JsValue, args: &[JsValue], ctx: &mut Context
     Ok(conv::s(&to_source_text(&j)))
 }
 
-/// `toSource` wie SpiderMonkey im Original (`[ 1, "zwei", { x:3 } ]`, Schlüssel ohne Anführungszeichen).
+/// `toSource` wie im Original (`[ 1, "zwei", { x:3 } ]`, Schlüssel ohne Anführungszeichen). Objekte
+/// stehen wie die Wirtobjekte des Originals (`guides`, `gridSize`, `textRuns`) ohne umschließende
+/// Klammern: `{ x:36, y:36 }` statt `({ x:36, y:36 })` (TW-08).
 pub(crate) fn to_source(this: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
     let j = conv::js_to_json(this, ctx, 0)?;
-    let text = to_source_text(&j);
-    Ok(conv::s(&if j.is_object() { format!("({text})") } else { text }))
+    Ok(conv::s(&to_source_text(&j)))
 }
 
 /// Quelltextform eines JSON-Werts.

@@ -235,33 +235,101 @@ pub(crate) fn typed_scalar(t: &str) -> Value {
     }
 }
 
-fn text_runs_json(t: &fp_model::TextElem) -> Value {
-    let attrs = |a: &fp_model::TextAttrs| {
-        let mut m = Map::new();
-        if let Some(f) = &a.font {
-            m.insert("face".into(), json!(f));
+/// Namen der Ausrichtung (`JSTi`) wie im Original.
+fn alignment_name(al: i32) -> &'static str {
+    match al {
+        1 => "center",
+        2 => "right",
+        3 => "justify",
+        4 => "stretch",
+        _ => "left",
+    }
+}
+
+/// Vergleichsschlüssel für Schriftnamen (ohne Leerzeichen/Bindestriche, klein).
+fn font_key(s: &str) -> String {
+    s.chars().filter(|c| !matches!(c, ' ' | '-' | '_')).flat_map(char::to_lowercase).collect()
+}
+
+/// PostScript-Name der Anfangsschrift wie `initialAttrs.face` im Original (`MyriadPro-Regular`).
+/// Der Kopf trägt meist den Familiennamen (`Myriad Pro`); dann gilt `CFTs`, sonst der Name des ersten
+/// Laufs derselben Familie, sonst Familie ohne Leerzeichen + `-Regular`.
+pub(crate) fn ps_face(t: &fp_model::TextElem) -> Option<String> {
+    let fam = t.initial.font.clone().or_else(|| t.runs.iter().find_map(|r| r.attrs.font.clone()))?;
+    if let Some(ps) = t.initial.ps_font.as_ref().filter(|p| !p.is_empty() && !p.contains(' ')) {
+        return Some(ps.clone());
+    }
+    if !fam.contains(' ') {
+        return Some(fam);
+    }
+    let fk = font_key(&fam);
+    if let Some(f) = t.runs.iter().filter_map(|r| r.attrs.font.as_ref()).find(|f| !f.contains(' ') && font_key(f.split('-').next().unwrap_or(f)).starts_with(&fk)) {
+        return Some(f.clone());
+    }
+    Some(format!("{}-Regular", fam.replace(' ', "")))
+}
+
+/// Textattribute als Original-Objekt. `full`: alle 15 Laufeigenschaften mit Vorgaben (sonst nur die
+/// gesetzten); die Glättungswerte (`antiAliasSharpness`, `antiAliasStrength`, `overSample`) stehen nur in
+/// `initialAttrs`.
+fn text_attrs_json(a: &fp_model::TextAttrs, full: bool, face: Option<String>) -> Map<String, Value> {
+    let mut m = Map::new();
+    let mut put = |k: &str, v: Option<Value>, d: Value| {
+        if let Some(v) = v {
+            m.insert(k.into(), v);
+        } else if full {
+            m.insert(k.into(), d);
         }
-        if let Some(s) = a.size {
-            m.insert("size".into(), json!(format!("{}pt", conv::fmt_num(s as f64))));
-        }
-        if let Some(c) = a.color {
-            m.insert("fillColor".into(), json!(hex(fp_color::Argb(c))));
-        }
-        for (k, v) in [("bold", a.bold), ("italic", a.italic), ("underline", a.underline)] {
-            if let Some(b) = v {
-                m.insert(k.into(), json!(b));
-            }
-        }
-        if let Some(al) = a.alignment {
-            m.insert("alignment".into(), json!(match al { 1 => "center", 2 => "right", 3 => "justify", 4 => "stretch", _ => "left" }));
-        }
-        Value::Object(m)
     };
-    let mut runs: Vec<Value> = t.runs.iter().map(|r| json!({"changedAttrs": attrs(&r.attrs), "characters": r.text})).collect();
+    // f32 über die kürzeste Dezimalform nach f64 (1.2 statt 1.2000000476837158)
+    let num = |v: Option<f32>| v.map(|x| json!(x.to_string().parse::<f64>().unwrap_or(x as f64)));
+    put("alignment", a.alignment.map(|al| json!(alignment_name(al))), json!("left"));
+    put("baselineShift", num(a.baseline_shift), json!(0));
+    put("bold", a.bold.map(|b| json!(b)), json!(false));
+    put("face", face.map(|f| json!(f)), json!(""));
+    put("fillColor", a.color.map(|c| json!(hex(fp_color::Argb(c)))), json!("#000000"));
+    put("horizontalScale", num(a.horizontal_scale), json!(1));
+    put("italic", a.italic.map(|b| json!(b)), json!(false));
+    put("leading", num(a.leading), json!(1));
+    put("leadingMode", a.leading_mode.map(|l| json!(if l == 1 { "exact" } else { "percentage" })), json!("percentage"));
+    put("paragraphIndent", num(a.indent), json!(0));
+    put("paragraphSpacingAfter", num(a.space_after), json!(0));
+    put("paragraphSpacingBefore", num(a.space_before), json!(0));
+    put("rangeKerning", num(a.tracking), json!(0));
+    put("size", a.size.map(|s| json!(format!("{}pt", conv::fmt_num(s as f64)))), json!("12pt"));
+    put("underline", a.underline.map(|b| json!(b)), json!(false));
+    m
+}
+
+/// `textRuns` wie im Original (TW-02): `initialAttrs` mit allen 18 Eigenschaften (15 Laufeigenschaften
+/// und Glättung), der erste Lauf mit dem vollständigen aufgelösten Satz, weitere Läufe nur mit den
+/// geänderten Werten.
+pub(crate) fn text_runs_json(t: &fp_model::TextElem) -> Value {
+    let face = ps_face(t);
+    let mut init = t.initial.clone();
+    if init.color.is_none() {
+        init.color = Some(t.attrs.fill_color.0);
+    }
+    let mut ia = text_attrs_json(&init, true, Some(face.clone().unwrap_or_default()));
+    ia.insert("antiAliasSharpness".into(), json!(t.aa_sharpness));
+    ia.insert("antiAliasStrength".into(), json!(t.aa_strength));
+    ia.insert("overSample".into(), json!(t.aa_oversample));
+    let mut runs: Vec<Value> = Vec::with_capacity(t.runs.len());
+    let mut cur = init.clone();
+    for (i, r) in t.runs.iter().enumerate() {
+        cur.apply(&r.attrs);
+        let changed = if i == 0 {
+            let f = cur.font.clone().filter(|f| !f.contains(' ')).or_else(|| face.clone());
+            text_attrs_json(&cur, true, f)
+        } else {
+            text_attrs_json(&r.attrs, false, r.attrs.font.clone())
+        };
+        runs.push(json!({"changedAttrs": changed, "characters": r.text}));
+    }
     if runs.is_empty() {
         runs.push(json!({"changedAttrs": {}, "characters": t.plain_text()}));
     }
-    json!({"initialAttrs": attrs(&t.initial), "textRuns": runs})
+    json!({"initialAttrs": ia, "textRuns": runs})
 }
 
 /// Original-Textattribute (`face`, `size` „24pt“, `fillColor`, `bold` …) → Parameter für
@@ -295,16 +363,47 @@ pub(super) fn text_attrs_params(a: Option<&Value>) -> Value {
     if let Some(al) = al {
         m.insert("alignment".into(), json!(al));
     }
-    if let Some(l) = a.get("leading").and_then(|v| v.as_f64()) {
-        m.insert("leading".into(), json!(l * 100.0));
+    // Zeilenabstand: Faktor (Modus „percentage“) bzw. px (Modus „exact“), wie `LEDf`
+    if let Some(l) = a.get("leading").and_then(|v| v.as_f64()).filter(|l| *l >= 0.0) {
+        m.insert("leading".into(), json!(l));
     }
-    if let Some(t) = a.get("rangeKerning").and_then(|v| v.as_f64()) {
-        m.insert("tracking".into(), json!(t));
+    let mode = match a.get("leadingMode") {
+        Some(Value::String(s)) if s == "percentage" => Some(0),
+        Some(Value::String(s)) if s == "exact" => Some(1),
+        Some(v) => v.as_i64().filter(|i| (0..=1).contains(i)),
+        None => None,
+    };
+    if let Some(mode) = mode {
+        m.insert("leadingMode".into(), json!(mode));
     }
-    if let Some(b) = a.get("baselineShift").and_then(|v| v.as_f64()) {
-        m.insert("baselineShift".into(), json!(b));
+    if let Some(h) = a.get("horizontalScale").and_then(|v| v.as_f64()).filter(|h| *h >= 0.01) {
+        m.insert("horizontalScale".into(), json!(h));
+    }
+    for (from, to) in [
+        ("rangeKerning", "tracking"),
+        ("baselineShift", "baselineShift"),
+        ("paragraphIndent", "indent"),
+        ("paragraphSpacingBefore", "spaceBefore"),
+        ("paragraphSpacingAfter", "spaceAfter"),
+    ] {
+        if let Some(v) = a.get(from).and_then(|v| v.as_f64()) {
+            m.insert(to.into(), json!(v));
+        }
     }
     Value::Object(m)
+}
+
+/// Glättungswerte aus `initialAttrs` (`antiAliasSharpness`, `antiAliasStrength`, `overSample`) →
+/// Parameter für `text.setProperties` (leer, wenn keiner gesetzt ist).
+pub(super) fn text_aa_params(a: Option<&Value>) -> Map<String, Value> {
+    let mut m = Map::new();
+    let Some(a) = a else { return m };
+    for (from, to, lo, hi) in [("antiAliasSharpness", "sharpness", 0, 255), ("antiAliasStrength", "strength", 0, 255), ("overSample", "oversample", 1, 64)] {
+        if let Some(v) = a.get(from).and_then(|v| v.as_f64()) {
+            m.insert(to.into(), json!((v.round() as i64).clamp(lo, hi)));
+        }
+    }
+    m
 }
 
 fn contours_of(e: &Element) -> Vec<fp_model::element::Contour> {
@@ -942,6 +1041,11 @@ fn element_set(cls: &str, name: &str, doc: DocId, id: ElementId, a: Arg, raw: &J
             {
                 m.insert("ids".into(), json!([id.0]));
                 exec(Some(doc), "text.setAttributes", attrs)?;
+            }
+            let mut aa = text_aa_params(v.get("initialAttrs"));
+            if !aa.is_empty() {
+                aa.insert("ids".into(), json!([id.0]));
+                exec(Some(doc), "text.setProperties", Value::Object(aa))?;
             }
             Ok(())
         }
