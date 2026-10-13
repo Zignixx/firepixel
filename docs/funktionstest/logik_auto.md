@@ -2,24 +2,20 @@
 
 Erzeugt von `crates\fp-ui\tests\gesamt_logik.rs` (`cargo test -p fp-ui --test gesamt_logik`). Nicht von Hand ändern.
 
-**70/70 Einträge ✅**
+**63/66 Einträge ✅**
 
 | Eintrag | Befehl | Ergebnis | Hinweis |
 |---|---|---|---|
-| Datei ▸ Exportassistent... | `file.exportWizard` | ✅ Doc | ohne Auswahl |
-| Datei ▸ Batch-Verarbeitung... | `file.batchProcess` | ✅ Doc | ohne Auswahl |
 | Datei ▸ Seite einrichten... | `file.pageSetup` | ✅ Doc | ohne Auswahl |
 | Datei ▸ Drucken... | `file.print` | ✅ Doc | ohne Auswahl |
-| Datei ▸ HTML-Einrichtung... | `file.htmlSetup` | ✅ Doc | ohne Auswahl |
-| Bearbeiten ▸ Objekt einfügen ▸ Neue Schaltfläche... | `edit.insert.newButton` | ✅ Doc | ohne Auswahl |
-| Bearbeiten ▸ Objekt einfügen ▸ Neues Symbol... | `edit.insert.newSymbol` | ✅ Doc | ohne Auswahl |
-| Ansicht ▸ Raster ▸ Raster bearbeiten... | `view.grid.editGrid` | ✅ Doc | ohne Auswahl |
+| Bearbeiten ▸ Objekt einfügen ▸ Neue Schaltfläche... | `edit.insert.newButton` | ❌ Error("OK: -1 Verlaufsschritte statt 1; OK + Rückgängig stellt nicht exakt her") | ohne Auswahl |
+| Bearbeiten ▸ Objekt einfügen ▸ Neues Symbol... | `edit.insert.newSymbol` | ❌ Error("OK: -1 Verlaufsschritte statt 1; OK + Rückgängig stellt nicht exakt her") | ohne Auswahl |
+| Ansicht ▸ Raster ▸ Raster bearbeiten... | `view.grid.editGrid` | ❌ Error("OK: 0 Verlaufsschritte statt 1; OK + Rückgängig stellt nicht exakt her; Wiederholen ergibt anderes Ergebnis") | ohne Auswahl |
 | Auswählen ▸ Weiche Kante… | `select.feather` | ✅ Doc | Pixelauswahl |
 | Auswählen ▸ Auswahlrahmen erweitern... | `select.expandMarquee` | ✅ Doc | Pixelauswahl |
 | Auswählen ▸ Auswahlrahmen verkleinern... | `select.contractMarquee` | ✅ Doc | Pixelauswahl |
 | Auswählen ▸ Auswahlrahmen begrenzen... | `select.borderMarquee` | ✅ Doc | Pixelauswahl |
 | Auswählen ▸ Auswahlrahmen glätten... | `select.smoothMarquee` | ✅ Doc | Pixelauswahl |
-| Auswählen ▸ Bitmap-Auswahl speichern... | `select.saveBitmapSelection` | ✅ Doc | Pixelauswahl |
 | Modifizieren ▸ Leinwand ▸ Leinwandfarbe... | `modify.canvas.canvasColor` | ✅ Doc | ohne Auswahl |
 | Modifizieren ▸ Animation ▸ Auswahl animieren... | `modify.animation.animateSelection` | ✅ Doc | Rechteck |
 | Modifizieren ▸ Animation ▸ Einstellungen... | `modify.animation.settings` | ✅ Doc | Animationssymbol |
@@ -27,11 +23,11 @@ Erzeugt von `crates\fp-ui\tests\gesamt_logik.rs` (`cargo test -p fp-ui --test ge
 | Modifizieren ▸ Symbol ▸ Instanzen tweenen... | `modify.symbol.tweenInstances` | ✅ Doc | zwei Instanzen |
 | Modifizieren ▸ Symbol ▸ Symbol austauschen... | `modify.symbol.swapSymbol` | ✅ Doc | Grafiksymbol |
 | Modifizieren ▸ Selektives JPEG ▸ Einstellungen... | `modify.selectiveJpeg.settings` | ✅ Doc | ohne Auswahl |
+| Modifizieren ▸ Pfad in Auswahlrahmen konvertieren... | `modify.convertPathToMarquee` | ✅ Doc | Rechteck |
 | Modifizieren ▸ Pfad ändern ▸ Vereinfachen... | `modify.alterPath.simplify` | ✅ Doc | Rechteck |
 | Modifizieren ▸ Pfad ändern ▸ Strich erweitern... | `modify.alterPath.expandStroke` | ✅ Doc | Rechteck |
 | Modifizieren ▸ Pfad ändern ▸ Pfad einlassen... | `modify.alterPath.insetPath` | ✅ Doc | Rechteck |
 | Text ▸ Größe ▸ Andere... | `text.size.other` | ✅ Doc | ohne Auswahl |
-| Text ▸ Rechtschreibprüfung einrichten... | `text.spellingSetup` | ✅ Doc | ohne Auswahl |
 | Filter ▸ Farbe anpassen ▸ Farbton/Sättigung... | `filter.adjustColor.hueSaturation` | ✅ Doc | Rechteck, mit Vorschau |
 | Filter ▸ Farbe anpassen ▸ Helligkeit/Kontrast... | `filter.adjustColor.brightnessContrast` | ✅ Doc | Rechteck, mit Vorschau |
 | Filter ▸ Rauschen ▸ Rauschen hinzufügen... | `filter.noise.addNoise` | ✅ Doc | Rechteck, mit Vorschau |

@@ -61,7 +61,7 @@ Erzeugt von `crates\fp-ui\tests\gesamt_menu.rs` (`cargo test -p fp-ui --test ges
 | Kontextmenü Objekt ausgewählt ▸ Bearbeiten ▸ Ausschneiden | `edit.cut` | ✅ Doc | Rechteck |
 | Kontextmenü Objekt ausgewählt ▸ Bearbeiten ▸ Kopieren | `edit.copy` | ✅ Ui | Rechteck |
 | Kontextmenü Objekt ausgewählt ▸ Bearbeiten ▸ Pfadumriss kopieren | `edit.copyAsVectors` | ✅ Ui | Rechteck |
-| Kontextmenü Objekt ausgewählt ▸ Bearbeiten ▸ HTML-Code kopieren... | `edit.copyHtmlCode` | ✅ Ui | ohne Auswahl: Meldung „HTML-Code in die Zwischenablage kopiert“ |
+| Kontextmenü Objekt ausgewählt ▸ Bearbeiten ▸ HTML-Code kopieren... | `edit.copyHtmlCode` | ✅ Ui | ohne Auswahl: Datei geschrieben |
 | Kontextmenü Objekt ausgewählt ▸ Bearbeiten ▸ Einfügen | `edit.paste` | ✅ Doc | ohne Auswahl |
 | Kontextmenü Objekt ausgewählt ▸ Bearbeiten ▸ Als Maske einfügen | `edit.pasteAsMask` | ✅ Doc | Rechteck |
 | Kontextmenü Objekt ausgewählt ▸ Bearbeiten ▸ Innen einfügen | `edit.pasteInside` | ✅ Doc | Rechteck |
@@ -92,7 +92,7 @@ Erzeugt von `crates\fp-ui\tests\gesamt_menu.rs` (`cargo test -p fp-ui --test ges
 | Kontextmenü Objekt ausgewählt ▸ Auswählen ▸ Teilauswahl treffen | `select.subselect` | ✅ Doc | drei Objekte |
 | Kontextmenü Objekt ausgewählt ▸ Auswahl ausblenden | `view.hideSelection` | ✅ Doc | Rechteck |
 | Kontextmenü Objekt ausgewählt ▸ Kanten | `view.edges` | ✅ Ui | ohne Auswahl |
-| Kontextmenü Objekt ausgewählt ▸ Pfad in Auswahlrahmen konvertieren... | `modify.convertPathToMarquee` | ✅ Doc | Rechteck |
+| Kontextmenü Objekt ausgewählt ▸ Pfad in Auswahlrahmen konvertieren... | `modify.convertPathToMarquee` | ✅ Dialog | Rechteck |
 | Kontextmenü Objekt ausgewählt ▸ Bitmap nachzeichnen... | `modify.traceBitmap` | ✅ Dialog | Bitmap |
 | Kontextmenü Objekt ausgewählt ▸ Anordnen ▸ In den Vordergrund | `modify.arrange.bringToFront` | ✅ Doc | Rechteck |
 | Kontextmenü Objekt ausgewählt ▸ Anordnen ▸ Schrittweise nach vorne | `modify.arrange.bringForward` | ✅ Doc | Rechteck |

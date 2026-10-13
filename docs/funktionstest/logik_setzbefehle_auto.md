@@ -2,17 +2,16 @@
 
 Erzeugt von `crates\fp-ui\tests\gesamt_logik.rs` (`cargo test -p fp-ui --test gesamt_logik`). Nicht von Hand ändern.
 
-**33/33 Einträge ✅**
+**30/31 Einträge ✅**
 
 | Eintrag | Befehl | Ergebnis | Hinweis |
 |---|---|---|---|
 | Modifizieren ▸ Selektives JPEG ▸ Einstellungen... | `modify.selectiveJpeg.settings` | ✅ Doc | ohne Auswahl; 50 Verlaufsschritte für 50 Änderungen |
 | Leinwandursprung | `document.setOrigin` | ✅ Doc | ohne Auswahl; 50 Verlaufsschritte für 50 Änderungen |
-| Textur | `element.setTexture` | ✅ Doc | Rechteck; 50 Verlaufsschritte für 50 Änderungen |
 | Zoom setzen | `view.setZoom` | ✅ Doc | ohne Auswahl; 0 Verlaufsschritte für 50 Änderungen |
 | Ansicht verschieben | `view.pan` | ✅ Doc | ohne Auswahl; 0 Verlaufsschritte für 50 Änderungen |
 | Sichtbereich melden | `view.setViewport` | ✅ Doc | ohne Auswahl; 0 Verlaufsschritte für 50 Änderungen |
-| Ansicht ▸ Raster ▸ Raster bearbeiten... | `view.grid.editGrid` | ✅ Doc | ohne Auswahl; 50 Verlaufsschritte für 50 Änderungen |
+| Ansicht ▸ Raster ▸ Raster bearbeiten... | `view.grid.editGrid` | ❌ Error("Rückgängig nach 50× stellt nicht exakt her") | ohne Auswahl; 0 Verlaufsschritte für 50 Änderungen |
 | Hilfslinien bearbeiten | `view.guides.editGuides` | ✅ Doc | ohne Auswahl; 50 Verlaufsschritte für 50 Änderungen |
 | Modifizieren ▸ Animation ▸ Einstellungen... | `modify.animation.settings` | ✅ Doc | Animationssymbol; 50 Verlaufsschritte für 50 Änderungen |
 | Textwerkzeug-Vorgaben | `text.setToolDefaults` | ✅ Doc | ohne Auswahl; 0 Verlaufsschritte für 50 Änderungen |
@@ -25,7 +24,6 @@ Erzeugt von `crates\fp-ui\tests\gesamt_logik.rs` (`cargo test -p fp-ui --test ge
 | Deckkraft | `element.setOpacity` | ✅ Doc | Rechteck; 50 Verlaufsschritte für 50 Änderungen |
 | Position und Größe | `element.setBounds` | ✅ Doc | Rechteck; 50 Verlaufsschritte für 50 Änderungen |
 | Farben setzen | `color.set` | ✅ Doc | ohne Auswahl; 0 Verlaufsschritte für 50 Änderungen |
-| Füllung ändern | `pi.fill` | ✅ Doc | Rechteck; 50 Verlaufsschritte für 50 Änderungen |
 | Strich bearbeiten | `pi.brush` | ✅ Doc | Rechteck; 50 Verlaufsschritte für 50 Änderungen |
 | Eckrundung | `pi.roundness` | ✅ Doc | Rechteck; 50 Verlaufsschritte für 50 Änderungen |
 | Pfadoperation | `pi.compound.setOp` | ✅ Doc | Rechteck + Ellipse; 50 Verlaufsschritte für 50 Änderungen |

@@ -2,7 +2,7 @@
 
 Erzeugt von `crates\fp-ui\tests\gesamt_alltag.rs` (`cargo test -p fp-ui --test gesamt_alltag`). Nicht von Hand ändern.
 
-**28/28 Einträge ✅**
+**27/28 Einträge ✅**
 
 | Eintrag | Befehl | Ergebnis | Hinweis |
 |---|---|---|---|
@@ -13,7 +13,7 @@ Erzeugt von `crates\fp-ui\tests\gesamt_alltag.rs` (`cargo test -p fp-ui --test g
 | Strg+X entfernt, Strg+V fügt wieder ein | `realistische Eingabe` | ✅ Ui | ausgeschnitten und eingefügt |
 | Strg+Alt+D dupliziert (Strg+D hebt wie im Original die Auswahl auf) | `realistische Eingabe` | ✅ Ui | dupliziert, Strg+D hebt Auswahl auf |
 | Pfeiltaste verschiebt um 1 px, Umschalt+Pfeil um 10 px, Tastenwiederholung 5× = 5 px | `realistische Eingabe` | ✅ Ui | Δ 1.0 / 10.0 / 5.0 |
-| Objekt mit der Maus ziehen (20 Bilder) verschiebt um die Mausstrecke | `realistische Eingabe` | ✅ Ui | Δ (40.0, 25.0), erwartet (40.0, 25.0) |
+| Objekt mit der Maus ziehen (20 Bilder) verschiebt um die Mausstrecke | `realistische Eingabe` | ❌ Error("Δ (40.0, 20.0), erwartet (40.0, 25.0)") | Δ (40.0, 20.0), erwartet (40.0, 25.0) |
 | Strg+G gruppiert, Strg+Umschalt+G hebt auf | `realistische Eingabe` | ✅ Ui | gruppiert und aufgehoben |
 | Text: T, Klick, „Hallo“ tippen, Esc → Textobjekt mit Hallo | `realistische Eingabe` | ✅ Ui | Text angelegt |
 | Strg+Z macht den letzten Schritt rückgängig, Strg+Y wiederholt | `realistische Eingabe` | ✅ Ui | rückgängig/wiederholt |

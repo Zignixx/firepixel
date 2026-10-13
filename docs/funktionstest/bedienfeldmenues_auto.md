@@ -22,13 +22,13 @@ Erzeugt von `crates\fp-ui\tests\gesamt_menu.rs` (`cargo test -p fp-ui --test ges
 | Optimieren ▸ Alle Bearbeitungen entfernen | `panel.optimize.removeAllEdits` | ✅ Doc | ohne Auswahl |
 | Optimieren ▸ Palette laden... | `panel.optimize.loadPalette` | ✅ Doc | ohne Auswahl |
 | Optimieren ▸ Palette speichern... | `panel.optimize.savePalette` | ✅ Ui | ohne Auswahl: Datei geschrieben |
-| Optimieren ▸ Hilfe | `help.firepixelHelp {"topic":"panels"}` | ✅ Ui | ohne Auswahl: Befehl liefert {"path":"C:\\Users\\Administrator\\Desktop\\REA\\firepixel\\docs\\ANLEITUNG.md","section":"Bedienfelder","sections":["Firepixel – Kurzanleit – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
+| Optimieren ▸ Hilfe | `help.firepixelHelp {"topic":"panels"}` | ✅ Ui | ohne Auswahl: Befehl liefert {"path":"C:\\Users\\Administrator\\Desktop\\REA\\firepixel\\docs\\MANUAL.md","section":"Bedienfelder","sections":["Firepixel – Kurzanleitung – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
 | Verlauf ▸ Ausgewählte Schritte wiederholen | `panel.history.replaySelected` | ✅ Doc | ohne Auswahl |
 | Verlauf ▸ Schritte kopieren | `panel.history.copySteps` | ✅ Ui | ohne Auswahl: Meldung „Schritte in die Zwischenablage kopiert“ |
 | Verlauf ▸ Als Befehl speichern... | `panel.history.saveAsCommand` | ✅ Dialog | ohne Auswahl |
 | Verlauf ▸ Verlauf löschen | `panel.history.clear` | ✅ Dialog | ohne Auswahl |
-| Verlauf ▸ Hilfe | `help.firepixelHelp {"topic":"panels"}` | ✅ Ui | ohne Auswahl: Befehl liefert {"path":"C:\\Users\\Administrator\\Desktop\\REA\\firepixel\\docs\\ANLEITUNG.md","section":"Bedienfelder","sections":["Firepixel – Kurzanleit – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
-| Ausrichten ▸ Hilfe | `help.firepixelHelp {"topic":"panels"}` | ✅ Ui | ohne Auswahl: Befehl liefert {"path":"C:\\Users\\Administrator\\Desktop\\REA\\firepixel\\docs\\ANLEITUNG.md","section":"Bedienfelder","sections":["Firepixel – Kurzanleit – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
+| Verlauf ▸ Hilfe | `help.firepixelHelp {"topic":"panels"}` | ✅ Ui | ohne Auswahl: Befehl liefert {"path":"C:\\Users\\Administrator\\Desktop\\REA\\firepixel\\docs\\MANUAL.md","section":"Bedienfelder","sections":["Firepixel – Kurzanleitung – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
+| Ausrichten ▸ Hilfe | `help.firepixelHelp {"topic":"panels"}` | ✅ Ui | ohne Auswahl: Befehl liefert {"path":"C:\\Users\\Administrator\\Desktop\\REA\\firepixel\\docs\\MANUAL.md","section":"Bedienfelder","sections":["Firepixel – Kurzanleitung – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
 | Seiten ▸ Neue Seite | `panel.pages.new` | ✅ Doc | ohne Auswahl |
 | Seiten ▸ Seite duplizieren | `panel.pages.duplicate` | ✅ Doc | ohne Auswahl |
 | Seiten ▸ Seite löschen | `panel.pages.delete` | ✅ Doc | ohne Auswahl |
@@ -39,7 +39,7 @@ Erzeugt von `crates\fp-ui\tests\gesamt_menu.rs` (`cargo test -p fp-ui --test ges
 | Seiten ▸ Ausgewählte Seite(n) exportieren... | `panel.pages.export` | ✅ Ui | ohne Auswahl: Datei geschrieben |
 | Seiten ▸ Nummerierung | `panel.pages.numbering` | ✅ Ui | ohne Auswahl |
 | Seiten ▸ Optionen für Miniaturansicht... | `panel.pages.thumbnailOptions` | ✅ Dialog | ohne Auswahl |
-| Seiten ▸ Hilfe | `help.firepixelHelp {"topic":"panels"}` | ✅ Ui | ohne Auswahl: Befehl liefert {"path":"C:\\Users\\Administrator\\Desktop\\REA\\firepixel\\docs\\ANLEITUNG.md","section":"Bedienfelder","sections":["Firepixel – Kurzanleit – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
+| Seiten ▸ Hilfe | `help.firepixelHelp {"topic":"panels"}` | ✅ Ui | ohne Auswahl: Befehl liefert {"path":"C:\\Users\\Administrator\\Desktop\\REA\\firepixel\\docs\\MANUAL.md","section":"Bedienfelder","sections":["Firepixel – Kurzanleitung – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
 | Status ▸ Status hinzufügen... | `panel.states.add` | ✅ Dialog | ohne Auswahl |
 | Status ▸ Status duplizieren... | `panel.states.duplicate` | ✅ Dialog | ohne Auswahl |
 | Status ▸ Status löschen | `panel.states.delete` | ✅ Doc | ohne Auswahl |
@@ -49,7 +49,7 @@ Erzeugt von `crates\fp-ui\tests\gesamt_menu.rs` (`cargo test -p fp-ui --test ges
 | Status ▸ Nummerierung | `panel.states.numbering` | ✅ Ui | ohne Auswahl |
 | Status ▸ Auto-Differenz | `panel.states.autoDifference` | ✅ Doc | ohne Auswahl |
 | Status ▸ Eigenschaften... | `panel.states.properties` | ✅ Dialog | ohne Auswahl |
-| Status ▸ Hilfe | `help.firepixelHelp {"topic":"panels"}` | ✅ Ui | ohne Auswahl: Befehl liefert {"path":"C:\\Users\\Administrator\\Desktop\\REA\\firepixel\\docs\\ANLEITUNG.md","section":"Bedienfelder","sections":["Firepixel – Kurzanleit – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
+| Status ▸ Hilfe | `help.firepixelHelp {"topic":"panels"}` | ✅ Ui | ohne Auswahl: Befehl liefert {"path":"C:\\Users\\Administrator\\Desktop\\REA\\firepixel\\docs\\MANUAL.md","section":"Bedienfelder","sections":["Firepixel – Kurzanleitung – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
 | Ebenen ▸ Neues Bild | `panel.layers.newBitmap` | ✅ Doc | ohne Auswahl |
 | Ebenen ▸ Neue Ebene... | `panel.layers.newLayer` | ✅ Dialog | ohne Auswahl |
 | Ebenen ▸ Neue Unterebene... | `panel.layers.newSubLayer` | ✅ Dialog | ohne Auswahl |
@@ -73,7 +73,7 @@ Erzeugt von `crates\fp-ui\tests\gesamt_menu.rs` (`cargo test -p fp-ui --test ges
 | Ebenen ▸ Maske deaktivieren | `panel.layers.disableMask` | ✅ Doc | Maskengruppe |
 | Ebenen ▸ Maske löschen | `panel.layers.deleteMask` | ✅ Doc | Maskengruppe |
 | Ebenen ▸ Miniaturoptionen... | `panel.layers.thumbnailOptions` | ✅ Dialog | ohne Auswahl |
-| Ebenen ▸ Hilfe | `help.firepixelHelp {"topic":"panels"}` | ✅ Ui | ohne Auswahl: Befehl liefert {"path":"C:\\Users\\Administrator\\Desktop\\REA\\firepixel\\docs\\ANLEITUNG.md","section":"Bedienfelder","sections":["Firepixel – Kurzanleit – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
+| Ebenen ▸ Hilfe | `help.firepixelHelp {"topic":"panels"}` | ✅ Ui | ohne Auswahl: Befehl liefert {"path":"C:\\Users\\Administrator\\Desktop\\REA\\firepixel\\docs\\MANUAL.md","section":"Bedienfelder","sections":["Firepixel – Kurzanleitung – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
 | Stile ▸ Neuer Stil... | `panel.styles.new` | ✅ Dialog | Rechteck |
 | Stile ▸ Stil duplizieren... | `panel.styles.duplicate` | ✅ Doc | ohne Auswahl |
 | Stile ▸ Stile löschen | `panel.styles.delete` | ✅ Doc | ohne Auswahl |
@@ -87,8 +87,8 @@ Erzeugt von `crates\fp-ui\tests\gesamt_menu.rs` (`cargo test -p fp-ui --test ges
 | Stile ▸ Stilbibliothek importieren... | `panel.styles.importLibrary` | ✅ Doc | ohne Auswahl |
 | Stile ▸ Stilbibliothek speichern | `panel.styles.saveLibrary` | ✅ Ui | ohne Auswahl: Datei geschrieben |
 | Stile ▸ Große Symbole | `panel.styles.largeIcons` | ✅ Ui | ohne Auswahl |
-| Stile ▸ Hilfe | `help.firepixelHelp {"topic":"panels"}` | ✅ Ui | ohne Auswahl: Befehl liefert {"path":"C:\\Users\\Administrator\\Desktop\\REA\\firepixel\\docs\\ANLEITUNG.md","section":"Bedienfelder","sections":["Firepixel – Kurzanleit – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
-| Farbpalette ▸ Hilfe | `help.firepixelHelp {"topic":"panels"}` | ✅ Ui | ohne Auswahl: Befehl liefert {"path":"C:\\Users\\Administrator\\Desktop\\REA\\firepixel\\docs\\ANLEITUNG.md","section":"Bedienfelder","sections":["Firepixel – Kurzanleit – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
+| Stile ▸ Hilfe | `help.firepixelHelp {"topic":"panels"}` | ✅ Ui | ohne Auswahl: Befehl liefert {"path":"C:\\Users\\Administrator\\Desktop\\REA\\firepixel\\docs\\MANUAL.md","section":"Bedienfelder","sections":["Firepixel – Kurzanleitung – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
+| Farbpalette ▸ Hilfe | `help.firepixelHelp {"topic":"panels"}` | ✅ Ui | ohne Auswahl: Befehl liefert {"path":"C:\\Users\\Administrator\\Desktop\\REA\\firepixel\\docs\\MANUAL.md","section":"Bedienfelder","sections":["Firepixel – Kurzanleitung – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
 | Farbfelder ▸ Farbfelder hinzufügen... | `panel.swatches.add` | ✅ Ui | ohne Auswahl |
 | Farbfelder ▸ Farbfelder ersetzen... | `panel.swatches.replace` | ✅ Ui | ohne Auswahl |
 | Farbfelder ▸ Farbfelder speichern... | `panel.swatches.save` | ✅ Ui | ohne Auswahl: Datei geschrieben |
@@ -100,11 +100,11 @@ Erzeugt von `crates\fp-ui\tests\gesamt_menu.rs` (`cargo test -p fp-ui --test ges
 | Farbfelder ▸ Graustufen | `panel.swatches.grayscale` | ✅ Ui | ohne Auswahl |
 | Farbfelder ▸ Aktuelle Exportpalette | `panel.swatches.exportPalette` | ✅ Ui | ohne Auswahl |
 | Farbfelder ▸ Nach Farbe sortieren | `panel.swatches.sortByColor` | ✅ Ui | ohne Auswahl |
-| Farbfelder ▸ Hilfe | `help.firepixelHelp {"topic":"panels"}` | ✅ Ui | ohne Auswahl: Befehl liefert {"path":"C:\\Users\\Administrator\\Desktop\\REA\\firepixel\\docs\\ANLEITUNG.md","section":"Bedienfelder","sections":["Firepixel – Kurzanleit – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
-| Sonderzeichen ▸ Hilfe | `help.firepixelHelp {"topic":"panels"}` | ✅ Ui | ohne Auswahl: Befehl liefert {"path":"C:\\Users\\Administrator\\Desktop\\REA\\firepixel\\docs\\ANLEITUNG.md","section":"Bedienfelder","sections":["Firepixel – Kurzanleit – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
-| Bildbearbeitung ▸ Hilfe | `help.firepixelHelp {"topic":"panels"}` | ✅ Ui | ohne Auswahl: Befehl liefert {"path":"C:\\Users\\Administrator\\Desktop\\REA\\firepixel\\docs\\ANLEITUNG.md","section":"Bedienfelder","sections":["Firepixel – Kurzanleit – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
-| Pfad ▸ Hilfe | `help.firepixelHelp {"topic":"panels"}` | ✅ Ui | ohne Auswahl: Befehl liefert {"path":"C:\\Users\\Administrator\\Desktop\\REA\\firepixel\\docs\\ANLEITUNG.md","section":"Bedienfelder","sections":["Firepixel – Kurzanleit – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
-| Automatische Formen ▸ Hilfe | `help.firepixelHelp {"topic":"panels"}` | ✅ Ui | ohne Auswahl: Befehl liefert {"path":"C:\\Users\\Administrator\\Desktop\\REA\\firepixel\\docs\\ANLEITUNG.md","section":"Bedienfelder","sections":["Firepixel – Kurzanleit – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
+| Farbfelder ▸ Hilfe | `help.firepixelHelp {"topic":"panels"}` | ✅ Ui | ohne Auswahl: Befehl liefert {"path":"C:\\Users\\Administrator\\Desktop\\REA\\firepixel\\docs\\MANUAL.md","section":"Bedienfelder","sections":["Firepixel – Kurzanleitung – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
+| Sonderzeichen ▸ Hilfe | `help.firepixelHelp {"topic":"panels"}` | ✅ Ui | ohne Auswahl: Befehl liefert {"path":"C:\\Users\\Administrator\\Desktop\\REA\\firepixel\\docs\\MANUAL.md","section":"Bedienfelder","sections":["Firepixel – Kurzanleitung – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
+| Bildbearbeitung ▸ Hilfe | `help.firepixelHelp {"topic":"panels"}` | ✅ Ui | ohne Auswahl: Befehl liefert {"path":"C:\\Users\\Administrator\\Desktop\\REA\\firepixel\\docs\\MANUAL.md","section":"Bedienfelder","sections":["Firepixel – Kurzanleitung – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
+| Pfad ▸ Hilfe | `help.firepixelHelp {"topic":"panels"}` | ✅ Ui | ohne Auswahl: Befehl liefert {"path":"C:\\Users\\Administrator\\Desktop\\REA\\firepixel\\docs\\MANUAL.md","section":"Bedienfelder","sections":["Firepixel – Kurzanleitung – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
+| Automatische Formen ▸ Hilfe | `help.firepixelHelp {"topic":"panels"}` | ✅ Ui | ohne Auswahl: Befehl liefert {"path":"C:\\Users\\Administrator\\Desktop\\REA\\firepixel\\docs\\MANUAL.md","section":"Bedienfelder","sections":["Firepixel – Kurzanleitung – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
 | Dokumentbibliothek ▸ Neues Symbol... | `panel.library.newSymbol` | ✅ Dialog | ohne Auswahl |
 | Dokumentbibliothek ▸ Duplizieren | `panel.library.duplicate` | ✅ Doc | ohne Auswahl |
 | Dokumentbibliothek ▸ Löschen | `panel.library.delete` | ✅ Dialog | ohne Auswahl |
@@ -118,8 +118,8 @@ Erzeugt von `crates\fp-ui\tests\gesamt_menu.rs` (`cargo test -p fp-ui --test ges
 | Dokumentbibliothek ▸ Abspielen | `panel.library.play` | ✅ Ui | ohne Auswahl |
 | Dokumentbibliothek ▸ Symbole importieren... | `panel.library.import` | ✅ Doc | ohne Auswahl |
 | Dokumentbibliothek ▸ Symbole exportieren... | `panel.library.export` | ✅ Ui | ohne Auswahl: Datei geschrieben |
-| Dokumentbibliothek ▸ Hilfe | `help.firepixelHelp {"topic":"panels"}` | ✅ Ui | ohne Auswahl: Befehl liefert {"path":"C:\\Users\\Administrator\\Desktop\\REA\\firepixel\\docs\\ANLEITUNG.md","section":"Bedienfelder","sections":["Firepixel – Kurzanleit – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
-| Allgemeine Bibliothek ▸ Hilfe | `help.firepixelHelp {"topic":"panels"}` | ✅ Ui | ohne Auswahl: Befehl liefert {"path":"C:\\Users\\Administrator\\Desktop\\REA\\firepixel\\docs\\ANLEITUNG.md","section":"Bedienfelder","sections":["Firepixel – Kurzanleit – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
+| Dokumentbibliothek ▸ Hilfe | `help.firepixelHelp {"topic":"panels"}` | ✅ Ui | ohne Auswahl: Befehl liefert {"path":"C:\\Users\\Administrator\\Desktop\\REA\\firepixel\\docs\\MANUAL.md","section":"Bedienfelder","sections":["Firepixel – Kurzanleitung – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
+| Allgemeine Bibliothek ▸ Hilfe | `help.firepixelHelp {"topic":"panels"}` | ✅ Ui | ohne Auswahl: Befehl liefert {"path":"C:\\Users\\Administrator\\Desktop\\REA\\firepixel\\docs\\MANUAL.md","section":"Bedienfelder","sections":["Firepixel – Kurzanleitung – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
 | Info ▸ Hexadezimal | `panel.info.hex` | ✅ Ui | ohne Auswahl: keine erkennbare Wirkung |
 | Info ▸ RGB | `panel.info.rgb` | ✅ Ui | ohne Auswahl |
 | Info ▸ CMY | `panel.info.cmy` | ✅ Ui | ohne Auswahl |
@@ -128,16 +128,16 @@ Erzeugt von `crates\fp-ui\tests\gesamt_menu.rs` (`cargo test -p fp-ui --test ges
 | Info ▸ Zoll | `panel.info.inches` | ✅ Ui | ohne Auswahl |
 | Info ▸ Zentimeter | `panel.info.centimeters` | ✅ Ui | ohne Auswahl |
 | Info ▸ Attribute skalieren | `panel.info.scaleAttributes` | ✅ Ui | ohne Auswahl |
-| Info ▸ Hilfe | `help.firepixelHelp {"topic":"panels"}` | ✅ Ui | ohne Auswahl: Befehl liefert {"path":"C:\\Users\\Administrator\\Desktop\\REA\\firepixel\\docs\\ANLEITUNG.md","section":"Bedienfelder","sections":["Firepixel – Kurzanleit – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
+| Info ▸ Hilfe | `help.firepixelHelp {"topic":"panels"}` | ✅ Ui | ohne Auswahl: Befehl liefert {"path":"C:\\Users\\Administrator\\Desktop\\REA\\firepixel\\docs\\MANUAL.md","section":"Bedienfelder","sections":["Firepixel – Kurzanleitung – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
 | Farbmischer ▸ RGB | `panel.mixer.rgb` | ✅ Ui | ohne Auswahl |
 | Farbmischer ▸ Hexadezimal | `panel.mixer.hex` | ✅ Ui | ohne Auswahl: keine erkennbare Wirkung |
 | Farbmischer ▸ CMY | `panel.mixer.cmy` | ✅ Ui | ohne Auswahl |
 | Farbmischer ▸ HSB | `panel.mixer.hsb` | ✅ Ui | ohne Auswahl |
 | Farbmischer ▸ Graustufen | `panel.mixer.grayscale` | ✅ Ui | ohne Auswahl |
-| Farbmischer ▸ Hilfe | `help.firepixelHelp {"topic":"panels"}` | ✅ Ui | ohne Auswahl: Befehl liefert {"path":"C:\\Users\\Administrator\\Desktop\\REA\\firepixel\\docs\\ANLEITUNG.md","section":"Bedienfelder","sections":["Firepixel – Kurzanleit – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
-| URL ▸ Hilfe | `help.firepixelHelp {"topic":"panels"}` | ✅ Ui | ohne Auswahl: Befehl liefert {"path":"C:\\Users\\Administrator\\Desktop\\REA\\firepixel\\docs\\ANLEITUNG.md","section":"Bedienfelder","sections":["Firepixel – Kurzanleit – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
-| Verhalten ▸ Hilfe | `help.firepixelHelp {"topic":"panels"}` | ✅ Ui | ohne Auswahl: Befehl liefert {"path":"C:\\Users\\Administrator\\Desktop\\REA\\firepixel\\docs\\ANLEITUNG.md","section":"Bedienfelder","sections":["Firepixel – Kurzanleit – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
-| Suchen und ersetzen ▸ Hilfe | `help.firepixelHelp {"topic":"panels"}` | ✅ Ui | ohne Auswahl: Befehl liefert {"path":"C:\\Users\\Administrator\\Desktop\\REA\\firepixel\\docs\\ANLEITUNG.md","section":"Bedienfelder","sections":["Firepixel – Kurzanleit – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
-| Symboleigenschaften ▸ Hilfe | `help.firepixelHelp {"topic":"panels"}` | ✅ Ui | ohne Auswahl: Befehl liefert {"path":"C:\\Users\\Administrator\\Desktop\\REA\\firepixel\\docs\\ANLEITUNG.md","section":"Bedienfelder","sections":["Firepixel – Kurzanleit – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
-| Eigenschaften für automatische Form ▸ Hilfe | `help.firepixelHelp {"topic":"panels"}` | ✅ Ui | ohne Auswahl: Befehl liefert {"path":"C:\\Users\\Administrator\\Desktop\\REA\\firepixel\\docs\\ANLEITUNG.md","section":"Bedienfelder","sections":["Firepixel – Kurzanleit – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
-| CSS-Eigenschaften ▸ Hilfe | `help.firepixelHelp {"topic":"panels"}` | ✅ Ui | ohne Auswahl: Befehl liefert {"path":"C:\\Users\\Administrator\\Desktop\\REA\\firepixel\\docs\\ANLEITUNG.md","section":"Bedienfelder","sections":["Firepixel – Kurzanleit – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
+| Farbmischer ▸ Hilfe | `help.firepixelHelp {"topic":"panels"}` | ✅ Ui | ohne Auswahl: Befehl liefert {"path":"C:\\Users\\Administrator\\Desktop\\REA\\firepixel\\docs\\MANUAL.md","section":"Bedienfelder","sections":["Firepixel – Kurzanleitung – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
+| URL ▸ Hilfe | `help.firepixelHelp {"topic":"panels"}` | ✅ Ui | ohne Auswahl: Befehl liefert {"path":"C:\\Users\\Administrator\\Desktop\\REA\\firepixel\\docs\\MANUAL.md","section":"Bedienfelder","sections":["Firepixel – Kurzanleitung – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
+| Verhalten ▸ Hilfe | `help.firepixelHelp {"topic":"panels"}` | ✅ Ui | ohne Auswahl: Befehl liefert {"path":"C:\\Users\\Administrator\\Desktop\\REA\\firepixel\\docs\\MANUAL.md","section":"Bedienfelder","sections":["Firepixel – Kurzanleitung – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
+| Suchen und ersetzen ▸ Hilfe | `help.firepixelHelp {"topic":"panels"}` | ✅ Ui | ohne Auswahl: Befehl liefert {"path":"C:\\Users\\Administrator\\Desktop\\REA\\firepixel\\docs\\MANUAL.md","section":"Bedienfelder","sections":["Firepixel – Kurzanleitung – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
+| Symboleigenschaften ▸ Hilfe | `help.firepixelHelp {"topic":"panels"}` | ✅ Ui | ohne Auswahl: Befehl liefert {"path":"C:\\Users\\Administrator\\Desktop\\REA\\firepixel\\docs\\MANUAL.md","section":"Bedienfelder","sections":["Firepixel – Kurzanleitung – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
+| Eigenschaften für automatische Form ▸ Hilfe | `help.firepixelHelp {"topic":"panels"}` | ✅ Ui | ohne Auswahl: Befehl liefert {"path":"C:\\Users\\Administrator\\Desktop\\REA\\firepixel\\docs\\MANUAL.md","section":"Bedienfelder","sections":["Firepixel – Kurzanleitung – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |
+| CSS-Eigenschaften ▸ Hilfe | `help.firepixelHelp {"topic":"panels"}` | ✅ Ui | ohne Auswahl: Befehl liefert {"path":"C:\\Users\\Administrator\\Desktop\\REA\\firepixel\\docs\\MANUAL.md","section":"Bedienfelder","sections":["Firepixel – Kurzanleitung – Start des Fremdprogramms im Test abgeschaltet (FP_NO_SHELL_OPEN) |

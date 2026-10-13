@@ -2,7 +2,7 @@
 
 Erzeugt von `crates\fp-ui\tests\gesamt_oberflaeche.rs` (`cargo test -p fp-ui --test gesamt_oberflaeche`). Nicht von Hand ändern.
 
-**361/361 Einträge ✅**
+**363/363 Einträge ✅**
 
 | Eintrag | Befehl | Ergebnis | Hinweis |
 |---|---|---|---|
@@ -306,7 +306,6 @@ Erzeugt von `crates\fp-ui\tests\gesamt_oberflaeche.rs` (`cargo test -p fp-ui --t
 | Dialog ▸ Datei ▸ Bildvorschau... | `file.imagePreview` | ✅ Ui | ohne Auswahl: gezeichnet, Esc |
 | Dialog ▸ Datei ▸ Datei-Info... | `file.fileInfo` | ✅ Ui | ohne Auswahl: gezeichnet, Esc |
 | Dialog ▸ Datei ▸ Exportassistent... | `file.exportWizard` | ✅ Ui | ohne Auswahl: gezeichnet, Esc |
-| Dialog ▸ Datei ▸ Batch-Verarbeitung... | `file.batchProcess` | ✅ Ui | ohne Auswahl: gezeichnet, Esc |
 | Dialog ▸ Datei ▸ Seite einrichten... | `file.pageSetup` | ✅ Ui | ohne Auswahl: gezeichnet, Esc |
 | Dialog ▸ Datei ▸ Drucken... | `file.print` | ✅ Ui | ohne Auswahl: gezeichnet, Esc |
 | Dialog ▸ Datei ▸ HTML-Einrichtung... | `file.htmlSetup` | ✅ Ui | ohne Auswahl: gezeichnet, Esc |
@@ -328,6 +327,8 @@ Erzeugt von `crates\fp-ui\tests\gesamt_oberflaeche.rs` (`cargo test -p fp-ui --t
 | Dialog ▸ Auswählen ▸ Auswahlrahmen begrenzen... | `select.borderMarquee` | ✅ Ui | Pixelauswahl: gezeichnet, Esc |
 | Dialog ▸ Auswählen ▸ Auswahlrahmen glätten... | `select.smoothMarquee` | ✅ Ui | Pixelauswahl: gezeichnet, Esc |
 | Dialog ▸ Auswählen ▸ Bitmap-Auswahl speichern... | `select.saveBitmapSelection` | ✅ Ui | Pixelauswahl: gezeichnet, Esc |
+| Dialog ▸ Auswählen ▸ Bitmap-Auswahl wiederherstellen... | `select.restoreBitmapSelection` | ✅ Ui | gespeicherte Bitmap-Auswahl: gezeichnet, Esc |
+| Dialog ▸ Auswählen ▸ Bitmap-Auswahl löschen... | `select.deleteBitmapSelection` | ✅ Ui | gespeicherte Bitmap-Auswahl: gezeichnet, Esc |
 | Dialog ▸ Modifizieren ▸ Leinwand ▸ Bildgröße... | `modify.canvas.imageSize` | ✅ Ui | ohne Auswahl: gezeichnet, Esc |
 | Dialog ▸ Modifizieren ▸ Leinwand ▸ Leinwandgröße... | `modify.canvas.canvasSize` | ✅ Ui | ohne Auswahl: gezeichnet, Esc |
 | Dialog ▸ Modifizieren ▸ Leinwand ▸ Leinwandfarbe... | `modify.canvas.canvasColor` | ✅ Ui | ohne Auswahl: gezeichnet, Esc |
@@ -338,9 +339,10 @@ Erzeugt von `crates\fp-ui\tests\gesamt_oberflaeche.rs` (`cargo test -p fp-ui --t
 | Dialog ▸ Modifizieren ▸ Symbol ▸ Teilen | `modify.symbol.breakApart` | ✅ Ui | ohne Auswahl: gezeichnet, Esc |
 | Dialog ▸ Modifizieren ▸ Symbol ▸ Symbol austauschen... | `modify.symbol.swapSymbol` | ✅ Ui | Grafiksymbol: gezeichnet, Esc |
 | Dialog ▸ Modifizieren ▸ Popupmenü ▸ Popupmenü hinzufügen... | `modify.popUpMenu.addPopUpMenu` | ✅ Ui | ohne Auswahl: gezeichnet, Esc |
-| Dialog ▸ Modifizieren ▸ Popupmenü ▸ Popupmenü bearbeiten... | `modify.popUpMenu.editPopUpMenu` | ✅ Ui | Segment: gezeichnet, Esc |
+| Dialog ▸ Modifizieren ▸ Popupmenü ▸ Popupmenü bearbeiten... | `modify.popUpMenu.editPopUpMenu` | ✅ Ui | Segment mit Pop-up-Menü: gezeichnet, Esc |
 | Dialog ▸ Modifizieren ▸ Selektives JPEG ▸ Einstellungen... | `modify.selectiveJpeg.settings` | ✅ Ui | ohne Auswahl: gezeichnet, Esc |
 | Dialog ▸ Modifizieren ▸ Transformieren ▸ Numerisch transformieren... | `modify.transform.numericTransform` | ✅ Ui | Rechteck: gezeichnet, Esc |
+| Dialog ▸ Modifizieren ▸ Pfad in Auswahlrahmen konvertieren... | `modify.convertPathToMarquee` | ✅ Ui | Rechteck: gezeichnet, Esc |
 | Dialog ▸ Modifizieren ▸ Pfade kombinieren ▸ Vereinigen | `modify.combinePaths.union` | ✅ Ui | ohne Auswahl: gezeichnet, Esc |
 | Dialog ▸ Modifizieren ▸ Pfade kombinieren ▸ Überschneiden | `modify.combinePaths.intersect` | ✅ Ui | ohne Auswahl: gezeichnet, Esc |
 | Dialog ▸ Modifizieren ▸ Pfade kombinieren ▸ Öffnen | `modify.combinePaths.punch` | ✅ Ui | ohne Auswahl: gezeichnet, Esc |
