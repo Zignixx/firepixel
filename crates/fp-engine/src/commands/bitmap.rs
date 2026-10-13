@@ -76,6 +76,8 @@ pub(crate) struct Dab {
     round: bool,
     core: f32,
     width: f32,
+    /// Harte Spitze (eckig oder Rand 0): `D` Zellen ab `floor(p − D/2) + 1`, volle Deckung.
+    hard: bool,
 }
 
 impl Dab {
@@ -92,7 +94,29 @@ impl Dab {
             round,
             core: (r - (1.0 + 0.0405 * e) * scale).max(0.0),
             width: ((0.47 + 0.0084 * e + 0.00007 * e * e) * scale).max(0.05),
+            hard: false,
         }
+    }
+
+    /// Abdruck eines ganzen Zugs (Radiergummi; Deckungsmaske von Weichzeichner, Scharfzeichner,
+    /// Abwedler, Nachbelichter, Verwischen), an den Strichen des Originals gemessen (PAR-X, Zug
+    /// 60 → 500 bzw. 50 → 510, Durchmesser 13): Eckige Spitze und Rand 0 sind hart – genau `D` Zeilen
+    /// um das Pixel des Mauspunkts (13 → Zeilen 144–156 bei y 150). Sonst weich wie [`Dab::new`], Kern
+    /// und Abfall so, dass der Querschnitt des Zugs (Abdrücke je Pixel, Deckung multipliziert) den
+    /// Messungen folgt: Rand 2 → 0,81 / 0,12 in den Randzeilen, Rand 50 → 0,88 / 0,41 / 0,09,
+    /// Rand 100 → 0,97 / 0,87 / 0,58 / 0,29 / 0,07.
+    pub(crate) fn stroke(size: f32, round: bool, edge: f32) -> Dab {
+        let mut d = Dab::new(size, round, edge);
+        let e = edge.clamp(0.0, 100.0);
+        if !round || e <= 0.0 {
+            d.hard = true;
+            return d;
+        }
+        let r = size.max(1.0) / 2.0;
+        let scale = if r < 6.5 { r / 6.5 } else if r > 8.0 { r / 8.0 } else { 1.0 };
+        d.core = (r - (1.03916 + 0.020826 * e + 0.000_047_83 * e * e) * scale).max(0.0);
+        d.width = ((0.4798 + 0.003_605_8 * e + 0.000_019_961 * e * e) * scale).max(0.05);
+        d
     }
 
     /// Deckung im Abstand `d` von der Mitte.
@@ -102,7 +126,8 @@ impl Dab {
 
     /// Linke obere Rasterzelle und Mitte des Abdrucks bei `p`.
     fn origin(&self, p: Point) -> (i32, i32, f32, f32) {
-        let (sx, sy) = ((p.x - self.half).floor() as i32, (p.y - self.half).floor() as i32);
+        let k = if self.hard { 1 } else { 0 };
+        let (sx, sy) = ((p.x - self.half).floor() as i32 + k, (p.y - self.half).floor() as i32 + k);
         (sx, sy, sx as f32 + self.half, sy as f32 + self.half)
     }
 
@@ -115,6 +140,17 @@ impl Dab {
     /// Ruft `f(x, y, deckung)` für jede Zelle mit sichtbarer Deckung (≥ ½/255) auf.
     pub(crate) fn each(&self, p: Point, mut f: impl FnMut(i32, i32, f32)) {
         let (sx, sy, cx, cy) = self.origin(p);
+        if self.hard {
+            for y in sy..sy + self.cells {
+                for x in sx..sx + self.cells {
+                    let (dx, dy) = (x as f32 + 0.5 - cx, y as f32 + 0.5 - cy);
+                    if !self.round || dx.hypot(dy) <= self.half + 1e-4 {
+                        f(x, y, 1.0);
+                    }
+                }
+            }
+            return;
+        }
         for y in sy..=sy + self.cells {
             for x in sx..=sx + self.cells {
                 let (dx, dy) = (x as f32 + 0.5 - cx, y as f32 + 0.5 - cy);
@@ -155,8 +191,8 @@ pub(crate) fn dab_points(pts: &[Point], step: f32) -> Vec<Point> {
 /// 13 / Rand 2 löscht bei 6 px Abstand 81 %, bei 7 px 13 %).
 pub(crate) const ERASER_STEP: f32 = 1.0;
 
-/// Radiert mit den Abdrücken: jeder Abdruck nimmt `deckung × Deckkraft` der verbliebenen Deckkraft
-/// weg (überlappende Abdrücke verstärken sich wie im Original).
+/// Radiert mit den Abdrücken: Die Deckung des Zugs entsteht aus allen Abdrücken (jeder nimmt seine
+/// Deckung vom Rest), danach wird `Deckung × Deckkraft` gelöscht.
 pub(crate) fn erase_dabs(img: &mut RgbaImage, dab: &Dab, stamps: &[Point], op: f32, sel: Option<&Mask>) {
     let ib = img.bounds();
     let region = stamps.iter().fold(IRect::default(), |r, s| r.union(&dab.bounds(*s))).intersect(&ib);
@@ -170,13 +206,15 @@ pub(crate) fn erase_dabs(img: &mut RgbaImage, dab: &Dab, stamps: &[Point], op: f
             if x < region.left || y < region.top || x >= region.right || y >= region.bottom {
                 return;
             }
-            let w = w * op * sel.map_or(1.0, |m| m.get(x, y) as f32 / 255.0);
             keep[(y - region.top) as usize * rw + (x - region.left) as usize] *= 1.0 - w;
         });
     }
     for y in region.top..region.bottom {
         for x in region.left..region.right {
-            let k = keep[(y - region.top) as usize * rw + (x - region.left) as usize];
+            // Deckkraft gilt für den ganzen Zug (Original: Deckkraft 50 löscht höchstens die Hälfte,
+            // überlappende Abdrücke verstärken das nicht), die Pixelauswahl ebenso
+            let cov = (1.0 - keep[(y - region.top) as usize * rw + (x - region.left) as usize]) * op * sel.map_or(1.0, |m| m.get(x, y) as f32 / 255.0);
+            let k = 1.0 - cov;
             if k < 1.0
                 && let Some(px) = img.get(x, y)
             {

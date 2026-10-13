@@ -227,6 +227,13 @@ impl PaintJob {
         if pts.len() == 1 {
             pts.push(pts[0]);
         }
+        if self.tool == PaintTool::Pencil && self.brush.antialiased {
+            // Bleistift mit Kantenglättung: Die Linie läuft durch die Pixelmitten des Mauspunkts
+            // (Original: Waagrechte bei y 150 bleibt eine volle Zeile, PAR-X 03/03)
+            for p in &mut pts {
+                *p = Point::new(p.x.floor() + 0.5, p.y.floor() + 0.5);
+            }
+        }
         pts
     }
 
@@ -259,7 +266,7 @@ impl PaintJob {
             dst.paste(&b.cropped(region));
         }
         if let Some(e) = &self.erase {
-            let dab = crate::commands::bitmap::Dab::new(e.size, e.round, e.edge);
+            let dab = crate::commands::bitmap::Dab::stroke(e.size, e.round, e.edge);
             let stamps: Vec<Point> = crate::commands::bitmap::dab_points(&self.points, crate::commands::bitmap::ERASER_STEP)
                 .into_iter()
                 .filter(|s| !dab.bounds(*s).intersect(&region).is_empty())
