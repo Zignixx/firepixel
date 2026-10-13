@@ -14,7 +14,7 @@ Vorher lesen: `..\UEBERGABE.md`, `ARCHITEKTUR.md` (§1 Regeln gelten weiter: Cle
 | Engine-Befehle + Export-Anbindung | **EB** | `crates\fp-engine\src\` außer `tools\*`, `commands\tooling.rs`, `commands\panel.rs`; `crates\fp-engine\data\*`; `crates\fp-engine\tests\` außer `canvas_tools.rs`; `crates\fp-export\src\render.rs` (+ neue Dateien in fp-export nur für die Renderer-Anbindung) |
 | Automatisierung | **AU** | `crates\fp-script`, `crates\fp-mcp`, `apps\firepixel-cli`, `docs\AGENTS.md`; in fp-ui nur die neue Datei `src\bridge.rs` |
 | Rendertreue + Formate | **RF** | `crates\fp-vector`, `fp-text`, `fp-effects`, `fp-render`, `fp-io`, `fp-fwpng`, `fp-raster`, `fp-color`, `fp-model`, `fp-geom`; `crates\fp-export` außer `src\render.rs` |
-| Hauptfenster, Icon, Gesamttest, Release | **HG** | `crates\fp-ui\src\` Shell-Dateien: `lib.rs`, `app_state.rs`, `actions.rs`, `menu.rs`, `appbar.rs`, `toolbar.rs`, `tools_panel.rs`, `docking.rs`, `workspace.rs`, `files.rs`, `theme.rs`, `icons.rs`, `widgets.rs`, `crates\fp-ui\data\*`, `crates\fp-ui\tests\layout.rs`, `apps\firepixel\*`, `assets\` (neu), `docs\FUNKTIONSTEST.md`, `docs\ANLEITUNG.md`, Workspace-`Cargo.toml` (nur `[workspace.dependencies]`/Profile, Bescheid in BEFUNDE) |
+| Hauptfenster, Icon, Gesamttest, Release | **HG** | `crates\fp-ui\src\` Shell-Dateien: `lib.rs`, `app_state.rs`, `actions.rs`, `menu.rs`, `appbar.rs`, `toolbar.rs`, `tools_panel.rs`, `docking.rs`, `workspace.rs`, `files.rs`, `theme.rs`, `icons.rs`, `widgets.rs`, `crates\fp-ui\data\*`, `crates\fp-ui\tests\layout.rs`, `apps\firepixel\*`, `assets\` (neu), `docs\FUNKTIONSTEST.md`, `docs\MANUAL.md`, `docs\MANUAL.en.md`, Workspace-`Cargo.toml` (nur `[workspace.dependencies]`/Profile, Bescheid in BEFUNDE) |
 
 - Braucht ein Agent eine Änderung in fremden Dateien (z. B. ein Haken in `app_state.rs`, ein neuer Befehl in fp-engine, eine öffentliche Funktion in fp-render), trägt er sie als Befund in `docs\BEFUNDE.md` ein (siehe §3). **Nicht selbst in fremden Dateien ändern.** Ausnahme: eine einzelne `pub mod …;`-/`mod`-Zeile bzw. eine Registrierungszeile, um die eigene neue Datei einzuhängen – dann im Befund vermerken.
 - `pub`-APIs anderer Crates nur rückwärtskompatibel ändern.
@@ -65,7 +65,7 @@ Neue Namen nur noch englisch. Beim Umbenennen bestehender Pfade wird migriert: d
 
 Nutzerwunsch: Firepixel mehrsprachig – Deutsch (bisher) + Englisch, neue Sprachen später sehr einfach. Kern: `crates\fp-i18n` (Fluent; API `fp_i18n::t`, `fp_i18n::tr!`, `command_key`, `set_language`, `generation`; Regeln und Dateiaufteilung in `crates\fp-i18n\README.md`, Begriffe in `crates\fp-i18n\GLOSSAR.md`).
 - **Kein fester Nutzertext mehr im Code.** Jeder sichtbare Text → Schlüssel in `locales\de\<bereich>.ftl` **und** `locales\en\<bereich>.ftl` (gleichzeitig; Englisch nach Glossar). Ausgenommen: Eigennamen, Formatnamen, Einheitenkürzel, Symbole.
-- Bereichsdateien gehören je einem Agenten (Tabelle im README). Braucht ein Agent einen Text aus einem fremden Bereich: Schlüssel dort nicht selbst anlegen, sondern Befund – außer `btn-*`/`key-*`/`unit-*` aus `allgemein.ftl`, die I18N-KERN pflegt (fehlende dort als Befund).
+- Bereichsdateien gehören je einem Agenten (Tabelle im README). Braucht ein Agent einen Text aus einem fremden Bereich: Schlüssel dort nicht selbst anlegen, sondern Befund – außer `btn-*`/`key-*`/`unit-*` aus `common.ftl`, die I18N-KERN pflegt (fehlende dort als Befund).
 - Code-Dateien: Zuständigkeit wie in der Agentenliste der Phase 6 (Auftrag). Einzeilige Einhängungen in fremde Dateien nur mit Befund.
 - Nach jeder umgestellten Datei: bauen, eigene Tests, `cargo test -p fp-i18n` (Vollständigkeit) und `cargo test -p fp-neutral`, dann committen (§2a).
 - Die Oberfläche muss in Deutsch **unverändert** aussehen (gleicher Wortlaut wie bisher, bestehende Tests mit deutschen Texten bleiben grün), in Englisch und in der Testsprache `qps` darf nichts überlaufen (§4c).
@@ -208,7 +208,7 @@ Nutzervorgabe: höchstens **4 Agenten gleichzeitig**, alle Opus, **kleine Auftr�
 
 | Kürzel | Thema | darf schreiben |
 |---|---|---|
-| **VT-<n>** | Bitmap nachzeichnen (Vektorisierung) | neues Crate `crates\fp-trace`; in fp-engine die neue Datei `src\commands\trace.rs` + je eine Registrierungszeile; Schlüssel `cmd-modify-traceBitmap*`/`trace-*` in `locales\{de,en}\menue.ftl` bzw. neue `locales\{de,en}\nachzeichnen.ftl`; ab VT-2 der neue Dialog `crates\fp-ui\src\dialogs\trace.rs` + Einhängezeile |
+| **VT-<n>** | Bitmap nachzeichnen (Vektorisierung) | neues Crate `crates\fp-trace`; in fp-engine die neue Datei `src\commands\trace.rs` + je eine Registrierungszeile; Schlüssel `cmd-modify-traceBitmap*`/`trace-*` in `locales\{de,en}\menu.ftl` bzw. neue `locales\{de,en}\trace.ftl`; ab VT-2 der neue Dialog `crates\fp-ui\src\dialogs\trace.rs` + Einhängezeile |
 | **UE-<n>** | Übersetzung (Restbefunde Phase 6) | die im Auftrag genannten Befunde und deren Dateien |
 | **FV-<n>** | Funktionsvergleich mit dem Original (Paritätsbefunde) | die im Auftrag genannten Befunde und deren Dateien |
 

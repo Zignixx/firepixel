@@ -20,7 +20,7 @@ needed for the user interface.
 and English; on first start it uses the Windows language. The switch takes effect immediately.
 More languages are plain `.ftl` text files in `%APPDATA%\Firepixel\Languages\` (*View ▸ Language ▸
 Open Language Folder…*); a guide for translators is in `crates\fp-i18n\README.md`. This guide is also
-available in German (`ANLEITUNG.md`).
+available in German (`MANUAL.md`).
 
 **Basics:**
 

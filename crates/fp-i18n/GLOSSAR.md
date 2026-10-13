@@ -40,7 +40,7 @@ Down-Status = Down state · Vordergrund-/Hintergrundbild (Segment) = Foreground/
 ## Dialoge im Einzelnen (von I18N-DIALOGE, 12.10.)
 Anker = Anchor · Pixelabmessungen = Pixel Dimensions · Druckgröße = Print Size · Bild neu auflösen = Resample image · Proportionen beibehalten = Constrain proportions · Numerisch transformieren = Numeric Transform · Attribute skalieren = Scale attributes · Tonwertspreizung/Tonwertumfang = Input/Output levels · Eingabetonwerte/Ausgabetonwerte = Input/Output Levels · Kanal = Channel · Weiche Auswahlkante = Feather Selection · Auswahlrahmen erweitern/verkleinern/begrenzen/glätten = Expand/Contract/Border/Smooth Marquee · Pfad einlassen = Inset Path · Vereinfachen = Simplify · Gehrungsgrenze = Miter limit · Ecken (Pfad) = Corners · Enden = Caps (Stumpf/Eckig/Rund = Butt/Square/Round) · Abgeschrägt/Rund/Eckig (Ecke) = Bevel/Round/Miter · Instanzen tweenen = Tween Instances · Animieren = Animate · Exportassistent = Export Wizard · HTML-Einrichtung = HTML Setup · Selektive JPEG-Einstellungen = Selective JPEG Settings · Batch-Verarbeitung = Batch Process · Seite einrichten = Page Setup · Rechtschreibprüfung = Check Spelling · Rechtschreibprüfung einrichten = Spelling Setup · Pop-up-Menü-Editor = Pop-up Menu Editor · Zellabstand/Zellauffüllung = Cell spacing/Cell padding · Tastaturkurzbefehle-Satz = (shortcut) Set · Neu zuweisen = Reassign · Strich bearbeiten = Edit Stroke · Spitze/Spitzengröße = Tip/Tip size · Kantenweichheit = Edge softness · Flussrate = Flow rate · Strichmuster = Dash · Auftrag = Ink · Empfindlichkeit = Sensitivity · Objekt aussparen = Knock out · Glühversatz = Offset · Kantenform = Edge shape · Schaltflächen-Vorgabe = Button preset · Erhaben/Hervorgehoben/Eingelassen/Umgekehrt = Raised/Highlighted/Inset/Inverted · Gespeicherte Befehle verwalten = Manage Saved Commands · Zwischenspeicher = Cache · Speicherort = Location · Einpassen (Zoom) = Fit in Window · Vorgabename = Preset Name
 
-## Sprachwahl (allgemein.ftl, `lang-*`)
+## Sprachwahl (common.ftl, `lang-*`)
 Sprache = Language · Sprachordner öffnen... = Open Language Folder... · Testsprache = Pseudo-language · Systemsprache = System language · Entwickleroptionen = Developer options
 
 ## Einheiten (`unit-*`)
@@ -49,6 +49,6 @@ Pixel/Zoll = Pixels/Inch · Pixel/cm = Pixels/cm · Pixel = Pixels · Kürzel (p
 ## Zahlen, Datum
 Dezimaltrennzeichen: de „,“ · en „.“ (`fmt-decimal-separator`) · keine Tausendertrennung · Datum de „12.10.2026“ · en „10/12/2026“ (`fmt-date`) · Uhrzeit 24 h „14:05“ in beiden
 
-## Tastennamen (Schlüssel `key-…` in allgemein.ftl)
+## Tastennamen (Schlüssel `key-…` in common.ftl)
 Strg = Ctrl · Umschalt = Shift · Alt = Alt · Eingabe = Enter · Esc = Esc · Löschen-Taste (Entf) = Del · Rück(taste) = Backspace · Leertaste = Space · Pos1 = Home · Ende = End · Bild auf/ab = Page Up/Down · Einfg = Ins · Tab = Tab · Num = Num
 Pfeiltasten in Kürzeln: Nach-links-/Nach-rechts-/Nach-oben-/Nach-unten-Taste = Left/Right/Up/Down (im Fließtext „Pfeil nach links“ = „Left Arrow“). Im Deutschen wie im Original (gemessen in allen Menüs): „Löschen-Taste“, „Nach-links-Taste“ …, „Rück“; `fp_i18n::shortcut_label` setzt Kürzel aus diesen Namen zusammen und nimmt auch die Kurzformen „Entf“, „Links“ … an.

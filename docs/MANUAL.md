@@ -20,7 +20,7 @@ daneben, wird für die Oberfläche aber nicht gebraucht.
 Deutsch und Englisch mit; beim ersten Start gilt die Sprache von Windows. Der Wechsel wirkt sofort,
 ohne Neustart. Weitere Sprachen sind einfache `.ftl`-Textdateien in `%APPDATA%\Firepixel\Languages\`
 (*Ansicht ▸ Sprache ▸ Sprachordner öffnen…*); eine Anleitung für Übersetzer steht in
-`crates\fp-i18n\README.md`. Diese Anleitung gibt es auch auf Englisch (`ANLEITUNG.en.md`).
+`crates\fp-i18n\README.md`. Diese Anleitung gibt es auch auf Englisch (`MANUAL.en.md`).
 
 **Grundlagen:**
 

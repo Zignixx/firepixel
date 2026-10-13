@@ -104,14 +104,16 @@ Wächter `crates\fp-neutral\tests\technical_english.rs`.
 |---|---|---|
 | Skriptnamen der eingebauten Befehle (`Text\Großbuchstaben.jsf`, `Dokument\…`) | `crates\fp-script\src\builtin_commands.rs` | Datei- und Ordnernamen im `Commands`-Ordner erscheinen im Menü „Befehle“ (wie im Original) und folgen der UI-Sprache beim ersten Start – Oberflächentext. Erlaubnisliste des Wächters. |
 | `Commands`, `Auto Shapes`, `Auto Shape Tools`, `Settings`, `Templates`, `Language`, `Original Files`, `Configuration\{Textures,Patterns,Libraries}` | `fp-script\src\imp\fw.rs`, `imp\files.rs`, `fp-engine\src\commands\export.rs`, `fp-ui\src\inspector\*` | englisch und bilden bewusst die Ordnerstruktur des Originals nach |
-| `ANLEITUNG.md`, `ANLEITUNG.<sprache>.md` (Hilfe ▸ Hilfe sucht sie neben der exe bzw. in `docs\`) | `crates\fp-engine\src\commands\misc.rs` `help_names` | Dateinamen der Handbücher im Repo; Umbenennung (z. B. `MANUAL.md`) nur zusammen mit den Dokumenten und mit den alten Namen als Rückfall – TE-2. Erlaubnisliste. |
-| Rust-Bezeichner `Preset::Schwarzweiss`, `Preset::Foto` | `crates\fp-trace\src\lib.rs` | serde-Namen sind englisch; Bezeichner sind Quelltextnamen (TE-2). Erlaubnisliste. |
+| ~~`ANLEITUNG.md`, `ANLEITUNG.<sprache>.md`~~ | `crates\fp-engine\src\commands\misc.rs` `help_names` | **erledigt in TE-2** (→ `MANUAL.md`, `MANUAL.<sprache>.md`; alte Namen nur noch als Rückfall, siehe E). |
+| ~~Rust-Bezeichner `Preset::Schwarzweiss`, `Preset::Foto`~~ | `crates\fp-trace\src\lib.rs` | **erledigt in TE-2** (→ `Preset::BlackWhite`, `Preset::Photo`, siehe E). |
 | Felder `label_de`, `menu_label_de`, `path_de`, `status_de`, `shortcuts_de` | `crates\fp-engine\src\catalog.rs`, `data\commands.json` | englische Schlüssel mit Sprachcode `de` (Texte des deutschen Originals) |
 | Eingabe-Aliasse `links`/`rechts`/`mitte` (Maustasten), `nach-links` … (Tastennamen), `hell`/`dunkel`, `ja` | `fp-ui\src\bridge\inject.rs`, `fp-i18n\src\format.rs`, `fp-ui\src\bridge.rs`, `fp-engine\src\prefs.rs` | nur zusätzlich angenommene Eingaben; ausgegeben und dokumentiert werden die englischen Namen |
 | JSF-Namen (`fw`, `dom`, `appJsCommandsDir` …) | `crates\fp-script` | vom Original-API vorgegeben |
 | deutsche Beschreibungen in `crates\fp-engine\data\prefs.json` (`"effect"`), Befehlsbeschreibungen | `fp-engine` | Texte, keine Schlüssel |
 
-## D. Für TE-2 (nur aufgelistet, nicht umbenannt)
+## D. Für TE-2 (Liste von TE-1) – erledigt
+
+**Erledigt in TE-2 (13.10.2026), Ergebnis in Abschnitt E.** Ausnahme laut Nutzerentscheidung: Testdateien, Testdaten-Dateien und Testfunktionsnamen mit deutschen Namen **bleiben** (sie erscheinen nirgends nach außen). Die Liste unten bleibt als Bestandsaufnahme stehen.
 
 **`.ftl`-Dateinamen** (je `locales\de` und `locales\en`, 16 Bereiche; Vorschlag):
 `allgemein` → `common`, `bedienfelder` → `panels`, `befehlstexte` → `command_texts`,
@@ -144,3 +146,56 @@ Testfunktionsnamen (z. B. `vorlage_pruefen_liste`, `projekt_ist_neutral`) in fas
 (Werte `basis`/`aktuell`), `FP_DESIGN_BILD` (Werte `vorher`/`nachher`), `FP_SPRACHEN_DEBUG`.
 
 **Rust-Bezeichner** mit deutschen Namen (z. B. `Preset::Schwarzweiss`, `Theme::label_de`).
+
+## E. Teil 2 (TE-2, 13.10.2026)
+
+Umgesetzt von TE2-A … TE2-F (Berichte `docs\berichte\te2a.md` … `te2f.md`). Regel wie oben: alte
+Namen, die Nutzer oder Skripte noch haben können, werden weiter gelesen (Rückfall), ausgegeben und
+dokumentiert werden nur die neuen.
+
+| # | Art | alt | neu | Fundstelle | Rückfall |
+|---|---|---|---|---|---|
+| 1 | `.ftl`-Datei | `allgemein.ftl` | `common.ftl` | `crates\fp-i18n\locales\{de,en}\` | Laden ist namensunabhängig; Sprachpakete der Nutzer unter `Languages\<code>\` mit alten Dateinamen werden weiter geladen und geprüft (TE2-A) |
+| 2 | `.ftl`-Datei | `bedienfelder.ftl` | `panels.ftl` | ebd. | wie 1 |
+| 3 | `.ftl`-Datei | `befehlstexte.ftl` | `command_texts.ftl` | ebd. | wie 1 |
+| 4 | `.ftl`-Datei | `dateidialog.ftl` | `file_dialog.ftl` | ebd. | wie 1 |
+| 5 | `.ftl`-Datei | `dialoge.ftl` | `dialogs.ftl` | ebd. | wie 1 |
+| 6 | `.ftl`-Datei | `inspektor.ftl` | `inspector.ftl` | ebd. | wie 1 |
+| 7 | `.ftl`-Datei | `kommandozeile.ftl` | `cli.ftl` | ebd. | wie 1 |
+| 8 | `.ftl`-Datei | `meldungen.ftl` | `messages.ftl` | ebd. | wie 1 |
+| 9 | `.ftl`-Datei | `menue.ftl` | `menu.ftl` | ebd. | wie 1 |
+| 10 | `.ftl`-Datei | `nachzeichnen.ftl` | `trace.ftl` | ebd. | wie 1 |
+| 11 | `.ftl`-Datei | `oberflaeche.ftl` | `ui.ftl` | ebd. | wie 1 |
+| 12 | `.ftl`-Datei | `skript.ftl` | `script.ftl` | ebd. | wie 1 |
+| 13 | `.ftl`-Datei | `werkzeuge.ftl` | `tools.ftl` | ebd. | wie 1 |
+| 14 | `.ftl`-Datei | `willkommen.ftl` | `welcome.ftl` | ebd. | wie 1 |
+| – | `.ftl`-Datei | `filter.ftl`, `mcp.ftl` | bleiben | ebd. | – |
+| 15 | Quelldatei | `apps\firepixel-cli\src\sprache.rs` | `language.rs` | `apps\firepixel-cli` | – (Quelltext) |
+| 16 | Quelldatei | `crates\fp-ui\src\inspector\texte.rs` | `texts.rs` | `crates\fp-ui` | – |
+| 17 | Beispiel | `crates\fp-ai\examples\ki_bilder.rs` (`cargo run --example ki_bilder`) | `ai_images.rs` (`--example ai_images`) | `crates\fp-ai` | – |
+| 18 | Handbuch | `docs\ANLEITUNG.md` | `docs\MANUAL.md` | `docs\` (TE2-F) | Hilfe ▸ Hilfe sucht zuerst `MANUAL*`, dann `ANLEITUNG*` (alte Testversionen, eigene Kopien neben der exe) – `crates\fp-engine\src\commands\misc.rs` `help_names` (TE2-E) |
+| 19 | Handbuch | `docs\ANLEITUNG.en.md` (bzw. `ANLEITUNG.<sprache>.md`) | `docs\MANUAL.en.md` (`MANUAL.<sprache>.md`) | ebd. | wie 18 |
+| 20 | Test-Umgebungsvariable | `FP_QA_NUR` | `FP_QA_ONLY` | `crates\fp-ui\tests\` (TE2-E) | alter Name weiter gelesen |
+| 21 | Test-Umgebungsvariable | `FP_QA_AUS` | `FP_QA_OFF` | ebd. | wie 20 |
+| 22 | Test-Umgebungsvariable | `FP_QA_NEU` | `FP_QA_NEW` | ebd. | wie 20 |
+| 23 | Test-Umgebungsvariable | `FP_QA_MODUS` | `FP_QA_MODE` | ebd. | wie 20 |
+| 24 | Test-Umgebungsvariable | `FP_DESIGN_BILD` | `FP_DESIGN_IMAGE` | ebd. | wie 20 |
+| 25 | Test-Umgebungsvariable | `FP_SPRACHEN_DEBUG` | `FP_LANGUAGES_DEBUG` | ebd. | wie 20 |
+| 26 | Rust-Bezeichner | `fp_trace::Preset::Schwarzweiss` | `Preset::BlackWhite` | `crates\fp-trace\src\lib.rs` und Aufrufer (TE2-D) | serde-Namen unverändert `blackWhite`/`photo`, Aliasse `schwarzweiss`/`foto` bleiben |
+| 27 | Rust-Bezeichner | `fp_trace::Preset::Foto` | `Preset::Photo` | ebd. | wie 26 |
+
+Weitere Bezeichner, die TE2-B … TE2-E nebenbei umbenannt haben, stehen in deren Berichten
+(`docs\berichte\te2a.md` … `te2e.md`); Nachtrag siehe unten.
+
+**Bleibt (Nutzerentscheidung 13.10.2026):** Testdateien (`tests\*.rs` mit deutschen Namen),
+Testdaten-Dateien (`*.tsv`, `*.json`, `*.jsf` unter `tests\`) und Testfunktionsnamen. Ebenso
+`fp-trace`-Werte und Eingabe-Aliasse aus Abschnitt C.
+
+**Doku angepasst (TE2-F):** `docs\ANLEITUNG*.md` per `git mv` zu `docs\MANUAL*.md` (gegenseitige
+Verweise), `docs\AGENTEN_REGELN.md` (§1 Zuständigkeit, §1b `common.ftl`, §7 `menu.ftl`/`trace.ftl`),
+`crates\fp-i18n\GLOSSAR.md` (`common.ftl`). `docs\AGENTS.md`, `AGENTS.en.md`, `MODELLE.md` und die
+MCP-Ressourcen `crates\fp-mcp\docs\{de,en}` enthielten keine der alten Namen; ein Root-`README.md`
+und weitere `crates\*\README.md` außer `fp-i18n` gibt es nicht; Skripte für Testversion/Release
+im Repo verweisen nicht auf die Handbuchnamen. Historische Berichte (`docs\berichte\*.md`),
+Fortschritts-/Testversionsnotizen und automatisch erzeugte Prüfberichte (`docs\I18N_PRUEFUNG.md`,
+`docs\funktionstest\*_auto.md`) zeigen die alten Namen, bis sie neu erzeugt bzw. abgelöst werden.
