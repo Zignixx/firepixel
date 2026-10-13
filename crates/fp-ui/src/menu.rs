@@ -455,15 +455,18 @@ fn filter_submenus(st: &AppState) -> Vec<Node> {
 fn command_submenus() -> Vec<Node> {
     use std::sync::Mutex;
     use std::time::{Duration, Instant};
-    static CACHE: Mutex<Option<(Instant, Vec<Node>)>> = Mutex::new(None);
+    // je Ordner (Tests haben je Thread einen eigenen Befehlsordner)
+    static CACHE: Mutex<Option<(std::path::PathBuf, Instant, Vec<Node>)>> = Mutex::new(None);
+    let dir = fp_engine::commands::misc::commands_dir();
     if let Ok(mut c) = CACHE.lock() {
-        if let Some((t, nodes)) = c.as_ref()
+        if let Some((d, t, nodes)) = c.as_ref()
+            && *d == dir
             && t.elapsed() < Duration::from_secs(2)
         {
             return nodes.clone();
         }
-        let nodes = scan_commands(&fp_engine::commands::misc::commands_dir(), 0);
-        *c = Some((Instant::now(), nodes.clone()));
+        let nodes = scan_commands(&dir, 0);
+        *c = Some((dir, Instant::now(), nodes.clone()));
         return nodes;
     }
     Vec::new()

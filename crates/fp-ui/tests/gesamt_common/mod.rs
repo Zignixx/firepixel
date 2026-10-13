@@ -78,6 +78,19 @@ pub fn test_profile() -> &'static Path {
     })
 }
 
+/// Eigener Befehlsordner nur für den laufenden Test (Thread) unter [`test_profile`] mit den
+/// mitgelieferten Befehlen: Tests des Befehle-Menüs sehen keine Befehle, die parallel laufende Tests
+/// gerade speichern (FIX-D/FIX-F, `menu_mn4`, `menu_fixes_fv13`).
+pub fn own_commands_dir() -> PathBuf {
+    static N: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+    let i = N.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+    let d = test_profile().join(format!("Commands-{i}"));
+    let _ = std::fs::remove_dir_all(&d);
+    let _ = fp_script::builtin_commands::install_into(&d);
+    fp_engine::commands::misc::set_thread_commands_dir(Some(d.clone()));
+    d
+}
+
 /// Testdokument: 800 × 600, zwei Seiten, zwei Status, alle Objektarten, Zwischenablage gefüllt,
 /// Zoom 50 %, eine gespeicherte Testdatei in „zuletzt geöffnet“.
 pub fn fixture() -> (AppState, egui::Context, Fix) {

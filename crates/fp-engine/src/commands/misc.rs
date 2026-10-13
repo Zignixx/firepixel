@@ -43,8 +43,23 @@ pub fn set_profile_dirs(commands: PathBuf, extensions: PathBuf) {
     }
 }
 
+thread_local! {
+    /// Befehlsordner nur für diesen Thread (Tests mit eigenem Ordner, z. B. das Befehle-Menü, das
+    /// sonst parallel laufende Tests mit ihren gespeicherten Befehlen stören).
+    static THREAD_COMMANDS_DIR: std::cell::RefCell<Option<PathBuf>> = const { std::cell::RefCell::new(None) };
+}
+
+/// Legt den Befehlsordner nur für den aufrufenden Thread fest (`None` = wieder der des Prozesses).
+/// Hat Vorrang vor [`set_profile_dirs`].
+pub fn set_thread_commands_dir(dir: Option<PathBuf>) {
+    THREAD_COMMANDS_DIR.with(|d| *d.borrow_mut() = dir);
+}
+
 /// Ordner der gespeicherten Befehle.
 pub fn commands_dir() -> PathBuf {
+    if let Some(d) = THREAD_COMMANDS_DIR.with(|d| d.borrow().clone()) {
+        return d;
+    }
     if let Some(d) = DIR_OVERRIDES.read().ok().and_then(|g| g.0.clone()) {
         return d;
     }
