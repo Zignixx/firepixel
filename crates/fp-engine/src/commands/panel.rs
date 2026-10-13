@@ -179,53 +179,519 @@ fn texture(name: &str) -> Texture {
 
 // ---------------------------------------------------------------------- Pinsel
 
-/// Eine Strichvorgabe (eigene Parameter; Kategorien und Namen sind die funktionalen Begriffe).
+/// Eine Strichvorgabe: vollständiges Pinselobjekt je Art, gemessen am Original (RE-PINSEL,
+/// `re\24-pinsel.md`, Werte aus `re\_testdateien\par\px\tool-brush-stroke-options\presets.csv`;
+/// Prozentwerte hier in Promille wie im Modell). Kategorien und Arten in der Reihenfolge des
+/// Strichart-Menüs (Arten alphabetisch nach dem Anzeigenamen).
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct BrushPreset {
     pub category: &'static str,
     pub category_de: &'static str,
     pub name: &'static str,
     pub name_de: &'static str,
-    /// Weichheit in Promille.
-    pub softness: i32,
-    pub antialiased: bool,
-    /// Strichmuster (an, aus) in Pixeln.
-    pub dash: Option<(i32, i32)>,
-    /// Vorgabestärke.
+    /// Natürliche Pinsel-Engine (sonst „simple“).
+    pub natural: bool,
+    /// Vorgabestärke (nur, wenn noch kein Strich da ist; ein Wechsel der Art behält die Größe).
     pub diameter: i32,
+    pub softness: i32,
+    pub round: bool,
+    pub antialiased: bool,
+    /// Weichheit als Glockenkurve (sonst linear).
+    pub bell: bool,
+    pub aspect: i32,
+    pub angle: i32,
+    pub concentration: i32,
+    pub blackness: i32,
+    pub spacing: i32,
+    pub flow_rate: i32,
+    pub feedback: i32,
+    pub texture_blend: i32,
+    pub texture_edge: i32,
+    pub alpha_remap: i32,
+    pub tip_count: i32,
+    pub tip_spacing: i32,
+    pub tip_spacing_mode: i32,
+    pub tip_coloring_mode: i32,
+    pub dash_count: i32,
+    pub dash_on: [i32; 3],
+    pub dash_off: [i32; 3],
+    pub min_size: i32,
+    pub max_count: i32,
+    /// Empfindlichkeiten (Quelle `PSHVR`, Ziel `ZAOBRHLS`, Promille).
+    pub sensitivities: &'static [(u8, u8, i32)],
 }
 
-#[allow(clippy::too_many_arguments)]
-const fn bp(category: &'static str, category_de: &'static str, name: &'static str, name_de: &'static str, softness: i32, antialiased: bool, dash: Option<(i32, i32)>, diameter: i32) -> BrushPreset {
-    BrushPreset { category, category_de, name, name_de, softness, antialiased, dash, diameter }
-}
-
-/// Strichvorgaben in Menüreihenfolge.
+/// Strichvorgaben in Menüreihenfolge (12 Kategorien, 54 Arten wie im Original).
 pub const BRUSH_PRESETS: &[BrushPreset] = &[
-    bp("bc_Pencil", "Bleistift", "bn_1-Pixel Hard", "1-Pixel hart", 0, false, None, 1),
-    bp("bc_Pencil", "Bleistift", "bn_1-Pixel Soft", "1-Pixel weich", 0, true, None, 1),
-    bp("bc_Pencil", "Bleistift", "bn_Colored Pencil", "Farbstift", 100, true, None, 2),
-    bp("bc_Pencil", "Bleistift", "bn_Graphite", "Grafit", 300, true, None, 2),
-    bp("bc_Basic", "Einfach", "bn_Hard Line", "Harte Linie", 0, true, None, 4),
-    bp("bc_Basic", "Einfach", "bn_Soft Line", "Weiche Linie", 500, true, None, 4),
-    bp("bc_Basic", "Einfach", "bn_Hard Rounded", "Hart, abgerundet", 0, true, None, 6),
-    bp("bc_Basic", "Einfach", "bn_Soft Rounded", "Weich, abgerundet", 700, true, None, 6),
-    bp("bc_Air Brush", "Airbrush", "bn_Basic", "Einfach", 1000, true, None, 20),
-    bp("bc_Air Brush", "Airbrush", "bn_Textured", "Strukturiert", 900, true, None, 20),
-    bp("bc_Calligraphy", "Kalligraphie", "bn_Bamboo", "Bambus", 100, true, None, 6),
-    bp("bc_Calligraphy", "Kalligraphie", "bn_Quill", "Feder", 50, true, None, 4),
-    bp("bc_Charcoal", "Kohle", "bn_Soft", "Weich", 600, true, None, 8),
-    bp("bc_Charcoal", "Kohle", "bn_Pastel", "Pastell", 400, true, None, 8),
-    bp("bc_Crayon", "Buntstift", "bn_Basic", "Einfach", 200, true, None, 6),
-    bp("bc_Dashed", "Gestrichelt", "bn_Basic Dash", "Einfach gestrichelt", 0, true, Some((10, 5)), 1),
-    bp("bc_Dashed", "Gestrichelt", "bn_Dotted", "Gepunktet", 0, true, Some((1, 3)), 1),
-    bp("bc_Dashed", "Gestrichelt", "bn_Double Dash", "Doppelt gestrichelt", 0, true, Some((6, 3)), 1),
-    bp("bc_Felt Tip", "Filzstift", "bn_Light Marker", "Heller Marker", 100, true, None, 6),
-    bp("bc_Felt Tip", "Filzstift", "bn_Dark Marker", "Dunkler Marker", 100, true, None, 6),
-    bp("bc_Oil", "Ölfarbe", "bn_Bristle", "Borste", 300, true, None, 10),
-    bp("bc_Watercolor", "Aquarell", "bn_Light", "Hell", 800, true, None, 12),
-    bp("bc_Watercolor", "Aquarell", "bn_Thick", "Dick", 700, true, None, 16),
+    BrushPreset {
+        category: "bc_Basic", category_de: "Einfach", name: "bn_Hard Rounded", name_de: "Präzise abger.",
+        natural: false, diameter: 20, softness: 0, round: true, antialiased: false, bell: true,
+        aspect: 1000, angle: 0, concentration: 1000, blackness: 0, spacing: 60, flow_rate: 0, feedback: 0,
+        texture_blend: 0, texture_edge: 0, alpha_remap: 0, tip_count: 1, tip_spacing: 0, tip_spacing_mode: 0, tip_coloring_mode: 0,
+        dash_count: 0, dash_on: [10, 1, 1], dash_off: [2, 2, 2], min_size: 10, max_count: 14,
+        sensitivities: &[],
+    },
+    BrushPreset {
+        category: "bc_Basic", category_de: "Einfach", name: "bn_Hard Line", name_de: "Präzise Linie",
+        natural: false, diameter: 20, softness: 0, round: false, antialiased: false, bell: true,
+        aspect: 1000, angle: 0, concentration: 1000, blackness: 0, spacing: 60, flow_rate: 0, feedback: 0,
+        texture_blend: 0, texture_edge: 0, alpha_remap: 0, tip_count: 1, tip_spacing: 0, tip_spacing_mode: 0, tip_coloring_mode: 0,
+        dash_count: 0, dash_on: [10, 1, 1], dash_off: [2, 2, 2], min_size: 10, max_count: 14,
+        sensitivities: &[],
+    },
+    BrushPreset {
+        category: "bc_Basic", category_de: "Einfach", name: "bn_Soft Rounded", name_de: "Weich abger.",
+        natural: false, diameter: 20, softness: 500, round: true, antialiased: true, bell: true,
+        aspect: 1000, angle: 0, concentration: 1000, blackness: 0, spacing: 60, flow_rate: 0, feedback: 1,
+        texture_blend: 0, texture_edge: 0, alpha_remap: 0, tip_count: 1, tip_spacing: 0, tip_spacing_mode: 0, tip_coloring_mode: 0,
+        dash_count: 0, dash_on: [10, 1, 1], dash_off: [2, 2, 2], min_size: 10, max_count: 14,
+        sensitivities: &[],
+    },
+    BrushPreset {
+        category: "bc_Basic", category_de: "Einfach", name: "bn_Soft Line", name_de: "Weiche Linie",
+        natural: false, diameter: 20, softness: 500, round: false, antialiased: true, bell: true,
+        aspect: 1000, angle: 0, concentration: 1000, blackness: 0, spacing: 60, flow_rate: 0, feedback: 1,
+        texture_blend: 0, texture_edge: 0, alpha_remap: 0, tip_count: 1, tip_spacing: 0, tip_spacing_mode: 0, tip_coloring_mode: 0,
+        dash_count: 0, dash_on: [10, 1, 1], dash_off: [2, 2, 2], min_size: 10, max_count: 14,
+        sensitivities: &[],
+    },
+    BrushPreset {
+        category: "bc_Air Brush", category_de: "Airbrush", name: "bn_Basic", name_de: "Einfach",
+        natural: true, diameter: 20, softness: 1000, round: true, antialiased: false, bell: true,
+        aspect: 1000, angle: 0, concentration: 900, blackness: 0, spacing: 220, flow_rate: 800, feedback: 1,
+        texture_blend: 0, texture_edge: 0, alpha_remap: 0, tip_count: 1, tip_spacing: 0, tip_spacing_mode: 0, tip_coloring_mode: 0,
+        dash_count: 0, dash_on: [10, 2, 2], dash_off: [4, 4, 4], min_size: 100, max_count: 14,
+        sensitivities: &[(b'P', b'O', 1000), (b'P', b'Z', 500), (b'S', b'O', 203), (b'S', b'Z', 203)],
+    },
+    BrushPreset {
+        category: "bc_Air Brush", category_de: "Airbrush", name: "bn_Textured", name_de: "Texturiert",
+        natural: true, diameter: 20, softness: 1000, round: true, antialiased: false, bell: true,
+        aspect: 1000, angle: 0, concentration: 700, blackness: 400, spacing: 200, flow_rate: 800, feedback: 1,
+        texture_blend: 800, texture_edge: 0, alpha_remap: 0, tip_count: 1, tip_spacing: 0, tip_spacing_mode: 0, tip_coloring_mode: 0,
+        dash_count: 0, dash_on: [10, 2, 2], dash_off: [4, 4, 4], min_size: 10, max_count: 14,
+        sensitivities: &[(b'P', b'O', 1000), (b'P', b'Z', 297), (b'S', b'O', 203), (b'S', b'Z', 203)],
+    },
+    BrushPreset {
+        category: "bc_Pencil", category_de: "Bleistift", name: "bn_1-Pixel", name_de: "1-Pixel hart",
+        natural: false, diameter: 1, softness: 0, round: true, antialiased: false, bell: true,
+        aspect: 1000, angle: 0, concentration: 1000, blackness: 0, spacing: 150, flow_rate: 0, feedback: 0,
+        texture_blend: 0, texture_edge: 0, alpha_remap: 0, tip_count: 1, tip_spacing: 0, tip_spacing_mode: 0, tip_coloring_mode: 0,
+        dash_count: 0, dash_on: [8, 1, 1], dash_off: [2, 2, 2], min_size: 10, max_count: 15,
+        sensitivities: &[],
+    },
+    BrushPreset {
+        category: "bc_Pencil", category_de: "Bleistift", name: "bn_1-Pixel Anti-Aliased", name_de: "1-Pixel weich",
+        natural: false, diameter: 1, softness: 0, round: true, antialiased: true, bell: true,
+        aspect: 1000, angle: 0, concentration: 1000, blackness: 0, spacing: 150, flow_rate: 0, feedback: 1,
+        texture_blend: 0, texture_edge: 0, alpha_remap: 0, tip_count: 1, tip_spacing: 0, tip_spacing_mode: 0, tip_coloring_mode: 0,
+        dash_count: 0, dash_on: [8, 1, 1], dash_off: [2, 2, 2], min_size: 10, max_count: 15,
+        sensitivities: &[],
+    },
+    BrushPreset {
+        category: "bc_Pencil", category_de: "Bleistift", name: "bn_Colored Pencil", name_de: "Buntstift",
+        natural: true, diameter: 20, softness: 10, round: false, antialiased: false, bell: true,
+        aspect: 600, angle: 90, concentration: 1000, blackness: 0, spacing: 150, flow_rate: 0, feedback: 1,
+        texture_blend: 0, texture_edge: 10, alpha_remap: 0, tip_count: 1, tip_spacing: 0, tip_spacing_mode: 0, tip_coloring_mode: 0,
+        dash_count: 0, dash_on: [8, 1, 1], dash_off: [2, 2, 2], min_size: 10, max_count: 14,
+        sensitivities: &[(b'P', b'B', 102), (b'P', b'O', 602), (b'S', b'B', 102), (b'S', b'O', 602), (b'S', b'Z', 102)],
+    },
+    BrushPreset {
+        category: "bc_Pencil", category_de: "Bleistift", name: "bn_Graphite", name_de: "Graphit",
+        natural: true, diameter: 20, softness: 0, round: false, antialiased: true, bell: true,
+        aspect: 1000, angle: 0, concentration: 972, blackness: 0, spacing: 200, flow_rate: 0, feedback: 1,
+        texture_blend: 800, texture_edge: 0, alpha_remap: 0, tip_count: 1, tip_spacing: 0, tip_spacing_mode: 0, tip_coloring_mode: 0,
+        dash_count: 0, dash_on: [20, 10, 10], dash_off: [8, 8, 8], min_size: 10, max_count: 14,
+        sensitivities: &[(b'P', b'O', 602), (b'P', b'Z', 203), (b'S', b'O', 602), (b'S', b'Z', 203)],
+    },
+    BrushPreset {
+        category: "bc_Felt Tip", category_de: "Filzstift", name: "bn_Dark Marker", name_de: "Dunkler Marker",
+        natural: true, diameter: 20, softness: 0, round: true, antialiased: true, bell: true,
+        aspect: 1000, angle: 0, concentration: 900, blackness: 350, spacing: 70, flow_rate: 0, feedback: 1,
+        texture_blend: 0, texture_edge: 0, alpha_remap: 0, tip_count: 1, tip_spacing: 0, tip_spacing_mode: 0, tip_coloring_mode: 0,
+        dash_count: 0, dash_on: [40, 2, 2], dash_off: [6, 8, 8], min_size: 700, max_count: 14,
+        sensitivities: &[(b'P', b'B', 500), (b'S', b'B', 203)],
+    },
+    BrushPreset {
+        category: "bc_Felt Tip", category_de: "Filzstift", name: "bn_Thin", name_de: "Dünn",
+        natural: true, diameter: 20, softness: 0, round: true, antialiased: true, bell: true,
+        aspect: 1000, angle: 0, concentration: 700, blackness: 400, spacing: 150, flow_rate: 0, feedback: 1,
+        texture_blend: 0, texture_edge: 0, alpha_remap: 0, tip_count: 1, tip_spacing: 0, tip_spacing_mode: 0, tip_coloring_mode: 0,
+        dash_count: 0, dash_on: [40, 2, 2], dash_off: [6, 8, 8], min_size: 10, max_count: 14,
+        sensitivities: &[(b'P', b'B', 703), (b'S', b'B', 602)],
+    },
+    BrushPreset {
+        category: "bc_Felt Tip", category_de: "Filzstift", name: "bn_Light Marker", name_de: "Heller Marker",
+        natural: true, diameter: 20, softness: 50, round: false, antialiased: true, bell: true,
+        aspect: 120, angle: 125, concentration: 1000, blackness: 300, spacing: 70, flow_rate: 0, feedback: 1,
+        texture_blend: 0, texture_edge: 0, alpha_remap: 0, tip_count: 1, tip_spacing: 0, tip_spacing_mode: 0, tip_coloring_mode: 0,
+        dash_count: 0, dash_on: [40, 2, 2], dash_off: [6, 8, 8], min_size: 10, max_count: 14,
+        sensitivities: &[(b'P', b'B', 703), (b'P', b'O', 602), (b'S', b'B', 398), (b'S', b'O', 797)],
+    },
+    BrushPreset {
+        category: "bc_Felt Tip", category_de: "Filzstift", name: "bn_Highlighter", name_de: "Hervorhebung",
+        natural: true, diameter: 20, softness: 0, round: false, antialiased: true, bell: false,
+        aspect: 450, angle: 90, concentration: 500, blackness: 0, spacing: 90, flow_rate: 0, feedback: 1,
+        texture_blend: 0, texture_edge: 0, alpha_remap: 0, tip_count: 1, tip_spacing: 0, tip_spacing_mode: 0, tip_coloring_mode: 0,
+        dash_count: 0, dash_on: [40, 2, 2], dash_off: [6, 8, 8], min_size: 600, max_count: 9,
+        sensitivities: &[],
+    },
+    BrushPreset {
+        category: "bc_Dashed", category_de: "Gestrichelt", name: "bn_Dashed_Heavy", name_de: "Dick gestrichelt",
+        natural: false, diameter: 20, softness: 500, round: true, antialiased: true, bell: true,
+        aspect: 1000, angle: 0, concentration: 1000, blackness: 0, spacing: 60, flow_rate: 0, feedback: 1,
+        texture_blend: 0, texture_edge: 0, alpha_remap: 0, tip_count: 1, tip_spacing: 0, tip_spacing_mode: 0, tip_coloring_mode: 0,
+        dash_count: 1, dash_on: [20, 5, 5], dash_off: [10, 10, 10], min_size: 10, max_count: 14,
+        sensitivities: &[],
+    },
+    BrushPreset {
+        category: "bc_Dashed", category_de: "Gestrichelt", name: "bn_Dashed_Double", name_de: "Doppelt gestr.",
+        natural: false, diameter: 20, softness: 500, round: true, antialiased: true, bell: true,
+        aspect: 1000, angle: 0, concentration: 1000, blackness: 0, spacing: 60, flow_rate: 0, feedback: 1,
+        texture_blend: 0, texture_edge: 0, alpha_remap: 0, tip_count: 1, tip_spacing: 0, tip_spacing_mode: 0, tip_coloring_mode: 0,
+        dash_count: 2, dash_on: [10, 1, 1], dash_off: [2, 2, 2], min_size: 10, max_count: 14,
+        sensitivities: &[],
+    },
+    BrushPreset {
+        category: "bc_Dashed", category_de: "Gestrichelt", name: "bn_Dashed_Triple", name_de: "Dreifach gestr.",
+        natural: false, diameter: 20, softness: 500, round: true, antialiased: true, bell: true,
+        aspect: 1000, angle: 0, concentration: 1000, blackness: 0, spacing: 60, flow_rate: 0, feedback: 1,
+        texture_blend: 0, texture_edge: 0, alpha_remap: 0, tip_count: 1, tip_spacing: 0, tip_spacing_mode: 0, tip_coloring_mode: 0,
+        dash_count: 3, dash_on: [10, 1, 1], dash_off: [2, 2, 2], min_size: 10, max_count: 14,
+        sensitivities: &[],
+    },
+    BrushPreset {
+        category: "bc_Dashed", category_de: "Gestrichelt", name: "bn_Dashed_Basic", name_de: "Einfach gestr.",
+        natural: false, diameter: 20, softness: 500, round: true, antialiased: true, bell: true,
+        aspect: 1000, angle: 0, concentration: 1000, blackness: 0, spacing: 60, flow_rate: 0, feedback: 1,
+        texture_blend: 0, texture_edge: 0, alpha_remap: 0, tip_count: 1, tip_spacing: 0, tip_spacing_mode: 0, tip_coloring_mode: 0,
+        dash_count: 1, dash_on: [10, 1, 1], dash_off: [2, 2, 2], min_size: 10, max_count: 14,
+        sensitivities: &[],
+    },
+    BrushPreset {
+        category: "bc_Dashed", category_de: "Gestrichelt", name: "bn_Dotted", name_de: "Gepunktet",
+        natural: true, diameter: 20, softness: 500, round: true, antialiased: true, bell: true,
+        aspect: 1000, angle: 0, concentration: 1000, blackness: 0, spacing: 2500, flow_rate: 0, feedback: 1,
+        texture_blend: 0, texture_edge: 0, alpha_remap: 0, tip_count: 1, tip_spacing: 0, tip_spacing_mode: 0, tip_coloring_mode: 0,
+        dash_count: 0, dash_on: [0, 0, 0], dash_off: [0, 0, 0], min_size: 10, max_count: 14,
+        sensitivities: &[],
+    },
+    BrushPreset {
+        category: "bc_Dashed", category_de: "Gestrichelt", name: "bn_Dashed_Hard", name_de: "Präzise gestr.",
+        natural: false, diameter: 20, softness: 0, round: false, antialiased: false, bell: true,
+        aspect: 1000, angle: 0, concentration: 1000, blackness: 0, spacing: 60, flow_rate: 0, feedback: 0,
+        texture_blend: 0, texture_edge: 0, alpha_remap: 0, tip_count: 1, tip_spacing: 0, tip_spacing_mode: 0, tip_coloring_mode: 0,
+        dash_count: 1, dash_on: [10, 1, 1], dash_off: [5, 5, 5], min_size: 10, max_count: 14,
+        sensitivities: &[],
+    },
+    BrushPreset {
+        category: "bc_Calligraphy", category_de: "Kalligrafie", name: "bn_Bamboo", name_de: "Bambus",
+        natural: true, diameter: 20, softness: 0, round: true, antialiased: true, bell: true,
+        aspect: 1000, angle: 0, concentration: 1000, blackness: 260, spacing: 80, flow_rate: 0, feedback: 1,
+        texture_blend: 500, texture_edge: 250, alpha_remap: 0, tip_count: 1, tip_spacing: 0, tip_spacing_mode: 0, tip_coloring_mode: 0,
+        dash_count: 0, dash_on: [40, 2, 2], dash_off: [4, 4, 4], min_size: 10, max_count: 19,
+        sensitivities: &[(b'P', b'Z', 898), (b'S', b'Z', 797)],
+    },
+    BrushPreset {
+        category: "bc_Calligraphy", category_de: "Kalligrafie", name: "bn_Ribbon", name_de: "Band",
+        natural: true, diameter: 20, softness: 0, round: false, antialiased: true, bell: true,
+        aspect: 140, angle: 125, concentration: 1000, blackness: 0, spacing: 60, flow_rate: 0, feedback: 1,
+        texture_blend: 0, texture_edge: 0, alpha_remap: 0, tip_count: 1, tip_spacing: 0, tip_spacing_mode: 0, tip_coloring_mode: 0,
+        dash_count: 0, dash_on: [40, 2, 2], dash_off: [4, 4, 4], min_size: 10, max_count: 14,
+        sensitivities: &[],
+    },
+    BrushPreset {
+        category: "bc_Calligraphy", category_de: "Kalligrafie", name: "bn_Basic", name_de: "Einfach",
+        natural: true, diameter: 20, softness: 0, round: false, antialiased: true, bell: true,
+        aspect: 140, angle: 125, concentration: 1000, blackness: 0, spacing: 50, flow_rate: 0, feedback: 0,
+        texture_blend: 0, texture_edge: 0, alpha_remap: 0, tip_count: 1, tip_spacing: 0, tip_spacing_mode: 0, tip_coloring_mode: 0,
+        dash_count: 0, dash_on: [40, 2, 2], dash_off: [4, 4, 4], min_size: 10, max_count: 14,
+        sensitivities: &[],
+    },
+    BrushPreset {
+        category: "bc_Calligraphy", category_de: "Kalligrafie", name: "bn_Quill", name_de: "Federkiel",
+        natural: true, diameter: 20, softness: 200, round: true, antialiased: true, bell: true,
+        aspect: 440, angle: 69, concentration: 1000, blackness: 250, spacing: 100, flow_rate: 900, feedback: 1,
+        texture_blend: 250, texture_edge: 0, alpha_remap: 0, tip_count: 1, tip_spacing: 0, tip_spacing_mode: 0, tip_coloring_mode: 0,
+        dash_count: 0, dash_on: [40, 2, 2], dash_off: [4, 4, 4], min_size: 160, max_count: 15,
+        sensitivities: &[(b'P', b'O', 1000), (b'P', b'Z', 898), (b'S', b'Z', 797)],
+    },
+    BrushPreset {
+        category: "bc_Calligraphy", category_de: "Kalligrafie", name: "bn_Wet", name_de: "Naß",
+        natural: true, diameter: 20, softness: 20, round: false, antialiased: true, bell: true,
+        aspect: 120, angle: 125, concentration: 1000, blackness: 120, spacing: 60, flow_rate: 0, feedback: 1,
+        texture_blend: 0, texture_edge: 0, alpha_remap: 2, tip_count: 1, tip_spacing: 0, tip_spacing_mode: 0, tip_coloring_mode: 0,
+        dash_count: 0, dash_on: [40, 2, 2], dash_off: [4, 4, 4], min_size: 10, max_count: 14,
+        sensitivities: &[(b'P', b'B', 203), (b'S', b'B', 203)],
+    },
+    BrushPreset {
+        category: "bc_Charcoal", category_de: "Kohlestift", name: "bn_Creamy", name_de: "Cremig",
+        natural: true, diameter: 20, softness: 20, round: true, antialiased: false, bell: true,
+        aspect: 1000, angle: 0, concentration: 1000, blackness: 380, spacing: 70, flow_rate: 0, feedback: 1,
+        texture_blend: 160, texture_edge: 980, alpha_remap: 0, tip_count: 1, tip_spacing: 0, tip_spacing_mode: 0, tip_coloring_mode: 0,
+        dash_count: 0, dash_on: [40, 2, 2], dash_off: [4, 4, 4], min_size: 300, max_count: 14,
+        sensitivities: &[(b'P', b'B', 602), (b'P', b'Z', 898), (b'S', b'B', 500), (b'S', b'Z', 797)],
+    },
+    BrushPreset {
+        category: "bc_Charcoal", category_de: "Kohlestift", name: "bn_Pastel", name_de: "Pastell",
+        natural: true, diameter: 20, softness: 0, round: true, antialiased: false, bell: true,
+        aspect: 1000, angle: 0, concentration: 800, blackness: 500, spacing: 100, flow_rate: 0, feedback: 1,
+        texture_blend: 240, texture_edge: 200, alpha_remap: 0, tip_count: 1, tip_spacing: 0, tip_spacing_mode: 0, tip_coloring_mode: 0,
+        dash_count: 0, dash_on: [40, 2, 2], dash_off: [4, 4, 4], min_size: 500, max_count: 14,
+        sensitivities: &[(b'P', b'B', 1000), (b'P', b'O', 297), (b'P', b'Z', 797), (b'R', b'B', 500), (b'S', b'B', 1000), (b'S', b'O', 297), (b'S', b'Z', 297)],
+    },
+    BrushPreset {
+        category: "bc_Charcoal", category_de: "Kohlestift", name: "bn_Textured", name_de: "Texturiert",
+        natural: true, diameter: 20, softness: 600, round: true, antialiased: false, bell: true,
+        aspect: 1000, angle: 0, concentration: 1000, blackness: 450, spacing: 200, flow_rate: 0, feedback: 1,
+        texture_blend: 850, texture_edge: 300, alpha_remap: 0, tip_count: 1, tip_spacing: 0, tip_spacing_mode: 0, tip_coloring_mode: 0,
+        dash_count: 0, dash_on: [30, 2, 2], dash_off: [4, 4, 4], min_size: 10, max_count: 14,
+        sensitivities: &[(b'P', b'B', 1000), (b'S', b'B', 47)],
+    },
+    BrushPreset {
+        category: "bc_Charcoal", category_de: "Kohlestift", name: "bn_Soft", name_de: "Weich",
+        natural: true, diameter: 20, softness: 500, round: true, antialiased: false, bell: true,
+        aspect: 1000, angle: 0, concentration: 800, blackness: 300, spacing: 110, flow_rate: 0, feedback: 1,
+        texture_blend: 300, texture_edge: 150, alpha_remap: 0, tip_count: 1, tip_spacing: 0, tip_spacing_mode: 0, tip_coloring_mode: 0,
+        dash_count: 0, dash_on: [40, 2, 2], dash_off: [4, 4, 4], min_size: 200, max_count: 14,
+        sensitivities: &[(b'R', b'B', 1000), (b'R', b'Z', 750)],
+    },
+    BrushPreset {
+        category: "bc_Crayon", category_de: "Pastellkreide", name: "bn_Thick", name_de: "Dick",
+        natural: true, diameter: 20, softness: 0, round: true, antialiased: false, bell: true,
+        aspect: 1000, angle: 0, concentration: 1000, blackness: 250, spacing: 100, flow_rate: 0, feedback: 1,
+        texture_blend: 200, texture_edge: 950, alpha_remap: 0, tip_count: 1, tip_spacing: 0, tip_spacing_mode: 0, tip_coloring_mode: 0,
+        dash_count: 0, dash_on: [40, 2, 2], dash_off: [4, 4, 4], min_size: 700, max_count: 14,
+        sensitivities: &[(b'P', b'O', 797), (b'P', b'Z', 1000), (b'R', b'H', 47), (b'R', b'Z', 297), (b'S', b'O', 203), (b'S', b'Z', 703)],
+    },
+    BrushPreset {
+        category: "bc_Crayon", category_de: "Pastellkreide", name: "bn_Basic", name_de: "Einfach",
+        natural: true, diameter: 20, softness: 0, round: true, antialiased: false, bell: true,
+        aspect: 1000, angle: 0, concentration: 1000, blackness: 0, spacing: 100, flow_rate: 0, feedback: 1,
+        texture_blend: 650, texture_edge: 400, alpha_remap: 0, tip_count: 1, tip_spacing: 0, tip_spacing_mode: 0, tip_coloring_mode: 0,
+        dash_count: 0, dash_on: [50, 2, 2], dash_off: [6, 6, 6], min_size: 700, max_count: 14,
+        sensitivities: &[(b'P', b'O', 297), (b'P', b'Z', 602), (b'R', b'H', 47), (b'S', b'O', 203), (b'S', b'Z', 703)],
+    },
+    BrushPreset {
+        category: "bc_Crayon", category_de: "Pastellkreide", name: "bn_Rake", name_de: "Harke",
+        natural: true, diameter: 20, softness: 0, round: true, antialiased: false, bell: false,
+        aspect: 1000, angle: 0, concentration: 1000, blackness: 0, spacing: 300, flow_rate: 0, feedback: 1,
+        texture_blend: 650, texture_edge: 400, alpha_remap: 0, tip_count: 4, tip_spacing: 90, tip_spacing_mode: 2, tip_coloring_mode: 0,
+        dash_count: 0, dash_on: [80, 25, 25], dash_off: [100, 100, 100], min_size: 900, max_count: 9,
+        sensitivities: &[(b'P', b'O', 602), (b'P', b'Z', 602), (b'R', b'H', 250), (b'S', b'O', 203), (b'S', b'Z', 703)],
+    },
+    BrushPreset {
+        category: "bc_Watercolor", category_de: "Wasserfarbe", name: "bn_Thick", name_de: "Dick",
+        natural: true, diameter: 20, softness: 700, round: true, antialiased: false, bell: true,
+        aspect: 1000, angle: 0, concentration: 850, blackness: 0, spacing: 100, flow_rate: 0, feedback: 1,
+        texture_blend: 50, texture_edge: 350, alpha_remap: 0, tip_count: 1, tip_spacing: 0, tip_spacing_mode: 0, tip_coloring_mode: 0,
+        dash_count: 0, dash_on: [40, 2, 2], dash_off: [3, 4, 4], min_size: 10, max_count: 14,
+        sensitivities: &[(b'P', b'O', 602), (b'P', b'Z', 102), (b'S', b'O', 602), (b'S', b'Z', 102)],
+    },
+    BrushPreset {
+        category: "bc_Watercolor", category_de: "Wasserfarbe", name: "bn_Thin", name_de: "Dünn",
+        natural: true, diameter: 20, softness: 250, round: true, antialiased: true, bell: true,
+        aspect: 1000, angle: 0, concentration: 950, blackness: 0, spacing: 90, flow_rate: 0, feedback: 1,
+        texture_blend: 0, texture_edge: 0, alpha_remap: 0, tip_count: 1, tip_spacing: 0, tip_spacing_mode: 0, tip_coloring_mode: 0,
+        dash_count: 0, dash_on: [30, 2, 2], dash_off: [2, 4, 4], min_size: 100, max_count: 31,
+        sensitivities: &[(b'P', b'O', 797), (b'P', b'Z', 703), (b'S', b'O', 797), (b'S', b'Z', 602)],
+    },
+    BrushPreset {
+        category: "bc_Watercolor", category_de: "Wasserfarbe", name: "bn_Heavy", name_de: "Intensiv",
+        natural: true, diameter: 20, softness: 500, round: true, antialiased: false, bell: true,
+        aspect: 1000, angle: 0, concentration: 850, blackness: 0, spacing: 150, flow_rate: 0, feedback: 1,
+        texture_blend: 300, texture_edge: 990, alpha_remap: 0, tip_count: 1, tip_spacing: 0, tip_spacing_mode: 0, tip_coloring_mode: 0,
+        dash_count: 0, dash_on: [30, 2, 2], dash_off: [8, 8, 8], min_size: 600, max_count: 14,
+        sensitivities: &[(b'P', b'O', 500), (b'P', b'Z', 797), (b'R', b'H', 102), (b'R', b'O', 102), (b'R', b'R', 16), (b'S', b'O', 500), (b'S', b'Z', 703)],
+    },
+    BrushPreset {
+        category: "bc_Oil", category_de: "Öl", name: "bn_Bristle", name_de: "Borsten",
+        natural: true, diameter: 20, softness: 0, round: true, antialiased: true, bell: true,
+        aspect: 1000, angle: 0, concentration: 950, blackness: 0, spacing: 300, flow_rate: 0, feedback: 1,
+        texture_blend: 200, texture_edge: 200, alpha_remap: 0, tip_count: 3, tip_spacing: 50, tip_spacing_mode: 2, tip_coloring_mode: 0,
+        dash_count: 0, dash_on: [30, 2, 2], dash_off: [30, 40, 40], min_size: 10, max_count: 14,
+        sensitivities: &[(b'P', b'O', 102), (b'R', b'A', 250), (b'R', b'H', 70), (b'R', b'S', 31), (b'R', b'Z', 203)],
+    },
+    BrushPreset {
+        category: "bc_Oil", category_de: "Öl", name: "bn_Broad Splatter", name_de: "Breiter Kleckser",
+        natural: true, diameter: 20, softness: 0, round: true, antialiased: false, bell: true,
+        aspect: 1000, angle: 0, concentration: 750, blackness: 0, spacing: 450, flow_rate: 970, feedback: 1,
+        texture_blend: 300, texture_edge: 220, alpha_remap: 0, tip_count: 2, tip_spacing: 500, tip_spacing_mode: 0, tip_coloring_mode: 0,
+        dash_count: 0, dash_on: [150, 40, 40], dash_off: [200, 200, 200], min_size: 200, max_count: 14,
+        sensitivities: &[(b'P', b'O', 602), (b'P', b'R', 297), (b'P', b'Z', 602), (b'R', b'B', 1000), (b'R', b'O', 602), (b'R', b'S', 1000), (b'R', b'R', 1000), (b'R', b'Z', 602), (b'S', b'O', 602), (b'S', b'Z', 602)],
+    },
+    BrushPreset {
+        category: "bc_Oil", category_de: "Öl", name: "bn_Strands", name_de: "Fasern",
+        natural: true, diameter: 20, softness: 430, round: true, antialiased: false, bell: true,
+        aspect: 1000, angle: 0, concentration: 900, blackness: 0, spacing: 300, flow_rate: 0, feedback: 1,
+        texture_blend: 0, texture_edge: 0, alpha_remap: 0, tip_count: 5, tip_spacing: 150, tip_spacing_mode: 1, tip_coloring_mode: 0,
+        dash_count: 0, dash_on: [100, 20, 20], dash_off: [60, 60, 60], min_size: 100, max_count: 19,
+        sensitivities: &[(b'R', b'H', 47), (b'R', b'S', 47), (b'R', b'R', 31), (b'R', b'Z', 102)],
+    },
+    BrushPreset {
+        category: "bc_Oil", category_de: "Öl", name: "bn_Splatter", name_de: "Kleckser",
+        natural: true, diameter: 20, softness: 0, round: true, antialiased: false, bell: true,
+        aspect: 1000, angle: 0, concentration: 990, blackness: 0, spacing: 200, flow_rate: 970, feedback: 1,
+        texture_blend: 300, texture_edge: 250, alpha_remap: 0, tip_count: 1, tip_spacing: 0, tip_spacing_mode: 0, tip_coloring_mode: 0,
+        dash_count: 0, dash_on: [80, 20, 20], dash_off: [60, 60, 60], min_size: 200, max_count: 14,
+        sensitivities: &[(b'P', b'O', 602), (b'P', b'R', 102), (b'R', b'O', 500), (b'R', b'S', 1000), (b'R', b'R', 250), (b'R', b'Z', 1000), (b'S', b'O', 602)],
+    },
+    BrushPreset {
+        category: "bc_Oil", category_de: "Öl", name: "bn_Textured Bristle", name_de: "Txtur. Borsten",
+        natural: true, diameter: 20, softness: 0, round: true, antialiased: true, bell: true,
+        aspect: 1000, angle: 0, concentration: 700, blackness: 0, spacing: 250, flow_rate: 0, feedback: 1,
+        texture_blend: 500, texture_edge: 0, alpha_remap: 0, tip_count: 4, tip_spacing: 75, tip_spacing_mode: 2, tip_coloring_mode: 4,
+        dash_count: 0, dash_on: [100, 40, 40], dash_off: [80, 80, 80], min_size: 10, max_count: 14,
+        sensitivities: &[(b'P', b'R', 47), (b'P', b'Z', 297), (b'R', b'H', 31), (b'R', b'S', 31), (b'R', b'R', 47), (b'S', b'R', 203), (b'S', b'Z', 297)],
+    },
+    BrushPreset {
+        category: "bc_Unnatural", category_de: "Unnatürlich", name: "bn_3D", name_de: "3D",
+        natural: true, diameter: 20, softness: 120, round: true, antialiased: false, bell: true,
+        aspect: 1000, angle: 0, concentration: 1000, blackness: 0, spacing: 100, flow_rate: 0, feedback: 1,
+        texture_blend: 0, texture_edge: 0, alpha_remap: 0, tip_count: 3, tip_spacing: 23, tip_spacing_mode: 2, tip_coloring_mode: 4,
+        dash_count: 0, dash_on: [80, 20, 20], dash_off: [40, 40, 40], min_size: 10, max_count: 14,
+        sensitivities: &[(b'R', b'H', 703)],
+    },
+    BrushPreset {
+        category: "bc_Unnatural", category_de: "Unnatürlich", name: "bn_3D Glow", name_de: "3D Glühen",
+        natural: true, diameter: 20, softness: 1000, round: true, antialiased: true, bell: true,
+        aspect: 1000, angle: 0, concentration: 1000, blackness: 0, spacing: 200, flow_rate: 0, feedback: 1,
+        texture_blend: 0, texture_edge: 0, alpha_remap: 1, tip_count: 4, tip_spacing: 30, tip_spacing_mode: 2, tip_coloring_mode: 3,
+        dash_count: 0, dash_on: [80, 20, 20], dash_off: [40, 40, 40], min_size: 10, max_count: 14,
+        sensitivities: &[(b'R', b'H', 703)],
+    },
+    BrushPreset {
+        category: "bc_Unnatural", category_de: "Unnatürlich", name: "bn_Chameleon", name_de: "Chamäleon",
+        natural: true, diameter: 20, softness: 0, round: true, antialiased: false, bell: true,
+        aspect: 1000, angle: 0, concentration: 788, blackness: 0, spacing: 150, flow_rate: 0, feedback: 1,
+        texture_blend: 310, texture_edge: 400, alpha_remap: 0, tip_count: 1, tip_spacing: 0, tip_spacing_mode: 0, tip_coloring_mode: 0,
+        dash_count: 0, dash_on: [30, 10, 10], dash_off: [8, 8, 8], min_size: 10, max_count: 14,
+        sensitivities: &[(b'P', b'H', 602), (b'S', b'H', 602)],
+    },
+    BrushPreset {
+        category: "bc_Unnatural", category_de: "Unnatürlich", name: "bn_Paint Splatter", name_de: "Farbkleckser",
+        natural: true, diameter: 20, softness: 1000, round: true, antialiased: false, bell: true,
+        aspect: 1000, angle: 0, concentration: 1000, blackness: 250, spacing: 500, flow_rate: 920, feedback: 1,
+        texture_blend: 0, texture_edge: 0, alpha_remap: 3, tip_count: 2, tip_spacing: 50, tip_spacing_mode: 2, tip_coloring_mode: 0,
+        dash_count: 0, dash_on: [60, 20, 20], dash_off: [150, 150, 150], min_size: 10, max_count: 14,
+        sensitivities: &[(b'P', b'R', 203), (b'P', b'Z', 203), (b'R', b'H', 117), (b'R', b'S', 102), (b'R', b'R', 398), (b'R', b'Z', 602), (b'S', b'R', 203), (b'S', b'Z', 203)],
+    },
+    BrushPreset {
+        category: "bc_Unnatural", category_de: "Unnatürlich", name: "bn_Fluid Splatter", name_de: "Flüssiger Kleckser",
+        natural: true, diameter: 20, softness: 1000, round: true, antialiased: false, bell: true,
+        aspect: 1000, angle: 0, concentration: 1000, blackness: 0, spacing: 170, flow_rate: 980, feedback: 1,
+        texture_blend: 0, texture_edge: 0, alpha_remap: 1, tip_count: 2, tip_spacing: 30, tip_spacing_mode: 1, tip_coloring_mode: 0,
+        dash_count: 0, dash_on: [100, 40, 40], dash_off: [40, 40, 40], min_size: 10, max_count: 14,
+        sensitivities: &[(b'R', b'H', 70), (b'R', b'R', 297), (b'R', b'Z', 398)],
+    },
+    BrushPreset {
+        category: "bc_Unnatural", category_de: "Unnatürlich", name: "bn_Toxic Waste", name_de: "Giftmüll",
+        natural: true, diameter: 20, softness: 1000, round: true, antialiased: false, bell: true,
+        aspect: 1000, angle: 0, concentration: 1000, blackness: 400, spacing: 150, flow_rate: 0, feedback: 0,
+        texture_blend: 0, texture_edge: 0, alpha_remap: 4, tip_count: 1, tip_spacing: 0, tip_spacing_mode: 0, tip_coloring_mode: 0,
+        dash_count: 0, dash_on: [35, 10, 10], dash_off: [8, 8, 8], min_size: 800, max_count: 14,
+        sensitivities: &[(b'P', b'B', 297), (b'P', b'H', 203), (b'P', b'O', 297), (b'R', b'H', 203), (b'R', b'S', 1000), (b'R', b'R', 47), (b'S', b'B', 297), (b'S', b'H', 1000), (b'S', b'O', 203), (b'S', b'Z', 711)],
+    },
+    BrushPreset {
+        category: "bc_Unnatural", category_de: "Unnatürlich", name: "bn_Outline", name_de: "Kontur",
+        natural: true, diameter: 20, softness: 1000, round: true, antialiased: true, bell: true,
+        aspect: 1000, angle: 0, concentration: 1000, blackness: 0, spacing: 250, flow_rate: 0, feedback: 1,
+        texture_blend: 0, texture_edge: 0, alpha_remap: 5, tip_count: 4, tip_spacing: 25, tip_spacing_mode: 2, tip_coloring_mode: 0,
+        dash_count: 0, dash_on: [50, 10, 10], dash_off: [40, 40, 40], min_size: 10, max_count: 14,
+        sensitivities: &[(b'R', b'H', 703)],
+    },
+    BrushPreset {
+        category: "bc_Unnatural", category_de: "Unnatürlich", name: "bn_Viscous Alien Paint", name_de: "SpaceAge-F.",
+        natural: true, diameter: 20, softness: 300, round: true, antialiased: false, bell: true,
+        aspect: 1000, angle: 0, concentration: 1000, blackness: 0, spacing: 200, flow_rate: 0, feedback: 1,
+        texture_blend: 0, texture_edge: 50, alpha_remap: 3, tip_count: 3, tip_spacing: 50, tip_spacing_mode: 2, tip_coloring_mode: 4,
+        dash_count: 0, dash_on: [80, 20, 20], dash_off: [50, 50, 50], min_size: 10, max_count: 14,
+        sensitivities: &[(b'P', b'O', 203), (b'P', b'R', 47), (b'P', b'Z', 8), (b'R', b'H', 203), (b'R', b'O', 203), (b'R', b'R', 47), (b'R', b'Z', 398), (b'S', b'O', 500), (b'S', b'R', 8), (b'S', b'Z', 8)],
+    },
+    BrushPreset {
+        category: "bc_Unnatural", category_de: "Unnatürlich", name: "bn_Toothpaste", name_de: "Zahnpasta",
+        natural: true, diameter: 20, softness: 500, round: true, antialiased: false, bell: true,
+        aspect: 1000, angle: 0, concentration: 1000, blackness: 0, spacing: 130, flow_rate: 0, feedback: 1,
+        texture_blend: 0, texture_edge: 0, alpha_remap: 0, tip_count: 3, tip_spacing: 40, tip_spacing_mode: 2, tip_coloring_mode: 2,
+        dash_count: 0, dash_on: [100, 20, 20], dash_off: [40, 40, 40], min_size: 10, max_count: 14,
+        sensitivities: &[(b'R', b'H', 797), (b'R', b'S', 797)],
+    },
+    BrushPreset {
+        category: "bc_Random", category_de: "Unregelmäßig", name: "bn_Yarn", name_de: "Garn",
+        natural: true, diameter: 20, softness: 0, round: true, antialiased: true, bell: true,
+        aspect: 1000, angle: 0, concentration: 972, blackness: 0, spacing: 180, flow_rate: 0, feedback: 1,
+        texture_blend: 0, texture_edge: 0, alpha_remap: 0, tip_count: 4, tip_spacing: 75, tip_spacing_mode: 2, tip_coloring_mode: 0,
+        dash_count: 0, dash_on: [100, 20, 20], dash_off: [100, 100, 100], min_size: 500, max_count: 14,
+        sensitivities: &[(b'P', b'Z', 898), (b'R', b'H', 203), (b'R', b'S', 203), (b'S', b'Z', 797)],
+    },
+    BrushPreset {
+        category: "bc_Random", category_de: "Unregelmäßig", name: "bn_Confetti", name_de: "Konfetti",
+        natural: true, diameter: 20, softness: 250, round: true, antialiased: false, bell: true,
+        aspect: 340, angle: 0, concentration: 866, blackness: 0, spacing: 400, flow_rate: 0, feedback: 0,
+        texture_blend: 0, texture_edge: 0, alpha_remap: 0, tip_count: 1, tip_spacing: 0, tip_spacing_mode: 0, tip_coloring_mode: 0,
+        dash_count: 0, dash_on: [40, 10, 10], dash_off: [35, 35, 35], min_size: 10, max_count: 31,
+        sensitivities: &[(b'R', b'H', 797), (b'R', b'R', 352)],
+    },
+    BrushPreset {
+        category: "bc_Random", category_de: "Unregelmäßig", name: "bn_Fur", name_de: "Pelz",
+        natural: true, diameter: 20, softness: 0, round: true, antialiased: false, bell: true,
+        aspect: 180, angle: 0, concentration: 972, blackness: 0, spacing: 300, flow_rate: 600, feedback: 1,
+        texture_blend: 0, texture_edge: 0, alpha_remap: 0, tip_count: 4, tip_spacing: 150, tip_spacing_mode: 2, tip_coloring_mode: 3,
+        dash_count: 0, dash_on: [200, 40, 40], dash_off: [150, 150, 150], min_size: 200, max_count: 31,
+        sensitivities: &[(b'R', b'A', 203), (b'R', b'B', 203), (b'R', b'H', 203), (b'R', b'O', 203), (b'R', b'R', 203)],
+    },
+    BrushPreset {
+        category: "bc_Random", category_de: "Unregelmäßig", name: "bn_Dots", name_de: "Punkte",
+        natural: true, diameter: 20, softness: 200, round: false, antialiased: false, bell: true,
+        aspect: 1000, angle: 0, concentration: 780, blackness: 0, spacing: 600, flow_rate: 0, feedback: 1,
+        texture_blend: 0, texture_edge: 0, alpha_remap: 0, tip_count: 4, tip_spacing: 180, tip_spacing_mode: 2, tip_coloring_mode: 0,
+        dash_count: 0, dash_on: [100, 25, 25], dash_off: [300, 300, 300], min_size: 10, max_count: 14,
+        sensitivities: &[(b'P', b'R', 352), (b'P', b'Z', 398), (b'R', b'H', 70), (b'R', b'R', 500), (b'S', b'R', 250), (b'S', b'Z', 398)],
+    },
+    BrushPreset {
+        category: "bc_Random", category_de: "Unregelmäßig", name: "bn_Squares", name_de: "Quadrate",
+        natural: true, diameter: 20, softness: 0, round: false, antialiased: false, bell: true,
+        aspect: 1000, angle: 0, concentration: 850, blackness: 0, spacing: 500, flow_rate: 0, feedback: 1,
+        texture_blend: 200, texture_edge: 150, alpha_remap: 0, tip_count: 1, tip_spacing: 0, tip_spacing_mode: 0, tip_coloring_mode: 0,
+        dash_count: 0, dash_on: [75, 25, 25], dash_off: [75, 25, 25], min_size: 10, max_count: 14,
+        sensitivities: &[(b'P', b'O', 23), (b'P', b'R', 203), (b'R', b'A', 203), (b'R', b'H', 297), (b'R', b'R', 250), (b'S', b'O', 23)],
+    },
 ];
+
+/// Frühere Namen „Kategorie/Art“ bzw. interne Namen → heutige (gespeicherte Werkzeugvorgaben,
+/// Skripte, ältere Dokumente).
+const PRESET_ALIASES: &[(&str, &str)] = &[
+    ("Bleistift/Farbstift", "Bleistift/Buntstift"),
+    ("Bleistift/Grafit", "Bleistift/Graphit"),
+    ("Einfach/Harte Linie", "Einfach/Präzise Linie"),
+    ("Einfach/Hart, abgerundet", "Einfach/Präzise abger."),
+    ("Einfach/Weich, abgerundet", "Einfach/Weich abger."),
+    ("Airbrush/Strukturiert", "Airbrush/Texturiert"),
+    ("Kalligraphie/Bambus", "Kalligrafie/Bambus"),
+    ("Kalligraphie/Feder", "Kalligrafie/Federkiel"),
+    ("Kohle/Weich", "Kohlestift/Weich"),
+    ("Kohle/Pastell", "Kohlestift/Pastell"),
+    ("Buntstift/Einfach", "Pastellkreide/Einfach"),
+    ("Gestrichelt/Einfach gestrichelt", "Gestrichelt/Einfach gestr."),
+    ("Gestrichelt/Doppelt gestrichelt", "Gestrichelt/Doppelt gestr."),
+    ("Ölfarbe/Borste", "Öl/Borsten"),
+    ("Aquarell/Hell", "Wasserfarbe/Dünn"),
+    ("Aquarell/Dick", "Wasserfarbe/Dick"),
+    ("bn_1-Pixel Hard", "bn_1-Pixel"),
+    ("bn_1-Pixel Soft", "bn_1-Pixel Anti-Aliased"),
+];
+
+/// Vorgabe nach „Kategorie/Art“ (Anzeigenamen), internem Namen (`bn_…`) oder Artnamen; frühere
+/// Namen über [`PRESET_ALIASES`].
+pub fn find_preset(n: &str) -> Option<&'static BrushPreset> {
+    let n = PRESET_ALIASES.iter().find(|(old, _)| *old == n).map(|(_, new)| *new).unwrap_or(n);
+    BRUSH_PRESETS.iter().find(|b| format!("{}/{}", b.category_de, b.name_de) == n || b.name == n || b.name_de == n)
+}
+
+/// Index der Vorgabe zu Kategorie und internem Namen (auch frühere interne Namen).
+pub fn preset_index_of(category: &str, name: &str) -> Option<usize> {
+    let name = PRESET_ALIASES.iter().find(|(old, _)| *old == name).map(|(_, new)| *new).unwrap_or(name);
+    BRUSH_PRESETS.iter().position(|p| p.category == category && p.name == name)
+}
 
 /// Kategorien der Strichvorgaben (Anzeigenamen, Reihenfolge des Popups).
 pub fn brush_categories() -> Vec<&'static str> {
@@ -240,7 +706,7 @@ pub fn brush_categories() -> Vec<&'static str> {
 
 /// Anzeigename eines Pinsels (Vorgabe oder interner Name ohne `bn_`).
 pub fn brush_label(b: &Brush) -> String {
-    if let Some(p) = BRUSH_PRESETS.iter().find(|p| p.category == b.category && p.name == b.name) {
+    if let Some(p) = preset_index_of(&b.category, &b.name).map(|i| &BRUSH_PRESETS[i]) {
         return p.name_de.to_string();
     }
     if let Some(u) = &b.user_name {
@@ -250,24 +716,35 @@ pub fn brush_label(b: &Brush) -> String {
 }
 
 fn apply_preset(b: &mut Brush, p: &BrushPreset) {
+    // alle Werte der Art, außer der Größe (re\24: „Strichart-Wahl behält die Größe“)
     b.category = p.category.into();
     b.name = p.name.into();
     b.user_name = Some(p.name_de.into());
+    b.brush_type = if p.natural { 0 } else { 1 };
     b.softness = p.softness;
+    b.shape = i32::from(p.round);
     b.antialiased = p.antialiased;
-    b.brush_type = 1;
-    match p.dash {
-        Some((on, off)) => {
-            b.dash_count = 1;
-            b.dash_on = [on, 0, 0];
-            b.dash_off = [off, 0, 0];
-        }
-        None => {
-            b.dash_count = 0;
-            b.dash_on = [0; 3];
-            b.dash_off = [0; 3];
-        }
-    }
+    b.soften_mode = i32::from(p.bell);
+    b.aspect = p.aspect;
+    b.angle = p.angle;
+    b.concentration = p.concentration;
+    b.blackness = p.blackness;
+    b.spacing = p.spacing;
+    b.flow_rate = p.flow_rate;
+    b.feedback = p.feedback;
+    b.texture_blend = p.texture_blend;
+    b.texture_edge = p.texture_edge;
+    b.alpha_remap = p.alpha_remap;
+    b.tip_count = p.tip_count;
+    b.tip_spacing = p.tip_spacing;
+    b.tip_spacing_mode = p.tip_spacing_mode;
+    b.tip_coloring_mode = p.tip_coloring_mode;
+    b.dash_count = p.dash_count;
+    b.dash_on = p.dash_on;
+    b.dash_off = p.dash_off;
+    b.min_size = p.min_size;
+    b.max_count = p.max_count;
+    b.sensitivities = p.sensitivities.iter().map(|(s, t, v)| fp_model::attrs::Sensitivity { source: *s, target: *t, value: *v }).collect();
 }
 
 /// Felder von „Strich bearbeiten“ (`pi.brush`, `pi.tool.brush`), auf einen Pinsel anwendbar.
@@ -374,7 +851,7 @@ pub fn tool_brush_from(new_stroke: Option<&Value>, new_brush: Option<&Value>) ->
     }
     let st = new_stroke;
     let get = |k: &str| st.and_then(|v| v.get(k));
-    let preset = get("preset").and_then(|v| v.as_str()).and_then(|n| BRUSH_PRESETS.iter().find(|b| format!("{}/{}", b.category_de, b.name_de) == n || b.name == n));
+    let preset = get("preset").and_then(|v| v.as_str()).and_then(find_preset);
     let width = get("width").and_then(|v| v.as_f64()).map(|w| w.round().clamp(1.0, 1000.0) as i32);
     let mut b = Brush::basic(width.or(preset.map(|p| p.diameter)).unwrap_or(1).max(1));
     if let Some(pr) = preset {
@@ -782,13 +1259,7 @@ pub fn register(r: &mut CommandRegistry) {
                 });
                 let preset = match &preset_name {
                     Some(_) if saved.is_some() => None,
-                    Some(n) => Some(
-                        BRUSH_PRESETS
-                            .iter()
-                            .copied()
-                            .find(|b| format!("{}/{}", b.category_de, b.name_de) == *n || b.name == n.as_str() || b.name_de == n.as_str())
-                            .ok_or_else(|| bad(p, fp_i18n::tr!("err-unknown-stroke-preset", name = n.as_str())))?,
-                    ),
+                    Some(n) => Some(*find_preset(n).ok_or_else(|| bad(p, fp_i18n::tr!("err-unknown-stroke-preset", name = n.as_str())))?),
                     None => None,
                 };
                 let soft = p.opt_i64("softness")?.map(|v| v as i32);
@@ -930,11 +1401,7 @@ pub fn register(r: &mut CommandRegistry) {
                 }
                 let mut b = full_brush(p)?.unwrap_or_else(|| tool_brush(&s.tools.options));
                 if let Some(n) = p.opt_str("preset")? {
-                    let pr = BRUSH_PRESETS
-                        .iter()
-                        .copied()
-                        .find(|b| format!("{}/{}", b.category_de, b.name_de) == n || b.name == n.as_str() || b.name_de == n.as_str())
-                        .ok_or_else(|| bad(p, fp_i18n::tr!("err-unknown-stroke-preset", name = n.as_str())))?;
+                    let pr = *find_preset(&n).ok_or_else(|| bad(p, fp_i18n::tr!("err-unknown-stroke-preset", name = n.as_str())))?;
                     let keep = b.diameter;
                     b = Brush::basic(keep.max(1));
                     apply_preset(&mut b, &pr);

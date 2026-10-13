@@ -5,8 +5,8 @@
 //! Verlaufsschritt; Pinsel, Bleistift und Formwerkzeuge malen danach damit). Unten zeigt der Dialog
 //! einen Probestrich mit dem bearbeiteten Pinsel (dieselbe Stempel-Engine wie beim Malen).
 //!
-//! Werte, die nur die natürliche Pinsel-Engine kennt (Abstand, Farbfluss, Spitzen, Variation,
-//! Breite, Winkel, Empfindlichkeiten; 07 §6.4), schalten einen einfachen Pinsel beim Ändern auf
+//! Abstand und Farbfluss sind wie im Original nur bei natürlichen Pinseln bedienbar. Werte, die nur
+//! die natürliche Pinsel-Engine kennt (Spitzen, Variation, Breite, Winkel, Empfindlichkeiten; 07 §6.4), schalten einen einfachen Pinsel beim Ändern auf
 //! die natürliche Engine um, damit sie sichtbar wirken (Annahme PINSEL-1).
 
 use super::{dialog_frame, dlu, dlu_rect, group_box, push_button, t, DialogClose};
@@ -22,25 +22,27 @@ pub const SOURCES: [u8; 5] = *b"PSHVR";
 pub const TARGETS: [u8; 8] = *b"ZAOBRHLS";
 
 const TAB_KEYS: [&str; 3] = ["dlg-brushedit-tab-options", "dlg-brushedit-tab-shape", "dlg-brushedit-tab-sensitivity"];
-const EFFECT_KEYS: [&str; 6] = [
-    "dlg-brushedit-effect-none",
-    "dlg-brushedit-effect-white-neon",
-    "dlg-brushedit-effect-harsh-wet",
-    "dlg-brushedit-effect-smooth-neon",
-    "dlg-brushedit-effect-wavy-gravy",
-    "dlg-brushedit-effect-white-neon-edge",
+/// Randeffekte in der Reihenfolge der Liste des Originals (re\24 Nr. 10) und `alphaRemap`-Wert.
+const EFFECTS: [(&str, i32); 6] = [
+    ("dlg-brushedit-effect-none", 0),
+    ("dlg-brushedit-effect-harsh-wet", 2),
+    ("dlg-brushedit-effect-white-neon", 1),
+    ("dlg-brushedit-effect-wavy-gravy", 4),
+    ("dlg-brushedit-effect-smooth-neon", 3),
+    ("dlg-brushedit-effect-white-neon-edge", 5),
 ];
 const VARIATION_KEYS: [&str; 5] = ["dlg-brushedit-var-random", "dlg-brushedit-var-uniform", "dlg-brushedit-var-complementary", "dlg-brushedit-var-hue", "dlg-brushedit-var-shadow"];
-const DASH_KEYS: [&str; 4] = ["dlg-dash-none", "dlg-dash-one", "dlg-dash-two", "dlg-dash-three"];
-const PROPERTY_KEYS: [&str; 8] = [
-    "dlg-brushedit-prop-size",
-    "dlg-brushedit-prop-angle",
-    "dlg-brushedit-prop-opacity",
-    "dlg-brushedit-prop-blackness",
-    "dlg-brushedit-prop-scatter",
-    "dlg-brushedit-prop-hue",
-    "dlg-brushedit-prop-lightness",
-    "dlg-brushedit-prop-saturation",
+const DASH_KEYS: [&str; 4] = ["dlg-brushedit-dash-none", "dlg-brushedit-dash-one", "dlg-brushedit-dash-two", "dlg-brushedit-dash-three"];
+/// Liste „Pinselstricheigenschaft“ wie im Original (7 Einträge, re\24 Nr. 12) und Ziel in
+/// [`TARGETS`]; „Tintenmenge“ = Deckkraft je Stempel (Annahme, im Original offen).
+const PROPERTIES: [(&str, u8); 7] = [
+    ("dlg-brushedit-prop-size", b'Z'),
+    ("dlg-brushedit-prop-angle", b'A'),
+    ("dlg-brushedit-prop-opacity", b'O'),
+    ("dlg-brushedit-prop-scatter", b'R'),
+    ("dlg-brushedit-prop-hue", b'H'),
+    ("dlg-brushedit-prop-lightness", b'L'),
+    ("dlg-brushedit-prop-saturation", b'S'),
 ];
 const SOURCE_KEYS: [&str; 5] = ["dlg-brushedit-pressure", "dlg-brushedit-speed", "dlg-brushedit-horizontal", "dlg-brushedit-vertical", "dlg-brushedit-random"];
 
@@ -54,7 +56,7 @@ pub struct BrushEditDialog {
     original: Brush,
     /// Registerkarte: 0 Optionen, 1 Form, 2 Empfindlichkeit.
     pub tab: usize,
-    /// Empfindlichkeit: gewählte Eigenschaft (Index in [`TARGETS`]).
+    /// Empfindlichkeit: gewählte Eigenschaft (Index in der Liste „Pinselstricheigenschaft“).
     pub property: usize,
 }
 
@@ -98,9 +100,7 @@ impl BrushEditDialog {
     pub fn effective(&self) -> Brush {
         let (b, o) = (&self.brush, &self.original);
         let mut out = b.clone();
-        let natural_only = b.spacing != o.spacing
-            || b.flow_rate != o.flow_rate
-            || b.tip_count != o.tip_count
+        let natural_only = b.tip_count != o.tip_count
             || b.tip_spacing != o.tip_spacing
             || b.tip_coloring_mode != o.tip_coloring_mode
             || b.aspect != o.aspect
@@ -202,13 +202,15 @@ fn slider_row(ui: &mut Ui, o: egui::Pos2, id: &str, label: &str, y: f32, value: 
 
 fn options_page(ui: &mut Ui, o: egui::Pos2, d: &mut BrushEditDialog) {
     let b = &mut d.brush;
+    // wie im Original: Abstand und Farbfluss nur bei natürlichen Pinseln (einfache Pinsel: grau)
+    let natural = b.brush_type == 0;
     if let Some(v) = num_row(ui, o, "ink", &t("dlg-brushedit-ink"), [1.0, 7.0, 76.0, 11.0], [82.0, 5.0, 30.0, 13.0], true, pct(b.concentration), (0.0, 100.0), true) {
         b.concentration = permille(v);
     }
-    if let Some(v) = num_row(ui, o, "spacing", &t("dlg-brushedit-spacing"), [2.0, 22.0, 75.0, 8.0], [82.0, 20.0, 30.0, 13.0], true, pct(b.spacing), (0.0, 1000.0), true) {
+    if let Some(v) = num_row(ui, o, "spacing", &t("dlg-brushedit-spacing"), [2.0, 22.0, 75.0, 8.0], [82.0, 20.0, 30.0, 13.0], true, pct(b.spacing), (0.0, 1000.0), natural) {
         b.spacing = permille(v);
     }
-    if let Some(v) = num_row(ui, o, "flow", &t("dlg-brushedit-flow"), [2.0, 37.0, 75.0, 8.0], [82.0, 35.0, 30.0, 13.0], true, pct(b.flow_rate), (0.0, 100.0), true) {
+    if let Some(v) = num_row(ui, o, "flow", &t("dlg-brushedit-flow"), [2.0, 37.0, 75.0, 8.0], [82.0, 35.0, 30.0, 13.0], true, pct(b.flow_rate), (0.0, 100.0), natural) {
         b.flow_rate = permille(v);
     }
     if let Some(on) = fields::checkbox(ui, ("fp-brushedit", "buildup"), dlu_rect(o, [82.0, 52.0, 100.0, 10.0]), &t("dlg-brushedit-buildup"), b.feedback == 1, true) {
@@ -221,9 +223,10 @@ fn options_page(ui: &mut Ui, o: egui::Pos2, d: &mut BrushEditDialog) {
         b.texture_edge = permille(v);
     }
     fields::label_right(ui, dlu_rect(o, [2.0, 100.0, 75.0, 8.0]), &t("dlg-brushedit-edge-effect"), true);
-    let effects = super::tl(&EFFECT_KEYS);
-    if let Some(i) = fields::combo(ui, ("fp-brushedit", "effect"), dlu_rect(o, [82.0, 97.0, 105.0, 13.0]), &super::refs(&effects), Some(b.alpha_remap.clamp(0, 5) as usize), true) {
-        b.alpha_remap = i as i32;
+    let effects: Vec<String> = EFFECTS.iter().map(|e| t(e.0)).collect();
+    let cur = EFFECTS.iter().position(|e| e.1 == b.alpha_remap).unwrap_or(0);
+    if let Some(i) = fields::combo(ui, ("fp-brushedit", "effect"), dlu_rect(o, [82.0, 97.0, 105.0, 13.0]), &super::refs(&effects), Some(cur), true) {
+        b.alpha_remap = EFFECTS[i].1;
     }
     if let Some(v) = num_row(ui, o, "tips", &t("dlg-brushedit-tips"), [20.0, 121.0, 57.0, 8.0], [82.0, 118.0, 30.0, 13.0], true, b.tip_count.max(1) as f64, (1.0, 32.0), true) {
         b.tip_count = v as i32;
@@ -286,12 +289,12 @@ fn shape_page(ui: &mut Ui, o: egui::Pos2, d: &mut BrushEditDialog, color: fp_col
 
 fn sensitivity_page(ui: &mut Ui, o: egui::Pos2, d: &mut BrushEditDialog) {
     fields::label(ui, dlu_rect(o, [3.0, 3.0, 174.0, 9.0]), &t("dlg-brushedit-property"), true);
-    let props = super::tl(&PROPERTY_KEYS);
-    if let Some(i) = fields::combo(ui, ("fp-brushedit", "property"), dlu_rect(o, [3.0, 14.0, 188.0, 13.0]), &super::refs(&props), Some(d.property.min(7)), true) {
+    let props: Vec<String> = PROPERTIES.iter().map(|p| t(p.0)).collect();
+    if let Some(i) = fields::combo(ui, ("fp-brushedit", "property"), dlu_rect(o, [3.0, 14.0, 188.0, 13.0]), &super::refs(&props), Some(d.property.min(PROPERTIES.len() - 1)), true) {
         d.property = i;
     }
     group_box(ui, dlu_rect(o, [3.0, 38.0, 187.0, 109.0]), &t("dlg-brushedit-depends"));
-    let target = TARGETS[d.property.min(7)];
+    let target = PROPERTIES[d.property.min(PROPERTIES.len() - 1)].1;
     for (k, (src, key)) in SOURCES.iter().zip(SOURCE_KEYS).enumerate() {
         let y = [54.0, 72.0, 89.0, 106.0, 123.0][k];
         let v = d.sensitivity(*src, target);

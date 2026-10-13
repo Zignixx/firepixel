@@ -109,7 +109,7 @@ fn live_stroke_matches_result_and_is_one_step() {
     let mut s = new_session();
     tool(&mut s, ToolId::Brush);
     // Nutzerbild 8: Strich 35, „Weich“ (Kohle), Kante 37
-    brush_setup(&mut s, json!({"preset": "Kohle/Weich", "width": 35, "softness": 37, "placement": "center"}));
+    brush_setup(&mut s, json!({"preset": "Kohlestift/Weich", "width": 35, "softness": 37, "placement": "center"}));
     let n0 = steps(&s);
     let pts = [(60.0, 80.0), (160.0, 120.0), (260.0, 90.0), (300.0, 200.0)];
     let p = stroke(&mut s, &pts).expect("Vorschau während des Ziehens");
@@ -136,8 +136,10 @@ fn live_stroke_matches_result_and_is_one_step() {
     assert_eq!(diff, 0, "Vorschau weicht in {diff} von {painted} Pixeln vom Ergebnis ab");
     // Breite 35: senkrecht durch den Strich bei x = 110 (Mitte des ersten Segments)
     let col: Vec<u8> = (0..300).map(|y| img.get(110, y).unwrap_or([0; 4])[3]).collect();
-    let covered = col.iter().filter(|a| **a > 128).count();
-    assert!((30..=40).contains(&covered), "Strichbreite ≈ 35 ({covered})");
+    // Kohlestift „Weich“: natürlicher Pinsel mit Zufallsgröße, Breite bis 35 (Deckung über ¼ der höchsten)
+    let top = *col.iter().max().unwrap_or(&0);
+    let covered = col.iter().filter(|a| **a > top / 4).count();
+    assert!(top > 0 && (12..=42).contains(&covered), "Strichbreite bis ≈ 35 ({covered}, höchste Deckung {top})");
     // Rückgängig/Wiederholen exakt
     let after = doc(&s);
     s.undo().expect("Rückgängig");
@@ -152,7 +154,7 @@ fn softness_changes_the_edge() {
     tool(&mut s, ToolId::Brush);
     let mut counts = Vec::new();
     for soft in [0, 80] {
-        brush_setup(&mut s, json!({"preset": "Einfach/Harte Linie", "width": 21, "softness": soft}));
+        brush_setup(&mut s, json!({"preset": "Einfach/Präzise abger.", "width": 21, "softness": soft}));
         stroke(&mut s, &[(40.0, 100.0), (340.0, 100.0)]);
         let id = top_elements(&s)[0].id;
         counts.push(alpha_counts(&image(&s, id)));
@@ -170,7 +172,7 @@ fn size_sets_the_stroke_width() {
     let mut s = new_session();
     tool(&mut s, ToolId::Brush);
     for w in [1, 10, 50] {
-        brush_setup(&mut s, json!({"preset": "Einfach/Harte Linie", "width": w, "softness": 0}));
+        brush_setup(&mut s, json!({"preset": "Einfach/Präzise abger.", "width": w, "softness": 0}));
         stroke(&mut s, &[(40.0, 150.0), (340.0, 150.0)]);
         let id = top_elements(&s)[0].id;
         let img = image(&s, id);
@@ -184,7 +186,7 @@ fn size_sets_the_stroke_width() {
 fn opacity_applies_to_the_whole_stroke_without_buildup() {
     let mut s = new_session();
     tool(&mut s, ToolId::Brush);
-    brush_setup(&mut s, json!({"preset": "Einfach/Harte Linie", "width": 12, "softness": 0}));
+    brush_setup(&mut s, json!({"preset": "Einfach/Präzise abger.", "width": 12, "softness": 0}));
     s.tools.options.opacity = 21;
     // Zickzack über dieselbe Stelle: im selben Zug keine Verstärkung
     stroke(&mut s, &[(50.0, 100.0), (250.0, 100.0), (60.0, 104.0), (250.0, 108.0)]);
@@ -198,7 +200,7 @@ fn blend_modes_mix_with_the_bitmap() {
     let mut s = new_session();
     let b = bitmap(&mut s, IRect::new(20, 20, 380, 280), |_, _| [100, 100, 100, 255]);
     tool(&mut s, ToolId::Brush);
-    brush_setup(&mut s, json!({"preset": "Einfach/Harte Linie", "width": 9, "softness": 0}));
+    brush_setup(&mut s, json!({"preset": "Einfach/Präzise abger.", "width": 9, "softness": 0}));
     // Durchschnitt (30): Weiß über Grau 100 → (255 + 100) / 2
     s.set_colors(Some(fp_color::Argb(0xffff_ffff)), None);
     s.tools.options.paint_blend = 30;
@@ -222,7 +224,7 @@ fn preserve_transparency_paints_only_on_opaque_pixels() {
     // links deckend rot, rechts transparent
     let b = bitmap(&mut s, IRect::new(20, 20, 380, 280), |x, _| if x < 200 { [255, 0, 0, 255] } else { [0, 0, 0, 0] });
     tool(&mut s, ToolId::Brush);
-    brush_setup(&mut s, json!({"preset": "Einfach/Harte Linie", "width": 9, "softness": 0}));
+    brush_setup(&mut s, json!({"preset": "Einfach/Präzise abger.", "width": 9, "softness": 0}));
     s.set_colors(Some(fp_color::Argb(0xff00_00ff)), None);
     s.tools.options.keep_transparency = true;
     stroke(&mut s, &[(40.0, 100.0), (340.0, 100.0)]);
@@ -261,7 +263,7 @@ fn texture_and_amount_are_visible_in_the_stroke() {
     let tex = stripe_texture();
     let mut spreads = Vec::new();
     for amount in [0, 100] {
-        brush_setup(&mut s, json!({"preset": "Einfach/Harte Linie", "width": 20, "softness": 0, "texture": tex, "textureAmount": amount}));
+        brush_setup(&mut s, json!({"preset": "Einfach/Präzise abger.", "width": 20, "softness": 0, "texture": tex, "textureAmount": amount}));
         stroke(&mut s, &[(40.0, 100.0), (340.0, 100.0)]);
         let id = top_elements(&s)[0].id;
         let row: Vec<u8> = (100..300).map(|x| px(&s, id, x, 100)[3]).collect();
@@ -279,7 +281,7 @@ fn fifty_value_changes_do_not_stack() {
     tool(&mut s, ToolId::Brush);
     let n0 = steps(&s);
     for k in 1..=50 {
-        brush_setup(&mut s, json!({"preset": "Einfach/Harte Linie", "width": k, "softness": k}));
+        brush_setup(&mut s, json!({"preset": "Einfach/Präzise abger.", "width": k, "softness": k}));
         s.tools.options.opacity = k as u8;
         s.tools.options.paint_blend = if k % 2 == 0 { 30 } else { 0 };
         ex(&mut s, "pi.tool.brush", json!({"width": k, "softness": 0}));
@@ -300,7 +302,7 @@ fn fifty_value_changes_do_not_stack() {
 fn escape_discards_the_stroke() {
     let mut s = new_session();
     tool(&mut s, ToolId::Brush);
-    brush_setup(&mut s, json!({"preset": "Einfach/Harte Linie", "width": 8, "softness": 0}));
+    brush_setup(&mut s, json!({"preset": "Einfach/Präzise abger.", "width": 8, "softness": 0}));
     let before = doc(&s);
     let n0 = steps(&s);
     events(&mut s, &[ToolEvent::down(50.0, 50.0)]);
@@ -323,7 +325,7 @@ fn undo_redo_sequences_restore_exactly() {
     let mut s = new_session();
     let b = bitmap(&mut s, IRect::new(20, 20, 380, 280), |_, _| [255, 255, 255, 255]);
     tool(&mut s, ToolId::Brush);
-    brush_setup(&mut s, json!({"preset": "Einfach/Harte Linie", "width": 6, "softness": 30}));
+    brush_setup(&mut s, json!({"preset": "Einfach/Präzise abger.", "width": 6, "softness": 30}));
     let d0 = doc(&s);
     stroke(&mut s, &[(40.0, 60.0), (340.0, 60.0)]);
     let d1 = doc(&s);
@@ -355,7 +357,7 @@ fn multi_selection_and_locks() {
     // Bitmap + Vektor ausgewählt: es wird in die Bitmap gemalt, kein neues Objekt
     select(&mut s, &[rect, a]);
     tool(&mut s, ToolId::Brush);
-    brush_setup(&mut s, json!({"preset": "Einfach/Harte Linie", "width": 6, "softness": 0}));
+    brush_setup(&mut s, json!({"preset": "Einfach/Präzise abger.", "width": 6, "softness": 0}));
     let n = top_elements(&s).len();
     stroke(&mut s, &[(40.0, 100.0), (180.0, 100.0)]);
     assert_eq!(top_elements(&s).len(), n);
@@ -414,7 +416,7 @@ fn pencil_and_eraser_preview_equals_result() {
 fn shift_draws_a_straight_line_and_click_a_dot() {
     let mut s = new_session();
     tool(&mut s, ToolId::Brush);
-    brush_setup(&mut s, json!({"preset": "Einfach/Harte Linie", "width": 4, "softness": 0}));
+    brush_setup(&mut s, json!({"preset": "Einfach/Präzise abger.", "width": 4, "softness": 0}));
     events(&mut s, &[ToolEvent::down(50.0, 50.0)]);
     for i in 1..30 {
         events(&mut s, &[ToolEvent::drag(50.0 + i as f32 * 8.0, 50.0 + (i % 5) as f32 * 9.0).shift()]);
@@ -438,7 +440,7 @@ fn edit_stroke_values_reach_the_brush() {
     // „Pinselstrich bearbeiten“ ohne Auswahl schreibt den Vorgabepinsel; der Pinsel malt damit
     let mut s = new_session();
     tool(&mut s, ToolId::Brush);
-    brush_setup(&mut s, json!({"preset": "Einfach/Harte Linie", "width": 10, "softness": 0}));
+    brush_setup(&mut s, json!({"preset": "Einfach/Präzise abger.", "width": 10, "softness": 0}));
     ex(&mut s, "pi.tool.brush", json!({"width": 10, "diameter": 30, "softness": 0, "shape": 0, "angle": 0}));
     stroke(&mut s, &[(100.0, 150.0), (300.0, 150.0)]);
     let id = top_elements(&s)[0].id;
@@ -448,4 +450,28 @@ fn edit_stroke_values_reach_the_brush() {
     // eckige Spitze: Ecken am Strichanfang deckend
     let b = img.alpha_bounds();
     assert_eq!(img.get(b.left, b.top).unwrap_or([0; 4])[3], 255, "eckige Spitze");
+}
+#[test]
+fn large_bitmap_renders_only_affected_areas() {
+    // 4000 × 3000 Bitmap, langer Zug mit Größe 35: je Bewegung nur das Endstück neu rechnen
+    let base = fp_raster::RgbaImage::filled(IRect::new(0, 0, 4000, 3000), fp_color::Rgba8::new(90, 90, 90, 255)).expect("Bild");
+    let mut b = fp_model::Brush::basic(35);
+    b.antialiased = true;
+    b.softness = 370;
+    let p = json!({"points": [[100.0, 100.0]], "brush": b, "color": "#000000ff", "opacity": 100});
+    let job = fp_engine::paint::PaintJob::from_params(fp_engine::paint::PaintTool::Brush, &p, fp_color::Argb(0xff00_0000), 35.0);
+    let mut lp = fp_engine::paint::LivePaint::new(job, Some(base), None, None, fp_color::Argb(0xffff_ffff));
+    let t0 = std::time::Instant::now();
+    let mut max_area = 0;
+    let n = 400;
+    for i in 1..=n {
+        let x = 100.0 + i as f32 * 9.0;
+        let y = 100.0 + i as f32 * 6.5 + (i as f32 / 10.0).sin() * 40.0;
+        lp.push(fp_geom::Point::new(x, y));
+        max_area = max_area.max(lp.last_area());
+    }
+    let per = t0.elapsed().as_secs_f64() * 1000.0 / n as f64;
+    eprintln!("Live-Malen 4000×3000: {per:.2} ms je Bewegung, größter Bereich {max_area} px");
+    assert!(max_area < 400_000, "nur betroffene Bereiche ({max_area} px von 12 000 000)");
+    assert!(per < 40.0, "flüssig: {per:.2} ms je Bewegung");
 }

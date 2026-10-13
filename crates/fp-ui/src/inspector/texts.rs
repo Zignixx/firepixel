@@ -69,7 +69,7 @@ pub fn brush_preset_label(p: &BrushPreset) -> String {
 
 /// Index der Vorgabe zu einem Pinsel (Kategorie und interner Name).
 pub fn brush_preset_index(b: &fp_model::Brush) -> Option<usize> {
-    BRUSH_PRESETS.iter().position(|p| p.category == b.category && p.name == b.name)
+    fp_engine::commands::panel::preset_index_of(&b.category, &b.name)
 }
 
 /// Anzeigename eines Pinsels: Vorgabe übersetzt, sonst der eigene Name, sonst der interne Name.

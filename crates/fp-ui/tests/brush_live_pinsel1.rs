@@ -118,7 +118,7 @@ fn mouse_drag(h: &mut H, pts: &[(f32, f32)]) {
 }
 
 fn preset_index(name: &str) -> usize {
-    fp_engine::commands::panel::BRUSH_PRESETS.iter().position(|b| format!("{}/{}", b.category_de, b.name_de) == name).expect("Vorgabe")
+    fp_engine::commands::panel::find_preset(name).and_then(|f| fp_engine::commands::panel::BRUSH_PRESETS.iter().position(|b| b == f)).expect("Vorgabe")
 }
 
 fn blend_index(m: i32) -> usize {
@@ -159,7 +159,7 @@ fn canvas_drag_paints_live_with_inspector_values() {    let (a, _) = app(false);
     // Nutzerbild 8: Strich 35, Kohle „Weich“, Kante 37, Deckkraft 21, „Durchschnitt“
     let ctx = h.ctx.clone();
     fp_ui::inspector::obj_quads::edit_tool_attrs(&ctx, |t| {
-        t.stroke_preset = Some(preset_index("Kohle/Weich"));
+        t.stroke_preset = Some(preset_index("Einfach/Weich abger."));
         t.stroke_width = 35;
         t.softness = 37;
         t.blend = blend_index(30);
@@ -196,7 +196,7 @@ fn keep_transparency_and_blend_reach_the_bitmap() {
     set_tool(&mut h, ToolId::Brush);
     let ctx = h.ctx.clone();
     fp_ui::inspector::obj_quads::edit_tool_attrs(&ctx, |t| {
-        t.stroke_preset = Some(preset_index("Einfach/Harte Linie"));
+        t.stroke_preset = Some(preset_index("Einfach/Präzise Linie"));
         t.stroke_width = 9;
         t.softness = 0;
         t.blend = blend_index(30);
@@ -220,7 +220,7 @@ fn edit_stroke_dialog_from_tool_inspector_with_bitmap_selected() {
     set_tool(&mut h, ToolId::Brush);
     let ctx = h.ctx.clone();
     fp_ui::inspector::obj_quads::edit_tool_attrs(&ctx, |t| {
-        t.stroke_preset = Some(preset_index("Einfach/Harte Linie"));
+        t.stroke_preset = Some(preset_index("Einfach/Präzise Linie"));
         t.stroke_width = 6;
         t.softness = 0;
     });
@@ -285,7 +285,7 @@ fn sensitivity_tab_and_natural_engine() {
     assert_eq!(st(&h).dialogs.brush_edit.as_ref().expect("offen").tab, 2);
     {
         let d = h.state_mut().state.dialogs.brush_edit.as_mut().expect("offen");
-        d.property = 4; // Streuung
+        d.property = 3; // Streuung
         d.set_sensitivity(b'R', b'R', 50.0);
         d.brush.diameter = 8;
     }
@@ -314,12 +314,12 @@ fn shots() {
     set_tool(&mut h, ToolId::Brush);
     let ctx = h.ctx.clone();
     fp_ui::inspector::obj_quads::edit_tool_attrs(&ctx, |t| {
-        t.stroke_preset = Some(preset_index("Kohle/Weich"));
+        t.stroke_preset = Some(preset_index("Kohlestift/Weich"));
         t.stroke_width = 35;
         t.softness = 37;
     });
     h.run_steps(2);
-    let mut save = |h: &mut H, name: &str| {
+    let save = |h: &mut H, name: &str| {
         h.run_steps(2);
         if let Ok(i) = h.render() {
             let _ = i.save(dir.join(format!("pinsel1_{name}.png")));

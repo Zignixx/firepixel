@@ -413,6 +413,8 @@ pub struct LivePaint {
     cover: IRect,
     generation: u64,
     stroke: u64,
+    /// Pixel, die der letzte Schritt neu gerechnet hat (Messung: nur betroffene Bereiche).
+    last_area: u64,
 }
 
 impl std::fmt::Debug for LivePaint {
@@ -446,6 +448,7 @@ impl LivePaint {
             cover,
             generation: 0,
             stroke: next_stroke_id(),
+            last_area: 0,
         };
         lp.render_rects(&[cover]);
         lp
@@ -497,6 +500,7 @@ impl LivePaint {
     }
 
     fn render_rects(&mut self, rects: &[IRect]) {
+        self.last_area = 0;
         // weit außerhalb liegende Bereiche nicht rechnen (Schutz vor riesigen Puffern)
         let sane = IRect::new(-1_000_000, -1_000_000, 1_000_000, 1_000_000);
         for r in rects {
@@ -507,6 +511,7 @@ impl LivePaint {
             if r.is_empty() {
                 continue;
             }
+            self.last_area += r.area();
             let img = self.job.render(self.base.as_deref(), self.sel.as_deref(), r);
             self.store(&img);
             self.painted = self.painted.union(&r);
@@ -551,6 +556,11 @@ impl LivePaint {
                 tile.version = self.generation;
             }
         }
+    }
+
+    /// Fläche (Pixel), die der letzte Schritt neu gerechnet hat.
+    pub fn last_area(&self) -> u64 {
+        self.last_area
     }
 
     /// Vorschau für die Leinwand.

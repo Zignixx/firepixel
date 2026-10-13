@@ -145,7 +145,8 @@ impl Default for ToolAttrs {
             fill_texture: String::new(),
             fill_texture_amount: 0,
             fill_texture_transparent: false,
-            stroke_preset: Some(0),
+            // Werksvorgabe „1-Pixel hart“ (wie bisher; Index in der Vorlagentabelle)
+            stroke_preset: fp_engine::commands::panel::preset_index_of("bc_Pencil", "bn_1-Pixel"),
             stroke_width: 1,
             softness: 0,
             placement: 1,
@@ -772,7 +773,7 @@ fn apply_stroke(ui: &Ui, st: &mut AppState, tgt: Target, params: Value) {
             }
             edit_tool_attrs(&ctx, |a| {
                 if let Some(p) = params.get("preset").and_then(|v| v.as_str()) {
-                    a.stroke_preset = BRUSH_PRESETS.iter().position(|b| format!("{}/{}", b.category_de, b.name_de) == p);
+                    a.stroke_preset = fp_engine::commands::panel::find_preset(p).and_then(|f| BRUSH_PRESETS.iter().position(|b| b == f));
                 }
                 if let Some(v) = params.get("width").and_then(|v| v.as_f64()) {
                     a.stroke_width = v.round() as i32;

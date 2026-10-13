@@ -163,7 +163,7 @@ fn inspector_stroke_fields_write_tool_brush() {
     let b = tool_brush(st(&h));
     assert_eq!((b.diameter, b.softness, b.angle), (12, 100, 60));
     // Strichvorgabe wechseln: Pinselart wird ersetzt, Stärke bleibt
-    fp_ui::inspector::obj_quads::sync_tool_brush(&mut h.state_mut().state, &json!({"preset": "Kohle/Pastell"}));
+    fp_ui::inspector::obj_quads::sync_tool_brush(&mut h.state_mut().state, &json!({"preset": "Kohlestift/Pastell"}));
     h.run_steps(2);
     let b = tool_brush(st(&h));
     assert_eq!((b.category.as_str(), b.diameter), ("bc_Charcoal", 12));
