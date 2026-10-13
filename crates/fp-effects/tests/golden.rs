@@ -51,6 +51,12 @@ fn golden_against_python_reference() {
         if name.starts_with("ps_drop") && name.split('_').any(|p| p.len() > 1 && p.starts_with('c') && p[1..].chars().all(|c| c.is_ascii_digit()) && p != "c0") {
             continue;
         }
+        // Glühen mit Versatz > 0: die Python-Referenz (A) beginnt das Band bei Abstand ≥ Versatz; die
+        // Messreihe des Originals (re\23 Gruppe 1, „halo“/„gross“) zeigt Abstand > Versatz – Firepixel
+        // folgt dem Original (FX-1, Prüfung in tests\fx1_parity.rs).
+        if name.starts_with("glow_") && name.split('_').any(|p| p.starts_with("st") && p != "st0" && p[2..].chars().all(|c| c.is_ascii_digit())) {
+            continue;
+        }
         let (ix, iy) = origin(c, "input_origin");
         let (ox, oy) = origin(c, "output_origin");
         let input = load_png(&dir.join(c["input"].as_str().unwrap_or("")), ix, iy);

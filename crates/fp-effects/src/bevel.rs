@@ -705,7 +705,9 @@ pub fn glow(obj: &RgbaImage, p: &BevelParams) -> RgbaImage {
         let valid = f.valid(i);
         let dd = if valid { f.dist(i) } else { 1e9 };
         reg[i] = valid && dd < ef + 1.0;
-        if reg[i] && dd - 1.0 <= g0 + gw && dd >= g0 {
+        // Band (Versatz, Versatz + Breite + 1]: innen streng größer (FX-1, Messreihe re\23 „halo“/„gross“:
+        // mit `>=` lag das Band 1 px zu weit innen, Abweichung bis 26 Stufen; mit `>` pixelgleich).
+        if reg[i] && dd - 1.0 <= g0 + gw && dd > g0 {
             hi[i] = mval;
         }
         inside[i] = !valid && alpha[i] > 0;

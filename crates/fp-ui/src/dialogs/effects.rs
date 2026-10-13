@@ -326,6 +326,12 @@ fn with_alpha_keep(hex: &str, pct: f64, orig: Option<u8>) -> String {
     format!("#{:02x}{:02x}{:02x}{:02x}", c.r, c.g, c.b, a)
 }
 
+/// Farbe als `#rrggbb` (Glühen und Inneres Glühen speichern die Farbe ohne Alpha, re\23).
+fn rgb_only(hex: &str) -> String {
+    let c = fp_color::Rgba8::parse_hex(hex).unwrap_or(fp_color::Rgba8::new(0, 0, 0, 255));
+    format!("#{:02x}{:02x}{:02x}", c.r, c.g, c.b)
+}
+
 fn orig_alpha(d: &FormDialog) -> Option<u8> {
     d.base.get("_alpha").and_then(|v| v.as_u64()).map(|v| v as u8)
 }
@@ -387,10 +393,13 @@ fn effect_params(d: &FormDialog) -> Value {
             let bt = v.get("type").and_then(|x| x.as_i64()).unwrap_or_else(|| d.base.get("bevel").and_then(|x| x.as_i64()).unwrap_or(0).max(0));
             params.insert("BevelType".into(), json!(bt.to_string()));
             if bt == 4 {
+                // Glühen (FX-1, re\23): Deckkraft ist `BevelContrast`, die Farbe wird ohne Alpha
+                // gespeichert (der Effekt liest kein Alpha).
                 params.insert("GlowWidth".into(), json!(n("width").to_string()));
+                params.insert("BevelContrast".into(), json!(n("opacity").to_string()));
                 params.insert("MaskSoftness".into(), json!(n("soft").to_string()));
                 params.insert("GlowStartDistance".into(), json!(n("offset").to_string()));
-                params.insert("OuterBevelColor".into(), json!(with_alpha_keep(s("color").as_str().unwrap_or("#ffff00"), n("opacity"), orig_alpha(d))));
+                params.insert("OuterBevelColor".into(), json!(rgb_only(s("color").as_str().unwrap_or("#df0000"))));
             } else {
                 let emboss = bt == 2 || bt == 3;
                 let base_bt = d.base.get("bevel").and_then(|x| x.as_i64()).unwrap_or(-1);
@@ -428,10 +437,14 @@ fn effect_params(d: &FormDialog) -> Value {
             }
         }
         "innerGlow" => {
-            params.insert("GlowWidth".into(), json!(n("width").to_string()));
+            // Wie das Original (re\23): Breite < 3 wird 2, Deckkraft ist `BevelContrast`,
+            // Farbe ohne Alpha.
+            let w = n("width");
+            params.insert("GlowWidth".into(), json!((if w < 3.0 { 2.0 } else { w }).to_string()));
+            params.insert("BevelContrast".into(), json!(n("opacity").to_string()));
             params.insert("MaskSoftness".into(), json!(n("soft").to_string()));
             params.insert("GlowStartDistance".into(), json!(n("offset").to_string()));
-            params.insert("OuterBevelColor".into(), json!(with_alpha_keep(s("color").as_str().unwrap_or("#ffff00"), n("opacity"), orig_alpha(d))));
+            params.insert("OuterBevelColor".into(), json!(rgb_only(s("color").as_str().unwrap_or("#000000"))));
         }
         "solidShadow" => {
             params.insert("angle".into(), json!(n("angle").to_string()));
@@ -471,7 +484,8 @@ fn with_target(st: &AppState, mut f: FormDialog) -> FormDialog {
 pub fn effect_form(name: &str, bevel: Option<i32>, e: Option<&Effect>, index: Option<usize>, fill: fp_color::Argb) -> FormDialog {
     let (title, fields): (String, Vec<Field>) = match name {
         "dropShadow" | "innerShadow" => {
-            let (col, op) = hex_alpha(&txt(e, "ShadowColor", "#000000a6"));
+            // Menü-Vorgaben des Originals (re\23): Schlagschatten 0xa2 = 64 %, Innerer Schatten 0xa5 = 65 %.
+            let (col, op) = hex_alpha(&txt(e, "ShadowColor", if name == "dropShadow" { "#000000a2" } else { "#000000a5" }));
             (
                 if name == "dropShadow" { t("effect-drop-shadow") } else { t("effect-inner-shadow") },
                 vec![
@@ -485,25 +499,29 @@ pub fn effect_form(name: &str, bevel: Option<i32>, e: Option<&Effect>, index: Op
             )
         }
         "glow" => {
-            let (col, op) = hex_alpha(&txt(e, "OuterBevelColor", &format!("#{:02x}{:02x}{:02x}ff", fill.r(), fill.g(), fill.b())));
+            // Vorgabe „Normal“ des Original-Menüs (re\23): Breite 5, Deckkraft 65 % (`BevelContrast`),
+            // Weichheit 12, Versatz 0, Farbe #df0000. Fehlt `BevelContrast` in einer Datei, gilt 75.
+            let (col, _) = hex_alpha(&txt(e, "OuterBevelColor", "#df0000"));
             (
                 t("effect-glow"),
                 vec![
-                    Field::slider("width", t("dlg-lbl-width").as_str(), num(e, "GlowWidth", 4.0), 0.0, 35.0),
-                    Field::slider("opacity", t("dlg-lbl-opacity").as_str(), if e.is_some() { op } else { 65.0 }, 0.0, 100.0).unit("%"),
-                    Field::slider("soft", t("dlg-lbl-softness").as_str(), num(e, "MaskSoftness", 4.0), 0.0, 30.0),
+                    Field::slider("width", t("dlg-lbl-width").as_str(), num(e, "GlowWidth", 5.0), 0.0, 35.0),
+                    Field::slider("opacity", t("dlg-lbl-opacity").as_str(), num(e, "BevelContrast", if e.is_some() { 75.0 } else { 65.0 }), 0.0, 100.0).unit("%"),
+                    Field::slider("soft", t("dlg-lbl-softness").as_str(), num(e, "MaskSoftness", 12.0), 0.0, 30.0),
                     Field::slider("offset", t("dlg-fx-glow-offset").as_str(), num(e, "GlowStartDistance", 0.0), 0.0, 100.0),
                     Field::color("color", t("dlg-lbl-color").as_str(), &col),
                 ],
             )
         }
         "innerGlow" => {
-            let (col, op) = hex_alpha(&txt(e, "OuterBevelColor", &format!("#{:02x}{:02x}{:02x}ff", fill.r(), fill.g(), fill.b())));
+            // Vorgabe des Originals (re\23): Breite 4, Deckkraft 65 % (`BevelContrast`), Weichheit 4,
+            // Versatz 0, Schwarz.
+            let (col, _) = hex_alpha(&txt(e, "OuterBevelColor", "#000000"));
             (
                 t("effect-inner-glow"),
                 vec![
                     Field::slider("width", t("dlg-lbl-width").as_str(), num(e, "GlowWidth", 4.0), 0.0, 35.0),
-                    Field::slider("opacity", t("dlg-lbl-opacity").as_str(), if e.is_some() { op } else { 65.0 }, 0.0, 100.0).unit("%"),
+                    Field::slider("opacity", t("dlg-lbl-opacity").as_str(), num(e, "BevelContrast", 65.0), 0.0, 100.0).unit("%"),
                     Field::slider("soft", t("dlg-lbl-softness").as_str(), num(e, "MaskSoftness", 4.0), 0.0, 30.0),
                     Field::slider("offset", t("dlg-fx-glow-offset").as_str(), num(e, "GlowStartDistance", 0.0), 0.0, 100.0),
                     Field::color("color", t("dlg-lbl-color").as_str(), &col),
@@ -576,6 +594,9 @@ pub fn effect_form(name: &str, bevel: Option<i32>, e: Option<&Effect>, index: Op
         if let Some(c) = e.get(key).and_then(fp_color::Rgba8::parse_hex) {
             base["_alpha"] = json!(c.a);
         }
+    } else if matches!(name, "dropShadow" | "innerShadow") {
+        // Vorgabe-Alpha verlustfrei übernehmen (64 % → 0xa2 wie das Original, nicht 0xa3).
+        base["_alpha"] = json!(if name == "dropShadow" { 0xa2 } else { 0xa5 });
     }
     if let Some(i) = index {
         base["index"] = json!(i);
@@ -674,7 +695,7 @@ mod tests {
         let p = d.params();
         assert_eq!(p["effect"], json!("dropShadow"));
         assert_eq!(p["params"]["ShadowDistance"], json!("7"));
-        assert_eq!(p["params"]["ShadowColor"], json!("#000000a6"));
+        assert_eq!(p["params"]["ShadowColor"], json!("#000000a2"));
         let mut e = Effect::new("{a7944db8-6ce2-11d1-8c76000502701850}", true);
         e.set("ShadowDistance", "12");
         e.set("ShadowColor", "#ff000080");

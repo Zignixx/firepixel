@@ -173,6 +173,41 @@ pub fn effect_moa_id(name: &str) -> Option<String> {
     k.moa_id().map(|s| s.to_string())
 }
 
+/// Vorgaben, die das Effekt-Menü des Originals einfügt (`EFDv`, re\23 Gruppe 1), für Effekte, die per
+/// Name hinzugefügt werden; übergebene Parameter überschreiben sie (FX-1). Ohne diese Liste wurde
+/// `glow` ohne `BevelType` zur Abschrägung innen, und fehlende Schlüssel (`EdgeThreshold`,
+/// `BevelContrast`) ergaben ein anderes Glühen als im Original.
+fn menu_preset(name: &str) -> &'static [(&'static str, &'static str)] {
+    match name.to_ascii_lowercase().as_str() {
+        "dropshadow" => &[("ShadowColor", "#000000a2"), ("ShadowType", "0"), ("ShadowBlur", "4"), ("ShadowDistance", "7"), ("ShadowAngle", "315")],
+        "innershadow" => &[("ShadowColor", "#000000a5"), ("ShadowType", "0"), ("ShadowBlur", "4"), ("ShadowDistance", "7"), ("ShadowAngle", "315")],
+        "innerglow" => &[("BevelContrast", "65"), ("MaskSoftness", "4"), ("OuterBevelColor", "#000000"), ("GlowStartDistance", "0"), ("GlowWidth", "4")],
+        "glow" => &[
+            ("BevelType", "4"),
+            ("BevelWidth", "10"),
+            ("BevelContrast", "65"),
+            ("EdgeThreshold", "1"),
+            ("AngleSoftness", "25"),
+            ("MaskSoftness", "12"),
+            ("LightDistance", "100"),
+            ("LightAngle", "135"),
+            ("SlopeType", "0"),
+            ("SlopeMultiplier", "1"),
+            ("OuterBevelColor", "#df0000"),
+            ("DownBlendColor", "#0000003f"),
+            ("HitBlendColor", "#ffffff3f"),
+            ("HiliteColor", "#ffffff"),
+            ("ShadowColor", "#000000"),
+            ("EmbossFaceColor", "#00000000"),
+            ("ShowObject", "false"),
+            ("ButtonState", "0"),
+            ("GlowStartDistance", "0"),
+            ("GlowWidth", "5"),
+        ],
+        _ => &[],
+    }
+}
+
 fn web_object(s: &mut Session, p: &Params, slice: bool) -> Result<CommandOutput> {
     let shape = p.str("shape")?;
     let (bounds, polygon) = match shape.as_str() {
@@ -543,10 +578,10 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 let name = p.str("effect")?;
                 let moa = effect_moa_id(&name).ok_or_else(|| EngineError::InvalidParams { name: p.command.clone(), message: fp_i18n::tr!("err-unknown-effect", name = name.as_str()) })?;
                 let vis = p.bool_or("visible", true)?;
-                let params: Vec<(String, String)> = match p.get("params") {
-                    Some(Value::Object(m)) => m.iter().map(|(k, v)| (k.clone(), v.as_str().map(|s| s.to_string()).unwrap_or_else(|| v.to_string()))).collect(),
-                    _ => Vec::new(),
-                };
+                let mut params: Vec<(String, String)> = menu_preset(&name).iter().map(|(k, v)| (k.to_string(), v.to_string())).collect();
+                if let Some(Value::Object(m)) = p.get("params") {
+                    params.extend(m.iter().map(|(k, v)| (k.clone(), v.as_str().map(|s| s.to_string()).unwrap_or_else(|| v.to_string()))));
+                }
                 edit_effects(s, p, move |l| {
                     let mut e = Effect::new(&moa, vis);
                     for (k, v) in &params {

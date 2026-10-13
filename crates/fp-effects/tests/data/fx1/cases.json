@@ -1,0 +1,378 @@
+[
+ {
+  "file": "schlagschatten_vorgabe_vektor.png",
+  "base": "base_vektor.png",
+  "effects": [
+   {
+    "EffectMoaID": "{a7944db8-6ce2-11d1-8c76000502701850}",
+    "EffectIsVisible": true,
+    "ShadowColor": "#000000a2",
+    "ShadowType": 0,
+    "ShadowBlur": 4,
+    "ShadowDistance": 7,
+    "ShadowAngle": 315
+   }
+  ],
+  "max": 1
+ },
+ {
+  "file": "schlagschatten_klein_vektor.png",
+  "base": "base_vektor.png",
+  "effects": [
+   {
+    "EffectMoaID": "{a7944db8-6ce2-11d1-8c76000502701850}",
+    "EffectIsVisible": true,
+    "ShadowColor": "#000000ff",
+    "ShadowType": 0,
+    "ShadowBlur": 0,
+    "ShadowDistance": 1,
+    "ShadowAngle": 45
+   }
+  ],
+  "max": 1
+ },
+ {
+  "file": "schlagschatten_gross_text.png",
+  "base": "base_text.png",
+  "effects": [
+   {
+    "EffectMoaID": "{a7944db8-6ce2-11d1-8c76000502701850}",
+    "EffectIsVisible": true,
+    "ShadowColor": "#cc0033cc",
+    "ShadowType": 0,
+    "ShadowBlur": 20,
+    "ShadowDistance": 25,
+    "ShadowAngle": 200
+   }
+  ],
+  "max": 1
+ },
+ {
+  "file": "schlagschatten_aussparen_bitmap.png",
+  "base": "base_bitmap.png",
+  "effects": [
+   {
+    "EffectMoaID": "{a7944db8-6ce2-11d1-8c76000502701850}",
+    "EffectIsVisible": true,
+    "ShadowColor": "#000000a2",
+    "ShadowType": 1,
+    "ShadowBlur": 4,
+    "ShadowDistance": 7,
+    "ShadowAngle": 315
+   }
+  ],
+  "max": 1
+ },
+ {
+  "file": "innerer-schatten_vorgabe_bitmap.png",
+  "base": "base_bitmap.png",
+  "effects": [
+   {
+    "EffectMoaID": "{5600f702-774c-11d3-baad0000861f4d01}",
+    "EffectIsVisible": true,
+    "ShadowColor": "#000000a5",
+    "ShadowType": 0,
+    "ShadowBlur": 4,
+    "ShadowDistance": 7,
+    "ShadowAngle": 315
+   }
+  ],
+  "max": 1
+ },
+ {
+  "file": "innerer-schatten_gross_vektor.png",
+  "base": "base_vektor.png",
+  "effects": [
+   {
+    "EffectMoaID": "{5600f702-774c-11d3-baad0000861f4d01}",
+    "EffectIsVisible": true,
+    "ShadowColor": "#cc0033cc",
+    "ShadowType": 0,
+    "ShadowBlur": 20,
+    "ShadowDistance": 25,
+    "ShadowAngle": 200
+   }
+  ],
+  "max": 1
+ },
+ {
+  "file": "innerer-schatten_aussparen_text.png",
+  "base": "base_text.png",
+  "effects": [
+   {
+    "EffectMoaID": "{5600f702-774c-11d3-baad0000861f4d01}",
+    "EffectIsVisible": true,
+    "ShadowColor": "#000000a5",
+    "ShadowType": 1,
+    "ShadowBlur": 4,
+    "ShadowDistance": 7,
+    "ShadowAngle": 315
+   }
+  ],
+  "max": 1
+ },
+ {
+  "file": "gluehen_vorgabe_vektor.png",
+  "base": "base_vektor.png",
+  "effects": [
+   {
+    "EffectMoaID": "{7fe61102-6ce2-11d1-8c76000502701850}",
+    "EffectIsVisible": true,
+    "BevelType": 4,
+    "BevelWidth": 10,
+    "BevelContrast": 65,
+    "EdgeThreshold": 1,
+    "AngleSoftness": 25,
+    "MaskSoftness": 12,
+    "LightDistance": 100,
+    "LightAngle": 135,
+    "SlopeType": 0,
+    "SlopeMultiplier": 1,
+    "OuterBevelColor": "#df0000",
+    "DownBlendColor": "#0000003f",
+    "HitBlendColor": "#ffffff3f",
+    "HiliteColor": "#ffffff",
+    "ShadowColor": "#000000",
+    "EmbossFaceColor": "#00000000",
+    "ShowObject": false,
+    "ButtonState": 0,
+    "GlowStartDistance": 0,
+    "GlowWidth": 5
+   }
+  ],
+  "max": 1
+ },
+ {
+  "file": "gluehen_vorgabe_text.png",
+  "base": "base_text.png",
+  "effects": [
+   {
+    "EffectMoaID": "{7fe61102-6ce2-11d1-8c76000502701850}",
+    "EffectIsVisible": true,
+    "BevelType": 4,
+    "BevelWidth": 10,
+    "BevelContrast": 65,
+    "EdgeThreshold": 1,
+    "AngleSoftness": 25,
+    "MaskSoftness": 12,
+    "LightDistance": 100,
+    "LightAngle": 135,
+    "SlopeType": 0,
+    "SlopeMultiplier": 1,
+    "OuterBevelColor": "#df0000",
+    "DownBlendColor": "#0000003f",
+    "HitBlendColor": "#ffffff3f",
+    "HiliteColor": "#ffffff",
+    "ShadowColor": "#000000",
+    "EmbossFaceColor": "#00000000",
+    "ShowObject": false,
+    "ButtonState": 0,
+    "GlowStartDistance": 0,
+    "GlowWidth": 5
+   }
+  ],
+  "max": 1
+ },
+ {
+  "file": "gluehen_klein_bitmap.png",
+  "base": "base_bitmap.png",
+  "effects": [
+   {
+    "EffectMoaID": "{7fe61102-6ce2-11d1-8c76000502701850}",
+    "EffectIsVisible": true,
+    "BevelType": 4,
+    "BevelWidth": 10,
+    "BevelContrast": 100,
+    "EdgeThreshold": 1,
+    "AngleSoftness": 25,
+    "MaskSoftness": 0,
+    "LightDistance": 100,
+    "LightAngle": 135,
+    "SlopeType": 0,
+    "SlopeMultiplier": 1,
+    "OuterBevelColor": "#0000ff",
+    "DownBlendColor": "#0000003f",
+    "HitBlendColor": "#ffffff3f",
+    "HiliteColor": "#ffffff",
+    "ShadowColor": "#000000",
+    "EmbossFaceColor": "#00000000",
+    "ShowObject": false,
+    "ButtonState": 0,
+    "GlowStartDistance": 0,
+    "GlowWidth": 1
+   }
+  ],
+  "max": 1
+ },
+ {
+  "file": "gluehen_gross_bitmap.png",
+  "base": "base_bitmap.png",
+  "effects": [
+   {
+    "EffectMoaID": "{7fe61102-6ce2-11d1-8c76000502701850}",
+    "EffectIsVisible": true,
+    "BevelType": 4,
+    "BevelWidth": 10,
+    "BevelContrast": 100,
+    "EdgeThreshold": 1,
+    "AngleSoftness": 25,
+    "MaskSoftness": 30,
+    "LightDistance": 100,
+    "LightAngle": 135,
+    "SlopeType": 0,
+    "SlopeMultiplier": 1,
+    "OuterBevelColor": "#ffcc00",
+    "DownBlendColor": "#0000003f",
+    "HitBlendColor": "#ffffff3f",
+    "HiliteColor": "#ffffff",
+    "ShadowColor": "#000000",
+    "EmbossFaceColor": "#00000000",
+    "ShowObject": false,
+    "ButtonState": 0,
+    "GlowStartDistance": 10,
+    "GlowWidth": 30
+   }
+  ],
+  "max": 1
+ },
+ {
+  "file": "gluehen_halo_vektor.png",
+  "base": "base_vektor.png",
+  "effects": [
+   {
+    "EffectMoaID": "{7fe61102-6ce2-11d1-8c76000502701850}",
+    "EffectIsVisible": true,
+    "BevelType": 4,
+    "BevelWidth": 10,
+    "BevelContrast": 60,
+    "EdgeThreshold": 1,
+    "AngleSoftness": 25,
+    "MaskSoftness": 5,
+    "LightDistance": 100,
+    "LightAngle": 135,
+    "SlopeType": 0,
+    "SlopeMultiplier": 1,
+    "OuterBevelColor": "#df0000",
+    "DownBlendColor": "#0000003f",
+    "HitBlendColor": "#ffffff3f",
+    "HiliteColor": "#ffffff",
+    "ShadowColor": "#000000",
+    "EmbossFaceColor": "#00000000",
+    "ShowObject": false,
+    "ButtonState": 0,
+    "GlowStartDistance": 8,
+    "GlowWidth": 4
+   }
+  ],
+  "max": 1
+ },
+ {
+  "file": "gluehen_halo_text.png",
+  "base": "base_text.png",
+  "effects": [
+   {
+    "EffectMoaID": "{7fe61102-6ce2-11d1-8c76000502701850}",
+    "EffectIsVisible": true,
+    "BevelType": 4,
+    "BevelWidth": 10,
+    "BevelContrast": 60,
+    "EdgeThreshold": 1,
+    "AngleSoftness": 25,
+    "MaskSoftness": 5,
+    "LightDistance": 100,
+    "LightAngle": 135,
+    "SlopeType": 0,
+    "SlopeMultiplier": 1,
+    "OuterBevelColor": "#df0000",
+    "DownBlendColor": "#0000003f",
+    "HitBlendColor": "#ffffff3f",
+    "HiliteColor": "#ffffff",
+    "ShadowColor": "#000000",
+    "EmbossFaceColor": "#00000000",
+    "ShowObject": false,
+    "ButtonState": 0,
+    "GlowStartDistance": 8,
+    "GlowWidth": 4
+   }
+  ],
+  "max": 1
+ },
+ {
+  "file": "inneres-gluehen_vorgabe_text.png",
+  "base": "base_text.png",
+  "effects": [
+   {
+    "EffectMoaID": "{2ba87123-8220-11d3-baad0000861f4d01}",
+    "EffectIsVisible": true,
+    "BevelContrast": 65,
+    "MaskSoftness": 4,
+    "OuterBevelColor": "#000000",
+    "GlowStartDistance": 0,
+    "GlowWidth": 4
+   }
+  ],
+  "max": 1
+ },
+ {
+  "file": "inneres-gluehen_klein_vektor.png",
+  "base": "base_vektor.png",
+  "effects": [
+   {
+    "EffectMoaID": "{2ba87123-8220-11d3-baad0000861f4d01}",
+    "EffectIsVisible": true,
+    "BevelContrast": 100,
+    "MaskSoftness": 0,
+    "OuterBevelColor": "#ff0000",
+    "GlowStartDistance": 0,
+    "GlowWidth": 1
+   }
+  ],
+  "max": 1
+ },
+ {
+  "file": "inneres-gluehen_gross_bitmap.png",
+  "base": "base_bitmap.png",
+  "effects": [
+   {
+    "EffectMoaID": "{2ba87123-8220-11d3-baad0000861f4d01}",
+    "EffectIsVisible": true,
+    "BevelContrast": 80,
+    "MaskSoftness": 30,
+    "OuterBevelColor": "#0033ff",
+    "GlowStartDistance": 5,
+    "GlowWidth": 30
+   }
+  ],
+  "max": 1
+ },
+ {
+  "file": "massiver-schatten_vorgabe_vektor.png",
+  "base": "base_vektor.png",
+  "effects": [
+   {
+    "EffectMoaID": "{b90c950e-64df-11d8-aaf2000a9582f7d4}",
+    "EffectIsVisible": true,
+    "MB_filter_preview_tile_size": "-1 -1",
+    "angle": 45,
+    "distance": 12,
+    "color": "#ffffff00"
+   }
+  ],
+  "max": 1
+ },
+ {
+  "file": "massiver-schatten_gross_bitmap.png",
+  "base": "base_bitmap.png",
+  "effects": [
+   {
+    "EffectMoaID": "{b90c950e-64df-11d8-aaf2000a9582f7d4}",
+    "EffectIsVisible": true,
+    "MB_filter_preview_tile_size": "-1 -1",
+    "angle": 135,
+    "distance": 40,
+    "color": "#3366ccff"
+   }
+  ],
+  "max": 1
+ }
+]
