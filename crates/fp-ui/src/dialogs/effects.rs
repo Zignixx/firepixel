@@ -338,6 +338,36 @@ fn txt(e: Option<&Effect>, key: &str, d: &str) -> String {
     e.and_then(|x| x.get(key)).map(|s| s.to_string()).unwrap_or_else(|| d.to_string())
 }
 
+/// Vollständige Vorgabeliste der Abschrägungsfamilie (`EFDv`, 05 §3; Rücklesung re Gruppe 2):
+/// Abschrägung innen/außen Breite 10, Weichheit (AngleSoftness) 3; Prägung Breite 2, MaskSoftness 2,
+/// vertieft mit Fläche `#0000001e`. Werte als Text wie im Dateiformat.
+pub fn bevel_defaults(bevel_type: i64) -> Vec<(&'static str, String)> {
+    let emboss = bevel_type == 2 || bevel_type == 3;
+    let kv: [(&'static str, &str); 20] = [
+        ("BevelType", ""),
+        ("BevelWidth", if emboss { "2" } else { "10" }),
+        ("BevelContrast", "75"),
+        ("EdgeThreshold", "0"),
+        ("AngleSoftness", "3"),
+        ("MaskSoftness", if emboss { "2" } else { "0" }),
+        ("LightDistance", "100"),
+        ("LightAngle", "135"),
+        ("SlopeType", "0"),
+        ("SlopeMultiplier", "1"),
+        ("OuterBevelColor", "#df0000"),
+        ("DownBlendColor", "#0000003f"),
+        ("HitBlendColor", "#ffffff3f"),
+        ("HiliteColor", "#ffffff"),
+        ("ShadowColor", "#000000"),
+        ("EmbossFaceColor", if bevel_type == 3 { "#0000001e" } else { "#00000000" }),
+        ("ShowObject", "false"),
+        ("ButtonState", "0"),
+        ("GlowStartDistance", "0"),
+        ("GlowWidth", "0"),
+    ];
+    kv.iter().map(|(k, v)| (*k, if *k == "BevelType" { bevel_type.to_string() } else { v.to_string() })).collect()
+}
+
 /// Parameter eines Effektdialogs für `element.addEffect` bzw. `pi.effect.set`.
 fn effect_params(d: &FormDialog) -> Value {
     let v = d.raw_values();
@@ -362,9 +392,24 @@ fn effect_params(d: &FormDialog) -> Value {
                 params.insert("GlowStartDistance".into(), json!(n("offset").to_string()));
                 params.insert("OuterBevelColor".into(), json!(with_alpha_keep(s("color").as_str().unwrap_or("#ffff00"), n("opacity"), orig_alpha(d))));
             } else {
+                let emboss = bt == 2 || bt == 3;
+                let base_bt = d.base.get("bevel").and_then(|x| x.as_i64()).unwrap_or(-1);
+                let is_new = d.base.get("index").is_none();
+                // Neuer Effekt: vollständige Vorgabeliste wie das Original (re: „alle Schlüssel werden immer
+                // gespeichert“), sonst greifen die Lese-Vorgaben des Renderers (AngleSoftness 25, Fläche transparent).
+                if is_new {
+                    for (k, val) in bevel_defaults(bt) {
+                        params.insert(k.into(), json!(val));
+                    }
+                }
+                // Art gewechselt (erhaben ↔ vertieft): Fläche der neuen Art (vertieft `#0000001e`).
+                if emboss && (is_new || base_bt != bt) {
+                    params.insert("EmbossFaceColor".into(), json!(if bt == 3 { "#0000001e" } else { "#00000000" }));
+                }
                 params.insert("BevelWidth".into(), json!(n("width").to_string()));
                 params.insert("BevelContrast".into(), json!(n("contrast").to_string()));
-                params.insert("AngleSoftness".into(), json!(n("soft").to_string()));
+                // Weichheit: Abschrägung ↔ AngleSoftness, Prägung ↔ MaskSoftness (re Dialogtabelle).
+                params.insert(if emboss { "MaskSoftness" } else { "AngleSoftness" }.into(), json!(n("soft").to_string()));
                 params.insert("LightAngle".into(), json!(n("angle").to_string()));
                 if let Some(sl) = v.get("slope").and_then(|x| x.as_i64()) {
                     params.insert("SlopeType".into(), json!(sl.to_string()));
@@ -502,17 +547,21 @@ pub fn effect_form(name: &str, bevel: Option<i32>, e: Option<&Effect>, index: Op
                 v.push(Field::choice_of("type", t("dlg-lbl-kind").as_str(), &[t("effect-bevel-inner").as_str(), t("effect-bevel-outer").as_str()], vec![json!(0), json!(1)], if bt == 1 { 1 } else { 0 }));
                 v.push(Field::choice("slope", t("dlg-fx-edge-shape").as_str(), &[t("dlg-fx-slope-flat").as_str(), t("dlg-fx-slope-smooth").as_str(), t("dlg-fx-slope-sloped").as_str(), t("dlg-fx-slope-frame1").as_str(), t("dlg-fx-slope-frame2").as_str(), t("dlg-fx-slope-ring").as_str(), t("dlg-fx-slope-ruffle").as_str()], num(e, "SlopeType", 0.0).clamp(0.0, 6.0) as usize));
             }
-            v.push(Field::slider("width", t("dlg-lbl-width").as_str(), num(e, "BevelWidth", 10.0), 0.0, 35.0));
+            // Reihenfolge wie im Original (re Dialogtabelle): [Kantenform], Breite, [Farbe nur außen], Kontrast,
+            // Weichheit, Winkel, Tastenstatus bzw. „Objekt anzeigen“. Vorgaben nach `EFDv` (05 §3).
+            v.push(Field::slider("width", t("dlg-lbl-width").as_str(), num(e, "BevelWidth", if emboss { 2.0 } else { 10.0 }), 0.0, 35.0));
+            if bt == 1 {
+                v.push(Field::color("color", t("dlg-lbl-color").as_str(), &txt(e, "OuterBevelColor", &format!("#{:02x}{:02x}{:02x}ff", fill.r(), fill.g(), fill.b()))));
+            }
             v.push(Field::slider("contrast", t("dlg-lbl-contrast").as_str(), num(e, "BevelContrast", 75.0), 0.0, 100.0).unit("%"));
-            v.push(Field::slider("soft", t("dlg-lbl-softness").as_str(), num(e, "AngleSoftness", 3.0), 0.0, 10.0));
+            // Weichheit: Prägung ↔ MaskSoftness (Vorgabe 2), Abschrägung ↔ AngleSoftness (Vorgabe 3), je 0–10.
+            let soft = if emboss { num(e, "MaskSoftness", 2.0) } else { num(e, "AngleSoftness", 3.0) };
+            v.push(Field::slider("soft", t("dlg-lbl-softness").as_str(), soft, 0.0, 10.0));
             v.push(Field::slider("angle", t("dlg-lbl-angle").as_str(), num(e, "LightAngle", 135.0), 0.0, 360.0).unit("°"));
             if emboss {
                 v.push(Field::check("show", t("dlg-fx-show-object").as_str(), txt(e, "ShowObject", "false").eq_ignore_ascii_case("true")));
             } else {
                 v.push(Field::choice("button", t("dlg-fx-button-preset").as_str(), &[t("dlg-fx-button-raised").as_str(), t("dlg-fx-button-highlighted").as_str(), t("dlg-fx-button-inset").as_str(), t("dlg-fx-button-inverted").as_str()], num(e, "ButtonState", 0.0).clamp(0.0, 3.0) as usize));
-                if bt == 1 {
-                    v.push(Field::color("color", t("dlg-lbl-color").as_str(), &txt(e, "OuterBevelColor", &format!("#{:02x}{:02x}{:02x}ff", fill.r(), fill.g(), fill.b()))));
-                }
             }
             (if emboss { t("dlg-fx-emboss") } else { t("dlg-fx-bevel") }, v)
         }
