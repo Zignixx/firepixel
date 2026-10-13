@@ -34,8 +34,8 @@ Slot `fp-s1` / `target-s1`. Commit: siehe `git log --grep "TE2-G"`.
    `design_nachher_*`.
 4. **`docs\PLAN.md`:** §7 neu gezählt (Stand nach DOC-3/TE-2): PARITAET_A 119/0/1/6, PARITAET_B Menüs
    276/0/0/30 ℹ️/44 ⏳, Dialoge 3/0/1/0/46 ⏳, Bedienfeldmenüs 1/1 ❔/8 ⏳, BEFUNDE 347 erledigt · 86 offen,
-   NACHPRUEFUNG 172 (1 ✅ · 171 ⏳), Nutzerbefunde 18 ✅ · 5 🔧 · 1 ❌ teilweise · 6 ❌ (N25–N30), Umfang
-   20 Crates + 2 Programme, ≈ 222.000 Zeilen Rust (609 Dateien), 192 Testdateien, 287 Commits. TE-2 und DOC-3
+   NACHPRUEFUNG 172 (1 ✅ · 171 ⏳), Nutzerbefunde 18 ✅ · 5 🔧 · 1 ❌ teilweise · 7 ❌ (N25–N31), Umfang
+   20 Crates + 2 Programme, ≈ 222.000 Zeilen Rust (609 Dateien), 192 Testdateien, 292 Commits. TE-2 und DOC-3
    in §4/§4c/§4f/§5 als ☑ mit Commits.
 
 ## Bewusst geblieben

@@ -427,6 +427,6 @@ Die Reihenfolge gilt, solange nichts Dringenderes vom Nutzer kommt. Sobald ein P
 | Automatischer Gesamttest | Menüs 345/345 · Kontextmenüs 283/283 (FV-13); Bedienfeldmenüs 135 Einträge (MN-3); übrige Berichte vom Lauf 12.10. 10:30 – neu im GT-1 |
 | BEFUNDE.md | 347 erledigt · 86 offen (DOC3-1: 26 abgehakt; TE2-G: 3 abgehakt, 3 neu) |
 | NACHPRUEFUNG.md | 172 Zeilen: 1 ✅ · 171 ⏳ (vorher 82) |
-| Nutzerbefunde (N01–N30) | 18 ✅ · 5 🔧 (N01, N21, N22, N23, N24; Prüfung im echten Fenster im Nachtlauf) · 1 ❌ teilweise (N11 → DES-3) · 6 ❌ neu (N25–N30 → Welle 5, §4d) |
+| Nutzerbefunde (N01–N31) | 18 ✅ · 5 🔧 (N01, N21, N22, N23, N24; Prüfung im echten Fenster im Nachtlauf) · 1 ❌ teilweise (N11 → DES-3) · 7 ❌ neu (N25–N30 → Welle 5, §4d; N31 Pinsel) |
 | Fest eingebaute Texte | 0 |
-| Umfang | 20 Crates + 2 Programme, ≈ 222.000 Zeilen Rust (609 Dateien), 192 Testdateien (`tests\*.rs`), 287 Commits (mit TE2-G) |
+| Umfang | 20 Crates + 2 Programme, ≈ 222.000 Zeilen Rust (609 Dateien), 192 Testdateien (`tests\*.rs`), 292 Commits (mit TE2-G und Nachtrag) |
