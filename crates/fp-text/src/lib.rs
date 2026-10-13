@@ -38,7 +38,10 @@
 //!   eingeschlossen).
 //! - Kein `unsafe`, keine Panik auf Eingaben: fehlende oder defekte Schriften → Rückfall-Schrift,
 //!   ohne jede Schrift ein leeres Layout.
-//! - Hinting wird nicht nachgebaut (09 §6.4: Abweichung ±1 Abtastpunkt an Kanten).
+//! - Hinting (FX-T, 09 §6.4): Glyphen werden wie in der Schriftmaschine des Originals in der
+//!   N-fachen Auflösung der Überabtastung gehintet (TrueType-Interpreter bzw. PostScript-Hinter
+//!   über `skrifa`, volles Hinting „Mono“), die Grundlinie liegt auf ganzen Pixeln, der waagerechte
+//!   Ursprung auf 1/N px. Abschaltbar über [`LayoutOptions::hinting`] (Python-Referenz: ungehintet).
 
 pub mod antialias;
 pub mod font;

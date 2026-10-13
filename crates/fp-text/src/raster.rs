@@ -3,7 +3,8 @@
 //! Abtastpunkte liegen bei `(i + (m + 0,5)/N, j + (k + 0,5)/N)`, Regel Non-Zero, die
 //! hochaufgelöste Maske ist binär. Gezählt wird die Zahl der getroffenen Unterpixel (0…N²); die
 //! Tonkurve ([`crate::antialias`]) macht daraus Alpha. Kurven werden vorher fein unterteilt
-//! (Toleranz 0,05 px wie die Python-Referenz `render_check2.py`). Hinting wird nicht nachgebaut.
+//! (Toleranz 0,05 px wie die Python-Referenz `render_check2.py`). Das Hinting der Konturen macht
+//! [`crate::render`] vor der Abtastung (FX-T).
 
 use crate::font::outline::{flatten_segment, Segment, P2};
 

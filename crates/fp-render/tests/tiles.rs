@@ -16,7 +16,7 @@ fn doc_with_rects(n: usize, w: f32, h: f32) -> Document {
     for i in 0..n {
         let x = (i * 97 % (w as usize - 60)) as f32;
         let y = (i * 53 % (h as usize - 40)) as f32;
-        let mut e = Element::new_rectangle(&mut doc.ids, Rect::new(x, y, x + 50.0 + (i % 7) as f32 * 9.0, y + 30.0), 0.2, PathAttrs::solid_fill(Argb(0xff00_0000 | (i as u32 * 2_654_435_761) >> 8)));
+        let mut e = Element::new_rectangle(&mut doc.ids, Rect::new(x, y, x + 50.0 + (i % 7) as f32 * 9.0, y + 30.0), 0.2, PathAttrs::solid_fill(Argb(0xff00_0000 | (i as u32).wrapping_mul(2_654_435_761) >> 8)));
         if i % 5 == 0 {
             e.common.opacity = fp_color::Opacity(140);
         }

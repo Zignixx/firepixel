@@ -21,11 +21,15 @@ pub struct LayoutOptions {
     pub tab_min_gap: f64,
     /// Scherung von Faux-Kursiv als tan(Winkel) (A: tan 10° = 0,1763; Rahmen der Testdatei T4 17/18).
     pub italic_shear: f64,
+    /// Glyphen beim Rastern hinten wie die Schriftmaschine des Originals (FX-T, 09 §6.4): volles
+    /// Hinting in der N-fachen Auflösung der Überabtastung, Grundlinie auf ganze Pixel gerundet,
+    /// waagerechter Ursprung auf 1/N px. `false` = ungehintete Konturen wie die Python-Referenz.
+    pub hinting: bool,
 }
 
 impl Default for LayoutOptions {
     fn default() -> Self {
-        Self { shaping: Shaping::Original, tab_interval: 36.0, tab_min_gap: 1.0, italic_shear: FAUX_ITALIC_SHEAR }
+        Self { shaping: Shaping::Original, tab_interval: 36.0, tab_min_gap: 1.0, italic_shear: FAUX_ITALIC_SHEAR, hinting: true }
     }
 }
 
@@ -168,6 +172,8 @@ pub struct TextLayout {
     pub decorations: Vec<Decoration>,
     /// Kantenglättung (aus dem Textobjekt).
     pub antialias: AntiAlias,
+    /// Hinting beim Rastern ([`LayoutOptions::hinting`]).
+    pub hinting: bool,
     /// Nicht gefundene Schriftnamen (es wurde eine Ersatzschrift benutzt).
     pub missing_fonts: Vec<String>,
     /// Anzahl der Zeichen des Texts.

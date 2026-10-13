@@ -97,7 +97,8 @@ fn golden_raster_counts() {
         eprintln!("übersprungen: Korpusschriften fehlen");
         return;
     }
-    let opts = LayoutOptions::default();
+    // Die Python-Referenz rastert ungehintet
+    let opts = LayoutOptions { hinting: false, ..LayoutOptions::default() };
     for c in load("golden_raster.json") {
         let r = &c["raster"];
         let (x, y, w, h, n) = (i(r, "x").unwrap(), i(r, "y").unwrap(), i(r, "w").unwrap(), i(r, "h").unwrap(), i(r, "n").unwrap());

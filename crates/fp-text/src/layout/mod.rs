@@ -703,6 +703,7 @@ impl<'a> Builder<'a> {
             glyphs,
             decorations,
             antialias: b.antialias,
+            hinting: self.opts.hinting,
             missing_fonts: std::mem::take(&mut self.missing),
             char_count: n_chars,
         };

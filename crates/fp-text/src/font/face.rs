@@ -35,6 +35,65 @@ pub struct Font {
     kern: OnceLock<KernTables>,
     roman_ascent: OnceLock<f64>,
     outlines: Mutex<HashMap<u16, Arc<GlyphOutline>>>,
+    /// Gehintete Umrisse je (Glyphe, ppem-Bits, Art) in Pixeln der Rasterauflösung.
+    hinted: Mutex<HintedCache>,
+    /// Hinting-Instanzen je (ppem-Bits, Art) (das `prep`-Programm läuft einmal je Größe).
+    hinters: Mutex<HinterCache>,
+}
+
+/// Höchstzahl zwischengespeicherter gehinteter Umrisse bzw. Hinting-Instanzen je Schrift.
+const MAX_HINTED: usize = 16_384;
+const MAX_HINTERS: usize = 64;
+
+type HintedCache =HashMap<(u16, u32, u8), Option<Arc<GlyphOutline>>>;
+type HinterCache = HashMap<(u32, u8), Option<Arc<skrifa::outline::HintingInstance>>>;
+
+/// Hinting-Art für [`Font::hinted_outline`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum HintStyle {
+    /// Volles Hinting für Schwarzweiß-Rasterung (beide Richtungen, `FT_LOAD_TARGET_MONO`).
+    Mono,
+    /// Glattes Hinting (`FT_LOAD_TARGET_NORMAL`).
+    Normal,
+    /// Leichtes Hinting (nur senkrecht, `FT_LOAD_TARGET_LIGHT`).
+    Light,
+}
+
+impl HintStyle {
+    fn code(self) -> u8 {
+        self as u8
+    }
+
+    fn target(self) -> skrifa::outline::Target {
+        use skrifa::outline::{SmoothMode, Target};
+        match self {
+            HintStyle::Mono => Target::Mono,
+            HintStyle::Normal => Target::Smooth { mode: SmoothMode::Normal, symmetric_rendering: true, preserve_linear_metrics: false },
+            HintStyle::Light => Target::Smooth { mode: SmoothMode::Light, symmetric_rendering: true, preserve_linear_metrics: false },
+        }
+    }
+}
+
+/// Stift für skrifa: sammelt Konturen in Pixeln (y nach oben).
+#[derive(Default)]
+struct SkPen(Collector);
+
+impl skrifa::outline::OutlinePen for SkPen {
+    fn move_to(&mut self, x: f32, y: f32) {
+        ttf_parser::OutlineBuilder::move_to(&mut self.0, x, y);
+    }
+    fn line_to(&mut self, x: f32, y: f32) {
+        ttf_parser::OutlineBuilder::line_to(&mut self.0, x, y);
+    }
+    fn quad_to(&mut self, cx0: f32, cy0: f32, x: f32, y: f32) {
+        ttf_parser::OutlineBuilder::quad_to(&mut self.0, cx0, cy0, x, y);
+    }
+    fn curve_to(&mut self, cx0: f32, cy0: f32, cx1: f32, cy1: f32, x: f32, y: f32) {
+        ttf_parser::OutlineBuilder::curve_to(&mut self.0, cx0, cy0, cx1, cy1, x, y);
+    }
+    fn close(&mut self) {
+        ttf_parser::OutlineBuilder::close(&mut self.0);
+    }
 }
 
 impl std::fmt::Debug for Font {
@@ -85,6 +144,8 @@ impl Font {
             kern: OnceLock::new(),
             roman_ascent: OnceLock::new(),
             outlines: Mutex::new(HashMap::new()),
+            hinted: Mutex::new(HashMap::new()),
+            hinters: Mutex::new(HashMap::new()),
             data,
         })
     }
@@ -180,6 +241,52 @@ impl Font {
         let o = Arc::new(GlyphOutline::new(col.into_contours()));
         cache.insert(gid, o.clone());
         o
+    }
+
+    /// Gehinteter Umriss einer Glyphe bei `ppem` Pixeln je em, in **Pixeln** (y nach oben),
+    /// zwischengespeichert. `None`, wenn die Schrift kein Hinting erlaubt oder die Glyphe fehlt
+    /// (dann gilt der ungehintete Umriss).
+    pub fn hinted_outline(&self, gid: u16, ppem: f32, style: HintStyle) -> Option<Arc<GlyphOutline>> {
+        if !(ppem.is_finite() && ppem > 0.0 && ppem <= 16384.0) {
+            return None;
+        }
+        let key = (gid, ppem.to_bits(), style.code());
+        if let Some(o) = self.hinted.lock().unwrap_or_else(|e| e.into_inner()).get(&key) {
+            return o.clone();
+        }
+        let r = self.compute_hinted(gid, ppem, style).map(Arc::new);
+        let mut cache = self.hinted.lock().unwrap_or_else(|e| e.into_inner());
+        // viele Größen (z. B. beim stufenlosen Zoomen): Zwischenspeicher begrenzen
+        if cache.len() >= MAX_HINTED {
+            cache.clear();
+        }
+        cache.insert(key, r.clone());
+        r
+    }
+
+    fn compute_hinted(&self, gid: u16, ppem: f32, style: HintStyle) -> Option<GlyphOutline> {
+        use skrifa::instance::{LocationRef, Size};
+        use skrifa::outline::{DrawSettings, HintingInstance, HintingOptions};
+        use skrifa::MetadataProvider;
+        let font = skrifa::FontRef::from_index(&self.data, self.index).ok()?;
+        let outlines = font.outline_glyphs();
+        let ikey = (ppem.to_bits(), style.code());
+        let inst = {
+            let mut hs = self.hinters.lock().unwrap_or_else(|e| e.into_inner());
+            if hs.len() >= MAX_HINTERS && !hs.contains_key(&ikey) {
+                hs.clear();
+            }
+            hs.entry(ikey)
+                .or_insert_with(|| {
+                    let opts = HintingOptions { engine: skrifa::outline::Engine::Interpreter, target: style.target() };
+                    HintingInstance::new(&outlines, Size::new(ppem), LocationRef::default(), opts).ok().map(Arc::new)
+                })
+                .clone()?
+        };
+        let glyph = outlines.get(skrifa::GlyphId::new(gid as u32))?;
+        let mut pen = SkPen::default();
+        glyph.draw(DrawSettings::hinted(&inst, false), &mut pen).ok()?;
+        Some(GlyphOutline::new(pen.0.into_contours()))
     }
 
     /// Unterlänge für den Textrahmen als Anteil der Schriftgröße: `−head.yMin / unitsPerEm`

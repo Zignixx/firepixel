@@ -12,9 +12,11 @@ use fp_geom::{BezierContour, BezierNode, IRect, Point};
 use fp_raster::{Mask, RgbaImage};
 
 use crate::antialias;
+use crate::font::face::HintStyle;
 use crate::font::outline::to_bezier_contour;
 use crate::layout::{PositionedGlyph, TextLayout, FAUX_BOLD_STROKE};
-use crate::raster::{contours_to_polygons, embolden, push_contour, push_polygon, sample_counts, Edge, RASTER_TOLERANCE};
+use crate::model::AntiAliasMode;
+use crate::raster::{contours_to_polygons, embolden, push_contour, push_polygon, sample_counts, Affine, Edge, RASTER_TOLERANCE};
 
 /// Pixelgrenzen der Tinte (Glyphen inkl. Faux-Fett und Unterstreichungen), nach außen gerundet.
 /// Leeres Rechteck, wenn nichts sichtbar ist.
@@ -45,14 +47,57 @@ pub fn ink_bounds(layout: &TextLayout) -> IRect {
     }
 }
 
-/// Strecken einer Glyphe relativ zum Ursprung (ox, oy).
-fn glyph_edges(g: &PositionedGlyph, ox: f64, oy: f64, edges: &mut Vec<Edge>) {
+/// Hinting-Art der Rasterung für ein Layout (09 §6.4, FX-T): volles Hinting („Mono“) in der
+/// N-fachen Auflösung der Überabtastung, außer bei „Stark“ (eigener Pfad im Original, ungehintet
+/// näher) und bei abgeschaltetem Hinting ([`crate::LayoutOptions::hinting`]).
+fn hint_style(layout: &TextLayout) -> Option<HintStyle> {
+    let strong = layout.antialias.enabled && layout.antialias.mode.effective() == AntiAliasMode::Strong;
+    (layout.hinting && !strong).then_some(HintStyle::Mono)
+}
+
+/// Lage einer gehinteten Glyphe wie in der Schriftmaschine des Originals: Grundlinie auf ganze
+/// Pixel gerundet, waagerechter Ursprung auf das Raster der Überabtastung (1/N px).
+fn snapped_origin(t: &Affine, nf: f64) -> (f64, f64) {
+    ((t.e * nf).round() / nf, t.f.round())
+}
+
+/// Ist die Abbildung eine reine, gleichmäßige Skalierung mit Verschiebung (ohne Drehung, Scherung,
+/// Spiegelung, Breitenskalierung)? Nur dann wird gehintet.
+fn axis_aligned(t: &Affine) -> bool {
+    t.b == 0.0 && t.c == 0.0 && t.a > 0.0 && (t.a + t.d).abs() <= 1e-9 * t.a.abs().max(1.0)
+}
+
+/// Strecken einer Glyphe relativ zum Ursprung (ox, oy); `n` = Überabtastung.
+fn glyph_edges(g: &PositionedGlyph, ox: f64, oy: f64, n: u32, hint: Option<HintStyle>, edges: &mut Vec<Edge>) {
     if !g.visible || g.is_tab {
         return;
     }
     let outline = g.font.outline(g.glyph_id);
     if outline.is_empty() {
         return;
+    }
+    let t = g.transform;
+    if let Some(style) = hint
+        && axis_aligned(&t)
+    {
+        let nf = n.max(1) as f64;
+        let ppem = t.a * g.font.units_per_em() as f64 * nf;
+        if let Some(h) = g.font.hinted_outline(g.glyph_id, ppem as f32, style) {
+            let (ex, fy) = snapped_origin(&t, nf);
+            let m = Affine { a: 1.0 / nf, b: 0.0, c: 0.0, d: -1.0 / nf, e: ex - ox, f: fy - oy };
+            if g.faux_bold {
+                let mut polys = contours_to_polygons(&h.contours, &m, RASTER_TOLERANCE);
+                embolden(&mut polys, g.size * FAUX_BOLD_STROKE);
+                for p in &polys {
+                    push_polygon(edges, p);
+                }
+            } else {
+                for c in &h.contours {
+                    push_contour(edges, c, &m, RASTER_TOLERANCE);
+                }
+            }
+            return;
+        }
     }
     let m = g.transform.translated(-ox, -oy);
     if g.faux_bold {
@@ -72,8 +117,9 @@ fn glyph_edges(g: &PositionedGlyph, ox: f64, oy: f64, edges: &mut Vec<Edge>) {
 fn counts_for(layout: &TextLayout, bounds: IRect, n: u32, filter: &dyn Fn(&PositionedGlyph) -> bool, deco: Option<Rgba8>) -> Vec<u16> {
     let (ox, oy) = (bounds.left as f64, bounds.top as f64);
     let mut edges = Vec::new();
+    let hint = hint_style(layout);
     for g in layout.glyphs.iter().filter(|g| filter(g)) {
-        glyph_edges(g, ox, oy, &mut edges);
+        glyph_edges(g, ox, oy, n, hint, &mut edges);
     }
     for d in &layout.decorations {
         if deco.is_none_or(|c| c == d.color) {
@@ -89,9 +135,39 @@ fn checked(bounds: IRect) -> Option<IRect> {
     if w == 0 || h == 0 || w * h > (1 << 26) { None } else { Some(bounds) }
 }
 
-/// Deckungsmaske (Alpha nach Tonkurve) in `bounds` (Vorgabe: [`ink_bounds`]).
+/// Rasterbereich ohne Vorgabe: [`ink_bounds`] plus Sicherheitsrand, weil Hinting und die
+/// gerundete Grundlinie die Tinte um Bruchteile eines Pixels verschieben.
+fn raster_bounds(layout: &TextLayout) -> IRect {
+    let b = ink_bounds(layout);
+    if b.is_empty() { b } else { b.inflate(2, 2) }
+}
+
+/// Deckungsmaske (Alpha nach Tonkurve) in `bounds`; ohne `bounds` wie [`render`]: Rechteck der
+/// gedeckten Pixel plus 1 px Rand.
 pub fn coverage(layout: &TextLayout, bounds: Option<IRect>) -> Mask {
-    let b = bounds.unwrap_or_else(|| ink_bounds(layout));
+    if let Some(b) = bounds {
+        return coverage_in(layout, b);
+    }
+    let m = coverage_in(layout, raster_bounds(layout));
+    let (b, w) = (m.bounds(), m.width());
+    let (mut x0, mut y0, mut x1, mut y1) = (i32::MAX, i32::MAX, i32::MIN, i32::MIN);
+    for (i, &v) in m.data().iter().enumerate() {
+        if v != 0 {
+            let (x, y) = (b.left + (i % w) as i32, b.top + (i / w) as i32);
+            x0 = x0.min(x);
+            y0 = y0.min(y);
+            x1 = x1.max(x + 1);
+            y1 = y1.max(y + 1);
+        }
+    }
+    if x0 > x1 {
+        let ib = ink_bounds(layout);
+        return Mask::empty_at(ib.left, ib.top);
+    }
+    m.copy_rect(IRect::new(x0, y0, x1, y1).inflate(1, 1)).unwrap_or(m)
+}
+
+fn coverage_in(layout: &TextLayout, b: IRect) -> Mask {
     let Some(b) = checked(b) else { return Mask::empty_at(b.left, b.top) };
     let (n, lut) = antialias::sampling(&layout.antialias);
     let counts = counts_for(layout, b, n, &|_| true, None);
@@ -113,13 +189,30 @@ pub fn sample_layout_n(layout: &TextLayout, bounds: IRect, n: u32) -> Vec<u16> {
     }
 }
 
-/// Rendert den Text mit den Laufarben in ein Bild (`bounds`, Vorgabe: [`ink_bounds`]).
+/// Rendert den Text mit den Laufarben in ein Bild.
+///
+/// Mit `bounds` genau in diesem Rechteck. Ohne `bounds` wie das Objektbild des Originals: das
+/// Rechteck der sichtbaren Pixel **plus 1 px transparenter Rand** ringsum (FX-1/FX-T: Effekte wie
+/// der Massive Schatten und die Weichzeichner rechnen auf diesem Bild; ohne den Rand fehlt eine
+/// Zeile/Spalte).
 ///
 /// Alpha = Tonkurve(Treffer der Vereinigung aller Glyphen) · Farbalpha. Bei mehreren Farben
 /// mittelt ein Pixel die Farben nach ihren Treffern (wie die Verkleinerungsroutine, die die
 /// Farbkanäle der gesetzten Unterpixel mittelt, 09 §6.1).
 pub fn render(layout: &TextLayout, bounds: Option<IRect>) -> RgbaImage {
-    let b = bounds.unwrap_or_else(|| ink_bounds(layout));
+    if let Some(b) = bounds {
+        return render_in(layout, b);
+    }
+    let img = render_in(layout, raster_bounds(layout));
+    let ab = img.alpha_bounds();
+    if ab.is_empty() {
+        let b = ink_bounds(layout);
+        return RgbaImage::empty_at(b.left, b.top);
+    }
+    img.copy_rect(ab.inflate(1, 1)).unwrap_or(img)
+}
+
+fn render_in(layout: &TextLayout, b: IRect) -> RgbaImage {
     let Some(b) = checked(b) else { return RgbaImage::empty_at(b.left, b.top) };
     let (n, lut) = antialias::sampling(&layout.antialias);
     let mut colors: Vec<Rgba8> = Vec::new();

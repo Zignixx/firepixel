@@ -1876,6 +1876,7 @@ name = "fp-engine"
 version = "0.1.0"
 dependencies = [
  "fp-ai",
+ "fp-batch",
  "fp-color",
  "fp-export",
  "fp-fwpng",
@@ -2087,6 +2088,7 @@ dependencies = [
  "rustybuzz",
  "serde",
  "serde_json",
+ "skrifa 0.46.2",
  "thiserror 2.0.21",
  "ttf-parser",
 ]

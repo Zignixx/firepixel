@@ -148,6 +148,7 @@ fn corpus_pixels() {
     }
     let opts = LayoutOptions::default();
     let mut by_mode: BTreeMap<i64, (u64, u64, u64)> = BTreeMap::new();
+    let mut by_font: BTreeMap<String, (u64, u64, u64, u64)> = BTreeMap::new();
     let (mut exact, mut px, mut py_exact, mut same_py_texts, mut texts) = (0u64, 0u64, 0u64, 0usize, 0usize);
     let (mut ink_exact, mut ink_px) = (0u64, 0u64);
     let mut exact_texts = 0usize;
@@ -180,10 +181,30 @@ fn corpus_pixels() {
         exact_texts += (e == alpha.len() as u64) as usize;
         texts += 1;
         let mode = i(&rec["attrs"], "TAAi").unwrap_or(0);
+        {
+            let fam = block.runs.first().map(|r| r.attrs.font.clone()).unwrap_or_default();
+            let mut ie = 0u64;
+            let mut inn = 0u64;
+            for (k, &r) in alpha.iter().enumerate() {
+                let o = ours.get(k).copied().unwrap_or(0);
+                if o > 0 || r > 0 {
+                    inn += 1;
+                    ie += (o == r) as u64;
+                }
+            }
+            let s = by_font.entry(fam).or_default();
+            s.0 += ie;
+            s.1 += inn;
+            s.2 += 1;
+            s.3 += (e == alpha.len() as u64) as u64;
+        }
         let s = by_mode.entry(mode).or_default();
         s.0 += e;
         s.1 += alpha.len() as u64;
         s.2 += pe;
+    }
+    for (f, (e, n, t, x)) in &by_font {
+        println!("Schrift {f}: Tintenpixel {:.1} % exakt ({n} px), Texte {t}, pixelgenau {x}", 100.0 * *e as f64 / (*n).max(1) as f64);
     }
     for (m, (e, n, p)) in &by_mode {
         println!(
