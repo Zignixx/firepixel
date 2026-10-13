@@ -713,7 +713,10 @@ fn keyboard(ctx: &egui::Context, st: &mut AppState, now: f64) {
             return;
         }
         if consume(ctx, ctrl, Key::O) {
-            files::pick_files(st);
+            if let Some(s) = st.batch.take() {
+                files::pick_files(st, &s);
+                st.batch = Some(s);
+            }
             return;
         }
     }

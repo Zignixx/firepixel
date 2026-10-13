@@ -161,8 +161,11 @@ fn extensions() -> Vec<&'static str> {
 }
 
 /// „Dateien…“: Mehrfachauswahl.
-pub fn pick_files(st: &mut AppState) {
-    let Some(s) = st.batch.as_ref() else { return };
+///
+/// Das Studio kommt als Parameter (N33): während es sich zeichnet, ist es aus `st.batch`
+/// herausgenommen (`batch::show`). Früher holte die Funktion es von dort, kehrte darum still
+/// zurück, und „+ Dateien…“/„Ordner…“ öffneten keinen Dialog.
+pub fn pick_files(st: &mut AppState, s: &Studio) {
     let inbox = s.inbox_sender();
     let exts = extensions();
     let req = crate::file_dialog::Request::open_many(t("batch-ui-files-add-title")).filter(t("batch-ui-filter-supported"), &exts).filter(t("ui-filter-all-files"), &["*"]);
@@ -174,8 +177,7 @@ pub fn pick_files(st: &mut AppState) {
 }
 
 /// „Ordner…“ bzw. „Ordner mit Unterordnern…“.
-pub fn pick_folder(st: &mut AppState, recursive: bool) {
-    let Some(s) = st.batch.as_ref() else { return };
+pub fn pick_folder(st: &mut AppState, s: &Studio, recursive: bool) {
     let inbox = s.inbox_sender();
     let req = crate::file_dialog::Request::folder(t("batch-ui-files-folder-title"));
     crate::file_dialog::request(st, req, move |_st, paths| {
@@ -238,14 +240,14 @@ pub fn show(ui: &mut Ui, st: &mut AppState, s: &mut Studio, rect: Rect, now: f64
     let w1 = if fits_two { w_add } else { (bar.width() - more_w - sp::XS).max(40.0) };
     let r_add = Rect::from_min_size(bar.min, vec2(w1, kit::BTN_H));
     if kit::button(ui, r_add, Id::new("fp-batch-add-files"), &add_l, Some(RowIcon::Icon(crate::icons::Icon::Plus)), BtnKind::Secondary, enabled, &add_l).on_hover_text(t("batch-ui-files-add.tooltip")).clicked() {
-        pick_files(st);
+        pick_files(st, s);
     }
     let mut x = r_add.right() + sp::XS;
     if fits_two {
         let r_f = Rect::from_min_size(pos2(x, bar.top()), vec2(w_folder, kit::BTN_H));
         if kit::button(ui, r_f, Id::new("fp-batch-add-folder"), &folder_l, Some(RowIcon::Icon(crate::icons::Icon::Folder)), BtnKind::Secondary, enabled, &folder_l).clicked() {
             let rec = s.recursive;
-            pick_folder(st, rec);
+            pick_folder(st, s, rec);
         }
         x = r_f.right() + sp::XS;
     }
@@ -255,10 +257,10 @@ pub fn show(ui: &mut Ui, st: &mut AppState, s: &mut Studio, rect: Rect, now: f64
     egui::Popup::menu(&mresp).id(Id::new("fp-batch-add-menu")).show(|ui| {
         crate::theme::field_widgets(ui);
         if ui.button(t("batch-ui-files-add-folder")).clicked() {
-            pick_folder(st, false);
+            pick_folder(st, s, false);
         }
         if ui.button(t("batch-ui-files-add-folder-rec")).clicked() {
-            pick_folder(st, true);
+            pick_folder(st, s, true);
         }
         if ui.button(t("batch-ui-files-add-open")).clicked() {
             add_open_documents(st, s, now);
@@ -457,11 +459,11 @@ fn empty_state(ui: &mut Ui, st: &mut AppState, s: &mut Studio, r: Rect, enabled:
         (Rect::from_min_size(pos2(zone.center().x - bw - sp::XS, y), vec2(bw, kit::BTN_H)), Rect::from_min_size(pos2(zone.center().x + sp::XS, y), vec2(bw, kit::BTN_H)))
     };
     if r1.bottom() <= zone.bottom() + 0.5 && kit::button(ui, r1, Id::new("fp-batch-empty-files"), &add_l, Some(RowIcon::Icon(crate::icons::Icon::Plus)), BtnKind::Primary, enabled, &add_l).clicked() {
-        pick_files(st);
+        pick_files(st, s);
     }
     if r2.bottom() <= zone.bottom() + 0.5 && kit::button(ui, r2, Id::new("fp-batch-empty-folder"), &folder_l, Some(RowIcon::Icon(crate::icons::Icon::Folder)), BtnKind::Secondary, enabled, &folder_l).clicked() {
         let rec = s.recursive;
-        pick_folder(st, rec);
+        pick_folder(st, s, rec);
     }
 }
 

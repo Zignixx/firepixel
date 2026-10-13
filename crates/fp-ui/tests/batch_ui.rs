@@ -639,3 +639,38 @@ fn batch2_bilder() {
     }
     lang("de");
 }
+
+// ------------------------------------------------------------------ N33: Dateien/Ordner-Knöpfe
+
+/// N33: „+ Dateien…“ und „Ordner…“ (Knopfzeile und leere Ablagefläche) sowie Strg+O öffnen den
+/// Datei-Dialog, und die gewählten Dateien landen in der Liste. Vorher holten die Knöpfe das
+/// Studio aus `st.batch`, das während des Zeichnens herausgenommen ist – es passierte nichts.
+#[test]
+fn n33_dateien_und_ordner_knoepfe_fuellen_die_liste() {
+    let d = dir("n33-knoepfe");
+    let mut s0 = state(ThemeKind::Normal);
+    s0.run("file.batchProcess", json!({}));
+    let mut h = harness(s0);
+    let a = png_file(&d, "a.png", 1, 40, 30);
+    let b = png_file(&d, "b.png", 2, 40, 30);
+    st(&mut h).file_override = Some(fp_ui::files::FilePickOverride { open: vec![a.clone(), b.clone()], save: None });
+    for (label, lower) in [("batch-ui-files-add", false), ("batch-ui-files-add", true), ("batch-ui-files-add-folder", false), ("batch-ui-files-add-folder", true)] {
+        studio(&mut h).clear_files();
+        h.run_steps(3);
+        let mut rects: Vec<Rect> = h.query_all_by_label(&t(label)).map(|n| n.rect()).collect();
+        rects.sort_by(|x, y| x.top().total_cmp(&y.top()));
+        assert!(rects.len() >= 2, "{label}: Knopf oben und in der leeren Fläche, gefunden {}", rects.len());
+        // [0] Knopfzeile, [1] leere Ablagefläche (weiter unten ggf. gleichnamiger Knopf der Ausgabe)
+        let r = rects[usize::from(lower)];
+        click(&mut h, r.center());
+        settle(&mut h);
+        let n = studio(&mut h).files.len();
+        assert_eq!(n, 2, "{label} (leere Fläche: {lower}): Liste gefüllt");
+    }
+    // Strg+O
+    studio(&mut h).clear_files();
+    h.run_steps(3);
+    key(&mut h, Key::O, Modifiers::COMMAND);
+    settle(&mut h);
+    assert_eq!(studio(&mut h).files.len(), 2, "Strg+O");
+}
