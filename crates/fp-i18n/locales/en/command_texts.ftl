@@ -590,3 +590,30 @@ cmdtext-konturen-eckenschwelle-0-nur-ecken-ab-4-be6146 = Outlines: corner thresh
 cmdtext-konturen-kurven-zusammenfassen = Outlines: merge curves
 cmdtext-konturen-toleranz-beim-zusammenfassen-in-pixeln = Outlines: tolerance for merging curves in pixels
 cmdtext-konturen-alle-einstellungen-als-objekt-t-47ff49 = Outlines: all settings as an object (turdSize, turnPolicy, alphaMax, optCurve, optTolerance)
+# FIX-R3 (13.10.): additions from FIX-G1/G4 and later commands
+cmdtext-antworten-der-oberflaeche-fuer-prompt-li-4c20db = Answers of the user interface for prompt() (list of text/null); without: default values
+cmdtext-zuschneiden-werkzeug-rahmen-auf-die-lein-bbc345 = Crop tool: limit the frame to the canvas, delete objects entirely outside, crop bitmaps, then select all
+cmdtext-attribute-skalieren-strichbreite-mit = Scale attributes (including stroke width)
+cmdtext-immer-einen-verlaufsschritt-anlegen-esc-a53b72 = always create a history step (Esc after a brush stroke)
+cmdtext-auch-die-objektauswahl-leeren-esc-nach-d-0edfcd = also clear the object selection (Esc after the marquee, TW-04)
+cmdtext-pinsel-spitze-weichheit-strichart-empfin-15ba41 = Brush (tip, softness, stroke category, sensitivities) like `element.brush`; default: simple brush in `size`
+cmdtext-strichtextur-name-oder-datei-menge-ueber-a7d666 = Stroke texture (name or file); amount via brush.textureBlend
+cmdtext-mischmodus-nummer-wie-element-setblendmode = Blend mode (number as in element.setBlendMode)
+cmdtext-transparenz-beibehalten-nur-auf-deckende-f5132f = Preserve transparency: paint only on opaque pixels
+cmdtext-endpunkt-weglassen-vorgabe-aus-echte-zue-cbdfd5 = omit the end point (default off: real strokes paint up to and including the end point)
+cmdtext-zufalls-startwert-des-zugs-natuerliche-p-8b1c3d = Random seed of the stroke (natural brushes; default derived from the points)
+cmdtext-in-ein-neues-bitmap-malen-auch-wenn-eine-2f28b1 = paint into a new bitmap even if a bitmap is selected (stroke outside the bitmap)
+cmdtext-werkzeug-vorgabe-pinsel = Tool (default: brush)
+cmdtext-aelterer-aufruf-strich-als-zeichenbefehl-a11103 = older call: stroke as a drawing command {"{"}command: tool.shape, params{"}"} – the brush is built from it
+cmdtext-rand-0-hart-1-anti-alias-2-weiche-kante = Edge: 0 hard, 1 anti-alias, 2 feather
+cmdtext-gewaehlte-vektoren-bekommen-die-farbe-pipette = selected vectors receive the color (eyedropper)
+cmdtext-verwischen-farbe-verwischen-farbe-color-a9a666 = Smudge: smudge color (mix in the color `color`)
+cmdtext-verwischen-farbe-fuer-farbe-verwischen-v-920ed2 = Smudge: color for "Smudge color" (default: fill color)
+cmdtext-verwischen-gesamtes-dokument-alle-sichtb-1546ef = Smudge: Entire document (pick up all visible objects and the canvas)
+cmdtext-farbe-ersetzen-staerke-0-255-vorgabe-200 = Replace color: strength 0..255 (default 200)
+cmdtext-farbe-ersetzen-von-farbe-aus-der-grafik-278aa3 = Replace color: from-color taken from the graphic under the start point
+cmdtext-fuellart-pattern-vorgabemuster-cotton-we-1de580 = Fill category (pattern: default pattern "Cotton" if there is no pattern yet)
+cmdtext-verlaufsform-fshi-17-konturverlauf = Gradient shape (FSHi; 17 = contour gradient)
+cmdtext-winkel-des-verlaufs-in-grad-0-nach-recht-634789 = Angle of the gradient in degrees (0 = to the right, 270 = downwards)
+cmdtext-vollstaendiger-pinsel-wie-element-brush-048a4d = complete brush like `element.brush` (dialog "Edit Stroke"); the other fields apply afterwards
+cmdtext-pinsel-der-werkzeugvorgabe-speichern-wer-94fd63 = save the brush of the tool preset (tool inspector) instead of the stroke of the selection

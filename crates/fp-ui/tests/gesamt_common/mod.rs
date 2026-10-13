@@ -320,6 +320,13 @@ pub fn external(name: &str) -> bool {
     if n == "ui.mcptoggle" {
         return true;
     }
+    if n.starts_with("file.previewinbrowser.") {
+        // Browser-Vorschau: der Browser startet ausschließlich über fp_engine::shell (export.rs,
+        // `shell_open`); hier für den ganzen Testprozess abgeschaltet, die Vorschauseite entsteht
+        // trotzdem – kein Fremdprogramm, also ohne GUI-Sitzung prüfbar (FIX-R3)
+        fp_engine::shell::disable();
+        return false;
+    }
     if std::env::var("FP_NO_SHELL_OPEN").as_deref() == Ok("1") {
         // die Engine startet dann keine Fremdprogramme (AGENTEN_REGELN §4a, `shell::disable`)
         return false;

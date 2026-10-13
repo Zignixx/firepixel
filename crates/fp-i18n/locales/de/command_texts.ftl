@@ -590,3 +590,30 @@ cmdtext-konturen-eckenschwelle-0-nur-ecken-ab-4-be6146 = Konturen: Eckenschwelle
 cmdtext-konturen-kurven-zusammenfassen = Konturen: Kurven zusammenfassen
 cmdtext-konturen-toleranz-beim-zusammenfassen-in-pixeln = Konturen: Toleranz beim Zusammenfassen in Pixeln
 cmdtext-konturen-alle-einstellungen-als-objekt-t-47ff49 = Konturen: alle Einstellungen als Objekt (turdSize, turnPolicy, alphaMax, optCurve, optTolerance)
+# FIX-R3 (13.10.): Nachträge aus FIX-G1/G4 und Folgebefehlen
+cmdtext-antworten-der-oberflaeche-fuer-prompt-li-4c20db = Antworten der Oberfläche für prompt() (Liste aus Text/null); ohne: Vorgabewerte
+cmdtext-zuschneiden-werkzeug-rahmen-auf-die-lein-bbc345 = Zuschneiden-Werkzeug: Rahmen auf die Leinwand begrenzen, Objekte ganz außerhalb löschen, Bitmaps beschneiden, danach alles auswählen
+cmdtext-attribute-skalieren-strichbreite-mit = Attribute skalieren (Strichbreite mit)
+cmdtext-immer-einen-verlaufsschritt-anlegen-esc-a53b72 = immer einen Verlaufsschritt anlegen (Esc nach einem Pinselzug)
+cmdtext-auch-die-objektauswahl-leeren-esc-nach-d-0edfcd = auch die Objektauswahl leeren (Esc nach dem Auswahlrahmen, TW-04)
+cmdtext-pinsel-spitze-weichheit-strichart-empfin-15ba41 = Pinsel (Spitze, Weichheit, Strichart, Empfindlichkeiten) wie `element.brush`; Vorgabe: einfacher Pinsel in `size`
+cmdtext-strichtextur-name-oder-datei-menge-ueber-a7d666 = Strichtextur (Name oder Datei); Menge über brush.textureBlend
+cmdtext-mischmodus-nummer-wie-element-setblendmode = Mischmodus (Nummer wie element.setBlendMode)
+cmdtext-transparenz-beibehalten-nur-auf-deckende-f5132f = Transparenz beibehalten: nur auf deckende Pixel malen
+cmdtext-endpunkt-weglassen-vorgabe-aus-echte-zue-cbdfd5 = Endpunkt weglassen (Vorgabe aus: echte Züge malen bis einschließlich Endpunkt)
+cmdtext-zufalls-startwert-des-zugs-natuerliche-p-8b1c3d = Zufalls-Startwert des Zugs (natürliche Pinsel; Vorgabe aus den Punkten)
+cmdtext-in-ein-neues-bitmap-malen-auch-wenn-eine-2f28b1 = in ein neues Bitmap malen, auch wenn eine Bitmap ausgewählt ist (Zug außerhalb der Bitmap)
+cmdtext-werkzeug-vorgabe-pinsel = Werkzeug (Vorgabe: Pinsel)
+cmdtext-aelterer-aufruf-strich-als-zeichenbefehl-a11103 = älterer Aufruf: Strich als Zeichenbefehl {"{"}command: tool.shape, params{"}"} – der Pinsel wird daraus gebildet
+cmdtext-rand-0-hart-1-anti-alias-2-weiche-kante = Rand: 0 hart, 1 Anti-Alias, 2 weiche Kante
+cmdtext-gewaehlte-vektoren-bekommen-die-farbe-pipette = gewählte Vektoren bekommen die Farbe (Pipette)
+cmdtext-verwischen-farbe-verwischen-farbe-color-a9a666 = Verwischen: Farbe verwischen (Farbe `color` einmischen)
+cmdtext-verwischen-farbe-fuer-farbe-verwischen-v-920ed2 = Verwischen: Farbe für „Farbe verwischen“ (Vorgabe: Füllfarbe)
+cmdtext-verwischen-gesamtes-dokument-alle-sichtb-1546ef = Verwischen: Gesamtes Dokument (alle sichtbaren Objekte und die Leinwand aufnehmen)
+cmdtext-farbe-ersetzen-staerke-0-255-vorgabe-200 = Farbe ersetzen: Stärke 0..255 (Vorgabe 200)
+cmdtext-farbe-ersetzen-von-farbe-aus-der-grafik-278aa3 = Farbe ersetzen: Von-Farbe aus der Grafik unter dem Startpunkt
+cmdtext-fuellart-pattern-vorgabemuster-cotton-we-1de580 = Füllart (pattern: Vorgabemuster „Cotton“, wenn noch kein Muster)
+cmdtext-verlaufsform-fshi-17-konturverlauf = Verlaufsform (FSHi; 17 = Konturverlauf)
+cmdtext-winkel-des-verlaufs-in-grad-0-nach-recht-634789 = Winkel des Verlaufs in Grad (0 = nach rechts, 270 = nach unten)
+cmdtext-vollstaendiger-pinsel-wie-element-brush-048a4d = vollständiger Pinsel wie `element.brush` (Dialog „Pinselstrich bearbeiten“); die übrigen Felder wirken danach
+cmdtext-pinsel-der-werkzeugvorgabe-speichern-wer-94fd63 = Pinsel der Werkzeugvorgabe speichern (Werkzeug-Inspektor) statt des Strichs der Auswahl

@@ -253,11 +253,14 @@ pub fn show_dialog(ctx: &egui::Context, d: &mut HtmlSetupDialog, doc_name: &str)
     // rechte Spalte der Karte „Allgemein“: Beschriftungen und Kontrollkästchen
     let lw2 = super::max_text_w(ctx, &[g_labels[1].as_str(), g_labels[4].as_str()]).ceil();
     let cw2 = (super::max_text_w(ctx, &[l("dlg-hs-css-popups").as_str(), l("dlg-hs-external-css").as_str()]) + 26.0).max(lw2 + 8.0 + 100.0).ceil();
+    // linke Spalte: mindestens COL1_W, bei langen Texten (andere Sprachen) so breit, dass
+    // „Kommentare“/„Kleinbuchstaben“ nicht in die rechte Spalte laufen (FIX-R3)
+    let col1 = (super::max_text_w(ctx, &[l("dlg-hs-comments").as_str(), l("dlg-hs-lowercase").as_str()]) + 26.0 + 8.0 - COL_GAP).max(COL1_W).ceil();
     let slice_items: Vec<String> = ["none", "doc-name", "slice", "num", "num2", "upper", "lower", "row-col", "underscore", "period", "space", "hyphen"].iter().map(|k| l(&format!("dlg-hs-n-{k}"))).collect();
     let frame1_items: Vec<String> = ["none", "frame-s", "frame-n", "rollover", "abbrev", "underscore", "period", "space", "hyphen", "custom"].iter().map(|k| l(&format!("dlg-hs-f-{k}"))).collect();
     let frame2_items: Vec<String> = ["none", "frame-s", "frame-n", "rollover", "abbrev", "underscore", "custom"].iter().map(|k| l(&format!("dlg-hs-f-{k}"))).collect();
     let nw = super::combo_fit_w(ctx, &refs(&slice_items), 150.0).max(super::combo_fit_w(ctx, &refs(&frame1_items), 150.0));
-    let width = (32.0 + (nw + 8.0) * 3.0).max(32.0 + lw + 8.0 + 330.0).max(32.0 + lw + 8.0 + COL1_W + COL_GAP + cw2).max(560.0).ceil();
+    let width = (32.0 + (nw + 8.0) * 3.0).max(32.0 + lw + 8.0 + 330.0).max(32.0 + lw + 8.0 + col1 + COL_GAP + cw2).max(560.0).ceil();
     let mut ans = None;
     let c = dialog_frame(ctx, "fp-html-setup", &t("dlg-md-html-setup"), vec2(width, 430.0), |ui, body| {
         // Startfokus auf OK wie im Original (Enter = OK)
@@ -284,7 +287,7 @@ pub fn show_dialog(ctx: &egui::Context, d: &mut HtmlSetupDialog, doc_name: &str)
                 if let Some(i) = fields::combo(ui, "hs-style", field(0.0, COL1_W), &refs(&style_items), Some(usize::from(d.xhtml)), true) {
                     d.xhtml = i == 1;
                 }
-                let x2 = fx + COL1_W + COL_GAP;
+                let x2 = fx + col1 + COL_GAP;
                 let label2 = |y: f32| Rect::from_min_size(pos2(x2, o.y + y + 1.0), vec2(lw2, 20.0));
                 let field2 = |y: f32, w: f32| Rect::from_min_size(pos2(x2 + lw2 + 8.0, o.y + y), vec2(w, 22.0));
                 super::fit_label(ui, label2(0.0), &g_labels[1], true);
@@ -292,7 +295,7 @@ pub fn show_dialog(ctx: &egui::Context, d: &mut HtmlSetupDialog, doc_name: &str)
                 if let Some(v) = fields::combo_edit(ui, "hs-ext", field2(0.0, 100.0), &d.extension, &exts, true) {
                     d.extension = v;
                 }
-                let w1 = COL1_W + COL_GAP - 8.0;
+                let w1 = col1 + COL_GAP - 8.0;
                 let w2 = body.right() - 16.0 - x2;
                 let cb = |ui: &mut egui::Ui, id: &str, x: f32, w: f32, y: f32, text: &str, v: &mut bool, on: bool| {
                     if let Some(b) = fields::checkbox(ui, id, Rect::from_min_size(pos2(x, o.y + y), vec2(w, 18.0)), text, *v, on) {
@@ -308,7 +311,7 @@ pub fn show_dialog(ctx: &egui::Context, d: &mut HtmlSetupDialog, doc_name: &str)
                 // Dokumenteigenschaften (CSS der Seite)
                 super::fit_label(ui, Rect::from_min_size(o + vec2(0.0, 88.0), vec2(body.width() - 32.0, 20.0)), &l("dlg-hs-doc-props"), true);
                 super::fit_label(ui, label(114.0), &g_labels[2], true);
-                if let Some(v) = fields::text(ui, "hs-bg-url", field(114.0, (body.right() - 16.0 - fx).min(COL1_W + COL_GAP + lw2 + 8.0 + 100.0)), &d.background_url, true) {
+                if let Some(v) = fields::text(ui, "hs-bg-url", field(114.0, (body.right() - 16.0 - fx).min(col1 + COL_GAP + lw2 + 8.0 + 100.0)), &d.background_url, true) {
                     d.background_url = v;
                 }
                 super::fit_label(ui, label(142.0), &g_labels[3], true);

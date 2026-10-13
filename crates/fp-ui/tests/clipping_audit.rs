@@ -989,6 +989,11 @@ fn analyze(cap: &Cap, ns: &[NodeRec], screen: Rect, roi: &Roi, cfg: &Cfg) -> (Ve
                 } else if outside > 4.0 {
                     out.push(Finding { kind: "ragt-heraus", text: t.text.clone(), rect: t.rect, score: outside / v.area().max(1.0), detail: format!("Element {} ({:?})", r1(c.rect), c.role) });
                 }
+            } else if fields.iter().any(|f| std::ptr::eq(*f, *c)) && c.rect.expand(1.0).contains_rect(t.clip.intersect(screen)) {
+                // FIX-R3: eigener Inhalt eines waagerecht scrollenden Felds, der viel länger ist als
+                // das Feld (langer Pfad): sein Clip liegt ganz im Feld, sichtbar ist nur der Teil im
+                // Feld wie bei einem Windows-Eingabefeld – oben schon als „hinweis-feldinhalt“
+                // gemeldet; die Mitte des (unsichtbaren) Textrechtecks liegt dabei nur rechts außen
             } else if !t.text.trim_end().ends_with('…') {
                 out.push(Finding { kind: "ueberlappt-element", text: t.text.clone(), rect: t.rect, score: o.area() / v.area().max(1.0), detail: format!("läuft in {} ({:?})", r1(c.rect), c.role) });
             }
