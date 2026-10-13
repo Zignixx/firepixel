@@ -237,11 +237,17 @@ pub fn handle(ctx: &egui::Context, st: &mut AppState) {
         return;
     }
     let events = ctx.input(|i| i.events.clone());
+    // Startbildschirm (kein Dokument): Tab und Pfeiltasten bewegen dort nur den Fokus
+    // (`welcome::keyboard`), Tab blendet nicht die Bedienfelder aus (CT-3)
+    let start_page = st.session.documents().is_empty() && !crate::batch::is_front(st) && crate::welcome::is_visible(ctx, st);
     for ev in events {
         let editing = st.session.tool_is_editing_text();
         match ev {
             Event::Key { key, pressed: true, repeat, modifiers, .. } => {
                 if key == Key::Space {
+                    continue;
+                }
+                if start_page && !(modifiers.ctrl || modifiers.command || modifiers.alt) && matches!(key, Key::Tab | Key::ArrowDown | Key::ArrowUp | Key::ArrowLeft | Key::ArrowRight) {
                     continue;
                 }
                 if key == Key::Escape && st.flyout.is_some() {

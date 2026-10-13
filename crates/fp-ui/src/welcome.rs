@@ -328,30 +328,134 @@ pub fn show(ui: &mut Ui, st: &mut AppState, rect: Rect) {
     let recent = recent_items(st);
     let extend = extend_entries(st);
     let lay = layout(ui.ctx(), rect.size(), recent.len(), extend.len());
+    // Fokus vor dem Zeichnen: egui verschiebt ihn bei Tab erst, während sich die Einträge anmelden
+    let focus_before = ui.ctx().memory(|m| m.focused());
     let mut child = ui.new_child(egui::UiBuilder::new().max_rect(rect).layout(egui::Layout::top_down(egui::Align::Min)));
     child.set_clip_rect(rect.intersect(ui.clip_rect()));
     egui::ScrollArea::both().id_salt("fp-welcome-scroll").auto_shrink([false, false]).show(&mut child, |ui| {
         let need = vec2(lay.w + 2.0 * sp::L, lay.total_h + 2.0 * sp::L);
         let (outer, _) = ui.allocate_exact_size(vec2(need.x.max(rect.width()), need.y.max(rect.height())), Sense::hover());
         let panel = Rect::from_min_size(pos2(outer.left() + ((outer.width() - lay.w) / 2.0).max(sp::L).round(), outer.top() + ((outer.height() - lay.total_h) / 2.0).max(sp::L).round()), vec2(lay.w, lay.total_h));
-        draw_panel(ui, st, &theme, &lay, panel, &recent, &extend);
+        draw_panel(ui, st, &theme, &lay, panel, &recent, &extend, focus_before);
     });
 }
 
-/// Fokus innerhalb des Startbildschirms (für die Pfeiltasten).
+/// Fokus innerhalb des Startbildschirms: Einträge in Lesereihenfolge (Tab, Pfeiltasten).
 #[derive(Default)]
 struct Nav {
-    focused: bool,
+    ids: Vec<Id>,
+    rects: Vec<Rect>,
 }
 
 impl Nav {
     fn track(&mut self, r: &Response) {
-        self.focused |= r.has_focus();
+        self.ids.push(r.id);
+        self.rects.push(r.rect);
+    }
+}
+
+/// Tastenwunsch auf dem Startbildschirm: Tab vorwärts/rückwärts in Lesereihenfolge, Pfeiltasten
+/// räumlich zum nächsten Eintrag in der Richtung.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Step {
+    Next,
+    Prev,
+    Dir(egui::Vec2),
+}
+
+/// Nächster Eintrag in Richtung `dir` (Einheitsvektor) vom Eintrag `cur` aus: nur Einträge, die
+/// in dieser Richtung liegen, der nächste gewinnt (Querabstand zählt doppelt). Am Rand bleibt
+/// der Fokus stehen; ohne Fokus im Startbildschirm der erste Eintrag.
+fn spatial_focus(ids: &[Id], rects: &[Rect], cur: Option<Id>, dir: egui::Vec2) -> Option<Id> {
+    let Some(i) = cur.and_then(|c| ids.iter().position(|x| *x == c)) else { return ids.first().copied() };
+    let from = rects.get(i)?.center();
+    // erst im 90°-Kegel der Richtung suchen (sonst gewönne ein kaum versetzter Eintrag darunter),
+    // dann im ganzen Halbraum
+    for cone in [true, false] {
+        let mut best: Option<(f32, Id)> = None;
+        for (k, (id, r)) in ids.iter().zip(rects).enumerate() {
+            if k == i {
+                continue;
+            }
+            let d = r.center() - from;
+            let along = d.x * dir.x + d.y * dir.y;
+            let across = (d.x * dir.y - d.y * dir.x).abs();
+            if along <= 1.0 || (cone && across > along) {
+                continue;
+            }
+            let score = along + 2.0 * across;
+            if best.is_none_or(|(b, _)| score < b) {
+                best = Some((score, *id));
+            }
+        }
+        if let Some((_, id)) = best {
+            return Some(id);
+        }
+    }
+    Some(ids[i])
+}
+
+/// Nächster Eintrag in `ids` nach `cur` (ringförmig); ohne Fokus im Startbildschirm der erste bzw.
+/// (rückwärts) der letzte.
+fn step_focus(ids: &[Id], cur: Option<Id>, step: Step) -> Option<Id> {
+    if ids.is_empty() {
+        return None;
+    }
+    let n = ids.len();
+    let i = match (cur.and_then(|c| ids.iter().position(|x| *x == c)), step) {
+        (Some(i), Step::Next) => (i + 1) % n,
+        (Some(i), Step::Prev) => (i + n - 1) % n,
+        (None, Step::Prev) => n - 1,
+        (None, _) | (Some(_), Step::Dir(_)) => 0,
+    };
+    Some(ids[i])
+}
+
+/// Tab und Pfeiltasten auf dem Startbildschirm (CT-3): Tab/Umschalt+Tab wandern nur durch die
+/// Einträge (das Kürzel „Bedienfelder ausblenden“ greift hier nicht, siehe `input::handle`),
+/// die Pfeiltasten ebenso. Andere Fenster (Dialog, Popup, Menü) haben Vorrang.
+fn keyboard(ui: &mut Ui, st: &AppState, nav: &Nav, focus_before: Option<Id>) {
+    let ids = &nav.ids[..];
+    let ctx = ui.ctx().clone();
+    if st.dialogs.any_open() || egui::Popup::is_any_open(&ctx) || ids.is_empty() {
+        return;
+    }
+    let focus = focus_before;
+    let inside = focus.is_some_and(|f| ids.contains(&f));
+    // ein Textfeld außerhalb (z. B. Zoomfeld der Werkzeugleiste) behält Tab und Pfeile
+    if !inside && focus.is_some() && ctx.text_edit_focused() {
+        return;
+    }
+    let step = ctx.input_mut(|i| {
+        use egui::{Key, Modifiers as M};
+        if i.consume_key(M::NONE, Key::Tab) {
+            return Some(Step::Next);
+        }
+        if i.consume_key(M::SHIFT, Key::Tab) {
+            return Some(Step::Prev);
+        }
+        [(Key::ArrowDown, vec2(0.0, 1.0)), (Key::ArrowRight, vec2(1.0, 0.0)), (Key::ArrowUp, vec2(0.0, -1.0)), (Key::ArrowLeft, vec2(-1.0, 0.0))].into_iter().find(|(k, _)| i.consume_key(M::NONE, *k)).map(|(_, d)| Step::Dir(d))
+    });
+    // egui hat Tab zu Beginn des Bildes schon selbst ausgewertet (evtl. in die Bedienfelder):
+    // der Startbildschirm legt das Ziel danach fest
+    let cur = if inside { focus } else { None };
+    let target = match step {
+        Some(Step::Dir(d)) => spatial_focus(ids, &nav.rects, cur, d),
+        Some(s) => step_focus(ids, cur, s),
+        None => None,
+    };
+    if let Some(target) = target {
+        // egui wertet Pfeiltasten am Bildende selbst räumlich aus (über alle Widgets): abschalten
+        ctx.memory_mut(|m| {
+            m.request_focus(target);
+            m.move_focus(egui::FocusDirection::None);
+        });
+        ctx.request_repaint();
     }
 }
 
 #[allow(clippy::too_many_arguments)]
-fn draw_panel(ui: &mut Ui, st: &mut AppState, theme: &Theme, lay: &Layout, panel: Rect, recent: &[RecentItem], extend: &[(KitIcon, &'static str, &'static str)]) {
+fn draw_panel(ui: &mut Ui, st: &mut AppState, theme: &Theme, lay: &Layout, panel: Rect, recent: &[RecentItem], extend: &[(KitIcon, &'static str, &'static str)], focus_before: Option<Id>) {
     let c = &theme.colors;
     let p = ui.painter().clone();
     let mut nav = Nav::default();
@@ -472,16 +576,8 @@ fn draw_panel(ui: &mut Ui, st: &mut AppState, theme: &Theme, lay: &Layout, panel
         st.session.prefs_changed();
         ui.ctx().data_mut(|d| d.insert_temp(ticked_id(), true));
     }
-    // ------------------------------------------------ Pfeiltasten bewegen den Fokus
-    if nav.focused {
-        let dir = ui.input_mut(|i| {
-            use egui::{FocusDirection as F, Key, Modifiers as M};
-            [(Key::ArrowDown, F::Down), (Key::ArrowUp, F::Up), (Key::ArrowLeft, F::Left), (Key::ArrowRight, F::Right)].into_iter().find(|(k, _)| i.consume_key(M::NONE, *k)).map(|(_, d)| d)
-        });
-        if let Some(d) = dir {
-            ui.memory_mut(|m| m.move_focus(d));
-        }
-    }
+    // ------------------------------------------------ Tab und Pfeiltasten bewegen den Fokus
+    keyboard(ui, st, &nav, focus_before);
 }
 
 /// Karte mit Schatten, Rahmen und Kopf (Symbolchip in der Leitfarbe, Titel). Liefert die
@@ -655,6 +751,41 @@ mod tests {
         assert_eq!(file_icon(Path::new(r"C:\a\b.png")), RowIcon::Kit(KitIcon::Image));
         assert_eq!(file_icon(Path::new(r"C:\a\b.jsf")), RowIcon::Kit(KitIcon::Script));
         assert_eq!(file_icon(Path::new(r"C:\a\b.xyz")), RowIcon::Icon(Icon::Document));
+    }
+
+    #[test]
+    fn focus_steps_in_reading_order_and_wraps() {
+        let ids: Vec<Id> = (0..4).map(|i| Id::new(("t", i))).collect();
+        assert_eq!(step_focus(&ids, None, Step::Next), Some(ids[0]));
+        assert_eq!(step_focus(&ids, None, Step::Prev), Some(ids[3]));
+        assert_eq!(step_focus(&ids, Some(ids[1]), Step::Next), Some(ids[2]));
+        assert_eq!(step_focus(&ids, Some(ids[3]), Step::Next), Some(ids[0]));
+        assert_eq!(step_focus(&ids, Some(ids[0]), Step::Prev), Some(ids[3]));
+        // Fokus außerhalb (Bedienfeld) zählt wie kein Fokus
+        assert_eq!(step_focus(&ids, Some(Id::new("anders")), Step::Next), Some(ids[0]));
+        assert_eq!(step_focus(&[], None, Step::Next), None);
+    }
+
+    #[test]
+    fn arrows_pick_the_nearest_entry_in_that_direction() {
+        // zwei Spalten: links a (oben), b (darunter); rechts c (auf Höhe von a), d (auf Höhe von b)
+        let r = |x: f32, y: f32| Rect::from_min_size(pos2(x, y), vec2(100.0, 40.0));
+        let ids: Vec<Id> = ["a", "b", "c", "d"].iter().map(|n| Id::new(*n)).collect();
+        let rects = [r(0.0, 0.0), r(0.0, 60.0), r(300.0, 0.0), r(300.0, 60.0)];
+        let go = |cur: usize, d: egui::Vec2| spatial_focus(&ids, &rects, Some(ids[cur]), d);
+        assert_eq!(go(0, vec2(0.0, 1.0)), Some(ids[1]), "ab");
+        assert_eq!(go(1, vec2(1.0, 0.0)), Some(ids[3]), "rechts auf gleicher Höhe");
+        assert_eq!(go(3, vec2(0.0, -1.0)), Some(ids[2]), "auf");
+        assert_eq!(go(2, vec2(-1.0, 0.0)), Some(ids[0]), "links");
+        // am Rand bleibt der Fokus stehen
+        assert_eq!(go(0, vec2(0.0, -1.0)), Some(ids[0]));
+        assert_eq!(go(0, vec2(-1.0, 0.0)), Some(ids[0]));
+        // ein kaum nach rechts versetzter Eintrag weit darunter verliert gegen den Eintrag rechts
+        let ids2: Vec<Id> = ["t", "h", "r"].iter().map(|n| Id::new(*n)).collect();
+        let rects2 = [r(0.0, 0.0), r(14.0, 120.0), r(480.0, 20.0)];
+        assert_eq!(spatial_focus(&ids2, &rects2, Some(ids2[0]), vec2(1.0, 0.0)), Some(ids2[2]));
+        // ohne Fokus: erster Eintrag
+        assert_eq!(spatial_focus(&ids, &rects, None, vec2(0.0, 1.0)), Some(ids[0]));
     }
 
     #[test]
