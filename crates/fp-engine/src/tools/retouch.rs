@@ -86,12 +86,14 @@ pub struct RetouchTool {
     /// Stempel: Quelle bzw. Versatz Quelle − Malstelle.
     source: Option<Point>,
     offset: Option<(f32, f32)>,
+    /// Der letzte Zug wurde gemalt (Esc danach: „Bitmapmodus beenden“).
+    painted: bool,
 }
 
 impl RetouchTool {
     /// Neues Werkzeug.
     pub fn new(id: ToolId) -> RetouchTool {
-        RetouchTool { id, points: Vec::new(), active: false, hover: None, source: None, offset: None }
+        RetouchTool { id, points: Vec::new(), active: false, hover: None, source: None, offset: None, painted: false }
     }
 
     fn cursor(&self) -> Cursor {
@@ -134,6 +136,11 @@ impl ToolMachine for RetouchTool {
                 return ToolResponse::default();
             }
             // wie im Original: mit Bitmap als Ziel → Zeiger, Bitmap bleibt gewählt (PARITAET_A L39)
+            if std::mem::take(&mut self.painted)
+                && let Some(r) = super::bitmap::escape_after_stroke(ctx)
+            {
+                return r;
+            }
             return super::bitmap::escape_paint_tool(ctx);
         }
         let ToolInput::Pointer { kind, pos } = &ev.input else { return ToolResponse::default() };
@@ -188,6 +195,7 @@ impl ToolMachine for RetouchTool {
                     self.points.push(*pos);
                 }
                 let pts = std::mem::take(&mut self.points);
+                self.painted = true;
                 let prm = params(self.id, ctx);
                 let mut p = json!({
                     "mode": prm.mode, "points": pts.iter().map(|q| pt_json(*q)).collect::<Vec<Value>>(), "size": prm.size,

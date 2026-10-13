@@ -512,8 +512,6 @@ pub(super) fn register(r: &mut CommandRegistry) {
                             set_bitmap_image(b, &img);
                         }
                     });
-                    // wie im Original: nach dem Malen ist die Bitmap im Bitmapmodus (Esc → „Bitmapmodus beenden“)
-                    d.bitmap_mode = true;
                     let out = CommandOutput::doc();
                     Ok(match label {
                         Some(k) => out.labeled(fp_i18n::t(k)),

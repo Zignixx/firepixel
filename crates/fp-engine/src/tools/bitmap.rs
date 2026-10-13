@@ -61,6 +61,16 @@ pub(crate) fn escape_paint_tool(ctx: &ToolContext) -> ToolResponse {
     ToolResponse { commands, switch_tool: Some(ToolId::Pointer), ..ToolResponse::default() }
 }
 
+/// Esc nach einem Malzug (Pinsel 01/14, Buntstift/Radiergummi 03/16, Retusche): Zeiger und Schritt
+/// „Bitmapmodus beenden“, die Bitmap bleibt ausgewählt (gemessen am Original).
+pub(crate) fn escape_after_stroke(ctx: &ToolContext) -> Option<ToolResponse> {
+    (bitmap_target(ctx) && !ctx.bitmap_mode && !ctx.selection.has_pixels()).then(|| ToolResponse {
+        commands: vec![Invocation::new("modify.editBitmap", json!({})), Invocation::new("modify.exitBitmapMode", json!({"step": true}))],
+        switch_tool: Some(ToolId::Pointer),
+        ..ToolResponse::default()
+    })
+}
+
 /// Fang für Pixelauswahl: Hilfslinien, Raster, ganze Pixel (keine intelligenten Hilfslinien).
 fn pixel_snap(ctx: &ToolContext, p: Point) -> Point {
     Snapper::new(ctx, &[]).without_smart().point(p).point
@@ -569,14 +579,10 @@ impl ToolMachine for BrushTool {
                 self.cancel();
                 return ToolResponse::with_overlay(self.overlay_for(ctx), self.cursor());
             }
-            if self.id == ToolId::Brush && std::mem::take(&mut self.painted) && bitmap_target(ctx) && !ctx.bitmap_mode && !ctx.selection.has_pixels() {
-                // Esc nach einem Pinselzug: Zeiger und Schritt „Bitmapmodus beenden“ (gemessen 01/14);
-                // die Bitmap bleibt ausgewählt
-                return ToolResponse {
-                    commands: vec![Invocation::new("modify.editBitmap", json!({})), Invocation::new("modify.exitBitmapMode", json!({"step": true}))],
-                    switch_tool: Some(ToolId::Pointer),
-                    ..ToolResponse::default()
-                };
+            if std::mem::take(&mut self.painted)
+                && let Some(r) = escape_after_stroke(ctx)
+            {
+                return r;
             }
             return escape_paint_tool(ctx);
         }
@@ -611,7 +617,8 @@ impl ToolMachine for BrushTool {
                 let mut params = std::mem::take(&mut self.params);
                 params["points"] = Value::Array(self.points.iter().map(|p| pt_json(*p)).collect());
                 self.cancel();
-                self.painted = self.id == ToolId::Brush;
+                // Pinsel (01/14), Buntstift und Radiergummi (03/16): Esc danach → „Bitmapmodus beenden“
+                self.painted = true;
                 let cmd = Invocation::new(self.command(), params);
                 return ToolResponse { commands: vec![cmd], cursor: self.cursor(), overlay: self.overlay_for(ctx), ..ToolResponse::default() };
             }
