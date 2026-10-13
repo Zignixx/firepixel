@@ -661,7 +661,10 @@ pub fn show_numeric_transform(ctx: &egui::Context, st: &mut AppState) {
     let bw = super::buttons_w(ctx, &[&ok_l, &cancel_l], dlu(56.0, 0.0).x);
     let checks = super::max_text_w(ctx, &[&attrs_l, &constrain_l]) + 18.0 + dlu(8.0, 0.0).x + 8.0;
     // Spalten im Rahmen: Symbol, Feld, Einheit, Kette, Objektgröße
-    let field_x = dlu(30.0, 0.0).x.max(dlu(14.0, 0.0).x + super::text_w(ctx, &angle_l) + 6.0).ceil();
+    // Felder bei 30 DLU (nach dem ↔/↕-Symbol); nur „Drehen“ rückt das Winkelfeld hinter die
+    // Beschriftung „Winkel:“ (die Dialogbreite richtet sich nach Skalieren/Größe ändern)
+    let field_x = dlu(30.0, 0.0).x.ceil();
+    let angle_x = field_x.max(dlu(14.0, 0.0).x + super::text_w(ctx, &angle_l) + 6.0).ceil();
     let field_w = dlu(34.0, 0.0).x;
     let unit_w = super::max_text_w(ctx, &["%", &px_l]).ceil();
     let size_x = field_x + field_w + 6.0 + unit_w + 22.0;
@@ -681,10 +684,11 @@ pub fn show_numeric_transform(ctx: &egui::Context, st: &mut AppState) {
         let frame = Rect::from_min_max(dlu_rect(o, [8.0, 26.0, 0.0, 0.0]).min, egui::pos2(o.x + frame_r, dlu_rect(o, [0.0, 68.0, 0.0, 0.0]).top()));
         ui.painter().rect_stroke(frame, 2.0, egui::Stroke::new(1.0, if theme.glow { theme.colors.line_dark } else { theme.colors.line_mid }), egui::StrokeKind::Inside);
         let row = |k: usize| dlu_rect(o, [0.0, 32.0 + k as f32 * 18.0, 0.0, 13.0]);
-        let fr = |k: usize| Rect::from_min_size(egui::pos2(o.x + field_x, row(k).top()), vec2(field_w, row(k).height()));
+        let fx = if d.mode == 2 { angle_x } else { field_x };
+        let fr = |k: usize| Rect::from_min_size(egui::pos2(o.x + fx, row(k).top()), vec2(field_w, row(k).height()));
         match d.mode {
             2 => {
-                label(ui, o, Rect::from_min_size(egui::pos2(o.x + dlu(14.0, 0.0).x, fr(0).top()), vec2(field_x - dlu(14.0, 0.0).x - 4.0, fr(0).height())), &angle_l);
+                label(ui, o, Rect::from_min_size(egui::pos2(o.x + dlu(14.0, 0.0).x, fr(0).top()), vec2(angle_x - dlu(14.0, 0.0).x - 4.0, fr(0).height())), &angle_l);
                 if let Some(t) = live_text(ui, "nt-angle", fr(0), &fields::fmt_num(d.angle, 1), true)
                     && let Some(v) = fields::parse_num(&t)
                 {

@@ -412,7 +412,9 @@ impl Layout {
         let note_w = 68.0 + tw("dlg-pref-restart-note");
         let colors_w = 32.0 + tw("dlg-pref-color-stroke").max(80.0) + 20.0 + 32.0 + tw("dlg-pref-color-fill");
         let ctrl_off = 230f32.max(label_w + 10.0).ceil();
-        page_w = page_w.max(ctrl_off + note_w.max(colors_w).max(20.0 + tw("dlg-pref-xformtoolxformsbfe")).max(20.0 + tw("dlg-pref-osbasedresample")));
+        // Kästchen auf „Allgemein“ stehen in der Steuerspalte (alle, auch „Entwickleroptionen“)
+        let general_checks_w = page_items(0).iter().filter_map(|it| if let Item::Check(_, l, _) = *it { Some(20.0 + tw(l)) } else { None }).fold(20.0, f32::max);
+        page_w = page_w.max(ctrl_off + note_w.max(colors_w).max(general_checks_w));
         let reset_w = 220f32.max(tw("dlg-pref-reset-warnings") + 16.0).ceil();
         // Kombifelder: bisher auf die Seitenbreite gekürzt (198 px); mehr Platz nur für längere Einträge
         page_w = page_w.max(ctrl_off + if cw > 220.0 { cw } else { 198.0 }).max(reset_w).max(super::text_w(ctx, &t("dlg-pref-cap-ui")) * 1.1);

@@ -289,7 +289,8 @@ fn deutsch_unveraendert() {
     reset(&mut h);
     assert!(dialogs::open_for_command(st(&mut h), "filter.blur.gaussian"));
     h.run_steps(3);
-    assert_eq!(size_of(&mut h, "fp-form-5971").x, 340.0, "Formularbreite");
+    // seit DLG-5 (5f06b0c, PM-6) in der Filteranordnung des Originals: Schiebergruppe + Knopfspalte rechts
+    assert_eq!(size_of(&mut h, "fp-form-5971").x, 406.0, "Formularbreite");
     reset(&mut h);
 }
 

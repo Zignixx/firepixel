@@ -211,7 +211,7 @@ fn rr(o: Pos2, x: f32, y: f32, w: f32, h: f32) -> Rect {
 
 pub fn show(ctx: &egui::Context, st: &mut AppState) {
     let Some(mut d) = st.dialogs.bitmap_selection.clone() else { return };
-    let (title, size, id) = match d.kind {
+    let (title, mut size, id) = match d.kind {
         Kind::Save => (t("dlg-title-save-selection"), vec2(296.0, 274.0), "fp-bsel-save"),
         Kind::Restore => (t("dlg-title-restore-selection"), vec2(297.0, 295.0), "fp-bsel-restore"),
         Kind::Delete => (t("dlg-title-delete-selection"), vec2(284.0, 125.0), "fp-bsel-delete"),
@@ -222,17 +222,27 @@ pub fn show(ctx: &egui::Context, st: &mut AppState) {
     let mut outcome = None;
     let mut new_doc = None;
     let mut new_sel = None;
+    // Lage der Steuerelemente nach den Vorlagen (§5.2–§5.4, Fensterkoordinaten ohne Titelleiste)
+    let (lx, cx, cw, doc_y, sel_y) = match d.kind {
+        Kind::Save => (24.0, 92.0, 188.0, 31.0, 57.0),
+        Kind::Restore => (24.0, 99.0, 182.0, 31.0, 70.0),
+        Kind::Delete => (14.0, 89.0, 185.0, 24.0, 52.0),
+    };
+    // Längere Beschriftungen (Übersetzungen, Testsprache) schieben die Felder nach rechts und
+    // verbreitern den Dialog; im Deutschen bleibt die Lage des Originals (Verschiebung 0).
+    let mut lbls = vec![t("bsel-lbl-document"), t("bsel-lbl-selection")];
+    if d.kind == Kind::Save {
+        lbls.push(t("bsel-lbl-name"));
+    }
+    let need = super::max_text_w(ctx, &super::refs(&lbls)).ceil() + 4.0;
+    let dx = (lx + need - cx).max(0.0);
+    let cx = cx + dx;
+    size.x += dx;
     let r = dialog_frame(ctx, id, &title, size, |ui, body| {
         let o = body.min;
-        // Lage der Steuerelemente nach den Vorlagen (§5.2–§5.4, Fensterkoordinaten ohne Titelleiste)
-        let (lx, cx, cw, doc_y, sel_y) = match d.kind {
-            Kind::Save => (24.0, 92.0, 188.0, 31.0, 57.0),
-            Kind::Restore => (24.0, 99.0, 182.0, 31.0, 70.0),
-            Kind::Delete => (14.0, 89.0, 185.0, 24.0, 52.0),
-        };
         match d.kind {
-            Kind::Save => group_box(ui, rr(o, 14.0, 9.0, 275.0, 106.0), &t("bsel-group-target")),
-            Kind::Restore => group_box(ui, rr(o, 14.0, 9.0, 276.0, 117.0), &t("bsel-group-source")),
+            Kind::Save => group_box(ui, rr(o, 14.0, 9.0, 275.0 + dx, 106.0), &t("bsel-group-target")),
+            Kind::Restore => group_box(ui, rr(o, 14.0, 9.0, 276.0 + dx, 117.0), &t("bsel-group-source")),
             Kind::Delete => {}
         }
         fit_label(ui, rr(o, lx, doc_y + 1.0, cx - lx - 4.0, 20.0), &t("bsel-lbl-document"), true);
@@ -251,16 +261,16 @@ pub fn show(ctx: &egui::Context, st: &mut AppState) {
             });
         }
         if d.kind == Kind::Restore
-            && let Some(v) = fields::checkbox(ui, "bsel-invert", rr(o, 98.0, 99.0, 176.0, 16.0), &t("bsel-invert"), d.invert, true)
+            && let Some(v) = fields::checkbox(ui, "bsel-invert", rr(o, 98.0 + dx, 99.0, 176.0, 16.0), &t("bsel-invert"), d.invert, true)
         {
             d.invert = v;
         }
         if d.kind != Kind::Delete {
             let (gy, ys): (f32, [f32; 4]) = if d.kind == Kind::Save { (130.0, [151.0, 169.0, 187.0, 204.0]) } else { (139.0, [164.0, 183.0, 203.0, 222.0]) };
-            group_box(ui, rr(o, 14.0, gy, 275.0 + if d.kind == Kind::Restore { 1.0 } else { 0.0 }, if d.kind == Kind::Save { 102.0 } else { 112.0 }), &t("bsel-group-operation"));
+            group_box(ui, rr(o, 14.0, gy, 275.0 + dx + if d.kind == Kind::Restore { 1.0 } else { 0.0 }, if d.kind == Kind::Save { 102.0 } else { 112.0 }), &t("bsel-group-operation"));
             let labels = d.op_labels();
             for (k, y) in ys.into_iter().enumerate() {
-                if fields::radio(ui, ("bsel-op", id, k), rr(o, 39.0, y, 237.0, 16.0), &labels[k], d.op == k, d.op_enabled(k)) && d.op_enabled(k) {
+                if fields::radio(ui, ("bsel-op", id, k), rr(o, 39.0, y, 237.0 + dx, 16.0), &labels[k], d.op == k, d.op_enabled(k)) && d.op_enabled(k) {
                     d.op = k;
                 }
             }
