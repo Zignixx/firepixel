@@ -1,0 +1,12 @@
+{
+  "unit": "_selftest_menu",
+  "testfile": "T04",
+  "note": "Runner self test: open the File menu in both programs; whole window as overview.",
+  "steps": [
+    { "id": "01_file_menu_open", "check": "File menu opens", "both": [ {"menu": "Datei"} ], "shot": {"area": "menu"},
+      "log_menu_items": true },
+    { "id": "02_modify_transform_open", "check": "sub menu Modify > Transform", "both": [ {"select": "R1"}, {"menu": "Modifizieren > Transformieren"} ],
+      "shot": {"area": "menu"} },
+    { "id": "03_window", "check": "window after opening T04", "both": [ {"open_testfile": "T04"} ], "shot": {"area": "window"} }
+  ]
+}

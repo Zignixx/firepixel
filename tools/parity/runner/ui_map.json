@@ -1,0 +1,80 @@
+{
+  "_doc": "Mapping table for the parity runner (see README.md, section 'ui_map.json'). Keys are logical names used in the scripts; values say how each program finds the element. Entries with null are known but not yet located - a step using them is logged as 'unmapped'.",
+
+  "menu_bar": {
+    "_doc": "orig: menu bar entries, centre in client coordinates of the main window (the bar is custom drawn, no UI Automation). fp: found by text.",
+    "orig": [["Datei", 60, 15], ["Bearbeiten", 120, 15], ["Ansicht", 186, 15], ["Auswählen", 252, 15], ["Modifizieren", 332, 15],
+             ["Text", 394, 15], ["Befehle", 442, 15], ["Filter", 492, 15], ["Fenster", 542, 15], ["Hilfe", 592, 15]]
+  },
+
+  "panels": {
+    "_doc": "panel id (with or without 'window.' prefix, '-' and '_' equivalent) -> fp panel command, German title (orig window title / fp tab text), orig menu path to show it.",
+    "properties":            {"fp": "window.properties", "title": "Eigenschaften", "menu": "Fenster > Eigenschaften"},
+    "inspector":             {"fp": "window.properties", "title": "Eigenschaften", "menu": "Fenster > Eigenschaften"},
+    "tools":                 {"fp": "window.tools", "title": null, "orig_class": "OWL.ToolbarContainer", "menu": "Fenster > Werkzeuge"},
+    "optimize":              {"fp": "window.optimize", "title": "Optimieren", "menu": "Fenster > Optimieren"},
+    "history":               {"fp": "window.history", "title": "Verlauf", "menu": "Fenster > Verlauf"},
+    "align":                 {"fp": "window.align", "title": "Ausrichten", "menu": "Fenster > Ausrichten"},
+    "pages":                 {"fp": "window.pages", "title": "Seiten", "menu": "Fenster > Seiten"},
+    "states":                {"fp": "window.states", "title": "Status", "menu": "Fenster > Status"},
+    "layers":                {"fp": "window.layers", "title": "Ebenen", "menu": "Fenster > Ebenen"},
+    "styles":                {"fp": "window.styles", "title": "Stile", "menu": "Fenster > Stile"},
+    "palette":               {"fp": "window.colorPalette", "title": "Farbpalette", "menu": "Fenster > Farbpalette"},
+    "color-palette":         {"fp": "window.colorPalette", "title": "Farbpalette", "menu": "Fenster > Farbpalette"},
+    "swatches":              {"fp": "window.swatches", "title": "Farbfelder", "menu": "Fenster > Farbfelder"},
+    "special-characters":    {"fp": "window.specialCharacters", "title": "Sonderzeichen", "menu": "Fenster > Sonderzeichen"},
+    "image-editing":         {"fp": "window.imageEditing", "title": "Bildbearbeitung", "menu": "Fenster > Bildbearbeitung"},
+    "path":                  {"fp": "window.path", "title": "Pfad", "menu": "Fenster > Pfad"},
+    "auto-shapes":           {"fp": "window.autoShapes", "title": "Automatische Formen", "menu": "Fenster > Automatische Formen"},
+    "library":               {"fp": "window.documentLibrary", "title": "Dokumentbibliothek", "menu": "Fenster > Dokumentbibliothek"},
+    "document-library":      {"fp": "window.documentLibrary", "title": "Dokumentbibliothek", "menu": "Fenster > Dokumentbibliothek"},
+    "common-library":        {"fp": "window.commonLibrary", "title": "Allgemeine Bibliothek", "menu": "Fenster > Allgemeine Bibliothek"},
+    "info":                  {"fp": "window.info", "title": "Info", "menu": "Fenster > Info"},
+    "mixer":                 {"fp": "window.colorMixer", "title": "Farbmischer", "menu": "Fenster > Farbmischer"},
+    "color-mixer":           {"fp": "window.colorMixer", "title": "Farbmischer", "menu": "Fenster > Farbmischer"},
+    "url":                   {"fp": "window.url", "title": "URL", "menu": "Fenster > URL"},
+    "behaviors":             {"fp": "window.behaviors", "title": "Verhalten", "menu": "Fenster > Verhalten"},
+    "find":                  {"fp": "window.findReplace", "title": "Suchen und ersetzen", "menu": "Fenster > Suchen und ersetzen"},
+    "symbol-properties":     {"fp": "window.symbolProperties", "title": "Symboleigenschaften", "menu": "Fenster > Symboleigenschaften"},
+    "auto-shape-properties": {"fp": "window.autoShapeProperties", "title": "Eigenschaften für automatische Form", "menu": "Fenster > Eigenschaften für automatische Form"},
+    "css-properties":        {"fp": "window.cssProperties", "title": "CSS-Eigenschaften", "menu": "Fenster > CSS-Eigenschaften"}
+  },
+
+  "tools": {
+    "_doc": "fp tool id -> orig: single-key shortcut (sent after a click-free focus) or {\"jsf\": \"...\"}. Unknown ids are logged as unmapped for orig; fp always uses ui_action {tool}.",
+    "tool.pointer": "v", "tool.subselection": "a", "tool.scale": "q", "tool.crop": "c",
+    "tool.marquee": "m", "tool.lasso": "l", "tool.magicWand": "w", "tool.brush": "b", "tool.pencil": "y",
+    "tool.eraser": "e", "tool.blur": "r", "tool.rubberStamp": "s", "tool.eyedropper": "i", "tool.paintBucket": "g",
+    "tool.line": "n", "tool.pen": "p", "tool.rectangle": "u", "tool.text": "t", "tool.hand": "h", "tool.zoom": "z",
+    "tool.slice": "k", "tool.hotspot": "j"
+  },
+
+  "commands": {
+    "_doc": "fp command id -> orig menu path ('A > B > C'), used by the verb 'command' on the orig side. fp uses ui_action {run}.",
+    "modify.canvas.imageSize": "Modifizieren > Leinwand > Bildgröße",
+    "modify.canvas.canvasSize": "Modifizieren > Leinwand > Leinwandgröße",
+    "modify.group": "Modifizieren > Gruppieren",
+    "modify.ungroup": "Modifizieren > Gruppierung aufheben",
+    "edit.selectAll": "Auswählen > Alles auswählen",
+    "edit.deselect": "Auswählen > Auswahl aufheben"
+  },
+
+  "targets": {
+    "_doc": "logical ui key -> {orig: locator, fp: locator}. orig locators: {panel, rel:[x,y]} (offset from the panel window's top-left), {window_rel:[x,y]} (client of main window), {child:{title,class,index}, panel?}, {dialog_child:{title,class,index}}, {label:'text'}. fp locators: {find:'text', role?, exact?, panel?, index?}, {window_rel:[x,y]}, {canvas:[x,y]}. A missing side or null = unmapped.",
+    "dialog.ok":     {"orig": {"dialog_button": "ok"},     "fp": {"find": "OK", "role": "button", "exact": true}},
+    "dialog.cancel": {"orig": {"dialog_button": "cancel"}, "fp": {"find": "Abbrechen", "role": "button", "exact": true}},
+    "inspector.fill_color": null,
+    "inspector.stroke_color": null,
+    "inspector.text_color": null,
+    "inspector.opacity_slider": null,
+    "inspector.fx_add": null,
+    "inspector.font": null,
+    "toolbox.fill_color": null,
+    "toolbox.stroke_color": null,
+    "toolbox.swap_colors": null,
+    "toolbox.default_colors": null,
+    "toolbox.no_color": null,
+    "optimize.format": null,
+    "preview.format": null
+  }
+}
