@@ -45,6 +45,20 @@ aufgeklappt, Ergebnis auf der Leinwand) müssen danach nachgebaut bzw. geprüft 
 
 Aufnehmen kostet keinen Kontext – nur **Ansehen** tut es. Darum: viele Bilder speichern, wenige ansehen.
 
+## Bewusst anders – nicht zurückbauen (Nutzervorgabe 13.10. ≈ 03:50, verbindlich)
+
+Die Referenzbilder sind Richtlinie für **Funktion, Inhalt und Verhalten** (welche Felder, Knöpfe, Einträge, Werte, Grenzen,
+Reihenfolge, Tab-Folge, Kürzel, Wirkung, Ergebnis). Die **Gestaltung**, die Firepixel bewusst verbessert hat, bleibt:
+
+- Dialograhmen, Titelleiste, Fußleiste, Schatten, OK-Hervorhebung, Abstände, Schriften, Farben und die 3 Designs
+  (DES-1, `DESIGN.md` §12/§13), Startbildschirm (DES-2), alles aus `NUTZERBEFUNDE.md` (z. B. N11 schöner, N19 Suche in der
+  Schriftliste, N20 größerer Nachzeichnen-Dialog, N21 KI-Karte) und eigene Firepixel-Funktionen (KI, Nachzeichnen, Batch).
+- Ausnahme, wo der Nutzer ausdrücklich das Original will: **Farbwähler-Popup** (N27b) – dort gilt das Original.
+
+Bewertung je Prüfpunkt: ✅ gleich · ❌ Unterschied in Funktion/Inhalt/Verhalten (beheben) · 🎨 **bewusst anders gestaltet**
+(Quelle angeben, z. B. „DES-1“, „N20“) – wird **nicht** geändert. Im Zweifel 🎨 mit Frage in der Ergebnisdatei statt Umbau;
+der Koordinator sammelt die Fragen für den Nutzer.
+
 ## Regeln gegen Bilderflut (verbindlich für jeden PAR-Agenten)
 
 1. Zustand **als Text** erfassen: Original per JSF (Werte, Grenzen, Objektbaum, `Files`-Log), Firepixel per Brücke
