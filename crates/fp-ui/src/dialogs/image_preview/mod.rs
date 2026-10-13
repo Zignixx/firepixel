@@ -102,7 +102,9 @@ pub struct ImagePreview {
     pub active: usize,
     /// Stufe in [`toolbar::ZOOMS`] (Start 100 %).
     pub zoom_idx: usize,
-    /// Gemeinsamer Bildpunkt in der Feldmitte (Bildpixel); `None` = Bildmitte.
+    /// Gemeinsamer Punkt in der Feldmitte in **Dokumentpixeln** der Seite (N25: Felder mit
+    /// verschiedenem Exportbereich, verschiedener Skalierung oder „Vorschau“ aus zentrieren auf
+    /// denselben Dokumentpunkt); `None` = Mitte des Bildes im aktiven Feld.
     pub center: Option<Vec2>,
     pub tool: Tool,
     /// Ziehen mit dem Zeiger: Druckpunkt und Bildmitte beim Drücken.
@@ -208,12 +210,55 @@ impl ImagePreview {
         }
     }
 
+    /// Abbildung Dokument → angezeigtes Bild des Feldes `i`: Ursprung des Bildes in Dokumentpixeln,
+    /// Maßstab (Bildpixel je Dokumentpixel) und Bildgröße. Felder mit „Vorschau“ aus zeigen das
+    /// Original (Ursprung 0, Maßstab 1); sonst gelten Exportbereich und Skalierung des Feldes.
+    pub fn pane_map(&self, i: usize) -> Option<(Vec2, Vec2, Vec2)> {
+        let p = &self.panes[i];
+        let res = if p.show_preview { p.result.as_ref() } else { self.original.as_ref() };
+        let img = res?.image.as_ref()?;
+        let size = vec2(img.width() as f32, img.height() as f32);
+        if !p.show_preview {
+            return Some((Vec2::ZERO, Vec2::splat(1.0), size));
+        }
+        let s = &p.settings;
+        let (fx, fy) = crop::factors(self.doc_size, s);
+        // das ganze Bild (Werkzeug „Exportbereich“ im aktiven Feld) beginnt am Seitenursprung
+        let origin = if (img.width(), img.height()) == crop::scaled_size(self.doc_size, s) {
+            Vec2::ZERO
+        } else {
+            let a = crop::area_doc(self.doc_size, s);
+            vec2(a[0] as f32, a[1] as f32)
+        };
+        Some((origin, vec2(fx as f32, fy as f32), size))
+    }
+
+    /// Maßstab (Bildpixel je Dokumentpixel) des Feldes `i`; 1, solange es kein Bild hat.
+    fn pane_scale(&self, i: usize) -> Vec2 {
+        self.pane_map(i).map(|(_, f, _)| f).filter(|f| f.x > 0.0 && f.y > 0.0).unwrap_or(Vec2::splat(1.0))
+    }
+
+    /// Gemeinsamer Dokumentpunkt in der Feldmitte (ohne Vorgabe: Mitte des Bildes im aktiven Feld).
+    pub fn center_doc(&self) -> Vec2 {
+        self.center.unwrap_or_else(|| match self.pane_map(self.active) {
+            Some((o, f, sz)) if f.x > 0.0 && f.y > 0.0 => o + sz / f / 2.0,
+            _ => vec2(self.doc_size.0 as f32, self.doc_size.1 as f32) / 2.0,
+        })
+    }
+
+    /// Bildschirmlage des angezeigten Bildes im Feld `i` (gemeinsamer Zoom und Mittelpunkt).
+    pub fn image_rect(&self, i: usize, lay: &pane::PaneLayout) -> Option<Rect> {
+        let (o, f, sz) = self.pane_map(i)?;
+        let z = self.zoom();
+        let c_img = (self.center_doc() - o) * f;
+        Some(Rect::from_min_size(lay.image.center() - c_img * z, sz * z))
+    }
+
     /// Bildpunkt (Pixel im angezeigten Bild) unter dem Bildschirmpunkt `p` im Feld `i`.
     pub fn pixel_at(&self, i: usize, lay: &pane::PaneLayout, p: egui::Pos2) -> Option<(i64, i64)> {
-        let img = self.panes[i].result.as_ref()?.image.as_ref()?;
-        let sz = vec2(img.width() as f32, img.height() as f32);
-        let c = self.center.unwrap_or(sz / 2.0);
-        let q = (p - (lay.image.center() - c * self.zoom())) / self.zoom();
+        self.panes[i].result.as_ref()?.image.as_ref()?;
+        let r = self.image_rect(i, lay)?;
+        let q = (p - r.min) / self.zoom();
         (lay.image.contains(p) && q.x >= 0.0 && q.y >= 0.0).then(|| (q.x.floor() as i64, q.y.floor() as i64))
     }
 
@@ -247,8 +292,9 @@ impl ImagePreview {
             return None;
         }
         let sz = vec2(img.width() as f32, img.height() as f32);
-        let c = self.center.unwrap_or(sz / 2.0);
-        Some(Rect::from_min_size(lay.image.center() - c * self.zoom(), sz * self.zoom()))
+        let (fx, fy) = crop::factors(self.doc_size, &p.settings);
+        let c_img = self.center_doc() * vec2(fx as f32, fy as f32);
+        Some(Rect::from_min_size(lay.image.center() - c_img * self.zoom(), sz * self.zoom()))
     }
 
     /// Rahmen des Exportbereichs des Feldes `i` auf dem Bildschirm (nur mit dem Werkzeug
@@ -312,32 +358,45 @@ impl ImagePreview {
     /// Zoomstufe setzen; mit `anchor` (Bildschirmpunkt, Mitte der Bildfläche) bleibt der Punkt
     /// unter dem Zeiger stehen.
     pub fn set_zoom(&mut self, idx: usize, anchor: Option<(egui::Pos2, egui::Pos2)>) {
+        self.set_zoom_in(idx, anchor, self.active);
+    }
+
+    /// Wie [`ImagePreview::set_zoom`], der Anker liegt im Feld `pane`.
+    fn set_zoom_in(&mut self, idx: usize, anchor: Option<(egui::Pos2, egui::Pos2)>, pane: usize) {
         let idx = idx.min(toolbar::ZOOMS.len() - 1);
-        if let (Some((p, c)), Some(center)) = (anchor, self.center) {
+        if let Some((p, c)) = anchor {
+            let f = self.pane_scale(pane);
+            let center = self.center_doc();
             let (old, new) = (self.zoom(), toolbar::ZOOMS[idx].1);
-            let img = center + (p - c) / old;
-            self.center = Some(img - (p - c) / new);
+            let doc = center + (p - c) / (old * f);
+            self.center = Some(doc - (p - c) / (new * f));
         }
         self.zoom_idx = idx;
     }
 
     /// Ausschnitt verschieben (alle Felder): `delta` in Bildschirmpunkten.
     pub fn pan(&mut self, delta: Vec2) {
-        if let Some(c) = self.center {
-            self.center = Some(c - delta / self.zoom());
-        }
+        self.pan_in(delta, self.active);
     }
 
-    /// Bildpunkt in der Feldmitte begrenzen: kleinere Bilder bleiben mittig, größere lassen sich
-    /// höchstens bis an ihren Rand schieben (kein Bildlauf ins Leere).
-    fn clamp_center(&mut self, img: Vec2, view: Vec2) {
+    /// Wie [`ImagePreview::pan`] mit dem Maßstab des Feldes `pane`.
+    fn pan_in(&mut self, delta: Vec2, pane: usize) {
+        let f = self.pane_scale(pane);
+        self.center = Some(self.center_doc() - delta / (self.zoom() * f));
+    }
+
+    /// Punkt in der Feldmitte begrenzen (im Bild des aktiven Feldes): kleinere Bilder bleiben
+    /// mittig, größere lassen sich höchstens bis an ihren Rand schieben (kein Bildlauf ins Leere).
+    fn clamp_center(&mut self, pane: usize, view: Vec2) {
+        let Some((o, f, img)) = self.pane_map(pane).filter(|(_, f, _)| f.x > 0.0 && f.y > 0.0) else { return };
         let z = self.zoom();
-        let c = self.center.unwrap_or(img / 2.0);
+        let c = (self.center_doc() - o) * f;
         let axis = |c: f32, img: f32, view: f32| {
             let half = view / 2.0 / z;
             if img * z <= view { img / 2.0 } else { c.clamp(half, img - half) }
         };
-        self.center = Some(vec2(axis(c.x, img.x, view.x), axis(c.y, img.y, view.y)));
+        let c = vec2(axis(c.x, img.x, view.x), axis(c.y, img.y, view.y));
+        self.center = Some(o + c / f);
     }
 
     fn update_jobs(&mut self, ctx: &egui::Context, base: &JobInput) {
@@ -648,14 +707,10 @@ fn draw(ctx: &egui::Context, st: &mut AppState, d: &mut ImagePreview) -> Option<
 fn draw_panes(ui: &mut egui::Ui, d: &mut ImagePreview, area: Rect, entries: &[pane::PresetEntry]) {
     let rects = pane_rects(area, d.mode);
     let lays: Vec<(usize, pane::PaneLayout)> = rects.iter().map(|&(i, r)| (i, pane::PaneLayout::new(r, i, d.mode))).collect();
-    // gemeinsamer Ausschnitt: Bezug ist das Bild des aktiven Feldes
-    let img_size = |p: &Pane, orig: &Option<Arc<PaneResult>>| -> Option<Vec2> {
-        let r = if p.show_preview { p.result.as_ref() } else { orig.as_ref() };
-        r.and_then(|r| r.image.as_ref()).map(|i| vec2(i.width() as f32, i.height() as f32))
-    };
+    // gemeinsamer Ausschnitt (Dokumentpunkt in der Feldmitte): Bezug ist das Bild des aktiven Feldes
     let view = lays.iter().map(|(_, l)| l.image.size()).fold(vec2(f32::MAX, f32::MAX), |a, b| a.min(b));
-    if let Some(sz) = img_size(&d.panes[d.active], &d.original).or_else(|| lays.iter().find_map(|(i, _)| img_size(&d.panes[*i], &d.original))) {
-        d.clamp_center(sz, view);
+    if let Some(i) = std::iter::once(d.active).chain(lays.iter().map(|(i, _)| *i)).find(|&i| d.pane_map(i).is_some()) {
+        d.clamp_center(i, view);
     }
     d.layout = lays.clone();
     // Alt aus dem Zustand oder aus dem Klick selbst (Taste und Klick im selben Bild)
@@ -701,6 +756,24 @@ fn draw_panes(ui: &mut egui::Ui, d: &mut ImagePreview, area: Rect, entries: &[pa
                 }
             }
         }
+        // Leertaste + Ziehen bzw. mittlere Taste verschieben mit jedem Werkzeug (wie im
+        // Dokumentfenster); der gegriffene Punkt bleibt unter dem Zeiger
+        let space = ui.input(|inp| inp.key_down(egui::Key::Space)) && !ui.ctx().text_edit_focused();
+        let hand = resp.dragged_by(egui::PointerButton::Middle) || (space && resp.dragged_by(egui::PointerButton::Primary) && d.crop_drag.is_none());
+        if hand || (d.tool == Tool::Pointer && resp.dragged()) {
+            if d.grab.is_none() {
+                d.grab = ui.input(|inp| inp.pointer.press_origin()).map(|o| (o, d.center_doc()));
+            }
+            if let (Some((o, c0)), Some(p)) = (d.grab, ui.input(|inp| inp.pointer.latest_pos())) {
+                d.center = Some(c0 - (p - o) / (d.zoom() * d.pane_scale(i)));
+            }
+            ui.ctx().set_cursor_icon(egui::CursorIcon::Grabbing);
+            continue;
+        }
+        if space && on_image {
+            ui.ctx().set_cursor_icon(egui::CursorIcon::Grab);
+            continue;
+        }
         match d.tool {
             Tool::Pipette(_) => {
                 if on_image {
@@ -708,20 +781,9 @@ fn draw_panes(ui: &mut egui::Ui, d: &mut ImagePreview, area: Rect, entries: &[pa
                 }
             }
             Tool::Pointer => {
-                // der gegriffene Bildpunkt bleibt unter dem Zeiger (ab dem Drücken gerechnet, auch
-                // die Bewegung, bevor egui das Ziehen erkennt)
-                if resp.drag_started() {
-                    let origin = ui.input(|inp| inp.pointer.press_origin());
-                    d.grab = origin.zip(d.center);
-                }
-                if resp.dragged() {
-                    if let (Some((o, c0)), Some(p)) = (d.grab, ui.input(|inp| inp.pointer.latest_pos())) {
-                        d.center = Some(c0 - (p - o) / d.zoom());
-                    } else {
-                        d.pan(resp.drag_delta());
-                    }
-                    ui.ctx().set_cursor_icon(egui::CursorIcon::Grabbing);
-                } else if on_image {
+                // Ziehen siehe oben (der gegriffene Punkt bleibt unter dem Zeiger, ab dem Drücken
+                // gerechnet, auch die Bewegung, bevor egui das Ziehen erkennt)
+                if on_image {
                     ui.ctx().set_cursor_icon(egui::CursorIcon::Grab);
                 }
             }
@@ -741,6 +803,7 @@ fn draw_panes(ui: &mut egui::Ui, d: &mut ImagePreview, area: Rect, entries: &[pa
     }
     if !ui.input(|inp| inp.pointer.any_down()) {
         d.crop_drag = None;
+        d.grab = None;
     }
     // Esc während des Ziehens mit „Exportbereich“: Ziehen abbrechen, Bereich wie vorher; die Taste
     // wird verbraucht, damit sie nicht zugleich den Dialog schließt
@@ -751,8 +814,6 @@ fn draw_panes(ui: &mut egui::Ui, d: &mut ImagePreview, area: Rect, entries: &[pa
         d.crop_drag = None;
     }
     wheel(ui, d, &lays);
-    let z = d.zoom();
-    let center = d.center;
     for (i, lay) in &lays {
         let i = *i;
         let show = d.panes[i].show_preview;
@@ -769,11 +830,8 @@ fn draw_panes(ui: &mut egui::Ui, d: &mut ImagePreview, area: Rect, entries: &[pa
             };
             (res, tex)
         };
-        let img_rect = res.as_ref().and_then(|r| r.image.as_ref()).map(|img| {
-            let sz = vec2(img.width() as f32, img.height() as f32);
-            let c = center.unwrap_or(sz / 2.0);
-            Rect::from_min_size(lay.image.center() - c * z, sz * z)
-        });
+        // gemeinsamer Dokumentpunkt in der Feldmitte, je Feld mit dessen Exportbereich/Skalierung
+        let img_rect = res.as_ref().and_then(|r| r.image.as_ref()).and_then(|_| d.image_rect(i, lay));
         pane::paint_image(ui, lay.image, img_rect, tex.as_ref());
         // Werkzeug „Exportbereich“: Rahmen mit Griffen im aktiven Feld
         if show
@@ -839,7 +897,7 @@ const WHEEL_POINTS_PER_NOTCH: f32 = 100.0;
 /// tut nichts, Strg+Rad = je volle Rastung genau eine der 11 Zoomstufen um den Mauszeiger.
 fn wheel(ui: &egui::Ui, d: &mut ImagePreview, lays: &[(usize, pane::PaneLayout)]) {
     // nur, wenn die Bildvorschau oben liegt und der Zeiger über einem Bild steht
-    let Some(lay) = lays.iter().map(|(_, l)| l).find(|l| ui.rect_contains_pointer(l.image)) else { return };
+    let Some((pane, lay)) = lays.iter().find(|(_, l)| ui.rect_contains_pointer(l.image)).map(|(i, l)| (*i, l)) else { return };
     let Some(p) = ui.input(|i| i.pointer.hover_pos()) else { return };
     let events: Vec<(egui::MouseWheelUnit, Vec2, bool, bool)> = ui.input(|i| {
         i.events
@@ -873,7 +931,7 @@ fn wheel(ui: &egui::Ui, d: &mut ImagePreview, lays: &[(usize, pane::PaneLayout)]
             if step != 0 {
                 d.wheel_acc -= step as f32;
                 let idx = if step > 0 { (d.zoom_idx + 1).min(toolbar::ZOOMS.len() - 1) } else { d.zoom_idx.saturating_sub(1) };
-                d.set_zoom(idx, Some((p, lay.image.center())));
+                d.set_zoom_in(idx, Some((p, lay.image.center())), pane);
             }
         } else if !shift {
             let k = match unit {
@@ -885,7 +943,7 @@ fn wheel(ui: &egui::Ui, d: &mut ImagePreview, lays: &[(usize, pane::PaneLayout)]
         }
     }
     if pan != Vec2::ZERO {
-        d.pan(pan);
+        d.pan_in(pan, pane);
     }
 }
 

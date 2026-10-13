@@ -297,13 +297,44 @@ fn view_bar_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
 
 // ---------------------------------------------------------------------- Leinwand
 
+/// Größe des Sichtbereichs (Bildschirmpunkte) des aktiven Dokuments melden. Hat sich seit der
+/// letzten Meldung die Ansicht (Original/Vorschau/2-fach/4-fach) geändert, bleibt der Dokumentpunkt
+/// in der Mitte stehen: alle Ansichten teilen eine Lage (Zoom und Mittelpunkt, N25), und Felder
+/// verschiedener Größe zentrieren auf denselben Punkt.
+pub(crate) fn report_viewport(st: &mut AppState, size: egui::Vec2) {
+    let Some(d) = st.session.active() else { return };
+    let (id, mode) = (d.id, d.view.preview_mode);
+    let cc = st.canvases.entry(id).or_default();
+    let switched = cc.view_mode.is_some_and(|m| m != mode);
+    cc.view_mode = Some(mode);
+    let prev = cc.switch_center;
+    let Some(d) = st.session.active_mut() else { return };
+    let new = (size.x.max(1.0) as f64, size.y.max(1.0) as f64);
+    let old = d.view.viewport;
+    let mut keep = None;
+    if switched && old != new {
+        let z = d.view.zoom.max(1e-9);
+        let now = (d.view.origin.0 + old.0 / 2.0 / z, d.view.origin.1 + old.1 / 2.0 / z);
+        // seit dem letzten Wechsel nicht bewegt (nur ausgerichtet): dessen genauen Punkt nehmen
+        let c = prev.filter(|p| ((p.0 - now.0) * z).abs() < 1.0 && ((p.1 - now.1) * z).abs() < 1.0).unwrap_or(now);
+        d.view.origin = (c.0 - new.0 / 2.0 / z, c.1 - new.1 / 2.0 / z);
+        keep = Some(c);
+    }
+    d.view.viewport = new;
+    if keep.is_some()
+        && let Some(cc) = st.canvases.get_mut(&id)
+    {
+        cc.switch_center = keep;
+    }
+}
+
 /// Seitenrechteck in Dokumentkoordinaten.
-fn page_rect(doc: &fp_model::Document, page: usize) -> Option<IRect> {
+pub(crate) fn page_rect(doc: &fp_model::Document, page: usize) -> Option<IRect> {
     fp_render::Renderer::page_rect(doc, page)
 }
 
 /// Ansicht so begrenzen, dass die Seite im Bild bleibt; kleinere Seiten werden zentriert.
-fn clamp_view(view: &mut fp_engine::ViewState, pr: IRect) {
+pub(crate) fn clamp_view(view: &mut fp_engine::ViewState, pr: IRect) {
     let z = view.zoom.max(1e-6);
     let (vw, vh) = view.viewport;
     let (pw, ph) = (pr.width() as f64, pr.height() as f64);
@@ -380,8 +411,8 @@ fn canvas_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
     let ppp = ui.ctx().pixels_per_point() as f64;
     // Sichtbereich melden, Erst-Einpassung, Begrenzung
     let needs_fit = st.canvases.entry(id).or_default().needs_initial_fit;
+    report_viewport(st, area.size());
     if let Some(d) = st.session.active_mut() {
-        d.view.viewport = (area.width().max(1.0) as f64, area.height().max(1.0) as f64);
         if let Some(pr) = page_rect(&d.doc, d.page) {
             if needs_fit {
                 if pr.width() as f64 > d.view.viewport.0 || pr.height() as f64 > d.view.viewport.1 {
@@ -595,7 +626,7 @@ fn paint_cursor(ui: &Ui, st: &AppState, area: Rect, resp: &egui::Response) {
 const POINTS_PER_NOTCH: f32 = 100.0;
 
 /// Rastungen eines Rad-Ereignisses.
-fn wheel_notches(unit: egui::MouseWheelUnit, dy: f32) -> f32 {
+pub(crate) fn wheel_notches(unit: egui::MouseWheelUnit, dy: f32) -> f32 {
     match unit {
         // eine Rastung je Zeilen-/Seiten-Ereignis, egal wie viele Zeilen Windows meldet
         egui::MouseWheelUnit::Line | egui::MouseWheelUnit::Page => {
@@ -610,7 +641,7 @@ fn wheel_notches(unit: egui::MouseWheelUnit, dy: f32) -> f32 {
 }
 
 /// Höchstens eine Stufe je Ereignis aus dem Akkumulator nehmen (Richtungswechsel verwirft den Rest).
-fn take_step(acc: &mut f32) -> i32 {
+pub(crate) fn take_step(acc: &mut f32) -> i32 {
     if *acc >= 1.0 {
         *acc = 0.0;
         1

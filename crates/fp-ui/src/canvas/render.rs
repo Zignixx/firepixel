@@ -155,6 +155,12 @@ pub struct CanvasCache {
     /// Zeit des letzten Bildes mit offenem Text-Editor (Textvorschau nach dem Übernehmen stehen
     /// lassen, bis das neue Hintergrundbild da ist).
     pub text_linger: Option<f64>,
+    /// Ansicht (Original/Vorschau/2-fach/4-fach), für die zuletzt der Sichtbereich gemeldet wurde:
+    /// Wechselt sie, bleibt der Dokumentpunkt in der Mitte stehen (N25).
+    pub view_mode: Option<fp_engine::view::PreviewMode>,
+    /// Genauer Dokument-Mittelpunkt beim letzten Ansichtswechsel (ohne die Pixel-Ausrichtung):
+    /// mehrfaches Umschalten ohne Bewegung wandert so nicht um halbe Pixel weiter.
+    pub switch_center: Option<(f64, f64)>,
 }
 
 impl CanvasCache {

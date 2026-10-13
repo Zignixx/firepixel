@@ -8,7 +8,7 @@
 
 use crate::app_state::AppState;
 use crate::theme::Theme;
-use egui::{pos2, vec2, Align2, Color32, Id, Rect, Stroke, StrokeKind, TextureHandle, Ui};
+use egui::{pos2, vec2, Align2, Color32, Id, Pos2, Rect, Stroke, StrokeKind, TextureHandle, Ui};
 use fp_engine::view::PreviewMode;
 use fp_export::options::{builtin_presets, OptimizeSettings};
 use fp_export::render::{Background, PageRenderer, RenderRequest};
@@ -108,19 +108,13 @@ pub fn tile(ctx: &egui::Context, st: &AppState, s: &OptimizeSettings) -> Option<
     Some(t)
 }
 
-/// Zeichnet die Vorschauansicht des aktiven Dokuments in `rect` (Modus aus `view.preview_mode`).
-/// `original` zeichnet bei 2-/4-fach die Originalkachel (die Leinwand übergibt ihre Zeichenfunktion).
-pub fn show(ui: &mut Ui, st: &mut AppState, rect: Rect, original: &mut dyn FnMut(&mut Ui, &mut AppState, Rect)) {
-    let theme = Theme::current(ui.ctx());
-    let c = &theme.colors;
-    let Some(d) = st.session.active() else { return };
-    let mode = d.view.preview_mode;
-    let zoom = d.view.zoom as f32;
-    let current = fp_export::doc_export::page_settings(&d.doc, d.page);
-    let settings = tile_settings(&current, mode);
-    let panes: Vec<Rect> = match mode {
-        PreviewMode::Original => return original(ui, st, rect),
-        PreviewMode::Preview => vec![rect],
+/// Höhe der Beschriftung unter jedem Feld.
+const CAPTION_H: f32 = 20.0;
+
+/// Felder der Ansicht `mode` in `rect` (2-fach nebeneinander, 4-fach 2 × 2, je 2 px Abstand).
+pub fn pane_rects(rect: Rect, mode: PreviewMode) -> Vec<Rect> {
+    match mode {
+        PreviewMode::Original | PreviewMode::Preview => vec![rect],
         PreviewMode::TwoUp => {
             let w = (rect.width() - 2.0) / 2.0;
             vec![Rect::from_min_size(rect.min, vec2(w, rect.height())), Rect::from_min_size(pos2(rect.left() + w + 2.0, rect.top()), vec2(w, rect.height()))]
@@ -130,27 +124,236 @@ pub fn show(ui: &mut Ui, st: &mut AppState, rect: Rect, original: &mut dyn FnMut
             let h = (rect.height() - 2.0) / 2.0;
             (0..4).map(|i| Rect::from_min_size(pos2(rect.left() + (i % 2) as f32 * (w + 2.0), rect.top() + (i / 2) as f32 * (h + 2.0)), vec2(w, h))).collect()
         }
+    }
+}
+
+/// Bildfläche eines Feldes (ohne Beschriftung).
+pub fn pane_body(pane: Rect) -> Rect {
+    Rect::from_min_max(pane.min, pos2(pane.right(), pane.bottom() - CAPTION_H))
+}
+
+/// Linke obere Ecke des gemeinsamen Sichtbereichs, wenn er in der Mitte von `body` liegt: Alle
+/// Felder zeigen dieselbe Lage (Zoom und Mittelpunkt in Dokumentkoordinaten, N25). Bildschirmpunkt
+/// `p` im Feld entspricht dem Dokumentpunkt `view.screen_to_doc(p - virtual_min)`.
+pub fn virtual_min(view: &fp_engine::ViewState, body: Rect) -> Pos2 {
+    body.center() - vec2(view.viewport.0 as f32, view.viewport.1 as f32) / 2.0
+}
+
+/// Dokumentrechteck, das das Exportbild einer Vorschau zeigt: die Seite bzw. ihr Exportbereich.
+fn image_doc_rect(pr: fp_geom::IRect, s: &OptimizeSettings) -> Rect {
+    let c = fp_export::doc_export::crop_rect(pr.width() as usize, pr.height() as usize, s);
+    Rect::from_min_max(pos2((pr.left + c.left) as f32, (pr.top + c.top) as f32), pos2((pr.left + c.right) as f32, (pr.top + c.bottom) as f32))
+}
+
+/// Bildschirmlage des Exportbildes im Feld `body` (gemeinsame Ansicht des Dokuments).
+pub fn image_screen_rect(view: &fp_engine::ViewState, body: Rect, pr: fp_geom::IRect, s: &OptimizeSettings) -> Rect {
+    let vmin = virtual_min(view, body);
+    let r = image_doc_rect(pr, s);
+    let at = |x: f32, y: f32| {
+        let (sx, sy) = view.doc_to_screen(fp_geom::Point::new(x, y));
+        vmin + vec2(sx as f32, sy as f32)
     };
+    Rect::from_min_max(at(r.left(), r.top()), at(r.right(), r.bottom()))
+}
+
+/// Laufendes Ziehen mit Hand/Leertaste/mittlerer Taste in einem Vorschaufeld: Druckpunkt und
+/// Ansichtsursprung beim Drücken (der gegriffene Dokumentpunkt bleibt unter dem Zeiger).
+#[derive(Clone, Copy)]
+struct Grab {
+    press: Pos2,
+    origin: (f64, f64),
+}
+
+/// Bewegen in einem Vorschaufeld wie auf der Leinwand: Mausrad (Bildlauf), Strg+Rad und
+/// Zwei-Finger-Zoom (eine Stufe je Rastung um den Zeiger), Hand-Werkzeug, Leertaste+Ziehen und
+/// mittlere Taste (Verschieben), Zoomwerkzeug bzw. Strg+Leertaste (Klick = größer, Alt+Klick =
+/// kleiner, Rahmen aufziehen = einpassen). Alles wirkt auf die eine Ansicht des Dokuments, die
+/// alle Felder zeigen (N25).
+fn navigate(ui: &mut Ui, st: &mut AppState, idx: usize, body: Rect) {
+    let resp = ui.interact(body, Id::new(("fp-preview-pane", idx)), egui::Sense::click_and_drag());
+    let Some(d) = st.session.active() else { return };
+    let id = d.id;
+    let view = d.view.clone();
+    let vmin = virtual_min(&view, body);
+    let anchor = |p: Pos2| ((p.x - vmin.x) as f64, (p.y - vmin.y) as f64);
+    let tool = st.session.tools.active;
+    let space = st.space_down;
+    type Wheel = (egui::MouseWheelUnit, egui::Vec2, bool, bool);
+    let (wheel, pinch, mods, pointer, press, latest) = ui.input(|i| {
+        let mut w: Vec<Wheel> = Vec::new();
+        let mut z = 1.0f32;
+        for e in &i.events {
+            match e {
+                egui::Event::MouseWheel { unit, delta, modifiers, .. } => w.push((*unit, *delta, modifiers.ctrl || modifiers.command, modifiers.shift)),
+                egui::Event::Zoom(f) => z *= *f,
+                _ => {}
+            }
+        }
+        // Umschalttasten aus dem Zustand oder aus dem Klick selbst (Taste und Klick im selben Bild)
+        let mut m = i.modifiers;
+        for e in &i.events {
+            if let egui::Event::PointerButton { modifiers, .. } = e {
+                m.alt |= modifiers.alt;
+                m.ctrl |= modifiers.ctrl;
+                m.command |= modifiers.command;
+            }
+        }
+        (w, z, m, i.pointer.hover_pos(), i.pointer.press_origin(), i.pointer.latest_pos())
+    });
+    let hovered = resp.hovered() || resp.dragged();
+    if hovered {
+        // Strg+Rad / Zwei-Finger-Zoom: je volle Rastung eine Stufe um den Zeiger (wie die Leinwand)
+        let mut steps = 0;
+        {
+            let cc = st.canvases.entry(id).or_default();
+            for (unit, delta, ctrl, _) in &wheel {
+                if !*ctrl {
+                    continue;
+                }
+                let n = crate::canvas::wheel_notches(*unit, delta.y);
+                if n * cc.wheel_acc < 0.0 {
+                    cc.wheel_acc = 0.0;
+                }
+                cc.wheel_acc += n;
+                steps += crate::canvas::take_step(&mut cc.wheel_acc);
+            }
+            if pinch != 1.0 {
+                cc.pinch_acc += pinch.ln() / 1.25f32.ln();
+                steps += crate::canvas::take_step(&mut cc.pinch_acc);
+            }
+        }
+        // Bildlauf: Zeile = 52 Bildschirmpixel, Seite = Feldhöhe, Punkte direkt; Umschalt+Rad nichts
+        let mut pan = egui::Vec2::ZERO;
+        for (unit, delta, ctrl, shift) in &wheel {
+            if *ctrl || *shift {
+                continue;
+            }
+            let k = match unit {
+                egui::MouseWheelUnit::Point => 1.0,
+                egui::MouseWheelUnit::Line => 52.0,
+                egui::MouseWheelUnit::Page => body.height(),
+            };
+            pan += *delta * k;
+        }
+        if let Some(d) = st.session.active_mut() {
+            let a = pointer.map(anchor);
+            for _ in 0..steps.abs() {
+                if steps > 0 { d.view.zoom_in(a) } else { d.view.zoom_out(a) }
+            }
+            if pan != egui::Vec2::ZERO {
+                d.view.pan(pan.x as f64, pan.y as f64);
+            }
+        }
+    }
+    let ctrl = mods.ctrl || mods.command;
+    let hand = tool == fp_engine::ToolId::Hand || (space && !ctrl);
+    let zoom_tool = tool == fp_engine::ToolId::Zoom || (space && ctrl);
+    let grab_id = Id::new(("fp-preview-grab", idx));
+    let panning = resp.dragged_by(egui::PointerButton::Middle) || (hand && resp.dragged_by(egui::PointerButton::Primary));
+    if panning {
+        let grab = ui.ctx().data(|m| m.get_temp::<Grab>(grab_id));
+        let grab = match grab {
+            Some(g) => g,
+            None => {
+                let g = Grab { press: press.unwrap_or(body.center()), origin: view.origin };
+                ui.ctx().data_mut(|m| m.insert_temp(grab_id, g));
+                g
+            }
+        };
+        if let (Some(p), Some(d)) = (latest, st.session.active_mut()) {
+            let z = d.view.zoom.max(1e-9);
+            d.view.origin = (grab.origin.0 - (p.x - grab.press.x) as f64 / z, grab.origin.1 - (p.y - grab.press.y) as f64 / z);
+        }
+        ui.ctx().set_cursor_icon(egui::CursorIcon::Grabbing);
+        return;
+    }
+    ui.ctx().data_mut(|m| m.remove::<Grab>(grab_id));
+    if zoom_tool {
+        if hovered {
+            ui.ctx().set_cursor_icon(if mods.alt { egui::CursorIcon::ZoomOut } else { egui::CursorIcon::ZoomIn });
+        }
+        // Rahmen aufziehen (nur Zoomwerkzeug, ohne Alt): Bereich einpassen
+        if tool == fp_engine::ToolId::Zoom
+            && !mods.alt
+            && let (Some(a), Some(b)) = (press, latest)
+            && (resp.dragged_by(egui::PointerButton::Primary) || resp.drag_stopped_by(egui::PointerButton::Primary))
+        {
+            let r = Rect::from_two_pos(a, b);
+            if resp.drag_stopped_by(egui::PointerButton::Primary) {
+                let (p0, p1) = (anchor(r.min), anchor(r.max));
+                if let Some(d) = st.session.active_mut() {
+                    let (a, b) = (d.view.screen_to_doc(p0.0, p0.1), d.view.screen_to_doc(p1.0, p1.1));
+                    d.view.fit_zoom_rect(fp_geom::Rect::new(a.x, a.y, b.x, b.y));
+                }
+            } else {
+                let theme = Theme::current(ui.ctx());
+                ui.painter().with_clip_rect(body).rect_stroke(r, 0.0, Stroke::new(1.0, theme.colors.focus), StrokeKind::Inside);
+            }
+            return;
+        }
+        if resp.clicked_by(egui::PointerButton::Primary)
+            && let Some(p) = resp.interact_pointer_pos()
+            && let Some(d) = st.session.active_mut()
+        {
+            if mods.alt { d.view.zoom_out(Some(anchor(p))) } else { d.view.zoom_in(Some(anchor(p))) }
+        }
+    } else if hand && hovered {
+        ui.ctx().set_cursor_icon(egui::CursorIcon::Grab);
+    }
+}
+
+/// Zeichnet die Vorschauansicht des aktiven Dokuments in `rect` (Modus aus `view.preview_mode`).
+/// `original` zeichnet bei 2-/4-fach die Originalkachel (die Leinwand übergibt ihre Zeichenfunktion).
+/// Alle Felder zeigen dieselbe Lage (Zoom und Dokumentpunkt in der Feldmitte); jede Bewegung in
+/// einem Feld wirkt auf alle (N25).
+pub fn show(ui: &mut Ui, st: &mut AppState, rect: Rect, original: &mut dyn FnMut(&mut Ui, &mut AppState, Rect)) {
+    let theme = Theme::current(ui.ctx());
+    let c = &theme.colors;
+    let Some(d) = st.session.active() else { return };
+    let mode = d.view.preview_mode;
+    if mode == PreviewMode::Original {
+        return original(ui, st, rect);
+    }
+    let current = fp_export::doc_export::page_settings(&d.doc, d.page);
+    let settings = tile_settings(&current, mode);
+    let panes = pane_rects(rect, mode);
+    let is_original = |i: usize| mode != PreviewMode::Preview && i == 0;
+    // Nur „Vorschau“: das Feld ist der Sichtbereich (sonst meldet ihn die Originalkachel)
+    if mode == PreviewMode::Preview {
+        crate::canvas::report_viewport(st, pane_body(panes[0]).size());
+    }
+    // erst bewegen, dann zeichnen: alle Felder zeigen im selben Bild dieselbe Lage
+    for (i, pane) in panes.iter().enumerate() {
+        if !is_original(i) {
+            navigate(ui, st, i, pane_body(*pane));
+        }
+    }
+    if let Some(d) = st.session.active_mut()
+        && let Some(pr) = crate::canvas::page_rect(&d.doc, d.page)
+    {
+        crate::canvas::clamp_view(&mut d.view, pr);
+    }
     ui.painter().rect_filled(rect, 0.0, c.frame_bg);
     let ctx = ui.ctx().clone();
     let mut tiles = settings.iter();
     for (i, pane) in panes.iter().enumerate() {
-        let caption_h = 20.0;
-        let body = Rect::from_min_max(pane.min, pos2(pane.right(), pane.bottom() - caption_h));
+        let body = pane_body(*pane);
         ui.painter().rect_filled(*pane, 0.0, c.canvas_bg);
-        let is_original = mode != PreviewMode::Preview && i == 0;
-        let caption = if is_original {
+        let caption = if is_original(i) {
             let mut child = ui.new_child(egui::UiBuilder::new().max_rect(body));
             child.set_clip_rect(body);
             original(&mut child, st, body);
             fp_i18n::t("ui-preview-original")
         } else {
-            match tiles.next().and_then(|s| tile(&ctx, st, s)) {
-                Some(t) => {
-                    if let Some(tex) = &t.texture {
-                        let size = vec2(t.size[0] as f32, t.size[1] as f32) * zoom / ctx.pixels_per_point().max(0.01);
-                        let r = Rect::from_center_size(body.center(), size);
-                        let p = ui.painter().with_clip_rect(body);
+            let s = tiles.next();
+            match s.and_then(|s| tile(&ctx, st, s).map(|t| (s, t))) {
+                Some((s, t)) => {
+                    if let Some(tex) = &t.texture
+                        && let Some(d) = st.session.active()
+                        && let Some(pr) = crate::canvas::page_rect(&d.doc, d.page)
+                    {
+                        let r = image_screen_rect(&d.view, body, pr, s);
+                        let p = ui.painter().with_clip_rect(body.intersect(ui.clip_rect()));
                         crate::widgets::checker(&p, r.intersect(body), 8.0, &theme);
                         p.image(tex.id(), r, Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0)), Color32::WHITE);
                     }
@@ -159,6 +362,7 @@ pub fn show(ui: &mut Ui, st: &mut AppState, rect: Rect, original: &mut dyn FnMut
                 None => String::new(),
             }
         };
+        let caption_h = CAPTION_H;
         let cap = Rect::from_min_max(pos2(pane.left(), pane.bottom() - caption_h), pane.max);
         ui.painter().rect_filled(cap, 0.0, c.frame_bg);
         ui.painter().text(pos2(cap.left() + 6.0, cap.center().y), Align2::LEFT_CENTER, caption, theme.ui_font(), c.text);
