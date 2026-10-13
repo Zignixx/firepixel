@@ -1,6 +1,6 @@
 # FIX-R3 – die 4 roten Tests aus GT-0e (13.10.2026)
 
-Slot `fp-s3` / `target-s3`, Basis `main` @ `5868bb7`.
+Slot `fp-s3` / `target-s3`, Basis `main` @ `5868bb7`. Commit auf main: `fd087ae`.
 
 ## Umgesetzt
 
