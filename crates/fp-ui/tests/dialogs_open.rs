@@ -78,7 +78,6 @@ const DIALOG_COMMANDS: &[&str] = &[
     "modify.selectiveJpeg.settings",
     "file.pageSetup",
     "file.print",
-    "file.batchProcess",
     "modify.symbol.swapSymbol",
     "edit.insert.newSymbol",
     "edit.insert.newButton",
