@@ -240,7 +240,8 @@ pub struct HtmlSettings {
     pub sprite_orientation: Option<i32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub sprite_preset: Option<String>,
-    /// „Standard-ALT-Tag“ der HTML-Einrichtung (re\18 §6.4). Im FW-PNG noch ohne Tag.
+    /// „Standard-ALT-Tag“ der HTML-Einrichtung (re\18 §6.4). Tag des Originals
+    /// unbekannt; im FW-PNG als `DALs` in der eigenen Erweiterung `fpSv` (fp-fwpng `write::SPRITE_EXT`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub default_alt: Option<String>,
 }

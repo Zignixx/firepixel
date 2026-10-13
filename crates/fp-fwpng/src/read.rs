@@ -1793,7 +1793,7 @@ fn read_html(r: &mut Rd, ctx: &mut ReadCtx) -> Option<Box<HtmlSettings>> {
     h.external_css_filename = r.str(k!(b"CXFs"));
     h.css_dir = r.str(k!(b"CBDs"));
     h.matte_color = r.int(k!(b"FCLi"));
-    // Firepixel-eigene Sprite-Erweiterung (siehe `write::SPRITE_EXT`)
+    // Firepixel-eigene Erweiterung: Sprites, Standard-ALT-Tag (siehe `write::SPRITE_EXT`)
     if let Some(n) = r.list(crate::write::SPRITE_EXT) {
         let mut s = Rd::new(n);
         h.sprite_selector_is_class = s.bool(k!(b"SSCb"));
@@ -1802,6 +1802,7 @@ fn read_html(r: &mut Rd, ctx: &mut ReadCtx) -> Option<Box<HtmlSettings>> {
         h.sprite_padding = s.i32(k!(b"SPDi"));
         h.sprite_orientation = s.i32(k!(b"SORi"));
         h.sprite_preset = s.str(k!(b"SPRs"));
+        h.default_alt = s.str(k!(b"DALs"));
         let _ = ctx.finish(s);
     }
     Some(Box::new(h))

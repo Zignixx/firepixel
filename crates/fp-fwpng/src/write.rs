@@ -1348,14 +1348,15 @@ pub fn write_export(e: &ExportSettings) -> Vec<RawNode> {
     w.finish()
 }
 
-/// Firepixel-eigene Erweiterung im `EXPv`: Exportoptionen für CSS-Sprites. Das Original hält diese
+/// Firepixel-eigene Erweiterung im `EXPv`: Exportoptionen für CSS-Sprites und der
+/// „Standard-ALT-Tag“ der HTML-Einrichtung (`DALs`, FIX-E). Das Original hält diese
 /// Felder im Dokument, ihre Tags sind aber nicht bekannt (`re\08` §1.5 „Tags ?“, nicht im
 /// Vokabular). Der Container beginnt mit Kleinbuchstaben und kann daher mit keinem Tag des
 /// Originals (immer drei Großbuchstaben/Ziffern) zusammenfallen.
 pub const SPRITE_EXT: TagKey = k!(b"fpSv");
 
 fn write_sprite_ext(h: &HtmlSettings) -> Option<Vec<RawNode>> {
-    if h.sprite_selector_is_class.is_none() && h.sprite_css_prefix.is_none() && h.sprite_css_suffix.is_none() && h.sprite_padding.is_none() && h.sprite_orientation.is_none() && h.sprite_preset.is_none() {
+    if h.sprite_selector_is_class.is_none() && h.sprite_css_prefix.is_none() && h.sprite_css_suffix.is_none() && h.sprite_padding.is_none() && h.sprite_orientation.is_none() && h.sprite_preset.is_none() && h.default_alt.is_none() {
         return None;
     }
     let empty = Extra::default();
@@ -1366,6 +1367,7 @@ fn write_sprite_ext(h: &HtmlSettings) -> Option<Vec<RawNode>> {
     w.opt_i32(k!(b"SPDi"), h.sprite_padding);
     w.opt_i32(k!(b"SORi"), h.sprite_orientation);
     w.opt_str(k!(b"SPRs"), h.sprite_preset.as_deref());
+    w.opt_str(k!(b"DALs"), h.default_alt.as_deref());
     Some(w.finish())
 }
 
