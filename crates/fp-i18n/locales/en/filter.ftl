@@ -124,3 +124,9 @@ blend-xor = XOR
 blend-invert = Invert
 blend-tint = Tint
 blend-erase = Erase
+# Blend mode list for objects (Property inspector, Layers, Color Fill); see de
+blend-obj-dissolve = Dissolve
+blend-obj-overlay = Overlay
+blend-obj-luminosity = Luminosity
+blend-obj-tint = Tint
+blend-obj-erase = Erase

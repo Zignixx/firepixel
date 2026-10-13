@@ -360,6 +360,22 @@ pub fn gradient_editor(ui: &mut Ui, id: Id, fill: &fp_model::Fill, st: &AppState
         out = Some(stops_params(&ge));
         ge.sel = None;
     }
+    // Farbrad links neben den Farbstopps (wie im Original): Farbdialog für den gewählten Farbstopp
+    // (sonst den ersten) – der Farbwähler des Originals mit offenem Farbkreis (PAR 18/04b, FARB-1b)
+    let wr = Rect::from_min_size(o + vec2(-2.0, 75.0), vec2(11.0, 11.0));
+    let wresp = fields::icon_button(ui, id.with("wheel"), wr, super::glyphs::Glyph::Picker, true, &texts::t("pi-color-system"));
+    ui.painter().rect_filled(wr.shrink(0.5), 2.0, c.menu_bg);
+    super::color_picker::paint_wheel(ui.painter(), wr.center(), 4.5);
+    if wresp.clicked() && !ge.colors.is_empty() {
+        let i = match ge.sel {
+            Some((false, i)) if i < ge.colors.len() => i,
+            _ => 0,
+        };
+        ge.sel = Some((false, i));
+        ge.picker = Some(i);
+        open_picker_at = Some(stop_rect(false, ge.colors[i].0).center().x);
+        super::color_picker::request_wheel(ui.ctx(), id.with(("stop-color", i)));
+    }
     // Farbwähler eines Farbstopps
     if let Some(i) = ge.picker {
         let anchor = ge.colors.get(i).map(|s| stop_rect(false, s.0)).unwrap_or(bar);
@@ -495,6 +511,7 @@ pub fn pattern_editor(ui: &mut Ui, id: Id, current: &str, angle: Option<f64>) ->
     let list_w = fields::list_width(ui, labels.iter().map(|s| s.as_str()), cr.width());
     egui::Popup::menu(&resp).frame(crate::menu::menu_frame(&t)).width(list_w).show(|ui| {
         ui.spacing_mut().item_spacing = vec2(0.0, 0.0);
+        ui.set_min_width(list_w);
         egui::ScrollArea::vertical().max_height(360.0).show(ui, |ui| {
             for (i, (name, label)) in items.iter().enumerate() {
                 if fields::list_item(ui, label, Some(i) == sel).clicked() {

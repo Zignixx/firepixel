@@ -314,6 +314,11 @@ pub fn text(ui: &mut Ui, id: impl Hash + std::fmt::Debug, r: Rect, current: &str
 /// Zahl formatieren (Komma, ohne überflüssige Nachkommastellen).
 pub fn fmt_num(v: f64, decimals: usize) -> String {
     let s = format!("{v:.decimals$}");
+    // −0 (z. B. Winkel nach Drehung, −0,3 gerundet) wie im Original als „0“ (PAR 18/08b)
+    let s = match s.strip_prefix('-') {
+        Some(rest) if rest.chars().all(|c| c == '0' || c == '.') => rest.to_string(),
+        _ => s,
+    };
     let s = if decimals > 0 { s.trim_end_matches('0').trim_end_matches('.').to_string() } else { s };
     // Dezimaltrennzeichen der Sprache (Deutsch „,“, Englisch „.“); Eingaben akzeptieren beides
     let sep = fp_i18n::t("fmt-decimal-separator");
@@ -645,6 +650,9 @@ pub fn combo(ui: &mut Ui, id: impl Hash + std::fmt::Debug, r: Rect, items: &[&st
     let list_w = list_width(ui, items.iter().copied().filter(|s| !is_separator(s)), r.width().max(60.0));
     egui::Popup::menu(&resp).frame(crate::menu::menu_frame(&t)).width(list_w).show(|ui| {
         ui.spacing_mut().item_spacing = vec2(0.0, 0.0);
+        // `width` gilt für den Bereich samt Rahmenabstand; der Inhalt selbst braucht die volle
+        // Breite, sonst wird der längste Eintrag doch gekürzt („Negativ multiplizie…“, PAR 17/07b)
+        ui.set_min_width(list_w);
         egui::ScrollArea::vertical().max_height(360.0).show(ui, |ui| {
             for (i, it) in items.iter().enumerate() {
                 if is_separator(it) {

@@ -261,7 +261,7 @@ pub const BLEND_ITEMS: &[(&str, i32)] = &[
     ("Löschen", 25),
 ];
 
-/// Namen der Mischmodus-Liste in der aktuellen Sprache (wie [`texts::blend_labels`], als
+/// Namen der Mischmodus-Liste für Objekte in der aktuellen Sprache (wie [`texts::blend_labels_obj`], als
 /// `&'static str` für ältere Aufrufer; je Sprachstand einmal abgelegt).
 pub fn blend_names() -> Vec<&'static str> {
     use std::collections::HashMap;
@@ -271,7 +271,7 @@ pub fn blend_names() -> Vec<&'static str> {
     let lang = format!("{}#{}", fp_i18n::current_language(), fp_i18n::generation());
     let mut m = CACHE.get_or_init(|| Mutex::new(HashMap::new())).lock().unwrap_or_else(|e| e.into_inner());
     let v = m.entry(lang).or_insert_with(|| {
-        let names: Vec<&'static str> = texts::blend_labels().into_iter().map(|s| &*Box::leak(s.into_boxed_str())).collect();
+        let names: Vec<&'static str> = texts::blend_labels_obj().into_iter().map(|s| &*Box::leak(s.into_boxed_str())).collect();
         Box::leak(names.into_boxed_slice())
     });
     v.to_vec()
@@ -1152,7 +1152,8 @@ pub fn opacity_panel(ui: &mut Ui, st: &mut AppState, d: Dl) {
     if let Some(v) = fields::number(ui, "pi-opacity", d.r(11.0, 0.0, 19.0, 13.0), Some(d.r(31.0, 0.0, 9.0, 13.0)), (en && !mixed_op).then_some(op), (0.0, 100.0), 0, en) {
         st.run("element.setOpacity", json!({"opacity": v}));
     }
-    let names = texts::blend_labels();
+    // Objekt-Liste: Namen wie im Original („Sprenkeln“ … „Radieren“, PAR 17/07b)
+    let names = texts::blend_labels_obj();
     if let Some(i) = fields::combo(ui, "pi-blend", d.r(43.0, 0.0, 81.0, 13.0), &refs(&names), (!mixed_bl).then_some(bl), en) {
         let m = BLEND_ITEMS[i].1;
         if m >= 0 {

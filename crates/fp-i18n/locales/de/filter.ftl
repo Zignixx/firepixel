@@ -124,3 +124,10 @@ blend-xor = XOR
 blend-invert = Umkehren
 blend-tint = Farbton
 blend-erase = Löschen
+# Mischmodus-Liste für Objekte (Inspektor, Ebenen, Farbfüllung): fünf Namen weichen im Original
+# von der Pinsel-Liste ab (PAR 17/07b); fehlt ein Schlüssel, gilt blend-<name>
+blend-obj-dissolve = Sprenkeln
+blend-obj-overlay = Ineinanderkopieren
+blend-obj-luminosity = Helligkeit
+blend-obj-tint = Tönung
+blend-obj-erase = Radieren

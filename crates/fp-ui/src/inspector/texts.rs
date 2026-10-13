@@ -36,9 +36,29 @@ pub fn blend_label(i: usize) -> String {
     }
 }
 
-/// Alle Einträge der Mischmodus-Liste in der aktuellen Sprache.
+/// Alle Einträge der Mischmodus-Liste der Pinsel/Werkzeuge in der aktuellen Sprache
+/// (`tool-brush-stroke-options.orig.md` Nr. 08: „Auflösen“, „Überlagern“, „Luminanz“, „Farbton“, „Löschen“).
 pub fn blend_labels() -> Vec<String> {
     (0..super::obj_quads::BLEND_ITEMS.len()).map(blend_label).collect()
+}
+
+/// Anzeigename in der Mischmodus-Liste für Objekte: Schlüssel `blend-obj-<name>`, sonst wie
+/// [`blend_label`] (PAR 17/07b: das Original nennt dort „Sprenkeln“, „Ineinanderkopieren“,
+/// „Helligkeit“, „Tönung“, „Radieren“).
+pub fn blend_label_obj(i: usize) -> String {
+    let Some((_, m)) = super::obj_quads::BLEND_ITEMS.get(i) else { return String::new() };
+    if let Some(n) = (*m >= 0).then(|| fp_color::BlendMode(*m as u8).name()).flatten() {
+        let key = format!("blend-obj-{n}");
+        if fp_i18n::has(&key) {
+            return t(&key);
+        }
+    }
+    blend_label(i)
+}
+
+/// Alle Einträge der Mischmodus-Liste für Objekte (Inspektor, Ebenen, Farbfüllung).
+pub fn blend_labels_obj() -> Vec<String> {
+    (0..super::obj_quads::BLEND_ITEMS.len()).map(blend_label_obj).collect()
 }
 
 // ---------------------------------------------------------------------- Strichvorgaben

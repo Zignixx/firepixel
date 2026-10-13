@@ -351,8 +351,19 @@ fn copy_button(ui: &mut Ui, id: Id, r: Rect, tip: &str) -> bool {
     fields::icon_button(ui, id, r, Glyph::Copy, true, tip).clicked()
 }
 
-/// Farbkreis-Symbol des Knopfs rechts unten.
-fn paint_wheel(p: &egui::Painter, center: Pos2, radius: f32) {
+/// Ist im offenen Farbwähler der Farbdialog (Farbkreis) offen?
+pub fn wheel_open(ctx: &egui::Context) -> bool {
+    let Some(pid) = ctx.data(|d| d.get_temp::<Id>(Id::new(OPEN_MARK))) else { return false };
+    egui::Popup::is_id_open(ctx, pid) && ctx.data(|d| d.get_temp::<CpState>(state_id(pid))).is_some_and(|s| s.sys)
+}
+
+/// Der nächste [`show`] mit Öffnen für dieses Farbfeld zeigt gleich den Farbdialog (Farbkreis).
+pub fn request_wheel(ctx: &egui::Context, swatch: Id) {
+    ctx.data_mut(|d| d.insert_temp(popup_id(swatch).with("open-wheel"), true));
+}
+
+/// Farbkreis-Symbol des Knopfs rechts unten (auch Farbrad-Knopf des Verlaufs-Popups).
+pub(crate) fn paint_wheel(p: &egui::Painter, center: Pos2, radius: f32) {
     let n = 24;
     for i in 0..n {
         let a0 = std::f32::consts::TAU * i as f32 / n as f32;
@@ -384,7 +395,13 @@ pub fn show(ui: &mut Ui, swatch: Id, anchor: Rect, open_at: Option<f32>, st: &Ap
     if let Some(x) = open_at
         && !open
     {
-        let s = CpState::new(popup_pos(anchor, x, screen), color, pass);
+        let mut s = CpState::new(popup_pos(anchor, x, screen), color, pass);
+        // gleich mit dem Farbdialog (Farbkreis) öffnen, z. B. Farbrad-Knopf im Verlaufs-Popup
+        let wheel_flag = pid.with("open-wheel");
+        if ctx.data_mut(|d| d.remove_temp::<bool>(wheel_flag)).unwrap_or(false) {
+            s.sys = true;
+            ctx.data_mut(|d| d.insert_temp(super::popups::picker_id(swatch).with("sys"), true));
+        }
         ctx.data_mut(|d| {
             d.insert_temp(sid, s);
             d.insert_temp(Id::new(OPEN_MARK), pid);
