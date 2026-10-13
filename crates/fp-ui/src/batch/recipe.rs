@@ -480,7 +480,9 @@ fn rename_card(ui: &mut Ui, s: &mut Studio, w: f32, files: &[ItemInfo], enabled:
                 }
                 None => quick_rename(ui, &mut spec, mode, enabled),
             };
-            if let Some((a, b)) = example_name(&Recipe { rename: spec.clone(), ..snapshot.clone() }, files.first()) {
+            if params::card_body(fp_batch::steps::files::RENAME).is_none()
+                && let Some((a, b)) = example_name(&Recipe { rename: spec.clone(), ..snapshot.clone() }, files.first())
+            {
                 ui.label(egui::RichText::new(format!("{a} → {b}")).size(type_scale::CAPTION).color(kit::weak(&Theme::current(ui.ctx()))));
             }
             ui.add_space(sp::S);

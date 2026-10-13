@@ -27,6 +27,8 @@ thiserror = { workspace = true }
 rayon = { workspace = true }
 # Umbenennen mit regulären Ausdrücken (MIT/Apache-2.0, garantiert linear)
 regex = "1.11"
+# BATCH-3: Klartext-Erklärung des Suchmusters aus dem Syntaxbaum (MIT/Apache-2.0; schon im Baum über regex)
+regex-syntax = "0.8"
 # Ordner rekursiv lesen (MIT/Unlicense)
 walkdir = "2.5"
 # Datum/Uhrzeit in Ortszeit für Namensbausteine und Bericht (MIT/Apache-2.0; schon im Baum)

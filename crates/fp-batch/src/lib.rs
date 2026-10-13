@@ -14,6 +14,7 @@
 
 pub mod error;
 pub mod executor;
+pub mod explain;
 pub mod host;
 pub mod item;
 pub mod meta;

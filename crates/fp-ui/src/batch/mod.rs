@@ -29,6 +29,7 @@ pub mod output_bar;
 pub mod params;
 pub mod preview;
 pub mod recipe;
+pub mod rename_ui;
 pub mod report_ui;
 pub mod timeline; // BATCH-7
 mod thumbs;
@@ -195,6 +196,7 @@ pub struct Studio {
 impl Studio {
     /// Neues, leeres Studio.
     pub fn new(mode: Mode) -> Studio {
+        rename_ui::register();
         let recipe = Recipe::default();
         let saved_json = recipe.to_json();
         Studio {

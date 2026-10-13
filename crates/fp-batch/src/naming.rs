@@ -197,13 +197,44 @@ fn take_original(base: &str, take: OriginalTake, count: usize) -> String {
     }
 }
 
-/// Platzhalter im Ersetzen-Feld des Regex-Modus: `{n}`, `{n:3}`, `{date:…}`, `{exif-date:…}`,
-/// `{w}`, `{h}`, `{folder}`, `{ext}`, `{name}`. Unbekannte bleiben stehen.
+/// Zähler-Platzhalter `{n:Stellen[:Start[:Schritt]]}` (BATCH-3): Vorgaben 1 Stelle, Start 1, Schritt 1.
+fn counter_placeholder(arg: Option<&str>, index: usize) -> String {
+    let mut it = arg.unwrap_or("").split(':');
+    let digits = it.next().and_then(|a| a.trim().parse().ok()).unwrap_or(1);
+    let start = it.next().and_then(|a| a.trim().parse().ok()).unwrap_or(1);
+    let step = it.next().and_then(|a| a.trim().parse().ok()).unwrap_or(1);
+    counter(start, step, digits, index)
+}
+
+/// Platzhalter `{name…}`: ganz, `{name:first:N}`, `{name:last:N}`, `{name:trim}` (ohne Ziffern am Ende).
+fn name_placeholder(arg: Option<&str>, base: &str) -> Option<String> {
+    let Some(arg) = arg else { return Some(base.to_string()) };
+    let (what, n) = match arg.split_once(':') {
+        Some((w, n)) => (w, n.trim().parse::<usize>().ok()),
+        None => (arg, None),
+    };
+    match what {
+        "first" => Some(take_original(base, OriginalTake::First, n.unwrap_or(0))),
+        "last" => Some(take_original(base, OriginalTake::Last, n.unwrap_or(0))),
+        "trim" => Some(take_original(base, OriginalTake::NoTrailingDigits, 0)),
+        _ => None,
+    }
+}
+
+/// Platzhalter im Ersetzen-Feld des Regex-Modus: `{n}`, `{n:3}`, `{n:3:10:5}` (Stellen, Start,
+/// Schritt), `{nf:…}` (je Ordner), `{date:…}`, `{today:…}`, `{exif-date:…}`, `{w}`, `{h}`, `{folder}`,
+/// `{ext}`, `{name}`, `{name:first:N}`, `{name:last:N}`, `{name:trim}`, `{exif:model|make|lens|iso|aperture}`,
+/// `{format}`; `{{` = wörtliches `{`. Unbekannte bleiben stehen.
 fn expand_placeholders(template: &str, base: &str, ctx: &NameContext, hints: &mut Vec<NameHint>) -> String {
     let mut out = String::new();
     let mut rest = template;
     while let Some(i) = rest.find('{') {
         out.push_str(&rest[..i]);
+        if rest[i + 1..].starts_with('{') {
+            out.push('{');
+            rest = &rest[i + 2..];
+            continue;
+        }
         let after = &rest[i + 1..];
         let Some(j) = after.find('}') else {
             out.push_str(&rest[i..]);
@@ -215,7 +246,17 @@ fn expand_placeholders(template: &str, base: &str, ctx: &NameContext, hints: &mu
             None => (inner, None),
         };
         let v = match key {
-            "n" => Some(counter(1, 1, arg.and_then(|a| a.parse().ok()).unwrap_or(1), ctx.list_index)),
+            "n" => Some(counter_placeholder(arg, ctx.list_index)),
+            "nf" => Some(counter_placeholder(arg, ctx.folder_index)),
+            "format" => Some(ctx.out_format.clone()),
+            "exif" => match arg.unwrap_or("model") {
+                "model" => Some(exif_field(ctx.info, ExifField::Model)),
+                "make" => Some(exif_field(ctx.info, ExifField::Make)),
+                "lens" => Some(exif_field(ctx.info, ExifField::Lens)),
+                "iso" => Some(exif_field(ctx.info, ExifField::Iso)),
+                "aperture" => Some(exif_field(ctx.info, ExifField::Aperture)),
+                _ => None,
+            },
             "date" => Some(format_date(&modified_date(ctx.info, ctx.now), arg.unwrap_or("YYYY-MM-DD"))),
             "today" => Some(format_date(&ctx.now, arg.unwrap_or("YYYY-MM-DD"))),
             "exif-date" => {
@@ -229,7 +270,7 @@ fn expand_placeholders(template: &str, base: &str, ctx: &NameContext, hints: &mu
             "h" => Some(ctx.info.height.to_string()),
             "folder" => Some(folder_name(ctx.info)),
             "ext" => Some(split_extension(&ctx.info.file_name()).1),
-            "name" => Some(base.to_string()),
+            "name" => name_placeholder(arg, base),
             _ => None,
         };
         match v {
@@ -480,9 +521,6 @@ pub fn build_name(spec: &RenameSpec, ctx: &NameContext) -> Result<NameResult> {
                     NamePart::Unknown => {}
                 }
             }
-            for r in &spec.replacements {
-                out = replace_text(&out, &r.find, &r.replace, r.all, r.match_case);
-            }
             out
         }
         RenameMode::Regex => {
@@ -493,7 +531,11 @@ pub fn build_name(spec: &RenameSpec, ctx: &NameContext) -> Result<NameResult> {
             if spec.regex.whole_name { split_extension(&replaced).0 } else { replaced }
         }
     };
-    // 3. Leerzeichen → Präfix/Suffix → Umlaute/Sonderzeichen → Schreibweise
+    // 3. Ersetzungen (in beiden Arten, damit der Wechsel Baukasten → Regex gleichwertig bleibt) →
+    // Leerzeichen → Präfix/Suffix → Umlaute/Sonderzeichen → Schreibweise
+    for r in &spec.replacements {
+        s = replace_text(&s, &r.find, &r.replace, r.all, r.match_case);
+    }
     if let Some(sp) = &spec.spaces {
         s = s.replace(' ', sp);
     }
