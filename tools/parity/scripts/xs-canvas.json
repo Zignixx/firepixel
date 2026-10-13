@@ -1,0 +1,894 @@
+{
+ "unit": "xs-canvas",
+ "testfile": "T10",
+ "note": "T10 (2400 x 1600) does not fit the view at 100 %: the runner's document->screen mapping for the reference program assumes a centred document (README limits) - canvas coordinates in this unit may need orig.canvas_offset or fit-all first | Verbs as in tools/parity/runner/README.md. Every step starts with reopen <Txx> (test file fresh, earlier changes discarded) or close_all (no document). Menu commands: orig = menu path, fp = command id (side-specific, so the following actions are listed on both sides). Logical keys used here that may still be unmapped in ui_map.json: dialog.field.<i> / dialog.combo.<i> (i-th edit/combo of the top dialog), labels for dropdowns. Rare verbs used here that the runner may log as unsupported: new_document, window_click, drag_text, hover_text, right_click_text, double_click_text, drag_guide, drag_ruler_origin, drag_dialog_title, drag_dialog_slider, click_dialog_rel, drag_dialog_rel, canvas_wheel, reopen_dialog (repeat the opening actions), save_history_as_command, delete_saved_command, add_live_filter, file_dialog_open_types, restart_app, window_size, set_clipboard_image, drop_files, log_focus_cycle-like record_ui {focus_cycle:n}. Object 'I1#2' = duplicate of I1; 'text' = first text element; canvas_drag option hold = screenshot while the button is held.",
+ "steps": [
+  {
+   "id": "00_overview_normal",
+   "check": "overview after opening the test file",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "reopen": "T10"
+    }
+   ],
+   "shot": {
+    "area": "window"
+   }
+  },
+  {
+   "id": "01_zoom_steps_result",
+   "check": "zoom step table 6%..6400% (zoom in from 6% to 6400%, log each zoom)",
+   "method": {
+    "orig": "J",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "reopen": "T10"
+    },
+    {
+     "menu": [
+      "Ansicht",
+      "Vergrößerung",
+      "6%"
+     ]
+    },
+    {
+     "menu": [
+      "Ansicht",
+      "Größer zoomen"
+     ]
+    },
+    {
+     "log_value": "fw.getDocumentDOM().zoom"
+    },
+    {
+     "menu": [
+      "Ansicht",
+      "Größer zoomen"
+     ]
+    },
+    {
+     "log_value": "fw.getDocumentDOM().zoom"
+    },
+    {
+     "menu": [
+      "Ansicht",
+      "Größer zoomen"
+     ]
+    },
+    {
+     "log_value": "fw.getDocumentDOM().zoom"
+    },
+    {
+     "menu": [
+      "Ansicht",
+      "Größer zoomen"
+     ]
+    },
+    {
+     "log_value": "fw.getDocumentDOM().zoom"
+    },
+    {
+     "menu": [
+      "Ansicht",
+      "Größer zoomen"
+     ]
+    },
+    {
+     "log_value": "fw.getDocumentDOM().zoom"
+    },
+    {
+     "menu": [
+      "Ansicht",
+      "Größer zoomen"
+     ]
+    },
+    {
+     "log_value": "fw.getDocumentDOM().zoom"
+    },
+    {
+     "menu": [
+      "Ansicht",
+      "Größer zoomen"
+     ]
+    },
+    {
+     "log_value": "fw.getDocumentDOM().zoom"
+    },
+    {
+     "menu": [
+      "Ansicht",
+      "Größer zoomen"
+     ]
+    },
+    {
+     "log_value": "fw.getDocumentDOM().zoom"
+    },
+    {
+     "menu": [
+      "Ansicht",
+      "Größer zoomen"
+     ]
+    },
+    {
+     "log_value": "fw.getDocumentDOM().zoom"
+    },
+    {
+     "menu": [
+      "Ansicht",
+      "Größer zoomen"
+     ]
+    },
+    {
+     "log_value": "fw.getDocumentDOM().zoom"
+    },
+    {
+     "menu": [
+      "Ansicht",
+      "Größer zoomen"
+     ]
+    },
+    {
+     "log_value": "fw.getDocumentDOM().zoom"
+    },
+    {
+     "menu": [
+      "Ansicht",
+      "Größer zoomen"
+     ]
+    },
+    {
+     "log_value": "fw.getDocumentDOM().zoom"
+    },
+    {
+     "log_value": "fw.getDocumentDOM().zoom"
+    },
+    {
+     "record_ui": "ui_state.summary"
+    }
+   ],
+   "shot": null,
+   "note": "'repeat'/'log_value' are composite helpers; runner may unroll them"
+  },
+  {
+   "id": "02_zoom_center_result",
+   "check": "zoom around mouse pointer / center, no offset (N10)",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "reopen": "T10"
+    },
+    {
+     "menu": [
+      "Ansicht",
+      "Vergrößerung",
+      "100%"
+     ]
+    },
+    {
+     "canvas_wheel": {
+      "pos": [
+       600,
+       400
+      ],
+      "delta": 1,
+      "modifiers": [
+       "ctrl"
+      ]
+     }
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "note": "canvas_wheel uses document coordinates; Ctrl+wheel zoom in the original unverified"
+  },
+  {
+   "id": "02_zoom_center_result_center",
+   "check": "zoom around mouse pointer / center, no offset (N10) - zoom in via menu keeps center",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "reopen": "T10"
+    },
+    {
+     "menu": [
+      "Ansicht",
+      "Vergrößerung",
+      "100%"
+     ]
+    },
+    {
+     "menu": [
+      "Ansicht",
+      "Größer zoomen"
+     ]
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "03_fit_result",
+   "check": "fit all leaves a 15 px margin",
+   "method": {
+    "orig": "J",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "reopen": "T10"
+    },
+    {
+     "menu": [
+      "Ansicht",
+      "Alles anpassen"
+     ]
+    },
+    {
+     "log_value": "fw.getDocumentDOM().zoom"
+    },
+    {
+     "record_ui": "ui_state.summary"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "04_scrollbars_normal",
+   "check": "scroll bars and border around the document",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "reopen": "T10"
+    },
+    {
+     "menu": [
+      "Ansicht",
+      "Vergrößerung",
+      "100%"
+     ]
+    }
+   ],
+   "shot": {
+    "area": "window"
+   }
+  },
+  {
+   "id": "05_rulers_normal",
+   "check": "rulers: unit, drag zero point",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "reopen": "T10"
+    },
+    {
+     "menu": [
+      "Ansicht",
+      "Lineale"
+     ]
+    }
+   ],
+   "shot": {
+    "area": "window"
+   },
+   "note": "rulers may already be on in one program: runner must set rulers ON (toggle only if off); 'drag_ruler_origin' = drag from the ruler corner to document point"
+  },
+  {
+   "id": "05_rulers_result",
+   "check": "rulers: unit, drag zero point",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "reopen": "T10"
+    },
+    {
+     "menu": [
+      "Ansicht",
+      "Lineale"
+     ]
+    },
+    {
+     "drag_ruler_origin": {
+      "to": [
+       400,
+       400
+      ]
+     }
+    }
+   ],
+   "shot": {
+    "area": "window"
+   },
+   "note": "rulers may already be on in one program: runner must set rulers ON (toggle only if off); 'drag_ruler_origin' = drag from the ruler corner to document point"
+  },
+  {
+   "id": "06_guides_drag_pressed",
+   "check": "drag a guide from the ruler, value tooltip",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "reopen": "T10"
+    },
+    {
+     "menu": [
+      "Ansicht",
+      "Lineale"
+     ]
+    },
+    {
+     "drag_guide": {
+      "from": "ruler_top",
+      "to": [
+       400,
+       300
+      ],
+      "hold": true
+     }
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "note": "screenshot while the mouse button is still held (tooltip with position)"
+  },
+  {
+   "id": "07_guides_dblclick_open",
+   "check": "double-click on guide opens the move-guide dialog",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T10"
+    },
+    {
+     "jsf": "fw.getDocumentDOM().addGuide(300,'horizontal')"
+    },
+    {
+     "double_click": {
+      "canvas": [
+       400,
+       300
+      ]
+     }
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "addGuide(position, 'horizontal') signature unverified in both programs"
+  },
+  {
+   "id": "08_guides_snap_result",
+   "check": "snap to guides moves object onto guide",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "reopen": "T10"
+    },
+    {
+     "jsf": "fw.getDocumentDOM().addGuide(500,'vertical')"
+    },
+    {
+     "menu": [
+      "Ansicht",
+      "Hilfslinien",
+      "An Hilfslinien ausrichten"
+     ]
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       100,
+       100
+      ],
+      "to": [
+       497,
+       100
+      ]
+     }
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": null,
+   "note": "T10 is one large bitmap; drag moves it, left edge should snap to x=500"
+  },
+  {
+   "id": "09_guides_lock_result",
+   "check": "locked guides cannot be dragged",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "reopen": "T10"
+    },
+    {
+     "jsf": "fw.getDocumentDOM().addGuide(300,'horizontal')"
+    },
+    {
+     "menu": [
+      "Ansicht",
+      "Hilfslinien",
+      "Hilfslinien sperren"
+     ]
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       400,
+       300
+      ],
+      "to": [
+       400,
+       500
+      ]
+     }
+    },
+    {
+     "log_value": "fw.getDocumentDOM().guides.toSource()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": null,
+   "note": "dom.guides property name unverified"
+  },
+  {
+   "id": "10_guides_remove_result",
+   "check": "dragging a guide off the canvas removes it",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "reopen": "T10"
+    },
+    {
+     "jsf": "fw.getDocumentDOM().addGuide(300,'horizontal')"
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       400,
+       300
+      ],
+      "to": [
+       400,
+       -80
+      ]
+     }
+    },
+    {
+     "log_value": "fw.getDocumentDOM().guides.toSource()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": null,
+   "note": "dom.guides property name unverified"
+  },
+  {
+   "id": "11_grid_show_normal",
+   "check": "grid on: color and spacing",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "reopen": "T10"
+    },
+    {
+     "menu": [
+      "Ansicht",
+      "Raster",
+      "Raster anzeigen"
+     ]
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "12_grid_snap_result",
+   "check": "snap to grid",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "reopen": "T10"
+    },
+    {
+     "menu": [
+      "Ansicht",
+      "Raster",
+      "Am Raster ausrichten"
+     ]
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       100,
+       100
+      ],
+      "to": [
+       113,
+       117
+      ]
+     }
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "13_smart_guides_pressed",
+   "check": "smart guides while dragging (if present)",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "reopen": "T10"
+    },
+    {
+     "menu": [
+      "Ansicht",
+      "Intelligente Hilfslinien",
+      "Intelligente Hilfslinien anzeigen"
+     ]
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       100,
+       100
+      ],
+      "to": [
+       140,
+       100
+      ],
+      "hold": true
+     }
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "note": "original menu entry name for smart guides unverified"
+  },
+  {
+   "id": "14_pixel_grid_normal",
+   "check": "pixel grid at >= 400%",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "reopen": "T10"
+    },
+    {
+     "menu": [
+      "Ansicht",
+      "Vergrößerung",
+      "800%"
+     ]
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "15_snap_pixels_result",
+   "check": "snap to pixels",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "reopen": "T10"
+    },
+    {
+     "menu": [
+      "Modifizieren",
+      "An Pixeln ausrichten"
+     ]
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": null,
+   "note": "menu location of 'An Pixeln ausrichten' (View vs Modify) may differ between programs"
+  },
+  {
+   "id": "16_edges_normal",
+   "check": "View > Edges (hover outline)",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "reopen": "T10"
+    },
+    {
+     "menu": [
+      "Ansicht",
+      "Ränder"
+     ]
+    },
+    {
+     "canvas_move": [
+      300,
+      300
+     ]
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "17_drag_clip_pressed",
+   "check": "dragging beyond the canvas edge is clipped (N04)",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "reopen": "T10"
+    },
+    {
+     "menu": [
+      "Ansicht",
+      "Alles anpassen"
+     ]
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       1200,
+       800
+      ],
+      "to": [
+       2600,
+       800
+      ],
+      "hold": true
+     }
+    }
+   ],
+   "shot": {
+    "area": "window"
+   }
+  },
+  {
+   "id": "18_checker_normal",
+   "check": "transparent canvas shows checkerboard",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "reopen": "T03"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "19_outside_click_result",
+   "check": "click outside the canvas deselects",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "reopen": "T10"
+    },
+    {
+     "key": "ctrl+A"
+    },
+    {
+     "window_click": "outside_canvas"
+    },
+    {
+     "log_value": "(function(){var r=[],s=fw.selection;for(var i=0;i<s.length;i++){var p=s[i].pixelRect;r.push([s[i].name,s[i].toString(),p.left,p.top,p.right,p.bottom]);}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "20_macro_view_normal",
+   "check": "full screen mode: rulers/grid stay?",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "reopen": "T10"
+    },
+    {
+     "menu": [
+      "Ansicht",
+      "Lineale"
+     ]
+    },
+    {
+     "menu": [
+      "Ansicht",
+      "Raster",
+      "Raster anzeigen"
+     ]
+    },
+    {
+     "key": "F"
+    }
+   ],
+   "shot": {
+    "area": "window"
+   },
+   "after": [
+    {
+     "key": "F"
+    },
+    {
+     "key": "F"
+    }
+   ],
+   "note": "screen mode key F cycles modes in the original; Firepixel equivalent unverified"
+  },
+  {
+   "id": "21_status_bar_normal",
+   "check": "status bar at the bottom (size, zoom field, playback)",
+   "method": {
+    "orig": "W, B",
+    "fp": "S, B"
+   },
+   "both": [
+    {
+     "reopen": "T10"
+    },
+    {
+     "record_ui": "ui_state.summary"
+    }
+   ],
+   "shot": {
+    "area": "window"
+   },
+   "note": "zoom field in the status bar is the click target; label may be the current zoom value"
+  },
+  {
+   "id": "21_status_bar_open",
+   "check": "status bar at the bottom (size, zoom field, playback)",
+   "method": {
+    "orig": "W, B",
+    "fp": "S, B"
+   },
+   "both": [
+    {
+     "reopen": "T10"
+    },
+    {
+     "click_text": "100%"
+    },
+    {
+     "record_ui": "ui_state.summary"
+    }
+   ],
+   "shot": {
+    "area": "popup"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "zoom field in the status bar is the click target; label may be the current zoom value"
+  },
+  {
+   "id": "22_cursor_coords_hover",
+   "check": "Info panel coordinates equal the ruler marker",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "reopen": "T10"
+    },
+    {
+     "menu": [
+      "Ansicht",
+      "Lineale"
+     ]
+    },
+    {
+     "menu": [
+      "Fenster",
+      "Info"
+     ]
+    },
+    {
+     "canvas_move": [
+      500,
+      400
+     ]
+    }
+   ],
+   "shot": {
+    "area": "window"
+   }
+  }
+ ]
+}

@@ -1,0 +1,1438 @@
+{
+ "unit": "dialogs-d31-d40",
+ "testfile": "T04",
+ "note": "Verbs as in tools/parity/runner/README.md. Every step starts with reopen <Txx> (test file fresh, earlier changes discarded) or close_all (no document). Menu commands: orig = menu path, fp = command id (side-specific, so the following actions are listed on both sides). Logical keys used here that may still be unmapped in ui_map.json: dialog.field.<i> / dialog.combo.<i> (i-th edit/combo of the top dialog), labels for dropdowns. Rare verbs used here that the runner may log as unsupported: new_document, window_click, drag_text, hover_text, right_click_text, double_click_text, drag_guide, drag_ruler_origin, drag_dialog_title, drag_dialog_slider, click_dialog_rel, drag_dialog_rel, canvas_wheel, reopen_dialog (repeat the opening actions), save_history_as_command, delete_saved_command, add_live_filter, file_dialog_open_types, restart_app, window_size, set_clipboard_image, drop_files, log_focus_cycle-like record_ui {focus_cycle:n}. Object 'I1#2' = duplicate of I1; 'text' = first text element; canvas_drag option hold = screenshot while the button is held.",
+ "steps": [
+  {
+   "id": "00_overview_normal",
+   "check": "overview after opening the test file",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "shot": {
+    "area": "window"
+   }
+  },
+  {
+   "id": "01_d31_fields_normal",
+   "check": "D31 inset path: direction, width, corners",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "select": "R1"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Modifizieren > Pfad ändern > Pfad einlassen..."
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "fp": [
+    {
+     "command": "modify.alterPath.insetPath"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "02_d31_effect_result",
+   "check": "D31 result",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "select": "R1"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Modifizieren > Pfad ändern > Pfad einlassen..."
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "log_value": "(function(){var r=[],s=fw.selection;for(var i=0;i<s.length;i++){var p=s[i].pixelRect;r.push([s[i].name,s[i].toString(),p.left,p.top,p.right,p.bottom]);}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "modify.alterPath.insetPath"
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "log_value": "(function(){var r=[],s=fw.selection;for(var i=0;i<s.length;i++){var p=s[i].pixelRect;r.push([s[i].name,s[i].toString(),p.left,p.top,p.right,p.bottom]);}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "03_d32_fields_normal",
+   "check": "D32 path to marquee: edge list",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "select": "R1"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Modifizieren > Pfad in Auswahlrahmen konvertieren..."
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "fp": [
+    {
+     "command": "modify.convertPathToMarquee"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "'open' = edge dropdown expanded"
+  },
+  {
+   "id": "03_d32_fields_open",
+   "check": "D32 path to marquee: edge list",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "select": "R1"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Modifizieren > Pfad in Auswahlrahmen konvertieren..."
+    },
+    {
+     "open": "dialog.combo.0"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "fp": [
+    {
+     "command": "modify.convertPathToMarquee"
+    },
+    {
+     "open": "dialog.combo.0"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "'open' = edge dropdown expanded"
+  },
+  {
+   "id": "04_d32_effect_result",
+   "check": "D32 result",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "select": "E1"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Modifizieren > Pfad in Auswahlrahmen konvertieren..."
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "log_value": "(function(){var s=fw.historyPalette.getSteps(),r=[];for(var i=0;i<s.length;i++)r.push(s[i].name);return r.toSource();})()"
+    }
+   ],
+   "fp": [
+    {
+     "command": "modify.convertPathToMarquee"
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "log_value": "(function(){var s=fw.historyPalette.getSteps(),r=[];for(var i=0;i<s.length;i++)r.push(s[i].name);return r.toSource();})()"
+    }
+   ],
+   "shot": null,
+   "note": "marching ants compared via canvas screenshot by runner"
+  },
+  {
+   "id": "05_d33_msg_open",
+   "check": "D33 tween instances: message / dialog (steps, distribute to states)",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "select": "R1"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Modifizieren > Symbol > Instanzen tweenen..."
+    },
+    {
+     "open": "dialog.combo.0"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "fp": [
+    {
+     "command": "modify.symbol.tweenInstances"
+    },
+    {
+     "open": "dialog.combo.0"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "05_d33_msg_open_dialog",
+   "check": "D33 tween instances: message / dialog (steps, distribute to states) - dialog with 2 instances",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T06"
+    },
+    {
+     "select": "I1"
+    },
+    {
+     "key": "ctrl+shift+D"
+    },
+    {
+     "select": [
+      "I1",
+      "I1#2"
+     ]
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Modifizieren > Symbol > Instanzen tweenen..."
+    }
+   ],
+   "fp": [
+    {
+     "command": "modify.symbol.tweenInstances"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "'I1#2' = the duplicate of I1"
+  },
+  {
+   "id": "06_d33_effect_result",
+   "check": "D33 effect with 2 instances",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "reopen": "T06"
+    },
+    {
+     "select": "I1"
+    },
+    {
+     "key": "ctrl+shift+D"
+    },
+    {
+     "select": [
+      "I1",
+      "I1#2"
+     ]
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Modifizieren > Symbol > Instanzen tweenen..."
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "modify.symbol.tweenInstances"
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "07_d34_msg_open",
+   "check": "D34 add pop-up menu: prompt",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "select": "R1"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Modifizieren > Popupmenü > Popupmenü hinzufügen..."
+    },
+    {
+     "open": "dialog.combo.0"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "fp": [
+    {
+     "command": "modify.popUpMenu.addPopUpMenu"
+    },
+    {
+     "open": "dialog.combo.0"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "08_d34_editor_normal",
+   "check": "D34 pop-up menu editor tabs",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T06"
+    },
+    {
+     "select": "S1"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Modifizieren > Popupmenü > Popupmenü hinzufügen..."
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "fp": [
+    {
+     "command": "modify.popUpMenu.addPopUpMenu"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "08_d34_editor_normal_tab2",
+   "check": "D34 pop-up menu editor tabs - second tab (appearance)",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T06"
+    },
+    {
+     "select": "S1"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Modifizieren > Popupmenü > Popupmenü hinzufügen..."
+    }
+   ],
+   "fp": [
+    {
+     "command": "modify.popUpMenu.addPopUpMenu"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "runner clicks the second register after the editor opens"
+  },
+  {
+   "id": "09_d35_fields_normal",
+   "check": "D35 feather selection",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T02"
+    },
+    {
+     "select": "B1"
+    },
+    {
+     "tool": "tool.marquee"
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       100,
+       100
+      ],
+      "to": [
+       300,
+       250
+      ]
+     }
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Auswählen > Weiche Kante..."
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "fp": [
+    {
+     "command": "select.feather"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "10_d35_effect_result",
+   "check": "D35 result",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "reopen": "T02"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Auswählen > Weiche Kante..."
+    },
+    {
+     "set_field": {
+      "target": "dialog.field.0",
+      "value": "5"
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "log_value": "(function(){var s=fw.historyPalette.getSteps(),r=[];for(var i=0;i<s.length;i++)r.push(s[i].name);return r.toSource();})()"
+    }
+   ],
+   "fp": [
+    {
+     "command": "select.feather"
+    },
+    {
+     "set_field": {
+      "target": "dialog.field.0",
+      "value": "5"
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "log_value": "(function(){var s=fw.historyPalette.getSteps(),r=[];for(var i=0;i<s.length;i++)r.push(s[i].name);return r.toSource();})()"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "11_d36_d37_result",
+   "check": "D36/D37 expand/contract: limits 1/5/10",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "reopen": "T02"
+    },
+    {
+     "select": "B1"
+    },
+    {
+     "tool": "tool.marquee"
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       100,
+       100
+      ],
+      "to": [
+       300,
+       250
+      ]
+     }
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Auswählen > Auswahlrahmen erweitern..."
+    },
+    {
+     "record_ui": "dialog.fields"
+    },
+    {
+     "set_field": {
+      "target": "dialog.field.0",
+      "value": "5"
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "log_value": "(function(){var s=fw.historyPalette.getSteps(),r=[];for(var i=0;i<s.length;i++)r.push(s[i].name);return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "select.expandMarquee"
+    },
+    {
+     "record_ui": "dialog.fields"
+    },
+    {
+     "set_field": {
+      "target": "dialog.field.0",
+      "value": "5"
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "log_value": "(function(){var s=fw.historyPalette.getSteps(),r=[];for(var i=0;i<s.length;i++)r.push(s[i].name);return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "note": "image = dialog; runner repeats with contract and values 1/10"
+  },
+  {
+   "id": "12_d38_result",
+   "check": "D38 border",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "reopen": "T02"
+    },
+    {
+     "select": "B1"
+    },
+    {
+     "tool": "tool.marquee"
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       100,
+       100
+      ],
+      "to": [
+       300,
+       250
+      ]
+     }
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Auswählen > Auswahlrahmen begrenzen..."
+    },
+    {
+     "set_field": {
+      "target": "dialog.field.0",
+      "value": "5"
+     }
+    },
+    {
+     "key": "Enter"
+    }
+   ],
+   "fp": [
+    {
+     "command": "select.borderMarquee"
+    },
+    {
+     "set_field": {
+      "target": "dialog.field.0",
+      "value": "5"
+     }
+    },
+    {
+     "key": "Enter"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "note": "screenshot after Enter (canvas with border selection)"
+  },
+  {
+   "id": "13_d39_result",
+   "check": "D39 smooth",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "reopen": "T02"
+    },
+    {
+     "select": "B1"
+    },
+    {
+     "tool": "tool.magicWand"
+    },
+    {
+     "canvas_click": [
+      60,
+      290
+     ]
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Auswählen > Auswahlrahmen glätten..."
+    },
+    {
+     "set_field": {
+      "target": "dialog.field.0",
+      "value": "5"
+     }
+    },
+    {
+     "key": "Enter"
+    }
+   ],
+   "fp": [
+    {
+     "command": "select.smoothMarquee"
+    },
+    {
+     "set_field": {
+      "target": "dialog.field.0",
+      "value": "5"
+     }
+    },
+    {
+     "key": "Enter"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "14_d40_fields_normal",
+   "check": "D40 save selection: target, operation",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T02"
+    },
+    {
+     "select": "B1"
+    },
+    {
+     "tool": "tool.marquee"
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       100,
+       100
+      ],
+      "to": [
+       300,
+       250
+      ]
+     }
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Auswählen > Bitmap-Auswahl speichern..."
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "fp": [
+    {
+     "command": "select.saveBitmapSelection"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "15_d40_effect_result",
+   "check": "D40 restore operations",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "reopen": "T02"
+    },
+    {
+     "select": "B1"
+    },
+    {
+     "tool": "tool.marquee"
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       100,
+       100
+      ],
+      "to": [
+       300,
+       250
+      ]
+     }
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Auswählen > Bitmap-Auswahl speichern..."
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "key": "ctrl+D"
+    },
+    {
+     "menu": [
+      "Auswählen",
+      "Bitmap-Auswahl wiederherstellen..."
+     ]
+    },
+    {
+     "record_ui": "dialog.fields"
+    },
+    {
+     "log_value": "(function(){var s=fw.historyPalette.getSteps(),r=[];for(var i=0;i<s.length;i++)r.push(s[i].name);return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "select.saveBitmapSelection"
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "key": "ctrl+D"
+    },
+    {
+     "menu": [
+      "Auswählen",
+      "Bitmap-Auswahl wiederherstellen..."
+     ]
+    },
+    {
+     "record_ui": "dialog.fields"
+    },
+    {
+     "log_value": "(function(){var s=fw.historyPalette.getSteps(),r=[];for(var i=0;i<s.length;i++)r.push(s[i].name);return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "image = restore dialog; 'menu' inside after runs for both programs (fp via ui_find)"
+  },
+  {
+   "id": "16_invalid_values_open",
+   "check": "invalid values -> message",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T02"
+    },
+    {
+     "select": "B1"
+    },
+    {
+     "tool": "tool.marquee"
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       100,
+       100
+      ],
+      "to": [
+       300,
+       250
+      ]
+     }
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Auswählen > Weiche Kante..."
+    },
+    {
+     "set_field": {
+      "target": "dialog.field.0",
+      "value": "abc"
+     }
+    },
+    {
+     "key": "Enter"
+    }
+   ],
+   "fp": [
+    {
+     "command": "select.feather"
+    },
+    {
+     "set_field": {
+      "target": "dialog.field.0",
+      "value": "abc"
+     }
+    },
+    {
+     "key": "Enter"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "note": "screenshot shows the message after Enter; afterwards close all dialogs"
+  },
+  {
+   "id": "16_invalid_values_open_range",
+   "check": "invalid values -> message - out of range value",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T02"
+    },
+    {
+     "select": "B1"
+    },
+    {
+     "tool": "tool.marquee"
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       100,
+       100
+      ],
+      "to": [
+       300,
+       250
+      ]
+     }
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Auswählen > Auswahlrahmen erweitern..."
+    },
+    {
+     "set_field": {
+      "target": "dialog.field.0",
+      "value": "99999"
+     }
+    },
+    {
+     "key": "Enter"
+    }
+   ],
+   "fp": [
+    {
+     "command": "select.expandMarquee"
+    },
+    {
+     "set_field": {
+      "target": "dialog.field.0",
+      "value": "99999"
+     }
+    },
+    {
+     "key": "Enter"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "17_enter_esc_result",
+   "check": "Enter/Esc",
+   "method": {
+    "orig": "J",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "reopen": "T02"
+    },
+    {
+     "select": "B1"
+    },
+    {
+     "tool": "tool.marquee"
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       100,
+       100
+      ],
+      "to": [
+       300,
+       250
+      ]
+     }
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Auswählen > Auswahlrahmen glätten..."
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "record_ui": "dialog.title"
+    },
+    {
+     "log_value": "(function(){var s=fw.historyPalette.getSteps(),r=[];for(var i=0;i<s.length;i++)r.push(s[i].name);return r.toSource();})()"
+    },
+    {
+     "record_ui": "ui_state.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "select.smoothMarquee"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "record_ui": "dialog.title"
+    },
+    {
+     "log_value": "(function(){var s=fw.historyPalette.getSteps(),r=[];for(var i=0;i<s.length;i++)r.push(s[i].name);return r.toSource();})()"
+    },
+    {
+     "record_ui": "ui_state.summary"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "18_tab_order_focus",
+   "check": "tab order",
+   "method": {
+    "orig": "W",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "select": "R1"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Modifizieren > Pfad ändern > Pfad einlassen..."
+    },
+    {
+     "key": "Tab"
+    },
+    {
+     "record_ui": {
+      "focus_cycle": 12
+     }
+    },
+    {
+     "record_ui": "ui_state.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "modify.alterPath.insetPath"
+    },
+    {
+     "key": "Tab"
+    },
+    {
+     "record_ui": {
+      "focus_cycle": 12
+     }
+    },
+    {
+     "record_ui": "ui_state.summary"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "tab cycle logged (12 x Tab, focused control after each); further dialogs without image: d32, d35"
+  },
+  {
+   "id": "18_tab_order_focus_d40",
+   "check": "tab order - tab order d40",
+   "method": {
+    "orig": "W",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "reopen": "T02"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Auswählen > Bitmap-Auswahl speichern..."
+    },
+    {
+     "record_ui": {
+      "focus_cycle": 12
+     }
+    }
+   ],
+   "fp": [
+    {
+     "command": "select.saveBitmapSelection"
+    },
+    {
+     "record_ui": {
+      "focus_cycle": 12
+     }
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "19_remember_result",
+   "check": "remembered values",
+   "method": {
+    "orig": "J",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "reopen": "T02"
+    },
+    {
+     "select": "B1"
+    },
+    {
+     "tool": "tool.marquee"
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       100,
+       100
+      ],
+      "to": [
+       300,
+       250
+      ]
+     }
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Auswählen > Weiche Kante..."
+    },
+    {
+     "set_field": {
+      "target": "dialog.field.0",
+      "value": "7"
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "reopen_dialog": true
+    },
+    {
+     "record_ui": "dialog.fields"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "record_ui": "ui_state.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "select.feather"
+    },
+    {
+     "set_field": {
+      "target": "dialog.field.0",
+      "value": "7"
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "reopen_dialog": true
+    },
+    {
+     "record_ui": "dialog.fields"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "record_ui": "ui_state.summary"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "20_undo_names_result",
+   "check": "history names",
+   "method": {
+    "orig": "J",
+    "fp": "H"
+   },
+   "both": [
+    {
+     "reopen": "T02"
+    },
+    {
+     "select": "B1"
+    },
+    {
+     "tool": "tool.marquee"
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       100,
+       100
+      ],
+      "to": [
+       300,
+       250
+      ]
+     }
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Auswählen > Auswahlrahmen erweitern..."
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "menu": [
+      "Auswählen",
+      "Auswahlrahmen verkleinern..."
+     ]
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "menu": [
+      "Auswählen",
+      "Auswahlrahmen begrenzen..."
+     ]
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "menu": [
+      "Auswählen",
+      "Auswahlrahmen glätten..."
+     ]
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "log_value": "(function(){var s=fw.historyPalette.getSteps(),r=[];for(var i=0;i<s.length;i++)r.push(s[i].name);return r.toSource();})()"
+    }
+   ],
+   "fp": [
+    {
+     "command": "select.expandMarquee"
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "menu": [
+      "Auswählen",
+      "Auswahlrahmen verkleinern..."
+     ]
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "menu": [
+      "Auswählen",
+      "Auswahlrahmen begrenzen..."
+     ]
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "menu": [
+      "Auswählen",
+      "Auswahlrahmen glätten..."
+     ]
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "log_value": "(function(){var s=fw.historyPalette.getSteps(),r=[];for(var i=0;i<s.length;i++)r.push(s[i].name);return r.toSource();})()"
+    }
+   ],
+   "shot": null,
+   "note": "history read-out via fw.historyPalette.getSteps()/step.name is unverified in both programs"
+  }
+ ]
+}

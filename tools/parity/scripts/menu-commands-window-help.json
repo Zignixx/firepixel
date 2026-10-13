@@ -1,0 +1,618 @@
+{
+ "unit": "menu-commands-window-help",
+ "testfile": "T04",
+ "note": "Verbs as in tools/parity/runner/README.md. Every step starts with reopen <Txx> (test file fresh, earlier changes discarded) or close_all (no document). Menu commands: orig = menu path, fp = command id (side-specific, so the following actions are listed on both sides). Logical keys used here that may still be unmapped in ui_map.json: dialog.field.<i> / dialog.combo.<i> (i-th edit/combo of the top dialog), labels for dropdowns. Rare verbs used here that the runner may log as unsupported: new_document, window_click, drag_text, hover_text, right_click_text, double_click_text, drag_guide, drag_ruler_origin, drag_dialog_title, drag_dialog_slider, click_dialog_rel, drag_dialog_rel, canvas_wheel, reopen_dialog (repeat the opening actions), save_history_as_command, delete_saved_command, add_live_filter, file_dialog_open_types, restart_app, window_size, set_clipboard_image, drop_files, log_focus_cycle-like record_ui {focus_cycle:n}. Object 'I1#2' = duplicate of I1; 'text' = first text element; canvas_drag option hold = screenshot while the button is held.",
+ "steps": [
+  {
+   "id": "00_overview_normal",
+   "check": "overview after opening the test file",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "shot": {
+    "area": "window"
+   }
+  },
+  {
+   "id": "01_commands_list_open",
+   "check": "commands menu in a fresh profile: folders, entries",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "menu_open": [
+      "Befehle"
+     ]
+    }
+   ],
+   "shot": {
+    "area": "menu"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "own Firepixel commands (AI, trace, batch) are deliberately different"
+  },
+  {
+   "id": "01_commands_list_open_submenu",
+   "check": "commands menu in a fresh profile: folders, entries - first command folder opened",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "menu_open": [
+      "Befehle"
+     ]
+    },
+    {
+     "key": "ArrowDown"
+    },
+    {
+     "key": "ArrowRight"
+    }
+   ],
+   "shot": {
+    "area": "menu"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "first entry must be a folder; otherwise screenshot shows the menu only"
+  },
+  {
+   "id": "02_commands_run_result",
+   "check": "sample of 5 built-in commands: effect",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "select": [
+      "R1",
+      "R2"
+     ]
+    },
+    {
+     "menu": [
+      "Befehle",
+      "Dokument",
+      "Ausgewählte zentrieren"
+     ]
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": null,
+   "note": "command folder/entry names in the original unverified; runner should pick 5 from the logged menu"
+  },
+  {
+   "id": "03_commands_manage_open",
+   "check": "manage saved commands (-> D25)",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Befehle > Gespeicherte Befehle verwalten..."
+    },
+    {
+     "record_ui": "dialog.text"
+    }
+   ],
+   "fp": [
+    {
+     "command": "commands.manageSavedCommands"
+    },
+    {
+     "record_ui": "dialog.text"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "04_commands_run_script_result",
+   "check": "run script (test mode)",
+   "method": {
+    "orig": "J",
+    "fp": "R"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "jsf": "fw.runScript('file:///C:/Users/Administrator/Desktop/REA/re/_testdateien/par/src/u56_probe.jsf')"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    }
+   ],
+   "shot": null,
+   "note": "probe script must exist (creates a rectangle 10,10-60,60); runner creates it if missing"
+  },
+  {
+   "id": "05_filter_menu_open",
+   "check": "filter menu: categories, repeat last",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "reopen": "T02"
+    },
+    {
+     "select": "B1"
+    },
+    {
+     "menu_open": [
+      "Filter"
+     ]
+    }
+   ],
+   "shot": {
+    "area": "menu"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "06_window_panels_result",
+   "check": "Window > every panel opens/closes, checkmark",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "menu": [
+      "Fenster",
+      "Info"
+     ]
+    },
+    {
+     "menu_open": [
+      "Fenster"
+     ]
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Escape"
+    }
+   ],
+   "shot": null,
+   "log_menu_items": true
+  },
+  {
+   "id": "07_window_toolbars_result",
+   "check": "toolbars",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "menu": [
+      "Fenster",
+      "Werkzeugleisten",
+      "Standard"
+     ]
+    }
+   ],
+   "shot": {
+    "area": "window"
+   },
+   "after": [
+    {
+     "menu": [
+      "Fenster",
+      "Werkzeugleisten",
+      "Standard"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "08_window_hide_panels_result",
+   "check": "hide panels",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Fenster > Bedienfelder ausblenden"
+    },
+    {
+     "record_ui": "ui_state.panels"
+    },
+    {
+     "key": "F4"
+    }
+   ],
+   "fp": [
+    {
+     "command": "window.hidePanels"
+    },
+    {
+     "record_ui": "ui_state.panels"
+    },
+    {
+     "key": "F4"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "09_window_workspace_open",
+   "check": "workspace layouts",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "menu_open": [
+      "Fenster",
+      "Arbeitsbereichlayouts"
+     ]
+    }
+   ],
+   "shot": {
+    "area": "menu"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "10_window_arrange_result",
+   "check": "cascade/tile",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "open_testfile": "T05"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Fenster > Überlappend"
+    },
+    {
+     "record_ui": "ui_state.windows"
+    }
+   ],
+   "fp": [
+    {
+     "command": "window.cascade"
+    },
+    {
+     "record_ui": "ui_state.windows"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "11_window_docs_open",
+   "check": "document list with checkmark at front",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "open_testfile": "T05"
+    },
+    {
+     "menu_open": [
+      "Fenster"
+     ]
+    }
+   ],
+   "shot": {
+    "area": "menu"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "12_window_extensions_open",
+   "check": "extension panels (neutral)",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "menu_open": [
+      "Fenster",
+      "Erweiterungen"
+     ]
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Escape"
+    }
+   ],
+   "shot": null,
+   "log_menu_items": true
+  },
+  {
+   "id": "13_help_entries_open",
+   "check": "help entries",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "menu_open": [
+      "Hilfe"
+     ]
+    }
+   ],
+   "shot": {
+    "area": "menu"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "product names in help entries differ by design"
+  },
+  {
+   "id": "14_help_about_open",
+   "check": "about dialog content (design deliberately different)",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Hilfe > Über..."
+    }
+   ],
+   "fp": [
+    {
+     "command": "help.about"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "original entry label contains the product name; runner matches the last Help entry"
+  },
+  {
+   "id": "15_help_online_result",
+   "check": "online entries (shell open suppressed)",
+   "method": {
+    "orig": "J",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "menu_open": [
+      "Hilfe"
+     ]
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "record_ui": "ui_state.summary"
+    }
+   ],
+   "shot": null,
+   "log_menu_items": true,
+   "note": "never click online entries (would open a browser)"
+  },
+  {
+   "id": "16_disabled_states_disabled",
+   "check": "grayed without document",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "close_all": true
+    },
+    {
+     "close_all": true
+    },
+    {
+     "menu_open": [
+      "Befehle"
+     ]
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Escape"
+    }
+   ],
+   "shot": null,
+   "log_menu_items": true
+  },
+  {
+   "id": "17_no_doc_open",
+   "check": "menus without document",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "close_all": true
+    },
+    {
+     "close_all": true
+    },
+    {
+     "menu_open": [
+      "Fenster"
+     ]
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Escape"
+    }
+   ],
+   "shot": null,
+   "log_menu_items": true
+  },
+  {
+   "id": "18_undo_names_result",
+   "check": "history names of commands",
+   "method": {
+    "orig": "J",
+    "fp": "H"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "select": [
+      "R1",
+      "R2"
+     ]
+    },
+    {
+     "menu": [
+      "Befehle",
+      "Dokument",
+      "Ausgewählte zentrieren"
+     ]
+    },
+    {
+     "log_value": "(function(){var s=fw.historyPalette.getSteps(),r=[];for(var i=0;i<s.length;i++)r.push(s[i].name);return r.toSource();})()"
+    }
+   ],
+   "shot": null,
+   "note": "history read-out via fw.historyPalette.getSteps()/step.name is unverified in both programs"
+  }
+ ]
+}

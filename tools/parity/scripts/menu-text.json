@@ -1,0 +1,822 @@
+{
+ "unit": "menu-text",
+ "testfile": "T05",
+ "note": "Verbs as in tools/parity/runner/README.md. Every step starts with reopen <Txx> (test file fresh, earlier changes discarded) or close_all (no document). Menu commands: orig = menu path, fp = command id (side-specific, so the following actions are listed on both sides). Logical keys used here that may still be unmapped in ui_map.json: dialog.field.<i> / dialog.combo.<i> (i-th edit/combo of the top dialog), labels for dropdowns. Rare verbs used here that the runner may log as unsupported: new_document, window_click, drag_text, hover_text, right_click_text, double_click_text, drag_guide, drag_ruler_origin, drag_dialog_title, drag_dialog_slider, click_dialog_rel, drag_dialog_rel, canvas_wheel, reopen_dialog (repeat the opening actions), save_history_as_command, delete_saved_command, add_live_filter, file_dialog_open_types, restart_app, window_size, set_clipboard_image, drop_files, log_focus_cycle-like record_ui {focus_cycle:n}. Object 'I1#2' = duplicate of I1; 'text' = first text element; canvas_drag option hold = screenshot while the button is held.",
+ "steps": [
+  {
+   "id": "00_overview_normal",
+   "check": "overview after opening the test file",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "reopen": "T05"
+    }
+   ],
+   "shot": {
+    "area": "window"
+   }
+  },
+  {
+   "id": "01_font_menu_open",
+   "check": "Font > structure (recent, families, styles)",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T05"
+    },
+    {
+     "select": "TX1"
+    },
+    {
+     "menu_open": [
+      "Text",
+      "Schrift"
+     ]
+    }
+   ],
+   "shot": {
+    "area": "menu"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "01_font_menu_open_scrolled",
+   "check": "Font > structure (recent, families, styles) - font menu scrolled to the middle",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T05"
+    },
+    {
+     "select": "TX1"
+    },
+    {
+     "menu_open": [
+      "Text",
+      "Schrift"
+     ]
+    },
+    {
+     "key": "PageDown"
+    },
+    {
+     "key": "PageDown"
+    }
+   ],
+   "shot": {
+    "area": "menu"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "02_size_menu_result",
+   "check": "Size > steps, other (-> D23)",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "reopen": "T05"
+    },
+    {
+     "select": "TX1"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Text > Größe > 36"
+    },
+    {
+     "log_value": "(function(){var s=fw.selection[0];return [s.font,s.fontsize,s.textRuns.toSource(),s.pixelRect.left,s.pixelRect.top,s.pixelRect.right,s.pixelRect.bottom].toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "text.size.36"
+    },
+    {
+     "log_value": "(function(){var s=fw.selection[0];return [s.font,s.fontsize,s.textRuns.toSource(),s.pixelRect.left,s.pixelRect.top,s.pixelRect.right,s.pixelRect.bottom].toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "03_style_menu_result",
+   "check": "Style > bold/italic/underline",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "reopen": "T05"
+    },
+    {
+     "select": "TX1"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Text > Stil > Faux Fett"
+    },
+    {
+     "log_value": "(function(){var s=fw.selection[0];return [s.font,s.fontsize,s.textRuns.toSource(),s.pixelRect.left,s.pixelRect.top,s.pixelRect.right,s.pixelRect.bottom].toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "text.style.fauxBold"
+    },
+    {
+     "log_value": "(function(){var s=fw.selection[0];return [s.font,s.fontsize,s.textRuns.toSource(),s.pixelRect.left,s.pixelRect.top,s.pixelRect.right,s.pixelRect.bottom].toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": null,
+   "note": "original label may be 'Fett' instead of 'Faux Fett'"
+  },
+  {
+   "id": "04_align_menu_result",
+   "check": "Align > 5 + stretched justified",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "reopen": "T05"
+    },
+    {
+     "select": "TX2"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Text > Ausrichten > Horizontal zentrieren"
+    },
+    {
+     "log_value": "fw.selection[0].textRuns.initialAttrs.alignment"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "text.align.centeredHorizontally"
+    },
+    {
+     "log_value": "fw.selection[0].textRuns.initialAttrs.alignment"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "05_editor_open",
+   "check": "text editor (Ctrl+Shift+E) open/apply",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T05"
+    },
+    {
+     "select": "TX1"
+    },
+    {
+     "key": "ctrl+shift+E"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "Firepixel command id for the text editor not in menu.ftl - shortcut only"
+  },
+  {
+   "id": "06_attach_path_result",
+   "check": "attach to path",
+   "method": {
+    "orig": "J, E",
+    "fp": "D, E"
+   },
+   "both": [
+    {
+     "reopen": "T05"
+    },
+    {
+     "select": [
+      "TX1",
+      "P2"
+     ]
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Text > An Pfad anfügen"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "text.attachToPath"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "07_attach_shape_result",
+   "check": "attach in path",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "reopen": "T05"
+    },
+    {
+     "jsf": "fw.getDocumentDOM().addNewOval({left:300,top:350,right:450,bottom:500})"
+    },
+    {
+     "select": [
+      "TX2",
+      "last"
+     ]
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Text > In Pfad einfügen"
+    }
+   ],
+   "fp": [
+    {
+     "command": "text.attachInPath"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "note": "'last' = the newly drawn ellipse; addNewOval signature unverified"
+  },
+  {
+   "id": "08_detach_result",
+   "check": "detach from path",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "reopen": "T05"
+    },
+    {
+     "select": "TX3"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Text > Von Pfad lösen"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "text.detachFromPath"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "09_orientation_result",
+   "check": "orientation on path (4 kinds)",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "reopen": "T05"
+    },
+    {
+     "select": "TX3"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Text > Richtung > Vertikal"
+    }
+   ],
+   "fp": [
+    {
+     "command": "text.orientation.vertical"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "09_orientation_result_skew_horizontal",
+   "check": "orientation on path (4 kinds) - skew horizontal",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "reopen": "T05"
+    },
+    {
+     "select": "TX3"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Text > Richtung > Horizontal neigen"
+    }
+   ],
+   "fp": [
+    {
+     "command": "text.orientation.skewHorizontal"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "10_reverse_direction_result",
+   "check": "reverse direction",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "reopen": "T05"
+    },
+    {
+     "select": "TX3"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Text > Richtung umkehren"
+    }
+   ],
+   "fp": [
+    {
+     "command": "text.reverseDirection"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "11_convert_paths_result",
+   "check": "convert to paths",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "reopen": "T05"
+    },
+    {
+     "select": "TX2"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Text > In Pfade konvertieren"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "text.convertToPaths"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "12_spelling_open",
+   "check": "check spelling (dialog, effect)",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T05"
+    },
+    {
+     "select": "TX2"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Text > Rechtschreibprüfung..."
+    }
+   ],
+   "fp": [
+    {
+     "command": "text.checkSpelling"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "first run may ask for dictionary setup (D24) in the original"
+  },
+  {
+   "id": "13_spelling_setup_open",
+   "check": "spelling setup (-> D24)",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "reopen": "T05"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Text > Rechtschreibprüfung einrichten..."
+    },
+    {
+     "record_ui": "dialog.title"
+    }
+   ],
+   "fp": [
+    {
+     "command": "text.spellingSetup"
+    },
+    {
+     "record_ui": "dialog.title"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "14_replace_fonts_open",
+   "check": "replace missing fonts",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "reopen": "T05"
+    },
+    {
+     "menu_open": [
+      "Text"
+     ]
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Escape"
+    }
+   ],
+   "shot": null,
+   "log_menu_items": true,
+   "note": "missing-font dialog needs a file with a missing font; only menu presence is logged"
+  },
+  {
+   "id": "15_in_edit_mode_result",
+   "check": "commands while editing text (only selected run)",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "reopen": "T05"
+    },
+    {
+     "select": "TX2"
+    },
+    {
+     "double_click": {
+      "canvas": [
+       70,
+       157
+      ]
+     }
+    },
+    {
+     "key": "shift+End"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Text > Stil > Faux Fett"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "log_value": "(function(){var s=fw.selection[0];return [s.font,s.fontsize,s.textRuns.toSource(),s.pixelRect.left,s.pixelRect.top,s.pixelRect.right,s.pixelRect.bottom].toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "text.style.fauxBold"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "log_value": "(function(){var s=fw.selection[0];return [s.font,s.fontsize,s.textRuns.toSource(),s.pixelRect.left,s.pixelRect.top,s.pixelRect.right,s.pixelRect.bottom].toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "16_multi_text_result",
+   "check": "on 2 texts",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "reopen": "T05"
+    },
+    {
+     "select": [
+      "TX1",
+      "TX2"
+     ]
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Text > Größe > 18"
+    },
+    {
+     "log_value": "(function(){var r=[],s=fw.selection;for(var i=0;i<s.length;i++){var p=s[i].pixelRect;r.push([s[i].name,s[i].toString(),p.left,p.top,p.right,p.bottom]);}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "text.size.18"
+    },
+    {
+     "log_value": "(function(){var r=[],s=fw.selection;for(var i=0;i<s.length;i++){var p=s[i].pixelRect;r.push([s[i].name,s[i].toString(),p.left,p.top,p.right,p.bottom]);}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "17_disabled_states_disabled",
+   "check": "grayed without text",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "reopen": "T05"
+    },
+    {
+     "select": "P2"
+    },
+    {
+     "menu_open": [
+      "Text"
+     ]
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Escape"
+    }
+   ],
+   "shot": null,
+   "log_menu_items": true
+  },
+  {
+   "id": "18_checkmarks_normal",
+   "check": "checkmarks for current style/size",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "reopen": "T05"
+    },
+    {
+     "select": "TX1"
+    },
+    {
+     "menu_open": [
+      "Text",
+      "Größe"
+     ]
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Escape"
+    }
+   ],
+   "shot": null,
+   "log_menu_items": true
+  },
+  {
+   "id": "19_vertical_result",
+   "check": "vertical text commands",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "reopen": "T05"
+    },
+    {
+     "select": "TX1"
+    },
+    {
+     "menu_open": [
+      "Text",
+      "Ausrichten"
+     ]
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "log_value": "(function(){var s=fw.selection[0];return [s.font,s.fontsize,s.textRuns.toSource(),s.pixelRect.left,s.pixelRect.top,s.pixelRect.right,s.pixelRect.bottom].toSource();})()"
+    }
+   ],
+   "shot": null,
+   "log_menu_items": true
+  },
+  {
+   "id": "20_undo_names_result",
+   "check": "history names",
+   "method": {
+    "orig": "J",
+    "fp": "H"
+   },
+   "both": [
+    {
+     "reopen": "T05"
+    },
+    {
+     "select": "TX1"
+    },
+    {
+     "menu": [
+      "Text",
+      "Größe",
+      "36"
+     ]
+    },
+    {
+     "menu": [
+      "Text",
+      "Stil",
+      "Unterstrichen"
+     ]
+    },
+    {
+     "menu": [
+      "Text",
+      "Ausrichten",
+      "Rechts"
+     ]
+    },
+    {
+     "log_value": "(function(){var s=fw.historyPalette.getSteps(),r=[];for(var i=0;i<s.length;i++)r.push(s[i].name);return r.toSource();})()"
+    }
+   ],
+   "shot": null,
+   "note": "history read-out via fw.historyPalette.getSteps()/step.name is unverified in both programs"
+  }
+ ]
+}

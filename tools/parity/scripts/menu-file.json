@@ -1,0 +1,800 @@
+{
+ "unit": "menu-file",
+ "testfile": "T04",
+ "note": "test files are opened from work\\ copies; file dialogs never left open | Verbs as in tools/parity/runner/README.md. Every step starts with reopen <Txx> (test file fresh, earlier changes discarded) or close_all (no document). Menu commands: orig = menu path, fp = command id (side-specific, so the following actions are listed on both sides). Logical keys used here that may still be unmapped in ui_map.json: dialog.field.<i> / dialog.combo.<i> (i-th edit/combo of the top dialog), labels for dropdowns. Rare verbs used here that the runner may log as unsupported: new_document, window_click, drag_text, hover_text, right_click_text, double_click_text, drag_guide, drag_ruler_origin, drag_dialog_title, drag_dialog_slider, click_dialog_rel, drag_dialog_rel, canvas_wheel, reopen_dialog (repeat the opening actions), save_history_as_command, delete_saved_command, add_live_filter, file_dialog_open_types, restart_app, window_size, set_clipboard_image, drop_files, log_focus_cycle-like record_ui {focus_cycle:n}. Object 'I1#2' = duplicate of I1; 'text' = first text element; canvas_drag option hold = screenshot while the button is held.",
+ "steps": [
+  {
+   "id": "00_overview_normal",
+   "check": "overview after opening the test file",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "shot": {
+    "area": "window"
+   }
+  },
+  {
+   "id": "01_new_result",
+   "check": "New -> D01 defaults = clipboard size",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "key": "ctrl+C"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Datei > Neu..."
+    },
+    {
+     "record_ui": "dialog.fields"
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM();return [d.width,d.height,d.zoom,d.layers.length,d.frames.length].toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "file.new"
+    },
+    {
+     "record_ui": "dialog.fields"
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM();return [d.width,d.height,d.zoom,d.layers.length,d.frames.length].toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": null,
+   "note": "dialog fields are logged before Enter; expected width/height = R1 size 100 x 70"
+  },
+  {
+   "id": "02_new_from_template_result",
+   "check": "New from template",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Datei > Neu von Vorlage..."
+    },
+    {
+     "file_dialog_cancel": true
+    },
+    {
+     "log_value": "(function(){var d=fw.documents,r=[];for(var i=0;i<d.length;i++)r.push(d[i].docTitle);return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "file.newFromTemplate"
+    },
+    {
+     "file_dialog_cancel": true
+    },
+    {
+     "log_value": "(function(){var d=fw.documents,r=[];for(var i=0;i<d.length;i++)r.push(d[i].docTitle);return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": null,
+   "note": "logs dialog folder/filter, then cancels"
+  },
+  {
+   "id": "03_open_recent_result",
+   "check": "open recent, clear list",
+   "method": {
+    "orig": "J",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "menu": [
+      "Datei",
+      "Zuletzt geöffnete Dateien",
+      "1"
+     ]
+    },
+    {
+     "log_value": "(function(){var d=fw.documents,r=[];for(var i=0;i<d.length;i++)r.push(d[i].docTitle);return r.toSource();})()"
+    },
+    {
+     "record_ui": "ui_state.summary"
+    }
+   ],
+   "shot": null,
+   "note": "first entry of the recent list; entry label = file name (unverified numbering)"
+  },
+  {
+   "id": "04_reopen_open",
+   "check": "revert asks for confirmation",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "key": "Delete"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Datei > Wiederherstellen"
+    }
+   ],
+   "fp": [
+    {
+     "command": "file.revert"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "click_button": "Abbrechen"
+    }
+   ]
+  },
+  {
+   "id": "05_close_result",
+   "check": "close, close all",
+   "method": {
+    "orig": "J",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "open_testfile": "T09"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Datei > Alle schließen"
+    },
+    {
+     "log_value": "(function(){var d=fw.documents,r=[];for(var i=0;i<d.length;i++)r.push(d[i].docTitle);return r.toSource();})()"
+    },
+    {
+     "record_ui": "ui_state.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "file.closeAll"
+    },
+    {
+     "log_value": "(function(){var d=fw.documents,r=[];for(var i=0;i<d.length;i++)r.push(d[i].docTitle);return r.toSource();})()"
+    },
+    {
+     "record_ui": "ui_state.summary"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "06_save_result",
+   "check": "save without a name -> save as",
+   "method": {
+    "orig": "J",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "new_document": [
+      200,
+      200
+     ]
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Datei > Speichern"
+    },
+    {
+     "record_ui": "dialog.title"
+    },
+    {
+     "file_dialog_cancel": true
+    },
+    {
+     "log_value": "(function(){var d=fw.documents,r=[];for(var i=0;i<d.length;i++)r.push(d[i].docTitle);return r.toSource();})()"
+    },
+    {
+     "record_ui": "ui_state.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "file.save"
+    },
+    {
+     "record_ui": "dialog.title"
+    },
+    {
+     "file_dialog_cancel": true
+    },
+    {
+     "log_value": "(function(){var d=fw.documents,r=[];for(var i=0;i<d.length;i++)r.push(d[i].docTitle);return r.toSource();})()"
+    },
+    {
+     "record_ui": "ui_state.summary"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "07_save_copy_result",
+   "check": "save a copy",
+   "method": {
+    "orig": "J",
+    "fp": "R"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "jsf": "fw.saveDocumentAs(fw.getDocumentDOM(), true)"
+    }
+   ],
+   "shot": null,
+   "note": "'save copy' via JSF (saveDocumentAs with copy flag) unverified; file dialog cancelled"
+  },
+  {
+   "id": "08_save_all_result",
+   "check": "save all",
+   "method": {
+    "orig": "J",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "open_testfile": "T09"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Datei > Alles speichern"
+    },
+    {
+     "log_value": "(function(){var d=fw.documents,r=[];for(var i=0;i<d.length;i++)r.push(d[i].docTitle);return r.toSource();})()"
+    },
+    {
+     "record_ui": "ui_state.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "file.saveAll"
+    },
+    {
+     "log_value": "(function(){var d=fw.documents,r=[];for(var i=0;i<d.length;i++)r.push(d[i].docTitle);return r.toSource();})()"
+    },
+    {
+     "record_ui": "ui_state.summary"
+    }
+   ],
+   "shot": null,
+   "note": "test files are copies under work\\ - never overwrite originals"
+  },
+  {
+   "id": "09_save_template_result",
+   "check": "save as template",
+   "method": {
+    "orig": "J",
+    "fp": "R"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Datei > Als Vorlage speichern..."
+    },
+    {
+     "record_ui": "dialog.title"
+    },
+    {
+     "file_dialog_cancel": true
+    }
+   ],
+   "fp": [
+    {
+     "command": "file.saveAsTemplate"
+    },
+    {
+     "record_ui": "dialog.title"
+    },
+    {
+     "file_dialog_cancel": true
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "10_import_result",
+   "check": "import (see unit 47)",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Datei > Importieren..."
+    },
+    {
+     "file_dialog": "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\par_import\\par.png"
+    },
+    {
+     "canvas_click": [
+      600,
+      400
+     ]
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "file.import"
+    },
+    {
+     "file_dialog": "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\par_import\\par.png"
+    },
+    {
+     "canvas_click": [
+      600,
+      400
+     ]
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "11_export_result",
+   "check": "export (see unit 42)",
+   "method": {
+    "orig": "J",
+    "fp": "R"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "jsf": "fw.exportDocumentAs(fw.getDocumentDOM(), 'file:///C:/Users/Administrator/Desktop/REA/re/_testdateien/par/work/u49_{prog}.png', null)"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "12_export_again_result",
+   "check": "export again (Ctrl+Shift+R)",
+   "method": {
+    "orig": "J",
+    "fp": "R"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "key": "ctrl+shift+R"
+    },
+    {
+     "record_ui": "dialog.title"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "13_preview_open",
+   "check": "image preview opens",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Datei > Bildvorschau..."
+    },
+    {
+     "record_ui": "dialog.title"
+    },
+    {
+     "key": "Escape"
+    }
+   ],
+   "fp": [
+    {
+     "command": "file.imagePreview"
+    },
+    {
+     "record_ui": "dialog.title"
+    },
+    {
+     "key": "Escape"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "14_update_html_open",
+   "check": "update HTML",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Datei > HTML aktualisieren..."
+    }
+   ],
+   "fp": [
+    {
+     "command": "file.updateHtml"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "file_dialog_cancel": true
+    }
+   ]
+  },
+  {
+   "id": "15_file_info_open",
+   "check": "file info",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Datei > Datei-Info..."
+    },
+    {
+     "record_ui": "dialog.title"
+    }
+   ],
+   "fp": [
+    {
+     "command": "file.fileInfo"
+    },
+    {
+     "record_ui": "dialog.title"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "16_batch_open",
+   "check": "batch processing (deliberately modern, reachability only)",
+   "method": {
+    "orig": "-",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "record_ui": "dialog.title"
+    }
+   ],
+   "fp": [
+    {
+     "ui_action": {
+      "run": "file.batchProcess"
+     }
+    },
+    {
+     "record_ui": "dialog.title"
+    }
+   ],
+   "shot": null,
+   "note": "Firepixel only; original not measured"
+  },
+  {
+   "id": "17_print_open",
+   "check": "print, page setup",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Datei > Seite einrichten..."
+    }
+   ],
+   "fp": [
+    {
+     "command": "file.pageSetup"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "print dialog itself (Datei > Drucken) only title logged; never actually print"
+  },
+  {
+   "id": "18_scan_twain_disabled",
+   "check": "scan/acquire (disabled?)",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "menu_open": [
+      "Datei",
+      "Scannen"
+     ]
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Escape"
+    }
+   ],
+   "shot": null,
+   "log_menu_items": true
+  },
+  {
+   "id": "19_browse_open",
+   "check": "file browser entry (neutral)",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "menu_open": [
+      "Datei"
+     ]
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Escape"
+    }
+   ],
+   "shot": null,
+   "log_menu_items": true,
+   "note": "only presence/state of the entry is logged; do not run it"
+  },
+  {
+   "id": "20_share_open",
+   "check": "share / send as e-mail",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "menu_open": [
+      "Datei",
+      "Als E-Mail senden"
+     ]
+    }
+   ],
+   "shot": {
+    "area": "menu"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "21_exit_open",
+   "check": "exit with unsaved documents",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "key": "Delete"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Datei > Beenden"
+    }
+   ],
+   "fp": [
+    {
+     "command": "file.exit"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "click_button": "Abbrechen"
+    }
+   ],
+   "note": "DANGER for the original: only if the prompt is guaranteed; always answer 'Abbrechen' (never quit the original)"
+  },
+  {
+   "id": "22_undo_names_result",
+   "check": "history names after import/new",
+   "method": {
+    "orig": "J",
+    "fp": "H"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Datei > Importieren..."
+    },
+    {
+     "file_dialog": "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\par_import\\par.png"
+    },
+    {
+     "canvas_click": [
+      600,
+      400
+     ]
+    },
+    {
+     "log_value": "(function(){var s=fw.historyPalette.getSteps(),r=[];for(var i=0;i<s.length;i++)r.push(s[i].name);return r.toSource();})()"
+    }
+   ],
+   "fp": [
+    {
+     "command": "file.import"
+    },
+    {
+     "file_dialog": "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\par_import\\par.png"
+    },
+    {
+     "canvas_click": [
+      600,
+      400
+     ]
+    },
+    {
+     "log_value": "(function(){var s=fw.historyPalette.getSteps(),r=[];for(var i=0;i<s.length;i++)r.push(s[i].name);return r.toSource();})()"
+    }
+   ],
+   "shot": null,
+   "note": "history read-out via fw.historyPalette.getSteps()/step.name is unverified in both programs"
+  }
+ ]
+}

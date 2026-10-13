@@ -1,0 +1,1360 @@
+{
+ "unit": "dialogs-d41-d50",
+ "testfile": "T02",
+ "note": "Verbs as in tools/parity/runner/README.md. Every step starts with reopen <Txx> (test file fresh, earlier changes discarded) or close_all (no document). Menu commands: orig = menu path, fp = command id (side-specific, so the following actions are listed on both sides). Logical keys used here that may still be unmapped in ui_map.json: dialog.field.<i> / dialog.combo.<i> (i-th edit/combo of the top dialog), labels for dropdowns. Rare verbs used here that the runner may log as unsupported: new_document, window_click, drag_text, hover_text, right_click_text, double_click_text, drag_guide, drag_ruler_origin, drag_dialog_title, drag_dialog_slider, click_dialog_rel, drag_dialog_rel, canvas_wheel, reopen_dialog (repeat the opening actions), save_history_as_command, delete_saved_command, add_live_filter, file_dialog_open_types, restart_app, window_size, set_clipboard_image, drop_files, log_focus_cycle-like record_ui {focus_cycle:n}. Object 'I1#2' = duplicate of I1; 'text' = first text element; canvas_drag option hold = screenshot while the button is held.",
+ "steps": [
+  {
+   "id": "00_overview_normal",
+   "check": "overview after opening the test file",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "reopen": "T02"
+    }
+   ],
+   "shot": {
+    "area": "window"
+   }
+  },
+  {
+   "id": "01_d41_fields_normal",
+   "check": "D41 hue/saturation: fields, colorize, preview",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T02"
+    },
+    {
+     "select": "B1"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Filter > Farbe anpassen > Farbton/Sättigung..."
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "fp": [
+    {
+     "command": "filter.adjustColor.hueSaturation"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "original menu labels from the measured dialog table; Firepixel labels are abbreviated (e.g. 'Gaußscher Weichz. ...') - fp uses the command id"
+  },
+  {
+   "id": "02_d41_sliders_pressed",
+   "check": "D41 slider mapping (support points)",
+   "method": {
+    "orig": "W",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "reopen": "T02"
+    },
+    {
+     "select": "B1"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Filter > Farbe anpassen > Farbton/Sättigung..."
+    },
+    {
+     "drag_dialog_slider": {
+      "index": 0,
+      "to_fraction": 0.75
+     }
+    },
+    {
+     "record_ui": "dialog.fields"
+    },
+    {
+     "record_ui": "ui_state.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "filter.adjustColor.hueSaturation"
+    },
+    {
+     "drag_dialog_slider": {
+      "index": 0,
+      "to_fraction": 0.75
+     }
+    },
+    {
+     "record_ui": "dialog.fields"
+    },
+    {
+     "record_ui": "ui_state.summary"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "screenshot taken after dragging the first slider to 75 % of its track; field value logged"
+  },
+  {
+   "id": "03_d42_fields_normal",
+   "check": "D42 brightness/contrast -100..100",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T02"
+    },
+    {
+     "select": "B1"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Filter > Farbe anpassen > Helligkeit/Kontrast..."
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "fp": [
+    {
+     "command": "filter.adjustColor.brightnessContrast"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "original menu labels from the measured dialog table; Firepixel labels are abbreviated (e.g. 'Gaußscher Weichz. ...') - fp uses the command id"
+  },
+  {
+   "id": "04_d43_fields_normal",
+   "check": "D43 curves: channel, grid, points, eyedroppers, auto",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T02"
+    },
+    {
+     "select": "B1"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Filter > Farbe anpassen > Kurven..."
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "fp": [
+    {
+     "command": "filter.adjustColor.curves"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "'open' = channel list expanded; original menu labels from the measured dialog table; Firepixel labels are abbreviated (e.g. 'Gaußscher Weichz. ...') - fp uses the command id"
+  },
+  {
+   "id": "04_d43_fields_open",
+   "check": "D43 curves: channel, grid, points, eyedroppers, auto",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T02"
+    },
+    {
+     "select": "B1"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Filter > Farbe anpassen > Kurven..."
+    },
+    {
+     "open": "dialog.combo.0"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "fp": [
+    {
+     "command": "filter.adjustColor.curves"
+    },
+    {
+     "open": "dialog.combo.0"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "'open' = channel list expanded; original menu labels from the measured dialog table; Firepixel labels are abbreviated (e.g. 'Gaußscher Weichz. ...') - fp uses the command id"
+  },
+  {
+   "id": "05_d43_mouse_pressed",
+   "check": "D43 mouse rules (set/drag/remove point)",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "reopen": "T02"
+    },
+    {
+     "select": "B1"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Filter > Farbe anpassen > Kurven..."
+    },
+    {
+     "click_dialog_rel": {
+      "control": "curve",
+      "at": [
+       0.5,
+       0.3
+      ]
+     }
+    },
+    {
+     "drag_dialog_rel": {
+      "control": "curve",
+      "from": [
+       0.5,
+       0.3
+      ],
+      "to": [
+       0.6,
+       0.2
+      ]
+     }
+    },
+    {
+     "record_ui": "dialog.fields"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "filter.adjustColor.curves"
+    },
+    {
+     "click_dialog_rel": {
+      "control": "curve",
+      "at": [
+       0.5,
+       0.3
+      ]
+     }
+    },
+    {
+     "drag_dialog_rel": {
+      "control": "curve",
+      "from": [
+       0.5,
+       0.3
+      ],
+      "to": [
+       0.6,
+       0.2
+      ]
+     }
+    },
+    {
+     "record_ui": "dialog.fields"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "note": "screenshot after drag; control 'curve' = curve graph area (relative coordinates); dialog closed with Escape afterwards by runner"
+  },
+  {
+   "id": "06_d44_fields_normal",
+   "check": "D44 levels: histogram, handles, fields",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T02"
+    },
+    {
+     "select": "B1"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Filter > Farbe anpassen > Tonwertkorrektur..."
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "fp": [
+    {
+     "command": "filter.adjustColor.levels"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "original menu labels from the measured dialog table; Firepixel labels are abbreviated (e.g. 'Gaußscher Weichz. ...') - fp uses the command id"
+  },
+  {
+   "id": "06_d44_fields_open_channel",
+   "check": "D44 levels: histogram, handles, fields - channel list expanded",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T02"
+    },
+    {
+     "select": "B1"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Filter > Farbe anpassen > Tonwertkorrektur..."
+    },
+    {
+     "open": "Kanal:"
+    }
+   ],
+   "fp": [
+    {
+     "command": "filter.adjustColor.levels"
+    },
+    {
+     "open": "Kanal:"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "07_d44_mouse_pressed",
+   "check": "D44 drag handles, middle handle",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "reopen": "T02"
+    },
+    {
+     "select": "B1"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Filter > Farbe anpassen > Tonwertkorrektur..."
+    },
+    {
+     "drag_dialog_rel": {
+      "control": "histogram",
+      "from": [
+       0.0,
+       1.0
+      ],
+      "to": [
+       0.2,
+       1.0
+      ]
+     }
+    },
+    {
+     "record_ui": "dialog.fields"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "filter.adjustColor.levels"
+    },
+    {
+     "drag_dialog_rel": {
+      "control": "histogram",
+      "from": [
+       0.0,
+       1.0
+      ],
+      "to": [
+       0.2,
+       1.0
+      ]
+     }
+    },
+    {
+     "record_ui": "dialog.fields"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "note": "black input handle dragged to 20 %; screenshot after drag"
+  },
+  {
+   "id": "08_d45_fields_normal",
+   "check": "D45 noise: amount popup, color",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T02"
+    },
+    {
+     "select": "B1"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Filter > Rauschen > Rauschen hinzufügen..."
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "fp": [
+    {
+     "command": "filter.noise.addNoise"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "'open' = amount popup slider expanded; original menu labels from the measured dialog table; Firepixel labels are abbreviated (e.g. 'Gaußscher Weichz. ...') - fp uses the command id"
+  },
+  {
+   "id": "08_d45_fields_open",
+   "check": "D45 noise: amount popup, color",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T02"
+    },
+    {
+     "select": "B1"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Filter > Rauschen > Rauschen hinzufügen..."
+    },
+    {
+     "open": "dialog.combo.0"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "fp": [
+    {
+     "command": "filter.noise.addNoise"
+    },
+    {
+     "open": "dialog.combo.0"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "'open' = amount popup slider expanded; original menu labels from the measured dialog table; Firepixel labels are abbreviated (e.g. 'Gaußscher Weichz. ...') - fp uses the command id"
+  },
+  {
+   "id": "09_d46_fields_normal",
+   "check": "D46 unsharp mask: 3 fields with popups",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T02"
+    },
+    {
+     "select": "B1"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Filter > Scharfzeichnen > Unscharf maskieren..."
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "fp": [
+    {
+     "command": "filter.sharpen.unsharpMask"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "original menu labels from the measured dialog table; Firepixel labels are abbreviated (e.g. 'Gaußscher Weichz. ...') - fp uses the command id"
+  },
+  {
+   "id": "10_d47_fields_normal",
+   "check": "D47 motion blur: angle/distance",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T02"
+    },
+    {
+     "select": "B1"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Filter > Weichzeichnen > Bewegungsunschärfe..."
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "fp": [
+    {
+     "command": "filter.blur.motion"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "original menu labels from the measured dialog table; Firepixel labels are abbreviated (e.g. 'Gaußscher Weichz. ...') - fp uses the command id"
+  },
+  {
+   "id": "11_d48_fields_normal",
+   "check": "D48 gaussian: radius popup",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T02"
+    },
+    {
+     "select": "B1"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Filter > Weichzeichnen > Gaußscher Weichzeichner..."
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "fp": [
+    {
+     "command": "filter.blur.gaussian"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "'open' = radius popup slider expanded; original menu labels from the measured dialog table; Firepixel labels are abbreviated (e.g. 'Gaußscher Weichz. ...') - fp uses the command id"
+  },
+  {
+   "id": "11_d48_fields_open",
+   "check": "D48 gaussian: radius popup",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T02"
+    },
+    {
+     "select": "B1"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Filter > Weichzeichnen > Gaußscher Weichzeichner..."
+    },
+    {
+     "open": "dialog.combo.0"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "fp": [
+    {
+     "command": "filter.blur.gaussian"
+    },
+    {
+     "open": "dialog.combo.0"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "'open' = radius popup slider expanded; original menu labels from the measured dialog table; Firepixel labels are abbreviated (e.g. 'Gaußscher Weichz. ...') - fp uses the command id"
+  },
+  {
+   "id": "12_d49_fields_normal",
+   "check": "D49 radial: amount/quality",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T02"
+    },
+    {
+     "select": "B1"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Filter > Weichzeichnen > Radiales Weichzeichnen..."
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "fp": [
+    {
+     "command": "filter.blur.radial"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "original menu labels from the measured dialog table; Firepixel labels are abbreviated (e.g. 'Gaußscher Weichz. ...') - fp uses the command id"
+  },
+  {
+   "id": "13_d50_fields_normal",
+   "check": "D50 zoom: amount/quality",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T02"
+    },
+    {
+     "select": "B1"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Filter > Weichzeichnen > Zentriertes Weichzeichnen..."
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "fp": [
+    {
+     "command": "filter.blur.zoom"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "original menu labels from the measured dialog table; Firepixel labels are abbreviated (e.g. 'Gaußscher Weichz. ...') - fp uses the command id"
+  },
+  {
+   "id": "14_slider_popups_open",
+   "check": "vertical popup sliders",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "reopen": "T02"
+    },
+    {
+     "select": "B1"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Filter > Weichzeichnen > Radiales Weichzeichnen..."
+    },
+    {
+     "open": "Menge"
+    }
+   ],
+   "fp": [
+    {
+     "command": "filter.blur.radial"
+    },
+    {
+     "open": "Menge"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "note": "screenshot while the popup slider is open; dialog closed afterwards"
+  },
+  {
+   "id": "14_slider_popups_open_quality",
+   "check": "vertical popup sliders - quality popup of D50",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "reopen": "T02"
+    },
+    {
+     "select": "B1"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Filter > Weichzeichnen > Zentriertes Weichzeichnen..."
+    },
+    {
+     "open": "Qualität"
+    }
+   ],
+   "fp": [
+    {
+     "command": "filter.blur.zoom"
+    },
+    {
+     "open": "Qualität"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "15_limits_result",
+   "check": "limits/clamping per field (table)",
+   "method": {
+    "orig": "W",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "reopen": "T02"
+    },
+    {
+     "select": "B1"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Filter > Weichzeichnen > Gaußscher Weichzeichner..."
+    },
+    {
+     "set_field": {
+      "target": "dialog.field.0",
+      "value": "-5"
+     }
+    },
+    {
+     "key": "Tab"
+    },
+    {
+     "record_ui": "dialog.fields"
+    },
+    {
+     "set_field": {
+      "target": "dialog.field.0",
+      "value": "9999"
+     }
+    },
+    {
+     "key": "Tab"
+    },
+    {
+     "record_ui": "dialog.fields"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "record_ui": "ui_state.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "filter.blur.gaussian"
+    },
+    {
+     "set_field": {
+      "target": "dialog.field.0",
+      "value": "-5"
+     }
+    },
+    {
+     "key": "Tab"
+    },
+    {
+     "record_ui": "dialog.fields"
+    },
+    {
+     "set_field": {
+      "target": "dialog.field.0",
+      "value": "9999"
+     }
+    },
+    {
+     "key": "Tab"
+    },
+    {
+     "record_ui": "dialog.fields"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "record_ui": "ui_state.summary"
+    }
+   ],
+   "shot": null,
+   "note": "runner repeats for every field of D41-D50 (min-1, max+1)"
+  },
+  {
+   "id": "16_preview_result",
+   "check": "preview checkbox on/off",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "reopen": "T02"
+    },
+    {
+     "select": "B1"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Filter > Farbe anpassen > Helligkeit/Kontrast..."
+    },
+    {
+     "set_field": {
+      "target": "dialog.field.0",
+      "value": "60"
+     }
+    },
+    {
+     "click_text": "Vorschau"
+    }
+   ],
+   "fp": [
+    {
+     "command": "filter.adjustColor.brightnessContrast"
+    },
+    {
+     "set_field": {
+      "target": "dialog.field.0",
+      "value": "60"
+     }
+    },
+    {
+     "click_text": "Vorschau"
+    }
+   ],
+   "shot": {
+    "area": "window"
+   },
+   "note": "screenshot of the whole window with preview toggled; dialog closed afterwards"
+  },
+  {
+   "id": "17_remember_result",
+   "check": "remembered values per dialog",
+   "method": {
+    "orig": "J",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "reopen": "T02"
+    },
+    {
+     "select": "B1"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Filter > Rauschen > Rauschen hinzufügen..."
+    },
+    {
+     "set_field": {
+      "target": "dialog.field.0",
+      "value": "20"
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "key": "ctrl+Z"
+    },
+    {
+     "reopen_dialog": true
+    },
+    {
+     "record_ui": "dialog.fields"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "record_ui": "ui_state.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "filter.noise.addNoise"
+    },
+    {
+     "set_field": {
+      "target": "dialog.field.0",
+      "value": "20"
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "key": "ctrl+Z"
+    },
+    {
+     "reopen_dialog": true
+    },
+    {
+     "record_ui": "dialog.fields"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "record_ui": "ui_state.summary"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "18_enter_esc_result",
+   "check": "Enter/Esc, cancel without effect",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "reopen": "T02"
+    },
+    {
+     "select": "B1"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Filter > Weichzeichnen > Gaußscher Weichzeichner..."
+    },
+    {
+     "set_field": {
+      "target": "dialog.field.0",
+      "value": "8"
+     }
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "log_value": "(function(){var r=[],s=fw.selection;for(var i=0;i<s.length;i++){var p=s[i].pixelRect;r.push([s[i].name,s[i].toString(),p.left,p.top,p.right,p.bottom]);}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "filter.blur.gaussian"
+    },
+    {
+     "set_field": {
+      "target": "dialog.field.0",
+      "value": "8"
+     }
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "log_value": "(function(){var r=[],s=fw.selection;for(var i=0;i<s.length;i++){var p=s[i].pixelRect;r.push([s[i].name,s[i].toString(),p.left,p.top,p.right,p.bottom]);}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "19_tab_order_focus",
+   "check": "tab order",
+   "method": {
+    "orig": "W",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "reopen": "T02"
+    },
+    {
+     "select": "B1"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Filter > Farbe anpassen > Helligkeit/Kontrast..."
+    },
+    {
+     "key": "Tab"
+    },
+    {
+     "record_ui": {
+      "focus_cycle": 12
+     }
+    },
+    {
+     "record_ui": "ui_state.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "filter.adjustColor.brightnessContrast"
+    },
+    {
+     "key": "Tab"
+    },
+    {
+     "record_ui": {
+      "focus_cycle": 12
+     }
+    },
+    {
+     "record_ui": "ui_state.summary"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "tab cycle logged (12 x Tab, focused control after each); further dialogs without image: d41, d46, d48"
+  },
+  {
+   "id": "20_live_vs_menu_open",
+   "check": "as live filter: same fields",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "reopen": "T02"
+    },
+    {
+     "select": "B1"
+    },
+    {
+     "add_live_filter": "Weichzeichnen > Gaußscher Weichzeichner..."
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "'add_live_filter' = Properties/Filters '+' menu path; Firepixel label of the live filter entry may differ"
+  },
+  {
+   "id": "21_result_ref_result",
+   "check": "result = RE-FX reference",
+   "method": {
+    "orig": "E (RE-FX)",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "reopen": "T02"
+    },
+    {
+     "select": "B1"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Filter > Weichzeichnen > Gaußscher Weichzeichner..."
+    },
+    {
+     "set_field": {
+      "target": "dialog.field.0",
+      "value": "2"
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "log_value": "(function(){var r=[],s=fw.selection;for(var i=0;i<s.length;i++){var p=s[i].pixelRect;r.push([s[i].name,s[i].toString(),p.left,p.top,p.right,p.bottom]);}return r.toSource();})()"
+    }
+   ],
+   "fp": [
+    {
+     "command": "filter.blur.gaussian"
+    },
+    {
+     "set_field": {
+      "target": "dialog.field.0",
+      "value": "2"
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "log_value": "(function(){var r=[],s=fw.selection;for(var i=0;i<s.length;i++){var p=s[i].pixelRect;r.push([s[i].name,s[i].toString(),p.left,p.top,p.right,p.bottom]);}return r.toSource();})()"
+    }
+   ],
+   "shot": null,
+   "note": "pixel result compared against RE-FX reference by runner (export B1 as PNG + hash)"
+  },
+  {
+   "id": "22_undo_names_result",
+   "check": "history names",
+   "method": {
+    "orig": "J",
+    "fp": "H"
+   },
+   "both": [
+    {
+     "reopen": "T02"
+    },
+    {
+     "select": "B1"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Filter > Farbe anpassen > Helligkeit/Kontrast..."
+    },
+    {
+     "set_field": {
+      "target": "dialog.field.0",
+      "value": "20"
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "log_value": "(function(){var s=fw.historyPalette.getSteps(),r=[];for(var i=0;i<s.length;i++)r.push(s[i].name);return r.toSource();})()"
+    }
+   ],
+   "fp": [
+    {
+     "command": "filter.adjustColor.brightnessContrast"
+    },
+    {
+     "set_field": {
+      "target": "dialog.field.0",
+      "value": "20"
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "log_value": "(function(){var s=fw.historyPalette.getSteps(),r=[];for(var i=0;i<s.length;i++)r.push(s[i].name);return r.toSource();})()"
+    }
+   ],
+   "shot": null,
+   "note": "history read-out via fw.historyPalette.getSteps()/step.name is unverified in both programs"
+  }
+ ]
+}

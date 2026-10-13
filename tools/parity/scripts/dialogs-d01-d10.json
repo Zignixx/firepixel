@@ -1,0 +1,1214 @@
+{
+ "unit": "dialogs-d01-d10",
+ "testfile": "T04",
+ "note": "Verbs as in tools/parity/runner/README.md. Every step starts with reopen <Txx> (test file fresh, earlier changes discarded) or close_all (no document). Menu commands: orig = menu path, fp = command id (side-specific, so the following actions are listed on both sides). Logical keys used here that may still be unmapped in ui_map.json: dialog.field.<i> / dialog.combo.<i> (i-th edit/combo of the top dialog), labels for dropdowns. Rare verbs used here that the runner may log as unsupported: new_document, window_click, drag_text, hover_text, right_click_text, double_click_text, drag_guide, drag_ruler_origin, drag_dialog_title, drag_dialog_slider, click_dialog_rel, drag_dialog_rel, canvas_wheel, reopen_dialog (repeat the opening actions), save_history_as_command, delete_saved_command, add_live_filter, file_dialog_open_types, restart_app, window_size, set_clipboard_image, drop_files, log_focus_cycle-like record_ui {focus_cycle:n}. Object 'I1#2' = duplicate of I1; 'text' = first text element; canvas_drag option hold = screenshot while the button is held.",
+ "steps": [
+  {
+   "id": "00_overview_normal",
+   "check": "overview after opening the test file",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "shot": {
+    "area": "window"
+   }
+  },
+  {
+   "id": "01_d01_fields_normal",
+   "check": "D01 new document: fields, units, limits, access keys",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Datei > Neu..."
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "fp": [
+    {
+     "command": "file.new"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "'open' = units dropdown expanded; 'focus' = after Tab"
+  },
+  {
+   "id": "01_d01_fields_open",
+   "check": "D01 new document: fields, units, limits, access keys",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Datei > Neu..."
+    },
+    {
+     "open": "dialog.combo.0"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "fp": [
+    {
+     "command": "file.new"
+    },
+    {
+     "open": "dialog.combo.0"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "'open' = units dropdown expanded; 'focus' = after Tab"
+  },
+  {
+   "id": "01_d01_fields_focus",
+   "check": "D01 new document: fields, units, limits, access keys",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Datei > Neu..."
+    },
+    {
+     "key": "Tab"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "fp": [
+    {
+     "command": "file.new"
+    },
+    {
+     "key": "Tab"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "'open' = units dropdown expanded; 'focus' = after Tab"
+  },
+  {
+   "id": "02_d01_effect_result",
+   "check": "D01 effect, remembered values, clipboard size",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Datei > Neu..."
+    },
+    {
+     "set_field": {
+      "target": "dialog.field.0",
+      "value": "123"
+     }
+    },
+    {
+     "set_field": {
+      "target": "dialog.field.1",
+      "value": "77"
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM();return [d.width,d.height,d.zoom,d.layers.length,d.frames.length].toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "file.new"
+    },
+    {
+     "set_field": {
+      "target": "dialog.field.0",
+      "value": "123"
+     }
+    },
+    {
+     "set_field": {
+      "target": "dialog.field.1",
+      "value": "77"
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM();return [d.width,d.height,d.zoom,d.layers.length,d.frames.length].toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "03_d02_fields_normal",
+   "check": "D02 new from template: folder, preview",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Datei > Neu von Vorlage..."
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "fp": [
+    {
+     "command": "file.newFromTemplate"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "file dialog: Firepixel in-app dialog when bridge active; answer with cancel"
+  },
+  {
+   "id": "04_d02_effect_result",
+   "check": "D02 effect",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Datei > Neu von Vorlage..."
+    },
+    {
+     "log_value": "(function(){var d=fw.documents,r=[];for(var i=0;i<d.length;i++)r.push(d[i].docTitle);return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "file.newFromTemplate"
+    },
+    {
+     "log_value": "(function(){var d=fw.documents,r=[];for(var i=0;i<d.length;i++)r.push(d[i].docTitle);return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": null,
+   "note": "choose first template in the template folder (runner: file_dialog_choose first entry)"
+  },
+  {
+   "id": "05_d03_fields_normal",
+   "check": "D03 open: extra buttons, preview",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Datei > Öffnen..."
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "fp": [
+    {
+     "command": "file.open"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "05_d03_fields_normal_filter",
+   "check": "D03 open: extra buttons, preview - file type list open",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Datei > Öffnen..."
+    },
+    {
+     "file_dialog_open_types": true
+    }
+   ],
+   "fp": [
+    {
+     "command": "file.open"
+    },
+    {
+     "ui_find_click": "Alle lesbaren Formate"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "06_d03_effect_result",
+   "check": "D03 open as untitled / as animation",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Datei > Öffnen..."
+    },
+    {
+     "log_value": "(function(){var d=fw.documents,r=[];for(var i=0;i<d.length;i++)r.push(d[i].docTitle);return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "file.open"
+    },
+    {
+     "log_value": "(function(){var d=fw.documents,r=[];for(var i=0;i<d.length;i++)r.push(d[i].docTitle);return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": null,
+   "note": "see unit 47 steps 16/17 for the actual choice; here the dialog checkboxes are toggled and the dialog is answered"
+  },
+  {
+   "id": "07_d04_fields_open",
+   "check": "D04 save as: type list, start folder",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Datei > Speichern unter..."
+    },
+    {
+     "open": "dialog.combo.0"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "fp": [
+    {
+     "command": "file.saveAs"
+    },
+    {
+     "open": "dialog.combo.0"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "07_d04_fields_open_types",
+   "check": "D04 save as: type list, start folder - type list expanded",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Datei > Speichern unter..."
+    },
+    {
+     "file_dialog_open_types": true
+    }
+   ],
+   "fp": [
+    {
+     "command": "file.saveAs"
+    },
+    {
+     "ui_find_click": "Dateityp"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "type combo label in the in-app dialog unverified"
+  },
+  {
+   "id": "08_d04_effect_result",
+   "check": "D04 effect, flat warning",
+   "method": {
+    "orig": "J",
+    "fp": "R"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Datei > Speichern unter..."
+    },
+    {
+     "log_value": "(function(){var d=fw.documents,r=[];for(var i=0;i<d.length;i++)r.push(d[i].docTitle);return r.toSource();})()"
+    }
+   ],
+   "fp": [
+    {
+     "command": "file.saveAs"
+    },
+    {
+     "log_value": "(function(){var d=fw.documents,r=[];for(var i=0;i<d.length;i++)r.push(d[i].docTitle);return r.toSource();})()"
+    }
+   ],
+   "shot": null,
+   "note": "answer with work\\u57_saveas_{prog}.png (flat) and log the warning text"
+  },
+  {
+   "id": "09_d05_effect_result",
+   "check": "D05 save as template",
+   "method": {
+    "orig": "J",
+    "fp": "R"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Datei > Als Vorlage speichern..."
+    },
+    {
+     "log_value": "(function(){var d=fw.documents,r=[];for(var i=0;i<d.length;i++)r.push(d[i].docTitle);return r.toSource();})()"
+    }
+   ],
+   "fp": [
+    {
+     "command": "file.saveAsTemplate"
+    },
+    {
+     "log_value": "(function(){var d=fw.documents,r=[];for(var i=0;i<d.length;i++)r.push(d[i].docTitle);return r.toSource();})()"
+    }
+   ],
+   "shot": null,
+   "note": "log dialog folder + filter, then cancel"
+  },
+  {
+   "id": "10_d06_fields_open",
+   "check": "D06 import: filter list (12), preview",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Datei > Importieren..."
+    },
+    {
+     "open": "dialog.combo.0"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "fp": [
+    {
+     "command": "file.import"
+    },
+    {
+     "open": "dialog.combo.0"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "10_d06_fields_open_filter",
+   "check": "D06 import: filter list (12), preview - filter list expanded",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Datei > Importieren..."
+    },
+    {
+     "file_dialog_open_types": true
+    }
+   ],
+   "fp": [
+    {
+     "command": "file.import"
+    },
+    {
+     "ui_find_click": "Alle lesbaren Formate"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "11_d06_effect_result",
+   "check": "D06 place",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Datei > Importieren..."
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "file.import"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": null,
+   "note": "choose par_import\\par.png, then click canvas at 600,400"
+  },
+  {
+   "id": "12_d07_fields_normal",
+   "check": "D07 export: type, HTML, slices, options",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Datei > Exportieren..."
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "fp": [
+    {
+     "command": "file.export"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "'open' = 'Exportieren:' type list expanded"
+  },
+  {
+   "id": "12_d07_fields_open",
+   "check": "D07 export: type, HTML, slices, options",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Datei > Exportieren..."
+    },
+    {
+     "open": "Exportieren:"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "fp": [
+    {
+     "command": "file.export"
+    },
+    {
+     "open": "Exportieren:"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "'open' = 'Exportieren:' type list expanded"
+  },
+  {
+   "id": "12_d07_fields_open_slices",
+   "check": "D07 export: type, HTML, slices, options - slices list expanded",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Datei > Exportieren..."
+    },
+    {
+     "open": "Segmente:"
+    }
+   ],
+   "fp": [
+    {
+     "command": "file.export"
+    },
+    {
+     "open": "Segmente:"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "dropdown is opened after the dialog appears (runner order: orig/fp then both-after)"
+  },
+  {
+   "id": "13_d07_effect_result",
+   "check": "D07 effect -> unit 42",
+   "method": {
+    "orig": "-",
+    "fp": "-"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "shot": null,
+   "note": "covered by unit 42; no action"
+  },
+  {
+   "id": "14_d08_fields_result",
+   "check": "D08 image preview (-> 40/41), Esc closes",
+   "method": {
+    "orig": "W",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Datei > Bildvorschau..."
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "record_ui": "dialog.title"
+    },
+    {
+     "record_ui": "ui_state.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "file.imagePreview"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "record_ui": "dialog.title"
+    },
+    {
+     "record_ui": "ui_state.summary"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "15_d09_fields_normal",
+   "check": "D09 update HTML",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Datei > HTML aktualisieren..."
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "fp": [
+    {
+     "command": "file.updateHtml"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "16_d09_effect_result",
+   "check": "D09 effect",
+   "method": {
+    "orig": "J",
+    "fp": "R"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Datei > HTML aktualisieren..."
+    },
+    {
+     "log_value": "(function(){var d=fw.documents,r=[];for(var i=0;i<d.length;i++)r.push(d[i].docTitle);return r.toSource();})()"
+    }
+   ],
+   "fp": [
+    {
+     "command": "file.updateHtml"
+    },
+    {
+     "log_value": "(function(){var d=fw.documents,r=[];for(var i=0;i<d.length;i++)r.push(d[i].docTitle);return r.toSource();})()"
+    }
+   ],
+   "shot": null,
+   "note": "needs an exported HTML file in work\\ (from unit 42); otherwise cancel and log"
+  },
+  {
+   "id": "17_d10_fields_normal",
+   "check": "D10 file info: fields, tabs",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Datei > Datei-Info..."
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "fp": [
+    {
+     "command": "file.fileInfo"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "17_d10_fields_normal_tab2",
+   "check": "D10 file info: fields, tabs - second tab",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Datei > Datei-Info..."
+    },
+    {
+     "key": "ctrl+Tab"
+    }
+   ],
+   "fp": [
+    {
+     "command": "file.fileInfo"
+    },
+    {
+     "key": "ctrl+Tab"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "Ctrl+Tab switches register in the original file info panel (unverified)"
+  },
+  {
+   "id": "18_d10_effect_result",
+   "check": "D10 save into file, remembered",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Datei > Datei-Info..."
+    },
+    {
+     "set_field": {
+      "target": "dialog.field.0",
+      "value": "PAR Titel"
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "log_value": "fw.getDocumentDOM().fileInfo ? fw.getDocumentDOM().fileInfo.toSource() : ''"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "file.fileInfo"
+    },
+    {
+     "set_field": {
+      "target": "dialog.field.0",
+      "value": "PAR Titel"
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "log_value": "fw.getDocumentDOM().fileInfo ? fw.getDocumentDOM().fileInfo.toSource() : ''"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": null,
+   "note": "fileInfo JSF property unverified"
+  },
+  {
+   "id": "19_tab_enter_esc_focus",
+   "check": "tab order, Enter/Esc per dialog (table)",
+   "method": {
+    "orig": "W",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Datei > Neu..."
+    },
+    {
+     "key": "Tab"
+    },
+    {
+     "record_ui": {
+      "focus_cycle": 12
+     }
+    },
+    {
+     "record_ui": "ui_state.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "file.new"
+    },
+    {
+     "key": "Tab"
+    },
+    {
+     "record_ui": {
+      "focus_cycle": 12
+     }
+    },
+    {
+     "record_ui": "ui_state.summary"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "tab cycle logged (12 x Tab, focused control after each); further dialogs without image: d02, d03"
+  },
+  {
+   "id": "19_tab_enter_esc_focus_d07",
+   "check": "tab order, Enter/Esc per dialog (table) - tab order d07",
+   "method": {
+    "orig": "W",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Datei > Exportieren..."
+    },
+    {
+     "record_ui": {
+      "focus_cycle": 12
+     }
+    }
+   ],
+   "fp": [
+    {
+     "command": "file.export"
+    },
+    {
+     "record_ui": {
+      "focus_cycle": 12
+     }
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "19_tab_enter_esc_focus_d10",
+   "check": "tab order, Enter/Esc per dialog (table) - tab order d10",
+   "method": {
+    "orig": "W",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Datei > Datei-Info..."
+    },
+    {
+     "record_ui": {
+      "focus_cycle": 12
+     }
+    }
+   ],
+   "fp": [
+    {
+     "command": "file.fileInfo"
+    },
+    {
+     "record_ui": {
+      "focus_cycle": 12
+     }
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "20_no_owner_normal",
+   "check": "file dialogs centered, with owner",
+   "method": {
+    "orig": "W",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Datei > Öffnen..."
+    },
+    {
+     "record_ui": "dialog.rect"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "record_ui": "ui_state.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "file.open"
+    },
+    {
+     "record_ui": "dialog.rect"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "record_ui": "ui_state.summary"
+    }
+   ],
+   "shot": null
+  }
+ ]
+}

@@ -1,0 +1,1513 @@
+{
+ "unit": "dialogs-d11-d20",
+ "testfile": "T04",
+ "note": "Verbs as in tools/parity/runner/README.md. Every step starts with reopen <Txx> (test file fresh, earlier changes discarded) or close_all (no document). Menu commands: orig = menu path, fp = command id (side-specific, so the following actions are listed on both sides). Logical keys used here that may still be unmapped in ui_map.json: dialog.field.<i> / dialog.combo.<i> (i-th edit/combo of the top dialog), labels for dropdowns. Rare verbs used here that the runner may log as unsupported: new_document, window_click, drag_text, hover_text, right_click_text, double_click_text, drag_guide, drag_ruler_origin, drag_dialog_title, drag_dialog_slider, click_dialog_rel, drag_dialog_rel, canvas_wheel, reopen_dialog (repeat the opening actions), save_history_as_command, delete_saved_command, add_live_filter, file_dialog_open_types, restart_app, window_size, set_clipboard_image, drop_files, log_focus_cycle-like record_ui {focus_cycle:n}. Object 'I1#2' = duplicate of I1; 'text' = first text element; canvas_drag option hold = screenshot while the button is held.",
+ "steps": [
+  {
+   "id": "00_overview_normal",
+   "check": "overview after opening the test file",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "shot": {
+    "area": "window"
+   }
+  },
+  {
+   "id": "01_d11_pages_normal",
+   "check": "D11 export wizard: pages, next/back, focus",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Datei > Exportassistent..."
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "fp": [
+    {
+     "command": "file.exportWizard"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "01_d11_pages_normal_page2",
+   "check": "D11 export wizard: pages, next/back, focus - page 2",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Datei > Exportassistent..."
+    },
+    {
+     "click_button": "Weiter"
+    }
+   ],
+   "fp": [
+    {
+     "command": "file.exportWizard"
+    },
+    {
+     "click_button": "Weiter"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "01_d11_pages_normal_page3",
+   "check": "D11 export wizard: pages, next/back, focus - page 3",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Datei > Exportassistent..."
+    },
+    {
+     "click_button": "Weiter"
+    },
+    {
+     "click_button": "Weiter"
+    }
+   ],
+   "fp": [
+    {
+     "command": "file.exportWizard"
+    },
+    {
+     "click_button": "Weiter"
+    },
+    {
+     "click_button": "Weiter"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "02_d11_effect_result",
+   "check": "D11 result, no history step",
+   "method": {
+    "orig": "J",
+    "fp": "H"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Datei > Exportassistent..."
+    },
+    {
+     "log_value": "(function(){var s=fw.historyPalette.getSteps(),r=[];for(var i=0;i<s.length;i++)r.push(s[i].name);return r.toSource();})()"
+    }
+   ],
+   "fp": [
+    {
+     "command": "file.exportWizard"
+    },
+    {
+     "log_value": "(function(){var s=fw.historyPalette.getSteps(),r=[];for(var i=0;i<s.length;i++)r.push(s[i].name);return r.toSource();})()"
+    }
+   ],
+   "shot": null,
+   "note": "click Weiter until the end, then Fertig/Abbrechen; history read-out via fw.historyPalette.getSteps()/step.name is unverified in both programs"
+  },
+  {
+   "id": "03_d12_reach_open",
+   "check": "D12 batch: reachability only (deliberately different)",
+   "method": {
+    "orig": "-",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "record_ui": "dialog.title"
+    }
+   ],
+   "fp": [
+    {
+     "ui_action": {
+      "run": "file.batchProcess"
+     }
+    },
+    {
+     "record_ui": "dialog.title"
+    }
+   ],
+   "shot": null,
+   "note": "Firepixel only"
+  },
+  {
+   "id": "04_d13_tabs_normal",
+   "check": "D13 HTML setup: 3 tabs, fields",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Datei > HTML-Einrichtung..."
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "fp": [
+    {
+     "command": "file.htmlSetup"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "'open' = HTML style dropdown expanded"
+  },
+  {
+   "id": "04_d13_tabs_open",
+   "check": "D13 HTML setup: 3 tabs, fields",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Datei > HTML-Einrichtung..."
+    },
+    {
+     "open": "HTML-Stil:"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "fp": [
+    {
+     "command": "file.htmlSetup"
+    },
+    {
+     "open": "HTML-Stil:"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "'open' = HTML style dropdown expanded"
+  },
+  {
+   "id": "04_d13_tabs_normal_tab3",
+   "check": "D13 HTML setup: 3 tabs, fields - tab 'Dokumentspezifisch'",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Datei > HTML-Einrichtung..."
+    },
+    {
+     "click_text": "Dokumentspezifisch"
+    }
+   ],
+   "fp": [
+    {
+     "command": "file.htmlSetup"
+    },
+    {
+     "click_text": "Dokumentspezifisch"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "05_d13_effect_result",
+   "check": "D13 remembered, effect on export",
+   "method": {
+    "orig": "J",
+    "fp": "R"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Datei > HTML-Einrichtung..."
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "log_value": "fw.getPref ? 'pref' : ''"
+    }
+   ],
+   "fp": [
+    {
+     "command": "file.htmlSetup"
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "log_value": "fw.getPref ? 'pref' : ''"
+    }
+   ],
+   "shot": null,
+   "note": "HTML setup values via JSF (dom.htmlSetup?) unverified; reopen dialog and read fields"
+  },
+  {
+   "id": "06_d14_fields_normal",
+   "check": "D14 new symbol: name, type, 9-slice",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Bearbeiten > Objekt einfügen > Neues Symbol..."
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "fp": [
+    {
+     "command": "edit.insert.newSymbol"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "07_d14_effect_result",
+   "check": "D14 symbol editor opens",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Bearbeiten > Objekt einfügen > Neues Symbol..."
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM();return [d.width,d.height,d.zoom,d.layers.length,d.frames.length].toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "edit.insert.newSymbol"
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM();return [d.width,d.height,d.zoom,d.layers.length,d.frames.length].toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": null,
+   "note": "after Enter the symbol editor opens; runner logs window/document title"
+  },
+  {
+   "id": "08_d15_pages_normal",
+   "check": "D15 copy HTML code: pages",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T09"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Bearbeiten > HTML-Code kopieren..."
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "fp": [
+    {
+     "command": "edit.copyHtmlCode"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "08_d15_pages_normal_page2",
+   "check": "D15 copy HTML code: pages - page 2",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T09"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Bearbeiten > HTML-Code kopieren..."
+    },
+    {
+     "click_button": "Weiter"
+    }
+   ],
+   "fp": [
+    {
+     "command": "edit.copyHtmlCode"
+    },
+    {
+     "click_button": "Weiter"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "09_d15_effect_result",
+   "check": "D15 clipboard content",
+   "method": {
+    "orig": "J",
+    "fp": "R"
+   },
+   "both": [
+    {
+     "reopen": "T09"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Bearbeiten > HTML-Code kopieren..."
+    }
+   ],
+   "fp": [
+    {
+     "command": "edit.copyHtmlCode"
+    }
+   ],
+   "shot": null,
+   "note": "runner finishes the wizard and logs the clipboard text"
+  },
+  {
+   "id": "10_d16_pages_normal",
+   "check": "D16 preferences: every category",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Bearbeiten > Voreinstellungen..."
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "fp": [
+    {
+     "command": "edit.preferences"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "category labels unverified in both programs; 'Photoshop-Import/Öffnen' label may be neutralised in Firepixel"
+  },
+  {
+   "id": "10_d16_pages_normal_edit",
+   "check": "D16 preferences: every category - category Bearbeiten",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Bearbeiten > Voreinstellungen..."
+    },
+    {
+     "click_text": "Bearbeiten"
+    }
+   ],
+   "fp": [
+    {
+     "command": "edit.preferences"
+    },
+    {
+     "click_text": "Bearbeiten"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "10_d16_pages_normal_guides_grids",
+   "check": "D16 preferences: every category - category Hilfslinien und Raster",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Bearbeiten > Voreinstellungen..."
+    },
+    {
+     "click_text": "Hilfslinien und Raster"
+    }
+   ],
+   "fp": [
+    {
+     "command": "edit.preferences"
+    },
+    {
+     "click_text": "Hilfslinien und Raster"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "10_d16_pages_normal_type",
+   "check": "D16 preferences: every category - category Text",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Bearbeiten > Voreinstellungen..."
+    },
+    {
+     "click_text": "Text"
+    }
+   ],
+   "fp": [
+    {
+     "command": "edit.preferences"
+    },
+    {
+     "click_text": "Text"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "10_d16_pages_normal_photoshop_import",
+   "check": "D16 preferences: every category - category Photoshop-Import/Öffnen",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Bearbeiten > Voreinstellungen..."
+    },
+    {
+     "click_text": "Photoshop-Import/Öffnen"
+    }
+   ],
+   "fp": [
+    {
+     "command": "edit.preferences"
+    },
+    {
+     "click_text": "Photoshop-Import/Öffnen"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "10_d16_pages_normal_launch_edit",
+   "check": "D16 preferences: every category - category Starten und bearbeiten",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Bearbeiten > Voreinstellungen..."
+    },
+    {
+     "click_text": "Starten und bearbeiten"
+    }
+   ],
+   "fp": [
+    {
+     "command": "edit.preferences"
+    },
+    {
+     "click_text": "Starten und bearbeiten"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "11_d16_effect_result",
+   "check": "D16 effect -> unit 45",
+   "method": {
+    "orig": "-",
+    "fp": "-"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "shot": null,
+   "note": "covered by unit 45; no action"
+  },
+  {
+   "id": "12_d17_fields_normal",
+   "check": "D17 keyboard shortcuts: set, tree, buttons",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Bearbeiten > Tastaturkurzbefehle..."
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "fp": [
+    {
+     "command": "edit.keyboardShortcuts"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "'open' = shortcut set dropdown expanded"
+  },
+  {
+   "id": "12_d17_fields_open",
+   "check": "D17 keyboard shortcuts: set, tree, buttons",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Bearbeiten > Tastaturkurzbefehle..."
+    },
+    {
+     "open": "dialog.combo.0"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "fp": [
+    {
+     "command": "edit.keyboardShortcuts"
+    },
+    {
+     "open": "dialog.combo.0"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "'open' = shortcut set dropdown expanded"
+  },
+  {
+   "id": "13_d17_effect_result",
+   "check": "D17 duplicate/rename/delete set, conflict",
+   "method": {
+    "orig": "J",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Bearbeiten > Tastaturkurzbefehle..."
+    },
+    {
+     "record_ui": "dialog.fields"
+    },
+    {
+     "record_ui": "ui_state.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "edit.keyboardShortcuts"
+    },
+    {
+     "record_ui": "dialog.fields"
+    },
+    {
+     "record_ui": "ui_state.summary"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "image = conflict message after assigning Ctrl+C to another command; runner must cancel everything (no persistent change)"
+  },
+  {
+   "id": "14_d18_fields_normal",
+   "check": "D18 edit grid: color, spacing, limits",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Ansicht > Raster > Raster bearbeiten..."
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "fp": [
+    {
+     "command": "view.grid.editGrid"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "15_d18_effect_result",
+   "check": "D18 effect, remembered",
+   "method": {
+    "orig": "J",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Ansicht > Raster > Raster bearbeiten..."
+    },
+    {
+     "set_field": {
+      "target": "dialog.field.0",
+      "value": "20"
+     }
+    },
+    {
+     "set_field": {
+      "target": "dialog.field.1",
+      "value": "30"
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "log_value": "fw.getDocumentDOM().gridSize ? fw.getDocumentDOM().gridSize.toSource() : ''"
+    },
+    {
+     "record_ui": "ui_state.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "view.grid.editGrid"
+    },
+    {
+     "set_field": {
+      "target": "dialog.field.0",
+      "value": "20"
+     }
+    },
+    {
+     "set_field": {
+      "target": "dialog.field.1",
+      "value": "30"
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "log_value": "fw.getDocumentDOM().gridSize ? fw.getDocumentDOM().gridSize.toSource() : ''"
+    },
+    {
+     "record_ui": "ui_state.summary"
+    }
+   ],
+   "shot": null,
+   "note": "grid spacing JSF property unverified; runner also reopens the dialog and reads fields"
+  },
+  {
+   "id": "16_d19_fields_normal",
+   "check": "D19 image size: fields, chain, units, resample list",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Modifizieren > Leinwand > Bildgröße..."
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "fp": [
+    {
+     "command": "modify.canvas.imageSize"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "'open' = resample list expanded"
+  },
+  {
+   "id": "16_d19_fields_open",
+   "check": "D19 image size: fields, chain, units, resample list",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Modifizieren > Leinwand > Bildgröße..."
+    },
+    {
+     "open": "dialog.combo.0"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "fp": [
+    {
+     "command": "modify.canvas.imageSize"
+    },
+    {
+     "open": "dialog.combo.0"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "'open' = resample list expanded"
+  },
+  {
+   "id": "17_d19_limits_result",
+   "check": "D19 limits, coupled values",
+   "method": {
+    "orig": "W",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Modifizieren > Leinwand > Bildgröße..."
+    },
+    {
+     "set_field": {
+      "target": "dialog.field.0",
+      "value": "250"
+     }
+    },
+    {
+     "record_ui": "dialog.fields"
+    },
+    {
+     "set_field": {
+      "target": "dialog.field.0",
+      "value": "999999"
+     }
+    },
+    {
+     "record_ui": "dialog.fields"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "record_ui": "ui_state.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "modify.canvas.imageSize"
+    },
+    {
+     "set_field": {
+      "target": "dialog.field.0",
+      "value": "250"
+     }
+    },
+    {
+     "record_ui": "dialog.fields"
+    },
+    {
+     "set_field": {
+      "target": "dialog.field.0",
+      "value": "999999"
+     }
+    },
+    {
+     "record_ui": "dialog.fields"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "record_ui": "ui_state.summary"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "18_d19_effect_result",
+   "check": "D19 effect",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "reopen": "T02"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Modifizieren > Leinwand > Bildgröße..."
+    },
+    {
+     "set_field": {
+      "target": "dialog.field.0",
+      "value": "400"
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM();return [d.width,d.height,d.zoom,d.layers.length,d.frames.length].toSource();})()"
+    }
+   ],
+   "fp": [
+    {
+     "command": "modify.canvas.imageSize"
+    },
+    {
+     "set_field": {
+      "target": "dialog.field.0",
+      "value": "400"
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM();return [d.width,d.height,d.zoom,d.layers.length,d.frames.length].toSource();})()"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "19_d20_fields_normal",
+   "check": "D20 canvas size: anchor, arrows",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Modifizieren > Leinwand > Leinwandgröße..."
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "fp": [
+    {
+     "command": "modify.canvas.canvasSize"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "20_d20_effect_result",
+   "check": "D20 anchor per position",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Modifizieren > Leinwand > Leinwandgröße..."
+    },
+    {
+     "set_field": {
+      "target": "dialog.field.0",
+      "value": "1000"
+     }
+    },
+    {
+     "set_field": {
+      "target": "dialog.field.1",
+      "value": "800"
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "modify.canvas.canvasSize"
+    },
+    {
+     "set_field": {
+      "target": "dialog.field.0",
+      "value": "1000"
+     }
+    },
+    {
+     "set_field": {
+      "target": "dialog.field.1",
+      "value": "800"
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": null,
+   "note": "default anchor center; runner may repeat with top-left anchor"
+  },
+  {
+   "id": "21_tab_enter_esc_focus",
+   "check": "tab, Enter/Esc",
+   "method": {
+    "orig": "W",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Modifizieren > Leinwand > Bildgröße..."
+    },
+    {
+     "key": "Tab"
+    },
+    {
+     "record_ui": {
+      "focus_cycle": 12
+     }
+    },
+    {
+     "record_ui": "ui_state.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "modify.canvas.imageSize"
+    },
+    {
+     "key": "Tab"
+    },
+    {
+     "record_ui": {
+      "focus_cycle": 12
+     }
+    },
+    {
+     "record_ui": "ui_state.summary"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "tab cycle logged (12 x Tab, focused control after each); further dialogs without image: d13, d14"
+  },
+  {
+   "id": "21_tab_enter_esc_focus_d20",
+   "check": "tab, Enter/Esc - tab order d20",
+   "method": {
+    "orig": "W",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Modifizieren > Leinwand > Leinwandgröße..."
+    },
+    {
+     "record_ui": {
+      "focus_cycle": 12
+     }
+    }
+   ],
+   "fp": [
+    {
+     "command": "modify.canvas.canvasSize"
+    },
+    {
+     "record_ui": {
+      "focus_cycle": 12
+     }
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "21_tab_enter_esc_focus_d18",
+   "check": "tab, Enter/Esc - tab order d18",
+   "method": {
+    "orig": "W",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Ansicht > Raster > Raster bearbeiten..."
+    },
+    {
+     "record_ui": {
+      "focus_cycle": 12
+     }
+    }
+   ],
+   "fp": [
+    {
+     "command": "view.grid.editGrid"
+    },
+    {
+     "record_ui": {
+      "focus_cycle": 12
+     }
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "22_remember_result",
+   "check": "remembered values",
+   "method": {
+    "orig": "J",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Ansicht > Raster > Raster bearbeiten..."
+    },
+    {
+     "set_field": {
+      "target": "dialog.field.0",
+      "value": "24"
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "reopen_dialog": true
+    },
+    {
+     "record_ui": "dialog.fields"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "record_ui": "ui_state.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "view.grid.editGrid"
+    },
+    {
+     "set_field": {
+      "target": "dialog.field.0",
+      "value": "24"
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "reopen_dialog": true
+    },
+    {
+     "record_ui": "dialog.fields"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "record_ui": "ui_state.summary"
+    }
+   ],
+   "shot": null,
+   "note": "'reopen_dialog' repeats the opening actions of this step"
+  }
+ ]
+}

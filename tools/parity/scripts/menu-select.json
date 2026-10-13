@@ -1,0 +1,676 @@
+{
+ "unit": "menu-select",
+ "testfile": "T04",
+ "note": "Verbs as in tools/parity/runner/README.md. Every step starts with reopen <Txx> (test file fresh, earlier changes discarded) or close_all (no document). Menu commands: orig = menu path, fp = command id (side-specific, so the following actions are listed on both sides). Logical keys used here that may still be unmapped in ui_map.json: dialog.field.<i> / dialog.combo.<i> (i-th edit/combo of the top dialog), labels for dropdowns. Rare verbs used here that the runner may log as unsupported: new_document, window_click, drag_text, hover_text, right_click_text, double_click_text, drag_guide, drag_ruler_origin, drag_dialog_title, drag_dialog_slider, click_dialog_rel, drag_dialog_rel, canvas_wheel, reopen_dialog (repeat the opening actions), save_history_as_command, delete_saved_command, add_live_filter, file_dialog_open_types, restart_app, window_size, set_clipboard_image, drop_files, log_focus_cycle-like record_ui {focus_cycle:n}. Object 'I1#2' = duplicate of I1; 'text' = first text element; canvas_drag option hold = screenshot while the button is held.",
+ "steps": [
+  {
+   "id": "00_overview_normal",
+   "check": "overview after opening the test file",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "shot": {
+    "area": "window"
+   }
+  },
+  {
+   "id": "01_all_result",
+   "check": "select all (object / bitmap mode)",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "key": "ctrl+A"
+    },
+    {
+     "log_value": "(function(){var r=[],s=fw.selection;for(var i=0;i<s.length;i++){var p=s[i].pixelRect;r.push([s[i].name,s[i].toString(),p.left,p.top,p.right,p.bottom]);}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "02_deselect_result",
+   "check": "deselect",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "key": "ctrl+A"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Auswählen > Auswahl aufheben"
+    },
+    {
+     "log_value": "(function(){var r=[],s=fw.selection;for(var i=0;i<s.length;i++){var p=s[i].pixelRect;r.push([s[i].name,s[i].toString(),p.left,p.top,p.right,p.bottom]);}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "select.none"
+    },
+    {
+     "log_value": "(function(){var r=[],s=fw.selection;for(var i=0;i<s.length;i++){var p=s[i].pixelRect;r.push([s[i].name,s[i].toString(),p.left,p.top,p.right,p.bottom]);}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "03_superselect_subselect_result",
+   "check": "superselect / subselect",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "select": "ST"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Auswählen > Teilauswahl treffen"
+    },
+    {
+     "log_value": "(function(){var r=[],s=fw.selection;for(var i=0;i<s.length;i++){var p=s[i].pixelRect;r.push([s[i].name,s[i].toString(),p.left,p.top,p.right,p.bottom]);}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "select.subselect"
+    },
+    {
+     "log_value": "(function(){var r=[],s=fw.selection;for(var i=0;i<s.length;i++){var p=s[i].pixelRect;r.push([s[i].name,s[i].toString(),p.left,p.top,p.right,p.bottom]);}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "04_similar_result",
+   "check": "select similar",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "select": "R1"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Auswählen > Ähnliches auswählen"
+    },
+    {
+     "log_value": "(function(){var r=[],s=fw.selection;for(var i=0;i<s.length;i++){var p=s[i].pixelRect;r.push([s[i].name,s[i].toString(),p.left,p.top,p.right,p.bottom]);}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "select.similar"
+    },
+    {
+     "log_value": "(function(){var r=[],s=fw.selection;for(var i=0;i<s.length;i++){var p=s[i].pixelRect;r.push([s[i].name,s[i].toString(),p.left,p.top,p.right,p.bottom]);}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": null,
+   "note": "original may require a bitmap selection for this entry"
+  },
+  {
+   "id": "05_inverse_result",
+   "check": "inverse (pixels)",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "reopen": "T02"
+    },
+    {
+     "select": "B1"
+    },
+    {
+     "tool": "tool.marquee"
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       100,
+       100
+      ],
+      "to": [
+       300,
+       250
+      ]
+     }
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Auswählen > Auswahl umkehren"
+    }
+   ],
+   "fp": [
+    {
+     "command": "select.inverse"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "06_feather_result",
+   "check": "feather (pixels)",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "reopen": "T02"
+    },
+    {
+     "select": "B1"
+    },
+    {
+     "tool": "tool.marquee"
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       100,
+       100
+      ],
+      "to": [
+       300,
+       250
+      ]
+     }
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Auswählen > Weiche Kante..."
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "key": "Delete"
+    }
+   ],
+   "fp": [
+    {
+     "command": "select.feather"
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "key": "Delete"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "note": "feathered selection made visible by Delete"
+  },
+  {
+   "id": "07_expand_contract_result",
+   "check": "expand/contract limits",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "reopen": "T02"
+    },
+    {
+     "select": "B1"
+    },
+    {
+     "tool": "tool.marquee"
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       100,
+       100
+      ],
+      "to": [
+       300,
+       250
+      ]
+     }
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Auswählen > Auswahlrahmen erweitern..."
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "log_value": "(function(){var s=fw.historyPalette.getSteps(),r=[];for(var i=0;i<s.length;i++)r.push(s[i].name);return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "select.expandMarquee"
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "log_value": "(function(){var s=fw.historyPalette.getSteps(),r=[];for(var i=0;i<s.length;i++)r.push(s[i].name);return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": null,
+   "note": "pixel selection bounds are not readable via JSF; history name + screenshot compare"
+  },
+  {
+   "id": "08_border_result",
+   "check": "border",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "reopen": "T02"
+    },
+    {
+     "select": "B1"
+    },
+    {
+     "tool": "tool.marquee"
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       100,
+       100
+      ],
+      "to": [
+       300,
+       250
+      ]
+     }
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Auswählen > Auswahlrahmen begrenzen..."
+    },
+    {
+     "key": "Enter"
+    }
+   ],
+   "fp": [
+    {
+     "command": "select.borderMarquee"
+    },
+    {
+     "key": "Enter"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "09_smooth_result",
+   "check": "smooth",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "reopen": "T02"
+    },
+    {
+     "select": "B1"
+    },
+    {
+     "tool": "tool.magicWand"
+    },
+    {
+     "canvas_click": [
+      60,
+      290
+     ]
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Auswählen > Auswahlrahmen glätten..."
+    },
+    {
+     "key": "Enter"
+    }
+   ],
+   "fp": [
+    {
+     "command": "select.smoothMarquee"
+    },
+    {
+     "key": "Enter"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "10_save_restore_result",
+   "check": "save/restore/delete bitmap selection",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "reopen": "T02"
+    },
+    {
+     "select": "B1"
+    },
+    {
+     "tool": "tool.marquee"
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       100,
+       100
+      ],
+      "to": [
+       300,
+       250
+      ]
+     }
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Auswählen > Bitmap-Auswahl speichern..."
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "key": "ctrl+D"
+    },
+    {
+     "menu": [
+      "Auswählen",
+      "Bitmap-Auswahl wiederherstellen..."
+     ]
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "log_value": "(function(){var s=fw.historyPalette.getSteps(),r=[];for(var i=0;i<s.length;i++)r.push(s[i].name);return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "select.saveBitmapSelection"
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "key": "ctrl+D"
+    },
+    {
+     "menu": [
+      "Auswählen",
+      "Bitmap-Auswahl wiederherstellen..."
+     ]
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "log_value": "(function(){var s=fw.historyPalette.getSteps(),r=[];for(var i=0;i<s.length;i++)r.push(s[i].name);return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "11_similar_pixels_result",
+   "check": "similar (pixels, tolerance)",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "reopen": "T02"
+    },
+    {
+     "select": "B1"
+    },
+    {
+     "tool": "tool.magicWand"
+    },
+    {
+     "canvas_click": [
+      120,
+      268
+     ]
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Auswählen > Ähnliches auswählen"
+    }
+   ],
+   "fp": [
+    {
+     "command": "select.similar"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "12_next_prev_result",
+   "check": "next/previous (Ctrl+Shift+arrows)",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "key": "ctrl+shift+ArrowRight"
+    },
+    {
+     "log_value": "(function(){var r=[],s=fw.selection;for(var i=0;i<s.length;i++){var p=s[i].pixelRect;r.push([s[i].name,s[i].toString(),p.left,p.top,p.right,p.bottom]);}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": null,
+   "note": "original shortcut for next/previous object unverified"
+  },
+  {
+   "id": "13_disabled_states_disabled",
+   "check": "grayed entries without bitmap mode",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "menu_open": [
+      "Auswählen"
+     ]
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Escape"
+    }
+   ],
+   "shot": null,
+   "log_menu_items": true
+  },
+  {
+   "id": "14_warning_open",
+   "check": "message without pixel selection",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T02"
+    },
+    {
+     "select": "B1"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Auswählen > Weiche Kante..."
+    }
+   ],
+   "fp": [
+    {
+     "command": "select.feather"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "15_undo_names_result",
+   "check": "history names",
+   "method": {
+    "orig": "J",
+    "fp": "H"
+   },
+   "both": [
+    {
+     "reopen": "T02"
+    },
+    {
+     "select": "B1"
+    },
+    {
+     "tool": "tool.marquee"
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       100,
+       100
+      ],
+      "to": [
+       300,
+       250
+      ]
+     }
+    },
+    {
+     "menu": [
+      "Auswählen",
+      "Auswahl umkehren"
+     ]
+    },
+    {
+     "log_value": "(function(){var s=fw.historyPalette.getSteps(),r=[];for(var i=0;i<s.length;i++)r.push(s[i].name);return r.toSource();})()"
+    }
+   ],
+   "shot": null,
+   "note": "history read-out via fw.historyPalette.getSteps()/step.name is unverified in both programs"
+  }
+ ]
+}

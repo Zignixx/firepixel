@@ -1,0 +1,1286 @@
+{
+ "unit": "dialogs-d21-d30",
+ "testfile": "T04",
+ "note": "Verbs as in tools/parity/runner/README.md. Every step starts with reopen <Txx> (test file fresh, earlier changes discarded) or close_all (no document). Menu commands: orig = menu path, fp = command id (side-specific, so the following actions are listed on both sides). Logical keys used here that may still be unmapped in ui_map.json: dialog.field.<i> / dialog.combo.<i> (i-th edit/combo of the top dialog), labels for dropdowns. Rare verbs used here that the runner may log as unsupported: new_document, window_click, drag_text, hover_text, right_click_text, double_click_text, drag_guide, drag_ruler_origin, drag_dialog_title, drag_dialog_slider, click_dialog_rel, drag_dialog_rel, canvas_wheel, reopen_dialog (repeat the opening actions), save_history_as_command, delete_saved_command, add_live_filter, file_dialog_open_types, restart_app, window_size, set_clipboard_image, drop_files, log_focus_cycle-like record_ui {focus_cycle:n}. Object 'I1#2' = duplicate of I1; 'text' = first text element; canvas_drag option hold = screenshot while the button is held.",
+ "steps": [
+  {
+   "id": "00_overview_normal",
+   "check": "overview after opening the test file",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "shot": {
+    "area": "window"
+   }
+  },
+  {
+   "id": "01_d21_fields_normal",
+   "check": "D21 canvas color",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Modifizieren > Leinwand > Leinwandfarbe..."
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "fp": [
+    {
+     "command": "modify.canvas.canvasColor"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "02_d21_effect_result",
+   "check": "D21 effect",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Modifizieren > Leinwand > Leinwandfarbe..."
+    },
+    {
+     "log_value": "fw.getDocumentDOM().backgroundColor"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "modify.canvas.canvasColor"
+    },
+    {
+     "log_value": "fw.getDocumentDOM().backgroundColor"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": null,
+   "note": "click 'Transparent', then Enter"
+  },
+  {
+   "id": "03_d22_fields_normal",
+   "check": "D22 selective JPEG: checkbox, grayed fields",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T02"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Modifizieren > Selektives JPEG > Einstellungen..."
+    },
+    {
+     "click_text": "Selektive Qualität aktivieren"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "fp": [
+    {
+     "command": "modify.selectiveJpeg.settings"
+    },
+    {
+     "click_text": "Selektive Qualität aktivieren"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "'disabled' = initial state with grayed fields; 'normal' = after ticking 'Selektive Qualität aktivieren'"
+  },
+  {
+   "id": "03_d22_fields_disabled",
+   "check": "D22 selective JPEG: checkbox, grayed fields",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T02"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Modifizieren > Selektives JPEG > Einstellungen..."
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "fp": [
+    {
+     "command": "modify.selectiveJpeg.settings"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "'disabled' = initial state with grayed fields; 'normal' = after ticking 'Selektive Qualität aktivieren'"
+  },
+  {
+   "id": "04_d22_effect_result",
+   "check": "D22 effect on export",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "reopen": "T02"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Modifizieren > Selektives JPEG > Einstellungen..."
+    },
+    {
+     "key": "Enter"
+    }
+   ],
+   "fp": [
+    {
+     "command": "modify.selectiveJpeg.settings"
+    },
+    {
+     "key": "Enter"
+    }
+   ],
+   "shot": null,
+   "note": "export as JPEG with JPEG mask; hash compare"
+  },
+  {
+   "id": "05_d23_fields_normal",
+   "check": "D23 text size other: slider 8..96",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T05"
+    },
+    {
+     "select": "TX1"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Text > Größe > Andere..."
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "fp": [
+    {
+     "command": "text.size.other"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "'open' = popup slider expanded"
+  },
+  {
+   "id": "05_d23_fields_open",
+   "check": "D23 text size other: slider 8..96",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T05"
+    },
+    {
+     "select": "TX1"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Text > Größe > Andere..."
+    },
+    {
+     "open": "dialog.combo.0"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "fp": [
+    {
+     "command": "text.size.other"
+    },
+    {
+     "open": "dialog.combo.0"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "'open' = popup slider expanded"
+  },
+  {
+   "id": "06_d23_effect_result",
+   "check": "D23 effect",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "reopen": "T05"
+    },
+    {
+     "select": "TX1"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Text > Größe > Andere..."
+    },
+    {
+     "set_field": {
+      "target": "dialog.field.0",
+      "value": "48"
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "log_value": "(function(){var s=fw.selection[0];return [s.font,s.fontsize,s.textRuns.toSource(),s.pixelRect.left,s.pixelRect.top,s.pixelRect.right,s.pixelRect.bottom].toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "text.size.other"
+    },
+    {
+     "set_field": {
+      "target": "dialog.field.0",
+      "value": "48"
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "log_value": "(function(){var s=fw.selection[0];return [s.font,s.fontsize,s.textRuns.toSource(),s.pixelRect.left,s.pixelRect.top,s.pixelRect.right,s.pixelRect.bottom].toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "07_d24_fields_normal",
+   "check": "D24 spelling setup: dictionaries, options",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Text > Rechtschreibprüfung einrichten..."
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "fp": [
+    {
+     "command": "text.spellingSetup"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "08_d24_effect_result",
+   "check": "D24 remembered",
+   "method": {
+    "orig": "J",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Text > Rechtschreibprüfung einrichten..."
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "record_ui": "ui_state.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "text.spellingSetup"
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "record_ui": "ui_state.summary"
+    }
+   ],
+   "shot": null,
+   "note": "toggle first option checkbox, OK, reopen and read fields; reset afterwards"
+  },
+  {
+   "id": "09_d25_msg_open",
+   "check": "D25 manage saved commands (message, fresh profile)",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Befehle > Gespeicherte Befehle verwalten..."
+    },
+    {
+     "open": "dialog.combo.0"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "fp": [
+    {
+     "command": "commands.manageSavedCommands"
+    },
+    {
+     "open": "dialog.combo.0"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "10_d25_list_normal",
+   "check": "D25 with a saved command: rename/delete",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "key": "ctrl+shift+D"
+    },
+    {
+     "save_history_as_command": "PAR-Befehl"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Befehle > Gespeicherte Befehle verwalten..."
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "fp": [
+    {
+     "command": "commands.manageSavedCommands"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    },
+    {
+     "delete_saved_command": "PAR-Befehl"
+    }
+   ],
+   "note": "'save_history_as_command' = History panel menu 'Als Befehl speichern' with name; cleanup deletes it again"
+  },
+  {
+   "id": "11_d26_fields_normal",
+   "check": "D26 numeric transform: list, chain, checkboxes",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "select": "R1"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Modifizieren > Transformieren > Numerisch transformieren..."
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "fp": [
+    {
+     "command": "modify.transform.numericTransform"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "'open' = mode list expanded"
+  },
+  {
+   "id": "11_d26_fields_open",
+   "check": "D26 numeric transform: list, chain, checkboxes",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "select": "R1"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Modifizieren > Transformieren > Numerisch transformieren..."
+    },
+    {
+     "open": "dialog.combo.0"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "fp": [
+    {
+     "command": "modify.transform.numericTransform"
+    },
+    {
+     "open": "dialog.combo.0"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "'open' = mode list expanded"
+  },
+  {
+   "id": "12_d26_effect_result",
+   "check": "D26 scale/resize/rotate per mode",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "select": "R1"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Modifizieren > Transformieren > Numerisch transformieren..."
+    },
+    {
+     "set_field": {
+      "target": "dialog.field.0",
+      "value": "200"
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "log_value": "(function(){var r=[],s=fw.selection;for(var i=0;i<s.length;i++){var p=s[i].pixelRect;r.push([s[i].name,s[i].toString(),p.left,p.top,p.right,p.bottom]);}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "modify.transform.numericTransform"
+    },
+    {
+     "set_field": {
+      "target": "dialog.field.0",
+      "value": "200"
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "log_value": "(function(){var r=[],s=fw.selection;for(var i=0;i<s.length;i++){var p=s[i].pixelRect;r.push([s[i].name,s[i].toString(),p.left,p.top,p.right,p.bottom]);}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "13_d27_fields_normal",
+   "check": "D27 convert to symbol",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "select": "R1"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Modifizieren > Symbol > In Symbol konvertieren..."
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "fp": [
+    {
+     "command": "modify.symbol.convertToSymbol"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "14_d27_effect_result",
+   "check": "D27 effect",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "select": "R1"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Modifizieren > Symbol > In Symbol konvertieren..."
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "modify.symbol.convertToSymbol"
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "15_d28_fields_normal",
+   "check": "D28 animate selection: fields, limits",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "select": "R1"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Modifizieren > Animation > Auswahl animieren..."
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "fp": [
+    {
+     "command": "modify.animation.animateSelection"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "16_d28_effect_result",
+   "check": "D28 effect (states, motion path)",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "select": "R1"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Modifizieren > Animation > Auswahl animieren..."
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM();return [d.width,d.height,d.zoom,d.layers.length,d.frames.length].toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "modify.animation.animateSelection"
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM();return [d.width,d.height,d.zoom,d.layers.length,d.frames.length].toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "17_d29_fields_normal",
+   "check": "D29 simplify",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "select": "R1"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Modifizieren > Pfad ändern > Vereinfachen..."
+    },
+    {
+     "record_ui": "dialog.fields"
+    },
+    {
+     "key": "Escape"
+    }
+   ],
+   "fp": [
+    {
+     "command": "modify.alterPath.simplify"
+    },
+    {
+     "record_ui": "dialog.fields"
+    },
+    {
+     "key": "Escape"
+    }
+   ],
+   "shot": null,
+   "note": "'open' = popup slider (no image)"
+  },
+  {
+   "id": "17_d29_fields_open",
+   "check": "D29 simplify",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "select": "R1"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Modifizieren > Pfad ändern > Vereinfachen..."
+    },
+    {
+     "open": "dialog.combo.0"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "fp": [
+    {
+     "command": "modify.alterPath.simplify"
+    },
+    {
+     "open": "dialog.combo.0"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "'open' = popup slider (no image)"
+  },
+  {
+   "id": "18_d29_effect_result",
+   "check": "D29 point count afterwards",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "select": "P1"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Modifizieren > Pfad ändern > Vereinfachen..."
+    },
+    {
+     "set_field": {
+      "target": "dialog.field.0",
+      "value": "20"
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "log_value": "fw.selection[0].contours[0].nodes.length"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "modify.alterPath.simplify"
+    },
+    {
+     "set_field": {
+      "target": "dialog.field.0",
+      "value": "20"
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "log_value": "fw.selection[0].contours[0].nodes.length"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "19_d30_fields_normal",
+   "check": "D30 expand stroke: width, corners, miter, caps",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "select": "P1"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Modifizieren > Pfad ändern > Strich erweitern..."
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "fp": [
+    {
+     "command": "modify.alterPath.expandStroke"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "20_d30_effect_result",
+   "check": "D30 result path",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "select": "P1"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Modifizieren > Pfad ändern > Strich erweitern..."
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "log_value": "(function(){var r=[],s=fw.selection;for(var i=0;i<s.length;i++){var p=s[i].pixelRect;r.push([s[i].name,s[i].toString(),p.left,p.top,p.right,p.bottom]);}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "modify.alterPath.expandStroke"
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "log_value": "(function(){var r=[],s=fw.selection;for(var i=0;i<s.length;i++){var p=s[i].pixelRect;r.push([s[i].name,s[i].toString(),p.left,p.top,p.right,p.bottom]);}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "21_tab_enter_esc_focus",
+   "check": "tab, Enter/Esc",
+   "method": {
+    "orig": "W",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "select": "R1"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Modifizieren > Transformieren > Numerisch transformieren..."
+    },
+    {
+     "key": "Tab"
+    },
+    {
+     "record_ui": {
+      "focus_cycle": 12
+     }
+    },
+    {
+     "record_ui": "ui_state.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "modify.transform.numericTransform"
+    },
+    {
+     "key": "Tab"
+    },
+    {
+     "record_ui": {
+      "focus_cycle": 12
+     }
+    },
+    {
+     "record_ui": "ui_state.summary"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "tab cycle logged (12 x Tab, focused control after each); further dialogs without image: d21, d27, d29"
+  },
+  {
+   "id": "21_tab_enter_esc_focus_d30",
+   "check": "tab, Enter/Esc - tab order d30",
+   "method": {
+    "orig": "W",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "select": "P1"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Modifizieren > Pfad ändern > Strich erweitern..."
+    },
+    {
+     "record_ui": {
+      "focus_cycle": 12
+     }
+    }
+   ],
+   "fp": [
+    {
+     "command": "modify.alterPath.expandStroke"
+    },
+    {
+     "record_ui": {
+      "focus_cycle": 12
+     }
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "21_tab_enter_esc_focus_d28",
+   "check": "tab, Enter/Esc - tab order d28",
+   "method": {
+    "orig": "W",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "select": "R1"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Modifizieren > Animation > Auswahl animieren..."
+    },
+    {
+     "record_ui": {
+      "focus_cycle": 12
+     }
+    }
+   ],
+   "fp": [
+    {
+     "command": "modify.animation.animateSelection"
+    },
+    {
+     "record_ui": {
+      "focus_cycle": 12
+     }
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "22_remember_result",
+   "check": "remembered values",
+   "method": {
+    "orig": "J",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "select": "P1"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Modifizieren > Pfad ändern > Vereinfachen..."
+    },
+    {
+     "set_field": {
+      "target": "dialog.field.0",
+      "value": "20"
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "select": "E1"
+    },
+    {
+     "reopen_dialog": true
+    },
+    {
+     "record_ui": "dialog.fields"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "record_ui": "ui_state.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "modify.alterPath.simplify"
+    },
+    {
+     "set_field": {
+      "target": "dialog.field.0",
+      "value": "20"
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "select": "E1"
+    },
+    {
+     "reopen_dialog": true
+    },
+    {
+     "record_ui": "dialog.fields"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "record_ui": "ui_state.summary"
+    }
+   ],
+   "shot": null
+  }
+ ]
+}
