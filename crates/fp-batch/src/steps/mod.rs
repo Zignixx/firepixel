@@ -12,6 +12,7 @@ pub mod overlay;
 pub mod geometry; // BATCH-4
 pub mod adjust; // BATCH-4
 pub mod script; // BATCH-4
+pub mod anim; // BATCH-7
 
 /// Registriert alle eingebauten Schritte.
 pub fn register_all(r: &mut StepRegistry) {
@@ -23,4 +24,5 @@ pub fn register_all(r: &mut StepRegistry) {
     geometry::register(r); // BATCH-4
     adjust::register(r); // BATCH-4
     script::register(r); // BATCH-4
+    anim::register(r); // BATCH-7
 }

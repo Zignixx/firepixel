@@ -92,11 +92,13 @@ pub struct PreviewState {
     pub split: f32,
     pub backdrop: Backdrop,
     stale: bool,
+    /// Zeitleiste für Animationen/Videos (BATCH-7).
+    pub timeline: super::timeline::TimelineState,
 }
 
 impl Default for PreviewState {
     fn default() -> Self {
-        PreviewState { generation: Arc::new(AtomicU64::new(0)), requested: None, pending: None, rx: None, running: false, shown: None, error: None, zoom: Zoom::Fit, pan: egui::Vec2::ZERO, split: 0.5, backdrop: Backdrop::Checker, stale: true }
+        PreviewState { generation: Arc::new(AtomicU64::new(0)), requested: None, pending: None, rx: None, running: false, shown: None, error: None, zoom: Zoom::Fit, pan: egui::Vec2::ZERO, split: 0.5, backdrop: Backdrop::Checker, stale: true, timeline: Default::default() }
     }
 }
 
@@ -317,7 +319,14 @@ fn image_view(ui: &mut Ui, s: &mut Studio, body: Rect, vis: &[usize], pos: Optio
     let nav_h = kit::BTN_H;
     let nav = Rect::from_min_max(pos2(body.left(), body.bottom() - nav_h), body.max);
     let info = Rect::from_min_max(pos2(body.left(), nav.top() - sp::S - info_h), pos2(body.right(), nav.top() - sp::S));
-    let img = Rect::from_min_max(body.min, pos2(body.right(), info.top() - sp::S));
+    // Zeitleiste (BATCH-7) über den Angaben, wenn die Datei eine Animation ist
+    super::timeline::update(ui.ctx(), s);
+    let tl_h = if s.preview.timeline.visible() && body.height() > 3.0 * super::timeline::AREA_HEIGHT { super::timeline::AREA_HEIGHT + sp::S } else { 0.0 };
+    let tl_rect = Rect::from_min_max(pos2(body.left(), info.top() - tl_h), pos2(body.right(), info.top() - sp::S));
+    let img = Rect::from_min_max(body.min, pos2(body.right(), info.top() - sp::S - tl_h));
+    if tl_h > 0.0 {
+        super::timeline::show_in_preview(ui, s, tl_rect);
+    }
     // Navigationszeile: ◀ ▶, Zoom, Hintergrund
     nav_row(ui, s, nav, vis, pos, theme);
     if img.height() < 24.0 {

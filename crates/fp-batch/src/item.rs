@@ -574,6 +574,9 @@ pub fn load(info: &ItemInfo, file_only: bool) -> Result<Item> {
     if file_only {
         return Ok(Item::FileOnly(info.path.clone()));
     }
+    if info.kind == ItemKind::Video {
+        return crate::video::load(info); // BATCH-7: Videos über ffmpeg
+    }
     let data = std::fs::read(&info.path).map_err(|e| BatchError::Io(format!("{}: {e}", info.path.display())))?;
     decode_bytes(&info.path.to_string_lossy(), &data)
 }

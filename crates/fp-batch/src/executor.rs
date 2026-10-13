@@ -428,6 +428,7 @@ fn run_collect(job: &Job, plan: &Plan, k: usize) -> Vec<ItemReport> {
                 let (fmt, _) = resolve_format(job.pipe.format, &info.format);
                 let mut ctx = StepContext::new(e.index, job.total, info, cancel, fmt);
                 job.pipe.apply_range(0..k, &mut item, &mut ctx)?;
+                crate::steps::anim::tag_source(&mut item, info); // BATCH-7: Quellname für Sammel-Schritte
                 Ok(item)
             });
             (e.index, r)
@@ -487,7 +488,7 @@ fn run_collect(job: &Job, plan: &Plan, k: usize) -> Vec<ItemReport> {
     };
     let mut out_reports = Vec::new();
     for (n, mut out) in outputs.into_iter().enumerate() {
-        let target = if n == 0 { first_entry.target.clone() } else { dir.join(if ext.is_empty() { format!("{stem} ({})", n + 1) } else { format!("{stem} ({}).{ext}", n + 1) }) };
+        let target = crate::steps::anim::collect_target(if n == 0 { first_entry.target.clone() } else { dir.join(if ext.is_empty() { format!("{stem} ({})", n + 1) } else { format!("{stem} ({}).{ext}", n + 1) }) }, &dir, &ext, &out); // BATCH-7
         let mut rep = ItemReport::new(first, &info.path, 0);
         rep.target = Some(target.clone());
         let t0 = Instant::now();

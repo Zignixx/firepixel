@@ -30,6 +30,7 @@ pub mod params;
 pub mod preview;
 pub mod recipe;
 pub mod report_ui;
+pub mod timeline; // BATCH-7
 mod thumbs;
 
 use crate::app_state::AppState;
