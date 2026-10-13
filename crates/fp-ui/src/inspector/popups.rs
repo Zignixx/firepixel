@@ -30,6 +30,16 @@ fn c32(c: Argb) -> Color32 {
     Color32::from_rgba_unmultiplied(c.r(), c.g(), c.b(), c.a())
 }
 
+/// Deckende Farbe aus dem Systemfarbwähler.
+fn argb_of(col: Color32) -> Argb {
+    Argb(0xff00_0000 | (col.r() as u32) << 16 | (col.g() as u32) << 8 | col.b() as u32)
+}
+
+/// Id des Farbwählers in einem Farbfelder-Popup (für Tests und Aufräumen).
+pub fn picker_id(id: Id) -> Id {
+    id.with("picker")
+}
+
 /// Inhalt des Farbfelder-Popups. `allow_none`: Knopf „Keine“; `allow_pipette`: Pipette.
 pub fn color_picker_ui(ui: &mut Ui, id: Id, st: &AppState, current: Option<Argb>, allow_none: bool, allow_pipette: bool) -> Option<ColorChoice> {
     let t = Theme::current(ui.ctx());
@@ -44,8 +54,13 @@ pub fn color_picker_ui(ui: &mut Ui, id: Id, st: &AppState, current: Option<Argb>
     // Vorschau der aktuellen bzw. überfahrenen Farbe
     let hover_key = id.with("hover");
     let hovered: Option<Argb> = ui.data(|d| d.get_temp(hover_key));
+    // Arbeitsfarbe des genauen Farbwählers (Nutzerbefund N27a): solange gezogen wird, gilt sie,
+    // nicht `current` – sonst sprang das Feld jeden Frame auf die Ausgangsfarbe zurück.
+    let sys_col_key = id.with("syscol");
+    let pending: Option<Argb> = ui.data(|d| d.get_temp::<Color32>(sys_col_key)).map(argb_of);
+    let current_shown = pending.or(current);
     let pv = Rect::from_min_size(head.min + vec2(1.0, 2.0), vec2(34.0, 20.0));
-    match hovered.or(current) {
+    match hovered.or(current_shown) {
         Some(col) => {
             crate::widgets::checker(ui.painter(), pv, 4.0, &t);
             ui.painter().rect_filled(pv, 0.0, c32(col));
@@ -57,7 +72,7 @@ pub fn color_picker_ui(ui: &mut Ui, id: Id, st: &AppState, current: Option<Argb>
     }
     ui.painter().rect_stroke(pv, 0.0, Stroke::new(1.0, c.field_border), StrokeKind::Inside);
     let hex_r = Rect::from_min_size(pos2(pv.right() + 6.0, head.top() + 3.0), vec2(70.0, 19.0));
-    let cur_hex = hovered.or(current).map(|x| format!("#{:02X}{:02X}{:02X}", x.r(), x.g(), x.b())).unwrap_or_default();
+    let cur_hex = hovered.or(current_shown).map(|x| format!("#{:02X}{:02X}{:02X}", x.r(), x.g(), x.b())).unwrap_or_default();
     if let Some(s) = fields::text(ui, id.with("hex"), hex_r, &cur_hex, true) {
         let s = s.trim().to_string();
         let s = if s.starts_with('#') { s } else { format!("#{s}") };
@@ -76,7 +91,10 @@ pub fn color_picker_ui(ui: &mut Ui, id: Id, st: &AppState, current: Option<Argb>
     let mut sys: bool = ui.data(|d| d.get_temp(sys_key)).unwrap_or(false);
     if fields::icon_button(ui, id.with("sysb"), Rect::from_min_size(pos2(x, head.top() + 2.0), vec2(20.0, 20.0)), Glyph::Picker, true, &texts::t("pi-color-system")).clicked() {
         sys = !sys;
-        ui.data_mut(|d| d.insert_temp(sys_key, sys));
+        ui.data_mut(|d| {
+            d.insert_temp(sys_key, sys);
+            d.remove::<Color32>(sys_col_key);
+        });
     }
     x -= 22.0;
     if allow_none && fields::icon_button(ui, id.with("none"), Rect::from_min_size(pos2(x, head.top() + 2.0), vec2(20.0, 20.0)), Glyph::FillNone, true, &texts::t("pi-color-transparent")).clicked() {
@@ -108,15 +126,17 @@ pub fn color_picker_ui(ui: &mut Ui, id: Id, st: &AppState, current: Option<Argb>
         out = Some(ColorChoice::Color(h));
     }
     if sys {
-        let mut rgb = current.map(|x| Color32::from_rgb(x.r(), x.g(), x.b())).unwrap_or(Color32::WHITE);
+        // Ausgangswert nur beim ersten Frame aus `current`, danach die gemerkte Arbeitsfarbe
+        let mut rgb = ui.data(|d| d.get_temp::<Color32>(sys_col_key)).or_else(|| current.map(|x| Color32::from_rgb(x.r(), x.g(), x.b()))).unwrap_or(Color32::WHITE);
         ui.add_space(4.0);
         if egui::color_picker::color_picker_color32(ui, &mut rgb, egui::color_picker::Alpha::Opaque) {
-            ui.data_mut(|d| d.insert_temp(id.with("syscol"), rgb));
+            ui.data_mut(|d| d.insert_temp(sys_col_key, rgb));
         }
-        if let Some(col) = ui.data(|d| d.get_temp::<Color32>(id.with("syscol")))
+        if let Some(col) = ui.data(|d| d.get_temp::<Color32>(sys_col_key))
             && ui.button(texts::t("btn-apply")).clicked()
         {
-            out = Some(ColorChoice::Color(Argb(0xff00_0000 | (col.r() as u32) << 16 | (col.g() as u32) << 8 | col.b() as u32)));
+            ui.data_mut(|d| d.remove::<Color32>(sys_col_key));
+            out = Some(ColorChoice::Color(argb_of(col)));
         }
     }
     out
@@ -134,15 +154,23 @@ pub fn color_button(ui: &mut Ui, id: impl std::hash::Hash + std::fmt::Debug, r: 
 pub fn color_popup(ui: &mut Ui, resp: &Response, id: Id, st: &AppState, color: Option<Argb>, allow_none: bool, allow_pipette: bool) -> Option<ColorChoice> {
     let t = Theme::current(ui.ctx());
     let mut out = None;
-    egui::Popup::from_toggle_button_response(resp)
+    let shown = egui::Popup::from_toggle_button_response(resp)
         .close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside)
         .frame(crate::menu::menu_frame(&t).inner_margin(egui::Margin::same(4)))
         .show(|ui| {
-            out = color_picker_ui(ui, id.with("picker"), st, color, allow_none, allow_pipette);
+            out = color_picker_ui(ui, picker_id(id), st, color, allow_none, allow_pipette);
             if out.is_some() {
                 ui.close();
             }
         });
+    if shown.is_none() {
+        // Popup zu (Esc, Klick daneben, Übernehmen): nicht übernommene Arbeitsfarbe verwerfen,
+        // damit das nächste Öffnen wieder bei der aktuellen Farbe beginnt
+        let key = picker_id(id).with("syscol");
+        if ui.data(|d| d.get_temp::<Color32>(key)).is_some() {
+            ui.data_mut(|d| d.remove::<Color32>(key));
+        }
+    }
     out
 }
 
