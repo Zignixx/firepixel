@@ -57,6 +57,14 @@ fn golden_against_python_reference() {
         if name.starts_with("glow_") && name.split('_').any(|p| p.starts_with("st") && p != "st0" && p[2..].chars().all(|c| c.is_ascii_digit())) {
             continue;
         }
+        // Farbfüllung an halbtransparenten Pixeln: die Python-Referenz mischt mit div255(a); das
+        // Original (RE-FX Gruppe 4, `farbfuellung_klein`, 20 %) gewichtet mit DIV[a][…] wie der Filter
+        // (06 §5) – Firepixel folgt dem Original, geprüft in `fx4_parity.rs` (FX-4).
+        let soft_fill = (name.starts_with("fill_") && (!name.starts_with("fill_rect_") || name.starts_with("fill_rect_a")))
+            || name.starts_with("chain_fill_");
+        if soft_fill {
+            continue;
+        }
         let (ix, iy) = origin(c, "input_origin");
         let (ox, oy) = origin(c, "output_origin");
         let input = load_png(&dir.join(c["input"].as_str().unwrap_or("")), ix, iy);

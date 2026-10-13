@@ -637,7 +637,7 @@ t("dlg-title-unsharp-mask"),
         EffectKind::AddNoise => (
 t("dlg-title-add-noise"),
             vec![("amount", "add_noise_amount"), ("use_color", "add_noise_use_color")],
-            vec![Field::slider("amount", t("dlg-lbl-amount").as_str(), n("add_noise_amount", 50.0), 1.0, 400.0).popup(), Field::check("use_color", t("dlg-lbl-color-check").as_str(), e.get_bool("add_noise_use_color").unwrap_or(true))],
+            vec![Field::slider("amount", t("dlg-lbl-amount").as_str(), n("add_noise_amount", 50.0), 1.0, 400.0).popup(), Field::check("use_color", t("dlg-lbl-color-check").as_str(), e.get_bool("add_noise_use_color").unwrap_or(false))],
         ),
         EffectKind::BrightnessContrast => (
 t("dlg-title-brightness-contrast"),
@@ -706,5 +706,49 @@ mod tests {
         // Deckkraft über das %-Feld bleibt verlustfrei, solange sie nicht geändert wird (0x80)
         assert_eq!(p["params"]["ShadowColor"], json!("#ff000080"));
         assert_eq!(effect_label(&e), "Schlagschatten");
+    }
+
+    /// FX-4 (re): Rauschen-Effekt ohne `add_noise_use_color` zeigt „Farbe“ aus (Vorgabe des
+    /// Originals); Farbton/Sättigung schaltet mit „Kolorieren“ die Bereiche um (−180…180 ↔ 0…360,
+    /// −100…100 ↔ 0…100), auch mehrfach hin und her ohne Werteverlust im Bereich.
+    #[test]
+    fn fx4_noise_default_and_colorize_ranges() {
+        use super::super::form::{sync_colorize_ranges, FieldKind};
+        let e = Effect::new("{e4c0f4bc-c0a3-4cb3-b3513822027e4d9f}", true);
+        let d = filter_effect_form(&e, 0).expect("Rauschen");
+        assert_eq!(d.get("use_color"), json!(false));
+        assert_eq!(d.get("amount").as_f64(), Some(50.0));
+        let range = |d: &FormDialog, k: &str| match d.fields.iter().find(|f| f.key == k).map(|f| &f.kind) {
+            Some(FieldKind::Number { min, max, .. }) => (*min, *max),
+            _ => panic!("{k}"),
+        };
+        for menu in [true, false] {
+            let mut d = if menu {
+                super::super::catalog::filter_form("filter.adjustColor.hueSaturation", false).expect("Dialog")
+            } else {
+                let mut e = Effect::new("{3439b08d-1922-11d3-9bde00e02910d580}", true);
+                e.set("hue_amount", "-30");
+                filter_effect_form(&e, 0).expect("Dialog")
+            };
+            sync_colorize_ranges(&mut d);
+            assert_eq!(range(&d, "hue"), (-180.0, 180.0));
+            assert_eq!(range(&d, "saturation"), (-100.0, 100.0));
+            d.field_mut("hue").expect("hue").value = json!(-30.0);
+            d.field_mut("saturation").expect("sat").value = json!(-40.0);
+            for _ in 0..25 {
+                d.field_mut("colorize").expect("colorize").value = json!(true);
+                sync_colorize_ranges(&mut d);
+                sync_colorize_ranges(&mut d);
+                assert_eq!(range(&d, "hue"), (0.0, 360.0));
+                assert_eq!(range(&d, "saturation"), (0.0, 100.0));
+                assert_eq!(d.get("hue").as_f64(), Some(330.0));
+                d.field_mut("colorize").expect("colorize").value = json!(false);
+                sync_colorize_ranges(&mut d);
+                assert_eq!(range(&d, "hue"), (-180.0, 180.0));
+                assert_eq!(d.get("hue").as_f64(), Some(-30.0));
+            }
+            // Sättigung beim Kolorieren auf 0…100 geklemmt
+            assert_eq!(d.get("saturation").as_f64(), Some(0.0));
+        }
     }
 }

@@ -578,14 +578,20 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 let name = p.str("effect")?;
                 let moa = effect_moa_id(&name).ok_or_else(|| EngineError::InvalidParams { name: p.command.clone(), message: fp_i18n::tr!("err-unknown-effect", name = name.as_str()) })?;
                 let vis = p.bool_or("visible", true)?;
-                let mut params: Vec<(String, String)> = menu_preset(&name).iter().map(|(k, v)| (k.to_string(), v.to_string())).collect();
+                // Menü-Vorgaben (FX-1), dann die Parameter: Text wie im Dateiformat, Punktlisten (Kurven:
+                // `[{x, y}, …]` bzw. `[[x, y], …]`) als `GPLv` (FX-4)
+                let mut params: Vec<(String, fp_model::DataValue)> =
+                    menu_preset(&name).iter().map(|(k, v)| (k.to_string(), fp_model::DataValue::Scalar(v.to_string()))).collect();
                 if let Some(Value::Object(m)) = p.get("params") {
-                    params.extend(m.iter().map(|(k, v)| (k.clone(), v.as_str().map(|s| s.to_string()).unwrap_or_else(|| v.to_string()))));
+                    params.extend(m.iter().map(|(k, v)| (k.clone(), super::panel::effect_param_value(v))));
                 }
                 edit_effects(s, p, move |l| {
                     let mut e = Effect::new(&moa, vis);
                     for (k, v) in &params {
-                        e.set(k, v.clone());
+                        match v {
+                            fp_model::DataValue::Scalar(t) => e.set(k, t.clone()),
+                            other => e.params.set_structured(k, other.clone()),
+                        }
                     }
                     l.effects.push(e);
                     Ok(())

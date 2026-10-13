@@ -447,6 +447,16 @@ impl FormDialog {
     }
     /// Vorgaben aus den Voreinstellungen lesen (fehlt der Schlüssel, bleibt die Feldvorgabe).
     pub fn load_prefs(&mut self, p: &fp_engine::Preferences) {
+        // Kästchen zuerst, damit „Kolorieren“ die Bereiche von Farbton/Sättigung vor dem Klemmen
+        // umschaltet (FX-4)
+        for (fk, pk) in self.prefs.clone() {
+            if let (Some(pv), Some(f)) = (p.get(&pk), self.fields.iter_mut().find(|f| f.key == fk && f.kind == FieldKind::Check))
+                && let Some(b) = pv.as_bool()
+            {
+                f.value = json!(b);
+            }
+        }
+        sync_colorize_ranges(self);
         for (fk, pk) in self.prefs.clone() {
             let Some(pv) = p.get(&pk) else { continue };
             if fk == PREVIEW_FIELD {
@@ -1254,7 +1264,43 @@ pub fn number_input(ui: &mut Ui, dlg_id: &str, i: usize, f: &mut Field, er: Rect
 }
 
 /// Zeigt einen Formular-Dialog; liefert `Some(true)` bei OK, `Some(false)` bei Abbrechen.
+/// Farbton/Sättigung (Filter und Live-Effekt): Bereiche mit „Kolorieren“ umschalten wie im
+/// Original (re): Farbton −180…180 bzw. 0…360, Sättigung −100…100 bzw. 0…100. Beim Umschalten
+/// wird der Farbton auf den Kreis umgerechnet (−30 ↔ 330), die Sättigung geklemmt (Annahme FX-4).
+/// Ohne Felder `hue`/`saturation`/`colorize` ohne Wirkung.
+pub fn sync_colorize_ranges(d: &mut FormDialog) {
+    let Some(on) = d.fields.iter().find(|f| f.key == "colorize" && f.kind == FieldKind::Check).and_then(|f| f.value.as_bool()) else { return };
+    for f in d.fields.iter_mut() {
+        let (lo, hi, sc) = match (f.key.as_str(), on) {
+            ("hue", false) => (-180.0, 180.0, Some(crate::inspector::scale::HUE)),
+            ("hue", true) => (0.0, 360.0, None),
+            ("saturation", false) => (-100.0, 100.0, Some(crate::inspector::scale::SATURATION)),
+            ("saturation", true) => (0.0, 100.0, None),
+            _ => continue,
+        };
+        let is_hue = f.key == "hue";
+        if let FieldKind::Number { min, max, .. } = &mut f.kind {
+            if *min == lo && *max == hi {
+                continue;
+            }
+            *min = lo;
+            *max = hi;
+            f.scale = sc;
+            if let Some(v) = f.value.as_f64() {
+                let nv = match (is_hue, on) {
+                    (true, true) => v.rem_euclid(360.0),
+                    (true, false) if v > 180.0 => v - 360.0,
+                    _ => v.clamp(lo, hi),
+                };
+                f.value = json!(nv);
+                f.error = false;
+            }
+        }
+    }
+}
+
 pub fn show_form(ctx: &egui::Context, st: &mut AppState, d: &mut FormDialog) -> Option<bool> {
+    sync_colorize_ranges(d);
     let side = d.side && d.custom.is_none();
     let size = match d.custom {
         Some(l) => (l.size)(ctx, d),

@@ -212,6 +212,11 @@ pub(super) fn apply_effects(doc: DocId, ids: &[ElementId], list: &Value) -> FwRe
                         Value::Bool(b) => b.to_string(),
                         Value::Number(x) => conv::fmt_num(x.as_f64().unwrap_or(0.0)),
                         Value::Null => continue,
+                        // Punktlisten (Kurven `rgb_points` …) bleiben Listen → `GPLv` (FX-4)
+                        Value::Array(_) => {
+                            params.insert(k.clone(), v.clone());
+                            continue;
+                        }
                         other => other.to_string(),
                     };
                     params.insert(k.clone(), json!(text));

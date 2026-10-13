@@ -878,7 +878,7 @@ pub fn set_effects(e: &mut Element, l: Option<EffectList>) {
 
 /// Wert eines Effektparameters für `pi.effect.set`: Text wie im Dateiformat bzw. eine Punktliste
 /// (Kurven-Effekt, KV-3), wenn ein Feld aus Punkten `[x, y]` oder `{x, y}` kommt.
-fn effect_param_value(v: &Value) -> fp_model::DataValue {
+pub(crate) fn effect_param_value(v: &Value) -> fp_model::DataValue {
     let point = |q: &Value| -> Option<fp_geom::Point> {
         let (x, y) = match q {
             Value::Array(a) if a.len() == 2 => (a[0].as_f64()?, a[1].as_f64()?),

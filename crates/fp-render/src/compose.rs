@@ -528,9 +528,22 @@ impl Renderer {
         let mut img = base?;
         if has_fx {
             if self.options.effects {
-                for p in img.data_mut() {
-                    if p[3] == 0 {
-                        *p = [0, 0, 0, 0];
+                // Farbe durchsichtiger Pixel im Objektpuffer (die 3×3-Filter lesen sie mit).
+                // Gemessen (RE-FX, FX-4): Vektorpfade weiß (Ränder suchen, Weichzeichnen, Schärfen
+                // am Vektor mit Rundung nur so exakt, schwarz: bis 255 Stufen), Bitmaps behalten
+                // ihre gespeicherten Farben (schwarz: bis 20 Stufen), Text schwarz.
+                let vector = matches!(e.kind, ElementKind::Path(_))
+                    || matches!(&e.kind, ElementKind::CompoundShape(c) if matches!(c.result.as_ref().map(|r| &r.kind), Some(ElementKind::Path(_))));
+                let clear = match e.kind {
+                    ElementKind::Bitmap(_) => None,
+                    _ if vector => Some([255, 255, 255, 0]),
+                    _ => Some([0, 0, 0, 0]),
+                };
+                if let Some(clear) = clear {
+                    for p in img.data_mut() {
+                        if p[3] == 0 {
+                            *p = clear;
+                        }
                     }
                 }
                 let res = apply_chain(&img, &effects, &self.options.effect_context);
