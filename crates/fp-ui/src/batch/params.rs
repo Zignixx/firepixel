@@ -401,6 +401,11 @@ fn number_widget(ui: &mut Ui, ctx: &mut CardCtx, d: &ParamDef, label: &str, w: f
         ui.spacing_mut().item_spacing.x = gap;
         if slider_w >= 48.0 && max > min {
             ui.spacing_mut().slider_width = slider_w;
+            if theme.glow {
+                // OLED: gefüllte Spur in der Leitfarbe, sonst verschwindet sie im Schwarz
+                ui.visuals_mut().selection.bg_fill = with_alpha(theme.colors.focus, 150);
+                ui.visuals_mut().widgets.inactive.bg_fill = mix(Color32::BLACK, theme.colors.line_mid, 0.6);
+            }
             let span = max - min;
             let log = span > 2000.0 && min >= 0.0;
             let mut xx = x.clamp(min, max);
