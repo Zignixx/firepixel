@@ -1,4 +1,4 @@
-# 16 `inspector-document` – Inspektor ohne Auswahl: Aufnahme des Originals (PAR-O-16-18, 13.10.2026 ≈ 06:00–06:20)
+# 16 `inspector-document` – Inspektor ohne Auswahl: Aufnahme des Originals (PAR-O-16-18, 13.10.2026 ≈ 05:25–06:05)
 
 Testdateien T01, T04 (05), T09 (09) als Arbeitskopien `re\_testdateien\par\work\insp_t0x.fw.png`. Fenster 1600 × 1000,
 Zoom 100 %. Referenzbilder: `re\_testdateien\par\ref\inspector-document\` (+ `INDEX.md`). Messart: **W** Fenstertext/

@@ -1,4 +1,4 @@
-# 17 `inspector-path-rect` – Rechteck, Pfad, Ellipse: Aufnahme des Originals (PAR-O-16-18, 13.10.2026 ≈ 06:20–06:50)
+# 17 `inspector-path-rect` – Rechteck, Pfad, Ellipse: Aufnahme des Originals (PAR-O-16-18, 13.10.2026 ≈ 05:25–06:05)
 
 T04 als Arbeitskopie `re\_testdateien\par\work\insp_t04.fw.png`; dazu per JSF ein **Rechteck-Grundobjekt RP**
 (400,420–520,500, #808080, ohne Strich), weil R1/R2 in T04 einfache Pfade sind (Inspektor „Pfad“, ohne Rundung).

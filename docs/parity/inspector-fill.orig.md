@@ -1,4 +1,4 @@
-# 18 `inspector-fill` – Füllung: Aufnahme des Originals (PAR-O-16-18, 13.10.2026 ≈ 06:50–07:20)
+# 18 `inspector-fill` – Füllung: Aufnahme des Originals (PAR-O-16-18, 13.10.2026 ≈ 05:25–06:05)
 
 T04 als Arbeitskopie `re\_testdateien\par\work\insp_t04.fw.png`, Objekt **R1** (Pfad 50,50–150,120, #808080, ohne
 Strich). Fenster 1600 × 1000, Zoom 100 %. Referenzbilder `re\_testdateien\par\ref\inspector-fill\` (+ `INDEX.md`),
