@@ -342,21 +342,45 @@ pub(crate) fn page_rect(doc: &fp_model::Document, page: usize) -> Option<IRect> 
 }
 
 /// Ansicht so begrenzen, dass die Seite im Bild bleibt; kleinere Seiten werden zentriert.
+/// Der Bildlauf endet genau am Dokumentrand wie im Original (re\22-ansicht-bitmap-farbe.md §3.1,
+/// BV-5; vorher 60 px darüber hinaus).
+#[cfg(test)]
 pub(crate) fn clamp_view(view: &mut fp_engine::ViewState, pr: IRect) {
+    clamp_view_bars(view, pr, 0.0);
+}
+
+/// Breite der Bildlaufleisten über der Leinwand (Punkte).
+pub(crate) const SCROLLBAR_T: f64 = 8.0;
+
+/// Wie [`clamp_view`]; `bar` = Breite der Bildlaufleisten, die rechts bzw. unten über der Fläche
+/// liegen, sobald die Seite in der anderen Richtung nicht hineinpasst. Der rechte bzw. untere
+/// Dokumentrand endet dann genau an der Leiste statt darunter.
+pub(crate) fn clamp_view_bars(view: &mut fp_engine::ViewState, pr: IRect, bar: f64) {
     let z = view.zoom.max(1e-6);
     let (vw, vh) = view.viewport;
     let (pw, ph) = (pr.width() as f64, pr.height() as f64);
-    let margin = 60.0 / z;
+    let (bar_r, bar_b) = scrollbar_insets(view, pr, bar);
     if pw * z <= vw {
         view.origin.0 = pr.left as f64 + pw / 2.0 - vw / 2.0 / z;
     } else {
-        view.origin.0 = view.origin.0.clamp(pr.left as f64 - margin, pr.right as f64 - vw / z + margin);
+        let hi = (pr.right as f64 - (vw - bar_r) / z).max(pr.left as f64);
+        view.origin.0 = view.origin.0.clamp(pr.left as f64, hi);
     }
     if ph * z <= vh {
         view.origin.1 = pr.top as f64 + ph / 2.0 - vh / 2.0 / z;
     } else {
-        view.origin.1 = view.origin.1.clamp(pr.top as f64 - margin, pr.bottom as f64 - vh / z + margin);
+        let hi = (pr.bottom as f64 - (vh - bar_b) / z).max(pr.top as f64);
+        view.origin.1 = view.origin.1.clamp(pr.top as f64, hi);
     }
+}
+
+/// (rechts, unten): Platz der senkrechten bzw. waagerechten Bildlaufleiste, wenn sie gezeigt wird.
+fn scrollbar_insets(view: &fp_engine::ViewState, pr: IRect, bar: f64) -> (f64, f64) {
+    let z = view.zoom;
+    let (vw, vh) = view.viewport;
+    let v_shown = pr.height() as f64 * z > vh + 1.0;
+    let h_shown = pr.width() as f64 * z > vw + 1.0;
+    (if v_shown { bar } else { 0.0 }, if h_shown { bar } else { 0.0 })
 }
 
 /// Ansichtsursprung so verschieben (um weniger als einen halben Gerätepixel), dass die linke obere
@@ -429,7 +453,7 @@ fn canvas_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
                     d.view.zoom = 1.0;
                 }
             }
-            clamp_view(&mut d.view, pr);
+            clamp_view_bars(&mut d.view, pr, SCROLLBAR_T);
             align_view_to_pixels(&mut d.view, pr, area.min, ppp);
         }
     }
@@ -446,7 +470,7 @@ fn canvas_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
         && let Some(pr) = page_rect(&d.doc, d.page)
     {
         d.view.viewport = (area.width().max(1.0) as f64, area.height().max(1.0) as f64);
-        clamp_view(&mut d.view, pr);
+        clamp_view_bars(&mut d.view, pr, SCROLLBAR_T);
         align_view_to_pixels(&mut d.view, pr, area.min, ppp);
     }
     // Rückmeldung des Werkzeugs (auch ohne Ereignis) und im Hintergrund auszublendende Elemente
@@ -1634,11 +1658,14 @@ fn scrollbars(ui: &mut Ui, st: &mut AppState, area: Rect, view: &fp_engine::View
     let (vw, vh) = view.viewport;
     let content_w = pr.width() as f64 * z;
     let content_h = pr.height() as f64 * z;
-    let t = 8.0;
+    let t = SCROLLBAR_T as f32;
+    // sichtbarer Bereich ohne die jeweils andere Leiste (Bildlauf endet am Dokumentrand, BV-5)
+    let (bar_r, bar_b) = scrollbar_insets(view, pr, SCROLLBAR_T);
+    let (vw_vis, vh_vis) = (vw - bar_r, vh - bar_b);
     if content_w > vw + 1.0 {
         let track = Rect::from_min_max(pos2(area.left(), area.bottom() - t), pos2(area.right() - t, area.bottom()));
-        let frac = (vw / content_w).clamp(0.05, 1.0) as f32;
-        let pos = (((view.origin.0 - pr.left as f64) * z) / (content_w - vw).max(1.0)).clamp(0.0, 1.0) as f32;
+        let frac = (vw_vis / content_w).clamp(0.05, 1.0) as f32;
+        let pos = (((view.origin.0 - pr.left as f64) * z) / (content_w - vw_vis).max(1.0)).clamp(0.0, 1.0) as f32;
         let tw = track.width() * frac;
         let thumb = Rect::from_min_size(pos2(track.left() + (track.width() - tw) * pos, track.top() + 1.0), vec2(tw, t - 2.0));
         ui.painter().rect_filled(track, 0.0, with_alpha(c.scrollbar_bg, 200));
@@ -1647,14 +1674,14 @@ fn scrollbars(ui: &mut Ui, st: &mut AppState, area: Rect, view: &fp_engine::View
         if resp.dragged()
             && let Some(d) = st.session.active_mut()
         {
-            let dx = resp.drag_delta().x as f64 / (track.width() - tw).max(1.0) as f64 * (content_w - vw);
+            let dx = resp.drag_delta().x as f64 / (track.width() - tw).max(1.0) as f64 * (content_w - vw_vis);
             d.view.pan(-dx, 0.0);
         }
     }
     if content_h > vh + 1.0 {
         let track = Rect::from_min_max(pos2(area.right() - t, area.top()), pos2(area.right(), area.bottom() - t));
-        let frac = (vh / content_h).clamp(0.05, 1.0) as f32;
-        let pos = (((view.origin.1 - pr.top as f64) * z) / (content_h - vh).max(1.0)).clamp(0.0, 1.0) as f32;
+        let frac = (vh_vis / content_h).clamp(0.05, 1.0) as f32;
+        let pos = (((view.origin.1 - pr.top as f64) * z) / (content_h - vh_vis).max(1.0)).clamp(0.0, 1.0) as f32;
         let th = track.height() * frac;
         let thumb = Rect::from_min_size(pos2(track.left() + 1.0, track.top() + (track.height() - th) * pos), vec2(t - 2.0, th));
         ui.painter().rect_filled(track, 0.0, with_alpha(c.scrollbar_bg, 200));
@@ -1663,7 +1690,7 @@ fn scrollbars(ui: &mut Ui, st: &mut AppState, area: Rect, view: &fp_engine::View
         if resp.dragged()
             && let Some(d) = st.session.active_mut()
         {
-            let dy = resp.drag_delta().y as f64 / (track.height() - th).max(1.0) as f64 * (content_h - vh);
+            let dy = resp.drag_delta().y as f64 / (track.height() - th).max(1.0) as f64 * (content_h - vh_vis);
             d.view.pan(0.0, -dy);
         }
     }

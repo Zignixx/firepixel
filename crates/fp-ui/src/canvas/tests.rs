@@ -1434,3 +1434,79 @@ fn pen_double_click_in_separate_frames_keeps_path() {
     assert_eq!(pts, vec![(250.0, 150.0), (330.0, 150.0), (330.0, 220.0)]);
     assert!(!pe.contours[0].closed);
 }
+
+
+/// FIX-A (BV-5): Bildlauf endet genau am Dokumentrand wie im Original (re\22 §3.1), nicht 60 px
+/// dahinter – in der 1-fach-Ansicht und in 2-/4-fach. Rechts/unten endet der Rand an der
+/// Bildlaufleiste.
+#[test]
+fn scroll_stops_exactly_at_document_edge() {
+    use fp_engine::view::PreviewMode;
+    for mode in [PreviewMode::Original, PreviewMode::TwoUp, PreviewMode::FourUp] {
+        let mut h = harness();
+        {
+            let d = h.state_mut().state.session.active_mut().expect("Dokument");
+            d.view.preview_mode = mode;
+            d.view.zoom = 4.0;
+        }
+        h.run_steps(3);
+        let area = |h: &Harness<'static, FirepixelApp>| {
+            let st = &h.state().state;
+            let d = st.session.active().expect("Dokument");
+            st.canvases.get(&d.id).and_then(|c| c.area).expect("Leinwand")
+        };
+        let a = area(&h);
+        let bar = super::SCROLLBAR_T as f32;
+        // echtes Mausrad, viele Rasten nach oben/links: obere linke Ecke genau an der Flächenecke
+        let mid = a.center();
+        mv(&mut h, mid);
+        for _ in 0..80 {
+            ev(&mut h, Event::MouseWheel { unit: egui::MouseWheelUnit::Line, phase: egui::TouchPhase::Move, delta: egui::vec2(1.0, 1.0), modifiers: Modifiers::NONE });
+        }
+        h.run_steps(2);
+        let tl = at(&h, 0.0, 0.0);
+        assert!((tl.x - a.left()).abs() < 0.01 && (tl.y - a.top()).abs() < 0.01, "{mode:?}: links/oben am Rand: {tl:?} vs {a:?}");
+        // weiter rollen ändert nichts
+        for _ in 0..20 {
+            ev(&mut h, Event::MouseWheel { unit: egui::MouseWheelUnit::Line, phase: egui::TouchPhase::Move, delta: egui::vec2(1.0, 1.0), modifiers: Modifiers::NONE });
+        }
+        h.run_steps(2);
+        assert_eq!(at(&h, 0.0, 0.0), tl, "{mode:?}: bleibt am Rand");
+        // nach unten/rechts: rechte untere Ecke genau an den Bildlaufleisten
+        for _ in 0..200 {
+            ev(&mut h, Event::MouseWheel { unit: egui::MouseWheelUnit::Line, phase: egui::TouchPhase::Move, delta: egui::vec2(-1.0, -1.0), modifiers: Modifiers::NONE });
+        }
+        h.run_steps(2);
+        let br = at(&h, 400.0, 300.0);
+        assert!((br.x - (a.right() - bar)).abs() < 0.51 && (br.y - (a.bottom() - bar)).abs() < 0.51, "{mode:?}: rechts/unten an der Leiste: {br:?} vs {a:?}");
+        // Ansicht direkt weit hinaus gesetzt (z. B. Hand-Werkzeug): wird auf den Rand begrenzt
+        h.state_mut().state.session.active_mut().expect("Dokument").view.origin = (-5000.0, -5000.0);
+        h.run_steps(2);
+        let tl2 = at(&h, 0.0, 0.0);
+        assert!((tl2.x - a.left()).abs() < 0.01 && (tl2.y - a.top()).abs() < 0.01, "{mode:?}: begrenzt: {tl2:?}");
+        h.state_mut().state.session.active_mut().expect("Dokument").view.origin = (5000.0, 5000.0);
+        h.run_steps(2);
+        let br2 = at(&h, 400.0, 300.0);
+        assert!((br2.x - (a.right() - bar)).abs() < 0.51 && (br2.y - (a.bottom() - bar)).abs() < 0.51, "{mode:?}: begrenzt: {br2:?}");
+    }
+}
+
+/// FIX-A: reine Begrenzung ohne Leisten (Vorschaufelder) – exakt am Rand, kleine Seiten mittig.
+#[test]
+fn clamp_view_exact_edges() {
+    let pr = fp_geom::IRect { left: 0, top: 0, right: 400, bottom: 300 };
+    let mut v = fp_engine::ViewState { zoom: 2.0, viewport: (500.0, 400.0), origin: (-100.0, -100.0), ..Default::default() };
+    super::clamp_view(&mut v, pr);
+    assert_eq!(v.origin, (0.0, 0.0));
+    v.origin = (1000.0, 1000.0);
+    super::clamp_view(&mut v, pr);
+    assert_eq!(v.origin, (400.0 - 250.0, 300.0 - 200.0));
+    // mit Leisten: rechts/unten 8 Punkte früher
+    v.origin = (1000.0, 1000.0);
+    super::clamp_view_bars(&mut v, pr, 8.0);
+    assert_eq!(v.origin, (400.0 - 246.0, 300.0 - 196.0));
+    // kleinere Seite: mittig
+    let mut v = fp_engine::ViewState { zoom: 1.0, viewport: (800.0, 600.0), origin: (77.0, 77.0), ..Default::default() };
+    super::clamp_view_bars(&mut v, pr, 8.0);
+    assert_eq!(v.origin, (-200.0, -150.0));
+}

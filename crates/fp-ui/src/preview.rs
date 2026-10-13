@@ -331,7 +331,9 @@ pub fn show(ui: &mut Ui, st: &mut AppState, rect: Rect, original: &mut dyn FnMut
     if let Some(d) = st.session.active_mut()
         && let Some(pr) = crate::canvas::page_rect(&d.doc, d.page)
     {
-        crate::canvas::clamp_view(&mut d.view, pr);
+        // 2-/4-fach: dieselbe Grenze wie die Originalkachel mit ihren Bildlaufleisten (FIX-A, BV-5)
+        let bar = if mode == PreviewMode::Preview { 0.0 } else { crate::canvas::SCROLLBAR_T };
+        crate::canvas::clamp_view_bars(&mut d.view, pr, bar);
     }
     ui.painter().rect_filled(rect, 0.0, c.frame_bg);
     let ctx = ui.ctx().clone();
