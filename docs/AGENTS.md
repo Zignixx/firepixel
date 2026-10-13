@@ -291,12 +291,18 @@ auf eine neue Ebene („Nachgezeichnet“); die neuen Gruppen sind danach ausgew
   dem Potrace-Verfahren, eigenständig umgesetzt: glatte Kurven mit wenigen Knoten, ideal für
   Strichzeichnungen, Scans und Schrift; Farbbilder als gestapelte Farbebenen, eine je Farbe). Das
   Konturverfahren nutzt von den übrigen Optionen nur `preset`, `colorMode`, `colors`, `threshold`,
-  `ignoreTransparent`, `alphaThreshold`, `maxPixels`, `downscale`, `pathPrecision` und hat eigene Werte:
+  `ignoreTransparent`, `alphaThreshold`, `maxPixels`, `downscale`, `pathPrecision`,
+  `refine.snapColors` und `refine.colorTolerance` und hat eigene Werte:
   `turdSize` (Flecken bis zu dieser Fläche in Pixeln entfernen, Vorgabe 2), `turnPolicy`
   (`minority` Vorgabe, `majority`, `black`, `white`, `left`, `right`: welche diagonal berührenden Pixel
   verbunden werden), `alphaMax` (Eckenschwelle 0…4/3, Vorgabe 1; 0 = Polygon, 4/3 = keine Ecken),
   `optCurve` (Bögen zusammenfassen, Vorgabe `true`), `optTolerance` (0…5 Pixel, Vorgabe 0,2) – einzeln
   oder als Objekt `potrace: {"turdSize": 4, "alphaMax": 0.8}`.
+  **Farbeinrasten** („Glatte Kurven“ im Dialog = `engine: "potrace"`): Mit `refine.snapColors` (Vorgabe
+  bei `logo`) nimmt auch das Konturverfahren die eingerastete, kantenbewusste Palette des
+  Flächenverfahrens (Toleranz `refine.colorTolerance`). Mischtöne der Kantenglättung bekommen so keine
+  eigene Farbebene (Logo mit zwei Farben → zwei Ebenen, wenige Knoten). Ohne Einrasten
+  (`illustration`, `photo` oder `refine: {"snapColors": false}`) bleibt die Farbreduktion per k-Means.
   Vergleichen: `run_command {"name": "modify.traceBitmap", "params": {"engine": "potrace"}}` →
   `render` → `undo` → dasselbe mit `"engine": "clusters"`; `nodes` im Ergebnis zeigt die Knotenzahl.
 * `keepOriginal` (Vorgabe `true`; `false` löscht die Bitmap), `layerName`.
@@ -417,7 +423,8 @@ Ohne Kopie gehört das Dokument danach zur PNG-Datei, und `file.save` schreibt w
 
 Das Werkzeug `batch` rechnet wie das **Batch-Studio** (*Datei ▸ Batch-Verarbeitung…*): ein **Rezept**
 (Schritte + Dateiname + „Speichern als“ + Ziel) auf viele Dateien, parallel, mit Konfliktregeln und
-Bericht `batch-report.json`. Jede Datei läuft in einer eigenen headless Sitzung; die offenen Dokumente
+Bericht `batch-report.json` (dazu `batch-report.html` mit Vorschaubildern vorher/nachher, Rezept
+`output.reportHtml`, Vorgabe an). Jede Datei läuft in einer eigenen headless Sitzung; die offenen Dokumente
 (auch in der Brücke) bleiben unberührt, Originale werden nie verändert (Vorgabe-Ziel: neuer Ordner
 `batch-output` neben den Quellen).
 
@@ -449,6 +456,7 @@ Vorrang). Dateien: `files` (absolute Pfade) und/oder `folder` (+ `recursive`, Vo
 | `transparency-to-white` | Transparenz auf Weiß, Format bleibt |
 | `logos-to-svg` | `vector.trace` (Vorgabe Logo, Farbflächen) → SVG |
 | `small-gifs` | längste Seite 480 px, GIF mit Optimierer „ausgewogen“ |
+| `video-to-gif` | Video mit 12 Bildern/s einlesen, längste Seite 480 px, GIF mit Optimierer „ausgewogen“ (braucht ffmpeg) |
 | `strip-metadata` | alle Metadaten entfernen, Format bleibt |
 | `rename-by-date` | Name `JJJJ-MM-TT_001` aus dem Aufnahmedatum (EXIF), Datei wird nur kopiert |
 | `square-1080` | Quadrat 1080 × 1080 (Mitte), JPEG 88 |
@@ -463,7 +471,10 @@ und – nur wenn gesetzt, sonst gilt die Vorgabe – `colorMode`, `colors`, `fil
 als **ausgeblendete** Ebene behalten, Vorgabe `false`) und `transparentCanvas` (Vorgabe `true`).
 Die Ausgabe wählt die Endkarte „Speichern als“ (`output.format`): `svg` (nur Pfade, Löcher
 gerade/ungerade), `fwpng` (bearbeitbar: Ebene mit der Gruppe, ggf. ausgeblendete Original-Ebene) oder
-ein Pixelformat (flach gerechnet). Beides auf einmal: zweimal laufen lassen (`out` je Format).
+ein Pixelformat (flach gerechnet). Beides auf einmal: `output.options.alsoFwpng: true` („Zusätzlich als
+FW-PNG“, alle Formate außer FW-PNG) legt neben jede Ausgabe eine bearbeitbare FW-PNG gleichen Namens
+(`logo.svg` + `logo.fw.png`, Konflikte nach `conflict`); der Bericht nennt sie je Datei in
+`items[].extraTargets`.
 Animationen: nur das erste Bild (Warnung im Bericht).
 
 **Abläufe**

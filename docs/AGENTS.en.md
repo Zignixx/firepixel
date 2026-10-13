@@ -290,12 +290,18 @@ interface: *Modify ▸ Trace Bitmap...* (dialog with preview).
   Potrace method, implemented independently: smooth curves with few nodes, ideal for line art, scans
   and lettering; color images as stacked color layers, one per color). The outline method only uses
   `preset`, `colorMode`, `colors`, `threshold`, `ignoreTransparent`, `alphaThreshold`, `maxPixels`,
-  `downscale`, `pathPrecision` from the other options and has its own values: `turdSize` (remove
+  `downscale`, `pathPrecision`, `refine.snapColors` and `refine.colorTolerance` from the other options
+  and has its own values: `turdSize` (remove
   speckles up to this area in pixels, default 2), `turnPolicy` (`minority` default, `majority`, `black`,
   `white`, `left`, `right`: which diagonally touching pixels are joined), `alphaMax` (corner threshold
   0…4/3, default 1; 0 = polygon, 4/3 = no corners), `optCurve` (merge arcs, default `true`),
   `optTolerance` (0…5 pixels, default 0.2) – individually or as an object
   `potrace: {"turdSize": 4, "alphaMax": 0.8}`.
+  **Color snapping** ("Smooth curves" in the dialog = `engine: "potrace"`): with `refine.snapColors`
+  (default for `logo`) the outline method also uses the snapped, edge-aware palette of the region method
+  (tolerance `refine.colorTolerance`). Anti-aliasing blends thus get no color layer of their own (a
+  two-color logo → two layers, few nodes). Without snapping (`illustration`, `photo` or
+  `refine: {"snapColors": false}`) colors are still reduced with k-means.
   To compare: `run_command {"name": "modify.traceBitmap", "params": {"engine": "potrace"}}` → `render`
   → `undo` → the same with `"engine": "clusters"`; `nodes` in the result shows the node count.
 * `keepOriginal` (default `true`; `false` deletes the bitmap), `layerName`.
@@ -416,7 +422,8 @@ Without a copy the document belongs to the PNG file afterwards, and `file.save` 
 
 The `batch` tool works like the **Batch Studio** (*File ▸ Batch Process…*): a **recipe** (steps +
 file name + "Save as" + target) applied to many files, in parallel, with conflict rules and a
-`batch-report.json` report. Every file runs in its own headless session; open documents (also in the
+`batch-report.json` report (plus `batch-report.html` with before/after thumbnails, recipe
+`output.reportHtml`, on by default). Every file runs in its own headless session; open documents (also in the
 bridge) stay untouched, originals are never changed (default target: new folder `batch-output` next to
 the sources).
 
@@ -448,6 +455,7 @@ folder), `conflict` (`rename` | `skip` | `overwrite`), `dryRun`, `threads`.
 | `transparency-to-white` | transparency on white, format stays |
 | `logos-to-svg` | `vector.trace` (preset logo, color regions) → SVG |
 | `small-gifs` | longest side 480 px, GIF with the "balanced" optimizer |
+| `video-to-gif` | read the video at 12 fps, longest side 480 px, GIF with the "balanced" optimizer (needs ffmpeg) |
 | `strip-metadata` | remove all metadata, format stays |
 | `rename-by-date` | name `YYYY-MM-DD_001` from the capture date (EXIF); the file is only copied |
 | `square-1080` | square 1080 × 1080 (center), JPEG 88 |
@@ -461,7 +469,10 @@ applies – `colorMode`, `colors`, `filterSpeckle`, `cornerThreshold`, `mode`, `
 `optCurve`, `optTolerance`; plus `keepOriginal` (keep the original bitmap as a **hidden** layer,
 default `false`) and `transparentCanvas` (default `true`). The "Save as" card (`output.format`) picks the
 output: `svg` (paths only, holes even-odd), `fwpng` (editable: layer with the group, optionally the
-hidden original layer) or a pixel format (flattened). Both at once: run twice (`out` per format).
+hidden original layer) or a pixel format (flattened). Both at once: `output.options.alsoFwpng: true`
+("Also as FW-PNG", every format except FW-PNG) puts an editable FW-PNG with the same name next to each
+output (`logo.svg` + `logo.fw.png`, conflicts per `conflict`); the report lists it per file in
+`items[].extraTargets`.
 Animations: first frame only (warning in the report).
 
 **Workflows**
