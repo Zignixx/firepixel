@@ -1,0 +1,1075 @@
+{
+ "unit": "tool-web",
+ "testfile": "T06",
+ "testfiles": [
+  "T06"
+ ],
+ "note": "Action verbs as in the shared list (see panel-layers.json): open_testfile, select, select_none, tool <tool id>, choose {target,item} (item path 'A > B'; toolbox.<tool>_flyout picks a flyout entry, orig_index = position in the owner-drawn list of the original), open <logical ui key>, click/double_click/hover <ui key|{handle}|{menu_item}>, drag {from,by|to,mods}, canvas_click/canvas_double_click/canvas_hover [x,y] (+mods), canvas_drag {from,to,mods}, canvas_wheel {pos,delta,modifiers}, key <combo>, repeat/do, type, menu 'A > B', menu_open, set_field {target,value}, jsf (both = fp run_script), record_ui <key>, log_value, log_menu_items, export_png doc, wait, close_all, window_size. Additions in this file: {handle: <index|role>} = control/frame handle of the selected object (orig: controlPoints, fp: autoShape.describe/frame); drag_popup_slider {to_fraction,hold} = drag inside the open popup slider; record_ui history.names = history step names; mods on canvas_click/canvas_hover = held modifier keys. Coordinates are document pixels. Labels are compared without '&' and trailing '...'/'…'.",
+ "steps": [
+  {
+   "id": "00_overview_normal",
+   "check": "overview after opening the test file",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    }
+   ],
+   "shot": {
+    "area": "window"
+   }
+  },
+  {
+   "id": "01_hotspot_rect_result",
+   "check": "hotspot rect",
+   "method": {
+    "orig": "J, B",
+    "fp": "D, B"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "select_none": true
+    },
+    {
+     "tool": "hotspotRect"
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       300,
+       300
+      ],
+      "to": [
+       400,
+       360
+      ]
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "02_hotspot_circle_result",
+   "check": "hotspot circle",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "select_none": true
+    },
+    {
+     "tool": "hotspotCircle"
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       450,
+       300
+      ],
+      "to": [
+       530,
+       380
+      ]
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "03_hotspot_polygon_result",
+   "check": "hotspot polygon",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "select_none": true
+    },
+    {
+     "tool": "hotspotPolygon"
+    },
+    {
+     "canvas_click": [
+      600,
+      300
+     ]
+    },
+    {
+     "canvas_click": [
+      700,
+      300
+     ]
+    },
+    {
+     "canvas_click": [
+      650,
+      380
+     ]
+    },
+    {
+     "tool": "pointer"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "04_slice_draw_result",
+   "check": "slice draw",
+   "method": {
+    "orig": "J, B",
+    "fp": "D, B"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "select_none": true
+    },
+    {
+     "tool": "slice"
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       300,
+       450
+      ],
+      "to": [
+       450,
+       550
+      ]
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "05_slice_auto_name_normal",
+   "check": "slice auto name",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "select_none": true
+    },
+    {
+     "tool": "slice"
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       300,
+       450
+      ],
+      "to": [
+       450,
+       550
+      ]
+     }
+    },
+    {
+     "record_ui": "inspector.fields"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "note": "Auto name depends on the work-copy file name (original: '<file>.fw_r6_c5'); runner should use the same file name in both."
+  },
+  {
+   "id": "06_poly_slice_result",
+   "check": "poly slice",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "select_none": true
+    },
+    {
+     "tool": "polygonSlice"
+    },
+    {
+     "canvas_click": [
+      520,
+      450
+     ]
+    },
+    {
+     "canvas_click": [
+      620,
+      450
+     ]
+    },
+    {
+     "canvas_click": [
+      580,
+      550
+     ]
+    },
+    {
+     "tool": "pointer"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "07_slice_guides_drag_guide_hover",
+   "check": "slice guides drag",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "select_none": true
+    },
+    {
+     "tool": "slice"
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       300,
+       450
+      ],
+      "to": [
+       450,
+       550
+      ]
+     }
+    },
+    {
+     "tool": "pointer"
+    },
+    {
+     "canvas_hover": [
+      700,
+      450
+     ]
+    },
+    {
+     "wait": 300
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "note": "Guide at y=450 spans the canvas; screenshot must include the cursor."
+  },
+  {
+   "id": "07_slice_guides_drag_result",
+   "check": "slice guides drag",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "select_none": true
+    },
+    {
+     "tool": "slice"
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       300,
+       450
+      ],
+      "to": [
+       450,
+       550
+      ]
+     }
+    },
+    {
+     "tool": "pointer"
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       700,
+       450
+      ],
+      "to": [
+       700,
+       420
+      ]
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "record_ui": "history.names"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "08_overlay_dim_normal",
+   "check": "overlay dim",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "select_none": true
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "09_hide_show_button_pressed",
+   "check": "hide show",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "select_none": true
+    }
+   ],
+   "orig": [
+    {
+     "click": "toolbox.hide_slices"
+    },
+    {
+     "record_ui": "history.names"
+    }
+   ],
+   "fp": [
+    {
+     "click": "toolbox.hide_slices"
+    },
+    {
+     "record_ui": "history.names"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "note": "Button tooltip 'Segmente und Hotspots ausblenden (2)'; Firepixel show button says 'einblenden', original 'anzeigen'."
+  },
+  {
+   "id": "09_hide_show_key2_normal",
+   "check": "hide show",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "select_none": true
+    },
+    {
+     "key": "2"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "key": "2"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "10_web_layer_result",
+   "check": "web layer",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "select_none": true
+    },
+    {
+     "tool": "hotspotRect"
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       300,
+       300
+      ],
+      "to": [
+       400,
+       360
+      ]
+     }
+    },
+    {
+     "tool": "slice"
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       300,
+       450
+      ],
+      "to": [
+       450,
+       550
+      ]
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ]
+  },
+  {
+   "id": "11_behavior_handle_normal",
+   "check": "behavior handle",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "select": "S1"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "11_behavior_handle_open",
+   "check": "behavior handle",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "select": "S1"
+    },
+    {
+     "canvas_click": [
+      100,
+      240
+     ]
+    }
+   ],
+   "shot": {
+    "area": "menu"
+   },
+   "note": "Behaviour handle sits in the slice centre (S1 20,200-180,280)."
+  },
+  {
+   "id": "11_behavior_handle_swap_dialog_open",
+   "check": "behavior handle",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "select_none": true
+    },
+    {
+     "tool": "slice"
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       300,
+       450
+      ],
+      "to": [
+       450,
+       550
+      ]
+     }
+    },
+    {
+     "select": "S1"
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       100,
+       240
+      ],
+      "to": [
+       375,
+       500
+      ]
+     }
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "note": "Original: dialog 'Bild austauschen' (267 x 123); close with Escape afterwards."
+  },
+  {
+   "id": "12_insert_from_selection_open",
+   "check": "insert from selection",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "select": [
+      "G",
+      "I1"
+     ]
+    },
+    {
+     "menu": "Bearbeiten > Objekt einfügen > Rechteckiges Segment"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "note": "Message 'Es sind mehrere Elemente ausgewählt...' with buttons Einzeln/Mehrere."
+  },
+  {
+   "id": "12_insert_from_selection_single_result",
+   "check": "insert from selection",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "select": [
+      "G",
+      "I1"
+     ]
+    },
+    {
+     "menu": "Bearbeiten > Objekt einfügen > Rechteckiges Segment"
+    }
+   ],
+   "orig": [
+    {
+     "click_button": "Einzeln"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "record_ui": "history.names"
+    }
+   ],
+   "fp": [
+    {
+     "click_button": "Einzeln"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "record_ui": "history.names"
+    }
+   ]
+  },
+  {
+   "id": "12_insert_from_selection_multiple_result",
+   "check": "insert from selection",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "select": [
+      "G",
+      "I1"
+     ]
+    },
+    {
+     "menu": "Bearbeiten > Objekt einfügen > Hotspot"
+    }
+   ],
+   "orig": [
+    {
+     "click_button": "Mehrere"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "record_ui": "history.names"
+    }
+   ],
+   "fp": [
+    {
+     "click_button": "Mehrere"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "record_ui": "history.names"
+    }
+   ]
+  },
+  {
+   "id": "12_insert_from_selection_polygon_slice_result",
+   "check": "insert from selection",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "select": "G"
+    },
+    {
+     "menu": "Bearbeiten > Objekt einfügen > Polygonsegment"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ]
+  },
+  {
+   "id": "13_inspector_hotspot_normal",
+   "check": "inspector",
+   "method": {
+    "orig": "W",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "select_none": true
+    },
+    {
+     "tool": "hotspotRect"
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       300,
+       300
+      ],
+      "to": [
+       400,
+       360
+      ]
+     }
+    },
+    {
+     "record_ui": "inspector.fields"
+    }
+   ],
+   "shot": {
+    "area": "inspector"
+   }
+  },
+  {
+   "id": "13_inspector_slice_normal",
+   "check": "inspector",
+   "method": {
+    "orig": "W",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "select_none": true
+    },
+    {
+     "tool": "slice"
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       300,
+       450
+      ],
+      "to": [
+       450,
+       550
+      ]
+     }
+    },
+    {
+     "record_ui": "inspector.fields"
+    }
+   ],
+   "shot": {
+    "area": "inspector"
+   }
+  },
+  {
+   "id": "14_cursor_hotspot_rect_hover",
+   "check": "cursor",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "select_none": true
+    },
+    {
+     "tool": "hotspotRect"
+    },
+    {
+     "canvas_hover": [
+      500,
+      500
+     ]
+    },
+    {
+     "wait": 300
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "note": "Screenshot must include the cursor."
+  },
+  {
+   "id": "14_cursor_hotspot_circle_hover",
+   "check": "cursor",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "select_none": true
+    },
+    {
+     "tool": "hotspotCircle"
+    },
+    {
+     "canvas_hover": [
+      500,
+      500
+     ]
+    },
+    {
+     "wait": 300
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "note": "Screenshot must include the cursor."
+  },
+  {
+   "id": "14_cursor_hotspot_polygon_hover",
+   "check": "cursor",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "select_none": true
+    },
+    {
+     "tool": "hotspotPolygon"
+    },
+    {
+     "canvas_hover": [
+      500,
+      500
+     ]
+    },
+    {
+     "wait": 300
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "note": "Screenshot must include the cursor."
+  },
+  {
+   "id": "14_cursor_slice_hover",
+   "check": "cursor",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "select_none": true
+    },
+    {
+     "tool": "slice"
+    },
+    {
+     "canvas_hover": [
+      500,
+      500
+     ]
+    },
+    {
+     "wait": 300
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "note": "Screenshot must include the cursor."
+  },
+  {
+   "id": "14_cursor_poly_slice_hover",
+   "check": "cursor",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "select_none": true
+    },
+    {
+     "tool": "polygonSlice"
+    },
+    {
+     "canvas_hover": [
+      500,
+      500
+     ]
+    },
+    {
+     "wait": 300
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "note": "Screenshot must include the cursor."
+  },
+  {
+   "id": "15_undo_result",
+   "check": "undo",
+   "method": {
+    "orig": "J",
+    "fp": "H"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "select_none": true
+    },
+    {
+     "tool": "hotspotRect"
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       300,
+       300
+      ],
+      "to": [
+       400,
+       360
+      ]
+     }
+    },
+    {
+     "tool": "hotspotCircle"
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       450,
+       300
+      ],
+      "to": [
+       530,
+       380
+      ]
+     }
+    },
+    {
+     "tool": "hotspotPolygon"
+    },
+    {
+     "canvas_click": [
+      600,
+      300
+     ]
+    },
+    {
+     "canvas_click": [
+      700,
+      300
+     ]
+    },
+    {
+     "canvas_click": [
+      650,
+      380
+     ]
+    },
+    {
+     "tool": "slice"
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       300,
+       450
+      ],
+      "to": [
+       450,
+       550
+      ]
+     }
+    },
+    {
+     "tool": "polygonSlice"
+    },
+    {
+     "canvas_click": [
+      520,
+      450
+     ]
+    },
+    {
+     "canvas_click": [
+      620,
+      450
+     ]
+    },
+    {
+     "canvas_click": [
+      580,
+      550
+     ]
+    },
+    {
+     "tool": "pointer"
+    },
+    {
+     "record_ui": "history.names"
+    }
+   ]
+  }
+ ]
+}

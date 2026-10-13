@@ -1,0 +1,466 @@
+{
+ "unit": "inspector-web",
+ "testfile": "T06",
+ "testfiles": [
+  "T06"
+ ],
+ "note": "Action verbs as in the shared list (see panel-layers.json): open_testfile, select, select_none, tool <tool id>, choose {target,item} (item path 'A > B'; toolbox.<tool>_flyout picks a flyout entry, orig_index = position in the owner-drawn list of the original), open <logical ui key>, click/double_click/hover <ui key|{handle}|{menu_item}>, drag {from,by|to,mods}, canvas_click/canvas_double_click/canvas_hover [x,y] (+mods), canvas_drag {from,to,mods}, canvas_wheel {pos,delta,modifiers}, key <combo>, repeat/do, type, menu 'A > B', menu_open, set_field {target,value}, jsf (both = fp run_script), record_ui <key>, log_value, log_menu_items, export_png doc, wait, close_all, window_size. Additions in this file: {handle: <index|role>} = control/frame handle of the selected object (orig: controlPoints, fp: autoShape.describe/frame); drag_popup_slider {to_fraction,hold} = drag inside the open popup slider; record_ui history.names = history step names; mods on canvas_click/canvas_hover = held modifier keys. Coordinates are document pixels. Labels are compared without '&' and trailing '...'/'…'.",
+ "steps": [
+  {
+   "id": "00_overview_normal",
+   "check": "overview after opening the test file",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    }
+   ],
+   "shot": {
+    "area": "window"
+   }
+  },
+  {
+   "id": "01_slice_layout_normal",
+   "check": "slice layout",
+   "method": {
+    "orig": "W, B",
+    "fp": "S, B"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "select": "S1"
+    },
+    {
+     "record_ui": "inspector.fields"
+    }
+   ],
+   "shot": {
+    "area": "inspector"
+   }
+  },
+  {
+   "id": "02_slice_type_open",
+   "check": "slice type",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "select": "S1"
+    },
+    {
+     "open": "inspector.slice_type"
+    },
+    {
+     "log_menu_items": true
+    }
+   ],
+   "shot": {
+    "area": "popup"
+   }
+  },
+  {
+   "id": "02_slice_type_html_result",
+   "check": "slice type",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "select": "S1"
+    },
+    {
+     "choose": {
+      "target": "inspector.slice_type",
+      "item": "HTML"
+     }
+    },
+    {
+     "record_ui": "inspector.fields"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ]
+  },
+  {
+   "id": "03_slice_html_edit_open",
+   "check": "slice html edit",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "select": "S1"
+    },
+    {
+     "choose": {
+      "target": "inspector.slice_type",
+      "item": "HTML"
+     }
+    },
+    {
+     "click": "inspector.slice_html_edit"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "note": "Button 'Bearbeiten...' (N23)."
+  },
+  {
+   "id": "04_slice_format_open",
+   "check": "slice format",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "select": "S1"
+    },
+    {
+     "open": "inspector.slice_format"
+    },
+    {
+     "log_menu_items": true
+    }
+   ],
+   "shot": {
+    "area": "popup"
+   }
+  },
+  {
+   "id": "05_slice_link_list_open",
+   "check": "slice link list",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "select": "S1"
+    },
+    {
+     "open": "inspector.link"
+    },
+    {
+     "log_menu_items": true
+    }
+   ],
+   "shot": {
+    "area": "popup"
+   }
+  },
+  {
+   "id": "06_slice_target_open",
+   "check": "slice target",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "select": "S1"
+    },
+    {
+     "open": "inspector.target"
+    },
+    {
+     "log_menu_items": true
+    }
+   ],
+   "shot": {
+    "area": "popup"
+   }
+  },
+  {
+   "id": "07_slice_name_auto_result",
+   "check": "slice name auto",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "select": "S1"
+    },
+    {
+     "record_ui": "inspector.fields"
+    },
+    {
+     "set_field": {
+      "target": "inspector.name",
+      "value": "kopf"
+     }
+    },
+    {
+     "record_ui": "inspector.fields"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ]
+  },
+  {
+   "id": "08_slice_color_open",
+   "check": "slice color",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "select": "S1"
+    },
+    {
+     "open": "inspector.web_color"
+    }
+   ],
+   "shot": {
+    "area": "popup"
+   }
+  },
+  {
+   "id": "09_hotspot_layout_normal",
+   "check": "hotspot layout",
+   "method": {
+    "orig": "W, B",
+    "fp": "S, B"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "select": "H1"
+    },
+    {
+     "record_ui": "inspector.fields"
+    }
+   ],
+   "shot": {
+    "area": "inspector"
+   }
+  },
+  {
+   "id": "10_hotspot_shape_result",
+   "check": "hotspot shape",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "select": "H1"
+    },
+    {
+     "choose": {
+      "target": "inspector.hotspot_shape",
+      "item": "Kreis"
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "record_ui": "history.names"
+    }
+   ]
+  },
+  {
+   "id": "11_xywh_result",
+   "check": "xywh",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "select": "S1"
+    },
+    {
+     "set_field": {
+      "target": "inspector.x",
+      "value": "40"
+     }
+    },
+    {
+     "set_field": {
+      "target": "inspector.y",
+      "value": "210"
+     }
+    },
+    {
+     "set_field": {
+      "target": "inspector.width",
+      "value": "150"
+     }
+    },
+    {
+     "set_field": {
+      "target": "inspector.height",
+      "value": "60"
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ]
+  },
+  {
+   "id": "12_multi_normal",
+   "check": "multi",
+   "method": {
+    "orig": "W",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "select_none": true
+    },
+    {
+     "tool": "slice"
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       300,
+       450
+      ],
+      "to": [
+       450,
+       550
+      ]
+     }
+    },
+    {
+     "tool": "pointer"
+    },
+    {
+     "canvas_click": [
+      100,
+      240
+     ],
+     "mods": [
+      "shift"
+     ]
+    },
+    {
+     "record_ui": "inspector.fields"
+    }
+   ],
+   "shot": {
+    "area": "inspector"
+   }
+  },
+  {
+   "id": "13_narrow_normal",
+   "check": "narrow",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "select": "S1"
+    },
+    {
+     "window_size": [
+      1100,
+      1000
+     ]
+    }
+   ],
+   "shot": {
+    "area": "inspector"
+   },
+   "note": "Restore 1600 x 1000 afterwards. Narrow width chosen freely (N23)."
+  },
+  {
+   "id": "14_undo_result",
+   "check": "undo",
+   "method": {
+    "orig": "J",
+    "fp": "H"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "select": "S1"
+    },
+    {
+     "choose": {
+      "target": "inspector.slice_type",
+      "item": "Hintergrundbild"
+     }
+    },
+    {
+     "set_field": {
+      "target": "inspector.name",
+      "value": "kopf"
+     }
+    },
+    {
+     "set_field": {
+      "target": "inspector.x",
+      "value": "40"
+     }
+    },
+    {
+     "record_ui": "history.names"
+    }
+   ]
+  }
+ ]
+}

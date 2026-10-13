@@ -1,0 +1,1042 @@
+{
+ "unit": "tool-text",
+ "testfile": "T01",
+ "testfiles": [
+  "T01",
+  "T05"
+ ],
+ "note": "Action verbs as in the shared list (see panel-layers.json): open_testfile, select, select_none, tool <tool id>, choose {target,item} (item path 'A > B'; toolbox.<tool>_flyout picks a flyout entry, orig_index = position in the owner-drawn list of the original), open <logical ui key>, click/double_click/hover <ui key|{handle}|{menu_item}>, drag {from,by|to,mods}, canvas_click/canvas_double_click/canvas_hover [x,y] (+mods), canvas_drag {from,to,mods}, canvas_wheel {pos,delta,modifiers}, key <combo>, repeat/do, type, menu 'A > B', menu_open, set_field {target,value}, jsf (both = fp run_script), record_ui <key>, log_value, log_menu_items, export_png doc, wait, close_all, window_size. Additions in this file: {handle: <index|role>} = control/frame handle of the selected object (orig: controlPoints, fp: autoShape.describe/frame); drag_popup_slider {to_fraction,hold} = drag inside the open popup slider; record_ui history.names = history step names; mods on canvas_click/canvas_hover = held modifier keys. Coordinates are document pixels. Labels are compared without '&' and trailing '...'/'…'.",
+ "steps": [
+  {
+   "id": "00_overview_normal",
+   "check": "overview after opening the test file",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    }
+   ],
+   "shot": {
+    "area": "window"
+   }
+  },
+  {
+   "id": "01_click_text_focus",
+   "check": "click text",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "tool": "text"
+    },
+    {
+     "canvas_click": [
+      100,
+      100
+     ]
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "02_drag_frame_result",
+   "check": "drag frame",
+   "method": {
+    "orig": "J, B",
+    "fp": "D, B"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "tool": "text"
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       100,
+       100
+      ],
+      "to": [
+       300,
+       140
+      ]
+     }
+    },
+    {
+     "type": "Abc 123 Abc 123 Abc 123 Abc 123"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "03_typing_result",
+   "check": "typing",
+   "method": {
+    "orig": "J, E",
+    "fp": "D, E"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "tool": "text"
+    },
+    {
+     "canvas_click": [
+      100,
+      100
+     ]
+    },
+    {
+     "type": "Abc 123"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "note": "Tool defaults differ by profile (original: 48 pt, fill colour); runner sets font/size via the text tool inspector first if needed."
+  },
+  {
+   "id": "04_esc_result",
+   "check": "esc",
+   "method": {
+    "orig": "J",
+    "fp": "D, S"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "tool": "text"
+    },
+    {
+     "canvas_click": [
+      100,
+      100
+     ]
+    },
+    {
+     "type": "Abc"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "record_ui": "ui_state.tool"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "record_ui": "ui_state.tool"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ]
+  },
+  {
+   "id": "05_click_out_result",
+   "check": "click out",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "tool": "text"
+    },
+    {
+     "canvas_click": [
+      100,
+      100
+     ]
+    },
+    {
+     "type": "Abc"
+    },
+    {
+     "canvas_click": [
+      400,
+      400
+     ]
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "record_ui": "ui_state.tool"
+    }
+   ]
+  },
+  {
+   "id": "06_edit_existing_focus",
+   "check": "edit existing",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T05"
+    },
+    {
+     "tool": "pointer"
+    },
+    {
+     "canvas_double_click": [
+      70,
+      160
+     ]
+    },
+    {
+     "type": "Q"
+    },
+    {
+     "record_ui": "ui_state.tool"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "note": "70,160 lies inside TX2 ('Zeile eins'); original inserts at the click position."
+  },
+  {
+   "id": "07_select_text_shift_arrows_focus",
+   "check": "select text",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "tool": "text"
+    },
+    {
+     "canvas_click": [
+      100,
+      100
+     ]
+    },
+    {
+     "type": "Hallo Welt"
+    },
+    {
+     "repeat": 4,
+     "do": [
+      {
+       "key": "Shift+Left"
+      }
+     ]
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "07_select_text_double_click_focus",
+   "check": "select text",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "tool": "text"
+    },
+    {
+     "canvas_click": [
+      100,
+      100
+     ]
+    },
+    {
+     "type": "Hallo Welt"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "tool": "pointer"
+    },
+    {
+     "canvas_double_click": [
+      120,
+      90
+     ]
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "note": "Original: double click does not select a word (caret at click position)."
+  },
+  {
+   "id": "08_arrows_result",
+   "check": "arrows",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "tool": "text"
+    },
+    {
+     "canvas_click": [
+      100,
+      100
+     ]
+    },
+    {
+     "type": "ab cd ef"
+    },
+    {
+     "key": "Ctrl+Left"
+    },
+    {
+     "type": "Z"
+    },
+    {
+     "key": "Home"
+    },
+    {
+     "type": "X"
+    },
+    {
+     "key": "End"
+    },
+    {
+     "type": "Y"
+    },
+    {
+     "repeat": 2,
+     "do": [
+      {
+       "key": "Left"
+      }
+     ]
+    },
+    {
+     "type": "W"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ]
+  },
+  {
+   "id": "09_backspace_result",
+   "check": "backspace",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "tool": "text"
+    },
+    {
+     "canvas_click": [
+      100,
+      100
+     ]
+    },
+    {
+     "type": "Abcd"
+    },
+    {
+     "key": "Backspace"
+    },
+    {
+     "repeat": 2,
+     "do": [
+      {
+       "key": "Left"
+      }
+     ]
+    },
+    {
+     "key": "Delete"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ]
+  },
+  {
+   "id": "10_enter_result",
+   "check": "enter",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "tool": "text"
+    },
+    {
+     "canvas_click": [
+      100,
+      100
+     ]
+    },
+    {
+     "type": "a"
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "type": "b"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ]
+  },
+  {
+   "id": "11_size_live_result",
+   "check": "size live",
+   "method": {
+    "orig": "J, E",
+    "fp": "D, E"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "tool": "text"
+    },
+    {
+     "canvas_click": [
+      100,
+      100
+     ]
+    },
+    {
+     "type": "Abc 123"
+    },
+    {
+     "repeat": 3,
+     "do": [
+      {
+       "key": "Shift+Left"
+      }
+     ]
+    },
+    {
+     "set_field": {
+      "target": "inspector.size",
+      "value": "72"
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "12_font_live_result",
+   "check": "font live",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "tool": "text"
+    },
+    {
+     "canvas_click": [
+      100,
+      100
+     ]
+    },
+    {
+     "type": "Abc 123"
+    },
+    {
+     "key": "Ctrl+A"
+    },
+    {
+     "set_field": {
+      "target": "inspector.font",
+      "value": "Arial"
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "13_color_live_result",
+   "check": "color live",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "tool": "text"
+    },
+    {
+     "canvas_click": [
+      100,
+      100
+     ]
+    },
+    {
+     "type": "Abc 123"
+    },
+    {
+     "repeat": 3,
+     "do": [
+      {
+       "key": "Shift+Left"
+      }
+     ]
+    },
+    {
+     "open": "inspector.text_color"
+    },
+    {
+     "set_field": {
+      "target": "color_popup.hex",
+      "value": "A0A0A0"
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "14_bounds_normal",
+   "check": "bounds",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "tool": "text"
+    },
+    {
+     "canvas_click": [
+      100,
+      100
+     ]
+    },
+    {
+     "type": "Abc 123"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "15_frame_resize_result",
+   "check": "frame resize",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "tool": "text"
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       100,
+       100
+      ],
+      "to": [
+       300,
+       140
+      ]
+     }
+    },
+    {
+     "type": "Abc 123 Abc 123 Abc 123"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "tool": "pointer"
+    },
+    {
+     "drag": {
+      "from": {
+       "handle": "right_middle"
+      },
+      "by": [
+       80,
+       0
+      ]
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "record_ui": "history.names"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "16_overflow_result",
+   "check": "overflow",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "tool": "text"
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       100,
+       100
+      ],
+      "to": [
+       300,
+       120
+      ]
+     }
+    },
+    {
+     "type": "Ein langer Text, der nicht in den Rahmen passt, und noch mehr."
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "17_vertical_result",
+   "check": "vertical",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "tool": "text"
+    },
+    {
+     "canvas_click": [
+      100,
+      100
+     ]
+    },
+    {
+     "type": "Abc 123"
+    },
+    {
+     "choose": {
+      "target": "inspector.text_direction",
+      "item": "vertical"
+     }
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "record_ui": "history.names"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "note": "Direction popup: original 2 entries (horizontal/vertical), Firepixel 4 orientations ('Vertikal von rechts nach links')."
+  },
+  {
+   "id": "18_aa_render_none_result",
+   "check": "aa render",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T05"
+    },
+    {
+     "select": "TX1"
+    },
+    {
+     "choose": {
+      "target": "inspector.antialias",
+      "item": "Kein Anti-Alias"
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "18_aa_render_crisp_result",
+   "check": "aa render",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T05"
+    },
+    {
+     "select": "TX1"
+    },
+    {
+     "choose": {
+      "target": "inspector.antialias",
+      "item": "Anti-Alias scharf"
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "18_aa_render_strong_result",
+   "check": "aa render",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T05"
+    },
+    {
+     "select": "TX1"
+    },
+    {
+     "choose": {
+      "target": "inspector.antialias",
+      "item": "Anti-Alias stark"
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "18_aa_render_smooth_result",
+   "check": "aa render",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T05"
+    },
+    {
+     "select": "TX1"
+    },
+    {
+     "choose": {
+      "target": "inspector.antialias",
+      "item": "Anti-Alias glatt"
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "19_cursor_canvas_hover",
+   "check": "cursor",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "tool": "text"
+    },
+    {
+     "canvas_hover": [
+      300,
+      300
+     ]
+    },
+    {
+     "wait": 300
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "note": "Screenshot must include the cursor."
+  },
+  {
+   "id": "19_cursor_over_text_hover",
+   "check": "cursor",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T05"
+    },
+    {
+     "tool": "text"
+    },
+    {
+     "canvas_hover": [
+      70,
+      160
+     ]
+    },
+    {
+     "wait": 300
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "note": "Screenshot must include the cursor."
+  },
+  {
+   "id": "19_cursor_frame_handle_hover",
+   "check": "cursor",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T05"
+    },
+    {
+     "select": "TX2"
+    },
+    {
+     "tool": "pointer"
+    },
+    {
+     "hover": {
+      "handle": "right_middle"
+     }
+    },
+    {
+     "wait": 300
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "note": "Screenshot must include the cursor."
+  },
+  {
+   "id": "20_undo_result",
+   "check": "undo",
+   "method": {
+    "orig": "J",
+    "fp": "H"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "tool": "text"
+    },
+    {
+     "canvas_click": [
+      100,
+      100
+     ]
+    },
+    {
+     "type": "Abc 123"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "record_ui": "history.names"
+    },
+    {
+     "repeat": 1,
+     "do": [
+      {
+       "key": "Ctrl+Z"
+      },
+      {
+       "record_ui": "document.summary"
+      }
+     ]
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ]
+  }
+ ]
+}

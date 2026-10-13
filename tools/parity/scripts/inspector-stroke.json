@@ -1,0 +1,1724 @@
+{
+ "unit": "inspector-stroke",
+ "testfile": "T04",
+ "testfiles": [
+  "T04",
+  "T05"
+ ],
+ "note": "Action verbs as in the shared list (see panel-layers.json): open_testfile, select, select_none, tool <tool id>, choose {target,item} (item path 'A > B'; toolbox.<tool>_flyout picks a flyout entry, orig_index = position in the owner-drawn list of the original), open <logical ui key>, click/double_click/hover <ui key|{handle}|{menu_item}>, drag {from,by|to,mods}, canvas_click/canvas_double_click/canvas_hover [x,y] (+mods), canvas_drag {from,to,mods}, canvas_wheel {pos,delta,modifiers}, key <combo>, repeat/do, type, menu 'A > B', menu_open, set_field {target,value}, jsf (both = fp run_script), record_ui <key>, log_value, log_menu_items, export_png doc, wait, close_all, window_size. Additions in this file: {handle: <index|role>} = control/frame handle of the selected object (orig: controlPoints, fp: autoShape.describe/frame); drag_popup_slider {to_fraction,hold} = drag inside the open popup slider; record_ui history.names = history step names; mods on canvas_click/canvas_hover = held modifier keys. Coordinates are document pixels. Labels are compared without '&' and trailing '...'/'…'.",
+ "steps": [
+  {
+   "id": "00_overview_normal",
+   "check": "overview after opening the test file",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    }
+   ],
+   "shot": {
+    "area": "window"
+   }
+  },
+  {
+   "id": "01_category_open",
+   "check": "category",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "P1"
+    },
+    {
+     "open": "inspector.stroke_category"
+    },
+    {
+     "record_ui": "inspector.fields"
+    }
+   ],
+   "shot": {
+    "area": "popup"
+   }
+  },
+  {
+   "id": "01_category_submenu_open",
+   "check": "category",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "P1"
+    },
+    {
+     "open": "inspector.stroke_category"
+    },
+    {
+     "repeat": 3,
+     "do": [
+      {
+       "key": "Down"
+      }
+     ]
+    },
+    {
+     "key": "Right"
+    }
+   ],
+   "shot": {
+    "area": "popup"
+   },
+   "note": "Original: 3x down = Airbrush, right opens the submenu."
+  },
+  {
+   "id": "02_type_result_basic_result",
+   "check": "type result",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "P1"
+    },
+    {
+     "choose": {
+      "target": "inspector.stroke_category",
+      "item": "Einfach > Präzise abger."
+     }
+    },
+    {
+     "set_field": {
+      "target": "inspector.stroke_size",
+      "value": "10"
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "02_type_result_airbrush_result",
+   "check": "type result",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "P1"
+    },
+    {
+     "choose": {
+      "target": "inspector.stroke_category",
+      "item": "Airbrush > Einfach"
+     }
+    },
+    {
+     "set_field": {
+      "target": "inspector.stroke_size",
+      "value": "10"
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "02_type_result_pencil_result",
+   "check": "type result",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "P1"
+    },
+    {
+     "choose": {
+      "target": "inspector.stroke_category",
+      "item": "Bleistift > 1-Pixel hart"
+     }
+    },
+    {
+     "set_field": {
+      "target": "inspector.stroke_size",
+      "value": "10"
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "02_type_result_felt_tip_result",
+   "check": "type result",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "P1"
+    },
+    {
+     "choose": {
+      "target": "inspector.stroke_category",
+      "item": "Filzstift > Dunkler Marker"
+     }
+    },
+    {
+     "set_field": {
+      "target": "inspector.stroke_size",
+      "value": "10"
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "note": "First type per category taken from the Firepixel list order (unsure for the original)."
+  },
+  {
+   "id": "02_type_result_dashed_result",
+   "check": "type result",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "P1"
+    },
+    {
+     "choose": {
+      "target": "inspector.stroke_category",
+      "item": "Gestrichelt > Einfach gestr."
+     }
+    },
+    {
+     "set_field": {
+      "target": "inspector.stroke_size",
+      "value": "10"
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "02_type_result_calligraphy_result",
+   "check": "type result",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "P1"
+    },
+    {
+     "choose": {
+      "target": "inspector.stroke_category",
+      "item": "Kalligrafie > Einfach"
+     }
+    },
+    {
+     "set_field": {
+      "target": "inspector.stroke_size",
+      "value": "10"
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "02_type_result_charcoal_result",
+   "check": "type result",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "P1"
+    },
+    {
+     "choose": {
+      "target": "inspector.stroke_category",
+      "item": "Kohlestift > Cremig"
+     }
+    },
+    {
+     "set_field": {
+      "target": "inspector.stroke_size",
+      "value": "10"
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "note": "First type per category taken from the Firepixel list order (unsure for the original)."
+  },
+  {
+   "id": "02_type_result_crayon_result",
+   "check": "type result",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "P1"
+    },
+    {
+     "choose": {
+      "target": "inspector.stroke_category",
+      "item": "Pastellkreide > Einfach"
+     }
+    },
+    {
+     "set_field": {
+      "target": "inspector.stroke_size",
+      "value": "10"
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "02_type_result_watercolor_result",
+   "check": "type result",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "P1"
+    },
+    {
+     "choose": {
+      "target": "inspector.stroke_category",
+      "item": "Wasserfarbe > Dick"
+     }
+    },
+    {
+     "set_field": {
+      "target": "inspector.stroke_size",
+      "value": "10"
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "note": "First type per category taken from the Firepixel list order (unsure for the original)."
+  },
+  {
+   "id": "02_type_result_oil_result",
+   "check": "type result",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "P1"
+    },
+    {
+     "choose": {
+      "target": "inspector.stroke_category",
+      "item": "Öl > Borsten"
+     }
+    },
+    {
+     "set_field": {
+      "target": "inspector.stroke_size",
+      "value": "10"
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "note": "First type per category taken from the Firepixel list order (unsure for the original)."
+  },
+  {
+   "id": "02_type_result_unnatural_result",
+   "check": "type result",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "P1"
+    },
+    {
+     "choose": {
+      "target": "inspector.stroke_category",
+      "item": "Unnatürlich > 3D"
+     }
+    },
+    {
+     "set_field": {
+      "target": "inspector.stroke_size",
+      "value": "10"
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "note": "First type per category taken from the Firepixel list order (unsure for the original)."
+  },
+  {
+   "id": "02_type_result_random_result",
+   "check": "type result",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "P1"
+    },
+    {
+     "choose": {
+      "target": "inspector.stroke_category",
+      "item": "Unregelmäßig > Garn"
+     }
+    },
+    {
+     "set_field": {
+      "target": "inspector.stroke_size",
+      "value": "10"
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "03_width_clamp_result",
+   "check": "width",
+   "method": {
+    "orig": "J, E",
+    "fp": "D, E"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "P1"
+    },
+    {
+     "set_field": {
+      "target": "inspector.stroke_size",
+      "value": "0"
+     }
+    },
+    {
+     "record_ui": "inspector.fields"
+    },
+    {
+     "set_field": {
+      "target": "inspector.stroke_size",
+      "value": "2000"
+     }
+    },
+    {
+     "record_ui": "inspector.fields"
+    },
+    {
+     "set_field": {
+      "target": "inspector.stroke_size",
+      "value": "abc"
+     }
+    },
+    {
+     "record_ui": "inspector.fields"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ]
+  },
+  {
+   "id": "03_width_w1_result",
+   "check": "width",
+   "method": {
+    "orig": "J, E",
+    "fp": "D, E"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "P1"
+    },
+    {
+     "set_field": {
+      "target": "inspector.stroke_size",
+      "value": "1"
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "03_width_w10_result",
+   "check": "width",
+   "method": {
+    "orig": "J, E",
+    "fp": "D, E"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "P1"
+    },
+    {
+     "set_field": {
+      "target": "inspector.stroke_size",
+      "value": "10"
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "03_width_w100_result",
+   "check": "width",
+   "method": {
+    "orig": "J, E",
+    "fp": "D, E"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "P1"
+    },
+    {
+     "set_field": {
+      "target": "inspector.stroke_size",
+      "value": "100"
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "04_edge_e0_result",
+   "check": "edge",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "P1"
+    },
+    {
+     "set_field": {
+      "target": "inspector.stroke_size",
+      "value": "10"
+     }
+    },
+    {
+     "set_field": {
+      "target": "inspector.stroke_edge",
+      "value": "0"
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "04_edge_e50_result",
+   "check": "edge",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "P1"
+    },
+    {
+     "set_field": {
+      "target": "inspector.stroke_size",
+      "value": "10"
+     }
+    },
+    {
+     "set_field": {
+      "target": "inspector.stroke_edge",
+      "value": "50"
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "04_edge_e100_result",
+   "check": "edge",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "P1"
+    },
+    {
+     "set_field": {
+      "target": "inspector.stroke_size",
+      "value": "10"
+     }
+    },
+    {
+     "set_field": {
+      "target": "inspector.stroke_edge",
+      "value": "100"
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "05_texture_result",
+   "check": "texture",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "P1"
+    },
+    {
+     "set_field": {
+      "target": "inspector.stroke_size",
+      "value": "10"
+     }
+    },
+    {
+     "choose": {
+      "target": "inspector.stroke_texture",
+      "item": "Ader"
+     }
+    },
+    {
+     "set_field": {
+      "target": "inspector.stroke_texture_amount",
+      "value": "50"
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "record_ui": "inspector.fields"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "06_position_buttons_normal",
+   "check": "position",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "PG"
+    },
+    {
+     "set_field": {
+      "target": "inspector.stroke_size",
+      "value": "10"
+     }
+    }
+   ],
+   "shot": {
+    "area": "inspector"
+   }
+  },
+  {
+   "id": "06_position_inside_result",
+   "check": "position",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "PG"
+    },
+    {
+     "set_field": {
+      "target": "inspector.stroke_size",
+      "value": "10"
+     }
+    },
+    {
+     "click": "inspector.stroke_inside"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "06_position_center_result",
+   "check": "position",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "PG"
+    },
+    {
+     "set_field": {
+      "target": "inspector.stroke_size",
+      "value": "10"
+     }
+    },
+    {
+     "click": "inspector.stroke_center"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "06_position_outside_result",
+   "check": "position",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "PG"
+    },
+    {
+     "set_field": {
+      "target": "inspector.stroke_size",
+      "value": "10"
+     }
+    },
+    {
+     "click": "inspector.stroke_outside"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "07_options_popup_open",
+   "check": "options popup",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "P1"
+    },
+    {
+     "choose": {
+      "target": "inspector.stroke_category",
+      "item": "Pinselstrichoptionen"
+     }
+    },
+    {
+     "record_ui": "inspector.fields"
+    }
+   ],
+   "shot": {
+    "area": "popup"
+   }
+  },
+  {
+   "id": "07_options_popup_advanced_open",
+   "check": "options popup",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "P1"
+    },
+    {
+     "choose": {
+      "target": "inspector.stroke_category",
+      "item": "Pinselstrichoptionen"
+     }
+    },
+    {
+     "click": "stroke_popup.advanced"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "note": "Button 'Erweitert...' in the stroke options popup opens 'Pinselstrich bearbeiten'."
+  },
+  {
+   "id": "08_edit_brush_open",
+   "check": "edit brush",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "P1"
+    },
+    {
+     "click": "inspector.stroke_edit"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   }
+  },
+  {
+   "id": "09_dash_heavy_result",
+   "check": "dash",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "P1"
+    },
+    {
+     "choose": {
+      "target": "inspector.stroke_category",
+      "item": "Gestrichelt > Dick gestrichelt"
+     }
+    },
+    {
+     "set_field": {
+      "target": "inspector.stroke_size",
+      "value": "4"
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "09_dash_double_result",
+   "check": "dash",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "P1"
+    },
+    {
+     "choose": {
+      "target": "inspector.stroke_category",
+      "item": "Gestrichelt > Doppelt gestr."
+     }
+    },
+    {
+     "set_field": {
+      "target": "inspector.stroke_size",
+      "value": "4"
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "note": "Original names 'Doppelt'/'Dreifach' in the unit 19 recording, Firepixel 'Doppelt gestr.'/'Dreifach gestr.' (check)."
+  },
+  {
+   "id": "09_dash_triple_result",
+   "check": "dash",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "P1"
+    },
+    {
+     "choose": {
+      "target": "inspector.stroke_category",
+      "item": "Gestrichelt > Dreifach gestr."
+     }
+    },
+    {
+     "set_field": {
+      "target": "inspector.stroke_size",
+      "value": "4"
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "note": "Original names 'Doppelt'/'Dreifach' in the unit 19 recording, Firepixel 'Doppelt gestr.'/'Dreifach gestr.' (check)."
+  },
+  {
+   "id": "09_dash_basic_result",
+   "check": "dash",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "P1"
+    },
+    {
+     "choose": {
+      "target": "inspector.stroke_category",
+      "item": "Gestrichelt > Einfach gestr."
+     }
+    },
+    {
+     "set_field": {
+      "target": "inspector.stroke_size",
+      "value": "4"
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "09_dash_dotted_result",
+   "check": "dash",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "P1"
+    },
+    {
+     "choose": {
+      "target": "inspector.stroke_category",
+      "item": "Gestrichelt > Gepunktet"
+     }
+    },
+    {
+     "set_field": {
+      "target": "inspector.stroke_size",
+      "value": "4"
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "09_dash_hard_result",
+   "check": "dash",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "P1"
+    },
+    {
+     "choose": {
+      "target": "inspector.stroke_category",
+      "item": "Gestrichelt > Präzise gestr."
+     }
+    },
+    {
+     "set_field": {
+      "target": "inspector.stroke_size",
+      "value": "4"
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "10_color_open",
+   "check": "color",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "P1"
+    },
+    {
+     "open": "inspector.stroke_color"
+    }
+   ],
+   "shot": {
+    "area": "popup"
+   }
+  },
+  {
+   "id": "11_none_result",
+   "check": "none",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "P1"
+    },
+    {
+     "choose": {
+      "target": "inspector.stroke_category",
+      "item": "Ohne"
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "record_ui": "history.names"
+    },
+    {
+     "export_png": "doc"
+    }
+   ]
+  },
+  {
+   "id": "12_text_stroke_inspector_normal",
+   "check": "text stroke",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T05"
+    },
+    {
+     "select": "TX2"
+    }
+   ],
+   "shot": {
+    "area": "inspector"
+   },
+   "note": "Original text inspector has no stroke section."
+  },
+  {
+   "id": "12_text_stroke_result",
+   "check": "text stroke",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T05"
+    },
+    {
+     "select": "TX2"
+    },
+    {
+     "jsf": "fw.getDocumentDOM().setBrush({category:'bc_Pencil',name:'bn_1-Pixel Hard',diameter:2})"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "note": "setBrush argument form unsure; alternative fw.getDocumentDOM().setBrushSize(2) after setting a brush."
+  },
+  {
+   "id": "13_open_closed_open_result",
+   "check": "open closed",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "P1"
+    },
+    {
+     "set_field": {
+      "target": "inspector.stroke_size",
+      "value": "4"
+     }
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "13_open_closed_closed_result",
+   "check": "open closed",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "P1"
+    },
+    {
+     "set_field": {
+      "target": "inspector.stroke_size",
+      "value": "4"
+     }
+    },
+    {
+     "jsf": "var e=fw.selection[0]; e.contours[0].isClosed=true;"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "14_fill_over_off_result",
+   "check": "fill over",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "PG"
+    },
+    {
+     "set_field": {
+      "target": "inspector.stroke_size",
+      "value": "20"
+     }
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "14_fill_over_popup_open",
+   "check": "fill over",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "PG"
+    },
+    {
+     "set_field": {
+      "target": "inspector.stroke_size",
+      "value": "20"
+     }
+    },
+    {
+     "choose": {
+      "target": "inspector.stroke_category",
+      "item": "Pinselstrichoptionen"
+     }
+    },
+    {
+     "click": "stroke_popup.fill_over_stroke"
+    }
+   ],
+   "shot": {
+    "area": "popup"
+   }
+  },
+  {
+   "id": "14_fill_over_on_result",
+   "check": "fill over",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "PG"
+    },
+    {
+     "set_field": {
+      "target": "inspector.stroke_size",
+      "value": "20"
+     }
+    },
+    {
+     "choose": {
+      "target": "inspector.stroke_category",
+      "item": "Pinselstrichoptionen"
+     }
+    },
+    {
+     "click": "stroke_popup.fill_over_stroke"
+    },
+    {
+     "canvas_click": [
+      700,
+      550
+     ]
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "note": "Click outside the popup applies (original)."
+  },
+  {
+   "id": "15_scale_result",
+   "check": "scale",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "P1"
+    },
+    {
+     "set_field": {
+      "target": "inspector.stroke_size",
+      "value": "10"
+     }
+    },
+    {
+     "jsf": "fw.getDocumentDOM().scaleSelection(2, 2, 'autoTrimImages transformAttributes')"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ]
+  },
+  {
+   "id": "16_save_stroke_open",
+   "check": "save stroke",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "P1"
+    },
+    {
+     "click": "inspector.stroke_save"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   }
+  },
+  {
+   "id": "17_custom_normal",
+   "check": "custom",
+   "method": {
+    "orig": "W",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "P1"
+    },
+    {
+     "click": "inspector.stroke_edit"
+    },
+    {
+     "set_field": {
+      "target": "dialog.ink_amount",
+      "value": "50"
+     }
+    },
+    {
+     "click": "dialog.ok"
+    },
+    {
+     "record_ui": "inspector.fields"
+    }
+   ],
+   "note": "Original (unit 02 no. 16): no marker for a custom stroke in the list. Field name 'Tintenmenge' (unsure id)."
+  },
+  {
+   "id": "18_disabled_disabled",
+   "check": "disabled",
+   "method": {
+    "orig": "W",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "P1"
+    },
+    {
+     "choose": {
+      "target": "inspector.stroke_category",
+      "item": "Ohne"
+     }
+    },
+    {
+     "record_ui": "inspector.fields"
+    }
+   ],
+   "shot": {
+    "area": "inspector"
+   }
+  },
+  {
+   "id": "19_undo_result",
+   "check": "undo",
+   "method": {
+    "orig": "J",
+    "fp": "H"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "P1"
+    },
+    {
+     "choose": {
+      "target": "inspector.stroke_category",
+      "item": "Airbrush > Einfach"
+     }
+    },
+    {
+     "set_field": {
+      "target": "inspector.stroke_size",
+      "value": "10"
+     }
+    },
+    {
+     "set_field": {
+      "target": "inspector.stroke_edge",
+      "value": "50"
+     }
+    },
+    {
+     "choose": {
+      "target": "inspector.stroke_texture",
+      "item": "Ader"
+     }
+    },
+    {
+     "set_field": {
+      "target": "inspector.stroke_texture_amount",
+      "value": "30"
+     }
+    },
+    {
+     "record_ui": "history.names"
+    }
+   ]
+  },
+  {
+   "id": "20_tool_default_normal",
+   "check": "tool default",
+   "method": {
+    "orig": "W",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select_none": true
+    },
+    {
+     "tool": "pen"
+    },
+    {
+     "record_ui": "inspector.fields"
+    }
+   ],
+   "shot": {
+    "area": "inspector"
+   }
+  }
+ ]
+}

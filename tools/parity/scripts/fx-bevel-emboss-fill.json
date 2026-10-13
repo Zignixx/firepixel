@@ -1,0 +1,1124 @@
+{
+ "unit": "fx-bevel-emboss-fill",
+ "testfile": "T08",
+ "testfiles": [
+  "T08",
+  "T11:par.psd"
+ ],
+ "note": "Action verbs as in the shared list (see panel-layers.json): open_testfile, select, select_none, tool <tool id>, choose {target,item} (item path 'A > B'; toolbox.<tool>_flyout picks a flyout entry, orig_index = position in the owner-drawn list of the original), open <logical ui key>, click/double_click/hover <ui key|{handle}|{menu_item}>, drag {from,by|to,mods}, canvas_click/canvas_double_click/canvas_hover [x,y] (+mods), canvas_drag {from,to,mods}, canvas_wheel {pos,delta,modifiers}, key <combo>, repeat/do, type, menu 'A > B', menu_open, set_field {target,value}, jsf (both = fp run_script), record_ui <key>, log_value, log_menu_items, export_png doc, wait, close_all, window_size. Additions in this file: {handle: <index|role>} = control/frame handle of the selected object (orig: controlPoints, fp: autoShape.describe/frame); drag_popup_slider {to_fraction,hold} = drag inside the open popup slider; record_ui history.names = history step names; mods on canvas_click/canvas_hover = held modifier keys. Coordinates are document pixels. Labels are compared without '&' and trailing '...'/'…'.",
+ "steps": [
+  {
+   "id": "00_overview_normal",
+   "check": "overview after opening the test file",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T08"
+    }
+   ],
+   "shot": {
+    "area": "window"
+   }
+  },
+  {
+   "id": "01_bevel_inner_popup_open",
+   "check": "bevel inner popup",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "open_testfile": "T08"
+    },
+    {
+     "select": "R"
+    }
+   ],
+   "orig": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Abschrägung und Prägung > Abgeflachte Kante innen"
+     }
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "fp": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Abgeflachte Kante und Relief > Abschrägung innen"
+     }
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": {
+    "area": "popup"
+   },
+   "note": "'+' menu group/entry names differ or are unsure (original group 'Abschrägung und Prägung' per inventory, entries per re 23; Firepixel 'Abgeflachte Kante und Relief'/'Abschrägung innen'...)."
+  },
+  {
+   "id": "01_bevel_inner_popup_canvas_open",
+   "check": "bevel inner popup",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "open_testfile": "T08"
+    },
+    {
+     "select": "R"
+    }
+   ],
+   "orig": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Abschrägung und Prägung > Abgeflachte Kante innen"
+     }
+    }
+   ],
+   "fp": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Abgeflachte Kante und Relief > Abschrägung innen"
+     }
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "note": "'+' menu group/entry names differ or are unsure (original group 'Abschrägung und Prägung' per inventory, entries per re 23; Firepixel 'Abgeflachte Kante und Relief'/'Abschrägung innen'...)."
+  },
+  {
+   "id": "02_bevel_shapes_open",
+   "check": "bevel shapes",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "open_testfile": "T08"
+    },
+    {
+     "select": "R"
+    }
+   ],
+   "orig": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Abschrägung und Prägung > Abgeflachte Kante innen"
+     }
+    },
+    {
+     "open": "fx_popup.edge_shape"
+    },
+    {
+     "log_menu_items": true
+    }
+   ],
+   "fp": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Abgeflachte Kante und Relief > Abschrägung innen"
+     }
+    },
+    {
+     "open": "fx_popup.edge_shape"
+    },
+    {
+     "log_menu_items": true
+    }
+   ],
+   "shot": {
+    "area": "popup"
+   }
+  },
+  {
+   "id": "03_bevel_button_preset_open",
+   "check": "bevel button preset",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "open_testfile": "T08"
+    },
+    {
+     "select": "R"
+    }
+   ],
+   "orig": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Abschrägung und Prägung > Abgeflachte Kante innen"
+     }
+    },
+    {
+     "open": "fx_popup.button_preset"
+    },
+    {
+     "log_menu_items": true
+    }
+   ],
+   "fp": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Abgeflachte Kante und Relief > Abschrägung innen"
+     }
+    },
+    {
+     "open": "fx_popup.button_preset"
+    },
+    {
+     "log_menu_items": true
+    }
+   ],
+   "shot": {
+    "area": "popup"
+   }
+  },
+  {
+   "id": "04_bevel_outer_open",
+   "check": "bevel outer",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "open_testfile": "T08"
+    },
+    {
+     "select": "R"
+    }
+   ],
+   "orig": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Abschrägung und Prägung > Abgefl. Kante außen"
+     }
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "fp": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Abgeflachte Kante und Relief > Abschrägung außen"
+     }
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": {
+    "area": "popup"
+   },
+   "note": "'+' menu group/entry names differ or are unsure (original group 'Abschrägung und Prägung' per inventory, entries per re 23; Firepixel 'Abgeflachte Kante und Relief'/'Abschrägung innen'...)."
+  },
+  {
+   "id": "05_emboss_inner_open",
+   "check": "emboss inner",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "open_testfile": "T08"
+    },
+    {
+     "select": "R"
+    }
+   ],
+   "orig": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Abschrägung und Prägung > Senkprägung"
+     }
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "fp": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Abgeflachte Kante und Relief > Prägung eingelassen"
+     }
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": {
+    "area": "popup"
+   },
+   "note": "Inventory 'Innere Prägung' mapped to 'Senkprägung' (orig) / 'Prägung eingelassen' (Firepixel) - unsure."
+  },
+  {
+   "id": "06_emboss_outer_open",
+   "check": "emboss outer",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "open_testfile": "T08"
+    },
+    {
+     "select": "R"
+    }
+   ],
+   "orig": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Abschrägung und Prägung > Reliefprägung"
+     }
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "fp": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Abgeflachte Kante und Relief > Prägung erhaben"
+     }
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": {
+    "area": "popup"
+   },
+   "note": "Inventory 'Äußere Prägung' mapped to 'Reliefprägung' (orig) / 'Prägung erhaben' (Firepixel) - unsure."
+  },
+  {
+   "id": "07_limits_result",
+   "check": "limits",
+   "method": {
+    "orig": "W",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T08"
+    },
+    {
+     "select": "R"
+    }
+   ],
+   "orig": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Abschrägung und Prägung > Abgeflachte Kante innen"
+     }
+    },
+    {
+     "set_field": {
+      "target": "fx_popup.width",
+      "value": "9999"
+     }
+    },
+    {
+     "record_ui": "dialog.fields"
+    },
+    {
+     "set_field": {
+      "target": "fx_popup.width",
+      "value": "-5"
+     }
+    },
+    {
+     "record_ui": "dialog.fields"
+    },
+    {
+     "set_field": {
+      "target": "fx_popup.contrast",
+      "value": "9999"
+     }
+    },
+    {
+     "record_ui": "dialog.fields"
+    },
+    {
+     "set_field": {
+      "target": "fx_popup.contrast",
+      "value": "-5"
+     }
+    },
+    {
+     "record_ui": "dialog.fields"
+    },
+    {
+     "set_field": {
+      "target": "fx_popup.softness",
+      "value": "9999"
+     }
+    },
+    {
+     "record_ui": "dialog.fields"
+    },
+    {
+     "set_field": {
+      "target": "fx_popup.softness",
+      "value": "-5"
+     }
+    },
+    {
+     "record_ui": "dialog.fields"
+    },
+    {
+     "set_field": {
+      "target": "fx_popup.angle",
+      "value": "9999"
+     }
+    },
+    {
+     "record_ui": "dialog.fields"
+    },
+    {
+     "set_field": {
+      "target": "fx_popup.angle",
+      "value": "-5"
+     }
+    },
+    {
+     "record_ui": "dialog.fields"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Abgeflachte Kante und Relief > Abschrägung innen"
+     }
+    },
+    {
+     "set_field": {
+      "target": "fx_popup.width",
+      "value": "9999"
+     }
+    },
+    {
+     "record_ui": "dialog.fields"
+    },
+    {
+     "set_field": {
+      "target": "fx_popup.width",
+      "value": "-5"
+     }
+    },
+    {
+     "record_ui": "dialog.fields"
+    },
+    {
+     "set_field": {
+      "target": "fx_popup.contrast",
+      "value": "9999"
+     }
+    },
+    {
+     "record_ui": "dialog.fields"
+    },
+    {
+     "set_field": {
+      "target": "fx_popup.contrast",
+      "value": "-5"
+     }
+    },
+    {
+     "record_ui": "dialog.fields"
+    },
+    {
+     "set_field": {
+      "target": "fx_popup.softness",
+      "value": "9999"
+     }
+    },
+    {
+     "record_ui": "dialog.fields"
+    },
+    {
+     "set_field": {
+      "target": "fx_popup.softness",
+      "value": "-5"
+     }
+    },
+    {
+     "record_ui": "dialog.fields"
+    },
+    {
+     "set_field": {
+      "target": "fx_popup.angle",
+      "value": "9999"
+     }
+    },
+    {
+     "record_ui": "dialog.fields"
+    },
+    {
+     "set_field": {
+      "target": "fx_popup.angle",
+      "value": "-5"
+     }
+    },
+    {
+     "record_ui": "dialog.fields"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ]
+  },
+  {
+   "id": "08_angle_pressed",
+   "check": "angle",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T08"
+    },
+    {
+     "select": "R"
+    }
+   ],
+   "orig": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Abschrägung und Prägung > Abgeflachte Kante innen"
+     }
+    },
+    {
+     "drag": {
+      "from": "fx_popup.angle_dial",
+      "by": [
+       0,
+       20
+      ]
+     }
+    }
+   ],
+   "fp": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Abgeflachte Kante und Relief > Abschrägung innen"
+     }
+    },
+    {
+     "drag": {
+      "from": "fx_popup.angle_dial",
+      "by": [
+       0,
+       20
+      ]
+     }
+    }
+   ],
+   "shot": {
+    "area": "popup"
+   }
+  },
+  {
+   "id": "09_live_pressed",
+   "check": "live",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T08"
+    },
+    {
+     "select": "R"
+    }
+   ],
+   "orig": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Abschrägung und Prägung > Abgeflachte Kante innen"
+     }
+    },
+    {
+     "open": "fx_popup.width_slider"
+    },
+    {
+     "drag_popup_slider": {
+      "to_fraction": 0.6,
+      "hold": true
+     }
+    }
+   ],
+   "fp": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Abgeflachte Kante und Relief > Abschrägung innen"
+     }
+    },
+    {
+     "open": "fx_popup.width_slider"
+    },
+    {
+     "drag_popup_slider": {
+      "to_fraction": 0.6,
+      "hold": true
+     }
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "note": "Screenshot while the slider is held."
+  },
+  {
+   "id": "10_color_fill_open",
+   "check": "color fill",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "open_testfile": "T08"
+    },
+    {
+     "select": "R"
+    }
+   ],
+   "orig": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Farbe anpassen > Farbfüllung"
+     }
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "fp": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Farbe anpassen > Farbfüllung"
+     }
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": {
+    "area": "popup"
+   }
+  },
+  {
+   "id": "11_ps_effects_open",
+   "check": "ps effects",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "open_testfile": "T11:par.psd"
+    },
+    {
+     "select": {
+      "index": 0
+     }
+    },
+    {
+     "click": "inspector.fx_row_info.0"
+    }
+   ],
+   "shot": {
+    "area": "popup"
+   },
+   "note": "Needs a PSD with layer effects; T11 par.psd (2 layers + text) may have none -> step may be empty (unsure)."
+  },
+  {
+   "id": "11_ps_effects_list_normal",
+   "check": "ps effects",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "open_testfile": "T11:par.psd"
+    },
+    {
+     "select": {
+      "index": 0
+     }
+    }
+   ],
+   "shot": {
+    "area": "inspector"
+   },
+   "note": "See previous step."
+  },
+  {
+   "id": "12_result_ref_result",
+   "check": "result ref",
+   "method": {
+    "orig": "E (RE-FX)",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T08"
+    },
+    {
+     "select": "R"
+    },
+    {
+     "jsf": "fw.getDocumentDOM().applyEffects({category:'UNUSED', effects:[{EffectMoaID:'{7fe61102-6ce2-11d1-8c76000502701850}', BevelType:0, BevelWidth:10, BevelContrast:75, MaskSoftness:3, AngleSoftness:135}], name:'UNUSED'})"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "note": "Reference pixels from RE-FX; parameter keys partly unsure (AngleSoftness)."
+  },
+  {
+   "id": "13_text_target_result",
+   "check": "text target",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T08"
+    },
+    {
+     "select": "TX"
+    }
+   ],
+   "orig": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Abschrägung und Prägung > Abgeflachte Kante innen"
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "fp": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Abgeflachte Kante und Relief > Abschrägung innen"
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "14_stack_result",
+   "check": "stack",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T08"
+    },
+    {
+     "select": "R"
+    }
+   ],
+   "orig": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Abschrägung und Prägung > Abgeflachte Kante innen"
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Schatten und Glühen > Schlagschatten"
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "fp": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Abgeflachte Kante und Relief > Abschrägung innen"
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Schatten und Glühen > Schlagschatten"
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "15_remember_result",
+   "check": "remember",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T08"
+    },
+    {
+     "select": "R"
+    }
+   ],
+   "orig": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Abschrägung und Prägung > Abgeflachte Kante innen"
+     }
+    },
+    {
+     "set_field": {
+      "target": "fx_popup.width",
+      "value": "20"
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "select": "EL"
+    },
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Abschrägung und Prägung > Abgeflachte Kante innen"
+     }
+    },
+    {
+     "record_ui": "dialog.fields"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Abgeflachte Kante und Relief > Abschrägung innen"
+     }
+    },
+    {
+     "set_field": {
+      "target": "fx_popup.width",
+      "value": "20"
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "select": "EL"
+    },
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Abgeflachte Kante und Relief > Abschrägung innen"
+     }
+    },
+    {
+     "record_ui": "dialog.fields"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ]
+  },
+  {
+   "id": "16_enter_esc_result",
+   "check": "enter esc",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T08"
+    },
+    {
+     "select": "R"
+    }
+   ],
+   "orig": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Abschrägung und Prägung > Abgeflachte Kante innen"
+     }
+    },
+    {
+     "set_field": {
+      "target": "fx_popup.width",
+      "value": "12"
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "click": "inspector.fx_row_info.0"
+    },
+    {
+     "set_field": {
+      "target": "fx_popup.width",
+      "value": "30"
+     }
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Abgeflachte Kante und Relief > Abschrägung innen"
+     }
+    },
+    {
+     "set_field": {
+      "target": "fx_popup.width",
+      "value": "12"
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "click": "inspector.fx_row_info.0"
+    },
+    {
+     "set_field": {
+      "target": "fx_popup.width",
+      "value": "30"
+     }
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ]
+  },
+  {
+   "id": "17_bounds_normal",
+   "check": "bounds",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T08"
+    },
+    {
+     "select": "R"
+    }
+   ],
+   "orig": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Abschrägung und Prägung > Abgefl. Kante außen"
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "record_ui": "inspector.fields"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Abgeflachte Kante und Relief > Abschrägung außen"
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "record_ui": "inspector.fields"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ]
+  },
+  {
+   "id": "18_undo_result",
+   "check": "undo",
+   "method": {
+    "orig": "J",
+    "fp": "H"
+   },
+   "both": [
+    {
+     "open_testfile": "T08"
+    },
+    {
+     "select": "R"
+    }
+   ],
+   "orig": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Abschrägung und Prägung > Abgeflachte Kante innen"
+     }
+    },
+    {
+     "set_field": {
+      "target": "fx_popup.width",
+      "value": "12"
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "record_ui": "history.names"
+    }
+   ],
+   "fp": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Abgeflachte Kante und Relief > Abschrägung innen"
+     }
+    },
+    {
+     "set_field": {
+      "target": "fx_popup.width",
+      "value": "12"
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "record_ui": "history.names"
+    }
+   ]
+  }
+ ]
+}
