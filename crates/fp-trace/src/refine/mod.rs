@@ -20,7 +20,7 @@
 
 mod fit;
 mod outline;
-mod palette;
+pub(crate) mod palette;
 mod shapes;
 mod symmetry;
 

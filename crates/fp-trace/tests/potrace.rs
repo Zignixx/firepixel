@@ -354,3 +354,23 @@ fn compare_engines_on_line_drawing() {
     }
     assert!(rows[1].1 < rows[0].1, "Konturen-Verfahren mit weniger Knoten: {} gegen {}", rows[1].1, rows[0].1);
 }
+
+/// CT-1a (FIX-C): Logo-Vorgabe mit „Glatte Kurven“ an einem blauen Quadrat mit gelbem,
+/// kantengeglättetem Kreis: die Mischtöne am Kreisrand bilden keine eigenen Farbebenen – zwei
+/// Farben, wenige Knoten (vorher 9 Farben/477 Punkte), Kreis glatt auf dem Radius.
+#[test]
+fn logo_preset_snaps_antialias_colors() {
+    const YELLOW: [u8; 4] = [250, 220, 30, 255];
+    let img = supersample(IRect::from_xywh(0, 0, 100, 100), |x, y| if (x - 50.0).hypot(y - 50.0) <= 30.0 { YELLOW } else { BLUE });
+    let o = TraceOptions { engine: Engine::Potrace, ..TraceOptions::from_preset(Preset::Logo) };
+    let res = trace(&img, &o).expect("nachzeichnen");
+    assert_eq!(res.paths.len(), 2, "zwei Farben: {:?}", res.paths.iter().map(|p| p.color).collect::<Vec<_>>());
+    let nodes: usize = res.paths.iter().flat_map(|p| &p.contours).map(|c| c.nodes.len()).sum();
+    assert!(nodes <= 16, "{nodes} Knoten");
+    let circle = res.paths.iter().find(|p| p.color.r > 200).expect("gelbe Ebene");
+    for p in sample(&circle.contours[0], 16) {
+        let r = ((p.x - 50.0) as f64).hypot((p.y - 50.0) as f64);
+        assert!((r - 30.0).abs() < 1.0, "Radius {r}");
+    }
+    assert!(color_match(&img, &res) > 97.0, "Übereinstimmung (Kantenpixel zählen als Abweichung) {}", color_match(&img, &res));
+}

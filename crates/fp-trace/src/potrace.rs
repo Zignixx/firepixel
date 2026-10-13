@@ -155,7 +155,11 @@ pub(crate) fn trace(img: &RgbaImage, o: &TraceOptions, map: &Mapper, cancel: &At
             }
         }
         ColorMode::Color => {
-            let (ranks, palette) = color_ranks(&mut px, &transparent, o.colors as usize);
+            // Mit „Farben einrasten“ (Vorgabe Logo) dieselbe kantenbewusste Palette wie das
+            // Flächenverfahren: Mischtöne der Kantenglättung werden keiner eigenen Farbebene
+            // zugeordnet (CT-1a: blaues Quadrat mit gelbem Kreis ergab 9 Farben/477 Punkte mit
+            // welligem Kreisrand statt 2 Farben)
+            let (ranks, palette) = if o.refine.enabled && o.refine.snap_colors { snapped_ranks(img, o) } else { color_ranks(&mut px, &transparent, o.colors as usize) };
             check(cancel)?;
             let total = palette.len().max(1);
             for (layer, &(rgb, pixels)) in palette.iter().enumerate() {
@@ -171,6 +175,28 @@ pub(crate) fn trace(img: &RgbaImage, o: &TraceOptions, map: &Mapper, cancel: &At
         }
     }
     Ok(out)
+}
+
+/// Rang je Pixel und Palette nach Fläche aus der eingerasteten Palette des Flächenverfahrens
+/// (`refine::palette`, `snap_colors`); Aufbau wie [`color_ranks`].
+fn snapped_ranks(img: &RgbaImage, o: &TraceOptions) -> (Vec<u16>, Vec<([u8; 3], usize)>) {
+    let labels = crate::refine::palette::build(img, o);
+    let none = crate::refine::NONE;
+    let mut area = vec![0usize; labels.palette.len()];
+    for &l in &labels.label {
+        if l != none && (l as usize) < area.len() {
+            area[l as usize] += 1;
+        }
+    }
+    let mut order: Vec<usize> = (0..labels.palette.len()).filter(|&i| area[i] > 0).collect();
+    order.sort_by(|&a, &b| area[b].cmp(&area[a]).then(labels.palette[a].cmp(&labels.palette[b])));
+    let mut rank = vec![u16::MAX; labels.palette.len()];
+    for (r, &i) in order.iter().enumerate() {
+        rank[i] = r.min(u16::MAX as usize - 1) as u16;
+    }
+    let ranks = labels.label.iter().map(|&l| if l == none { u16::MAX } else { rank.get(l as usize).copied().unwrap_or(u16::MAX) }).collect();
+    let palette = order.iter().map(|&i| (labels.palette[i], area[i])).collect();
+    (ranks, palette)
 }
 
 /// Farbreduktion (nur wenn nötig) und Rang jeder Farbe nach Fläche (0 = größte, zuunterst).
