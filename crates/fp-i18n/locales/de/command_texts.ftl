@@ -562,3 +562,22 @@ cmdtext-aktive-woerterbuecher-liste-der-sprachen = Aktive Wörterbücher (Liste 
 cmdtext-datei-des-persoenlichen-woerterbuchs-lee-60ccfb = Datei des persönlichen Wörterbuchs (leer: in den Voreinstellungen)
 cmdtext-internet-und-dateiadressen-ueberspringen = Internet- und Dateiadressen überspringen
 cmdtext-doppelte-woerter-melden = Doppelte Wörter melden
+# CMD-TXT: fehlende Parameterbeschreibungen (file.open, element.setPattern, Bitmap-Auswahl …)
+cmdtext-als-unbenannt-oeffnen-ohne-dateinamen-sp-dab760 = als „Unbenannt“ öffnen (ohne Dateinamen; Speichern fragt nach einem Namen)
+cmdtext-weitere-dateien-pfad-als-animation-oeffn-98a4d2 = weitere Dateien [Pfad, …]: „Als Animation öffnen“, je Datei ein Status nach dem ersten
+cmdtext-ordner-fuer-die-bilder-ohne-nur-der-code = Ordner für die Bilder (ohne: nur der Code)
+cmdtext-musterbild-png-jpeg-gif-ohne-datei-zu-na-354ba8 = Musterbild (PNG, JPEG, GIF …); ohne: Datei zu „name“ aus den Musterordnern
+cmdtext-texturbild-helligkeit-maske-ohne-datei-z-5a73b6 = Texturbild (Helligkeit = Maske); ohne: Datei zu „name“ aus den Texturordnern, ohne beides: Textur entfernen
+cmdtext-leeres-symbol-in-der-bibliothek-anlegen-4e22e1 = leeres Symbol in der Bibliothek anlegen und seine Symbolbearbeitung öffnen (Menü wie im Original)
+cmdtext-hilfslinien-fuer-9-slice-skalierung-akti-4814f4 = Hilfslinien für 9-Slice-Skalierung aktivieren (mit edit)
+cmdtext-leere-schaltflaeche-in-der-bibliothek-an-2ab12a = leere Schaltfläche in der Bibliothek anlegen und ihre Symbolbearbeitung öffnen (Menü wie im Original)
+cmdtext-name-vorgabe-standard-vorhandener-name-w-17641f = Name (Vorgabe „Standard“; vorhandener Name wird ersetzt bzw. verknüpft)
+cmdtext-verknuepfung-mit-der-vorhandenen-gleichn-a44dd6 = Verknüpfung mit der vorhandenen gleichnamigen Auswahl (Vorgabe ersetzen)
+cmdtext-zieldokument-id-gleiche-groesse-vorgabe-aktives = Zieldokument (ID, gleiche Größe; Vorgabe: aktives)
+cmdtext-geladene-maske-vorher-umkehren = geladene Maske vorher umkehren
+cmdtext-quelldokument-id-gleiche-groesse-vorgabe-aktives = Quelldokument (ID, gleiche Größe; Vorgabe: aktives)
+cmdtext-dokument-id-gleiche-groesse-vorgabe-aktives = Dokument (ID, gleiche Größe; Vorgabe: aktives)
+cmdtext-ausgewaehlten-bereich-fuellen-aus-farbbe-9a8595 = ausgewählten Bereich füllen (aus: Farbbereich am Anfangspunkt nach Toleranz)
+cmdtext-farbtoleranz-nur-ohne-ausgewaehlten-bere-764ef7 = Farbtoleranz (nur ohne „ausgewählten Bereich füllen“)
+cmdtext-musterfuellung-nach-name-datei-aus-den-m-2859b3 = Musterfüllung nach Name (Datei aus den Musterordnern)
+cmdtext-index-vorgabe-aktueller = Index (Vorgabe: aktueller)

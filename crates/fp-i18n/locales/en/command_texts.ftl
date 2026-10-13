@@ -562,3 +562,22 @@ cmdtext-aktive-woerterbuecher-liste-der-sprachen = Active dictionaries (list of 
 cmdtext-datei-des-persoenlichen-woerterbuchs-lee-60ccfb = Personal dictionary file (empty: stored in the preferences)
 cmdtext-internet-und-dateiadressen-ueberspringen = Skip Internet and file addresses
 cmdtext-doppelte-woerter-melden = Report duplicate words
+# CMD-TXT: missing parameter descriptions (file.open, element.setPattern, bitmap selection …)
+cmdtext-als-unbenannt-oeffnen-ohne-dateinamen-sp-dab760 = open as “Untitled” (without a file name; saving asks for a name)
+cmdtext-weitere-dateien-pfad-als-animation-oeffn-98a4d2 = further files [path, …]: “Open as Animation”, one state per file after the first
+cmdtext-ordner-fuer-die-bilder-ohne-nur-der-code = Folder for the images (without: code only)
+cmdtext-musterbild-png-jpeg-gif-ohne-datei-zu-na-354ba8 = Pattern image (PNG, JPEG, GIF …); without: file for “name” from the pattern folders
+cmdtext-texturbild-helligkeit-maske-ohne-datei-z-5a73b6 = Texture image (brightness = mask); without: file for “name” from the texture folders, without both: remove texture
+cmdtext-leeres-symbol-in-der-bibliothek-anlegen-4e22e1 = create an empty symbol in the library and open it in symbol editing (menu as in the original)
+cmdtext-hilfslinien-fuer-9-slice-skalierung-akti-4814f4 = enable 9-slice scaling guides (with edit)
+cmdtext-leere-schaltflaeche-in-der-bibliothek-an-2ab12a = create an empty button in the library and open it in symbol editing (menu as in the original)
+cmdtext-name-vorgabe-standard-vorhandener-name-w-17641f = Name (default “Default”; an existing name is replaced or combined)
+cmdtext-verknuepfung-mit-der-vorhandenen-gleichn-a44dd6 = Operation with the existing selection of the same name (default: replace)
+cmdtext-zieldokument-id-gleiche-groesse-vorgabe-aktives = Target document (ID, same size; default: active)
+cmdtext-geladene-maske-vorher-umkehren = invert the loaded mask first
+cmdtext-quelldokument-id-gleiche-groesse-vorgabe-aktives = Source document (ID, same size; default: active)
+cmdtext-dokument-id-gleiche-groesse-vorgabe-aktives = Document (ID, same size; default: active)
+cmdtext-ausgewaehlten-bereich-fuellen-aus-farbbe-9a8595 = fill the selected area (off: color range at the start point by tolerance)
+cmdtext-farbtoleranz-nur-ohne-ausgewaehlten-bere-764ef7 = Color tolerance (only without “fill the selected area”)
+cmdtext-musterfuellung-nach-name-datei-aus-den-m-2859b3 = Pattern fill by name (file from the pattern folders)
+cmdtext-index-vorgabe-aktueller = Index (default: current)
