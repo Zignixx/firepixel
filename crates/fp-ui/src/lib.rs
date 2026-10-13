@@ -405,8 +405,63 @@ pub fn native_options() -> eframe::NativeOptions {
         persistence_path: fp_i18n::profile::roaming_dir().map(|d| d.join("data").join("app.ron")),
         // maximiert erst nach dem Erscheinen (sonst blitzt das Fenster beim Start zweimal auf)
         window_builder: Some(Box::new(start_window::strip_maximized)),
+        wgpu_options: wgpu_options(),
         ..Default::default()
     }
+}
+
+/// Grafik-Einrichtung (START-1): wgpu tastet sonst beim Start Vulkan, DX12 und OpenGL ab; auf
+/// Rechnern ohne Vulkan/GL kostet das ≈ 35 ms. Unter Windows richtet Firepixel deshalb zuerst DX12
+/// allein ein (Instanz, Adapter – auch WARP, der Software-Rasterer –, Gerät, mit denselben
+/// Gerätewünschen wie egui) und übergibt das fertig an eframe. Klappt das nicht, bleibt alles wie
+/// bisher (alle Backends, Rückfall auf Vulkan/GL). `WGPU_BACKEND` hat Vorrang;
+/// `FP_WGPU_ALL_BACKENDS=1` schaltet die Vorauswahl ab.
+fn wgpu_options() -> eframe::egui_wgpu::WgpuConfiguration {
+    #[allow(unused_mut)]
+    let mut cfg = eframe::egui_wgpu::WgpuConfiguration::default();
+    #[cfg(windows)]
+    {
+        use eframe::egui_wgpu::{wgpu, WgpuSetup};
+        let skip = std::env::var_os("WGPU_BACKEND").is_some() || std::env::var_os("FP_WGPU_ALL_BACKENDS").is_some_and(|v| v != "0" && !v.is_empty());
+        if !skip
+            && let WgpuSetup::CreateNew(create_new) = &cfg.wgpu_setup
+            && create_new.instance_descriptor.backends.contains(wgpu::Backends::DX12)
+            && let Some(existing) = fp_i18n::startup::time("wgpu: DX12 setup", || dx12_setup(create_new))
+        {
+            cfg.wgpu_setup = WgpuSetup::Existing(existing);
+        }
+    }
+    cfg
+}
+
+/// Ein Future einmal abfragen (wgpu liefert nativ sofort); `None`, wenn es noch nicht fertig ist.
+#[cfg(windows)]
+fn poll_once<F: std::future::Future>(fut: F) -> Option<F::Output> {
+    let mut fut = std::pin::pin!(fut);
+    let mut cx = std::task::Context::from_waker(std::task::Waker::noop());
+    match fut.as_mut().poll(&mut cx) {
+        std::task::Poll::Ready(v) => Some(v),
+        std::task::Poll::Pending => None,
+    }
+}
+
+/// DX12 allein einrichten wie egui-wgpu (Energievorgabe, Gerätewünsche aus `create_new`).
+#[cfg(windows)]
+fn dx12_setup(create_new: &eframe::egui_wgpu::WgpuSetupCreateNew) -> Option<eframe::egui_wgpu::WgpuSetupExisting> {
+    use eframe::egui_wgpu::wgpu;
+    let base = &create_new.instance_descriptor;
+    let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
+        backends: wgpu::Backends::DX12,
+        flags: base.flags,
+        backend_options: base.backend_options.clone(),
+        memory_budget_thresholds: base.memory_budget_thresholds,
+        display: None,
+    });
+    let options = wgpu::RequestAdapterOptions { power_preference: create_new.power_preference, force_fallback_adapter: false, compatible_surface: None, apply_limit_buckets: false };
+    let adapter = poll_once(instance.request_adapter(&options))?.ok()?;
+    let desc = (create_new.device_descriptor)(&adapter);
+    let (device, queue) = poll_once(adapter.request_device(&desc))?.ok()?;
+    Some(eframe::egui_wgpu::WgpuSetupExisting { instance, adapter, device, queue })
 }
 
 /// Hilfetext der Kommandozeile (`firepixel --help`) in der aktuellen Sprache.
