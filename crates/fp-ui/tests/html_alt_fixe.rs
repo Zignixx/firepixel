@@ -64,3 +64,38 @@ fn without_default_alt_no_extension_is_written() {
     let nodes = fp_fwpng::write::write_export(&e);
     assert!(!nodes.iter().any(|n| n.key == fp_fwpng::write::SPRITE_EXT));
 }
+
+/// CT-3 (niedrig): *Datei ▸ HTML aktualisieren* mit einer Textdatei meldete den Fehler nur in der
+/// Statuszeile mit dem Vorspann „ungültige Parameter für „file.updateHtml“: …“. Jetzt: Meldung im
+/// Dialog, ohne technischen Vorspann; die Datei bleibt unverändert. Wiederholt (§4b): eine Meldung.
+#[test]
+fn update_html_with_a_text_file_shows_a_plain_message() {
+    let mut st = state();
+    let dir = tmp("upd");
+    st.session.execute("file.new", json!({"width": 40, "height": 30})).unwrap();
+    let txt = dir.join("notiz.txt");
+    std::fs::write(&txt, "nur Text").unwrap();
+    st.file_override = Some(fp_ui::files::FilePickOverride { open: vec![txt.clone()], save: None });
+    let ctx = egui::Context::default();
+    for _ in 0..3 {
+        st.dialogs.message = None;
+        st.run("file.updateHtml", json!({}));
+        st.process_actions(&ctx);
+        let (title, msg) = st.dialogs.message.clone().expect("Meldung im Dialog");
+        assert_eq!(title, "HTML aktualisieren");
+        assert!(msg.contains("keine HTML-Seite"), "{msg}");
+        assert!(!msg.contains("Parameter") && !msg.contains("file.updateHtml"), "ohne technischen Vorspann: {msg}");
+        assert!(!st.status.as_ref().is_some_and(|(m, _)| m.contains("file.updateHtml")), "nicht in der Statuszeile");
+    }
+    assert_eq!(std::fs::read_to_string(&txt).unwrap(), "nur Text");
+    // Englisch
+    fp_i18n::set_language("en");
+    st.dialogs.message = None;
+    st.run("file.updateHtml", json!({}));
+    st.process_actions(&ctx);
+    let (title, msg) = st.dialogs.message.clone().expect("message");
+    fp_i18n::set_language("de");
+    assert_eq!(title, "Update HTML");
+    assert!(msg.contains("is not an HTML page") && !msg.contains("invalid parameters"), "{msg}");
+    let _ = std::fs::remove_dir_all(&dir);
+}

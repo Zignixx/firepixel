@@ -786,7 +786,8 @@ pub(super) fn register(r: &mut CommandRegistry) {
                     if !f.path.contains('/') && f.path.eq_ignore_ascii_case(&format!("{base}.{ext}")) {
                         // nur die Firepixel-Tabelle austauschen, der übrige Inhalt der Seite bleibt
                         let new = String::from_utf8_lossy(&f.bytes).into_owned();
-                        let merged = replace_html_table(&old, &new).ok_or_else(|| bad("file.updateHtml", fp_i18n::tr!("err-update-html-no-table", path = path.display().to_string())))?;
+                        // fachlicher Fehler ohne Vorspann „ungültige Parameter …“ (CT-3): die Meldung steht für sich
+                        let merged = replace_html_table(&old, &new).ok_or_else(|| EngineError::Failed(fp_i18n::tr!("err-update-html-no-table", path = path.display().to_string())))?;
                         f.bytes = merged.into_bytes();
                         f.path = html_name.clone();
                     }

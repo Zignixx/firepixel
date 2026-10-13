@@ -180,10 +180,10 @@ fn run_command(st: &mut AppState, ctx: &egui::Context, name: &str, params: Value
             return;
         }
         "file.updateHtml" if !has_param(&params, "path") => {
-            let n = name.to_string();
             crate::files::pick(st, crate::files::DialogKind::UpdateHtml, "", move |st, r| {
                 if let Some(p) = r.into_iter().next() {
-                    st.run(&n, json!({ "path": p.to_string_lossy() }));
+                    // Erfolg in der Statuszeile, Fehler (keine HTML-Seite …) als Meldung im Dialog
+                    crate::dialogs::menu_dialogs::update_html(st, &p.to_string_lossy());
                 }
             });
             return;
