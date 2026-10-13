@@ -322,6 +322,8 @@ fn stamp_live_preview_equals_result() {
     let (n, bb) = changed(&img, &base);
     assert!((1150..=1400).contains(&n), "Kopie {n} (Original: zwei Züge 2 528)");
     assert!(bb.0 >= 320 && bb.2 <= 402, "{bb:?}");
+    // 05/03: Zug 330 → 390 reicht wie im Original bis 322–399 (vorher endete er 2 px früher)
+    assert_eq!((bb.0, bb.2), (322, 399), "Zuganfang/-ende {bb:?}");
     // Vorschau = Ergebnis (geänderte Pixel der Vorschau stehen so im Bild)
     let mut checked = 0;
     for t in preview.tiles.iter() {

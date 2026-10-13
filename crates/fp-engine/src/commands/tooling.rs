@@ -1035,7 +1035,15 @@ fn smudge(img: &mut RgbaImage, pts: &[Point], prm: &Retouch, sel: Option<&fp_ras
 fn retouch(img: &mut RgbaImage, pts: &[Point], prm: &Retouch, sel: Option<&fp_raster::Mask>) {
     let dab = Dab::new(prm.size, prm.round, prm.soft * 100.0);
     let step = (prm.size * prm.spacing / 100.0 * spacing_gain(&prm.mode)).max(1.0);
-    let stamps = dab_points(pts, step);
+    let mut stamps = dab_points(pts, step);
+    // Stempel: der Zug reicht bis zum Endpunkt (letzter Abdruck dort, nicht einen Abstand davor;
+    // gemessen PAR 05/03: Zug 330 → 390 endet im Original 2 px weiter als ohne End-Abdruck)
+    if prm.mode == "stamp"
+        && let (Some(&end), Some(&last)) = (pts.last(), stamps.last())
+        && (end.x - last.x).hypot(end.y - last.y) > 0.01
+    {
+        stamps.push(end);
+    }
     let reach = stamps.iter().fold(fp_geom::IRect::default(), |r, s| r.union(&dab.bounds(*s)));
     let orig = img.bounds();
     let grows = prm.mode == "blur";
