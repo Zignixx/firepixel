@@ -451,11 +451,16 @@ pub(super) fn register(r: &mut CommandRegistry) {
             .opt_default("fingerPaint", ParamKind::Bool, json!(false), "Verwischen: Farbe verwischen (Farbe `color` einmischen)")
             .opt("color", ParamKind::Color, "Verwischen: Farbe für „Farbe verwischen“ (Vorgabe: Füllfarbe)")
             .opt_default("wholeDocument", ParamKind::Bool, json!(false), "Verwischen: Gesamtes Dokument (alle sichtbaren Objekte und die Leinwand aufnehmen)")
+            .opt("replaceStrength", ParamKind::Integer { min: Some(0), max: Some(255) }, "Farbe ersetzen: Stärke 0..255 (Vorgabe 200)")
+            .opt("fromImage", ParamKind::Bool, "Farbe ersetzen: Von-Farbe aus der Grafik unter dem Startpunkt")
             .run(|s, p| {
                 let mode = p.str("mode")?;
                 let pts = p.points("points")?;
                 if pts.is_empty() {
                     return Err(bad(p, "err-param-no-points"));
+                }
+                if mode == "replaceColor" || mode == "redEye" {
+                    return replace_or_red_eye(s, p, &mode, &pts);
                 }
                 let prm = Retouch {
                     mode: mode.clone(),
@@ -515,11 +520,98 @@ pub(super) fn register(r: &mut CommandRegistry) {
                     let out = CommandOutput::doc();
                     Ok(match label {
                         Some(k) => out.labeled(fp_i18n::t(k)),
+                        None if mode == "stamp" => out.labeled(fp_i18n::t("msg-step-stamp")),
                         None => out,
                     })
                 })
             }),
     );
+}
+
+/// Stempel ohne Befehl rechnen (Live-Vorschau des Werkzeugs, PAR 05/04): dieselbe Rechnung wie
+/// `bitmap.retouch` mit `mode = "stamp"`.
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn stamp_image(img: &mut RgbaImage, pts: &[Point], size: f32, round: bool, soft: f32, strength: f32, spacing: f32, offset: (f32, f32), sel: Option<&fp_raster::Mask>) {
+    let prm = Retouch {
+        mode: "stamp".to_string(),
+        size,
+        round,
+        soft: soft.clamp(0.0, 1.0),
+        strength: (strength.clamp(0.0, 100.0) / 100.0),
+        range: 1,
+        spacing,
+        offset,
+        from: Rgba8::new(0, 255, 0, 255),
+        to: Rgba8::new(255, 0, 0, 255),
+        colorize: false,
+        tolerance: 50.0,
+        finger: None,
+    };
+    retouch(img, pts, &prm, sel);
+}
+
+/// `bitmap.retouch` für „Farbe ersetzen“ (Strich) und „Rote Augen entfernen“ (Rechteck aus erstem
+/// und letztem Punkt), gemessen am Original (`retouch_px`). Verlaufsschritt „Farbe ersetzen“ bzw.
+/// „Rote Augen entfernen“; ein Rote-Augen-Rechteck ohne Wirkung legt wie im Original „Bitmap
+/// bearbeiten“ an.
+fn replace_or_red_eye(s: &mut crate::session::Session, p: &Params, mode: &str, pts: &[Point]) -> Result<CommandOutput> {
+    use super::retouch_px::{red_eye, replace_color, RedEyeParams, ReplaceParams};
+    let size = p.f64_or("size", 13.0)? as f32;
+    let round = p.bool_or("round", true)?;
+    let from = p.opt_color("from")?.map(|c| c.to_rgba8()).unwrap_or(Rgba8::new(0, 255, 0, 255));
+    let to = p.opt_color("to")?.map(|c| c.to_rgba8()).unwrap_or(Rgba8::new(255, 0, 0, 255));
+    let colorize = p.bool_or("colorize", false)?;
+    let tol = p.i64_or("tolerance", if mode == "redEye" { 50 } else { 32 })?.clamp(0, 255) as f32;
+    let strength = p.f64_or("strength", 50.0)?.clamp(0.0, 100.0) as f32;
+    let rstrength = p.i64_or("replaceStrength", 200)?.clamp(0, 255) as f32;
+    let from_image = p.bool_or("fromImage", false)?;
+    let prefs = s.prefs.clone();
+    let mut changed = false;
+    with_doc(s, |d| {
+        let (path, _) = bitmap_for(d, pts.first().copied(), &BasicGeometry).ok_or_else(|| sel_err("err-sel-no-bitmap-under-stroke"))?;
+        let sel = d.selection.pixels.clone().filter(|_| d.selection.has_pixels());
+        let doc = Arc::make_mut(&mut d.doc);
+        docops::edit_at(doc, &path, |e| {
+            if let ElementKind::Bitmap(b) = &mut e.kind
+                && let Some(mut img) = bitmap_image(b)
+            {
+                changed = if mode == "redEye" {
+                    let (a, z) = (pts[0], pts[pts.len() - 1]);
+                    let (l, r) = (a.x.min(z.x).round() as i32, a.x.max(z.x).round() as i32);
+                    let (t, bt) = (a.y.min(z.y).round() as i32, a.y.max(z.y).round() as i32);
+                    let prm = RedEyeParams {
+                        rect: fp_geom::IRect::new(l, t, r, bt),
+                        tolerance: tol,
+                        strength,
+                        min_hue: prefs.get_real("RedEyeRemovalToolMinHueAngle", 300.0) as f32,
+                        max_hue: prefs.get_real("RedEyeRemovalToolMaxHueAngle", 5.0) as f32,
+                        min_sat: prefs.get_int("RedEyeRemovalToolMinSaturationPercentage", 50) as f32 / 100.0,
+                        min_lum: prefs.get_int("RedEyeRemovalToolMinLuminancePercentage", 25) as f32 / 100.0,
+                    };
+                    red_eye(&mut img, &prm, sel.as_ref())
+                } else {
+                    let start = pts[0];
+                    let from = if from_image {
+                        img.get(start.x.floor() as i32, start.y.floor() as i32).map(|q| Rgba8::new(q[0], q[1], q[2], 255)).unwrap_or(from)
+                    } else {
+                        from
+                    };
+                    let prm = ReplaceParams { size, round, from, to, tolerance: tol, strength: rstrength, colorize };
+                    replace_color(&mut img, pts, &prm, sel.as_ref())
+                };
+                if changed {
+                    set_bitmap_image(b, &img);
+                }
+            }
+        });
+        Ok(())
+    })?;
+    let out = CommandOutput::doc();
+    Ok(match mode {
+        "redEye" if !changed => out.labeled(fp_i18n::t("msg-step-edit-bitmap")),
+        "redEye" => out.labeled(fp_i18n::t("msg-step-red-eye")),
+        _ => out.labeled(fp_i18n::t("msg-step-replace-color")),
+    })
 }
 
 /// 9-Slice eines Elements (Gruppen rekursiv; Pfade punktweise, Rechteck-Grundformen behalten die

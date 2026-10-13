@@ -177,3 +177,163 @@ fn bucket_tolerance_and_edges() {
     let (img, _) = fill(0, 160.5, 120.5, 32).expect("hart");
     assert_eq!(changed(&img, &base).0, 5323);
 }
+
+// ------------------------------------------------------------------ 05 Stempel, Farbe ersetzen, Rote Augen
+
+fn set_pref(s: &mut Session, k: &str, v: fp_engine::prefs::PrefValue) {
+    s.prefs.set(k, v);
+}
+
+fn replace_setup(s: &mut Session, from: &str, to: &str, tol: i64, colorize: bool, from_image: bool) {
+    use fp_engine::prefs::PrefValue::{Bool, Int, Str};
+    set_pref(s, "ReplaceColorToolSrcColor", Str(from.into()));
+    set_pref(s, "ReplaceColorToolDestColor", Str(to.into()));
+    set_pref(s, "ReplaceColorToolTolerance", Int(tol));
+    set_pref(s, "ReplaceColorToolStrength", Int(200));
+    set_pref(s, "ReplaceColorToolColorize", Bool(colorize));
+    set_pref(s, "ReplaceColorToolMode", Bool(from_image));
+    s.set_tool(ToolId::ReplaceColor).expect("Farbe ersetzen");
+}
+
+/// 05/07: Rot → Blau ersetzt nur den roten Streifen, 13 Zeilen, Ergebnis #0000FE (Kolorieren
+/// #0000FF); „Von: Grafik“ ab Start 370 – Hash wie das Original. Schritt „Farbe ersetzen“, Rückgängig.
+#[test]
+fn replace_color_red_to_blue_matches_original() {
+    for (colorize, from_image, start, px, hash) in [
+        (false, false, 290.0, 520, "e6c50102d4dc11ad"),
+        (true, false, 290.0, 520, "d9d4838d8c7653ad"),
+        (false, true, 370.0, 452, "0f8fa34837df8c6e"),
+    ] {
+        let Some(mut s) = open_par("p57_t02.fw.png") else { return };
+        let base = render(&s);
+        replace_setup(&mut s, if from_image { "#00FF00" } else { "#FF0000" }, "#0000FF", 32, colorize, from_image);
+        drag(&mut s, (start, 120.0), (510.0, 120.0));
+        assert_eq!(undo_label(&s), "Farbe ersetzen");
+        let img = render(&s);
+        save_png(&format!("r07_{}.png", if colorize { "colorize" } else if from_image { "from_image" } else { "red_to_blue" }), &img);
+        let (n, bb) = changed(&img, &base);
+        assert_eq!(n, px, "Pixel {colorize}/{from_image}");
+        assert_eq!(bb.1, 114);
+        assert_eq!(bb.3, 127);
+        assert_eq!(sha16(&img), hash, "Hash {colorize}/{from_image}");
+        ex(&mut s, "edit.undo", json!({}));
+        assert_eq!(sha16(&render(&s)), sha16(&base), "Rückgängig");
+    }
+}
+
+/// 05/08: Toleranz wirkt abgestuft (Von #8E8881, Zug 60 → 270): 0 → wenige Pixel, 32 → ≈ 2 249,
+/// 100 → ≈ 2 867 (Näherung ± 12 %).
+#[test]
+fn replace_color_tolerance_is_graded() {
+    let mut last = 0;
+    for (tol, want) in [(0, 20), (32, 2249), (100, 2867)] {
+        let Some(mut s) = open_par("p57_t02.fw.png") else { return };
+        let base = render(&s);
+        replace_setup(&mut s, "#8E8881", "#0000FF", tol, false, false);
+        drag(&mut s, (60.0, 120.0), (270.0, 120.0));
+        let img = render(&s);
+        save_png(&format!("r08_tol{tol}.png"), &img);
+        let (n, _) = changed(&img, &base);
+        if tol == 0 {
+            assert!((1..=40).contains(&n), "Toleranz 0: {n}");
+        } else {
+            let dev = (n as f64 - want as f64).abs() / want as f64;
+            assert!(dev <= 0.12, "Toleranz {tol}: {n} statt {want}");
+        }
+        assert!(n > last, "Toleranz {tol} wählt mehr als die kleinere");
+        last = n;
+    }
+}
+
+fn red_eye(s: &mut Session, tol: i64) {
+    use fp_engine::prefs::PrefValue::Int;
+    set_pref(s, "RedEyeRemovalToolTolerance", Int(tol));
+    set_pref(s, "RedEyeRemovalToolStrength", Int(50));
+    s.set_tool(ToolId::RedEyeRemoval).expect("Rote Augen");
+}
+
+/// 05/11–12, 05/15: Rote Augen mit aufgezogenem Rechteck über beide Augen: ≈ 1 116 px in
+/// 107,255–214,282, Pupillen dunkel; Toleranz 10 = 50; 100 → mehr Pixel, Augen ≈ #1F1F1F.
+/// Klick wirkt nicht (kein Schritt), waagrechter Zug: keine Änderung, Schritt „Bitmap bearbeiten“.
+#[test]
+fn red_eye_rectangle_and_tolerance() {
+    let run = |tol: i64, a: (f32, f32), b: (f32, f32)| -> Option<(Session, fp_raster::RgbaImage, fp_raster::RgbaImage)> {
+        let mut s = open_par("p57_t02.fw.png")?;
+        let base = render(&s);
+        red_eye(&mut s, tol);
+        drag(&mut s, a, b);
+        let img = render(&s);
+        Some((s, img, base))
+    };
+    let Some((s, img50, base)) = run(50, (100.0, 250.0), (225.0, 287.0)) else { return };
+    save_png("e11_rect.png", &img50);
+    assert_eq!(undo_label(&s), "Rote Augen entfernen");
+    let (n, bb) = changed(&img50, &base);
+    assert!((1050..=1180).contains(&n), "Rechteck: {n}");
+    assert!((bb.0 - 107).abs() <= 1 && (bb.1 - 255).abs() <= 1 && (bb.2 - 214).abs() <= 1 && (bb.3 - 282).abs() <= 1, "{bb:?}");
+    let c = img50.get(120, 268).expect("Auge");
+    assert!(c[0] < 140 && c[1] < 40, "Pupille dunkel: {c:?}");
+    let (_, img10, _) = run(10, (100.0, 250.0), (225.0, 287.0)).expect("10");
+    assert_eq!(sha16(&img10), sha16(&img50), "Toleranz 10 = 50");
+    let (_, img100, _) = run(100, (100.0, 250.0), (225.0, 287.0)).expect("100");
+    save_png("e12_rect_tol100.png", &img100);
+    let (n100, _) = changed(&img100, &base);
+    assert!(n100 > n && (1100..=1260).contains(&n100), "Toleranz 100: {n100}");
+    let c = img100.get(120, 268).expect("Auge");
+    assert!(c.iter().take(3).all(|v| (*v as i32 - 31).abs() <= 3), "dunkles Grau: {c:?}");
+    // Klick: nichts, kein Schritt
+    let mut s = open_par("p57_t02.fw.png").expect("Datei");
+    red_eye(&mut s, 50);
+    let n0 = s.active().expect("Dokument").history.undo_count();
+    click(&mut s, 120.0, 268.0);
+    assert_eq!(s.active().expect("Dokument").history.undo_count(), n0, "Klick ohne Schritt");
+    assert_eq!(sha16(&render(&s)), sha16(&base));
+    // waagrechter Zug (Höhe 0): keine Änderung, Schritt „Bitmap bearbeiten“
+    drag(&mut s, (100.0, 268.0), (225.0, 268.0));
+    assert_eq!(sha16(&render(&s)), sha16(&base), "Höhe 0 ohne Wirkung");
+    assert_eq!(undo_label(&s), "Bitmap bearbeiten");
+}
+
+/// 05/03–04, 05/15: Stempel – Alt-Klick setzt die Quelle, beim Ziehen zeigt die Vorschau die echte
+/// Kopie (pixelgleich mit dem Ergebnis nach dem Loslassen), Schritt „Stempel“.
+#[test]
+fn stamp_live_preview_equals_result() {
+    let Some(mut s) = open_par("p57_t02.fw.png") else { return };
+    let base = render(&s);
+    s.set_tool(ToolId::RubberStamp).expect("Stempel");
+    events(&mut s, &[ToolEvent::down(120.0, 268.0).alt(), ToolEvent::up(120.0, 268.0).alt()]);
+    events(&mut s, &[ToolEvent::down(330.0, 260.0)]);
+    for i in 1..=30 {
+        events(&mut s, &[ToolEvent::drag(330.0 + 2.0 * i as f32, 260.0)]);
+    }
+    let preview = s
+        .tool_overlay()
+        .into_iter()
+        .find_map(|o| match o {
+            fp_engine::tools::Overlay::Paint(p) => Some(p),
+            _ => None,
+        })
+        .expect("Live-Vorschau beim Ziehen");
+    assert!(!preview.tiles.is_empty(), "Kacheln");
+    events(&mut s, &[ToolEvent::up(390.0, 260.0)]);
+    assert_eq!(undo_label(&s), "Stempel");
+    let img = render(&s);
+    save_png("s03_aligned.png", &img);
+    let (n, bb) = changed(&img, &base);
+    assert!((1150..=1400).contains(&n), "Kopie {n} (Original: zwei Züge 2 528)");
+    assert!(bb.0 >= 320 && bb.2 <= 402, "{bb:?}");
+    // Vorschau = Ergebnis (geänderte Pixel der Vorschau stehen so im Bild)
+    let mut checked = 0;
+    for t in preview.tiles.iter() {
+        let r = t.rect;
+        for y in r.top..r.bottom {
+            for x in r.left..r.right {
+                if let Some(p) = t.image.get(x, y).filter(|p| p[3] > 0) {
+                    assert_eq!(img.get(x, y), Some(p), "Vorschau {x},{y}");
+                    checked += 1;
+                }
+            }
+        }
+    }
+    assert!(checked > 1000, "geprüfte Pixel {checked}");
+}

@@ -52,8 +52,8 @@ pub fn params(id: ToolId, ctx: &ToolContext) -> RetouchParams {
         ToolId::Smudge => p.get_int(&key("Pressure"), 50),
         ToolId::RedEyeRemoval => p.get_int(&key("Strength"), 50),
         // Stärke im Inspektor 0..255, Werksvorgabe 200 (`ReplaceColorToolStrength`, PARITAET_A W8);
-        // Annahme: 200 = volle Wirkung (Skala des Originals nicht gemessen)
-        ToolId::ReplaceColor => p.get_int(&key("Strength"), 200) / 2,
+        // der Befehl bekommt sie unverändert als `replaceStrength` (PAR 05/08)
+        ToolId::ReplaceColor => p.get_int(&key("Strength"), 200) * 100 / 255,
         _ => 100,
     };
     RetouchParams {
@@ -88,22 +88,114 @@ pub struct RetouchTool {
     offset: Option<(f32, f32)>,
     /// Der letzte Zug wurde gemalt (Esc danach: „Bitmapmodus beenden“).
     painted: bool,
+    /// Stempel: Live-Vorschau (Zielbitmap beim Drücken, gerechnete Kopie; PAR 05/04).
+    live: Option<StampLive>,
+}
+
+/// Laufender Stempelzug: Ausgangsbild der Zielbitmap und die zuletzt gerechnete Vorschau.
+#[derive(Clone, Debug)]
+struct StampLive {
+    base: std::sync::Arc<fp_raster::RgbaImage>,
+    sel: Option<fp_raster::Mask>,
+    preview: crate::paint::PaintPreview,
+}
+
+/// Kachelgröße der Stempel-Vorschau (feste Rasterlage je Kachel, wie die Mal-Vorschau).
+const STAMP_TILE: i32 = 128;
+
+fn next_stamp_stroke() -> u64 {
+    use std::sync::atomic::{AtomicU64, Ordering};
+    static N: AtomicU64 = AtomicU64::new(1 << 40);
+    N.fetch_add(1, Ordering::Relaxed)
+}
+
+impl StampLive {
+    /// Rechnet den Zug auf eine Kopie der Zielbitmap und legt die geänderten Pixel als Kacheln ab.
+    fn update(&mut self, pts: &[Point], prm: &RetouchParams, offset: (f32, f32)) {
+        let mut img = (*self.base).clone();
+        crate::commands::stamp_image(&mut img, pts, prm.size, prm.round, prm.soft, prm.strength, prm.spacing, offset, self.sel.as_ref());
+        let reach = pts.iter().fold(fp_geom::IRect::default(), |r, p| {
+            let h = (prm.size / 2.0).ceil() as i32 + 2;
+            let (x, y) = (p.x.floor() as i32, p.y.floor() as i32);
+            r.union(&fp_geom::IRect::new(x - h, y - h, x + h + 1, y + h + 1))
+        });
+        let area = reach.intersect(&img.bounds());
+        let next_gen = self.preview.generation + 1;
+        let mut tiles = Vec::new();
+        if !area.is_empty() {
+            let (tx0, ty0) = (area.left.div_euclid(STAMP_TILE), area.top.div_euclid(STAMP_TILE));
+            let (tx1, ty1) = ((area.right - 1).div_euclid(STAMP_TILE), (area.bottom - 1).div_euclid(STAMP_TILE));
+            for ty in ty0..=ty1 {
+                for tx in tx0..=tx1 {
+                    let tr = fp_geom::IRect::from_xywh(tx * STAMP_TILE, ty * STAMP_TILE, STAMP_TILE, STAMP_TILE);
+                    let Ok(mut t) = fp_raster::RgbaImage::new(tr) else { continue };
+                    let part = tr.intersect(&area);
+                    for y in part.top..part.bottom {
+                        for x in part.left..part.right {
+                            if let (Some(n), Some(o)) = (img.get(x, y), self.base.get(x, y))
+                                && n != o
+                            {
+                                t.set_pixel(x, y, fp_color::Rgba8::new(n[0], n[1], n[2], n[3]));
+                            }
+                        }
+                    }
+                    tiles.push(crate::paint::PaintTile { key: (tx, ty), rect: tr, image: std::sync::Arc::new(t), version: next_gen });
+                }
+            }
+        }
+        self.preview = crate::paint::PaintPreview {
+            bounds: area.to_rect(),
+            generation: next_gen,
+            stroke: self.preview.stroke,
+            tiles: std::sync::Arc::new(tiles),
+        };
+    }
 }
 
 impl RetouchTool {
     /// Neues Werkzeug.
     pub fn new(id: ToolId) -> RetouchTool {
-        RetouchTool { id, points: Vec::new(), active: false, hover: None, source: None, offset: None, painted: false }
+        RetouchTool { id, points: Vec::new(), active: false, hover: None, source: None, offset: None, painted: false, live: None }
     }
 
     fn cursor(&self) -> Cursor {
-        if self.id == ToolId::RubberStamp { Cursor::Stamp } else { Cursor::Brush }
+        match self.id {
+            ToolId::RubberStamp => Cursor::Stamp,
+            ToolId::RedEyeRemoval => Cursor::Crosshair,
+            _ => Cursor::Brush,
+        }
+    }
+
+    /// Stempel: Vorschau beim Drücken beginnen (ausgewählte Bitmap als Ziel).
+    fn begin_stamp_live(&mut self, ctx: &ToolContext) {
+        self.live = None;
+        let Some((_, e)) = crate::paint::target_bitmap(ctx.doc, ctx.page, &ctx.selection.elements) else { return };
+        let fp_model::ElementKind::Bitmap(b) = &e.kind else { return };
+        let Some(base) = crate::docops::bitmap_image(b) else { return };
+        let sel = ctx.selection.pixels.clone().filter(|_| ctx.selection.has_pixels());
+        self.live = Some(StampLive {
+            base: std::sync::Arc::new(base),
+            sel,
+            preview: crate::paint::PaintPreview { stroke: next_stamp_stroke(), ..crate::paint::PaintPreview::default() },
+        });
     }
 
     fn overlay_for(&self, ctx: &ToolContext) -> Vec<Overlay> {
         let prm = params(self.id, ctx);
         let mut v = Vec::new();
-        if !self.points.is_empty() {
+        if self.id == ToolId::RedEyeRemoval {
+            // Rote Augen: aufgezogenes Rechteck mit Kreuz (gemessen 05/11)
+            if let (true, Some(a), Some(b)) = (self.active, self.points.first(), self.hover) {
+                let r = fp_geom::Rect::new(a.x, a.y, b.x, b.y).normalized();
+                v.push(Overlay::Rect { rect: r, dashed: false });
+                v.push(Overlay::Line { from: Point::new(r.left, r.top), to: Point::new(r.right, r.bottom) });
+                v.push(Overlay::Line { from: Point::new(r.right, r.top), to: Point::new(r.left, r.bottom) });
+            }
+            return v;
+        }
+        if let Some(l) = self.live.as_ref().filter(|_| self.active) {
+            v.push(Overlay::Paint(l.preview.clone()));
+        } else if !self.points.is_empty() {
             v.push(Overlay::Stroke { points: self.points.clone(), diameter: prm.size });
         }
         if let Some(h) = self.hover {
@@ -133,6 +225,7 @@ impl ToolMachine for RetouchTool {
             if self.active {
                 self.points.clear();
                 self.active = false;
+                self.live = None;
                 return ToolResponse::default();
             }
             // wie im Original: mit Bitmap als Ziel → Zeiger, Bitmap bleibt gewählt (PARITAET_A L39)
@@ -177,17 +270,49 @@ impl ToolMachine for RetouchTool {
                 }
                 self.points = vec![*pos];
                 self.active = true;
+                if self.id == ToolId::RubberStamp {
+                    self.begin_stamp_live(ctx);
+                    let prm = params(self.id, ctx);
+                    let off = self.offset.unwrap_or((0.0, 0.0));
+                    if let Some(l) = self.live.as_mut() {
+                        l.update(&self.points, &prm, off);
+                    }
+                }
             }
+            PointerKind::Move if self.active && self.id == ToolId::RedEyeRemoval => {}
             PointerKind::Move if self.active => {
                 if ev.mods.shift {
                     self.points.truncate(1);
                 }
                 if self.points.last().is_none_or(|l| dist(*l, *pos) >= 0.5) {
                     self.points.push(*pos);
+                    if self.id == ToolId::RubberStamp {
+                        let prm = params(self.id, ctx);
+                        let off = self.offset.unwrap_or((0.0, 0.0));
+                        if let Some(l) = self.live.as_mut() {
+                            l.update(&self.points, &prm, off);
+                        }
+                    }
                 }
+            }
+            PointerKind::Up if self.active && self.id == ToolId::RedEyeRemoval => {
+                // Rote Augen: Rechteck aus Start und Ende; ein Klick ohne Ziehen wirkt nicht
+                self.active = false;
+                let a = std::mem::take(&mut self.points).first().copied().unwrap_or(*pos);
+                if dist(a, *pos) < ctx.drag_threshold() {
+                    return ToolResponse::with_overlay(Vec::new(), self.cursor());
+                }
+                let p = json!({
+                    "mode": "redEye", "points": [pt_json(a), pt_json(*pos)],
+                    "tolerance": ctx.prefs.get_int("RedEyeRemovalToolTolerance", 50),
+                    "strength": ctx.prefs.get_int("RedEyeRemovalToolStrength", 50).clamp(0, 100),
+                });
+                self.painted = true;
+                return ToolResponse { commands: vec![Invocation::new("bitmap.retouch", p)], overlay: Vec::new(), cursor: self.cursor(), ..ToolResponse::default() };
             }
             PointerKind::Up if self.active => {
                 self.active = false;
+                self.live = None;
                 if ev.mods.shift {
                     self.points.truncate(1);
                 }
@@ -210,6 +335,10 @@ impl ToolMachine for RetouchTool {
                         p["from"] = json!(ctx.prefs.get_str("ReplaceColorToolSrcColor", "#00FF00"));
                         p["to"] = json!(ctx.prefs.get_str("ReplaceColorToolDestColor", "#FF0000"));
                         p["colorize"] = json!(ctx.prefs.get_bool("ReplaceColorToolColorize", false));
+                        // Toleranz, Stärke 0..255 und „Von: Grafik“ (PAR 05/07–08)
+                        p["tolerance"] = json!(ctx.prefs.get_int("ReplaceColorToolTolerance", 32).clamp(0, 255));
+                        p["replaceStrength"] = json!(ctx.prefs.get_int("ReplaceColorToolStrength", 200).clamp(0, 255));
+                        p["fromImage"] = json!(ctx.prefs.get_bool("ReplaceColorToolMode", false));
                     }
                     ToolId::RedEyeRemoval => {
                         p["tolerance"] = json!(ctx.prefs.get_int("RedEyeRemovalToolTolerance", 50));
@@ -230,7 +359,10 @@ impl ToolMachine for RetouchTool {
     }
 
     fn overlay(&self) -> Vec<Overlay> {
-        if self.points.is_empty() { Vec::new() } else { vec![Overlay::Polyline { points: self.points.clone(), closed: false }] }
+        if let Some(l) = self.live.as_ref().filter(|_| self.active) {
+            return vec![Overlay::Paint(l.preview.clone())];
+        }
+        if self.points.is_empty() || self.id == ToolId::RedEyeRemoval { Vec::new() } else { vec![Overlay::Polyline { points: self.points.clone(), closed: false }] }
     }
 
     fn feedback(&self, ctx: &ToolContext) -> Vec<Overlay> {

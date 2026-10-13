@@ -596,7 +596,11 @@ fn replace_color_q3(ui: &mut Ui, st: &mut AppState, r: Rect) {
     fields::label_right(ui, d.r(213.0, 17.0, 35.0, 8.0), &tx("pi-strength"), true);
     let stg = fields::number(ui, "rc-str", d.r(250.0, 15.0, 21.0, 13.0), Some(d.r(272.0, 15.0, 9.0, 13.0)), Some(ta.strength as f64), (0.0, 255.0), 0, true);
     fields::label_right(ui, d.r(19.0, 17.0, 37.0, 8.0), &tx("pi-replace-from"), true);
-    let _ = fields::combo(ui, "rc-from", d.r(58.0, 15.0, 56.0, 13.0), &refs(&tl(&["pi-replace-swatch", "pi-replace-image"])), Some(0), true);
+    // „Von: Grafik“ nimmt die Farbe unter dem Startpunkt (`ReplaceColorToolMode`, PAR 05/07)
+    let from_img = st.session.prefs.get_bool("ReplaceColorToolMode", false);
+    if let Some(i) = fields::combo(ui, "rc-from", d.r(58.0, 15.0, 56.0, 13.0), &refs(&tl(&["pi-replace-swatch", "pi-replace-image"])), Some(usize::from(from_img)), true) {
+        st.session.prefs.set("ReplaceColorToolMode", fp_engine::prefs::PrefValue::Bool(i == 1));
+    }
     // „Von“/„in“ sind eigene Farben des Werkzeugs (Werksvorgabe #00FF00 → #FF0000, PARITAET_A W8),
     // nicht Strich-/Füllfarbe; das Werkzeug malt mit genau diesen Voreinstellungen
     let (src, dst) = replace_colors(&st.session.prefs);

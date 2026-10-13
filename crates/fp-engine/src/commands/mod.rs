@@ -24,6 +24,8 @@ mod modify;
 pub mod panel;
 mod select;
 mod text;
+mod retouch_px;
+pub(crate) use tooling::stamp_image;
 mod tooling;
 pub mod trace;
 mod view;
