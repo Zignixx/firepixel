@@ -5,8 +5,12 @@
 use crate::step::StepRegistry;
 
 pub mod files;
+pub mod metadata;
+pub mod optimize;
 
 /// Registriert alle eingebauten Schritte.
 pub fn register_all(r: &mut StepRegistry) {
     files::register(r);
+    metadata::register(r);
+    optimize::register(r);
 }

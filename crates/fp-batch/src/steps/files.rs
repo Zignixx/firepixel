@@ -127,6 +127,9 @@ impl Step for Output {
             ParamDef::int("ditherAmount", 0, 100, 80).unit("%"),
             ParamDef::bool("transparency", true),
             ParamDef::int("speed", 1, 10, 6),
+            // PNG: fast/default/max (max = verlustfrei optimiert); TIFF: none/lzw/deflate/packbits
+            // (default = lzw); TGA: none = unkomprimiert (BATCH-5)
+            ParamDef::choice("compression", &["default", "fast", "max", "none", "lzw", "deflate", "packbits"], "default"),
         ]
     }
     fn preview_ok(&self) -> bool {

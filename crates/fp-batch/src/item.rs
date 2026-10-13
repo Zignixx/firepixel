@@ -586,7 +586,7 @@ pub fn decode_bytes(name: &str, data: &[u8]) -> Result<Item> {
     let fmt = fp_io::detect_format(data, name);
     let fname = format_name(fmt);
     let err = |e: fp_io::ImportError| BatchError::Decode(e.to_string());
-    let item = match fmt {
+    let mut item = match fmt {
         FileFormat::Png => still(fp_io::png_in::decode_png(data).map_err(err)?, fname),
         FileFormat::Apng => animation(fp_io::png_in::decode_apng(data).map_err(err)?, fname),
         FileFormat::Gif => animation(fp_io::gif::decode(data).map_err(err)?.into_animation(), fname),
@@ -613,6 +613,8 @@ pub fn decode_bytes(name: &str, data: &[u8]) -> Result<Item> {
     {
         return Err(BatchError::Decode(fp_i18n::t("batch-err-empty-page")));
     }
+    // Metadaten lesen, EXIF-Ausrichtung anwenden (BATCH-5)
+    crate::meta::read_into(data, &mut item);
     Ok(item)
 }
 

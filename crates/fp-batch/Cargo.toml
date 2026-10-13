@@ -32,5 +32,10 @@ walkdir = "2.5"
 # Datum/Uhrzeit in Ortszeit für Namensbausteine und Bericht (MIT/Apache-2.0; schon im Baum)
 chrono = { version = "0.4.45", default-features = false, features = ["clock", "std", "serde"] }
 
+# BATCH-5: Metadaten-Container (zlib für iCCP/TIFF, CRC der PNG-Chunks, PNG lesen) – schon im Baum
+flate2 = { workspace = true }
+crc32fast = { workspace = true }
+png = { workspace = true }
+
 [lints]
 workspace = true

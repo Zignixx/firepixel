@@ -16,6 +16,7 @@ pub mod error;
 pub mod executor;
 pub mod host;
 pub mod item;
+pub mod meta;
 pub mod naming;
 pub mod output;
 pub mod pipeline;

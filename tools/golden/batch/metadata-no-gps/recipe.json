@@ -1,0 +1,9 @@
+{
+  "format": "firepixel-batch-recipe",
+  "version": 1,
+  "name": "Metadaten ohne GPS",
+  "steps": [
+    { "id": "metadata.edit", "enabled": true, "params": { "keep": "all", "remove": ["gps"] } }
+  ],
+  "output": { "format": "jpeg", "options": { "quality": 85 } }
+}

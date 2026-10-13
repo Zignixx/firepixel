@@ -223,7 +223,13 @@ pub fn item_document(item: &Item) -> Result<fp_model::Document> {
 }
 
 /// Kodiert ein Element. Liefert Dateiinhalt und Warnungen (übersetzt). `fmt` darf nicht `Same` sein.
+/// Mit Nachbearbeitung von BATCH-5 (`meta::finish_encode`: Metadaten, PNG-Optimierung, Zielgröße, TIFF).
 pub fn encode(item: &Item, fmt: OutputFormat, options: &Map<String, Value>) -> Result<(Vec<u8>, Vec<String>)> {
+    crate::meta::finish_encode(item, fmt, options, encode_plain)
+}
+
+/// Kodiert ein Element ohne Nachbearbeitung.
+pub fn encode_plain(item: &Item, fmt: OutputFormat, options: &Map<String, Value>) -> Result<(Vec<u8>, Vec<String>)> {
     let mut warnings = Vec::new();
     if let Some(f) = encoders().read().ok().and_then(|m| m.get(&fmt).copied()) {
         return Ok((f(item, options)?, warnings));
