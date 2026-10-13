@@ -85,7 +85,7 @@ pub(crate) fn p_color(p: &Value, k: &str, d: Px) -> Px {
 
 /// Optionaler Zahlenparameter ohne Vorgabe (`null` = „nicht gesetzt“).
 pub(crate) fn opt_param(name: &str, ty: ParamType, unit: Option<&str>) -> ParamDef {
-    ParamDef { name: name.to_string(), ty, default: Value::Null, beginner: false, unit: unit.map(str::to_string) }
+    ParamDef { unit: unit.map(str::to_string), ..ParamDef::new(name, ty, Value::Null) }
 }
 
 /// Maßstab des Vorschau-Proxys (1,0 außerhalb der Vorschau). Beim ersten Aufruf je Element aus
@@ -94,6 +94,10 @@ pub(crate) fn opt_param(name: &str, ty: ParamType, unit: Option<&str>) -> ParamD
 pub fn preview_scale(item: &mut Item, ctx: &StepContext) -> f64 {
     if !ctx.preview {
         return 1.0;
+    }
+    // BATCH-11a: Maßstab aus der Vorschau-Pipeline (genau, auch nach Größenschritten davor)
+    if let Some(s) = ctx.preview_scale() {
+        return s;
     }
     if let Some(s) = item.meta().and_then(|m| m.extra.get(PREVIEW_SCALE_KEY)).and_then(Value::as_f64).filter(|s| *s > 0.0) {
         return s;
@@ -493,12 +497,12 @@ impl Step for Resize {
     fn params(&self) -> Vec<ParamDef> {
         vec![
             ParamDef::choice("mode", &RESIZE_MODES, "longEdge").beginner(),
-            ParamDef::int("size", 1, MAX_SIDE, 1600).beginner().unit("px"),
-            ParamDef::int("width", 1, MAX_SIDE, 1600).beginner().unit("px"),
-            ParamDef::int("height", 1, MAX_SIDE, 1600).beginner().unit("px"),
-            ParamDef::number("percent", 1.0, 10000.0, 50.0).beginner().unit("%"),
-            ParamDef::bool("onlyShrink", true).beginner(),
-            ParamDef::choice("filter", &["auto", "nearest", "bilinear", "bicubic", "lanczos3"], "auto"),
+            ParamDef::int("size", 1, MAX_SIDE, 1600).beginner().unit("px").when("mode", &["longEdge", "shortEdge"]),
+            ParamDef::int("width", 1, MAX_SIDE, 1600).beginner().unit("px").when("mode", &["width", "fit", "fill", "exact"]),
+            ParamDef::int("height", 1, MAX_SIDE, 1600).beginner().unit("px").when("mode", &["height", "fit", "fill", "exact"]),
+            ParamDef::number("percent", 1.0, 10000.0, 50.0).beginner().unit("%").when("mode", &["percent"]),
+            ParamDef::bool("onlyShrink", true).beginner().when("mode", &RESIZE_MODES[..8]),
+            ParamDef::choice("filter", &["auto", "nearest", "bilinear", "bicubic", "lanczos3"], "auto").when("mode", &RESIZE_MODES[..8]),
             opt_param("dpi", ParamType::Number { min: 1.0, max: 10000.0 }, Some("dpi")),
         ]
     }
@@ -627,12 +631,12 @@ fn anchor_param() -> ParamDef {
     ParamDef::choice("anchor", &ANCHORS, "center").beginner()
 }
 
-fn ratio_params(beginner: bool) -> Vec<ParamDef> {
-    let r = ParamDef::choice("ratio", &RATIOS, "1:1");
+fn ratio_params(beginner: bool, ratio_modes: &[&str]) -> Vec<ParamDef> {
+    let r = ParamDef::choice("ratio", &RATIOS, "1:1").when("mode", ratio_modes);
     vec![
         if beginner { r.beginner() } else { r },
-        ParamDef::number("ratioWidth", 0.01, 10000.0, 1.0),
-        ParamDef::number("ratioHeight", 0.01, 10000.0, 1.0),
+        ParamDef::number("ratioWidth", 0.01, 10000.0, 1.0).when("ratio", &["free"]),
+        ParamDef::number("ratioHeight", 0.01, 10000.0, 1.0).when("ratio", &["free"]),
     ]
 }
 
@@ -645,18 +649,18 @@ impl Step for Crop {
     }
     fn params(&self) -> Vec<ParamDef> {
         let mut v = vec![ParamDef::choice("mode", &CROP_MODES, "aspect").beginner()];
-        v.extend(ratio_params(true));
+        v.extend(ratio_params(true, &["aspect"]));
         v.extend([
-            anchor_param(),
-            ParamDef::choice("unit", &["px", "percent"], "px").beginner(),
-            ParamDef::number("x", 0.0, 100000.0, 0.0),
-            ParamDef::number("y", 0.0, 100000.0, 0.0),
-            ParamDef::number("width", 0.0, 100000.0, 1000.0),
-            ParamDef::number("height", 0.0, 100000.0, 1000.0),
-            ParamDef::number("top", 0.0, 100000.0, 0.0),
-            ParamDef::number("right", 0.0, 100000.0, 0.0),
-            ParamDef::number("bottom", 0.0, 100000.0, 0.0),
-            ParamDef::number("left", 0.0, 100000.0, 0.0),
+            anchor_param().when("mode", &["aspect"]),
+            ParamDef::choice("unit", &["px", "percent"], "px").beginner().when("mode", &["rect", "edges"]),
+            ParamDef::number("x", 0.0, 100000.0, 0.0).when("mode", &["rect"]),
+            ParamDef::number("y", 0.0, 100000.0, 0.0).when("mode", &["rect"]),
+            ParamDef::number("width", 0.0, 100000.0, 1000.0).when("mode", &["rect"]),
+            ParamDef::number("height", 0.0, 100000.0, 1000.0).when("mode", &["rect"]),
+            ParamDef::number("top", 0.0, 100000.0, 0.0).when("mode", &["edges"]),
+            ParamDef::number("right", 0.0, 100000.0, 0.0).when("mode", &["edges"]),
+            ParamDef::number("bottom", 0.0, 100000.0, 0.0).when("mode", &["edges"]),
+            ParamDef::number("left", 0.0, 100000.0, 0.0).when("mode", &["edges"]),
         ]);
         v
     }
@@ -748,7 +752,7 @@ impl Step for Trim {
     fn params(&self) -> Vec<ParamDef> {
         vec![
             ParamDef::choice("what", &["transparent", "color", "both"], "transparent").beginner(),
-            ParamDef::int("tolerance", 0, 255, 8),
+            ParamDef::int("tolerance", 0, 255, 8).when("what", &["color", "both"]),
             ParamDef::int("padding", 0, 500, 0).unit("px"),
         ]
     }
@@ -1124,16 +1128,16 @@ impl Step for Canvas {
     fn params(&self) -> Vec<ParamDef> {
         let mut v = vec![
             ParamDef::choice("mode", &CANVAS_MODES, "addBorder").beginner(),
-            ParamDef::int("border", 0, 10000, 20).beginner().unit("px"),
-            opt_param("top", ParamType::Int { min: 0, max: 10000 }, Some("px")),
-            opt_param("right", ParamType::Int { min: 0, max: 10000 }, Some("px")),
-            opt_param("bottom", ParamType::Int { min: 0, max: 10000 }, Some("px")),
-            opt_param("left", ParamType::Int { min: 0, max: 10000 }, Some("px")),
-            ParamDef::int("width", 1, MAX_SIDE, 1600).beginner().unit("px"),
-            ParamDef::int("height", 1, MAX_SIDE, 1600).beginner().unit("px"),
+            ParamDef::int("border", 0, 10000, 20).beginner().unit("px").when("mode", &["addBorder"]),
+            opt_param("top", ParamType::Int { min: 0, max: 10000 }, Some("px")).when("mode", &["addBorder"]),
+            opt_param("right", ParamType::Int { min: 0, max: 10000 }, Some("px")).when("mode", &["addBorder"]),
+            opt_param("bottom", ParamType::Int { min: 0, max: 10000 }, Some("px")).when("mode", &["addBorder"]),
+            opt_param("left", ParamType::Int { min: 0, max: 10000 }, Some("px")).when("mode", &["addBorder"]),
+            ParamDef::int("width", 1, MAX_SIDE, 1600).beginner().unit("px").when("mode", &["toSize"]),
+            ParamDef::int("height", 1, MAX_SIDE, 1600).beginner().unit("px").when("mode", &["toSize"]),
         ];
-        v.extend(ratio_params(false));
-        v.extend([ParamDef::color("color", "transparent").beginner(), anchor_param()]);
+        v.extend(ratio_params(false, &["toAspect"]));
+        v.extend([ParamDef::color("color", "transparent").beginner(), anchor_param().when("mode", &["toSize", "toAspect", "square"])]);
         v
     }
     fn applies_to(&self) -> &[ItemKind] {

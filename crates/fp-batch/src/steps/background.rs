@@ -64,6 +64,9 @@ pub(crate) fn p_color(p: &Value, k: &str, d: [u8; 4]) -> [u8; 4] {
 /// Maßstab der Vorschau: Pixelangaben (Rahmenbreite, Schattenabstand …) werden im verkleinerten
 /// Proxy-Bild mitverkleinert, damit die Vorschau wie das Ergebnis aussieht.
 pub(crate) fn preview_scale(ctx: &StepContext, w: usize, h: usize) -> f64 {
+    if let Some(s) = ctx.preview_scale() {
+        return s.clamp(0.01, 1.0); // BATCH-11a: Maßstab aus der Vorschau-Pipeline
+    }
     let src = ctx.info.width.max(ctx.info.height) as f64;
     if !ctx.preview || src <= 0.0 {
         return 1.0;
@@ -952,7 +955,7 @@ fn ai_params(beginner_model: bool) -> Vec<ParamDef> {
     vec![
         if beginner_model { model.beginner() } else { model },
         ParamDef::choice("edge", &["hard", "antiAlias", "feather"], "antiAlias").beginner(),
-        ParamDef::int("feather", 0, 250, 4).unit("px"),
+        ParamDef::int("feather", 0, 250, 4).unit("px").when("edge", &["feather"]),
         ParamDef::int("tolerance", 0, 100, 50),
         ParamDef::int("expand", -100, 100, 0).unit("px"),
         ParamDef::int("smooth", 0, 100, 0).unit("px"),
@@ -1026,7 +1029,7 @@ impl Step for RemoveColor {
     fn params(&self) -> Vec<ParamDef> {
         vec![
             ParamDef::choice("pick", &["topLeft", "topRight", "bottomLeft", "bottomRight", "custom"], "topLeft").beginner(),
-            ParamDef::color("color", "#ffffff").beginner(),
+            ParamDef::color("color", "#ffffff").beginner().when("pick", &["custom"]),
             ParamDef::int("tolerance", 0, 255, 24).beginner(),
             ParamDef::bool("contiguous", true),
             ParamDef::number("feather", 0.0, 10.0, 0.0).unit("px"),
@@ -1061,14 +1064,14 @@ impl Step for RemoveColor {
 fn fill_params() -> Vec<ParamDef> {
     vec![
         ParamDef::choice("kind", &["color", "gradient", "image", "blur"], "color").beginner(),
-        ParamDef::color("color", "#ffffff").beginner(),
-        ParamDef::color("color2", "#000000"),
-        ParamDef::choice("gradientShape", &["linear", "radial"], "linear"),
-        ParamDef::number("angle", -360.0, 360.0, 90.0).unit("°"),
-        ParamDef::path("image"),
-        ParamDef::text("imageData", ""),
-        ParamDef::choice("fit", &["cover", "contain", "stretch", "tile"], "cover"),
-        ParamDef::number("blur", 0.0, 250.0, 30.0).unit("px"),
+        ParamDef::color("color", "#ffffff").beginner().when("kind", &["color", "gradient"]),
+        ParamDef::color("color2", "#000000").when("kind", &["gradient"]),
+        ParamDef::choice("gradientShape", &["linear", "radial"], "linear").when("kind", &["gradient"]),
+        ParamDef::number("angle", -360.0, 360.0, 90.0).unit("°").when("gradientShape", &["linear"]),
+        ParamDef::path("image").when("kind", &["image"]),
+        ParamDef::text("imageData", "").when("kind", &["image"]),
+        ParamDef::choice("fit", &["cover", "contain", "stretch", "tile"], "cover").when("kind", &["image"]),
+        ParamDef::number("blur", 0.0, 250.0, 30.0).unit("px").when("kind", &["blur"]),
     ]
 }
 
@@ -1096,8 +1099,8 @@ impl Step for Flatten {
         let mut v = fill_params();
         v.push(ParamDef::bool("onlyIfTransparent", true));
         v.push(ParamDef::choice("edge", &["blend", "unmix", "hard"], "blend").beginner());
-        v.push(ParamDef::color("matte", "#ffffff"));
-        v.push(ParamDef::int("threshold", 1, 255, 128));
+        v.push(ParamDef::color("matte", "#ffffff").when("edge", &["unmix"]));
+        v.push(ParamDef::int("threshold", 1, 255, 128).when("edge", &["hard"]));
         v.push(ParamDef::bool("linearLight", false));
         v
     }
@@ -1146,11 +1149,12 @@ impl Step for Replace {
     }
     fn params(&self) -> Vec<ParamDef> {
         let mut v = vec![ParamDef::choice("method", &["ai", "color"], "ai").beginner()];
-        v.extend(ai_params(false));
-        v.push(ParamDef::choice("pick", &["topLeft", "topRight", "bottomLeft", "bottomRight", "custom"], "topLeft"));
-        v.push(ParamDef::color("keyColor", "#ffffff"));
-        v.push(ParamDef::int("keyTolerance", 0, 255, 24));
-        v.push(ParamDef::bool("contiguous", true));
+        // KI-Werte nur bei `method` = ai, Farbschlüssel nur bei `method` = color (BATCH-11a)
+        v.extend(ai_params(false).into_iter().map(|d| if d.visible_when.is_none() { d.when("method", &["ai"]) } else { d }));
+        v.push(ParamDef::choice("pick", &["topLeft", "topRight", "bottomLeft", "bottomRight", "custom"], "topLeft").when("method", &["color"]));
+        v.push(ParamDef::color("keyColor", "#ffffff").when("pick", &["custom"]));
+        v.push(ParamDef::int("keyTolerance", 0, 255, 24).when("method", &["color"]));
+        v.push(ParamDef::bool("contiguous", true).when("method", &["color"]));
         v.extend(fill_params());
         v.push(ParamDef::bool("linearLight", false));
         v

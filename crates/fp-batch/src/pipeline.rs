@@ -212,6 +212,7 @@ pub fn preview(recipe: &Recipe, info: &ItemInfo, reg: &StepRegistry, opts: &Prev
     let (format, fallback) = resolve_format(pipe.format, &info.format);
     let mut ctx = StepContext::new(0, 1, info, &opts.cancel, format);
     ctx.preview = true;
+    ctx.proxy_scale = Some(scale); // BATCH-11a: Proxy-Maßstab für Pixelangaben der Schritte
     if let Some(f) = fallback {
         ctx.warn(f);
     }

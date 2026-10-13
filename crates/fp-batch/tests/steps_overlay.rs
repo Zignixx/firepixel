@@ -303,7 +303,7 @@ fn catalog_lists_batch6_steps_with_labels() {
                 assert!(fp_i18n::has(&k), "{lang}: {k}");
                 if let fp_batch::ParamType::Enum { values } = &p.ty {
                     for v in values {
-                        let ck = format!("batch-choice-{}-{}-{}", s.id().replace('.', "-"), p.name, v);
+                        let ck = fp_batch::step::value_key(s.id(), &p.name, v); // BATCH-11a: ein Schema
                         assert!(fp_i18n::has(&ck), "{lang}: {ck}");
                     }
                 }

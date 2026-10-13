@@ -132,7 +132,7 @@ impl Step for Edit {
     fn params(&self) -> Vec<ParamDef> {
         vec![
             ParamDef::choice("keep", &["all", "none", "chosen"], "all").beginner(),
-            ParamDef::multi("remove", &CATEGORIES, &["gps"]).beginner(),
+            ParamDef::multi("remove", &CATEGORIES, &["gps"]).beginner().when("keep", &["all", "chosen"]),
             ParamDef::json("tags", Value::Array(Vec::new())),
         ]
     }

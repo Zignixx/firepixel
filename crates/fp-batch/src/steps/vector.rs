@@ -57,7 +57,7 @@ const PASS_THROUGH: [&str; 17] = [
 
 /// Parameter ohne feste Vorgabe („wie die Vorgabe“).
 fn unset(name: &str, ty: ParamType) -> ParamDef {
-    ParamDef { name: name.to_string(), ty, default: Value::Null, beginner: false, unit: None }
+    ParamDef::new(name, ty, Value::Null)
 }
 
 fn choices(v: &[&str]) -> ParamType {
@@ -79,19 +79,19 @@ impl Step for TraceStep {
             ParamDef::choice("engine", &ENGINES, "clusters").beginner(),
             unset("colorMode", choices(&["color", "blackWhite"])),
             unset("colors", ParamType::Int { min: 0, max: 256 }),
-            unset("filterSpeckle", ParamType::Int { min: 0, max: 128 }).unit("px"),
-            unset("cornerThreshold", ParamType::Number { min: 0.0, max: 180.0 }).unit("°"),
-            unset("mode", choices(&["spline", "polygon"])),
-            unset("hierarchical", choices(&["stacked", "cutout"])),
+            unset("filterSpeckle", ParamType::Int { min: 0, max: 128 }).unit("px").when("engine", &["clusters"]),
+            unset("cornerThreshold", ParamType::Number { min: 0.0, max: 180.0 }).unit("°").when("engine", &["clusters"]),
+            unset("mode", choices(&["spline", "polygon"])).when("engine", &["clusters"]),
+            unset("hierarchical", choices(&["stacked", "cutout"])).when("engine", &["clusters"]),
             unset("threshold", ParamType::Int { min: 0, max: 255 }),
             unset("ignoreTransparent", ParamType::Bool),
             unset("pathPrecision", ParamType::Int { min: 0, max: 8 }),
-            unset("refine", ParamType::Bool),
-            unset("turdSize", ParamType::Int { min: 0, max: 10_000 }).unit("px²"),
-            unset("turnPolicy", choices(&["minority", "majority", "black", "white", "left", "right"])),
-            unset("alphaMax", ParamType::Number { min: 0.0, max: ALPHA_MAX_LIMIT }),
-            unset("optCurve", ParamType::Bool),
-            unset("optTolerance", ParamType::Number { min: 0.0, max: 5.0 }).unit("px"),
+            unset("refine", ParamType::Bool).when("engine", &["clusters"]),
+            unset("turdSize", ParamType::Int { min: 0, max: 10_000 }).unit("px²").when("engine", &["potrace"]),
+            unset("turnPolicy", choices(&["minority", "majority", "black", "white", "left", "right"])).when("engine", &["potrace"]),
+            unset("alphaMax", ParamType::Number { min: 0.0, max: ALPHA_MAX_LIMIT }).when("engine", &["potrace"]),
+            unset("optCurve", ParamType::Bool).when("engine", &["potrace"]),
+            unset("optTolerance", ParamType::Number { min: 0.0, max: 5.0 }).unit("px").when("engine", &["potrace"]),
             ParamDef::bool("keepOriginal", false),
             ParamDef::bool("transparentCanvas", true),
         ]

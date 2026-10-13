@@ -82,7 +82,7 @@ impl Step for Quantize {
         vec![
             ParamDef::int("colors", 2, 256, 256).beginner(),
             ParamDef::choice("dither", &["none", "ordered", "floydSteinberg"], "floydSteinberg").beginner(),
-            ParamDef::int("ditherAmount", 0, 100, 80).unit("%"),
+            ParamDef::int("ditherAmount", 0, 100, 80).unit("%").when("dither", &["ordered", "floydSteinberg"]),
         ]
     }
     fn applies_to(&self) -> &[ItemKind] {
@@ -145,7 +145,7 @@ impl Step for TargetSize {
             ParamDef::int("maxKB", 1, 100_000, 200).beginner().unit("KB"),
             ParamDef::choice("strategy", &["quality", "qualityResize"], "quality").beginner(),
             ParamDef::int("minQuality", 10, 95, 40),
-            ParamDef::int("minScale", 10, 100, 50).unit("%"),
+            ParamDef::int("minScale", 10, 100, 50).unit("%").when("strategy", &["qualityResize"]),
         ]
     }
     fn applies_to(&self) -> &[ItemKind] {

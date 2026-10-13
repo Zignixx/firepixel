@@ -592,7 +592,7 @@ impl Step for Loop {
     fn params(&self) -> Vec<ParamDef> {
         vec![
             ParamDef::choice("mode", &["infinite", "once", "count"], "infinite").beginner(),
-            ParamDef::int("count", 1, 65535, 3),
+            ParamDef::int("count", 1, 65535, 3).when("mode", &["count"]),
             ParamDef::bool("pingPong", false).beginner(),
             ParamDef::bool("reverse", false).beginner(),
         ]
@@ -676,7 +676,7 @@ impl Step for DropFrames {
             ParamDef::int("keepEvery", 1, 100, 1).beginner(),
             ParamDef::number("targetFps", 0.0, 100.0, 0.0).beginner(),
             ParamDef::bool("mergeSimilar", true).beginner(),
-            ParamDef::number("threshold", 0.0, 100.0, 0.5).unit("%"),
+            ParamDef::number("threshold", 0.0, 100.0, 0.5).unit("%").when("mergeSimilar", &["true"]),
         ]
     }
     fn applies_to(&self) -> &[ItemKind] {
@@ -709,7 +709,7 @@ impl Step for FrameDelay {
     fn params(&self) -> Vec<ParamDef> {
         vec![
             ParamDef::choice("mode", &["all", "keep"], "all").beginner(),
-            ParamDef::int("delay", 0, 60000, 100).beginner().unit("ms"),
+            ParamDef::int("delay", 0, 60000, 100).beginner().unit("ms").when("mode", &["all"]),
             ParamDef::int("first", 0, 10000, 0).unit("ms"),
             ParamDef::int("last", 0, 10000, 0).unit("ms"),
         ]
@@ -868,8 +868,8 @@ impl Step for FromFrames {
         vec![
             ParamDef::int("delay", 1, 60000, 100).beginner().unit("ms"),
             ParamDef::choice("size", &["first", "largest", "fixed"], "first").beginner(),
-            ParamDef::int("width", 1, 16384, 640).unit("px"),
-            ParamDef::int("height", 1, 16384, 480).unit("px"),
+            ParamDef::int("width", 1, 16384, 640).unit("px").when("size", &["fixed"]),
+            ParamDef::int("height", 1, 16384, 480).unit("px").when("size", &["fixed"]),
             ParamDef::color("background", "transparent"),
             ParamDef::choice("loop", &["infinite", "once"], "infinite"),
         ]

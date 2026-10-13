@@ -405,8 +405,8 @@ impl Step for AdjustGrayscale {
     fn params(&self) -> Vec<ParamDef> {
         vec![
             ParamDef::choice("style", &["gray", "sepia", "duotone"], "gray").beginner(),
-            ParamDef::color("dark", "#1b2a4a"),
-            ParamDef::color("light", "#f5d9a8"),
+            ParamDef::color("dark", "#1b2a4a").when("style", &["duotone"]),
+            ParamDef::color("light", "#f5d9a8").when("style", &["duotone"]),
         ]
     }
     fn applies_to(&self) -> &[ItemKind] {
@@ -511,10 +511,10 @@ impl Step for FilterBlur {
     fn params(&self) -> Vec<ParamDef> {
         vec![
             ParamDef::choice("kind", &["gaussian", "motion", "radial", "zoom"], "gaussian").beginner(),
-            ParamDef::number("radius", 0.0, 250.0, 2.0).beginner().unit("px"),
-            ParamDef::number("angle", 0.0, 360.0, 0.0).unit("°"),
-            ParamDef::int("amount", 1, 100, 30),
-            ParamDef::int("quality", 1, 100, 20),
+            ParamDef::number("radius", 0.0, 250.0, 2.0).beginner().unit("px").when("kind", &["gaussian", "motion"]),
+            ParamDef::number("angle", 0.0, 360.0, 0.0).unit("°").when("kind", &["motion"]),
+            ParamDef::int("amount", 1, 100, 30).when("kind", &["radial", "zoom"]),
+            ParamDef::int("quality", 1, 100, 20).when("kind", &["radial", "zoom"]),
         ]
     }
     fn applies_to(&self) -> &[ItemKind] {
@@ -652,6 +652,33 @@ fn effect_params(p: &Value) -> fp_raster::filters::EffectParams {
     out
 }
 
+/// Pixelangaben eines Live-Effekts (Abstand, Weichheit, Breite) mit dem Vorschau-Maßstab
+/// verkleinern, damit der Effekt auf dem Proxy so groß wirkt wie im Ergebnis.
+pub(crate) fn scale_live_effect(e: &mut fp_effects::LiveEffect, s: f64) {
+    use fp_effects::LiveEffect as L;
+    let si = |v: i64| ((v as f64) * s).round() as i64;
+    let su = |v: u32| ((v as f64) * s).round().max(0.0) as u32;
+    match e {
+        L::DropShadow(p) | L::InnerShadow(p) => {
+            p.blur = su(p.blur);
+            p.distance *= s;
+        }
+        L::Bevel(p) => {
+            p.width = si(p.width).max(1);
+            p.angle_softness = si(p.angle_softness);
+            p.mask_softness = si(p.mask_softness);
+            p.light_distance = si(p.light_distance);
+        }
+        L::InnerGlow(p) => {
+            p.softness = su(p.softness);
+            p.width = su(p.width).max(1);
+            p.start = su(p.start);
+        }
+        L::SolidShadow(p) => p.distance *= s,
+        _ => {}
+    }
+}
+
 impl Step for EffectLive {
     fn id(&self) -> &str {
         EFFECT_LIVE
@@ -683,7 +710,13 @@ impl Step for EffectLive {
         if let Some(b) = bevel {
             ep.insert("BevelType".into(), ParamValue::Text(b.into()));
         }
-        let entry = fp_effects::EffectEntry { effect: fp_effects::LiveEffect::parse(moa, &ep), visible: true };
+        let mut effect = fp_effects::LiveEffect::parse(moa, &ep);
+        // Vorschau auf dem Proxy: Pixelangaben des Effekts mitverkleinern (BATCH-11a, Befund BATCH-4)
+        let scale = preview_scale(item, ctx);
+        if scale < 1.0 {
+            scale_live_effect(&mut effect, scale);
+        }
+        let entry = fp_effects::EffectEntry { effect, visible: true };
         let fx_ctx = fp_effects::EffectContext::default();
         let expand = p_bool(params, "expandCanvas", true);
         let mut frames = frames_mut(item)?;

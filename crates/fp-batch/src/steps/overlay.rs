@@ -270,11 +270,11 @@ pub fn text_stamp(text: &str, size_px: f64, p: &Value) -> Option<RgbaImage> {
 fn position_params() -> Vec<ParamDef> {
     vec![
         ParamDef::choice("position", &POSITIONS, "bottomRight").beginner(),
-        ParamDef::number("x", 0.0, 100.0, 50.0).unit("%"),
-        ParamDef::number("y", 0.0, 100.0, 50.0).unit("%"),
-        ParamDef::number("margin", 0.0, 50.0, 3.0).unit("%"),
+        ParamDef::number("x", 0.0, 100.0, 50.0).unit("%").when("position", &["free"]),
+        ParamDef::number("y", 0.0, 100.0, 50.0).unit("%").when("position", &["free"]),
+        ParamDef::number("margin", 0.0, 50.0, 3.0).unit("%").when("position", &POSITIONS[..9]),
         ParamDef::number("rotation", -360.0, 360.0, 0.0).unit("°"),
-        ParamDef::number("spacing", 0.0, 1000.0, 100.0).unit("%"),
+        ParamDef::number("spacing", 0.0, 1000.0, 100.0).unit("%").when("position", &["tiled"]),
         ParamDef::choice("blend", &BLEND_MODES, "normal"),
     ]
 }
@@ -300,8 +300,8 @@ impl Step for TextStep {
             ParamDef::int("opacity", 0, 100, 60).unit("%").beginner(),
             ParamDef::bool("shadow", false),
             ParamDef::bool("outline", false),
-            ParamDef::color("outlineColor", "#000000"),
-            ParamDef::number("outlineWidth", 0.0, 50.0, 6.0).unit("%"),
+            ParamDef::color("outlineColor", "#000000").when("outline", &["true"]),
+            ParamDef::number("outlineWidth", 0.0, 50.0, 6.0).unit("%").when("outline", &["true"]),
         ];
         v.extend(position_params());
         v

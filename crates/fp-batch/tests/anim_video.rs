@@ -732,7 +732,8 @@ fn catalog_lists_animation_steps_with_texts_in_both_languages() {
                     assert!(fp_i18n::has(&pk), "{lang}: {pk}");
                     if let fp_batch::ParamType::Enum { values } = &p.ty {
                         for v in values {
-                            assert!(fp_i18n::has(&format!("{pk}-{v}")), "{lang}: {pk}-{v}");
+                            let vk = fp_batch::step::value_key(id, &p.name, v); // BATCH-11a: ein Schema
+                            assert!(fp_i18n::has(&vk), "{lang}: {vk}");
                         }
                     }
                 }
