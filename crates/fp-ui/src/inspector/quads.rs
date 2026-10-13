@@ -316,7 +316,10 @@ fn box_q2(ui: &mut Ui, st: &mut AppState, r: Rect) {
     // während der Textbearbeitung der Rahmen des Texts im Editor (mit allen ungespeicherten
     // Änderungen) – wie außerhalb der Bearbeitung mit 2-px-Rand (Textgrenzen des Originals)
     let editing = if st.session.tool_is_editing_text() { st.session.text_edit_bounds() } else { None };
-    let b = editing.or_else(|| st.session.active().and_then(|d| fp_engine::docops::ids_bounds(&d.doc, d.page, &d.selection.elements)));
+    // mit Auswahlrahmen dessen Maße (Original: nach dem Aufziehen B/H/X/Y des Rahmens, PAR 06/02);
+    // Eingaben wirken dann nicht auf das Objekt
+    let marq = if editing.is_some() { None } else { st.session.active().filter(|d| d.selection.has_pixels()).and_then(|d| d.selection.pixels.as_ref().map(|m| m.tight_bounds().to_rect())).filter(|r| r.width() > 0.0) };
+    let b = editing.or(marq).or_else(|| st.session.active().and_then(|d| fp_engine::docops::ids_bounds(&d.doc, d.page, &d.selection.elements)));
     // ohne Auswahl (Rechteck, Ellipse, Auto-Form, Auswahlrahmen, Lasso, Zuschneiden, Exportbereich)
     // sind die Felder wie im Original weiß, leer und bedienbar (PARITAET_A W22); eine Eingabe ohne
     // Auswahl hat kein Ziel und wird verworfen
@@ -353,19 +356,19 @@ fn box_q2(ui: &mut Ui, st: &mut AppState, r: Rect) {
         }
         Some(c)
     };
-    if let Some(v) = fields::number_box(ui, "pi-box-w", d.r(17.0, 1.0, 24.0, 12.0), val(w), en).filter(|_| has).and_then(|v| limit(st, v)) {
+    if let Some(v) = fields::number_box(ui, "pi-box-w", d.r(17.0, 1.0, 24.0, 12.0), val(w), en).filter(|_| has && marq.is_none()).and_then(|v| limit(st, v)) {
         let p = if prop && w > 0.0 { json!({"width": v, "height": (h * v / w).round()}) } else { json!({"width": v}) };
         st.run("element.setBounds", p);
     }
-    if let Some(v) = fields::number_box(ui, "pi-box-h", d.r(17.0, 15.0, 24.0, 12.0), val(h), en).filter(|_| has).and_then(|v| limit(st, v)) {
+    if let Some(v) = fields::number_box(ui, "pi-box-h", d.r(17.0, 15.0, 24.0, 12.0), val(h), en).filter(|_| has && marq.is_none()).and_then(|v| limit(st, v)) {
         let p = if prop && h > 0.0 { json!({"height": v, "width": (w * v / h).round()}) } else { json!({"height": v}) };
         st.run("element.setBounds", p);
     }
     // X/Y ohne Grenze im Original (9999 und -5 erlaubt, „x“ → 0); F13
-    if let Some(v) = fields::number_box(ui, "pi-box-x", d.r(52.0, 1.0, 24.0, 12.0), val(x), en).filter(|_| has).map(|v| fields::clamp_range(v, (-30000.0, 30000.0))) {
+    if let Some(v) = fields::number_box(ui, "pi-box-x", d.r(52.0, 1.0, 24.0, 12.0), val(x), en).filter(|_| has && marq.is_none()).map(|v| fields::clamp_range(v, (-30000.0, 30000.0))) {
         st.run("element.setBounds", json!({"x": v}));
     }
-    if let Some(v) = fields::number_box(ui, "pi-box-y", d.r(52.0, 15.0, 24.0, 12.0), val(y), en).filter(|_| has).map(|v| fields::clamp_range(v, (-30000.0, 30000.0))) {
+    if let Some(v) = fields::number_box(ui, "pi-box-y", d.r(52.0, 15.0, 24.0, 12.0), val(y), en).filter(|_| has && marq.is_none()).map(|v| fields::clamp_range(v, (-30000.0, 30000.0))) {
         st.run("element.setBounds", json!({"y": v}));
     }
 }

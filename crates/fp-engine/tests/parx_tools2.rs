@@ -10,7 +10,7 @@ use common::*;
 use fp_engine::tools::ToolId;
 use fp_engine::{Session, ToolEvent, ToolKey};
 use fp_model::{ElementId, ElementKind};
-use serde_json::{json, Value};
+use serde_json::json;
 use sha2::Digest;
 use std::path::PathBuf;
 
@@ -336,4 +336,181 @@ fn stamp_live_preview_equals_result() {
         }
     }
     assert!(checked > 1000, "geprüfte Pixel {checked}");
+}
+// ------------------------------------------------------------------ 06 Auswahlrahmen, Lasso
+
+fn marquee(s: &mut Session) {
+    s.set_tool(ToolId::Marquee).expect("Auswahlrahmen");
+    s.tools.options.marquee_edge = fp_engine::tools::EdgeMode::Hard;
+    s.tools.options.marquee_style = fp_engine::tools::MarqueeStyle::Normal;
+}
+
+fn sel_bounds(s: &Session) -> Option<fp_geom::IRect> {
+    s.active().and_then(|d| d.selection.pixels.as_ref().map(|m| m.tight_bounds()))
+}
+
+/// 06/02, 06/22: Rahmen 100,80–300,220 – Loch hashgleich, Schritt „Pixel auswählen“.
+#[test]
+fn marquee_draw_and_step_name() {
+    let Some(mut s) = open_par("p57_t02t.fw.png") else { return };
+    marquee(&mut s);
+    drag(&mut s, (100.0, 80.0), (300.0, 220.0));
+    assert_eq!(undo_label(&s), "Pixel auswählen");
+    assert_eq!(sel_bounds(&s), Some(fp_geom::IRect::new(100, 80, 300, 220)));
+    assert_eq!(sha16(&hole(&mut s)), "ab14a172833dcb51");
+}
+
+/// 06/03: ohne Rahmen Umschalt = Quadrat, Alt = von der Mitte; mit Rahmen Umschalt→Alt = Schnitt,
+/// Alt→Umschalt = Abziehen (Hashes wie das Original).
+#[test]
+fn marquee_shift_alt_like_original() {
+    let Some(mut s) = open_par("p57_t02t.fw.png") else { return };
+    marquee(&mut s);
+    drag_mods(&mut s, (100.0, 80.0), (300.0, 150.0), |e| e.shift());
+    assert_eq!(sha16(&hole(&mut s)), "4dabede78d6d3fae", "Quadrat");
+    let mut s = open_par("p57_t02t.fw.png").expect("Datei");
+    marquee(&mut s);
+    drag_mods(&mut s, (200.0, 150.0), (260.0, 190.0), |e| e.alt());
+    assert_eq!(sha16(&hole(&mut s)), "7eb9136d3e660763", "von der Mitte");
+    for (alt_first, hash) in [(false, "b1588fc512fd1bf1"), (true, "537fd41babb88cc7")] {
+        let mut s = open_par("p57_t02t.fw.png").expect("Datei");
+        marquee(&mut s);
+        drag(&mut s, (100.0, 80.0), (200.0, 180.0));
+        let first = if alt_first { ToolEvent::drag(150.0, 130.0).alt() } else { ToolEvent::drag(150.0, 130.0).shift() };
+        events(&mut s, &[first]);
+        drag_mods(&mut s, (150.0, 130.0), (300.0, 250.0), |e| e.shift().alt());
+        assert_eq!(sha16(&hole(&mut s)), hash, "Alt zuerst: {alt_first}");
+    }
+}
+
+/// 06/05, 06/16: Ziehen im Rahmen verschiebt nur den Rahmen; Pfeiltasten ebenso (1 px / 10 px);
+/// Strg+Ziehen und Zeiger-Ziehen verschieben die Pixel (Hashes wie das Original), Rückgängig exakt.
+#[test]
+fn marquee_move_frame_and_pixels() {
+    let Some(mut s) = open_par("p57_t02t.fw.png") else { return };
+    marquee(&mut s);
+    drag(&mut s, (100.0, 80.0), (200.0, 180.0));
+    drag(&mut s, (120.0, 100.0), (170.0, 130.0));
+    assert_eq!(sel_bounds(&s), Some(fp_geom::IRect::new(150, 110, 250, 210)));
+    assert_eq!(sha16(&hole(&mut s)), "e164fd73729191c3", "Rahmen gezogen");
+    let mut s = open_par("p57_t02t.fw.png").expect("Datei");
+    marquee(&mut s);
+    drag(&mut s, (100.0, 80.0), (200.0, 180.0));
+    for _ in 0..10 {
+        ex(&mut s, "edit.nudge.right", json!({}));
+    }
+    ex(&mut s, "edit.nudge.bigDown", json!({}));
+    assert_eq!(sha16(&hole(&mut s)), "ddd9af986dfcbebe", "Pfeiltasten");
+    for pointer in [false, true] {
+        let mut s = open_par("p57_t02t.fw.png").expect("Datei");
+        let base = render(&s);
+        marquee(&mut s);
+        drag(&mut s, (100.0, 80.0), (200.0, 180.0));
+        if pointer {
+            s.set_tool(ToolId::Pointer).expect("Zeiger");
+            drag(&mut s, (120.0, 100.0), (170.0, 100.0));
+        } else {
+            drag_mods(&mut s, (120.0, 100.0), (170.0, 100.0), |e| e.ctrl());
+        }
+        let img = render(&s);
+        save_png(&format!("m16_{}.png", if pointer { "drag_post" } else { "ctrldrag" }), &img);
+        assert_eq!(sha16(&img), "5c6a628e1af58f6b", "Pixel verschoben (Zeiger: {pointer})");
+        ex(&mut s, "edit.undo", json!({}));
+        assert_eq!(sha16(&render(&s)), sha16(&base), "Rückgängig");
+    }
+}
+
+/// 06/08, 06/18: Esc im offenen Polygon-Lasso beendet den Bitmapmodus, Werkzeug → Zeiger, B1 bleibt
+/// gewählt; ein zweites Esc ändert nichts.
+#[test]
+fn poly_lasso_escape_and_second_escape() {
+    let Some(mut s) = open_par("p57_t02t.fw.png") else { return };
+    let b1 = first_of(&s, |k| matches!(k, ElementKind::Bitmap(_))).expect("B1");
+    s.set_tool(ToolId::PolygonLasso).expect("Polygon-Lasso");
+    click(&mut s, 100.0, 80.0);
+    click(&mut s, 300.0, 80.0);
+    events(&mut s, &[ToolEvent::key(ToolKey::Escape)]);
+    assert_eq!(s.tools.active, ToolId::Pointer);
+    assert_eq!(s.active().expect("Dokument").selection.elements, vec![b1]);
+    events(&mut s, &[ToolEvent::key(ToolKey::Escape)]);
+    assert_eq!(s.active().expect("Dokument").selection.elements, vec![b1], "zweites Esc");
+}
+
+/// 06/17: „Live-Auswahlrahmen“ – Weiche Kante 10 nachträglich wie beim Aufziehen (Hash wie 06/19).
+#[test]
+fn live_edge_feathers_existing_marquee() {
+    let Some(mut s) = open_par("p57_t02t.fw.png") else { return };
+    marquee(&mut s);
+    drag(&mut s, (100.0, 80.0), (300.0, 220.0));
+    ex(&mut s, "select.liveEdge", json!({"feather": 10}));
+    let live = hole(&mut s);
+    // gleich wie ein mit Weicher Kante 10 aufgezogener Rahmen (06/19: Zahlen wie das Original)
+    let mut t = open_par("p57_t02t.fw.png").expect("Datei");
+    marquee(&mut t);
+    t.tools.options.marquee_edge = fp_engine::tools::EdgeMode::Feather(10);
+    drag(&mut t, (100.0, 80.0), (300.0, 220.0));
+    assert_eq!(sha16(&live), sha16(&hole(&mut t)));
+    let (n, bb) = changed(&live, &render(&open_par("p57_t02t.fw.png").expect("Datei")));
+    assert_eq!((n, bb), (35_088, (90, 70, 310, 230)));
+}
+
+// ------------------------------------------------------------------ 07 Verlauf, Pipette, Farbeimer auf Vektoren
+
+/// 07/07, 07/16: Verlauf ohne Rahmen füllt die ganze Leinwand, B1 wächst auf 0,0–800,600 (Hash wie
+/// das Original), Schritt „Füllen“.
+#[test]
+fn gradient_without_marquee_fills_canvas() {
+    let Some(mut s) = open_par("p57_t02.fw.png") else { return };
+    s.set_tool(ToolId::Gradient).expect("Verlauf");
+    drag(&mut s, (100.0, 150.0), (300.0, 150.0));
+    assert_eq!(undo_label(&s), "Füllen");
+    let img = render(&s);
+    save_png("g07_nomarquee.png", &img);
+    let b1 = first_of(&s, |k| matches!(k, ElementKind::Bitmap(_))).expect("B1");
+    let b = bounds(&s, b1);
+    assert_eq!((b.left, b.top, b.right, b.bottom), (0.0, 0.0, 800.0, 600.0));
+    let (n, _) = changed(&img, &render(&open_par("p57_t02.fw.png").expect("Datei")));
+    assert!((243_000..=245_000).contains(&n), "{n}");
+}
+
+/// 07/08, 07/16: Verlauf auf einem Vektor: dritter Griff wie im Original (60,85 → 140,100 ⇒ 75,5),
+/// Schritt „Füllung bearbeiten“; Farbeimer auf ein Objekt: Schritt „Füllen“.
+#[test]
+fn gradient_handles_and_vector_steps() {
+    let mut s = doc_session(400.0, 300.0);
+    let r1 = rect(&mut s, 50.0, 50.0, 150.0, 120.0);
+    select(&mut s, &[r1]);
+    ex(&mut s, "element.setGradient", json!({"from": [60, 85], "to": [140, 100]}));
+    assert_eq!(undo_label(&s), "Füllung bearbeiten");
+    let ElementKind::Path(p) = &el(&s, r1).kind else { panic!("Pfad") };
+    assert_eq!((p.fill_handles.second.x, p.fill_handles.second.y), (75.0, 5.0));
+    select(&mut s, &[]);
+    s.set_tool(ToolId::PaintBucket).expect("Farbeimer");
+    click(&mut s, 100.0, 80.0);
+    assert_eq!(undo_label(&s), "Füllen");
+}
+
+/// 07/11, 07/13: Pipette setzt die Farbe des aktiven Felds, gewählte Vektoren bekommen sie (Schritt
+/// „Füllfarbe“/„Strichfarbe“); ein Klick neben die Leinwand ändert nichts.
+#[test]
+fn eyedropper_respects_active_well_and_selection() {
+    let Some(mut s) = open_par("p57_t02.fw.png") else { return };
+    select(&mut s, &[]);
+    s.set_tool(ToolId::Eyedropper).expect("Pipette");
+    click(&mut s, 380.0, 120.0);
+    assert_eq!(s.tools.fill_color.to_rgba8().to_hex_rgba()[..7].to_uppercase(), "#FF0000");
+    s.tools.options.stroke_well = true;
+    click(&mut s, 420.0, 120.0);
+    assert_eq!(s.tools.stroke_color.to_rgba8().to_hex_rgba()[..7].to_uppercase(), "#00A000");
+    let before = (s.tools.fill_color, s.tools.stroke_color);
+    click(&mut s, 1300.0, 400.0);
+    assert_eq!((s.tools.fill_color, s.tools.stroke_color), before, "neben der Leinwand");
+    s.tools.options.stroke_well = false;
+    let r = rect(&mut s, 600.0, 400.0, 700.0, 500.0);
+    select(&mut s, &[r]);
+    s.set_tool(ToolId::Eyedropper).expect("Pipette");
+    click(&mut s, 380.0, 120.0);
+    assert_eq!(undo_label(&s), "Füllfarbe");
+    let a = fp_engine::docops::path_attrs_of(&el(&s, r)).expect("Attribute");
+    assert_eq!(a.fill_color.to_rgba8().to_hex_rgba()[..7].to_uppercase(), "#FF0000");
 }

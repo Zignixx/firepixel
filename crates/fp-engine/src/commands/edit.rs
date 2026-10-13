@@ -196,6 +196,19 @@ pub(crate) fn move_selection(s: &mut Session, dx: f32, dy: f32, copy: bool) -> R
         duplicate(s, (dx, dy))?;
         return Ok(CommandOutput::doc().labeled(fp_i18n::t("msg-step-move-copy")));
     }
+    // Pfeiltasten mit einem Bitmap-Auswahlwerkzeug: nur der Auswahlrahmen wandert (PAR 06/05)
+    use crate::tools::ToolId as T;
+    if matches!(s.tools.active, T::Marquee | T::OvalMarquee | T::Lasso | T::PolygonLasso | T::MagicWand) && s.doc()?.selection.has_pixels() {
+        return with_doc(s, |d| {
+            if let Some(m) = &mut d.selection.pixels {
+                let b = m.bounds().translate(dx.round() as i32, dy.round() as i32);
+                if let Ok(nm) = Mask::from_raw(b, m.data().to_vec()) {
+                    *m = nm;
+                }
+            }
+            Ok(CommandOutput::doc().labeled(fp_i18n::t("msg-step-move")))
+        });
+    }
     with_doc(s, |d| {
         let page = d.page;
         let ids = d.selection.elements.clone();

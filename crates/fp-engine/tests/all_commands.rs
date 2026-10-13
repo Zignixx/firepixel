@@ -567,6 +567,15 @@ fn overrides(name: &str, ids: &Ids) -> Option<(Value, Option<Setup>)> {
         "select.points" => r(json!({"points": [{"element": ellipse.0, "contour": 0, "node": 0}]})),
         "select.pixels" => r(json!({"shape": "rect", "rect": [0, 0, 10, 10]})),
         "select.magicWand" => rs(json!({"point": [205, 105]}), sel_ids(vec![bitmap])),
+        // PAR-X-TOOLS-2: Rahmen weich machen bzw. verschieben, Auswahlpixel verschieben (B1 mit Rahmen)
+        "select.liveEdge" | "select.moveMarquee" | "select.movePixels" => {
+            let p = if name == "select.liveEdge" { json!({"feather": 3}) } else { json!({"dx": 2, "dy": 1}) };
+            rs(p, Box::new(move |s: &mut Session| {
+                select(s, &[bitmap]);
+                ex(s, "select.pixels", json!({"shape": "rect", "rect": [202, 102, 212, 112]}));
+                Value::Null
+            }))
+        }
         // KI-Auswahl (Agent KI): Klickpunkt auf der Bitmap; ohne Modelle meldet der Befehl das fehlende Modell
         "select.aiObject" => rs(json!({"point": [205, 105]}), sel_ids(vec![bitmap])),
         "select.restoreBitmapSelection" | "select.deleteBitmapSelection" => rs(json!({"name": "A"}), Box::new(move |s: &mut Session| {

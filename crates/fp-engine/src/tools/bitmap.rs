@@ -83,12 +83,29 @@ pub struct MarqueeTool {
     start: Option<(Point, SelectMode)>,
     cur: Option<Point>,
     overlay: Vec<Overlay>,
+    /// Ziehen im vorhandenen Rahmen: Startpunkt und ob die Pixel mitgehen (Strg) – sonst nur der Rahmen.
+    moving: Option<(Point, bool)>,
+    /// Reihenfolge der Umschalttasten: Some(true) = Alt zuerst gedrückt (Alt, dann Umschalt = Abziehen).
+    alt_first: Option<bool>,
 }
 
 impl MarqueeTool {
     /// Neues Werkzeug (Marquee, OvalMarquee).
     pub fn new(id: ToolId) -> MarqueeTool {
-        MarqueeTool { id, start: None, cur: None, overlay: Vec::new() }
+        MarqueeTool { id, start: None, cur: None, overlay: Vec::new(), moving: None, alt_first: None }
+    }
+
+    /// Verknüpfung beim Drücken wie im Original (PAR 06/03): ohne vorhandenen Rahmen ersetzt jeder
+    /// Zug (Umschalt = Quadrat, Alt = von der Mitte); mit Rahmen Umschalt addiert, Alt zieht ab,
+    /// beide: Umschalt zuerst = Schnitt, Alt zuerst = Abziehen.
+    fn press_mode(&self, ev: &ToolEvent, ctx: &ToolContext) -> SelectMode {
+        if !ctx.selection.has_pixels() {
+            return SelectMode::Replace;
+        }
+        match (ev.mods.shift, ev.mods.alt) {
+            (true, true) if self.alt_first == Some(true) => SelectMode::Subtract,
+            _ => mode_from(ev),
+        }
     }
 
     fn rect(&self, start: Point, cur: Point, mode: SelectMode, ev: &ToolEvent, ctx: &ToolContext) -> Rect {
@@ -129,11 +146,52 @@ impl ToolMachine for MarqueeTool {
         };
         let ellipse = self.id == ToolId::OvalMarquee;
         let p = pixel_snap(ctx, *pos);
+        // Reihenfolge der Umschalttasten merken (nur eine gehalten → die war zuerst)
+        match (ev.mods.shift, ev.mods.alt) {
+            (false, true) => self.alt_first = Some(true),
+            (true, false) => self.alt_first = Some(false),
+            (false, false) => self.alt_first = None,
+            _ => {}
+        }
         match kind {
             PointerKind::Down => {
-                self.start = Some((p, mode_from(ev)));
+                // im vorhandenen Rahmen: Ziehen verschiebt den Rahmen, Strg+Ziehen die Pixel (PAR 06/05, 06/16)
+                let inside = !ev.mods.shift
+                    && !ev.mods.alt
+                    && ctx.selection.has_pixels()
+                    && ctx.selection.pixels.as_ref().is_some_and(|m| m.get(pos.x.floor() as i32, pos.y.floor() as i32) > 0)
+                    && !matches!(ctx.options.marquee_style, MarqueeStyle::FixedSize(..));
+                if inside {
+                    self.moving = Some((p, ev.mods.ctrl));
+                    return ToolResponse { cursor: Cursor::Move, ..ToolResponse::default() };
+                }
+                self.start = Some((p, self.press_mode(ev, ctx)));
                 self.cur = None;
                 ToolResponse { cursor: Cursor::Crosshair, ..ToolResponse::default() }
+            }
+            PointerKind::Move if self.moving.is_some() => {
+                let (s, _) = self.moving.unwrap_or((p, false));
+                let (dx, dy) = ((p.x - s.x).round(), (p.y - s.y).round());
+                self.overlay = ctx
+                    .selection
+                    .pixels
+                    .as_ref()
+                    .map(|m| {
+                        let b = m.tight_bounds().to_rect();
+                        vec![Overlay::Rect { rect: Rect::new(b.left + dx, b.top + dy, b.right + dx, b.bottom + dy), dashed: true }]
+                    })
+                    .unwrap_or_default();
+                ToolResponse::with_overlay(self.overlay.clone(), Cursor::Move)
+            }
+            PointerKind::Up if self.moving.is_some() => {
+                self.overlay.clear();
+                let (s, pixels) = self.moving.take().unwrap_or((p, false));
+                let (dx, dy) = ((p.x - s.x).round(), (p.y - s.y).round());
+                if dx == 0.0 && dy == 0.0 {
+                    return ToolResponse::default();
+                }
+                let name = if pixels { "select.movePixels" } else { "select.moveMarquee" };
+                ToolResponse::commit(vec![Invocation::new(name, json!({"dx": dx, "dy": dy}))])
             }
             PointerKind::Move => {
                 // Leertaste beim Aufziehen: Rahmen verschieben (Startpunkt wandert mit)
@@ -278,6 +336,12 @@ impl ToolMachine for LassoTool {
                 self.points.clear();
                 self.active = false;
                 self.hover = None;
+                if poly && bitmap_target(ctx) {
+                    // offenes Polygon-Lasso: verwerfen und wie im Original den Bitmapmodus beenden,
+                    // Werkzeug → Zeiger, die Bitmap bleibt gewählt (PAR 06/08)
+                    let commands = if ctx.bitmap_mode || ctx.selection.has_pixels() { vec![Invocation::new("modify.exitBitmapMode", json!({}))] } else { Vec::new() };
+                    return ToolResponse { commands, switch_tool: Some(ToolId::Pointer), ..ToolResponse::default() };
+                }
                 ToolResponse::default()
             }
             _ => ToolResponse::with_overlay(self.overlay(), self.cursor()),
@@ -842,7 +906,8 @@ impl ToolMachine for FillTool {
                         let (a, c) = (Point::new(b.left, (b.top + b.bottom) / 2.0), Point::new(b.right, (b.top + b.bottom) / 2.0));
                         ToolResponse::commit(vec![Invocation::new("element.setGradient", json!({"ids": [id.0], "from": pt_json(a), "to": pt_json(c), "colors": colors}))])
                     }
-                    Some(id) => ToolResponse::commit(vec![Invocation::new("element.setFill", json!({"ids": [id.0], "color": crate::commands::argb_hex(ctx.fill_color)}))]),
+                    // Farbeimer auf ein Objekt: Schritt „Füllen“ wie im Original (PAR 07/16)
+                    Some(id) => ToolResponse::commit(vec![Invocation::new("pi.fill", json!({"ids": [id.0], "category": "solid", "color": crate::commands::argb_hex(ctx.fill_color)}))]),
                     None => ToolResponse::default(),
                 }
             }
@@ -880,14 +945,24 @@ impl ToolMachine for EyedropperTool {
 
     fn handle(&mut self, ev: &ToolEvent, ctx: &ToolContext) -> ToolResponse {
         match &ev.input {
-            ToolInput::Pointer { kind: PointerKind::Up, pos } if ctx.has_document => ToolResponse {
-                commands: vec![Invocation::new(
-                    "color.sample",
-                    json!({"point": pt_json(*pos), "target": if ev.mods.alt { "stroke" } else { "fill" }, "samples": ctx.options.eyedropper_samples}),
-                )],
-                cursor: Cursor::Eyedropper,
-                ..ToolResponse::default()
-            },
+            ToolInput::Pointer { kind: PointerKind::Up, pos } if ctx.has_document => {
+                // neben der Leinwand: Farbe bleibt (PAR 07/13)
+                let canvas = crate::commands::canvas_rect(ctx.doc, ctx.page);
+                if pos.x < canvas.left || pos.y < canvas.top || pos.x >= canvas.right || pos.y >= canvas.bottom {
+                    return ToolResponse { cursor: Cursor::Eyedropper, ..ToolResponse::default() };
+                }
+                // Ziel = aktives Farbfeld des Werkzeugbedienfelds (Alt: das andere); gewählte Vektoren
+                // bekommen die Farbe (PAR 07/11)
+                let stroke = ctx.options.stroke_well != ev.mods.alt;
+                ToolResponse {
+                    commands: vec![Invocation::new(
+                        "color.sample",
+                        json!({"point": pt_json(*pos), "target": if stroke { "stroke" } else { "fill" }, "samples": ctx.options.eyedropper_samples, "applyToSelection": true}),
+                    )],
+                    cursor: Cursor::Eyedropper,
+                    ..ToolResponse::default()
+                }
+            }
             _ => ToolResponse { cursor: Cursor::Eyedropper, ..ToolResponse::default() },
         }
     }

@@ -491,6 +491,9 @@ pub struct ToolOptions {
     pub eraser_edge: u32,
     /// Pipette: 1, 3 oder 5 Pixel.
     pub eyedropper_samples: u32,
+    /// Im Werkzeugbedienfeld ist das Strichfarbfeld aktiv (Pipette setzt dann die Strichfarbe, PAR 07/11).
+    #[serde(default)]
+    pub stroke_well: bool,
     pub text_font: String,
     pub text_size: f32,
     /// Eigene Textfarbe des Textwerkzeugs (`Text_FillColor`, Werksvorgabe schwarz) – nicht die
@@ -639,6 +642,7 @@ impl ToolOptions {
                 2 => 5,
                 _ => 1,
             },
+            stroke_well: false,
             text_font: default_text_font(p),
             text_size: p.get_real("Text_Size", 12.0) as f32,
             text_color: p.get_color("Text_FillColor", black()),

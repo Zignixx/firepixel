@@ -87,7 +87,8 @@ fn bitmap_gradient_respects_fill_selection_and_tolerance() {
     assert_eq!(px(&s, b, 0, 5), [255, 0, 0, 255]);
     // mit „Auswahl füllen“ (Vorgabe) ohne Pixelauswahl: die ganze Bitmap
     ex(&mut s, "bitmap.gradient", json!({"from": [10, 15], "to": [30, 15], "colors": ["#000000", "#ffffff"]}));
-    assert!(px(&s, b, 19, 5)[2] > 200 && px(&s, b, 19, 5)[0] > 200, "rechts Verlaufsende {:?}", px(&s, b, 19, 5));
+    // ohne Pixelauswahl wächst die Bitmap auf die Leinwand (PAR 07/07): Bildkoordinaten = Dokument
+    assert!(px(&s, b, 29, 15)[2] > 200 && px(&s, b, 29, 15)[0] > 200, "rechts Verlaufsende {:?}", px(&s, b, 29, 15));
 }
 
 #[test]
@@ -185,13 +186,13 @@ fn gradient_tool_paints_own_colors() {
     ex(&mut s, "color.set", json!({"stroke": "#c04040", "fill": "#808080"}));
     s.set_tool(ToolId::Gradient).expect("Werkzeug");
     events(&mut s, &[ToolEvent::down(10.0, 15.0), ToolEvent::drag(30.0, 15.0), ToolEvent::drag(50.0, 15.0), ToolEvent::up(50.0, 15.0)]);
-    let (l, r) = (px(&s, b, 0, 5), px(&s, b, 39, 5));
+    let (l, r) = (px(&s, b, 10, 15), px(&s, b, 49, 15));
     assert!(l[0] < 20 && l[1] < 20 && l[2] < 20, "Anfang schwarz {l:?}");
     assert!(r[0] > 235 && r[1] > 235 && r[2] > 235, "Ende weiß {r:?}");
     // eigene Werkzeugfarben
     s.tools.options.gradient_colors = vec![fp_color::Argb(0xffff_0000), fp_color::Argb(0xff00_00ff)];
     events(&mut s, &[ToolEvent::down(10.0, 15.0), ToolEvent::drag(30.0, 15.0), ToolEvent::drag(50.0, 15.0), ToolEvent::up(50.0, 15.0)]);
-    let (l, r) = (px(&s, b, 0, 5), px(&s, b, 39, 5));
+    let (l, r) = (px(&s, b, 10, 15), px(&s, b, 49, 15));
     assert!(l[0] > 235 && l[2] < 20 && r[2] > 235 && r[0] < 20, "rot → blau {l:?} {r:?}");
     // Vektorobjekt: Verlauf mit den Werkzeugfarben
     s.tools.options.gradient_colors = fp_engine::tools::default_gradient_colors();

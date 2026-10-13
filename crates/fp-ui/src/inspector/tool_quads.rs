@@ -273,11 +273,21 @@ fn live_marquee(ui: &mut Ui, r: Rect, key: &str) {
     }
 }
 
+/// „Live-Auswahlrahmen“ an: ein neuer Rand „Weiche Kante“ wirkt sofort auf den vorhandenen Rahmen
+/// (PAR 06/17; aus: erst der nächste Rahmen).
+fn live_edge(ui: &Ui, st: &mut AppState, e: fp_engine::tools::EdgeMode) {
+    let has_px = st.session.active().is_some_and(|d| d.selection.has_pixels());
+    if let (true, true, fp_engine::tools::EdgeMode::Feather(f)) = (tool_attrs(ui.ctx()).live_marquee, has_px, e) {
+        st.run("select.liveEdge", serde_json::json!({"feather": f}));
+    }
+}
+
 fn lasso_q3(ui: &mut Ui, st: &mut AppState, r: Rect) {
     let d = Dl::at(r.min);
     fields::label(ui, d.r(4.0, 2.0, 26.0, 8.0), &tx("pi-edge"), true);
     if let Some(e) = edge_fields(ui, "lasso", d.r(31.0, 0.0, 68.0, 13.0), d.r(101.0, 0.0, 22.0, 13.0), d.r(124.0, 0.0, 9.0, 13.0), st.session.tools.options.lasso_edge) {
         st.session.tools.options.lasso_edge = e;
+        live_edge(ui, st, e);
     }
     live_marquee(ui, d.r(11.0, 17.0, 94.0, 10.0), "lasso");
 }
@@ -291,6 +301,7 @@ fn wand_q3(ui: &mut Ui, st: &mut AppState, r: Rect) {
     fields::label_right(ui, d.r(83.0, 2.0, 27.0, 8.0), &tx("pi-edge"), true);
     if let Some(e) = edge_fields(ui, "wand", d.r(112.0, 0.0, 65.0, 13.0), d.r(179.0, 0.0, 21.0, 13.0), d.r(202.0, 0.0, 9.0, 13.0), st.session.tools.options.wand_edge) {
         st.session.tools.options.wand_edge = e;
+        live_edge(ui, st, e);
     }
     live_marquee(ui, d.r(10.0, 17.0, 83.0, 10.0), "wand");
 }
@@ -340,6 +351,7 @@ fn marquee_q3(ui: &mut Ui, st: &mut AppState, r: Rect) {
     fields::label_right(ui, d.r(129.0, 2.0, 28.0, 8.0), &tx("pi-edge"), true);
     if let Some(e) = edge_fields(ui, "marq", d.r(159.0, 0.0, 71.0, 13.0), d.r(233.0, 0.0, 19.0, 13.0), d.r(253.0, 0.0, 9.0, 13.0), st.session.tools.options.marquee_edge) {
         st.session.tools.options.marquee_edge = e;
+        live_edge(ui, st, e);
     }
     live_marquee(ui, d.r(139.0, 17.0, 93.0, 10.0), "marq");
 }

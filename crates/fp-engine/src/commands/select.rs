@@ -94,6 +94,44 @@ fn set_pixels(d: &mut DocumentState, m: Option<Mask>, mode: SelectMode, feather:
     }
 }
 
+/// Hebt die Pixel unter der Maske aus dem Bild und setzt sie um `(dx, dy)` versetzt wieder ein
+/// (Bild wächst bei Bedarf; das Loch wird transparent).
+pub(crate) fn move_pixels(img: &fp_raster::RgbaImage, m: &Mask, dx: i32, dy: i32) -> fp_raster::RgbaImage {
+    let ib = img.bounds();
+    let src = m.bounds().intersect(&ib);
+    let nb = ib.union(&src.translate(dx, dy));
+    let Ok(mut out) = img.extended_to(nb) else { return img.clone() };
+    for y in src.top..src.bottom {
+        for x in src.left..src.right {
+            let k = m.get(x, y) as u32;
+            if k == 0 {
+                continue;
+            }
+            if let Some(p) = img.get(x, y) {
+                let a = (p[3] as u32 * (255 - k) + 127) / 255;
+                out.set_pixel(x, y, fp_color::Rgba8::new(p[0], p[1], p[2], a as u8));
+            }
+        }
+    }
+    for y in src.top..src.bottom {
+        for x in src.left..src.right {
+            let k = m.get(x, y) as u32;
+            let Some(p) = img.get(x, y).filter(|_| k > 0) else { continue };
+            let sa = (p[3] as u32 * k + 127) / 255;
+            if sa == 0 {
+                continue;
+            }
+            let (tx, ty) = (x + dx, y + dy);
+            let q = out.get(tx, ty).unwrap_or([0; 4]);
+            let da = q[3] as u32 * (255 - sa) / 255;
+            let oa = sa + da;
+            let c = |i: usize| ((p[i] as u32 * sa + q[i] as u32 * da + oa / 2) / oa.max(1)) as u8;
+            out.set_pixel(tx, ty, fp_color::Rgba8::new(c(0), c(1), c(2), oa.min(255) as u8));
+        }
+    }
+    out
+}
+
 /// Weiche Kante wie beim Aufziehen eines Rahmens (gemessen 06/19: Rahmen + `f` px nach außen).
 pub(crate) fn feather_mask(m: Mask, f: u32) -> Mask {
     if f == 0 {
@@ -632,8 +670,75 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 let md = mode(p)?;
                 let fe = p.i64_or("feather", 0)?.max(0) as u32;
                 with_doc(s, |d| {
+                    let none = m.is_none();
                     set_pixels(d, m, md, fe);
-                    Ok(CommandOutput::doc())
+                    // Verlaufsschritt wie im Original „Pixel auswählen“ (PAR 06/22)
+                    Ok(if none { CommandOutput::doc() } else { CommandOutput::doc().labeled(fp_i18n::t("msg-step-select-pixels")) })
+                })
+            }),
+    );
+    r.add(
+        cmd("select.liveEdge")
+            .label("Weiche Auswahlkante")
+            .requires(DOC)
+            .param("feather", ParamKind::Integer { min: Some(0), max: Some(1000) }, "weiche Kante")
+            .run(|s, p| {
+                let f = p.i64("feather")?.max(0) as u32;
+                with_doc(s, |d| {
+                    // „Live-Auswahlrahmen“: Rand im Inspektor ändern macht den vorhandenen Rahmen weich (PAR 06/17)
+                    let Some(m) = d.selection.pixels.clone().filter(|_| d.selection.has_pixels() && f > 0) else { return Ok(CommandOutput::doc()) };
+                    d.selection.pixels = Some(feather_mask(m, f));
+                    Ok(CommandOutput::doc().labeled(fp_i18n::t("msg-step-feather-selection")))
+                })
+            }),
+    );
+    r.add(
+        cmd("select.moveMarquee")
+            .label("Verschieben")
+            .requires(DOC)
+            .param("dx", ParamKind::Number { min: None, max: None }, "Verschiebung x")
+            .param("dy", ParamKind::Number { min: None, max: None }, "Verschiebung y")
+            .run(|s, p| {
+                let (dx, dy) = (p.f64("dx")?.round() as i32, p.f64("dy")?.round() as i32);
+                with_doc(s, |d| {
+                    // nur der Auswahlrahmen wandert, die Pixel bleiben (PAR 06/05)
+                    let Some(m) = d.selection.pixels.as_mut().filter(|_| dx != 0 || dy != 0) else { return Ok(CommandOutput::doc()) };
+                    let b = m.bounds().translate(dx, dy);
+                    if let Ok(nm) = Mask::from_raw(b, m.data().to_vec()) {
+                        *m = nm;
+                    }
+                    Ok(CommandOutput::doc().labeled(fp_i18n::t("msg-step-move")))
+                })
+            }),
+    );
+    r.add(
+        cmd("select.movePixels")
+            .label("Verschieben")
+            .requires(DOC)
+            .param("dx", ParamKind::Number { min: None, max: None }, "Verschiebung x")
+            .param("dy", ParamKind::Number { min: None, max: None }, "Verschiebung y")
+            .run(|s, p| {
+                let (dx, dy) = (p.f64("dx")?.round() as i32, p.f64("dy")?.round() as i32);
+                let geo = Arc::new(crate::geometry::BasicGeometry);
+                with_doc(s, |d| {
+                    // ausgewählte Pixel verschieben: Loch bleibt transparent, Rahmen wandert mit (PAR 06/16)
+                    let Some(m) = d.selection.pixels.clone().filter(|_| d.selection.has_pixels()) else { return Err(sel_err("err-sel-empty-pixels")) };
+                    let (path, e) = bitmap_for(d, None, geo.as_ref()).ok_or_else(|| sel_err("err-sel-no-bitmap"))?;
+                    let ElementKind::Bitmap(b) = &e.kind else { return Err(sel_err("err-sel-no-bitmap")) };
+                    let img = docops::bitmap_image(b).ok_or_else(|| EngineError::Failed(fp_i18n::t("err-bitmap-unreadable-short")))?;
+                    let out = move_pixels(&img, &m, dx, dy);
+                    let doc = Arc::make_mut(&mut d.doc);
+                    docops::edit_at(doc, &path, |e| {
+                        if let ElementKind::Bitmap(b) = &mut e.kind {
+                            docops::set_bitmap_image(b, &out);
+                        }
+                    });
+                    if let Some(pm) = d.selection.pixels.as_mut()
+                        && let Ok(nm) = Mask::from_raw(pm.bounds().translate(dx, dy), pm.data().to_vec())
+                    {
+                        *pm = nm;
+                    }
+                    Ok(CommandOutput::doc().labeled(fp_i18n::t("msg-step-move")))
                 })
             }),
     );

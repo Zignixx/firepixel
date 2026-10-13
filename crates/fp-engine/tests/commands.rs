@@ -384,8 +384,9 @@ fn bitmap_tools_and_filters() {
     ex(&mut s, "bitmap.erase", json!({"points": [[11.5, 25.5]], "size": 2}));
     assert_eq!(px(&s, b, 1, 15)[3], 0);
     ex(&mut s, "bitmap.gradient", json!({"from": [10, 10], "to": [30, 10], "colors": ["#000000", "#ffffff"]}));
-    let l = px(&s, b, 0, 5);
-    let r = px(&s, b, 19, 5);
+    // ohne Pixelauswahl wächst die Bitmap auf die Leinwand (PAR 07/07)
+    let l = px(&s, b, 10, 15);
+    let r = px(&s, b, 29, 15);
     assert!(l[0] < 20 && r[0] > 230, "{l:?} {r:?}");
     // Zauberstab, Bitmap durch Kopieren, Zuschneiden
     ex(&mut s, "select.magicWand", json!({"point": [10, 15], "tolerance": 255}));

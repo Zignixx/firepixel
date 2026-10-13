@@ -516,7 +516,8 @@ pub(super) fn register(r: &mut CommandRegistry) {
                     } else {
                         match &d.selection.pixels {
                             Some(m) if d.selection.has_pixels() => m.clone(),
-                            _ => Mask::from_rect(docops::element_bounds(&d.doc, &e).map(|r| r.round_out()).unwrap_or_default())?,
+                            // ohne Pixelauswahl die ganze Leinwand; die Bitmap wächst darauf (PAR 07/07)
+                            _ => Mask::from_rect(super::canvas_rect(&d.doc, d.page).round_out())?,
                         }
                     };
                     let (dx, dy) = ((b.x - a.x) as f64, (b.y - a.y) as f64);
@@ -555,7 +556,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                             set_bitmap_image(bm, &out);
                         }
                     });
-                    Ok(CommandOutput::doc())
+                    Ok(CommandOutput::doc().labeled(fp_i18n::t("msg-step-fill")))
                 })
             }),
     );

@@ -678,6 +678,13 @@ impl PointerTool {
                 if ctx.selection.elements.is_empty() || (dx == 0.0 && dy == 0.0 && !copy) {
                     return ToolResponse::default();
                 }
+                // Ziehen im Auswahlrahmen einer Bitmap verschiebt die ausgewählten Pixel (PAR 06/16)
+                if !copy
+                    && ctx.selection.has_pixels()
+                    && ctx.selection.pixels.as_ref().is_some_and(|m| m.get(start.x.floor() as i32, start.y.floor() as i32) > 0)
+                {
+                    return ToolResponse::commit(vec![Invocation::new("select.movePixels", json!({"dx": dx.round(), "dy": dy.round()}))]);
+                }
                 ToolResponse::commit(vec![Invocation::new("edit.move", json!({"dx": dx, "dy": dy, "copy": copy}))])
             }
             PState::Rubber { start, cur, add } => {
@@ -891,7 +898,11 @@ impl ToolMachine for PointerTool {
                         let was_busy = self.state != PState::Idle;
                         self.state = PState::Idle;
                         self.overlay.clear();
-                        if was_busy || ctx.selection.is_empty() {
+                        // eine gewählte Bitmap (z. B. nach „Bitmapmodus beenden“ per Esc) bleibt wie im
+                        // Original gewählt (PAR 06/18: zweites Esc ändert nichts)
+                        let single_bitmap = ctx.selection.elements.len() == 1
+                            && docops::element_on_page(ctx.doc, ctx.page, ctx.selection.elements[0]).is_some_and(|e| matches!(e.kind, fp_model::ElementKind::Bitmap(_)));
+                        if was_busy || ctx.selection.is_empty() || single_bitmap {
                             ToolResponse::default()
                         } else {
                             ToolResponse::commit(vec![Invocation::new("select.none", json!({}))])

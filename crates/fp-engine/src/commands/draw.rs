@@ -700,7 +700,8 @@ pub(super) fn register(r: &mut CommandRegistry) {
                     for id in ids {
                         docops::edit_by_id(doc, page, id, |e| {
                             docops::edit_path_attrs(e, &|x| x.fill = Some(fill.clone()));
-                            let h = fp_model::FillHandles { valid: true, start: a, end: b, second: Point::new(a.x - (b.y - a.y), a.y + (b.x - a.x)) };
+                            // dritter Griff (Breite) wie im Original senkrecht zur anderen Seite: 60,85 → 140,100 ergibt 75,5 (PAR 07/08)
+                            let h = fp_model::FillHandles { valid: true, start: a, end: b, second: Point::new(a.x + (b.y - a.y), a.y - (b.x - a.x)) };
                             match &mut e.kind {
                                 ElementKind::Path(pe) => pe.fill_handles = h,
                                 ElementKind::Text(t) => t.fill_handles = h,
@@ -708,7 +709,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                             }
                         });
                     }
-                    Ok(CommandOutput::doc())
+                    Ok(CommandOutput::doc().labeled(fp_i18n::t("msg-step-edit-fill")))
                 })
             }),
     );
@@ -1002,6 +1003,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
             .param("point", ParamKind::Point, "Punkt")
             .opt_default("target", ParamKind::Enum { values: vec!["fill".into(), "stroke".into(), "none".into()] }, json!("fill"), "Ziel")
             .opt_default("samples", ParamKind::Integer { min: Some(1), max: Some(5) }, json!(1), "1, 3 oder 5 Pixel (Mittelwert)")
+            .opt_default("applyToSelection", ParamKind::Bool, json!(false), "gewählte Vektoren bekommen die Farbe (Pipette)")
             .run(|s, p| {
                 let pt = p.point("point")?;
                 let n = match p.i64_or("samples", 1)? {
@@ -1010,10 +1012,26 @@ pub(super) fn register(r: &mut CommandRegistry) {
                     _ => 1,
                 };
                 let c = super::bitmap::sample_color(s, pt, n)?;
-                match p.opt_str("target")?.as_deref() {
+                let target = p.opt_str("target")?;
+                match target.as_deref() {
                     Some("stroke") => s.set_colors(Some(c), None),
                     Some("none") => {}
                     _ => s.set_colors(None, Some(c)),
+                }
+                // Pipette mit gewählten Vektoren: sie bekommen die Farbe, Schritt „Füllfarbe“ bzw.
+                // „Strichfarbe“ (PAR 07/11)
+                let vectors = s.doc().map(|d| {
+                    super::selected_elements(d).iter().any(|(_, e)| !matches!(e.kind, fp_model::element::ElementKind::Bitmap(_)))
+                })?;
+                if p.bool_or("applyToSelection", false)? && vectors && target.as_deref() != Some("none") {
+                    let stroke = target.as_deref() == Some("stroke");
+                    let (name, key) = if stroke { ("element.setStroke", "msg-step-stroke-color") } else { ("element.setFill", "msg-step-fill-color") };
+                    let reg = std::sync::Arc::clone(s.registry());
+                    let cmd = reg.get(name).ok_or_else(|| EngineError::UnknownCommand(name.into()))?;
+                    let ip = crate::command::Params::new(name, json!({"color": argb_hex(c)}));
+                    crate::command::validate(cmd.info(), &ip)?;
+                    let out = cmd.apply(s, &ip)?;
+                    return Ok(CommandOutput { value: json!({"color": argb_hex(c)}), ..out }.labeled(fp_i18n::t(key)));
                 }
                 Ok(CommandOutput::session_with(json!({"color": argb_hex(c)})))
             }),
