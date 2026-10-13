@@ -1,5 +1,53 @@
 # Firepixel: Stand
 
+## Nacht 13.10.: Welle 5, Batch, Vollabgleich
+
+**Stand 13.10.2026 ≈ 07:00 (DOC-4).** Ablauf nach `docs\NIGHT_PLAN_2026-10-13.md` (ein „los“ ≈ 03:50, durchgehend, höchstens 8 Agenten). Seit `7f93f96` 40 Commits (Gesamt 330, Stand `73c3379`). Alles unten ist umgesetzt und mit eigenen Tests grün; die Prüfung im echten Fenster bzw. über die Brücke steht aus (`docs\NACHPRUEFUNG.md`, jetzt 231 Zeilen, neu §8 Batch-Studio). Neue und erledigte Befunde: `docs\BEFUNDE.md` (361 erledigt / 149 offen, neuer Abschnitt BATCH).
+
+**Nutzerbefunde:** 18 ✅ · 12 🔧 (N01, N21–N31) · 1 ❌ teilweise (N11 → DES-3).
+
+**Welle 5 (N25–N31) und Nachläufer:**
+
+| Paket | Nutzerbefund | Stand | Commit(s) | Kurz | Bericht |
+|---|---|---|---|---|---|
+| RE-5 | N25–N27 | ☑ | – (außerhalb des Repos) | Messung im Original: Bitmap-Grenzen, Farbwähler-Popup, 2-/4-fach | `re\22-ansicht-bitmap-farbe.md` |
+| RE-FX | N28 | ☑ | – | Messreihe aller Live-Effekte/Filter, 237 Referenzbilder | `re\23-effekte.md` |
+| RE-PINSEL | N31 | ☑ | – | Pinsel im Original, mit echten Zügen nachgemessen | `re\24-pinsel.md` |
+| BV-5 | N25 | ☑ | `21be8b0` | 2-/4-fach (Dokument und Bildvorschau) mit gemeinsamer Ansichtslage; Mausrad bewusst synchron | `berichte\bv5.md` |
+| BM-1 | N26 | ☑ | `725515f` | PNG öffnen/importieren beschneidet auf Alpha ≥ 2, Rahmen/`pixelRect` um sichtbare Pixel | `bm1.md` |
+| FARB-1a | N27a | ☑ | `4575384` | genauer Farbwähler springt nicht mehr zurück | `farb1a.md` |
+| FARB-1b | N27b | ☑ | `569ea54` | Farbwähler-Popup des Originals an allen Farbfeldern | `farb1b.md` |
+| CMD-TXT | – | ☑ | `edd079b` | 18 fehlende Befehlstexte de/en, CLI-Test grün | `cmdtxt.md` |
+| VT-6 | N29 | ☑ | `7893e78` | zweites Nachzeichen-Verfahren „Glatte Kurven“ (Potrace-Verfahren, eigenständig) | `vt6.md` |
+| START-1 | N30 | ☑ | `e37efcb` | Start sichtbar warm −22 %, kalt −19 % (Vorladen, Hintergrund-Threads, 0,5 s) | `start1.md` |
+| PINSEL-1 | N31 | ☑ | `90f9f80`, `13755db`, `131ab9e`, `86f50a0` | Pinsel/Bleistift/Radiergummi live, alle Inspektor-Werte wirksam, 54 Stricharten, Dialog „Pinselstrich bearbeiten“ | `pinsel1.md` |
+| FX-1 | N28 | ☑ | `7d7b3c0`, `5fceac4` | Schatten/Glühen ≤ 1 Stufe (Dialog-Deckkraft, Menü-Vorgaben, Glühen-Versatz) | `fx1.md` |
+| FX-2 | N28 | ☑ | `dc9f56e` | Abschrägung/Prägung ≤ 2 Stufen (Dialog-Vorgaben, `MaskSoftness`) | `fx2.md` |
+| FX-3 | N28 | ☑ (nach Start von DOC-4) | `73c3379` | Weichzeichnen/Schärfen – Bericht noch nicht übertragen | `fx3.md` |
+| FX-4 | N28 | ☑ | `9bbc5e2` | Farbe/Rauschen/Sonstige, 54 Golden-Fälle exakt (Kurven, Farbfüllung, Ränder suchen) | `fx4.md` |
+| FX-T | N28 | ☑ | `2b9d75d`, `a694b48` | Text-Rasterung mit Hinting wie im Original (159 → 16 Stufen), Test `all_commands` grün | `fxt.md` |
+| FIX-A | N25/N26/N30 | ☑ | `78d91bc`, `5e90180`, `a79e643`, `236e35e` | leere Bitmaps beim Speichern verworfen, Bildlauf bis genau zum Dokumentrand, Grafikstart zuerst DX12 | `fixa.md` |
+
+**Batch-Studio (moderner Batch-Modus, `docs\BATCH_MODERN.md`, PLAN §4e):**
+
+| Paket | Stand | Commit(s) | Kurz |
+|---|---|---|---|
+| BATCH-1 | ☑ | `bc131fd`, `03f7774` | Kern `fp-batch`, Befehle `batch.*`, CLI `batch --recipe/--steps` |
+| BATCH-2 | ☑ | `3ba9c89`, `8df29f2` | Batch-Studio als Reiter im Hauptfenster |
+| BATCH-3 | ◐ läuft | – | Umbenennen (Baukasten + Regex) |
+| BATCH-4 | ☑ | `5922db4` | Geometrie, Farbe/Effekte, Erweitert |
+| BATCH-5 | ☑ | `f289d79` | Metadaten, TIFF/TGA, Optimieren, Zielgröße |
+| BATCH-6 | ☑ | `41d0fec` | Hintergrund (KI) und Überlagerung |
+| BATCH-7 | ☑ | `180852a` | Animation und Video über ein installiertes ffmpeg |
+| BATCH-8 | ☑ | `0b7b087` | GIF-Optimierer (eigene Umsetzung) |
+| BATCH-8b | ◐ läuft | – | Bericht folgt |
+| BATCH-9 | ☑ | `62fcd9d` | Nachzeichnen → SVG, 11 Vorlagen, MCP-Werkzeug `batch`, `firepixel.exe --batch` |
+| BATCH-11 / BATCH-T | ☐ | – | Feinschliff / Batch testen (NACHPRUEFUNG §8) |
+
+**Vollabgleich Original ↔ Firepixel (Nachtplan P0–P4):** ☑ PAR-0 Inventar (`738e88b`: 61 Einheiten, 1181 Prüfpunkte, `docs\parity\INVENTORY.md`) · ◐ PAR-O Aufnahmen im Original (`eee6cbb`, `be24475`, `929981b`, `6b534c9`) · ◐ PAR-F Vergleiche (`7704f13`, Befunde in BEFUNDE „PAR“) · ◐ PAR-X/PAR-R beheben und gegenprüfen (laufen). **Leinwandfehler im Original geklärt** (`re\25-leinwand-fehler.md`): Ursache war das dritte Argument `true` in `fw.openDocument(url, false, true)`; mit `fw.openDocument(url)` gehen Klicks und Werkzeuge auf der Leinwand wieder (BEFUNDE FV-15 abgehakt).
+
+**Als Nächstes laut Nachtplan:** GT-0 (Slots vorwärmen, Testversion), Nachttests GT-1/CT-1…3, FIX, BATCH-11/BATCH-T, PAR-X/R, DOC-5, GT-2 (Endversion auf den Desktop).
+
 ## Gesamtübersicht – Stand 13.10.2026 nach Welle 3 (DOC3-4)
 
 **Kurz:** Welle 3 und alle Nachläufer sind fertig (13.10. 00:00–01:55, 21 Pakete). Seit der Testversion vom 12.10. 20:24 kamen 73 Commits dazu (Gesamt 268, Stand `d6671bb`). Zusammenfassung für den Nutzer, Fix-Liste, offene Messungen und Entscheidungen: `docs\progress-2026-10-13.md`. Testversion 13.10. auf dem Desktop (`NEU.md` = `docs\preview-notes-2026-10-13.md`). **TE-2** (TE2-A…F, Abschluss TE2-G) und **DOC-3** (DOC3-1…6) sind fertig; die Zahlen nach DOC-3/TE-2 stehen in `docs\PLAN.md` §7.

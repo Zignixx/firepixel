@@ -253,11 +253,13 @@ Namen: Kurven/Tonwert-Pakete heißen **KV-1…3** (früher KT-1…3), die Klickt
 | Paket | Inhalt |
 |---|---|
 | ☐ **CMD-1** | Bildschirmfoto, Symbolskript erstellen, Gemeinsame Palette echt umsetzen (Nutzerentscheidung 13.10.), ≈ 35 min |
-| ☐ **BATCH-1** | Batch-Assistent nach `re\21-batch.md` (Nutzer: ja, aber später; braucht vorher die Messungen M1–M13 im Original), ≈ 60–80 min |
+| ☑ ~~**BATCH-1**~~ | ~~Batch-Assistent nach `re\21-batch.md`~~ – ersetzt durch den modernen Batch-Modus (Nutzerwunsch 13.10. ≈ 03:00, §4e) |
 | ☐ **DES-3** | N11-Rest: Tabellen/Listen einzelner Dialoge (DESIGN §13 Prio 5–11: KI-Modelle, Gespeicherte Befehle, Tastenkürzel, Pop-up-Editor, Export-Leerraum), Voreinstellungen ohne Fußleiste (Kategorienliste kürzen) |
 | ☐ **Fix-Liste → FIX** | 8 kleine Punkte aus `progress-2026-10-13.md` §2 (Standard-ALT-Text im FW-PNG, Tab-Folge der Live-Effekt-Dialoge, „Neues Symbol“ im Bibliothek-Bedienfeld, Optimieren ▸ Einstellungen löschen ohne Rückfrage, `shortcuts.json` gegen PARITAET_B §1, alte Texte `dlg-md-*` (mit TE-2), „Demo – aktuelles Dokument“ im Fenster, erste Ziehbewegung bei Tausenden Objekten) – im FIX-Schritt des Nachtlaufs oder früher |
 
-## 4d. Welle 5 – Nutzerbefunde N25–N30 (gemeldet 13.10. ≈ 03:00; **vor** den Nachttests, Start nur nach Freigabe)
+## 4d. Welle 5 – Nutzerbefunde N25–N31 (gemeldet 13.10. ≈ 03:00; **vor** den Nachttests, Start nur nach Freigabe)
+
+**Stand 13.10. ≈ 07:00 (DOC-4):** Welle 5 fertig (FX-3 `73c3379` kam um 07:03 nach dem Start von DOC-4, Bericht noch nicht übertragen), dazu PINSEL-1 (N31), FX-T, CMD-TXT und FIX-A. Ablauf und Zeiten seit dem „los“ (≈ 03:50): **`docs\NIGHT_PLAN_2026-10-13.md`** (ein Durchlauf ohne Stopps; ersetzt die Stopps in §4f). Alle Pakete sind umgesetzt, die Prüfung im echten Fenster steht aus (`NACHPRUEFUNG.md`). Legende: ☑ fertig · ◐ läuft · ☐ offen.
 
 Nutzervorgabe: aufschreiben, nicht sofort starten; diese Punkte laufen **vor** dem Nachtlauf. Messungen im Original nur unter der Sperre (AGENTEN_REGELN §4e), also nacheinander; alles andere parallel auf warmen Slots. Bilder des Nutzers: `re\_nutzerbilder\2026-10-13\` (außerhalb von `firepixel\`, weil sie das Original zeigen).
 
@@ -265,20 +267,24 @@ Nutzervorgabe: aufschreiben, nicht sofort starten; diese Punkte laufen **vor** d
 
 | Paket | Nutzerbefund | Inhalt | Dauer |
 |---|---|---|---|
-| ☐ **RE-5** | N25, N26, N27 | Messungen im Original (Sperre): Bildvorschau 2-/4-fach – was läuft synchron (Bildlauf, Mausrad, Leertaste + Ziehen, Hand, Zoom, Auswahl/Slice-Werkzeug); Grenzen eines Bitmap-Objekts in einer FW-PNG mit transparentem Rand (JSF `pixelRect`/`left/top/width/height`, Datei aus Firepixel und aus dem Original gespeichert); Farbwähler-Popup (Raster, Farbanordnung, Maße, Felder, Pipette beim Überfahren, Systemfarbwähler, Tastatur, Esc/Eingabe) mit Bildern → `re\22-ansicht-bitmap-farbe.md` | ≈ 45 min |
-| ☐ **RE-FX** | N28 | Messreihe im Original nach RE-5 (Sperre): jeder Live-Effekt (Schatten, Innerer Schatten, Glühen, Inneres Glühen, Abschrägung innen/außen, Prägen, …) und jeder Filter mit je 3 Einstellungen auf 3 festen Testbildern (Vektor, Text, Foto-Bitmap mit Transparenz), Export als PNG 32 → Referenzbilder + `re\23-effekte.md` | ≈ 60–90 min |
-| ☐ **BV-5** | N25 | gemeinsame Ansichtslage für alle Felder der 2-/4-fach-Ansicht (Bildvorschau und Dokumentansicht): Bildlauf, Rad, Leertaste, Hand, Zoom wirken überall; Feinheiten nach RE-5 | ≈ 40 min |
-| ☐ **BM-1** | N26 | Ursache suchen: FW-PNG-Import/-Export und Bitmap-Grenzen (Objekt = Leinwand?); nach RE-5 angleichen; Test mit nachgebauter Datei | ≈ 40 min |
-| ☐ **FARB-1a** | N27a | Fehler: Ziehen im Farbfeld des Popups springt auf die alte Farbe zurück (z. B. Glühen ▸ Farbe) – an allen Stellen mit diesem Popup | ≈ 20 min |
-| ☐ **VT-6** | N29 | zweites Nachzeichnen-Verfahren nach dem veröffentlichten Potrace-Fachartikel, eigenständig umgesetzt (keine GPL-Bibliothek), Auswahl „Verfahren“ im Dialog mit Vorschau, MCP/CLI-Parameter `engine`; Vergleich auf Strichzeichnung und Logo | ≈ 60–80 min |
-| ☐ **START-1** | N30 | Startzeit der Release-exe messen und aufschlüsseln; teure Schritte verzögern bzw. in den Hintergrund; Zahlen vorher/nachher | ≈ 45 min |
+| ☑ **RE-5** (`re\22-ansicht-bitmap-farbe.md`) | N25, N26, N27 | Messungen im Original (Sperre): Bildvorschau 2-/4-fach – was läuft synchron (Bildlauf, Mausrad, Leertaste + Ziehen, Hand, Zoom, Auswahl/Slice-Werkzeug); Grenzen eines Bitmap-Objekts in einer FW-PNG mit transparentem Rand (JSF `pixelRect`/`left/top/width/height`, Datei aus Firepixel und aus dem Original gespeichert); Farbwähler-Popup (Raster, Farbanordnung, Maße, Felder, Pipette beim Überfahren, Systemfarbwähler, Tastatur, Esc/Eingabe) mit Bildern → `re\22-ansicht-bitmap-farbe.md` | ≈ 45 min |
+| ☑ **RE-FX** (`re\23-effekte.md`, 237 Referenzbilder) | N28 | Messreihe im Original nach RE-5 (Sperre): jeder Live-Effekt (Schatten, Innerer Schatten, Glühen, Inneres Glühen, Abschrägung innen/außen, Prägen, …) und jeder Filter mit je 3 Einstellungen auf 3 festen Testbildern (Vektor, Text, Foto-Bitmap mit Transparenz), Export als PNG 32 → Referenzbilder + `re\23-effekte.md` | ≈ 60–90 min |
+| ☑ **BV-5** (`21be8b0`; Rand: FIX-A `5e90180`) | N25 | gemeinsame Ansichtslage für alle Felder der 2-/4-fach-Ansicht (Bildvorschau und Dokumentansicht): Bildlauf, Rad, Leertaste, Hand, Zoom wirken überall; Feinheiten nach RE-5 | ≈ 40 min |
+| ☑ **BM-1** (`725515f`; leere Bitmaps: FIX-A `78d91bc`) | N26 | Ursache suchen: FW-PNG-Import/-Export und Bitmap-Grenzen (Objekt = Leinwand?); nach RE-5 angleichen; Test mit nachgebauter Datei | ≈ 40 min |
+| ☑ **FARB-1a** (`4575384`) | N27a | Fehler: Ziehen im Farbfeld des Popups springt auf die alte Farbe zurück (z. B. Glühen ▸ Farbe) – an allen Stellen mit diesem Popup | ≈ 20 min |
+| ☑ **VT-6** (`7893e78`) | N29 | zweites Nachzeichnen-Verfahren nach dem veröffentlichten Potrace-Fachartikel, eigenständig umgesetzt (keine GPL-Bibliothek), Auswahl „Verfahren“ im Dialog mit Vorschau, MCP/CLI-Parameter `engine`; Vergleich auf Strichzeichnung und Logo | ≈ 60–80 min |
+| ☑ **START-1** (`e37efcb`; DX12 zuerst: FIX-A `a79e643`) | N30 | Startzeit der Release-exe messen und aufschlüsseln; teure Schritte verzögern bzw. in den Hintergrund; Zahlen vorher/nachher | ≈ 45 min |
+| ☑ **CMD-TXT** (`edd079b`) | – | roter Test `parameterbeschreibungen_in_de_und_en`: 18 Schlüssel de/en in `command_texts.ftl` | ≈ 15 min |
+| ☑ **RE-PINSEL** (`re\24-pinsel.md`, mit echten Zügen nachgemessen) | N31 | Pinsel im Original messen: Strich live, Kategorien/Arten (`presets.csv`, 54), Kante, Textur, Deckkraft, Mischmodi, Transparenz beibehalten, Dialog „Pinselstrich bearbeiten“ | ≈ 30 min |
+| ☑ **PINSEL-1** (`90f9f80`, `13755db`, `131ab9e`, Bericht `86f50a0`) | N31 | live malen (Pinsel, Bleistift, Radiergummi), alle Inspektor-Werte wirksam, Stricharten nach `re\24`, Dialog „Pinselstrich bearbeiten“ mit drei Registerkarten | ≈ 90 min |
+| ☑ **FIX-A** (`78d91bc`, `5e90180`, `a79e643`, Bericht `236e35e`) | N25/N26/N30 | Restbefunde aus bm1/bv5/start1/fx4: leere Bitmaps beim Speichern verwerfen, Bildlauf genau bis zum Dokumentrand, Grafikstart zuerst DX12, Test `tiles` geprüft | ≈ 30 min |
 
 **Teil 5b (nach RE-5/RE-FX, parallel, ≈ 45–60 min):**
 
 | Paket | Nutzerbefund | Inhalt |
 |---|---|---|
-| ☐ **FARB-1b** | N27b | Farbwähler-Popup wie im Original an allen Stellen (Werkzeugleiste, Inspektor, Effekte, Dialoge, Bedienfelder) nach `re\22` |
-| ☐ **FX-1…4** | N28 | Pixelvergleich mit den Referenzbildern aus RE-FX und Abweichungen beheben, aufgeteilt: FX-1 Schatten/Glühen (Glühen zuerst), FX-2 Abschrägung/Prägen, FX-3 Weichzeichner/Schärfen, FX-4 Farbe/Rauschen/übrige; Toleranz und Ergebnis je Effekt im Bericht |
+| ☑ **FARB-1b** (`569ea54`) | N27b | Farbwähler-Popup wie im Original an allen Stellen (Werkzeugleiste, Inspektor, Effekte, Dialoge, Bedienfelder) nach `re\22` |
+| ☑ **FX-1…4** | N28 | Pixelvergleich mit den Referenzbildern aus RE-FX und Abweichungen beheben, aufgeteilt: ☑ FX-1 Schatten/Glühen (`7d7b3c0`, Bericht `5fceac4`), ☑ FX-2 Abschrägung/Prägen (`dc9f56e`), ☑ FX-3 Weichzeichner/Schärfen (`73c3379`, 07:03, nach Start von DOC-4; Bericht `fx3.md` noch nicht übertragen), ☑ FX-4 Farbe/Rauschen/übrige (`9bbc5e2`); dazu ☑ **FX-T** Text-Rasterung wie im Original + roter Test `all_commands` (`2b9d75d`, `a694b48`); Toleranz und Ergebnis je Effekt im Bericht |
 
 Gesamt Welle 5 ≈ 2–3 h. Danach Doku-Übertrag (kurz), Slots vorwärmen, neue Testversion, dann Nachtlauf nach „los“.
 
@@ -286,7 +292,27 @@ Gesamt Welle 5 ≈ 2–3 h. Danach Doku-Übertrag (kurz), Slots vorwärmen, neue
 
 Spezifikation `docs\BATCH_MODERN.md` (SPEC-BATCH). **Gebaut während der Nachttests** als eigene Spur, je Paket ein frischer Agent nacheinander (Nutzer: „mit einem Subagenten während die UI-Tests laufen“); eigenes Crate/eigene Dateien, keine Überschneidung mit den FIX-Agenten. **Getestet erst, wenn alle UI-Tests und FIX vorbei sind** (Paket BATCH-T), danach GT-2.
 
+**Stand 13.10. ≈ 07:00 (DOC-4)** – Pakete laut `docs\NIGHT_PLAN_2026-10-13.md`; offene Punkte in BEFUNDE „BATCH“, Prüfungen in NACHPRUEFUNG §8:
+
+| Paket | Stand | Inhalt | Commit(s) / Bericht |
+|---|---|---|---|
+| **BATCH-1** | ☑ | Kern `fp-batch`: Rezept-Modell, Schritt-Register, Pipeline mit Vorschau, Namensbildung/Plan/Konflikte, Executor (rayon, Speicherbudget, Abbrechen), Ausgabe atomar, Befehle `batch.*`, CLI `batch --recipe/--steps` | `bc131fd`, `03f7774` · `berichte\batch1.md` |
+| **BATCH-2** | ☑ | Batch-Studio als Reiter im Hauptfenster (Einfach/Profi, Dateien, Rezept-Karten, Vorschau, Ausgabe-Leiste), *Datei ▸ Batch-Verarbeitung…* öffnet es | `3ba9c89`, `8df29f2` · `batch2.md` |
+| **BATCH-3** | ◐ läuft | Umbenennen: Anfänger-Baukasten + Regex mit Klartext und Tabelle alt → neu | – |
+| **BATCH-4** | ☑ | Geometrie, Farbe/Effekte, Erweitert (resize, crop, trim, rotate, canvas, adjust.*, filter.*, effect.live, script.*) | `5922db4` · `batch4.md` |
+| **BATCH-5** | ☑ | Metadaten (EXIF/XMP/IPTC/ICC), TIFF-Kompression, TGA, optimize.png/quantize/targetSize | `f289d79` · `batch5.md` |
+| **BATCH-6** | ☑ | Hintergrund (KI-Freistellen, Farbe entfernen, flach, ersetzen, Schatten) + Überlagerung (Text, Bild, Rahmen) | `41d0fec` · `batch6.md` |
+| **BATCH-7** | ☑ | Animation und Video (ffmpeg des Nutzers, nicht heruntergeladen): video.import, anim.*, Zeitleiste in der Vorschau | `180852a` · `batch7.md` |
+| **BATCH-8** | ☑ | GIF-Optimierer (eigene Umsetzung ohne GPL/AGPL): Palette, Dithering, Zielgröße, SSIM/PSNR | `0b7b087` · `batch8.md` |
+| **BATCH-8b** | ◐ läuft | Inhalt im Bericht `berichte\batch8b.md`, sobald er da ist (Übertrag durch den nächsten Doku-Agenten) | – |
+| **BATCH-9** | ☑ | vector.trace (beide Verfahren) + SVG-Ausgabe, 11 Vorlagen, MCP-Werkzeug `batch` (async, status, cancel), `firepixel.exe --batch` | `62fcd9d` · `batch9.md` |
+| **BATCH-10** | ☐ (P2, nicht im Nachtplan) | eingebaute Video-Decoder | – |
+| **BATCH-11** | ☐ | Feinschliff: 3 Designs, DE/EN, Abschneide-Prüfer, Tastatur, Fehlerliste/Bericht; offene Oberflächenpunkte aus BEFUNDE „BATCH“ | – |
+| **BATCH-T** | ☐ | Batch testen (nach UI-Tests und FIX): Tests, Logikfälle, NACHPRUEFUNG §8 über die Brücke | – |
+
 ## 4f. Reihenfolge ab 13.10. ≈ 03:05 (Nutzerwunsch)
+
+**Seit 13.10. ≈ 03:35 gilt `docs\NIGHT_PLAN_2026-10-13.md`** (ein „los“, danach durchgehend ohne Stopps, höchstens 8 Agenten; CT-4 aufgeteilt in PAR-O und GT-2). Die Liste unten ist der ältere Plan. Vollabgleich (Nachtplan P0–P4) Stand DOC-4: ☑ PAR-0 Inventar (`738e88b`, 61 Einheiten, 1181 Prüfpunkte), ◐ PAR-O Aufnahmen im Original (`eee6cbb`, `be24475`/`929981b`, `6b534c9`), ◐ PAR-F Vergleiche (`7704f13`, Befunde in BEFUNDE „PAR“), ◐ PAR-X beheben (läuft).
 
 1. TE2-C/D/E und SPEC-BATCH fertig laufen lassen; Koordinator: Restsuche alte Namen, TECHNISCH_ENGLISCH §E abgleichen, §7 Zahlen, Testleitfaden auf neue Namen (☑ TE-2-Teil erledigt von TE2-G). **Stopp → Freigabe Welle 5.**
 2. Welle 5a (§4d), 3. Welle 5b, 4. Doku-Übertrag Welle 5 (DOC-4), 5. Slots vorwärmen + neue Testversion. **Stopp → „los“.**
