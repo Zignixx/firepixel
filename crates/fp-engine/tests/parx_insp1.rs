@@ -80,7 +80,9 @@ fn gradient_default_and_handles() {
     assert!((panel::handles_angle(&h0) - 0.0).abs() < 1e-3, "{h0:?}");
     assert!((h0.end.x - 135.0).abs() < 1e-3 && (h0.end.y - 85.0).abs() < 1e-3, "{h0:?}");
     s.execute("edit.undo", json!({})).expect("undo");
-    assert!(panel::handles_angle(&handles(&s, id)) < 1e-3, "ein Schritt je Eingabe");
+    // 50 gleiche Eingaben = ein Schritt (Wiederholung ohne Änderung legt keinen an, FIX-F)
+    let hu = handles(&s, id);
+    assert_eq!((hu.start.x, hu.start.y, hu.end.x, hu.end.y), (100.0, 85.0, 100.0, 120.0), "Rückgängig: wieder Kontur-Vorgabe");
 }
 
 /// Muster: Umschalten setzt das Vorgabemuster „Cotton“ mit gültigen Griffen; nochmal „Muster“ behält es.

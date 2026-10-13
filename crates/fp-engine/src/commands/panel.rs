@@ -57,6 +57,24 @@ fn edit_each(s: &mut Session, p: &Params, f: impl Fn(&mut Element, Option<Rect>)
     Ok(CommandOutput::doc())
 }
 
+/// Wie [`edit_each`], aber `f` meldet, ob sich das Element geändert hat. Ändert sich keines, bleibt
+/// das Dokument dasselbe (kein Verlaufsschritt, z. B. wiederholtes `pi.fill` mit derselben Art).
+fn edit_each_changed(s: &mut Session, p: &Params, f: impl Fn(&mut Element, Option<Rect>) -> bool) -> Result<CommandOutput> {
+    let (page, ids) = targets(s, p)?;
+    let d = s.doc_mut()?;
+    let orig = Arc::clone(&d.doc);
+    let doc = Arc::make_mut(&mut d.doc);
+    let mut changed = false;
+    for id in ids {
+        let bounds = docops::element_on_page(doc, page, id).and_then(|e| docops::element_bounds(doc, &e));
+        changed |= docops::edit_by_id(doc, page, id, |e| f(e, bounds)).ok_or(EngineError::ElementNotFound(id.0))?;
+    }
+    if !changed {
+        d.doc = orig;
+    }
+    Ok(CommandOutput::doc())
+}
+
 fn parse_color(v: &Value) -> Option<Argb> {
     match v {
         Value::String(s) => Rgba8::parse_hex(s).map(|c| c.to_argb()),
@@ -1256,7 +1274,8 @@ pub fn register(r: &mut CommandRegistry) {
                 let tex_tr = p.opt_bool("textureTransparent")?;
                 let dither = p.opt_bool("dither")?;
                 let fallback_fill = s.tools.fill_color;
-                edit_each(s, p, |e, bounds| {
+                edit_each_changed(s, p, |e, bounds| {
+                    let (attrs0, handles0) = (docops::path_attrs_of(e), handles_of(e));
                     let before = docops::path_attrs_of(e).map(|a| fill_kind(a.fill.as_ref())).unwrap_or(0);
                     let before_shape = docops::path_attrs_of(e).and_then(|a| a.fill.as_ref().map(shape_id));
                     let before_handles = handles_of(e);
@@ -1421,6 +1440,8 @@ pub fn register(r: &mut CommandRegistry) {
                     {
                         rotate_element_handles(e, deg.rem_euclid(360.0));
                     }
+                    // nur bei echter Änderung ein Verlaufsschritt (gleiche Art erneut gewählt: keiner)
+                    docops::path_attrs_of(e).as_deref() != attrs0.as_deref() || handles_of(e) != handles0
                 })
             }),
     );
