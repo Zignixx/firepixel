@@ -213,3 +213,38 @@ fn kv3_live_curves_label_and_info_button() {
     assert!(st(&h).dialogs.curves.is_some(), "ⓘ öffnet den Kurvendialog");
     key(&mut h, Key::Escape);
 }
+/// E2 CSS-Sprites: Präfix tippen und sofort OK klicken übernimmt den Wert (Beispielzeile live);
+/// ein ungültiger Präfix wie „1 x“ führt beim Export zur Meldung „Einige der CSS-Selektornamen …“.
+#[test]
+fn e2_sprite_prefix_typed_then_ok_is_kept() {
+    use fp_export::doc_export::FilesStyle;
+    use fp_ui::dialogs::export::{style_index, ExportDialog};
+    use fp_ui::dialogs::export_options::OptionsDialog;
+    let mut h = harness_with(bitmap_session());
+    let mut d = ExportDialog::new(st(&h)).expect("Exportdialog");
+    d.set_style(style_index(FilesStyle::CssSprites));
+    d.open_options();
+    assert!(matches!(d.options, Some(OptionsDialog::Sprites(_))));
+    h.state_mut().state.dialogs.export = Some(d);
+    h.run_steps(4);
+    let r = fp_ui::dialogs::dialog_rect(&h.ctx, "fp-export-sprite-options").expect("Sprite-Optionen");
+    // Feld in der Zeile der Beschriftung „Präfix:“ (der Exportdialog liegt darunter)
+    let lab = text_rect(&h, &fp_i18n::t("dlg-expopt-prefix")).expect("Präfix:");
+    let field = h.get_all(By::new().role(Role::TextInput)).map(|n| n.rect()).find(|x| r.contains(x.center()) && (x.center().y - lab.center().y).abs() < 6.0 && x.left() > lab.right()).expect("Präfixfeld");
+    click(&mut h, field.center());
+    for c in ["1", " ", "x"] {
+        ev(&mut h, Event::Text(c.into()));
+    }
+    let prefix = |h: &H| match &st(h).dialogs.export.as_ref().expect("Export").options {
+        Some(OptionsDialog::Sprites(o)) => (o.prefix.clone(), o.example()),
+        _ => Default::default(),
+    };
+    assert_eq!(prefix(&h).0, "1 x", "Wert sofort im Dialog (Beispiel {})", prefix(&h).1);
+    let ok = h.get_all(By::new().role(Role::Button).label(fp_i18n::t("btn-ok").as_str())).map(|n| n.rect()).find(|x| r.contains(x.center())).expect("OK");
+    click(&mut h, ok.center());
+    h.run_steps(3);
+    let d = st(&h).dialogs.export.as_ref().expect("Exportdialog bleibt");
+    assert!(d.options.is_none(), "Optionen geschlossen");
+    assert_eq!(d.sprite.prefix, "1 x", "getippter Präfix übernommen");
+    h.state_mut().state.dialogs.export = None;
+}

@@ -465,6 +465,14 @@ fn password(ui: &mut egui::Ui, id: &str, r: Rect, value: &mut String, enabled: b
     ui.add_enabled_ui(enabled, |ui| ui.put(r.shrink(1.0), te));
 }
 
+/// Textfeld, das jede Eingabe sofort in `value` schreibt.
+fn live_text(ui: &mut egui::Ui, id: &str, r: Rect, value: &mut String) {
+    fields::field_frame(ui, r, true, false);
+    let theme = crate::theme::Theme::current(ui.ctx());
+    let te = egui::TextEdit::singleline(value).frame(egui::Frame::NONE).id_salt(id).font(theme.ui_font()).text_color(theme.colors.field_text).margin(vec2(4.0, 2.0)).vertical_align(egui::Align::Center);
+    ui.put(r.shrink(1.0), te);
+}
+
 fn show_sprites(ctx: &egui::Context, o: &mut SpriteOpts) -> Option<bool> {
     let l = |k: &str| t(k);
     let (sel_l, pre_l, suf_l, pad_l, lay_l, preset_l) = (l("dlg-expopt-sprite-selector"), l("dlg-expopt-prefix"), l("dlg-expopt-suffix"), l("dlg-expopt-sprite-padding"), l("dlg-expopt-sprite-layout"), l("dlg-expopt-preset"));
@@ -488,13 +496,11 @@ fn show_sprites(ctx: &egui::Context, o: &mut SpriteOpts) -> Option<bool> {
             o.selector_is_class = false;
         }
         super::fit_label(ui, g.label(28.0), &pre_l, true);
-        if let Some(v) = fields::text(ui, "sprite-prefix", g.field(28.0, fw), &o.prefix, true) {
-            o.prefix = v;
-        }
+        // Präfix/Suffix wirken sofort (Beispielzeile live wie im Original, OK übernimmt den
+        // getippten Wert auch ohne Eingabe/Fokuswechsel; CT-1a: „1 x“ ging still verloren)
+        live_text(ui, "sprite-prefix", g.field(28.0, fw), &mut o.prefix);
         super::fit_label(ui, g.label(56.0), &suf_l, true);
-        if let Some(v) = fields::text(ui, "sprite-suffix", g.field(56.0, fw), &o.suffix, true) {
-            o.suffix = v;
-        }
+        live_text(ui, "sprite-suffix", g.field(56.0, fw), &mut o.suffix);
         let theme = crate::theme::Theme::current(ui.ctx());
         ui.painter().text(g.field(86.0, fw).left_center(), egui::Align2::LEFT_CENTER, &example, theme.ui_font(), theme.colors.text_weak);
         super::fit_label(ui, g.label(116.0), &pad_l, true);
