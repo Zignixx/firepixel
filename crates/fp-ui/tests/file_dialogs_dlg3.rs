@@ -285,3 +285,29 @@ fn ctrl_w_shows_the_question_in_the_same_frame() {
     assert!(h.state().state.session.documents().is_empty());
     assert!(h.state().state.dialogs.unsaved.is_none());
 }
+
+/// CT-3 (FIX-E): Schließen von außen bei **minimiertem** Fenster mit geändertem Dokument. eframe ruft
+/// dann nur `logic` auf; das Fenster kommt zurück, und die Rückfrage muss im nächsten Bild stehen,
+/// obwohl das Schließen-Ereignis dort nicht mehr ankommt. Wiederholt (§4b): eine Rückfrage.
+#[test]
+fn close_from_outside_while_minimized_restores_and_asks() {
+    let mut s = fp_engine::Session::default();
+    s.execute("file.new", json!({"width": 40, "height": 30})).expect("doc");
+    s.execute("draw.rectangle", json!({"rect": [1, 1, 10, 10]})).expect("rect");
+    let mut h = harness(s);
+    let ctx = h.ctx.clone();
+    assert!(h.state_mut().close_while_minimized(&ctx, true, true), "Schließwunsch übernommen");
+    // zweites WM_CLOSE, bevor das Fenster zurück ist
+    assert!(h.state_mut().close_while_minimized(&ctx, true, true));
+    h.run_steps(2);
+    let st = &h.state().state;
+    assert!(!st.quit_confirmed, "erst fragen");
+    assert_eq!(st.dialogs.unsaved.as_ref().map(|f| f.queue.len()), Some(1), "genau eine Rückfrage");
+    // nicht minimiert bzw. ohne Änderungen: nichts zu tun (normaler Weg über root_ui)
+    assert!(!h.state_mut().close_while_minimized(&ctx, false, true));
+    let mut s = fp_engine::Session::default();
+    s.execute("file.new", json!({"width": 40, "height": 30})).expect("doc");
+    let mut h = harness(s);
+    let ctx = h.ctx.clone();
+    assert!(!h.state_mut().close_while_minimized(&ctx, true, true), "unverändert: eframe beendet direkt");
+}

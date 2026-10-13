@@ -291,19 +291,31 @@ impl FirepixelApp {
     }
 }
 
+impl FirepixelApp {
+    /// Schließen über die Taskleiste bzw. WM_CLOSE bei minimiertem Fenster (aus `logic`, das eframe
+    /// dann als Einziges aufruft): mit ungespeicherten Dokumenten nicht sofort beenden (eframe
+    /// schlösse ohne `CancelClose` gleich), sondern das Fenster wiederherstellen und den
+    /// Schließwunsch merken; die Rückfrage stellt `root_ui` im nächsten Bild. Das Schließen-Ereignis
+    /// selbst kommt dort nicht mehr an (CT-3: Fenster kam zurück, aber ohne Rückfrage). Liefert, ob
+    /// der Schließwunsch übernommen wurde.
+    pub fn close_while_minimized(&mut self, ctx: &egui::Context, minimized: bool, close: bool) -> bool {
+        if !(minimized && close && !self.state.quit_confirmed && self.state.any_dirty()) {
+            return false;
+        }
+        ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
+        ctx.send_viewport_cmd(egui::ViewportCommand::Minimized(false));
+        // eine zweite Anfrage, solange die Rückfrage offen ist, legt keine zweite an (Action::Quit)
+        self.state.push(Action::Quit);
+        ctx.request_repaint();
+        true
+    }
+}
+
 impl eframe::App for FirepixelApp {
     /// Läuft vor jedem Bild, bei minimiertem Fenster als Einziges (eframe ruft dann `ui` nicht).
-    /// Schließen über die Taskleiste bei minimiertem Fenster: mit ungespeicherten Dokumenten nicht
-    /// sofort beenden (eframe schlösse ohne `CancelClose` gleich), sondern das Fenster
-    /// wiederherstellen; die Rückfrage stellt `root_ui` im nächsten Bild (eframe reicht das
-    /// Schließen-Ereignis dorthin weiter).
     fn logic(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         let (minimized, close) = ctx.input(|i| (i.viewport().minimized == Some(true), i.viewport().close_requested()));
-        if minimized && close && !self.state.quit_confirmed && self.state.any_dirty() {
-            ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
-            ctx.send_viewport_cmd(egui::ViewportCommand::Minimized(false));
-            ctx.request_repaint();
-        }
+        self.close_while_minimized(ctx, minimized, close);
     }
 
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
