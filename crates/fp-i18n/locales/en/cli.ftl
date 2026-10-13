@@ -124,7 +124,7 @@ cli-language-check = Check language files: missing/orphaned keys, placeholders, 
           firepixel-cli language check %APPDATA%\Firepixel\Languages         (all languages in the folder)
           firepixel-cli language check Languages\fr                            (one language, folder with *.ftl)
           firepixel-cli language check fr.ftl                                 (one language in one file)
-          firepixel-cli language check Languages\fr\menue.ftl                  (only this area)
+          firepixel-cli language check Languages\fr\menu.ftl                   (only this area)
           firepixel-cli language check --builtin                              (the built-in languages)
 
         The reference is the built-in German. Errors (exit code 1): syntax, duplicate keys, placeholders
@@ -241,7 +241,7 @@ cli-lang-template-header =
 cli-lang-template-skipped = , { $n } existing skipped (--overwrite)
 cli-lang-template-done = 
     Template for “{ $code }” in { $dir }: { $n } file(s) written{ $skipped }.
-    Next steps: set language-name in allgemein.ftl, translate, then
+    Next steps: set language-name in common.ftl, translate, then
       firepixel-cli language check "{ $dir }"
 cli-lang-col-code = Code
 cli-lang-col-name = Name

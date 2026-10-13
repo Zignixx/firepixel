@@ -278,7 +278,7 @@ impl LangData {
         d
     }
 
-    /// Nur die Schlüssel einer Datei (Dateiname ohne Ordner, z. B. `menue.ftl`).
+    /// Nur die Schlüssel einer Datei (Dateiname ohne Ordner, z. B. `menu.ftl`).
     pub fn only_file(&self, file_name: &str) -> LangData {
         let mut d = LangData { code: self.code.clone(), name: self.name.clone(), ..LangData::default() };
         d.files = self.files.iter().filter(|f| file_base(f) == file_name).cloned().collect();
@@ -374,9 +374,49 @@ fn fmt_vars(v: &BTreeSet<String>) -> String {
     if v.is_empty() { crate::t("cli-check-none") } else { v.iter().map(|x| format!("${x}")).collect::<Vec<_>>().join(", ") }
 }
 
-/// Namen der eingebauten Bereichsdateien (`menue.ftl` …).
+/// Namen der eingebauten Bereichsdateien (`menu.ftl` …).
 pub fn builtin_file_names() -> BTreeSet<String> {
     crate::embedded_files().iter().map(|(_, f, _)| f.to_string()).collect()
+}
+
+/// Frühere (deutsche) Namen der Bereichsdateien bis 13.10.2026, ohne `.ftl`: (alt, neu).
+/// Sprachpakete der Nutzer unter `Languages\<code>\` tragen sie noch. Geladen wird ohnehin jede
+/// `*.ftl`; die Prüfung ordnet alte Namen über diese Liste dem neuen Bereich zu
+/// ([`area_file_name`]).
+pub const LEGACY_AREA_NAMES: &[(&str, &str)] = &[
+    ("allgemein", "common"),
+    ("bedienfelder", "panels"),
+    ("befehlstexte", "command_texts"),
+    ("dateidialog", "file_dialog"),
+    ("dialoge", "dialogs"),
+    ("inspektor", "inspector"),
+    ("kommandozeile", "cli"),
+    ("meldungen", "messages"),
+    ("menue", "menu"),
+    ("nachzeichnen", "trace"),
+    ("oberflaeche", "ui"),
+    ("skript", "script"),
+    ("werkzeuge", "tools"),
+    ("willkommen", "welcome"),
+];
+
+/// Bereichsdatei unter ihrem heutigen Namen: `menue.ftl` → `menu.ftl` (Groß-/Kleinschreibung
+/// egal); andere Namen unverändert.
+pub fn area_file_name(file_name: &str) -> String {
+    let legacy = file_name
+        .rsplit_once('.')
+        .filter(|(_, ext)| ext.eq_ignore_ascii_case("ftl"))
+        .and_then(|(stem, _)| LEGACY_AREA_NAMES.iter().find(|(old, _)| old.eq_ignore_ascii_case(stem)));
+    match legacy {
+        Some((_, new)) => format!("{new}.ftl"),
+        None => file_name.to_string(),
+    }
+}
+
+/// Früherer Name einer Bereichsdatei (`menu.ftl` → `menue.ftl`), falls es einen gab.
+pub fn legacy_area_file_name(file_name: &str) -> Option<String> {
+    let stem = file_name.strip_suffix(".ftl")?;
+    LEGACY_AREA_NAMES.iter().find(|(_, new)| *new == stem).map(|(old, _)| format!("{old}.ftl"))
 }
 
 /// Ergebnis einer Prüfung.
@@ -434,7 +474,8 @@ fn file_name(p: &Path) -> String {
 }
 
 /// Sprachen aus einem Pfad lesen:
-/// * Datei `<code>.ftl` → eine Sprache in einer Datei; Bereichsdatei (`fr\menue.ftl`) → nur dieser Bereich.
+/// * Datei `<code>.ftl` → eine Sprache in einer Datei; Bereichsdatei (`fr\menu.ftl`, auch unter
+///   altem Namen wie `fr\menue.ftl`, siehe [`LEGACY_AREA_NAMES`]) → nur dieser Bereich.
 /// * Ordner mit Bereichsdateien (`fr\`) → eine Sprache (Code = Ordnername).
 /// * Ordner mit Sprachordnern bzw. `<code>.ftl`-Dateien (`Languages\`, `locales\`) → alle.
 ///
@@ -443,7 +484,7 @@ pub fn load_path(path: &Path) -> Result<Vec<(LangData, Option<String>)>, String>
     let areas = builtin_file_names();
     let mut out = Vec::new();
     if path.is_file() {
-        let name = file_name(path);
+        let name = area_file_name(&file_name(path));
         let text = read_ftl(path)?;
         if areas.contains(&name) {
             let code = path.parent().map(file_name).unwrap_or_default();
@@ -462,7 +503,7 @@ pub fn load_path(path: &Path) -> Result<Vec<(LangData, Option<String>)>, String>
         return Err(crate::tr!("cli-check-no-path", path = path.display().to_string()));
     }
     let direct = ftl_files(path);
-    let is_lang_folder = direct.iter().any(|p| areas.contains(&file_name(p)));
+    let is_lang_folder = direct.iter().any(|p| areas.contains(&area_file_name(&file_name(p))));
     if is_lang_folder {
         let mut d = LangData::new(&file_name(path));
         for f in &direct {

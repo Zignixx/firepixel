@@ -124,7 +124,7 @@ cli-language-check = Sprachdateien prüfen: fehlende/verwaiste Schlüssel, Platz
           firepixel-cli language check %APPDATA%\Firepixel\Languages         (alle Sprachen im Ordner)
           firepixel-cli language check Languages\fr                            (eine Sprache, Ordner mit *.ftl)
           firepixel-cli language check fr.ftl                                 (eine Sprache in einer Datei)
-          firepixel-cli language check Languages\fr\menue.ftl                  (nur dieser Bereich)
+          firepixel-cli language check Languages\fr\menu.ftl                   (nur dieser Bereich)
           firepixel-cli language check --builtin                              (die eingebauten Sprachen)
 
         Maßstab ist das eingebaute Deutsch. Fehler (Exit-Code 1): Syntax, doppelte Schlüssel, Platzhalter,
@@ -241,7 +241,7 @@ cli-lang-template-header =
 cli-lang-template-skipped = , { $n } vorhandene übersprungen (--overwrite)
 cli-lang-template-done = 
     Vorlage für „{ $code }“ in { $dir }: { $n } Datei(en) geschrieben{ $skipped }.
-    Nächste Schritte: language-name in allgemein.ftl setzen, übersetzen, dann
+    Nächste Schritte: language-name in common.ftl setzen, übersetzen, dann
       firepixel-cli language check "{ $dir }"
 cli-lang-col-code = Code
 cli-lang-col-name = Name

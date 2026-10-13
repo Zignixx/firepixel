@@ -2,7 +2,8 @@
 //!
 //! # Texte
 //! Jede Sprache ist ein Ordner `locales/<code>/` mit beliebig vielen `*.ftl`-Bereichsdateien
-//! (z. B. `menue.ftl`, `dialoge.ftl`). Alle eingebauten Dateien werden beim Bauen eingebettet
+//! (z. B. `menu.ftl`, `dialogs.ftl`; Namen bis 13.10.2026 siehe
+//! [`check::LEGACY_AREA_NAMES`]). Alle eingebauten Dateien werden beim Bauen eingebettet
 //! (`build.rs`), die exe bleibt eine einzelne Datei. Weitere Sprachen (oder eigene Korrekturen)
 //! werden zur Laufzeit aus Ordnern geladen ([`load_external_dir`]): je Sprache entweder
 //! `<code>.ftl` oder ein Unterordner `<code>\*.ftl`. Jede Sprache nennt sich selbst über den

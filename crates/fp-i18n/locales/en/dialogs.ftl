@@ -1,5 +1,5 @@
 # Dialogs (area I18N-DIALOGE, prefix dlg-). Code: crates\fp-ui\src\dialogs\*
-# Standard buttons (OK, Cancel, Yes, No …) come from allgemein.ftl (btn-*).
+# Standard buttons (OK, Cancel, Yes, No …) come from common.ftl (btn-*).
 
 ## Frame, messages (mod.rs)
 dlg-titlebar = Title bar { $title }

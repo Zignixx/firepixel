@@ -1,5 +1,5 @@
 # Bitmap nachzeichnen (Vektorisierung, crates\fp-trace und fp-engine commands\trace.rs) – zuständig: VT-<n>
-# Präfix trace-; Befehlsbeschriftung steht in menue.ftl (cmd-modify-traceBitmap).
+# Präfix trace-; Befehlsbeschriftung steht in menu.ftl (cmd-modify-traceBitmap).
 
 trace-err-empty = Das Bild hat keine Pixel.
 trace-err-too-large = Das Bild ist zu groß zum Nachzeichnen ({ $width } × { $height } Pixel).

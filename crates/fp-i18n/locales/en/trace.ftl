@@ -1,5 +1,5 @@
 # Trace Bitmap (vectorization, crates\fp-trace and fp-engine commands\trace.rs) – owner: VT-<n>
-# Prefix trace-; the command label is in menue.ftl (cmd-modify-traceBitmap).
+# Prefix trace-; the command label is in menu.ftl (cmd-modify-traceBitmap).
 
 trace-err-empty = The image has no pixels.
 trace-err-too-large = The image is too large to trace ({ $width } × { $height } pixels).

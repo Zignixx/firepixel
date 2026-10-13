@@ -302,7 +302,7 @@ fn englisch_fachlich() {
         }
         for (c, ks) in seen {
             if ks.len() > 1 {
-                items.push(Item { rule: "zugriffstaste_doppelt".into(), key: ks.join(", "), file: "menue.ftl".into(), de: String::new(), en: String::new(), note: format!("Gruppe {g}: „{c}“ mehrfach") });
+                items.push(Item { rule: "zugriffstaste_doppelt".into(), key: ks.join(", "), file: "menu.ftl".into(), de: String::new(), en: String::new(), note: format!("Gruppe {g}: „{c}“ mehrfach") });
             }
         }
     }

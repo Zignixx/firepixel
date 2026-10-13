@@ -16,13 +16,13 @@ fn vorlage_pruefen_liste() {
     let _ = std::fs::remove_dir_all(&dir);
     cli().args(["sprache", "vorlage", "fr"]).arg(&dir).assert().success().stdout(predicate::str::contains("Vorlage für „fr“"));
     let fr = dir.join("fr");
-    assert!(fr.join("allgemein.ftl").exists());
+    assert!(fr.join("common.ftl").exists());
     // zweites Mal ohne --ueberschreiben: nichts überschrieben
     cli().args(["sprache", "vorlage", "fr"]).arg(&dir).assert().success().stdout(predicate::str::contains("übersprungen"));
     // sauber
     cli().args(["sprache", "pruefen", "--kurz"]).arg(&fr).assert().success().stdout(predicate::str::contains("0 Fehler"));
     // Fehler einbauen
-    let f = fr.join("allgemein.ftl");
+    let f = fr.join("common.ftl");
     let text = std::fs::read_to_string(&f).unwrap_or_default();
     let text = text.replace("test-unsaved = Save changes to “{ $name }”?", "test-unsaved = Enregistrer { $nom } ?") + "\nbtn-ok = OK\n";
     let _ = std::fs::write(&f, text);

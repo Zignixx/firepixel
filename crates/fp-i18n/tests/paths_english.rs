@@ -20,7 +20,7 @@ fn tmp(name: &str) -> PathBuf {
 fn old_language_dir(base: &Path) -> PathBuf {
     let old = base.join(fp_i18n::LEGACY_LANGUAGE_DIR);
     std::fs::create_dir_all(old.join("fr")).expect("old dir");
-    std::fs::write(old.join("fr").join("allgemein.ftl"), "language-name = Français\nte1-probe = Bonjour\n").expect("ftl");
+    std::fs::write(old.join("fr").join("common.ftl"), "language-name = Français\nte1-probe = Bonjour\n").expect("ftl");
     old
 }
 
@@ -44,7 +44,7 @@ fn migrates_old_folder_once() {
     paths::set_migration_enabled(false);
     assert_eq!(dir, base.join("Languages"));
     assert!(!old.exists(), "old folder renamed");
-    let text = std::fs::read_to_string(dir.join("fr").join("allgemein.ftl")).expect("file moved along");
+    let text = std::fs::read_to_string(dir.join("fr").join("common.ftl")).expect("file moved along");
     assert!(text.contains("te1-probe = Bonjour"), "content unchanged");
     // second call: nothing more to do
     assert_eq!(fp_i18n::language_dir_in(&base), base.join("Languages"));
@@ -62,7 +62,7 @@ fn fallback_when_rename_fails() {
     let dir = paths::migrate_dir_with(&new, &old, |_, _| Err(std::io::Error::new(std::io::ErrorKind::PermissionDenied, "no write access next to the exe")));
     assert_eq!(dir, old, "old folder is read as a fallback");
     assert!(!new.exists());
-    assert!(old.join("fr").join("allgemein.ftl").is_file(), "nothing lost");
+    assert!(old.join("fr").join("common.ftl").is_file(), "nothing lost");
     let _ = std::fs::remove_dir_all(&base);
 }
 
@@ -74,7 +74,7 @@ fn fallback_with_locked_file() {
     let _g = SWITCH.lock().unwrap_or_else(|e| e.into_inner());
     let base = tmp("locked");
     let old = old_language_dir(&base);
-    let locked = std::fs::OpenOptions::new().read(true).share_mode(0).open(old.join("fr").join("allgemein.ftl")).expect("lock");
+    let locked = std::fs::OpenOptions::new().read(true).share_mode(0).open(old.join("fr").join("common.ftl")).expect("lock");
     paths::set_migration_enabled(true);
     let dir = fp_i18n::language_dir_in(&base);
     // a failed attempt is not repeated in the same run
@@ -84,7 +84,7 @@ fn fallback_with_locked_file() {
     assert_eq!(dir, old, "locked: old folder used");
     assert_eq!(again, old);
     assert!(!base.join("Languages").exists());
-    assert!(std::fs::read_to_string(old.join("fr").join("allgemein.ftl")).expect("file").contains("Bonjour"));
+    assert!(std::fs::read_to_string(old.join("fr").join("common.ftl")).expect("file").contains("Bonjour"));
     let _ = std::fs::remove_dir_all(&base);
 }
 
@@ -95,13 +95,13 @@ fn no_migration_when_new_exists() {
     let old = old_language_dir(&base);
     let new = base.join("Languages");
     std::fs::create_dir_all(new.join("es")).expect("new dir");
-    std::fs::write(new.join("es").join("allgemein.ftl"), "language-name = Español\n").expect("ftl");
+    std::fs::write(new.join("es").join("common.ftl"), "language-name = Español\n").expect("ftl");
     paths::set_migration_enabled(true);
     let dir = fp_i18n::language_dir_in(&base);
     paths::set_migration_enabled(false);
     assert_eq!(dir, new);
-    assert!(old.join("fr").join("allgemein.ftl").is_file(), "old folder left alone");
-    assert!(new.join("es").join("allgemein.ftl").is_file());
+    assert!(old.join("fr").join("common.ftl").is_file(), "old folder left alone");
+    assert!(new.join("es").join("common.ftl").is_file());
     assert!(!new.join("fr").exists(), "nothing merged");
     // readers also look into the leftover old folder
     assert_eq!(paths::leftover_dir(&dir, &old), Some(old.clone()));

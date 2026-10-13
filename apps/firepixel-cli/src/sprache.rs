@@ -123,8 +123,10 @@ fn vorlage(code: &str, ziel: &Path, ueberschreiben: bool, von: &str) -> Result<V
     let mut skipped = Vec::new();
     for (_, name, text) in files {
         let p = dir.join(name);
-        if p.exists() && !ueberschreiben {
-            skipped.push(p.display().to_string());
+        // Sprachpaket mit dem alten Namen des Bereichs (`menue.ftl` bis 13.10.2026) zählt als vorhanden
+        let legacy = check::legacy_area_file_name(name).map(|f| dir.join(f)).filter(|f| f.is_file());
+        if (p.exists() || legacy.is_some()) && !ueberschreiben {
+            skipped.push(legacy.filter(|_| !p.exists()).unwrap_or(p).display().to_string());
             continue;
         }
         let mut body = String::new();
@@ -139,6 +141,10 @@ fn vorlage(code: &str, ziel: &Path, ueberschreiben: bool, von: &str) -> Result<V
             }
         }
         std::fs::write(&p, body).map_err(|e| format!("{}: {e}", p.display()))?;
+        if let Some(old) = legacy {
+            // überschrieben wird der Bereich; die alte Datei bliebe sonst mit doppelten Schlüsseln liegen
+            std::fs::remove_file(&old).map_err(|e| format!("{}: {e}", old.display()))?;
+        }
         written.push(p.display().to_string());
     }
     let skipped_text = if skipped.is_empty() { String::new() } else { tr!("cli-lang-template-skipped", n = skipped.len()) };

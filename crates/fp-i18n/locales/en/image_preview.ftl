@@ -1,5 +1,5 @@
 # Image Preview (File ▸ Image Preview…, crates\fp-ui\src\dialogs\image_preview\, re\17-bildvorschau.md) – owner: BV-<n>
-# Prefix image-preview-; the labels of the left column stay in dialoge.ftl (dlg-preview-*).
+# Prefix image-preview-; the labels of the left column stay in dialogs.ftl (dlg-preview-*).
 
 # Pane header
 image-preview-preview = Preview

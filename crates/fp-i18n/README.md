@@ -20,7 +20,7 @@ Ohne Kommandozeile: den Ordner `crates\fp-i18n\locales\en\` kopieren und umbenen
 Jede Zeile ist `schlüssel = Text`. Nur **rechts vom `=`** übersetzen:
 
 ```ftl
-# allgemein.ftl
+# common.ftl
 language-name = Français              # Eigenname der Sprache, so erscheint sie im Menü
 btn-cancel = Annuler
 btn-yes = &Oui                        # & vor dem Buchstaben = Zugriffstaste (Alt+O)
@@ -28,7 +28,7 @@ key-ctrl = Ctrl                       # Tastennamen in Kürzeln (Strg+S → Ctrl
 fmt-decimal-separator = ,             # Dezimaltrennzeichen: 12,5 %
 fmt-date = { $day }/{ $month }/{ $year }
 
-# dialoge.ftl – Platzhalter { $name } unverändert übernehmen, Stelle frei wählbar
+# dialogs.ftl – Platzhalter { $name } unverändert übernehmen, Stelle frei wählbar
 dlg-unsaved-text = Enregistrer les modifications de « { $name } » ?
 
 # Mehrzahl: Varianten nach den Regeln der Sprache (one, few, many, other …), *[other] ist Pflicht
@@ -65,6 +65,12 @@ Alte Ordner `Sprachen` (bis 12.10.2026) werden beim Start einmal in `Languages` 
 wenn das nicht geht, weiter gelesen (`fp_i18n::paths`). Die alten Befehle `sprache pruefen|vorlage|liste`
 und Optionen `--eingebaut`, `--kurz`, `--streng`, `--ueberschreiben`, `--von` gehen weiter.
 
+Bis 13.10.2026 trugen die Bereichsdateien deutsche Namen (`allgemein.ftl`, `menue.ftl` …; Liste
+`check::LEGACY_AREA_NAMES`, neue Namen in der Tabelle unten). Sprachpakete mit den alten Namen
+laden weiter (jede `*.ftl` wird gelesen); `language check` ordnet sie dem neuen Bereich zu, und
+`language template` legt die neuen Namen an (eine vorhandene Datei unter altem Namen zählt als
+vorhanden, `--overwrite` ersetzt sie unter dem neuen Namen).
+
 Erlaubt sind ein Unterordner je Sprache (`fr\*.ftl`) oder eine einzige Datei `fr.ftl`. Gleiche
 Schlüssel überschreiben eingebaute Texte – so lassen sich auch einzelne deutsche oder englische
 Texte anpassen (`de\eigene.ftl`).
@@ -83,7 +89,7 @@ eingebaute Texte fallen sofort auf, und Layouts werden mit langen Texten geprüf
 - **Rechts nach links (Arabisch, Hebräisch, Persisch, Urdu): nicht unterstützt.** egui setzt Text nur links→rechts und ohne Glyphenformung (keine Bidi-Umordnung, keine arabischen Verbindungsformen, kein gespiegeltes Layout). Solche Sprachdateien lassen sich laden, erscheinen im Menü mit „(RTL)“ markiert, sind aber kaum lesbar.
 
 ### Kommandozeile und MCP
-- `firepixel-cli` spricht `--lang <code>`, sonst `FIREPIXEL_LANG`, sonst die Systemsprache; die Hilfe kommt vollständig aus `kommandozeile.ftl`.
+- `firepixel-cli` spricht `--lang <code>`, sonst `FIREPIXEL_LANG`, sonst die Systemsprache; die Hilfe kommt vollständig aus `cli.ftl`.
 - Der MCP-Server antwortet KI-Agenten in `FIREPIXEL_MCP_LANG` (Vorgabe Englisch, je Aufruf `language`), über `fp_i18n::with_language` nur im Thread des Aufrufs; die Oberfläche bleibt in ihrer Sprache.
 
 ## Für Entwickler
@@ -139,23 +145,24 @@ Schlüssel: Kleinbuchstaben, Bindestriche, Bereichspräfix. Attribute mit Punkt 
 
 | Datei (`locales\<code>\…`) | Präfixe | zuständig (Phase 6) |
 |---|---|---|
-| `allgemein.ftl` | `language-name`, `btn-`, `fmt-`, `unit-`, `key-` (Tastennamen), `lang-` (Sprachwahl), `test-` | I18N-KERN |
-| `menue.ftl` | `menu-` (Menütitel, Untermenüs), `cmd-` (alle Befehle aus dem Register inkl. Tooltip), `ctx-` (Kontextmenüs), `pmenu-` (Bedienfeldmenüs) | I18N-MENUE |
-| `werkzeuge.ftl` | `tool-` (Werkzeugnamen, Tooltips, Flyouts, Statushinweise), `shape-` (automatische Formen) | I18N-MENUE |
-| `dialoge.ftl` | `dlg-` | I18N-DIALOGE |
-| `inspektor.ftl` | `pi-` | I18N-INSPEKTOR |
-| `bedienfelder.ftl` | `panel-` | I18N-BEDIENFELDER |
-| `oberflaeche.ftl` | `ui-` (Anwendungsleiste, Symbolleiste, Reiter, Leinwand-Overlays, Statuszeile, Fußleiste, Docking, Datei-Dialogfilter, Startfenster) | I18N-SHELL |
-| `meldungen.ftl` | `err-` (Fehler aus fp-engine/fp-io/fp-export/fp-script), `msg-` (Status-/Infomeldungen), `ai-` (KI-Auswahl) | I18N-ENGINE |
+| `common.ftl` | `language-name`, `btn-`, `fmt-`, `unit-`, `key-` (Tastennamen), `lang-` (Sprachwahl), `test-` | I18N-KERN |
+| `menu.ftl` | `menu-` (Menütitel, Untermenüs), `cmd-` (alle Befehle aus dem Register inkl. Tooltip), `ctx-` (Kontextmenüs), `pmenu-` (Bedienfeldmenüs) | I18N-MENUE |
+| `tools.ftl` | `tool-` (Werkzeugnamen, Tooltips, Flyouts, Statushinweise), `shape-` (automatische Formen) | I18N-MENUE |
+| `dialogs.ftl` | `dlg-` | I18N-DIALOGE |
+| `inspector.ftl` | `pi-` | I18N-INSPEKTOR |
+| `panels.ftl` | `panel-` | I18N-BEDIENFELDER |
+| `ui.ftl` | `ui-` (Anwendungsleiste, Symbolleiste, Reiter, Leinwand-Overlays, Statuszeile, Fußleiste, Docking, Datei-Dialogfilter, Startfenster) | I18N-SHELL |
+| `messages.ftl` | `err-` (Fehler aus fp-engine/fp-io/fp-export/fp-script), `msg-` (Status-/Infomeldungen), `ai-` (KI-Auswahl) | I18N-ENGINE |
 | `filter.ftl` | `filter-`, `effect-`, `blend-` (Filter-, Effekt- und Mischmodusnamen, Parameter) | I18N-ENGINE |
-| `willkommen.ftl` | `welcome-` (Startbildschirm) | DESIGN |
-| `skript.ftl` | `err-script-` (Meldungen aus fp-script: automatische Formen, Dateien) | AU |
+| `welcome.ftl` | `welcome-` (Startbildschirm) | DESIGN |
+| `script.ftl` | `err-script-` (Meldungen aus fp-script: automatische Formen, Dateien) | AU |
 | `mcp.ftl` | `msg-mcp-`, `err-mcp-` (Antworten des MCP-Servers und der Brücke an KI-Agenten), `mcp-tool-` (Werkzeugtitel, `.description`, Parameter), `mcp-res-` (Ressourcen), `mcp-doc-arg` | AU, UE-3 |
-| `kommandozeile.ftl` | `cli-` (Hilfe von `firepixel-cli`: `cli-<befehl>`, `.examples`, `cli-<befehl>-arg-<option>`, `.value`; Meldungen; `cli-lang-*`, `cli-check-*` Sprachprüfung) | UE-3 |
-| `befehlstexte.ftl` | `cmdtext-` (Parameterbeschreibungen und Hinweise der Befehle für MCP/CLI; Schlüssel aus dem deutschen Quelltext, `fp_engine::command::source_text_key`) | UE-3 |
-| `dateidialog.ftl` | `fdlg-` (Datei-Dialog in der App bei aktivem KI-Steuerkanal) | AU |
-| `image_preview.ftl` | `image-preview-` (Bildvorschau, Datei ▸ Bildvorschau…; die Beschriftungen der linken Spalte stehen in `dialoge.ftl` unter `dlg-preview-`) | BV-<n> |
-| `nachzeichnen.ftl` | `trace-` (Bitmap nachzeichnen; die Befehlsbeschriftung steht in `menue.ftl` unter `cmd-modify-traceBitmap`) | VT-<n> |
+| `cli.ftl` | `cli-` (Hilfe von `firepixel-cli`: `cli-<befehl>`, `.examples`, `cli-<befehl>-arg-<option>`, `.value`; Meldungen; `cli-lang-*`, `cli-check-*` Sprachprüfung) | UE-3 |
+| `command_texts.ftl` | `cmdtext-` (Parameterbeschreibungen und Hinweise der Befehle für MCP/CLI; Schlüssel aus dem deutschen Quelltext, `fp_engine::command::source_text_key`) | UE-3 |
+| `file_dialog.ftl` | `fdlg-` (Datei-Dialog in der App bei aktivem KI-Steuerkanal) | AU |
+| `image_preview.ftl` | `image-preview-` (Bildvorschau, Datei ▸ Bildvorschau…; die Beschriftungen der linken Spalte stehen in `dialogs.ftl` unter `dlg-preview-`) | BV-<n> |
+| `trace.ftl` | `trace-` (Bitmap nachzeichnen; die Befehlsbeschriftung steht in `menu.ftl` unter `cmd-modify-traceBitmap`) | VT-<n> |
+| `bitmap_selection.ftl` | `bsel-`, `sel-saved-`, `err-sel-`, `msg-step-…-selection` (Bitmap-Auswahl speichern/wiederherstellen/löschen) | KV-<n> |
 
 Jeder Agent schreibt nur in seine Dateien (in `de` **und** `en`).
 

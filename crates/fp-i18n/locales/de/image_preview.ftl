@@ -1,5 +1,5 @@
 # Bildvorschau (Datei ▸ Bildvorschau…, crates\fp-ui\src\dialogs\image_preview\, re\17-bildvorschau.md) – zuständig: BV-<n>
-# Präfix image-preview-; die Beschriftungen der linken Spalte stehen weiter in dialoge.ftl (dlg-preview-*).
+# Präfix image-preview-; die Beschriftungen der linken Spalte stehen weiter in dialogs.ftl (dlg-preview-*).
 
 # Kopfzeile je Feld
 image-preview-preview = Vorschau

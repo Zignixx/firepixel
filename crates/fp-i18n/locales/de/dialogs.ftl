@@ -1,5 +1,5 @@
 # Dialoge (Bereich I18N-DIALOGE, Präfix dlg-). Code: crates\fp-ui\src\dialogs\*
-# Standardknöpfe (OK, Abbrechen, Ja, Nein …) kommen aus allgemein.ftl (btn-*).
+# Standardknöpfe (OK, Abbrechen, Ja, Nein …) kommen aus common.ftl (btn-*).
 
 ## Rahmen, Meldungen (mod.rs)
 dlg-titlebar = Titelleiste { $title }

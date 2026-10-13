@@ -28,7 +28,7 @@ fn json(out: &[u8]) -> Value {
 fn old_profile(profile: &Path) -> PathBuf {
     let old = profile.join("Firepixel").join("Sprachen").join("xx");
     std::fs::create_dir_all(&old).expect("old dir");
-    std::fs::write(old.join("allgemein.ftl"), "language-name = Testsprache TE1\n").expect("ftl");
+    std::fs::write(old.join("common.ftl"), "language-name = Testsprache TE1\n").expect("ftl");
     old
 }
 
@@ -69,7 +69,7 @@ fn old_folder_is_read_without_migration() {
     assert!(v["languages"].as_array().is_some_and(|l| l.iter().any(|x| x["code"] == "xx")), "{v}");
     let folders = v["folders"].to_string();
     assert!(folders.contains("Sprachen"), "fallback folder listed: {folders}");
-    assert!(old.join("allgemein.ftl").is_file(), "untouched");
+    assert!(old.join("common.ftl").is_file(), "untouched");
     assert!(!profile.join("Firepixel").join("Languages").exists());
     let _ = std::fs::remove_dir_all(&profile);
 }
@@ -82,7 +82,7 @@ fn migration_end_to_end() {
     let out = cli(&profile).env("FP_MIGRATE", "1").args(["--json", "language", "list"]).assert().success().get_output().stdout.clone();
     let v = json(&out);
     let base = profile.join("Firepixel");
-    assert!(base.join("Languages").join("xx").join("allgemein.ftl").is_file(), "moved");
+    assert!(base.join("Languages").join("xx").join("common.ftl").is_file(), "moved");
     assert!(!base.join("Sprachen").exists(), "old folder gone");
     assert!(v["languages"].as_array().is_some_and(|l| l.iter().any(|x| x["code"] == "xx")), "{v}");
     assert!(v["folders"].to_string().contains("Languages"), "{v}");
@@ -91,10 +91,10 @@ fn migration_end_to_end() {
     assert!(json(&out)["languages"].as_array().is_some_and(|l| l.iter().any(|x| x["code"] == "xx")));
     // new folder exists already: old one is left alone but still read
     let old = old_profile(&profile);
-    std::fs::write(old.join("allgemein.ftl"), "language-name = Alt TE1\nte1-only-old = 1\n").expect("ftl");
+    std::fs::write(old.join("common.ftl"), "language-name = Alt TE1\nte1-only-old = 1\n").expect("ftl");
     let out = cli(&profile).env("FP_MIGRATE", "1").args(["--json", "language", "list"]).assert().success().get_output().stdout.clone();
     let v = json(&out);
-    assert!(old.join("allgemein.ftl").is_file(), "no second migration");
+    assert!(old.join("common.ftl").is_file(), "no second migration");
     assert!(v["languages"].as_array().is_some_and(|l| l.iter().any(|x| x["code"] == "xx")), "{v}");
     let _ = std::fs::remove_dir_all(&profile);
 }
@@ -108,5 +108,34 @@ fn json_keys_are_english() {
         assert!(v.get(k).is_some(), "{k} missing: {v}");
     }
     cli(&profile).args(["language", "nonsense"]).assert().failure().stderr(predicate::str::is_empty().not());
+    let _ = std::fs::remove_dir_all(&profile);
+}
+
+/// `language template` writes the English area names; a pack with the old German file names
+/// (until 13.10.2026) counts as existing, `--overwrite` replaces it under the new name, and
+/// `language check` assigns an old area file to its new area (TE2-A).
+#[test]
+fn template_and_check_with_old_area_names() {
+    let profile = tmp("areas");
+    let dir = profile.join("Languages");
+    let out = cli(&profile).args(["--json", "language", "template", "fr"]).arg(&dir).assert().success().get_output().stdout.clone();
+    let v = json(&out);
+    let fr = dir.join("fr");
+    for f in ["common.ftl", "menu.ftl", "dialogs.ftl", "cli.ftl", "mcp.ftl"] {
+        assert!(fr.join(f).is_file(), "{f}: {v}");
+    }
+    assert!(!fr.join("menue.ftl").exists() && !fr.join("allgemein.ftl").exists());
+    // old pack: menu area under its old name
+    std::fs::rename(fr.join("menu.ftl"), fr.join("menue.ftl")).expect("rename");
+    let out = cli(&profile).args(["--json", "language", "check", "--short"]).arg(fr.join("menue.ftl")).assert().success().get_output().stdout.clone();
+    let v = json(&out);
+    assert_eq!(v["languages"][0]["code"], "fr", "{v}");
+    assert_eq!(v["languages"][0]["missing"], 0, "only the menu area: {v}");
+    let out = cli(&profile).args(["--json", "language", "template", "fr"]).arg(&dir).assert().success().get_output().stdout.clone();
+    let v = json(&out);
+    assert!(v["skipped"].to_string().contains("menue.ftl"), "old name counts as existing: {v}");
+    assert!(!fr.join("menu.ftl").exists(), "no second copy of the menu area");
+    cli(&profile).args(["language", "template", "fr", "--overwrite"]).arg(&dir).assert().success();
+    assert!(fr.join("menu.ftl").is_file() && !fr.join("menue.ftl").exists(), "replaced under the new name");
     let _ = std::fs::remove_dir_all(&profile);
 }

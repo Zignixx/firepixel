@@ -128,7 +128,7 @@ fn external_language_folder_appears_in_menu() {
     let dir = std::env::temp_dir().join(format!("fp-ui-sprachen-{}", std::process::id()));
     let fr = dir.join("fr");
     let _ = std::fs::create_dir_all(&fr);
-    let _ = std::fs::write(fr.join("allgemein.ftl"), "language-name = Français\nlang-menu = Langue\nbtn-cancel = Annuler\n");
+    let _ = std::fs::write(fr.join("common.ftl"), "language-name = Français\nlang-menu = Langue\nbtn-cancel = Annuler\n");
     assert_eq!(fp_i18n::load_external_dir(&dir), vec!["fr".to_string()]);
     let mut h = harness();
     h.run_steps(1);
@@ -194,7 +194,7 @@ fn screenshot_sprachwahl() {
     fp_i18n::set_language("de");
     let dir = std::env::temp_dir().join(format!("fp-ui-shot-{}", std::process::id()));
     let _ = std::fs::create_dir_all(dir.join("fr"));
-    let _ = std::fs::write(dir.join("fr").join("allgemein.ftl"), "language-name = Français\n");
+    let _ = std::fs::write(dir.join("fr").join("common.ftl"), "language-name = Français\n");
     fp_i18n::load_external_dir(&dir);
     let ctx = egui::Context::default();
     let app = FirepixelApp::with_session(&ctx, Session::default(), UiSettings::default(), false);
