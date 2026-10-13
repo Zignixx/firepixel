@@ -190,15 +190,43 @@ fn parse_stops(v: Option<&Value>) -> Option<Vec<(f32, Argb)>> {
     (out.len() >= 2).then_some(out)
 }
 
-/// Vorgabegriffe eines neuen Verlaufs wie im Original (PAR 18/03, 18/07): senkrecht nach unten
-/// (Winkel 270°); lineare Arten von der Ober- zur Unterkante, die übrigen von der Mitte zur
-/// Unterkante; die zweite Achse steht senkrecht dazu.
+/// Vorgabegriffe eines neuen Verlaufs je Art, so dass das Ergebnis den Exporten des Originals
+/// gleicht (PAR 18/03, 18/03b; `re\_testdateien\par\px\inspector-fill\03_*.png`, Objekt 50,50–150,120):
+/// - Linear: Ober- → Unterkante (Winkel 270°), zweite Achse senkrecht dazu
+/// - Kontur: Mitte → halbe kleinere Seite nach unten
+/// - Radial, Rechteck, Kegel, Ellipse, Streifen, Kleine Wellen: Mitte → Mitte rechts,
+///   zweite Achse Mitte → Mitte oben (Kreis mit halber Breite, Rechteck/Ellipse füllen das Objekt)
+/// - Glanz, Falten: Mitte → rechte untere Ecke; Wellen: Mitte → halber Weg dorthin
+/// - Supernova: Mitte → rechte untere Ecke, zweite Achse Mitte → halber Weg zur linken unteren Ecke
 pub fn default_handles(b: Option<Rect>, shape: i32) -> fp_model::FillHandles {
     let r = b.unwrap_or(Rect::new(0.0, 0.0, 100.0, 100.0));
     let cy = (r.top + r.bottom) / 2.0;
     let cx = (r.left + r.right) / 2.0;
-    let (start, end) = if shape == 2 || shape == 5 || shape == 12 || shape == 14 { (Point::new(cx, r.top), Point::new(cx, r.bottom)) } else { (Point::new(cx, cy), Point::new(cx, r.bottom)) };
-    let second = Point::new(start.x - (end.y - start.y), start.y + (end.x - start.x));
+    let (qw, qh) = ((r.right - r.left) / 4.0, (r.bottom - r.top) / 4.0);
+    let c = Point::new(cx, cy);
+    let rot = |s: Point, e: Point| Point::new(s.x - (e.y - s.y), s.y + (e.x - s.x));
+    let (start, end, second) = match shape {
+        2 => {
+            let (s, e) = (Point::new(cx, r.top), Point::new(cx, r.bottom));
+            (s, e, rot(s, e))
+        }
+        5 | 8 => {
+            let e = Point::new(r.right, r.bottom);
+            (c, e, rot(c, e))
+        }
+        14 => {
+            let e = Point::new(cx + qw, cy + qh);
+            (c, e, rot(c, e))
+        }
+        7 => (c, Point::new(r.right, r.bottom), Point::new(cx - qw, cy + qh)),
+        // Kontur: Griffabstand = halbe kleinere Seite, damit die Stopps nicht umgerechnet werden
+        // (Verlauf vom Rand bis zur Mittellinie wie im Export des Originals)
+        CONTOUR_SHAPE => {
+            let e = Point::new(cx, cy + 2.0 * qw.min(qh));
+            (c, e, rot(c, e))
+        }
+        _ => (c, Point::new(r.right, cy), Point::new(cx, r.top)),
+    };
     fp_model::FillHandles { valid: true, start, end, second }
 }
 
@@ -1230,6 +1258,8 @@ pub fn register(r: &mut CommandRegistry) {
                 let fallback_fill = s.tools.fill_color;
                 edit_each(s, p, |e, bounds| {
                     let before = docops::path_attrs_of(e).map(|a| fill_kind(a.fill.as_ref())).unwrap_or(0);
+                    let before_shape = docops::path_attrs_of(e).and_then(|a| a.fill.as_ref().map(shape_id));
+                    let before_handles = handles_of(e);
                     // „Muster“ an einer Musterfüllung: Muster behalten (nur das Popup öffnet sich)
                     let pattern = if keep_pattern && before == 3 { None } else { pattern.clone() };
                     docops::edit_path_attrs(e, &|a| {
@@ -1375,8 +1405,14 @@ pub fn register(r: &mut CommandRegistry) {
                     if after == 2 || after == 3 {
                         // neu auf Verlauf/Muster umgestellt: Vorgabegriffe des Originals; sonst nur
                         // ungültige bzw. entartete Griffe ersetzen (Objekte aus Dateien, PAR 18/03)
-                        let force = after != before;
                         let sh = docops::path_attrs_of(e).and_then(|a| a.fill.as_ref().map(shape_id)).unwrap_or(2);
+                        // andere Verlaufsart: unveränderte Vorgabegriffe der alten Art durch die der
+                        // neuen ersetzen (Radial & Co. um die Mitte, PAR 18/03b); vom Nutzer
+                        // verschobene oder gedrehte Griffe bleiben
+                        let untouched = after == 2
+                            && before == 2
+                            && before_shape.is_some_and(|o| o != sh && before_handles == Some(default_handles(bounds, o)));
+                        let force = after != before || untouched;
                         let h = if after == 3 { bounds.map(fp_model::new::default_fill_handles).unwrap_or_else(|| default_handles(None, 2)) } else { default_handles(bounds, sh) };
                         set_handles(e, h, force);
                     }

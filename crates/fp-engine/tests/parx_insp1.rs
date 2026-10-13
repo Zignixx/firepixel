@@ -64,19 +64,21 @@ fn gradient_default_and_handles() {
     let h = handles(&s, id);
     assert_eq!((h.start.x, h.start.y, h.end.x, h.end.y), (100.0, 50.0, 100.0, 120.0), "von oben nach unten");
     assert!((panel::handles_angle(&h) - 270.0).abs() < 1e-6);
-    // Art wechseln behält die Griffe, Kontur wird als FSHi 3 + FSXi 17 gespeichert
+    // Art wechseln: unveränderte Vorgabegriffe werden die der neuen Art (PAR 18/03b, Kontur von der
+    // Mitte aus), Kontur wird als FSHi 3 + FSXi 17 gespeichert
     s.execute("pi.fill", json!({"shape": CONTOUR_SHAPE})).expect("Kontur");
     let f = fill(&s, id);
     assert!(f.is_contour_gradient() && f.shape == 3 && f.category == "fc_ContourGrad");
     assert_eq!(panel::shape_id(&f), CONTOUR_SHAPE);
-    assert_eq!(handles(&s, id), h);
+    let hc = handles(&s, id);
+    assert_eq!((hc.start.x, hc.start.y, hc.end.x, hc.end.y), (100.0, 85.0, 100.0, 120.0), "Kontur: Mitte → halbe Höhe");
     // Winkel 0° dreht um den Startpunkt; 50× gesetzt = einmal (§4b)
     for _ in 0..50 {
         s.execute("pi.fill", json!({"angle": 0})).expect("Winkel");
     }
     let h0 = handles(&s, id);
     assert!((panel::handles_angle(&h0) - 0.0).abs() < 1e-3, "{h0:?}");
-    assert!((h0.end.x - 170.0).abs() < 1e-3 && (h0.end.y - 50.0).abs() < 1e-3, "{h0:?}");
+    assert!((h0.end.x - 135.0).abs() < 1e-3 && (h0.end.y - 85.0).abs() < 1e-3, "{h0:?}");
     s.execute("edit.undo", json!({})).expect("undo");
     assert!(panel::handles_angle(&handles(&s, id)) < 1e-3, "ein Schritt je Eingabe");
 }

@@ -146,7 +146,17 @@ pub(super) fn register(r: &mut CommandRegistry) {
                     d.selection.set(vec![ElementId(id)]);
                     Ok(())
                 })?;
-                Ok(CommandOutput { value: json!({"id": id}), ..CommandOutput::doc() })
+                // Verlaufsschritt wie im Original nach der Form („Rechteck“, nicht „Form zeichnen“, PAR 18/20b)
+                let key = fp_i18n::command_key(&draw);
+                let step = format!("{key}.step");
+                let out = CommandOutput { value: json!({"id": id}), ..CommandOutput::doc() };
+                Ok(if fp_i18n::has(&step) {
+                    out.labeled(fp_i18n::t(&step))
+                } else if fp_i18n::has(&key) {
+                    out.labeled(fp_i18n::t(&key))
+                } else {
+                    out
+                })
             }),
     );
     r.add(
