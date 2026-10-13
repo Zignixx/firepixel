@@ -1158,6 +1158,14 @@ fn draw_side(ui: &mut Ui, d: &mut FormDialog, body: Rect, id: &str) -> (bool, Op
                 if slider_tabs {
                     // erstes Bedienelement (D42): Startfokus auf der Leiste
                     super::autofocus_widget(&child, r.id);
+                    // Klick bzw. Ziehen gibt der Leiste den Fokus (Win32-Trackbar), danach wirken
+                    // die Pfeiltasten; Fokusrahmen um die ganze Leiste (CT-1a)
+                    if r.drag_started() || r.clicked() {
+                        r.request_focus();
+                    }
+                    if r.has_focus() {
+                        ui.painter().rect_stroke(sr, 0.0, Stroke::new(1.0, c.focus), StrokeKind::Inside);
+                    }
                 } else {
                     super::skip_tab_stop_after(ui, skip, &r);
                 }
