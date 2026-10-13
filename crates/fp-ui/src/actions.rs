@@ -58,6 +58,7 @@ pub fn execute(st: &mut AppState, ctx: &egui::Context, a: Action) {
         }
         Action::ShowPanel(p) => {
             st.settings.workspace.show(p);
+            st.dock.prefer = Some(p);
             st.sync_panels_to_engine();
         }
         Action::Activate(id) => {
@@ -348,19 +349,26 @@ fn run_command(st: &mut AppState, ctx: &egui::Context, name: &str, params: Value
         "ui.dock.tabClicked" => {
             let idx = params.get("index").and_then(|v| v.as_u64()).unwrap_or(0) as usize;
             let ws = &mut st.settings.workspace;
-            let g = if let Some(f) = params.get("floating").and_then(|v| v.as_u64()) {
+            let floating = params.get("floating").and_then(|v| v.as_u64());
+            let dock_gi = params.get("group").and_then(|v| v.as_u64()).map(|g| g as usize);
+            // nur wegen der Fensterhöhe eingeklappt angezeigt (CT-3): Klick klappt auf
+            let forced = floating.is_none() && dock_gi.is_some_and(|g| st.dock.forced.contains(&g));
+            let g = if let Some(f) = floating {
                 ws.floating.get_mut(f as usize).map(|f| &mut f.group)
-            } else if let Some(gi) = params.get("group").and_then(|v| v.as_u64()) {
-                ws.dock.get_mut(gi as usize)
+            } else if let Some(gi) = dock_gi {
+                ws.dock.get_mut(gi)
             } else {
                 None
             };
             if let Some(g) = g {
-                if g.active == idx {
+                if g.active == idx && !forced {
                     g.collapsed = !g.collapsed;
                 } else {
                     g.active = idx;
                     g.collapsed = false;
+                }
+                if !g.collapsed && floating.is_none() {
+                    st.dock.prefer = g.panels.get(idx).copied();
                 }
             }
             return;

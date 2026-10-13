@@ -38,6 +38,12 @@ pub struct DockUi {
     /// (gilt für den Sprachstand `measured_generation`; beim Sprachwechsel neu gemessen).
     pub measured: std::collections::BTreeMap<PanelId, f32>,
     pub measured_generation: u64,
+    /// Zuletzt gezielt geöffnetes Bedienfeld (Reiterklick, Menü *Fenster*): reicht die Höhe des
+    /// Docks nicht für alle Gruppen, bleibt seine Gruppe offen und andere klappen zu (CT-3).
+    pub prefer: Option<PanelId>,
+    /// Dock-Gruppen, die im letzten Bild nur wegen der Höhe eingeklappt angezeigt wurden
+    /// (gespeichert offen); ein Reiterklick klappt sie auf statt zu.
+    pub forced: Vec<usize>,
 }
 
 /// Innenabstand des Bedienfeldinhalts links und rechts (Gruppe → Inhalt).
@@ -336,15 +342,24 @@ pub fn show_dock(ui: &mut Ui, st: &mut AppState) {
     // Zu wenig Höhe: untere Gruppen nur für die Anzeige einklappen, damit jede offene Gruppe eine
     // Mindesthöhe behält (sonst überlappen Listen und Knopfleisten); gespeichert bleibt der Zustand.
     const MIN_GROUP_CONTENT: f32 = 120.0;
+    // Die Gruppe des zuletzt gezielt geöffneten Bedienfelds bleibt offen (sonst ließe sich die
+    // unterste Gruppe bei kleinem Fenster nie aufklappen, CT-3)
+    let prefer = st.dock.prefer.and_then(|p| groups.iter().find(|(_, g)| g.panels.contains(&p)).map(|(gi, _)| *gi));
+    let mut forced = Vec::new();
     loop {
         let open = groups.iter().filter(|(_, g)| !g.collapsed).count();
         if open <= 1 || rem >= open as f32 * MIN_GROUP_CONTENT {
             break;
         }
-        if let Some((_, g)) = groups.iter_mut().rev().find(|(_, g)| !g.collapsed) {
-            g.collapsed = true;
+        match groups.iter_mut().rev().find(|(gi, g)| !g.collapsed && Some(*gi) != prefer) {
+            Some((gi, g)) => {
+                g.collapsed = true;
+                forced.push(*gi);
+            }
+            None => break,
         }
     }
+    st.dock.forced = forced;
     let wsum: f32 = groups.iter().filter(|(_, g)| !g.collapsed).map(|(_, g)| g.weight).sum::<f32>().max(1e-3);
     let mut y = area.top();
     let mut prev_expanded: Option<(usize, f32)> = None;
