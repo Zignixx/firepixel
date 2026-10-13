@@ -3,6 +3,8 @@
 Slot `fp-s3`, Ziel `target-s3`. Auftrag: Lücken in DE/EN finden und schließen (ftl, feste Texte,
 Befehlsregister, CLI, Handbuch/AGENTS, echtes Fenster).
 
+Commit: `aeef2aa` (alle Änderungen und dieser Bericht).
+
 ## Ergebnis je Bereich
 
 | Bereich | Geprüft mit | Gefunden | Behoben |
