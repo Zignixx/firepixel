@@ -341,12 +341,38 @@ fn import_file(doc: DocId, path: &Path, bounds: Option<[f64; 4]>, keep_aspect: b
         let (x, y) = bounds.map(|b| (b[0], b[1])).unwrap_or((0.0, 0.0));
         let rgba = fp_raster::RgbaImage::from_rgba_bytes(fp_geom::IRect::new(x.round() as i32, y.round() as i32, x.round() as i32 + w as i32, y.round() as i32 + h as i32), &px)
             .map_err(|e| FwErr::generic(e.to_string()))?;
+        // wie im Original auf die sichtbaren Pixel (Alpha ≥ 2) beschneiden, Lage bleibt; ganz
+        // transparentes Bild: kein Objekt (re §1.2 Regel 1)
+        let full = rgba.bounds();
+        let vis = rgba.alpha_bounds_min(fp_model::image::VISIBLE_ALPHA_MIN);
+        if vis.is_empty() {
+            return Ok(());
+        }
+        let rgba = if vis == full { rgba } else { rgba.cropped(vis) };
         st(|s| {
             s.session.clipboard.clear();
             s.session.clipboard.pixels = Some(rgba);
             s.exec_on(Some(doc), "edit.paste", json!({}))?;
             Ok(())
         })?;
+        // Zielrechteck: das ganze Bild hineinskalieren, der beschnittene Inhalt behält seinen
+        // (mitskalierten) Versatz; ohne Größenänderung steht er schon richtig
+        if let Some(b) = bounds {
+            let (tw, th) = (b[2] - b[0], b[3] - b[1]);
+            let (fw, fh) = (w as f64, h as f64);
+            if tw > 0.0 && th > 0.0 && ((fw - tw).abs() > 0.5 || (fh - th).abs() > 0.5) {
+                let (kx, ky) = if keep_aspect {
+                    let k = (tw / fw).min(th / fh);
+                    (k, k)
+                } else {
+                    (tw / fw, th / fh)
+                };
+                let (ox, oy) = ((vis.left - full.left) as f64, (vis.top - full.top) as f64);
+                let p = json!({"x": b[0] + ox * kx, "y": b[1] + oy * ky, "width": vis.width() as f64 * kx, "height": vis.height() as f64 * ky});
+                exec(Some(doc), "element.setBounds", p)?;
+            }
+        }
+        return Ok(());
     }
     // auf die Zielgrenzen bringen (das Original skaliert in das Rechteck)
     if let Some(b) = bounds {

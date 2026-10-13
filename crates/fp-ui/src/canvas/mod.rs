@@ -1191,7 +1191,7 @@ fn overlays(ui: &Ui, st: &mut AppState, painter: &egui::Painter, area: Rect, vie
             if paint_tool && matches!(e.kind, fp_model::ElementKind::Bitmap(_)) {
                 continue;
             }
-            let Some(b) = fp_engine::docops::element_bounds(&d.doc, &e) else { continue };
+            let Some(b) = fp_engine::docops::element_frame_bounds(&d.doc, &e) else { continue };
             let is_moving = moving_ids.contains(&eid.0);
             let corners = match moving.as_ref().filter(|_| is_moving) {
                 Some((_, m)) => b.corners().map(|p| m.apply(p)),

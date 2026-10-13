@@ -301,12 +301,19 @@ impl RgbaImage {
     ///
     /// Gespeicherte Render-Caches des Originals sind genau darauf zugeschnitten (06 §2.4, 05 §2.6).
     pub fn alpha_bounds(&self) -> IRect {
+        self.alpha_bounds_min(1)
+    }
+
+    /// Kleinstes Rechteck der Pixel mit Alpha ≥ `min_alpha` (leer, wenn es keine gibt). Das
+    /// Original beschneidet geöffnete und importierte Bilder mit `min_alpha = 2` (re\22 §1.2).
+    pub fn alpha_bounds_min(&self, min_alpha: u8) -> IRect {
+        let min_alpha = min_alpha.max(1);
         let (w, h) = (self.width(), self.height());
         let (mut x0, mut y0, mut x1, mut y1) = (usize::MAX, usize::MAX, 0usize, 0usize);
         for y in 0..h {
             let row = self.row_local(y);
-            if let Some(first) = row.iter().position(|p| p[3] != 0) {
-                let last = row.iter().rposition(|p| p[3] != 0).unwrap_or(first);
+            if let Some(first) = row.iter().position(|p| p[3] >= min_alpha) {
+                let last = row.iter().rposition(|p| p[3] >= min_alpha).unwrap_or(first);
                 x0 = x0.min(first);
                 x1 = x1.max(last + 1);
                 y0 = y0.min(y);

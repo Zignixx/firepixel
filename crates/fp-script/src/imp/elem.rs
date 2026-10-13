@@ -470,8 +470,21 @@ fn element_get(cls: &str, name: &str, doc: DocId, id: ElementId, ctx: &mut Conte
             }))
         }
         "pixelRect" => {
-            let b = bounds(doc, &e)?;
-            conv::rect_js([b[0].floor(), b[1].floor(), b[2].ceil(), b[3].ceil()], ctx).map_err(jserr)?
+            // Bitmaps: Rechteck der sichtbaren Pixel (Alpha ≥ 2), unabhängig von den Objektgrenzen;
+            // leere Bitmap wie im Original ±2³¹ (re\22 §1.2 Regel 3)
+            let r = st(|s| {
+                let d = s.session.document(doc).ok_or_else(|| FwErr::bad("Dokument"))?;
+                Ok(fp_engine::docops::element_pixel_rect(&d.doc, &e))
+            })?;
+            let b = match (r, &e.kind) {
+                (Some(r), _) => [r.left as f64, r.top as f64, r.right as f64, r.bottom as f64],
+                (None, ElementKind::Bitmap(_)) => {
+                    let m = 2f64.powi(31);
+                    [-m, -m, m, m]
+                }
+                (None, _) => [0.0; 4],
+            };
+            conv::rect_js(b, ctx).map_err(jserr)?
         }
         "visible" => JsValue::from(e.common.visible),
         "locked" => JsValue::from(e.common.locked),

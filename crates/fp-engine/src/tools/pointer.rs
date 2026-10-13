@@ -141,7 +141,7 @@ pub(crate) fn outline_overlay(doc: &Document, e: &Element) -> Overlay {
     if !matches!(e.kind, ElementKind::Text(_) | ElementKind::Bitmap(_) | ElementKind::Instance(_)) {
         collect_contours(e, &mut cs, 0);
     }
-    if cs.is_empty() { Overlay::Highlight { contours: Vec::new(), rect: docops::element_bounds(doc, e) } } else { Overlay::Highlight { contours: cs, rect: None } }
+    if cs.is_empty() { Overlay::Highlight { contours: Vec::new(), rect: docops::element_frame_bounds(doc, e) } } else { Overlay::Highlight { contours: cs, rect: None } }
 }
 
 /// Strichbreite eines Elements (für die Vorauswahl über die Grenzen).

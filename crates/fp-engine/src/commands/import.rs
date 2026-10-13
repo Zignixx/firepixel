@@ -141,7 +141,13 @@ pub(super) fn register(r: &mut CommandRegistry) {
                         return Err(EngineError::Failed(fp_i18n::t("err-file-no-objects")));
                     }
                     if let Some(at) = at {
-                        let b = els.iter().filter_map(|e| docops::element_bounds(doc, e)).reduce(|a, b| a.union(&b));
+                        // Einzelbild: `at` ist die linke obere Ecke des Bildes; das auf die sichtbaren
+                        // Pixel beschnittene Objekt behält seinen Versatz darin (re\22 §1.2 Regel 1)
+                        let b = if res.content == fp_io::ImportedContent::Bitmap {
+                            Some(fp_geom::Rect::new(0.0, 0.0, 0.0, 0.0))
+                        } else {
+                            els.iter().filter_map(|e| docops::element_bounds(doc, e)).reduce(|a, b| a.union(&b))
+                        };
                         if let Some(b) = b {
                             let (dx, dy) = (at.x - b.left, at.y - b.top);
                             for e in els.iter_mut() {

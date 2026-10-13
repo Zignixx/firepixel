@@ -252,6 +252,89 @@ impl TileGrid {
     }
 }
 
+/// Kleinste Deckkraft, ab der ein Bitmap-Pixel als sichtbar zählt (re\22 §1.2: Alpha 1 zählt wie 0).
+pub const VISIBLE_ALPHA_MIN: u8 = 2;
+
+/// Zwischenspeicher der sichtbaren Rechtecke je Bildkachel. Schlüssel: Adresse der Kachel und die
+/// genutzte Breite/Höhe (Randkacheln). Der `Weak` hält die Adresse belegt, solange der Eintrag lebt
+/// (keine Verwechslung mit einer neuen Kachel an derselben Stelle); Kachelpixel werden nie an Ort
+/// und Stelle geändert, jede Bearbeitung erzeugt neue Kacheln.
+type VisCache = std::collections::HashMap<(usize, u32, u32), (std::sync::Weak<Tile>, Option<[u32; 4]>)>;
+static VIS_CACHE: std::sync::Mutex<Option<VisCache>> = std::sync::Mutex::new(None);
+const VIS_CACHE_PRUNE: usize = 16_384;
+
+/// Sichtbares Rechteck einer ARGB-Kachel (Alpha in Byte 0), lokal `[x0, y0, x1, y1)`.
+fn tile_visible(px: &[u8], ts: usize, cw: usize, ch: usize) -> Option<[u32; 4]> {
+    let (mut x0, mut y0, mut x1, mut y1) = (usize::MAX, usize::MAX, 0usize, 0usize);
+    for y in 0..ch {
+        let row = &px[y * ts * 4..y * ts * 4 + cw * 4];
+        let vis = |p: &[u8; 4]| p[0] >= VISIBLE_ALPHA_MIN;
+        let (c, _) = row.as_chunks::<4>();
+        let Some(first) = c.iter().position(vis) else { continue };
+        let last = c.iter().rposition(vis).unwrap_or(first);
+        x0 = x0.min(first);
+        x1 = x1.max(last + 1);
+        y0 = y0.min(y);
+        y1 = y + 1;
+    }
+    (x0 != usize::MAX).then(|| [x0 as u32, y0 as u32, x1 as u32, y1 as u32])
+}
+
+impl TileGrid {
+    /// Rechteck der Pixel mit Alpha ≥ [`VISIBLE_ALPHA_MIN`] in Bitmap-Pixeln `[x0, y0, x1, y1)`
+    /// (`None`, wenn es keine gibt). Nur für Bildbitmaps; fehlende Kacheln zählen als transparent.
+    pub fn visible_bounds(&self) -> Option<[u32; 4]> {
+        let (w, h, ts) = (self.width, self.height, self.tile_size);
+        if ts == 0 || w == 0 || h == 0 {
+            return None;
+        }
+        let cols = w.div_ceil(ts);
+        let mut acc: Option<[u32; 4]> = None;
+        let mut add = |r: [u32; 4]| {
+            acc = Some(match acc {
+                None => r,
+                Some(a) => [a[0].min(r[0]), a[1].min(r[1]), a[2].max(r[2]), a[3].max(r[3])],
+            });
+        };
+        let mut guard = VIS_CACHE.lock().unwrap_or_else(|e| e.into_inner());
+        let cache = guard.get_or_insert_with(Default::default);
+        for (k, e) in self.tiles.iter().enumerate() {
+            let k = k as u32;
+            let (tx, ty) = (k % cols, k / cols);
+            let (ox, oy) = (tx * ts, ty * ts);
+            if ox >= w || oy >= h {
+                continue;
+            }
+            let (cw, ch) = (ts.min(w - ox), ts.min(h - oy));
+            let local = match e {
+                TileEntry::Solid(c) => (c.a() >= VISIBLE_ALPHA_MIN).then_some([0, 0, cw, ch]),
+                TileEntry::Tile(t) if t.kind == TileKind::Image && t.pixels.len() >= (ts * ts * 4) as usize => {
+                    let key = (Arc::as_ptr(t) as usize, cw, ch);
+                    match cache.get(&key).filter(|(wk, _)| wk.upgrade().is_some_and(|a| Arc::ptr_eq(&a, t))) {
+                        Some((_, r)) => *r,
+                        None => {
+                            let r = tile_visible(&t.pixels, ts as usize, cw as usize, ch as usize);
+                            if cache.len() >= VIS_CACHE_PRUNE {
+                                cache.retain(|_, (wk, _)| wk.strong_count() > 0);
+                                if cache.len() >= VIS_CACHE_PRUNE / 2 {
+                                    cache.clear();
+                                }
+                            }
+                            cache.insert(key, (Arc::downgrade(t), r));
+                            r
+                        }
+                    }
+                }
+                _ => None,
+            };
+            if let Some([a, b, c, d]) = local {
+                add([ox + a, oy + b, ox + c, oy + d]);
+            }
+        }
+        acc
+    }
+}
+
 /// Lage und Pixel einer Bitmap (`IMGv`-Inhalt): `XLCf YLCf XOFf YOFf WPXi HPXi TSZi TILv`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct ImageData {
@@ -273,6 +356,16 @@ impl ImageData {
     /// Bitmap als RGBA8 zusammensetzen.
     pub fn to_rgba(&self) -> (Vec<u8>, bool) {
         self.grid.to_rgba()
+    }
+
+    /// Rechteck der sichtbaren Pixel (Alpha ≥ [`VISIBLE_ALPHA_MIN`]) in Dokumentkoordinaten, `None`
+    /// bei einer leeren Bitmap. Das Original zeichnet daran den Auswahlrahmen und meldet es als
+    /// `pixelRect`, unabhängig von den gespeicherten Objektgrenzen (re\22 §1.2 Regel 3).
+    /// Je Kachel zwischengespeichert: Ändern sich Pixel, entsteht eine neue Kachel.
+    pub fn visible_bounds(&self) -> Option<fp_geom::Rect> {
+        let [x0, y0, x1, y1] = self.grid.visible_bounds()?;
+        let p = self.position();
+        Some(fp_geom::Rect::new(p.x + x0 as f32, p.y + y0 as f32, p.x + x1 as f32, p.y + y1 as f32))
     }
 
     /// Ein Pixel lesen (ohne Zusammensetzen der ganzen Bitmap).
@@ -320,6 +413,39 @@ mod tests {
         let (back, missing) = g.to_rgba();
         assert!(!missing);
         assert_eq!(back, rgba);
+    }
+
+    #[test]
+    fn visible_bounds_threshold_and_tiles() {
+        // 300×200 (3×2 Kacheln), Alpha 1 bei (5,5) zählt nicht, Alpha 2 bei (250,150) und ein Block
+        let (w, h) = (300u32, 200u32);
+        let mut rgba = vec![0u8; (w * h * 4) as usize];
+        fn set(rgba: &mut [u8], w: u32, x: u32, y: u32, a: u8) {
+            let o = ((y * w + x) * 4) as usize;
+            rgba[o..o + 4].copy_from_slice(&[200, 10, 10, a]);
+        }
+        set(&mut rgba, w, 5, 5, 1);
+        for y in 40..60 {
+            for x in 100..140 {
+                set(&mut rgba, w, x, y, 255);
+            }
+        }
+        let mut id = 0;
+        let g = TileGrid::from_rgba(w, h, &rgba, &mut id);
+        assert_eq!(g.visible_bounds(), Some([100, 40, 140, 60]));
+        // zweiter Aufruf aus dem Zwischenspeicher, gleiches Ergebnis
+        assert_eq!(g.visible_bounds(), Some([100, 40, 140, 60]));
+        set(&mut rgba, w, 250, 150, 2);
+        let g2 = TileGrid::from_rgba(w, h, &rgba, &mut id);
+        assert_eq!(g2.visible_bounds(), Some([100, 40, 251, 151]));
+        let img = ImageData { origin: Point::new(10.0, -3.0), offset: Point::default(), grid: g2 };
+        assert_eq!(img.visible_bounds(), Some(fp_geom::Rect::new(110.0, 37.0, 261.0, 148.0)));
+        let empty = TileGrid::from_rgba(w, h, &vec![0u8; (w * h * 4) as usize], &mut id);
+        assert_eq!(empty.visible_bounds(), None);
+        let solid = TileGrid { width: 10, height: 10, tile_size: 128, tiles: vec![TileEntry::Solid(Argb(0x01ff0000))], tiles_extra: Extra::default() };
+        assert_eq!(solid.visible_bounds(), None);
+        let solid = TileGrid { width: 10, height: 10, tile_size: 128, tiles: vec![TileEntry::Solid(Argb(0x02ff0000))], tiles_extra: Extra::default() };
+        assert_eq!(solid.visible_bounds(), Some([0, 0, 10, 10]));
     }
 
     #[test]

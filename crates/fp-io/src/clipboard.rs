@@ -6,7 +6,7 @@
 //! `CF_DIBV5` (17), `kMoaCfFormat_BMP`, `kMoaCfFormat_GIF`, `kMoaCfFormat_JPEG`, `kMoaCfFormat_TIFF`,
 //! `image/svg+xml` sowie Dateilisten (Pfade, über [`crate::open_path`]).
 
-use crate::build::{document_from_raster, import_format, ImportResult, ImportedContent};
+use crate::build::{document_from_raster_trimmed, import_format, ImportResult, ImportedContent};
 use crate::detect::{detect_format, FileFormat};
 use crate::{ImportError, ImportOptions, Result};
 
@@ -47,7 +47,7 @@ pub fn import_clipboard(format: &str, data: &[u8], opts: &ImportOptions) -> Resu
         ClipFormat::Dib | ClipFormat::DibV5 => {
             // CF_DIB kann auch mit „BM“-Kopf kommen
             let img = if data.starts_with(b"BM") { crate::bmp::decode(data)? } else { crate::bmp::decode_dib(data, None, true)? };
-            Ok(ImportResult { document: document_from_raster(img, FileFormat::Bmp), format: FileFormat::Bmp, content: ImportedContent::Bitmap, warnings: vec![] })
+            Ok(ImportResult { document: document_from_raster_trimmed(img, FileFormat::Bmp, true), format: FileFormat::Bmp, content: ImportedContent::Bitmap, warnings: vec![] })
         }
         ClipFormat::Png | ClipFormat::FileData | ClipFormat::Svg => {
             let fmt = detect_format(data, if classify(format) == ClipFormat::Svg { "clip.svg" } else { "" });

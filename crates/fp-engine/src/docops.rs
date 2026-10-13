@@ -512,6 +512,25 @@ fn bounds_depth(doc: &Document, e: &Element, depth: u32) -> Option<Rect> {
     }
 }
 
+/// Rechteck des Auswahlrahmens bzw. der Hervorhebung eines Elements. Bei Bitmaps die sichtbaren
+/// Pixel (Alpha ≥ 2), nicht die gespeicherten Objektgrenzen (re\22 §1.2 Regel 3); eine leere Bitmap
+/// fällt auf die Objektgrenzen zurück. Sonst wie [`element_bounds`].
+pub fn element_frame_bounds(doc: &Document, e: &Element) -> Option<Rect> {
+    match &e.kind {
+        ElementKind::Bitmap(b) => b.image.visible_bounds().or_else(|| element_bounds(doc, e)),
+        _ => element_bounds(doc, e),
+    }
+}
+
+/// `pixelRect` eines Elements wie im Original: bei Bitmaps das Rechteck der sichtbaren Pixel (leere
+/// Bitmap: `None`, das Original meldet dann ±2³¹), sonst die nach außen gerundeten Grenzen.
+pub fn element_pixel_rect(doc: &Document, e: &Element) -> Option<Rect> {
+    match &e.kind {
+        ElementKind::Bitmap(b) => b.image.visible_bounds().map(|r| Rect::new(r.left.floor(), r.top.floor(), r.right.ceil(), r.bottom.ceil())),
+        _ => element_bounds(doc, e).map(|r| Rect::new(r.left.floor(), r.top.floor(), r.right.ceil(), r.bottom.ceil())),
+    }
+}
+
 /// Vereinigte Grenzen mehrerer Elemente einer Seite.
 pub fn ids_bounds(doc: &Document, page: usize, ids: &[ElementId]) -> Option<Rect> {
     elements_on_page(doc, page, ids).iter().fold(None, |acc, e| union_opt(acc, element_bounds(doc, e)))

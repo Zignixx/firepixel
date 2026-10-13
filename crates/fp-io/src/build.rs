@@ -95,7 +95,12 @@ pub fn export_for(fmt: FileFormat, has_transparency: bool) -> ExportSettings {
 /// Dokument aus einem Einzelbild: Ebene „Hintergrund“ mit der Bitmap (JPEG zusätzlich eine leere
 /// „Ebene 1“ darüber, Laufzeit 7a T7).
 pub fn document_from_raster(r: RasterImage, fmt: FileFormat) -> Document {
-    let mut doc = empty_document(r.width(), r.height());
+    let size = (r.width(), r.height());
+    raster_document(r, fmt, size)
+}
+
+fn raster_document(r: RasterImage, fmt: FileFormat, (cw, ch): (u32, u32)) -> Document {
+    let mut doc = empty_document(cw, ch);
     let mut ids = std::mem::take(&mut doc.ids);
     let mut tile = 0u32;
     let e = bitmap_element(&mut ids, &r.image, None, &mut tile);
@@ -114,6 +119,31 @@ pub fn document_from_raster(r: RasterImage, fmt: FileFormat) -> Document {
     }
     push_elements(&mut doc, 0, vec![e]);
     set_resolution(&mut doc, r.dpi);
+    doc
+}
+
+/// Wie [`document_from_raster`], aber das Bitmap-Objekt wie im Original auf die sichtbaren Pixel
+/// (Alpha ≥ 2) beschnitten; die Leinwand behält die Bildgröße, die Lage bleibt (re\22 §1.2 Regel 1).
+/// Ganz transparentes Bild: beim Öffnen eine Bitmap 0×0 bei (0, 0), beim Importieren (`importing`)
+/// gar kein Objekt.
+pub fn document_from_raster_trimmed(mut r: RasterImage, fmt: FileFormat, importing: bool) -> Document {
+    let full = r.image.bounds();
+    let vis = r.image.alpha_bounds_min(fp_model::image::VISIBLE_ALPHA_MIN);
+    if vis == full {
+        return document_from_raster(r, fmt);
+    }
+    let (w, h) = (r.width(), r.height());
+    let empty = vis.is_empty();
+    r.image = if empty { RgbaImage::empty_at(full.left, full.top) } else { r.image.cropped(vis) };
+    let mut doc = raster_document(r, fmt, (w, h));
+    if empty
+        && importing
+        && let Some(p) = doc.page_mut(0)
+        && let Some(LayerSlot::Own(l)) = p.root.layers.get_mut(0)
+        && let Some(c) = Arc::make_mut(l).cels.first_mut()
+    {
+        Arc::make_mut(c).elements.clear();
+    }
     doc
 }
 
@@ -230,7 +260,7 @@ pub fn document_from_animation(a: Animation, fmt: FileFormat, opts: &ImportOptio
 
 /// Dispatcher nach Format.
 pub fn import_format(fmt: FileFormat, name: &str, data: &[u8], opts: &ImportOptions) -> Result<ImportResult> {
-    let raster = |r: RasterImage, f: FileFormat| ImportResult { document: document_from_raster(r, f), format: f, content: ImportedContent::Bitmap, warnings: vec![] };
+    let raster = |r: RasterImage, f: FileFormat| ImportResult { document: document_from_raster_trimmed(r, f, opts.importing), format: f, content: ImportedContent::Bitmap, warnings: vec![] };
     let anim = |a: Animation, f: FileFormat| {
         let n = a.frames.len();
         if n <= 1 {
