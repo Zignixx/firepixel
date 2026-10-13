@@ -173,6 +173,7 @@ pi-stroke-inside = Pinselstrich innen ausrichten
 pi-stroke-center = Pinselstrich mittig ausrichten
 pi-stroke-outside = Pinselstrich außen ausrichten
 pi-stroke-edit = Pinselstrich bearbeiten
+pi-stroke-options-item = Pinselstrichoptionen…
 pi-stroke-save = Pinselstrich speichern
 pi-stroke-delete = Pinselstrich löschen
 pi-stroke-save-name = Name:

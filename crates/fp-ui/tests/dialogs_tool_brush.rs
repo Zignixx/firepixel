@@ -38,9 +38,18 @@ fn undo_count(st: &AppState) -> usize {
     st.session.active().map(|d| d.history.undo_count()).unwrap_or(0)
 }
 
+/// Wert im Dialog „Pinselstrich bearbeiten“ setzen (Feldnamen wie früher im Formular; seit
+/// PINSEL-1 ein eigener Dialog mit Registerkarten).
 fn set_field(h: &mut Harness<'_, FirepixelApp>, key: &str, v: Value) {
-    let f = h.state_mut().state.dialogs.form.as_mut().expect("Dialog offen");
-    f.field_mut(key).unwrap_or_else(|| panic!("Feld {key}")).value = v;
+    let d = h.state_mut().state.dialogs.brush_edit.as_mut().expect("Dialog offen");
+    let n = v.as_f64().unwrap_or(0.0);
+    match key {
+        "diameter" => d.brush.diameter = n as i32,
+        "softness" => d.brush.softness = (n * 10.0) as i32,
+        "angle" => d.brush.angle = n as i32,
+        "_PZ" => d.set_sensitivity(b'P', b'Z', n),
+        _ => panic!("Feld {key}"),
+    }
     h.run_steps(1);
 }
 
@@ -55,8 +64,9 @@ fn click_button(h: &mut Harness<'_, FirepixelApp>, label: &str) {
 fn open(h: &mut Harness<'_, FirepixelApp>) {
     h.state_mut().state.dialogs.open_stroke_options(true);
     h.run_steps(2);
-    let f = st(h).dialogs.form.as_ref().expect("Strich bearbeiten offen");
-    assert_eq!(f.command, "pi.tool.brush", "ohne Auswahl wirkt der Dialog auf die Werkzeugvorgabe");
+    let f = st(h).dialogs.brush_edit.as_ref().expect("Strich bearbeiten offen");
+    assert!(f.tool, "ohne Auswahl wirkt der Dialog auf die Werkzeugvorgabe");
+    assert_eq!(f.invocation().0, "pi.tool.brush");
 }
 
 fn tool_brush(st: &AppState) -> fp_model::Brush {
@@ -91,7 +101,7 @@ fn tool_brush_dialog_cancel_ok_and_drawing() {
         set_field(&mut h, "_PZ", json!(k % 4 * 10));
     }
     click_button(&mut h, "Abbrechen");
-    assert!(st(&h).dialogs.form.is_none());
+    assert!(st(&h).dialogs.brush_edit.is_none());
     assert!(st(&h).session.tools.options.new_brush.is_none(), "Abbrechen schreibt nichts");
     assert!(Arc::ptr_eq(&d0, &doc(st(&h))));
     // OK nach vielen Änderungen: nur die letzten Werte zählen
@@ -105,16 +115,16 @@ fn tool_brush_dialog_cancel_ok_and_drawing() {
     set_field(&mut h, "angle", json!(45));
     set_field(&mut h, "_PZ", json!(20));
     click_button(&mut h, "OK");
-    assert!(st(&h).dialogs.form.is_none());
+    assert!(st(&h).dialogs.brush_edit.is_none());
     let b = tool_brush(st(&h));
     assert_eq!((b.diameter, b.softness, b.angle, b.sensitivity(b'P', b'Z')), (9, 300, 45, 200));
     assert!(Arc::ptr_eq(&d0, &doc(st(&h))), "Werkzeugvorgabe ist kein Dokumentschritt");
     assert_eq!(undo_count(st(&h)), u0);
     // erneut öffnen zeigt die Vorgabe; Abbrechen lässt sie stehen
     open(&mut h);
-    let f = st(&h).dialogs.form.as_ref().expect("offen");
-    assert_eq!(f.get("diameter").as_f64(), Some(9.0));
-    assert_eq!(f.get("_PZ").as_f64(), Some(20.0));
+    let f = st(&h).dialogs.brush_edit.as_ref().expect("offen");
+    assert_eq!(f.brush.diameter, 9);
+    assert_eq!(f.sensitivity(b'P', b'Z'), 20.0);
     set_field(&mut h, "diameter", json!(33));
     click_button(&mut h, "Abbrechen");
     assert_eq!(tool_brush(st(&h)).diameter, 9);

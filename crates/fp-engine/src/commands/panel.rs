@@ -350,6 +350,17 @@ impl BrushEdit {
     }
 }
 
+/// Vollständiger Pinsel aus dem Parameter `brush` (Feldnamen wie im Modell).
+fn full_brush(p: &Params) -> Result<Option<Brush>> {
+    match p.get("brush") {
+        Some(v) => serde_json::from_value::<Brush>(v.clone()).map(|mut b| {
+            b.diameter = b.diameter.clamp(1, 1000);
+            Some(b)
+        }).map_err(|e| bad(p, fp_i18n::tr!("err-brush-detail", detail = e.to_string()))),
+        None => Ok(None),
+    }
+}
+
 /// Pinsel der Werkzeugvorgabe: `new_brush`, sonst aus der Strichvorgabe `new_stroke`
 /// (Vorgabe, Stärke, Weichheit) gebildet, sonst ein einfacher 1-px-Pinsel.
 pub fn tool_brush(o: &crate::tools::ToolOptions) -> Brush {
@@ -873,10 +884,15 @@ pub fn register(r: &mut CommandRegistry) {
             .opt("dashCount", ParamKind::Integer { min: Some(0), max: Some(3) }, "Anzahl Strich/Lücke-Paare")
             .opt("dashOn", ParamKind::Json, "Strichlängen [a, b, c]")
             .opt("dashOff", ParamKind::Json, "Lückenlängen [a, b, c]")
+            .opt("brush", ParamKind::Json, "vollständiger Pinsel wie `element.brush` (Dialog „Pinselstrich bearbeiten“); die übrigen Felder wirken danach")
             .run(|s, p| {
                 let ed = BrushEdit::parse(p)?;
+                let full = full_brush(p)?;
                 edit_each(s, p, |e, _| {
                     docops::edit_path_attrs(e, &|a| {
+                        if let (Some(f), Some(_)) = (&full, &a.brush) {
+                            a.brush = Some(f.clone());
+                        }
                         if let Some(b) = a.brush.as_mut() {
                             ed.apply(b);
                         }
@@ -906,12 +922,13 @@ pub fn register(r: &mut CommandRegistry) {
             .opt("dashOn", ParamKind::Json, "Strichlängen [a, b, c]")
             .opt("dashOff", ParamKind::Json, "Lückenlängen [a, b, c]")
             .opt("sensitivity", ParamKind::Json, "Empfindlichkeiten {\"PZ\": %, …} wie element.setBrushSensitivity")
+            .opt("brush", ParamKind::Json, "vollständiger Pinsel wie `element.brush` (Dialog „Pinselstrich bearbeiten“); die übrigen Felder wirken danach")
             .run(|s, p| {
                 if p.opt_bool("clear")?.unwrap_or(false) {
                     s.tools.options.new_brush = None;
                     return Ok(CommandOutput::session_with(json!({ "brush": null })));
                 }
-                let mut b = tool_brush(&s.tools.options);
+                let mut b = full_brush(p)?.unwrap_or_else(|| tool_brush(&s.tools.options));
                 if let Some(n) = p.opt_str("preset")? {
                     let pr = BRUSH_PRESETS
                         .iter()

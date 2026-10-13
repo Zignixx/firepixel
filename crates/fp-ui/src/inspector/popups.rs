@@ -363,9 +363,18 @@ pub fn stroke_category(ui: &mut Ui, id: Id, r: Rect, label: &str, has: bool, pre
                 }
             });
         }
+        // wie im Original am Ende: „Pinselstrichoptionen…“ (öffnet „Pinselstrich bearbeiten“)
+        ui.separator();
+        if fields::list_item(ui, &texts::t("pi-stroke-options-item"), false).clicked() {
+            out = Some(Some(STROKE_OPTIONS_ITEM));
+            ui.close();
+        }
     });
     out
 }
+
+/// Rückgabewert von [`stroke_category`] für „Pinselstrichoptionen…“.
+pub const STROKE_OPTIONS_ITEM: usize = usize::MAX;
 
 /// Name des eigenen Benutzer-Texturordners in `%APPDATA%\Firepixel` (technisch englisch, §1c).
 pub const USER_TEXTURES_DIR: &str = fp_engine::resources::TEXTURES;

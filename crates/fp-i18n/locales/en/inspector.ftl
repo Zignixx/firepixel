@@ -176,6 +176,7 @@ pi-stroke-inside = Align stroke inside
 pi-stroke-center = Center stroke on path
 pi-stroke-outside = Align stroke outside
 pi-stroke-edit = Edit Stroke
+pi-stroke-options-item = Stroke Options…
 pi-stroke-save = Save stroke
 pi-stroke-delete = Delete stroke
 pi-stroke-save-name = Name:

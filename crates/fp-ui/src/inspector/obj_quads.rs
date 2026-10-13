@@ -882,6 +882,11 @@ pub fn stroke_panel(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target, enabled:
     if let Some(choice) = popups::stroke_category(ui, id.with("cat"), d.r(64.0, 0.0, 65.0, 14.0), &label, has, cur_preset, en, &saved) {
         match choice {
             None => apply_stroke(ui, st, tgt, json!({"none": true})),
+            // „Pinselstrichoptionen…“ am Ende der Liste: Dialog „Pinselstrich bearbeiten“
+            Some(popups::STROKE_OPTIONS_ITEM) => match tgt {
+                Target::Tool => st.dialogs.open_stroke_options_for_tool(),
+                Target::Selection => st.dialogs.open_stroke_options(true),
+            },
             Some(i) if i >= BRUSH_PRESETS.len() => {
                 if let Some(n) = saved.get(i - BRUSH_PRESETS.len()) {
                     apply_stroke(ui, st, tgt, json!({"preset": n}));
@@ -966,7 +971,11 @@ pub fn stroke_edit_row(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target, enabl
     let en = edit_en && tgt == Target::Selection;
     let id = Id::new(("pi-sedit", tgt == Target::Tool));
     if fields::button(ui, id.with("edit"), d.r(0.0, 2.0, 80.0, 13.0), &t("pi-stroke-edit"), edit_en) {
-        st.dialogs.open_stroke_options(st.session.active().is_some());
+        // Werkzeug-Inspektor: Pinsel der Werkzeugvorgabe, auch wenn eine Bitmap ausgewählt ist (PINSEL-1)
+        match tgt {
+            Target::Tool => st.dialogs.open_stroke_options_for_tool(),
+            Target::Selection => st.dialogs.open_stroke_options(st.session.active().is_some()),
+        }
     }
     if fields::icon_button(ui, id.with("save"), d.r(84.0, 2.0, 13.0, 13.0), Glyph::StyleNew, en, &t("pi-stroke-save")).clicked() && en {
         let n = saved_brushes(st).len() + 1;

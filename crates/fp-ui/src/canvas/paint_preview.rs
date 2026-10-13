@@ -41,61 +41,53 @@ fn draw(painter: &egui::Painter, c: &PaintPreviewCache, spp: &dyn Fn(Point) -> P
 pub fn paint(ctx: &egui::Context, painter: &egui::Painter, doc: fp_engine::DocId, p: &PaintPreview, zoom: f64, time: f64, spp: &dyn Fn(Point) -> Pos2) -> usize {
     let mut uploads = 0;
     let filter = if zoom >= 1.0 { TextureOptions::NEAREST } else { TextureOptions::LINEAR };
-    ctx.data_mut(|d| {
-        let c = d.get_temp_mut_or_default::<PaintPreviewCache>(key(doc));
-        if c.stroke != p.stroke {
-            *c = PaintPreviewCache { stroke: p.stroke, ..Default::default() };
-        }
-        c.last_seen = time;
-        c.ended = false;
-        for t in p.tiles.iter() {
-            match c.tiles.get_mut(&t.key) {
-                Some((tex, ver, _)) if *ver == t.version => {
-                    let _ = tex;
-                }
-                Some((tex, ver, _)) => {
-                    tex.set(color_image(&t.image), filter);
-                    *ver = t.version;
-                    uploads += 1;
-                }
-                None => {
-                    let tex = ctx.load_texture(format!("paint-{}-{}-{}", p.stroke, t.key.0, t.key.1), color_image(&t.image), filter);
-                    c.tiles.insert(t.key, (tex, t.version, t.rect));
-                    uploads += 1;
-                }
+    // Zwischenspeicher herausnehmen: Texturen anlegen sperrt den Kontext selbst
+    let mut c = ctx.data_mut(|d| d.remove_temp::<PaintPreviewCache>(key(doc))).unwrap_or_default();
+    if c.stroke != p.stroke {
+        c = PaintPreviewCache { stroke: p.stroke, ..Default::default() };
+    }
+    c.last_seen = time;
+    c.ended = false;
+    for t in p.tiles.iter() {
+        match c.tiles.get_mut(&t.key) {
+            Some((_, ver, _)) if *ver == t.version => {}
+            Some((tex, ver, _)) => {
+                tex.set(color_image(&t.image), filter);
+                *ver = t.version;
+                uploads += 1;
+            }
+            None => {
+                let tex = ctx.load_texture(format!("paint-{}-{}-{}", p.stroke, t.key.0, t.key.1), color_image(&t.image), filter);
+                c.tiles.insert(t.key, (tex, t.version, t.rect));
+                uploads += 1;
             }
         }
-        draw(painter, c, spp);
-    });
+    }
+    draw(painter, &c, spp);
+    ctx.data_mut(|d| d.insert_temp(key(doc), c));
     uploads
 }
 
 /// Nach dem Zug: Vorschau stehen lassen, bis das Hintergrundbild den Stand `generation` zeigt
 /// (`shown_generation`), höchstens 2 s; sonst Texturen freigeben.
 pub fn linger(ctx: &egui::Context, painter: &egui::Painter, doc: fp_engine::DocId, generation: u64, shown_generation: Option<u64>, time: f64, spp: &dyn Fn(Point) -> Pos2) {
-    let keep = ctx.data_mut(|d| {
-        let c = d.get_temp_mut_or_default::<PaintPreviewCache>(key(doc));
-        if c.tiles.is_empty() {
-            return false;
-        }
-        if !c.ended {
-            c.ended = true;
-            c.last_seen = time;
-        }
-        let waiting = time - c.last_seen < 2.0 && shown_generation.is_none_or(|g| g != generation);
-        if waiting {
-            draw(painter, c, spp);
-        } else {
-            *c = PaintPreviewCache::default();
-        }
-        waiting
-    });
-    if keep {
+    let Some(mut c) = ctx.data_mut(|d| d.remove_temp::<PaintPreviewCache>(key(doc))) else { return };
+    if c.tiles.is_empty() {
+        return;
+    }
+    if !c.ended {
+        c.ended = true;
+        c.last_seen = time;
+    }
+    let waiting = time - c.last_seen < 2.0 && shown_generation.is_none_or(|g| g != generation);
+    if waiting {
+        draw(painter, &c, spp);
+        ctx.data_mut(|d| d.insert_temp(key(doc), c));
         ctx.request_repaint_after(std::time::Duration::from_millis(16));
     }
 }
 
 /// Anzahl der gehaltenen Vorschau-Kacheln (Tests).
 pub fn cached_tiles(ctx: &egui::Context, doc: fp_engine::DocId) -> usize {
-    ctx.data_mut(|d| d.get_temp_mut_or_default::<PaintPreviewCache>(key(doc)).tiles.len())
+    ctx.data(|d| d.get_temp::<PaintPreviewCache>(key(doc)).map(|c| c.tiles.len()).unwrap_or(0))
 }

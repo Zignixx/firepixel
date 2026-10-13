@@ -21,6 +21,7 @@ pub mod levels_common;
 pub mod marquee;
 pub mod curves;
 pub mod bitmap_selection;
+pub mod brush_edit;
 pub mod menu_dialogs;
 pub mod misc;
 pub mod models;
@@ -101,12 +102,16 @@ pub struct Dialogs {
     pub trace: Option<trace::TraceDialog>,
     /// Warnung „Befehl ohne passendes Ziel“ mit „Nicht mehr anzeigen“ (FV-5).
     pub warning: Option<warning::WarningDialog>,
+    /// „Pinselstrich bearbeiten“ mit Registerkarten Optionen/Form/Empfindlichkeit (PINSEL-1).
+    pub brush_edit: Option<brush_edit::BrushEditDialog>,
 }
 
 /// Verzögert zu öffnendes Formular.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum PendingForm {
     StrokeOptions,
+    /// „Pinselstrich bearbeiten“ für die Werkzeugvorgabe (Werkzeug-Inspektor).
+    StrokeOptionsTool,
     NewStyle,
     StatusText,
 }
@@ -143,12 +148,17 @@ impl Dialogs {
             || self.ai.modal_open()
             || self.trace.is_some()
             || self.warning.is_some()
+            || self.brush_edit.is_some()
             || crate::file_dialog::is_open() // AU: offener Datei-Dialog sperrt wie ein modaler Dialog
     }
 
     /// „Strich bearbeiten“ öffnen (beim nächsten Bild, braucht die Auswahl).
     pub fn open_stroke_options(&mut self, _with_document: bool) {
         self.pending_form = Some(PendingForm::StrokeOptions);
+    }
+    /// „Pinselstrich bearbeiten“ für den Pinsel der Werkzeugvorgabe öffnen (auch mit Auswahl).
+    pub fn open_stroke_options_for_tool(&mut self) {
+        self.pending_form = Some(PendingForm::StrokeOptionsTool);
     }
     /// „Neuer Stil“ öffnen.
     pub fn open_new_style(&mut self) {
@@ -1042,10 +1052,8 @@ pub fn show_all(ctx: &egui::Context, st: &mut AppState) {
     about::show(ctx, st);
     if let Some(p) = st.dialogs.pending_form.take() {
         match p {
-            PendingForm::StrokeOptions => match misc::stroke_options_form(st) {
-                Some(f) => st.dialogs.form = Some(f),
-                None => misc::not_available_message(st, &t("dlg-stroke-title"), &t("dlg-stroke-need-selection")),
-            },
+            PendingForm::StrokeOptions => brush_edit::open(st, false),
+            PendingForm::StrokeOptionsTool => brush_edit::open(st, true),
             PendingForm::NewStyle => st.dialogs.form = Some(misc::new_style_form(st)),
             PendingForm::StatusText => st.dialogs.form = catalog::form_for(st, "panel.behaviors.statusText"),
         }
@@ -1060,6 +1068,7 @@ pub fn show_all(ctx: &egui::Context, st: &mut AppState) {
             }
         }
     }
+    brush_edit::show(ctx, st);
     doc_dialogs::show_canvas_size(ctx, st);
     doc_dialogs::show_image_size(ctx, st);
     doc_dialogs::show_numeric_transform(ctx, st);
