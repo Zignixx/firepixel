@@ -274,11 +274,23 @@ fn tip_spacing_spreads_tracks() {
     b.tip_count = 3;
     b.tip_spacing = 500;
     ex(&mut s, "pi.tool.brush", json!({"brush": serde_json::to_value(&b).expect("json")}));
+    // Werkzeug malt mit dem Dialogpinsel (Zufalls-Startwert je Zug: Lage zufällig, nur ≥ 1 Spur)
     drag(&mut s, (60.0, 150.0), (500.0, 150.0), false);
-    // (Zufalls-Startwert je Zug: Bild nicht abgelegt, es wäre bei jedem Lauf anders)
-    let img = render(&s);
-    let (_, (_, t, _, bt)) = changed(&img, &base);
-    assert!(bt - t >= 35, "drei gespreizte Spuren: Höhe {}", bt - t);
+    let (n, (_, t, _, bt)) = changed(&render(&s), &base);
+    assert!(n > 0 && bt - t >= 20, "Strich gemalt: Höhe {}", bt - t);
+    // Statistik mit festen Startwerten (nicht flackernd): Ausdehnung wie das Original (31,114–523,177,
+    // Höhe 63) im Mittel über 8 Züge
+    let bv = serde_json::to_value(&b).expect("json");
+    let mut hs = Vec::new();
+    for seed in 1..=8u32 {
+        let p = json!({"points": [[60, 150], [500, 150]], "brush": bv, "color": "#C04040", "seed": seed * 7919});
+        let job = PaintJob::from_params(PaintTool::Brush, &p, fp_color::Argb(0xffc0_4040), 20.0);
+        let img = paint_into(&job, Some(&base), None).map(|i| i.cropped(base.bounds())).expect("Strich");
+        let (_, (_, t, _, bt)) = changed(&img, &base);
+        hs.push(bt - t);
+    }
+    let mean = hs.iter().sum::<i32>() as f64 / hs.len() as f64;
+    assert!(hs.iter().all(|h| *h > 20) && (40.0..=90.0).contains(&mean), "gespreizte Spuren: Höhen {hs:?}");
 }
 
 /// Probestrich wie die Ersatzmessung des Originals: Linie 60,150 → 500,150 mit der Vorlage,
