@@ -937,6 +937,12 @@ fn system_fonts() -> &'static Vec<(&'static str, Arc<egui::FontData>)> {
     })
 }
 
+/// Liest die Schriftdateien der Oberfläche schon vorab (Programmstart, im Hintergrund parallel
+/// zur Fenster- und Grafik-Einrichtung; N30). [`install_fonts`] wartet sonst darauf.
+pub fn prewarm_fonts() {
+    let _ = system_fonts();
+}
+
 /// Reihenfolge der CJK-Rückfallschriften: die Schrift der aktuellen Sprache zuerst (gleiche
 /// Unicode-Zeichen haben im Chinesischen, Japanischen und Koreanischen verschiedene Glyphenformen).
 pub fn cjk_fallback_order(lang: &str) -> [&'static str; 3] {

@@ -68,6 +68,7 @@ pub fn get(ctx: &egui::Context, path: &Path) -> Option<TextureHandle> {
             None => State::None,
         };
         c.0.lock().unwrap_or_else(|e| e.into_inner()).insert(key, state);
+        fp_i18n::startup::mark("recent-file thumbnail ready");
         ctx2.request_repaint();
     });
     if spawned.is_err() {

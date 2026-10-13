@@ -49,6 +49,7 @@ pub mod check;
 mod format;
 pub mod paths;
 pub mod profile;
+pub mod startup;
 pub use format::{
     fmt_date, fmt_datetime, fmt_number, fmt_size, fmt_time, shortcut_label, strip_access, t_access, unit, AccessText,
 };

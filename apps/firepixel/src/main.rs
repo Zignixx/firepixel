@@ -11,6 +11,8 @@
 use fp_ui::theme::ThemeKind;
 
 fn main() -> eframe::Result {
+    // Startzeit-Messung (nur mit FP_STARTUP_TRACE, Nutzerbefund N30)
+    fp_i18n::startup::start();
     // alte deutsche Ordnernamen (Sprachen, Modelle, …) beim ersten Zugriff einmal auf die englischen
     // umbenennen (AGENTEN_REGELN §1c; nicht in Testläufen mit FP_NO_SHELL_OPEN)
     fp_i18n::paths::enable_migration();

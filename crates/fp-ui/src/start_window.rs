@@ -90,10 +90,14 @@ static PHASE: AtomicU8 = AtomicU8::new(0);
 static SHOWN_AT: AtomicU64 = AtomicU64::new(0);
 /// Frames seit dem Sichtbarwerden (außerhalb).
 static FRAMES: AtomicU32 = AtomicU32::new(0);
+/// Startzeit-Messung (`FP_STARTUP_TRACE`): erster Frame nach dem Platzieren schon gemeldet?
+static INTERACTIVE_MARKED: AtomicBool = AtomicBool::new(false);
 /// So lange (und mindestens [`SETTLE_FRAMES`] Frames) zeichnet das Fenster außerhalb, bevor es an
 /// seinen Platz kommt. Gemessen (Software-Grafik, Debug-Build): weißes erstes Bild ≈ 0,1 s,
-/// vergrößerter Ausschnitt bis ≈ 0,45 s nach dem Sichtbarwerden.
-const SETTLE: f64 = 0.7;
+/// vergrößerter Ausschnitt bis ≈ 0,45 s nach dem Sichtbarwerden. Im Release-Build sind die Frames
+/// 4- bis 5-mal schneller (≈ 60 ms statt 250 ms); 0,5 s deckt die Debug-Messung weiter ab und
+/// zeigt das Fenster 0,2 s früher als die frühere Vorgabe 0,7 s (N30, START-1).
+const SETTLE: f64 = 0.5;
 const SETTLE_FRAMES: u32 = 4;
 /// Abstand des Folge-Frames nach dem Platzieren (Fenstersymbole erneut setzen). Gemessen
 /// (Software-Grafik, 2560 × 1392): Die ersten Frames nach dem Erscheinen brauchen je etwa 250 ms
@@ -113,6 +117,7 @@ pub fn after_frame(ctx: &egui::Context, window: Option<&winit::window::Window>) 
     match PHASE.load(Ordering::Relaxed) {
         0 if w.is_visible() == Some(true) => {
             PHASE.store(3, Ordering::Relaxed);
+            fp_i18n::startup::mark("window shown (offscreen, settling)");
             SHOWN_AT.store(now.to_bits(), Ordering::Relaxed);
             FRAMES.store(0, Ordering::Relaxed);
             ctx.request_repaint();
@@ -136,13 +141,22 @@ pub fn after_frame(ctx: &egui::Context, window: Option<&winit::window::Window>) 
             if START_MAXIMIZED.swap(false, Ordering::Relaxed) {
                 w.set_maximized(true);
             }
-            w.focus_window();
+            // Testinstanzen (FP_NO_SHELL_OPEN, FP_TEST_PROFILE …) holen sich den Fokus nicht: winit
+            // erzwingt ihn sonst mit einem simulierten Alt-Tastendruck (SendInput), der im gerade
+            // aktiven fremden Fenster landet (AGENTEN_REGELN §4d/§4e, START-1)
+            if !fp_i18n::profile::is_test_run() {
+                w.focus_window();
+            }
             PHASE.store(1, Ordering::Relaxed);
+            fp_i18n::startup::mark("window placed (visible to the user)");
             SHOWN_AT.store(now.to_bits(), Ordering::Relaxed);
             ctx.request_repaint();
             true
         }
         1 => {
+            if !INTERACTIVE_MARKED.swap(true, Ordering::Relaxed) {
+                fp_i18n::startup::mark("first frame after placement (interactive)");
+            }
             let left = f64::from_bits(SHOWN_AT.load(Ordering::Relaxed)) + FOLLOW_UP - now;
             if left <= 0.0 {
                 PHASE.store(2, Ordering::Relaxed);

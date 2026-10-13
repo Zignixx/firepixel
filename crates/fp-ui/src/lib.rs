@@ -75,7 +75,9 @@ impl FirepixelApp {
     /// Start aus eframe: Schriften, Voreinstellungen, gespeicherter Arbeitsbereich, Dateien aus der
     /// Kommandozeile.
     pub fn new(cc: &eframe::CreationContext<'_>, files: Vec<PathBuf>, design: Option<ThemeKind>) -> FirepixelApp {
-        theme::install_fonts(&cc.egui_ctx);
+        use fp_i18n::startup::{mark, time};
+        mark("eframe: window + graphics ready (App::new)");
+        time("fonts", || theme::install_fonts(&cc.egui_ctx));
         #[cfg(target_os = "windows")]
         if let Some(window) = cc.winit_window() {
             icons::apply_window_icons(window);
@@ -84,14 +86,24 @@ impl FirepixelApp {
             start_window::prepare_hidden(window, cc.storage);
             file_dialog::set_parent_window(window.clone()); // AU: Besitzer der nativen Datei-Dialoge
         }
+        mark("window icons + hidden placement");
         let prefs_path = Preferences::default_path();
-        let mut prefs = prefs_path.as_deref().map(Preferences::load_or_default).unwrap_or_default();
+        let mut prefs = time("preferences", || prefs_path.as_deref().map(Preferences::load_or_default).unwrap_or_default());
         dialogs::preferences::apply_original_dir(&prefs);
-        if language::init(&mut prefs) != fp_i18n::SOURCE_LANG { theme::install_fonts(&cc.egui_ctx); }
+        if time("language (Fluent)", || language::init(&mut prefs)) != fp_i18n::SOURCE_LANG {
+            time("fonts (language)", || theme::install_fonts(&cc.egui_ctx));
+        }
         // eigene Befehle (Befehle-Menü) beim ersten Start in den Befehlsordner legen (einmal je
         // Ordner, gelöschte kommen nicht wieder; nur die echte App, nicht die Tests) – nach der
         // Sprachwahl, damit die Namen in der Sprache der Oberfläche stehen
-        if let Err(e) = fp_script::install_builtin_commands() {
+        // Im Hintergrund (N30): das Prüfen/Schreiben der Dateien kostet beim Start 7–50 ms; das
+        // Befehle-Menü liest den Ordner erst beim Öffnen.
+        let spawned = std::thread::Builder::new().name("fp-builtin-commands".into()).spawn(|| {
+            if let Err(e) = time("command folder (background)", fp_script::install_builtin_commands) {
+                log::warn!("Befehlsordner nicht angelegt: {e}");
+            }
+        });
+        if spawned.is_err() && let Err(e) = fp_script::install_builtin_commands() {
             log::warn!("Befehlsordner nicht angelegt: {e}");
         }
         let mut cli_design = None;
@@ -99,19 +111,20 @@ impl FirepixelApp {
             cli_design = Some((prefs.theme, d.to_engine()));
             prefs.theme = d.to_engine();
         }
-        let mut settings: UiSettings = cc.storage.and_then(|s| eframe::get_value(s, SETTINGS_KEY)).unwrap_or_default();
+        let mut settings: UiSettings = time("workspace settings", || cc.storage.and_then(|s| eframe::get_value(s, SETTINGS_KEY)).unwrap_or_default());
         settings.workspace.repair();
         // das Design steht in den Voreinstellungen von fp-engine (gemeinsam mit CLI/MCP)
         settings.theme = ThemeKind::from_engine(prefs.theme);
         // Register mit den Adapter-Befehlen der Oberfläche (Inspektor, Bedienfelder, Dialoge)
-        let mut session = ui_commands::new_session(prefs);
+        let mut session = time("session + command registry", || ui_commands::new_session(prefs));
         session.prefs_path = prefs_path;
-        let mut app = FirepixelApp::with_session(&cc.egui_ctx, session, settings, true);
+        let mut app = time("app state (renderer, script host)", || FirepixelApp::with_session(&cc.egui_ctx, session, settings, true));
         app.fonts_ready = true;
         app.cli_design = cli_design;
         for f in files {
             app.state.push(Action::OpenPath(f));
         }
+        mark("App::new done");
         app
     }
 
@@ -289,7 +302,15 @@ impl eframe::App for FirepixelApp {
 
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         self.frames = self.frames.saturating_add(1);
+        // Startzeit-Messung (FP_STARTUP_TRACE): Beginn und Ende der ersten Frames
+        let trace = self.frames <= 12 && fp_i18n::startup::enabled();
+        if trace {
+            fp_i18n::startup::mark(&format!("frame {} begin", self.frames));
+        }
         self.root_ui(ui);
+        if trace {
+            fp_i18n::startup::mark(&format!("frame {} ui done", self.frames));
+        }
         // Fenster nach dem Sichtbarwerden maximieren; Symbole dann erneut setzen (und 1,5 s später)
         let window = _frame.winit_window().map(|w| &**w);
         if start_window::after_frame(ui.ctx(), window) {
@@ -388,6 +409,28 @@ pub fn cli_help() -> String {
     fp_i18n::t("ui-cli-help")
 }
 
+/// Schnellerer Start (Nutzerbefund N30, START-1): Was `FirepixelApp::new` braucht, aber nicht vom
+/// Fenster abhängt, wird schon parallel zur Fenster- und Grafik-Einrichtung (winit, wgpu) in
+/// Hintergrund-Threads geladen: die Schriftdateien der Oberfläche (≈ 50 MB), der Index der
+/// Systemschriften (Vorgabeschrift des Textwerkzeugs) und die eingebauten Sprachdateien. Alle drei
+/// liegen in prozessweiten `OnceLock`s; wer sie danach braucht, wartet höchstens auf den Rest und
+/// bekommt dasselbe Ergebnis wie ohne Vorladen.
+fn prewarm() {
+    let jobs: [(&str, fn()); 3] = [
+        ("ui fonts", theme::prewarm_fonts),
+        ("system font index", || drop(fp_text::FontDb::shared())),
+        ("language files", || drop(fp_i18n::languages())),
+    ];
+    for (name, job) in jobs {
+        let spawned = std::thread::Builder::new().name(format!("fp-prewarm-{}", name.replace(' ', "-"))).spawn(move || {
+            fp_i18n::startup::time(&format!("prewarm: {name}"), job);
+        });
+        if spawned.is_err() {
+            log::warn!("Vorladen beim Start ließ sich nicht starten: {name}");
+        }
+    }
+}
+
 /// Startet die Anwendung (Dateien aus der Kommandozeile werden geöffnet; `design` überschreibt
 /// das gespeicherte Design, z. B. für Bildschirmfotos).
 pub fn run(files: Vec<PathBuf>, design: Option<ThemeKind>) -> eframe::Result {
@@ -396,5 +439,7 @@ pub fn run(files: Vec<PathBuf>, design: Option<ThemeKind>) -> eframe::Result {
     // und getippte Zeichen erschienen 0,6–1,2 s verzögert (FV-8, `vendor\egui-wgpu`). Wirkt nur auf
     // Software-Rasterern.
     eframe::egui_wgpu::SOFTWARE_RASTERIZER_TUNING.store(true, std::sync::atomic::Ordering::Relaxed);
+    prewarm();
+    fp_i18n::startup::mark("eframe::run_native");
     eframe::run_native("Firepixel", native_options(), Box::new(move |cc| Ok(Box::new(FirepixelApp::new(cc, files, design)))))
 }
