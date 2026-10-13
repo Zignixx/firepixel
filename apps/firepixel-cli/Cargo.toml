@@ -20,6 +20,8 @@ fp-mcp = { workspace = true }
 fp-script = { workspace = true }
 # firepixel-cli language … (src\language.rs, I18N-KERN)
 fp-i18n = { workspace = true }
+# moderner Batch-Modus: batch --recipe/--steps, Befehle batch.* (BATCH-1)
+fp-batch = { path = "../../crates/fp-batch" }
 serde_json = { workspace = true }
 clap = { version = "4.6", features = ["derive", "string"] }
 tokio = { version = "1", features = ["rt-multi-thread"] }

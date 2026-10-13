@@ -1,0 +1,36 @@
+[package]
+name = "fp-batch"
+description = "Moderner Batch-Modus (Batch-Studio): Rezepte, Schritte, Pipeline, parallele Abarbeitung, Umbenennen, Ausgabe und Bericht (ohne Oberfläche)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+# Spezifikation: docs\BATCH_MODERN.md (SPEC-BATCH). Spätere Pakete (BATCH-2 … BATCH-11) fügen ihre
+# Abhängigkeit hier als einzelne Zeile hinzu und nennen sie mit Lizenz in docs\berichte\batch<n>.md.
+# Nur permissive Lizenzen (MIT/Apache/BSD/Zlib), kein GPL/AGPL/LGPL, `qcms` nicht.
+
+[dependencies]
+fp-raster = { workspace = true }
+fp-model = { workspace = true }
+fp-io = { workspace = true }
+fp-export = { workspace = true }
+fp-render = { workspace = true }
+# Befehlsregister (batch.* über den Haken BatchHost), headless Sitzung für FW-PNG-Ausgabe
+fp-engine = { workspace = true }
+# Mehrsprachige Meldungen (Schlüssel `batch-*` in locales\<code>\batch.ftl)
+fp-i18n = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+# parallele Abarbeitung (MIT/Apache-2.0)
+rayon = { workspace = true }
+# Umbenennen mit regulären Ausdrücken (MIT/Apache-2.0, garantiert linear)
+regex = "1.11"
+# Ordner rekursiv lesen (MIT/Unlicense)
+walkdir = "2.5"
+# Datum/Uhrzeit in Ortszeit für Namensbausteine und Bericht (MIT/Apache-2.0; schon im Baum)
+chrono = { version = "0.4.45", default-features = false, features = ["clock", "std", "serde"] }
+
+[lints]
+workspace = true

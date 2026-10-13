@@ -28,7 +28,8 @@ fn legacy_table_matches_builtin_files() {
     assert_eq!(check::area_file_name("menu.ftl"), "menu.ftl");
     assert_eq!(check::area_file_name("fr.ftl"), "fr.ftl");
     assert_eq!(check::legacy_area_file_name("mcp.ftl"), None);
-    assert_eq!(areas.len(), 18, "{areas:?}");
+    // 18 Bereiche bis 13.10.2026; neue Bereichsdateien (z. B. batch.ftl, BATCH-1) kommen dazu
+    assert!(areas.len() >= 18, "{areas:?}");
 }
 
 #[test]
@@ -61,8 +62,10 @@ fn folder_with_only_old_names_is_a_language_folder() {
     assert_eq!(r.langs.len(), 1, "{:?}", r.langs.iter().map(|l| &l.code).collect::<Vec<_>>());
     assert_eq!(r.langs[0].code, "fr");
     // es fehlen nur die Bereiche, die nie umbenannt wurden
-    let unrenamed: usize = ["filter.ftl", "mcp.ftl", "bitmap_selection.ftl", "image_preview.ftl"]
+    // (alle eingebauten Bereiche ohne alten Namen, auch später neu hinzugekommene wie batch.ftl)
+    let unrenamed: usize = check::builtin_file_names()
         .iter()
+        .filter(|f| !LEGACY_AREA_NAMES.iter().any(|(_, new)| **f == format!("{new}.ftl")))
         .map(|f| check::LangData::builtin("de").only_file(f).keys.len())
         .sum();
     assert_eq!(r.langs[0].missing, unrenamed);

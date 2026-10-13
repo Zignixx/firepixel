@@ -1655,6 +1655,7 @@ dependencies = [
  "assert_cmd",
  "clap",
  "embed-resource",
+ "fp-batch",
  "fp-engine",
  "fp-geom",
  "fp-i18n",
@@ -1817,6 +1818,26 @@ dependencies = [
  "sha2",
  "thiserror 2.0.21",
  "ureq",
+]
+
+[[package]]
+name = "fp-batch"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "fp-engine",
+ "fp-export",
+ "fp-i18n",
+ "fp-io",
+ "fp-model",
+ "fp-raster",
+ "fp-render",
+ "rayon",
+ "regex",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.21",
+ "walkdir",
 ]
 
 [[package]]

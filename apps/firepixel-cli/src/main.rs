@@ -14,6 +14,7 @@ use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 mod language; // Unterbefehl `language`
+mod batch; // BATCH-1: `batch --recipe` und `batch --steps` (fp-batch)
 
 #[derive(Parser, Debug)]
 #[command(name = "firepixel-cli", version)]
@@ -138,6 +139,9 @@ fn main() -> ExitCode {
     // Testläufen mit FP_NO_SHELL_OPEN, siehe fp_i18n::paths)
     fp_i18n::paths::enable_migration();
     init_language();
+    if let Some(code) = batch::intercept() {
+        return code;
+    }
     let matches = match localized_command().try_get_matches() {
         Ok(m) => m,
         Err(e) => return clap_error(e),

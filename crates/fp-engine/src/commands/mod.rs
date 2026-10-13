@@ -5,6 +5,7 @@
 //! Verlaufsschritt an. Parameter sind in [`crate::command::ParamSpec`] beschrieben (deutsch).
 
 pub mod ai;
+pub mod batch; // BATCH-1: batch.* (Haken BatchHost, fp-batch)
 mod bitmap;
 mod draw;
 mod edit;
@@ -67,6 +68,7 @@ pub fn register_all(r: &mut CommandRegistry) {
     panel::register(r);
     ai::register(r);
     trace::register(r);
+    batch::register(r);
 }
 
 pub(crate) const DOC: &[Requirement] = &[Requirement::Document];
