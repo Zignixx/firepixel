@@ -191,10 +191,11 @@ pub(crate) fn erase_dabs(img: &mut RgbaImage, dab: &Dab, stamps: &[Point], op: f
 /// â€žTransparenz beibehaltenâ€œ) in die ausgewÃ¤hlte Bitmap gemalt; ohne ausgewÃ¤hlte Bitmap entsteht eine
 /// neue Bitmap in StrichgrÃ¶ÃŸe (oben auf der Ebene, ausgewÃ¤hlt; PARITAET_A L36). Ohne Ã„nderung
 /// (z. B. â€žTransparenz beibehaltenâ€œ auf leerer FlÃ¤che) gibt es keinen Verlaufsschritt.
-fn apply_paint_job(s: &mut Session, job: crate::paint::PaintJob) -> Result<CommandOutput> {
+fn apply_paint_job(s: &mut Session, job: crate::paint::PaintJob, new_bitmap: bool) -> Result<CommandOutput> {
     with_doc(s, |d| {
         let sel = d.selection.pixels.clone().filter(|_| d.selection.has_pixels());
-        let target = crate::paint::target_bitmap(&d.doc, d.page, &d.selection.elements);
+        // Pinselzug außerhalb der gewählten Bitmap (`newBitmap`): neues Bitmap wie im Original
+        let target = if new_bitmap { None } else { crate::paint::target_bitmap(&d.doc, d.page, &d.selection.elements) };
         match target.and_then(|(id, e)| docops::find_on_page(&d.doc, d.page, id).map(|p| (p, e))) {
             Some((path, e)) => {
                 let ElementKind::Bitmap(b) = &e.kind else { return Err(sel_err("err-sel-no-bitmap-selected")) };
@@ -347,7 +348,9 @@ pub(super) fn register(r: &mut CommandRegistry) {
             .opt("texture", ParamKind::String, "Strichtextur (Name oder Datei); Menge Ã¼ber brush.textureBlend")
             .opt("blend", ParamKind::Integer { min: Some(0), max: Some(55) }, "Mischmodus (Nummer wie element.setBlendMode)")
             .opt("preserveTransparency", ParamKind::Bool, "Transparenz beibehalten: nur auf deckende Pixel malen")
-            .opt("trimEnd", ParamKind::Bool, "Endpunkt weglassen (Pinsel; Vorgabe an)")
+            .opt("trimEnd", ParamKind::Bool, "Endpunkt weglassen (Vorgabe aus: echte Züge malen bis einschließlich Endpunkt)")
+            .opt("seed", ParamKind::Integer { min: Some(0), max: None }, "Zufalls-Startwert des Zugs (natürliche Pinsel; Vorgabe aus den Punkten)")
+            .opt("newBitmap", ParamKind::Bool, "in ein neues Bitmap malen, auch wenn eine Bitmap ausgewählt ist (Zug außerhalb der Bitmap)")
             .opt("tool", ParamKind::Enum { values: vec!["brush".into(), "pencil".into()] }, "Werkzeug (Vorgabe: Pinsel)")
             .opt("draw", ParamKind::Json, "Ã¤lterer Aufruf: Strich als Zeichenbefehl {command: tool.shape, params} â€“ der Pinsel wird daraus gebildet")
             .run(|s, p| {
@@ -356,7 +359,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 legacy_draw_brush(&mut v);
                 let tool = if p.opt_str("tool")?.as_deref() == Some("pencil") { crate::paint::PaintTool::Pencil } else { crate::paint::PaintTool::Brush };
                 let job = crate::paint::PaintJob::from_params(tool, &v, s.tools.stroke_color, s.tools.options.brush_size);
-                apply_paint_job(s, job)
+                apply_paint_job(s, job, p.opt_bool("newBitmap")?.unwrap_or(false))
             }),
     );
     r.add(
@@ -381,7 +384,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                     }
                     Ok(())
                 })?;
-                apply_paint_job(s, job)
+                apply_paint_job(s, job, false)
             }),
     );
     r.add(

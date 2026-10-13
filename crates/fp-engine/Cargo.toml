@@ -47,6 +47,8 @@ fp-testlist = { path = "../fp-testlist", features = ["fp-engine"] }
 # Batch-Laufzeit für die Funktionstests der batch.*-Befehle (all_commands; fp-batch steckt sich über
 # den Haken BatchHost ein, wie in App, CLI und MCP)
 fp-batch = { path = "../fp-batch" }
+# Pixel-Hashes der Golden-Tests (sha256 der RGBA-Pixel wie die Messungen des Originals, PAR-X-BRUSH-1)
+sha2 = "0.10"
 
 [lints]
 workspace = true

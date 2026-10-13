@@ -300,10 +300,11 @@ fn fifty_value_changes_do_not_stack() {
 
 #[test]
 fn escape_discards_the_stroke() {
+    // Pinsel: Esc mitten im Zug bricht wie im Original nicht ab (PAR-X-BRUSH-1, r14_esc_mid);
+    // der Radiergummi verwirft den Zug weiter
     let mut s = new_session();
     tool(&mut s, ToolId::Brush);
     brush_setup(&mut s, json!({"preset": "Einfach/Präzise abger.", "width": 8, "softness": 0}));
-    let before = doc(&s);
     let n0 = steps(&s);
     events(&mut s, &[ToolEvent::down(50.0, 50.0)]);
     for i in 1..40 {
@@ -311,13 +312,12 @@ fn escape_discards_the_stroke() {
     }
     assert!(s.tool_feedback().iter().any(|o| matches!(o, Overlay::Paint(_))));
     events(&mut s, &[ToolEvent::key(ToolKey::Escape)]);
-    assert!(!s.tool_feedback().iter().any(|o| matches!(o, Overlay::Paint(_))), "Vorschau weg");
+    assert!(s.tool_feedback().iter().any(|o| matches!(o, Overlay::Paint(_))), "Pinsel: Zug läuft weiter");
     events(&mut s, &[ToolEvent::up(250.0, 60.0)]);
-    assert_eq!(steps(&s), n0);
-    assert_eq!(doc(&s), before, "Esc: nichts gemalt");
+    assert_eq!(steps(&s), n0 + 1, "Esc mitten im Zug: Strich vollständig gemalt");
     // der nächste Zug malt wieder
     stroke(&mut s, &[(50.0, 100.0), (250.0, 100.0)]);
-    assert_eq!(steps(&s), n0 + 1);
+    assert_eq!(steps(&s), n0 + 2);
 }
 
 #[test]
@@ -426,8 +426,8 @@ fn shift_draws_a_straight_line_and_click_a_dot() {
     let img = image(&s, id);
     let b = img.alpha_bounds();
     assert!(b.height() <= 6, "Umschalt: gerade waagrechte Linie ({b:?})");
-    // Pinsel lässt den Endpunkt weg: Ziehen 50 → 290 endet vor 290 + Radius
-    assert!(b.right <= 292, "{b:?}");
+    // Pinsel malt bis einschließlich Endpunkt, gerade Größe +1/+1 (PAR-X-BRUSH-1): 290 + 2 + 1
+    assert!(b.right <= 294, "{b:?}");
     ex(&mut s, "select.none", json!({}));
     events(&mut s, &[ToolEvent::down(200.0, 200.0), ToolEvent::up(200.0, 200.0)]);
     let id = top_elements(&s)[0].id;

@@ -315,7 +315,11 @@ impl ToolMachine for WandTool {
 /// Werkzeug den vollständigen Auftrag fest (Pinsel, Farbe, Deckkraft, Mischmodus, „Transparenz
 /// beibehalten“ bzw. Radiergummi-Werte) und rechnet ab dann je Bewegung nur die betroffenen Kacheln
 /// ([`crate::paint::LivePaint`], Vorschau [`Overlay::Paint`]). Loslassen schickt denselben Auftrag
-/// als **einen** Befehl (`bitmap.paint` bzw. `bitmap.erase`), Esc verwirft ihn.
+/// als **einen** Befehl (`bitmap.paint` bzw. `bitmap.erase`); Esc verwirft ihn (Bleistift,
+/// Radiergummi). Der Pinsel folgt den echten Zügen des Originals (PAR-X-BRUSH-1, `real_strokes.txt`):
+/// Esc mitten im Zug bricht nicht ab, gerade Spitzengrößen liegen um +1/+1 versetzt, Umschalt rastet
+/// auf 45°, ein Zug außerhalb der gewählten Bitmap malt ein neues Bitmap bzw. (Transparenz
+/// beibehalten) nichts und hebt die Auswahl auf.
 #[derive(Clone, Debug)]
 pub struct BrushTool {
     id: ToolId,
@@ -326,12 +330,60 @@ pub struct BrushTool {
     /// Punkte des laufenden Zugs (auch ohne Vorschau, z. B. gesperrte Bitmap).
     points: Vec<Point>,
     live: Option<Box<crate::paint::LivePaint>>,
+    /// Versatz der Punkte gegenüber der Maus (Pinsel mit gerader Größe: +1/+1 wie im Original).
+    offset: f32,
+    /// Pinsel: Zug beginnt außerhalb der gewählten Bitmap mit „Transparenz beibehalten“ – nichts
+    /// malen, beim Loslassen die Auswahl aufheben.
+    deselect_only: bool,
+    /// Pinsel: der letzte Zug wurde gemalt (Esc danach beendet den Bitmapmodus mit Verlaufsschritt).
+    painted: bool,
+}
+
+/// Strichtextur des Pinsels, solange im Inspektor keine gewählt ist (Liste des Originals zeigt „Ader“).
+pub const DEFAULT_STROKE_TEXTURE: &str = "Vein";
+
+/// Startwert eines neuen Pinselzugs (je Zug verschieden wie im Original).
+fn stroke_seed() -> u32 {
+    use std::sync::atomic::{AtomicU32, Ordering};
+    static N: AtomicU32 = AtomicU32::new(0);
+    let t = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.subsec_nanos() ^ d.as_secs() as u32).unwrap_or(0);
+    crate::paint::nonzero_seed(t.wrapping_add(N.fetch_add(0x9e37_79b9, Ordering::Relaxed)))
+}
+
+/// Umschalt beim Pinsel (gemessen, `real_strokes.txt` r12): Richtung rastet in 45°-Schritten, die
+/// Länge je Achse ist die größere Komponente (60,150 → 300,260 ergibt 300,390).
+pub fn snap_brush_line(a: Point, b: Point) -> Point {
+    let (dx, dy) = (b.x - a.x, b.y - a.y);
+    let m = dx.abs().max(dy.abs());
+    if m == 0.0 {
+        return a;
+    }
+    let k = (dy.atan2(dx) / std::f32::consts::FRAC_PI_4).round();
+    let ang = k * std::f32::consts::FRAC_PI_4;
+    let (s, c) = ang.sin_cos();
+    let unit = |v: f32| if v > 0.5 { 1.0 } else if v < -0.5 { -1.0 } else { 0.0 };
+    Point::new(a.x + unit(c) * m, a.y + unit(s) * m)
 }
 
 impl BrushTool {
     /// Neues Werkzeug (Brush, Pencil, Eraser).
     pub fn new(id: ToolId) -> BrushTool {
-        BrushTool { id, active: false, hover: None, params: Value::Null, points: Vec::new(), live: None }
+        BrushTool { id, active: false, hover: None, params: Value::Null, points: Vec::new(), live: None, offset: 0.0, deselect_only: false, painted: false }
+    }
+
+    /// Pinsel bei ausgewähltem Vektor (ohne Bitmap als Ziel): Das Original zeigt im Inspektor den
+    /// Strich des Vektors und malt damit (gemessen T04/R1 ohne Strich: 1 px, Annahme
+    /// „Inspektorstrich“); ohne Strich gilt „1-Pixel hart“.
+    fn vector_brush(ctx: &ToolContext) -> Option<fp_model::Brush> {
+        if crate::paint::target_bitmap(ctx.doc, ctx.page, &ctx.selection.elements).is_some() {
+            return None;
+        }
+        let e = docops::paths_sorted(ctx.doc, ctx.page, &ctx.selection.elements)
+            .into_iter()
+            .filter(|p| !docops::is_locked(ctx.doc, ctx.page, p))
+            .find_map(|p| ctx.doc.element_at(&p).filter(|e| !matches!(e.kind, ElementKind::Bitmap(_))).cloned())?;
+        let a = docops::path_attrs_of(&e)?;
+        Some(a.brush.clone().unwrap_or_else(|| crate::commands::panel::tool_brush_from(Some(&json!({"preset": "Bleistift/1-Pixel hart", "width": 1})), None)))
     }
 
     fn paint_tool(&self) -> crate::paint::PaintTool {
@@ -362,15 +414,25 @@ impl BrushTool {
                 json!({"tool": "pencil", "brush": b, "color": hex(color), "opacity": o.opacity, "blend": o.paint_blend, "preserveTransparency": o.keep_transparency, "trimEnd": false})
             }
             _ => {
-                let mut b = crate::commands::panel::tool_brush(o);
                 let st = o.new_stroke.as_ref();
-                if let Some(a) = st.and_then(|s| s.get("textureAmount")).and_then(|v| v.as_i64()) {
-                    b.texture_blend = (a.clamp(0, 100) * 10) as i32;
-                }
-                let mut p = json!({"brush": b, "color": hex(ctx.stroke_color), "opacity": o.opacity, "blend": o.paint_blend, "preserveTransparency": o.keep_transparency, "trimEnd": true});
-                if let Some(t) = st.and_then(|s| s.get("texture")).and_then(|v| v.as_str()).filter(|t| !t.is_empty()) {
-                    p["texture"] = json!(t);
-                }
+                let mut b = match Self::vector_brush(ctx) {
+                    Some(v) => v,
+                    None => {
+                        let mut b = crate::commands::panel::tool_brush(o);
+                        if let Some(a) = st.and_then(|s| s.get("textureAmount")).and_then(|v| v.as_i64()) {
+                            b.texture_blend = (a.clamp(0, 100) * 10) as i32;
+                        }
+                        b
+                    }
+                };
+                b.diameter = b.diameter.max(1);
+                // echte Züge malen bis einschließlich Endpunkt (r03: 60→500 = 441 px), eigener
+                // Zufalls-Startwert je Zug (natürliche Pinsel)
+                let mut p = json!({"brush": b, "color": hex(ctx.stroke_color), "opacity": o.opacity, "blend": o.paint_blend, "preserveTransparency": o.keep_transparency, "trimEnd": false, "seed": stroke_seed()});
+                // Textur der Strichvorgabe; ohne Wahl wie im Original „Ader“ (Vein, Vorgabe der Liste),
+                // damit texturierte Arten (Graphit, Kohlestift …) ihre Textur zeigen
+                let tex = st.and_then(|s| s.get("texture")).and_then(|v| v.as_str()).filter(|t| !t.is_empty()).unwrap_or(DEFAULT_STROKE_TEXTURE);
+                p["texture"] = json!(tex);
                 p
             }
         }
@@ -379,15 +441,37 @@ impl BrushTool {
     /// Beginnt den Zug: Auftrag festlegen, Zielbitmap lesen, ersten Abdruck rechnen.
     fn begin(&mut self, ctx: &ToolContext, pos: Point) {
         self.active = true;
-        self.points = vec![pos];
-        let target = crate::paint::target_bitmap(ctx.doc, ctx.page, &ctx.selection.elements);
-        let base = target.as_ref().and_then(|(_, e)| match &e.kind {
+        self.deselect_only = false;
+        self.painted = false;
+        self.offset = 0.0;
+        let mut target = crate::paint::target_bitmap(ctx.doc, ctx.page, &ctx.selection.elements);
+        let mut base = target.as_ref().and_then(|(_, e)| match &e.kind {
             ElementKind::Bitmap(b) => docops::bitmap_image(b),
             _ => None,
         });
         let start_px = base.as_ref().and_then(|b| b.get(pos.x.floor() as i32, pos.y.floor() as i32));
         self.params = self.job_params(ctx, start_px);
         self.live = None;
+        if self.id == ToolId::Brush {
+            // gerade Größen +1/+1 (echte Züge r02/r13/r16: Größe 10 → 56,146–506,156 für 60→500)
+            let d = self.params["brush"]["diameter"].as_i64().unwrap_or(1);
+            self.offset = if d % 2 == 0 { 1.0 } else { 0.0 };
+            // Start außerhalb der gewählten Bitmap (gemessen T03, Start 100,250): mit „Transparenz
+            // beibehalten“ nichts malen und die Auswahl aufheben, sonst ein neues Bitmap
+            let outside = base.as_ref().is_some_and(|b| b.get(pos.x.floor() as i32, pos.y.floor() as i32).is_none());
+            if outside {
+                if ctx.options.keep_transparency {
+                    self.deselect_only = true;
+                    self.points = vec![pos];
+                    return;
+                }
+                target = None;
+                base = None;
+                self.params["newBitmap"] = json!(true);
+            }
+        }
+        let pos = Point::new(pos.x + self.offset, pos.y + self.offset);
+        self.points = vec![pos];
         // Radiergummi ohne (ungesperrte) Bitmap: nichts zu radieren, der Befehl meldet es
         if self.id == ToolId::Eraser && target.is_none() {
             return;
@@ -403,8 +487,13 @@ impl BrushTool {
 
     /// Punkt anhängen bzw. (Umschalt) gerade Linie vom Startpunkt.
     fn extend(&mut self, pos: Point, line: bool) {
+        if self.deselect_only {
+            return;
+        }
+        let pos = Point::new(pos.x + self.offset, pos.y + self.offset);
         if line {
             let first = self.points[0];
+            let pos = if self.id == ToolId::Brush { snap_brush_line(first, pos) } else { pos };
             self.points = vec![first, pos];
             if let Some(l) = self.live.as_mut() {
                 l.set_points(self.points.clone());
@@ -460,10 +549,23 @@ impl ToolMachine for BrushTool {
             return ToolResponse::default();
         }
         if ev.input == ToolInput::Key(ToolKey::Escape) {
+            if self.active && self.id == ToolId::Brush {
+                // Pinsel: Esc mitten im Zug bricht nicht ab (gemessen r14_esc_mid = ganzer Strich)
+                return ToolResponse::with_overlay(self.overlay_for(ctx), self.cursor());
+            }
             if self.active {
                 // Zug verwerfen: Vorschau weg, kein Befehl, kein Verlaufsschritt
                 self.cancel();
                 return ToolResponse::with_overlay(self.overlay_for(ctx), self.cursor());
+            }
+            if self.id == ToolId::Brush && std::mem::take(&mut self.painted) && bitmap_target(ctx) && !ctx.bitmap_mode && !ctx.selection.has_pixels() {
+                // Esc nach einem Pinselzug: Zeiger und Schritt „Bitmapmodus beenden“ (gemessen 01/14);
+                // die Bitmap bleibt ausgewählt
+                return ToolResponse {
+                    commands: vec![Invocation::new("modify.editBitmap", json!({})), Invocation::new("modify.exitBitmapMode", json!({"step": true}))],
+                    switch_tool: Some(ToolId::Pointer),
+                    ..ToolResponse::default()
+                };
             }
             return escape_paint_tool(ctx);
         }
@@ -483,11 +585,22 @@ impl ToolMachine for BrushTool {
             }
             PointerKind::Down => self.begin(ctx, *pos),
             PointerKind::Move if self.active => self.extend(*pos, ev.mods.shift),
+            PointerKind::Up if self.active && self.deselect_only => {
+                self.cancel();
+                if !ctx.selection.elements.is_empty() {
+                    return ToolResponse {
+                        commands: vec![Invocation::new("tool.pick", json!({"command": "select.set", "params": {"ids": []}}))],
+                        cursor: self.cursor(),
+                        ..ToolResponse::default()
+                    };
+                }
+            }
             PointerKind::Up if self.active => {
                 self.extend(*pos, ev.mods.shift);
                 let mut params = std::mem::take(&mut self.params);
                 params["points"] = Value::Array(self.points.iter().map(|p| pt_json(*p)).collect());
                 self.cancel();
+                self.painted = self.id == ToolId::Brush;
                 let cmd = Invocation::new(self.command(), params);
                 return ToolResponse { commands: vec![cmd], cursor: self.cursor(), overlay: self.overlay_for(ctx), ..ToolResponse::default() };
             }
@@ -516,6 +629,7 @@ impl BrushTool {
         self.active = false;
         self.points.clear();
         self.live = None;
+        self.deselect_only = false;
     }
 
     /// Laufender Malvorgang (Tests, Vorschau).

@@ -22,6 +22,9 @@ use serde_json::{json, Value};
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
+/// Geschwindigkeit je Punkt beim Malen (VELf; Maus ohne Stift, wie erzeugte Pfade).
+pub const PAINT_VELOCITY: f32 = 0.125;
+
 /// Kantenlänge der Vorschau-Kacheln in Dokumentpixeln.
 pub const TILE: i32 = 256;
 
@@ -65,8 +68,41 @@ pub struct PaintJob {
     pub color: Argb,
     pub mix: PaintMix,
     pub erase: Option<EraseSpec>,
-    /// Endpunkt weglassen (Pinsel: Ziehen 300 → 400 füllt 300–399, gemessen am Original).
+    /// Endpunkt weglassen (früher Vorgabe des Pinsels; echte Züge des Originals malen bis
+    /// einschließlich Endpunkt, `real_strokes.txt` r03: 60→500 ergibt 60–500, PAR-X).
     pub trim_end: bool,
+    /// Zufalls-Startwert des Zugs (natürliche Pinsel: Streuung, Spitzenversätze, Farbjitter). Je
+    /// Punkt wird daraus ein eigener Startwert (`RNDi`) abgeleitet; nie 0 (MINSTD bliebe stehen).
+    pub seed: u32,
+}
+
+/// Startwert aus den Punkten (Aufrufe ohne `seed`: gleiches Ergebnis bei gleichen Punkten).
+pub fn seed_of_points(points: &[Point]) -> u32 {
+    let mut h: u32 = 0x811c_9dc5;
+    for p in points {
+        for v in [p.x.to_bits(), p.y.to_bits()] {
+            h ^= v;
+            h = h.wrapping_mul(0x0100_0193);
+        }
+    }
+    nonzero_seed(h)
+}
+
+/// Startwert im Bereich der MINSTD-Folge (1..2³¹−2).
+pub fn nonzero_seed(s: u32) -> u32 {
+    let v = s & 0x7fff_ffff;
+    if v == 0 || v == 0x7fff_ffff { 0x2545_f491 } else { v }
+}
+
+/// Startwert des Punkts `i` (je Punkt verschieden, wie `RNDi` eines echten Zugs im Original).
+fn point_seed(seed: u32, i: usize) -> u32 {
+    let mut x = seed ^ (i as u32).wrapping_mul(0x9e37_79b9);
+    x ^= x >> 16;
+    x = x.wrapping_mul(0x7feb_352d);
+    x ^= x >> 15;
+    x = x.wrapping_mul(0x846c_a68b);
+    x ^= x >> 16;
+    nonzero_seed(x)
 }
 
 impl std::fmt::Debug for PaintJob {
@@ -140,6 +176,7 @@ impl PaintJob {
                 mix: PaintMix { opacity: 255, blend: 0, preserve: false },
                 erase: Some(erase),
                 trim_end: false,
+                seed: 1,
             };
         }
         let mut brush = p
@@ -159,7 +196,6 @@ impl PaintJob {
         let blend = p.get("blend").and_then(|v| v.as_i64().or_else(|| v.as_str().and_then(|s| s.parse().ok()))).unwrap_or(0).clamp(0, 255) as u8;
         PaintJob {
             tool,
-            points,
             brush,
             texture,
             color: parse_color(p.get("color")).unwrap_or(fallback_color),
@@ -169,7 +205,9 @@ impl PaintJob {
                 preserve: p.get("preserveTransparency").and_then(|v| v.as_bool()).unwrap_or(false),
             },
             erase: None,
-            trim_end: p.get("trimEnd").and_then(|v| v.as_bool()).unwrap_or(tool == PaintTool::Brush),
+            trim_end: p.get("trimEnd").and_then(|v| v.as_bool()).unwrap_or(false),
+            seed: p.get("seed").and_then(|v| v.as_u64()).map(|s| nonzero_seed(s as u32)).unwrap_or_else(|| seed_of_points(&points)),
+            points,
         }
     }
 
@@ -259,7 +297,13 @@ impl PaintJob {
     fn stroke_layer(&self, region: IRect) -> RgbaImage {
         use fp_vector as fv;
         let pts = self.stroke_points();
-        let mut path = fv::VectorPath::new(vec![fv::PathContour::from_points(&pts, false)]);
+        let mut contour = fv::PathContour::from_points(&pts, false);
+        // Stiftdaten je Punkt wie ein echter Zug im Original: eigener Zufalls-Startwert je Punkt
+        // (sonst wiederholt jedes Segment dieselbe Streuung), Druck 1, Geschwindigkeit wie bei
+        // erzeugten Pfaden (`VELf` 0,125, 07 §6.3)
+        contour.dynamics = (0..pts.len()).map(|i| fv::PointDynamics { pressure: 1.0, velocity: PAINT_VELOCITY, seed: point_seed(self.seed, i) }).collect();
+        let mut path = fv::VectorPath::new(vec![contour]);
+        path.random_seed = self.seed;
         let mut stroke = fv::Stroke::new(fp_render::convert::brush_params(&self.brush), self.color);
         if self.brush.texture_blend > 0 || self.brush.texture_edge > 0 {
             stroke.texture = self.texture.clone().map(|mask| fv::StrokeTexture { mask });
@@ -609,6 +653,7 @@ mod tests {
             mix: PaintMix { opacity: 255, blend: 0, preserve: false },
             erase: None,
             trim_end: true,
+            seed: 7,
         }
     }
 

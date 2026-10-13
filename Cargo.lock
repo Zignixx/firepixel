@@ -1893,6 +1893,7 @@ dependencies = [
  "fp-vector",
  "serde",
  "serde_json",
+ "sha2",
  "spellbook",
  "thiserror 2.0.21",
 ]

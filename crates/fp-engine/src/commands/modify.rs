@@ -1543,7 +1543,11 @@ pub(super) fn register(r: &mut CommandRegistry) {
         d.bitmap_mode = true;
         Ok(CommandOutput::session())
     }));
-    r.add(cmd("modify.exitBitmapMode").requires(DOC).available(|s| s.active().is_some_and(|d| d.bitmap_mode || d.selection.has_pixels())).run(|s, _| {
+    r.add(cmd("modify.exitBitmapMode").requires(DOC).available(|s| s.active().is_some_and(|d| d.bitmap_mode || d.selection.has_pixels())).opt("step", ParamKind::Bool, "immer einen Verlaufsschritt anlegen (Esc nach einem Pinselzug)").run(|s, p| {
+        // Pinsel: Esc nach dem Zug legt im Original den Schritt „Bitmapmodus beenden“ an (01/14)
+        if p.opt_bool("step")?.unwrap_or(false) {
+            s.force_history_step();
+        }
         with_doc(s, |d| {
             d.bitmap_mode = false;
             d.selection.pixels = None;
