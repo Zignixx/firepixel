@@ -179,9 +179,24 @@ fn general_item(key: &str) -> Option<&'static Item> {
     })
 }
 
+/// Zeilenabstand der Seite „Allgemein“ (Steuerelemente 20–22 px hoch).
+const GENERAL_ROW: f32 = 21.0;
+/// Höhe einer Gruppenüberschrift mit Trennlinie.
+const GENERAL_HEAD: f32 = 20.0;
+
+/// Zeilenhöhe eines Eintrags der übrigen Seiten: Kästchen und Überschriften 18 px (Kästchen 16 px
+/// hoch), Zeilen mit Feldern 21 px (Felder 20 px) – so passt auch „Hilfslinien und Raster“ mit
+/// 19 Einträgen in die Höhe des Originals (CT-1a).
+fn item_h(it: &Item) -> f32 {
+    match it {
+        Item::Check(..) | Item::Caption(_) => 18.0,
+        _ => 21.0,
+    }
+}
+
 /// Höhe der Seite „Allgemein“ ab der Überschrift.
 fn general_height() -> f32 {
-    GENERAL_GROUPS.iter().map(|(g, rows)| if g.is_some() { 26.0 } else { 0.0 } + rows.len() as f32 * 26.0).sum::<f32>() + 28.0
+    GENERAL_GROUPS.iter().map(|(g, rows)| if g.is_some() { GENERAL_HEAD } else { 0.0 } + rows.len() as f32 * GENERAL_ROW).sum::<f32>() + 28.0
 }
 
 /// Eintrag ohne eigene Beschriftung (die steht rechtsbündig links der Steuerspalte).
@@ -204,7 +219,7 @@ fn draw_general(ui: &mut Ui, d: &mut PreferencesDialog, prefs: &Preferences, pag
             let gw = super::text_w(ui.ctx(), &txt) * 1.1;
             ui.painter().text(pos2(page.left(), y + 10.0), Align2::LEFT_CENTER, &txt, theme.bold(theme.fonts.ui), c.text);
             ui.painter().hline((page.left() + gw + 6.0)..=page.right(), y + 11.0, Stroke::new(1.0, c.list_border));
-            y += 26.0;
+            y += GENERAL_HEAD;
         }
         for row in *rows {
             let label = |ui: &mut Ui, k: &str| {
@@ -256,7 +271,9 @@ fn draw_general(ui: &mut Ui, d: &mut PreferencesDialog, prefs: &Preferences, pag
                 }
                 GeneralRow::Language => {
                     // Sprache (fp_ui::language): Eigennamen aller Sprachen, Auswahl als values["Language"]
-                    crate::language::pref_row(ui, Rect::from_min_size(pos2(page.left(), y), vec2(ctrl_x - page.left(), 20.0)), Rect::from_min_size(pos2(ctrl_x, y), vec2(180.0, 20.0)), &mut d.values, prefs);
+                    // „Sprache:“ rechtsbündig vor dem Feld wie die übrigen Beschriftungen (CT-1a)
+                    let lw = super::text_w(ui.ctx(), &t("lang-label"));
+                    crate::language::pref_row(ui, Rect::from_min_size(pos2(ctrl_x - 6.0 - lw, y), vec2(lw, 20.0)), Rect::from_min_size(pos2(ctrl_x, y), vec2(180.0, 20.0)), &mut d.values, prefs);
                 }
                 GeneralRow::ResetWarnings => {
                     let reset = t("dlg-pref-reset-warnings");
@@ -265,7 +282,7 @@ fn draw_general(ui: &mut Ui, d: &mut PreferencesDialog, prefs: &Preferences, pag
                     }
                 }
             }
-            y += 26.0;
+            y += GENERAL_ROW;
         }
     }
 }
@@ -403,7 +420,7 @@ impl Layout {
                 CAT_PLUGINS => 12.0 + 40.0,
                 _ => 0.0,
             };
-            page_h = page_h.max(if cat == 0 { general_height() } else { 28.0 + items.len() as f32 * 24.0 + extra });
+            page_h = page_h.max(if cat == 0 { general_height() } else { 28.0 + items.iter().map(item_h).sum::<f32>() + extra });
         }
         // Allgemein: rechtsbündige Beschriftungen der Gruppen, Neustart-Hinweis und Farbbeschriftungen
         for k in ["dlg-pref-grp-docoptions", "dlg-pref-grp-workspace"] {
@@ -420,7 +437,9 @@ impl Layout {
         page_w = page_w.max(ctrl_off + if cw > 220.0 { cw } else { 198.0 }).max(reset_w).max(super::text_w(ctx, &t("dlg-pref-cap-ui")) * 1.1);
         let w = 640f32.max(12.0 + list_w + 16.0 + page_w + 14.0).ceil();
         // Seiten mit vielen Einträgen: Platz bis über die Knöpfe
-        let h = 500f32.max(12.0 + page_h + 60.0).ceil();
+        // (Original 656 × 442 außen; Firepixel hat zusätzlich Design/Sprache/Entwickleroptionen:
+        // außen ≈ 480–520 px, CT-1a maß vorher 585)
+        let h = 440f32.max(12.0 + page_h + 60.0).ceil();
         Layout { list_w, ctrl_off, reset_w, size: vec2(w, h) }
     }
 }
@@ -503,8 +522,9 @@ pub fn show(ctx: &egui::Context, st: &mut AppState) {
             draw_general(ui, &mut d, &prefs, page, ctrl_x, lay.reset_w, st);
         } else {
             for it in page_items(d.category) {
-                draw_item(ui, &mut d, &prefs, it, Rect::from_min_size(pos2(page.left(), y), vec2(page.width(), 22.0)), ctrl_x, st);
-                y += 24.0;
+                let ih = item_h(it);
+                draw_item(ui, &mut d, &prefs, it, Rect::from_min_size(pos2(page.left(), y), vec2(page.width(), ih)), ctrl_x, st);
+                y += ih;
             }
         }
         if d.category == CAT_PLUGINS {

@@ -160,3 +160,28 @@ fn d21_canvas_color_no_hidden_tab_stop() {
     assert_eq!(focused(&h), Some((Role::Button, fp_i18n::t("btn-ok"))), "Umschalt+Tab → OK");
     key(&mut h, Key::Escape);
 }
+/// Rechte Kante eines gezeichneten Texts im letzten Bild.
+fn text_right(h: &H, text: &str) -> Option<f32> {
+    h.output().shapes.iter().find_map(|cs| match &cs.shape {
+        egui::epaint::Shape::Text(ts) if ts.galley.text() == text => Some(ts.pos.x + ts.galley.size().x),
+        _ => None,
+    })
+}
+
+/// D16 Voreinstellungen: außen 480–520 px hoch (vorher ≈ 585), „Sprache:“ rechtsbündig vor dem Feld
+/// wie „Design:“; in Englisch ebenso.
+#[test]
+fn d16_preferences_height_and_language_label() {
+    for lang in ["de", "en"] {
+        fp_i18n::set_language(lang);
+        let mut h = harness_with(bitmap_session());
+        open(&mut h, "edit.preferences");
+        let r = fp_ui::dialogs::dialog_rect(&h.ctx, "fp-prefs").expect("Voreinstellungen");
+        assert!((480.0..=520.0).contains(&r.height()), "{lang}: Höhe {}", r.height());
+        let lang_r = text_right(&h, &fp_i18n::t("lang-label")).expect("Sprache:");
+        let theme_r = text_right(&h, &fp_i18n::t("dlg-pref-theme")).expect("Design:");
+        assert!((lang_r - theme_r).abs() <= 1.5, "{lang}: Sprache rechts {lang_r}, Design rechts {theme_r}");
+        key(&mut h, Key::Escape);
+    }
+    fp_i18n::set_language("de");
+}
