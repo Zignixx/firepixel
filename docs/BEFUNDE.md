@@ -839,3 +839,12 @@ Eingetragen von DOC-4 (13.10.) aus den Berichten `berichte\batch1.md`, `batch2.m
 - [ ] (von CT-1b) Bedienfeld-≡-Menüs: Trenner sind nicht wirkungslos – Klick auf die Trennlinie bzw. 1 px darunter führt den nächsten Eintrag aus (Ebenen-≡: „Auswahl auf Hintergrund reduzieren“, „Alles ausblenden“); Hauptmenüs richtig (≈ 8 px wirkungslos) – Bedienfeldmenüs in fp-ui
 - [ ] (von CT-1b) Verlauf-Bedienfeld zeigt über die Brücke ausgeführte Schritte englisch in deutscher Oberfläche („Move“, „Deselect“, „Add Filter“, „Rectangle Slice“) – Beschriftung in Oberflächensprache – Verlauf-Bedienfeld / Brücke
 - [ ] (von CT-1b, niedrig) Inspektor „+“ (Live-Filter): Eintrag „Photoshop-Live-Effekte (noch nicht verfügbar)“ nennt ein Produkt des Herstellers des Originals – neutral benennen wie „Bridge“ bei MN-4 (ftl de/en)
+- [ ] (von CT-1a) D21 Leinwandfarbe: nach der Optionsgruppe ein unsichtbarer Tab-Stopp (kein Fokusrahmen), erst der zweite Tab erreicht OK – Dialog `canvasColor` (fp-ui) – `docs\funktionstest\ct1a_2026-10-13.md`
+- [ ] (von CT-1a) D43 Kurven: gepunktetes 4×4-Raster und Kurvenlinie werden nicht gezeichnet, nur die Punkte – Kurvenfeld (fp-ui, KV-1)
+- [ ] (von CT-1a) D16 Voreinstellungen: Höhe ≈ 585 px statt 480–520; Beschriftung „Sprache:“ linksbündig statt rechtsbündig vor dem Feld – Voreinstellungen-Dialog
+- [ ] (von CT-1a, niedrig) Live-Filter Kurven heißt „Gradationskurven“ (Menü „Anpassen der Farbe“) statt „Kurven…“, Bearbeiten-Knopf Zahnrad statt ⓘ; bei 900 × 650 außerhalb des sichtbaren Inspektors – ftl de / Effektliste
+- [ ] (von CT-1a) CSS-Sprites-Optionen: ungültiger Präfix „1 x“ → keine Meldung „Einige der CSS-Selektornamen …“, OK verwirft den Wert still – Sprite-Optionsdialog
+- [ ] (von CT-1a) HTML-Export ignoriert die HTML-Einrichtung: „Dateiname in Kleinbuchstaben“ → `MyPage.html`/`MyPage_r1_c1.gif`; Tabelle Zellfarbe `#123456`/Inhalt geschütztes Leerzeichen → weiter `bgcolor="#ffffff"` + `spacer.gif` – HTML-Export (fp-engine)
+- [ ] (von CT-1a) D42 Helligkeit/Kontrast: Pfeiltasten verschieben den fokussierten Schieber nicht, kein Fokusrahmen am Schieber – Schieber der Filterdialoge (FORM-1)
+- [ ] (von CT-1a) Bitmap nachzeichnen „Glatte Kurven“: auf Testbitmap (blaues Quadrat, gelber Kreis) 9 Pfade/477 Punkte/9 Farben gegen Farbflächen 2/8/2, Kreisrand wellig – erwartet weniger Punkte – `modify.traceBitmap` potrace (VT-6)
+- [ ] (von CT-1a, niedrig) Live-Effekt „Rauschen hinzufügen“ startet mit dem gemerkten Menüwert (20) statt Vorgabe Menge 50 (FX-4)
