@@ -461,18 +461,36 @@ fn color_section(ui: &mut Ui, st: &mut AppState, full: Rect, mut y: f32, theme: 
         let choice = crate::inspector::color_picker::show(ui, Id::new(("well", is_stroke)), well, open_at, st, shown_col, footer);
         let none = fp_color::Argb(0x00ff_ffff);
         let set = |c| if is_stroke { Action::SetColors { stroke: Some(c), fill: None } } else { Action::SetColors { stroke: None, fill: Some(c) } };
+        // gewählte Vektoren/Texte (keine Bitmaps): die Farbe der Werkzeugleiste wirkt wie im
+        // Original auch auf die Auswahl (CT-2 FARB-1b), ein Verlaufsschritt
+        let vectors = st.session.active().is_some_and(|d| {
+            d.selection.elements.iter().any(|id| fp_engine::docops::element_on_page(&d.doc, d.page, *id).is_some_and(|e| !matches!(e.kind, fp_model::ElementKind::Bitmap(_))))
+        });
         match choice {
             Some(ColorChoice::Color(nc)) => {
                 st.push(set(nc));
-                // Füllwerkzeug: gewählte Vektoren bekommen die neue Füllfarbe sofort, Schritt „Füllen“ (PAR 07/03)
-                let vectors = st.session.active().is_some_and(|d| {
-                    d.selection.elements.iter().any(|id| fp_engine::docops::element_on_page(&d.doc, d.page, *id).is_some_and(|e| !matches!(e.kind, fp_model::ElementKind::Bitmap(_))))
-                });
-                if !is_stroke && vectors && st.session.tools.active == fp_engine::ToolId::PaintBucket {
-                    st.run("pi.fill", serde_json::json!({"category": "solid", "color": fp_engine::commands::argb_hex(nc)}));
+                let hex = fp_engine::commands::argb_hex(nc);
+                if vectors {
+                    if is_stroke {
+                        st.run("pi.stroke", serde_json::json!({"color": hex}));
+                    } else if st.session.tools.active == fp_engine::ToolId::PaintBucket {
+                        // Füllwerkzeug: Schritt „Füllen“ mit einfarbiger Füllung (PAR 07/03)
+                        st.run("pi.fill", serde_json::json!({"category": "solid", "color": hex}));
+                    } else {
+                        st.run("pi.fill", serde_json::json!({"color": hex}));
+                    }
                 }
             }
-            Some(ColorChoice::None) => st.push(set(none)),
+            Some(ColorChoice::None) => {
+                st.push(set(none));
+                if vectors {
+                    if is_stroke {
+                        st.run("pi.stroke", serde_json::json!({"none": true}));
+                    } else {
+                        st.run("pi.fill", serde_json::json!({"category": "none"}));
+                    }
+                }
+            }
             Some(ColorChoice::Gradient) => st.run("pi.fill", serde_json::json!({"category": "gradient"})),
             Some(ColorChoice::Pattern) => {
                 if let Some((_, p)) = crate::inspector::popups::pattern_files().first() {

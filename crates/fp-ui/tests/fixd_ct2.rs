@@ -272,3 +272,77 @@ fn escape_in_ai_progress_keeps_pixel_selection() {
     assert_eq!(after.2, before.2, "kein Verlaufsschritt");
     assert_eq!(st(&h).session.tools.active, ToolId::AiObject, "Werkzeug bleibt");
 }
+
+fn fill_of(h: &H, id: ElementId) -> fp_color::Argb {
+    let d = st(h).session.active().expect("Dokument");
+    let e = fp_engine::docops::element_on_page(&d.doc, d.page, id).expect("Element");
+    fp_engine::docops::path_attrs_of(&e).map(|a| a.fill_color).expect("Pfad")
+}
+
+fn stroke_of(h: &H, id: ElementId) -> (fp_color::Argb, bool) {
+    let d = st(h).session.active().expect("Dokument");
+    let e = fp_engine::docops::element_on_page(&d.doc, d.page, id).expect("Element");
+    fp_engine::docops::path_attrs_of(&e).map(|a| (a.stroke_color, a.brush.is_some())).expect("Pfad")
+}
+
+fn key_tap(h: &mut H, k: egui::Key, m: Modifiers) {
+    h.event(Event::Key { key: k, physical_key: None, pressed: true, repeat: false, modifiers: m });
+    h.event(Event::Key { key: k, physical_key: None, pressed: false, repeat: false, modifiers: m });
+    h.run_steps(2);
+}
+
+/// HEX im Farb-Popup der Werkzeugleiste tippen und mit Enter übernehmen (Feld wie im FARB-1b-Test).
+fn well_hex(h: &mut H, stroke: bool, hex: &str) {
+    use fp_ui::inspector::color_picker as cp;
+    let sw = egui::Id::new(("well", stroke));
+    let well = h.ctx.read_response(sw).expect("Farbfeld der Werkzeugleiste").rect;
+    click_at(h, egui::pos2(well.right() - well.width() / 4.0, well.center().y));
+    let p = cp::open_rect(&h.ctx, sw).expect("Popup offen");
+    click_at(h, p.min + egui::vec2(180.0, 201.0));
+    let ctrl = Modifiers { alt: false, ctrl: true, shift: false, mac_cmd: false, command: true };
+    key_tap(h, egui::Key::A, ctrl);
+    for ch in hex.chars() {
+        h.event(Event::Text(ch.to_string()));
+        h.run_steps(1);
+    }
+    key_tap(h, egui::Key::Enter, Modifiers::NONE);
+    assert!(cp::open_rect(&h.ctx, sw).is_none(), "Enter schließt");
+}
+
+/// CT-2 FARB-1b: Farbe aus dem Popup der Werkzeugleiste wirkt wie im Original auf das gewählte
+/// Objekt (Füllung bzw. Strich, je ein Verlaufsschritt, Rückgängig exakt); ohne Auswahl bzw. mit
+/// gewählter Bitmap nur die Werkzeugfarbe.
+#[test]
+fn toolbar_color_applies_to_selection() {
+    let mut s = Session::default();
+    s.execute("file.new", json!({"width": 300, "height": 200, "background": "#ffffff"})).expect("Dokument");
+    let v = s.execute("draw.rectangle", json!({"rect": [20, 20, 120, 80], "fillColor": "#3a7bd5", "strokeWidth": 0})).expect("Rechteck");
+    let r = ElementId(v.value["id"].as_u64().expect("id"));
+    let ctx = egui::Context::default();
+    let mut a = FirepixelApp::with_session(&ctx, s, UiSettings::default(), false);
+    a.state.sync_render = true;
+    let mut h = harness(a);
+    h.state_mut().state.session.execute("select.set", json!({"ids": [r.0]})).expect("Auswahl");
+    h.run_steps(3);
+    let n0 = st(&h).session.active().map(|d| d.history.undo_count()).unwrap_or(0);
+    well_hex(&mut h, false, "123456");
+    assert_eq!(st(&h).session.tools.fill_color, fp_color::Argb(0xff12_3456), "Werkzeugfarbe");
+    assert_eq!(fill_of(&h, r), fp_color::Argb(0xff12_3456), "Füllung des gewählten Rechtecks");
+    assert_eq!(st(&h).session.active().map(|d| d.history.undo_count()).unwrap_or(0), n0 + 1, "ein Verlaufsschritt");
+    // Strich: Rechteck ohne Strich bekommt einen
+    well_hex(&mut h, true, "ff00ff");
+    assert_eq!(stroke_of(&h, r), (fp_color::Argb(0xffff_00ff), true), "Strich des Rechtecks");
+    assert_eq!(st(&h).session.active().map(|d| d.history.undo_count()).unwrap_or(0), n0 + 2);
+    h.state_mut().state.session.undo().expect("Rückgängig");
+    h.state_mut().state.session.undo().expect("Rückgängig");
+    assert_eq!(fill_of(&h, r), fp_color::Argb(0xff3a_7bd5), "Rückgängig stellt die Füllung her");
+    assert!(!stroke_of(&h, r).1, "Rückgängig: wieder ohne Strich");
+    // ohne Auswahl: nur die Werkzeugfarbe
+    h.state_mut().state.session.execute("select.none", json!({})).expect("nichts");
+    h.run_steps(2);
+    let n1 = st(&h).session.active().map(|d| d.history.undo_count()).unwrap_or(0);
+    well_hex(&mut h, false, "00ff00");
+    assert_eq!(st(&h).session.tools.fill_color, fp_color::Argb(0xff00_ff00));
+    assert_eq!(fill_of(&h, r), fp_color::Argb(0xff3a_7bd5), "ohne Auswahl bleibt das Rechteck");
+    assert_eq!(st(&h).session.active().map(|d| d.history.undo_count()).unwrap_or(0), n1, "kein Verlaufsschritt");
+}
