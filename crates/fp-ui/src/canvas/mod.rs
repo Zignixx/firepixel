@@ -475,6 +475,15 @@ fn canvas_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
     }
     // Rückmeldung des Werkzeugs (auch ohne Ereignis) und im Hintergrund auszublendende Elemente
     let feedback = st.session.tool_feedback();
+    // Rote Vorauswahl-Hervorhebung nur, solange der Zeiger über der Leinwand ist: Verlässt er das
+    // Fenster (bzw. liegt ein Bedienfeld darüber), kommt kein Bewegungsereignis mehr, das sie
+    // löscht; die alte Hervorhebung blieb stehen (CT-3: rote Linie ab dem Seitenursprung)
+    let pointer_here = resp.hovered() && ui.ctx().pointer_hover_pos().is_some_and(|p| area.contains(p));
+    let feedback: Vec<Overlay> = if pointer_here || st.canvases.get(&id).is_some_and(|c| c.pointer_down) {
+        feedback
+    } else {
+        feedback.into_iter().filter(|o| !matches!(o, Overlay::Highlight { .. })).collect()
+    };
     let preview_drag = st.session.prefs.get_bool("PreviewDrag", true);
     let mut hidden: Vec<u64> = Vec::new();
     for o in &feedback {
