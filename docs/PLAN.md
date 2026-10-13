@@ -257,10 +257,35 @@ Namen: Kurven/Tonwert-Pakete heißen **KV-1…3** (früher KT-1…3), die Klickt
 | ☐ **DES-3** | N11-Rest: Tabellen/Listen einzelner Dialoge (DESIGN §13 Prio 5–11: KI-Modelle, Gespeicherte Befehle, Tastenkürzel, Pop-up-Editor, Export-Leerraum), Voreinstellungen ohne Fußleiste (Kategorienliste kürzen) |
 | ☐ **Fix-Liste → FIX** | 8 kleine Punkte aus `progress-2026-10-13.md` §2 (Standard-ALT-Text im FW-PNG, Tab-Folge der Live-Effekt-Dialoge, „Neues Symbol“ im Bibliothek-Bedienfeld, Optimieren ▸ Einstellungen löschen ohne Rückfrage, `shortcuts.json` gegen PARITAET_B §1, alte Texte `dlg-md-*` (mit TE-2), „Demo – aktuelles Dokument“ im Fenster, erste Ziehbewegung bei Tausenden Objekten) – im FIX-Schritt des Nachtlaufs oder früher |
 
+## 4d. Welle 5 – Nutzerbefunde N25–N30 (gemeldet 13.10. ≈ 03:00; **vor** den Nachttests, Start nur nach Freigabe)
+
+Nutzervorgabe: aufschreiben, nicht sofort starten; diese Punkte laufen **vor** dem Nachtlauf. Messungen im Original nur unter der Sperre (AGENTEN_REGELN §4e), also nacheinander; alles andere parallel auf warmen Slots. Bilder des Nutzers: `re\_nutzerbilder\2026-10-13\` (außerhalb von `firepixel\`, weil sie das Original zeigen).
+
+**Teil 5a (parallel, ≈ 60–90 min):**
+
+| Paket | Nutzerbefund | Inhalt | Dauer |
+|---|---|---|---|
+| ☐ **RE-5** | N25, N26, N27 | Messungen im Original (Sperre): Bildvorschau 2-/4-fach – was läuft synchron (Bildlauf, Mausrad, Leertaste + Ziehen, Hand, Zoom, Auswahl/Slice-Werkzeug); Grenzen eines Bitmap-Objekts in einer FW-PNG mit transparentem Rand (JSF `pixelRect`/`left/top/width/height`, Datei aus Firepixel und aus dem Original gespeichert); Farbwähler-Popup (Raster, Farbanordnung, Maße, Felder, Pipette beim Überfahren, Systemfarbwähler, Tastatur, Esc/Eingabe) mit Bildern → `re\22-ansicht-bitmap-farbe.md` | ≈ 45 min |
+| ☐ **RE-FX** | N28 | Messreihe im Original nach RE-5 (Sperre): jeder Live-Effekt (Schatten, Innerer Schatten, Glühen, Inneres Glühen, Abschrägung innen/außen, Prägen, …) und jeder Filter mit je 3 Einstellungen auf 3 festen Testbildern (Vektor, Text, Foto-Bitmap mit Transparenz), Export als PNG 32 → Referenzbilder + `re\23-effekte.md` | ≈ 60–90 min |
+| ☐ **BV-5** | N25 | gemeinsame Ansichtslage für alle Felder der 2-/4-fach-Ansicht (Bildvorschau und Dokumentansicht): Bildlauf, Rad, Leertaste, Hand, Zoom wirken überall; Feinheiten nach RE-5 | ≈ 40 min |
+| ☐ **BM-1** | N26 | Ursache suchen: FW-PNG-Import/-Export und Bitmap-Grenzen (Objekt = Leinwand?); nach RE-5 angleichen; Test mit nachgebauter Datei | ≈ 40 min |
+| ☐ **FARB-1a** | N27a | Fehler: Ziehen im Farbfeld des Popups springt auf die alte Farbe zurück (z. B. Glühen ▸ Farbe) – an allen Stellen mit diesem Popup | ≈ 20 min |
+| ☐ **VT-6** | N29 | zweites Nachzeichnen-Verfahren nach dem veröffentlichten Potrace-Fachartikel, eigenständig umgesetzt (keine GPL-Bibliothek), Auswahl „Verfahren“ im Dialog mit Vorschau, MCP/CLI-Parameter `engine`; Vergleich auf Strichzeichnung und Logo | ≈ 60–80 min |
+| ☐ **START-1** | N30 | Startzeit der Release-exe messen und aufschlüsseln; teure Schritte verzögern bzw. in den Hintergrund; Zahlen vorher/nachher | ≈ 45 min |
+
+**Teil 5b (nach RE-5/RE-FX, parallel, ≈ 45–60 min):**
+
+| Paket | Nutzerbefund | Inhalt |
+|---|---|---|
+| ☐ **FARB-1b** | N27b | Farbwähler-Popup wie im Original an allen Stellen (Werkzeugleiste, Inspektor, Effekte, Dialoge, Bedienfelder) nach `re\22` |
+| ☐ **FX-1…4** | N28 | Pixelvergleich mit den Referenzbildern aus RE-FX und Abweichungen beheben, aufgeteilt: FX-1 Schatten/Glühen (Glühen zuerst), FX-2 Abschrägung/Prägen, FX-3 Weichzeichner/Schärfen, FX-4 Farbe/Rauschen/übrige; Toleranz und Ergebnis je Effekt im Bericht |
+
+Gesamt Welle 5 ≈ 2–3 h. Danach Doku-Übertrag (kurz), Slots vorwärmen, neue Testversion, dann Nachtlauf nach „los“.
+
 **Nachtlauf (Abschluss Z), Ablauf laut `progress-2026-10-13.md` §4:**
 
 1. Testversion vom 13.10. liegt auf dem Desktop (`Firepixel-Vorschau-2026-10-13_HH-MM`, mit `NEU.md`).
-2. TE-2 + DOC-3 laufen (seit ≈ 02:45). **Danach die warmen Slots vorwärmen und eine neue Testversion bauen – erst nach Freigabe des Nutzers.**
+2. TE-2 + DOC-3 laufen (seit ≈ 02:45), danach **Welle 5 (§4d)**. **Danach die warmen Slots vorwärmen und eine neue Testversion bauen – erst nach Freigabe des Nutzers.**
 3. Nachttests **nur nach „los“** des Nutzers (≈ 2–2,5 h):
 
    | ab „los“ | Paket | Inhalt |
