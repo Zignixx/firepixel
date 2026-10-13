@@ -180,13 +180,33 @@ impl KnownFolder {
     }
 }
 
+/// Home folder of a test profile given by `APPDATA` (`<home>\Roaming` or
+/// `<home>\AppData\Roaming`), e.g. a GUI test instance started with its own `APPDATA` and
+/// `FP_NO_SHELL_OPEN` (`fpmcp.ps1`).
+fn home_from_appdata(appdata: &Path) -> Option<PathBuf> {
+    let parent = appdata.parent()?;
+    if parent.as_os_str().is_empty() {
+        return None;
+    }
+    Some(if parent.file_name().is_some_and(|n| n.eq_ignore_ascii_case("AppData")) { parent.parent()?.to_path_buf() } else { parent.to_path_buf() })
+}
+
+/// In a test run without redirect: `APPDATA` points outside the real profile → its home folder.
+fn env_test_home() -> Option<PathBuf> {
+    if env_roaming().as_deref().is_none_or(is_real) {
+        return None;
+    }
+    home_from_appdata(&env_path("APPDATA")?)
+}
+
 /// A known user folder: `<home>\Pictures` or `<home>\Documents` if it exists, else the home
 /// folder itself (home = `%USERPROFILE%` on Windows, else `$HOME`). In a test run the test
-/// profile root stands in for the home folder, so tests never see the user's real folders.
-/// Never creates anything.
+/// profile root stands in for the home folder, so tests never see the user's real folders: the
+/// redirected root, else the profile that `APPDATA` names (then preferences, templates and these
+/// folders share one root, CT-3), else the process's own test profile. Never creates anything.
 pub fn known_folder(f: KnownFolder) -> Option<PathBuf> {
     let home = if is_test_run() {
-        redirected_root().unwrap_or_else(use_test_profile)
+        redirected_root().or_else(env_test_home).unwrap_or_else(use_test_profile)
     } else if cfg!(windows) {
         env_path("USERPROFILE").or_else(|| env_path("HOME"))?
     } else {
@@ -356,6 +376,14 @@ mod tests {
         assert!(is_real(&v));
         let other = u.join("AppData").join("Local").join("Packages").join("Some_App_123").join("LocalCache").join("Temp").join("x");
         assert!(!is_real(&other));
+    }
+
+    #[test]
+    fn home_of_a_test_instance_from_its_appdata() {
+        let b = PathBuf::from(r"C:\t\fphome");
+        assert_eq!(home_from_appdata(&b.join("Roaming")), Some(b.clone()));
+        assert_eq!(home_from_appdata(&b.join("AppData").join("Roaming")), Some(b.clone()));
+        assert_eq!(home_from_appdata(Path::new("Roaming")), None);
     }
 
     #[test]
