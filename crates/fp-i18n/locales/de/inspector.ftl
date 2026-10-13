@@ -244,7 +244,7 @@ pi-stroke-save = Pinselstrich speichern
 pi-stroke-delete = Pinselstrich löschen
 pi-stroke-save-name = Name:
 pi-stroke-default-name = Pinselstrich { $n }
-pi-stroke-cat-none = Keine
+pi-stroke-cat-none = Ohne
 pi-stroke-saved = Gespeichert
 
 ## Strichkategorien und -vorgaben

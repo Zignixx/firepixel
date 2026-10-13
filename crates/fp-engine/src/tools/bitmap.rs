@@ -339,6 +339,10 @@ pub struct BrushTool {
     painted: bool,
 }
 
+/// Abstand (px) des Zugbeginns von der gewählten Bitmap, ab dem der Pinsel ein neues Bitmap malt
+/// (Annahme zwischen den Messungen 19 px → Bitmap wächst und 100 px → neues Bitmap).
+pub const OUTSIDE_NEW_BITMAP: f32 = 32.0;
+
 /// Strichtextur des Pinsels, solange im Inspektor keine gewählt ist (Liste des Originals zeigt „Ader“).
 pub const DEFAULT_STROKE_TEXTURE: &str = "Vein";
 
@@ -456,9 +460,16 @@ impl BrushTool {
             // gerade Größen +1/+1 (echte Züge r02/r13/r16: Größe 10 → 56,146–506,156 für 60→500)
             let d = self.params["brush"]["diameter"].as_i64().unwrap_or(1);
             self.offset = if d % 2 == 0 { 1.0 } else { 0.0 };
-            // Start außerhalb der gewählten Bitmap (gemessen T03, Start 100,250): mit „Transparenz
-            // beibehalten“ nichts malen und die Auswahl aufheben, sonst ein neues Bitmap
-            let outside = base.as_ref().is_some_and(|b| b.get(pos.x.floor() as i32, pos.y.floor() as i32).is_none());
+            // Start deutlich außerhalb der gewählten Bitmap (gemessen T03, Start 100,250 = 100 px
+            // neben den deckenden Pixeln): mit „Transparenz beibehalten“ nichts malen und die Auswahl
+            // aufheben, sonst ein neues Bitmap. Knapp daneben (FV-11: 10 bzw. 19 px) wächst die
+            // gewählte Bitmap wie bisher – Grenze dazwischen angenommen (OUTSIDE_NEW_BITMAP).
+            let outside = base.as_ref().is_some_and(|b| {
+                let r = b.bounds();
+                let dx = (r.left as f32 - pos.x).max(pos.x - r.right as f32).max(0.0);
+                let dy = (r.top as f32 - pos.y).max(pos.y - r.bottom as f32).max(0.0);
+                dx.max(dy) > OUTSIDE_NEW_BITMAP
+            });
             if outside {
                 if ctx.options.keep_transparency {
                     self.deselect_only = true;

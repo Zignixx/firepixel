@@ -264,6 +264,9 @@ pub fn sync_tool_attrs(ctx: &egui::Context, st: &mut crate::app_state::AppState)
         ctx.data_mut(|d| d.insert_temp(tool_key, tool));
         let mut ta = crate::inspector::obj_quads::tool_attrs(ctx);
         if attrs_from_prefs(tool, &st.session.prefs, &mut ta) {
+            if tool == fp_engine::ToolId::Brush {
+                st.session.tools.options.brush_size = ta.stroke_width.max(1) as f32;
+            }
             let t2 = ta.clone();
             crate::inspector::obj_quads::edit_tool_attrs(ctx, |a| *a = t2);
         }
@@ -308,6 +311,7 @@ pub fn attrs_from_prefs(tool: fp_engine::ToolId, p: &fp_engine::prefs::Preferenc
             ta.rate = int("ScrubRate", 10);
             return true;
         }
+        T::Brush => return brush_attrs_from_prefs(p, ta),
         _ => {}
     }
     let pre = match tool {
@@ -354,6 +358,41 @@ pub fn attrs_from_prefs(tool: fp_engine::ToolId, p: &fp_engine::prefs::Preferenc
     true
 }
 
+/// Pinsel-Werkzeugvorgabe in den Voreinstellungen (PAR 02/18: das Original merkt Strichart, Größe
+/// und Rand über den Neustart). Schlüssel technisch englisch (§1c); Strichart als interner Name
+/// „Kategorie/Art“ (`bc_Basic/bn_Soft Rounded`), Größe im Schlüssel des Originals `BrushTipSize`.
+pub const BRUSH_PREF_STROKE: &str = "BrushToolStroke";
+pub const BRUSH_PREF_SOFT: &str = "BrushToolSoftEdge";
+pub const BRUSH_PREF_TEXTURE: &str = "BrushToolTexture";
+pub const BRUSH_PREF_TEXTURE_AMOUNT: &str = "BrushToolTextureAmount";
+
+/// Werkzeugattribute des Pinsels aus den Voreinstellungen; `false`, solange nichts gespeichert ist
+/// (dann gelten die bisherigen Werte).
+pub fn brush_attrs_from_prefs(p: &fp_engine::prefs::Preferences, ta: &mut crate::inspector::obj_quads::ToolAttrs) -> bool {
+    let stroke = p.get_str(BRUSH_PREF_STROKE, "");
+    let Some((cat, name)) = stroke.split_once('/') else { return false };
+    let Some(i) = fp_engine::commands::panel::preset_index_of(cat, name) else { return false };
+    ta.stroke_preset = Some(i);
+    ta.stroke_width = p.get_int("BrushTipSize", 1).clamp(1, 1000) as i32;
+    ta.softness = p.get_int(BRUSH_PREF_SOFT, 0).clamp(0, 100) as i32;
+    ta.stroke_texture = p.get_str(BRUSH_PREF_TEXTURE, "");
+    ta.stroke_texture_amount = p.get_int(BRUSH_PREF_TEXTURE_AMOUNT, 0).clamp(0, 100) as i32;
+    true
+}
+
+/// Voreinstellungen der Pinsel-Werkzeugvorgabe (Umkehrung von [`brush_attrs_from_prefs`]).
+pub fn brush_prefs(ta: &crate::inspector::obj_quads::ToolAttrs) -> Vec<(String, fp_engine::prefs::PrefValue)> {
+    use fp_engine::prefs::PrefValue::{Int, Str};
+    let Some(b) = ta.stroke_preset.and_then(|i| fp_engine::commands::panel::BRUSH_PRESETS.get(i)) else { return Vec::new() };
+    vec![
+        (BRUSH_PREF_STROKE.into(), Str(format!("{}/{}", b.category, b.name))),
+        ("BrushTipSize".into(), Int(ta.stroke_width.clamp(1, 1000) as i64)),
+        (BRUSH_PREF_SOFT.into(), Int(ta.softness.clamp(0, 100) as i64)),
+        (BRUSH_PREF_TEXTURE.into(), Str(ta.stroke_texture.clone())),
+        (BRUSH_PREF_TEXTURE_AMOUNT.into(), Int(ta.stroke_texture_amount.clamp(0, 100) as i64)),
+    ]
+}
+
 /// Voreinstellungen eines Retusche-Werkzeugs aus den Werkzeugattributen des Inspektors.
 pub fn retouch_prefs(tool: fp_engine::ToolId, ta: &crate::inspector::obj_quads::ToolAttrs) -> Vec<(String, fp_engine::prefs::PrefValue)> {
     use fp_engine::prefs::PrefValue::{Bool, Int};
@@ -377,6 +416,7 @@ pub fn retouch_prefs(tool: fp_engine::ToolId, ta: &crate::inspector::obj_quads::
         T::PathScrubAdd | T::PathScrubSubtract => {
             return vec![("ScrubPressure".into(), Bool(ta.pressure)), ("ScrubVelocity".into(), Bool(ta.velocity)), ("ScrubRate".into(), Int(ta.rate as i64))];
         }
+        T::Brush => return brush_prefs(ta),
         _ => {}
     }
     let pre = match tool {

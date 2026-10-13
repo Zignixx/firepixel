@@ -557,43 +557,35 @@ pub fn pattern_swatch_texture(ctx: &egui::Context, name: &str) -> Option<egui::T
 #[allow(clippy::too_many_arguments)]
 pub fn stroke_category(ui: &mut Ui, id: Id, r: Rect, label: &str, has: bool, preset: Option<usize>, enabled: bool, saved: &[String]) -> Option<Option<usize>> {
     let resp = fields::combo_box_frame(ui, id, r, label, enabled);
-    let th = Theme::current(ui.ctx());
-    let mut out = None;
-    egui::Popup::menu(&resp).frame(crate::menu::menu_frame(&th)).show(|ui| {
-        ui.spacing_mut().item_spacing = vec2(0.0, 0.0);
-        if fields::list_item(ui, &texts::t("pi-stroke-cat-none"), !has).clicked() {
-            out = Some(None);
-            ui.close();
-        }
-        for cat in texts::brush_categories() {
-            ui.menu_button(texts::brush_category_label(cat), |ui| {
-                for (i, b) in ui_commands::BRUSH_PRESETS.iter().enumerate().filter(|(_, b)| b.category == cat) {
-                    if fields::list_item(ui, &texts::brush_preset_label(b), has && preset == Some(i)).clicked() {
-                        out = Some(Some(i));
-                        ui.close();
-                    }
-                }
-            });
-        }
-        if !saved.is_empty() {
-            ui.menu_button(texts::t("pi-stroke-saved"), |ui| {
-                for (k, n) in saved.iter().enumerate() {
-                    if fields::list_item(ui, n, n == label).clicked() {
-                        out = Some(Some(ui_commands::BRUSH_PRESETS.len() + k));
-                        ui.close();
-                    }
-                }
-            });
-        }
-        // wie im Original am Ende: „Pinselstrichoptionen…“ (öffnet „Pinselstrich bearbeiten“)
-        ui.separator();
-        if fields::list_item(ui, &texts::t("pi-stroke-options-item"), false).clicked() {
-            out = Some(Some(STROKE_OPTIONS_ITEM));
-            ui.close();
-        }
-    });
-    out
+    // Menü wie im Original (PAR 02/01): „Ohne“ · Trenner · Kategorien ▸ (Untermenü rechts daneben) ·
+    // Trenner · „Pinselstrichoptionen…“, so breit wie die Einträge (≈ 220 px). Gebaut aus den
+    // Menüknoten der Anwendung; die Wahl kommt als Kennung zurück und wird hier ausgewertet.
+    let pick = |i: usize| crate::menu::ItemAction::Command(format!("{STROKE_PICK}{i}"));
+    let item = |label: String, i: usize, checked: bool| crate::menu::Node::Item { label, shortcut: None, action: pick(i), enabled: true, checked: Some(checked) };
+    let mut nodes = vec![item(texts::t("pi-stroke-cat-none"), STROKE_NONE_ITEM, !has), crate::menu::Node::Separator];
+    for cat in texts::brush_categories() {
+        let children = ui_commands::BRUSH_PRESETS.iter().enumerate().filter(|(_, b)| b.category == cat).map(|(i, b)| item(texts::brush_preset_label(b), i, has && preset == Some(i))).collect();
+        nodes.push(crate::menu::Node::Sub { label: texts::brush_category_label(cat), children, enabled: true });
+    }
+    if !saved.is_empty() {
+        let children = saved.iter().enumerate().map(|(k, n)| item(n.clone(), ui_commands::BRUSH_PRESETS.len() + k, n == label)).collect();
+        nodes.push(crate::menu::Node::Sub { label: texts::t("pi-stroke-saved"), children, enabled: true });
+    }
+    nodes.push(crate::menu::Node::Separator);
+    nodes.push(item(texts::t("pi-stroke-options-item"), STROKE_OPTIONS_ITEM, false));
+    let mut acts = Vec::new();
+    crate::menu::popup_menu(ui, &resp, &nodes, &mut acts);
+    acts.iter().find_map(|a| match a {
+        crate::app_state::Action::Run(n, _) => n.strip_prefix(STROKE_PICK).and_then(|s| s.parse::<usize>().ok()),
+        _ => None,
+    })
+    .map(|i| if i == STROKE_NONE_ITEM { None } else { Some(i) })
 }
+
+/// Kennung der Menüwahl im Strichart-Menü (kein Befehl, wird von [`stroke_category`] ausgewertet).
+const STROKE_PICK: &str = "\u{1}stroke-pick:";
+/// Eintrag „Ohne“ im Strichart-Menü.
+const STROKE_NONE_ITEM: usize = usize::MAX - 1;
 
 /// Rückgabewert von [`stroke_category`] für „Pinselstrichoptionen…“.
 pub const STROKE_OPTIONS_ITEM: usize = usize::MAX;

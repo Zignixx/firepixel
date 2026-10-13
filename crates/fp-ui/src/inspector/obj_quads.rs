@@ -206,7 +206,7 @@ pub fn edit_tool_attrs(ctx: &egui::Context, f: impl FnOnce(&mut ToolAttrs)) {
 pub const BLEND_ITEMS: &[(&str, i32)] = &[
     ("Normal", 0),
     ("Durchschnitt", 30),
-    ("Sprenkeln", 7),
+    ("Auflösen", 7),
     ("-----", -1),
     ("Abdunkeln", 9),
     ("Multiplizieren", 2),
@@ -222,7 +222,7 @@ pub const BLEND_ITEMS: &[(&str, i32)] = &[
     ("Weich abwedeln", 40),
     ("Linear abwedeln", 18),
     ("-----", -1),
-    ("Ineinanderkopieren", 4),
+    ("Überlagern", 4),
     ("Weiches Licht", 34),
     ("Unscharfes Licht", 35),
     ("Hartes Licht", 33),
@@ -238,7 +238,7 @@ pub const BLEND_ITEMS: &[(&str, i32)] = &[
     ("Farbton", 11),
     ("Sättigung", 12),
     ("Farbe", 13),
-    ("Helligkeit", 14),
+    ("Luminanz", 14),
     ("Rot", 51),
     ("Grün", 52),
     ("Blau", 53),
@@ -256,9 +256,9 @@ pub const BLEND_ITEMS: &[(&str, i32)] = &[
     ("XOR", 50),
     ("-----", -1),
     ("Umkehren", 17),
-    ("Tönung", 29),
+    ("Farbton", 29),
     ("-----", -1),
-    ("Radieren", 25),
+    ("Löschen", 25),
 ];
 
 /// Namen der Mischmodus-Liste in der aktuellen Sprache (wie [`texts::blend_labels`], als
@@ -846,45 +846,55 @@ fn pick_other_texture(ui: &Ui, st: &mut AppState, tgt: Target, stroke: bool) {
 fn apply_stroke(ui: &Ui, st: &mut AppState, tgt: Target, params: Value) {
     match tgt {
         Target::Selection => st.run("pi.stroke", params),
-        Target::Tool => {
-            let ctx = ui.ctx().clone();
-            if let Some(c) = params.get("color").and_then(|v| v.as_str()).and_then(fp_color::Rgba8::parse_hex) {
-                st.push(Action::SetColors { stroke: Some(c.to_argb()), fill: None });
-            }
-            if params.get("none").and_then(|v| v.as_bool()) == Some(true) {
-                st.push(Action::SetColors { stroke: Some(Argb(0x00ff_ffff)), fill: None });
-            }
-            edit_tool_attrs(&ctx, |a| {
-                if let Some(p) = params.get("preset").and_then(|v| v.as_str()) {
-                    a.stroke_preset = fp_engine::commands::panel::find_preset(p).and_then(|f| BRUSH_PRESETS.iter().position(|b| b == f));
-                }
-                if let Some(v) = params.get("width").and_then(|v| v.as_f64()) {
-                    a.stroke_width = v.round() as i32;
-                }
-                if let Some(v) = params.get("softness").and_then(|v| v.as_i64()) {
-                    a.softness = v as i32;
-                }
-                if let Some(v) = params.get("placement").and_then(|v| v.as_str()) {
-                    a.placement = match v {
-                        "inside" => 0,
-                        "outside" => 2,
-                        _ => 1,
-                    };
-                }
-                if let Some(v) = params.get("texture").and_then(|v| v.as_str()) {
-                    a.stroke_texture = v.to_string();
-                }
-                if let Some(v) = params.get("textureAmount").and_then(|v| v.as_i64()) {
-                    a.stroke_texture_amount = v as i32;
-                }
-            });
-            // Strichbreite für das Werkzeug: Pinselgröße der Bitmap-Werkzeuge
-            if let Some(v) = params.get("width").and_then(|v| v.as_f64()) {
-                st.session.tools.options.brush_size = v.max(1.0) as f32;
-            }
-            sync_tool_brush(st, &params);
-        }
+        Target::Tool => apply_tool_stroke(ui.ctx(), st, params),
     }
+}
+
+/// Strich-Felder des Werkzeug-Inspektors (Strichart, Größe, Rand, Textur …) auf die Werkzeugvorgabe
+/// anwenden – wie ein Klick im Inspektor (auch für Tests).
+pub fn apply_tool_stroke(ctx: &egui::Context, st: &mut AppState, params: Value) {
+    if let Some(c) = params.get("color").and_then(|v| v.as_str()).and_then(fp_color::Rgba8::parse_hex) {
+        st.push(Action::SetColors { stroke: Some(c.to_argb()), fill: None });
+    }
+    if params.get("none").and_then(|v| v.as_bool()) == Some(true) {
+        st.push(Action::SetColors { stroke: Some(Argb(0x00ff_ffff)), fill: None });
+    }
+    edit_tool_attrs(ctx, |a| {
+        if let Some(p) = params.get("preset").and_then(|v| v.as_str()) {
+            let f =fp_engine::commands::panel::find_preset(p);
+            a.stroke_preset = f.and_then(|f| BRUSH_PRESETS.iter().position(|b| b == f));
+            // die Strichart bringt Rand und Texturmenge mit (wie im Original; vorher zeigte
+            // „Rand“ nach der Wahl den alten Wert, PAR 01/01)
+            if let Some(f) = f {
+                a.softness = f.softness / 10;
+                a.stroke_texture_amount = f.texture_blend / 10;
+            }
+        }
+        if let Some(v) = params.get("width").and_then(|v| v.as_f64()) {
+            a.stroke_width = v.round() as i32;
+        }
+        if let Some(v) = params.get("softness").and_then(|v| v.as_i64()) {
+            a.softness = v as i32;
+        }
+        if let Some(v) = params.get("placement").and_then(|v| v.as_str()) {
+            a.placement = match v {
+                "inside" => 0,
+                "outside" => 2,
+                _ => 1,
+            };
+        }
+        if let Some(v) = params.get("texture").and_then(|v| v.as_str()) {
+            a.stroke_texture = v.to_string();
+        }
+        if let Some(v) = params.get("textureAmount").and_then(|v| v.as_i64()) {
+            a.stroke_texture_amount = v as i32;
+        }
+    });
+    // Strichbreite für das Werkzeug: Pinselgröße der Bitmap-Werkzeuge
+    if let Some(v) = params.get("width").and_then(|v| v.as_f64()) {
+        st.session.tools.options.brush_size = v.max(1.0) as f32;
+    }
+    sync_tool_brush(st, &params);
 }
 
 /// Ist ein Vorgabepinsel gesetzt (`ToolOptions::new_brush`, aus „Strich bearbeiten“), schreiben die
@@ -906,6 +916,39 @@ pub fn sync_tool_brush(st: &mut AppState, params: &Value) {
     }
     if !p.is_empty() {
         st.run("pi.tool.brush", Value::Object(p));
+    }
+}
+
+/// Vorgabepinsel der Werkzeugvorgabe (`ToolOptions::new_brush`), falls gesetzt.
+fn tool_brush_override(st: &AppState) -> Option<fp_model::Brush> {
+    st.session.tools.options.new_brush.as_ref().and_then(|v| serde_json::from_value::<fp_model::Brush>(v.clone()).ok())
+}
+
+/// Was die Strich-Felder des Werkzeug-Inspektors zeigen: (Größe, Strichart, Rand, Strich vorhanden,
+/// Vorgabe-Index). Ein Vorgabepinsel (`pi.tool.brush`, Dialog „Pinselstrich bearbeiten“) hat
+/// Vorrang – die Felder zeigen den Pinsel, mit dem gemalt wird (PAR 01/01).
+pub fn shown_tool_stroke(st: &AppState, ctx: &egui::Context) -> (i32, String, i32, bool, Option<usize>) {
+    let ta = tool_attrs(ctx);
+    let c = st.session.tools.stroke_color;
+    if let Some(b) = tool_brush_override(st) {
+        let has = c.a() > 0;
+        return (b.diameter, if has { texts::brush_label(&b) } else { t("pi-none") }, b.softness / 10, has, texts::brush_preset_index(&b).filter(|_| has));
+    }
+    let has = c.a() > 0 && ta.stroke_preset.is_some();
+    let lab = ta.stroke_preset.and_then(|i| BRUSH_PRESETS.get(i)).map(texts::brush_preset_label).unwrap_or_else(|| t("pi-none"));
+    (ta.stroke_width, if has { lab } else { t("pi-none") }, ta.softness, has, ta.stroke_preset.filter(|_| has))
+}
+
+/// Kantenvorschau neben „Rand:“ (Original 23 × 23): Spitze in Pinselgröße (Größe 1 → Punkt),
+/// größere Spitzen auf das Feld begrenzt, Rand als weicher Verlauf (PAR 02/19).
+fn paint_edge_preview(ui: &Ui, pv: Rect, col: Color32, size: i32, soft: i32) {
+    let full = (pv.height() / 2.0 - 2.0).max(1.0);
+    let r0 = (size.max(1) as f32 / 2.0).clamp(0.5, full);
+    let steps = if r0 < 2.0 { 1 } else { 4 };
+    for k in 0..steps {
+        let f = 1.0 - k as f32 / steps as f32;
+        let a = if soft == 0 { 255 } else { (255.0 * (1.0 - f * soft as f32 / 120.0)).clamp(30.0, 255.0) as u8 };
+        ui.painter().circle_filled(pv.center(), r0 * f, crate::theme::with_alpha(col, a));
     }
 }
 
@@ -931,9 +974,8 @@ pub fn stroke_panel(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target, enabled:
         }
         Target::Tool => {
             let c = st.session.tools.stroke_color;
-            let has = c.a() > 0 && ta.stroke_preset.is_some();
-            let lab = ta.stroke_preset.and_then(|i| BRUSH_PRESETS.get(i)).map(texts::brush_preset_label).unwrap_or_else(|| t("pi-none"));
-            (has, has.then_some(c), ta.stroke_width, if has { lab } else { t("pi-none") }, ta.softness, ta.placement, ta.stroke_preset.filter(|_| has))
+            let (width, label, soft, has, preset) = shown_tool_stroke(st, ui.ctx());
+            (has, has.then_some(c), width, label, soft, ta.placement, preset)
         }
     };
     let en = enabled && (tgt == Target::Tool || attrs.is_some());
@@ -1009,13 +1051,7 @@ pub fn stroke_panel(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target, enabled:
     ui.painter().rect_stroke(pv, 0.0, Stroke::new(1.0, theme.colors.field_border), StrokeKind::Inside);
     if has {
         let col = color.map(|c| Color32::from_rgb(c.r(), c.g(), c.b())).unwrap_or(theme.colors.icon_fg);
-        let r0 = (pv.height() / 2.0 - 2.0).max(1.0);
-        let steps = 4;
-        for k in 0..steps {
-            let f = 1.0 - k as f32 / steps as f32;
-            let a = if soft == 0 { 255 } else { (255.0 * (1.0 - f * soft as f32 / 120.0)).clamp(30.0, 255.0) as u8 };
-            ui.painter().circle_filled(pv.center(), r0 * f, crate::theme::with_alpha(col, a));
-        }
+        paint_edge_preview(ui, pv, col, width, soft);
     }
     if let Some(v) = fields::number(ui, id.with("soft"), d.r(100.0, 16.0, 19.0, 13.0), Some(d.r(120.0, 16.0, 9.0, 13.0)), has.then_some(soft as f64), (0.0, 100.0), 0, en && has) {
         apply_stroke(ui, st, tgt, json!({"softness": v as i64}));
@@ -1032,7 +1068,10 @@ pub fn stroke_texture_panel(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target, 
             let b = a.and_then(|a| a.brush.as_ref());
             (b.is_some(), a.and_then(|a| a.stroke_texture.as_ref()).map(|t| t.user_name.clone().unwrap_or_else(|| t.name.clone())).unwrap_or_default(), b.map(|b| b.texture_blend / 10).unwrap_or(0))
         }
-        Target::Tool => (st.session.tools.stroke_color.a() > 0 && ta.stroke_preset.is_some(), ta.stroke_texture.clone(), ta.stroke_texture_amount),
+        Target::Tool => match tool_brush_override(st) {
+            Some(b) => (st.session.tools.stroke_color.a() > 0, ta.stroke_texture.clone(), if ta.stroke_texture.is_empty() { b.texture_blend / 10 } else { ta.stroke_texture_amount }),
+            None => (st.session.tools.stroke_color.a() > 0 && ta.stroke_preset.is_some(), ta.stroke_texture.clone(), ta.stroke_texture_amount),
+        },
     };
     let en = enabled && has;
     let id = Id::new(("pi-stex", tgt == Target::Tool));
@@ -1053,11 +1092,14 @@ pub fn stroke_edit_row(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target, enabl
         Target::Selection => first_attrs(st).is_some_and(|a| a.brush.is_some()),
         Target::Tool => st.session.tools.stroke_color.a() > 0,
     };
-    // Bearbeiten auch für die Werkzeugvorgabe (`pi.tool.brush`), Speichern/Löschen nur mit Auswahl
+    // Bearbeiten auch für die Werkzeugvorgabe (`pi.tool.brush`); Speichern/Löschen mit Auswahl bzw. im
+    // Werkzeug-Inspektor mit offenem Dokument (Original: beide Symbolknöpfe aktiv, PAR 01/01, 02/15)
     let edit_en = enabled && has;
-    let en = edit_en && tgt == Target::Selection;
+    let en = edit_en && (tgt == Target::Selection || st.session.active().is_some());
     let id = Id::new(("pi-sedit", tgt == Target::Tool));
-    if fields::button(ui, id.with("edit"), d.r(0.0, 2.0, 80.0, 13.0), &t("pi-stroke-edit"), edit_en) {
+    // ganzer Text „Pinselstrich bearbeiten“ wie im Original: Knopf 122 px breit wie dort (401–523),
+    // vorher 120 px und „Pinselstrich bearbeit…“ (PAR 01/01)
+    if fields::button(ui, id.with("edit"), d.r(0.0, 2.0, 81.5, 13.0), &t("pi-stroke-edit"), edit_en) {
         // Werkzeug-Inspektor: Pinsel der Werkzeugvorgabe, auch wenn eine Bitmap ausgewählt ist (PINSEL-1)
         match tgt {
             Target::Tool => st.dialogs.open_stroke_options_for_tool(),
@@ -1067,10 +1109,19 @@ pub fn stroke_edit_row(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target, enabl
     if fields::icon_button(ui, id.with("save"), d.r(84.0, 2.0, 13.0, 13.0), Glyph::StyleNew, en, &t("pi-stroke-save")).clicked() && en {
         let n = saved_brushes(st).len() + 1;
         let (title, name_label, name) = (t("pi-stroke-save"), t("pi-stroke-save-name"), fp_i18n::tr!("pi-stroke-default-name", n = n));
-        st.dialogs.form = Some(crate::dialogs::form::FormDialog::new("5974", &title, "pi.brush.save", vec![crate::dialogs::form::Field::text("name", &name_label, &name)]));
+        let mut dlg = crate::dialogs::form::FormDialog::new("5974", &title, "pi.brush.save", vec![crate::dialogs::form::Field::text("name", &name_label, &name)]);
+        if tgt == Target::Tool {
+            // Pinsel der Werkzeugvorgabe speichern (`pi.brush.save {tool: true}`)
+            dlg.base = json!({"tool": true});
+        }
+        st.dialogs.form = Some(dlg);
     }
     // Löschen: der aktuelle Pinsel ist ein gespeicherter Pinselstrich
-    let cur = first_attrs(st).and_then(|a| a.brush.as_ref().and_then(|b| b.user_name.clone())).filter(|n| saved_brushes(st).contains(n));
+    let cur = match tgt {
+        Target::Selection => first_attrs(st).and_then(|a| a.brush.as_ref().and_then(|b| b.user_name.clone())),
+        Target::Tool => tool_brush_override(st).and_then(|b| b.user_name),
+    }
+    .filter(|n| saved_brushes(st).contains(n));
     // wie im Original bei jedem Strich bedienbar (PAR 17/02); löscht einen gespeicherten Pinselstrich
     if fields::icon_button(ui, id.with("del"), d.r(98.0, 2.0, 13.0, 13.0), Glyph::Trash, en, &t("pi-stroke-delete")).clicked()
         && let Some(n) = cur

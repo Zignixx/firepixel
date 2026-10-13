@@ -128,7 +128,9 @@ fn pinsel_ohne_auswahl_legt_neue_bitmap_an_und_malt_weiter_hinein() {
     assert_eq!(all.len(), n0 + 1, "genau ein neues Objekt");
     let nb = all[0];
     assert!(is_bitmap(s, nb), "Pinsel legt eine Bitmap an, keinen Pfad");
-    assert_eq!(image(s, nb).alpha_bounds(), IRect::new(300, 20, 400, 21), "Strichgröße wie im Original (300,20–400,21)");
+    // Endpunkt eingeschlossen wie die echten Züge des Originals (PAR-X-BRUSH-1, real_strokes r03:
+    // 60→500 = 60–501); FV-11 hatte 300,20–400,21 gemessen (Nachprüfung im Original offen)
+    assert_eq!(image(s, nb).alpha_bounds(), IRect::new(300, 20, 401, 21), "Strichgröße (300,20–401,21)");
     assert_eq!(px(s, nb, 350, 20), [0xc0, 0x40, 0x40, 255], "mit der Strichfarbe");
     assert_eq!(sel(s), vec![nb], "neue Bitmap ausgewählt");
     assert_eq!(s.tools.active, ToolId::Brush, "Werkzeug bleibt Pinsel");
@@ -136,14 +138,17 @@ fn pinsel_ohne_auswahl_legt_neue_bitmap_an_und_malt_weiter_hinein() {
     // zweiter Strich malt in dieselbe (ausgewählte) Bitmap
     drag(s, (300.0, 40.0), (400.0, 40.0));
     assert_eq!(ids(s).len(), n0 + 1, "kein weiteres Objekt");
-    assert_eq!(image(s, nb).alpha_bounds(), IRect::new(300, 20, 400, 41));
+    assert_eq!(image(s, nb).alpha_bounds(), IRect::new(300, 20, 401, 41));
     // Esc: Zeiger, Bitmap bleibt gewählt (Original M3)
     esc(s);
     assert_eq!(s.tools.active, ToolId::Pointer);
     assert_eq!(sel(s), vec![nb]);
+    // Esc nach dem Zug legt wie im Original den Schritt „Bitmapmodus beenden“ an (PAR 01/14)
+    assert_eq!(undo_count(s), h0 + 3, "zwei Striche + Bitmapmodus beenden");
+    s.undo().expect("undo");
     // Rückgängig: erst der zweite Strich, dann die neue Bitmap
     s.undo().expect("undo");
-    assert_eq!(image(s, nb).alpha_bounds(), IRect::new(300, 20, 400, 21));
+    assert_eq!(image(s, nb).alpha_bounds(), IRect::new(300, 20, 401, 21));
     s.undo().expect("undo");
     assert_eq!(ids(s).len(), n0);
 }
@@ -161,7 +166,7 @@ fn pinsel_mit_gewaehltem_vektor_legt_neue_bitmap_an() {
     let all = ids(s);
     assert_eq!(all.len(), n0 + 1);
     assert!(is_bitmap(s, all[0]));
-    assert_eq!(image(s, all[0]).alpha_bounds(), IRect::new(60, 100, 140, 101), "Original T0: 60,100–140,101");
+    assert_eq!(image(s, all[0]).alpha_bounds(), IRect::new(60, 100, 141, 101), "Original T0 60,100–140,101; Endpunkt eingeschlossen (PAR-X-BRUSH-1)");
     assert_eq!(sel(s), vec![all[0]]);
     let after = s.active().map(|d| fp_engine::docops::element_on_page(&d.doc, d.page, r1)).expect("R1");
     assert_eq!(before, after, "R1 unverändert");
@@ -202,9 +207,9 @@ fn pinsel_vielfach_ohne_duplikate() {
     }
     assert_eq!(ids(s).len(), n0 + 1);
     assert!(undo_count(s) > h0, "Verlaufsschritte");
-    assert_eq!(image(s, ids(s)[0]).alpha_bounds(), IRect::new(300, 100, 400, 130));
+    assert_eq!(image(s, ids(s)[0]).alpha_bounds(), IRect::new(300, 100, 401, 130));
     s.undo().expect("undo");
-    assert_eq!(image(s, ids(s)[0]).alpha_bounds(), IRect::new(300, 100, 400, 129), "Rückgängig nimmt genau den letzten Strich");
+    assert_eq!(image(s, ids(s)[0]).alpha_bounds(), IRect::new(300, 100, 401, 129), "Rückgängig nimmt genau den letzten Strich");
 }
 
 // ------------------------------------------------------------------ L37 Radiergummi

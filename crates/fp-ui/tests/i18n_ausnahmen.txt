@@ -95,7 +95,9 @@ text obj_quads.rs | Grün
 text obj_quads.rs | Glühen
 text obj_quads.rs | Abkühlen
 text obj_quads.rs | Erwärmen
-text obj_quads.rs | Tönung
+text obj_quads.rs | Auflösen
+text obj_quads.rs | Überlagern
+text obj_quads.rs | Löschen
 # Bibliotheksname
 zlib
 # Kennungen: Name der globalen JSF-Variable, Schlüsselzeile in neuen Sprachvorlagen, Eingabe-Alias der Rücktaste (MCP ui_input)

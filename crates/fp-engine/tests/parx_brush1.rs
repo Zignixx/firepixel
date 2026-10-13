@@ -229,6 +229,21 @@ fn stroke_starting_outside_selected_bitmap() {
     }
 }
 
+/// Zug knapp neben der gewählten Bitmap (FV-11: 10 px darüber) lässt sie wachsen, kein neues Objekt.
+#[test]
+fn stroke_just_outside_grows_selected_bitmap() {
+    let mut s = doc_session(600.0, 400.0);
+    let b = bitmap(&mut s, 150, 340, 120, 55, [255, 0, 0, 255]);
+    select(&mut s, &[b]);
+    s.set_colors(Some(fp_color::Argb(0xffc0_4040)), None);
+    brush(&mut s, "Einfach/Präzise abger.", 1);
+    let n = top_elements(&s).len();
+    drag(&mut s, (160.0, 330.0), (260.0, 330.0), false);
+    assert_eq!(top_elements(&s).len(), n, "kein neues Objekt");
+    let ElementKind::Bitmap(bm) = &el(&s, b).kind else { panic!("Bitmap") };
+    assert_eq!(fp_engine::docops::bitmap_image(bm).expect("Bild").bounds().top, 330, "B2 wächst bis 330");
+}
+
 /// 01/06: T04, Vektor R1 (ohne Strich) gewählt: neues Bitmap mit 1-px-Strich (Inspektor zeigt den
 /// Strich des Vektors), R1 unverändert.
 #[test]
@@ -260,8 +275,8 @@ fn tip_spacing_spreads_tracks() {
     b.tip_spacing = 500;
     ex(&mut s, "pi.tool.brush", json!({"brush": serde_json::to_value(&b).expect("json")}));
     drag(&mut s, (60.0, 150.0), (500.0, 150.0), false);
+    // (Zufalls-Startwert je Zug: Bild nicht abgelegt, es wäre bei jedem Lauf anders)
     let img = render(&s);
-    save_png("u02_13_tips3_spacing50.png", &img);
     let (_, (_, t, _, bt)) = changed(&img, &base);
     assert!(bt - t >= 35, "drei gespreizte Spuren: Höhe {}", bt - t);
 }

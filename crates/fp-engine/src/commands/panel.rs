@@ -1567,14 +1567,20 @@ pub fn register(r: &mut CommandRegistry) {
     );
 
     // Pinselstrich speichern/löschen (Zeile „Pinselstrich bearbeiten“): Vorgaben im Dokument
-    r.add(cmd("pi.brush.save").label("Pinselstrich speichern").requires(&[Requirement::Document, Requirement::Selection]).param("name", ParamKind::String, "Name").run(|s, p| {
+    r.add(cmd("pi.brush.save").label("Pinselstrich speichern").requires(DOC).param("name", ParamKind::String, "Name").opt("tool", ParamKind::Bool, "Pinsel der Werkzeugvorgabe speichern (Werkzeug-Inspektor) statt des Strichs der Auswahl").run(|s, p| {
         let name = p.str("name")?.trim().to_string();
         if name.is_empty() {
             return Err(bad(p, fp_i18n::t("err-param-name-missing")));
         }
+        // Werkzeug-Inspektor (Pinsel, Zeichenwerkzeuge): der Symbolknopf ist im Original auch ohne
+        // Auswahl aktiv und speichert die Werkzeugvorgabe (PAR 02/15)
+        let tool = p.opt_bool("tool")?.unwrap_or(false).then(|| tool_brush(&s.tools.options));
         let d = s.doc_mut()?;
         let page = d.page;
-        let b = d.selection.elements.iter().filter_map(|id| docops::element_on_page(&d.doc, page, *id)).find_map(|e| docops::path_attrs_of(&e).and_then(|a| a.brush.clone())).ok_or_else(|| EngineError::Selection(fp_i18n::t("err-sel-no-stroked-object")))?;
+        let b = match tool {
+            Some(b) => b,
+            None => d.selection.elements.iter().filter_map(|id| docops::element_on_page(&d.doc, page, *id)).find_map(|e| docops::path_attrs_of(&e).and_then(|a| a.brush.clone())).ok_or_else(|| EngineError::Selection(fp_i18n::t("err-sel-no-stroked-object")))?,
+        };
         let mut nb = b;
         nb.user_name = Some(name.clone());
         let v = page_mut(d)?.presets.brushes.get_or_insert_with(Vec::new);

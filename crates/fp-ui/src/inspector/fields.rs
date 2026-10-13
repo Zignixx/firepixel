@@ -411,10 +411,17 @@ pub fn clamp_range(v: f64, range: (f64, f64)) -> f64 {
 /// (gemischte Auswahl). Liefert den neuen, auf `range` geklemmten Wert.
 #[allow(clippy::too_many_arguments)]
 pub fn number(ui: &mut Ui, id: impl Hash + std::fmt::Debug, edit: Rect, arrow: Option<Rect>, value: Option<f64>, range: (f64, f64), decimals: usize, enabled: bool) -> Option<f64> {
+    number_unit(ui, id, edit, arrow, value, range, decimals, enabled, "")
+}
+
+/// Wie [`number`], der Wert steht mit Einheit im Feld (z. B. „100%“ wie die Prozentfelder im Dialog
+/// „Pinselstrich bearbeiten“ des Originals); beim Lesen zählen nur die Ziffern.
+#[allow(clippy::too_many_arguments)]
+pub fn number_unit(ui: &mut Ui, id: impl Hash + std::fmt::Debug, edit: Rect, arrow: Option<Rect>, value: Option<f64>, range: (f64, f64), decimals: usize, enabled: bool, unit: &str) -> Option<f64> {
     let id = Id::new(id);
     // beim Ziehen im Popup-Schieber zeigt das Feld den Wert schon mit (übernommen wird beim Loslassen)
     let live = arrow.and_then(|_| ui.data(|d| d.get_temp::<f64>(id.with("arrow").with("val"))));
-    let cur = live.or(value).map(|v| fmt_num(v, decimals)).unwrap_or_default();
+    let cur = live.or(value).map(|v| format!("{}{unit}", fmt_num(v, decimals))).unwrap_or_default();
     let (txt, _) = buffered_edit(ui, id, edit, &cur, enabled, false, true);
     // nicht negative Ganzzahlfelder sind im Original Ziffernfelder: nur Ziffern zählen
     // („-5“ → 5, „12,5“ → 125 → auf den Bereich begrenzt)

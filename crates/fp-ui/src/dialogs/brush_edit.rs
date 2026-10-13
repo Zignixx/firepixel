@@ -179,10 +179,16 @@ fn paint_preview(ui: &Ui, r: Rect, b: &Brush, color: fp_color::Argb, dot: bool) 
 /// Zahlenfeld mit Beschriftung rechtsbündig davor (Lage aus der Vorlage).
 #[allow(clippy::too_many_arguments)]
 fn num_row(ui: &mut Ui, o: egui::Pos2, id: &str, label: &str, lr: [f32; 4], er: [f32; 4], arrow: bool, value: f64, range: (f64, f64), enabled: bool) -> Option<f64> {
+    num_row_unit(ui, o, id, label, lr, er, arrow, value, range, enabled, "")
+}
+
+/// Wie [`num_row`], Wert mit Einheit im Feld (die Prozentfelder des Originals zeigen „100%“, PAR 02/10).
+#[allow(clippy::too_many_arguments)]
+fn num_row_unit(ui: &mut Ui, o: egui::Pos2, id: &str, label: &str, lr: [f32; 4], er: [f32; 4], arrow: bool, value: f64, range: (f64, f64), enabled: bool, unit: &str) -> Option<f64> {
     fields::label_right(ui, dlu_rect(o, lr), label, enabled);
     let e = dlu_rect(o, er);
     let a = arrow.then(|| Rect::from_min_size(egui::pos2(e.right(), e.top()), vec2(dlu(10.0, 0.0).x, e.height())));
-    fields::number(ui, ("fp-brushedit", id), e, a, Some(value), range, 0, enabled)
+    fields::number_unit(ui, ("fp-brushedit", id), e, a, Some(value), range, 0, enabled, unit)
 }
 
 /// Schieber + Zahlenfeld (Registerkarte Form).
@@ -204,10 +210,10 @@ fn options_page(ui: &mut Ui, o: egui::Pos2, d: &mut BrushEditDialog) {
     let b = &mut d.brush;
     // wie im Original: Abstand und Farbfluss nur bei natürlichen Pinseln (einfache Pinsel: grau)
     let natural = b.brush_type == 0;
-    if let Some(v) = num_row(ui, o, "ink", &t("dlg-brushedit-ink"), [1.0, 7.0, 76.0, 11.0], [82.0, 5.0, 30.0, 13.0], true, pct(b.concentration), (0.0, 100.0), true) {
+    if let Some(v) = num_row_unit(ui, o, "ink", &t("dlg-brushedit-ink"), [1.0, 7.0, 76.0, 11.0], [82.0, 5.0, 30.0, 13.0], true, pct(b.concentration), (0.0, 100.0), true, "%") {
         b.concentration = permille(v);
     }
-    if let Some(v) = num_row(ui, o, "spacing", &t("dlg-brushedit-spacing"), [2.0, 22.0, 75.0, 8.0], [82.0, 20.0, 30.0, 13.0], true, pct(b.spacing), (0.0, 1000.0), natural) {
+    if let Some(v) = num_row_unit(ui, o, "spacing", &t("dlg-brushedit-spacing"), [2.0, 22.0, 75.0, 8.0], [82.0, 20.0, 30.0, 13.0], true, pct(b.spacing), (0.0, 1000.0), natural, "%") {
         b.spacing = permille(v);
     }
     if let Some(v) = num_row(ui, o, "flow", &t("dlg-brushedit-flow"), [2.0, 37.0, 75.0, 8.0], [82.0, 35.0, 30.0, 13.0], true, pct(b.flow_rate), (0.0, 100.0), natural) {
@@ -216,10 +222,10 @@ fn options_page(ui: &mut Ui, o: egui::Pos2, d: &mut BrushEditDialog) {
     if let Some(on) = fields::checkbox(ui, ("fp-brushedit", "buildup"), dlu_rect(o, [82.0, 52.0, 100.0, 10.0]), &t("dlg-brushedit-buildup"), b.feedback == 1, true) {
         b.feedback = i32::from(on);
     }
-    if let Some(v) = num_row(ui, o, "texture", &t("dlg-brushedit-texture"), [2.0, 69.0, 75.0, 8.0], [82.0, 67.0, 30.0, 13.0], true, pct(b.texture_blend), (0.0, 100.0), true) {
+    if let Some(v) = num_row_unit(ui, o, "texture", &t("dlg-brushedit-texture"), [2.0, 69.0, 75.0, 8.0], [82.0, 67.0, 30.0, 13.0], true, pct(b.texture_blend), (0.0, 100.0), true, "%") {
         b.texture_blend = permille(v);
     }
-    if let Some(v) = num_row(ui, o, "edgetexture", &t("dlg-brushedit-edge-texture"), [2.0, 84.0, 75.0, 8.0], [82.0, 82.0, 30.0, 13.0], true, pct(b.texture_edge), (0.0, 100.0), true) {
+    if let Some(v) = num_row_unit(ui, o, "edgetexture", &t("dlg-brushedit-edge-texture"), [2.0, 84.0, 75.0, 8.0], [82.0, 82.0, 30.0, 13.0], true, pct(b.texture_edge), (0.0, 100.0), true, "%") {
         b.texture_edge = permille(v);
     }
     fields::label_right(ui, dlu_rect(o, [2.0, 100.0, 75.0, 8.0]), &t("dlg-brushedit-edge-effect"), true);
@@ -232,7 +238,7 @@ fn options_page(ui: &mut Ui, o: egui::Pos2, d: &mut BrushEditDialog) {
         b.tip_count = v as i32;
     }
     let multi = b.tip_count > 1;
-    if let Some(v) = num_row(ui, o, "tipspacing", &t("dlg-brushedit-tip-spacing"), [16.0, 136.0, 61.0, 10.0], [82.0, 133.0, 30.0, 13.0], true, pct(b.tip_spacing), (0.0, 1000.0), multi) {
+    if let Some(v) = num_row_unit(ui, o, "tipspacing", &t("dlg-brushedit-tip-spacing"), [16.0, 136.0, 61.0, 10.0], [82.0, 133.0, 30.0, 13.0], true, pct(b.tip_spacing), (0.0, 1000.0), multi, "%") {
         b.tip_spacing = permille(v);
     }
     fields::label_right(ui, dlu_rect(o, [1.0, 151.0, 76.0, 8.0]), &t("dlg-brushedit-variation"), multi);
@@ -257,10 +263,10 @@ fn options_page(ui: &mut Ui, o: egui::Pos2, d: &mut BrushEditDialog) {
     for k in 0..3usize {
         let y = 180.0 + 15.0 * k as f32;
         let en = (k as i32) < b.dash_count;
-        if let Some(v) = num_row(ui, o, &format!("on{k}"), &on_l, [46.0, y + 2.0, 31.0, 8.0], [82.0, y, 35.0, 13.0], false, b.dash_on[k] as f64, (0.0, 1000.0), en) {
+        if let Some(v) = num_row(ui, o, &format!("on{k}"), &on_l, [46.0, y + 2.0, 31.0, 8.0], [82.0, y, 35.0, 13.0], false, if en { b.dash_on[k] as f64 } else { 0.0 }, (0.0, 1000.0), en) {
             b.dash_on[k] = v as i32;
         }
-        if let Some(v) = num_row(ui, o, &format!("off{k}"), &off_l, [121.0, y + 2.0, 20.0, 8.0], [143.0, y, 35.0, 13.0], false, b.dash_off[k] as f64, (0.0, 1000.0), en) {
+        if let Some(v) = num_row(ui, o, &format!("off{k}"), &off_l, [121.0, y + 2.0, 20.0, 8.0], [143.0, y, 35.0, 13.0], false, if en { b.dash_off[k] as f64 } else { 0.0 }, (0.0, 1000.0), en) {
             b.dash_off[k] = v as i32;
         }
     }
@@ -282,7 +288,7 @@ fn shape_page(ui: &mut Ui, o: egui::Pos2, d: &mut BrushEditDialog, color: fp_col
     if let Some(v) = slider_row(ui, o, "aspect", &t("dlg-brushedit-aspect"), 109.0, pct(b.aspect).max(1.0), (1.0, 100.0), (1.0, 100.0)) {
         b.aspect = permille(v.clamp(1.0, 100.0));
     }
-    if let Some(v) = num_row(ui, o, "angle", &t("dlg-brushedit-angle"), [55.0, 131.0, 91.0, 10.0], [151.0, 129.0, 30.0, 13.0], true, b.angle as f64, (0.0, 359.0), true) {
+    if let Some(v) = num_row(ui, o, "angle", &t("dlg-brushedit-angle"), [55.0, 131.0, 91.0, 10.0], [151.0, 129.0, 30.0, 13.0], true, if b.angle == 0 { 360.0 } else { b.angle as f64 }, (0.0, 360.0), true) {
         b.angle = (v as i32).rem_euclid(360);
     }
 }
