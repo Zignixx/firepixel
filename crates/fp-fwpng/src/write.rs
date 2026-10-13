@@ -418,6 +418,12 @@ fn write_cel(c: &Cel, ctx: &mut WriteCtx) -> Vec<RawNode> {
 pub fn write_elements(list: &[Arc<Element>], extra: &Extra, ctx: &mut WriteCtx) -> Vec<RawNode> {
     let mut kids = Vec::with_capacity(list.len());
     for e in list {
+        // Ganz leere Bitmaps (0×0) verwirft das Original beim Speichern; das Dokument behält sie.
+        if let ElementKind::Bitmap(b) = &e.kind
+            && (b.image.grid.width == 0 || b.image.grid.height == 0)
+        {
+            continue;
+        }
         kids.push(write_element(e, ctx));
         if let ElementKind::CompoundShape(c) = &e.kind {
             match &c.proxy {

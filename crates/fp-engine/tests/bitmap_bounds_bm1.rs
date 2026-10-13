@@ -115,6 +115,38 @@ fn open_empty_png_gives_zero_bitmap() {
     assert_eq!(canvas(&s2), (200.0, 100.0));
 }
 
+/// FIX-A: Das Original verwirft leere Bitmaps (0×0) beim Speichern. Dokument und Verlauf bleiben.
+#[test]
+fn save_drops_empty_bitmap_but_keeps_document() {
+    let mut s = fresh();
+    open(&mut s, &png("t4_drop.png", 200, 100, |_, _| 0));
+    let e = only_bitmap(&s);
+    // daneben ein normales Objekt, das erhalten bleiben muss
+    let r = rect(&mut s, 10.0, 10.0, 40.0, 30.0);
+    let hist = s.active().expect("d").history.len();
+    let n = top_elements(&s).len();
+    assert_eq!(n, 2);
+    for i in 0..3 {
+        let p = dir().join(format!("t4_drop_{i}.fw.png"));
+        ex(&mut s, "file.saveAs", json!({"path": p.to_string_lossy()}));
+        // Dokument und Verlauf unverändert
+        assert_eq!(top_elements(&s).len(), n, "Dokument behält die leere Bitmap");
+        assert!(top_elements(&s).iter().any(|x| x.id == e.id));
+        assert_eq!(s.active().expect("d").history.len(), hist, "kein Verlaufsschritt");
+        // Datei: nur das Rechteck
+        let mut s2 = fresh();
+        open(&mut s2, &p);
+        let t = top_elements(&s2);
+        assert_eq!(t.len(), 1, "leere Bitmap nicht geschrieben");
+        assert!(!matches!(t[0].kind, ElementKind::Bitmap(_)));
+        assert_eq!(fp_engine::docops::element_bounds(&s2.active().expect("d").doc, &t[0]), Some(bounds(&s, r)));
+    }
+    // Rückgängig nach dem Speichern wirkt weiter auf das Rechteck
+    ex(&mut s, "edit.undo", json!({}));
+    assert_eq!(top_elements(&s).len(), 1);
+    assert!(matches!(top_elements(&s)[0].kind, ElementKind::Bitmap(_)));
+}
+
 #[test]
 fn opaque_png_and_jpeg_like_stay_full() {
     let mut s = fresh();
