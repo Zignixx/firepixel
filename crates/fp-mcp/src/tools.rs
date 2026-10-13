@@ -1086,6 +1086,46 @@ fn undo_redo(s: &mut Session, a: &Value, undo: bool) -> ToolOutput {
     ToolOutput::json(json!({"ok": true, "steps": done, "state": state_summary(s)}))
 }
 
+/// Verlaufsnamen in der Antwortsprache: Schritte aus der Oberfläche (Brücke) tragen ihren Namen in
+/// der Sprache der Oberfläche („Retusche“, „Füllung ändern“); für die Antwort wird der passende
+/// Text-Schlüssel gesucht (Befehl, `msg-step-*`, `tool-*`, `cmd-*`) und in der Antwortsprache
+/// ausgegeben. Unbekannte Namen (eigene Bezeichnungen, Skripte) bleiben unverändert (CT-2).
+#[derive(Default)]
+struct StepLabels {
+    index: Option<std::collections::HashMap<String, String>>,
+}
+
+impl StepLabels {
+    fn label(&mut self, info: Option<&fp_engine::command::CommandInfo>, label: &str) -> String {
+        let ui = fp_i18n::with_ui_language(fp_i18n::current_language);
+        if ui == fp_i18n::current_language() {
+            return label.to_string();
+        }
+        let clean = |s: String| fp_i18n::strip_access(&s).0;
+        // Name des Befehls selbst (wie `Session::execute` ihn vergibt)
+        if let Some(i) = info
+            && fp_i18n::with_ui_language(|| i.step_label()) == label
+        {
+            return i.step_label();
+        }
+        let index = self.index.get_or_insert_with(|| {
+            fp_i18n::with_ui_language(|| {
+                let mut m = std::collections::HashMap::new();
+                for k in fp_i18n::keys(&ui) {
+                    if ["msg-step-", "tool-", "cmd-"].iter().any(|p| k.starts_with(p)) {
+                        m.entry(clean(fp_i18n::t(&k))).or_insert(k);
+                    }
+                }
+                m
+            })
+        });
+        match index.get(label) {
+            Some(k) => clean(fp_i18n::t(k)),
+            None => label.to_string(),
+        }
+    }
+}
+
 fn history(s: &mut Session, a: &Value) -> ToolOutput {
     if let Err(e) = activate(s, a) {
         return e;
@@ -1096,7 +1136,9 @@ fn history(s: &mut Session, a: &Value) -> ToolOutput {
         return engine_err(e);
     }
     let Some(d) = s.active() else { return ToolOutput::error(fp_i18n::t("err-mcp-no-document")) };
-    let steps: Vec<Value> = d.history.steps().iter().map(|st| json!({"label": st.label, "command": st.command, "params": st.params})).collect();
+    let mut tr = StepLabels::default();
+    let reg = s.registry();
+    let steps: Vec<Value> = d.history.steps().iter().map(|st| json!({"label": tr.label(reg.get(&st.command).map(|c| c.info()), &st.label), "command": st.command, "params": st.params})).collect();
     ToolOutput::json(json!({
         "position": d.history.undo_count(), "redoAvailable": d.history.redo_count(), "maxUndos": d.history.max_undos(),
         "dropped": d.history.dropped(), "steps": steps,
@@ -1284,6 +1326,37 @@ mod tests {
         assert!(!u.is_error);
         let h = run(&mut s, "history", json!({}));
         assert!(h.text().contains("position"));
+    }
+
+    /// CT-2: Schritte aus der deutschen Oberfläche heißen in der englischen MCP-Antwort englisch
+    /// (wie ein Schritt, der gleich auf Englisch entstand); eigene Namen bleiben.
+    #[test]
+    fn history_labels_in_response_language() {
+        fp_i18n::set_language("de");
+        let steps = |s: &mut Session| -> Vec<String> {
+            let h = fp_i18n::with_language("en", || run(s, "history", json!({})));
+            h.structured.as_ref().and_then(|v| v["steps"].as_array().cloned()).unwrap_or_default().iter().map(|v| v["label"].as_str().unwrap_or_default().to_string()).collect()
+        };
+        let build = |s: &mut Session| {
+            s.execute("file.new", json!({"width": 120, "height": 80})).expect("Dokument");
+            let v = s.execute("draw.rectangle", json!({"rect": [10, 10, 60, 40], "fillColor": "#ff0000"})).expect("Rechteck");
+            let id = v.value["id"].as_u64().unwrap_or(0);
+            s.execute("pi.fill", json!({"ids": [id], "color": "#00ff00"})).expect("Füllung");
+        };
+        // Oberfläche deutsch, Antwort englisch: Namen wie ein englischer Verlauf
+        let mut de = Session::default();
+        build(&mut de);
+        let de_labels: Vec<String> = de.active().map(|d| d.history.steps().iter().map(|st| st.label.clone()).collect()).unwrap_or_default();
+        let want: Vec<String> = ["draw.rectangle", "pi.fill"].iter().map(|n| fp_i18n::with_language("en", || de.registry().get(n).map(|c| c.info().step_label()).unwrap_or_default())).collect();
+        assert_eq!(de_labels.len(), 2);
+        assert_ne!(de_labels, want, "Testvoraussetzung: deutsche Namen im Verlauf");
+        assert_eq!(steps(&mut de), want, "Antwort in der Antwortsprache");
+        // Antwort deutsch: unverändert
+        let env = ToolEnv { language: "de".into(), ..ToolEnv::default() };
+        let h = call(&mut de, &env, "history", &json!({}));
+        let got: Vec<String> = h.structured.as_ref().and_then(|v| v["steps"].as_array().cloned()).unwrap_or_default().iter().map(|v| v["label"].as_str().unwrap_or_default().to_string()).collect();
+        assert_eq!(got, de_labels);
+        fp_i18n::set_language("de");
     }
 
     #[test]
