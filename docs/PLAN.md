@@ -81,9 +81,13 @@ Umfang heute: 19 Crates, ≈ 169.000 Zeilen Rust, 132 Testdateien, 16 Sprachdate
 
 ---
 
-## 4. Stand nach Welle 2 (12.10.2026 nachts)
+## 4. Stand nach Welle 3 (13.10.2026 ≈ 02:10)
 
-**Kein Agent läuft.** Welle 1 und Welle 2 sind fertig; die Doku hat DOC-2 übertragen (Berichte unter `docs\berichte\`). Weiter mit Welle 3 (§4c), sobald der Koordinator startet.
+**Kein Agent läuft.** Welle 3 und alle Nachläufer sind fertig (BV-4, E3, DLG-10/11, MN-4/5/6, RAND-2a/2b, AU-3, PERF-1, NZ-3/4/5, FORM-1, DES-1/2, NEUTRAL-1, RE-BATCH). **Zusammenfassung, Offenes, Entscheidungen und nächster Ablauf: `docs\progress-2026-10-13.md`.** Die Berichte unter `docs\berichte\` sind noch nicht in BEFUNDE/PARITAET/NACHPRUEFUNG übertragen (DOC-3, wartet auf Freigabe). Testversion 13.10. auf dem Desktop (`NEU.md` = `docs\preview-notes-2026-10-13.md`). Nächste Schritte nur nach Freigabe des Nutzers (§6).
+
+### Früher: Stand nach Welle 2 (12.10.2026 nachts)
+
+**Kein Agent lief.** Welle 1 und Welle 2 sind fertig; die Doku hat DOC-2 übertragen (Berichte unter `docs\berichte\`). Weiter mit Welle 3 (§4c), sobald der Koordinator startet.
 
 ### Welle 1 (nach der Pause, 12.10. ab ≈ 21:00)
 
