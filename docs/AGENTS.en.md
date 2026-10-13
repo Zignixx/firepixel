@@ -284,6 +284,18 @@ interface: *Modify ▸ Trace Bitmap...* (dialog with preview).
   `downscale` … – complete with ranges: `describe_command {"name": "modify.traceBitmap"}`.
 * `refine`: clean-up (logo post-processing) – `true`/`false` or an object on top of the preset, e.g.
   `{"snapColors": true, "colorTolerance": 12, "straighten": true, "shapes": true, "reduceNodes": true}`.
+* `engine`: method – `clusters` (default; color regions, with clean-up) or `potrace` (outlines using the
+  Potrace method, implemented independently: smooth curves with few nodes, ideal for line art, scans
+  and lettering; color images as stacked color layers, one per color). The outline method only uses
+  `preset`, `colorMode`, `colors`, `threshold`, `ignoreTransparent`, `alphaThreshold`, `maxPixels`,
+  `downscale`, `pathPrecision` from the other options and has its own values: `turdSize` (remove
+  speckles up to this area in pixels, default 2), `turnPolicy` (`minority` default, `majority`, `black`,
+  `white`, `left`, `right`: which diagonally touching pixels are joined), `alphaMax` (corner threshold
+  0…4/3, default 1; 0 = polygon, 4/3 = no corners), `optCurve` (merge arcs, default `true`),
+  `optTolerance` (0…5 pixels, default 0.2) – individually or as an object
+  `potrace: {"turdSize": 4, "alphaMax": 0.8}`.
+  To compare: `run_command {"name": "modify.traceBitmap", "params": {"engine": "potrace"}}` → `render`
+  → `undo` → the same with `"engine": "clusters"`; `nodes` in the result shows the node count.
 * `keepOriginal` (default `true`; `false` deletes the bitmap), `layerName`.
 * Result: `{ids, layer, paths, nodes, downscaled, keptOriginal}`.
 

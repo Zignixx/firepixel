@@ -581,3 +581,12 @@ cmdtext-ausgewaehlten-bereich-fuellen-aus-farbbe-9a8595 = ausgewählten Bereich 
 cmdtext-farbtoleranz-nur-ohne-ausgewaehlten-bere-764ef7 = Farbtoleranz (nur ohne „ausgewählten Bereich füllen“)
 cmdtext-musterfuellung-nach-name-datei-aus-den-m-2859b3 = Musterfüllung nach Name (Datei aus den Musterordnern)
 cmdtext-index-vorgabe-aktueller = Index (Vorgabe: aktueller)
+
+# Bitmap nachzeichnen, zweites Verfahren (VT-6)
+cmdtext-verfahren-farbcluster-oder-konturen-potr-a17a88 = Verfahren: Farbcluster oder Konturen (Potrace-Verfahren)
+cmdtext-konturen-flecken-bis-zu-dieser-flaeche-i-64a3f5 = Konturen: Flecken bis zu dieser Fläche in Pixeln entfernen
+cmdtext-konturen-abbiegeregel-an-diagonal-berueh-d80965 = Konturen: Abbiegeregel an diagonal berührenden Pixeln
+cmdtext-konturen-eckenschwelle-0-nur-ecken-ab-4-be6146 = Konturen: Eckenschwelle (0 = nur Ecken, ab 4/3 keine Ecken)
+cmdtext-konturen-kurven-zusammenfassen = Konturen: Kurven zusammenfassen
+cmdtext-konturen-toleranz-beim-zusammenfassen-in-pixeln = Konturen: Toleranz beim Zusammenfassen in Pixeln
+cmdtext-konturen-alle-einstellungen-als-objekt-t-47ff49 = Konturen: alle Einstellungen als Objekt (turdSize, turnPolicy, alphaMax, optCurve, optTolerance)

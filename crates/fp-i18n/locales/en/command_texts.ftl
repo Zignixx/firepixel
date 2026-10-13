@@ -581,3 +581,12 @@ cmdtext-ausgewaehlten-bereich-fuellen-aus-farbbe-9a8595 = fill the selected area
 cmdtext-farbtoleranz-nur-ohne-ausgewaehlten-bere-764ef7 = Color tolerance (only without “fill the selected area”)
 cmdtext-musterfuellung-nach-name-datei-aus-den-m-2859b3 = Pattern fill by name (file from the pattern folders)
 cmdtext-index-vorgabe-aktueller = Index (default: current)
+
+# Trace bitmap, second method (VT-6)
+cmdtext-verfahren-farbcluster-oder-konturen-potr-a17a88 = Method: color clusters or outlines (Potrace method)
+cmdtext-konturen-flecken-bis-zu-dieser-flaeche-i-64a3f5 = Outlines: remove speckles up to this area in pixels
+cmdtext-konturen-abbiegeregel-an-diagonal-berueh-d80965 = Outlines: turn policy where pixels touch diagonally
+cmdtext-konturen-eckenschwelle-0-nur-ecken-ab-4-be6146 = Outlines: corner threshold (0 = corners only, from 4/3 no corners)
+cmdtext-konturen-kurven-zusammenfassen = Outlines: merge curves
+cmdtext-konturen-toleranz-beim-zusammenfassen-in-pixeln = Outlines: tolerance for merging curves in pixels
+cmdtext-konturen-alle-einstellungen-als-objekt-t-47ff49 = Outlines: all settings as an object (turdSize, turnPolicy, alphaMax, optCurve, optTolerance)

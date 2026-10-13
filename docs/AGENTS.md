@@ -285,6 +285,18 @@ auf eine neue Ebene („Nachgezeichnet“); die neuen Gruppen sind danach ausgew
   `downscale` … – vollständig mit Bereichen: `describe_command {"name": "modify.traceBitmap"}`.
 * `refine`: Aufräumen (Logo-Nachbearbeitung) – `true`/`false` oder ein Objekt über der Vorgabe, z. B.
   `{"snapColors": true, "colorTolerance": 12, "straighten": true, "shapes": true, "reduceNodes": true}`.
+* `engine`: Verfahren – `clusters` (Vorgabe; Farbflächen, mit Aufräumen) oder `potrace` (Konturen nach
+  dem Potrace-Verfahren, eigenständig umgesetzt: glatte Kurven mit wenigen Knoten, ideal für
+  Strichzeichnungen, Scans und Schrift; Farbbilder als gestapelte Farbebenen, eine je Farbe). Das
+  Konturverfahren nutzt von den übrigen Optionen nur `preset`, `colorMode`, `colors`, `threshold`,
+  `ignoreTransparent`, `alphaThreshold`, `maxPixels`, `downscale`, `pathPrecision` und hat eigene Werte:
+  `turdSize` (Flecken bis zu dieser Fläche in Pixeln entfernen, Vorgabe 2), `turnPolicy`
+  (`minority` Vorgabe, `majority`, `black`, `white`, `left`, `right`: welche diagonal berührenden Pixel
+  verbunden werden), `alphaMax` (Eckenschwelle 0…4/3, Vorgabe 1; 0 = Polygon, 4/3 = keine Ecken),
+  `optCurve` (Bögen zusammenfassen, Vorgabe `true`), `optTolerance` (0…5 Pixel, Vorgabe 0,2) – einzeln
+  oder als Objekt `potrace: {"turdSize": 4, "alphaMax": 0.8}`.
+  Vergleichen: `run_command {"name": "modify.traceBitmap", "params": {"engine": "potrace"}}` →
+  `render` → `undo` → dasselbe mit `"engine": "clusters"`; `nodes` im Ergebnis zeigt die Knotenzahl.
 * `keepOriginal` (Vorgabe `true`; `false` löscht die Bitmap), `layerName`.
 * Ergebnis: `{ids, layer, paths, nodes, downscaled, keptOriginal}`.
 

@@ -146,3 +146,67 @@ fn trace_needs_bitmap_selection() {
     assert_eq!(v["ids"].as_array().map(|x| x.len()), Some(2));
     assert_eq!(layers(&s).len(), n_layers + 1);
 }
+
+/// Zweites Verfahren (VT-6, `engine = potrace`): ein Verlaufsschritt, Rückgängig/Wiederholen
+/// exakt, glatte Kurven mit wenigen Knoten, Wiederholung ergibt dasselbe, Abfolge A, B,
+/// Rückgängig, C, Wiederholen.
+#[test]
+fn trace_with_second_engine_history_and_repeat() {
+    let mut s = doc_session(300.0, 200.0);
+    let bmp = logo_bitmap(&mut s);
+    select(&mut s, &[bmp]);
+    let before = model(&s);
+    let steps = undo_count(&s);
+    let v = ex(&mut s, "modify.traceBitmap", json!({"engine": "potrace", "preset": "illustration", "colors": 3}));
+    assert_eq!(undo_count(&s), steps + 1, "genau ein Verlaufsschritt");
+    let gid = ElementId(v["ids"][0].as_u64().expect("Gruppen-ID"));
+    let ElementKind::Group(grp) = &el(&s, gid).kind else { panic!("keine Gruppe") };
+    assert_eq!(grp.children.len(), 3, "eine Ebene je Farbe");
+    // Kreis: glatte Kurve mit wenigen Knoten
+    let nodes: usize = grp.children.iter().map(|c| match &c.kind {
+        ElementKind::Path(p) => p.contours.iter().map(|k| k.nodes.len()).sum::<usize>(),
+        _ => 0,
+    }).sum();
+    assert!(nodes <= 24, "{nodes} Knoten");
+    assert_eq!(v["nodes"].as_u64(), Some(nodes as u64));
+    assert!(rect_approx(bounds(&s, gid), bounds(&s, bmp)), "{:?} vs {:?}", bounds(&s, gid), bounds(&s, bmp));
+    let traced = model(&s);
+    ex(&mut s, "edit.undo", json!({}));
+    assert_eq!(model(&s), before, "Rückgängig stellt exakt her");
+    ex(&mut s, "edit.redo", json!({}));
+    assert_eq!(model(&s), traced, "Wiederholen stellt das Ergebnis her");
+    // 5× nachzeichnen und zurücknehmen: gleiches Ergebnis, keine Reste
+    for _ in 0..5 {
+        ex(&mut s, "edit.undo", json!({}));
+        select(&mut s, &[bmp]);
+        ex(&mut s, "modify.traceBitmap", json!({"engine": "potrace", "preset": "illustration", "colors": 3}));
+        assert_eq!(undo_count(&s), steps + 1);
+        assert_eq!(model(&s), traced, "Wiederholung ergibt dasselbe Dokument");
+    }
+    // Abfolge: A (Konturen), B (Farbcluster), Rückgängig, C (Konturen Schwarzweiß), Wiederholen
+    // ist danach nicht mehr möglich (neuer Zweig)
+    ex(&mut s, "edit.undo", json!({}));
+    assert_eq!(model(&s), before);
+    select(&mut s, &[bmp]);
+    ex(&mut s, "modify.traceBitmap", json!({"engine": "potrace"}));
+    select(&mut s, &[bmp]);
+    ex(&mut s, "modify.traceBitmap", json!({"engine": "clusters"}));
+    assert_eq!(undo_count(&s), steps + 2);
+    ex(&mut s, "edit.undo", json!({}));
+    select(&mut s, &[bmp]);
+    let c = ex(&mut s, "modify.traceBitmap", json!({"engine": "potrace", "preset": "blackWhite", "turdSize": 0, "alphaMax": 0}));
+    assert_eq!(undo_count(&s), steps + 2);
+    assert!(s.execute("edit.redo", json!({})).is_err() || undo_count(&s) == steps + 2, "kein Wiederholen nach neuem Schritt");
+    // alphaMax 0: nur Ecken (Polygon ohne Henkel)
+    let cid = ElementId(c["ids"][0].as_u64().expect("Gruppen-ID"));
+    let ElementKind::Group(grp) = &el(&s, cid).kind else { panic!("keine Gruppe") };
+    for ch in &grp.children {
+        let ElementKind::Path(p) = &ch.kind else { panic!("kein Pfad") };
+        assert!(p.contours.iter().flat_map(|k| &k.nodes).all(|n| n.pred == n.anchor && n.succ == n.anchor), "Polygon mit Henkeln");
+    }
+    // ungültiges Verfahren: Fehler ohne Änderung
+    let now = model(&s);
+    select(&mut s, &[bmp]);
+    assert!(s.execute("modify.traceBitmap", json!({"engine": "zauber"})).is_err());
+    assert_eq!(model(&s), now);
+}

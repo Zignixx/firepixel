@@ -17,7 +17,9 @@ fp-i18n = { workspace = true }
 # reines Rust (Abhängigkeiten bit-vec, flo_curves, num-traits, alle MIT/Apache).
 # Bewusst nicht vtracer: 1.0.0-alpha.* ist Alpha, 0.6.5 bringt Datei-/SVG-Ein-/Ausgabe mit, die wir
 # nicht brauchen; der Ablauf (Farbcluster → Pfade) ist hier in `lib.rs` nach dessen Muster
-# (ebenfalls MIT OR Apache-2.0) eigenständig umgesetzt. Potrace (GPL) ist ausgeschlossen.
+# (ebenfalls MIT OR Apache-2.0) eigenständig umgesetzt. Potrace (GPL) ist als Code/Bibliothek
+# ausgeschlossen; das zweite Verfahren (src\potrace.rs, VT-6) ist nur nach dem veröffentlichten
+# Fachartikel (Selinger 2003) eigenständig umgesetzt, ohne weitere Abhängigkeit.
 visioncortex = "=0.9.3"
 
 [dev-dependencies]

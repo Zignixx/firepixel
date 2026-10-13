@@ -16,6 +16,10 @@
 //!   Einstellungen, die einzelnen Schritte mit Toleranzreglern im Abschnitt „Erweitert“; die
 //!   Kennzahlen zeigen dann zusätzlich erkannte Grundformen, eingerastete Geraden und die Knoten
 //!   vorher → nachher ([`fp_trace::RefineReport`]).
+//! * **Verfahren** (VT-6, Nutzerbefund N29): Zeile über den Vorgaben, „Farbflächen“ (bisher) oder
+//!   „Konturen“ (Potrace-Verfahren, [`fp_trace::Engine::Potrace`]); die Hauptregler wechseln mit
+//!   (Konturen: Flecken als Fläche, Ecken = `alphaMax`, Kurven zusammenfassen mit Toleranz;
+//!   „Erweitert“: Abbiegeregel statt „Aufräumen“). Die Wahl wird sofort gemerkt ([`PREF_ENGINE`]).
 //!
 //! Die Rechnung läuft in einem **Hintergrund-Thread** je Lauf mit eigenem `AtomicBool`; ein neuer
 //! Lauf bricht den alten ab, Regleränderungen werden kurz gesammelt (kein Ruckeln). Die Vorschau
@@ -33,7 +37,7 @@ use crate::theme::{mix, with_alpha, Theme};
 use crate::ui_kit::{self, sp, type_scale, BarButton, HeaderIcon, KitIcon, Tone};
 use egui::{pos2, vec2, Align2, Color32, CornerRadius, FontId, Id, Pos2, Rect, Sense, Shape, Stroke, StrokeKind, TextureHandle, Ui, Vec2};
 use fp_raster::RgbaImage;
-use fp_trace::{ColorMode, CurveMode, Hierarchy, Preset, RefineReport, Stage, TraceOptions, TraceResult};
+use fp_trace::{ColorMode, CurveMode, Engine, Hierarchy, Preset, RefineReport, Stage, TraceOptions, TraceResult, TurnPolicy};
 use serde_json::json;
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::sync::mpsc::{self, Receiver, TryRecvError};
@@ -46,6 +50,9 @@ pub const DIALOG_ID: &str = "fp-trace";
 pub const PREF_OPTIONS: &str = "TraceDialogOptions";
 /// Voreinstellung: „Original behalten“.
 pub const PREF_KEEP: &str = "TraceDialogKeepOriginal";
+/// Voreinstellung: zuletzt gewähltes Verfahren (`clusters`/`potrace`, VT-6) – gilt sofort beim
+/// Umschalten, auch wenn der Dialog danach abgebrochen wird.
+pub const PREF_ENGINE: &str = "TraceDialogEngine";
 /// Voreinstellung: vom Nutzer gezogene Größe des Client-Bereichs („Breite Höhe“ in Punkten).
 pub const PREF_SIZE: &str = "TraceDialogSize";
 /// Ausgangsgröße des Client-Bereichs: außen ≈ 1050 × 830 (Nutzerbefund N20; vorher 900 × 640).
@@ -218,9 +225,14 @@ pub fn dialog_sizes(screen: Vec2, remembered: Option<Vec2>) -> (Vec2, Vec2) {
     (min, initial)
 }
 
-/// Gemerkte Optionen aus den Voreinstellungen (sonst die Vorgabe „Logo“).
+/// Gemerkte Optionen aus den Voreinstellungen (sonst die Vorgabe „Logo“), mit dem zuletzt
+/// gewählten Verfahren.
 pub fn remembered_options(st: &AppState) -> TraceOptions {
-    options_from_json(&st.session.prefs.get_str(PREF_OPTIONS, ""))
+    let mut o = options_from_json(&st.session.prefs.get_str(PREF_OPTIONS, ""));
+    if let Some(e) = Engine::from_name(&st.session.prefs.get_str(PREF_ENGINE, "")) {
+        o.engine = e;
+    }
+    o
 }
 
 /// Gemerkte Optionen lesen. Ältere Einträge (vor dem Aufräumen) haben kein `refine`: sie bekommen
@@ -297,10 +309,20 @@ impl TraceDialog {
         (self.result_opts.as_ref() == Some(&self.opts.validated())).then_some(r)
     }
 
-    /// Vorgabe wählen: alle Optionen auf deren Werte, sofort neu berechnen.
+    /// Vorgabe wählen: alle Optionen auf deren Werte, sofort neu berechnen. Verfahren und die
+    /// Werte des Konturverfahrens bleiben (die Vorgaben legen nur Farben bzw. Schwelle fest).
     pub fn set_preset(&mut self, p: Preset) {
-        self.opts = TraceOptions::from_preset(p);
+        let (engine, potrace) = (self.opts.engine, self.opts.potrace.clone());
+        self.opts = TraceOptions { engine, potrace, ..TraceOptions::from_preset(p) };
         self.changed(f64::NEG_INFINITY);
+    }
+
+    /// Verfahren wählen (VT-6): übrige Optionen bleiben, sofort neu berechnen.
+    pub fn set_engine(&mut self, e: Engine) {
+        if self.opts.engine != e {
+            self.opts.engine = e;
+            self.changed(f64::NEG_INFINITY);
+        }
     }
 
     /// Optionen geändert: neu berechnen (nach kurzer Sammelzeit, wenn gerade gerechnet wird).
@@ -422,6 +444,7 @@ impl TraceDialog {
             st.session.prefs.set(PREF_OPTIONS, fp_engine::prefs::PrefValue::Str(s));
         }
         st.session.prefs.set(PREF_KEEP, fp_engine::prefs::PrefValue::Bool(self.keep_original));
+        st.session.prefs.set(PREF_ENGINE, fp_engine::prefs::PrefValue::Str(self.opts.engine.name().into()));
     }
 
     /// „Als SVG speichern…“: Datei-Dialog (nicht blockierend), dann schreiben.
@@ -684,11 +707,16 @@ pub fn show(ctx: &egui::Context, st: &mut AppState) {
     let mut outcome: Option<bool> = None;
     let mut want_svg = false;
     let title = t("trace-dlg-title");
+    let engine_before = d.opts.engine;
     let r = dialog_frame_resizable_sized(ctx, DIALOG_ID, &title, min, initial, |ui, body| {
         let (o, svg) = d.ui(ui, body, now);
         outcome = o;
         want_svg = svg;
     });
+    // gewähltes Verfahren sofort merken (auch bei Abbrechen)
+    if d.opts.engine != engine_before {
+        st.session.prefs.set(PREF_ENGINE, fp_engine::prefs::PrefValue::Str(d.opts.engine.name().into()));
+    }
     // vom Nutzer gezogene Größe merken (gilt beim nächsten Öffnen, auch nach einem Neustart)
     if let Some(g) = super::dialog_geom(ctx, DIALOG_ID) {
         let client = g.client.round();
@@ -775,6 +803,9 @@ impl TraceDialog {
 
     fn settings_ui(&mut self, ui: &mut Ui, now: f64) {
         let theme = Theme::current(ui.ctx());
+        // Verfahren (VT-6): eine Zeile über den Vorgaben, Erklärung als Tooltip
+        self.engine_row(ui, &theme);
+        ui.add_space(sp::M);
         ui_kit::section(ui, &t("trace-dlg-presets"));
         ui.add_space(sp::XS);
         self.preset_cards(ui, &theme);
@@ -788,7 +819,6 @@ impl TraceDialog {
         ui.add_space(sp::XS);
         let mut o = self.opts.clone();
         let bw = o.color_mode == ColorMode::BlackWhite;
-        let px = fp_i18n::unit("px");
         if bw {
             if let Some(v) = slider_row(ui, "threshold", &t("trace-opt-threshold"), o.threshold as f64, (0.0, 255.0), 0, 1.0, "", Some((&t("trace-opt-threshold-low"), &t("trace-opt-threshold-high"))), true) {
                 o.threshold = v.round() as u8;
@@ -796,28 +826,11 @@ impl TraceDialog {
         } else if let Some(v) = slider_row(ui, "colors", &t("trace-opt-colors"), o.colors as f64, (2.0, 64.0), 0, 1.0, "", None, true) {
             o.colors = v.round() as u32;
         }
-        // „Detail und Glätte“: beim Aufräumen die Kurventoleranz, sonst die Mindestlänge der Segmente
-        let ends = (t("trace-opt-smoothness-low"), t("trace-opt-smoothness-high"));
-        if o.refine.enabled {
-            if let Some(v) = slider_row(ui, "smooth", &t("trace-opt-smoothness"), o.refine.fit_tolerance, (0.2, 4.0), 1, 0.1, &px, Some((&ends.0, &ends.1)), true) {
-                o.refine.fit_tolerance = v;
-            }
-        } else if let Some(v) = slider_row(ui, "smooth", &t("trace-opt-smoothness"), o.length_threshold, (3.5, 10.0), 1, 0.5, &px, Some((&ends.0, &ends.1)), true) {
-            o.length_threshold = v;
+        if o.engine == Engine::Potrace {
+            self.potrace_main_ui(ui, &mut o);
+        } else {
+            self.clusters_main_ui(ui, &mut o);
         }
-        let deg = fp_i18n::unit("deg");
-        let poly = o.mode == CurveMode::Polygon;
-        if let Some(v) = slider_row(ui, "corners", &t("trace-opt-corners"), o.corner_threshold, (0.0, 180.0), 0, 5.0, &deg, Some((&t("trace-opt-corners-low"), &t("trace-opt-corners-high"))), !poly) {
-            o.corner_threshold = v;
-        }
-        if let Some(v) = slider_row(ui, "speckle", &t("trace-opt-speckle"), o.filter_speckle as f64, (0.0, 32.0), 0, 1.0, &px, None, true) {
-            o.filter_speckle = v.round() as u32;
-        }
-        // Aufräumen (Hauptschalter), darunter ein Satz, was es tut
-        if let Some(v) = check_row(ui, "trace-refine", &t("trace-refine"), o.refine.enabled, true) {
-            o.refine.enabled = v;
-        }
-        caption_text(ui, &t("trace-refine-hint"), CHECK_INDENT, true);
         ui.add_space(sp::S);
         // Erweitert (einklappbar)
         let (hr, hresp) = ui.allocate_exact_size(vec2(ui.available_width(), 22.0), Sense::click());
@@ -853,6 +866,75 @@ impl TraceDialog {
             self.opts = o;
             self.changed(now);
         }
+    }
+
+    /// Zeile „Verfahren“: Farbflächen (bisher) oder Konturen (Potrace-Verfahren, VT-6).
+    fn engine_row(&mut self, ui: &mut Ui, theme: &Theme) {
+        let w = ui.available_width();
+        let (r, _) = ui.allocate_exact_size(vec2(w, 22.0), Sense::hover());
+        let label = t("trace-dlg-engine");
+        let font = theme.bold(type_scale::BODY);
+        let lw = (ui_kit::text_w(ui.ctx(), &label, &font) + sp::M).min(w * 0.45);
+        let lr = Rect::from_min_size(r.min, vec2(lw, r.height()));
+        if ui_kit::paint_text_fit(ui.painter(), lr, &label, font, theme.colors.text) {
+            report_overflow(ui.ctx(), format!("trace engine label {:.0}", lr.width()));
+        }
+        let items = [t("trace-engine-clusters"), t("trace-engine-potrace")];
+        let tips = [t("trace-engine-clusters-hint"), t("trace-engine-potrace-hint")];
+        let refs: Vec<&str> = items.iter().map(|s| s.as_str()).collect();
+        let tip_refs: Vec<&str> = tips.iter().map(|s| s.as_str()).collect();
+        let sel = Engine::ALL.iter().position(|e| *e == self.opts.engine).unwrap_or(0);
+        let sr = Rect::from_min_max(pos2(r.left() + lw, r.top() + 1.0), pos2(r.right(), r.bottom() - 1.0));
+        if let Some(i) = segmented_tips(ui, Id::new("trace-engine"), sr, &refs, &tip_refs, sel, true) {
+            self.set_engine(Engine::ALL[i]);
+        }
+    }
+
+    /// Hauptregler des Konturverfahrens: Flecken (Fläche), Ecken (alphaMax), Kurven zusammenfassen.
+    fn potrace_main_ui(&mut self, ui: &mut Ui, o: &mut TraceOptions) {
+        let px = fp_i18n::unit("px");
+        let px2 = t("trace-unit-px2");
+        let pr = &mut o.potrace;
+        if let Some(v) = slider_row(ui, "turd", &t("trace-opt-speckle"), pr.turd_size as f64, (0.0, 100.0), 0, 1.0, &px2, None, true) {
+            pr.turd_size = v.round() as u32;
+        }
+        if let Some(v) = slider_row(ui, "alphamax", &t("trace-opt-corners"), pr.alpha_max, (0.0, fp_trace::ALPHA_MAX_LIMIT), 2, 0.05, "", Some((&t("trace-opt-corners-low"), &t("trace-opt-corners-high"))), true) {
+            pr.alpha_max = v;
+        }
+        if let Some(v) = check_row(ui, "trace-optcurve", &t("trace-potrace-optcurve"), pr.opt_curve, true) {
+            pr.opt_curve = v;
+        }
+        if let Some(v) = tolerance_row(ui, "opttol", &t("trace-potrace-opttol"), pr.opt_tolerance, (0.0, 1.0), 2, 0.05, &px, pr.opt_curve) {
+            pr.opt_tolerance = v;
+        }
+        caption_text(ui, &t("trace-potrace-optcurve-hint"), CHECK_INDENT, true);
+    }
+
+    /// Hauptregler der Farbcluster: Detail und Glätte, Ecken, Flecken, Aufräumen.
+    fn clusters_main_ui(&mut self, ui: &mut Ui, o: &mut TraceOptions) {
+        let px = fp_i18n::unit("px");
+        // „Detail und Glätte“: beim Aufräumen die Kurventoleranz, sonst die Mindestlänge der Segmente
+        let ends = (t("trace-opt-smoothness-low"), t("trace-opt-smoothness-high"));
+        if o.refine.enabled {
+            if let Some(v) = slider_row(ui, "smooth", &t("trace-opt-smoothness"), o.refine.fit_tolerance, (0.2, 4.0), 1, 0.1, &px, Some((&ends.0, &ends.1)), true) {
+                o.refine.fit_tolerance = v;
+            }
+        } else if let Some(v) = slider_row(ui, "smooth", &t("trace-opt-smoothness"), o.length_threshold, (3.5, 10.0), 1, 0.5, &px, Some((&ends.0, &ends.1)), true) {
+            o.length_threshold = v;
+        }
+        let deg = fp_i18n::unit("deg");
+        let poly = o.mode == CurveMode::Polygon;
+        if let Some(v) = slider_row(ui, "corners", &t("trace-opt-corners"), o.corner_threshold, (0.0, 180.0), 0, 5.0, &deg, Some((&t("trace-opt-corners-low"), &t("trace-opt-corners-high"))), !poly) {
+            o.corner_threshold = v;
+        }
+        if let Some(v) = slider_row(ui, "speckle", &t("trace-opt-speckle"), o.filter_speckle as f64, (0.0, 32.0), 0, 1.0, &px, None, true) {
+            o.filter_speckle = v.round() as u32;
+        }
+        // Aufräumen (Hauptschalter), darunter ein Satz, was es tut
+        if let Some(v) = check_row(ui, "trace-refine", &t("trace-refine"), o.refine.enabled, true) {
+            o.refine.enabled = v;
+        }
+        caption_text(ui, &t("trace-refine-hint"), CHECK_INDENT, true);
     }
 
     fn preset_cards(&mut self, ui: &mut Ui, theme: &Theme) {
@@ -929,8 +1011,40 @@ impl TraceDialog {
         ui.add_space(sp::XS);
     }
 
+    /// Abschnitt „Konturen“ im Bereich „Erweitert“ (VT-6): Abbiegeregel an diagonalen Pixeln.
+    fn potrace_advanced_ui(&mut self, ui: &mut Ui, o: &mut TraceOptions) {
+        ui_kit::section(ui, &t("trace-potrace-section"));
+        ui.add_space(sp::XS);
+        let theme = Theme::current(ui.ctx());
+        let (r, _) = ui.allocate_exact_size(vec2(ui.available_width(), 20.0), Sense::hover());
+        if ui_kit::paint_text_fit(ui.painter(), r, &t("trace-potrace-turn"), theme.font(type_scale::BODY), theme.colors.text) {
+            report_overflow(ui.ctx(), format!("trace turn {:.0}", r.width()));
+        }
+        let names: Vec<String> = TurnPolicy::ALL.iter().map(|p| t(&format!("trace-turn-{}", p.name()))).collect();
+        let sel = TurnPolicy::ALL.iter().position(|p| *p == o.potrace.turn_policy).unwrap_or(0);
+        for row in 0..2 {
+            let items: Vec<&str> = names[row * 3..row * 3 + 3].iter().map(|s| s.as_str()).collect();
+            let w = ui.available_width();
+            let (r, _) = ui.allocate_exact_size(vec2(w, 22.0), Sense::hover());
+            // Auswahl in der anderen Zeile: hier nichts markiert
+            let here = if sel / 3 == row { sel % 3 } else { usize::MAX };
+            if let Some(i) = segmented(ui, Id::new(("trace-turn", row)), Rect::from_min_size(r.min + vec2(0.0, 1.0), vec2(w, 20.0)), &items, here, true) {
+                o.potrace.turn_policy = TurnPolicy::ALL[row * 3 + i];
+            }
+        }
+        caption_text(ui, &t("trace-potrace-turn-hint"), 0.0, true);
+        ui.add_space(sp::M);
+        ui_kit::section(ui, &t("trace-dlg-tracing"));
+        ui.add_space(sp::XS);
+    }
+
     fn advanced_ui(&mut self, ui: &mut Ui, o: &mut TraceOptions) {
-        self.refine_ui(ui, o);
+        let pot = o.engine == Engine::Potrace;
+        if pot {
+            self.potrace_advanced_ui(ui, o);
+        } else {
+            self.refine_ui(ui, o);
+        }
         let labels = [
             t("trace-opt-color-mode"),
             t("trace-opt-curves"),
@@ -965,17 +1079,19 @@ impl TraceDialog {
         if let Some(i) = seg(ui, "mode", &[&m_color, &m_bw], bw as usize, true) {
             o.color_mode = if i == 1 { ColorMode::BlackWhite } else { ColorMode::Color };
         }
-        ui.add_space(sp::XS);
-        let (c_sp, c_po) = (t("trace-opt-curves-spline"), t("trace-opt-curves-polygon"));
-        caption(ui, &labels[1], true);
-        if let Some(i) = seg(ui, "curves", &[&c_sp, &c_po], (o.mode == CurveMode::Polygon) as usize, true) {
-            o.mode = if i == 1 { CurveMode::Polygon } else { CurveMode::Spline };
-        }
-        ui.add_space(sp::XS);
-        let (l_st, l_cu) = (t("trace-opt-stacked"), t("trace-opt-cutout"));
-        caption(ui, &labels[2], !bw);
-        if let Some(i) = seg(ui, "layer", &[&l_st, &l_cu], (o.hierarchical == Hierarchy::Cutout) as usize, !bw) {
-            o.hierarchical = if i == 1 { Hierarchy::Cutout } else { Hierarchy::Stacked };
+        if !pot {
+            ui.add_space(sp::XS);
+            let (c_sp, c_po) = (t("trace-opt-curves-spline"), t("trace-opt-curves-polygon"));
+            caption(ui, &labels[1], true);
+            if let Some(i) = seg(ui, "curves", &[&c_sp, &c_po], (o.mode == CurveMode::Polygon) as usize, true) {
+                o.mode = if i == 1 { CurveMode::Polygon } else { CurveMode::Spline };
+            }
+            ui.add_space(sp::XS);
+            let (l_st, l_cu) = (t("trace-opt-stacked"), t("trace-opt-cutout"));
+            caption(ui, &labels[2], !bw);
+            if let Some(i) = seg(ui, "layer", &[&l_st, &l_cu], (o.hierarchical == Hierarchy::Cutout) as usize, !bw) {
+                o.hierarchical = if i == 1 { Hierarchy::Cutout } else { Hierarchy::Stacked };
+            }
         }
         ui.add_space(sp::S);
         let bit = t("trace-unit-bit");
@@ -1000,20 +1116,22 @@ impl TraceDialog {
         if let Some(v) = num(ui, &labels[3], "colors", o.colors as f64, (0.0, 256.0), 0, "", !bw) {
             o.colors = v.round() as u32;
         }
-        if let Some(v) = num(ui, &labels[4], "precision", o.color_precision as f64, (1.0, 8.0), 0, &bit, !bw) {
-            o.color_precision = v.round() as u8;
-        }
-        if let Some(v) = num(ui, &labels[5], "layerdiff", o.layer_difference as f64, (0.0, 255.0), 0, "", !bw) {
-            o.layer_difference = v.round() as u8;
-        }
-        if let Some(v) = num(ui, &labels[6], "length", o.length_threshold, (3.5, 10.0), 1, &px, true) {
-            o.length_threshold = v;
-        }
-        if let Some(v) = num(ui, &labels[7], "iterations", o.max_iterations as f64, (1.0, 50.0), 0, "", true) {
-            o.max_iterations = v.round() as usize;
-        }
-        if let Some(v) = num(ui, &labels[8], "splice", o.splice_threshold, (0.0, 180.0), 0, &deg, o.mode == CurveMode::Spline) {
-            o.splice_threshold = v;
+        if !pot {
+            if let Some(v) = num(ui, &labels[4], "precision", o.color_precision as f64, (1.0, 8.0), 0, &bit, !bw) {
+                o.color_precision = v.round() as u8;
+            }
+            if let Some(v) = num(ui, &labels[5], "layerdiff", o.layer_difference as f64, (0.0, 255.0), 0, "", !bw) {
+                o.layer_difference = v.round() as u8;
+            }
+            if let Some(v) = num(ui, &labels[6], "length", o.length_threshold, (3.5, 10.0), 1, &px, true) {
+                o.length_threshold = v;
+            }
+            if let Some(v) = num(ui, &labels[7], "iterations", o.max_iterations as f64, (1.0, 50.0), 0, "", true) {
+                o.max_iterations = v.round() as usize;
+            }
+            if let Some(v) = num(ui, &labels[8], "splice", o.splice_threshold, (0.0, 180.0), 0, &deg, o.mode == CurveMode::Spline) {
+                o.splice_threshold = v;
+            }
         }
         if let Some(v) = num(ui, &labels[9], "decimals", o.path_precision as f64, (0.0, 8.0), 0, "", true) {
             o.path_precision = v.round() as u32;
@@ -1037,7 +1155,8 @@ impl TraceDialog {
         let reset = t("trace-dlg-reset");
         let (r, _) = ui.allocate_exact_size(vec2(w, 20.0), Sense::hover());
         if ui_kit::more_link_at(ui, r, Id::new("trace-reset"), &reset, None).clicked() {
-            *o = TraceOptions::from_preset(o.preset);
+            // Verfahren bleibt; dessen Werte gehen auf die Vorgabe zurück
+            *o = TraceOptions { engine: o.engine, ..TraceOptions::from_preset(o.preset) };
         }
     }
 
@@ -1484,6 +1603,11 @@ fn pill(p: &egui::Painter, at: Pos2, align: Align2, text: &str, font: FontId) {
 
 /// Segmentierte Auswahl (gleich breite Segmente, ausgewähltes getönt mit Akzentrahmen).
 fn segmented(ui: &mut Ui, id: Id, rect: Rect, items: &[&str], selected: usize, enabled: bool) -> Option<usize> {
+    segmented_tips(ui, id, rect, items, &[], selected, enabled)
+}
+
+/// Wie [`segmented`], mit Tooltip je Segment (`tips[i]`, fehlt = keiner).
+fn segmented_tips(ui: &mut Ui, id: Id, rect: Rect, items: &[&str], tips: &[&str], selected: usize, enabled: bool) -> Option<usize> {
     let theme = Theme::current(ui.ctx());
     let c = &theme.colors;
     let n = items.len().max(1) as f32;
@@ -1503,7 +1627,7 @@ fn segmented(ui: &mut Ui, id: Id, rect: Rect, items: &[&str], selected: usize, e
         } else if enabled && resp.hovered() {
             ui.painter().rect_filled(r, cr, c.list_hover_bg);
         }
-        if i > 0 && !sel && i != selected + 1 {
+        if i > 0 && !sel && selected.checked_add(1) != Some(i) {
             ui.painter().vline(r.left(), (r.top() + 4.0)..=(r.bottom() - 4.0), Stroke::new(1.0, c.field_border));
         }
         let col = if !enabled { c.text_disabled } else if sel && theme.glow { Color32::WHITE } else { c.text };
@@ -1514,6 +1638,9 @@ fn segmented(ui: &mut Ui, id: Id, rect: Rect, items: &[&str], selected: usize, e
         ui.painter().with_clip_rect(r).text(r.center(), Align2::CENTER_CENTER, shown, font.clone(), col);
         if enabled && resp.clicked() && !sel {
             out = Some(i);
+        }
+        if let Some(tip) = tips.get(i) {
+            let _ = resp.on_hover_text(*tip);
         }
     }
     ui.painter().rect_stroke(rect, radius, Stroke::new(1.0, c.field_border), StrokeKind::Inside);

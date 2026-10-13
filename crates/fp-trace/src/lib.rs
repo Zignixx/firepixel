@@ -31,14 +31,21 @@
 //! Rechteck), eingerastete Geraden (0°/45°/90°, rechte Winkel), wenige Bézier-Knoten, optional
 //! Spiegelsymmetrie. Kennzahlen liefert [`trace_with_report`] ([`RefineReport`]).
 //!
+//! **Zweites Verfahren** ([`TraceOptions::engine`] = [`Engine::Potrace`], VT-6): Konturen nach dem
+//! Fachartikel von P. Selinger (2003), eigenständig umgesetzt im Modul `potrace` – Schwellwert bzw.
+//! gestapelte Farbmasken, Pfadzerlegung, optimales Polygon, Ecken/Glättung, Kurvenoptimierung
+//! ([`PotraceOptions`]). Ergibt glatte Kurven mit wenigen Knoten (Strichzeichnungen, Schrift).
+//!
 //! Abbruch und Fortschritt (für die Live-Vorschau): [`trace_with`] nimmt ein `&AtomicBool` und
 //! einen Rückruf mit [`Progress`]. Kein `unsafe`; Panics der Bibliothek werden abgefangen und als
 //! [`TraceError::Internal`] gemeldet.
 
+mod potrace;
 mod quantize;
 mod refine;
 mod render;
 
+pub use potrace::{PotraceOptions, TurnPolicy, ALPHA_MAX_LIMIT};
 pub use refine::{RefineOptions, RefineReport, Symmetry, FAST_PREVIEW_PIXELS};
 
 use fp_color::Rgba8;
@@ -114,6 +121,35 @@ impl Preset {
             "photo" | "foto" => Some(Preset::Photo),
             _ => None,
         }
+    }
+}
+
+/// Verfahren des Nachzeichnens (VT-6).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum Engine {
+    /// Farbcluster mit Kurvenanpassung (visioncortex) und optionalem Aufräumen – bisheriges Verfahren.
+    #[default]
+    Clusters,
+    /// Konturen nach Selinger (optimales Polygon, Ecken, Kurvenoptimierung).
+    Potrace,
+}
+
+impl Engine {
+    /// Alle Verfahren in Dialogreihenfolge.
+    pub const ALL: [Engine; 2] = [Engine::Clusters, Engine::Potrace];
+
+    /// Name im JSON (Befehlsparameter `engine`).
+    pub fn name(self) -> &'static str {
+        match self {
+            Engine::Clusters => "clusters",
+            Engine::Potrace => "potrace",
+        }
+    }
+
+    /// Verfahren zu einem JSON-Namen.
+    pub fn from_name(s: &str) -> Option<Engine> {
+        Engine::ALL.into_iter().find(|e| e.name() == s)
     }
 }
 
@@ -194,6 +230,13 @@ pub struct TraceOptions {
     /// Logo-Nachbearbeitung (fehlt der Eintrag im JSON: aus).
     #[serde(default)]
     pub refine: RefineOptions,
+    /// Verfahren (fehlt der Eintrag im JSON: Farbcluster). Das Konturverfahren nutzt von den
+    /// übrigen Werten nur Farbmodus, `colors`, `threshold`, Transparenz, Größe und Nachkommastellen.
+    #[serde(default)]
+    pub engine: Engine,
+    /// Einstellungen des Konturverfahrens (nur bei [`Engine::Potrace`]).
+    #[serde(default)]
+    pub potrace: PotraceOptions,
 }
 
 impl Default for TraceOptions {
@@ -225,6 +268,8 @@ impl TraceOptions {
             max_pixels: DEFAULT_MAX_PIXELS,
             downscale: true,
             refine: RefineOptions::default(),
+            engine: Engine::Clusters,
+            potrace: PotraceOptions::default(),
         };
         match p {
             Preset::Logo => TraceOptions { colors: 16, color_precision: 6, refine: RefineOptions::logo(), ..base },
@@ -249,6 +294,7 @@ impl TraceOptions {
             path_precision: self.path_precision.min(8),
             alpha_threshold: self.alpha_threshold.max(1),
             refine: self.refine.validated(),
+            potrace: self.potrace.validated(),
             ..self.clone()
         }
     }
@@ -394,7 +440,7 @@ pub fn trace_with_report(image: &RgbaImage, opts: &TraceOptions, cancel: &Atomic
     progress(Progress { stage: Stage::Prepare, fraction: 0.0 });
     let total = w * h;
     let mut limit = if o.max_pixels == 0 { HARD_PIXEL_LIMIT } else { o.max_pixels.min(HARD_PIXEL_LIMIT) };
-    if o.refine.enabled && o.refine.fast {
+    if o.engine == Engine::Clusters && o.refine.enabled && o.refine.fast {
         limit = limit.min(FAST_PREVIEW_PIXELS);
     }
     let work: Cow<RgbaImage> = if total > limit {
@@ -423,6 +469,9 @@ pub fn trace_with_report(image: &RgbaImage, opts: &TraceOptions, cancel: &Atomic
     };
     check(cancel)?;
     let run = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        if o.engine == Engine::Potrace {
+            return potrace::trace(&work, &o, &map, cancel, progress).map(|p| (p, None));
+        }
         if o.refine.enabled {
             return refine::trace(&work, &o, &map, cancel, progress).map(|(p, r)| (p, Some(r)));
         }

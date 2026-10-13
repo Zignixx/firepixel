@@ -13,7 +13,7 @@ use crate::error::{EngineError, Result};
 use fp_model::element::ElementKind;
 use fp_model::layer::LayerKind;
 use fp_model::{Element, ElementId, Fill, PathAttrs};
-use fp_trace::{ColorMode, CurveMode, Hierarchy, Preset, TraceOptions};
+use fp_trace::{ColorMode, CurveMode, Engine, Hierarchy, Preset, TraceOptions, TurnPolicy};
 use serde_json::{json, Map, Value};
 use std::cell::{Cell, RefCell};
 use std::sync::Arc;
@@ -183,6 +183,37 @@ pub(crate) fn options_from_params(p: &Params) -> Result<TraceOptions> {
         }
         Some(_) => return Err(bad("refine")),
     }
+    // Verfahren (VT-6) und Einstellungen des Konturverfahrens: Objekt `potrace` (wie gespeichert)
+    // und/oder einzelne Schlüssel `turdSize`, `turnPolicy`, `alphaMax`, `optCurve`, `optTolerance`.
+    if let Some(s) = p.opt_str("engine")? {
+        o.engine = Engine::from_name(&s).ok_or_else(|| bad("engine"))?;
+    }
+    match p.get("potrace") {
+        None | Some(Value::Null) => {}
+        Some(Value::Object(m)) => {
+            let mut base = serde_json::to_value(&o.potrace).map_err(|_| bad("potrace"))?;
+            for (k, v) in m {
+                base[k.as_str()] = v.clone();
+            }
+            o.potrace = serde_json::from_value(base).map_err(|_| bad("potrace"))?;
+        }
+        Some(_) => return Err(bad("potrace")),
+    }
+    if let Some(v) = p.opt_f64("turdSize")? {
+        o.potrace.turd_size = v.clamp(0.0, 10_000.0).round() as u32;
+    }
+    if let Some(s) = p.opt_str("turnPolicy")? {
+        o.potrace.turn_policy = TurnPolicy::from_name(&s).ok_or_else(|| bad("turnPolicy"))?;
+    }
+    if let Some(v) = p.opt_f64("alphaMax")? {
+        o.potrace.alpha_max = v;
+    }
+    if let Some(v) = p.opt_bool("optCurve")? {
+        o.potrace.opt_curve = v;
+    }
+    if let Some(v) = p.opt_f64("optTolerance")? {
+        o.potrace.opt_tolerance = v;
+    }
     Ok(o.validated())
 }
 
@@ -232,6 +263,13 @@ pub(crate) fn register(r: &mut CommandRegistry) {
             .opt("maxPixels", ParamKind::Integer { min: Some(0), max: Some(fp_trace::HARD_PIXEL_LIMIT as i64) }, "größere Bilder herunterskalieren (0 = nur feste Obergrenze)")
             .opt("downscale", ParamKind::Bool, "zu große Bilder herunterskalieren statt abzulehnen")
             .opt("refine", ParamKind::Json, "Logo-Nachbearbeitung: true/false oder Objekt (enabled, snapColors, colorTolerance, straighten, snapAngle, shapes, shapeTolerance, reduceNodes, fitTolerance, closeGaps, symmetry, fast); fehlt: wie die Vorgabe")
+            .opt_default("engine", enum_kind(&["clusters", "potrace"]), json!("clusters"), "Verfahren: Farbcluster oder Konturen (Potrace-Verfahren)")
+            .opt("turdSize", int(0, 10_000), "Konturen: Flecken bis zu dieser Fläche in Pixeln entfernen")
+            .opt("turnPolicy", enum_kind(&["minority", "majority", "black", "white", "left", "right"]), "Konturen: Abbiegeregel an diagonal berührenden Pixeln")
+            .opt("alphaMax", num(0.0, fp_trace::ALPHA_MAX_LIMIT), "Konturen: Eckenschwelle (0 = nur Ecken, ab 4/3 keine Ecken)")
+            .opt("optCurve", ParamKind::Bool, "Konturen: Kurven zusammenfassen")
+            .opt("optTolerance", num(0.0, 5.0), "Konturen: Toleranz beim Zusammenfassen in Pixeln")
+            .opt("potrace", ParamKind::Json, "Konturen: alle Einstellungen als Objekt (turdSize, turnPolicy, alphaMax, optCurve, optTolerance)")
             .opt_default("keepOriginal", ParamKind::Bool, json!(true), "Original-Bitmap behalten (false = löschen)")
             .opt("layerName", ParamKind::String, "Name der neuen Ebene")
             .run(|s, p| {
@@ -341,6 +379,29 @@ mod tests {
             d.refine.fit_tolerance = 1.7;
             d.refine.symmetry = true;
             assert_eq!(opts(serde_json::to_value(&d).expect("JSON")), d.validated(), "{p:?}");
+            // zweites Verfahren (VT-6) mit eigenen Werten
+            d.engine = Engine::Potrace;
+            d.potrace = fp_trace::PotraceOptions { turd_size: 9, turn_policy: TurnPolicy::White, alpha_max: 0.7, opt_curve: false, opt_tolerance: 0.45 };
+            assert_eq!(opts(serde_json::to_value(&d).expect("JSON")), d.validated(), "{p:?} Konturen");
+        }
+    }
+
+    #[test]
+    fn engine_parameters() {
+        // Vorgabe: bisheriges Verfahren
+        let o = opts(json!({}));
+        assert_eq!(o.engine, Engine::Clusters);
+        assert_eq!(o.potrace, fp_trace::PotraceOptions::default());
+        // einzelne Schlüssel (auch snake_case) über dem Objekt
+        let p = Params::new("modify.traceBitmap", json!({"engine": "potrace", "potrace": {"turdSize": 5, "alphaMax": 0.5}, "alpha_max": 0.9, "turnPolicy": "black", "opt_curve": false, "optTolerance": 0.3}));
+        let o = options_from_params(&normalized(&p)).expect("Optionen");
+        assert_eq!(o.engine, Engine::Potrace);
+        assert_eq!((o.potrace.turd_size, o.potrace.alpha_max, o.potrace.turn_policy, o.potrace.opt_curve, o.potrace.opt_tolerance), (5, 0.9, TurnPolicy::Black, false, 0.3));
+        // Bereiche und Fehler
+        assert_eq!(opts(json!({"alphaMax": 7.0, "turdSize": 1e9})).potrace.alpha_max, fp_trace::ALPHA_MAX_LIMIT);
+        assert_eq!(opts(json!({"turdSize": 1e9})).potrace.turd_size, 10_000);
+        for bad in [json!({"engine": "magic"}), json!({"turnPolicy": "up"}), json!({"potrace": 3}), json!({"potrace": {"turnPolicy": 1}})] {
+            assert!(options_from_params(&Params::new("modify.traceBitmap", bad.clone())).is_err(), "{bad}");
         }
     }
 
