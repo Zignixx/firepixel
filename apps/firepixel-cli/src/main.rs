@@ -13,12 +13,12 @@ use serde_json::{json, Value};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
-mod sprache; // Unterbefehl `language` (Dateiname: TE-2)
+mod language; // Unterbefehl `language`
 
 #[derive(Parser, Debug)]
 #[command(name = "firepixel-cli", version)]
 struct Cli {
-    // Hilfetexte aller Befehle und Optionen: kommandozeile.ftl (`cli-…`, siehe `localize`)
+    // Hilfetexte aller Befehle und Optionen: cli.ftl (`cli-…`, siehe `localize`)
     #[arg(long, global = true)]
     json: bool,
     #[arg(long, global = true, value_name = "CODE")]
@@ -29,7 +29,7 @@ struct Cli {
 
 #[derive(Subcommand, Debug)]
 enum Cmd {
-    // Hilfetexte: kommandozeile.ftl (`cli-<befehl>`, `.examples`, `cli-<befehl>-arg-<option>`)
+    // Hilfetexte: cli.ftl (`cli-<befehl>`, `.examples`, `cli-<befehl>-arg-<option>`)
     Run {
         file: Option<PathBuf>,
         #[arg(long, value_name = "WxH")]
@@ -119,7 +119,7 @@ enum Cmd {
         token_file: Option<PathBuf>,
     },
     #[command(subcommand, alias = "sprache")]
-    Language(sprache::LanguageCmd),
+    Language(language::LanguageCmd),
 }
 
 /// Fehler mit Meldung.
@@ -301,7 +301,7 @@ fn run(cli: Cli, sub: Option<&ArgMatches>) -> Res<Value> {
                 cmd_mcp(http, port, token, token_file)
             }
         }
-        Cmd::Language(c) => sprache::run(c, json_out).map_err(Fail),
+        Cmd::Language(c) => language::run(c, json_out).map_err(Fail),
     }
 }
 
@@ -754,7 +754,7 @@ mod tests {
         assert!(de.contains("Aufruf:") && de.contains("Beispiele:") && de.contains("Ausgabe als JSON (maschinenlesbar)"), "{de}");
     }
     /// UE-3: jede Parameterbeschreibung und jeder Hinweis aller Befehle (Engine + JSF-Laufzeit) hat
-    /// einen Schlüssel in befehlstexte.ftl (de wortgleich, en ohne deutsche Reste).
+    /// einen Schlüssel in command_texts.ftl (de wortgleich, en ohne deutsche Reste).
     #[test]
     fn parameterbeschreibungen_in_de_und_en() {
         let s = new_session();

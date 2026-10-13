@@ -18,7 +18,7 @@ fp-geom = { workspace = true }
 fp-render = { workspace = true }
 fp-mcp = { workspace = true }
 fp-script = { workspace = true }
-# firepixel-cli sprache … (src\sprache.rs, I18N-KERN)
+# firepixel-cli language … (src\language.rs, I18N-KERN)
 fp-i18n = { workspace = true }
 serde_json = { workspace = true }
 clap = { version = "4.6", features = ["derive", "string"] }

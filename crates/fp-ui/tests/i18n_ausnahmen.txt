@@ -100,7 +100,7 @@ text obj_quads.rs | Tönung
 zlib
 # Kennungen: Name der globalen JSF-Variable, Schlüsselzeile in neuen Sprachvorlagen, Eingabe-Alias der Rücktaste (MCP ui_input)
 text main.rs | FP_ARG
-text sprache.rs | language-name = {code}\n
+text language.rs | language-name = {code}\n
 text inject.rs | rück
 # Formatkennungen in Fehlerdetails (fp-color, fp-io)
 ASE ACO HEIC HEIF XL WBMP

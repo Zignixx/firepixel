@@ -30,7 +30,7 @@ const fn text(key: &'static str, label: &'static str) -> ParamDef {
     ParamDef { key, label, kind: "text", min: None, max: None, options: &[] }
 }
 
-/// Parameterbeschriftungen (deutsch) → Schlüssel in `bedienfelder.ftl` (`labelKey` in
+/// Parameterbeschriftungen (deutsch) → Schlüssel in `panels.ftl` (`labelKey` in
 /// `autoShape.list`/`describe`; Befund I18N-BEDIENFELDER, UE-1).
 pub const PARAM_LABEL_KEYS: &[(&str, &str)] = &[
     ("Drehung", "panel-asp-p-rotation"),
@@ -108,7 +108,7 @@ pub const PARAM_LABEL_KEYS: &[(&str, &str)] = &[
     ("Farbe", "panel-asp-p-color"),
 ];
 
-/// Auswahlwerte (gespeichert wird der deutsche Wert) → Schlüssel in `bedienfelder.ftl` (`optionKeys`).
+/// Auswahlwerte (gespeichert wird der deutsche Wert) → Schlüssel in `panels.ftl` (`optionKeys`).
 pub const OPTION_LABEL_KEYS: &[(&str, &str)] = &[
     ("gerade", "panel-asp-o-straight"),
     ("rund", "panel-asp-o-round"),

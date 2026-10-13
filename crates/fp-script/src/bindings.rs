@@ -149,7 +149,7 @@ pub mod hr {
     pub const E_ARRAY_INDEX: u32 = 0x8004_1410;
 }
 
-/// Kurzer Text zu einem Errors-Namen (eigene Formulierung) in der aktuellen Sprache (skript.ftl, `err-script-hr-*`).
+/// Kurzer Text zu einem Errors-Namen (eigene Formulierung) in der aktuellen Sprache (script.ftl, `err-script-hr-*`).
 pub fn error_text(name: &str) -> String {
     let key = match name {
         "EBadParam" | "EBadParamCount" => "err-script-hr-ebad-param",

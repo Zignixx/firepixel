@@ -2,7 +2,7 @@
 //! verfügbare Sprachen auflisten (Phase 6, I18N-KERN). Die Prüfungen stehen in `fp_i18n::check`.
 
 use clap::Subcommand;
-use fp_i18n::check::{self, Kind, Report};
+use fp_i18n::check::{self as i18n_check, Kind, Report};
 use fp_i18n::{t, tr};
 use serde_json::{json, Value};
 use std::path::{Path, PathBuf};
@@ -12,7 +12,7 @@ use std::path::{Path, PathBuf};
 /// `--von` bleiben als versteckte Aliasse gültig).
 #[derive(Subcommand, Debug)]
 pub enum LanguageCmd {
-    // Hilfetexte: kommandozeile.ftl (`cli-language-…`)
+    // Hilfetexte: cli.ftl (`cli-language-…`)
     #[command(alias = "pruefen")]
     Check {
         path: Option<PathBuf>,
@@ -39,9 +39,9 @@ pub enum LanguageCmd {
 /// Führt einen `language`-Unterbefehl aus. `Err` = Fehlermeldung (Exit-Code 1).
 pub fn run(cmd: LanguageCmd, json_out: bool) -> Result<Value, String> {
     match cmd {
-        LanguageCmd::Check { path, builtin, short, strict } => pruefen(path.as_deref(), builtin, short, strict, json_out),
-        LanguageCmd::Template { code, target_dir, overwrite, from } => vorlage(&code, &target_dir, overwrite, &from),
-        LanguageCmd::List => liste(json_out),
+        LanguageCmd::Check { path, builtin, short, strict } => check(path.as_deref(), builtin, short, strict, json_out),
+        LanguageCmd::Template { code, target_dir, overwrite, from } => template(&code, &target_dir, overwrite, &from),
+        LanguageCmd::List => list(json_out),
     }
 }
 
@@ -50,7 +50,7 @@ fn kind_title(k: Kind) -> String {
     fp_i18n::strip_access(&t(&format!("cli-lang-kind-{}", k.code()))).0
 }
 
-fn report_text(r: &Report, kurz: bool) -> String {
+fn report_text(r: &Report, short: bool) -> String {
     let mut out = String::new();
     for l in &r.langs {
         let name = l.name.clone().unwrap_or_else(|| t("cli-lang-no-name"));
@@ -61,9 +61,9 @@ fn report_text(r: &Report, kurz: bool) -> String {
     kinds.sort();
     kinds.dedup();
     for k in kinds {
-        let list: Vec<&check::Problem> = r.problems.iter().filter(|p| p.kind == k).collect();
+        let list: Vec<&i18n_check::Problem> = r.problems.iter().filter(|p| p.kind == k).collect();
         out.push_str(&format!("\n{} ({}):\n", kind_title(k), list.len()));
-        if kurz && matches!(k, Kind::Missing | Kind::Orphan) {
+        if short && matches!(k, Kind::Missing | Kind::Orphan) {
             continue;
         }
         for p in list {
@@ -85,13 +85,13 @@ fn report_json(r: &Report) -> Value {
     })
 }
 
-fn pruefen(pfad: Option<&Path>, eingebaut: bool, kurz: bool, streng: bool, json_out: bool) -> Result<Value, String> {
-    let r = match (pfad, eingebaut) {
-        (_, true) => check::check_builtin(),
-        (Some(p), false) => check::check_path(p)?,
+fn check(path: Option<&Path>, builtin: bool, short: bool, strict: bool, json_out: bool) -> Result<Value, String> {
+    let r = match (path, builtin) {
+        (_, true) => i18n_check::check_builtin(),
+        (Some(p), false) => i18n_check::check_path(p)?,
         (None, false) => return Err(t("cli-lang-path-missing")),
     };
-    let failed = r.errors() > 0 || (streng && r.warnings() > 0);
+    let failed = r.errors() > 0 || (strict && r.warnings() > 0);
     if json_out {
         let v = report_json(&r);
         if failed {
@@ -101,7 +101,7 @@ fn pruefen(pfad: Option<&Path>, eingebaut: bool, kurz: bool, streng: bool, json_
         }
         return Ok(v);
     }
-    let text = report_text(&r, kurz);
+    let text = report_text(&r, short);
     if failed {
         print!("{text}");
         return Err(tr!("cli-lang-errors-warnings", errors = r.errors(), warnings = r.warnings()));
@@ -109,28 +109,28 @@ fn pruefen(pfad: Option<&Path>, eingebaut: bool, kurz: bool, streng: bool, json_
     Ok(json!({ "text": text.trim_end() }))
 }
 
-fn vorlage(code: &str, ziel: &Path, ueberschreiben: bool, von: &str) -> Result<Value, String> {
+fn template(code: &str, target_dir: &Path, overwrite: bool, from: &str) -> Result<Value, String> {
     if code.parse::<unic_langid_check::Code>().is_err() {
         return Err(tr!("cli-lang-bad-code", code = code));
     }
-    let files: Vec<&(&str, &str, &str)> = fp_i18n::embedded_files().iter().filter(|(c, _, _)| *c == von).collect();
+    let files: Vec<&(&str, &str, &str)> = fp_i18n::embedded_files().iter().filter(|(c, _, _)| *c == from).collect();
     if files.is_empty() {
-        return Err(tr!("cli-lang-no-builtin", code = von));
+        return Err(tr!("cli-lang-no-builtin", code = from));
     }
-    let dir = ziel.join(code);
+    let dir = target_dir.join(code);
     std::fs::create_dir_all(&dir).map_err(|e| format!("{}: {e}", dir.display()))?;
     let mut written = Vec::new();
     let mut skipped = Vec::new();
     for (_, name, text) in files {
         let p = dir.join(name);
         // Sprachpaket mit dem alten Namen des Bereichs (`menue.ftl` bis 13.10.2026) zählt als vorhanden
-        let legacy = check::legacy_area_file_name(name).map(|f| dir.join(f)).filter(|f| f.is_file());
-        if (p.exists() || legacy.is_some()) && !ueberschreiben {
+        let legacy = i18n_check::legacy_area_file_name(name).map(|f| dir.join(f)).filter(|f| f.is_file());
+        if (p.exists() || legacy.is_some()) && !overwrite {
             skipped.push(legacy.filter(|_| !p.exists()).unwrap_or(p).display().to_string());
             continue;
         }
         let mut body = String::new();
-        body.push_str(&tr!("cli-lang-template-header", code = code, from = von, file = *name));
+        body.push_str(&tr!("cli-lang-template-header", code = code, from = from, file = *name));
         body.push_str("\n\n");
         for line in text.lines() {
             if line.starts_with("language-name") {
@@ -152,10 +152,10 @@ fn vorlage(code: &str, ziel: &Path, ueberschreiben: bool, von: &str) -> Result<V
     Ok(json!({ "ok": true, "dir": dir.display().to_string(), "written": written, "skipped": skipped, "text": text }))
 }
 
-fn liste(json_out: bool) -> Result<Value, String> {
+fn list(json_out: bool) -> Result<Value, String> {
     let dirs: Vec<PathBuf> = [fp_i18n::exe_language_dir(), fp_i18n::user_language_dir()].into_iter().flatten().collect();
     fp_i18n::load_default_dirs();
-    let reference = check::LangData::builtin(fp_i18n::SOURCE_LANG);
+    let reference = i18n_check::LangData::builtin(fp_i18n::SOURCE_LANG);
     let total = reference.keys.len();
     let mut rows = Vec::new();
     for l in fp_i18n::languages() {

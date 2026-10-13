@@ -1,7 +1,7 @@
 //! Firepixel: Grafik- und Webdesign-Programm.
 //!
 //! Aufruf: `firepixel [--design=normal|dark|oled] [--mcp[=PORT]] [--help] [Datei …]`
-//! (Hilfetext: Schlüssel `ui-cli-help` in `crates\fp-i18n\locales\<sprache>\oberflaeche.ftl`)
+//! (Hilfetext: Schlüssel `ui-cli-help` in `crates\fp-i18n\locales\<sprache>\ui.ftl`)
 //!
 //! * `--design=…` überschreibt das gespeicherte Design (z. B. für Bildschirmfotos).
 //! * `--mcp[=PORT]` startet den KI-Steuerkanal (MCP über HTTP, nur 127.0.0.1, mit Token; siehe
