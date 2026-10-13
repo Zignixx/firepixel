@@ -14,7 +14,7 @@ use crate::cmyk::{ase_cmyk_byte, cmyk_to_rgb, CmykTable};
 use crate::round::round_even;
 use crate::{Palette, Rgba8};
 
-/// Meldung `key` mit einem Platzhalter in der aktuellen Sprache (meldungen.ftl).
+/// Meldung `key` mit einem Platzhalter in der aktuellen Sprache (messages.ftl).
 fn m1(key: &str, a: &str, va: &dyn std::fmt::Display) -> String {
     fp_i18n::t_args(key, &[(a, fp_i18n::Value::from(va.to_string()))])
 }

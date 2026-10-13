@@ -393,7 +393,7 @@ fn options_and_compat() {
     let o: TraceOptions = serde_json::from_str(r#"{"preset":"logo","refine":{"enabled":true,"symmetry":true}}"#).expect("json");
     assert!(o.refine.enabled && o.refine.symmetry && o.refine.shapes);
     assert!(TraceOptions::from_preset(Preset::Logo).refine.enabled);
-    for p in [Preset::Schwarzweiss, Preset::Illustration, Preset::Foto] {
+    for p in [Preset::BlackWhite, Preset::Illustration, Preset::Photo] {
         assert!(!TraceOptions::from_preset(p).refine.enabled, "{p:?}");
     }
     let mut ro = RefineOptions::logo();
@@ -413,7 +413,7 @@ fn options_and_compat() {
     assert!(r.paths.iter().flat_map(|p| &p.contours).flat_map(|c| &c.nodes).all(|n| n.is_corner()));
     assert!(rep.expect("Kennzahlen").rectangles >= 1);
     // Schwarzweiß mit Nachbearbeitung
-    let mut o = TraceOptions::from_preset(Preset::Schwarzweiss);
+    let mut o = TraceOptions::from_preset(Preset::BlackWhite);
     o.refine.enabled = true;
     let (r, rep, _) = run("Schwarzweiß (Nachbearbeitung)", &logo(1.0, WHITE, true), &o);
     assert!(r.paths.iter().all(|p| p.color == Rgba8::new(0, 0, 0, 255)));

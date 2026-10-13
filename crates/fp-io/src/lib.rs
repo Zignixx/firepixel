@@ -73,7 +73,7 @@ pub enum ImportError {
     Io(#[from] std::io::Error),
 }
 
-// ---- Mehrsprachige Meldungen (fp-i18n, `meldungen.ftl`) ----
+// ---- Mehrsprachige Meldungen (fp-i18n, `messages.ftl`) ----
 fn m0(key: &str) -> String {
     fp_i18n::t(key)
 }

@@ -63,9 +63,9 @@ pub const DEFAULT_MAX_PIXELS: u64 = 4_000_000;
 /// | Vorgabe | Farbe | Farben | Präzision | Ebenenabstand | Flecken | Kurven | Ecke | Stapel |
 /// |---|---|---|---|---|---|---|---|---|
 /// | `Logo` | Farbe | 16 | 6 Bit | 16 | 4 px | Spline | 60° | stapeln |
-/// | `Schwarzweiss` | Schwarzweiß (Schwelle 128) | – | – | – | 4 px | Spline | 60° | – |
+/// | `BlackWhite` | Schwarzweiß (Schwelle 128) | – | – | – | 4 px | Spline | 60° | – |
 /// | `Illustration` | Farbe | 32 | 7 Bit | 16 | 4 px | Spline | 60° | stapeln |
-/// | `Foto` | Farbe | 64 | 6 Bit | 16 | 12 px | Spline (Segment 8) | 180° | stapeln |
+/// | `Photo` | Farbe | 64 | 6 Bit | 16 | 12 px | Spline (Segment 8) | 180° | stapeln |
 ///
 /// Logo-Nachbearbeitung ([`RefineOptions`]) nur bei `Logo` an (Schalter wie [`RefineOptions::logo`]).
 ///
@@ -82,26 +82,26 @@ pub enum Preset {
     Logo,
     /// Schwarze Flächen auf hellem Grund (Strichzeichnungen, Scans, Schrift).
     #[serde(rename = "blackWhite", alias = "schwarzweiss", alias = "bw")]
-    Schwarzweiss,
+    BlackWhite,
     /// Viele Farben, Stapelebenen (Grafiken, Poster).
     #[serde(rename = "illustration")]
     Illustration,
     /// Fotos: feine Farbstufen (Verläufe als viele Farbflächen), gröbere Flecken, weiche Kurven.
     #[serde(rename = "photo", alias = "foto")]
-    Foto,
+    Photo,
 }
 
 impl Preset {
     /// Alle Vorgaben in Dialogreihenfolge.
-    pub const ALL: [Preset; 4] = [Preset::Logo, Preset::Schwarzweiss, Preset::Illustration, Preset::Foto];
+    pub const ALL: [Preset; 4] = [Preset::Logo, Preset::BlackWhite, Preset::Illustration, Preset::Photo];
 
     /// Name im JSON (Befehlsparameter).
     pub fn name(self) -> &'static str {
         match self {
             Preset::Logo => "logo",
-            Preset::Schwarzweiss => "blackWhite",
+            Preset::BlackWhite => "blackWhite",
             Preset::Illustration => "illustration",
-            Preset::Foto => "photo",
+            Preset::Photo => "photo",
         }
     }
 
@@ -109,9 +109,9 @@ impl Preset {
     pub fn from_name(s: &str) -> Option<Preset> {
         match s {
             "logo" => Some(Preset::Logo),
-            "blackWhite" | "schwarzweiss" | "bw" => Some(Preset::Schwarzweiss),
+            "blackWhite" | "schwarzweiss" | "bw" => Some(Preset::BlackWhite),
             "illustration" => Some(Preset::Illustration),
-            "photo" | "foto" => Some(Preset::Foto),
+            "photo" | "foto" => Some(Preset::Photo),
             _ => None,
         }
     }
@@ -228,9 +228,9 @@ impl TraceOptions {
         };
         match p {
             Preset::Logo => TraceOptions { colors: 16, color_precision: 6, refine: RefineOptions::logo(), ..base },
-            Preset::Schwarzweiss => TraceOptions { color_mode: ColorMode::BlackWhite, ..base },
+            Preset::BlackWhite => TraceOptions { color_mode: ColorMode::BlackWhite, ..base },
             Preset::Illustration => TraceOptions { colors: 32, ..base },
-            Preset::Foto => TraceOptions { colors: 64, color_precision: 6, layer_difference: 16, filter_speckle: 12, corner_threshold: 180.0, length_threshold: 8.0, ..base },
+            Preset::Photo => TraceOptions { colors: 64, color_precision: 6, layer_difference: 16, filter_speckle: 12, corner_threshold: 180.0, length_threshold: 8.0, ..base },
         }
     }
 

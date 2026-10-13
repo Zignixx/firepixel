@@ -70,9 +70,9 @@ fn ends(list: &[CurvePoint]) -> (CurvePoint, CurvePoint) {
 /// 0,5-%-Grenzen wie Auto-Tonwert; innere Punkte entfallen.
 pub fn auto_points(hist: &[[u64; 256]; 3]) -> CurvesParams {
     let ch = |h: &[u64; 256]| {
-        let (unten, oben) = histogram_bounds(h);
-        let lo = unten.clamp(0, 251);
-        let hi = oben.max(lo + 4).min(255);
+        let (lower, upper) = histogram_bounds(h);
+        let lo = lower.clamp(0, 251);
+        let hi = upper.max(lo + 4).min(255);
         vec![pt(lo as f32, 0.0), pt(hi as f32, 255.0)]
     };
     CurvesParams { rgb_points: identity_points(), red_points: ch(&hist[0]), green_points: ch(&hist[1]), blue_points: ch(&hist[2]) }

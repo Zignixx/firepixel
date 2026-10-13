@@ -85,7 +85,7 @@ pub enum ExportError {
     Io(#[from] std::io::Error),
 }
 
-// ---- Mehrsprachige Meldungen (fp-i18n, `meldungen.ftl`) ----
+// ---- Mehrsprachige Meldungen (fp-i18n, `messages.ftl`) ----
 fn m1(key: &str, a: &str, va: &dyn std::fmt::Display) -> String {
     fp_i18n::t_args(key, &[(a, fp_i18n::Value::from(va.to_string()))])
 }

@@ -158,7 +158,7 @@ pub fn info(id: ModelId) -> &'static ModelInfo {
 }
 
 impl ModelId {
-    /// Schlüssel des Anzeigenamens (`meldungen.ftl`; Modellnamen bleiben, Zusätze werden übersetzt).
+    /// Schlüssel des Anzeigenamens (`messages.ftl`; Modellnamen bleiben, Zusätze werden übersetzt).
     pub fn name_key(self) -> &'static str {
         match self {
             ModelId::Sam2Tiny => "ai-model-sam2-tiny",

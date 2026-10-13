@@ -18,8 +18,6 @@ use std::path::{Path, PathBuf};
 const ALLOWED: &[(&str, &str, &str)] = &[
     ("fp-engine/src/commands/misc.rs", "ANLEITUNG", "Handbuch-Dateien im Repo (docs\\ANLEITUNG*.md); Umbenennung zusammen mit den Dokumenten (TE-2)"),
     ("fp-script/src/builtin_commands.rs", ".jsf", "eingebaute Befehlsskripte: Datei- und Ordnernamen erscheinen im Menü „Befehle“ (wie im Original) und folgen der UI-Sprache"),
-    ("fp-trace/src/lib.rs", "Schwarzweiss", "Rust-Bezeichner; serde-Name ist `blackWhite`, `schwarzweiss` nur Alias (Bezeichner: TE-2)"),
-    ("fp-trace/src/lib.rs", "Foto", "Rust-Bezeichner; serde-Name ist `photo`, `foto` nur Alias (Bezeichner: TE-2)"),
 ];
 
 /// German words that must not appear in technical names (lowercase, compared per word part).

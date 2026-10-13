@@ -1,5 +1,5 @@
 //! Fehler der KI-Auswahl (für die Statuszeile bzw. die Fehlermeldung des Befehls; Texte aus
-//! fp-i18n, `meldungen.ftl`, Schlüssel `ai-err-…`).
+//! fp-i18n, `messages.ftl`, Schlüssel `ai-err-…`).
 
 use crate::models::ModelId;
 
@@ -32,7 +32,7 @@ pub enum AiError {
     Io(#[from] std::io::Error),
 }
 
-// ---- Mehrsprachige Meldungen (fp-i18n, `meldungen.ftl`) ----
+// ---- Mehrsprachige Meldungen (fp-i18n, `messages.ftl`) ----
 fn m0(key: &str) -> String {
     fp_i18n::t(key)
 }

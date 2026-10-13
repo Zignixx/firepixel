@@ -778,7 +778,7 @@ impl TraceDialog {
         ui_kit::section(ui, &t("trace-dlg-presets"));
         ui.add_space(sp::XS);
         self.preset_cards(ui, &theme);
-        if self.opts.preset == Preset::Foto {
+        if self.opts.preset == Preset::Photo {
             // ehrlicher Hinweis: Fotos werden zu Farbflächen (kein Pixelbild mehr)
             ui.add_space(sp::S);
             ui_kit::notice(ui, Tone::Info, None, &t("trace-photo-note"));
@@ -1439,9 +1439,9 @@ impl TraceDialog {
 fn preset_key(p: Preset) -> &'static str {
     match p {
         Preset::Logo => "trace-preset-logo",
-        Preset::Schwarzweiss => "trace-preset-bw",
+        Preset::BlackWhite => "trace-preset-bw",
         Preset::Illustration => "trace-preset-illustration",
-        Preset::Foto => "trace-preset-photo",
+        Preset::Photo => "trace-preset-photo",
     }
 }
 
@@ -1723,7 +1723,7 @@ fn paint_preset_icon(p: &egui::Painter, r: Rect, preset: Preset, theme: &Theme) 
             p.circle_filled(at(15.0, 7.5), 6.0 * s, c.icon_red);
             p.circle_stroke(at(15.0, 7.5), 6.0 * s, Stroke::new(1.0, with_alpha(c.icon_paper, 200)));
         }
-        Preset::Schwarzweiss => {
+        Preset::BlackWhite => {
             let cc = at(11.0, 11.0);
             let rad = 9.0 * s;
             p.circle_filled(cc, rad, c.icon_paper);
@@ -1745,7 +1745,7 @@ fn paint_preset_icon(p: &egui::Painter, r: Rect, preset: Preset, theme: &Theme) 
             p.circle_filled(at(14.5, 9.5), 5.5 * s, with_alpha(c.icon_yellow, 220));
             p.circle_filled(at(11.0, 15.0), 5.5 * s, with_alpha(c.icon_blue, 210));
         }
-        Preset::Foto => {
+        Preset::Photo => {
             let fr = Rect::from_min_max(at(1.5, 3.5), at(20.5, 18.5));
             p.rect_filled(fr, CornerRadius::same((2.0 * s) as u8), c.icon_paper);
             p.add(Shape::convex_polygon(vec![at(3.0, 17.0), at(9.0, 9.0), at(14.0, 17.0)], c.icon_green, Stroke::NONE));
@@ -1871,7 +1871,7 @@ mod tests {
         let mut d = TraceDialog::new(logo(), 1, TraceOptions::default(), true);
         d.start(&ctx);
         let first = Arc::clone(&d.job.as_ref().expect("Lauf").cancel);
-        d.set_preset(Preset::Foto);
+        d.set_preset(Preset::Photo);
         d.start(&ctx);
         assert!(first.load(Ordering::Relaxed), "alter Lauf abgebrochen");
         let t0 = Instant::now();

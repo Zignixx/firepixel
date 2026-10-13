@@ -193,7 +193,7 @@ fn preset_change_restarts_trace_and_cancel_changes_nothing() {
     h.get_by_label(&fp_i18n::t("trace-preset-photo")).click();
     h.run_steps(2);
     let d = st(&mut h).dialogs.trace.as_ref().expect("Dialog");
-    assert_eq!(d.opts.preset, fp_trace::Preset::Foto);
+    assert_eq!(d.opts.preset, fp_trace::Preset::Photo);
     assert_eq!(d.runs_started, runs + 1, "Vorgabe wechseln startet genau eine neue Rechnung");
     wait_idle(&mut h);
     // dieselbe Vorgabe noch einmal: keine neue Rechnung
@@ -326,7 +326,7 @@ fn layout_fits_in_de_en_all_themes_and_small_screens() {
                 // mit Aufräumen zweizeilige Kennzahlen; Foto mit Hinweis unter den Karten, ohne Aufräumen
                 assert!(st(&mut h).dialogs.trace.as_ref().is_some_and(|d| d.stats.as_ref().is_some_and(|s| s.refine.is_some())), "Logo: Aufräum-Kennzahlen");
                 if let Some(d) = st(&mut h).dialogs.trace.as_mut() {
-                    d.set_preset(fp_trace::Preset::Foto);
+                    d.set_preset(fp_trace::Preset::Photo);
                 }
                 wait_idle(&mut h);
                 let _ = dialogs::take_overflows(&h.ctx);

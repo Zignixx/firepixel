@@ -205,7 +205,7 @@ fn logo_cutout_and_polygon() {
 #[test]
 fn black_white_letters() {
     let img = letters();
-    let r = timed("Schrift (Vorgabe Schwarzweiß)", &img, &TraceOptions::from_preset(Preset::Schwarzweiss));
+    let r = timed("Schrift (Vorgabe Schwarzweiß)", &img, &TraceOptions::from_preset(Preset::BlackWhite));
     // F, O, Balken, 2 Punkte
     assert_eq!(r.paths.len(), 5, "Pfade: {}", r.paths.len());
     assert!(r.paths.iter().all(|p| p.color == Rgba8::new(0, 0, 0, 255)));
@@ -216,7 +216,7 @@ fn black_white_letters() {
     eprintln!("Schrift: Übereinstimmung {:.2} %", m * 100.0);
     assert!(m >= 0.97, "Übereinstimmung {m}");
     // Flecken unter 4×4 px fallen weg
-    let mut o = TraceOptions::from_preset(Preset::Schwarzweiss);
+    let mut o = TraceOptions::from_preset(Preset::BlackWhite);
     o.filter_speckle = 30;
     let r2 = trace(&img, &o).expect("nachzeichnen");
     assert_eq!(r2.paths.len(), 3, "große Fleckengrenze entfernt die Punkte");
@@ -225,7 +225,7 @@ fn black_white_letters() {
 #[test]
 fn gradient_presets() {
     let img = gradient();
-    for p in [Preset::Illustration, Preset::Foto] {
+    for p in [Preset::Illustration, Preset::Photo] {
         let r = timed(&format!("Verlauf ({})", p.name()), &img, &TraceOptions::from_preset(p));
         assert!((4..=3000).contains(&r.paths.len()), "{p:?}: {} Pfade", r.paths.len());
         let out = r.render();
@@ -263,7 +263,7 @@ fn cancel_and_progress() {
 
     // Abbruch mitten im Lauf über den Rückruf
     let cancel = AtomicBool::new(false);
-    let r = trace_with(&img, &TraceOptions::from_preset(Preset::Foto), &cancel, &mut |p| {
+    let r = trace_with(&img, &TraceOptions::from_preset(Preset::Photo), &cancel, &mut |p| {
         if p.stage == Stage::Cluster {
             cancel.store(true, std::sync::atomic::Ordering::Relaxed);
         }
@@ -324,8 +324,8 @@ fn preset_names() {
     for p in Preset::ALL {
         assert_eq!(Preset::from_name(p.name()), Some(p));
     }
-    assert_eq!(Preset::from_name("foto"), Some(Preset::Foto));
-    assert_eq!(Preset::from_name("schwarzweiss"), Some(Preset::Schwarzweiss));
+    assert_eq!(Preset::from_name("foto"), Some(Preset::Photo));
+    assert_eq!(Preset::from_name("schwarzweiss"), Some(Preset::BlackWhite));
     assert_eq!(Preset::from_name("x"), None);
     assert_eq!(TraceOptions::default(), TraceOptions::from_preset(Preset::Logo));
 }
@@ -336,7 +336,7 @@ fn preset_names() {
 #[ignore]
 fn corpus_bitmaps() {
     let root = std::env::var("FP_CORPUS_DIR").map(std::path::PathBuf::from).unwrap_or_else(|_| std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..").join("..").join("..").join("korpus"));
-    let files = [("Configuration/Auto Shapes/Cog.gif", Preset::Logo), ("Configuration/Auto Shape Tools/Arrow.png", Preset::Logo), ("Configuration/Patterns/Blue Wave.jpg", Preset::Foto)];
+    let files = [("Configuration/Auto Shapes/Cog.gif", Preset::Logo), ("Configuration/Auto Shape Tools/Arrow.png", Preset::Logo), ("Configuration/Patterns/Blue Wave.jpg", Preset::Photo)];
     let mut done = 0;
     for (rel, preset) in files {
         let path = root.join(rel);

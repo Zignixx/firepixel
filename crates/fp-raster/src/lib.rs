@@ -49,7 +49,7 @@ pub use tiles::{Tile, TiledImage, TILE_SIZE};
 /// Größte Pixelzahl eines Puffers (2²⁸ ≈ 268 Mio. Pixel, 1 GiB RGBA).
 pub const MAX_PIXELS: usize = 1 << 28;
 
-/// Meldung aus fp-i18n (`meldungen.ftl`) mit zwei Werten.
+/// Meldung aus fp-i18n (`messages.ftl`) mit zwei Werten.
 fn raster_msg(key: &str, a: &str, va: &dyn std::fmt::Display, b: &str, vb: &dyn std::fmt::Display) -> String {
     fp_i18n::t_args(key, &[(a, fp_i18n::Value::from(va.to_string())), (b, fp_i18n::Value::from(vb.to_string()))])
 }

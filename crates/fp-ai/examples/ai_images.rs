@@ -9,7 +9,7 @@
 //!
 //! Zeiten auf stdout.
 //!
-//! `cargo run --release -p fp-ai --example ki_bilder -- <testdata-ordner> <ausgabeordner>`
+//! `cargo run --release -p fp-ai --example ai_images -- <testdata-ordner> <ausgabeordner>`
 
 use fp_ai::models::ModelId;
 use fp_ai::pipeline::{self, ObjectPrompt, PromptPoint};
