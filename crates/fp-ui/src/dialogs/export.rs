@@ -483,6 +483,9 @@ pub fn export_files_noted(st: &AppState, dlg: &ExportDialog) -> Result<(Vec<Expo
     o.style = dlg.kind();
     o.src_file = d.path.as_ref().map(|p| p.display().to_string()).unwrap_or_default();
     o.panel = Some(dlg.panel_options(st));
+    // HTML-Einrichtung „Allgemein“/„Tabelle“ (Kleinbuchstaben, leere Zellen; Voreinstellungen) –
+    // vorher nur im Engine-Befehl gesetzt, der Dialog exportierte mit den Vorgaben (CT-1a E3)
+    o.html_prefs = fp_engine::commands::export::html_prefs(&st.session.prefs);
     let r = ExportRenderer { normal: Arc::clone(&st.renderer) };
     if dlg.kind() == FilesStyle::PagesToFiles && dlg.pages_as == 1 {
         return pages_as_fwpng(&st.session, &d.doc, d.page, &stem, o.panel.as_ref().map(|p| p.pages).unwrap_or_default()).map(|f| (f, ExportNotes::default()));

@@ -248,3 +248,44 @@ fn e2_sprite_prefix_typed_then_ok_is_kept() {
     assert_eq!(d.sprite.prefix, "1 x", "getippter Präfix übernommen");
     h.state_mut().state.dialogs.export = None;
 }
+/// E3: Der Exportdialog (nicht nur der Engine-Befehl) wendet die HTML-Einrichtung an:
+/// „Dateiname in Kleinbuchstaben“ und leere Zellen (Farbe #123456, geschütztes Leerzeichen).
+#[test]
+fn e3_export_dialog_uses_html_setup() {
+    use fp_export::doc_export::FilesStyle;
+    use fp_ui::dialogs::export::{begin_export, style_index, ExportDialog, ExportStep};
+    use fp_ui::dialogs::html_setup::{self, HtmlSetupDialog};
+    let mut s = fp_engine::Session::default();
+    s.execute("file.new", json!({"width": 240, "height": 160})).expect("file.new");
+    s.execute("draw.rectangle", json!({"rect": [10, 10, 100, 100], "fillColor": "#ff0000"})).expect("rect");
+    s.execute("edit.insert.slice", json!({})).expect("slice");
+    s.execute("select.set", json!({"ids": []})).ok();
+    let mut st = AppState::new(s, UiSettings::default(), None);
+    let mut hs = HtmlSetupDialog::new(&st).expect("HTML-Einrichtung");
+    hs.lowercase = true;
+    hs.shims = 1; // Einzelne Tabelle ohne Platzhalter
+    hs.use_canvas = false;
+    hs.cell_color = "#123456".into();
+    hs.contents = 2; // Geschütztes Leerzeichen
+    hs.include_unsliced = false; // Bereiche ohne Segmente nicht einschließen ⇒ leere Zellen
+    html_setup::apply(&mut st, &hs);
+    let dir = std::env::temp_dir().join(format!("fp-fixc-e3-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).expect("Ordner");
+    let mut d = ExportDialog::new(&st).expect("Exportdialog");
+    d.set_style(style_index(FilesStyle::HtmlAndImages));
+    d.folder = dir.display().to_string();
+    d.file_name = "MyPage.htm".into();
+    match begin_export(&mut st, &mut d) {
+        ExportStep::Done(_) => {}
+        o => panic!("{o:?}"),
+    }
+    let mut files: Vec<String> = std::fs::read_dir(&dir).expect("Ordner").flatten().map(|e| e.file_name().to_string_lossy().to_string()).collect();
+    files.sort();
+    assert!(files.iter().any(|f| f == "mypage.htm"), "HTML klein: {files:?}");
+    assert!(files.iter().all(|f| *f == f.to_lowercase()), "alle Namen klein: {files:?}");
+    assert!(!files.iter().any(|f| f == "spacer.gif"), "ohne Abstandhalter: {files:?}");
+    let html = std::fs::read_to_string(dir.join("mypage.htm")).expect("HTML");
+    assert!(html.contains("bgcolor=\"#123456\">&nbsp;</td>"), "leere Zellen: {html}");
+    let _ = std::fs::remove_dir_all(&dir);
+}
