@@ -232,7 +232,15 @@ pub fn encode(item: &Item, fmt: OutputFormat, options: &Map<String, Value>) -> R
 pub fn encode_plain(item: &Item, fmt: OutputFormat, options: &Map<String, Value>) -> Result<(Vec<u8>, Vec<String>)> {
     let mut warnings = Vec::new();
     if let Some(f) = encoders().read().ok().and_then(|m| m.get(&fmt).copied()) {
-        return Ok((f(item, options)?, warnings));
+        let bytes = f(item, options)?;
+        // GIF mit Zielgröße: nicht erreicht → Warnung im Bericht und in der Vorschau (BATCH-11b)
+        if fmt == OutputFormat::Gif
+            && let Some(kb) = opt_i(options, "maxKB").filter(|k| *k > 0)
+            && bytes.len() as u64 > kb as u64 * 1024
+        {
+            warnings.push(fp_i18n::tr!("batch-warn-gif-target-missed", target = fp_i18n::fmt_size(kb as u64 * 1024), reached = fp_i18n::fmt_size(bytes.len() as u64)));
+        }
+        return Ok((bytes, warnings));
     }
     if fmt == OutputFormat::FwPng {
         let dir = std::env::temp_dir().join("firepixel-batch");

@@ -33,12 +33,16 @@ batch-step-output-gif = GIF Options
     .description = Small GIFs at very good quality: palette, dithering, frame differences, loss and target size.
 batch-param-output-gif-preset = Preset
 batch-param-output-gif-quality = Quality
+    .tooltip = Controls colors, dither strength and loss. The preset sets it: Smallest 60, Balanced 80, Best quality 100.
 batch-param-output-gif-maxKB = Target size
+    .tooltip = Largest file size in KB; 0 = no target size. Firepixel lowers quality, frame rate and finally the size to reach it.
 batch-param-output-gif-colors = Maximum colors
+    .tooltip = Empty = automatic from quality and content (graphic or photo).
 batch-param-output-gif-palette = Palette
 batch-param-output-gif-dither = Dithering
 batch-param-output-gif-ditherAmount = Dithering strength
 batch-param-output-gif-lossy = Loss
+    .tooltip = Empty = automatic from quality and content.
 batch-param-output-gif-diffTransparency = Unchanged pixels transparent
 batch-param-output-gif-diffThreshold = “Unchanged” threshold
 batch-param-output-gif-cropChanged = Save changed area only
@@ -46,6 +50,7 @@ batch-param-output-gif-mergeSimilar = Merge nearly identical frames
 batch-param-output-gif-disposal = Disposal
 batch-param-output-gif-transparency = Transparency
 batch-param-output-gif-splitFrames = Save separate changes individually
+    .tooltip = Automatic = on below quality 95. Separate changes of a frame are stored as small sub-frames.
 batch-value-output-gif-preset-smallest = Smallest
 batch-value-output-gif-preset-balanced = Balanced
 batch-value-output-gif-preset-best = Best Quality
@@ -148,9 +153,13 @@ batch-cli-examples =
     Examples:
       firepixel-cli batch --recipe web.fpbatch.json --in photos --recursive
       firepixel-cli batch --recipe web.fpbatch.json a.png b.jpg --out output --dry-run
+      firepixel-cli batch --recipe web-webp --in photos --out web         (built-in template)
+      firepixel-cli batch --recipe video-to-gif clip.mp4 --out gifs       (needs ffmpeg)
+      firepixel-cli batch --templates
       firepixel-cli batch --steps --json
+    After the run, batch-report.json and batch-report.html (with thumbnails) are in the output folder.
     Exit code: 0 all done, 1 at least one error, 2 wrong call, 3 canceled.
-batch-cli-arg-recipe = Recipe file (.fpbatch.json) or JSON text
+batch-cli-arg-recipe = Recipe file (.fpbatch.json), JSON text or name of a built-in template (--templates)
 batch-cli-arg-steps = Show the catalog of all steps
 batch-cli-arg-in = Input folder
 batch-cli-arg-recursive = Include subfolders

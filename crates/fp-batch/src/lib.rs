@@ -7,7 +7,7 @@
 //! - [`naming`] – Umbenennen (Baukasten/Regex), Ausgabeordner, Konflikte, Plan/Trockenlauf
 //! - [`executor`] – Thread-Pool, Speicherbudget, Abbrechen, Fortschritt, Lauf im Hintergrund
 //! - [`output`] – Kodieren, Temporärdatei + atomares Umbenennen, Sicherung
-//! - [`report`] – `batch-report.json`, `batch-log.txt`
+//! - [`report`] – `batch-report.json`, `batch-log.txt`; [`report_html`] – `batch-report.html`
 //! - [`host`] – Befehle `batch.*` im Befehlsregister ([`install_host`])
 //!
 //! Dieselbe Pipeline dient Oberfläche, CLI (`firepixel-cli batch --recipe`), MCP und JSF.
@@ -23,6 +23,7 @@ pub mod output;
 pub mod pipeline;
 pub mod recipe;
 pub mod report;
+pub mod report_html; // BATCH-11b: batch-report.html
 pub mod step;
 pub mod steps;
 pub mod video;

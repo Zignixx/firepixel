@@ -26,7 +26,7 @@ pub mod size;
 use crate::error::{BatchError, Result};
 use crate::item::{Item, ItemKind};
 use crate::output::OutputFormat;
-use crate::step::{ParamDef, Step, StepContext, StepGroup, StepKind, StepRegistry};
+use crate::step::{ParamDef, ParamType, Step, StepContext, StepGroup, StepKind, StepRegistry};
 use dither::DitherMode;
 pub use encoder::{FrameStat, GifSettings, GifStats, PaletteMode};
 use fp_raster::{IRect, RgbaImage};
@@ -328,18 +328,21 @@ impl Step for GifOutput {
             ParamDef::choice("preset", &["smallest", "balanced", "best"], "balanced").beginner(),
             ParamDef::int("quality", 1, 100, 80).beginner(),
             ParamDef::int("maxKB", 0, 100_000, 0).beginner().unit("KB"),
-            ParamDef::int("colors", 2, 256, 256),
+            // ohne Wert: nach Qualität und Inhalt (Grafik/Foto) gewählt → „Automatisch“ (BATCH-11b)
+            ParamDef::new("colors", ParamType::Int { min: 2, max: 256 }, Value::Null),
             ParamDef::choice("palette", &["global", "perFrame", "auto"], "auto"),
             ParamDef::choice("dither", &["none", "ordered", "blueNoise", "floydSteinberg", "temporal"], "temporal"),
             ParamDef::int("ditherAmount", 0, 100, 70).unit("%"),
-            ParamDef::int("lossy", 0, 200, 40),
+            ParamDef::new("lossy", ParamType::Int { min: 0, max: 200 }, Value::Null),
             ParamDef::bool("diffTransparency", true),
             ParamDef::int("diffThreshold", 0, 32, 3),
             ParamDef::bool("cropChanged", true),
             ParamDef::bool("mergeSimilar", true),
             ParamDef::choice("disposal", &["auto", "keep"], "auto"),
             ParamDef::bool("transparency", true),
-            ParamDef::bool("splitFrames", true),
+            ParamDef::new("splitFrames", ParamType::Bool, Value::Null),
+            // Füllfarbe für halbtransparente Pixel ohne GIF-Transparenz (BATCH-11b: eigenes Feld)
+            ParamDef::color("background", "#ffffff").when("transparency", &["false"]),
         ]
     }
     fn preview_ok(&self) -> bool {

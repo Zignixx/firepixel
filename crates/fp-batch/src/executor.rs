@@ -265,6 +265,7 @@ impl Job<'_> {
             rep.warnings.append(&mut ctx.warnings);
             cancel.check()?;
             self.write_item(&item, fmt, &target, action, info, rep)?;
+            self.write_extra_fwpng(&item, fmt, &target, rep)?;
         }
         if self.recipe.output.keep_timestamps && action != PlanAction::ReplaceOriginal && target.exists() {
             let _ = output::copy_modified_time(&info.path, &target);
@@ -304,6 +305,65 @@ impl Job<'_> {
         } else {
             output::commit_temp(&tmp, target)?;
         }
+        Ok(())
+    }
+}
+
+/// Ziel der zusätzlichen FW-PNG: gleicher Ordner und Stamm wie `target`, Endung `.fw.png`.
+pub fn extra_fwpng_target(target: &Path) -> PathBuf {
+    let name = target.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
+    let lower = name.to_lowercase();
+    let stem = if lower.ends_with(".fw.png") {
+        &name[..name.len() - 7]
+    } else {
+        match name.rfind('.') {
+            Some(i) if i > 0 => &name[..i],
+            _ => name.as_str(),
+        }
+    };
+    target.with_file_name(format!("{stem}.fw.png"))
+}
+
+impl Job<'_> {
+    /// „Zusätzlich als FW-PNG“ (`output.options.alsoFwpng`, BATCH-11b): schreibt neben die Ausgabe
+    /// eine bearbeitbare FW-PNG desselben Elements (z. B. SVG **und** FW-PNG aus „Nachzeichnen“ in
+    /// einem Lauf). Konflikte nach der Regel des Rezepts: umbenennen (`name (2).fw.png`),
+    /// überspringen (Hinweis) oder überschreiben; „Jedes Mal fragen“ benennt um.
+    fn write_extra_fwpng(&self, item: &Item, fmt: OutputFormat, target: &Path, rep: &mut ItemReport) -> Result<()> {
+        let on = self.recipe.output.options.get(crate::steps::files::ALSO_FWPNG).and_then(serde_json::Value::as_bool).unwrap_or(false);
+        if !on || fmt == OutputFormat::FwPng {
+            return Ok(());
+        }
+        let mut extra = extra_fwpng_target(target);
+        if extra.exists() {
+            match self.recipe.output.conflict {
+                crate::recipe::Conflict::Skip => {
+                    rep.warnings.push(fp_i18n::tr!("batch-warn-extra-exists", name = extra.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default()));
+                    return Ok(());
+                }
+                crate::recipe::Conflict::Overwrite => {}
+                _ => {
+                    let stem = extra.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
+                    let stem = stem.trim_end_matches(".fw.png").to_string();
+                    let mut k = 2;
+                    while extra.exists() && k < 10_000 {
+                        extra = target.with_file_name(format!("{stem} ({k}).fw.png"));
+                        k += 1;
+                    }
+                }
+            }
+        }
+        let tmp = output::temp_path(&extra);
+        if let Err(e) = output::write_fwpng(item, &output::long_path(&tmp)) {
+            let _ = std::fs::remove_file(output::long_path(&tmp));
+            return Err(e);
+        }
+        if let Err(e) = self.opts.cancel.check() {
+            let _ = std::fs::remove_file(output::long_path(&tmp));
+            return Err(e);
+        }
+        output::commit_temp(&tmp, &extra)?;
+        rep.extra_targets.push(extra);
         Ok(())
     }
 }
@@ -363,6 +423,7 @@ pub fn run(recipe: &Recipe, items: &[ItemInfo], opts: &RunOptions) -> Result<Rep
         output_dirs: plan.output_dirs.clone(),
         warnings: Vec::new(),
         report_file: None,
+        report_html: None,
     };
     if opts.dry_run {
         report.items = plan
@@ -399,8 +460,19 @@ pub fn run(recipe: &Recipe, items: &[ItemInfo], opts: &RunOptions) -> Result<Rep
         });
         if let Some(p) = path {
             report.report_file = Some(p.clone());
+            // HTML-Bericht daneben (BATCH-11b); sein Pfad steht auch im JSON
+            if recipe.output.report_html {
+                report.report_html = Some(crate::report_html::html_path_for(&p));
+            }
             if let Err(e) = report.write(&p) {
                 report.report_file = None;
+                report.report_html = None;
+                report.warnings.push(e.to_string());
+            }
+            if let Some(hp) = report.report_html.clone()
+                && let Err(e) = crate::report_html::write(&report, &hp)
+            {
+                report.report_html = None;
                 report.warnings.push(e.to_string());
             }
         }
@@ -493,7 +565,7 @@ fn run_collect(job: &Job, plan: &Plan, k: usize) -> Vec<ItemReport> {
         rep.target = Some(target.clone());
         let t0 = Instant::now();
         let mut c2 = StepContext::new(first, job.total, info, cancel, fmt);
-        let r = job.pipe.apply_range(k + 1..job.pipe.steps.len(), &mut out, &mut c2).and_then(|_| job.write_item(&out, fmt, &target, PlanAction::Write, info, &mut rep));
+        let r = job.pipe.apply_range(k + 1..job.pipe.steps.len(), &mut out, &mut c2).and_then(|_| job.write_item(&out, fmt, &target, PlanAction::Write, info, &mut rep)).and_then(|_| job.write_extra_fwpng(&out, fmt, &target, &mut rep));
         rep.ms = t0.elapsed().as_millis() as u64;
         rep.warnings.extend(c2.warnings);
         match r {

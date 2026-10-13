@@ -433,6 +433,9 @@ pub struct OutputSpec {
     /// `batch-report.json` in den Ausgabeordner schreiben.
     #[serde(default = "yes")]
     pub report: bool,
+    /// Zusätzlich `batch-report.html` mit Vorschaubildern neben den JSON-Bericht (BATCH-11b).
+    #[serde(default = "yes")]
+    pub report_html: bool,
     #[serde(flatten)]
     pub extra: Map<String, Value>,
 }
@@ -453,6 +456,7 @@ impl Default for OutputSpec {
             threads: None,
             memory_limit_mb: None,
             report: true,
+            report_html: true,
             extra: Map::new(),
         }
     }

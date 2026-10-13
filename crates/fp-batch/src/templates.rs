@@ -28,7 +28,7 @@ pub struct Template {
 }
 
 /// (ID, Gruppe, Inhalt) in der Reihenfolge des Menüs.
-const BUILTIN: [(&str, StepGroup, &str); 11] = [
+const BUILTIN: [(&str, StepGroup, &str); 12] = [
     ("web-webp", StepGroup::Geometry, include_str!("../data/recipes/web-webp.fpbatch.json")),
     ("email-photos", StepGroup::Geometry, include_str!("../data/recipes/email-photos.fpbatch.json")),
     ("save-as-jpeg", StepGroup::Format, include_str!("../data/recipes/save-as-jpeg.fpbatch.json")),
@@ -36,6 +36,7 @@ const BUILTIN: [(&str, StepGroup, &str); 11] = [
     ("transparency-to-white", StepGroup::Background, include_str!("../data/recipes/transparency-to-white.fpbatch.json")),
     ("logos-to-svg", StepGroup::Advanced, include_str!("../data/recipes/logos-to-svg.fpbatch.json")),
     ("small-gifs", StepGroup::Animation, include_str!("../data/recipes/small-gifs.fpbatch.json")),
+    ("video-to-gif", StepGroup::Animation, include_str!("../data/recipes/video-to-gif.fpbatch.json")), // BATCH-11b
     ("strip-metadata", StepGroup::Metadata, include_str!("../data/recipes/strip-metadata.fpbatch.json")),
     ("rename-by-date", StepGroup::Files, include_str!("../data/recipes/rename-by-date.fpbatch.json")),
     ("square-1080", StepGroup::Geometry, include_str!("../data/recipes/square-1080.fpbatch.json")),

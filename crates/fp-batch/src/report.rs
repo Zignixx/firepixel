@@ -10,6 +10,8 @@ use std::path::{Path, PathBuf};
 pub const REPORT_FORMAT: &str = "firepixel-batch-report";
 /// Dateiname des Berichts im Ausgabeordner.
 pub const REPORT_FILE: &str = "batch-report.json";
+/// Dateiname des HTML-Berichts im Ausgabeordner (neben `batch-report.json`, BATCH-11b).
+pub const REPORT_HTML_FILE: &str = "batch-report.html";
 /// Dateiname des Protokolls im Ordner `Logs`.
 pub const LOG_FILE: &str = "batch-log.txt";
 
@@ -48,12 +50,15 @@ pub struct ItemReport {
     /// Sicherung des Originals (`Original Files`).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub backup: Option<PathBuf>,
+    /// Zusätzliche Ausgaben neben `target` (z. B. die FW-PNG bei `alsoFwpng`, BATCH-11b).
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub extra_targets: Vec<PathBuf>,
 }
 
 impl ItemReport {
     /// Leerer Eintrag.
     pub fn new(index: usize, source: &Path, bytes_in: u64) -> ItemReport {
-        ItemReport { index, source: source.to_path_buf(), target: None, status: ItemStatus::Waiting, bytes_in, bytes_out: 0, ms: 0, warnings: Vec::new(), error: None, step: None, backup: None }
+        ItemReport { index, source: source.to_path_buf(), target: None, status: ItemStatus::Waiting, bytes_in, bytes_out: 0, ms: 0, warnings: Vec::new(), error: None, step: None, backup: None, extra_targets: Vec::new() }
     }
 }
 
@@ -93,6 +98,9 @@ pub struct Report {
     /// Pfad des geschriebenen `batch-report.json`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub report_file: Option<PathBuf>,
+    /// Pfad des geschriebenen `batch-report.html` (BATCH-11b).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub report_html: Option<PathBuf>,
 }
 
 impl Report {

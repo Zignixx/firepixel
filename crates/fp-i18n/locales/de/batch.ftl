@@ -33,12 +33,16 @@ batch-step-output-gif = GIF-Optionen
     .description = Kleine GIFs bei sehr guter Qualität: Palette, Dithering, Bilddifferenz, Verlust und Zielgröße.
 batch-param-output-gif-preset = Voreinstellung
 batch-param-output-gif-quality = Qualität
+    .tooltip = Steuert Farben, Dithering-Stärke und Verlust. Die Voreinstellung setzt sie: Am kleinsten 60, Ausgewogen 80, Beste Qualität 100.
 batch-param-output-gif-maxKB = Zielgröße
+    .tooltip = Größte Dateigröße in KB; 0 = keine Zielgröße. Firepixel senkt dafür Qualität, Bildrate und zuletzt die Größe.
 batch-param-output-gif-colors = Höchstens Farben
+    .tooltip = Leer = automatisch nach Qualität und Inhalt (Grafik oder Foto).
 batch-param-output-gif-palette = Palette
 batch-param-output-gif-dither = Dithering
 batch-param-output-gif-ditherAmount = Dithering-Stärke
 batch-param-output-gif-lossy = Verlust
+    .tooltip = Leer = automatisch nach Qualität und Inhalt.
 batch-param-output-gif-diffTransparency = Unveränderte Pixel transparent
 batch-param-output-gif-diffThreshold = Schwelle „unverändert“
 batch-param-output-gif-cropChanged = Nur geänderten Bereich speichern
@@ -46,6 +50,7 @@ batch-param-output-gif-mergeSimilar = Fast gleiche Bilder zusammenlegen
 batch-param-output-gif-disposal = Entsorgung
 batch-param-output-gif-transparency = Transparenz
 batch-param-output-gif-splitFrames = Getrennte Änderungen einzeln speichern
+    .tooltip = Automatisch = an unter Qualität 95. Getrennte Änderungen eines Bildes werden als einzelne kleine Teilbilder gespeichert.
 batch-value-output-gif-preset-smallest = Am kleinsten
 batch-value-output-gif-preset-balanced = Ausgewogen
 batch-value-output-gif-preset-best = Beste Qualität
@@ -148,9 +153,13 @@ batch-cli-examples =
     Beispiele:
       firepixel-cli batch --recipe web.fpbatch.json --in fotos --recursive
       firepixel-cli batch --recipe web.fpbatch.json a.png b.jpg --out ausgabe --dry-run
+      firepixel-cli batch --recipe web-webp --in fotos --out web          (eingebaute Vorlage)
+      firepixel-cli batch --recipe video-to-gif clip.mp4 --out gifs       (braucht ffmpeg)
+      firepixel-cli batch --templates
       firepixel-cli batch --steps --json
+    Nach dem Lauf liegen batch-report.json und batch-report.html (mit Vorschaubildern) im Ausgabeordner.
     Exit-Code: 0 alles fertig, 1 mindestens ein Fehler, 2 Aufruf falsch, 3 abgebrochen.
-batch-cli-arg-recipe = Rezept-Datei (.fpbatch.json) oder JSON-Text
+batch-cli-arg-recipe = Rezept-Datei (.fpbatch.json), JSON-Text oder Name einer eingebauten Vorlage (--templates)
 batch-cli-arg-steps = Katalog aller Schritte zeigen
 batch-cli-arg-in = Eingangsordner
 batch-cli-arg-recursive = Unterordner einbeziehen
