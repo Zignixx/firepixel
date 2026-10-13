@@ -111,7 +111,8 @@ pub fn show(ui: &mut Ui, st: &mut AppState, s: &mut Studio, r: Rect, now: f64) {
     let bytes: u64 = vis.iter().map(|&i| s.files[i].info.bytes).sum();
     let dirty = if s.is_dirty() && (s.recipe_path.is_some() || !s.recipe.steps.is_empty()) { format!(" {}", t("batch-ui-unsaved")) } else { String::new() };
     let subtitle = fp_i18n::tr!("batch-ui-subtitle", n = vis.len(), size = fp_i18n::fmt_size(bytes), recipe = s.recipe_title()) + &dirty;
-    kit::paint_banner(&p, r, &theme, &t("batch-ui-title"), &subtitle, text_right);
+    let pixels_right = if show_seg { x_seg } else { x_menu } - sp::S;
+    kit::paint_banner(&p, r, &theme, &t("batch-ui-title"), &subtitle, text_right, pixels_right);
     if show_seg {
         let sr = Rect::from_min_size(pos2(x_seg, cy - 13.0), vec2(seg_w, 26.0));
         let cur = if s.mode == Mode::Pro { 1 } else { 0 };

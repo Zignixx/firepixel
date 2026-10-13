@@ -164,7 +164,8 @@ fn hash01(x: i32, y: i32) -> f32 {
 
 /// Banner wie auf dem Startbildschirm (Fläche, Pixelfeld nach rechts dichter, Logo), mit Titel und
 /// Untertitel; `text_right` = rechte Grenze der Schrift (rechts davon liegen Bedienelemente).
-pub fn paint_banner(p: &egui::Painter, r: Rect, theme: &Theme, title: &str, subtitle: &str, text_right: f32) {
+/// `pixels_right`: rechte Grenze des Pixelfelds (links der Bedienelemente).
+pub fn paint_banner(p: &egui::Painter, r: Rect, theme: &Theme, title: &str, subtitle: &str, text_right: f32, pixels_right: f32) {
     let b = banner_colors(theme);
     let c = &theme.colors;
     let cr = CornerRadius::same(RADIUS);
@@ -185,7 +186,7 @@ pub fn paint_banner(p: &egui::Painter, r: Rect, theme: &Theme, title: &str, subt
         for i in 0..cols {
             let fx = i as f32 / cols.max(1) as f32;
             let px = r.left() + i as f32 * cell;
-            if fx < 0.30 || px < text_end {
+            if fx < 0.30 || px < text_end || px + cell > pixels_right {
                 continue;
             }
             let v = hash01(i, j);

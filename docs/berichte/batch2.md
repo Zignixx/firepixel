@@ -21,7 +21,7 @@ weichem Schatten (Normal), heller als die Fläche (Dunkel), Leuchtrand in Gruppe
 | `crates\fp-ui\tests\batch_ui.rs` | 15 Tests + Bilder (siehe unten) |
 | `crates\fp-i18n\locales\{de,en}\batch.ftl` | Abschnitt „Oberfläche: Batch-Studio“ (`batch-ui-*`), Beschriftungen der Endkarte „Speichern als“ (`batch-param-output-*`) und von „Nur kopieren“ (`batch-param-file-copyOnly-action-*`) |
 
-Bilder (1440 × 900, sechs Dateien, Schritt „Metadaten“ von BATCH-5, Endkarte „Speichern als“ offen,
+Bilder (1440 × 900, sechs Dateien, Schritte „Größe ändern“ (BATCH-4) und „Metadaten“ (BATCH-5), Endkarte „Speichern als“ offen,
 Vergleich vorher/nachher): `docs\screenshots\batch2_{normal,dunkel,oled}_{de,en}.png`.
 Erzeugen: `cargo test -p fp-ui --test all batch_ui::batch2_bilder -- --ignored`.
 
@@ -66,7 +66,7 @@ Erzeugen: `cargo test -p fp-ui --test all batch_ui::batch2_bilder -- --ignored`.
   Das Formular ändert `ctx.params` (JSON-Objekt) und liefert `true` bei Änderung; das Studio schreibt
   das in einem Rückgängig-Schritt je Geste ins Rezept. `ctx.pick_path = Some(param)` öffnet den
   Datei-Dialog für einen Pfad-Parameter. Bausteine: `params::generic_body` (Rest wie gewohnt),
-  `params::param_label`, `value_label` (`batch-param-<id>-<param>-<wert>` → `batch-value-<wert>` → Wert),
+  `params::param_label`, `value_label` (sucht `batch-param-<id>-<param>-<wert>`, `batch-value-<id>-<param>-<wert>` (BATCH-4/5), `batch-choice-<id>-<param>-<wert>` (BATCH-6), `batch-value-<wert>`, sonst den Wert; Formate als Eigenname),
   `kit::*`. Anmelden einmal je Prozess, z. B. aus `pub mod <datei>;` in `batch\mod.rs` + einer
   `register()`-Zeile in `open()` – oder aus der eigenen Initialisierung.
 - **Endkarten**: dieselbe Anmeldung mit `"rename"` (BATCH-3, `rename_ui.rs`; `params` = `RenameSpec` als

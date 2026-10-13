@@ -78,12 +78,15 @@ pub fn value_label(step_id: &str, name: &str, value: &str) -> String {
     {
         return if f == fp_batch::output::OutputFormat::Same { t("batch-ui-output-same") } else { f.display_name().to_string() };
     }
-    let k = format!("{}-{}", param_key(step_id, name), value);
-    if fp_i18n::has(&k) {
-        return t(&k);
+    // Schreibweisen der Pakete: batch-param-…-<wert> (BATCH-1/2), batch-value-<id>-<param>-<wert>
+    // (BATCH-4/5), batch-choice-<id>-<param>-<wert> (BATCH-6), allgemein batch-value-<wert>
+    let id = step_id.replace('.', "-");
+    for k in [format!("{}-{}", param_key(step_id, name), value), format!("batch-value-{id}-{name}-{value}"), format!("batch-choice-{id}-{name}-{value}"), format!("batch-value-{value}")] {
+        if fp_i18n::has(&k) {
+            return t(&k);
+        }
     }
-    let k2 = format!("batch-value-{value}");
-    if fp_i18n::has(&k2) { t(&k2) } else { value.to_string() }
+    value.to_string()
 }
 
 /// Wert eines Parameters als kurzer Text (Zusammenfassung).
