@@ -353,10 +353,15 @@ impl BrushEdit {
 /// Pinsel der Werkzeugvorgabe: `new_brush`, sonst aus der Strichvorgabe `new_stroke`
 /// (Vorgabe, Stärke, Weichheit) gebildet, sonst ein einfacher 1-px-Pinsel.
 pub fn tool_brush(o: &crate::tools::ToolOptions) -> Brush {
-    if let Some(b) = o.new_brush.as_ref().and_then(|v| serde_json::from_value::<Brush>(v.clone()).ok()) {
+    tool_brush_from(o.new_stroke.as_ref(), o.new_brush.as_ref())
+}
+
+/// Wie [`tool_brush`] aus Strichvorgabe (`pi.stroke`-Parameter) und Vorgabepinsel.
+pub fn tool_brush_from(new_stroke: Option<&Value>, new_brush: Option<&Value>) -> Brush {
+    if let Some(b) = new_brush.and_then(|v| serde_json::from_value::<Brush>(v.clone()).ok()) {
         return b;
     }
-    let st = o.new_stroke.as_ref();
+    let st = new_stroke;
     let get = |k: &str| st.and_then(|v| v.get(k));
     let preset = get("preset").and_then(|v| v.as_str()).and_then(|n| BRUSH_PRESETS.iter().find(|b| format!("{}/{}", b.category_de, b.name_de) == n || b.name == n));
     let width = get("width").and_then(|v| v.as_f64()).map(|w| w.round().clamp(1.0, 1000.0) as i32);

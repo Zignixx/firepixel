@@ -258,6 +258,9 @@ pub enum Overlay {
     TextEdit(Box<TextEditView>),
     /// Pinselspitze am Cursor (Bitmapwerkzeuge, `UseBrushSizeCursors`).
     BrushTip { at: Point, diameter: f32, round: bool },
+    /// Laufender Malvorgang (Pinsel, Bleistift, Radiergummi): die geänderten Pixel der Bitmap als
+    /// Kacheln, über das Hintergrundbild gelegt (PINSEL-1).
+    Paint(crate::paint::PaintPreview),
     /// Markierung (Quelle des Stempels).
     Marker { at: Point },
     /// Steuerpunkt einer automatischen Form (gelbe Raute); `hot` = gerade gezogen/überfahren.
@@ -470,6 +473,16 @@ pub struct ToolOptions {
     pub brush_size: f32,
     pub brush_soft: bool,
     pub pencil_antialias: bool,
+    /// Mischmodus von Pinsel und Bleistift (`BLDi`, 0 = Normal; Inspektor „Mischmodus“).
+    #[serde(default)]
+    pub paint_blend: u8,
+    /// „Transparenz beibehalten“ von Pinsel und Bleistift: nur auf deckende Pixel malen.
+    #[serde(default)]
+    pub keep_transparency: bool,
+    /// „Automatisch löschen“ des Bleistifts: beginnt der Zug auf einem Pixel in Strichfarbe, malt
+    /// er mit der Füllfarbe.
+    #[serde(default)]
+    pub auto_erase: bool,
     pub eraser_size: f32,
     pub eraser_round: bool,
     pub eraser_opacity: u8,
@@ -614,6 +627,9 @@ impl ToolOptions {
             brush_size: p.get_int("BrushTipSize", 1).max(1) as f32,
             brush_soft: false,
             pencil_antialias: p.get_bool("PencilAntiAlias", false),
+            paint_blend: 0,
+            keep_transparency: false,
+            auto_erase: false,
             eraser_size: p.get_int("EraserToolDiameter", 13).max(1) as f32,
             eraser_round: p.get_bool("EraserToolIsCircle", true),
             eraser_opacity: p.get_int("EraserToolOpacity", 100).clamp(0, 100) as u8,

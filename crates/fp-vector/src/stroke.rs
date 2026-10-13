@@ -98,6 +98,10 @@ impl InkBuffer<'_> {
     #[inline]
     pub fn stamp(&mut self, x: i64, y: i64, m: &Tip, o: u8, cap: bool) {
         let (x0, y0) = (self.rect.left as i64, self.rect.top as i64);
+        // Stempel ganz außerhalb des Fensters: nichts zu tun (Teilfenster der Live-Vorschau)
+        if x >= x0 + self.w as i64 || y >= y0 + self.h as i64 || x + m.n as i64 <= x0 || y + m.n as i64 <= y0 {
+            return;
+        }
         for j in 0..m.n {
             let yy = y + j as i64 - y0;
             if yy < 0 || yy >= self.h as i64 {

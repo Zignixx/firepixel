@@ -42,6 +42,7 @@ pub mod error;
 pub mod export_backend;
 pub mod geometry;
 pub mod history;
+pub mod paint;
 pub mod prefs;
 pub mod render;
 pub mod resources;

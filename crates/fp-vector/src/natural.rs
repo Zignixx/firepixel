@@ -273,6 +273,10 @@ impl ArgbInk<'_> {
     fn stamp(&mut self, x: i64, y: i64, m: &Tip, o: u8, cap: bool, color: [u8; 3], tex: Option<(&TexLookup, u32, u32)>) {
         let (x0, y0) = (self.base.rect.left as i64, self.base.rect.top as i64);
         let (w, h) = (self.base.w as i64, self.base.h as i64);
+        // Stempel ganz außerhalb des Fensters: nichts zu tun (Teilfenster der Live-Vorschau)
+        if x >= x0 + w || y >= y0 + h || x + m.n as i64 <= x0 || y + m.n as i64 <= y0 {
+            return;
+        }
         for j in 0..m.n {
             let yy = y + j as i64 - y0;
             if yy < 0 || yy >= h {

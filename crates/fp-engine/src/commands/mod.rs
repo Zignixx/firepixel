@@ -6,7 +6,7 @@
 
 pub mod ai;
 pub mod batch; // BATCH-1: batch.* (Haken BatchHost, fp-batch)
-mod bitmap;
+pub(crate) mod bitmap;
 mod draw;
 mod edit;
 pub mod export;

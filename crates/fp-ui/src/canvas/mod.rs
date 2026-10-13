@@ -8,6 +8,7 @@ pub mod context;
 pub mod cursors;
 pub mod ghost;
 pub mod overlay;
+pub mod paint_preview;
 pub mod render;
 pub mod textedit;
 pub mod web;
@@ -1264,6 +1265,7 @@ fn overlays(ui: &Ui, st: &mut AppState, painter: &egui::Painter, area: Rect, vie
     let cc = st.canvases.entry(id).or_default();
     let mut had_ghost = false;
     let mut had_text = false;
+    let mut had_paint = false;
     for o in feedback.iter().cloned() {
         match o {
             Overlay::Rect { rect, dashed } => {
@@ -1458,7 +1460,15 @@ fn overlays(ui: &Ui, st: &mut AppState, painter: &egui::Painter, area: Rect, vie
                 painter.line_segment([p - vec2(5.0, 0.0), p + vec2(5.0, 0.0)], stroke);
                 painter.line_segment([p - vec2(0.0, 5.0), p + vec2(0.0, 5.0)], stroke);
             }
+            Overlay::Paint(p) => {
+                // Malwerkzeuge: der echte Strich live (PINSEL-1)
+                had_paint = true;
+                paint_preview::paint(&ctx, &page_painter, id, &p, view.zoom, time, &spp);
+            }
         }
+    }
+    if !had_paint {
+        paint_preview::linger(&ctx, &page_painter, id, generation, cc.shown.map(|k| k.generation), time, &spp);
     }
     if had_text {
         cc.text_linger = Some(time);

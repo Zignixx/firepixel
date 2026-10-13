@@ -239,6 +239,17 @@ pub fn sync_tool_attrs(ctx: &egui::Context, st: &mut crate::app_state::AppState)
     if o.new_stroke != s {
         o.new_stroke = s;
     }
+    // Mischmodus, „Transparenz beibehalten“ und „Automatisch löschen“ der Malwerkzeuge (PINSEL-1)
+    let blend = crate::inspector::obj_quads::BLEND_ITEMS.get(ta.blend).map(|b| b.1).filter(|m| *m >= 0).unwrap_or(0) as u8;
+    if o.paint_blend != blend {
+        o.paint_blend = blend;
+    }
+    if o.keep_transparency != ta.keep_transparency {
+        o.keep_transparency = ta.keep_transparency;
+    }
+    if o.auto_erase != ta.auto_erase {
+        o.auto_erase = ta.auto_erase;
+    }
     // Retusche-Werkzeuge lesen ihre Werte aus den Voreinstellungen: Änderungen im Inspektor für das
     // aktive Werkzeug dorthin übertragen (nur bei Änderung, damit gespeicherte Werte gelten)
     let last_id = egui::Id::new("lw-last-tool-attrs");
