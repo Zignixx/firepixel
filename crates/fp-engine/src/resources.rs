@@ -87,14 +87,84 @@ pub fn find_in(dirs: &[PathBuf], name: &str) -> Option<PathBuf> {
     None
 }
 
-/// Datei einer Textur nach ihrem Namen.
-pub fn texture_file(name: &str) -> Option<PathBuf> {
-    find_in(&dirs(TEXTURES), name)
+/// Fluent-Schlüssel des angezeigten Namens einer Textur bzw. eines Musters (Dateiname ohne Endung):
+/// `pi-texture-name-<slug>` bzw. `pi-pattern-name-<slug>` (Kleinbuchstaben, Ziffern, Bindestriche).
+pub fn label_key(kind: &str, name: &str) -> String {
+    let mut slug = String::new();
+    for c in name.chars().flat_map(|c| c.to_lowercase()) {
+        if c.is_ascii_alphanumeric() {
+            slug.push(c);
+        } else if !slug.ends_with('-') && !slug.is_empty() {
+            slug.push('-');
+        }
+    }
+    let k = if kind == PATTERNS { "pattern" } else { "texture" };
+    format!("pi-{k}-name-{}", slug.trim_end_matches('-'))
 }
 
-/// Datei eines Musters nach seinem Namen.
+/// Datei zu einem **angezeigten** Namen (z. B. „Ader“ für die Datei „Vein“): der Name in der
+/// aktuellen Sprache oder einer der eingebauten bzw. geladenen Sprachen, ohne Rücksicht auf
+/// Groß-/Kleinschreibung (CT-2: die Inspektorliste zeigt übersetzte Namen, Skripte und Agenten
+/// nennen sie so).
+fn find_by_label(dirs: &[PathBuf], kind: &str, name: &str) -> Option<PathBuf> {
+    let name = name.trim();
+    if name.is_empty() {
+        return None;
+    }
+    let mut langs: Vec<String> = vec![fp_i18n::current_language()];
+    for l in fp_i18n::languages() {
+        if !langs.iter().any(|x| x.eq_ignore_ascii_case(&l.code)) {
+            langs.push(l.code);
+        }
+    }
+    let files = files_in(dirs);
+    for lang in &langs {
+        let hit = fp_i18n::with_language(lang, || {
+            files.iter().find(|(stem, _)| {
+                let key = label_key(kind, stem);
+                let label = fp_i18n::t(&key);
+                label != key && label.trim().eq_ignore_ascii_case(name)
+            })
+        });
+        if let Some((_, p)) = hit {
+            return Some(p.clone());
+        }
+    }
+    None
+}
+
+/// Datei einer Textur nach ihrem Namen (Dateiname oder angezeigter Name).
+pub fn texture_file(name: &str) -> Option<PathBuf> {
+    let d = dirs(TEXTURES);
+    find_in(&d, name).or_else(|| find_by_label(&d, TEXTURES, name))
+}
+
+/// Datei eines Musters nach seinem Namen (Dateiname oder angezeigter Name).
 pub fn pattern_file(name: &str) -> Option<PathBuf> {
-    find_in(&dirs(PATTERNS), name)
+    let d = dirs(PATTERNS);
+    find_in(&d, name).or_else(|| find_by_label(&d, PATTERNS, name))
+}
+
+/// Dateiname (ohne Endung) zu einem Textur- bzw. Musternamen, wenn eine Datei passt – so wird ein
+/// angezeigter Name („Ader“) im Dokument als Dateiname („Vein“) gespeichert wie im Original.
+pub fn file_name_of(kind: &str, name: &str) -> Option<String> {
+    let p = if kind == PATTERNS { pattern_file(name) } else { texture_file(name) }?;
+    if Path::new(name.trim()).is_absolute() {
+        return None;
+    }
+    p.file_stem().map(|s| s.to_string_lossy().to_string())
+}
+
+/// Name, unter dem eine gefundene Datei im Dokument steht: der genannte Name, wenn er der
+/// Dateiname ist, sonst (angezeigter Name) der Dateiname ohne Endung.
+fn stored_name(name: &str, p: &Path) -> String {
+    let n = name.trim();
+    let is_file = p.file_stem().is_some_and(|s| s.to_string_lossy().eq_ignore_ascii_case(n)) || p.file_name().is_some_and(|s| s.to_string_lossy().eq_ignore_ascii_case(n));
+    if is_file || Path::new(n).is_absolute() {
+        name.to_string()
+    } else {
+        p.file_stem().map(|s| s.to_string_lossy().to_string()).unwrap_or_else(|| name.to_string())
+    }
 }
 
 fn image_of(path: &Path) -> Option<fp_raster::RgbaImage> {
@@ -121,7 +191,8 @@ pub fn texture_from_file(path: &Path, name: &str) -> Option<fp_model::attrs::Tex
 
 /// Textur nach Namen aus den Texturordnern (mit Maske); `None`, wenn keine Datei passt.
 pub fn load_texture(name: &str) -> Option<fp_model::attrs::Texture> {
-    texture_from_file(&texture_file(name)?, name)
+    let p = texture_file(name)?;
+    texture_from_file(&p, &stored_name(name, &p))
 }
 
 /// Muster mit Bild aus einer Datei; zwischengespeichert je Datei.
@@ -147,5 +218,6 @@ pub fn pattern_from_file(path: &Path, name: &str) -> Option<fp_model::attrs::Pat
 
 /// Muster nach Namen aus den Musterordnern (mit Bild); `None`, wenn keine Datei passt.
 pub fn load_pattern(name: &str) -> Option<fp_model::attrs::Pattern> {
-    pattern_from_file(&pattern_file(name)?, name)
+    let p = pattern_file(name)?;
+    pattern_from_file(&p, &stored_name(name, &p))
 }

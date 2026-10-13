@@ -138,9 +138,9 @@ fn texture_and_pattern_by_name_load_from_resource_folders() {
     assert!(tex(&s, false).is_some_and(|t| t.mask.is_some() && t.name == "Fv16Textur"), "Fülltextur mit Maske");
     ex(&mut s, "pi.stroke", json!({"texture": "Fv16Textur", "textureAmount": 30}));
     assert!(tex(&s, true).is_some_and(|t| t.mask.is_some()), "Strichtextur mit Maske");
-    // unbekannter Name: bleibt beim Namen ohne Maske (wie bisher, keine Wirkung, kein Fehler)
-    ex(&mut s, "pi.fill", json!({"texture": "gibt-es-nicht"}));
-    assert!(tex(&s, false).is_some_and(|t| t.mask.is_none()));
+    // unbekannter Name: Fehlermeldung, Textur bleibt (AGENTS §3; FIX-D nach CT-2)
+    assert!(s.execute("pi.fill", json!({"texture": "gibt-es-nicht"})).is_err());
+    assert!(tex(&s, false).is_some_and(|t| t.mask.is_some() && t.name == "Fv16Textur"));
     // Werkzeugvorgabe für neue Objekte (`tool.shape` mit `pi.fill {texture}`)
     s.tools.options.new_fill = Some(json!({"texture": "Fv16Textur", "textureAmount": 40}));
     let inv = fp_engine::tools::styled(fp_engine::tools::Invocation::new("draw.rectangle", json!({"rect": [100, 10, 150, 50]})), &s.tools.options);

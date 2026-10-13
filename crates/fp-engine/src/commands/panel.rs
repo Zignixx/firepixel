@@ -263,6 +263,24 @@ fn texture(name: &str) -> Texture {
     crate::resources::load_texture(name).unwrap_or_else(|| Texture { name: name.to_string(), user_name: Some(name.to_string()), mask: None, extra: Default::default() })
 }
 
+/// Unbekannter Texturname → Fehlermeldung (AGENTS §3), sobald es auf diesem Rechner Texturdateien
+/// gibt; ohne Texturordner (Rechner ohne Ressourcen) bleibt es beim Namen wie bisher. Leer = keine
+/// Textur; volle Pfade müssen eine lesbare Bilddatei sein.
+fn check_texture_name(p: &Params, name: Option<&str>) -> Result<()> {
+    match name.map(str::trim).filter(|n| !texture_name_known(n)) {
+        Some(n) => Err(EngineError::InvalidParams { name: p.command.clone(), message: fp_i18n::tr!("err-not-found", what = n) }),
+        None => Ok(()),
+    }
+}
+
+/// Texturname gültig für `pi.fill`/`pi.stroke` (siehe [`check_texture_name`]).
+pub(crate) fn texture_name_known(name: &str) -> bool {
+    let n = name.trim();
+    n.is_empty()
+        || crate::resources::texture_file(n).is_some()
+        || (!std::path::Path::new(n).is_absolute() && crate::resources::files_in(&crate::resources::dirs(crate::resources::TEXTURES)).is_empty())
+}
+
 // ---------------------------------------------------------------------- Pinsel
 
 /// Eine Strichvorgabe: vollständiges Pinselobjekt je Art, gemessen am Original (RE-PINSEL,
@@ -1205,6 +1223,7 @@ pub fn register(r: &mut CommandRegistry) {
                 let edge = p.opt_i64("edge")?.map(|v| v as i32);
                 let feather = p.opt_i64("feather")?.map(|v| v as i32);
                 let tex = p.opt_str("texture")?;
+                check_texture_name(p, tex.as_deref())?;
                 let tex_amount = p.opt_i64("textureAmount")?.map(|v| v as i32);
                 let tex_tr = p.opt_bool("textureTransparent")?;
                 let dither = p.opt_bool("dither")?;
@@ -1405,6 +1424,7 @@ pub fn register(r: &mut CommandRegistry) {
                     _ => 1,
                 });
                 let tex = p.opt_str("texture")?;
+                check_texture_name(p, tex.as_deref())?;
                 let tex_amount = p.opt_i64("textureAmount")?.map(|v| v as i32);
                 let fos = p.opt_bool("fillOverStroke")?;
                 let aa = p.opt_bool("antialiased")?;

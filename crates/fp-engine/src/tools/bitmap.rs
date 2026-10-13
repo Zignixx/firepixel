@@ -907,7 +907,20 @@ impl ToolMachine for FillTool {
                         ToolResponse::commit(vec![Invocation::new("element.setGradient", json!({"ids": [id.0], "from": pt_json(a), "to": pt_json(c), "colors": colors}))])
                     }
                     // Farbeimer auf ein Objekt: Schritt „Füllen“ wie im Original (PAR 07/16)
-                    Some(id) => ToolResponse::commit(vec![Invocation::new("pi.fill", json!({"ids": [id.0], "category": "solid", "color": crate::commands::argb_hex(ctx.fill_color)}))]),
+                    // samt Textur aus dem Füllbereich des Inspektors (CT-2: Textur „Ader“ 50 wirkt mit)
+                    Some(id) => {
+                        let mut p = json!({"ids": [id.0], "category": "solid", "color": crate::commands::argb_hex(ctx.fill_color)});
+                        if let Some(nf) = ctx.options.new_fill.as_ref()
+                            && nf.get("texture").and_then(Value::as_str).is_some_and(|t| !t.is_empty())
+                        {
+                            for k in ["texture", "textureAmount", "textureTransparent"] {
+                                if let Some(v) = nf.get(k) {
+                                    p[k] = v.clone();
+                                }
+                            }
+                        }
+                        ToolResponse::commit(vec![Invocation::new("pi.fill", p)])
+                    }
                     None => ToolResponse::default(),
                 }
             }

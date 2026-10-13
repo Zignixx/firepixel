@@ -118,11 +118,13 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 {
                     let mut f = f.clone();
                     f["ids"] = json!([id]);
+                    drop_unknown_texture(&mut f);
                     run_inner(s, "pi.fill", f)?;
                 }
                 if let Some(st) = p.get("stroke").filter(|v| v.is_object()) {
                     let mut st = st.clone();
                     st["ids"] = json!([id]);
+                    drop_unknown_texture(&mut st);
                     run_inner(s, "pi.stroke", st)?;
                 }
                 if let Some(bv) = p.get("brush").filter(|v| v.is_object()) {
@@ -526,6 +528,17 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 })
             }),
     );
+}
+
+/// Werkzeugvorgabe mit einer Textur, die es auf diesem Rechner nicht gibt (z. B. aus einer Datei
+/// übernommen): Zeichnen geht trotzdem, nur ohne den unbekannten Namen (`pi.fill` meldet ihn sonst).
+fn drop_unknown_texture(v: &mut serde_json::Value) {
+    if let Some(o) = v.as_object_mut()
+        && o.get("texture").and_then(serde_json::Value::as_str).is_some_and(|t| !super::panel::texture_name_known(t))
+    {
+        o.remove("texture");
+        o.remove("textureAmount");
+    }
 }
 
 /// Stempel ohne Befehl rechnen (Live-Vorschau des Werkzeugs, PAR 05/04): dieselbe Rechnung wie
