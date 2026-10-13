@@ -110,6 +110,8 @@ struct Ids {
 }
 
 fn fixture() -> (Session, Ids) {
+    // Batch-Laufzeit einstecken wie App, CLI und MCP (sonst melden batch.* „fehlt fp-batch“)
+    fp_batch::install();
     let mut s = Session::default();
     s.set_renderer(renderer());
     s.set_script_host(Some(Arc::new(LineHost)));
@@ -467,6 +469,24 @@ fn overrides(name: &str, ids: &Ids) -> Option<(Value, Option<Setup>)> {
             }
             Value::Null
         })),
+        // Batch-Studio (fp-batch über den Haken BatchHost): Quelldatei = das Testdokument
+        "batch.run" | "batch.plan" | "batch.preview" => {
+            let src = t("batch_src.fw.png");
+            let out = t(&format!("{}_out", name.replace('.', "_")));
+            let _ = std::fs::remove_dir_all(&out);
+            let recipe = json!({"output": {"format": "png"}});
+            let params = match name {
+                "batch.preview" => json!({"recipe": recipe, "file": src, "maxSize": 64}),
+                _ => json!({"recipe": recipe, "files": [src], "out": out}),
+            };
+            rs(params, Box::new(|s: &mut Session| {
+                let d = s.doc().map(|d| Arc::clone(&d.doc)).ok();
+                if let Some(d) = d {
+                    let _ = fp_engine::commands::save_document(s, &d, 0, &tmp().join("batch_src.fw.png"));
+                }
+                Value::Null
+            }))
+        }
         "file.print" => rs(json!({"open": false, "outDir": t("druck")}), Box::new(|s: &mut Session| {
             ex(s, "file.pageSetup", json!({"orientation": "landscape", "fit": true}));
             Value::Null
@@ -1172,6 +1192,23 @@ fn check_for(name: &str, ids: &Ids) -> Option<Check> {
             let f = v["processed"][0]["output"].as_str().ok_or_else(|| format!("{v}"))?;
             let b = std::fs::read(f).map_err(|e| format!("{f}: {e}"))?;
             if b.starts_with(&[0xFF, 0xD8]) { Ok(()) } else { Err("kein JPEG".into()) }
+        }),
+        // Batch: Lauf schreibt genau eine PNG-Datei, Plan schreibt nichts, Vorschau liefert ein Bild
+        "batch.run" => Box::new(|_, v| {
+            let out = tmp().join("batch_run_out");
+            let pngs: Vec<_> = std::fs::read_dir(&out)
+                .map(|rd| rd.flatten().map(|e| e.path()).filter(|p| std::fs::read(p).is_ok_and(|b| b.starts_with(&[0x89, b'P', b'N', b'G']))).collect())
+                .unwrap_or_default();
+            if v["ok"] == true && v["totals"]["done"] == 1 && pngs.len() == 1 { Ok(()) } else { Err(format!("{v} – Ausgabe {pngs:?}")) }
+        }),
+        "batch.plan" => Box::new(|_, v| {
+            let n = v["entries"].as_array().map(Vec::len).unwrap_or(0);
+            if n == 1 && !tmp().join("batch_plan_out").exists() { Ok(()) } else { Err(format!("{v}")) }
+        }),
+        "batch.preview" => Box::new(|_, v| {
+            // Größe des Testdokuments (400 × 300), Bild als PNG
+            let size_ok = v["before"]["width"] == 400 && v["before"]["height"] == 300 && v["after"]["width"] == 400;
+            if size_ok && v["after"]["png"].as_str().is_some_and(|p| p.starts_with("iVBOR")) { Ok(()) } else { Err(format!("{v}")) }
         }),
         "file.import" => Box::new(|s, v| {
             let n = v["ids"].as_array().map(|a| a.len()).unwrap_or(0);

@@ -44,6 +44,9 @@ fp-trace = { workspace = true }
 [dev-dependencies]
 # Liste aller tests\*.rs fuer tests\all.rs (INF-1)
 fp-testlist = { path = "../fp-testlist", features = ["fp-engine"] }
+# Batch-Laufzeit für die Funktionstests der batch.*-Befehle (all_commands; fp-batch steckt sich über
+# den Haken BatchHost ein, wie in App, CLI und MCP)
+fp-batch = { path = "../fp-batch" }
 
 [lints]
 workspace = true
