@@ -315,15 +315,25 @@ fn doc_changed(a: &Snap, b: &Snap) -> bool {
     }
 }
 
+/// Ganz leere Bitmap (0×0)? Solche verwirft das Original beim Speichern (re\22 §1, FIX-A `78d91bc`).
+fn is_empty_bitmap(e: &fp_model::Element) -> bool {
+    matches!(&e.kind, fp_model::ElementKind::Bitmap(b) if b.image.grid.width == 0 || b.image.grid.height == 0)
+}
+
 /// Struktur eines Dokuments für den Dateivergleich.
 fn summary(doc: &Document) -> Vec<String> {
+    summary_with(doc, false)
+}
+
+/// Struktur wie [`summary`]; mit `as_saved` ohne leere Bitmaps (so, wie die Datei sie enthalten muss).
+fn summary_with(doc: &Document, as_saved: bool) -> Vec<String> {
     let mut v = vec![format!("pages {}", doc.pages.len()), format!("symbols {}", doc.symbols.len())];
     for (i, p) in doc.pages.iter().enumerate() {
         v.push(format!("page {i} frames {} canvas {}x{}", p.root.frame_count, p.canvas.width, p.canvas.height));
         for slot in &p.root.layers {
             if let LayerSlot::Own(l) = slot {
                 for (ci, c) in l.cels.iter().enumerate() {
-                    let kinds: Vec<&str> = c.elements.iter().map(|e| e.js_type()).collect();
+                    let kinds: Vec<&str> = c.elements.iter().filter(|e| !(as_saved && is_empty_bitmap(e))).map(|e| e.js_type()).collect();
                     if !kinds.is_empty() {
                         v.push(format!("  layer {} cel {ci}: {}", l.name, kinds.join(",")));
                     }
@@ -341,9 +351,16 @@ fn file_roundtrip(s: &Session, name: &str) -> Result<(), String> {
     let bytes = std::fs::read(&path).map_err(|e| e.to_string())?;
     let back = fp_fwpng::read(&bytes).map_err(|e| format!("Lesen: {e}"))?;
     let _ = std::fs::remove_file(&path);
-    let (a, b) = (summary(&d.doc), summary(&back));
+    // Erwartet: das Dokument ohne leere Bitmaps – die entfallen beim Speichern wie im Original,
+    // das Dokument im Speicher behält sie.
+    let (a, b) = (summary_with(&d.doc, true), summary(&back));
     if a != b {
         return Err(format!("Datei weicht ab:\n  vorher {a:?}\n  gelesen {b:?}"));
+    }
+    let mut empty_in_file = 0;
+    back.walk_elements(|_, _, e| empty_in_file += usize::from(is_empty_bitmap(e)));
+    if empty_in_file > 0 {
+        return Err(format!("{empty_in_file} leere Bitmap(s) in der Datei, erwartet: beim Speichern entfallen"));
     }
     Ok(())
 }
