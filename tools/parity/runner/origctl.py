@@ -138,7 +138,8 @@ class Host:
     def list(self, cmd: str, timeout: float = 30, **args) -> list:
         """Like call, for commands answering with a list (PowerShell unwraps 1-element arrays)."""
         r = self.call(cmd, timeout, **args)
-        return r if isinstance(r, list) else ([] if r is None else [r])
+        r = r if isinstance(r, list) else ([] if r is None else [r])
+        return [x for x in r if x != {}]  # an empty PowerShell array arrives as {}
 
 
 class Original:
@@ -151,18 +152,61 @@ class Original:
         self.host = Host({"process": cfg["process"], "main_class": cfg.get("main_class", ""),
                           "view_class": cfg.get("view_class", ""), "panel_class": cfg.get("panel_class", "")})
         self.started_by_us = False
+        self.own_pids: set[int] = set()  # processes this runner started (instances and script launchers)
 
     # ---------------------------------------------------------------- process
     def pid(self) -> int:
-        return int(self.host.call("pid") or 0)
+        """Process owning the visible main window (searched by class across all processes), else 0."""
+        return int(self.host.call("main_pid") or 0)
 
     def running(self) -> bool:
         return self.pid() > 0
 
+    def procs(self) -> list[dict]:
+        return [p for p in self.host.list("procs", timeout=60) if isinstance(p, dict) and p.get("pid")]
+
+    def _own(self, p: dict) -> bool:
+        return p["pid"] in self.own_pids or str(self.tmp).lower() in str(p.get("cmdline") or "").lower()
+
+    def kill_hung_own(self) -> list[int]:
+        """End processes of this runner without any window (script launchers waiting for a blocked instance,
+        restarts that never showed a window). Foreign processes are never touched."""
+        killed = []
+        for p in self.procs():
+            if not p.get("has_main") and not p.get("windows") and self._own(p):
+                subprocess.run(["taskkill", "/F", "/PID", str(p["pid"])], capture_output=True)
+                killed.append(p["pid"])
+        if killed:
+            self.log(f"ended hung own processes without window: {killed}")
+            time.sleep(1.5)
+        return killed
+
+    def decline_dialogs(self) -> int:
+        try:
+            return int(self.host.call("dialog_close", mode="cancel") or 0)
+        except OrigError:
+            return 0
+
     def start(self):
         if self.running():
+            self.decline_dialogs()
             return
-        subprocess.Popen([self.exe], cwd=str(Path(self.exe).parent))
+        self.kill_hung_own()
+        others = [p for p in self.procs() if not p.get("has_main")]
+        if others:
+            # a foreign process exists (maybe still starting): wait for its main window, never kill it
+            end = time.time() + float(self.cfg.get("start_wait_s", 60))
+            while time.time() < end and not self.running():
+                self.decline_dialogs()
+                time.sleep(2)
+            if not self.running():
+                raise OrigError(f"reference process without main window that this runner did not start: "
+                                f"{[p['pid'] for p in others]}")
+            self.decline_dialogs()
+            self.place()
+            return
+        pr = subprocess.Popen([self.exe], cwd=str(Path(self.exe).parent))
+        self.own_pids.add(pr.pid)
         self.started_by_us = True
         end = time.time() + float(self.cfg.get("start_wait_s", 60))
         while time.time() < end:
@@ -183,9 +227,17 @@ class Original:
         if pid:
             subprocess.run(["taskkill", "/F", "/PID", str(pid)], capture_output=True)
             time.sleep(3)
+        self.kill_hung_own()
 
     def restart(self):
+        """Clean restart: decline questions, close all documents unsaved, end the instance, start again."""
         self.log("restart reference program")
+        self.decline_dialogs()
+        try:
+            if self.running():
+                self.close_all_docs(timeout=20)
+        except OrigError:
+            pass
         self.kill()
         self.start()
 
@@ -212,9 +264,13 @@ class Original:
                   'function fp_log(t) { FP_LOG.push(String(t)); }\n'
                   'function fp_try(n, f) { try { var r = f(); fp_log("ok " + n + (r === undefined ? "" : " = " + r)); return r; } '
                   'catch (e) { fp_log("ERROR " + n + ": " + e); return null; } }\n'
-                  'try {\n')
+                  # a script may be sent twice (lost hand-over): the second copy does nothing
+                  f'var FP_STARTED = FP_OUT + {js_str(name + ".started")};\n'
+                  'var FP_DUP = Files.exists(FP_STARTED);\n'
+                  'if (!FP_DUP) { Files.createFile(FP_STARTED, ".txt", "TEXT"); }\n'
+                  'try { if (FP_DUP) { throw "duplicate"; }\n')
         epilog = ('\n} catch (e) { fp_log("ERROR: " + e); }\n'
-                  '(function () {\n'
+                  'if (!FP_DUP) (function () {\n'
                   f'  var p = FP_OUT + {js_str(name + ".log")};\n'
                   '  Files.deleteFileIfExisting(p); Files.createFile(p, ".txt", "TEXT");\n'
                   '  var f = Files.open(p, true); f.write(FP_LOG.join("\\n")); f.close();\n'
@@ -223,20 +279,38 @@ class Original:
                   '})();\n')
         src = self.tmp / f"{name}.jsf"
         src.write_text(prolog + code + epilog, encoding="ascii", errors="backslashreplace")
-        subprocess.Popen([self.exe, str(src)], cwd=str(Path(self.exe).parent))
+        started = self.tmp / f"{name}.started"
+        launcher = subprocess.Popen([self.exe, str(src)], cwd=str(Path(self.exe).parent))
+        self.own_pids.add(launcher.pid)
         end = time.time() + timeout
         progress = self.cfg.get("progress_dialog_regex", "Befehlsskript|verarbeitet|Processing|Fortschritt")
+        gone_since, resends = None, 0
         while time.time() < end and not done.exists():
             time.sleep(0.4)
+            # the launcher hands the script over and ends; if it ended but the script never started
+            # (instance was busy finishing an older script), hand it over again
+            if launcher.poll() is not None and not started.exists():
+                gone_since = gone_since or time.time()
+                if time.time() - gone_since > 10 and resends < 2:
+                    resends += 1
+                    self.log(f"script {name} not started - handing it over again ({resends})")
+                    launcher = subprocess.Popen([self.exe, str(src)], cwd=str(Path(self.exe).parent))
+                    self.own_pids.add(launcher.pid)
+                    gone_since = None
             try:
                 self.host.call("dialog_close", mode="cancel", **{"except": progress})
             except OrigError:
                 pass
             if not self.running():
-                raise OrigError("reference program ended during JSF (crash)")
+                time.sleep(1.0)  # the main window may be re-created; check twice
+                if not self.running():
+                    self._end_launcher(launcher)
+                    raise OrigError("reference program ended during JSF (crash)")
         finished = done.exists()
+        if not finished:
+            self._end_launcher(launcher)
         lines = logf.read_text(encoding="utf-8", errors="replace").splitlines() if logf.exists() else []
-        for f in (src, done, logf):
+        for f in ((done, logf, started) if resends else (src, done, logf, started)):
             try:
                 f.unlink()
             except OSError:
@@ -250,6 +324,23 @@ class Original:
                 raise CrashError(msg)
             raise OrigError(msg)
         return lines
+
+    def _end_launcher(self, launcher: subprocess.Popen):
+        """A script launcher still waiting for the instance (instance blocked) is ended - unless it became the
+        instance itself (no instance was running) and owns the main window."""
+        try:
+            if launcher.poll() is None and launcher.pid != self.pid():
+                launcher.kill()
+                self.log(f"ended waiting script launcher {launcher.pid}")
+        except (OSError, OrigError):
+            pass
+
+    def close_all_docs(self, timeout: float = 60):
+        """Defined start state: every open document closed without saving (questions are declined)."""
+        self.decline_dialogs()
+        self.jsf("for (var k = 0; k < 40 && fw.documents.length > 0; k++) {"
+                 " fw.documents[fw.documents.length - 1].close(false); }\n"
+                 'fp_log("RET " + fw.documents.length);', timeout=timeout)
 
     def jsf_retry(self, code: str, timeout: float = 60) -> list[str]:
         """jsf(); after an internal access violation restart the program once and retry."""

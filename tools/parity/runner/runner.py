@@ -468,7 +468,10 @@ class OrigSide(Side):
             return r
         if area == "popup":
             main = self.h.call("main")["hwnd"]
-            ws = [w for w in self.h.list("windows") if w["hwnd"] != main and w["class"] not in ("tooltips_class32",)]
+            # only windows that appeared during the step (permanent small tool windows are left out)
+            old = getattr(self, "windows_before", None) or set()
+            ws = [w for w in self.h.list("windows") if w["hwnd"] != main and w["hwnd"] not in old
+                  and w["class"] not in ("tooltips_class32",)]
             r = bbox_union([w["rect"] for w in ws])
             if r:
                 return r
@@ -1429,10 +1432,33 @@ class Runner:
             self.fp = Firepixel(self.cfg["fp"], log=self.log)
         self.sides = {"orig": OrigSide(self, self.orig), "fp": FpSide(self, self.fp)}
 
+    SYSTEMIC = re.compile(r"main window not found|process not running|JSF timeout|host timeout|host ended|"
+                          r"crash|cannot bring|input refused|not started|without main window", re.I)
+
+    def count_orig(self, status: str, error: str = ""):
+        """After `orig.max_consecutive_errors` (default 3) failed steps in a row whose errors point at the
+        program/automation (not at a single locator) the reference program is restarted cleanly
+        (documents closed unsaved, instance ended, started again) and the unit goes on."""
+        if status == "error" and self.SYSTEMIC.search(error or ""):
+            self.orig_fails = getattr(self, "orig_fails", 0) + 1
+        elif status in ("ok", "slow"):
+            self.orig_fails = 0
+        if self.orig_fails >= int(self.cfg["orig"].get("max_consecutive_errors", 3)):
+            self.log(f"{self.orig_fails} reference errors in a row - clean restart")
+            self.orig_fails = 0
+            try:
+                self.orig.restart()
+                self.sides["orig"].prepare()
+                if self.unit.get("testfile"):
+                    self.open_testfile(self.sides["orig"], self.unit["testfile"])
+            except Exception as e:  # noqa: BLE001
+                self.log(f"restart orig failed: {e}")
+
     def recover(self, side: Side):
         """After a failure: crash check, close menus/dialogs, reopen the unit's test file."""
         try:
             if side.name == "orig":
+                self.orig.decline_dialogs()
                 if not self.orig.running():
                     self.orig.start()
                 side.prepare()
@@ -1571,9 +1597,15 @@ class Runner:
             return
         try:
             self.ensure_programs()
+            self.orig_fails = 0
             for side in self.sides.values():
                 try:
                     side.prepare()
+                    if side.name == "orig":
+                        self.orig.kill_hung_own()
+                        # defined start state: no questions open, every document closed without saving
+                        side.reset_light()
+                        self.orig.close_all_docs()
                     if unit.get("testfile"):
                         self.open_testfile(side, unit["testfile"])
                 except Exception as e:  # noqa: BLE001
@@ -1598,6 +1630,13 @@ class Runner:
                     except Exception as e:  # noqa: BLE001
                         self.recover(side)
                     before = None
+                    if name == "orig":
+                        side.windows_before = set()
+                        if (step.get("shot") or {}).get("area") == "popup":
+                            try:
+                                side.windows_before = {w["hwnd"] for w in side.h.list("windows")}
+                            except Exception:  # noqa: BLE001
+                                pass
                     if (step.get("shot") or {}).get("area") in ("menu", "popup"):
                         try:
                             before, _ = side.window_image()
@@ -1607,6 +1646,8 @@ class Runner:
                     entry["result"][name] = rec
                     if rec["status"] in ("error",):
                         self.recover(side)
+                    if name == "orig":
+                        self.count_orig(rec["status"], rec.get("error", ""))
                 st = {k: v["status"] for k, v in entry["result"].items()}
                 self.log(f"  {step['id']}: {st}")
                 self.write_log(logf, entry)

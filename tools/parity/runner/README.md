@@ -32,6 +32,16 @@ only lists the steps and verbs. `--gallery-only` rebuilds `index.html` from exis
    release the lock, run `compare.py`. At the end of the run: `index.html`; the reference program is
    closed only if the runner started it.
 
+Robustness: the target process is the one owning the visible main window (`orig.main_class`, searched
+across all processes of `orig.process`), so a script launcher still waiting for a busy instance is never
+taken for the program. Questions are declined (`No` first – save/recovery questions –, then `Cancel`;
+never `Yes`/`Save`/`OK`). Processes of the runner without any window (waiting launchers, hung restarts)
+are ended; foreign processes never. No second instance is started while one is running. Every unit
+starts with all documents closed unsaved. After `orig.max_consecutive_errors` (default 3) failed steps
+in a row the program is restarted cleanly and the unit goes on. A script whose hand-over got lost
+(launcher ended, script never started) is handed over again; a `.started` marker makes the second copy
+a no-op.
+
 Real input to the reference program (SendInput) is only sent while its window (or one of its dialogs/menus)
 owns the foreground; otherwise the action fails with "input refused". Ctrl+Alt+Space is never sent.
 Firepixel never gets real input: everything goes through `ui_input`/`ui_action` of the bridge.

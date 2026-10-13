@@ -76,10 +76,32 @@ $UIA = [System.Windows.Automation.AutomationElement]
 $TW = [System.Windows.Automation.TreeWalker]::ControlViewWalker
 $S = @{ process = ''; main_class = ''; view_class = ''; panel_class = ''; pid = 0 }
 
+# LRESULT of a 32-bit target arrives zero-extended (-1 = 4294967295): back to a signed 32-bit value
+function I32($v) { $x = [int64]$v.ToInt64(); if ($x -gt [int64][int]::MaxValue) { $x -= [int64]4294967296 }; [int]$x }
 function R4($r) { @([int]$r.L, [int]$r.T, [int]$r.R, [int]$r.B) }
 function WRect($h) { $r = New-Object PR.N+RECT; [PR.N]::GetWindowRect($h, [ref]$r) | Out-Null; R4 $r }
 function CRect($h) { $r = New-Object PR.N+RECT; [PR.N]::GetClientRect($h, [ref]$r) | Out-Null; $p = New-Object PR.N+POINT; [PR.N]::ClientToScreen($h, [ref]$p) | Out-Null; @($p.X, $p.Y, ($p.X + $r.R), ($p.Y + $r.B)) }
-function Proc { $p = Get-Process -Name $S.process -ErrorAction SilentlyContinue | Select-Object -First 1; if ($p) { $S.pid = $p.Id; [PR.N]::TargetPid = [uint32]$p.Id } else { $S.pid = 0; [PR.N]::TargetPid = 0 }; $p }
+# Several processes of the program may exist (a script launcher waiting for a busy instance, a hung
+# restart): the target is the process owning the visible main window (by class, across processes);
+# without one the process with any visible window, else the first one.
+function MainOwner { $best = 0; $area = 0
+  if (-not $S.main_class) { return 0 }
+  foreach ($p in @(Get-Process -Name $S.process -ErrorAction SilentlyContinue)) {
+    foreach ($h in [PR.N]::Tops([uint32]$p.Id)) { if ([PR.N]::Cls($h) -ne $S.main_class) { continue }
+      $r = WRect $h; $a = ($r[2] - $r[0]) * ($r[3] - $r[1]); if ($a -gt $area) { $area = $a; $best = $p.Id } } }
+  $best }
+function Proc {
+  $all = @(Get-Process -Name $S.process -ErrorAction SilentlyContinue)
+  $p = $null; $mo = MainOwner
+  if ($mo) { $p = $all | ? { $_.Id -eq $mo } | Select-Object -First 1 }
+  if (-not $p) { $p = $all | ? { [PR.N]::Tops([uint32]$_.Id).Count -gt 0 } | Select-Object -First 1 }
+  if (-not $p) { $p = $all | Select-Object -First 1 }
+  if ($p) { $S.pid = $p.Id; [PR.N]::TargetPid = [uint32]$p.Id } else { $S.pid = 0; [PR.N]::TargetPid = 0 }; $p }
+function ProcList { $mo = MainOwner; $cl = @{}
+  try { foreach ($w in @(Get-CimInstance Win32_Process -Filter "Name='$($S.process).exe'" -ErrorAction Stop)) { $cl[[int]$w.ProcessId] = [string]$w.CommandLine } } catch { }
+  @(Get-Process -Name $S.process -ErrorAction SilentlyContinue | % { $age = -1; try { $age = [int]((Get-Date) - $_.StartTime).TotalSeconds } catch { }
+    $tops = @([PR.N]::Tops([uint32]$_.Id))
+    @{ pid = $_.Id; has_main = ($_.Id -eq $mo); windows = $tops.Count; dialogs = @($tops | ? { [PR.N]::Cls($_) -eq '#32770' } | % { "$([PR.N]::Txt($_)) | $(DialogTexts $_)" }); age_s = $age; cmdline = $cl[[int]$_.Id] } }) }
 function MainWin {
   if (-not (Proc)) { throw 'process not running' }
   $best = [IntPtr]::Zero; $area = 0
@@ -95,7 +117,7 @@ function MainWin {
 function WinInfo($h) { @{ hwnd = [int64]$h; class = [PR.N]::Cls($h); title = [PR.N]::Txt($h); rect = (WRect $h) } }
 function Union($rects) { if (-not $rects) { return $null }; $l = ($rects | % { $_[0] } | Measure -Min).Minimum; $t = ($rects | % { $_[1] } | Measure -Min).Minimum; $r = ($rects | % { $_[2] } | Measure -Max).Maximum; $b = ($rects | % { $_[3] } | Measure -Max).Maximum; @([int]$l, [int]$t, [int]$r, [int]$b) }
 function Clean([string]$s) { ($s -replace '&', '' -replace "`t.*$", '' -replace '\.\.\.$|…$', '').Trim() }
-function Dialogs { $m = MainWin; [PR.N]::Tops([uint32]$S.pid) | ? { [PR.N]::Cls($_) -eq '#32770' } }
+function Dialogs { if (-not (Proc)) { throw 'process not running' }; [PR.N]::Tops([uint32]$S.pid) | ? { [PR.N]::Cls($_) -eq '#32770' } }
 function DialogTexts($h) { (([PR.N]::Kids($h) | % { [PR.N]::Txt($_) } | ? { $_ }) -join ' | ') }
 
 function Focus {
@@ -256,8 +278,12 @@ function Handle($c) {
     'init' { $S.process = $c.process; $S.main_class = [string]$c.main_class; $S.view_class = [string]$c.view_class; $S.panel_class = [string]$c.panel_class; [PR.N]::TargetClass = $S.main_class; $p = Proc; return @{ pid = $S.pid } }
     'ping' { return 'pong' }
     'pid' { Proc | Out-Null; return $S.pid }
+    'main_pid' { return (MainOwner) }
+    'procs' { return @(ProcList) }
     'windows' { if (-not (Proc)) { return @() }; return @([PR.N]::Tops([uint32]$S.pid) | % { WinInfo $_ }) }
-    'main' { $h = MainWin; $i = WinInfo $h; $i.client = CRect $h; $i.maximized = [PR.N]::IsZoomed($h); return $i }
+    'main' { $h = MainWin; $i = WinInfo $h; $cr = CRect $h; $wr = $i.rect
+             # the program's own frame reports a client area 1 px taller than the window: clip to the window
+             $i.client = @([Math]::Max($cr[0], $wr[0]), [Math]::Max($cr[1], $wr[1]), [Math]::Min($cr[2], $wr[2]), [Math]::Min($cr[3], $wr[3])); $i.maximized = [PR.N]::IsZoomed($h); return $i }
     'place' { $h = MainWin; if ([PR.N]::IsZoomed($h) -or [PR.N]::IsIconic($h)) { [PR.N]::ShowWindow($h, 9) | Out-Null; Start-Sleep -Milliseconds 300 }
               [PR.N]::MoveWindow($h, [int]$c.x, [int]$c.y, [int]$c.w, [int]$c.h, $true) | Out-Null; Start-Sleep -Milliseconds 300; return (WRect $h) }
     'focus' { return (Focus) }
@@ -283,8 +309,8 @@ function Handle($c) {
     'get_text' { $sb = New-Object Text.StringBuilder 1024; [PR.N]::SendMessageSB([IntPtr][int64]$c.hwnd, 0x000D, [IntPtr]1024, $sb) | Out-Null; return $sb.ToString() }
     'combo_items' { $h = [IntPtr][int64]$c.hwnd; $n = [int][PR.N]::SendMessage($h, 0x146, [IntPtr]::Zero, [IntPtr]::Zero); $l = @()
       for ($i = 0; $i -lt $n; $i++) { $sb = New-Object Text.StringBuilder 512; [PR.N]::SendMessageSB($h, 0x148, [IntPtr]$i, $sb) | Out-Null; $l += $sb.ToString() }
-      return @{ items = $l; selected = [int][PR.N]::SendMessage($h, 0x147, [IntPtr]::Zero, [IntPtr]::Zero) } }
-    'combo_select' { $h = [IntPtr][int64]$c.hwnd; $i = [int][PR.N]::SendMessageS($h, 0x158, [IntPtr](-1), [string]$c.text)
+      return @{ items = $l; selected = (I32 ([PR.N]::SendMessage($h, 0x147, [IntPtr]::Zero, [IntPtr]::Zero))) } }
+    'combo_select' { $h = [IntPtr][int64]$c.hwnd; $i = I32 ([PR.N]::SendMessageS($h, 0x158, [IntPtr](-1), [string]$c.text))
       if ($i -lt 0) { throw "combo entry not found: $($c.text)" }
       [PR.N]::SendMessage($h, 0x14E, [IntPtr]$i, [IntPtr]::Zero) | Out-Null
       $id = [PR.N]::GetDlgCtrlID($h); [PR.N]::SendMessage([PR.N]::GetParent($h), 0x111, [IntPtr]((1 -shl 16) -bor ($id -band 0xFFFF)), $h) | Out-Null
@@ -293,8 +319,11 @@ function Handle($c) {
     'dialogs' { return @(Dialogs | % { $i = WinInfo $_; $i.texts = DialogTexts $_; $i }) }
     'dialog_close' { $n = 0; $cmdId = if ($c.mode -eq 'ok') { 1 } else { 2 }
       foreach ($h in @(Dialogs)) { $t = "$([PR.N]::Txt($h)) | $(DialogTexts $h)"; if ($c.except -and $t -match $c.except) { continue }
-        $names = if ($c.mode -eq 'ok') { @('OK') } else { @('Abbrechen', 'Cancel', 'Nein', 'Schließen') }
-        $btn = [PR.N]::Kids($h) | ? { [PR.N]::Cls($_) -eq 'Button' -and $names -contains (Clean ([PR.N]::Txt($_))) } | Select-Object -First 1
+        # decline: "No" first (save / recovery questions: do not save, do not recover), then Cancel/Close;
+        # never Yes/Save/OK
+        $lists = if ($c.mode -eq 'ok') { @(, @('OK')) } else { @(@('Nein', 'No', 'Nicht speichern', "Don't Save"), @('Abbrechen', 'Cancel', 'Schließen', 'Close')) }
+        $kids = @([PR.N]::Kids($h) | ? { [PR.N]::Cls($_) -eq 'Button' }); $btn = $null
+        foreach ($names in $lists) { if (-not $btn) { $btn = $kids | ? { $names -contains (Clean ([PR.N]::Txt($_))) } | Select-Object -First 1 } }
         if ($btn) { [PR.N]::PostMessage($btn, 0x00F5, [IntPtr]::Zero, [IntPtr]::Zero) | Out-Null } else { [PR.N]::PostMessage($h, 0x111, [IntPtr]$cmdId, [IntPtr]::Zero) | Out-Null }; $n++ }
       return $n }
     'menus' { return (OpenMenus) }
