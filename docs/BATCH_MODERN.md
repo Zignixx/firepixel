@@ -703,7 +703,7 @@ Ergebnis als Textur; parallel volle Kodierung für die Größenangabe (abbrechba
 
 ### 5.5 Video-Dekodierung (Empfehlung)
 
-Anforderungen: einzelne exe, proprietäre Lizenz (kein GPL/LGPL-Linken), kein `unsafe` im eigenen Code,
+Anforderungen: einzelne exe, Projektlizenz Apache-2.0 seit 13.10.2026 (kein GPL/AGPL/LGPL-Linken, nur permissive Lizenzen wie MIT/Apache/BSD/Zlib), kein `unsafe` im eigenen Code,
 Patente beachten.
 
 | Weg | Formate | Lizenz | Bewertung |
