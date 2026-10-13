@@ -114,12 +114,31 @@ Aliases: `reset <T..|null>` = `open_testfile` (null: only close menus/dialogs), 
 | `file_dialog` / `file_dialog_choose` / `file_dialog_cancel` | path | edit field of the open file dialog + OK / Cancel | `ui_file_dialog` |
 | `ui_action`, `ui_find`, `ui_state`, `get_document`, `ui_file_dialog`, `ui_find_click` | bridge arguments | – (put under `fp`) | bridge tool |
 
-Not supported yet (logged as `unsupported`, the run continues): `handle`/`drag_handle`/`click_handle`/
-`hover_handle`, `drag_popup_slider`, `slider_drag`, `flyout_open`/`flyout_item`, `panel_menu`, `fx_add`,
-`read_dialog_fields`, `export`/`export_png`, `scroll`/`wheel`/`canvas_wheel`, `resize_panel`, `resize_dialog`,
-`drag_dialog_*`, `restart_app`, `window_size`, `log_focus_cycle`, `set_clipboard_image`, `drop_files` and the
-other rare verbs from the scripts' notes. Target forms `{layer_row}`, `{object_row}`, `{tree_item}`,
-`{pref_category}`, `{history_row}` … work in Firepixel (found by their text) but not yet in the reference program.
+Verbs for popups, flyouts, handles and scrolling:
+
+| verb | argument | reference program | Firepixel |
+|---|---|---|---|
+| `choose` on a non-combo target | `{target, item: "A > B"}` (+ `orig_index`) | opens the target (press-and-hold if the locator has `hold_ms`), then walks the popup menu by item text (hover sub menus, click the last); `orig_index` = raw item index (separators count) for owner-drawn menus without texts (tool flyouts) | opens the target the same way, clicks the item texts |
+| `fx_add` | `"Schatten und Glühen > Schlagschatten"` | `choose {target: inspector.fx_add, item}` | same |
+| `flyout_open` / `flyout` / `flyout_item` | target (`toolbox.<tool>_flyout`) [+ `item`] | press-and-hold on the tool button (`hold_ms`), optional item as in `choose` | same (`ui_input` down / wait / up) |
+| `panel_menu` | panel id [+ `item`] | shows the panel, clicks the group's menu button (`orig_panel_menu_offset` from the group's top-right corner), optional item path | clicks the `Bedienfeldmenü` button in the panel's tab row |
+| `drag_popup_slider` / `slider_drag` | `{to_fraction, hold?, from_fraction?}` | the open popup slider (smallest extra window of the process): press near the target, move to the fraction of its long axis (vertical: top = maximum); `hold: true` keeps the button down until the next reset | same with the `slider` element from `ui_find` |
+| `scroll` / `wheel` | `{area | target, delta, mods?, horizontal?}` (`area` = shot area or `{preview_pane: i}`) | mouse wheel at the centre; `delta` > 0 scrolls the content down (wheel towards the user) | `ui_input wheel` (same sign rule) |
+| `canvas_wheel` | `{pos: [x, y] document px, delta, modifiers?}` | wheel at the document point; `delta` > 0 = wheel away from the user | same |
+| `drag_handle` / `click_handle` / `hover_handle` | `{handle, by?}` | control point of the selected object (`fw.selection[0].controlPoints`); `handle` = index or role (tooltip prefix via `handle_roles`, e.g. `points` → „Punkte“); without control points the 8 frame handles of `pixelRect` (0 = top left, clockwise) | `run_command autoShape.describe` of the selected element, else its bounds |
+| `mouse_down` / `mouse_up` | target | SendInput down/up (released at the next reset) | `ui_input down/up` |
+| `export_png` | `"doc"` | `fw.exportDocumentAs(dom, url, null)` (document's own export settings) into `run\<unit>\files\<step>_orig.png`, size + SHA-1 + pixels into `values` | bridge `render {}` into `…_fp.png` |
+| `log_menu_items` (as action) | – | texts/states of the open popup menus into `values` | `ui_find` menu items |
+
+Target forms `{handle: i|role}`, `{menu_item: "Text"}` (item of an open popup menu), `{preview_pane: i}`
+(reference: i-th preview child window of the open dialog, Firepixel: `Vorschaufeld <i+1>`) and
+`{dialog_rel: [x, y]}` (offset from the top-left of the largest open dialog) work on both sides.
+
+Not supported yet (logged as `unsupported`, the run continues): `read_dialog_fields`, `export`, `resize_panel`,
+`resize_dialog`, `drag_dialog_*`, `restart_app`, `window_size`, `log_focus_cycle`, `set_clipboard_image`,
+`drop_files`, `drag_text`, `repeat` and the other rare verbs from the scripts' notes. Target forms
+`{layer_row}`, `{object_row}`, `{tree_item}`, `{pref_category}`, `{history_row}`, `{popup_swatch}` … work in
+Firepixel (found by their text) but not yet in the reference program.
 
 ### Targets
 
@@ -152,9 +171,19 @@ The mapping table. Script authors add entries here instead of hard-coding coordi
   * reference locators: `{"panel": "properties", "rel": [x, y]}` (offset from the panel window's
     top-left), `{"window_rel": [x, y]}`, `{"child": {"title"?, "class"?, "index"?}, "panel"?}` (Win32
     child window), `{"dialog_child": {…}}`, `{"dialog_button": "ok"|"cancel"}`, `{"label": "Text"}`,
-    `{"canvas": [x, y]}`.
+    `{"canvas": [x, y]}`, `{"dialog_rel": [x, y]}`. For `rel`/`dialog_rel` points the runner asks which Win32
+    window lies under the point: an `Edit` gets its text set directly, a `ComboBox` is chosen with
+    `CB_SELECTSTRING` (so `set_field`/`choose` work on the custom-drawn inspector, too).
   * Firepixel locators: `{"find": "Text", "role"?: "button", "exact"?: true, "panel"?: "layers", "index"?: 0}`,
-    `{"window_rel": [x, y]}`, `{"canvas": [x, y]}`.
+    `{"window_rel": [x, y]}`, `{"canvas": [x, y]}`, `{"dialog_rel": [x, y]}`.
+  * options on either side: `"hold_ms": 900` (open = press-and-hold, tool flyouts), `"select": "100%"`
+    (click = choose this combo entry, e.g. `preview.zoom_100`).
+  * The inspector keys (`inspector.*`) are measured for the docked properties panel of the 1600 × 1000 window:
+    vector keys with a rectangle (T04 R1), text keys with a text object (T05 TX2); live filter rows
+    `inspector.fx_row.<i>` / `fx_row_info.<i>` / `fx_row_check.<i>`; `fx_popup.*` are the edit fields of the
+    reference program's filter popup (in Firepixel the filter settings are a dialog: not mapped yet).
+* `handle_roles`: handle role → German tooltip prefix of the control point; `orig_panel_menu_offset`;
+  `orig_neutral_point` (empty spot of the menu bar, clicked to close a popup slider the reference program leaves open).
 
 The reference program exposes **no UI Automation tree** (its panels, menu bar and inspector are custom
 drawn); only Win32 child windows (buttons, edits, combo boxes inside panels/dialogs, panel windows titled
@@ -191,5 +220,7 @@ Self test: `python -I runner.py --units _selftest_menu,_selftest_inspector`.
   is used, which is only right at 100 %.
 * `log_menu_items` in Firepixel only finds entries exposed as `menu_item` by `ui_find` (often none);
   the reference side reads the real popup menu items.
-* Hover-only states (tooltips, flyouts after press-and-hold) and mouse pointer images are not captured.
+* Tooltips and mouse pointer images are not captured (flyouts are: they open on press-and-hold).
+* Popup sliders: the reference program's slider opens below its arrow (it may reach beyond the 1000 px window
+  on a taller screen), Firepixel's above; `drag_popup_slider` works with fractions, so both get the same value.
 * The reference program must not be used by a person while the runner holds the lock (it needs the foreground).

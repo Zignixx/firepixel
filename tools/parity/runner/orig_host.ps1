@@ -46,6 +46,8 @@ public static class N {
   [DllImport("user32.dll", CharSet=CharSet.Unicode, EntryPoint="SendMessageW")] public static extern IntPtr SendMessageS(IntPtr h, uint m, IntPtr w, string l);
   [DllImport("user32.dll", CharSet=CharSet.Unicode, EntryPoint="SendMessageW")] public static extern IntPtr SendMessageSB(IntPtr h, uint m, IntPtr w, StringBuilder l);
   [DllImport("user32.dll")] public static extern int GetDlgCtrlID(IntPtr h);
+  [DllImport("user32.dll")] public static extern IntPtr WindowFromPoint(POINT p);
+  [DllImport("user32.dll")] public static extern IntPtr ChildWindowFromPointEx(IntPtr h, POINT p, uint f);
   public static string MenuText(IntPtr m, int i) { var s = new StringBuilder(256); GetMenuString(m, (uint)i, s, 256, 0x400); return s.ToString(); }
   [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr h, out uint pid);
   [DllImport("user32.dll", CharSet=CharSet.Unicode)] public static extern int GetClassName(IntPtr h, StringBuilder s, int n);
@@ -59,7 +61,7 @@ public static class N {
   public static uint TargetPid = 0; public static string TargetClass = "";
   public static string Guard() { if (TargetPid == 0) return "no target"; IntPtr f = GetForegroundWindow(); if (f == IntPtr.Zero) return "no foreground window";
     if (Pid(f) != TargetPid) return "foreground belongs to process " + Pid(f) + " (" + Cls(f) + ")";
-    string c = Cls(f); if (TargetClass != "" && c != TargetClass && c != "#32770" && c != "#32768") return "foreground class " + c; return ""; }
+    string c = Cls(f); if (TargetClass != "" && c != TargetClass && c != "#32770" && c != "#32768" && !c.StartsWith("Afx:")) return "foreground class " + c; return ""; }
   public static void Send(INPUT[] a) { string g = Guard(); if (g != "") throw new Exception("input refused: " + g);
     uint r = SendInput((uint)a.Length, a, Marshal.SizeOf(typeof(INPUT))); if (r != a.Length) throw new Exception("SendInput " + r + "/" + a.Length); }
   public static INPUT Key(ushort vk, bool up) { var i = new INPUT(); i.type = 1; i.u.ki.wVk = vk; i.u.ki.dwFlags = up ? 2u : 0u;
@@ -211,6 +213,8 @@ function PopupItems($w) {
     @{ index = $i; text = (Clean $raw); raw = $raw; separator = ((-not $sub) -and [bool]($st -band 0x800)); grayed = [bool]($st -band 0x3); checked = [bool]($st -band 0x8); submenu = $sub; rect = (R4 $r) }
   }
 }
+function TreeOf($m, $pre, $out) { $n = [PR.N]::GetMenuItemCount($m); for ($i = 0; $i -lt $n; $i++) { $t = Clean ([PR.N]::MenuText($m, $i)); if (-not $t) { continue }
+  $p = if ($pre) { "$pre > $t" } else { $t }; [void]$out.Add($p); $sm = [PR.N]::GetSubMenu($m, $i); if ($sm -ne [IntPtr]::Zero -and $out.Count -lt 3000) { TreeOf $sm $p $out } } }
 function OpenMenus { $l = New-Object Collections.ArrayList; foreach ($w in (MenuWins)) { [void]$l.Add(@{ hwnd = [int64]$w; rect = (WRect $w); items = @(PopupItems $w) }) }; @{ menus = $l.ToArray(); count = $l.Count } }
 function CloseMenus {
   for ($k = 0; $k -lt 6 -and (MenuWins).Count; $k++) {
@@ -289,7 +293,9 @@ function Handle($c) {
     'dialogs' { return @(Dialogs | % { $i = WinInfo $_; $i.texts = DialogTexts $_; $i }) }
     'dialog_close' { $n = 0; $cmdId = if ($c.mode -eq 'ok') { 1 } else { 2 }
       foreach ($h in @(Dialogs)) { $t = "$([PR.N]::Txt($h)) | $(DialogTexts $h)"; if ($c.except -and $t -match $c.except) { continue }
-        [PR.N]::PostMessage($h, 0x111, [IntPtr]$cmdId, [IntPtr]::Zero) | Out-Null; $n++ }
+        $names = if ($c.mode -eq 'ok') { @('OK') } else { @('Abbrechen', 'Cancel', 'Nein', 'Schließen') }
+        $btn = [PR.N]::Kids($h) | ? { [PR.N]::Cls($_) -eq 'Button' -and $names -contains (Clean ([PR.N]::Txt($_))) } | Select-Object -First 1
+        if ($btn) { [PR.N]::PostMessage($btn, 0x00F5, [IntPtr]::Zero, [IntPtr]::Zero) | Out-Null } else { [PR.N]::PostMessage($h, 0x111, [IntPtr]$cmdId, [IntPtr]::Zero) | Out-Null }; $n++ }
       return $n }
     'menus' { return (OpenMenus) }
     'close_menus' { return (CloseMenus) }
@@ -302,6 +308,19 @@ function Handle($c) {
     'click' { Click $c.x $c.y $c.button $c.mods $c.count; return 'ok' }
     'move' { [PR.N]::SetCursorPos([int]$c.x, [int]$c.y) | Out-Null; [PR.N]::Send(@([PR.N]::Mouse(0x1, 0))); Start-Sleep -Milliseconds 120; return 'ok' }
     'drag' { Drag $c.x1 $c.y1 $c.x2 $c.y2 $c.mods $c.steps $c.button; return 'ok' }
+    'wheel' { [PR.N]::SetCursorPos([int]$c.x, [int]$c.y) | Out-Null; [PR.N]::Send(@([PR.N]::Mouse(0x1, 0))); Start-Sleep -Milliseconds 60; Mods $c.mods $false
+              $fl = if ($c.horizontal) { 0x1000 } else { 0x800 }; $n = [int]$c.delta
+              for ($i = 0; $i -lt [Math]::Abs($n); $i++) { [PR.N]::Send(@([PR.N]::Mouse($fl, [BitConverter]::ToUInt32([BitConverter]::GetBytes([int]([Math]::Sign($n) * 120)), 0)))); Start-Sleep -Milliseconds 60 }
+              Mods $c.mods $true; Start-Sleep -Milliseconds 150; return 'ok' }
+    'down' { [PR.N]::SetCursorPos([int]$c.x, [int]$c.y) | Out-Null; [PR.N]::Send(@([PR.N]::Mouse(0x1, 0))); Start-Sleep -Milliseconds 60; Mods $c.mods $false
+             $d = if ($c.button -eq 'right') { 0x8 } else { 0x2 }; [PR.N]::Send(@([PR.N]::Mouse($d, 0))); Start-Sleep -Milliseconds 80; return 'ok' }
+    'held_move' { $x0 = [int]$c.x1; $y0 = [int]$c.y1; $st = [Math]::Max(1, [int]$c.steps)
+                  for ($i = 1; $i -le $st; $i++) { [PR.N]::SetCursorPos([int]($x0 + ($c.x2 - $x0) * $i / $st), [int]($y0 + ($c.y2 - $y0) * $i / $st)) | Out-Null; [PR.N]::Send(@([PR.N]::Mouse(0x1, 0))); Start-Sleep -Milliseconds 25 }; return 'ok' }
+    'up' { if ($c.x -ne $null) { [PR.N]::SetCursorPos([int]$c.x, [int]$c.y) | Out-Null; [PR.N]::Send(@([PR.N]::Mouse(0x1, 0))); Start-Sleep -Milliseconds 40 }
+           $u = if ($c.button -eq 'right') { 0x10 } else { 0x4 }; [PR.N]::Send(@([PR.N]::Mouse($u, 0))); Start-Sleep -Milliseconds 60; Mods $c.mods $true; return 'ok' }
+    'menu_tree' { $out = New-Object Collections.ArrayList; foreach ($w in (MenuWins)) { $m = [PR.N]::SendMessage($w, 0x01E1, [IntPtr]::Zero, [IntPtr]::Zero); if ($m -ne [IntPtr]::Zero) { TreeOf $m '' $out } }; return ,$out.ToArray() }
+    'at' { $pt = New-Object PR.N+POINT; $pt.X = [int]$c.x; $pt.Y = [int]$c.y; $h = [PR.N]::WindowFromPoint($pt); if ($h -eq [IntPtr]::Zero) { return $null }
+           $i = WinInfo $h; $i.title = [PR.N]::Txt($h); $p = [PR.N]::GetParent($h); if ($p -ne [IntPtr]::Zero) { $i.parent = WinInfo $p }; $i.pid = [PR.N]::Pid($h); return $i }
     'park' { [PR.N]::SetCursorPos([int]$c.x, [int]$c.y) | Out-Null; return 'ok' }
     'shot' { $r = @($c.rect); $b = [PR.N]::Screen($r[0], $r[1], $r[2], $r[3]); $b.Save($c.path, [System.Drawing.Imaging.ImageFormat]::Png); $b.Dispose(); return $c.path }
     default { throw "unknown command $($c.cmd)" }

@@ -25,7 +25,7 @@ from PIL import Image, ImageChops  # noqa: E402
 
 import gallery  # noqa: E402
 from fpctl import BridgeError, Firepixel  # noqa: E402
-from origctl import Lock, OrigError, Original, js_str  # noqa: E402
+from origctl import Lock, OrigError, Original, file_url as file_url_of, js_str  # noqa: E402
 
 REPO = HERE.parents[2]
 SCRIPTS = HERE.parent / "scripts"
@@ -101,6 +101,44 @@ def parse_combo(c: str) -> tuple[list[str], str]:
     return mods, KEY_ALIASES.get(lk, lk)
 
 
+def pick_handle(h, pts, rect, roles):
+    """pts = [(x, y, tooltip, visible)] in document pixels; h = index or role ('points', 'turns' ...,
+    matched as tooltip prefix via ui_map handle_roles) or a frame handle name. Without control points
+    the 8 frame handles of the bounding box are used (0 = top left, clockwise)."""
+    vis = [p for p in pts if p[3]]
+    if isinstance(h, int) or (isinstance(h, str) and h.isdigit()):
+        i = int(h)
+        if i < len(pts):
+            return pts[i][0], pts[i][1]
+        if rect:
+            l, t, r, b = rect
+            frame = [(l, t), ((l + r) / 2, t), (r, t), (r, (t + b) / 2), (r, b), ((l + r) / 2, b), (l, b), (l, (t + b) / 2)]
+            return frame[i % 8]
+        raise RuntimeError(f"handle {h}: object has {len(pts)} control points and no bounds")
+    want = [w.lower() for w in ([roles.get(h)] if isinstance(roles.get(h), str) else roles.get(h) or []) + [str(h)]]
+    for p in vis:
+        tip = (p[2] or "").lower()
+        if any(tip.startswith(w) for w in want):
+            return p[0], p[1]
+    raise RuntimeError(f"handle '{h}' not found among {[p[2] for p in pts]}")
+
+
+def slider_points(r, frac, from_frac=None):
+    """Press and target point inside a popup slider window rect (long axis; vertical: top = maximum)."""
+    l, t, rr, b = r
+    frac = max(0.0, min(1.0, frac))
+    pad = 6
+    if (b - t) >= (rr - l):
+        x = (l + rr) // 2
+        y_of = lambda f: int(b - pad - f * (b - t - 2 * pad))
+        start = y_of(from_frac) if from_frac is not None else y_of(frac) + (8 if frac < 0.5 else -8)
+        return (x, start), (x, y_of(frac))
+    y = (t + b) // 2
+    x_of = lambda f: int(l + pad + f * (rr - l - 2 * pad))
+    start = x_of(from_frac) if from_frac is not None else x_of(frac) + (-8 if frac > 0.5 else 8)
+    return (start, y), (x_of(frac), y)
+
+
 # --------------------------------------------------------------------------- sides
 class Side:
     name = "?"
@@ -150,6 +188,7 @@ class OrigSide(Side):
         self.o.focus()
 
     def reset_light(self):
+        self.release_held()
         try:
             self.h.call("close_menus")
         except OrigError:
@@ -240,8 +279,20 @@ class OrigSide(Side):
                 return ((r[0] + r[2]) // 2, (r[1] + r[3]) // 2), ch
             if "button" in target or "text" in target:
                 return self.label_point(target.get("button") or target.get("text"))
+            if "menu_item" in target:
+                return self.menu_item_point(target["menu_item"])
+            if "handle" in target:
+                return self.handle_point(target["handle"]), None
+            if "preview_pane" in target:
+                ch = self.h.call("find_child", scope="dialog", title=None,
+                                 **{"class": self.r.ui_map.get("orig_preview_pane_class", "Afx:00400000:b:00000000:00900010:00000000")},
+                                 index=int(target["preview_pane"]))
+                r = ch["rect"]
+                return ((r[0] + r[2]) // 2, (r[1] + r[3]) // 2), ch
+            if "dialog_rel" in target or ("rel" in target and "panel" in target) or "child" in target or "dialog_child" in target:
+                return self.locate(target)
             for k in ("layer_row", "object_row", "pref_category", "popup_swatch", "panel_swatch", "list_row",
-                      "tree_item", "history_row", "handle", "menu_item"):
+                      "tree_item", "history_row"):
                 if k in target:
                     raise Unsupported(f"target form {{{k}}} not supported for orig yet")
             loc = target
@@ -259,10 +310,30 @@ class OrigSide(Side):
             return self.label_point(str(target))
         return self.locate(loc)
 
+    def win_at(self, pt):
+        """Win32 window under a point (edit fields / combo boxes inside panels are real child windows)."""
+        try:
+            w = self.h.call("at", x=int(pt[0]), y=int(pt[1]))
+        except OrigError:
+            return None
+        if not w:
+            return None
+        if w.get("class") == "Edit" and (w.get("parent") or {}).get("class") == "ComboBox":
+            w = dict(w["parent"], title="")
+        return w if w.get("class") in ("Edit", "ComboBox") else None
+
     def locate(self, loc):
         if "rel" in loc and "panel" in loc:
             p = self.h.call("panel", name=self.panel_info(loc["panel"]).get("title") or loc["panel"])
-            return (p["palette"][0] + loc["rel"][0], p["palette"][1] + loc["rel"][1]), None
+            pt = (p["palette"][0] + loc["rel"][0], p["palette"][1] + loc["rel"][1])
+            return pt, self.win_at(pt)
+        if "dialog_rel" in loc:
+            ds = self.h.list("dialogs")
+            if not ds:
+                raise OrigError("no dialog open")
+            big = max(ds, key=lambda d: (d["rect"][2] - d["rect"][0]) * (d["rect"][3] - d["rect"][1]))
+            pt = (big["rect"][0] + loc["dialog_rel"][0], big["rect"][1] + loc["dialog_rel"][1])
+            return pt, self.win_at(pt)
         if "window_rel" in loc:
             c = self.client()
             return (c[0] + loc["window_rel"][0], c[1] + loc["window_rel"][1]), None
@@ -279,6 +350,78 @@ class OrigSide(Side):
         if "canvas" in loc:
             return self.doc_to_screen(*loc["canvas"]), None
         raise Unmapped(f"orig locator not understood: {loc}")
+
+    def menu_item_point(self, label):
+        lab = clean_label(label)
+        for _ in range(8):
+            for m in self.h.call("menus").get("menus") or []:
+                for it in m.get("items") or []:
+                    if not it.get("separator") and it.get("text") == lab:
+                        r = it["rect"]
+                        return ((r[0] + r[2]) // 2, (r[1] + r[3]) // 2), {"menu_item": it}
+            time.sleep(0.15)
+        raise Unmapped(f"menu item not found in open menus: {label}")
+
+    def menu_index_point(self, index):
+        """Owner-drawn popup menus (tool flyouts) have no item texts: raw item index (separators count)."""
+        ms = self.h.call("menus").get("menus") or []
+        if not ms:
+            raise OrigError("no menu open")
+        items = ms[-1].get("items") or []
+        if index >= len(items):
+            raise OrigError(f"menu has only {len(items)} items")
+        r = items[index]["rect"]
+        return ((r[0] + r[2]) // 2, (r[1] + r[3]) // 2)
+
+    def handle_point(self, h):
+        """Control point of the selected object (fw.selection[0].controlPoints): index or role (tooltip prefix)."""
+        lines = self.o.jsf('var s = fw.selection[0]; var cp = s ? s.controlPoints : null; var o = [];\n'
+                           'if (cp) for (var i = 0; i < cp.length; i++) o.push(cp[i].x + "," + cp[i].y + "," + String(cp[i].toolTip || "").replace(/[,;|]/g, " ") + "," + (cp[i].visible === false ? 0 : 1));\n'
+                           'var b = s ? s.pixelRect : null; fp_log("RET " + o.join(";") + "|" + (b ? [b.left, b.top, b.right, b.bottom].join(",") : ""));')
+        ret = [ln[4:] for ln in lines if ln.startswith("RET ")]
+        pts_s, _, rect_s = (ret[-1] if ret else "|").partition("|")
+        pts = []
+        for t in filter(None, pts_s.split(";")):
+            x, y, tip, vis = (t.split(",", 3) + ["", "1"])[:4]
+            pts.append((float(x), float(y), tip, vis != "0"))
+        rect = [float(v) for v in rect_s.split(",")] if rect_s.count(",") == 3 else None
+        pt = pick_handle(h, pts, rect, self.r.ui_map.get("handle_roles", {}))
+        return self.doc_to_screen(*pt)
+
+    def release_held(self):
+        if getattr(self, "held", None):
+            try:
+                self.h.call("up", button="left")
+            except OrigError:
+                pass
+            self.held = None
+        # popup sliders stay open over their arrow button (Escape does not close them): click on a neutral spot
+        # (empty part of the menu bar), otherwise the next click lands on the slider
+        try:
+            main = self.h.call("main")["hwnd"]
+            for w in self.h.list("windows"):
+                r = w["rect"]
+                if w["hwnd"] != main and str(w["class"]).startswith("Afx:") and (r[2] - r[0]) * (r[3] - r[1]) < 120000:
+                    c = self.client()
+                    nx, ny = self.r.ui_map.get("orig_neutral_point", [900, 15])
+                    self.o.focus()
+                    self.h.call("click", x=c[0] + nx, y=c[1] + ny, button="left", mods=[], count=1)
+                    time.sleep(0.2)
+                    break
+        except OrigError:
+            pass
+
+    def popup_slider_rect(self):
+        main = self.h.call("main")["hwnd"]
+        for _ in range(10):
+            ws = [w for w in self.h.list("windows") if w["hwnd"] != main and w["class"] not in ("tooltips_class32", "#32768", "#32770")]
+            ws = [w for w in ws if (w["rect"][2] - w["rect"][0]) * (w["rect"][3] - w["rect"][1]) < 120000]
+            if ws:
+                break
+            time.sleep(0.2)
+        if not ws:
+            raise OrigError("no popup slider open")
+        return min(ws, key=lambda w: (w["rect"][2] - w["rect"][0]) * (w["rect"][3] - w["rect"][1]))["rect"]
 
     def label_point(self, label):
         lab = clean_label(label)
@@ -454,11 +597,13 @@ class OrigSide(Side):
             self.o.focus()
             self.h.call("drag", x1=fr[0], y1=fr[1], x2=to[0], y2=to[1], mods=a.get("mods") or [], steps=a.get("steps", 20), timeout=60)
         elif verb == "choose":
-            self.choose(arg)
+            self.choose(arg, act)
         elif verb in ("set_field", "set", "set_dialog_field"):
             self.set_field(arg if isinstance(arg, dict) else act)
         elif verb == "record_ui":
             self.values.append({"record_ui": arg, "value": self.record_ui(arg)})
+        elif verb == "log_menu_items":
+            self.values.append({"menu_items": self.menu_items()})
         elif verb == "clear_dir":
             r.clear_dir(arg)
         elif verb in ("record_dir", "record_file", "record_file_text"):
@@ -473,6 +618,80 @@ class OrigSide(Side):
             self.h.call("dialog_close", mode="ok")
         elif verb == "file_dialog_cancel":
             self.h.call("dialog_close", mode="cancel")
+        elif verb == "export_png":
+            out = r.export_path(self)
+            if out.exists():
+                out.unlink()
+            self.o.jsf(f'var d = fw.getDocumentDOM(); fw.exportDocumentAs(d, {js_str(file_url_of(out))}, null);', timeout=90)
+            self.values.append({"export_png": arg, "value": r.record_path("record_file", str(out))})
+        elif verb in ("drag_popup_slider", "slider_drag"):
+            a = arg if isinstance(arg, dict) else {"to_fraction": arg}
+            r = self.popup_slider_rect()
+            p1, p2 = slider_points(r, float(a.get("to_fraction", a.get("fraction", 0.5))), a.get("from_fraction"))
+            self.o.focus()
+            self.h.call("down", x=p1[0], y=p1[1])
+            self.held = "left"
+            self.h.call("held_move", x1=p1[0], y1=p1[1], x2=p2[0], y2=p2[1], steps=12)
+            if not a.get("hold"):
+                self.h.call("up", x=p2[0], y=p2[1])
+                self.held = None
+            time.sleep(0.3)
+        elif verb in ("panel_menu", "panel_menu_item"):
+            p = arg if isinstance(arg, str) else arg.get("panel")
+            info = self.panel_info(p)
+            if not info.get("title"):
+                raise Unmapped(f"panel {p}: no title for the panel menu")
+            try:
+                g = self.h.call("panel", name=info["title"])
+            except OrigError:
+                self.do("panel", p, {})
+                g = self.h.call("panel", name=info["title"])
+            dx, dy = self.r.ui_map.get("orig_panel_menu_offset", [-13, 8])
+            self.click_at((g["rect"][2] + dx, g["rect"][1] + dy))
+            time.sleep(0.4)
+            item = act.get("item") or (arg.get("item") if isinstance(arg, dict) else None)
+            if item:
+                self.menu_path(split_path(item))
+        elif verb in ("flyout_open", "flyout", "flyout_item"):
+            a = arg if isinstance(arg, dict) else {"target": arg}
+            target = a.get("target") or a.get("flyout")
+            if a.get("item") or act.get("item"):
+                self.choose({"target": target, "item": a.get("item") or act.get("item")}, act)
+            else:
+                self.pointer("open", target, act)
+        elif verb == "fx_add":
+            item = arg if isinstance(arg, str) else arg.get("item")
+            self.choose({"target": "inspector.fx_add", "item": item}, act)
+        elif verb in ("scroll", "wheel", "canvas_wheel"):
+            a = arg if isinstance(arg, dict) else {"delta": arg}
+            if verb == "canvas_wheel":
+                pt = self.doc_to_screen(*a["pos"])
+            elif isinstance(a.get("area"), dict):
+                pt = self.resolve(a["area"])[0]
+            elif a.get("target") is not None:
+                pt = self.resolve(a["target"])[0]
+            else:
+                rr = self.area_rect(a.get("area", "canvas"))
+                pt = ((rr[0] + rr[2]) // 2, (rr[1] + rr[3]) // 2)
+            mods = a.get("mods") or a.get("modifiers") or act.get("mods") or []
+            d = int(a.get("delta", 1))
+            if verb != "canvas_wheel":
+                d = -d  # scroll: positive = content moves up (wheel towards the user)
+            self.o.focus()
+            self.h.call("wheel", x=pt[0], y=pt[1], delta=d, mods=list(mods), horizontal=bool(a.get("horizontal")))
+            time.sleep(0.3)
+        elif verb in ("drag_handle", "click_handle", "hover_handle"):
+            a = arg if isinstance(arg, dict) else {"handle": arg}
+            pt = self.handle_point(a.get("handle", a.get("index", 0)))
+            if verb == "drag_handle":
+                by = a.get("by") or act.get("by") or [0, 0]
+                self.o.focus()
+                self.h.call("drag", x1=pt[0], y1=pt[1], x2=pt[0] + by[0], y2=pt[1] + by[1], mods=a.get("mods") or [], steps=20, timeout=60)
+            elif verb == "click_handle":
+                self.click_at(pt)
+            else:
+                self.o.focus()
+                self.h.call("move", x=pt[0], y=pt[1])
         elif verb in ("ui_action", "ui_find_click", "ui_find", "ui_state", "get_document", "ui_file_dialog", "fp_only"):
             raise Unsupported(f"{verb} is Firepixel-only (put it under 'fp')")
         else:
@@ -494,24 +713,70 @@ class OrigSide(Side):
         if info and "dialog_button" in info:
             self.h.call("dialog_close", mode=info["dialog_button"])
             return
+        loc = {} if verb.startswith("canvas_") else self.loc_of(arg.get("target") if isinstance(arg, dict) and "target" in arg else arg)
+        if loc.get("select") and info and info.get("class") == "ComboBox" and verb in ("click", "open"):
+            self.h.call("combo_select", hwnd=info["hwnd"], text=clean_label(loc["select"]))
+            return
+        if loc.get("hold_ms") and verb in ("click", "open"):
+            self.o.focus()
+            self.h.call("down", x=pt[0], y=pt[1])
+            time.sleep(float(loc["hold_ms"]) / 1000)
+            self.h.call("up", x=pt[0], y=pt[1])
+            time.sleep(0.3)
+            return
         if verb in ("hover", "hover_text", "canvas_hover", "canvas_move"):
             self.o.focus()
             self.h.call("move", x=pt[0], y=pt[1])
-        elif verb == "mouse_down" or verb == "mouse_up":
-            raise Unsupported(verb)
+        elif verb == "mouse_down":
+            self.o.focus()
+            self.h.call("down", x=pt[0], y=pt[1], mods=list(mods))
+            self.held = "left"
+        elif verb == "mouse_up":
+            self.h.call("up", x=pt[0], y=pt[1], mods=list(mods))
+            self.held = None
         else:
             button = "right" if verb.startswith("right") else "left"
             count = 2 if verb.startswith("double") else 1
             self.click_at(pt, button, count, mods)
         time.sleep(0.25)
 
-    def choose(self, a):
+    def loc_of(self, target):
+        if isinstance(target, str) and target in self.r.ui_map.get("targets", {}):
+            e = self.r.ui_map["targets"][target]
+            return (e.get(self.name) if isinstance(e, dict) else None) or {}
+        return target if isinstance(target, dict) else {}
+
+    def menu_path(self, parts, final_click=True):
+        """Walk open popup menus by item text: hover sub menus, click the last entry."""
+        for i, part in enumerate(parts):
+            pt, info = self.menu_item_point(part)
+            last = i == len(parts) - 1
+            if last and final_click:
+                if (info.get("menu_item") or {}).get("grayed"):
+                    raise OrigError(f"menu item disabled: {part}")
+                self.click_at(pt)
+            else:
+                self.o.focus()
+                self.h.call("move", x=pt[0], y=pt[1])
+                time.sleep(0.45)
+
+    def choose(self, a, act=None):
+        act = act or {}
         target, item = a.get("target"), a.get("item")
-        _, info = self.resolve(target) if target else (None, None)
+        pt, info = self.resolve(target) if target else (None, None)
         if info and info.get("class") == "ComboBox":
             self.h.call("combo_select", hwnd=info["hwnd"], text=clean_label(item))
             return
-        raise Unsupported("choose: only Win32 combo boxes are supported for orig")
+        if target:
+            self.pointer("open", target, {})
+            time.sleep(0.3)
+        oi = act.get("orig_index", a.get("orig_index"))
+        if oi is not None:
+            self.click_at(self.menu_index_point(int(oi)))
+            return
+        if not self.h.call("menus").get("menus"):
+            raise Unsupported("choose: target opened no menu and is no Win32 combo box")
+        self.menu_path(split_path(item or ""))
 
     def set_field(self, a):
         target, value = a.get("target") or a.get("set_field") or a.get("set"), a.get("value")
@@ -558,6 +823,12 @@ class FpSide(Side):
             self.fp.start()
 
     def reset_light(self):
+        if getattr(self, "held", None):
+            self.held = None
+            try:
+                self.inp([{"type": "up"}])
+            except BridgeError:
+                pass
         self.call("ui_action", {"close_dialogs": True})
         try:
             st = self.call("ui_state")
@@ -656,6 +927,15 @@ class FpSide(Side):
                 if target.get("panel"):
                     reg = self.area_rect("panel:" + target["panel"])
                 return self.find(target["find"], target.get("role"), target.get("exact", True), reg, target.get("index", 0))["center"]
+            if "menu_item" in target:
+                return self.find(target["menu_item"], None, True, [0, 30, 10000, 10000])["center"]
+            if "handle" in target:
+                return self.handle_point(target["handle"])
+            if "preview_pane" in target:
+                return self.find(f"Vorschaufeld {int(target['preview_pane']) + 1}")["center"]
+            if "dialog_rel" in target:
+                d = self.area_rect("dialog")
+                return [d[0] + target["dialog_rel"][0], d[1] + target["dialog_rel"][1]]
             for k in ("layer_row", "object_row", "page_row", "state_row", "history_row", "list_row", "tree_item", "pref_category",
                       "layer_name", "page_name"):
                 if k in target:
@@ -689,9 +969,16 @@ class FpSide(Side):
         if area == "dialog":
             hits = (self.call("ui_find", {"role": "window", "limit": 50}) or {}).get("hits") or []
             hits = [h for h in hits if h.get("text")]
-            if not hits:
+            if hits:
+                return hits[0]["rect"]
+            tb = [h for h in (self.call("ui_find", {"text": "Titelleiste", "exact": False, "limit": 20}) or {}).get("hits") or []
+                  if str(h.get("text", "")).startswith("Titelleiste")]
+            if not tb:
                 raise BridgeError("no dialog window found")
-            return hits[0]["rect"]
+            l, t, r, _ = tb[0]["rect"]
+            inside = (self.call("ui_find", {"region": [l, t, r, H], "limit": 600}) or {}).get("hits") or []
+            bottom = max([h["rect"][3] for h in inside if h["rect"][0] >= l - 2 and h["rect"][2] <= r + 2] + [t + 40])
+            return [l - 1, t - 1, r + 1, min(H, bottom + 12)]
         if area in ("menu", "popup"):
             return None  # difference box
         raise Unsupported(f"shot area {area}")
@@ -843,7 +1130,7 @@ class FpSide(Side):
         elif verb == "choose":
             a = arg
             if a.get("target"):
-                self.inp([{"type": "click", "pos": self.resolve(a["target"])}, {"type": "wait", "ms": 200}])
+                self.pointer("open", a["target"], {})
             for part in split_path(a.get("item", "")):
                 hit = self.find(part)
                 self.inp([{"type": "click", "pos": hit["center"]}, {"type": "wait", "ms": 200}])
@@ -855,6 +1142,8 @@ class FpSide(Side):
                       {"type": "type", "text": str(a.get("value"))}, {"type": "key", "key": "Enter"}])
         elif verb == "record_ui":
             self.values.append({"record_ui": arg, "value": self.record_ui(arg)})
+        elif verb == "log_menu_items":
+            self.values.append({"menu_items": self.menu_items()})
         elif verb == "clear_dir":
             r.clear_dir(arg)
         elif verb in ("record_dir", "record_file", "record_file_text"):
@@ -868,15 +1157,152 @@ class FpSide(Side):
             v = self.call(verb, arg if isinstance(arg, dict) else {})
             if verb != "ui_action":
                 self.values.append({verb: arg, "value": v})
+        elif verb == "export_png":
+            out = r.export_path(self)
+            _, imgs = self.fp.call("render", {}, timeout=90)
+            if not imgs:
+                raise BridgeError("render returned no image")
+            out.write_bytes(imgs[0])
+            self.values.append({"export_png": arg, "value": r.record_path("record_file", str(out))})
+        elif verb in ("drag_popup_slider", "slider_drag"):
+            a = arg if isinstance(arg, dict) else {"to_fraction": arg}
+            p1, p2 = slider_points(self.popup_slider_rect(), float(a.get("to_fraction", a.get("fraction", 0.5))), a.get("from_fraction"))
+            ev = [{"type": "move", "pos": list(p1)}, {"type": "down"}, {"type": "wait", "ms": 60}]
+            for i in range(1, 13):
+                ev.append({"type": "move", "pos": [p1[0] + (p2[0] - p1[0]) * i / 12, p1[1] + (p2[1] - p1[1]) * i / 12]})
+                ev.append({"type": "wait", "ms": 20})
+            if a.get("hold"):
+                self.held = "left"
+            else:
+                ev.append({"type": "up"})
+            ev.append({"type": "wait", "ms": 250})
+            self.inp(ev)
+        elif verb in ("panel_menu", "panel_menu_item"):
+            p = arg if isinstance(arg, str) else arg.get("panel")
+            info = self.panel_info(p)
+            self.do("panel", p, {})
+            tab = self.find(info.get("title") or p, None, True)
+            tr = tab["rect"]
+            cy = (tr[1] + tr[3]) / 2
+            btns = [h for h in (self.call("ui_find", {"text": "Bedienfeldmenü", "role": "button", "limit": 50}) or {}).get("hits") or []
+                    if abs((h["rect"][1] + h["rect"][3]) / 2 - cy) < 12 and h["rect"][0] > tr[0]]
+            if not btns:
+                raise BridgeError(f"panel menu button for {p} not found")
+            b = min(btns, key=lambda h: h["rect"][0])
+            self.inp([{"type": "click", "pos": b["center"]}, {"type": "wait", "ms": 300}])
+            item = act.get("item") or (arg.get("item") if isinstance(arg, dict) else None)
+            if item:
+                parts = split_path(item)
+                for i, part in enumerate(parts):
+                    hit = self.find(part, None, True, [0, 30, 10000, 10000])
+                    t = "click" if i == len(parts) - 1 else "move"
+                    self.inp([{"type": t, "pos": hit["center"]}, {"type": "wait", "ms": 350}])
+        elif verb in ("flyout_open", "flyout", "flyout_item"):
+            a = arg if isinstance(arg, dict) else {"target": arg}
+            target = a.get("target") or a.get("flyout")
+            item = a.get("item") or act.get("item")
+            if item:
+                self.do("choose", {"target": target, "item": item}, act)
+            else:
+                self.pointer("open", target, act)
+        elif verb == "fx_add":
+            item = arg if isinstance(arg, str) else arg.get("item")
+            self.do("choose", {"target": "inspector.fx_add", "item": item}, act)
+        elif verb in ("scroll", "wheel", "canvas_wheel"):
+            a = arg if isinstance(arg, dict) else {"delta": arg}
+            if verb == "canvas_wheel":
+                pos = self.doc_to_win(*a["pos"])
+            elif isinstance(a.get("area"), dict):
+                pos = self.resolve(a["area"])
+            elif a.get("target") is not None:
+                pos = self.resolve(a["target"])
+            else:
+                rr = self.area_rect(a.get("area", "canvas"))
+                pos = [(rr[0] + rr[2]) / 2, (rr[1] + rr[3]) / 2]
+            d = int(a.get("delta", 1))
+            if verb != "canvas_wheel":
+                d = -d  # scroll: positive = content moves up (wheel towards the user)
+            mods = a.get("mods") or a.get("modifiers") or act.get("mods") or []
+            ev = {"type": "wheel", "pos": pos, "delta": [d, 0] if a.get("horizontal") else [0, d], "unit": "line"}
+            if mods:
+                ev["modifiers"] = [m.lower() for m in mods]
+            self.inp([{"type": "move", "pos": pos}, ev, {"type": "wait", "ms": 250}])
+        elif verb in ("drag_handle", "click_handle", "hover_handle"):
+            a = arg if isinstance(arg, dict) else {"handle": arg}
+            pos = self.handle_point(a.get("handle", a.get("index", 0)))
+            if verb == "drag_handle":
+                by = a.get("by") or act.get("by") or [0, 0]
+                ev = {"type": "drag", "from": pos, "to": [pos[0] + by[0], pos[1] + by[1]], "steps": 20}
+                if a.get("mods"):
+                    ev["modifiers"] = a["mods"]
+                self.inp([ev])
+            else:
+                self.inp([{"type": "click" if verb == "click_handle" else "move", "pos": pos}, {"type": "wait", "ms": 200}])
         elif verb == "uia_click":
             raise Unsupported("uia_click is orig-only")
         else:
             raise Unsupported(verb)
 
+    def loc_of(self, target):
+        if isinstance(target, str) and target in self.r.ui_map.get("targets", {}):
+            e = self.r.ui_map["targets"][target]
+            return (e.get(self.name) if isinstance(e, dict) else None) or {}
+        return target if isinstance(target, dict) else {}
+
+    def selected_id(self):
+        doc = next((d for d in self.state().get("documents", []) if d.get("active")), None)
+        sel = (doc or {}).get("selection") or []
+        if not sel:
+            raise BridgeError("nothing selected")
+        return sel[0]
+
+    def handle_point(self, h):
+        eid = self.selected_id()
+        pts, rect = [], None
+        try:
+            v = self.call("run_command", {"name": "autoShape.describe", "params": {"id": eid}})
+            for c in ((v or {}).get("result") or {}).get("controlPoints") or []:
+                pts.append((c["x"], c["y"], c.get("toolTip") or "", c.get("visible", True)))
+        except BridgeError:
+            pass
+        doc = self.call("get_document", {"depth": 6})
+
+        def walk(els):
+            for e in els or []:
+                if e.get("id") == eid:
+                    return e
+                f = walk(e.get("children"))
+                if f:
+                    return f
+            return None
+        for pg in doc.get("pages", []):
+            for ly in pg.get("layers", []):
+                e = walk(ly.get("elements")) or next(filter(None, (walk(sub.get("elements")) for sub in ly.get("sublayers") or [])), None)
+                if e and e.get("bounds"):
+                    b = e["bounds"]
+                    rect = list(b) if isinstance(b, list) else [b.get("left", b.get("x")), b.get("top", b.get("y")),
+                                                                b.get("right", b.get("x", 0) + b.get("width", 0)),
+                                                                b.get("bottom", b.get("y", 0) + b.get("height", 0))]
+        x, y = pick_handle(h, pts, rect, self.r.ui_map.get("handle_roles", {}))
+        return self.doc_to_win(x, y)
+
+    def popup_slider_rect(self):
+        hits = []
+        for _ in range(6):
+            hits = (self.call("ui_find", {"role": "slider", "limit": 50}) or {}).get("hits") or []
+            if hits:
+                break
+            time.sleep(0.2)
+        if not hits:
+            raise BridgeError("no popup slider open")
+        return min(hits, key=lambda h: (h["rect"][2] - h["rect"][0]) * (h["rect"][3] - h["rect"][1]))["rect"]
+
     def pointer(self, verb, arg, act):
         mods = act.get("mods") or act.get("hold_key") or []
         if isinstance(mods, str):
             mods = [mods]
+        loc = {} if verb.startswith("canvas_") or verb == "ui_find_click" else \
+            self.loc_of(arg.get("target") if isinstance(arg, dict) and "target" in arg else arg)
         if verb == "ui_find_click":
             pos = self.find(arg if isinstance(arg, str) else arg.get("text"))["center"]
             verb = "click"
@@ -889,9 +1315,14 @@ class FpSide(Side):
                 mods = arg.get("mods") or arg.get("hold_key") or mods
                 target = arg["target"]
             pos = self.resolve(target)
+        if loc.get("hold_ms") and verb in ("click", "open"):
+            self.inp([{"type": "move", "pos": pos}, {"type": "down"}, {"type": "wait", "ms": int(loc["hold_ms"])},
+                      {"type": "up"}, {"type": "wait", "ms": 250}])
+            return
         if verb in ("hover", "hover_text", "canvas_hover", "canvas_move"):
             ev = [{"type": "move", "pos": pos}]
         elif verb == "mouse_down":
+            self.held = "left"
             ev = [{"type": "move", "pos": pos}, {"type": "down"}]
         elif verb == "mouse_up":
             ev = [{"type": "move", "pos": pos}, {"type": "up"}]
@@ -907,6 +1338,9 @@ class FpSide(Side):
                     e["modifiers"] = [m.lower() for m in mods]
         ev.append({"type": "wait", "ms": 200})
         self.inp(ev)
+        if loc.get("select") and verb in ("click", "open"):
+            hit = self.find(loc["select"], None, True, [0, 30, 10000, 10000])
+            self.inp([{"type": "click", "pos": hit["center"]}, {"type": "wait", "ms": 200}])
 
     def record_ui(self, key):
         if key.startswith("ui_state"):
@@ -1056,7 +1490,13 @@ class Runner:
             side.do(verb, arg, act)
             rec["actions"].append({"verb": verb, "ms": int((time.time() - t0) * 1000)})
 
+    def export_path(self, side: Side) -> Path:
+        d = self.out / self.unit["unit"] / "files"
+        d.mkdir(parents=True, exist_ok=True)
+        return d / f"{self.cur_step}_{side.name}.png"
+
     def step_side(self, side: Side, step, before_img):
+        self.cur_step = step["id"]
         rec = {"side": side.name, "actions": [], "status": "ok", "want_before": before_img is not None}
         actions = list(step.get("both") or []) + list(step.get(side.name) or [])
         side.values = []

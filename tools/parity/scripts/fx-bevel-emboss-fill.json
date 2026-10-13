@@ -42,7 +42,7 @@
     {
      "choose": {
       "target": "inspector.fx_add",
-      "item": "Abschrägung und Prägung > Abgeflachte Kante innen"
+      "item": "Abgeflachte Kante und Relief > Abgeflachte Kante innen"
      }
     },
     {
@@ -84,7 +84,7 @@
     {
      "choose": {
       "target": "inspector.fx_add",
-      "item": "Abschrägung und Prägung > Abgeflachte Kante innen"
+      "item": "Abgeflachte Kante und Relief > Abgeflachte Kante innen"
      }
     }
    ],
@@ -120,7 +120,7 @@
     {
      "choose": {
       "target": "inspector.fx_add",
-      "item": "Abschrägung und Prägung > Abgeflachte Kante innen"
+      "item": "Abgeflachte Kante und Relief > Abgeflachte Kante innen"
      }
     },
     {
@@ -167,7 +167,7 @@
     {
      "choose": {
       "target": "inspector.fx_add",
-      "item": "Abschrägung und Prägung > Abgeflachte Kante innen"
+      "item": "Abgeflachte Kante und Relief > Abgeflachte Kante innen"
      }
     },
     {
@@ -214,7 +214,7 @@
     {
      "choose": {
       "target": "inspector.fx_add",
-      "item": "Abschrägung und Prägung > Abgefl. Kante außen"
+      "item": "Abgeflachte Kante und Relief > Abgefl. Kante außen"
      }
     },
     {
@@ -256,7 +256,7 @@
     {
      "choose": {
       "target": "inspector.fx_add",
-      "item": "Abschrägung und Prägung > Senkprägung"
+      "item": "Abgeflachte Kante und Relief > Senkprägung"
      }
     },
     {
@@ -298,7 +298,7 @@
     {
      "choose": {
       "target": "inspector.fx_add",
-      "item": "Abschrägung und Prägung > Reliefprägung"
+      "item": "Abgeflachte Kante und Relief > Reliefprägung"
      }
     },
     {
@@ -340,7 +340,7 @@
     {
      "choose": {
       "target": "inspector.fx_add",
-      "item": "Abschrägung und Prägung > Abgeflachte Kante innen"
+      "item": "Abgeflachte Kante und Relief > Abgeflachte Kante innen"
      }
     },
     {
@@ -522,7 +522,7 @@
     {
      "choose": {
       "target": "inspector.fx_add",
-      "item": "Abschrägung und Prägung > Abgeflachte Kante innen"
+      "item": "Abgeflachte Kante und Relief > Abgeflachte Kante innen"
      }
     },
     {
@@ -575,7 +575,7 @@
     {
      "choose": {
       "target": "inspector.fx_add",
-      "item": "Abschrägung und Prägung > Abgeflachte Kante innen"
+      "item": "Abgeflachte Kante und Relief > Abgeflachte Kante innen"
      }
     },
     {
@@ -743,7 +743,7 @@
     {
      "choose": {
       "target": "inspector.fx_add",
-      "item": "Abschrägung und Prägung > Abgeflachte Kante innen"
+      "item": "Abgeflachte Kante und Relief > Abgeflachte Kante innen"
      }
     },
     {
@@ -796,7 +796,7 @@
     {
      "choose": {
       "target": "inspector.fx_add",
-      "item": "Abschrägung und Prägung > Abgeflachte Kante innen"
+      "item": "Abgeflachte Kante und Relief > Abgeflachte Kante innen"
      }
     },
     {
@@ -867,7 +867,7 @@
     {
      "choose": {
       "target": "inspector.fx_add",
-      "item": "Abschrägung und Prägung > Abgeflachte Kante innen"
+      "item": "Abgeflachte Kante und Relief > Abgeflachte Kante innen"
      }
     },
     {
@@ -885,7 +885,7 @@
     {
      "choose": {
       "target": "inspector.fx_add",
-      "item": "Abschrägung und Prägung > Abgeflachte Kante innen"
+      "item": "Abgeflachte Kante und Relief > Abgeflachte Kante innen"
      }
     },
     {
@@ -947,7 +947,7 @@
     {
      "choose": {
       "target": "inspector.fx_add",
-      "item": "Abschrägung und Prägung > Abgeflachte Kante innen"
+      "item": "Abgeflachte Kante und Relief > Abgeflachte Kante innen"
      }
     },
     {
@@ -1033,7 +1033,7 @@
     {
      "choose": {
       "target": "inspector.fx_add",
-      "item": "Abschrägung und Prägung > Abgefl. Kante außen"
+      "item": "Abgeflachte Kante und Relief > Abgefl. Kante außen"
      }
     },
     {
@@ -1083,7 +1083,7 @@
     {
      "choose": {
       "target": "inspector.fx_add",
-      "item": "Abschrägung und Prägung > Abgeflachte Kante innen"
+      "item": "Abgeflachte Kante und Relief > Abgeflachte Kante innen"
      }
     },
     {
