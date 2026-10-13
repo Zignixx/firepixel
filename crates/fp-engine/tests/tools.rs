@@ -43,9 +43,9 @@ fn rectangle_tool_modifiers() {
         ToolEvent::up(130.0, 40.0),
     ]);
     assert!(rect_approx(bounds(&s, last(&s)), Rect::new(110.0, 20.0, 130.0, 40.0)));
-    // Pfeil auf beim Aufziehen: im Original ohne Wirkung (PARITAET_A L17)
+    // kurze Tipper auf ↑ beim Aufziehen: kaum Rundung (PAR 10/05: ≈ 0–1 %; gehalten wächst sie)
     events(&mut s, &[ToolEvent::down(0.0, 150.0), ToolEvent::drag(40.0, 190.0), ToolEvent::key(ToolKey::Up), ToolEvent::key(ToolKey::Up), ToolEvent::up(40.0, 190.0)]);
-    assert!(matches!(&el(&s, last(&s)).kind, ElementKind::Path(p) if p.primitive.as_ref().is_some_and(|r| r.roundness.abs() < 1e-4)));
+    assert!(matches!(&el(&s, last(&s)).kind, ElementKind::Path(p) if p.primitive.as_ref().is_some_and(|r| r.roundness.abs() <= 0.01)));
     assert_eq!(top_elements(&s).len(), 5);
     // Esc beim Aufziehen wird ignoriert, das Rechteck entsteht beim Loslassen (L19)
     events(&mut s, &[ToolEvent::down(200.0, 150.0), ToolEvent::drag(240.0, 180.0), ToolEvent::key(ToolKey::Escape), ToolEvent::up(240.0, 180.0)]);
@@ -205,9 +205,10 @@ fn select_behind_and_subselection() {
     tool(&mut s, ToolId::Subselection);
     events(&mut s, &[ToolEvent::down(5.0, 5.0), ToolEvent::up(5.0, 5.0)]);
     assert_eq!(sel(&s), vec![a]);
-    // Punkt ziehen (−7: außerhalb des Fangabstands 5 zur Seitenkante 0)
+    // Eckpunkt einer Rechteck-Grundform ziehen verschiebt wie im Original das ganze Rechteck
+    // (PAR 10/06; −7: außerhalb des Fangabstands 5 zur Seitenkante 0)
     drag(&mut s, (0.0, 0.0), (-10.0, -7.0));
-    assert!(rect_approx(bounds(&s, a), Rect::new(-10.0, -7.0, 50.0, 50.0)), "{:?}", bounds(&s, a));
+    assert!(rect_approx(bounds(&s, a), Rect::new(-10.0, -7.0, 40.0, 43.0)), "{:?}", bounds(&s, a));
 }
 
 #[test]

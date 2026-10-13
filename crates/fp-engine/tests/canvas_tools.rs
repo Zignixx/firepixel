@@ -452,6 +452,11 @@ fn pen_continue_insert_remove_and_close() {
     select(&mut s, &[p]);
     click(&mut s, 60.0, 35.0);
     assert_eq!(path_of(&s, p).contours[0].nodes.len(), 4);
+    // Klick auf den (Kurven-)Punkt wandelt ihn wie im Original in einen Eckpunkt (PAR 09/10),
+    // ein weiterer Klick auf den Eckpunkt entfernt ihn
+    select(&mut s, &[p]);
+    click(&mut s, 60.0, 35.0);
+    assert_eq!(path_of(&s, p).contours[0].nodes.len(), 4);
     select(&mut s, &[p]);
     click(&mut s, 60.0, 35.0);
     assert_eq!(path_of(&s, p).contours[0].nodes.len(), 3);
@@ -841,7 +846,9 @@ fn free_transform_like_original() {
         events(s, &seq);
     }
     let px = |r: Rect| (r.left.round(), r.top.round(), r.right.round(), r.bottom.round());
-    for (mods, want) in [("", (50.0, 50.0, 193.0, 150.0)), ("s", (50.0, 50.0, 193.0, 150.0)), ("a", (7.0, 20.0, 193.0, 150.0)), ("as", (7.0, 20.0, 193.0, 150.0))] {
+    // PAR 08/10 (Neumessung mit echtem Zug): Projektion auf die Diagonale, Ecke auf ganzen Pixeln –
+    // 151,121 → 191,151 ergibt 192,149 (Alt: 8,21–192,149)
+    for (mods, want) in [("", (50.0, 50.0, 192.0, 149.0)), ("s", (50.0, 50.0, 192.0, 149.0)), ("a", (8.0, 21.0, 192.0, 149.0)), ("as", (8.0, 21.0, 192.0, 149.0))] {
         let (mut s, r1) = setup();
         let n = s.active().unwrap().history.undo_count();
         pull(&mut s, (151.0, 121.0), (191.0, 151.0), mods);
@@ -864,24 +871,22 @@ fn free_transform_like_original() {
     pull(&mut s, (151.0, 85.0), (191.0, 85.0), "");
     s.tool_event(&ToolEvent::key(ToolKey::Enter)).expect("Eingabe");
     assert_eq!(px(bounds(&s, r1)), (50.0, 50.0, 191.0, 120.0));
-    // Esc behält die Änderung, beendet den Modus (Zeiger), ein Schritt; Strg+Z nimmt alles zurück
+    // Esc verwirft die Änderung (PAR 08/15), beendet den Modus (Zeiger), kein Verlaufsschritt
     let (mut s, r1) = setup();
     let n = s.active().unwrap().history.undo_count();
     pull(&mut s, (151.0, 121.0), (191.0, 151.0), "");
     s.tool_event(&ToolEvent::key(ToolKey::Escape)).expect("Esc");
-    assert_eq!(px(bounds(&s, r1)), (50.0, 50.0, 193.0, 150.0), "Esc behält");
+    assert_eq!(px(bounds(&s, r1)), (50.0, 50.0, 150.0, 120.0), "Esc verwirft");
     assert_eq!(s.tools.active, ToolId::Pointer, "Werkzeug danach Zeiger");
-    assert_eq!(s.active().unwrap().history.undo_count(), n + 1);
+    assert_eq!(s.active().unwrap().history.undo_count(), n);
     // der nächste Klick wählt (Zeiger) statt zu skalieren
     click(&mut s, 400.0, 300.0);
     assert!(sel(&s).is_empty(), "Klick ins Leere hebt die Auswahl auf");
-    s.undo().expect("undo");
-    assert_eq!(px(bounds(&s, r1)), (50.0, 50.0, 150.0, 120.0));
     // Doppelklick innen übernimmt
     let (mut s, r1) = setup();
     pull(&mut s, (151.0, 121.0), (191.0, 151.0), "");
     events(&mut s, &[ToolEvent::down(100.0, 85.0), ToolEvent::up(100.0, 85.0), ToolEvent::double(100.0, 85.0)]);
-    assert_eq!(px(bounds(&s, r1)), (50.0, 50.0, 193.0, 150.0));
+    assert_eq!(px(bounds(&s, r1)), (50.0, 50.0, 192.0, 149.0));
     assert_eq!(s.tools.active, ToolId::Pointer);
     // Esc ohne Änderung: Modus beenden, Dokument unverändert
     let (mut s, _) = setup();
@@ -1689,11 +1694,12 @@ fn shift_constraint_projects_onto_axis() {
     tool(&mut s, ToolId::Line);
     events(&mut s, &[ToolEvent::down(200.0, 200.0), ToolEvent::drag(230.0, 207.0).shift(), ToolEvent::drag(256.0, 215.0).shift(), ToolEvent::up(256.0, 215.0).shift()]);
     let l = bounds(&s, last(&s));
-    assert_eq!((l.right, l.height()), (256.0, 0.0), "Linie endet bei x = 256");
-    // 45°: d = (dx + dy) / 2
+    // Knoten auf Pixelmitten wie im Original (PAR 09/01)
+    assert_eq!((l.right, l.height()), (256.5, 0.0), "Linie endet bei x = 256,5");
+    // 45°: Kantenlänge = größere Komponente (PAR 09/01: 100,300→200,390 ergibt 200,400)
     events(&mut s, &[ToolEvent::down(100.0, 100.0), ToolEvent::drag(120.0, 118.0).shift(), ToolEvent::drag(140.0, 136.0).shift(), ToolEvent::up(140.0, 136.0).shift()]);
     let l = bounds(&s, last(&s));
-    assert_eq!((l.right, l.bottom), (138.0, 138.0));
+    assert_eq!((l.right, l.bottom), (140.5, 140.5));
 }
 
 #[test]
