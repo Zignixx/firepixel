@@ -1,6 +1,41 @@
 # Firepixel: Stand
 
-## Gesamtübersicht – Stand 12.10.2026 nach Welle 2 (DOC-2)
+## Gesamtübersicht – Stand 13.10.2026 nach Welle 3 (DOC3-4)
+
+**Kurz:** Welle 3 und alle Nachläufer sind fertig (13.10. 00:00–01:55, 21 Pakete). Seit der Testversion vom 12.10. 20:24 kamen 73 Commits dazu (Gesamt 268, Stand `d6671bb`). Zusammenfassung für den Nutzer, Fix-Liste, offene Messungen und Entscheidungen: `docs\progress-2026-10-13.md`. Testversion 13.10. auf dem Desktop (`NEU.md` = `docs\preview-notes-2026-10-13.md`). Gerade laufen **TE-2** (seit ≈ 02:45, 6 Agenten TE2-A…F) und **DOC-3** (6 Agenten DOC3-1…6). Die Zahlen der Paritäts- und Befundlisten zählt der Koordinator nach DOC-3 neu (`docs\PLAN.md` §7); bis dahin gelten die Zahlen aus dem Abschnitt nach Welle 2 unten.
+
+**Nutzerbefunde:** 18 ✅ · 5 🔧 umgesetzt, Prüfung im echten Fenster im Nachtlauf (N01, N21, **N22 komplett**, **N23 Prüflauf 0 Funde**, N24) · 1 ❌ teilweise (N11: Dialograhmen und Startbildschirm umgesetzt, Rest → DES-3).
+
+**Welle 3 und Nachläufer, je Paket:**
+
+| Paket | Stand | Commit(s) | Bericht |
+|---|---|---|---|
+| BV-4 | Bildvorschau P4: OK/Exportieren als ein Verlaufsschritt „Optimieren“, Exportdialog über der Vorschau, Esc (auch beim Ziehen des Exportbereichs), Mausrad/Strg+Rad, Vorgaben → **N22 komplett** | `ad67a00` | `bv4.md` (`1dbd2a4`) |
+| E3 | HTML-Einrichtung (3 Registerkarten, Speicherort nach `re\18` §6.5), Exportassistent als ein Fenster bis zur Bildvorschau, HTML-Code kopieren mit Bildordner, HTML aktualisieren tauscht nur die Tabelle, Rollover `_s2` | `42dabe7` | `e3.md` |
+| DLG-10 | Datei ▸ Datei-Info als Metadaten-Fenster (XMP im Dokument, neutral, Verlauf), Text ▸ Rechtschreibprüfung einrichten (nur Ordnerwahl) | `d01f3cc` | `dlg10.md` |
+| DLG-11 | Datei-Info in gemessener Größe (außen 680 × 620), Titel = Dateiname; Register des Originals nicht messbar | `1fe6899` | `dlg11.md` |
+| MN-4 | Befehle-Menü wie im Original (5 fehlende Befehle, Namen, „Warnmeldungen zurücksetzen“ einmal), Strg+AKUT/ZIRKUMFLEX, „Im Dateibrowser durchsuchen…“ | `0172907` | `mn4.md` |
+| MN-5 | „Wiederholen: <Filter>“, Skripttexte DE/EN (`fp.t`), „Maske deaktivieren“ ohne Kürzel, Rückfrage beim Löschen im Optimieren-Bedienfeld | `3cc575f` | `mn5.md` (`a682eda`) |
+| MN-6 | Menüs höher als das Fenster mit Pfeilleisten wie native Windows-Menüs (Haupt-, Unter-, Kontext-, ≡-Menüs, Tastatur); Erlaubnisliste 4 → 0 | `a6fd9d3` | `mn6.md` (`bfb8e3d`) |
+| RAND-2a | N23 R2-1/R2-2: Inspektor im schmalen Fenster (schwebende Bildlaufleiste), Text-Inspektor; 55 → 0 Stellen | `21edb24` | `rand2a.md` (`20be741`) |
+| RAND-2b | N23 R2-3…R2-5: Dialoge auf das Fenster begrenzt (Bildlauf, feste Knopfzeile), `list_frame`, Prüfer für Menüs/Tooltips; Erlaubnisliste 17 → 4; mit MN-6 **voller Prüflauf 0 Funde** | `247ce0c`, `e1d8909` | `rand2b.md` |
+| AU-3 | JSF-Textrichtung wie `re\09` T5, Texturnamen in Skripten, „Andere…“-Textur mit vollem Pfad; F7 bleibt bis zur Messung im Original offen | `cf504bb` | `au3.md` |
+| PERF-1 | Tausende Objekte (iPad.png, Release): Bild bei voller Auswahl 180–220 → 24 ms, Pfeiltaste 250–430 → 56 ms; erste Ziehbewegung → Fix-Liste | `0b208c8`, `9a60015` | `perf1.md` (`69c2d1a`) |
+| NZ-3 | Bildlaufleisten app-weit sichtbar, Schrift-Menü ✓, Zugriffstasten Kurven/Tonwert/Bildgröße, Info-Symbol, Hilfe-Knopf | `3a3342b` | `nz3.md` (`ff6ff0a`) |
+| NZ-4 | pHYs 2834, Neue Schaltfläche öffnet Symbolbearbeitung, Fußknopf „Auf Status verteilen“, Sprite-Werte im FW-PNG, Zusatzfelder im Dateidialog, Startordner „Bilder“ | `08187d5`, `a285413` | `nz4.md` (`e29a8f1`) |
+| NZ-5 | `ui_file_dialog` kennt die neuen Dateidialog-Kästchen (Aktion `set`), Benutzerordner nur über den Testprofil-Wächter | `cbcc2b4` | `nz5.md` (`1dd9df8`) |
+| FORM-1 | Tab-Folge OK/Abbrechen je Vorlage, ▾ kein Tab-Stopp, gemerkte Auswahllisten, Klemmen beim OK, Klick neben modalen Dialog schließt nicht, D26 Startfokus | `64d5511` | `form1.md` |
+| DES-1 | N11 Dialoge: Fußleiste, Titelleiste mit Verlauf, Schatten/OLED-Schein, getönter Standardknopf, geätzte Gruppenrahmen | `4109217` | `des1.md` |
+| DES-2 | N11 Startbildschirm: Banner mit Logo, drei Karten mit Vorschaubildern, Tastatur, 3 Designs | `a728586` | `des2.md` |
+| NEUTRAL-1 | fp-neutral prüft Doku-Abdeckung und Bildtext (Texterkennung über 596 Bilder), 10 Vergleichsbilder geschwärzt | `8275f78` | `neutral1.md` |
+| RE-BATCH | Spezifikation Batch-Assistent `re\21-batch.md` (≈ 420 Zeilen, 13 offene Messungen M1–M13) | – (`re\`, nicht im Repository) | – |
+
+**Was offen ist** (Einzelheiten in `docs\PLAN.md` §4c und `docs\progress-2026-10-13.md` §2):
+1. **Läuft:** TE-2 (Technisches Englisch Teil 2), DOC-3 (Übertragung der Berichte, Testleitfaden, DESIGN).
+2. **Danach, nur nach Freigabe:** Slots vorwärmen, neue Testversion; Nachttests erst nach „los“: GT-1, CT-1…CT-4 (inkl. Messungen im Original), FIX (Fix-Liste mit 8 Punkten), GT-2.
+3. **Neue Pakete:** CMD-1 (Bildschirmfoto, Symbolskript erstellen, Gemeinsame Palette), BATCH-1 (Batch-Assistent, später), DES-3 (N11-Rest: Tabellen/Listen einzelner Dialoge, Voreinstellungen ohne Fußleiste), CI (braucht Repo-Entscheidung).
+
+## Früher: Gesamtübersicht – Stand 12.10.2026 nach Welle 2 (DOC-2)
 
 **Was Firepixel ist:** ein nativer Nachbau des klassischen Grafikprogramms (im Folgenden „das Original“) in Rust: eine einzelne EXE ohne Installation, dazu `firepixel-cli`. Er öffnet und speichert FW-PNG (`.fw.png`) und wird bedient wie das Original. Umfang: 20 Crates, ≈ 212.000 Zeilen Rust, 177 Testdateien, 235 Commits (davon ≈ 190 am 12.10.).
 
