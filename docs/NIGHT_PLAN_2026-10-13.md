@@ -19,41 +19,43 @@ Lizenz seit 13.10.: **Apache-2.0** (`LICENSE`, `Cargo.toml`). Keine GPL/AGPL/LGP
 | 7 | VT-6 | s5 | T0 → T+1:20 | N29: zweites Nachzeichnen-Verfahren (Potrace-Verfahren eigenständig nach Fachartikel), Auswahl im Dialog |
 | 8 | START-1 | s6 | T0 → T+0:45 | N30: Startzeit messen und verkürzen, Zahlen vorher/nachher |
 | 9 | BATCH-1 | s8 | T+0:15 → T+1:15 | Batch-Kern: Crate `fp-batch`, Pipeline, Rezept-JSON, Thread-Pool, Abbrechen |
+| 9a | RE-PINSEL | Original | T+0:45 → T+1:15 | N31: Pinsel im Original messen – Strich live, Strich-Kategorien/-Arten, Kante, Textur, Deckkraft, Mischmodi, Transparenz beibehalten, Dialog „Pinselstrich bearbeiten“ → `re\24-pinsel.md` |
+| 9b | PINSEL-1 | s11 | T+0:45 → T+2:15 | N31: Pinsel live malen (kein Stempel-Umriss), danach alle Inspektor-Werte wirksam und „Pinselstrich bearbeiten“ nach `re\24` |
 
-## Block 2 – Welle 5b + Batch-Gerüst (≈ T+0:45 → T+3:00)
+## Block 2 – Welle 5b + Batch-Gerüst (≈ T+0:45 → T+3:25)
 
 | # | Paket | Slot | Start → Ende | Inhalt |
 |---|---|---|---|---|
-| 10 | RE-FX | Original | T+0:45 → T+2:05 | Messreihe aller Live-Effekte und Filter (je 3 Einstellungen, 3 Testbilder, PNG 32), **in Gruppen geliefert**: Schatten/Glühen → Abschrägung/Prägen → Weichzeichner/Schärfen → Rest → `re\23-effekte.md` |
+| 10 | RE-FX | Original | T+1:15 → T+2:35 | Messreihe aller Live-Effekte und Filter (je 3 Einstellungen, 3 Testbilder, PNG 32), **in Gruppen geliefert**: Schatten/Glühen → Abschrägung/Prägen → Weichzeichner/Schärfen → Rest → `re\23-effekte.md` |
 | 11 | FARB-1b | s4 | T+0:50 → T+1:50 | N27b: Farbwähler wie im Original an allen Stellen (Raster, HEX/RGB, Pipette im Popup, Systemfarbwähler) |
-| 12 | FX-1 | s7 | ab Gruppe 1 (≈ T+1:10) → T+2:00 | N28: Schatten/Glühen pixelgleich (Glühen zuerst) |
-| 13 | FX-2 | s2 | ab Gruppe 2 (≈ T+1:30) → T+2:20 | Abschrägung/Prägen |
-| 14 | FX-3 | s3 | ab Gruppe 3 (≈ T+1:50) → T+2:40 | Weichzeichner/Schärfen |
-| 15 | FX-4 | s6 | ab Gruppe 4 (≈ T+2:05) → T+2:55 | Farbe/Rauschen/übrige Filter |
+| 12 | FX-1 | s7 | ab Gruppe 1 (≈ T+1:40) → T+2:30 | N28: Schatten/Glühen pixelgleich (Glühen zuerst) |
+| 13 | FX-2 | s2 | ab Gruppe 2 (≈ T+2:00) → T+2:50 | Abschrägung/Prägen |
+| 14 | FX-3 | s3 | ab Gruppe 3 (≈ T+2:20) → T+3:10 | Weichzeichner/Schärfen |
+| 15 | FX-4 | s6 | ab Gruppe 4 (≈ T+2:35) → T+3:25 | Farbe/Rauschen/übrige Filter |
 | 16 | BATCH-2 | s8 | T+1:15 → T+2:15 | Batch-UI-Gerüst im Stil des Startbildschirms (Reiter, Dateiliste, Rezept-Karten, Vorschau, Ziel/Start) |
 | 17 | BATCH-3 | s9 | T+2:15 → T+3:05 | Umbenennen: Anfänger-Baukasten + Regex mit Klartext und Tabelle alt → neu |
 | 18 | BATCH-4 | s10 | T+2:15 → T+3:15 | Schritte Geometrie/Farbe/Filter/Live-Effekte |
 
-## Block 3 – Abschluss Welle 5, Testversion (≈ T+2:55 → T+3:20)
+## Block 3 – Abschluss Welle 5, Testversion (≈ T+3:25 → T+3:50)
 
 | # | Paket | Slot | Start → Ende | Inhalt |
 |---|---|---|---|---|
-| 19 | DOC-4 | – | T+2:55 → T+3:10 | Berichte der Welle 5 in NUTZERBEFUNDE/BEFUNDE/PARITAET/NACHPRUEFUNG/PLAN |
-| 20 | GT-0 | s1 + fp-rel | T+2:55 → T+3:20 | warme Slots s1–s7 auf den neuen Stand vorwärmen, Release-Build, Testversion `Firepixel-Vorschau-<Datum>_<Zeit>` auf den Desktop (mit NEU.md) – diese exe testen CT-1…4 |
+| 19 | DOC-4 | – | T+3:25 → T+3:40 | Berichte der Welle 5 in NUTZERBEFUNDE/BEFUNDE/PARITAET/NACHPRUEFUNG/PLAN |
+| 20 | GT-0 | s1 + fp-rel | T+3:25 → T+3:50 | warme Slots s1–s7 auf den neuen Stand vorwärmen, Release-Build, Testversion `Firepixel-Vorschau-<Datum>_<Zeit>` auf den Desktop (mit NEU.md) – diese exe testen CT-1…4 |
 
-## Block 4 – Nachttests + Batch-Spur (≈ T+3:20 → T+5:20)
+## Block 4 – Nachttests + Batch-Spur (≈ T+3:50 → T+5:50)
 
 | # | Paket | Slot | Start → Ende | Inhalt |
 |---|---|---|---|---|
-| 21 | GT-1 | s1 | T+3:20 → T+4:05 | alle Tests, Funktionsberichte, Abschneide-Prüflauf, Neutralität inkl. Bildtext, technisches Englisch, Scanner |
-| 22 | CT-1a | Brücke | T+3:35 → T+4:35 | Dialoge im echten Fenster (NACHPRUEFUNG §3) |
-| 23 | CT-1b | Brücke | T+3:35 → T+4:35 | Menüs (§7) |
-| 24 | CT-2 | Brücke | T+3:35 → T+4:35 | Werkzeuge, Leinwand, Inspektor, KI (§1, §2, §6) – inkl. N25–N30 |
-| 25 | CT-3 | Brücke | T+3:35 → T+4:35 | Bedienfelder, Docking, Datei, Bildvorschau/Export, Startseite (§4, §5) |
-| 26 | CT-4 | Brücke + Original | T+3:35 → T+4:35 | Englisch, 3 Designs, Fenstergrößen, alle Messungen im Original |
+| 21 | GT-1 | s1 | T+3:50 → T+4:35 | alle Tests, Funktionsberichte, Abschneide-Prüflauf, Neutralität inkl. Bildtext, technisches Englisch, Scanner |
+| 22 | CT-1a | Brücke | T+4:05 → T+5:05 | Dialoge im echten Fenster (NACHPRUEFUNG §3) |
+| 23 | CT-1b | Brücke | T+4:05 → T+5:05 | Menüs (§7) |
+| 24 | CT-2 | Brücke | T+4:05 → T+5:05 | Werkzeuge, Leinwand, Inspektor, KI (§1, §2, §6) – inkl. N25–N31 |
+| 25 | CT-3 | Brücke | T+4:05 → T+5:05 | Bedienfelder, Docking, Datei, Bildvorschau/Export, Startseite (§4, §5) |
+| 26 | CT-4 | Brücke + Original | T+4:05 → T+5:05 | Englisch, 3 Designs, Fenstergrößen, alle Messungen im Original |
 | 27 | BATCH-5 | s9 | T+3:15 → T+4:15 | Metadaten (behalten/entfernen/setzen), Optimieren, Zielgröße in KB |
 | 28 | BATCH-6 | s10 | T+3:15 → T+4:15 | Hintergrund entfernen (KI), Transparenz → Farbe, Wasserzeichen/Text/Rahmen |
-| 29 | FIX-1…4 | s2–s7 | T+4:35 → T+5:20 | jedes ❌ aus GT-1/CT-1…4 und die Fix-Liste (BEFUNDE „Fix-Liste 1–7“) beheben und erneut prüfen |
+| 29 | FIX-1…4 | s2–s7 | T+5:05 → T+5:50 | jedes ❌ aus GT-1/CT-1…4 und die Fix-Liste (BEFUNDE „Fix-Liste 1–7“) beheben und erneut prüfen |
 | 30 | BATCH-7 | s9 | T+4:15 → T+5:15 | Animation kürzen/Tempo/Schleife mit Vorschau, Video → GIF/APNG/WebP über ein **installiertes** ffmpeg (wird nicht heruntergeladen; fehlt es, werden diese Tests mit Vermerk übersprungen) |
 | 31 | BATCH-8 | s10 | T+4:15 → T+5:15 | GIF-Optimierer: kleine GIFs in hoher Qualität (eigene Verfahren, ohne GPL-Bibliotheken) |
 
