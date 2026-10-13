@@ -307,7 +307,7 @@ fn englisch_fachlich() {
         }
     }
     // Ergebnis
-    let out = i18n_qa_common::out_root().join("aktuell");
+    let out = i18n_qa_common::out_root().join(i18n_qa_common::MODE_CURRENT);
     let _ = std::fs::create_dir_all(&out);
     let _ = std::fs::write(out.join("glossar.json"), serde_json::to_string_pretty(&items).unwrap_or_default());
     let mut by: BTreeMap<String, Vec<&Item>> = BTreeMap::new();

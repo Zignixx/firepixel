@@ -84,7 +84,7 @@ fn widget_rect(ctx: &egui::Context, id: Id) -> Option<Rect> {
 /// Prüft die Texte eines Streifens (Anwendungsleiste, Ansichtsleiste, Fußleiste).
 fn check_band(name: &str, band: Rect, screen: Rect, texts: &[Painted], problems: &mut Vec<String>) {
     let inside: Vec<&Painted> = texts.iter().filter(|t| band.contains(t.rect.center())).collect();
-    if std::env::var_os("FP_SPRACHEN_DEBUG").is_some() {
+    if std::env::var_os("FP_LANGUAGES_DEBUG").or_else(|| std::env::var_os("FP_SPRACHEN_DEBUG")).is_some() {
         eprintln!("{name} [{:.0},{:.0}–{:.0},{:.0}]: {:?}", band.min.x, band.min.y, band.max.x, band.max.y, inside.iter().map(|t| t.text.as_str()).collect::<Vec<_>>());
     }
     for t in &inside {

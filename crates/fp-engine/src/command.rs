@@ -163,7 +163,7 @@ pub enum Requirement {
 }
 
 impl Requirement {
-    /// Schlüssel der Begründung (`meldungen.ftl`), falls nicht erfüllt.
+    /// Schlüssel der Begründung (`messages.ftl`), falls nicht erfüllt.
     pub fn reason_key(&self) -> &'static str {
         match self {
             Requirement::Document => "err-req-document",
@@ -267,7 +267,7 @@ impl CommandInfo {
 }
 
 /// Schlüssel eines deutschen Quelltexts der Befehlsbeschreibungen (Parameter, Hinweise) in
-/// `befehlstexte.ftl`: `cmdtext-` + Text in Kleinbuchstaben (ä → ae …, andere Buchstaben → `u<hex>`,
+/// `command_texts.ftl`: `cmdtext-` + Text in Kleinbuchstaben (ä → ae …, andere Buchstaben → `u<hex>`,
 /// sonstige Zeichen → `-`); längere
 /// Texte werden nach 40 Zeichen gekürzt und bekommen eine Prüfsumme (FNV-1a, 6 Hex-Ziffern), damit
 /// der Schlüssel eindeutig bleibt.
@@ -301,7 +301,7 @@ pub fn source_text_key(de: &str) -> String {
 }
 
 /// Deutscher Quelltext einer Befehlsbeschreibung (Parameter, Hinweis) in der aktuellen Sprache
-/// (`befehlstexte.ftl`); Deutsch bleibt wortgleich, fehlt ein Schlüssel, bleibt der Quelltext.
+/// (`command_texts.ftl`); Deutsch bleibt wortgleich, fehlt ein Schlüssel, bleibt der Quelltext.
 pub fn source_text(de: &str) -> String {
     if de.is_empty() || fp_i18n::current_language() == fp_i18n::SOURCE_LANG {
         return de.to_string();

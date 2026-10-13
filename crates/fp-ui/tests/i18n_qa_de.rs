@@ -2,7 +2,7 @@
 //! die gezeichneten Texte jedes Bildes mit dem Stand vor Phase 6 (Basis aus Commit `30ddaec`).
 //! Lang laufend, daher `#[ignore]`:
 //! `cargo test -j 4 -p fp-ui --test i18n_qa_de -- --ignored --test-threads 4`
-//! Basis erzeugen (im Stand vor Phase 6): `FP_QA_MODUS=basis`. Bericht: Test `i18n_qa_bericht`.
+//! Basis erzeugen (im Stand vor Phase 6): `FP_QA_MODE=baseline` (alt `FP_QA_MODUS=basis`). Bericht: Test `i18n_qa_bericht`.
 
 use crate::i18n_qa_common;
 
@@ -14,7 +14,7 @@ qa_tests!("de");
 #[ignore]
 fn bilder() {
     i18n_qa_common::set_lang("de");
-    let basis = i18n_qa_common::mode() == "basis";
+    let basis = i18n_qa_common::mode() == i18n_qa_common::MODE_BASELINE;
     let rep = i18n_qa_common::images_standard(if basis { "phase6_basis_de_" } else { "phase6_de_" }, if basis { None } else { Some("phase6_basis_de_") });
     let _ = std::fs::write(i18n_qa_common::out_dir().join("de_bilder.txt"), rep.join("\n"));
     eprintln!("{}", rep.join("\n"));

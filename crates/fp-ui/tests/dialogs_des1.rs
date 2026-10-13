@@ -166,7 +166,7 @@ fn footer_top_rules() {
 fn des1_images() {
     fp_engine::shell::disable();
     let stage = std::env::var("FP_DES1_STAGE").unwrap_or_else(|_| "after".into());
-    let only = std::env::var("FP_QA_NUR").ok().filter(|s| !s.is_empty());
+    let only = std::env::var("FP_QA_ONLY").or_else(|_| std::env::var("FP_QA_NUR")).ok().filter(|s| !s.is_empty());
     let cfg = Cfg { w: 1280.0, h: 900.0, ppp: 1.0 };
     let dir = repo().join("docs").join("screenshots").join("des1");
     let _ = std::fs::create_dir_all(&dir);

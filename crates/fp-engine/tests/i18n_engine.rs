@@ -1,5 +1,5 @@
 //! Mehrsprachigkeit von fp-engine (Phase 6, I18N-ENGINE): Fehlermeldungen, Verlaufsschritte,
-//! Statushinweise und Standardnamen kommen aus fp-i18n (`meldungen.ftl`, `filter.ftl`).
+//! Statushinweise und Standardnamen kommen aus fp-i18n (`messages.ftl`, `filter.ftl`).
 //!
 //! Die Sprache ist global; alle Tests dieser Datei laufen unter einer Sperre nacheinander und
 //! stellen am Ende Deutsch wieder her (andere Testdateien laufen in eigenen Prozessen).

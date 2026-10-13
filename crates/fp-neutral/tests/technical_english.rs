@@ -16,7 +16,6 @@ use std::path::{Path, PathBuf};
 
 /// (file path suffix, literal or identifier, reason)
 const ALLOWED: &[(&str, &str, &str)] = &[
-    ("fp-engine/src/commands/misc.rs", "ANLEITUNG", "Handbuch-Dateien im Repo (docs\\ANLEITUNG*.md); Umbenennung zusammen mit den Dokumenten (TE-2)"),
     ("fp-script/src/builtin_commands.rs", ".jsf", "eingebaute Befehlsskripte: Datei- und Ordnernamen erscheinen im Menü „Befehle“ (wie im Original) und folgen der UI-Sprache"),
 ];
 

@@ -11,7 +11,12 @@
 //! * (c) **Überlauf**: Text waagerecht abgeschnitten (ohne „…“), Text über den Fensterrand, Texte
 //!   überlappen sich, Text ragt teilweise in ein fremdes Bedienelement, Bedienelement über den Rand,
 //! * (d) **Deutsch unverändert**: Liste aller gezeichneten Texte mit Lage je Bild gegen den Stand
-//!   vor Phase 6 (Commit `30ddaec`, erzeugt mit `FP_QA_MODUS=basis`).
+//!   vor Phase 6 (Commit `30ddaec`, erzeugt mit `FP_QA_MODE=baseline`).
+//!
+//! Umgebungsvariablen (TE2-E, englisch; die alten deutschen Namen und Werte werden weiter gelesen):
+//! `FP_QA_MODE` (`current`/`baseline`, alt `FP_QA_MODUS` mit `aktuell`/`basis`), `FP_QA_OUT`
+//! (Ausgabeordner, alt `FP_QA_AUS`), `FP_QA_ONLY` (Teil der Bild-ID, alt `FP_QA_NUR`), `FP_QA_NEW`
+//! (Dialoge neu suchen, alt `FP_QA_NEU`).
 //!
 //! Ergebnisse als JSON nach `target-i18n-qa\i18n-qa\<modus>\<sprache>_<bereich>.json`; der Test
 //! `i18n_qa_bericht` fasst sie in `docs\I18N_PRUEFUNG.md` zusammen.
@@ -63,17 +68,50 @@ pub fn repo() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..").join("..")
 }
 
-/// Modus: `aktuell` (Standard) oder `basis` (Stand vor Phase 6 erzeugen).
-pub fn mode() -> String {
-    std::env::var("FP_QA_MODUS").unwrap_or_else(|_| "aktuell".into())
+/// Wert einer Umgebungsvariablen; ohne den neuen (englischen) Namen der alte deutsche als Rückfall.
+pub fn env_var(name: &str, legacy: &str) -> Option<String> {
+    std::env::var(name).or_else(|_| std::env::var(legacy)).ok()
 }
 
-/// Ausgabeordner der Ergebnisse (`FP_QA_AUS` oder `<repo>\target-i18n-qa\i18n-qa`).
-pub fn out_root() -> PathBuf {
-    match std::env::var("FP_QA_AUS") {
-        Ok(p) => PathBuf::from(p),
-        Err(_) => repo().join("target-i18n-qa").join("i18n-qa"),
+/// Modus `current` (Standard).
+pub const MODE_CURRENT: &str = "current";
+/// Modus `baseline` (Stand vor Phase 6 erzeugen).
+pub const MODE_BASELINE: &str = "baseline";
+
+/// Modus: `current` (Standard) oder `baseline` (Stand vor Phase 6 erzeugen); aus `FP_QA_MODE`
+/// (alt `FP_QA_MODUS`, alte Werte `aktuell`/`basis` werden umgesetzt).
+pub fn mode() -> String {
+    match env_var("FP_QA_MODE", "FP_QA_MODUS").as_deref() {
+        Some("baseline" | "basis") => MODE_BASELINE.into(),
+        Some("current" | "aktuell") | None => MODE_CURRENT.into(),
+        Some(other) => other.into(),
     }
+}
+
+/// Ergebnisordner eines Modus; liegt dort noch nichts, der Ordner mit dem früheren deutschen
+/// Namen (`aktuell`/`basis`), falls vorhanden.
+pub fn mode_dir(mode: &str) -> PathBuf {
+    let dir = out_root().join(mode);
+    let legacy = match mode {
+        MODE_CURRENT => "aktuell",
+        MODE_BASELINE => "basis",
+        _ => return dir,
+    };
+    let old = out_root().join(legacy);
+    if !dir.is_dir() && old.is_dir() { old } else { dir }
+}
+
+/// Ausgabeordner der Ergebnisse (`FP_QA_OUT`, alt `FP_QA_AUS`, sonst `<repo>\target-i18n-qa\i18n-qa`).
+pub fn out_root() -> PathBuf {
+    match env_var("FP_QA_OUT", "FP_QA_AUS") {
+        Some(p) => PathBuf::from(p),
+        None => repo().join("target-i18n-qa").join("i18n-qa"),
+    }
+}
+
+/// Nur ausgewählte Szenen/Bilder (`FP_QA_ONLY`, alt `FP_QA_NUR`; Teilzeichenkette der ID).
+pub fn only_filter() -> Option<String> {
+    env_var("FP_QA_ONLY", "FP_QA_NUR").filter(|s| !s.is_empty())
 }
 
 pub fn out_dir() -> PathBuf {
@@ -82,9 +120,9 @@ pub fn out_dir() -> PathBuf {
     d
 }
 
-/// Nur ausgewählte Bilder (`FP_QA_NUR=menues:3` o. ä., Teilzeichenkette der Bild-ID).
+/// Nur ausgewählte Bilder (`FP_QA_ONLY=menues:3` o. ä., Teilzeichenkette der Bild-ID).
 fn only() -> Option<String> {
-    std::env::var("FP_QA_NUR").ok().filter(|s| !s.is_empty())
+    only_filter()
 }
 
 /// Sprache setzen (vor dem Aufbau der Oberfläche).
@@ -1159,10 +1197,10 @@ pub fn all_commands(st: &AppState) -> Vec<String> {
     out
 }
 
-/// Sucht zu jedem Befehl einen Dialog (zwischengespeichert in `dialoge.json`; neu mit `FP_QA_NEU=1`).
+/// Sucht zu jedem Befehl einen Dialog (zwischengespeichert in `dialoge.json`; neu mit `FP_QA_NEW=1`, alt `FP_QA_NEU`).
 pub fn discover_dialogs() -> Vec<DialogCase> {
     let cache = out_root().join("dialoge.json");
-    if std::env::var("FP_QA_NEU").is_err()
+    if env_var("FP_QA_NEW", "FP_QA_NEU").is_none()
         && let Ok(s) = std::fs::read_to_string(&cache)
         && let Ok(v) = serde_json::from_str::<Vec<DialogCase>>(&s)
     {
@@ -1330,7 +1368,7 @@ pub fn run_area_with(lang: &str, area: &str, scenes: Vec<Scene>, extra: Vec<Find
     let filter = only();
     let scenes: Vec<Scene> = scenes.into_iter().filter(|s| filter.as_ref().is_none_or(|f| s.id.contains(f.as_str()))).collect();
     let mut res = AreaResult { lang: lang.into(), area: area.into(), mode: mode(), scenes: scenes.len(), ..Default::default() };
-    let layout_cfgs: Vec<Cfg> = if mode() == "basis" { vec![] } else { CFG_LAYOUT.to_vec() };
+    let layout_cfgs: Vec<Cfg> = if mode() == MODE_BASELINE { vec![] } else { CFG_LAYOUT.to_vec() };
     res.configs = std::iter::once(CFG_TEXT).chain(layout_cfgs.iter().copied()).map(|c| c.label()).collect();
     res.findings.extend(extra);
     for sc in &scenes {
@@ -1357,7 +1395,7 @@ pub fn run_area_with(lang: &str, area: &str, scenes: Vec<Scene>, extra: Vec<Find
             }
         }
     }
-    if lang == "de" && mode() != "basis" {
+    if lang == "de" && mode() != MODE_BASELINE {
         res.de_changed = compare_with_basis(area, &res.dump);
     }
     res.seconds = t0.elapsed().as_secs_f64();
@@ -1528,7 +1566,7 @@ pub fn load_png(path: &std::path::Path) -> Option<(u32, u32, Vec<u8>)> {
 
 /// Vergleicht die deutsche Textliste mit dem Stand vor Phase 6.
 pub fn compare_with_basis(area: &str, dump: &BTreeMap<String, Vec<String>>) -> Vec<String> {
-    let path = out_root().join("basis").join(format!("de_{area}.json"));
+    let path = mode_dir(MODE_BASELINE).join(format!("de_{area}.json"));
     let Ok(s) = std::fs::read_to_string(&path) else { return vec![format!("keine Basis {}", path.display())] };
     let Ok(base) = serde_json::from_str::<AreaResult>(&s) else { return vec!["Basis unlesbar".into()] };
     let mut out = Vec::new();

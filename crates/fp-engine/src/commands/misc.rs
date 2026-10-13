@@ -6,8 +6,8 @@
 //!   Erweiterungen liegen in `Extensions` (oder `FP_EXTENSIONS_DIR`).
 //! * Fenster: Anordnung und zusätzliche Fenster stehen in [`crate::session::UiState`]; die
 //!   Oberfläche zeigt sie an.
-//! * Hilfe: lokale Anleitung (`ANLEITUNG.md`, bei anderer Oberflächensprache zuerst `ANLEITUNG.en.md`,
-//!   neben dem Programm bzw. im Ordner `docs`), sonst eine
+//! * Hilfe: lokale Anleitung (`MANUAL.md`, bei anderer Oberflächensprache zuerst `MANUAL.en.md`,
+//!   neben dem Programm bzw. im Ordner `docs`; die alten Namen `ANLEITUNG*.md` gelten weiter), sonst eine
 //!   eingebaute Kurzhilfe. Firepixel sendet keine Nutzungsdaten.
 //! * Durchsuchen: listet öffnbare Bilddateien eines Ordners (Ersatz für den externen Dateibrowser).
 //! * Scannen: Windows-Bilderfassung (WIA) über PowerShell; das erfasste Bild wird ein neues Dokument.
@@ -108,7 +108,7 @@ pub fn run_script_source(s: &mut Session, code: &str, path: Option<&Path>, label
 /// Themen der Hilfe (Titel `msg-help-topic-<id>`, Text der Kurzhilfe `msg-help-body-<id>`).
 const HELP_TOPICS: &[&str] = &["start", "tools", "menus", "panels", "export", "automation", "support"];
 
-/// Kurzhilfe (Markdown) in der aktuellen Sprache, falls keine `ANLEITUNG.md` gefunden wird.
+/// Kurzhilfe (Markdown) in der aktuellen Sprache, falls keine `MANUAL.md` gefunden wird.
 fn builtin_help() -> String {
     let mut out = format!("# {}\n\n{}\n", fp_i18n::t("msg-help-title"), fp_i18n::t("msg-help-intro"));
     for id in HELP_TOPICS {
@@ -145,19 +145,25 @@ pub fn help_file() -> PathBuf {
     f
 }
 
+/// Grundname der Anleitung (`MANUAL.md`, `MANUAL.<sprache>.md`).
+const MANUAL_STEM: &str = "MANUAL";
+/// Früherer Grundname (vor TE-2); wird als Rückfall weiter gefunden.
+const LEGACY_MANUAL_STEM: &str = "ANLEITUNG";
+
 /// Dateinamen der Anleitung in Suchreihenfolge für eine Oberflächensprache: Deutsch (Ausgangssprache)
-/// `ANLEITUNG.md`; sonst `ANLEITUNG.<sprache>.md`, dann `ANLEITUNG.en.md`, zuletzt `ANLEITUNG.md`.
+/// `MANUAL.md`; sonst `MANUAL.<sprache>.md`, dann `MANUAL.en.md`, zuletzt `MANUAL.md`. Zu jeder
+/// Sprachfassung folgt direkt der alte Name (`ANLEITUNG.<sprache>.md`) als Rückfall.
 fn help_names(lang: &str) -> Vec<String> {
     let base = lang.split(['-', '_']).next().unwrap_or("").to_ascii_lowercase();
-    let mut names = Vec::new();
+    let mut suffixes: Vec<String> = Vec::new();
     if !base.is_empty() && base != fp_i18n::SOURCE_LANG {
         if base != "en" {
-            names.push(format!("ANLEITUNG.{base}.md"));
+            suffixes.push(format!(".{base}"));
         }
-        names.push("ANLEITUNG.en.md".to_string());
+        suffixes.push(".en".to_string());
     }
-    names.push("ANLEITUNG.md".to_string());
-    names
+    suffixes.push(String::new());
+    suffixes.iter().flat_map(|sfx| [MANUAL_STEM, LEGACY_MANUAL_STEM].map(|stem| format!("{stem}{sfx}.md"))).collect()
 }
 
 /// Erste Anleitung in `dirs` (je Ordner die Sprachfassung vor dem deutschen Rückfall).
@@ -525,45 +531,83 @@ mod tests {
 
     /// UE-5: Hilfe-Menü wählt die Anleitung in der Oberflächensprache (Rückfall Deutsch), ohne etwas zu öffnen.
     #[test]
-    fn anleitung_je_sprache() {
+    fn manual_per_language() {
         let root = std::env::temp_dir().join(format!("fp-ue5-hilfe-{}", std::process::id()));
         let (a, b) = (root.join("a"), root.join("b"));
         std::fs::create_dir_all(&a).unwrap();
         std::fs::create_dir_all(&b).unwrap();
-        std::fs::write(a.join("ANLEITUNG.md"), "# Anleitung").unwrap();
-        std::fs::write(a.join("ANLEITUNG.en.md"), "# Manual").unwrap();
-        std::fs::write(b.join("ANLEITUNG.md"), "# Anleitung").unwrap();
+        std::fs::write(a.join("MANUAL.md"), "# Anleitung").unwrap();
+        std::fs::write(a.join("MANUAL.en.md"), "# Manual").unwrap();
+        std::fs::write(b.join("MANUAL.md"), "# Anleitung").unwrap();
         let dirs = vec![a.clone(), b.clone()];
-        assert_eq!(find_help(&dirs, "de"), Some(a.join("ANLEITUNG.md")));
-        assert_eq!(find_help(&dirs, "en"), Some(a.join("ANLEITUNG.en.md")));
-        assert_eq!(find_help(&dirs, "en-US"), Some(a.join("ANLEITUNG.en.md")));
-        assert_eq!(find_help(&dirs, "fr"), Some(a.join("ANLEITUNG.en.md")));
-        assert_eq!(find_help(&dirs, "qps"), Some(a.join("ANLEITUNG.en.md")));
+        assert_eq!(find_help(&dirs, "de"), Some(a.join("MANUAL.md")));
+        assert_eq!(find_help(&dirs, "en"), Some(a.join("MANUAL.en.md")));
+        assert_eq!(find_help(&dirs, "en-US"), Some(a.join("MANUAL.en.md")));
+        assert_eq!(find_help(&dirs, "fr"), Some(a.join("MANUAL.en.md")));
+        assert_eq!(find_help(&dirs, "qps"), Some(a.join("MANUAL.en.md")));
         // nur deutsche Fassung vorhanden → Rückfall Deutsch
-        assert_eq!(find_help(&dirs[1..], "en"), Some(b.join("ANLEITUNG.md")));
+        assert_eq!(find_help(&dirs[1..], "en"), Some(b.join("MANUAL.md")));
         // eigene Sprachfassung vor Englisch
-        std::fs::write(a.join("ANLEITUNG.fr.md"), "# Manuel").unwrap();
-        assert_eq!(find_help(&dirs, "fr"), Some(a.join("ANLEITUNG.fr.md")));
+        std::fs::write(a.join("MANUAL.fr.md"), "# Manuel").unwrap();
+        assert_eq!(find_help(&dirs, "fr"), Some(a.join("MANUAL.fr.md")));
         assert_eq!(find_help(&[root.join("fehlt")], "en"), None);
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    /// TE2-E: Die alten Handbuchnamen `ANLEITUNG*.md` werden weiter gefunden; der neue Name gewinnt
+    /// bei gleicher Sprache, die Sprachfassung geht aber vor dem Namen.
+    #[test]
+    fn manual_legacy_names() {
+        let root = std::env::temp_dir().join(format!("fp-te2e-manual-{}", std::process::id()));
+        let (old, mixed) = (root.join("old"), root.join("mixed"));
+        std::fs::create_dir_all(&old).unwrap();
+        std::fs::create_dir_all(&mixed).unwrap();
+        std::fs::write(old.join("ANLEITUNG.md"), "# Anleitung").unwrap();
+        std::fs::write(old.join("ANLEITUNG.en.md"), "# Manual").unwrap();
+        assert_eq!(find_help(std::slice::from_ref(&old), "de"), Some(old.join("ANLEITUNG.md")));
+        assert_eq!(find_help(std::slice::from_ref(&old), "en"), Some(old.join("ANLEITUNG.en.md")));
+        assert_eq!(find_help(std::slice::from_ref(&old), "fr"), Some(old.join("ANLEITUNG.en.md")));
+        // alter englischer Name vor neuem deutschem
+        std::fs::write(mixed.join("MANUAL.md"), "# Anleitung").unwrap();
+        std::fs::write(mixed.join("ANLEITUNG.en.md"), "# Manual").unwrap();
+        assert_eq!(find_help(std::slice::from_ref(&mixed), "en"), Some(mixed.join("ANLEITUNG.en.md")));
+        assert_eq!(find_help(std::slice::from_ref(&mixed), "de"), Some(mixed.join("MANUAL.md")));
+        // neuer Name vor altem bei gleicher Sprache
+        std::fs::write(mixed.join("MANUAL.en.md"), "# Manual").unwrap();
+        std::fs::write(mixed.join("ANLEITUNG.md"), "# Anleitung").unwrap();
+        assert_eq!(find_help(std::slice::from_ref(&mixed), "en"), Some(mixed.join("MANUAL.en.md")));
+        assert_eq!(find_help(std::slice::from_ref(&mixed), "de"), Some(mixed.join("MANUAL.md")));
+        assert_eq!(help_names("de"), vec!["MANUAL.md", "ANLEITUNG.md"]);
+        assert_eq!(help_names("en"), vec!["MANUAL.en.md", "ANLEITUNG.en.md", "MANUAL.md", "ANLEITUNG.md"]);
         let _ = std::fs::remove_dir_all(&root);
     }
 
     /// Über den Befehl: Pfad der englischen Anleitung bei englischer Oberfläche (FP_HELP nicht gesetzt,
     /// `open: false`, also kein Fremdprogramm).
     #[test]
-    fn hilfe_befehl_liefert_englische_anleitung() {
+    fn help_command_returns_english_manual() {
         if std::env::var_os("FP_HELP").is_some() {
             return;
         }
         let f = fp_i18n::with_language("en", help_file);
         let name = f.file_name().and_then(|n| n.to_str()).unwrap_or("").to_string();
         // im Repository liegen beide Fassungen unter docs\ (über current_dir/current_exe gefunden)
-        if f.parent().is_some_and(|d| d.join("ANLEITUNG.en.md").is_file()) {
-            assert_eq!(name, "ANLEITUNG.en.md", "{f:?}");
+        // (neuer Name `MANUAL*.md` oder bis zur Umbenennung der Dokumente der alte `ANLEITUNG*.md`)
+        if let Some(d) = f.parent() {
+            if d.join("MANUAL.en.md").is_file() {
+                assert_eq!(name, "MANUAL.en.md", "{f:?}");
+            } else if d.join("ANLEITUNG.en.md").is_file() {
+                assert_eq!(name, "ANLEITUNG.en.md", "{f:?}");
+            }
         }
         let de = fp_i18n::with_language("de", help_file);
-        if de.parent().is_some_and(|d| d.join("ANLEITUNG.md").is_file()) {
-            assert_eq!(de.file_name().and_then(|n| n.to_str()), Some("ANLEITUNG.md"), "{de:?}");
+        let de_name = de.file_name().and_then(|n| n.to_str()).unwrap_or("").to_string();
+        if let Some(d) = de.parent() {
+            if d.join("MANUAL.md").is_file() {
+                assert_eq!(de_name, "MANUAL.md", "{de:?}");
+            } else if d.join("ANLEITUNG.md").is_file() {
+                assert_eq!(de_name, "ANLEITUNG.md", "{de:?}");
+            }
         }
     }
 }

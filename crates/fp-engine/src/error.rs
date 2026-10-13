@@ -2,7 +2,7 @@
 //!
 //! # Mehrsprachigkeit
 //! Jede Variante hat einen stabilen Schlüssel ([`EngineError::message_key`], Bereichsdatei
-//! `meldungen.ftl` von fp-i18n) und benannte Argumente ([`EngineError::args`]). `Display` setzt
+//! `messages.ftl` von fp-i18n) und benannte Argumente ([`EngineError::args`]). `Display` setzt
 //! daraus den Text in der aktuellen Sprache zusammen (Deutsch wie bisher).
 //!
 //! Die Nutzlast der Varianten ist bereits übersetzt (wird beim Erzeugen über `fp_i18n::t`
@@ -48,7 +48,7 @@ pub enum EngineError {
 }
 
 impl EngineError {
-    /// Stabiler Schlüssel der Meldung (`meldungen.ftl`), z. B. `err-not-found`. Für Skripte, MCP
+    /// Stabiler Schlüssel der Meldung (`messages.ftl`), z. B. `err-not-found`. Für Skripte, MCP
     /// und Tests, die die Art des Fehlers unabhängig von der Sprache prüfen.
     pub fn message_key(&self) -> &'static str {
         match self {

@@ -3,12 +3,14 @@
 //! (Normal | Dunkel | OLED), auf den Dialog zugeschnitten.
 //!
 //! ```text
-//! $env:FP_NO_SHELL_OPEN='1'; $env:FP_QA_AUS='…\target-design\design-qa'
-//! $env:FP_DESIGN_BILD='vorher'   # oder 'nachher'
+//! $env:FP_NO_SHELL_OPEN='1'; $env:FP_QA_OUT='…\target-design\design-qa'
+//! $env:FP_DESIGN_IMAGE='before'   # oder 'after'
 //! cargo test -j 4 -p fp-ui --test design_bilder -- --ignored --nocapture --test-threads 1
 //! ```
 //!
-//! Nur einzelne Dialoge: `FP_QA_NUR=<Teil der Szenen-ID>` (z. B. `dlg:export`).
+//! Nur einzelne Dialoge: `FP_QA_ONLY=<Teil der Szenen-ID>` (z. B. `dlg:export`).
+//! Alte Namen und Werte gelten weiter (`FP_DESIGN_BILD` mit `vorher`/`nachher`, `FP_QA_AUS`,
+//! `FP_QA_NUR`); die Bilder heißen dann ebenfalls `design_before_*`/`design_after_*`.
 //! Die Szenen (Testdokument, Dialogsuche) kommen aus dem Prüfgerüst der Mehrsprachigkeit.
 
 #[allow(unused_macros, unused_imports)]
@@ -107,8 +109,12 @@ fn file_name(id: &str) -> String {
 #[ignore]
 fn design_bestand() {
     fp_engine::shell::disable();
-    let stage = std::env::var("FP_DESIGN_BILD").unwrap_or_else(|_| "vorher".into());
-    let only = std::env::var("FP_QA_NUR").ok().filter(|s| !s.is_empty());
+    let stage = match i18n_qa_common::env_var("FP_DESIGN_IMAGE", "FP_DESIGN_BILD").as_deref() {
+        Some("after" | "nachher") => "after".to_string(),
+        Some("before" | "vorher") | None => "before".to_string(),
+        Some(other) => other.to_string(),
+    };
+    let only = i18n_qa_common::only_filter();
     let cfg = Cfg { w: 1280.0, h: 860.0, ppp: 1.0 };
     let dir = repo().join("docs").join("screenshots");
     let _ = std::fs::create_dir_all(&dir);

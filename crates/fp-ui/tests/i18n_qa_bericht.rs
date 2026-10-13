@@ -21,11 +21,11 @@ const AREAS: &[(&str, &str)] = &[
 const LAYOUT: &[&str] = &["abgeschnitten", "fensterrand", "ueberlappung", "in_element", "element_rand"];
 
 fn load(lang: &str, area: &str) -> Option<AreaResult> {
-    load_in("aktuell", lang, area)
+    load_in(i18n_qa_common::MODE_CURRENT, lang, area)
 }
 
 fn load_in(mode: &str, lang: &str, area: &str) -> Option<AreaResult> {
-    let p = i18n_qa_common::out_root().join(mode).join(format!("{lang}_{area}.json"));
+    let p = i18n_qa_common::mode_dir(mode).join(format!("{lang}_{area}.json"));
     serde_json::from_str(&std::fs::read_to_string(p).ok()?).ok()
 }
 
