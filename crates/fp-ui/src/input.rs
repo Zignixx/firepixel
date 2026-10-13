@@ -251,7 +251,7 @@ pub fn handle(ctx: &egui::Context, st: &mut AppState) {
                 // Esc in einem offenen Popup (Popup-Schieber, Kombifeld-Liste, Farbfeld-Popup)
                 // schließt nur das Popup (egui erledigt das selbst), wie im Original; die Auswahl
                 // auf der Leinwand bleibt
-                if key == Key::Escape && egui::Popup::is_any_open(ctx) {
+                if key == Key::Escape && (egui::Popup::is_any_open(ctx) || crate::inspector::popups::fill_popup_open(ctx)) {
                     continue;
                 }
                 let ctrl = modifiers.ctrl || modifiers.command;

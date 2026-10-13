@@ -155,9 +155,10 @@ fn w21_counts_like_original_when_installed() {
     }
     assert_eq!(popups::texture_names().len(), 77, "Texturen wie im Original");
     assert_eq!(popups::pattern_files().len(), 60, "Muster wie im Original");
-    // die Texturen haben deutsche Namen (bis auf gleichlautende wie „Chiffon“, „Sand“)
+    // die Texturen haben deutsche Namen (bis auf gleichlautende wie „Chiffon“, „Sand“ und
+    // „Argyle 01/02“, die auch das Original nicht übersetzt, PAR 18/12)
     let same = popups::texture_names().iter().filter(|n| obj_quads::texture_label(n) == **n).count();
-    assert!(same <= 4, "{same} Texturen ohne deutschen Namen");
+    assert!(same <= 6, "{same} Texturen ohne deutschen Namen");
     let (items, _) = obj_quads::texture_items("");
     let labels: Vec<String> = items.iter().map(|(_, l)| l.to_lowercase()).collect();
     let mut sorted = labels.clone();
@@ -258,31 +259,43 @@ fn w21_listed_texture_gets_mask() {
     assert_eq!(undo_count(&h), n0 + 1);
 }
 
-/// Musterliste (Knopf „Muster“ an einem gewählten Rechteck): Muster aus allen Musterordnern, eine
-/// schmale Liste mit Bildlauf und darunter „Andere…“ (immer sichtbar); Wahl eines Musters ist ein
-/// Schritt und setzt die Musterfüllung.
+/// Knopf „Muster“ an einem gewählten Rechteck (PAR 18/01, 18/08): stellt in einem Schritt auf das
+/// Vorgabemuster „Baumwolle“ um und öffnet sofort das Muster-Popup; dessen Liste zeigt die Muster
+/// mit deutschen Namen wie im Original (alphabetisch, darunter „Andere...“); Wahl eines Musters ist
+/// ein Schritt und setzt die Musterfüllung.
 #[test]
 fn w21_pattern_list_like_texture_list() {
-    let Some((first, _)) = popups::pattern_files().first().cloned() else { return };
+    if popups::pattern_files().is_empty() {
+        return;
+    }
     let mut h = harness(|s| {
         rect(s, [50, 50, 150, 120], "#ff0000");
     });
     // Muster-Knopf: vierter Füllart-Knopf rechts über der Fülltextur-Liste (Lage wie im echten Fenster)
     let tex = texture_combos(&h)[0];
     let pattern = egui::pos2(tex.left() + 119.0, tex.top() - 38.0);
+    let n0 = undo_count(&h);
     click(&mut h, pattern);
+    h.run_steps(2);
+    let name = |h: &H| obj_quads::shown_attrs(st(h)).and_then(|a| a.fill.as_ref().and_then(|f| f.pattern.as_ref().map(|p| p.name.clone())));
+    assert_eq!(name(&h).as_deref(), Some("Cotton"), "Vorgabemuster");
+    assert_eq!(undo_count(&h), n0 + 1, "ein Schritt");
+    assert!(popups::anchored_open(&h.ctx, obj_quads::fill_popup_ids(false).1), "Muster-Popup offen");
+    // Liste im Popup aufklappen
+    let combo = h.get_all(By::new().role(egui::accesskit::Role::ComboBox)).find(|n| n.value().as_deref() == Some("Baumwolle")).expect("Musterliste mit „Baumwolle“").rect();
+    click(&mut h, combo.center());
     let other = h.get_by_label("Andere...").rect();
     assert!(other.bottom() <= HH, "„Andere…“ sichtbar: {other:?}");
-    assert!(other.width() < 220.0, "schmale Liste: {other:?}");
-    let item = h.get_by_label(&first).rect();
+    let items = popups::pattern_items();
+    assert_eq!(items.first().map(|(_, l)| l.as_str()), Some("Baumwolle"), "alphabetisch wie im Original");
+    let (second, label) = items[1].clone();
+    let item = h.get_by_label(&label).rect();
     assert!(item.top() < other.top());
-    let n0 = undo_count(&h);
     click(&mut h, item.center());
     h.run_steps(2);
-    let attrs = obj_quads::shown_attrs(st(&h)).expect("Attribute");
-    let f = attrs.fill.as_ref().expect("Füllung");
-    assert_eq!(f.pattern.as_ref().map(|p| p.name.clone()).as_deref(), Some(first.as_str()));
-    assert_eq!(undo_count(&h), n0 + 1);
+    assert_eq!(name(&h).as_deref(), Some(second.as_str()));
+    assert_eq!(undo_count(&h), n0 + 2);
+    assert!(popups::anchored_open(&h.ctx, obj_quads::fill_popup_ids(false).1), "Wahl in der Liste schließt das Popup nicht");
 }
 
 // ------------------------------------------------------------------ EB pi.text.antialias

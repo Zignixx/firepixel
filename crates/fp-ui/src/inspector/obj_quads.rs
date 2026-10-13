@@ -100,6 +100,8 @@ pub struct ToolAttrs {
     pub fill_texture: String,
     pub fill_texture_amount: i32,
     pub fill_texture_transparent: bool,
+    /// Muster der Werkzeugvorgabe (Dateiname ohne Endung oder voller Pfad; leer = Vorgabemuster).
+    pub pattern: String,
     pub stroke_preset: Option<usize>,
     pub stroke_width: i32,
     pub softness: i32,
@@ -145,6 +147,7 @@ impl Default for ToolAttrs {
             fill_texture: String::new(),
             fill_texture_amount: 0,
             fill_texture_transparent: false,
+            pattern: String::new(),
             // Werksvorgabe „1-Pixel hart“ (wie bisher; Index in der Vorlagentabelle)
             stroke_preset: fp_engine::commands::panel::preset_index_of("bc_Pencil", "bn_1-Pixel"),
             stroke_width: 1,
@@ -363,9 +366,16 @@ fn apply_tool_gradient(ui: &Ui, st: &mut AppState, p: &Value) {
     }
 }
 
+/// Merker: Füllung der Auswahl wurde im Inspektor geändert; im nächsten Bild übernimmt das
+/// Werkzeug sie (neue Objekte erhalten die zuletzt gesetzte Füllung, PAR 18/22).
+const FILL_MIRROR: &str = "pi-fill-mirror";
+
 fn apply_fill(ui: &Ui, st: &mut AppState, tgt: Target, params: Value) {
     match tgt {
-        Target::Selection => st.run("pi.fill", params),
+        Target::Selection => {
+            st.run("pi.fill", params);
+            ui.ctx().data_mut(|d| d.insert_temp(Id::new(FILL_MIRROR), true));
+        }
         Target::Tool => {
             let ctx = ui.ctx().clone();
             if let Some(c) = params.get("color").and_then(|v| v.as_str()).and_then(fp_color::Rgba8::parse_hex) {
@@ -376,13 +386,21 @@ fn apply_fill(ui: &Ui, st: &mut AppState, tgt: Target, params: Value) {
                     Some("none") => a.fill_kind = 0,
                     Some("solid") => a.fill_kind = 1,
                     Some("gradient") => a.fill_kind = 2,
+                    Some("pattern") => a.fill_kind = 3,
                     _ => {}
+                }
+                if let Some(v) = params.get("pattern").and_then(|v| v.as_str()) {
+                    a.fill_kind = 3;
+                    a.pattern = v.to_string();
                 }
                 if let Some(v) = params.get("shape").and_then(|v| v.as_i64()) {
                     a.grad_shape = v as i32;
                 }
                 if let Some(v) = params.get("edge").and_then(|v| v.as_i64()) {
                     a.edge = v as i32;
+                    if v != 2 {
+                        a.feather = 0;
+                    }
                 }
                 if let Some(v) = params.get("feather").and_then(|v| v.as_i64()) {
                     a.feather = v as i32;
@@ -401,9 +419,54 @@ fn apply_fill(ui: &Ui, st: &mut AppState, tgt: Target, params: Value) {
     }
 }
 
+/// Übernimmt die Füllung der Auswahl als Werkzeugvorgabe (nach einer Änderung im Inspektor; das
+/// Original zeichnet neue Objekte mit der zuletzt gesetzten Füllung, PAR 18/22).
+fn mirror_fill_to_tool(ctx: &egui::Context, st: &mut AppState) {
+    if !ctx.data(|d| d.get_temp::<bool>(Id::new(FILL_MIRROR))).unwrap_or(false) {
+        return;
+    }
+    ctx.data_mut(|d| d.remove::<bool>(Id::new(FILL_MIRROR)));
+    let Some(a) = shown_attrs(st) else { return };
+    let f = a.fill.as_ref();
+    let kind = ui_commands::fill_kind(f);
+    edit_tool_attrs(ctx, |ta| {
+        ta.fill_kind = if kind == 4 { 1 } else { kind };
+        if let Some(f) = f {
+            if kind == 2 {
+                ta.grad_shape = ui_commands::shape_id(f);
+            }
+            if kind == 3 {
+                ta.pattern = f.pattern.as_ref().map(|p| p.name.clone()).unwrap_or_default();
+            }
+            ta.edge = f.edge;
+            ta.feather = f.feather;
+            ta.fill_texture_amount = f.texture_amount / 10;
+            ta.fill_texture_transparent = f.transparent_dither.unwrap_or(false);
+        }
+        ta.fill_texture = a.fill_texture.as_ref().map(|t| t.name.clone()).filter(|_| ta.fill_texture_amount > 0).unwrap_or_default();
+    });
+    if kind != 0 {
+        st.push(Action::SetColors { stroke: None, fill: Some(Argb(a.fill_color.0 | 0xff00_0000)) });
+    }
+}
+
+/// Winkel der Füllgriffe des zuletzt gewählten Objekts (Verlaufs-/Muster-Popup).
+fn selection_fill_angle(st: &AppState) -> Option<f64> {
+    selection(st).iter().rev().find_map(|e| ui_commands::handles_of(e)).filter(|h| h.valid).map(|h| ui_commands::handles_angle(&h))
+}
+
+/// Popup-Ids des Verlaufs- und des Muster-Popups eines Füllfelds.
+pub fn fill_popup_ids(tool: bool) -> (Id, Id) {
+    let id = Id::new(("pi-fill", tool));
+    (id.with("grad-pop"), id.with("pat-pop"))
+}
+
 /// Teilfeld „Füllung“ an DLU-Ursprung `d` (Breite 119 DLU, Höhe 29 DLU).
 pub fn fill_panel(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target, enabled: bool) {
     let theme = Theme::current(ui.ctx());
+    if tgt == Target::Selection {
+        mirror_fill_to_tool(&ui.ctx().clone(), st);
+    }
     let ta = tool_attrs(ui.ctx());
     let attrs = first_attrs(st);
     let (kind, color, fill, edge, feather) = match tgt {
@@ -417,22 +480,43 @@ pub fn fill_panel(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target, enabled: b
         Target::Tool => {
             let c = st.session.tools.fill_color;
             let kind = if c.a() == 0 { 0 } else { ta.fill_kind };
-            let fill = (kind == 2).then(|| {
-                let mut f = fp_model::Fill::solid();
-                f.shape = ta.grad_shape;
-                f.gradient = Some(ui_commands::make_gradient(ta.grad_shape, &[(0.0, c), (1.0, st.session.tools.stroke_color)], None));
-                f
-            });
+            let fill = match kind {
+                2 => {
+                    let mut f = fp_model::Fill::solid();
+                    let end = if Argb(c.0 | 0xff00_0000) == Argb(0xffff_ffff) { Argb(0xff00_0000) } else { Argb(c.0 | 0xff00_0000) };
+                    f.shape = ta.grad_shape;
+                    if ta.grad_shape == ui_commands::CONTOUR_SHAPE {
+                        f.shape = 3;
+                        f.shape_ext = 17;
+                    }
+                    f.gradient = Some(ui_commands::make_gradient(ta.grad_shape, &[(0.0, Argb(0xffff_ffff)), (1.0, end)], None));
+                    Some(f)
+                }
+                3 => {
+                    let mut f = fp_model::Fill::solid();
+                    f.shape = 15;
+                    f.category = "fc_Pattern".into();
+                    let name = if ta.pattern.is_empty() { ui_commands::DEFAULT_PATTERN.to_string() } else { texture_display_name(&ta.pattern) };
+                    f.pattern = Some(fp_model::attrs::Pattern { name: name.clone(), user_name: Some(name), image: None, extra: Default::default() });
+                    Some(f)
+                }
+                _ => None,
+            };
             (kind, (c.a() > 0).then_some(c), fill, ta.edge, ta.feather)
         }
     };
     let en = enabled && (tgt == Target::Tool || attrs.is_some());
     let id = Id::new(("pi-fill", tgt == Target::Tool));
+    let (grad_pid, pat_pid) = fill_popup_ids(tgt == Target::Tool);
     super::glyphs::paint(ui.painter(), d.r(0.0, 0.0, 12.0, 11.0), Glyph::PaintBucket, &theme, en);
     let sw = d.r(14.0, 0.0, 15.0, 13.0);
+    let angle = match tgt {
+        Target::Selection => selection_fill_angle(st),
+        Target::Tool => None,
+    };
     // Verlauf-Werkzeug: eigenes Farbfeld mit dem Verlauf, den das Werkzeug malt (Werksvorgabe
     // Schwarz → Weiß, unabhängig von Füll- und Strichfarbe; Original gemessen, PARITAET_A W26),
-    // Klick öffnet den Verlaufseditor; ohne Füllart-Knöpfe (W25)
+    // Klick öffnet das Verlaufs-Popup; ohne Füllart-Knöpfe (W25)
     let gradient_tool = tgt == Target::Tool && st.session.tools.active == fp_engine::ToolId::Gradient;
     if gradient_tool {
         let cols = st.session.tools.options.gradient_tool_colors();
@@ -444,32 +528,43 @@ pub fn fill_panel(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target, enabled: b
         let resp = fields::swatch(ui, id.with("sw"), sw, Some(stops[0].1), en);
         draw_gradient_swatch(ui, sw, &f);
         ui.ctx().data_mut(|dd| dd.insert_temp(Id::new(TOOL_SWATCH_GRADIENT), Some(stops.iter().map(|s| s.1 .0).collect::<Vec<u32>>())));
-        let mut out = None;
-        egui::Popup::from_toggle_button_response(&resp)
-            .close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside)
-            .frame(crate::menu::menu_frame(&theme).inner_margin(egui::Margin::same(6)))
-            .show(|ui| {
-                out = popups::gradient_editor(ui, id.with("grad"), &f);
-            });
+        let out = popups::anchored_popup(ui, grad_pid, sw, resp.clicked(), |ui| popups::gradient_editor(ui, id.with("grad"), &f, st, None)).flatten();
         if let Some(p) = out {
             apply_tool_gradient(ui, st, &p);
         }
-    } else if kind == 2 && tgt == Target::Selection {
+    } else if kind == 2 {
         let resp = fields::swatch(ui, id.with("sw"), sw, color, en);
         if let Some(f) = &fill {
             draw_gradient_swatch(ui, sw, f);
         }
         let mut out = None;
-        egui::Popup::from_toggle_button_response(&resp)
-            .close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside)
-            .frame(crate::menu::menu_frame(&theme).inner_margin(egui::Margin::same(6)))
-            .show(|ui| {
-                if let Some(f) = &fill {
-                    out = popups::gradient_editor(ui, id.with("grad"), f);
-                }
-            });
+        if let Some(f) = &fill {
+            out = popups::anchored_popup(ui, grad_pid, sw, resp.clicked(), |ui| popups::gradient_editor(ui, id.with("grad"), f, st, angle)).flatten();
+        }
         if let Some(p) = out {
             apply_fill(ui, st, tgt, p);
+        }
+    } else if kind == 3 {
+        // Muster: Farbfeld zeigt das Muster, Klick öffnet das Muster-Popup (PAR 18/08)
+        let cur = fill.as_ref().and_then(|f| f.pattern.as_ref()).map(|p| p.name.clone()).unwrap_or_default();
+        let resp = fields::swatch(ui, id.with("sw"), sw, color, en);
+        draw_pattern_swatch(ui, sw, &cur);
+        let out = popups::anchored_popup(ui, pat_pid, sw, resp.clicked(), |ui| popups::pattern_editor(ui, id.with("pat"), &cur, if tgt == Target::Selection { angle } else { None })).flatten();
+        match out {
+            Some(popups::PatternChoice::Named(n)) => apply_fill(ui, st, tgt, json!({"pattern": n})),
+            Some(popups::PatternChoice::Angle(a)) => apply_fill(ui, st, tgt, json!({"angle": a})),
+            Some(popups::PatternChoice::Other) => {
+                let (title, images) = (t("pi-pattern-pick-title"), t("pi-filter-images"));
+                let ctx = ui.ctx().clone();
+                crate::dialogs::panel_menus::pick_open(st, &title, &[(images.as_str(), &["png", "jpg", "jpeg", "gif", "bmp"])], move |st, p| match tgt {
+                    Target::Selection => st.run("pi.fill", json!({"pattern": p.to_string_lossy()})),
+                    Target::Tool => edit_tool_attrs(&ctx, |a| {
+                        a.fill_kind = 3;
+                        a.pattern = p.to_string_lossy().to_string();
+                    }),
+                });
+            }
+            None => {}
         }
     } else {
         let choice = popups::color_button_with(ui, id.with("sw"), sw, st, color, en, super::color_picker::Footer::Plain);
@@ -485,7 +580,7 @@ pub fn fill_panel(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target, enabled: b
                 apply_fill(ui, st, tgt, p);
             }
             Some(ColorChoice::None) => match tgt {
-                Target::Selection => st.run("pi.fill", json!({"category": "none"})),
+                Target::Selection => apply_fill(ui, st, tgt, json!({"category": "none"})),
                 Target::Tool => st.push(Action::SetColors { stroke: None, fill: Some(Argb(0x00ff_ffff)) }),
             },
             Some(ColorChoice::Pipette) => {
@@ -498,60 +593,30 @@ pub fn fill_panel(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target, enabled: b
             Some(_) | None => {}
         }
     }
-    // Füllart-Knöpfe Keine / Einfarbig / Verlauf / Muster; der Werkzeug-Inspektor des Verlaufs
+    // Füllart-Knöpfe Keine / Einfarbig / Verlauf / Muster; „Verlauf“ und „Muster“ stellen um und
+    // öffnen sofort das zugehörige Popup (Original, PAR 18/01). Der Werkzeug-Inspektor des Verlaufs
     // zeigt nur das Farbfeld (Original, PARITAET_A W25/W26; das Füllwerkzeug hat die Knöpfe)
-    let kinds = [(54.0, Glyph::FillNone, 0u8, "pi-fill-none", "none"), (70.0, Glyph::FillSolid, 1, "pi-fill-solid", "solid"), (86.0, Glyph::FillGradient, 2, "pi-fill-gradient", "gradient"), (102.0, Glyph::FillPattern, 3, "pi-fill-pattern", "")];
+    let kinds = [(54.0, Glyph::FillNone, 0u8, "pi-fill-none", "none"), (70.0, Glyph::FillSolid, 1, "pi-fill-solid", "solid"), (86.0, Glyph::FillGradient, 2, "pi-fill-gradient", "gradient"), (102.0, Glyph::FillPattern, 3, "pi-fill-pattern", "pattern")];
     for (x, g, k, tip, cat) in kinds.into_iter().filter(|_| !gradient_tool) {
         let tip = t(tip);
-        let tip = tip.as_str();
-        let pattern = k == 3;
-        if pattern {
-            // Muster: Liste aus den Musterordnern (zur Laufzeit, popups::pattern_files) + „Andere…“
-            let r = d.r(x, 0.0, 16.0, 12.0);
-            let pen = en && tgt == Target::Selection;
-            if kind == 3 {
-                ui.painter().rect_stroke(r, 2.0, egui::Stroke::new(1.0, theme.colors.focus), egui::StrokeKind::Inside);
-            }
-            let resp = fields::icon_button(ui, id.with(("kind", k)), r, g, pen, tip);
-            let mut chosen: Option<std::path::PathBuf> = None;
-            let mut other = false;
-            let other_l = t("pi-pattern-other");
-            let list_w = fields::list_width(ui, popups::pattern_files().iter().map(|(n, _)| n.as_str()).chain([other_l.as_str()]), 150.0);
-            egui::Popup::menu(&resp).frame(crate::menu::menu_frame(&theme)).width(list_w).show(|ui| {
-                ui.spacing_mut().item_spacing = egui::vec2(0.0, 0.0);
-                egui::ScrollArea::vertical().max_height(360.0).show(ui, |ui| {
-                    for (name, p) in popups::pattern_files() {
-                        if fields::list_item(ui, name, false).clicked() {
-                            chosen = Some(p.clone());
-                            ui.close();
-                        }
-                    }
-                });
-                list_separator(ui);
-                if fields::list_item(ui, &t("pi-pattern-other"), false).clicked() {
-                    other = true;
-                    ui.close();
-                }
-            });
-            if other {
-                let (title, images) = (t("pi-pattern-pick-title"), t("pi-filter-images"));
-                crate::dialogs::panel_menus::pick_open(st, &title, &[(images.as_str(), &["png", "jpg", "jpeg", "gif", "bmp"])], |st, p| st.run("element.setPattern", json!({"image": p.to_string_lossy()})));
-            }
-            if let Some(p) = chosen {
-                st.run("element.setPattern", json!({"image": p.to_string_lossy()}));
-            }
+        if !fields::toggle(ui, id.with(("kind", k)), d.r(x, 0.0, 16.0, 12.0), g, kind == k, en, &tip) {
             continue;
         }
-        if fields::toggle(ui, id.with(("kind", k)), d.r(x, 0.0, 16.0, 12.0), g, kind == k, en && !pattern, tip) && !cat.is_empty() {
-            if tgt == Target::Tool && k == 0 {
-                st.push(Action::SetColors { stroke: None, fill: Some(Argb(0x00ff_ffff)) });
-            } else if tgt == Target::Tool && kind == 0 {
-                let c = st.session.prefs.default_colors().1;
-                st.push(Action::SetColors { stroke: None, fill: Some(Argb(c.0 | 0xff00_0000)) });
-                apply_fill(ui, st, tgt, json!({"category": cat}));
-            } else {
-                apply_fill(ui, st, tgt, json!({"category": cat}));
-            }
+        if tgt == Target::Tool && k == 0 {
+            st.push(Action::SetColors { stroke: None, fill: Some(Argb(0x00ff_ffff)) });
+            continue;
+        }
+        if tgt == Target::Tool && kind == 0 {
+            let c = st.session.prefs.default_colors().1;
+            st.push(Action::SetColors { stroke: None, fill: Some(Argb(c.0 | 0xff00_0000)) });
+        }
+        if kind != k {
+            apply_fill(ui, st, tgt, json!({"category": cat}));
+        }
+        match k {
+            2 => popups::set_anchored_open(ui.ctx(), grad_pid, true),
+            3 => popups::set_anchored_open(ui.ctx(), pat_pid, true),
+            _ => {}
         }
     }
     // Rand: Hart / Anti-Alias / Weiche Kante + Breite (Verlauf-Werkzeug: immer bedienbar, es malt
@@ -559,15 +624,33 @@ pub fn fill_panel(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target, enabled: b
     let fen = en && (kind != 0 || gradient_tool);
     fields::label(ui, d.r(0.0, 17.0, 31.0, 8.0), &t("pi-edge"), fen);
     let edge_items = tl(&EDGE_ITEMS);
-    if let Some(i) = fields::combo(ui, id.with("edge"), d.r(33.0, 15.0, 55.0, 13.0), &refs(&edge_items), Some(edge.clamp(0, 2) as usize), fen) {
+    let er = d.r(33.0, 15.0, 55.0, 13.0);
+    if let Some(i) = fields::combo(ui, id.with("edge"), er, &refs(&edge_items), Some(edge.clamp(0, 2) as usize), fen) {
         let mut p = json!({"edge": i});
         if i == 2 && feather == 0 {
             p["feather"] = json!(10);
         }
         apply_fill(ui, st, tgt, p);
     }
+    tooltip_at(ui, id.with("edge-tip"), er, &t("pi-edge-tip"));
     if let Some(v) = fields::number(ui, id.with("feather"), d.r(89.0, 15.0, 19.0, 13.0), Some(d.r(109.0, 15.0, 9.0, 13.0)), Some(feather as f64), (0.0, 100.0), 0, fen && edge == 2) {
         apply_fill(ui, st, tgt, json!({"feather": v as i64, "edge": 2}));
+    }
+}
+
+/// Tooltip über einem Feld (ohne eigene Klickfläche; das Feld bleibt bedienbar).
+pub fn tooltip_at(ui: &mut Ui, id: Id, r: Rect, text: &str) {
+    let _ = ui.interact(r, id, egui::Sense::hover()).on_hover_text(text);
+}
+
+/// Farbfeld mit dem Muster (Ausschnitt des Musterbilds).
+fn draw_pattern_swatch(ui: &Ui, r: Rect, name: &str) {
+    let inner = r.shrink(2.0);
+    if let Some(tex) = popups::pattern_swatch_texture(ui.ctx(), name) {
+        let ts = tex.size_vec2();
+        if ts.x > 0.0 && ts.y > 0.0 {
+            ui.painter().image(tex.id(), inner, Rect::from_min_max(pos2(0.0, 0.0), pos2(inner.width() / ts.x, inner.height() / ts.y)), Color32::WHITE);
+        }
     }
 }
 
@@ -880,7 +963,10 @@ pub fn stroke_panel(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target, enabled:
         apply_stroke(ui, st, tgt, json!({"width": v}));
     }
     let saved = saved_brushes(st);
-    if let Some(choice) = popups::stroke_category(ui, id.with("cat"), d.r(64.0, 0.0, 65.0, 14.0), &label, has, cur_preset, en, &saved) {
+    let cat_r = d.r(64.0, 0.0, 65.0, 14.0);
+    let choice = popups::stroke_category(ui, id.with("cat"), cat_r, &label, has, cur_preset, en, &saved);
+    tooltip_at(ui, id.with("cat-tip"), cat_r, &t("pi-stroke-cat-tip"));
+    if let Some(choice) = choice {
         match choice {
             None => apply_stroke(ui, st, tgt, json!({"none": true})),
             // „Pinselstrichoptionen…“ am Ende der Liste: Dialog „Pinselstrich bearbeiten“
@@ -985,7 +1071,8 @@ pub fn stroke_edit_row(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target, enabl
     }
     // Löschen: der aktuelle Pinsel ist ein gespeicherter Pinselstrich
     let cur = first_attrs(st).and_then(|a| a.brush.as_ref().and_then(|b| b.user_name.clone())).filter(|n| saved_brushes(st).contains(n));
-    if fields::icon_button(ui, id.with("del"), d.r(98.0, 2.0, 13.0, 13.0), Glyph::Trash, en && cur.is_some(), &t("pi-stroke-delete")).clicked()
+    // wie im Original bei jedem Strich bedienbar (PAR 17/02); löscht einen gespeicherten Pinselstrich
+    if fields::icon_button(ui, id.with("del"), d.r(98.0, 2.0, 13.0, 13.0), Glyph::Trash, en, &t("pi-stroke-delete")).clicked()
         && let Some(n) = cur
     {
         st.run("pi.brush.delete", json!({"name": n}));
@@ -1158,7 +1245,8 @@ fn rect_q4(ui: &mut Ui, st: &mut AppState, r: Rect) {
     let en = prim.is_some();
     let px_key = Id::new("pi-round-px");
     let px_mode: bool = prim.as_ref().and_then(|p| p.roundness_pixels).unwrap_or_else(|| ui.data(|d| d.get_temp(px_key)).unwrap_or(false));
-    let (w, h) = prim.as_ref().map(|p| (p.rect.width().abs(), p.rect.height().abs())).unwrap_or((0.0, 0.0));
+    // aktuelle Größe (nach B/H-Änderungen steckt die Skalierung in der Matrix, PAR 17/05)
+    let (w, h) = prim.as_ref().map(ui_commands::primitive_size).unwrap_or((0.0, 0.0));
     let frac = prim.as_ref().map(|p| p.roundness).unwrap_or(0.0) as f64;
     let shown = if px_mode { frac * (w.min(h) as f64) / 2.0 } else { frac * 100.0 };
     fields::label_right(ui, d.r(128.0, 17.0, 63.0, 8.0), &t("pi-roundness"), en);
@@ -1178,10 +1266,17 @@ fn rect_q4(ui: &mut Ui, st: &mut AppState, r: Rect) {
 fn pathops_q5(ui: &mut Ui, st: &mut AppState, r: Rect) {
     let d = Dl::at(r.min + vec2(4.0, 0.0));
     let sel = selection(st);
-    let tool_mode = sel.is_empty();
+    // Werkzeug-Inspektor (Rechteck, Ellipse, Stift …): wie im Original ohne Pfadoperationen (PAR 18/21)
+    if sel.is_empty() {
+        return;
+    }
+    let tool_mode = false;
     let compound = sel.len() == 1 && matches!(sel[0].kind, ElementKind::CompoundShape(_));
     let paths = sel.iter().filter(|e| matches!(e.kind, ElementKind::Path(_))).count();
-    let en = compound || paths >= 2;
+    // wie im Original schon bei einem gewählten Pfad bedienbar (PAR 17/02); zusammengefasst wird
+    // erst ab zwei Pfaden
+    let en = compound || paths >= 1;
+    let can_run = compound || paths >= 2;
     let cur_op = sel.first().and_then(|e| match &e.kind {
         ElementKind::CompoundShape(c) => c.operands.first().map(|o| match &o.kind {
             ElementKind::Path(p) => p.path_op,
@@ -1194,7 +1289,7 @@ fn pathops_q5(ui: &mut Ui, st: &mut AppState, r: Rect) {
         let tip = t(tip);
         let tip = tip.as_str();
         let on = cur_op == Some(op) || (cur_op.is_none() && op == 0 && !tool_mode);
-        if fields::toggle(ui, ("pi-pathop", op), d.r(x, 0.0, 16.0, 12.0), g, on, en || tool_mode, tip) && en {
+        if fields::toggle(ui, ("pi-pathop", op), d.r(x, 0.0, 16.0, 12.0), g, on, en || tool_mode, tip) && en && can_run {
             st.run("pi.compound.setOp", json!({"op": op}));
         }
     }

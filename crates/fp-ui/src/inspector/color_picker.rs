@@ -44,6 +44,9 @@ pub enum Footer {
     Plain,
     /// „Ohne“ + Farbkreis (Farbfelder, die keine Farbe zulassen, z. B. Leinwand transparent).
     NoneOnly,
+    /// Leinwandfarbe (Dokument-Inspektor): Ohne + Farbkreis, **ohne** Deckkraftfeld wie im
+    /// Original (die Leinwand ist deckend oder transparent, PAR 16/02).
+    Canvas,
     /// Werkzeugleiste Füllung: Ohne, Einfarbig, Verlauf, Muster + Farbkreis. `kinds`: Verlauf und
     /// Muster bedienbar (es gibt eine Auswahl).
     Fill { kinds: bool },
@@ -55,6 +58,11 @@ pub enum Footer {
 impl Footer {
     fn has_none(self) -> bool {
         !matches!(self, Footer::Plain)
+    }
+
+    /// Zeile Deckkraft (Feld + Klappschieber) zeigen?
+    fn has_opacity(self) -> bool {
+        !matches!(self, Footer::Canvas)
     }
 }
 
@@ -592,25 +600,27 @@ fn body(ui: &mut Ui, ctx: &egui::Context, swatch: Id, st: &AppState, s: &mut CpS
             ctx.copy_text(hex_text(shown.unwrap_or(Argb(0xff00_0000))));
             close = true;
         }
-        // Deckkraft
-        let ck = Rect::from_min_max(o + vec2(3.0, 219.0), o + vec2(13.0, 229.0));
-        crate::widgets::checker(&p, ck, 2.5, &t);
-        p.rect_stroke(ck, 0.0, Stroke::new(1.0, c.field_border), StrokeKind::Inside);
-        let op_r = Rect::from_min_max(o + vec2(15.0, 214.0), o + vec2(46.0, 235.0));
-        let mut op = s.op.clone();
-        if field(ui, pid.with("op"), op_r, &mut op, false).changed() {
-            s.op = op.clone();
-            if let Some(v) = fields::parse_digits(&op) {
-                s.opacity = v.clamp(0.0, 100.0) as u8;
-                s.opacity_dirty = true;
+        // Deckkraft (nicht bei der Leinwandfarbe, PAR 16/02)
+        if footer.has_opacity() {
+            let ck = Rect::from_min_max(o + vec2(3.0, 219.0), o + vec2(13.0, 229.0));
+            crate::widgets::checker(&p, ck, 2.5, &t);
+            p.rect_stroke(ck, 0.0, Stroke::new(1.0, c.field_border), StrokeKind::Inside);
+            let op_r = Rect::from_min_max(o + vec2(15.0, 214.0), o + vec2(46.0, 235.0));
+            let mut op = s.op.clone();
+            if field(ui, pid.with("op"), op_r, &mut op, false).changed() {
+                s.op = op.clone();
+                if let Some(v) = fields::parse_digits(&op) {
+                    s.opacity = v.clamp(0.0, 100.0) as u8;
+                    s.opacity_dirty = true;
+                }
             }
-        }
-        let dd = Rect::from_min_max(o + vec2(47.0, 214.0), o + vec2(61.0, 235.0));
-        let ddr = ui.interact(dd, pid.with("op-dd"), Sense::click()).on_hover_text(texts::t("pi-color-opacity"));
-        p.rect_stroke(dd, 0.0, Stroke::new(1.0, if ddr.hovered() { c.focus } else { c.field_border }), StrokeKind::Inside);
-        super::glyphs::chevron_down(&p, dd, c.icon_fg);
-        if ddr.clicked() {
-            s.slider = !s.slider;
+            let dd = Rect::from_min_max(o + vec2(47.0, 214.0), o + vec2(61.0, 235.0));
+            let ddr = ui.interact(dd, pid.with("op-dd"), Sense::click()).on_hover_text(texts::t("pi-color-opacity"));
+            p.rect_stroke(dd, 0.0, Stroke::new(1.0, if ddr.hovered() { c.focus } else { c.field_border }), StrokeKind::Inside);
+            super::glyphs::chevron_down(&p, dd, c.icon_fg);
+            if ddr.clicked() {
+                s.slider = !s.slider;
+            }
         }
         // RGB
         fields::label_right(ui, Rect::from_min_max(o + vec2(96.0, 214.0), o + vec2(133.0, 235.0)), &texts::t("pi-color-rgb"), true);
@@ -662,7 +672,7 @@ fn body(ui: &mut Ui, ctx: &egui::Context, swatch: Id, st: &AppState, s: &mut CpS
                     }
                 }
             }
-            Footer::Plain | Footer::NoneOnly => {}
+            Footer::Plain | Footer::NoneOnly | Footer::Canvas => {}
         }
         let wr = btn(234.5);
         let wresp = fields::icon_button(ui, swatch_pid.with("sysb"), wr, Glyph::Picker, true, &texts::t("pi-color-system"));

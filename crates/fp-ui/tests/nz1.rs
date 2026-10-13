@@ -348,9 +348,12 @@ fn w21_pattern_list_as_wide_as_longest_name() {
     }
     let mut h = harness(|s| rect(s, [50, 50, 150, 120]));
     let tex = texture_combos(&h)[0];
+    // „Muster“ stellt um und öffnet das Muster-Popup (PAR 18/01); dort die Liste aufklappen
     click(&mut h, egui::pos2(tex.left() + 119.0, tex.top() - 38.0));
+    let combo = h.get_all(By::new().role(egui::accesskit::Role::ComboBox)).find(|n| n.value().as_deref() == Some("Baumwolle")).expect("Musterliste").rect();
+    click(&mut h, combo.center());
     let other = h.get_by_label("Andere...").rect();
-    let longest = popups::pattern_files().iter().map(|(n, _)| text_w(&h, n)).fold(0.0_f32, f32::max);
+    let longest = popups::pattern_items().iter().map(|(_, l)| text_w(&h, l)).fold(0.0_f32, f32::max);
     assert!(other.width() >= longest + 10.0 - 0.5, "längster Mustername {longest} passt: {other:?}");
 }
 

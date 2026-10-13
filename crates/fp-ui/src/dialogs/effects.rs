@@ -224,8 +224,16 @@ pub fn add_menu(ui: &mut Ui, resp: &Response, st: &mut AppState) {
     // Zusatzmodule suchen (vorher im ≡ des Inspektors, MN-3)
     let options = crate::panels::common::resource_menu_nodes(st, "6921");
     let mut acts = Vec::new();
-    egui::Popup::menu(resp).frame(crate::menu::menu_frame(&theme)).show(|ui| {
+    // wie im Original (PAR 17/12): „Ohne“, Optionen, Gruppen alphabetisch, Trenner, Fremd-Effekte;
+    // Breite wie dort ≈ 272 px
+    let mut clear = false;
+    egui::Popup::menu(resp).frame(crate::menu::menu_frame(&theme)).width(272.0).show(|ui| {
         ui.spacing_mut().item_spacing = vec2(0.0, 0.0);
+        ui.set_width(272.0);
+        if fields::list_item(ui, &t("pi-none"), false).clicked() {
+            clear = true;
+            ui.close();
+        }
         ui.menu_button(t("dlg-fx-options"), |ui| crate::menu::show_nodes(ui, &options, &mut acts));
         let mut groups: Vec<&str> = Vec::new();
         for f in FX {
@@ -233,6 +241,7 @@ pub fn add_menu(ui: &mut Ui, resp: &Response, st: &mut AppState) {
                 groups.push(f.group);
             }
         }
+        groups.sort_by_key(|g| t(g).to_lowercase());
         for g in groups {
             ui.menu_button(t(g), |ui| {
                 for (i, f) in FX.iter().enumerate().filter(|(_, f)| f.group == g) {
@@ -243,10 +252,15 @@ pub fn add_menu(ui: &mut Ui, resp: &Response, st: &mut AppState) {
                 }
             });
         }
+        ui.separator();
         let _ = fields::list_item(ui, &t("dlg-fx-photoshop-unavailable"), false);
     });
     for a in acts {
         st.push(a);
+    }
+    if clear {
+        // „Ohne“: alle Live-Filter des Objekts entfernen (ein Schritt)
+        st.run("pi.effects.replace", json!({"effects": []}));
     }
     if let Some(i) = chosen {
         begin_add(st, i);

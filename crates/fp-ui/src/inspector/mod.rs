@@ -19,6 +19,7 @@ pub mod scale;
 mod quads;
 pub use quads::tool_header_lines;
 pub use quads::selection_thumb_rect;
+pub use quads::export_preset_order;
 pub mod texts;
 mod tool_quads;
 
@@ -116,6 +117,19 @@ pub fn height(theme: &Theme, st: &AppState) -> f32 {
     }
 }
 
+/// Nächste Höhe des Inspektors beim Doppelklick auf den Reiter: voll → halb → nur Reiter → voll.
+pub fn cycle_height(ws: &mut crate::workspace::Workspace) {
+    if ws.inspector_collapsed {
+        ws.inspector_collapsed = false;
+        ws.inspector_half = false;
+    } else if ws.inspector_half {
+        ws.inspector_collapsed = true;
+        ws.inspector_half = false;
+    } else {
+        ws.inspector_half = true;
+    }
+}
+
 /// Zeichnet den Inspektor in die verfügbare Fläche (unterer Bereich).
 pub fn show(ui: &mut Ui, st: &mut AppState) {
     // Werkzeugvorgaben, die beim Werkzeugwechsel bzw. beim Beginn eines neuen Texts gelten
@@ -158,6 +172,13 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
             ws.bottom_active = i;
             ws.inspector_collapsed = false;
         }
+    }
+    // Doppelklick auf den Reiter bzw. die freie Reiterleiste schaltet wie im Original reihum: volle
+    // Höhe → halbe Höhe (nur Zeile 1) → nur Reiter → volle Höhe (PAR 16/11). Die beiden Einzelklicks
+    // des Doppelklicks heben sich oben auf.
+    let bg_double = out.background.as_ref().is_some_and(|b| b.double_clicked());
+    if out.double_clicked.is_some() || bg_double {
+        cycle_height(&mut st.settings.workspace);
     }
     // ≡ wie im Original nur „Hilfe“ (die Effektoptionen 6921 stehen unter „+ ▸ Optionen“);
     // Volle/Halbe Höhe und Schließen im Kontextmenü der Reiter (MN-3)

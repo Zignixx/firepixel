@@ -634,7 +634,9 @@ pub fn combo(ui: &mut Ui, id: impl Hash + std::fmt::Debug, r: Rect, items: &[&st
             }
         }
     }
-    egui::Popup::menu(&resp).frame(crate::menu::menu_frame(&t)).width(r.width().max(60.0)).show(|ui| {
+    // so breit wie der längste Eintrag (Windows-Kombifeld; z. B. Mischmodi ganz lesbar, PAR 17/07)
+    let list_w = list_width(ui, items.iter().copied().filter(|s| !is_separator(s)), r.width().max(60.0));
+    egui::Popup::menu(&resp).frame(crate::menu::menu_frame(&t)).width(list_w).show(|ui| {
         ui.spacing_mut().item_spacing = vec2(0.0, 0.0);
         egui::ScrollArea::vertical().max_height(360.0).show(ui, |ui| {
             for (i, it) in items.iter().enumerate() {
@@ -838,7 +840,11 @@ pub fn swatch(ui: &mut Ui, id: impl Hash + std::fmt::Debug, r: Rect, color: Opti
     if enabled && resp.hovered() {
         ui.painter().rect_stroke(r, 0.0, Stroke::new(1.0, t.colors.focus), StrokeKind::Inside);
     }
-    resp
+    // Tooltip mit dem Hex-Wert wie im Original („#808080“, PAR 17/17)
+    match color {
+        Some(c) if enabled && c.a() > 0 => resp.on_hover_text(format!("#{:02X}{:02X}{:02X}", c.r(), c.g(), c.b())),
+        _ => resp,
+    }
 }
 
 /// Senkrechte Trennlinie (zwischen Teilfeldern im Quadranten, z. B. Füllung | Strich).

@@ -62,7 +62,8 @@ fn document_q3(ui: &mut Ui, st: &mut AppState, r: Rect) {
     let en = st.session.active().is_some();
     fields::label(ui, d.r(0.0, 2.0, 41.0, 8.0), &t("pi-doc-canvas"), en);
     let bg = st.session.active().and_then(|d| d.doc.pages.get(d.page).map(|p| p.root.background)).unwrap_or(fp_color::Argb(0xffff_ffff));
-    match super::popups::color_button(ui, "pi-canvas-color", d.r(45.0, 0.0, 16.0, 13.0), st, (bg.a() > 0).then_some(bg), en, true, false) {
+    // Farbwähler ohne Deckkraftfeld wie im Original (PAR 16/02)
+    match super::popups::color_button_with(ui, "pi-canvas-color", d.r(45.0, 0.0, 16.0, 13.0), st, (bg.a() > 0).then_some(bg), en, super::color_picker::Footer::Canvas) {
         Some(super::popups::ColorChoice::Color(c)) => st.run("modify.canvas.canvasColor", json!({"color": crate::ui_commands::hex(c)})),
         Some(super::popups::ColorChoice::None) => st.run("modify.canvas.canvasColor", json!({"color": "#ffffff00"})),
         _ => {}
@@ -75,10 +76,12 @@ fn document_q3(ui: &mut Ui, st: &mut AppState, r: Rect) {
     }
     // Standardoptionen für Export (14755) mit Symbol (14754)
     icons::paint(ui.painter(), d.r(28.0, 17.0, 12.0, 11.0), icons::Icon::Export, &IconStyle::new(&theme, Some(ToolGroup::Web), en));
-    let presets = fp_export::options::builtin_presets();
-    let names: Vec<String> = presets.iter().map(|p| crate::panels::optimize::preset_label(p.name)).collect();
+    // Reihenfolge wie im Original (PAR 16/07): dessen acht Vorgaben zuerst, die Firepixel-Formate dahinter
+    let all = fp_export::options::builtin_presets();
+    let order = export_preset_order(&all);
+    let names: Vec<String> = order.iter().map(|&i| crate::panels::optimize::preset_label(all[i].name)).collect();
     let cur = st.session.active().map(|d| fp_export::doc_export::page_settings(&d.doc, d.page));
-    let sel = cur.as_ref().and_then(crate::panels::optimize::preset_index);
+    let sel = cur.as_ref().and_then(crate::panels::optimize::preset_index).and_then(|i| order.iter().position(|&k| k == i));
     let text = match (sel, cur.as_ref()) {
         (Some(i), _) => names[i].clone(),
         (None, Some(c)) => crate::panels::optimize::settings_label(c),
@@ -96,10 +99,31 @@ fn document_q3(ui: &mut Ui, st: &mut AppState, r: Rect) {
         }
     });
     if let Some(i) = chosen {
-        crate::panels::optimize::apply_settings(st, &presets[i].settings);
+        crate::panels::optimize::apply_settings(st, &all[order[i]].settings);
     }
     // Kein Knopf „Bearbeiten…“ neben der Liste: das Original hat dort keinen (PARITAET_A W29);
     // die Exporteinstellungen bearbeitet man im Optimieren-Bedienfeld bzw. in der Bildvorschau.
+}
+
+/// Vorgaben der Exportformat-Liste im Dokument-Inspektor in der Reihenfolge des Originals: PNG32,
+/// JPEG - Höhere Qualität, JPEG - Kleinere Datei, GIF Web 216, GIF WebSnap 256, GIF WebSnap 128,
+/// GIF Adaptiv 256, Animiertes GIF WebSnap 128; danach die übrigen (Firepixel-Formate) in ihrer
+/// Reihenfolge. Liefert Indizes in `presets`.
+pub fn export_preset_order(presets: &[fp_export::options::Preset]) -> Vec<usize> {
+    const ORIGINAL: [&str; 8] = [
+        "panel-opt-preset-png32",
+        "panel-opt-preset-jpeg-better",
+        "panel-opt-preset-jpeg-smaller",
+        "panel-opt-preset-gif-web216",
+        "panel-opt-preset-gif-websnap256",
+        "panel-opt-preset-gif-websnap128",
+        "panel-opt-preset-gif-adaptive256",
+        "panel-opt-preset-anim-gif-websnap128",
+    ];
+    let mut v: Vec<usize> = ORIGINAL.iter().filter_map(|k| presets.iter().position(|p| crate::panels::optimize::preset_key(p.name) == Some(*k))).collect();
+    let rest: Vec<usize> = (0..presets.len()).filter(|i| !v.contains(i)).collect();
+    v.extend(rest);
+    v
 }
 
 /// Dokument Zeile 2 (6564): Status.

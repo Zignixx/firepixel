@@ -140,6 +140,11 @@ pub fn preset_label(name: &str) -> String {
     translated(name, PRESET_KEYS)
 }
 
+/// Textschlüssel einer eingebauten Vorgabe (z. B. `panel-opt-preset-png32`).
+pub fn preset_key(name: &str) -> Option<&'static str> {
+    PRESET_KEYS.iter().find(|(de, _)| *de == name).map(|(_, k)| *k)
+}
+
 /// Index der Formatliste.
 pub fn format_index(s: &OptimizeSettings) -> Option<usize> {
     FORMATS.iter().position(|(_, f)| *f == Some((s.format, s.color_mode))).or_else(|| FORMATS.iter().position(|(_, f)| f.is_some_and(|x| x.0 == s.format)))

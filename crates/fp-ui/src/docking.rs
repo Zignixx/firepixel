@@ -96,6 +96,8 @@ pub fn tab_strip_height(theme: &Theme) -> f32 {
 #[derive(Default)]
 pub struct TabStripOut {
     pub clicked: Option<usize>,
+    /// Doppelklick auf einen Reiter.
+    pub double_clicked: Option<usize>,
     pub drag_started: Option<usize>,
     pub menu_clicked: Option<egui::Response>,
     pub tab_rects: Vec<Rect>,
@@ -151,6 +153,9 @@ pub fn tab_strip(ui: &mut Ui, rect: Rect, id: Id, tabs: &[(&str, ToolGroup)], ac
         widgets::text_clipped(ui.painter(), pos2(tr.left() + theme.metrics.panel_tab_pad, tr.center().y), Align2::LEFT_CENTER, title, font.clone(), tc, tr.width() - 2.0 * theme.metrics.panel_tab_pad + 4.0);
         if resp.clicked() {
             out.clicked = Some(i);
+        }
+        if resp.double_clicked() {
+            out.double_clicked = Some(i);
         }
         if resp.drag_started() {
             out.drag_started = Some(i);

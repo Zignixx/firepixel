@@ -1268,6 +1268,15 @@ fn overlays(ui: &Ui, st: &mut AppState, painter: &egui::Painter, area: Rect, vie
         if let Some(bt) = batch.as_mut() {
             bt.flush(painter);
         }
+        // Verlaufs-/Mustergriffe des einzigen gewählten Objekts beim Zeiger: Linie vom Start (runder
+        // Punkt) zum Ende (Quadrat) wie im Original (PAR 18/07)
+        if matches!(st.session.tools.active, fp_engine::ToolId::Pointer | fp_engine::ToolId::SelectBehind)
+            && moving.is_none()
+            && let [only] = found.as_slice()
+            && let Some(e) = only.as_ref().and_then(|p| d.doc.element_at(p))
+        {
+            fill_handles(painter, e, &spp, &c);
+        }
     }
     st.canvases.entry(id).or_default().sel_frames = frames;
     // Pixelauswahl: laufende Ameisen am echten Umriss (auch bei ausgeblendeten Kanten wie CS6)
@@ -1535,6 +1544,41 @@ fn overlays(ui: &Ui, st: &mut AppState, painter: &egui::Painter, area: Rect, vie
 }
 
 /// Beschriftung mit Hintergrund (Größe, Winkel, Abstand, Position).
+/// Füllgriffe eines Objekts mit Verlaufs- oder Musterfüllung: Linie Start → Ende, Start als runder
+/// Punkt, Ende als Quadrat; bei Formen mit zweiter Achse (Ellipse, Rechteck, Muster) auch deren
+/// Griff (PAR 18/07).
+fn fill_handles(painter: &egui::Painter, e: &fp_model::Element, spp: &dyn Fn(Point) -> Pos2, c: &crate::theme::Palette) {
+    let Some(a) = fp_engine::docops::path_attrs_of(e) else { return };
+    let Some(f) = a.fill.as_ref() else { return };
+    let kind = fp_engine::commands::panel::fill_kind(Some(f));
+    if kind != 2 && kind != 3 {
+        return;
+    }
+    let Some(h) = fp_engine::commands::panel::handles_of(e).filter(|h| h.valid) else { return };
+    let (s, en, se) = (spp(h.start), spp(h.end), spp(h.second));
+    let line = Stroke::new(1.0, c.selection);
+    let second = kind == 3 || matches!(f.shape, 9 | 10);
+    painter.line_segment([s, en], line);
+    if second {
+        painter.line_segment([s, se], line);
+    }
+    let knob = |p: Pos2, round: bool| {
+        if round {
+            painter.circle_filled(p, 3.5, c.handle_fill);
+            painter.circle_stroke(p, 3.5, line);
+        } else {
+            let r = Rect::from_center_size(p, vec2(7.0, 7.0));
+            painter.rect_filled(r, 0.0, c.handle_fill);
+            painter.rect_stroke(r, 0.0, line, StrokeKind::Inside);
+        }
+    };
+    knob(s, true);
+    knob(en, false);
+    if second {
+        knob(se, false);
+    }
+}
+
 fn label_at(painter: &egui::Painter, theme: &Theme, at: Pos2, text: &str) {
     let c = &theme.colors;
     let galley = painter.layout_no_wrap(text.to_string(), theme.small_font(), c.label_text);

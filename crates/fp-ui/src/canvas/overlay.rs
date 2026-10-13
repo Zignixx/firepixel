@@ -189,6 +189,9 @@ pub fn attrs_params(ta: &crate::inspector::obj_quads::ToolAttrs) -> (Option<Valu
         let mut f = match ta.fill_kind {
             0 => json!({"category": "none"}),
             2 => json!({"category": "gradient", "shape": ta.grad_shape}),
+            // Muster der Werkzeugvorgabe (leer = Vorgabemuster des Originals)
+            3 if ta.pattern.is_empty() => json!({"category": "pattern"}),
+            3 => json!({"category": "pattern", "pattern": ta.pattern}),
             _ => json!({"category": "solid"}),
         };
         if ta.fill_kind != 0 {
