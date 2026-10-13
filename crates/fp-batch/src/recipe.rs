@@ -494,12 +494,12 @@ impl Recipe {
     /// Version 0 (ohne `version`/`format`, z. B. von Hand geschrieben): Schritte als reine
     /// Zeichenketten (`"steps": ["resize"]`) werden zu Objekten.
     fn migrate(v: &mut Value, from: u32) {
-        if from < 1 {
-            if let Some(steps) = v.get_mut("steps").and_then(Value::as_array_mut) {
-                for s in steps.iter_mut() {
-                    if let Some(id) = s.as_str() {
-                        *s = serde_json::json!({"id": id});
-                    }
+        if from < 1
+            && let Some(steps) = v.get_mut("steps").and_then(Value::as_array_mut)
+        {
+            for s in steps.iter_mut() {
+                if let Some(id) = s.as_str() {
+                    *s = serde_json::json!({"id": id});
                 }
             }
         }
@@ -523,6 +523,42 @@ impl Recipe {
     /// Rezept-Datei schreiben (atomar über eine Temporärdatei).
     pub fn save(&self, path: &Path) -> Result<()> {
         crate::output::write_bytes_atomic(path, self.to_json().as_bytes())
+    }
+
+    /// Hängt einen Schritt an (vor den Endkarten) und liefert seinen Index.
+    pub fn add_step(&mut self, id: &str, params: Value) -> usize {
+        self.steps.push(StepConfig::new(id, params));
+        self.steps.len() - 1
+    }
+
+    /// Entfernt einen Schritt (ungültiger Index: nichts).
+    pub fn remove_step(&mut self, index: usize) -> Option<StepConfig> {
+        (index < self.steps.len()).then(|| self.steps.remove(index))
+    }
+
+    /// Verschiebt einen Schritt (Ziehen, Alt+↑/↓). Liefert `false` bei ungültigem Index.
+    pub fn move_step(&mut self, from: usize, to: usize) -> bool {
+        if from >= self.steps.len() || to >= self.steps.len() {
+            return false;
+        }
+        let s = self.steps.remove(from);
+        self.steps.insert(to, s);
+        true
+    }
+
+    /// Setzt einen Parameter (idempotent: gleicher Wert erneut ändert nichts). Liefert `true`, wenn
+    /// sich etwas geändert hat.
+    pub fn set_param(&mut self, index: usize, name: &str, value: Value) -> bool {
+        let Some(s) = self.steps.get_mut(index) else { return false };
+        if !s.params.is_object() {
+            s.params = empty_object();
+        }
+        let Some(o) = s.params.as_object_mut() else { return false };
+        if o.get(name) == Some(&value) {
+            return false;
+        }
+        o.insert(name.to_string(), value);
+        true
     }
 
     /// Eingeschaltete Schritte.

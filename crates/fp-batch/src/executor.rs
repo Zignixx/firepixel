@@ -422,14 +422,14 @@ fn run_collect(job: &Job, plan: &Plan, k: usize) -> Vec<ItemReport> {
         .par_iter()
         .map(|e| {
             let info = &job.items[e.index];
-            let r = (|| {
+            let r = fp_i18n::with_language(&job.lang, || -> Result<Item> {
                 cancel.check()?;
                 let mut item = item::load(info, false)?;
                 let (fmt, _) = resolve_format(job.pipe.format, &info.format);
                 let mut ctx = StepContext::new(e.index, job.total, info, cancel, fmt);
                 job.pipe.apply_range(0..k, &mut item, &mut ctx)?;
                 Ok(item)
-            })();
+            });
             (e.index, r)
         })
         .collect();

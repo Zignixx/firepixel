@@ -619,6 +619,6 @@ pub fn decode_bytes(name: &str, data: &[u8]) -> Result<Item> {
 /// Neues Einzelbild aus RGBA-Bytes (Tests, Schritte).
 pub fn still_from_rgba(w: u32, h: u32, rgba: &[u8]) -> Result<Item> {
     let image = RgbaImage::from_rgba_bytes(IRect::new(0, 0, w as i32, h as i32), rgba).map_err(|e| BatchError::Decode(e.to_string()))?;
-    let has_transparency = rgba.chunks_exact(4).any(|p| p[3] < 255);
+    let has_transparency = rgba.as_chunks::<4>().0.iter().any(|p| p[3] < 255);
     Ok(Item::Still(Still { image, meta: Meta { has_transparency, source_format: "png".into(), ..Meta::default() } }))
 }

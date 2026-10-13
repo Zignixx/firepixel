@@ -1,14 +1,14 @@
 //! Moderner Batch-Modus „Batch-Studio“ – Kern ohne Oberfläche (SPEC-BATCH, `docs\BATCH_MODERN.md`).
 //!
-//! - [`recipe`]: Rezept-Modell (JSON, englische Schlüssel, Version, Migration, Validierung)
-//! - [`item`]: Elemente (Kopf lesen, Ordner sammeln, dekodieren)
-//! - [`step`]: Schritt-Schnittstelle und Register; Schritte in [`steps`]
-//! - [`pipeline`]: Anwendung der Schritte, „nur Dateischritte“, Live-Vorschau
-//! - [`naming`]: Umbenennen (Baukasten/Regex), Ausgabeordner, Konflikte, Plan/Trockenlauf
-//! - [`executor`]: Thread-Pool, Speicherbudget, Abbrechen, Fortschritt, Lauf im Hintergrund
-//! - [`output`]: Kodieren, Temporärdatei + atomares Umbenennen, Sicherung
-//! - [`report`]: `batch-report.json`, `batch-log.txt`
-//! - [`host`]: Befehle `batch.*` im Befehlsregister ([`install_host`])
+//! - [`recipe`] – Rezept-Modell (JSON, englische Schlüssel, Version, Migration, Validierung)
+//! - [`item`] – Elemente (Kopf lesen, Ordner sammeln, dekodieren)
+//! - [`step`] – Schritt-Schnittstelle und Register; Schritte in [`steps`]
+//! - [`pipeline`] – Anwendung der Schritte, „nur Dateischritte“, Live-Vorschau
+//! - [`naming`] – Umbenennen (Baukasten/Regex), Ausgabeordner, Konflikte, Plan/Trockenlauf
+//! - [`executor`] – Thread-Pool, Speicherbudget, Abbrechen, Fortschritt, Lauf im Hintergrund
+//! - [`output`] – Kodieren, Temporärdatei + atomares Umbenennen, Sicherung
+//! - [`report`] – `batch-report.json`, `batch-log.txt`
+//! - [`host`] – Befehle `batch.*` im Befehlsregister ([`install_host`])
 //!
 //! Dieselbe Pipeline dient Oberfläche, CLI (`firepixel-cli batch --recipe`), MCP und JSF.
 

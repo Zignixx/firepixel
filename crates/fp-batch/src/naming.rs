@@ -247,6 +247,35 @@ fn expand_placeholders(template: &str, base: &str, ctx: &NameContext, hints: &mu
     out
 }
 
+/// `$1_x` wie erwartet lesen: `$<Ziffern>` wird zu `${Ziffern}` (die regex-Crate läse sonst die
+/// Gruppe `1_x`); `$$` bleibt ein wörtliches `$`.
+pub fn normalize_group_refs(rep: &str) -> String {
+    let mut out = String::with_capacity(rep.len() + 8);
+    let mut it = rep.chars().peekable();
+    while let Some(c) = it.next() {
+        if c != '$' {
+            out.push(c);
+            continue;
+        }
+        match it.peek().copied() {
+            Some('$') => {
+                it.next();
+                out.push_str("$$");
+            }
+            Some(d) if d.is_ascii_digit() => {
+                let mut n = String::new();
+                while let Some(d) = it.peek().copied().filter(char::is_ascii_digit) {
+                    n.push(d);
+                    it.next();
+                }
+                out.push_str(&format!("${{{n}}}"));
+            }
+            _ => out.push('$'),
+        }
+    }
+    out
+}
+
 fn replace_text(s: &str, find: &str, rep: &str, all: bool, match_case: bool) -> String {
     if find.is_empty() {
         return s.to_string();
@@ -459,7 +488,7 @@ pub fn build_name(spec: &RenameSpec, ctx: &NameContext) -> Result<NameResult> {
         RenameMode::Regex => {
             let re = compile_regex(&spec.regex)?;
             let subject = if spec.regex.whole_name { file_name.clone() } else { base.clone() };
-            let rep = expand_placeholders(&spec.regex.replace, &base, ctx, &mut hints);
+            let rep = normalize_group_refs(&expand_placeholders(&spec.regex.replace, &base, ctx, &mut hints));
             let replaced = if spec.regex.all { re.replace_all(&subject, rep.as_str()).to_string() } else { re.replace(&subject, rep.as_str()).to_string() };
             if spec.regex.whole_name { split_extension(&replaced).0 } else { replaced }
         }
@@ -484,10 +513,9 @@ pub fn build_name(spec: &RenameSpec, ctx: &NameContext) -> Result<NameResult> {
     if stem.chars().count() > room {
         stem = stem.chars().take(room).collect();
         // kein Punkt/Leerzeichen am Ende nach dem Kürzen
-        while stem.ends_with(['.', ' ']) {
+        if stem.ends_with(['.', ' ']) {
             stem.pop();
             stem.push('_');
-            break;
         }
         hints.push(NameHint::Truncated);
     }
