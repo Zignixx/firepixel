@@ -112,6 +112,8 @@ pub struct AppState {
     pub os_clipboard: bool,
     /// Abgelegte Dateien, deren Ablageort noch bestimmt wird (Drag & Drop).
     pub pending_drop: Option<crate::files::PendingDrop>,
+    /// Batch-Studio (Reiter „Batch“, BATCH-2); `None` = geschlossen.
+    pub batch: Option<Box<crate::batch::Studio>>,
 }
 
 impl AppState {
@@ -148,6 +150,7 @@ impl AppState {
             file_override: None,
             os_clipboard: true,
             pending_drop: None,
+            batch: None,
         };
         st.sync_panels_to_engine();
         st

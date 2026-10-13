@@ -133,3 +133,262 @@ batch-cli-progress-done = [{ $n }/{ $total }] { $source } → { $target }
 batch-cli-progress-skipped = [{ $n }/{ $total }] { $source }: { $reason }
 batch-cli-progress-failed = [{ $n }/{ $total }] { $source }: Fehler: { $error }
 batch-cli-report-written = Bericht: { $path }
+
+## Oberfläche: Batch-Studio (BATCH-2, crates\fp-ui\src\batch\)
+batch-ui-tab = Batch
+    .tooltip = Batch-Verarbeitung: viele Dateien mit einem Rezept bearbeiten
+batch-ui-title = Batch-Verarbeitung
+batch-ui-subtitle = { $n ->
+        [one] 1 Datei
+       *[other] { $n } Dateien
+    } · { $size } · Rezept: „{ $recipe }“
+batch-ui-unsaved = (ungespeichert •)
+batch-ui-recipe-untitled = Neues Rezept
+batch-ui-mode-beginner = Einfach
+batch-ui-mode-pro = Profi
+batch-ui-recipes = Rezepte
+    .tooltip = Vorlagen, eigene Rezepte öffnen und speichern
+batch-ui-menu-templates = Vorlagen
+batch-ui-menu-mine = Meine Rezepte
+batch-ui-menu-none = Noch keine gespeicherten Rezepte
+batch-ui-menu-open = Rezept öffnen...
+batch-ui-menu-save = Rezept speichern
+batch-ui-menu-save-as = Rezept speichern unter...
+batch-ui-menu-new = Leeres Rezept
+batch-ui-more = Weitere Befehle
+batch-ui-undo = Rückgängig im Rezept
+batch-ui-redo = Wiederholen im Rezept
+batch-ui-close = Batch schließen
+batch-ui-recursive = Unterordner einbeziehen
+batch-ui-filter-recipes = Batch-Rezepte
+batch-ui-recipe-loaded = Rezept „{ $name }“ geladen
+batch-ui-recipe-load-failed = Rezept lässt sich nicht laden: { $error }
+batch-ui-recipe-saved = Rezept „{ $name }“ gespeichert
+batch-ui-on = an
+batch-ui-off = aus
+# Karte Dateien
+batch-ui-files-title = Dateien
+batch-ui-files-count = { $n ->
+        [one] 1 Datei
+       *[other] { $n } Dateien
+    }
+batch-ui-files-count-filtered = { $shown } von { $total }
+batch-ui-files-add = Dateien...
+    .tooltip = Bilder, Animationen oder Videos hinzufügen (Strg+O)
+batch-ui-files-add-title = Dateien für die Batch-Verarbeitung
+batch-ui-files-add-folder = Ordner...
+batch-ui-files-add-folder-rec = Ordner mit Unterordnern...
+batch-ui-files-add-open = Offene Dokumente
+batch-ui-files-folder-title = Ordner hinzufügen
+batch-ui-files-more = Weitere Arten hinzuzufügen
+batch-ui-files-no-open-docs = Kein offenes Dokument ist als Datei gespeichert.
+batch-ui-files-remove = Entfernen
+    .tooltip = Markierte Datei aus der Liste nehmen (Entf); die Datei selbst bleibt unverändert
+batch-ui-files-clear = Leeren
+batch-ui-files-empty = Bilder, Animationen oder Videos hierher ziehen
+batch-ui-files-empty-hint = PNG, JPEG, GIF, WebP, AVIF, BMP, TIFF, QOI, FW-PNG, PSD und mehr – auch ganze Ordner
+batch-ui-files-drop = Zum Hinzufügen loslassen
+batch-ui-files-duplicates = { $n ->
+        [one] 1 Datei war schon in der Liste
+       *[other] { $n } Dateien waren schon in der Liste
+    }
+batch-ui-files-skipped = { $n } übersprungen (kein unterstütztes Format)
+batch-ui-files-videos = { $n ->
+        [one] 1 Video
+       *[other] { $n } Videos
+    }
+batch-ui-file-enabled = „{ $name }“ verarbeiten
+batch-ui-badge-frames = { $n } B.
+batch-ui-filter-hint = Filtern...
+batch-ui-filter-hint-pro = Filtern... (mit / davor: regulärer Ausdruck)
+batch-ui-filter-supported = Alle unterstützten Dateien
+batch-ui-filter-all = Alle Arten
+batch-ui-filter-images = Bilder
+batch-ui-filter-animations = Animationen
+batch-ui-filter-videos = Videos
+batch-ui-filter-documents = FW-PNG/Dokumente
+batch-ui-filter-other = Andere
+batch-ui-filter-failed = Nur Dateien mit Fehler
+batch-ui-sort = Reihenfolge (bestimmt die Nummerierung)
+batch-ui-sort-added = Hinzugefügt
+batch-ui-sort-name = Name
+batch-ui-sort-date = Datum
+batch-ui-sort-size = Größe
+batch-ui-sort-pixels = Pixel
+# Karte Rezept
+batch-ui-recipe-title = Rezept
+batch-ui-recipe-steps = { $n ->
+        [0] keine Schritte
+        [one] 1 Schritt
+       *[other] { $n } Schritte
+    }
+batch-ui-recipe-empty = Noch keine Schritte
+batch-ui-recipe-empty-hint = Mit „Schritt hinzufügen“ eine Kette bauen – oder nur umbenennen und als anderes Format speichern.
+batch-ui-add-step = Schritt hinzufügen
+    .tooltip = Schritt aus dem Katalog wählen
+batch-ui-step-enabled = Schritt ein- oder ausschalten
+batch-ui-step-menu = Weitere Aktionen
+batch-ui-step-drag = Ziehen zum Umsortieren (Alt+Pfeil hoch/runter)
+batch-ui-step-duplicate = Duplizieren
+batch-ui-step-up = Nach oben
+batch-ui-step-down = Nach unten
+batch-ui-step-remove = Entfernen
+batch-ui-step-more = Mehr Optionen
+batch-ui-step-less = Weniger Optionen
+batch-ui-step-hidden-pro = { $n ->
+        [one] + 1 Profi-Einstellung
+       *[other] + { $n } Profi-Einstellungen
+    }
+batch-ui-step-unknown = Unbekannter Schritt „{ $id }“
+batch-ui-step-unknown-hint = Aus einer neueren Version; wird übersprungen, Einstellungen bleiben erhalten
+batch-ui-step-no-params = Dieser Schritt hat keine Einstellungen.
+batch-ui-end-section = Ausgabe
+batch-ui-end-fixed = Feste Endkarte: zeigt, was am Ende geschrieben wird
+batch-ui-end-rename = Dateiname
+batch-ui-end-output = Speichern als
+batch-ui-rename-same = Name bleibt gleich: { $name }
+batch-ui-rename-hint = Name der Ausgabedateien
+batch-ui-rename-prefix = Davor
+batch-ui-rename-suffix = Dahinter
+batch-ui-rename-case = Schreibweise
+batch-ui-rename-spaces = Leerzeichen → _
+batch-ui-rename-find = Suchen (regulärer Ausdruck)
+batch-ui-rename-replace = Ersetzen durch
+batch-ui-rename-mode-builder = Baukasten
+batch-ui-rename-mode-regex = Regulärer Ausdruck
+batch-ui-case-keep = unverändert
+batch-ui-case-lower = klein
+batch-ui-case-upper = GROSS
+batch-ui-case-sentence = Erster Buchstabe groß
+batch-ui-case-title = Jedes Wort Groß
+batch-ui-case-kebab = mit-bindestrich
+batch-ui-case-snake = mit_unterstrich
+batch-ui-case-camel = binnenMajuskel
+batch-ui-output-same = Format wie Quelle
+batch-ui-output-quality = Qualität { $q }
+batch-ui-choose-file = Datei wählen...
+batch-ui-gallery-title = Schritt hinzufügen
+batch-ui-gallery-close = Katalog schließen (Esc)
+batch-ui-gallery-search = Suchen...
+batch-ui-gallery-empty = Kein passender Schritt
+batch-ui-gallery-empty-hint = Weitere Schritte stehen im Profi-Modus zur Verfügung.
+batch-ui-gallery-empty-hint-pro = Anderen Suchbegriff versuchen.
+# Karte Vorschau
+batch-ui-preview-title = Vorschau
+batch-ui-preview-nav = { $i }/{ $n }
+batch-ui-tab-before = Vorher
+batch-ui-tab-after = Nachher
+batch-ui-tab-compare = Vergleich
+batch-ui-tab-plan = Plan
+batch-ui-tab-errors = Fehler ({ $n })
+batch-ui-preview-empty = Dateien hinzufügen, um die Vorschau zu sehen
+batch-ui-preview-pick = Eine Datei in der Liste wählen
+batch-ui-preview-computing = Vorschau wird gerechnet...
+batch-ui-preview-error = Vorschau nicht möglich
+batch-ui-preview-before-info = Vorher { $w }×{ $h } · { $size }
+batch-ui-preview-after-info = Nachher { $w }×{ $h } · { $size }
+batch-ui-preview-size-pending = wird ermittelt
+batch-ui-preview-time = { $s } s
+batch-ui-preview-prev = Vorige Datei
+batch-ui-preview-next = Nächste Datei
+batch-ui-preview-split = Teiler vorher/nachher
+batch-ui-zoom = Zoom (Mausrad zoomt, Doppelklick passt ein)
+batch-ui-zoom-fit = Einpassen
+batch-ui-bg = Hintergrund hinter Transparenz
+batch-ui-bg-checker = Schachbrett
+batch-ui-bg-white = Weiß
+batch-ui-bg-black = Schwarz
+# Plan, Fehler, Ende
+batch-ui-plan-empty = Noch kein Trockenlauf
+batch-ui-plan-empty-hint = „Trockenlauf“ (F5) zeigt Ziele, Konflikte und Hinweise, ohne etwas zu schreiben.
+batch-ui-plan-summary = { $n ->
+        [one] 1 Datei
+       *[other] { $n } Dateien
+    } · { $conflicts ->
+        [0] keine Konflikte
+        [one] 1 Konflikt
+       *[other] { $conflicts } Konflikte
+    }
+batch-ui-plan-source = Quelle
+batch-ui-plan-target = Ziel
+batch-ui-plan-note = Hinweis
+batch-ui-plan-conflict-with = gleicher Name wie Datei { $n }
+batch-ui-errors-copy = Kopieren
+batch-ui-errors-file = Datei
+batch-ui-errors-message = Meldung
+batch-ui-done-title = Fertig
+batch-ui-done-errors = Fertig mit Fehlern
+batch-ui-done-cancelled = Abgebrochen
+batch-ui-done-ok = { $n } fertig
+batch-ui-done-skipped = { $n } übersprungen
+batch-ui-done-failed = { $n } Fehler
+batch-ui-done-counts = { $done } fertig · { $skipped } übersprungen · { $failed } Fehler
+batch-ui-done-duration = Dauer { $s } s
+batch-ui-done-open-folder = Ordner öffnen
+batch-ui-done-save-report = Bericht speichern...
+batch-ui-done-retry = Fehlgeschlagene erneut
+batch-ui-done-new = Neues Rezept
+batch-ui-done-close = Schließen
+batch-ui-report-saved = Bericht gespeichert: { $name }
+batch-ui-failed-notice = { $n ->
+        [one] 1 Datei ließ sich nicht verarbeiten
+       *[other] { $n } Dateien ließen sich nicht verarbeiten
+    }
+# Ausgabe-Leiste
+batch-ui-target = Ziel
+batch-ui-target-new = Neuer Ordner „{ $name }“
+batch-ui-target-folder = Eigener Ordner...
+batch-ui-target-same = Gleicher Ort wie das Original
+batch-ui-target-choose = Ordner...
+    .tooltip = Eigenen Ausgabeordner wählen
+batch-ui-target-choose-title = Ausgabeordner wählen
+batch-ui-conflict = Bei Konflikt
+batch-ui-conflict-rename = Neuen Namen wählen
+batch-ui-conflict-skip = Überspringen
+batch-ui-conflict-overwrite = Überschreiben
+batch-ui-conflict-ask = Jedes Mal fragen
+batch-ui-keep-structure = Ordnerstruktur beibehalten
+batch-ui-backup-keep = Sicherungen behalten
+    .tooltip = Originale landen in „Original Files“; mit Häkchen werden ältere Sicherungen nicht überschrieben
+batch-ui-dry-run = Trockenlauf
+    .tooltip = Ziele, Konflikte und Hinweise zeigen, ohne zu schreiben (F5)
+batch-ui-start = { $n ->
+        [one] 1 Datei verarbeiten
+       *[other] { $n } Dateien verarbeiten
+    }
+    .tooltip = Verarbeitung starten (Strg+Eingabe)
+batch-ui-cancel = Abbrechen
+batch-ui-cancelling = Wird abgebrochen...
+batch-ui-running = Läuft...
+batch-ui-progress = { $done } von { $total }
+batch-ui-remaining = noch { $time }
+batch-ui-blocked-empty = Keine Dateien in der Liste
+batch-ui-blocked-filtered = Keine Datei aktiviert bzw. alle herausgefiltert
+batch-ui-blocked-invalid = Das Rezept enthält Fehler:
+batch-ui-ask-title = Datei gibt es schon
+batch-ui-ask-text = „{ $name }“ ist im Ziel schon vorhanden. Was soll geschehen?
+batch-ui-ask-all = Für alle weiteren übernehmen
+# Beschriftungen der Endkarte „Speichern als“ und von „Nur kopieren“ (Formular im Studio)
+batch-param-output-lossless = Verlustfrei
+batch-param-output-bitDepth = Farbtiefe
+batch-param-output-bitDepth-auto = automatisch
+batch-param-output-bitDepth-8 = 8 Bit (Palette)
+batch-param-output-bitDepth-24 = 24 Bit
+batch-param-output-bitDepth-32 = 32 Bit (mit Transparenz)
+batch-param-output-palette = Palette
+batch-param-output-interlace = Zeilensprung
+batch-param-output-progressive = Progressiv
+batch-param-output-subsampling = Farb-Unterabtastung
+batch-param-output-subsampling-auto = automatisch
+batch-param-output-background = Hintergrund
+batch-param-output-colors = Farben
+batch-param-output-dither = Dithering
+batch-param-output-dither-none = keins
+batch-param-output-dither-ordered = geordnet
+batch-param-output-dither-floydSteinberg = Floyd-Steinberg
+batch-param-output-dither-blueNoise = Blaues Rauschen
+batch-param-output-ditherAmount = Dithering-Stärke
+batch-param-output-transparency = Transparenz
+batch-param-output-speed = Geschwindigkeit
+batch-param-file-copyOnly-action-copy = Kopieren
+batch-param-file-copyOnly-action-move = Verschieben

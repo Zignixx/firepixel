@@ -711,6 +711,7 @@ const SCAN_DIRS: &[(&str, Mode)] = &[
     ("crates/fp-fwpng/src", Mode::Msg),
     ("crates/fp-raster/src", Mode::Msg),
     ("crates/fp-trace/src", Mode::Msg),
+    ("crates/fp-batch/src", Mode::Msg),
     ("crates/fp-i18n/src", Mode::Msg),
     ("crates/fp-model/src", Mode::Msg),
     ("crates/fp-render/src", Mode::Msg),

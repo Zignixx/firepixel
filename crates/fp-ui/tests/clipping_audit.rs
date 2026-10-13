@@ -150,6 +150,8 @@ enum View {
     Dialog { cmd: String, cand: usize },
     Extra(&'static str, usize),
     Start,
+    /// BATCH-2: Batch-Studio (Reiter „Batch“) mit Dateien und einer Schrittkarte
+    Batch,
     /// RAND-2b: Hauptmenü Nr. (Popup `("fp-main-menu", i)`)
     Menu(usize),
     /// RAND-2b: k-tes Bedienfeldmenü (≡) von oben links
@@ -168,6 +170,7 @@ impl View {
             View::InspectorSel(_) | View::InspectorTool(_) | View::InspectorSymbol => "Inspektor",
             View::Dialog { .. } | View::Extra(..) => "Dialoge",
             View::Start => "Startseite",
+            View::Batch => "Batch-Studio",
             View::Menu(_) | View::PanelMenu(_) | View::Context(_) => "Menüs",
             View::Tooltip(..) => "Tooltips",
         }
@@ -190,6 +193,7 @@ impl View {
             View::Dialog { cmd, .. } => format!("Dialog {cmd}"),
             View::Extra(k, i) => if *i == 0 { format!("Dialog {k}") } else { format!("Dialog {k} {i}") },
             View::Start => "Startseite".into(),
+            View::Batch => "Batch-Studio".into(),
             View::Menu(i) => format!("Hauptmenü {}", i + 1),
             View::PanelMenu(k) => format!("Bedienfeldmenü {}", k + 1),
             View::Context(w) => format!("Kontextmenü {w}"),
@@ -279,6 +283,7 @@ fn all_views(cands: &[Candidate], dialogs: &[(String, usize)]) -> Vec<View> {
         }
     }
     v.push(View::Start);
+    v.push(View::Batch);
     // RAND-2b: Menüs, Kontextmenüs, Tooltips
     for i in 0..MAIN_MENUS {
         v.push(View::Menu(i));
@@ -328,6 +333,8 @@ fn plain_candidates(f: &Fix) -> Vec<Candidate> {
 /// Stellt eine Ansicht ein (vor dem ersten Bild).
 fn setup(st: &mut AppState, view: &View, cands: &[Candidate], extra_collapse: usize) {
     close_dialogs(st);
+    // BATCH-2: Studio nur in seiner eigenen Ansicht vorn
+    st.batch = None;
     st.settings.workspace = Workspace::expanded();
     st.flyout = None;
     st.push(Action::SetTool(fp_engine::ToolId::Pointer));
@@ -418,6 +425,10 @@ fn setup(st: &mut AppState, view: &View, cands: &[Candidate], extra_collapse: us
             }
         }
         View::Menu(_) | View::PanelMenu(_) | View::Context(_) | View::Tooltip(..) => apply_candidate(st, &cands[1.min(cands.len() - 1)]),
+        View::Batch => {
+            apply_candidate(st, none);
+            batch_studio(st);
+        }
         View::Start => {
             apply_candidate(st, none);
             while st.session.active_id().is_some() {
@@ -761,6 +772,12 @@ fn roi_for(h: &H, view: &View, cap: &Cap, screen: Rect) -> (Roi, bool) {
                 _ => Roi { layers: Some(vec![usize::MAX]), ..all },
             }
         }
+        View::Batch => {
+            // Studio: ganze Fläche unter den Leisten (Werkzeuge, Dock, Inspektor sind ausgeblendet)
+            let top = panel_rect(ctx, "fp-toolbar").or(panel_rect(ctx, "fp-appbar")).map(|r| r.bottom()).unwrap_or(screen.top());
+            let area = Rect::from_min_max(pos2(screen.left(), top), screen.max);
+            Roi { area, layers: Some(vec![layer_index(cap, LayerId::background())]), ..all }
+        }
         View::Start => {
             // Mitte: rechts der Werkzeuge, links vom Dock, über dem Inspektor
             let tools = panel_rect(ctx, "fp-tools");
@@ -771,6 +788,26 @@ fn roi_for(h: &H, view: &View, cap: &Cap, screen: Rect) -> (Roi, bool) {
         View::Menu(_) | View::PanelMenu(_) | View::Context(_) | View::Tooltip(..) => all.clone(),
     };
     (roi, true)
+}
+
+/// BATCH-2: Studio öffnen mit Beispieldateien (lange Namen) und einer offenen Endkarte.
+fn batch_studio(st: &mut AppState) {
+    let d = std::env::temp_dir().join("firepixel-clipping-batch").join(std::process::id().to_string());
+    let _ = std::fs::create_dir_all(&d);
+    let mut paths = Vec::new();
+    for (i, n) in ["urlaub_strand_mit_einem_sehr_langen_namen.png", "logo.png", "b.png"].iter().enumerate() {
+        let p = d.join(n);
+        if !p.exists() {
+            let img = image::RgbaImage::from_fn(40 + i as u32 * 8, 30, |x, y| image::Rgba([(x * 6) as u8, (y * 8) as u8, 160, 255]));
+            let _ = img.save(&p);
+        }
+        paths.push(p);
+    }
+    fp_ui::batch::open_with_files(st, &paths);
+    if let Some(s) = fp_ui::batch::studio_mut(st) {
+        fp_ui::batch::recipe::add_step(s, "file.copyOnly");
+        s.open_card = Some(fp_ui::batch::CardId::Output);
+    }
 }
 
 fn layer_index(cap: &Cap, l: LayerId) -> usize {

@@ -24,6 +24,8 @@ fp-i18n = { workspace = true }
 fp-export = { workspace = true }
 # Bitmap nachzeichnen (VT-2): Live-Vorschau im Dialog dialogs\trace.rs
 fp-trace = { workspace = true }
+# Batch-Studio (BATCH-2, src\batch\): Rezepte, Plan, Lauf, Vorschau aus dem Kern fp-batch
+fp-batch = { path = "../fp-batch" }
 fp-vector = { workspace = true }
 # Schriftenliste im Text-Inspektor (Index der Systemschriften, zur Laufzeit)
 fp-text = { workspace = true }

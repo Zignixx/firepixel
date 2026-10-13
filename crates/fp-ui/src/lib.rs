@@ -24,6 +24,7 @@
 pub mod actions;
 pub mod app_state;
 pub mod appbar;
+pub mod batch; // BATCH-2: Batch-Studio (Reiter „Batch“)
 pub mod bridge;
 pub mod canvas;
 mod start_window;
@@ -133,6 +134,7 @@ impl FirepixelApp {
         ctx.options_mut(|o| {
             o.zoom_with_keyboard = false;
         });
+        fp_batch::install(); // BATCH-2: Befehle batch.* (auch über die MCP-Brücke)
         let mut state = AppState::new(session, settings, if threaded { Some(ctx.clone()) } else { None });
         state.sync_render = !threaded;
         FirepixelApp { state, last_title: String::new(), lang_generation: fp_i18n::generation(), fonts_ready: false, cli_design: None, frames: 0 }
@@ -183,6 +185,7 @@ impl FirepixelApp {
             ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
             st.push(Action::Quit);
         }
+        batch::frame_input(&ctx, st); // BATCH-2: Ablegen/Tasten im Batch-Studio vor dem Dokument
         files::handle_dropped_files(&ctx, st);
         // Menüs per Tastatur (Alt+Buchstabe, F10, Pfeile …) vor den Kürzeln, Dokumentwechsel
         if !st.dialogs.any_open() {
@@ -196,12 +199,14 @@ impl FirepixelApp {
 
         let m = theme.metrics.clone();
         let hidden = st.settings.workspace.panels_hidden || st.session.ui.screen_mode == 2;
+        // BATCH-2: Studio vorn → Werkzeuge, Dock und Inspektor ausblenden (Arbeitsbereich bleibt gespeichert)
+        let studio = batch::is_front(st);
         let no_frame = egui::Frame::NONE;
         egui::Panel::top("fp-appbar").exact_size(m.app_bar_height).frame(no_frame).resizable(false).show_separator_line(false).show(ui, |ui| appbar::show(ui, st));
         if st.settings.workspace.show_toolbar && !hidden {
             egui::Panel::top("fp-toolbar").exact_size(m.toolbar_height).frame(no_frame).resizable(false).show_separator_line(false).show(ui, |ui| toolbar::show(ui, st));
         }
-        if st.settings.workspace.show_tools && !hidden {
+        if st.settings.workspace.show_tools && !hidden && !studio {
             egui::Panel::left("fp-tools").exact_size(m.tools_width + m.splitter).frame(no_frame).resizable(false).show_separator_line(false).show(ui, |ui| {
                 let r = ui.max_rect();
                 let inner = Rect::from_min_max(r.min, pos2(r.right() - m.splitter, r.bottom()));
@@ -210,7 +215,7 @@ impl FirepixelApp {
                 widgets::vsplitter(ui.painter(), r.right() - m.splitter, r.y_range(), &theme);
             });
         }
-        if !hidden {
+        if !hidden && !studio {
             // wie im Original: nicht schmaler als das breiteste angedockte Bedienfeld
             let dock_min = docking::dock_min_width(st, &theme);
             let dock_w = if st.settings.workspace.dock_mode == workspace::DockMode::Expanded {
@@ -243,7 +248,7 @@ impl FirepixelApp {
                 st.settings.workspace.dock_width = w;
             }
         }
-        if st.settings.workspace.show_inspector && !hidden {
+        if st.settings.workspace.show_inspector && !hidden && !studio {
             let h = inspector::height(&theme, st);
             egui::Panel::bottom("fp-inspector").exact_size(h + m.splitter).frame(no_frame).resizable(false).show_separator_line(false).show(ui, |ui| {
                 let r = ui.max_rect();

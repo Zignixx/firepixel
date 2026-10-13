@@ -50,25 +50,6 @@ fn print_params(d: &FormDialog) -> Value {
     v
 }
 
-fn batch_params(d: &FormDialog) -> Value {
-    let mut v = json!({
-        "files": d.base.get("files").cloned().unwrap_or(json!([])),
-        "outDir": d.get("outDir"),
-        "output": d.get("output"),
-        "backup": d.get("backup"),
-    });
-    for k in ["prefix", "suffix"] {
-        if let Some(s) = d.get(k).as_str().filter(|s| !s.is_empty()) {
-            v[k] = json!(s);
-        }
-    }
-    let scale = d.get("_scale").as_f64().unwrap_or(100.0);
-    if (scale - 100.0).abs() > 0.01 {
-        v["commands"] = json!([{"name": "modify.canvas.imageSize", "params": {"percent": scale}}]);
-    }
-    v
-}
-
 /// „HTML-Code kopieren“: HTML in die Zwischenablage, Bilder in den Ordner `dir` (ohne: nur der
 /// Code). Erfolg in der Statuszeile, Fehler als Meldung.
 pub fn copy_html(st: &mut AppState, dir: Option<&str>) {
@@ -202,14 +183,9 @@ pub fn open(st: &mut AppState, name: &str) -> bool {
         ),
         "file.print" => Some(FormDialog::new("10397", t("dlg-md-print").as_str(), name, vec![Field::text("printer", t("dlg-md-printer").as_str(), ""), Field::check("_all", t("dlg-md-print-all").as_str(), false)]).with_width(420.0).with_transform(print_params)),
         "file.batchProcess" => {
-            // Dateidialog ohne Blockieren: der Dialog erscheint, sobald Dateien gewählt sind
-            let req = crate::file_dialog::Request::open_many(t("dlg-md-batch-files")).filter(t("dlg-filter-images"), &["png", "gif", "jpg", "jpeg", "psd", "bmp", "tif", "tiff", "webp"]);
-            crate::file_dialog::request(st, req, |st, paths| {
-                let files: Vec<String> = paths.iter().map(|p| p.to_string_lossy().to_string()).collect();
-                if !files.is_empty() {
-                    st.dialogs.form = Some(batch_form(files));
-                }
-            });
+            // BATCH-2: Datei ▸ Batch-Verarbeitung… öffnet das Batch-Studio (Reiter „Batch“) statt
+            // des alten Assistenten; mit Parametern (`files`/`recipe`) läuft der Befehl ohne Oberfläche
+            crate::batch::open(st);
             return true;
         }
         "modify.symbol.swapSymbol" => {
@@ -250,29 +226,6 @@ pub fn open(st: &mut AppState, name: &str) -> bool {
         st.dialogs.form = Some(f);
     }
     true
-}
-
-/// Stapelverarbeitung (2160) für die gewählten Dateien.
-fn batch_form(files: Vec<String>) -> FormDialog {
-    let name = "file.batchProcess";
-    let out = std::path::Path::new(&files[0]).parent().map(|p| p.join(t("dlg-md-batch-folder")).to_string_lossy().to_string()).unwrap_or_default();
-    FormDialog::new(
-        "2160",
-        t("dlg-md-batch").as_str(),
-        name,
-        vec![
-            Field::note(&fp_i18n::tr!("dlg-md-files-selected", n = files.len())),
-            Field::text("outDir", t("dlg-md-out-dir").as_str(), &out),
-            Field::radio_of("output", t("dlg-md-output").as_str(), &[t("dlg-md-output-export").as_str(), t("dlg-md-output-fwpng").as_str()], vec![json!("export"), json!("fwpng")], 0),
-            Field::number("_scale", t("dlg-preview-scale").as_str(), 100.0, 1.0, 1000.0).unit("%"),
-            Field::text("prefix", t("dlg-md-prefix").as_str(), ""),
-            Field::text("suffix", t("dlg-md-suffix").as_str(), ""),
-            Field::check("backup", t("dlg-md-backup").as_str(), false),
-        ],
-    )
-    .with_base(json!({"files": files}))
-    .with_width(480.0)
-    .with_transform(batch_params)
 }
 
 /// Befehle mit eigenem Dialog in diesem Modul.

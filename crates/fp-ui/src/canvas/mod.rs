@@ -41,6 +41,11 @@ pub fn show_document_area(ui: &mut Ui, st: &mut AppState) {
     if st.canvases.len() < before {
         st.renderer.clear_tiles();
     }
+    if crate::batch::is_front(st) {
+        // BATCH-2: Batch-Studio statt der Leinwand (Reiter „Batch“)
+        crate::batch::show(ui, st, Rect::from_min_max(pos2(full.left(), tabs.bottom()), full.max));
+        return;
+    }
     if st.session.active().is_none() {
         let rest = Rect::from_min_max(pos2(full.left(), tabs.bottom()), full.max);
         // Startbildschirm (DESIGN, `welcome.rs`): zuletzt geöffnet, Neu erstellen, Erweitern
@@ -91,7 +96,9 @@ fn doc_tabs(ui: &mut Ui, st: &mut AppState, rect: Rect) {
         ui.painter().rect_filled(rect, 0.0, c.doc_tab_bar_top);
     }
     ui.painter().hline(rect.x_range(), rect.bottom() - 0.5, Stroke::new(1.0, c.doc_tab_border));
-    let active = st.session.active_id();
+    // BATCH-2: Reiter „Batch“ links; ist das Studio vorn, ist kein Dokumentreiter aktiv
+    let rect = crate::batch::doc_tab(ui, st, rect);
+    let active = if crate::batch::is_front(st) { None } else { st.session.active_id() };
     let docs: Vec<(fp_engine::DocId, String, bool)> = st.session.documents().iter().map(|d| (d.id, d.title.clone(), d.is_dirty())).collect();
     let font = theme.bold(theme.fonts.ui);
     // Überlauf wie im Original: passen nicht alle Reiter, steht rechts „»“ mit „Weitere Dokumente“;

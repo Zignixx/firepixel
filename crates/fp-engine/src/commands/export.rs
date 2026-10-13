@@ -1037,8 +1037,10 @@ pub(super) fn register(r: &mut CommandRegistry) {
     );
     r.add(
         cmd("file.batchProcess")
-            .param("files", ParamKind::Json, "Liste der Eingabedateien")
-            .param("outDir", ParamKind::Path, "Zielordner")
+            .opt("files", ParamKind::Json, "Liste der Eingabedateien")
+            .opt("outDir", ParamKind::Path, "Zielordner")
+            // BATCH-2 (SPEC-BATCH §5.1): mit `recipe` an `batch.run` weiterleiten (neuer Batch-Modus)
+            .opt("recipe", ParamKind::Json, "Rezept (Objekt) oder Pfad einer Rezept-Datei")
             .opt("commands", ParamKind::Json, "Befehle je Datei [{name, params}] (z. B. modify.canvas.imageSize)")
             .opt_default("output", ParamKind::Enum { values: vec!["export".into(), "fwpng".into()] }, json!("export"), "Ergebnis exportieren (Optimieren-Einstellungen) oder als FW-PNG speichern")
             .opt("settings", sp(), "Optimieren-Einstellungen für den Export (Vorgabe: die der Datei)")
@@ -1047,6 +1049,16 @@ pub(super) fn register(r: &mut CommandRegistry) {
             .opt("replace", ParamKind::Json, "[suchen, ersetzen] im Dateinamen")
             .opt_default("backup", ParamKind::Bool, json!(false), "vorhandene Zieldateien als „Original Files“ sichern")
             .run(|s, p| {
+                if p.get("recipe").is_some_and(|v| !v.is_null()) {
+                    let mut v = if p.value.is_object() { p.value.clone() } else { json!({}) };
+                    if v.get("out").is_none()
+                        && let Some(o) = v.get("outDir").cloned()
+                    {
+                        v["out"] = o;
+                    }
+                    let host = super::batch::batch_host().ok_or(EngineError::BackendMissing("err-backend-batch-runtime"))?;
+                    return host.handle(s, super::batch::BatchOp::Run, &v).map(CommandOutput::value).map_err(EngineError::Failed);
+                }
                 let files: Vec<String> = p.parse("files")?.unwrap_or_default();
                 let cmds: Vec<crate::history::RecordedCommand> = match p.get("commands") {
                     Some(v) => serde_json::from_value(v.clone()).or_else(|_| {

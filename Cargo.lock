@@ -2113,6 +2113,7 @@ dependencies = [
  "eframe",
  "egui",
  "egui_kittest",
+ "fp-batch",
  "fp-color",
  "fp-engine",
  "fp-export",
