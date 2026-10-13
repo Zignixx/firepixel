@@ -546,6 +546,13 @@ pub fn ids_bounds(doc: &Document, page: usize, ids: &[ElementId]) -> Option<Rect
     elements_on_page(doc, page, ids).iter().fold(None, |acc, e| union_opt(acc, element_bounds(doc, e)))
 }
 
+/// Vereinigte Rahmen-Grenzen mehrerer Elemente einer Seite wie [`element_frame_bounds`] (Bitmaps:
+/// sichtbare Pixel). Grundlage für Griffe, Verschiebe-Vorschau und Transformationsrahmen, damit sie
+/// mit dem gezeichneten Auswahlrahmen übereinstimmen (N32).
+pub fn ids_frame_bounds(doc: &Document, page: usize, ids: &[ElementId]) -> Option<Rect> {
+    elements_on_page(doc, page, ids).iter().fold(None, |acc, e| union_opt(acc, element_frame_bounds(doc, e)))
+}
+
 /// Grenzen aller Elemente einer Seite (alle Status, ohne Web-Ebene).
 pub fn page_content_bounds(doc: &Document, page: usize) -> Option<Rect> {
     let mut r = None;

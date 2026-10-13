@@ -390,7 +390,7 @@ impl PointerTool {
     }
 
     fn selection_bounds(ctx: &ToolContext) -> Option<Rect> {
-        docops::ids_bounds(ctx.doc, ctx.page, &ctx.selection.elements)
+        docops::ids_frame_bounds(ctx.doc, ctx.page, &ctx.selection.elements)
     }
 
     /// Ist unter der Auswahl ein gewöhnlicher Pfad (keine Rechteck-Grundform)?
@@ -1243,7 +1243,7 @@ impl TransformTool {
     fn current(&self, ctx: &ToolContext) -> Option<(Rect, [Point; 4])> {
         match &self.pending {
             Some((_, q, _)) => Some((Rect::from_points(*q)?.normalized(), *q)),
-            None => docops::ids_bounds(ctx.doc, ctx.page, &ctx.selection.elements).map(|b| (b, b.corners())),
+            None => docops::ids_frame_bounds(ctx.doc, ctx.page, &ctx.selection.elements).map(|b| (b, b.corners())),
         }
     }
 

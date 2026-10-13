@@ -283,3 +283,96 @@ fn hover_highlight_uses_visible_pixels() {
     });
     assert_eq!(rect, Some(Rect::new(100.0, 50.0, 200.0, 150.0)), "{:?}", resp.overlay);
 }
+
+/// N32: FW-PNG mit Bitmap über die ganze Leinwand (Objekt [0,0,400,300], sichtbar [100,50,200,150]),
+/// gewählt mit dem Zeiger.
+fn n32_session(name: &str) -> (Session, fp_model::ElementId) {
+    let data = std::fs::read(t1(&format!("{name}_src.png"), 0)).expect("lesen");
+    let r = fp_io::png_in::decode_png(&data).expect("PNG");
+    let doc = fp_io::build::document_from_raster(r, fp_io::FileFormat::Png);
+    let bytes = fp_fwpng::write(&doc, &fp_fwpng::WriteOptions::default(), &fp_fwpng::NoFlattener).expect("FW-PNG");
+    let p = dir().join(format!("{name}.fw.png"));
+    std::fs::write(&p, bytes).expect("schreiben");
+    let mut s = fresh();
+    open(&mut s, &p);
+    let id = only_bitmap(&s).id;
+    select(&mut s, &[id]);
+    s.set_tool(ToolId::Pointer).expect("Zeiger");
+    (s, id)
+}
+
+fn rects(ov: &[fp_engine::Overlay]) -> Vec<Rect> {
+    ov.iter()
+        .filter_map(|o| match o {
+            fp_engine::Overlay::Ghost { quad, .. } => Rect::from_points(*quad).map(|r| r.normalized()),
+            fp_engine::Overlay::Rect { rect, .. } => Some(*rect),
+            fp_engine::Overlay::TransformBox { quad, .. } => Rect::from_points(*quad).map(|r| r.normalized()),
+            fp_engine::Overlay::Highlight { rect, .. } => *rect,
+            _ => None,
+        })
+        .collect()
+}
+
+/// N32: Beim Verschieben zeigte die Vorschau (Ghost) die gespeicherten Objektgrenzen, der
+/// Auswahlrahmen mit Griffen die sichtbaren Pixel – zwei blaue Rechtecke. Jetzt nur noch eines.
+#[test]
+fn n32_move_preview_uses_visible_pixels() {
+    let (mut s, id) = n32_session("n32_move");
+    s.tool_event(&ToolEvent::down(150.0, 100.0)).expect("down");
+    let resp = s.tool_event(&ToolEvent::drag(170.0, 110.0)).expect("drag");
+    let r = rects(&resp.overlay);
+    assert_eq!(r, vec![Rect::new(120.0, 60.0, 220.0, 160.0)], "nur ein Rahmen um die sichtbaren Pixel: {:?}", resp.overlay);
+    // weit über die Leinwand hinaus (Bild teilweise außerhalb)
+    let resp = s.tool_event(&ToolEvent::drag(400.0, 100.0)).expect("drag");
+    assert_eq!(rects(&resp.overlay), vec![Rect::new(350.0, 50.0, 450.0, 150.0)], "{:?}", resp.overlay);
+    s.tool_event(&ToolEvent::up(400.0, 100.0)).expect("up");
+    assert_eq!(frame(&s, &el(&s, id)), Rect::new(350.0, 50.0, 450.0, 150.0));
+    assert_eq!(bounds(&s, id), Rect::new(250.0, 0.0, 650.0, 300.0), "Objektgrenzen wandern mit");
+    // nochmal anfassen und ziehen: Vorschau wieder um die sichtbaren Pixel, nicht um [250,0,650,300]
+    s.tool_event(&ToolEvent::down(380.0, 100.0)).expect("down");
+    let resp = s.tool_event(&ToolEvent::drag(370.0, 100.0)).expect("drag");
+    assert_eq!(rects(&resp.overlay), vec![Rect::new(340.0, 50.0, 440.0, 150.0)], "{:?}", resp.overlay);
+    s.tool_event(&ToolEvent::up(370.0, 100.0)).expect("up");
+}
+
+/// N32: Die Griffe sitzen an den Ecken des gezeichneten Rahmens (sichtbare Pixel); an den Ecken der
+/// gespeicherten Objektgrenzen gibt es keinen Griff.
+#[test]
+fn n32_handles_sit_on_visible_frame() {
+    let (mut s, id) = n32_session("n32_handles");
+    // Eckgriff rechts unten des sichtbaren Rahmens ziehen → Skalieren mit einem Rahmen
+    s.tool_event(&ToolEvent::down(200.0, 150.0)).expect("down");
+    let resp = s.tool_event(&ToolEvent::drag(250.0, 200.0)).expect("drag");
+    // Vorschau (Ghost) und Rahmen decken sich: ein sichtbares Rechteck
+    let r = rects(&resp.overlay);
+    assert!(!r.is_empty() && r.iter().all(|x| *x == Rect::new(100.0, 50.0, 250.0, 200.0)), "Skalieren vom sichtbaren Rahmen aus: {:?}", resp.overlay);
+    s.tool_event(&ToolEvent::up(250.0, 200.0)).expect("up");
+    let f = frame(&s, &el(&s, id));
+    // Neuberechnung beim Skalieren: Kantenpixel der Interpolation (± 2 px)
+    assert!((f.left - 100.0).abs() <= 2.0 && (f.right - 250.0).abs() <= 2.0 && (f.bottom - 200.0).abs() <= 2.0, "{f:?}");
+    // alte Ecke der Objektgrenzen ist kein Griff mehr: Ziehen dort skaliert nicht
+    let (mut s, id) = n32_session("n32_handles2");
+    s.tool_event(&ToolEvent::down(399.0, 299.0)).expect("down");
+    let resp = s.tool_event(&ToolEvent::drag(380.0, 280.0)).expect("drag");
+    s.tool_event(&ToolEvent::up(380.0, 280.0)).expect("up");
+    assert!(resp.overlay.iter().all(|o| !matches!(o, fp_engine::Overlay::Handles { .. })), "kein Skalieren an der alten Ecke: {:?}", resp.overlay);
+    let b = bounds(&s, id);
+    assert_eq!((b.width(), b.height()), (400.0, 300.0), "nicht skaliert: {b:?}");
+}
+
+/// N32: Transformieren-Werkzeug: Rahmen mit Griffen um die sichtbaren Pixel.
+#[test]
+fn n32_transform_box_uses_visible_pixels() {
+    let (mut s, _) = n32_session("n32_transform");
+    s.set_tool(ToolId::Scale).expect("Skalieren");
+    let resp = s.tool_event(&ToolEvent::drag(10.0, 10.0)).expect("hover");
+    let boxes: Vec<Rect> = resp
+        .overlay
+        .iter()
+        .filter_map(|o| match o {
+            fp_engine::Overlay::TransformBox { quad, .. } => Rect::from_points(*quad).map(|r| r.normalized()),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(boxes, vec![Rect::new(100.0, 50.0, 200.0, 150.0)], "{:?}", resp.overlay);
+}
