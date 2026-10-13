@@ -404,7 +404,9 @@ die Brücke antwortet. Leinwand, Menüs und Kürzel sind wie bei einem modalen D
 
 Ablauf „Speichern unter“ über die Oberfläche:
 `ui_action {"run": "file.saveAs"}` → `ui_file_dialog {}` → `ui_file_dialog {"action": "choose", "path": "C:\\out\\bild.fw.png"}`
-→ `ui_state {}` (Titel ohne Stern). Ohne Oberfläche geht es direkt: `save {"path": …}`.
+→ `ui_state {}` (Titel ohne Stern). `ui_action` antwortet sofort (`dialog_open: true`), der Dialog wartet
+in der App, bis `ui_file_dialog` ihn beantwortet; genauso mit `"file.open"`, `"file.import"` usw.
+Ohne Oberfläche geht es direkt: `save {"path": …}`.
 Dateityp „Reduziertes PNG“ (aktuelle Seite flach mit den Optimierungseinstellungen des Dokuments,
 Format PNG, ohne private Chunks): `ui_file_dialog {"action": "choose", "path": "C:\\out\\flach.png", "filter": 4}`
 (Index in `filters`), dazu `"save_as_copy": true`, damit das Dokument Namen und Art behält; ohne

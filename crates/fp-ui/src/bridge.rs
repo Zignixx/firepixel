@@ -32,6 +32,18 @@ static REQUESTED_OFF: AtomicBool = AtomicBool::new(false);
 static PORT: AtomicU16 = AtomicU16::new(0);
 static GLOBAL: Mutex<Option<UiBridge>> = Mutex::new(None);
 static ENV_CHECKED: AtomicBool = AtomicBool::new(false);
+/// URL des laufenden Steuerkanals, getrennt von [`GLOBAL`]: [`frame`] hält `GLOBAL`, während es
+/// Aufträge abarbeitet, und ein Auftrag (z. B. `ui_action {"run": "file.open"}`) fragt über
+/// [`running_url`] nach, ob der Dialog in der App erscheinen soll. Läse `running_url` `GLOBAL`,
+/// bliebe der UI-Thread an der eigenen Sperre hängen (CT-3, FIX-E).
+static URL: Mutex<Option<String>> = Mutex::new(None);
+
+fn set_url(url: Option<String>) {
+    match URL.lock() {
+        Ok(mut g) => *g = url,
+        Err(p) => *p.into_inner() = url,
+    }
+}
 
 /// Schaltet den Steuerkanal ein (wirkt im nächsten Frame). `port = 0` → Vorgabe-Port.
 pub fn enable(port: u16) {
@@ -48,7 +60,23 @@ pub fn disable() {
 
 /// Läuft der Steuerkanal? Liefert die URL.
 pub fn running_url() -> Option<String> {
-    GLOBAL.lock().ok().and_then(|g| g.as_ref().and_then(|b| b.url()))
+    URL.lock().map(|g| g.clone()).unwrap_or_else(|p| p.into_inner().clone())
+}
+
+/// Nur für Tests (eigener Testprozess): hängt eine Brücke ohne Server als laufenden Steuerkanal
+/// ein (wie `--mcp`, Aufträge über den zurückgegebenen Host statt HTTP). [`frame`] arbeitet sie
+/// dann genau wie die echte Brücke ab, unter derselben Sperre.
+#[doc(hidden)]
+pub fn install_detached_for_tests(ctx: &egui::Context) -> Arc<BridgeHost> {
+    let (host, b) = UiBridge::detached(ctx);
+    if let Ok(mut g) = GLOBAL.lock() {
+        if let Some(old) = g.take() {
+            old.stop();
+        }
+        *g = Some(b);
+    }
+    set_url(Some("http://127.0.0.1:0/mcp".into()));
+    host
 }
 
 fn env_wants_bridge() -> bool {
@@ -70,6 +98,7 @@ pub fn frame(ctx: &egui::Context, st: &mut AppState) {
     if REQUESTED_OFF.swap(false, Ordering::SeqCst)
         && let Some(b) = g.take()
     {
+        set_url(None);
         b.stop();
         st.set_status(fp_i18n::t("ui-mcp-stopped"), ctx.input(|i| i.time));
     }
@@ -81,6 +110,7 @@ pub fn frame(ctx: &egui::Context, st: &mut AppState) {
                 log::info!("{msg}");
                 eprintln!("{msg}");
                 st.set_status(msg, ctx.input(|i| i.time));
+                set_url(b.url());
                 *g = Some(b);
             }
             Err(e) => {

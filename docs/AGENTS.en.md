@@ -403,7 +403,9 @@ answering. Canvas, menus and shortcuts are locked as with a modal dialog
 
 Workflow "Save As" through the user interface:
 `ui_action {"run": "file.saveAs"}` → `ui_file_dialog {}` → `ui_file_dialog {"action": "choose", "path": "C:\\out\\image.fw.png"}`
-→ `ui_state {}` (title without asterisk). Without the user interface it is direct: `save {"path": …}`.
+→ `ui_state {}` (title without asterisk). `ui_action` answers at once (`dialog_open: true`); the dialog waits
+in the app until `ui_file_dialog` answers it; the same with `"file.open"`, `"file.import"` and so on.
+Without the user interface it is direct: `save {"path": …}`.
 File type "Flattened PNG" (current page flattened with the document's optimize settings, format PNG,
 no private chunks): `ui_file_dialog {"action": "choose", "path": "C:\\out\\flat.png", "filter": 4}`
 (index into `filters`), plus `"save_as_copy": true` to keep the document's name and type; without the

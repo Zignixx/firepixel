@@ -110,3 +110,9 @@ path = "tests/ai_progress_ki2.rs"
 [[test]]
 name = "file_dialogs_dlg3"
 path = "tests/file_dialogs_dlg3.rs"
+
+# haengt die MCP-Bruecke prozessweit ein (fp_ui::bridge::install_detached_for_tests): alle
+# Datei-Dialoge erscheinen dann in der App statt nativ (FIX-E, ui_action mit Datei-Dialog)
+[[test]]
+name = "bridge_file_dialog"
+path = "tests/bridge_file_dialog.rs"
