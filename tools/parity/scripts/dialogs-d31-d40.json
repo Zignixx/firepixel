@@ -36,7 +36,7 @@
    ],
    "orig": [
     {
-     "menu": "Modifizieren > Pfad ändern > Pfad einlassen..."
+     "menu_item": "Modifizieren > Pfad ändern > Pfad einlassen..."
     },
     {
      "record_ui": "dialog.fields"
@@ -76,7 +76,7 @@
    ],
    "orig": [
     {
-     "menu": "Modifizieren > Pfad ändern > Pfad einlassen..."
+     "menu_item": "Modifizieren > Pfad ändern > Pfad einlassen..."
     },
     {
      "key": "Enter"
@@ -121,7 +121,7 @@
    ],
    "orig": [
     {
-     "menu": "Modifizieren > Pfad in Auswahlrahmen konvertieren..."
+     "menu_item": "Modifizieren > Pfad in Auswahlrahmen konvertieren..."
     },
     {
      "record_ui": "dialog.fields"
@@ -162,7 +162,7 @@
    ],
    "orig": [
     {
-     "menu": "Modifizieren > Pfad in Auswahlrahmen konvertieren..."
+     "menu_item": "Modifizieren > Pfad in Auswahlrahmen konvertieren..."
     },
     {
      "open": "dialog.combo.0"
@@ -209,7 +209,7 @@
    ],
    "orig": [
     {
-     "menu": "Modifizieren > Pfad in Auswahlrahmen konvertieren..."
+     "menu_item": "Modifizieren > Pfad in Auswahlrahmen konvertieren..."
     },
     {
      "key": "Enter"
@@ -249,7 +249,7 @@
    ],
    "orig": [
     {
-     "menu": "Modifizieren > Symbol > Instanzen tweenen..."
+     "menu_item": "Modifizieren > Symbol > Instanzen tweenen..."
     },
     {
      "open": "dialog.combo.0"
@@ -304,7 +304,7 @@
    ],
    "orig": [
     {
-     "menu": "Modifizieren > Symbol > Instanzen tweenen..."
+     "menu_item": "Modifizieren > Symbol > Instanzen tweenen..."
     }
    ],
    "fp": [
@@ -348,7 +348,7 @@
    ],
    "orig": [
     {
-     "menu": "Modifizieren > Symbol > Instanzen tweenen..."
+     "menu_item": "Modifizieren > Symbol > Instanzen tweenen..."
     },
     {
      "key": "Enter"
@@ -393,7 +393,7 @@
    ],
    "orig": [
     {
-     "menu": "Modifizieren > Popupmenü > Popupmenü hinzufügen..."
+     "menu_item": "Modifizieren > Popupmenü > Popupmenü hinzufügen..."
     },
     {
      "open": "dialog.combo.0"
@@ -439,7 +439,7 @@
    ],
    "orig": [
     {
-     "menu": "Modifizieren > Popupmenü > Popupmenü hinzufügen..."
+     "menu_item": "Modifizieren > Popupmenü > Popupmenü hinzufügen..."
     },
     {
      "record_ui": "dialog.fields"
@@ -479,7 +479,7 @@
    ],
    "orig": [
     {
-     "menu": "Modifizieren > Popupmenü > Popupmenü hinzufügen..."
+     "menu_item": "Modifizieren > Popupmenü > Popupmenü hinzufügen..."
     }
    ],
    "fp": [
@@ -529,7 +529,7 @@
    ],
    "orig": [
     {
-     "menu": "Auswählen > Weiche Kante..."
+     "menu_item": "Auswählen > Weiche Kante..."
     },
     {
      "record_ui": "dialog.fields"
@@ -566,7 +566,7 @@
    ],
    "orig": [
     {
-     "menu": "Auswählen > Weiche Kante..."
+     "menu_item": "Auswählen > Weiche Kante..."
     },
     {
      "set_field": {
@@ -632,7 +632,7 @@
    ],
    "orig": [
     {
-     "menu": "Auswählen > Auswahlrahmen erweitern..."
+     "menu_item": "Auswählen > Auswahlrahmen erweitern..."
     },
     {
      "record_ui": "dialog.fields"
@@ -713,7 +713,7 @@
    ],
    "orig": [
     {
-     "menu": "Auswählen > Auswahlrahmen begrenzen..."
+     "menu_item": "Auswählen > Auswahlrahmen begrenzen..."
     },
     {
      "set_field": {
@@ -770,7 +770,7 @@
    ],
    "orig": [
     {
-     "menu": "Auswählen > Auswahlrahmen glätten..."
+     "menu_item": "Auswählen > Auswahlrahmen glätten..."
     },
     {
      "set_field": {
@@ -832,7 +832,7 @@
    ],
    "orig": [
     {
-     "menu": "Auswählen > Bitmap-Auswahl speichern..."
+     "menu_item": "Auswählen > Bitmap-Auswahl speichern..."
     },
     {
      "record_ui": "dialog.fields"
@@ -887,7 +887,7 @@
    ],
    "orig": [
     {
-     "menu": "Auswählen > Bitmap-Auswahl speichern..."
+     "menu_item": "Auswählen > Bitmap-Auswahl speichern..."
     },
     {
      "key": "Enter"
@@ -896,7 +896,7 @@
      "key": "ctrl+D"
     },
     {
-     "menu": [
+     "menu_item": [
       "Auswählen",
       "Bitmap-Auswahl wiederherstellen..."
      ]
@@ -922,7 +922,7 @@
      "key": "ctrl+D"
     },
     {
-     "menu": [
+     "menu_item": [
       "Auswählen",
       "Bitmap-Auswahl wiederherstellen..."
      ]
@@ -979,7 +979,7 @@
    ],
    "orig": [
     {
-     "menu": "Auswählen > Weiche Kante..."
+     "menu_item": "Auswählen > Weiche Kante..."
     },
     {
      "set_field": {
@@ -1042,7 +1042,7 @@
    ],
    "orig": [
     {
-     "menu": "Auswählen > Auswahlrahmen erweitern..."
+     "menu_item": "Auswählen > Auswahlrahmen erweitern..."
     },
     {
      "set_field": {
@@ -1109,7 +1109,7 @@
    ],
    "orig": [
     {
-     "menu": "Auswählen > Auswahlrahmen glätten..."
+     "menu_item": "Auswählen > Auswahlrahmen glätten..."
     },
     {
      "key": "Escape"
@@ -1160,7 +1160,7 @@
    ],
    "orig": [
     {
-     "menu": "Modifizieren > Pfad ändern > Pfad einlassen..."
+     "menu_item": "Modifizieren > Pfad ändern > Pfad einlassen..."
     },
     {
      "key": "Tab"
@@ -1214,7 +1214,7 @@
    ],
    "orig": [
     {
-     "menu": "Auswählen > Bitmap-Auswahl speichern..."
+     "menu_item": "Auswählen > Bitmap-Auswahl speichern..."
     },
     {
      "record_ui": {
@@ -1273,7 +1273,7 @@
    ],
    "orig": [
     {
-     "menu": "Auswählen > Weiche Kante..."
+     "menu_item": "Auswählen > Weiche Kante..."
     },
     {
      "set_field": {
@@ -1357,13 +1357,13 @@
    ],
    "orig": [
     {
-     "menu": "Auswählen > Auswahlrahmen erweitern..."
+     "menu_item": "Auswählen > Auswahlrahmen erweitern..."
     },
     {
      "key": "Enter"
     },
     {
-     "menu": [
+     "menu_item": [
       "Auswählen",
       "Auswahlrahmen verkleinern..."
      ]
@@ -1372,7 +1372,7 @@
      "key": "Enter"
     },
     {
-     "menu": [
+     "menu_item": [
       "Auswählen",
       "Auswahlrahmen begrenzen..."
      ]
@@ -1381,7 +1381,7 @@
      "key": "Enter"
     },
     {
-     "menu": [
+     "menu_item": [
       "Auswählen",
       "Auswahlrahmen glätten..."
      ]
@@ -1401,7 +1401,7 @@
      "key": "Enter"
     },
     {
-     "menu": [
+     "menu_item": [
       "Auswählen",
       "Auswahlrahmen verkleinern..."
      ]
@@ -1410,7 +1410,7 @@
      "key": "Enter"
     },
     {
-     "menu": [
+     "menu_item": [
       "Auswählen",
       "Auswahlrahmen begrenzen..."
      ]
@@ -1419,7 +1419,7 @@
      "key": "Enter"
     },
     {
-     "menu": [
+     "menu_item": [
       "Auswählen",
       "Auswahlrahmen glätten..."
      ]

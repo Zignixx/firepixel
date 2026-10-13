@@ -33,7 +33,7 @@
    ],
    "orig": [
     {
-     "menu": "Modifizieren > Leinwand > Leinwandfarbe..."
+     "menu_item": "Modifizieren > Leinwand > Leinwandfarbe..."
     },
     {
      "record_ui": "dialog.fields"
@@ -70,7 +70,7 @@
    ],
    "orig": [
     {
-     "menu": "Modifizieren > Leinwand > Leinwandfarbe..."
+     "menu_item": "Modifizieren > Leinwand > Leinwandfarbe..."
     },
     {
      "log_value": "fw.getDocumentDOM().backgroundColor"
@@ -107,7 +107,7 @@
    ],
    "orig": [
     {
-     "menu": "Modifizieren > Selektives JPEG > Einstellungen..."
+     "menu_item": "Modifizieren > Selektives JPEG > Einstellungen..."
     },
     {
      "click_text": "Selektive Qualität aktivieren"
@@ -151,7 +151,7 @@
    ],
    "orig": [
     {
-     "menu": "Modifizieren > Selektives JPEG > Einstellungen..."
+     "menu_item": "Modifizieren > Selektives JPEG > Einstellungen..."
     },
     {
      "record_ui": "dialog.fields"
@@ -189,7 +189,7 @@
    ],
    "orig": [
     {
-     "menu": "Modifizieren > Selektives JPEG > Einstellungen..."
+     "menu_item": "Modifizieren > Selektives JPEG > Einstellungen..."
     },
     {
      "key": "Enter"
@@ -223,7 +223,7 @@
    ],
    "orig": [
     {
-     "menu": "Text > Größe > Andere..."
+     "menu_item": "Text > Größe > Andere..."
     },
     {
      "record_ui": "dialog.fields"
@@ -264,7 +264,7 @@
    ],
    "orig": [
     {
-     "menu": "Text > Größe > Andere..."
+     "menu_item": "Text > Größe > Andere..."
     },
     {
      "open": "dialog.combo.0"
@@ -311,7 +311,7 @@
    ],
    "orig": [
     {
-     "menu": "Text > Größe > Andere..."
+     "menu_item": "Text > Größe > Andere..."
     },
     {
      "set_field": {
@@ -365,7 +365,7 @@
    ],
    "orig": [
     {
-     "menu": "Text > Rechtschreibprüfung einrichten..."
+     "menu_item": "Text > Rechtschreibprüfung einrichten..."
     },
     {
      "record_ui": "dialog.fields"
@@ -402,7 +402,7 @@
    ],
    "orig": [
     {
-     "menu": "Text > Rechtschreibprüfung einrichten..."
+     "menu_item": "Text > Rechtschreibprüfung einrichten..."
     },
     {
      "key": "Enter"
@@ -439,7 +439,7 @@
    ],
    "orig": [
     {
-     "menu": "Befehle > Gespeicherte Befehle verwalten..."
+     "menu_item": "Befehle > Gespeicherte Befehle verwalten..."
     },
     {
      "open": "dialog.combo.0"
@@ -491,7 +491,7 @@
    ],
    "orig": [
     {
-     "menu": "Befehle > Gespeicherte Befehle verwalten..."
+     "menu_item": "Befehle > Gespeicherte Befehle verwalten..."
     },
     {
      "record_ui": "dialog.fields"
@@ -535,7 +535,7 @@
    ],
    "orig": [
     {
-     "menu": "Modifizieren > Transformieren > Numerisch transformieren..."
+     "menu_item": "Modifizieren > Transformieren > Numerisch transformieren..."
     },
     {
      "record_ui": "dialog.fields"
@@ -576,7 +576,7 @@
    ],
    "orig": [
     {
-     "menu": "Modifizieren > Transformieren > Numerisch transformieren..."
+     "menu_item": "Modifizieren > Transformieren > Numerisch transformieren..."
     },
     {
      "open": "dialog.combo.0"
@@ -623,7 +623,7 @@
    ],
    "orig": [
     {
-     "menu": "Modifizieren > Transformieren > Numerisch transformieren..."
+     "menu_item": "Modifizieren > Transformieren > Numerisch transformieren..."
     },
     {
      "set_field": {
@@ -680,7 +680,7 @@
    ],
    "orig": [
     {
-     "menu": "Modifizieren > Symbol > In Symbol konvertieren..."
+     "menu_item": "Modifizieren > Symbol > In Symbol konvertieren..."
     },
     {
      "record_ui": "dialog.fields"
@@ -720,7 +720,7 @@
    ],
    "orig": [
     {
-     "menu": "Modifizieren > Symbol > In Symbol konvertieren..."
+     "menu_item": "Modifizieren > Symbol > In Symbol konvertieren..."
     },
     {
      "key": "Enter"
@@ -765,7 +765,7 @@
    ],
    "orig": [
     {
-     "menu": "Modifizieren > Animation > Auswahl animieren..."
+     "menu_item": "Modifizieren > Animation > Auswahl animieren..."
     },
     {
      "record_ui": "dialog.fields"
@@ -805,7 +805,7 @@
    ],
    "orig": [
     {
-     "menu": "Modifizieren > Animation > Auswahl animieren..."
+     "menu_item": "Modifizieren > Animation > Auswahl animieren..."
     },
     {
      "key": "Enter"
@@ -850,7 +850,7 @@
    ],
    "orig": [
     {
-     "menu": "Modifizieren > Pfad ändern > Vereinfachen..."
+     "menu_item": "Modifizieren > Pfad ändern > Vereinfachen..."
     },
     {
      "record_ui": "dialog.fields"
@@ -890,7 +890,7 @@
    ],
    "orig": [
     {
-     "menu": "Modifizieren > Pfad ändern > Vereinfachen..."
+     "menu_item": "Modifizieren > Pfad ändern > Vereinfachen..."
     },
     {
      "open": "dialog.combo.0"
@@ -937,7 +937,7 @@
    ],
    "orig": [
     {
-     "menu": "Modifizieren > Pfad ändern > Vereinfachen..."
+     "menu_item": "Modifizieren > Pfad ändern > Vereinfachen..."
     },
     {
      "set_field": {
@@ -994,7 +994,7 @@
    ],
    "orig": [
     {
-     "menu": "Modifizieren > Pfad ändern > Strich erweitern..."
+     "menu_item": "Modifizieren > Pfad ändern > Strich erweitern..."
     },
     {
      "record_ui": "dialog.fields"
@@ -1034,7 +1034,7 @@
    ],
    "orig": [
     {
-     "menu": "Modifizieren > Pfad ändern > Strich erweitern..."
+     "menu_item": "Modifizieren > Pfad ändern > Strich erweitern..."
     },
     {
      "key": "Enter"
@@ -1079,7 +1079,7 @@
    ],
    "orig": [
     {
-     "menu": "Modifizieren > Transformieren > Numerisch transformieren..."
+     "menu_item": "Modifizieren > Transformieren > Numerisch transformieren..."
     },
     {
      "key": "Tab"
@@ -1136,7 +1136,7 @@
    ],
    "orig": [
     {
-     "menu": "Modifizieren > Pfad ändern > Strich erweitern..."
+     "menu_item": "Modifizieren > Pfad ändern > Strich erweitern..."
     },
     {
      "record_ui": {
@@ -1180,7 +1180,7 @@
    ],
    "orig": [
     {
-     "menu": "Modifizieren > Animation > Auswahl animieren..."
+     "menu_item": "Modifizieren > Animation > Auswahl animieren..."
     },
     {
      "record_ui": {
@@ -1224,7 +1224,7 @@
    ],
    "orig": [
     {
-     "menu": "Modifizieren > Pfad ändern > Vereinfachen..."
+     "menu_item": "Modifizieren > Pfad ändern > Vereinfachen..."
     },
     {
      "set_field": {

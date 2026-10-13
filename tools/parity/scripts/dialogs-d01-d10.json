@@ -33,7 +33,7 @@
    ],
    "orig": [
     {
-     "menu": "Datei > Neu..."
+     "menu_item": "Datei > Neu..."
     },
     {
      "record_ui": "dialog.fields"
@@ -71,7 +71,7 @@
    ],
    "orig": [
     {
-     "menu": "Datei > Neu..."
+     "menu_item": "Datei > Neu..."
     },
     {
      "open": "dialog.combo.0"
@@ -115,7 +115,7 @@
    ],
    "orig": [
     {
-     "menu": "Datei > Neu..."
+     "menu_item": "Datei > Neu..."
     },
     {
      "key": "Tab"
@@ -159,7 +159,7 @@
    ],
    "orig": [
     {
-     "menu": "Datei > Neu..."
+     "menu_item": "Datei > Neu..."
     },
     {
      "set_field": {
@@ -225,7 +225,7 @@
    ],
    "orig": [
     {
-     "menu": "Datei > Neu von Vorlage..."
+     "menu_item": "Datei > Neu von Vorlage..."
     },
     {
      "record_ui": "dialog.fields"
@@ -263,7 +263,7 @@
    ],
    "orig": [
     {
-     "menu": "Datei > Neu von Vorlage..."
+     "menu_item": "Datei > Neu von Vorlage..."
     },
     {
      "log_value": "(function(){var d=fw.documents,r=[];for(var i=0;i<d.length;i++)r.push(d[i].docTitle);return r.toSource();})()"
@@ -300,7 +300,7 @@
    ],
    "orig": [
     {
-     "menu": "Datei > Öffnen..."
+     "menu_item": "Datei > Öffnen..."
     },
     {
      "record_ui": "dialog.fields"
@@ -337,7 +337,7 @@
    ],
    "orig": [
     {
-     "menu": "Datei > Öffnen..."
+     "menu_item": "Datei > Öffnen..."
     },
     {
      "file_dialog_open_types": true
@@ -374,7 +374,7 @@
    ],
    "orig": [
     {
-     "menu": "Datei > Öffnen..."
+     "menu_item": "Datei > Öffnen..."
     },
     {
      "log_value": "(function(){var d=fw.documents,r=[];for(var i=0;i<d.length;i++)r.push(d[i].docTitle);return r.toSource();})()"
@@ -411,7 +411,7 @@
    ],
    "orig": [
     {
-     "menu": "Datei > Speichern unter..."
+     "menu_item": "Datei > Speichern unter..."
     },
     {
      "open": "dialog.combo.0"
@@ -454,7 +454,7 @@
    ],
    "orig": [
     {
-     "menu": "Datei > Speichern unter..."
+     "menu_item": "Datei > Speichern unter..."
     },
     {
      "file_dialog_open_types": true
@@ -492,7 +492,7 @@
    ],
    "orig": [
     {
-     "menu": "Datei > Speichern unter..."
+     "menu_item": "Datei > Speichern unter..."
     },
     {
      "log_value": "(function(){var d=fw.documents,r=[];for(var i=0;i<d.length;i++)r.push(d[i].docTitle);return r.toSource();})()"
@@ -523,7 +523,7 @@
    ],
    "orig": [
     {
-     "menu": "Datei > Als Vorlage speichern..."
+     "menu_item": "Datei > Als Vorlage speichern..."
     },
     {
      "log_value": "(function(){var d=fw.documents,r=[];for(var i=0;i<d.length;i++)r.push(d[i].docTitle);return r.toSource();})()"
@@ -554,7 +554,7 @@
    ],
    "orig": [
     {
-     "menu": "Datei > Importieren..."
+     "menu_item": "Datei > Importieren..."
     },
     {
      "open": "dialog.combo.0"
@@ -597,7 +597,7 @@
    ],
    "orig": [
     {
-     "menu": "Datei > Importieren..."
+     "menu_item": "Datei > Importieren..."
     },
     {
      "file_dialog_open_types": true
@@ -634,7 +634,7 @@
    ],
    "orig": [
     {
-     "menu": "Datei > Importieren..."
+     "menu_item": "Datei > Importieren..."
     },
     {
      "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
@@ -671,7 +671,7 @@
    ],
    "orig": [
     {
-     "menu": "Datei > Exportieren..."
+     "menu_item": "Datei > Exportieren..."
     },
     {
      "record_ui": "dialog.fields"
@@ -709,7 +709,7 @@
    ],
    "orig": [
     {
-     "menu": "Datei > Exportieren..."
+     "menu_item": "Datei > Exportieren..."
     },
     {
      "open": "Exportieren:"
@@ -753,7 +753,7 @@
    ],
    "orig": [
     {
-     "menu": "Datei > Exportieren..."
+     "menu_item": "Datei > Exportieren..."
     },
     {
      "open": "Segmente:"
@@ -806,7 +806,7 @@
    ],
    "orig": [
     {
-     "menu": "Datei > Bildvorschau..."
+     "menu_item": "Datei > Bildvorschau..."
     },
     {
      "key": "Escape"
@@ -848,7 +848,7 @@
    ],
    "orig": [
     {
-     "menu": "Datei > HTML aktualisieren..."
+     "menu_item": "Datei > HTML aktualisieren..."
     },
     {
      "record_ui": "dialog.fields"
@@ -885,7 +885,7 @@
    ],
    "orig": [
     {
-     "menu": "Datei > HTML aktualisieren..."
+     "menu_item": "Datei > HTML aktualisieren..."
     },
     {
      "log_value": "(function(){var d=fw.documents,r=[];for(var i=0;i<d.length;i++)r.push(d[i].docTitle);return r.toSource();})()"
@@ -916,7 +916,7 @@
    ],
    "orig": [
     {
-     "menu": "Datei > Datei-Info..."
+     "menu_item": "Datei > Datei-Info..."
     },
     {
      "record_ui": "dialog.fields"
@@ -953,7 +953,7 @@
    ],
    "orig": [
     {
-     "menu": "Datei > Datei-Info..."
+     "menu_item": "Datei > Datei-Info..."
     },
     {
      "key": "ctrl+Tab"
@@ -991,7 +991,7 @@
    ],
    "orig": [
     {
-     "menu": "Datei > Datei-Info..."
+     "menu_item": "Datei > Datei-Info..."
     },
     {
      "set_field": {
@@ -1046,7 +1046,7 @@
    ],
    "orig": [
     {
-     "menu": "Datei > Neu..."
+     "menu_item": "Datei > Neu..."
     },
     {
      "key": "Tab"
@@ -1100,7 +1100,7 @@
    ],
    "orig": [
     {
-     "menu": "Datei > Exportieren..."
+     "menu_item": "Datei > Exportieren..."
     },
     {
      "record_ui": {
@@ -1141,7 +1141,7 @@
    ],
    "orig": [
     {
-     "menu": "Datei > Datei-Info..."
+     "menu_item": "Datei > Datei-Info..."
     },
     {
      "record_ui": {
@@ -1182,7 +1182,7 @@
    ],
    "orig": [
     {
-     "menu": "Datei > Öffnen..."
+     "menu_item": "Datei > Öffnen..."
     },
     {
      "record_ui": "dialog.rect"

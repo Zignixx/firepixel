@@ -36,7 +36,7 @@
    ],
    "orig": [
     {
-     "menu": "Filter > Farbe anpassen > Farbton/Sättigung..."
+     "menu_item": "Filter > Farbe anpassen > Farbton/Sättigung..."
     },
     {
      "record_ui": "dialog.fields"
@@ -77,7 +77,7 @@
    ],
    "orig": [
     {
-     "menu": "Filter > Farbe anpassen > Farbton/Sättigung..."
+     "menu_item": "Filter > Farbe anpassen > Farbton/Sättigung..."
     },
     {
      "drag_dialog_slider": {
@@ -136,7 +136,7 @@
    ],
    "orig": [
     {
-     "menu": "Filter > Farbe anpassen > Helligkeit/Kontrast..."
+     "menu_item": "Filter > Farbe anpassen > Helligkeit/Kontrast..."
     },
     {
      "record_ui": "dialog.fields"
@@ -177,7 +177,7 @@
    ],
    "orig": [
     {
-     "menu": "Filter > Farbe anpassen > Kurven..."
+     "menu_item": "Filter > Farbe anpassen > Kurven..."
     },
     {
      "record_ui": "dialog.fields"
@@ -218,7 +218,7 @@
    ],
    "orig": [
     {
-     "menu": "Filter > Farbe anpassen > Kurven..."
+     "menu_item": "Filter > Farbe anpassen > Kurven..."
     },
     {
      "open": "dialog.combo.0"
@@ -265,7 +265,7 @@
    ],
    "orig": [
     {
-     "menu": "Filter > Farbe anpassen > Kurven..."
+     "menu_item": "Filter > Farbe anpassen > Kurven..."
     },
     {
      "click_dialog_rel": {
@@ -351,7 +351,7 @@
    ],
    "orig": [
     {
-     "menu": "Filter > Farbe anpassen > Tonwertkorrektur..."
+     "menu_item": "Filter > Farbe anpassen > Tonwertkorrektur..."
     },
     {
      "record_ui": "dialog.fields"
@@ -392,7 +392,7 @@
    ],
    "orig": [
     {
-     "menu": "Filter > Farbe anpassen > Tonwertkorrektur..."
+     "menu_item": "Filter > Farbe anpassen > Tonwertkorrektur..."
     },
     {
      "open": "Kanal:"
@@ -432,7 +432,7 @@
    ],
    "orig": [
     {
-     "menu": "Filter > Farbe anpassen > Tonwertkorrektur..."
+     "menu_item": "Filter > Farbe anpassen > Tonwertkorrektur..."
     },
     {
      "drag_dialog_rel": {
@@ -500,7 +500,7 @@
    ],
    "orig": [
     {
-     "menu": "Filter > Rauschen > Rauschen hinzufügen..."
+     "menu_item": "Filter > Rauschen > Rauschen hinzufügen..."
     },
     {
      "record_ui": "dialog.fields"
@@ -541,7 +541,7 @@
    ],
    "orig": [
     {
-     "menu": "Filter > Rauschen > Rauschen hinzufügen..."
+     "menu_item": "Filter > Rauschen > Rauschen hinzufügen..."
     },
     {
      "open": "dialog.combo.0"
@@ -588,7 +588,7 @@
    ],
    "orig": [
     {
-     "menu": "Filter > Scharfzeichnen > Unscharf maskieren..."
+     "menu_item": "Filter > Scharfzeichnen > Unscharf maskieren..."
     },
     {
      "record_ui": "dialog.fields"
@@ -629,7 +629,7 @@
    ],
    "orig": [
     {
-     "menu": "Filter > Weichzeichnen > Bewegungsunschärfe..."
+     "menu_item": "Filter > Weichzeichnen > Bewegungsunschärfe..."
     },
     {
      "record_ui": "dialog.fields"
@@ -670,7 +670,7 @@
    ],
    "orig": [
     {
-     "menu": "Filter > Weichzeichnen > Gaußscher Weichzeichner..."
+     "menu_item": "Filter > Weichzeichnen > Gaußscher Weichzeichner..."
     },
     {
      "record_ui": "dialog.fields"
@@ -711,7 +711,7 @@
    ],
    "orig": [
     {
-     "menu": "Filter > Weichzeichnen > Gaußscher Weichzeichner..."
+     "menu_item": "Filter > Weichzeichnen > Gaußscher Weichzeichner..."
     },
     {
      "open": "dialog.combo.0"
@@ -758,7 +758,7 @@
    ],
    "orig": [
     {
-     "menu": "Filter > Weichzeichnen > Radiales Weichzeichnen..."
+     "menu_item": "Filter > Weichzeichnen > Radiales Weichzeichnen..."
     },
     {
      "record_ui": "dialog.fields"
@@ -799,7 +799,7 @@
    ],
    "orig": [
     {
-     "menu": "Filter > Weichzeichnen > Zentriertes Weichzeichnen..."
+     "menu_item": "Filter > Weichzeichnen > Zentriertes Weichzeichnen..."
     },
     {
      "record_ui": "dialog.fields"
@@ -840,7 +840,7 @@
    ],
    "orig": [
     {
-     "menu": "Filter > Weichzeichnen > Radiales Weichzeichnen..."
+     "menu_item": "Filter > Weichzeichnen > Radiales Weichzeichnen..."
     },
     {
      "open": "Menge"
@@ -876,7 +876,7 @@
    ],
    "orig": [
     {
-     "menu": "Filter > Weichzeichnen > Zentriertes Weichzeichnen..."
+     "menu_item": "Filter > Weichzeichnen > Zentriertes Weichzeichnen..."
     },
     {
      "open": "Qualität"
@@ -916,7 +916,7 @@
    ],
    "orig": [
     {
-     "menu": "Filter > Weichzeichnen > Gaußscher Weichzeichner..."
+     "menu_item": "Filter > Weichzeichnen > Gaußscher Weichzeichner..."
     },
     {
      "set_field": {
@@ -1004,7 +1004,7 @@
    ],
    "orig": [
     {
-     "menu": "Filter > Farbe anpassen > Helligkeit/Kontrast..."
+     "menu_item": "Filter > Farbe anpassen > Helligkeit/Kontrast..."
     },
     {
      "set_field": {
@@ -1052,7 +1052,7 @@
    ],
    "orig": [
     {
-     "menu": "Filter > Rauschen > Rauschen hinzufügen..."
+     "menu_item": "Filter > Rauschen > Rauschen hinzufügen..."
     },
     {
      "set_field": {
@@ -1127,7 +1127,7 @@
    ],
    "orig": [
     {
-     "menu": "Filter > Weichzeichnen > Gaußscher Weichzeichner..."
+     "menu_item": "Filter > Weichzeichnen > Gaußscher Weichzeichner..."
     },
     {
      "set_field": {
@@ -1184,7 +1184,7 @@
    ],
    "orig": [
     {
-     "menu": "Filter > Farbe anpassen > Helligkeit/Kontrast..."
+     "menu_item": "Filter > Farbe anpassen > Helligkeit/Kontrast..."
     },
     {
      "key": "Tab"
@@ -1269,7 +1269,7 @@
    ],
    "orig": [
     {
-     "menu": "Filter > Weichzeichnen > Gaußscher Weichzeichner..."
+     "menu_item": "Filter > Weichzeichnen > Gaußscher Weichzeichner..."
     },
     {
      "set_field": {
@@ -1321,7 +1321,7 @@
    ],
    "orig": [
     {
-     "menu": "Filter > Farbe anpassen > Helligkeit/Kontrast..."
+     "menu_item": "Filter > Farbe anpassen > Helligkeit/Kontrast..."
     },
     {
      "set_field": {

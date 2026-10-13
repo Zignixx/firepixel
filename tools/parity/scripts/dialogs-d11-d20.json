@@ -33,7 +33,7 @@
    ],
    "orig": [
     {
-     "menu": "Datei > Exportassistent..."
+     "menu_item": "Datei > Exportassistent..."
     },
     {
      "record_ui": "dialog.fields"
@@ -70,7 +70,7 @@
    ],
    "orig": [
     {
-     "menu": "Datei > Exportassistent..."
+     "menu_item": "Datei > Exportassistent..."
     },
     {
      "click_button": "Weiter"
@@ -107,7 +107,7 @@
    ],
    "orig": [
     {
-     "menu": "Datei > Exportassistent..."
+     "menu_item": "Datei > Exportassistent..."
     },
     {
      "click_button": "Weiter"
@@ -150,7 +150,7 @@
    ],
    "orig": [
     {
-     "menu": "Datei > Exportassistent..."
+     "menu_item": "Datei > Exportassistent..."
     },
     {
      "log_value": "(function(){var s=fw.historyPalette.getSteps(),r=[];for(var i=0;i<s.length;i++)r.push(s[i].name);return r.toSource();})()"
@@ -211,7 +211,7 @@
    ],
    "orig": [
     {
-     "menu": "Datei > HTML-Einrichtung..."
+     "menu_item": "Datei > HTML-Einrichtung..."
     },
     {
      "record_ui": "dialog.fields"
@@ -249,7 +249,7 @@
    ],
    "orig": [
     {
-     "menu": "Datei > HTML-Einrichtung..."
+     "menu_item": "Datei > HTML-Einrichtung..."
     },
     {
      "open": "HTML-Stil:"
@@ -293,7 +293,7 @@
    ],
    "orig": [
     {
-     "menu": "Datei > HTML-Einrichtung..."
+     "menu_item": "Datei > HTML-Einrichtung..."
     },
     {
      "click_text": "Dokumentspezifisch"
@@ -330,7 +330,7 @@
    ],
    "orig": [
     {
-     "menu": "Datei > HTML-Einrichtung..."
+     "menu_item": "Datei > HTML-Einrichtung..."
     },
     {
      "key": "Enter"
@@ -367,7 +367,7 @@
    ],
    "orig": [
     {
-     "menu": "Bearbeiten > Objekt einfügen > Neues Symbol..."
+     "menu_item": "Bearbeiten > Objekt einfügen > Neues Symbol..."
     },
     {
      "record_ui": "dialog.fields"
@@ -404,7 +404,7 @@
    ],
    "orig": [
     {
-     "menu": "Bearbeiten > Objekt einfügen > Neues Symbol..."
+     "menu_item": "Bearbeiten > Objekt einfügen > Neues Symbol..."
     },
     {
      "key": "Enter"
@@ -447,7 +447,7 @@
    ],
    "orig": [
     {
-     "menu": "Bearbeiten > HTML-Code kopieren..."
+     "menu_item": "Bearbeiten > HTML-Code kopieren..."
     },
     {
      "record_ui": "dialog.fields"
@@ -484,7 +484,7 @@
    ],
    "orig": [
     {
-     "menu": "Bearbeiten > HTML-Code kopieren..."
+     "menu_item": "Bearbeiten > HTML-Code kopieren..."
     },
     {
      "click_button": "Weiter"
@@ -521,7 +521,7 @@
    ],
    "orig": [
     {
-     "menu": "Bearbeiten > HTML-Code kopieren..."
+     "menu_item": "Bearbeiten > HTML-Code kopieren..."
     }
    ],
    "fp": [
@@ -546,7 +546,7 @@
    ],
    "orig": [
     {
-     "menu": "Bearbeiten > Voreinstellungen..."
+     "menu_item": "Bearbeiten > Voreinstellungen..."
     },
     {
      "record_ui": "dialog.fields"
@@ -584,7 +584,7 @@
    ],
    "orig": [
     {
-     "menu": "Bearbeiten > Voreinstellungen..."
+     "menu_item": "Bearbeiten > Voreinstellungen..."
     },
     {
      "click_text": "Bearbeiten"
@@ -621,7 +621,7 @@
    ],
    "orig": [
     {
-     "menu": "Bearbeiten > Voreinstellungen..."
+     "menu_item": "Bearbeiten > Voreinstellungen..."
     },
     {
      "click_text": "Hilfslinien und Raster"
@@ -658,7 +658,7 @@
    ],
    "orig": [
     {
-     "menu": "Bearbeiten > Voreinstellungen..."
+     "menu_item": "Bearbeiten > Voreinstellungen..."
     },
     {
      "click_text": "Text"
@@ -695,7 +695,7 @@
    ],
    "orig": [
     {
-     "menu": "Bearbeiten > Voreinstellungen..."
+     "menu_item": "Bearbeiten > Voreinstellungen..."
     },
     {
      "click_text": "Photoshop-Import/Öffnen"
@@ -732,7 +732,7 @@
    ],
    "orig": [
     {
-     "menu": "Bearbeiten > Voreinstellungen..."
+     "menu_item": "Bearbeiten > Voreinstellungen..."
     },
     {
      "click_text": "Starten und bearbeiten"
@@ -784,7 +784,7 @@
    ],
    "orig": [
     {
-     "menu": "Bearbeiten > Tastaturkurzbefehle..."
+     "menu_item": "Bearbeiten > Tastaturkurzbefehle..."
     },
     {
      "record_ui": "dialog.fields"
@@ -822,7 +822,7 @@
    ],
    "orig": [
     {
-     "menu": "Bearbeiten > Tastaturkurzbefehle..."
+     "menu_item": "Bearbeiten > Tastaturkurzbefehle..."
     },
     {
      "open": "dialog.combo.0"
@@ -866,7 +866,7 @@
    ],
    "orig": [
     {
-     "menu": "Bearbeiten > Tastaturkurzbefehle..."
+     "menu_item": "Bearbeiten > Tastaturkurzbefehle..."
     },
     {
      "record_ui": "dialog.fields"
@@ -910,7 +910,7 @@
    ],
    "orig": [
     {
-     "menu": "Ansicht > Raster > Raster bearbeiten..."
+     "menu_item": "Ansicht > Raster > Raster bearbeiten..."
     },
     {
      "record_ui": "dialog.fields"
@@ -947,7 +947,7 @@
    ],
    "orig": [
     {
-     "menu": "Ansicht > Raster > Raster bearbeiten..."
+     "menu_item": "Ansicht > Raster > Raster bearbeiten..."
     },
     {
      "set_field": {
@@ -1014,7 +1014,7 @@
    ],
    "orig": [
     {
-     "menu": "Modifizieren > Leinwand > Bildgröße..."
+     "menu_item": "Modifizieren > Leinwand > Bildgröße..."
     },
     {
      "record_ui": "dialog.fields"
@@ -1052,7 +1052,7 @@
    ],
    "orig": [
     {
-     "menu": "Modifizieren > Leinwand > Bildgröße..."
+     "menu_item": "Modifizieren > Leinwand > Bildgröße..."
     },
     {
      "open": "dialog.combo.0"
@@ -1096,7 +1096,7 @@
    ],
    "orig": [
     {
-     "menu": "Modifizieren > Leinwand > Bildgröße..."
+     "menu_item": "Modifizieren > Leinwand > Bildgröße..."
     },
     {
      "set_field": {
@@ -1168,7 +1168,7 @@
    ],
    "orig": [
     {
-     "menu": "Modifizieren > Leinwand > Bildgröße..."
+     "menu_item": "Modifizieren > Leinwand > Bildgröße..."
     },
     {
      "set_field": {
@@ -1216,7 +1216,7 @@
    ],
    "orig": [
     {
-     "menu": "Modifizieren > Leinwand > Leinwandgröße..."
+     "menu_item": "Modifizieren > Leinwand > Leinwandgröße..."
     },
     {
      "record_ui": "dialog.fields"
@@ -1253,7 +1253,7 @@
    ],
    "orig": [
     {
-     "menu": "Modifizieren > Leinwand > Leinwandgröße..."
+     "menu_item": "Modifizieren > Leinwand > Leinwandgröße..."
     },
     {
      "set_field": {
@@ -1320,7 +1320,7 @@
    ],
    "orig": [
     {
-     "menu": "Modifizieren > Leinwand > Bildgröße..."
+     "menu_item": "Modifizieren > Leinwand > Bildgröße..."
     },
     {
      "key": "Tab"
@@ -1374,7 +1374,7 @@
    ],
    "orig": [
     {
-     "menu": "Modifizieren > Leinwand > Leinwandgröße..."
+     "menu_item": "Modifizieren > Leinwand > Leinwandgröße..."
     },
     {
      "record_ui": {
@@ -1415,7 +1415,7 @@
    ],
    "orig": [
     {
-     "menu": "Ansicht > Raster > Raster bearbeiten..."
+     "menu_item": "Ansicht > Raster > Raster bearbeiten..."
     },
     {
      "record_ui": {
@@ -1456,7 +1456,7 @@
    ],
    "orig": [
     {
-     "menu": "Ansicht > Raster > Raster bearbeiten..."
+     "menu_item": "Ansicht > Raster > Raster bearbeiten..."
     },
     {
      "set_field": {
