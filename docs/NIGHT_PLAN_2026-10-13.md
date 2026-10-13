@@ -52,7 +52,7 @@ Lizenz seit 13.10.: **Apache-2.0** (`LICENSE`, `Cargo.toml`). Keine GPL/AGPL/LGP
 | 23 | CT-1b | Brücke | T+4:05 → T+5:05 | Menüs (§7) |
 | 24 | CT-2 | Brücke | T+4:05 → T+5:05 | Werkzeuge, Leinwand, Inspektor, KI (§1, §2, §6) – inkl. N25–N31 |
 | 25 | CT-3 | Brücke | T+4:05 → T+5:05 | Bedienfelder, Docking, Datei, Bildvorschau/Export, Startseite (§4, §5) |
-| 26 | CT-4 | Brücke + Original | T+4:05 → T+5:05 | Englisch, 3 Designs, Fenstergrößen, alle Messungen im Original |
+| 26 | ~~CT-4~~ → PAR-O (Original) + GT-2 (Englisch/Designs/Fenstergrößen) | – | T+4:05 → T+5:05 | Englisch, 3 Designs, Fenstergrößen, alle Messungen im Original |
 | 27 | BATCH-5 | s9 | T+3:15 → T+4:15 | Metadaten (behalten/entfernen/setzen), Optimieren, Zielgröße in KB |
 | 28 | BATCH-6 | s10 | T+3:15 → T+4:15 | Hintergrund entfernen (KI), Transparenz → Farbe, Wasserzeichen/Text/Rahmen |
 | 29 | FIX-1…4 | s2–s7 | T+5:05 → T+5:50 | jedes ❌ aus GT-1/CT-1…4 und die Fix-Liste (BEFUNDE „Fix-Liste 1–7“) beheben und erneut prüfen |
@@ -66,9 +66,31 @@ Lizenz seit 13.10.: **Apache-2.0** (`LICENSE`, `Cargo.toml`). Keine GPL/AGPL/LGP
 | 32 | BATCH-9 | s9 | T+5:15 → T+6:00 | Nachzeichnen → SVG als Schritt, Rezept-Vorlagen, Befehle des Registers als Schritt, CLI `batch --recipe`, MCP |
 | 33 | BATCH-11 | s10 | T+6:00 → T+6:50 | Feinschliff: 3 Designs, DE/EN, Abschneide-Prüfer, Tastatur, Fehlerliste/Bericht |
 | 34 | BATCH-T | s1 | T+6:50 → T+7:40 | Batch testen (erst jetzt, nachdem alle UI-Tests und FIX vorbei sind): automatische Tests, Logikfälle, Bedienung im echten Fenster über die Brücke; Fehler direkt beheben |
-| 35 | GT-2 | s1 + fp-rel | T+7:40 → T+8:20 | letzter Gesamtlauf inkl. Batch, Release-Build, **Endversion auf den Desktop** (`Firepixel-Vorschau-<Datum>_<Zeit>` mit NEU.md), Doku-Übertrag, Abschlussbericht im Chat |
+| 35 | GT-1b | s1 + fp-rel | T+7:40 → T+8:20 | Zwischen-Gesamtlauf inkl. Batch, **Zwischenversion auf den Desktop** (`Firepixel-Vorschau-<Datum>_<Zeit>` mit NEU.md), Zwischenbericht im Chat |
 
-**Ende ≈ T+8:20** (bei „los“ um 03:45 ≈ 12:05). Nicht in dieser Nacht: BATCH-10 (Video eingebaut, P2), CMD-1, DES-3, CI.
+## Spur PAR – Vollabgleich Original ↔ Firepixel (Nutzerwunsch 13.10. ≈ 03:45, Verfahren `docs\PARITY_SWEEP.md`)
+
+Läuft **neben** den Blöcken oben, als Fließband: Original aufnehmen (immer nur ein Agent, Sperre) → Firepixel vergleichen → beheben → gegenprüfen. Jeder Agent hat eine kleine Einheit (≤ 25 Prüfpunkte, ≤ 12 angesehene Bilder je Programm).
+
+| # | Paket | Start → Ende | Inhalt |
+|---|---|---|---|
+| P0 | PAR-0 | T0 → T+0:40 | Inventar: alle Befehle, Werkzeuge, Inspektor-Felder, Bedienfelder, Filter, Dialoge, Kürzel → ≈ 50 Einheiten mit Prüfpunkten und Reihenfolge (`docs\parity\INVENTORY.md`) |
+| P1 | PAR-O-1…50 | T+2:35 → ≈ T+13:00 | Original aufnehmen, eine Einheit nach der anderen, **lückenlos** nach RE-FX (die Messungen von CT-4 im Original laufen hier mit) |
+| P2 | PAR-F-n | je ≈ 15 min nach der Aufnahme | Firepixel vergleichen, Befunde eintragen (bis zu 2 gleichzeitig während der Nachttests, danach bis zu 3) |
+| P3 | PAR-X-<bereich> | ab T+5:50 (nach FIX) laufend | Unterschiede beheben, je Bereich ein Agent (Werkzeuge, Inspektor, Effekte, Bedienfelder, Menüs/Dialoge, Querschnitt) |
+| P4 | PAR-R-n | nach jedem PAR-X | gegenprüfen (nur Firepixel, gegen die Aufnahme) |
+
+Höchstgrenze bleibt 8 Agenten: CT-4 entfällt als eigenes Paket (Englisch/Designs/Fenstergrößen → GT-2, Messungen im Original → PAR-O); PAR-F/X/R füllen jeweils die freien Plätze.
+
+## Schluss (≈ T+13:00 → T+14:30)
+
+| # | Paket | Inhalt |
+|---|---|---|
+| 36 | PAR-X/R Rest | letzte Unterschiede beheben und gegenprüfen |
+| 37 | DOC-5 | alle PAR-Ergebnisse in PARITAET/BEFUNDE/NUTZERBEFUNDE/NACHPRUEFUNG, Zählung |
+| 38 | GT-2 | letzter Gesamtlauf inkl. Batch und PAR-Fixes, Englisch, 3 Designs, Fenstergrößen, Release-Build, **Endversion auf den Desktop**, Abschlussbericht im Chat |
+
+**Ende ≈ T+14:30** (bei „los“ um 03:50 ≈ 18:20). Zwischenversion mit Welle 5 + Batch ≈ T+8:20 (≈ 12:10). Nicht dabei: BATCH-10 (Video eingebaut, P2), CMD-1, DES-3, CI.
 
 ## Annahmen (Empfehlungen, gelten ohne Gegenbescheid)
 
@@ -76,3 +98,4 @@ Lizenz seit 13.10.: **Apache-2.0** (`LICENSE`, `Cargo.toml`). Keine GPL/AGPL/LGP
 - H.264 nicht eingebaut (nur über ffmpeg); `qcms` (MPL) nicht zulassen; KI-Hochskalieren später (P3).
 - Nichts wird heruntergeladen oder installiert; keine Systemeinstellungen; keine Prozesse des Nutzers beenden.
 - Läuft ein Paket fest oder schlägt fehl: einmal mit frischem Agenten wiederholen, sonst als Befund vermerken und weitermachen.
+- Der Nutzer hält die RDP-Sitzung offen (Mac bleibt an), damit das Original sichtbar zeichnet. Ist der Bildschirm trotzdem nicht erreichbar (schwarze Bildschirmfotos): Original-Aufnahmen pausieren, nur Firepixel-Seite (Brücke) weiter, im Chat melden.
