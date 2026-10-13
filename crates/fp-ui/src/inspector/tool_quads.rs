@@ -189,6 +189,21 @@ fn brush_q4(ui: &mut Ui, st: &mut AppState, r: Rect) {
     mask_sub(ui, st, d.offset(258.0, 0.0));
 }
 
+/// Kantenvorschau „Rand:“ wie im Original: voller Kern, nach außen weich auslaufend (Rand 100 =
+/// weicher Punkt, Rand 0 = harter Punkt; PAR 04/01).
+fn edge_preview(ui: &Ui, pv: Rect, edge: f64, color: egui::Color32) {
+    let outer = pv.height() / 2.0 - 1.0;
+    let soft = (edge as f32 / 100.0).clamp(0.0, 1.0);
+    let core = outer * (1.0 - 0.8 * soft);
+    let rings = ((outer - core) * 3.0).ceil().max(0.0) as i32;
+    for k in 0..rings {
+        // von außen nach innen dichter werdende Ringe
+        let r = outer - k as f32 / 3.0;
+        ui.painter().circle_filled(pv.center(), r, color.gamma_multiply(1.5 / rings as f32));
+    }
+    ui.painter().circle_filled(pv.center(), core, color);
+}
+
 #[allow(clippy::too_many_arguments)]
 fn size_edge_shape(ui: &mut Ui, d: Dl, key: &str, size: f64, edge: f64, round: bool, form_x: f32, size_range: (f64, f64)) -> (Option<f64>, Option<f64>, Option<bool>) {
     let t = Theme::current(ui.ctx());
@@ -197,7 +212,7 @@ fn size_edge_shape(ui: &mut Ui, d: Dl, key: &str, size: f64, edge: f64, round: b
     fields::label_right(ui, d.r(4.0, 17.0, 35.0, 8.0), &tx("pi-edge"), true);
     let pv = d.r(41.0, 15.0, 15.0, 13.0);
     ui.painter().rect_filled(pv, 0.0, t.colors.field_bg);
-    ui.painter().circle_filled(pv.center(), (pv.height() / 2.0 - 2.0) * (1.0 - edge as f32 / 200.0), t.colors.icon_fg);
+    edge_preview(ui, pv, edge, t.colors.icon_fg);
     let e = fields::number(ui, (key, "edge"), d.r(58.0, 15.0, 21.0, 13.0), Some(d.r(80.0, 15.0, 9.0, 13.0)), Some(edge), (0.0, 100.0), 0, true);
     fields::label_right(ui, d.r(form_x - 42.0, 2.0, 40.0, 8.0), &tx("pi-shape"), true);
     let mut shape = None;
@@ -431,7 +446,7 @@ fn size_edge_shape_noform(ui: &mut Ui, d: Dl, key: &str, size: f64, edge: f64) -
     fields::label_right(ui, d.r(4.0, 17.0, 35.0, 8.0), &tx("pi-edge"), true);
     let pv = d.r(41.0, 15.0, 15.0, 13.0);
     ui.painter().rect_filled(pv, 0.0, t.colors.field_bg);
-    ui.painter().circle_filled(pv.center(), (pv.height() / 2.0 - 2.0) * (1.0 - edge as f32 / 200.0), t.colors.icon_fg);
+    edge_preview(ui, pv, edge, t.colors.icon_fg);
     let e = fields::number(ui, (key, "edge"), d.r(58.0, 15.0, 21.0, 13.0), Some(d.r(80.0, 15.0, 9.0, 13.0)), Some(edge), (0.0, 100.0), 0, true);
     (s, e, ())
 }
