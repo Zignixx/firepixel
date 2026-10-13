@@ -185,3 +185,31 @@ fn d16_preferences_height_and_language_label() {
     }
     fp_i18n::set_language("de");
 }
+/// Linke Kante eines gezeichneten Texts im letzten Bild (Rechteck).
+fn text_rect(h: &H, text: &str) -> Option<Rect> {
+    h.output().shapes.iter().find_map(|cs| match &cs.shape {
+        egui::epaint::Shape::Text(ts) if ts.galley.text() == text => Some(Rect::from_min_size(ts.pos, ts.galley.size())),
+        _ => None,
+    })
+}
+
+/// KV-3: Live-Effekt Kurven heißt in der Filterliste „Kurven...“ (wie der Menüeintrag) und hat das
+/// ⓘ direkt nach dem Kästchen; ein Klick darauf öffnet den Kurvendialog mit den Effektwerten.
+#[test]
+fn kv3_live_curves_label_and_info_button() {
+    let mut s = fp_engine::Session::default();
+    s.execute("file.new", json!({"width": 300, "height": 200, "background": "#ffffff"})).expect("doc");
+    s.execute("draw.rectangle", json!({"rect": [20, 20, 180, 140], "fillColor": "#808080", "strokeWidth": 0})).expect("rect");
+    s.execute("element.addEffect", json!({"effect": "curves"})).expect("Kurven-Effekt");
+    let mut h = harness_with(s);
+    h.run_steps(3);
+    let label = fp_ui::menu::clean_label(&fp_i18n::t("cmd-filter-adjustColor-curves")).0;
+    assert_eq!(label, "Kurven...");
+    let lr = text_rect(&h, &label).expect("Eintrag „Kurven...“ in der Filterliste");
+    assert!(text_rect(&h, "Gradationskurven").is_none(), "alter Name");
+    // ⓘ links vor dem Namen (13 px breit, 5 px Abstand)
+    click(&mut h, egui::pos2(lr.left() - 5.0 - 6.5, lr.center().y));
+    h.run_steps(3);
+    assert!(st(&h).dialogs.curves.is_some(), "ⓘ öffnet den Kurvendialog");
+    key(&mut h, Key::Escape);
+}

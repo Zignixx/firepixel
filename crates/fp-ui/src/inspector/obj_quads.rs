@@ -1230,10 +1230,14 @@ pub fn effect_list(ui: &mut Ui, st: &mut AppState, r: Rect) {
         if let Some(v) = fields::checkbox(ui, ("pi-fx-vis", i), cb, "", fx.is_visible(), true) {
             st.run("element.setEffectVisible", json!({"index": i, "visible": v}));
         }
-        ui.painter().text(pos2(cb.right() + 6.0, rr.center().y), Align2::LEFT_CENTER, crate::dialogs::effects::effect_label(fx), t.ui_font(), c.text);
-        // Info-Symbol rechts (Doppelklick/Klick öffnet die Einstellungen)
-        let info = Rect::from_min_size(pos2(rr.right() - 16.0, rr.top() + 2.0), vec2(13.0, 13.0));
-        super::glyphs::paint(ui.painter(), info, Glyph::Gear, &t, crate::dialogs::effects::editable(fx));
+        // ⓘ direkt nach dem Kästchen wie im Original („✓ ⓘ Kurven…“), nur bei Effekten mit
+        // Einstellungen; Klick darauf bzw. Doppelklick öffnet sie (CT-1a: vorher Zahnrad am rechten
+        // Rand, im schmalen Inspektor außerhalb des sichtbaren Bereichs)
+        let info = Rect::from_min_size(pos2(cb.right() + 4.0, rr.top() + 2.0), vec2(13.0, 13.0));
+        if crate::dialogs::effects::editable(fx) {
+            super::glyphs::paint(ui.painter(), info, Glyph::Info, &t, true);
+        }
+        ui.painter().text(pos2(info.right() + 5.0, rr.center().y), Align2::LEFT_CENTER, crate::dialogs::effects::effect_label(fx), t.ui_font(), c.text);
         if resp.clicked() {
             ui.data_mut(|d| d.insert_temp(Id::new(FX_SEL), i));
             if resp.interact_pointer_pos().is_some_and(|p| info.contains(p)) {

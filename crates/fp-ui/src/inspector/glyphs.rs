@@ -71,6 +71,8 @@ pub enum Glyph {
     Picker,
     Check,
     Gear,
+    /// ⓘ (Einstellungen eines Live-Effekts)
+    Info,
     TextT,
     Bitmap,
     Link,
@@ -435,6 +437,13 @@ pub fn paint(p: &Painter, r: Rect, g: Glyph, t: &Theme, enabled: bool) {
                 let a = std::f32::consts::TAU * i as f32 / 8.0;
                 p.line_segment([pos2(m.x + 4.5 * k * a.cos(), m.y + 4.5 * k * a.sin()), pos2(m.x + 6.5 * k * a.cos(), m.y + 6.5 * k * a.sin())], Stroke::new(1.6, fg));
             }
+        }
+        Glyph::Info => {
+            // ⓘ: blauer Kreis mit weißem „i“ (gesperrt grau)
+            let fill = if enabled { blue } else { c.icon_disabled };
+            p.circle_filled(m, 6.0 * k, fill);
+            p.circle_filled(z(0.0, -3.0), 1.1 * k, paper);
+            p.line_segment([z(0.0, -0.8), z(0.0, 3.8)], Stroke::new(1.8 * k, paper));
         }
         Glyph::Bitmap => {
             let b = sq(m, 11.0 * k, 9.0 * k);

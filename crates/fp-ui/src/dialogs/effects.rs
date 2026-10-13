@@ -86,6 +86,16 @@ pub const FX: &[Fx] = &[
 /// Anzeigename eines Effekts in der Filterliste (Namen aus `filter.ftl` über
 /// `Effect::label_key`; unbekannte Effekte: Name aus der Datei bzw. „Effekt“).
 pub fn effect_label(e: &Effect) -> String {
+    // Kurven und Tonwertkorrektur heißen in der Liste wie der Menüeintrag („✓ ⓘ Kurven…“,
+    // re\19-kurven-tonwert.md §6)
+    let menu_cmd = match e.kind() {
+        EffectKind::Curves => Some("filter.adjustColor.curves"),
+        EffectKind::Levels => Some("filter.adjustColor.levels"),
+        _ => None,
+    };
+    if let Some(cmd) = menu_cmd {
+        return crate::menu::clean_label(&t(&fp_i18n::command_key(cmd))).0;
+    }
     match e.label_key() {
         Some(key) => t(key),
         None => e.ui_name().map(|s| s.to_string()).unwrap_or_else(|| t("effect-generic")),
@@ -720,6 +730,10 @@ mod tests {
         // Deckkraft über das %-Feld bleibt verlustfrei, solange sie nicht geändert wird (0x80)
         assert_eq!(p["params"]["ShadowColor"], json!("#ff000080"));
         assert_eq!(effect_label(&e), "Schlagschatten");
+        // Kurven/Tonwert wie im Menü (CT-1a KV-3)
+        let k = Effect::new("{3439b08e-1923-11d3-9bde00e02910d580}", true);
+        assert_eq!(k.kind(), EffectKind::Curves);
+        assert_eq!(effect_label(&k), "Kurven...");
     }
 
     /// FX-4 (re): Rauschen-Effekt ohne `add_noise_use_color` zeigt „Farbe“ aus (Vorgabe des
