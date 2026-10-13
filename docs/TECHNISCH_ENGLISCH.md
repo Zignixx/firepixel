@@ -51,7 +51,7 @@ der Nutzer die nächste Version startet.
 | 14 | Datei (temp.) | `KURZHILFE.md` | `QUICK_HELP.md` | ebd. | keine |
 | 15 | Datei (temp.) | `%TEMP%\Firepixel\zwischenablage-<pid>.png` | `clipboard-<pid>.png` | `crates\fp-ui\src\os_clipboard.rs` | keine (wird sofort gelöscht) |
 | 16 | JSON-Schlüssel | `befehl_id` (Bedienfeldtabelle) | `command_id` | `crates\fp-engine\data\commands.json`, `src\catalog.rs`, Erzeuger `tools\golden\fp-engine\gen_data.py` | serde `alias = "befehl_id"` |
-| 17 | CLI-Befehl | `firepixel-cli sprache` | `language` | `apps\firepixel-cli\src\main.rs`, `src\sprache.rs` | alter Name als versteckter Alias |
+| 17 | CLI-Befehl | `firepixel-cli sprache` | `language` | `apps\firepixel-cli\src\main.rs`, `src\language.rs` (bis TE-2 `sprache.rs`) | alter Name als versteckter Alias |
 | 18 | CLI-Befehl | `sprache pruefen` | `language check` | ebd. | versteckter Alias |
 | 19 | CLI-Befehl | `sprache vorlage` | `language template` | ebd. | versteckter Alias |
 | 20 | CLI-Befehl | `sprache liste` | `language list` | ebd. | versteckter Alias |
@@ -60,8 +60,8 @@ der Nutzer die nächste Version startet.
 | 23 | CLI-Option | `--streng` | `--strict` | ebd. | versteckter Alias |
 | 24 | CLI-Option | `--ueberschreiben` | `--overwrite` | ebd. | versteckter Alias |
 | 25 | CLI-Option | `--von` | `--from` | ebd. | versteckter Alias |
-| 26 | Fluent-IDs | `cli-sprache`, `cli-sprache-{pruefen,vorlage,liste}`, `…-arg-{pfad,eingebaut,kurz,streng,zielordner,ueberschreiben,von}` (12) | `cli-language`, `cli-language-{check,template,list}`, `…-arg-{path,builtin,short,strict,target-dir,overwrite,from}` | `crates\fp-i18n\locales\{de,en}\kommandozeile.ftl` (aus den Argument-IDs abgeleitet) | – |
-| 27 | GUI-Option | `firepixel --design=dunkel` | `--design=dark` | `apps\firepixel\src\main.rs`, `oberflaeche.ftl` (`ui-cli-help`) | `dunkel` weiter gültig |
+| 26 | Fluent-IDs | `cli-sprache`, `cli-sprache-{pruefen,vorlage,liste}`, `…-arg-{pfad,eingebaut,kurz,streng,zielordner,ueberschreiben,von}` (12) | `cli-language`, `cli-language-{check,template,list}`, `…-arg-{path,builtin,short,strict,target-dir,overwrite,from}` | `crates\fp-i18n\locales\{de,en}\cli.ftl` (bis TE-2 `kommandozeile.ftl`; aus den Argument-IDs abgeleitet) | – |
+| 27 | GUI-Option | `firepixel --design=dunkel` | `--design=dark` | `apps\firepixel\src\main.rs`, `ui.ftl` (bis TE-2 `oberflaeche.ftl`; `ui-cli-help`) | `dunkel` weiter gültig |
 | 28 | MCP-Wert | `ui_action {"theme": "dunkel"}` (Schema-enum) | `"dark"` | `crates\fp-mcp\src\tools.rs`, `crates\fp-ui\src\bridge.rs`, `mcp.ftl` | `dunkel`/`hell` weiter angenommen |
 | 29 | MCP-Ausgabe | `ui_state` → `"theme": "dunkel"` | `"dark"` | `crates\fp-ui\src\bridge.rs` `theme_name` | – |
 | 30 | MCP-Beispiel | `describe_command` Beispielpfad `C:\pfad\datei.fw.png` | `C:\path\file.fw.png` | `crates\fp-mcp\src\tools.rs` | – |
@@ -115,7 +115,7 @@ Wächter `crates\fp-neutral\tests\technical_english.rs`.
 
 **Erledigt in TE-2 (13.10.2026), Ergebnis in Abschnitt E.** Ausnahme laut Nutzerentscheidung: Testdateien, Testdaten-Dateien und Testfunktionsnamen mit deutschen Namen **bleiben** (sie erscheinen nirgends nach außen). Die Liste unten bleibt als Bestandsaufnahme stehen.
 
-**`.ftl`-Dateinamen** (je `locales\de` und `locales\en`, 16 Bereiche; Vorschlag):
+**`.ftl`-Dateinamen** (je `locales\de` und `locales\en`, 16 Bereiche; Vorschlag) – ☑ erledigt (TE2-A, E1–E14):
 `allgemein` → `common`, `bedienfelder` → `panels`, `befehlstexte` → `command_texts`,
 `dateidialog` → `file_dialog`, `dialoge` → `dialogs`, `filter` (bleibt), `inspektor` → `inspector`,
 `kommandozeile` → `cli`, `mcp` (bleibt), `meldungen` → `messages`, `menue` → `menu`,
@@ -126,11 +126,11 @@ Dateinamen (`fp_i18n::check`, `language template` kopiert die Dateinamen in neue
 dass vorhandene Sprachpakete der Nutzer unter `Languages\<code>\` die alten Dateinamen tragen
 (Laden ist namensunabhängig; Prüfung/Bereichszuordnung ggf. mit Rückfall).
 
-**Quelltext-Dateien mit deutschen Namen:**
+**Quelltext-Dateien mit deutschen Namen** – ☑ erledigt (TE2-B/C/D, E15–E17):
 `apps\firepixel-cli\src\sprache.rs` (→ `language.rs`; Funktionen `pruefen`/`vorlage`/`liste`),
 `crates\fp-ui\src\inspector\texte.rs`, `crates\fp-ai\examples\ki_bilder.rs`.
 
-**Testdateien mit deutschen Namen:** `apps\firepixel-cli\tests\sprache.rs`,
+**Testdateien mit deutschen Namen** – bleiben (Nutzerentscheidung 13.10.; Verweise in Kommentaren auf die neuen `.ftl`-/Quelldateinamen umgestellt, TE2-G): `apps\firepixel-cli\tests\sprache.rs`,
 `crates\fp-ai\tests\referenz.rs` (+ `testdata\referenz.json`), `crates\fp-engine\tests\{eb1_paritaet,
 paritaet_menue, stichproben, text_vermessung, warnungen}.rs` (+ `tests\data\paritaet_menue.tsv`,
 `stichproben.jsf`), `crates\fp-i18n\tests\leistung.rs`, `crates\fp-mcp\tests\sprache.rs`,
@@ -142,10 +142,11 @@ inspector_paritaet, tippen_messung, ue3_befunde, ux_a_abgleich, ux_b_abgleich, u
 `crates\fp-ui\tests\i18n_ausnahmen.txt`, `crates\fp-ui\tests\gesamt_common\`. Dazu viele deutsche
 Testfunktionsnamen (z. B. `vorlage_pruefen_liste`, `projekt_ist_neutral`) in fast allen Crates.
 
-**Test-Umgebungsvariablen** (nur in `tests\`): `FP_QA_NUR`, `FP_QA_AUS`, `FP_QA_NEU`, `FP_QA_MODUS`
+**Test-Umgebungsvariablen** (nur in `tests\`) – ☑ erledigt (TE2-E, E20–E25): `FP_QA_NUR`, `FP_QA_AUS`, `FP_QA_NEU`, `FP_QA_MODUS`
 (Werte `basis`/`aktuell`), `FP_DESIGN_BILD` (Werte `vorher`/`nachher`), `FP_SPRACHEN_DEBUG`.
 
-**Rust-Bezeichner** mit deutschen Namen (z. B. `Preset::Schwarzweiss`, `Theme::label_de`).
+**Rust-Bezeichner** mit deutschen Namen (z. B. `Preset::Schwarzweiss`, `Theme::label_de`) – ☑ erledigt
+(TE2-B…E, E26/E27 und Nachtrag in E); `label_de` u. ä. bleiben (Abschnitt C).
 
 ## E. Teil 2 (TE-2, 13.10.2026)
 
@@ -170,22 +171,48 @@ dokumentiert werden nur die neuen.
 | 13 | `.ftl`-Datei | `werkzeuge.ftl` | `tools.ftl` | ebd. | wie 1 |
 | 14 | `.ftl`-Datei | `willkommen.ftl` | `welcome.ftl` | ebd. | wie 1 |
 | – | `.ftl`-Datei | `filter.ftl`, `mcp.ftl` | bleiben | ebd. | – |
-| 15 | Quelldatei | `apps\firepixel-cli\src\sprache.rs` | `language.rs` | `apps\firepixel-cli` | – (Quelltext) |
-| 16 | Quelldatei | `crates\fp-ui\src\inspector\texte.rs` | `texts.rs` | `crates\fp-ui` | – |
-| 17 | Beispiel | `crates\fp-ai\examples\ki_bilder.rs` (`cargo run --example ki_bilder`) | `ai_images.rs` (`--example ai_images`) | `crates\fp-ai` | – |
+| 15 | Quelldatei | `apps\firepixel-cli\src\sprache.rs` | `language.rs` (Funktionen `pruefen`/`vorlage`/`liste` → `check`/`template`/`list`, Parameter englisch; das Modul `fp_i18n::check` heißt dort `i18n_check` wegen der Funktion `check`) | `apps\firepixel-cli` (TE2-C) | – (Quelltext; CLI-Befehle und versteckte Aliasse unverändert) |
+| 16 | Quelldatei | `crates\fp-ui\src\inspector\texte.rs` (Modul `inspector::texte`) | `texts.rs` (`inspector::texts`) | `crates\fp-ui` (TE2-B) | – |
+| 17 | Beispiel | `crates\fp-ai\examples\ki_bilder.rs` (`cargo run --example ki_bilder`) | `ai_images.rs` (`--example ai_images`) | `crates\fp-ai` (TE2-D) | – |
 | 18 | Handbuch | `docs\ANLEITUNG.md` | `docs\MANUAL.md` | `docs\` (TE2-F) | Hilfe ▸ Hilfe sucht zuerst `MANUAL*`, dann `ANLEITUNG*` (alte Testversionen, eigene Kopien neben der exe) – `crates\fp-engine\src\commands\misc.rs` `help_names` (TE2-E) |
 | 19 | Handbuch | `docs\ANLEITUNG.en.md` (bzw. `ANLEITUNG.<sprache>.md`) | `docs\MANUAL.en.md` (`MANUAL.<sprache>.md`) | ebd. | wie 18 |
-| 20 | Test-Umgebungsvariable | `FP_QA_NUR` | `FP_QA_ONLY` | `crates\fp-ui\tests\` (TE2-E) | alter Name weiter gelesen |
-| 21 | Test-Umgebungsvariable | `FP_QA_AUS` | `FP_QA_OFF` | ebd. | wie 20 |
-| 22 | Test-Umgebungsvariable | `FP_QA_NEU` | `FP_QA_NEW` | ebd. | wie 20 |
-| 23 | Test-Umgebungsvariable | `FP_QA_MODUS` | `FP_QA_MODE` | ebd. | wie 20 |
-| 24 | Test-Umgebungsvariable | `FP_DESIGN_BILD` | `FP_DESIGN_IMAGE` | ebd. | wie 20 |
-| 25 | Test-Umgebungsvariable | `FP_SPRACHEN_DEBUG` | `FP_LANGUAGES_DEBUG` | ebd. | wie 20 |
+| 20 | Test-Umgebungsvariable | `FP_QA_NUR` | `FP_QA_ONLY` | `crates\fp-ui\tests\i18n_qa_common\mod.rs` (`only_filter`), `design_bilder.rs`, `dialogs_des1.rs` (TE2-E) | alter Name weiter gelesen (Helfer `i18n_qa_common::env_var(neu, alt)`) |
+| 21 | Test-Umgebungsvariable | `FP_QA_AUS` (Ausgabeordner) | `FP_QA_OUT` (nicht `OFF`: „AUS“ stand für *Ausgabe*; passt zu `FP_UXB_OUT`, `FP_RENDER_OUT`) | `i18n_qa_common::out_root` | wie 20 |
+| 22 | Test-Umgebungsvariable | `FP_QA_NEU` | `FP_QA_NEW` | `i18n_qa_common::discover_dialogs` | wie 20 |
+| 23 | Test-Umgebungsvariable | `FP_QA_MODUS` mit `aktuell`/`basis` | `FP_QA_MODE` mit `current`/`baseline`; Ergebnisordner `…\i18n-qa\current\` bzw. `baseline\` (vorher `aktuell\`/`basis\`) | `i18n_qa_common::mode`, `mode_dir`; `i18n_qa_de`, `i18n_qa_bericht`, `i18n_qa_glossar` | alter Name und alte Werte weiter gelesen; `mode_dir()` liest die alten Ordner, solange es die neuen nicht gibt (vorhandene Basis bleibt nutzbar) |
+| 24 | Test-Umgebungsvariable | `FP_DESIGN_BILD` mit `vorher`/`nachher` | `FP_DESIGN_IMAGE` mit `before`/`after`; neue Bilder `docs\screenshots\design_before_*.png`/`design_after_*.png` | `crates\fp-ui\tests\design_bilder.rs` | alter Name und alte Werte weiter gelesen (Bilder dann ebenfalls `design_before_*`/`design_after_*`); die 107 vorhandenen Bilder `design_vorher_*`/`design_nachher_*` behalten ihre Namen, `design_willkommen.rs` schreibt noch `design_nachher_*` (Befund) |
+| 25 | Test-Umgebungsvariable | `FP_SPRACHEN_DEBUG` | `FP_LANGUAGES_DEBUG` | `crates\fp-ui\tests\gesamt_sprachen.rs` | wie 20 |
 | 26 | Rust-Bezeichner | `fp_trace::Preset::Schwarzweiss` | `Preset::BlackWhite` | `crates\fp-trace\src\lib.rs` und Aufrufer (TE2-D) | serde-Namen unverändert `blackWhite`/`photo`, Aliasse `schwarzweiss`/`foto` bleiben |
 | 27 | Rust-Bezeichner | `fp_trace::Preset::Foto` | `Preset::Photo` | ebd. | wie 26 |
 
 Weitere Bezeichner, die TE2-B … TE2-E nebenbei umbenannt haben, stehen in deren Berichten
 (`docs\berichte\te2a.md` … `te2e.md`); Nachtrag siehe unten.
+
+**Nachtrag (Abgleich mit den Berichten, TE2-G):**
+
+- Rückfall für Sprachpakete (TE2-A): `fp_i18n::check::LEGACY_AREA_NAMES` (alt → neu),
+  `area_file_name` (`menue.ftl` → `menu.ftl`, Groß-/Kleinschreibung egal), `legacy_area_file_name`;
+  `check::load_path` erkennt einen Sprachordner auch nur an alten Namen. `firepixel-cli language template`
+  schreibt die neuen Namen, ein Bereich unter altem Namen zählt als vorhanden; `--overwrite` schreibt den
+  neuen Namen und entfernt die alte Datei. Tests `crates\fp-i18n\tests\legacy_area_names.rs`,
+  `apps\firepixel-cli\tests\language_english.rs` `template_and_check_with_old_area_names`.
+- Unverändert geblieben (TE2-A): `filter.ftl`, `mcp.ftl`, `bitmap_selection.ftl`, `image_preview.ftl`.
+- Handbuch (TE2-E): Konstanten `MANUAL_STEM`, `LEGACY_MANUAL_STEM`; Reihenfolge Englisch
+  `MANUAL.en.md`, `ANLEITUNG.en.md`, `MANUAL.md`, `ANLEITUNG.md` (Sprachfassung vor Name). `msg-help-intro`
+  in `messages.ftl` nennt `MANUAL.md` bzw. `MANUAL.en.md`. Erlaubnisliste des Wächters ohne
+  `ANLEITUNG` und ohne `Preset::Schwarzweiss/Foto` (TE2-D/E).
+- Unit-Testnamen im Quelltext englisch: `fp-ui` `file_dialog.rs` (`test_mode_path_answers_by_kind`,
+  `multiple_paths_only_for_multi_select`), `bridge\inject.rs` (`ctrl_c_becomes_copy_like_egui_winit`,
+  `click_needs_pointer_position_and_carries_modifiers`, `files_and_text`, `structure_and_errors`,
+  `main_window_driven_by_input`) (TE2-B); `fp-engine` `misc.rs` (`manual_per_language`,
+  `manual_legacy_names`, `help_command_returns_english_manual`) (TE2-E).
+- Lokale Variablen `unten`/`oben` → `lower`/`upper` in `fp-raster\src\filters\curve_edit.rs` (TE2-D).
+- `.ftl`-Namen in Kommentaren aller Crates und Tests auf die neuen Namen (TE2-A…E; Reste in
+  Testkommentaren, `fp-trace\Cargo.toml`, `i18n_ausnahmen.txt` von TE2-G).
+- **Noch deutsch (Befunde in `docs\BEFUNDE.md`, Abschnitt TE):** QA-Bereichs-IDs und -Ordner der
+  `i18n_qa_*`-Tests (`menues`, `bedienfelder`, `inspektor`, `dialoge`, `kontextmenues`, `hauptfenster`,
+  `basislayout`, Cachedatei `dialoge.json`, Befundarten, Bildpräfix `phase6_basis_de_`) und die 107
+  Bilder `design_vorher_*`/`design_nachher_*`.
 
 **Bleibt (Nutzerentscheidung 13.10.2026):** Testdateien (`tests\*.rs` mit deutschen Namen),
 Testdaten-Dateien (`*.tsv`, `*.json`, `*.jsf` unter `tests\`) und Testfunktionsnamen. Ebenso

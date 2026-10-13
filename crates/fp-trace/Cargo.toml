@@ -11,7 +11,7 @@ fp-geom = { workspace = true }
 fp-color = { workspace = true }
 fp-raster = { workspace = true }
 serde = { workspace = true }
-# Mehrsprachige Fehlermeldungen (Schlüssel `trace-*` in locales\<code>\nachzeichnen.ftl)
+# Mehrsprachige Fehlermeldungen (Schlüssel `trace-*` in locales\<code>\trace.ftl)
 fp-i18n = { workspace = true }
 # Vektorisierung: visioncortex 0.9.3 (veröffentlicht 14.08.2026), Lizenz MIT OR Apache-2.0,
 # reines Rust (Abhängigkeiten bit-vec, flo_curves, num-traits, alle MIT/Apache).

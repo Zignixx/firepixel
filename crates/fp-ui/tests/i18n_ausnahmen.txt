@@ -89,7 +89,7 @@ text jpeg_ijg.rs | nicht ganzzahliges Abtastverhältnis
 text proxy.rs | Parse error: {e}
 text render.rs | Renderer: {:?}
 # Mischmodus-Liste: deutsche Namen sind nur Rückfall-Quelltexte; angezeigt wird blend-<name> aus filter.ftl
-# (inspector\texte.rs::blend_label, Test texte::keys_of_lists_exist prüft jeden Schlüssel)
+# (inspector\texts.rs::blend_label, Test texts::keys_of_lists_exist prüft jeden Schlüssel)
 text obj_quads.rs | Sättigung
 text obj_quads.rs | Grün
 text obj_quads.rs | Glühen

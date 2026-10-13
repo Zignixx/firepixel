@@ -26,7 +26,7 @@ fn antworten_englisch_ohne_oberflaeche_umzuschalten() {
 }
 
 /// Befund I18N-MENUE/UE-2: englische Beschriftungen und Beschreibungen für alle Befehle in
-/// `describe_command`/`list_commands` (aus `cmd-…`, `.label`, `.description` in menue.ftl).
+/// `describe_command`/`list_commands` (aus `cmd-…`, `.label`, `.description` in menu.ftl).
 #[test]
 fn englische_beschriftungen_fuer_alle_befehle() {
     let mut s = fp_engine::Session::default();

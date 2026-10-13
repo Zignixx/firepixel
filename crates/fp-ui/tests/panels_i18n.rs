@@ -4,7 +4,7 @@
 //! - kein Rohschlüssel (`panel-…`, `cmd-…` …) sichtbar,
 //! - kein Text ragt über den sichtbaren Bereich hinaus, ohne mit „…“ gekürzt zu sein,
 //! - keine zwei Texte überlappen sich,
-//! - in `en` keine deutschen Reste der Bedienfeldtexte (Stichprobe aus `bedienfelder.ftl`).
+//! - in `en` keine deutschen Reste der Bedienfeldtexte (Stichprobe aus `panels.ftl`).
 //!
 //! Die Sprache ist global; deshalb läuft alles in einem Test nacheinander (eigene Testdatei).
 

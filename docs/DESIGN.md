@@ -5,10 +5,13 @@ Dieses Dokument enthält die **Gestaltungsregeln** (verbindlich für neue und ü
 die **gemeinsamen Bausteine** (`crates\fp-ui\src\ui_kit.rs`) und die **Bestandsaufnahme mit
 Prioritätenliste**.
 
-Bilder: `docs\screenshots\design_vorher_*.png` (Stand vor der Überarbeitung) und
-`design_nachher_*.png`; je Bild die drei Designs nebeneinander (**Normal | Dunkel | OLED**).
-Erzeugen: `cargo test -j 4 -p fp-ui --test design_bilder -- --ignored --nocapture` mit
-`FP_DESIGN_BILD=vorher|nachher` (Startbildschirm: `--test design_willkommen -- --ignored`).
+Bilder: `docs\screenshots\design_before_*.png` (Stand vor der Überarbeitung) und
+`design_after_*.png`; je Bild die drei Designs nebeneinander (**Normal | Dunkel | OLED**).
+Bis TE-2 (13.10.2026) hießen sie `design_vorher_*`/`design_nachher_*`; die vorhandenen Bilder
+behalten ihre Namen.
+Erzeugen: `cargo test -j 4 -p fp-ui --test all design_bilder:: -- --ignored --nocapture` mit
+`FP_DESIGN_IMAGE=before|after` (alt `FP_DESIGN_BILD=vorher|nachher`, wird weiter gelesen;
+Startbildschirm: `--test all design_willkommen:: -- --ignored`).
 
 ---
 

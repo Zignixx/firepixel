@@ -9,7 +9,7 @@
 //! * Zugriffstaste `&` gleich vorhanden; Platzhalter `{ $x }` gleich,
 //! * Großschreibung: Menüs, Befehle, Dialogtitel in Title Case; Meldungen/Hinweise nicht in Title Case,
 //! * deutsche Tastennamen (Strg, Umschalt, Entf …) oder deutsche Wörter im englischen Text,
-//! * eindeutige Zugriffstasten je Menü (Menüs aus `menue.ftl`, gleiche Gruppe = gleiches Präfix).
+//! * eindeutige Zugriffstasten je Menü (Menüs aus `menu.ftl`, gleiche Gruppe = gleiches Präfix).
 
 use crate::i18n_qa_common;
 

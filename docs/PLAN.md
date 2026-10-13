@@ -83,7 +83,7 @@ Umfang heute: 19 Crates, ≈ 169.000 Zeilen Rust, 132 Testdateien, 16 Sprachdate
 
 ## 4. Stand nach Welle 3 (13.10.2026 ≈ 02:50)
 
-**Es laufen TE-2 (seit ≈ 02:45, 6 Agenten TE2-A…F) und DOC-3 (6 Agenten DOC3-1…6).** Welle 3 und alle Nachläufer sind fertig (Tabelle unten). **Zusammenfassung, Offenes, Entscheidungen und nächster Ablauf: `docs\progress-2026-10-13.md`.** Die Berichte unter `docs\berichte\` überträgt DOC-3 in BEFUNDE/PARITAET/NACHPRUEFUNG/NUTZERBEFUNDE/STATUS/PLAN (`docs\berichte\README.md`). Testversion 13.10. auf dem Desktop (`NEU.md` = `docs\preview-notes-2026-10-13.md`). Die Nachttests starten nur nach „los“ des Nutzers (§4c Nachtlauf, §6).
+**TE-2 (TE2-A…F, Abschluss TE2-G) und DOC-3 (DOC3-1…6) sind fertig** (13.10. ≈ 02:45–03:30). Welle 3 und alle Nachläufer sind fertig (Tabelle unten). **Zusammenfassung, Offenes, Entscheidungen und nächster Ablauf: `docs\progress-2026-10-13.md`.** Die Berichte unter `docs\berichte\` überträgt DOC-3 in BEFUNDE/PARITAET/NACHPRUEFUNG/NUTZERBEFUNDE/STATUS/PLAN (`docs\berichte\README.md`). Testversion 13.10. auf dem Desktop (`NEU.md` = `docs\preview-notes-2026-10-13.md`). Die Nachttests starten nur nach „los“ des Nutzers (§4c Nachtlauf, §6).
 
 ### Welle 3 und Nachläufer (13.10. 00:00–01:55, warme Bau-Slots)
 
@@ -241,12 +241,12 @@ Namen: Kurven/Tonwert-Pakete heißen **KV-1…3** (früher KT-1…3), die Klickt
 | Paket | Inhalt |
 |---|---|
 | ☑ **NEUTRAL-1** (`8275f78`) | fp-neutral prüft auch `STATUS.md`, `docs\*.md`, `docs\berichte\*`, `docs\funktionstest\*` (P-NEUTRAL) |
-| 🔄 **TE-2** – läuft (13.10. ≈ 02:45, 6 Agenten TE2-A…F) | Technisches Englisch Teil 2: `.ftl`-Dateinamen, Quelldateien, Anleitung, Umgebungsvariablen; Testnamen bleiben (§4b) |
+| ☑ **TE-2** (`86be8d0`, `a6ca2c1`, `0fd951b`, `9adfc08`, `61a7120`, `c81936f`, `dcd1205`; Abschluss TE2-G) | Technisches Englisch Teil 2: `.ftl`-Dateinamen, Quelldateien, Anleitung (`MANUAL*.md`), Umgebungsvariablen, jeweils mit Rückfall auf die alten Namen; Testnamen bleiben (§4b). Ergebnis `docs\TECHNISCH_ENGLISCH.md` Abschnitt E; Rest (QA-Bereichs-IDs, Bilder `design_vorher_*`, roter CLI-Unit-Test) als Befunde |
 | ☑ **DES-1** (`4109217`) | N11: Dialoge schöner (DESIGN.md §13), Vorher/Nachher in 3 Designs |
 | ☑ **DES-2** (`a728586`) | N11: Startbildschirm schöner, Vorher/Nachher in 3 Designs |
 | ☑ **NZ-3** (`3a3342b`; Formular-Punkte von FORM-1 `64d5511`) | Nachzügler Oberfläche (Restpunkte aus Welle 1/2, je Befund in BEFUNDE): Popup-Schieber ▾ kein Tab-Stopp; `FormDialog::load_prefs` bei Text-Auswahllisten; Klemmen beim OK (19105–19108); Tab-Folge der Knöpfe in Formularen (D27/D28); D14 gesperrtes Kästchen „In allgemeiner Bibliothek speichern“; Info-Symbol in `show_message` (D25); D17 Rest (Symbolknöpfe, Fokus/Pfeiltasten im Baum, Kombifeld „Befehle:“); D26 Startfokus auf der Liste; Verlaufsnamen der Pfade („Pfade erweitern“/„Pfade einlassen“); Live-Anzeige in „Bitmap-Auswahl wiederherstellen“; Fußknopf „Auf Status verteilen“ ab 1 Objekt; Accessibility-Name für „Optionen…“ im Exportdialog; Klick neben modalen Dialog schließt ihn (NZ-2); Bildlaufleisten app-weit sichtbar (HG, NZ-2); Aufräumen: alte Formulare in `catalog.rs`, unbenutzte Schlüssel `dlg-fx-*`, `dlg-op-*`, `btn-help` in `allgemein.ftl` |
 | ☑ **NZ-4** (`08187d5`, `a285413`; Messungen im Original → CT-4) | Nachzügler Engine/Export und Messungen: Sprite-Felder als FW-PNG-Tag; PDF „Textauswahl aktivieren“ (unsichtbarer Text); Photoshop-Optionen Effekte/Vektor/Text und Ebene je Objekt; offene Fragen aus `re\18` (Raster-Layout, „_“, PDF-Qualität); wgpu-Renderer im Testprogramm `all` (INF, NZ-2). **Im Original messen** (eine GUI-Sitzung): Bewegungsunschärfe Winkel 0, Auswahl erweitern 1/5/10 und begrenzen 5, Animieren mit Richtung ≠ 0, „Neue Schaltfläche“, Lage von Volle/Halbe Höhe, Optimieren-Palettenbefehle bei GIF, Fußknopf „Auf Status verteilen“, englische Texte D39 und Verlaufsnamen |
-| 🔄 **DOC-3** – läuft (6 Agenten DOC3-1…6) | Berichte der Welle 3 und Nachläufer in BEFUNDE, PARITAET, NACHPRUEFUNG, NUTZERBEFUNDE, STATUS, PLAN übertragen; Testleitfaden; DESIGN §12 + Bilder |
+| ☑ **DOC-3** (`07b5d88`, `760836d`, `a09f06b`, `4db6ac5`, `0262b5f`, `444bd4c`) | Berichte der Welle 3 und Nachläufer in BEFUNDE, PARITAET, NACHPRUEFUNG, NUTZERBEFUNDE, STATUS, PLAN übertragen; Testleitfaden; DESIGN §12 + Bilder |
 
 **Neu offen (aus `progress-2026-10-13.md` §2):**
 
@@ -288,14 +288,14 @@ Spezifikation `docs\BATCH_MODERN.md` (SPEC-BATCH). **Gebaut während der Nachtte
 
 ## 4f. Reihenfolge ab 13.10. ≈ 03:05 (Nutzerwunsch)
 
-1. TE2-C/D/E und SPEC-BATCH fertig laufen lassen; Koordinator: Restsuche alte Namen, TECHNISCH_ENGLISCH §E abgleichen, §7 Zahlen, Testleitfaden auf neue Namen. **Stopp → Freigabe Welle 5.**
+1. TE2-C/D/E und SPEC-BATCH fertig laufen lassen; Koordinator: Restsuche alte Namen, TECHNISCH_ENGLISCH §E abgleichen, §7 Zahlen, Testleitfaden auf neue Namen (☑ TE-2-Teil erledigt von TE2-G). **Stopp → Freigabe Welle 5.**
 2. Welle 5a (§4d), 3. Welle 5b, 4. Doku-Übertrag Welle 5 (DOC-4), 5. Slots vorwärmen + neue Testversion. **Stopp → „los“.**
 6. Nachtlauf: GT-1 · CT-1a/1b (Dialoge, Menüs) · CT-2 · CT-3 · CT-4, parallel Spur BATCH-1…n (Bau) → FIX-1…n → BATCH-T (Batch testen und beheben) → GT-2 (Gesamtlauf inkl. Batch, Endversion auf den Desktop, Bericht im Chat).
 
 **Nachtlauf (Abschluss Z), Ablauf laut `progress-2026-10-13.md` §4:**
 
 1. Testversion vom 13.10. liegt auf dem Desktop (`Firepixel-Vorschau-2026-10-13_HH-MM`, mit `NEU.md`).
-2. TE-2 + DOC-3 laufen (seit ≈ 02:45), danach **Welle 5 (§4d)**. **Danach die warmen Slots vorwärmen und eine neue Testversion bauen – erst nach Freigabe des Nutzers.**
+2. TE-2 + DOC-3 ☑ fertig, danach **Welle 5 (§4d)**. **Danach die warmen Slots vorwärmen und eine neue Testversion bauen – erst nach Freigabe des Nutzers.**
 3. Nachttests **nur nach „los“** des Nutzers (≈ 2–2,5 h):
 
    | ab „los“ | Paket | Inhalt |
@@ -374,7 +374,7 @@ Die Reihenfolge gilt, solange nichts Dringenderes vom Nutzer kommt. Sobald ein P
 | ☑ **P-N19-20** (FV-12, e8dd1ad) | N19 Suche in der Schriftarten-Liste (Inspektor und Text-Menü, Tippen filtert, Pfeiltasten/Eingabe); N20 Nachzeichnen-Dialog standardmäßig ≈ 1050 × 830, Vorschau größer, „Aufräumen“ ohne Scrollen sichtbar, Größe gemerkt |
 | ☑ **P-KI** (KI-2, `39c6e6a`) | N21: Fortschrittsfenster der KI-Werkzeuge schön gestalten (Design wie der Nachzeichnen-Dialog, alle 3 Designs); prüfen, welche Stellschrauben SAM 2.1/BiRefNet wirklich hergeben (Maskenschwelle, Kante weich/ausdehnen/zusammenziehen, Maskenvariante bei SAM), nur diese im Inspektor anbieten; optional: Vorschau der Objektmaske beim Überfahren |
 | ☑ **P-BV1…4** | N22 Bildvorschau, **Cleanroom**-Agenten, die *nur* `re\17-bildvorschau.md` (§10) lesen. ☑ P1 Mehrfachansicht und Kern (erledigt, BV-1, Commits 9906252, 0c01836, 71577d5); ☑ P2 Registerkarte Optionen vollständig (Format/Palette/Rastern/Glättung/Transparenz mit 3 Pipetten, Farbtabelle mit Menü und Statuszeile, „Optimieren auf Größe“; erledigt, BV-2, Commit 9fc13e6, Nachprüfung im echten Fenster in NACHPRUEFUNG); ☑ **BV-3** P3 Datei (Skalieren, Exportbereich mit Werkzeug), Animation, Abspielknöpfe (erledigt, Commit 16741b9, Nachprüfung im echten Fenster in NACHPRUEFUNG); ☑ **BV-4** (`ad67a00`) P4 Verhalten (OK schreibt die Einstellung des aktiven Feldes, Exportieren, Esc schließt), Vorgaben, Texte. Nebenbefund: PARITAET_B D08 „Esc schließt nicht“ ist falsch, im Original schließt Esc |
-| 🔄 **P-TE2** → **TE-2** – läuft (13.10. ≈ 02:45, 6 Agenten TE2-A…F) | Technisches Englisch, Teil 2: `.ftl`-Dateinamen (`befehlstexte.ftl`, `nachzeichnen.ftl` …) und deutsche Datei- und Testnamen im Quelltext umbenennen, nach der Liste von TE-1. Erst wenn wenige Agenten in den `.ftl`-Dateien arbeiten |
+| ☑ **P-TE2** → **TE-2** (`86be8d0`, `a6ca2c1`, `0fd951b`, `9adfc08`, `61a7120`, `c81936f`, `dcd1205`; Abschluss TE2-G) | Technisches Englisch, Teil 2: `.ftl`-Dateinamen (`befehlstexte.ftl`, `nachzeichnen.ftl` …) und deutsche Datei- und Testnamen im Quelltext umbenennen, nach der Liste von TE-1. Erst wenn wenige Agenten in den `.ftl`-Dateien arbeiten |
 
 ### D. Gestaltung und Feinschliff
 
@@ -416,17 +416,17 @@ Die Reihenfolge gilt, solange nichts Dringenderes vom Nutzer kommt. Sobald ein P
 
 ---
 
-## 7. Zahlen auf einen Blick (Stand nach Welle 2, Aktualisierung nach DOC-3)
+## 7. Zahlen auf einen Blick (Stand 13.10.2026 nach DOC-3/TE-2, gezählt von TE2-G)
 
 | Messgröße | Wert |
 |---|---|
-| PARITAET_A (Werkzeuge, Inspektor, Leinwand, Zeiger) | 123 ✅ / 1 ⚠️ / 2 ❌ (126 Zeilen) |
-| PARITAET_B Hauptmenüs (350 Zeilen) | 276 ✅ · 9 ⚠️ · 4 ❌ · 29 ℹ️ · 32 ⏳ umgesetzt, Nachprüfung ausstehend (vorher 276/20/25/29) |
-| PARITAET_B Dialoge (50) | 3 ✅ · 0 ⚠️ · 6 ❌ · 1 ❔ · 40 ⏳ (davon 6 🔧 DLG-3) (vorher 3/21/15, 5 ⏳, 6 🔧) |
-| PARITAET_B Bedienfeldmenüs (10) | 1 ✅ · 1 ❔ · 8 ⏳ (vorher 1/4/4/1) |
-| Automatischer Gesamttest | Menüs 345/345 · Kontextmenüs 283/283 (FV-13); Bedienfeldmenüs 135 Einträge neu erzeugt (MN-3); übrige Berichte vom Lauf 10:30 |
-| BEFUNDE.md | 313 erledigt · 88 offen (DOC-2: 11 abgehakt, 22 neu aus den Berichten) |
-| NACHPRUEFUNG.md | 82 Zeilen: 1 ✅ · 81 ⏳ |
-| Nutzerbefunde | 18 ✅ · 4 🔧 (N01, N21, N23 teilweise, N24) · 1 ⚠️ (N22) · 1 ❌ teilweise (N11) |
+| PARITAET_A (Werkzeuge, Inspektor, Leinwand, Zeiger) | 119 ✅ · 0 ⚠️ · 1 ❌ (O11) · 6 ⏳ (126 Zeilen; vorher 123/1/2/0) |
+| PARITAET_B Hauptmenüs (350 Zeilen) | 276 ✅ · 0 ⚠️ · 0 ❌ · 30 ℹ️ · 44 ⏳ umgesetzt, Nachprüfung ausstehend (vorher 276/9/4/29/32) |
+| PARITAET_B Dialoge (50) | 3 ✅ · 0 ⚠️ · 1 ❌ (D12 Batch) · 0 ❔ · 46 ⏳ (vorher 3/0/6/1 ❔/40) |
+| PARITAET_B Bedienfeldmenüs (10) | 1 ✅ · 1 ❔ · 8 ⏳ (unverändert) |
+| Automatischer Gesamttest | Menüs 345/345 · Kontextmenüs 283/283 (FV-13); Bedienfeldmenüs 135 Einträge (MN-3); übrige Berichte vom Lauf 12.10. 10:30 – neu im GT-1 |
+| BEFUNDE.md | 347 erledigt · 86 offen (DOC3-1: 26 abgehakt; TE2-G: 3 abgehakt, 3 neu) |
+| NACHPRUEFUNG.md | 172 Zeilen: 1 ✅ · 171 ⏳ (vorher 82) |
+| Nutzerbefunde (N01–N30) | 18 ✅ · 5 🔧 (N01, N21, N22, N23, N24; Prüfung im echten Fenster im Nachtlauf) · 1 ❌ teilweise (N11 → DES-3) · 6 ❌ neu (N25–N30 → Welle 5, §4d) |
 | Fest eingebaute Texte | 0 |
-| Umfang | 20 Crates, ≈ 212.000 Zeilen Rust, 177 Testdateien, 235 Commits |
+| Umfang | 20 Crates + 2 Programme, ≈ 222.000 Zeilen Rust (609 Dateien), 192 Testdateien (`tests\*.rs`), 287 Commits (mit TE2-G) |

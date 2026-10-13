@@ -5,7 +5,7 @@
 //! ```text
 //! $env:FP_NO_SHELL_OPEN='1'; $env:FP_QA_OUT='…\target-design\design-qa'
 //! $env:FP_DESIGN_IMAGE='before'   # oder 'after'
-//! cargo test -j 4 -p fp-ui --test design_bilder -- --ignored --nocapture --test-threads 1
+//! cargo test -j 4 -p fp-ui --test all design_bilder:: -- --ignored --nocapture --test-threads 1
 //! ```
 //!
 //! Nur einzelne Dialoge: `FP_QA_ONLY=<Teil der Szenen-ID>` (z. B. `dlg:export`).

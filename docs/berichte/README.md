@@ -35,4 +35,4 @@ Je Agent eine Datei `<kürzel>.md` (siehe AGENTEN_REGELN §7b.2). Der Doku-Agent
 
 Welle 1 (DLG-5, MN-2, KV-1, KV-2, EB-2, BV-3, NZ-2, E1) hatte noch keine Berichtsdateien; die Agenten haben ihre Doku selbst eingetragen. DOC-2 hat sie geprüft und ergänzt (PARITAET_B D07/D43/D44 mit ⏳ und Commit, NACHPRUEFUNG E1-Commit und NZ-2-Zeile, PLAN Welle 1).
 
-Welle 3 und Nachläufer: übertragen von DOC-3 (6 Agenten DOC3-1…6; NUTZERBEFUNDE, STATUS, PLAN von DOC3-4), zusammen mit `docs\progress-2026-10-13.md`. Die TE-2-Berichte (`te2*.md`) überträgt der nächste Doku-Agent.
+Welle 3 und Nachläufer: übertragen von DOC-3 (6 Agenten DOC3-1…6; NUTZERBEFUNDE, STATUS, PLAN von DOC3-4), zusammen mit `docs\progress-2026-10-13.md`. Die TE-2-Berichte (`te2a.md` … `te2f.md`) hat TE2-G übertragen (`TECHNISCH_ENGLISCH.md` E, BEFUNDE, STATUS, PLAN; Bericht `te2g.md`).
