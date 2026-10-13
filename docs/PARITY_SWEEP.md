@@ -28,14 +28,31 @@ Je Einheit **höchstens 25 Prüfpunkte**. Grundlage: `crates\fp-engine\data\comm
 - **Dialoge (≈ 5):** D01–D50 in Zehnergruppen, Verhalten (Felder, Grenzen, Tab, Merken, Esc/Enter, Wirkung)
 - **Querschnitt (≈ 6):** Kontextmenüs · Tastenkürzel · Voreinstellungen · Bildvorschau/Export · Leinwand (Zoom, Hand, Hilfslinien, Raster, Lineale, Ausrichten) · Dateiformate Öffnen/Importieren/Speichern
 
+## Referenzbilder als Richtlinie (Nutzerwunsch 13.10. ≈ 03:50, verbindlich)
+
+PAR-O schreibt nicht nur Werte auf, sondern macht zu **jedem Prüfpunkt sortierte Bildschirmfotos des Originals**. Sie sind
+die **Richtlinie** für Firepixel: Aussehen, Anordnung, Abstände, Texte, Zustände (normal, Maus darüber, gedrückt, grau,
+aufgeklappt, Ergebnis auf der Leinwand) müssen danach nachgebaut bzw. geprüft werden.
+
+- Ablage (außerhalb von `firepixel\`, Neutralität): `re\_testdateien\par\ref\<einheit>\<nr>_<prüfpunkt>_<zustand>.png`,
+  z. B. `re\_testdateien\par\ref\werkzeug-pinsel\07_inspektor_textur_aufgeklappt.png`. Je Einheit eine `INDEX.md`
+  (Nr · Prüfpunkt · Zustand · Bild · was darauf zu sehen ist · gemessene Werte).
+- Gleiche Fenstergröße (1600 × 1000), gleiches Design/Zoom, gleiches Testdokument; Ausschnitt eng um das Prüfziel plus ein
+  Übersichtsbild je Einheit; verlustfrei PNG, Originalgröße (nicht verkleinert gespeichert).
+- PAR-F macht **dieselben Bilder mit denselben Namen** von Firepixel nach `docs\parity\img\<einheit>\` und erzeugt per Skript
+  Vergleichsbilder nebeneinander + Differenz (`re\_testdateien\par\cmp\<einheit>\…`), plus eine Kennzahl je Paar.
+- PAR-X und PAR-R schauen sich gezielt nur die Referenzbilder **ihrer** Prüfpunkte an (über `INDEX.md`).
+
+Aufnehmen kostet keinen Kontext – nur **Ansehen** tut es. Darum: viele Bilder speichern, wenige ansehen.
+
 ## Regeln gegen Bilderflut (verbindlich für jeden PAR-Agenten)
 
 1. Zustand **als Text** erfassen: Original per JSF (Werte, Grenzen, Objektbaum, `Files`-Log), Firepixel per Brücke
    (`ui_state`, `ui_find`, `get_document`, `run_script`). Bilder nur, wo Aussehen das Prüfziel ist.
-2. Bilder **immer als Ausschnitt** (`rect`) und verkleinert (`max_size` ≤ 900); auf Platte speichern
-   (`docs\parity\img\<einheit>\…`), **nur ansehen, wenn nötig**. Pixelvergleiche per Python-Skript (Differenz,
-   Hash), nicht per Auge.
-3. Höchstens **12 angesehene Bilder je Programm und Agent**. Reicht das nicht: Einheit teilen (Notiz an den Koordinator).
+2. Bilder in voller Größe **speichern** (siehe Referenzbilder), aber zum **Ansehen** nur Ausschnitte, verkleinert
+   (≤ 900 px). Pixelvergleiche per Python-Skript (Differenz, Hash), nicht per Auge.
+3. Höchstens **12 angesehene Bilder je Programm und Agent** (gespeichert werden dürfen beliebig viele). Reicht das nicht:
+   Einheit teilen (Notiz an den Koordinator).
 4. Ergebnisdatei ≤ 150 Zeilen, Tabelle statt Prosa. Gleiches Testdokument und gleiche Fenstergröße in beiden Programmen
    (`re\_testdateien\par\`).
 5. Original nur unter der Sperre (`re\scripts\fwsteuerung\gui-sitzung.ps1`), je Sitzung ≤ 15 min, danach Fenster
