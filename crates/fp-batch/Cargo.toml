@@ -31,6 +31,10 @@ regex = "1.11"
 walkdir = "2.5"
 # Datum/Uhrzeit in Ortszeit für Namensbausteine und Bericht (MIT/Apache-2.0; schon im Baum)
 chrono = { version = "0.4.45", default-features = false, features = ["clock", "std", "serde"] }
+# BATCH-6: KI-Freistellen (BiRefNet), Text-Wasserzeichen (Satz/Rasterung), Farbtyp der Textattribute
+fp-ai = { path = "../fp-ai" }
+fp-text = { workspace = true }
+fp-color = { workspace = true }
 
 # BATCH-5: Metadaten-Container (zlib für iCCP/TIFF, CRC der PNG-Chunks, PNG lesen) – schon im Baum
 flate2 = { workspace = true }

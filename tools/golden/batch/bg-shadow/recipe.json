@@ -1,0 +1,18 @@
+{
+  "format": "firepixel-batch-recipe",
+  "name": "bg-shadow",
+  "output": {
+    "format": "png"
+  },
+  "steps": [
+    {
+      "id": "background.shadow",
+      "params": {
+        "blur": 3,
+        "distance": 4,
+        "opacity": 60
+      }
+    }
+  ],
+  "version": 1
+}

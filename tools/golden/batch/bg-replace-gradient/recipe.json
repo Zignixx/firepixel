@@ -1,0 +1,20 @@
+{
+  "format": "firepixel-batch-recipe",
+  "name": "bg-replace-gradient",
+  "output": {
+    "format": "png"
+  },
+  "steps": [
+    {
+      "id": "background.replace",
+      "params": {
+        "color": "#ffffff",
+        "color2": "#3060a0",
+        "gradientShape": "radial",
+        "kind": "gradient",
+        "method": "color"
+      }
+    }
+  ],
+  "version": 1
+}
