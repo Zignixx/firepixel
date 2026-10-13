@@ -1,4 +1,4 @@
-//! Texte des Inspektors (Mehrsprachigkeit): Schlüssel aus `locales\<sprache>\inspektor.ftl`
+//! Texte des Inspektors (Mehrsprachigkeit): Schlüssel aus `locales\<sprache>\inspector.ftl`
 //! (Präfix `pi-`), dazu Anzeigenamen für Listen, deren Daten an anderer Stelle stehen
 //! (Mischmodi, Strichvorgaben, Verlaufsformen, Werkzeugnamen).
 

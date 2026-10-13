@@ -10,7 +10,7 @@
 use super::fields::{self, Dl};
 use super::glyphs::Glyph;
 use super::popups::{self, ColorChoice};
-use super::texte::{self, refs, t, tl};
+use super::texts::{self, refs, t, tl};
 use super::QuadrantRegistry;
 use crate::app_state::{Action, AppState};
 use crate::theme::Theme;
@@ -257,7 +257,7 @@ pub const BLEND_ITEMS: &[(&str, i32)] = &[
     ("Radieren", 25),
 ];
 
-/// Namen der Mischmodus-Liste in der aktuellen Sprache (wie [`texte::blend_labels`], als
+/// Namen der Mischmodus-Liste in der aktuellen Sprache (wie [`texts::blend_labels`], als
 /// `&'static str` für ältere Aufrufer; je Sprachstand einmal abgelegt).
 pub fn blend_names() -> Vec<&'static str> {
     use std::collections::HashMap;
@@ -267,7 +267,7 @@ pub fn blend_names() -> Vec<&'static str> {
     let lang = format!("{}#{}", fp_i18n::current_language(), fp_i18n::generation());
     let mut m = CACHE.get_or_init(|| Mutex::new(HashMap::new())).lock().unwrap_or_else(|e| e.into_inner());
     let v = m.entry(lang).or_insert_with(|| {
-        let names: Vec<&'static str> = texte::blend_labels().into_iter().map(|s| &*Box::leak(s.into_boxed_str())).collect();
+        let names: Vec<&'static str> = texts::blend_labels().into_iter().map(|s| &*Box::leak(s.into_boxed_str())).collect();
         Box::leak(names.into_boxed_slice())
     });
     v.to_vec()
@@ -839,16 +839,16 @@ pub fn stroke_panel(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target, enabled:
                 b.is_some(),
                 a.map(|a| a.stroke_color).filter(|_| b.is_some()),
                 b.map(|b| b.diameter).unwrap_or(1),
-                b.map(texte::brush_label).unwrap_or_else(|| t("pi-none")),
+                b.map(texts::brush_label).unwrap_or_else(|| t("pi-none")),
                 b.map(|b| b.softness / 10).unwrap_or(0),
                 first_el.as_deref().map(placement_of).unwrap_or(1),
-                b.and_then(texte::brush_preset_index),
+                b.and_then(texts::brush_preset_index),
             )
         }
         Target::Tool => {
             let c = st.session.tools.stroke_color;
             let has = c.a() > 0 && ta.stroke_preset.is_some();
-            let lab = ta.stroke_preset.and_then(|i| BRUSH_PRESETS.get(i)).map(texte::brush_preset_label).unwrap_or_else(|| t("pi-none"));
+            let lab = ta.stroke_preset.and_then(|i| BRUSH_PRESETS.get(i)).map(texts::brush_preset_label).unwrap_or_else(|| t("pi-none"));
             (has, has.then_some(c), ta.stroke_width, if has { lab } else { t("pi-none") }, ta.softness, ta.placement, ta.stroke_preset.filter(|_| has))
         }
     };
@@ -1002,7 +1002,7 @@ pub fn opacity_panel(ui: &mut Ui, st: &mut AppState, d: Dl) {
     if let Some(v) = fields::number(ui, "pi-opacity", d.r(11.0, 0.0, 19.0, 13.0), Some(d.r(31.0, 0.0, 9.0, 13.0)), (en && !mixed_op).then_some(op), (0.0, 100.0), 0, en) {
         st.run("element.setOpacity", json!({"opacity": v}));
     }
-    let names = texte::blend_labels();
+    let names = texts::blend_labels();
     if let Some(i) = fields::combo(ui, "pi-blend", d.r(43.0, 0.0, 81.0, 13.0), &refs(&names), (!mixed_bl).then_some(bl), en) {
         let m = BLEND_ITEMS[i].1;
         if m >= 0 {
@@ -1021,7 +1021,7 @@ pub fn tool_opacity_panel(ui: &mut Ui, st: &mut AppState, d: Dl, with_blend: boo
     }
     if with_blend {
         let ta = tool_attrs(ui.ctx());
-        let names = texte::blend_labels();
+        let names = texts::blend_labels();
         if let Some(i) = fields::combo(ui, "pi-tool-blend", d.r(42.0, 0.0, 81.0, 13.0), &refs(&names), Some(ta.blend), true)
             && BLEND_ITEMS[i].1 >= 0
         {
@@ -1979,5 +1979,5 @@ pub fn swatch_color(c: Argb) -> Color32 {
 /// Liste der Verlaufsformen in der aktuellen Sprache (Export für Dialoge).
 pub fn gradient_names() -> Vec<String> {
     let _ = GRADIENT_SHAPES;
-    texte::gradient_labels()
+    texts::gradient_labels()
 }

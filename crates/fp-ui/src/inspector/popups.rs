@@ -7,7 +7,7 @@
 
 use super::fields::{self, Dl};
 use super::glyphs::Glyph;
-use super::texte::{self, refs};
+use super::texts::{self, refs};
 use crate::app_state::{Action, AppState};
 use crate::theme::Theme;
 use crate::ui_commands::{self, GRADIENT_SHAPES};
@@ -67,19 +67,19 @@ pub fn color_picker_ui(ui: &mut Ui, id: Id, st: &AppState, current: Option<Argb>
     }
     let mut x = head.right() - 22.0;
     if allow_pipette {
-        if fields::icon_button(ui, id.with("pip"), Rect::from_min_size(pos2(x, head.top() + 2.0), vec2(20.0, 20.0)), Glyph::Eyedropper, true, &texte::t("pi-color-pipette")).clicked() {
+        if fields::icon_button(ui, id.with("pip"), Rect::from_min_size(pos2(x, head.top() + 2.0), vec2(20.0, 20.0)), Glyph::Eyedropper, true, &texts::t("pi-color-pipette")).clicked() {
             out = Some(ColorChoice::Pipette);
         }
         x -= 22.0;
     }
     let sys_key = id.with("sys");
     let mut sys: bool = ui.data(|d| d.get_temp(sys_key)).unwrap_or(false);
-    if fields::icon_button(ui, id.with("sysb"), Rect::from_min_size(pos2(x, head.top() + 2.0), vec2(20.0, 20.0)), Glyph::Picker, true, &texte::t("pi-color-system")).clicked() {
+    if fields::icon_button(ui, id.with("sysb"), Rect::from_min_size(pos2(x, head.top() + 2.0), vec2(20.0, 20.0)), Glyph::Picker, true, &texts::t("pi-color-system")).clicked() {
         sys = !sys;
         ui.data_mut(|d| d.insert_temp(sys_key, sys));
     }
     x -= 22.0;
-    if allow_none && fields::icon_button(ui, id.with("none"), Rect::from_min_size(pos2(x, head.top() + 2.0), vec2(20.0, 20.0)), Glyph::FillNone, true, &texte::t("pi-color-transparent")).clicked() {
+    if allow_none && fields::icon_button(ui, id.with("none"), Rect::from_min_size(pos2(x, head.top() + 2.0), vec2(20.0, 20.0)), Glyph::FillNone, true, &texts::t("pi-color-transparent")).clicked() {
         out = Some(ColorChoice::None);
     }
     // Farbfelder
@@ -114,7 +114,7 @@ pub fn color_picker_ui(ui: &mut Ui, id: Id, st: &AppState, current: Option<Argb>
             ui.data_mut(|d| d.insert_temp(id.with("syscol"), rgb));
         }
         if let Some(col) = ui.data(|d| d.get_temp::<Color32>(id.with("syscol")))
-            && ui.button(texte::t("btn-apply")).clicked()
+            && ui.button(texts::t("btn-apply")).clicked()
         {
             out = Some(ColorChoice::Color(Argb(0xff00_0000 | (col.r() as u32) << 16 | (col.g() as u32) << 8 | col.b() as u32)));
         }
@@ -261,12 +261,12 @@ pub fn gradient_editor(ui: &mut Ui, id: Id, fill: &fp_model::Fill) -> Option<Val
     let mut out = None;
     // Kopf: Form + Umkehren
     let (head, _) = ui.allocate_exact_size(vec2(240.0, 24.0), Sense::hover());
-    let names = texte::gradient_labels();
+    let names = texts::gradient_labels();
     let cur = GRADIENT_SHAPES.iter().position(|g| g.1 == fill.shape);
     if let Some(i) = fields::combo(ui, id.with("shape"), Rect::from_min_size(head.min + vec2(0.0, 2.0), vec2(150.0, 20.0)), &refs(&names), cur, true) {
         out = Some(json!({"shape": GRADIENT_SHAPES[i].1}));
     }
-    if fields::button(ui, id.with("rev"), Rect::from_min_size(pos2(head.left() + 156.0, head.top() + 2.0), vec2(84.0, 20.0)), &texte::t("pi-grad-reverse"), true) {
+    if fields::button(ui, id.with("rev"), Rect::from_min_size(pos2(head.left() + 156.0, head.top() + 2.0), vec2(84.0, 20.0)), &texts::t("pi-grad-reverse"), true) {
         out = Some(json!({"reverse": true}));
     }
     ui.add_space(4.0);
@@ -350,7 +350,7 @@ pub fn gradient_editor(ui: &mut Ui, id: Id, fill: &fp_model::Fill) -> Option<Val
         let d = Dl::at(row.min);
         if top {
             let a = ge.opacities.get(i).map(|s| s.1.a() as f64 * 100.0 / 255.0).unwrap_or(100.0);
-            fields::label(ui, d.r(0.0, 2.0, 40.0, 10.0), &texte::t("pi-opacity"), true);
+            fields::label(ui, d.r(0.0, 2.0, 40.0, 10.0), &texts::t("pi-opacity"), true);
             if let Some(v) = fields::number(ui, id.with("op"), d.r(42.0, 0.0, 24.0, 13.0), Some(d.r(66.0, 0.0, 9.0, 13.0)), Some(a), (0.0, 100.0), 0, true)
                 && let Some(s) = ge.opacities.get_mut(i)
             {
@@ -361,7 +361,7 @@ pub fn gradient_editor(ui: &mut Ui, id: Id, fill: &fp_model::Fill) -> Option<Val
         } else {
             let cur = ge.colors.get(i).map(|s| s.1);
             let hex = cur.map(|x| format!("#{:02X}{:02X}{:02X}", x.r(), x.g(), x.b())).unwrap_or_default();
-            fields::label(ui, d.r(0.0, 2.0, 30.0, 10.0), &texte::t("pi-grad-color"), true);
+            fields::label(ui, d.r(0.0, 2.0, 30.0, 10.0), &texts::t("pi-grad-color"), true);
             if let Some(s) = fields::text(ui, id.with("hex"), d.r(32.0, 0.0, 44.0, 13.0), &hex, true) {
                 let s = if s.starts_with('#') { s } else { format!("#{s}") };
                 if let (Some(col), Some(st)) = (Rgba8::parse_hex(&s), ge.colors.get_mut(i)) {
@@ -371,7 +371,7 @@ pub fn gradient_editor(ui: &mut Ui, id: Id, fill: &fp_model::Fill) -> Option<Val
             }
         }
         let list_len = if top { ge.opacities.len() } else { ge.colors.len() };
-        if list_len > 2 && fields::button(ui, id.with("del"), d.r(110.0, 0.0, 50.0, 13.0), &texte::t("pi-grad-delete"), true) {
+        if list_len > 2 && fields::button(ui, id.with("del"), d.r(110.0, 0.0, 50.0, 13.0), &texts::t("pi-grad-delete"), true) {
             if top {
                 ge.opacities.remove(i);
             } else {
@@ -423,14 +423,14 @@ pub fn stroke_category(ui: &mut Ui, id: Id, r: Rect, label: &str, has: bool, pre
     let mut out = None;
     egui::Popup::menu(&resp).frame(crate::menu::menu_frame(&th)).show(|ui| {
         ui.spacing_mut().item_spacing = vec2(0.0, 0.0);
-        if fields::list_item(ui, &texte::t("pi-stroke-cat-none"), !has).clicked() {
+        if fields::list_item(ui, &texts::t("pi-stroke-cat-none"), !has).clicked() {
             out = Some(None);
             ui.close();
         }
-        for cat in texte::brush_categories() {
-            ui.menu_button(texte::brush_category_label(cat), |ui| {
+        for cat in texts::brush_categories() {
+            ui.menu_button(texts::brush_category_label(cat), |ui| {
                 for (i, b) in ui_commands::BRUSH_PRESETS.iter().enumerate().filter(|(_, b)| b.category == cat) {
-                    if fields::list_item(ui, &texte::brush_preset_label(b), has && preset == Some(i)).clicked() {
+                    if fields::list_item(ui, &texts::brush_preset_label(b), has && preset == Some(i)).clicked() {
                         out = Some(Some(i));
                         ui.close();
                     }
@@ -438,7 +438,7 @@ pub fn stroke_category(ui: &mut Ui, id: Id, r: Rect, label: &str, has: bool, pre
             });
         }
         if !saved.is_empty() {
-            ui.menu_button(texte::t("pi-stroke-saved"), |ui| {
+            ui.menu_button(texts::t("pi-stroke-saved"), |ui| {
                 for (k, n) in saved.iter().enumerate() {
                     if fields::list_item(ui, n, n == label).clicked() {
                         out = Some(Some(ui_commands::BRUSH_PRESETS.len() + k));

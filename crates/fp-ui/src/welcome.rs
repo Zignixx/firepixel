@@ -26,7 +26,7 @@
 //! „Nicht mehr anzeigen“ setzt die Voreinstellung `ShowStartPage` (wie im Original; wieder
 //! einschalten über Voreinstellungen ▸ Allgemein). In der laufenden Sitzung bleibt der Bildschirm
 //! sichtbar, damit sich das Häkchen zurücknehmen lässt. Texte: Präfix `welcome-` in
-//! `locales\<sprache>\willkommen.ftl`. Bausteine aus [`crate::ui_kit`], Vorschaubilder aus
+//! `locales\<sprache>\welcome.ftl`. Bausteine aus [`crate::ui_kit`], Vorschaubilder aus
 //! [`thumbs`].
 
 mod thumbs;

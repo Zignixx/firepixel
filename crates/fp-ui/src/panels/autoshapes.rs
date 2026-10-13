@@ -46,7 +46,7 @@ pub fn shape_list(st: &mut AppState) -> Vec<ShapeInfo> {
     list
 }
 
-/// Schlüssel einer Form (I18N-MENUE, `werkzeuge.ftl`): `shape-<englischer Name klein, Leerzeichen → ->`,
+/// Schlüssel einer Form (I18N-MENUE, `tools.ftl`): `shape-<englischer Name klein, Leerzeichen → ->`,
 /// z. B. „Rounded Rectangle“ → `shape-rounded-rectangle`, „3D Box“ → `shape-3d-box`.
 pub fn shape_key(name: &str) -> String {
     let slug: String = name.trim().to_lowercase().chars().map(|c| if c.is_ascii_alphanumeric() { c } else { '-' }).collect();

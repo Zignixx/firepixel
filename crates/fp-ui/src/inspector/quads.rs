@@ -2,7 +2,7 @@
 //! (14101/14102) und B/H/X/Y (14007). Lage in DLU wie in `dialoge.json`.
 
 use super::fields::{self, Dl};
-use super::texte::t;
+use super::texts::t;
 use super::QuadrantRegistry;
 use crate::app_state::{Action, AppState};
 use crate::icons::{self, IconStyle};
@@ -215,7 +215,7 @@ fn tool_q1_label(st: &AppState) -> String {
             return shape.to_string();
         }
     }
-    fp_engine::tools::info(id).map(super::texte::tool_label).unwrap_or_default()
+    fp_engine::tools::info(id).map(super::texts::tool_label).unwrap_or_default()
 }
 
 /// Auswahl (14101): Miniatur, Typtext, Objektname (editierbar).

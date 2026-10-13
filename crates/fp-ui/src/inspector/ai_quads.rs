@@ -16,7 +16,7 @@
 //! aktuelle Auswahl ist.
 
 use super::fields::{self, Dl};
-use super::texte::{refs, t, tl};
+use super::texts::{refs, t, tl};
 use super::QuadrantRegistry;
 use crate::app_state::AppState;
 use egui::{Rect, Ui};

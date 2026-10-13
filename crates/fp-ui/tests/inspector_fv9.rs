@@ -498,7 +498,7 @@ fn w10_w27_w28_tool_name_two_lines() {
         fp_engine::ToolId::PolygonSlice,
         fp_engine::ToolId::HotspotRect,
     ] {
-        let want = fp_ui::inspector::texte::tool_label(fp_engine::tools::info(tool).expect("Werkzeug"));
+        let want = fp_ui::inspector::texts::tool_label(fp_engine::tools::info(tool).expect("Werkzeug"));
         let _ = h.state_mut().state.session.set_tool(tool);
         h.run_steps(3);
         let lines = fp_ui::inspector::tool_header_lines(&h.ctx);

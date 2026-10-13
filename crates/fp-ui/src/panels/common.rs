@@ -179,7 +179,7 @@ pub fn resource_menu(ui: &Ui, resp: &egui::Response, st: &mut crate::app_state::
 
 // ---------------------------------------------------------------------- Texte (Phase 6)
 
-/// Text eines Schlüssels aus `bedienfelder.ftl` (bzw. jeder anderen Bereichsdatei).
+/// Text eines Schlüssels aus `panels.ftl` (bzw. jeder anderen Bereichsdatei).
 pub fn t(key: &str) -> String {
     fp_i18n::t(key)
 }

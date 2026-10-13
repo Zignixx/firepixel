@@ -57,7 +57,7 @@ fn resolve(st: &AppState, name: &str) -> Option<String> {
     st.session.registry().iter().find(|c| c.info().name.to_lowercase() == lower).map(|c| c.info().name.clone())
 }
 
-/// Werkzeugtipp „Beschriftung (Kürzel)“ in der aktuellen Sprache (`cmd-…` aus `menue.ftl`).
+/// Werkzeugtipp „Beschriftung (Kürzel)“ in der aktuellen Sprache (`cmd-…` aus `menu.ftl`).
 fn tooltip(st: &AppState, name: &str) -> String {
     if st.session.registry().get(name).is_none() {
         return String::new();

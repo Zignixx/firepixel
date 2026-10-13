@@ -18,7 +18,7 @@ pub mod scale;
 mod quads;
 pub use quads::tool_header_lines;
 pub use quads::selection_thumb_rect;
-pub mod texte;
+pub mod texts;
 mod tool_quads;
 
 use crate::app_state::{Action, AppState};
@@ -128,8 +128,8 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
     let header = Rect::from_min_size(full.min, vec2(full.width(), theme.metrics.inspector_header_height));
     let sym_visible = st.settings.workspace.is_visible(PanelId::SymbolProperties);
     // führende Leerzeichen lassen Platz für das ◊-Einklappsymbol
-    let tab_props = format!("  {}", texte::t("pi-tab-properties"));
-    let tab_sym = texte::t("pi-tab-symbol-properties");
+    let tab_props = format!("  {}", texts::t("pi-tab-properties"));
+    let tab_sym = texts::t("pi-tab-symbol-properties");
     let mut tabs: Vec<(&str, ToolGroup)> = vec![(tab_props.as_str(), ToolGroup::Select)];
     if sym_visible {
         tabs.push((tab_sym.as_str(), ToolGroup::Bitmap));

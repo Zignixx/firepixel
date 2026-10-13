@@ -8,7 +8,7 @@
 //! ([`fp_engine::CommandRegistry::by_fw_id`]); fehlt der Befehl, ist der Eintrag gesperrt.
 //!
 //! # Sprachen
-//! Jeder Eintrag der Menüdaten trägt einen Schlüssel (`key`) aus `locales\<sprache>\menue.ftl`:
+//! Jeder Eintrag der Menüdaten trägt einen Schlüssel (`key`) aus `locales\<sprache>\menu.ftl`:
 //! Befehle `cmd-…` ([`fp_i18n::command_key`], Wert = Menütext mit `&`), Untermenüs und Einträge
 //! an anderer Stelle `menu-…`, Kontextmenüs `ctx-…`, Bedienfeldmenüs `pmenu-…`. Angezeigt wird
 //! [`MenuEntry::local_text`]; `text` bleibt der deutsche Ausgangstext (Kürzel nach dem Tabulator).
@@ -30,7 +30,7 @@ pub struct MenuEntry {
     /// Deutscher Ausgangstext (mit `&` und ggf. Kürzel nach `\t`).
     #[serde(default)]
     pub text: String,
-    /// Schlüssel des Texts in `menue.ftl` (leer = `text` unverändert anzeigen).
+    /// Schlüssel des Texts in `menu.ftl` (leer = `text` unverändert anzeigen).
     #[serde(default)]
     pub key: String,
     #[serde(default)]
@@ -502,7 +502,7 @@ fn command_tail() -> Vec<Node> {
 }
 
 fn panel_item(st: &AppState, p: PanelId) -> Node {
-    // Titel kommt aus `bedienfelder.ftl` (PanelId::title)
+    // Titel kommt aus `panels.ftl` (PanelId::title)
     // wie im Original: Häkchen nur, wenn das Bedienfeld vorn in seiner sichtbaren Gruppe liegt
     let checked = st.settings.workspace.is_visible(p) && st.settings.workspace.is_front(p);
     item(p.title(), ItemAction::Ui(Action::TogglePanel(p)), true, Some(checked))

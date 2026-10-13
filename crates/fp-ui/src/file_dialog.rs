@@ -807,7 +807,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn testmodus_pfad_beantwortet_nach_art() {
+    fn test_mode_path_answers_by_kind() {
         let dir = std::env::temp_dir().join(format!("fp-dateidialog-{}", std::process::id()));
         let _ = std::fs::create_dir_all(&dir);
         let _ = std::fs::write(dir.join("b.png"), b"x");
@@ -844,7 +844,7 @@ mod tests {
     }
 
     #[test]
-    fn mehrere_pfade_nur_bei_mehrfachauswahl() {
+    fn multiple_paths_only_for_multi_select() {
         assert_eq!(split_paths(Kind::OpenMany, "a.png; b.png\nc.png").len(), 3);
         assert_eq!(split_paths(Kind::Open, " a;b.png ").len(), 1);
     }

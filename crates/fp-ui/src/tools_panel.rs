@@ -108,7 +108,7 @@ pub fn tool_key(id: ToolId) -> String {
     name.replace(['.', '_'], "-")
 }
 
-/// Name eines Werkzeugs in der aktuellen Sprache (`werkzeuge.ftl`, Rückfall: deutscher Name).
+/// Name eines Werkzeugs in der aktuellen Sprache (`tools.ftl`, Rückfall: deutscher Name).
 pub fn tool_label(id: ToolId) -> String {
     let k = tool_key(id);
     let s = fp_i18n::t(&k);

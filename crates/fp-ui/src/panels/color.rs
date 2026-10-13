@@ -18,7 +18,7 @@ use serde_json::json;
 
 /// Farbfeldsätze: Anzeigename und Nummer der Voreinstellung `SwatchesPanelColorPaletteChoice`
 /// (0 Farbwürfel, 1 benutzerdefiniert, 2 Graustufen, 3 Mac, 4 Windows, 5 Kontinuierlicher Farbton).
-/// Erster Wert: Schlüssel des Anzeigenamens in `bedienfelder.ftl`.
+/// Erster Wert: Schlüssel des Anzeigenamens in `panels.ftl`.
 pub const SETS: &[(&str, i64)] = &[
     ("panel-swatches-set-cubes", 0),
     ("panel-swatches-set-continuous", 5),

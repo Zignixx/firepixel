@@ -479,7 +479,7 @@ pub fn effect_form(name: &str, bevel: Option<i32>, e: Option<&Effect>, index: Op
         }
         "colorFill" => {
             let bl = num(e, "Blendmode", 0.0) as i64;
-            let labels = crate::inspector::texte::blend_labels();
+            let labels = crate::inspector::texts::blend_labels();
             let names: Vec<&str> = labels.iter().map(|s| s.as_str()).collect();
             let vals: Vec<Value> = crate::inspector::obj_quads::BLEND_ITEMS.iter().map(|b| json!(b.1.max(0))).collect();
             let idx = crate::inspector::obj_quads::BLEND_ITEMS.iter().position(|b| b.1 as i64 == bl).unwrap_or(0);

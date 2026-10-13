@@ -1,7 +1,7 @@
 //! Hauptmenü per Tastatur wie unter Windows (und im Original):
 //!
 //! * Alt+Buchstabe öffnet das Menü mit dieser Zugriffstaste (unterstrichener Buchstabe, `&` im
-//!   Menütext der aktuellen Sprache aus `menue.ftl`), z. B. Alt+D = „Datei“, englisch Alt+F = „File“,
+//!   Menütext der aktuellen Sprache aus `menu.ftl`), z. B. Alt+D = „Datei“, englisch Alt+F = „File“,
 //! * Alt allein (drücken und loslassen) bzw. F10 aktiviert die Menüleiste (erster Titel markiert),
 //! * ←/→ wechseln das Menü (bei offenem Menü öffnet das Nachbarmenü), → öffnet ein Untermenü,
 //!   ← schließt es,

@@ -287,7 +287,7 @@ fn w28_tool_names_wrap_between_words_de_en() {
                 if info.id == ToolId::AutoShape {
                     continue;
                 }
-                let want = fp_ui::inspector::texte::tool_label(info);
+                let want = fp_ui::inspector::texts::tool_label(info);
                 let lines = header_lines(&mut h, info.id);
                 // nur Werkzeuge, die sich ohne weiteren Zustand wählen lassen (Kopf zeigt sie)
                 if lines.is_empty() || h.state().state.session.tools.active != info.id {

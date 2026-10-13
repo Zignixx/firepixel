@@ -6,7 +6,7 @@
 use super::fields::{self, Dl};
 use super::glyphs::Glyph;
 use super::obj_quads::{self, edit_tool_attrs, tool_attrs, Target};
-use super::texte::{refs, tl, t as tx};
+use super::texts::{refs, tl, t as tx};
 use super::QuadrantRegistry;
 use crate::app_state::{Action, AppState};
 use crate::theme::Theme;

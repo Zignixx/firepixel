@@ -97,7 +97,7 @@ impl PanelId {
         PanelId::CssProperties,
     ];
 
-    /// Schlüssel des Reitertitels in `bedienfelder.ftl`.
+    /// Schlüssel des Reitertitels in `panels.ftl`.
     pub fn title_key(self) -> &'static str {
         match self {
             PanelId::Optimize => "panel-title-optimize",

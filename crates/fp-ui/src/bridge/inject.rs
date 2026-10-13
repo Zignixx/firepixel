@@ -1063,7 +1063,7 @@ mod tests {
     }
 
     #[test]
-    fn ctrl_c_wird_copy_wie_egui_winit() {
+    fn ctrl_c_becomes_copy_like_egui_winit() {
         let (mut b, mut s, mut p) = (Modifiers::NONE, Vec::new(), None);
         let ctrl = Modifiers { ctrl: true, command: true, ..Modifiers::NONE };
         let raw = raw_after(vec![Ev::PushMods(ctrl), Ev::KeyDown(Key::C), Ev::KeyUp(Key::C), Ev::PopMods], &mut b, &mut s, &mut p);
@@ -1084,7 +1084,7 @@ mod tests {
     }
 
     #[test]
-    fn klick_braucht_zeigerposition_und_traegt_umschalttasten() {
+    fn click_needs_pointer_position_and_carries_modifiers() {
         let (mut b, mut s, mut p) = (Modifiers::NONE, Vec::new(), None);
         let raw = raw_after(vec![Ev::Button { button: PointerButton::Primary, pressed: true }], &mut b, &mut s, &mut p);
         assert!(raw.events.is_empty(), "ohne Zeigerposition verwirft egui-winit den Klick");
@@ -1097,7 +1097,7 @@ mod tests {
     }
 
     #[test]
-    fn dateien_und_text() {
+    fn files_and_text() {
         let (mut b, mut s, mut p) = (Modifiers::NONE, Vec::new(), None);
         let raw = raw_after(vec![Ev::Hover(vec!["a.png".into()]), Ev::Drop(vec!["a.png".into()])], &mut b, &mut s, &mut p);
         assert!(raw.hovered_files.is_empty() && raw.dropped_files.len() == 1);
@@ -1107,7 +1107,7 @@ mod tests {
     }
 
     #[test]
-    fn aufbau_und_fehler() {
+    fn structure_and_errors() {
         let s = parse(&json!({"events": [
             {"type": "click", "pos": [10, 20], "count": 2},
             {"type": "drag", "from": [0, 0], "to": [100, 0], "steps": 4, "ms": 0},
@@ -1132,7 +1132,7 @@ mod tests {
     /// wählt ein Objekt per Klick, Strg+C/Strg+V verdoppelt es, Strg+Mausrad zoomt, Wiederholung
     /// ohne Eskalation (§4b).
     #[test]
-    fn hauptfenster_ueber_eingabe_bedienen() {
+    fn main_window_driven_by_input() {
         use crate::app_state::UiSettings;
         use crate::FirepixelApp;
         use fp_mcp::SessionHost;

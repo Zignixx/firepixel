@@ -13,7 +13,7 @@ use std::collections::BTreeMap;
 
 /// Kategorien in der Reihenfolge der Liste (wie im Original: „Starten und Bearbeiten“ vor
 /// „Zusatzmodule“, PM-5 D16).
-/// (Schlüssel der Texte in `dialoge.ftl`; ebenso die Beschriftungen der Einträge.)
+/// (Schlüssel der Texte in `dialogs.ftl`; ebenso die Beschriftungen der Einträge.)
 pub const CATEGORIES: [&str; 7] = ["dlg-pref-cat-general", "dlg-pref-cat-edit", "dlg-pref-cat-guides", "dlg-pref-cat-type", "dlg-pref-cat-psimport", "dlg-pref-cat-launch", "dlg-pref-cat-plugins"];
 
 /// Index der Kategorie „Zusatzmodule“ (Hinweis unter den Feldern).
@@ -51,7 +51,7 @@ fn page_items(cat: usize) -> &'static [Item] {
             Check("IconPanelsAutoCollapse", "dlg-pref-iconpanelsautocollapse", false),
             Check("WriteThumbnailPreview", "dlg-pref-writethumbnailpreview", true),
             Check("AppendFwPng", "dlg-pref-appendfwpng", true),
-            // Entwickleroptionen: Testsprache qps auch im Release-Build (Text aus allgemein.ftl)
+            // Entwickleroptionen: Testsprache qps auch im Release-Build (Text aus common.ftl)
             Check(crate::language::DEV_PREF_KEY, "lang-dev-options", false),
         ],
         1 => &[
