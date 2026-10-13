@@ -16,7 +16,7 @@ fn tmp(name: &str) -> PathBuf {
     d
 }
 
-/// Old folder `Sprachen\fr\allgemein.ftl` with a language of the user.
+/// Old folder `Sprachen\fr\common.ftl` with a language of the user.
 fn old_language_dir(base: &Path) -> PathBuf {
     let old = base.join(fp_i18n::LEGACY_LANGUAGE_DIR);
     std::fs::create_dir_all(old.join("fr")).expect("old dir");
