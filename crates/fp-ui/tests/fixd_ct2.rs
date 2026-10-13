@@ -184,3 +184,45 @@ fn stroke_category_submenu_beside_main_menu() {
     assert_eq!(sub.left() >= m.right() - 4.0, room_right, "rechts daneben, wenn Platz ist, sonst links: {m:?} / {sub:?}");
     assert!(sub.right() <= 900.0 && sub.bottom() <= 650.0, "im Fenster: {sub:?}");
 }
+
+fn open_popups(h: &H) -> Vec<egui::Rect> {
+    h.ctx.memory(|m| {
+        m.areas()
+            .visible_layer_ids()
+            .into_iter()
+            .filter(|l| l.order == egui::Order::Foreground)
+            .filter_map(|l| m.area_rect(l.id))
+            .filter(|r| r.width() > 40.0 && r.height() > 40.0)
+            .collect()
+    })
+}
+
+fn combo_rect(h: &H, value: &str) -> Option<egui::Rect> {
+    use egui_kittest::kittest::Queryable;
+    h.query_all(egui_kittest::kittest::By::new().role(egui::accesskit::Role::ComboBox)).find(|n| n.value().as_deref() == Some(value)).map(|n| n.rect())
+}
+
+/// CT-2 / NZ-1 W21: Die Texturliste des Rechteck-Werkzeugs ist so breit wie der längste Name
+/// („Linie waagerecht 1…4“ ganz lesbar), in Deutsch und Englisch, im 900 × 650-Fenster.
+#[test]
+fn texture_list_as_wide_as_longest_name() {
+    for lang in ["de", "en"] {
+        fp_i18n::set_language(lang);
+        let (a, _) = app_with_bitmap([200, 200, 200, 255]);
+        let mut h = small_harness(a);
+        h.state_mut().state.session.execute("select.none", json!({})).expect("nichts");
+        h.state_mut().state.session.set_tool(ToolId::Rectangle).expect("Rechteck");
+        h.run_steps(4);
+        let label = fp_ui::inspector::obj_quads::texture_label(fp_ui::inspector::obj_quads::DEFAULT_TEXTURE);
+        let r = combo_rect(&h, &label).unwrap_or_else(|| panic!("Texturfeld „{label}“"));
+        click_at(&mut h, r.center());
+        let p = open_popups(&h);
+        assert_eq!(p.len(), 1, "{lang}: Liste offen {p:?}");
+        let (items, labels, _) = fp_ui::inspector::obj_quads::texture_list_labels("");
+        let font = fp_ui::theme::Theme::current(&h.ctx).ui_font();
+        let longest = labels.iter().map(|l| h.ctx.fonts_mut(|f| f.layout_no_wrap(l.clone(), font.clone(), egui::Color32::WHITE).size().x)).fold(0.0f32, f32::max);
+        assert!(items.len() > 1);
+        assert!(p[0].width() >= longest + 10.0, "{lang}: Liste {:.0} px, längster Name {:.0} px", p[0].width(), longest);
+    }
+    fp_i18n::set_language("de");
+}
