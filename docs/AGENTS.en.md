@@ -114,13 +114,15 @@ only after the answer to the previous one – MCP clients like Claude do that by
 | `ui_find` | **bridge only:** find visible controls/labels (menu items, buttons, tabs, panel rows, dialog title bars) – text, role, rectangle, center in window points, topmost first | `{"text": "File", "exact": true}` · `{"text": "OK", "role": "button"}` · `{"text": "Title bar"}` · `{"region": [0, 0, 400, 60]}` |
 | `ui_input` | **bridge only:** inject raw mouse/keyboard/file events, exactly like real input (see 5a) | `{"events": [{"type": "click", "pos": [640, 420]}, {"type": "key", "key": "C", "modifiers": ["ctrl"]}], "screenshot": true}` |
 | `ui_file_dialog` | **bridge only:** query and answer an open file dialog (Open, Save As, Import, folder …) (see 5b) | `{}` · `{"action": "choose", "path": "C:\\out\\a.fw.png"}` · `{"action": "choose", "paths": ["a.png", "b.png"]}` · `{"action": "cancel"}` |
+| `batch` | **batch processing:** many files with one recipe (template, file or object) – templates, steps, validate, plan, preview, run (also in the background with progress), cancel (see 5c) | `{"action": "templates"}` · `{"recipe": "logos-to-svg", "folder": "C:\\logos", "out": "C:\\svg"}` · `{"action": "status", "jobId": 1, "wait_ms": 5000}` |
 
 Headless, `screenshot`/`ui_state`/`ui_action`/`ui_find`/`ui_input`/`ui_file_dialog` return an error
 message pointing to the bridge (use `render` and `tool_event` there).
 
 Resources (Markdown): `firepixel://docs/agents.md` (this file), `firepixel://docs/commands.md`
 (complete command catalog with parameters), `firepixel://docs/document-model.md`,
-`firepixel://docs/examples.md`, `firepixel://docs/jsf.md` (scope of the JSF API).
+`firepixel://docs/examples.md`, `firepixel://docs/jsf.md` (scope of the JSF API),
+`firepixel://docs/batch.md` (templates and steps of batch processing with parameters).
 
 ## 3. Command name scheme
 
@@ -408,6 +410,74 @@ no private chunks): `ui_file_dialog {"action": "choose", "path": "C:\\out\\flat.
 user interface `run_command {"name": "file.saveAs", "params": {"path": "C:\\out\\flat.png", "flattened": true, "copy": false}}`.
 Without a copy the document belongs to the PNG file afterwards, and `file.save` writes it flattened again.
 
+## 5c. Batch processing: many files with one recipe
+
+The `batch` tool works like the **Batch Studio** (*File ▸ Batch Process…*): a **recipe** (steps +
+file name + "Save as" + target) applied to many files, in parallel, with conflict rules and a
+`batch-report.json` report. Every file runs in its own headless session; open documents (also in the
+bridge) stay untouched, originals are never changed (default target: new folder `batch-output` next to
+the sources).
+
+`recipe` is a recipe object (structure like `*.fpbatch.json`, English keys), JSON text, a path to a
+recipe file or the **name of a built-in template** (an existing file with that name wins). Files:
+`files` (absolute paths) and/or `folder` (+ `recursive`, default `true`). Overrides: `out` (output
+folder), `conflict` (`rename` | `skip` | `overwrite`), `dryRun`, `threads`.
+
+| `action` | Effect | Result |
+|---|---|---|
+| `templates` | built-in templates | `templates[]` with `id`, `title`, `description`, `steps`, `format`, `recipe` |
+| `steps` | catalog of all steps with parameter schema (type, range, default, values) | `steps[]` |
+| `validate` | check a recipe | `{ok, issues[]}` (errors/warnings per step, translated) |
+| `plan` | dry run: source → target, conflicts, writes nothing | plan |
+| `preview` | one file (`file`, `maxSize`) before/after | sizes, bytes, hints + **two PNG images** |
+| `run` (default) | execute, blocking until the report | report (`totals`, `items[]`, `summary`, `ok`) |
+| `run` + `"async": true` | start in the background | `{jobId}` at once |
+| `status` | progress (`jobId`, optional `wait_ms` ≤ 60000: wait that long for the end) | `state` (`running`/`finished`/`cancelled`), `total`, `processed`, `done`, `failed`, `skipped`, `percent`, `etaMs`, `errors[]`, at the end `report` |
+| `cancel` | cancel a job; finished files stay, no temporary files | like `status` |
+
+**Built-in templates** (`batch {"action": "templates"}`; in the studio under *Recipes ▸ Templates*):
+
+| Name | Contents |
+|---|---|
+| `web-webp` | longest side 1920 px, WebP 82, metadata without GPS |
+| `email-photos` | longest side 1280 px, transparency on white, JPEG 80, without GPS |
+| `save-as-jpeg` | transparency on white, JPEG 85 |
+| `remove-background` | cut out the main subject (local AI model, see "AI selection") → 32-bit PNG |
+| `transparency-to-white` | transparency on white, format stays |
+| `logos-to-svg` | `vector.trace` (preset logo, color regions) → SVG |
+| `small-gifs` | longest side 480 px, GIF with the "balanced" optimizer |
+| `strip-metadata` | remove all metadata, format stays |
+| `rename-by-date` | name `YYYY-MM-DD_001` from the capture date (EXIF); the file is only copied |
+| `square-1080` | square 1080 × 1080 (center), JPEG 88 |
+| `thumbnails-256` | fit into 256 × 256, PNG, name with `_thumb` |
+
+**Tracing in a batch** (`vector.trace`, group "Advanced"): the same command as `modify.traceBitmap`
+(see "Trace bitmap") on every image. Parameters: `preset` (`logo`/`blackWhite`/`illustration`/`photo`),
+`engine` (`clusters` color regions | `potrace` smooth curves) and – only when set, otherwise the preset
+applies – `colorMode`, `colors`, `filterSpeckle`, `cornerThreshold`, `mode`, `hierarchical`,
+`threshold`, `ignoreTransparent`, `pathPrecision`, `refine`, `turdSize`, `turnPolicy`, `alphaMax`,
+`optCurve`, `optTolerance`; plus `keepOriginal` (keep the original bitmap as a **hidden** layer,
+default `false`) and `transparentCanvas` (default `true`). The "Save as" card (`output.format`) picks the
+output: `svg` (paths only, holes even-odd), `fwpng` (editable: layer with the group, optionally the
+hidden original layer) or a pixel format (flattened). Both at once: run twice (`out` per format).
+Animations: first frame only (warning in the report).
+
+**Workflows**
+
+* Trace logos: `batch {"action": "preview", "recipe": "logos-to-svg", "file": "C:\\logos\\a.png"}`
+  → check the images → `batch {"recipe": "logos-to-svg", "folder": "C:\\logos", "out": "C:\\svg"}`.
+  Another method: `recipe` as an object, e.g.
+  `{"steps": [{"id": "vector.trace", "params": {"preset": "blackWhite", "engine": "potrace"}}], "output": {"format": "svg"}}`.
+* Many photos in the background: `batch {"recipe": "web-webp", "folder": "D:\\Photos", "async": true}` → `{jobId: 1}`
+  → repeat `batch {"action": "status", "jobId": 1, "wait_ms": 10000}` until `state` ≠ `running`
+  → `report.summary`; if needed `batch {"action": "cancel", "jobId": 1}`.
+* Own recipe: `batch {"action": "steps"}` → build the recipe → `batch {"action": "validate", "recipe": {…}}`
+  → `batch {"action": "plan", …}` → `batch {…}`.
+
+The same via `run_command`: `batch.run`, `batch.plan`, `batch.preview`, `batch.steps`, `batch.validate`
+(blocking; `recipe` also takes template names). In the user interface,
+`firepixel.exe --batch <recipe|template> [files|folders …]` opens the studio with recipe and files.
+
 ## 6. Commands menu and saved commands
 
 The **Commands** menu shows the commands folder (`%APPDATA%\Firepixel\Commands`, subfolders =
@@ -424,6 +494,9 @@ firepixel-cli commands [--filter TEXT] [--category CAT] [--all] [--json]
 firepixel-cli info <file> [--json] [--depth N] [--all-pages] [--types text,path]
 firepixel-cli run <file>|--new 800x600[:#color] --cmd <name> [--params <json>|@file] … [--steps <json>] --out <file>|--in-place
 firepixel-cli batch --actions <json|file> --in <folder> --out <folder> [--format png|fwpng|gif|jpg|webp|…]
+firepixel-cli batch --recipe <recipe.fpbatch.json|template> (--in <folder> [--recursive] | <files…>) [--out <folder>] [--conflict rename|skip|overwrite] [--dry-run] [--threads N] [--report report.json] [--json]
+firepixel-cli batch --templates [--json]   (built-in templates, names for --recipe)
+firepixel-cli batch --steps [--json]       (step catalog)
 firepixel-cli render <file> [--page N] [--state N] [--zoom Z] [--rect l,t,r,b] [--element ID] --out x.png
 firepixel-cli convert <in> <out>
 firepixel-cli script <x.jsf> [file] [--code JS] [--out file] [--arg VALUE]

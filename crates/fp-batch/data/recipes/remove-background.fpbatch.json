@@ -1,0 +1,10 @@
+{
+  "format": "firepixel-batch-recipe",
+  "version": 1,
+  "name": "Remove background to PNG",
+  "description": "Cut out the main subject with the local AI model and save a transparent PNG.",
+  "steps": [
+    { "id": "background.remove", "enabled": true, "params": { "edge": "antiAlias", "output": "transparent" } }
+  ],
+  "output": { "format": "png", "options": { "bitDepth": 32 } }
+}

@@ -1,0 +1,12 @@
+{
+  "format": "firepixel-batch-recipe",
+  "version": 1,
+  "name": "Photos for email",
+  "description": "Longest side 1280 px, JPEG quality 80, transparency on white, metadata without GPS.",
+  "steps": [
+    { "id": "resize", "enabled": true, "params": { "mode": "longEdge", "size": 1280, "onlyShrink": true, "filter": "auto" } },
+    { "id": "background.flatten", "enabled": true, "params": { "kind": "color", "color": "#ffffff", "onlyIfTransparent": true } },
+    { "id": "metadata.edit", "enabled": true, "params": { "keep": "all", "remove": ["gps", "thumbnails"] } }
+  ],
+  "output": { "format": "jpeg", "options": { "quality": 80, "progressive": true } }
+}

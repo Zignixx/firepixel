@@ -115,13 +115,15 @@ Hinweis: Anfragen werden nebenläufig angenommen. Abhängige Aufrufe (z. B. `ren
 | `ui_input` | **nur Brücke:** rohe Maus-/Tastatur-/Datei-Ereignisse einspeisen, genau wie echte Eingaben (siehe 5a) | `{"events": [{"type": "click", "pos": [640, 420]}, {"type": "key", "key": "C", "modifiers": ["ctrl"]}], "screenshot": true}` |
 
 | `ui_file_dialog` | **nur Brücke:** offenen Datei-Dialog (Öffnen, Speichern unter, Importieren, Ordner …) abfragen und beantworten (siehe 5b) | `{}` · `{"action": "choose", "path": "C:\\out\\a.fw.png"}` · `{"action": "choose", "paths": ["a.png", "b.png"]}` · `{"action": "cancel"}` |
+| `batch` | **Batch-Verarbeitung:** viele Dateien mit einem Rezept (Vorlage, Datei oder Objekt) – Vorlagen, Schritte, prüfen, planen, Vorschau, ausführen (auch im Hintergrund mit Fortschritt), abbrechen (siehe 5c) | `{"action": "templates"}` · `{"recipe": "logos-to-svg", "folder": "C:\\logos", "out": "C:\\svg"}` · `{"action": "status", "jobId": 1, "wait_ms": 5000}` |
 
 Headless liefern `screenshot`/`ui_state`/`ui_action`/`ui_find`/`ui_input`/`ui_file_dialog` eine Fehlermeldung mit
 Hinweis auf die Brücke (dort `render` und `tool_event` benutzen).
 
 Ressourcen (Markdown): `firepixel://docs/agents.md` (diese Datei), `firepixel://docs/commands.md`
 (vollständiger Befehlskatalog mit Parametern), `firepixel://docs/document-model.md`,
-`firepixel://docs/examples.md`, `firepixel://docs/jsf.md` (Umfang der JSF-API).
+`firepixel://docs/examples.md`, `firepixel://docs/jsf.md` (Umfang der JSF-API),
+`firepixel://docs/batch.md` (Vorlagen und Schritte der Batch-Verarbeitung mit Parametern).
 
 ## 3. Befehlsnamen-Schema
 
@@ -409,6 +411,75 @@ Format PNG, ohne private Chunks): `ui_file_dialog {"action": "choose", "path": "
 Oberfläche `run_command {"name": "file.saveAs", "params": {"path": "C:\\out\\flach.png", "flattened": true, "copy": false}}`.
 Ohne Kopie gehört das Dokument danach zur PNG-Datei, und `file.save` schreibt wieder flach.
 
+## 5c. Batch-Verarbeitung: viele Dateien mit einem Rezept
+
+Das Werkzeug `batch` rechnet wie das **Batch-Studio** (*Datei ▸ Batch-Verarbeitung…*): ein **Rezept**
+(Schritte + Dateiname + „Speichern als“ + Ziel) auf viele Dateien, parallel, mit Konfliktregeln und
+Bericht `batch-report.json`. Jede Datei läuft in einer eigenen headless Sitzung; die offenen Dokumente
+(auch in der Brücke) bleiben unberührt, Originale werden nie verändert (Vorgabe-Ziel: neuer Ordner
+`batch-output` neben den Quellen).
+
+`recipe` ist ein Rezept-Objekt (Aufbau wie `*.fpbatch.json`, Schlüssel englisch), JSON-Text, ein Pfad zu
+einer Rezeptdatei oder der **Name einer eingebauten Vorlage** (eine vorhandene Datei gleichen Namens hat
+Vorrang). Dateien: `files` (absolute Pfade) und/oder `folder` (+ `recursive`, Vorgabe `true`).
+Überschreiben: `out` (Ausgabeordner), `conflict` (`rename` | `skip` | `overwrite`), `dryRun`, `threads`.
+
+| `action` | Wirkung | Ergebnis |
+|---|---|---|
+| `templates` | eingebaute Vorlagen | `templates[]` mit `id`, `title`, `description`, `steps`, `format`, `recipe` |
+| `steps` | Katalog aller Schritte mit Parameter-Schema (Typ, Bereich, Vorgabe, Werte) | `steps[]` |
+| `validate` | Rezept prüfen | `{ok, issues[]}` (Fehler/Warnungen je Schritt, übersetzt) |
+| `plan` | Trockenlauf: Quelle → Ziel, Konflikte, ohne zu schreiben | Plan |
+| `preview` | eine Datei (`file`, `maxSize`) vorher/nachher | Größen, Bytes, Hinweise + **zwei PNG-Bilder** |
+| `run` (Vorgabe) | ausführen, blockierend bis zum Bericht | Bericht (`totals`, `items[]`, `summary`, `ok`) |
+| `run` + `"async": true` | im Hintergrund starten | `{jobId}` sofort |
+| `status` | Fortschritt (`jobId`, optional `wait_ms` ≤ 60000: so lange auf das Ende warten) | `state` (`running`/`finished`/`cancelled`), `total`, `processed`, `done`, `failed`, `skipped`, `percent`, `etaMs`, `errors[]`, am Ende `report` |
+| `cancel` | Auftrag abbrechen; fertige Dateien bleiben, keine Temporärdateien | wie `status` |
+
+**Eingebaute Vorlagen** (`batch {"action": "templates"}`; im Studio unter *Rezepte ▸ Vorlagen*):
+
+| Name | Inhalt |
+|---|---|
+| `web-webp` | längste Seite 1920 px, WebP 82, Metadaten ohne GPS |
+| `email-photos` | längste Seite 1280 px, Transparenz auf Weiß, JPEG 80, ohne GPS |
+| `save-as-jpeg` | Transparenz auf Weiß, JPEG 85 |
+| `remove-background` | Hauptmotiv freistellen (lokales KI-Modell, siehe „KI-Auswahl“) → PNG 32 Bit |
+| `transparency-to-white` | Transparenz auf Weiß, Format bleibt |
+| `logos-to-svg` | `vector.trace` (Vorgabe Logo, Farbflächen) → SVG |
+| `small-gifs` | längste Seite 480 px, GIF mit Optimierer „ausgewogen“ |
+| `strip-metadata` | alle Metadaten entfernen, Format bleibt |
+| `rename-by-date` | Name `JJJJ-MM-TT_001` aus dem Aufnahmedatum (EXIF), Datei wird nur kopiert |
+| `square-1080` | Quadrat 1080 × 1080 (Mitte), JPEG 88 |
+| `thumbnails-256` | in 256 × 256 einpassen, PNG, Name mit `_thumb` |
+
+**Nachzeichnen im Batch** (`vector.trace`, Gruppe „Erweitert“): derselbe Befehl wie
+`modify.traceBitmap` (siehe „Bitmap nachzeichnen“) auf jedes Bild. Parameter: `preset`
+(`logo`/`blackWhite`/`illustration`/`photo`), `engine` (`clusters` Farbflächen | `potrace` glatte Kurven)
+und – nur wenn gesetzt, sonst gilt die Vorgabe – `colorMode`, `colors`, `filterSpeckle`,
+`cornerThreshold`, `mode`, `hierarchical`, `threshold`, `ignoreTransparent`, `pathPrecision`, `refine`,
+`turdSize`, `turnPolicy`, `alphaMax`, `optCurve`, `optTolerance`; dazu `keepOriginal` (Original-Bitmap
+als **ausgeblendete** Ebene behalten, Vorgabe `false`) und `transparentCanvas` (Vorgabe `true`).
+Die Ausgabe wählt die Endkarte „Speichern als“ (`output.format`): `svg` (nur Pfade, Löcher
+gerade/ungerade), `fwpng` (bearbeitbar: Ebene mit der Gruppe, ggf. ausgeblendete Original-Ebene) oder
+ein Pixelformat (flach gerechnet). Beides auf einmal: zweimal laufen lassen (`out` je Format).
+Animationen: nur das erste Bild (Warnung im Bericht).
+
+**Abläufe**
+
+* Logos nachzeichnen: `batch {"action": "preview", "recipe": "logos-to-svg", "file": "C:\\logos\\a.png"}`
+  → Bilder prüfen → `batch {"recipe": "logos-to-svg", "folder": "C:\\logos", "out": "C:\\svg"}`.
+  Anderes Verfahren: `recipe` als Objekt, z. B.
+  `{"steps": [{"id": "vector.trace", "params": {"preset": "blackWhite", "engine": "potrace"}}], "output": {"format": "svg"}}`.
+* Viele Fotos im Hintergrund: `batch {"recipe": "web-webp", "folder": "D:\\Fotos", "async": true}` → `{jobId: 1}`
+  → `batch {"action": "status", "jobId": 1, "wait_ms": 10000}` wiederholen, bis `state` ≠ `running`
+  → `report.summary`; bei Bedarf `batch {"action": "cancel", "jobId": 1}`.
+* Eigenes Rezept: `batch {"action": "steps"}` → Rezept bauen → `batch {"action": "validate", "recipe": {…}}`
+  → `batch {"action": "plan", …}` → `batch {…}`.
+
+Dasselbe über `run_command`: `batch.run`, `batch.plan`, `batch.preview`, `batch.steps`, `batch.validate`
+(blockierend; `recipe` nimmt auch Vorlagennamen). In der Oberfläche öffnet
+`firepixel.exe --batch <rezept|vorlage> [dateien|ordner …]` das Studio mit Rezept und Dateien.
+
 ## 6. Befehle-Menü und gespeicherte Befehle
 
 Das Menü **Befehle** zeigt den Befehlsordner (`%APPDATA%\Firepixel\Commands`, Unterordner =
@@ -425,6 +496,9 @@ firepixel-cli commands [--filter TEXT] [--category CAT] [--all] [--json]
 firepixel-cli info <datei> [--json] [--depth N] [--all-pages] [--types text,path]
 firepixel-cli run <datei>|--new 800x600[:#farbe] --cmd <name> [--params <json>|@datei] … [--steps <json>] --out <datei>|--in-place
 firepixel-cli batch --actions <json|datei> --in <ordner> --out <ordner> [--format png|fwpng|gif|jpg|webp|…]
+firepixel-cli batch --recipe <rezept.fpbatch.json|vorlage> (--in <ordner> [--recursive] | <dateien…>) [--out <ordner>] [--conflict rename|skip|overwrite] [--dry-run] [--threads N] [--report bericht.json] [--json]
+firepixel-cli batch --templates [--json]   (eingebaute Vorlagen, Namen für --recipe)
+firepixel-cli batch --steps [--json]       (Katalog der Schritte)
 firepixel-cli render <datei> [--page N] [--state N] [--zoom Z] [--rect l,t,r,b] [--element ID] --out x.png
 firepixel-cli convert <ein> <aus>
 firepixel-cli script <x.jsf> [datei] [--code JS] [--out datei] [--arg WERT]

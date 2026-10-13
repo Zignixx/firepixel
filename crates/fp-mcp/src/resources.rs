@@ -14,9 +14,9 @@ pub struct DocResource {
 
 /// Alle Ressourcen.
 pub fn resources() -> Vec<DocResource> {
-    ["agents", "commands", "document-model", "examples", "jsf"]
+    ["agents", "commands", "document-model", "examples", "jsf", "batch"]
         .into_iter()
-        .zip(["firepixel://docs/agents.md", "firepixel://docs/commands.md", "firepixel://docs/document-model.md", "firepixel://docs/examples.md", "firepixel://docs/jsf.md"])
+        .zip(["firepixel://docs/agents.md", "firepixel://docs/commands.md", "firepixel://docs/document-model.md", "firepixel://docs/examples.md", "firepixel://docs/jsf.md", crate::batch::RESOURCE_URI])
         .map(|(name, uri)| DocResource { uri, name, title: fp_i18n::t(&format!("mcp-res-{name}")), description: fp_i18n::t(&format!("mcp-res-{name}.description")) })
         .collect()
 }
@@ -29,6 +29,7 @@ pub fn read(uri: &str, registry: &CommandRegistry) -> Option<String> {
         "firepixel://docs/document-model.md" => Some(by_language(DOCUMENT_MODEL_MD, DOCUMENT_MODEL_MD_EN).to_string()),
         "firepixel://docs/examples.md" => Some(by_language(EXAMPLES_MD, EXAMPLES_MD_EN).to_string()),
         "firepixel://docs/jsf.md" => Some(jsf_markdown()),
+        crate::batch::RESOURCE_URI => Some(crate::batch::batch_markdown()), // BATCH-9
         _ => None,
     }
 }

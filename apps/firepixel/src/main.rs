@@ -1,6 +1,6 @@
 //! Firepixel: Grafik- und Webdesign-Programm.
 //!
-//! Aufruf: `firepixel [--design=normal|dark|oled] [--mcp[=PORT]] [--help] [Datei …]`
+//! Aufruf: `firepixel [--design=normal|dark|oled] [--mcp[=PORT]] [--batch [rezept] [dateien …]] [--help] [Datei …]`
 //! (Hilfetext: Schlüssel `ui-cli-help` in `crates\fp-i18n\locales\<sprache>\ui.ftl`)
 //!
 //! * `--design=…` überschreibt das gespeicherte Design (z. B. für Bildschirmfotos).
@@ -18,7 +18,27 @@ fn main() -> eframe::Result {
     fp_i18n::paths::enable_migration();
     let mut design = None;
     let mut files = Vec::new();
+    // `--batch [rezept] [dateien/ordner …]` (BATCH-9): Batch-Studio mit Rezept (Pfad zu *.fpbatch.json
+    // oder Name einer eingebauten Vorlage, auch `--batch=<rezept>`) und den folgenden Dateien/Ordnern.
+    let mut batch: Option<(Option<String>, Vec<std::path::PathBuf>)> = None;
     for a in std::env::args_os().skip(1) {
+        if let Some((recipe, list)) = batch.as_mut() {
+            let s = a.to_string_lossy().to_string();
+            if !s.starts_with("--") {
+                let p = std::path::PathBuf::from(&a);
+                if recipe.is_none() && list.is_empty() && (s.to_lowercase().ends_with(".fpbatch.json") || !p.exists()) {
+                    *recipe = Some(s);
+                } else if p.exists() {
+                    list.push(p);
+                }
+                continue;
+            }
+        }
+        if let Some(r) = a.to_string_lossy().strip_prefix("--batch") {
+            let r = r.trim_start_matches('=');
+            batch = Some(((!r.is_empty()).then(|| r.to_string()), Vec::new()));
+            continue;
+        }
         let s = a.to_string_lossy().to_string();
         if matches!(s.as_str(), "--help" | "-h" | "/?") {
             // Hilfetext in der Sprache der Oberfläche (ohne Konsole nur bei umgeleiteter Ausgabe sichtbar)
@@ -41,6 +61,9 @@ fn main() -> eframe::Result {
                 files.push(p);
             }
         }
+    }
+    if let Some((recipe, list)) = batch {
+        fp_ui::batch::request_launch(recipe, list);
     }
     fp_ui::run(files, design)
 }

@@ -1,0 +1,16 @@
+{
+  "format": "firepixel-batch-recipe",
+  "version": 1,
+  "name": "Rename photos by date",
+  "description": "Name from the capture date (EXIF) and a counter: 2026-10-13_001.jpg.",
+  "steps": [],
+  "rename": {
+    "mode": "builder",
+    "parts": [
+      { "kind": "date", "source": "exif", "format": "YYYY-MM-DD" },
+      { "kind": "text", "text": "_" },
+      { "kind": "counter", "start": 1, "step": 1, "digits": 3 }
+    ]
+  },
+  "output": { "format": "same", "options": {} }
+}

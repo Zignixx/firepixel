@@ -14,6 +14,7 @@ pub mod adjust; // BATCH-4
 pub mod script; // BATCH-4
 pub mod anim; // BATCH-7
 pub mod gifopt; // BATCH-8
+pub mod vector; // BATCH-9
 
 /// Registriert alle eingebauten Schritte.
 pub fn register_all(r: &mut StepRegistry) {
@@ -27,4 +28,5 @@ pub fn register_all(r: &mut StepRegistry) {
     script::register(r); // BATCH-4
     anim::register(r); // BATCH-7
     gifopt::register(r); // BATCH-8
+    vector::register(r); // BATCH-9
 }

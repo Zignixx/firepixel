@@ -514,6 +514,46 @@ pub fn open_with_files(st: &mut AppState, paths: &[PathBuf]) {
     }
 }
 
+// ------------------------------------------------------------------ Start mit `--batch` (BATCH-9)
+
+/// Start-Auftrag aus der Kommandozeile: Rezept (Pfad oder Vorlagenname) und Dateien/Ordner.
+type Launch = (Option<String>, Vec<PathBuf>);
+
+fn launch_slot() -> &'static std::sync::Mutex<Option<Launch>> {
+    static L: std::sync::OnceLock<std::sync::Mutex<Option<Launch>>> = std::sync::OnceLock::new();
+    L.get_or_init(|| std::sync::Mutex::new(None))
+}
+
+/// `firepixel --batch [rezept] [dateien…]`: Das Studio öffnet sich im ersten Frame mit dem Rezept
+/// (Pfad zu `*.fpbatch.json` oder Name einer eingebauten Vorlage) und den Dateien/Ordnern.
+pub fn request_launch(recipe: Option<String>, files: Vec<PathBuf>) {
+    if let Ok(mut l) = launch_slot().lock() {
+        *l = Some((recipe, files));
+    }
+}
+
+/// Führt einen angemeldeten Start-Auftrag einmal aus (aus [`frame_input`]).
+pub fn apply_launch(st: &mut AppState) {
+    let Some((recipe, files)) = launch_slot().lock().ok().and_then(|mut l| l.take()) else { return };
+    launch(st, recipe.as_deref(), &files);
+}
+
+/// Öffnet das Studio mit Dateien und Rezept (Pfad zu `*.fpbatch.json` oder Vorlagenname). Liefert
+/// `false`, wenn das Rezept weder Datei noch Vorlage ist (Studio offen, Rezept unverändert).
+pub fn launch(st: &mut AppState, recipe: Option<&str>, files: &[PathBuf]) -> bool {
+    open_with_files(st, files);
+    let Some(name) = recipe else { return true };
+    let path = PathBuf::from(name);
+    let loaded = if path.is_file() { Recipe::load(&path).ok().map(|r| (r, Some(path))) } else { fp_batch::templates::recipe(name).map(|r| (r, None)) };
+    match (loaded, st.batch.as_mut()) {
+        (Some((r, p)), Some(s)) => {
+            s.set_recipe(r, p);
+            true
+        }
+        _ => false,
+    }
+}
+
 /// Schließt das Studio (bricht einen laufenden Auftrag ab).
 pub fn close(st: &mut AppState) {
     st.batch = None;
@@ -534,6 +574,7 @@ pub fn is_front(st: &AppState) -> bool {
 /// Tasten des Studios (Strg+Z/Y auf das Rezept, Entf, Pfeile, Strg+Eingabe, F5, Strg+O) werden
 /// verbraucht, damit sie nicht auf das verdeckte Dokument wirken.
 pub fn frame_input(ctx: &egui::Context, st: &mut AppState) {
+    apply_launch(st); // BATCH-9: `firepixel --batch …`
     let dialogs_open = st.dialogs.any_open();
     let Some(s) = st.batch.as_mut() else { return };
     s.drop_hover = s.front && ctx.input(|i| !i.raw.hovered_files.is_empty());

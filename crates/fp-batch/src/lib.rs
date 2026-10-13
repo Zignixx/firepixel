@@ -25,6 +25,7 @@ pub mod report;
 pub mod step;
 pub mod steps;
 pub mod video;
+pub mod templates; // BATCH-9: eingebaute Rezept-Vorlagen
 
 pub use error::{BatchError, Result};
 pub use executor::{plan, run, spawn, AskChoice, CancelToken, JobHandle, Progress, RunOptions};

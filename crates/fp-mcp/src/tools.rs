@@ -423,7 +423,7 @@ pub fn tool_defs() -> Vec<ToolDef> {
             destructive: false,
         },
     ];
-    defs.into_iter().map(localize_tool).collect()
+    defs.into_iter().chain([crate::batch::tool_def()]).map(localize_tool).collect() // BATCH-9: + `batch`
 }
 
 /// Werkzeuge, die die laufende Oberfläche brauchen (Brückenmodus; asynchron im Server beantwortet).
@@ -727,6 +727,7 @@ fn call_inner(s: &mut Session, env: &ToolEnv, name: &str, args: &Value) -> ToolO
         "tool_event" => tool_event(s, args),
         "documents" => documents(s, args),
         "run_script" => run_script(s, env, args),
+        "batch" => crate::batch::call(s, args), // BATCH-9
         "screenshot" | "ui_state" | "ui_action" | "ui_input" | "ui_find" | "ui_file_dialog" => ToolOutput::error(crate::McpError::NoUi.to_string()),
         other => ToolOutput::error(fp_i18n::tr!("err-mcp-unknown-tool", name = other)),
     }

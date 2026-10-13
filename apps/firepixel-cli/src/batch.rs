@@ -37,7 +37,7 @@ pub fn intercept() -> Option<ExitCode> {
         return None;
     }
     let rest = &args[i + 1..];
-    if !rest.iter().any(|a| a == "--recipe" || a.starts_with("--recipe=") || a == "--steps") {
+    if !rest.iter().any(|a| a == "--recipe" || a.starts_with("--recipe=") || a == "--steps" || a == "--templates") {
         return None;
     }
     let m = match command().try_get_matches_from(std::iter::once("batch".to_string()).chain(rest.iter().cloned())) {
@@ -62,6 +62,7 @@ fn command() -> Command {
         .disable_version_flag(true)
         .arg(Arg::new("recipe").long("recipe").value_name("FILE|JSON").help(t("batch-cli-arg-recipe")))
         .arg(Arg::new("steps").long("steps").action(ArgAction::SetTrue).help(t("batch-cli-arg-steps")))
+        .arg(Arg::new("templates").long("templates").action(ArgAction::SetTrue).help(t("batch-cli-arg-templates"))) // BATCH-9
         .arg(Arg::new("in").long("in").value_name("FOLDER").help(t("batch-cli-arg-in")))
         .arg(Arg::new("recursive").long("recursive").action(ArgAction::SetTrue).help(t("batch-cli-arg-recursive")))
         .arg(Arg::new("files").num_args(0..).value_name("FILES").help(t("batch-cli-arg-files")))
@@ -88,6 +89,12 @@ fn load_recipe(arg: &str) -> Result<Recipe, String> {
     if a.starts_with('{') {
         return Recipe::from_json(a).map_err(|e| e.to_string());
     }
+    // BATCH-9: Name einer eingebauten Vorlage (eine vorhandene Datei hat Vorrang)
+    if !a.starts_with('@') && !std::path::Path::new(a).exists()
+        && let Some(r) = fp_batch::templates::recipe(a)
+    {
+        return Ok(r);
+    }
     Recipe::load(std::path::Path::new(a.strip_prefix('@').unwrap_or(a))).map_err(|e| e.to_string())
 }
 
@@ -110,9 +117,25 @@ fn print_steps(json_out: bool) -> ExitCode {
     ExitCode::SUCCESS
 }
 
+/// `batch --templates [--json]`: eingebaute Vorlagen (BATCH-9).
+fn print_templates(json_out: bool) -> ExitCode {
+    if json_out {
+        println!("{}", serde_json::to_string_pretty(&fp_batch::templates::catalog_json()).unwrap_or_default());
+        return ExitCode::SUCCESS;
+    }
+    println!("{}", t("batch-cli-templates-header"));
+    for tp in fp_batch::templates::all() {
+        println!("  {:<22} {} – {}", tp.id, tp.title, tp.description);
+    }
+    ExitCode::SUCCESS
+}
+
 fn run(m: &ArgMatches, json_out: bool) -> ExitCode {
     if m.get_flag("steps") {
         return print_steps(json_out);
+    }
+    if m.get_flag("templates") {
+        return print_templates(json_out); // BATCH-9
     }
     let Some(recipe_arg) = m.get_one::<String>("recipe") else {
         return fail(json_out, 2, t("batch-err-recipe-missing"));

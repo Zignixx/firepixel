@@ -1,0 +1,11 @@
+{
+  "format": "firepixel-batch-recipe",
+  "version": 1,
+  "name": "Resize for the web + WebP",
+  "description": "Longest side 1920 px, WebP quality 82, metadata without GPS.",
+  "steps": [
+    { "id": "resize", "enabled": true, "params": { "mode": "longEdge", "size": 1920, "onlyShrink": true, "filter": "auto" } },
+    { "id": "metadata.edit", "enabled": true, "params": { "keep": "all", "remove": ["gps"] } }
+  ],
+  "output": { "format": "webp", "options": { "quality": 82, "lossless": false } }
+}

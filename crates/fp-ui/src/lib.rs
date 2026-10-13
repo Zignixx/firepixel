@@ -135,6 +135,7 @@ impl FirepixelApp {
             o.zoom_with_keyboard = false;
         });
         fp_batch::install(); // BATCH-2: Befehle batch.* (auch über die MCP-Brücke)
+        batch::register_templates(|| fp_batch::templates::all().into_iter().map(|t| batch::Template { title: t.title, description: t.description, recipe: t.recipe }).collect()); // BATCH-9: eingebaute Vorlagen
         let mut state = AppState::new(session, settings, if threaded { Some(ctx.clone()) } else { None });
         state.sync_render = !threaded;
         FirepixelApp { state, last_title: String::new(), lang_generation: fp_i18n::generation(), fonts_ready: false, cli_design: None, frames: 0 }

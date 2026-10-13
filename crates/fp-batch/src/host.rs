@@ -25,12 +25,16 @@ pub fn install() {
 
 struct Host;
 
-/// Rezept aus einem Parameter: Objekt, JSON-Text oder Pfad.
+/// Rezept aus einem Parameter: Objekt, JSON-Text, Pfad oder Name einer eingebauten Vorlage
+/// (BATCH-9, [`crate::templates::find`]; eine vorhandene Datei hat Vorrang).
 pub fn recipe_from_param(v: Option<&Value>) -> Result<Recipe, String> {
     match v {
         Some(Value::Object(_)) => Recipe::from_value(v.cloned().unwrap_or(Value::Null)).map_err(|e| e.to_string()),
         Some(Value::String(s)) if s.trim_start().starts_with('{') => Recipe::from_json(s).map_err(|e| e.to_string()),
-        Some(Value::String(s)) => Recipe::load(std::path::Path::new(s)).map_err(|e| e.to_string()),
+        Some(Value::String(s)) => match crate::templates::recipe(s).filter(|_| !std::path::Path::new(s).exists()) {
+            Some(r) => Ok(r),
+            None => Recipe::load(std::path::Path::new(s)).map_err(|e| e.to_string()),
+        },
         _ => Err(fp_i18n::t("batch-err-recipe-missing")),
     }
 }

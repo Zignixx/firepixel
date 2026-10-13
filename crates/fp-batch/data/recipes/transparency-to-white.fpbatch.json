@@ -1,0 +1,10 @@
+{
+  "format": "firepixel-batch-recipe",
+  "version": 1,
+  "name": "Transparency to white",
+  "description": "Fill transparent areas with white; keep the format.",
+  "steps": [
+    { "id": "background.flatten", "enabled": true, "params": { "kind": "color", "color": "#ffffff", "onlyIfTransparent": true, "edge": "blend" } }
+  ],
+  "output": { "format": "same", "options": {} }
+}

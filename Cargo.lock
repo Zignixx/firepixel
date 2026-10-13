@@ -1982,6 +1982,7 @@ name = "fp-mcp"
 version = "0.1.0"
 dependencies = [
  "bytes",
+ "fp-batch",
  "fp-color",
  "fp-engine",
  "fp-fwpng",

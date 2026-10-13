@@ -40,6 +40,7 @@
 //! assert!(!r.is_error);
 //! ```
 
+pub mod batch; // BATCH-9: Werkzeug `batch`, Ressource batch.md
 pub mod docjson;
 pub mod error;
 pub mod host;

@@ -1,0 +1,11 @@
+{
+  "format": "firepixel-batch-recipe",
+  "version": 1,
+  "name": "Square 1080",
+  "description": "Crop to a square of 1080 × 1080 px (centre), JPEG quality 88.",
+  "steps": [
+    { "id": "resize", "enabled": true, "params": { "mode": "fill", "width": 1080, "height": 1080, "onlyShrink": false, "filter": "auto" } },
+    { "id": "background.flatten", "enabled": true, "params": { "kind": "color", "color": "#ffffff", "onlyIfTransparent": true } }
+  ],
+  "output": { "format": "jpeg", "options": { "quality": 88 } }
+}
