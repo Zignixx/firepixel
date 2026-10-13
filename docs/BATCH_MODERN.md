@@ -295,7 +295,9 @@ Unbekannte Schlüssel werden beim Lesen ignoriert und beim Speichern erhalten (`
   Knopf „Kopieren“.
 - **Bericht**: `batch-report.json` (Schlüssel englisch: `recipe`, `started`, `finished`, `items[]` mit
   `source`, `target`, `status`, `bytesIn`, `bytesOut`, `ms`, `warnings`, `error`) und optional
-  `batch-report.html` (P2) im Ausgabeordner; Protokoll `batch-log.txt` (englisch, technisch) unter
+  `batch-report.html` (umgesetzt BATCH-11b: Kacheln, Fehlerliste, je Datei Vorschaubilder vorher/nachher als
+  eingebettete PNG, Maße, Größen, Hinweise; hell/dunkel nach System; Rezept `output.reportHtml`, Vorgabe an;
+  Knopf „Bericht ansehen“ in der Ende-Karte) im Ausgabeordner; Protokoll `batch-log.txt` (englisch, technisch) unter
   `%LOCALAPPDATA%\Firepixel\Logs\`.
 - Fenster schließen während des Laufs: Rückfrage „Batch läuft noch – abbrechen und schließen?“.
 
@@ -370,20 +372,29 @@ Animation rosa, Optimieren grün-türkis, Vektor/Skript neutral.
 | ID | Name | Parameter | V | Verfahren | P |
 |---|---|---|---|---|---|
 | `output` (Endkarte) | Speichern als | **A** `format`: same, png, jpeg, webp, avif, gif, apng, tiff, bmp, tga, qoi, ico, wbmp, fwpng, psd, jxl (P2), pdf (P2), svg (über `vector.trace`); Formatoptionen siehe unten | ja (Größe) | `fp-export` (vorhanden) | **P1** |
-| – PNG | | **A** `bitDepth` 8/24/32/auto *auto*; `palette` 2…256; `interlace` aus; `compression` fast/default/max *default* | ja | `png`, `fp-export::png_out`; max → `optimize.png` | **P1** |
+| – PNG | | **A** `bitDepth` 8/24/32/auto *auto*; `palette` 2…256 *256* (nur bei 8 Bit); `interlace` aus; `compression` default/fast/max *default* | ja | `png`, `fp-export::png_out`; max → `optimize.png` | **P1** |
 | – JPEG | | **A** `quality` 1…100 *85*; `progressive` an; `subsampling` 4:4:4/4:2:2/4:2:0 *auto (≥90 → 4:4:4)*; `background` für Transparenz *#ffffff* | ja | `fp-export::jpeg` (eigen) | **P1** |
 | – WebP | | **A** `quality` 0…100 *82*; **A** `lossless` aus; `alphaQuality` 0…100 *100*; `method` 0…6 *4* | ja | `webp` 0.3.1 (libwebp statisch, BSD-3) | **P1** |
 | – AVIF | | **A** `quality` 1…100 *60*; `speed` 1…10 *6*; `alphaQuality` | ja | `ravif` 0.13 (BSD-3) | **P1** |
-| – GIF (Standbild) | | **A** `colors` 2…256 *256*; `dither` none/ordered/floydSteinberg/blueNoise *floydSteinberg*; `ditherAmount` 0…100 *80*; `transparency` | ja | `fp-export` Quantisierer + §5.6 | **P1** |
-| – TIFF/BMP/TGA/QOI/WBMP | | TIFF `compression` none/lzw/deflate/packbits *lzw* | ja | `fp-export::formats` (vorhanden) | **P1** |
+| – GIF (Standbild und Animation) | | Optionen des GIF-Optimierers, Tabelle §3.10 (Schema `output.gif`) | ja | eigener Kodierer §5.6 | **P1** |
+| – TIFF/BMP/TGA/QOI/WBMP | | TIFF `compression` default/none/lzw/deflate/packbits *default = lzw*; TGA `compression` default/none *default = RLE*; BMP/WBMP `background` *#ffffff* | ja | `fp-export::formats` (vorhanden) | **P1** |
 | – ICO | | `sizes` [16,24,32,48,64,128,256] *alle ≤ Bild*; `pngFrom` 256 | ja | `fp-export::write_ico` | P2 |
 | – FW-PNG | | – (Dokument bleibt bearbeitbar) | – | `fp-fwpng` | **P1** |
+| – alle außer FW-PNG | | `alsoFwpng` aus: zusätzlich eine bearbeitbare FW-PNG mit gleichem Namen neben jede Ausgabe (z. B. SVG **und** FW-PNG aus `vector.trace` in einem Lauf); Konflikte nach der Regel des Rezepts, Bericht `extraTargets` | – | Executor (BATCH-11b) | **P1** |
 | – PSD | | `layers` an (aus FW-PNG/PSD-Quellen) | – | `fp-export::psd_out` | P2 |
 | – JPEG XL | | `lossless` an / `distance` 0…15 *1* | ja | Lizenz/Reife prüfen: `zune-jpegxl` (nur verlustfrei, MIT/Apache/Zlib) bzw. `jxl-encoder` falls permissiv; sonst P3 | P2 |
 | – PDF | | `pageSize` Bild/A4/Letter, `fit`, ein PDF je Bild oder **alle in eins** | – | eigener Schreiber (`fp-export` hat PDF-Bausteine für Vektorausgabe) | P2 |
 | `format.colorDepth` | Farbtiefe | 8/16 Bit, Graustufen, indiziert | ja | eigen | P3 |
 | `format.colorProfile` | Farbprofil | `mode` keep / convertToSrgb / assignSrgb / strip *convertToSrgb* | ja | ICC lesen eigen; Umrechnung `qcms` 0.3 (MPL-2.0, **nur** wenn MPL zugelassen, sonst eigene Matrix-/TRC-Umrechnung für RGB-Matrix-Profile) | P2 |
 | `format.multiPage` | Mehrseitig/Ebenen aufteilen | Quelle mit Seiten/Ebenen/Frames (FW-PNG, PSD, TIFF, ICO, GIF) → je Seite/Ebene/Frame eine Datei; `{page}`/`{layer}`/`{frame}` im Namen | – | `fp-io`, `fp-model` | P2 |
+
+**Felder je Format (BATCH-11b):** Das Schema der Endkarte (`output`) hängt jedes Formatfeld per
+`visibleWhen` an `format`; gleichnamige Felder stehen je Format einmal da (z. B. `quality` JPEG *85*,
+WebP *82*, AVIF *60*; `compression` je PNG/TIFF/TGA mit eigenen Werten), sichtbar ist immer nur eines.
+Bei GIF hängt die Oberfläche das Schema `output.gif` (§3.10) als Abschnitt „GIF-Optimierer“ an. Beim
+Formatwechsel entfernt die Karte Werte, die das neue Format so nicht annimmt (TIFF `lzw` → PNG);
+gültige Werte (Qualität) bleiben. Hinweise in der Karte: „Nachzeichnen“ mit Pixelformat, JPEG füllt
+Transparenz mit `background`.
 
 **Ziel = „wie Quelle“** behält das Format (bei unlesbarer Ausgabe, z. B. HEIC/PSD → PNG mit Hinweis).
 Die Endung folgt immer dem Ausgabeformat (`.jpg`, `.webp`, `.fw.png`); Endungsschreibweise ⋯
@@ -494,23 +505,30 @@ Patente; P3 nur über ffmpeg des Nutzers).
 
 ### 3.10 GIF-Optimierer „kleine GIFs, sehr gute Qualität“ (Teil von „Speichern als GIF“)
 
-Parameter in der Endkarte bei Format GIF (Anfänger sieht nur **Qualität** und **Zielgröße**):
+Parameter in der Endkarte bei Format GIF (Anfänger sieht **Voreinstellung**, **Qualität** und **Zielgröße**;
+eigene Felder, kein JSON; Stand BATCH-11b). Eine andere Voreinstellung setzt die Qualität (60/80/100) im
+selben Rückgängig-Schritt. Felder ohne Vorgabe („Automatisch“) wählt der Kodierer nach Qualität und Inhalt.
+Unter den Feldern: erreichte Größe der Vorschaudatei bzw. ⚠ „Zielgröße nicht erreichbar: kleinste Datei …“;
+im Lauf steht die Warnung im Bericht (`batch-warn-gif-target-missed`).
 
 | Parameter | Bereich, *Vorgabe* | Wirkung |
 |---|---|---|
 | **A** `preset` | smallest / balanced / best *balanced* | setzt die folgenden Werte |
-| **A** `quality` | 1…100 *80* | steuert Farben, Dithering-Stärke, Verlust |
+| **A** `quality` | 1…100 *80* (smallest 60, best 100) | steuert Farben, Dithering-Stärke, Verlust |
 | **A** `maxKB` | 0 (aus) … 100 000 | Zielgröße: Suche über Qualität → fps → Größe (§3.12) |
-| `colors` | 2…256 *256* | höchste Palettengröße |
+| `colors` | 2…256 *automatisch* | höchste Palettengröße; ohne Wert nach Qualität und Inhalt (Grafik 44, Foto 92 bei Qualität 80) |
 | `palette` | global / perFrame / auto *auto* | auto: global, wenn der Fehler < Schwelle, sonst je Frame (lokale Farbtabelle) |
 | `dither` | none / ordered / blueNoise / floydSteinberg / temporal *temporal* | `temporal`: zeitlich stabiles Dithering (§5.6) |
 | `ditherAmount` | 0…100 *70* | |
-| `lossy` | 0…200 *40* (balanced), 80 (smallest), 0 (best) | verlustbehaftetes LZW (§5.6, eigene Umsetzung) |
+| `lossy` | 0…200 *automatisch* (Grafik (100 − q)·2, Foto (100 − q)·5) | verlustbehaftetes LZW (§5.6, eigene Umsetzung) |
 | `diffTransparency` | an | unveränderte Pixel → transparent (bessere LZW-Läufe) |
 | `diffThreshold` | 0…32 *3* (Abstand in Oklab × 100) | „unverändert“ bei kleinem Unterschied |
 | `cropChanged` | an | nur das Rechteck mit Änderungen je Frame speichern |
 | `mergeSimilar` | an | fast gleiche Frames zusammenlegen (Dauer addiert) |
-| `disposal` | auto | auto wählt je Frame „nicht entsorgen“ oder „Hintergrund“ nach kleinerer Größe |
+| `disposal` | auto / keep *auto* | auto wählt je Frame „nicht entsorgen“ oder „Hintergrund“ nach kleinerer Größe |
+| `transparency` | an | Transparenz als GIF-Transparenz speichern |
+| `background` | Farbe *#ffffff* (nur bei `transparency` aus) | Füllfarbe für halbtransparente Pixel |
+| `splitFrames` | an/aus *automatisch* (an unter Qualität 95) | getrennte Änderungen eines Frames als einzelne Teilbilder (je 20 ms vor dem Bildwechsel, BATCH-8b) |
 
 ### 3.11 Dokument-Schritte (FW-PNG/PSD/SVG als Dokument, Gruppe „Dokument“)
 
