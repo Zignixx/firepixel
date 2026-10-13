@@ -2,6 +2,9 @@
 //! Teilung (nach Wu 1991 / Heckbert 1982) und k-Means-Verfeinerung (Lloyd) – alles im Oklab-Raum,
 //! eigene Umsetzung. Hat das Bild höchstens so viele Farben wie Plätze frei sind, werden sie exakt
 //! übernommen (verlustfrei für Bildschirmaufnahmen, Pixelart, Zeichentrick mit flachen Farben).
+//! Abstände für Teilung, k-Means und Farbsuche können die Helligkeit stärker gewichten
+//! ([`Palette::weighted`], [`build_weighted`], BATCH-8b): Grafiken bekommen so mehr Helligkeitsstufen
+//! (weniger sichtbare Stufen in Verläufen), Fotos bleiben farbtreu (Gewicht 1).
 
 use super::color::{dist2, lab_to_rgb, pack, rgb_to_lab, ColorMap, Lab};
 
@@ -96,12 +99,19 @@ pub struct Palette {
     pub rgb: Vec<[u8; 3]>,
     pub lab: Vec<Lab>,
     cache: ColorMap<u8>,
+    /// Gewicht der Helligkeit in der Farbsuche (1 = Oklab).
+    l_weight: f32,
 }
 
 impl Palette {
     pub fn new(rgb: Vec<[u8; 3]>) -> Palette {
+        Palette::weighted(rgb, 1.0)
+    }
+
+    /// Palette, deren Farbsuche die Helligkeit `l_weight`-fach gewichtet.
+    pub fn weighted(rgb: Vec<[u8; 3]>, l_weight: f32) -> Palette {
         let lab = rgb.iter().map(|c| rgb_to_lab(*c)).collect();
-        Palette { rgb, lab, cache: ColorMap::default() }
+        Palette { rgb, lab, cache: ColorMap::default(), l_weight }
     }
 
     pub fn len(&self) -> usize {
@@ -117,7 +127,7 @@ impl Palette {
         let mut best = 0usize;
         let mut bd = f32::MAX;
         for (i, p) in self.lab.iter().enumerate() {
-            let d = dist2(p, c);
+            let d = super::color::wdist2(p, c, self.l_weight);
             if d < bd {
                 bd = d;
                 best = i;
@@ -165,8 +175,13 @@ impl Palette {
     }
 }
 
-/// Bildet höchstens `k` Farben aus der Statistik.
+/// Bildet höchstens `k` Farben aus der Statistik (Oklab-Abstand).
 pub fn build(hist: &Histogram, k: usize) -> Vec<[u8; 3]> {
+    build_weighted(hist, k, 1.0)
+}
+
+/// Bildet höchstens `k` Farben; Teilung und k-Means im Raum mit `wl`-fach gewichteter Helligkeit.
+pub fn build_weighted(hist: &Histogram, k: usize, wl: f32) -> Vec<[u8; 3]> {
     let k = k.clamp(1, 256);
     let entries = hist.entries();
     if entries.is_empty() {
@@ -175,12 +190,14 @@ pub fn build(hist: &Histogram, k: usize) -> Vec<[u8; 3]> {
     if entries.len() <= k && hist.exact() {
         return entries.iter().map(|e| super::color::unpack(e.0)).collect();
     }
-    let pts: Vec<(Lab, f32)> = entries.iter().map(|e| (e.1, e.2)).collect();
+    // Median-Cut und k-Means im Raum mit gewichteter Helligkeit (wie die Farbsuche)
+    let wl = wl.max(0.1);
+    let pts: Vec<(Lab, f32)> = entries.iter().map(|e| ([e.1[0] * wl, e.1[1], e.1[2]], e.2)).collect();
     let mut centers = median_cut(&pts, k);
     kmeans(&pts, &mut centers, 6);
     let mut out: Vec<[u8; 3]> = Vec::with_capacity(centers.len());
     for c in centers {
-        let rgb = lab_to_rgb(c);
+        let rgb = lab_to_rgb([c[0] / wl, c[1], c[2]]);
         if !out.contains(&rgb) {
             out.push(rgb);
         }
@@ -344,6 +361,37 @@ mod tests {
         assert!(gaps.iter().all(|g| *g < mean * 2.0), "{gaps:?}");
     }
 
+    /// Gewichtete Helligkeit (BATCH-8b): Die Palette trifft die Helligkeit genauer (kleinerer mittlerer
+    /// L-Fehler) und gibt dafür beim Farbton nach; Gewicht 1 ist der gewöhnliche Oklab-Abstand.
+    #[test]
+    fn weighted_palette_spends_more_levels_on_lightness() {
+        let mut h = Histogram::new();
+        let mut data = Vec::new();
+        for r in (0..=255u32).step_by(5) {
+            for g in (0..=255u32).step_by(15) {
+                let c = [r as u8, g as u8, 128];
+                let lab = rgb_to_lab(c);
+                h.add(c, &lab, 1.0);
+                data.push(lab);
+            }
+        }
+        let err = |p: &Palette| {
+            let (mut el, mut ec) = (0f32, 0f32);
+            for c in &data {
+                let q = p.lab[p.nearest_lab(c) as usize];
+                el += (q[0] - c[0]).abs();
+                ec += ((q[1] - c[1]).powi(2) + (q[2] - c[2]).powi(2)).sqrt();
+            }
+            (el / data.len() as f32, ec / data.len() as f32)
+        };
+        let plain = Palette::new(build(&h, 16));
+        let weighted = Palette::weighted(build_weighted(&h, 16, 2.0), 2.0);
+        let ((lp, cp), (lw, cw)) = (err(&plain), err(&weighted));
+        assert!(lw < lp && cw > cp, "L {lw} < {lp}, Farbton {cw} > {cp}");
+        let q = Palette::weighted(plain.rgb.clone(), 1.0);
+        let c = rgb_to_lab([100, 120, 90]);
+        assert_eq!(plain.nearest_lab(&c), q.nearest_lab(&c));
+    }
     #[test]
     fn histogram_coarsens_and_stays_bounded() {
         let mut h = Histogram::new();

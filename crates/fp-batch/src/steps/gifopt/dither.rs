@@ -5,7 +5,8 @@
 //! - `blueNoise`: dieselbe Mischung mit einer 64×64-Blue-Noise-Schwellwertmatrix (Void-and-Cluster
 //!   nach Ulichney 1993, eigen erzeugt, als Datei `bluenoise64.bin` im Crate).
 //! - `temporal`: Blue-Noise-Matrix, die zwischen den Frames **fest** bleibt (kein Flimmern, gute
-//!   LZW-Läufe), Stärke adaptiv: in glatten Flächen voll, an Kanten schwächer.
+//!   LZW-Läufe), Stärke adaptiv: in glatten Flächen voll, an Kanten schwächer, und mit Totzone (nur
+//!   wo der Quantisierungsfehler sichtbar wäre, BATCH-8b).
 //! - `floydSteinberg`: Fehlerverteilung mit Serpentine in Oklab, nur in geänderten Bereichen.
 //!
 //! In allen Arten übernehmen statische Pixel (gegenüber dem Vorframe unverändert) die Indizes des
@@ -226,12 +227,26 @@ pub fn index_frame(inp: &FrameInput, pal: &mut Palette, mode: DitherMode, amount
                         }
                         _ => ((bn[(y % BN) * BN + x % BN] as f32 + 0.5) / 4096.0, amount),
                     };
+                    let strength = if mode == DitherMode::Temporal { strength * deadzone(&pal.lab[p1 as usize], &inp.lab[i]) } else { strength };
                     out[i] = if t < ratio * strength { p2 as u16 } else { p1 as u16 };
                 }
             }
         }
     }
     out
+}
+
+/// Totzone von `temporal` (BATCH-8b), Oklab-Abstand zur nächsten Palettenfarbe: darunter wird nicht
+/// gemischt (der Fehler liegt unter der Sichtbarkeit, die Fläche bleibt ruhig und packt gut), darüber
+/// steigt die Stärke weich bis [`DEADZONE_FULL`] auf 100 % (sichtbare Stufen werden weiter aufgelöst).
+pub const DEADZONE_START: f32 = 0.01;
+/// Ende der weichen Totzone (volle Stärke).
+pub const DEADZONE_FULL: f32 = 0.03;
+
+fn deadzone(p: &Lab, c: &Lab) -> f32 {
+    let e = super::color::dist(p, c);
+    let t = ((e - DEADZONE_START) / (DEADZONE_FULL - DEADZONE_START)).clamp(0.0, 1.0);
+    t * t * (3.0 - 2.0 * t)
 }
 
 fn pick_static(inp: &FrameInput, i: usize) -> Option<u16> {
@@ -349,6 +364,25 @@ mod tests {
             }
         }
         assert!(same < BN * BN * 45 / 100, "zu klumpig: {same}");
+    }
+
+    /// Totzone (BATCH-8b): Liegt die Quelle fast auf einer Palettenfarbe, bleibt die Fläche ruhig
+    /// (jede Zeile eines senkrechten Verlaufs einfarbig); bei groben Stufen wird weiter gemischt.
+    #[test]
+    fn temporal_deadzone_keeps_fine_gradients_calm() {
+        let (w, h) = (64usize, 64usize);
+        let px: Vec<u32> = (0..w * h).map(|i| OPAQUE | pack([90, 140, (150 + i / w) as u8])).collect();
+        let lab: Vec<Lab> = px.iter().map(|p| lab_of(*p)).collect();
+        let st = vec![false; w * h];
+        let edge = vec![0.0; w * h];
+        let inp = FrameInput { w, h, px: &px, lab: &lab, static_mask: &st, prev_idx: None, edge: &edge };
+        let rows_uniform = |idx: &[u16]| (0..h).filter(|y| idx[y * w..(y + 1) * w].iter().all(|v| *v == idx[y * w])).count();
+        // fein: jede zweite Quellfarbe in der Palette (Fehler ≤ 1 Stufe) → keine Mischung
+        let mut fine = Palette::new((0..32).map(|k| [90, 140, (150 + 2 * k) as u8]).collect());
+        assert_eq!(rows_uniform(&index_frame(&inp, &mut fine, DitherMode::Temporal, 1.0)), h);
+        // grob: zwei Farben für den ganzen Verlauf → gemischt (viele Zeilen nicht einfarbig)
+        let mut coarse = Palette::new(vec![[90, 140, 150], [90, 140, 213]]);
+        assert!(rows_uniform(&index_frame(&inp, &mut coarse, DitherMode::Temporal, 1.0)) < h / 2);
     }
 
     #[test]

@@ -166,6 +166,7 @@ pub struct GifOptions {
     pub disposal_auto: Option<bool>,
     pub transparency: Option<bool>,
     pub matte: Option<[u8; 3]>,
+    pub split_frames: Option<bool>,
 }
 
 fn num(o: &Map<String, Value>, k: &str) -> Option<f64> {
@@ -198,6 +199,7 @@ impl GifOptions {
             disposal_auto: s("disposal").map(|d| d != "keep"),
             transparency: b("transparency"),
             matte: s("background").and_then(crate::step::parse_color).map(|c| [c[0], c[1], c[2]]),
+            split_frames: b("splitFrames"),
         }
     }
 
@@ -212,24 +214,39 @@ impl GifOptions {
 
     /// Einstellungen für eine Qualität. Liegt `q` unter der Ausgangsqualität (Zielgröße), werden auch
     /// ausdrücklich gesetzte Werte entsprechend verschärft (mehr Verlust, weniger Farben/Dithering).
+    ///
+    /// Ohne ausdrückliche Werte hängen Palettengröße und Verlust vom Inhalt ab (BATCH-8b, siehe
+    /// [`quality_colors`], [`quality_lossy`]): Grafiken (wenige Farben, Flächen, Verläufe) kommen mit
+    /// wenigen Farben aus und gewinnen kaum durch Verlust; Fotos/Videos brauchen mehr Farben (sonst
+    /// Farbflecken) und werden über verlustbehaftetes LZW im feinen Korn klein.
     pub fn resolve(&self, q: u8) -> GifSettings {
         let q = q.clamp(1, 100);
         let base = self.base_quality();
         let below = base.saturating_sub(q) as f32;
         let qf = q as f32;
-        let colors_q = 2f32.powf(3.0 + 5.0 * qf / 100.0).round() as usize;
-        let lossy = match self.lossy {
-            Some(l) => (l as f32 + 2.0 * below).round() as u32,
-            None => ((100.0 - qf) * 2.0).round() as u32,
+        let auto_colors = [quality_colors(qf, false), quality_colors(qf, true)];
+        let auto_lossy = [quality_lossy(qf, false), quality_lossy(qf, true)];
+        let (colors, colors_auto) = match self.colors {
+            // ausdrücklich: genau so viele, unter der Ausgangsqualität höchstens so viele wie automatisch
+            Some(c) => (c, (below > 0.0).then_some(auto_colors)),
+            None => (256, Some(auto_colors)),
         };
-        let amount = self.dither_amount.unwrap_or(70) as f32 / 100.0 * (1.0 - 0.5 * below / 100.0);
+        let (lossy, lossy_auto) = match self.lossy {
+            Some(l) => ((l as f32 + 2.0 * below).round() as u32, None),
+            None => (auto_lossy[0], Some(auto_lossy)),
+        };
+        // unter Qualität 50 weniger, ab 10 kein Dithering (wenige Farben + Dithering wären größer statt
+        // kleiner – die Zielgröße braucht eine mit der Qualität fallende Größe, BATCH-8b)
+        let amount = self.dither_amount.unwrap_or(70) as f32 / 100.0 * ((qf - 10.0) / 40.0).clamp(0.0, 1.0);
         let thr = self.diff_threshold.unwrap_or(3) as f32 / 100.0 * ((130.0 - qf) / 70.0).clamp(0.2, 2.0);
         GifSettings {
-            colors: self.colors.unwrap_or(256).min(colors_q).clamp(2, 256),
+            colors: colors.clamp(2, 256),
+            colors_auto,
             palette: self.palette.unwrap_or(PaletteMode::Auto),
             dither: self.dither.unwrap_or(DitherMode::Temporal),
             dither_amount: amount.clamp(0.0, 1.0),
             lossy: lossy.min(200),
+            lossy_auto,
             diff_transparency: self.diff_transparency.unwrap_or(true),
             diff_threshold: thr,
             crop_changed: self.crop_changed.unwrap_or(true),
@@ -240,8 +257,39 @@ impl GifOptions {
             loop_count: 0,
             scale: 1.0,
             frame_step: 1,
+            split_frames: self.split_frames.unwrap_or(q < 95),
         }
     }
+}
+
+/// Log-lineare Interpolation über Stützstellen `(Qualität, Wert)`.
+fn interp_log(q: f32, pts: &[(f32, f32)]) -> f32 {
+    let q = q.clamp(pts[0].0, pts[pts.len() - 1].0);
+    for w in pts.windows(2) {
+        let ((q0, v0), (q1, v1)) = (w[0], w[1]);
+        if q <= q1 {
+            let t = if q1 > q0 { (q - q0) / (q1 - q0) } else { 0.0 };
+            return (v0.ln() + (v1.ln() - v0.ln()) * t).exp();
+        }
+    }
+    pts[pts.len() - 1].1
+}
+
+/// Palettengröße (mit Transparenz-Index) je Qualität für Grafik bzw. Foto (BATCH-8b). Gemessen an
+/// den Testclips (Bericht `docs\berichte\batch8b.md`): „balanced“ (80) = 44 Farben für Grafik, 92 für
+/// Foto; „best“ (100) = 256.
+pub fn quality_colors(q: f32, photo: bool) -> usize {
+    let pts: &[(f32, f32)] = if photo {
+        &[(1.0, 8.0), (40.0, 32.0), (60.0, 60.0), (80.0, 92.0), (90.0, 160.0), (100.0, 256.0)]
+    } else {
+        &[(1.0, 6.0), (40.0, 16.0), (60.0, 24.0), (80.0, 44.0), (90.0, 96.0), (100.0, 256.0)]
+    };
+    (interp_log(q, pts).round() as usize).clamp(2, 256)
+}
+
+/// Verlust (0…200) je Qualität für Grafik bzw. Foto (BATCH-8b): Grafik (100 − q)·2, Foto (100 − q)·5.
+pub fn quality_lossy(q: f32, photo: bool) -> u32 {
+    (((100.0 - q.clamp(1.0, 100.0)) * if photo { 5.0 } else { 2.0 }).round() as u32).min(200)
 }
 
 /// Optimiert ein Element (mit Zielgröße, wenn `maxKB` gesetzt ist).
@@ -291,6 +339,7 @@ impl Step for GifOutput {
             ParamDef::bool("mergeSimilar", true),
             ParamDef::choice("disposal", &["auto", "keep"], "auto"),
             ParamDef::bool("transparency", true),
+            ParamDef::bool("splitFrames", true),
         ]
     }
     fn preview_ok(&self) -> bool {
@@ -336,5 +385,37 @@ impl Step for Stabilize {
     fn summary(&self, params: &Value) -> String {
         let t = params.get("threshold").and_then(Value::as_i64).unwrap_or(3);
         fp_i18n::tr!("batch-summary-anim-stabilize", threshold = t)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Voreinstellungen (BATCH-8b): Grafik braucht weniger Farben als Foto, Fotos mehr Verlust; beide
+    /// steigen bzw. fallen mit der Qualität; „best“ = 256 Farben ohne Verlust.
+    #[test]
+    fn quality_mapping_is_monotonic_and_content_aware() {
+        assert_eq!((quality_colors(80.0, false), quality_colors(80.0, true)), (44, 92));
+        assert_eq!((quality_colors(100.0, false), quality_colors(100.0, true)), (256, 256));
+        assert_eq!((quality_lossy(100.0, false), quality_lossy(100.0, true)), (0, 0));
+        assert_eq!((quality_lossy(80.0, false), quality_lossy(80.0, true)), (40, 100));
+        for photo in [false, true] {
+            for q in 1..100 {
+                assert!(quality_colors(q as f32, photo) <= quality_colors(q as f32 + 1.0, photo));
+                assert!(quality_lossy(q as f32, photo) >= quality_lossy(q as f32 + 1.0, photo));
+                assert!(quality_colors(q as f32, false) <= quality_colors(q as f32, true));
+            }
+        }
+        // ausdrückliche Farben gelten genau (ab der Ausgangsqualität), automatisch sonst
+        let o = GifOptions::from_map(&serde_json::json!({"colors": 128}).as_object().cloned().unwrap_or_default());
+        let s = o.resolve(80);
+        assert_eq!((s.colors, s.colors_auto, s.for_content(1.0).0), (128, None, 128));
+        let s = o.resolve(40);
+        assert_eq!(s.for_content(0.0).0, quality_colors(40.0, false));
+        let auto = GifOptions::default().resolve(80);
+        assert_eq!((auto.for_content(0.0), auto.for_content(1.0)), ((44, 40), (92, 100)));
+        // Teilbilder nur unter „best“
+        assert!(auto.split_frames && !GifOptions::default().resolve(100).split_frames);
     }
 }

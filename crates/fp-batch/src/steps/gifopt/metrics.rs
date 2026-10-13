@@ -53,6 +53,41 @@ pub fn ssim(a: &[[u8; 4]], b: &[[u8; 4]], w: usize, h: usize) -> f64 {
     if cnt > 0.0 { sum / cnt } else { 1.0 }
 }
 
+/// Farbtreue in der Fläche (BATCH-8b): mittlerer Oklab-Abstand der Mittelwerte von 8×8-Fenstern
+/// (Schrittweite 4), ×100. Unempfindlich für feines Korn und Dithering, empfindlich für Farbflecken
+/// und Farbverschiebungen, die SSIM auf L nicht sieht. 0 = gleich.
+pub fn color_error(a: &[[u8; 4]], b: &[[u8; 4]], w: usize, h: usize) -> f64 {
+    if a.len() != b.len() || a.len() < w * h || w == 0 || h == 0 {
+        return 100.0;
+    }
+    let la: Vec<[f32; 3]> = a.iter().map(|p| rgb_to_lab(flat(*p))).collect();
+    let lb: Vec<[f32; 3]> = b.iter().map(|p| rgb_to_lab(flat(*p))).collect();
+    let win = 8.min(w).min(h);
+    let step = (win / 2).max(1);
+    let (mut sum, mut cnt) = (0.0f64, 0.0f64);
+    let mut y = 0;
+    while y + win <= h {
+        let mut x = 0;
+        while x + win <= w {
+            let (mut ma, mut mb) = ([0f64; 3], [0f64; 3]);
+            for yy in y..y + win {
+                for xx in x..x + win {
+                    for k in 0..3 {
+                        ma[k] += la[yy * w + xx][k] as f64;
+                        mb[k] += lb[yy * w + xx][k] as f64;
+                    }
+                }
+            }
+            let n = (win * win) as f64;
+            sum += ((0..3).map(|k| ((ma[k] - mb[k]) / n).powi(2)).sum::<f64>()).sqrt();
+            cnt += 1.0;
+            x += step;
+        }
+        y += step;
+    }
+    if cnt > 0.0 { sum / cnt * 100.0 } else { 0.0 }
+}
+
 /// PSNR in dB auf RGB (∞ bei Gleichheit → 99).
 pub fn psnr(a: &[[u8; 4]], b: &[[u8; 4]]) -> f64 {
     let mut se = 0f64;

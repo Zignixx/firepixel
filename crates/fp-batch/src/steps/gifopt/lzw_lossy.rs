@@ -1,8 +1,9 @@
 //! GIF-LZW-Kodierer mit optionalem Verlust (SPEC-BATCH §5.6 Punkt 5), eigene Umsetzung des bekannten
 //! Prinzips: Beim Verlängern eines Wörterbuch-Eintrags wird für das nächste Pixel nicht nur der exakte
 //! Index akzeptiert, sondern jeder Folge-Index im Wörterbuch, dessen Farbe nah genug an der
-//! gewünschten Farbe liegt (Schwelle aus `lossy`). Das ergibt längere Codes, also weniger Bits. Der
-//! Fehler einer Ersetzung wird an das rechte und das untere Nachbarpixel weitergegeben.
+//! gewünschten Farbe liegt (Schwelle aus `lossy`, Abstand mit stärker gewichteter Helligkeit, siehe
+//! [`LOSSY_L_WEIGHT`]). Das ergibt längere Codes, also weniger Bits. Der Fehler einer Ersetzung wird an
+//! das rechte und das untere Nachbarpixel weitergegeben.
 //!
 //! Auch ohne Verlust nutzt der Kodierer gleichwertige Möglichkeiten: Ein unverändertes Pixel darf
 //! transparent (Vorbild bleibt sichtbar) **oder** in genau der sichtbaren Farbe kodiert werden – je
@@ -43,6 +44,12 @@ pub struct LzwParams<'a> {
     /// Breite des Rechtecks (für die Fehlerweitergabe nach unten).
     pub width: usize,
 }
+
+/// Gewicht der Helligkeit in der Verlust-Toleranz (BATCH-8b): Ersetzungen dürfen den Farbton deutlich
+/// stärker verschieben als die Helligkeit (Helligkeitsfehler sieht man als Struktur, kleine
+/// Farbtonfehler in feinem Korn kaum). Gemessen: bei gleicher Größe deutlich bessere SSIM.
+pub const LOSSY_L_WEIGHT: f32 = 3.0;
+
 
 const NONE: u16 = u16::MAX;
 const MAX_CODES: usize = 4096;
@@ -132,7 +139,7 @@ pub fn encode(plan: &[PlanPx], p: &LzwParams) -> (Vec<u8>, Vec<u8>) {
             return if dist2(c, &px.reference) <= 1e-10 { Some(0.0) } else { None };
         }
         let r = [px.reference[0] + carry[0], px.reference[1] + carry[1], px.reference[2] + carry[2]];
-        let d = dist2(c, &r);
+        let d = super::color::wdist2(c, &r, LOSSY_L_WEIGHT);
         if d <= thr2 { Some(d) } else { None }
     };
 
@@ -379,7 +386,8 @@ pub(crate) mod tests {
 
     #[test]
     fn lossy_respects_threshold() {
-        let pal: Vec<Lab> = (0..16).map(|i| [i as f32 / 15.0, 0.0, 0.0]).collect();
+        // Palette entlang des Farbtons (a), Abstand 1/15 je Stufe
+        let pal: Vec<Lab> = (0..16).map(|i| [0.6, i as f32 / 15.0, 0.0]).collect();
         let mut seed = 7u64;
         let plan: Vec<PlanPx> = (0..20_000)
             .map(|_| {
@@ -396,5 +404,29 @@ pub(crate) mod tests {
         assert_eq!(c0.iter().zip(&plan).filter(|(c, p)| **c != p.default).count(), 0);
         // jede Ersetzung höchstens einen Schritt (1/15 ≈ 0,067) plus weitergegebener Fehler entfernt
         assert!(c1.iter().zip(&plan).all(|(c, p)| (*c as i32 - p.default as i32).abs() <= 2));
+    }
+
+    /// Helligkeit wird strenger behandelt als Farbton (BATCH-8b): dieselben Abstände entlang L werden
+    /// mit derselben Schwelle kaum ersetzt.
+    #[test]
+    fn lossy_is_stricter_on_lightness() {
+        let mut seed = 11u64;
+        let picks: Vec<u8> = (0..20_000)
+            .map(|_| {
+                seed = seed.wrapping_mul(6_364_136_223_846_793_005).wrapping_add(1);
+                7 + ((seed >> 60) as u8 % 3)
+            })
+            .collect();
+        let run = |pal: &[Lab]| -> (usize, usize) {
+            let plan: Vec<PlanPx> = picks.iter().map(|v| PlanPx { default: *v, flex: true, can_transp: false, reference: pal[*v as usize], forbid: 256 }).collect();
+            let p = LzwParams { min_code_size: 4, palette: pal, transparent: None, threshold: 0.08, width: 200 };
+            let (bytes, chosen) = encode(&plan, &p);
+            (bytes.len(), chosen.iter().zip(&picks).filter(|(c, d)| c != d).count())
+        };
+        let chroma: Vec<Lab> = (0..16).map(|i| [0.6, i as f32 / 15.0 * 0.5, 0.0]).collect();
+        let light: Vec<Lab> = (0..16).map(|i| [0.2 + i as f32 / 15.0 * 0.5, 0.0, 0.0]).collect();
+        let (bc, nc) = run(&chroma);
+        let (bl, nl) = run(&light);
+        assert!(nc > 4 * nl.max(1) && bc < bl, "Farbton {nc} Ersetzungen/{bc} B, Helligkeit {nl}/{bl} B");
     }
 }

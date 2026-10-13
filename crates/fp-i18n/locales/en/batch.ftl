@@ -45,6 +45,7 @@ batch-param-output-gif-cropChanged = Save changed area only
 batch-param-output-gif-mergeSimilar = Merge nearly identical frames
 batch-param-output-gif-disposal = Disposal
 batch-param-output-gif-transparency = Transparency
+batch-param-output-gif-splitFrames = Save separate changes individually
 batch-param-output-gif-preset-smallest = Smallest
 batch-param-output-gif-preset-balanced = Balanced
 batch-param-output-gif-preset-best = Best Quality

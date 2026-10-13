@@ -66,6 +66,13 @@ pub fn dist2(a: &Lab, b: &Lab) -> f32 {
     d0 * d0 + d1 * d1 + d2 * d2
 }
 
+/// Quadrierter Wahrnehmungsabstand: Oklab mit `wl`-fach gewichteter Helligkeit (BATCH-8b; `wl` = 1
+/// ist der gewöhnliche Oklab-Abstand).
+#[inline]
+pub fn wdist2(a: &Lab, b: &Lab, wl: f32) -> f32 {
+    let (d0, d1, d2) = ((a[0] - b[0]) * wl, a[1] - b[1], a[2] - b[2]);
+    d0 * d0 + d1 * d1 + d2 * d2
+}
 /// Abstand in Oklab.
 #[inline]
 pub fn dist(a: &Lab, b: &Lab) -> f32 {

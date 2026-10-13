@@ -119,11 +119,86 @@ fn lossy_makes_smaller_and_keeps_quality() {
         let l0 = run(&clip, json!({"lossy": 0}));
         let l80 = run(&clip, json!({"lossy": 80}));
         let l200 = run(&clip, json!({"lossy": 200}));
-        assert!(l80.bytes.len() < l0.bytes.len(), "{}: {} vs {}", clip.name, l80.bytes.len(), l0.bytes.len());
-        assert!(l200.bytes.len() < l80.bytes.len());
+        if clip.name == "pan" {
+            // Korn: Verlust macht deutlich kleiner
+            assert!(l80.bytes.len() < l0.bytes.len(), "{}: {} vs {}", clip.name, l80.bytes.len(), l0.bytes.len());
+            assert!(l200.bytes.len() < l80.bytes.len());
+        } else {
+            // Flächen/Verläufe: Verlust bringt wenig, macht aber nie größer (BATCH-8b: je Teilbild das kleinere)
+            assert!(l80.bytes.len() <= l0.bytes.len() && l200.bytes.len() <= l0.bytes.len(), "{}: {} {} {}", clip.name, l0.bytes.len(), l80.bytes.len(), l200.bytes.len());
+        }
         let (s0, s80) = (mean_ssim(&clip, &l0.bytes), mean_ssim(&clip, &l80.bytes));
         assert!(s0 > 0.9 && s80 > 0.8, "{}: {s0} {s80}", clip.name);
         assert!(s80 <= s0 + 0.01);
+    }
+}
+
+/// Getrennte Änderungen als Teilbilder (BATCH-8b): zu jedem Frame-Zeitpunkt exakt das Quellbild,
+/// Gesamtdauer gleich, Teilbilder ≥ 20 ms, kleiner als ohne Aufteilung; `splitFrames: false` und
+/// „best“ teilen nicht; ein bewegtes Objekt (alte + neue Lage) wird nie getrennt.
+#[test]
+fn split_frames_are_exact_at_frame_times() {
+    let clip = screen(160, 120, 12);
+    let lossless = json!({"quality": 90, "lossy": 0, "dither": "none", "diffThreshold": 0});
+    let split = run(&clip, lossless.clone());
+    let mut whole_opts = lossless.clone();
+    whole_opts["splitFrames"] = json!(false);
+    let whole = run(&clip, whole_opts);
+    assert!(split.stats.frames.len() > clip.frames.len(), "{:?}", split.stats.frames);
+    assert_eq!(whole.stats.frames.len(), clip.frames.len());
+    assert!(split.bytes.len() * 10 < whole.bytes.len() * 8, "{} vs {}", split.bytes.len(), whole.bytes.len());
+    assert!(split.stats.frames.iter().all(|f| f.delay_cs >= 2));
+    let total = |r: &gifopt::Optimized| r.stats.frames.iter().map(|f| f.delay_cs as u32).sum::<u32>();
+    assert_eq!(total(&split), clip.delay_ms / 10 * clip.frames.len() as u32);
+    assert_eq!(total(&split), total(&whole));
+    // zu jedem Frame-Zeitpunkt exakt das Quellbild
+    let (_, _, dec) = decode(&split.bytes);
+    let tl = timeline(&dec, clip.delay_ms);
+    for (k, src) in clip.frames.iter().enumerate() {
+        let got = tl[k * (clip.delay_ms / 10) as usize];
+        assert!(got == src, "Frame {k} zur Zeit {} ms nicht exakt", k as u32 * clip.delay_ms);
+    }
+    assert!(full_ssim(&clip, &split.bytes) > 0.995);
+    // „best“ teilt nicht
+    assert_eq!(run(&clip, json!({"preset": "best"})).stats.frames.len(), clip.frames.len());
+    // bewegtes Objekt: nie getrennt (Ball alte + neue Lage)
+    let ball = cartoon(160, 120, 10);
+    assert_eq!(run(&ball, json!({"preset": "balanced"})).stats.frames.len(), ball.frames.len());
+    // Option 50× umschalten = einmal mit dem Endwert
+    let mut m = Map::new();
+    for k in 0..50 {
+        m.insert("splitFrames".into(), json!(k % 2 == 0));
+    }
+    for (k, v) in lossless.as_object().cloned().unwrap_or_default() {
+        m.insert(k, v);
+    }
+    assert_eq!(gifopt::optimize(&clip.item(), &m).expect("50x").bytes, whole.bytes);
+}
+
+/// Inhalt steuert die Voreinstellung (BATCH-8b): Grafik wenige Farben/wenig Verlust, Foto mehr Farben
+/// und mehr Verlust; kleine Teilbilder bekommen eine kleinere LZW-Codelänge.
+#[test]
+fn content_class_and_code_size() {
+    let g = run(&cartoon(160, 120, 8), json!({"preset": "balanced"}));
+    let p = run(&pan(160, 120, 8), json!({"preset": "balanced"}));
+    let s = run(&screen(160, 120, 8), json!({"preset": "balanced"}));
+    assert!(g.stats.photo < 0.01 && s.stats.photo < 0.01 && p.stats.photo > 0.99, "{} {} {}", g.stats.photo, s.stats.photo, p.stats.photo);
+    assert!(g.stats.global_colors < p.stats.global_colors && g.stats.lossy < p.stats.lossy);
+    assert!(g.stats.global_colors <= 44 && p.stats.global_colors > 64);
+    // Grafik mit 40+ Farben: Ball-Teilbilder brauchen nur die vorderen Indizes
+    let full = g.stats.frames[0].min_code_size;
+    assert!(g.stats.frames[1..].iter().any(|f| f.min_code_size < full), "{:?}", g.stats.frames);
+    // ausdrücklich gesetzte Farben gelten unabhängig vom Inhalt
+    let fixed = run(&cartoon(160, 120, 8), json!({"preset": "balanced", "colors": 128}));
+    assert!(fixed.stats.global_colors > 64);
+}
+
+/// Größe fällt mit der Qualität (Voraussetzung der Zielgröße), für Grafik und Foto.
+#[test]
+fn size_falls_with_quality() {
+    for clip in [cartoon(128, 96, 8), pan(96, 72, 6)] {
+        let sizes: Vec<usize> = [10, 30, 50, 70, 90].iter().map(|q| run(&clip, json!({"quality": q})).bytes.len()).collect();
+        assert!(sizes.windows(2).all(|w| w[0] <= w[1] + w[1] / 50), "{}: {sizes:?}", clip.name);
     }
 }
 
@@ -151,6 +226,8 @@ fn target_size_is_reached_or_reported() {
     let r = run(&clip, json!({"maxKB": limit_kb}));
     assert!(r.reached && r.bytes.len() <= limit_kb * 1024, "{} > {}", r.bytes.len(), limit_kb * 1024);
     assert!(r.encodes <= gifopt::size::MAX_ENCODES);
+    // Schätzung über ln(Größe) statt Halbierung: wenige Kodierungen, nah am Ziel (BATCH-8b)
+    assert!(r.encodes <= 6 && r.frame_step == 1 && r.scale == 1.0, "{} Kodierungen, Schritt {}, Faktor {}", r.encodes, r.frame_step, r.scale);
     assert!(r.quality < 80 || r.scale < 1.0 || r.frame_step > 1);
     // schon klein genug → eine Kodierung, Qualität unverändert
     let big = run(&clip, json!({"maxKB": 100_000}));

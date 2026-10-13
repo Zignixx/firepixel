@@ -228,6 +228,47 @@ pub fn mean_ssim(clip: &Clip, bytes: &[u8]) -> f64 {
     s / c
 }
 
+/// Mittlere Farbtreue in der Fläche über die Zeit ([`fp_batch::steps::gifopt::metrics::color_error`]).
+pub fn mean_color_error(clip: &Clip, bytes: &[u8]) -> f64 {
+    use fp_batch::steps::gifopt::metrics::color_error;
+    let (_, _, dec) = decode(bytes);
+    let src: Vec<(Vec<Px>, u32)> = clip.frames.iter().map(|f| (f.clone(), clip.delay_ms)).collect();
+    let a = timeline(&src, clip.delay_ms);
+    let b = timeline(&dec, clip.delay_ms);
+    let n = a.len().min(b.len());
+    let step = (n / 12).max(1);
+    let (mut s, mut c) = (0.0, 0.0);
+    for i in (0..n).step_by(step) {
+        s += color_error(a[i], b[i], clip.w, clip.h);
+        c += 1.0;
+    }
+    s / c
+}
+
+/// SSIM über **alle** Zeitpunkte (je 10 ms), nicht nur 12 Stichproben – zeigt auch kurze
+/// Zwischenzustände (z. B. aufgeteilte Frames).
+pub fn full_ssim(clip: &Clip, bytes: &[u8]) -> f64 {
+    use fp_batch::steps::gifopt::metrics::ssim;
+    let (_, _, dec) = decode(bytes);
+    let src: Vec<(Vec<Px>, u32)> = clip.frames.iter().map(|f| (f.clone(), clip.delay_ms)).collect();
+    let a = timeline(&src, clip.delay_ms);
+    let b = timeline(&dec, clip.delay_ms);
+    let n = a.len().min(b.len());
+    let (mut s, mut c) = (0.0, 0.0);
+    // gleiche Bildpaare hintereinander nur einmal rechnen
+    let mut last: Option<(&Vec<Px>, &Vec<Px>, f64)> = None;
+    for i in 0..n {
+        let v = match last {
+            Some((x, y, v)) if std::ptr::eq(x, a[i]) && std::ptr::eq(y, b[i]) => v,
+            _ => ssim(a[i], b[i], clip.w, clip.h),
+        };
+        last = Some((a[i], b[i], v));
+        s += v;
+        c += 1.0;
+    }
+    s / c
+}
+
 /// Mittlere PSNR über die Zeit.
 pub fn mean_psnr(clip: &Clip, bytes: &[u8]) -> f64 {
     use fp_batch::steps::gifopt::metrics::psnr;

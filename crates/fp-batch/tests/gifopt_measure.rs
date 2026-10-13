@@ -31,17 +31,22 @@ fn measure_against_plain_export() {
         ("smallest", json!({"preset": "smallest"})),
         ("maxKB=60%", Value::Null),
     ];
-    println!("| Clip | Encoder | KB | vs. Export | SSIM | PSNR dB | ms |");
-    println!("|---|---|---:|---:|---:|---:|---:|");
+    // SSIM: 12 Stichproben (wie bisher) und über alle Zeitpunkte (je 10 ms); Farbe: Farbtreue in der
+    // Fläche (×100, kleiner = besser, siehe metrics::color_error)
+    println!("| Clip | Kodierer | Bytes | KB | vs. Export | SSIM | SSIM (alle 10 ms) | Farbe | PSNR dB | ms |");
+    println!("|---|---|---:|---:|---:|---:|---:|---:|---:|---:|");
     for (clip, base) in clips.iter().zip(&baseline) {
         let row = |name: &str, bytes: &[u8], ms: u128| {
             println!(
-                "| {} | {} | {:.1} | {:+.0} % | {:.4} | {:.2} | {} |",
+                "| {} | {} | {} | {:.1} | {:+.1} % | {:.4} | {:.4} | {:.3} | {:.2} | {} |",
                 clip.name,
                 name,
+                bytes.len(),
                 bytes.len() as f64 / 1024.0,
                 (bytes.len() as f64 / base.len() as f64 - 1.0) * 100.0,
                 mean_ssim(clip, bytes),
+                full_ssim(clip, bytes),
+                mean_color_error(clip, bytes),
                 mean_psnr(clip, bytes),
                 ms
             );
@@ -59,7 +64,10 @@ fn measure_against_plain_export() {
                 let _ = std::fs::write(std::path::Path::new(&d).join(format!("{}-{}.gif", clip.name, name.replace(['=', '%'], ""))), &r.bytes);
             }
             if name.starts_with("maxKB") {
-                println!("|  | ↳ Qualität {} · Faktor {:.2} · Schritt {} · {} Kodierungen · erreicht {} | | | | | |", r.quality, r.scale, r.frame_step, r.encodes, r.reached);
+                println!("|  | ↳ Qualität {} · Faktor {:.2} · Schritt {} · {} Kodierungen · erreicht {} | | | | | | | | |", r.quality, r.scale, r.frame_step, r.encodes, r.reached);
+            }
+            if !name.starts_with("maxKB") && *name != "simple" {
+                println!("|  | ↳ Foto-Anteil {:.2} · {} Farben · Verlust {} · {} Teilbilder | | | | | | | | |", r.stats.photo, r.stats.global_colors, r.stats.lossy, r.stats.frames.len());
             }
         }
         // gleiche Qualität wie der Export: kleinste Qualitätsstufe mit SSIM ≥ SSIM des Exports
