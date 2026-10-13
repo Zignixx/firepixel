@@ -35,6 +35,9 @@ chrono = { version = "0.4.45", default-features = false, features = ["clock", "s
 fp-ai = { path = "../fp-ai" }
 fp-text = { workspace = true }
 fp-color = { workspace = true }
+# BATCH-4: Live-Effekte als Schritt (effect.live) und JSF-Laufzeit für script.command (beide eigene Crates)
+fp-effects = { workspace = true }
+fp-script = { workspace = true }
 
 # BATCH-5: Metadaten-Container (zlib für iCCP/TIFF, CRC der PNG-Chunks, PNG lesen) – schon im Baum
 flate2 = { workspace = true }
