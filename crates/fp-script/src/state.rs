@@ -20,11 +20,11 @@ pub enum Handle {
     Singleton,
     Document(DocId),
     Element { doc: DocId, id: ElementId },
-    /// Ebene `slot` der Ebenenliste (unten → oben) einer Seite.
-    Layer { doc: DocId, page: usize, slot: usize },
+    /// Ebene `slot` der Ebenenliste (unten → oben) einer Seite; `sub` = Unterebene (Element-ID) darin.
+    Layer { doc: DocId, page: usize, slot: usize, sub: Option<ElementId> },
     Frame { doc: DocId, page: usize, frame: usize },
     /// Inhalt einer Ebene in einem Status (FrameNLayerIntersection).
-    Cel { doc: DocId, page: usize, slot: usize, frame: usize },
+    Cel { doc: DocId, page: usize, slot: usize, sub: Option<ElementId>, frame: usize },
     Contour { doc: DocId, id: ElementId, c: usize },
     Node { doc: DocId, id: ElementId, c: usize, n: usize },
     /// Lebende Knotenliste einer Kontur.

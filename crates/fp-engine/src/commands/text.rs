@@ -147,6 +147,31 @@ fn attach(s: &mut Session, inside: bool) -> Result<CommandOutput> {
     })
 }
 
+/// Text nach „Von Pfad lösen“ wie im Original (Q-16, `docs\berichte\m1.md`): Rahmen mit fester
+/// Breite (Breite des Rahmens vor dem Anfügen: Benutzerrahmen, sonst gespeicherter Satzrahmen), Text
+/// neu umbrochen, Rahmen auf die Mitte `center` der geometrischen Pfadgrenzen zentriert (ganze Pixel,
+/// .5 aufwärts).
+fn detached_text(doc: &fp_model::Document, t: &TextElem, center: Option<(f32, f32)>, r: Option<&dyn crate::render::PageRenderer>) -> TextElem {
+    let mut n = t.clone();
+    n.on_path = None;
+    n.frame_type = Some(1);
+    n.detach_story();
+    let user_w = t.anchor_rect.map(|a| a.right - a.left).filter(|w| *w >= 1.0);
+    let w = user_w.unwrap_or(t.bounds.right - t.bounds.left).max(1.0);
+    let a0 = fp_geom::Rect::new(0.0, 0.0, w, 1.0);
+    n.anchor_rect = Some(a0);
+    // Satz am Ursprung: Höhe und Lage des Satzrahmens relativ zum Benutzerrahmen
+    let f = r.and_then(|r| r.text_frame(doc, &n)).unwrap_or(fp_geom::Rect::new(0.0, 0.0, w, t.bounds.bottom - t.bounds.top));
+    let h = (f.bottom - f.top).max(1.0);
+    let half_up = |v: f32| (v + 0.5).floor();
+    let (cx, cy) = center.unwrap_or(((t.bounds.left + t.bounds.right) * 0.5, (t.bounds.top + t.bounds.bottom) * 0.5));
+    let (left, top) = (half_up(cx - (f.right - f.left) * 0.5), half_up(cy - h * 0.5));
+    let (dx, dy) = (left - f.left, top - f.top);
+    n.anchor_rect = Some(fp_geom::Rect::new(a0.left + dx, a0.top + dy, a0.left + dx + w, a0.top + dy + h));
+    n.bounds = f.translate(dx, dy);
+    n
+}
+
 /// Namen der Glättung (JS `antiAliasMode` bzw. „none“ = keine Kantenglättung).
 pub(super) fn antialias_names() -> Vec<String> {
     ["none", "crisp", "strong", "smooth", "custom", "system"].iter().map(|s| s.to_string()).collect()
@@ -374,6 +399,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
     r.add(cmd("text.attachToPath").requires(&[Requirement::Document, Requirement::MinSelected(2)]).available(|s| text_and_path(s).is_ok()).run(|s, _| attach(s, false)));
     r.add(cmd("text.attachInPath").requires(&[Requirement::Document, Requirement::MinSelected(2)]).available(|s| text_and_path(s).is_ok()).run(|s, _| attach(s, true)));
     r.add(cmd("text.detachFromPath").requires(TEXT_SEL).available(has_text_on_path).run(|s, _| {
+        let renderer = s.renderer().cloned();
         with_doc(s, |d| {
             let page = d.page;
             let texts: Vec<_> = selected_elements(d).into_iter().filter(|(_, e)| matches!(&e.kind, ElementKind::Text(t) if t.on_path.is_some())).collect();
@@ -384,24 +410,25 @@ pub(super) fn register(r: &mut CommandRegistry) {
             for (_, e) in texts {
                 let ElementKind::Text(t) = &e.kind else { continue };
                 let path = t.on_path.as_ref().and_then(|o| o.path.clone());
+                let center = path.as_ref().and_then(|p| docops::element_bounds(&d.doc, p)).map(|b| ((b.left + b.right) * 0.5, (b.top + b.bottom) * 0.5));
+                let detached = detached_text(&d.doc, t, center, renderer.as_deref());
                 let doc = Arc::make_mut(&mut d.doc);
                 docops::edit_by_id(doc, page, e.id, |x| {
                     if let ElementKind::Text(t) = &mut x.kind {
-                        t.on_path = None;
-                        t.frame_type = Some(0);
-                        t.detach_story();
+                        **t = detached;
                     }
                 });
-                sel.push(e.id);
                 if let Some(pth) = path {
+                    // wie im Original: der Pfad kommt als oberstes Objekt der Ebene zurück (Q-16)
                     let n = docops::reassign(doc, &pth);
                     sel.push(n.id);
                     if let Some(cur) = docops::find_on_page(doc, page, e.id)
-                        && let Some((list, idx)) = docops::parent_list_mut(doc, &cur)
+                        && let Some((list, _)) = docops::parent_list_mut(doc, &cur)
                     {
-                        list.insert(idx + 1, Arc::new(n));
+                        list.insert(0, Arc::new(n));
                     }
                 }
+                sel.push(e.id);
             }
             d.selection.set(sel);
             Ok(CommandOutput::doc())

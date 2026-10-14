@@ -523,6 +523,9 @@ impl<'a> Builder<'a> {
         let vertical = b.orientation.is_vertical();
         let fixed = b.kind == FrameKind::FixedWidth;
         let on_path = b.kind == FrameKind::OnPath && b.path.as_ref().is_some_and(|p| !p.contours.is_empty());
+        // Text am Pfad zeigt wie im Original nur den ersten Absatz (m1 Nebenbefund zu Q-16: TX2 mit
+        // drei Absätzen an P2 hat im Original nur die Tinte von „Zeile eins“, 50,390–104,408)
+        let first_para_end = lines.iter().find(|l| l.last_of_paragraph).map(|l| l.chars.end).unwrap_or(n_chars);
         if on_path {
             // Pfadtext ist einzeilig: Umbrüche entfallen
             let mut all = RawLine {
@@ -692,7 +695,8 @@ impl<'a> Builder<'a> {
         if fixed {
             let bottom = y + emb;
             frame_exact = [b.bounds.left as f64, y_anchor, b.bounds.right as f64, bottom];
-            frame = Rect::new(b.bounds.left, b.bounds.top, b.bounds.right, (bottom - 1e-6).ceil() as f32);
+            // Unterkante gerundet (F6: Original TX3 16 pt zweizeilig 35, TX2 48; Korpus exakt 305/676 statt 271 mit Aufrunden)
+            frame = Rect::new(b.bounds.left, b.bounds.top, b.bounds.right, bottom.round() as f32);
         }
         let mut lay = TextLayout {
             kind: b.kind,
@@ -708,7 +712,7 @@ impl<'a> Builder<'a> {
             char_count: n_chars,
         };
         if on_path {
-            self.place_on_path(&mut lay);
+            self.place_on_path(&mut lay, first_para_end);
         } else if vertical {
             self.make_vertical(&mut lay);
         }
@@ -716,7 +720,7 @@ impl<'a> Builder<'a> {
     }
 
     /// Text auf Pfad: Glyphen entlang der ersten Pfadkontur platzieren (A, siehe Moduldoku).
-    fn place_on_path(&self, lay: &mut TextLayout) {
+    fn place_on_path(&self, lay: &mut TextLayout, first_para_end: usize) {
         let Some(tp) = self.block.path.as_ref() else { return };
         let Some(c) = tp.contours.first() else { return };
         let sampler = path::PathSampler::new(c, tp.reversed);
@@ -744,7 +748,7 @@ impl<'a> Builder<'a> {
             let core = g.advance - g.tracking;
             let half = core / 2.0;
             let s_mid = start + (g.x - x_line0) + half;
-            g.visible = !g.is_tab && s_mid >= 0.0 && s_mid <= len;
+            g.visible = !g.is_tab && s_mid >= 0.0 && s_mid <= len && g.char_index < first_para_end;
             let Some((p, th)) = sampler.at(sampler.path_s(&ocum, s_mid)) else { continue };
             let (sn, cs) = th.sin_cos();
             // Bildachsen der Glyphe: t = Laufrichtung (x), nrm = „unten“ (−y) im Dokument

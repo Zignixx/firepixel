@@ -1157,10 +1157,11 @@ pub(super) fn get(doc: DocId, name: &str, ctx: &mut Context) -> FwResult<JsValue
         "onionSkinAfter" => conv::n(pg.root.onion_after as f64),
         "frameLoopingCount" => conv::n(pg.loop_count() as f64),
         "layers" | "topLayers" => {
-            let n = pg.root.layers.len();
+            // `layers` flach mit Unterebenen wie im Original (Befund F2-1), `topLayers` nur die oberste Stufe
+            let list: Vec<(usize, Option<fp_model::ElementId>)> = if name == "layers" { super::elem::flat_layers(doc, page)? } else { (0..pg.root.layers.len()).map(|s| (s, None)).collect() };
             let mut v = Vec::new();
-            for slot in 0..n {
-                v.push(runtime::wrap(ctx, "Layer", Handle::Layer { doc, page, slot })?);
+            for (slot, sub) in list {
+                v.push(runtime::wrap(ctx, "Layer", Handle::Layer { doc, page, slot, sub })?);
             }
             conv::array(v, ctx)
         }

@@ -406,11 +406,7 @@
      "jsf": "fw.getDocumentDOM().addGuide(500,'vertical')"
     },
     {
-     "menu": [
-      "Ansicht",
-      "Hilfslinien",
-      "An Hilfslinien ausrichten"
-     ]
+     "jsf": "var d=fw.getDocumentDOM(); d.setSnapToGrid(false); d.setSnapToGuides(true)"
     },
     {
      "canvas_drag": {
@@ -419,7 +415,7 @@
        100
       ],
       "to": [
-       497,
+       590,
        100
       ]
      }
@@ -432,7 +428,7 @@
     }
    ],
    "shot": null,
-   "note": "T10 is one large bitmap; drag moves it, left edge should snap to x=500"
+   "note": "T10 is one large bitmap; drag moves it by 490 px, left edge comes within snap range of the guide and snaps to x=500 (expected 500,0 in both, m1 Q-17). Snap state set by JSF (grid off, guides on), not by toggling the menu: in the original snap to guides is on by default, so the menu toggle switched it off, and the grid state was carried over"
   },
   {
    "id": "09_guides_lock_result",

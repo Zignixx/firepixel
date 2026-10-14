@@ -539,9 +539,9 @@ pub(super) fn get(cls: &str, name: &str, h: &Handle, this: &JsValue, ctx: &mut C
     let _ = this;
     match h {
         Handle::Element { doc, id } => element_get(cls, name, *doc, *id, ctx),
-        Handle::Layer { doc, page, slot } => layer_get(name, *doc, *page, *slot, ctx),
+        Handle::Layer { doc, page, slot, sub } => layer_get(name, *doc, *page, *slot, *sub, ctx),
         Handle::Frame { doc, page, frame } => frame_get(name, *doc, *page, *frame, ctx),
-        Handle::Cel { doc, page, slot, frame } => cel_get(name, *doc, *page, *slot, *frame, ctx),
+        Handle::Cel { doc, page, slot, sub, frame } => cel_get(name, *doc, *page, *slot, *sub, *frame, ctx),
         Handle::Contour { doc, id, c } => {
             let e = element(*doc, *id)?;
             let cs = contours_of(&e);
@@ -899,9 +899,48 @@ fn node_get(cls: &str, name: &str, doc: DocId, id: ElementId, c: usize, n: usize
     })
 }
 
-fn layer_snapshot(doc: DocId, page: usize, slot: usize) -> FwResult<(Option<Arc<fp_model::Layer>>, bool)> {
+/// Flache Ebenenliste wie `dom.layers` im Original (Befund F2-1): jede Ebene der obersten Stufe
+/// (unten → oben), direkt danach ihre Unterebenen (unten → oben, rekursiv). Unterebenen sind in
+/// Firepixel Elemente (`ElementKind::SubLayer`) im Cel des aktuellen Status.
+pub(super) fn flat_layers(doc: DocId, page: usize) -> FwResult<Vec<(usize, Option<fp_model::ElementId>)>> {
+    fn subs(l: &fp_model::Layer, frame: usize, slot: usize, out: &mut Vec<(usize, Option<fp_model::ElementId>)>) {
+        let Some(cel) = l.cel(frame).or_else(|| l.cel(0)) else { return };
+        for e in cel.elements.iter().rev() {
+            if let ElementKind::SubLayer(sl) = &e.kind {
+                out.push((slot, Some(e.id)));
+                subs(sl, frame, slot, out);
+            }
+        }
+    }
     st(|s| {
         let d = s.session.document(doc).ok_or_else(|| FwErr::bad("Dokument"))?;
+        let p = d.doc.pages.get(page).ok_or_else(|| FwErr::bad("Seite"))?;
+        let mut out = Vec::new();
+        for (slot, ls) in p.root.layers.iter().enumerate() {
+            out.push((slot, None));
+            let l = match ls {
+                LayerSlot::Own(l) => Some(Arc::clone(l)),
+                LayerSlot::Shared(r) => d.doc.shared_layer(&r.id).and_then(|x| x.layer.clone()),
+                _ => None,
+            };
+            if let Some(l) = l {
+                subs(&l, d.frame, slot, &mut out);
+            }
+        }
+        Ok(out)
+    })
+}
+
+fn layer_snapshot(doc: DocId, page: usize, slot: usize, sub: Option<fp_model::ElementId>) -> FwResult<(Option<Arc<fp_model::Layer>>, bool)> {
+    st(|s| {
+        let d = s.session.document(doc).ok_or_else(|| FwErr::bad("Dokument"))?;
+        if let Some(id) = sub {
+            let e = d.doc.find_element(id).and_then(|p| d.doc.element_at(&p).cloned());
+            return Ok(match e.as_deref().map(|e| &e.kind) {
+                Some(ElementKind::SubLayer(l)) => (Some(Arc::clone(l)), false),
+                _ => (None, false),
+            });
+        }
         let p = d.doc.pages.get(page).ok_or_else(|| FwErr::bad("Seite"))?;
         Ok(match p.root.layers.get(slot) {
             Some(LayerSlot::Own(l)) => (Some(Arc::clone(l)), false),
@@ -911,8 +950,8 @@ fn layer_snapshot(doc: DocId, page: usize, slot: usize) -> FwResult<(Option<Arc<
     })
 }
 
-fn layer_get(name: &str, doc: DocId, page: usize, slot: usize, ctx: &mut Context) -> FwResult<JsValue> {
-    let (l, _shared_pages) = layer_snapshot(doc, page, slot)?;
+fn layer_get(name: &str, doc: DocId, page: usize, slot: usize, sub: Option<fp_model::ElementId>, ctx: &mut Context) -> FwResult<JsValue> {
+    let (l, _shared_pages) = layer_snapshot(doc, page, slot, sub)?;
     let frames = st(|s| Ok(s.session.document(doc).and_then(|d| d.doc.pages.get(page).map(|p| p.root.frame_count.max(1) as usize)).unwrap_or(1)))?;
     Ok(match name {
         "isLayer" => JsValue::from(true),
@@ -926,7 +965,7 @@ fn layer_get(name: &str, doc: DocId, page: usize, slot: usize, ctx: &mut Context
         "frames" => {
             let mut v = Vec::new();
             for f in 0..frames {
-                v.push(runtime::wrap(ctx, "FrameNLayerIntersection", Handle::Cel { doc, page, slot, frame: f })?);
+                v.push(runtime::wrap(ctx, "FrameNLayerIntersection", Handle::Cel { doc, page, slot, sub, frame: f })?);
             }
             conv::array(v, ctx)
         }
@@ -942,9 +981,10 @@ fn frame_get(name: &str, doc: DocId, page: usize, frame: usize, ctx: &mut Contex
     let n_layers = st(|s| Ok(s.session.document(doc).and_then(|d| d.doc.pages.get(page).map(|p| p.root.layers.len())).unwrap_or(0)))?;
     Ok(match name {
         "layers" | "topLayers" => {
+            let list = if name == "layers" { flat_layers(doc, page)? } else { (0..n_layers).map(|s| (s, None)).collect() };
             let mut v = Vec::new();
-            for slot in 0..n_layers {
-                v.push(runtime::wrap(ctx, "FrameNLayerIntersection", Handle::Cel { doc, page, slot, frame })?);
+            for (slot, sub) in list {
+                v.push(runtime::wrap(ctx, "FrameNLayerIntersection", Handle::Cel { doc, page, slot, sub, frame })?);
             }
             conv::array(v, ctx)
         }
@@ -956,12 +996,16 @@ fn frame_get(name: &str, doc: DocId, page: usize, frame: usize, ctx: &mut Contex
     })
 }
 
-fn cel_get(name: &str, doc: DocId, page: usize, slot: usize, frame: usize, ctx: &mut Context) -> FwResult<JsValue> {
-    let (l, _) = layer_snapshot(doc, page, slot)?;
+fn cel_get(name: &str, doc: DocId, page: usize, slot: usize, sub: Option<fp_model::ElementId>, frame: usize, ctx: &mut Context) -> FwResult<JsValue> {
+    let (l, _) = layer_snapshot(doc, page, slot, sub)?;
     let cel = l.as_ref().and_then(|l| l.cel(frame)).cloned();
     Ok(match name {
         "elements" | "elemsandsublayers" => {
-            let els: Vec<Arc<Element>> = cel.map(|c| c.elements.clone()).unwrap_or_default();
+            // wie im Original: `elements` ohne Unterebenen (die stehen flach in `dom.layers`)
+            let mut els: Vec<Arc<Element>> = cel.map(|c| c.elements.clone()).unwrap_or_default();
+            if name == "elements" {
+                els.retain(|e| !matches!(e.kind, ElementKind::SubLayer(_)));
+            }
             super::wrap_elements(ctx, doc, &els)?
         }
         "visible" => JsValue::from(l.as_ref().is_none_or(|l| l.is_visible()) && cel.as_ref().is_none_or(|c| c.visible)),
@@ -977,8 +1021,8 @@ pub(super) fn set(cls: &str, name: &str, h: &Handle, a: Arg, raw: &JsValue, this
     let _ = this;
     match h {
         Handle::Element { doc, id } => element_set(cls, name, *doc, *id, a, raw, ctx),
-        Handle::Layer { doc, page, slot } => {
-            let (l, _) = layer_snapshot(*doc, *page, *slot)?;
+        Handle::Layer { doc, page, slot, sub } => {
+            let (l, _) = layer_snapshot(*doc, *page, *slot, *sub)?;
             let Some(l) = l else { return Ok(()) };
             match name {
                 "name" => exec(Some(*doc), "layer.rename", json!({"layer": l.id.0, "name": a.str().unwrap_or_default()})).map(|_| ()),
@@ -987,8 +1031,8 @@ pub(super) fn set(cls: &str, name: &str, h: &Handle, a: Arg, raw: &JsValue, this
                 _ => ni("Layer", &format!("{name} =")),
             }
         }
-        Handle::Cel { doc, page, slot, .. } => {
-            let (l, _) = layer_snapshot(*doc, *page, *slot)?;
+        Handle::Cel { doc, page, slot, sub, .. } => {
+            let (l, _) = layer_snapshot(*doc, *page, *slot, *sub)?;
             let Some(l) = l else { return Ok(()) };
             match name {
                 "visible" => exec(Some(*doc), "layer.setVisible", json!({"layer": l.id.0, "visible": a.bool()})).map(|_| ()),
