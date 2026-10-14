@@ -34,9 +34,9 @@ und Masken-Inspektor sind erledigt, neu: alte Dateien mit Masken aus „Alles ei
 die alte Polarität). Beschriftungen in NEW.md aus `locales\en`.
 
 Neutralität: keine Namen des Originals/Herstellers in Ordner, NEU/NEW, Handbüchern. In beiden exe kommt
-„adobe“ nur als Formatkennung fremder Bibliotheken vor (XMP-Namensraum `ns.adobe.com`, JPEG-Marker
-„Adobe“/„Unknown Adobe colorspace“ des Decoders, Wörterbuch des Brotli-Dekoders) – unverändert gegenüber der
-Vorversion (dort 11 Treffer), nicht sichtbar in der Oberfläche; „Fireworks“ kommt nicht vor.
+der Herstellername nur als Formatkennung fremder Bibliotheken vor (XMP-Standard-Namensraum, JPEG-APP14-Marker
+und Farbraum-Meldung des Decoders, Wörterbuch des Brotli-Dekoders) – unverändert gegenüber der Vorversion
+(dort 11 Treffer), nicht sichtbar in der Oberfläche; der Programmname des Originals kommt nicht vor.
 
 ## Smoke-Test (echtes Fenster, Brücke)
 
