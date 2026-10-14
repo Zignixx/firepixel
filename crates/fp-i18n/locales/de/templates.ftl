@@ -1,19 +1,4 @@
-# Mitgelieferte Vorlagen für „Neu von Vorlage“ (Q-11): Ordner, Dateinamen und Platzhaltertexte
-tpl-folder-presets = Dokumentvorgaben
-tpl-folder-grids = Raster
-tpl-folder-mobile = Mobil
-tpl-folder-web = Web
-tpl-folder-wireframes = Drahtmodelle
-tpl-a4-portrait = A4 Hochformat
-tpl-presentation-1920 = Präsentation
-tpl-grid-12-columns = 12 Spalten
-tpl-grid-6-columns-tablet = 6 Spalten Tablet
-tpl-phone-390 = Smartphone
-tpl-app-icon-1024 = App-Symbol
-tpl-web-banner-728 = Web-Banner
-tpl-social-post-1080 = Social-Media-Beitrag
-tpl-website-home-1440 = Website-Startseite
-tpl-mobile-wireframe-390 = Mobile App
+# Mitgelieferte Vorlagen für „Neu von Vorlage“ (Q-11): Platzhaltertexte in den Vorlagen (Ordner- und Dateinamen sind technisch und immer englisch)
 tpl-text-headline = Überschrift
 tpl-text-subline = Unterzeile mit einem kurzen Satz
 tpl-text-body = Text hier eingeben …

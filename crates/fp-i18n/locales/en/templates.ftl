@@ -1,19 +1,4 @@
-# Built-in templates for “New from Template” (Q-11): folders, file names and placeholder texts
-tpl-folder-presets = Document Presets
-tpl-folder-grids = Grids
-tpl-folder-mobile = Mobile
-tpl-folder-web = Web
-tpl-folder-wireframes = Wireframes
-tpl-a4-portrait = A4 Portrait
-tpl-presentation-1920 = Presentation
-tpl-grid-12-columns = 12 Columns
-tpl-grid-6-columns-tablet = 6 Columns Tablet
-tpl-phone-390 = Smartphone
-tpl-app-icon-1024 = App Icon
-tpl-web-banner-728 = Web Banner
-tpl-social-post-1080 = Social Media Post
-tpl-website-home-1440 = Website Home Page
-tpl-mobile-wireframe-390 = Mobile App
+# Built-in templates for “New from Template” (Q-11): placeholder texts inside the templates (folder and file names are technical and always English)
 tpl-text-headline = Headline
 tpl-text-subline = Subline with a short sentence
 tpl-text-body = Type your text here …

@@ -1,11 +1,16 @@
 //! Mitgelieferte Vorlagen für *Datei ▸ Neu von Vorlage* (Q-11, Nutzerentscheidung 14.10.2026).
 //!
 //! Firepixel bringt eigene, selbst gestaltete Vorlagen mit (keine Inhalte anderer Programme): je
-//! Unterordner zwei bis drei einfache FW-PNG-Dokumente – Dokumentvorgaben, Raster, Mobil, Web,
-//! Drahtmodelle. Sie werden beim ersten Öffnen des Vorlagenordners (`%APPDATA%\Firepixel\Templates`)
-//! aus dem Programm heraus erzeugt, Ordner-, Datei- und Beschriftungsnamen in der Sprache der
-//! Oberfläche in diesem Moment. Danach gehören sie dem Nutzer: gelöschte oder geänderte Vorlagen
-//! kommen nicht wieder (Merker `builtin-templates.json`, technisch englisch).
+//! Unterordner zwei einfache FW-PNG-Dokumente – Document Presets, Grids, Mobile, Web, Wireframes.
+//! Sie werden beim ersten Öffnen des Vorlagenordners (`%APPDATA%\Firepixel\Templates`) aus dem
+//! Programm heraus erzeugt. Ordner- und Dateinamen sind technische Namen und daher **immer
+//! englisch** (Projektregel; F7), unabhängig von der Oberflächensprache – die Liste zeigt der
+//! Datei-Dialog des Systems, nicht die App. Nur die Platzhaltertexte in den Dokumenten folgen der
+//! Sprache der Oberfläche in diesem Moment. Danach gehören die Vorlagen dem Nutzer: gelöschte oder
+//! geänderte kommen nicht wieder (Merker `builtin-templates.json`).
+//!
+//! Jede Vorlage trägt eine passende Exportvorgabe (PNG 32 bzw. JPEG für fotolastige Formate) statt
+//! „GIF Adaptiv 256“ (F7).
 
 use fp_color::Argb;
 use fp_geom::{Point, Rect};
@@ -21,42 +26,59 @@ pub const MARKER: &str = "builtin-templates.json";
 /// Version des Vorlagensatzes (steigt, wenn neue Vorlagen dazukommen; nur neue werden ergänzt).
 pub const VERSION: u32 = 1;
 
-/// Eine Vorlage: technische ID (englisch), Ordner-Schlüssel, Name-Schlüssel, Maße, Zeichnung.
+/// Eine Vorlage: technische ID, Ordner, Name (beides englisch), Maße, Exportvorgabe, Zeichnung.
 pub struct Builtin {
     pub id: &'static str,
     pub folder: &'static str,
+    pub name: &'static str,
     pub width: f32,
     pub height: f32,
+    /// Exportformat wie bei `file.export` (`png32`, `jpeg` …).
+    pub export: &'static str,
     draw: fn(&mut Canvas),
 }
 
 /// Alle mitgelieferten Vorlagen (Reihenfolge = Ordner, dann Datei).
 pub fn all() -> Vec<Builtin> {
+    const P: &str = "png32";
+    const J: &str = "jpeg";
     vec![
-        Builtin { id: "a4-portrait", folder: "presets", width: 595.0, height: 842.0, draw: draw_a4 },
-        Builtin { id: "presentation-1920", folder: "presets", width: 1920.0, height: 1080.0, draw: draw_presentation },
-        Builtin { id: "grid-12-columns", folder: "grids", width: 1200.0, height: 800.0, draw: |c| draw_columns(c, 12, 20.0, 40.0) },
-        Builtin { id: "grid-6-columns-tablet", folder: "grids", width: 768.0, height: 1024.0, draw: |c| draw_columns(c, 6, 16.0, 32.0) },
-        Builtin { id: "phone-390", folder: "mobile", width: 390.0, height: 844.0, draw: draw_phone },
-        Builtin { id: "app-icon-1024", folder: "mobile", width: 1024.0, height: 1024.0, draw: draw_app_icon },
-        Builtin { id: "web-banner-728", folder: "web", width: 728.0, height: 90.0, draw: draw_banner },
-        Builtin { id: "social-post-1080", folder: "web", width: 1080.0, height: 1080.0, draw: draw_social },
-        Builtin { id: "website-home-1440", folder: "wireframes", width: 1440.0, height: 1024.0, draw: draw_website_wireframe },
-        Builtin { id: "mobile-wireframe-390", folder: "wireframes", width: 390.0, height: 844.0, draw: draw_phone_wireframe },
+        Builtin { id: "a4-portrait", folder: "presets", name: "A4 Portrait", width: 595.0, height: 842.0, export: P, draw: draw_a4 },
+        Builtin { id: "presentation-1920", folder: "presets", name: "Presentation", width: 1920.0, height: 1080.0, export: J, draw: draw_presentation },
+        Builtin { id: "grid-12-columns", folder: "grids", name: "12 Columns", width: 1200.0, height: 800.0, export: P, draw: |c| draw_columns(c, 12, 20.0, 40.0) },
+        Builtin { id: "grid-6-columns-tablet", folder: "grids", name: "6 Columns Tablet", width: 768.0, height: 1024.0, export: P, draw: |c| draw_columns(c, 6, 16.0, 32.0) },
+        Builtin { id: "phone-390", folder: "mobile", name: "Smartphone", width: 390.0, height: 844.0, export: P, draw: draw_phone },
+        Builtin { id: "app-icon-1024", folder: "mobile", name: "App Icon", width: 1024.0, height: 1024.0, export: P, draw: draw_app_icon },
+        Builtin { id: "web-banner-728", folder: "web", name: "Web Banner", width: 728.0, height: 90.0, export: P, draw: draw_banner },
+        Builtin { id: "social-post-1080", folder: "web", name: "Social Media Post", width: 1080.0, height: 1080.0, export: J, draw: draw_social },
+        Builtin { id: "website-home-1440", folder: "wireframes", name: "Website Home Page", width: 1440.0, height: 1024.0, export: P, draw: draw_website_wireframe },
+        Builtin { id: "mobile-wireframe-390", folder: "wireframes", name: "Mobile App", width: 390.0, height: 844.0, export: P, draw: draw_phone_wireframe },
     ]
 }
 
+/// Englischer Ordnername je Ordner-Schlüssel, dazu der Name, den Vorlagen aus F5 (vor F7) in
+/// deutscher Oberfläche bekamen – liegt ein solcher Ordner schon vor, wird er weiterbenutzt statt
+/// einen zweiten anzulegen.
+fn folder_names(key: &str) -> (&'static str, &'static str) {
+    match key {
+        "presets" => ("Document Presets", "Dokumentvorgaben"),
+        "grids" => ("Grids", "Raster"),
+        "mobile" => ("Mobile", "Mobil"),
+        "wireframes" => ("Wireframes", "Drahtmodelle"),
+        _ => ("Web", "Web"),
+    }
+}
+
 impl Builtin {
-    /// Ordnername in der aktuellen Sprache.
+    /// Ordnername auf der Platte (immer englisch).
     pub fn folder_name(&self) -> String {
-        fp_i18n::t(&format!("tpl-folder-{}", self.folder))
+        folder_names(self.folder).0.to_string()
     }
-    /// Dateiname in der aktuellen Sprache (mit Maßen, Endung `.fw.png`).
+    /// Dateiname auf der Platte (immer englisch, mit Maßen, Endung `.fw.png`).
     pub fn file_name(&self) -> String {
-        let name = fp_i18n::t(&format!("tpl-{}", self.id));
-        format!("{} {}x{}.fw.png", safe(&name), self.width as u32, self.height as u32)
+        format!("{} {}x{}.fw.png", safe(self.name), self.width as u32, self.height as u32)
     }
-    /// Das Dokument.
+    /// Das Dokument (mit der Exportvorgabe der Vorlage).
     pub fn document(&self) -> Document {
         let mut doc = Document::new(self.width, self.height, Argb(0xffff_ffff));
         let mut c = Canvas { ids: std::mem::take(&mut doc.ids), els: Vec::new(), w: self.width, h: self.height };
@@ -66,6 +88,11 @@ impl Builtin {
             let cel = Arc::make_mut(&mut Arc::make_mut(l).cels[0]);
             // in der Ebene liegt das erste Element oben: zuerst Gezeichnetes (Hintergrund) nach unten
             cel.elements.extend(c.els.into_iter().rev().map(Arc::new));
+        }
+        let base = fp_export::doc_export::page_settings(&doc, 0);
+        let v = serde_json::json!({"format": self.export, "quality": 85});
+        if let Ok(s) = fp_engine::commands::export::apply_settings_json(base, &v, "file.newFromTemplate") {
+            let _ = fp_engine::commands::export::store_page_settings(&mut doc, 0, &s);
         }
         doc
     }
@@ -217,7 +244,9 @@ pub fn ensure(dir: &Path, save: &dyn Fn(&Document, &Path) -> Result<(), String>)
         if known.iter().any(|k| k == b.id) {
             continue; // in einer früheren Version angelegt (vielleicht vom Nutzer gelöscht): nicht wieder
         }
-        let folder = dir.join(safe(&b.folder_name()));
+        let (en, legacy) = folder_names(b.folder);
+        // Profile aus F5 mit deutschen Ordnernamen: vorhandenen Ordner weiterbenutzen, nicht doppeln
+        let folder = if !dir.join(en).is_dir() && dir.join(legacy).is_dir() { dir.join(legacy) } else { dir.join(en) };
         let path = folder.join(b.file_name());
         ids.push(b.id.to_string());
         if path.exists() || std::fs::create_dir_all(&folder).is_err() {
