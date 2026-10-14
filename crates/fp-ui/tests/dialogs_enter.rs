@@ -109,6 +109,7 @@ fn enter_confirms_every_dialog_even_with_focused_field() {
     let mut no_field = Vec::new();
     for name in DIALOG_COMMANDS {
         let mut h = harness();
+        h.state_mut().state.dialogs.filter_vectors_ok = true; // TW-21: Rückfrage wie nach OK überspringen
         h.state_mut().state.run(name, json!({}));
         h.run_steps(3);
         assert!(h.state().state.dialogs.any_open(), "{name}: Dialog offen");

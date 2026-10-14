@@ -199,8 +199,10 @@ fn paste_inside_and_as_mask() {
     select(&mut s, &[a]);
     ex(&mut s, "edit.copy", json!({}));
     select(&mut s, &[b]);
-    ex(&mut s, "edit.pasteInside", json!({}));
-    let g = s.active().map(|d| d.selection.elements[0]).unwrap_or_default();
+    let v = ex(&mut s, "edit.pasteInside", json!({}));
+    // wie im Original danach nichts ausgewählt (M1 Q-14); die ID kommt aus dem Ergebnis
+    assert!(s.active().is_some_and(|d| d.selection.elements.is_empty()));
+    let g = fp_model::ElementId(v["id"].as_u64().unwrap_or(0));
     match &el(&s, g).kind {
         ElementKind::Group(gr) => {
             assert!(gr.kind.is_mask());

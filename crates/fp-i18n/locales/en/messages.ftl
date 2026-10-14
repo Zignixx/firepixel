@@ -586,6 +586,8 @@ msg-warn-choice-hotspot = &Hotspot
 msg-warn-choice-slice = S&lice
 msg-warn-choice-cancel = &Cancel
 msg-warn-dont-show = Don't s&how again
+# Filter auf Vektorobjekt (TW-21): Rückfrage mit OK/Abbrechen/Nicht mehr anzeigen
+msg-warn-filter-vectors = This operation converts vectors to bitmaps.
 msg-step-jpeg-mask-load = Load JPEG Mask
 msg-step-jpeg-mask-delete = Delete JPEG Mask
 # <<< FV-5 Warnungen ohne Ziel

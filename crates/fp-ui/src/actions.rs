@@ -154,7 +154,7 @@ fn run_command(st: &mut AppState, ctx: &egui::Context, name: &str, params: Value
     }
     match name {
         "file.new" if !has_param(&params, "width") => {
-            st.dialogs.new_document = Some(NewDocumentDialog::from_prefs(&st.session.prefs));
+            st.dialogs.new_document = Some(NewDocumentDialog::from_prefs(&st.session.prefs).with_clipboard(&st.session));
             return;
         }
         "file.open" if !has_param(&params, "path") => {
@@ -400,6 +400,10 @@ fn run_command(st: &mut AppState, ctx: &egui::Context, name: &str, params: Value
     }
     // Immer aktive Befehle ohne passendes Ziel: Warnung des Originals statt Dialog/Wirkung (FV-5)
     if crate::dialogs::warning::intercept(st, name) {
+        return;
+    }
+    // Filter auf Vektorobjekte: Rückfrage „Dieser Vorgang konvertiert Vektoren in Bitmaps.“ (TW-21)
+    if crate::dialogs::warning::intercept_filter_vectors(st, name, &params) {
         return;
     }
     // Befehle ohne Parameter aus Menü/Kürzel: zugehörigen Dialog öffnen (dialoge.json)

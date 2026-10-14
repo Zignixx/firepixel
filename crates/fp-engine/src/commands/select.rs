@@ -398,7 +398,10 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 return Ok(CommandOutput::doc());
             }
             let refs: Vec<_> = selected_elements(d).into_iter().map(|(_, e)| e).collect();
-            let key = |e: &Element| (e.type_code(), docops::path_attrs_of(e).map(|a| (a.fill_color, a.stroke_color, a.fill.is_some(), a.brush.is_some())));
+            // TW-31: wie im Original zählen auch Deckkraft und Mischmodus (par_vector: R2 mit 50 % wird nicht mitgewählt)
+            let key = |e: &Element| {
+                (e.type_code(), e.common.opacity, e.common.blend, docops::path_attrs_of(e).map(|a| (a.fill_color, a.stroke_color, a.fill.is_some(), a.brush.is_some())))
+            };
             let keys: Vec<_> = refs.iter().map(|e| key(e)).collect();
             let mut out = Vec::new();
             for id in all_selectable(d) {

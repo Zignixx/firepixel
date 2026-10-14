@@ -334,11 +334,17 @@ pub fn step_label_in_ui_language(text: &str) -> String {
     if ui == agent {
         return text.to_string();
     }
-    keys(&agent)
-        .iter()
-        .filter(|k| k.starts_with("msg-step-"))
-        .find(|k| t(k) == text)
-        .map(|k| with_ui_language(|| t(k)))
+    let all = keys(&agent);
+    if let Some(k) = all.iter().filter(|k| k.starts_with("msg-step-")).find(|k| t(k) == text) {
+        return with_ui_language(|| t(k));
+    }
+    // Schritte, die nach einem Befehl oder Werkzeug heißen (z. B. „Rectangle“ → „Rechteck“ aus
+    // `tool.shape`, np1 Nr. 5); Zugriffstasten (`&`) zählen nicht
+    let plain = |s: String| s.replace('&', "");
+    all.iter()
+        .filter(|k| k.starts_with("cmd-") || k.starts_with("tool-"))
+        .find(|k| plain(t(k)) == text)
+        .map(|k| with_ui_language(|| plain(t(k))))
         .unwrap_or_else(|| text.to_string())
 }
 

@@ -121,6 +121,7 @@ fn button_center(h: &H, label: &str) -> Pos2 {
 }
 
 fn open(h: &mut H, name: &str) {
+    h.state_mut().state.dialogs.filter_vectors_ok = true; // TW-21: Rückfrage wie nach OK überspringen
     h.state_mut().state.run(name, json!({}));
     h.run_steps(4);
     assert!(st(h).dialogs.any_open(), "{name}: Dialog offen");
@@ -294,6 +295,7 @@ fn every_dialog_field_keeps_typed_text_over_ten_openings() {
     let mut skipped = Vec::new();
     for name in DIALOG_COMMANDS {
         for round in 0..10usize {
+            h.state_mut().state.dialogs.filter_vectors_ok = true; // TW-21: Rückfrage wie nach OK überspringen
             h.state_mut().state.run(name, json!({}));
             h.run_steps(4);
             if !st(&h).dialogs.any_open() {
@@ -355,6 +357,7 @@ fn title_bar_is_never_a_tab_stop() {
     let title = fp_i18n::tr!("dlg-titlebar", title = "");
     let mut seen = 0;
     for name in DIALOG_COMMANDS {
+        h.state_mut().state.dialogs.filter_vectors_ok = true; // TW-21: Rückfrage wie nach OK überspringen
         h.state_mut().state.run(name, json!({}));
         h.run_steps(4);
         if !st(&h).dialogs.any_open() {
@@ -499,6 +502,7 @@ fn typed_value_survives_mouse_click_into_another_field() {
     h.state_mut().state.session.execute("select.all", json!({})).expect("alles");
     let mut checked = Vec::new();
     for name in DIALOG_COMMANDS {
+        h.state_mut().state.dialogs.filter_vectors_ok = true; // TW-21: Rückfrage wie nach OK überspringen
         h.state_mut().state.run(name, json!({}));
         h.run_steps(4);
         if !st(&h).dialogs.any_open() {

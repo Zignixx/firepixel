@@ -576,9 +576,19 @@ fn element_get(cls: &str, name: &str, doc: DocId, id: ElementId, ctx: &mut Conte
             // Maskiertes Einzelelement (Maske ▸ Alles einblenden/ausblenden, fixg5 Q-02): die nach der
             // Maske sichtbaren Pixel; ganz ausgeblendet wie im Original das leere Rechteck ±2³¹.
             let masked = e.masked_single().is_some();
+            // TW-16: Text meldet wie im Original die Tintengrenzen (gerenderte Alpha), nicht den Rahmen.
+            let text = matches!(e.kind, ElementKind::Text(_));
             let r = st(|s| {
                 let d = s.session.document(doc).ok_or_else(|| FwErr::bad("Dokument"))?;
-                if masked {
+                // Q-14 (M1): Vektormaske (Einfügen innen) meldet im Original immer den Maskenbereich,
+                // auch ohne Überlappung mit dem Inhalt
+                if let ElementKind::Group(g) = &e.kind
+                    && matches!(g.kind, fp_model::element::GroupKind::VectorMask)
+                    && let Some(m) = &g.mask
+                {
+                    return Ok(fp_engine::docops::element_pixel_rect(&d.doc, m));
+                }
+                if masked || text {
                     let r = fp_render::Renderer::new(fp_render::RenderOptions { background: fp_render::BackgroundMode::Transparent, ..fp_render::RenderOptions::default() });
                     let img = r.render_element(&d.doc, &e, &fp_render::PointMap::identity(), d.frame).image;
                     let b = img.alpha_bounds_min(2);
@@ -588,7 +598,7 @@ fn element_get(cls: &str, name: &str, doc: DocId, id: ElementId, ctx: &mut Conte
             })?;
             let b = match (r, &e.kind) {
                 (Some(r), _) => [r.left as f64, r.top as f64, r.right as f64, r.bottom as f64],
-                (None, _) if masked => {
+                (None, _) if masked || text => {
                     let m = 2f64.powi(31);
                     [-m, -m, m, m]
                 }

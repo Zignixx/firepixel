@@ -77,6 +77,8 @@ fn drag(h: &mut H, a: Pos2, b: Pos2, frames: usize) {
 }
 
 fn open(h: &mut H, cmd: &str) {
+    // Filter auf das Vektor-Testobjekt: die Rückfrage „konvertiert Vektoren in Bitmaps“ (TW-21) wie nach OK überspringen
+    h.state_mut().state.dialogs.filter_vectors_ok = true;
     h.state_mut().state.run(cmd, json!({}));
     h.run_steps(3);
     assert!(st(h).dialogs.form.is_some(), "{cmd}: Formular offen");

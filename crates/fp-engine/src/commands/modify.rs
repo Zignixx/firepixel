@@ -297,7 +297,11 @@ fn combine(s: &mut Session, op: PathBoolOp) -> Result<CommandOutput> {
                     docops::remove_ids(doc, page, &[bottom.id]);
                     d.selection.clear();
                 } else {
-                    docops::edit_by_id(doc, page, bottom.id, |e| set_contours(e, contours, Some(true)));
+                    // TW-26: Ergebnis der Pfadoperation ist im Original namenlos
+                    docops::edit_by_id(doc, page, bottom.id, |e| {
+                        set_contours(e, contours, Some(true));
+                        e.common.name = None;
+                    });
                     d.selection.set(vec![bottom.id]);
                 }
             }
@@ -309,7 +313,10 @@ fn combine(s: &mut Session, op: PathBoolOp) -> Result<CommandOutput> {
                     if contours.is_empty() {
                         docops::remove_ids(doc, page, &[e.id]);
                     } else {
-                        docops::edit_by_id(doc, page, e.id, |x| set_contours(x, contours, Some(true)));
+                        docops::edit_by_id(doc, page, e.id, |x| {
+                            set_contours(x, contours, Some(true));
+                            x.common.name = None;
+                        });
                         keep.push(e.id);
                     }
                 }
@@ -321,6 +328,11 @@ fn combine(s: &mut Session, op: PathBoolOp) -> Result<CommandOutput> {
 }
 
 fn alter_paths(s: &mut Session, f: impl Fn(&dyn geometry::GeometryOps, &Element, &[Contour]) -> Result<Vec<Contour>>) -> Result<CommandOutput> {
+    alter_paths_named(s, true, f)
+}
+
+/// Wie [`alter_paths`]; `keep_name = false` entfernt den Namen (TW-26: Strich erweitern, Pfad einlassen).
+fn alter_paths_named(s: &mut Session, keep_name: bool, f: impl Fn(&dyn geometry::GeometryOps, &Element, &[Contour]) -> Result<Vec<Contour>>) -> Result<CommandOutput> {
     let geo = Arc::clone(&s.geometry_arc());
     with_doc(s, |d| {
         let page = d.page;
@@ -334,7 +346,12 @@ fn alter_paths(s: &mut Session, f: impl Fn(&dyn geometry::GeometryOps, &Element,
         }
         let doc = Arc::make_mut(&mut d.doc);
         for (id, c) in results {
-            docops::edit_by_id(doc, page, id, |e| set_contours(e, c, Some(true)));
+            docops::edit_by_id(doc, page, id, |e| {
+                set_contours(e, c, Some(true));
+                if !keep_name {
+                    e.common.name = None;
+                }
+            });
         }
         Ok(CommandOutput::doc())
     })
@@ -392,7 +409,10 @@ fn join(d: &mut DocumentState) -> Result<()> {
             };
             let others: Vec<ElementId> = items[..items.len() - 1].iter().map(|(_, e, _)| e.id).collect();
             docops::remove_ids(doc, page, &others);
-            docops::edit_by_id(doc, page, bottom.id, |x| set_contours(x, contours, None));
+            docops::edit_by_id(doc, page, bottom.id, |x| {
+                set_contours(x, contours, None);
+                x.common.name = None; // TW-26
+            });
             d.selection.set(vec![bottom.id]);
             Ok(())
         }
@@ -416,6 +436,7 @@ fn split(d: &mut DocumentState) -> Result<()> {
         for c in sh.contours.iter().rev() {
             let mut n = (*e).clone();
             set_contours(&mut n, vec![c.clone()], None);
+            n.common.name = None; // TW-26: Teile sind im Original namenlos
             parts.push(n);
         }
         let mut idg = std::mem::take(&mut doc.ids);
@@ -825,6 +846,10 @@ pub(super) fn register(r: &mut CommandRegistry) {
     r.add(cmd("modify.canvas.trimCanvas").requires(DOC).run(|s, _| {
         with_doc(s, |d| {
             let b = docops::page_content_bounds(&d.doc, d.page).ok_or_else(|| sel_err("err-sel-page-empty"))?;
+            // TW-17: Inhaltsgrenzen ∩ Leinwand (wie im Original); liegt nichts auf der Leinwand,
+            // weiter auf den ganzen Inhalt
+            let inside = b.intersect(&canvas_rect(&d.doc, d.page));
+            let b = if inside.is_empty() { b } else { inside };
             crop_page(d, b.round_out())?;
             Ok(CommandOutput::doc())
         })
@@ -927,6 +952,9 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 with_doc(s, |d| {
                     let ids = d.selection.elements.clone();
                     let id = make_symbol(d, &name, kind, &ids)?;
+                    // TW-27: die Instanz heißt wie das Symbol (wie im Original)
+                    let page = d.page;
+                    docops::edit_by_id(Arc::make_mut(&mut d.doc), page, id, |e| e.common.name = Some(name.clone()));
                     Ok(CommandOutput::doc_with(json!({"id": id.0})))
                 })
             }),
@@ -1173,8 +1201,14 @@ pub(super) fn register(r: &mut CommandRegistry) {
             (els.iter().map(|(_, e)| Arc::clone(e)).collect::<Vec<_>>(), first, d.selection.elements.clone())
         };
         let img = flatten_elements(s, &els)?;
+        // TW-27: die Bitmap behält den Namen (des obersten Objekts), wie im Original
+        let name = els.first().and_then(|e| e.common.name.clone());
         with_doc(s, |d| {
             let id = replace_with_bitmap(d, &ids, &img, &first)?;
+            if name.is_some() {
+                let page = d.page;
+                docops::edit_by_id(Arc::make_mut(&mut d.doc), page, id, |e| e.common.name = name.clone());
+            }
             Ok(CommandOutput::doc_with(json!({"id": id.0})))
         })
     }));
@@ -1461,7 +1495,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                     _ => 0,
                 };
                 let miter = p.f64_or("miter", 10.0)?;
-                alter_paths(s, move |g, e, c| {
+                alter_paths_named(s, false, move |g, e, c| {
                     let width = w.or_else(|| docops::path_attrs_of(e).and_then(|a| a.brush.as_ref().map(|b| b.diameter as f64))).unwrap_or(1.0);
                     g.expand_stroke(c, width, join, cap, miter)
                 })
@@ -1483,7 +1517,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                     _ => 2,
                 };
                 let miter = p.f64_or("miter", 10.0)?;
-                alter_paths(s, move |g, _, c| g.inset(c, dist, expand, join, miter))
+                alter_paths_named(s, false, move |g, _, c| g.inset(c, dist, expand, join, miter))
             }),
     );
     for (name, edge) in [("modify.alterPath.hardFill", 0), ("modify.alterPath.antiAliasFill", 1), ("modify.alterPath.featherFill", 2)] {

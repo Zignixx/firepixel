@@ -1351,8 +1351,10 @@ pub(super) fn get(doc: DocId, name: &str, ctx: &mut Context) -> FwResult<JsValue
         "gridColor" => Ok(conv::s(&hex(page_root(doc, |p, _, _| p.root.grid.clone().unwrap_or_default().color)?))),
         "guides" => {
             let g = page_root(doc, |p, _, _| p.root.guides.clone().unwrap_or_default())?;
+            // TW-28: Die wirksame Sperre steht im Ansichtszustand (Ansicht ▸ Hilfslinien sperren).
+            let locked = view(doc, |v| v.lock_guides)? || g.locked.unwrap_or(false);
             let v = json!({
-                "locked": g.locked.unwrap_or(false), "color": hex(g.color.unwrap_or(fp_color::Argb(0xff00_ffff))),
+                "locked": locked, "color": hex(g.color.unwrap_or(fp_color::Argb(0xff00_ffff))),
                 "hGuides": g.horizontal, "vGuides": g.vertical,
             });
             conv::json_to_js(&v, ctx).map_err(jserr)

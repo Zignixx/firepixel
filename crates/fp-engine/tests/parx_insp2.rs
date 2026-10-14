@@ -125,10 +125,12 @@ fn shape_tool_step_named_after_shape() {
     assert_eq!(label(&s), "Rechteck");
     s.execute("tool.shape", json!({"draw": "draw.ellipse", "params": {"rect": [70, 10, 120, 40]}})).expect("Ellipse");
     assert_eq!(label(&s), "Ellipse");
-    fp_i18n::with_language("en", || {
-        s.execute("tool.shape", json!({"draw": "draw.rectangle", "params": {"rect": [10, 50, 60, 90]}})).expect("Rectangle");
-        assert_eq!(label(&s), "Rectangle");
-    });
+    // englische Oberfläche: „Rectangle“. (Über die Brücke mit englischer Antwortsprache bleibt der
+    // Verlaufsname in der Sprache der Oberfläche, np1 Nr. 5 / tw_f4::history_names_are_german.)
+    fp_i18n::set_language("en");
+    s.execute("tool.shape", json!({"draw": "draw.rectangle", "params": {"rect": [10, 50, 60, 90]}})).expect("Rectangle");
+    assert_eq!(label(&s), "Rectangle");
+    fp_i18n::set_language("de");
     // ein Schritt je Form; Rückgängig entfernt genau die letzte
     let n = s.active().unwrap().history.undo_count();
     s.execute("edit.undo", json!({})).expect("undo");

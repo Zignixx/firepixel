@@ -101,6 +101,7 @@ fn snapshots_inspector_panels_dialogs() {
     save(&mut h, "ebenen");
     h.state_mut().state.push(Action::ShowPanel(PanelId::Optimize));
     save(&mut h, "optimieren");
+    h.state_mut().state.dialogs.filter_vectors_ok = true; // TW-21: Rückfrage wie nach OK überspringen
     h.state_mut().state.run("filter.blur.gaussian", json!({}));
     save(&mut h, "filterdialog");
     h.key_press(egui::Key::Escape);

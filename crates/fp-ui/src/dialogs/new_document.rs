@@ -40,6 +40,18 @@ fn parse_num(s: &str) -> Option<f64> {
     s.trim().replace(',', ".").parse::<f64>().ok().filter(|v| v.is_finite())
 }
 
+/// Größe der internen Zwischenablage in Pixeln (`None`: leer).
+pub fn clipboard_size(session: &fp_engine::Session) -> Option<(f64, f64)> {
+    let c = &session.clipboard;
+    if let Some(px) = &c.pixels {
+        return (px.width() > 0 && px.height() > 0).then(|| (px.width() as f64, px.height() as f64));
+    }
+    let doc = &session.active()?.doc;
+    let b = c.elements.iter().filter_map(|e| fp_engine::docops::element_bounds(doc, e)).reduce(|a, b| a.union(&b))?;
+    let b = b.round_out();
+    (b.width() > 0 && b.height() > 0).then(|| (b.width() as f64, b.height() as f64))
+}
+
 impl NewDocumentDialog {
     /// Vorgaben aus den Voreinstellungen (`DefaultDocSize`, Auflösung, Leinwandfarbe).
     pub fn from_prefs(p: &fp_engine::Preferences) -> NewDocumentDialog {
@@ -63,6 +75,18 @@ impl NewDocumentDialog {
             canvas,
             custom: Color32::from_rgb((bg.0 >> 16 & 0xff) as u8, (bg.0 >> 8 & 0xff) as u8, (bg.0 & 0xff) as u8),
         }
+    }
+
+    /// TW-24: Liegt etwas in der internen Zwischenablage, schlägt das Original dessen Größe vor
+    /// (Rahmen aller kopierten Objekte bzw. die kopierten Pixel).
+    pub fn with_clipboard(mut self, session: &fp_engine::Session) -> NewDocumentDialog {
+        if let Some((w, h)) = clipboard_size(session) {
+            self.width = fmt_num(w);
+            self.height = fmt_num(h);
+            self.width_unit = 0;
+            self.height_unit = 0;
+        }
+        self
     }
 
     fn ppi(&self) -> f64 {

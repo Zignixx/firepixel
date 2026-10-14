@@ -677,11 +677,13 @@ fn convert_to_paths(s: &mut Session) -> Result<CommandOutput> {
                 1 => {
                     let mut p = (*paths[0]).clone();
                     p.common = e.common.clone();
+                    p.common.name = None; // TW-26: Ergebnis im Original namenlos
                     Some(p)
                 }
                 _ => {
                     let mut g = Element::new_group(&mut ids, paths);
                     g.common = e.common.clone();
+                    g.common.name = None; // TW-26: Ergebnis im Original namenlos
                     Some(g)
                 }
             };

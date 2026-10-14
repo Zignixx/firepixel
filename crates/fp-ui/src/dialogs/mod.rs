@@ -106,6 +106,8 @@ pub struct Dialogs {
     pub trace: Option<trace::TraceDialog>,
     /// Warnung „Befehl ohne passendes Ziel“ mit „Nicht mehr anzeigen“ (FV-5).
     pub warning: Option<warning::WarningDialog>,
+    /// Rückfrage „konvertiert Vektoren in Bitmaps“ mit OK bestätigt: der nächste Filteraufruf fragt nicht (TW-21).
+    pub filter_vectors_ok: bool,
     /// „Pinselstrich bearbeiten“ mit Registerkarten Optionen/Form/Empfindlichkeit (PINSEL-1).
     pub brush_edit: Option<brush_edit::BrushEditDialog>,
     /// Eingabeaufforderung `prompt()` eines Befehlsskripts (CT-1b MN-5).

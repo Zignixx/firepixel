@@ -445,8 +445,9 @@ pub(super) fn register(r: &mut CommandRegistry) {
             if let Some((list, _)) = docops::parent_list_mut(doc, &path) {
                 list.insert(idx.min(list.len()), Arc::new(g));
             }
-            d.selection.set(vec![gid]);
-            Ok(CommandOutput::doc())
+            // wie im Original ist danach nichts ausgewählt (M1 Q-14)
+            d.selection.clear();
+            Ok(CommandOutput::doc_with(json!({"id": gid.0})))
         })
     }));
     r.add(cmd("edit.pasteAttributes").requires(&[Requirement::Document, Requirement::Selection, Requirement::Clipboard]).run(|s, _| {

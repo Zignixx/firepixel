@@ -36,6 +36,53 @@ pub fn intercept(st: &mut AppState, name: &str) -> bool {
     true
 }
 
+/// Schlüssel der Rückfrage „Dieser Vorgang konvertiert Vektoren in Bitmaps.“ (TW-21).
+pub const FILTER_VECTORS: &str = "filterVectors";
+/// Voreinstellung ihres Kästchens „Nicht mehr anzeigen“ (`DisableConfirm…`: „Warndialoge
+/// zurücksetzen“ schaltet sie wieder ein).
+pub const FILTER_VECTORS_PREF: &str = "DisableConfirmFilterVectors";
+
+/// Wird ein Filter (aus Menü oder Kürzel, ohne Parameter) auf eine Auswahl mit Vektorobjekten
+/// angewendet, fragt das Original erst „Dieser Vorgang konvertiert Vektoren in Bitmaps.“ (OK,
+/// Abbrechen, Nicht mehr anzeigen). `true`: Rückfrage offen, der Befehl wartet auf OK.
+pub fn intercept_filter_vectors(st: &mut AppState, name: &str, params: &serde_json::Value) -> bool {
+    if !name.starts_with("filter.") || !params.as_object().is_none_or(|o| o.is_empty()) {
+        return false;
+    }
+    if std::mem::take(&mut st.dialogs.filter_vectors_ok) {
+        return false;
+    }
+    let Some(d) = st.session.active() else { return false };
+    if d.selection.has_pixels() {
+        return false;
+    }
+    let vectors = d.selection.elements.iter().filter_map(|id| fp_engine::docops::element_on_page(&d.doc, d.page, *id)).any(|e| !matches!(e.kind, fp_model::ElementKind::Bitmap(_)));
+    if !vectors {
+        return false;
+    }
+    if st.session.prefs.get_bool(FILTER_VECTORS_PREF, false) {
+        // abgeschaltet: ohne Frage konvertieren wie nach OK
+        convert_then_run(st, name);
+        return true;
+    }
+    st.dialogs.warning = Some(WarningDialog::new(TargetWarning {
+        key: FILTER_VECTORS.into(),
+        command: name.into(),
+        text: t("msg-warn-filter-vectors"),
+        pref: Some(FILTER_VECTORS_PREF.into()),
+        choices: vec![fp_engine::warnings::WarningChoice { label: t("btn-ok"), command: name.into() }],
+        suppressed: false,
+    }));
+    true
+}
+
+/// Nach OK (oder abgeschalteter Rückfrage): Auswahl in Bitmap konvertieren, dann der Filter.
+fn convert_then_run(st: &mut AppState, command: &str) {
+    st.dialogs.filter_vectors_ok = true;
+    st.push(Action::Run("modify.flattenSelection".into(), json!({})));
+    st.push(Action::Run(command.into(), json!({})));
+}
+
 /// Zugriffstaste ohne Alt (Meldungsfenster wie im Original).
 fn access(ui: &egui::Ui, label: &str) -> bool {
     let Some(k) = super::access_key(label) else { return false };
@@ -117,6 +164,14 @@ pub fn show(ctx: &egui::Context, st: &mut AppState) {
         {
             st.dialogs.warning = Some(WarningDialog::new(next));
         }
+        return;
+    }
+    if let Outcome::Choice(_) = outcome
+        && d.warning.key == FILTER_VECTORS
+    {
+        // OK: wie angekündigt erst in Bitmap konvertieren, dann den Filter ausführen (bzw. seinen
+        // Dialog öffnen), ohne erneut zu fragen
+        convert_then_run(st, &d.warning.command);
         return;
     }
     if let Outcome::Choice(i) = outcome {
