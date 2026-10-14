@@ -207,6 +207,11 @@ struct CpState {
     shot_asked: f64,
     /// Zeigerlage beim letzten Foto (ruht der Zeiger, wird nicht neu fotografiert).
     shot_pos: Option<Pos2>,
+    /// Foto angefordert, aber noch nicht da (Zeitpunkt): bis dahin wird der eigene Pipetten-Zeiger
+    /// nicht gemalt. eframe fotografiert erst das **nächste** Bild nach der Anforderung – dort lag
+    /// sonst die schwarze Spitze des Zeigers genau unter dem Zeiger, und die Pipette las über
+    /// Bedienfeldern und Menüleiste immer #000000 (N27, NP-1).
+    shot_pending: Option<f64>,
 }
 
 fn state_id(pid: Id) -> Id {
@@ -262,7 +267,7 @@ fn opacity_of(start: Option<Argb>) -> u8 {
 impl CpState {
     fn new(pos: Pos2, start: Option<Argb>, pass: u64) -> CpState {
         let work = start.map(opaque);
-        let mut s = CpState { pos, start, work, opacity: opacity_of(start), dirty: false, opacity_dirty: false, hex: String::new(), op: String::new(), rgb: Default::default(), slider: false, sys: false, opened_pass: pass, page: None, shot: None, shot_asked: f64::NEG_INFINITY, shot_pos: None };
+        let mut s = CpState { pos, start, work, opacity: opacity_of(start), dirty: false, opacity_dirty: false, hex: String::new(), op: String::new(), rgb: Default::default(), slider: false, sys: false, opened_pass: pass, page: None, shot: None, shot_asked: f64::NEG_INFINITY, shot_pos: None, shot_pending: None };
         s.fill_buffers(work);
         s
     }
@@ -291,8 +296,11 @@ impl CpState {
 
 /// Farbe unter dem Zeiger außerhalb des Popups: Leinwand (Dokumentpixel der aktiven Seite, auf Weiß)
 /// bzw. das letzte Bildschirmfoto des App-Fensters.
-fn sample(ctx: &egui::Context, st: &AppState, s: &mut CpState, p: Pos2) -> Option<Argb> {
-    if let Some(d) = st.session.active()
+fn sample(ctx: &egui::Context, st: &AppState, s: &mut CpState, p: Pos2, own: &[Id]) -> Option<Argb> {
+    // Leinwand-Abkürzung nur, wenn dort kein Fenster (Dialog, schwebendes Bedienfeld, Menü) liegt:
+    // sonst nahm die Pipette über dem Glühen-Dialog das Dokumentpixel darunter (N27, NP-1)
+    if !covered_by_window(ctx, p, own)
+        && let Some(d) = st.session.active()
         && let Some(area) = st.canvases.get(&d.id).and_then(|c| c.area)
         && area.contains(p)
         && let Some(page) = d.doc.pages.get(d.page)
@@ -320,7 +328,27 @@ fn sample(ctx: &egui::Context, st: &AppState, s: &mut CpState, p: Pos2) -> Optio
         return None;
     }
     let c = img.pixels[y as usize * w + x as usize];
-    Some(Argb(0xff00_0000 | (c.r() as u32) << 16 | (c.g() as u32) << 8 | c.b() as u32))
+    // außerhalb eines offenen Dialogs liegt dessen Abdunklung über allem: herausrechnen, damit die
+    // Pipette die Farbe wie ohne Dialog liefert (im Original wird nichts abgedunkelt)
+    let k = match (ctx.memory(|m| m.top_modal_layer()), crate::dialogs::last_dialog_id(ctx)) {
+        (Some(l), Some(id)) if l.id == Id::new(&id) && crate::dialogs::dialog_rect(ctx, &id).is_some_and(|r| !r.contains(p)) => 1.0 - crate::dialogs::backdrop_alpha(&Theme::current(ctx)) as f32 / 255.0,
+        _ => 1.0,
+    };
+    let un = |v: u8| ((v as f32 / k).round().clamp(0.0, 255.0)) as u32;
+    Some(Argb(0xff00_0000 | un(c.r()) << 16 | un(c.g()) << 8 | un(c.b())))
+}
+
+/// Liegt über `p` ein Fenster/Bereich oberhalb der Grundebene (Dialog, schwebendes Bedienfeld,
+/// Menü)? Die eigenen Ebenen des Popups (`own`: Popup und Hintergrund) zählen nicht.
+fn covered_by_window(ctx: &egui::Context, p: Pos2, own: &[Id]) -> bool {
+    ctx.memory(|m| {
+        m.layer_ids().any(|l| {
+            !matches!(l.order, Order::Background | Order::Tooltip | Order::Debug)
+                && !own.contains(&l.id)
+                && m.areas().is_visible(&l)
+                && m.area_rect(l.id).is_some_and(|r| r.contains(p))
+        })
+    })
 }
 
 /// Eingabefeld des Popups (Rahmen im Firepixel-Design, Fokus = Unterlinie wie im Original).
@@ -460,10 +488,14 @@ fn body(ui: &mut Ui, ctx: &egui::Context, swatch: Id, st: &AppState, s: &mut CpS
             })
             .collect()
     });
+    let now = ctx.input(|i| i.time);
     if let Some(img) = shots.into_iter().last() {
         s.shot = Some(img);
+        s.shot_pending = None;
     }
-    let now = ctx.input(|i| i.time);
+    if s.shot_pending.is_some_and(|t| now - t > 1.0) {
+        s.shot_pending = None; // kein Foto gekommen (z. B. Fenster verdeckt): Zeiger wieder zeigen
+    }
     let mut out = None;
     let mut close = false;
     // ---- Tasten (vor den Feldern verbraucht, damit weder Dialog noch Feld sie bekommt)
@@ -499,6 +531,7 @@ fn body(ui: &mut Ui, ctx: &egui::Context, swatch: Id, st: &AppState, s: &mut CpS
         let rr = ((p.y - o.y - 3.5) / 12.0).floor().clamp(0.0, (GRID_ROWS - 1) as f32) as usize;
         Some((cc, rr))
     };
+    let own = [pid.with("backdrop"), pid.with("area")];
     let (sys_open, slider_open) = (s.sys, s.slider);
     let blocked = |p: Pos2| (sys_open && sys_rect.contains(p)) || (slider_open && slider_rect.contains(p));
     let mut hover_cell = None;
@@ -509,12 +542,13 @@ fn body(ui: &mut Ui, ctx: &egui::Context, swatch: Id, st: &AppState, s: &mut CpS
             hover_cell = cell_at(p);
             live = hover_cell.map(|(cc, rr)| grid_color(cc, rr));
         } else if !s.sys {
-            live = sample(ctx, st, s, p);
+            live = sample(ctx, st, s, p, &own);
             // Bildschirmfoto auffrischen, solange der Zeiger draußen ist (höchstens alle 0,4 s)
             // (das Foto zeigt dieses Bild: hier ohne den eigenen Zeiger, sonst läse die Pipette ihn selbst)
             if now - s.shot_asked > 0.4 && s.shot_pos != Some(p) && screenshots_allowed() {
                 s.shot_asked = now;
                 s.shot_pos = Some(p);
+                s.shot_pending = Some(now);
                 shot_frame = true;
                 ctx.send_viewport_cmd(egui::ViewportCommand::Screenshot(egui::UserData::new(SHOT_TAG)));
                 ctx.request_repaint();
@@ -534,7 +568,7 @@ fn body(ui: &mut Ui, ctx: &egui::Context, swatch: Id, st: &AppState, s: &mut CpS
         } else if let Some((cc, rr)) = cell_at(p) {
             return (Some(ColorChoice::Color(s.finish(grid_color(cc, rr)))), true);
         } else if !rect.contains(p) {
-            let picked = sample(ctx, st, s, p);
+            let picked = sample(ctx, st, s, p, &own);
             return (picked.map(|col| ColorChoice::Color(s.finish(col))), true);
         }
     }
@@ -740,14 +774,16 @@ fn body(ui: &mut Ui, ctx: &egui::Context, swatch: Id, st: &AppState, s: &mut CpS
     // ---- Zeiger: Pipette (eigener Zeiger) über allem außer Eingabefeldern
     if let Some(p) = pointer
         && !s.sys
-        && !shot_frame
     {
         let over_field = [(137.0, 191.0, 234.0, 212.0), (15.0, 214.0, 46.0, 235.0), (137.0, 214.0, 235.0, 235.0)].iter().any(|(a, b, cx, d)| Rect::from_min_max(o + vec2(*a, *b), o + vec2(*cx, *d)).contains(p));
         let over_controls = rect.contains(p) && !grid.contains(p);
         if !over_field && !over_controls && !(s.slider && slider_rect.contains(p)) {
             ctx.set_cursor_icon(CursorIcon::None);
-            let painter = ctx.layer_painter(LayerId::new(Order::Debug, pid.with("cursor")));
-            crate::canvas::cursors::paint(&painter, p, fp_engine::tools::Cursor::Eyedropper, &t.colors, false);
+            // solange ein Foto aussteht, ohne eigenen Zeiger (das Foto zeigt das nächste Bild)
+            if !shot_frame && s.shot_pending.is_none() {
+                let painter = ctx.layer_painter(LayerId::new(Order::Debug, pid.with("cursor")));
+                crate::canvas::cursors::paint(&painter, p, fp_engine::tools::Cursor::Eyedropper, &t.colors, false);
+            }
         }
     }
     let _ = ui;

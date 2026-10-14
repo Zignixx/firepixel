@@ -972,6 +972,11 @@ fn model_issue(p: &Value) -> Option<Issue> {
 }
 
 /// `background.remove`.
+/// Gleichzeitig laufende Elemente mit KI-Schritt: das Modell rechnet selbst auf allen Kernen und
+/// braucht je Bild mehrere 100 MB – mehr Elemente zugleich machen den Lauf nicht schneller, nur die
+/// Restzeit unruhig und den Speicher knapp (BATCH-T: 24 Fotos liefen alle sofort „läuft“).
+pub const AI_PARALLEL: usize = 2;
+
 struct Remove;
 
 impl Step for Remove {
@@ -993,6 +998,9 @@ impl Step for Remove {
     }
     fn applies_to(&self) -> &[ItemKind] {
         &ItemKind::PIXELS
+    }
+    fn max_parallel(&self, _params: &Value) -> Option<usize> {
+        Some(AI_PARALLEL)
     }
     fn apply(&self, item: &mut Item, params: &Value, ctx: &mut StepContext) -> Result<()> {
         let output = p_str(params, "output", "transparent").to_string();
@@ -1169,6 +1177,9 @@ impl Step for Replace {
     }
     fn applies_to(&self) -> &[ItemKind] {
         &ItemKind::PIXELS
+    }
+    fn max_parallel(&self, params: &Value) -> Option<usize> {
+        (p_str(params, "method", "ai") == "ai").then_some(AI_PARALLEL)
     }
     fn apply(&self, item: &mut Item, params: &Value, ctx: &mut StepContext) -> Result<()> {
         let deco = p_bool(params, "decontaminate", true);

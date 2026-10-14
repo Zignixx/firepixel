@@ -80,6 +80,7 @@ trace-done = Done in { $ms } ms
 trace-no-preview = Calculating preview …
 trace-empty-title = No paths were created
 trace-empty-hint = Remove fewer speckles or choose another preset.
+trace-empty-hint-faint = The bitmap is semi-transparent (highest opacity { $alpha } of 255) and lies entirely below the alpha threshold { $threshold }. Lower the alpha threshold or turn off “Ignore transparent pixels”.
 trace-downscaled = Downscaled to { $width } × { $height } pixels for tracing; the paths are stretched to the full size.
 trace-multi = { $n } bitmaps selected: the preview shows the first, OK traces all of them.
 trace-keep-original = Keep original

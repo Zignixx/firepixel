@@ -35,6 +35,8 @@ pub struct RunState {
     pub ask: Option<(PlanEntry, Sender<(AskChoice, bool)>)>,
     pub ask_all: bool,
     pub cancelling: bool,
+    /// Geglättete Restzeit (Zeitpunkt der Schätzung, Sekunden), siehe [`RunState::update_eta`].
+    eta: Option<(Instant, f64)>,
 }
 
 impl RunState {
@@ -48,13 +50,25 @@ impl RunState {
     pub fn fraction(&self) -> f32 {
         if self.total == 0 { 0.0 } else { self.finished as f32 / self.total as f32 }
     }
-    /// Geschätzte Restzeit in Sekunden (gleitend über die bisherige Dauer je Datei).
+    /// Geschätzte Restzeit in Sekunden: letzte Schätzung, seitdem heruntergezählt.
     pub fn remaining(&self) -> Option<f64> {
-        if self.finished == 0 {
-            return None;
+        let (at, est) = self.eta?;
+        Some((est - at.elapsed().as_secs_f64()).max(0.0))
+    }
+    /// Neue Schätzung nach jeder fertigen Datei: Rohwert (bisherige Dauer je Datei × Rest) mit der
+    /// heruntergezählten alten Schätzung gemittelt (gleitender Mittelwert, SPEC §2.8). Ohne Glättung
+    /// sprang die Restzeit bei parallelen Läufen stark (0:58 → 3:59 → 0:47, BATCH-T).
+    pub fn update_eta(&mut self) {
+        if self.finished == 0 || self.total == 0 {
+            return;
         }
         let per = self.started.elapsed().as_secs_f64() / self.finished as f64;
-        Some(per * (self.total - self.finished) as f64)
+        let raw = per * self.total.saturating_sub(self.finished) as f64;
+        let est = match self.remaining() {
+            Some(prev) if self.finished < self.total => 0.35 * raw + 0.65 * prev,
+            _ => raw,
+        };
+        self.eta = Some((Instant::now(), est));
     }
 }
 
@@ -125,7 +139,7 @@ pub fn start(s: &mut Studio, now: f64) {
     let opts = RunOptions { ask: Some(ask), log: true, ..RunOptions::default() };
     let handle = fp_batch::spawn(s.recipe.clone(), items, opts);
     let total = map.len();
-    s.run = Some(RunState { handle, map, total, finished: 0, started: Instant::now(), ask_rx, ask: None, ask_all: false, cancelling: false });
+    s.run = Some(RunState { handle, map, total, finished: 0, started: Instant::now(), ask_rx, ask: None, ask_all: false, cancelling: false, eta: None });
     s.report = None;
     s.show_summary = false;
     s.gallery = None;
@@ -146,6 +160,7 @@ pub fn poll(ctx: &egui::Context, s: &mut Studio, now: f64) {
     let events: Vec<Progress> = run.handle.events.try_iter().collect();
     let map = run.map.clone();
     let mut finished: Option<fp_batch::Report> = None;
+    let finished_before = run.finished;
     for ev in events {
         let idx = |k: usize| map.get(k).copied();
         match ev {
@@ -187,6 +202,9 @@ pub fn poll(ctx: &egui::Context, s: &mut Studio, now: f64) {
             }
             Progress::Finished(r) => finished = Some(*r),
         }
+    }
+    if run.finished != finished_before {
+        run.update_eta();
     }
     if finished.is_none() && !thread_done {
         return;

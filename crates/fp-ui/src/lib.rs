@@ -25,6 +25,7 @@ pub mod actions;
 pub mod app_state;
 pub mod appbar;
 pub mod batch; // BATCH-2: Batch-Studio (Reiter „Batch“)
+pub mod builtin_templates; // Q-11: mitgelieferte Vorlagen für „Neu von Vorlage“
 pub mod bridge;
 pub mod canvas;
 mod start_window;

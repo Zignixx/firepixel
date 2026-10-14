@@ -80,6 +80,7 @@ trace-done = Fertig in { $ms } ms
 trace-no-preview = Vorschau wird berechnet …
 trace-empty-title = Keine Pfade entstanden
 trace-empty-hint = Entfernen Sie weniger Flecken oder wählen Sie eine andere Vorgabe.
+trace-empty-hint-faint = Die Bitmap ist halbtransparent (höchste Deckkraft { $alpha } von 255) und liegt ganz unter der Alphaschwelle { $threshold }. Alphaschwelle senken oder „Transparente Pixel ignorieren“ ausschalten.
 trace-downscaled = Zum Nachzeichnen auf { $width } × { $height } Pixel verkleinert; die Pfade werden auf die volle Größe gestreckt.
 trace-multi = { $n } Bitmaps ausgewählt: Die Vorschau zeigt die erste, OK zeichnet alle nach.
 trace-keep-original = Original behalten

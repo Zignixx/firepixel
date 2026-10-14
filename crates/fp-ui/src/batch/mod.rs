@@ -290,6 +290,9 @@ impl Studio {
         let existing: Vec<ItemInfo> = self.files.iter().map(|f| f.info.clone()).collect();
         let c = fp_batch::collect(paths, recursive, allow_other, &existing);
         let n = c.items.len();
+        if self.files.is_empty() && n > 0 {
+            self.forget_report(); // neue Liste: Zahlen des letzten Laufs gehören nicht dazu (BATCH-T)
+        }
         for info in c.items {
             self.files.push(FileEntry { info, enabled: true, status: EntryStatus::Waiting, message: None, target: None, added: self.next_added });
             self.next_added += 1;
@@ -331,6 +334,9 @@ impl Studio {
         if self.selected.is_none() {
             self.selected = self.visible().first().copied();
         }
+        if self.files.is_empty() {
+            self.forget_report();
+        }
         self.files_changed();
     }
 
@@ -338,7 +344,17 @@ impl Studio {
     pub fn clear_files(&mut self) {
         self.files.clear();
         self.selected = None;
+        self.forget_report();
         self.files_changed();
+    }
+
+    /// Ergebnis des letzten Laufs verwerfen (Ausgabe-Leiste und Ende-Karte), z. B. nach „Leeren“:
+    /// sonst stand „24 fertig · 1,9 MB → …“ weiter unter einer leeren bzw. neuen Liste (BATCH-T).
+    pub fn forget_report(&mut self) {
+        if self.run.is_none() {
+            self.report = None;
+            self.show_summary = false;
+        }
     }
 
     pub(crate) fn files_changed(&mut self) {
@@ -485,7 +501,7 @@ impl Studio {
     /// Name des Rezepts für die Anzeige.
     pub fn recipe_title(&self) -> String {
         if !self.recipe.name.trim().is_empty() {
-            return self.recipe.name.clone();
+            return localized_template_name(&self.recipe.name);
         }
         match &self.recipe_path {
             Some(p) => recipe_name_from_path(p),
@@ -520,6 +536,29 @@ impl Drop for Studio {
         }
         self.preview.cancel();
     }
+}
+
+/// Name einer eingebauten Vorlage in der aktuellen Sprache: Ein Rezept aus „Rezepte ▸ Vorlagen“
+/// trägt den Titel der Sprache beim Laden; nach einem Sprachwechsel zeigen Banner und Ende-Karte
+/// sonst „Hintergrund entfernen → PNG“ in der englischen Oberfläche (BATCH-T). Andere Namen bleiben.
+/// Zwischengespeichert je (Name, Sprache) – wird in jedem Bild gefragt.
+pub fn localized_template_name(name: &str) -> String {
+    static CACHE: Mutex<Option<(String, String, String)>> = Mutex::new(None);
+    let lang = fp_i18n::current_language();
+    let mut c = CACHE.lock().unwrap_or_else(|e| e.into_inner());
+    if let Some((n, l, out)) = c.as_ref()
+        && n == name
+        && *l == lang
+    {
+        return out.clone();
+    }
+    // nur Titel (nicht die technische ID) zählen: ein eigenes Rezept „web-webp“ bleibt so
+    let is_title = fp_batch::templates::ids().iter().any(|id| {
+        ["de", "en", lang.as_str()].iter().any(|code| fp_i18n::with_language(code, || fp_i18n::t(&format!("batch-template-{id}"))).trim().eq_ignore_ascii_case(name.trim()))
+    });
+    let out = if is_title { fp_batch::templates::find(name).map(|t| t.title).unwrap_or_else(|| name.to_string()) } else { name.to_string() };
+    *c = Some((name.to_string(), lang, out.clone()));
+    out
 }
 
 /// Name eines Rezepts aus dem Dateinamen (ohne `.fpbatch.json`).

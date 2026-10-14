@@ -158,6 +158,9 @@ pub fn pick(st: &mut AppState, kind: DialogKind, file_name: &str, done: impl FnO
     {
         fp_i18n::profile::guard_write(&t);
         let _ = std::fs::create_dir_all(&t);
+        // Q-11: beim ersten Öffnen die mitgelieferten Vorlagen anlegen (danach gehören sie dem Nutzer)
+        let session = &st.session;
+        crate::builtin_templates::ensure(&t, &|doc, path| fp_engine::commands::save_document(session, doc, 0, path).map_err(|e| e.to_string()));
     }
     let doc_path = st.session.active().and_then(|d| d.path.clone());
     let dir = start_dir(&st.session.prefs, kind, doc_path.as_deref());

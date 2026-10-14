@@ -546,3 +546,69 @@ fn engine_commands_through_the_batch_host() {
     let _ = std::fs::remove_dir_all(&dir);
     let _ = PlanOptions::default();
 }
+
+// ------------------------------------------------------------------ F5 (BATCH-T-Reste)
+
+/// Abbruch: Summe vorher/nachher nur über fertige Dateien (vorher „1,9 MB → 0 Byte (−100 %)“) und
+/// Meldung „Abgebrochen: n fertig, m nicht verarbeitet“ (SPEC §2.8).
+#[test]
+fn f5_cancelled_report_sums_only_done_items() {
+    let mut rep = fp_batch::Report {
+        format: fp_batch::report::REPORT_FORMAT.into(),
+        version: 1,
+        recipe: "x".into(),
+        started: String::new(),
+        finished: String::new(),
+        dry_run: false,
+        cancelled: true,
+        totals: Default::default(),
+        items: Vec::new(),
+        output_dirs: Vec::new(),
+        warnings: Vec::new(),
+        report_file: None,
+        report_html: None,
+    };
+    let mut done = fp_batch::report::ItemReport::new(0, Path::new("a.png"), 1000);
+    done.status = ItemStatus::Done;
+    done.bytes_out = 400;
+    let mut rest = fp_batch::report::ItemReport::new(1, Path::new("b.png"), 9000);
+    rest.status = ItemStatus::Cancelled;
+    let mut wait = fp_batch::report::ItemReport::new(2, Path::new("c.png"), 5000);
+    wait.status = ItemStatus::Waiting;
+    rep.items = vec![done, rest, wait];
+    rep.recount();
+    assert_eq!((rep.totals.done, rep.totals.cancelled), (1, 2));
+    assert_eq!((rep.totals.bytes_in, rep.totals.bytes_out), (1000, 400), "nur die fertige Datei zählt");
+    let txt = fp_i18n::with_language("de", || rep.summary_text());
+    assert_eq!(txt, "Abgebrochen: 1 fertig, 2 nicht verarbeitet");
+}
+
+/// KI-Schritte begrenzen die gleichzeitig laufenden Elemente (BATCH-T: 24 Fotos liefen alle sofort).
+#[test]
+fn f5_ai_steps_limit_parallel_items() {
+    let reg = StepRegistry::with_defaults();
+    let mut r = Recipe::named("ki");
+    r.add_step("resize", json!({}));
+    assert_eq!(fp_batch::Pipeline::new(&r, &reg).expect("p").max_parallel(), None, "ohne KI frei");
+    r.add_step("background.remove", json!({}));
+    assert_eq!(fp_batch::Pipeline::new(&r, &reg).expect("p").max_parallel(), Some(fp_batch::steps::background::AI_PARALLEL));
+    let mut c = Recipe::named("farbe");
+    c.add_step("background.replace", json!({"method": "color"}));
+    assert_eq!(fp_batch::Pipeline::new(&c, &reg).expect("p").max_parallel(), None, "Farbschlüssel ist kein KI-Schritt");
+}
+
+/// Reines Umbenennen/Kopieren: Vorschau „Nachher“ = unveränderte Kopie, nicht neu kodiert (BATCH-T B9).
+#[test]
+fn f5_preview_of_rename_only_reports_source_size() {
+    let dir = temp("f5-rename");
+    let p = dir.join("foto.png");
+    write_png(&p, 40, 30);
+    let mut r = folder_recipe(&dir.join("out"), "same");
+    r.rename.parts = vec![NamePart::Text { text: "neu_".into() }, NamePart::Counter { start: 1, step: 1, digits: 2, per_folder: false }];
+    let info = items(std::slice::from_ref(&p)).remove(0);
+    let reg = StepRegistry::with_defaults();
+    let opts = fp_batch::PreviewOptions { encode_full: true, ..fp_batch::PreviewOptions::default() };
+    let res = fp_batch::preview(&r, &info, &reg, &opts).expect("preview");
+    assert_eq!(res.bytes_after, Some(std::fs::metadata(&p).expect("m").len()));
+    let _ = std::fs::remove_dir_all(&dir);
+}

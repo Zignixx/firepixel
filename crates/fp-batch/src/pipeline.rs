@@ -63,6 +63,11 @@ impl Pipeline {
         Ok(Pipeline { steps, unknown, format, file_only })
     }
 
+    /// Höchstzahl gleichzeitig laufender Elemente nach den Schritten (kleinste Grenze; `None` = frei).
+    pub fn max_parallel(&self) -> Option<usize> {
+        self.steps.iter().filter_map(|r| r.step.max_parallel(&r.params)).min().map(|n| n.max(1))
+    }
+
     /// Dateiaktion bei „nur Dateischritten“ (`file.copyOnly` mit `action: move` → verschieben).
     pub fn file_action(&self) -> FileAction {
         let mv = self.steps.iter().any(|r| r.step.id() == crate::steps::files::COPY_ONLY && r.params.get("action").and_then(Value::as_str) == Some("move"));
@@ -225,7 +230,10 @@ pub fn preview(recipe: &Recipe, info: &ItemInfo, reg: &StepRegistry, opts: &Prev
     let mut warnings = std::mem::take(&mut ctx.warnings);
     let mut bytes_after = None;
     let mut after_size = after_size;
-    if opts.encode_full {
+    if opts.encode_full && pipe.file_only {
+        // nur Dateischritte (umbenennen/kopieren): die Datei wird unverändert kopiert (BATCH-T)
+        bytes_after = Some(info.bytes);
+    } else if opts.encode_full {
         let mut full = original;
         let mut fctx = StepContext::new(0, 1, info, &opts.cancel, format);
         pipe.apply(&mut full, &mut fctx)?;

@@ -758,3 +758,128 @@ fn batcht_filterzeile_ueberlappt_nicht() {
     let clear = h.query_by_label(&t("batch-ui-files-clear")).expect("Leeren").rect();
     assert!(row[1].right() <= clear.right() + 0.5, "Sortierung ragt aus der Karte: {:?} (Leeren {clear:?})", row[1]);
 }
+
+// ------------------------------------------------------------------ F5 (BATCH-T-Reste)
+
+fn cancelled_report(done: usize, rest: usize) -> fp_batch::Report {
+    let mut items = Vec::new();
+    for k in 0..done + rest {
+        let mut it = fp_batch::report::ItemReport::new(k, Path::new("x.png"), 1000);
+        if k < done {
+            it.status = fp_batch::ItemStatus::Done;
+            it.bytes_out = 300;
+        } else {
+            it.status = fp_batch::ItemStatus::Cancelled;
+        }
+        items.push(it);
+    }
+    let mut r = fp_batch::Report {
+        format: fp_batch::report::REPORT_FORMAT.into(),
+        version: 1,
+        recipe: "x".into(),
+        started: "2026-10-14T10:00:00+02:00".into(),
+        finished: "2026-10-14T10:00:05+02:00".into(),
+        dry_run: false,
+        cancelled: true,
+        totals: Default::default(),
+        items,
+        output_dirs: Vec::new(),
+        warnings: Vec::new(),
+        report_file: None,
+        report_html: None,
+    };
+    r.recount();
+    r
+}
+
+/// F5/BATCH-T: Abbruch-Karte „Abgebrochen: 2 fertig, 3 nicht verarbeitet“, Summe nur über fertige
+/// (kein „→ 0 Byte (−100 %)“); „Leeren“ verwirft die Zahlen des letzten Laufs in der Ausgabe-Leiste.
+#[test]
+fn f5_abbruch_karte_und_leeren() {
+    lang("de");
+    let (mut h, _d) = open_with_files(2, ThemeKind::Normal);
+    {
+        let s = studio(&mut h);
+        s.report = Some(cancelled_report(2, 3));
+        s.show_summary = true;
+    }
+    h.run_steps(3);
+    let all: Vec<String> = texts(&h).into_iter().map(|t| t.text).collect();
+    assert!(all.iter().any(|t| t == "Abgebrochen: 2 fertig, 3 nicht verarbeitet"), "Abbruch-Meldung: {all:?}");
+    assert!(!all.iter().any(|t| t.contains("−100 %")), "keine −100 %: {all:?}");
+    assert!(all.iter().any(|t| t.contains("−70 %")), "Summe über fertige: {all:?}");
+    studio(&mut h).show_summary = false;
+    h.run_steps(2);
+    assert!(texts(&h).iter().any(|t| t.text == "Abgebrochen: 2 fertig, 3 nicht verarbeitet"), "Ausgabe-Leiste nennt den Abbruch");
+    studio(&mut h).clear_files();
+    h.run_steps(2);
+    assert!(studio(&mut h).report.is_none(), "Leeren verwirft den letzten Lauf");
+    assert!(!texts(&h).iter().any(|t| t.text.contains("nicht verarbeitet")), "Leiste ohne alte Zahlen");
+}
+
+/// F5/BATCH-T: Trockenlauf zeigt geschätzte Größen „≈“ (reines Umbenennen: Größe der Quelle).
+#[test]
+fn f5_trockenlauf_mit_groessen() {
+    lang("de");
+    let (mut h, _d) = open_with_files(2, ThemeKind::Normal);
+    studio(&mut h).edit("o", |r| {
+        r.output.format = "same".into();
+        true
+    });
+    settle(&mut h);
+    key(&mut h, Key::F5, Modifiers::NONE);
+    h.run_steps(3);
+    let all: Vec<String> = texts(&h).into_iter().map(|t| t.text).collect();
+    let size_h = t("batch-ui-plan-size");
+    assert!(all.iter().any(|x| x == &size_h), "Spalte Größe: {all:?}");
+    let est = all.iter().filter(|t| t.starts_with("≈ ") && !t.contains('…')).count();
+    assert!(est >= 2, "geschätzte Größen je Datei: {all:?}");
+}
+
+/// F5/BATCH-T: Name einer eingebauten Vorlage folgt dem Sprachwechsel (Banner).
+#[test]
+fn f5_vorlagenname_nach_sprachwechsel() {
+    lang("de");
+    let (mut h, _d) = open_with_files(1, ThemeKind::Normal);
+    let tpl = fp_batch::templates::find("remove-background").expect("Vorlage");
+    let de_title = tpl.title.clone();
+    studio(&mut h).set_recipe(tpl.recipe, None);
+    assert_eq!(studio(&mut h).recipe_title(), de_title);
+    lang("en");
+    let en_title = fp_batch::templates::find("remove-background").expect("Vorlage").title;
+    assert_ne!(de_title, en_title);
+    assert_eq!(studio(&mut h).recipe_title(), en_title, "Titel in der neuen Sprache");
+    assert!(!studio(&mut h).is_dirty(), "Anzeige ändert das Rezept nicht");
+    lang("de");
+    studio(&mut h).recipe.name = "Mein Rezept".into();
+    assert_eq!(studio(&mut h).recipe_title(), "Mein Rezept", "eigene Namen bleiben");
+}
+
+/// F5/BATCH-T: Werkzeugleiste des Hauptfensters wirkt nicht auf das verdeckte Dokument, solange das
+/// Studio vorn ist (nur „Neu“/„Öffnen“ bleiben); die Brücke meldet sichtbare Bedienfelder ehrlich.
+#[test]
+fn f5_werkzeugleiste_gesperrt_solange_studio_vorn() {
+    lang("de");
+    let mut s0 = state(ThemeKind::Normal);
+    s0.run("file.new", json!({"width": 200, "height": 100}));
+    s0.run("file.batchProcess", json!({}));
+    let mut h = harness(s0);
+    h.run_steps(3);
+    assert!(batch::is_front(&h.state().state));
+    let label = |h: &H, cmd: &str| fp_ui::menu::command_label(&h.state().state, cmd);
+    let button = |h: &H, l: &str| {
+        use egui_kittest::kittest::NodeT;
+        h.get_all(egui_kittest::kittest::By::new().role(egui::accesskit::Role::Button)).find(|n| n.rect().top() < 120.0 && n.accesskit_node().label().is_some_and(|x| x.starts_with(l))).map(|n| n.accesskit_node().is_disabled())
+    };
+    let (save, new) = (label(&h, "file.save"), label(&h, "file.new"));
+    assert_eq!(button(&h, &save), Some(true), "Speichern gesperrt, solange das Studio vorn ist");
+    assert_eq!(button(&h, &new), Some(false), "Neu bleibt");
+    let ui = fp_ui::bridge::ui_state(&h.ctx, &h.state().state);
+    assert_eq!(ui["batch_front"], true);
+    let vis: Vec<String> = ui["visible_panels"].as_array().expect("Liste").iter().filter_map(|v| v.as_str().map(str::to_string)).collect();
+    assert!(vis.iter().all(|p| p == "window.toolbars.main"), "Studio vorn: nur die Werkzeugleiste sichtbar: {vis:?}");
+    // Dokument nach vorn: Speichern wieder frei
+    batch::studio_mut(st(&mut h)).expect("Studio").front = false;
+    h.run_steps(3);
+    assert_eq!(button(&h, &save), Some(false), "Speichern frei, wenn das Dokument vorn ist");
+}

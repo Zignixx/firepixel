@@ -108,6 +108,10 @@ struct Shared {
     pointer: Option<Pos2>,
     next_shot: u64,
     accesskit_by_us: bool,
+    /// Dateien, die gerade über dem Fenster schweben (`hover_files`): gelten bis `drop_files`,
+    /// `hover_end` bzw. `pointer_gone` in jedem Frame – wie beim echten Ziehen (BATCH-T: vorher nur
+    /// einen Frame, die Rückmeldung „Zum Hinzufügen loslassen“ war nicht zu fotografieren).
+    hover: Vec<PathBuf>,
     /// AccessKit ist ohnehin an (Barrierefreiheit, Testumgebung) – dann nie abschalten.
     accesskit_external: bool,
 }
@@ -126,6 +130,7 @@ static SHARED: Mutex<Shared> = Mutex::new(Shared {
     pointer: None,
     next_shot: SHOT_BASE,
     accesskit_by_us: false,
+    hover: Vec::new(),
     accesskit_external: false,
 });
 
@@ -281,6 +286,7 @@ fn input_hook(ctx: &egui::Context, raw: &mut egui::RawInput) {
     let mut mods_stack = std::mem::take(&mut g.mods_stack);
     let mut base = g.base_mods;
     let mut pointer = g.pointer;
+    let mut hover = std::mem::take(&mut g.hover);
     let mut injected = 0usize;
     let next_shot = g.next_shot;
     let mut used_shot = false;
@@ -310,6 +316,11 @@ fn input_hook(ctx: &egui::Context, raw: &mut egui::RawInput) {
                 match step {
                     Step::Frame(evs) => {
                         for ev in evs {
+                            match &ev {
+                                Ev::Hover(p) => hover = p.clone(),
+                                Ev::Drop(_) | Ev::Gone => hover.clear(),
+                                _ => {}
+                            }
                             injected += apply(ev, raw, &mut base, &mut mods_stack, &mut pointer);
                         }
                         s.injected += injected;
@@ -331,6 +342,12 @@ fn input_hook(ctx: &egui::Context, raw: &mut egui::RawInput) {
     if used_shot {
         g.next_shot += 1;
     }
+    if !hover.is_empty() && raw.hovered_files.is_empty() && raw.dropped_files.is_empty() {
+        for p in &hover {
+            raw.hovered_files.push(egui::HoveredFile { path: Some(p.clone()), ..Default::default() });
+        }
+    }
+    g.hover = hover;
     g.mods_stack = mods_stack;
     g.base_mods = base;
     g.pointer = pointer;
@@ -987,6 +1004,10 @@ fn parse(args: &Value) -> Result<Script, String> {
                 frame(&mut steps, vec![Ev::Hover(p)]);
                 labels.push("hover_files".into());
             }
+            "hover_end" => {
+                frame(&mut steps, vec![Ev::Hover(Vec::new())]);
+                labels.push("hover_end".into());
+            }
             "drop_files" => {
                 let p = paths_of(e.get("paths")).map_err(err)?;
                 let at = pos.ok_or_else(|| err(missing("pos")))?;
@@ -1020,7 +1041,7 @@ fn parse(args: &Value) -> Result<Script, String> {
                 labels.push(format!("focus {f}"));
             }
             other => {
-                return Err(err(super::agent_text(|| fp_i18n::tr!("err-mcp-ui-unknown-type", kind = other, list = "move, click, double_click, right_click, down, up, drag, wheel, key, modifiers, text, type, copy, cut, paste, zoom, hover_files, drop_files, wait, frames, screenshot, pointer_gone, focus"))));
+                return Err(err(super::agent_text(|| fp_i18n::tr!("err-mcp-ui-unknown-type", kind = other, list = "move, click, double_click, right_click, down, up, drag, wheel, key, modifiers, text, type, copy, cut, paste, zoom, hover_files, hover_end, drop_files, wait, frames, screenshot, pointer_gone, focus"))));
             }
         }
         if each && t != "screenshot" && t != "wait" && t != "frames" {

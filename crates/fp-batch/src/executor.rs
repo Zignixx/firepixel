@@ -441,6 +441,8 @@ pub fn run(recipe: &Recipe, items: &[ItemInfo], opts: &RunOptions) -> Result<Rep
     } else {
         let budget_bytes = opts.memory_budget.or_else(|| recipe.output.memory_limit_mb.map(|m| m * 1024 * 1024)).unwrap_or(DEFAULT_MEMORY_MB * 1024 * 1024);
         let threads = opts.threads.or(recipe.output.threads).unwrap_or_else(default_threads).max(1);
+        // KI-Schritte: höchstens wenige Elemente zugleich (Schritt-Grenze, BATCH-T)
+        let threads = pipe.max_parallel().map_or(threads, |m| threads.min(m));
         let collect_at = pipe.collect_at();
         let job = Job { recipe, items, pipe, budget: Budget { total: budget_bytes.max(1), used: Mutex::new(0), cv: Condvar::new() }, opts, ask_lock: Mutex::new(None), total: items.len(), lang: fp_i18n::current_language() };
         let pool = rayon::ThreadPoolBuilder::new().num_threads(threads).build().map_err(|e| BatchError::Io(e.to_string()))?;

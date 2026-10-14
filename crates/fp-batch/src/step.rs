@@ -383,6 +383,11 @@ pub trait Step: Send + Sync {
     fn file_only(&self) -> bool {
         false
     }
+    /// Höchstzahl gleichzeitig laufender Elemente mit diesem Schritt (`None` = frei). KI-Schritte
+    /// rechnen selbst mehrfädig und brauchen viel Speicher: dort wenige Elemente zugleich (BATCH-T).
+    fn max_parallel(&self, _params: &Value) -> Option<usize> {
+        None
+    }
     /// Wendet den Schritt an. `params` sind mit den Vorgaben aufgefüllt.
     fn apply(&self, item: &mut Item, params: &Value, ctx: &mut StepContext) -> Result<()>;
     /// Sammel-Schritt (nur [`StepKind::Collect`]): alle Elemente → neue Elemente.

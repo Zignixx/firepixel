@@ -121,6 +121,19 @@ impl PreviewState {
     }
 }
 
+/// Verhältnis Nachher/Vorher der Dateigröße für die Schätzung im Trockenlauf (SPEC §2.6: „aus der
+/// Vorschaudatei hochgerechnet“). Nur Dateischritte: 1 (die Datei wird kopiert). Sonst aus der fertig
+/// kodierten Vorschau, wenn sie zum aktuellen Rezept gehört; `None`, solange sie noch rechnet.
+pub fn size_ratio(s: &Studio) -> Option<f64> {
+    if fp_batch::pipeline::is_file_only(&s.recipe, &StepRegistry::global()) {
+        return Some(1.0);
+    }
+    let sh = s.preview.shown.as_ref()?;
+    let info = &s.files.get(s.selected?)?.info;
+    let after = sh.bytes_after?;
+    (sh.key == key_for(&s.recipe, info) && sh.bytes_before > 0).then(|| after as f64 / sh.bytes_before as f64)
+}
+
 fn key_for(recipe: &Recipe, info: &ItemInfo) -> u64 {
     use std::hash::{Hash, Hasher};
     let mut h = std::collections::hash_map::DefaultHasher::new();

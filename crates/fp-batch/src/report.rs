@@ -115,8 +115,12 @@ impl Report {
                 ItemStatus::Failed => t.failed += 1,
                 ItemStatus::Cancelled | ItemStatus::Waiting => t.cancelled += 1,
             }
-            t.bytes_in += i.bytes_in;
-            t.bytes_out += i.bytes_out;
+            // Summe vorher/nachher nur über geschriebene Dateien: abgebrochene, übersprungene und
+            // fehlgeschlagene zählten sonst als „→ 0 Byte (−100 %)“ (SPEC §2.8, BATCH-T)
+            if i.status == ItemStatus::Done {
+                t.bytes_in += i.bytes_in;
+                t.bytes_out += i.bytes_out;
+            }
             t.ms += i.ms;
         }
         self.totals = t;

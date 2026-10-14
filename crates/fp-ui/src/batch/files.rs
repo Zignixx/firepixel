@@ -177,6 +177,11 @@ pub fn pick_files(st: &mut AppState, s: &Studio) {
 }
 
 /// „Ordner…“ bzw. „Ordner mit Unterordnern…“.
+/// Tooltip des Knopfs „Ordner…“: sagt, ob Unterordner mitgelesen werden (Einstellung im ▾-Menü).
+fn folder_tooltip(recursive: bool) -> String {
+    t(if recursive { "batch-ui-files-add-folder.tooltip-rec" } else { "batch-ui-files-add-folder.tooltip-flat" })
+}
+
 pub fn pick_folder(st: &mut AppState, s: &Studio, recursive: bool) {
     let inbox = s.inbox_sender();
     let req = crate::file_dialog::Request::folder(t("batch-ui-files-folder-title"));
@@ -245,7 +250,7 @@ pub fn show(ui: &mut Ui, st: &mut AppState, s: &mut Studio, rect: Rect, now: f64
     let mut x = r_add.right() + sp::XS;
     if fits_two {
         let r_f = Rect::from_min_size(pos2(x, bar.top()), vec2(w_folder, kit::BTN_H));
-        if kit::button(ui, r_f, Id::new("fp-batch-add-folder"), &folder_l, Some(RowIcon::Icon(crate::icons::Icon::Folder)), BtnKind::Secondary, enabled, &folder_l).clicked() {
+        if kit::button(ui, r_f, Id::new("fp-batch-add-folder"), &folder_l, Some(RowIcon::Icon(crate::icons::Icon::Folder)), BtnKind::Secondary, enabled, &folder_l).on_hover_text(folder_tooltip(s.recursive)).clicked() {
             let rec = s.recursive;
             pick_folder(st, s, rec);
         }
@@ -256,7 +261,9 @@ pub fn show(ui: &mut Ui, st: &mut AppState, s: &mut Studio, rect: Rect, now: f64
     let mresp = kit::button(ui, r_more, Id::new("fp-batch-add-more"), "", Some(RowIcon::Icon(crate::icons::Icon::DropDown)), BtnKind::Ghost, enabled, &more_name);
     egui::Popup::menu(&mresp).id(Id::new("fp-batch-add-menu")).show(|ui| {
         crate::theme::field_widgets(ui);
-        if ui.button(t("batch-ui-files-add-folder")).clicked() {
+        // eigene Beschriftung: „Ordner…“ der Knopfzeile folgt „Unterordner einbeziehen“, dieser
+        // Eintrag liest immer flach (BATCH-T: gleiche Beschriftung, anderes Verhalten)
+        if ui.button(t("batch-ui-files-add-folder-flat")).clicked() {
             pick_folder(st, s, false);
         }
         if ui.button(t("batch-ui-files-add-folder-rec")).clicked() {
@@ -464,7 +471,7 @@ fn empty_state(ui: &mut Ui, st: &mut AppState, s: &mut Studio, r: Rect, enabled:
     if r1.bottom() <= zone.bottom() + 0.5 && kit::button(ui, r1, Id::new("fp-batch-empty-files"), &add_l, Some(RowIcon::Icon(crate::icons::Icon::Plus)), BtnKind::Primary, enabled, &add_l).clicked() {
         pick_files(st, s);
     }
-    if r2.bottom() <= zone.bottom() + 0.5 && kit::button(ui, r2, Id::new("fp-batch-empty-folder"), &folder_l, Some(RowIcon::Icon(crate::icons::Icon::Folder)), BtnKind::Secondary, enabled, &folder_l).clicked() {
+    if r2.bottom() <= zone.bottom() + 0.5 && kit::button(ui, r2, Id::new("fp-batch-empty-folder"), &folder_l, Some(RowIcon::Icon(crate::icons::Icon::Folder)), BtnKind::Secondary, enabled, &folder_l).on_hover_text(folder_tooltip(s.recursive)).clicked() {
         let rec = s.recursive;
         pick_folder(st, s, rec);
     }

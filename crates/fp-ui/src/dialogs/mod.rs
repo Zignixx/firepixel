@@ -457,6 +457,11 @@ pub fn last_dialog_id(ctx: &egui::Context) -> Option<String> {
     ctx.data(|d| d.get_temp(Id::new(LAST_DIALOG)))
 }
 
+/// Deckkraft der schwarzen Abdunklung hinter einem Dialog (die Pipette rechnet sie heraus, N27).
+pub fn backdrop_alpha(theme: &Theme) -> u8 {
+    if theme.glow { 150 } else { 40 }
+}
+
 /// Bildschirmrechteck eines Dialograhmens im letzten Bild.
 pub fn dialog_rect(ctx: &egui::Context, id: &str) -> Option<Rect> {
     ctx.memory(|m| m.area_rect(Id::new(id)))
@@ -537,7 +542,7 @@ fn dialog_frame_ex(ctx: &egui::Context, id: &str, title: &str, size: egui::Vec2,
         .current_pos(pos);
     // DES-1: Schatten (OLED: Akzentschein) um den Rahmen; Lage und Größe bleiben gleich
     let frame = egui::Frame::new().fill(c.frame_bg).stroke(Stroke::new(1.0, if theme.glow { c.focus } else { c.line_dark })).inner_margin(egui::Margin::ZERO).shadow(theme.dialog_shadow());
-    let resp = egui::Modal::new(Id::new(id)).area(area).frame(frame).backdrop_color(egui::Color32::from_black_alpha(if theme.glow { 150 } else { 40 })).show(ctx, |ui| {
+    let resp = egui::Modal::new(Id::new(id)).area(area).frame(frame).backdrop_color(egui::Color32::from_black_alpha(backdrop_alpha(&theme))).show(ctx, |ui| {
         let (rect, _) = ui.allocate_exact_size(vec2(shown.x, shown.y + title_h), Sense::hover());
         let tr = Rect::from_min_size(rect.min, vec2(rect.width(), title_h));
         // DES-1: Titelleiste als ruhiger Verlauf, im Dunkel-Design deutlich von der Fläche abgesetzt

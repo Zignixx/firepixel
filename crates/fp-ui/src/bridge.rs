@@ -326,7 +326,11 @@ pub fn ui_state(ctx: &egui::Context, st: &AppState) -> Value {
             })
         })
         .collect();
-    let panels: Vec<&str> = s.ui.panels.iter().filter(|(_, v)| **v).map(|(k, _)| k.as_str()).collect();
+    // wirklich gezeichnet: „Bedienfelder ausblenden“ (Tab) bzw. Vollbild blenden alles aus, ein
+    // vorderes Batch-Studio alles außer der Werkzeugleiste (BATCH-T: Liste meldete sie weiter sichtbar)
+    let panels_hidden = st.settings.workspace.panels_hidden || s.ui.screen_mode == 2;
+    let studio_front = crate::batch::is_front(st);
+    let panels: Vec<&str> = s.ui.panels.iter().filter(|(k, v)| **v && !panels_hidden && (!studio_front || k.as_str() == "window.toolbars.main")).map(|(k, _)| k.as_str()).collect();
     json!({
         "mode": "bridge",
         "window": {"width": rect.width(), "height": rect.height(), "pixels_per_point": ctx.pixels_per_point()},
@@ -337,6 +341,8 @@ pub fn ui_state(ctx: &egui::Context, st: &AppState) -> Value {
         "documents": docs,
         "active_document": s.active_id().map(|d| d.0),
         "visible_panels": panels,
+        "panels_hidden": panels_hidden,
+        "batch_front": studio_front,
         "screen_mode": s.ui.screen_mode,
         "dialog_open": st.dialogs.any_open(),
         "message": st.dialogs.message.as_ref().map(|(t, m)| json!({"title": t, "text": m})),

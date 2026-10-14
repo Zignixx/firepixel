@@ -113,6 +113,27 @@ pub struct Stats {
     pub downscaled: Option<(u32, u32)>,
     /// Kennzahlen des Aufräumens (nur wenn es eingeschaltet war).
     pub refine: Option<RefineReport>,
+    /// Höchste Deckkraft im Bild, wenn **alle** sichtbaren Pixel unter der Alphaschwelle liegen
+    /// (halbtransparente Bitmap: nichts wird nachgezeichnet, NP-1 Nebenbefund zu N29).
+    pub faint_alpha: Option<u8>,
+}
+
+impl Stats {
+    /// Übereinstimmung anzeigen? Ohne Pfade nicht: „100,0 %“ bei einer halbtransparenten Bitmap
+    /// (alles unter der Alphaschwelle zählt als „keine Fläche“) täuschte ein perfektes Ergebnis vor.
+    pub fn match_shown(&self) -> Option<f32> {
+        (self.paths > 0).then_some(self.match_pct)
+    }
+}
+
+/// Höchste Deckkraft, falls das Bild sichtbare Pixel hat, die **alle** unter der Alphaschwelle liegen.
+pub fn faint_alpha(img: &RgbaImage, opts: &TraceOptions) -> Option<u8> {
+    let o = opts.validated();
+    if !o.ignore_transparent {
+        return None;
+    }
+    let max = img.data().iter().map(|p| p[3]).max().unwrap_or(0);
+    (max > 0 && max < o.alpha_threshold).then_some(max)
 }
 
 /// Fertiges Ergebnis eines Laufs.
@@ -508,6 +529,7 @@ fn compute(img: &RgbaImage, opts: &TraceOptions, cancel: &AtomicBool, progress: 
         ms: t0.elapsed().as_millis() as u64,
         downscaled: res.downscaled().then_some((res.traced_width, res.traced_height)),
         refine: report,
+        faint_alpha: if res.paths.is_empty() { faint_alpha(img, opts) } else { None },
     };
     progress.store(1f32.to_bits(), Ordering::Relaxed);
     Some(Ok(Ready { opts: opts.clone(), result: Arc::new(res), preview, outlines, stats }))
@@ -1378,7 +1400,12 @@ impl TraceDialog {
             let r = Rect::from_center_size(canvas.center(), vec2(w, h));
             ui_kit::notice_at(&p, r, Tone::Error, None, e, theme);
         } else if self.stats.as_ref().is_some_and(|s| s.paths == 0) && self.view != ViewMode::Original {
-            let (tt, hh) = (t("trace-empty-title"), t("trace-empty-hint"));
+            let faint = self.stats.as_ref().and_then(|s| s.faint_alpha);
+            let hh = match faint {
+                Some(a) => fp_i18n::tr!("trace-empty-hint-faint", alpha = a as u32, threshold = self.opts.validated().alpha_threshold as u32),
+                None => t("trace-empty-hint"),
+            };
+            let tt = t("trace-empty-title");
             let w = (canvas.width() - 32.0).clamp(80.0, 360.0);
             let h = ui_kit::empty_state_height(ui.ctx(), &tt, Some(&hh), w);
             let r = Rect::from_center_size(canvas.center(), vec2(w, h));
@@ -1506,11 +1533,11 @@ impl TraceDialog {
             (t("trace-stat-paths"), s.map(|s| fp_i18n::fmt_number(s.paths as f64, 0, 0)).unwrap_or_else(|| dash.clone())),
             (t("trace-stat-points"), s.map(|s| fp_i18n::fmt_number(s.points as f64, 0, 0)).unwrap_or_else(|| dash.clone())),
             (t("trace-stat-colors"), s.map(|s| fp_i18n::fmt_number(s.colors as f64, 0, 0)).unwrap_or_else(|| dash.clone())),
-            (t("trace-stat-match"), s.map(|s| format!("{}{}", fp_i18n::fmt_number(s.match_pct as f64, 1, 1), fp_i18n::unit("percent"))).unwrap_or_else(|| dash.clone())),
+            (t("trace-stat-match"), s.and_then(|s| s.match_shown()).map(|m| format!("{}{}", fp_i18n::fmt_number(m as f64, 1, 1), fp_i18n::unit("percent"))).unwrap_or_else(|| dash.clone())),
         ];
         // „Übereinstimmung“ bekommt mehr Platz (längste Beschriftung)
         let weights = [1.0f32, 1.0, 1.0, 1.45];
-        let dot = s.map(|s| if s.match_pct >= 97.0 { c.icon_green } else if s.match_pct >= 85.0 { c.icon_yellow } else { c.icon_red });
+        let dot = s.and_then(|s| s.match_shown()).map(|m| if m >= 97.0 { c.icon_green } else if m >= 85.0 { c.icon_yellow } else { c.icon_red });
         self.stat_cells(ui, r, theme, &weights, items.iter().map(|(l, v)| (l.as_str(), v.as_str())), dot.map(|d| (3, d)));
         let total: f32 = weights.iter().sum();
         let x0 = r.left() + r.width() * weights[..3].iter().sum::<f32>() / total;
@@ -1973,6 +2000,22 @@ mod tests {
             }
         }
         img
+    }
+
+    #[test]
+    fn halbtransparente_bitmap_zeigt_keine_100_prozent() {
+        // NP-1 (N29 Nebenbefund): Pinselstrich mit Deckkraft 50 % → keine Pfade, trotzdem „100,0 %“
+        let mut img = logo();
+        for px in img.data_mut().iter_mut() {
+            px[3] = px[3].min(127);
+        }
+        let opts = TraceOptions::from_preset(Preset::Logo);
+        let res = fp_trace::trace(&img, &opts).expect("nachzeichnen");
+        assert!(res.paths.is_empty(), "nichts über der Alphaschwelle");
+        let stats = Stats { paths: 0, points: 0, colors: 0, match_pct: match_percent(&img, &res, &opts), ms: 0, downscaled: None, refine: None, faint_alpha: faint_alpha(&img, &opts) };
+        assert_eq!(stats.match_shown(), None, "keine Übereinstimmung ohne Pfade");
+        assert_eq!(stats.faint_alpha, Some(127));
+        assert_eq!(faint_alpha(&logo(), &opts), None, "deckendes Bild ist nicht halbtransparent");
     }
 
     #[test]

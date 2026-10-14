@@ -96,6 +96,7 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
     let size = vec2(theme.metrics.toolbar_button + 2.0, theme.metrics.toolbar_button - 4.0);
     let mut x = rect.left() + 13.0;
     let y = rect.center().y - size.y / 2.0 + 1.0;
+    let studio = crate::batch::is_front(st);
     for e in ENTRIES {
         match e {
             Entry::Separator => {
@@ -107,7 +108,10 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
             Entry::Button(icon, name, group) => {
                 let r = Rect::from_min_size(pos2(x, y), size);
                 let resolved = resolve(st, name);
-                let enabled = resolved.as_deref().is_some_and(|n| st.session.is_available(n) || crate::actions::ui_command_state(st, n).is_some_and(|s| s.0));
+                // Batch-Studio vorn: nur „Neu“ und „Öffnen“ (holen ein Dokument nach vorn); alles andere
+                // würde unsichtbar auf das verdeckte Dokument wirken (BATCH-T)
+                let studio_blocks = studio && !matches!(*name, "file.new" | "file.open");
+                let enabled = !studio_blocks && resolved.as_deref().is_some_and(|n| st.session.is_available(n) || crate::actions::ui_command_state(st, n).is_some_and(|s| s.0));
                 let tip = resolved.as_deref().map(|n| tooltip(st, n)).unwrap_or_default();
                 let mut child = ui.new_child(egui::UiBuilder::new().max_rect(r));
                 let resp = widgets::icon_button(&mut child, *icon, size, theme.metrics.icon_size, ButtonLook { selected: false, enabled, group: Some(*group) }, &tip);
@@ -121,7 +125,7 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
             Entry::AlignMenu => {
                 let r = Rect::from_min_size(pos2(x, y), vec2(size.x + 12.0, size.y));
                 let resp = ui.interact(r, egui::Id::new("tb-align"), Sense::click());
-                let any = ["modify.align.left", "modify.align.top"].iter().any(|n| st.session.is_available(n));
+                let any = !studio && ["modify.align.left", "modify.align.top"].iter().any(|n| st.session.is_available(n));
                 widgets::button_frame(ui.painter(), r, &resp, ButtonLook { selected: false, enabled: true, group: Some(ToolGroup::Select) }, &theme);
                 let ir = Rect::from_center_size(pos2(r.left() + 14.0, r.center().y), vec2(16.0, 16.0));
                 crate::icons::paint(ui.painter(), ir, Icon::AlignLeft, &crate::icons::IconStyle::new(&theme, Some(ToolGroup::Select), any));
@@ -134,7 +138,7 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                         if n.is_empty() {
                             Node::Separator
                         } else {
-                            Node::Item { label: menu::command_label(st, n), shortcut: st.session.command_shortcuts(n).first().map(menu::shortcut_text), action: ItemAction::Command(n.to_string()), enabled: st.session.is_available(n), checked: None }
+                            Node::Item { label: menu::command_label(st, n), shortcut: st.session.command_shortcuts(n).first().map(menu::shortcut_text), action: ItemAction::Command(n.to_string()), enabled: !studio && st.session.is_available(n), checked: None }
                         }
                     })
                     .collect();
