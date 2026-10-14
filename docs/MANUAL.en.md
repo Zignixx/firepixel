@@ -24,14 +24,21 @@ available in German (`MANUAL.md`).
 
 **Basics:**
 
-- *File ▸ New* (Ctrl+N) creates a document (size, resolution, canvas color).
+- *File ▸ New* (Ctrl+N) creates a document (size, resolution, canvas color). New documents are named
+  "Untitled-1.fw.png", "Untitled-2.fw.png" and so on. If you copied objects or pixels with Ctrl+C
+  before, *New* suggests their size.
 - *File ▸ Open* (Ctrl+O) reads FW-PNG and common image formats: PNG, GIF, JPEG, BMP, TIFF, TGA,
-  WBMP, PSD, SVG, WebP, APNG, AVIF, HEIC, JPEG XL, QOI, ICO.
+  WBMP, PSD, SVG, WebP, APNG, AVIF, HEIC, JPEG XL, QOI, ICO. In PSD files, shape layers become paths
+  and groups become sub-layers. Text from AI/EPS and SVG files comes in as editable text objects.
 - *File ▸ Save* (Ctrl+S) writes FW-PNG; all layers, pages, states, symbols and Live Filters stay
   editable.
 - The file dialogs (Open, Import, Save As, New from Template, Save as Template) start in the folder
   used last or in the document's folder; templates are stored in `%APPDATA%\Firepixel\Templates`.
   While a file dialog is open, Firepixel keeps redrawing.
+- *File ▸ New from Template...*: the first time you use it, Firepixel creates ten templates of its own
+  in five folders (`Document Presets`, `Grids`, `Mobile`, `Web`, `Wireframes`), e.g. Web Banner
+  728 × 90 or Smartphone 390 × 844. Each template brings a fitting export setting (PNG 32 or JPEG).
+  Templates you delete do not come back.
 - *Edit ▸ Undo/Redo* (Ctrl+Z / Ctrl+Y); the History panel shows all steps.
 - At the top of the window is the application bar with logo, menus, quick buttons and the
   workspace switcher, below it the main toolbar, the tools on the left, the panels on the right
@@ -65,7 +72,8 @@ Frequent shortcuts (set "Firepixel", switchable in *Edit ▸ Keyboard Shortcuts*
 
 Shift while dragging constrains proportions and angles, Alt draws from the center. Double-click a
 bitmap to enter bitmap mode; double-click text to edit it. A right-click opens the context menu
-that fits the tool and the selection.
+that fits the tool and the selection. Esc with no action in progress deselects all objects (the first
+Esc closes open popups and menus).
 
 **Bitmap tools:** the **Brush** paints pixels: with no bitmap selected it creates a new one,
 otherwise it paints into the selected one. **Eraser**, **Blur** and **Rubber Stamp** work with a
@@ -94,6 +102,14 @@ has its own colors (default black → white, a click on the swatch opens the gra
 - *Modify ▸ Mask ▸ Reveal All / Hide All* puts an empty mask over the selected object. The Layers
   panel and the inspector still show the object itself (e.g. the bitmap) with the mask as a second
   thumbnail.
+- *Select ▸ Select Similar* adds objects with the same fill, stroke, opacity and blending mode.
+- *Text ▸ Detach from Path* turns the text back into a text block with its previous width, centered
+  on the path. The path is on top afterwards. Text on a path shows only the first paragraph, as in
+  the original.
+- **Filters on vector objects:** Firepixel first asks "This operation converts vectors to bitmaps."
+  (OK, Cancel, "Don't show again").
+- *View ▸ Gamma 1.8* shows the canvas brighter, as on a monitor with Macintosh gamma. The document and
+  the export stay unchanged.
 - **Commands:** Run Script (`.jsf`), saved commands from the commands folder
   (`%APPDATA%\Firepixel\Commands`, subfolders become submenus), Manage AI Models, Reset Warning
   Dialogs and the AI control channel.
@@ -120,7 +136,9 @@ Important panels:
 
 - **Layers:** visibility (eye), lock, sub-layers; drag to reorder. Sub-layers are indented folder
   rows with an expander; double-click a row to rename it.
-- **Pages / States:** pages and animation frames, master page, onion skinning.
+- **Pages / States:** pages and animation frames, master page, onion skinning. When an animation
+  instance is selected, the canvas shows its motion path (green start, red end), and the selection
+  frame encloses only the current frame.
 - **Optimize:** export format and colors.
 - **History:** step back, replay steps or save them as a command.
 
@@ -132,6 +150,10 @@ opacity, blending mode, Live Filters (+/−) and text or symbol settings.
   closes without a change.
 - **Textures and patterns:** the lists show all textures or patterns from the resource folders;
   "Other..." below the list picks an image file of your own.
+- **Color picker:** a click on a color box opens the popup with swatches, HEX field and eyedropper.
+  While you move over the window, the eyedropper picks up every visible color, also over panels,
+  menus and open dialogs. A click applies the color. Outside the Firepixel window the working color
+  stays.
 
 ## Trace Bitmap
 
@@ -174,7 +196,10 @@ tuning** the models really support:
   < 0 smaller), *Smooth*,
 - Object Selection only: *Variant* (Automatic, Small, Medium, Large).
 
-A change adjusts the last selection at once, without running the model again.
+A change adjusts the last selection at once, without running the model again. After
+*Select ▸ Select Subject* the inspector also shows this fine tuning with the Pointer, Subselection,
+Marquee, Lasso and Magic Wand, as long as the selection is unchanged. Even a very soft selection
+(e.g. on a semi-transparent brush stroke) shows its marching ants.
 
 ## Exporting
 
@@ -190,6 +215,18 @@ each with file size and download time. 4-Up shows three settings side by side fo
 *File ▸ Export* writes images, slices including HTML/CSS, and all pages. In *File ▸ HTML Setup...*
 (tab *General*), "Write CSS to external file" (on by default, works together with "Use CSS for
 popups") writes the styles to a separate `.css` file next to the HTML file, included via `@import`.
+Next to "Background image:", "Browse..." picks an image. If it is in the document's folder, the path
+is entered relative to it.
+
+**Web features:**
+
+- *Edit ▸ Copy HTML Code...* is a wizard with three pages: HTML style, base file name for the slices,
+  folder for the images. It has the buttons < Back, Next > and Finish. Afterwards the code is on the
+  clipboard.
+- *Modify ▸ Pop-up Menu ▸ Add Pop-up Menu...* opens the Pop-up Menu Editor. Next > and < Back lead
+  through the four tabs, Done creates the menu.
+- Button instances count as slices on the canvas. They get the green slice overlay and the slice
+  guides.
 
 **Image Preview** (*File ▸ Image Preview...*): with the buttons at the bottom (1, 2 or 4 preview
 windows) you compare formats and qualities side by side. Each pane has its own setting; the pane you
@@ -207,10 +244,14 @@ Choose saved settings from the list at the top; "+" saves the current one.
 ## Automation (Scripts, Command Line, MCP)
 
 - **Scripts:** *Commands ▸ Run Script* runs JSF scripts (object `fw`). Each script is one undo
-  step.
+  step. `dom.layers` lists all layers flat, as in the original, each sub-layer right after its layer.
+  `dom.topLayers` holds the top level only.
 - **Batch Processing** (*File ▸ Batch Process...*): drag files in or add them with "Files..." or
   "Folder...", choose the steps and "Save as", look at the before/after preview and run. The
-  target folder then holds the report `batch-report.html` with preview images.
+  target folder then holds the report `batch-report.html` with preview images. The "Plan" tab of the
+  dry run estimates the size of each output file ("≈ 192 KB") and the total. If you cancel a run,
+  the end card shows "Canceled: n done, m not processed". The size total then counts finished
+  files only.
 - **Command line:** `firepixel-cli` can inspect documents (`info`), apply commands (`run`,
   `batch`), render images (`render`), convert (`convert`), run scripts (`script`) and check
   translations (`language check`). `firepixel-cli <command> --help` shows examples; `--lang en|de`

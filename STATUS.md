@@ -1,5 +1,52 @@
 # Firepixel: Stand
 
+## Stand 14.10.2026 nachmittags (DOC-5)
+
+**Kurz:** Welle 5, das Batch-Studio, drei Skript-Vergleichsläufe mit dem Original und alle Fixes daraus
+(FIX-B…F, FIX-G1…G5, FIX-N32/N33, FIX-R1…R3, F1–F7) sind auf `main`. Stand: `489eb72`, 490 Commits.
+Die Testversion `Desktop\Firepixel-Vorschau-2026-10-14_15-33` enthält alles bis F7 (Stand `821278b`, GT-0g,
+`NEU.md`/`NEW.md`). Das Repository liegt jetzt auch als **privates GitHub-Repository** vor (`origin`). Gepusht
+wird nur auf Anweisung des Nutzers.
+
+**Fertig:**
+
+| Bereich | Ergebnis | Belege |
+|---|---|---|
+| Welle 5 (N25–N31) | Bildvorschau 2-/4-fach synchron, Bitmap-Rahmen um sichtbare Pixel, Farbwähler-Popup wie im Original, Effekte und Filter nahezu pixelgleich, zweites Nachzeichen-Verfahren, schnellerer Start (Median 783 ms sichtbar, 816 ms bedienbar), Pinsel live | NP-1 im echten Fenster: N22–N26 und N28–N33 ✅. N21 und N27 nach F3/F5 🔧 |
+| Batch-Studio | BATCH-1…9, BATCH-11a/b, BATCH-T (`15c2c46`, 9 Fixes im echten Fenster), Reste in F5 (`76d80be`). 12 Vorlagen, CLI `batch`, MCP `batch`, `firepixel.exe --batch` | `berichte\batcht.md`, `f5.md` |
+| Vergleich mit dem Original | Inventar (61 Einheiten), Läufer RUN-2…4, drei Skriptläufe (13.10., 14.10. 02:38–05:56). TWEAKS 13.10. (TW-01…13, Q-01…10) erledigt mit FIX-G1…G5 und FIX-R1…R3. TWEAKS 14.10. (TW-14…32, Q-11…17) erledigt mit F1–F7 und M1, TW-14 und Q-12 waren Läufer-Fehler | `parity\TWEAKS_2026-10-13.md`, `parity\TWEAKS_2026-10-14.md` |
+| Fixes F1–F8 | F1 Dialoge (HTML-Code-Assistent, Popupmenü-Editor, Durchsuchen), F2 Import (PSD-Formebenen/Gruppen, AI-/SVG-Text, Unbenannt-1.fw.png), F3 Leinwand (Gamma 1.8, Schaltflächen-Segmente, Bewegungspfad, Esc, N21), F4 Befehle/Skript (TW-16…31, Q-14/15), F5 Batch-Reste, Pipette N27, Vorlagen Q-11, F6 Von Pfad lösen, `dom.layers` flach, F7 Vorlagen englisch mit PNG/JPEG. **F8** (Ebenennummern im Skript) läuft gerade | `berichte\f1.md` … `f7.md` |
+| Klicktests der Nacht | CT-1a/1b/2/3 mit den Fixes FIX-B…F, Nutzerbefunde N32 (doppelter Rahmen) und N33 (Batch-Knöpfe) ✅ | `funktionstest\ct*_2026-10-13.md` |
+| DE/EN vollständig | I18N-CHECK `aeef2aa`: 6633/6633 Schlüssel, keine Lücke. CLI-Hilfe samt clap-Gerüst übersetzt, Wächtertests für Befehlstexte, Handbuch und AGENTS in beiden Sprachen. Seitdem jede neue Zeichenkette in de und en (F1–F7, `fp-i18n` grün) | `berichte\i18n-check.md` |
+| Tests | letzter voller Lauf GT-0f: 1948 bestanden, 1 wackelnd (einzeln grün). GT-0g hat bewusst nur gebaut und Smoke-Tests DE/EN gefahren | `berichte\gt0f.md`, `gt0g.md` |
+
+**Offen:**
+
+1. **GT-2 / Endversion – der Nutzer entscheidet.** GT-2 umfasst den vollen Testlauf, den Release-Build und die
+   Endversion auf dem Desktop. Vorher laufen noch der Skript-Nachlauf vom 14.10. (Auswertung in
+   `parity\TWEAKS_2026-10-14.md`, Abschnitt „Nachlauf 14.10.“) und F8.
+2. Prüfung mit echter Maus beim Nutzer: N01, N21, N27 (🔧) und die Zeilen in `NACHPRUEFUNG.md`.
+3. Später, niedrige Priorität:
+   - **CI** (GitHub Actions, Builds für Windows/macOS/Linux)
+   - **CMD-1** (Bildschirmfoto, Symbolskript erstellen, Gemeinsame Palette)
+   - **DES-3** (Rest von N11)
+   - **BATCH-10** (Video ohne ffmpeg, P2)
+   - **Runner-Lücken** (BEFUNDE „F“, letzter Eintrag)
+4. Restliste `BEFUNDE.md`: **144 offen** (535 erledigt), grob nach Art:
+
+   | Art | offen |
+   |---|---|
+   | Inspektor, Bedienfelder, Dialoge (IBD, UX, DESIGN) | ≈ 29 |
+   | Batch-Studio (Wünsche P2, fehlende Schritte, Formate) | 18 |
+   | Hauptfenster, Gesamttest, Release (HG) | 17 |
+   | Leinwand und Werkzeuge (LW, PAR, CT) | ≈ 21 |
+   | Engine/Export und Rendertreue/Formate (EB, RF) | 22 |
+   | Skript-Schnittstelle, Läufer, Nachmessungen aus „F“ | 16 |
+   | Automatisierung, Technisch-Englisch, i18n, Neutralität, Nachzeichnen (AU, TE, I18N, NT, VT) | ≈ 21 |
+
+   Etwa 40 der offenen Einträge sind reine Nachmessungen im Original. Rund 20 sind als „niedrig“ oder „klein“
+   markiert.
+
 ## Nacht 13.10.: Welle 5, Batch, Vollabgleich
 
 **Stand 13.10.2026 ≈ 07:00 (DOC-4).** Ablauf nach `docs\NIGHT_PLAN_2026-10-13.md` (ein „los“ ≈ 03:50, durchgehend, höchstens 8 Agenten). Seit `7f93f96` 40 Commits (Gesamt 330, Stand `73c3379`). Alles unten ist umgesetzt und mit eigenen Tests grün; die Prüfung im echten Fenster bzw. über die Brücke steht aus (`docs\NACHPRUEFUNG.md`, jetzt 231 Zeilen, neu §8 Batch-Studio). Neue und erledigte Befunde: `docs\BEFUNDE.md` (361 erledigt / 149 offen, neuer Abschnitt BATCH).

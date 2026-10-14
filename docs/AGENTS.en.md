@@ -109,7 +109,7 @@ only after the answer to the previous one – MCP clients like Claude do that by
 | `tool_event` | operate a tool like a human (pointer events) | `{"tool": "ellipse", "drag": {"from": [10,10], "to": [90,60]}}` |
 | `run_script` | run JSF JavaScript | `{"code": "fw.getDocumentDOM().width"}` |
 | `screenshot` | **bridge only:** screenshot of the app window (menus, panels, dialogs) | `{}` · `{"rect": [0, 0, 800, 600]}` · `{"max_size": 1200}` |
-| `ui_state` | **bridge only:** tool, colors, zoom/scroll per document, window size, visible panels, dialog open?, status bar | `{}` |
+| `ui_state` | **bridge only:** tool, colors, zoom/scroll per document, window size, visible panels (`visible_panels`: only what is really drawn; plus `panels_hidden` and `batch_front` when the Batch Studio is in front), dialog open?, status bar | `{}` |
 | `ui_action` | **bridge only:** like a click in the user interface – menu command (opens its dialog, if any), zoom, fit, panel, tool, theme, close dialogs | `{"run": "modify.canvas.imageSize"}` · `{"zoom": 2}` · `{"fit": true}` · `{"panel": "window.layers"}` · `{"tool": "tool.pen"}` · `{"close_dialogs": true}` |
 | `ui_find` | **bridge only:** find visible controls/labels (menu items, buttons, tabs, panel rows, dialog title bars) – text, role, rectangle, center in window points, topmost first | `{"text": "File", "exact": true}` · `{"text": "OK", "role": "button"}` · `{"text": "Title bar"}` · `{"region": [0, 0, 400, 60]}` |
 | `ui_input` | **bridge only:** inject raw mouse/keyboard/file events, exactly like real input (see 5a) | `{"events": [{"type": "click", "pos": [640, 420]}, {"type": "key", "key": "C", "modifiers": ["ctrl"]}], "screenshot": true}` |
@@ -156,6 +156,15 @@ Resources (Markdown): `firepixel://docs/agents.md` (this file), `firepixel://doc
     `modify.transform.numericTransform {mode: scale|resize|rotate, scaleX?, scaleY?, width?, height?, angle?, constrain?, scaleAttributes?}`
     (`scaleAttributes`, default `true`: the stroke width scales along, like "Scale attributes" in the dialog),
     `modify.mask.revealAll` / `modify.mask.hideAll` (empty mask over the selected object)
+  * Text and selection: `text.detachFromPath` (the text becomes a fixed-width block again, width = width
+    before attaching, centered on the path bounds; the path goes to the top of the layer, selection
+    afterwards [path, text]), `select.similar {tolerance?}` (same fill, stroke, opacity and blending mode),
+    `edit.pasteInside` (afterwards **nothing** is selected, the ID is in the result `{"id": …}`),
+    `modify.canvas.trimCanvas` (content bounds intersected with the canvas)
+  * Web and templates: `edit.copyHtmlCode {style?, dir?, baseName?, xhtml?}` (`baseName` and `xhtml` apply
+    to this export only, the document stays unchanged; in the user interface a three-page wizard leads
+    there), `file.newFromTemplate` (takes over the template's export setting; ten templates are shipped
+    in `%APPDATA%\Firepixel\Templates`, folders `Document Presets`, `Grids`, `Mobile`, `Web`, `Wireframes`)
   * Choosing a tool: `tool.select {tool: "tool.pen"}`; colors: `color.set`, `color.swap`, `color.defaults`
   * **Auto shapes** (41 shapes, own implementation; list: `autoShape.list`):
     `autoShape.insert {shape, at | rect}` (English or German name, e.g. `"Star"`/`"Stern"`,
@@ -180,6 +189,13 @@ Resources (Markdown): `firepixel://docs/agents.md` (this file), `firepixel://doc
   the reason (e.g. "select at least two objects").
 * Repeated calls are safe: setting the same parameters again changes nothing twice
   (e.g. `autoShape.setParams` 50× → one shape, one path).
+* New documents are named "Untitled-1.fw.png" (German user interface "Unbenannt-1.fw.png"). In the user
+  interface, *File ▸ New* suggests the size of the internal clipboard after Ctrl+C.
+* Filters from the menu or a shortcut ask in the user interface before converting vectors to bitmaps
+  ("This operation converts vectors to bitmaps.", "Don't show again" = preference
+  `DisableConfirmFilterVectors`). `run_command` and scripts with parameters do not ask.
+* Esc with no action in progress (no popup, menu, tool drag or AI run) deselects all objects in the user
+  interface.
 
 ## 5. Typical workflows
 
@@ -230,6 +246,15 @@ Resources (Markdown): `firepixel://docs/agents.md` (this file), `firepixel://doc
 `run_script {"path": "C:\\scripts\\macro.jsf"}` – the API (`fw`, `fw.getDocumentDOM()`, `Files` …)
 matches the original (550/565 methods, 546/721 properties; the rest is left out for documented reasons,
 see `firepixel://docs/jsf.md`). In addition `fp.run(name, params)` for every command of the registry.
+As in the original:
+* `dom.layers` (and `Frame.layers`) lists the layers **flat**: each top-level layer, directly followed by
+  its sub-layers (bottom → top, recursive). `dom.topLayers` holds the top level only.
+  `frames[n].elements` contains no sub-layers, `elemsandsublayers` does.
+* `pixelRect` of text is the rendered ink. Without a drawn glyph you get the empty rectangle
+  (±2147483648). For elements with a vector mask it is the mask area.
+* `dom.guides.locked` reads the effective lock (*View ▸ Guides ▸ Lock Guides*).
+In documents with sub-layers, check the layer **numbers** of other functions (`setLayerVisible(i)`,
+`currentLayerNum` …) against `dom.layers`. Aligning them with the flat index is still in progress.
 
 **AI selection** (object, subject, edge – local models, no network connection while computing)
 
@@ -351,7 +376,7 @@ Steps (`events`, one after the other, each in its own frames):
 | `modifiers` | `modifiers` (`["shift"]`, `[]` releases) | **hold** modifier keys (across several steps) |
 | `text` / `type` | `text` | text directly (like IME) / key + text per character |
 | `copy` / `cut` / `paste` | `text?` (for `paste`) | clipboard event directly |
-| `drop_files` / `hover_files` | `paths`, `pos` | drop files / hover over with files |
+| `drop_files` / `hover_files` / `hover_end` | `paths`, `pos` / – | drop files / hover over with files (applies in every frame until `drop_files`, `hover_end` or `pointer_gone`) / end hovering |
 | `wait` / `frames` | `ms` / `n` | wait (animations, double-click pauses, renderer) |
 | `screenshot` | `rect?` | screenshot at this point |
 | `pointer_gone` / `focus` | – / `focused` | pointer leaves the window / window focus |

@@ -24,14 +24,21 @@ ohne Neustart. Weitere Sprachen sind einfache `.ftl`-Textdateien in `%APPDATA%\F
 
 **Grundlagen:**
 
-- *Datei ▸ Neu* (Strg+N) legt ein Dokument an (Größe, Auflösung, Leinwandfarbe).
+- *Datei ▸ Neu* (Strg+N) legt ein Dokument an (Größe, Auflösung, Leinwandfarbe). Neue Dokumente heißen
+  „Unbenannt-1.fw.png“, „Unbenannt-2.fw.png“ usw. Hast du vorher Objekte oder Pixel mit Strg+C kopiert,
+  schlägt *Neu* deren Größe vor.
 - *Datei ▸ Öffnen* (Strg+O) liest FW-PNG und gängige Bildformate: PNG, GIF, JPEG, BMP, TIFF, TGA,
-  WBMP, PSD, SVG, WebP, APNG, AVIF, HEIC, JPEG XL, QOI, ICO.
+  WBMP, PSD, SVG, WebP, APNG, AVIF, HEIC, JPEG XL, QOI, ICO. In PSD-Dateien werden Formebenen zu Pfaden
+  und Gruppen zu Unterebenen. Texte aus AI-/EPS- und SVG-Dateien kommen als bearbeitbare Textobjekte.
 - *Datei ▸ Speichern* (Strg+S) schreibt FW-PNG; alle Ebenen, Seiten, Status, Symbole und
   Live-Filter bleiben bearbeitbar.
 - Die Datei-Dialoge (Öffnen, Importieren, Speichern unter, Neu von Vorlage, Als Vorlage speichern)
   starten im zuletzt benutzten Ordner bzw. im Ordner des Dokuments; Vorlagen liegen in
   `%APPDATA%\Firepixel\Templates`. Während ein Datei-Dialog offen ist, zeichnet Firepixel weiter.
+- *Datei ▸ Neu von Vorlage…*: Beim ersten Aufruf legt Firepixel zehn eigene Vorlagen in fünf Ordnern an
+  (`Document Presets`, `Grids`, `Mobile`, `Web`, `Wireframes`), z. B. Web-Banner 728 × 90 oder Smartphone
+  390 × 844. Jede Vorlage bringt eine passende Exportvorgabe mit (PNG 32 bzw. JPEG). Gelöschte Vorlagen
+  kommen nicht wieder.
 - *Bearbeiten ▸ Rückgängig/Wiederholen* (Strg+Z / Strg+Y); das Verlauf-Bedienfeld zeigt alle Schritte.
 - Das Fenster hat oben die Anwendungsleiste mit Logo, Menüs, Schnellknöpfen und dem
   Arbeitsbereich-Umschalter, darunter die Hauptsymbolleiste, links die Werkzeuge, rechts die
@@ -65,7 +72,8 @@ Häufige Kürzel (Satz „Firepixel“, umschaltbar unter *Bearbeiten ▸ Tastat
 
 Umschalt beim Ziehen hält Seitenverhältnisse und Winkel fest, Alt zeichnet von der Mitte aus.
 Doppelklick auf eine Bitmap öffnet den Bitmapmodus; Doppelklick auf Text bearbeitet ihn. Ein
-Rechtsklick öffnet das zum Werkzeug und zur Auswahl passende Kontextmenü.
+Rechtsklick öffnet das zum Werkzeug und zur Auswahl passende Kontextmenü. Esc ohne laufende Aktion hebt
+die Objektauswahl auf (offene Popups und Menüs schließt das erste Esc).
 
 **Bitmap-Werkzeuge:** Der **Pinsel** malt Pixel: Ist keine Bitmap gewählt, legt er eine neue an,
 sonst malt er in die gewählte. **Radiergummi**, **Weichzeichner** und **Stempel** arbeiten mit
@@ -95,6 +103,14 @@ mit der Strichart *Einfach ▸ Präzise abger.* (1 px); eine eigene Wahl im Insp
 - *Modifizieren ▸ Maske ▸ Alles einblenden / Alles ausblenden* legt eine leere Maske über das
   gewählte Objekt. Ebenen-Bedienfeld und Inspektor zeigen weiter das Objekt selbst (z. B. die Bitmap)
   mit der Maske als zweiter Miniatur.
+- *Auswählen ▸ Ähnliches auswählen* nimmt Objekte mit gleicher Füllung, gleichem Strich, gleicher Deckkraft
+  und gleichem Mischmodus dazu.
+- *Text ▸ Von Pfad lösen* macht den Text wieder zu einem Textrahmen mit seiner früheren Breite, mittig über
+  dem Pfad. Der Pfad liegt danach oben. Text an einem Pfad zeigt wie im Original nur den ersten Absatz.
+- **Filter auf Vektorobjekten:** Vorher fragt Firepixel „Dieser Vorgang konvertiert Vektoren in Bitmaps.“
+  (OK, Abbrechen, „Nicht mehr anzeigen“).
+- *Ansicht ▸ Gamma 1.8* zeigt die Leinwand heller, wie auf einem Monitor mit Macintosh-Gamma. Dokument und
+  Export bleiben unverändert.
 - **Befehle:** Skript ausführen (`.jsf`), gespeicherte Befehle aus dem Befehlsordner
   (`%APPDATA%\Firepixel\Commands`, Unterordner werden Untermenüs), KI-Modelle verwalten,
   Warnmeldungen zurücksetzen und der KI-Steuerkanal.
@@ -121,7 +137,9 @@ Wichtige Bedienfelder:
 
 - **Ebenen:** Sichtbarkeit (Auge), Sperre (Schloss), Unterebenen; Ziehen ordnet um. Unterebenen
   stehen eingerückt als Ordnerzeile mit Aufklapper; Doppelklick auf die Zeile benennt sie um.
-- **Seiten / Status:** Seiten und Animationsbilder, Masterseite, Zwiebelschicht.
+- **Seiten / Status:** Seiten und Animationsbilder, Masterseite, Zwiebelschicht. Ist eine
+  Animationsinstanz gewählt, zeigt die Leinwand ihren Bewegungspfad (grüner Start, rotes Ende), und der
+  Auswahlrahmen umschließt nur das aktuelle Bild.
 - **Optimieren:** Exportformat und Farben.
 - **Verlauf:** Schritte zurückspulen, wiederholen oder als Befehl speichern.
 
@@ -133,6 +151,10 @@ Mischmodus, Filter (+/−) und Text- bzw. Symbol-Einstellungen.
   übernimmt, Esc schließt ohne Änderung.
 - **Texturen und Muster:** Die Listen zeigen alle Texturen bzw. Muster aus den Ressourcenordnern;
   „Andere…“ unter der Liste wählt eine eigene Bilddatei.
+- **Farbwähler:** Ein Klick auf ein Farbfeld öffnet das Popup mit Farbfeldern, HEX-Feld und Pipette. Die
+  Pipette nimmt beim Überfahren jede sichtbare Farbe im Fenster auf, auch über Bedienfeldern, Menüs und
+  offenen Dialogen. Ein Klick übernimmt die Farbe. Außerhalb des Firepixel-Fensters bleibt die
+  Arbeitsfarbe.
 
 ## Bitmap nachzeichnen
 
@@ -176,7 +198,10 @@ einen Balken und die Zeit; *Abbrechen* oder Esc bricht ab. Im Inspektor des Werk
   *Ausdehnen* (> 0 größer, < 0 kleiner), *Glätten*,
 - nur bei der Objektauswahl: *Variante* (Automatisch, Klein, Mittel, Groß).
 
-Eine Änderung stellt die letzte Auswahl sofort nach, ohne dass das Modell neu rechnet.
+Eine Änderung stellt die letzte Auswahl sofort nach, ohne dass das Modell neu rechnet. Nach
+*Auswählen ▸ Motiv auswählen* zeigt der Inspektor diese Feineinstellungen auch bei Zeiger, Unterauswahl,
+Auswahlrahmen, Lasso und Zauberstab, solange die Auswahl unverändert ist. Auch eine sehr weiche Auswahl
+(z. B. auf einem halbtransparenten Pinselstrich) ist an den Auswahlameisen zu sehen.
 
 ## Exportieren
 
@@ -193,7 +218,18 @@ nebeneinander.
 *Datei ▸ Exportieren* schreibt Bilder, Segmente samt HTML/CSS und alle Seiten. In
 *Datei ▸ HTML-Einrichtung…* (Register *Allgemein*) schreibt „CSS in externe Datei schreiben“
 (Vorgabe an, wirkt mit „CSS für Popupmenüs verwenden“) die Stile in eine eigene `.css`-Datei neben
-der HTML-Datei, die per `@import` eingebunden wird.
+der HTML-Datei, die per `@import` eingebunden wird. Neben „Hintergrundbild:“ wählt „Durchsuchen...“ ein
+Bild. Liegt es im Ordner des Dokuments, wird der Pfad relativ eingetragen.
+
+**Web-Funktionen:**
+
+- *Bearbeiten ▸ HTML-Code kopieren…* ist ein Assistent mit drei Seiten: HTML-Stil, Basis-Dateiname für die
+  Segmente, Ordner für die Bilder. Er hat die Knöpfe < Zurück, Weiter > und Fertig stellen. Danach liegt der
+  Code in der Zwischenablage.
+- *Modifizieren ▸ Popupmenü ▸ Popupmenü hinzufügen…* öffnet den Popupmenü-Editor. Weiter > und < Zurück
+  führen durch die vier Register, Fertig legt das Menü an.
+- Schaltflächen-Instanzen gelten auf der Leinwand als Segment. Sie bekommen die grüne Segmentüberlagerung
+  und die Segment-Hilfslinien.
 
 **Bildvorschau** (*Datei ▸ Bildvorschau…*): Mit den Knöpfen unten (1, 2 oder 4 Vorschaufenster)
 vergleichst du Formate und Qualitäten nebeneinander. Jedes Feld hat seine eigene Einstellung, das
@@ -211,10 +247,14 @@ Gespeicherte Einstellungen wählst du aus der Liste oben, „+“ speichert die 
 ## Automatisierung (Skripte, Kommandozeile, MCP)
 
 - **Skripte:** *Befehle ▸ Skript ausführen* führt JSF-Skripte aus (Objekt `fw`). Jedes Skript ist ein
-  Rückgängig-Schritt.
+  Rückgängig-Schritt. `dom.layers` listet wie im Original alle Ebenen flach, jede Unterebene direkt nach
+  ihrer Ebene. `dom.topLayers` enthält nur die oberste Stufe.
 - **Batch-Verarbeitung** (*Datei ▸ Batch-Verarbeitung…*): Dateien hineinziehen oder mit
   „Dateien…“ bzw. „Ordner…“ hinzufügen, Schritte und „Speichern als“ wählen, Vorschau vorher/nachher
   ansehen und ausführen. Im Zielordner liegt danach der Bericht `batch-report.html` mit Vorschaubildern.
+  Der Reiter „Plan“ des Trockenlaufs schätzt die Größe jeder Ausgabedatei („≈ 192 KB“) und die Summe.
+  Bricht man einen Lauf ab, zeigt die Ende-Karte „Abgebrochen: n fertig, m nicht verarbeitet“. Die
+  Größensumme zählt dann nur fertige Dateien.
 - **Kommandozeile:** `firepixel-cli` kann Dokumente prüfen (`info`), Befehle anwenden (`run`,
   `batch`), Bilder rendern (`render`), umwandeln (`convert`), Skripte starten (`script`) und
   Übersetzungen prüfen (`language check`). `firepixel-cli <befehl> --help` zeigt Beispiele;

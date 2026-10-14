@@ -109,7 +109,7 @@ Hinweis: Anfragen werden nebenläufig angenommen. Abhängige Aufrufe (z. B. `ren
 | `tool_event` | Werkzeug wie ein Mensch bedienen (Zeigerereignisse) | `{"tool": "ellipse", "drag": {"from": [10,10], "to": [90,60]}}` |
 | `run_script` | JSF-JavaScript ausführen | `{"code": "fw.getDocumentDOM().width"}` |
 | `screenshot` | **nur Brücke:** Bildschirmfoto des App-Fensters (Menüs, Bedienfelder, Dialoge) | `{}` · `{"rect": [0, 0, 800, 600]}` · `{"max_size": 1200}` |
-| `ui_state` | **nur Brücke:** Werkzeug, Farben, Zoom/Bildlauf je Dokument, Fenstergröße, sichtbare Bedienfelder, Dialog offen?, Statuszeile | `{}` |
+| `ui_state` | **nur Brücke:** Werkzeug, Farben, Zoom/Bildlauf je Dokument, Fenstergröße, sichtbare Bedienfelder (`visible_panels`: nur wirklich gezeichnete; dazu `panels_hidden` und `batch_front`, wenn das Batch-Studio vorn ist), Dialog offen?, Statuszeile | `{}` |
 | `ui_action` | **nur Brücke:** wie ein Klick in der Oberfläche – Menübefehl (öffnet ggf. seinen Dialog), Zoom, Einpassen, Bedienfeld, Werkzeug, Design, Dialoge schließen | `{"run": "modify.canvas.imageSize"}` · `{"zoom": 2}` · `{"fit": true}` · `{"panel": "window.layers"}` · `{"tool": "tool.pen"}` · `{"close_dialogs": true}` |
 | `ui_find` | **nur Brücke:** sichtbare Bedienelemente/Beschriftungen finden (Menüeinträge, Knöpfe, Reiter, Bedienfeld-Zeilen, Dialog-Titelleisten) – Text, Rolle, Rechteck, Mittelpunkt in Fensterpunkten, oberste zuerst | `{"text": "Datei", "exact": true}` · `{"text": "OK", "role": "button"}` · `{"text": "Titelleiste"}` · `{"region": [0, 0, 400, 60]}` |
 | `ui_input` | **nur Brücke:** rohe Maus-/Tastatur-/Datei-Ereignisse einspeisen, genau wie echte Eingaben (siehe 5a) | `{"events": [{"type": "click", "pos": [640, 420]}, {"type": "key", "key": "C", "modifiers": ["ctrl"]}], "screenshot": true}` |
@@ -157,6 +157,15 @@ Ressourcen (Markdown): `firepixel://docs/agents.md` (diese Datei), `firepixel://
     `modify.transform.numericTransform {mode: scale|resize|rotate, scaleX?, scaleY?, width?, height?, angle?, constrain?, scaleAttributes?}`
     (`scaleAttributes`, Vorgabe `true`: Strichbreite skaliert mit, wie „Attribute skalieren“ im Dialog),
     `modify.mask.revealAll` / `modify.mask.hideAll` (leere Maske über dem gewählten Objekt)
+  * Text und Auswahl: `text.detachFromPath` (Text wird wieder Rahmen fester Breite = Breite vor dem Anfügen,
+    mittig über den Pfadgrenzen; der Pfad kommt oben in die Ebene, Auswahl danach [Pfad, Text]),
+    `select.similar {tolerance?}` (gleiche Füllung, gleicher Strich, gleiche Deckkraft und gleicher Mischmodus),
+    `edit.pasteInside` (danach ist **nichts** ausgewählt, die ID steht im Ergebnis `{"id": …}`),
+    `modify.canvas.trimCanvas` (Inhaltsgrenzen geschnitten mit der Leinwand)
+  * Web und Vorlagen: `edit.copyHtmlCode {style?, dir?, baseName?, xhtml?}` (`baseName` und `xhtml` gelten nur
+    für diesen Export, das Dokument bleibt unverändert; in der Oberfläche führt ein Assistent mit drei Seiten
+    dorthin), `file.newFromTemplate` (übernimmt die Exportvorgabe der Vorlage; mitgeliefert sind zehn Vorlagen
+    in `%APPDATA%\Firepixel\Templates`, Ordner `Document Presets`, `Grids`, `Mobile`, `Web`, `Wireframes`)
   * Werkzeug wählen: `tool.select {tool: "tool.pen"}`; Farben: `color.set`, `color.swap`, `color.defaults`
   * **Automatische Formen** (41 Formen, eigene Umsetzung; Liste: `autoShape.list`):
     `autoShape.insert {shape, at | rect}` (deutscher oder englischer Name, z. B. `"Stern"`/`"Star"`,
@@ -181,6 +190,13 @@ Ressourcen (Markdown): `firepixel://docs/agents.md` (diese Datei), `firepixel://
   Fehlermeldung den Grund (z. B. „mindestens 2 Objekte auswählen“).
 * Wiederholte Aufrufe sind sicher: dieselben Parameter erneut setzen ändert nichts doppelt
   (z. B. `autoShape.setParams` 50× → eine Form, ein Pfad).
+* Neue Dokumente heißen „Unbenannt-1.fw.png“ (englische Oberfläche „Untitled-1.fw.png“). In der Oberfläche
+  schlägt *Datei ▸ Neu* nach Strg+C die Größe der internen Zwischenablage vor.
+* Filter aus Menü oder Kürzel fragen in der Oberfläche vor dem Umwandeln von Vektoren in Bitmaps nach
+  („Dieser Vorgang konvertiert Vektoren in Bitmaps.“, „Nicht mehr anzeigen“ = Voreinstellung
+  `DisableConfirmFilterVectors`). `run_command` und Skripte mit Parametern fragen nicht.
+* Esc ohne laufende Aktion (kein Popup, Menü, Werkzeugzug oder KI-Lauf) hebt in der Oberfläche die
+  Objektauswahl auf.
 
 ## 5. Typische Abläufe
 
@@ -231,6 +247,15 @@ Ressourcen (Markdown): `firepixel://docs/agents.md` (diese Datei), `firepixel://
 `run_script {"path": "C:\\skripte\\makro.jsf"}` – die API (`fw`, `fw.getDocumentDOM()`, `Files` …)
 entspricht dem Original (550/565 Methoden, 546/721 Properties; die übrigen sind begründet ausgelassen,
 siehe `firepixel://docs/jsf.md`). Zusätzlich `fp.run(name, params)` für jeden Befehl des Registers.
+Wie im Original gilt:
+* `dom.layers` (und `Frame.layers`) listet die Ebenen **flach**: jede Ebene der obersten Stufe, direkt danach
+  ihre Unterebenen (unten → oben, rekursiv). `dom.topLayers` enthält nur die oberste Stufe.
+  `frames[n].elements` enthält keine Unterebenen, `elemsandsublayers` schon.
+* `pixelRect` von Text ist die gerenderte Tinte. Ohne gezeichnete Glyphe kommt das leere Rechteck
+  (±2147483648). Bei Elementen mit Vektormaske ist es der Maskenbereich.
+* `dom.guides.locked` liest die wirksame Sperre (*Ansicht ▸ Hilfslinien ▸ Hilfslinien sperren*).
+Bei Dokumenten mit Unterebenen die Ebenen**nummern** anderer Funktionen (`setLayerVisible(i)`,
+`currentLayerNum` …) gegen `dom.layers` prüfen. Die Angleichung an den flachen Index läuft noch.
 
 **KI-Auswahl** (Objekt, Motiv, Kante – lokale Modelle, keine Netzverbindung beim Rechnen)
 
@@ -351,7 +376,7 @@ Schritte (`events`, nacheinander, jeder in eigenen Frames):
 | `modifiers` | `modifiers` (`["shift"]`, `[]` löst) | Umschalttasten **halten** (über mehrere Schritte) |
 | `text` / `type` | `text` | Text direkt (wie IME) / je Zeichen Taste + Text |
 | `copy` / `cut` / `paste` | `text?` (für `paste`) | Zwischenablage-Ereignis direkt |
-| `drop_files` / `hover_files` | `paths`, `pos` | Dateien ablegen / darüber schweben |
+| `drop_files` / `hover_files` / `hover_end` | `paths`, `pos` / – | Dateien ablegen / darüber schweben (gilt in jedem Frame, bis `drop_files`, `hover_end` oder `pointer_gone`) / Schweben beenden |
 | `wait` / `frames` | `ms` / `n` | warten (Animationen, Doppelklick-Pausen, Renderer) |
 | `screenshot` | `rect?` | Bildschirmfoto an dieser Stelle |
 | `pointer_gone` / `focus` | – / `focused` | Zeiger verlässt das Fenster / Fensterfokus |
