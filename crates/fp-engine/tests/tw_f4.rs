@@ -85,7 +85,8 @@ fn path_operations_drop_the_name() {
     }
 }
 
-/// TW-27: In Bitmap konvertieren behält den Namen, die Symbolinstanz heißt wie das Symbol.
+/// TW-27: In Bitmap konvertieren behält den Namen; Q-22 (M2): die Symbolinstanz bleibt ohne Namen,
+/// das Symbol heißt wie im Dialog.
 #[test]
 fn convert_keeps_or_sets_names() {
     let mut s = doc_session(400.0, 300.0);
@@ -101,7 +102,9 @@ fn convert_keeps_or_sets_names() {
     select(&mut s, &[b]);
     let v = ex(&mut s, "modify.symbol.convertToSymbol", json!({"name": "Symbol"}));
     let id = ElementId(v["id"].as_u64().expect("id"));
-    assert_eq!(name(&s, id).as_deref(), Some("Symbol"));
+    assert_eq!(name(&s, id), None);
+    let d = s.active().expect("Dokument");
+    assert_eq!(d.doc.symbols.last().map(|y| y.name.clone()).as_deref(), Some("Symbol"));
 }
 
 /// TW-31: R2 unterscheidet sich nur in der Deckkraft (par_vector) und wird nicht mitgewählt.

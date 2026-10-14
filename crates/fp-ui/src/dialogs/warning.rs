@@ -83,6 +83,47 @@ fn convert_then_run(st: &mut AppState, command: &str) {
     st.push(Action::Run(command.into(), json!({})));
 }
 
+/// Schlüssel der Rückfrage „Automatisch neue Status hinzufügen?“ (Q-20, M2).
+pub const ANIMATE_STATES: &str = "animateStates";
+/// Voreinstellung ihres Kästchens „Nicht mehr anzeigen“ („Warndialoge zurücksetzen“ schaltet sie
+/// wieder ein).
+pub const ANIMATE_STATES_PREF: &str = "DisableConfirmAnimateStates";
+
+/// „Auswahl animieren“ nach dem Dialog: Reicht die Animation über den letzten Status hinaus, fragt
+/// das Original „Automatisch neue Status hinzufügen?“ (OK, Abbrechen, Nicht mehr anzeigen). OK hängt
+/// die fehlenden Status an, Abbrechen legt die Animation ohne neue Status an; abgeschaltet gilt OK.
+/// `true`: Rückfrage offen bzw. Befehl schon mit Antwort eingereiht.
+pub fn intercept_animate_states(st: &mut AppState, name: &str, params: &serde_json::Value) -> bool {
+    if name != "modify.animation.animateSelection" || params.as_object().is_none_or(|o| o.is_empty() || o.contains_key("addStates")) {
+        return false;
+    }
+    let Some(d) = st.session.active() else { return false };
+    let frames = params.get("frames").and_then(|v| v.as_f64()).unwrap_or(fp_model::AnimParams::default().frames as f64);
+    if frames <= d.frame_count() as f64 {
+        return false;
+    }
+    if st.session.prefs.get_bool(ANIMATE_STATES_PREF, false) {
+        run_animate(st, name, params.clone(), true);
+        return true;
+    }
+    st.dialogs.animate_states = Some(params.clone());
+    st.dialogs.warning = Some(WarningDialog::new(TargetWarning {
+        key: ANIMATE_STATES.into(),
+        command: name.into(),
+        text: t("msg-confirm-animate-add-states"),
+        pref: Some(ANIMATE_STATES_PREF.into()),
+        choices: vec![fp_engine::warnings::WarningChoice { label: t("btn-ok"), command: name.into() }],
+        suppressed: false,
+    }));
+    true
+}
+
+/// „Auswahl animieren“ mit der Antwort der Rückfrage ausführen.
+fn run_animate(st: &mut AppState, name: &str, mut params: serde_json::Value, add: bool) {
+    params["addStates"] = json!(add);
+    st.push(Action::Run(name.into(), params));
+}
+
 /// Zugriffstaste ohne Alt (Meldungsfenster wie im Original).
 fn access(ui: &egui::Ui, label: &str) -> bool {
     let Some(k) = super::access_key(label) else { return false };
@@ -155,6 +196,13 @@ pub fn show(ctx: &egui::Context, st: &mut AppState) {
     st.dialogs.warning = None;
     if d.dont_show {
         st.session.set_warning_disabled(&d.warning, true);
+    }
+    if d.warning.key == ANIMATE_STATES {
+        // OK: fehlende Status anhängen; Abbrechen/Esc: Animation trotzdem anlegen, ohne neue Status
+        if let Some(params) = st.dialogs.animate_states.take() {
+            run_animate(st, &d.warning.command, params, matches!(outcome, Outcome::Choice(_)));
+        }
+        return;
     }
     if question && matches!(outcome, Outcome::Close) {
         // Rückfrage abgebrochen (Knopf oder Esc): wie im Original folgt eine zweite Meldung

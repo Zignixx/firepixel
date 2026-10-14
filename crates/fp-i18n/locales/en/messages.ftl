@@ -588,6 +588,8 @@ msg-warn-choice-cancel = &Cancel
 msg-warn-dont-show = Don't s&how again
 # Filter auf Vektorobjekt (TW-21): Rückfrage mit OK/Abbrechen/Nicht mehr anzeigen
 msg-warn-filter-vectors = This operation converts vectors to bitmaps.
+# Animate selection beyond the last state (Q-20): question with OK/Cancel/Don't show again
+msg-confirm-animate-add-states = The animation of this symbol extends beyond the last state in the document. Automatically add new states?
 msg-step-jpeg-mask-load = Load JPEG Mask
 msg-step-jpeg-mask-delete = Delete JPEG Mask
 # <<< FV-5 Warnungen ohne Ziel

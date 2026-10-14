@@ -907,8 +907,13 @@ pub(super) fn register(r: &mut CommandRegistry) {
     r.add(cmd("modify.canvas.rotate90DegreeCcw").requires(DOC).run(|s, _| rotate_canvas(s, -90)));
 
     // Animation
-    r.add(with_anim_params(cmd("modify.animation.animateSelection").requires(SEL).menu_when(super::no_pixel_selection)).opt("name", ParamKind::String, "Symbolname").run(|s, p| {
-        let name = p.opt_str("name")?.unwrap_or_else(|| "Animation".into());
+    let animate = with_anim_params(cmd("modify.animation.animateSelection").requires(SEL).menu_when(super::no_pixel_selection))
+        .opt("name", ParamKind::String, "Symbolname (Vorgabe „Symbol“)")
+        .opt_default("addStates", ParamKind::Bool, json!(true), "fehlende Status anhängen (Rückfrage „Automatisch neue Status hinzufügen?“: OK = true, Abbrechen = false)");
+    r.add(animate.run(|s, p| {
+        // Q-20 (M2): Symbol heißt wie bei „In Symbol konvertieren“ „Symbol“, die Instanz bleibt ohne Namen
+        let name = p.opt_str("name")?.unwrap_or_else(|| "Symbol".into());
+        let add_states = p.bool_or("addStates", true)?;
         let a = anim_params(p, fp_model::AnimParams::default())?;
         // Verlaufsschritt wie im Original „In Symbol konvertieren“ (PM-6 D28)
         let label = s.registry().get("modify.symbol.convertToSymbol").map(|c| c.info().step_label());
@@ -921,7 +926,9 @@ pub(super) fn register(r: &mut CommandRegistry) {
                     i.anim = a;
                 }
             });
-            ensure_frames(d, a.frames as usize);
+            if add_states {
+                ensure_frames(d, a.frames as usize);
+            }
             Ok(CommandOutput::doc_with(json!({"id": id.0})))
         })?;
         Ok(match label {
@@ -990,10 +997,9 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 };
                 with_doc(s, |d| {
                     let ids = d.selection.elements.clone();
+                    // Q-22 (M2): die neue Instanz bleibt wie im Original ohne Namen (beide Menüwege,
+                    // 4 von 4 Messungen); nur das Symbol heißt wie im Dialog
                     let id = make_symbol(d, &name, kind, &ids)?;
-                    // TW-27: die Instanz heißt wie das Symbol (wie im Original)
-                    let page = d.page;
-                    docops::edit_by_id(Arc::make_mut(&mut d.doc), page, id, |e| e.common.name = Some(name.clone()));
                     Ok(CommandOutput::doc_with(json!({"id": id.0})))
                 })
             }),
@@ -1002,9 +1008,10 @@ pub(super) fn register(r: &mut CommandRegistry) {
         cmd("modify.symbol.tweenInstances")
             // im Original immer aktiv; ohne zwei Instanzen Meldung statt Wirkung
             .requires(DOC)
-            .opt_default("steps", ParamKind::Integer { min: Some(1), max: Some(1000) }, json!(1), "Zwischenschritte")
+            // Q-19 (M2): Vorgabe 10 wie im Original
+            .opt_default("steps", ParamKind::Integer { min: Some(1), max: Some(1000) }, json!(10), "Zwischenschritte")
             .run(|s, p| {
-                let steps = p.i64_or("steps", 1)?.clamp(1, 1000) as usize;
+                let steps = p.i64_or("steps", 10)?.clamp(1, 1000) as usize;
                 with_doc(s, |d| {
                     let page = d.page;
                     let insts = selected_instances(d);

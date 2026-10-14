@@ -138,6 +138,8 @@ pub struct DocumentState {
     /// Art der Datei: `true` = „Reduziertes PNG“ (re\20 §5.3, EB-2) – `file.save` schreibt wieder
     /// flach, bis unter einem anderen Typ gespeichert wird; `false` = FW-PNG.
     pub flattened: bool,
+    /// Auswahlverlauf für „Vorherige/Nächste Auswahl“ (Q-21).
+    pub selection_history: crate::selection::SelectionHistory,
 }
 
 /// Verknüpfung einer Symbol-Bearbeitungsansicht mit ihrem Dokument („Symbol bearbeiten“,
@@ -178,6 +180,7 @@ impl DocumentState {
             bitmap_mode: false,
             symbol_edit: None,
             flattened: false,
+            selection_history: Default::default(),
         }
     }
 
@@ -685,6 +688,14 @@ impl Session {
         }
         if self.group_depth > 0 {
             self.group_log.push(RecordedCommand { command: name.into(), params: p.value.clone() });
+        }
+        // Auswahlverlauf (Q-21): jede neue Objektauswahl ist ein Eintrag; „Vorherige/Nächste
+        // Auswahl“ selbst bewegen sich nur darin
+        if !matches!(name, "select.next" | "select.previous")
+            && let Some(d) = self.active_mut()
+        {
+            let sel = d.selection.elements.clone();
+            d.selection_history.note(&sel);
         }
         self.events.push(SessionEvent::CommandExecuted(name.into()));
         Ok(out)

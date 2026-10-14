@@ -606,7 +606,7 @@ fn cases() -> Vec<Case> {
             key(&mut h, Key::ArrowRight, Modifiers::NONE);
             selection(&h)
         }),
-        ("N10 Strg+Umschalt+Rechts (nächstes Objekt)", || {
+        ("N10 Strg+Umschalt+Rechts (Auswahlverlauf vor)", || {
             let mut h = basis();
             select(&mut h, &["R1"]);
             key(&mut h, Key::ArrowRight, plus(ctrl(), shift()));

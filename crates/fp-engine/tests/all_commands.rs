@@ -961,6 +961,18 @@ fn overrides(name: &str, ids: &Ids) -> Option<(Value, Option<Setup>)> {
             Value::Null
         })),
         "select.none" => rs(json!({}), sel_ids(vec![ellipse])),
+        // Auswahlverlauf (Q-21): zwei Auswahlen, für „Nächste“ vorher einen Schritt zurück
+        "select.previous" | "select.next" => {
+            let next = name == "select.next";
+            rs(json!({}), Box::new(move |s: &mut Session| {
+                select(s, &[ellipse]);
+                select(s, &[bitmap]);
+                if next {
+                    ex(s, "select.previous", json!({}));
+                }
+                Value::Null
+            }))
+        }
         "select.similar" => rs(json!({}), Box::new(move |s: &mut Session| {
             select(s, &[bitmap]);
             ex(s, "select.pixels", json!({"shape": "rect", "rect": [202, 102, 204, 104]}));

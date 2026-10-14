@@ -110,6 +110,8 @@ fn enter_confirms_every_dialog_even_with_focused_field() {
     for name in DIALOG_COMMANDS {
         let mut h = harness();
         h.state_mut().state.dialogs.filter_vectors_ok = true; // TW-21: Rückfrage wie nach OK überspringen
+        // Q-20: Rückfrage „Automatisch neue Status hinzufügen?“ abgeschaltet (gilt als OK)
+        h.state_mut().state.session.prefs.set(fp_ui::dialogs::warning::ANIMATE_STATES_PREF, fp_engine::PrefValue::Bool(true));
         h.state_mut().state.run(name, json!({}));
         h.run_steps(3);
         assert!(h.state().state.dialogs.any_open(), "{name}: Dialog offen");

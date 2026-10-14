@@ -50,6 +50,40 @@ fn run_inner(s: &mut crate::session::Session, name: &str, params: serde_json::Va
     c.apply(s, &p)
 }
 
+/// Legt die Werkzeugattribute (Füllung wie `pi.fill`, Strich wie `pi.stroke`, Pinsel) auf das neue
+/// Objekt `id` – ohne eigenen Verlaufsschritt; offene Pfade bekommen keine Füllung.
+pub(crate) fn apply_tool_style(s: &mut crate::session::Session, id: u64, open: bool, fill: Option<&serde_json::Value>, stroke: Option<&serde_json::Value>, brush: Option<&serde_json::Value>) -> Result<()> {
+    if let Some(f) = fill.filter(|v| v.is_object())
+        && !open
+    {
+        let mut f = f.clone();
+        f["ids"] = json!([id]);
+        drop_unknown_texture(&mut f);
+        run_inner(s, "pi.fill", f)?;
+    }
+    if let Some(st) = stroke.filter(|v| v.is_object()) {
+        let mut st = st.clone();
+        st["ids"] = json!([id]);
+        drop_unknown_texture(&mut st);
+        run_inner(s, "pi.stroke", st)?;
+    }
+    if let Some(bv) = brush.filter(|v| v.is_object()) {
+        let brush: fp_model::Brush = serde_json::from_value(bv.clone()).map_err(|e| EngineError::InvalidParams { name: "brush".into(), message: format!("brush: {e}") })?;
+        with_doc(s, |d| {
+            let page = d.page;
+            docops::edit_by_id(Arc::make_mut(&mut d.doc), page, ElementId(id), |e| {
+                docops::edit_path_attrs(e, &|a| {
+                    if a.stroke_color.a() > 0 || a.brush.is_some() {
+                        a.brush = Some(brush.clone());
+                    }
+                });
+            });
+            Ok(())
+        })?;
+    }
+    Ok(())
+}
+
 /// Zeichenbefehle, die `tool.shape` kapseln darf.
 const SHAPE_COMMANDS: [&str; 5] = ["draw.rectangle", "draw.ellipse", "draw.polygon", "draw.line", "draw.path"];
 
@@ -113,34 +147,10 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 let out = run_inner(s, &draw, params)?;
                 let id = out.value.get("id").and_then(|v| v.as_u64()).ok_or_else(|| EngineError::Failed(fp_i18n::t("err-no-new-object")))?;
                 let open = draw == "draw.line" || (draw == "draw.path" && !p.get("params").and_then(|v| v.get("contours")).and_then(|c| c.as_array()).is_some_and(|a| a.iter().any(|c| c.get("closed").and_then(|b| b.as_bool()) == Some(true))));
-                if let Some(f) = p.get("fill").filter(|v| v.is_object())
-                    && !open
-                {
-                    let mut f = f.clone();
-                    f["ids"] = json!([id]);
-                    drop_unknown_texture(&mut f);
-                    run_inner(s, "pi.fill", f)?;
-                }
-                if let Some(st) = p.get("stroke").filter(|v| v.is_object()) {
-                    let mut st = st.clone();
-                    st["ids"] = json!([id]);
-                    drop_unknown_texture(&mut st);
-                    run_inner(s, "pi.stroke", st)?;
-                }
-                if let Some(bv) = p.get("brush").filter(|v| v.is_object()) {
-                    let brush: fp_model::Brush = serde_json::from_value(bv.clone()).map_err(|e| bad(p, &format!("brush: {e}")))?;
-                    with_doc(s, |d| {
-                        let page = d.page;
-                        docops::edit_by_id(Arc::make_mut(&mut d.doc), page, ElementId(id), |e| {
-                            docops::edit_path_attrs(e, &|a| {
-                                if a.stroke_color.a() > 0 || a.brush.is_some() {
-                                    a.brush = Some(brush.clone());
-                                }
-                            });
-                        });
-                        Ok(())
-                    })?;
-                }
+                apply_tool_style(s, id, open, p.get("fill"), p.get("stroke"), p.get("brush")).map_err(|e| match e {
+                    EngineError::InvalidParams { message, .. } => bad(p, &message),
+                    e => e,
+                })?;
                 // Auswahl bleibt beim neuen Objekt
                 with_doc(s, |d| {
                     d.selection.set(vec![ElementId(id)]);

@@ -406,6 +406,10 @@ fn run_command(st: &mut AppState, ctx: &egui::Context, name: &str, params: Value
     if crate::dialogs::warning::intercept_filter_vectors(st, name, &params) {
         return;
     }
+    // Auswahl animieren über den letzten Status hinaus: Rückfrage „Automatisch neue Status hinzufügen?“ (Q-20)
+    if crate::dialogs::warning::intercept_animate_states(st, name, &params) {
+        return;
+    }
     // Befehle ohne Parameter aus Menü/Kürzel: zugehörigen Dialog öffnen (dialoge.json)
     let empty = params.as_object().is_none_or(|o| o.is_empty()) || params.is_null();
     if empty && crate::dialogs::open_for_command(st, name) {

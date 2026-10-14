@@ -165,7 +165,7 @@ fn plain_form(st: &AppState, cmd: &str) -> Option<FormDialog> {
         // Vorgabe wie im Original: Größe des gewählten Texts, sonst der zuletzt bestätigte Wert;
         // Feld mit Popup-Schieber 8..96 (11 §3.5.5), ohne Einheit, Knöpfe rechts untereinander
         "text.size.other" => FormDialog::new("6073", t("dlg-title-text-size").as_str(), cmd, vec![Field::number("size", t("dlg-lbl-size").as_str(), text_size_default(st), 8.0, 96.0).popup()]).with_layout(TEXT_SIZE_LAYOUT).with_store_hook(remember_text_size),
-        "modify.symbol.tweenInstances" => FormDialog::new("6005", t("dlg-title-tween-instances").as_str(), cmd, vec![Field::number("steps", t("dlg-lbl-steps").as_str(), 1.0, 1.0, 1000.0), Field::check("_distribute", t("dlg-lbl-distribute-states").as_str(), false)]).with_transform(tween_params),
+        "modify.symbol.tweenInstances" => FormDialog::new("6005", t("dlg-title-tween-instances").as_str(), cmd, vec![Field::number("steps", t("dlg-lbl-steps").as_str(), tween_steps_default(), 1.0, 1000.0), Field::check("_distribute", t("dlg-lbl-distribute-states").as_str(), false)]).with_transform(tween_params).with_store_hook(remember_tween_steps),
         "modify.symbol.convertToSymbol" => FormDialog::new(
             "19104",
             t("dlg-title-convert-to-symbol").as_str(),
@@ -588,6 +588,21 @@ thread_local! {
     static LAST_TEXT_SIZE: std::cell::Cell<(Option<f64>, f64)> = const { std::cell::Cell::new((None, 0.0)) };
     /// Beim Öffnen: Vorgabe des Textwerkzeugs und ob Text gewählt war.
     static OPEN_TEXT_SIZE: std::cell::Cell<(f64, bool)> = const { std::cell::Cell::new((0.0, false)) };
+    /// „Instanzen tweenen“: zuletzt mit OK bestätigte Schrittzahl (Q-19, M2: Vorgabe 10, gilt bis
+    /// Programmende, nicht in den Voreinstellungen).
+    static LAST_TWEEN_STEPS: std::cell::Cell<f64> = const { std::cell::Cell::new(10.0) };
+}
+
+/// Vorgabe „Schritte“ in „Instanzen tweenen“: 10, danach der zuletzt bestätigte Wert.
+pub fn tween_steps_default() -> f64 {
+    LAST_TWEEN_STEPS.with(|c| c.get())
+}
+
+/// OK in „Instanzen tweenen“: Schrittzahl für die Dauer der Sitzung merken.
+fn remember_tween_steps(d: &FormDialog, _p: &mut fp_engine::Preferences) {
+    if let Some(v) = d.get("steps").as_f64() {
+        LAST_TWEEN_STEPS.with(|c| c.set(v.round().clamp(1.0, 1000.0)));
+    }
 }
 
 /// Vorgabe des Dialogs „Textgröße“ wie im Original: Größe des ersten gewählten Texts (erster

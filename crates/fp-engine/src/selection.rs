@@ -207,3 +207,66 @@ mod tests {
         assert!(!s.has_pixels());
     }
 }
+
+/// Auswahlverlauf eines Dokuments für „Vorherige/Nächste Auswahl“ (Strg+Umschalt+Links/Rechts,
+/// Q-21 aus M2): Jede neue, nicht leere Objektauswahl ist ein Eintrag. Zurück/Vor laufen nicht im
+/// Kreis; wird nach einem Schritt zurück neu ausgewählt, fallen die späteren Einträge weg.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct SelectionHistory {
+    entries: Vec<Vec<ElementId>>,
+    pos: usize,
+}
+
+impl SelectionHistory {
+    /// Höchstzahl der gemerkten Auswahlen.
+    pub const MAX: usize = 100;
+
+    /// Merkt die aktuelle Auswahl (leere Auswahl und unveränderte Auswahl ergeben keinen Eintrag).
+    pub fn note(&mut self, sel: &[ElementId]) {
+        if sel.is_empty() || self.entries.get(self.pos).is_some_and(|e| e.as_slice() == sel) {
+            return;
+        }
+        if !self.entries.is_empty() {
+            self.entries.truncate(self.pos + 1);
+        }
+        self.entries.push(sel.to_vec());
+        if self.entries.len() > Self::MAX {
+            self.entries.remove(0);
+        }
+        self.pos = self.entries.len() - 1;
+    }
+
+    /// Einen Eintrag zurück (`dir < 0`) bzw. vor (`dir > 0`) gehen. `current` ist die aktuelle
+    /// Auswahl, `exists` filtert gelöschte Objekte heraus (leer gewordene Einträge werden
+    /// übersprungen). `None`: Ende des Verlaufs, die Auswahl bleibt.
+    pub fn step(&mut self, dir: i64, current: &[ElementId], exists: impl Fn(ElementId) -> bool) -> Option<Vec<ElementId>> {
+        if self.entries.is_empty() {
+            return None;
+        }
+        // weicht die Auswahl vom aktuellen Eintrag ab (z. B. aufgehoben), führt „zurück“ erst zu ihm
+        let mut i = self.pos as i64;
+        let at_entry = self.entries.get(self.pos).is_some_and(|e| e.as_slice() == current);
+        if dir > 0 || at_entry {
+            i += dir.signum();
+        }
+        while i >= 0 && (i as usize) < self.entries.len() {
+            let ids: Vec<ElementId> = self.entries[i as usize].iter().copied().filter(|id| exists(*id)).collect();
+            if !ids.is_empty() && ids.as_slice() != current {
+                self.pos = i as usize;
+                return Some(ids);
+            }
+            i += dir.signum();
+        }
+        None
+    }
+
+    /// Anzahl der Einträge.
+    pub fn len(&self) -> usize {
+        self.entries.len()
+    }
+
+    /// Kein Eintrag?
+    pub fn is_empty(&self) -> bool {
+        self.entries.is_empty()
+    }
+}

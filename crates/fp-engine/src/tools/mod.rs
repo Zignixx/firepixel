@@ -666,24 +666,30 @@ impl ToolOptions {
     }
 }
 
+/// Werkzeugattribute neuer Formen für den Zeichenbefehl `command`: Füllung (`pi.fill`), Strich
+/// (`pi.stroke`) und Pinsel; `None`, wenn nichts über die Werkzeugfarben hinaus anzuwenden ist.
+pub fn tool_style(command: &str, opts: &ToolOptions) -> Option<(Option<Value>, Option<Value>, Option<Value>)> {
+    // Werksvorgabe des Strichs (ohne Strichvorgabe/Vorgabepinsel): „Präzise abger.“ wie im Original
+    // für Linie, Stift, Vektorpfad und Rechteck/Ellipse/Polygon (FIX-G5, alt 4)
+    let default_brush = (opts.new_stroke.is_none() && opts.new_brush.is_none() && matches!(command, "draw.line" | "draw.path" | "draw.rectangle" | "draw.ellipse" | "draw.polygon"))
+        .then(|| serde_json::to_value(crate::commands::panel::default_tool_brush(1)).ok())
+        .flatten();
+    if opts.new_fill.is_none() && opts.new_stroke.is_none() && opts.new_brush.is_none() && default_brush.is_none() {
+        return None;
+    }
+    Some((opts.new_fill.clone(), opts.new_stroke.clone(), opts.new_brush.clone().or(default_brush)))
+}
+
 /// Zeichenbefehl (`draw.*`) mit den Werkzeugattributen des Inspektors: ohne Attribute unverändert,
 /// sonst `tool.shape` (Zeichnen + Füllung + Strich als **ein** Verlaufsschritt).
 pub fn styled(inv: Invocation, opts: &ToolOptions) -> Invocation {
     if !inv.command.starts_with("draw.") {
         return inv;
     }
-    // Werksvorgabe des Strichs (ohne Strichvorgabe/Vorgabepinsel): „Präzise abger.“ wie im Original
-    // für Linie, Stift, Vektorpfad und Rechteck/Ellipse/Polygon (FIX-G5, alt 4)
-    let default_brush = (opts.new_stroke.is_none() && opts.new_brush.is_none() && matches!(inv.command.as_str(), "draw.line" | "draw.path" | "draw.rectangle" | "draw.ellipse" | "draw.polygon"))
-        .then(|| serde_json::to_value(crate::commands::panel::default_tool_brush(1)).ok())
-        .flatten();
-    if opts.new_fill.is_none() && opts.new_stroke.is_none() && opts.new_brush.is_none() && default_brush.is_none() {
-        return inv;
-    }
+    let Some((fill, stroke, brush)) = tool_style(&inv.command, opts) else { return inv };
     // Name des Verlaufsschritts (`step`) gilt für den ganzen Schritt
     let step = inv.params.get("step").cloned();
-    let brush = opts.new_brush.clone().or(default_brush);
-    let mut v = serde_json::json!({"draw": inv.command, "params": inv.params, "fill": opts.new_fill, "stroke": opts.new_stroke, "brush": brush});
+    let mut v = serde_json::json!({"draw": inv.command, "params": inv.params, "fill": fill, "stroke": stroke, "brush": brush});
     if let (Some(s), Some(o)) = (step, v.as_object_mut()) {
         o.insert("step".into(), s);
     }

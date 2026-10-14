@@ -82,7 +82,7 @@ Legende: ✅ gleich · ⚠️ kleine Abweichung · ❌ anders · ❔ Original no
 | N08 | R1 gewählt | Strg+→ | ❔ | nichts | ❔ |
 | N09 | R1 gewählt, Rechteckwerkzeug | → | ❔ (verschiebt vermutlich) | verschiebt 1 px | ❔ |
 | N10 | 400 % | → | 1 Dokumentpixel (S Nudge-Tabelle) | 1 px | ✅ |
-| N11 | R1 gewählt | Strg+Umschalt+→ | nächstes Objekt wählen (S cmd_Next_Selection) | T gewählt | ✅ |
+| N11 | R1 gewählt | Strg+Umschalt+→ | Auswahlverlauf vor (`cmd_Next_Selection`, Strg+Umschalt+← zurück); ohne späteren Eintrag bleibt R1 (M2 Q-21) | R1 bleibt gewählt (F13, vorher: nächstes Objekt T) | ✅ behoben (F13) |
 | N12 | R1 gewählt | Tab | ❔ | nichts | ❔ |
 | N13 | Hilfslinie bei x=152, R1 rechts 150 | → | 1 px, kein Fang (❔) | 151 (kein Fang) | ❔ |
 | N14 | nach N03 | Rückgängig | alle Pfeilschritte auf einmal zurück (C) | einmal Rückgängig → 50,50 | ✅ behoben (UX-A) |

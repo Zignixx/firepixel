@@ -179,6 +179,13 @@ fn animate_dialog_like_the_original() {
     key(&mut h, Key::Enter);
     h.run_steps(4);
     assert!(st(&h).dialogs.form.is_none(), "Enter schließt");
+    // Q-20: 5 Status > 1 → Rückfrage „Automatisch neue Status hinzufügen?“, Enter = OK
+    let w = st(&h).dialogs.warning.clone().expect("Rückfrage");
+    assert_eq!(w.warning.key, fp_ui::dialogs::warning::ANIMATE_STATES);
+    key(&mut h, Key::Enter);
+    h.run_steps(4);
+    assert!(st(&h).dialogs.warning.is_none(), "Enter bestätigt die Rückfrage");
+    assert_eq!(st(&h).session.active().map(|d| d.frame_count()), Some(5), "OK hängt die Status an");
     let s = &st(&h).session;
     let d = s.active().expect("doc");
     let id = d.selection.elements.first().expect("Instanz").0;

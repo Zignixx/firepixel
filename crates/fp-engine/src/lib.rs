@@ -63,7 +63,7 @@ pub use command::{Command, CommandInfo, CommandOutput, CommandRegistry, Effect, 
 pub use error::{EngineError, Result};
 pub use history::{History, HistoryStep, RecordedCommand};
 pub use prefs::{Preferences, PrefValue, Theme};
-pub use selection::{Clipboard, PointRef, SelectMode, Selection};
+pub use selection::{Clipboard, PointRef, SelectMode, Selection, SelectionHistory};
 pub use session::{DocId, DocumentState, ScriptHost, Session, SessionEvent};
 pub use shortcuts::{Shortcut, ShortcutSet};
 pub use tools::{Modifiers, Overlay, ToolEvent, ToolId, ToolKey, ToolResponse};

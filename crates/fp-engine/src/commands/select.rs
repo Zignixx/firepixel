@@ -448,8 +448,10 @@ pub(super) fn register(r: &mut CommandRegistry) {
     r.add(cmd("select.borderMarquee").requires(&[Requirement::Document, Requirement::PixelSelection]).opt_default("amount", amt(), json!(1), "Pixel").run(|s, p| adjust(s, p, "msg-step-border-selection", |m, a, t| m.border(a, t))));
     r.add(cmd("select.smoothMarquee").requires(&[Requirement::Document, Requirement::PixelSelection]).opt_default("amount", amt(), json!(1), "Pixel").run(|s, p| adjust(s, p, "msg-step-smooth-selection", |m, a, t| m.smooth(a, t))));
     r.add(cmd("select.convertMarqueeToPath").requires(&[Requirement::Document, Requirement::PixelSelection]).run(|s, _| {
-        let attrs = shape_attrs(s, false, 1.0);
-        with_doc(s, |d| {
+        // Q-18 (M2): Füllung und Strich wie bei einer neu gezeichneten Form aus den aktuellen
+        // Werkzeugvorgaben (Farben, Füll-/Strichart des Inspektors); kein fester 1-px-Strich
+        let attrs = shape_attrs(s, true, 0.0);
+        let id = with_doc(s, |d| {
             let m = d.selection.pixels.clone().ok_or_else(|| sel_err("err-req-pixel-selection"))?;
             let contours = geometry::trace_mask(&m);
             if contours.is_empty() {
@@ -460,9 +462,16 @@ pub(super) fn register(r: &mut CommandRegistry) {
             let e = Element::new_path(&mut idg, contours, attrs);
             doc.ids = idg;
             d.selection.pixels = None;
-            let id = insert_new(d, e)?;
-            Ok(CommandOutput::doc_with(json!({"id": id.0})))
-        })
+            insert_new(d, e)
+        })?;
+        if let Some((fill, stroke, brush)) = crate::tools::tool_style("draw.path", &s.tools.options) {
+            super::tooling::apply_tool_style(s, id.0, false, fill.as_ref(), stroke.as_ref(), brush.as_ref())?;
+            with_doc(s, |d| {
+                d.selection.set(vec![id]);
+                Ok(())
+            })?;
+        }
+        Ok(CommandOutput::doc_with(json!({"id": id.0})))
     }));
     // re\19-kurven-tonwert.md §5: Speicherort je Seite (aktive Seite des Zieldokuments), Speichern und
     // Laden sind eigene Verlaufsschritte („Auswahl speichern“/„Auswahl laden“)
@@ -778,19 +787,15 @@ pub(super) fn register(r: &mut CommandRegistry) {
             }),
     );
     for (name, dir) in [("select.next", 1i64), ("select.previous", -1)] {
+        // Q-21 (M2): wie im Original durch den Auswahlverlauf (nicht durch die Objekte); am Ende
+        // des Verlaufs bleibt die Auswahl
         r.add(cmd(name).requires(DOC).run(move |s, _| {
             with_doc(s, |d| {
-                let all = all_selectable(d);
-                if all.is_empty() {
-                    return Ok(CommandOutput::doc());
+                let (doc, page) = (Arc::clone(&d.doc), d.page);
+                let cur = d.selection.elements.clone();
+                if let Some(ids) = d.selection_history.step(dir, &cur, |id| docops::find_on_page(&doc, page, id).is_some()) {
+                    d.selection.set(ids);
                 }
-                let cur = d.selection.elements.first().and_then(|id| all.iter().position(|x| x == id));
-                let n = all.len() as i64;
-                let i = match cur {
-                    Some(c) => (c as i64 + dir).rem_euclid(n) as usize,
-                    None => 0,
-                };
-                d.selection.set(vec![all[i]]);
                 Ok(CommandOutput::doc())
             })
         }));

@@ -108,6 +108,8 @@ pub struct Dialogs {
     pub warning: Option<warning::WarningDialog>,
     /// Rückfrage „konvertiert Vektoren in Bitmaps“ mit OK bestätigt: der nächste Filteraufruf fragt nicht (TW-21).
     pub filter_vectors_ok: bool,
+    /// Rückfrage „Automatisch neue Status hinzufügen?“ offen: Parameter von „Auswahl animieren“ (Q-20).
+    pub animate_states: Option<serde_json::Value>,
     /// „Pinselstrich bearbeiten“ mit Registerkarten Optionen/Form/Empfindlichkeit (PINSEL-1).
     pub brush_edit: Option<brush_edit::BrushEditDialog>,
     /// Eingabeaufforderung `prompt()` eines Befehlsskripts (CT-1b MN-5).
