@@ -29,7 +29,8 @@ ohne Neustart. Weitere Sprachen sind einfache `.ftl`-Textdateien in `%APPDATA%\F
   schlägt *Neu* deren Größe vor.
 - *Datei ▸ Öffnen* (Strg+O) liest FW-PNG und gängige Bildformate: PNG, GIF, JPEG, BMP, TIFF, TGA,
   WBMP, PSD, SVG, WebP, APNG, AVIF, HEIC, JPEG XL, QOI, ICO. In PSD-Dateien werden Formebenen zu Pfaden
-  und Gruppen zu Unterebenen. Texte aus AI-/EPS- und SVG-Dateien kommen als bearbeitbare Textobjekte.
+  und Gruppen zu Unterebenen. Texte aus AI-/EPS- und SVG-Dateien kommen als bearbeitbare Textobjekte
+  (AI-Flächentext an derselben Stelle wie im Original); der Dateityp heißt im Dialog „AI (*.ai;*.art)“.
 - *Datei ▸ Speichern* (Strg+S) schreibt FW-PNG; alle Ebenen, Seiten, Status, Symbole und
   Live-Filter bleiben bearbeitbar.
 - Die Datei-Dialoge (Öffnen, Importieren, Speichern unter, Neu von Vorlage, Als Vorlage speichern)
@@ -56,7 +57,8 @@ Das Werkzeugbedienfeld hat die Abschnitte Auswählen, Bitmap, Vektor, Web, Farbe
 Ein kleines Dreieck am Knopf zeigt weitere Werkzeuge: Maustaste gedrückt halten oder auf das
 Dreieck klicken. Jeder Platz merkt sich das zuletzt benutzte Werkzeug.
 
-Häufige Kürzel (Satz „Firepixel“, umschaltbar unter *Bearbeiten ▸ Tastaturbefehle*):
+Häufige Kürzel (Satz „Firepixel“, umschaltbar unter *Bearbeiten ▸ Tastaturkurzbefehle…*; weitere Sätze heißen
+„Bildbearbeitung“, „Vektorzeichnung“ und „Klassische Vektor-Tasten“):
 
 | Taste | Werkzeug | Taste | Werkzeug |
 |---|---|---|---|
@@ -111,6 +113,24 @@ mit der Strichart *Einfach ▸ Präzise abger.* (1 px); eine eigene Wahl im Insp
   (OK, Abbrechen, „Nicht mehr anzeigen“).
 - *Ansicht ▸ Gamma 1.8* zeigt die Leinwand heller, wie auf einem Monitor mit Macintosh-Gamma. Dokument und
   Export bleiben unverändert.
+- *Bearbeiten ▸ Einfügen* legt kopierte Objekte direkt über das oberste gewählte Objekt (in dessen Ebene;
+  ist ein Objekt in einer Gruppe gewählt, über die Gruppe). Ohne Auswahl landen sie oben in der aktiven Ebene.
+- *Modifizieren ▸ Maske ▸ Als Maske gruppieren* setzt die Maskengruppe an den Platz des untersten gewählten
+  Objekts; *Gruppieren* bleibt am Platz des obersten. Vereinigen, Überschneiden und Verbinden legen das
+  Ergebnis an den Platz des oberen Objekts, Öffnen und Zuschneiden an den des unteren (*Pfade kombinieren*).
+- *Auswählen ▸ Auswahlrahmen in Pfad konvertieren* gibt dem neuen Pfad Füllung und Strich wie einer neu
+  gezeichneten Form (Farben aus dem Werkzeugbedienfeld, Füll- und Strichart aus dem Inspektor).
+- *Auswählen ▸ Nächste Auswahl / Vorherige Auswahl* (Strg+Umschalt+Rechts / Links) gehen durch den
+  Auswahlverlauf des Dokuments: Jede neue Objektauswahl ist ein Eintrag, am Ende passiert nichts.
+- *Modifizieren ▸ Symbol ▸ Symbol bearbeiten* öffnet das Symbol im Fenster des Dokuments, so groß wie die
+  Seite und mit dem Titel „<Dokument> (Symbol)“. Eine Pfadleiste unter der Ansichtsleiste zeigt
+  „Seite 1 ▸ <Symbol>“; „← Zurück“ kehrt ins Dokument zurück. Nach *In Symbol konvertieren* hat die Instanz
+  keinen eigenen Namen.
+- *Modifizieren ▸ Symbol ▸ Instanzen tweenen…* schlägt beim ersten Öffnen 10 Schritte vor, danach den zuletzt
+  bestätigten Wert (bis zum Programmende).
+- *Modifizieren ▸ Animation ▸ Auswahl animieren…* fragt, wenn die Animation über den letzten Status
+  hinausreicht: „Automatisch neue Status hinzufügen?“ (OK hängt Status an, Abbrechen legt die Animation ohne
+  neue Status an, „Nicht mehr anzeigen“ lässt sich unter *Warnmeldungen zurücksetzen* wieder einschalten).
 - **Befehle:** Skript ausführen (`.jsf`), gespeicherte Befehle aus dem Befehlsordner
   (`%APPDATA%\Firepixel\Commands`, Unterordner werden Untermenüs), KI-Modelle verwalten,
   Warnmeldungen zurücksetzen und der KI-Steuerkanal.
@@ -227,7 +247,11 @@ Bild. Liegt es im Ordner des Dokuments, wird der Pfad relativ eingetragen.
   Segmente, Ordner für die Bilder. Er hat die Knöpfe < Zurück, Weiter > und Fertig stellen. Danach liegt der
   Code in der Zwischenablage.
 - *Modifizieren ▸ Popupmenü ▸ Popupmenü hinzufügen…* öffnet den Popupmenü-Editor. Weiter > und < Zurück
-  führen durch die vier Register, Fertig legt das Menü an.
+  führen durch die vier Register, Fertig legt das Menü an. Im Register „Inhalt“ stehen die Einträge in einer
+  Tabelle (Text │ Hyperlink │ Ziel), die gewählte Zeile ist direkt bearbeitbar; die Knöpfe + / − / → / ←
+  fügen Einträge hinzu, löschen sie, rücken sie ein oder aus.
+- Die Segment-Hilfslinien teilen die Seite wie im Original: erst waagerecht über dem obersten Segment, dann
+  senkrecht an den Segmentkanten, ohne ein Segment zu schneiden.
 - Schaltflächen-Instanzen gelten auf der Leinwand als Segment. Sie bekommen die grüne Segmentüberlagerung
   und die Segment-Hilfslinien.
 

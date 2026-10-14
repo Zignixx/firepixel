@@ -196,6 +196,27 @@ Resources (Markdown): `firepixel://docs/agents.md` (this file), `firepixel://doc
   `DisableConfirmFilterVectors`). `run_command` and scripts with parameters do not ask.
 * Esc with no action in progress (no popup, menu, tool drag or AI run) deselects all objects in the user
   interface.
+* *Animate Selection* asks in the user interface when the animation goes beyond the last state
+  ("Automatically add new states?", "Don't show again" = preference `DisableConfirmAnimateStates`).
+  `run_command` does not ask: `modify.animation.animateSelection` has the parameter `addStates` (default
+  `true`; `false` creates the animation without new states). The new symbol is called "Symbol", the instance
+  stays unnamed (likewise after `modify.symbol.convertToSymbol`).
+* `select.next` / `select.previous` (Ctrl+Shift+Right/Left) step through the document's selection history
+  (every new, non-empty object selection after a command is an entry, at most 100; no effect at the end,
+  deleted objects are skipped), not cyclically through the objects.
+* Paste position: `edit.paste` puts copied objects directly above the topmost selected object (with a
+  subselection inside a group, above the group), without a selection at the top of the active layer.
+  `modify.mask.groupAsMask` puts the group in the place of the lowest selected object; Union/Intersect/Join put
+  the result in the place of the upper one, Punch/Crop in the place of the lower one, Split at the very top of
+  the list.
+* `select.convertMarqueeToPath` takes fill and stroke from the current tool defaults (like a newly drawn
+  shape). `modify.symbol.tweenInstances` defaults to 10 steps.
+* `modify.symbol.editSymbol` opens a symbol view as large as the page, titled "<document> (Symbol)"; it still
+  counts as a document of its own in `documents`. In the user interface the "Back" button of the path bar
+  (`modify.symbol.exitEdit`) returns.
+* Shortcut sets have neutral names in the user interface ("Image Editing", "Vector Drawing", "Classic Vector
+  Keys"). `edit.keyboardShortcuts {"set": …}` and `CurrentShortcutSet` still take the old internal
+  identifiers; saved preferences and scripts keep working.
 
 ## 5. Typical workflows
 

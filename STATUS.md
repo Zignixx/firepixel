@@ -1,5 +1,18 @@
 # Firepixel: Stand
 
+## Stand 14.10.2026 abends (GT-2): Endversion gebaut, Tag ausstehend
+
+**Kurz:** Nach der Testversion `Firepixel-Vorschau-2026-10-14_15-33` kamen F8–F14 und M2 auf `main`: Einfügen direkt
+über der Auswahl, Maskengruppe am Platz des untersten Objekts, Stapelplatz der Pfadoperationen, Segment-Hilfslinien
+wie im Original, Symbol bearbeiten im Fenster des Dokuments mit Pfadleiste, Popupmenü-Editor mit Tabelle, AI-Text an
+der richtigen Stelle, zu schmaler Textrahmen ohne Tinte, Auswahlrahmen in Pfad mit Werkzeugfarben, Instanzen tweenen
+mit 10 Schritten, Rückfrage „Status hinzufügen“ (`addStates`), Auswahlverlauf Strg+Umschalt+Pfeile und neutrale
+sichtbare Texte (Kürzelsätze „Bildbearbeitung“, „Vektorzeichnung“, „Klassische Vektor-Tasten“, Dateityp „AI“).
+TWEAKS 14.10. Nachlauf: TW-33…41 und Q-18…22 bearbeitet (TW-37 kein Produktfehler), Nachprüfung im Skriptlauf
+steht aus (`parity\TWEAKS_2026-10-14.md`). Handbuch und AGENTS DE/EN nachgezogen. Die **Endversion** ist gebaut
+(GT-2: voller Testlauf, Golden-Korpus, Release-Build, Desktop-Ordner `Firepixel-<Datum_Uhrzeit>`, Smoke-Test DE/EN,
+Bericht `docs\berichte\gt2.md`). Ein Git-Tag ist noch **nicht** gesetzt; gepusht wird nur auf Anweisung.
+
 ## Stand 14.10.2026 nachmittags (DOC-5)
 
 **Kurz:** Welle 5, das Batch-Studio, drei Skript-Vergleichsläufe mit dem Original und alle Fixes daraus

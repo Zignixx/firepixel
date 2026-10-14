@@ -197,6 +197,26 @@ Ressourcen (Markdown): `firepixel://docs/agents.md` (diese Datei), `firepixel://
   `DisableConfirmFilterVectors`). `run_command` und Skripte mit Parametern fragen nicht.
 * Esc ohne laufende Aktion (kein Popup, Menü, Werkzeugzug oder KI-Lauf) hebt in der Oberfläche die
   Objektauswahl auf.
+* *Auswahl animieren* fragt in der Oberfläche, wenn die Animation über den letzten Status hinausreicht
+  („Automatisch neue Status hinzufügen?“, „Nicht mehr anzeigen“ = Voreinstellung `DisableConfirmAnimateStates`).
+  `run_command` fragt nicht: `modify.animation.animateSelection` hat den Parameter `addStates` (Vorgabe
+  `true`; `false` legt die Animation ohne neue Status an). Das neue Symbol heißt „Symbol“, die Instanz bleibt
+  ohne Namen (ebenso nach `modify.symbol.convertToSymbol`).
+* `select.next` / `select.previous` (Strg+Umschalt+Rechts/Links) gehen durch den Auswahlverlauf des Dokuments
+  (jede neue, nicht leere Objektauswahl nach einem Befehl ist ein Eintrag, höchstens 100; am Ende keine Wirkung,
+  gelöschte Objekte werden übersprungen), nicht zyklisch durch die Objekte.
+* Einfügeplatz: `edit.paste` legt kopierte Objekte direkt über das oberste gewählte Objekt (bei Unterauswahl in
+  einer Gruppe über die Gruppe), ohne Auswahl oben in die aktive Ebene. `modify.mask.groupAsMask` setzt die
+  Gruppe an den Platz des untersten gewählten Objekts; Vereinigen/Überschneiden/Verbinden legen das Ergebnis an
+  den Platz des oberen, Öffnen/Zuschneiden an den des unteren, Teilen ganz oben in die Liste.
+* `select.convertMarqueeToPath` übernimmt Füllung und Strich aus den aktuellen Werkzeugvorgaben (wie eine neu
+  gezeichnete Form). `modify.symbol.tweenInstances` hat die Vorgabe 10 Schritte.
+* `modify.symbol.editSymbol` öffnet eine Symbolansicht so groß wie die Seite, Titel „<Dokument> (Symbol)“; sie
+  zählt in `documents` weiterhin als eigenes Dokument. In der Oberfläche führt der Knopf „Zurück“ der
+  Pfadleiste (`modify.symbol.exitEdit`) zurück.
+* Kürzelsätze heißen in der Oberfläche neutral („Bildbearbeitung“, „Vektorzeichnung“, „Klassische
+  Vektor-Tasten“). `edit.keyboardShortcuts {"set": …}` und `CurrentShortcutSet` nehmen weiter die alten internen
+  Kennungen; gespeicherte Einstellungen und Skripte laufen unverändert.
 
 ## 5. Typische Abläufe
 

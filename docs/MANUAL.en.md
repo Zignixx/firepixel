@@ -29,7 +29,8 @@ available in German (`MANUAL.md`).
   before, *New* suggests their size.
 - *File ▸ Open* (Ctrl+O) reads FW-PNG and common image formats: PNG, GIF, JPEG, BMP, TIFF, TGA,
   WBMP, PSD, SVG, WebP, APNG, AVIF, HEIC, JPEG XL, QOI, ICO. In PSD files, shape layers become paths
-  and groups become sub-layers. Text from AI/EPS and SVG files comes in as editable text objects.
+  and groups become sub-layers. Text from AI/EPS and SVG files comes in as editable text objects
+  (AI area text in the same place as in the original); the file type in the dialog is "AI (*.ai;*.art)".
 - *File ▸ Save* (Ctrl+S) writes FW-PNG; all layers, pages, states, symbols and Live Filters stay
   editable.
 - The file dialogs (Open, Import, Save As, New from Template, Save as Template) start in the folder
@@ -56,7 +57,8 @@ The Tools panel has the sections Select, Bitmap, Vector, Web, Colors and View. A
 on a button means there are more tools: hold the mouse button down or click the triangle. Each
 slot remembers the tool used last.
 
-Frequent shortcuts (set "Firepixel", switchable in *Edit ▸ Keyboard Shortcuts*):
+Frequent shortcuts (set "Firepixel", switchable in *Edit ▸ Keyboard Shortcuts...*; further sets are called
+"Image Editing", "Vector Drawing" and "Classic Vector Keys"):
 
 | Key | Tool | Key | Tool |
 |---|---|---|---|
@@ -110,6 +112,23 @@ has its own colors (default black → white, a click on the swatch opens the gra
   (OK, Cancel, "Don't show again").
 - *View ▸ Gamma 1.8* shows the canvas brighter, as on a monitor with Macintosh gamma. The document and
   the export stay unchanged.
+- *Edit ▸ Paste* puts copied objects directly above the topmost selected object (in its layer; if an object
+  inside a group is selected, above the group). Without a selection they go to the top of the active layer.
+- *Modify ▸ Mask ▸ Group as Mask* puts the mask group in the place of the lowest selected object; *Group*
+  stays in the place of the topmost one. Union, Intersect and Join put the result in the place of the upper
+  object, Punch and Crop in the place of the lower one (*Combine Paths*).
+- *Select ▸ Convert Marquee to Path* gives the new path fill and stroke like a newly drawn shape (colors
+  from the Tools panel, fill and stroke category from the Property Inspector).
+- *Select ▸ Next Selection / Previous Selection* (Ctrl+Shift+Right / Left) step through the document's
+  selection history: every new object selection is an entry, nothing happens at the end.
+- *Modify ▸ Symbol ▸ Edit Symbol* opens the symbol in the document's window, as large as the page and titled
+  "<document> (Symbol)". A path bar below the view bar shows "Page 1 ▸ <symbol>"; "← Back" returns to the
+  document. After *Convert to Symbol* the instance has no name of its own.
+- *Modify ▸ Symbol ▸ Tween Instances...* suggests 10 steps the first time, afterwards the value last
+  confirmed (until the program ends).
+- *Modify ▸ Animation ▸ Animate Selection...* asks when the animation goes beyond the last state:
+  "Automatically add new states?" (OK appends states, Cancel creates the animation without new states,
+  "Don't show again" can be switched back on with *Reset Warning Dialogs*).
 - **Commands:** Run Script (`.jsf`), saved commands from the commands folder
   (`%APPDATA%\Firepixel\Commands`, subfolders become submenus), Manage AI Models, Reset Warning
   Dialogs and the AI control channel.
@@ -224,7 +243,11 @@ is entered relative to it.
   folder for the images. It has the buttons < Back, Next > and Finish. Afterwards the code is on the
   clipboard.
 - *Modify ▸ Pop-up Menu ▸ Add Pop-up Menu...* opens the Pop-up Menu Editor. Next > and < Back lead
-  through the four tabs, Done creates the menu.
+  through the four tabs, Done creates the menu. On the "Content" tab the entries are in a table
+  (Text │ Link │ Target), the selected row can be edited in place; the buttons + / − / → / ← add, delete,
+  indent and outdent entries.
+- The slice guides divide the page as in the original: first horizontally above the topmost slice, then
+  vertically along the slice edges, without cutting through a slice.
 - Button instances count as slices on the canvas. They get the green slice overlay and the slice
   guides.
 

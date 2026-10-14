@@ -1,6 +1,6 @@
 # Firepixel – Gesamtplan
 
-Stand: **14.10.2026 nachmittags (DOC-5)**, Übersicht im nächsten Abschnitt. Die Abschnitte 2–7 sind der ältere Stand vom **13.10.2026 ≈ 02:50, nach Welle 3 und den Nachläufern** (auf den Ist-Stand gebracht von DOC3-4; vorher DOC-2 nach Welle 2, DOC-1 in der Pause ≈ 20:15). Zusammenfassung für den Nutzer: `docs\progress-2026-10-13.md`. Dieses Dokument ist der Fahrplan bis „fertig“. Es sagt, was erledigt ist, was gerade läuft und was in welcher Reihenfolge noch kommt. Die Einzelheiten stehen in den verlinkten Dateien. Wer ein Paket abschließt, hakt es hier ab (☐ → ☑) und trägt den Commit ein.
+Stand: **14.10.2026 abends (GT-2), Endversion gebaut, Tag ausstehend**, Übersicht im nächsten Abschnitt (davor DOC-5 nachmittags). Die Abschnitte 2–7 sind der ältere Stand vom **13.10.2026 ≈ 02:50, nach Welle 3 und den Nachläufern** (auf den Ist-Stand gebracht von DOC3-4; vorher DOC-2 nach Welle 2, DOC-1 in der Pause ≈ 20:15). Zusammenfassung für den Nutzer: `docs\progress-2026-10-13.md`. Dieses Dokument ist der Fahrplan bis „fertig“. Es sagt, was erledigt ist, was gerade läuft und was in welcher Reihenfolge noch kommt. Die Einzelheiten stehen in den verlinkten Dateien. Wer ein Paket abschließt, hakt es hier ab (☐ → ☑) und trägt den Commit ein.
 
 Verwandte Dateien:
 - `STATUS.md`: Stand je Crate und je Agent
@@ -15,6 +15,19 @@ Verwandte Dateien:
 - `docs\TESTLEITFADEN_2026-10-12.md`: Hands-on-Test für den Nutzer, alle Änderungen seit 12.10. 04:00
 
 ---
+
+## Stand 14.10.2026 abends (GT-2): Endversion gebaut, Tag ausstehend
+
+**Kurz:** Nach der Testversion `Firepixel-Vorschau-2026-10-14_15-33` kamen F8–F14 und M2 auf `main`: Einfügen direkt
+über der Auswahl, Maskengruppe am Platz des untersten Objekts, Stapelplatz der Pfadoperationen, Segment-Hilfslinien
+wie im Original, Symbol bearbeiten im Fenster des Dokuments mit Pfadleiste, Popupmenü-Editor mit Tabelle, AI-Text an
+der richtigen Stelle, zu schmaler Textrahmen ohne Tinte, Auswahlrahmen in Pfad mit Werkzeugfarben, Instanzen tweenen
+mit 10 Schritten, Rückfrage „Status hinzufügen“ (`addStates`), Auswahlverlauf Strg+Umschalt+Pfeile und neutrale
+sichtbare Texte (Kürzelsätze „Bildbearbeitung“, „Vektorzeichnung“, „Klassische Vektor-Tasten“, Dateityp „AI“).
+TWEAKS 14.10. Nachlauf: TW-33…41 und Q-18…22 bearbeitet (TW-37 kein Produktfehler), Nachprüfung im Skriptlauf
+steht aus (`parity\TWEAKS_2026-10-14.md`). Handbuch und AGENTS DE/EN nachgezogen. Die **Endversion** ist gebaut
+(GT-2: voller Testlauf, Golden-Korpus, Release-Build, Desktop-Ordner `Firepixel-<Datum_Uhrzeit>`, Smoke-Test DE/EN,
+Bericht `docs\berichte\gt2.md`). Ein Git-Tag ist noch **nicht** gesetzt; gepusht wird nur auf Anweisung.
 
 ## Stand 14.10.2026 nachmittags (DOC-5)
 
