@@ -21,6 +21,10 @@ pub enum Pred {
     Sel(ObjectKind),
     /// Mehr als ein Element ausgewählt UND alle von dieser Art.
     Multi(ObjectKind),
+    /// Die Pixelauswahl ist das unveränderte Ergebnis von „Motiv auswählen“ und ein Auswahl- bzw.
+    /// Zeigerwerkzeug ist aktiv: die KI-Feineinstellungen bleiben auch nach dem Menübefehl
+    /// erreichbar (N21).
+    AiSubjectResult,
     /// Zustände, die fp-engine noch nicht meldet (Vektormaske/Bitmapmaske/Text bearbeiten,
     /// gemischte Mehrfachauswahl): trifft vorerst nie zu.
     Never,
@@ -52,6 +56,7 @@ const DOC_BOX: [u16; 6] = [14100, 14007, 14031, 6564, 14083, 14084];
 /// Die Tabelle in Original-Reihenfolge.
 pub const LAYOUTS: &[PiLayout] = &[
     row(1, NoDocument, [14079, 14080, 14081, 14082, 14083, 14084], 73),
+    row(74, AiSubjectResult, [14006, 14080, super::ai_quads::SUBJECT_Q3, super::ai_quads::SUBJECT_Q4, 14083, 14084], 73),
     row(2, Tool(ToolId::Brush), [14006, 14080, 14050, 14051, 14083, 14084], 118),
     row(3, Tool(ToolId::Eraser), [14006, 14080, 14052, 14119, 14083, 14084], 73),
     row(4, Tool(ToolId::Eyedropper), [14006, 14080, 14053, 14119, 14083, 14084], 73),
@@ -143,6 +148,7 @@ pub fn matches(pred: &Pred, s: &Session) -> bool {
         NoDocument => d.is_none(),
         Tool(t) => d.is_some() && s.tools.active == *t,
         Never => false,
+        AiSubjectResult => d.is_some_and(|d| d.selection.has_pixels()) && TUNE_TOOLS.contains(&s.tools.active) && subject_result(s),
         Sel(k) | Multi(k) => {
             let Some(d) = d else { return false };
             let ids = &d.selection.elements;
@@ -157,6 +163,28 @@ pub fn matches(pred: &Pred, s: &Session) -> bool {
             fp_engine::docops::find_many_on_page(&d.doc, d.page, ids).iter().all(|p| p.as_ref().and_then(|p| d.doc.element_at(p)).is_some_and(|e| element_is(insp_elem(e), *k, &d.doc)))
         }
     }
+}
+
+/// Werkzeuge, bei denen eine Motivauswahl die KI-Feineinstellungen zeigt (N21).
+const TUNE_TOOLS: [ToolId; 7] = [ToolId::Pointer, ToolId::Subselection, ToolId::Marquee, ToolId::OvalMarquee, ToolId::Lasso, ToolId::PolygonLasso, ToolId::MagicWand];
+
+thread_local! {
+    /// Letzte Prüfung (Kennung der Maske → Ergebnis); die volle Prüfsumme der Maske nur bei Änderung.
+    static SUBJECT_TUNE: std::cell::Cell<Option<((usize, i32, i32, i32, i32), bool)>> = const { std::cell::Cell::new(None) };
+}
+
+/// Ist die Pixelauswahl das unveränderte Ergebnis der letzten Motivauswahl?
+fn subject_result(s: &Session) -> bool {
+    let Some(m) = s.active().and_then(|d| d.selection.pixels.as_ref()) else { return false };
+    let key = crate::canvas::overlay::mask_key(m);
+    if let Some((k, v)) = SUBJECT_TUNE.with(|c| c.get())
+        && k == key
+    {
+        return v;
+    }
+    let v = fp_engine::commands::ai::can_retune(s, "select.aiSubject");
+    SUBJECT_TUNE.with(|c| c.set(Some((key, v))));
+    v
 }
 
 /// Element, nach dessen Art der Inspektor gewählt wird: Ein maskiertes Einzelelement (Maske ▸ Alles

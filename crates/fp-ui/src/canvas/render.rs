@@ -86,6 +86,8 @@ pub struct RenderKey {
     pub zoom: f64,
     /// Kennung der ausgeblendeten Elemente (0 = keine).
     pub variant: u64,
+    /// Ansicht ▸ Macintosh-Gamma: Bild nur für die Anzeige aufhellen (TW-18).
+    pub gamma: bool,
 }
 
 /// Stand der Leinwand eines Dokuments (Render-Cache und Interaktionszustand der Werkzeuge).
@@ -253,6 +255,32 @@ impl RenderWorker {
 }
 
 fn render_now(r: &fp_render::Renderer, doc: &Document, key: &RenderKey, hidden: &[u64]) -> RgbaImage {
+    let mut img = render_plain(r, doc, key, hidden);
+    if key.gamma {
+        apply_gamma_preview(&mut img);
+    }
+    img
+}
+
+/// Gamma-Vorschau (Ansicht ▸ Macintosh-Gamma, TW-18): R, G, B des fertigen Leinwandbilds über
+/// [`fp_color::models::gamma_preview_table`] (Windows: lokal 2,2, andere Plattform 1,8). Nur Anzeige –
+/// Dokument und Export bleiben unverändert.
+pub fn apply_gamma_preview(img: &mut RgbaImage) {
+    let t = gamma_table();
+    for px in img.as_bytes_mut().chunks_exact_mut(4) {
+        px[0] = t[px[0] as usize];
+        px[1] = t[px[1] as usize];
+        px[2] = t[px[2] as usize];
+    }
+}
+
+/// Tabelle der Gamma-Vorschau (einmal berechnet).
+pub fn gamma_table() -> &'static [u8; 256] {
+    static T: std::sync::OnceLock<[u8; 256]> = std::sync::OnceLock::new();
+    T.get_or_init(|| fp_color::models::gamma_preview_table(2.2, 1.8))
+}
+
+fn render_plain(r: &fp_render::Renderer, doc: &Document, key: &RenderKey, hidden: &[u64]) -> RgbaImage {
     if hidden.is_empty() {
         return r.render_region(doc, key.page, key.frame, key.region, key.zoom).image;
     }
@@ -336,6 +364,19 @@ mod tests {
         let p = (y * w + x) * 4;
         i.as_bytes_mut()[p + 1] = v;
         i.as_bytes_mut()[p + 3] = 255;
+    }
+
+    #[test]
+    fn gamma_preview_brightens_skin_tone_tw18() {
+        // Messwert TWEAKS TW-18: Hautton 198,147,115 → mit Macintosh-Gamma 207,162,133
+        let mut a = img(1, 1);
+        a.as_bytes_mut().copy_from_slice(&[198, 147, 115, 255]);
+        apply_gamma_preview(&mut a);
+        let b = a.as_bytes();
+        assert_eq!(b[3], 255, "Alpha bleibt");
+        assert_eq!(b[0], 207);
+        assert!((b[1] as i32 - 162).abs() <= 1, "G {}", b[1]);
+        assert!((b[2] as i32 - 133).abs() <= 1, "B {}", b[2]);
     }
 
     #[test]

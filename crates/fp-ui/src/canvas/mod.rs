@@ -4,6 +4,7 @@
 //! (Auswahlinfo, Status-Steuerung, Dokumentgröße, Vergrößerung). Mausereignisse gehen als
 //! [`fp_engine::ToolEvent`] an die Sitzung.
 
+pub mod anim;
 pub mod context;
 pub mod cursors;
 pub mod ghost;
@@ -510,7 +511,8 @@ fn canvas_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
     let (generation, page, frame, docarc) = (d.generation, d.page, d.frame, std::sync::Arc::clone(&d.doc));
     let cc = st.canvases.entry(id).or_default();
     // Ergebnisse des Threads übernehmen
-    let fresh = |k: &RenderKey| k.doc == id && k.generation == generation && k.epoch == cc.epoch && k.page == page && k.frame == frame && k.variant == variant && (k.zoom - zoom_dev).abs() < 1e-9;
+    let gamma = view.gamma_preview;
+    let fresh = |k: &RenderKey| k.doc == id && k.generation == generation && k.epoch == cc.epoch && k.page == page && k.frame == frame && k.variant == variant && k.gamma == gamma && (k.zoom - zoom_dev).abs() < 1e-9;
     let covered = cc.shown.as_ref().is_some_and(|k| fresh(k) && k.region.intersect(&visible) == visible);
     let pending_ok = cc.requested.as_ref().is_some_and(|k| fresh(k) && k.region.intersect(&visible) == visible);
     if !visible.is_empty() && !covered && !pending_ok {
@@ -532,7 +534,7 @@ fn canvas_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
             let hh = (region.height() as i32).min(max_side) / 2;
             region = IRect::new(cx - hw, cy - hh, cx - hw + (region.width() as i32).min(max_side), cy - hh + (region.height() as i32).min(max_side));
         }
-        let key = RenderKey { doc: id, generation, epoch: cc.epoch, page, frame, region, zoom: zoom_dev, variant };
+        let key = RenderKey { doc: id, generation, epoch: cc.epoch, page, frame, region, zoom: zoom_dev, variant, gamma };
         cc.requested = Some(key);
         if let Some(res) = st.worker.request(RenderJob { key, doc: docarc, hidden: hidden.clone() }, st.sync_render) {
             render::show_result(ui.ctx(), st.canvases.entry(id).or_default(), res);
@@ -1244,7 +1246,8 @@ fn overlays(ui: &Ui, st: &mut AppState, painter: &egui::Painter, area: Rect, vie
             if paint_tool && matches!(e.kind, fp_model::ElementKind::Bitmap(_)) {
                 continue;
             }
-            let Some(b) = fp_engine::docops::element_frame_bounds(&d.doc, &e) else { continue };
+            // Animationsinstanz: Rahmen nur um das Bild im aktuellen Status (TW-20)
+            let Some(b) = anim::frame_bounds(&d.doc, &e, d.frame).or_else(|| fp_engine::docops::element_frame_bounds(&d.doc, &e)) else { continue };
             let is_moving = moving_ids.contains(&eid.0);
             let corners = match moving.as_ref().filter(|_| is_moving) {
                 Some((_, m)) => b.corners().map(|p| m.apply(p)),
@@ -1297,6 +1300,14 @@ fn overlays(ui: &Ui, st: &mut AppState, painter: &egui::Painter, area: Rect, vie
             && let Some(e) = only.as_ref().and_then(|p| d.doc.element_at(p))
         {
             fill_handles(painter, e, &spp, &c);
+        }
+        // Bewegungspfad der einzigen gewählten Animationsinstanz (TW-20)
+        if moving.is_none()
+            && let [only] = found.as_slice()
+            && let Some(e) = only.as_ref().and_then(|p| d.doc.element_at(p))
+            && let Some(pts) = anim::motion_path(&d.doc, e)
+        {
+            anim::paint_path(painter, &pts, &spp, c.selection);
         }
     }
     st.canvases.entry(id).or_default().sel_frames = frames;

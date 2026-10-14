@@ -20,8 +20,23 @@ pub struct WebItem {
 /// Sichtbare Web-Objekte der Seite im Status `frame`.
 pub fn items(doc: &Document, page: usize, frame: usize) -> Vec<WebItem> {
     let mut out = Vec::new();
-    for (_, l) in fp_engine::docops::own_layers(doc, page) {
-        if l.kind != LayerKind::Web || !l.is_visible() {
+    let layers = fp_engine::docops::own_layers(doc, page);
+    // die Segmente der Schaltflächen gehören zur Web-Ebene: ist sie ausgeblendet, fehlen auch sie
+    let web_visible = layers.iter().filter(|(_, l)| l.kind == LayerKind::Web).all(|(_, l)| l.is_visible());
+    for (_, l) in layers {
+        if !l.is_visible() {
+            continue;
+        }
+        if l.kind != LayerKind::Web {
+            if !web_visible {
+                continue;
+            }
+            // Schaltflächen-Instanzen haben ihr eigenes Segment: grüne Überlagerung und
+            // Segment-Hilfslinien wie ein normales Segment (TW-19)
+            let ci = if l.shared_across_frames { 0 } else { frame };
+            if let Some(cel) = l.cels.get(ci).or_else(|| l.cels.first()) {
+                button_slices(doc, &cel.elements, &mut out);
+            }
             continue;
         }
         let ci = if l.shared_across_frames { 0 } else { frame };
@@ -42,6 +57,27 @@ pub fn items(doc: &Document, page: usize, frame: usize) -> Vec<WebItem> {
         }
     }
     out
+}
+
+/// Farbe des Segments einer Schaltfläche (Vorgabe der Segmente, Grün).
+pub const BUTTON_SLICE_COLOR: [u8; 4] = [0, 255, 0, 255];
+
+/// Sichtbare Schaltflächen-Instanzen (auch in Gruppen) als Segmente über ihren Grenzen.
+fn button_slices(doc: &Document, elements: &[std::sync::Arc<fp_model::Element>], out: &mut Vec<WebItem>) {
+    for e in elements {
+        if !e.common.visible {
+            continue;
+        }
+        match &e.kind {
+            ElementKind::Instance(i) if doc.symbol_by_id(i.symbol_id).is_some_and(|(_, s)| s.kind() == fp_model::SymbolKind::Button) => {
+                if let Some(r) = fp_engine::docops::element_bounds(doc, e).filter(|r| r.width() > 0.0 && r.height() > 0.0) {
+                    out.push(WebItem { rect: r.normalized(), polygon: None, ellipse: false, slice: true, color: BUTTON_SLICE_COLOR });
+                }
+            }
+            ElementKind::Group(g) => button_slices(doc, &g.children, out),
+            _ => {}
+        }
+    }
 }
 
 /// Segment-Hilfslinien als Strecken (Dokumentkoordinaten): Schnitte der Seite wie die Tabelle des

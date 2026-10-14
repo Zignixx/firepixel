@@ -15,7 +15,7 @@ pub struct AntsCache {
     pub outlines: Vec<Vec<Point>>,
 }
 
-fn mask_key(m: &fp_raster::Mask) -> (usize, i32, i32, i32, i32) {
+pub fn mask_key(m: &fp_raster::Mask) -> (usize, i32, i32, i32, i32) {
     let b = m.bounds();
     let data = m.data();
     // Prüfsumme über eine Stichprobe (große Masken) bzw. alle Bytes (kleine)
@@ -78,6 +78,20 @@ impl FrameBatch {
 pub fn ants_for<'a>(slot: &'a mut Option<AntsCache>, mask: &fp_raster::Mask) -> &'a [Vec<Point>] {
     let key = mask_key(mask);
     if slot.as_ref().is_none_or(|c| c.key != key) {
+        // Weiche Auswahl ohne ein Pixel ≥ 50 % (z. B. KI „Motiv auswählen“ bei unsicherem Motiv,
+        // N21): die Ameisen laufen dann an der halben Höchstdeckung statt gar nicht – sonst
+        // bestünde eine unsichtbare Pixelauswahl
+        let peak = mask.data().iter().copied().max().unwrap_or(0);
+        let lifted;
+        let mask = if peak > 0 && peak < 128 {
+            let thr = peak.div_ceil(2).max(1);
+            let mut m = mask.clone();
+            m.map(|v| if v >= thr { 255 } else { 0 });
+            lifted = m;
+            &lifted
+        } else {
+            mask
+        };
         let outlines = fp_engine::geometry::trace_mask(mask).iter().map(|c| c.nodes.iter().map(|n| n.anchor).collect::<Vec<Point>>()).filter(|v| v.len() >= 2).collect();
         *slot = Some(AntsCache { key, outlines });
     }
