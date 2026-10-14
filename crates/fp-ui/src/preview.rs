@@ -71,7 +71,8 @@ pub fn tile_settings(current: &OptimizeSettings, mode: PreviewMode) -> Vec<Optim
 pub fn tile(ctx: &egui::Context, st: &AppState, s: &OptimizeSettings) -> Option<PreviewTile> {
     let d = st.session.active()?;
     // Sprachstand im Schlüssel: die Beschriftung wechselt mit der Sprache
-    let key = format!("{}-{}-{}-{}-{}-{:?}", d.id.0, d.generation, d.page, d.frame, fp_i18n::generation(), s);
+    let gamma = d.view.gamma_preview;
+    let key = format!("{}-{}-{}-{}-{}-{}-{:?}", d.id.0, d.generation, d.page, d.frame, fp_i18n::generation(), gamma, s);
     let c = cache(ctx);
     if let Ok(g) = c.lock()
         && let Some(t) = g.get(&key)
@@ -86,7 +87,11 @@ pub fn tile(ctx: &egui::Context, st: &AppState, s: &OptimizeSettings) -> Option<
             let ectx = fp_export::doc_export::page_context(&d.doc, d.page);
             match fp_export::export::export_image(&img, s, &ectx, &fp_export::export::EncodeExtras::standalone()) {
                 Ok(ex) => {
-                    let pv = fp_export::export::preview(&ex, s, (0, 0));
+                    let mut pv = fp_export::export::preview(&ex, s, (0, 0));
+                    // Ansicht ▸ Macintosh-Gamma gilt auch für die Kacheln der 2-/4-fach-Ansicht (BA-045)
+                    if gamma {
+                        crate::canvas::render::apply_gamma_preview(&mut pv);
+                    }
                     let size = [pv.width(), pv.height()];
                     let tex = ctx.load_texture(format!("fp-preview-{key}"), crate::canvas::render::to_color_image(&pv), egui::TextureOptions::NEAREST);
                     let secs = fp_export::preview::download_seconds(ex.bytes.len(), 56_000);
@@ -356,7 +361,7 @@ pub fn show(ui: &mut Ui, st: &mut AppState, rect: Rect, original: &mut dyn FnMut
                     {
                         let r = image_screen_rect(&d.view, body, pr, s);
                         let p = ui.painter().with_clip_rect(body.intersect(ui.clip_rect()));
-                        crate::widgets::checker(&p, r.intersect(body), 8.0, &theme);
+                        crate::widgets::checker_view(&p, r.intersect(body), 8.0, &theme, d.view.gamma_preview);
                         p.image(tex.id(), r, Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0)), Color32::WHITE);
                     }
                     t.caption

@@ -384,8 +384,9 @@ fn join(d: &mut DocumentState) -> Result<()> {
         0 => Err(sel_err("err-sel-no-paths-selected")),
         1 => {
             let (_, e, sh) = &items[0];
-            let open: Vec<usize> = sh.contours.iter().enumerate().filter(|(_, c)| !c.closed).map(|(i, _)| i).collect();
-            if open.len() != 1 || sh.contours.len() != 1 {
+            // ein Pfad mit einer Kontur: offen → schließen, geschlossen → kein Fehler; das Ergebnis
+            // ist im Original immer ein Pfad ohne Namen (B-2 BA-005: Name danach `null`)
+            if sh.contours.len() != 1 {
                 return Err(sel_err("err-sel-no-single-open-contour"));
             }
             docops::edit_by_id(doc, page, e.id, |x| {
@@ -394,6 +395,7 @@ fn join(d: &mut DocumentState) -> Result<()> {
                 {
                     c.closed = true;
                 }
+                x.common.name = None;
             });
             Ok(())
         }
@@ -1255,7 +1257,13 @@ pub(super) fn register(r: &mut CommandRegistry) {
             }
             (els.iter().map(|(_, e)| Arc::clone(e)).collect::<Vec<_>>(), first, d.selection.elements.clone())
         };
-        let img = flatten_elements(s, &els)?;
+        let mut img = flatten_elements(s, &els)?;
+        // B-2 BA-013: das Original beschneidet das Ergebnis sofort auf die Pixel mit Alpha > 0
+        // (unsichtbare mitgewählte Objekte vergrößern die Bitmap nicht); ganz leer: unverändert
+        let a = img.alpha_bounds();
+        if !a.is_empty() && a != img.bounds() {
+            img = img.cropped(a);
+        }
         // TW-27: ein einzelnes Objekt behält seinen Namen (menu-modify-a/08 „ST“); aus mehreren
         // Objekten entsteht wie im Original eine Bitmap ohne Namen (TW-33, menu-modify-a/06)
         let name = if els.len() == 1 { els[0].common.name.clone() } else { None };

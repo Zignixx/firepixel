@@ -651,7 +651,7 @@ fn canvas_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
         painter.rect_filled(page_screen.translate(vec2(2.0, 2.0)), 0.0, with_alpha(Color32::BLACK, 30));
     }
     if (bg.0 >> 24) < 255 {
-        widgets::checker(&painter.with_clip_rect(page_screen.intersect(area)), page_screen.intersect(area), 8.0, &theme);
+        widgets::checker_view(&painter.with_clip_rect(page_screen.intersect(area)), page_screen.intersect(area), 8.0, &theme, gamma);
     }
     if let Some((tex, k)) = &tex_now {
         let page_painter = painter.with_clip_rect(page_screen.intersect(area));

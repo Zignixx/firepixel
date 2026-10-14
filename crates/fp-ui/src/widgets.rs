@@ -186,14 +186,28 @@ pub fn color_well(painter: &Painter, rect: Rect, color: Color32, theme: &Theme) 
 /// das ~10.000 Formen mit ~100.000 Dreiecken, die der Software-Rasterer (Rechner ohne
 /// Grafikkarte, Fernsitzung) je Bild 0,5 s lang zeichnete (FV-8, Tippverzögerung).
 pub fn checker(painter: &Painter, rect: Rect, cell: f32, theme: &Theme) {
-    let c = &theme.colors;
+    checker_colors(painter, rect, cell, theme.colors.checker_a, theme.colors.checker_b);
+}
+
+/// Schachbrett der Leinwand; mit `gamma` durch die Gamma-Vorschau aufgehellt wie das Bild darauf
+/// (Ansicht ▸ Macintosh-Gamma, BA-045).
+pub fn checker_view(painter: &Painter, rect: Rect, cell: f32, theme: &Theme, gamma: bool) {
+    let (a, b) = (theme.colors.checker_a, theme.colors.checker_b);
+    if gamma {
+        checker_colors(painter, rect, cell, crate::canvas::render::gamma_color(a), crate::canvas::render::gamma_color(b));
+    } else {
+        checker_colors(painter, rect, cell, a, b);
+    }
+}
+
+fn checker_colors(painter: &Painter, rect: Rect, cell: f32, checker_a: Color32, checker_b: Color32) {
     let cols = (rect.width() / cell).ceil() as i32;
     let rows = (rect.height() / cell).ceil() as i32;
     if cell <= 0.0 || !rect.is_positive() || cols.saturating_mul(rows) > 40_000 {
-        painter.rect_filled(rect, 0.0, c.checker_a);
+        painter.rect_filled(rect, 0.0, checker_a);
         return;
     }
-    let tex = checker_texture(painter.ctx(), c.checker_a, c.checker_b);
+    let tex = checker_texture(painter.ctx(), checker_a, checker_b);
     // eine Texturperiode = 2 Felder; Ursprung an der linken oberen Ecke von `rect`
     let uv = Rect::from_min_max(pos2(0.0, 0.0), pos2(rect.width() / (2.0 * cell), rect.height() / (2.0 * cell)));
     painter.image(tex.id(), rect, uv, Color32::WHITE);

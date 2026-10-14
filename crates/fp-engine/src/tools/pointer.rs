@@ -302,6 +302,57 @@ enum PState {
     DraggingPoint { start: Point, cur: Point, hit: PointHit, pull: bool, guides: Vec<Overlay> },
     /// Steuerpunkt einer automatischen Form wird gezogen.
     Control(ControlDrag),
+    /// Verlaufs-/Mustergriff des gewählten Objekts wird gezogen (BA-043).
+    FillHandle { id: ElementId, handles: fp_model::FillHandles, which: FillGrip, from: Point, cur: Point },
+}
+
+/// Griff einer Verlaufs- bzw. Musterfüllung, den der Zeiger zieht (BA-043).
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub(crate) enum FillGrip {
+    /// Anfang (runder Griff)
+    Start,
+    /// Ende (eckiger Griff)
+    End,
+    /// zweite Achse (Ellipse, Rechteck, Muster)
+    Second,
+}
+
+/// Verlaufs-/Mustergriff des einzigen gewählten Pfads bzw. Texts unter `p` – dieselben Griffe, die
+/// die Leinwand beim Zeiger zeichnet (`fill_handles`, PAR 18/07).
+pub(crate) fn fill_grip_at(ctx: &ToolContext, p: Point, tol: f32) -> Option<(ElementId, fp_model::FillHandles, FillGrip)> {
+    let [id] = ctx.selection.elements.as_slice() else { return None };
+    let e = docops::element_on_page(ctx.doc, ctx.page, *id)?;
+    if !matches!(e.kind, ElementKind::Path(_) | ElementKind::Text(_)) {
+        return None;
+    }
+    let attrs = docops::path_attrs_of(&e)?;
+    let f = attrs.fill.as_ref()?;
+    let kind = crate::commands::panel::fill_kind(Some(f));
+    if kind != 2 && kind != 3 {
+        return None;
+    }
+    let h = crate::commands::panel::handles_of(&e).filter(|h| h.valid)?;
+    let second = kind == 3 || matches!(f.shape, 9 | 10);
+    let tol = tol.max(4.0 / ctx.zoom.max(1e-6) as f32);
+    let mut grips = vec![(FillGrip::Start, h.start), (FillGrip::End, h.end)];
+    if second {
+        grips.push((FillGrip::Second, h.second));
+    }
+    grips.into_iter().filter(|g| dist(g.1, p) <= tol).min_by(|a, b| dist(a.1, p).total_cmp(&dist(b.1, p))).map(|g| (*id, h, g.0))
+}
+
+/// Griffe nach dem Ziehen des Griffs `which` um `from` → `to` (nur dieser Griff bewegt sich, wie
+/// beim Füll- und Verlaufswerkzeug).
+pub(crate) fn dragged_fill_handles(h: fp_model::FillHandles, which: FillGrip, from: Point, to: Point) -> fp_model::FillHandles {
+    let (dx, dy) = (to.x - from.x, to.y - from.y);
+    let mv = |q: Point| Point::new(q.x + dx, q.y + dy);
+    let mut n = h;
+    match which {
+        FillGrip::Start => n.start = mv(h.start),
+        FillGrip::End => n.end = mv(h.end),
+        FillGrip::Second => n.second = mv(h.second),
+    }
+    n
 }
 
 /// Sichtbare Steuerpunkte der ausgewählten automatischen Formen: (Form, Index, Lage, Tooltip).
@@ -420,6 +471,10 @@ impl PointerTool {
             self.hover_cursor = Cursor::PointerPoint;
             return ToolResponse { cursor: self.hover_cursor, ..ToolResponse::default() };
         }
+        if self.id != ToolId::Subselection && fill_grip_at(ctx, p, tol).is_some() {
+            self.hover_cursor = Cursor::Move;
+            return ToolResponse { cursor: self.hover_cursor, ..ToolResponse::default() };
+        }
         // Über den Griffen der Auswahl zeigt das Original einen Pfeil ohne Zusatz: über den Ecken
         // weiß mit schwarzem Rand (K2, wie die Teilauswahl), über den Kanten schwarz (K3)
         if self.paint_handles(ctx)
@@ -461,6 +516,14 @@ impl PointerTool {
         {
             self.state = PState::Control(ControlDrag { id, index, from: at, points: vec![at] });
             return ToolResponse { overlay: control_points_feedback(ctx, Some((id, index, at))), cursor: Cursor::PointerPoint, ..ToolResponse::default() };
+        }
+        // Verlaufs-/Mustergriffe des gewählten Objekts (BA-043; die Leinwand zeichnet sie bei Zeiger
+        // und Hintere auswählen)
+        if self.id != ToolId::Subselection
+            && let Some((id, handles, which)) = fill_grip_at(ctx, p, tol)
+        {
+            self.state = PState::FillHandle { id, handles, which, from: p, cur: p };
+            return ToolResponse { cursor: Cursor::Move, ..ToolResponse::default() };
         }
         // Griffe der Auswahl (nur Zeiger, PointerToolPaintHandles); auch die Eckgriffe eines
         // Rechtecks skalieren – im Original live gemessen, die Rundung bleibt (PARITAET_A L26)
@@ -561,6 +624,12 @@ impl PointerTool {
             PState::PressedHandle { start, handle, bounds } if dist(start, p) >= thr => {
                 self.state = PState::Scaling { handle, bounds, cur: bounds };
                 self.moved(p, ev, ctx)
+            }
+            PState::FillHandle { id, handles, which, from, .. } => {
+                let n = dragged_fill_handles(handles, which, from, p);
+                self.overlay = vec![Overlay::GradientHandles { start: n.start, end: n.end }];
+                self.state = PState::FillHandle { id, handles, which, from, cur: p };
+                ToolResponse::with_overlay(self.overlay.clone(), Cursor::Move)
             }
             PState::Control(mut c) => {
                 c.points.push(p);
@@ -718,6 +787,17 @@ impl PointerTool {
         let st = std::mem::replace(&mut self.state, PState::Idle);
         self.overlay.clear();
         match st {
+            // ein Verlaufsschritt; ein Klick ohne Ziehen ändert nichts
+            PState::FillHandle { id, handles, which, from, cur } => {
+                if dist(from, cur) < ctx.drag_threshold() {
+                    return ToolResponse::default();
+                }
+                let n = dragged_fill_handles(handles, which, from, cur);
+                ToolResponse::commit(vec![Invocation::new(
+                    "element.setFillHandles",
+                    json!({"ids": [id.0], "start": pt_json(n.start), "end": pt_json(n.end), "second": pt_json(n.second)}),
+                )])
+            }
             PState::Control(c) => match c.finish(p, ev) {
                 Some(inv) => ToolResponse::commit(vec![inv]),
                 None => ToolResponse::default(),

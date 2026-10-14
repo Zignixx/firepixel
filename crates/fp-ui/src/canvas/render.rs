@@ -274,6 +274,12 @@ pub fn apply_gamma_preview(img: &mut RgbaImage) {
     }
 }
 
+/// Eine Anzeigefarbe durch die Gamma-Vorschau (Schachbrett transparenter Seiten, BA-045).
+pub fn gamma_color(c: egui::Color32) -> egui::Color32 {
+    let t = gamma_table();
+    egui::Color32::from_rgba_premultiplied(t[c.r() as usize], t[c.g() as usize], t[c.b() as usize], c.a())
+}
+
 /// Tabelle der Gamma-Vorschau (einmal berechnet).
 pub fn gamma_table() -> &'static [u8; 256] {
     static T: std::sync::OnceLock<[u8; 256]> = std::sync::OnceLock::new();
@@ -377,6 +383,16 @@ mod tests {
         assert_eq!(b[0], 207);
         assert!((b[1] as i32 - 162).abs() <= 1, "G {}", b[1]);
         assert!((b[2] as i32 - 133).abs() <= 1, "B {}", b[2]);
+    }
+
+    #[test]
+    fn gamma_color_brightens_checker_like_the_image_ba045() {
+        // Schachbrettfarben folgen derselben Tabelle wie das Bild (Hautton wie TW-18)
+        let c = gamma_color(egui::Color32::from_rgb(198, 147, 115));
+        assert_eq!((c.r(), c.a()), (207, 255));
+        assert_eq!(gamma_color(egui::Color32::from_rgb(204, 204, 204)).r(), gamma_table()[204]);
+        assert!(gamma_table()[204] > 204, "Grau wird heller");
+        assert_eq!(gamma_color(egui::Color32::WHITE), egui::Color32::WHITE);
     }
 
     #[test]
