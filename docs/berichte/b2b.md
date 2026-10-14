@@ -78,3 +78,36 @@ Protokolle `g6a_log.txt`, `g6b_log.txt`, `g6c_log.txt`; Skript `b2b_j2.jsf` in b
 | BA-024 | Strich-Popup im Inspektor (R1 mit Strich): untere Reihe Ohne · Strich innen/mittig/außen, Deckkraft-Feld mit ▾. Klick auf „außen“ setzt die Strichlage (`brushPlacement` outside) **und schließt das Popup** | Strichlage-Knopf setzt die Lage und schließt (`color_picker.rs:722` `close = true`) | **gleich** (Strichlage). Nicht gemessen: Deckkraft einer Rasterwahl (Eingabe ins Deckkraft-Feld per Tastatur wurde angehängt statt ersetzt, „10500“; Messung verworfen) |
 | BA-126 (Teil) | Aktive Unterebene (`currentLayerNum` = Unterebene): Ebenen-Bedienfeldmenü „Ebene für Seiten freigeben…“, „Ebene für alle Seiten freigeben“ und „Ebene statusübergreifend freigeben“ **grau**; aktive Ebene der obersten Stufe → die beiden Seiten-Einträge aktiv | „Für Seiten freigeben“ grau bei Unterebene | **gleich** für die Freigabe (Hinweis: auch „statusübergreifend freigeben“ ist grau – in Firepixel prüfen). Nicht gemessen: Klick auf die Unterebenenzeile, Hervorhebung, `layer.move`-Index (Ebenen-Bedienfeld im Messfenster nur 2 Zeilen hoch, Zeilen nicht per Text erreichbar) |
 | BA-128 | Werkzeugleiste, Füllfarbfeld: Popup (259 × 253) mit Ohne · Einfarbig · Verlauf · Muster und Systemfarbwähler. Klick auf **Verlauf** wechselt **ins Verlaufs-Popup** (Verlaufsarten, Winkel-Feld) – **ohne Auswahl** (Knopf aktiv) wie mit Auswahl (R1 bleibt nach Abbrechen einfarbig). Strichfarbfeld der Werkzeugleiste: Popup **ohne** Strichlage-Knöpfe (nur Ohne + Systemfarbwähler); die Strichlage-Knöpfe gibt es nur im Strich-Popup des Inspektors | Verlauf/Muster setzen die Füllung der Auswahl (ohne Auswahl grau); Strichlage-Knöpfe im Werkzeugleisten-Popup (nur mit Auswahl) | **Unterschied.** Soll: Verlauf/Muster im Werkzeugleisten-Popup immer aktiv und öffnen das Verlaufs- bzw. Muster-Popup (Werkzeugvorgabe bzw. Auswahl erst mit dessen Wahl); Strich-Popup der Werkzeugleiste ohne Strichlage-Knöpfe. Codestelle `crates\fp-ui\src\tools_panel.rs:500` (Popup-Aufbau und `ColorChoice`-Auswertung). Paket **B3** |
+
+## Gruppe 7 – Datei-Dialoge (BA-025, BA-054) und nicht gemessene Punkte
+
+| BA | Ergebnis |
+|---|---|
+| BA-025 | **nicht messbar** in dieser Sitzung: Der Öffnen-Dialog des Originals ist ein alter Win32-Dateidialog mit den Zusatzkästchen „Als „Unbenannt“ öffnen“ und „Als Animation öffnen“ (grau, bis mehrere Dateien gewählt sind); die Mehrfachwahl ließ sich per Fensternachricht nicht auslösen (Dialog blieb offen, mit Abbrechen geschlossen). Braucht echte Tastatureingabe im Dateinamenfeld |
+| BA-054 | **nicht messbar**: *Bildvorschau ▸ Exportieren…* öffnet den Speichern-Dialog **über** der weiter offenen Bildvorschau; das Speichern ließ sich per Fensternachricht nicht auslösen (keine Datei), daher offen, ob die Bildvorschau nach erfolgreichem Export schließt |
+| BA-009 (Rest) | **nicht messbar**: Pixel bis zum Rand per Auswahlrahmen + Entf – Messung ungültig (das Original führte das Anlege-Skript doppelt aus, zwei übereinanderliegende Bitmaps); Systemzwischenablage und Skalier-Werkzeug nicht gemessen |
+| BA-013 (Filterfrage) | **nicht messbar** (gleicher Grund wie BA-009; Umkehren an Bitmaps fragt nicht nach) |
+| BA-010 | nicht gemessen (Pinselstrich-Dialog, Zeitrahmen) |
+| BA-015 | bleibt **X** (Rausch-Startwert-Analyse je Messpunkt nötig) |
+| BA-018 | nicht gemessen (Bildvorschau 2-/4-fach braucht Bildvergleich je Ansicht, Zeitrahmen) |
+| BA-021 | bleibt **X** (nur deutsche Oberfläche installiert) |
+| BA-034, BA-035 (BMP), BA-036 | nicht gemessen (Export über den Datei-Dialog, siehe BA-054) |
+| BA-087, BA-092 | keine Messung im Original – entstehen beim nächsten Gesamt-/Bildlauf |
+
+## Zusammenfassung
+
+41 Punkte: **gleich 9** (BA-001, 002, 004, 006, 012, 019, 028, 055, 122) · **teilweise gleich, Rest nicht messbar 4** (BA-014,
+024, 026, 126) · **Unterschied 15** (BA-003, 007, 008, 017, 020, 022, 023, 027, 032, 039, 119, 123, 124, 127, 128) ·
+**nicht messbar/nicht gemessen 11** (BA-009, 010, 013, 015, 018, 021, 025, 034, 035, 036, 054) · **Gesamtlauf 2** (BA-087, 092).
+Dazu Nebenbefund N1 (JSF `setExportOptions` ohne Wirkung in Firepixel).
+
+Pakete der Unterschiede: **B3** BA-003, 007, 008 (Nutzerentscheid empfohlen), 020, 039, 119, 128 · **B4** BA-022, 023, 027, 032, 127 ·
+**B5** BA-017, 123, 124, N1.
+
+Hinweise für weitere Messungen im Original:
+- Die Werkzeugtaste schaltet bei schon aktivem Werkzeug in der Gruppe weiter – Werkzeuge per `fw.activeTool = "<Name>"` setzen.
+- Menüs (`#32768`), Inspektor und Dialoge sind Win32: Freigaben, Listen, Tab-Folge und Fokus lassen sich ohne Bildschirmfoto lesen
+  (`re\_testdateien\par\b2b\menu.ps1`, `win32.ps1`).
+- Kurz nacheinander gestartete JSF-Läufe wurden vom Original teils doppelt ausgeführt (Objekte doppelt) – Anlege-Skripte idempotent schreiben.
+- `fw.historyPalette.getStepCount()` zählt jeden Skriptlauf als eigenen Schritt.
+- Am Ende: eine Instanz des Originals, kein Dialog offen, eigene Testdokumente geschlossen.
