@@ -684,7 +684,14 @@ t("dlg-title-hue-saturation"),
     let f = FormDialog::new("fx-filter", &title, "pi.effect.set", fields).with_base(json!({"index": index, "map": mapping})).with_transform(filter_effect_params).with_preview();
     // dieselbe Anordnung wie der Filterdialog aus dem Menü (PM-6)
     let side = matches!(e.kind(), EffectKind::GaussianBlur | EffectKind::UnsharpMask | EffectKind::AddNoise | EffectKind::BrightnessContrast | EffectKind::HueSaturation);
-    Some(if side { f.with_side_buttons() } else { f })
+    let f = if side { f.with_side_buttons() } else { f };
+    // Tab-Folge wie im Menüdialog (catalog.rs, PM-6 D41/D42/D46; BA-052)
+    Some(match e.kind() {
+        EffectKind::BrightnessContrast => f.with_side_order(super::form::SideOrder::SlidersFirst),
+        EffectKind::UnsharpMask => f.with_side_order(super::form::SideOrder::FieldsPreviewSliders),
+        EffectKind::HueSaturation => f.without_slider_tab_stops(),
+        _ => f,
+    })
 }
 
 fn filter_effect_params(d: &FormDialog) -> Value {
@@ -777,6 +784,21 @@ mod tests {
             }
             // Sättigung beim Kolorieren auf 0…100 geklemmt
             assert_eq!(d.get("saturation").as_f64(), Some(0.0));
+        }
+    }
+
+    /// BA-052: Die Live-Effekt-Dialoge Farbton/Sättigung, Helligkeit/Kontrast und Unscharf maskieren
+    /// haben dieselbe Tab-Folge wie der Filterdialog aus dem Menü.
+    #[test]
+    fn ba052_live_effect_tab_order_like_menu() {
+        for (guid, cmd) in [
+            ("{3439b08d-1922-11d3-9bde00e02910d580}", "filter.adjustColor.hueSaturation"),
+            ("{3439b08c-1921-11d3-9bde00e02910d580}", "filter.adjustColor.brightnessContrast"),
+            ("{f1cfce44-718e-11d1-8c8200a024cdc039}", "filter.sharpen.unsharpMask"),
+        ] {
+            let live = filter_effect_form(&Effect::new(guid, true), 0).expect("Live-Dialog");
+            let menu = super::super::catalog::filter_form(cmd, false).expect("Menüdialog");
+            assert_eq!((live.side, live.side_order, live.slider_tabs), (menu.side, menu.side_order, menu.slider_tabs), "{cmd}");
         }
     }
 }

@@ -279,6 +279,37 @@ fn saved_index(d: &DocumentState, p: &crate::command::Params) -> Result<usize> {
     if i < list.len() { Ok(i) } else { Err(EngineError::NotFound(fp_i18n::t("err-nf-saved-selection"))) }
 }
 
+/// Gespeicherte Maske aus dem Quelldokument (`document`, `name`/`index`) für „Bitmap-Auswahl wiederherstellen“.
+fn saved_mask(s: &Session, p: &crate::command::Params) -> Result<Mask> {
+    let source = other_document(s, p)?;
+    let src = s.document(source).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-document")))?;
+    let i = saved_index(src, p)?;
+    let sv = src.doc.pages.get(src.page).and_then(|pg| pg.saved_selections.as_ref()).and_then(|l| l.get(i)).cloned();
+    sv.and_then(|s| s.mask.as_ref().and_then(|md| data_to_mask(md, s.left, s.top))).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-mask")))
+}
+
+/// „Umkehren“ (`invert`) innerhalb der Leinwand des Zieldokuments.
+fn invert_saved(d: &DocumentState, m: Mask, p: &crate::command::Params) -> Result<Mask> {
+    if !p.bool_or("invert", false)? {
+        return Ok(m);
+    }
+    let within = canvas_rect(&d.doc, d.page).round_out().union(&m.bounds());
+    Ok(m.inverted(within)?)
+}
+
+/// Ergebnis von `select.restoreBitmapSelection` mit diesen Parametern, ohne etwas zu ändern: die
+/// Pixelauswahl des aktiven Dokuments, wie sie nach dem Befehl wäre (Live-Anzeige im Dialog, BA-050).
+pub fn restore_bitmap_selection_preview(s: &Session, params: serde_json::Value) -> Result<Option<Mask>> {
+    let p = crate::command::Params::new("select.restoreBitmapSelection", params);
+    let md = mode(&p)?;
+    let m = saved_mask(s, &p)?;
+    let d = s.doc()?;
+    let m = invert_saved(d, m, &p)?;
+    let mut sel = d.selection.clone();
+    sel.apply_pixels(m, md);
+    Ok(sel.pixels)
+}
+
 /// Verlaufsname wie im Original (PM-6 D35–D39): „Auswahl erweitern“ usw. statt des Menünamens.
 fn adjust(s: &mut Session, p: &crate::command::Params, step: &str, f: impl Fn(&Mask, u32, u8) -> std::result::Result<Mask, fp_raster::RasterError>) -> Result<CommandOutput> {
     let amount = p.i64_or("amount", 1)?.clamp(1, 1000) as u32;
@@ -508,17 +539,9 @@ pub(super) fn register(r: &mut CommandRegistry) {
             .opt("document", ParamKind::Integer { min: Some(0), max: None }, "Quelldokument (ID, gleiche Größe; Vorgabe: aktives)")
             .run(|s, p| {
                 let md = mode(p)?;
-                let invert = p.bool_or("invert", false)?;
-                let source = other_document(s, p)?;
-                let src = s.document(source).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-document")))?;
-                let i = saved_index(src, p)?;
-                let sv = src.doc.pages.get(src.page).and_then(|pg| pg.saved_selections.as_ref()).and_then(|l| l.get(i)).cloned();
-                let mut m = sv.and_then(|s| s.mask.as_ref().and_then(|md| data_to_mask(md, s.left, s.top))).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-mask")))?;
+                let m = saved_mask(s, p)?;
                 with_doc(s, |d| {
-                    if invert {
-                        let within = canvas_rect(&d.doc, d.page).round_out().union(&m.bounds());
-                        m = m.inverted(within)?;
-                    }
+                    let m = invert_saved(d, m, p)?;
                     d.selection.apply_pixels(m, md);
                     Ok(CommandOutput::doc().labeled(fp_i18n::t("msg-step-load-selection")))
                 })

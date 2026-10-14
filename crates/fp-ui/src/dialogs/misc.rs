@@ -162,6 +162,10 @@ pub fn show_text_editor(ctx: &egui::Context, st: &mut AppState) {
         }
     });
     if apply || result == Some(true) {
+        // Schrift aus dem Texteditor in „zuletzt benutzt“ des Schrift-Menüs (BA-061)
+        if !d.font.is_empty() {
+            crate::menu::note_recent_font(st, &d.font);
+        }
         st.push(Action::Run("history.replay".into(), json!({"commands": d.commands(), "label": t("dlg-te-title")})));
     }
     match (result, r) {

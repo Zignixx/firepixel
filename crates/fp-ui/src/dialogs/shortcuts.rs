@@ -9,6 +9,7 @@
 use super::{dialog_frame, push_button, refs, t, DialogClose};
 use crate::app_state::{Action, AppState};
 use crate::inspector::fields;
+use crate::inspector::glyphs::Glyph;
 use crate::theme::Theme;
 use egui::{pos2, vec2, Align2, Rect, Sense, Stroke, StrokeKind};
 use fp_engine::shortcuts::{Shortcut, ShortcutSet};
@@ -41,6 +42,8 @@ pub struct ShortcutsDialog {
     pub message: Option<String>,
     /// Aufgeklappte Knoten des Menübaums (Pfad bis zum Knoten, Teile mit „ ▸ “ verbunden).
     pub expanded: BTreeSet<String>,
+    /// Markierter Menüknoten (Pfad) im Baum – Tastaturbedienung mit Pfeiltasten (BA-049).
+    pub cursor: Option<String>,
 }
 
 /// Zeile des Menübaums (Original: Baum der Menüs mit ⊞/⊟, PM-5 D17).
@@ -80,6 +83,74 @@ pub fn tree_lines(rows: &[Row], expanded: &BTreeSet<String>) -> Vec<TreeLine> {
     out
 }
 
+/// Index der markierten Zeile im Baum bzw. in der Liste (gewählter Befehl oder markierter Knoten).
+pub fn current_line(d: &ShortcutsDialog, lines: &[TreeLine], rws: &[Row]) -> Option<usize> {
+    lines.iter().position(|l| match l {
+        TreeLine::Folder { path, .. } => d.cursor.as_deref() == Some(path.as_str()),
+        TreeLine::Leaf { row, .. } => d.cursor.is_none() && d.selected.as_deref() == rws.get(*row).map(|r| r.0.as_str()),
+    })
+}
+
+fn select_line(d: &mut ShortcutsDialog, line: &TreeLine, rws: &[Row]) {
+    match line {
+        TreeLine::Folder { path, .. } => {
+            d.cursor = Some(path.clone());
+            d.selected = None;
+            d.selected_key = None;
+        }
+        TreeLine::Leaf { row, .. } => {
+            let (id, _, keys) = &rws[*row];
+            d.cursor = None;
+            d.selected = Some(id.clone());
+            d.selected_key = (!keys.is_empty()).then_some(0);
+        }
+    }
+}
+
+/// Tastaturbedienung des Menübaums wie im Windows-Baum des Originals (BA-049): ↑/↓ wechseln die Zeile,
+/// Pos1/Ende springen an den Anfang bzw. das Ende, → klappt einen Knoten auf bzw. geht zum ersten
+/// Eintrag darin, ← klappt zu bzw. geht zum übergeordneten Knoten. Liefert `true`, wenn die Taste
+/// etwas bewirkt hat.
+pub fn tree_key(d: &mut ShortcutsDialog, lines: &[TreeLine], rws: &[Row], key: egui::Key) -> bool {
+    use egui::Key;
+    if lines.is_empty() {
+        return false;
+    }
+    let cur = current_line(d, lines, rws);
+    let target = match (key, cur) {
+        (Key::ArrowDown, None) | (Key::Home, _) => Some(0),
+        (Key::ArrowUp, None) | (Key::End, _) => Some(lines.len() - 1),
+        (Key::ArrowDown, Some(i)) => Some((i + 1).min(lines.len() - 1)),
+        (Key::ArrowUp, Some(i)) => Some(i.saturating_sub(1)),
+        (Key::ArrowRight, Some(i)) => match &lines[i] {
+            TreeLine::Folder { path, open: false, .. } => {
+                d.expanded.insert(path.clone());
+                return true;
+            }
+            TreeLine::Folder { open: true, .. } => Some((i + 1).min(lines.len() - 1)),
+            TreeLine::Leaf { .. } => None,
+        },
+        (Key::ArrowLeft, Some(i)) => match &lines[i] {
+            TreeLine::Folder { path, open: true, .. } => {
+                d.expanded.remove(path);
+                return true;
+            }
+            TreeLine::Folder { depth, .. } | TreeLine::Leaf { depth, .. } => {
+                let depth = *depth;
+                lines[..i].iter().rposition(|l| matches!(l, TreeLine::Folder { depth: k, .. } if *k < depth))
+            }
+        },
+        _ => None,
+    };
+    match target {
+        Some(t) if Some(t) != cur => {
+            select_line(d, &lines[t], rws);
+            true
+        }
+        _ => false,
+    }
+}
+
 /// Reihenfolge der Hauptmenüs (Datei, Bearbeiten, Ansicht …) in der aktuellen Sprache.
 fn menu_order() -> Vec<String> {
     crate::menu::main_menu().iter().filter(|e| !e.sep).map(|e| crate::menu::clean_label(&e.local_text()).0).collect()
@@ -93,7 +164,7 @@ impl ShortcutsDialog {
 
     fn for_set(st: &AppState, name: &str) -> ShortcutsDialog {
         let work = fp_engine::shortcuts::any_set(name).cloned().unwrap_or_else(|| st.session.shortcut_set().clone());
-        ShortcutsDialog { work, dirty: false, delete: Vec::new(), section: 0, filter: String::new(), selected: None, selected_key: None, pressed: None, capturing: false, name_edit: None, message: None, expanded: BTreeSet::new() }
+        ShortcutsDialog { work, dirty: false, delete: Vec::new(), section: 0, filter: String::new(), selected: None, selected_key: None, pressed: None, capturing: false, name_edit: None, message: None, expanded: BTreeSet::new(), cursor: None }
     }
 
     /// Ist die Arbeitskopie ein mitgelieferter Satz (schreibgeschützt)?
@@ -241,11 +312,15 @@ pub fn show(ctx: &egui::Context, st: &mut AppState) {
     let sections = super::tl(&["dlg-sc-menu-commands", "dlg-sc-tools"]);
     let (search_l, keys_l, press_l, ok_l, cancel_l) = (t("dlg-sc-search"), t("dlg-sc-shortcut"), t("dlg-sc-press-key"), t("btn-ok"), t("btn-cancel"));
     let assign_ls = [t("dlg-sc-assign"), t("dlg-sc-reassign")];
-    let dx = super::extra_w(ctx, &[&set_l], 110.0 - 4.0);
-    let bw = super::buttons_w(ctx, &refs(&btn_l), 68.0);
+    let cmds_l = t("dlg-sc-commands");
+    let dx = super::extra_w(ctx, &[&set_l, &cmds_l], 110.0 - 4.0);
+    // vier Symbolknöpfe wie im Original (Duplizieren, Umbenennen, Exportieren, Löschen); der Text
+    // steht im Tooltip und ist der Name für Barrierefreiheit und `ui_find` (BA-049)
+    let bw = 24.0;
     let bx0 = 316.0 + dx;
     let sec_w = super::combo_fit_w(ctx, &refs(&sections), 160.0);
-    let ds = sec_w - 160.0;
+    // „Befehle:“ mit Kombifeld unter der Satzwahl, Suche dahinter: Feld bei 170 + ds
+    let ds = 116.0 + dx + sec_w + 10.0 - 170.0;
     let dk = super::extra_w(ctx, &[&keys_l], 110.0 - 4.0);
     let dp = super::extra_w(ctx, &[&press_l], 160.0 - 4.0);
     let aw = super::buttons_w(ctx, &[&assign_ls[0], &assign_ls[1]], 90.0);
@@ -273,9 +348,13 @@ pub fn show(ctx: &egui::Context, st: &mut AppState) {
         }
         let ro = d.read_only();
         let btns = [(&btn_l[0], true), (&btn_l[1], !ro), (&btn_l[2], true), (&btn_l[3], !ro)];
+        let glyphs = [Glyph::Duplicate, Glyph::Pencil, Glyph::Save, Glyph::Trash];
         for (k, (label, en)) in btns.iter().enumerate() {
             let br = Rect::from_min_size(o + vec2(bx0 + k as f32 * (bw + 4.0), 0.0), vec2(bw, 20.0));
-            if fields::button(ui, ("sc-btn", k), br, label, *en) {
+            // Rahmen wie ein Knopf, darüber der flache Symbolknopf
+            ui.painter().rect_filled(br, 2.0, c.button_bg);
+            ui.painter().rect_stroke(br, 2.0, Stroke::new(1.0, c.button_border), StrokeKind::Inside);
+            if fields::icon_button(ui, ("sc-btn", k), br, glyphs[k], *en, label).clicked() && *en {
                 match k {
                     0 => d.name_edit = Some((false, fp_i18n::tr!("dlg-sc-copy-name", name = set_label(&d.work.name).as_str()))),
                     1 => d.name_edit = Some((true, d.work.name.clone())),
@@ -325,9 +404,12 @@ pub fn show(ctx: &egui::Context, st: &mut AppState) {
                 d.name_edit = None;
             }
         }
-        if let Some(i) = fields::combo(ui, "sc-section", Rect::from_min_size(o + vec2(0.0, 30.0), vec2(sec_w, 20.0)), &super::refs(&sections), Some(d.section), true) {
+        // „Befehle:“ mit Kombifeld (Menübefehle/Werkzeuge) wie im Original
+        super::fit_label(ui, Rect::from_min_size(o + vec2(0.0, 30.0), vec2(110.0 + dx, 20.0)), &cmds_l, true);
+        if let Some(i) = fields::combo(ui, "sc-section", Rect::from_min_size(o + vec2(116.0 + dx, 30.0), vec2(sec_w, 20.0)), &super::refs(&sections), Some(d.section), true) {
             d.section = i;
             d.selected = None;
+            d.cursor = None;
         }
         if let Some(t) = fields::text(ui, "sc-filter", Rect::from_min_size(o + vec2(170.0 + ds, 30.0), vec2(130.0, 20.0)), &d.filter, true) {
             d.filter = t;
@@ -337,21 +419,49 @@ pub fn show(ctx: &egui::Context, st: &mut AppState) {
         ui.painter().rect_filled(list, 0.0, c.list_bg);
         ui.painter().rect_stroke(list, 0.0, Stroke::new(1.0, c.list_border), StrokeKind::Inside);
         let rws = rows(st, &d.work, d.section, &d.filter);
-        let mut child = ui.new_child(egui::UiBuilder::new().max_rect(list.shrink(1.0)));
-        egui::ScrollArea::vertical().auto_shrink([false, false]).show(&mut child, |ui| {
-            ui.spacing_mut().item_spacing = vec2(0.0, 0.0);
-            // Menübefehle ohne Suche als Baum wie im Original, sonst (Suche, Werkzeuge) flach
-            let lines: Vec<TreeLine> = if d.section == 0 && d.filter.trim().is_empty() {
+        // Menübefehle ohne Suche als Baum wie im Original, sonst (Suche, Werkzeuge) flach
+        let tree_view = |d: &ShortcutsDialog| -> Vec<TreeLine> {
+            if d.section == 0 && d.filter.trim().is_empty() {
                 tree_lines(&rws, &d.expanded)
             } else {
                 rws.iter().enumerate().map(|(i, r)| TreeLine::Leaf { depth: 0, label: r.1.clone(), row: i }).collect()
-            };
+            }
+        };
+        // Baum als Ganzes fokussierbar (Tab), mit Fokusrahmen; Pfeiltasten bewegen die Markierung (BA-049)
+        let tree_id = egui::Id::new("sc-tree");
+        let tree_resp = ui.interact(list, tree_id, Sense::focusable_noninteractive());
+        tree_resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Other, true, cmds_l.trim_end_matches(':')));
+        let tree_focus = tree_resp.has_focus();
+        let mut moved = false;
+        if tree_focus {
+            ui.memory_mut(|m| m.set_focus_lock_filter(tree_id, egui::EventFilter { horizontal_arrows: true, vertical_arrows: true, tab: false, escape: false }));
+            for k in [egui::Key::ArrowUp, egui::Key::ArrowDown, egui::Key::ArrowLeft, egui::Key::ArrowRight, egui::Key::Home, egui::Key::End] {
+                if ui.input_mut(|i| i.consume_key(egui::Modifiers::NONE, k)) {
+                    let lines = tree_view(&d);
+                    moved |= tree_key(&mut d, &lines, &rws, k);
+                    // im ersten Bild nach dem Fokuswechsel greift der Filter noch nicht: egui würde
+                    // den Fokus mit der Pfeiltaste weiterreichen
+                    ui.memory_mut(|m| m.move_focus(egui::FocusDirection::None));
+                }
+            }
+        }
+        let lines = tree_view(&d);
+        let mut child = ui.new_child(egui::UiBuilder::new().max_rect(list.shrink(1.0)));
+        let mut take_focus = false;
+        egui::ScrollArea::vertical().auto_shrink([false, false]).show(&mut child, |ui| {
+            ui.spacing_mut().item_spacing = vec2(0.0, 0.0);
             for line in &lines {
                 let (rr, resp) = ui.allocate_exact_size(vec2(ui.available_width(), 18.0), Sense::click());
                 match line {
                     TreeLine::Folder { depth, label, path, open } => {
                         let x = rr.left() + 6.0 + *depth as f32 * 16.0;
-                        if resp.hovered() {
+                        let marked = d.cursor.as_deref() == Some(path.as_str());
+                        if marked {
+                            ui.painter().rect_filled(rr, 0.0, c.list_selected_bg);
+                            if moved {
+                                resp.scroll_to_me(None);
+                            }
+                        } else if resp.hovered() {
                             ui.painter().rect_filled(rr, 0.0, c.list_hover_bg);
                         }
                         // Kästchen ⊞/⊟
@@ -364,15 +474,24 @@ pub fn show(ctx: &egui::Context, st: &mut AppState) {
                         }
                         ui.painter().text(pos2(x + 14.0, rr.center().y), Align2::LEFT_CENTER, label, theme.ui_font(), c.text);
                         resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, true, label));
-                        if resp.clicked() && !d.expanded.remove(path) {
-                            d.expanded.insert(path.clone());
+                        if resp.clicked() {
+                            if !d.expanded.remove(path) {
+                                d.expanded.insert(path.clone());
+                            }
+                            d.cursor = Some(path.clone());
+                            d.selected = None;
+                            d.selected_key = None;
+                            take_focus = true;
                         }
                     }
                     TreeLine::Leaf { depth, label, row } => {
                         let (id, _, keys) = &rws[*row];
-                        let sel = d.selected.as_deref() == Some(id.as_str());
+                        let sel = d.cursor.is_none() && d.selected.as_deref() == Some(id.as_str());
                         if sel {
                             ui.painter().rect_filled(rr, 0.0, c.list_selected_bg);
+                            if moved {
+                                resp.scroll_to_me(None);
+                            }
                         } else if resp.hovered() {
                             ui.painter().rect_filled(rr, 0.0, c.list_hover_bg);
                         }
@@ -382,13 +501,21 @@ pub fn show(ctx: &egui::Context, st: &mut AppState) {
                         crate::widgets::text_clipped(ui.painter(), pos2(rr.left() + rr.width() * 0.7, rr.center().y), Align2::LEFT_CENTER, &k.join(", "), theme.ui_font(), c.text_weak, rr.width() * 0.3 - 6.0);
                         resp.widget_info(|| egui::WidgetInfo::selected(egui::WidgetType::SelectableLabel, true, sel, label));
                         if resp.clicked() {
+                            d.cursor = None;
                             d.selected = Some(id.clone());
                             d.selected_key = (!keys.is_empty()).then_some(0);
+                            take_focus = true;
                         }
                     }
                 }
             }
         });
+        if take_focus {
+            ui.memory_mut(|m| m.request_focus(tree_id));
+        }
+        if tree_focus {
+            ui.painter().rect_stroke(list.shrink(1.0), 0.0, Stroke::new(1.0, c.focus), StrokeKind::Inside);
+        }
         // Beschreibung des gewählten Befehls (Original: „Beschreibung:“ unter dem Baum)
         let desc_l = t("dlg-sc-description");
         let dy = list.bottom() + 6.0;

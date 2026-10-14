@@ -203,6 +203,11 @@ fn content_page(ui: &mut egui::Ui, d: &mut PopupEditor, area: Rect, cols: &[Stri
                 _ => d.rows[i].target.clone(),
             };
             if is_sel {
+                // Eingabe in einer Zelle bestätigt nur die Zelle, nicht „Weiter >“ (F11)
+                let cell_te = egui::Id::new(("pm-cell", k, i)).with("te");
+                if ui.memory(|m| m.has_focus(cell_te)) && ui.input(|inp| inp.key_pressed(egui::Key::Enter)) {
+                    super::keep_enter_in_field(ui);
+                }
                 if let Some(v) = fields::text(ui, ("pm-cell", k, i), cr, &cur, true) {
                     match k {
                         0 => d.rows[i].text = v,

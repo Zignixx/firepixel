@@ -116,7 +116,12 @@ fn text_w(ui: &Ui, s: &str, font: &egui::FontId) -> f32 {
 
 /// Passt `text` in `max_w` ein: unverändert, leicht verkleinert (bis 85 %, mind. 8 px) oder mit „…“.
 fn fit_text(ui: &Ui, text: &str, font: egui::FontId, max_w: f32) -> (String, egui::FontId, u8) {
-    if !fit_on(ui) || text_w(ui, text, &font) <= max_w + 0.5 {
+    fit_text_ex(ui, text, font, max_w, false)
+}
+
+/// Wie [`fit_text`]; `force` passt auch außerhalb des Inspektor-Einpassens und im Deutschen ein.
+fn fit_text_ex(ui: &Ui, text: &str, font: egui::FontId, max_w: f32, force: bool) -> (String, egui::FontId, u8) {
+    if !(force || fit_on(ui)) || text_w(ui, text, &font) <= max_w + 0.5 {
         return (text.to_string(), font, 0);
     }
     let min = (font.size * 0.85).max(8.0).min(font.size);
@@ -782,9 +787,21 @@ pub fn icon_button(ui: &mut Ui, id: impl Hash + std::fmt::Debug, r: Rect, glyph:
 
 /// Knopf mit Text (Windows-Stil).
 pub fn button(ui: &mut Ui, id: impl Hash + std::fmt::Debug, r: Rect, text: &str, enabled: bool) -> bool {
+    button_impl(ui, id, r, text, enabled, false)
+}
+
+/// Knopf, dessen Text in jeder Sprache ganz zu lesen ist: passt er nicht, wird die Schrift bis 85 %
+/// verkleinert (z. B. „Pinselstrich bearbeiten“ im Inspektor, BA-055).
+pub fn button_fit(ui: &mut Ui, id: impl Hash + std::fmt::Debug, r: Rect, text: &str, enabled: bool) -> bool {
+    button_impl(ui, id, r, text, enabled, true)
+}
+
+fn button_impl(ui: &mut Ui, id: impl Hash + std::fmt::Debug, r: Rect, text: &str, enabled: bool, force_fit: bool) -> bool {
     let t = Theme::current(ui.ctx());
     let c = &t.colors;
     let resp = ui.interact(r, Id::new(id), if enabled { Sense::click() } else { Sense::hover() });
+    // Barrierefreiheit (und egui_kittest/`ui_find`): Knopf mit seinem Text als Namen (BA-058)
+    resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, enabled, text));
     let hot = enabled && resp.hovered();
     let pressed = enabled && resp.is_pointer_button_down_on();
     let bg = if pressed { c.button_pressed_bg } else if hot { c.button_hover_bg } else { c.button_bg };
@@ -792,7 +809,11 @@ pub fn button(ui: &mut Ui, id: impl Hash + std::fmt::Debug, r: Rect, text: &str,
     ui.painter().rect_stroke(r, 2.0, Stroke::new(1.0, if hot { c.button_hover_border } else { c.button_border }), StrokeKind::Inside);
     let col = if enabled { c.text } else { c.text_disabled };
     audit(ui, "field", "", r, r, 0);
-    if fit_on(ui) {
+    if force_fit {
+        let (shown, f, fit) = fit_text_ex(ui, text, t.ui_font(), r.width() - 4.0, true);
+        let drawn = ui.painter().text(r.center(), Align2::CENTER_CENTER, &shown, f, col);
+        audit(ui, "button", text, r.shrink2(vec2(2.0, 0.0)), drawn, fit);
+    } else if fit_on(ui) {
         fitted_text(ui, "button", r.shrink2(vec2(3.0, 0.0)), r.center(), Align2::CENTER_CENTER, text, t.ui_font(), col);
     } else {
         let drawn = crate::widgets::text_clipped(ui.painter(), r.center(), Align2::CENTER_CENTER, text, t.ui_font(), col, r.width() - 6.0);

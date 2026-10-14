@@ -334,6 +334,12 @@ pub fn note_font_choice(st: &mut AppState, a: &Action) {
         return;
     }
     let Some(ps) = p.get("font").and_then(|v| v.as_str()) else { return };
+    note_recent_font(st, ps);
+}
+
+/// Merkt eine Schrift (PostScript- oder Familienname) als zuletzt benutzt – aus dem Menü, dem
+/// Inspektor oder dem Texteditor, wie im Original (BA-061).
+pub fn note_recent_font(st: &mut AppState, ps: &str) {
     let fams = crate::inspector::fonts::families();
     let Some(fam) = fams.iter().find(|f| f.styles.iter().any(|s| s.1 == ps) || f.name == ps).map(|f| f.name.clone()) else { return };
     let mut list = recent_fonts(st);

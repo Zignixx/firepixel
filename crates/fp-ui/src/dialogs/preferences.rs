@@ -454,7 +454,8 @@ pub fn show(ctx: &egui::Context, st: &mut AppState) {
     let r = dialog_frame(ctx, "fp-prefs", &t("dlg-pref-title"), lay.size, |ui, body| {
         let theme = Theme::current(ui.ctx());
         let c = &theme.colors;
-        let list = Rect::from_min_size(body.min + vec2(12.0, 12.0), vec2(lay.list_w, body.height() - 60.0));
+        // Liste endet 10 px früher, damit die Fußleiste (DESIGN §12.2) ganz darunter Platz hat (BA-064)
+        let list = Rect::from_min_size(body.min + vec2(12.0, 12.0), vec2(lay.list_w, body.height() - 70.0));
         ui.painter().rect_filled(list, 0.0, c.list_bg);
         ui.painter().rect_stroke(list, 0.0, Stroke::new(1.0, c.list_border), StrokeKind::Inside);
         // Kategorieliste wie eine Windows-Liste: **ein** Tab-Stopp (der gewählte Eintrag), hat beim

@@ -291,8 +291,11 @@ fn navigate(ui: &mut Ui, st: &mut AppState, idx: usize, body: Rect) {
                     d.view.fit_zoom_rect(fp_geom::Rect::new(a.x, a.y, b.x, b.y));
                 }
             } else {
+                // gestrichelter Rahmen wie auf der Leinwand (BA-048)
                 let theme = Theme::current(ui.ctx());
-                ui.painter().with_clip_rect(body).rect_stroke(r, 0.0, Stroke::new(1.0, theme.colors.focus), StrokeKind::Inside);
+                let time = ui.input(|i| i.time);
+                crate::canvas::dashed_rect(&ui.painter().with_clip_rect(body), r, theme.colors.marquee_a, theme.colors.marquee_b, time);
+                ui.ctx().request_repaint_after(std::time::Duration::from_millis(120));
             }
             return;
         }

@@ -1563,6 +1563,8 @@ pub(super) fn register(r: &mut CommandRegistry) {
                     let width = w.or_else(|| docops::path_attrs_of(e).and_then(|a| a.brush.as_ref().map(|b| b.diameter as f64))).unwrap_or(1.0);
                     g.expand_stroke(c, width, join, cap, miter)
                 })
+                // Verlaufsname wie im Original (PM-6 D30, BA-057)
+                .map(|o| o.labeled(fp_i18n::t("msg-step-expand-paths")))
             }),
     );
     r.add(
@@ -1581,7 +1583,8 @@ pub(super) fn register(r: &mut CommandRegistry) {
                     _ => 2,
                 };
                 let miter = p.f64_or("miter", 10.0)?;
-                alter_paths_named(s, false, move |g, _, c| g.inset(c, dist, expand, join, miter))
+                // Verlaufsname wie im Original (PM-6 D31, BA-057)
+                alter_paths_named(s, false, move |g, _, c| g.inset(c, dist, expand, join, miter)).map(|o| o.labeled(fp_i18n::t("msg-step-inset-paths")))
             }),
     );
     for (name, edge) in [("modify.alterPath.hardFill", 0), ("modify.alterPath.antiAliasFill", 1), ("modify.alterPath.featherFill", 2)] {

@@ -361,6 +361,10 @@ pub fn ui_action(ctx: &egui::Context, st: &mut AppState, a: &Value) -> UiReply {
     let mut done: Vec<String> = Vec::new();
     let mut actions: Vec<Action> = Vec::new();
     if a.get("close_dialogs").and_then(Value::as_bool) == Some(true) {
+        // Live-Anzeige von „Bitmap-Auswahl wiederherstellen“ zurücknehmen (wie Abbrechen)
+        if let Some(mut d) = st.dialogs.bitmap_selection.take() {
+            crate::dialogs::bitmap_selection::live_revert(st, &mut d);
+        }
         st.dialogs = crate::dialogs::Dialogs::default();
         done.push(at("msg-mcp-ui-done-dialogs"));
     }

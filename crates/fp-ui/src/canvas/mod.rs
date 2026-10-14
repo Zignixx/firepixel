@@ -1684,7 +1684,7 @@ fn argb(a: fp_color::Argb) -> Color32 {
 }
 
 /// „Laufende Ameisen“: gestrichelter Rahmen, dessen Muster mit der Zeit wandert.
-fn dashed_rect(painter: &egui::Painter, r: Rect, a: Color32, b: Color32, time: f64) {
+pub(crate) fn dashed_rect(painter: &egui::Painter, r: Rect, a: Color32, b: Color32, time: f64) {
     painter.rect_stroke(r, 0.0, Stroke::new(1.0, b), StrokeKind::Middle);
     let phase = ((time * 8.0) as i64 % 8) as f32;
     let corners = [r.left_top(), r.right_top(), r.right_bottom(), r.left_bottom(), r.left_top()];

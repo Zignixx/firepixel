@@ -572,6 +572,7 @@ cmdtext-musterbild-png-jpeg-gif-ohne-datei-zu-na-354ba8 = Pattern image (PNG, JP
 cmdtext-texturbild-helligkeit-maske-ohne-datei-z-5a73b6 = Texture image (brightness = mask); without: file for “name” from the texture folders, without both: remove texture
 cmdtext-leeres-symbol-in-der-bibliothek-anlegen-4e22e1 = create an empty symbol in the library and open it in symbol editing (menu as in the original)
 cmdtext-hilfslinien-fuer-9-slice-skalierung-akti-4814f4 = enable 9-slice scaling guides (with edit)
+cmdtext-hilfslinien-fuer-9-slice-skalierung-aktivieren = enable 9-slice scaling guides
 cmdtext-leere-schaltflaeche-in-der-bibliothek-an-2ab12a = create an empty button in the library and open it in symbol editing (menu as in the original)
 cmdtext-name-vorgabe-standard-vorhandener-name-w-17641f = Name (default “Default”; an existing name is replaced or combined)
 cmdtext-verknuepfung-mit-der-vorhandenen-gleichn-a44dd6 = Operation with the existing selection of the same name (default: replace)

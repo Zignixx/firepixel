@@ -1084,8 +1084,9 @@ pub fn stroke_edit_row(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target, enabl
     let en = edit_en && (tgt == Target::Selection || st.session.active().is_some());
     let id = Id::new(("pi-sedit", tgt == Target::Tool));
     // ganzer Text „Pinselstrich bearbeiten“ wie im Original: Knopf 122 px breit wie dort (401–523),
-    // vorher 120 px und „Pinselstrich bearbeit…“ (PAR 01/01)
-    if fields::button(ui, id.with("edit"), d.r(0.0, 2.0, 81.5, 13.0), &t("pi-stroke-edit"), edit_en) {
+    // vorher 120 px und „Pinselstrich bearbeit…“ (PAR 01/01); passt der Text in der Schrift von Firepixel
+    // trotzdem nicht (Nutzerbild 8: „…bearbeit…“), wird sie leicht verkleinert statt gekürzt (BA-055)
+    if fields::button_fit(ui, id.with("edit"), d.r(0.0, 2.0, 81.5, 13.0), &t("pi-stroke-edit"), edit_en) {
         // Werkzeug-Inspektor: Pinsel der Werkzeugvorgabe, auch wenn eine Bitmap ausgewählt ist (PINSEL-1)
         match tgt {
             Target::Tool => st.dialogs.open_stroke_options_for_tool(),
@@ -1875,6 +1876,8 @@ pub fn text_row1(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target) {
         let _ = resp;
     } else if let Some(i) = super::fonts::family_combo(ui, id.with("fam"), fam_r, &names, fsel, en) {
         let ps = super::fonts::ps_name(names[i], &style);
+        // auch aus dem Inspektor in „zuletzt benutzt“ des Schrift-Menüs (BA-061)
+        crate::menu::note_recent_font(st, &ps);
         set_text(ui, st, tgt, json!({"font": ps}));
     }
     let styles: Vec<String> = fams.iter().find(|f| f.name == family).map(|f| f.styles.iter().map(|s| s.0.clone()).collect()).unwrap_or_else(|| vec![style.clone()]);

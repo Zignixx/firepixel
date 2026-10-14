@@ -73,6 +73,10 @@ pub struct Dialogs {
     /// Bitmap-Auswahl speichern/wiederherstellen/löschen (KV-3).
     pub bitmap_selection: Option<bitmap_selection::BitmapSelectionDialog>,
     pub export: Option<export::ExportDialog>,
+    /// Zähler erfolgreicher Exporte über den Exportdialog (BA-054): Wer den Dialog geöffnet hat (z. B.
+    /// die Bildvorschau), erkennt am gestiegenen Wert, dass wirklich exportiert wurde. Ob die
+    /// Bildvorschau danach schließt, hängt an der Messung re\17 §11.2 (offen).
+    pub exported: u64,
     /// Bildvorschau (BV-1).
     pub preview: Option<image_preview::ImagePreview>,
     pub shortcuts: Option<shortcuts::ShortcutsDialog>,
@@ -786,6 +790,9 @@ fn painted_rects(ctx: &egui::Context, layer: egui::LayerId, from: usize) -> Vec<
         match s {
             egui::Shape::Vec(v) => v.iter().for_each(|s| walk(s, clip, out)),
             egui::Shape::Noop => {}
+            // leere Texte (z. B. leere Eingabefelder) haben kein sichtbares Rechteck; ihr Grenzrechteck
+            // ist nicht endlich und sperrte sonst die Fußleiste (Voreinstellungen, BA-064)
+            egui::Shape::Text(t) if t.galley.job.text.is_empty() => {}
             s => {
                 let r = s.visual_bounding_rect().intersect(clip);
                 if r.is_positive() {
@@ -1025,6 +1032,13 @@ pub fn fit_label(ui: &Ui, r: Rect, text: &str, enabled: bool) {
 /// Zahlen- oder Textfeld den Fokus hat. Damit der getippte Wert vorher übernommen ist (Felder
 /// übernehmen beim Fokusverlust, der erst im Bild nach der Eingabe gemeldet wird), wirkt die Taste
 /// ein Bild später. Ein mehrzeiliges Textfeld behält die Eingabe (Zeilenumbruch).
+/// Eingabe in diesem Bild gehört einem Feld (z. B. Tabellenzelle), nicht dem Standardknopf: bis
+/// zum nächsten Bild löst Eingabe den Standardknopf der Ebene nicht aus (Popupmenü-Editor, F11).
+pub fn keep_enter_in_field(ui: &Ui) {
+    let nr = ui.ctx().cumulative_pass_nr();
+    ui.ctx().data_mut(|d| d.insert_temp(Id::new(("fp-enter-suppress", ui.layer_id().id)), nr));
+}
+
 fn enter_confirms(ui: &Ui, own: Id) -> bool {
     let ctx = ui.ctx();
     let layer = ui.layer_id();
@@ -1033,6 +1047,12 @@ fn enter_confirms(ui: &Ui, own: Id) -> bool {
     }
     let key = Id::new(("fp-enter-pending", layer.id));
     let nr = ctx.cumulative_pass_nr();
+    if let Some(s) = ctx.data(|d| d.get_temp::<u64>(Id::new(("fp-enter-suppress", layer.id))))
+        && (s == nr || s + 1 == nr)
+    {
+        ctx.data_mut(|d| d.remove::<u64>(key));
+        return false;
+    }
     if let Some(p) = ctx.data(|d| d.get_temp::<u64>(key)) {
         if p + 1 == nr {
             ctx.data_mut(|d| d.remove::<u64>(key));

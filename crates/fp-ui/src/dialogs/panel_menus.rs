@@ -328,8 +328,22 @@ pub fn open(st: &mut AppState, name: &str) -> bool {
             return true;
         }
         // Dokumentbibliothek
+        // wie D14 (Vorlage 19104): Name, Typ, 9-Slice und das graue Bibliothek-Kästchen in derselben
+        // Anordnung und Tab-Folge (BA-053); das Bedienfeld legt das Symbol nur an (Original ungemessen)
         "panel.library.newSymbol" => Some(
-            FormDialog::new("19104", t("dlg-md-new-symbol").as_str(), name, vec![Field::text("name", t("dlg-lbl-name").as_str(), &t("dlg-symbol-default-name")), Field::radio_of("kind", t("dlg-lbl-type").as_str(), &[t("dlg-symbol-graphic").as_str(), t("dlg-symbol-animation").as_str(), t("dlg-symbol-button").as_str()], vec![json!("graphic"), json!("animation"), json!("button")], 0)]).with_width(420.0),
+            FormDialog::new(
+                "19104",
+                t("dlg-md-new-symbol").as_str(),
+                name,
+                vec![
+                    Field::text("name", t("dlg-lbl-name").as_str(), &t("dlg-symbol-default-name")),
+                    Field::radio_of("kind", t("dlg-lbl-type").as_str(), &[t("dlg-symbol-graphic").as_str(), t("dlg-symbol-animation").as_str(), t("dlg-symbol-button").as_str()], vec![json!("graphic"), json!("animation"), json!("button")], 0),
+                    Field::check("nineSlice", t("dlg-lbl-enable-nineslice").as_str(), false),
+                    Field::check("_common", t("dlg-lbl-save-common-library").as_str(), false).disabled(),
+                ],
+            )
+            .with_width(420.0)
+            .with_layout(super::symbol_anim::CONVERT_LAYOUT),
         ),
         "panel.library.duplicate" | "panel.library.edit" | "panel.library.nineSlice" | "panel.library.lockNineSlice" | "panel.library.delete" | "panel.library.properties" | "panel.library.saveToCommon" => {
             let Some(i) = sel.symbol else {
@@ -415,6 +429,13 @@ pub fn open(st: &mut AppState, name: &str) -> bool {
                 st.dialogs.message = Some((t("dlg-pmenu-delete-settings"), t("dlg-pmenu-no-settings")));
                 return true;
             }
+            // wie im Original: die im Bedienfeld gewählte eigene Einstellung direkt nach der Rückfrage
+            // „Aktuelle Einstellungen löschen?“ löschen (actions.rs), ohne Auswahldialog (BA-051)
+            if let Some(n) = crate::panels::optimize::selected_own_preset(st) {
+                st.run(name, json!({ "name": n }));
+                return true;
+            }
+            // keine eigene Einstellung gewählt (Original ungemessen): Auswahl wie bisher
             let refs: Vec<&str> = names.iter().map(|s| s.as_str()).collect();
             Some(FormDialog::new("5974", t("dlg-pmenu-delete-settings").as_str(), name, vec![Field::choice_of("name", t("dlg-pmenu-preset").as_str(), &refs, names.iter().map(|n| json!(n)).collect(), 0)]))
         }

@@ -79,6 +79,12 @@ pub fn thumbnails_pending(ctx: &egui::Context) -> bool {
     thumbs::pending(ctx)
 }
 
+/// Kleines Vorschaubild einer Datei (gleicher Hintergrund-Leser wie „Zuletzt geöffnet“; auch für die
+/// Vorschau im Datei-Dialog in der App, BA-060). `None`, solange gelesen wird bzw. bei anderen Formaten.
+pub fn file_thumbnail(ctx: &egui::Context, path: &Path) -> Option<egui::TextureHandle> {
+    thumbs::get(ctx, path)
+}
+
 fn last_id() -> Id {
     Id::new("fp-welcome-last-triggered")
 }
@@ -138,7 +144,12 @@ fn create_entries() -> [(KitIcon, &'static str, &'static str); 2] {
 }
 
 fn extend_entries(st: &AppState) -> Vec<(KitIcon, &'static str, &'static str)> {
-    [(KitIcon::Commands, "welcome-extend-commands", "commands.manageSavedCommands"), (KitIcon::Extend, "welcome-extend-extensions", "commands.manageExtensions")]
+    // „Batch-Verarbeitung…“ öffnet das Batch-Studio (BATCH-9 P2, BA-065)
+    [
+        (KitIcon::Chevrons, "welcome-extend-batch", "file.batchProcess"),
+        (KitIcon::Commands, "welcome-extend-commands", "commands.manageSavedCommands"),
+        (KitIcon::Extend, "welcome-extend-extensions", "commands.manageExtensions"),
+    ]
         .into_iter()
         .filter(|(_, _, c)| st.session.registry().get(c).is_some())
         .collect()

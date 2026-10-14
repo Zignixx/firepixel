@@ -525,6 +525,7 @@ dlg-preview-info = { $format }   { $size }   { $secs } s bei 56 kbit/s{ $colors 
 ## Tastaturkurzbefehle (shortcuts.rs)
 dlg-sc-title = Tastaturkurzbefehle
 dlg-sc-current-set = Aktueller Satz:
+dlg-sc-commands = Befehle:
 dlg-sc-duplicate = Duplizieren
 dlg-sc-rename = Umbenennen
 dlg-sc-export = Exportieren

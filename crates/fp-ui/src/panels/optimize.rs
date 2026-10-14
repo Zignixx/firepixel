@@ -194,6 +194,19 @@ pub fn apply_settings(st: &mut AppState, s: &OptimizeSettings) {
     }
 }
 
+/// Eigene gespeicherte Einstellung, die genau den Einstellungen der Seite entspricht – die im
+/// Bedienfeld gewählte (Bedienfeldmenü „Einstellungen löschen“ löscht sie nach der Rückfrage, BA-051).
+pub fn selected_own_preset(st: &AppState) -> Option<String> {
+    let d = st.session.active()?;
+    let norm = |e: &fp_model::ExportSettings| {
+        let mut e = e.clone();
+        e.frames = Default::default();
+        serde_json::to_value(&e).ok()
+    };
+    let cur = norm(d.doc.pages.get(d.page)?.root.export.as_deref()?)?;
+    crate::ui_commands::export_presets(&st.session.prefs).into_iter().find(|(_, e)| norm(e).as_ref() == Some(&cur)).map(|(n, _)| n)
+}
+
 fn current(st: &AppState) -> Option<OptimizeSettings> {
     st.session.active().map(|d| fp_export::doc_export::page_settings(&d.doc, d.page))
 }
@@ -340,7 +353,9 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
     let names_s: Vec<String> = presets.iter().map(|p| preset_label(p.name)).collect();
     let names: Vec<&str> = names_s.iter().map(|s| s.as_str()).collect();
     let psel = preset_index(&s);
-    let label = psel.map(|i| names[i].to_string()).unwrap_or_else(|| settings_label(&s));
+    // eigene Einstellung gewählt: ihr Name steht im Feld (wie im Original)
+    let own_sel = if psel.is_none() { selected_own_preset(st) } else { None };
+    let label = psel.map(|i| names[i].to_string()).or_else(|| own_sel.clone()).unwrap_or_else(|| settings_label(&s));
     let resp = fields::combo_box_frame(ui, Id::new("opt-preset"), d.r(16.0, 2.0, 113.0, 12.0), &label, true);
     egui::Popup::menu(&resp).frame(crate::menu::menu_frame(&theme)).show(|ui| {
         ui.spacing_mut().item_spacing = vec2(0.0, 0.0);
@@ -356,7 +371,7 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
         if !own.is_empty() {
             ui.separator();
             for (n, _) in &own {
-                if fields::list_item(ui, n, false).clicked() {
+                if fields::list_item(ui, n, own_sel.as_deref() == Some(n.as_str())).clicked() {
                     custom_preset = Some(n.clone());
                     ui.close();
                 }

@@ -531,6 +531,7 @@ dlg-preview-info = { $format }   { $size }   { $secs } s at 56 kbps{ $colors ->
 ## Keyboard Shortcuts (shortcuts.rs)
 dlg-sc-title = Keyboard Shortcuts
 dlg-sc-current-set = Current set:
+dlg-sc-commands = Commands:
 dlg-sc-duplicate = Duplicate
 dlg-sc-rename = Rename
 dlg-sc-export = Export

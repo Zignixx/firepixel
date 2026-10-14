@@ -660,9 +660,9 @@ struct Cols {
 }
 
 /// `task_w`/`status_w`: Spaltenbreiten für die Texte der aktuellen Sprache (mindestens 130/200 px).
-fn cols(w: f32, task_w: f32, status_w: f32) -> Cols {
+fn cols(w: f32, task_w: f32, status_w: f32, name_min: f32) -> Cols {
     let fixed = task_w + 80.0 + 90.0 + status_w + 4.0 * 12.0;
-    let name_w = (w - fixed - 10.0).max(180.0);
+    let name_w = (w - fixed - 10.0).max(name_min);
     let x_task = 10.0 + name_w + 12.0;
     let x_size_r = x_task + task_w + 12.0 + 80.0;
     let x_lic = x_size_r + 12.0;
@@ -709,7 +709,10 @@ fn show_manager(ctx: &egui::Context, st: &mut AppState) {
     let bw = super::buttons_w(ctx, &[&dl_l, &cancel_l, &browse_l, &default_l, &open_l, &close_l], BTN.x);
     let btn = vec2(bw, BTN.y);
     let cw = super::button_w(ctx, &clear_l, 170.0);
-    let min_w = 680f32.max(2.0 * PAD + 10.0 + 180.0 + task_w + 80.0 + 90.0 + status_w + 4.0 * 12.0).ceil();
+    // Modellspalte so breit wie der längste Name (höchstens 340 px; längere enden mit „…“ und Tooltip, BA-062)
+    let names: Vec<String> = models::MODELS.iter().map(|m| if m.default { fp_i18n::tr!("dlg-ai-default-model", model = m.display_name()) } else { m.display_name() }).collect();
+    let name_min = (super::max_text_w(ctx, &super::refs(&names)) + 8.0).clamp(180.0, 340.0).ceil();
+    let min_w = 680f32.max(2.0 * PAD + 10.0 + name_min + task_w + 80.0 + 90.0 + status_w + 4.0 * 12.0).ceil();
     let size = vec2(d.size.x.max(min_w), d.size.y);
     let r = dialog_frame(ctx, "fp-ai-models", &t("dlg-ai-manage-title"), size, |ui, body| {
         let th = Theme::current(ui.ctx());
@@ -724,7 +727,7 @@ fn show_manager(ctx: &egui::Context, st: &mut AppState) {
         u.add_space(10.0);
         // --- Tabelle
         let tw = u.available_width();
-        let cl = cols(tw, task_w, status_w);
+        let cl = cols(tw, task_w, status_w, name_min);
         let row_h = 32.0;
         let (hr, _) = u.allocate_exact_size(vec2(tw, 24.0), Sense::hover());
         let p = u.painter();
@@ -744,10 +747,11 @@ fn show_manager(ctx: &egui::Context, st: &mut AppState) {
             u.painter().rect_filled(rr, 0.0, bg);
             u.painter().hline(rr.x_range(), rr.bottom() - 0.5, Stroke::new(1.0, c.list_row_line));
             let y = rr.center().y;
-            let name = if m.default { fp_i18n::tr!("dlg-ai-default-model", model = m.display_name()) } else { m.display_name() };
+            let name = &names[i];
             let name_rect = Rect::from_min_size(pos2(rr.left() + cl.name.0, rr.top()), vec2(cl.name.1, row_h));
-            u.painter().with_clip_rect(name_rect).text(pos2(name_rect.left(), y), egui::Align2::LEFT_CENTER, name, font.clone(), c.text);
-            u.interact(name_rect, egui::Id::new(("fp-ai-row", i)), Sense::hover()).on_hover_text(format!("{}\n{}", short_source(m), m.display_note()));
+            // zu lang: „…“ am Ende, der volle Name steht im Tooltip (BA-062)
+            crate::widgets::text_clipped(u.painter(), pos2(name_rect.left(), y), egui::Align2::LEFT_CENTER, name, font.clone(), c.text, name_rect.width() - 4.0);
+            u.interact(name_rect, egui::Id::new(("fp-ai-row", i)), Sense::hover()).on_hover_text(format!("{name}\n{}\n{}", short_source(m), m.display_note()));
             u.painter().text(pos2(rr.left() + cl.task.0, y), egui::Align2::LEFT_CENTER, task_text(m.task), font.clone(), c.text);
             u.painter().text(pos2(rr.left() + cl.size_right, y), egui::Align2::RIGHT_CENTER, size_text(m.size), font.clone(), c.text);
             u.painter().text(pos2(rr.left() + cl.license.0, y), egui::Align2::LEFT_CENTER, m.license, font.clone(), c.text);

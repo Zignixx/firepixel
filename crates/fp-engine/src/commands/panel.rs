@@ -4036,6 +4036,7 @@ fn register_library_menu(r: &mut CommandRegistry) {
             .requires(DOC)
             .opt("name", ParamKind::String, "Name")
             .opt_default("kind", ParamKind::Enum { values: vec!["graphic".into(), "animation".into(), "button".into()] }, json!("graphic"), "Typ")
+            .opt_default("nineSlice", ParamKind::Bool, json!(false), "Hilfslinien für 9-Slice-Skalierung aktivieren")
             .run(|s, p| {
                 let name = p.opt_str("name")?.unwrap_or_else(|| "Symbol".into());
                 let kind = match p.opt_str("kind")?.as_deref() {
@@ -4043,11 +4044,15 @@ fn register_library_menu(r: &mut CommandRegistry) {
                     Some("button") => fp_model::symbol::SymbolKind::Button,
                     _ => fp_model::symbol::SymbolKind::Graphic,
                 };
+                let nine = p.bool_or("nineSlice", false)?;
                 super::with_doc(s, |d| {
                     let doc = Arc::make_mut(&mut d.doc);
                     let sid = doc.new_symbol_id();
                     let mut idg = super::take_ids(doc);
-                    let sym = fp_model::Symbol::new(&mut idg, &name, sid, kind);
+                    let mut sym = fp_model::Symbol::new(&mut idg, &name, sid, kind);
+                    if nine {
+                        set_nine_slice(&mut sym, true);
+                    }
                     doc.ids = idg;
                     doc.symbols.push(Arc::new(sym));
                     Ok(CommandOutput::doc_with(json!({"index": doc.symbols.len() - 1})))

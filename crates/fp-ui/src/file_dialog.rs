@@ -598,6 +598,9 @@ pub fn save_extras_ui_ex(ui: &mut egui::Ui, extras: TypeExtras, copy: &mut bool,
                 crate::theme::with_field_widgets(ui, |ui| ui.add_enabled(false, egui::Checkbox::new(&mut on, fp_i18n::t("fdlg-save-as-copy"))));
             }
         }
+        // „XMP einschließen“: im Original grau und angekreuzt (DLG-3, BA-060), also wie dort nur Anzeige
+        let mut xmp = true;
+        crate::theme::with_field_widgets(ui, |ui| ui.add_enabled(false, egui::Checkbox::new(&mut xmp, fp_i18n::t("fdlg-include-xmp"))));
     });
     clicked
 }
@@ -662,6 +665,21 @@ fn show_modal(ctx: &egui::Context) {
                     ui.horizontal(|ui| {
                         ui.checkbox(&mut untitled, fp_i18n::t("fdlg-open-untitled"));
                         ui.add_enabled(many, egui::Checkbox::new(&mut animation, fp_i18n::t("fdlg-open-as-animation")));
+                    });
+                }
+                // Vorschau der (ersten) gewählten Datei wie im Öffnen-Dialog des Originals (BA-060)
+                if matches!(kind, Kind::Open | Kind::OpenMany) {
+                    let first = split_paths(kind, path).into_iter().next();
+                    ui.horizontal(|ui| {
+                        ui.label(fp_i18n::t("fdlg-preview"));
+                        let (r, _) = ui.allocate_exact_size(egui::vec2(80.0, 80.0), egui::Sense::hover());
+                        ui.painter().rect_stroke(r, 0.0, egui::Stroke::new(1.0, ui.visuals().widgets.noninteractive.bg_stroke.color), egui::StrokeKind::Inside);
+                        if let Some(tex) = first.as_deref().and_then(|p| crate::welcome::file_thumbnail(ui.ctx(), p)) {
+                            let s = tex.size_vec2();
+                            let k = (78.0 / s.x.max(s.y)).min(1.0);
+                            let ir = egui::Rect::from_center_size(r.center(), s * k);
+                            ui.painter().image(tex.id(), ir, egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0)), egui::Color32::WHITE);
+                        }
                     });
                 }
                 ui.horizontal(|ui| {

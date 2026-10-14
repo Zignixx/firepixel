@@ -53,6 +53,10 @@ pub struct BitmapSelectionDialog {
     pub has_pixels: bool,
     /// Rückfrage „gleichnamige Auswahl ersetzen?“ offen.
     pub confirm: bool,
+    /// Live-Anzeige beim Wiederherstellen (BA-050): Auswahl des aktiven Dokuments vor dem Dialog …
+    pub live_orig: Option<fp_engine::Selection>,
+    /// … und die Parameter der zuletzt angezeigten Auswahl.
+    pub live_key: Option<Value>,
 }
 
 /// Befehle dieses Moduls.
@@ -120,6 +124,8 @@ impl BitmapSelectionDialog {
             invert: false,
             has_pixels: a.selection.has_pixels(),
             confirm: false,
+            live_orig: None,
+            live_key: None,
         };
         d.set_doc(st, doc);
         Some(d)
@@ -290,6 +296,9 @@ pub fn show(ctx: &egui::Context, st: &mut AppState) {
     if let Some(i) = new_sel {
         d.set_selection(i);
     }
+    if d.kind == Kind::Restore {
+        live_update(st, &mut d);
+    }
     // Rückfrage über dem Dialog: OK ersetzt, Abbrechen kehrt in den offenen Dialog zurück
     if d.confirm {
         let text = t("bsel-confirm-replace");
@@ -331,11 +340,49 @@ fn finish(st: &mut AppState, mut d: BitmapSelectionDialog, outcome: Option<Outco
                 st.dialogs.bitmap_selection = Some(d);
                 return;
             }
+            live_revert(st, &mut d);
             let (cmd, p) = d.invocation();
             st.dialogs.bitmap_selection = None;
             st.run(cmd, p);
         }
-        Some(Outcome::Cancel) => st.dialogs.bitmap_selection = None,
+        Some(Outcome::Cancel) => {
+            live_revert(st, &mut d);
+            st.dialogs.bitmap_selection = None;
+        }
         None => st.dialogs.bitmap_selection = Some(d),
     }
+}
+
+/// Live-Anzeige der entstehenden Auswahl beim Wiederherstellen (re\19 §5.3, BA-050): Bei jeder
+/// Änderung von Dokument, Auswahl, Vorgang oder „Umkehren“ zeigt die Leinwand das Ergebnis, ohne
+/// Verlaufsschritt. OK nimmt die Anzeige zurück und führt den Befehl aus (ein Schritt), Abbrechen
+/// stellt die Auswahl von vorher wieder her.
+pub fn live_update(st: &mut AppState, d: &mut BitmapSelectionDialog) {
+    if d.names.is_empty() {
+        live_revert(st, d);
+        return;
+    }
+    let (_, p) = d.invocation();
+    if d.live_key.as_ref() == Some(&p) {
+        return;
+    }
+    let Some(active) = st.session.active_mut() else { return };
+    let orig = d.live_orig.get_or_insert_with(|| active.selection.clone()).clone();
+    active.selection = orig;
+    if let Ok(px) = fp_engine::commands::restore_bitmap_selection_preview(&st.session, p.clone())
+        && let Some(active) = st.session.active_mut()
+    {
+        active.selection.pixels = px;
+    }
+    d.live_key = Some(p);
+}
+
+/// Nimmt die Live-Anzeige zurück (Auswahl wie vor dem Dialog).
+pub fn live_revert(st: &mut AppState, d: &mut BitmapSelectionDialog) {
+    if let Some(orig) = d.live_orig.take()
+        && let Some(active) = st.session.active_mut()
+    {
+        active.selection = orig;
+    }
+    d.live_key = None;
 }

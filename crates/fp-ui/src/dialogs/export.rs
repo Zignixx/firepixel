@@ -620,6 +620,7 @@ fn finish_export(st: &mut AppState, dlg: &mut ExportDialog, files: Vec<ExportFil
     {
         let _ = fp_engine::commands::export::open_with_system(&folder.join(&f.path), None);
     }
+    st.dialogs.exported = st.dialogs.exported.wrapping_add(1);
     ExportStep::Done(files.len())
 }
 

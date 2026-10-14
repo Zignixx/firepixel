@@ -572,6 +572,7 @@ cmdtext-musterbild-png-jpeg-gif-ohne-datei-zu-na-354ba8 = Musterbild (PNG, JPEG,
 cmdtext-texturbild-helligkeit-maske-ohne-datei-z-5a73b6 = Texturbild (Helligkeit = Maske); ohne: Datei zu „name“ aus den Texturordnern, ohne beides: Textur entfernen
 cmdtext-leeres-symbol-in-der-bibliothek-anlegen-4e22e1 = leeres Symbol in der Bibliothek anlegen und seine Symbolbearbeitung öffnen (Menü wie im Original)
 cmdtext-hilfslinien-fuer-9-slice-skalierung-akti-4814f4 = Hilfslinien für 9-Slice-Skalierung aktivieren (mit edit)
+cmdtext-hilfslinien-fuer-9-slice-skalierung-aktivieren = Hilfslinien für 9-Slice-Skalierung aktivieren
 cmdtext-leere-schaltflaeche-in-der-bibliothek-an-2ab12a = leere Schaltfläche in der Bibliothek anlegen und ihre Symbolbearbeitung öffnen (Menü wie im Original)
 cmdtext-name-vorgabe-standard-vorhandener-name-w-17641f = Name (Vorgabe „Standard“; vorhandener Name wird ersetzt bzw. verknüpft)
 cmdtext-verknuepfung-mit-der-vorhandenen-gleichn-a44dd6 = Verknüpfung mit der vorhandenen gleichnamigen Auswahl (Vorgabe ersetzen)
