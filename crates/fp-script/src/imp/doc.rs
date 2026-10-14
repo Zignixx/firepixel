@@ -8,6 +8,7 @@ use crate::state::{st, with_state, DefaultAttrs, FwErr, FwResult, Handle};
 use crate::urls::{path_to_url, url_to_path};
 use boa_engine::{Context, JsValue};
 use fp_engine::DocId;
+use fp_model::element::ElementKind;
 use fp_model::{ElementId, LayerSlot};
 use serde_json::{json, Map, Value};
 use std::path::Path;
@@ -402,42 +403,66 @@ fn import_file(doc: DocId, path: &Path, bounds: Option<[f64; 4]>, keep_aspect: b
     Ok(())
 }
 
-/// Ebenen-ID zum Index der Ebenenliste (unten → oben); -1 = aktive.
+/// Flache Ebenenliste der aktuellen Seite (Ebenennummern wie `dom.layers[i]`, mit Unterebenen).
+pub(super) fn flat_entries(doc: DocId) -> FwResult<Vec<super::elem::FlatLayer>> {
+    let page = st(|s| s.session.document(doc).map(|d| d.page).ok_or_else(|| FwErr::bad(fp_i18n::t("err-script-doc-closed"))))?;
+    super::elem::flat_layer_entries(doc, page)
+}
+
+/// Eintrag zur Ebenennummer (flach wie `dom.layers`, Befund F6-1); -1 = aktive Ebene.
+pub(super) fn flat_entry(doc: DocId, idx: i64) -> FwResult<super::elem::FlatLayer> {
+    let list = flat_entries(doc)?;
+    let i = if idx < 0 { current_layer_index(doc)? } else { idx };
+    usize::try_from(i).ok().and_then(|i| list.get(i).cloned()).ok_or_else(|| FwErr::Hr(hr::E_ARRAY_INDEX, format!("Ebene {idx} gibt es nicht")))
+}
+
+/// Ebenen-ID zur Ebenennummer (flach wie `dom.layers`, Unterebenen mitgezählt; bei einer
+/// Unterebene die ID ihrer inneren Ebene); -1 = aktive.
 pub(super) fn layer_id(doc: DocId, idx: i64) -> FwResult<Option<u64>> {
-    st(|s| {
-        let d = s.session.document(doc).ok_or_else(|| FwErr::bad(fp_i18n::t("err-script-doc-closed")))?;
-        if idx < 0 {
-            return Ok(d.layer.map(|l| l.0));
-        }
-        let p = d.doc.pages.get(d.page).ok_or_else(|| FwErr::bad("Seite"))?;
-        match p.root.layers.get(idx as usize) {
-            Some(LayerSlot::Own(l)) => Ok(Some(l.id.0)),
-            Some(LayerSlot::Shared(r)) => Ok(d.doc.shared_layer(&r.id).and_then(|x| x.layer.as_ref()).map(|l| l.id.0)),
-            Some(_) => Ok(None),
-            None => Err(FwErr::Hr(hr::E_ARRAY_INDEX, format!("Ebene {idx} gibt es nicht"))),
-        }
-    })
-}
-
-/// IDs aller Ebenen der aktuellen Seite (eigene und freigegebene).
-fn all_layer_ids(doc: DocId) -> FwResult<Vec<u64>> {
-    let n = st(|s| Ok(s.session.document(doc).and_then(|d| d.doc.pages.get(d.page)).map(|p| p.root.layers.len()).unwrap_or(0)))?;
-    let mut v = Vec::new();
-    for i in 0..n {
-        if let Some(id) = layer_id(doc, i as i64)? {
-            v.push(id);
-        }
+    if idx < 0 {
+        return st(|s| s.session.document(doc).map(|d| d.layer.map(|l| l.0)).ok_or_else(|| FwErr::bad(fp_i18n::t("err-script-doc-closed"))));
     }
-    Ok(v)
+    Ok(flat_entry(doc, idx)?.id)
 }
 
-/// Index der aktiven Ebene.
+/// Ebenen-ID der Ebene der obersten Stufe zur Ebenennummer (für Befehle, die nur dort wirken,
+/// z. B. die aktive Ebene setzen): bei einer Unterebene die Ebene, in der sie liegt.
+pub(super) fn top_layer_id(doc: DocId, idx: i64) -> FwResult<Option<u64>> {
+    if idx < 0 {
+        return layer_id(doc, -1);
+    }
+    let e = flat_entry(doc, idx)?;
+    if e.sub.is_none() {
+        return Ok(e.id);
+    }
+    Ok(flat_entries(doc)?.into_iter().find(|x| x.slot == e.slot && x.sub.is_none()).and_then(|x| x.id))
+}
+
+/// Ebene zu einem Eintrag der flachen Liste: eigene Ebene der Seite oder Unterebene
+/// (über Seiten geteilte Ebenen und die Masterseitenebene: `None`, wie bisher).
+pub(super) fn entry_layer(m: &fp_model::Document, page: usize, e: &super::elem::FlatLayer) -> Option<Arc<fp_model::Layer>> {
+    if let Some(sub) = e.sub {
+        let p = fp_engine::docops::find_on_page(m, page, sub)?;
+        return match &m.element_at(&p)?.kind {
+            ElementKind::SubLayer(l) => Some(Arc::clone(l)),
+            _ => None,
+        };
+    }
+    match m.pages.get(page)?.root.layers.get(e.slot)? {
+        LayerSlot::Own(l) => Some(Arc::clone(l)),
+        _ => None,
+    }
+}
+
+/// IDs aller Ebenen der aktuellen Seite (eigene und freigegebene, mit Unterebenen).
+fn all_layer_ids(doc: DocId) -> FwResult<Vec<u64>> {
+    Ok(flat_entries(doc)?.into_iter().filter_map(|e| e.id).collect())
+}
+
+/// Nummer der aktiven Ebene (flach wie `dom.layers`).
 pub(super) fn current_layer_index(doc: DocId) -> FwResult<i64> {
-    st(|s| {
-        let d = s.session.document(doc).ok_or_else(|| FwErr::bad(fp_i18n::t("err-script-doc-closed")))?;
-        let Some(id) = d.layer else { return Ok(-1) };
-        Ok(fp_engine::docops::layer_slot(&d.doc, d.page, id).map(|i| i as i64).unwrap_or(-1))
-    })
+    let Some(id) = st(|s| s.session.document(doc).map(|d| d.layer.map(|l| l.0)).ok_or_else(|| FwErr::bad(fp_i18n::t("err-script-doc-closed"))))? else { return Ok(-1) };
+    Ok(flat_entries(doc)?.iter().position(|e| e.id == Some(id)).map(|i| i as i64).unwrap_or(-1))
 }
 
 pub(super) fn text_align_code(a: &str) -> Option<i64> {
@@ -597,14 +622,11 @@ pub(super) fn method(doc: DocId, name: &str, args: &[Arg], ctx: &mut Context) ->
         "selectAllOnLayer" => {
             let idx = a(0).i64();
             let toggle = a(2).bool();
+            // Ebenennummer flach wie `dom.layers` (Unterebenen mitgezählt)
+            let entry = flat_entry(doc, if idx < 0 { current_layer_index(doc)?.max(0) } else { idx })?;
             let ids: Vec<u64> = st(|s| {
                 let d = s.session.document(doc).ok_or_else(|| FwErr::bad("Dokument"))?;
-                let page = d.doc.pages.get(d.page).ok_or_else(|| FwErr::bad("Seite"))?;
-                let slot = if idx < 0 { d.layer.and_then(|l| fp_engine::docops::layer_slot(&d.doc, d.page, l)).unwrap_or(0) } else { idx as usize };
-                Ok(match page.root.layers.get(slot) {
-                    Some(LayerSlot::Own(l)) => l.cel(d.frame).map(|c| c.elements.iter().map(|e| e.id.0).collect()).unwrap_or_default(),
-                    _ => Vec::new(),
-                })
+                Ok(entry_layer(&d.doc, d.page, &entry).and_then(|l| l.cel(d.frame).map(|c| c.elements.iter().map(|e| e.id.0).collect())).unwrap_or_default())
             })?;
             let mode = if toggle { "toggle" } else if a(1).bool() { "add" } else { "replace" };
             exec(Some(doc), "select.set", json!({"ids": ids, "mode": mode}))?;
@@ -843,15 +865,16 @@ pub(super) fn method(doc: DocId, name: &str, args: &[Arg], ctx: &mut Context) ->
         "setElementVisible" | "setElementLocked" => {
             // (frameNum, layerNum, objectIndex, flag)
             let (f, l, o, flag) = (a(0).i64(), a(1).i64(), a(2).i64(), a(3).bool());
+            // layerNum flach wie `dom.layers`, objectIndex wie `dom.layers[l].frames[f].elements` (ohne Unterebenen)
+            let entry = flat_entry(doc, if l < 0 { current_layer_index(doc)?.max(0) } else { l }).map_err(|_| FwErr::Hr(hr::E_ARRAY_INDEX, "Ebene".into()))?;
             let id = st(|s| {
                 let d = s.session.document(doc).ok_or_else(|| FwErr::bad("Dokument"))?;
-                let page = d.doc.pages.get(d.page).ok_or_else(|| FwErr::bad("Seite"))?;
-                let slot = if l < 0 { d.layer.and_then(|x| fp_engine::docops::layer_slot(&d.doc, d.page, x)).unwrap_or(0) } else { l as usize };
                 let frame = if f < 0 { d.frame } else { f as usize };
-                match page.root.layers.get(slot) {
-                    Some(LayerSlot::Own(ly)) => ly.cel(frame).and_then(|c| c.elements.get(o.max(0) as usize)).map(|e| e.id.0).ok_or_else(|| FwErr::Hr(hr::E_ARRAY_INDEX, "Objektindex".into())),
-                    _ => Err(FwErr::Hr(hr::E_ARRAY_INDEX, "Ebene".into())),
-                }
+                let ly = entry_layer(&d.doc, d.page, &entry).filter(|_| !entry.master).ok_or_else(|| FwErr::Hr(hr::E_ARRAY_INDEX, "Ebene".into()))?;
+                ly.cel(frame)
+                    .and_then(|c| c.elements.iter().filter(|e| !matches!(e.kind, ElementKind::SubLayer(_))).nth(o.max(0) as usize))
+                    .map(|e| e.id.0)
+                    .ok_or_else(|| FwErr::Hr(hr::E_ARRAY_INDEX, "Objektindex".into()))
             })?;
             let c = if name == "setElementVisible" { "element.setVisible" } else { "element.setLocked" };
             let key = if name == "setElementVisible" { "visible" } else { "locked" };
@@ -1010,9 +1033,14 @@ pub(super) fn method(doc: DocId, name: &str, args: &[Arg], ctx: &mut Context) ->
             on_selection(doc, "modify.symbol.convertToSymbol", json!({"kind": kind, "name": arg_str(args, 1)}))
         }
         // ---------------------------------------------------------- Ebenen, Seiten, Status
+        // Ebenennummern flach wie `dom.layers` (Unterebenen mitgezählt, Befund F6-1)
         "setLayerName" => {
-            let id = layer_id(doc, a(0).i64())?.ok_or_else(|| FwErr::bad("Ebene"))?;
-            exec(Some(doc), "layer.rename", json!({"layer": id, "name": arg_str(args, 1)}))?;
+            let e = flat_entry(doc, a(0).i64())?;
+            match e.sub {
+                // Unterebene: Name wie im Ebenen-Bedienfeld (Element- und Ebenenname)
+                Some(sub) => exec(Some(doc), "element.setName", json!({"ids": [sub.0], "name": arg_str(args, 1)}))?,
+                None => exec(Some(doc), "layer.rename", json!({"layer": e.id.ok_or_else(|| FwErr::bad("Ebene"))?, "name": arg_str(args, 1)}))?,
+            };
             u()
         }
         // (layerIndex, frameIndex, value, allLayers): mit allLayers = true jede Ebene der Seite,
@@ -1034,8 +1062,17 @@ pub(super) fn method(doc: DocId, name: &str, args: &[Arg], ctx: &mut Context) ->
             u()
         }
         "deleteLayer" => {
-            let id = layer_id(doc, a(0).i64())?.ok_or_else(|| FwErr::bad("Ebene"))?;
-            exec(Some(doc), "layer.delete", json!({"layer": id}))?;
+            let e = flat_entry(doc, a(0).i64())?;
+            if let Some(sub) = e.sub {
+                // Unterebene: das Unterebenen-Element samt Inhalt entfernen
+                super::edit_doc(doc, |d| {
+                    let page = d.page;
+                    fp_engine::docops::remove_ids(d.doc_mut(), page, &[sub]);
+                    d.selection.elements.retain(|x| *x != sub);
+                })?;
+            } else {
+                exec(Some(doc), "layer.delete", json!({"layer": e.id.ok_or_else(|| FwErr::bad("Ebene"))?}))?;
+            }
             u()
         }
         "changeCurrentPage" => exec(Some(doc), "page.setCurrent", json!({"index": a(0).i64().max(0)})).map(|_| JsValue::undefined()),
@@ -1240,7 +1277,8 @@ pub(super) fn set(doc: DocId, name: &str, a: Arg, raw: &JsValue, ctx: &mut Conte
     let _ = raw;
     match name {
         "currentLayerNum" => {
-            if let Some(id) = layer_id(doc, a.i64())? {
+            // Unterebenen können in Firepixel nicht aktiv sein: dann ihre Ebene der obersten Stufe
+            if let Some(id) = top_layer_id(doc, a.i64())? {
                 exec(Some(doc), "layer.setActive", json!({"layer": id}))?;
             }
             Ok(())

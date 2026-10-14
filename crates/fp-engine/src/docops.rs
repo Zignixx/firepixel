@@ -306,6 +306,37 @@ pub fn layer_mut(doc: &mut Document, page: usize, slot: usize) -> Option<&mut La
     }
 }
 
+/// Element-ID der Unterebene mit der Ebenen-ID `id` auf einer Seite (Unterebenen sind Elemente
+/// `ElementKind::SubLayer` im Cel ihrer Elternebene).
+pub fn sublayer_element(doc: &Document, page: usize, id: LayerId) -> Option<ElementId> {
+    let p = doc.pages.get(page)?;
+    let mut found = None;
+    walk_root(&p.root, RootRef::Page(page), &mut |_, _, e| {
+        if found.is_none()
+            && let ElementKind::SubLayer(l) = &e.kind
+            && l.id == id
+        {
+            found = Some(e.id);
+        }
+    });
+    found
+}
+
+/// Ändert eine Ebene per ID: eine Ebene der Seite (eigene oder über Seiten geteilte) oder eine
+/// Unterebene darin. `None`, wenn es die Ebene auf der Seite nicht gibt.
+pub fn edit_layer_by_id<R>(doc: &mut Document, page: usize, id: LayerId, f: impl FnOnce(&mut Layer) -> R) -> Option<R> {
+    if let Some(slot) = layer_slot(doc, page, id) {
+        return layer_mut(doc, page, slot).map(f);
+    }
+    let el = sublayer_element(doc, page, id)?;
+    let mut f = Some(f);
+    edit_by_id(doc, page, el, |e| match &mut e.kind {
+        ElementKind::SubLayer(l) => f.take().map(|f| f(Arc::make_mut(l))),
+        _ => None,
+    })
+    .flatten()
+}
+
 /// Oberste normale (nicht Web-)Ebene.
 pub fn top_normal_layer(doc: &Document, page: usize) -> Option<LayerId> {
     own_layers(doc, page).into_iter().rev().find(|(_, l)| l.kind == LayerKind::Normal).map(|(_, l)| l.id)

@@ -97,9 +97,8 @@ fn edit_layer(s: &mut Session, p: &Params, f: impl FnOnce(&mut fp_model::Layer))
     with_doc(s, |d| {
         let id = layer_param(d, p)?;
         let page = d.page;
-        let slot = docops::layer_slot(&d.doc, page, id).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-layer")))?;
-        let l = docops::layer_mut(Arc::make_mut(&mut d.doc), page, slot).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-layer")))?;
-        f(l);
+        // auch Unterebenen (Skript-Ebenennummern zählen sie flach mit, Befund F6-1)
+        docops::edit_layer_by_id(Arc::make_mut(&mut d.doc), page, id, f).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-layer")))?;
         Ok(CommandOutput::doc())
     })
 }

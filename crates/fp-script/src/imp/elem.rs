@@ -903,12 +903,33 @@ fn node_get(cls: &str, name: &str, doc: DocId, id: ElementId, c: usize, n: usize
 /// (unten → oben), direkt danach ihre Unterebenen (unten → oben, rekursiv). Unterebenen sind in
 /// Firepixel Elemente (`ElementKind::SubLayer`) im Cel des aktuellen Status.
 pub(super) fn flat_layers(doc: DocId, page: usize) -> FwResult<Vec<(usize, Option<fp_model::ElementId>)>> {
-    fn subs(l: &fp_model::Layer, frame: usize, slot: usize, out: &mut Vec<(usize, Option<fp_model::ElementId>)>) {
+    Ok(flat_layer_entries(doc, page)?.into_iter().map(|e| (e.slot, e.sub)).collect())
+}
+
+/// Ein Eintrag der flachen Ebenenliste (Index = Ebenennummer im Skript-API, wie `dom.layers[i]`).
+#[derive(Clone, Debug)]
+pub(crate) struct FlatLayer {
+    /// Platz der Ebene der obersten Stufe, zu der der Eintrag gehört.
+    pub slot: usize,
+    /// Unterebene (Element-ID), `None` für die Ebene der obersten Stufe selbst.
+    pub sub: Option<fp_model::ElementId>,
+    /// Ebenen-ID (bei Unterebenen die ID der inneren Ebene); `None` z. B. für die Masterseitenebene.
+    pub id: Option<u64>,
+    /// Flacher Index der Elternebene, `None` auf der obersten Stufe.
+    pub parent: Option<usize>,
+    /// Platz der Masterseitenebene.
+    pub master: bool,
+}
+
+/// Flache Ebenenliste der Seite mit IDs und Eltern (gleiche Reihenfolge wie [`flat_layers`]).
+pub(crate) fn flat_layer_entries(doc: DocId, page: usize) -> FwResult<Vec<FlatLayer>> {
+    fn subs(l: &fp_model::Layer, frame: usize, slot: usize, parent: usize, out: &mut Vec<FlatLayer>) {
         let Some(cel) = l.cel(frame).or_else(|| l.cel(0)) else { return };
         for e in cel.elements.iter().rev() {
             if let ElementKind::SubLayer(sl) = &e.kind {
-                out.push((slot, Some(e.id)));
-                subs(sl, frame, slot, out);
+                let me = out.len();
+                out.push(FlatLayer { slot, sub: Some(e.id), id: Some(sl.id.0), parent: Some(parent), master: false });
+                subs(sl, frame, slot, me, out);
             }
         }
     }
@@ -917,14 +938,15 @@ pub(super) fn flat_layers(doc: DocId, page: usize) -> FwResult<Vec<(usize, Optio
         let p = d.doc.pages.get(page).ok_or_else(|| FwErr::bad("Seite"))?;
         let mut out = Vec::new();
         for (slot, ls) in p.root.layers.iter().enumerate() {
-            out.push((slot, None));
             let l = match ls {
                 LayerSlot::Own(l) => Some(Arc::clone(l)),
                 LayerSlot::Shared(r) => d.doc.shared_layer(&r.id).and_then(|x| x.layer.clone()),
                 _ => None,
             };
+            let me = out.len();
+            out.push(FlatLayer { slot, sub: None, id: l.as_ref().map(|l| l.id.0), parent: None, master: matches!(ls, LayerSlot::MasterPage(_)) });
             if let Some(l) = l {
-                subs(&l, d.frame, slot, &mut out);
+                subs(&l, d.frame, slot, me, &mut out);
             }
         }
         Ok(out)

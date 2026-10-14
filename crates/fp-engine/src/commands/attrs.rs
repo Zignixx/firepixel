@@ -163,9 +163,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                         None => d.layer.ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-active-layer")))?,
                     };
                     let page = d.page;
-                    let slot = docops::layer_slot(&d.doc, page, id).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-layer")))?;
-                    let l = docops::layer_mut(Arc::make_mut(&mut d.doc), page, slot).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-layer")))?;
-                    l.expanded = v;
+                    docops::edit_layer_by_id(Arc::make_mut(&mut d.doc), page, id, |l| l.expanded = v).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-layer")))?;
                     Ok(CommandOutput::doc())
                 })
             }),

@@ -2,7 +2,7 @@
 //! Pfade, Masken, Web-Objekte, Stile und automatische Formen. Methoden, die `doc.rs` nicht kennt,
 //! landen hier; was auch hier fehlt, meldet „nicht implementiert“.
 
-use super::doc::{arg_str, bounds, current_layer_index, jserr, layer_id, on_selection, rect_arr, selection};
+use super::doc::{arg_str, bounds, current_layer_index, flat_entries, flat_entry, jserr, layer_id, on_selection, rect_arr, selection, top_layer_id};
 use super::{element, exec, ni, wrap_ids};
 use crate::bindings::hr;
 use crate::conv::{self, Arg};
@@ -89,13 +89,44 @@ fn ids_json(ids: &[ElementId]) -> Value {
 }
 
 /// Aktive Ebene setzen (für Befehle, die auf der aktiven Ebene arbeiten).
+/// `idx` zählt flach wie `dom.layers`; bei einer Unterebene wird ihre Ebene der obersten Stufe aktiv.
 fn activate_layer(doc: DocId, idx: i64) -> FwResult<()> {
     if idx >= 0
-        && let Some(id) = layer_id(doc, idx)?
+        && let Some(id) = top_layer_id(doc, idx)?
     {
         exec(Some(doc), "layer.setActive", json!({"layer": id}))?;
     }
     Ok(())
+}
+
+/// Verschiebt Elemente oben in eine Unterebene (aktueller Status), Reihenfolge bleibt.
+/// Die Unterebene selbst und ihre Vorfahren bleiben, wo sie sind.
+fn move_into_sublayer(doc: DocId, ids: &[ElementId], sub: ElementId) -> FwResult<()> {
+    super::edit_doc(doc, |d| {
+        let (page, frame) = (d.page, d.frame);
+        let m = d.doc_mut();
+        let Some(target) = fp_engine::docops::find_on_page(m, page, sub) else { return };
+        // nicht die Unterebene in sich selbst verschieben
+        let blocked: Vec<ElementId> = ids.iter().copied().filter(|id| *id == sub || fp_engine::docops::find_on_page(m, page, *id).is_some_and(|p| target.steps.starts_with(&p.steps) && p.slot == target.slot)).collect();
+        let movable: Vec<ElementId> = ids.iter().copied().filter(|id| !blocked.contains(id)).collect();
+        // in Stapelfolge (oben zuerst) wie in der Ebene
+        let order: Vec<ElementId> = fp_engine::docops::selectable_ids(m, page, frame).into_iter().filter(|i| movable.contains(i)).collect();
+        let mut removed = fp_engine::docops::remove_ids(m, page, &movable);
+        removed.sort_by_key(|(_, e)| order.iter().position(|i| *i == e.id).unwrap_or(usize::MAX));
+        let els: Vec<Arc<fp_model::Element>> = removed.into_iter().map(|(_, e)| e).collect();
+        fp_engine::docops::edit_by_id(m, page, sub, |e| {
+            if let ElementKind::SubLayer(l) = &mut e.kind {
+                let l = Arc::make_mut(l);
+                let ci = if frame < l.cels.len() { frame } else { 0 };
+                if let Some(c) = l.cels.get_mut(ci) {
+                    let c = Arc::make_mut(c);
+                    for (k, x) in els.into_iter().enumerate() {
+                        c.elements.insert(k.min(c.elements.len()), x);
+                    }
+                }
+            }
+        });
+    })
 }
 
 fn pt_arg(a: &Arg) -> FwResult<(f64, f64)> {
@@ -427,11 +458,15 @@ pub(super) fn method(doc: DocId, name: &str, args: &[Arg], ctx: &mut Context) ->
             if ids.is_empty() {
                 return u();
             }
-            let target = if name == "moveSelectionToNewLayer" {
+            // layerIndex flach wie `dom.layers` (Unterebenen mitgezählt, Befund F6-1)
+            let (target, sub) = if name == "moveSelectionToNewLayer" {
                 exec(Some(doc), "layer.add", json!({}))?;
-                layer_id(doc, -1)?
+                (layer_id(doc, -1)?, None)
+            } else if a(0).i64() < 0 {
+                (layer_id(doc, -1)?, None)
             } else {
-                layer_id(doc, a(0).i64())?
+                let e = flat_entry(doc, a(0).i64())?;
+                (e.id, e.sub)
             };
             let Some(layer) = target else { return Err(FwErr::bad("Ebene")) };
             let copy = if name == "moveSelectionToLayer" { a(1).bool() } else { a(0).bool() };
@@ -439,6 +474,10 @@ pub(super) fn method(doc: DocId, name: &str, args: &[Arg], ctx: &mut Context) ->
                 exec(Some(doc), "edit.duplicate", json!({}))?;
             }
             let ids = selection(doc)?;
+            if let Some(sub) = sub {
+                move_into_sublayer(doc, &ids, sub)?;
+                return u();
+            }
             for (k, id) in ids.iter().enumerate() {
                 exec(Some(doc), "pi.element.moveTo", json!({"id": id.0, "layer": layer, "index": k}))?;
             }
@@ -446,6 +485,9 @@ pub(super) fn method(doc: DocId, name: &str, args: &[Arg], ctx: &mut Context) ->
         }
         "duplicateLayer" => {
             let idx = a(0).i64();
+            if idx >= 0 && flat_entry(doc, idx)?.sub.is_some() {
+                return Err(FwErr::NotImpl(format!("{CLS}.{name} für Unterebenen")));
+            }
             let id = layer_id(doc, idx)?.ok_or_else(|| FwErr::bad("Ebene"))?;
             let n = a(1).i64().clamp(1, 100);
             for _ in 0..n {
@@ -454,20 +496,40 @@ pub(super) fn method(doc: DocId, name: &str, args: &[Arg], ctx: &mut Context) ->
             u()
         }
         "reorderLayer" => {
-            let id = layer_id(doc, a(0).i64())?.ok_or_else(|| FwErr::bad("Ebene"))?;
-            ex(doc, "layer.move", json!({"layer": id, "index": a(1).i64().max(0)}))
+            // beide Nummern flach wie `dom.layers`; verschoben werden Ebenen der obersten Stufe,
+            // das Ziel zählt als Platz seiner Ebene der obersten Stufe
+            let from = flat_entry(doc, a(0).i64())?;
+            if from.sub.is_some() {
+                return Err(FwErr::NotImpl(format!("{CLS}.{name} für Unterebenen")));
+            }
+            let id = from.id.ok_or_else(|| FwErr::bad("Ebene"))?;
+            let list = flat_entries(doc)?;
+            let to = a(1).i64().max(0);
+            let slot = match list.get(to as usize) {
+                Some(e) => e.slot,
+                // hinter dem Ende: wie bisher ans Ende (layer.move begrenzt)
+                None => list.last().map(|e| e.slot + 1).unwrap_or(0) + (to as usize).saturating_sub(list.len()),
+            };
+            ex(doc, "layer.move", json!({"layer": id, "index": slot}))
         }
         "addNewSubLayer" => {
             activate_layer(doc, a(0).i64())?;
             ex(doc, "pi.layer.addSub", json!({"name": arg_str(args, 1)}))
         }
         "getParentLayerNum" => {
-            let idx = a(0).i64();
-            Ok(conv::n(if idx < 0 { current_layer_index(doc)? as f64 } else { -1.0 }))
+            // flacher Index der Elternebene, -1 auf der obersten Stufe (re\api\fw_api.json)
+            let e = flat_entry(doc, a(0).i64())?;
+            Ok(conv::n(e.parent.map(|p| p as f64).unwrap_or(-1.0)))
         }
         "setLayerDisclosure" => {
-            let slot = if a(0).i64() < 0 { current_layer_index(doc)?.max(0) as usize } else { a(0).i64() as usize };
-            super::set_layers_expanded(doc, Some(slot), a(1).bool())?;
+            let e = flat_entry(doc, if a(0).i64() < 0 { current_layer_index(doc)?.max(0) } else { a(0).i64() })?;
+            if e.sub.is_some()
+                && let Some(id) = e.id
+            {
+                exec(Some(doc), "layer.setExpanded", json!({"layer": id, "expanded": a(1).bool()}))?;
+            } else {
+                super::set_layers_expanded(doc, Some(e.slot), a(1).bool())?;
+            }
             u()
         }
         "shareLayerToPages" | "shareWebLayerToPages" => {
@@ -513,7 +575,7 @@ pub(super) fn method(doc: DocId, name: &str, args: &[Arg], ctx: &mut Context) ->
         }
         "isMasterPageLayer" => {
             let idx = a(0).i64();
-            let r = page_root(doc, |p, _, _| idx >= 0 && matches!(p.root.layers.get(idx as usize), Some(LayerSlot::MasterPage(_))))?;
+            let r = idx >= 0 && flat_entries(doc)?.get(idx as usize).is_some_and(|e| e.master);
             Ok(JsValue::from(r))
         }
         // ---------------------------------------------------------- Seiten
