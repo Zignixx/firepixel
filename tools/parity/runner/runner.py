@@ -102,6 +102,28 @@ def parse_combo(c: str) -> tuple[list[str], str]:
     return mods, KEY_ALIASES.get(lk, lk)
 
 
+# actions that may switch a view setting (grid, guides, rulers, edges …): the side resets the switches before the next step
+VIEW_TOGGLE = re.compile(r'^(menu\w*|hover_menu|command) .*("Ansicht|"view\.)|setShow|setSnap|lockGuides|'
+                         r'^key "ctrl\+(alt\+)?(shift\+)?[äüöÄÜÖ]', re.I)
+
+
+def set_field_commit(a: dict):
+    """How `set_field` ends: option `commit` (alias `then`) = "enter" | "tab" | "none"; None = side default
+    (field in an open dialog: "tab" - the value is taken over, the dialog stays open and the script's next action
+    decides (Enter/OK, Escape, Vorschau …); any other field: "enter")."""
+    c = a.get("commit", a.get("then")) if isinstance(a, dict) else None
+    if c is None:
+        return None
+    c = str(c).lower()
+    if c in ("return", "ok"):
+        c = "enter"
+    if c in ("", "false", "no"):
+        c = "none"
+    if c not in ("enter", "tab", "none"):
+        raise Unsupported(f"set_field commit {c!r}")
+    return c
+
+
 def pick_handle(h, pts, rect, roles):
     """pts = [(x, y, tooltip, visible)] in document pixels; h = index or role ('points', 'turns' ...,
     matched as tooltip prefix via ui_map handle_roles) or a frame handle name. Without control points
@@ -162,6 +184,24 @@ class Side:
         self.r = runner
         self.values: list = []
         self.doc_size = (0, 0)
+        self.view_dirty = False
+
+    def view_reset_code(self) -> str:
+        """JSF that puts the view switches (grid, guides, rulers, smart guides, edges …) back to `ui_map.json →
+        view_defaults` (Firepixel's defaults of a freshly opened document) and logs what it changed. The reference
+        program keeps these switches across documents, so a step that toggled one changed every later step
+        (runner finding 2)."""
+        parts = []
+        for k, want in (self.r.ui_map.get("view_defaults") or {}).items():
+            if k.startswith("_"):
+                continue
+            w = "true" if want else "false"
+            setter = "lockGuides" if k == "LockGuides" else f"set{k}"
+            if k in ("ShowSliceGuides", "ShowEdges"):  # no getter: set unconditionally
+                parts.append(f"try {{ d.{setter}({w}); }} catch (e) {{}}")
+            else:
+                parts.append(f"try {{ if (d.get{k}() != {w}) {{ d.{setter}({w}); ch.push('{k}'); }} }} catch (e) {{}}")
+        return "var ch = []; if (d) { " + " ".join(parts) + " }"
 
     def ui(self, key):
         t = self.r.ui_map.get("targets", {})
@@ -224,12 +264,24 @@ class OrigSide(Side):
             self.close_floating(only_over_view=True)
         except OrigError:
             pass
+        if self.view_dirty:
+            # the last step switched a view setting (grid, guides, rulers …): back to the defaults
+            try:
+                self.log_view(self.o.jsf("var d = fw.getDocumentDOM(); " + self.view_reset_code() + ' fp_log("VIEW " + ch.join(","));'))
+                self.view_dirty = False
+            except OrigError as e:
+                self.r.log(f"view reset: {e}")
         # the properties panel (inspector) is the program's default layout: a step may have switched its dock
         # group to another tab (e.g. Fenster > Symboleigenschaften) or closed it
         try:
             self.ensure_panel("properties")
         except OrigError as e:
             self.r.log(f"properties panel: {e}")
+
+    def log_view(self, lines):
+        ch = [ln[5:] for ln in lines or [] if ln.startswith("VIEW ") and ln[5:].strip()]
+        if ch:
+            self.r.log(f"view switches reset: {ch[-1]}")
 
     PROTECTED_PANELS = ("properties",)
 
@@ -293,7 +345,11 @@ class OrigSide(Side):
     def open_testfile(self, path: Path):
         self.reset_light()
         self.o.open_doc(path)
-        lines = self.o.jsf('var d = fw.getDocumentDOM(); fp_log("RET " + d.width + "," + d.height);')
+        # the view switches go back to their defaults with the same script (no extra script run per step)
+        lines = self.o.jsf('var d = fw.getDocumentDOM(); fp_log("RET " + d.width + "," + d.height); '
+                           + self.view_reset_code() + ' fp_log("VIEW " + ch.join(","));')
+        self.view_dirty = False
+        self.log_view(lines)
         ret = [ln[4:] for ln in lines if ln.startswith("RET ")]
         if ret:
             w, h = ret[-1].split(",")
@@ -631,6 +687,16 @@ class OrigSide(Side):
                     return
             except OrigError:
                 pass
+        if k == "tab" and mods in ([], ["shift"]):
+            # Tab is not translated by the program's dialogs either (types a character into the field): move the
+            # focus with WM_NEXTDLGCTL when the focused control belongs to an open dialog
+            try:
+                f = self.h.call("focused") or {}
+                if f.get("hwnd") and self.in_dialog(f["hwnd"]) and not self.h.call("menus").get("menus"):
+                    self.h.call("next_ctl", hwnd=f["hwnd"], back=bool(mods))
+                    return
+            except OrigError:
+                pass
         self.o.focus()
         self.h.call("key", combo="+".join(mods + [k]))
 
@@ -659,8 +725,10 @@ class OrigSide(Side):
         if verb in ("open_testfile", "reopen"):
             r.open_testfile(self, arg)
         elif verb in ("close_all", "close_all_documents"):
-            for p in r.opened.get(self.name, set()):
-                self.close_doc(p)
+            # every open document, also the ones a script opened itself (jsf / file dialog), runner finding 5
+            self.reset_light()
+            self.o.close_all_docs()
+            r.opened[self.name] = set()
         elif verb in ("menu", "menu_open", "hover_menu"):
             # `menu`: a leaf entry at the end of the path is executed (scripts check the result), a sub menu
             # stays open; `menu_open`/`hover_menu` only open/hover
@@ -744,7 +812,7 @@ class OrigSide(Side):
         elif verb == "choose":
             self.choose(arg, act)
         elif verb in ("set_field", "set", "set_dialog_field"):
-            self.set_field(arg if isinstance(arg, dict) else act)
+            self.set_field(dict(act, **arg) if isinstance(arg, dict) else act)
         elif verb == "record_ui":
             self.values.append({"record_ui": arg, "value": self.record_ui(arg)})
         elif verb == "log_menu_items":
@@ -943,17 +1011,41 @@ class OrigSide(Side):
             raise Unsupported("choose: target opened no menu and is no Win32 combo box")
         self.menu_path(split_path(item or ""))
 
+    def in_dialog(self, hwnd) -> bool:
+        try:
+            return any(hwnd and self.h.call("next_ctl_root", hwnd=hwnd) == d["hwnd"] for d in self.h.list("dialogs"))
+        except OrigError:
+            return False
+
     def set_field(self, a):
         target, value = a.get("target") or a.get("set_field") or a.get("set"), a.get("value")
         pt, info = self.resolve(target)
-        if info and info.get("class") in ("Edit",):
-            self.h.call("set_text", hwnd=info["hwnd"], text=str(value))
         if pt is None:
             raise Unsupported("set_field without a point")
+        commit = set_field_commit(a)
+        if info and info.get("class") == "Edit" and self.in_dialog(info["hwnd"]):
+            # dialog edit: the program's dialogs translate neither Enter nor Tab (SendInput Enter/Tab end up as a
+            # character in the field: "60r", runner finding F1) - focus the field, set its text, then end like
+            # the script says: Tab = WM_NEXTDLGCTL (the field commits on focus loss), Enter = the OK button
+            commit = commit or "tab"
+            self.click_at(pt)
+            self.h.call("set_text", hwnd=info["hwnd"], text=str(value))
+            if commit in ("tab", "enter"):
+                self.h.call("next_ctl", hwnd=info["hwnd"])
+                time.sleep(0.2)
+            text = self.h.call("get_text", hwnd=info["hwnd"])
+            if commit == "enter":
+                self.h.call("dialog_close", mode="ok")
+                time.sleep(0.5)
+            self.values.append({"set_field": str(target), "commit": commit, "text": text})
+            return
+        if info and info.get("class") in ("Edit",):
+            self.h.call("set_text", hwnd=info["hwnd"], text=str(value))
         self.click_at(pt, count=2)
         self.h.call("key", combo="ctrl+a")
         self.h.call("type", text=str(value))
-        self.h.call("key", combo="enter")
+        if (commit or "enter") != "none":
+            self.h.call("key", combo=commit or "enter")
         loc = self.loc_of(target)
         if loc.get("jsf_set"):
             # some inspector fields keep typed text without applying it to the selection (no commit from
@@ -1023,9 +1115,18 @@ class FpSide(Side):
         except BridgeError:
             pass
         self.call("ui_input", {"events": [{"type": "key", "key": "Escape"}, {"type": "pointer_gone"}]})
+        if self.view_dirty:
+            try:
+                ch = self.script_value("(function(){var d = fw.getDocumentDOM(); " + self.view_reset_code() + " return ch.join(',');})()")
+                if ch:
+                    self.r.log(f"fp view switches reset: {ch}")
+                self.view_dirty = False
+            except BridgeError as e:
+                self.r.log(f"fp view reset: {e}")
 
     def open_testfile(self, path: Path):
         self.reset_light()
+        self.view_dirty = False  # a freshly opened document has the default view switches
         docs = self.call("documents") or {}
         for d in (docs.get("documents") if isinstance(docs, dict) else []) or []:
             if str(d.get("path", "")).lower() == str(path).lower():
@@ -1329,8 +1430,17 @@ class FpSide(Side):
         if verb in ("open_testfile", "reopen"):
             r.open_testfile(self, arg)
         elif verb in ("close_all", "close_all_documents"):
-            for p in r.opened.get(self.name, set()):
-                self.close_doc(p)
+            # every open document, also the ones a script opened itself (file dialog), runner finding 5
+            for _ in range(3):
+                docs = (self.call("documents") or {}).get("documents") or []
+                if not docs:
+                    break
+                for d in docs:
+                    self.call("documents", {"close": d.get("doc") or d.get("id"), "discard": True})
+            left = (self.call("documents") or {}).get("documents") or []
+            if left:
+                raise BridgeError(f"close_all: {len(left)} documents still open")
+            r.opened[self.name] = set()
         elif verb in ("menu", "menu_open", "hover_menu", "menu_item"):
             parts = split_path(arg)
             h = self.find(parts[0], None, True, [0, 0, 2000, 40])
@@ -1406,11 +1516,8 @@ class FpSide(Side):
                 hit = self.find(part)
                 self.inp([{"type": "click", "pos": hit["center"]}, {"type": "wait", "ms": 200}])
         elif verb in ("set_field", "set", "set_dialog_field"):
-            a = arg if isinstance(arg, dict) else act
-            target = a.get("target") or (arg if isinstance(arg, str) else None)
-            pos = self.resolve(target)
-            self.inp([{"type": "click", "pos": pos}, {"type": "key", "key": "A", "modifiers": ["ctrl"]},
-                      {"type": "type", "text": str(a.get("value"))}, {"type": "key", "key": "Enter"}])
+            a = dict(act, **arg) if isinstance(arg, dict) else act
+            self.set_field(a, a.get("target") or (arg if isinstance(arg, str) else None))
         elif verb == "record_ui":
             self.values.append({"record_ui": arg, "value": self.record_ui(arg)})
         elif verb == "log_menu_items":
@@ -1519,6 +1626,28 @@ class FpSide(Side):
             e = self.r.ui_map["targets"][target]
             return (e.get(self.name) if isinstance(e, dict) else None) or {}
         return target if isinstance(target, dict) else {}
+
+    def set_field(self, a, target):
+        """Click the field, Ctrl+A, type, then end like the reference side (`set_field_commit`). Ctrl+A is only sent
+        when the click focused a text field: otherwise it reached the canvas and selected every object (runner
+        finding 1: `select P1` + `set_field inspector.stroke_edge` left all 7 objects selected)."""
+        pos = self.resolve(target)
+        in_dialog = bool(self.state().get("dialog_open"))
+        focused = False
+        for ev in ({"type": "click", "pos": pos}, {"type": "double_click", "pos": pos}):
+            v = self.inp([ev, {"type": "wait", "ms": 60}]) or {}
+            # a field that already had the focus reports only `clicked`
+            if any(w.get("event") in ("focus_gained", "clicked") and re.search(r"text|drag|spin|value", str(w.get("widget")))
+                   for w in v.get("widget_events") or []):
+                focused = True
+                break
+        if not focused:
+            raise BridgeError(f"set_field: no text field at {target} ({pos}) - nothing typed")
+        commit = set_field_commit(a) or ("tab" if in_dialog else "enter")
+        ev = [{"type": "key", "key": "A", "modifiers": ["ctrl"]}, {"type": "type", "text": str(a.get("value"))}]
+        if commit != "none":
+            ev.append({"type": "key", "key": "Enter" if commit == "enter" else "Tab"})
+        self.inp(ev)
 
     def selected_id(self):
         doc = next((d for d in self.state().get("documents", []) if d.get("active")), None)
@@ -1833,7 +1962,7 @@ class Runner:
                 act = {act: True}
             verb = next((k for k in act if k not in ("mods", "ms", "repeat", "hold_key", "item", "by", "at", "do",
                                                     "region", "to_fraction", "hold", "orig_index", "row", "from", "to",
-                                                    "value", "target", "note", "orig_menu")), None)
+                                                    "value", "target", "note", "orig_menu", "commit", "then")), None)
             if verb is None:
                 verb = next(iter(act))
             arg = act[verb]
@@ -1869,6 +1998,8 @@ class Runner:
                     rec["_before"] = side.before_img = side.window_image()[0]
                 except Exception:  # noqa: BLE001
                     pass
+            if VIEW_TOGGLE.search(f"{verb} {json.dumps(arg, ensure_ascii=False)}"):
+                side.view_dirty = True
             side.do(verb, arg, act)
             rec["actions"].append({"verb": verb, "ms": int((time.time() - t0) * 1000)})
 

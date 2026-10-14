@@ -110,6 +110,14 @@ Defined layout: Firepixel starts with a fresh profile for every unit (`fp.fresh_
 default `OWL.Dock`) are closed at the start of every unit, and before every step when they cover the document view;
 a floating group holding the properties panel is never closed.
 
+View switches: the reference program keeps grid, guides, rulers, smart guides, edges … across documents (Firepixel per
+document). After every opened test file and before a step that follows an action touching them (`Ansicht` menu/`view.*`
+command, `setShow*`/`setSnap*`/`lockGuides` JSF, Ctrl+Ä/Ü keys) both sides set them to `ui_map.json → view_defaults`
+(JS API `get…`/`set…`; changes are logged as `view switches reset: …`). Not covered: slice overlay (no API).
+
+`set_field` `commit`: `enter` | `tab` | `none` (alias `then`); default `tab` for a field in an open dialog (the value is taken
+over, the dialog stays open, the script's next action - Enter, Escape, Vorschau … - decides), else `enter`.
+
 An action is an object whose first known key is the verb; further keys are options (`mods`, `repeat`,
 `item`, `value`, `target`, `by`, `hold_key`, `ms`). A plain string is a verb without argument.
 
@@ -121,13 +129,13 @@ Aliases: `reset <T..|null>` = `open_testfile` (null: only close menus/dialogs), 
 | verb | argument | reference program | Firepixel |
 |---|---|---|---|
 | `open_testfile` / `reopen` | `"T04"` (or `true` = unit file) | close same file unsaved, `fw.openDocument(url)` | `documents close` + `open` |
-| `close_all` / `close_all_documents` | – | closes the test files opened in this unit | same |
+| `close_all` / `close_all_documents` | – | closes **every** open document unsaved (also files a script opened itself) | same (`documents close`, error if one stays open) |
 | `menu` | `"A > B > C"` (also `A/B` without `>`, list) | click bar entry, hover sub menus; a **leaf entry at the end is executed** (hover + click, Enter if the menu stays open), a sub menu at the end stays open; abbreviated entries (`Gaußscher Weichz.`) match | same; leaf = no new texts appear next to the hovered entry |
 | `menu_open` / `hover_menu` | same | only opens/hovers (leaves the last open, for menu shots) | same |
 | `menu_item` | `"A > B"` | like `menu`, last entry clicked | same |
 | `command` | Firepixel command id | menu path from `ui_map.json → commands` | `ui_action {run}` |
 | `close_dialogs` | – | cancel dialogs, close menus | `ui_action {close_dialogs}` |
-| `key` | `"ctrl+shift+z"`, `"Escape"`, `"F1"` (`repeat`) | SendInput; plain Enter/Escape with a dialog open (no popup menu) press its OK/Cancel button (the program's dialogs ignore the keys) | `ui_input key` (egui names) |
+| `key` | `"ctrl+shift+z"`, `"Escape"`, `"F1"` (`repeat`) | SendInput; plain Enter/Escape with a dialog open (no popup menu) press its OK/Cancel button, Tab/Shift+Tab with the focus in a dialog = `WM_NEXTDLGCTL` (the program's dialogs do not translate these keys: SendInput Enter/Tab end up as a character in the field) | `ui_input key` (egui names) |
 | `type` | text | Unicode SendInput | `ui_input type` |
 | `wait` | ms | sleep | sleep |
 | `select` | object name or list | JSF `fw.selection` by name | same JSF via `run_script` (exactly the named objects; `select {ids}` only as fallback) |
@@ -141,7 +149,7 @@ Aliases: `reset <T..|null>` = `open_testfile` (null: only close menus/dialogs), 
 | `canvas_click` / `canvas_double_click` / `canvas_move` / `canvas_hover` | `[x, y]` document px (+`mods`) | page rectangle measured in the view image (+ `orig.canvas_offset`) | `page_on_screen` |
 | `drag` / `canvas_drag` | `{from, to | by, mods, steps}` (points = `[x,y]` document px or targets) | SendInput drag | `ui_input drag` |
 | `choose` | `{target, item}` (`item` may be `A > B`) | Win32 combo box: select entry | click target, click item texts |
-| `set_field` / `set` / `set_dialog_field` | `{target, value}` | Win32 edit: text; else double click, Ctrl+A, type, Enter | click, Ctrl+A, type, Enter |
+| `set_field` / `set` / `set_dialog_field` | `{target, value, commit?}` | edit in a dialog: click, `WM_SETTEXT`, then `commit` (Tab = `WM_NEXTDLGCTL`, Enter = Tab + OK button); other fields: double click, Ctrl+A, type, `commit` key | click (double click if needed) - **only if a text field took the focus** (else error, so Ctrl+A never reaches the canvas), Ctrl+A, type, `commit` key |
 | `record_ui` | logical key (`ui_state.*`, `document.summary`, `menu.open`, `dialog.fields`, `focus`, …) or `{"focus_cycle": n}` | dialogs (title + control texts)/menu items/focused control (Tab n times) | `dialog.*`: title, texts in reading order and controls (role, text, state) from `ui_find` inside the dialog; `menu.*`: texts of the open menus (columns, shortcuts) inside the difference box; `focus_cycle`: `focus_gained` of `ui_input`; else `ui_state`/`get_document` |
 | `clear_dir` / `record_dir` / `record_file` / `record_file_text` | path (relative = `run\<unit>\files\…`, only below the test folder) | file listing / size + SHA-1 + pixels | same |
 | `file_dialog` / `file_dialog_choose` / `file_dialog_cancel` | path | edit field of the open file dialog + OK / Cancel | `ui_file_dialog` |

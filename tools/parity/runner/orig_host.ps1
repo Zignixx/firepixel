@@ -38,6 +38,7 @@ public static class N {
   [DllImport("user32.dll")] public static extern bool IsWindowEnabled(IntPtr h);
   [DllImport("user32.dll")] public static extern IntPtr GetWindow(IntPtr h, uint c);
   [DllImport("user32.dll")] public static extern IntPtr GetParent(IntPtr h);
+  [DllImport("user32.dll")] public static extern IntPtr GetAncestor(IntPtr h, uint flags);
   [DllImport("user32.dll")] public static extern IntPtr SendMessage(IntPtr h, uint m, IntPtr w, IntPtr l);
   [DllImport("user32.dll")] public static extern int GetMenuItemCount(IntPtr m);
   [DllImport("user32.dll")] public static extern IntPtr GetSubMenu(IntPtr m, int i);
@@ -355,6 +356,13 @@ function Handle($c) {
         if ($n -eq [int]$c.index) { $i = WinInfo $h; $i.title = [PR.N]::Txt($h); return $i }; $n++ } }
       throw "child not found: $($c | ConvertTo-Json -Compress)" }
     'set_text' { [PR.N]::SendMessageS([IntPtr][int64]$c.hwnd, 0x000C, [IntPtr]::Zero, [string]$c.text) | Out-Null; return 'ok' }
+    'next_ctl_root' { return [int64][PR.N]::GetAncestor([IntPtr][int64]$c.hwnd, 2) }
+    'next_ctl' { # Tab / Shift+Tab inside a dialog: the program's dialogs do not translate Tab (SendInput Tab types a
+      # character into the edit), WM_NEXTDLGCTL moves the focus like the dialog manager does (the edit commits on focus loss)
+      $h = [PR.N]::GetAncestor([IntPtr][int64]$c.hwnd, 2)
+      if ($h -eq [IntPtr]::Zero -or [PR.N]::Cls($h) -ne '#32770') { throw 'next_ctl: control is not inside a dialog' }
+      [PR.N]::SendMessage($h, 0x0028, [IntPtr]$(if ($c.back) { 1 } else { 0 }), [IntPtr]::Zero) | Out-Null; Start-Sleep -Milliseconds 120
+      $f = [PR.N]::FocusOf($h); return @{ dialog = [int64]$h; focus = [int64]$f; focus_class = $(if ($f -ne [IntPtr]::Zero) { [PR.N]::Cls($f) } else { '' }) } }
     'get_text' { $sb = New-Object Text.StringBuilder 1024; [PR.N]::SendMessageSB([IntPtr][int64]$c.hwnd, 0x000D, [IntPtr]1024, $sb) | Out-Null; return $sb.ToString() }
     'combo_items' { $h = [IntPtr][int64]$c.hwnd; $n = [int][PR.N]::SendMessage($h, 0x146, [IntPtr]::Zero, [IntPtr]::Zero); $l = @()
       for ($i = 0; $i -lt $n; $i++) { $sb = New-Object Text.StringBuilder 512; [PR.N]::SendMessageSB($h, 0x148, [IntPtr]$i, $sb) | Out-Null; $l += $sb.ToString() }

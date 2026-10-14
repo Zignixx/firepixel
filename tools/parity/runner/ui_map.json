@@ -1,5 +1,8 @@
 {
   "_doc": "Mapping table for the parity runner (see README.md, section 'ui_map.json'). Keys are logical names used in the scripts; values say how each program finds the element. Entries with null are known but not yet located - a step using them is logged as 'unmapped'.",
+  "view_defaults": {"_doc": "view switches set before a step after one was toggled and after every opened test file (Firepixel's defaults of a fresh document; the reference program keeps them across documents). Key = JS API name without get/set.",
+    "ShowGrid": false, "SnapToGrid": false, "ShowGuides": true, "SnapToGuides": true, "LockGuides": false, "ShowRulers": false,
+    "ShowSmartGuides": true, "SnapToSmartGuides": true, "ShowSliceGuides": true, "ShowEdges": false},
   "menu_bar": {"_doc": "orig: menu bar entries, centre in client coordinates of the main window (the bar is custom drawn, no UI Automation). fp: found by text.", "orig": [["Datei", 60, 15], ["Bearbeiten", 120, 15], ["Ansicht", 186, 15], ["Auswählen", 252, 15], ["Modifizieren", 332, 15], ["Text", 394, 15], ["Befehle", 442, 15], ["Filter", 492, 15], ["Fenster", 542, 15], ["Hilfe", 592, 15]]},
   "panels": {
     "_doc": "panel id (with or without 'window.' prefix, '-' and '_' equivalent) -> fp panel command, German title (orig window title / fp tab text), orig menu path to show it.",
@@ -219,7 +222,7 @@
     "inspector.stroke_inside": {"orig": {"panel": "properties", "rel": [326, 39]}, "fp": {"find": "Pinselstrich innen ausrichten", "role": "button"}},
     "inspector.stroke_center": {"orig": {"panel": "properties", "rel": [348, 39]}, "fp": {"find": "Pinselstrich mittig ausrichten", "role": "button"}},
     "inspector.stroke_outside": {"orig": {"panel": "properties", "rel": [370, 39]}, "fp": {"find": "Pinselstrich außen ausrichten", "role": "button"}},
-    "inspector.stroke_edge": {"orig": {"panel": "properties", "rel": [446, 39], "jsf_set": "(function(v){var d=fw.getDocumentDOM(),s=fw.selection[0],b=s&&s.pathAttributes?s.pathAttributes.brush:null;if(b){b.softness=v;d.setBrush(b);}})(%s)"}, "fp": {"window_rel": [515, 934]}},
+    "inspector.stroke_edge": {"orig": {"panel": "properties", "rel": [446, 39], "jsf_set": "(function(v){var d=fw.getDocumentDOM(),s=fw.selection[0],b=s&&s.pathAttributes?s.pathAttributes.brush:null;if(b){b.softness=v;d.setBrush(b);}})(%s)"}, "fp": {"window_rel": [545, 934]}},
     "inspector.stroke_texture": {"orig": {"panel": "properties", "rel": [410, 65]}, "fp": {"window_rel": [478, 958]}},
     "inspector.stroke_texture_amount": {"orig": {"panel": "properties", "rel": [472, 65]}, "fp": {"window_rel": [545, 957]}},
     "inspector.stroke_edit": {"orig": {"panel": "properties", "rel": [390, 88]}, "fp": {"window_rel": [442, 983]}},
