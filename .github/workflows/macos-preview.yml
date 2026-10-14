@@ -1,16 +1,25 @@
-# macOS-Vorschau: Firepixel.app (Apple Silicon, arm64) als ZIP-Artifact, dazu Tests der
-# plattformneutralen Crates. Nur manuell oder per Push auf den Branch ci/macos (macOS-Minuten
-# zaehlen 10-fach: Abhaengigkeiten werden gecacht).
+# macOS-Vorschau: Firepixel.app (Apple Silicon, arm64) als ZIP-Artifact, auf Wunsch dazu Tests der
+# plattformneutralen Crates. Kein Push-Ausloeser: nur manuell (workflow_dispatch) oder aus dem
+# Release-Workflow (workflow_call) – macOS-Minuten zaehlen 10-fach.
 name: macos-preview
 
 on:
   workflow_dispatch:
-  push:
-    branches: [ci/macos]
+    inputs:
+      tests:
+        description: "Auch die Tests der plattformneutralen Crates ausfuehren (kostet ~12 Mac-Minuten)"
+        type: boolean
+        default: false
+  workflow_call:
+    inputs:
+      ref:
+        description: "Commit/Branch, der gebaut wird"
+        type: string
+        required: true
 
 concurrency:
-  group: macos-preview-${{ github.ref }}
-  cancel-in-progress: true
+  group: macos-preview-${{ github.workflow }}-${{ inputs.ref || github.ref }}
+  cancel-in-progress: false
 
 env:
   CARGO_TERM_COLOR: always
@@ -26,6 +35,8 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.sha }}
 
       - name: Rust stable
         run: |
@@ -33,7 +44,7 @@ jobs:
           rustup default stable
           rustc --version
 
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@v2.8.0
         with:
           shared-key: macos-arm64
           cache-on-failure: true
@@ -150,9 +161,9 @@ jobs:
     name: Tests (plattformneutrale Crates)
     runs-on: macos-14
     timeout-minutes: 45
-    # rote Tests nur melden, nicht den Lauf blockieren; "[skip-tests]" in der Commit-Nachricht spart Minuten
+    # nur auf Wunsch (Eingabe tests); rote Tests melden, aber den Lauf nicht blockieren
     continue-on-error: true
-    if: ${{ !contains(github.event.head_commit.message, '[skip-tests]') }}
+    if: ${{ inputs.tests == true }}
     steps:
       - uses: actions/checkout@v4
 
@@ -161,7 +172,7 @@ jobs:
           rustup toolchain install stable --profile minimal
           rustup default stable
 
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@v2.8.0
         with:
           shared-key: macos-arm64-test
           cache-on-failure: true

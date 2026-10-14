@@ -1,0 +1,139 @@
+# Windows-CI: Pruefen, Tests (aufgeteilt) und Release-Build als Artifact.
+# Wird auch vom Release-Workflow (prerelease.yml) per workflow_call aufgerufen; dann nur der
+# Release-Build mit ZIP-Paket (Tests liefen schon beim Push auf main).
+name: windows-ci
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "docs/**"
+      - "**.md"
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      ref:
+        description: "Commit/Branch, der gebaut wird"
+        type: string
+        required: true
+      package:
+        description: "ZIP-Paket fuer das Release erzeugen (ohne Tests)"
+        type: boolean
+        default: true
+
+concurrency:
+  group: windows-ci-${{ github.workflow }}-${{ inputs.ref || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: "0"
+  # Tests nie ins echte Profil, nichts im Explorer/Browser oeffnen
+  FP_NO_SHELL_OPEN: "1"
+
+jobs:
+  check:
+    name: cargo check (warnungsfrei)
+    if: ${{ !inputs.package }}
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Rust stable
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+          rustc --version
+      - uses: Swatinem/rust-cache@v2.8.0
+        with:
+          shared-key: win-check
+      - name: cargo check --workspace --all-targets
+        shell: pwsh
+        run: |
+          cargo check --locked --workspace --all-targets --message-format short 2>&1 | Tee-Object -Variable out
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $w = $out | Where-Object { "$_" -match ': warning: ' }
+          if ($w) { Write-Output "::error::$($w.Count) Warnung(en) bei cargo check"; exit 1 }
+
+  test-core:
+    name: Tests (ohne fp-ui)
+    if: ${{ !inputs.package }}
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Rust stable
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+      - uses: Swatinem/rust-cache@v2.8.0
+        with:
+          shared-key: win-test-core
+      - name: cargo test (alle Crates ausser fp-ui)
+        run: cargo test --locked --workspace --exclude fp-ui --no-fail-fast
+
+  test-ui:
+    name: Tests fp-ui (kittest)
+    if: ${{ !inputs.package }}
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Rust stable
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+      - uses: Swatinem/rust-cache@v2.8.0
+        with:
+          shared-key: win-test-ui
+      - name: cargo test -p fp-ui
+        run: cargo test --locked -p fp-ui --no-fail-fast
+
+  build:
+    name: Release-Build (x64)
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+      - name: Rust stable
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+      - uses: Swatinem/rust-cache@v2.8.0
+        with:
+          shared-key: win-release
+      - name: cargo build --release
+        run: cargo build --locked --release -p firepixel -p firepixel-cli
+      - name: Paket zusammenstellen
+        shell: pwsh
+        run: |
+          $ver = ((cargo pkgid -p firepixel) -replace '.*[#@]', '').Trim()
+          $out = "dist/Firepixel-Windows-x64"
+          New-Item -ItemType Directory -Force "$out/docs" | Out-Null
+          Copy-Item target/release/firepixel.exe, target/release/firepixel-cli.exe, LICENSE $out
+          Copy-Item docs/MANUAL.md, docs/MANUAL.en.md "$out/docs"
+          & "$out/firepixel-cli.exe" --version
+          if ("${{ inputs.package }}" -eq "true") {
+            Compress-Archive -Path "$out/*" -DestinationPath "dist/Firepixel-Windows-x64-$ver.zip"
+          }
+          Get-ChildItem -Recurse dist | Select-Object FullName, Length
+      - name: Artifact (CI)
+        if: ${{ !inputs.package }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: Firepixel-Windows-x64
+          path: dist/Firepixel-Windows-x64
+          if-no-files-found: error
+          retention-days: 7
+      - name: Artifact (Release-ZIP)
+        if: ${{ inputs.package }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-windows
+          path: dist/Firepixel-Windows-x64-*.zip
+          if-no-files-found: error
+          retention-days: 7
