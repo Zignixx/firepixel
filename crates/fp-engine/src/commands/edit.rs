@@ -35,6 +35,71 @@ pub(crate) fn masked_pixels(img: &RgbaImage, mask: &Mask) -> RgbaImage {
     out
 }
 
+/// Hat das Element eigene Effekte?
+fn has_own_effects(e: &Element) -> bool {
+    e.common.effects.as_ref().is_some_and(|l| !l.effects.is_empty())
+}
+
+/// Ergebnis von „Innen einfügen“ (re 26 §2.2, Hinweise für die Umsetzung): Das Ziel wird Maske
+/// (Pfadumriss, verknüpft, aktiv, Füllung und Pinselstrich anzeigen), der Inhalt der Zwischenablage
+/// wird maskiert und behält seine Lage.
+/// - ein Inhalt ohne eigene Effekte → maskiertes Einzelelement; Deckkraft und Mischmodus des
+///   Inhalts gelten für das Element (wirken auf Füllung + Inhalt + Strich, D2);
+/// - mehrere Inhalte oder einer mit eigenen Effekten → Gruppe mit Maske (Kinder in
+///   Zwischenablage-Reihenfolge);
+/// - Effekte des Ziels wandern auf das Ergebnis; Deckkraft und Mischmodus des Ziels bleiben an der
+///   Maske (werden nicht gezeichnet);
+/// - Ziel ist schon maskiert → die vorhandene Maske bleibt, neue Gruppe aus Inhalt (oben) und altem
+///   Element.
+pub(crate) fn paste_inside_result(idg: &mut fp_model::IdGen, target: &Arc<Element>, children: &mut Vec<Arc<Element>>) -> Element {
+    let content = std::mem::take(children);
+    if let ElementKind::Group(tg) = &target.kind
+        && tg.kind.is_mask()
+        && tg.mask.is_some()
+    {
+        let old: Vec<Arc<Element>> = if target.masked_single().is_some() {
+            tg.children.clone()
+        } else {
+            vec![Arc::new(Element::new_group(idg, tg.children.clone()))]
+        };
+        let mut g = (**target).clone();
+        if let ElementKind::Group(gg) = &mut g.kind {
+            gg.children = content.into_iter().chain(old).collect();
+        }
+        return g;
+    }
+    let single = content.len() == 1 && !has_own_effects(&content[0]) && !matches!(&content[0].kind, ElementKind::Group(c) if c.kind.is_mask());
+    let mut mask = (**target).clone();
+    let fx = mask.common.effects.take();
+    let (mut opacity, mut blend) = (fp_model::Opacity(255), fp_model::BlendMode(0));
+    let content: Vec<Arc<Element>> = if single {
+        content
+            .into_iter()
+            .map(|c| {
+                let mut c = (*c).clone();
+                (opacity, blend) = (c.common.opacity, c.common.blend);
+                c.common.opacity = fp_model::Opacity(255);
+                c.common.blend = fp_model::BlendMode(0);
+                Arc::new(c)
+            })
+            .collect()
+    } else {
+        content
+    };
+    let mut g = Element::new_mask_group(idg, Arc::new(mask), content, true);
+    g.common.effects = fx;
+    g.common.opacity = opacity;
+    g.common.blend = blend;
+    if let ElementKind::Group(gr) = &mut g.kind {
+        // Flagbyte 0x17: Pfadumriss, verknüpft, aktiv, Füllung und Pinselstrich anzeigen (kein `MNAb`)
+        gr.mask_flags.linked = true;
+        gr.mask_flags.enabled = true;
+        gr.mask_flags.hide_attrs = false;
+        gr.mask_flags.auto_expand = false;
+    }
+    g
+}
+
 /// Löscht die Pixel unter der Maske (Alpha · (255 − Maske)).
 pub(crate) fn clear_masked(img: &mut RgbaImage, mask: &Mask) {
     let (l, t) = img.origin();
@@ -469,24 +534,23 @@ pub(super) fn register(r: &mut CommandRegistry) {
             let page = d.page;
             let doc = Arc::make_mut(&mut d.doc);
             let path = docops::find_on_page(doc, page, target).ok_or(EngineError::ElementNotFound(target.0))?;
-            let children: Vec<Arc<Element>> = clip.elements.iter().map(|e| Arc::new(docops::reassign(doc, e))).collect();
+            let mut children: Vec<Arc<Element>> = clip.elements.iter().map(|e| Arc::new(docops::reassign(doc, e))).collect();
             let (list, idx) = docops::parent_list_mut(doc, &path).ok_or_else(|| EngineError::Failed(fp_i18n::t("err-parent-list")))?;
-            let mask = list.remove(idx);
-            let vector = !matches!(mask.kind, ElementKind::Bitmap(_));
+            let target_el = list.remove(idx);
             let mut idg = std::mem::take(&mut doc.ids);
-            let mut g = Element::new_mask_group(&mut idg, mask, children, vector);
-            // Innen einfügen: Füllung und Strich der Form bleiben sichtbar (`mask.showAttrs`), daher
-            // meldet `pixelRect` den Maskenbereich (Q-14), Als Maske gruppieren dagegen den Schnitt (TW-35)
-            if let ElementKind::Group(gr) = &mut g.kind {
-                gr.mask_flags.hide_attrs = false;
-            }
+            let g = paste_inside_result(&mut idg, &target_el, &mut children);
             doc.ids = idg;
             let gid = g.id;
+            let single = g.masked_single().is_some();
             if let Some((list, _)) = docops::parent_list_mut(doc, &path) {
                 list.insert(idx.min(list.len()), Arc::new(g));
             }
-            // wie im Original ist danach nichts ausgewählt (M1 Q-14)
-            d.selection.clear();
+            // wie im Original: Einzelelement → nichts ausgewählt (M1 Q-14), Gruppe → Gruppe gewählt (re 26 §2.2)
+            if single {
+                d.selection.clear();
+            } else {
+                d.selection.set(vec![gid]);
+            }
             Ok(CommandOutput::doc_with(json!({"id": gid.0})))
         })
     }));

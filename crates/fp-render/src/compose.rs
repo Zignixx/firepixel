@@ -56,6 +56,13 @@ impl Canvas {
 
     /// Mischt ein Aussehen mit Deckkraft und Mischmodus auf die Leinwand.
     pub(crate) fn draw(&mut self, img: &RgbaImage, opacity: Opacity, blend: BlendMode) {
+        self.draw_variant(img, opacity, blend, OverVariant::Mmx);
+    }
+
+    /// Wie [`Canvas::draw`] mit wählbarer Rundung von „over“ (Masken mit sichtbaren Attributen: Inhalt
+    /// skalar über die Füllung, re 26 §3.2).
+    pub(crate) fn draw_variant(&mut self, img: &RgbaImage, opacity: Opacity, blend: BlendMode, variant: OverVariant) {
+        let o = CompositeOptions { variant, ..opts(opacity, blend) };
         if img.is_empty() || opacity.0 == 0 {
             return;
         }
@@ -66,7 +73,7 @@ impl Canvas {
                 if base.is_empty() {
                     return;
                 }
-                composite(&mut base, img, None, &opts(opacity, blend));
+                composite(&mut base, img, None, &o);
                 self.img = base;
                 return;
             }
@@ -76,7 +83,7 @@ impl Canvas {
                 self.img = ext;
             }
         }
-        composite(&mut self.img, img, None, &opts(opacity, blend));
+        composite(&mut self.img, img, None, &o);
     }
 }
 
@@ -733,7 +740,9 @@ impl Renderer {
         let mut img = cv.img;
         let masked = g.kind.is_mask() && g.mask_flags.enabled;
         if masked && let Some(me) = g.effective_mask() {
-            let mask = self.mask_values(doc, e, g, me, st, rep);
+            // Pfadumriss mit „Füllung und Pinselstrich anzeigen“ (Flags 0x01 und 0x10, re 26 §3.1)
+            let show = g.kind == GroupKind::VectorMask && !g.mask_flags.hide_attrs;
+            let mask = self.mask_values(doc, e, g, me, show, st, rep);
             let b = img.bounds();
             let w = img.width();
             for (i, p) in img.data_mut().iter_mut().enumerate() {
@@ -748,6 +757,20 @@ impl Renderer {
                 let m = m.unwrap_or(0);
                 p[3] = ((p[3] as u32 * m as u32 + 127) / 255) as u8;
             }
+            if show {
+                // Füllung der Maske → Inhalt (skalar) → Strich der Maske (MMX); Deckkraft und
+                // Mischmodus der Maske zählen nicht (re 26 §3.2/§3.3)
+                let (under, over) = self.mask_attr_layers(doc, me, st, rep);
+                let mut z = Canvas::growable();
+                if let Some(u) = &under {
+                    z.draw(u, Opacity(255), BlendMode(0));
+                }
+                z.draw_variant(&img, Opacity(255), BlendMode(0), OverVariant::Scalar);
+                if let Some(o) = &over {
+                    z.draw(o, Opacity(255), BlendMode(0));
+                }
+                img = z.img;
+            }
         }
         if img.is_empty() {
             return None;
@@ -755,33 +778,61 @@ impl Renderer {
         Some(img)
     }
 
-    /// Maskenwerte (Grenzen, Breite, Daten) einer Maskengruppe (07 §7.5, Laufzeit T3).
-    #[allow(clippy::type_complexity)]
+    /// Sichtbare Attribute einer Maske mit „Füllung und Pinselstrich anzeigen“: (unten, oben). Pfad:
+    /// Füllung (mit weicher Kante, Farbalpha, Verlauf, Textur) unten, Strich oben. Andere
+    /// Maskenelemente (Bitmap, Gruppe): das ganze Element unten (re 26 §3.2).
+    fn mask_attr_layers(&self, doc: &Document, me: &Arc<Element>, st: &State, rep: &mut RenderReport) -> (Option<RgbaImage>, Option<RgbaImage>) {
+        match &me.kind {
+            ElementKind::Path(p) => {
+                if !self.options.rasterize {
+                    rep.miss("GRPv:mask");
+                    return (None, None);
+                }
+                let vp = convert::vector_path(p, &st.map);
+                let fill = vp.fill.is_some().then(|| fp_vector::VectorPath { stroke: None, ..vp.clone() });
+                let stroke = vp.stroke.is_some().then(|| fp_vector::VectorPath { fill: None, ..vp.clone() });
+                let layer = |v: Option<fp_vector::VectorPath>| v.and_then(|v| fp_vector::render_path_layer(&v)).map(|l| l.image).filter(|i| !i.is_empty());
+                (layer(fill), layer(stroke))
+            }
+            _ => (self.look(doc, me, st, rep).map(|l| (*l.image).clone()), None),
+        }
+    }
+
+    /// Maskenwerte (Grenzen, Breite, Daten) einer Maskengruppe (07 §7.5, Laufzeit T3; re 26 §3.2).
+    /// Pfad: Fülldeckung der Geometrie (Farbe, Farbalpha und Strich zählen nicht); die weiche Kante
+    /// wirkt nur ohne „anzeigen“ (`show`), sonst beschneidet die Geometrie mit Kantenglättung.
+    #[allow(clippy::type_complexity, clippy::too_many_arguments)]
     fn mask_values(
         &self,
         doc: &Document,
         _group: &Element,
         g: &fp_model::GroupElem,
         me: &Arc<Element>,
+        show: bool,
         st: &State,
         rep: &mut RenderReport,
     ) -> Option<(IRect, usize, Vec<u8>)> {
-        let alpha_attrs = g.mask_flags.hide_attrs;
+        // Graustufen nur bei Bitmapmasken (`MNAb`); Pfadumriss nimmt das Alpha (re 26 §3.2)
+        let gray = g.kind == GroupKind::BitmapMask && g.mask_flags.hide_attrs;
         let img: Option<RgbaImage> = match (&me.kind, g.kind) {
             (ElementKind::Path(p), GroupKind::VectorMask) | (ElementKind::Path(p), GroupKind::BitmapMask) => {
                 if !self.options.rasterize {
                     rep.miss("GRPv:mask");
                     return None;
                 }
-                let vp = convert::vector_path(p, &st.map);
-                let vp = if alpha_attrs { vp } else { convert::fill_only(vp) };
+                let mut vp = convert::fill_only(convert::vector_path(p, &st.map));
+                if show && let Some(f) = &mut vp.fill
+                    && matches!(f.edge, fp_vector::FillEdge::Feather(_))
+                {
+                    f.edge = fp_vector::FillEdge::AntiAliased;
+                }
                 fp_vector::render_path_layer(&vp).map(|l| l.image)
             }
             (ElementKind::Bitmap(b), _) => {
                 let src = b.effect_result.as_ref().and_then(|r| convert::image_of_node(r)).or_else(|| convert::image_of(&b.image));
                 let src = src.and_then(|i| self.place_bitmap(&i, &st.map, rep));
                 src.map(|mut i| {
-                    if alpha_attrs {
+                    if gray {
                         for p in i.data_mut() {
                             let lum = (p[0] as u32 * 299 + p[1] as u32 * 587 + p[2] as u32 * 114) / 1000;
                             p[3] = ((p[3] as u32 * (255 - lum) + 127) / 255) as u8;

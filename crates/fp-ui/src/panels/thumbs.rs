@@ -135,21 +135,33 @@ pub fn element_thumb(ctx: &Context, st: &AppState, doc: DocId, generation: u64, 
 pub fn mask_thumb(ctx: &Context, st: &AppState, doc: DocId, d: &Arc<Document>, group: &fp_model::Element, mask: &Arc<Element>, size: u32) -> Option<TextureHandle> {
     let invert = matches!(&group.kind, fp_model::ElementKind::Group(g) if g.kind == fp_model::GroupKind::BitmapMask && g.mask_flags.hide_attrs)
         && matches!(mask.kind, fp_model::ElementKind::Bitmap(_));
-    if !invert {
+    // Vektormaske (Pfadumriss): Form weiß auf Schwarz wie im Original (N35, Nutzerbild 15)
+    let shape = matches!(&group.kind, fp_model::ElementKind::Group(g) if g.kind == fp_model::GroupKind::VectorMask);
+    if !invert && !shape {
         return element_thumb(ctx, st, doc, 0, d, mask, size);
     }
     let r = Arc::clone(&st.renderer);
     let frame = st.session.document(doc).map(|x| x.frame).unwrap_or(0);
-    get(ctx, st, (doc.0, mask.id.0 | MASK_INV, size), (Arc::as_ptr(mask) as usize as u64) ^ (frame as u64), || {
+    let bit = if shape { MASK_SHAPE } else { MASK_INV };
+    get(ctx, st, (doc.0, mask.id.0 | bit, size), (Arc::as_ptr(mask) as usize as u64) ^ (frame as u64), || {
         let mut img = r.render_element(d, mask, &fp_render::PointMap::identity(), frame).image;
         for p in img.data_mut() {
-            p[0] = 255 - p[0];
-            p[1] = 255 - p[1];
-            p[2] = 255 - p[2];
+            if shape {
+                p[0] = 255;
+                p[1] = 255;
+                p[2] = 255;
+            } else {
+                p[0] = 255 - p[0];
+                p[1] = 255 - p[1];
+                p[2] = 255 - p[2];
+            }
         }
         Some(img)
     })
 }
+
+/// Schlüsselbit der Formminiaturen von Vektormasken.
+const MASK_SHAPE: u64 = 1 << 60;
 
 /// Schlüsselbit der invertierten Maskenminiaturen.
 const MASK_INV: u64 = 1 << 61;

@@ -340,7 +340,19 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                     let mask_thumb = e.masked_single().map(|(_, m)| Arc::clone(m));
                     let thumb = match &mask_thumb {
                         Some(m) if tpx > 0.0 => {
-                            let mt = Rect::from_min_size(pos2(thumb.right() + 6.0, thumb.top()), thumb.size());
+                            // verknüpfte Maske: Kettensymbol zwischen den Miniaturen wie im Original (N35)
+                            let linked = matches!(&e.kind, ElementKind::Group(g) if g.mask_flags.linked);
+                            let gap = if linked { 12.0 } else { 6.0 };
+                            let mt = Rect::from_min_size(pos2(thumb.right() + gap, thumb.top()), thumb.size());
+                            if linked && ui.is_rect_visible(mt) {
+                                let cx = thumb.right() + gap / 2.0;
+                                let cy = thumb.center().y;
+                                let s = Stroke::new(1.0, c.icon_fg);
+                                for dy in [-2.5f32, 2.5] {
+                                    let link = Rect::from_center_size(pos2(cx, cy + dy), vec2(4.0, 7.0));
+                                    ui.painter().rect_stroke(link, 2.0, s, StrokeKind::Inside);
+                                }
+                            }
                             if ui.is_rect_visible(mt) {
                                 ui.painter().rect_filled(mt, 0.0, Color32::BLACK);
                                 if let Some(tex) = thumbs::mask_thumb(ui.ctx(), st, doc_id, &doc, &e, m, (tpx as u32 * 2).max(16)) {

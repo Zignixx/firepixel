@@ -1049,6 +1049,14 @@ fn hit_depth(doc: &Document, e: &Element, p: Point, geo: &dyn GeometryOps, opt: 
             {
                 return false;
             }
+            // „Füllung und Pinselstrich anzeigen“: auch die sichtbare Maske trifft (re 26 §3.1)
+            if g.kind == fp_model::element::GroupKind::VectorMask
+                && g.mask_flags.enabled
+                && !g.mask_flags.hide_attrs
+                && g.effective_mask().is_some_and(|m| hit_depth(doc, m, p, geo, opt, depth + 1))
+            {
+                return true;
+            }
             g.children.iter().any(|c| hit_depth(doc, c, p, geo, opt, depth + 1))
         }
         ElementKind::CompoundShape(c) => match &c.result {
