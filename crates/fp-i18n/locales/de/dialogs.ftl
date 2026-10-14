@@ -661,6 +661,13 @@ dlg-pm-menu-y = Menü Y:
 dlg-pm-sub-x = Untermenü X:
 dlg-pm-sub-y = Untermenü Y:
 dlg-pm-sub-relative = Untermenü relativ zum Menüeintrag
+dlg-pm-col-text = Text
+dlg-pm-col-link = Hyperlink
+dlg-pm-col-target = Ziel
+dlg-pm-add = Menü hinzufügen
+dlg-pm-delete = Menü löschen
+dlg-pm-indent = Menü einrücken
+dlg-pm-outdent = Menü ausrücken
 ## Dialoge zu Menübefehlen (menu_dialogs.rs)
 dlg-filter-all-readable = Alle lesbaren Formate
 dlg-filter-all-files = Alle Dateien (*.*)

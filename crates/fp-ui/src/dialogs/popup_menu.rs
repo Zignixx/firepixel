@@ -85,7 +85,7 @@ impl PopupEditor {
         } else {
             let mut menu = Map::new();
             menu.insert("vertical".into(), json!(true));
-            Some(PopupEditor { edit, tab: 0, rows: vec![Row { level: 0, text: fp_i18n::tr!("dlg-pm-default-item", n = 1), url: String::new(), target: String::new() }], selected: Some(0), menu })
+            Some(PopupEditor { edit, tab: 0, rows: vec![Row { level: 0, text: String::new(), url: String::new(), target: String::new() }], selected: Some(0), menu })
         }
     }
 
@@ -107,6 +107,119 @@ impl PopupEditor {
     }
 }
 
+/// Zeilenhöhe der Inhaltstabelle.
+const ROW_H: f32 = 20.0;
+
+/// Reiter „Inhalt“ wie im Original (TW-39): Werkzeugleiste + / − │ Einrücken / Ausrücken, darunter
+/// die Tabelle mit den Spalten Text, Hyperlink und Ziel. Die gewählte Zeile ist direkt
+/// bearbeitbar, ein Klick auf eine andere Zeile wählt sie.
+fn content_page(ui: &mut egui::Ui, d: &mut PopupEditor, area: Rect, cols: &[String]) {
+    let theme = Theme::current(ui.ctx());
+    let c = &theme.colors;
+    let inner = area.shrink(4.0);
+    // Werkzeugleiste
+    let bar = Rect::from_min_size(inner.min, vec2(inner.width(), 30.0));
+    ui.painter().rect_filled(bar, 0.0, c.line_light);
+    let btn = |k: f32, gap: f32| Rect::from_min_size(pos2(bar.left() + 6.0 + k * 24.0 + gap, bar.top() + 4.0), vec2(22.0, 22.0));
+    let sel = d.selected.filter(|i| *i < d.rows.len());
+    let tips = tl(&["dlg-pm-add", "dlg-pm-delete", "dlg-pm-indent", "dlg-pm-outdent"]);
+    let mut clicked = [false; 4];
+    let enabled = [true, sel.is_some() && d.rows.len() > 1, sel.is_some_and(|i| i > 0 && d.rows[i].level <= d.rows[i - 1].level), sel.is_some_and(|i| d.rows[i].level > 0)];
+    for (k, (glyph, gap)) in [("+", 0.0), ("−", 0.0), ("→", 14.0), ("←", 14.0)].iter().enumerate() {
+        // Werkzeugknopf mit Zeichen; Name für Barrierefreiheit = Kurzinfo („Menü hinzufügen“ …)
+        let r = btn(k as f32, *gap);
+        let en = enabled[k];
+        let resp = ui.interact(r, egui::Id::new(("pm-tool", k)), if en { Sense::click() } else { Sense::hover() });
+        resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, en, tips[k].as_str()));
+        let hot = en && resp.hovered();
+        let bg = if en && resp.is_pointer_button_down_on() { c.button_pressed_bg } else if hot { c.button_hover_bg } else { c.button_bg };
+        ui.painter().rect_filled(r, 2.0, bg);
+        ui.painter().rect_stroke(r, 2.0, Stroke::new(1.0, if hot { c.button_hover_border } else { c.button_border }), StrokeKind::Inside);
+        ui.painter().text(r.center(), Align2::CENTER_CENTER, *glyph, theme.bold(theme.fonts.ui), if en { c.text } else { c.text_disabled });
+        clicked[k] = en && resp.clicked();
+        resp.on_hover_text(tips[k].as_str());
+    }
+    if clicked[0] {
+        let level = sel.and_then(|i| d.rows.get(i)).map(|r| r.level).unwrap_or(0);
+        let at = sel.map(|i| i + 1).unwrap_or(d.rows.len());
+        d.rows.insert(at, Row { level, text: String::new(), url: String::new(), target: String::new() });
+        d.selected = Some(at);
+    }
+    if clicked[1]
+        && let Some(i) = sel
+    {
+        d.rows.remove(i);
+        d.selected = Some(i.min(d.rows.len().saturating_sub(1)));
+    }
+    if clicked[2]
+        && let Some(i) = sel
+    {
+        d.rows[i].level += 1;
+    }
+    if clicked[3]
+        && let Some(i) = sel
+    {
+        d.rows[i].level -= 1;
+    }
+    // Tabelle
+    let table = Rect::from_min_max(pos2(inner.left(), bar.bottom() + 2.0), inner.max);
+    ui.painter().rect_filled(table, 0.0, c.list_bg);
+    ui.painter().rect_stroke(table, 0.0, Stroke::new(1.0, c.list_border), StrokeKind::Inside);
+    let tw = table.width() - 2.0;
+    let widths = [(tw * 0.28).max(super::text_w(ui.ctx(), &cols[0]) + 12.0), (tw * 0.34).max(super::text_w(ui.ctx(), &cols[1]) + 12.0), (tw * 0.20).max(super::text_w(ui.ctx(), &cols[2]) + 12.0)];
+    let mut xs = [table.left() + 1.0; 4];
+    for k in 0..3 {
+        xs[k + 1] = xs[k] + widths[k];
+    }
+    let grid = Stroke::new(1.0, c.line_mid);
+    let head = Rect::from_min_max(pos2(table.left() + 1.0, table.top() + 1.0), pos2(xs[3], table.top() + 1.0 + 26.0));
+    for k in 0..3 {
+        let cr = Rect::from_min_max(pos2(xs[k], head.top()), pos2(xs[k + 1], head.bottom()));
+        ui.painter().text(pos2(cr.left() + 6.0, cr.top() + 10.0), Align2::LEFT_CENTER, cols[k].as_str(), theme.ui_font(), c.text);
+        ui.painter().vline(cr.right() - 0.5, cr.y_range(), grid);
+    }
+    ui.painter().hline(head.x_range(), head.bottom() - 0.5, grid);
+    let rows_top = head.bottom();
+    let max_rows = (((table.bottom() - 1.0 - rows_top) / ROW_H).floor() as usize).max(1);
+    let first = sel.map(|i| (i + 1).saturating_sub(max_rows)).unwrap_or(0);
+    let clip = ui.clip_rect();
+    ui.set_clip_rect(table.shrink(1.0).intersect(clip));
+    for (vis, i) in (first..d.rows.len()).take(max_rows).enumerate() {
+        let y = rows_top + vis as f32 * ROW_H;
+        let rr = Rect::from_min_max(pos2(xs[0], y), pos2(xs[3], y + ROW_H));
+        let is_sel = sel == Some(i);
+        if !is_sel {
+            let resp = ui.interact(rr, egui::Id::new(("pm-row", i)), Sense::click());
+            if resp.clicked() {
+                d.selected = Some(i);
+            }
+        }
+        for k in 0..3 {
+            let indent = if k == 0 { d.rows[i].level as f32 * 12.0 } else { 0.0 };
+            let cr = Rect::from_min_max(pos2(xs[k] + 1.0 + indent, y + 1.0), pos2(xs[k + 1] - 1.0, y + ROW_H - 1.0));
+            let cur = match k {
+                0 => d.rows[i].text.clone(),
+                1 => d.rows[i].url.clone(),
+                _ => d.rows[i].target.clone(),
+            };
+            if is_sel {
+                if let Some(v) = fields::text(ui, ("pm-cell", k, i), cr, &cur, true) {
+                    match k {
+                        0 => d.rows[i].text = v,
+                        1 => d.rows[i].url = v,
+                        _ => d.rows[i].target = v,
+                    }
+                }
+            } else {
+                let _ = crate::ui_kit::paint_text_fit(ui.painter(), cr.shrink2(vec2(4.0, 0.0)), &cur, theme.ui_font(), c.text);
+            }
+            ui.painter().vline(xs[k + 1] - 0.5, y..=y + ROW_H, grid);
+        }
+        ui.painter().hline(xs[0]..=xs[3], y + ROW_H - 0.5, grid);
+    }
+    ui.set_clip_rect(clip);
+}
+
 /// Zeigt den Editor.
 pub fn show(ctx: &egui::Context, st: &mut AppState) {
     let Some(mut d) = st.dialogs.popup_editor.clone() else { return };
@@ -114,7 +227,7 @@ pub fn show(ctx: &egui::Context, st: &mut AppState) {
     let title = if d.edit { t("dlg-pm-title-edit") } else { t("dlg-pm-title") };
     // Texte der aktuellen Sprache; Spalten wachsen mit (Deutsch: Lage wie bisher)
     let tabs = tl(&["dlg-pm-tab-content", "dlg-pm-tab-appearance", "dlg-pm-tab-advanced", "dlg-pm-tab-position"]);
-    let l0 = tl(&["dlg-pm-text", "dlg-pm-link", "dlg-pm-target"]);
+    let l0 = tl(&["dlg-pm-col-text", "dlg-pm-col-link", "dlg-pm-col-target"]);
     let l1 = tl(&["dlg-pm-orientation", "dlg-pm-text-align", "dlg-pm-text-up", "dlg-pm-text-over", "dlg-pm-highlight"]);
     let radios = tl(&["dlg-pm-vertical", "dlg-pm-horizontal"]);
     let aligns = tl(&["dlg-pm-align-left", "dlg-pm-align-center", "dlg-pm-align-right"]);
@@ -129,7 +242,7 @@ pub fn show(ctx: &egui::Context, st: &mut AppState) {
     let rw: Vec<f32> = radios.iter().map(|r| (super::text_w(ctx, r) + 20.0).max(110.0)).collect();
     let acw = super::combo_fit_w(ctx, &refs(&aligns), 120.0);
     let bold_w = (18.0 + super::text_w(ctx, &bold_l)).max(80.0);
-    let inner_w = (64.0 + dx0 + 300.0)
+    let inner_w = (3.0 * dx0 + 420.0)
         .max(110.0 + dx1 + rw[0] + 10.0 + rw[1])
         .max(110.0 + dx1 + acw + 20.0 + bold_w)
         .max(160.0 + dx2 + 60.0)
@@ -139,90 +252,41 @@ pub fn show(ctx: &egui::Context, st: &mut AppState) {
         let theme = Theme::current(ui.ctx());
         let c = &theme.colors;
         let o = body.min + vec2(12.0, 10.0);
-        // Registerkarten
+        // Registerkarten wie im Original (TW-39): echte Reiter links, so breit wie ihr Text; der
+        // aktive Reiter ist höher und geht in die Seite über
+        let area = Rect::from_min_max(o + vec2(-8.0, 22.0), pos2(body.right() - 4.0, body.bottom() - 44.0));
+        let mut tx = area.left() + 2.0;
+        let mut active_tab = None;
         for (k, name) in tabs.iter().enumerate() {
-            let tr = Rect::from_min_size(o + vec2(k as f32 * (tab_w + 4.0), 0.0), vec2(tab_w, 22.0));
+            let w = super::text_w(ui.ctx(), name) + 14.0;
+            let on = d.tab == k;
+            let tr = if on { Rect::from_min_max(pos2(tx - 2.0, area.top() - 22.0), pos2(tx + w + 2.0, area.top() + 1.0)) } else { Rect::from_min_max(pos2(tx, area.top() - 19.0), pos2(tx + w, area.top())) };
             let resp = ui.interact(tr, egui::Id::new(("pm-tab", k)), Sense::click());
-            ui.painter().rect_filled(tr, 0.0, if d.tab == k { c.list_bg } else { c.frame_bg });
-            ui.painter().rect_stroke(tr, 0.0, Stroke::new(1.0, c.line_mid), StrokeKind::Inside);
-            ui.painter().text(tr.center(), Align2::CENTER_CENTER, name.as_str(), theme.ui_font(), c.text);
+            resp.widget_info(|| egui::WidgetInfo::selected(egui::WidgetType::SelectableLabel, true, on, name.as_str()));
+            if !on {
+                ui.painter().rect_filled(tr, 0.0, if resp.hovered() { c.tab_hover_bg } else { c.line_light });
+                ui.painter().rect_stroke(tr, 0.0, Stroke::new(1.0, c.line_mid), StrokeKind::Inside);
+                ui.painter().text(tr.center(), Align2::CENTER_CENTER, name.as_str(), theme.ui_font(), c.text);
+            } else {
+                active_tab = Some((tr, name.as_str()));
+            }
             if resp.clicked() {
                 d.tab = k;
             }
+            tx += w;
         }
-        let area = Rect::from_min_max(o + vec2(0.0, 30.0), pos2(body.right() - 12.0, body.bottom() - 44.0));
         ui.painter().rect_stroke(area, 0.0, Stroke::new(1.0, c.line_mid), StrokeKind::Inside);
+        if let Some((tr, name)) = active_tab {
+            ui.painter().rect_filled(Rect::from_min_max(tr.min + vec2(1.0, 1.0), pos2(tr.right() - 1.0, area.top() + 1.0)), 0.0, c.frame_bg);
+            ui.painter().text(tr.center() - vec2(0.0, 1.0), Align2::CENTER_CENTER, name, theme.ui_font(), c.text);
+            let s = Stroke::new(1.0, c.line_mid);
+            ui.painter().vline(tr.left() + 0.5, tr.top()..=area.top(), s);
+            ui.painter().vline(tr.right() - 0.5, tr.top()..=area.top(), s);
+            ui.painter().hline(tr.left()..=tr.right(), tr.top() + 0.5, s);
+        }
         let a = area.min + vec2(10.0, 10.0);
         match d.tab {
-            0 => {
-                // Liste
-                let list = Rect::from_min_size(a, vec2(area.width() - 20.0, 180.0));
-                let inner = fields::list_box(ui, list);
-                let mut child = ui.new_child(egui::UiBuilder::new().max_rect(inner));
-                child.spacing_mut().item_spacing = vec2(0.0, 0.0);
-                for (i, row) in d.rows.iter().enumerate() {
-                    let label = format!("{}{}    {}    {}", "    ".repeat(row.level), row.text, row.url, row.target);
-                    if fields::list_item(&mut child, &label, d.selected == Some(i)).clicked() {
-                        d.selected = Some(i);
-                    }
-                }
-                let by = list.bottom() + 6.0;
-                let btn = |k: f32| Rect::from_min_size(pos2(a.x + k * 34.0, by), vec2(30.0, 22.0));
-                if fields::button(ui, "pm-add", btn(0.0), "+", true) {
-                    let level = d.selected.and_then(|i| d.rows.get(i)).map(|r| r.level).unwrap_or(0);
-                    let at = d.selected.map(|i| i + 1).unwrap_or(d.rows.len());
-                    d.rows.insert(at, Row { level, text: fp_i18n::tr!("dlg-pm-default-item", n = d.rows.len() + 1), url: String::new(), target: String::new() });
-                    d.selected = Some(at);
-                }
-                if fields::button(ui, "pm-del", btn(1.0), "−", d.selected.is_some() && d.rows.len() > 1)
-                    && let Some(i) = d.selected
-                {
-                    d.rows.remove(i);
-                    d.selected = Some(i.min(d.rows.len().saturating_sub(1)));
-                }
-                if fields::button(ui, "pm-in", btn(2.0), "→", d.selected.is_some_and(|i| i > 0 && d.rows[i].level <= d.rows[i - 1].level))
-                    && let Some(i) = d.selected
-                {
-                    d.rows[i].level += 1;
-                }
-                if fields::button(ui, "pm-out", btn(3.0), "←", d.selected.is_some_and(|i| d.rows[i].level > 0))
-                    && let Some(i) = d.selected
-                {
-                    d.rows[i].level -= 1;
-                }
-                if fields::button(ui, "pm-up", btn(4.0), "↑", d.selected.is_some_and(|i| i > 0))
-                    && let Some(i) = d.selected
-                {
-                    d.rows.swap(i, i - 1);
-                    d.selected = Some(i - 1);
-                }
-                if fields::button(ui, "pm-down", btn(5.0), "↓", d.selected.is_some_and(|i| i + 1 < d.rows.len()))
-                    && let Some(i) = d.selected
-                {
-                    d.rows.swap(i, i + 1);
-                    d.selected = Some(i + 1);
-                }
-                if let Some(i) = d.selected.filter(|i| *i < d.rows.len()) {
-                    let fy = by + 32.0;
-                    for (k, (label, key)) in [(&l0[0], 0), (&l0[1], 1), (&l0[2], 2)].iter().enumerate() {
-                        let y = fy + k as f32 * 26.0;
-                        super::fit_label(ui, Rect::from_min_size(pos2(a.x, y), vec2(60.0 + dx0, 20.0)), label, true);
-                        let cur = match key {
-                            0 => d.rows[i].text.clone(),
-                            1 => d.rows[i].url.clone(),
-                            _ => d.rows[i].target.clone(),
-                        };
-                        if let Some(t) = fields::text(ui, ("pm-f", *key, i), Rect::from_min_size(pos2(a.x + 64.0 + dx0, y), vec2(300.0, 20.0)), &cur, true) {
-                            match key {
-                                0 => d.rows[i].text = t,
-                                1 => d.rows[i].url = t,
-                                _ => d.rows[i].target = t,
-                            }
-                        }
-                    }
-                }
-            }
-            1 => {
+            0 => content_page(ui, &mut d, area, &l0),            1 => {
                 let vertical = d.flag("vertical", true);
                 let cx = 110.0 + dx1;
                 super::fit_label(ui, Rect::from_min_size(a, vec2(100.0 + dx1, 20.0)), &l1[0], true);

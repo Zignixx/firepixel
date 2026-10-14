@@ -56,7 +56,14 @@ pub fn show_document_area(ui: &mut Ui, st: &mut AppState) {
     let view_bar = Rect::from_min_size(pos2(full.left(), tabs.bottom()), vec2(full.width(), m.view_bar_height));
     view_bar_ui(ui, st, view_bar);
     let footer = Rect::from_min_max(pos2(full.left(), full.bottom() - m.footer_height), full.max);
-    let canvas = Rect::from_min_max(pos2(full.left(), view_bar.bottom()), pos2(full.right(), footer.top()));
+    // TW-36: Symbolbearbeitung im Fenster des Dokuments mit Pfadleiste (Zurück · Seite ▸ Symbol)
+    let mut top = view_bar.bottom();
+    if let Some(path) = symbol_path(st) {
+        let bar = Rect::from_min_size(pos2(full.left(), top), vec2(full.width(), SYMBOL_BAR_H));
+        symbol_bar_ui(ui, st, bar, &path);
+        top = bar.bottom();
+    }
+    let canvas = Rect::from_min_max(pos2(full.left(), top), pos2(full.right(), footer.top()));
     let preview = st.session.active().is_some_and(|d| d.view.preview_mode != PreviewMode::Original);
     if preview {
         // Vorschau/2-fach/4-fach: Exportbild (nicht bearbeitbar); die Originalkachel ist die Leinwand
@@ -65,6 +72,50 @@ pub fn show_document_area(ui: &mut Ui, st: &mut AppState) {
         canvas_ui(ui, st, canvas);
     }
     footer_ui(ui, st, footer);
+}
+
+// ---------------------------------------------------------------------- Symbolbearbeitung
+
+/// Höhe der Pfadleiste im Symbol-Bearbeitungsmodus.
+pub const SYMBOL_BAR_H: f32 = 24.0;
+
+/// Pfad der aktiven Symbol-Bearbeitungsansicht: Seitenname des Dokuments und Symbolname
+/// (`None`, wenn das aktive Dokument keine Bearbeitungsansicht ist).
+pub fn symbol_path(st: &AppState) -> Option<(String, String)> {
+    let d = st.session.active()?;
+    let link = d.symbol_edit.as_ref()?;
+    let parent = st.session.document(link.parent)?;
+    let page = parent.doc.pages.get(link.page).map(|p| p.display_name().to_string()).filter(|n| !n.is_empty()).unwrap_or_else(|| fp_i18n::tr!("ui-page-default-name", n = link.page + 1));
+    let symbol = parent.doc.symbol_by_id(link.symbol).map(|(_, s)| s.name.clone()).unwrap_or_default();
+    Some((page, symbol))
+}
+
+/// Dokumente, deren Reiter gerade eine Symbol-Bearbeitungsansicht vertritt (Original: dasselbe
+/// Fenster, Titel „<Dokument> (Symbol)“).
+pub fn hidden_by_symbol_edit(st: &AppState) -> Vec<fp_engine::DocId> {
+    st.session.documents().iter().filter_map(|d| d.symbol_edit.as_ref().map(|l| l.parent)).collect()
+}
+
+/// Pfadleiste: Knopf „Zurück“ (beendet die Bearbeitung) und „Seite ▸ Symbol“.
+fn symbol_bar_ui(ui: &mut Ui, st: &mut AppState, rect: Rect, path: &(String, String)) {
+    let theme = Theme::current(ui.ctx());
+    let c = &theme.colors;
+    ui.painter().rect_filled(rect, 0.0, c.frame_bg);
+    ui.painter().hline(rect.x_range(), rect.bottom() - 0.5, Stroke::new(1.0, c.line_mid));
+    let font = theme.ui_font();
+    let back = fp_i18n::t("ui-symbol-edit-back");
+    let bw = widgets::text_width(ui, &back, &font) + 26.0;
+    let br = Rect::from_min_size(pos2(rect.left() + 4.0, rect.top() + 2.0), vec2(bw, rect.height() - 4.0));
+    let resp = ui.interact(br, Id::new("symbol-edit-back"), Sense::click());
+    widgets::button_frame(ui.painter(), br, &resp, ButtonLook { selected: false, enabled: true, group: Some(ToolGroup::View) }, &theme);
+    ui.painter().text(pos2(br.left() + 10.0, br.center().y), Align2::CENTER_CENTER, "←", font.clone(), c.text);
+    ui.painter().text(pos2(br.left() + 20.0, br.center().y), Align2::LEFT_CENTER, &back, font.clone(), c.text);
+    crate::ui_kit::icon_button_info(&resp, true, &back, None);
+    if resp.on_hover_text(fp_i18n::t("ui-symbol-edit-back.tooltip")).clicked() {
+        st.push(Action::Run("modify.symbol.exitEdit".into(), json!({})));
+    }
+    let label = format!("{}  ▸  {}", path.0, path.1);
+    widgets::text_clipped(ui.painter(), pos2(br.right() + 10.0, rect.center().y), Align2::LEFT_CENTER, &label, font, c.text, (rect.right() - br.right() - 16.0).max(0.0));
 }
 
 // ---------------------------------------------------------------------- Reiter
@@ -100,7 +151,16 @@ fn doc_tabs(ui: &mut Ui, st: &mut AppState, rect: Rect) {
     // BATCH-2: Reiter „Batch“ links; ist das Studio vorn, ist kein Dokumentreiter aktiv
     let rect = crate::batch::doc_tab(ui, st, rect);
     let active = if crate::batch::is_front(st) { None } else { st.session.active_id() };
-    let docs: Vec<(fp_engine::DocId, String, bool)> = st.session.documents().iter().map(|d| (d.id, d.title.clone(), d.is_dirty())).collect();
+    // TW-36: Ein Dokument in Symbolbearbeitung hat keinen eigenen Reiter; der Reiter der Ansicht
+    // zeigt „<Dokument> (Symbol)“ und den Änderungsstern des Dokuments.
+    let hidden = hidden_by_symbol_edit(st);
+    let docs: Vec<(fp_engine::DocId, String, bool)> = st
+        .session
+        .documents()
+        .iter()
+        .filter(|d| !hidden.contains(&d.id))
+        .map(|d| (d.id, d.title.clone(), d.is_dirty() || d.symbol_edit.as_ref().and_then(|l| st.session.document(l.parent)).is_some_and(|p| p.is_dirty())))
+        .collect();
     let font = theme.bold(theme.fonts.ui);
     // Überlauf wie im Original: passen nicht alle Reiter, steht rechts „»“ mit „Weitere Dokumente“;
     // der aktive Reiter bleibt immer sichtbar.

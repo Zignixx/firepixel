@@ -51,6 +51,8 @@ ui-view-4up = 4-fach
     .tooltip = Vierfach-Vorschau
 ui-page-default-name = Seite { $n }
 ui-page-nav = Seitenauswahl ändern
+ui-symbol-edit-back = Zurück
+    .tooltip = Symbolbearbeitung beenden und zum Dokument zurückkehren
 
 ## Vorschau (2-fach/4-fach)
 ui-preview-original = Original

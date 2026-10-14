@@ -42,9 +42,13 @@ pub fn begin_edit(s: &mut Session, symbol: SymbolId, in_place: bool, instance: O
     let page = d.page;
     let (_, sym) = d.doc.symbol_by_id(symbol).ok_or_else(|| EngineError::NotFound(fp_i18n::tr!("err-nf-symbol-id", id = symbol.0.to_string())))?;
     let sym = Arc::clone(sym);
-    let b = symbol_bounds(&d.doc, &sym).unwrap_or(fp_geom::Rect::new(-50.0, -50.0, 50.0, 50.0));
-    let (l, t) = (b.left.floor(), b.top.floor());
-    let (w, h) = ((b.right.ceil() - l).max(1.0), (b.bottom.ceil() - t).max(1.0));
+    // TW-36: Die Ansicht hat die Größe der Dokumentseite (Original: `dom` 800 × 600 auch für ein
+    // leeres Symbol), mittig um den Inhalt bzw. den Bezugspunkt 0,0; größerer Inhalt vergrößert sie.
+    let (pw, ph) = d.doc.pages.get(page).map(|p| (p.canvas.width, p.canvas.height)).unwrap_or((100.0, 100.0));
+    let b = symbol_bounds(&d.doc, &sym).unwrap_or(fp_geom::Rect::new(0.0, 0.0, 0.0, 0.0));
+    let (w, h) = (pw.max(b.right.ceil() - b.left.floor()).max(1.0).ceil(), ph.max(b.bottom.ceil() - b.top.floor()).max(1.0).ceil());
+    let (l, t) = (((b.left + b.right) / 2.0 - w / 2.0).floor(), ((b.top + b.bottom) / 2.0 - h / 2.0).floor());
+    let parent_title = d.title.clone();
     let mut doc = Document::new(w, h, fp_color::Argb(0x00FF_FFFF));
     doc.symbols = d.doc.symbols.clone();
     doc.styles = d.doc.styles.clone();
@@ -68,7 +72,8 @@ pub fn begin_edit(s: &mut Session, symbol: SymbolId, in_place: bool, instance: O
     }
     let id = s.add_document(doc, None);
     let st = s.doc_mut()?;
-    st.title = format!("{} (Symbol)", sym.name);
+    // TW-36: Titel wie im Original „<Dokument> (Symbol)“ (Bearbeitung im Fenster des Dokuments)
+    st.title = format!("{parent_title} (Symbol)");
     st.symbol_edit = Some(SymbolEdit { parent, symbol, in_place, page, instance: instance.map(|x| x.0), transform: instance.map(|x| x.1) });
     Ok(id)
 }

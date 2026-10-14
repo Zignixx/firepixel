@@ -51,6 +51,8 @@ ui-view-4up = 4-Up
     .tooltip = 4-Up preview
 ui-page-default-name = Page { $n }
 ui-page-nav = Change page
+ui-symbol-edit-back = Back
+    .tooltip = Finish editing the symbol and return to the document
 
 ## Preview (2-Up/4-Up)
 ui-preview-original = Original
