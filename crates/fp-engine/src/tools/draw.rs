@@ -440,6 +440,22 @@ pub struct PenTool {
     resume: Option<usize>,
     /// Alt-Ziehen auf dem soeben gesetzten Punkt: nur dessen Ausgangshenkel ändern (PAR 09/09).
     edit_last: bool,
+    /// Alt-Ziehen am End- bzw. Anfangspunkt eines gewählten Pfads (Fortsetzen): beide Henkel
+    /// symmetrisch wie ein glatter Punkt (B-2b BA-003: 400,200 → 430,200 ergibt 370 · 430).
+    smooth_drag: bool,
+    /// Alt-Ziehen an einem mittleren Punkt des gewählten Pfads: zieht dort einen glatten Punkt auf,
+    /// statt ihn zu löschen (B-2b BA-003: 300,160 → 330,160 ergibt 270 · 330).
+    alt_point: Option<AltPoint>,
+}
+
+/// Laufendes Alt-Ziehen an einem vorhandenen Punkt (BA-003).
+#[derive(Clone, Debug)]
+struct AltPoint {
+    id: ElementId,
+    contour: usize,
+    node: usize,
+    contours: Vec<Contour>,
+    moved: bool,
 }
 
 /// Biegt ein Henkel des Knotens das Segment (liegt nicht auf der Geraden zum Nachbarpunkt)?
@@ -647,6 +663,8 @@ impl ToolMachine for PenTool {
             ToolInput::Pointer { kind: PointerKind::Down, pos } => {
                 self.button = true;
                 self.edit_last = false;
+                self.smooth_drag = false;
+                self.alt_point = None;
                 if self.nodes.len() >= 2 && dist(*pos, self.nodes[0].0) <= tol {
                     self.closing = true;
                     return ToolResponse { cursor: Cursor::PenClose, ..ToolResponse::default() };
@@ -664,8 +682,20 @@ impl ToolMachine for PenTool {
                     match Self::pen_hit(ctx, *pos) {
                         Some(PenHit::End { id, contour, at_start }) => {
                             if self.start_continue(ctx, id, contour, at_start) {
+                                // Alt-Ziehen am Endpunkt: glatter Punkt, beide Henkel (BA-003)
+                                self.smooth_drag = ev.mods.alt;
                                 let cmds = if ctx.selection.elements == [id] { Vec::new() } else { vec![pick_select(id)] };
                                 return ToolResponse { commands: cmds, overlay: self.overlay(), cursor: Cursor::PenContinue, ..ToolResponse::default() };
+                            }
+                        }
+                        Some(PenHit::Point { id, contour, node }) if ev.mods.alt => {
+                            // Alt-Ziehen am mittleren Punkt: glatten Punkt aufziehen; erst das
+                            // Loslassen entscheidet (ohne Bewegung wie ein Klick, BA-003)
+                            if let Some(e) = docops::element_on_page(ctx.doc, ctx.page, id)
+                                && let ElementKind::Path(pe) = &e.kind
+                            {
+                                self.alt_point = Some(AltPoint { id, contour, node, contours: pe.contours.clone(), moved: false });
+                                return ToolResponse::with_overlay(Vec::new(), Cursor::Pen);
                             }
                         }
                         Some(PenHit::Point { id, contour, node }) => {
@@ -712,6 +742,24 @@ impl ToolMachine for PenTool {
                 ToolResponse::with_overlay(self.overlay(), Cursor::Pen)
             }
             ToolInput::Pointer { kind: PointerKind::Move, pos } => {
+                if self.button
+                    && let Some(ap) = self.alt_point.as_mut()
+                {
+                    let Some(n) = ap.contours.get_mut(ap.contour).and_then(|c| c.nodes.get_mut(ap.node)) else { return ToolResponse::default() };
+                    let a = n.anchor;
+                    let q = if ev.mods.shift { constrain_angle(a, *pos, 45.0) } else { *pos };
+                    if dist(q, a) > 0.5 {
+                        ap.moved = true;
+                    }
+                    if ap.moved {
+                        n.succ = q;
+                        n.pred = Point::new(2.0 * a.x - q.x, 2.0 * a.y - q.y);
+                        n.curve = true;
+                    }
+                    let c = ap.contours[ap.contour].clone();
+                    let ov = vec![Overlay::Path { contours: vec![c.clone()] }, Overlay::PathPoints { contours: vec![c], selected: vec![(0, ap.node)], handles: true }];
+                    return ToolResponse::with_overlay(ov, Cursor::Pen);
+                }
                 if self.button {
                     let idx = if self.closing { 0 } else { self.nodes.len().saturating_sub(1) };
                     if let Some(n) = self.nodes.get_mut(idx) {
@@ -720,6 +768,10 @@ impl ToolMachine for PenTool {
                         if self.edit_last {
                             // nur der Ausgangshenkel, der Eingangshenkel bleibt (PAR 09/09)
                             n.2 = q;
+                        } else if self.smooth_drag {
+                            // Alt am Endpunkt eines gewählten Pfads: glatter Punkt (BA-003)
+                            n.2 = q;
+                            n.1 = Point::new(2.0 * a.x - q.x, 2.0 * a.y - q.y);
                         } else if self.closing {
                             // Schließen mit Ziehen: Eingangshenkel des Startpunkts (gespiegelt)
                             n.1 = Point::new(2.0 * a.x - q.x, 2.0 * a.y - q.y);
@@ -750,6 +802,18 @@ impl ToolMachine for PenTool {
             ToolInput::Pointer { kind: PointerKind::Up, .. } => {
                 self.button = false;
                 self.edit_last = false;
+                self.smooth_drag = false;
+                if let Some(ap) = self.alt_point.take() {
+                    if ap.moved {
+                        return ToolResponse::commit(vec![Invocation::new("path.setContours", json!({"id": ap.id.0, "contours": contours_json(&ap.contours), "step": "pen"}))]);
+                    }
+                    // ohne Bewegung wie ein Klick: Kurvenpunkt → Eckpunkt, Eckpunkt entfernen
+                    let curve = ap.contours.get(ap.contour).is_some_and(|c| is_curve_node(c, ap.node));
+                    if curve && let Some(cs) = Self::corner_contours(ctx, ap.id, ap.contour, ap.node) {
+                        return ToolResponse::commit(vec![Invocation::new("path.setContours", json!({"id": ap.id.0, "contours": contours_json(&cs), "step": "pen"}))]);
+                    }
+                    return ToolResponse::commit(vec![Invocation::new("path.removeNode", json!({"id": ap.id.0, "contour": ap.contour, "node": ap.node, "step": "pen"}))]);
+                }
                 if self.closing {
                     self.resume = None;
                     return self.commit(true, ctx.options);

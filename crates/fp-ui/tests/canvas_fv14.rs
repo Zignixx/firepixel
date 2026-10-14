@@ -10,7 +10,8 @@
 //! - L13: Zauberstab wählt die Bitmap als Objekt; Esc beendet den Bitmapmodus, sie bleibt gewählt.
 //! - L25: Zoomrahmen passt in den Sichtbereich minus 17 px je Richtung ein.
 //! - L7: Strg+Leertaste+Klick zoomt auch, wenn Tasten und Klick im selben Bild ankommen.
-//! - FV-11: Klick auf ein durchsichtiges Pixel einer Bitmap wählt sie (Zeiger, Umschalt, Unterauswahl).
+//! - FV-11 → B-2b BA-007 (neu gemessen): Klick auf ein durchsichtiges Pixel einer Bitmap wählt sie
+//!   **nicht** (Zeiger, Umschalt, Unterauswahl); Ziehen von dort zieht einen Auswahlrahmen auf.
 
 use egui::{Event, Key, Modifiers, PointerButton, Pos2};
 use egui_kittest::Harness;
@@ -305,36 +306,34 @@ fn l25_zoomrahmen_passt_mit_17_px_abzug_ein() {
     assert!((z - 792.0 / 70.0).abs() < 1e-9, "Auswahl einpassen: {z}");
 }
 
-// ------------------------------------------------------------------ FV-11 durchsichtige Pixel
+// ------------------------------------------------------------------ BA-007 durchsichtige Pixel
 
+/// B-2b BA-007 (Mess-Sitzung, ersetzt FV-11): Treffer auf Bitmaps nur an Pixeln mit Alpha > 0.
 #[test]
-fn klick_auf_durchsichtiges_bitmap_pixel_waehlt_die_bitmap() {
+fn klick_auf_durchsichtiges_bitmap_pixel_waehlt_nichts() {
     let mut t = app();
     let (r1, b2) = (t.r1, t.b2);
     let s = ses(&mut t);
     tool(s, ToolId::Pointer);
     click(s, 210.0, 367.0, plain);
-    assert_eq!(sel(s), vec![b2], "Zeiger: Klick in die Lücke wählt B2");
+    assert!(sel(s).is_empty(), "Zeiger: Klick in die Lücke wählt nichts");
+    click(s, 170.0, 367.0, plain);
+    assert_eq!(sel(s), vec![b2], "deckendes Pixel wählt B2");
     click(s, 580.0, 385.0, plain);
     assert!(sel(s).is_empty());
-    click(s, 148.0, 367.0, plain);
-    assert!(sel(s).is_empty(), "neben der Bitmap: nichts");
-    // Umschalt-Klick fügt hinzu bzw. nimmt wieder weg
+    // Umschalt-Klick in die Lücke fügt nichts hinzu
     click(s, 100.0, 85.0, plain);
     click(s, 210.0, 367.0, shift);
-    assert_eq!(sel(s), vec![r1, b2], "Umschalt-Klick fügt B2 hinzu");
-    click(s, 210.0, 367.0, shift);
-    assert_eq!(sel(s), vec![r1], "zweiter Umschalt-Klick nimmt B2 weg");
+    assert_eq!(sel(s), vec![r1], "Umschalt-Klick in die Lücke: nur R1");
     click(s, 580.0, 385.0, plain);
-    // Ziehen aus der Lücke verschiebt B2
+    // Ziehen aus der Lücke verschiebt B2 nicht
     drag(s, (210.0, 367.0), (230.0, 367.0), plain);
-    assert_eq!(bounds(s, b2).left, 170.0, "Ziehen aus der Lücke verschiebt B2");
-    undo(s);
+    assert_eq!(bounds(s, b2).left, 150.0, "Ziehen aus der Lücke verschiebt B2 nicht");
     // Unterauswahl
     click(s, 580.0, 385.0, plain);
     tool(s, ToolId::Subselection);
     click(s, 210.0, 367.0, plain);
-    assert_eq!(sel(s), vec![b2], "Unterauswahl: Klick in die Lücke wählt B2");
+    assert!(sel(s).is_empty(), "Unterauswahl: Klick in die Lücke wählt nichts");
 }
 
 // ------------------------------------------------------------------ L7 Strg+Leertaste+Klick

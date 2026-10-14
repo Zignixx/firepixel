@@ -251,11 +251,32 @@ fn apply_paint_job(s: &mut Session, job: crate::paint::PaintJob, new_bitmap: boo
                     return Err(sel_err("err-sel-no-bitmap-selected"));
                 }
                 let Some(out) = crate::paint::paint_into(&job, None, sel.as_ref()) else { return Ok(CommandOutput::session()) };
+                // B-2b BA-039: gesperrte aktive Ebene → ohne Rückfrage auf die nächste freie Ebene
+                // darunter, die danach aktiv ist
+                if let Some(l) = unlocked_layer_below(d) {
+                    d.layer = Some(l);
+                }
                 insert_bitmap(d, &out)?;
             }
         }
         Ok(CommandOutput::doc())
     })
+}
+
+/// Ist die aktive Ebene im aktuellen Status gesperrt, die nächste nicht gesperrte normale Ebene
+/// darunter (sonst `None`: Ziel bleibt die aktive Ebene).
+fn unlocked_layer_below(d: &DocumentState) -> Option<fp_model::LayerId> {
+    let active = d.layer?;
+    let layers = docops::own_layers(&d.doc, d.page);
+    let locked = |l: &fp_model::layer::Layer| {
+        let ci = if l.shared_across_frames { 0 } else { d.frame };
+        l.cels.get(ci).is_some_and(|c| c.locked)
+    };
+    let idx = layers.iter().position(|(_, l)| l.id == active)?;
+    if !locked(&layers[idx].1) {
+        return None;
+    }
+    layers[..idx].iter().rev().find(|(_, l)| l.kind == fp_model::layer::LayerKind::Normal && !locked(l)).map(|(_, l)| l.id)
 }
 
 /// Pinsel aus einem älteren `draw`-Parameter (`tool.shape` mit Strich-/Pinselvorgabe).

@@ -102,7 +102,8 @@ fn last_step(s: &fp_engine::Session) -> String {
 // ---------------------------------------------------------------------- D28 Engine
 
 /// Original: R1 (20,20,120,100), Status 3, Verschieben 72 (Richtung 0) → Instanz 20,20,192,100
-/// (Bewegungsweg eingerechnet), Schritt „In Symbol konvertieren“. Richtung 90 → nach oben.
+/// (Bewegungsweg eingerechnet), Schritt „In Symbol konvertieren“. Richtung wirkt nicht auf die
+/// Grenzen (B-2b BA-020, zwei Messungen): Richtung 90 → ebenfalls waagerecht um den Betrag.
 #[test]
 fn animation_symbol_rect_contains_motion_path() {
     let (mut s, r1) = session();
@@ -114,11 +115,11 @@ fn animation_symbol_rect_contains_motion_path() {
     s.execute("edit.undo", json!({})).expect("undo");
     let b0 = bounds(&s, r1);
     assert_eq!((b0.left.round(), b0.top.round(), b0.right.round(), b0.bottom.round()), (20.0, 20.0, 120.0, 100.0), "Rückgängig stellt das Rechteck wieder her");
-    // Richtung 90° (nach oben), 50 px: oben 20 − 50
+    // Richtung 90° (nach oben), 50 px: Grenzen trotzdem waagerecht 120 + 50 (BA-020)
     s.execute("select.set", json!({"ids": [r1]})).expect("Auswahl");
     let id = s.execute("modify.animation.animateSelection", json!({"frames": 5, "offsetX": 0, "offsetY": -50})).expect("animieren").value["id"].as_u64().expect("id");
     let b = bounds(&s, id);
-    assert_eq!((b.left.round(), b.top.round(), b.right.round(), b.bottom.round()), (20.0, -30.0, 120.0, 100.0), "Weg nach oben: {b:?}");
+    assert_eq!((b.left.round(), b.top.round(), b.right.round(), b.bottom.round()), (20.0, 20.0, 170.0, 100.0), "Richtung ohne Wirkung auf die Grenzen: {b:?}");
     // ohne Bewegung (1 Status) bleibt das Rechteck des Inhalts
     s.execute("modify.animation.settings", json!({"frames": 1})).expect("Einstellungen");
     let b = bounds(&s, id);

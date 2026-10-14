@@ -455,6 +455,76 @@ fn selection_fill_angle(st: &AppState) -> Option<f64> {
     selection(st).iter().rev().find_map(|e| ui_commands::handles_of(e)).filter(|h| h.valid).map(|h| ui_commands::handles_angle(&h))
 }
 
+/// Verlaufsfüllung der Werkzeugvorgabe (Weiß → Füllfarbe, Form `grad_shape`).
+fn tool_gradient_fill(ta: &ToolAttrs, c: Argb) -> fp_model::Fill {
+    let mut f = fp_model::Fill::solid();
+    let end = if Argb(c.0 | 0xff00_0000) == Argb(0xffff_ffff) { Argb(0xff00_0000) } else { Argb(c.0 | 0xff00_0000) };
+    f.shape = ta.grad_shape;
+    if ta.grad_shape == ui_commands::CONTOUR_SHAPE {
+        f.shape = 3;
+        f.shape_ext = 17;
+    }
+    f.gradient = Some(ui_commands::make_gradient(ta.grad_shape, &[(0.0, Argb(0xffff_ffff)), (1.0, end)], None));
+    f
+}
+
+/// Popup-Ids des Verlaufs- und des Muster-Popups am Füllfarbfeld der **Werkzeugleiste**.
+pub fn toolbar_fill_popup_ids() -> (Id, Id) {
+    let id = Id::new("tb-fill");
+    (id.with("grad-pop"), id.with("pat-pop"))
+}
+
+/// Verlaufs- bzw. Muster-Popup am Füllfarbfeld der Werkzeugleiste (B-2b BA-128): „Verlauf“ und
+/// „Muster“ im Farbwähler der Werkzeugleiste öffnen diese Popups, statt sofort umzustellen. Erst eine
+/// Wahl darin ändert die Auswahl (gewählte Vektoren) bzw. die Werkzeugvorgabe; Abbrechen lässt alles.
+pub fn toolbar_fill_popups(ui: &mut Ui, st: &mut AppState, well: Rect) {
+    let ctx = ui.ctx().clone();
+    let (gp, pp) = toolbar_fill_popup_ids();
+    if !popups::anchored_open(&ctx, gp) && !popups::anchored_open(&ctx, pp) {
+        return;
+    }
+    let vectors = selection(st).iter().any(|e| !matches!(e.kind, ElementKind::Bitmap(_)));
+    let tgt = if vectors { Target::Selection } else { Target::Tool };
+    let ta = tool_attrs(&ctx);
+    let sel_fill = if vectors { first_attrs(st).and_then(|a| a.fill.clone()) } else { None };
+    let kind = ui_commands::fill_kind(sel_fill.as_ref());
+    let id = Id::new("tb-fill");
+    // Verlauf
+    let grad = match sel_fill.as_ref().filter(|_| kind == 2) {
+        Some(f) => f.clone(),
+        None => tool_gradient_fill(&ta, st.session.tools.fill_color),
+    };
+    let angle = if vectors && kind == 2 { selection_fill_angle(st) } else { None };
+    if let Some(mut p) = popups::anchored_popup(ui, gp, well, false, |ui| popups::gradient_editor(ui, id.with("grad"), &grad, st, angle)).flatten() {
+        if tgt == Target::Tool || kind != 2 {
+            p["category"] = json!("gradient");
+        }
+        apply_fill(ui, st, tgt, p);
+    }
+    // Muster
+    let cur = match sel_fill.as_ref().filter(|_| kind == 3).and_then(|f| f.pattern.as_ref()) {
+        Some(p) => p.name.clone(),
+        None if ta.pattern.is_empty() => ui_commands::DEFAULT_PATTERN.to_string(),
+        None => texture_display_name(&ta.pattern),
+    };
+    let pangle = if vectors && kind == 3 { selection_fill_angle(st) } else { None };
+    match popups::anchored_popup(ui, pp, well, false, |ui| popups::pattern_editor(ui, id.with("pat"), &cur, pangle)).flatten() {
+        Some(popups::PatternChoice::Named(n)) => apply_fill(ui, st, tgt, json!({"pattern": n})),
+        Some(popups::PatternChoice::Angle(a)) => apply_fill(ui, st, tgt, json!({"angle": a})),
+        Some(popups::PatternChoice::Other) => {
+            let (title, images) = (t("pi-pattern-pick-title"), t("pi-filter-images"));
+            crate::dialogs::panel_menus::pick_open(st, &title, &[(images.as_str(), &["png", "jpg", "jpeg", "gif", "bmp"])], move |st, p| match tgt {
+                Target::Selection => st.run("pi.fill", json!({"pattern": p.to_string_lossy()})),
+                Target::Tool => edit_tool_attrs(&ctx, |a| {
+                    a.fill_kind = 3;
+                    a.pattern = p.to_string_lossy().to_string();
+                }),
+            });
+        }
+        None => {}
+    }
+}
+
 /// Popup-Ids des Verlaufs- und des Muster-Popups eines Füllfelds.
 pub fn fill_popup_ids(tool: bool) -> (Id, Id) {
     let id = Id::new(("pi-fill", tool));
@@ -481,17 +551,7 @@ pub fn fill_panel(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target, enabled: b
             let c = st.session.tools.fill_color;
             let kind = if c.a() == 0 { 0 } else { ta.fill_kind };
             let fill = match kind {
-                2 => {
-                    let mut f = fp_model::Fill::solid();
-                    let end = if Argb(c.0 | 0xff00_0000) == Argb(0xffff_ffff) { Argb(0xff00_0000) } else { Argb(c.0 | 0xff00_0000) };
-                    f.shape = ta.grad_shape;
-                    if ta.grad_shape == ui_commands::CONTOUR_SHAPE {
-                        f.shape = 3;
-                        f.shape_ext = 17;
-                    }
-                    f.gradient = Some(ui_commands::make_gradient(ta.grad_shape, &[(0.0, Argb(0xffff_ffff)), (1.0, end)], None));
-                    Some(f)
-                }
+                2 => Some(tool_gradient_fill(&ta, c)),
                 3 => {
                     let mut f = fp_model::Fill::solid();
                     f.shape = 15;

@@ -455,8 +455,9 @@ fn color_section(ui: &mut Ui, st: &mut AppState, full: Rect, mut y: f32, theme: 
         }
         // Farbwähler-Popup des Originals (N27b): Fußleiste Füllung bzw. Kontur, Pipette ab dem Öffnen
         let open_at = resp.clicked().then(|| resp.interact_pointer_pos()).flatten().filter(|p| well.contains(*p)).map(|p| p.x);
-        let has_sel = st.session.active().is_some_and(|d| !d.selection.elements.is_empty());
-        let footer = if is_stroke { Footer::Stroke { placement: None, enabled: has_sel } } else { Footer::Fill { kinds: has_sel } };
+        // B-2b BA-128: Strich-Popup der Werkzeugleiste ohne Strichlage-Knöpfe (nur Ohne +
+        // Farbkreis), Verlauf/Muster im Füll-Popup immer bedienbar
+        let footer = if is_stroke { Footer::NoneOnly } else { Footer::Fill { kinds: true } };
         let shown_col = (argb.a() > 0).then_some(argb);
         let choice = crate::inspector::color_picker::show(ui, Id::new(("well", is_stroke)), well, open_at, st, shown_col, footer);
         let none = fp_color::Argb(0x00ff_ffff);
@@ -491,14 +492,17 @@ fn color_section(ui: &mut Ui, st: &mut AppState, full: Rect, mut y: f32, theme: 
                     }
                 }
             }
-            Some(ColorChoice::Gradient) => st.run("pi.fill", serde_json::json!({"category": "gradient"})),
-            Some(ColorChoice::Pattern) => {
-                if let Some((_, p)) = crate::inspector::popups::pattern_files().first() {
-                    st.run("element.setPattern", serde_json::json!({"image": p.to_string_lossy()}));
-                }
+            // Verlauf/Muster öffnen das Verlaufs- bzw. Muster-Popup; erst dessen Wahl ändert etwas
+            Some(ColorChoice::Gradient) | Some(ColorChoice::Pattern) => {
+                let (gp, pp) = crate::inspector::obj_quads::toolbar_fill_popup_ids();
+                let (open, other) = if matches!(choice, Some(ColorChoice::Gradient)) { (gp, pp) } else { (pp, gp) };
+                crate::inspector::popups::set_anchored_open(ui.ctx(), other, false);
+                crate::inspector::popups::set_anchored_open(ui.ctx(), open, true);
             }
-            Some(ColorChoice::Placement(k)) => st.run("pi.stroke", serde_json::json!({"placement": crate::inspector::color_picker::placement_name(k)})),
-            None => {}
+            Some(ColorChoice::Placement(_)) | None => {}
+        }
+        if !is_stroke {
+            crate::inspector::obj_quads::toolbar_fill_popups(ui, st, well);
         }
         y += cell.y;
     }

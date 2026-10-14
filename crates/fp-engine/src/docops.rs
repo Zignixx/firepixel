@@ -595,10 +595,14 @@ fn bounds_depth(doc: &Document, e: &Element, depth: u32) -> Option<Rect> {
             // Animationsinstanz: Grenzen schließen den Bewegungsweg ein (alle Status, wie das
             // Original `pixelRect` meldet, PM-6 D28); Zustand je Status wie beim Zeichnen
             // (Skalierung/Drehung um die Symbolmitte, dann Instanzmatrix, dann Versatz)
+            // B-2b BA-020 (zwei Messungen, PM-6): die Grenzen schließen den Weg **waagerecht** um
+            // „Verschieben“ ein, unabhängig von „Richtung“ (Richtung 30, 72 px → 50,50–222,120)
+            let len = i.anim.offset.x.hypot(i.anim.offset.y);
             let c = b.center();
             let mut out = base;
             for k in 0..i.anim.frames.min(360) as usize {
-                let Some(af) = i.anim.frame(k, sym.root.frame_count) else { continue };
+                let Some(mut af) = i.anim.frame(k, sym.root.frame_count) else { continue };
+                af.offset = Point::new((af.t * len as f64) as f32, 0.0);
                 let local = Matrix3::translation(-c.x, -c.y)
                     .then(&Matrix3::scaling(af.scale as f32, af.scale as f32))
                     .then(&Matrix3::rotation_degrees(af.rotation))
@@ -1051,11 +1055,21 @@ fn hit_depth(doc: &Document, e: &Element, p: Point, geo: &dyn GeometryOps, opt: 
             Some(r) => hit_depth(doc, r, p, geo, opt, depth + 1),
             None => c.operands.iter().any(|o| hit_depth(doc, o, p, geo, opt, depth + 1)),
         },
-        // Bitmaps treffen wie im Original in ihrem ganzen Rahmen, auch auf durchsichtigen Pixeln
-        // (FV-11/FV-14: Klick in ein radiertes Loch bzw. die Ecke einer Ellipsen-Bitmap wählt sie)
-        ElementKind::Bitmap(_) => element_bounds(doc, e).is_some_and(|r| r.contains(p)),
+        // Bitmaps treffen nur auf Pixeln mit Alpha > 0 (B-2b BA-007: Klick in die durchsichtige
+        // Ecke einer gerasterten Ellipse wählt nichts, Ziehen von dort zieht einen Auswahlrahmen auf)
+        ElementKind::Bitmap(b) => bitmap_hit(b, p),
         _ => element_bounds(doc, e).is_some_and(|r| r.inflate(opt.tolerance as f32, opt.tolerance as f32).contains(p)),
     }
+}
+
+/// Treffer auf einer Bitmap: das Pixel unter `p` hat Alpha > 0 (Schwelle 0, BA-007).
+fn bitmap_hit(b: &BitmapElem, p: Point) -> bool {
+    let o = b.image.position();
+    let (x, y) = ((p.x - o.x).floor(), (p.y - o.y).floor());
+    if x < 0.0 || y < 0.0 {
+        return false;
+    }
+    b.image.pixel(x as u32, y as u32).is_some_and(|px| px.a > 0)
 }
 
 /// Alle getroffenen Elemente direkt in den Cels des Status `frame`, oben zuerst (für Zeiger und

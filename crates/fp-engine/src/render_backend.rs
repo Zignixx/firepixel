@@ -18,6 +18,7 @@ impl PageRenderer for FpRenderer {
     }
 
     fn render_elements(&self, doc: &Document, _page: usize, frame: usize, elements: &[Arc<Element>]) -> Option<RgbaImage> {
+        // Deckkraft und Mischmodus jedes Elements werden eingebacken (B-2b BA-119)
         let mut out: Option<RgbaImage> = None;
         let map = fp_render::PointMap::identity();
         for e in elements.iter().rev() {
@@ -25,11 +26,12 @@ impl PageRenderer for FpRenderer {
             if img.is_empty() {
                 continue;
             }
-            let opt = fp_raster::CompositeOptions::default();
-            out = Some(match out {
-                None => img,
-                Some(o) => fp_raster::composite_extend(&o, &img, None, &opt),
-            });
+            let opt = fp_raster::CompositeOptions { mode: e.common.blend, opacity: e.common.opacity, ..fp_raster::CompositeOptions::default() };
+            let base = match out {
+                Some(o) => o,
+                None => RgbaImage::new(img.bounds()).ok()?,
+            };
+            out = Some(fp_raster::composite_extend(&base, &img, None, &opt));
         }
         out
     }

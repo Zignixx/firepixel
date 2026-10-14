@@ -57,17 +57,19 @@ impl PageRenderer for EngineRenderer {
     }
 }
 
-/// Elemente (oben zuerst) übereinander rendern; `None`, wenn nichts sichtbar ist.
+/// Elemente (oben zuerst) übereinander rendern; `None`, wenn nichts sichtbar ist. Deckkraft und
+/// Mischmodus jedes Elements werden eingebacken wie beim Rastern im Original (B-2b BA-119).
 pub fn render_elements(r: &fp_render::Renderer, doc: &Document, frame: usize, elements: &[Arc<Element>]) -> Option<RgbaImage> {
     let map = fp_render::PointMap::identity();
-    let parts: Vec<RgbaImage> = elements.iter().rev().map(|e| r.render_element(doc, e, &map, frame).image).filter(|i| i.width() > 0).collect();
-    let bounds = parts.iter().fold(IRect::default(), |acc, i| acc.union(&i.bounds()));
+    let parts: Vec<(RgbaImage, &Arc<Element>)> = elements.iter().rev().map(|e| (r.render_element(doc, e, &map, frame).image, e)).filter(|(i, _)| i.width() > 0).collect();
+    let bounds = parts.iter().fold(IRect::default(), |acc, (i, _)| acc.union(&i.bounds()));
     if bounds.is_empty() {
         return None;
     }
     let mut out = RgbaImage::new(bounds).ok()?;
-    for p in &parts {
-        fp_raster::composite(&mut out, p, None, &fp_raster::CompositeOptions::default());
+    for (p, e) in &parts {
+        let opt = fp_raster::CompositeOptions { mode: e.common.blend, opacity: e.common.opacity, ..fp_raster::CompositeOptions::default() };
+        fp_raster::composite(&mut out, p, None, &opt);
     }
     Some(out)
 }
