@@ -784,6 +784,9 @@ fn anim_params(p: &Params, base: fp_model::AnimParams) -> Result<fp_model::AnimP
     if let Some(v) = p.opt_f64("endOpacity")? {
         a.end_opacity = (v.clamp(0.0, 100.0) * 10.0).round() as u32;
     }
+    if let Some(v) = p.opt_bool("boundsVector")? {
+        a.bounds_horizontal = !v;
+    }
     Ok(a)
 }
 
@@ -795,6 +798,7 @@ fn with_anim_params(b: crate::command::CommandBuilder) -> crate::command::Comman
         .opt("scale", ParamKind::Number { min: Some(0.0), max: None }, "Endskalierung in %")
         .opt("startOpacity", ParamKind::Number { min: Some(0.0), max: Some(100.0) }, "Anfangsdeckkraft in %")
         .opt("endOpacity", ParamKind::Number { min: Some(0.0), max: Some(100.0) }, "Enddeckkraft in %")
+        .opt("boundsVector", ParamKind::Bool, "Grenzen mit dem Weg als Vektor (JSF)")
 }
 
 pub(super) fn register(r: &mut CommandRegistry) {
@@ -916,7 +920,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
         // Q-20 (M2): Symbol heißt wie bei „In Symbol konvertieren“ „Symbol“, die Instanz bleibt ohne Namen
         let name = p.opt_str("name")?.unwrap_or_else(|| "Symbol".into());
         let add_states = p.bool_or("addStates", true)?;
-        let a = anim_params(p, fp_model::AnimParams::default())?;
+        let a = anim_params(p, fp_model::AnimParams { bounds_horizontal: true, ..fp_model::AnimParams::default() })?;
         // Verlaufsschritt wie im Original „In Symbol konvertieren“ (PM-6 D28)
         let label = s.registry().get("modify.symbol.convertToSymbol").map(|c| c.info().step_label());
         let out = with_doc(s, |d| {

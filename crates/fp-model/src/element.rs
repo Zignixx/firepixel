@@ -554,11 +554,16 @@ pub struct AnimParams {
     /// Start-/End-Deckkraft in Promille (`ASOi`, `AEOi`).
     pub start_opacity: u32,
     pub end_opacity: u32,
+    /// Nur für die Grenzen (BA-020, F16): `true` = Weg waagerecht um seine Länge („Verschieben“,
+    /// Richtung ohne Wirkung) wie nach dem Animieren-Dialog im Original (B-2b, PM-6); `false` = Weg
+    /// als Vektor wie nach JSF `convertToAnimSymbol` (B-2) und beim Lesen einer Datei.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub bounds_horizontal: bool,
 }
 
 impl Default for AnimParams {
     fn default() -> Self {
-        AnimParams { frames: 5, offset: Point::default(), rotation: 0, scale: 100.0, start_opacity: 1000, end_opacity: 1000 }
+        AnimParams { frames: 5, offset: Point::default(), rotation: 0, scale: 100.0, start_opacity: 1000, end_opacity: 1000, bounds_horizontal: false }
     }
 }
 
@@ -858,7 +863,7 @@ mod tests {
     #[test]
     fn anim_frames_like_t6() {
         // Laufzeit 13 T6: 5 Status, Versatz 100, Drehung 90, Skalierung 50 %, Deckkraft 1000 → 0.
-        let a = AnimParams { frames: 5, offset: Point::new(100.0, 0.0), rotation: 90, scale: 50.0, start_opacity: 1000, end_opacity: 0 };
+        let a = AnimParams { frames: 5, offset: Point::new(100.0, 0.0), rotation: 90, scale: 50.0, start_opacity: 1000, end_opacity: 0, bounds_horizontal: false };
         let f0 = a.frame(0, 1).unwrap();
         assert_eq!((f0.scale, f0.rotation, f0.opacity.0), (1.0, 0.0, 255));
         let f2 = a.frame(2, 1).unwrap();

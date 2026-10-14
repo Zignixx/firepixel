@@ -595,14 +595,19 @@ fn bounds_depth(doc: &Document, e: &Element, depth: u32) -> Option<Rect> {
             // Animationsinstanz: Grenzen schließen den Bewegungsweg ein (alle Status, wie das
             // Original `pixelRect` meldet, PM-6 D28); Zustand je Status wie beim Zeichnen
             // (Skalierung/Drehung um die Symbolmitte, dann Instanzmatrix, dann Versatz)
-            // B-2b BA-020 (zwei Messungen, PM-6): die Grenzen schließen den Weg **waagerecht** um
-            // „Verschieben“ ein, unabhängig von „Richtung“ (Richtung 30, 72 px → 50,50–222,120)
+            // BA-020 (F16): nach dem Animieren-Dialog schließen die Grenzen den Weg **waagerecht**
+            // um „Verschieben“ ein, unabhängig von „Richtung“ (B-2b/PM-6: Richtung 30, 72 px →
+            // 50,50–222,120); nach JSF `convertToAnimSymbol` den Weg als Vektor (B-2: 62/−36 →
+            // 20,−16,182,100). Merker `bounds_horizontal` setzt der Befehl je nach Eingang.
             let len = i.anim.offset.x.hypot(i.anim.offset.y);
+            let horizontal = i.anim.bounds_horizontal;
             let c = b.center();
             let mut out = base;
             for k in 0..i.anim.frames.min(360) as usize {
                 let Some(mut af) = i.anim.frame(k, sym.root.frame_count) else { continue };
-                af.offset = Point::new((af.t * len as f64) as f32, 0.0);
+                if horizontal {
+                    af.offset = Point::new((af.t * len as f64) as f32, 0.0);
+                }
                 let local = Matrix3::translation(-c.x, -c.y)
                     .then(&Matrix3::scaling(af.scale as f32, af.scale as f32))
                     .then(&Matrix3::rotation_degrees(af.rotation))

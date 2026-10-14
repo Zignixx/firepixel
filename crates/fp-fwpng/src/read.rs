@@ -1414,6 +1414,7 @@ fn read_instance(r: &mut Rd, ctx: &mut ReadCtx) -> Option<InstanceElem> {
         scale: r.f32(k!(b"ASCf")).unwrap_or(100.0),
         start_opacity: r.int(k!(b"ASOi")).unwrap_or(1000),
         end_opacity: r.int(k!(b"AEOi")).unwrap_or(1000),
+        bounds_horizontal: false,
     };
     let widget_params = r.str(k!(b"WPVs"));
     let button = read_button_strings(r);

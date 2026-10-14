@@ -778,7 +778,7 @@ pub(super) fn method(doc: DocId, name: &str, args: &[Arg], ctx: &mut Context) ->
             // wie im Original (BA-020): per Skript entstehen keine neuen Status; die Instanzgrenzen
             // schließen den Bewegungsweg ein (fp-engine `element_bounds`)
             let off = a(2).point().unwrap_or((10.0, 10.0));
-            let mut p = json!({"frames": a(1).i64().clamp(1, 1000), "offsetX": off.0, "offsetY": off.1, "rotation": a(3).i64(), "scale": if a(4).is_null() { 100.0 } else { a(4).f64() }, "startOpacity": if a(5).is_null() { 100.0 } else { a(5).f64() }, "endOpacity": if a(6).is_null() { 100.0 } else { a(6).f64() }, "addStates": false});
+            let mut p = json!({"frames": a(1).i64().clamp(1, 1000), "offsetX": off.0, "offsetY": off.1, "rotation": a(3).i64(), "scale": if a(4).is_null() { 100.0 } else { a(4).f64() }, "startOpacity": if a(5).is_null() { 100.0 } else { a(5).f64() }, "endOpacity": if a(6).is_null() { 100.0 } else { a(6).f64() }, "addStates": false, "boundsVector": true});
             let ui_name = arg_str(args, 0);
             if !ui_name.trim().is_empty() {
                 p["name"] = json!(ui_name);
@@ -789,7 +789,7 @@ pub(super) fn method(doc: DocId, name: &str, args: &[Arg], ctx: &mut Context) ->
         "setAnimInstanceNumFrames" => on_selection(doc, "modify.animation.settings", json!({"frames": a(0).i64().clamp(1, 1000)})),
         "setAnimInstanceOffsetDist" => {
             let (x, y) = a(0).point().unwrap_or((0.0, 0.0));
-            on_selection(doc, "modify.animation.settings", json!({"offsetX": x, "offsetY": y}))
+            on_selection(doc, "modify.animation.settings", json!({"offsetX": x, "offsetY": y, "boundsVector": true}))
         }
         "setAnimInstanceRotationAmount" => on_selection(doc, "modify.animation.settings", json!({"rotation": a(0).i64()})),
         "setAnimInstanceScaleAmount" => on_selection(doc, "modify.animation.settings", json!({"scale": a(0).f64()})),

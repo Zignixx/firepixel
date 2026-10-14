@@ -624,3 +624,4 @@ cmdtext-pinsel-der-werkzeugvorgabe-speichern-wer-94fd63 = Pinsel der Werkzeugvor
 cmdtext-symbolname-vorgabe-symbol = Symbolname (Vorgabe „Symbol“)
 cmdtext-fehlende-status-anhaengen-rueckfrage-aut-c6e799 = fehlende Status anhängen (Rückfrage „Automatisch neue Status hinzufügen?“: OK = true, Abbrechen = false)
 cmdtext-dokumentpunkt-in-die-mitte-der-ansicht-j-c76d50 = Dokumentpunkt in die Mitte der Ansicht (JSF setActiveViewScale)
+cmdtext-grenzen-mit-dem-weg-als-vektor-jsf = Grenzen mit dem Weg als Vektor (JSF)

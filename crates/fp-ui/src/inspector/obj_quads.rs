@@ -1473,7 +1473,7 @@ fn animation_q3(ui: &mut Ui, st: &mut AppState, r: Rect) {
         _ => None,
     });
     let en = anim.is_some();
-    let a = anim.unwrap_or(fp_model::AnimParams { frames: 1, offset: fp_geom::Point::new(0.0, 0.0), rotation: 0, scale: 100.0, start_opacity: 1000, end_opacity: 1000 });
+    let a = anim.unwrap_or(fp_model::AnimParams { frames: 1, offset: fp_geom::Point::new(0.0, 0.0), rotation: 0, scale: 100.0, start_opacity: 1000, end_opacity: 1000, bounds_horizontal: false });
     let mut out: Option<Value> = None;
     fields::label_right(ui, d.r(13.0, 2.0, 32.0, 8.0), &t("pi-anim-states"), en);
     if let Some(v) = fields::number(ui, "pi-anim-frames", d.r(48.0, 0.0, 24.0, 13.0), Some(d.r(73.0, 0.0, 9.0, 13.0)), Some(a.frames as f64), (1.0, 60.0), 0, en) {
