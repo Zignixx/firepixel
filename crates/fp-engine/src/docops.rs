@@ -351,6 +351,66 @@ pub fn layer_on_page(doc: &Document, page: usize, current: Option<LayerId>) -> O
     }
 }
 
+/// Ebene per ID: eine Ebene der Seite (eigene oder über Seiten geteilte) oder eine Unterebene darin.
+pub fn layer_by_id(doc: &Document, page: usize, id: LayerId) -> Option<Arc<Layer>> {
+    if let Some((_, l)) = own_layers(doc, page).into_iter().find(|(_, l)| l.id == id) {
+        return Some(l);
+    }
+    let el = element_on_page(doc, page, sublayer_element(doc, page, id)?)?;
+    match &el.kind {
+        ElementKind::SubLayer(l) => Some(Arc::clone(l)),
+        _ => None,
+    }
+}
+
+/// Slot der Ebene der obersten Stufe, die die Ebene `id` ist bzw. die Unterebene `id` enthält.
+pub fn top_slot_of(doc: &Document, page: usize, id: LayerId) -> Option<usize> {
+    layer_slot(doc, page, id).or_else(|| find_on_page(doc, page, sublayer_element(doc, page, id)?).map(|p| p.slot))
+}
+
+/// Ist `id` eine Unterebene (und keine Ebene der obersten Stufe) dieser Seite? Liefert ihr Element.
+pub fn as_sublayer(doc: &Document, page: usize, id: LayerId) -> Option<ElementId> {
+    if layer_slot(doc, page, id).is_some() {
+        return None;
+    }
+    sublayer_element(doc, page, id)
+}
+
+/// Kopiert die Unterebene `el` `n`-mal (neue IDs, Name „Kopie von …“) in ihre Elternliste.
+/// `at(index, len)` liefert die Einfügestelle in der Liste (0 = oben) aus dem Index des Originals
+/// und der Listenlänge. Ergebnis: Ebenen-ID der zuletzt eingefügten Kopie.
+pub fn duplicate_sublayer(doc: &mut Document, page: usize, el: ElementId, n: usize, at: impl Fn(usize, usize) -> usize) -> Option<LayerId> {
+    let path = find_on_page(doc, page, el)?;
+    let src = doc.element_at(&path).cloned()?;
+    let mut last = None;
+    for _ in 0..n.max(1) {
+        let mut c = reassign(doc, &src);
+        if let ElementKind::SubLayer(l) = &mut c.kind {
+            let l = Arc::make_mut(l);
+            l.name = fp_i18n::tr!("msg-default-copy", name = l.name.as_str());
+            last = Some(l.id);
+        }
+        let (list, idx) = parent_list_mut(doc, &path)?;
+        let i = at(idx, list.len()).min(list.len());
+        list.insert(i, Arc::new(c));
+    }
+    last
+}
+
+/// Verschiebt die Unterebene `el` in ihrer Elternliste an Position `to`, gezählt von unten
+/// (0 = unterste) wie die Ebenenliste.
+pub fn move_sublayer(doc: &mut Document, page: usize, el: ElementId, to: usize) -> Option<()> {
+    let path = find_on_page(doc, page, el)?;
+    let (list, idx) = parent_list_mut(doc, &path)?;
+    if idx >= list.len() {
+        return None;
+    }
+    let e = list.remove(idx);
+    let n = list.len();
+    list.insert(n - to.min(n), e);
+    Some(())
+}
+
 /// Web-Ebene der Seite.
 pub fn web_layer(doc: &Document, page: usize) -> Option<LayerId> {
     own_layers(doc, page).into_iter().find(|(_, l)| l.kind == LayerKind::Web).map(|(_, l)| l.id)

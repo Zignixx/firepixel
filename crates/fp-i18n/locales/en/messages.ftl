@@ -453,6 +453,7 @@ err-stroke-misses-path = The stroke does not touch any selected path.
 err-view-empty = view is empty
 err-web-layer-no-duplicate = the Web Layer cannot be duplicated
 err-web-layer-no-share = the Web Layer cannot be shared
+err-sublayer-no-share = a sublayer cannot be shared to pages
 
 # >>> UE-3 Farben und Schriften
 # Errors from fp-color (swatches, CMYK) and fp-text (font files), UE-3

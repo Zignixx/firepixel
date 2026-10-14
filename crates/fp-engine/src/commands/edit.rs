@@ -758,7 +758,8 @@ fn crop_tool_cleanup(d: &mut DocumentState) {
 /// Neue Ebene über der aktiven; wird aktiv.
 pub(crate) fn add_layer(d: &mut DocumentState, name: Option<&str>, kind: LayerKind) -> Result<fp_model::LayerId> {
     let page = d.page;
-    let cur_slot = d.layer.and_then(|l| docops::layer_slot(&d.doc, page, l));
+    // aktive Unterebene: über ihrer Ebene der obersten Stufe (B-9)
+    let cur_slot = d.layer.and_then(|l| docops::top_slot_of(&d.doc, page, l));
     let doc = Arc::make_mut(&mut d.doc);
     let frames = doc.pages.get(page).map(|p| p.root.frame_count as usize).unwrap_or(1);
     let count = docops::own_layers(doc, page).len();

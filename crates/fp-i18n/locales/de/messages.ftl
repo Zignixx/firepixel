@@ -453,6 +453,7 @@ err-stroke-misses-path = Der Strich berührt keinen ausgewählten Pfad.
 err-view-empty = Ansicht leer
 err-web-layer-no-duplicate = die Web-Ebene kann nicht dupliziert werden
 err-web-layer-no-share = die Web-Ebene kann nicht freigegeben werden
+err-sublayer-no-share = eine Unterebene kann nicht für Seiten freigegeben werden
 
 # >>> UE-3 Farben und Schriften
 # Fehler aus fp-color (Farbfelder, CMYK) und fp-text (Schriftdateien), UE-3

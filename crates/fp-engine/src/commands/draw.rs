@@ -824,6 +824,11 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 with_doc(s, |d| {
                     let id = layer_param(d, p)?;
                     let page = d.page;
+                    // Unterebene (kann aktiv sein): Position in ihrer Elternebene, 0 = unten (B-9)
+                    if let Some(el) = docops::as_sublayer(&d.doc, page, id) {
+                        docops::move_sublayer(Arc::make_mut(&mut d.doc), page, el, to).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-layer")))?;
+                        return Ok(CommandOutput::doc());
+                    }
                     let slot = docops::layer_slot(&d.doc, page, id).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-layer")))?;
                     let pg = Arc::make_mut(&mut d.doc).page_mut(page).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-page")))?;
                     let l = pg.root.layers.remove(slot);
@@ -837,6 +842,12 @@ pub(super) fn register(r: &mut CommandRegistry) {
         with_doc(s, |d| {
             let id = layer_param(d, p)?;
             let page = d.page;
+            // Unterebene: Kopie direkt darüber in derselben Elternebene, wird aktiv (B-9)
+            if let Some(el) = docops::as_sublayer(&d.doc, page, id) {
+                let nid = docops::duplicate_sublayer(Arc::make_mut(&mut d.doc), page, el, 1, |i, _| i).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-layer")))?;
+                d.layer = Some(nid);
+                return Ok(CommandOutput::doc_with(json!({"layer": nid.0})));
+            }
             let slot = docops::layer_slot(&d.doc, page, id).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-layer")))?;
             let doc = Arc::make_mut(&mut d.doc);
             let Some(LayerSlot::Own(l)) = doc.pages.get(page).and_then(|pg| pg.root.layers.get(slot)).cloned() else { return Err(EngineError::NotFound(fp_i18n::t("err-nf-layer"))) };

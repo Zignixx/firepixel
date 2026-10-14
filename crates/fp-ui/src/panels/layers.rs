@@ -84,8 +84,13 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
     let selected_set: std::collections::HashSet<fp_model::ElementId> = selected.iter().copied().collect();
     let active_layer = d.layer;
     // „Ebene gewählt“: Auswahl = alle (ungesperrten) Objekte der aktiven Ebene, auch leer
+    // auch eine aktive Unterebene (B-9)
     let layer_objects = |lid: LayerId| -> Vec<fp_model::ElementId> {
-        layers.iter().find(|rl| rl.layer.id == lid).and_then(|rl| rl.layer.cel(frame)).map(|cel| cel.elements.iter().filter(|e| !e.common.locked).map(|e| e.id).collect()).unwrap_or_default()
+        let objs = |l: &fp_model::Layer| l.cel(frame).map(|cel| cel.elements.iter().filter(|e| !e.common.locked).map(|e| e.id).collect()).unwrap_or_default();
+        match layers.iter().find(|rl| rl.layer.id == lid) {
+            Some(rl) => objs(&rl.layer),
+            None => fp_engine::docops::layer_by_id(&doc, page, lid).map(|l| objs(&l)).unwrap_or_default(),
+        }
     };
     let layer_selected = active_layer.is_some_and(|lid| {
         let mut a = layer_objects(lid);
@@ -237,7 +242,10 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                     let e = &e;
                     let sel = selected_set.contains(&e.id);
                     if let ElementKind::SubLayer(sl) = &e.kind {
-                        let (r2, resp2) = common::row(ui, 23.0, sel);
+                        // aktive Unterebene hervorheben wie eine aktive Ebene (B-9)
+                        let sub_active = active_layer == Some(sl.id);
+                        let hl = sel || (sub_active && (layer_selected || selected.is_empty()));
+                        let (r2, resp2) = common::row(ui, 23.0, hl);
                         let eye2 = Rect::from_min_size(r2.min, vec2(20.0, r2.height()));
                         let lock2 = Rect::from_min_size(pos2(r2.left() + 21.0, r2.top()), vec2(19.0, r2.height()));
                         ui.painter().vline(r2.left() + 20.5, r2.y_range(), Stroke::new(1.0, c.list_row_line));
@@ -253,7 +261,15 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                         let open = !collapsed.contains(&sub_key(e.id));
                         paint_triangle(ui, tri2, open, c.icon_fg);
                         glyphs::paint(ui.painter(), Rect::from_center_size(pos2(x0 + 66.0, r2.center().y), vec2(16.0, 14.0)), Glyph::Folder, &theme, true);
-                        let nr = Rect::from_min_max(pos2(x0 + 78.0, r2.top() + 2.0), pos2(r2.right() - 4.0, r2.bottom() - 2.0));
+                        let nr = Rect::from_min_max(pos2(x0 + 78.0, r2.top() + 2.0), pos2(r2.right() - 22.0, r2.bottom() - 2.0));
+                        // Kennzeichen rechts wie bei Ebenen: über Status geteilt bzw. aktiv
+                        let mark2 = Rect::from_center_size(pos2(r2.right() - 11.0, r2.center().y), vec2(12.0, 12.0));
+                        if sl.shared_across_frames {
+                            glyphs::paint(ui.painter(), mark2, Glyph::Distribute, &theme, true);
+                        } else if sub_active {
+                            ui.painter().circle_stroke(mark2.center(), 4.5, Stroke::new(1.0, c.icon_fg));
+                            ui.painter().circle_filled(mark2.center(), 2.0, c.icon_fg);
+                        }
                         // Umbenennen per Doppelklick wie bei Ebenen und Objekten (fixg5 Q-05)
                         let renaming = rename.as_ref().is_some_and(|k| matches!(k, RowKind::Element { id, .. } if *id == e.id));
                         if renaming {
@@ -264,7 +280,7 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                                 ui.data_mut(|dd| dd.remove::<RowKind>(Id::new(RENAME)));
                             }
                         } else {
-                            let font = if sel { theme.bold(theme.fonts.ui) } else { theme.ui_font() };
+                            let font = if hl { theme.bold(theme.fonts.ui) } else { theme.ui_font() };
                             crate::widgets::text_clipped(ui.painter(), pos2(nr.left(), r2.center().y), Align2::LEFT_CENTER, &sl.name, font, if editable { c.text } else { c.text_weak }, nr.width());
                         }
                         let kind = RowKind::Element { id: e.id, layer: l.id, index: idx, editable };
@@ -278,7 +294,11 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                             } else if tri2.expand(3.0).contains(p) {
                                 toggle_collapse = Some(sub_key(e.id));
                             } else if editable {
-                                actions.push(Action::Run("select.set".into(), json!({"ids": [e.id.0]})));
+                                // wie eine Ebenenzeile: Unterebene wird aktiv (neue Objekte landen
+                                // darin), ihre Objekte werden ausgewählt (B-9)
+                                let ids: Vec<u64> = sl.cel(frame).map(|cel| cel.elements.iter().filter(|x| !x.common.locked).map(|x| x.id.0).collect()).unwrap_or_default();
+                                actions.push(Action::Run("layer.setActive".into(), json!({"layer": sl.id.0})));
+                                actions.push(Action::Run("select.set".into(), json!({"ids": ids})));
                             }
                         }
                         if (resp2.double_clicked() || resp2.triple_clicked()) && editable && !tri2.expand(3.0).contains(resp2.interact_pointer_pos().unwrap_or(r2.center())) {

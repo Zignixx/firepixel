@@ -2964,6 +2964,11 @@ fn active_slot(d: &DocumentState) -> Option<usize> {
     })
 }
 
+/// Freigeben für Seiten nur für Ebenen der obersten Stufe, nicht bei aktiver Unterebene (B-9).
+fn no_active_sublayer(s: &Session) -> bool {
+    s.active().is_some_and(|d| !d.layer.is_some_and(|l| docops::as_sublayer(&d.doc, d.page, l).is_some()))
+}
+
 /// Einfügeposition für neue Ebenen „oben“: unter der Web-Ebene.
 fn top_insert_index(pg: &fp_model::Page) -> usize {
     pg.root.layers.iter().position(|sl| matches!(sl, LayerSlot::Own(l) if l.kind == LayerKind::Web)).unwrap_or(pg.root.layers.len())
@@ -3336,6 +3341,18 @@ fn register_layer_menu(r: &mut CommandRegistry) {
                 let pos = p.opt_str("position")?.unwrap_or_else(|| "above".into());
                 super::with_doc(s, |d| {
                     let page = d.page;
+                    // aktive Unterebene: Kopien in ihrer Elternebene (Liste oben → unten), B-9
+                    if let Some(el) = d.layer.and_then(|l| docops::as_sublayer(&d.doc, page, l)) {
+                        let nid = docops::duplicate_sublayer(Arc::make_mut(&mut d.doc), page, el, n, |i, len| match pos.as_str() {
+                            "top" => 0,
+                            "below" => i + 1,
+                            "bottom" => len,
+                            _ => i,
+                        })
+                        .ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-layer")))?;
+                        d.layer = Some(nid);
+                        return Ok(CommandOutput::doc().labeled(fp_i18n::t("msg-step-duplicate-layer")));
+                    }
                     let slot = active_slot(d).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-layer")))?;
                     let doc = Arc::make_mut(&mut d.doc);
                     let Some(LayerSlot::Own(src)) = doc.pages.get(page).and_then(|pg| pg.root.layers.get(slot)).cloned() else {
@@ -3376,10 +3393,11 @@ fn register_layer_menu(r: &mut CommandRegistry) {
         cmd("panel.layers.shareAcrossStates")
             .label("Ebene statusübergreifend freigeben")
             .requires(DOC)
-            .checked(|s| s.active().and_then(|d| d.layer.and_then(|l| docops::own_layers(&d.doc, d.page).into_iter().find(|(_, x)| x.id == l))).is_some_and(|(_, l)| l.shared_across_frames))
+            // auch eine aktive Unterebene (B-9)
+            .checked(|s| s.active().and_then(|d| d.layer.and_then(|l| docops::layer_by_id(&d.doc, d.page, l))).is_some_and(|l| l.shared_across_frames))
             .run(|s, _| {
                 let d = s.doc()?;
-                let cur = d.layer.and_then(|l| docops::own_layers(&d.doc, d.page).into_iter().find(|(_, x)| x.id == l)).map(|(_, l)| l.shared_across_frames).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-layer")))?;
+                let cur = d.layer.and_then(|l| docops::layer_by_id(&d.doc, d.page, l)).map(|l| l.shared_across_frames).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-layer")))?;
                 s.execute("layer.setShared", json!({"shared": !cur})).map(passthrough)
             }),
     );
@@ -3416,6 +3434,9 @@ fn register_layer_menu(r: &mut CommandRegistry) {
     let share = |s: &mut Session, pages: Option<Vec<usize>>| -> Result<CommandOutput> {
         super::with_doc(s, |d| {
             let page = d.page;
+            if d.layer.is_some_and(|l| docops::as_sublayer(&d.doc, page, l).is_some()) {
+                return Err(EngineError::Failed(fp_i18n::t("err-sublayer-no-share")));
+            }
             let slot = active_slot(d).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-layer")))?;
             let all = pages.is_none();
             let doc = Arc::make_mut(&mut d.doc);
@@ -3456,12 +3477,12 @@ fn register_layer_menu(r: &mut CommandRegistry) {
     add_fw(
         r,
         35799,
-        cmd("panel.layers.shareToPages").label("Ebene für Seiten freigeben").requires(DOC).param("pages", ParamKind::Json, "Seitenindizes [0, 2, …]").run(move |s, p| {
+        cmd("panel.layers.shareToPages").label("Ebene für Seiten freigeben").requires(DOC).menu_when(no_active_sublayer).param("pages", ParamKind::Json, "Seitenindizes [0, 2, …]").run(move |s, p| {
             let pages: Vec<usize> = p.parse("pages")?.unwrap_or_default();
             share(s, Some(pages))
         }),
     );
-    add_fw(r, 35800, cmd("panel.layers.shareToAllPages").label("Ebene für alle Seiten freigeben").requires(DOC).run(move |s, _| share(s, None)));
+    add_fw(r, 35800, cmd("panel.layers.shareToAllPages").label("Ebene für alle Seiten freigeben").requires(DOC).menu_when(no_active_sublayer).run(move |s, _| share(s, None)));
     let shared_ref = |d: &DocumentState| -> Option<(usize, fp_model::Guid)> {
         let slot = active_slot(d)?;
         match d.doc.pages.get(d.page)?.root.layers.get(slot)? {
