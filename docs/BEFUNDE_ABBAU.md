@@ -4,21 +4,21 @@ Stand 14.10.2026 spät (B-8, Endstand siehe unten). Ursprünglich B-1. Quelle: a
 
 ## Endstand nach dem Befunde-Abbau (B-8, 14.10.2026 spät)
 
-Gezählt je BA nach dem letzten Ergebnis (B-2 … B-9). Teilweise erledigte BA zählen nach ihrem offenen Rest. „Mess-Sitzung“ = Messung im Original über die GUI bzw. der nächste Gesamt-/Bildlauf – beides nur mit Freigabe des Nutzers. Neu aus dem Abbau: BA-117 … BA-127 (Abschnitt N).
+Gezählt je BA nach dem letzten Ergebnis (B-2 … B-9). Teilweise erledigte BA zählen nach ihrem offenen Rest. „Mess-Sitzung“ = Messung im Original über die GUI bzw. der nächste Gesamt-/Bildlauf – beides nur mit Freigabe des Nutzers (erteilt 14.10. 21:12). Neu aus dem Abbau: BA-117 … BA-128 (Abschnitt N).
 
-| Paket | BA | erledigt | wartet auf Mess-Sitzung (Freigabe Nutzer) | wartet auf Nutzerentscheid | verschoben V | nicht machbar X |
+| Paket | BA | erledigt | wartet auf Mess-Sitzung (freigegeben) | entschieden, Umsetzung offen | verschoben V | nicht machbar X |
 |---|---|---|---|---|---|---|
-| M – im Original messen | 36 | 7 (005, 011, 016, 029, 030, 031, 033) | 29 (davon teilweise erledigt: 009, 013, 014, 017, 020, 035) | – | – | – |
-| B3 – Leinwand/Werkzeuge | 11 | 6 (038, 040, 041, 042 bewusst anders, 043, 045) | 1 (039 Rest) | 1 (047) | 3 (037, 044, 046) | – |
-| B4 – Dialoge/Datei-Dialoge/Gestaltung | 18 | 13 (048–053, 057–062, 065) | 2 (054 Rest, 055 Rest) | 1 (056) | 2 (063 Zugriffstasten, 064 Rest → DES-3) | – |
+| M – im Original messen | 36 | 7 (005, 011, 016, 029, 030, 031, 033) | 29 (davon 23 = X von B-2; teilweise erledigt: 009, 013, 014, 017, 020, 035) | – | – | – |
+| B3 – Leinwand/Werkzeuge | 11 | 7 (038, 040, 041, 042 und 047 bewusst anders, 043, 045) | 1 (039 Rest) | – | 3 (037, 044, 046) | – |
+| B4 – Dialoge/Datei-Dialoge/Gestaltung | 18 | 13 (048–053, 057–062, 065) | 2 (054 Rest, 055 Rest) | 1 (056 Effektnamen wie im Original) | 2 (063 Zugriffstasten, 064 Rest → DES-3) | – |
 | B5 – Skript/Export/Web | 11 | 11 | – | – | – | – |
 | B6 – Aufräumen/Tests/Doku | 20 | 14 | 2 (087, 092: nächster Gesamt-/Bildlauf) | – | 4 (083 CI, 086 Entscheid Koordinator, 089, 091 L) | – |
 | V – bewusst verschoben | 15 | – | – | – | 15 | – |
 | X – nicht machbar | 5 | – | – | – | – | 5 |
-| N – neu aus dem Abbau | 11 | – | 6 (119, 122, 123, 124, 126, 127) | – | 5 (117, 118, 120, 121, 125) | – |
-| **Summe** | **127** | **51** | **40** | **2** | **29** | **5** |
+| N – neu aus dem Abbau | 12 | – | 7 (119, 122, 123, 124, 126, 127, 128) | – | 5 (117, 118, 120, 121, 125) | – |
+| **Summe** | **128** | **52** | **41** | **1** | **29** | **5** |
 
-**Offen gesamt: 76 BA** (40 Mess-Sitzung + 2 Nutzerentscheid + 29 verschoben + 5 nicht machbar). In `BEFUNDE.md`: 614 erledigt, 81 offen (70 + 11 neue offene Einträge aus dem Abbau; dazu 1 erledigter).
+**Offen gesamt: 76 BA** (41 Mess-Sitzung + 1 entschieden/Umsetzung offen + 29 verschoben + 5 nicht machbar). Nutzerentscheid 14.10. 21:12: BA-047 geschlossen (A3 bewusst anders, A4 → BA-128), BA-056 entschieden, Mess-Sitzung freigegeben (die 23 X-Punkte von B-2 und die übrigen Messpunkte). In `BEFUNDE.md`: 614 erledigt, 81 offen (70 + 11 neue offene Einträge aus dem Abbau; dazu 1 erledigter).
 
 ## Zählung bei B-1
 
@@ -107,7 +107,7 @@ Ergebnisse B-3 (14.10.): `docs\berichte\b3.md` (erledigt 7 inkl. BA-005/BA-013, 
 1. **BA-044** Innen einfügen: Pfad mit Vektormaske statt Maskengruppe (Objektmodell); „Als Maske einfügen“ Auswahl danach – Z. 951 (M1/F4) – `fp-engine commands\edit.rs` – L – **Ergebnis B-3:** verschoben (L)
 1. **BA-045** Gamma 1.8: Schachbrett und Ansichten 2-/4-fach mit aufhellen – Z. 953 (F3) – `fp-ui canvas\render.rs` – S – **Ergebnis B-3:** erledigt (220459c) – Schachbrett und 2-/4-fach mit Gamma
 1. **BA-046** Symbolbearbeitung im selben Dokument statt eigener Ansicht (Verlauf, Ebenen, Skript-API, Abblenden) – Z. 970 (F11) – `fp-engine commands\symbol_edit.rs, fp-ui canvas` – L – **Ergebnis B-3:** verschoben (L)
-1. **BA-047** Farbwahl A3 (Leinwand-Pipette transparent → Weiß) und A4 (Werkzeugleiste Verlauf/Muster) bewusst entscheiden – Z. 241 (FARB-1b) – `inspector\popups.rs, tools_panel.rs` – S – **Ergebnis B-3:** wartet auf Nutzerentscheidung (Vorschlag A3 behalten, A4 nach Messung)
+1. **BA-047** Farbwahl A3 (Leinwand-Pipette transparent → Weiß) und A4 (Werkzeugleiste Verlauf/Muster) bewusst entscheiden – Z. 241 (FARB-1b) – `inspector\popups.rs, tools_panel.rs` – S – **Ergebnis B-3:** wartet auf Nutzerentscheidung (Vorschlag A3 behalten, A4 nach Messung) – **Nutzerentscheid 14.10. 21:12:** geschlossen, bewusst anders – Pipette auf transparenter Leinwand nimmt Weiß; A4 (Werkzeugleiste) → BA-128, wartet auf Mess-Sitzung
 
 ## B4 – Dialoge/Datei-Dialoge/Gestaltung
 
@@ -119,7 +119,7 @@ Ergebnisse B-3 (14.10.): `docs\berichte\b3.md` (erledigt 7 inkl. BA-005/BA-013, 
 1. **BA-053** „Neues Symbol“ im Bibliothek-Bedienfeld wie D14 (9-Slice, Bibliothek-Kästchen) – Z. 232 (FORM-1) – `panel.library.newSymbol` – M – **Ergebnis B-4:** erledigt (B-4, f2808dc) – Anordnung D14, 9-Slice wirkt (`nineSlice`), Bibliothek-Kästchen grau; Verhalten (Bearbeitung öffnen?) ungemessen → M
 1. **BA-054** Exportdialog meldet „exportiert“ (Bildvorschau danach schließen, falls Messung re\17 §11.2 das ergibt) – Z. 236 (BV-4) – `dialogs\export.rs` – S – **Ergebnis B-4:** teilweise (B-4, f2808dc) – Zähler `dialogs.exported`; Schließen der Bildvorschau wartet auf B-2 (re\17 §11.2)
 1. **BA-055** Pinsel-Inspektor: Knopfbreite DE, senkrechte Popup-Schieber 24 × 222, Mischmodus-Liste (56 Einträge) – Z. 242 (PINSEL-1) – `inspector` – M – **Ergebnis B-4:** teilweise (B-4, f2808dc) – Knopftext ganz lesbar (`fields::button_fit`); Popup-Schieber schon senkrecht (parity tool-brush 07/09 ✅); Mischmodus-Liste (56) wartet auf B-2/eigenen Auftrag
-1. **BA-056** Namen der Abschrägungs-Familie und Feld „Art“ – Nutzerentscheidung – Z. 244 (FX-2) – `Effekte, Glossar` – S – **Ergebnis B-4:** wartet auf Nutzerentscheidung (Namen der Abschrägungs-Familie, Feld „Art“) – kein Code
+1. **BA-056** Namen der Abschrägungs-Familie und Feld „Art“ – Nutzerentscheidung – Z. 244 (FX-2) – `Effekte, Glossar` – S – **Ergebnis B-4:** wartet auf Nutzerentscheidung (Namen der Abschrägungs-Familie, Feld „Art“) – kein Code – **Nutzerentscheid 14.10. 21:12:** Effektnamen wie im Original (Abgeflachte Kante innen/außen, Relief erhaben/vertieft, Gruppe „Abgeflachte Kante und Relief“) – offen, Umsetzung nach B-8
 1. **BA-057** Verlaufsnamen der Pfadbefehle „Pfade erweitern“/„Pfade einlassen“ – Z. 316 (PM-6) – `command_texts.ftl` – S – **Ergebnis B-4:** erledigt (B-4, f2808dc) – „Pfade erweitern“/„Pfade einlassen“ (en Expand/Inset Paths)
 1. **BA-058** Knopf „Optionen…“ im Exportdialog mit Accessibility-Namen – Z. 321 (E2) – `dialogs\export.rs` – S – **Ergebnis B-4:** erledigt (B-4, f2808dc) – alle `fields::button` mit Accessibility-Namen
 1. **BA-059** shortcuts.json gegen PARITAET_B §1 abgleichen (gemessene Werte gelten) – Z. 322 (MN-5) – `fp-engine\data\shortcuts.json` – S – **Ergebnis B-4:** geprüft (B-4, f2808dc) – aktiver Vorgabesatz zeigt die gemessenen Werte (Umschalt+F3, Strg+Alt+O, F5; Test); Abweichungen nur im nicht gemessenen Satz „Firepixel“ → ohne Messwerte keine Änderung (wartet auf B-2)
@@ -208,6 +208,7 @@ Ergebnisse B-6 (14.10.): `docs\berichte\b6.md` (erledigt 14, offen/verschoben 6)
 1. **BA-125** `fw.createFirepixelDocument(…, {pixelsPerUnit, units: "centimeter"})` übernimmt die Zahl anscheinend als dpi – aus B-7 (Nebenbefund B-2) – `fp-script` – S – **V** (prüfen)
 1. **BA-126** Aktive Unterebene im Original ungemessen: Klick auf die Unterebenenzeile, „Für Seiten freigeben“ grau, `layer.move`-Index in der Elternebene, Klick auf die Ebenenzeile hebt die Unterebenenzeile mit hervor – aus B-9 – `fp-ui panels\layers.rs` – S – **Mess-Sitzung**
 1. **BA-127** Vorgabe-Kürzelsatz: Testsitzung mit „Web Standard“, `prefs.rs`-Rückfall „Firepixel“ – welcher Satz ist im Original Vorgabe (mit BA-059) – aus B-4 – `fp-ui prefs.rs` – S – **Mess-Sitzung**
+1. **BA-128** Farbwahl A4: Werkzeugleiste Verlauf/Muster (Original wechselt ins Verlaufs-Popup?) und Strichlage-Knöpfe ohne Auswahl – Rest von BA-047 nach Nutzerentscheid 14.10. 21:12 – `tools_panel.rs` – S – **Mess-Sitzung**
 
 ## I – abgehakt (Info/erledigt/überholt)
 

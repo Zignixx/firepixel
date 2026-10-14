@@ -1,6 +1,6 @@
 # Firepixel – Gesamtplan
 
-Stand: **14.10.2026 abends (GT-2), Endversion gebaut, Tag ausstehend**, Übersicht im nächsten Abschnitt (davor DOC-5 nachmittags). Die Abschnitte 2–7 sind der ältere Stand vom **13.10.2026 ≈ 02:50, nach Welle 3 und den Nachläufern** (auf den Ist-Stand gebracht von DOC3-4; vorher DOC-2 nach Welle 2, DOC-1 in der Pause ≈ 20:15). Zusammenfassung für den Nutzer: `docs\progress-2026-10-13.md`. Dieses Dokument ist der Fahrplan bis „fertig“. Es sagt, was erledigt ist, was gerade läuft und was in welcher Reihenfolge noch kommt. Die Einzelheiten stehen in den verlinkten Dateien. Wer ein Paket abschließt, hakt es hier ab (☐ → ☑) und trägt den Commit ein.
+Stand: **14.10.2026 spät (B-8), Befunde-Abbau fertig**, Übersicht im nächsten Abschnitt (davor GT-2 abends, Endversion gebaut, Tag ausstehend; DOC-5 nachmittags). Die Abschnitte 2–7 sind der ältere Stand vom **13.10.2026 ≈ 02:50, nach Welle 3 und den Nachläufern** (auf den Ist-Stand gebracht von DOC3-4; vorher DOC-2 nach Welle 2, DOC-1 in der Pause ≈ 20:15). Zusammenfassung für den Nutzer: `docs\progress-2026-10-13.md`. Dieses Dokument ist der Fahrplan bis „fertig“. Es sagt, was erledigt ist, was gerade läuft und was in welcher Reihenfolge noch kommt. Die Einzelheiten stehen in den verlinkten Dateien. Wer ein Paket abschließt, hakt es hier ab (☐ → ☑) und trägt den Commit ein.
 
 Verwandte Dateien:
 - `STATUS.md`: Stand je Crate und je Agent
@@ -15,6 +15,18 @@ Verwandte Dateien:
 - `docs\TESTLEITFADEN_2026-10-12.md`: Hands-on-Test für den Nutzer, alle Änderungen seit 12.10. 04:00
 
 ---
+
+## Stand 14.10.2026 spät (B-8): Befunde-Abbau fertig
+
+**Kurz:** Der Befunde-Abbau B-1…B-9 ist abgeschlossen (Berichte `docs\berichte\b1.md`–`b9.md`, Abschluss `b8.md`).
+Endstand in `docs\BEFUNDE_ABBAU.md` (128 BA): **52 erledigt**, **41 warten auf die Mess-Sitzung im Original**
+(vom Nutzer am 14.10. 21:12 freigegeben; darunter die 23 X-Punkte von B-2), **1 entschieden, Umsetzung offen**
+(BA-056 Effektnamen der Abschrägungs-Familie wie im Original), **29 verschoben**, **5 nicht machbar** – offen 76.
+BA-047 ist nach Nutzerentscheid geschlossen (A3: Pipette auf transparenter Leinwand nimmt Weiß, A4 → BA-128).
+`BEFUNDE.md`: 614 erledigt, 81 offen. AGENTS DE/EN (aktive Unterebene, Neuerungen B-3…B-7) und NACHPRUEFUNG
+(Abschnitt 9, 26 Zeilen) nachgezogen. Voller Testlauf auf `ba032d1`: 2095 grün, 4 rot (3 echte kleine Fehler in
+`161c229` behoben, 1 wackelnd), 127 ignoriert. Neue Vorschau `Desktop\Firepixel-Vorschau-2026-10-14_21-48` (Stand `161c229`, NEU.md/NEW.md).
+Kein Git-Tag, nicht gepusht.
 
 ## Stand 14.10.2026 abends (GT-2): Endversion gebaut, Tag ausstehend
 

@@ -1,5 +1,17 @@
 # Firepixel: Stand
 
+## Stand 14.10.2026 spät (B-8): Befunde-Abbau fertig
+
+**Kurz:** Der Befunde-Abbau B-1…B-9 ist abgeschlossen (Berichte `docs\berichte\b1.md`–`b9.md`, Abschluss `b8.md`).
+Endstand in `docs\BEFUNDE_ABBAU.md` (128 BA): **52 erledigt**, **41 warten auf die Mess-Sitzung im Original**
+(vom Nutzer am 14.10. 21:12 freigegeben; darunter die 23 X-Punkte von B-2), **1 entschieden, Umsetzung offen**
+(BA-056 Effektnamen der Abschrägungs-Familie wie im Original), **29 verschoben**, **5 nicht machbar** – offen 76.
+BA-047 ist nach Nutzerentscheid geschlossen (A3: Pipette auf transparenter Leinwand nimmt Weiß, A4 → BA-128).
+`BEFUNDE.md`: 614 erledigt, 81 offen. AGENTS DE/EN (aktive Unterebene, Neuerungen B-3…B-7) und NACHPRUEFUNG
+(Abschnitt 9, 26 Zeilen) nachgezogen. Voller Testlauf auf `ba032d1`: 2095 grün, 4 rot (3 echte kleine Fehler in
+`161c229` behoben, 1 wackelnd), 127 ignoriert. Neue Vorschau `Desktop\Firepixel-Vorschau-2026-10-14_21-48` (Stand `161c229`, NEU.md/NEW.md).
+Kein Git-Tag, nicht gepusht.
+
 ## Stand 14.10.2026 abends (GT-2): Endversion gebaut, Tag ausstehend
 
 **Kurz:** Nach der Testversion `Firepixel-Vorschau-2026-10-14_15-33` kamen F8–F14 und M2 auf `main`: Einfügen direkt
