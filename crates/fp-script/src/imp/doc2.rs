@@ -99,6 +99,67 @@ fn activate_layer(doc: DocId, idx: i64) -> FwResult<()> {
     Ok(())
 }
 
+/// Dupliziert eine Unterebene `n`-mal, jede Kopie direkt darüber (neue Element- und Ebenen-IDs).
+fn duplicate_sublayer(doc: DocId, sub: ElementId, n: usize) -> FwResult<()> {
+    super::edit_doc(doc, |d| {
+        let page = d.page;
+        let m = d.doc_mut();
+        for _ in 0..n {
+            let Some(path) = fp_engine::docops::find_on_page(m, page, sub) else { return };
+            let Some(e) = m.element_at(&path).cloned() else { return };
+            let c = fp_engine::docops::reassign(m, &e);
+            if let Some((list, idx)) = fp_engine::docops::parent_list_mut(m, &path) {
+                list.insert(idx, Arc::new(c));
+            }
+        }
+    })
+}
+
+/// Verschiebt eine Unterebene an die Stelle eines anderen Eintrags der flachen Ebenenliste.
+/// `below`: unter das Ziel (es rückt in der flachen Liste dahinter), sonst darüber.
+fn move_sublayer(doc: DocId, sub: ElementId, target: &super::elem::FlatLayer, below: bool) -> FwResult<()> {
+    if target.sub == Some(sub) {
+        return Ok(());
+    }
+    super::edit_doc(doc, |d| {
+        let (page, frame) = (d.page, d.frame);
+        let m = d.doc_mut();
+        let Some(from) = fp_engine::docops::find_on_page(m, page, sub) else { return };
+        // Ziel innerhalb der verschobenen Unterebene: nichts tun
+        if let Some(t) = target.sub
+            && fp_engine::docops::find_on_page(m, page, t).is_some_and(|p| p.slot == from.slot && p.steps.starts_with(&from.steps))
+        {
+            return;
+        }
+        let removed = fp_engine::docops::remove_ids(m, page, &[sub]);
+        let Some((_, e)) = removed.into_iter().next() else { return };
+        match target.sub {
+            Some(t) => {
+                if let Some(p) = fp_engine::docops::find_on_page(m, page, t)
+                    && let Some((list, idx)) = fp_engine::docops::parent_list_mut(m, &p)
+                {
+                    list.insert(if below { idx + 1 } else { idx }.min(list.len()), e);
+                }
+            }
+            None => {
+                let frames = m.pages.get(page).map(|p| p.root.frame_count as usize).unwrap_or(1);
+                if let Some(l) = fp_engine::docops::layer_mut(m, page, target.slot) {
+                    let ci = if l.shared_across_frames { 0 } else { frame.min(frames.saturating_sub(1)) };
+                    while l.cels.len() <= ci {
+                        l.cels.push(Arc::new(fp_model::Cel::empty()));
+                    }
+                    if let Some(c) = l.cels.get_mut(ci) {
+                        // Ebene als Ziel: als ihre oberste Unterebene bzw. ganz unten, wenn von hinten
+                        let c = Arc::make_mut(c);
+                        let at = if below { c.elements.len() } else { 0 };
+                        c.elements.insert(at, e);
+                    }
+                }
+            }
+        }
+    })
+}
+
 /// Verschiebt Elemente oben in eine Unterebene (aktueller Status), Reihenfolge bleibt.
 /// Die Unterebene selbst und ihre Vorfahren bleiben, wo sie sind.
 fn move_into_sublayer(doc: DocId, ids: &[ElementId], sub: ElementId) -> FwResult<()> {
@@ -485,11 +546,15 @@ pub(super) fn method(doc: DocId, name: &str, args: &[Arg], ctx: &mut Context) ->
         }
         "duplicateLayer" => {
             let idx = a(0).i64();
-            if idx >= 0 && flat_entry(doc, idx)?.sub.is_some() {
-                return Err(FwErr::NotImpl(format!("{CLS}.{name} für Unterebenen")));
+            let n = a(1).i64().clamp(1, 100);
+            // Unterebene: Kopie direkt darüber in derselben Elternebene (BA-075)
+            if idx >= 0
+                && let Some(sub) = flat_entry(doc, idx)?.sub
+            {
+                duplicate_sublayer(doc, sub, n as usize)?;
+                return u();
             }
             let id = layer_id(doc, idx)?.ok_or_else(|| FwErr::bad("Ebene"))?;
-            let n = a(1).i64().clamp(1, 100);
             for _ in 0..n {
                 exec(Some(doc), "layer.duplicate", json!({"layer": id}))?;
             }
@@ -499,12 +564,17 @@ pub(super) fn method(doc: DocId, name: &str, args: &[Arg], ctx: &mut Context) ->
             // beide Nummern flach wie `dom.layers`; verschoben werden Ebenen der obersten Stufe,
             // das Ziel zählt als Platz seiner Ebene der obersten Stufe
             let from = flat_entry(doc, a(0).i64())?;
-            if from.sub.is_some() {
-                return Err(FwErr::NotImpl(format!("{CLS}.{name} für Unterebenen")));
-            }
-            let id = from.id.ok_or_else(|| FwErr::bad("Ebene"))?;
             let list = flat_entries(doc)?;
             let to = a(1).i64().max(0);
+            // Unterebene: an die Stelle des Ziels in dessen Elternebene (Ziel = Ebene der obersten
+            // Stufe: oben in sie hinein); nicht in sich selbst (BA-075)
+            if let Some(sub) = from.sub {
+                let target = list.get(to as usize).or(list.last()).ok_or_else(|| FwErr::bad("Ebene"))?;
+                // flach nach vorn (in der Ebene nach unten): unter das Ziel, sonst darüber
+                move_sublayer(doc, sub, target, a(0).i64() > to)?;
+                return u();
+            }
+            let id = from.id.ok_or_else(|| FwErr::bad("Ebene"))?;
             let slot = match list.get(to as usize) {
                 Some(e) => e.slot,
                 // hinter dem Ende: wie bisher ans Ende (layer.move begrenzt)
@@ -513,8 +583,20 @@ pub(super) fn method(doc: DocId, name: &str, args: &[Arg], ctx: &mut Context) ->
             ex(doc, "layer.move", json!({"layer": id, "index": slot}))
         }
         "addNewSubLayer" => {
-            activate_layer(doc, a(0).i64())?;
-            ex(doc, "pi.layer.addSub", json!({"name": arg_str(args, 1)}))
+            // unter der Ebene `index` (auch einer Unterebene: verschachtelt); die neue Unterebene
+            // wird aktiv, Rückgabe ihr Name (B-2 BA-030)
+            let idx = a(0).i64();
+            if idx >= 0
+                && let Some(id) = flat_entry(doc, idx)?.id
+            {
+                exec(Some(doc), "layer.setActive", json!({"layer": id}))?;
+            }
+            let mut p = json!({});
+            if let Some(n) = a(1).str().filter(|n| !n.is_empty()) {
+                p["name"] = json!(n);
+            }
+            exec(Some(doc), "pi.layer.addSub", p)?;
+            Ok(conv::s(&super::doc::active_layer_name(doc)?))
         }
         "getParentLayerNum" => {
             // flacher Index der Elternebene, -1 auf der obersten Stufe (re\api\fw_api.json)

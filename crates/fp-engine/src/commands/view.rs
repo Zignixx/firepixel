@@ -97,11 +97,17 @@ pub(super) fn register(r: &mut CommandRegistry) {
             .requires(DOC)
             .param("zoom", ParamKind::Number { min: Some(0.0625), max: Some(64.0) }, "Zoomfaktor (1 = 100 %)")
             .opt("at", ParamKind::Point, "Ankerpunkt (Dokumentkoordinaten)")
+            .opt("center", ParamKind::Point, "Dokumentpunkt in die Mitte der Ansicht (JSF setActiveViewScale)")
             .run(|s, p| {
                 let z = p.f64("zoom")?;
+                let center = p.opt_point("center")?;
                 let d = s.doc_mut()?;
                 let a = anchor_for(d, p)?;
                 d.view.set_zoom(z, a);
+                if let Some(c) = center {
+                    let v = &mut d.view;
+                    v.origin = (c.x as f64 - v.viewport.0 / 2.0 / v.zoom, c.y as f64 - v.viewport.1 / 2.0 / v.zoom);
+                }
                 Ok(CommandOutput::view())
             }),
     );

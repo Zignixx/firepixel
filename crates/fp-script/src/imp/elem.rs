@@ -750,15 +750,11 @@ fn element_get(cls: &str, name: &str, doc: DocId, id: ElementId, ctx: &mut Conte
             }
             _ => JsValue::undefined(),
         },
-        "antiAliased" => JsValue::from(matches!(&e.kind, ElementKind::Text(t) if t.antialias != 0)),
+        // „Keine Kantenglättung“ ist kein `TAAi`-Wert, sondern die harte Füllkante; `TAAi` 0 = glatt
+        // (re\09 §3.5, BA-066)
+        "antiAliased" => JsValue::from(matches!(&e.kind, ElementKind::Text(t) if t.attrs.fill.as_ref().is_none_or(|f| f.edge != 0))),
         "antiAliasMode" => conv::s(match &e.kind {
-            ElementKind::Text(t) => match t.antialias {
-                0 => "none",
-                1 => "crisp",
-                2 => "strong",
-                4 => "custom",
-                _ => "smooth",
-            },
+            ElementKind::Text(t) => super::aa_name(t.antialias),
             _ => "smooth",
         }),
         "autoKern" => JsValue::from(matches!(&e.kind, ElementKind::Text(t) if t.auto_kern)),
@@ -1160,19 +1156,15 @@ fn element_set(cls: &str, name: &str, doc: DocId, id: ElementId, a: Arg, raw: &J
             text_prop(doc, id, cls, name, json!({"autoKern": v}))
         }
         "antiAliased" => {
-            let v = a.bool();
-            text_prop(doc, id, cls, name, json!({"antialias": super::aa_name(if v { 3 } else { 0 })}))
-        }
-        "antiAliasMode" => {
-            let code = match a.str().unwrap_or_default().as_str() {
-                "none" => 0,
-                "crisp" => 1,
-                "strong" => 2,
-                "custom" => 4,
-                _ => 3,
+            // an: bisheriger Glättungsmodus (`TAAi`) mit weicher Kante, aus: harte Füllkante
+            let cur = match &element(doc, id)?.kind {
+                ElementKind::Text(t) => t.antialias,
+                _ => 0,
             };
-            text_prop(doc, id, cls, name, json!({"antialias": super::aa_name(code)}))
+            let v = a.bool();
+            text_prop(doc, id, cls, name, json!({"antialias": if v { super::aa_name(cur) } else { "none" }}))
         }
+        "antiAliasMode" => text_prop(doc, id, cls, name, json!({"antialias": super::aa_mode_from_jsf(&a.str().unwrap_or_default())})),
         "orientation" => {
             let code = super::orientation_code_from_jsf(&a.str().unwrap_or_default());
             text_prop(doc, id, cls, name, json!({"orientation": super::orientation_name(code)}))

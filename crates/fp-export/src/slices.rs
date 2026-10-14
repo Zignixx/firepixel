@@ -280,8 +280,163 @@ pub fn frame_suffix_with(tokens: &[i32], frame: usize, state_names: &[String; 4]
     out
 }
 
-/// Slices der Web-Ebene einer Seite (oberste zuerst). Slices ohne `MSNi` bekommen laufende IDs ab 1.
+/// Grenzen eines Elements in Dokumentkoordinaten (für Schaltflächen ohne aktiven Bereich).
+pub type BoundsFn = fn(&Document, &fp_model::Element) -> Option<Rect>;
+
+/// Slices der Web-Ebene einer Seite (oberste zuerst), danach die Segmente der Schaltflächen-Instanzen
+/// (TW-19, [`button_slices`]); Grenzen ohne aktiven Bereich mit [`approx_bounds`].
 pub fn collect_slices(doc: &Document, page: usize) -> Vec<SliceSpec> {
+    collect_slices_with(doc, page, approx_bounds)
+}
+
+/// Wie [`collect_slices`], Grenzen der Schaltflächen ohne aktiven Bereich über `bounds` (die Engine
+/// übergibt ihre genauen Elementgrenzen).
+pub fn collect_slices_with(doc: &Document, page: usize, bounds: BoundsFn) -> Vec<SliceSpec> {
+    let mut out = web_slices(doc, page);
+    let next = out.iter().map(|s| s.id).max().unwrap_or(0) + 1;
+    out.extend(button_slices(doc, page, next, bounds));
+    out
+}
+
+/// Aktiver Bereich einer Schaltflächen-Instanz: die Web-Objekte der Web-Ebene des Symbols (re\13
+/// §1.4 „Aktiver Bereich“, z. B. Bevel Button −43,−18–44,18), mit der Instanzmatrix abgebildet.
+/// `None` = keine Schaltfläche oder kein aktiver Bereich im Symbol (BA-072).
+pub fn button_active_area(doc: &Document, e: &fp_model::Element) -> Option<Rect> {
+    let ElementKind::Instance(i) = &e.kind else { return None };
+    let (_, sym) = doc.symbol_by_id(i.symbol_id)?;
+    if sym.kind() != fp_model::SymbolKind::Button {
+        return None;
+    }
+    let mut r: Option<Rect> = None;
+    for slot in &sym.root.layers {
+        let LayerSlot::Own(l) = slot else { continue };
+        if l.kind != LayerKind::Web {
+            continue;
+        }
+        let Some(cel) = l.cels.first() else { continue };
+        for c in &cel.elements {
+            let ElementKind::WebObject(w) = &c.kind else { continue };
+            let b = match &w.polygon {
+                Some(p) if !p.nodes.is_empty() => fp_model::new::contour_bounds(std::slice::from_ref(p)),
+                _ => w.bounds.normalized(),
+            };
+            r = Some(r.map_or(b, |x| x.union(&b)));
+        }
+    }
+    r.filter(|b| b.width() > 0.0 && b.height() > 0.0).map(|b| i.transform.transform_rect_bounds(&b))
+}
+
+/// Segmentfläche einer sichtbaren Schaltflächen-Instanz: aktiver Bereich des Symbols, sonst die
+/// Grenzen der Instanz (`bounds`). `None` = keine Schaltfläche.
+pub fn button_slice_rect(doc: &Document, e: &fp_model::Element, bounds: impl Fn(&fp_model::Element) -> Option<Rect>) -> Option<Rect> {
+    let ElementKind::Instance(i) = &e.kind else { return None };
+    if !doc.symbol_by_id(i.symbol_id).is_some_and(|(_, s)| s.kind() == fp_model::SymbolKind::Button) {
+        return None;
+    }
+    button_active_area(doc, e).or_else(|| bounds(e)).map(|r| r.normalized()).filter(|r| r.width() > 0.0 && r.height() > 0.0)
+}
+
+/// Schaltflächen-Instanzen sichtbarer Ebenen (auch in Gruppen) als Bild-Segmente wie im Original
+/// (TW-19): Fläche nach [`button_slice_rect`], Link/Alt/Ziel/Dateiname der Instanz, sonst des
+/// Symbols. Kennungen ab `next`. Ist die Web-Ebene ausgeblendet, fehlen sie wie auf der Leinwand.
+pub fn button_slices(doc: &Document, page: usize, next: u32, bounds: BoundsFn) -> Vec<SliceSpec> {
+    let mut out = Vec::new();
+    let Some(p) = doc.pages.get(page) else { return out };
+    let own = || p.root.layers.iter().filter_map(|s| if let LayerSlot::Own(l) = s { Some(l) } else { None });
+    if !own().filter(|l| l.kind == LayerKind::Web).all(|l| l.is_visible()) {
+        return out;
+    }
+    let mut id = next;
+    for l in own().collect::<Vec<_>>().into_iter().rev() {
+        if l.kind == LayerKind::Web || !l.is_visible() {
+            continue;
+        }
+        let Some(cel) = l.cels.first() else { continue };
+        collect_buttons(doc, &cel.elements, bounds, &mut id, &mut out, 0);
+    }
+    out
+}
+
+fn collect_buttons(doc: &Document, elements: &[std::sync::Arc<fp_model::Element>], bounds: BoundsFn, id: &mut u32, out: &mut Vec<SliceSpec>, depth: u32) {
+    if depth > 24 {
+        return;
+    }
+    for e in elements {
+        if !e.common.visible {
+            continue;
+        }
+        match &e.kind {
+            ElementKind::Instance(i) => {
+                let Some(r) = button_slice_rect(doc, e, |x| bounds(doc, x)) else { continue };
+                let sym = doc.symbol_by_id(i.symbol_id).map(|(_, s)| s.button.clone()).unwrap_or_default();
+                let pick = |a: &Option<String>, b: &Option<String>| a.clone().or_else(|| b.clone()).unwrap_or_default();
+                out.push(SliceSpec {
+                    rect: [r.left, r.top, r.right, r.bottom],
+                    id: *id,
+                    poly: false,
+                    base_name: i.button.file_name.clone().or(sym.file_name.clone()).filter(|s| !s.is_empty()),
+                    url: pick(&i.button.url, &sym.url),
+                    alt: pick(&i.button.alt, &sym.alt),
+                    target: pick(&i.button.target, &sym.target),
+                    kind: 0,
+                    html: String::new(),
+                    polygon: Vec::new(),
+                    behaviors: Vec::new(),
+                });
+                *id += 1;
+            }
+            ElementKind::Group(g) => collect_buttons(doc, &g.children, bounds, id, out, depth + 1),
+            _ => {}
+        }
+    }
+}
+
+/// Näherung der Elementgrenzen ohne Engine (Pfade mit Griffpunkten, Text mit 2 px Rand, Bitmaps,
+/// Gruppen, Instanzen über ihr Symbol); nur Rückfall für [`collect_slices`].
+pub fn approx_bounds(doc: &Document, e: &fp_model::Element) -> Option<Rect> {
+    approx_depth(doc, e, 0)
+}
+
+fn approx_depth(doc: &Document, e: &fp_model::Element, depth: u32) -> Option<Rect> {
+    if depth > 24 {
+        return None;
+    }
+    let union = |a: Option<Rect>, b: Option<Rect>| match (a, b) {
+        (Some(a), Some(b)) => Some(a.union(&b)),
+        (a, b) => a.or(b),
+    };
+    match &e.kind {
+        ElementKind::Path(p) => Some(fp_model::new::contour_bounds(&p.contours)),
+        ElementKind::Text(t) => {
+            let b = Rect::new(t.bounds.left - 2.0, t.bounds.top - 2.0, t.bounds.right + 2.0, t.bounds.bottom + 2.0);
+            Some(t.transform.map_or(b, |m| m.transform_rect_bounds(&b)))
+        }
+        ElementKind::Bitmap(b) => {
+            let p = b.image.position();
+            Some(Rect::from_xywh(p.x, p.y, b.image.grid.width as f32, b.image.grid.height as f32))
+        }
+        ElementKind::Group(g) => g.children.iter().fold(None, |acc, c| union(acc, approx_depth(doc, c, depth + 1))),
+        ElementKind::Instance(i) => {
+            let (_, sym) = doc.symbol_by_id(i.symbol_id)?;
+            let mut r = None;
+            for s in &sym.root.layers {
+                if let LayerSlot::Own(l) = s
+                    && l.kind == LayerKind::Normal
+                    && let Some(cel) = l.cels.first()
+                {
+                    for c in &cel.elements {
+                        r = union(r, approx_depth(doc, c, depth + 1));
+                    }
+                }
+            }
+            r.map(|b| i.transform.transform_rect_bounds(&b))
+        }
+        _ => None,
+    }
+}
+
+/// Slices der Web-Ebene einer Seite (oberste zuerst). Slices ohne `MSNi` bekommen laufende IDs ab 1.
+fn web_slices(doc: &Document, page: usize) -> Vec<SliceSpec> {
     let mut out = Vec::new();
     let Some(p) = doc.pages.get(page) else { return out };
     let mut next = 1u32;

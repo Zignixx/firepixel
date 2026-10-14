@@ -48,6 +48,12 @@ pub(super) fn set_defaults(doc: DocId, f: impl FnOnce(&mut DefaultAttrs)) -> FwR
     with_state(|s| f(s.defaults.entry(doc.0).or_default()))
 }
 
+/// Strich- bzw. Füllfarbe des Werkzeugbedienfelds (Farbe als `#rrggbb[aa]`; `None` = unverändert).
+fn set_tool_color(c: Option<&str>, stroke: bool) -> FwResult<()> {
+    let Some(argb) = c.and_then(fp_model::Rgba8::parse_hex).map(fp_model::Argb::from) else { return Ok(()) };
+    with_state(|s| if stroke { s.session.set_colors(Some(argb), None) } else { s.session.set_colors(None, Some(argb)) })
+}
+
 /// Füll- bzw. Strichtextur nach Namen (`""` = keine) auf die Auswahl, ohne Auswahl in die
 /// Vorgaben für neue Objekte. `pi.fill`/`pi.stroke` laden die Maske mit
 /// `fp_engine::resources::load_texture` aus den Texturordnern (ohne Datei bleibt nur der Name).
@@ -438,6 +444,25 @@ pub(super) fn top_layer_id(doc: DocId, idx: i64) -> FwResult<Option<u64>> {
     Ok(flat_entries(doc)?.into_iter().find(|x| x.slot == e.slot && x.sub.is_none()).and_then(|x| x.id))
 }
 
+/// Name der aktiven Ebene (auch einer aktiven Unterebene); leer, wenn es keine gibt.
+pub(super) fn active_layer_name(doc: DocId) -> FwResult<String> {
+    st(|s| {
+        let d = s.session.document(doc).ok_or_else(|| FwErr::bad(fp_i18n::t("err-script-doc-closed")))?;
+        let Some(id) = d.layer else { return Ok(String::new()) };
+        if let Some((_, l)) = fp_engine::docops::own_layers(&d.doc, d.page).into_iter().find(|(_, l)| l.id == id) {
+            return Ok(l.name.clone());
+        }
+        let name = fp_engine::docops::sublayer_element(&d.doc, d.page, id)
+            .and_then(|el| fp_engine::docops::find_on_page(&d.doc, d.page, el))
+            .and_then(|p| d.doc.element_at(&p).cloned())
+            .and_then(|e| match &e.kind {
+                ElementKind::SubLayer(l) => Some(l.name.clone()),
+                _ => None,
+            });
+        Ok(name.unwrap_or_default())
+    })
+}
+
 /// Ebene zu einem Eintrag der flachen Liste: eigene Ebene der Seite oder Unterebene
 /// (über Seiten geteilte Ebenen und die Masterseitenebene: `None`, wie bisher).
 pub(super) fn entry_layer(m: &fp_model::Document, page: usize, e: &super::elem::FlatLayer) -> Option<Arc<fp_model::Layer>> {
@@ -557,6 +582,13 @@ pub(super) fn method(doc: DocId, name: &str, args: &[Arg], ctx: &mut Context) ->
         "addNewText" => {
             let r = a(0).rect().ok_or_else(|| FwErr::Hr(hr::E_BAD_PARAM_TYPE, "Rechteck".into()))?;
             let mut p = json!({"text": " "});
+            // bInitFromPrefs = true: letzte Einstellungen des Textwerkzeugs (Vorgabe von `draw.text`;
+            // Original UX-A O6: glatt, ohne Unterschneidung, 120 %); false: Werksvorgaben (BA-066)
+            if !a(1).bool() {
+                p["antialias"] = json!("smooth");
+                p["autoKern"] = json!(false);
+                p["orientation"] = json!("horizontalLtr");
+            }
             if (r[2] - r[0]).abs() > 2.0 {
                 p["rect"] = rect_arr(r);
             } else {
@@ -583,8 +615,15 @@ pub(super) fn method(doc: DocId, name: &str, args: &[Arg], ctx: &mut Context) ->
             u()
         }
         "addNewHotspot" => {
+            // addNewHotspot(kind, shape, bounds): „slice“ legt ein Segment an (Original: Segment mit
+            // automatischem Namen, UX-A O11/BA-066), sonst ein Hotspot; Form „oval“ = Kreis-Hotspot
             let r = args.iter().find_map(|x| x.rect()).unwrap_or([0.0, 0.0, 10.0, 10.0]);
-            exec(Some(doc), "web.addHotspot", json!({"shape": "rect", "rect": rect_arr(r)}))?;
+            if arg_str(args, 0).eq_ignore_ascii_case("slice") {
+                exec(Some(doc), "web.addSlice", json!({"shape": "rect", "rect": rect_arr(r)}))?;
+            } else {
+                let shape = if arg_str(args, 1).eq_ignore_ascii_case("oval") { "circle" } else { "rect" };
+                exec(Some(doc), "web.addHotspot", json!({"shape": shape, "rect": rect_arr(r)}))?;
+            }
             u()
         }
         "addNewSlice" => {
@@ -604,7 +643,8 @@ pub(super) fn method(doc: DocId, name: &str, args: &[Arg], ctx: &mut Context) ->
             {
                 exec(Some(doc), "layer.setShared", json!({"layer": id, "shared": true}))?;
             }
-            Ok(conv::s(&with_state(|s| s.session.document(doc).and_then(|d| d.layer).map(|l| l.0.to_string()))?.unwrap_or_default()))
+            // Rückgabe: Name der neuen Ebene (B-2 BA-031: `addNewLayer("TestL", false)` → "TestL")
+            Ok(conv::s(&active_layer_name(doc)?))
         }
         "addNewPage" => {
             let n = a(0).str();
@@ -772,6 +812,8 @@ pub(super) fn method(doc: DocId, name: &str, args: &[Arg], ctx: &mut Context) ->
         "setFillColor" => {
             let c = a(0).str().and_then(|c| conv::norm_color(&c));
             if selection(doc)?.is_empty() {
+                // ohne Auswahl: Füllfarbe des Werkzeugbedienfelds wie im Original (M2 Q-18, f13)
+                set_tool_color(c.as_deref(), false)?;
                 return set_defaults(doc, |d| d.fill = Some(c)).map(|_| JsValue::undefined());
             }
             exec(Some(doc), "element.setFill", json!({"color": c, "kind": "solid"}))?;
@@ -816,6 +858,11 @@ pub(super) fn method(doc: DocId, name: &str, args: &[Arg], ctx: &mut Context) ->
         }
         "setBrushColor" => {
             let c = a(0).str().and_then(|c| conv::norm_color(&c));
+            if selection(doc)?.is_empty() {
+                // ohne Auswahl: Strichfarbe des Werkzeugbedienfelds (M2 Q-18, f13)
+                set_tool_color(c.as_deref(), true)?;
+                return u();
+            }
             on_selection(doc, "element.setStroke", json!({"color": c}))
         }
         "setBrushSize" => on_selection(doc, "element.setStroke", json!({"width": a(0).f64().max(0.0)})),
@@ -914,14 +961,7 @@ pub(super) fn method(doc: DocId, name: &str, args: &[Arg], ctx: &mut Context) ->
             u()
         }
         "setTextAntiAliasing" => {
-            let code = match arg_str(args, 0).as_str() {
-                "none" => 0,
-                "crisp" => 1,
-                "strong" => 2,
-                "custom" => 4,
-                _ => 3,
-            };
-            super::set_text_props(doc, None, json!({"antialias": super::aa_name(code)}))?;
+            super::set_text_props(doc, None, json!({"antialias": super::aa_mode_from_jsf(&arg_str(args, 0))}))?;
             u()
         }
         "setTextOnPathMode" => {
@@ -1277,8 +1317,8 @@ pub(super) fn set(doc: DocId, name: &str, a: Arg, raw: &JsValue, ctx: &mut Conte
     let _ = raw;
     match name {
         "currentLayerNum" => {
-            // Unterebenen können in Firepixel nicht aktiv sein: dann ihre Ebene der obersten Stufe
-            if let Some(id) = top_layer_id(doc, a.i64())? {
+            // auch eine Unterebene kann aktiv sein (B-2 BA-030: Lesen liefert danach ihre Nummer)
+            if let Some(id) = flat_entry(doc, a.i64())?.id {
                 exec(Some(doc), "layer.setActive", json!({"layer": id}))?;
             }
             Ok(())

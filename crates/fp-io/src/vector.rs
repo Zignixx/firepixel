@@ -260,7 +260,10 @@ fn svg_image(ids: &mut IdGen, img: &usvg::Image, tile: &mut u32, warnings: &mut 
     Some(bitmap_element(ids, &placed, None, tile))
 }
 
-fn svg_group(ids: &mut IdGen, g: &usvg::Group, tile: &mut u32, warnings: &mut Vec<String>, depth: u32) -> Vec<Element> {
+/// Platzhalter-ID eines `<text>` im vorbereiteten SVG (Stapelfolge, BA-076).
+const TEXT_MARK: &str = "__fp_text_";
+
+fn svg_group(ids: &mut IdGen, g: &usvg::Group, tile: &mut u32, warnings: &mut Vec<String>, texts: &mut std::collections::HashMap<usize, Element>, depth: u32) -> Vec<Element> {
     if depth > 64 {
         return Vec::new();
     }
@@ -272,6 +275,13 @@ fn svg_group(ids: &mut IdGen, g: &usvg::Group, tile: &mut u32, warnings: &mut Ve
     for n in g.children().iter().rev() {
         match n {
             usvg::Node::Path(p) => {
+                // Platzhalter eines Texts: das Textobjekt an dieser Stelle der Stapelfolge
+                if let Some(k) = p.id().strip_prefix(TEXT_MARK).and_then(|k| k.parse::<usize>().ok()) {
+                    if let Some(t) = texts.remove(&k) {
+                        out.push(t);
+                    }
+                    continue;
+                }
                 if let Some(e) = svg_path(ids, p, warnings) {
                     out.push(e);
                 }
@@ -282,7 +292,7 @@ fn svg_group(ids: &mut IdGen, g: &usvg::Group, tile: &mut u32, warnings: &mut Ve
                 }
             }
             usvg::Node::Group(c) => {
-                let kids = svg_group(ids, c, tile, warnings, depth + 1);
+                let kids = svg_group(ids, c, tile, warnings, texts, depth + 1);
                 if kids.is_empty() {
                     continue;
                 }
@@ -350,18 +360,20 @@ fn svg_len(v: &str, em: f64) -> Option<f64> {
 
 /// SVG-`<text>` als Textobjekte (Q-13): Inhalt (inkl. `<tspan>`), Schrift, Größe, Fett/Kursiv, Füllfarbe,
 /// Ausrichtung und Lage (Grundlinie bei `x`/`y`, alle Transformationen bis zur Leinwand). Oben → unten.
-fn svg_texts(data: &[u8], ids: &mut IdGen, warnings: &mut Vec<String>) -> Vec<Element> {
+/// Texte in Dokumentreihenfolge mit dem Bytebereich ihres `<text>` im (entpackten) Quelltext,
+/// dazu der entpackte Quelltext selbst (für die Platzhalter, BA-076).
+fn svg_texts(data: &[u8], ids: &mut IdGen, warnings: &mut Vec<String>) -> (Vec<(std::ops::Range<usize>, Element)>, Option<String>) {
     let unz;
     let data = if data.starts_with(&[0x1f, 0x8b]) {
-        let Ok(d) = usvg::decompress_svgz(data) else { return Vec::new() };
+        let Ok(d) = usvg::decompress_svgz(data) else { return (Vec::new(), None) };
         unz = d;
         &unz[..]
     } else {
         data
     };
-    let Ok(s) = std::str::from_utf8(data) else { return Vec::new() };
+    let Ok(s) = std::str::from_utf8(data) else { return (Vec::new(), None) };
     let opt = roxmltree::ParsingOptions { allow_dtd: true, ..Default::default() };
-    let Ok(xml) = roxmltree::Document::parse_with_options(s, opt) else { return Vec::new() };
+    let Ok(xml) = roxmltree::Document::parse_with_options(s, opt) else { return (Vec::new(), None) };
     let root = xml.root_element();
     // viewBox ⇒ Leinwand (gleichmäßig wie usvg bei preserveAspectRatio „xMidYMid meet“)
     let mut t0 = svgtypes::Transform::default();
@@ -377,8 +389,7 @@ fn svg_texts(data: &[u8], ids: &mut IdGen, warnings: &mut Vec<String>) -> Vec<El
     let style0 = SvgTextStyle { t: t0, fill: Some(Argb(0xFF00_0000)), family: "Times New Roman".into(), size: 16.0, bold: false, italic: false, anchor: 0 };
     let mut out = Vec::new();
     svg_text_walk(root, &style0, ids, warnings, &mut out, 0);
-    out.reverse();
-    out
+    (out, Some(s.to_string()))
 }
 
 fn svg_text_style(n: &roxmltree::Node, parent: &SvgTextStyle) -> SvgTextStyle {
@@ -428,7 +439,7 @@ fn svg_text_style(n: &roxmltree::Node, parent: &SvgTextStyle) -> SvgTextStyle {
     st
 }
 
-fn svg_text_walk(n: roxmltree::Node, parent: &SvgTextStyle, ids: &mut IdGen, warnings: &mut Vec<String>, out: &mut Vec<Element>, depth: u32) {
+fn svg_text_walk(n: roxmltree::Node, parent: &SvgTextStyle, ids: &mut IdGen, warnings: &mut Vec<String>, out: &mut Vec<(std::ops::Range<usize>, Element)>, depth: u32) {
     if depth > 64 || svg_prop(&n, "display").as_deref() == Some("none") {
         return;
     }
@@ -483,7 +494,7 @@ fn svg_text_walk(n: roxmltree::Node, parent: &SvgTextStyle, ids: &mut IdGen, war
     if let Some(id) = n.attribute("id") {
         e.common.name = Some(id.to_string());
     }
-    out.push(e);
+    out.push((n.range(), e));
 }
 
 /// SVG importieren (Pfade ins Modell).
@@ -496,10 +507,31 @@ pub fn import_svg(data: &[u8], _opts: &ImportOptions) -> Result<ImportResult> {
     let mut ids = std::mem::take(&mut doc.ids);
     let mut warnings = Vec::new();
     let mut tile = 0;
-    let mut els = svg_group(&mut ids, tree.root(), &mut tile, &mut warnings, 0);
-    // Text liegt oben (usvg liefert ohne Textmodul keine Textknoten, die Stapelfolge zu Pfaden fehlt daher) (A)
-    let texts = svg_texts(data, &mut ids, &mut warnings);
-    els.splice(0..0, texts);
+    // Texte liest svg_texts (usvg ohne Textmodul liefert keine Textknoten). Für die Stapelfolge
+    // ersetzt ein unsichtbarer Platzhalterpfad mit eigener ID jedes `<text>`; usvg ordnet ihn wie
+    // den Text ein, svg_group setzt dort das Textobjekt ein (BA-076). Nicht eingesetzte Texte
+    // (Platzhalter verworfen) liegen wie bisher oben.
+    let (found, src) = svg_texts(data, &mut ids, &mut warnings);
+    let marked = src.filter(|_| !found.is_empty()).map(|s| {
+        let mut m = String::with_capacity(s.len());
+        let mut at = 0;
+        for (k, (r, _)) in found.iter().enumerate() {
+            if r.start < at {
+                continue;
+            }
+            m.push_str(&s[at..r.start]);
+            m.push_str(&format!("<path id=\"{TEXT_MARK}{k}\" d=\"M0 0h1v1h-1z\" fill=\"#000\" stroke=\"none\" opacity=\"1\"/>"));
+            at = r.end;
+        }
+        m.push_str(&s[at..]);
+        m
+    });
+    let mut texts: std::collections::HashMap<usize, Element> = found.into_iter().map(|(_, e)| e).enumerate().collect();
+    let marked_tree = marked.and_then(|m| usvg::Tree::from_data(m.as_bytes(), &usvg::Options::default()).ok());
+    let mut els = svg_group(&mut ids, marked_tree.as_ref().unwrap_or(&tree).root(), &mut tile, &mut warnings, &mut texts, 0);
+    let mut rest: Vec<(usize, Element)> = texts.into_iter().collect();
+    rest.sort_by_key(|(k, _)| std::cmp::Reverse(*k));
+    els.splice(0..0, rest.into_iter().map(|(_, e)| e));
     doc.ids = ids;
     push_elements(&mut doc, 0, els);
     warnings.sort();

@@ -346,7 +346,7 @@ pub fn top_normal_layer(doc: &Document, page: usize) -> Option<LayerId> {
 /// geteilte Ebene), sonst die oberste normale Ebene.
 pub fn layer_on_page(doc: &Document, page: usize, current: Option<LayerId>) -> Option<LayerId> {
     match current {
-        Some(c) if own_layers(doc, page).iter().any(|(_, l)| l.id == c) => Some(c),
+        Some(c) if own_layers(doc, page).iter().any(|(_, l)| l.id == c) || sublayer_element(doc, page, c).is_some() => Some(c),
         _ => top_normal_layer(doc, page),
     }
 }
@@ -360,6 +360,28 @@ pub fn web_layer(doc: &Document, page: usize) -> Option<LayerId> {
 /// Web-Ebene, andere Elemente nie (dann oberste normale Ebene). Liefert die Adresse.
 pub fn insert_element(doc: &mut Document, page: usize, frame: usize, layer: Option<LayerId>, index: usize, e: Arc<Element>) -> Option<ElementPath> {
     let is_web = matches!(e.kind, ElementKind::WebObject(_));
+    // aktive Unterebene (B-2 BA-030: im Original kann eine Unterebene aktiv sein): neue Elemente
+    // oben in ihr Cel des aktuellen Status
+    if !is_web
+        && let Some(sub) = layer.filter(|l| layer_slot(doc, page, *l).is_none())
+        && sublayer_element(doc, page, sub).is_some()
+    {
+        let id = e.id;
+        let frames = doc.pages.get(page)?.root.frame_count as usize;
+        let mut e = Some(e);
+        edit_layer_by_id(doc, page, sub, |l| {
+            let ci = if l.shared_across_frames { 0 } else { frame.min(frames.saturating_sub(1)) };
+            while l.cels.len() <= ci {
+                l.cels.push(Arc::new(Cel::empty()));
+            }
+            if let (Some(c), Some(e)) = (l.cels.get_mut(ci), e.take()) {
+                let cel = Arc::make_mut(c);
+                drop_order(&mut cel.elements_extra);
+                cel.elements.insert(index.min(cel.elements.len()), e);
+            }
+        })?;
+        return find_on_page(doc, page, id);
+    }
     let target = if is_web {
         web_layer(doc, page).or(layer)
     } else {

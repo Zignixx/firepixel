@@ -392,6 +392,7 @@ pub fn export_active(s: &Session, style: FilesStyle, base: &str, page: usize, se
     o.date = today();
     o.src_file = d.path.as_ref().map(|p| p.to_string_lossy().to_string()).unwrap_or_default();
     o.html_prefs = html_prefs(&s.prefs);
+    o.bounds = Some(crate::docops::element_bounds);
     export_document(&d.doc, &r, &o, &EncodeExtras::default()).map_err(|e| EngineError::Failed(e.to_string()))
 }
 
@@ -414,6 +415,7 @@ fn export_with_xhtml(s: &Session, style: FilesStyle, base: &str, page: usize, xh
     o.date = today();
     o.src_file = d.path.as_ref().map(|p| p.to_string_lossy().to_string()).unwrap_or_default();
     o.html_prefs = html_prefs(&s.prefs);
+    o.bounds = Some(crate::docops::element_bounds);
     export_document(&doc, &r, &o, &EncodeExtras::default()).map_err(|e| EngineError::Failed(e.to_string()))
 }
 
@@ -430,7 +432,7 @@ fn page_param(s: &Session, p: &Params) -> Result<usize> {
 }
 
 fn has_slices(doc: &Document, page: usize) -> bool {
-    !fp_export::slices::collect_slices(doc, page).is_empty()
+    !fp_export::slices::collect_slices_with(doc, page, crate::docops::element_bounds).is_empty()
 }
 
 /// Zählt die Farben eines Bildes (bis `limit + 1`) und prüft auf Transparenz.

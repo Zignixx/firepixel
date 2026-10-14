@@ -320,7 +320,19 @@ pub(super) fn method(name: &str, args: &[Arg], ctx: &mut Context) -> FwResult<Js
         "isPIVisible" | "getFloaterVisibility" | "checkFwJsVersion" => Ok(JsValue::from(name != "getFloaterVisibility")),
         "setFloaterVisibility" | "toggleFloater" | "setHideAllFloaters" | "growPIWindow" | "shrinkPIWindow" | "setPIPosition" | "showPIWindow" | "hidePIWindow" | "reloadPatterns"
         | "reloadTextures" | "reloadCommonLibrary" | "logPipEvent" | "enableFlashDebugging" | "disableFlashDebugging" | "quit" | "quitApplication"
-        | "addProjectEntry" | "logChangeInProject" | "removeAllProjectEntries" | "setActiveViewScale" => Ok(JsValue::undefined()),
+        | "addProjectEntry" | "logChangeInProject" | "removeAllProjectEntries" => Ok(JsValue::undefined()),
+        // setActiveViewScale(scale, center): Zoom der aktiven Ansicht und Mittelpunkt (BA-068)
+        "setActiveViewScale" => {
+            let z = a0.map(|a| a.f64()).unwrap_or(1.0);
+            if !(z.is_finite() && z > 0.0) {
+                return Ok(JsValue::undefined());
+            }
+            let mut p = json!({"zoom": z.clamp(0.0625, 64.0)});
+            if let Some((x, y)) = args.get(1).and_then(|a| a.point()) {
+                p["center"] = json!([x, y]);
+            }
+            exec(None, "view.setZoom", p).map(|_| JsValue::undefined())
+        }
         // „Warndialoge zurücksetzen“ (Befehle-Menü): abgeschaltete Warnungen wieder zeigen (FV-5)
         "resetWarnings" => {
             with_state(|s| {

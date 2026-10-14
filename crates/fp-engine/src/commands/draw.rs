@@ -740,6 +740,17 @@ pub(super) fn register(r: &mut CommandRegistry) {
             let id = layer_param(d, p)?;
             let page = d.page;
             let normals = docops::own_layers(&d.doc, page).iter().filter(|(_, l)| l.kind == LayerKind::Normal).count();
+            // Unterebene (kann seit B-5 aktiv sein): ihr Element samt Inhalt entfernen, aktiv wird
+            // die Ebene der obersten Stufe, in der sie lag
+            if docops::layer_slot(&d.doc, page, id).is_none()
+                && let Some(el) = docops::sublayer_element(&d.doc, page, id)
+            {
+                let removed = docops::remove_ids(Arc::make_mut(&mut d.doc), page, &[el]);
+                let parent = removed.first().and_then(|(path, _)| docops::own_layers(&d.doc, page).into_iter().find(|(s, _)| *s == path.slot).map(|(_, l)| l.id));
+                d.layer = parent.or_else(|| docops::top_normal_layer(&d.doc, page));
+                d.selection.clear();
+                return Ok(CommandOutput::doc());
+            }
             let slot = docops::layer_slot(&d.doc, page, id).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-layer")))?;
             let is_web = docops::own_layers(&d.doc, page).iter().any(|(s, l)| *s == slot && l.kind == LayerKind::Web);
             if is_web || normals <= 1 {
@@ -794,7 +805,8 @@ pub(super) fn register(r: &mut CommandRegistry) {
             let shared = d.doc.pages.get(d.page).is_some_and(|pg| {
                 pg.root.layers.iter().any(|sl| matches!(sl, LayerSlot::Shared(r) if d.doc.shared_layer(&r.id).and_then(|x| x.layer.as_ref()).is_some_and(|l| l.id == id)))
             });
-            if !shared {
+            // auch eine Unterebene kann aktiv sein (B-2 BA-030)
+            if !shared && docops::sublayer_element(&d.doc, d.page, id).is_none() {
                 docops::layer_slot(&d.doc, d.page, id).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-layer")))?;
             }
             d.layer = Some(id);

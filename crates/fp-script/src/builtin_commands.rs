@@ -27,7 +27,7 @@ var d = fw.getDocumentDOM();\n\
 if (fw.selection.length) {\n\
   var list = fw.selection[0].effectList;\n\
   var effects = list ? list.effects.slice(0) : [];\n\
-  effects.push({ EffectMoaID: \"{a7944db8-6ce2-11d1-8c76000502701850}\", EffectIsVisible: true, ShadowAngle: 315, ShadowBlur: 4, ShadowColor: \"#000000a5\", ShadowDistance: 7, ShadowType: 0, category: \"Shadow and Glow\", name: \"Drop Shadow\" });\n\
+  effects.push({ EffectMoaID: \"{a7944db8-6ce2-11d1-8c76000502701850}\", EffectIsVisible: true, ShadowAngle: 315, ShadowBlur: 4, ShadowColor: \"#000000a2\", ShadowDistance: 7, ShadowType: 0, category: \"Shadow and Glow\", name: \"Drop Shadow\" });\n\
   d.applyEffects({ category: \"UNUSED\", name: \"UNUSED\", effects: effects });\n\
 }\n",
     ),

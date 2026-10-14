@@ -2359,10 +2359,14 @@ pub fn register(r: &mut CommandRegistry) {
                 let mut idg = std::mem::take(&mut doc.ids);
                 let n = name.unwrap_or_else(|| fp_i18n::t("msg-default-sublayer"));
                 let sub = fp_model::Layer::new(&mut idg, &n, fp_model::LayerKind::Normal, frames.max(1));
+                let sub_id = sub.id;
                 let e = Element::new(idg.element(), ElementKind::SubLayer(Arc::new(sub)));
                 doc.ids = idg;
                 let id = e.id;
+                // in der aktiven Ebene, auch einer aktiven Unterebene (verschachtelt); die neue
+                // Unterebene wird aktiv wie im Original (B-2 BA-030)
                 docops::insert_element(doc, page, frame, layer, 0, Arc::new(e)).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-layer")))?;
+                d.layer = Some(sub_id);
                 d.selection.set(vec![id]);
                 Ok(CommandOutput::doc())
             }),

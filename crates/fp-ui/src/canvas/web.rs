@@ -69,9 +69,10 @@ fn button_slices(doc: &Document, elements: &[std::sync::Arc<fp_model::Element>],
             continue;
         }
         match &e.kind {
-            ElementKind::Instance(i) if doc.symbol_by_id(i.symbol_id).is_some_and(|(_, s)| s.kind() == fp_model::SymbolKind::Button) => {
-                if let Some(r) = fp_engine::docops::element_bounds(doc, e).filter(|r| r.width() > 0.0 && r.height() > 0.0) {
-                    out.push(WebItem { rect: r.normalized(), polygon: None, ellipse: false, slice: true, color: BUTTON_SLICE_COLOR });
+            ElementKind::Instance(_) => {
+                // aktiver Bereich aus dem Schaltflächensymbol, sonst die Instanzgrenzen (BA-072)
+                if let Some(r) = fp_export::slices::button_slice_rect(doc, e, |x| fp_engine::docops::element_bounds(doc, x)) {
+                    out.push(WebItem { rect: r, polygon: None, ellipse: false, slice: true, color: BUTTON_SLICE_COLOR });
                 }
             }
             ElementKind::Group(g) => button_slices(doc, &g.children, out),

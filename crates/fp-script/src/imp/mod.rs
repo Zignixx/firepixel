@@ -235,6 +235,19 @@ pub(crate) fn aa_name(code: i32) -> &'static str {
     }
 }
 
+/// JSF-Glättungsname (`antiAliasMode`, `setTextAntiAliasing`) → Name in `text.setProperties`;
+/// „none“ = harte Füllkante, Unbekanntes = glatt (BA-066).
+pub(crate) fn aa_mode_from_jsf(name: &str) -> &'static str {
+    match name {
+        "none" => "none",
+        "crisp" => "crisp",
+        "strong" => "strong",
+        "system" => "system",
+        "custom" => "custom",
+        _ => "smooth",
+    }
+}
+
 /// Richtungs-Code (ORIi) → Name in `text.setProperties`.
 pub(crate) fn orientation_name(code: i32) -> &'static str {
     match code {
@@ -461,7 +474,7 @@ pub(crate) fn global_uneval(_this: &JsValue, args: &[JsValue], ctx: &mut Context
 ///   der Serialisierer des Originals: `{ x:36, y:36 }` ohne Klammern, `[ 300 ]` mit Innenabstand,
 ///   leer `[  ]`/`{  }`, Steuerzeichen in Zeichenketten als `\u000D` (TW-08).
 /// - **Reine JS-Werte** wie SpiderMonkey 1.5: `[800, 600, , 2, 1]` (kein Innenabstand, `undefined`
-///   als Lücke), Objektliterale außen mit Klammern `({a:1, b:[1, 2]})`, verschachtelt ohne,
+///   und `null` als Lücke), Objektliterale außen mit Klammern `({a:1, b:[1, 2]})`, verschachtelt ohne,
 ///   Zeichenketten mit `\n`/`\r`/`\t`.
 pub(crate) fn to_source(this: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
     Ok(conv::s(&to_source_js(this, ctx)?))
@@ -478,11 +491,11 @@ fn src_value(v: &JsValue, ctx: &mut Context, depth: u32, host: bool, top: bool, 
     if depth > 24 {
         return Ok("null".into());
     }
-    if v.is_undefined() {
+    // `undefined` und `null` sind im JS-Array des Originals beide eine Lücke (BA-073, Beleg M2 q18:
+    // `[…, a.brush ? … : null].toSource()` → `[…, "fc_Solid/fn_Normal", ]`; im ganzen Paarlauf gibt das
+    // Original nie `null` in einem JS-Array aus)
+    if v.is_null_or_undefined() {
         return Ok(if in_js_array { String::new() } else { "null".into() });
-    }
-    if v.is_null() {
-        return Ok("null".into());
     }
     if let Some(b) = v.as_boolean() {
         return Ok(b.to_string());

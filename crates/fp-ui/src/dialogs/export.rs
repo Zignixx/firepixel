@@ -492,6 +492,7 @@ pub fn export_files_noted(st: &AppState, dlg: &ExportDialog) -> Result<(Vec<Expo
     o.style = dlg.kind();
     o.src_file = d.path.as_ref().map(|p| p.display().to_string()).unwrap_or_default();
     o.panel = Some(dlg.panel_options(st));
+    o.bounds = Some(fp_engine::docops::element_bounds);
     // HTML-Einrichtung „Allgemein“/„Tabelle“ (Kleinbuchstaben, leere Zellen; Voreinstellungen) –
     // vorher nur im Engine-Befehl gesetzt, der Dialog exportierte mit den Vorgaben (CT-1a E3)
     o.html_prefs = fp_engine::commands::export::html_prefs(&st.session.prefs);

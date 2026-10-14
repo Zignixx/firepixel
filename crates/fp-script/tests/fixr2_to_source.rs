@@ -24,8 +24,8 @@ fn js_array_without_inner_spaces_and_undefined_as_gap() {
     assert_eq!(result("[undefined, undefined, undefined].toSource()"), "[, , ]");
     // Original menu-edit/06: `["#808080", , 100]`.
     assert_eq!(result("['#808080', undefined, 100].toSource()"), "[\"#808080\", , 100]");
-    // null bleibt sichtbar.
-    assert_eq!(result("[1, null].toSource()"), "[1, null]");
+    // null ist ebenfalls eine Lücke (BA-073, Beleg M2 q18: `[…, a.brush ? … : null]` → `[…, ]`).
+    assert_eq!(result("[1, null].toSource()"), "[1, ]");
 }
 
 #[test]

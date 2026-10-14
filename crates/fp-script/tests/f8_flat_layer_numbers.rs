@@ -23,8 +23,8 @@ fn result(s: &mut fp_engine::Session, src: &str) -> String {
 fn with_sublayers() -> fp_engine::Session {
     let mut s = session();
     s.execute("draw.rectangle", json!({"rect": [0, 0, 50, 50], "name": "R"})).unwrap_or_else(|e| panic!("{e}"));
-    s.execute("pi.layer.addSub", json!({"name": "S1"})).unwrap_or_else(|e| panic!("{e}"));
-    s.execute("pi.layer.addSub", json!({"name": "S2"})).unwrap_or_else(|e| panic!("{e}"));
+    // seit B-5 wird die neue Unterebene aktiv (B-2 BA-030): beide ausdrücklich in Ebene 0
+    result(&mut s, "var d=fw.getDocumentDOM();d.addNewSubLayer(0,'S1',false);d.addNewSubLayer(0,'S2',false);d.currentLayerNum=0");
     s.execute("select.none", json!({})).unwrap_or_else(|e| panic!("{e}"));
     s
 }
@@ -52,8 +52,8 @@ fn current_layer_num_flat() {
     // Web-Ebene: Nummer 3 (bisher 1), gelesen wie gesetzt
     assert_eq!(result(&mut s, &format!("{D}d.currentLayerNum=3;[d.currentLayerNum,d.layers[d.currentLayerNum].layerType].join(',')")), "3,web");
     assert_eq!(result(&mut s, &format!("{D}d.currentLayerNum=0;d.layers[d.currentLayerNum].name")), n0(&mut s));
-    // Unterebene: aktiv wird ihre Ebene der obersten Stufe (Unterebenen können in Firepixel nicht aktiv sein)
-    assert_eq!(result(&mut s, &format!("{D}d.currentLayerNum=3;d.currentLayerNum=2;d.currentLayerNum")), "0");
+    // Unterebene: sie selbst wird aktiv und so gelesen (B-2 BA-030, Original liest 2)
+    assert_eq!(result(&mut s, &format!("{D}d.currentLayerNum=3;d.currentLayerNum=2;d.currentLayerNum")), "2");
 }
 
 fn n0(s: &mut fp_engine::Session) -> String {
@@ -130,7 +130,9 @@ fn reorder_top_level_with_sublayers() {
     let n = names(&mut s);
     assert_eq!(result(&mut s, &format!("{D}d.layers[0].layerType")), "web", "{n:?}");
     assert_eq!(&n[2..4], &["S1", "S2"], "{n:?}");
-    assert!(run_source(&mut s, &format!("{D}d.reorderLayer(2,0,false,0,0)"), &ScriptOptions::default()).error.is_some(), "Unterebene verschieben: nicht umgesetzt, Fehler statt falscher Ebene");
+    // Unterebene (BA-075): S2 (3) an die Stelle von S1 (2) – Reihenfolge in der Ebene getauscht
+    result(&mut s, &format!("{D}d.reorderLayer(3,2,false,0,0)"));
+    assert_eq!(&names(&mut s)[2..4], &["S2", "S1"]);
 }
 
 /// Ohne Unterebenen: Nummern wie bisher (oberste Stufe).

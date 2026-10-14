@@ -27,6 +27,8 @@ fn layers_flat_with_sublayers() {
     let mut s = session();
     s.execute("draw.rectangle", json!({"rect": [0, 0, 50, 50], "name": "BG"})).unwrap_or_else(|e| panic!("{e}"));
     s.execute("pi.layer.addSub", json!({"name": "S1"})).unwrap_or_else(|e| panic!("{e}"));
+    // seit B-5 wird die neue Unterebene aktiv (B-2 BA-030): S2 wieder in Ebene 0 anlegen
+    result(&mut s, "fw.getDocumentDOM().currentLayerNum = 0");
     s.execute("pi.layer.addSub", json!({"name": "S2"})).unwrap_or_else(|e| panic!("{e}"));
     let names = result(&mut s, "var d=fw.getDocumentDOM(),r=[];for(var i=0;i<d.layers.length;i++)r.push(d.layers[i].name);r.join('|')");
     let parts: Vec<&str> = names.split('|').collect();

@@ -13,7 +13,7 @@ use crate::options::{ExportFormat, OptimizeSettings};
 use crate::pipeline::ExportContext;
 use crate::popup::MenuDate;
 use crate::render::{page_rect, Background, LayerFilter, PageRenderer, RenderRequest};
-use crate::slices::{auto_name, build_grid, collect_hotspots, collect_slices, frame_suffix_with, NameDate};
+use crate::slices::{auto_name, build_grid, collect_hotspots, collect_slices_with, frame_suffix_with, NameDate};
 use crate::{ExportError, Result};
 
 /// Exportart (`exportFilesStyle`).
@@ -232,6 +232,9 @@ pub struct DocExportOptions {
     pub panel: Option<PanelOptions>,
     /// Programmweite Werte der HTML-Einrichtung (Voreinstellungen, re\18 §6.5).
     pub html_prefs: HtmlPrefs,
+    /// Elementgrenzen für Schaltflächen-Segmente ohne aktiven Bereich (TW-19); `None` = Näherung
+    /// [`crate::slices::approx_bounds`]. Die Engine übergibt ihre genauen Grenzen.
+    pub bounds: Option<crate::slices::BoundsFn>,
 }
 
 /// Werte der HTML-Einrichtung, die in den Voreinstellungen stehen (re\18 §6.5): Endung
@@ -306,6 +309,7 @@ impl DocExportOptions {
             measure: None,
             panel: None,
             html_prefs: HtmlPrefs::default(),
+            bounds: None,
         }
     }
 }
@@ -834,8 +838,8 @@ pub fn export_document_noted(doc: &Document, r: &dyn PageRenderer, o: &DocExport
             // „Dateiname in Kleinbuchstaben“ (HTML-Einrichtung, re\18 §6.2)
             let base = if o.html_prefs.lowercase { base.to_lowercase() } else { base };
             let slices = match pn.map(|x| x.slices) {
-                None if o.use_slices => collect_slices(doc, page),
-                Some(SliceMode::Export) => collect_slices(doc, page),
+                None if o.use_slices => collect_slices_with(doc, page, o.bounds.unwrap_or(crate::slices::approx_bounds)),
+                Some(SliceMode::Export) => collect_slices_with(doc, page, o.bounds.unwrap_or(crate::slices::approx_bounds)),
                 Some(SliceMode::AlongGuides) => guide_slices(doc, page),
                 _ => Vec::new(),
             };
