@@ -774,7 +774,11 @@ impl AiText {
             }
             match (self.kind, self.frame) {
                 (1, Some(f)) => {
-                    // Flächentext: Rahmen fester Breite wie im Original (Rahmentext, `frame_type` 1)
+                    // Flächentext: Rahmen fester Breite wie im Original (Rahmentext, `frame_type` 1). Das Original
+                    // legt den Rahmen 2 px links und 2 px tiefer an als den Pfad zwischen `Tp` und `TP` (TW-38,
+                    // gemessen 14.10.2026: `rawLeft/rawTop` = Pfad −2/+2 bei 3 Lagen, Myriad Pro und Arial,
+                    // 24/48 pt; `par.ai` ⇒ Tinte 9,20–107,55)
+                    let f = fp_geom::Rect::new(f.left - 2.0, f.top + 2.0, f.right - 2.0, f.bottom + 2.0);
                     t.frame_type = Some(1);
                     t.anchor_rect = Some(f);
                     t.bounds = f;

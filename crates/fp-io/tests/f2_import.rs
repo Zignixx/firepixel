@@ -109,7 +109,7 @@ fn tw15_psd_shape_and_nested_groups() {
 }
 
 
-/// TW-25: `.ai` aus dem Korpus (Flächentext „Hallo“, Myriad Pro 48) ⇒ ein Textobjekt im Rahmen 8,18–112,147.6.
+/// TW-25: `.ai` aus dem Korpus (Flächentext „Hallo“, Myriad Pro 48) ⇒ ein Textobjekt im Rahmen 6,20–110 (Pfad 8,18–112,147.6 um −2/+2 versetzt wie im Original, TW-38).
 #[test]
 fn tw25_ai_area_text() {
     let Some(doc) = open("par.ai") else {
@@ -125,7 +125,7 @@ fn tw25_ai_area_text() {
     assert_eq!(t.initial.ps_font.as_deref(), Some("MyriadPro-Regular"));
     assert_eq!(t.initial.size, Some(48.0));
     let r = t.anchor_rect.expect("Rahmen");
-    assert_eq!((r.left, r.top, r.right), (8.0, 18.0, 112.0));
+    assert_eq!((r.left, r.top, r.right), (6.0, 20.0, 110.0), "Pfad 8,18–112 um −2/+2 versetzt (TW-38)");
     println!("{:?} {:?}", t.bounds, t.runs[0].attrs.color);
 }
 
