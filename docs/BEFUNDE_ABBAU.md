@@ -22,7 +22,7 @@ Gezählt je BA nach dem letzten Ergebnis (B-2 … B-9). Teilweise erledigte BA z
 
 ## Stand nach B-2b (Mess-Sitzung, 14.10.2026 spät)
 
-Bericht `docs\berichte\b2b.md`. Von den 41 Mess-Sitzungs-Punkten: **gleich 9** (001, 002, 004, 006, 012, 019, 028, 055, 122 → abhaken) · **teilweise gleich, Rest nicht messbar 4** (014, 024, 026, 126) · **Unterschied 15** (B3: 003, 007, 008, 020, 039, 119, 128 · B4: 022, 023, 027, 032, 127 · B5: 017, 123, 124) · **nicht messbar/nicht gemessen 11** (009, 010, 013, 015, 018, 021, 025, 034, 035, 036, 054) · **Gesamtlauf 2** (087, 092). Nebenbefund N1: JSF `setExportOptions` ohne Wirkung in Firepixel (B5).
+Bericht `docs\berichte\b2b.md`. Von den 41 Mess-Sitzungs-Punkten: **gleich 9** (001, 002, 004, 006, 012, 019, 028, 055, 122 → abhaken) · **teilweise gleich, Rest nicht messbar 4** (014, 024, 026, 126) · **Unterschied 15** (B3: 003, 007, 008, 020, 039, 119, 128 · B4: 022, 023, 027, 032, 127 · B5: 017, 123, 124) · **nicht messbar/nicht gemessen 11** (009, 010, 013, 015, 018, 021, 025, 034, 035, 036, 054) · **Gesamtlauf 2** (087, 092). Nebenbefund N1: JSF `setExportOptions` ohne Wirkung in Firepixel (B5) – erledigt (G-B5, 0e8c6ae).
 
 ## Zählung bei B-1
 
@@ -67,7 +67,7 @@ Ergebnisse B-2 (14.10.): `docs\berichte\b2.md` (gleich 3, Unterschied 10, X 23).
 
 1. **BA-015** Objektpuffer der Live-Effekte an Text (fx_text.fw.png: 23,46–167,112), weitere Messpunkte für die Regel – Z. 370 (FX-4) – `compose.rs` – M – **Ergebnis B-2:** X (Rauschanalyse nötig) – **Ergebnis B-2b:** bleibt X (Rauschanalyse)
 1. **BA-016** Helligkeit/Kontrast „klein“ am einfarbigen Vektor: Rechenweg des Mittelwerts (109 statt 113) – Z. 371 (FX-4) – `Filter Helligkeit/Kontrast` – S – **Ergebnis B-2:** gleich (16 Messpunkte pixelgleich)
-1. **BA-017** Rahmen „roh“ beim Anfügen von Text an einen Pfad (TX2/P2 vs. TX3 aus Datei) – Z. 952 (F6/M1) – `fp-script, Text an Pfad` – S – **Ergebnis B-2:** Unterschied: raw = Pfadanfang/-breite, auch aus Datei → B5 · **Ergebnis B-7:** raw Links/Oben/Breite = Pfad ✓, Höhe offen – **Ergebnis B-2b:** Unterschied (Höhe) – rawHeight nach Pfadhöhe/Textgröße/Form, 10 Messwerte in b2b.md – `fp-script imp\elem.rs:721` – B5
+1. **BA-017** Rahmen „roh“ beim Anfügen von Text an einen Pfad (TX2/P2 vs. TX3 aus Datei) – Z. 952 (F6/M1) – `fp-script, Text an Pfad` – S – **Ergebnis B-2:** Unterschied: raw = Pfadanfang/-breite, auch aus Datei → B5 · **Ergebnis B-7:** raw Links/Oben/Breite = Pfad ✓, Höhe offen – **Ergebnis B-2b:** Unterschied (Höhe) – rawHeight nach Pfadhöhe/Textgröße/Form, 10 Messwerte in b2b.md – `fp-script imp\elem.rs:721` – B5 – **Ergebnis G-B5:** erledigt (G-B5, 0e8c6ae) – Messwerttabelle als Regel (Linie stückweise linear × Größe/14, senkrecht 10 × 65, geschlossen h/2 + 1, Rechteck 5)
 
 ### M-D · Dialoge, Menüs und Inspektor-Popups nach PARITAET_B (Messdokument UX-B; Datei-Info nach `berichte\dlg11.md`) (11)
 
@@ -207,8 +207,8 @@ Ergebnisse B-6 (14.10.): `docs\berichte\b6.md` (erledigt 14, offen/verschoben 6)
 1. **BA-120** Verlaufsgriffe: beim Ziehen bleiben die alten Griffe sichtbar (kosmetisch) – aus B-3 – `fp-ui canvas` – S – **V**
 1. **BA-121** HTML-Export: Schaltflächen ohne Rollover (Bild austauschen/Navigationsleiste, Bilder der Status 2–4) – aus B-5 – `fp-export` – L – **V**
 1. **BA-122** JSF-Name eines Segments aus `addNewHotspot("slice")` (`null`; Original zeigt „_r2_c2“) – aus B-5 – `fp-script` – S – **Mess-Sitzung** – **Ergebnis B-2b:** gleich – name = null (abhaken)
-1. **BA-123** `reorderLayer` einer Unterebene auf eine Ebene der obersten Stufe (Annahme) – aus B-5 – `fp-script` – S – **Mess-Sitzung** – **Ergebnis B-2b:** Unterschied – Unterebene wird Ebene der obersten Stufe direkt unter dem Ziel – `fp-script imp\doc2.rs:120` – B5
-1. **BA-124** pHYs bei Einheit Pixel/cm (Original nur in dpi gemessen) – aus B-7 – `fp-fwpng`, `fp-export` – S – **Mess-Sitzung** – **Ergebnis B-2b:** Unterschied – Einheit cm bleibt, pHYs = trunc(px/cm)·100 (2800/5000/5900) – `fp-fwpng png.rs:294` – B5
+1. **BA-123** `reorderLayer` einer Unterebene auf eine Ebene der obersten Stufe (Annahme) – aus B-5 – `fp-script` – S – **Mess-Sitzung** – **Ergebnis B-2b:** Unterschied – Unterebene wird Ebene der obersten Stufe direkt unter dem Ziel – `fp-script imp\doc2.rs:120` – B5 – **Ergebnis G-B5:** erledigt (G-B5, 0e8c6ae)
+1. **BA-124** pHYs bei Einheit Pixel/cm (Original nur in dpi gemessen) – aus B-7 – `fp-fwpng`, `fp-export` – S – **Mess-Sitzung** – **Ergebnis B-2b:** Unterschied – Einheit cm bleibt, pHYs = trunc(px/cm)·100 (2800/5000/5900) – `fp-fwpng png.rs:294` – B5 – **Ergebnis G-B5:** erledigt (G-B5, 0e8c6ae) – auch PNG-Export
 1. **BA-125** `fw.createFirepixelDocument(…, {pixelsPerUnit, units: "centimeter"})` übernimmt die Zahl anscheinend als dpi – aus B-7 (Nebenbefund B-2) – `fp-script` – S – **V** (prüfen)
 1. **BA-126** Aktive Unterebene im Original ungemessen: Klick auf die Unterebenenzeile, „Für Seiten freigeben“ grau, `layer.move`-Index in der Elternebene, Klick auf die Ebenenzeile hebt die Unterebenenzeile mit hervor – aus B-9 – `fp-ui panels\layers.rs` – S – **Mess-Sitzung** – **Ergebnis B-2b:** „Für Seiten freigeben“ grau bei aktiver Unterebene – gleich; Zeilenklick/Index nicht messbar
 1. **BA-127** Vorgabe-Kürzelsatz: Testsitzung mit „Web Standard“, `prefs.rs`-Rückfall „Firepixel“ – welcher Satz ist im Original Vorgabe (mit BA-059) – aus B-4 – `fp-ui prefs.rs` – S – **Mess-Sitzung** – **Ergebnis B-2b:** Unterschied – Vorgabe „Web Standard“ – `fp-engine prefs.rs:448` – B4
