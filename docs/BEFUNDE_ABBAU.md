@@ -1,8 +1,26 @@
 # Abbau der offenen Befunde
 
-Stand 14.10.2026 (B-1). Quelle: alle 147 offenen Einträge (`- [ ]`) in `docs\BEFUNDE.md`. Zeilenangaben „Z.“ beziehen sich auf BEFUNDE.md vor der Markierung durch B-1; seit der neuen Kopfnotiz liegen alle Einträge 2 Zeilen tiefer (Suche nach „BA-0xx“ in BEFUNDE.md findet sie direkt). Herkunft = Kürzel aus „(von …)“. Aufwand S ≤ 30 min, M ≤ 2 h, L > 2 h.
+Stand 14.10.2026 spät (B-8, Endstand siehe unten). Ursprünglich B-1. Quelle: alle 147 offenen Einträge (`- [ ]`) in `docs\BEFUNDE.md`. Zeilenangaben „Z.“ beziehen sich auf BEFUNDE.md vor der Markierung durch B-1; seit der neuen Kopfnotiz liegen alle Einträge 2 Zeilen tiefer (Suche nach „BA-0xx“ in BEFUNDE.md findet sie direkt). Herkunft = Kürzel aus „(von …)“. Aufwand S ≤ 30 min, M ≤ 2 h, L > 2 h.
 
-## Zählung
+## Endstand nach dem Befunde-Abbau (B-8, 14.10.2026 spät)
+
+Gezählt je BA nach dem letzten Ergebnis (B-2 … B-9). Teilweise erledigte BA zählen nach ihrem offenen Rest. „Mess-Sitzung“ = Messung im Original über die GUI bzw. der nächste Gesamt-/Bildlauf – beides nur mit Freigabe des Nutzers. Neu aus dem Abbau: BA-117 … BA-127 (Abschnitt N).
+
+| Paket | BA | erledigt | wartet auf Mess-Sitzung (Freigabe Nutzer) | wartet auf Nutzerentscheid | verschoben V | nicht machbar X |
+|---|---|---|---|---|---|---|
+| M – im Original messen | 36 | 7 (005, 011, 016, 029, 030, 031, 033) | 29 (davon teilweise erledigt: 009, 013, 014, 017, 020, 035) | – | – | – |
+| B3 – Leinwand/Werkzeuge | 11 | 6 (038, 040, 041, 042 bewusst anders, 043, 045) | 1 (039 Rest) | 1 (047) | 3 (037, 044, 046) | – |
+| B4 – Dialoge/Datei-Dialoge/Gestaltung | 18 | 13 (048–053, 057–062, 065) | 2 (054 Rest, 055 Rest) | 1 (056) | 2 (063 Zugriffstasten, 064 Rest → DES-3) | – |
+| B5 – Skript/Export/Web | 11 | 11 | – | – | – | – |
+| B6 – Aufräumen/Tests/Doku | 20 | 14 | 2 (087, 092: nächster Gesamt-/Bildlauf) | – | 4 (083 CI, 086 Entscheid Koordinator, 089, 091 L) | – |
+| V – bewusst verschoben | 15 | – | – | – | 15 | – |
+| X – nicht machbar | 5 | – | – | – | – | 5 |
+| N – neu aus dem Abbau | 11 | – | 6 (119, 122, 123, 124, 126, 127) | – | 5 (117, 118, 120, 121, 125) | – |
+| **Summe** | **127** | **51** | **40** | **2** | **29** | **5** |
+
+**Offen gesamt: 76 BA** (40 Mess-Sitzung + 2 Nutzerentscheid + 29 verschoben + 5 nicht machbar). In `BEFUNDE.md`: 614 erledigt, 81 offen (70 + 11 neue offene Einträge aus dem Abbau; dazu 1 erledigter).
+
+## Zählung bei B-1
 
 | Paket | Einträge (BA) | BEFUNDE-Zeilen |
 |---|---|---|
@@ -64,8 +82,8 @@ Ergebnisse B-2 (14.10.): `docs\berichte\b2.md` (gleich 3, Unterschied 10, X 23).
 ### M-E · JSF-Skripte im Original (`re\_testdateien\ux\uxa\`, Referenz `re\api\fw_api.json`) (3)
 
 1. **BA-029** JSF: setzt das Original beim Setzen einer Textur eine Menge (textureAmount)? – Z. 353 (AU-3) – `fp-script pi.fill` – S – **Ergebnis B-2:** gleich (fillTexture gesetzt, textureBlend 0)
-1. **BA-030** JSF: currentLayerNum = Unterebene – liefert das Original die Unterebene? – Z. 961 (F8) – `fp-script, fp-engine` – S – **Ergebnis B-2:** Unterschied: Unterebene aktiv, addNewSubLayer aktiviert/Name/verschachtelt → B5 – **Ergebnis B-5:** erledigt – Unterebene aktivierbar (Engine), `addNewSubLayer` verschachtelt/aktiviert/Name
-1. **BA-031** JSF addNewLayer: Rückgabe Name (laut re\api\fw_api.json) oder ID – Z. 963 (F8) – `fp-script` – S – **Ergebnis B-2:** Unterschied: Rückgabe Name statt ID → B5 – **Ergebnis B-5:** erledigt – Rückgabe Name
+1. **BA-030** JSF: currentLayerNum = Unterebene – liefert das Original die Unterebene? – Z. 961 (F8) – `fp-script, fp-engine` – S – **Ergebnis B-2:** Unterschied: Unterebene aktiv, addNewSubLayer aktiviert/Name/verschachtelt → B5 – **Ergebnis B-5:** erledigt – Unterebene aktivierbar (Engine), `addNewSubLayer` verschachtelt/aktiviert/Name
+1. **BA-031** JSF addNewLayer: Rückgabe Name (laut re\api\fw_api.json) oder ID – Z. 963 (F8) – `fp-script` – S – **Ergebnis B-2:** Unterschied: Rückgabe Name statt ID → B5 – **Ergebnis B-5:** erledigt – Rückgabe Name
 
 ### M-F · Export eines neuen bzw. des Testdokuments (`re\17`, `re\18`; BMP/PNG-Auflösung, HTML-Exportart) (5)
 
@@ -99,7 +117,7 @@ Ergebnisse B-3 (14.10.): `docs\berichte\b3.md` (erledigt 7 inkl. BA-005/BA-013, 
 1. **BA-051** Optimieren ▸ Einstellungen löschen: gewählte Einstellung direkt nach Rückfrage löschen – Z. 230 (MN-5) – `panels\optimize.rs, dialogs\panel_menus.rs` – S – **Ergebnis B-4:** erledigt (B-4, f2808dc) – gewählte eigene Einstellung → direkt Rückfrage; ohne gewählte eigene Einstellung (Original ungemessen) Auswahl wie bisher
 1. **BA-052** Tab-Folge der Live-Effekt-Dialoge (Farbton/Sättigung, Helligkeit/Kontrast, Unscharf maskieren) wie im Menüdialog – Z. 231 (FORM-1) – `dialogs\effects.rs effect_form` – S – **Ergebnis B-4:** erledigt (B-4, f2808dc) – Tab-Folge wie Menüdialog (Unit-Test)
 1. **BA-053** „Neues Symbol“ im Bibliothek-Bedienfeld wie D14 (9-Slice, Bibliothek-Kästchen) – Z. 232 (FORM-1) – `panel.library.newSymbol` – M – **Ergebnis B-4:** erledigt (B-4, f2808dc) – Anordnung D14, 9-Slice wirkt (`nineSlice`), Bibliothek-Kästchen grau; Verhalten (Bearbeitung öffnen?) ungemessen → M
-1. **BA-054** Exportdialog meldet „exportiert“ (Bildvorschau danach schließen, falls Messung re\17 §11.2 das ergibt) – Z. 236 (BV-4) – `dialogs\export.rs` – S – **Ergebnis B-4:** teilweise (B-4, f2808dc) – Zähler `dialogs.exported`; Schließen der Bildvorschau wartet auf B-2 (re §11.2)
+1. **BA-054** Exportdialog meldet „exportiert“ (Bildvorschau danach schließen, falls Messung re\17 §11.2 das ergibt) – Z. 236 (BV-4) – `dialogs\export.rs` – S – **Ergebnis B-4:** teilweise (B-4, f2808dc) – Zähler `dialogs.exported`; Schließen der Bildvorschau wartet auf B-2 (re\17 §11.2)
 1. **BA-055** Pinsel-Inspektor: Knopfbreite DE, senkrechte Popup-Schieber 24 × 222, Mischmodus-Liste (56 Einträge) – Z. 242 (PINSEL-1) – `inspector` – M – **Ergebnis B-4:** teilweise (B-4, f2808dc) – Knopftext ganz lesbar (`fields::button_fit`); Popup-Schieber schon senkrecht (parity tool-brush 07/09 ✅); Mischmodus-Liste (56) wartet auf B-2/eigenen Auftrag
 1. **BA-056** Namen der Abschrägungs-Familie und Feld „Art“ – Nutzerentscheidung – Z. 244 (FX-2) – `Effekte, Glossar` – S – **Ergebnis B-4:** wartet auf Nutzerentscheidung (Namen der Abschrägungs-Familie, Feld „Art“) – kein Code
 1. **BA-057** Verlaufsnamen der Pfadbefehle „Pfade erweitern“/„Pfade einlassen“ – Z. 316 (PM-6) – `command_texts.ftl` – S – **Ergebnis B-4:** erledigt (B-4, f2808dc) – „Pfade erweitern“/„Pfade einlassen“ (en Expand/Inset Paths)
@@ -114,17 +132,17 @@ Ergebnisse B-3 (14.10.): `docs\berichte\b3.md` (erledigt 7 inkl. BA-005/BA-013, 
 
 ## B5 – Skript/Export/Web
 
-1. **BA-066** JSF addNewHotspot("slice") → Segment; addNewText(rect, true) mit Voreinstellungen (Anti-Alias glatt, Unterschneidung aus, 120 %) – Z. 340 (UX-A) – `crates\fp-script\src\imp\doc.rs` – M – **Ergebnis B-5:** erledigt – Segment; Textvorgaben; JSF-Glättung nach `TAAi` korrigiert
-1. **BA-067** JSF pixelRect eines Texts = Glyphengrenzen (nach FX-T prüfen) – Z. 347 (PM-3) – `crates\fp-script\src\imp\elem.rs` – S – **Ergebnis B-5:** erledigt – geprüft (43,60–148,98 wie Original), Test
-1. **BA-068** JSF fw.setActiveViewScale an die Ansicht anbinden (heute No-op) – Z. 348 (PM-3) – `crates\fp-script\src\imp\fw.rs:323` – S – **Ergebnis B-5:** erledigt – `view.setZoom {center}`
-1. **BA-069** JSF-Vorgabe Schlagschatten #000000a5 vs. Menü-Vorgabe #000000a2 – Z. 354 (FX-1) – `crates\fp-script\src\builtin_commands.rs` – S – **Ergebnis B-5:** erledigt – `#000000a2`
-1. **BA-070** Batch effect.live: Abstand/Weichheit in der Vorschau über StepContext::preview_scale umrechnen (Feld vorhanden) – Z. 738 (BATCH-4/BATCH-6) – `crates\fp-batch\src\step.rs, steps` – S – **Ergebnis B-5:** erledigt – war umgesetzt (BATCH-11a), Test
-1. **BA-071** HTML-Export mit Schaltflächen-Segmenten (TW-19) prüfen – Z. 954 (F3) – `fp-export HTML` – M – **Ergebnis B-5:** erledigt – Schaltflächen-Segmente in der Tabelle (ohne Rollover → neuer Befund)
-1. **BA-072** TW-19: aktive Fläche aus dem Schaltflächensymbol auswerten – Z. 955 (F3) – `fp-export / Segmente` – S – **Ergebnis B-5:** erledigt – aktiver Bereich aus der Symbol-Web-Ebene (Export + Leinwand)
-1. **BA-073** JSF: undefined statt null (name, d.zoom, docTitle, brush.diameter) – Z. 956 (F4/FIX-R2) – `fp-script Wertumwandlung` – S – **Ergebnis B-5:** erledigt – `null` als Lücke in JS-Arrays (Beleg M2 q18)
-1. **BA-074** Unterebene als aktive Ebene; addNewSubLayer verschachtelt – Z. 961 (F8) – `fp-engine, fp-script` – M – **Ergebnis B-5:** erledigt – mit BA-030
-1. **BA-075** reorderLayer/duplicateLayer für Unterebenen (Engine-Befehl fehlt) – Z. 962 (F8) – `fp-script, fp-engine` – M – **Ergebnis B-5:** erledigt – duplizieren/umsortieren in fp-script
-1. **BA-076** SVG-Import: Stapelfolge von Text und Pfaden – Z. 964 (F2) – `fp-io vector.rs` – M – **Ergebnis B-5:** erledigt – Platzhalterpfade für usvg, Text in SVG-Stapelfolge
+1. **BA-066** JSF addNewHotspot("slice") → Segment; addNewText(rect, true) mit Voreinstellungen (Anti-Alias glatt, Unterschneidung aus, 120 %) – Z. 340 (UX-A) – `crates\fp-script\src\imp\doc.rs` – M – **Ergebnis B-5:** erledigt – Segment; Textvorgaben; JSF-Glättung nach `TAAi` korrigiert
+1. **BA-067** JSF pixelRect eines Texts = Glyphengrenzen (nach FX-T prüfen) – Z. 347 (PM-3) – `crates\fp-script\src\imp\elem.rs` – S – **Ergebnis B-5:** erledigt – geprüft (43,60–148,98 wie Original), Test
+1. **BA-068** JSF fw.setActiveViewScale an die Ansicht anbinden (heute No-op) – Z. 348 (PM-3) – `crates\fp-script\src\imp\fw.rs:323` – S – **Ergebnis B-5:** erledigt – `view.setZoom {center}`
+1. **BA-069** JSF-Vorgabe Schlagschatten #000000a5 vs. Menü-Vorgabe #000000a2 – Z. 354 (FX-1) – `crates\fp-script\src\builtin_commands.rs` – S – **Ergebnis B-5:** erledigt – `#000000a2`
+1. **BA-070** Batch effect.live: Abstand/Weichheit in der Vorschau über StepContext::preview_scale umrechnen (Feld vorhanden) – Z. 738 (BATCH-4/BATCH-6) – `crates\fp-batch\src\step.rs, steps` – S – **Ergebnis B-5:** erledigt – war umgesetzt (BATCH-11a), Test
+1. **BA-071** HTML-Export mit Schaltflächen-Segmenten (TW-19) prüfen – Z. 954 (F3) – `fp-export HTML` – M – **Ergebnis B-5:** erledigt – Schaltflächen-Segmente in der Tabelle (ohne Rollover → neuer Befund)
+1. **BA-072** TW-19: aktive Fläche aus dem Schaltflächensymbol auswerten – Z. 955 (F3) – `fp-export / Segmente` – S – **Ergebnis B-5:** erledigt – aktiver Bereich aus der Symbol-Web-Ebene (Export + Leinwand)
+1. **BA-073** JSF: undefined statt null (name, d.zoom, docTitle, brush.diameter) – Z. 956 (F4/FIX-R2) – `fp-script Wertumwandlung` – S – **Ergebnis B-5:** erledigt – `null` als Lücke in JS-Arrays (Beleg M2 q18)
+1. **BA-074** Unterebene als aktive Ebene; addNewSubLayer verschachtelt – Z. 961 (F8) – `fp-engine, fp-script` – M – **Ergebnis B-5:** erledigt – mit BA-030
+1. **BA-075** reorderLayer/duplicateLayer für Unterebenen (Engine-Befehl fehlt) – Z. 962 (F8) – `fp-script, fp-engine` – M – **Ergebnis B-5:** erledigt – duplizieren/umsortieren in fp-script
+1. **BA-076** SVG-Import: Stapelfolge von Text und Pfaden – Z. 964 (F2) – `fp-io vector.rs` – M – **Ergebnis B-5:** erledigt – Platzhalterpfade für usvg, Text in SVG-Stapelfolge
 
 ## B6 – Aufräumen/Tests/Doku
 
@@ -176,6 +194,20 @@ Ergebnisse B-6 (14.10.): `docs\berichte\b6.md` (erledigt 14, offen/verschoben 6)
 1. **BA-114** Systemfarbwähler (A1) und Pipette außerhalb des Fensters (A2) – nur mit unsafe bzw. Zusatzabhängigkeit – Z. 241 (FARB-1b), Z. 959 (F5) – `inspector\popups.rs` – S
 1. **BA-115** XMP-Standardkennung enthält den Herstellernamen – Neutralitätsregel §1a verbietet es – Z. 447 (DLG-10) – `fp-fwpng XMP` – S
 1. **BA-116** CFF-Schrift (andere Schriftfassung unter Windows) bleibt bei 52–72 % exakten Pixeln; gedrehter Text ungehintet – Z. 373 (FX-T) – `fp-text` – S
+
+## N – neu aus dem Abbau (B-2 … B-9, eingetragen von B-8)
+
+1. **BA-117** Auswahlrahmen: Rand 5 px in x 2 px breiter als im Original, erweitern 10 unten 1 px kürzer (Maskengrenze) – aus B-2 (BA-011) – `fp-engine Auswahl` – S – **V** (nächstes Code-Paket)
+1. **BA-118** JSF `dom.getPixelMask` fehlt (liefert `null`) – aus B-2 (BA-011) – `crates\fp-script\src\imp\doc2.rs` – M – **V**
+1. **BA-119** In Bitmap konvertieren ignoriert die Deckkraft mitgewählter Objekte (Deckkraft 0 wird deckend gerastert; Original: fällt weg) – bäckt das Original die Deckkraft ein? – aus B-3 – `fp-engine render_backend.rs`, `fp-ui canvas\render.rs` – M – **Mess-Sitzung**
+1. **BA-120** Verlaufsgriffe: beim Ziehen bleiben die alten Griffe sichtbar (kosmetisch) – aus B-3 – `fp-ui canvas` – S – **V**
+1. **BA-121** HTML-Export: Schaltflächen ohne Rollover (Bild austauschen/Navigationsleiste, Bilder der Status 2–4) – aus B-5 – `fp-export` – L – **V**
+1. **BA-122** JSF-Name eines Segments aus `addNewHotspot("slice")` (`null`; Original zeigt „_r2_c2“) – aus B-5 – `fp-script` – S – **Mess-Sitzung**
+1. **BA-123** `reorderLayer` einer Unterebene auf eine Ebene der obersten Stufe (Annahme) – aus B-5 – `fp-script` – S – **Mess-Sitzung**
+1. **BA-124** pHYs bei Einheit Pixel/cm (Original nur in dpi gemessen) – aus B-7 – `fp-fwpng`, `fp-export` – S – **Mess-Sitzung**
+1. **BA-125** `fw.createFirepixelDocument(…, {pixelsPerUnit, units: "centimeter"})` übernimmt die Zahl anscheinend als dpi – aus B-7 (Nebenbefund B-2) – `fp-script` – S – **V** (prüfen)
+1. **BA-126** Aktive Unterebene im Original ungemessen: Klick auf die Unterebenenzeile, „Für Seiten freigeben“ grau, `layer.move`-Index in der Elternebene, Klick auf die Ebenenzeile hebt die Unterebenenzeile mit hervor – aus B-9 – `fp-ui panels\layers.rs` – S – **Mess-Sitzung**
+1. **BA-127** Vorgabe-Kürzelsatz: Testsitzung mit „Web Standard“, `prefs.rs`-Rückfall „Firepixel“ – welcher Satz ist im Original Vorgabe (mit BA-059) – aus B-4 – `fp-ui prefs.rs` – S – **Mess-Sitzung**
 
 ## I – abgehakt (Info/erledigt/überholt)
 

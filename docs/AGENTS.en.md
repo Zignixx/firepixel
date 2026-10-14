@@ -217,6 +217,21 @@ Resources (Markdown): `firepixel://docs/agents.md` (this file), `firepixel://doc
 * Shortcut sets have neutral names in the user interface ("Image Editing", "Vector Drawing", "Classic Vector
   Keys"). `edit.keyboardShortcuts {"set": …}` and `CurrentShortcutSet` still take the old internal
   identifiers; saved preferences and scripts keep working.
+* **Active sub-layer:** `layer.setActive` also takes the ID of a sub-layer; new objects then go into it.
+  `layer.move` counts the position within the parent layer (0 = bottom), `layer.duplicate` puts the copy
+  directly above it in the same parent layer (result `{"layer": id}`, the copy becomes active), `layer.add` puts
+  the new layer above the top-level layer, `layer.delete` then activates the top-level layer.
+  "Share Layer to Pages" is not available for a sub-layer (menu greyed out, a clear error message via command).
+  In the Layers panel a click on the sub-layer row makes it active.
+* Gradient/pattern handles: `element.setFillHandles` is one step ("Move gradient handles"); in the user
+  interface the Pointer and Subselection tools drag the handles. `modify.combinePaths.join` always returns an
+  unnamed result. `modify.flattenSelection` crops the bitmap to the visible pixels (alpha > 0).
+* New documents and new pages default to **PNG 32-bit** export; files without export settings still read as GIF
+  Adaptive 256. PNG export and FW-PNG write `pHYs` = `floor(trunc(dpi) / 0.0254)` (72 dpi → 2834).
+* `view.setZoom` has the optional parameter `center` (document point to the middle of the window).
+  `panel.library.newSymbol` takes `nineSlice`. The HTML export turns button instances into slices of their own
+  (active area from the symbol's web layer, otherwise the instance bounds; state 1 with link only).
+  SVG import keeps the stacking order of texts.
 
 ## 5. Typical workflows
 
@@ -276,7 +291,17 @@ As in the original:
 * `dom.guides.locked` reads the effective lock (*View ▸ Guides ▸ Lock Guides*).
 * All layer **numbers** count flat like `dom.layers`: number `i` in `currentLayerNum`, `setLayerVisible(i)`,
   `setLayerLocked`, `deleteLayer`, `getParentLayerNum`, `moveSelectionToLayer` … means `dom.layers[i]`. A sub-layer
-  cannot be the active layer; `currentLayerNum = <sub-layer>` activates its top-level layer.
+  can be the active layer: `currentLayerNum = <sub-layer>` activates it and reads it back;
+  `addNewSubLayer(index, name)` creates the sub-layer under `index` (nested), activates it and returns the name;
+  `addNewLayer(name, shared)` returns the name. `duplicateLayer`/`reorderLayer` with a sub-layer stay within its
+  parent layer.
+* More script details as in the original: `addNewHotspot("slice", …)` creates a slice, shape `"oval"` a circle
+  hotspot; `addNewText(rect, true)` takes the Text tool defaults. `antiAliased`/`antiAliasMode` read and set the
+  text anti-aliasing (`"none"` = hard edge). `fw.setActiveViewScale(scale, center)` sets zoom and centre.
+  `toSource` writes `null` in an array as a gap (`[1, ]`). `setFillColor`/`setBrushColor` without a selection set
+  the colours of the Tools panel. `filterSelection`/`filterSelectionByName` convert vectors to a bitmap without
+  asking. `convertToAnimSymbol(name, states, …)` adds no new states from a script. `importFile` into a target
+  rectangle rounds the position. Text on a path: `rawLeft/rawTop/rawWidth` = the path bounds.
 
 **AI selection** (object, subject, edge – local models, no network connection while computing)
 

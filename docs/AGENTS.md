@@ -217,6 +217,21 @@ Ressourcen (Markdown): `firepixel://docs/agents.md` (diese Datei), `firepixel://
 * Kürzelsätze heißen in der Oberfläche neutral („Bildbearbeitung“, „Vektorzeichnung“, „Klassische
   Vektor-Tasten“). `edit.keyboardShortcuts {"set": …}` und `CurrentShortcutSet` nehmen weiter die alten internen
   Kennungen; gespeicherte Einstellungen und Skripte laufen unverändert.
+* **Aktive Unterebene:** `layer.setActive` nimmt auch die ID einer Unterebene; neue Objekte landen dann in ihr.
+  `layer.move` zählt die Position in der Elternebene (0 = unten), `layer.duplicate` legt die Kopie direkt
+  darüber in dieselbe Elternebene (Ergebnis `{"layer": id}`, die Kopie wird aktiv), `layer.add` setzt die neue
+  Ebene über die Ebene der obersten Stufe, `layer.delete` aktiviert danach die Ebene der obersten Stufe.
+  „Für Seiten freigeben“ geht für eine Unterebene nicht (Menü grau, per Befehl eine klare Fehlermeldung).
+  Im Ebenen-Bedienfeld macht ein Klick auf die Unterebenenzeile sie aktiv.
+* Verlaufs-/Mustergriffe: `element.setFillHandles` ist ein Schritt („Verlaufsgriffe verschieben“); in der
+  Oberfläche ziehen Zeiger und Hintere auswählen die Griffe. `modify.combinePaths.join` liefert immer ein Ergebnis ohne Namen.
+  `modify.flattenSelection` beschneidet die Bitmap auf die sichtbaren Pixel (Alpha > 0).
+* Neue Dokumente und neue Seiten haben die Exportvorgabe **PNG 32 Bit**; Dateien ohne Exporteinstellung lesen
+  weiter GIF Adaptiv 256. PNG-Export und FW-PNG schreiben `pHYs` = `floor(trunc(dpi) / 0,0254)` (72 dpi → 2834).
+* `view.setZoom` hat den optionalen Parameter `center` (Dokumentpunkt in die Fenstermitte).
+  `panel.library.newSymbol` nimmt `nineSlice`. Der HTML-Export macht aus Schaltflächen-Instanzen eigene Segmente
+  (aktiver Bereich aus der Web-Ebene des Symbols, sonst Instanzgrenzen; nur Status 1 mit Link).
+  SVG-Import behält die Stapelfolge von Texten.
 
 ## 5. Typische Abläufe
 
@@ -276,7 +291,18 @@ Wie im Original gilt:
 * `dom.guides.locked` liest die wirksame Sperre (*Ansicht ▸ Hilfslinien ▸ Hilfslinien sperren*).
 * Alle Ebenen**nummern** zählen flach wie `dom.layers`: Nummer `i` in `currentLayerNum`, `setLayerVisible(i)`,
   `setLayerLocked`, `deleteLayer`, `getParentLayerNum`, `moveSelectionToLayer` … meint `dom.layers[i]`. Eine Unterebene
-  kann nicht die aktive Ebene sein; `currentLayerNum = <Unterebene>` aktiviert ihre Ebene der obersten Stufe.
+  kann die aktive Ebene sein: `currentLayerNum = <Unterebene>` aktiviert sie und liest sie zurück;
+  `addNewSubLayer(index, name)` legt die Unterebene unter `index` an (verschachtelt), aktiviert sie und gibt den
+  Namen zurück; `addNewLayer(name, shared)` gibt den Namen zurück. `duplicateLayer`/`reorderLayer` mit einer
+  Unterebene bleiben in deren Elternebene.
+* Weitere Skript-Details wie im Original: `addNewHotspot("slice", …)` legt ein Segment an, Form `"oval"` einen
+  Kreis-Hotspot; `addNewText(rect, true)` nimmt die Vorgaben des Textwerkzeugs. `antiAliased`/`antiAliasMode`
+  lesen und setzen die Textglättung (`"none"` = harte Kante). `fw.setActiveViewScale(scale, center)` setzt Zoom
+  und Mittelpunkt. `toSource` gibt `null` in einem Array als Lücke aus (`[1, ]`). `setFillColor`/`setBrushColor`
+  ohne Auswahl setzen die Farben des Werkzeugbedienfelds. `filterSelection`/`filterSelectionByName` wandeln
+  Vektoren ohne Rückfrage in ein Bitmap um. `convertToAnimSymbol(name, status, …)` legt per Skript keine neuen
+  Status an. `importFile` in ein Zielrechteck rundet die Lage. Text am Pfad: `rawLeft/rawTop/rawWidth` = Grenzen
+  des Pfads.
 
 **KI-Auswahl** (Objekt, Motiv, Kante – lokale Modelle, keine Netzverbindung beim Rechnen)
 
