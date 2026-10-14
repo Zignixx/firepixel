@@ -126,26 +126,28 @@ Ergebnisse B-2 (14.10.): `docs\berichte\b2.md` (gleich 3, Unterschied 10, X 23).
 
 ## B6 – Aufräumen/Tests/Doku
 
-1. **BA-077** new_document.rs: eigene underline_access auf dialogs::access umstellen – Z. 237 (NZ-3) – `crates\fp-ui\src\dialogs\new_document.rs:171` – S
-1. **BA-078** Unbenutzte Schlüssel pi-color-pipette/pi-color-transparent entfernen (kein .rs-Treffer) – Z. 239 (FARB-1b) – `inspector.ftl de/en` – S
-1. **BA-079** Altpfad ColorChoice::Pipette / popups::start_pick prüfen und entfernen – Z. 240 (FARB-1b) – `crates\fp-ui\src\inspector\popups.rs:83` – S
-1. **BA-080** misc::stroke_options_form unbenutzt – entfernen – Z. 243 (PINSEL-1) – `crates\fp-ui\src\dialogs\misc.rs:208` – S
-1. **BA-081** Unbenutzte dlg-md-*-Schlüssel (Ziel/Größe/Batch, 14 + 4 je Sprache) entfernen – Z. 723 (E3), Z. 744 (BATCH-2) – `crates\fp-i18n\locales\*\dialogs.ftl` – S
-1. **BA-082** Gesamttests: file.batchProcess öffnet das Studio – ausnehmen; Erlaubnis im clipping_audit streichen (prüfen) – Z. 745 (BATCH-2) – `fp-ui tests` – S
-1. **BA-083** Golden-Hashes des Resamplers auf anderen OS (CI) neu erzeugen – Z. 746 (BATCH-4) – `fp-batch Tests` – S
-1. **BA-084** AGENTS.md/AGENTS.en.md: Abschnitt „Video über ffmpeg“ (FIREPIXEL_FFMPEG) – Z. 750 (BATCH-7) – `docs\AGENTS*.md` – S
-1. **BA-085** DESIGN.md §12 Startbildschirm; design_willkommen schreibt design_after_* statt design_nachher_*; Bilder neu – Z. 707 (DES-2), Z. 726 (TE2-E) – `docs\DESIGN.md, crates\fp-ui\tests\design_willkommen.rs` – S
-1. **BA-086** Deutsche QA-Bereichs-IDs/Ordner in i18n_qa_* englisch (alte Ergebnisse weiter lesen) – Koordinator – Z. 725 (TE2-A/TE2-E) – `crates\fp-ui\tests\i18n_qa_*` – M
-1. **BA-087** Automatische Berichte (I18N_PRUEFUNG, funktionstest\*_auto) mit neuen Ordner-/ftl-Namen neu erzeugen – Z. 719 (TE-1) – `docs` – S
-1. **BA-088** gesamt_menu: Sprachwechsel prozessweit – Sprache zurücksetzen oder seriell (prüfen) – Z. 413 (FV-13) – `crates\fp-ui\tests\gesamt_menu.rs` – S
-1. **BA-089** kittest/wgpu: gemeinsame Sperre um render() gegen Zugriffsverletzung im Programm all – Z. 416 (NZ-2) – `fp-ui tests` – M
-1. **BA-090** Wackelnde Tests width_field_limited_to_6000_with_message, batch_ui::trockenlauf_und_lauf_zweimal – Z. 968 (GT-0f/FIX-F) – `fp-ui tests` – M
-1. **BA-091** Runner-Lücken tools\parity\ (ui_map-Schlüssel, repeat, owner-drawn Untermenüs, Drehbücher) – Z. 969 (RUN-2/RUN-3/RUN-4/A3-2) – `tools\parity\` – L
-1. **BA-092** kittest-Bildserien/Paarbilder mit Text nach Hinting neu erzeugen – Z. 374 (FX-T) – `fp-ui tests` – S
-1. **BA-093** Korpus-Pixeltests (--ignored) nach InkBuffer::stamp-Änderung laufen lassen – Z. 375 (PINSEL-1) – `fp-vector` – S
-1. **BA-094** „Befehle ▸ Demo - aktuelles Dokument“ im echten Fenster; judge meldet Fremdprogramm-Start – Z. 420 (MN-4) – `gesamt_common::judge` – S
-1. **BA-095** winit focus_window() beim normalen Start nötig? (simulierter Alt-Druck) – Z. 421 (START-1) – `crates\fp-ui\src\start_window.rs:148` – S
-1. **BA-096** bridge.rs: Bildschirmfoto-Zuordnung eindeutig machen – Z. 425 (FARB-1b) – `bridge.rs` – S
+Ergebnisse B-6 (14.10.): `docs\berichte\b6.md` (erledigt 14, offen/verschoben 6), Commit `ab45d1e`.
+
+1. **BA-077** new_document.rs: eigene underline_access auf dialogs::access umstellen – Z. 237 (NZ-3) – `crates\fp-ui\src\dialogs\new_document.rs:171` – S – **Ergebnis B-6:** erledigt – `access::underline` statt eigener Funktion
+1. **BA-078** Unbenutzte Schlüssel pi-color-pipette/pi-color-transparent entfernen (kein .rs-Treffer) – Z. 239 (FARB-1b) – `inspector.ftl de/en` – S – **Ergebnis B-6:** erledigt – beide Schlüssel de/en entfernt
+1. **BA-079** Altpfad ColorChoice::Pipette / popups::start_pick prüfen und entfernen – Z. 240 (FARB-1b) – `crates\fp-ui\src\inspector\popups.rs:83` – S – **Ergebnis B-6:** erledigt – Variante, `start_pick`, `poll_pick`, `PickState` entfernt
+1. **BA-080** misc::stroke_options_form unbenutzt – entfernen – Z. 243 (PINSEL-1) – `crates\fp-ui\src\dialogs\misc.rs:208` – S – **Ergebnis B-6:** erledigt – samt Hilfsfunktionen und 29 nur dort benutzten Schlüsseln je Sprache
+1. **BA-081** Unbenutzte dlg-md-*-Schlüssel (Ziel/Größe/Batch, 14 + 4 je Sprache) entfernen – Z. 723 (E3), Z. 744 (BATCH-2) – `crates\fp-i18n\locales\*\dialogs.ftl` – S – **Ergebnis B-6:** erledigt – 19 Schlüssel je Sprache entfernt (Grep ohne Treffer)
+1. **BA-082** Gesamttests: file.batchProcess öffnet das Studio – ausnehmen; Erlaubnis im clipping_audit streichen (prüfen) – Z. 745 (BATCH-2) – `fp-ui tests` – S – **Ergebnis B-6:** erledigt (geprüft) – Studio zählt seit FIX-B als Wirkung, keine Erlaubnis-Einträge mehr; Bericht beim nächsten GT neu
+1. **BA-083** Golden-Hashes des Resamplers auf anderen OS (CI) neu erzeugen – Z. 746 (BATCH-4) – `fp-batch Tests` – S – **Ergebnis B-6:** offen – braucht CI auf anderem OS (→ V)
+1. **BA-084** AGENTS.md/AGENTS.en.md: Abschnitt „Video über ffmpeg“ (FIREPIXEL_FFMPEG) – Z. 750 (BATCH-7) – `docs\AGENTS*.md` – S – **Ergebnis B-6:** erledigt – AGENTS.md/AGENTS.en.md §5c „Video über ffmpeg“
+1. **BA-085** DESIGN.md §12 Startbildschirm; design_willkommen schreibt design_after_* statt design_nachher_*; Bilder neu – Z. 707 (DES-2), Z. 726 (TE2-E) – `docs\DESIGN.md, crates\fp-ui\tests\design_willkommen.rs` – S – **Ergebnis B-6:** erledigt – `design_after_welcome*` neu, alte Entwurfsbilder entfernt, 102 `design_vorher_*` → `design_before_*` mit Verweisen
+1. **BA-086** Deutsche QA-Bereichs-IDs/Ordner in i18n_qa_* englisch (alte Ergebnisse weiter lesen) – Koordinator – Z. 725 (TE2-A/TE2-E) – `crates\fp-ui\tests\i18n_qa_*` – M – **Ergebnis B-6:** offen – Entscheidung Koordinator ausstehend
+1. **BA-087** Automatische Berichte (I18N_PRUEFUNG, funktionstest\*_auto) mit neuen Ordner-/ftl-Namen neu erzeugen – Z. 719 (TE-1) – `docs` – S – **Ergebnis B-6:** offen – entsteht beim nächsten GT-Lauf
+1. **BA-088** gesamt_menu: Sprachwechsel prozessweit – Sprache zurücksetzen oder seriell (prüfen) – Z. 413 (FV-13) – `crates\fp-ui\tests\gesamt_menu.rs` – S – **Ergebnis B-6:** erledigt – `run_item` setzt die Sprache nach jedem Versuch zurück
+1. **BA-089** kittest/wgpu: gemeinsame Sperre um render() gegen Zugriffsverletzung im Programm all – Z. 416 (NZ-2) – `fp-ui tests` – M – **Ergebnis B-6:** verschoben – Sperre müsste Bild und Abbau umschließen (25 Dateien), kein Absturz in GT-0f…GT-2
+1. **BA-090** Wackelnde Tests width_field_limited_to_6000_with_message, batch_ui::trockenlauf_und_lauf_zweimal – Z. 968 (GT-0f/FIX-F) – `fp-ui tests` – M – **Ergebnis B-6:** erledigt – Ursachen behoben (Sprachzähler je Thread; eigener Testordner je Batch-Test), Regressionstest
+1. **BA-091** Runner-Lücken tools\parity\ (ui_map-Schlüssel, repeat, owner-drawn Untermenüs, Drehbücher) – Z. 969 (RUN-2/RUN-3/RUN-4/A3-2) – `tools\parity\` – L – **Ergebnis B-6:** offen (L) – Läufer gegen das Original, nicht in B6 bearbeitet
+1. **BA-092** kittest-Bildserien/Paarbilder mit Text nach Hinting neu erzeugen – Z. 374 (FX-T) – `fp-ui tests` – S – **Ergebnis B-6:** offen – nächster Bildlauf (NACHPRUEFUNG)
+1. **BA-093** Korpus-Pixeltests (--ignored) nach InkBuffer::stamp-Änderung laufen lassen – Z. 375 (PINSEL-1) – `fp-vector` – S – **Ergebnis B-6:** erledigt – fp-vector `--ignored` grün (7/7)
+1. **BA-094** „Befehle ▸ Demo - aktuelles Dokument“ im echten Fenster; judge meldet Fremdprogramm-Start – Z. 420 (MN-4) – `gesamt_common::judge` – S – **Ergebnis B-6:** erledigt (judge) – unterdrückte Fremdprogramm-Starts → „im echten Fenster prüfen“; Sichtprüfung NACHPRUEFUNG
+1. **BA-095** winit focus_window() beim normalen Start nötig? (simulierter Alt-Druck) – Z. 421 (START-1) – `crates\fp-ui\src\start_window.rs:148` – S – **Ergebnis B-6:** erledigt – `focus_window` nur bei nicht aktivem Fenster; Sichtprüfung NACHPRUEFUNG
+1. **BA-096** bridge.rs: Bildschirmfoto-Zuordnung eindeutig machen – Z. 425 (FARB-1b) – `bridge.rs` – S – **Ergebnis B-6:** erledigt – Zuordnung nur über die eigene Kennung
 
 ## V – bewusst verschoben
 
