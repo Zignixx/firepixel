@@ -325,6 +325,7 @@ pub fn page_context(doc: &Document, page: usize) -> ExportContext {
         ctx.canvas = p.root.background.0;
         let r = p.canvas.resolution;
         ctx.resolution_dpi = if p.canvas.resolution_unit == 1 { r * 2.54 } else { r };
+        ctx.resolution_per_cm = (p.canvas.resolution_unit == 1).then_some(r);
     }
     ctx
 }

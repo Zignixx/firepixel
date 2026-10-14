@@ -154,12 +154,11 @@ pub(super) fn set(name: &str, a: Arg, raw: &JsValue, ctx: &mut Context) -> FwRes
 fn create_document(args: &[Arg], ctx: &mut Context) -> FwResult<JsValue> {
     let (w, h) = args.first().and_then(|a| a.point()).ok_or_else(|| FwErr::Hr(hr::E_BAD_PARAM_TYPE, "size {x, y}".into()))?;
     let res = args.get(1).map(|a| a.json()).unwrap_or(Value::Null);
-    let mut ppi = res.get("pixelsPerUnit").and_then(|v| v.as_f64()).unwrap_or(72.0);
-    if res.get("units").and_then(|v| v.as_str()) == Some("cm") {
-        ppi *= 2.54;
-    }
+    let ppi = res.get("pixelsPerUnit").and_then(|v| v.as_f64()).unwrap_or(72.0);
+    // Einheit Pixel/cm bleibt im Dokument erhalten (B-2b BA-124: `resolution` 28,35, `resolutionUnits` cm)
+    let per_cm = res.get("units").and_then(|v| v.as_str()) == Some("cm");
     let bg = args.get(2).and_then(|a| a.str()).and_then(|c| conv::norm_color(&c)).unwrap_or_else(|| "#ffffff".into());
-    let v = exec(None, "file.new", json!({"width": w.max(1.0), "height": h.max(1.0), "background": bg, "resolution": ppi.clamp(1.0, 5000.0)}))?;
+    let v = exec(None, "file.new", json!({"width": w.max(1.0), "height": h.max(1.0), "background": bg, "resolution": ppi.clamp(1.0, 5000.0), "perCm": per_cm}))?;
     let id = v.get("doc").and_then(|d| d.as_u64()).ok_or_else(|| FwErr::generic("kein Dokument angelegt"))?;
     wrap_doc(ctx, DocId(id))
 }

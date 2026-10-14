@@ -1205,7 +1205,12 @@ pub(super) fn method(doc: DocId, name: &str, args: &[Arg], ctx: &mut Context) ->
             Ok(JsValue::from(true))
         }
         "setExportOptions" => {
+            // wie im Original (B-2b N1): setzt die Exporteinstellungen der Seite, ein Verlaufsschritt
             let v = a(0).json();
+            let page = with_state(|s| s.session.document(doc).and_then(|d| d.doc.pages.get(d.page).map(|p| p.legacy_export.as_ref().or(p.root.export.as_ref()).map(|e| (**e).clone()))))?.flatten();
+            let es = export_settings_from_json(page.unwrap_or_else(fp_model::ExportSettings::new_page_default), &v);
+            let es = serde_json::to_value(es).map_err(|e| FwErr::generic(e.to_string()))?;
+            exec(Some(doc), "pi.export.settings", json!({"settings": es}))?;
             with_state(|s| s.export_options.insert(doc.0, v))?;
             u()
         }
@@ -1420,6 +1425,82 @@ pub(super) fn export_options_json(e: Option<&fp_model::ExportSettings>) -> Value
         "webSnapAdaptive": e.websnap_adaptive, "webSnapTolerance": e.websnap_tolerance, "jpegQuality": e.jpeg_quality,
         "lossyGifAmount": e.lossy, "interlacedGIF": e.interlaced, "name": name,
     })
+}
+
+/// Gegenstück zu [`export_options_json`]: JSF-`ExportOptions` auf die Exporteinstellungen `base`
+/// anwenden (fehlende Schlüssel bleiben; beim Formatwechsel ohne `colorMode` passt der Farbmodus:
+/// GIF indiziert, JPEG 24 Bit).
+pub(super) fn export_settings_from_json(mut e: fp_model::ExportSettings, v: &Value) -> fp_model::ExportSettings {
+    let s = |k: &str| v.get(k).and_then(|x| x.as_str()).map(|x| x.to_ascii_lowercase());
+    let i = |k: &str| v.get(k).and_then(|x| x.as_f64()).map(|x| x.round() as i32);
+    let b = |k: &str| v.get(k).and_then(|x| x.as_bool());
+    if let Some(f) = s("exportFormat") {
+        let fmt = match f.as_str() {
+            "gif" => Some(0),
+            "jpeg" | "jpg" => Some(1),
+            "png" => Some(2),
+            "custom" => Some(3),
+            "animated gif" => Some(4),
+            _ => None,
+        };
+        if let Some(fmt) = fmt {
+            if fmt != e.format && v.get("colorMode").is_none() {
+                match fmt {
+                    0 | 4 => e.color_mode = 0,
+                    1 => e.color_mode = 1,
+                    _ => {}
+                }
+            }
+            e.format = fmt;
+        }
+    }
+    if let Some(m) = s("colorMode") {
+        match m.as_str() {
+            "indexed" | "8 bit" => e.color_mode = 0,
+            "24 bit" => e.color_mode = 1,
+            "32 bit" => e.color_mode = 2,
+            _ => {}
+        }
+    }
+    if let Some(p) = s("paletteMode") {
+        let (mode, snap) = match p.as_str() {
+            "adaptive" => (Some(1), Some(false)),
+            "websnap adaptive" => (Some(1), Some(true)),
+            "uniform" => (Some(2), None),
+            "grayscale" => (Some(3), None),
+            "macintosh" => (Some(4), None),
+            "windows" => (Some(5), None),
+            "exact" => (Some(6), None),
+            "web216" | "web 216" => (Some(7), None),
+            "custom" => (Some(0), None),
+            _ => (None, None),
+        };
+        if let Some(m) = mode {
+            e.palette_mode = m;
+        }
+        if let Some(w) = snap {
+            e.websnap_adaptive = w;
+        }
+    }
+    if let Some(n) = i("numEntriesRequested").or_else(|| i("numPaletteEntries")) {
+        e.entries_requested = n.clamp(0, 256);
+    }
+    if let Some(w) = b("webSnapAdaptive") {
+        e.websnap_adaptive = w;
+    }
+    if let Some(t) = i("webSnapTolerance") {
+        e.websnap_tolerance = t;
+    }
+    if let Some(q) = i("jpegQuality") {
+        e.jpeg_quality = q.clamp(0, 100);
+    }
+    if let Some(l) = i("lossyGifAmount") {
+        e.lossy = l.max(0);
+    }
+    if let Some(il) = b("interlacedGIF") {
+        e.interlaced = il;
+    }
+    e
 }
 
 /// Element-Wrapper zur ID (für Rückgaben).

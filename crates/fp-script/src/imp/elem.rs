@@ -1657,17 +1657,48 @@ pub(super) fn proxy_keys(h: &Handle) -> Vec<String> {
 
 /// Rahmen „roh“ (`rawLeft/rawTop/rawWidth/rawHeight`) eines Texts. Am Pfad wie im Original (BA-017,
 /// gemessen, auch nach Speichern und Wiederöffnen): linke obere Ecke und Breite der Pfadgrenzen.
-/// Die Höhenregel des Originals ist noch offen (waagerechte Linie und Rechteck: 5); bis dahin 5.
-/// Sonst der Layout-Rahmen.
+/// Höhe nach [`path_raw_height`]. Sonst der Layout-Rahmen.
 fn text_raw_rect(t: &fp_model::TextElem) -> fp_geom::Rect {
-    const PATH_RAW_HEIGHT: f32 = 5.0;
     let path = t.on_path.as_ref().and_then(|o| o.path.as_ref());
     let pb = path.and_then(|p| match &p.kind {
-        ElementKind::Path(pe) => fp_engine::geometry::contours_bounds(&pe.contours),
+        ElementKind::Path(pe) => fp_engine::geometry::contours_bounds(&pe.contours).map(|r| (r, pe.contours.iter().any(|c| c.closed), pe.primitive.is_some())),
         _ => None,
     });
     match pb {
-        Some(r) => fp_geom::Rect::new(r.left, r.top, r.right, r.top + PATH_RAW_HEIGHT),
+        Some((r, closed, primitive)) => {
+            let size = t.resolved_runs().first().map(|(a, _)| a.clone()).unwrap_or_else(|| t.initial.clone()).size.unwrap_or(12.0);
+            let (w, h) = path_raw_size(r.right - r.left, r.bottom - r.top, closed, primitive, size);
+            fp_geom::Rect::new(r.left, r.top, r.left + w, r.top + h)
+        }
         None => t.bounds,
     }
+}
+
+/// Breite und Höhe des Rahmens „roh“ eines Texts am Pfad (BA-017, Mess-Sitzung B-2b, Text
+/// „Hallo Welt“ Arial; die Regel des Originals ist nur angenähert, die 10 Messwerte treffen genau):
+/// - offene Linie: Höhe stückweise linear über der Pfadhöhe durch die Messpunkte bei 14 pt
+///   (0 → 5, 20 → 9, 40 → 12, 80 → 19, 160 → 31; darüber Steigung 0,15), mit Schriftgröße/14
+///   skaliert (28 pt: 0 → 10, 40 → 24) und gerundet;
+/// - senkrechte Linie (Pfadbreite unter 1 px): 10 × 65 bei 14 pt (mit der Größe skaliert);
+/// - geschlossene Form: Höhe = Pfadhöhe/2 + 1 (Ellipse 240 → 121, Kreis 120 → 61);
+/// - Rechteck (Grundform): 5 bei 14 pt (B-2).
+fn path_raw_size(w: f32, h: f32, closed: bool, primitive: bool, size: f32) -> (f32, f32) {
+    const PTS: [(f32, f32); 5] = [(0.0, 5.0), (20.0, 9.0), (40.0, 12.0), (80.0, 19.0), (160.0, 31.0)];
+    let k = size.max(1.0) / 14.0;
+    if primitive {
+        return (w, (5.0 * k).round());
+    }
+    if closed {
+        return (w, (h / 2.0).floor() + 1.0);
+    }
+    if w < 1.0 {
+        return ((10.0 * k).round(), (65.0 * k).round());
+    }
+    let h = h.max(0.0);
+    let base = PTS
+        .windows(2)
+        .find(|p| h <= p[1].0)
+        .map(|p| p[0].1 + (p[1].1 - p[0].1) * (h - p[0].0) / (p[1].0 - p[0].0))
+        .unwrap_or_else(|| 31.0 + 0.15 * (h - 160.0));
+    (w, (base * k).round())
 }

@@ -175,6 +175,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
             .opt("height", ParamKind::Number { min: Some(1.0), max: Some(30000.0) }, "Höhe in Pixel")
             .opt("background", ParamKind::Color, "Leinwandfarbe (Vorgabe nach DefaultDocColorState)")
             .opt("resolution", ParamKind::Number { min: Some(1.0), max: Some(5000.0) }, "Auflösung (Pixel/Zoll)")
+            .opt("perCm", ParamKind::Bool, "Auflösung in Pixel/cm (Einheit bleibt erhalten)")
             .run(|s, p| {
                 let (dw, dh) = s.prefs.new_document_size();
                 let w = p.f64_or("width", dw as f64)? as f32;
@@ -185,7 +186,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 if let Some(pg) = doc.pages.first_mut() {
                     let pg = Arc::make_mut(pg);
                     pg.canvas.resolution = p.f64_or("resolution", res.value as f64)? as f32;
-                    pg.canvas.resolution_unit = if res.per_cm && !p.has("resolution") { 1 } else { 0 };
+                    pg.canvas.resolution_unit = if p.has("resolution") { i32::from(p.bool_or("perCm", false)?) } else { i32::from(res.per_cm) };
                     pg.root.grid = Some(s.prefs.new_document_grid());
                 }
                 let id = s.add_document(doc, None);

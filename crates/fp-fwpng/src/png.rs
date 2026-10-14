@@ -287,13 +287,22 @@ pub fn phys_ppm(dpi: f64) -> u32 {
     (dpi.trunc() / 0.0254 + 1e-6).floor().clamp(0.0, u32::MAX as f64) as u32
 }
 
+/// Pixel je Meter für `pHYs` aus einer Auflösung in Pixel/cm wie im Original:
+/// `trunc(px/cm) · 100` (BA-124).
+pub fn phys_ppm_per_cm(ppcm: f64) -> u32 {
+    if !ppcm.is_finite() || ppcm <= 0.0 {
+        return 0;
+    }
+    (ppcm.trunc() * 100.0).clamp(0.0, u32::MAX as f64) as u32
+}
+
 /// `pHYs`-Chunk aus Auflösung und Einheit (0 = Pixel/Zoll, 1 = Pixel/cm) wie im Original.
 ///
 /// Regel des Originals (BA-035, gemessen): Auflösung erst auf ganze dpi abschneiden, dann
 /// `floor(dpi / 0,0254)` – 72 dpi → 2834, 150,6 dpi → 5905, 299,7 dpi → 11771.
+/// Einheit Pixel/cm (BA-124, gemessen): `trunc(px/cm) · 100` – 28,35 → 2800, 59,06 → 5900.
 pub fn make_phys(resolution: f32, unit: i32) -> Chunk {
-    let dpi = if unit == 1 { resolution as f64 * 2.54 } else { resolution as f64 };
-    let v = phys_ppm(dpi);
+    let v = if unit == 1 { phys_ppm_per_cm(resolution as f64) } else { phys_ppm(resolution as f64) };
     let mut d = Vec::with_capacity(9);
     d.extend_from_slice(&v.to_be_bytes());
     d.extend_from_slice(&v.to_be_bytes());

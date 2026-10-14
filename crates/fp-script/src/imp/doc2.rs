@@ -122,7 +122,7 @@ fn move_sublayer(doc: DocId, sub: ElementId, target: &super::elem::FlatLayer, be
         return Ok(());
     }
     super::edit_doc(doc, |d| {
-        let (page, frame) = (d.page, d.frame);
+        let page = d.page;
         let m = d.doc_mut();
         let Some(from) = fp_engine::docops::find_on_page(m, page, sub) else { return };
         // Ziel innerhalb der verschobenen Unterebene: nichts tun
@@ -142,18 +142,20 @@ fn move_sublayer(doc: DocId, sub: ElementId, target: &super::elem::FlatLayer, be
                 }
             }
             None => {
-                let frames = m.pages.get(page).map(|p| p.root.frame_count as usize).unwrap_or(1);
-                if let Some(l) = fp_engine::docops::layer_mut(m, page, target.slot) {
-                    let ci = if l.shared_across_frames { 0 } else { frame.min(frames.saturating_sub(1)) };
-                    while l.cels.len() <= ci {
+                // Ziel = Ebene der obersten Stufe (B-2b BA-123, gemessen): die Unterebene verlässt
+                // ihre Elternebene und wird Ebene der obersten Stufe direkt unter dem Ziel (flach
+                // vor dem Ziel), in beiden Richtungen
+                let frames = m.pages.get(page).map(|p| p.root.frame_count as usize).unwrap_or(1).max(1);
+                let ElementKind::SubLayer(sl) = &e.kind else { return };
+                let mut l = (**sl).clone();
+                if !l.shared_across_frames {
+                    while l.cels.len() < frames {
                         l.cels.push(Arc::new(fp_model::Cel::empty()));
                     }
-                    if let Some(c) = l.cels.get_mut(ci) {
-                        // Ebene als Ziel: als ihre oberste Unterebene bzw. ganz unten, wenn von hinten
-                        let c = Arc::make_mut(c);
-                        let at = if below { c.elements.len() } else { 0 };
-                        c.elements.insert(at, e);
-                    }
+                }
+                if let Some(p) = m.page_mut(page) {
+                    let at = target.slot.min(p.root.layers.len());
+                    p.root.layers.insert(at, fp_model::LayerSlot::Own(Arc::new(l)));
                 }
             }
         }
@@ -572,6 +574,12 @@ pub(super) fn method(doc: DocId, name: &str, args: &[Arg], ctx: &mut Context) ->
                 let target = list.get(to as usize).or(list.last()).ok_or_else(|| FwErr::bad("Ebene"))?;
                 // flach nach vorn (in der Ebene nach unten): unter das Ziel, sonst darüber
                 move_sublayer(doc, sub, target, a(0).i64() > to)?;
+                // nun Ebene der obersten Stufe: sie wird aktiv (`currentLayerNum` = ihr Index, BA-123)
+                if target.sub.is_none()
+                    && let Some(id) = from.id
+                {
+                    exec(Some(doc), "layer.setActive", json!({"layer": id}))?;
+                }
                 return u();
             }
             let id = from.id.ok_or_else(|| FwErr::bad("Ebene"))?;

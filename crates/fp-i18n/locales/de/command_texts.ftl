@@ -2,6 +2,7 @@
 # Schlüssel = cmdtext- + deutscher Text (fp_engine::command::source_text_key) – UE-3
 cmdtext-leinwandfarbe-vorgabe-nach-defaultdoccolorstate = Leinwandfarbe (Vorgabe nach DefaultDocColorState)
 cmdtext-hoehe-in-pixel = Höhe in Pixel
+cmdtext-aufloesung-in-pixel-cm-einheit-bleibt-erhalten = Auflösung in Pixel/cm (Einheit bleibt erhalten)
 cmdtext-aufloesung-pixel-zoll = Auflösung (Pixel/Zoll)
 cmdtext-breite-in-pixel-vorgabe-defaultdocsize = Breite in Pixel (Vorgabe DefaultDocSize)
 cmdtext-vorlagendatei-fw-png = Vorlagendatei (.fw.png)

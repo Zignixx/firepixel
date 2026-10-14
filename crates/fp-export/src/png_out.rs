@@ -21,6 +21,8 @@ pub struct PngOptions {
     pub interlaced: bool,
     /// Auflösung in dpi (`pHYs` = dpi·10000/254 Pixel/m), `None` = kein `pHYs`.
     pub dpi: Option<f32>,
+    /// Auflösung in Pixel/cm: `pHYs` = trunc(px/cm)·100 statt aus `dpi` (BA-124).
+    pub per_cm: Option<f32>,
     /// `tEXt`-Einträge (Schlüssel, Latin-1-Text).
     pub text: Vec<(String, String)>,
     /// zlib-Stufe 0…9.
@@ -29,7 +31,7 @@ pub struct PngOptions {
 
 impl Default for PngOptions {
     fn default() -> Self {
-        PngOptions { interlaced: false, dpi: Some(72.0), text: Vec::new(), level: 6 }
+        PngOptions { interlaced: false, dpi: Some(72.0), per_cm: None, text: Vec::new(), level: 6 }
     }
 }
 
@@ -43,7 +45,7 @@ impl PngOptions {
         if let Some(t) = &ctx.creation_time {
             text.push(("Creation Time".to_string(), t.clone()));
         }
-        PngOptions { interlaced: interlaced || ctx.png_adam7, dpi: Some(ctx.resolution_dpi), text, level: 6 }
+        PngOptions { interlaced: interlaced || ctx.png_adam7, dpi: Some(ctx.resolution_dpi), per_cm: ctx.resolution_per_cm, text, level: 6 }
     }
 }
 
@@ -211,7 +213,11 @@ fn trailer_meta(out: &mut Vec<u8>, opts: &PngOptions) {
         // Das Original schneidet ab (72 dpi -> 2834 Pixel/m, `re` §5.2); das kleine
         // Epsilon fängt Werte wie 254 dpi ab, die rechnerisch knapp unter der Ganzzahl landen.
         // BA-035: erst die dpi auf eine ganze Zahl abschneiden (150,6 dpi -> 5905 wie im Original).
-        let ppm = (dpi.trunc() as f64 * 10000.0 / 254.0 + 1e-6).floor() as u32;
+        // BA-124: Einheit Pixel/cm wie im Original trunc(px/cm)·100 (28,35 -> 2800)
+        let ppm = match opts.per_cm.filter(|v| v.is_finite() && *v > 0.0) {
+            Some(c) => (c.trunc() as f64 * 100.0) as u32,
+            None => (dpi.trunc() as f64 * 10000.0 / 254.0 + 1e-6).floor() as u32,
+        };
         let mut d = Vec::with_capacity(9);
         d.extend_from_slice(&ppm.to_be_bytes());
         d.extend_from_slice(&ppm.to_be_bytes());

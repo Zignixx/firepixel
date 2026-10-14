@@ -85,7 +85,7 @@ pub fn write_flattened_png(img: &RgbaImage, doc_settings: &OptimizeSettings, ctx
     let optimized = optimize_pixels(&image_pixels(img), w, h, &s, ctx);
     // technische PNG-Schlüsselwörter (nicht übersetzt), Reihenfolge wie im Original
     let chunks = vec![(KEY_CREATION_TIME.to_string(), creation_time.to_string()), (KEY_SOFTWARE.to_string(), SOFTWARE.to_string())];
-    let opts = PngOptions { interlaced: s.interlaced || ctx.png_adam7, dpi: Some(ctx.resolution_dpi), text: chunks, level: 6 };
+    let opts = PngOptions { interlaced: s.interlaced || ctx.png_adam7, dpi: Some(ctx.resolution_dpi), per_cm: ctx.resolution_per_cm, text: chunks, level: 6 };
     match &optimized {
         Optimized::Indexed(ix) => write_png8(ix, s.effective_matte(ctx.canvas), &opts),
         Optimized::Truecolor { width, height, pixels, alpha } => write_png_truecolor(pixels, *width, *height, *alpha, &opts),

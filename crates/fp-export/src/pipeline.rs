@@ -17,6 +17,8 @@ pub struct ExportContext {
     pub canvas: u32,
     /// Auflösung in Pixel je Zoll (Einheit wie `RSUi`: 0 Zoll, 1 cm; gespeichert wird immer je Zoll).
     pub resolution_dpi: f32,
+    /// Auflösung in Pixel je cm, wenn die Seite in cm misst (`pHYs` = trunc(px/cm)·100, BA-124).
+    pub resolution_per_cm: Option<f32>,
     /// Voreinstellung `LZWSmoothingAmount` (Vorgabe 7).
     pub lzw_smoothing: i32,
     /// Voreinstellung `BlackAndWhiteForDirector` (Vorgabe aus).
@@ -34,6 +36,7 @@ impl Default for ExportContext {
         ExportContext {
             canvas: 0xFFFF_FFFF,
             resolution_dpi: 72.0,
+            resolution_per_cm: None,
             lzw_smoothing: 7,
             black_and_white_for_director: false,
             png_adam7: false,
