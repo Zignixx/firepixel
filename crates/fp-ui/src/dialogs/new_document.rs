@@ -166,19 +166,6 @@ fn combo(ui: &mut Ui, rect: Rect, id: &str, items: &[&str], sel: &mut usize) {
     });
 }
 
-/// Unterstreicht die Zugriffstaste eines links ausgerichteten, senkrecht mittigen Texts (Optionsfelder
-/// zeichnen ihre Beschriftung selbst, ohne „&“).
-fn underline_access(ui: &Ui, left_center: egui::Pos2, raw: &str) {
-    let Some(i) = raw.find('&') else { return };
-    let Some(ch) = raw[i + 1..].chars().next() else { return };
-    let theme = crate::theme::Theme::current(ui.ctx());
-    let font = theme.ui_font();
-    let x0 = left_center.x + text_w(ui.ctx(), &raw[..i]);
-    let x1 = x0 + text_w(ui.ctx(), &ch.to_string());
-    let y = left_center.y + font.size * 0.55;
-    ui.painter().line_segment([egui::pos2(x0, y), egui::pos2(x1, y)], egui::Stroke::new(1.0, theme.colors.text));
-}
-
 /// Zeigt den Dialog.
 pub fn show(ctx: &egui::Context, st: &mut AppState) {
     let Some(mut d) = st.dialogs.new_document.clone() else { return };
@@ -292,7 +279,8 @@ pub fn show(ctx: &egui::Context, st: &mut AppState) {
             d.canvas = choices[k];
         }
         for (r, raw) in rects.iter().zip(radios_ak.iter()) {
-            underline_access(ui, egui::pos2(r.left() + 17.0, r.center().y), raw);
+            // Optionsfelder zeichnen ihre Beschriftung selbst (ohne „&“), daher nur die Unterstreichung
+            super::access::underline(ui, r.left() + 17.0, r.center().y, raw, true);
         }
         let sw = dlu_rect(o, [96.0, 116.0, 14.0, 14.0]).translate(vec2(dsw, 0.0));
         // das Farbfeld ist im Original kein Tab-Stopp; Klick öffnet das Farbwähler-Popup (N27b)

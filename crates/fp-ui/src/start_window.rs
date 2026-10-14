@@ -143,8 +143,10 @@ pub fn after_frame(ctx: &egui::Context, window: Option<&winit::window::Window>) 
             }
             // Testinstanzen (FP_NO_SHELL_OPEN, FP_TEST_PROFILE …) holen sich den Fokus nicht: winit
             // erzwingt ihn sonst mit einem simulierten Alt-Tastendruck (SendInput), der im gerade
-            // aktiven fremden Fenster landet (AGENTEN_REGELN §4d/§4e, START-1)
-            if !fp_i18n::profile::is_test_run() {
+            // aktiven fremden Fenster landet (AGENTEN_REGELN §4d/§4e, START-1). Beim normalen Start
+            // aktiviert Windows das Fenster schon beim Anzeigen; dann ist der Aufruf unnötig und
+            // unterbleibt (B-6, BA-095) – nur ein nicht aktives Fenster holt sich den Fokus noch.
+            if !fp_i18n::profile::is_test_run() && !w.has_focus() {
                 w.focus_window();
             }
             PHASE.store(1, Ordering::Relaxed);

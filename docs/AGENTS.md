@@ -542,6 +542,28 @@ Dasselbe über `run_command`: `batch.run`, `batch.plan`, `batch.preview`, `batch
 (blockierend; `recipe` nimmt auch Vorlagennamen). In der Oberfläche öffnet
 `firepixel.exe --batch <rezept|vorlage> [dateien|ordner …]` das Studio mit Rezept und Dateien.
 
+### Video über ffmpeg
+
+Firepixel liefert **keinen** Video-Decoder mit und lädt nichts herunter. Videos (`.mp4`, `.m4v`, `.mov`,
+`.webm`, `.mkv`, `.avi`) liest der Batch über ein vom Nutzer installiertes **ffmpeg** als eigenen Prozess
+(Argumente als Liste, keine Shell, kein Konsolenfenster, Bilder als rohes RGBA über eine Pipe). Bilder und
+Animationen brauchen kein ffmpeg.
+
+**Suchreihenfolge** (die erste gültige Datei gilt; ein gesetzter, aber ungültiger Pfad wird übersprungen):
+
+1. Einstellung **„ffmpeg-Datei…“** in den Batch-Einstellungen (Abschnitt „Videos (ffmpeg)“), gespeichert
+   in `<Profil>\video.json`, Schlüssel `ffmpegPath`
+2. Umgebungsvariable **`FIREPIXEL_FFMPEG`** (Pfad zu `ffmpeg.exe`)
+3. Suchpfad `PATH`
+4. Ordner der laufenden exe (`ffmpeg.exe` neben `firepixel.exe` bzw. `firepixel-cli.exe`)
+
+Fehlt ffmpeg, scheitert nur das Laden der Videodatei mit der Meldung „ffmpeg nicht gefunden – Pfad in den
+Einstellungen wählen.“ (Bericht: Datei fehlgeschlagen, die übrigen laufen weiter); im Studio zeigt die
+Dateiliste „⚠“ mit Klick in die Einstellungen. Gelesen wird mit dem Schritt `video.import` (`start`, `end`
+in ms oder als `"1.5s"`/`"0:01:30"`, `fps` 0,1–60, Vorgabe 12, `maxFrames` 1–3000, Vorgabe 600, `maxSize`
+längste Seite); alle Frames zusammen höchstens 1 GiB (größere Videos werden verkleinert, solange `maxSize`
+nicht fest vorgegeben ist). Beispiel: `batch {"recipe": "video-to-gif", "files": ["C:\\clips\\a.mp4"]}`.
+
 ## 6. Befehle-Menü und gespeicherte Befehle
 
 Das Menü **Befehle** zeigt den Befehlsordner (`%APPDATA%\Firepixel\Commands`, Unterordner =

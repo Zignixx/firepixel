@@ -237,7 +237,10 @@ impl UiBridge {
         });
         let ppp = ctx.pixels_per_point();
         for (id, img) in images {
-            let pos = self.shots.iter().position(|s| Some(s.id) == id).or(if id.is_none() { Some(0) } else { None });
+            // nur die eigene Kennung zählt (B-6, BA-096): Fotos ohne bzw. mit fremder Kennung (Pipette
+            // des Farbwählers `SHOT_TAG`, Eingabefolgen ab `inject::SHOT_BASE`) gehören anderen Nutzern;
+            // bleibt das eigene Foto aus, antwortet die Zeitüberschreitung unten
+            let pos = id.and_then(|id| self.shots.iter().position(|s| s.id == id));
             if let Some(i) = pos {
                 let s = self.shots.remove(i);
                 s.reply.respond(crop_image(&img, s.rect, ppp));

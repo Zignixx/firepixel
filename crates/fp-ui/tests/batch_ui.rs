@@ -196,7 +196,11 @@ fn assert_clean(h: &H, label: &str) {
 }
 
 fn open_with_files(n: usize, kind: ThemeKind) -> (H, PathBuf) {
-    let d = dir(&format!("files-{n}-{}", kind.label()));
+    // eigener Ordner je Aufruf: parallel laufende Tests mit gleicher Dateizahl löschten sonst
+    // gegenseitig ihre Dateien (`dir` leert den Ordner) – Ursache des Wacklers (B-6)
+    static NEXT: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+    let k = NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    let d = dir(&format!("files-{n}-{}-{k}", kind.label()));
     let mut st = state(kind);
     st.run("file.batchProcess", json!({}));
     let paths: Vec<PathBuf> = (0..n as u32).map(|i| png_file(&d, &format!("urlaub_{:02}.png", i + 1), i, 96 + i * 8, 64 + i * 4)).collect();

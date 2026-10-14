@@ -258,7 +258,7 @@ pub fn preview_dir(doc: u64) -> PathBuf {
 }
 
 fn launch_allowed(p: &Params) -> Result<bool> {
-    Ok(p.bool_or("open", true)? && crate::shell::allowed())
+    Ok(p.bool_or("open", true)? && crate::shell::allowed_or_count())
 }
 
 /// Öffnet eine Datei mit dem zugeordneten Programm (bzw. mit `program`) über

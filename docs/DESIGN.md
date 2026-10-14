@@ -7,8 +7,8 @@ Prioritätenliste**.
 
 Bilder: `docs\screenshots\design_before_*.png` (Stand vor der Überarbeitung) und
 `design_after_*.png`; je Bild die drei Designs nebeneinander (**Normal | Dunkel | OLED**).
-Bis TE-2 (13.10.2026) hießen sie `design_vorher_*`/`design_nachher_*`; die vorhandenen Bilder
-behalten ihre Namen.
+Bis TE-2 (13.10.2026) hießen sie `design_vorher_*`/`design_nachher_*`; B-6 (14.10.2026) hat die
+vorhandenen Bilder umbenannt (`design_vorher_X` → `design_before_X`).
 Erzeugen: `cargo test -j 4 -p fp-ui --test all design_bilder:: -- --ignored --nocapture` mit
 `FP_DESIGN_IMAGE=before|after` (alt `FP_DESIGN_BILD=vorher|nachher`, wird weiter gelesen;
 Startbildschirm: `--test all design_willkommen:: -- --ignored`).
@@ -192,9 +192,10 @@ Aufbau (ersetzt den ersten Entwurf „zwei Spalten in einer Karte“):
 
 Je 1280 × 860, mit Vorschaubildern und Hover über einer Datei. Erzeugen:
 `cargo test -p fp-ui --test all welcome_des2::n11_start_bilder -- --ignored`.
-Vorher: [design_vorher_startbildschirm](screenshots/design_vorher_startbildschirm.png).
-Die Bilder `design_nachher_startbildschirm*.png` zeigen noch den ersten Entwurf (vor DES-2) und
-gelten nicht mehr als Nachweis.
+Vorher: [design_before_startbildschirm](screenshots/design_before_startbildschirm.png).
+Nachher (Normal | Dunkel | OLED, auch englisch, leer, schmal, 150 %): `design_after_welcome{,_en,_empty,_narrow,_150}.png`,
+erzeugt mit `cargo test -p fp-ui --test all design_willkommen::design_willkommen_bilder -- --ignored`
+(die Bilder des ersten Entwurfs `design_nachher_startbildschirm*.png` sind entfernt).
 
 ![Startbildschirm, Normal, Deutsch](screenshots/nutzerbefunde/N11_start_normal_de.png)
 
@@ -281,7 +282,7 @@ dialogs_des1::des1_images -- --ignored`.
 
 ## 13. Bestandsaufnahme (vorher) und Prioritäten
 
-Bestand am 12.10.2026: **79 Bilder** (`design_vorher_*.png`) – Startbildschirm, 71 über Menüs,
+Bestand am 12.10.2026: **79 Bilder** (heute `design_before_*.png`) – Startbildschirm, 71 über Menüs,
 Bedienfeldmenüs und Kontextmenüs erreichbare Dialogarten (automatisch gefunden, Liste in
 `target-design\design-qa\dialoge.json`) und die 7 Seiten der Voreinstellungen, je Normal | Dunkel | OLED.
 

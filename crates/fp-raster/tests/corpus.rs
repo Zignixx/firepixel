@@ -203,17 +203,48 @@ fn t3_sharpen() {
     }
 }
 
+/// Zentriertes Weichzeichnen (T4). Seit FX-3 (`73c3379`) wächst das Ergebnis wie im Original
+/// (Ausgabegrenzen nach `@00b2c9e0`: Rechteck + Menge, dann Quadrat um die Mitte der Eingabe; gemessen
+/// gegen neue Aufnahmen in Golden fx3, `fp-effects	estsx3.rs`). Die alten IDAT-Bilder dieser Dateien
+/// enden an den Eingabegrenzen (das Original lief teils in die Zeitbegrenzung) – verglichen wird daher
+/// nur innerhalb der Eingabe; die Grenzen prüft der Test gegen die FX-3-Formel (B-6).
 #[test]
 #[ignore]
 fn t4_zoom() {
     let all = fw06();
-    let r = live_vs_idat(file(&all, "t4b_zoom_100.fw.png"), "zoom", GaussPrecision::Single);
-    println!("T4b Zoom 100/100: {r}");
-    assert_eq!(r.equal, r.total);
     let f = file(&all, "t4_zoom.fw.png");
-    for elem in ["zoom_100_100", "zoom_30_20"] {
-        println!("T4 {elem} (das Original lief teils in die Zeitbegrenzung): {}", live_vs_idat(f, elem, GaussPrecision::Single));
+    let refimg = idat(&f.file, f.page);
+    // (Element, erwartete Ausgabegrenzen links, oben, rechts, unten)
+    for (elem, want) in [("zoom_100_100", (-90, -250, 510, 350)), ("zoom_30_20", (-71, -81, 191, 181))] {
+        let (_, img, eff) = f.elements.iter().find(|e| e.0 == elem).unwrap_or_else(|| panic!("{elem}"));
+        let out = apply_chain(img, &with_precision(&filters_of(eff).expect("bekannte Filter"), GaussPrecision::Single));
+        let b = out.bounds();
+        assert_eq!((b.left, b.top, b.right, b.bottom), want, "{elem}: Ausgabegrenzen nach FX-3");
+        let a = out.alpha_bounds();
+        let i = img.bounds();
+        assert!(a.left < i.left && a.top < i.top && a.right > i.right && a.bottom > i.bottom, "{elem}: Ergebnis wächst über die Eingabe ({a:?})");
+        let r = out.compare(&refimg, i);
+        println!("T4 {elem} innerhalb der Eingabe: {r}; Ausgabe {b:?}, deckend {a:?}");
+        assert_eq!(r.equal, r.total, "{elem}");
     }
+    // gewachsener Bereich: 30/20 links ganz bis zur Überlappung mit 100/100 (x ≥ 111) exakt; 100/100
+    // rechts davon nur zur Information (das Original lief dort in die Zeitbegrenzung)
+    let fx = |elem: &str| {
+        let (_, img, eff) = f.elements.iter().find(|e| e.0 == elem).expect("Element");
+        apply_chain(img, &filters_of(eff).expect("bekannte Filter"))
+    };
+    let r = fx("zoom_30_20").compare(&refimg, IRect::new(5, 15, 111, 85));
+    println!("T4 zoom_30_20 gewachsener Bereich 5,15–111,85: {r}");
+    assert_eq!((r.equal, r.total), (7_420, 7_420));
+    println!("T4 zoom_100_100 gewachsener Bereich 117,0–308,109 (Information): {}", fx("zoom_100_100").compare(&refimg, IRect::new(117, 0, 308, 109)));
+    // T4b (100/100 einzeln): Referenz endet an den Eingabegrenzen und weicht auch innen ab (älterer Lauf
+    // mit Zeitbegrenzung) – nur Grenzen prüfen, Vergleich zur Information
+    let f = file(&all, "t4b_zoom_100.fw.png");
+    let (_, img, eff) = f.elements.iter().find(|e| e.0 == "zoom").expect("zoom");
+    let out = apply_chain(img, &with_precision(&filters_of(eff).expect("bekannte Filter"), GaussPrecision::Single));
+    let b = out.bounds();
+    assert_eq!((b.left, b.top, b.right, b.bottom), (-90, -100, 510, 500), "T4b: Ausgabegrenzen nach FX-3");
+    println!("T4b Zoom 100/100 (Information, Referenz veraltet): innerhalb der Eingabe {}", out.compare(&idat(&f.file, f.page), img.bounds()));
 }
 
 #[test]

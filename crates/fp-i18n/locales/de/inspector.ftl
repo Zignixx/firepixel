@@ -379,9 +379,7 @@ pi-text-autokern = Autom. Unterschneidung
 pi-mask-editing = Bitmapmaske wird bearbeitet
 
 ## Farbfelder-Popup
-pi-color-pipette = Pipette
 pi-color-system = Systemfarbwähler
-pi-color-transparent = Transparent
 pi-color-hex = HEX:
 pi-color-rgb = RGB:
 pi-color-copy-hex = HEX-Wert kopieren

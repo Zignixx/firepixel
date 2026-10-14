@@ -541,6 +541,28 @@ The same via `run_command`: `batch.run`, `batch.plan`, `batch.preview`, `batch.s
 (blocking; `recipe` also takes template names). In the user interface,
 `firepixel.exe --batch <recipe|template> [files|folders …]` opens the studio with recipe and files.
 
+### Video via ffmpeg
+
+Firepixel ships **no** video decoder and downloads nothing. The batch reads videos (`.mp4`, `.m4v`,
+`.mov`, `.webm`, `.mkv`, `.avi`) through an **ffmpeg** installed by the user, as a separate process
+(arguments as a list, no shell, no console window, frames as raw RGBA through a pipe). Images and
+animations do not need ffmpeg.
+
+**Search order** (the first valid file wins; a path that is set but invalid is skipped):
+
+1. the setting **"ffmpeg file..."** in the batch settings (section "Videos (ffmpeg)"), stored in
+   `<profile>\video.json`, key `ffmpegPath`
+2. the environment variable **`FIREPIXEL_FFMPEG`** (path to `ffmpeg.exe`)
+3. the search path `PATH`
+4. the folder of the running exe (`ffmpeg.exe` next to `firepixel.exe` or `firepixel-cli.exe`)
+
+Without ffmpeg only loading the video file fails, with the message "ffmpeg not found – choose its path in
+the settings." (report: that file failed, the others continue); in the studio the file list shows "⚠",
+a click opens the settings. Reading is done by the step `video.import` (`start`, `end` in ms or as
+`"1.5s"`/`"0:01:30"`, `fps` 0.1–60, default 12, `maxFrames` 1–3000, default 600, `maxSize` longest side);
+all frames together at most 1 GiB (larger videos are scaled down unless `maxSize` is fixed). Example:
+`batch {"recipe": "video-to-gif", "files": ["C:\\clips\\a.mp4"]}`.
+
 ## 6. Commands menu and saved commands
 
 The **Commands** menu shows the commands folder (`%APPDATA%\Firepixel\Commands`, subfolders =

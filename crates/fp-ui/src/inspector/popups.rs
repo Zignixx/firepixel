@@ -8,12 +8,11 @@
 use super::fields::{self, Dl};
 use super::color_picker::Footer;
 use super::texts::{self, refs};
-use crate::app_state::{Action, AppState};
+use crate::app_state::AppState;
 use crate::theme::Theme;
 use crate::ui_commands::{self, GRADIENT_SHAPES};
 use egui::{pos2, vec2, Align2, Color32, Id, Pos2, Rect, Response, Sense, Stroke, StrokeKind, Ui};
 use fp_color::Argb;
-use fp_engine::ToolId;
 use serde_json::{json, Value};
 
 /// Ergebnis des Farbwähler-Popups ([`super::color_picker`]).
@@ -22,9 +21,6 @@ pub enum ColorChoice {
     Color(Argb),
     /// Keine Farbe (transparent, Knopf „Ohne“).
     None,
-    /// Pipette starten (älterer Ablauf; das Popup des Originals ist selbst schon Pipette und liefert
-    /// die aufgenommene Farbe direkt als [`ColorChoice::Color`]).
-    Pipette,
     /// Werkzeugleiste Füllung: Knopf „Verlauf“.
     Gradient,
     /// Werkzeugleiste Füllung: Knopf „Muster“.
@@ -59,70 +55,6 @@ pub fn color_popup(ui: &mut Ui, resp: &Response, id: Id, st: &AppState, color: O
     let _ = (id, allow_pipette);
     super::color_picker::popup(ui, resp, st, color, if allow_none { Footer::NoneOnly } else { Footer::Plain })
 }
-// ---------------------------------------------------------------------- Pipette über die Leinwand
-
-#[derive(Clone, Debug)]
-struct PickState {
-    command: String,
-    params: Value,
-    key: String,
-    prev_tool: ToolId,
-    fill: Argb,
-    stroke: Argb,
-}
-
-const PICK_ID: &str = "pi-pick";
-
-/// Platzhalterfarbe während der Pipette: völlig transparent und daher nie das Ergebnis einer
-/// Aufnahme (die Pipette liefert deckende Farben). So wird auch eine Aufnahme erkannt, die
-/// dieselbe Farbe wie vorher ergibt.
-const PICK_SENTINEL: Argb = Argb(0x0012_3457);
-
-/// Startet die Pipette: das nächste Aufnehmen auf der Leinwand setzt `params[key]` und führt
-/// `command` aus (z. B. `pi.fill` mit `color`).
-pub fn start_pick(ctx: &egui::Context, st: &mut AppState, command: &str, params: Value, key: &str) {
-    let ps = PickState { command: command.into(), params, key: key.into(), prev_tool: st.session.tools.active, fill: st.session.tools.fill_color, stroke: st.session.tools.stroke_color };
-    ctx.data_mut(|d| d.insert_temp(Id::new(PICK_ID), ps));
-    st.push(Action::SetColors { stroke: Some(PICK_SENTINEL), fill: Some(PICK_SENTINEL) });
-    st.push(Action::SetTool(ToolId::Eyedropper));
-}
-
-/// Ist die Pipette aktiv?
-pub fn picking(ctx: &egui::Context) -> bool {
-    ctx.data(|d| d.get_temp::<PickState>(Id::new(PICK_ID))).is_some()
-}
-
-/// Jeden Frame aufrufen: übernimmt die aufgenommene Farbe und stellt Werkzeug und Farben wieder her.
-pub fn poll_pick(ctx: &egui::Context, st: &mut AppState) {
-    let Some(ps) = ctx.data(|d| d.get_temp::<PickState>(Id::new(PICK_ID))) else { return };
-    let tools = &st.session.tools;
-    if tools.active != ToolId::Eyedropper {
-        // erst nach dem Werkzeugwechsel prüfen; anderes Werkzeug gewählt = abbrechen
-        if tools.active != ps.prev_tool {
-            ctx.data_mut(|d| d.remove::<PickState>(Id::new(PICK_ID)));
-            st.push(Action::SetColors { stroke: Some(ps.stroke), fill: Some(ps.fill) });
-        }
-        return;
-    }
-    let picked = if tools.fill_color != PICK_SENTINEL {
-        Some(tools.fill_color)
-    } else if tools.stroke_color != PICK_SENTINEL {
-        Some(tools.stroke_color)
-    } else {
-        None
-    };
-    if let Some(c) = picked {
-        ctx.data_mut(|d| d.remove::<PickState>(Id::new(PICK_ID)));
-        st.push(Action::SetColors { stroke: Some(ps.stroke), fill: Some(ps.fill) });
-        let mut p = ps.params.clone();
-        if let Value::Object(m) = &mut p {
-            m.insert(ps.key.clone(), json!(ui_commands::hex(Argb(c.0 | 0xff00_0000))));
-        }
-        st.push(Action::Run(ps.command.clone(), p));
-        st.push(Action::SetTool(ps.prev_tool));
-    }
-}
-
 // ---------------------------------------------------------------------- Füllungs-Popups (Verlauf, Muster)
 
 /// Merker: Id des offenen Füllungs-Popups (Verlauf bzw. Muster), siehe [`fill_popup_open`].

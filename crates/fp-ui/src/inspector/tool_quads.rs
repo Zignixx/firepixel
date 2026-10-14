@@ -492,10 +492,6 @@ fn pencil_q3(ui: &mut Ui, st: &mut AppState, r: Rect) {
     match super::popups::color_button(ui, "pencil-color", d.r(15.0, 0.0, 14.0, 13.0), st, (c.a() > 0).then_some(c), true, true, true) {
         Some(super::popups::ColorChoice::Color(col)) => st.push(Action::SetColors { stroke: Some(col), fill: None }),
         Some(super::popups::ColorChoice::None) => st.push(Action::SetColors { stroke: Some(fp_color::Argb(0x00ff_ffff)), fill: None }),
-        Some(super::popups::ColorChoice::Pipette) => {
-            let ctx = ui.ctx().clone();
-            super::popups::start_pick(&ctx, st, "color.set", serde_json::json!({}), "stroke");
-        }
         Some(_) | None => {}
     }
     if let Some(b) = fields::checkbox(ui, "pencil-aa", d.r(43.0, 2.0, 90.0, 10.0), &tx("pi-antialias"), st.session.tools.options.pencil_antialias, true) {

@@ -243,7 +243,8 @@ fn alle_groessen_designs_und_sprachen_ohne_ueberlauf() {
     assert!(all.is_empty(), "{} Befunde:\n{}", all.len(), all.join("\n"));
 }
 
-/// Bilder des neuen Startbildschirms (Normal | Dunkel | OLED) für `docs\screenshots`.
+/// Bilder des neuen Startbildschirms (Normal | Dunkel | OLED) für `docs\screenshots`:
+/// `design_after_welcome{,_en,_empty,_narrow,_150}.png` (technische Namen englisch, B-6).
 #[test]
 #[ignore]
 fn design_willkommen_bilder() {
@@ -253,8 +254,8 @@ fn design_willkommen_bilder() {
     let cases: [(&str, &str, Vec<PathBuf>, f32, f32, f32); 5] = [
         ("de", "", recent.clone(), 1280.0, 860.0, 1.0),
         ("en", "_en", recent.clone(), 1280.0, 860.0, 1.0),
-        ("de", "_leer", vec![], 1280.0, 860.0, 1.0),
-        ("de", "_schmal", recent.clone(), 480.0, 760.0, 1.0),
+        ("de", "_empty", vec![], 1280.0, 860.0, 1.0),
+        ("de", "_narrow", recent.clone(), 480.0, 760.0, 1.0),
         ("de", "_150", recent.clone(), 1600.0, 1200.0, 1.5),
     ];
     for (code, suffix, list, w, hh, ppp) in cases {
@@ -282,7 +283,7 @@ fn design_willkommen_bilder() {
             }
             x += pw + gap;
         }
-        let f = std::fs::File::create(dir.join(format!("design_nachher_startbildschirm{suffix}.png"))).expect("Datei");
+        let f = std::fs::File::create(dir.join(format!("design_after_welcome{suffix}.png"))).expect("Datei");
         let mut enc = png::Encoder::new(std::io::BufWriter::new(f), tw, th);
         enc.set_color(png::ColorType::Rgba);
         enc.set_depth(png::BitDepth::Eight);

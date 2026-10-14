@@ -498,7 +498,7 @@ fn color_section(ui: &mut Ui, st: &mut AppState, full: Rect, mut y: f32, theme: 
                 }
             }
             Some(ColorChoice::Placement(k)) => st.run("pi.stroke", serde_json::json!({"placement": crate::inspector::color_picker::placement_name(k)})),
-            Some(ColorChoice::Pipette) | None => {}
+            None => {}
         }
         y += cell.y;
     }

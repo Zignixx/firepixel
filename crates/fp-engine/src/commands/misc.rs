@@ -20,7 +20,7 @@ use serde_json::{json, Value};
 use std::path::{Path, PathBuf};
 
 fn launch_allowed(p: &Params) -> Result<bool> {
-    Ok(p.bool_or("open", true)? && crate::shell::allowed())
+    Ok(p.bool_or("open", true)? && crate::shell::allowed_or_count())
 }
 
 fn bad(p: &Params, msg: impl Into<String>) -> EngineError {

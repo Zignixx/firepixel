@@ -1116,7 +1116,6 @@ pub fn show_all(ctx: &egui::Context, st: &mut AppState) {
     if let Some(t) = st.dialogs.clipboard.take() {
         ctx.copy_text(t);
     }
-    crate::inspector::popups::poll_pick(ctx, st);
 }
 
 fn show_message(ctx: &egui::Context, st: &mut AppState) {

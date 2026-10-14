@@ -272,6 +272,10 @@ thread_local! {
     static OVERRIDE: RefCell<Option<String>> = const { RefCell::new(None) };
     /// Sprache für Dokumentinhalte ([with_content_language]).
     static CONTENT: RefCell<Option<String>> = const { RefCell::new(None) };
+    /// Sprachwechsel dieses Threads im Modus „Sprache je Thread“ ([language_per_thread]); zählt zu
+    /// [generation] hinzu, damit der Wechsel eines anderen Test-Threads hier keine Oberflächen-Caches
+    /// (z. B. die Meldung der Statuszeile) verwirft.
+    static THREAD_GENERATION: std::cell::Cell<u64> = const { std::cell::Cell::new(0) };
 }
 
 /// Präfix der Standardnamen, die als Inhalt ins Dokument wandern (Ebene 1, Hintergrund,
@@ -551,7 +555,7 @@ pub fn current_language() -> String {
 
 /// Zähler, der bei jedem Sprachwechsel bzw. Nachladen steigt (Oberflächen-Caches daran koppeln).
 pub fn generation() -> u64 {
-    GENERATION.load(Ordering::Acquire)
+    GENERATION.load(Ordering::Acquire) + THREAD_GENERATION.with(|g| g.get())
 }
 
 /// Sprache wechseln; `false`, wenn es den Code nicht gibt. [`PSEUDO_LANG`] ist immer erlaubt.
@@ -608,7 +612,8 @@ fn set_thread_language(code: &str) -> bool {
     };
     let changed = OVERRIDE.with(|o| o.borrow_mut().replace(code.clone()).as_deref() != Some(code.as_str()));
     if changed {
-        bump_generation();
+        // nur dieser Thread: die Sprache gilt hier je Thread, also auch der Wechselzähler (B-6)
+        THREAD_GENERATION.with(|g| g.set(g.get() + 1));
     }
     true
 }

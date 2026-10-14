@@ -583,13 +583,6 @@ pub fn fill_panel(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target, enabled: b
                 Target::Selection => apply_fill(ui, st, tgt, json!({"category": "none"})),
                 Target::Tool => st.push(Action::SetColors { stroke: None, fill: Some(Argb(0x00ff_ffff)) }),
             },
-            Some(ColorChoice::Pipette) => {
-                let ctx = ui.ctx().clone();
-                match tgt {
-                    Target::Selection => popups::start_pick(&ctx, st, "pi.fill", json!({}), "color"),
-                    Target::Tool => popups::start_pick(&ctx, st, "color.set", json!({}), "fill"),
-                }
-            }
             Some(_) | None => {}
         }
     }
@@ -991,13 +984,6 @@ pub fn stroke_panel(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target, enabled:
             apply_stroke(ui, st, tgt, p);
         }
         Some(ColorChoice::None) => apply_stroke(ui, st, tgt, json!({"none": true})),
-        Some(ColorChoice::Pipette) => {
-            let ctx = ui.ctx().clone();
-            match tgt {
-                Target::Selection => popups::start_pick(&ctx, st, "pi.stroke", json!({}), "color"),
-                Target::Tool => popups::start_pick(&ctx, st, "color.set", json!({}), "stroke"),
-            }
-        }
         Some(ColorChoice::Placement(k)) => apply_stroke(ui, st, tgt, json!({"placement": crate::inspector::color_picker::placement_name(k)})),
         Some(_) | None => {}
     }
@@ -1911,13 +1897,6 @@ pub fn text_row1(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target) {
     }
     match popups::color_button(ui, id.with("color"), d.r(240.0, 0.0, 15.0, 13.0), st, v.color, en, false, true) {
         Some(ColorChoice::Color(c)) => set_text(ui, st, tgt, json!({"color": ui_commands::hex(c)})),
-        Some(ColorChoice::Pipette) => {
-            let ctx = ui.ctx().clone();
-            match tgt {
-                Target::Selection => popups::start_pick(&ctx, st, "text.setAttributes", json!({}), "color"),
-                Target::Tool => popups::start_pick(&ctx, st, "color.set", json!({}), "fill"),
-            }
-        }
         _ => {}
     }
     super::glyphs::paint(ui.painter(), d.r(1.0, 16.0, 12.0, 11.0), Glyph::Tracking, &theme, en);
@@ -2100,10 +2079,6 @@ fn text_stroke_field(ui: &mut Ui, st: &mut AppState, d: Dl, id: Id) {
             st.run("pi.stroke", p);
         }
         Some(ColorChoice::None) => st.run("pi.stroke", json!({"none": true})),
-        Some(ColorChoice::Pipette) => {
-            let ctx = ui.ctx().clone();
-            popups::start_pick(&ctx, st, "pi.stroke", json!({}), "color");
-        }
         Some(ColorChoice::Placement(k)) => st.run("pi.stroke", json!({"placement": crate::inspector::color_picker::placement_name(k)})),
         Some(_) | None => {}
     }

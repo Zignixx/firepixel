@@ -382,9 +382,7 @@ pi-text-autokern = Auto kern
 pi-mask-editing = Editing bitmap mask
 
 ## Swatches popup
-pi-color-pipette = Eyedropper
 pi-color-system = System color picker
-pi-color-transparent = Transparent
 pi-color-hex = HEX:
 pi-color-rgb = RGB:
 pi-color-copy-hex = Copy HEX value

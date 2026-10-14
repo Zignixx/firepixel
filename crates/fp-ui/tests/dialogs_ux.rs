@@ -240,3 +240,17 @@ fn width_field_limited_to_6000_with_message() {
     assert_eq!(b.right - b.left, 6000.0, "auf 6000 begrenzt");
     assert!(st(&h).status.as_ref().is_some_and(|(m, _)| m.contains("6000")), "Meldung statt stillem Klemmen");
 }
+
+/// Ursache des Wacklers von [`width_field_limited_to_6000_with_message`] im Gesamtlauf (B-6): der
+/// Sprachwechsel eines anderen Test-Threads erhöhte den globalen Zähler `fp_i18n::generation`, die
+/// App verwarf daraufhin die Meldung der Statuszeile. Im gemeinsamen Testprogramm gilt die Sprache
+/// je Thread, also auch der Zähler.
+#[test]
+fn language_switch_in_other_thread_keeps_this_threads_generation() {
+    let g = fp_i18n::generation();
+    std::thread::spawn(|| assert!(fp_i18n::set_language("en"))).join().expect("Thread");
+    assert_eq!(fp_i18n::generation(), g, "fremder Sprachwechsel verwirft hier nichts");
+    assert!(fp_i18n::set_language("en"));
+    assert!(fp_i18n::generation() > g, "eigener Sprachwechsel zählt");
+    assert!(fp_i18n::set_language("de"));
+}

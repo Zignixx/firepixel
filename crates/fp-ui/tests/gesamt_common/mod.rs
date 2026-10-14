@@ -373,6 +373,8 @@ pub struct Probe {
     pub undo: usize,
     pub doc: Value,
     pub ui: String,
+    /// im Test unterdrückte Fremdprogramm-Starts dieses Threads (`fp_engine::shell`)
+    pub shell: u64,
 }
 
 thread_local! {
@@ -413,7 +415,7 @@ pub fn probe(st: &AppState) -> Probe {
         })
         .unwrap_or_default();
     let os_clipboard = OS_CLIP.with(|c| c.borrow().as_ref().map(|ctx| ctx.output(|o| o.commands.len())).unwrap_or(0));
-    Probe { docs, files, os_clipboard, generation, undo, doc, ui }
+    Probe { docs, files, os_clipboard, generation, undo, doc, ui, shell: fp_engine::shell::suppressed_in_thread() }
 }
 
 pub fn status_text(st: &AppState) -> String {
@@ -470,6 +472,11 @@ pub fn judge(st: &mut AppState, before: &Probe, used: &str) -> (Outcome, String)
         }
         return (Outcome::Error(status.clone()), format!("{used}: {status}"));
     }
+    // einzige Wirkung ein Fremdprogramm (z. B. „Befehle ▸ Demo - aktuelles Dokument“ öffnet den
+    // Browser), im Test abgeschaltet: im echten Fenster prüfen statt „keine Wirkung“ (MN-4, B-6)
+    if after.shell > before.shell {
+        return (Outcome::Manual, format!("{used}: startet ein Fremdprogramm (shell, im Test abgeschaltet) – im echten Fenster prüfen"));
+    }
     (Outcome::Nothing(String::new()), format!("{used}: keine erkennbare Wirkung"))
 }
 
@@ -488,6 +495,9 @@ pub fn run_item(action: Action, avail: Option<&str>) -> (Outcome, String) {
     let (_, _, f0) = fixture();
     let mut first_fail: Option<(Outcome, String)> = None;
     for cand in candidates(&f0) {
+        // „Ansicht ▸ Sprache ▸ …“ schaltet die Sprache um: nach jedem Versuch zurück, sonst laufen die
+        // folgenden Einträge und Berichte in der anderen Sprache weiter (FV-13, BA-088)
+        let _lang = LangGuard(fp_i18n::current_language());
         let (mut st, ctx, _f) = fixture();
         // Design-Einträge: vorher ein anderes Design setzen
         if let Action::SetTheme(k) = &action {
@@ -565,6 +575,17 @@ pub fn run_item(action: Action, avail: Option<&str>) -> (Outcome, String) {
     }
     first_fail.unwrap_or((Outcome::NeverAvailable, "in keiner Testsituation verfügbar".into()))
 }
+/// Stellt beim Verlassen die Sprache von vorher wieder her ([`run_item`]).
+struct LangGuard(String);
+
+impl Drop for LangGuard {
+    fn drop(&mut self) {
+        if fp_i18n::current_language() != self.0 {
+            fp_i18n::set_language(&self.0);
+        }
+    }
+}
+
 pub fn panic_msg(e: &Box<dyn std::any::Any + Send>) -> String {
     e.downcast_ref::<String>().cloned().or_else(|| e.downcast_ref::<&str>().map(|s| s.to_string())).unwrap_or_default()
 }
