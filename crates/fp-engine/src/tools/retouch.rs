@@ -147,6 +147,7 @@ impl StampLive {
             bounds: area.to_rect(),
             generation: next_gen,
             stroke: self.preview.stroke,
+            target: self.preview.target,
             tiles: std::sync::Arc::new(tiles),
         };
     }

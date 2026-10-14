@@ -8,6 +8,7 @@ pub mod anim;
 pub mod context;
 pub mod cursors;
 pub mod ghost;
+pub mod stack;
 pub mod overlay;
 pub mod paint_preview;
 pub mod render;
@@ -546,17 +547,40 @@ fn canvas_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
         feedback.into_iter().filter(|o| !matches!(o, Overlay::Highlight { .. })).collect()
     };
     let preview_drag = st.session.prefs.get_bool("PreviewDrag", true);
-    let mut hidden: Vec<u64> = Vec::new();
+    // Stapelfolge der Vorschau (N34, BA-039): gezogene bzw. bemalte Objekte bleiben zwischen den
+    // Objekten darunter (Hintergrundbild) und darüber (durchsichtige Schichten)
+    let mut text_hidden: Vec<u64> = Vec::new();
+    let mut source: Option<(Vec<u64>, bool, bool)> = None;
     for o in &feedback {
         match o {
-            Overlay::Ghost { ids, copy: false, .. } if preview_drag => hidden.extend(ids.iter().copied()),
-            Overlay::TextEdit(v) => hidden.extend(v.target),
+            Overlay::Ghost { ids, copy, .. } if preview_drag && source.is_none() => source = Some((ids.clone(), *copy, true)),
+            Overlay::Paint(p) if source.is_none() => source = p.target.map(|t| (vec![t], true, false)),
+            Overlay::TextEdit(v) => text_hidden.extend(v.target),
             _ => {}
         }
     }
-    hidden.sort_unstable();
-    hidden.dedup();
-    let variant = render::hidden_variant(&hidden);
+    let plan = source.and_then(|(ids, copy, ghost)| {
+        let d = st.session.active()?;
+        let src_key = stack::source_key(d.generation, d.page, d.frame, &ids, copy);
+        let cc = st.canvases.entry(id).or_default();
+        if cc.stack_src != src_key || cc.stack.is_none() {
+            // gezogen: notfalls wie bisher (Vorschau oben); gemalt: ohne Schichtung nichts ausblenden
+            cc.stack = stack::plan(&d.doc, d.page, d.frame, &ids, copy).or_else(|| ghost.then(|| stack::StackPlan::flat(&ids, copy)));
+            cc.stack_src = src_key;
+        }
+        cc.stack.clone()
+    });
+    let mut hidden: Vec<stack::Atom> = plan.as_ref().map(|p| p.hidden.clone()).unwrap_or_default();
+    hidden.extend(text_hidden.iter().map(|t| stack::Atom::Elem(*t)));
+    let layers = plan.as_ref().map(|p| p.layers()).unwrap_or_default();
+    let variant = stack::variant(plan.as_ref().unwrap_or(&stack::StackPlan::default()), &text_hidden);
+    {
+        let cc = st.canvases.entry(id).or_default();
+        if plan.is_none() {
+            cc.stack = None;
+        }
+        cc.stack_variant = variant;
+    }
     // Zeichnen
     let Some(d) = st.session.active() else { return };
     let view = d.view.clone();
@@ -596,7 +620,7 @@ fn canvas_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
         }
         let key = RenderKey { doc: id, generation, epoch: cc.epoch, page, frame, region, zoom: zoom_dev, variant, gamma };
         cc.requested = Some(key);
-        if let Some(res) = st.worker.request(RenderJob { key, doc: docarc, hidden: hidden.clone() }, st.sync_render) {
+        if let Some(res) = st.worker.request(RenderJob { key, doc: docarc, hidden: hidden.clone(), layers: layers.clone() }, st.sync_render) {
             render::show_result(ui.ctx(), st.canvases.entry(id).or_default(), res);
         }
     }
@@ -665,7 +689,9 @@ fn canvas_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
             Rect::from_min_size(a, size)
         };
         page_painter.image(tex.id(), rect, Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0)), Color32::WHITE);
+        st.canvases.entry(id).or_default().tex_rect = Some(rect);
     }
+    preview_stack(ui, st, page_screen.intersect(area), area, &view, &feedback);
     if theme.glow {
         painter.rect_stroke(page_screen, 0.0, Stroke::new(1.0, with_alpha(c.focus, 90)), StrokeKind::Outside);
     }
@@ -1191,7 +1217,7 @@ fn overlays(ui: &Ui, st: &mut AppState, painter: &egui::Painter, area: Rect, vie
     let time = ui.input(|i| i.time);
     let Some(d) = st.session.active() else { return };
     let id = d.id;
-    let (generation, page_i, frame_i) = (d.generation, d.page, d.frame);
+    let (generation, frame_i) = (d.generation, d.frame);
     let page = d.doc.pages.get(d.page);
     let sp = |x: f64, y: f64| to_screen(view, area.min, x, y);
     let spp = |p: Point| to_screen(view, area.min, p.x as f64, p.y as f64);
@@ -1382,7 +1408,6 @@ fn overlays(ui: &Ui, st: &mut AppState, painter: &egui::Painter, area: Rect, vie
     }
     // Werkzeug-Rückmeldung
     let Some(d) = st.session.active() else { return };
-    let preview_drag = st.session.prefs.get_bool("PreviewDrag", true);
     let stroke = Stroke::new(1.0, c.tool_preview);
     // Gerenderte Vorschauen (Verschieben, Kopie, Transformieren, Text) nur innerhalb der Leinwand
     // wie im fertigen Bild; Rahmen, Griffe und Umrisse dürfen darüber hinaus
@@ -1395,9 +1420,7 @@ fn overlays(ui: &Ui, st: &mut AppState, painter: &egui::Painter, area: Rect, vie
         .unwrap_or(area);
     let page_painter = painter.with_clip_rect(page_clip);
     let cc = st.canvases.entry(id).or_default();
-    let mut had_ghost = false;
     let mut had_text = false;
-    let mut had_paint = false;
     for o in feedback.iter().cloned() {
         match o {
             Overlay::Rect { rect, dashed } => {
@@ -1519,14 +1542,11 @@ fn overlays(ui: &Ui, st: &mut AppState, painter: &egui::Painter, area: Rect, vie
                     }
                 }
             }
-            Overlay::Ghost { ids, rect, quad, copy } => {
-                had_ghost = true;
-                if preview_drag && let Some(s) = cc.ghosts.drag_sprite(&ctx, &st.renderer, &d.doc, generation, page_i, frame_i, &ids, view.zoom) {
-                    ghost::paint_mapped(&page_painter, s, rect, &quad, Color32::WHITE, &spp);
-                }
+            Overlay::Ghost { quad, .. } => {
+                // die Vorschau selbst zeichnet `preview_stack` (in der Stapelfolge, unter Raster,
+                // Hilfslinien und Auswahlrahmen); hier nur der Umriss
                 let v: Vec<Pos2> = quad.iter().map(|p| spp(*p)).collect();
                 painter.add(egui::Shape::closed_line(v, Stroke::new(1.0, c.selection)));
-                cc.ghosts.linger = Some(ghost::Linger { generation, rect, quad, ids: if copy { Vec::new() } else { ids } });
             }
             Overlay::Shade { rect } => {
                 let r = Rect::from_min_max(sp(rect.left as f64, rect.top as f64), sp(rect.right as f64, rect.bottom as f64));
@@ -1592,15 +1612,9 @@ fn overlays(ui: &Ui, st: &mut AppState, painter: &egui::Painter, area: Rect, vie
                 painter.line_segment([p - vec2(5.0, 0.0), p + vec2(5.0, 0.0)], stroke);
                 painter.line_segment([p - vec2(0.0, 5.0), p + vec2(0.0, 5.0)], stroke);
             }
-            Overlay::Paint(p) => {
-                // Malwerkzeuge: der echte Strich live (PINSEL-1)
-                had_paint = true;
-                paint_preview::paint(&ctx, &page_painter, id, &p, view.zoom, time, &spp);
-            }
+            // Malwerkzeuge: der echte Strich live (PINSEL-1) – zeichnet `preview_stack`
+            Overlay::Paint(_) => {}
         }
-    }
-    if !had_paint {
-        paint_preview::linger(&ctx, &page_painter, id, generation, cc.shown.map(|k| k.generation), time, &spp);
     }
     if had_text {
         cc.text_linger = Some(time);
@@ -1621,16 +1635,88 @@ fn overlays(ui: &Ui, st: &mut AppState, painter: &egui::Painter, area: Rect, vie
             }
         }
     }
+}
+
+/// Eine Schicht über den Vorschauen ([`render::CanvasCache::layers`]) an der Stelle der Textur.
+fn paint_layer(painter: &egui::Painter, layers: &[Option<egui::TextureHandle>], i: usize, rect: Option<Rect>) {
+    if let (Some(Some(t)), Some(r)) = (layers.get(i), rect) {
+        painter.image(t.id(), r, Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0)), Color32::WHITE);
+    }
+}
+
+/// Vorschauen in der Stapelfolge (N34, BA-039), direkt über dem Hintergrundbild und unter Raster,
+/// Hilfslinien, Auswahlrahmen und Werkzeug-Rückmeldung: je Lauf gezogener Objekte die Vorschau
+/// (bzw. die Malkacheln), darüber die durchsichtige Schicht der Objekte darüber. Nach dem Loslassen
+/// bleibt das stehen, bis das neue Hintergrundbild da ist.
+fn preview_stack(ui: &Ui, st: &mut AppState, page_clip: Rect, area: Rect, view: &fp_engine::ViewState, feedback: &[Overlay]) {
+    let ctx = ui.ctx().clone();
+    let time = ui.input(|i| i.time);
+    let preview_drag = st.session.prefs.get_bool("PreviewDrag", true);
+    let Some(d) = st.session.active() else { return };
+    let (id, generation, page_i, frame_i) = (d.id, d.generation, d.page, d.frame);
+    let spp = |p: Point| to_screen(view, area.min, p.x as f64, p.y as f64);
+    let page_painter = ui.painter().with_clip_rect(page_clip);
+    let cc = st.canvases.entry(id).or_default();
+    let ready = cc.shown.is_some_and(|k| k.variant == cc.stack_variant);
+    let tr = cc.tex_rect;
+    let mut layers_drawn = false;
+    let mut had_ghost = false;
+    let mut had_paint = false;
+    for o in feedback {
+        match o {
+            Overlay::Ghost { ids, rect, quad, copy } => {
+                had_ghost = true;
+                cc.ghosts.linger = Some(ghost::Linger { generation, rect: *rect, quad: *quad, ids: if *copy { Vec::new() } else { ids.clone() } });
+                if !preview_drag || layers_drawn {
+                    continue;
+                }
+                // Bis das passende Hintergrundbild da ist, bleibt das alte Bild stehen
+                let plan = cc.stack.clone().unwrap_or_else(|| stack::StackPlan::flat(ids, *copy));
+                if !ready && plan.has_layers() {
+                    continue;
+                }
+                let runs: Vec<Vec<u64>> = plan.runs.iter().map(|r| r.ids.clone()).collect();
+                let layers = if ready { cc.layers.clone() } else { Vec::new() };
+                let sprites = cc.ghosts.drag_sprites(&ctx, &st.renderer, &d.doc, generation, page_i, frame_i, &runs, view.zoom);
+                for i in 0..sprites.len().max(layers.len()) {
+                    if let Some(Some(s)) = sprites.get(i) {
+                        ghost::paint_mapped(&page_painter, s, *rect, quad, Color32::WHITE, &spp);
+                    }
+                    paint_layer(&page_painter, &layers, i, tr);
+                }
+                layers_drawn = true;
+            }
+            Overlay::Paint(p) => {
+                had_paint = true;
+                paint_preview::paint(&ctx, &page_painter, id, p, view.zoom, time, &spp);
+            }
+            _ => {}
+        }
+    }
+    if !had_paint {
+        paint_preview::linger(&ctx, &page_painter, id, generation, cc.shown.map(|k| k.generation), time, &spp);
+    }
     // Nach dem Loslassen: Vorschau stehen lassen, bis das Hintergrundbild ohne Ausblendung da ist
+    let mut lingering = false;
     if !had_ghost && let Some(l) = &cc.ghosts.linger {
         let waiting = cc.shown.is_some_and(|k| k.variant != 0) && !l.ids.is_empty();
         if waiting && preview_drag {
-            if let Some(s) = cc.ghosts.drag.as_ref() {
-                ghost::paint_mapped(&page_painter, s, l.rect, &l.quad, Color32::WHITE, &spp);
+            for i in 0..cc.ghosts.drag.len().max(cc.layers.len()) {
+                if let Some(Some(s)) = cc.ghosts.drag.get(i) {
+                    ghost::paint_mapped(&page_painter, s, l.rect, &l.quad, Color32::WHITE, &spp);
+                }
+                paint_layer(&page_painter, &cc.layers, i, tr);
             }
+            lingering = true;
         } else {
             cc.ghosts.linger = None;
-            cc.ghosts.drag = None;
+            cc.ghosts.drag.clear();
+        }
+    }
+    // Schichten gehören zum angezeigten Hintergrundbild: ohne laufende Vorschau einfach darüber
+    if !layers_drawn && !lingering {
+        for i in 0..cc.layers.len() {
+            paint_layer(&page_painter, &cc.layers, i, tr);
         }
     }
 }

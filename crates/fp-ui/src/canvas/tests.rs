@@ -108,7 +108,7 @@ fn moving_hides_original_and_shows_ghost() {
         assert_eq!((f[0].x, f[0].y), (110.0, 60.0), "{f:?}");
         assert!(cc.feedback.iter().any(|o| matches!(o, Overlay::Ghost { .. })));
         assert!(cc.shown.is_some_and(|k| k.variant != 0), "Original im Hintergrundbild ausgeblendet");
-        assert!(cc.ghosts.drag.is_some(), "gerenderte Vorschau");
+        assert!(cc.ghosts.drag.iter().any(Option::is_some), "gerenderte Vorschau");
     }
     button(&mut h, b, PointerButton::Primary, false, Modifiers::NONE);
     h.run_steps(2);
@@ -142,7 +142,7 @@ fn shared_layer_element_moves_with_mouse() {
     {
         let cc = h.state().state.canvases.values().next().expect("Leinwand");
         assert!(cc.shown.is_some_and(|k| k.variant != 0), "Original der geteilten Ebene ausgeblendet");
-        assert!(cc.ghosts.drag.is_some(), "Vorschau gerendert");
+        assert!(cc.ghosts.drag.iter().any(Option::is_some), "Vorschau gerendert");
     }
     button(&mut h, b, PointerButton::Primary, false, Modifiers::NONE);
     h.run_steps(2);

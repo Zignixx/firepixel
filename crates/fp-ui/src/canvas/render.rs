@@ -6,12 +6,13 @@
 //! Beim Ziehen („Vorschau beim Ziehen“) und beim Bearbeiten von Text werden die betroffenen
 //! Elemente im Hintergrundbild ausgeblendet (`hidden`, eigener Schlüssel `variant`) und als
 //! Vorschau-Textur ([`super::ghost`]) darübergelegt – das Dokument wird während des Ziehens nicht
-//! neu gerendert.
+//! neu gerendert. Liegen Objekte über den gezogenen, rendert derselbe Auftrag sie zusätzlich als
+//! durchsichtige Schichten über der Vorschau (Stapelfolge, [`super::stack`], N34).
 
 use fp_engine::render::PageRenderer;
 use fp_engine::DocId;
 use fp_geom::IRect;
-use fp_model::{Document, Element, ElementId};
+use fp_model::{Document, Element};
 use fp_raster::RgbaImage;
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::Arc;
@@ -120,6 +121,16 @@ pub struct CanvasCache {
     pub hidden: Vec<u64>,
     /// Vorschau-Texturen (Ziehen, Text).
     pub ghosts: super::ghost::GhostCache,
+    /// Schichten über den Vorschauen zur angezeigten Textur (N34; `RenderResult::layers`).
+    pub layers: Vec<Option<egui::TextureHandle>>,
+    /// Bildschirmrechteck, auf das die angezeigte Textur (und ihre Schichten) gezeichnet wurde.
+    pub tex_rect: Option<egui::Rect>,
+    /// Schichtung der laufenden Vorschau (Ziehen, Malen) in diesem Bild.
+    pub stack: Option<super::stack::StackPlan>,
+    /// Kennung der Schichtung, die das Hintergrundbild haben muss.
+    pub stack_variant: u64,
+    /// Quelle von `stack` ([`super::stack::source_key`]): nur bei Änderung neu berechnen.
+    pub stack_src: u64,
     /// Umriss der Pixelauswahl („laufende Ameisen“).
     pub ants: Option<super::overlay::AntsCache>,
     /// Layout des bearbeiteten Texts (Caret, Auswahl, Treffertest).
@@ -193,14 +204,18 @@ pub fn hidden_variant(ids: &[u64]) -> u64 {
 pub struct RenderJob {
     pub key: RenderKey,
     pub doc: Arc<Document>,
-    /// Auszublendende Elemente.
-    pub hidden: Vec<u64>,
+    /// Im Hintergrundbild auszublendende Teile.
+    pub hidden: Vec<super::stack::Atom>,
+    /// Schichten über den Vorschauen (N34): je Schicht die auszublendenden Teile, `None` = leer.
+    pub layers: Vec<Option<Vec<super::stack::Atom>>>,
 }
 
 /// Ergebnis.
 pub struct RenderResult {
     pub key: RenderKey,
     pub image: RgbaImage,
+    /// Durchsichtige Schichten über den Vorschauen (gleicher Ausschnitt und Zoom wie `image`).
+    pub layers: Vec<Option<RgbaImage>>,
 }
 
 /// Hintergrund-Thread für die Leinwand.
@@ -222,8 +237,8 @@ impl RenderWorker {
                 while let Ok(newer) = job_rx.try_recv() {
                     job = newer;
                 }
-                let image = render_now(&r, &job.doc, &job.key, &job.hidden);
-                if res_tx.send(RenderResult { key: job.key, image }).is_err() {
+                let (image, layers) = render_job(&r, &job);
+                if res_tx.send(RenderResult { key: job.key, image, layers }).is_err() {
                     break;
                 }
                 if let Some(c) = &ctx {
@@ -243,8 +258,8 @@ impl RenderWorker {
             let _ = tx.send(job);
             return None;
         }
-        let image = render_now(&self.renderer, &job.doc, &job.key, &job.hidden);
-        Some(RenderResult { key: job.key, image })
+        let (image, layers) = render_job(&self.renderer, &job);
+        Some(RenderResult { key: job.key, image, layers })
     }
 
     /// Fertige Ergebnisse abholen.
@@ -256,8 +271,15 @@ impl RenderWorker {
     }
 }
 
-fn render_now(r: &fp_render::Renderer, doc: &Document, key: &RenderKey, hidden: &[u64]) -> RgbaImage {
-    let mut img = render_plain(r, doc, key, hidden);
+/// Hintergrundbild und Schichten eines Auftrags.
+fn render_job(r: &fp_render::Renderer, job: &RenderJob) -> (RgbaImage, Vec<Option<RgbaImage>>) {
+    let image = render_now(r, &job.doc, &job.key, &job.hidden, false);
+    let layers = job.layers.iter().map(|l| l.as_ref().map(|h| render_now(r, &job.doc, &job.key, h, true))).collect();
+    (image, layers)
+}
+
+fn render_now(r: &fp_render::Renderer, doc: &Document, key: &RenderKey, hidden: &[super::stack::Atom], clear: bool) -> RgbaImage {
+    let mut img = render_plain(r, doc, key, hidden, clear);
     if key.gamma {
         apply_gamma_preview(&mut img);
     }
@@ -288,14 +310,16 @@ pub fn gamma_table() -> &'static [u8; 256] {
     T.get_or_init(|| fp_color::models::gamma_preview_table(2.2, 1.8))
 }
 
-fn render_plain(r: &fp_render::Renderer, doc: &Document, key: &RenderKey, hidden: &[u64]) -> RgbaImage {
-    if hidden.is_empty() {
+/// `clear`: durchsichtige Schicht (ohne Leinwandfarbe) für die Stapelfolge der Vorschau (N34).
+fn render_plain(r: &fp_render::Renderer, doc: &Document, key: &RenderKey, hidden: &[super::stack::Atom], clear: bool) -> RgbaImage {
+    if hidden.is_empty() && !clear {
         return r.render_region(doc, key.page, key.frame, key.region, key.zoom).image;
     }
-    // Kopie mit ausgeblendeten Elementen (Copy-on-Write: nur die betroffenen Zweige werden neu)
+    // Kopie mit ausgeblendeten Teilen (Copy-on-Write: nur die betroffenen Zweige werden neu)
     let mut d = doc.clone();
-    for id in hidden {
-        fp_engine::docops::edit_by_id(&mut d, key.page, ElementId(*id), |e| e.common.visible = false);
+    super::stack::hide(&mut d, key.page, hidden);
+    if clear && let Some(p) = d.pages.get_mut(key.page) {
+        Arc::make_mut(p).root.background = fp_color::Argb(0);
     }
     r.render_region(&d, key.page, key.frame, key.region, key.zoom).image
 }
@@ -320,6 +344,12 @@ pub fn show_result(ctx: &egui::Context, cc: &mut CanvasCache, res: RenderResult)
         (Some(tex), _) => tex.set(to_color_image(&res.image), egui::TextureOptions::NEAREST),
         (None, _) => cc.texture = Some(ctx.load_texture(format!("canvas-{}", res.key.doc.0), to_color_image(&res.image), egui::TextureOptions::NEAREST)),
     }
+    cc.layers = res
+        .layers
+        .iter()
+        .enumerate()
+        .map(|(i, l)| l.as_ref().filter(|img| img.width() > 0).map(|img| ctx.load_texture(format!("canvas-{}-layer-{i}", res.key.doc.0), to_color_image(img), egui::TextureOptions::NEAREST)))
+        .collect();
     cc.shown = Some(res.key);
     cc.shown_image = Some(res.image);
 }

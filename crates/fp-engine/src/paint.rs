@@ -413,6 +413,10 @@ pub struct PaintPreview {
     pub generation: u64,
     /// Kennung des Vorgangs (neuer Zug = neue Kennung).
     pub stroke: u64,
+    /// Bemalte Bitmap (`None` = neue Bitmap): Die Leinwand legt die Objekte darüber wieder über
+    /// die Vorschau (Stapelfolge, BA-039).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub target: Option<u64>,
     /// Kacheln (nur in der Oberfläche).
     #[serde(skip)]
     pub tiles: Arc<Vec<PaintTile>>,
@@ -620,6 +624,7 @@ impl LivePaint {
             bounds: self.painted.to_rect(),
             generation: self.generation,
             stroke: self.stroke,
+            target: self.target.map(|t| t.0),
             tiles: Arc::new(self.tiles.values().cloned().collect()),
         }
     }

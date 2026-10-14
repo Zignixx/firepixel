@@ -30,7 +30,10 @@ pub struct Linger {
 /// Vorschau-Texturen eines Dokuments.
 #[derive(Default)]
 pub struct GhostCache {
-    pub drag: Option<Sprite>,
+    /// Je Lauf gezogener Objekte (unten → oben, [`super::stack::Run`]) eine Vorschau; leer = keine.
+    pub drag: Vec<Option<Sprite>>,
+    /// Schlüssel von `drag`.
+    pub drag_key: u64,
     pub text: Option<Sprite>,
     pub linger: Option<Linger>,
 }
@@ -51,16 +54,25 @@ fn texture_of(ctx: &egui::Context, name: &str, img: &fp_raster::RgbaImage, zoom:
 }
 
 impl GhostCache {
-    /// Vorschau der Elemente `ids` (Seite `page`, Status `frame`) – gecacht je Generation.
+    /// Vorschauen der Läufe `runs` (je Lauf die gezogenen Elemente, unten → oben; Seite `page`,
+    /// Status `frame`) – gecacht je Generation. Ein Lauf ohne sichtbaren Inhalt liefert `None`.
     #[allow(clippy::too_many_arguments)] // Kontext der Vorschau (egui, Renderer, Dokument, Lage)
-    pub fn drag_sprite(&mut self, ctx: &egui::Context, r: &fp_render::Renderer, doc: &Document, generation: u64, page: usize, frame: usize, ids: &[u64], zoom: f64) -> Option<&Sprite> {
-        let key = hash_ids(generation, ids);
-        if self.drag.as_ref().is_none_or(|s| s.key != key) {
-            let els: Vec<Arc<Element>> = ids.iter().filter_map(|id| fp_engine::docops::element_on_page(doc, page, ElementId(*id))).collect();
-            let img = super::render::render_elements(r, doc, frame, &els)?;
-            self.drag = Some(Sprite { key, texture: texture_of(ctx, "canvas-ghost", &img, zoom), bounds: img.bounds() });
+    pub fn drag_sprites(&mut self, ctx: &egui::Context, r: &fp_render::Renderer, doc: &Document, generation: u64, page: usize, frame: usize, runs: &[Vec<u64>], zoom: f64) -> &[Option<Sprite>] {
+        let flat: Vec<u64> = runs.iter().flat_map(|ids| ids.iter().copied().chain(std::iter::once(u64::MAX))).collect();
+        let key = hash_ids(generation, &flat);
+        if self.drag.is_empty() || self.drag_key != key {
+            self.drag = runs
+                .iter()
+                .enumerate()
+                .map(|(i, ids)| {
+                    let els: Vec<Arc<Element>> = ids.iter().filter_map(|id| fp_engine::docops::element_on_page(doc, page, ElementId(*id))).collect();
+                    let img = super::render::render_elements(r, doc, frame, &els)?;
+                    Some(Sprite { key, texture: texture_of(ctx, &format!("canvas-ghost-{i}"), &img, zoom), bounds: img.bounds() })
+                })
+                .collect();
+            self.drag_key = key;
         }
-        self.drag.as_ref()
+        &self.drag
     }
 
     /// Vorschau eines (Text-)Elements; `key` beschreibt den Inhalt.
