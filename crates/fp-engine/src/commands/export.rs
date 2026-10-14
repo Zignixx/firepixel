@@ -395,6 +395,28 @@ pub fn export_active(s: &Session, style: FilesStyle, base: &str, page: usize, se
     export_document(&d.doc, &r, &o, &EncodeExtras::default()).map_err(|e| EngineError::Failed(e.to_string()))
 }
 
+/// Wie [`export_active`] mit Segmenten, aber mit eigenem HTML-Stil (XHTML ja/nein) für diesen
+/// einen Export – das Dokument selbst bleibt unverändert (Assistent „HTML-Code kopieren“).
+fn export_with_xhtml(s: &Session, style: FilesStyle, base: &str, page: usize, xhtml: bool) -> Result<Vec<ExportFile>> {
+    let d = s.doc()?;
+    let mut doc = (*d.doc).clone();
+    if let Some(pg) = doc.pages.get_mut(page) {
+        let pg = std::sync::Arc::make_mut(pg);
+        let ex = pg.root.export.get_or_insert_with(Default::default);
+        let h = ex.html.get_or_insert_with(|| Box::new(fp_model::HtmlSettings::cs6_default()));
+        h.xhtml = Some(i32::from(xhtml));
+    }
+    let r = ExportRenderer::new(s.renderer());
+    let mut o = DocExportOptions::new(base);
+    o.page = page;
+    o.style = style;
+    o.use_slices = true;
+    o.date = today();
+    o.src_file = d.path.as_ref().map(|p| p.to_string_lossy().to_string()).unwrap_or_default();
+    o.html_prefs = html_prefs(&s.prefs);
+    export_document(&doc, &r, &o, &EncodeExtras::default()).map_err(|e| EngineError::Failed(e.to_string()))
+}
+
 fn page_param(s: &Session, p: &Params) -> Result<usize> {
     let d = s.doc()?;
     let page = match p.opt_i64("page")? {
@@ -829,11 +851,15 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 Ok(super::view::doc_without_step(s, !same, out))
             }),
     );
-    r.add(cmd("edit.copyHtmlCode").requires(DOC).opt_default("style", ParamKind::Enum { values: vec!["htmlAndImages".into(), "cssAndImages".into()] }, json!("htmlAndImages"), "HTML-Art").opt("dir", ParamKind::Path, "Ordner für die Bilder (ohne: nur der Code)").run(|s, p| {
+    r.add(cmd("edit.copyHtmlCode").requires(DOC).opt_default("style", ParamKind::Enum { values: vec!["htmlAndImages".into(), "cssAndImages".into()] }, json!("htmlAndImages"), "HTML-Art").opt("dir", ParamKind::Path, "Ordner für die Bilder (ohne: nur der Code)").opt("baseName", ParamKind::String, "Basis-Dateiname für Segmente").opt("xhtml", ParamKind::Bool, "XHTML statt HTML").run(|s, p| {
         let style = style_of(&p.opt_str("style")?.unwrap_or_else(|| "htmlAndImages".into())).unwrap_or(FilesStyle::HtmlAndImages);
-        let base = base_name_of(s)?;
+        // Assistent „HTML-Code kopieren“ (TW-22): Basisname und HTML-Stil gelten nur für diesen Export
+        let base = p.opt_str("baseName")?.map(|b| b.trim().to_string()).filter(|b| !b.is_empty()).map_or_else(|| base_name_of(s), Ok)?;
         let page = s.doc()?.page;
-        let files = export_active(s, style, &base, page, None, true)?;
+        let files = match p.opt_bool("xhtml")? {
+            Some(x) => export_with_xhtml(s, style, &base, page, x)?,
+            None => export_active(s, style, &base, page, None, true)?,
+        };
         let ext = format!(".{}", html_ext_of(s)?.to_ascii_lowercase());
         let is_html = |f: &ExportFile| !f.path.contains('/') && f.path.to_ascii_lowercase().ends_with(&ext);
         let html = files.iter().find(|f| is_html(f)).map(|f| String::from_utf8_lossy(&f.bytes).into_owned()).ok_or_else(|| EngineError::Failed(fp_i18n::t("err-no-html")))?;

@@ -58,6 +58,8 @@ pub struct HtmlSetupDialog {
     pub alt: String,
     pub include_unsliced: bool,
     pub utf8: bool,
+    /// „Durchsuchen...“ neben dem Hintergrundbild gedrückt (TW-29; die Dateiwahl startet [`show`]).
+    pub browse_bg: bool,
     /// Ausgangswerte (für „ohne Änderung nichts schreiben“).
     initial: Option<Box<HtmlSetupDialog>>,
 }
@@ -103,6 +105,7 @@ impl HtmlSetupDialog {
             alt: h.default_alt.clone().unwrap_or_default(),
             include_unsliced: !h.discard_unspecified_slices.unwrap_or(false),
             utf8: h.encoding.unwrap_or(1) == 1,
+            browse_bg: false,
             initial: None,
         };
         dlg.initial = Some(Box::new(dlg.clone()));
@@ -117,9 +120,11 @@ impl HtmlSetupDialog {
     pub fn unchanged(&self) -> bool {
         let mut a = self.clone();
         a.tab = 0;
+        a.browse_bg = false;
         a.initial = None;
         let mut b = self.base();
         b.tab = 0;
+        b.browse_bg = false;
         b.initial = None;
         a == b
     }
@@ -234,11 +239,36 @@ pub fn show(ctx: &egui::Context, st: &mut AppState) {
     let Some(mut d) = st.dialogs.html_setup.take() else { return };
     let doc_name = st.session.active().map(|x| super::export::file_stem(&x.path.as_ref().and_then(|p| p.file_name()).map(|n| n.to_string_lossy().to_string()).unwrap_or_default())).unwrap_or_default();
     let ans = show_dialog(ctx, &mut d, &doc_name);
+    let browse = std::mem::take(&mut d.browse_bg);
     match ans {
         Some(true) => apply(st, &d),
         Some(false) => {}
         None => st.dialogs.html_setup = Some(d),
     }
+    if browse && ans.is_none() {
+        pick_background(st);
+    }
+}
+
+/// Bilddateien für „Hintergrundbild“.
+const BG_IMAGES: &[&str] = &["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp"];
+
+/// „Durchsuchen...“: Bild wählen und als Hintergrundbild eintragen – relativ zum Ordner des
+/// Dokuments, wenn es darin liegt (so findet die exportierte Seite es), sonst der volle Pfad.
+fn pick_background(st: &mut AppState) {
+    let doc_dir = st.session.active().and_then(|d| d.path.as_ref()).and_then(|p| p.parent()).map(|p| p.to_path_buf());
+    super::panel_menus::pick_open(st, &t("dlg-hs-pick-bg"), &[("dlg-filter-all-readable", BG_IMAGES)], move |st, p| {
+        let url = background_url_for(&p, doc_dir.as_deref());
+        if let Some(d) = st.dialogs.html_setup.as_mut() {
+            d.background_url = url;
+        }
+    });
+}
+
+/// Eintrag für das Feld „Hintergrundbild“ zu einer gewählten Datei (Schrägstriche wie in einer URL).
+pub fn background_url_for(file: &std::path::Path, doc_dir: Option<&std::path::Path>) -> String {
+    let rel = doc_dir.and_then(|d| file.strip_prefix(d).ok()).unwrap_or(file);
+    rel.to_string_lossy().replace('\\', "/")
 }
 
 /// Zeichnet den Dialog; `Some(true)` OK, `Some(false)` Abbrechen/Esc.
@@ -311,8 +341,17 @@ pub fn show_dialog(ctx: &egui::Context, d: &mut HtmlSetupDialog, doc_name: &str)
                 // Dokumenteigenschaften (CSS der Seite)
                 super::fit_label(ui, Rect::from_min_size(o + vec2(0.0, 88.0), vec2(body.width() - 32.0, 20.0)), &l("dlg-hs-doc-props"), true);
                 super::fit_label(ui, label(114.0), &g_labels[2], true);
-                if let Some(v) = fields::text(ui, "hs-bg-url", field(114.0, (body.right() - 16.0 - fx).min(col1 + COL_GAP + lw2 + 8.0 + 100.0)), &d.background_url, true) {
+                // Feld + „Durchsuchen...“ rechts daneben wie im Original (TW-29), zusammen so breit
+                // wie bisher das Feld allein
+                let browse_l = l("dlg-export-browse");
+                let bw = super::button_w(ui.ctx(), &browse_l, 80.0);
+                let total = (body.right() - 16.0 - fx).min(col1 + COL_GAP + lw2 + 8.0 + 100.0);
+                let bg = field(114.0, total - bw - 6.0);
+                if let Some(v) = fields::text(ui, "hs-bg-url", bg, &d.background_url, true) {
                     d.background_url = v;
+                }
+                if push_button(ui, Rect::from_min_size(pos2(bg.right() + 6.0, bg.top() - 1.0), vec2(bw, 23.0)), &browse_l, false, true) {
+                    d.browse_bg = true;
                 }
                 super::fit_label(ui, label(142.0), &g_labels[3], true);
                 if let Some(i) = fields::combo(ui, "hs-repeat", field(142.0, 110.0), &["no-repeat", "repeat", "repeat-x", "repeat-y"], Some(d.background_repeat), true) {

@@ -120,7 +120,7 @@ pub fn show(ctx: &egui::Context, st: &mut AppState) {
     let aligns = tl(&["dlg-pm-align-left", "dlg-pm-align-center", "dlg-pm-align-right"]);
     let l2 = tl(&["dlg-pm-cell-spacing", "dlg-pm-cell-padding", "dlg-pm-text-indent", "dlg-pm-border-width", "dlg-pm-hide-delay", "dlg-pm-fixed-width", "dlg-pm-border-color", "dlg-pm-shadow-color"]);
     let l3 = tl(&["dlg-pm-menu-x", "dlg-pm-menu-y", "dlg-pm-sub-x", "dlg-pm-sub-y"]);
-    let (bold_l, hide_l, rel_l, ok_l, cancel_l) = (t("dlg-pm-bold"), t("dlg-pm-hide-on-leave"), t("dlg-pm-sub-relative"), t("btn-ok"), t("btn-cancel"));
+    let (bold_l, hide_l, rel_l, ok_l, cancel_l) = (t("dlg-pm-bold"), t("dlg-pm-hide-on-leave"), t("dlg-pm-sub-relative"), t("dlg-pm-finish"), t("btn-cancel"));
     let tab_w = super::buttons_w(ctx, &refs(&tabs), 108.0);
     let dx0 = super::extra_w(ctx, &refs(&l0), 60.0 - 4.0);
     let dx1 = super::extra_w(ctx, &refs(&l1), 100.0 - 4.0);
@@ -134,7 +134,7 @@ pub fn show(ctx: &egui::Context, st: &mut AppState) {
         .max(110.0 + dx1 + acw + 20.0 + bold_w)
         .max(160.0 + dx2 + 60.0)
         .max(18.0 + super::max_text_w(ctx, &[&hide_l, &rel_l]));
-    let width = 560f32.max(24.0 + 4.0 * (tab_w + 4.0)).max(24.0 + 20.0 + inner_w).max(super::button_row_w(ctx, &[&ok_l, &cancel_l], 76.0, 8.0) + 32.0).ceil();
+    let width = 560f32.max(24.0 + 4.0 * (tab_w + 4.0)).max(24.0 + 20.0 + inner_w).max(super::button_row_w(ctx, &[&cancel_l, &t("dlg-wiz-nav-back"), &t("dlg-wiz-nav-next"), &ok_l], 76.0, 8.0) + 32.0).ceil();
     let r = dialog_frame(ctx, "fp-popup-editor", &title, vec2(width, 420.0), |ui, body| {
         let theme = Theme::current(ui.ctx());
         let c = &theme.colors;
@@ -292,12 +292,22 @@ pub fn show(ctx: &egui::Context, st: &mut AppState) {
                 }
             }
         }
-        let b = super::button_row(ui.ctx(), body.right() - 16.0, body.bottom() - 34.0, &[&ok_l, &cancel_l], 76.0, 23.0, 8.0);
-        if push_button(ui, b[0], &ok_l, true, !d.rows.is_empty()) {
-            result = Some(true);
-        }
-        if push_button(ui, b[1], &cancel_l, false, true) {
+        // Navigation wie im Original (TW-23): Abbrechen · < Zurück · Weiter > · Fertig; Weiter ist der
+        // Standardknopf und blättert die Registerkarten durch, auf der letzten Karte Fertig
+        let (back_l, next_l) = (t("dlg-wiz-nav-back"), t("dlg-wiz-nav-next"));
+        let last = d.tab + 1 >= tabs.len();
+        let b = super::button_row(ui.ctx(), body.right() - 16.0, body.bottom() - 34.0, &[&cancel_l, &back_l, &next_l, &ok_l], 76.0, 23.0, 8.0);
+        if push_button(ui, b[0], &cancel_l, false, true) {
             result = Some(false);
+        }
+        if push_button(ui, b[1], &back_l, false, d.tab > 0) {
+            d.tab -= 1;
+        }
+        if push_button(ui, b[2], &next_l, !last, !last) {
+            d.tab += 1;
+        }
+        if push_button(ui, b[3], &ok_l, last, !d.rows.is_empty()) {
+            result = Some(true);
         }
     });
     match (result, r) {

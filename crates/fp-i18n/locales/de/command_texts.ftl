@@ -566,6 +566,8 @@ cmdtext-doppelte-woerter-melden = Doppelte Wörter melden
 cmdtext-als-unbenannt-oeffnen-ohne-dateinamen-sp-dab760 = als „Unbenannt“ öffnen (ohne Dateinamen; Speichern fragt nach einem Namen)
 cmdtext-weitere-dateien-pfad-als-animation-oeffn-98a4d2 = weitere Dateien [Pfad, …]: „Als Animation öffnen“, je Datei ein Status nach dem ersten
 cmdtext-ordner-fuer-die-bilder-ohne-nur-der-code = Ordner für die Bilder (ohne: nur der Code)
+cmdtext-basis-dateiname-fuer-segmente = Basis-Dateiname für Segmente
+cmdtext-xhtml-statt-html = XHTML statt HTML
 cmdtext-musterbild-png-jpeg-gif-ohne-datei-zu-na-354ba8 = Musterbild (PNG, JPEG, GIF …); ohne: Datei zu „name“ aus den Musterordnern
 cmdtext-texturbild-helligkeit-maske-ohne-datei-z-5a73b6 = Texturbild (Helligkeit = Maske); ohne: Datei zu „name“ aus den Texturordnern, ohne beides: Textur entfernen
 cmdtext-leeres-symbol-in-der-bibliothek-anlegen-4e22e1 = leeres Symbol in der Bibliothek anlegen und seine Symbolbearbeitung öffnen (Menü wie im Original)

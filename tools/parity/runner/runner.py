@@ -1091,8 +1091,22 @@ class FpSide(Side):
             return out if not sc.get("notImplemented") else {"result": out, "notImplemented": sc["notImplemented"]}
         return v
 
-    def find_role(self, role, index=0):
+    def find_role(self, role, index=0, in_dialog=True):
         hits = (self.call("ui_find", {"role": role, "limit": 200}) or {}).get("hits") or []
+        # dialog.field.N etc. count only the controls of the open dialog (like the reference side's child
+        # windows); otherwise fields of panels/inspector above the dialog came first (TW-14, runner finding 6)
+        if in_dialog and self.state().get("dialog_open"):
+            try:
+                l, t, r, b = self.dialog_rect()
+                hits = [h for h in hits if l - 1 <= h["center"][0] <= r + 1 and t - 1 <= h["center"][1] <= b + 1]
+                # panel fields lying under the dialog were drawn before its title bar
+                tb = [h for h in (self.call("ui_find", {"text": "Titelleiste", "exact": False, "limit": 20}) or {}).get("hits") or []
+                      if str(h.get("text", "")).startswith("Titelleiste") and "order" in h]
+                if tb:
+                    o = max(h["order"] for h in tb)
+                    hits = [h for h in hits if h.get("order", o) >= o]
+            except BridgeError:
+                pass
         hits.sort(key=lambda h: (round(h["rect"][1] / 4), h["rect"][0]))
         if len(hits) <= index:
             raise Unmapped(f"fp: no {role} #{index}")

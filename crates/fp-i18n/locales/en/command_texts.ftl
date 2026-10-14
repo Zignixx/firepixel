@@ -566,6 +566,8 @@ cmdtext-doppelte-woerter-melden = Report duplicate words
 cmdtext-als-unbenannt-oeffnen-ohne-dateinamen-sp-dab760 = open as “Untitled” (without a file name; saving asks for a name)
 cmdtext-weitere-dateien-pfad-als-animation-oeffn-98a4d2 = further files [path, …]: “Open as Animation”, one state per file after the first
 cmdtext-ordner-fuer-die-bilder-ohne-nur-der-code = Folder for the images (without: code only)
+cmdtext-basis-dateiname-fuer-segmente = Base file name for slices
+cmdtext-xhtml-statt-html = XHTML instead of HTML
 cmdtext-musterbild-png-jpeg-gif-ohne-datei-zu-na-354ba8 = Pattern image (PNG, JPEG, GIF …); without: file for “name” from the pattern folders
 cmdtext-texturbild-helligkeit-maske-ohne-datei-z-5a73b6 = Texture image (brightness = mask); without: file for “name” from the texture folders, without both: remove texture
 cmdtext-leeres-symbol-in-der-bibliothek-anlegen-4e22e1 = create an empty symbol in the library and open it in symbol editing (menu as in the original)

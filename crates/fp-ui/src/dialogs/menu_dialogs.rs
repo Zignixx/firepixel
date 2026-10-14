@@ -57,6 +57,13 @@ pub fn copy_html(st: &mut AppState, dir: Option<&str>) {
     if let Some(d) = dir {
         params["dir"] = json!(d);
     }
+    copy_html_with(st, params);
+}
+
+/// `edit.copyHtmlCode` mit fertigen Parametern (Assistent: `dir`, `baseName`, `xhtml`).
+pub fn copy_html_with(st: &mut AppState, params: Value) {
+    let dir = params.get("dir").and_then(|d| d.as_str()).map(|s| s.to_string());
+    let dir = dir.as_deref();
     match crate::ui_commands::execute(&mut st.session, "edit.copyHtmlCode", params) {
         Ok(o) => {
             st.dialogs.clipboard = o.value.get("html").and_then(|h| h.as_str()).map(|s| s.to_string());
@@ -114,16 +121,8 @@ pub fn open(st: &mut AppState, name: &str) -> bool {
             return true;
         }
         "edit.copyHtmlCode" => {
-            // erst den Ordner für die Bilder wählen, dann den Code kopieren (E3)
-            if st.session.active().is_none() {
-                return true;
-            }
-            crate::file_dialog::request(st, crate::file_dialog::Request::folder(t("dlg-md-copy-html-folder")), |st, r| {
-                if let Some(p) = r.into_iter().next() {
-                    copy_html(st, Some(&p.to_string_lossy()));
-                }
-            });
-            return true;
+            // Assistent wie im Original (TW-22): Stil, Basisname, Bilderordner, dann kopieren
+            return super::copy_html::open(st);
         }
         "commands.manageExtensions" | "help.manageExtensions" => {
             let v = crate::ui_commands::execute(&mut st.session, name, json!({"action": "list"})).map(|o| o.value).unwrap_or(Value::Null);

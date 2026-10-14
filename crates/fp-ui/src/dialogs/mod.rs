@@ -7,6 +7,7 @@ mod about;
 pub mod access;
 pub mod ai_progress;
 pub mod catalog;
+pub mod copy_html;
 pub mod doc_dialogs;
 pub mod effects;
 pub mod export;
@@ -87,6 +88,8 @@ pub struct Dialogs {
     pub saved_commands: Option<menu_dialogs::SavedCommandsDialog>,
     /// „HTML-Einrichtung“ (E3).
     pub html_setup: Option<html_setup::HtmlSetupDialog>,
+    /// Assistent "HTML-Code kopieren" (TW-22).
+    pub copy_html: Option<copy_html::CopyHtmlWizard>,
     /// „Exportassistent“ (E3).
     pub wizard: Option<export_wizard::ExportWizard>,
     /// Rechtschreibprüfung.
@@ -143,6 +146,7 @@ impl Dialogs {
             || self.html_slice.is_some()
             || self.saved_commands.is_some()
             || self.html_setup.is_some()
+            || self.copy_html.is_some()
             || self.wizard.is_some()
             || self.spelling.is_some()
             || self.spelling_setup.is_some()
@@ -1080,6 +1084,8 @@ pub fn show_all(ctx: &egui::Context, st: &mut AppState) {
     curves::show_curves(ctx, st);
     bitmap_selection::show(ctx, st);
     export::show_export(ctx, st);
+    // vor der HTML-Einrichtung: die öffnet der Assistent darüber
+    copy_html::show(ctx, st);
     html_setup::show(ctx, st);
     export_wizard::show(ctx, st);
     image_preview::show(ctx, st);
