@@ -604,11 +604,12 @@ pub fn show(ctx: &egui::Context, st: &mut AppState) {
         } else if add_clicked {
             d.capturing = true;
         }
-        if ro {
-            // Hinweis bricht bei längeren Texten um (Platz bis zur Meldungszeile)
-            super::text_block(ui, Rect::from_min_size(pos2(o.x, y + 111.0), vec2(body.width() - 28.0, 28.0)), egui::RichText::new(t("dlg-sc-read-only")).font(theme.small_font()).color(c.text_weak));
-        }
         let b = super::button_row(ui.ctx(), body.right() - 16.0, body.bottom() - 36.0, &[&ok_l, &cancel_l], 76.0, 23.0, 8.0);
+        if ro {
+            // Hinweis bricht bei längeren Texten um (Platz bis zur Meldungszeile); links neben den
+            // Knöpfen, damit er bei drei Zeilen nicht unter OK läuft (qps, B-8)
+            super::text_block(ui, Rect::from_min_size(pos2(o.x, y + 111.0), vec2((b[0].left() - 8.0 - o.x).min(body.width() - 28.0), 28.0)), egui::RichText::new(t("dlg-sc-read-only")).font(theme.small_font()).color(c.text_weak));
+        }
         if let Some(m) = &d.message {
             crate::widgets::text_clipped(ui.painter(), pos2(o.x, body.bottom() - 24.0), Align2::LEFT_CENTER, m, theme.small_font(), c.text, b[0].left() - 8.0 - o.x);
         }

@@ -622,3 +622,4 @@ cmdtext-vollstaendiger-pinsel-wie-element-brush-048a4d = complete brush like `el
 cmdtext-pinsel-der-werkzeugvorgabe-speichern-wer-94fd63 = save the brush of the tool preset (tool inspector) instead of the stroke of the selection
 cmdtext-symbolname-vorgabe-symbol = Symbol name (default "Symbol")
 cmdtext-fehlende-status-anhaengen-rueckfrage-aut-c6e799 = append missing states (question "Automatically add new states?": OK = true, Cancel = false)
+cmdtext-dokumentpunkt-in-die-mitte-der-ansicht-j-c76d50 = Document point to the middle of the view (JSF setActiveViewScale)

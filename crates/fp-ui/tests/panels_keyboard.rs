@@ -280,9 +280,10 @@ fn layers_panel_rename_keys() {
 fn inspector_text_field_clipboard_only_text() {
     let mut h = harness();
     click_row(&mut h, "Alpha", false);
-    // erstes Textfeld des Inspektors (Breite) fokussieren
-    let fields: Vec<_> = h.get_all(egui_kittest::kittest::By::new().role(egui::accesskit::Role::TextInput)).collect();
-    assert!(!fields.is_empty(), "Inspektor zeigt Textfelder");
+    // Namensfeld des Inspektors fokussieren. Nicht einfach das erste Textfeld: seit BA-033 (PNG 32 als
+    // Exportvorgabe) zeigt das Optimieren-Bedienfeld davor ein Zahlenfeld (B-8)
+    let fields: Vec<_> = h.get_all(egui_kittest::kittest::By::new().role(egui::accesskit::Role::TextInput)).filter(|n| n.value().as_deref() == Some("Alpha")).collect();
+    assert!(!fields.is_empty(), "Inspektor zeigt das Namensfeld");
     fields[0].click();
     drop(fields);
     h.run_steps(3);
