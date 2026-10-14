@@ -141,7 +141,7 @@ Aliases: `reset <T..|null>` = `open_testfile` (null: only close menus/dialogs), 
 | `select` | object name or list | JSF `fw.selection` by name | same JSF via `run_script` (exactly the named objects; `select {ids}` only as fallback) |
 | `select_none` / `select_all` | – | JSF | `select` |
 | `tool` | `tool.rectangle` | click on the toolbox button (`ui_map.json → tools`; single-key shortcuts do not reliably reach the program) | `ui_action {tool}` |
-| `panel` | `window.layers` / id / title | visible? else menu `Fenster > …` | `ui_action {panel}` if not visible |
+| `panel` | `window.layers` / id / title | visible? else menu `Fenster > …` | `ui_action {panel}` if not visible (fallback: tab / menu, see below) |
 | `jsf` / `run_script` | code | JSF in the running instance | `run_script` |
 | `log_value` / `log` | JSF expression | value into `values` | `run_script` value |
 | `click` / `double_click` / `right_click` / `hover` / `open` / `click_text` / `click_button` / `toolbox_click` | target | SendInput at the target | `ui_input` at the target |
@@ -175,11 +175,44 @@ Target forms `{handle: i|role}`, `{menu_item: "Text"}` (item of an open popup me
 (reference: i-th preview child window of the open dialog, Firepixel: `Vorschaufeld <i+1>`) and
 `{dialog_rel: [x, y]}` (offset from the top-left of the largest open dialog) work on both sides.
 
+More target forms (RUN-5), both sides:
+
+| form | reference program | Firepixel |
+|---|---|---|
+| `{layer_row: "Ebene 1"}`, `{object_row: 0 \| "Name", layer?}`, `{layer_eye \| layer_lock \| layer_expand \| layer_name: "Ebene 1"}` | the layers panel is an owner-drawn Win32 list box without item texts: the row list is rebuilt from the document (JSF `Layer.elems` = sub layers and objects in display order, `disclosure` = expanded) and checked against the list box (row count, layer rows 24 px, object rows taller); the row is scrolled into view (`LB_SETTOPINDEX`, host `lb_info`), the column x offsets are fixed (eye 11, lock 32, triangle 51 (+16 for a sub layer), name 110) | row text via `ui_find`; rows scrolled out of the small panel are reached with the mouse wheel; eye/lock at fixed x, triangle 28 px left of the name |
+| `{popup_swatch: "#RRGGBB"}` | the open colour popup (own window) is captured, the first cell of exactly that colour is used | the same in the window image, region above the popup's HEX field |
+| `{pref_category: "Bearbeiten"}` | row of the preferences category list (`SysListView32`, items not readable): index from `ui_map.json → orig_pref_categories` (script names and their aliases), row height 17 px; plain labels of these categories work too | text |
+| `{field_arrow: i}` | popup slider arrow next to the i-th edit field of the open dialog (the `Button` without text right of it) | 10 px right of the i-th text field |
+
+`{list_row}`, `{tree_item}`, `{history_row}` (reference: looked up by name with UI Automation, works only for standard
+list/tree controls), `{panel_swatch}` and grid cells (`style_cell`, `char_cell`, `color_table_cell` …) are still open.
+
+Other RUN-5 rules:
+* `{"repeat": n, "do": [actions]}` runs the actions n times (both sides).
+* `menu`/`menu_item` with the menu path of a panel in `ui_map.json → panels` (`Fenster > Ausrichten` …) is handled
+  like `panel` (only shown when not visible; the menu entry would hide a visible panel). `"toggle": true` keeps the
+  plain menu command.
+* Firepixel `panel` for panels without an engine command (Ausrichten, Pfad, Farbpalette, Sonderzeichen,
+  Bildbearbeitung, Symboleigenschaften …, unknown to `ui_action panel` and missing in `visible_panels`): click its tab
+  when it is there, else its menu entry.
+* Every opened test file starts with the pointer tool on both sides (the reference program keeps the last tool,
+  runner finding 3). After `select` the reference side waits until the properties panel changed (≤ 3 s).
+* Reference `open` (no field under the point): if neither a menu nor a new window appeared within 2.5 s it clicks once
+  more (the first click after a selection change sometimes only activates the rebuilt panel). Menus opened by
+  `choose`/`open` are polled for up to 2.5 s (they appear with a delay).
+* Owner-drawn sub menus (stroke categories `Einfach > Präzise abger.` …): item order in `ui_map.json →
+  orig_owner_drawn_menus`; `orig_index` with a path `A > B` = index in the sub menu of A.
+* `ui_map.json → menu_aliases`: groups of names (reference first, then Firepixel) of the same menu entry where they differ (bevel live
+  filters); tried when the script's name is not found.
+* `ui_map.json → orig_labels`: label → reference locator for icon buttons without Win32 text (align panel).
+* Test file `T11` is a folder (`par_import`, not opened at unit start); `"T11:par.psd"` = a file inside it; `T12` =
+  swatch file. Firepixel targets `dialog.slider.<i>`.
+* The tools column of the reference program has no window class of its own: `panel:tools` = client left edge to the
+  document view.
+
 Not supported yet (logged as `unsupported`, the run continues): `read_dialog_fields`, `export`, `resize_panel`,
 `resize_dialog`, `drag_dialog_*`, `restart_app`, `window_size`, `log_focus_cycle`, `set_clipboard_image`,
-`drop_files`, `drag_text`, `repeat` and the other rare verbs from the scripts' notes. Target forms
-`{layer_row}`, `{object_row}`, `{tree_item}`, `{pref_category}`, `{history_row}`, `{popup_swatch}` … work in
-Firepixel (found by their text) but not yet in the reference program.
+`drop_files`, `drag_text` and the other rare verbs from the scripts' notes.
 
 ### Targets
 

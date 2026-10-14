@@ -15,6 +15,7 @@ import json
 import os
 import queue
 import random
+import re
 import subprocess
 import threading
 import time
@@ -66,6 +67,22 @@ def file_url(p: Path | str) -> str:
     if len(s) > 1 and s[1] == ":":
         s = s[0] + "|" + s[2:]
     return "file:///" + s
+
+
+MAP_CALL = re.compile(r"((?:fw\.getDocumentDOM\(\)|fw|dom|doc|d)(?:\.[A-Za-z_]\w*(?:\(\))?)*)\.map\(\s*function")
+
+
+def map_compat(code: str) -> str:
+    """The program's script engine has no Array.prototype.map, and its collections (dom.layers, frames, elements)
+    are no arrays: `X.map(function …)` written by the scripts becomes `__fp_map(X, function …)` (same number of
+    parentheses), with the helper defined in front."""
+    if ".map(" not in code:
+        return code
+    new = MAP_CALL.sub(lambda m: "__fp_map(" + m.group(1) + ", function", code)
+    if new == code:
+        return code
+    return ("function __fp_map(a, f) { var o = []; for (var i = 0; i < a.length; i++) o.push(f(a[i], i, a)); return o; }\n"
+            + new)
 
 
 class Host:
@@ -266,6 +283,7 @@ class Original:
         """Run JSF in the running instance; returns the log lines (fp_log / fp_ret)."""
         if not self.running():
             self.start()
+        code = map_compat(code)
         name = f"par_{time.strftime('%H%M%S')}_{random.randrange(100000)}"
         done = self.tmp / f"{name}.done"
         logf = self.tmp / f"{name}.log"

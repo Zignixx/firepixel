@@ -544,7 +544,9 @@
      "menu_item": "Filter > Rauschen > Rauschen hinzufügen..."
     },
     {
-     "open": "dialog.combo.0"
+     "open": {
+      "field_arrow": 0
+     }
     },
     {
      "record_ui": "dialog.fields"
@@ -555,7 +557,9 @@
      "command": "filter.noise.addNoise"
     },
     {
-     "open": "dialog.combo.0"
+     "open": {
+      "field_arrow": 0
+     }
     },
     {
      "record_ui": "dialog.fields"
@@ -714,7 +718,9 @@
      "menu_item": "Filter > Weichzeichnen > Gaußscher Weichzeichner..."
     },
     {
-     "open": "dialog.combo.0"
+     "open": {
+      "field_arrow": 0
+     }
     },
     {
      "record_ui": "dialog.fields"
@@ -725,7 +731,9 @@
      "command": "filter.blur.gaussian"
     },
     {
-     "open": "dialog.combo.0"
+     "open": {
+      "field_arrow": 0
+     }
     },
     {
      "record_ui": "dialog.fields"

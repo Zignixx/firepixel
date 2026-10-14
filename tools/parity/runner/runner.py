@@ -176,6 +176,29 @@ def slider_points(r, frac, from_frac=None):
     return (start, y), (x_of(frac), y)
 
 
+def find_color_cell(img: Image.Image, region, hexcol: str, half: int = 2):
+    """Centre of the first swatch cell (reading order) inside `region` (image coordinates) whose pixels around the
+    centre all have the colour `hexcol` ('#RRGGBB'). Swatch grids are drawn without anti-aliasing in both programs."""
+    h = hexcol.lstrip("#")
+    want = (int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16))
+    im = img.convert("RGB")
+    l, t, r, b = [int(v) for v in region]
+    l, t, r, b = max(0, l), max(0, t), min(im.width, r), min(im.height, b)
+    px = im.load()
+    for y in range(t + half, b - half):
+        for x in range(l + half, r - half):
+            if px[x, y] == want and all(px[x + dx, y + dy] == want for dx in (-half, 0, half) for dy in (-half, 0, half)):
+                # walk to the cell's centre
+                x2 = x
+                while x2 + 1 < r and px[x2 + 1, y] == want:
+                    x2 += 1
+                y2 = y
+                while y2 + 1 < b and px[x, y2 + 1] == want:
+                    y2 += 1
+                return (x + x2) // 2, (y + y2) // 2
+    return None
+
+
 # --------------------------------------------------------------------------- sides
 class Side:
     name = "?"
@@ -212,6 +235,14 @@ class Side:
         if not loc:
             raise Unmapped(f"ui key {key} not located for {self.name}")
         return loc
+
+    def aliases(self, label):
+        """Other names of the same menu entry (ui_map `menu_aliases`: groups, reference name first, then Firepixel's)."""
+        lab = clean_label(label)
+        for g in self.r.ui_map.get("menu_aliases") or []:
+            if lab in g:
+                return [x for x in g if x != lab]
+        return []
 
     def panel_info(self, p):
         info = self.r.ui_map.get("panels", {}).get(norm_panel(p))
@@ -423,6 +454,16 @@ class OrigSide(Side):
                 return (r[0] + target["pos"][0], r[1] + target["pos"][1]), None
             if "target" in target:
                 return self.resolve(target["target"])
+            if "field_arrow" in target:
+                # popup slider arrow right next to the i-th edit field of the open dialog (text size, simplify ...)
+                ed = self.dialog_child("Edit", int(target["field_arrow"]))
+                d = max(self.h.list("dialogs"), key=lambda d: (d["rect"][2] - d["rect"][0]) * (d["rect"][3] - d["rect"][1]))
+                er = ed["rect"]
+                for k in self.h.list("kids", hwnd=d["hwnd"]):
+                    r = k["rect"]
+                    if k["class"] == "Button" and not k.get("title") and abs(r[0] - er[2]) <= 6 and r[1] < er[3] and r[3] > er[1]:
+                        return ((r[0] + r[2]) // 2, (r[1] + r[3]) // 2), None
+                return (er[2] + 8, (er[1] + er[3]) // 2), None
             if "dialog_field" in target:
                 ch = self.h.call("find_child", scope="dialog", title=None, **{"class": "Edit"}, index=int(target["dialog_field"]))
                 r = ch["rect"]
@@ -441,6 +482,46 @@ class OrigSide(Side):
                 return ((r[0] + r[2]) // 2, (r[1] + r[3]) // 2), ch
             if "dialog_rel" in target or ("rel" in target and "panel" in target) or "child" in target or "dialog_child" in target:
                 return self.locate(target)
+            if "pref_category" in target:
+                # preferences dialog: category list (SysListView32, items not readable cross-process); row order from
+                # ui_map `orig_pref_categories` (script names and their aliases), row height measured 17 px
+                cats = self.r.ui_map.get("orig_pref_categories") or {}
+                i = cats.get(clean_label(str(target["pref_category"])))
+                if i is not None:
+                    lv = self.h.call("find_child", scope="dialog", title=None, **{"class": "SysListView32"}, index=0)
+                    r = lv["rect"]
+                    return (r[0] + 40, r[1] + 10 + 17 * int(i)), None
+            for k in ("pref_category", "list_row", "tree_item", "history_row"):
+                if k in target and isinstance(target[k], str):
+                    # standard list/tree controls (preferences categories, library lists) expose their items to UI
+                    # Automation even though the program's own panels do not: look the item up by name in the dialogs
+                    # first, then in the main window
+                    for scope in ("tops", "main"):
+                        for typ in ("ListItem", "TreeItem", "DataItem"):
+                            try:
+                                e = self.h.call("uia_find", name=target[k], type=typ, scope=scope, exact=True, timeout=30)
+                            except OrigError:
+                                continue
+                            if e.get("rect"):
+                                r = e["rect"]
+                                return ((r[0] + r[2]) // 2, (r[1] + r[3]) // 2), None
+                    raise Unmapped(f"{k} '{target[k]}' not found as list/tree item in orig")
+            for k in ("layer_row", "object_row", "layer_eye", "layer_lock", "layer_expand", "layer_name"):
+                if k in target:
+                    return self.layers_point(k, target[k], target.get("layer")), None
+            if "popup_swatch" in target:
+                # swatch of the open colour popup (a window of its own): found by its colour in the popup image
+                main = self.h.call("main")["hwnd"]
+                ws = [w for w in self.h.list("windows") if w["hwnd"] != main and w["class"] not in ("tooltips_class32", "#32768")]
+                for w in sorted(ws, key=lambda w: -(w["rect"][2] - w["rect"][0]) * (w["rect"][3] - w["rect"][1])):
+                    rr = w["rect"]
+                    tmp = Path(self.r.cfg["tmp_dir"]) / "orig_popup.png"
+                    self.grab(rr, tmp)
+                    with Image.open(tmp) as im:
+                        pt = find_color_cell(im, [0, 0, im.width, im.height], str(target["popup_swatch"]))
+                    if pt:
+                        return (rr[0] + pt[0], rr[1] + pt[1]), None
+                raise OrigError(f"popup swatch {target['popup_swatch']} not found in the open popup")
             for k in ("layer_row", "object_row", "pref_category", "popup_swatch", "panel_swatch", "list_row",
                       "tree_item", "history_row"):
                 if k in target:
@@ -449,7 +530,7 @@ class OrigSide(Side):
         elif isinstance(target, str) and re.match(r"^dialog\.(field|combo|check|button)\.\d+$", target):
             kind, i = target.split(".")[1:]
             cls = {"field": "Edit", "combo": "ComboBox", "check": "Button", "button": "Button"}[kind]
-            ch = self.h.call("find_child", scope="dialog", title=None, **{"class": cls}, index=int(i))
+            ch = self.dialog_child(cls, int(i))
             r = ch["rect"]
             return ((r[0] + r[2]) // 2, (r[1] + r[3]) // 2), ch
         elif isinstance(target, str) and target in self.r.ui_map.get("targets", {}):
@@ -461,6 +542,65 @@ class OrigSide(Side):
         else:
             return self.label_point(str(target))
         return self.locate(loc)
+
+    # x offsets inside a row of the layers panel list (measured 14.10. at 1600 x 1000): eye, lock, expand triangle,
+    # name; the triangle of a sub layer is indented by one level (16 px)
+    LAYER_COLS = {"layer_eye": 11, "layer_lock": 32, "layer_expand": 51, "layer_name": 110, "layer_row": 150, "object_row": 150}
+
+    def layers_point(self, kind, name, layer=None):
+        """Row of the layers panel, an owner-drawn Win32 list box without item texts (setting the current layer by
+        JSF does not move its selection). The row list is rebuilt from the document (JSF `Layer.elems` holds sub
+        layers and objects in display order, `disclosure` = expanded) and checked against the list box: same row
+        count, layer rows 24 px, object rows taller. The row is scrolled into view (LB_SETTOPINDEX)."""
+        p = self.panel("layers")
+        lb = next((k for k in self.h.list("kids", hwnd=p["hwnd"]) if k["class"] == "ListBox"), None)
+        if not lb:
+            raise OrigError("layers panel: no list box")
+        lines = self.o.jsf(
+            "var d = fw.getDocumentDOM(), rows = [], child = {};NL"
+            "for (var i = 0; i < d.layers.length; i++) { var es = d.layers[i].elems || [];NL"
+            "  for (var j = 0; j < es.length; j++) if (es[j].isLayer) child[es[j].name] = 1; }NL"
+            "function walk(L, par) { rows.push('L' + String.fromCharCode(1) + L.name + String.fromCharCode(1) + par);NL"
+            "  if (!L.disclosure) return; var es = L.elems || [];NL"
+            "  for (var j = 0; j < es.length; j++) { if (es[j].isLayer) walk(es[j], L.name);NL"
+            "    else rows.push('O' + String.fromCharCode(1) + (es[j].name || '') + String.fromCharCode(1) + L.name); } }NL"
+            "for (var i = d.layers.length - 1; i >= 0; i--) if (!child[d.layers[i].name]) walk(d.layers[i], '');NL"
+            "fp_log('RET ' + rows.join(String.fromCharCode(2)));".replace("NL", "\n"))
+        ret = ([ln[4:] for ln in lines if ln.startswith("RET ")] or [""])[-1]
+        rows = [r.split(chr(1)) for r in ret.split(chr(2)) if r]
+        info = self.h.call("lb_info", hwnd=lb["hwnd"])
+        hs = info["heights"]
+        if len(rows) != len(hs) or any((r[0] == "L") != (h <= 26) for r, h in zip(rows, hs)):
+            raise OrigError(f"layers panel: rows {[r[0] + ':' + r[1] for r in rows]} do not match the list {hs}")
+        if kind == "object_row":
+            objs = [i for i, r in enumerate(rows) if r[0] == "O" and (layer is None or r[2] == layer)]
+            cand = objs[int(name):int(name) + 1] if isinstance(name, int) else [i for i in objs if rows[i][1] == name]
+        else:
+            cand = [i for i, r in enumerate(rows) if r[0] == "L" and r[1] == name]
+        if not cand:
+            raise OrigError(f"layers panel: {kind} {name!r} not found")
+        idx = cand[0]
+        self.h.call("lb_info", hwnd=lb["hwnd"], top=int(idx))
+        time.sleep(0.2)
+        top = self.h.call("lb_info", hwnd=lb["hwnd"])["top"]
+        r = lb["rect"]
+        y = r[1] + sum(hs[top:idx]) + hs[idx] // 2
+        if not (top <= idx) or y > r[3]:
+            raise OrigError(f"layers panel: row {idx} not visible (top {top})")
+        x = r[0] + self.LAYER_COLS.get(kind, 150)
+        if kind == "layer_expand" and rows[idx][2]:
+            x += 16  # sub layer: triangle indented
+        return x, y
+
+    def dialog_child(self, cls, index):
+        """i-th Win32 child of a class in the open dialog; a dialog opened by the previous action may need a moment."""
+        for k in range(10):
+            try:
+                return self.h.call("find_child", scope="dialog", title=None, **{"class": cls}, index=index)
+            except OrigError:
+                if k == 9:
+                    raise
+                time.sleep(0.3)
 
     def win_at(self, pt):
         """Win32 window under a point (edit fields / combo boxes inside panels are real child windows)."""
@@ -533,11 +673,45 @@ class OrigSide(Side):
                         r = it["rect"]
                         return ((r[0] + r[2]) // 2, (r[1] + r[3]) // 2), {"menu_item": it}
             time.sleep(0.15)
+        if not getattr(self, "_in_alias", False):
+            self._in_alias = True
+            try:
+                for al in self.aliases(label):
+                    try:
+                        return self.menu_item_point(al, skip)
+                    except Unmapped:
+                        pass
+            finally:
+                self._in_alias = False
         raise Unmapped(f"menu item not found in open menus: {label}")
+
+    def wait_menus(self, timeout=2.5):
+        """Open popup menus; a menu opened by a click/press-and-hold appears with a delay of up to ~1 s
+        (the inspector rebuilds its child windows after a selection change), so poll instead of looking once."""
+        t_end = time.time() + timeout
+        while True:
+            ms = self.h.call("menus").get("menus") or []
+            if ms or time.time() >= t_end:
+                return ms
+            time.sleep(0.15)
+
+    def new_menu_index_point(self, index, walked):
+        """Raw item index in the popup menu that opened after the menus in `walked` (a sub menu is listed first
+        by the host, so `menus[-1]` would be its parent)."""
+        for _ in range(16):
+            new = [m for m in self.h.call("menus").get("menus") or [] if m.get("hwnd") not in walked]
+            if new:
+                items = new[0].get("items") or []
+                if index >= len(items):
+                    raise OrigError(f"sub menu has only {len(items)} items")
+                r = items[index]["rect"]
+                return ((r[0] + r[2]) // 2, (r[1] + r[3]) // 2)
+            time.sleep(0.15)
+        raise OrigError("sub menu did not open")
 
     def menu_index_point(self, index):
         """Owner-drawn popup menus (tool flyouts) have no item texts: raw item index (separators count)."""
-        ms = self.h.call("menus").get("menus") or []
+        ms = self.wait_menus()
         if not ms:
             raise OrigError("no menu open")
         items = ms[-1].get("items") or []
@@ -611,6 +785,14 @@ class OrigSide(Side):
                 return ((r[0] + r[2]) // 2, (r[1] + r[3]) // 2), ch
             except OrigError:
                 continue
+        loc = (self.r.ui_map.get("orig_labels") or {}).get(lab)
+        if isinstance(loc, dict):
+            return self.locate(loc)
+        if lab in (self.r.ui_map.get("orig_pref_categories") or {}):
+            try:
+                return self.resolve({"pref_category": lab})
+            except OrigError:
+                pass
         raise Unmapped(f"label not found as window text in orig: {label}")
 
     # ------------------------------------------------------------ areas
@@ -626,7 +808,15 @@ class OrigSide(Side):
             if info.get("title"):
                 return self.panel(area[6:])["rect"]
             if info.get("orig_class"):
-                return self.h.call("find_child", scope="main", title=None, **{"class": info["orig_class"]}, index=0)["rect"]
+                try:
+                    return self.h.call("find_child", scope="main", title=None, **{"class": info["orig_class"]}, index=0)["rect"]
+                except OrigError:
+                    if norm_panel(area[6:]) != "tools":
+                        raise
+                # tools column docked left (no own window class): from the client's left edge to the document view,
+                # from the document tab row down (like Firepixel's tools column)
+                c, v = self.client(), self.h.call("view")
+                return [c[0], max(c[1], v[1] - 30), v[0] - 2, c[3]]
             raise Unmapped(f"panel area {area} unknown for orig")
         if area == "dialog":
             # Flash based dialogs (file info) appear only after a few seconds
@@ -640,7 +830,7 @@ class OrigSide(Side):
                 raise OrigError("no dialog open")
             return ds[0]["rect"]
         if area == "menu":
-            ms = self.h.call("menus").get("menus") or []
+            ms = self.wait_menus()
             r = bbox_union([m["rect"] for m in ms])
             if not r:
                 raise OrigError("no menu open")
@@ -707,17 +897,37 @@ class OrigSide(Side):
 
     def select(self, names):
         names = names if isinstance(names, list) else [names]
-        code = ("var d = fw.getDocumentDOM(); var want = %s; var sel = [];\n"
+        code = ("var d = fw.getDocumentDOM(); var want = %s; var sel = [], cnt = 0;\n"
                 "for (var i = 0; i < d.layers.length; i++) { var fr = d.layers[i].frames[d.currentFrameNum];\n"
                 "  for (var j = 0; j < fr.elements.length; j++) { var e = fr.elements[j];\n"
-                "    for (var k = 0; k < want.length; k++) if (e.name == want[k]) sel.push(e); } }\n"
+                "    cnt++; for (var k = 0; k < want.length; k++) if (e.name == want[k] || (want[k] !== null && typeof want[k] == 'object' && want[k].index == cnt - 1)) sel.push(e); } }\n"
                 "d.selectNone(); fw.selection = sel; fp_log('RET ' + sel.length);") % json.dumps(names, ensure_ascii=True)
+        before = self.panel_image()
         lines = self.o.jsf(code)
         n = [ln for ln in lines if ln.startswith("RET ")]
         if not n or n[-1] == "RET 0":
             raise OrigError(f"objects not found: {names}")
-        # the inspector rebuilds its child windows for the new selection after the script returns
-        time.sleep(0.6)
+        # the inspector rebuilds its child windows for the new selection after the script returns - sometimes only
+        # after a few seconds (right after opening a document it may keep showing the marquee inspector meanwhile):
+        # wait until the properties panel changed (at most ~3 s), then let it settle
+        time.sleep(0.4)
+        if before is not None:
+            for _ in range(12):
+                now = self.panel_image()
+                if now is None or now.size != before.size or ImageChops.difference(now, before).getbbox():
+                    break
+                time.sleep(0.25)
+        time.sleep(0.3)
+
+    def panel_image(self, p="properties"):
+        try:
+            r = self.panel(p)["rect"]
+            tmp = Path(self.r.cfg["tmp_dir"]) / "orig_panel.png"
+            self.grab(r, tmp)
+            with Image.open(tmp) as im:
+                return im.convert("RGB")
+        except Exception:  # noqa: BLE001
+            return None
 
     # ------------------------------------------------------------ verbs
     def do(self, verb, arg, act):
@@ -955,6 +1165,17 @@ class OrigSide(Side):
         elif verb == "mouse_up":
             self.h.call("up", x=pt[0], y=pt[1], mods=list(mods))
             self.held = None
+        elif verb == "open" and not info:
+            # `open` = something must pop up (popup window, menu, dialog). The first click after a selection change
+            # often only activates the rebuilt properties panel: if nothing appeared within ~2.5 s, click once more
+            before = {w["hwnd"] for w in self.h.list("windows")}
+            self.click_at(pt, "left", 1, mods)
+            for _ in range(16):
+                time.sleep(0.15)
+                if self.h.call("menus").get("menus") or any(w["hwnd"] not in before for w in self.h.list("windows")):
+                    break
+            else:
+                self.click_at(pt, "left", 1, mods)
         else:
             button = "right" if verb.startswith("right") else "left"
             count = 2 if verb.startswith("double") else 1
@@ -970,8 +1191,13 @@ class OrigSide(Side):
     def menu_path(self, parts, final_click=True):
         """Walk open popup menus by item text: hover sub menus, click the last entry."""
         walked = set()
+        owner = self.r.ui_map.get("orig_owner_drawn_menus") or {}
         for i, part in enumerate(parts):
-            pt, info = self.menu_item_point(part, walked)
+            if i > 0 and parts[i - 1] in owner and part in owner[parts[i - 1]]:
+                # owner-drawn sub menu (no item texts, e.g. stroke categories): item order from ui_map
+                pt, info = self.new_menu_index_point(owner[parts[i - 1]].index(part), walked), {}
+            else:
+                pt, info = self.menu_item_point(part, walked)
             walked = {m.get("hwnd") for m in self.h.call("menus").get("menus") or []}
             last = i == len(parts) - 1
             if last and final_click:
@@ -995,21 +1221,44 @@ class OrigSide(Side):
                 # owner-drawn combo boxes with one entry (stroke/fill category, texture) open a popup menu
                 # when clicked: walk it like a menu
                 self.click_at(pt)
-                time.sleep(0.5)
-                if not self.h.call("menus").get("menus"):
+                time.sleep(0.3)
+                if not self.wait_menus():
                     raise
-                self.menu_path(split_path(item or ""))
+                oi = (act or {}).get("orig_index", a.get("orig_index"))
+                parts = split_path(item or "")
+                if oi is not None:
+                    self.click_index_path(parts, int(oi))
+                    return
+                self.menu_path(parts)
                 return
         if target:
             self.pointer("open", target, {})
             time.sleep(0.3)
         oi = act.get("orig_index", a.get("orig_index"))
+        parts = split_path(item or "")
         if oi is not None:
-            self.click_at(self.menu_index_point(int(oi)))
+            # owner-drawn menus without item texts: `orig_index` = raw index (separators count) in the last menu;
+            # a path 'A > B' walks the text entries before it ('Einfach' in the stroke category menu, whose sub
+            # menu is owner-drawn)
+            self.click_index_path(parts, int(oi))
             return
-        if not self.h.call("menus").get("menus"):
+        if not self.wait_menus():
             raise Unsupported("choose: target opened no menu and is no Win32 combo box")
-        self.menu_path(split_path(item or ""))
+        self.menu_path(parts)
+
+    def click_index_path(self, parts, oi):
+        """`orig_index` = raw index (separators count) in the last menu of the path; the text entries before it are
+        hovered first ('A > B': B by index in the owner-drawn sub menu of A)."""
+        if len(parts) > 1:
+            before = {m.get("hwnd") for m in self.wait_menus()}
+            if len(parts) > 2:
+                self.menu_path(parts[:-2], final_click=False)
+            walked = {m.get("hwnd") for m in self.h.call("menus").get("menus") or []} | before
+            self.menu_path(parts[-2:-1], final_click=False)
+            time.sleep(0.3)
+            self.click_at(self.new_menu_index_point(oi, walked))
+        else:
+            self.click_at(self.menu_index_point(oi))
 
     def in_dialog(self, hwnd) -> bool:
         try:
@@ -1226,6 +1475,10 @@ class FpSide(Side):
                 return self.resolve(target["target"])
             if "dialog_field" in target:
                 return self.find_role("text_input", int(target["dialog_field"]))["center"]
+            if "field_arrow" in target:
+                # popup slider arrow right next to the i-th text field of the dialog (not exposed by ui_find)
+                r = self.find_role("text_input", int(target["field_arrow"]))["rect"]
+                return [r[2] + 10, (r[1] + r[3]) / 2]
             if "button" in target:
                 return self.find(target["button"], "button")["center"]
             if "text" in target:
@@ -1244,15 +1497,62 @@ class FpSide(Side):
             if "dialog_rel" in target:
                 d = self.area_rect("dialog")
                 return [d[0] + target["dialog_rel"][0], d[1] + target["dialog_rel"][1]]
+            if "popup_swatch" in target:
+                # swatch grid of the colour popup: above its HEX field, found by its colour in the window image
+                hexf = [h for h in (self.call("ui_find", {"text": "#", "exact": False, "role": "text_input", "limit": 20}) or {}).get("hits") or []
+                        if str(h.get("text", "")).startswith("#")]
+                img = self.window_image()[0]
+                if hexf:
+                    hr = hexf[0]["rect"]
+                    reg = [hr[0] - 160, hr[1] - 230, hr[2] + 40, hr[1] - 4]
+                else:
+                    reg = [0, 0, img.width, img.height]
+                pt = find_color_cell(img, reg, str(target["popup_swatch"]))
+                if not pt:
+                    raise BridgeError(f"popup swatch {target['popup_swatch']} not found")
+                return [pt[0], pt[1]]
+            for k in ("layer_eye", "layer_lock", "layer_expand"):
+                if k in target:
+                    # columns of the layers panel row (measured 14.10.): eye and lock at fixed x, the triangle left of the name
+                    c = self.resolve({"layer_row": target[k]})
+                    hit = self.find(target[k], None, True, None)
+                    pr = self.area_rect("panel:layers")
+                    x = {"layer_eye": pr[0] + 17, "layer_lock": pr[0] + 38}.get(k, hit["rect"][0] - 28)
+                    return [x, c[1]]
             for k in ("layer_row", "object_row", "page_row", "state_row", "history_row", "list_row", "tree_item", "pref_category",
                       "layer_name", "page_name"):
                 if k in target:
                     v = target[k]
-                    return self.find(v[-1] if isinstance(v, list) else v)["center"]
+                    v = v[-1] if isinstance(v, list) else v
+                    if isinstance(v, int) and k == "object_row":
+                        # n-th object (top first) of the layer `layer` (or of the current layer): its name
+                        lay = json.dumps(target.get("layer"))
+                        v = self.script_value("(function(){var d = fw.getDocumentDOM(), f = d.currentFrameNum, n = %d, lay = %s;"
+                                              "for (var i = d.layers.length - 1; i >= 0; i--) { var L = d.layers[i];"
+                                              " if (lay !== null && L.name != lay) continue; var es = L.frames[f].elements;"
+                                              " if (es.length > n) return es[n].name; } return null;})()" % (v, lay))
+                        if not v:
+                            raise Unmapped(f"fp object_row {target[k]} not found")
+                    try:
+                        return self.find(v)["center"]
+                    except Unmapped:
+                        if k not in ("layer_row", "object_row", "layer_name"):
+                            raise
+                    # the row is scrolled out of the (small) layers panel: wheel through the list and look again
+                    pr = self.area_rect("panel:layers")
+                    pos = [(pr[0] + pr[2]) / 2, (pr[1] + pr[3]) / 2]
+                    for d in [3] * 6 + [-3] * 12:
+                        self.inp([{"type": "wheel", "pos": pos, "delta": [0, -d], "unit": "line"}])
+                        time.sleep(0.15)
+                        hits = [h for h in (self.call("ui_find", {"text": clean_label(str(v)), "exact": True}) or {}).get("hits") or []
+                                if h["center"][0] >= pr[0] and h["center"][1] >= pr[1]]
+                        if hits:
+                            return hits[0]["center"]
+                    raise Unmapped(f"fp ui_find: '{v}' not found (layers panel scrolled through)")
             raise Unsupported(f"fp target form {list(target)}")
-        if isinstance(target, str) and re.match(r"^dialog\.(field|combo|check|button)\.\d+$", target):
+        if isinstance(target, str) and re.match(r"^dialog\.(field|combo|check|button|slider)\.\d+$", target):
             kind, i = target.split(".")[1:]
-            role = {"field": "text_input", "combo": "combo_box", "check": "check_box", "button": "button"}[kind]
+            role = {"field": "text_input", "combo": "combo_box", "check": "check_box", "button": "button", "slider": "slider"}[kind]
             return self.find_role(role, int(i))["center"]
         if isinstance(target, str) and target in self.r.ui_map.get("targets", {}):
             return self.resolve(self.ui(target))
@@ -1347,8 +1647,12 @@ class FpSide(Side):
             col = [0, ca[2]]
         below = []
         allh = (self.call("ui_find", {"role": "text", "region": [col[0], r[3] + 20, col[1], H], "limit": 500}) or {}).get("hits") or []
-        for h in allh:
-            if h.get("text") in titles and h["rect"][1] > r[3] + 20:
+        cand = [h for h in allh if h.get("text") in titles and h["rect"][1] > r[3] + 20]
+        for h in cand:
+            # a tab row of the next group: starts at the column's left edge or has another tab on its line
+            # (object rows named like a panel, e.g. "Pfad" in the layers list, are no group border)
+            same_line = [o for o in cand if o is not h and abs(o["rect"][1] - h["rect"][1]) < 4]
+            if h["rect"][0] <= col[0] + 30 or same_line:
                 below.append(h["rect"][1])
         bottom = min(below) - 4 if below else H
         if cx >= ca[0] and cx <= ca[2]:
@@ -1393,10 +1697,10 @@ class FpSide(Side):
         """Exactly the named objects, chosen like in the reference program (JSF fw.selection by name on the
         current state of all layers); the bridge's `select {ids}` is only the fallback."""
         names = names if isinstance(names, list) else [names]
-        code = ("(function(){var d = fw.getDocumentDOM(); var want = %s; var sel = [];"
+        code = ("(function(){var d = fw.getDocumentDOM(); var want = %s; var sel = [], cnt = 0;"
                 "for (var i = 0; i < d.layers.length; i++) { var fr = d.layers[i].frames[d.currentFrameNum];"
                 "  for (var j = 0; j < fr.elements.length; j++) { var e = fr.elements[j];"
-                "    for (var k = 0; k < want.length; k++) if (e.name == want[k]) sel.push(e); } }"
+                "    cnt++; for (var k = 0; k < want.length; k++) if (e.name == want[k] || (want[k] !== null && typeof want[k] == 'object' && want[k].index == cnt - 1)) sel.push(e); } }"
                 "d.selectNone(); fw.selection = sel; return [sel.length, fw.selection.length].join(',');})()") % json.dumps(names, ensure_ascii=True)
         try:
             v = str(self.script_value(code))
@@ -1481,7 +1785,23 @@ class FpSide(Side):
             pid = info.get("fp") or arg
             st = self.state()
             if pid not in st.get("visible_panels", []):
-                self.call("ui_action", {"panel": pid})
+                try:
+                    self.call("ui_action", {"panel": pid})
+                except BridgeError:
+                    # panels without an engine command (Ausrichten, Pfad, Farbpalette, Sonderzeichen, Bildbearbeitung,
+                    # Symboleigenschaften …) are unknown to `ui_action panel` and missing in `visible_panels`: bring
+                    # its tab to the front when it is there, else use its menu entry (shows it)
+                    title = info.get("title")
+                    tabs = [h for h in (self.call("ui_find", {"text": title, "exact": True, "limit": 20}) or {}).get("hits") or []
+                            if title and h.get("text") == title and h["rect"][1] > 60] if title else []
+                    if tabs:
+                        t = min(tabs, key=lambda h: h["rect"][1])
+                        self.inp([{"type": "click", "pos": t["center"], "button": "left"}])
+                        time.sleep(0.3)
+                    elif info.get("menu"):
+                        self.do("menu", info["menu"], {"toggle": True})
+                    else:
+                        raise
         elif verb in ("jsf", "run_script"):
             code = arg if isinstance(arg, str) else arg.get("code")
             self.values.append({"jsf": code[:200], "out": self.script_value(code)})
@@ -1513,7 +1833,15 @@ class FpSide(Side):
             if a.get("target"):
                 self.pointer("open", a["target"], {})
             for part in split_path(a.get("item", "")):
-                hit = self.find(part)
+                hit = None
+                for name in [part] + self.aliases(part):
+                    try:
+                        hit = self.find(name)
+                        break
+                    except Unmapped:
+                        continue
+                if hit is None:
+                    raise Unmapped(f"fp ui_find: '{part}' not found")
                 self.inp([{"type": "click", "pos": hit["center"]}, {"type": "wait", "ms": 200}])
         elif verb in ("set_field", "set", "set_dialog_field"):
             a = dict(act, **arg) if isinstance(arg, dict) else act
@@ -1860,16 +2188,31 @@ class Runner:
         print(time.strftime("%H:%M:%S"), *a, flush=True)
 
     # ---- files
+    # test files of TESTFILES.md that the config may not list: T11 = import folder, T12 = swatch file
+    EXTRA_TESTFILES = {"T11": "par_import", "T12": "par_swatches.act"}
+
     def testfile(self, code) -> Path:
-        tf = self.cfg["testfiles"].get(code, code)
+        code = str(code)
+        sub = None
+        if re.fullmatch(r"T\d\d:.+", code):  # "T11:par.psd" = file inside the test folder T11
+            code, sub = code.split(":", 1)
+        tf = self.cfg["testfiles"].get(code) or self.EXTRA_TESTFILES.get(code, code)
         p = Path(tf)
-        return p if p.is_absolute() else Path(self.cfg["testfile_dir"]) / tf
+        p = p if p.is_absolute() else Path(self.cfg["testfile_dir"]) / tf
+        return p / sub if sub else p
 
     def open_testfile(self, side: Side, code):
         code = code if isinstance(code, str) and code not in ("", "true") else self.unit.get("testfile")
         p = self.testfile(code)
         side.open_testfile(p)
         self.opened.setdefault(side.name, set()).add(p)
+        # defined tool: the reference program keeps the last tool across documents and steps (a marquee left active
+        # shows its own inspector instead of the selection's, runner finding 3); every opened test file starts with
+        # the pointer tool on both sides
+        try:
+            side.do("tool", "tool.pointer", {})
+        except Exception as e:  # noqa: BLE001
+            self.log(f"{side.name}: pointer tool after opening: {e}")
 
     def safe_dir(self, d) -> Path:
         p = Path(d)
@@ -1931,7 +2274,7 @@ class Runner:
             try:
                 self.orig.restart()
                 self.sides["orig"].prepare()
-                if self.unit.get("testfile"):
+                if self.unit.get("testfile") and not self.testfile(self.unit["testfile"]).is_dir():
                     self.open_testfile(self.sides["orig"], self.unit["testfile"])
             except Exception as e:  # noqa: BLE001
                 self.log(f"restart orig failed: {e}")
@@ -1950,7 +2293,7 @@ class Runner:
                     self.fp.stop()
                     self.fp.start()
             side.reset_light()
-            if self.unit.get("testfile"):
+            if self.unit.get("testfile") and not self.testfile(self.unit["testfile"]).is_dir():
                 self.open_testfile(side, self.unit["testfile"])
         except Exception as e:  # noqa: BLE001
             self.log(f"recover {side.name} failed: {e}")
@@ -1964,9 +2307,14 @@ class Runner:
                                                     "region", "to_fraction", "hold", "orig_index", "row", "from", "to",
                                                     "value", "target", "note", "orig_menu", "commit", "then")), None)
             if verb is None:
-                verb = next(iter(act))
+                verb = "repeat" if "repeat" in act and "do" in act else next(iter(act))
             arg = act[verb]
             if verb == "orig_index":
+                continue
+            if verb == "repeat":
+                # {"repeat": n, "do": [actions]}: the actions n times (both sides)
+                for _ in range(int(arg or 0)):
+                    self.run_actions(side, act.get("do") or [], rec)
                 continue
             if verb == "reset":
                 if arg in (None, False, "", "null"):
@@ -1975,6 +2323,15 @@ class Runner:
                     verb = "open_testfile"
             if verb == "record":
                 verb = "log_value"
+            if verb in ("menu", "menu_item") and isinstance(arg, str) and not act.get("toggle"):
+                # "Fenster > <panel>" toggles: a panel that is already visible would be hidden. Scripts mean "show
+                # it" (then click its buttons): handled like the `panel` verb (only opened when not visible);
+                # `"toggle": true` keeps the plain menu command
+                want = " > ".join(split_path(arg))
+                for pid, info in (self.ui_map.get("panels") or {}).items():
+                    if isinstance(info, dict) and info.get("menu") and " > ".join(split_path(info["menu"])) == want:
+                        verb, arg = "panel", pid
+                        break
             if verb == "command" and side.name == "orig" and act.get("orig_menu"):
                 verb, arg = "menu_item", act["orig_menu"]
             if verb in ("file_dialog", "file_dialog_choose") and arg == "cancel":
@@ -2103,7 +2460,8 @@ class Runner:
                             side.ensure_panel("properties")
                         except Exception as e:  # noqa: BLE001
                             self.log(f"properties panel: {e}")
-                    if unit.get("testfile"):
+                    if unit.get("testfile") and not self.testfile(unit["testfile"]).is_dir():
+                        # a folder (T11 = import files) is no document: the steps open its files themselves
                         self.open_testfile(side, unit["testfile"])
                 except Exception as e:  # noqa: BLE001
                     self.log(f"start {side.name}: {e} - recovering")

@@ -252,18 +252,12 @@
      "menu_item": "Modifizieren > Symbol > Instanzen tweenen..."
     },
     {
-     "open": "dialog.combo.0"
-    },
-    {
      "record_ui": "dialog.fields"
     }
    ],
    "fp": [
     {
      "command": "modify.symbol.tweenInstances"
-    },
-    {
-     "open": "dialog.combo.0"
     },
     {
      "record_ui": "dialog.fields"
@@ -396,18 +390,12 @@
      "menu_item": "Modifizieren > Popupmenü > Popupmenü hinzufügen..."
     },
     {
-     "open": "dialog.combo.0"
-    },
-    {
      "record_ui": "dialog.fields"
     }
    ],
    "fp": [
     {
      "command": "modify.popUpMenu.addPopUpMenu"
-    },
-    {
-     "open": "dialog.combo.0"
     },
     {
      "record_ui": "dialog.fields"

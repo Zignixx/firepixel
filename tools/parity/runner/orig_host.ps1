@@ -197,6 +197,8 @@ function ElInfo($e) { $i = $e.Current; $b = $i.BoundingRectangle
 function Roots($scope) {
   $m = MainWin
   if ($scope -eq 'main') { return @(El $m) }
+  # 'tops': only the other top-level windows (dialogs) - the main window's tree is large and slow to walk
+  if ($scope -eq 'tops') { $l = @(); foreach ($h in [PR.N]::Tops([uint32]$S.pid)) { if ($h -ne $m) { $l += El $h } }; return $l }
   # main window first, then other top-level windows of the process (dialogs, floating panels, menus)
   $l = @(El $m); foreach ($h in [PR.N]::Tops([uint32]$S.pid)) { if ($h -ne $m) { $l += El $h } }; $l
 }
@@ -364,6 +366,13 @@ function Handle($c) {
       [PR.N]::SendMessage($h, 0x0028, [IntPtr]$(if ($c.back) { 1 } else { 0 }), [IntPtr]::Zero) | Out-Null; Start-Sleep -Milliseconds 120
       $f = [PR.N]::FocusOf($h); return @{ dialog = [int64]$h; focus = [int64]$f; focus_class = $(if ($f -ne [IntPtr]::Zero) { [PR.N]::Cls($f) } else { '' }) } }
     'get_text' { $sb = New-Object Text.StringBuilder 1024; [PR.N]::SendMessageSB([IntPtr][int64]$c.hwnd, 0x000D, [IntPtr]1024, $sb) | Out-Null; return $sb.ToString() }
+    'lb_info' { # owner-drawn list box (layers panel rows): count, top index, selected rows, item heights
+      $h = [IntPtr][int64]$c.hwnd; $n = I32 ([PR.N]::SendMessage($h, 0x18B, [IntPtr]::Zero, [IntPtr]::Zero))
+      if ($c.top -ne $null) { [PR.N]::SendMessage($h, 0x197, [IntPtr][int]$c.top, [IntPtr]::Zero) | Out-Null; Start-Sleep -Milliseconds 150 }
+      $sel = @(); $hs = @()
+      for ($i = 0; $i -lt $n; $i++) { if ((I32 ([PR.N]::SendMessage($h, 0x187, [IntPtr]$i, [IntPtr]::Zero))) -gt 0) { $sel += $i }
+        $hs += (I32 ([PR.N]::SendMessage($h, 0x1A1, [IntPtr]$i, [IntPtr]::Zero))) }
+      return @{ count = $n; top = (I32 ([PR.N]::SendMessage($h, 0x18E, [IntPtr]::Zero, [IntPtr]::Zero))); cursel = (I32 ([PR.N]::SendMessage($h, 0x188, [IntPtr]::Zero, [IntPtr]::Zero))); selected = $sel; heights = $hs } }
     'combo_items' { $h = [IntPtr][int64]$c.hwnd; $n = [int][PR.N]::SendMessage($h, 0x146, [IntPtr]::Zero, [IntPtr]::Zero); $l = @()
       for ($i = 0; $i -lt $n; $i++) { $sb = New-Object Text.StringBuilder 512; [PR.N]::SendMessageSB($h, 0x148, [IntPtr]$i, $sb) | Out-Null; $l += $sb.ToString() }
       return @{ items = $l; selected = (I32 ([PR.N]::SendMessage($h, 0x147, [IntPtr]::Zero, [IntPtr]::Zero))) } }
