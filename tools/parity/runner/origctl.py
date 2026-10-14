@@ -150,8 +150,12 @@ class Original:
         self.tmp.mkdir(parents=True, exist_ok=True)
         self.log = log
         self.host = Host({"process": cfg["process"], "main_class": cfg.get("main_class", ""),
-                          "view_class": cfg.get("view_class", ""), "panel_class": cfg.get("panel_class", "")})
-        self.started_by_us = False
+                          "view_class": cfg.get("view_class", ""), "panel_class": cfg.get("panel_class", ""),
+                          # menu entries that would end the program are never executed
+                          "forbidden_menu": cfg.get("forbidden_menu", ["Datei > Beenden"])})
+        # decided by the first start(): True only if no instance was running when the run began (a later
+        # restart after a crash does not change it)
+        self.started_by_us = None
         self.own_pids: set[int] = set()  # processes this runner started (instances and script launchers)
 
     # ---------------------------------------------------------------- process
@@ -189,6 +193,8 @@ class Original:
 
     def start(self):
         if self.running():
+            if self.started_by_us is None:
+                self.started_by_us = False
             self.decline_dialogs()
             return
         self.kill_hung_own()
@@ -207,7 +213,8 @@ class Original:
             return
         pr = subprocess.Popen([self.exe], cwd=str(Path(self.exe).parent))
         self.own_pids.add(pr.pid)
-        self.started_by_us = True
+        if self.started_by_us is None:
+            self.started_by_us = True
         end = time.time() + float(self.cfg.get("start_wait_s", 60))
         while time.time() < end:
             time.sleep(2)
@@ -238,8 +245,11 @@ class Original:
                 self.close_all_docs(timeout=20)
         except OrigError:
             pass
+        # a restart does not change who owns the instance: one that was running before the run stays open at the end
+        owned = self.started_by_us
         self.kill()
         self.start()
+        self.started_by_us = owned
 
     def place(self):
         x, y, w, h = self.cfg.get("rect", [0, 0, 1600, 1000])

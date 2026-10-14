@@ -181,6 +181,7 @@
   "targets": {
     "_doc": "logical ui key -> {orig: locator, fp: locator}. orig locators: {panel, rel:[x,y]} (offset from the panel window's top-left), {window_rel:[x,y]} (client of main window), {child:{title,class,index}, panel?}, {dialog_child:{title,class,index}}, {label:'text'}. fp locators: {find:'text', role?, exact?, panel?, index?}, {window_rel:[x,y]}, {canvas:[x,y]}. A missing side or null = unmapped.",
     "dialog.field.<i>": "pattern, built in: orig = i-th Win32 Edit in the open dialog, fp = i-th text_input (top-to-bottom, left-to-right); also dialog.combo.<i> (ComboBox / combo_box), dialog.check.<i>, dialog.button.<i>",
+    "dialog.radius": {"orig": "dialog.field.0", "fp": "dialog.field.0", "note": "alias: first edit field of the open filter dialog (Gaussian blur, unsharp mask ...)"},
     "dialog.ok": {"orig": {"dialog_button": "ok"}, "fp": {"find": "OK", "role": "button", "exact": true}},
     "dialog.cancel": {"orig": {"dialog_button": "cancel"}, "fp": {"find": "Abbrechen", "role": "button", "exact": true}},
     "inspector.fill_color": {"orig": {"panel": "properties", "rel": [156, 13]}, "fp": {"window_rel": [228, 906]}},

@@ -28,9 +28,19 @@ only lists the steps and verbs. `--gallery-only` rebuilds `index.html` from exis
 4. Per step and side (reference first, then Firepixel): light reset (close menus and dialogs, Escape), actions
    `both` + `orig`/`fp`, screenshot of `shot.area`, then `after`. A failing action ends that side of the
    step; the side is recovered (crash → restart, reopen the test file) and the run continues.
+   Before every step (light reset) the properties panel is made visible again (`Fenster > Eigenschaften`, only
+   when it is not visible – the entry toggles), because some steps switch its dock group to another tab
+   (e.g. `Fenster > Symboleigenschaften`).
 5. End of unit: close menus/dialogs, close the test documents without saving, stop the Firepixel instance,
    release the lock, run `compare.py`. At the end of the run: `index.html`; the reference program is
-   closed only if the runner started it.
+   closed only if no instance was running when the run began (a restart during the run does not change that).
+
+Modal windows: besides standard dialogs (`#32770`) the program has Flash based dialogs (top-level class
+`SWFPLAYER_SWFWINDOWCONTAINER`, e.g. `Datei > Datei-Info`) without Win32 buttons; they count as dialogs
+(shot area `dialog`, which waits up to 4 s for a late dialog) and are cancelled with `WM_CLOSE`. A Flash dialog
+left open blocks the menu bar, so `menu` closes them first and tries opening the bar entry up to 3 times
+(closing menus/Flash dialogs and giving the foreground back to the main window in between); the error then
+names whether the main window is enabled and which windows are open.
 
 Robustness: the target process is the one owning the visible main window (`orig.main_class`, searched
 across all processes of `orig.process`), so a script launcher still waiting for a busy instance is never
@@ -38,7 +48,8 @@ taken for the program. Questions are declined (`No` first – save/recovery ques
 never `Yes`/`Save`/`OK`). Processes of the runner without any window (waiting launchers, hung restarts)
 are ended; foreign processes never. No second instance is started while one is running. Every unit
 starts with all documents closed unsaved. After `orig.max_consecutive_errors` (default 3) failed steps
-in a row the program is restarted cleanly and the unit goes on. A script whose hand-over got lost
+in a row with a systemic error (program gone, timeouts, foreground lost, `menu did not open`, panel not shown
+even after its menu entry) the program is restarted cleanly and the unit goes on. A script whose hand-over got lost
 (launcher ended, script never started) is handed over again; a `.started` marker makes the second copy
 a no-op.
 
@@ -96,7 +107,8 @@ Firepixel `panel:<id>` of a panel group floating over the canvas: its own frame 
 
 Defined layout: Firepixel starts with a fresh profile for every unit (`fp.fresh_profile`, default true:
 `runner_work\fp\profile` is deleted). In the reference program floating panel groups (`orig.floating_dock_class`,
-default `OWL.Dock`) are closed at the start of every unit, and before every step when they cover the document view.
+default `OWL.Dock`) are closed at the start of every unit, and before every step when they cover the document view;
+a floating group holding the properties panel is never closed.
 
 An action is an object whose first known key is the verb; further keys are options (`mods`, `repeat`,
 `item`, `value`, `target`, `by`, `hold_key`, `ms`). A plain string is a verb without argument.
@@ -188,7 +200,8 @@ The mapping table. Script authors add entries here instead of hard-coding coordi
   (`window.colorMixer` = `color-mixer`).
 * `tools`: Firepixel tool id → reference shortcut key (or `{"jsf": …}`).
 * `commands`: Firepixel command id → reference menu path.
-* `targets`: logical key → `{"orig": locator, "fp": locator}`; `null` or a missing side = `unmapped`.
+* `targets`: logical key → `{"orig": locator, "fp": locator}`; `null` or a missing side = `unmapped`. A
+  locator that is a string is an alias of another target (e.g. `"dialog.radius": {"orig": "dialog.field.0", …}`).
   * reference locators: `{"panel": "properties", "rel": [x, y]}` (offset from the panel window's
     top-left), `{"window_rel": [x, y]}`, `{"child": {"title"?, "class"?, "index"?}, "panel"?}` (Win32
     child window), `{"dialog_child": {…}}`, `{"dialog_button": "ok"|"cancel"}`, `{"label": "Text"}`,

@@ -224,6 +224,37 @@ class OrigSide(Side):
             self.close_floating(only_over_view=True)
         except OrigError:
             pass
+        # the properties panel (inspector) is the program's default layout: a step may have switched its dock
+        # group to another tab (e.g. Fenster > Symboleigenschaften) or closed it
+        try:
+            self.ensure_panel("properties")
+        except OrigError as e:
+            self.r.log(f"properties panel: {e}")
+
+    PROTECTED_PANELS = ("properties",)
+
+    def panel(self, p):
+        """Panel window info (host `panel`) by panel id or title. A panel that is not visible (closed, or hidden
+        behind another tab of its dock group) is shown with its `Fenster > …` menu entry first - only then, so the
+        menu entry never toggles a visible panel off."""
+        info = self.panel_info(p)
+        title = info.get("title") or p
+        try:
+            return self.h.call("panel", name=title)
+        except OrigError as e:
+            if "not visible" not in str(e) or not info.get("menu"):
+                raise
+        self.h.call("menu", path=split_path(info["menu"]), final="invoke", bar=self.r.ui_map["menu_bar"]["orig"], timeout=40)
+        for _ in range(10):
+            time.sleep(0.3)
+            try:
+                return self.h.call("panel", name=title)
+            except OrigError:
+                pass
+        raise OrigError(f"panel not visible after {info['menu']}: {title}")
+
+    def ensure_panel(self, p):
+        return self.panel(p)
 
     def close_floating(self, only_over_view=False):
         """Floating panel groups (top-level dock windows of the program, e.g. Info/Farbmischer/URL) that cover the
@@ -242,6 +273,13 @@ class OrigSide(Side):
                 continue
             if v and (r[2] <= v[0] or r[0] >= v[2] or r[3] <= v[1] or r[1] >= v[3]):
                 continue
+            # never close a floating group that holds the properties panel
+            keep = {(self.panel_info(k).get("title") or k) for k in self.PROTECTED_PANELS}
+            try:
+                if any(k.get("title") in keep for k in self.h.list("kids", hwnd=w["hwnd"])):
+                    continue
+            except OrigError:
+                pass
             try:
                 self.click_at((r[2] - 9, r[1] + 7))
                 time.sleep(0.4)
@@ -360,6 +398,8 @@ class OrigSide(Side):
             return ((r[0] + r[2]) // 2, (r[1] + r[3]) // 2), ch
         elif isinstance(target, str) and target in self.r.ui_map.get("targets", {}):
             loc = self.ui(target)
+            if isinstance(loc, str):  # alias of another target (e.g. "dialog.field.0")
+                return self.resolve(loc)
         elif isinstance(target, str) and re.match(r"^[a-z_]+(\.[a-z0-9_]+)+$", target):
             raise Unmapped(f"ui key not in ui_map.json: {target}")
         else:
@@ -388,7 +428,7 @@ class OrigSide(Side):
         if "rel" in loc and "panel" in loc:
             # the inspector recreates its child windows after a selection change: wait for a field under the point
             for k in range(8):
-                p = self.h.call("panel", name=self.panel_info(loc["panel"]).get("title") or loc["panel"])
+                p = self.panel(loc["panel"])
                 pt = (p["palette"][0] + loc["rel"][0], p["palette"][1] + loc["rel"][1])
                 w = self.win_at(pt)
                 if w or loc.get("no_field"):
@@ -524,16 +564,22 @@ class OrigSide(Side):
         if area == "canvas":
             return self.h.call("view")
         if area == "inspector":
-            return self.h.call("panel", name="Eigenschaften")["rect"]
+            return self.panel("properties")["rect"]
         if area.startswith("panel:"):
             info = self.panel_info(area[6:])
             if info.get("title"):
-                return self.h.call("panel", name=info["title"])["rect"]
+                return self.panel(area[6:])["rect"]
             if info.get("orig_class"):
                 return self.h.call("find_child", scope="main", title=None, **{"class": info["orig_class"]}, index=0)["rect"]
             raise Unmapped(f"panel area {area} unknown for orig")
         if area == "dialog":
+            # Flash based dialogs (file info) appear only after a few seconds
             ds = self.h.list("dialogs")
+            for _ in range(10):
+                if ds:
+                    break
+                time.sleep(0.4)
+                ds = self.h.list("dialogs")
             if not ds:
                 raise OrigError("no dialog open")
             return ds[0]["rect"]
@@ -740,11 +786,7 @@ class OrigSide(Side):
             info = self.panel_info(p)
             if not info.get("title"):
                 raise Unmapped(f"panel {p}: no title for the panel menu")
-            try:
-                g = self.h.call("panel", name=info["title"])
-            except OrigError:
-                self.do("panel", p, {})
-                g = self.h.call("panel", name=info["title"])
+            g = self.panel(p)
             dx, dy = self.r.ui_map.get("orig_panel_menu_offset", [-13, 8])
             self.click_at((g["rect"][2] + dx, g["rect"][1] + dy))
             time.sleep(0.4)
@@ -1729,7 +1771,8 @@ class Runner:
         self.sides = {"orig": OrigSide(self, self.orig), "fp": FpSide(self, self.fp)}
 
     SYSTEMIC = re.compile(r"main window not found|process not running|JSF timeout|host timeout|host ended|"
-                          r"crash|cannot bring|input refused|not started|without main window", re.I)
+                          r"crash|cannot bring|input refused|not started|without main window|menu did not open|"
+                          r"panel not visible after", re.I)
 
     def count_orig(self, status: str, error: str = ""):
         """After `orig.max_consecutive_errors` (default 3) failed steps in a row whose errors point at the
@@ -1911,6 +1954,10 @@ class Runner:
                             side.close_floating()
                         except Exception as e:  # noqa: BLE001
                             self.log(f"close floating panels: {e}")
+                        try:
+                            side.ensure_panel("properties")
+                        except Exception as e:  # noqa: BLE001
+                            self.log(f"properties panel: {e}")
                     if unit.get("testfile"):
                         self.open_testfile(side, unit["testfile"])
                 except Exception as e:  # noqa: BLE001
@@ -1930,6 +1977,15 @@ class Runner:
                         continue
                     if name == "orig" and step.get("fp_only"):
                         continue
+                    if name == "orig":
+                        # the program may have ended (crash, quit) since the last step: start it again
+                        try:
+                            alive = self.orig.running()
+                        except Exception:  # noqa: BLE001
+                            alive = False
+                        if not alive:
+                            self.log("reference program not running - starting it again")
+                            self.recover(side)
                     try:
                         side.reset_light()
                     except Exception as e:  # noqa: BLE001
@@ -1990,6 +2046,15 @@ class Runner:
 
     def shutdown(self):
         if self.orig is not None:
+            if self.orig.started_by_us is False:
+                # an instance was running when the run began: leave one running (restart it if it ended)
+                try:
+                    if not self.orig.running():
+                        self.log("reference program ended during the run - starting it again")
+                        self.orig.start()
+                    self.orig.decline_dialogs()
+                except Exception as e:  # noqa: BLE001
+                    self.log(f"restart orig at the end failed: {e}")
             if self.orig.started_by_us:
                 try:
                     self.orig.jsf("fw.quit();", timeout=10)

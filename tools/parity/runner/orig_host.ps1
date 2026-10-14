@@ -35,6 +35,7 @@ public static class N {
   [DllImport("user32.dll")] public static extern bool EnumWindows(CB cb, IntPtr l);
   [DllImport("user32.dll")] public static extern bool EnumChildWindows(IntPtr p, CB cb, IntPtr l);
   [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr h);
+  [DllImport("user32.dll")] public static extern bool IsWindowEnabled(IntPtr h);
   [DllImport("user32.dll")] public static extern IntPtr GetWindow(IntPtr h, uint c);
   [DllImport("user32.dll")] public static extern IntPtr GetParent(IntPtr h);
   [DllImport("user32.dll")] public static extern IntPtr SendMessage(IntPtr h, uint m, IntPtr w, IntPtr l);
@@ -87,7 +88,7 @@ public static class N {
 [PR.N]::SetProcessDPIAware() | Out-Null
 $UIA = [System.Windows.Automation.AutomationElement]
 $TW = [System.Windows.Automation.TreeWalker]::ControlViewWalker
-$S = @{ process = ''; main_class = ''; view_class = ''; panel_class = ''; pid = 0 }
+$S = @{ process = ''; main_class = ''; view_class = ''; panel_class = ''; pid = 0; forbidden = @() }
 
 # LRESULT of a 32-bit target arrives zero-extended (-1 = 4294967295): back to a signed 32-bit value
 function I32($v) { $x = [int64]$v.ToInt64(); if ($x -gt [int64][int]::MaxValue) { $x -= [int64]4294967296 }; [int]$x }
@@ -130,7 +131,12 @@ function MainWin {
 function WinInfo($h) { @{ hwnd = [int64]$h; class = [PR.N]::Cls($h); title = [PR.N]::Txt($h); rect = (WRect $h) } }
 function Union($rects) { if (-not $rects) { return $null }; $l = ($rects | % { $_[0] } | Measure -Min).Minimum; $t = ($rects | % { $_[1] } | Measure -Min).Minimum; $r = ($rects | % { $_[2] } | Measure -Max).Maximum; $b = ($rects | % { $_[3] } | Measure -Max).Maximum; @([int]$l, [int]$t, [int]$r, [int]$b) }
 function Clean([string]$s) { ($s -replace '&', '' -replace "`t.*$", '' -replace '\.\.\.$|…$', '').Trim() }
-function Dialogs { if (-not (Proc)) { throw 'process not running' }; [PR.N]::Tops([uint32]$S.pid) | ? { [PR.N]::Cls($_) -eq '#32770' } }
+# modal windows: standard dialogs and the program's Flash based dialogs (e.g. file info), which are top-level
+# windows of the Flash player class without Win32 buttons (closed with WM_CLOSE = cancel)
+$FLASHDLG = 'SWFPLAYER_SWFWINDOWCONTAINER'
+function Dialogs { if (-not (Proc)) { throw 'process not running' }; [PR.N]::Tops([uint32]$S.pid) | ? { $k = [PR.N]::Cls($_); $k -eq '#32770' -or $k -eq $FLASHDLG } }
+function CloseFlash { $n = 0; foreach ($h in @([PR.N]::Tops([uint32]$S.pid) | ? { [PR.N]::Cls($_) -eq $FLASHDLG })) { [PR.N]::PostMessage($h, 0x0010, [IntPtr]::Zero, [IntPtr]::Zero) | Out-Null; $n++ }
+  if ($n) { Start-Sleep -Milliseconds 500 }; $n }
 function DialogTexts($h) { (([PR.N]::Kids($h) | % { [PR.N]::Txt($_) } | ? { $_ }) -join ' | ') }
 
 function Focus {
@@ -258,15 +264,25 @@ function CloseMenus {
   }
   (MenuWins).Count }
 function MenuPath($path, $final, $bar) {
+  # a modal window left open (Flash dialog, message box) blocks the menu bar: close it first
+  CloseFlash | Out-Null
   if ((Focus).ok -eq $false) { throw 'cannot focus target' }
   if ((CloseMenus) -gt 0) { throw 'open menu could not be closed' }
   # bar: [[name, x, y], ...] in client coordinates of the main window (from the runner's ui map)
   $top = Clean $path[0]; $pos = $null
   foreach ($b in $bar) { if ((Clean $b[0]) -eq $top) { $pos = $b } }
   if (-not $pos) { throw "unknown menu bar entry: $top" }
-  $cr = CRect (MainWin)
-  Click ($cr[0] + [int]$pos[1]) ($cr[1] + [int]$pos[2]) 'left' @() 1; Start-Sleep -Milliseconds 350
-  if ((MenuWins).Count -eq 0) { throw "menu did not open: $top" }
+  # up to 3 tries: after a failed try close menus/Flash dialogs, give the foreground back to the main window
+  for ($try = 0; $try -lt 3; $try++) {
+    if ($try) { CloseMenus | Out-Null; CloseFlash | Out-Null; [PR.N]::MainHwnd = (MainWin)
+      $m = MainWin; [PR.N]::keybd_event(0x12, 0, 0, [IntPtr]::Zero); [PR.N]::keybd_event(0x12, 0, 2, [IntPtr]::Zero); [PR.N]::SetForegroundWindow($m) | Out-Null; Start-Sleep -Milliseconds 500 }
+    $cr = CRect (MainWin)
+    Click ($cr[0] + [int]$pos[1]) ($cr[1] + [int]$pos[2]) 'left' @() 1
+    for ($t = 0; $t -lt 8 -and (MenuWins).Count -eq 0; $t++) { Start-Sleep -Milliseconds 150 }
+    if ((MenuWins).Count) { break }
+  }
+  if ((MenuWins).Count -eq 0) { $f = [PR.N]::GetForegroundWindow()
+    throw "menu did not open: $top (main enabled=$([PR.N]::IsWindowEnabled((MainWin))), foreground=$([PR.N]::Cls($f)), windows=$((@([PR.N]::Tops([uint32]$S.pid) | % { [PR.N]::Cls($_) })) -join ','))" }
   $invoked = $false; $seen = @()
   for ($k = 1; $k -lt $path.Count; $k++) {
     $want = Clean $path[$k]; $hit = $null
@@ -288,6 +304,9 @@ function MenuPath($path, $final, $bar) {
     # 'auto': a leaf entry at the end of the path is executed, a sub menu is left open
     if ($last -and ($final -eq 'invoke' -or ($final -eq 'auto' -and -not $hit.submenu))) {
       if ($hit.grayed) { throw "menu item disabled: $want" }
+      # entries that would end the program (Datei > Beenden) are never executed
+      $full = (@($path | % { Clean $_ })) -join ' > '
+      if ($S.forbidden -contains $full) { CloseMenus | Out-Null; throw "forbidden menu entry (never executed in the reference program): $full" }
       # hover first (the item gets highlighted), then click; if the menu is still open afterwards the click
       # did not arrive: execute the highlighted item with Enter
       [PR.N]::SetCursorPos($x, $y) | Out-Null; [PR.N]::Send(@([PR.N]::Mouse(0x1, 0))); Start-Sleep -Milliseconds 250
@@ -305,7 +324,7 @@ function MenuPath($path, $final, $bar) {
 }
 function Handle($c) {
   switch ($c.cmd) {
-    'init' { $S.process = $c.process; $S.main_class = [string]$c.main_class; $S.view_class = [string]$c.view_class; $S.panel_class = [string]$c.panel_class; [PR.N]::TargetClass = $S.main_class; $p = Proc; return @{ pid = $S.pid } }
+    'init' { $S.process = $c.process; $S.main_class = [string]$c.main_class; $S.view_class = [string]$c.view_class; $S.panel_class = [string]$c.panel_class; $S.forbidden = @($c.forbidden_menu | ? { $_ } | % { (($_ -split '>') | % { Clean $_ }) -join ' > ' }); [PR.N]::TargetClass = $S.main_class; $p = Proc; return @{ pid = $S.pid } }
     'ping' { return 'pong' }
     'pid' { Proc | Out-Null; return $S.pid }
     'main_pid' { return (MainOwner) }
@@ -352,6 +371,7 @@ function Handle($c) {
         # decline: "No" first (save / recovery questions: do not save, do not recover), then Cancel/Close;
         # never Yes/Save/OK
         $lists = if ($c.mode -eq 'ok') { @(, @('OK')) } else { @(@('Nein', 'No', 'Nicht speichern', "Don't Save"), @('Abbrechen', 'Cancel', 'Schließen', 'Close')) }
+        if ([PR.N]::Cls($h) -eq $FLASHDLG) { if ($c.mode -ne 'ok') { [PR.N]::PostMessage($h, 0x0010, [IntPtr]::Zero, [IntPtr]::Zero) | Out-Null; $n++ }; continue }
         $kids = @([PR.N]::Kids($h) | ? { [PR.N]::Cls($_) -eq 'Button' }); $btn = $null
         foreach ($names in $lists) { if (-not $btn) { $btn = $kids | ? { $names -contains (Clean ([PR.N]::Txt($_))) } | Select-Object -First 1 } }
         if ($btn) { [PR.N]::PostMessage($btn, 0x00F5, [IntPtr]::Zero, [IntPtr]::Zero) | Out-Null } else { [PR.N]::PostMessage($h, 0x111, [IntPtr]$cmdId, [IntPtr]::Zero) | Out-Null }; $n++ }
@@ -359,6 +379,7 @@ function Handle($c) {
       # button: IDCANCEL to the dialog, then the system close command
       if ($n -and $c.mode -ne 'ok') { Start-Sleep -Milliseconds 400
         foreach ($h in @(Dialogs)) { $t = "$([PR.N]::Txt($h)) | $(DialogTexts $h)"; if ($c.except -and $t -match $c.except) { continue }
+          if ([PR.N]::Cls($h) -eq $FLASHDLG) { continue }
           [PR.N]::PostMessage($h, 0x111, [IntPtr]2, [IntPtr]::Zero) | Out-Null; Start-Sleep -Milliseconds 300
           if ([PR.N]::IsWindowVisible($h)) { [PR.N]::PostMessage($h, 0x0112, [IntPtr]0xF060, [IntPtr]::Zero) | Out-Null; Start-Sleep -Milliseconds 300 } } }
       return $n }
@@ -368,6 +389,8 @@ function Handle($c) {
     'close_window' { $h = [IntPtr][int64]$c.hwnd; if ([PR.N]::Pid($h) -ne [uint32]$S.pid -or $h -eq (MainWin)) { throw 'not a tool window of the target' }
                      [PR.N]::PostMessage($h, 0x0010, [IntPtr]::Zero, [IntPtr]::Zero) | Out-Null; Start-Sleep -Milliseconds 300; return [PR.N]::IsWindowVisible($h) }
     'menus' { return (OpenMenus) }
+    'kids' { return @([PR.N]::Kids([IntPtr][int64]$c.hwnd) | % { WinInfo $_ }) }
+    'main_enabled' { return [PR.N]::IsWindowEnabled((MainWin)) }
     'close_menus' { return (CloseMenus) }
     'menu' { return (MenuPath @($c.path) $c.final @($c.bar)) }
     'uia_tree' { $root = if ($c.hwnd) { El ([IntPtr][int64]$c.hwnd) } else { El (MainWin) }; $out = New-Object Collections.ArrayList; Dump $root 0 ([int]$(if ($c.depth) { $c.depth } else { 3 })) $out; return ,$out.ToArray() }
