@@ -370,6 +370,12 @@
      "reopen": "T10"
     },
     {
+     "menu": [
+      "Ansicht",
+      "Lineale"
+     ]
+    },
+    {
      "jsf": "fw.getDocumentDOM().addGuide(300,'horizontal')"
     },
     {
