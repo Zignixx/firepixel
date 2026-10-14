@@ -111,6 +111,24 @@ jobs:
           ditto -c -k --sequesterRsrc --keepParent Firepixel-macOS-arm64 "Firepixel-macOS-arm64-${VERSION}.zip"
           ls -la
 
+      - name: Startprobe (GUI 20 s, Bildschirmfoto)
+        continue-on-error: true
+        run: |
+          set -u
+          APP=dist/Firepixel-macOS-arm64/Firepixel.app
+          FP_STARTUP_TRACE=1 RUST_BACKTRACE=1 "$APP/Contents/MacOS/firepixel" > dist/start.log 2>&1 &
+          PID=$!
+          sleep 20
+          screencapture -x dist/startprobe.png || true
+          if kill -0 "$PID" 2>/dev/null; then
+            echo "Firepixel laeuft nach 20 s (PID $PID)"
+            kill "$PID" || true
+          else
+            echo "::warning::Firepixel nach 20 s nicht mehr aktiv"
+            wait "$PID"; echo "Exit-Code: $?"
+          fi
+          cat dist/start.log | tail -n 60
+
       - uses: actions/upload-artifact@v4
         with:
           name: Firepixel-macOS-arm64
@@ -118,12 +136,23 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: startprobe
+          path: |
+            dist/startprobe.png
+            dist/start.log
+          if-no-files-found: ignore
+          retention-days: 7
+
   tests:
     name: Tests (plattformneutrale Crates)
     runs-on: macos-14
     timeout-minutes: 45
-    # rote Tests nur melden, nicht den Lauf blockieren
+    # rote Tests nur melden, nicht den Lauf blockieren; "[skip-tests]" in der Commit-Nachricht spart Minuten
     continue-on-error: true
+    if: ${{ !contains(github.event.head_commit.message, '[skip-tests]') }}
     steps:
       - uses: actions/checkout@v4
 
