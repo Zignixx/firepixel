@@ -210,9 +210,24 @@ Other RUN-5 rules:
 * The tools column of the reference program has no window class of its own: `panel:tools` = client left edge to the
   document view.
 
-Not supported yet (logged as `unsupported`, the run continues): `read_dialog_fields`, `export`, `resize_panel`,
-`resize_dialog`, `drag_dialog_*`, `restart_app`, `window_size`, `log_focus_cycle`, `set_clipboard_image`,
-`drop_files`, `drag_text` and the other rare verbs from the scripts' notes.
+RUN-6 additions:
+
+| verb / form | reference program | Firepixel |
+|---|---|---|
+| `export {dir, name, type, slices?}` | only `type` „Nur Bilder“ without slices/options: `fw.exportDocumentAs(dom, <dir>\<name>.<ext>, null)` with the document's export settings, `ext` from `exportOptions.exportFormat`; folder listing into `values`. Other types (HTML, Segmente, Status/Ebenen/Seiten in Dateien, PDF, CSS-Sprites) stay `unsupported` | bridge `export {path}` with the same extension |
+| `window_size [w, h]` | main window resized at `orig.rect`'s position (host `place`) | `SetWindowPos` without activation at `fp.rect`'s position |
+| `"{side}"` / `"{unit}"` in any action argument | replaced by `orig`/`fp` and the unit id (separate export folders per side) | same |
+| `record_ui "dialog.controls"` | child windows (class, text, rect) of the open dialogs - for measuring locators | – |
+| `{dialog_child: {class, index}}` | negative `index` counts from the last match (`-1` = last slider arrow of an effect popup) | – |
+| `{find, from_left: dx}` | – | point `dx` right of the label's left edge (controls without own node, e.g. colour well) |
+| `tools` entry `{flyout, orig_index}` | tool inside a toolbox flyout: press-and-hold the group button, click entry `orig_index` | `ui_action {tool}` |
+
+After `window_size` the next step first restores the configured size on both sides.
+
+Not supported yet (logged as `unsupported`, the run continues): `read_dialog_fields`, `export` of other types,
+`resize_panel` and `drag_text` (they change the reference program's saved workspace layout, which would leak into
+later units), `resize_dialog`, `drag_dialog_*`, `restart_app`, `log_focus_cycle`, `set_clipboard_image`,
+`drop_files` and the other rare verbs from the scripts' notes.
 
 ### Targets
 

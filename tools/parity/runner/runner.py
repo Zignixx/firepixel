@@ -33,6 +33,29 @@ COMPARE = HERE.parent / "compare.py"
 DEFAULT_CONFIG = REPO.parent / "re" / "_testdateien" / "par" / "runner.config.json"
 
 
+def subst_placeholders(o, side, unit):
+    if isinstance(o, str):
+        return o.replace("{side}", side).replace("{unit}", unit) if "{" in o else o
+    if isinstance(o, list):
+        return [subst_placeholders(x, side, unit) for x in o]
+    if isinstance(o, dict):
+        return {k: subst_placeholders(v, side, unit) for k, v in o.items()}
+    return o
+
+
+def export_spec(arg):
+    """`export {dir, name, type, slices?}`: only the plain image export (type 'Nur Bilder', no slices, no options
+    dialog) is supported - it uses the document's own export settings on both sides (RUN-6)."""
+    a = arg if isinstance(arg, dict) else {"dir": arg}
+    if (a.get("type") or "Nur Bilder") != "Nur Bilder" or (a.get("slices") or "Ohne") != "Ohne"             or a.get("open_options") or a.get("selected_slices_only"):
+        raise Unsupported(f"export type {a.get('type')} / slices {a.get('slices')} (only 'Nur Bilder' without slices)")
+    return a
+
+
+EXPORT_EXT = {"GIF": "gif", "GIF ANIMATION": "gif", "ANIMATED GIF": "gif", "JPEG": "jpg", "JPG": "jpg", "PNG": "png",
+              "BMP": "bmp", "TIFF": "tif", "WBMP": "wbmp", "WEBP": "webp", "AVIF": "avif"}
+
+
 class Unsupported(Exception):
     """Action the runner cannot perform (logged as 'unsupported', not as a failure of the program)."""
 
@@ -890,6 +913,12 @@ class OrigSide(Side):
         self.o.focus()
         self.h.call("key", combo="+".join(mods + [k]))
 
+    def window_size(self, w, h):
+        """Main window size at the configured position (None = configured size)."""
+        x, y, cw, ch = self.r.cfg["orig"].get("rect", [0, 0, 1600, 1000])
+        self.h.call("place", x=x, y=y, w=w or cw, h=h or ch)
+        time.sleep(0.5)
+
     def jsf_value(self, expr):
         lines = self.o.jsf(f'var __v = ({expr}); fp_log("RET " + (typeof __v == "object" && __v !== null ? (__v.toSource ? __v.toSource() : String(__v)) : String(__v)));')
         ret = [ln[4:] for ln in lines if ln.startswith("RET ")]
@@ -978,6 +1007,12 @@ class OrigSide(Side):
                 raise Unmapped(f"tool {t} has no orig shortcut in ui_map.json")
             if isinstance(k, dict) and "jsf" in k:
                 self.o.jsf(k["jsf"])
+            elif isinstance(k, dict) and "flyout" in k:
+                # tool hidden in a toolbox flyout (RUN-6): press-and-hold the group button, click the
+                # owner-drawn entry by index
+                self.reset_light()
+                self.choose({"target": k["flyout"], "item": k.get("item", "")}, {"orig_index": k["orig_index"]})
+                time.sleep(0.3)
             elif isinstance(k, dict):
                 self.reset_light()
                 self.click_at(self.locate(k)[0])
@@ -1041,6 +1076,14 @@ class OrigSide(Side):
             self.h.call("dialog_close", mode="ok")
         elif verb == "file_dialog_cancel":
             self.h.call("dialog_close", mode="cancel")
+        elif verb == "export":
+            a = export_spec(arg)
+            d = r.safe_dir(a["dir"])
+            d.mkdir(parents=True, exist_ok=True)
+            fmt = str(self.jsf_value("fw.getDocumentDOM().exportOptions.exportFormat") or "PNG").upper()
+            out = d / f'{a.get("name") or "export"}.{EXPORT_EXT.get(fmt, "png")}'
+            self.o.jsf(f'var d = fw.getDocumentDOM(); fw.exportDocumentAs(d, {js_str(file_url_of(out))}, null);', timeout=90)
+            self.values.append({"export": a, "format": fmt, "value": r.record_path("record_dir", str(d))})
         elif verb == "export_png":
             out = r.export_path(self)
             if out.exists():
@@ -1185,7 +1228,9 @@ class OrigSide(Side):
     def loc_of(self, target):
         if isinstance(target, str) and target in self.r.ui_map.get("targets", {}):
             e = self.r.ui_map["targets"][target]
-            return (e.get(self.name) if isinstance(e, dict) else None) or {}
+            loc = (e.get(self.name) if isinstance(e, dict) else None) or {}
+            # a string locator is an alias ("dialog.combo.1", another key): no options of its own (RUN-6)
+            return self.loc_of(loc) if isinstance(loc, str) and loc != target else (loc if isinstance(loc, dict) else {})
         return target if isinstance(target, dict) else {}
 
     def menu_path(self, parts, final_click=True):
@@ -1315,6 +1360,9 @@ class OrigSide(Side):
                     out.append({"class": f.get("class"), "text": f.get("title")})
                 return {"focus_cycle": out}
             raise Unsupported(f"record_ui {key}")
+        if key == "dialog.controls":
+            # child windows (class, text, rect) of the open dialogs - used to measure locators (RUN-6)
+            return self.h.list("dialog_kids")
         if key in ("dialog.fields", "dialog.open", "dialog.title", "dialog.text"):
             return self.h.list("dialogs")
         if key in ("menu.open", "menu.disabled_items"):
@@ -1416,10 +1464,19 @@ class FpSide(Side):
             q["role"] = role
         if region:
             q["region"] = region
-        hits = (self.call("ui_find", q) or {}).get("hits") or []
-        if not hits and exact:
-            q["exact"] = False
+        hits = []
+        for k in range(4):
+            # a panel shown by the previous action (tab click / menu) is laid out one or two frames later (RUN-6:
+            # align buttons not found in the run, found in the single test)
+            if k:
+                time.sleep(0.4)
+            q["exact"] = exact
             hits = (self.call("ui_find", q) or {}).get("hits") or []
+            if not hits and exact:
+                q["exact"] = False
+                hits = (self.call("ui_find", q) or {}).get("hits") or []
+            if len(hits) > index:
+                break
         if len(hits) <= index:
             raise Unmapped(f"fp ui_find: '{text}' not found")
         return hits[index]
@@ -1430,6 +1487,11 @@ class FpSide(Side):
         r = hit["rect"]
         hits = (self.call("ui_find", {"region": [r[2] + 1, r[1] - 6, r[2] + 600, r[3] + 60], "limit": 40}) or {}).get("hits") or []
         return {(h.get("text"), round(h["rect"][0]), round(h["rect"][1])) for h in hits if h.get("text")}
+
+    def window_size(self, w, h):
+        """Firepixel window size at the configured position (None = configured size), never activated."""
+        self.fp.resize(w, h)
+        time.sleep(0.6)
 
     def script_value(self, code):
         v = self.call("run_script", {"code": code})
@@ -1454,7 +1516,10 @@ class FpSide(Side):
                       if str(h.get("text", "")).startswith("Titelleiste") and "order" in h]
                 if tb:
                     o = max(h["order"] for h in tb)
-                    hits = [h for h in hits if h.get("order", o) >= o]
+                    after = [h for h in hits if h.get("order", o) >= o]
+                    # sliders of the effect dialogs carry an earlier order than the title bar (RUN-6): keep the
+                    # rectangle filter alone when the order filter leaves too few
+                    hits = after if len(after) > index else hits
             except BridgeError:
                 pass
         hits.sort(key=lambda h: (round(h["rect"][1] / 4), h["rect"][0]))
@@ -1487,7 +1552,11 @@ class FpSide(Side):
                 reg = None
                 if target.get("panel"):
                     reg = self.area_rect("panel:" + target["panel"])
-                return self.find(target["find"], target.get("role"), target.get("exact", True), reg, target.get("index", 0))["center"]
+                hit = self.find(target["find"], target.get("role"), target.get("exact", True), reg, target.get("index", 0))
+                if "from_left" in target and hit.get("rect"):
+                    # control without own node right of its label (colour well of the effect dialogs, RUN-6)
+                    return [hit["rect"][0] + target["from_left"], (hit["rect"][1] + hit["rect"][3]) / 2]
+                return hit["center"]
             if "menu_item" in target:
                 return self.find(target["menu_item"], None, True, [0, 30, 10000, 10000])["center"]
             if "handle" in target:
@@ -1792,6 +1861,11 @@ class FpSide(Side):
                     # Symboleigenschaften …) are unknown to `ui_action panel` and missing in `visible_panels`: bring
                     # its tab to the front when it is there, else use its menu entry (shows it)
                     title = info.get("title")
+                    probe = info.get("fp_probe")
+                    if probe and ((self.call("ui_find", {"text": probe, "exact": True, "limit": 2}) or {}).get("hits")):
+                        # already in front: clicking the active tab again would fold the group (RUN-6, align buttons
+                        # not found in every second step)
+                        return
                     tabs = [h for h in (self.call("ui_find", {"text": title, "exact": True, "limit": 20}) or {}).get("hits") or []
                             if title and h.get("text") == title and h["rect"][1] > 60] if title else []
                     if tabs:
@@ -1863,6 +1937,20 @@ class FpSide(Side):
             v = self.call(verb, arg if isinstance(arg, dict) else {})
             if verb != "ui_action":
                 self.values.append({verb: arg, "value": v})
+        elif verb == "export":
+            a = export_spec(arg)
+            d = r.safe_dir(a["dir"])
+            d.mkdir(parents=True, exist_ok=True)
+            fmt = "PNG"
+            try:
+                v = self.script_value("fw.getDocumentDOM().exportOptions.exportFormat")
+                if isinstance(v, str) and v.strip():
+                    fmt = v.strip().upper()
+            except Exception:
+                pass
+            out = d / f'{a.get("name") or "export"}.{EXPORT_EXT.get(fmt, "png")}'
+            self.call("export", {"path": str(out)}, timeout=90)
+            self.values.append({"export": a, "format": fmt, "value": r.record_path("record_dir", str(d))})
         elif verb == "export_png":
             out = r.export_path(self)
             _, imgs = self.fp.call("render", {}, timeout=90)
@@ -1952,7 +2040,9 @@ class FpSide(Side):
     def loc_of(self, target):
         if isinstance(target, str) and target in self.r.ui_map.get("targets", {}):
             e = self.r.ui_map["targets"][target]
-            return (e.get(self.name) if isinstance(e, dict) else None) or {}
+            loc = (e.get(self.name) if isinstance(e, dict) else None) or {}
+            # a string locator is an alias ("dialog.combo.1", another key): no options of its own (RUN-6)
+            return self.loc_of(loc) if isinstance(loc, str) and loc != target else (loc if isinstance(loc, dict) else {})
         return target if isinstance(target, dict) else {}
 
     def set_field(self, a, target):
@@ -2303,6 +2393,8 @@ class Runner:
         for act in actions or []:
             if isinstance(act, str):
                 act = {act: True}
+            # "{side}" / "{unit}" in paths (export-results): each side gets its own folder (RUN-6)
+            act = subst_placeholders(act, side.name, self.unit["unit"])
             verb = next((k for k in act if k not in ("mods", "ms", "repeat", "hold_key", "item", "by", "at", "do",
                                                     "region", "to_fraction", "hold", "orig_index", "row", "from", "to",
                                                     "value", "target", "note", "orig_menu", "commit", "then")), None)
@@ -2323,6 +2415,13 @@ class Runner:
                     verb = "open_testfile"
             if verb == "record":
                 verb = "log_value"
+            if verb == "window_size":
+                # [w, h] of the main window at its configured position; the next step restores the configured size
+                w, h = (arg if isinstance(arg, list) else [arg.get("width"), arg.get("height")])
+                side.window_size(int(w), int(h))
+                side.resized = (int(w), int(h))
+                rec["actions"].append({"verb": verb, "ms": 0})
+                continue
             if verb in ("menu", "menu_item") and isinstance(arg, str) and not act.get("toggle"):
                 # "Fenster > <panel>" toggles: a panel that is already visible would be hidden. Scripts mean "show
                 # it" (then click its buttons): handled like the `panel` verb (only opened when not visible);
@@ -2372,6 +2471,9 @@ class Runner:
         side.values = []
         side.before_img = before_img
         t0 = time.time()
+        if getattr(side, "resized", None):
+            side.resized = None
+            side.window_size(None, None)
         try:
             if side.name == "orig":
                 side.o.focus()

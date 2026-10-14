@@ -351,11 +351,14 @@ function Handle($c) {
     'find_child' {
       $m = MainWin; $roots = @()
       if ($c.scope -eq 'dialog') { $roots = @(Dialogs) } elseif ($c.scope -and $c.scope -ne 'main') { $roots = @([IntPtr][int64](Handle @{ cmd = 'panel'; name = $c.scope }).hwnd) } else { $roots = @($m) + @([PR.N]::Tops([uint32]$S.pid) | ? { $_ -ne $m }) }
-      $n = 0
+      # negative index = counted from the last match (RUN-6: last slider arrow of an effect popup)
+      $hits = New-Object Collections.ArrayList
       foreach ($r in $roots) { foreach ($h in [PR.N]::Kids($r)) {
         if ($c.class -and [PR.N]::Cls($h) -ne $c.class) { continue }
         if ($c.title -and (Clean ([PR.N]::Txt($h))) -ne (Clean $c.title)) { continue }
-        if ($n -eq [int]$c.index) { $i = WinInfo $h; $i.title = [PR.N]::Txt($h); return $i }; $n++ } }
+        [void]$hits.Add($h); if ([int]$c.index -ge 0 -and $hits.Count -gt [int]$c.index) { break } } }
+      $k = [int]$c.index; if ($k -lt 0) { $k = $hits.Count + $k }
+      if ($k -ge 0 -and $k -lt $hits.Count) { $h = $hits[$k]; $i = WinInfo $h; $i.title = [PR.N]::Txt($h); return $i }
       throw "child not found: $($c | ConvertTo-Json -Compress)" }
     'set_text' { [PR.N]::SendMessageS([IntPtr][int64]$c.hwnd, 0x000C, [IntPtr]::Zero, [string]$c.text) | Out-Null; return 'ok' }
     'next_ctl_root' { return [int64][PR.N]::GetAncestor([IntPtr][int64]$c.hwnd, 2) }
@@ -383,6 +386,7 @@ function Handle($c) {
       return $i }
     'children' { $m = MainWin; return @([PR.N]::Kids($m) | % { WinInfo $_ } | ? { $_.title -or $c.all }) }
     'dialogs' { return @(Dialogs | % { $i = WinInfo $_; $i.texts = DialogTexts $_; $i }) }
+    'dialog_kids' { return @(Dialogs | % { $i = WinInfo $_; $i.kids = @([PR.N]::Kids($_) | % { WinInfo $_ }); $i }) }
     'dialog_close' { $n = 0; $cmdId = if ($c.mode -eq 'ok') { 1 } else { 2 }
       foreach ($h in @(Dialogs)) { $t = "$([PR.N]::Txt($h)) | $(DialogTexts $h)"; if ($c.except -and $t -match $c.except) { continue }
         # decline: "No" first (save / recovery questions: do not save, do not recover), then Cancel/Close;

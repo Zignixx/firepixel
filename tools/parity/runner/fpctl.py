@@ -149,6 +149,13 @@ class Firepixel:
             time.sleep(0.25)
         self.log("firepixel window could not be placed")
 
+    def resize(self, w=None, h=None):
+        """Window size at the configured position (None = configured size): SWP_NOACTIVATE, z-order kept."""
+        x, y, cw, ch = self.cfg.get("rect", [960, 400, 1600, 1000])
+        hw = self.hwnd()
+        if hw:
+            user32.SetWindowPos(hw, 0, x, y, w or cw, h or ch, 0x0010 | 0x0004)
+
     def stop(self):
         if self.proc is None:
             return

@@ -11,7 +11,7 @@
     "tools": {"fp": "window.tools", "title": null, "orig_class": "OWL.ToolbarContainer", "menu": "Fenster > Werkzeuge"},
     "optimize": {"fp": "window.optimize", "title": "Optimieren", "menu": "Fenster > Optimieren"},
     "history": {"fp": "window.history", "title": "Verlauf", "menu": "Fenster > Verlauf"},
-    "align": {"fp": "window.align", "title": "Ausrichten", "menu": "Fenster > Ausrichten"},
+    "align": {"fp": "window.align", "title": "Ausrichten", "menu": "Fenster > Ausrichten", "fp_probe": "Horizontal zentrieren"},
     "pages": {"fp": "window.pages", "title": "Seiten", "menu": "Fenster > Seiten"},
     "states": {"fp": "window.states", "title": "Status", "menu": "Fenster > Status"},
     "layers": {"fp": "window.layers", "title": "Ebenen", "menu": "Fenster > Ebenen"},
@@ -37,7 +37,7 @@
     "css-properties": {"fp": "window.cssProperties", "title": "CSS-Eigenschaften", "menu": "Fenster > CSS-Eigenschaften"}
   },
   "tools": {
-    "_doc": "fp tool id -> orig: {\"window_rel\": [x, y]} = click on the toolbox button (client coordinates, window 1600x1000 at 0,0, toolbox docked left), or a shortcut key string, or {\"jsf\": ...}. Tools hidden in a flyout (null) need the flyout. Single-key shortcuts proved unreliable in the reference program (only some reach it), so clicks are used.",
+    "_doc": "fp tool id -> orig: {\"window_rel\": [x, y]} = click on the toolbox button (client coordinates, window 1600x1000 at 0,0, toolbox docked left), or a shortcut key string, or {\"jsf\": ...}. Tools hidden in a flyout: {\"flyout\": target, \"orig_index\": i} = press-and-hold the group button, click entry i (RUN-6). Single-key shortcuts proved unreliable in the reference program (only some reach it), so clicks are used.",
     "tool.pointer": {"window_rel": [22, 124]},
     "tool.subselection": {"window_rel": [49, 124]},
     "tool.scale": {"window_rel": [22, 149]},
@@ -62,8 +62,15 @@
     "tool.paintBucket": {"window_rel": [49, 496]},
     "tool.hand": {"window_rel": [22, 637]},
     "tool.zoom": {"window_rel": [49, 637]},
-    "tool.exportArea": null,
-    "tool.replaceColor": null
+    "tool.exportArea": {"flyout": "toolbox.crop_flyout", "orig_index": 1},
+    "tool.replaceColor": {"flyout": "toolbox.rubberStamp_flyout", "orig_index": 1},
+    "tool.reshapeArea": {"flyout": "toolbox.freeform_flyout", "orig_index": 1},
+    "tool.pathScrubAdd": {"flyout": "toolbox.freeform_flyout", "orig_index": 2},
+    "tool.pathScrubSubtract": {"flyout": "toolbox.freeform_flyout", "orig_index": 3},
+    "tool.hotspotRect": {"flyout": "toolbox.hotspot_flyout", "orig_index": 0},
+    "tool.hotspotCircle": {"flyout": "toolbox.hotspot_flyout", "orig_index": 1},
+    "tool.hotspotPolygon": {"flyout": "toolbox.hotspot_flyout", "orig_index": 2},
+    "tool.polygonSlice": {"flyout": "toolbox.slice_flyout", "orig_index": 1}
   },
   "commands": {
     "_doc": "fp command id -> orig menu path ('A > B > C'), used by the verb 'command' on the orig side. fp uses ui_action {run}.",
@@ -270,6 +277,14 @@
     "fx_popup.softness": {"orig": {"dialog_child": {"class": "Edit", "index": 2}}, "fp": "dialog.field.2"},
     "fx_popup.angle": {"orig": {"dialog_child": {"class": "Edit", "index": 3}}, "fp": "dialog.field.3"},
     "fx_popup.knockout": {"orig": {"dialog_child": {"title": "Aussparung", "class": "Button"}}, "fp": {"find": "Objekt aussparen", "role": "check_box"}},
+    "fx_popup.angle_dial": {"orig": {"dialog_child": {"class": "Button", "index": -1}}, "fp": "dialog.slider.3"},
+    "fx_popup.softness_slider": {"orig": {"dialog_child": {"class": "Button", "index": -2}}, "fp": "dialog.slider.2"},
+    "fx_popup.color": {"orig": {"dialog_child": {"class": "Afx:00400000:b", "index": 0}}, "fp": {"find": "Farbe:", "from_left": 143}},
+    "fx_popup.edge_shape": {"orig": {"dialog_child": {"class": "ComboBox", "index": 0}}, "fp": "dialog.combo.1"},
+    "fx_popup.width": {"orig": {"dialog_child": {"class": "Edit", "index": 0}}, "fp": "dialog.field.0"},
+    "fx_popup.width_slider": {"orig": {"dialog_child": {"class": "Button", "index": 0}}, "fp": "dialog.slider.0"},
+    "fx_popup.contrast": {"orig": {"dialog_child": {"class": "Edit", "index": 1}}, "fp": "dialog.field.1"},
+    "fx_popup.button_preset": {"orig": {"dialog_child": {"class": "ComboBox", "index": 1}}, "fp": "dialog.combo.2"},
     "toolbox.stroke_icon": {"orig": {"window_rel": [22, 520]}, "fp": {"window_rel": [14, 505]}},
     "toolbox.screen_standard": {"orig": {"window_rel": [17, 610]}, "fp": {"find": "Standardbildschirmmodus", "role": "button"}},
     "toolbox.screen_full_menus": {"orig": {"window_rel": [34, 610]}, "fp": {"find": "Vollbildmodus mit Menüs", "role": "button"}},
@@ -304,6 +319,8 @@
     "toolbox.rectangle_flyout": {"orig": {"window_rel": [22, 349], "hold_ms": 900}, "fp": {"window_rel": [18, 335], "hold_ms": 900}},
     "toolbox.freeform_flyout": {"orig": {"window_rel": [22, 374], "hold_ms": 900}, "fp": {"window_rel": [18, 359], "hold_ms": 900}},
     "toolbox.hotspot_flyout": {"orig": {"window_rel": [22, 424], "hold_ms": 900}, "fp": {"window_rel": [18, 408], "hold_ms": 900}},
+    "toolbox.slice_flyout": {"orig": {"window_rel": [49, 424], "hold_ms": 900}, "fp": {"window_rel": [44, 408], "hold_ms": 900}},
+    "toolbox.rubberStamp_flyout": {"orig": {"window_rel": [49, 274], "hold_ms": 900}, "fp": {"window_rel": [44, 262], "hold_ms": 900}},
     "toolbox.slice_flyout": {"orig": {"window_rel": [49, 424], "hold_ms": 900}, "fp": {"window_rel": [44, 408], "hold_ms": 900}}
   },
   "handle_roles": {
