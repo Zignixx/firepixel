@@ -539,7 +539,8 @@ pub fn read(b: &[u8]) -> Result<PsdFile> {
                             let _ = (br.u16(), br.u32());
                             let desc = descriptor(&mut br);
                             let text = desc.as_ref().and_then(|x| x.str("text").or_else(|| x.str("Txt ")).map(str::to_string)).unwrap_or_default();
-                            let engine = String::from_utf8_lossy(d).into_owned();
+                            // Latin-1 (ein Zeichen je Byte), damit UTF-16-Zeichenketten `(\xfe\xff…)` lesbar bleiben
+                            let engine: String = d.iter().map(|&b| b as char).collect();
                             l.text = Some((m, text, desc, engine));
                         }
                         "SoLd" | "PlLd" | "SoLE" => l.smart_object = true,

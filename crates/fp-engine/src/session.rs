@@ -116,7 +116,7 @@ pub struct DocumentState {
     pub doc: Arc<Document>,
     /// Datei (None = noch nicht gespeichert).
     pub path: Option<PathBuf>,
-    /// Fenstertitel („Unbenannt-1.png“ bzw. Dateiname).
+    /// Fenstertitel („Unbenannt-1.fw.png“ bzw. Dateiname).
     pub title: String,
     pub history: History,
     pub selection: Selection,
@@ -483,9 +483,10 @@ impl Session {
         let title = match &path {
             Some(p) => p.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_else(|| fp_i18n::t("msg-default-document-nameless")),
             None => {
-                // Vorgabetitel in der Sprache der Oberfläche beim Anlegen (wie die übrigen Standardnamen)
+                // Vorgabetitel in der Sprache der Oberfläche beim Anlegen (wie die übrigen Standardnamen);
+                // Endung .fw.png wie im Original, dessen „.fw.png anhängen“ ab Werk an ist (TW-30)
                 self.untitled += 1;
-                format!("{}.png", fp_i18n::tr!("msg-default-document", n = self.untitled.to_string()))
+                format!("{}.fw.png", fp_i18n::tr!("msg-default-document", n = self.untitled.to_string()))
             }
         };
         let mut st = DocumentState::new(id, doc, path, title, &self.prefs);

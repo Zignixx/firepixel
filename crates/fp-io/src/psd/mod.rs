@@ -306,7 +306,7 @@ fn text_style(engine: &str, m: &[f64; 6]) -> (String, f32, Argb) {
     let size = find_num("/FontSize ").unwrap_or(12.0) * m[3].abs().max(1e-6);
     let mut color = Argb(0xFF00_0000);
     if let Some(i) = engine.find("/FillColor") {
-        let tail = &engine[i..engine.len().min(i + 200)];
+        let tail: String = engine[i..].chars().take(200).collect();
         if let Some(s) = tail.find("/Values [") {
             let vals: Vec<f64> = tail[s + 9..].split(']').next().unwrap_or("").split_whitespace().filter_map(|v| v.parse().ok()).collect();
             if vals.len() >= 4 {
@@ -315,15 +315,48 @@ fn text_style(engine: &str, m: &[f64; 6]) -> (String, f32, Argb) {
             }
         }
     }
-    let mut font = "Arial".to_string();
-    if let Some(i) = engine.find("/Name (\u{fe}\u{ff}") {
-        let raw: Vec<u16> = engine[i + 9..].chars().take(128).collect::<Vec<char>>().chunks(2).take_while(|c| c.len() == 2 && c[1] != ')').map(|c| (c[0] as u16) << 8 | c[1] as u16).collect();
-        let s = String::from_utf16_lossy(&raw);
-        if !s.is_empty() {
-            font = s;
+    // Schrift: erster Eintrag der `/FontSet` (davor stehen gleichnamige Schlüssel der Kinsoku-Tabellen)
+    let font = engine
+        .find("/FontSet")
+        .and_then(|f| engine[f..].find("/Name").map(|n| f + n + 5))
+        .and_then(|i| engine_string(engine, i))
+        .filter(|s| !s.is_empty())
+        .unwrap_or_else(|| "Arial".to_string());
+    (font, size as f32, color)
+}
+
+/// PDF-Zeichenkette `( … )` aus EngineData ab Position `from` (Latin-1, ein Zeichen je Byte); `\xfe\xff` ⇒ UTF-16BE.
+fn engine_string(engine: &str, from: usize) -> Option<String> {
+    let rest = engine.get(from..)?;
+    let start = rest.find('(')?;
+    if !rest[..start].trim().is_empty() {
+        return None;
+    }
+    let mut bytes = Vec::new();
+    let mut it = rest[start + 1..].chars();
+    while let Some(c) = it.next() {
+        match c {
+            '\\' => bytes.push(it.next()? as u32 as u8),
+            ')' => break,
+            c => bytes.push(c as u32 as u8),
         }
     }
-    (font, size as f32, color)
+    Some(if let Some(b) = bytes.strip_prefix(&[0xfe, 0xff]) {
+        let units: Vec<u16> = b.as_chunks::<2>().0.iter().map(|c| u16::from_be_bytes(*c)).collect();
+        String::from_utf16_lossy(&units)
+    } else {
+        bytes.iter().map(|&b| b as char).collect()
+    })
+}
+
+/// Text des Textobjekts laut EngineData (`/Editor /Text`), Absatzende `\r` ⇒ Zeilenumbruch, letztes entfällt.
+/// Das Original zeigt diesen Text, nicht den der Beschreibung (TW-15: `par.psd` hat dort „PSD“, im Editor leer).
+fn engine_text(engine: &str) -> Option<String> {
+    let e = engine.find("/Editor")?;
+    let t = engine[e..].find("/Text")? + e + 5;
+    let s = engine_string(engine, t)?;
+    let s = s.strip_suffix('\r').unwrap_or(&s).replace('\r', "\n");
+    Some(s)
 }
 
 /// Knoten des Ebenenbaums.
@@ -428,7 +461,8 @@ impl Ctx<'_> {
             LayerKind::Text if editable => {
                 let Some((m, text, _, engine)) = &l.text else { return None };
                 let (font, size, color) = text_style(engine, m);
-                el = Element::new_text(&mut self.ids, text, &font, size, color, Point::new(m[4] as f32, m[5] as f32));
+                let shown = engine_text(engine).unwrap_or_else(|| text.clone());
+                el = Element::new_text(&mut self.ids, &shown, &font, size, color, Point::new(m[4] as f32, m[5] as f32));
                 self.warnings.push(fp_i18n::tr!("msg-import-warn-psd-text", name = l.name.as_str()));
             }
             _ => {
@@ -439,9 +473,12 @@ impl Ctx<'_> {
         el.common.name = Some(l.name.clone());
         // Masken
         let mut wrapped = el;
+        // Masken-Bit 3: Pixelmaske ist nur die Rasterung anderer Daten (Vektormaske/Form) ⇒ nicht als Maske (TW-15)
+        let rendered_mask = l.mask.as_ref().is_some_and(|m| m.flags & 8 != 0) && l.vector_mask.as_ref().is_some_and(|v| !v.0.is_empty());
         if let Some(m) = &l.mask
             && !m.disabled()
             && !m.pixels.is_empty()
+            && !rendered_mask
         {
             let lr = IRect::new(l.rect[0], l.rect[1], l.rect[2], l.rect[3]);
             let mr = IRect::new(m.rect[0], m.rect[1], m.rect[2], m.rect[3]);
@@ -497,6 +534,7 @@ impl Ctx<'_> {
                 sub.level = (depth + 1).min(2) as i32;
                 sub.visibility = vec![l.visible];
                 sub.expanded = matches!(l.kind(), LayerKind::Section { open: true });
+                sub.opacity = Opacity(l.opacity);
                 if let Some(c) = sub.cels.first_mut() {
                     Arc::make_mut(c).elements = inner.into_iter().map(Arc::new).collect();
                 }
@@ -507,6 +545,20 @@ impl Ctx<'_> {
             }
         }
         out
+    }
+}
+
+/// Unterebenen einer zur obersten Ebene beförderten Gruppe eine Stufe höher setzen (mindestens Stufe 1).
+fn lift_sublayers(l: &mut Layer) {
+    for c in &mut l.cels {
+        for e in &mut Arc::make_mut(c).elements {
+            if let ElementKind::SubLayer(s) = &e.kind {
+                let mut s2 = (**s).clone();
+                s2.level = (s2.level - 1).max(1);
+                lift_sublayers(&mut s2);
+                Arc::make_mut(e).kind = ElementKind::SubLayer(Arc::new(s2));
+            }
+        }
     }
 }
 
@@ -542,41 +594,25 @@ pub fn import(data: &[u8], opts: &ImportOptions) -> Result<ImportResult> {
         let top_adj = f.layers.iter().rposition(|l| l.adjustment.is_some());
         let tree = build_tree(&f.layers);
         let mut ctx = Ctx { f: &f, o, importing: opts.importing, ids, tile, top_adj, warnings: Vec::new(), global_angle: f.resources.global_angle.unwrap_or(30.0) };
-        // Oberste Stufe: Läufe ungruppierter Ebenen ⇒ „Ebene“, Gruppen ⇒ eigene Ebene (unten → oben)
+        // Oberste Stufe: alle Objekte in **einer** Ebene „Ebene“, PS-Gruppen darin als Unterebenen (verschachtelt,
+        // TW-15: `par.psd` ⇒ Ebene ▸ Ebene 2 / Ebene 1 / Background). Bleibt nur eine Gruppe übrig, wird sie selbst
+        // die Ebene mit ihrem Namen (7a T4).
+        let els = ctx.elements_of(&tree, 0);
         let mut fw_layers: Vec<Layer> = Vec::new();
-        let mut run: Vec<usize> = Vec::new();
-        let flush = |ctx: &mut Ctx, run: &mut Vec<usize>, fw_layers: &mut Vec<Layer>| {
-            if run.is_empty() {
-                return;
-            }
-            let node = Node { layer: None, children: run.drain(..).map(|i| Node { layer: Some(i), children: Vec::new() }).collect() };
-            let els = ctx.elements_of(&node, 0);
+        if let [only] = els.as_slice()
+            && let ElementKind::SubLayer(sub) = &only.kind
+        {
+            let mut l = (**sub).clone();
+            l.level = 0;
+            lift_sublayers(&mut l);
+            fw_layers.push(l);
+        } else if !els.is_empty() {
             let mut l = Layer::new(&mut ctx.ids, "Ebene", FwLayerKind::Normal, 1);
             if let Some(c) = l.cels.first_mut() {
                 Arc::make_mut(c).elements = els.into_iter().map(Arc::new).collect();
             }
             fw_layers.push(l);
-        };
-        for ch in &tree.children {
-            let Some(li) = ch.layer else { continue };
-            if matches!(f.layers[li].kind(), LayerKind::Section { .. }) {
-                flush(&mut ctx, &mut run, &mut fw_layers);
-                let g = &f.layers[li];
-                let els = ctx.elements_of(ch, 0);
-                let mut l = Layer::new(&mut ctx.ids, &g.name, FwLayerKind::Normal, 1);
-                l.visibility = vec![g.visible];
-                l.expanded = matches!(g.kind(), LayerKind::Section { open: true });
-                l.opacity = Opacity(g.opacity);
-                if let Some(c) = l.cels.first_mut() {
-                    Arc::make_mut(c).elements = els.into_iter().map(Arc::new).collect();
-                }
-                fw_layers.push(l);
-            } else {
-                run.push(li);
-            }
         }
-        flush(&mut ctx, &mut run, &mut fw_layers);
-        fw_layers.retain(|l| l.cels.first().is_some_and(|c| !c.elements.is_empty()));
         if fw_layers.is_empty() {
             fw_layers.push(Layer::new(&mut ctx.ids, "Ebene", FwLayerKind::Normal, 1));
         }

@@ -475,8 +475,8 @@ msg-import-warn-svg-gradient-repeat = SVG-Verläufe mit Wiederholung werden ohne
 msg-import-warn-svg-gradient-focus = SVG-Verläufe mit verschobenem Brennpunkt werden zentriert übernommen (A)
 msg-import-warn-svg-image = eingebettete SVG-Bilder dieses Typs werden nicht übernommen
 msg-import-warn-svg-clip = SVG-Schnittpfade, Masken und Filter werden nicht übernommen
-msg-import-warn-svg-text = SVG-Text wird nicht übernommen (ohne Textmodul)
-msg-import-warn-ai-text = Illustrator-Text wird nicht übernommen
+msg-import-warn-svg-text = SVG-Text auf Pfad wird als einfacher Text übernommen
+msg-import-warn-ai-text = Illustrator-Text auf Pfad wird als einfacher Text übernommen
 msg-import-warn-ai-raster = platzierte Bilder/Raster werden nicht übernommen
 msg-import-warn-eps-preview = EPS ohne Illustrator-Daten: nur die eingebettete TIFF-Vorschau wurde übernommen (kein PostScript-Interpreter)
 # <<< UE-3 Import-Hinweise

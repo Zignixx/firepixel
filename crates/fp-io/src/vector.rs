@@ -4,10 +4,11 @@
 //! * **SVG:** Pfade mit Vollton-Füllung/-Strich (Deckkraft als Farb-Alpha, Füllregel), Gruppen mit
 //!   Deckkraft, eingebettete PNG/JPEG-Bilder; lineare/radiale Verläufe als Verlaufsfüllung (Form 2/3/9 mit
 //!   Griffen und Farb-/Deckkraftstopps), Verlaufsstriche als erste Farbe (A),
-//!   Muster, Filter, Masken und Text (ohne Textmodul) entfallen mit Hinweis.
+//!   Muster, Filter und Masken entfallen mit Hinweis; `<text>` wird Textobjekt (eigener Leser, Q-13).
 //! * **Illustrator ≤ 8 / AI-EPS:** Leinwand = `%%BoundingBox`, Pfadoperatoren `m l L c C v V y Y h H`,
 //!   Malen `f F s S b B n N`, Farben `g G k K x X Xa XA`, Strichbreite `w`. CMYK über die
-//!   CMYK-Tabelle des Originals bzw. naiv. Text, platzierte Bilder und Muster entfallen mit Hinweis.
+//!   CMYK-Tabelle des Originals bzw. naiv. Text (`To` … `TO`) wird Textobjekt (Punkt-/Flächentext, TW-25);
+//!   platzierte Bilder und Muster entfallen mit Hinweis.
 //! * **EPS ohne Illustrator-Daten:** nur die TIFF-Vorschau eines DOS-EPS (das Original rastert mit MPS.dll,
 //!   die nicht nachgebaut wird); sonst klare Fehlermeldung.
 //! * **PDF / AI ≥ 9:** über den reinen Rust-PDF-Interpreter hayro nach SVG und dann wie SVG
@@ -19,6 +20,7 @@ use std::sync::Arc;
 use fp_color::cmyk::{cmyk_to_rgb, postscript_cmyk_byte};
 use fp_color::Argb;
 use fp_model::{Brush, Contour, ContourNode, Element, ElementKind, IdGen, PathAttrs, Point};
+use usvg::roxmltree;
 
 use crate::build::{bitmap_element, document_from_raster, empty_document, push_elements, ImportResult, ImportedContent};
 use crate::detect::FileFormat;
@@ -296,10 +298,192 @@ fn svg_group(ids: &mut IdGen, g: &usvg::Group, tile: &mut u32, warnings: &mut Ve
                     out.push(ge);
                 }
             }
-            usvg::Node::Text(_) => warnings.push(fp_i18n::t("msg-import-warn-svg-text")),
+            // Text liest svg_texts selbst (usvg ohne Textmodul liefert keine Textknoten)
+            usvg::Node::Text(_) => {}
         }
     }
     out
+}
+
+/// Geerbte Darstellungsattribute für SVG-Text.
+#[derive(Clone)]
+struct SvgTextStyle {
+    t: svgtypes::Transform,
+    fill: Option<Argb>,
+    family: String,
+    size: f64,
+    bold: bool,
+    italic: bool,
+    anchor: i32,
+}
+
+/// Wert einer Eigenschaft aus Attribut oder `style="…"`.
+fn svg_prop<'a>(n: &roxmltree::Node<'a, 'a>, name: &str) -> Option<String> {
+    if let Some(style) = n.attribute("style") {
+        for decl in style.split(';') {
+            if let Some((k, v)) = decl.split_once(':')
+                && k.trim() == name
+            {
+                return Some(v.trim().to_string());
+            }
+        }
+    }
+    n.attribute(name).map(|v| v.trim().to_string())
+}
+
+/// Erste Zahl einer Längenangabe in Pixeln (`18`, `18px`, `12pt`, `1em` relativ zu `em`).
+fn svg_len(v: &str, em: f64) -> Option<f64> {
+    let v = v.split([' ', ',']).find(|s| !s.is_empty())?;
+    let num_end = v.find(|c: char| !(c.is_ascii_digit() || c == '.' || c == '-' || c == '+' || c == 'e')).unwrap_or(v.len());
+    let x: f64 = v[..num_end].parse().ok()?;
+    Some(match &v[num_end..] {
+        "pt" => x * 4.0 / 3.0,
+        "pc" => x * 16.0,
+        "mm" => x * 96.0 / 25.4,
+        "cm" => x * 96.0 / 2.54,
+        "in" => x * 96.0,
+        "em" => x * em,
+        "%" => x / 100.0 * em,
+        _ => x,
+    })
+}
+
+/// SVG-`<text>` als Textobjekte (Q-13): Inhalt (inkl. `<tspan>`), Schrift, Größe, Fett/Kursiv, Füllfarbe,
+/// Ausrichtung und Lage (Grundlinie bei `x`/`y`, alle Transformationen bis zur Leinwand). Oben → unten.
+fn svg_texts(data: &[u8], ids: &mut IdGen, warnings: &mut Vec<String>) -> Vec<Element> {
+    let unz;
+    let data = if data.starts_with(&[0x1f, 0x8b]) {
+        let Ok(d) = usvg::decompress_svgz(data) else { return Vec::new() };
+        unz = d;
+        &unz[..]
+    } else {
+        data
+    };
+    let Ok(s) = std::str::from_utf8(data) else { return Vec::new() };
+    let opt = roxmltree::ParsingOptions { allow_dtd: true, ..Default::default() };
+    let Ok(xml) = roxmltree::Document::parse_with_options(s, opt) else { return Vec::new() };
+    let root = xml.root_element();
+    // viewBox ⇒ Leinwand (gleichmäßig wie usvg bei preserveAspectRatio „xMidYMid meet“)
+    let mut t0 = svgtypes::Transform::default();
+    if let Some(vb) = root.attribute("viewBox").and_then(|v| v.parse::<svgtypes::ViewBox>().ok()) {
+        let w = root.attribute("width").and_then(|v| svg_len(v, 16.0)).unwrap_or(vb.w);
+        let h = root.attribute("height").and_then(|v| svg_len(v, 16.0)).unwrap_or(vb.h);
+        if vb.w > 0.0 && vb.h > 0.0 {
+            let sc = (w / vb.w).min(h / vb.h);
+            let (tx, ty) = ((w - vb.w * sc) / 2.0 - vb.x * sc, (h - vb.h * sc) / 2.0 - vb.y * sc);
+            t0 = svgtypes::Transform::new(sc, 0.0, 0.0, sc, tx, ty);
+        }
+    }
+    let style0 = SvgTextStyle { t: t0, fill: Some(Argb(0xFF00_0000)), family: "Times New Roman".into(), size: 16.0, bold: false, italic: false, anchor: 0 };
+    let mut out = Vec::new();
+    svg_text_walk(root, &style0, ids, warnings, &mut out, 0);
+    out.reverse();
+    out
+}
+
+fn svg_text_style(n: &roxmltree::Node, parent: &SvgTextStyle) -> SvgTextStyle {
+    let mut st = parent.clone();
+    if let Some(tr) = n.attribute("transform").and_then(|v| v.parse::<svgtypes::Transform>().ok()) {
+        let p = parent.t;
+        st.t = svgtypes::Transform::new(
+            p.a * tr.a + p.c * tr.b,
+            p.b * tr.a + p.d * tr.b,
+            p.a * tr.c + p.c * tr.d,
+            p.b * tr.c + p.d * tr.d,
+            p.a * tr.e + p.c * tr.f + p.e,
+            p.b * tr.e + p.d * tr.f + p.f,
+        );
+    }
+    if let Some(f) = svg_prop(n, "fill") {
+        st.fill = if f == "none" { None } else { f.parse::<svgtypes::Color>().ok().map(|c| Argb((c.alpha as u32) << 24 | (c.red as u32) << 16 | (c.green as u32) << 8 | c.blue as u32)).or(st.fill) };
+    }
+    if let Some(f) = svg_prop(n, "font-family")
+        && let Some(first) = f.split(',').next()
+    {
+        let fam = first.trim().trim_matches(|c| c == '\'' || c == '"');
+        st.family = match fam {
+            "sans-serif" => "Arial".into(),
+            "serif" => "Times New Roman".into(),
+            "monospace" => "Courier New".into(),
+            "" => st.family,
+            f => f.to_string(),
+        };
+    }
+    if let Some(v) = svg_prop(n, "font-size").and_then(|v| svg_len(&v, parent.size)) {
+        st.size = v;
+    }
+    if let Some(w) = svg_prop(n, "font-weight") {
+        st.bold = w == "bold" || w == "bolder" || w.parse::<u32>().is_ok_and(|x| x >= 600);
+    }
+    if let Some(s) = svg_prop(n, "font-style") {
+        st.italic = s == "italic" || s == "oblique";
+    }
+    if let Some(a) = svg_prop(n, "text-anchor") {
+        st.anchor = match a.as_str() {
+            "middle" => 1,
+            "end" => 2,
+            _ => 0,
+        };
+    }
+    st
+}
+
+fn svg_text_walk(n: roxmltree::Node, parent: &SvgTextStyle, ids: &mut IdGen, warnings: &mut Vec<String>, out: &mut Vec<Element>, depth: u32) {
+    if depth > 64 || svg_prop(&n, "display").as_deref() == Some("none") {
+        return;
+    }
+    let name = n.tag_name().name();
+    if matches!(name, "defs" | "symbol" | "clipPath" | "mask" | "pattern" | "marker" | "style" | "script") {
+        return;
+    }
+    let st = svg_text_style(&n, parent);
+    if name != "text" {
+        for c in n.children().filter(|c| c.is_element()) {
+            svg_text_walk(c, &st, ids, warnings, out, depth + 1);
+        }
+        return;
+    }
+    // Inhalt: Textknoten aller Nachfahren, Leerraum wie `xml:space="default"` zusammengefasst
+    let mut raw = String::new();
+    for d in n.descendants() {
+        if d.is_text() {
+            raw.push_str(d.text().unwrap_or(""));
+        }
+        if d.is_element() && d.tag_name().name() == "textPath" {
+            warnings.push(fp_i18n::t("msg-import-warn-svg-text"));
+        }
+    }
+    let text = raw.replace(['\n', '\r', '\t'], " ").split(' ').filter(|w| !w.is_empty()).collect::<Vec<_>>().join(" ");
+    if text.is_empty() {
+        return;
+    }
+    // erster gesetzter Ursprung (auch aus dem ersten `<tspan>`), Stil des ersten `<tspan>` mit Text
+    let first_span = n.descendants().find(|d| d.is_element() && d.tag_name().name() == "tspan" && d.text().is_some_and(|t| !t.trim().is_empty()));
+    let span_st = first_span.map(|s| {
+        let mut chain: Vec<roxmltree::Node> = s.ancestors().take_while(|a| *a != n).collect();
+        chain.reverse();
+        chain.iter().fold(st.clone(), |acc, a| svg_text_style(a, &acc))
+    });
+    let st2 = span_st.as_ref().unwrap_or(&st);
+    let pick = |k: &str| n.attribute(k).or_else(|| first_span.and_then(|s| s.attribute(k))).and_then(|v| svg_len(v, st.size)).unwrap_or(0.0);
+    let (x, y) = (pick("x"), pick("y"));
+    let t = st.t;
+    let p = Point::new((t.a * x + t.c * y + t.e) as f32, (t.b * x + t.d * y + t.f) as f32);
+    let scale = (t.a * t.d - t.b * t.c).abs().sqrt();
+    let size = (st2.size * if scale > 0.0 { scale } else { 1.0 }).max(1.0) as f32;
+    let color = st2.fill.unwrap_or(Argb(0xFF00_0000));
+    let mut e = Element::new_text(ids, &text, &st2.family, size, color, p);
+    if let ElementKind::Text(te) = &mut e.kind {
+        for a in std::iter::once(&mut te.initial).chain(te.runs.iter_mut().map(|r| &mut r.attrs)) {
+            a.bold = Some(st2.bold);
+            a.italic = Some(st2.italic);
+            a.alignment = Some(st2.anchor);
+        }
+    }
+    if let Some(id) = n.attribute("id") {
+        e.common.name = Some(id.to_string());
+    }
+    out.push(e);
 }
 
 /// SVG importieren (Pfade ins Modell).
@@ -312,7 +496,10 @@ pub fn import_svg(data: &[u8], _opts: &ImportOptions) -> Result<ImportResult> {
     let mut ids = std::mem::take(&mut doc.ids);
     let mut warnings = Vec::new();
     let mut tile = 0;
-    let els = svg_group(&mut ids, tree.root(), &mut tile, &mut warnings, 0);
+    let mut els = svg_group(&mut ids, tree.root(), &mut tile, &mut warnings, 0);
+    // Text liegt oben (usvg liefert ohne Textmodul keine Textknoten, die Stapelfolge zu Pfaden fehlt daher) (A)
+    let texts = svg_texts(data, &mut ids, &mut warnings);
+    els.splice(0..0, texts);
     doc.ids = ids;
     push_elements(&mut doc, 0, els);
     warnings.sort();
@@ -459,6 +646,148 @@ fn is_illustrator(text: &str) -> bool {
     text.lines().take(60).any(|l| (l.starts_with("%%Creator:") && l.contains("Illustrator")) || l.starts_with("%%AI") || l.starts_with("%AI") || l.contains("AI3_") || l.contains("AI5_"))
 }
 
+/// PostScript-Zeile in Wörter zerlegen; `( … )` (mit `\\`-Maskierung und Klammerpaaren) bleibt ein Wort.
+fn ps_tokens(line: &str) -> Vec<&str> {
+    let b = line.as_bytes();
+    let mut out = Vec::new();
+    let mut i = 0;
+    while i < b.len() {
+        if b[i].is_ascii_whitespace() {
+            i += 1;
+            continue;
+        }
+        let start = i;
+        if b[i] == b'(' {
+            let mut depth = 0;
+            while i < b.len() {
+                match b[i] {
+                    b'\\' => i += 1,
+                    b'(' => depth += 1,
+                    b')' => {
+                        depth -= 1;
+                        if depth == 0 {
+                            i += 1;
+                            break;
+                        }
+                    }
+                    _ => {}
+                }
+                i += 1;
+            }
+        } else {
+            while i < b.len() && !b[i].is_ascii_whitespace() && (i == start || b[i] != b'(') {
+                i += 1;
+            }
+        }
+        if let Some(t) = line.get(start..i.min(b.len())) {
+            out.push(t);
+        }
+    }
+    out
+}
+
+/// Inhalt einer PostScript-Zeichenkette `( … )`; `\r` bzw. `\n` ⇒ Zeilenumbruch, Oktal `\ddd` ⇒ Latin-1.
+fn ps_string(tok: &str) -> String {
+    let inner = tok.strip_prefix('(').unwrap_or(tok);
+    let inner = inner.strip_suffix(')').unwrap_or(inner);
+    let mut out = String::new();
+    let mut it = inner.chars().peekable();
+    while let Some(c) = it.next() {
+        if c != '\\' {
+            out.push(c);
+            continue;
+        }
+        match it.next() {
+            Some('r' | 'n') => out.push('\n'),
+            Some('t') => out.push('\t'),
+            Some(d @ '0'..='7') => {
+                let mut v = d.to_digit(8).unwrap_or(0);
+                for _ in 0..2 {
+                    if let Some(&n) = it.peek()
+                        && let Some(x) = n.to_digit(8)
+                    {
+                        v = v * 8 + x;
+                        it.next();
+                    }
+                }
+                out.push(char::from_u32(v).unwrap_or('?'));
+            }
+            Some(o) => out.push(o),
+            None => {}
+        }
+    }
+    out
+}
+
+/// Textobjekt einer Illustrator-Datei (`To` … `TO`).
+#[derive(Default)]
+struct AiText {
+    /// 0 Punkttext, 1 Flächentext, 2 Pfadtext.
+    kind: i32,
+    /// Ursprung aus `Tp` (Grundlinie des Punkttexts), Illustrator-Koordinaten.
+    origin: Option<(f64, f64)>,
+    /// Rahmen eines Flächentexts in Dokumentkoordinaten.
+    frame: Option<fp_geom::Rect>,
+    font: String,
+    size: f64,
+    color: Argb,
+    text: String,
+}
+
+impl AiText {
+    /// Schriftfamilie aus dem PostScript-Namen: `_MyriadPro-Regular` ⇒ „Myriad Pro“.
+    fn family(&self) -> (String, String) {
+        let ps = self.font.trim_start_matches('_').to_string();
+        // `ArialMT`, `TimesNewRomanPSMT` ⇒ ohne Herstellerkürzel
+        let base = ps.split('-').next().unwrap_or(&ps).trim_end_matches("MT").trim_end_matches("PS");
+        let mut fam = String::new();
+        let mut prev: Option<char> = None;
+        for c in base.chars() {
+            if c.is_ascii_uppercase() && prev.is_some_and(|p| p.is_ascii_lowercase()) {
+                fam.push(' ');
+            }
+            fam.push(c);
+            prev = Some(c);
+        }
+        if fam.is_empty() {
+            fam = "Arial".into();
+        }
+        (fam, if ps.is_empty() { "ArialMT".into() } else { ps })
+    }
+
+    fn element(mut self, ids: &mut IdGen, map: &dyn Fn(f64, f64) -> Point, warnings: &mut Vec<String>) -> Option<Element> {
+        // Absatzende des letzten Absatzes ist kein Text
+        while self.text.ends_with('\n') {
+            self.text.pop();
+        }
+        if self.text.is_empty() {
+            return None;
+        }
+        let (family, ps) = self.family();
+        let size = if self.size > 0.0 { self.size as f32 } else { 12.0 };
+        let origin = self.origin.map(|(x, y)| map(x, y)).unwrap_or_default();
+        let mut e = Element::new_text(ids, &self.text, &family, size, self.color, origin);
+        if let ElementKind::Text(t) = &mut e.kind {
+            t.initial.ps_font = Some(ps.clone());
+            if let Some(r) = t.runs.first_mut() {
+                r.attrs.font = Some(ps);
+            }
+            match (self.kind, self.frame) {
+                (1, Some(f)) => {
+                    // Flächentext: Rahmen fester Breite wie im Original (Rahmentext, `frame_type` 1)
+                    t.frame_type = Some(1);
+                    t.anchor_rect = Some(f);
+                    t.bounds = f;
+                    t.fill_handles = fp_model::new::default_fill_handles(f);
+                }
+                (2, _) => warnings.push(fp_i18n::t("msg-import-warn-ai-text")),
+                _ => {}
+            }
+        }
+        Some(e)
+    }
+}
+
 /// Illustrator-PostScript (≤ 8) bzw. AI-EPS lesen.
 fn import_ai_text(text: &str, opts: &ImportOptions) -> Result<ImportResult> {
     let bb = bounding_box(text).ok_or_else(|| ImportError::Corrupt(fp_i18n::t("err-import-eps-no-bbox")))?;
@@ -490,13 +819,25 @@ fn import_ai_text(text: &str, opts: &ImportOptions) -> Result<ImportResult> {
     let mut elements: Vec<Element> = Vec::new();
     let mut warnings: Vec<String> = Vec::new();
     let mut in_text = false;
+    let mut txt: Option<AiText> = None;
+    let (mut last_str, mut last_name) = (String::new(), String::new());
     for raw in body.lines() {
         let line = raw.trim();
         if line.starts_with('%') {
             continue;
         }
-        for tok in line.split_whitespace() {
-            if tok.starts_with('(') || tok.starts_with('[') || tok.starts_with('/') || tok.starts_with('{') {
+        for tok in ps_tokens(line) {
+            if tok.starts_with('(') {
+                last_str = ps_string(tok);
+                stack.clear();
+                continue;
+            }
+            if let Some(name) = tok.strip_prefix('/') {
+                last_name = name.to_string();
+                stack.clear();
+                continue;
+            }
+            if tok.starts_with('[') || tok.starts_with('{') {
                 stack.clear();
                 continue;
             }
@@ -507,7 +848,37 @@ fn import_ai_text(text: &str, opts: &ImportOptions) -> Result<ImportResult> {
             let n = stack.len();
             let arg = |k: usize| stack.get(n.wrapping_sub(k)).copied().unwrap_or(0.0);
             match tok {
-                "To" | "TO" => in_text = !in_text || tok == "To",
+                "To" => {
+                    in_text = true;
+                    txt = Some(AiText { kind: if n >= 1 { arg(1) as i32 } else { 0 }, ..AiText::default() });
+                }
+                "TO" => {
+                    in_text = false;
+                    if let Some(t) = txt.take()
+                        && let Some(e) = t.element(&mut ids, &map, &mut warnings)
+                    {
+                        elements.push(e);
+                    }
+                }
+                "Tp" if n >= 7 => {
+                    if let Some(t) = txt.as_mut() {
+                        t.origin = Some((arg(3), arg(2)));
+                    }
+                }
+                "Tf" if n >= 1 => {
+                    if let Some(t) = txt.as_mut() {
+                        t.font = last_name.clone();
+                        t.size = arg(1);
+                    }
+                }
+                "Tx" | "Tj" => {
+                    if let Some(t) = txt.as_mut() {
+                        if t.text.is_empty() {
+                            t.color = fill;
+                        }
+                        t.text.push_str(&last_str);
+                    }
+                }
                 "m" if n >= 2 => b.move_to(map(arg(2), arg(1))),
                 "l" | "L" if n >= 2 => b.line_to(map(arg(2), arg(1))),
                 "c" | "C" if n >= 6 => b.cubic_to(map(arg(6), arg(5)), map(arg(4), arg(3)), map(arg(2), arg(1))),
@@ -524,6 +895,14 @@ fn import_ai_text(text: &str, opts: &ImportOptions) -> Result<ImportResult> {
                     let close = tok.chars().next().is_some_and(|c| c.is_ascii_lowercase());
                     b.flush(close);
                     let contours = std::mem::take(&mut b.contours);
+                    // Rahmen eines Flächentexts (Pfad zwischen `Tp` und `TP`)
+                    if in_text
+                        && let Some(t) = txt.as_mut()
+                        && t.frame.is_none()
+                        && !contours.is_empty()
+                    {
+                        t.frame = Some(fp_model::new::contour_bounds(&contours));
+                    }
                     let do_fill = matches!(tok.chars().next(), Some('f' | 'F' | 'b' | 'B'));
                     let do_stroke = matches!(tok.chars().next(), Some('s' | 'S' | 'b' | 'B'));
                     if !contours.is_empty() && (do_fill || do_stroke) && !in_text {
@@ -552,7 +931,6 @@ fn import_ai_text(text: &str, opts: &ImportOptions) -> Result<ImportResult> {
                 "Xa" if n >= 3 => fill = rgb(arg(3), arg(2), arg(1)),
                 "XA" if n >= 3 => stroke = rgb(arg(3), arg(2), arg(1)),
                 "w" if n >= 1 => width = arg(1),
-                "Tx" | "Tj" | "TX" => warnings.push(fp_i18n::t("msg-import-warn-ai-text")),
                 "XI" | "XG" | "%%BeginRaster" => warnings.push(fp_i18n::t("msg-import-warn-ai-raster")),
                 _ => {}
             }

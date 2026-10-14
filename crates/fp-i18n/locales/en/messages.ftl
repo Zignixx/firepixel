@@ -475,8 +475,8 @@ msg-import-warn-svg-gradient-repeat = repeating SVG gradients are imported witho
 msg-import-warn-svg-gradient-focus = SVG gradients with a moved focal point are imported centered (A)
 msg-import-warn-svg-image = embedded SVG images of this type are not imported
 msg-import-warn-svg-clip = SVG clipping paths, masks and filters are not imported
-msg-import-warn-svg-text = SVG text is not imported (no text module)
-msg-import-warn-ai-text = Illustrator text is not imported
+msg-import-warn-svg-text = SVG text on a path is imported as plain text
+msg-import-warn-ai-text = Illustrator text on a path is imported as plain text
 msg-import-warn-ai-raster = placed images/rasters are not imported
 msg-import-warn-eps-preview = EPS without Illustrator data: only the embedded TIFF preview was imported (no PostScript interpreter)
 # <<< UE-3 Import-Hinweise

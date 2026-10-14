@@ -1973,6 +1973,7 @@ dependencies = [
  "png",
  "serde_json",
  "sqzer-rav1d",
+ "svgtypes",
  "thiserror 2.0.21",
  "tiff",
  "usvg",
