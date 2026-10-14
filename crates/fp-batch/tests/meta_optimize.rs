@@ -259,6 +259,9 @@ fn conversion_keeps_metadata_and_applies_orientation() {
     // EXIF-Leser für Namensbausteine ist eingehängt
     let _ = fp_batch::StepRegistry::global();
     assert_eq!(fp_batch::item::read_exif(&src).and_then(|s| s.model).as_deref(), Some("Model X"));
+    // BATCH-T: `probe` (Liste, Plan, Namen) liest das EXIF mit – vorher blieb `exif` immer leer
+    let info = fp_batch::probe(&src).expect("probe");
+    assert_eq!(info.exif.as_ref().and_then(|s| s.model.clone()).as_deref(), Some("Model X"), "probe liest EXIF");
     for fmt in ["jpeg", "png", "webp"] {
         let rep = run(&recipe(&dir.join(format!("out-{fmt}")), fmt), std::slice::from_ref(&src));
         let t = out_file(&rep, 0);

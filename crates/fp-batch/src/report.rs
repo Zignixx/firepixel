@@ -122,6 +122,14 @@ impl Report {
         self.totals = t;
     }
 
+    /// Laufzeit des ganzen Auftrags in Sekunden (Wanduhr, `started` → `finished`). `totals.ms` ist
+    /// dagegen die Summe der Rechenzeiten je Datei und bei parallelen Läufen viel größer.
+    pub fn wall_seconds(&self) -> Option<f64> {
+        let a = chrono::DateTime::parse_from_rfc3339(&self.started).ok()?;
+        let b = chrono::DateTime::parse_from_rfc3339(&self.finished).ok()?;
+        Some(((b - a).num_milliseconds().max(0)) as f64 / 1000.0)
+    }
+
     /// Exit-Code der Kommandozeile: 0 alles fertig, 1 mindestens ein Fehler, 3 abgebrochen.
     pub fn exit_code(&self) -> u8 {
         if self.cancelled {

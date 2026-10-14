@@ -99,9 +99,10 @@ pub fn dry_run(s: &mut Studio, now: f64) {
     }
 }
 
-/// Startet den Auftrag (Strg+Eingabe, Knopf „Verarbeiten“).
-pub fn start(st: &mut AppState, now: f64) {
-    let Some(s) = st.batch.as_mut() else { return };
+/// Startet den Auftrag (Strg+Eingabe, Knopf „Verarbeiten“, „Fehlgeschlagene erneut“).
+/// Das Studio kommt als Parameter (wie N33): während es sich zeichnet, ist es aus `st.batch`
+/// herausgenommen – über `st.batch` lief der Knopf „Verarbeiten“ ins Leere (BATCH-T).
+pub fn start(s: &mut Studio, now: f64) {
     if blocked(s).is_some() {
         return;
     }
@@ -280,7 +281,7 @@ pub fn show(ui: &mut Ui, st: &mut AppState, s: &mut Studio, rect: Rect, now: f64
         _ => sresp.on_hover_text(t("batch-ui-start.tooltip")),
     };
     if sresp.clicked() {
-        start(st, now);
+        start(s, now);
     }
     let dry_l = t("batch-ui-dry-run");
     let dw = kit::btn_w(ui.ctx(), &dry_l, false);

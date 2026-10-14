@@ -68,7 +68,7 @@ pub fn summary_card(ui: &mut Ui, st: &mut AppState, s: &mut Studio, r: Rect, now
         kit::text_left(&p, r.left(), y + 8.0, r.width(), &txt, theme.bold(type_scale::BODY), c.text);
         y += 20.0;
     }
-    let dur = fp_i18n::tr!("batch-ui-done-duration", s = fp_i18n::fmt_number(tt.ms as f64 / 1000.0, 1, 1));
+    let dur = fp_i18n::tr!("batch-ui-done-duration", s = fp_i18n::fmt_number(rep.wall_seconds().unwrap_or(tt.ms as f64 / 1000.0), 1, 1)); // Wanduhr, nicht die Summe je Datei (BATCH-T)
     kit::text_left(&p, r.left(), y + 8.0, r.width(), &dur, theme.font(type_scale::CAPTION + 0.5), kit::weak(&theme));
     y += 20.0;
     if let Some(dir) = rep.output_dirs.first() {
@@ -109,7 +109,7 @@ pub fn summary_card(ui: &mut Ui, st: &mut AppState, s: &mut Studio, r: Rect, now
                 }
                 2 => {
                     let inbox = s.inbox_sender();
-                    crate::files::pick_save(st, &t("batch-ui-done-save-report"), fp_batch::report::REPORT_FILE, rep.output_dirs.first().map(|p| p.as_path()), move |_st, path| {
+                    crate::files::pick_save(st, &t("batch-ui-done-save-report"), fp_batch::report::REPORT_FILE, rep.output_dirs.first().map(|p| p.as_path()), (&t("batch-ui-filter-report"), &["json"]), move |_st, path| {
                         if let Some(p) = path {
                             inbox.lock().unwrap_or_else(|e| e.into_inner()).push(Inbox::SaveReport(p));
                         }
@@ -122,7 +122,7 @@ pub fn summary_card(ui: &mut Ui, st: &mut AppState, s: &mut Studio, r: Rect, now
                     }
                     s.files_changed();
                     s.show_summary = false;
-                    super::output_bar::start(st, now);
+                    super::output_bar::start(s, now);
                     return;
                 }
                 4 => {

@@ -206,6 +206,17 @@ pub fn probe(path: &Path) -> Result<ItemInfo> {
     } else if info.kind == ItemKind::Image {
         info.frames = 1;
     }
+    // EXIF für Namensbausteine (`{exif-date}`, Kamera …; BATCH-T: wurde nie gelesen, „Fotos nach
+    // Datum umbenennen“ nahm immer das Änderungsdatum). JPEG/PNG/TIFF tragen EXIF am Anfang (Kopf
+    // reicht); WebP/HEIF/AVIF/JXL oft hinter den Bilddaten – dann die ganze Datei.
+    if matches!(info.kind, ItemKind::Image | ItemKind::Animation)
+        && let Some(f) = EXIF_PROBE.get()
+    {
+        info.exif = f(path, &head);
+        if info.exif.is_none() && n == head.len() && matches!(fmt, FileFormat::WebP | FileFormat::Heif | FileFormat::Avif | FileFormat::JpegXl) {
+            info.exif = read_exif(path);
+        }
+    }
     Ok(info)
 }
 

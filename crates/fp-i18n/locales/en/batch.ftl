@@ -210,6 +210,7 @@ batch-ui-redo = Redo in Recipe
 batch-ui-close = Close Batch
 batch-ui-recursive = Include subfolders
 batch-ui-filter-recipes = Batch recipes
+batch-ui-filter-report = Batch report (JSON)
 batch-ui-recipe-loaded = Recipe “{ $name }” loaded
 batch-ui-recipe-load-failed = Cannot load recipe: { $error }
 batch-ui-recipe-saved = Recipe “{ $name }” saved
@@ -249,7 +250,7 @@ batch-ui-files-videos = { $n ->
 batch-ui-file-enabled = Process “{ $name }”
 batch-ui-badge-frames = { $n } fr.
 batch-ui-filter-hint = Filter...
-batch-ui-filter-hint-pro = Filter... (start with / for a regular expression)
+batch-ui-filter-hint-pro = Start with / for a regular expression (e.g. /^IMG_)
 batch-ui-filter-supported = All supported files
 batch-ui-filter-all = All types
 batch-ui-filter-images = Images
@@ -370,8 +371,14 @@ batch-ui-done-errors = Done with errors
 batch-ui-done-cancelled = Cancelled
 batch-ui-done-ok = { $n } done
 batch-ui-done-skipped = { $n } skipped
-batch-ui-done-failed = { $n } errors
-batch-ui-done-counts = { $done } done · { $skipped } skipped · { $failed } errors
+batch-ui-done-failed = { $n ->
+        [one] 1 error
+       *[other] { $n } errors
+    }
+batch-ui-done-counts = { $done } done · { $skipped } skipped · { $failed ->
+        [one] 1 error
+       *[other] { $failed } errors
+    }
 batch-ui-done-duration = Duration { $s } s
 batch-ui-done-open-folder = Open Folder
 batch-ui-done-save-report = Save Report...

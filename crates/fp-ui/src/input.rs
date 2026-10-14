@@ -240,11 +240,17 @@ pub fn handle(ctx: &egui::Context, st: &mut AppState) {
     // Startbildschirm (kein Dokument): Tab und Pfeiltasten bewegen dort nur den Fokus
     // (`welcome::keyboard`), Tab blendet nicht die Bedienfelder aus (CT-3)
     let start_page = st.session.documents().is_empty() && !crate::batch::is_front(st) && crate::welcome::is_visible(ctx, st);
+    // Batch-Studio vorn: Tab ist dort nur Fokusfolge (SPEC-BATCH §2.11), blendet nicht Bedienfelder
+    // und Werkzeugleiste aus (BATCH-T)
+    let batch_front = crate::batch::is_front(st);
     for ev in events {
         let editing = st.session.tool_is_editing_text();
         match ev {
             Event::Key { key, pressed: true, repeat, modifiers, .. } => {
                 if key == Key::Space {
+                    continue;
+                }
+                if batch_front && key == Key::Tab && !(modifiers.ctrl || modifiers.command || modifiers.alt) {
                     continue;
                 }
                 if start_page && !(modifiers.ctrl || modifiers.command || modifiers.alt) && matches!(key, Key::Tab | Key::ArrowDown | Key::ArrowUp | Key::ArrowLeft | Key::ArrowRight) {

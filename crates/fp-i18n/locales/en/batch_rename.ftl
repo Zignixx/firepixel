@@ -176,6 +176,7 @@ batch-rn-part-original = Original name
 batch-rn-part-original-first = First { $n } characters
 batch-rn-part-original-last = Last { $n } characters
 batch-rn-part-original-trim = Original name without number
+batch-rn-part-text = “{ $text }”
 batch-rn-part-text-empty = Text (empty)
 batch-rn-part-counter = Number { $example }
 batch-rn-part-date = Date { $example }

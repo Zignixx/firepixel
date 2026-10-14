@@ -287,7 +287,7 @@ pub fn chip_label(p: &NamePart) -> String {
             OriginalTake::NoTrailingDigits => t("batch-rn-part-original-trim"),
         },
         NamePart::Text { text } if text.is_empty() => t("batch-rn-part-text-empty"),
-        NamePart::Text { text } => format!("„{}“", text.replace(' ', "␣")),
+        NamePart::Text { text } => tr!("batch-rn-part-text", text = text.replace(' ', "␣")),
         NamePart::Counter { start, digits, .. } => tr!(
             "batch-rn-part-counter",
             example = format!("{:0w$}", start, w = (*digits).clamp(1, 9) as usize)

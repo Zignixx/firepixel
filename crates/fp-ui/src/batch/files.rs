@@ -308,12 +308,15 @@ fn filter_row(ui: &mut Ui, s: &mut Studio, r: Rect) {
     let mut child = ui.new_child(egui::UiBuilder::new().max_rect(text_r).layout(egui::Layout::left_to_right(egui::Align::Center)));
     crate::theme::field_widgets(&mut child);
     let pro = s.mode == Mode::Pro;
-    let hint = t(if pro { "batch-ui-filter-hint-pro" } else { "batch-ui-filter-hint" });
+    // Das Feld ist schmal: der Hinweis bleibt kurz, die Regex-Erklärung (Profi) steht im Tooltip
+    // (BATCH-T: „Filtern... (mit / da…“ war abgeschnitten).
+    let hint = t("batch-ui-filter-hint");
     let mut f = s.filter.clone();
     let field = if pro && f.text.is_empty() && !f.regex.is_empty() { &mut f.regex } else { &mut f.text };
     let resp = child.add_sized(text_r.size(), egui::TextEdit::singleline(field).hint_text(hint.clone()).desired_width(text_r.width()));
     resp.widget_info(|| egui::WidgetInfo::text_edit(true, "", &hint, ""));
-    let resp = resp.on_hover_text(t("batch-ui-filter-glob-hint"));
+    let tip = if pro { format!("{}\n{}", t("batch-ui-filter-glob-hint"), t("batch-ui-filter-hint-pro")) } else { t("batch-ui-filter-glob-hint") };
+    let resp = resp.on_hover_text(tip);
     let _ = resp;
     let _ = theme;
     // Typ
@@ -321,7 +324,7 @@ fn filter_row(ui: &mut Ui, s: &mut Studio, r: Rect) {
     let mut kc = ui.new_child(egui::UiBuilder::new().max_rect(kr));
     crate::theme::field_widgets(&mut kc);
     let kind_text = if pro && f.has_size_filter() { format!("{} •", kind_label(f.kind)) } else { kind_label(f.kind) };
-    egui::ComboBox::from_id_salt("fp-batch-filter-kind").selected_text(kind_text).width(kind_w - 8.0).close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside).show_ui(&mut kc, |ui| {
+    egui::ComboBox::from_id_salt("fp-batch-filter-kind").selected_text(kind_text).width(kind_w).truncate().close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside).show_ui(&mut kc, |ui| {
         for k in [None, Some(ItemKind::Image), Some(ItemKind::Animation), Some(ItemKind::Video), Some(ItemKind::Document)] {
             ui.selectable_value(&mut f.kind, k, kind_label(k));
         }
@@ -339,7 +342,7 @@ fn filter_row(ui: &mut Ui, s: &mut Studio, r: Rect) {
     let mut sc = ui.new_child(egui::UiBuilder::new().max_rect(sr));
     crate::theme::field_widgets(&mut sc);
     let mut sort = s.sort;
-    egui::ComboBox::from_id_salt("fp-batch-sort").selected_text(sort.label()).width(sort_w - 8.0).show_ui(&mut sc, |ui| {
+    egui::ComboBox::from_id_salt("fp-batch-sort").selected_text(sort.label()).width(sort_w).truncate().show_ui(&mut sc, |ui| {
         for k in SortKey::ALL {
             ui.selectable_value(&mut sort, k, k.label());
         }

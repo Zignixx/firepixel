@@ -474,7 +474,7 @@ fn running_studio(name: &str) -> (H, PathBuf) {
         });
     }
     h.run_steps(2);
-    batch::output_bar::start(st(&mut h), 0.0);
+    batch::output_bar::start(studio(&mut h), 0.0);
     for _ in 0..300 {
         h.run_steps(1);
         if studio(&mut h).run.as_ref().is_some_and(|r| r.ask.is_some()) {

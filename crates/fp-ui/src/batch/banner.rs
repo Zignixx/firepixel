@@ -69,7 +69,7 @@ fn ask_save_as(st: &mut AppState, s: &Studio) {
         let _ = std::fs::create_dir_all(d);
     }
     let name = format!("{}.{}", sanitize(&s.recipe_title()), fp_batch::recipe::RECIPE_EXTENSION);
-    crate::files::pick_save(st, &t("batch-ui-menu-save-as"), &name, dir.as_deref(), move |_st, path| {
+    crate::files::pick_save(st, &t("batch-ui-menu-save-as"), &name, dir.as_deref(), (&t("batch-ui-filter-recipes"), &["json"]), move |_st, path| {
         if let Some(p) = path {
             inbox.lock().unwrap_or_else(|e| e.into_inner()).push(Inbox::SaveRecipe(p));
         }

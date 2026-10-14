@@ -674,3 +674,87 @@ fn n33_dateien_und_ordner_knoepfe_fuellen_die_liste() {
     settle(&mut h);
     assert_eq!(studio(&mut h).files.len(), 2, "Strg+O");
 }
+
+/// BATCH-T: Ein Mausklick auf „▶ n Dateien verarbeiten“ startet den Auftrag. Vorher holte
+/// `output_bar::start` das Studio aus `st.batch`, das während des Zeichnens herausgenommen ist –
+/// der Knopf meldete „clicked“, aber nichts lief (nur Strg+Eingabe ging).
+#[test]
+fn batcht_knopf_verarbeiten_startet_den_lauf() {
+    let d = dir("batcht-start");
+    let out = d.join("out");
+    std::fs::create_dir_all(&out).unwrap();
+    let mut s0 = state(ThemeKind::Normal);
+    s0.run("file.batchProcess", json!({}));
+    let mut h = harness(s0);
+    let a = png_file(&d, "a.png", 1, 40, 30);
+    {
+        let s = studio(&mut h);
+        s.add_paths(&[a], false);
+        s.edit("o", |r| {
+            r.output.format = "png".into();
+            r.output.target.kind = fp_batch::recipe::TargetKind::Folder;
+            r.output.target.path = Some(out.clone());
+            true
+        });
+    }
+    h.run_steps(3);
+    let label = fp_i18n::tr!("batch-ui-start", n = 1);
+    let r = h.query_by_label(&label).expect("Knopf Verarbeiten").rect();
+    click(&mut h, r.center());
+    h.run_steps(1);
+    assert!(studio(&mut h).running() || studio(&mut h).report.is_some(), "Klick startet den Lauf");
+    for _ in 0..500 {
+        h.run_steps(1);
+        if studio(&mut h).report.is_some() {
+            break;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(10));
+    }
+    assert!(studio(&mut h).report.is_some(), "Lauf fertig mit Bericht");
+    assert!(out.join("a.png").exists(), "Ausgabe geschrieben");
+    // „Bericht speichern…“ behält den gewählten Namen (vorher wurde `.fw.png` angehängt)
+    let kopie = d.join("kopie.json");
+    st(&mut h).file_override = Some(fp_ui::files::FilePickOverride { open: vec![], save: Some(kopie.clone()) });
+    h.run_steps(3);
+    let r = h.query_by_label(&t("batch-ui-done-save-report")).expect("Bericht speichern").rect();
+    click(&mut h, r.center());
+    settle(&mut h);
+    assert!(kopie.exists(), "Bericht unter dem gewählten Namen");
+    assert!(!d.join("kopie.json.fw.png").exists(), "kein .fw.png angehängt");
+}
+
+/// BATCH-T: Tab im Batch-Studio ist nur Fokusfolge – vorher blendete ein Tab ohne Fokus über das
+/// Kürzel „Bedienfelder ausblenden“ die Werkzeugleiste des Hauptfensters aus.
+#[test]
+fn batcht_tab_blendet_nichts_aus() {
+    let mut s0 = state(ThemeKind::Normal);
+    s0.run("file.batchProcess", json!({}));
+    let mut h = harness(s0);
+    h.run_steps(3);
+    assert!(batch::is_front(&h.state().state));
+    assert!(!h.state().state.settings.workspace.panels_hidden);
+    key(&mut h, Key::Tab, Modifiers::NONE);
+    assert!(!h.state().state.settings.workspace.panels_hidden, "Tab blendet im Studio nichts aus");
+}
+
+/// BATCH-T: Die Auswahlfelder „Art“ und „Sortierung“ der Filterzeile bleiben in ihrem Platz – ein
+/// langer Eintrag („FW-PNG/Dokumente“) schob sich vorher über „Hinzugefügt“, das selbst über den
+/// Kartenrand ragte.
+#[test]
+fn batcht_filterzeile_ueberlappt_nicht() {
+    let d = dir("batcht-filter");
+    let mut s0 = state(ThemeKind::Normal);
+    s0.run("file.batchProcess", json!({}));
+    let mut h = harness(s0);
+    let a = png_file(&d, "a.png", 1, 40, 30);
+    studio(&mut h).filter.kind = Some(fp_batch::ItemKind::Document);
+    studio(&mut h).add_paths(&[a], false);
+    h.run_steps(3);
+    let kind = h.query_all_by_role(egui::accesskit::Role::ComboBox).map(|n| n.rect()).collect::<Vec<_>>();
+    let mut row: Vec<Rect> = kind.into_iter().filter(|r| r.top() < 400.0).collect();
+    row.sort_by(|x, y| x.left().total_cmp(&y.left()));
+    assert!(row.len() >= 2, "Art und Sortierung gefunden: {row:?}");
+    assert!(row[0].right() <= row[1].left() + 0.5, "Art überlappt Sortierung: {row:?}");
+    let clear = h.query_by_label(&t("batch-ui-files-clear")).expect("Leeren").rect();
+    assert!(row[1].right() <= clear.right() + 0.5, "Sortierung ragt aus der Karte: {:?} (Leeren {clear:?})", row[1]);
+}

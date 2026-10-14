@@ -709,7 +709,7 @@ fn keyboard(ctx: &egui::Context, st: &mut AppState, now: f64) {
             output_bar::dry_run(s, now);
         }
         if consume(ctx, ctrl, Key::Enter) {
-            output_bar::start(st, now);
+            output_bar::start(s, now);
             return;
         }
         if consume(ctx, ctrl, Key::O) {

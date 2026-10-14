@@ -136,11 +136,6 @@ fn short_time(iso: &str) -> String {
 }
 
 /// Dauer des Laufs in Sekunden (aus `started`/`finished`).
-fn wall_seconds(r: &Report) -> Option<f64> {
-    let a = chrono::DateTime::parse_from_rfc3339(&r.started).ok()?;
-    let b = chrono::DateTime::parse_from_rfc3339(&r.finished).ok()?;
-    Some(((b - a).num_milliseconds().max(0)) as f64 / 1000.0)
-}
 
 fn status_key(s: ItemStatus) -> (&'static str, &'static str) {
     match s {
@@ -256,7 +251,7 @@ pub fn render(report: &Report, out_dir: Option<&Path>, with_images: bool) -> Str
     } else {
         tile(&mut h, "size", fp_i18n::fmt_size(tt.bytes_in), t("batch-html-tile-size-in"));
     }
-    if let Some(s) = wall_seconds(report) {
+    if let Some(s) = report.wall_seconds() {
         tile(&mut h, "time", fp_i18n::tr!("batch-html-seconds", s = fp_i18n::fmt_number(s, 1, 1)), t("batch-html-tile-duration"));
     }
     h.push_str("</section>");

@@ -356,18 +356,20 @@ pub fn pick_one(st: &mut AppState, title: &str, filter: &str, exts: &[&str], don
     });
 }
 
-/// Speicherziel wählen (Dateitypen von „Speichern unter“, ohne Blockieren; mit [`FilePickOverride`]
-/// sofort). `done` läuft nur, wenn ein Ziel gewählt wurde; `cancelled` sonst.
-pub fn pick_save(st: &mut AppState, title: &str, default_name: &str, dir: Option<&Path>, done: impl FnOnce(&mut AppState, Option<PathBuf>) + Send + 'static) {
+/// Speicherziel für eine Nicht-Bild-Datei wählen (Batch-Rezept, Bericht): ein Dateityp `filter`
+/// (Name, Endungen) plus „Alle Dateien“, der Name bleibt wie gewählt (ohne Blockieren; mit
+/// [`FilePickOverride`] sofort). `done` bekommt `None`, wenn abgebrochen wurde.
+/// BATCH-T: vorher mit den Bildtypen von „Speichern unter“ – aus `bericht.json` wurde
+/// `bericht.json.fw.png`.
+pub fn pick_save(st: &mut AppState, title: &str, default_name: &str, dir: Option<&Path>, filter: (&str, &[&str]), done: impl FnOnce(&mut AppState, Option<PathBuf>) + Send + 'static) {
     if let Some(o) = &st.file_override {
-        let p = o.save.clone().map(ensure_fw_png);
+        let p = o.save.clone();
         done(st, p);
         return;
     }
-    let req = save_type_filters(Request::save(title, default_name).dir(dir));
+    let req = Request::save(title, default_name).dir(dir).filter(filter.0, filter.1).filter(fp_i18n::t("ui-filter-all-files"), &["*"]);
     file_dialog::request(st, req, move |st, r| {
-        let p = r.into_iter().next().map(save_target);
-        done(st, p);
+        done(st, r.into_iter().next());
     });
 }
 
