@@ -170,6 +170,10 @@ pub fn help_file() -> PathBuf {
             let Some(x) = d else { break };
             dirs.push(x.clone());
             dirs.push(x.join("docs"));
+            if cfg!(target_os = "macos") {
+                // macOS-App-Paket: Anleitungen in `Firepixel.app/Contents/Resources`
+                dirs.push(x.join("Resources"));
+            }
             d = x.parent().map(Path::to_path_buf);
         }
     }

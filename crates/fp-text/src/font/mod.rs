@@ -103,10 +103,16 @@ impl FontDb {
     /// Standardordner der Systemschriften (siehe Moduldoku).
     pub fn system_dirs() -> Vec<PathBuf> {
         let mut dirs = Vec::new();
-        let windir = std::env::var_os("WINDIR").map(PathBuf::from).unwrap_or_else(|| PathBuf::from(r"C:\Windows"));
-        dirs.push(windir.join("Fonts"));
-        if let Some(l) = std::env::var_os("LOCALAPPDATA") {
-            dirs.push(PathBuf::from(l).join("Microsoft").join("Windows").join("Fonts"));
+        if cfg!(target_os = "macos") {
+            // macOS: System-, Zusatz-, Rechner- und Benutzerschriften (nicht rekursiv gelesen)
+            dirs.extend(["/System/Library/Fonts", "/System/Library/Fonts/Supplemental", "/Library/Fonts"].map(PathBuf::from));
+            dirs.extend(fp_i18n::profile::mac_user_fonts_dir());
+        } else {
+            let windir = std::env::var_os("WINDIR").map(PathBuf::from).unwrap_or_else(|| PathBuf::from(r"C:\Windows"));
+            dirs.push(windir.join("Fonts"));
+            if let Some(l) = std::env::var_os("LOCALAPPDATA") {
+                dirs.push(PathBuf::from(l).join("Microsoft").join("Windows").join("Fonts"));
+            }
         }
         if let Some(extra) = std::env::var_os("FP_FONT_DIRS") {
             dirs.extend(std::env::split_paths(&extra));

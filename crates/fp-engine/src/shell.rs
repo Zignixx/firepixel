@@ -80,7 +80,9 @@ pub fn shell_open(path: &Path, program: Option<&str>) -> Result<bool> {
         _ => {
             #[cfg(windows)]
             let mut c = std::process::Command::new("explorer.exe");
-            #[cfg(not(windows))]
+            #[cfg(target_os = "macos")]
+            let mut c = std::process::Command::new("open");
+            #[cfg(not(any(windows, target_os = "macos")))]
             let mut c = std::process::Command::new("xdg-open");
             c.arg(path);
             c

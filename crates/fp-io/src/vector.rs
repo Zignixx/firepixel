@@ -545,20 +545,20 @@ pub fn import_svg(data: &[u8], _opts: &ImportOptions) -> Result<ImportResult> {
 fn standard_font_file(f: hayro_svg::hayro_interpret::font::StandardFont) -> Option<Vec<u8>> {
     use hayro_svg::hayro_interpret::font::StandardFont as S;
     let names: &[&str] = match f {
-        S::Helvetica => &["arial.ttf", "LiberationSans-Regular.ttf"],
-        S::HelveticaBold => &["arialbd.ttf", "LiberationSans-Bold.ttf"],
-        S::HelveticaOblique => &["ariali.ttf", "LiberationSans-Italic.ttf"],
-        S::HelveticaBoldOblique => &["arialbi.ttf", "LiberationSans-BoldItalic.ttf"],
-        S::Courier => &["cour.ttf", "LiberationMono-Regular.ttf"],
-        S::CourierBold => &["courbd.ttf", "LiberationMono-Bold.ttf"],
-        S::CourierOblique => &["couri.ttf", "LiberationMono-Italic.ttf"],
-        S::CourierBoldOblique => &["courbi.ttf", "LiberationMono-BoldItalic.ttf"],
-        S::TimesRoman => &["times.ttf", "LiberationSerif-Regular.ttf"],
-        S::TimesBold => &["timesbd.ttf", "LiberationSerif-Bold.ttf"],
-        S::TimesItalic => &["timesi.ttf", "LiberationSerif-Italic.ttf"],
-        S::TimesBoldItalic => &["timesbi.ttf", "LiberationSerif-BoldItalic.ttf"],
-        S::Symbol => &["symbol.ttf"],
-        S::ZapfDingBats => &["wingding.ttf"],
+        S::Helvetica => &["arial.ttf", "LiberationSans-Regular.ttf", "Arial.ttf"],
+        S::HelveticaBold => &["arialbd.ttf", "LiberationSans-Bold.ttf", "Arial Bold.ttf"],
+        S::HelveticaOblique => &["ariali.ttf", "LiberationSans-Italic.ttf", "Arial Italic.ttf"],
+        S::HelveticaBoldOblique => &["arialbi.ttf", "LiberationSans-BoldItalic.ttf", "Arial Bold Italic.ttf"],
+        S::Courier => &["cour.ttf", "LiberationMono-Regular.ttf", "Courier New.ttf"],
+        S::CourierBold => &["courbd.ttf", "LiberationMono-Bold.ttf", "Courier New Bold.ttf"],
+        S::CourierOblique => &["couri.ttf", "LiberationMono-Italic.ttf", "Courier New Italic.ttf"],
+        S::CourierBoldOblique => &["courbi.ttf", "LiberationMono-BoldItalic.ttf", "Courier New Bold Italic.ttf"],
+        S::TimesRoman => &["times.ttf", "LiberationSerif-Regular.ttf", "Times New Roman.ttf"],
+        S::TimesBold => &["timesbd.ttf", "LiberationSerif-Bold.ttf", "Times New Roman Bold.ttf"],
+        S::TimesItalic => &["timesi.ttf", "LiberationSerif-Italic.ttf", "Times New Roman Italic.ttf"],
+        S::TimesBoldItalic => &["timesbi.ttf", "LiberationSerif-BoldItalic.ttf", "Times New Roman Bold Italic.ttf"],
+        S::Symbol => &["symbol.ttf", "Symbol.ttf"],
+        S::ZapfDingBats => &["wingding.ttf", "Wingdings.ttf"],
     };
     let mut dirs: Vec<std::path::PathBuf> = Vec::new();
     if let Some(w) = std::env::var_os("WINDIR") {
@@ -568,6 +568,9 @@ fn standard_font_file(f: hayro_svg::hayro_interpret::font::StandardFont) -> Opti
         dirs.push(std::path::PathBuf::from(l).join("Microsoft").join("Windows").join("Fonts"));
     }
     dirs.push("/usr/share/fonts/truetype/liberation".into());
+    // macOS: Arial, Courier New, Times New Roman, Symbol liegen unter Supplemental
+    dirs.push("/System/Library/Fonts/Supplemental".into());
+    dirs.push("/System/Library/Fonts".into());
     names.iter().flat_map(|n| dirs.iter().map(move |d| d.join(n))).find_map(|p| std::fs::read(p).ok())
 }
 
