@@ -162,7 +162,9 @@ Ressourcen (Markdown): `firepixel://docs/agents.md` (diese Datei), `firepixel://
   * Text und Auswahl: `text.detachFromPath` (Text wird wieder Rahmen fester Breite = Breite vor dem Anfügen,
     mittig über den Pfadgrenzen; der Pfad kommt oben in die Ebene, Auswahl danach [Pfad, Text]),
     `select.similar {tolerance?}` (gleiche Füllung, gleicher Strich, gleiche Deckkraft und gleicher Mischmodus),
-    `edit.pasteInside` (danach ist **nichts** ausgewählt, die ID steht im Ergebnis `{"id": …}`),
+    `edit.pasteInside` (das gewählte Objekt wird Vektormaske mit sichtbarer Füllung und Strich; ein einzelner
+    Inhalt wird maskiertes Einzelelement und danach ist **nichts** ausgewählt, mehrere Inhalte bzw. einer mit
+    eigenen Effekten werden eine ausgewählte Gruppe mit Maske; die ID steht im Ergebnis `{"id": …}`),
     `modify.canvas.trimCanvas` (Inhaltsgrenzen geschnitten mit der Leinwand)
   * Web und Vorlagen: `edit.copyHtmlCode {style?, dir?, baseName?, xhtml?}` (`baseName` und `xhtml` gelten nur
     für diesen Export, das Dokument bleibt unverändert; in der Oberfläche führt ein Assistent mit drei Seiten

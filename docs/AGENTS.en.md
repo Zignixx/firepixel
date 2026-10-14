@@ -161,7 +161,9 @@ Resources (Markdown): `firepixel://docs/agents.md` (this file), `firepixel://doc
   * Text and selection: `text.detachFromPath` (the text becomes a fixed-width block again, width = width
     before attaching, centered on the path bounds; the path goes to the top of the layer, selection
     afterwards [path, text]), `select.similar {tolerance?}` (same fill, stroke, opacity and blending mode),
-    `edit.pasteInside` (afterwards **nothing** is selected, the ID is in the result `{"id": …}`),
+    `edit.pasteInside` (the selected object becomes a vector mask with visible fill and stroke; a single
+    content becomes a masked single element and afterwards **nothing** is selected, several contents or one
+    with its own effects become a selected group with mask; the ID is in the result `{"id": …}`),
     `modify.canvas.trimCanvas` (content bounds intersected with the canvas)
   * Web and templates: `edit.copyHtmlCode {style?, dir?, baseName?, xhtml?}` (`baseName` and `xhtml` apply
     to this export only, the document stays unchanged; in the user interface a three-page wizard leads
