@@ -161,7 +161,7 @@ msg-default-document-nameless = Dokument
 msg-tool-roundness = Rundung { $px } px
 
 ## Import-Details (fp-io, $detail in err-import-corrupt/-unsupported/-decode)
-err-import-act-not-image = Photoshop-Paletten (*.act) sind keine Bilder: im Optimieren-Bedienfeld „Palette laden“ bzw. in den Farbfeldern verwenden.
+err-import-act-not-image = ACT-Paletten (*.act, 256 Farben + Anzahl) sind keine Bilder: im Optimieren-Bedienfeld „Palette laden“ bzw. in den Farbfeldern verwenden.
 err-import-apng-no-frame = APNG ohne Einzelbild
 err-import-av1-aborted = AV1-Dekoder abgebrochen (beschädigte Daten)
 err-import-avif-item-missing = AVIF: Item fehlt

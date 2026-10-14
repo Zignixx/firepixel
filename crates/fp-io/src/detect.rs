@@ -32,7 +32,7 @@ pub enum FileFormat {
     JpegXl,
     Qoi,
     Ico,
-    /// Photoshop-Palette (kein Bild-Leser, nur „Palette laden“).
+    /// ACT-Palette (kein Bild-Leser, nur „Palette laden“).
     Act,
     Unknown,
 }
@@ -44,7 +44,7 @@ impl FileFormat {
             FileFormat::FwPng => "FW-PNG",
             FileFormat::Png => "PNG",
             FileFormat::Apng => "APNG",
-            FileFormat::Psd => "Photoshop PSD",
+            FileFormat::Psd => "PSD",
             FileFormat::Gif => "GIF",
             FileFormat::Jpeg => "JPEG",
             FileFormat::Bmp => "BMP",
@@ -61,7 +61,7 @@ impl FileFormat {
             FileFormat::JpegXl => "JPEG XL",
             FileFormat::Qoi => "QOI",
             FileFormat::Ico => "ICO",
-            FileFormat::Act => "Photoshop Palette",
+            FileFormat::Act => "ACT-Palette",
             FileFormat::Unknown => "Unbekannt",
         }
     }
@@ -87,7 +87,7 @@ pub struct ReaderInfo {
 /// Registry in der Reihenfolge des Originals (`@0055f140`) plus Firepixel-Formate am Ende.
 pub const REGISTRY: &[ReaderInfo] = &[
     ReaderInfo { id: "PNG", name: "FW-PNG", pattern: "*.png", extensions: &[".png"], in_file_dialog: true, format: FileFormat::Png },
-    ReaderInfo { id: "PS30", name: "Photoshop PSD", pattern: "*.psd", extensions: &[".psd"], in_file_dialog: true, format: FileFormat::Psd },
+    ReaderInfo { id: "PS30", name: "PSD", pattern: "*.psd", extensions: &[".psd"], in_file_dialog: true, format: FileFormat::Psd },
     ReaderInfo { id: "kMoaCfFormat_GIF", name: "GIF", pattern: "*.gif", extensions: &[".gif"], in_file_dialog: true, format: FileFormat::Gif },
     ReaderInfo { id: "kMoaCfFormat_JPEG", name: "JPEG", pattern: "*.jpg;*.jpe;*.jpeg", extensions: &[".jpg", ".jpe", ".jpeg"], in_file_dialog: true, format: FileFormat::Jpeg },
     ReaderInfo { id: "kMoaCfFormat_BMP", name: "BMP", pattern: "*.bmp;*.dib;*.rle", extensions: &[".bmp", ".dib", ".rle"], in_file_dialog: true, format: FileFormat::Bmp },
@@ -103,7 +103,7 @@ pub const REGISTRY: &[ReaderInfo] = &[
     ReaderInfo { id: "image/qoi", name: "QOI", pattern: "*.qoi", extensions: &[".qoi"], in_file_dialog: true, format: FileFormat::Qoi },
     ReaderInfo { id: "image/x-icon", name: "ICO", pattern: "*.ico;*.cur", extensions: &[".ico", ".cur"], in_file_dialog: true, format: FileFormat::Ico },
     ReaderInfo { id: "image/svg+xml", name: "SVG", pattern: "*.svg;*.svgz", extensions: &[".svg", ".svgz"], in_file_dialog: true, format: FileFormat::Svg },
-    ReaderInfo { id: "kMoaCfFormat_PhotoshopPalette", name: "Photoshop Palette", pattern: "*.act", extensions: &[".act"], in_file_dialog: false, format: FileFormat::Act },
+    ReaderInfo { id: "kMoaCfFormat_PhotoshopPalette", name: "ACT-Palette", pattern: "*.act", extensions: &[".act"], in_file_dialog: false, format: FileFormat::Act },
 ];
 
 /// Format über die Endung (erster Leser mit passender Endung, Registrierungsreihenfolge).
@@ -282,7 +282,7 @@ mod tests {
     #[test]
     fn filter_and_paste_order() {
         let f = open_filter(true, true);
-        assert!(f.starts_with("FW-PNG (*.png)|*.png|Photoshop PSD (*.psd)|*.psd|"));
+        assert!(f.starts_with("FW-PNG (*.png)|*.png|PSD (*.psd)|*.psd|"));
         assert!(f.ends_with("Alle Dateien (*.*)|*.*||"));
         assert!(!f.contains("*.act"));
         let o = paste_order("Illustrator (AI3) PNG (kMoaCfFormat_PNG)", &["PNG", "PS30"]);

@@ -115,7 +115,7 @@ fn titles_filters_and_order_per_kind() {
     let n = names(&r);
     let pos = |s: &str| n.iter().position(|x| x.starts_with(s)).unwrap_or_else(|| panic!("{s} fehlt in {n:?}"));
     assert_eq!(n[0], "FW-PNG (*.png)");
-    let order = ["FW-PNG", "Photoshop PSD", "GIF", "JPEG (", "WBMP", "TIFF", "Targa", "BMP", "Illustrator", "EPS"];
+    let order = ["FW-PNG", "PSD (", "GIF", "JPEG (", "WBMP", "TIFF", "Targa", "BMP", "Illustrator", "EPS"];
     for w in order.windows(2) {
         assert!(pos(w[0]) < pos(w[1]), "{} vor {} erwartet: {n:?}", w[0], w[1]);
     }
@@ -140,7 +140,7 @@ fn titles_filters_and_order_per_kind() {
     assert_eq!((s.kind, s.title.as_str(), s.file_name.as_deref()), (Kind::Save, "Speichern unter", Some("a.fw.png")));
     let sn = names(&s);
     // EB-2: „Reduziertes PNG“ an seiner Stelle aus dem Original (nach JPEG, vor PSD)
-    assert_eq!(&sn[..8], &["FW-PNG (*.png)", "BMP (*.bmp)", "GIF (*.gif)", "JPEG (*.jpg; *.jpeg; *.jpe)", "Reduziertes PNG (*.png)", "Photoshop PSD (*.psd)", "TIFF (*.tif; *.tiff)", "WBMP (*.wbmp)"]);
+    assert_eq!(&sn[..8], &["FW-PNG (*.png)", "BMP (*.bmp)", "GIF (*.gif)", "JPEG (*.jpg; *.jpeg; *.jpe)", "Reduziertes PNG (*.png)", "PSD (*.psd)", "TIFF (*.tif; *.tiff)", "WBMP (*.wbmp)"]);
     // D05 Als Vorlage speichern: im Original der Standardtitel „Speichern unter“, nur FW-PNG
     let v = DialogKind::SaveAsTemplate.request("a.fw.png");
     assert_eq!((v.kind, v.title.as_str()), (Kind::Save, "Speichern unter"));

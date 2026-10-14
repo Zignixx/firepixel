@@ -472,7 +472,7 @@ Lesart: Rohschlüssel und unmarkierte Texte zählen verschiedene Texte; Überlä
 | dlg:voreinstellungen | fensterrand | [!! Allgemein ····!!] | 1024x768@150 | [-19,49–67,60] Fenster [0,0–683,512] |
 | dlg:voreinstellungen | fensterrand | [!! Bearbeiten ····!!] | 1024x768@150 | [-19,70–71,80] Fenster [0,0–683,512] |
 | dlg:voreinstellungen | fensterrand | [!! Hilfslinien und Raster ········!!] | 1024x768@150 | [-19,91–133,101] Fenster [0,0–683,512] |
-| dlg:voreinstellungen | fensterrand | [!! Photoshop-Import/Öffnen ··········!!] | 1024x768@150 | [-19,131–165,144] Fenster [0,0–683,512] |
+| dlg:voreinstellungen | fensterrand | [!! PSD-Import/Öffnen ··········!!] | 1024x768@150 | [-19,131–165,144] Fenster [0,0–683,512] |
 | dlg:voreinstellungen | fensterrand | [!! Starten und Bearbeiten ········!!] | 1024x768@150 | [-19,175–143,185] Fenster [0,0–683,512] |
 | dlg:voreinstellungen | fensterrand | [!! Text ··!!] | 1024x768@150 | [-19,112–31,122] Fenster [0,0–683,512] |
 | dlg:voreinstellungen | fensterrand | [!! Voreinstellungen ·······!!] | 1024x768@150 | [-28,11–105,23] Fenster [0,0–683,512] |
@@ -480,7 +480,7 @@ Lesart: Rohschlüssel und unmarkierte Texte zählen verschiedene Texte; Überlä
 | dlg:voreinstellungen:0 | fensterrand | [!! Allgemein ····!!] | 1024x768@150 | [-19,49–67,60] Fenster [0,0–683,512] |
 | dlg:voreinstellungen:0 | fensterrand | [!! Bearbeiten ····!!] | 1024x768@150 | [-19,70–71,80] Fenster [0,0–683,512] |
 | dlg:voreinstellungen:0 | fensterrand | [!! Hilfslinien und Raster ········!!] | 1024x768@150 | [-19,91–133,101] Fenster [0,0–683,512] |
-| dlg:voreinstellungen:0 | fensterrand | [!! Photoshop-Import/Öffnen ··········!!] | 1024x768@150 | [-19,131–165,144] Fenster [0,0–683,512] |
+| dlg:voreinstellungen:0 | fensterrand | [!! PSD-Import/Öffnen ··········!!] | 1024x768@150 | [-19,131–165,144] Fenster [0,0–683,512] |
 | dlg:voreinstellungen:0 | fensterrand | [!! Starten und Bearbeiten ········!!] | 1024x768@150 | [-19,175–143,185] Fenster [0,0–683,512] |
 | dlg:voreinstellungen:0 | fensterrand | [!! Text ··!!] | 1024x768@150 | [-19,112–31,122] Fenster [0,0–683,512] |
 | dlg:voreinstellungen:0 | fensterrand | [!! Voreinstellungen ·······!!] | 1024x768@150 | [-28,11–105,23] Fenster [0,0–683,512] |
@@ -488,7 +488,7 @@ Lesart: Rohschlüssel und unmarkierte Texte zählen verschiedene Texte; Überlä
 | dlg:voreinstellungen:1 | fensterrand | [!! Allgemein ····!!] | 1024x768@150 | [-19,49–67,60] Fenster [0,0–683,512] |
 | dlg:voreinstellungen:1 | fensterrand | [!! Bearbeiten ····!!] | 1024x768@150 | [-19,70–71,80] Fenster [0,0–683,512] |
 | dlg:voreinstellungen:1 | fensterrand | [!! Hilfslinien und Raster ········!!] | 1024x768@150 | [-19,91–133,101] Fenster [0,0–683,512] |
-| dlg:voreinstellungen:1 | fensterrand | [!! Photoshop-Import/Öffnen ··········!!] | 1024x768@150 | [-19,131–165,144] Fenster [0,0–683,512] |
+| dlg:voreinstellungen:1 | fensterrand | [!! PSD-Import/Öffnen ··········!!] | 1024x768@150 | [-19,131–165,144] Fenster [0,0–683,512] |
 | dlg:voreinstellungen:1 | fensterrand | [!! Starten und Bearbeiten ········!!] | 1024x768@150 | [-19,175–143,185] Fenster [0,0–683,512] |
 | dlg:voreinstellungen:1 | fensterrand | [!! Text ··!!] | 1024x768@150 | [-19,112–31,122] Fenster [0,0–683,512] |
 | dlg:voreinstellungen:1 | fensterrand | [!! Voreinstellungen ·······!!] | 1024x768@150 | [-28,11–105,23] Fenster [0,0–683,512] |
@@ -497,14 +497,14 @@ Lesart: Rohschlüssel und unmarkierte Texte zählen verschiedene Texte; Überlä
 | dlg:voreinstellungen:2 | fensterrand | [!! Allgemein ····!!] | 1024x768@150 | [-19,49–67,60] Fenster [0,0–683,512] |
 | dlg:voreinstellungen:2 | fensterrand | [!! Bearbeiten ····!!] | 1024x768@150 | [-19,70–71,80] Fenster [0,0–683,512] |
 | dlg:voreinstellungen:2 | fensterrand | [!! Hilfslinien und Raster ········!!] | 1024x768@150 | [-19,91–133,101] Fenster [0,0–683,512] |
-| dlg:voreinstellungen:2 | fensterrand | [!! Photoshop-Import/Öffnen ··········!!] | 1024x768@150 | [-19,131–165,144] Fenster [0,0–683,512] |
+| dlg:voreinstellungen:2 | fensterrand | [!! PSD-Import/Öffnen ··········!!] | 1024x768@150 | [-19,131–165,144] Fenster [0,0–683,512] |
 | dlg:voreinstellungen:2 | fensterrand | [!! Starten und Bearbeiten ········!!] | 1024x768@150 | [-19,175–143,185] Fenster [0,0–683,512] |
 | dlg:voreinstellungen:2 | fensterrand | [!! Text ··!!] | 1024x768@150 | [-19,112–31,122] Fenster [0,0–683,512] |
 | dlg:voreinstellungen:2 | fensterrand | [!! Zusatzmodule ·····!!] | 1024x768@150 | [-19,154–90,164] Fenster [0,0–683,512] |
 | dlg:voreinstellungen:3 | fensterrand | [!! Allgemein ····!!] | 1024x768@150 | [-19,49–67,60] Fenster [0,0–683,512] |
 | dlg:voreinstellungen:3 | fensterrand | [!! Bearbeiten ····!!] | 1024x768@150 | [-19,70–71,80] Fenster [0,0–683,512] |
 | dlg:voreinstellungen:3 | fensterrand | [!! Hilfslinien und Raster ········!!] | 1024x768@150 | [-19,91–133,101] Fenster [0,0–683,512] |
-| dlg:voreinstellungen:3 | fensterrand | [!! Photoshop-Import/Öffnen ··········!!] | 1024x768@150 | [-19,131–165,144] Fenster [0,0–683,512] |
+| dlg:voreinstellungen:3 | fensterrand | [!! PSD-Import/Öffnen ··········!!] | 1024x768@150 | [-19,131–165,144] Fenster [0,0–683,512] |
 | dlg:voreinstellungen:3 | fensterrand | [!! Starten und Bearbeiten ········!!] | 1024x768@150 | [-19,175–143,185] Fenster [0,0–683,512] |
 | dlg:voreinstellungen:3 | fensterrand | [!! Text ··!!] | 1024x768@150 | [-19,112–31,122] Fenster [0,0–683,512] |
 | dlg:voreinstellungen:3 | fensterrand | [!! Voreinstellungen ·······!!] | 1024x768@150 | [-28,11–105,23] Fenster [0,0–683,512] |
@@ -512,7 +512,7 @@ Lesart: Rohschlüssel und unmarkierte Texte zählen verschiedene Texte; Überlä
 | dlg:voreinstellungen:4 | fensterrand | [!! Allgemein ····!!] | 1024x768@150 | [-19,49–67,60] Fenster [0,0–683,512] |
 | dlg:voreinstellungen:4 | fensterrand | [!! Bearbeiten ····!!] | 1024x768@150 | [-19,70–71,80] Fenster [0,0–683,512] |
 | dlg:voreinstellungen:4 | fensterrand | [!! Hilfslinien und Raster ········!!] | 1024x768@150 | [-19,91–133,101] Fenster [0,0–683,512] |
-| dlg:voreinstellungen:4 | fensterrand | [!! Photoshop-Import/Öffnen ··········!!] | 1024x768@150 | [-19,131–165,144] Fenster [0,0–683,512] |
+| dlg:voreinstellungen:4 | fensterrand | [!! PSD-Import/Öffnen ··········!!] | 1024x768@150 | [-19,131–165,144] Fenster [0,0–683,512] |
 | dlg:voreinstellungen:4 | fensterrand | [!! Starten und Bearbeiten ········!!] | 1024x768@150 | [-19,175–143,185] Fenster [0,0–683,512] |
 | dlg:voreinstellungen:4 | fensterrand | [!! Text ··!!] | 1024x768@150 | [-19,112–31,122] Fenster [0,0–683,512] |
 | dlg:voreinstellungen:4 | fensterrand | [!! Voreinstellungen ·······!!] | 1024x768@150 | [-28,11–105,23] Fenster [0,0–683,512] |
@@ -521,7 +521,7 @@ Lesart: Rohschlüssel und unmarkierte Texte zählen verschiedene Texte; Überlä
 | dlg:voreinstellungen:5 | fensterrand | [!! Bearbeiten ····!!] | 1024x768@150 | [-19,70–71,80] Fenster [0,0–683,512] |
 | dlg:voreinstellungen:5 | fensterrand | [!! Hilfslinien und Raster ········!!] | 1024x768@150 | [-19,91–133,101] Fenster [0,0–683,512] |
 | dlg:voreinstellungen:5 | fensterrand | [!! Hinweis: Firepixel bettet keine Texturen oder Muster des Originals ein; Ordner werden nur zur Laufzeit gelesen. ·······································!!] | 1024x768@150 | [189,300–693,326] Fenster [0,0–683,512] |
-| dlg:voreinstellungen:5 | fensterrand | [!! Photoshop-Import/Öffnen ··········!!] | 1024x768@150 | [-19,131–165,144] Fenster [0,0–683,512] |
+| dlg:voreinstellungen:5 | fensterrand | [!! PSD-Import/Öffnen ··········!!] | 1024x768@150 | [-19,131–165,144] Fenster [0,0–683,512] |
 | dlg:voreinstellungen:5 | fensterrand | [!! Starten und Bearbeiten ········!!] | 1024x768@150 | [-19,175–143,185] Fenster [0,0–683,512] |
 | dlg:voreinstellungen:5 | fensterrand | [!! Text ··!!] | 1024x768@150 | [-19,112–31,122] Fenster [0,0–683,512] |
 | dlg:voreinstellungen:5 | fensterrand | [!! Voreinstellungen ·······!!] | 1024x768@150 | [-28,11–105,23] Fenster [0,0–683,512] |
@@ -529,7 +529,7 @@ Lesart: Rohschlüssel und unmarkierte Texte zählen verschiedene Texte; Überlä
 | dlg:voreinstellungen:6 | fensterrand | [!! Allgemein ····!!] | 1024x768@150 | [-19,49–67,60] Fenster [0,0–683,512] |
 | dlg:voreinstellungen:6 | fensterrand | [!! Bearbeiten ····!!] | 1024x768@150 | [-19,70–71,80] Fenster [0,0–683,512] |
 | dlg:voreinstellungen:6 | fensterrand | [!! Hilfslinien und Raster ········!!] | 1024x768@150 | [-19,91–133,101] Fenster [0,0–683,512] |
-| dlg:voreinstellungen:6 | fensterrand | [!! Photoshop-Import/Öffnen ··········!!] | 1024x768@150 | [-19,131–165,144] Fenster [0,0–683,512] |
+| dlg:voreinstellungen:6 | fensterrand | [!! PSD-Import/Öffnen ··········!!] | 1024x768@150 | [-19,131–165,144] Fenster [0,0–683,512] |
 | dlg:voreinstellungen:6 | fensterrand | [!! Starten und Bearbeiten ········!!] | 1024x768@150 | [-19,175–143,185] Fenster [0,0–683,512] |
 | dlg:voreinstellungen:6 | fensterrand | [!! Text ··!!] | 1024x768@150 | [-19,112–31,122] Fenster [0,0–683,512] |
 | dlg:voreinstellungen:6 | fensterrand | [!! Voreinstellungen ·······!!] | 1024x768@150 | [-28,11–105,23] Fenster [0,0–683,512] |

@@ -259,6 +259,14 @@ def main():
 
     dump("commands.json", {"commands": cmds, "zoom_steps": zoom, "panels": panels})
     dump("shortcuts.json", {"sets": sets, "order": SETS})
+    # Beschreibende Texte ohne fremde Produktnamen (F12, 14.10.2026); Schluessel bleiben wie im Original
+    for p in prefs:
+        for k in ("category", "effect", "dialog_page"):
+            v = p.get(k)
+            if isinstance(v, str):
+                v = v.replace("Photoshop-Zusatzmodulordner", "Zusatzmodulordner (8BF)")
+                v = v.replace("Photoshop-Zusatzmodule", "Zusatzmodule (8BF)").replace("Photoshop-", "PSD-")
+                p[k] = v
     dump("prefs.json", {"prefs": prefs})
     print("Befehle:", len(cmds), "davon Hauptmenue:", sum(1 for c in cmds if c["main_menu"]))
     print("Sets:", {k: (len(v["menu"]), len(v["tools"])) for k, v in sets.items()})

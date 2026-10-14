@@ -18,7 +18,7 @@ Commit: siehe `git log --grep "DLG-4"` (ein Commit, Präfix „DLG-4:“).
   - Ohne eigene Befehle erscheint nur eine Meldung mit dem Titel „Firepixel“: „Befehle werden dem Verlauf-Bedienfeld entnommen. Zurzeit sind dort keine gespeicherten Befehle vorhanden.“ Auf Englisch: „Commands are taken from the History panel. There are currently no saved commands.“ Enter und Esc schließen sie.
   - Mit eigenen Befehlen erscheint die Verwaltungsliste wie bisher, aber nur mit diesen Befehlen.
 - **D16 Voreinstellungen**
-  - Kategorien wie im Original: „Bearbeitung“, „Photoshop-Datei importieren“, „Starten und Bearbeiten“ vor „Zusatzmodule“. Englisch bleibt bei den Namen des englischen Originals (Edit, Photoshop Import/Open, Launch and Edit, Plug-ins).
+  - Kategorien wie im Original: „Bearbeitung“, „PSD-Datei importieren“, „Starten und Bearbeiten“ vor „Zusatzmodule“. Englisch bleibt bei den Namen des englischen Originals (Edit, PSD Import/Open, Launch and Edit, Plug-ins).
   - Die Seite „Allgemein“ ist in Gruppen geteilt, mit Überschrift und Trennlinie; die Beschriftungen stehen rechtsbündig vor der Steuerspalte:
     - „Dokumentoptionen:“ mit Startseite und Pinselstrichen/Effekten.
     - „Maximale Anzahl Rückgängig-Schritte:“ mit dem Hinweis **„Änderungen werden erst nach Neustart aktiv“**.

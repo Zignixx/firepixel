@@ -38,7 +38,7 @@ Der ausführliche Testleitfaden für alles bis 20:24 liegt weiterhin in `docs\TE
 | Was | So kommst du hin |
 |---|---|
 | Exportieren als ein Ablauf (Ordner, Name, 10 Arten, Unterpaneele, Optionen…) | Datei ▸ Exportieren… |
-| Optionen: PDF (inkl. Kennwortschutz), CSS-Sprites, Photoshop, HTML-Einrichtung | Datei ▸ Exportieren… ▸ Art wählen ▸ Optionen… |
+| Optionen: PDF (inkl. Kennwortschutz), CSS-Sprites, PSD, HTML-Einrichtung | Datei ▸ Exportieren… ▸ Art wählen ▸ Optionen… |
 | Exportassistent (Zurück/Weiter, endet in der Bildvorschau) | Datei ▸ Exportassistent… oder Optimieren-Bedienfeld ▸ Exportassistent… |
 | HTML-Einrichtung, HTML-Code kopieren, HTML aktualisieren | Datei ▸ HTML-Einrichtung… ; Bearbeiten ▸ HTML-Code kopieren… ; Datei ▸ HTML aktualisieren… |
 | Reduziertes PNG | Datei ▸ Speichern unter… ▸ Dateityp „Reduziertes PNG“ |

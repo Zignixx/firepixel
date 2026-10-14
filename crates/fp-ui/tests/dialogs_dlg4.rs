@@ -160,7 +160,7 @@ fn d25_message_without_own_commands_list_with_own() {
 #[test]
 fn d16_categories_groups_and_help() {
     let names: Vec<String> = CATEGORIES.iter().map(|k| fp_i18n::t(k)).collect();
-    assert_eq!(names, ["Allgemein", "Bearbeitung", "Hilfslinien und Raster", "Text", "Photoshop-Datei importieren", "Starten und Bearbeiten", "Zusatzmodule"]);
+    assert_eq!(names, ["Allgemein", "Bearbeitung", "Hilfslinien und Raster", "Text", "PSD-Datei importieren", "Starten und Bearbeiten", "Zusatzmodule"]);
     assert_eq!(general_group_titles(), ["Speichern", "Benutzeroberfläche", "Standardfarben"]);
     let mut h = harness();
     run(&mut h, "edit.preferences");
@@ -186,7 +186,7 @@ fn d16_categories_groups_and_help() {
     fp_i18n::set_language("en");
     let en: Vec<String> = CATEGORIES.iter().map(|k| fp_i18n::t(k)).collect();
     fp_i18n::set_language("de");
-    assert_eq!(en, ["General", "Edit", "Guides and Grids", "Type", "Photoshop Import/Open", "Launch and Edit", "Plug-ins"]);
+    assert_eq!(en, ["General", "Edit", "Guides and Grids", "Type", "PSD Import/Open", "Launch and Edit", "Plug-ins"]);
 }
 
 // ------------------------------------------------------------------ D17 Tastaturkurzbefehle

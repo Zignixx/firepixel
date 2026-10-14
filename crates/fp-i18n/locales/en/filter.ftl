@@ -65,7 +65,7 @@ effect-inner-shadow = Inner Shadow
 effect-inner-glow = Inner Glow
 effect-solid-shadow = Solid Shadow
 effect-color-fill = Color Fill
-effect-photoshop-live = Photoshop Live Effects
+effect-photoshop-live = PSD Live Effects
 effect-generic = Effect
 
 ## Live-Filter (Effekte): Gruppen im Menü „+“

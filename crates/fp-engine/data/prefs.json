@@ -493,7 +493,7 @@
 "type": "bool",
 "default": false,
 "category": "Dialog: Zusatzmodule",
-"effect": "zusaetzlicher Photoshop-Zusatzmodulordner aktiv",
+"effect": "zusaetzlicher Zusatzmodulordner (8BF) aktiv",
 "dialog_page": "Zusatzmodule"
 },
 {
@@ -1500,9 +1500,9 @@
 "key": "UseFWFilters",
 "type": "bool",
 "default": false,
-"category": "Dialog: Photoshop-Datei importieren/oeffnen",
+"category": "Dialog: PSD-Datei importieren/oeffnen",
 "effect": "native Filter statt PS-Live-Effekte",
-"dialog_page": "Photoshop-Datei importieren/oeffnen"
+"dialog_page": "PSD-Datei importieren/oeffnen"
 },
 {
 "key": "PathToolPrecision",
@@ -3020,55 +3020,55 @@
 "key": "PSTextEditable",
 "type": "bool",
 "default": true,
-"category": "Dialog: Photoshop-Datei importieren/oeffnen",
+"category": "Dialog: PSD-Datei importieren/oeffnen",
 "effect": "PSD-Text bearbeitbar",
-"dialog_page": "Photoshop-Datei importieren/oeffnen"
+"dialog_page": "PSD-Datei importieren/oeffnen"
 },
 {
 "key": "PSImageLayersEditable",
 "type": "bool",
 "default": true,
-"category": "Dialog: Photoshop-Datei importieren/oeffnen",
+"category": "Dialog: PSD-Datei importieren/oeffnen",
 "effect": "PSD-Bildebenen: Bitmaps mit bearbeitbaren Effekten",
-"dialog_page": "Photoshop-Datei importieren/oeffnen"
+"dialog_page": "PSD-Datei importieren/oeffnen"
 },
 {
 "key": "PSShapeLayersEditable",
 "type": "bool",
 "default": true,
-"category": "Dialog: Photoshop-Datei importieren/oeffnen",
+"category": "Dialog: PSD-Datei importieren/oeffnen",
 "effect": "PSD-Formebenen als bearbeitbare Pfade",
-"dialog_page": "Photoshop-Datei importieren/oeffnen"
+"dialog_page": "PSD-Datei importieren/oeffnen"
 },
 {
 "key": "PSShapeLayerEffectsEditable",
 "type": "bool",
 "default": true,
-"category": "Dialog: Photoshop-Datei importieren/oeffnen",
+"category": "Dialog: PSD-Datei importieren/oeffnen",
 "effect": "PSD-Formebenen reduziert mit bearbeitbaren Effekten",
-"dialog_page": "Photoshop-Datei importieren/oeffnen"
+"dialog_page": "PSD-Datei importieren/oeffnen"
 },
 {
 "key": "PSClippingMasksEditable",
 "type": "bool",
 "default": true,
-"category": "Dialog: Photoshop-Datei importieren/oeffnen",
+"category": "Dialog: PSD-Datei importieren/oeffnen",
 "effect": "Beschneidungsmasken bearbeitbar (Dialog invertiert)",
-"dialog_page": "Photoshop-Datei importieren/oeffnen"
+"dialog_page": "PSD-Datei importieren/oeffnen"
 },
 {
 "key": "PSRetainAdjustmentLayersAppearance",
 "type": "bool",
 "default": true,
-"category": "Dialog: Photoshop-Datei importieren/oeffnen",
+"category": "Dialog: PSD-Datei importieren/oeffnen",
 "effect": "Erscheinungsbild der Einstellungsebenen beibehalten",
-"dialog_page": "Photoshop-Datei importieren/oeffnen"
+"dialog_page": "PSD-Datei importieren/oeffnen"
 },
 {
 "key": "PSSmartImport",
 "type": "bool",
 "default": true,
-"category": "Photoshop-Import",
+"category": "PSD-Import",
 "effect": "PSD: intelligenter Import (A)",
 "dialog_page": null
 },
@@ -3076,7 +3076,7 @@
 "key": "PSIncludeGuides",
 "type": "bool",
 "default": true,
-"category": "Photoshop-Import",
+"category": "PSD-Import",
 "effect": "PSD: Hilfslinien uebernehmen",
 "dialog_page": null
 },
@@ -3084,7 +3084,7 @@
 "key": "PSShowPreviewOnOpen",
 "type": "bool",
 "default": false,
-"category": "Photoshop-Import",
+"category": "PSD-Import",
 "effect": "PSD-Oeffnen: Vorschau",
 "dialog_page": null
 },
@@ -3092,7 +3092,7 @@
 "key": "PSShowPreviewOnImport",
 "type": "bool",
 "default": false,
-"category": "Photoshop-Import",
+"category": "PSD-Import",
 "effect": "PSD-Import: Vorschau",
 "dialog_page": null
 },
@@ -3100,7 +3100,7 @@
 "key": "PSLayersAsFrames",
 "type": "bool",
 "default": false,
-"category": "Photoshop-Import",
+"category": "PSD-Import",
 "effect": "PSD-Ebenen als Status",
 "dialog_page": null
 },
@@ -3108,7 +3108,7 @@
 "key": "PSImportDialogSettings",
 "type": "integer",
 "default": 0,
-"category": "Photoshop-Import",
+"category": "PSD-Import",
 "effect": null,
 "dialog_page": null
 },
@@ -3116,7 +3116,7 @@
 "key": "PSOpenDialogSettings",
 "type": "integer",
 "default": 0,
-"category": "Photoshop-Import",
+"category": "PSD-Import",
 "effect": null,
 "dialog_page": null
 },
@@ -3212,9 +3212,9 @@
 "key": "PSSharedLayers",
 "type": "bool",
 "default": false,
-"category": "Dialog: Photoshop-Datei importieren/oeffnen",
+"category": "Dialog: PSD-Datei importieren/oeffnen",
 "effect": "Ebene statusuebergreifend freigeben",
-"dialog_page": "Photoshop-Datei importieren/oeffnen"
+"dialog_page": "PSD-Datei importieren/oeffnen"
 },
 {
 "key": "SymbolEditor_Pos",
@@ -4420,17 +4420,17 @@
 "key": "ShowPSImportDialog",
 "type": "bool",
 "default": true,
-"category": "Dialog: Photoshop-Datei importieren/oeffnen",
-"effect": "Photoshop-Import-Dialog zeigen",
-"dialog_page": "Photoshop-Datei importieren/oeffnen"
+"category": "Dialog: PSD-Datei importieren/oeffnen",
+"effect": "PSD-Import-Dialog zeigen",
+"dialog_page": "PSD-Datei importieren/oeffnen"
 },
 {
 "key": "ShowPSOpenDialog",
 "type": "bool",
 "default": true,
-"category": "Dialog: Photoshop-Datei importieren/oeffnen",
-"effect": "Photoshop-Oeffnen-Dialog zeigen",
-"dialog_page": "Photoshop-Datei importieren/oeffnen"
+"category": "Dialog: PSD-Datei importieren/oeffnen",
+"effect": "PSD-Oeffnen-Dialog zeigen",
+"dialog_page": "PSD-Datei importieren/oeffnen"
 },
 {
 "key": "PasteTextOnlyFromOtherApps",
@@ -4805,7 +4805,7 @@
 "type": "string",
 "default": "",
 "category": "Dialog: Zusatzmodule",
-"effect": "Pfad Photoshop-Zusatzmodule",
+"effect": "Pfad Zusatzmodule (8BF)",
 "dialog_page": "Zusatzmodule"
 },
 {

@@ -198,7 +198,7 @@ pub const SAVE_TYPES: &[(&str, &[&str], SaveKind)] = &[
     ("GIF (*.gif)", &["gif"], SaveKind::Export("gif")),
     ("JPEG (*.jpg; *.jpeg; *.jpe)", &["jpg", "jpeg", "jpe"], SaveKind::Export("jpeg")),
     ("", &["png"], SaveKind::FlatPng),
-    ("Photoshop PSD (*.psd)", &["psd"], SaveKind::Style("psd")),
+    ("PSD (*.psd)", &["psd"], SaveKind::Style("psd")),
     ("TIFF (*.tif; *.tiff)", &["tif", "tiff"], SaveKind::Export("tiff")),
     ("WBMP (*.wbmp)", &["wbmp"], SaveKind::Export("wbmp")),
     ("WebP (*.webp)", &["webp"], SaveKind::Export("webp")),

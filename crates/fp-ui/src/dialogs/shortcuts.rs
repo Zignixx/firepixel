@@ -109,6 +109,12 @@ pub fn set_names() -> Vec<String> {
     v
 }
 
+/// Angezeigter Name eines Satzes. Der mitgelieferte Satz mit der internen Kennung „Photoshop“ heißt in der
+/// Oberfläche neutral (Nutzerwunsch 14.10.2026, F12); Kennung, Voreinstellung und Skript-Argument bleiben.
+pub fn set_label(name: &str) -> String {
+    if name == "Photoshop" && fp_engine::shortcuts::builtin_set(name).is_some() { t("dlg-sc-set-image-editing") } else { name.to_string() }
+}
+
 /// Zeilen eines Satzes.
 pub fn rows(st: &AppState, set: &ShortcutSet, section: usize, filter: &str) -> Vec<Row> {
     let f = filter.to_lowercase();
@@ -200,7 +206,7 @@ fn captured_key(ui: &egui::Ui) -> Option<Shortcut> {
 
 /// HTML-Übersicht eines Satzes (Exportieren).
 pub fn set_html(st: &AppState, set: &ShortcutSet) -> String {
-    let heading = fp_i18n::tr!("dlg-sc-html-title", name = set.name.as_str()).replace('&', "&amp;").replace('<', "&lt;");
+    let heading = fp_i18n::tr!("dlg-sc-html-title", name = set_label(&set.name).as_str()).replace('&', "&amp;").replace('<', "&lt;");
     let mut s = format!("<!DOCTYPE html>\n<html><head><meta charset=\"utf-8\"><title>{heading}</title></head><body>\n<h1>{heading}</h1>\n");
     for (title, sec) in [(t("dlg-sc-menu-commands"), 0), (t("dlg-sc-tools"), 1)] {
         s.push_str(&format!("<h2>{title}</h2>\n<table border=\"1\" cellpadding=\"3\">\n"));
@@ -252,7 +258,8 @@ pub fn show(ctx: &egui::Context, st: &mut AppState) {
         if !names.iter().any(|n| n.eq_ignore_ascii_case(&d.work.name)) {
             names.push(d.work.name.clone());
         }
-        let refs: Vec<&str> = names.iter().map(|s| s.as_str()).collect();
+        let labels: Vec<String> = names.iter().map(|s| set_label(s)).collect();
+        let refs: Vec<&str> = labels.iter().map(|s| s.as_str()).collect();
         let cur = names.iter().position(|n| n.eq_ignore_ascii_case(&d.work.name));
         if let Some(i) = fields::combo(ui, "sc-set", Rect::from_min_size(o + vec2(116.0 + dx, 0.0), vec2(190.0, 20.0)), &refs, cur, true) {
             switch_to = Some(names[i].clone());
@@ -263,13 +270,13 @@ pub fn show(ctx: &egui::Context, st: &mut AppState) {
             let br = Rect::from_min_size(o + vec2(bx0 + k as f32 * (bw + 4.0), 0.0), vec2(bw, 20.0));
             if fields::button(ui, ("sc-btn", k), br, label, *en) {
                 match k {
-                    0 => d.name_edit = Some((false, fp_i18n::tr!("dlg-sc-copy-name", name = d.work.name.as_str()))),
+                    0 => d.name_edit = Some((false, fp_i18n::tr!("dlg-sc-copy-name", name = set_label(&d.work.name).as_str()))),
                     1 => d.name_edit = Some((true, d.work.name.clone())),
                     2 => {
                         let html = set_html(st, &d.work);
                         let html_filter = t("dlg-sc-html-filter");
                         // Dateidialog ohne Blockieren: die Meldung landet im Dialog, sobald gewählt
-                        super::panel_menus::pick_save(st, &t("dlg-sc-export-set"), &format!("{}.html", d.work.name), &[(html_filter.as_str(), &["html", "htm"])], move |st, p| {
+                        super::panel_menus::pick_save(st, &t("dlg-sc-export-set"), &format!("{}.html", set_label(&d.work.name)), &[(html_filter.as_str(), &["html", "htm"])], move |st, p| {
                             let m = match std::fs::write(&p, html) {
                                 Ok(()) => fp_i18n::tr!("dlg-export-file-done", path = p.display().to_string()),
                                 Err(e) => fp_i18n::tr!("dlg-export-failed", error = e.to_string()),

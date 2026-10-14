@@ -161,7 +161,7 @@ msg-default-document-nameless = Document
 msg-tool-roundness = Roundness { $px } px
 
 ## Import-Details (fp-io, $detail in err-import-corrupt/-unsupported/-decode)
-err-import-act-not-image = Photoshop palettes (*.act) are not images: use them via “Load Palette” in the Optimize panel or in the Swatches panel.
+err-import-act-not-image = ACT palettes (*.act, 256 colors + count) are not images: use them via “Load Palette” in the Optimize panel or in the Swatches panel.
 err-import-apng-no-frame = APNG without frame
 err-import-av1-aborted = AV1 decoder aborted (damaged data)
 err-import-avif-item-missing = AVIF: item missing
