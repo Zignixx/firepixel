@@ -27,7 +27,7 @@ Ergebnisse B-2 (14.10.): `docs\berichte\b2.md` (gleich 3, Unterschied 10, X 23).
 1. **BA-002** Fang beim Verschieben und beim Stift: Kante/Mitte bei 4–5 px, Stiftpunkte an Kanten – Z. 117 (FV-14) – `tools\snap.rs` – M – **Ergebnis B-2:** X (GUI-Sitzung gesperrt)
 1. **BA-003** Alt-Ziehen aus mittleren und End-Eckpunkten (nur Ausgangshenkel?) – Z. 118 (FV-14) – `tools (Stift)` – S – **Ergebnis B-2:** X (GUI-Sitzung gesperrt)
 1. **BA-004** Feldtext beim Klick auf ein anderes Objekt: Übernahme an R1 oder R2 (Ablauf A–E in berichte\au3.md) – Z. 175 (FV-9) – `inspector\fields.rs, inspector\mod.rs, canvas\mod.rs` – M – **Ergebnis B-2:** X (GUI-Sitzung gesperrt)
-1. **BA-005** Verbinden mit nur einem offenen Pfad (= schließen): Name bleibt? – Z. 958 (F4) – `fp-engine` – S – **Ergebnis B-2:** Unterschied: Original Name nach Verbinden immer null → B3
+1. **BA-005** Verbinden mit nur einem offenen Pfad (= schließen): Name bleibt? – Z. 958 (F4) – `fp-engine` – S – **Ergebnis B-2:** Unterschied: Original Name nach Verbinden immer null → B3 – **Ergebnis B-3:** erledigt (B-3, 220459c) – Verbinden ohne Namen, geschlossener Einzelpfad kein Fehler
 1. **BA-006** Inspektor eines maskierten Bilds: Werte der Maskengruppe oder des Bildes; Freigabe der Pfadknöpfe im Werkzeug-Inspektor – Z. 965 (FIX-G5/FIX-R1) – `inspector` – S – **Ergebnis B-2:** X (GUI-Sitzung gesperrt)
 
 ### M-B · Bitmap-Testdokument (B1 320,200,420,300; radierte Bitmap aus FV-11; Pinselzüge nach `re\24`; Auswahlbefehle NACHPRUEFUNG §3) (8)
@@ -38,7 +38,7 @@ Ergebnisse B-2 (14.10.): `docs\berichte\b2.md` (gleich 3, Unterschied 10, X 23).
 1. **BA-010** Pinsel: Umschalten auf natürliche Engine durch deren Werte; „Tintenmenge“ = Deckkraft (re\24 Nr. 12) – Z. 130 (PINSEL-1) – `dialogs (Pinsel)` – S – **Ergebnis B-2:** X (GUI-Sitzung gesperrt)
 1. **BA-011** Auswahlrahmen erweitern/begrenzen: nutzt das Original die Morphologie aus re\05 §2.2 (+6 bei 5 px)? (NACHPRUEFUNG §3) – Z. 315 (PM-6) – `fp-engine Auswahl` – S – **Ergebnis B-2:** gleich (Morphologie +1/+6/+11, runde Ecken); Rand 5 px 2 px schmaler → B3-Hinweis; getPixelMask fehlt → B5
 1. **BA-012** Bewegungsunschärfe Winkel 0 an B1 (Umfang 20): 300 oder 301 links – Z. 362 (DLG-6) – `blur.rs` – S – **Ergebnis B-2:** X (JSF im Original wirkungslos, Dialog nur GUI)
-1. **BA-013** Menüfilter (z. B. Umkehren) an Bitmap mit durchsichtigem Rand: Zuschnitt auf Alpha > 0? – Z. 363 (DLG-6) – `trim_growth` – S – **Ergebnis B-2:** Filterfrage X; Unterschied: Rastern beschneidet auf Alpha > 0 → B3
+1. **BA-013** Menüfilter (z. B. Umkehren) an Bitmap mit durchsichtigem Rand: Zuschnitt auf Alpha > 0? – Z. 363 (DLG-6) – `trim_growth` – S – **Ergebnis B-2:** Filterfrage X; Unterschied: Rastern beschneidet auf Alpha > 0 → B3 – **Ergebnis B-3:** Rasterteil erledigt (B-3, 220459c) – Zuschnitt auf Alpha > 0
 1. **BA-014** Filter auf Vektor: wann konvertiert das Original, wie viele Verlaufsschritte – Z. 957 (F4) – `fp-ui Filterablauf` – S – **Ergebnis B-2:** Unterschied (JSF): Filter rastert Vektor ohne Rückfrage → B5; Menüablauf X
 
 ### M-C · Text und Effekte: `fx_text.fw.png` (FX-4) und Text an Pfad (TX2/P2, TX3 aus Datei, M1) (3)
@@ -77,17 +77,19 @@ Ergebnisse B-2 (14.10.): `docs\berichte\b2.md` (gleich 3, Unterschied 10, X 23).
 
 ## B3 – Leinwand/Werkzeuge
 
-1. **BA-037** KI-Objektauswahl: Vorschau der Objektmaske beim Überfahren (optional, Bonus) – Z. 31 (KI) – `canvas\*, fp_engine::commands::ai` – M
-1. **BA-038** Esc mitten im Pinselzug wie im Original (Zug behalten, Zeiger, Schritt „Bitmapmodus beenden“) – Z. 128 (PINSEL-1) – `BrushTool, canvas\paint_preview.rs` – S
-1. **BA-039** Pinsel-Restabweichungen: Vorgabe nach Neustart, Werkzeugwerte merken, Vorschau in Stapelfolge mit Deckkraft/Mischmodus, Bézier-Anpassung, gesperrte Ebene, +1/+1-Versatz (Druck/Geschwindigkeit der Maus nicht machbar) – Z. 129 (PINSEL-1) – `BrushTool, paint_preview.rs` – L
-1. **BA-040** Weichzeichnen/Schärfen: Gauß r > 200 auf Alpha-Rechteck beschränken, Wachstum je Durchgang am Text; FX-3-Gegenprüfung – Z. 372 (FX-4/FX-T) – `compose.rs, blur.rs` – M
-1. **BA-041** Stempel: Pixelwerte im Zug (Spitzenrasterung wie tool-retouch/13–14) – Z. 817 (PAR-F) – `Stempel-Werkzeug` – M
-1. **BA-042** Pipette 3×3/5×5: Original nimmt linkes oberes Pixel – Nutzerentscheidung, ob nachbauen – Z. 838 (PAR-F) – `Pipette` – S
-1. **BA-043** Verlaufs-/Mustergriffe auf der Leinwand ziehbar machen (ein Schritt) – Z. 841 (PAR-X-INSP-1) – `canvas\mod.rs fill_handles` – M
-1. **BA-044** Innen einfügen: Pfad mit Vektormaske statt Maskengruppe (Objektmodell); „Als Maske einfügen“ Auswahl danach – Z. 951 (M1/F4) – `fp-engine commands\edit.rs` – L
-1. **BA-045** Gamma 1.8: Schachbrett und Ansichten 2-/4-fach mit aufhellen – Z. 953 (F3) – `fp-ui canvas\render.rs` – S
-1. **BA-046** Symbolbearbeitung im selben Dokument statt eigener Ansicht (Verlauf, Ebenen, Skript-API, Abblenden) – Z. 970 (F11) – `fp-engine commands\symbol_edit.rs, fp-ui canvas` – L
-1. **BA-047** Farbwahl A3 (Leinwand-Pipette transparent → Weiß) und A4 (Werkzeugleiste Verlauf/Muster) bewusst entscheiden – Z. 241 (FARB-1b) – `inspector\popups.rs, tools_panel.rs` – S
+Ergebnisse B-3 (14.10.): `docs\berichte\b3.md` (erledigt 7 inkl. BA-005/BA-013, teilweise 1, Entscheidung 2, verschoben 3), Commit `220459c`.
+
+1. **BA-037** KI-Objektauswahl: Vorschau der Objektmaske beim Überfahren (optional, Bonus) – Z. 31 (KI) – `canvas\*, fp_engine::commands::ai` – M – **Ergebnis B-3:** verschoben – Bonus, ohne Modelle nicht prüfbar
+1. **BA-038** Esc mitten im Pinselzug wie im Original (Zug behalten, Zeiger, Schritt „Bitmapmodus beenden“) – Z. 128 (PINSEL-1) – `BrushTool, canvas\paint_preview.rs` – S – **Ergebnis B-3:** war schon erledigt (67db4dd), Tests vorhanden; NACHPRUEFUNG §1 anpassen
+1. **BA-039** Pinsel-Restabweichungen: Vorgabe nach Neustart, Werkzeugwerte merken, Vorschau in Stapelfolge mit Deckkraft/Mischmodus, Bézier-Anpassung, gesperrte Ebene, +1/+1-Versatz (Druck/Geschwindigkeit der Maus nicht machbar) – Z. 129 (PINSEL-1) – `BrushTool, paint_preview.rs` – L – **Ergebnis B-3:** teilweise: Neustart-Vorgabe und +1/+1 schon erledigt; Vorschau-Stapelfolge verschoben (L), Bézier und gesperrte Ebene wartet auf Messung (B-2), Druck X
+1. **BA-040** Weichzeichnen/Schärfen: Gauß r > 200 auf Alpha-Rechteck beschränken, Wachstum je Durchgang am Text; FX-3-Gegenprüfung – Z. 372 (FX-4/FX-T) – `compose.rs, blur.rs` – M – **Ergebnis B-3:** war schon erledigt (FX-3); Regressionstest b3_fx_text
+1. **BA-041** Stempel: Pixelwerte im Zug (Spitzenrasterung wie tool-retouch/13–14) – Z. 817 (PAR-F) – `Stempel-Werkzeug` – M – **Ergebnis B-3:** erledigt – 4 Pixel > 16 (max 18) gegen das Original, Test b3_stamp
+1. **BA-042** Pipette 3×3/5×5: Original nimmt linkes oberes Pixel – Nutzerentscheidung, ob nachbauen – Z. 838 (PAR-F) – `Pipette` – S – **Ergebnis B-3:** wartet auf Nutzerentscheidung (Vorschlag: Mittelwert behalten)
+1. **BA-043** Verlaufs-/Mustergriffe auf der Leinwand ziehbar machen (ein Schritt) – Z. 841 (PAR-X-INSP-1) – `canvas\mod.rs fill_handles` – M – **Ergebnis B-3:** erledigt (220459c) – Griffe mit dem Zeiger ziehbar, ein Schritt; runder Griff: ungemessen
+1. **BA-044** Innen einfügen: Pfad mit Vektormaske statt Maskengruppe (Objektmodell); „Als Maske einfügen“ Auswahl danach – Z. 951 (M1/F4) – `fp-engine commands\edit.rs` – L – **Ergebnis B-3:** verschoben (L)
+1. **BA-045** Gamma 1.8: Schachbrett und Ansichten 2-/4-fach mit aufhellen – Z. 953 (F3) – `fp-ui canvas\render.rs` – S – **Ergebnis B-3:** erledigt (220459c) – Schachbrett und 2-/4-fach mit Gamma
+1. **BA-046** Symbolbearbeitung im selben Dokument statt eigener Ansicht (Verlauf, Ebenen, Skript-API, Abblenden) – Z. 970 (F11) – `fp-engine commands\symbol_edit.rs, fp-ui canvas` – L – **Ergebnis B-3:** verschoben (L)
+1. **BA-047** Farbwahl A3 (Leinwand-Pipette transparent → Weiß) und A4 (Werkzeugleiste Verlauf/Muster) bewusst entscheiden – Z. 241 (FARB-1b) – `inspector\popups.rs, tools_panel.rs` – S – **Ergebnis B-3:** wartet auf Nutzerentscheidung (Vorschlag A3 behalten, A4 nach Messung)
 
 ## B4 – Dialoge/Datei-Dialoge/Gestaltung
 
