@@ -254,7 +254,7 @@ Danach geht es weiter, wenn der Nutzer „weiter“ sagt. **Reihenfolge nach der
 
 | Paket | Entscheidung |
 |---|---|
-| EB-2 (P-EB1) | **Nur „Reduziertes PNG“ bauen.** SWF und Illustrator 8 fallen weg: Flash ist tot, AI8 stammt von 1998, und SVG-Export gibt es schon. Die Spezifikation `re\20-ai8-swf.md` bleibt für später erhalten. |
+| EB-2 (P-EB1) | **Nur „Reduziertes PNG“ bauen.** SWF und AI 8 fallen weg: SWF ist tot, AI8 stammt von 1998, und SVG-Export gibt es schon. Die Spezifikation `re\20-ai8-swf.md` bleibt für später erhalten. |
 | HTML-Teil | Für HTML-Einrichtung (D13), HTML-Code kopieren (D15), HTML aktualisieren (D09), Export „HTML und Bilder“ und Exportassistent (D11) gilt: **funktioniert, aber kein Feld-für-Feld-Abgleich** mit dem Original. |
 | CI-1 (P-CI) | → **Später**, zusammen mit den Builds für macOS und Linux; sinnvoll erst, wenn es ein GitHub-Repository gibt. |
 | AU-3 (P-AU1) | Nur F7 (Feldübernahme beim Objektwechsel) und die vertauschte JSF-Textrichtung. **Weg fallen:** `pixelRect` bei Text, `setActiveViewScale` in der Brücke, Hotspot-Typ „slice“ und JSF-Doppelaufruf. |

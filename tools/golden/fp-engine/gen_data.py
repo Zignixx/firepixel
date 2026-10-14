@@ -266,6 +266,10 @@ def main():
             if isinstance(v, str):
                 v = v.replace("Photoshop-Zusatzmodulordner", "Zusatzmodulordner (8BF)")
                 v = v.replace("Photoshop-Zusatzmodule", "Zusatzmodule (8BF)").replace("Photoshop-", "PSD-")
+                # F14: weitere Produktnamen desselben Herstellers/Vorgaengers
+                v = v.replace("CS-Extensions (CSXS/Flash-Panels)", "CS-Erweiterungen (CSXS/SWF-Bedienfelder)")
+                v = v.replace("Flash-Bedienfelder", "SWF-Bedienfelder").replace("Director-Export", "DIR-Export")
+                v = v.replace("FreeHand-8-kompatibel", "FH8-kompatibel")
                 p[k] = v
     dump("prefs.json", {"prefs": prefs})
     print("Befehle:", len(cmds), "davon Hauptmenue:", sum(1 for c in cmds if c["main_menu"]))

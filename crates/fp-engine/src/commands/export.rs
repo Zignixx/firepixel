@@ -723,7 +723,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
     r.add(
         cmd("file.exportWizard")
             .requires(DOC)
-            .opt_default("destination", ParamKind::Enum { values: vec!["web".into(), "image".into(), "dreamweaver".into()] }, json!("web"), "Ziel (Web, Bildbearbeitung, Dreamweaver)")
+            .opt_default("destination", ParamKind::Enum { values: vec!["web".into(), "image".into(), "dreamweaver".into()] }, json!("web"), "Ziel (Web, Bildbearbeitung, HTML-Editor)")
             .opt("targetSize", ParamKind::Integer { min: Some(1), max: None }, "Zielgröße in Bytes (Auf Größe optimieren)")
             .opt_default("apply", ParamKind::Bool, json!(true), "Empfehlung in die Seite übernehmen")
             .opt("path", ParamKind::Path, "gleich exportieren (Zieldatei)")

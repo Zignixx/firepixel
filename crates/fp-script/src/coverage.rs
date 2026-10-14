@@ -113,12 +113,12 @@ pub const PROPS: &[(&str, &[&str])] = &[
 
 /// Bewusst nicht umgesetzte Member mit Begründung (Klasse, Member oder `*`, Grund).
 pub const EXCEPTIONS: &[(&str, &str, &str)] = &[
-    ("Firepixel", "exportSWF", "Flash-Export (SWF) – Format veraltet, kein Exporter in Firepixel"),
+    ("Firepixel", "exportSWF", "SWF-Export – Format veraltet, kein Exporter in Firepixel"),
     ("Firepixel", "exportFXG", "FXG-Export (Flex) – Format veraltet, kein Exporter in Firepixel"),
     ("Firepixel", "exportMXMLAndImages", "MXML-Export (Flex) – Format veraltet, kein Exporter in Firepixel"),
-    ("Firepixel", "exportDirectorAsSlices", "Director-Export – Format veraltet, kein Exporter in Firepixel"),
-    ("Firepixel", "exportDirectorAsLayers", "Director-Export – Format veraltet, kein Exporter in Firepixel"),
-    ("Firepixel", "exportIllustrator", "Export als Illustrator 8 – kein Exporter in Firepixel (SVG/PDF über exportPDF bzw. file.export)"),
+    ("Firepixel", "exportDirectorAsSlices", "DIR-Export (Multimedia) – Format veraltet, kein Exporter in Firepixel"),
+    ("Firepixel", "exportDirectorAsLayers", "DIR-Export (Multimedia) – Format veraltet, kein Exporter in Firepixel"),
+    ("Firepixel", "exportIllustrator", "Export als AI 8 – kein Exporter in Firepixel (SVG/PDF über exportPDF bzw. file.export)"),
     ("Style", "clipCopySmallPreviewImage", "Stil-Vorschaubild in die Zwischenablage – Firepixel erzeugt keine Stil-Vorschaubilder"),
     ("Style", "clipCopyLargePreviewImage", "Stil-Vorschaubild in die Zwischenablage – Firepixel erzeugt keine Stil-Vorschaubilder"),
     ("BehaviorInfo", "*", "Objekt der HTML-Exportvorlagen des Originals; Firepixel exportiert HTML/Verhalten nativ (fp-export) und führt diese Vorlagen nicht aus"),

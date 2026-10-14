@@ -109,10 +109,17 @@ pub fn set_names() -> Vec<String> {
     v
 }
 
-/// Angezeigter Name eines Satzes. Der mitgelieferte Satz mit der internen Kennung „Photoshop“ heißt in der
-/// Oberfläche neutral (Nutzerwunsch 14.10.2026, F12); Kennung, Voreinstellung und Skript-Argument bleiben.
+/// Angezeigter Name eines Satzes. Die mitgelieferten Sätze mit fremden Produktnamen als interner Kennung heißen
+/// in der Oberfläche neutral (Nutzerwunsch 14.10.2026, F12/F14); Kennung, Voreinstellung `CurrentShortcutSet`,
+/// `shortcuts.json` und Skript-Argument bleiben, gespeicherte Einstellungen laufen also unverändert weiter.
 pub fn set_label(name: &str) -> String {
-    if name == "Photoshop" && fp_engine::shortcuts::builtin_set(name).is_some() { t("dlg-sc-set-image-editing") } else { name.to_string() }
+    let key = match name {
+        "Photoshop" => "dlg-sc-set-image-editing",
+        "Illustrator" => "dlg-sc-set-vector-drawing",
+        "FreeHand" => "dlg-sc-set-classic-vector",
+        _ => return name.to_string(),
+    };
+    if fp_engine::shortcuts::builtin_set(name).is_some() { t(key) } else { name.to_string() }
 }
 
 /// Zeilen eines Satzes.

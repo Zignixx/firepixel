@@ -5,7 +5,7 @@
 "type": "bool",
 "default": false,
 "category": "Sonstiges",
-"effect": "CS-Extensions (CSXS/Flash-Panels) abschalten",
+"effect": "CS-Erweiterungen (CSXS/SWF-Bedienfelder) abschalten",
 "dialog_page": null
 },
 {
@@ -1797,7 +1797,7 @@
 "type": "bool",
 "default": false,
 "category": "Sonstiges",
-"effect": "Director-Export schwarzweiss (A)",
+"effect": "DIR-Export schwarzweiss (A)",
 "dialog_page": null
 },
 {
@@ -2973,7 +2973,7 @@
 "type": "bool",
 "default": true,
 "category": "Sonstiges",
-"effect": "FreeHand-8-kompatibel kopieren",
+"effect": "FH8-kompatibel kopieren",
 "dialog_page": null
 },
 {
@@ -5146,7 +5146,7 @@
 "48604": "\\Special Characters.swf"
 },
 "category": "Export",
-"effect": "Zuordnung Bedienfeld-ID -> SWF-Datei (Flash-Bedienfelder)",
+"effect": "Zuordnung Bedienfeld-ID -> SWF-Datei (SWF-Bedienfelder)",
 "dialog_page": null
 },
 {

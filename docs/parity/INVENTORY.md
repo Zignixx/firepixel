@@ -1051,7 +1051,7 @@ Dialog, Felder, Grenzen, Merken, Verhalten; Ergebnisbilder werden aus RE-FX übe
 | 18 | `undo` | Verlaufsschritte | r | J | H | 0 |
 
 ### 38 · `panel-info-align-path` – Info, Ausrichten, Pfad
-**Test:** T04. **Bef.:** PARITAET_B ❔ Ausrichten/Farbpalette, „Flash-Bedienfelder ohne ≡“.
+**Test:** T04. **Bef.:** PARITAET_B ❔ Ausrichten/Farbpalette, „SWF-Bedienfelder ohne ≡“.
 
 | Nr | Kürzel | Prüfpunkt | Zust. | Orig. | FP | Bilder |
 |---|---|---|---|---|---|---:|

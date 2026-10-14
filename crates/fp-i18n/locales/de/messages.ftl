@@ -206,7 +206,7 @@ err-import-tiff-short = TIFF-Daten zu kurz
 err-import-tile-no-image = Kachel ohne Bild
 err-import-unknown-header-size = unbekannte Kopfgröße
 err-import-webp-no-frame = WebP ohne Einzelbild
-err-import-eps-no-ai-data = EPS ohne Illustrator-Daten kann nicht gelesen werden: Das Original rastert sie mit seinem PostScript-Modul (MPS.dll), das in Firepixel nicht enthalten ist. Bitte als Illustrator-8-EPS, SVG oder Pixelbild speichern.
+err-import-eps-no-ai-data = EPS ohne AI-Daten kann nicht gelesen werden: Das Original rastert sie mit seinem PostScript-Modul (MPS.dll), das in Firepixel nicht enthalten ist. Bitte als AI-8-kompatibles EPS, SVG oder Pixelbild speichern.
 err-import-avif-kind = AVIF: Bildart „{ $kind }“ wird nicht unterstützt
 err-import-bmp-compression = BMP-Kompression { $comp } mit { $bpp } Bit wird nicht unterstützt
 err-import-clipboard-format = Zwischenablageformat „{ $name }“ wird nicht unterstützt
@@ -476,9 +476,9 @@ msg-import-warn-svg-gradient-focus = SVG-Verläufe mit verschobenem Brennpunkt w
 msg-import-warn-svg-image = eingebettete SVG-Bilder dieses Typs werden nicht übernommen
 msg-import-warn-svg-clip = SVG-Schnittpfade, Masken und Filter werden nicht übernommen
 msg-import-warn-svg-text = SVG-Text auf Pfad wird als einfacher Text übernommen
-msg-import-warn-ai-text = Illustrator-Text auf Pfad wird als einfacher Text übernommen
+msg-import-warn-ai-text = AI-Text auf Pfad wird als einfacher Text übernommen
 msg-import-warn-ai-raster = platzierte Bilder/Raster werden nicht übernommen
-msg-import-warn-eps-preview = EPS ohne Illustrator-Daten: nur die eingebettete TIFF-Vorschau wurde übernommen (kein PostScript-Interpreter)
+msg-import-warn-eps-preview = EPS ohne AI-Daten: nur die eingebettete TIFF-Vorschau wurde übernommen (kein PostScript-Interpreter)
 # <<< UE-3 Import-Hinweise
 
 # >>> UE-3 Detailtexte

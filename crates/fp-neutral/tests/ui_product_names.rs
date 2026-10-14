@@ -1,10 +1,12 @@
-//! Sichtbare Texte ohne fremde Produktnamen (Nutzerwunsch 14.10.2026, F12): Die Werte der `.ftl`-Dateien
-//! (alle Sprachen) und das Handbuch/AGENTS (DE+EN) nennen kein Bildbearbeitungsprodukt beim Namen. Interne
-//! Kennungen (ftl-Schlüssel, Voreinstellungsnamen, Formatkennungen im Code) sind davon ausgenommen.
+//! Sichtbare Texte ohne fremde Produktnamen (Nutzerwunsch 14.10.2026, F12, erweitert F14): Die Werte der
+//! `.ftl`-Dateien (alle Sprachen) und das Handbuch/AGENTS (DE+EN) nennen kein Grafik-, Web- oder Multimedia-
+//! Produkt beim Namen (auch nicht die des Vorgängers). Interne Kennungen (ftl-Schlüssel, Voreinstellungsnamen,
+//! Formatkennungen im Code) sind davon ausgenommen. Verglichen wird wortweise, damit z. B. „Directory“ nicht
+//! als „Director“ zählt.
 
 use std::path::{Path, PathBuf};
 
-const BLOCKED: &[&str] = &["photoshop"];
+const BLOCKED: &[&str] = &["photoshop", "illustrator", "freehand", "macromedia", "dreamweaver", "flash", "director", "shockwave", "fontographer", "authorware"];
 
 fn root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..").join("..")
@@ -24,7 +26,7 @@ fn ftl_files(dir: &Path, out: &mut Vec<PathBuf>) {
 
 fn hits(text: &str) -> bool {
     let l = text.to_lowercase();
-    BLOCKED.iter().any(|b| l.contains(b))
+    l.split(|c: char| !c.is_alphanumeric()).any(|w| BLOCKED.contains(&w))
 }
 
 #[test]

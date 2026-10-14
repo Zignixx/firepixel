@@ -546,7 +546,7 @@ Diese Punkte gehen noch nicht oder nur teilweise. Bitte nicht als neuen Fehler m
 - **Bedienfeldmenüs ≡:** Verlauf, Stile, Status, Seiten, Ebenen und Optimieren weichen ab (MN-3).
 - **Filterdialoge merken sich keine Werte;** Bewegungsunschärfe und Radiales Weichzeichnen wirken falsch, der Sättigungsschieber hat eine falsche Kennlinie (P-DLG5/6).
 - **Seltene Dialoge** D26–D50, z. B. Numerisch transformieren ohne Objektgröße und „Pfad in Auswahlrahmen“ ohne Dialog (P-DLG7–9).
-- **Speichern unter ▸ Reduziertes PNG** fehlt (EB-2, kommt als Erstes nach der Pause). SWF und Illustrator 8 sind gestrichen.
+- **Speichern unter ▸ Reduziertes PNG** fehlt (EB-2, kommt als Erstes nach der Pause). SWF und AI 8 sind gestrichen.
 - **Neues Symbol** (*Modifizieren ▸ Symbol*) und gespeicherte Befehle (DLG-4).
 - **Abgeschnittene Texte:** 70 bekannte Stellen; Menüs und Tooltips sind noch ungeprüft (RAND-2).
 - **Dialoge und Startbildschirm schöner** (N11, P-DESIGN).

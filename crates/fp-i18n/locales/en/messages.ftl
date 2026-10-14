@@ -206,7 +206,7 @@ err-import-tiff-short = TIFF data too short
 err-import-tile-no-image = tile without image
 err-import-unknown-header-size = unknown header size
 err-import-webp-no-frame = WebP without frame
-err-import-eps-no-ai-data = EPS without Illustrator data cannot be read: the original program rasterizes it with its PostScript module (MPS.dll), which Firepixel does not include. Please save it as Illustrator 8 EPS, SVG or pixel image.
+err-import-eps-no-ai-data = EPS without AI data cannot be read: the original program rasterizes it with its PostScript module (MPS.dll), which Firepixel does not include. Please save it as AI-8-compatible EPS, SVG or pixel image.
 err-import-avif-kind = AVIF: image type “{ $kind }” is not supported
 err-import-bmp-compression = BMP compression { $comp } with { $bpp } bits is not supported
 err-import-clipboard-format = clipboard format “{ $name }” is not supported
@@ -476,9 +476,9 @@ msg-import-warn-svg-gradient-focus = SVG gradients with a moved focal point are 
 msg-import-warn-svg-image = embedded SVG images of this type are not imported
 msg-import-warn-svg-clip = SVG clipping paths, masks and filters are not imported
 msg-import-warn-svg-text = SVG text on a path is imported as plain text
-msg-import-warn-ai-text = Illustrator text on a path is imported as plain text
+msg-import-warn-ai-text = AI text on a path is imported as plain text
 msg-import-warn-ai-raster = placed images/rasters are not imported
-msg-import-warn-eps-preview = EPS without Illustrator data: only the embedded TIFF preview was imported (no PostScript interpreter)
+msg-import-warn-eps-preview = EPS without AI data: only the embedded TIFF preview was imported (no PostScript interpreter)
 # <<< UE-3 Import-Hinweise
 
 # >>> UE-3 Detailtexte

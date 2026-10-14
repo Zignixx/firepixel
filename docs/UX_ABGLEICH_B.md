@@ -70,7 +70,7 @@ Befunde stehen in `docs\BEFUNDE.md` unter IBD und HG, jeweils mit „(von UX-B)�
 | D25 | Dialog, Knopf mit Tab fokussiert → Leertaste | löst den Knopf aus | egui-Knopf: ja; eigene Felder: nein | ⚠️ | WIN, CODE |
 | D26 | Dialog, „Abbrechen“ fokussiert → Enter | löst **Abbrechen** aus (fokussierter Knopf wird Standard) | globales Enter löst OK **und** Abbrechen aus; Ergebnis hängt von der Reihenfolge ab (Abbrechen gewinnt) | ⚠️ | WIN, CODE |
 | D27 | Eingabe-Dialog (`prompt`) → Öffnen | Titel „[JavaScript]“, Fokus im Feld, Vorgabe ganz markiert, OK/Abbrechen | Text-Dialoge (z. B. Arbeitsbereich speichern) setzen Fokus | ⚠️ | DLG o_dlg2 D6, CODE mod.rs:444 |
-| D28 | Exportieren (Strg+Umschalt+R) | **Windows-Dateidialog** „Exportieren“: Dateiname, Kombi „Exportieren:“ (PDF; HTML und Bilder; **Nur Bilder**; Dreamweaver-Bibliothek; CSS und Bilder; Director; CSS-Sprites; Ebenen/Status/Seiten in Dateien; FXG und Bilder; MXML und Bilder; Lotus Domino Designer), Startordner = Dokumentordner | eigener egui-Dialog „Exportieren“ | ⚠️ | DLG D8, CODE export.rs |
+| D28 | Exportieren (Strg+Umschalt+R) | **Windows-Dateidialog** „Exportieren“: Dateiname, Kombi „Exportieren:“ (PDF; HTML und Bilder; **Nur Bilder**; HTML-Editor-Bibliothek (LBI); CSS und Bilder; Multimedia (DIR); CSS-Sprites; Ebenen/Status/Seiten in Dateien; FXG und Bilder; MXML und Bilder; Lotus Domino Designer), Startordner = Dokumentordner | eigener egui-Dialog „Exportieren“ | ⚠️ | DLG D8, CODE export.rs |
 | D29 | Bildvorschau (Strg+Umschalt+X) | ❔ | eigener Dialog, zentriert, Esc schließt | ❔ | FP DLG imagePreview |
 | D30 | Voreinstellungen (Strg+U) | ❔ Kategorienliste links, erste Kategorie aktiv | Liste links, Esc schließt | ❔ | FP DLG prefs |
 | D31 | Tastaturbefehle → Esc | ❔ | schließt | ❔ | FP DLG shortcuts |
@@ -106,7 +106,7 @@ Befunde stehen in `docs\BEFUNDE.md` unter IBD und HG, jeweils mit „(von UX-B)�
 | F03 | Öffnen → Mehrfachauswahl | ❔ | möglich | ❔ | CODE |
 | F04 | Datei schon offen → noch einmal öffnen | ❔ (Reiter wird aktiviert) | Reiter wird aktiviert | ❔ | CODE files.rs:126 |
 | F05 | Speichern unter (Strg+Umschalt+S) | Windows-Dialog, Startordner = Dokumentordner, Dateiname vorbelegt | gleich (Vorschlag „x.fw.png“) | ✅ | DLG D3, CODE |
-| F06 | Speichern unter → Dateitypen | 11 Typen: FW-PNG (*.png), BMP, GIF, Animiertes GIF, Illustrator 8, JPEG, Flash SWF, Reduziertes PNG, PSD, TIFF, WBMP | nur „FW-PNG (*.fw.png)“ | ❌ | DLG D3 |
+| F06 | Speichern unter → Dateitypen | 11 Typen: FW-PNG (*.png), BMP, GIF, Animiertes GIF, AI 8, JPEG, SWF, Reduziertes PNG, PSD, TIFF, WBMP | nur „FW-PNG (*.fw.png)“ | ❌ | DLG D3 |
 | F07 | Speichern unter → Zusatzoptionen | „Optionen…“, Kästchen „.fw.png anhängen“, „Als Kopie speichern“, „XMP einschließen“ | keine | ❌ | DLG (Speichern-unter-Kinder) |
 | F08 | unverändertes Dokument → Datei-Menü | „Speichern“ **grau** | aktiv (`file.save` verlangt nur ein Dokument) | ❌ | GUI uxb_s1_b.png, CODE actions.rs:35/file.rs |
 | F09 | Dokument ohne Pfad → Strg+S | Speichern unter | Speichern unter | ✅ | CODE files.rs:105 |

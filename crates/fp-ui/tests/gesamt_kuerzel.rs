@@ -109,7 +109,7 @@ fn gesamt_kuerzelsaetze() {
         }
         let o = if problems.is_empty() { Outcome::Ui } else { Outcome::Error(format!("{} Fund(e)", problems.len())) };
         rows.push(Row {
-            path: format!("Kürzelsatz „{}“", set.name),
+            path: format!("Kürzelsatz „{}“", fp_ui::dialogs::shortcuts::set_label(&set.name)),
             command: format!("{total} Menükürzel, {tools_total} Werkzeugkürzel"),
             outcome: o,
             note: format!("Menü {ok}/{total} (davon {shared} mehrfach belegt), Werkzeuge {tools_ok}/{tools_total}{}", if problems.is_empty() { String::new() } else { format!("; {}", problems.join("; ")) }),

@@ -115,7 +115,7 @@ fn titles_filters_and_order_per_kind() {
     let n = names(&r);
     let pos = |s: &str| n.iter().position(|x| x.starts_with(s)).unwrap_or_else(|| panic!("{s} fehlt in {n:?}"));
     assert_eq!(n[0], "FW-PNG (*.png)");
-    let order = ["FW-PNG", "PSD (", "GIF", "JPEG (", "WBMP", "TIFF", "Targa", "BMP", "Illustrator", "EPS"];
+    let order = ["FW-PNG", "PSD (", "GIF", "JPEG (", "WBMP", "TIFF", "Targa", "BMP", "AI (", "EPS"];
     for w in order.windows(2) {
         assert!(pos(w[0]) < pos(w[1]), "{} vor {} erwartet: {n:?}", w[0], w[1]);
     }

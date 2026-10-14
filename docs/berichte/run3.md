@@ -8,7 +8,7 @@ Anlass: Zweiter Volllauf (14.10. 00:25–02:08) abgebrochen, Referenzseite fiel 
 | Fehlerbild | Ursache (nachgestellt) |
 |---|---|
 | `panel not visible: Eigenschaften` (ab inspector-group-symbol 04, danach alle Inspektor-Einheiten) | Schritt `Fenster > Symboleigenschaften` legt das Bedienfeld als Registerkarte **in dieselbe Dockgruppe** wie Eigenschaften und aktiviert es; Eigenschaften ist dann verborgen (nicht sichtbar). Nichts stellte es wieder her. Nicht das Aufräumen von RUN-2. |
-| `menu did not open: Datei/Modifizieren/Auswählen` (dialogs-d01-d10 ab d10, dialogs-d11-d20, menu-file ab 17, menu-modify-a/-b, menu-select) | `Datei > Datei-Info` öffnet einen **Flash-Dialog** (Top-Level-Klasse `SWFPLAYER_SWFWINDOWCONTAINER`, keine Win32-Knöpfe). Escape und das Dialog-Schließen (nur `#32770`) wirken nicht → modal offen → Menüleiste tot. Der Fehler zählte nicht als „systemisch“, daher kein Neustart. |
+| `menu did not open: Datei/Modifizieren/Auswählen` (dialogs-d01-d10 ab d10, dialogs-d11-d20, menu-file ab 17, menu-modify-a/-b, menu-select) | `Datei > Datei-Info` öffnet einen **SWF-Dialog** (Top-Level-Klasse `SWFPLAYER_SWFWINDOWCONTAINER`, keine Win32-Knöpfe). Escape und das Dialog-Schließen (nur `#32770`) wirken nicht → modal offen → Menüleiste tot. Der Fehler zählte nicht als „systemisch“, daher kein Neustart. |
 | Original lief um 02:08 nicht mehr | Kein Absturz (keine Ereignisprotokoll-Einträge). Beim Abbruch beendet `shutdown()` das Original, weil der Runner es um 00:39 neu gestartet hatte (`started_by_us` wurde beim Neustart gesetzt). Im Testlauf zusätzlich gefunden: Schritt menu-file `21_exit_open` führt `Datei > Beenden` aus; die Sicherheitsfrage wird mit „Nein“ (nicht speichern) beantwortet → Programm endet wirklich. |
 
 ## Änderungen
@@ -18,9 +18,9 @@ Anlass: Zweiter Volllauf (14.10. 00:25–02:08) abgebrochen, Referenzseite fiel 
   `inspector`/`panel:*`-Bereiche, `rel`-Locatoren und `panel_menu`. Vor jedem Schritt (`reset_light`) und am
   Einheitenbeginn wird Eigenschaften sichergestellt. `close_floating` schließt keine schwebende Gruppe, die
   Eigenschaften enthält (neuer Host-Befehl `kids`).
-- **Flash-Dialoge**: zählen als Dialoge (Aufnahmebereich `dialog`, wartet bis 4 s auf späte Dialoge), werden mit
+- **SWF-Dialoge**: zählen als Dialoge (Aufnahmebereich `dialog`, wartet bis 4 s auf späte Dialoge), werden mit
   `WM_CLOSE` abgebrochen (`dialog_close`), nie bestätigt.
-- **Menüleiste**: vorher Flash-Dialoge und Menüs schließen, bis zu 3 Versuche (dazwischen Vordergrund an das
+- **Menüleiste**: vorher SWF-Dialoge und Menüs schließen, bis zu 3 Versuche (dazwischen Vordergrund an das
   Hauptfenster), Fehlermeldung nennt `main enabled`, Vordergrundklasse und offene Fenster. `menu did not open` und
   „panel not visible after …“ gelten als systemisch → nach 3 Fehlern in Folge sauberer Neustart.
 - **Prozessende**: vor jeder Referenzseite eines Schritts Prüfung `running()`; sonst Neustart + Testdatei

@@ -28,7 +28,7 @@ use crate::{check_size, ImportError, ImportOptions, Result};
 
 /// Früher: Begründung für den fehlenden PDF-Import (bleibt für ältere Aufrufer erhalten).
 #[deprecated(note = "PDF wird jetzt über import_pdf gelesen")]
-pub const PDF_NOTE: &str = "PDF und Illustrator ab Version 9 werden über einen PDF-Interpreter als Vektoren gelesen.";
+pub const PDF_NOTE: &str = "PDF und AI ab Version 9 werden über einen PDF-Interpreter als Vektoren gelesen.";
 
 #[derive(Default)]
 struct PathBuilder {
