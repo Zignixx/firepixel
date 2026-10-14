@@ -389,8 +389,6 @@ dlg-style-other = Other text attributes
 ## Live filters (effects.rs)
 dlg-fx-options = Options
 dlg-fx-photoshop-unavailable = PSD Live Effects (not available yet)
-dlg-fx-emboss = Emboss
-dlg-fx-bevel = Bevel
 dlg-fx-slope-flat = Flat
 dlg-fx-slope-smooth = Smooth
 dlg-fx-slope-sloped = Sloped
@@ -408,7 +406,6 @@ dlg-fx-knockout = Knock out
 dlg-fx-glow-offset = Offset:
 dlg-fx-use-original-colors = Use original colors
 dlg-lbl-blend-mode = Blending mode:
-dlg-lbl-kind = Type:
 dlg-fx-edge-shape = Edge shape:
 dlg-fx-show-object = Show object
 dlg-fx-button-preset = Button preset:

@@ -20,8 +20,8 @@ Proportionieren (Ausrichten) = Distribute · Zwiebelschichteneffekt = Onion Skin
 
 ## Ebenen, Live-Filter, Filter, Mischmodi (von I18N-ENGINE, 12.10.)
 Webebene = Web Layer · Unterebene = Sub-layer · Hintergrund (Ebene) = Background · „<Name> Kopie“ = „<name> copy“
-Live-Filter: Abschrägung innen/außen = Inner/Outer Bevel · Prägung erhaben/eingelassen = Raised/Inset Emboss · Einfarbiger Schatten = Solid Shadow · Farbfüllung = Color Fill
-Gruppen: Abschrägung und Prägung = Bevel and Emboss · Schatten und Glühen = Shadow and Glow · Farbe anpassen = Adjust Color
+Live-Filter: Abgeflachte Kante innen/außen = Inner/Outer Bevel · Relief erhaben/vertieft = Raised/Inset Emboss (Nutzerentscheid 14.10., BA-056) · Einfarbiger Schatten = Solid Shadow · Farbfüllung = Color Fill
+Gruppen: Abgeflachte Kante und Relief = Bevel and Emboss · Schatten und Glühen = Shadow and Glow · Farbe anpassen = Adjust Color
 Filter: Auto-Tonwertkorrektur = Auto Levels · Helligkeit/Kontrast = Brightness/Contrast · Gradationskurven/Kurven = Curves · Farbton/Sättigung = Hue/Saturation · Tonwertkorrektur = Levels · Umkehren = Invert · Weichzeichnen / Stark weichzeichnen = Blur / Blur More · Gaußscher Weichzeichner = Gaussian Blur · Bewegungsunschärfe = Motion Blur · Radiales/Zentriertes Weichzeichnen = Radial/Zoom Blur · Rauschen hinzufügen = Add Noise · In Alpha konvertieren = Convert to Alpha · Kanten suchen = Find Edges · Scharfzeichnen / Stark scharfzeichnen = Sharpen / Sharpen More · Unscharf maskieren = Unsharp Mask
 Mischmodi (`blend-*` in filter.ftl): Negativ multiplizieren = Screen · Überlagern = Overlay · Auflösen = Dissolve · Unscharfes Licht = Fuzzy Light · Weiches Licht = Soft Light · Hartes Licht = Hard Light · Farbig nachbelichten/abwedeln = Color Burn/Dodge · Differenz = Difference · Ausschluss = Exclusion · Farbton = Hue · Sättigung = Saturation · Farbe = Color · Luminanz = Luminosity · Farbton (Tint) = Tint · Löschen = Erase
 KI: Modelle verwalten = Manage Models

@@ -142,6 +142,8 @@ Ressourcen (Markdown): `firepixel://docs/agents.md` (diese Datei), `firepixel://
     `element.setOpacity {opacity}`, `element.setBlendMode {mode}`, `element.setName {name}`,
     `element.setVisible`, `element.setLocked`, `element.setBounds {x?, y?, width?, height?}`,
     `element.addEffect {effect: "dropShadow"|"innerShadow"|"bevel"|"glow"|… , params?}`, `element.setGradient {from, to, colors?}`
+    (`bevel` mit `params.BevelType` 0 Abgeflachte Kante innen, 1 Abgeflachte Kante außen, 2 Relief erhaben, 3 Relief vertieft;
+    Gruppe „Abgeflachte Kante und Relief“)
   * Texturen und Muster (Namen wie in den Inspektorlisten, Dateien aus den Textur- bzw. Musterordnern):
     `element.setTexture {name | image, target?: "fill"|"stroke", amount?, ids?}` (ohne `name` und `image`: Textur entfernen),
     `element.setPattern {name | image, ids?}`, `pi.fill {pattern}` bzw. `pi.fill {texture, textureAmount?}` an der Auswahl

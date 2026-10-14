@@ -583,10 +583,9 @@ pub fn effect_form(name: &str, bevel: Option<i32>, e: Option<&Effect>, index: Op
             let bt = bevel.unwrap_or(0);
             let emboss = bt == 2 || bt == 3;
             let mut v = Vec::new();
-            if emboss {
-                v.push(Field::choice_of("type", t("dlg-lbl-kind").as_str(), &[t("effect-emboss-raised").as_str(), t("effect-emboss-inset").as_str()], vec![json!(2), json!(3)], if bt == 3 { 1 } else { 0 }));
-            } else {
-                v.push(Field::choice_of("type", t("dlg-lbl-kind").as_str(), &[t("effect-bevel-inner").as_str(), t("effect-bevel-outer").as_str()], vec![json!(0), json!(1)], if bt == 1 { 1 } else { 0 }));
+            // Kein Feld „Art“ (innen/außen, erhaben/vertieft): das Original hat es nicht (BA-056,
+            // Nutzerentscheid 14.10.); die Art kommt aus dem Menüeintrag bzw. dem bearbeiteten Effekt.
+            if !emboss {
                 v.push(Field::choice("slope", t("dlg-fx-edge-shape").as_str(), &[t("dlg-fx-slope-flat").as_str(), t("dlg-fx-slope-smooth").as_str(), t("dlg-fx-slope-sloped").as_str(), t("dlg-fx-slope-frame1").as_str(), t("dlg-fx-slope-frame2").as_str(), t("dlg-fx-slope-ring").as_str(), t("dlg-fx-slope-ruffle").as_str()], num(e, "SlopeType", 0.0).clamp(0.0, 6.0) as usize));
             }
             // Reihenfolge wie im Original (re Dialogtabelle): [Kantenform], Breite, [Farbe nur außen], Kontrast,
@@ -605,7 +604,14 @@ pub fn effect_form(name: &str, bevel: Option<i32>, e: Option<&Effect>, index: Op
             } else {
                 v.push(Field::choice("button", t("dlg-fx-button-preset").as_str(), &[t("dlg-fx-button-raised").as_str(), t("dlg-fx-button-highlighted").as_str(), t("dlg-fx-button-inset").as_str(), t("dlg-fx-button-inverted").as_str()], num(e, "ButtonState", 0.0).clamp(0.0, 3.0) as usize));
             }
-            (if emboss { t("dlg-fx-emboss") } else { t("dlg-fx-bevel") }, v)
+            // Titel = Effektname wie im Menü (BA-056).
+            let title = match bt {
+                1 => "effect-bevel-outer",
+                2 => "effect-emboss-raised",
+                3 => "effect-emboss-inset",
+                _ => "effect-bevel-inner",
+            };
+            (t(title), v)
         }
     };
     let mut base = json!({"effect": name, "bevel": bevel.unwrap_or(-1)});

@@ -389,8 +389,6 @@ dlg-style-other = Andere Textattribute
 ## Live-Filter (effects.rs)
 dlg-fx-options = Optionen
 dlg-fx-photoshop-unavailable = PSD-Live-Effekte (noch nicht verfügbar)
-dlg-fx-emboss = Prägung
-dlg-fx-bevel = Abschrägung
 dlg-fx-slope-flat = Flach
 dlg-fx-slope-smooth = Glatt
 dlg-fx-slope-sloped = Abfallend
@@ -408,7 +406,6 @@ dlg-fx-knockout = Objekt aussparen
 dlg-fx-glow-offset = Glühversatz:
 dlg-fx-use-original-colors = Originalfarben verwenden
 dlg-lbl-blend-mode = Mischmodus:
-dlg-lbl-kind = Art:
 dlg-fx-edge-shape = Kantenform:
 dlg-fx-show-object = Objekt anzeigen
 dlg-fx-button-preset = Schaltflächen-Vorgabe:

@@ -89,10 +89,10 @@ fn txt(e: &fp_model::effects::Effect, k: &str) -> String {
 fn dialog_defaults_limits_and_field_order() {
     // (BevelType, Breite, Weichheit, Felder in Reihenfolge)
     let cases: [(i32, f64, f64, &[&str]); 4] = [
-        (0, 10.0, 3.0, &["type", "slope", "width", "contrast", "soft", "angle", "button"]),
-        (1, 10.0, 3.0, &["type", "slope", "width", "color", "contrast", "soft", "angle", "button"]),
-        (2, 2.0, 2.0, &["type", "width", "contrast", "soft", "angle", "show"]),
-        (3, 2.0, 2.0, &["type", "width", "contrast", "soft", "angle", "show"]),
+        (0, 10.0, 3.0, &["slope", "width", "contrast", "soft", "angle", "button"]),
+        (1, 10.0, 3.0, &["slope", "width", "color", "contrast", "soft", "angle", "button"]),
+        (2, 2.0, 2.0, &["width", "contrast", "soft", "angle", "show"]),
+        (3, 2.0, 2.0, &["width", "contrast", "soft", "angle", "show"]),
     ];
     for (bt, width, soft, order) in cases {
         let mut h = harness(app_with_rect());
@@ -181,39 +181,32 @@ fn bevel_softness_slope_and_button_state() {
 }
 
 #[test]
-fn emboss_kind_switch_sets_face_color_undo_redo() {
+fn no_kind_field_title_is_effect_name_edit_keeps_kind() {
+    // BA-056 (Nutzerentscheid 14.10.): kein Feld „Art“, Titel = Effektname wie im Menü.
+    for (bt, title) in [(0, "Abgeflachte Kante innen"), (1, "Abgeflachte Kante außen"), (2, "Relief erhaben"), (3, "Relief vertieft")] {
+        let mut h = harness(app_with_rect());
+        h.run_steps(2);
+        open_new(&mut h, bt);
+        assert!(!keys(&h).iter().any(|k| k == "type"), "Typ {bt}: kein Feld „Art“");
+        assert_eq!(st(&h).dialogs.form.as_ref().expect("Dialog").title, title, "Typ {bt}: Titel");
+    }
     let mut h = harness(app_with_rect());
     h.run_steps(2);
     open_new(&mut h, 3);
     click_button(&mut h, "OK");
     assert_eq!(txt(&effects_of(st(&h))[0], "EmbossFaceColor"), "#0000001e", "vertieft: graue Fläche");
-    let d_inset = doc(st(&h));
-    // vorhandenen Effekt bearbeiten: vertieft → erhaben
+    // Bearbeiten behält die Art und ändert nur das Feld
     let e = effects_of(st(&h))[0].clone();
     effects::begin_edit(&mut h.state_mut().state, 0, &e);
     h.run_steps(2);
     assert_eq!(field(&h, "soft").as_f64(), Some(2.0), "Bearbeiten zeigt MaskSoftness");
-    set_field(&mut h, "type", json!(0));
-    click_button(&mut h, "OK");
-    let fx = effects_of(st(&h));
-    assert_eq!(fx.len(), 1, "derselbe Eintrag");
-    assert_eq!(txt(&fx[0], "BevelType"), "2");
-    assert_eq!(txt(&fx[0], "EmbossFaceColor"), "#00000000", "erhaben: Fläche transparent");
-    let d_raised = doc(st(&h));
-    h.state_mut().state.session.undo().expect("undo");
-    assert!(*doc(st(&h)) == *d_inset, "Rückgängig stellt vertieft exakt her");
-    h.state_mut().state.session.redo().expect("redo");
-    assert!(*doc(st(&h)) == *d_raised, "Wiederholen");
-    // Bearbeiten ohne Artwechsel ändert nur das Feld
-    let e = effects_of(st(&h))[0].clone();
-    effects::begin_edit(&mut h.state_mut().state, 0, &e);
-    h.run_steps(2);
     set_field(&mut h, "width", json!(5));
     click_button(&mut h, "OK");
     let fx = effects_of(st(&h));
-    assert_eq!(txt(&fx[0], "EmbossFaceColor"), "#00000000");
+    assert_eq!(fx.len(), 1, "derselbe Eintrag");
+    assert_eq!(txt(&fx[0], "BevelType"), "3");
+    assert_eq!(txt(&fx[0], "EmbossFaceColor"), "#0000001e");
     assert_eq!(fx[0].get_f64("BevelWidth"), Some(5.0));
-    assert_eq!(fx.len(), 1);
 }
 
 #[test]

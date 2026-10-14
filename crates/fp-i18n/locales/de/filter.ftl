@@ -55,10 +55,10 @@ filter-param-use-color = farbig
 filter-param-threshold = Schwellenwert
 
 ## Live-Filter (Effekte): Namen
-effect-bevel-inner = Abschrägung innen
-effect-bevel-outer = Abschrägung außen
-effect-emboss-inset = Prägung eingelassen
-effect-emboss-raised = Prägung erhaben
+effect-bevel-inner = Abgeflachte Kante innen
+effect-bevel-outer = Abgeflachte Kante außen
+effect-emboss-inset = Relief vertieft
+effect-emboss-raised = Relief erhaben
 effect-glow = Glühen
 effect-drop-shadow = Schlagschatten
 effect-inner-shadow = Innerer Schatten

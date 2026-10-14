@@ -164,6 +164,10 @@ Important panels:
 The **Properties inspector** at the bottom shows, depending on the selection, fill, stroke,
 opacity, blending mode, Live Filters (+/−) and text or symbol settings.
 
+- **Live Filters (+):** the “+” menu groups the effects as in the original, e.g. *Bevel and Emboss* ▸
+  *Inner Bevel*, *Outer Bevel*, *Inset Emboss*, *Raised Emboss*. The kind is part of the menu item;
+  the dialog has no separate field for it. Double-click an entry in the filter list to open its settings.
+
 - **Font search:** the opened font list (text inspector, Text tool, text editor) has a search field
   at the top. Typing filters (part of a word, case-insensitive), ↑/↓ select, Enter applies, Esc
   closes without a change.

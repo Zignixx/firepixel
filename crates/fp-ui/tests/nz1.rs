@@ -107,7 +107,7 @@ fn rect_with_redo() -> H {
 
 // ------------------------------------------------------------------ N01: Abbrechen mit Vorschau
 
-const LIVE: &[(&str, &str)] = &[("Glühen", "width"), ("Schlagschatten", "dist"), ("Innerer Schatten", "dist"), ("Abschrägung innen", "width"), ("Farbfüllung", "opacity"), ("Gaußscher Weichz. ...", "radius"), ("Farbton/Sättigung...", "hue")];
+const LIVE: &[(&str, &str)] = &[("Glühen", "width"), ("Schlagschatten", "dist"), ("Innerer Schatten", "dist"), ("Abgeflachte Kante innen", "width"), ("Farbfüllung", "opacity"), ("Gaußscher Weichz. ...", "radius"), ("Farbton/Sättigung...", "hue")];
 
 /// N01: Live-Effekt bzw. Live-Filter neu, Wert vielfach geändert (Vorschau), Abbrechen → Dokument
 /// und Verlauf exakt wie vorher: kein Rückgängig-, kein Wiederholen-Schritt, der vorher vorhandene
