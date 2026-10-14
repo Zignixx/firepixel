@@ -34,24 +34,24 @@ Ergebnisse B-2 (14.10.): `docs\berichte\b2.md` (gleich 3, Unterschied 10, X 23).
 
 1. **BA-007** Treffer auf durchsichtigen Bitmap-Pixeln: Ellipsen-Bitmap-Ecke, Umschalt-/Strg-Klick, Unterauswahl, Ziehen aus dem Loch – Z. 119 (FV-14) – `tools (Treffertest)` – M – **Ergebnis B-2:** X (GUI-Sitzung gesperrt)
 1. **BA-008** Pinsel mit gewähltem Vektor nach Strg+Z-Schritten malt in vorige Bitmap – welcher Schritt bewirkt das – Z. 120 (FV-11) – `BrushTool` – S – **Ergebnis B-2:** X (GUI-Sitzung gesperrt)
-1. **BA-009** Radieren bis zum Rand (Objektgrenzen), Einfügen fremder Pixel, leerer Import, Skalieren an Pixelgrenzen, Beschnitt JPEG/GIF/WebP (re\22 §1.4) – Z. 127 (BM-1) – `fp-engine Import/Bitmap` – M – **Ergebnis B-2:** Import-Beschnitt gleich; Einpassen 1 px (runden) → B5; Rest X (GUI-Sitzung gesperrt)
+1. **BA-009** Radieren bis zum Rand (Objektgrenzen), Einfügen fremder Pixel, leerer Import, Skalieren an Pixelgrenzen, Beschnitt JPEG/GIF/WebP (re\22 §1.4) – Z. 127 (BM-1) – `fp-engine Import/Bitmap` – M – **Ergebnis B-2:** Import-Beschnitt gleich; Einpassen 1 px (runden) → B5; Rest X (GUI-Sitzung gesperrt) · **Ergebnis B-7:** Einpassen rundet (158) ✓
 1. **BA-010** Pinsel: Umschalten auf natürliche Engine durch deren Werte; „Tintenmenge“ = Deckkraft (re\24 Nr. 12) – Z. 130 (PINSEL-1) – `dialogs (Pinsel)` – S – **Ergebnis B-2:** X (GUI-Sitzung gesperrt)
 1. **BA-011** Auswahlrahmen erweitern/begrenzen: nutzt das Original die Morphologie aus re\05 §2.2 (+6 bei 5 px)? (NACHPRUEFUNG §3) – Z. 315 (PM-6) – `fp-engine Auswahl` – S – **Ergebnis B-2:** gleich (Morphologie +1/+6/+11, runde Ecken); Rand 5 px 2 px schmaler → B3-Hinweis; getPixelMask fehlt → B5
 1. **BA-012** Bewegungsunschärfe Winkel 0 an B1 (Umfang 20): 300 oder 301 links – Z. 362 (DLG-6) – `blur.rs` – S – **Ergebnis B-2:** X (JSF im Original wirkungslos, Dialog nur GUI)
 1. **BA-013** Menüfilter (z. B. Umkehren) an Bitmap mit durchsichtigem Rand: Zuschnitt auf Alpha > 0? – Z. 363 (DLG-6) – `trim_growth` – S – **Ergebnis B-2:** Filterfrage X; Unterschied: Rastern beschneidet auf Alpha > 0 → B3 – **Ergebnis B-3:** Rasterteil erledigt (B-3, 220459c) – Zuschnitt auf Alpha > 0
-1. **BA-014** Filter auf Vektor: wann konvertiert das Original, wie viele Verlaufsschritte – Z. 957 (F4) – `fp-ui Filterablauf` – S – **Ergebnis B-2:** Unterschied (JSF): Filter rastert Vektor ohne Rückfrage → B5; Menüablauf X
+1. **BA-014** Filter auf Vektor: wann konvertiert das Original, wie viele Verlaufsschritte – Z. 957 (F4) – `fp-ui Filterablauf` – S – **Ergebnis B-2:** Unterschied (JSF): Filter rastert Vektor ohne Rückfrage → B5; Menüablauf X · **Ergebnis B-7:** JSF rastert ohne Rückfrage ✓, UI-Rückfrage bleibt
 
 ### M-C · Text und Effekte: `fx_text.fw.png` (FX-4) und Text an Pfad (TX2/P2, TX3 aus Datei, M1) (3)
 
 1. **BA-015** Objektpuffer der Live-Effekte an Text (fx_text.fw.png: 23,46–167,112), weitere Messpunkte für die Regel – Z. 370 (FX-4) – `compose.rs` – M – **Ergebnis B-2:** X (Rauschanalyse nötig)
 1. **BA-016** Helligkeit/Kontrast „klein“ am einfarbigen Vektor: Rechenweg des Mittelwerts (109 statt 113) – Z. 371 (FX-4) – `Filter Helligkeit/Kontrast` – S – **Ergebnis B-2:** gleich (16 Messpunkte pixelgleich)
-1. **BA-017** Rahmen „roh“ beim Anfügen von Text an einen Pfad (TX2/P2 vs. TX3 aus Datei) – Z. 952 (F6/M1) – `fp-script, Text an Pfad` – S – **Ergebnis B-2:** Unterschied: raw = Pfadanfang/-breite, auch aus Datei → B5
+1. **BA-017** Rahmen „roh“ beim Anfügen von Text an einen Pfad (TX2/P2 vs. TX3 aus Datei) – Z. 952 (F6/M1) – `fp-script, Text an Pfad` – S – **Ergebnis B-2:** Unterschied: raw = Pfadanfang/-breite, auch aus Datei → B5 · **Ergebnis B-7:** raw Links/Oben/Breite = Pfad ✓, Höhe offen
 
 ### M-D · Dialoge, Menüs und Inspektor-Popups nach PARITAET_B (Messdokument UX-B; Datei-Info nach `berichte\dlg11.md`) (11)
 
 1. **BA-018** Bildvorschau 2-/4-fach mit Skalierung (50 %): Lage/Streckung des Exportbilds – Z. 125 (BV-5) – `crates\fp-ui\src\preview.rs` – S – **Ergebnis B-2:** X (GUI-Sitzung gesperrt)
 1. **BA-019** Raster bearbeiten: Bereich und Kennlinie der Popup-Schieber ▾ an beiden Abständen (Annahme 1 … 100) – Z. 203 (DLG-2), Z. 966 (FIX-G1) – `dialogs\catalog.rs grid_draw` – S – **Ergebnis B-2:** X (GUI-Sitzung gesperrt)
-1. **BA-020** Animieren mit Richtung ≠ 0; „Größe ändern“ im Inspektor bei Animationsinstanzen – Z. 224 (DLG-9) – `Animation` – S – **Ergebnis B-2:** Unterschied (JSF): Instanzgrenzen inkl. Weg → B5; Dialog X
+1. **BA-020** Animieren mit Richtung ≠ 0; „Größe ändern“ im Inspektor bei Animationsinstanzen – Z. 224 (DLG-9) – `Animation` – S – **Ergebnis B-2:** Unterschied (JSF): Instanzgrenzen inkl. Weg → B5; Dialog X · **Ergebnis B-7:** JSF-Argumente korrigiert, Grenzen inkl. Weg ✓
 1. **BA-021** Englische Beschriftung von D39 („Sample radius:“) und englische Verlaufsnamen der Auswahlbefehle – Z. 228 (DLG-8) – `ftl en` – S – **Ergebnis B-2:** X (nur deutsche Oberfläche installiert)
 1. **BA-022** Tab-Folge von D45, D47–D50; Fokus ins Feld nach Klemmen beim OK – Z. 233 (FORM-1) – `dialogs\form.rs` – S – **Ergebnis B-2:** X (GUI-Sitzung gesperrt)
 1. **BA-023** Datei-Info (D10): Register, Felder je Seite, Knöpfe, Startfokus, Esc, Größenänderung (Messauftrag berichte\dlg11.md) – Z. 234 (DLG-11) – `dialogs` – M – **Ergebnis B-2:** X (GUI-Sitzung gesperrt)
@@ -70,9 +70,9 @@ Ergebnisse B-2 (14.10.): `docs\berichte\b2.md` (gleich 3, Unterschied 10, X 23).
 ### M-F · Export eines neuen bzw. des Testdokuments (`re\17`, `re\18`; BMP/PNG-Auflösung, HTML-Exportart) (5)
 
 1. **BA-032** Exportassistent: Ergebnisseiten-Texte, Farbanzahl des GIF-Vorschlags (re\18 10.5) – Z. 235 (E3) – `dialogs (Exportassistent)` – S – **Ergebnis B-2:** X (GUI-Sitzung gesperrt)
-1. **BA-033** Vorgabe-Exporteinstellung einer neuen Seite: GIF Adaptiv 256 oder PNG32 (re\17 §5.1) – Z. 308 (BV-1) – `crates\fp-export\src\doc_export.rs, JSF exportOptions` – S – **Ergebnis B-2:** Unterschied: Original PNG32, Firepixel GIF → B5
+1. **BA-033** Vorgabe-Exporteinstellung einer neuen Seite: GIF Adaptiv 256 oder PNG32 (re\17 §5.1) – Z. 308 (BV-1) – `crates\fp-export\src\doc_export.rs, JSF exportOptions` – S – **Ergebnis B-2:** Unterschied: Original PNG32, Firepixel GIF → B5 · **Ergebnis B-7:** PNG32 für neue Dokumente/Seiten ✓
 1. **BA-034** re\18: Raster-Layout der Sprites (10.15), Trennzeichen „_“ (10.7), PDF-Qualitätsstufen – Z. 320 (E2) – `fp-export` – S – **Ergebnis B-2:** X (GUI-Sitzung gesperrt)
-1. **BA-035** BMP-/pHYs-Rundung der Auflösung (CT-4) – Z. 366 (NZ-4) – `fp-export\src\formats.rs, fp-fwpng\src\png.rs` – S – **Ergebnis B-2:** Unterschied: pHYs = floor(trunc(dpi)/0,0254), auch JSF-Export → B5; BMP X
+1. **BA-035** BMP-/pHYs-Rundung der Auflösung (CT-4) – Z. 366 (NZ-4) – `fp-export\src\formats.rs, fp-fwpng\src\png.rs` – S – **Ergebnis B-2:** Unterschied: pHYs = floor(trunc(dpi)/0,0254), auch JSF-Export → B5; BMP X · **Ergebnis B-7:** pHYs trunc/floor in FW-PNG, PNG, JSF ✓; BMP X
 1. **BA-036** Merkt das Original die zuletzt gewählte HTML-Exportart auch für neue Dokumente? – Z. 967 (FIX-G2) – `Export HTML` – S – **Ergebnis B-2:** X (GUI-Sitzung gesperrt)
 
 ## B3 – Leinwand/Werkzeuge

@@ -134,6 +134,19 @@ pub fn export_page(s: &Session, doc: DocId, page: Option<usize>, frame: Option<u
     Ok(bytes.len())
 }
 
+/// PNG32 wie der Export des Originals: nach `IHDR` folgen `sBIT` und `pHYs` aus der Auflösung der Seite
+/// (`floor(trunc(dpi) / 0,0254)`, BA-035; `exportTo`/`exportDocumentAs` per JSF schreiben sie wie der Export).
+fn png32_with_phys(img: &RgbaImage, page: Option<&fp_model::Page>) -> Result<Vec<u8>, String> {
+    use fp_fwpng::png as pngc;
+    let bytes = png32(img)?;
+    let Some(p) = page else { return Ok(bytes) };
+    let mut chunks = pngc::read_chunks(&bytes).map_err(|e| e.to_string())?;
+    let at = chunks.iter().position(|c| c.is(b"IHDR")).map_or(0, |i| i + 1);
+    chunks.insert(at, pngc::make_phys(p.canvas.resolution, p.canvas.resolution_unit));
+    chunks.insert(at, pngc::Chunk::new(b"sBIT", vec![8, 8, 8, 8]));
+    Ok(pngc::write_chunks(&chunks))
+}
+
 fn png32(img: &RgbaImage) -> Result<Vec<u8>, String> {
     let (w, h) = (img.width() as u32, img.height() as u32);
     let mut out = Vec::new();
@@ -156,7 +169,7 @@ pub fn encode(doc: &fp_model::Document, page: usize, frame: usize, spec: &Export
         if img.is_empty() {
             return Err(fp_i18n::t("err-script-page-empty"));
         }
-        return png32(&img);
+        return png32_with_phys(&img, doc.pages.get(page).map(|p| &**p));
     }
     #[cfg(feature = "formats")]
     {

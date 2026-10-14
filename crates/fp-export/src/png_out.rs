@@ -210,7 +210,8 @@ fn trailer_meta(out: &mut Vec<u8>, opts: &PngOptions) {
     {
         // Das Original schneidet ab (72 dpi -> 2834 Pixel/m, `re` §5.2); das kleine
         // Epsilon fängt Werte wie 254 dpi ab, die rechnerisch knapp unter der Ganzzahl landen.
-        let ppm = (dpi as f64 * 10000.0 / 254.0 + 1e-6).floor() as u32;
+        // BA-035: erst die dpi auf eine ganze Zahl abschneiden (150,6 dpi -> 5905 wie im Original).
+        let ppm = (dpi.trunc() as f64 * 10000.0 / 254.0 + 1e-6).floor() as u32;
         let mut d = Vec::with_capacity(9);
         d.extend_from_slice(&ppm.to_be_bytes());
         d.extend_from_slice(&ppm.to_be_bytes());

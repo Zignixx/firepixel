@@ -327,6 +327,12 @@ impl HtmlSettings {
 }
 
 impl ExportSettings {
+    /// Vorgabe neuer Dokumente und Seiten wie im Original (BA-033, gemessen per JSF
+    /// `exportOptions` nach dem Anlegen bzw. `addNewPage`): PNG 32 Bit, Palette adaptiv.
+    pub fn new_page_default() -> ExportSettings {
+        ExportSettings { format: 2, color_mode: 2, ..ExportSettings::default() }
+    }
+
     /// Exportoptionen ohne HTML-Teil (Slices, Symbole).
     pub fn options_only() -> ExportSettings {
         ExportSettings { html: None, ..ExportSettings::default() }

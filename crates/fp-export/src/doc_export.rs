@@ -1198,8 +1198,8 @@ mod tests {
         let files = export_document(&d, &SimpleRenderer, &o, &EncodeExtras::standalone()).unwrap();
         let names: Vec<&str> = files.iter().map(|f| f.path.as_str()).collect();
         assert!(names.contains(&"test.htm"), "{names:?}");
-        assert!(names.contains(&"test_r1_c1.gif"));
-        assert!(names.contains(&"test_r1_c2.gif"));
+        assert!(names.contains(&"test_r1_c1.png"), "neue Seite: PNG 32 (BA-033): {names:?}");
+        assert!(names.contains(&"test_r1_c2.png"), "neue Seite: PNG 32 (BA-033): {names:?}");
         // CS6-Vorgabe LSSi = 3: verschachtelte Tabellen ohne Abstandhalter
         let html = String::from_utf8_lossy(&files.iter().find(|f| f.path == "test.htm").unwrap().bytes).into_owned();
         assert!(html.contains("fwnested=\"1\"") && !names.contains(&"spacer.gif"));

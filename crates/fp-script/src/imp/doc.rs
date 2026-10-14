@@ -40,6 +40,26 @@ pub(super) fn on_selection(doc: DocId, name: &str, params: Value) -> FwResult<Js
     exec(Some(doc), name, params).map(|_| JsValue::undefined())
 }
 
+/// Filter per Skript auf Vektoren: Das Original wandelt die Auswahl vorher ohne Rückfrage in ein
+/// Bitmap um (wie das Menü nach OK, BA-014; Grenzen bleiben). Mit Pixelauswahl oder nur Bitmaps: nichts.
+fn rasterize_vectors_for_filter(doc: DocId) -> FwResult<()> {
+    let vectors = st(|s| {
+        let d = s.session.document(doc).ok_or_else(|| FwErr::bad(fp_i18n::t("err-script-doc-closed")))?;
+        if d.selection.has_pixels() {
+            return Ok(false);
+        }
+        Ok(d.selection
+            .elements
+            .iter()
+            .filter_map(|id| fp_engine::docops::element_on_page(&d.doc, d.page, *id))
+            .any(|e| !matches!(e.kind, ElementKind::Bitmap(_))))
+    })?;
+    if vectors {
+        exec(Some(doc), "modify.flattenSelection", json!({}))?;
+    }
+    Ok(())
+}
+
 pub(super) fn defaults(doc: DocId) -> DefaultAttrs {
     with_state(|s| s.defaults.get(&doc.0).cloned().unwrap_or_default()).unwrap_or_default()
 }
@@ -380,7 +400,8 @@ fn import_file(doc: DocId, path: &Path, bounds: Option<[f64; 4]>, keep_aspect: b
                     (tw / fw, th / fh)
                 };
                 let (ox, oy) = ((vis.left - full.left) as f64, (vis.top - full.top) as f64);
-                let p = json!({"x": b[0] + ox * kx, "y": b[1] + oy * ky, "width": vis.width() as f64 * kx, "height": vis.height() as f64 * ky});
+                // Lage gerundet wie im Original (BA-009: 150 + 10 · 0,75 = 157,5 → 158)
+                let p = json!({"x": (b[0] + ox * kx).round(), "y": (b[1] + oy * ky).round(), "width": vis.width() as f64 * kx, "height": vis.height() as f64 * ky});
                 exec(Some(doc), "element.setBounds", p)?;
             }
         }
@@ -899,12 +920,16 @@ pub(super) fn method(doc: DocId, name: &str, args: &[Arg], ctx: &mut Context) ->
                 "add noise" | "rauschen hinzufügen" => ("filter.noise.addNoise", json!({"amount": 10})),
                 other => return Err(FwErr::Hr(hr::E_BAD_PARAM, format!("filterSelectionByName: unbekannter Filter „{other}“"))),
             };
+            rasterize_vectors_for_filter(doc)?;
             on_selection(doc, c, p)
         }
         "filterSelection" | "filterSelectionByName" => {
             let e = if name == "filterSelection" { a(0).json() } else { a(1).json() };
             match filter_command(&e) {
-                Some((c, p)) => on_selection(doc, c, p),
+                Some((c, p)) => {
+                    rasterize_vectors_for_filter(doc)?;
+                    on_selection(doc, c, p)
+                }
                 None => Err(FwErr::NotImpl(format!("{CLS}.{name} für diesen Filter"))),
             }
         }

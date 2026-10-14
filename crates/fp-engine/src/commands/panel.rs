@@ -4969,6 +4969,8 @@ mod tests {
     fn optimize_menu_commands() {
         let mut s = doc_with_rect();
         s.execute("pi.fill", json!({"color": "#ff0000"})).expect("rot");
+        // neue Seiten exportieren als PNG 32 (BA-033); die Palettenbefehle brauchen GIF
+        s.execute("pi.export.settings", json!({"settings": serde_json::to_value(fp_model::ExportSettings::default()).expect("json")})).expect("gif");
         let ex = |s: &Session| export_of(s);
         changes_and_undoes(&mut s, "panel.optimize.interlaced", json!({}));
         assert!(ex(&s).interlaced);

@@ -720,7 +720,7 @@ fn element_get(cls: &str, name: &str, doc: DocId, id: ElementId, ctx: &mut Conte
         },
         "rawLeft" | "rawTop" | "rawWidth" | "rawHeight" => match &e.kind {
             ElementKind::Text(t) => {
-                let b = t.bounds;
+                let b = text_raw_rect(t);
                 conv::n(r6(match name {
                     "rawLeft" => b.left as f64,
                     "rawTop" => b.top as f64,
@@ -1652,5 +1652,22 @@ pub(super) fn proxy_keys(h: &Handle) -> Vec<String> {
             (0..n).map(|i| i.to_string()).collect()
         }
         _ => Vec::new(),
+    }
+}
+
+/// Rahmen „roh“ (`rawLeft/rawTop/rawWidth/rawHeight`) eines Texts. Am Pfad wie im Original (BA-017,
+/// gemessen, auch nach Speichern und Wiederöffnen): linke obere Ecke und Breite der Pfadgrenzen.
+/// Die Höhenregel des Originals ist noch offen (waagerechte Linie und Rechteck: 5); bis dahin 5.
+/// Sonst der Layout-Rahmen.
+fn text_raw_rect(t: &fp_model::TextElem) -> fp_geom::Rect {
+    const PATH_RAW_HEIGHT: f32 = 5.0;
+    let path = t.on_path.as_ref().and_then(|o| o.path.as_ref());
+    let pb = path.and_then(|p| match &p.kind {
+        ElementKind::Path(pe) => fp_engine::geometry::contours_bounds(&pe.contours),
+        _ => None,
+    });
+    match pb {
+        Some(r) => fp_geom::Rect::new(r.left, r.top, r.right, r.top + PATH_RAW_HEIGHT),
+        None => t.bounds,
     }
 }

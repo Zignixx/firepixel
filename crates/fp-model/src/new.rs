@@ -41,7 +41,7 @@ impl Page {
         root.layers.push(LayerSlot::Own(Arc::new(Layer::new(ids, &fp_i18n::t("msg-default-web-layer"), LayerKind::Web, 1))));
         root.grid = Some(Grid::default());
         root.guides = Some(Guides::default());
-        root.export = Some(Box::new(ExportSettings::default()));
+        root.export = Some(Box::new(ExportSettings::new_page_default()));
         Page {
             format_version: Some(10),
             format_minor: Some(1),

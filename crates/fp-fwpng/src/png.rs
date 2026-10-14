@@ -277,10 +277,23 @@ pub fn parse_phys(data: &[u8]) -> Option<(u32, u32, u8)> {
     ))
 }
 
+/// Pixel je Meter für `pHYs` aus einer Auflösung in dpi wie im Original:
+/// `floor(trunc(dpi) / 0,0254)` (BA-035). Das kleine Epsilon fängt Werte wie 254 dpi ab,
+/// die rechnerisch knapp unter der Ganzzahl landen.
+pub fn phys_ppm(dpi: f64) -> u32 {
+    if !dpi.is_finite() || dpi <= 0.0 {
+        return 0;
+    }
+    (dpi.trunc() / 0.0254 + 1e-6).floor().clamp(0.0, u32::MAX as f64) as u32
+}
+
 /// `pHYs`-Chunk aus Auflösung und Einheit (0 = Pixel/Zoll, 1 = Pixel/cm) wie im Original.
+///
+/// Regel des Originals (BA-035, gemessen): Auflösung erst auf ganze dpi abschneiden, dann
+/// `floor(dpi / 0,0254)` – 72 dpi → 2834, 150,6 dpi → 5905, 299,7 dpi → 11771.
 pub fn make_phys(resolution: f32, unit: i32) -> Chunk {
-    let ppm = if unit == 1 { resolution as f64 * 100.0 } else { resolution as f64 / 0.0254 };
-    let v = ppm.round().clamp(0.0, u32::MAX as f64) as u32;
+    let dpi = if unit == 1 { resolution as f64 * 2.54 } else { resolution as f64 };
+    let v = phys_ppm(dpi);
     let mut d = Vec::with_capacity(9);
     d.extend_from_slice(&v.to_be_bytes());
     d.extend_from_slice(&v.to_be_bytes());

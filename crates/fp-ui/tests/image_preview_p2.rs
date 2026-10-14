@@ -45,6 +45,8 @@ type H = Harness<'static, FirepixelApp>;
 fn session() -> fp_engine::Session {
     let mut s = fp_engine::Session::default();
     s.execute("file.new", json!({"width": 240, "height": 160, "background": "#ffffff"})).expect("Dokument");
+    // neue Dokumente exportieren als PNG 32 (BA-033); diese Tests prüfen die GIF-Ansicht
+    s.execute("pi.export.settings", json!({"settings": serde_json::to_value(fp_model::ExportSettings::default()).expect("json")})).expect("GIF");
     let mut img = fp_raster::RgbaImage::filled(fp_geom::IRect::from_xywh(0, 0, 240, 160), fp_color::Rgba8::new(255, 255, 255, 255)).expect("Bild");
     let w = img.width();
     for (i, px) in img.data_mut().iter_mut().enumerate() {

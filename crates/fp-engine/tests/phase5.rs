@@ -42,7 +42,8 @@ fn export_styles_write_valid_files() {
     let v = ex(&mut s, "file.export", json!({"path": dir.join("web").to_string_lossy(), "style": "htmlAndImages", "baseName": "seite"}));
     let files: Vec<String> = v["files"].as_array().map(|a| a.iter().filter_map(|x| x.as_str().map(String::from)).collect()).unwrap_or_default();
     assert!(files.iter().any(|f| f.ends_with("seite.htm")), "{files:?}");
-    assert!(files.iter().filter(|f| f.ends_with(".gif")).count() >= 2, "{files:?}");
+    // Vorgabe neuer Dokumente: PNG 32 (BA-033)
+    assert!(files.iter().filter(|f| f.ends_with(".png")).count() >= 2, "{files:?}");
     // Exportbereich: Pixel der Ellipse (rot vorgegeben? Füllfarbe des Werkzeugs) – Größe genau
     let v = ex(&mut s, "file.exportArea", json!({"rect": [80, 20, 150, 90], "path": dir.join("bereich.png").to_string_lossy(), "settings": {"format": "png32"}}));
     assert_eq!((v["width"].as_u64(), v["height"].as_u64()), (Some(70), Some(70)));

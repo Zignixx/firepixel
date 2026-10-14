@@ -766,13 +766,16 @@ pub(super) fn method(doc: DocId, name: &str, args: &[Arg], ctx: &mut Context) ->
         }
         "detachInstanceFromSymbol" => on_selection(doc, "modify.symbol.breakApart", json!({})),
         "convertToAnimSymbol" => {
-            // (frames, offset{x,y}, rotation, scale, opacityStart, opacityEnd)
-            let off = a(1).point().unwrap_or((10.0, 10.0));
-            on_selection(
-                doc,
-                "modify.animation.animateSelection",
-                json!({"frames": a(0).i64().clamp(1, 1000), "offsetX": off.0, "offsetY": off.1, "rotation": a(2).i64(), "scale": if a(3).is_null() { 100.0 } else { a(3).f64() }, "startOpacity": if a(4).is_null() { 100.0 } else { a(4).f64() }, "endOpacity": if a(5).is_null() { 100.0 } else { a(5).f64() }}),
-            )
+            // (uiName, numFrames, offsetDistPt{x,y}, rotationAmount, scaleAmount, startOpacity, endOpacity)
+            // wie im Original (BA-020): per Skript entstehen keine neuen Status; die Instanzgrenzen
+            // schließen den Bewegungsweg ein (fp-engine `element_bounds`)
+            let off = a(2).point().unwrap_or((10.0, 10.0));
+            let mut p = json!({"frames": a(1).i64().clamp(1, 1000), "offsetX": off.0, "offsetY": off.1, "rotation": a(3).i64(), "scale": if a(4).is_null() { 100.0 } else { a(4).f64() }, "startOpacity": if a(5).is_null() { 100.0 } else { a(5).f64() }, "endOpacity": if a(6).is_null() { 100.0 } else { a(6).f64() }, "addStates": false});
+            let ui_name = arg_str(args, 0);
+            if !ui_name.trim().is_empty() {
+                p["name"] = json!(ui_name);
+            }
+            on_selection(doc, "modify.animation.animateSelection", p)
         }
         "convertAnimSymbolToGraphicSymbol" => on_selection(doc, "modify.animation.removeAnimation", json!({})),
         "setAnimInstanceNumFrames" => on_selection(doc, "modify.animation.settings", json!({"frames": a(0).i64().clamp(1, 1000)})),

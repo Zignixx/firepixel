@@ -118,6 +118,8 @@ fn fixture() -> (Session, Ids) {
     // genug Verlaufsschritte für die Wiederholungstests (50× + Vorbereitung)
     s.prefs.set("MaxUndos", fp_engine::PrefValue::Int(200));
     ex(&mut s, "file.new", json!({"width": 400, "height": 300, "background": "#ffffff"}));
+    // neue Dokumente exportieren als PNG 32 (BA-033); die Paletten- und Größenbefehle brauchen GIF
+    ex(&mut s, "pi.export.settings", json!({"settings": serde_json::to_value(fp_model::ExportSettings::default()).unwrap_or_default()}));
     let rect = ElementId(ex(&mut s, "draw.rectangle", json!({"rect": [10, 10, 60, 40], "fillColor": "#3366cc", "strokeWidth": 2, "strokeColor": "#000000"}))["id"].as_u64().unwrap_or(0));
     let ellipse = ElementId(ex(&mut s, "draw.ellipse", json!({"rect": [100, 20, 160, 80], "fillColor": "#cc3333"}))["id"].as_u64().unwrap_or(0));
     let text = ElementId(ex(&mut s, "draw.text", json!({"text": "Hallo Welt", "anchor": [20, 150], "size": 20, "font": "Arial", "color": "#000000"}))["id"].as_u64().unwrap_or(0));

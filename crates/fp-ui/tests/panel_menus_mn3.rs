@@ -14,6 +14,8 @@ fn app(selected: bool) -> FirepixelApp {
     let ctx = egui::Context::default();
     let mut s = Session::default();
     s.execute("file.new", json!({"width": 300, "height": 200})).expect("doc");
+    // neue Dokumente exportieren als PNG 32 (BA-033); diese Tests prüfen die GIF-Ansicht
+    s.execute("pi.export.settings", json!({"settings": serde_json::to_value(fp_model::ExportSettings::default()).expect("json")})).expect("GIF");
     s.execute("draw.rectangle", json!({"rect": [20, 20, 120, 80]})).expect("rect");
     if !selected {
         s.execute("select.none", json!({})).expect("none");
