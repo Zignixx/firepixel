@@ -15,7 +15,7 @@ wird nur auf Anweisung des Nutzers.
 | Welle 5 (N25–N31) | Bildvorschau 2-/4-fach synchron, Bitmap-Rahmen um sichtbare Pixel, Farbwähler-Popup wie im Original, Effekte und Filter nahezu pixelgleich, zweites Nachzeichen-Verfahren, schnellerer Start (Median 783 ms sichtbar, 816 ms bedienbar), Pinsel live | NP-1 im echten Fenster: N22–N26 und N28–N33 ✅. N21 und N27 nach F3/F5 🔧 |
 | Batch-Studio | BATCH-1…9, BATCH-11a/b, BATCH-T (`15c2c46`, 9 Fixes im echten Fenster), Reste in F5 (`76d80be`). 12 Vorlagen, CLI `batch`, MCP `batch`, `firepixel.exe --batch` | `berichte\batcht.md`, `f5.md` |
 | Vergleich mit dem Original | Inventar (61 Einheiten), Läufer RUN-2…4, drei Skriptläufe (13.10., 14.10. 02:38–05:56). TWEAKS 13.10. (TW-01…13, Q-01…10) erledigt mit FIX-G1…G5 und FIX-R1…R3. TWEAKS 14.10. (TW-14…32, Q-11…17) erledigt mit F1–F7 und M1, TW-14 und Q-12 waren Läufer-Fehler | `parity\TWEAKS_2026-10-13.md`, `parity\TWEAKS_2026-10-14.md` |
-| Fixes F1–F8 | F1 Dialoge (HTML-Code-Assistent, Popupmenü-Editor, Durchsuchen), F2 Import (PSD-Formebenen/Gruppen, AI-/SVG-Text, Unbenannt-1.fw.png), F3 Leinwand (Gamma 1.8, Schaltflächen-Segmente, Bewegungspfad, Esc, N21), F4 Befehle/Skript (TW-16…31, Q-14/15), F5 Batch-Reste, Pipette N27, Vorlagen Q-11, F6 Von Pfad lösen, `dom.layers` flach, F7 Vorlagen englisch mit PNG/JPEG. **F8** (Ebenennummern im Skript) läuft gerade | `berichte\f1.md` … `f7.md` |
+| Fixes F1–F8 | F1 Dialoge (HTML-Code-Assistent, Popupmenü-Editor, Durchsuchen), F2 Import (PSD-Formebenen/Gruppen, AI-/SVG-Text, Unbenannt-1.fw.png), F3 Leinwand (Gamma 1.8, Schaltflächen-Segmente, Bewegungspfad, Esc, N21), F4 Befehle/Skript (TW-16…31, Q-14/15), F5 Batch-Reste, Pipette N27, Vorlagen Q-11, F6 Von Pfad lösen, `dom.layers` flach, F7 Vorlagen englisch mit PNG/JPEG, F8 Ebenennummern im Skript flach wie `dom.layers` (`add9a71`, 3 Restbefunde in BEFUNDE „F“) | `berichte\f1.md` … `f8.md` |
 | Klicktests der Nacht | CT-1a/1b/2/3 mit den Fixes FIX-B…F, Nutzerbefunde N32 (doppelter Rahmen) und N33 (Batch-Knöpfe) ✅ | `funktionstest\ct*_2026-10-13.md` |
 | DE/EN vollständig | I18N-CHECK `aeef2aa`: 6633/6633 Schlüssel, keine Lücke. CLI-Hilfe samt clap-Gerüst übersetzt, Wächtertests für Befehlstexte, Handbuch und AGENTS in beiden Sprachen. Seitdem jede neue Zeichenkette in de und en (F1–F7, `fp-i18n` grün) | `berichte\i18n-check.md` |
 | Tests | letzter voller Lauf GT-0f: 1948 bestanden, 1 wackelnd (einzeln grün). GT-0g hat bewusst nur gebaut und Smoke-Tests DE/EN gefahren | `berichte\gt0f.md`, `gt0g.md` |
@@ -23,8 +23,10 @@ wird nur auf Anweisung des Nutzers.
 **Offen:**
 
 1. **GT-2 / Endversion – der Nutzer entscheidet.** GT-2 umfasst den vollen Testlauf, den Release-Build und die
-   Endversion auf dem Desktop. Vorher laufen noch der Skript-Nachlauf vom 14.10. (Auswertung in
-   `parity\TWEAKS_2026-10-14.md`, Abschnitt „Nachlauf 14.10.“) und F8.
+   Endversion auf dem Desktop. F8 ist fertig. Der Skript-Nachlauf vom 14.10. (15:34–17:08) ist ausgewertet
+   (A3-3, `parity\TWEAKS_2026-10-14.md`, Abschnitt „Nachlauf 14.10.“): 19 von 23 Punkten belegt, 2 nicht
+   belegbar, 2 noch abweichend (TW-19, Q-15). Die neuen Tweaks TW-33…41 und die Fragen Q-18…22 warten auf
+   den Nutzer.
 2. Prüfung mit echter Maus beim Nutzer: N01, N21, N27 (🔧) und die Zeilen in `NACHPRUEFUNG.md`.
 3. Später, niedrige Priorität:
    - **CI** (GitHub Actions, Builds für Windows/macOS/Linux)
@@ -32,7 +34,7 @@ wird nur auf Anweisung des Nutzers.
    - **DES-3** (Rest von N11)
    - **BATCH-10** (Video ohne ffmpeg, P2)
    - **Runner-Lücken** (BEFUNDE „F“, letzter Eintrag)
-4. Restliste `BEFUNDE.md`: **144 offen** (535 erledigt), grob nach Art:
+4. Restliste `BEFUNDE.md`: **146 offen** (536 erledigt, Stand A3-3), grob nach Art:
 
    | Art | offen |
    |---|---|
@@ -41,7 +43,7 @@ wird nur auf Anweisung des Nutzers.
    | Hauptfenster, Gesamttest, Release (HG) | 17 |
    | Leinwand und Werkzeuge (LW, PAR, CT) | ≈ 21 |
    | Engine/Export und Rendertreue/Formate (EB, RF) | 22 |
-   | Skript-Schnittstelle, Läufer, Nachmessungen aus „F“ | 16 |
+   | Skript-Schnittstelle, Läufer, Nachmessungen aus „F“ | 18 |
    | Automatisierung, Technisch-Englisch, i18n, Neutralität, Nachzeichnen (AU, TE, I18N, NT, VT) | ≈ 21 |
 
    Etwa 40 der offenen Einträge sind reine Nachmessungen im Original. Rund 20 sind als „niedrig“ oder „klein“

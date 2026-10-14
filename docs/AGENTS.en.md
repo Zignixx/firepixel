@@ -253,8 +253,9 @@ As in the original:
 * `pixelRect` of text is the rendered ink. Without a drawn glyph you get the empty rectangle
   (±2147483648). For elements with a vector mask it is the mask area.
 * `dom.guides.locked` reads the effective lock (*View ▸ Guides ▸ Lock Guides*).
-In documents with sub-layers, check the layer **numbers** of other functions (`setLayerVisible(i)`,
-`currentLayerNum` …) against `dom.layers`. Aligning them with the flat index is still in progress.
+* All layer **numbers** count flat like `dom.layers`: number `i` in `currentLayerNum`, `setLayerVisible(i)`,
+  `setLayerLocked`, `deleteLayer`, `getParentLayerNum`, `moveSelectionToLayer` … means `dom.layers[i]`. A sub-layer
+  cannot be the active layer; `currentLayerNum = <sub-layer>` activates its top-level layer.
 
 **AI selection** (object, subject, edge – local models, no network connection while computing)
 

@@ -254,8 +254,9 @@ Wie im Original gilt:
 * `pixelRect` von Text ist die gerenderte Tinte. Ohne gezeichnete Glyphe kommt das leere Rechteck
   (±2147483648). Bei Elementen mit Vektormaske ist es der Maskenbereich.
 * `dom.guides.locked` liest die wirksame Sperre (*Ansicht ▸ Hilfslinien ▸ Hilfslinien sperren*).
-Bei Dokumenten mit Unterebenen die Ebenen**nummern** anderer Funktionen (`setLayerVisible(i)`,
-`currentLayerNum` …) gegen `dom.layers` prüfen. Die Angleichung an den flachen Index läuft noch.
+* Alle Ebenen**nummern** zählen flach wie `dom.layers`: Nummer `i` in `currentLayerNum`, `setLayerVisible(i)`,
+  `setLayerLocked`, `deleteLayer`, `getParentLayerNum`, `moveSelectionToLayer` … meint `dom.layers[i]`. Eine Unterebene
+  kann nicht die aktive Ebene sein; `currentLayerNum = <Unterebene>` aktiviert ihre Ebene der obersten Stufe.
 
 **KI-Auswahl** (Objekt, Motiv, Kante – lokale Modelle, keine Netzverbindung beim Rechnen)
 
