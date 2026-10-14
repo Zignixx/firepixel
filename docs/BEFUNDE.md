@@ -912,12 +912,12 @@ Eingetragen von DOC-4 (13.10.) aus den Berichten `berichte\batch1.md`, `batch2.m
 - [x] (von BATCH-T) „Rezept speichern unter…“/„Bericht speichern…“ mit Bildtypen, Name bekam `.fw.png` – erledigt (BATCH-T, 15c2c46)
 - [x] (von BATCH-T) Ende-Karte „Dauer“ = Summe der Zeiten je Datei (796 s statt 51 s) – erledigt (BATCH-T, 15c2c46: Wanduhr, auf Sekunden genau wie der Bericht)
 - [x] (von BATCH-T, niedrig) Filterzeile Art/Sortierung überlappen; Profi-Filterhinweis abgeschnitten; EN „1 errors“; Text-Baustein mit deutschen Anführungszeichen in EN; Tab ohne Fokus blendet die Werkzeugleiste aus – erledigt (BATCH-T, 15c2c46)
-- [ ] (von BATCH-T) Abbruch-Karte: „0 fertig · 0 übersprungen · 0 Fehler“ und „1,9 MB → 0 Byte (−100 %)“ – Spec §2.8: „Abgebrochen: n fertig, m nicht verarbeitet“, Summe nur über fertige Dateien – `batcheport_ui.rs`
-- [ ] (von BATCH-T, niedrig) Ausgabe-Leiste zeigt die Zahlen des letzten Laufs weiter nach „Leeren“/neuer Liste
-- [ ] (von BATCH-T, niedrig) Trockenlauf-Plan ohne geschätzte Größen („≈“, Spec §2.6)
-- [ ] (von BATCH-T, niedrig) KI-Schritt (Hintergrund entfernen, 24 Fotos): alle Dateien sofort „läuft“, Restzeit springt 0:58 → 3:59 → 0:47 – Parallelität/Speicher bei KI-Schritten prüfen
-- [ ] (von BATCH-T, niedrig) Name einer eingebauten Vorlage bleibt nach Sprachwechsel in der alten Sprache (Banner, Ende-Karte)
-- [ ] (von BATCH-T, niedrig) Werkzeugleiste des Hauptfensters (Speichern, Drucken …) aktiv, solange das Studio vorn ist
-- [ ] (von BATCH-T, niedrig) „Ordner…“ in der Knopfzeile liest rekursiv (Einstellung „Unterordner einbeziehen“), „Ordner…“ im ▾-Menü flach – gleiche Beschriftung, anderes Verhalten
-- [ ] (von BATCH-T, niedrig) Vorschau „Nachher“ bei reinem Umbenennen (Speichern als „Format wie Quelle“, nur Kopie) zeigt neu kodierte Größe (80 KB, −57 %) statt der unveränderten Kopie
-- [ ] (von BATCH-T, Testbarkeit) `ui_input hover_files` gilt nur einen Frame – Schweben-Rückmeldung beim Ziehen (Tönung, „Zum Hinzufügen loslassen“) über die Brücke nicht prüfbar; `ui_state.visible_panels` meldet die Werkzeugleiste auch bei „Bedienfelder ausblenden“ als sichtbar
+- [x] (von BATCH-T) Abbruch-Karte: „0 fertig · 0 übersprungen · 0 Fehler“ und „1,9 MB → 0 Byte (−100 %)“ – Spec §2.8: „Abgebrochen: n fertig, m nicht verarbeitet“, Summe nur über fertige Dateien – `batch\report_ui.rs` – erledigt (F5, 76d80be)
+- [x] (von BATCH-T, niedrig) Ausgabe-Leiste zeigt die Zahlen des letzten Laufs weiter nach „Leeren“/neuer Liste – erledigt (F5, 76d80be)
+- [x] (von BATCH-T, niedrig) Trockenlauf-Plan ohne geschätzte Größen („≈“, Spec §2.6) – erledigt (F5, 76d80be)
+- [x] (von BATCH-T, niedrig) KI-Schritt (Hintergrund entfernen, 24 Fotos): alle Dateien sofort „läuft“, Restzeit springt 0:58 → 3:59 → 0:47 – Parallelität/Speicher bei KI-Schritten prüfen – erledigt (F5, 76d80be)
+- [x] (von BATCH-T, niedrig) Name einer eingebauten Vorlage bleibt nach Sprachwechsel in der alten Sprache (Banner, Ende-Karte) – erledigt (F5, 76d80be)
+- [x] (von BATCH-T, niedrig) Werkzeugleiste des Hauptfensters (Speichern, Drucken …) aktiv, solange das Studio vorn ist – erledigt (F5, 76d80be)
+- [x] (von BATCH-T, niedrig) „Ordner…“ in der Knopfzeile liest rekursiv (Einstellung „Unterordner einbeziehen“), „Ordner…“ im ▾-Menü flach – gleiche Beschriftung, anderes Verhalten – erledigt (F5, 76d80be)
+- [x] (von BATCH-T, niedrig) Vorschau „Nachher“ bei reinem Umbenennen (Speichern als „Format wie Quelle“, nur Kopie) zeigt neu kodierte Größe (80 KB, −57 %) statt der unveränderten Kopie – erledigt (F5, 76d80be)
+- [x] (von BATCH-T, Testbarkeit) `ui_input hover_files` gilt nur einen Frame – Schweben-Rückmeldung beim Ziehen (Tönung, „Zum Hinzufügen loslassen“) über die Brücke nicht prüfbar; `ui_state.visible_panels` meldet die Werkzeugleiste auch bei „Bedienfelder ausblenden“ als sichtbar – erledigt (F5, 76d80be)
