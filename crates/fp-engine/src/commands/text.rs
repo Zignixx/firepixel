@@ -723,8 +723,10 @@ fn convert_to_paths(s: &mut Session) -> Result<CommandOutput> {
                     new_sel.push(r.id);
                     list[idx] = Arc::new(r);
                 }
+                // TW-40: ohne gesetzte Glyphen (z. B. Rahmen schmaler als ein Zeichen) bleibt der Text
+                // wie im Original unverändert stehen und gewählt
                 None => {
-                    list.remove(idx);
+                    new_sel.push(e.id);
                 }
             }
         }

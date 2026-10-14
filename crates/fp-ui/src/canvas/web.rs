@@ -80,51 +80,80 @@ fn button_slices(doc: &Document, elements: &[std::sync::Arc<fp_model::Element>],
     }
 }
 
-/// Segment-Hilfslinien als Strecken (Dokumentkoordinaten): Schnitte der Seite wie die Tabelle des
-/// HTML-Exports (oben quer an den Oberkanten, darunter abwechselnd senkrecht und waagerecht an den
-/// Kanten, ohne ein Segment zu schneiden).
+/// Segment-Hilfslinien als Strecken (Dokumentkoordinaten), wie im Original (TW-41,
+/// `menu-view/12`, `tool-web/04`, `a_309`): Die Seite wird rekursiv geteilt, ohne ein Segment zu
+/// schneiden. In einem Bereich gilt der Reihe nach:
+/// 1. Liegt das oberste Segment tiefer als die Oberkante: waagerecht an seiner Oberkante.
+/// 2. Sonst senkrecht an den Kanten der Segmente der ersten Reihe, über die ganze Höhe (erst Spalten).
+/// 3. Geht das nicht: waagerecht an der Oberkante des nächsten Segments darunter.
+/// 4. Sonst waagerecht an der Unterkante der Segmente der ersten Reihe.
 pub fn slice_guides(page: Rect, slices: &[Rect]) -> Vec<(Point, Point)> {
     let mut out = Vec::new();
-    cut(page, slices, true, true, &mut out, 0);
+    cut(page, slices, &mut out, 0);
     out
 }
 
-fn cut(region: Rect, slices: &[Rect], horizontal: bool, tops_only: bool, out: &mut Vec<(Point, Point)>, depth: usize) {
-    let inside: Vec<Rect> = slices.iter().copied().filter(|s| s.left < region.right && s.right > region.left && s.top < region.bottom && s.bottom > region.top).collect();
-    if inside.is_empty() || depth > 12 {
-        return;
-    }
-    let lo = if horizontal { region.top } else { region.left };
-    let hi = if horizontal { region.bottom } else { region.right };
-    let mut cuts: Vec<f32> = Vec::new();
-    for s in &inside {
-        let (a, b) = if horizontal { (s.top, s.bottom) } else { (s.left, s.right) };
-        for (v, keep) in [(a, true), (b, !tops_only)] {
-            if keep && v > lo + 0.5 && v < hi - 0.5 && !inside.iter().any(|o| if horizontal { o.top < v - 0.5 && o.bottom > v + 0.5 } else { o.left < v - 0.5 && o.right > v + 0.5 }) {
-                cuts.push(v);
-            }
-        }
-    }
-    cuts.sort_by(|a, b| a.total_cmp(b));
-    cuts.dedup_by(|a, b| (*a - *b).abs() < 0.5);
-    for &v in &cuts {
-        out.push(if horizontal { (Point::new(region.left, v), Point::new(region.right, v)) } else { (Point::new(v, region.top), Point::new(v, region.bottom)) });
-    }
-    let mut edges = vec![lo];
-    edges.extend(cuts.iter().copied());
-    edges.push(hi);
-    for w in edges.windows(2) {
-        let sub = if horizontal { Rect::new(region.left, w[0], region.right, w[1]) } else { Rect::new(w[0], region.top, w[1], region.bottom) };
-        // ein Teil, der genau ein Segment ist, wird nicht weiter geschnitten
-        let only = slices.iter().filter(|s| s.left < sub.right && s.right > sub.left && s.top < sub.bottom && s.bottom > sub.top).count();
-        let exact = slices.iter().any(|s| (s.left - sub.left).abs() < 0.5 && (s.right - sub.right).abs() < 0.5 && (s.top - sub.top).abs() < 0.5 && (s.bottom - sub.bottom).abs() < 0.5);
-        if only == 0 || (only == 1 && exact) {
-            continue;
-        }
-        cut(sub, slices, !horizontal, false, out, depth + 1);
-    }
+fn overlaps(s: &Rect, r: &Rect) -> bool {
+    s.left < r.right - 0.5 && s.right > r.left + 0.5 && s.top < r.bottom - 0.5 && s.bottom > r.top + 0.5
 }
 
+/// Gültiger Schnitt: liegt im Inneren des Bereichs und schneidet kein Segment.
+fn valid(inside: &[Rect], region: &Rect, v: f32, horizontal: bool) -> bool {
+    let (lo, hi) = if horizontal { (region.top, region.bottom) } else { (region.left, region.right) };
+    v > lo + 0.5 && v < hi - 0.5 && !inside.iter().any(|o| if horizontal { o.top < v - 0.5 && o.bottom > v + 0.5 } else { o.left < v - 0.5 && o.right > v + 0.5 })
+}
+
+fn cut(region: Rect, slices: &[Rect], out: &mut Vec<(Point, Point)>, depth: usize) {
+    let inside: Vec<Rect> = slices.iter().copied().filter(|s| overlaps(s, &region)).collect();
+    if inside.is_empty() || depth > 24 {
+        return;
+    }
+    // ein Bereich, der genau ein Segment ist, wird nicht weiter geteilt
+    if inside.len() == 1 {
+        let s = inside[0];
+        if s.left <= region.left + 0.5 && s.right >= region.right - 0.5 && s.top <= region.top + 0.5 && s.bottom >= region.bottom - 0.5 {
+            return;
+        }
+    }
+    let top = inside.iter().map(|s| s.top.max(region.top)).fold(f32::INFINITY, f32::min);
+    let first_row: Vec<Rect> = inside.iter().copied().filter(|s| s.top.max(region.top) <= top + 0.5).collect();
+    let mut tries: Vec<(bool, Vec<f32>)> = Vec::new();
+    // 1. oberstes Segment liegt tiefer: Oberkante
+    tries.push((true, vec![top]));
+    // 2. Spalten an den Kanten der ersten Reihe
+    tries.push((false, first_row.iter().flat_map(|s| [s.left, s.right]).collect()));
+    // 3. Oberkante des nächsten Segments darunter
+    let mut tops: Vec<f32> = inside.iter().map(|s| s.top).filter(|&t| t > top + 0.5).collect();
+    tops.sort_by(|a, b| a.total_cmp(b));
+    if let Some(&t) = tops.iter().find(|&&t| valid(&inside, &region, t, true)) {
+        tries.push((true, vec![t]));
+    }
+    // 4. Unterkanten der ersten Reihe
+    tries.push((true, first_row.iter().map(|s| s.bottom).collect()));
+    // Rückfall für verschachtelte Lagen: irgendeine gültige Kante
+    tries.push((false, inside.iter().flat_map(|s| [s.left, s.right]).collect()));
+    tries.push((true, inside.iter().flat_map(|s| [s.top, s.bottom]).collect()));
+    for (horizontal, cand) in tries {
+        let mut cuts: Vec<f32> = cand.into_iter().filter(|&v| valid(&inside, &region, v, horizontal)).collect();
+        if cuts.is_empty() {
+            continue;
+        }
+        cuts.sort_by(|a, b| a.total_cmp(b));
+        cuts.dedup_by(|a, b| (*a - *b).abs() < 0.5);
+        for &v in &cuts {
+            out.push(if horizontal { (Point::new(region.left, v), Point::new(region.right, v)) } else { (Point::new(v, region.top), Point::new(v, region.bottom)) });
+        }
+        let (lo, hi) = if horizontal { (region.top, region.bottom) } else { (region.left, region.right) };
+        let mut edges = vec![lo];
+        edges.extend(cuts.iter().copied());
+        edges.push(hi);
+        for w in edges.windows(2) {
+            let sub = if horizontal { Rect::new(region.left, w[0], region.right, w[1]) } else { Rect::new(w[0], region.top, w[1], region.bottom) };
+            cut(sub, slices, out, depth + 1);
+        }
+        return;
+    }
+}
 /// Zeichnet Überlagerung und Hilfslinien.
 pub fn paint(painter: &egui::Painter, items: &[WebItem], page: Rect, guides: bool, guide_color: Color32, to_screen: &dyn Fn(Point) -> Pos2) {
     for it in items {
@@ -183,5 +212,57 @@ mod tests {
         assert!(has((377.0, 342.0), (377.0, 492.0)), "{g:?}");
         assert!(has((297.0, 422.0), (377.0, 422.0)), "{g:?}");
         assert_eq!(g.len(), 4, "{g:?}");
+    }
+
+    fn sorted(mut g: Vec<(Point, Point)>) -> Vec<(f32, f32, f32, f32)> {
+        let mut v: Vec<_> = g.drain(..).map(|(p, q)| (p.x, p.y, q.x, q.y)).collect();
+        v.sort_by(|a, b| a.partial_cmp(b).expect("Zahl"));
+        v
+    }
+
+    /// TW-41, `menu-view/12`: Schaltfläche 260–360 × 20–60 und Segment 20–180 × 200–280 auf 800 × 600.
+    /// Erst Spalten: Die Senkrechten bei 260/360 laufen bis unten, die Waagerechte bei 200 endet bei 260.
+    #[test]
+    fn guides_like_original_menu_view_12_tw41() {
+        let g = slice_guides(Rect::new(0.0, 0.0, 800.0, 600.0), &[Rect::new(20.0, 200.0, 180.0, 280.0), Rect::new(260.0, 20.0, 360.0, 60.0)]);
+        let want = vec![
+            (0.0, 20.0, 800.0, 20.0),
+            (0.0, 200.0, 260.0, 200.0),
+            (20.0, 200.0, 20.0, 600.0),
+            (20.0, 280.0, 180.0, 280.0),
+            (180.0, 200.0, 180.0, 600.0),
+            (260.0, 20.0, 260.0, 600.0),
+            (260.0, 60.0, 360.0, 60.0),
+            (360.0, 20.0, 360.0, 600.0),
+        ];
+        let mut want = want;
+        want.sort_by(|a, b| a.partial_cmp(b).expect("Zahl"));
+        assert_eq!(sorted(g), want);
+    }
+
+    /// TW-41, `tool-web/04`: Ein neues Segment 300–450 × 450–550 schneidet die Spalte bei 360. Dann endet
+    /// die Senkrechte bei 360 an der Waagerechten bei 450, die von 260 bis zum rechten Rand läuft.
+    #[test]
+    fn guides_like_original_tool_web_04_tw41() {
+        let g = slice_guides(
+            Rect::new(0.0, 0.0, 800.0, 600.0),
+            &[Rect::new(20.0, 200.0, 180.0, 280.0), Rect::new(260.0, 20.0, 360.0, 60.0), Rect::new(300.0, 450.0, 450.0, 550.0)],
+        );
+        let mut want = vec![
+            (0.0, 20.0, 800.0, 20.0),
+            (0.0, 200.0, 260.0, 200.0),
+            (20.0, 200.0, 20.0, 600.0),
+            (20.0, 280.0, 180.0, 280.0),
+            (180.0, 200.0, 180.0, 600.0),
+            (260.0, 20.0, 260.0, 600.0),
+            (260.0, 450.0, 800.0, 450.0),
+            (360.0, 20.0, 360.0, 450.0),
+            (260.0, 60.0, 360.0, 60.0),
+            (300.0, 450.0, 300.0, 600.0),
+            (450.0, 450.0, 450.0, 600.0),
+            (300.0, 550.0, 450.0, 550.0),
+        ];
+        want.sort_by(|a, b| a.partial_cmp(b).expect("Zahl"));
+        assert_eq!(sorted(g), want);
     }
 }

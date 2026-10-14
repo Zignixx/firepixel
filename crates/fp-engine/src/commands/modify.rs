@@ -309,8 +309,9 @@ fn combine(s: &mut Session, op: PathBoolOp) -> Result<CommandOutput> {
                 let contours = res.into_iter().next().unwrap_or_default();
                 let (bottom_path, bottom) = (items[items.len() - 1].0.clone(), Arc::clone(&items[items.len() - 1].1));
                 let others: Vec<ElementId> = items[..items.len() - 1].iter().map(|(_, e, _)| e.id).collect();
-                let _ = bottom_path;
                 docops::remove_ids(doc, page, &others);
+                // TW-33: das Ergebnis liegt im Original am Platz des oberen gewählten Objekts
+                move_to_top_place(doc, page, bottom.id, &items[0].0, &bottom_path);
                 if contours.is_empty() {
                     docops::remove_ids(doc, page, &[bottom.id]);
                     d.selection.clear();
@@ -427,6 +428,8 @@ fn join(d: &mut DocumentState) -> Result<()> {
             };
             let others: Vec<ElementId> = items[..items.len() - 1].iter().map(|(_, e, _)| e.id).collect();
             docops::remove_ids(doc, page, &others);
+            // TW-33: wie Vereinigen am Platz des oberen Objekts
+            move_to_top_place(doc, page, bottom.id, &items[0].0, &items[items.len() - 1].0);
             docops::edit_by_id(doc, page, bottom.id, |x| {
                 set_contours(x, contours, None);
                 x.common.name = None; // TW-26
@@ -434,6 +437,22 @@ fn join(d: &mut DocumentState) -> Result<()> {
             d.selection.set(vec![bottom.id]);
             Ok(())
         }
+    }
+}
+
+/// Legt `id` an den Platz `top` (Pfad vor dem Entfernen), wenn beide in derselben Liste lagen.
+fn move_to_top_place(doc: &mut fp_model::Document, page: usize, id: ElementId, top: &ElementPath, bottom: &ElementPath) {
+    let same_list = top.root == bottom.root && top.slot == bottom.slot && top.cel == bottom.cel && top.steps.len() == bottom.steps.len() && top.steps[..top.steps.len().saturating_sub(1)] == bottom.steps[..bottom.steps.len().saturating_sub(1)];
+    let Some(PathStep::Child(to)) = top.steps.last().copied() else { return };
+    if !same_list {
+        return;
+    }
+    let Some(now) = docops::find_on_page(doc, page, id) else { return };
+    if let Some((list, i)) = docops::parent_list_mut(doc, &now)
+        && i > to
+    {
+        let e = list.remove(i);
+        list.insert(to.min(list.len()), e);
     }
 }
 
@@ -451,7 +470,9 @@ fn split(d: &mut DocumentState) -> Result<()> {
         let Some((list, idx)) = docops::parent_list_mut(doc, &path) else { continue };
         list.remove(idx);
         let mut parts = Vec::new();
-        for c in sh.contours.iter().rev() {
+        // TW-33: Die Teile liegen im Original ganz oben (erste Kontur zuoberst)
+        let idx = 0;
+        for c in sh.contours.iter() {
             let mut n = (*e).clone();
             set_contours(&mut n, vec![c.clone()], None);
             n.common.name = None; // TW-26: Teile sind im Original namenlos
@@ -1215,12 +1236,22 @@ pub(super) fn register(r: &mut CommandRegistry) {
         let (els, first, ids) = {
             let d = s.doc()?;
             let els = selected_elements(d);
-            let first = els.first().map(|(p, _)| p.clone()).ok_or_else(|| sel_err("err-sel-nothing"))?;
+            // TW-33: die Bitmap liegt im Original am Platz des untersten gewählten Objekts; dessen
+            // Index rückt um die darüber entfernten Objekte derselben Liste auf
+            let mut first = els.last().map(|(p, _)| p.clone()).ok_or_else(|| sel_err("err-sel-nothing"))?;
+            let parent = |p: &ElementPath| (p.root, p.slot, p.cel, p.steps[..p.steps.len().saturating_sub(1)].to_vec());
+            if let Some(PathStep::Child(i)) = first.steps.last().copied() {
+                let above = els[..els.len() - 1].iter().filter(|(p, _)| parent(p) == parent(&first) && matches!(p.steps.last(), Some(PathStep::Child(j)) if *j < i)).count();
+                if let Some(last) = first.steps.last_mut() {
+                    *last = PathStep::Child(i - above);
+                }
+            }
             (els.iter().map(|(_, e)| Arc::clone(e)).collect::<Vec<_>>(), first, d.selection.elements.clone())
         };
         let img = flatten_elements(s, &els)?;
-        // TW-27: die Bitmap behält den Namen (des obersten Objekts), wie im Original
-        let name = els.first().and_then(|e| e.common.name.clone());
+        // TW-27: ein einzelnes Objekt behält seinen Namen (menu-modify-a/08 „ST“); aus mehreren
+        // Objekten entsteht wie im Original eine Bitmap ohne Namen (TW-33, menu-modify-a/06)
+        let name = if els.len() == 1 { els[0].common.name.clone() } else { None };
         with_doc(s, |d| {
             let id = replace_with_bitmap(d, &ids, &img, &first)?;
             if name.is_some() {

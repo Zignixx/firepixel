@@ -541,6 +541,12 @@ impl<'a> Builder<'a> {
             }
             lines = vec![all];
         }
+        // TW-40 (Q-15, TX1 10 px breit, 18/24 pt): Ist ein Zeichen breiter als der feste Textrahmen,
+        // setzt das Original gar nichts – keine Tinte, und „In Pfade konvertieren“ ändert nichts
+        let too_narrow = fixed && !vertical && {
+            let width = (b.bounds.right - b.bounds.left) as f64;
+            lines.iter().flat_map(|l| l.items.iter()).any(|it| !it.tab && !it.ch.is_whitespace() && it.adv - it.trk > width + 1e-9)
+        };
         let x_anchor = b.bounds.left as f64;
         let y_anchor = b.bounds.top as f64;
         let mut out_lines: Vec<LineLayout> = Vec::new();
@@ -697,6 +703,13 @@ impl<'a> Builder<'a> {
             frame_exact = [b.bounds.left as f64, y_anchor, b.bounds.right as f64, bottom];
             // Unterkante gerundet (F6: Original TX3 16 pt zweizeilig 35, TX2 48; Korpus exakt 305/676 statt 271 mit Aufrunden)
             frame = Rect::new(b.bounds.left, b.bounds.top, b.bounds.right, bottom.round() as f32);
+        }
+        if too_narrow {
+            glyphs.clear();
+            decorations.clear();
+            for l in &mut out_lines {
+                l.glyphs = 0..0;
+            }
         }
         let mut lay = TextLayout {
             kind: b.kind,
