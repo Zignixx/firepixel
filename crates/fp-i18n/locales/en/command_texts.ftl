@@ -619,3 +619,5 @@ cmdtext-verlaufsform-fshi-17-konturverlauf = Gradient shape (FSHi; 17 = contour 
 cmdtext-winkel-des-verlaufs-in-grad-0-nach-recht-634789 = Angle of the gradient in degrees (0 = to the right, 270 = downwards)
 cmdtext-vollstaendiger-pinsel-wie-element-brush-048a4d = complete brush like `element.brush` (dialog "Edit Stroke"); the other fields apply afterwards
 cmdtext-pinsel-der-werkzeugvorgabe-speichern-wer-94fd63 = save the brush of the tool preset (tool inspector) instead of the stroke of the selection
+cmdtext-symbolname-vorgabe-symbol = Symbol name (default "Symbol")
+cmdtext-fehlende-status-anhaengen-rueckfrage-aut-c6e799 = append missing states (question "Automatically add new states?": OK = true, Cancel = false)

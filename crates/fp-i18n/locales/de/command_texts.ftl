@@ -619,3 +619,5 @@ cmdtext-verlaufsform-fshi-17-konturverlauf = Verlaufsform (FSHi; 17 = Konturverl
 cmdtext-winkel-des-verlaufs-in-grad-0-nach-recht-634789 = Winkel des Verlaufs in Grad (0 = nach rechts, 270 = nach unten)
 cmdtext-vollstaendiger-pinsel-wie-element-brush-048a4d = vollständiger Pinsel wie `element.brush` (Dialog „Pinselstrich bearbeiten“); die übrigen Felder wirken danach
 cmdtext-pinsel-der-werkzeugvorgabe-speichern-wer-94fd63 = Pinsel der Werkzeugvorgabe speichern (Werkzeug-Inspektor) statt des Strichs der Auswahl
+cmdtext-symbolname-vorgabe-symbol = Symbolname (Vorgabe „Symbol“)
+cmdtext-fehlende-status-anhaengen-rueckfrage-aut-c6e799 = fehlende Status anhängen (Rückfrage „Automatisch neue Status hinzufügen?“: OK = true, Abbrechen = false)
