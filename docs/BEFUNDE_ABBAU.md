@@ -93,24 +93,24 @@ Ergebnisse B-3 (14.10.): `docs\berichte\b3.md` (erledigt 7 inkl. BA-005/BA-013, 
 
 ## B4 – Dialoge/Datei-Dialoge/Gestaltung
 
-1. **BA-048** Zoom-Rahmen in der Vorschaukachel gestrichelt wie auf der Leinwand – Z. 124 (BV-5) – `crates\fp-ui\src\preview.rs` – S
-1. **BA-049** Tastaturkurzbefehle Rest: Symbolknöpfe beim Satz, Fokus/Pfeiltasten im Menübaum, „Befehle:“ als Kombifeld – Z. 227 (DLG-4) – `dialogs (Kürzel)` – M
-1. **BA-050** Bitmap-Auswahl wiederherstellen: Live-Anzeige der entstehenden Auswahl – Z. 229 (KV-3) – `dialogs (bitmap_selection)` – M
-1. **BA-051** Optimieren ▸ Einstellungen löschen: gewählte Einstellung direkt nach Rückfrage löschen – Z. 230 (MN-5) – `panels\optimize.rs, dialogs\panel_menus.rs` – S
-1. **BA-052** Tab-Folge der Live-Effekt-Dialoge (Farbton/Sättigung, Helligkeit/Kontrast, Unscharf maskieren) wie im Menüdialog – Z. 231 (FORM-1) – `dialogs\effects.rs effect_form` – S
-1. **BA-053** „Neues Symbol“ im Bibliothek-Bedienfeld wie D14 (9-Slice, Bibliothek-Kästchen) – Z. 232 (FORM-1) – `panel.library.newSymbol` – M
-1. **BA-054** Exportdialog meldet „exportiert“ (Bildvorschau danach schließen, falls Messung re\17 §11.2 das ergibt) – Z. 236 (BV-4) – `dialogs\export.rs` – S
-1. **BA-055** Pinsel-Inspektor: Knopfbreite DE, senkrechte Popup-Schieber 24 × 222, Mischmodus-Liste (56 Einträge) – Z. 242 (PINSEL-1) – `inspector` – M
-1. **BA-056** Namen der Abschrägungs-Familie und Feld „Art“ – Nutzerentscheidung – Z. 244 (FX-2) – `Effekte, Glossar` – S
-1. **BA-057** Verlaufsnamen der Pfadbefehle „Pfade erweitern“/„Pfade einlassen“ – Z. 316 (PM-6) – `command_texts.ftl` – S
-1. **BA-058** Knopf „Optionen…“ im Exportdialog mit Accessibility-Namen – Z. 321 (E2) – `dialogs\export.rs` – S
-1. **BA-059** shortcuts.json gegen PARITAET_B §1 abgleichen (gemessene Werte gelten) – Z. 322 (MN-5) – `fp-engine\data\shortcuts.json` – S
-1. **BA-060** App-eigener Datei-Dialog: Vorschau und „XMP einschließen“ nachrüsten – Z. 409 (DLG-3) – `file_dialog.rs show_modal, files.rs` – M
-1. **BA-061** Schrift-Menü: Schriften aus Inspektor/Texteditor in „zuletzt benutzt“ eintragen – Z. 492 (UX-B) – `menu.rs` – S
-1. **BA-062** KI-Modelle verwalten: Modellspalte breiter oder „…“ mit Tooltip; Nachprüfung qps – Z. 522 (I18N-QA) – `dialogs (KI)` – S
-1. **BA-063** Dialoge D18–D23 Rest: D18 Zusatzkästchen, D19 Druckgröße/Ketten, D20 Pfeilsymbole + B:/H:, D21 Anordnung, D22 Selektives JPEG, D23 Textgröße als Kombifeld; Zugriffstasten in allen Dialogen – Z. 532 (UX-B) – `dialogs\*` – L
-1. **BA-064** Gestaltung Rest DES-1: Voreinstellungen Fußleiste, DESIGN §13 Prio 5–11, Knopfbreiten zentral – Z. 706 (DES-1) – `dialogs, ui_kit` – M
-1. **BA-065** Startseite: Eintrag „Batch“ – Z. 753 (BATCH-9) – `welcome` – S
+1. **BA-048** Zoom-Rahmen in der Vorschaukachel gestrichelt wie auf der Leinwand – Z. 124 (BV-5) – `crates\fp-ui\src\preview.rs` – S – **Ergebnis B-4:** erledigt (B-4, f2808dc) – gestrichelter Leinwand-Rahmen (`canvas::dashed_rect`)
+1. **BA-049** Tastaturkurzbefehle Rest: Symbolknöpfe beim Satz, Fokus/Pfeiltasten im Menübaum, „Befehle:“ als Kombifeld – Z. 227 (DLG-4) – `dialogs (Kürzel)` – M – **Ergebnis B-4:** erledigt (B-4, f2808dc) – 4 Symbolknöpfe (Name = Tooltip), „Befehle:“ + Kombifeld, Baum fokussierbar mit Fokusrahmen, ↑/↓/←/→/Pos1/Ende
+1. **BA-050** Bitmap-Auswahl wiederherstellen: Live-Anzeige der entstehenden Auswahl – Z. 229 (KV-3) – `dialogs (bitmap_selection)` – M – **Ergebnis B-4:** erledigt (B-4, f2808dc) – Live-Anzeige ohne Verlaufsschritt, Abbrechen stellt zurück, OK = ein Schritt
+1. **BA-051** Optimieren ▸ Einstellungen löschen: gewählte Einstellung direkt nach Rückfrage löschen – Z. 230 (MN-5) – `panels\optimize.rs, dialogs\panel_menus.rs` – S – **Ergebnis B-4:** erledigt (B-4, f2808dc) – gewählte eigene Einstellung → direkt Rückfrage; ohne gewählte eigene Einstellung (Original ungemessen) Auswahl wie bisher
+1. **BA-052** Tab-Folge der Live-Effekt-Dialoge (Farbton/Sättigung, Helligkeit/Kontrast, Unscharf maskieren) wie im Menüdialog – Z. 231 (FORM-1) – `dialogs\effects.rs effect_form` – S – **Ergebnis B-4:** erledigt (B-4, f2808dc) – Tab-Folge wie Menüdialog (Unit-Test)
+1. **BA-053** „Neues Symbol“ im Bibliothek-Bedienfeld wie D14 (9-Slice, Bibliothek-Kästchen) – Z. 232 (FORM-1) – `panel.library.newSymbol` – M – **Ergebnis B-4:** erledigt (B-4, f2808dc) – Anordnung D14, 9-Slice wirkt (`nineSlice`), Bibliothek-Kästchen grau; Verhalten (Bearbeitung öffnen?) ungemessen → M
+1. **BA-054** Exportdialog meldet „exportiert“ (Bildvorschau danach schließen, falls Messung re\17 §11.2 das ergibt) – Z. 236 (BV-4) – `dialogs\export.rs` – S – **Ergebnis B-4:** teilweise (B-4, f2808dc) – Zähler `dialogs.exported`; Schließen der Bildvorschau wartet auf B-2 (re §11.2)
+1. **BA-055** Pinsel-Inspektor: Knopfbreite DE, senkrechte Popup-Schieber 24 × 222, Mischmodus-Liste (56 Einträge) – Z. 242 (PINSEL-1) – `inspector` – M – **Ergebnis B-4:** teilweise (B-4, f2808dc) – Knopftext ganz lesbar (`fields::button_fit`); Popup-Schieber schon senkrecht (parity tool-brush 07/09 ✅); Mischmodus-Liste (56) wartet auf B-2/eigenen Auftrag
+1. **BA-056** Namen der Abschrägungs-Familie und Feld „Art“ – Nutzerentscheidung – Z. 244 (FX-2) – `Effekte, Glossar` – S – **Ergebnis B-4:** wartet auf Nutzerentscheidung (Namen der Abschrägungs-Familie, Feld „Art“) – kein Code
+1. **BA-057** Verlaufsnamen der Pfadbefehle „Pfade erweitern“/„Pfade einlassen“ – Z. 316 (PM-6) – `command_texts.ftl` – S – **Ergebnis B-4:** erledigt (B-4, f2808dc) – „Pfade erweitern“/„Pfade einlassen“ (en Expand/Inset Paths)
+1. **BA-058** Knopf „Optionen…“ im Exportdialog mit Accessibility-Namen – Z. 321 (E2) – `dialogs\export.rs` – S – **Ergebnis B-4:** erledigt (B-4, f2808dc) – alle `fields::button` mit Accessibility-Namen
+1. **BA-059** shortcuts.json gegen PARITAET_B §1 abgleichen (gemessene Werte gelten) – Z. 322 (MN-5) – `fp-engine\data\shortcuts.json` – S – **Ergebnis B-4:** geprüft (B-4, f2808dc) – aktiver Vorgabesatz zeigt die gemessenen Werte (Umschalt+F3, Strg+Alt+O, F5; Test); Abweichungen nur im nicht gemessenen Satz „Firepixel“ → ohne Messwerte keine Änderung (wartet auf B-2)
+1. **BA-060** App-eigener Datei-Dialog: Vorschau und „XMP einschließen“ nachrüsten – Z. 409 (DLG-3) – `file_dialog.rs show_modal, files.rs` – M – **Ergebnis B-4:** erledigt (B-4, f2808dc) – Vorschau (Öffnen) und „XMP einschließen“ (grau, ☑) im App-Dialog; nativer Dialog bleibt X (BA-113)
+1. **BA-061** Schrift-Menü: Schriften aus Inspektor/Texteditor in „zuletzt benutzt“ eintragen – Z. 492 (UX-B) – `menu.rs` – S – **Ergebnis B-4:** erledigt (B-4, f2808dc) – Inspektor und Texteditor tragen in `RecentFontList` ein
+1. **BA-062** KI-Modelle verwalten: Modellspalte breiter oder „…“ mit Tooltip; Nachprüfung qps – Z. 522 (I18N-QA) – `dialogs (KI)` – S – **Ergebnis B-4:** erledigt (B-4, f2808dc) – Spalte bis 340 px nach längstem Namen, sonst „…“ + Tooltip; Nachprüfung qps
+1. **BA-063** Dialoge D18–D23 Rest: D18 Zusatzkästchen, D19 Druckgröße/Ketten, D20 Pfeilsymbole + B:/H:, D21 Anordnung, D22 Selektives JPEG, D23 Textgröße als Kombifeld; Zugriffstasten in allen Dialogen – Z. 532 (UX-B) – `dialogs\*` – L – **Ergebnis B-4:** D18–D23 im Code erledigt (DLG-1b/DLG-2, geprüft B-4); Zugriffstasten in allen Formulardialogen → V (L, braucht &-Buchstaben je Dialog aus den Vorlagen)
+1. **BA-064** Gestaltung Rest DES-1: Voreinstellungen Fußleiste, DESIGN §13 Prio 5–11, Knopfbreiten zentral – Z. 706 (DES-1) – `dialogs, ui_kit` – M – **Ergebnis B-4:** teilweise (B-4, f2808dc) – Voreinstellungen mit Fußleiste (Liste 10 px kürzer; leere Texte sperren die Fußleiste nicht mehr); DESIGN §13 Prio 5–11 und zentrale Knopfbreiten → V (DES-3)
+1. **BA-065** Startseite: Eintrag „Batch“ – Z. 753 (BATCH-9) – `welcome` – S – **Ergebnis B-4:** erledigt (B-4, f2808dc) – „Batch-Verarbeitung…“ unter „Erweitern“
 
 ## B5 – Skript/Export/Web
 
@@ -171,8 +171,8 @@ Ergebnisse B-6 (14.10.): `docs\berichte\b6.md` (erledigt 14, offen/verschoben 6)
 
 ## X – nicht machbar
 
-1. **BA-112** Native Datei-Dialoge mittig platzieren – nur per Win32/unsafe (Workspace unsafe_code = forbid) – Z. 408 (DLG-3) – `file_dialog.rs spawn_native` – S
-1. **BA-113** Nativer Dialog: Zusatzfelder (IFileDialogCustomize = unsafe) und Filter-Vorwahl (rfd kann es nicht) – Z. 409 (DLG-3), Z. 410 (DLG-3) – `file_dialog.rs` – S
+1. **BA-112** Native Datei-Dialoge mittig platzieren – nur per Win32/unsafe (Workspace unsafe_code = forbid) – Z. 408 (DLG-3) – `file_dialog.rs spawn_native` – S – **Ergebnis B-4:** bleibt X: `SetWindowPos` nur `unsafe` oder neue Abhängigkeit; ein unsichtbares Besitzerfenster ginge nur über einen eigenen winit-Fenstergriff, den eframe für Unterfenster nicht herausgibt
+1. **BA-113** Nativer Dialog: Zusatzfelder (IFileDialogCustomize = unsafe) und Filter-Vorwahl (rfd kann es nicht) – Z. 409 (DLG-3), Z. 410 (DLG-3) – `file_dialog.rs` – S – **Ergebnis B-4:** bleibt X (`IFileDialogCustomize` nur über COM/`unsafe`); Ersatz: alle Zusatzfelder im App-Dialog (BA-060)
 1. **BA-114** Systemfarbwähler (A1) und Pipette außerhalb des Fensters (A2) – nur mit unsafe bzw. Zusatzabhängigkeit – Z. 241 (FARB-1b), Z. 959 (F5) – `inspector\popups.rs` – S
 1. **BA-115** XMP-Standardkennung enthält den Herstellernamen – Neutralitätsregel §1a verbietet es – Z. 447 (DLG-10) – `fp-fwpng XMP` – S
 1. **BA-116** CFF-Schrift (andere Schriftfassung unter Windows) bleibt bei 52–72 % exakten Pixeln; gedrehter Text ungehintet – Z. 373 (FX-T) – `fp-text` – S
