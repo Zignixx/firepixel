@@ -36,11 +36,11 @@ fn phys_x(bytes: &[u8]) -> Option<u32> {
 
 // ------------------------------------------------------------------ BA-017
 
-/// BA-017 (HÃ¶he): `rawWidth Ã— rawHeight` eines Texts (â€žHallo Weltâ€œ, Arial) nach
+/// BA-017 (Höhe): `rawWidth × rawHeight` eines Texts („Hallo Welt“, Arial) nach
 /// `attachTextToPath`, Messwerte des Originals aus B-2b (10 Punkte) und B-2 (Kreis).
 #[test]
 fn ba017_raw_height_of_text_on_path_matches_measurements() {
-    // (Pfad, SchriftgrÃ¶ÃŸe, erwartet "rawWidth,rawHeight")
+    // (Pfad, Schriftgröße, erwartet "rawWidth,rawHeight")
     let line = |x1: i32, y1: i32, x2: i32, y2: i32| format!("dom.addNewLine({{x: {x1}, y: {y1}}}, {{x: {x2}, y: {y2}}})");
     let ellipse = |l: i32, t: i32, r: i32, b: i32| format!("dom.addNewOval({{left: {l}, top: {t}, right: {r}, bottom: {b}}})");
     let cases: Vec<(String, u32, &str)> = vec![
@@ -80,9 +80,9 @@ fn layered() -> fp_engine::Session {
     s
 }
 
-/// BA-123: `reorderLayer(<Unterebene>, <Ebene der obersten Stufe>, false)` â€“ die Unterebene
-/// verlÃ¤sst ihre Elternebene und wird Ebene der obersten Stufe direkt unter dem Ziel (flach vor
-/// dem Ziel), danach aktiv (Original: `â€¦ A, A2^A, A1, B`; `A1, Ebene 1, A, A2^A`; `A2, A, A1^A`).
+/// BA-123: `reorderLayer(<Unterebene>, <Ebene der obersten Stufe>, false)` – die Unterebene
+/// verlässt ihre Elternebene und wird Ebene der obersten Stufe direkt unter dem Ziel (flach vor
+/// dem Ziel), danach aktiv (Original: `… A, A2^A, A1, B`; `A1, Ebene 1, A, A2^A`; `A2, A, A1^A`).
 #[test]
 fn ba123_sublayer_onto_top_level_becomes_top_level_below_target() {
     let mut s = layered();
@@ -108,8 +108,8 @@ fn ba123_sublayer_onto_top_level_becomes_top_level_below_target() {
 
 // ------------------------------------------------------------------ BA-124
 
-/// BA-124: Dokument mit Einheit Pixel/cm â€“ `resolution` bleibt, `resolutionUnits` = `cm`,
-/// `pHYs` = trunc(px/cm)Â·100 in FW-PNG und PNG-Export (28,35 â†’ 2800, 50 â†’ 5000, 59,06 â†’ 5900).
+/// BA-124: Dokument mit Einheit Pixel/cm – `resolution` bleibt, `resolutionUnits` = `cm`,
+/// `pHYs` = trunc(px/cm)·100 in FW-PNG und PNG-Export (28,35 → 2800, 50 → 5000, 59,06 → 5900).
 #[test]
 fn ba124_resolution_per_cm_kept_and_phys_truncated() {
     for (i, (ppcm, want)) in [(28.35, 2800u32), (50.0, 5000), (59.06, 5900)].into_iter().enumerate() {
@@ -134,8 +134,8 @@ fn ba124_resolution_per_cm_kept_and_phys_truncated() {
 
 // ------------------------------------------------------------------ N1
 
-/// N1: `dom.setExportOptions({exportFormat: "GIF", â€¦})` setzt wie im Original die
-/// Exporteinstellungen des Dokuments (Verlaufsschritt, rÃ¼ckgÃ¤ngig machbar).
+/// N1: `dom.setExportOptions({exportFormat: "GIF", …})` setzt wie im Original die
+/// Exporteinstellungen des Dokuments (Verlaufsschritt, rückgängig machbar).
 #[test]
 fn n1_set_export_options_changes_document_export_settings() {
     fp_engine::shell::disable();
@@ -146,10 +146,10 @@ fn n1_set_export_options_changes_document_export_settings() {
         &format!("{NEW} var a = dom.exportOptions.exportFormat; dom.setExportOptions({{exportFormat: 'GIF', colorMode: 'indexed', paletteMode: 'web216', numEntriesRequested: 216}}); var e = dom.exportOptions; [a, e.exportFormat, e.colorMode, e.paletteMode, e.name].join('/')"),
     );
     assert_eq!(r, "PNG/GIF/indexed/web216/GIF Web 216");
-    // JPEG ohne Farbmodus: 24 Bit, QualitÃ¤t Ã¼bernommen
+    // JPEG ohne Farbmodus: 24 Bit, Qualität übernommen
     let r = run(&mut s, "var dom = fw.getDocumentDOM(); dom.setExportOptions({exportFormat: 'JPEG', jpegQuality: 60}); var e = dom.exportOptions; [e.exportFormat, e.colorMode, e.jpegQuality].join('/')");
     assert_eq!(r, "JPEG/24 bit/60");
-    // ein Verlaufsschritt je Aufruf: RÃ¼ckgÃ¤ngig fÃ¼hrt zum GIF zurÃ¼ck
+    // ein Verlaufsschritt je Aufruf: Rückgängig führt zum GIF zurück
     s.execute("edit.undo", serde_json::json!({})).expect("undo");
     assert_eq!(run(&mut s, "fw.getDocumentDOM().exportOptions.exportFormat"), "GIF");
 }
