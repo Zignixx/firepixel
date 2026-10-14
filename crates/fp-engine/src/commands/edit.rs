@@ -110,16 +110,51 @@ pub(crate) fn clear_selection(d: &mut DocumentState) -> Result<()> {
     Ok(())
 }
 
-/// Fügt Kopien von Elementen oben in die aktive Ebene ein (neue IDs), wählt sie aus.
+/// Einfügeplatz wie im Original (TW-34, Lauf `menu-edit/04`): direkt über dem obersten gewählten
+/// Objekt, in dessen Liste (bei Unterauswahl in einer Gruppe über der Gruppe). `None` = ohne passende
+/// Auswahl, dann oben in der aktiven Ebene. Web-Objekte gehen weiter in die Web-Ebene.
+fn paste_anchor(d: &DocumentState, els: &[Arc<Element>]) -> Option<fp_model::ElementPath> {
+    if els.iter().any(|e| matches!(e.kind, ElementKind::WebObject(_))) {
+        return None;
+    }
+    let mut p = docops::paths_sorted(&d.doc, d.page, &d.selection.elements).into_iter().next()?;
+    p.steps.truncate(1);
+    if !matches!(p.steps.first(), Some(fp_model::PathStep::Child(_))) {
+        return None;
+    }
+    match p.root {
+        fp_model::RootRef::Page(_) => {
+            let normal = docops::own_layers(&d.doc, d.page).into_iter().any(|(slot, l)| slot == p.slot && l.kind == fp_model::LayerKind::Normal);
+            normal.then_some(p)
+        }
+        fp_model::RootRef::SharedLayer(_) => Some(p),
+        _ => None,
+    }
+}
+
+/// Fügt Kopien von Elementen direkt über dem gewählten Objekt ein, ohne Auswahl oben in die aktive
+/// Ebene (neue IDs), wählt sie aus.
 pub(crate) fn paste_elements(d: &mut DocumentState, els: &[Arc<Element>], offset: (f32, f32)) -> Result<Vec<ElementId>> {
     let (page, frame, layer) = (d.page, d.frame, d.layer);
+    let anchor = paste_anchor(d, els);
     let doc = Arc::make_mut(&mut d.doc);
     let mut ids = Vec::new();
-    for (i, e) in els.iter().enumerate() {
+    let mut copies = Vec::new();
+    for e in els {
         let mut c = docops::reassign(doc, e);
         docops::translate_element(&mut c, offset.0, offset.1);
         ids.push(c.id);
-        docops::insert_element(doc, page, frame, layer, i, Arc::new(c)).ok_or_else(|| EngineError::Failed(fp_i18n::t("err-paste-failed")))?;
+        copies.push(Arc::new(c));
+    }
+    let placed = anchor.and_then(|p| docops::parent_list_mut(doc, &p)).map(|(list, idx)| {
+        for (i, c) in copies.iter().enumerate() {
+            list.insert((idx + i).min(list.len()), c.clone());
+        }
+    });
+    if placed.is_none() {
+        for (i, c) in copies.into_iter().enumerate() {
+            docops::insert_element(doc, page, frame, layer, i, c).ok_or_else(|| EngineError::Failed(fp_i18n::t("err-paste-failed")))?;
+        }
     }
     d.selection.set(ids.clone());
     Ok(ids)
@@ -439,7 +474,12 @@ pub(super) fn register(r: &mut CommandRegistry) {
             let mask = list.remove(idx);
             let vector = !matches!(mask.kind, ElementKind::Bitmap(_));
             let mut idg = std::mem::take(&mut doc.ids);
-            let g = Element::new_mask_group(&mut idg, mask, children, vector);
+            let mut g = Element::new_mask_group(&mut idg, mask, children, vector);
+            // Innen einfügen: Füllung und Strich der Form bleiben sichtbar (`mask.showAttrs`), daher
+            // meldet `pixelRect` den Maskenbereich (Q-14), Als Maske gruppieren dagegen den Schnitt (TW-35)
+            if let ElementKind::Group(gr) = &mut g.kind {
+                gr.mask_flags.hide_attrs = false;
+            }
             doc.ids = idg;
             let gid = g.id;
             if let Some((list, _)) = docops::parent_list_mut(doc, &path) {

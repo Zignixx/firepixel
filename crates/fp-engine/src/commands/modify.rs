@@ -115,6 +115,21 @@ fn arrange(s: &mut Session, how: &'static str) -> Result<CommandOutput> {
     })
 }
 
+/// Platz der Maskengruppe: Adresse des untersten gewählten Objekts, bereinigt um die gewählten
+/// Objekte darüber in derselben Liste (die beim Gruppieren herausgenommen werden). `paths` oben zuerst.
+fn mask_group_slot(paths: &[ElementPath]) -> Option<ElementPath> {
+    let last = paths.last()?;
+    let (PathStep::Child(li), prefix) = last.steps.split_last().map(|(s, p)| (*s, p))? else { return None };
+    let above = paths[..paths.len() - 1]
+        .iter()
+        .filter(|p| p.root == last.root && p.slot == last.slot && p.cel == last.cel)
+        .filter(|p| matches!(p.steps.split_last(), Some((PathStep::Child(i), pre)) if pre == prefix && *i < li))
+        .count();
+    let mut p = last.clone();
+    *p.steps.last_mut()? = PathStep::Child(li - above);
+    Some(p)
+}
+
 /// Gruppiert die Auswahl (Maskengruppe: oberstes Element = Maske).
 fn group(d: &mut DocumentState, as_mask: bool) -> Result<ElementId> {
     let page = d.page;
@@ -123,6 +138,9 @@ fn group(d: &mut DocumentState, as_mask: bool) -> Result<ElementId> {
     if as_mask && paths.len() < 2 {
         return Err(sel_err("err-sel-two-objects"));
     }
+    // TW-35 (Lauf `menu-modify-a/16`, `menu-modify-b/20`): die Maskengruppe nimmt im Original den Platz
+    // des untersten gewählten Objekts ein (der Inhalt bleibt, wo er war); eine normale Gruppe den des obersten.
+    let first = if as_mask { mask_group_slot(&paths).unwrap_or(first) } else { first };
     let ids = d.selection.elements.clone();
     let doc = Arc::make_mut(&mut d.doc);
     let removed: Vec<Arc<Element>> = docops::remove_ids(doc, page, &ids).into_iter().map(|(_, e)| e).collect();

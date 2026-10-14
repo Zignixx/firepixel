@@ -576,6 +576,7 @@ fn element_get(cls: &str, name: &str, doc: DocId, id: ElementId, ctx: &mut Conte
             // Maskiertes Einzelelement (Maske ▸ Alles einblenden/ausblenden, fixg5 Q-02): die nach der
             // Maske sichtbaren Pixel; ganz ausgeblendet wie im Original das leere Rechteck ±2³¹.
             let masked = e.masked_single().is_some();
+            let vmask = matches!(&e.kind, ElementKind::Group(g) if g.kind == fp_model::element::GroupKind::VectorMask);
             // TW-16: Text meldet wie im Original die Tintengrenzen (gerenderte Alpha), nicht den Rahmen.
             let text = matches!(e.kind, ElementKind::Text(_));
             let r = st(|s| {
@@ -586,7 +587,18 @@ fn element_get(cls: &str, name: &str, doc: DocId, id: ElementId, ctx: &mut Conte
                     && matches!(g.kind, fp_model::element::GroupKind::VectorMask)
                     && let Some(m) = &g.mask
                 {
-                    return Ok(fp_engine::docops::element_pixel_rect(&d.doc, m));
+                    // TW-35: sonst Inhalt ∩ aktive Maske (Als Maske gruppieren); deaktiviert der Inhalt
+                    // allein. Zeigt die Maske Füllung und Strich (Innen einfügen), zählt ihr Bereich mit.
+                    let content = g.children.iter().filter_map(|c| fp_engine::docops::element_pixel_rect(&d.doc, c)).reduce(|a, b| a.union(&b));
+                    if !g.mask_flags.enabled {
+                        return Ok(content);
+                    }
+                    let mr = fp_engine::docops::element_pixel_rect(&d.doc, m);
+                    let inter = content.zip(mr).and_then(|(c, m)| {
+                        let r = fp_geom::Rect::new(c.left.max(m.left), c.top.max(m.top), c.right.min(m.right), c.bottom.min(m.bottom));
+                        (r.right > r.left && r.bottom > r.top).then_some(r)
+                    });
+                    return Ok(if g.mask_flags.hide_attrs { inter } else { mr.map(|m| inter.map_or(m, |i| i.union(&m))) });
                 }
                 if masked || text {
                     let r = fp_render::Renderer::new(fp_render::RenderOptions { background: fp_render::BackgroundMode::Transparent, ..fp_render::RenderOptions::default() });
@@ -598,7 +610,7 @@ fn element_get(cls: &str, name: &str, doc: DocId, id: ElementId, ctx: &mut Conte
             })?;
             let b = match (r, &e.kind) {
                 (Some(r), _) => [r.left as f64, r.top as f64, r.right as f64, r.bottom as f64],
-                (None, _) if masked || text => {
+                (None, _) if masked || text || vmask => {
                     let m = 2f64.powi(31);
                     [-m, -m, m, m]
                 }
