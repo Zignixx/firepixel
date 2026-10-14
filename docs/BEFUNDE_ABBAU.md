@@ -64,8 +64,8 @@ Ergebnisse B-2 (14.10.): `docs\berichte\b2.md` (gleich 3, Unterschied 10, X 23).
 ### M-E · JSF-Skripte im Original (`re\_testdateien\ux\uxa\`, Referenz `re\api\fw_api.json`) (3)
 
 1. **BA-029** JSF: setzt das Original beim Setzen einer Textur eine Menge (textureAmount)? – Z. 353 (AU-3) – `fp-script pi.fill` – S – **Ergebnis B-2:** gleich (fillTexture gesetzt, textureBlend 0)
-1. **BA-030** JSF: currentLayerNum = Unterebene – liefert das Original die Unterebene? – Z. 961 (F8) – `fp-script, fp-engine` – S – **Ergebnis B-2:** Unterschied: Unterebene aktiv, addNewSubLayer aktiviert/Name/verschachtelt → B5
-1. **BA-031** JSF addNewLayer: Rückgabe Name (laut re\api\fw_api.json) oder ID – Z. 963 (F8) – `fp-script` – S – **Ergebnis B-2:** Unterschied: Rückgabe Name statt ID → B5
+1. **BA-030** JSF: currentLayerNum = Unterebene – liefert das Original die Unterebene? – Z. 961 (F8) – `fp-script, fp-engine` – S – **Ergebnis B-2:** Unterschied: Unterebene aktiv, addNewSubLayer aktiviert/Name/verschachtelt → B5 – **Ergebnis B-5:** erledigt – Unterebene aktivierbar (Engine), `addNewSubLayer` verschachtelt/aktiviert/Name
+1. **BA-031** JSF addNewLayer: Rückgabe Name (laut re\api\fw_api.json) oder ID – Z. 963 (F8) – `fp-script` – S – **Ergebnis B-2:** Unterschied: Rückgabe Name statt ID → B5 – **Ergebnis B-5:** erledigt – Rückgabe Name
 
 ### M-F · Export eines neuen bzw. des Testdokuments (`re\17`, `re\18`; BMP/PNG-Auflösung, HTML-Exportart) (5)
 
@@ -112,17 +112,17 @@ Ergebnisse B-2 (14.10.): `docs\berichte\b2.md` (gleich 3, Unterschied 10, X 23).
 
 ## B5 – Skript/Export/Web
 
-1. **BA-066** JSF addNewHotspot("slice") → Segment; addNewText(rect, true) mit Voreinstellungen (Anti-Alias glatt, Unterschneidung aus, 120 %) – Z. 340 (UX-A) – `crates\fp-script\src\imp\doc.rs` – M
-1. **BA-067** JSF pixelRect eines Texts = Glyphengrenzen (nach FX-T prüfen) – Z. 347 (PM-3) – `crates\fp-script\src\imp\elem.rs` – S
-1. **BA-068** JSF fw.setActiveViewScale an die Ansicht anbinden (heute No-op) – Z. 348 (PM-3) – `crates\fp-script\src\imp\fw.rs:323` – S
-1. **BA-069** JSF-Vorgabe Schlagschatten #000000a5 vs. Menü-Vorgabe #000000a2 – Z. 354 (FX-1) – `crates\fp-script\src\builtin_commands.rs` – S
-1. **BA-070** Batch effect.live: Abstand/Weichheit in der Vorschau über StepContext::preview_scale umrechnen (Feld vorhanden) – Z. 738 (BATCH-4/BATCH-6) – `crates\fp-batch\src\step.rs, steps` – S
-1. **BA-071** HTML-Export mit Schaltflächen-Segmenten (TW-19) prüfen – Z. 954 (F3) – `fp-export HTML` – M
-1. **BA-072** TW-19: aktive Fläche aus dem Schaltflächensymbol auswerten – Z. 955 (F3) – `fp-export / Segmente` – S
-1. **BA-073** JSF: undefined statt null (name, d.zoom, docTitle, brush.diameter) – Z. 956 (F4/FIX-R2) – `fp-script Wertumwandlung` – S
-1. **BA-074** Unterebene als aktive Ebene; addNewSubLayer verschachtelt – Z. 961 (F8) – `fp-engine, fp-script` – M
-1. **BA-075** reorderLayer/duplicateLayer für Unterebenen (Engine-Befehl fehlt) – Z. 962 (F8) – `fp-script, fp-engine` – M
-1. **BA-076** SVG-Import: Stapelfolge von Text und Pfaden – Z. 964 (F2) – `fp-io vector.rs` – M
+1. **BA-066** JSF addNewHotspot("slice") → Segment; addNewText(rect, true) mit Voreinstellungen (Anti-Alias glatt, Unterschneidung aus, 120 %) – Z. 340 (UX-A) – `crates\fp-script\src\imp\doc.rs` – M – **Ergebnis B-5:** erledigt – Segment; Textvorgaben; JSF-Glättung nach `TAAi` korrigiert
+1. **BA-067** JSF pixelRect eines Texts = Glyphengrenzen (nach FX-T prüfen) – Z. 347 (PM-3) – `crates\fp-script\src\imp\elem.rs` – S – **Ergebnis B-5:** erledigt – geprüft (43,60–148,98 wie Original), Test
+1. **BA-068** JSF fw.setActiveViewScale an die Ansicht anbinden (heute No-op) – Z. 348 (PM-3) – `crates\fp-script\src\imp\fw.rs:323` – S – **Ergebnis B-5:** erledigt – `view.setZoom {center}`
+1. **BA-069** JSF-Vorgabe Schlagschatten #000000a5 vs. Menü-Vorgabe #000000a2 – Z. 354 (FX-1) – `crates\fp-script\src\builtin_commands.rs` – S – **Ergebnis B-5:** erledigt – `#000000a2`
+1. **BA-070** Batch effect.live: Abstand/Weichheit in der Vorschau über StepContext::preview_scale umrechnen (Feld vorhanden) – Z. 738 (BATCH-4/BATCH-6) – `crates\fp-batch\src\step.rs, steps` – S – **Ergebnis B-5:** erledigt – war umgesetzt (BATCH-11a), Test
+1. **BA-071** HTML-Export mit Schaltflächen-Segmenten (TW-19) prüfen – Z. 954 (F3) – `fp-export HTML` – M – **Ergebnis B-5:** erledigt – Schaltflächen-Segmente in der Tabelle (ohne Rollover → neuer Befund)
+1. **BA-072** TW-19: aktive Fläche aus dem Schaltflächensymbol auswerten – Z. 955 (F3) – `fp-export / Segmente` – S – **Ergebnis B-5:** erledigt – aktiver Bereich aus der Symbol-Web-Ebene (Export + Leinwand)
+1. **BA-073** JSF: undefined statt null (name, d.zoom, docTitle, brush.diameter) – Z. 956 (F4/FIX-R2) – `fp-script Wertumwandlung` – S – **Ergebnis B-5:** erledigt – `null` als Lücke in JS-Arrays (Beleg M2 q18)
+1. **BA-074** Unterebene als aktive Ebene; addNewSubLayer verschachtelt – Z. 961 (F8) – `fp-engine, fp-script` – M – **Ergebnis B-5:** erledigt – mit BA-030
+1. **BA-075** reorderLayer/duplicateLayer für Unterebenen (Engine-Befehl fehlt) – Z. 962 (F8) – `fp-script, fp-engine` – M – **Ergebnis B-5:** erledigt – duplizieren/umsortieren in fp-script
+1. **BA-076** SVG-Import: Stapelfolge von Text und Pfaden – Z. 964 (F2) – `fp-io vector.rs` – M – **Ergebnis B-5:** erledigt – Platzhalterpfade für usvg, Text in SVG-Stapelfolge
 
 ## B6 – Aufräumen/Tests/Doku
 
