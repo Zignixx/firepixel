@@ -128,9 +128,29 @@ pub fn child_env(cmd: &mut std::process::Command) -> &mut std::process::Command 
     cmd.env(ENV_TEST_PROFILE, root).env("FP_NO_SHELL_OPEN", "1")
 }
 
+/// macOS: `~/Library/Application Support/Firepixel` (preferences, templates, ...); the local part
+/// (AI models, logs, `mcp-*.json`) lives in its sub-folder `Local`. Other systems: `None`.
+fn mac_support_dir(home: &Path, local: bool) -> Option<PathBuf> {
+    if !cfg!(target_os = "macos") {
+        return None;
+    }
+    let d = home.join("Library").join("Application Support").join(APP_DIR);
+    Some(if local { d.join("Local") } else { d })
+}
+
+/// macOS: the user's font folder `~/Library/Fonts` (system folder, only read, never redirected);
+/// other systems `None` (Windows user fonts are read in `fp-text` from `LOCALAPPDATA`).
+pub fn mac_user_fonts_dir() -> Option<PathBuf> {
+    if !cfg!(target_os = "macos") {
+        return None;
+    }
+    env_path("HOME").map(|h| h.join("Library").join("Fonts"))
+}
+
 fn env_roaming() -> Option<PathBuf> {
     env_path("APPDATA")
         .map(|p| p.join(APP_DIR))
+        .or_else(|| env_path("HOME").and_then(|h| mac_support_dir(&h, false)))
         .or_else(|| env_path("XDG_CONFIG_HOME").map(|p| p.join("firepixel")))
         .or_else(|| env_path("HOME").map(|h| h.join(".config").join("firepixel")))
 }
@@ -138,6 +158,7 @@ fn env_roaming() -> Option<PathBuf> {
 fn env_local() -> Option<PathBuf> {
     env_path("LOCALAPPDATA")
         .map(|p| p.join(APP_DIR))
+        .or_else(|| env_path("HOME").and_then(|h| mac_support_dir(&h, true)))
         .or_else(|| env_path("XDG_STATE_HOME").map(|p| p.join("firepixel")))
         .or_else(|| env_path("HOME").map(|h| h.join(".local").join("state").join("firepixel")))
 }
@@ -148,7 +169,7 @@ pub fn real_roaming_dir() -> Option<PathBuf> {
     if cfg!(windows) {
         env_path("USERPROFILE").map(|u| u.join("AppData").join("Roaming").join(APP_DIR)).or_else(env_roaming)
     } else {
-        env_path("HOME").map(|h| h.join(".config").join("firepixel")).or_else(env_roaming)
+        env_path("HOME").map(|h| mac_support_dir(&h, false).unwrap_or_else(|| h.join(".config").join("firepixel"))).or_else(env_roaming)
     }
 }
 
@@ -158,7 +179,7 @@ pub fn real_local_dir() -> Option<PathBuf> {
     if cfg!(windows) {
         env_path("USERPROFILE").map(|u| u.join("AppData").join("Local").join(APP_DIR)).or_else(env_local)
     } else {
-        env_path("HOME").map(|h| h.join(".local").join("state").join("firepixel")).or_else(env_local)
+        env_path("HOME").map(|h| mac_support_dir(&h, true).unwrap_or_else(|| h.join(".local").join("state").join("firepixel"))).or_else(env_local)
     }
 }
 
@@ -226,13 +247,15 @@ fn resolve(sub: &str, env: Option<PathBuf>) -> Option<PathBuf> {
     env
 }
 
-/// `%APPDATA%\Firepixel` (else `$XDG_CONFIG_HOME/firepixel` or `$HOME/.config/firepixel`); in a
+/// `%APPDATA%\Firepixel` (macOS `~/Library/Application Support/Firepixel`, else `$XDG_CONFIG_HOME/firepixel`
+/// or `$HOME/.config/firepixel`); in a
 /// test run the test profile (see module docs).
 pub fn roaming_dir() -> Option<PathBuf> {
     resolve(ROAMING, env_roaming())
 }
 
-/// `%LOCALAPPDATA%\Firepixel` (else `$XDG_STATE_HOME/firepixel` or `$HOME/.local/state/firepixel`);
+/// `%LOCALAPPDATA%\Firepixel` (macOS `~/Library/Application Support/Firepixel/Local`, else
+/// `$XDG_STATE_HOME/firepixel` or `$HOME/.local/state/firepixel`);
 /// in a test run the test profile (see module docs).
 pub fn local_dir() -> Option<PathBuf> {
     resolve(LOCAL, env_local())

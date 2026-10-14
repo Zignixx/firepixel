@@ -915,6 +915,7 @@ pub fn mix(a: Color32, b: Color32, t: f32) -> Color32 {
 /// Systemschriften für die Oberfläche (Name in egui, Datei in `%WINDIR%\Fonts`). Segoe UI deckt
 /// Latein, Kyrillisch und Griechisch ab; die CJK-Schriften sind Rückfallschriften für Chinesisch,
 /// Japanisch und Koreanisch (Oberflächentexte weiterer Sprachen, Ebenen-/Seiten-/Dateinamen).
+#[cfg(not(target_os = "macos"))]
 const SYSTEM_FONTS: &[(&str, &str)] = &[
     ("segoe", "segoeui.ttf"),
     ("segoe-bold", "segoeuib.ttf"),
@@ -922,6 +923,18 @@ const SYSTEM_FONTS: &[(&str, &str)] = &[
     ("cjk-zh", "msyh.ttc"),
     ("cjk-ja", "YuGothM.ttc"),
     ("cjk-ko", "malgun.ttf"),
+];
+
+/// macOS: dieselben Rollen mit den Systemschriften von macOS (absolute Pfade; fehlende Dateien
+/// werden übersprungen, dann bleibt die egui-Standardschrift).
+#[cfg(target_os = "macos")]
+const SYSTEM_FONTS: &[(&str, &str)] = &[
+    ("segoe", "/System/Library/Fonts/Supplemental/Arial.ttf"),
+    ("segoe-bold", "/System/Library/Fonts/Supplemental/Arial Bold.ttf"),
+    ("segoe-symbol", "/System/Library/Fonts/Apple Symbols.ttf"),
+    ("cjk-zh", "/System/Library/Fonts/Hiragino Sans GB.ttc"),
+    ("cjk-ja", "/System/Library/Fonts/ヒラギノ角ゴシック W3.ttc"),
+    ("cjk-ko", "/System/Library/Fonts/AppleSDGothicNeo.ttc"),
 ];
 
 /// Einmal je Prozess gelesene Schriftdateien (gemeinsam für alle egui-Kontexte; die CJK-Dateien
