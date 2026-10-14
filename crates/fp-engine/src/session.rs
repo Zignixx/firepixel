@@ -526,11 +526,11 @@ impl Session {
         self.events.push(e);
     }
 
-    /// Aktives Tastenkürzel-Set (Voreinstellung `CurrentShortcutSet`, Rückfall „Firepixel“).
+    /// Aktives Tastenkürzel-Set (Voreinstellung `CurrentShortcutSet`, Rückfall „Web Standard“ wie im Original, BA-127).
     pub fn shortcut_set(&self) -> &'static ShortcutSet {
         static EMPTY: std::sync::OnceLock<ShortcutSet> = std::sync::OnceLock::new();
         shortcuts::any_set(&self.prefs.shortcut_set())
-            .or_else(|| shortcuts::builtin_set("Firepixel"))
+            .or_else(|| shortcuts::builtin_set(crate::prefs::DEFAULT_SHORTCUT_SET))
             .unwrap_or_else(|| EMPTY.get_or_init(ShortcutSet::default))
     }
 

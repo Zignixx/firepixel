@@ -696,6 +696,7 @@ t("dlg-title-hue-saturation"),
         EffectKind::BrightnessContrast => f.with_side_order(super::form::SideOrder::SlidersFirst),
         EffectKind::UnsharpMask => f.with_side_order(super::form::SideOrder::FieldsPreviewSliders),
         EffectKind::HueSaturation => f.without_slider_tab_stops(),
+        EffectKind::GaussianBlur => f.with_side_order(super::form::SideOrder::FieldsButtonsSliders),
         _ => f,
     })
 }

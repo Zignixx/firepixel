@@ -333,7 +333,13 @@ pub fn ui_state(ctx: &egui::Context, st: &AppState) -> Value {
     // vorderes Batch-Studio alles außer der Werkzeugleiste (BATCH-T: Liste meldete sie weiter sichtbar)
     let panels_hidden = st.settings.workspace.panels_hidden || s.ui.screen_mode == 2;
     let studio_front = crate::batch::is_front(st);
-    let panels: Vec<&str> = s.ui.panels.iter().filter(|(k, v)| **v && !panels_hidden && (!studio_front || k.as_str() == "window.toolbars.main")).map(|(k, _)| k.as_str()).collect();
+    let mut panels: Vec<&str> = s.ui.panels.iter().filter(|(k, v)| **v && !panels_hidden && (!studio_front || k.as_str() == "window.toolbars.main")).map(|(k, _)| k.as_str()).collect();
+    // Bedienfelder ohne Katalogbefehl (Ausrichten, Pfad, …) unter ihrem Brückennamen (RUN-5)
+    if !panels_hidden && !studio_front {
+        for p in crate::panels::PanelId::ALL.iter().filter(|p| p.engine_command().is_none() && st.settings.workspace.is_visible(**p)) {
+            panels.push(p.bridge_name());
+        }
+    }
     json!({
         "mode": "bridge",
         "window": {"width": rect.width(), "height": rect.height(), "pixels_per_point": ctx.pixels_per_point()},
@@ -387,7 +393,8 @@ pub fn ui_action(ctx: &egui::Context, st: &mut AppState, a: &Value) -> UiReply {
         done.push(at("msg-mcp-ui-done-fit"));
     }
     if let Some(p) = a.get("panel").and_then(Value::as_str) {
-        let id = crate::panels::PanelId::from_command(p).or_else(|| crate::panels::PanelId::from_command(&format!("window.{p}")));
+        // jedes Bedienfeld des Fenster-Menüs, auch ohne Katalogbefehl (Ausrichten, Pfad, …; RUN-5)
+        let id = crate::panels::PanelId::from_command(p).or_else(|| crate::panels::PanelId::from_bridge_name(p));
         match id {
             Some(id) => {
                 actions.push(Action::ShowPanel(id));

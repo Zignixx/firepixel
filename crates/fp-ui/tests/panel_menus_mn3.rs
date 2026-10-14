@@ -272,7 +272,7 @@ fn optimize_jpeg_and_palette_entries_follow_the_format() {
     // mit gewählter Palettenfarbe
     let mut a = app(true);
     let m = menu(&a, PanelId::Optimize);
-    for e in ["Progressives JPEG (grau)", "JPEG-Ränder scharfzeichnen (grau)", "Sperrung aller Farben aufheben", "Nicht verwendete Farben entfernen (✓)", "Paletteneintrag ersetzen... (grau)", "Transparent machen (grau)", "Bearbeitung entfernen (grau)"] {
+    for e in ["Progressives JPEG (grau)", "JPEG-Ränder scharfzeichnen (grau)", "Sperrung aller Farben aufheben (grau)", "Nicht verwendete Farben entfernen (✓)", "Paletteneintrag ersetzen... (grau)", "Transparent machen (grau)", "Bearbeitung entfernen (grau)"] {
         assert!(m.iter().any(|r| r == e), "GIF: {e} erwartet in {m:#?}");
     }
     a.state.dialogs.panel_sel.palette = vec![0xff00_0000];
@@ -309,7 +309,7 @@ fn panel_menus_end_with_help_and_close_is_in_the_tab_menu() {
 fn properties_menu_is_only_help() {
     let a = app(true);
     assert_eq!(rows(&fp_ui::menu::build_inspector_menu(&a.state)), ["Hilfe"]);
-    assert_eq!(rows(&fp_ui::menu::build_inspector_tab_menu(&a.state)), ["Volle Höhe (✓)", "Halbe Höhe", "---", "Schließen"]);
+    assert_eq!(rows(&fp_ui::menu::build_inspector_tab_menu(&a.state)), ["Schließen", "Registerkartengruppe schließen", "Minimieren"], "BA-027: keine Höhe-Einträge");
 }
 
 #[test]

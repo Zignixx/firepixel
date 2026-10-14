@@ -122,6 +122,17 @@ pub fn height(theme: &Theme, st: &AppState) -> f32 {
     }
 }
 
+/// ◊-Symbol im Reiter (BA-027): volle ↔ halbe Höhe; ein auf den Reiter eingeklappter Inspektor
+/// öffnet in voller Höhe.
+pub fn toggle_half(ws: &mut crate::workspace::Workspace) {
+    if ws.inspector_collapsed {
+        ws.inspector_collapsed = false;
+        ws.inspector_half = false;
+    } else {
+        ws.inspector_half = !ws.inspector_half;
+    }
+}
+
 /// Nächste Höhe des Inspektors beim Doppelklick auf den Reiter: voll → halb → nur Reiter → voll.
 pub fn cycle_height(ws: &mut crate::workspace::Workspace) {
     if ws.inspector_collapsed {
@@ -159,15 +170,29 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
     let strip_rect = Rect::from_min_max(pos2(header.left() + 2.0, header.top()), header.max);
     widgets::header_bar(ui.painter(), header, &theme);
     let out = docking::tab_strip(ui, strip_rect, Id::new("inspector-tabs"), &tabs, Some(active), true, st.settings.workspace.inspector_collapsed);
+    let mut toggle_height = false;
     if let Some(r0) = out.tab_rects.first() {
-        // ◊-Kennzeichen (Einklappen) im ersten Reiter
+        // ◊-Symbol im ersten Reiter: schaltet wie im Original zwischen voller und halber Höhe
+        // (BA-027; das Reiter-Kontextmenü hat keine Höhe-Einträge)
         let cx = r0.left() + 5.0;
         let cy = r0.center().y;
-        let col = c.tab_text;
+        let hr = Rect::from_center_size(pos2(cx, cy), vec2(10.0, r0.height().min(14.0)));
+        let half = st.settings.workspace.inspector_half && !st.settings.workspace.inspector_collapsed;
+        let tip = texts::t(if half { "pi-menu-full-height" } else { "pi-menu-half-height" });
+        let hresp = ui.interact(hr, Id::new("inspector-height-toggle"), egui::Sense::click());
+        hresp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, true, texts::t("pi-height-toggle")));
+        if hresp.clicked() {
+            toggle_height = true;
+        }
+        let hresp = hresp.on_hover_text(tip);
+        let col = if hresp.hovered() { c.focus } else { c.tab_text };
         ui.painter().line_segment([pos2(cx - 2.5, cy - 1.0), pos2(cx, cy - 3.5)], Stroke::new(1.0, col));
         ui.painter().line_segment([pos2(cx, cy - 3.5), pos2(cx + 2.5, cy - 1.0)], Stroke::new(1.0, col));
         ui.painter().line_segment([pos2(cx - 2.5, cy + 1.0), pos2(cx, cy + 3.5)], Stroke::new(1.0, col));
         ui.painter().line_segment([pos2(cx, cy + 3.5), pos2(cx + 2.5, cy + 1.0)], Stroke::new(1.0, col));
+    }
+    if toggle_height {
+        toggle_half(&mut st.settings.workspace);
     }
     if let Some(i) = out.clicked {
         let ws = &mut st.settings.workspace;
@@ -186,7 +211,7 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
         cycle_height(&mut st.settings.workspace);
     }
     // ≡ wie im Original nur „Hilfe“ (die Effektoptionen 6921 stehen unter „+ ▸ Optionen“);
-    // Volle/Halbe Höhe und Schließen im Kontextmenü der Reiter (MN-3)
+    // Schließen, Registerkartengruppe schließen und Minimieren im Kontextmenü der Reiter (BA-027)
     let mut acts = Vec::new();
     if let Some(resp) = &out.menu_clicked {
         let nodes = crate::menu::build_inspector_menu(st);
@@ -199,10 +224,10 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
         }
     }
     for a in acts {
-        if let Action::Run(n, p) = &a
-            && n == "ui.inspector.half"
+        if let Action::Run(n, _) = &a
+            && n == crate::menu::INSPECTOR_MINIMIZE
         {
-            st.settings.workspace.inspector_half = p.get("half").and_then(|v| v.as_bool()).unwrap_or(false);
+            st.settings.workspace.inspector_collapsed = true;
             continue;
         }
         st.push(a);

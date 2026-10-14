@@ -177,7 +177,9 @@ fn assistent_bis_zur_bildvorschau() {
     let p = st.dialogs.preview.as_ref().expect("Bildvorschau offen");
     assert_eq!(p.mode, ViewMode::Two);
     assert_eq!(p.panes[0].settings.format, ExportFormat::Gif);
-    assert_eq!(p.panes[0].settings.max_colors, 128);
+    // BA-032: Vorschlag GIF Web 216 wie im Original
+    assert_eq!(p.panes[0].settings.max_colors, 216);
+    assert_eq!(p.panes[0].settings.palette_kind, fp_export::options::PaletteKind::Web216);
     assert_eq!(p.panes[1].settings.format, ExportFormat::Jpeg);
     assert_eq!(p.panes[1].settings.jpeg.quality, 80);
     assert_eq!(st.session.active().unwrap().doc.pages[0].root.export, before, "erst die Bildvorschau übernimmt");

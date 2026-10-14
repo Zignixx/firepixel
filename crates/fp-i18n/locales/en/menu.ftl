@@ -600,6 +600,7 @@ menu-filter-blur = Blur
 pmenu-help = Help
 pmenu-close = Close
 pmenu-closeGroup = Close Tab Group
+pmenu-minimize = Minimize
 
 ## Kontextmenüs (Meldungen)
 

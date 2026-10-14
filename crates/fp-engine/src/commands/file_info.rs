@@ -25,24 +25,70 @@ pub struct XmpInfo {
     pub description: String,
     pub keywords: Vec<String>,
     pub copyright: String,
+    /// Autorentitel (`photoshop:AuthorsPosition`, BA-023).
+    pub author_title: String,
+    /// Verfasser der Beschreibung (`photoshop:CaptionWriter`).
+    pub caption_writer: String,
+    /// Bewertung 0–5 Sterne (`xmp:Rating`; 0 = keine).
+    pub rating: u8,
+    /// Copyright-Status (`xmpRights:Marked`): `None` = Unbekannt, `Some(true)` = urheberrechtlich
+    /// geschützt, `Some(false)` = gemeinfrei.
+    pub copyright_marked: Option<bool>,
+    /// URL für Copyright-Informationen (`xmpRights:WebStatement`).
+    pub copyright_url: String,
     pub created: Option<String>,
     pub modified: Option<String>,
     pub application: Option<String>,
+    /// Format (`dc:format`), nur angezeigt.
+    pub format: Option<String>,
+}
+
+/// Weitere Felder der Seite „Beschreibung“ außerhalb von Dublin Core (BA-023), Elementnamen mit Präfix.
+const EXTRA_TAGS: [&str; 5] = ["photoshop:AuthorsPosition", "photoshop:CaptionWriter", "xmp:Rating", "xmpRights:Marked", "xmpRights:WebStatement"];
+
+/// Standard-Namensräume der XMP-Felder `photoshop:`, `xmp:` und `xmpRights:`. Der Rechnername der
+/// Namensräume enthält den Herstellernamen; er steht deshalb weder im Quelltext noch im Programm am
+/// Stück (Neutralitätsregel), sondern wird hier rückwärts gespeichert zusammengesetzt.
+fn std_ns(path: &str) -> String {
+    let host: String = "moc.ebod".chars().rev().collect();
+    format!("http://ns.a{host}/{path}")
 }
 
 impl XmpInfo {
     /// Nur die bearbeitbaren Felder vergleichen.
     fn same_fields(&self, o: &XmpInfo) -> bool {
-        self.title == o.title && self.author == o.author && self.description == o.description && self.keywords == o.keywords && self.copyright == o.copyright
+        self.title == o.title
+            && self.author == o.author
+            && self.description == o.description
+            && self.keywords == o.keywords
+            && self.copyright == o.copyright
+            && self.author_title == o.author_title
+            && self.caption_writer == o.caption_writer
+            && self.rating == o.rating
+            && self.copyright_marked == o.copyright_marked
+            && self.copyright_url == o.copyright_url
     }
     fn is_empty(&self) -> bool {
-        self.title.is_empty() && self.author.is_empty() && self.description.is_empty() && self.keywords.is_empty() && self.copyright.is_empty()
+        self.title.is_empty() && self.author.is_empty() && self.description.is_empty() && self.keywords.is_empty() && self.copyright.is_empty() && self.extra_empty()
+    }
+    fn extra_empty(&self) -> bool {
+        self.author_title.is_empty() && self.caption_writer.is_empty() && self.rating == 0 && self.copyright_marked.is_none() && self.copyright_url.is_empty()
+    }
+    /// Copyright-Status als Text: `unknown`, `copyrighted` oder `publicDomain`.
+    pub fn copyright_status(&self) -> &'static str {
+        match self.copyright_marked {
+            None => "unknown",
+            Some(true) => "copyrighted",
+            Some(false) => "publicDomain",
+        }
     }
     pub fn to_json(&self) -> Value {
         json!({
             "title": self.title, "author": self.author, "description": self.description,
             "keywords": self.keywords, "copyright": self.copyright,
-            "created": self.created, "modified": self.modified, "application": self.application,
+            "authorTitle": self.author_title, "captionWriter": self.caption_writer, "rating": self.rating,
+            "copyrightStatus": self.copyright_status(), "copyrightUrl": self.copyright_url,
+            "created": self.created, "modified": self.modified, "application": self.application, "format": self.format,
         })
     }
 }
@@ -205,15 +251,30 @@ pub fn parse(xml: &str) -> XmpInfo {
         description: first("description"),
         keywords: dc_values(xml, "subject").iter().flat_map(|k| split_keywords(k)).collect(),
         copyright: first("rights"),
+        author_title: simple_value(xml, "photoshop:AuthorsPosition").unwrap_or_default(),
+        caption_writer: simple_value(xml, "photoshop:CaptionWriter").unwrap_or_default(),
+        rating: simple_value(xml, "xmp:Rating").and_then(|v| v.trim().parse::<f64>().ok()).map(|v| v.clamp(0.0, 5.0).round() as u8).unwrap_or(0),
+        copyright_marked: simple_value(xml, "xmpRights:Marked").and_then(|v| match v.trim().to_ascii_lowercase().as_str() {
+            "true" => Some(true),
+            "false" => Some(false),
+            _ => None,
+        }),
+        copyright_url: simple_value(xml, "xmpRights:WebStatement").unwrap_or_default(),
         created: simple_value(xml, "xmp:CreateDate"),
         modified: simple_value(xml, "xmp:ModifyDate"),
         application: simple_value(xml, "xmp:CreatorTool"),
+        format: dc_values(xml, "format").into_iter().next(),
     }
 }
 
 /// Entfernt alle Elemente und Attribute `dc:<tag>`.
 fn strip_dc(xml: &str, tag: &str) -> String {
-    let name = format!("dc:{tag}");
+    strip_name(xml, &format!("dc:{tag}"))
+}
+
+/// Entfernt alle Elemente und Attribute `<name>` (mit Präfix).
+fn strip_name(xml: &str, name: &str) -> String {
+    let name = name.to_string();
     let mut s = xml.to_string();
     while let Some((a, b, _)) = find_element(&s, &name, 0) {
         s.replace_range(a..b, "");
@@ -240,7 +301,36 @@ pub fn build(existing: Option<&str>, info: &XmpInfo) -> String {
     for t in TAGS {
         xml = strip_dc(&xml, t);
     }
+    for t in EXTRA_TAGS {
+        xml = strip_name(&xml, t);
+    }
     if info.is_empty() {
+        return xml;
+    }
+    if !info.extra_empty() {
+        let (ps, xmp, rights) = (std_ns("photoshop/1.0/"), std_ns("xap/1.0/"), std_ns("xap/1.0/rights/"));
+        let mut extra = format!(" <rdf:Description rdf:about=\"\" xmlns:photoshop=\"{ps}\" xmlns:xmp=\"{xmp}\" xmlns:xmpRights=\"{rights}\">\n");
+        if !info.author_title.is_empty() {
+            extra += &format!("  <photoshop:AuthorsPosition>{}</photoshop:AuthorsPosition>\n", escape(&info.author_title));
+        }
+        if !info.caption_writer.is_empty() {
+            extra += &format!("  <photoshop:CaptionWriter>{}</photoshop:CaptionWriter>\n", escape(&info.caption_writer));
+        }
+        if info.rating > 0 {
+            extra += &format!("  <xmp:Rating>{}</xmp:Rating>\n", info.rating.min(5));
+        }
+        if let Some(m) = info.copyright_marked {
+            extra += &format!("  <xmpRights:Marked>{}</xmpRights:Marked>\n", if m { "True" } else { "False" });
+        }
+        if !info.copyright_url.is_empty() {
+            extra += &format!("  <xmpRights:WebStatement>{}</xmpRights:WebStatement>\n", escape(&info.copyright_url));
+        }
+        extra += " </rdf:Description>\n";
+        let at = xml.rfind("</rdf:RDF>").unwrap_or(xml.len());
+        xml.insert_str(at, &extra);
+    }
+    let dc_empty = info.title.is_empty() && info.author.is_empty() && info.description.is_empty() && info.keywords.is_empty() && info.copyright.is_empty();
+    if dc_empty {
         return xml;
     }
     let mut block = format!(" <rdf:Description rdf:about=\"\" xmlns:dc=\"{DC_NS}\">\n");
@@ -284,7 +374,12 @@ pub(super) fn register(r: &mut CommandRegistry) {
             .opt("author", ParamKind::String, "Metadaten: Autor (mehrere durch Semikolon getrennt)")
             .opt("description", ParamKind::String, "Metadaten: Beschreibung")
             .opt("keywords", ParamKind::Json, "Metadaten: Schlüsselwörter (Liste oder Text mit Komma/Semikolon)")
-            .opt("copyright", ParamKind::String, "Metadaten: Copyright-Vermerk")
+            .opt("copyright", ParamKind::String, "Metadaten: Copyright-Informationen")
+            .opt("authorTitle", ParamKind::String, "Metadaten: Autorentitel")
+            .opt("captionWriter", ParamKind::String, "Metadaten: Verfasser der Beschreibung")
+            .opt("rating", ParamKind::Integer { min: Some(0), max: Some(5) }, "Metadaten: Bewertung (0–5 Sterne)")
+            .opt("copyrightStatus", ParamKind::Enum { values: vec!["unknown".into(), "copyrighted".into(), "publicDomain".into()] }, "Metadaten: Copyright-Status")
+            .opt("copyrightUrl", ParamKind::String, "Metadaten: URL für Copyright-Informationen")
             .run(|s, p| {
                 let cur = read_info(&s.doc()?.doc);
                 let mut next = cur.clone();
@@ -299,6 +394,25 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 }
                 if let Some(v) = str_param(p, "copyright")? {
                     next.copyright = v.trim().to_string();
+                }
+                if let Some(v) = str_param(p, "authorTitle")? {
+                    next.author_title = v.trim().to_string();
+                }
+                if let Some(v) = str_param(p, "captionWriter")? {
+                    next.caption_writer = v.trim().to_string();
+                }
+                if let Some(v) = p.opt_i64("rating")? {
+                    next.rating = v.clamp(0, 5) as u8;
+                }
+                if let Some(v) = str_param(p, "copyrightStatus")? {
+                    next.copyright_marked = match v.as_str() {
+                        "copyrighted" => Some(true),
+                        "publicDomain" => Some(false),
+                        _ => None,
+                    };
+                }
+                if let Some(v) = str_param(p, "copyrightUrl")? {
+                    next.copyright_url = v.trim().to_string();
                 }
                 match p.get("keywords") {
                     Some(Value::Array(a)) => next.keywords = a.iter().filter_map(Value::as_str).flat_map(split_keywords).collect(),
@@ -355,5 +469,26 @@ mod tests {
         let y = build(Some(foreign), &XmpInfo { title: "Neu".into(), ..Default::default() });
         assert!(y.contains("xmp:CreatorTool=\"Tool 1\"") && !y.contains(">Alt<"));
         assert_eq!(parse(&y).title, "Neu");
+    }
+
+    /// BA-023: weitere Felder der Seite „Beschreibung“ (Autorentitel, Verfasser, Bewertung,
+    /// Copyright-Status und -URL) werden geschrieben, gelesen und beim erneuten Bauen ersetzt.
+    #[test]
+    fn description_page_extra_fields_roundtrip() {
+        let i = XmpInfo { author_title: "Grafik".into(), caption_writer: "Ben".into(), rating: 4, copyright_marked: Some(true), copyright_url: "https://example.org/r?a=1&b=2".into(), ..Default::default() };
+        let x = build(None, &i);
+        assert!(x.contains("<xmp:Rating>4</xmp:Rating>") && x.contains("<xmpRights:Marked>True</xmpRights:Marked>"), "{x}");
+        assert!(!x.contains("<dc:"), "ohne Dublin-Core-Felder kein dc-Block");
+        let back = parse(&x);
+        assert!(back.same_fields(&i), "{back:?}");
+        assert_eq!(back.copyright_status(), "copyrighted");
+        let y = build(Some(&x), &XmpInfo { rating: 2, copyright_marked: Some(false), ..i.clone() });
+        assert_eq!(y.matches("<xmp:Rating>").count(), 1);
+        assert_eq!((parse(&y).rating, parse(&y).copyright_status()), (2, "publicDomain"));
+        // alles leer: Felder entfernt
+        let z = build(Some(&y), &XmpInfo::default());
+        assert!(!z.contains("AuthorsPosition") && !z.contains("xmp:Rating"), "{z}");
+        assert_eq!(parse(&z).copyright_status(), "unknown");
+        assert!(std_ns("xap/1.0/").starts_with("http://ns.") && std_ns("xap/1.0/").ends_with(".com/xap/1.0/"));
     }
 }

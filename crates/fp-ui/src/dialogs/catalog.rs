@@ -90,6 +90,9 @@ pub fn filter_form(cmd: &str, live: bool) -> Option<FormDialog> {
         "6074" => f = f.with_side_order(super::form::SideOrder::SlidersFirst),
         "5972" => f = f.with_side_order(super::form::SideOrder::FieldsPreviewSliders),
         "19110" => f = f.without_slider_tab_stops(),
+        // BA-022: D47 Bewegung und D49 Radial Knöpfe zuerst, D48 Gauß Schieber zuletzt
+        "6525" | "19159" => f = f.with_side_order(super::form::SideOrder::ButtonsFirst),
+        "5971" => f = f.with_side_order(super::form::SideOrder::FieldsButtonsSliders),
         _ => {}
     }
     // zuletzt per OK bestätigte Werte, app-weit wie im Original (PM-6 D41/D42/D45–D50); Abbrechen

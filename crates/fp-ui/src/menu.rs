@@ -651,14 +651,17 @@ pub fn build_inspector_menu(_st: &AppState) -> Vec<Node> {
     vec![help_item()]
 }
 
-/// Kontextmenü auf den Reitern des Inspektors: Volle/Halbe Höhe und Schließen.
+/// Oberflächenaktion „Minimieren“ im Reiter-Kontextmenü des Inspektors (auf den Reiter einklappen).
+pub const INSPECTOR_MINIMIZE: &str = "ui.inspector.minimize";
+
+/// Kontextmenü auf den Reitern des Inspektors wie im Original (BA-027): Schließen,
+/// Registerkartengruppe schließen, Minimieren. Volle/Halbe Höhe schaltet das ◊-Symbol im Reiter.
 pub fn build_inspector_tab_menu(st: &AppState) -> Vec<Node> {
-    let half = st.settings.workspace.inspector_half;
+    let collapsed = st.settings.workspace.inspector_collapsed;
     vec![
-        item(&t("pi-menu-full-height"), ItemAction::Ui(Action::Run("ui.inspector.half".into(), json!({ "half": false }))), true, Some(!half)),
-        item(&t("pi-menu-half-height"), ItemAction::Ui(Action::Run("ui.inspector.half".into(), json!({ "half": true }))), true, Some(half)),
-        Node::Separator,
         item(&t("pmenu-close"), ItemAction::Command("window.properties".into()), true, None),
+        item(&t("pmenu-closeGroup"), ItemAction::Command("window.properties".into()), true, None),
+        item(&t("pmenu-minimize"), ItemAction::Ui(Action::Run(INSPECTOR_MINIMIZE.into(), json!({}))), !collapsed, None),
     ]
 }
 

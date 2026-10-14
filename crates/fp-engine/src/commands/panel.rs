@@ -4555,7 +4555,8 @@ fn register_optimize_menu(r: &mut CommandRegistry) {
     // „JPEG-Ränder scharfzeichnen“ = keine Farbunterabtastung (4:4:4, `jpegSubsampling = 0`)
     only_when(r, 35399, "panel.optimize.sharpenJpegEdges", "JPEG-Ränder scharfzeichnen", is_jpeg, |e| e.jpeg_subsampling == 0, |e, v| e.jpeg_subsampling = if v { 0 } else { 1 });
     only_when(r, 35396, "panel.optimize.removeUnusedColors", "Nicht verwendete Farben entfernen", has_palette, |e| e.optimized, |e, v| e.optimized = v);
-    add_fw(r, 35595, cmd("panel.optimize.unlockAll").label("Sperrung aller Farben aufheben").requires(DOC).menu_when(|s| has_palette(&export_of(s))).run(|s, _| edit_opt(s, fp_export::palette_edit::unlock_all)));
+    // wie im Original nur aktiv, wenn es gesperrte bzw. bearbeitete Farben gibt (BA-027)
+    add_fw(r, 35595, cmd("panel.optimize.unlockAll").label("Sperrung aller Farben aufheben").requires(DOC).menu_when(|s| { let e = export_of(s); has_palette(&e) && e.palette.iter().any(|p| p.locked == Some(true)) }).run(|s, _| edit_opt(s, fp_export::palette_edit::unlock_all)));
     let colors_cmd = |name: &str, label: &str| cmd(name).label(label).requires(DOC).menu_when(|s| has_palette(&export_of(s))).param("colors", ParamKind::Json, "Palettenfarben [\"#rrggbb\", …]");
     add_fw(
         r,
@@ -4594,7 +4595,7 @@ fn register_optimize_menu(r: &mut CommandRegistry) {
     add_fw(
         r,
         35223,
-        cmd("panel.optimize.removeAllEdits").label("Alle Bearbeitungen entfernen").requires(DOC).menu_when(|s| has_palette(&export_of(s))).run(|s, _| {
+        cmd("panel.optimize.removeAllEdits").label("Alle Bearbeitungen entfernen").requires(DOC).menu_when(|s| { let e = export_of(s); has_palette(&e) && e.palette.iter().any(|p| p.new_color.is_some()) }).run(|s, _| {
             edit_opt(s, |o| {
                 let edited: Vec<u32> = o.palette.iter().filter(|e| e.edited.is_some()).map(|e| e.color).collect();
                 for c in edited {

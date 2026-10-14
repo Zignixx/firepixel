@@ -160,6 +160,39 @@ impl PanelId {
         PanelId::ALL.iter().copied().find(|p| p.engine_command() == Some(name))
     }
 
+    /// Name des Bedienfelds für die Brücke (`ui_action {"panel": …}`, `ui_state.visible_panels`):
+    /// der Befehl des Fenster-Menüs, bei Bedienfeldern ohne Katalogbefehl ein Name in derselben
+    /// Form (`window.align`, `window.path`, …), damit jedes Bedienfeld des Fenster-Menüs erreichbar ist.
+    pub fn bridge_name(self) -> &'static str {
+        if let Some(c) = self.engine_command() {
+            return c;
+        }
+        match self {
+            PanelId::Align => "window.align",
+            PanelId::ColorPalette => "window.colorPalette",
+            PanelId::SpecialCharacters => "window.specialCharacters",
+            PanelId::ImageEditing => "window.imageEditing",
+            PanelId::Path => "window.path",
+            PanelId::SymbolProperties => "window.symbolProperties",
+            PanelId::AutoShapeProperties => "window.autoShapeProperties",
+            // alle übrigen haben einen Befehl (oben)
+            _ => "window.unknown",
+        }
+    }
+
+    /// Bedienfeld zu einem Brückennamen: [`PanelId::bridge_name`] mit oder ohne `window.`,
+    /// ohne Rücksicht auf Groß-/Kleinschreibung, oder die Original-Befehls-ID ([`PanelId::fw_id`]).
+    pub fn from_bridge_name(name: &str) -> Option<PanelId> {
+        let n = name.trim();
+        if let Ok(id) = n.parse::<u32>() {
+            return PanelId::ALL.iter().copied().find(|p| p.fw_id() == id);
+        }
+        PanelId::ALL.iter().copied().find(|p| {
+            let b = p.bridge_name();
+            b.eq_ignore_ascii_case(n) || b.strip_prefix("window.").is_some_and(|s| s.eq_ignore_ascii_case(n))
+        })
+    }
+
     /// Original-Befehls-ID des Bedienfelds (Arbeitsbereich-XML `app-data`, 10 §4.5, 11 §4.2).
     pub fn fw_id(self) -> u32 {
         match self {

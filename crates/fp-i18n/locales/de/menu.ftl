@@ -600,6 +600,7 @@ menu-filter-blur = Weichzeichnen
 pmenu-help = Hilfe
 pmenu-close = Schließen
 pmenu-closeGroup = Registerkartengruppe schließen
+pmenu-minimize = Minimieren
 
 ## Kontextmenüs (Meldungen)
 

@@ -33,6 +33,8 @@ text preview.rs | JPEG – Höhere Qualität
 text preview.rs | GIF Adaptiv 256
 text preview.rs | JPEG – Kleinere Datei
 text preview.rs | GIF Web 216
+# Exportassistent (BA-032): Kennung der eingebauten Vorgabe für den JPEG-Vorschlag
+text export_wizard.rs | JPEG – Höhere Qualität
 # ToolGroup::label()/ThemeKind::label()/from_section: feste Kennungen, Anzeige über name() (ui-toolgroup-*, ui-theme-*)
 text theme.rs | Auswählen
 text theme.rs | Vektor

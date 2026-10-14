@@ -75,6 +75,11 @@ pub struct ExportWizard {
     pub current: OptimizeSettings,
 }
 
+/// Eingebaute Vorgabe des GIF-Vorschlags für das Web (BA-032).
+pub const WEB_GIF_PRESET: &str = "GIF Web 216";
+/// Eingebaute Vorgabe des JPEG-Vorschlags für das Web (Qualität 80, BA-032).
+pub const WEB_JPEG_PRESET: &str = "JPEG – Höhere Qualität";
+
 /// Ergebnisseite für „Aktuelle Formateinstellungen auswerten“.
 pub fn analysis_page(s: &OptimizeSettings) -> Option<ResultPage> {
     match s.format {
@@ -155,8 +160,9 @@ impl ExportWizard {
     pub fn proposal(&self) -> Vec<OptimizeSettings> {
         let base = self.current.clone();
         let with = |v: Value| fp_engine::commands::export::apply_settings_json(base.clone(), &v, "file.exportWizard").unwrap_or_else(|_| base.clone());
-        let gif = || with(json!({"format": "gif", "palette": "adaptive", "colors": 128}));
-        let jpeg = || with(json!({"format": "jpeg", "quality": 80, "smoothing": 0}));
+        // Web-Ziel wie im Original (BA-032): Vorgaben „GIF Web 216“ und „JPEG – Höhere Qualität“ (80)
+        let gif = || with(json!({"preset": WEB_GIF_PRESET}));
+        let jpeg = || with(json!({"preset": WEB_JPEG_PRESET}));
         match self.step {
             Step::Frames if self.frames_choice == FramesChoice::AnimatedGif => vec![with(json!({"format": "animatedGif", "palette": "adaptive", "colors": 128}))],
             Step::Result(ResultPage::WebAnalysis) => vec![gif(), jpeg()],
@@ -221,7 +227,17 @@ fn result_text(p: ResultPage) -> (String, String) {
         ResultPage::Jpeg => "jpeg",
         ResultPage::FullColor => "full",
     };
+    if p == ResultPage::WebAnalysis {
+        // vier Absätze wie im Original (BA-032)
+        let body = (1..=4).map(|i| t(&format!("dlg-wiz-res-analysis-{i}"))).collect::<Vec<_>>().join("\n\n");
+        return (t("dlg-wiz-res-analysis-title"), body);
+    }
     (t(&format!("dlg-wiz-res-{k}-title")), t(&format!("dlg-wiz-res-{k}")))
+}
+
+/// Text einer Ergebnisseite (Titel, Inhalt) – für Tests.
+pub fn result_page_text(p: ResultPage) -> (String, String) {
+    result_text(p)
 }
 
 /// Zeichnet die aktuelle Seite; `Some(true)` = in die Bildvorschau, `Some(false)` = Abbrechen.

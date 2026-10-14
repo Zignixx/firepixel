@@ -280,6 +280,10 @@ impl Resolution {
 /// Höchstzahl gemerkter zuletzt geöffneter Dateien (MFC `LoadStdProfileSettings(10)`).
 pub const MAX_RECENT_FILES: usize = 10;
 
+/// Vorgabe-Kürzelsatz wie im Original (`CurrentShortcutSet` = „Web Standard“, BA-127); gilt auch als
+/// Rückfall, wenn die Definition fehlt oder der gespeicherte Satz unbekannt ist.
+pub const DEFAULT_SHORTCUT_SET: &str = "Web Standard";
+
 /// Voreinstellungen von Firepixel.
 #[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
 pub struct Preferences {
@@ -445,7 +449,7 @@ impl Preferences {
 
     /// Aktives Tastenkürzel-Set (`CurrentShortcutSet`).
     pub fn shortcut_set(&self) -> String {
-        self.get_str("CurrentShortcutSet", "Firepixel")
+        self.get_str("CurrentShortcutSet", DEFAULT_SHORTCUT_SET)
     }
 
     /// Fangabstand in Bildschirmpixeln (`SnapDistance`).

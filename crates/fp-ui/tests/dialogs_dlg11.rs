@@ -83,7 +83,7 @@ fn file_info_controls_inside_window_de_en() {
                 }
             }
         }
-        assert_eq!(n, 5, "{lang}: Titel, Autor, Beschreibung, Schlüsselwörter, Copyright");
+        assert_eq!(n, 8, "{lang}: Titel, Autor, Autorentitel, Beschreibung, Verfasser, Stichwörter, Copyright, URL (BA-023)");
         for key in ["btn-ok", "btn-cancel"] {
             let r = h.get_by_label(&fp_i18n::t(key)).rect();
             assert!(win.expand(0.5).contains_rect(r), "{lang}: {key} {r:?} ragt aus {win:?}");

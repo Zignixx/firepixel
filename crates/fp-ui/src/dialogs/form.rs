@@ -385,6 +385,12 @@ pub enum SideOrder {
     SlidersFirst,
     /// Alle Felder › Vorschau › alle Schieber › OK › Abbrechen (D46 Unscharf maskieren).
     FieldsPreviewSliders,
+    /// OK › Abbrechen › Kästchen der Knopfspalte › Vorschau › Felder (D47 Bewegungsunschärfe,
+    /// D49 Radiales Weichzeichnen; BA-022).
+    ButtonsFirst,
+    /// Alle Felder › OK › Abbrechen › Kästchen der Knopfspalte › Vorschau › alle Schieber
+    /// (D48 Gaußscher Weichzeichner; BA-022).
+    FieldsButtonsSliders,
 }
 
 /// Pseudo-Feldschlüssel des Kästchens „Vorschau“ in [`FormDialog::with_prefs`]
@@ -1067,9 +1073,9 @@ fn side_stops(d: &FormDialog, rows: &[Option<(f32, f32)>]) -> Vec<SideStop> {
         }
         match &f.kind {
             FieldKind::Number { slider: true, .. } => match d.side_order {
-                SideOrder::FieldsFirst => v.extend([Field(i), Slider(i)]),
+                SideOrder::FieldsFirst | SideOrder::ButtonsFirst => v.extend([Field(i), Slider(i)]),
                 SideOrder::SlidersFirst => v.extend([Slider(i), Field(i)]),
-                SideOrder::FieldsPreviewSliders => {
+                SideOrder::FieldsPreviewSliders | SideOrder::FieldsButtonsSliders => {
                     v.push(Field(i));
                     sliders.push(Slider(i));
                 }
@@ -1086,6 +1092,13 @@ fn side_stops(d: &FormDialog, rows: &[Option<(f32, f32)>]) -> Vec<SideStop> {
             v.extend([Column, Preview]);
             v.extend(sliders);
             v.extend([Ok, Cancel]);
+        }
+        SideOrder::ButtonsFirst => {
+            v.splice(0..0, [Ok, Cancel, Column, Preview]);
+        }
+        SideOrder::FieldsButtonsSliders => {
+            v.extend([Ok, Cancel, Column, Preview]);
+            v.extend(sliders);
         }
     }
     v

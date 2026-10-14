@@ -8,6 +8,7 @@ pi-tab-properties = Properties
 pi-tab-symbol-properties = Symbol Properties
 pi-menu-full-height = Full Height
 pi-menu-half-height = Half Height
+pi-height-toggle = Full/Half Height
 
 ## Common field labels
 pi-edit = Edit...
