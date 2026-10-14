@@ -904,3 +904,20 @@ Eingetragen von DOC-4 (13.10.) aus den Berichten `berichte\batch1.md`, `batch2.m
 - [x] (von CT-3, niedrig) Rote 1-px-Linie ab Seitenursprung nach rechts/unten bis zum Leinwandrand, sobald der Zeiger das Fenster verlässt (gesehen nach Bedienfeld-Ziehen) – Hover-Rahmen der Leinwand? – `docs\funktionstest\img\ct3\rote_linie_zeiger_weg.png` – erledigt (FIX-E, e9f65f3: Hervorhebung nur bei Zeiger über der Leinwand)
 - [x] (von CT-3, niedrig) Bei 900 × 650 bleibt die Gruppe Dokumentbibliothek/Allgemeine Bibliothek eine Reiterzeile: Klick, Doppelklick und *Fenster ▸ Dokumentbibliothek* klappen sie nicht auf, Trenner darüber nicht ziehbar – Dock-Layout fp-ui – erledigt (FIX-E, 06cf937: zuletzt geöffnete Gruppe bleibt offen)
 - [x] (von CT-3, niedrig, Testbarkeit) Mit `FP_NO_SHELL_OPEN` liegen Vorlagen und Startordner („Dokumente“, „Bilder“) im Wächter-Profil `%TEMP%\firepixel-test-profiles\<pid>`, Einstellungen/Befehle im gesetzten `APPDATA` – zwei Profilwurzeln; NZ-4 „Export startet in Bilder“ dadurch nicht prüfbar – `fp_i18n::profile` – erledigt (FIX-E, 2a466aa: Startordner aus dem gesetzten APPDATA)
+
+## BATCH-T – Batch-Studio im echten Fenster (14.10.2026, `docs\berichte\batcht.md`)
+
+- [x] (von BATCH-T) Mausklick auf „▶ n Dateien verarbeiten“ und „Fehlgeschlagene erneut“ ohne Wirkung (nur Strg+Eingabe ging) – `output_bar::start` über `st.batch` (wie N33) – erledigt (BATCH-T, 15c2c46)
+- [x] (von BATCH-T) „Fotos nach Datum umbenennen“/`{exif-date}` nahm immer das Änderungsdatum – `ItemInfo.exif` nie gefüllt – erledigt (BATCH-T, 15c2c46: `probe` liest EXIF)
+- [x] (von BATCH-T) „Rezept speichern unter…“/„Bericht speichern…“ mit Bildtypen, Name bekam `.fw.png` – erledigt (BATCH-T, 15c2c46)
+- [x] (von BATCH-T) Ende-Karte „Dauer“ = Summe der Zeiten je Datei (796 s statt 51 s) – erledigt (BATCH-T, 15c2c46: Wanduhr, auf Sekunden genau wie der Bericht)
+- [x] (von BATCH-T, niedrig) Filterzeile Art/Sortierung überlappen; Profi-Filterhinweis abgeschnitten; EN „1 errors“; Text-Baustein mit deutschen Anführungszeichen in EN; Tab ohne Fokus blendet die Werkzeugleiste aus – erledigt (BATCH-T, 15c2c46)
+- [ ] (von BATCH-T) Abbruch-Karte: „0 fertig · 0 übersprungen · 0 Fehler“ und „1,9 MB → 0 Byte (−100 %)“ – Spec §2.8: „Abgebrochen: n fertig, m nicht verarbeitet“, Summe nur über fertige Dateien – `batcheport_ui.rs`
+- [ ] (von BATCH-T, niedrig) Ausgabe-Leiste zeigt die Zahlen des letzten Laufs weiter nach „Leeren“/neuer Liste
+- [ ] (von BATCH-T, niedrig) Trockenlauf-Plan ohne geschätzte Größen („≈“, Spec §2.6)
+- [ ] (von BATCH-T, niedrig) KI-Schritt (Hintergrund entfernen, 24 Fotos): alle Dateien sofort „läuft“, Restzeit springt 0:58 → 3:59 → 0:47 – Parallelität/Speicher bei KI-Schritten prüfen
+- [ ] (von BATCH-T, niedrig) Name einer eingebauten Vorlage bleibt nach Sprachwechsel in der alten Sprache (Banner, Ende-Karte)
+- [ ] (von BATCH-T, niedrig) Werkzeugleiste des Hauptfensters (Speichern, Drucken …) aktiv, solange das Studio vorn ist
+- [ ] (von BATCH-T, niedrig) „Ordner…“ in der Knopfzeile liest rekursiv (Einstellung „Unterordner einbeziehen“), „Ordner…“ im ▾-Menü flach – gleiche Beschriftung, anderes Verhalten
+- [ ] (von BATCH-T, niedrig) Vorschau „Nachher“ bei reinem Umbenennen (Speichern als „Format wie Quelle“, nur Kopie) zeigt neu kodierte Größe (80 KB, −57 %) statt der unveränderten Kopie
+- [ ] (von BATCH-T, Testbarkeit) `ui_input hover_files` gilt nur einen Frame – Schweben-Rückmeldung beim Ziehen (Tönung, „Zum Hinzufügen loslassen“) über die Brücke nicht prüfbar; `ui_state.visible_panels` meldet die Werkzeugleiste auch bei „Bedienfelder ausblenden“ als sichtbar
