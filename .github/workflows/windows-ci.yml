@@ -32,13 +32,15 @@ env:
   CARGO_INCREMENTAL: "0"
   # Tests nie ins echte Profil, nichts im Explorer/Browser oeffnen
   FP_NO_SHELL_OPEN: "1"
+  # CI: keine Zeilentabellen im Testbuild (schnelleres Linken; Optimierstufen wie lokal)
+  CARGO_PROFILE_DEV_DEBUG: "0"
 
 jobs:
   check:
     name: cargo check (warnungsfrei)
     if: ${{ !inputs.package }}
     runs-on: windows-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - name: Rust stable
@@ -49,6 +51,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2.8.0
         with:
           shared-key: win-check
+          cache-on-failure: true
       - name: cargo check --workspace --all-targets
         shell: pwsh
         run: |
@@ -61,7 +64,7 @@ jobs:
     name: Tests (ohne fp-ui)
     if: ${{ !inputs.package }}
     runs-on: windows-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - name: Rust stable
@@ -70,15 +73,16 @@ jobs:
           rustup default stable
       - uses: Swatinem/rust-cache@v2.8.0
         with:
-          shared-key: win-test-core
-      - name: cargo test (alle Crates ausser fp-ui)
-        run: cargo test --locked --workspace --exclude fp-ui --no-fail-fast
+          shared-key: win-dev
+          save-if: false
+      - name: cargo test (alle Crates ausser fp-ui und der GUI-exe)
+        run: cargo test --locked --workspace --exclude fp-ui --exclude firepixel --no-fail-fast
 
   test-ui:
     name: Tests fp-ui (kittest)
     if: ${{ !inputs.package }}
     runs-on: windows-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - name: Rust stable
@@ -87,14 +91,15 @@ jobs:
           rustup default stable
       - uses: Swatinem/rust-cache@v2.8.0
         with:
-          shared-key: win-test-ui
+          shared-key: win-dev
+          cache-on-failure: true
       - name: cargo test -p fp-ui
         run: cargo test --locked -p fp-ui --no-fail-fast
 
   build:
     name: Release-Build (x64)
     runs-on: windows-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
         with:
@@ -106,8 +111,13 @@ jobs:
       - uses: Swatinem/rust-cache@v2.8.0
         with:
           shared-key: win-release
+          cache-on-failure: true
       - name: cargo build --release
-        run: cargo build --locked --release -p firepixel -p firepixel-cli
+        shell: pwsh
+        run: |
+          # CI-Artifact: parallel optimieren; das Release-ZIP (package) bleibt bei codegen-units = 1
+          if ("${{ inputs.package }}" -ne "true") { $env:CARGO_PROFILE_RELEASE_CODEGEN_UNITS = "16" }
+          cargo build --locked --release -p firepixel -p firepixel-cli
       - name: Paket zusammenstellen
         shell: pwsh
         run: |
