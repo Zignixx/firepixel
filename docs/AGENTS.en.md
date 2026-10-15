@@ -142,7 +142,7 @@ Resources (Markdown): `firepixel://docs/agents.md` (this file), `firepixel://doc
     `element.setVisible`, `element.setLocked`, `element.setBounds {x?, y?, width?, height?}`,
     `element.addEffect {effect: "dropShadow"|"innerShadow"|"bevel"|"glow"|… , params?}`, `element.setGradient {from, to, colors?}`
     (`bevel` with `params.BevelType` 0 Inner Bevel, 1 Outer Bevel, 2 Raised Emboss, 3 Inset Emboss;
-    group “Bevel and Emboss”)
+    group "Bevel and Emboss")
   * Textures and patterns (names as in the inspector lists, files from the texture or pattern folders):
     `element.setTexture {name | image, target?: "fill"|"stroke", amount?, ids?}` (without `name` and `image`: remove the texture),
     `element.setPattern {name | image, ids?}`, `pi.fill {pattern}` or `pi.fill {texture, textureAmount?}` on the selection
