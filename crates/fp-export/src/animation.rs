@@ -8,7 +8,8 @@
 //!    Schranken mit `l = lossyGifAmount`: gleich ⇒ zählt nicht; Abstand² < (l+4)² ⇒ Vorgängerpixel,
 //!    zählt nicht; < (l+8)² ⇒ bleibt, zählt nicht; sonst zählt. Bildrechteck = Hülle der zählenden
 //!    Pixel (leer ⇒ 1×1). Löschmethode 2 wird zu 1, wenn kein Pixel von deckend nach transparent wechselt.
-//! 3. Eine gemeinsame Palette über alle Bilder (A: Bilder untereinander gestapelt quantisiert).
+//! 3. Eine gemeinsame Palette über alle Bilder (spec 44: one histogram over all frames, adaptive
+//!    palette capped at 255 colours and sorted by luminance descending).
 //! 4. Transparenzindex: eigene Transparenz, sonst mit Auto-Differenz `n` (Palettengröße) – Farbe
 //!    `#FE0102` nur zusammen mit Auto-Crop (Laufzeit T4); bei Zweierpotenz wächst die Bittiefe, bei 256
 //!    gibt es keinen. Mit Auto-Differenz wird je Bild die kleinere von zwei Kodierungen genommen:
@@ -19,7 +20,7 @@ use fp_model::FrameInfo;
 
 use crate::gif::{GifFrame, GifOptions, lzw_size, palette_bits, write_gif};
 use crate::options::{ExportFormat, OptimizeSettings};
-use crate::pipeline::{ExportContext, quantize_indexed};
+use crate::pipeline::{ExportContext, quantize_indexed_frames};
 use crate::png_out::{ApngFrame, PngOptions, write_apng};
 use crate::px::{a, dist2};
 use crate::quant::TRANSPARENCY_NONE;
@@ -152,15 +153,9 @@ pub fn animated_gif(
     if s.anim.auto_difference && s.transparency.code() == TRANSPARENCY_NONE {
         qs.max_colors = qs.max_colors.min(255);
     }
-    // A (Laufzeit 08 T4: GCT weiß, rot, blau): Passen alle Farben der Status in die gewünschte Zahl,
-    // entsteht die Palette wie „Exakt“ (Luminanz absteigend) statt über den Variance-Quantisierer.
-    if s.palette_kind == crate::options::PaletteKind::Adaptive
-        && let Some(ex) = crate::palettes::palette_exact(&stacked, s.effective_matte(ctx.canvas))
-        && ex.len() as i32 <= qs.max_colors
-    {
-        qs.palette_kind = crate::options::PaletteKind::Exact;
-    }
-    let ix = quantize_indexed(&stacked, w, h * prepared.len(), &qs, ctx);
+    // Spec 44 (TW-114): "Adaptive" builds one global, luminance-sorted palette over all frames
+    // (`Quantizer::build_adaptive_global`, chosen in `build_quantizer_frames`).
+    let ix = quantize_indexed_frames(&stacked, w, h * prepared.len(), h, &qs, ctx);
     let matte = s.effective_matte(ctx.canvas);
     let mut file_pal = ix.palette_rgb(matte);
     let own_transparency =

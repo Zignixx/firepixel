@@ -271,6 +271,18 @@ pub fn build_quantizer(
     s: &OptimizeSettings,
     ctx: &ExportContext,
 ) -> BuiltPalette {
+    build_quantizer_frames(pixels, w, pixels.len(), s, ctx)
+}
+
+/// Like [`build_quantizer`]; `frame_pixels` = W·H of one frame when `pixels` holds several
+/// stacked animation frames (weight of locked colours in the global animated palette).
+pub fn build_quantizer_frames(
+    pixels: &[u32],
+    w: usize,
+    frame_pixels: usize,
+    s: &OptimizeSettings,
+    ctx: &ExportContext,
+) -> BuiltPalette {
     let matte = s.effective_matte(ctx.canvas);
     let mut tm = effective_transparency(s);
     let (mut dmode, dpct) = s.dither_mode();
@@ -360,6 +372,23 @@ pub fn build_quantizer(
                     q.set_palette(rpal.clone(), 0, false, false);
                     q.tmode = TRANSPARENCY_RGBA;
                     rgba_palette = Some(rpal);
+                } else if s.format == ExportFormat::AnimatedGif {
+                    // Spec 44: animated GIF builds one global palette over all frames, at most
+                    // 255 colours (adaptive) or 256 (exact fallback), luminance-sorted.
+                    let n = if kind == PaletteKind::Adaptive {
+                        max_colors.min(255)
+                    } else {
+                        256
+                    };
+                    q.build_adaptive_global(
+                        pixels,
+                        frame_pixels,
+                        n,
+                        snap,
+                        s.websnap_tolerance,
+                        &locked,
+                    );
+                    adaptive_counts = true;
                 } else {
                     let temp_bw = (!s.web_adaptive && s.format.is_plugin_format())
                         || ctx.black_and_white_for_director;
@@ -453,8 +482,20 @@ pub fn quantize_indexed(
     s: &OptimizeSettings,
     ctx: &ExportContext,
 ) -> IndexedImage {
+    quantize_indexed_frames(pixels, w, h, h, s, ctx)
+}
+
+/// Like [`quantize_indexed`] for `h / frame_h` animation frames stacked vertically.
+pub fn quantize_indexed_frames(
+    pixels: &[u32],
+    w: usize,
+    h: usize,
+    frame_h: usize,
+    s: &OptimizeSettings,
+    ctx: &ExportContext,
+) -> IndexedImage {
     let matte = s.effective_matte(ctx.canvas);
-    let mut built = build_quantizer(pixels, w, s, ctx);
+    let mut built = build_quantizer_frames(pixels, w, w * frame_h.min(h), s, ctx);
     let tm = built.q.tmode;
     let max_colors = built.max_colors;
     let adaptive_counts = built.adaptive_counts;
@@ -616,7 +657,8 @@ pub fn quantize_indexed(
     }
     apply_edited(&mut slots);
     let tmode = built.q.tmode;
-    let sort_mode = if tmode == TRANSPARENCY_RGBA {
+    // The global animated palette is already luminance-sorted; no extra export sorting (spec 44 §3).
+    let sort_mode = if tmode == TRANSPARENCY_RGBA || (animated && adaptive_counts) {
         0
     } else {
         s.sorting.code()

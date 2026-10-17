@@ -516,6 +516,147 @@ impl Quantizer {
         &self.palette
     }
 
+    /// Global adaptive palette of an animated GIF (spec 44 §3): one histogram over all frames
+    /// (`pixels` = frames stacked, `frame_pixels` = W·H of one frame), the same variance quantiser
+    /// and bit loop as [`Quantizer::build_adaptive`], but **no** tolerance-3 web snap (only with
+    /// web-adaptive), no canvas special colour, no padding to two colours and no fine-tuning.
+    /// Locked colours are pre-weighted in the histogram and then replace their nearest entry. The
+    /// palette ends sorted by luminance descending with [`crt_qsort`] (unstable, CRT tie order).
+    /// `ncolors` is already capped by the caller (255 adaptive, 256 exact fallback).
+    pub fn build_adaptive_global(
+        &mut self,
+        pixels: &[u32],
+        frame_pixels: usize,
+        ncolors: i32,
+        websnap_on: bool,
+        tolerance: i32,
+        locked: &[u32],
+    ) -> &[u32] {
+        self.adaptive = true;
+        let tol = (tolerance / 2).max(0) as u32;
+        let mut n = ncolors.clamp(2, 256) as usize;
+        if n == 256 && self.tmode == TRANSPARENCY_INDEX_ALPHA {
+            n = 255;
+        }
+        let matte = self.matte;
+        let blend = a(matte) != 0;
+        let prepped: Vec<u32> = pixels
+            .iter()
+            .map(|&p0| {
+                let mut p = p0;
+                // 0x00010203 is never blended (spec 44 §3.1, kept as specified)
+                if blend && a(p) != 255 && p != 0x0001_0203 {
+                    p = matte_blend(p, matte, false);
+                }
+                if websnap_on { websnap(p, tol) } else { p }
+            })
+            .collect();
+        let locked_weight = if locked.is_empty() {
+            0
+        } else {
+            let d = (n as i64 - locked.len() as i64).max(1) as u64;
+            frame_pixels as u64 / d
+        };
+        let mut bits = initial_bits(n);
+        let mut best = 0usize;
+        let mut state = 0;
+        let mut res;
+        loop {
+            if state == -1 {
+                bits -= 1;
+            }
+            let tb = reduce_table(bits);
+            let key = |c: u32| [tb[r(c) as usize], tb[g(c) as usize], tb[b(c) as usize]];
+            let mut hm: HashMap<[u8; 3], u64> = HashMap::new();
+            if locked_weight > 0 {
+                for &c in locked {
+                    *hm.entry(key(c)).or_insert(0) += locked_weight;
+                }
+            }
+            for (&c, &c0) in prepped.iter().zip(pixels) {
+                if self.tmode == TRANSPARENCY_NONE || a(c0) > 16 {
+                    *hm.entry(key(c)).or_insert(0) += 1;
+                }
+            }
+            let mut hist: Vec<([u8; 3], u64)> = hm.into_iter().collect();
+            hist.sort_unstable_by_key(|h| h.0);
+            res = colorquant(&hist, n, bits);
+            let count = res.colors.len();
+            if state == -1 {
+                break;
+            }
+            if count > best && (count != n || bits != 7) {
+                best = count;
+                if count >= n {
+                    break;
+                }
+                if bits < 7 {
+                    bits += 1;
+                    state = 0;
+                    continue;
+                }
+                break;
+            }
+            state = -1;
+        }
+        let mut pal: Vec<u32> = res
+            .colors
+            .iter()
+            .map(|c| argb(255, c[0] as u32, c[1] as u32, c[2] as u32))
+            .collect();
+        let mut counts = res.weights.clone();
+        if pal.is_empty() {
+            // nothing counted (all pixels transparent): one opaque matte entry keeps the lookup valid
+            pal.push(matte | 0xFF00_0000);
+            counts.push(0);
+        }
+        if websnap_on {
+            for c in &mut pal {
+                *c = websnap(*c, tol);
+            }
+        }
+        let mut lockf = vec![false; pal.len()];
+        for &c in locked {
+            let c = c | 0xFF00_0000;
+            let k = pal.iter().position(|&p| p == c).unwrap_or_else(|| {
+                let mut k = 0;
+                for i in 1..pal.len() {
+                    if dist2(pal[i], c) < dist2(pal[k], c) {
+                        k = i;
+                    }
+                }
+                k
+            });
+            pal[k] = c;
+            lockf[k] = true;
+        }
+        let mut entries: Vec<(u32, u64, bool)> = pal
+            .iter()
+            .zip(&counts)
+            .zip(&lockf)
+            .map(|((&p, &w), &l)| (p, w, l))
+            .collect();
+        crt_qsort(&mut entries, |x, y| {
+            let (lx, ly) = (lum(x.0) & 0xFF, lum(y.0) & 0xFF);
+            if ly < lx {
+                -1
+            } else if lx < ly {
+                1
+            } else {
+                0
+            }
+        });
+        self.palette = entries.iter().map(|e| e.0 | 0xFF00_0000).collect();
+        self.counts = entries.iter().map(|e| e.1).collect();
+        self.locked = entries.iter().map(|e| e.2).collect();
+        self.grid_levels = 0;
+        self.gray = false;
+        self.custom = false;
+        self.reset_lookup();
+        self.append_transparent();
+        &self.palette
+    }
+
     fn brute(&self, c: u32) -> usize {
         let mut best = 0xFFFFFu32;
         let mut bi = 0;
@@ -815,9 +956,148 @@ impl Quantizer {
     }
 }
 
+/// Unstable quicksort with the tie behaviour of the classic C runtime `qsort` (spec 44 §3.2):
+/// median-of-three pivot, partition loops as specified, an explicit stack and a selection
+/// "short sort" for partitions of at most 8 elements. `cmp` returns <0, 0 or >0. A stable sort
+/// orders equal keys differently, which would change palette indices.
+pub fn crt_qsort<T, F: FnMut(&T, &T) -> i32>(a: &mut [T], mut cmp: F) {
+    const CUTOFF: isize = 8;
+    let num = a.len() as isize;
+    if num < 2 {
+        return;
+    }
+    let at = |i: isize| i as usize;
+    let mut stack: Vec<(isize, isize)> = Vec::new();
+    let (mut lo, mut hi): (isize, isize) = (0, num - 1);
+    loop {
+        let size = hi - lo + 1;
+        if size <= CUTOFF {
+            // short sort: move the largest element to the end, then shrink
+            let mut h = hi;
+            while h > lo {
+                let mut mx = lo;
+                for p in lo + 1..=h {
+                    if cmp(&a[at(p)], &a[at(mx)]) > 0 {
+                        mx = p;
+                    }
+                }
+                a.swap(at(mx), at(h));
+                h -= 1;
+            }
+        } else {
+            let mut mid = lo + size / 2;
+            if cmp(&a[at(lo)], &a[at(mid)]) > 0 {
+                a.swap(at(lo), at(mid));
+            }
+            if cmp(&a[at(lo)], &a[at(hi)]) > 0 {
+                a.swap(at(lo), at(hi));
+            }
+            if cmp(&a[at(mid)], &a[at(hi)]) > 0 {
+                a.swap(at(mid), at(hi));
+            }
+            let mut loguy = lo;
+            let mut higuy = hi;
+            loop {
+                if mid > loguy {
+                    loop {
+                        loguy += 1;
+                        if !(loguy < mid && cmp(&a[at(loguy)], &a[at(mid)]) <= 0) {
+                            break;
+                        }
+                    }
+                }
+                if mid <= loguy {
+                    loop {
+                        loguy += 1;
+                        if !(loguy <= hi && cmp(&a[at(loguy)], &a[at(mid)]) <= 0) {
+                            break;
+                        }
+                    }
+                }
+                loop {
+                    higuy -= 1;
+                    if !(higuy > mid && cmp(&a[at(higuy)], &a[at(mid)]) > 0) {
+                        break;
+                    }
+                }
+                if higuy < loguy {
+                    break;
+                }
+                a.swap(at(loguy), at(higuy));
+                if mid == higuy {
+                    mid = loguy;
+                }
+            }
+            higuy += 1;
+            if mid < higuy {
+                loop {
+                    higuy -= 1;
+                    if !(higuy > mid && cmp(&a[at(higuy)], &a[at(mid)]) == 0) {
+                        break;
+                    }
+                }
+            }
+            if mid >= higuy {
+                loop {
+                    higuy -= 1;
+                    if !(higuy > lo && cmp(&a[at(higuy)], &a[at(mid)]) == 0) {
+                        break;
+                    }
+                }
+            }
+            if higuy - lo >= hi - loguy {
+                if lo < higuy {
+                    stack.push((lo, higuy));
+                }
+                if loguy < hi {
+                    lo = loguy;
+                    continue;
+                }
+            } else {
+                if loguy < hi {
+                    stack.push((loguy, hi));
+                }
+                if lo < higuy {
+                    hi = higuy;
+                    continue;
+                }
+            }
+        }
+        match stack.pop() {
+            Some((l, h)) => {
+                lo = l;
+                hi = h;
+            }
+            None => return,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn crt_qsort_sorts_and_keeps_crt_tie_order() {
+        // sorted result for distinct keys
+        let mut v: Vec<i32> = (0..300).map(|i| (i * 7919) % 1009).collect();
+        let mut e = v.clone();
+        e.sort();
+        crt_qsort(&mut v, |x, y| x.cmp(y) as i32);
+        assert_eq!(v, e);
+        // many ties: still ordered by key, every element kept (tie order is pinned by the
+        // animated-GIF golden test)
+        let mut t: Vec<(i32, i32)> = (0..40).map(|i| ((i * 13) % 4, i)).collect();
+        crt_qsort(&mut t, |x, y| x.0.cmp(&y.0) as i32);
+        assert!(t.windows(2).all(|w| w[0].0 <= w[1].0));
+        let mut ids: Vec<i32> = t.iter().map(|x| x.1).collect();
+        ids.sort();
+        assert_eq!(ids, (0..40).collect::<Vec<_>>());
+        // short sort only (≤ 8 elements)
+        let mut s = vec![3, 1, 2];
+        crt_qsort(&mut s, |x, y| x.cmp(y) as i32);
+        assert_eq!(s, vec![1, 2, 3]);
+    }
 
     #[test]
     fn colorquant_two_colors() {
