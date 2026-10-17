@@ -269,6 +269,9 @@ struct CpState {
     /// sonst die schwarze Spitze des Zeigers genau unter dem Zeiger, und die Pipette las über
     /// Bedienfeldern und Menüleiste immer #000000 (N27, NP-1).
     shot_pending: Option<f64>,
+    /// Primary button went down on the grid or outside the popup and is still held: the choice
+    /// follows the pointer and is taken on release (like the reference, TW-112).
+    track: bool,
 }
 
 fn state_id(pid: Id) -> Id {
@@ -355,6 +358,7 @@ impl CpState {
             shot_asked: f64::NEG_INFINITY,
             shot_pos: None,
             shot_pending: None,
+            track: false,
         };
         s.fill_buffers(s.display(work));
         s
@@ -773,7 +777,9 @@ fn body(
             }
         }
     }
-    // ---- Klick: Rasterzelle bzw. außerhalb (Pipette) übernimmt und schließt
+    // ---- Press on a grid cell or outside (eyedropper) starts tracking; the colour under the
+    // pointer at release is taken and the popup closes (press, drag across the grid, release =
+    // that swatch; Esc while held cancels, see above)
     let press = ctx.input(|i| {
         if i.pointer.primary_pressed() {
             i.pointer.press_origin().or(i.pointer.latest_pos())
@@ -789,11 +795,26 @@ fn body(
             s.slider = false;
         } else if s.sys {
             // Klick neben den Farbdialog: nichts (modal wie der Systemdialog)
-        } else if let Some((cc, rr)) = cell_at(p) {
-            return (Some(ColorChoice::Color(grid_choice(cc, rr))), true);
-        } else if !rect.contains(p) {
-            let picked = sample(ctx, st, s, p, &own);
-            return (picked.map(|col| ColorChoice::Color(s.finish(col))), true);
+        } else if cell_at(p).is_some() || !rect.contains(p) {
+            s.track = true;
+        }
+    }
+    let release = ctx.input(|i| {
+        if i.pointer.primary_released() {
+            i.pointer.latest_pos().or(i.pointer.interact_pos())
+        } else {
+            None
+        }
+    });
+    if s.track && (release.is_some() || !ctx.input(|i| i.pointer.primary_down())) {
+        s.track = false;
+        if let Some(p) = release.filter(|p| !blocked(*p) && !s.sys) {
+            if let Some((cc, rr)) = cell_at(p) {
+                return (Some(ColorChoice::Color(grid_choice(cc, rr))), true);
+            } else if !rect.contains(p) {
+                let picked = sample(ctx, st, s, p, &own);
+                return (picked.map(|col| ColorChoice::Color(s.finish(col))), true);
+            }
         }
     }
     // ---- Hintergrund (schluckt Klicks außerhalb, damit die Leinwand sie nicht bekommt)

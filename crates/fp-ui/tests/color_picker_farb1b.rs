@@ -197,6 +197,43 @@ fn grid_click_sets_exact_color_and_dialog_stays() {
     }
 }
 
+fn button(h: &mut Harness<'_, FirepixelApp>, p: Pos2, pressed: bool) {
+    h.event(Event::PointerMoved(p));
+    h.event(Event::PointerButton { pos: p, button: PointerButton::Primary, pressed, modifiers: Modifiers::NONE });
+    h.run_steps(2);
+}
+
+#[test]
+fn grid_drag_takes_cell_under_pointer_on_release() {
+    let mut h = harness(app(&[("#ff0000", [20.0, 20.0, 120.0, 80.0])]));
+    open_glow(&mut h);
+    let sw = glow_swatch(&h);
+    let start = form_color(&h);
+    // press on one cell, drag to another, release: the cell at release wins (TW-112)
+    let p = open_popup(&mut h, sw);
+    button(&mut h, cell_center(p, 3, 1), true);
+    assert!(cp::open_rect(&h.ctx, sw).is_some(), "press alone keeps the popup open");
+    assert_eq!(form_color(&h), start, "press alone takes nothing");
+    h.event(Event::PointerMoved(cell_center(p, 10, 6)));
+    h.run_steps(2);
+    h.event(Event::PointerMoved(cell_center(p, 18, 13)));
+    h.run_steps(2);
+    let want = cp::grid_color(18, 13);
+    assert_eq!(cp::live_color(&h.ctx, sw), Some(Some(want)), "preview follows the drag");
+    button(&mut h, cell_center(p, 18, 13), false);
+    assert!(cp::open_rect(&h.ctx, sw).is_none(), "release closes");
+    assert_eq!(&form_color(&h)[..7], format!("#{:06x}", want.0 & 0xff_ffff), "cell under the pointer at release");
+    // Esc while the button is held cancels
+    let before = form_color(&h);
+    let p = open_popup(&mut h, sw);
+    button(&mut h, cell_center(p, 5, 12), true);
+    key(&mut h, Key::Escape, Modifiers::NONE);
+    assert!(cp::open_rect(&h.ctx, sw).is_none(), "Esc closes");
+    button(&mut h, cell_center(p, 5, 12), false);
+    assert_eq!(form_color(&h), before, "Esc while held takes nothing");
+    assert!(st(&h).dialogs.form.is_some(), "effect dialog stays open");
+}
+
 #[test]
 fn hex_typed_live_then_enter_applies_and_esc_discards() {
     let mut h = harness(app(&[("#ff0000", [20.0, 20.0, 120.0, 80.0])]));
