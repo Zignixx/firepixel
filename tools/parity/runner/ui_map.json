@@ -367,11 +367,12 @@
     "toolbox.slice_flyout": {"orig": {"tools_rel": [14, 324], "hold_ms": 900}, "fp": {"window_rel": [44, 408], "hold_ms": 900}}
   },
   "handle_roles": {
-    "_doc": "handle role -> tooltip prefix of the control point (both programs show German tooltips)",
+    "_doc": "handle role -> tooltip prefix of the control point (both programs show German tooltips); center (R-10, TW-116): spiral handle 0 at the centre, tooltip 'Spirale öffnen/schließen' (click toggles open/closed, re 36 section 2.5)",
     "points": "Punkte",
     "turns": ["Windungen", "Spiralen"],
     "sides": "Seiten",
     "size": ["Skalieren", "Größe"],
+    "center": ["Spirale öffnen", "Mittelpunkt"],
     "radius": "Radius",
     "roundness": "Rundung",
     "corner": "Ecke",

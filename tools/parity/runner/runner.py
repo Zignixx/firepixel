@@ -1110,6 +1110,13 @@ class OrigSide(Side):
         with Image.open(tmp) as im:
             im = im.convert("RGB")
             bg = im.getpixel((3, 3))
+            # R-10 (lauf 14 xs-canvas: the reference was fitted to 43 %, but a floating panel group over the view
+            # reached the view border, so the page counted as cut and the centre rule with zoom 1.0 was used):
+            # other top-level windows of the program over the view are painted with the pasteboard colour first
+            for r in self.view_overlaps(v):
+                box = (max(0, int(r[0] - v[0])), max(0, int(r[1] - v[1])), min(im.width, int(r[2] - v[0])), min(im.height, int(r[3] - v[1])))
+                if box[2] > box[0] and box[3] > box[1]:
+                    im.paste(bg, box)
             d = ImageChops.difference(im, Image.new("RGB", im.size, bg)).convert("L").point(lambda q: 255 if q > 10 else 0)
             bb = d.getbbox()
         w, h = self.doc_size
@@ -1139,6 +1146,25 @@ class OrigSide(Side):
         oy = (v[1] + v[3]) / 2 - h * z / 2
         self.page = [ox, oy, ox + w * z, oy + h * z]
         return self.page
+
+    def view_overlaps(self, v):
+        """R-10: rectangles of visible top-level windows of the reference (floating panel groups, tooltips) that
+        overlap the document view `v`; a window that covers the whole view is not listed (nothing left to measure)."""
+        try:
+            main = self.h.call("main")["hwnd"]
+            out = []
+            for w in self.h.list("windows"):
+                r = w.get("rect") or []
+                if w.get("hwnd") == main or len(r) != 4 or r[2] - r[0] < 4 or r[3] - r[1] < 4:
+                    continue
+                if r[2] <= v[0] or r[0] >= v[2] or r[3] <= v[1] or r[1] >= v[3]:
+                    continue
+                if r[0] <= v[0] and r[1] <= v[1] and r[2] >= v[2] and r[3] >= v[3]:
+                    continue
+                out.append(r)
+            return out
+        except Exception:  # noqa: BLE001
+            return []
 
     def fit_if_needed(self):
         """Large documents (e.g. T10): 'fit all' in both programs so that every document point is reachable.

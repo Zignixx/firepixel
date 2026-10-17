@@ -1692,12 +1692,12 @@
     {
      "canvas_drag": {
       "from": [
-       100,
-       85
+       70,
+       100
       ],
       "to": [
-       160,
-       95
+       130,
+       110
       ],
       "mods": [
        "shift"
@@ -1713,12 +1713,12 @@
     {
      "canvas_drag": {
       "from": [
-       100,
-       85
+       70,
+       100
       ],
       "to": [
-       160,
-       95
+       130,
+       110
       ],
       "mods": [
        "alt"
@@ -1774,7 +1774,8 @@
      "log_value": "fw.selection.map(function(e){var r=e.pixelRect;return e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom}).join('|')"
     }
    ],
-   "shot": null
+   "shot": null,
+   "note": "R-10 (TW-97): R1 (T04, 50,50-150,120) is pressed at 70,100 - plain fill, 20 px from the left and bottom edge, away from the 8 frame handles and from the centre 100,85 (gradient/grip hit in runs 12-14); same offset +60,+10 as before"
   },
   {
    "id": "14_space_hand_result",

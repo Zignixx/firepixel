@@ -136,6 +136,34 @@
    "note": "Firepixel: tab 'Symboleigenschaften' in the inspector; original: separate panel (unsure menu path)."
   },
   {
+   "id": "04b_properties_tab_front",
+   "check": "properties tab in front again (runner)",
+   "method": {
+    "orig": "W",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "select": "I1"
+    }
+   ],
+   "orig": [
+    {
+     "panel": "properties"
+    }
+   ],
+   "fp": [
+    {
+     "click_text": "Eigenschaften"
+    }
+   ],
+   "shot": null,
+   "note": "R-10 workaround for TW-111 / Q-51 (still open): step 04 brings Symbol Properties to the front; Firepixel keeps it there for 05-14 while the reference shows Properties. This step clicks the Properties tab on both sides so 05-14 measure the same panel. The open question (does the reference switch back by itself?) is not answered by this step; remove it once Q-51 is decided."
+  },
+  {
    "id": "05_button_normal",
    "check": "button",
    "method": {

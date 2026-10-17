@@ -9,6 +9,36 @@
  "note": "Action verbs (both/orig/fp): open_testfile <T..> (close docs unsaved, open fresh, base settings) / close_all; menu 'A > B'; command <id from commands.json>; panel <window.* id or title>; panel_menu <panel> (open its menu); select <object name|[names]>; select_none; tool <tool id>; open <logical ui key>; click/double_click/right_click/hover/mouse_down/mouse_up <label|{key}|{popup_swatch:#hex}|{area,pos}>; drag {from,to,mods}; canvas_click/canvas_move [x,y] (document px); canvas_drag {from,to,mods}; scroll {area,delta}; key <combo>; type <text>; wait <ms>; choose {target,item} (pick list entry); file_dialog <path> (choose file in open dialog); export_png doc (export + hash); resize_panel {panel,width}; set_field {target,value}; export {dir,name,type,...} (File > Export dialog); clear_dir/record_dir <dir>; record_file <path> (size+hash+pixels); record_file_text <path>; restart_app; resize_dialog {width,height}; target forms {canvas:[x,y]|name}, {pref_category}, {tree_item:[path]}, hold_key in drag/click; log_value <JSF expression, logged in both>; record_ui <logical ui key> (orig window text/UIA, fp ui_find/ui_state); jsf <code> (in both = fp run_script); fp-only ui_action {...}, ui_find_click <text>. Step keys: after = actions after the shot; log_menu_items = item texts + enabled/checked of the open menu; shot omitted = value-only checkpoint.",
  "steps": [
   {
+   "id": "00a_swatches_reset_result",
+   "check": "swatch set reset to the default (runner)",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "panel": "window.swatches"
+    },
+    {
+     "panel_menu": "swatches"
+    },
+    {
+     "click": "Farbwürfel"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "swatches.count"
+    }
+   ],
+   "shot": null,
+   "note": "R-10 (TW-115): the reference keeps its swatch set across sessions, Firepixel starts with its profile's set - both load the default set (panel menu 'Farbwürfel', checked in the reference by default) before the swatch steps; steps that click a swatch index or load a file start from this set again"
+  },
+  {
    "id": "00_overview_normal",
    "check": "overview after opening the test file",
    "method": {
@@ -56,6 +86,18 @@
    "both": [
     {
      "open_testfile": "T01"
+    },
+    {
+     "panel": "window.swatches"
+    },
+    {
+     "panel_menu": "swatches"
+    },
+    {
+     "click": "Farbwürfel"
+    },
+    {
+     "wait": 300
     },
     {
      "panel": "window.swatches"
@@ -203,6 +245,18 @@
      "panel_menu": "swatches"
     },
     {
+     "click": "Farbwürfel"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "panel": "window.swatches"
+    },
+    {
+     "panel_menu": "swatches"
+    },
+    {
      "click": "Farbfelder hinzufügen..."
     },
     {
@@ -227,6 +281,18 @@
    "both": [
     {
      "open_testfile": "T01"
+    },
+    {
+     "panel": "window.swatches"
+    },
+    {
+     "panel_menu": "swatches"
+    },
+    {
+     "click": "Farbwürfel"
+    },
+    {
+     "wait": 300
     },
     {
      "panel": "window.swatches"
@@ -731,6 +797,18 @@
      "open_testfile": "T04"
     },
     {
+     "panel": "window.swatches"
+    },
+    {
+     "panel_menu": "swatches"
+    },
+    {
+     "click": "Farbwürfel"
+    },
+    {
+     "wait": 300
+    },
+    {
      "select": "R1"
     },
     {
@@ -757,6 +835,18 @@
    "both": [
     {
      "open_testfile": "T04"
+    },
+    {
+     "panel": "window.swatches"
+    },
+    {
+     "panel_menu": "swatches"
+    },
+    {
+     "click": "Farbwürfel"
+    },
+    {
+     "wait": 300
     },
     {
      "select": "R1"

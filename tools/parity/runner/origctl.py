@@ -57,6 +57,24 @@ class Lock:
             self.h = None
 
 
+def decode_script_text(raw: bytes) -> str:
+    """R-10 (TW-116, lauf 14 tool-autoshapes/06,13: the handle tooltip 'Groesse aendern' with umlauts arrived as
+    mojibake, handle `size` not found): the reference writes script output files in the ANSI code page, not UTF-8.
+    Valid UTF-8 is kept (pure ASCII is both), otherwise the system ANSI code page is used (cp1252 as fallback)."""
+    if raw.startswith(b"\xef\xbb\xbf"):
+        raw = raw[3:]
+    try:
+        return raw.decode("utf-8")
+    except UnicodeDecodeError:
+        pass
+    for enc in ("mbcs", "cp1252"):
+        try:
+            return raw.decode(enc)
+        except (LookupError, UnicodeDecodeError):
+            continue
+    return raw.decode("cp1252", errors="replace")
+
+
 def js_str(s: str) -> str:
     """JavaScript string literal, ASCII only (the script host reads files in the ANSI code page)."""
     return json.dumps(s, ensure_ascii=True)
@@ -361,7 +379,7 @@ class Original:
         finished = done.exists()
         if not finished:
             self._end_launcher(launcher)
-        lines = logf.read_text(encoding="utf-8", errors="replace").splitlines() if logf.exists() else []
+        lines = decode_script_text(logf.read_bytes()).splitlines() if logf.exists() else []
         for f in ((done, logf, started) if resends else (src, done, logf, started)):
             try:
                 f.unlink()
