@@ -64,21 +64,21 @@ def build(out_dir: Path) -> Path:
     details{margin-top:4px} pre{font-size:12px;white-space:pre-wrap;max-height:240px;overflow:auto}
     .badge{font-size:12px;padding:1px 6px;border-radius:9px;background:var(--line)} .badge.bad{background:var(--bad);color:#fff}
     """
-    out = ["<!doctype html><html lang='de'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>",
+    out = ["<!doctype html><html lang='en'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>",
            "<title>Parity Gallery</title><style>", css, "</style></head><body>",
-           "<h1>Bildvergleich – Galerie</h1><p class='mut'>Je Einheit: Fehlschritte (rot) und auffällige Paare (≥ "
-           f"{NOTABLE_SHARE:g} % abweichende Pixel, Größe anders) zuerst. Bild: Original | Firepixel | Differenz ×4.</p><nav>"]
+           "<h1>Image comparison – gallery</h1><p class='mut'>Per unit: failed steps (red) and notable pairs (≥ "
+           f"{NOTABLE_SHARE:g} % differing pixels, different size) first. Image: reference | Firepixel | difference ×4.</p><nav>"]
     for (f, n, _), name, _rows_ in units:
         out.append(f"<a href='#{html.escape(name)}'>{html.escape(name)}</a><span class='mut'>({f}/{n})</span> ")
     out.append("</nav>")
     for (f, n, mx), name, rows in units:
-        out.append(f"<h2 id='{html.escape(name)}'>{html.escape(name)} <span class='mut'>– {len(rows)} Schritte, "
-                   f"{f} Fehler, {n} auffällig, max {mx:.2f} %</span></h2>")
+        out.append(f"<h2 id='{html.escape(name)}'>{html.escape(name)} <span class='mut'>– {len(rows)} steps, "
+                   f"{f} errors, {n} notable, max {mx:.2f} %</span></h2>")
         for r in rows:
             cls = "row" + (" failed" if r["failed"] else "") + (" notable" if r["notable"] and not r["failed"] else "")
             m = r["m"]
             metric = (f"<span class='badge{' bad' if r['notable'] else ''}'>{r['share']:.2f} %</span> "
-                      f"<span class='mut'>mittel {m.get('mean_abs', '')} · max {m.get('max_abs', '')} · "
+                      f"<span class='mut'>mean {m.get('mean_abs', '')} · max {m.get('max_abs', '')} · "
                       f"{m.get('ref_size', '')} / {m.get('fp_size', '')} {html.escape(m.get('note', ''))}</span>") if m else ""
             out.append(f"<div class='{cls}'><div class='head'><span class='id'>{html.escape(r['id'])}</span>"
                        f"<span>{html.escape(r['check'])}</span><span class='mut'>{html.escape(r['area'])}</span>{metric}</div>")
@@ -89,7 +89,7 @@ def build(out_dir: Path) -> Path:
                 out.append(f"<div class='imgs'><img loading='lazy' src='{cmp_img.as_posix()}' alt='{html.escape(r['id'])}'></div>")
             else:
                 figs = []
-                for side, cap in (("orig", "Original"), ("fp", "Firepixel")):
+                for side, cap in (("orig", "Reference"), ("fp", "Firepixel")):
                     p = Path(name) / side / f"{r['id']}.png"
                     if (out_dir / p).exists():
                         figs.append(f"<figure><img loading='lazy' src='{p.as_posix()}'><figcaption>{cap}</figcaption></figure>")
@@ -97,7 +97,7 @@ def build(out_dir: Path) -> Path:
                     out.append("<div class='imgs pair'>" + "".join(figs) + "</div>")
             vals = {k: v.get("values") for k, v in r["res"].items() if v.get("values")}
             if vals:
-                out.append("<details><summary>Werte</summary><pre>" + html.escape(json.dumps(vals, ensure_ascii=False, indent=1, default=str)[:6000]) + "</pre></details>")
+                out.append("<details><summary>Values</summary><pre>" + html.escape(json.dumps(vals, ensure_ascii=False, indent=1, default=str)[:6000]) + "</pre></details>")
             out.append("</div>")
     out.append("</body></html>")
     idx = out_dir / "index.html"

@@ -58,7 +58,7 @@ class Lock:
 
 
 def decode_script_text(raw: bytes) -> str:
-    """R-10 (TW-116, lauf 14 tool-autoshapes/06,13: the handle tooltip 'Groesse aendern' with umlauts arrived as
+    """R-10 (TW-116, run 14 tool-autoshapes/06,13: the handle tooltip 'Groesse aendern' with umlauts arrived as
     mojibake, handle `size` not found): the reference writes script output files in the ANSI code page, not UTF-8.
     Valid UTF-8 is kept (pure ASCII is both), otherwise the system ANSI code page is used (cp1252 as fallback)."""
     if raw.startswith(b"\xef\xbb\xbf"):
@@ -275,7 +275,7 @@ class Original:
 
     def restart(self, reason: str = ""):
         """Clean restart: decline questions, close all documents unsaved, end the instance, start again.
-        R-8 (lauf 12: 5 of 8 restarts without a reason in the log): the reason is part of the log line."""
+        R-8 (run 12: 5 of 8 restarts without a reason in the log): the reason is part of the log line."""
         self.log("restart reference program" + (f" - {reason}" if reason else " - no reason given"))
         self.decline_dialogs()
         try:
@@ -293,11 +293,11 @@ class Original:
         x, y, w, h = self.cfg.get("rect", [0, 0, 1600, 1000])
         return self.host.call("place", x=x, y=y, w=w, h=h)
 
-    # R-5 (lauf 9): the taskbar and a browser took the focus back within a second; one retry helped in ~27 %.
+    # R-5 (run 9): the taskbar and a browser took the focus back within a second; one retry helped in ~27 %.
     # Now up to 5 retries with growing pauses; the host closes a taskbar flyout with Esc and, as a last resort,
     # clicks a neutral spot of the program's caption (`hard`)
     FG_PAUSES = (0.3, 0.6, 1.2, 2.4, 4.8)
-    # R-8 (lauf 12: claude/Chrome_WidgetWin_1 re-activated itself within a second 75 times, every quick retry
+    # R-8 (run 12: claude/Chrome_WidgetWin_1 re-activated itself within a second 75 times, every quick retry
     # failed): when the foreground is lost again right after a verified take-back, the runner yields with long
     # pauses (165 s in all) instead of fighting; processes in orig.yield_to are yielded to at the first loss
     FG_SETTLE = 0.4

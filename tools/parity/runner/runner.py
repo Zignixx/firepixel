@@ -147,7 +147,7 @@ def popup_component(a: Image.Image | None, b: Image.Image | None, seed=None, cel
     """Area of the opened popup only (R-4, `log_menu_items` in Firepixel): the changed pixels are grouped into
     connected regions (cells of `cell` px, 8-neighbourhood, so gaps below one cell are bridged). With `seed` (a
     box known to lie in the popup) every region touching it counts, otherwise the largest region. Other changes in
-    the window (hover highlights, status texts, a panel repainted) are left out - lauf 8 read window texts as menu
+    the window (hover highlights, status texts, a panel repainted) are left out - run 8 read window texts as menu
     entries (URL, Verhalten, Suchen) and cut the Stile list."""
     if a is None or b is None or a.size != b.size:
         return None
@@ -193,7 +193,7 @@ EGUI_KEYS = {"esc": "Escape", "enter": "Enter", "tab": "Tab", "space": "Space", 
              "left": "ArrowLeft", "right": "ArrowRight", "up": "ArrowUp", "down": "ArrowDown", "home": "Home", "end": "End",
              "pageup": "PageUp", "pagedown": "PageDown", "insert": "Insert", "plus": "Plus", "minus": "Minus",
              "comma": "Comma", "period": "Period",
-             # R-9 (lauf 13 xs-shortcuts: 'unknown key Apostrophe'): egui names of the punctuation keys
+             # R-9 (run 13 xs-shortcuts: 'unknown key Apostrophe'): egui names of the punctuation keys
              "apostrophe": "Quote", "quote": "Quote", "semicolon": "Semicolon", "slash": "Slash", "backslash": "Backslash",
              "equals": "Equals", "backtick": "Backtick", "openbracket": "OpenBracket", "closebracket": "CloseBracket"}
 
@@ -213,7 +213,7 @@ HELD_MODS = ("ctrl", "shift", "alt")
 
 
 def norm_mods(m) -> list[str]:
-    """R-9 (lauf 13: the `hold_key` 'ctrl+Space' came out as the characters c, t, r, l, ...): modifier / held-key
+    """R-9 (run 13: the `hold_key` 'ctrl+Space' came out as the characters c, t, r, l, ...): modifier / held-key
     list from a string ('ctrl+Space') or a list, lower case, aliases resolved."""
     if not m:
         return []
@@ -434,7 +434,7 @@ class Side:
 
     def canvas_doc_point(self, arg):
         """Document point of a canvas argument: [x, y], {"pos"/"at"/"canvas": ...} or an object name
-        ("P1", "TX1", "P1.node.0"; lauf 7: the name was spread into doc_to_screen(*"TX1"))."""
+        ("P1", "TX1", "P1.node.0"; run 7: the name was spread into doc_to_screen(*"TX1"))."""
         if isinstance(arg, dict):
             arg = arg.get("pos") or arg.get("at") or arg.get("canvas")
         if isinstance(arg, (list, tuple)) and len(arg) >= 2 and all(isinstance(v, (int, float)) for v in arg[:2]):
@@ -447,7 +447,7 @@ class Side:
         """R-7 (A3-10, 9 under-measured units): cell / row targets of owner-drawn panel lists without item texts -
         `{"panel_swatch": i}`, `{"color_table_cell": i}`, `{"history_row": i}`, `{"page_row": i}`, ... - from ui_map
         `grid_targets` → {form: {side: {area, origin: [dx, dy] (centre of cell 0 inside the shot area), cell: [w, h],
-        cols}}}, measured in the lauf-11 images. None when the form has no grid for this side (or no int index)."""
+        cols}}}, measured in the run-11 images. None when the form has no grid for this side (or no int index)."""
         if not isinstance(target, dict):
             return None
         grids = self.r.ui_map.get("grid_targets") or {}
@@ -469,7 +469,7 @@ class Side:
 
     def area_pos(self, area, pos):
         """Offset inside a shot area: [dx, dy] or a named point from ui_map `area_points` → {area: {name: {side:
-        [dx, dy] | {"frac": [fx, fy]}}}} (lauf 7: "spectrum_center" was added to a number)."""
+        [dx, dy] | {"frac": [fx, fy]}}}} (run 7: "spectrum_center" was added to a number)."""
         if isinstance(pos, (list, tuple)):
             return float(pos[0]), float(pos[1])
         e = ((self.r.ui_map.get("area_points") or {}).get(area) or {}).get(str(pos)) or {}
@@ -486,10 +486,10 @@ class Side:
         `canvas_shot_margin` (R-2: the whole view held pasteboard, floating panels and a different view size)."""
         m = float(self.r.ui_map.get("canvas_shot_margin", 0))
         r = [max(view[0], page[0] - m), max(view[1], page[1] - m), min(view[2], page[2] + m), min(view[3], page[3] + m)]
-        # R-5 (lauf 9, xs-canvas/02,03,11,13,14,16): a zoomed page fills the whole view, and the views differ in size
+        # R-5 (run 9, xs-canvas/02,03,11,13,14,16): a zoomed page fills the whole view, and the views differ in size
         # (reference 1420 x 732, Firepixel 1077 x 718). On an axis where the page is cut by the view, both sides take
         # the same centred span (ui_map `canvas_clip_max`, default 1000 x 640)
-        # R-6 (lauf 10, xs-canvas/03,11,13,16, toolbox/15): a fitted or zoomed page that is not cut but larger than
+        # R-6 (run 10, xs-canvas/03,11,13,16, toolbox/15): a fitted or zoomed page that is not cut but larger than
         # the span (reference 1028 x 685, Firepixel 1077 x 718 or 1506 x 1004) gets the same centred span; the test
         # documents at 100 % are at most 800 x 600, so only zoomed/fitted shots change
         cw, ch = (self.r.ui_map.get("canvas_clip_max") or [1000, 640])[:2]
@@ -547,7 +547,7 @@ def fg_who(r: dict) -> str:
 
 
 class GuardedHost:
-    """Host of the reference side with a foreground check before every input command (R-4). Lauf 8: a browser
+    """Host of the reference side with a foreground check before every input command (R-4). Run 8: a browser
     (Chrome_WidgetWin_1) took the foreground in the middle of a step, the step-level check of R-2 was too early
     and the host refused the input ('input refused: foreground belongs to process …'). Now: before each input
     command the host's own guard is read; a foreign foreground is taken back. When the host still refuses because
@@ -559,7 +559,7 @@ class GuardedHost:
         self._h = host
         self._o = orig
         self._log = log
-        # R-7 (lauf 11, xs-canvas/08…12): every take-back of the foreground is counted; a step during which the
+        # R-7 (run 11, xs-canvas/08…12): every take-back of the foreground is counted; a step during which the
         # count grows is repeated once (`retry`), the reference may have run it with a wrong tool or state
         self.lost = 0
 
@@ -574,7 +574,7 @@ class GuardedHost:
             r = self._h.call("focus", hard=True)
         except OrigError:
             return False
-        # R-7 (lauf 11: no line 'taken back … via' although the focus was lost three times): logged every time
+        # R-7 (run 11: no line 'taken back … via' although the focus was lost three times): logged every time
         if r.get("how") or r.get("ok") is False:
             # R-6 (Q-39): who held the foreground (process, pid, class, title) and why a caption click was skipped
             self._log(f"foreground: taken back from {fg_who(r)} via {r.get('how')} -> "
@@ -596,7 +596,7 @@ class GuardedHost:
         return None
 
     def _verify(self):
-        """R-8 (lauf 12: 75 take-backs 'via set+stable -> ok', the next input was refused anyway - claude
+        """R-8 (run 12: 75 take-backs 'via set+stable -> ok', the next input was refused anyway - claude
         (Chrome_WidgetWin_1) re-activated itself within a second): after a take-back wait FG_SETTLE s and read the
         foreground again; input is sent only when it is still ours. Returns the foreign holder or None."""
         time.sleep(float(getattr(self._o, "FG_SETTLE", 0.4)))
@@ -629,9 +629,9 @@ class GuardedHost:
         if cmd not in self.INPUT:
             return self._h.call(cmd, timeout, **args)
         self._precheck()
-        # R-5 (lauf 9: one retry helped in ~27 %): up to 5 retries with growing pauses (0.3/0.6/1.2/2.4/4.8 s),
+        # R-5 (run 9: one retry helped in ~27 %): up to 5 retries with growing pauses (0.3/0.6/1.2/2.4/4.8 s),
         # each after a hard take-back of the foreground.
-        # R-8 (lauf 12: all 75 retries failed, the foreign program took the foreground back each time): the input
+        # R-8 (run 12: all 75 retries failed, the foreign program took the foreground back each time): the input
         # is sent again only after a verified take-back (`_verify`); once the foreground is lost again - at the
         # first loss counted twice for a process in `orig.yield_to` (default claude) - the runner yields with long
         # pauses (FG_YIELD, 165 s in all) instead of fighting, then gives up with the holder in the error.
@@ -801,7 +801,7 @@ class OrigSide(Side):
     def ensure_layout(self):
         """Default layout of the reference program (R-2): panels shown (the 'hide panels' switch off), main toolbar
         docked, tools column visible. A unit like menu-commands-window-help/06-08 may leave panels, toolbar and
-        tools column hidden; every later click on the tools column then missed (lauf 7: 70 flyout errors).
+        tools column hidden; every later click on the tools column then missed (run 7: 70 flyout errors).
         Raises LayoutError when the tools column cannot be shown."""
         lay = self.r.ui_map.get("orig_layout") or {}
         bar = self.r.ui_map["menu_bar"]["orig"]
@@ -870,7 +870,7 @@ class OrigSide(Side):
             raise LayoutError("tools column anchor not found after restoring the layout")
         if v is None:
             # measured without a document (unit start): the strip may include the main toolbar, so the anchor is
-            # not cached - it is measured again as soon as a document view exists (lauf 8 probe: (93, 20) vs (35, 101))
+            # not cached - it is measured again as soon as a document view exists (run 8 probe: (93, 20) vs (35, 101))
             self.r.log(f"orig tools anchor (provisional, no document) {anchor}")
             return anchor
         self.tools_anchor = anchor
@@ -895,7 +895,7 @@ class OrigSide(Side):
         return {0x03: True, 0x02: False}.get(b[i + len(key)])
 
     def align_to_canvas_off(self):
-        """Unit start (R-2): the align panel's 'to canvas' switch off. The program keeps it across sessions; in lauf
+        """Unit start (R-2): the align panel's 'to canvas' switch off. The program keeps it across sessions; in run
         7 every align step aligned to the canvas. Switched with the panel's own button, checked in the store file."""
         if self.align_to_canvas_state() is not True:
             return False
@@ -1040,7 +1040,7 @@ class OrigSide(Side):
         return n
 
     def open_testfile(self, path: Path):
-        # R-5: preparation steps are secured like inputs (lauf 9: 107 preparations failed at a foreign window)
+        # R-5: preparation steps are secured like inputs (run 9: 107 preparations failed at a foreign window)
         try:
             self.ensure_foreground()
         except OrigError as e:
@@ -1048,11 +1048,11 @@ class OrigSide(Side):
         self.reset_light()
         self.o.open_doc(path)
         # unit start (R-4): stroke and fill colour of the tools back to the program's defaults, like a freshly
-        # started Firepixel (lauf 8: auto shapes without stroke and with fill #808080 left by earlier runs)
+        # started Firepixel (run 8: auto shapes without stroke and with fill #808080 left by earlier runs)
         colors = ""
         if getattr(self, "pending_colors", False):
             self.pending_colors = False
-            # R-6 (A3-9: not confirmed in lauf 10): the result is logged in any case, with the document's path
+            # R-6 (A3-9: not confirmed in run 10): the result is logged in any case, with the document's path
             # attributes before and after (fill, stroke colour, stroke set or not)
             pa = ('(function () { try { var p = d.pathAttributes; return "fill " + p.fillColor + " stroke " + p.brushColor '
                   '+ " brush " + (p.brush ? "set" : "none") + " fillset " + (p.fill ? "set" : "none"); } catch (e) { return "? " + e; } })()')
@@ -1069,7 +1069,7 @@ class OrigSide(Side):
                 k, _, v = ln[7:].partition(" ")
                 col[k] = v
         if colors and col.get("before") is not None and col.get("before") == col.get("after"):
-            # R-7 (lauf 10/11: 'setDefaultBrushAndFillColors' changes nothing): the tools' own button for the
+            # R-7 (run 10/11: 'setDefaultBrushAndFillColors' changes nothing): the tools' own button for the
             # default colours (the same as the key D) with nothing selected, then read again and logged
             try:
                 pt = self.resolve("toolbox.default_colors")[0]
@@ -1110,7 +1110,7 @@ class OrigSide(Side):
         with Image.open(tmp) as im:
             im = im.convert("RGB")
             bg = im.getpixel((3, 3))
-            # R-10 (lauf 14 xs-canvas: the reference was fitted to 43 %, but a floating panel group over the view
+            # R-10 (run 14 xs-canvas: the reference was fitted to 43 %, but a floating panel group over the view
             # reached the view border, so the page counted as cut and the centre rule with zoom 1.0 was used):
             # other top-level windows of the program over the view are painted with the pasteboard colour first
             for r in self.view_overlaps(v):
@@ -1127,7 +1127,7 @@ class OrigSide(Side):
             page = [v[0] + bb[0], v[1] + bb[1], v[0] + bb[2], v[1] + bb[3]]
             # a page touching the view border is cut off (scrolled) - then the centre rule below is used
             cut = bb[0] <= 1 or bb[1] <= 1 or bb[2] >= im.width - 1 or bb[3] >= im.height - 1
-            # R-9 (lauf 13, 32 failed 'fit all' tries): 'Alles anpassen' fits the page exactly into the view, so the
+            # R-9 (run 13, 32 failed 'fit all' tries): 'Alles anpassen' fits the page exactly into the view, so the
             # page touches both borders of one axis. That is a fully visible page, not a scrolled one, when the other
             # axis keeps a margin on both sides and the box has the document's aspect ratio.
             if cut and h:
@@ -1168,7 +1168,7 @@ class OrigSide(Side):
 
     def fit_if_needed(self):
         """Large documents (e.g. T10): 'fit all' in both programs so that every document point is reachable.
-        R-8 (Q-48, lauf 12 xs-canvas/12: the reference stayed at zoom 1, page at -420,-317, the drag ran outside
+        R-8 (Q-48, run 12 xs-canvas/12: the reference stayed at zoom 1, page at -420,-317, the drag ran outside
         the window and still counted as 'ok'): the menu command `orig.fit_menu` (default Ansicht > Alles anpassen,
         re 10 cmd 35065) first, the key `orig.fit_all_key` as second way; after each the page is measured again and
         must be fully visible. The fitted zoom is kept (`fit_zoom`) - the Firepixel side takes the same zoom."""
@@ -1209,7 +1209,7 @@ class OrigSide(Side):
 
     def check_drag_points(self, pts):
         """R-8 (Q-48): a canvas drag point outside the reference's document view (negative screen points in
-        lauf 12 xs-canvas/08,10,12) makes the step an error instead of a silent 'ok' without effect."""
+        run 12 xs-canvas/08,10,12) makes the step an error instead of a silent 'ok' without effect."""
         v = self.h.call("view")
         bad = [list(map(int, p)) for p in pts if not (v[0] <= p[0] < v[2] and v[1] <= p[1] < v[3])]
         if bad:
@@ -1801,7 +1801,7 @@ class OrigSide(Side):
             old = getattr(self, "windows_before", None) or set()
             ws = [w for w in self.h.list("windows") if w["hwnd"] != main and w["hwnd"] not in old
                   and w["class"] not in ("tooltips_class32",)]
-            # R-6 (lauf 10, inspector-fields/22: 1273 x 927): a new window as large as the main window is no popup
+            # R-6 (run 10, inspector-fields/22: 1273 x 927): a new window as large as the main window is no popup
             try:
                 c = self.client()
                 big = [w for w in ws if (w["rect"][2] - w["rect"][0]) * (w["rect"][3] - w["rect"][1])
@@ -1935,7 +1935,7 @@ class OrigSide(Side):
         time.sleep(0.3)
 
     def list_row_by_image(self, name, icon=False):
-        """R-5: the document library of the reference program is owner-drawn (no UI Automation items, lauf 8/9
+        """R-5: the document library of the reference program is owner-drawn (no UI Automation items, run 8/9
         `panel-library-styles/04` unmapped). The row is found in the panel image: text bands below the list frame
         line (first band = column header), the n-th data band for the n-th library name in the program's order
         (sorted by name, case-insensitive). Returns a screen point or None (logged)."""
@@ -1947,7 +1947,7 @@ class OrigSide(Side):
                                'try { for (var k = 0; k < d.library.length; k++) n.push(d.library[k].name); } catch (e) {} '
                                'if (!n.length) try { for (var k = 0; k < d.library.items.length; k++) n.push(d.library.items[k].name); } catch (e) {} '
                                'if (!n.length) try { for (var k = 0; k < d.symbols.length; k++) n.push(d.symbols[k].name); } catch (e) {} '
-                               # R-6 (lauf 10: [] for all three): symbol names of the instances in the document
+                               # R-6 (run 10: [] for all three): symbol names of the instances in the document
                                'if (!n.length) { var s = {}; var walk = function (els) { for (var i = 0; i < els.length; i++) { '
                                'try { if (els[i].symbolName) s[els[i].symbolName] = 1; } catch (e) {} '
                                'try { if (els[i].elements) walk(els[i].elements); } catch (e) {} } }; '
@@ -2164,7 +2164,7 @@ class OrigSide(Side):
             try:
                 self.values.append({"expr": expr, "value": self.jsf_value(expr)})
             except OrigError as e:
-                # R-6 (lauf 10 color-popup/21, panel-info-align-path/15, panel-misc/20): the history palette is not
+                # R-6 (run 10 color-popup/21, panel-info-align-path/15, panel-misc/20): the history palette is not
                 # readable by script in the reference program (-2147216344); the value is recorded as missing and the
                 # step goes on (the undo itself runs as a key / menu command)
                 if "-2147216344" not in str(e):
@@ -2440,7 +2440,7 @@ class OrigSide(Side):
                 time.sleep(0.45)
 
     def combo_notify(self, target=None):
-        """R-7 (lauf 11, panel-optimize/01…: the format combo showed GIF, the panel kept its PNG 32 layout):
+        """R-7 (run 11, panel-optimize/01…: the format combo showed GIF, the panel kept its PNG 32 layout):
         notification codes sent to the combo's parent after the selection, config `orig.combo_notify` (default
         CBN_SELCHANGE only, as before); a ui_map target may carry its own `notify` list in its orig locator."""
         e = (self.r.ui_map.get("targets") or {}).get(target) if isinstance(target, str) else None
@@ -2533,7 +2533,7 @@ class OrigSide(Side):
                 try:
                     self.h.call("next_ctl", hwnd=info["hwnd"])
                 except OrigError as e:
-                    # R-7 (lauf 11, xs-preferences/02,17): the field's root window is no dialog any more (page of
+                    # R-7 (run 11, xs-preferences/02,17): the field's root window is no dialog any more (page of
                     # the preferences rebuilt) - the focus moves on in the largest open dialog instead
                     ds = self.h.list("dialogs")
                     if not ds:
@@ -2685,7 +2685,7 @@ class FpSide(Side):
                 self.call("ui_action", {"run": name})
                 n += 1
             except BridgeError as e:
-                # R-5 (lauf 9: 'window.autoShapeProperties: unknown command', the group covered 38 % of the canvas
+                # R-5 (run 9: 'window.autoShapeProperties: unknown command', the group covered 38 % of the canvas
                 # in tool-autoshapes/11): groups without a window command are closed with the '×' at the right end
                 # of their title bar (docking.rs float_title: strip of `dock_strip_height` = 12 above the group
                 # rect, close box = last strip height + 6 px)
@@ -3187,7 +3187,7 @@ class FpSide(Side):
         # the bridge reports the drawn rect of each front panel (tab strip + content of its own group, TW-59)
         pr = (st.get("panel_rects") or {}).get(info.get("fp") or "")
         if pr and pr[2] - pr[0] > 20 and pr[3] - pr[1] > 10:
-            # R-6 (TW-84, lauf 10 panel-misc/16): the rect of a later tab starts at its own tab (x 152), the group
+            # R-6 (TW-84, run 10 panel-misc/16): the rect of a later tab starts at its own tab (x 152), the group
             # at the first tab of the strip (x 64, like the reference shot with "Eigenschaften"): other panel tabs
             # on the same tab line left of it move the left edge
             try:
@@ -3197,7 +3197,7 @@ class FpSide(Side):
                 left = [h["rect"][0] for h in hs if h.get("text") in titles and h["rect"][2] <= pr[0] + 2]
                 if left:
                     return [max(0, min(left) - 10), pr[1], pr[2], pr[3]]
-                # R-7 (lauf 11, inspector-group-symbol/04: no tab text found, the shot still began at x 152 without
+                # R-7 (run 11, inspector-group-symbol/04: no tab text found, the shot still began at x 152 without
                 # the 'Name' column): the group's left frame from the window image - walk left along the panel's
                 # content (60 % of its height) until the frame line; only a move of 8…400 px counts
                 img = self.window_image()[0]
@@ -3256,7 +3256,7 @@ class FpSide(Side):
         path.parent.mkdir(parents=True, exist_ok=True)
         args = {"max_size": 8192}
         if rect and (float(rect[2]) - float(rect[0]) < 1 or float(rect[3]) - float(rect[1]) < 1):
-            # R-9 (lauf 13 toolbox/14,16: 'screenshot: empty region'): an empty area falls back to the whole window
+            # R-9 (run 13 toolbox/14,16: 'screenshot: empty region'): an empty area falls back to the whole window
             self.r.log(f"fp screenshot: empty region {[round(float(v), 1) for v in rect]} - whole window instead")
             rect = None
         if rect:
@@ -3433,7 +3433,7 @@ class FpSide(Side):
             # position of a drag; its host now waits 60 ms and moves once more at the target before releasing -
             # the same sequence here, so both sides end on the same position
             # (move/down/up carry no modifiers in the bridge: held keys are set with a `modifiers` event around it)
-            # R-6 (TW-97, lauf 10: Alt drag without duplicate): a `modifiers` event holds only for its own frame - the
+            # R-6 (TW-97, run 10: Alt drag without duplicate): a `modifiers` event holds only for its own frame - the
             # next frame starts with the window's real (empty) key state, the moves of the drag came without Alt.
             # The held keys are now sent again right before every pointer event (each its own frame)
             mods = norm_mods(a.get("mods") or a.get("hold_key"))
@@ -3967,7 +3967,7 @@ class Runner:
         p = p if p.is_absolute() else Path(self.cfg["testfile_dir"]) / tf
         return p / sub if sub else p
 
-    # ---- R-6 (Q-41): test files protected by checksums. Lauf 10: `menu-file/07` (saveDocumentAs with the copy
+    # ---- R-6 (Q-41): test files protected by checksums. Run 10: `menu-file/07` (saveDocumentAs with the copy
     # flag) saved over par_vector.fw.png in the reference program without a dialog. The run now starts only when
     # every test file matches the stored list; a copy of the checked files is kept in tmp_dir and a file changed by
     # a unit is put back from it at the unit's end.
@@ -4097,7 +4097,7 @@ class Runner:
             side.do("tool", "tool.pointer", {})
         except Exception as e:  # noqa: BLE001
             self.log(f"{side.name}: pointer tool after opening: {e}")
-            # R-7 (lauf 11, xs-canvas/08,10,12 ran with the wrong tool and counted as ok): the step is repeated
+            # R-7 (run 11, xs-canvas/08,10,12 ran with the wrong tool and counted as ok): the step is repeated
             side.tool_failed = True
 
     def safe_dir(self, d) -> Path:
@@ -4137,7 +4137,7 @@ class Runner:
 
     def log_foreign_windows(self):
         """R-6 (Q-39): visible windows of Chromium/Electron programs (class Chrome_WidgetWin_1) at run start, with
-        process name, pid and title - lauf 10 lost 3 steps to one of them. The runner ends no process."""
+        process name, pid and title - run 10 lost 3 steps to one of them. The runner ends no process."""
         try:
             import ctypes
             from ctypes import wintypes
@@ -4368,7 +4368,7 @@ class Runner:
                     if not bb:
                         raise RuntimeError(f"area {area}: nothing opened (no difference to the state before)")
                     if side.name == "fp" and hasattr(side, "tight_popup"):
-                        # R-6 (lauf 10, filters-blur-sharpen-noise/02,03): the difference box took the tool bar
+                        # R-6 (run 10, filters-blur-sharpen-noise/02,03): the difference box took the tool bar
                         # and the document tab along; only the menu columns (and sub menus touching them)
                         try:
                             tb = side.tight_popup(rec.get("_before") or before_img, img, bb)
@@ -4390,7 +4390,7 @@ class Runner:
                 rec["rect"] = [round(v) for v in rect]
                 out = self.out / self.unit["unit"] / side.name / f"{step['id']}.png"
                 side.grab(rect, out)
-                # a window that is not painted yet (lauf 7: 'Vektordatei-Optionen' empty): wait and grab again
+                # a window that is not painted yet (run 7: 'Vektordatei-Optionen' empty): wait and grab again
                 for _ in range(5):
                     with Image.open(out) as im:
                         lo, hi = im.convert("L").getextrema()
@@ -4451,7 +4451,7 @@ class Runner:
             return
         try:
             self.ensure_programs()
-            # R-6 (lauf 10: access violations / restarts in color-popup, menu-view, panel-misc, xs-file-formats):
+            # R-6 (run 10: access violations / restarts in color-popup, menu-view, panel-misc, xs-file-formats):
             # a fresh reference instance before these script-heavy units (config `orig.restart_before_units`)
             rb = self.cfg["orig"].get("restart_before_units", self.RESTART_BEFORE)
             if unit_name in rb and getattr(self, "units_played", 0):
@@ -4547,7 +4547,7 @@ class Runner:
                             before = None
                     rec = self.step_side(side, step, before)
                     if name == "orig" and rec.get("focus_lost") and rec["status"] in ("ok", "error", "unmapped"):
-                        # R-7 (lauf 11, xs-canvas/08…12): the focus was lost during the step (or the pointer tool
+                        # R-7 (run 11, xs-canvas/08…12): the focus was lost during the step (or the pointer tool
                         # could not be chosen): the result may come from a wrong tool or state. The step is marked
                         # 'retry' and played once more after a reset; still disturbed -> error
                         self.log(f"  {step['id']}: focus lost during the step {rec['focus_lost']} - tool "

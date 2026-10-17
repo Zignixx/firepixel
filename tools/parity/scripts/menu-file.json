@@ -294,7 +294,7 @@
     }
    ],
    "shot": null,
-   "note": "R-6 (Q-41): lauf 10 saveDocumentAs(doc, true) saved over the test file par_vector.fw.png without a dialog. Now 'save as' with a file name into the runner's tmp_dir ({tmp_url}), never into a test file; the copy is recorded. The test file is reopened by the next step"
+   "note": "R-6 (Q-41): run 10 saveDocumentAs(doc, true) saved over the test file par_vector.fw.png without a dialog. Now 'save as' with a file name into the runner's tmp_dir ({tmp_url}), never into a test file; the copy is recorded. The test file is reopened by the next step"
   },
   {
    "id": "08_save_all_result",

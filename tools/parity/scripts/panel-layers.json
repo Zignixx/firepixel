@@ -435,7 +435,7 @@
      "log_value": "fw.getDocumentDOM().layers.map(function(l){return l.name}).join('|')"
     }
    ],
-   "note": "R-7 (M9 re 42 §2): the reference collapses Gemeinsam, Unterebene and Ebene 2 first (setLayerDisclosure), otherwise Ebene 3 and Ebene 1 are not visible together; Ebene 3 is locked - Soll for 09 'no change' (into a locked layer is refused), 15 'no change' (web layer does not move)"
+   "note": "R-7 (M9 re 42 §2): the reference collapses Gemeinsam, Unterebene and Ebene 2 first (setLayerDisclosure), otherwise Ebene 3 and Ebene 1 are not visible together; Ebene 3 is locked - expected for 09 'no change' (into a locked layer is refused), 15 'no change' (web layer does not move)"
   },
   {
    "id": "10_drag_into_layer_result",
@@ -618,7 +618,7 @@
     }
    ],
    "shot": null,
-   "note": "web layer name in original: 'Webebene' (unsure) R-7 (M9 re 42 §2): the reference collapses Gemeinsam, Unterebene and Ebene 2 first (setLayerDisclosure), otherwise Ebene 3 and Ebene 1 are not visible together; Ebene 3 is locked - Soll for 09 'no change' (into a locked layer is refused), 15 'no change' (web layer does not move)",
+   "note": "web layer name in original: 'Webebene' (unsure) R-7 (M9 re 42 §2): the reference collapses Gemeinsam, Unterebene and Ebene 2 first (setLayerDisclosure), otherwise Ebene 3 and Ebene 1 are not visible together; Ebene 3 is locked - expected for 09 'no change' (into a locked layer is refused), 15 'no change' (web layer does not move)",
    "orig": [
     {
      "jsf": "(function(){var d=fw.getDocumentDOM(),n=['Gemeinsam','Unterebene','Ebene 2'];for(var i=0;i<d.layers.length;i++){for(var k=0;k<n.length;k++){if(d.layers[i].name==n[k]){d.setLayerDisclosure(i,false);}}}})()"

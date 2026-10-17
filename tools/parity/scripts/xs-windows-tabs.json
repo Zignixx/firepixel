@@ -246,7 +246,7 @@
    "shot": {
     "area": "window"
    },
-   "note": "original label 'Nebeneinander' vs Firepixel 'Anordnen' (menu.ftl cmd-window-tile) - unverified R-7: the reference's Window menu has 'Überlappend' and 'Anordnen' (lauf-10 menu list), no 'Nebeneinander'."
+   "note": "original label 'Nebeneinander' vs Firepixel 'Anordnen' (menu.ftl cmd-window-tile) - unverified R-7: the reference's Window menu has 'Überlappend' and 'Anordnen' (run-10 menu list), no 'Nebeneinander'."
   },
   {
    "id": "07_duplicate_window_result",
@@ -483,7 +483,7 @@
    ],
    "note": "original has a switcher in the application bar too; Firepixel label menu-window-workspaceLayouts",
    "unsupported": {
-    "orig": "the reference's Window menu has no 'Arbeitsbereichlayouts' (lauf-10 menu list; its workspace switcher is not a menu) - only the shot (R-7)"
+    "orig": "the reference's Window menu has no 'Arbeitsbereichlayouts' (run-10 menu list; its workspace switcher is not a menu) - only the shot (R-7)"
    }
   },
   {

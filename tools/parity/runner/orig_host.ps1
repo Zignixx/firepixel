@@ -60,9 +60,9 @@ public static class N {
   [DllImport("user32.dll")] public static extern bool AttachThreadInput(uint a, uint b, bool attach);
   [DllImport("kernel32.dll")] public static extern uint GetCurrentThreadId();
   [DllImport("user32.dll")] public static extern bool BringWindowToTop(IntPtr h);
-  // R-7 (lauf 11, Q-43): second way when SetForegroundWindow is not honoured or the focus is taken again at once
+  // R-7 (run 11, Q-43): second way when SetForegroundWindow is not honoured or the focus is taken again at once
   [DllImport("user32.dll")] public static extern void SwitchToThisWindow(IntPtr h, bool alt);
-  // R-8 (lauf 12): the host may pass its foreground right on to the target process while attached
+  // R-8 (run 12): the host may pass its foreground right on to the target process while attached
   [DllImport("user32.dll")] public static extern bool AllowSetForegroundWindow(uint pid);
   [DllImport("user32.dll")] public static extern bool SetWindowPos(IntPtr h, IntPtr after, int x, int y, int cx, int cy, uint f);
   // R-6 (Q-39): process name and title of a window for the protocol (foreign foreground windows)
@@ -169,7 +169,7 @@ function Focus([bool]$hard) {
   if ($f -ne [IntPtr]::Zero -and [PR.N]::Pid($f) -eq [uint32]$S.pid) { return @{ fg = [int64]$f; class = [PR.N]::Cls($f) } }
   $was = [PR.N]::Cls($f); $how = 'set'
   $wasPid = [PR.N]::Pid($f); $wasProc = [PR.N]::ProcName($f); $wasTitle = [PR.N]::Txt($f)
-  # R-5 (lauf 9): the taskbar (Shell_TrayWnd) and a browser took the focus back within a second. A taskbar
+  # R-5 (run 9): the taskbar (Shell_TrayWnd) and a browser took the focus back within a second. A taskbar
   # flyout / start menu is closed with Esc first (the key goes to the shell, never to the target)
   if ($was -match '^(Shell_TrayWnd|Shell_SecondaryTrayWnd|NotifyIconOverflowWindow|Windows\.UI\.Core\.CoreWindow|XamlExplorerHostIslandWindow|TopLevelWindowForOverflowXamlIsland)$') {
     [PR.N]::keybd_event(0x1B, 0, 0, [IntPtr]::Zero); [PR.N]::keybd_event(0x1B, 0, 2, [IntPtr]::Zero); Start-Sleep -Milliseconds 120; $how = 'esc+set' }
@@ -187,7 +187,7 @@ function Focus([bool]$hard) {
   }
   Start-Sleep -Milliseconds 250
   $f = [PR.N]::GetForegroundWindow()
-  # R-7 (lauf 11: the take-back reported 'set', the next input was refused - another program took the foreground
+  # R-7 (run 11: the take-back reported 'set', the next input was refused - another program took the foreground
   # straight back): SwitchToThisWindow when SetForegroundWindow was not honoured, then a stability check (the
   # foreground must still be ours 400 ms later; up to two more rounds with the Alt tap + AttachThreadInput trick)
   if ([PR.N]::Pid($f) -ne [uint32]$S.pid) {
@@ -213,7 +213,7 @@ function Focus([bool]$hard) {
     # last resort: one click on a neutral spot of the target's caption (WM_NCHITTEST = HTCAPTION). The topmost
     # enabled window of the target is used (a modal dialog before the main window); the point must belong to that
     # window (WindowFromPoint), otherwise no click is sent.
-    # R-6 (Q-39, lauf 10): the click never fired - the foreign window covered the caption, the check skipped every
+    # R-6 (Q-39, run 10): the click never fired - the foreign window covered the caption, the check skipped every
     # point silently. Now: fresh window rect, the middle of the caption (vertical centre of the HTCAPTION band,
     # x at 50/35/65 %), the covering window is reported; when covered, the target is raised for the click
     # (HWND_TOPMOST without activation, reset to HWND_NOTOPMOST right after) and the point checked again. After
@@ -250,7 +250,7 @@ function Focus([bool]$hard) {
     if (-not $clicked) { $how += '+nocaption' }
     $f = [PR.N]::GetForegroundWindow()
   }
-  # R-8 (lauf 12: 75 take-backs from claude/Chrome_WidgetWin_1 reported 'set+stable -> ok', the next input ~0.2 s
+  # R-8 (run 12: 75 take-backs from claude/Chrome_WidgetWin_1 reported 'set+stable -> ok', the next input ~0.2 s
   # later was refused - the other program re-activates itself within a second): a final settle check, the
   # foreground must still be ours after $S.settle_ms (default 450 ms); otherwise `+relost to <proc> <class>` and ok=false
   if ([PR.N]::Pid($f) -eq [uint32]$S.pid) {
@@ -265,7 +265,7 @@ function Focus([bool]$hard) {
 $VK = @{ shift = 0x10; ctrl = 0x11; alt = 0x12; space = 0x20; enter = 0x0D; return = 0x0D; esc = 0x1B; escape = 0x1B; tab = 0x09; backspace = 0x08; back = 0x08; delete = 0x2E; del = 0x2E; insert = 0x2D
   left = 0x25; up = 0x26; right = 0x27; down = 0x28; arrowleft = 0x25; arrowup = 0x26; arrowright = 0x27; arrowdown = 0x28; home = 0x24; end = 0x23; pageup = 0x21; pagedown = 0x22
   plus = 0xBB; minus = 0xBD; comma = 0xBC; period = 0xBE }
-# R-9 (lauf 13: 'unknown key semicolon'): punctuation by key position (US names; on the German layout
+# R-9 (run 13: 'unknown key semicolon'): punctuation by key position (US names; on the German layout
 # semicolon = Ue, apostrophe = Ae, openbracket = sz ... - the keys the program's German shortcuts use)
 $VK += @{ semicolon = 0xBA; apostrophe = 0xDE; quote = 0xDE; slash = 0xBF; backslash = 0xDC; openbracket = 0xDB; closebracket = 0xDD; backtick = 0xC0; equals = 0xBB }
 function VkOf([string]$k) { $k = $k.ToLower(); if ($VK.ContainsKey($k)) { return [uint16]$VK[$k] }; if ($k.Length -eq 1) { return [uint16][int][char]$k.ToUpper() }; if ($k -match '^f(\d+)$') { return [uint16](0x6F + [int]$matches[1]) }; if ($k -match '^0x') { return [uint16][Convert]::ToInt32($k, 16) }; throw "unknown key $k" }
@@ -298,11 +298,11 @@ function Drag($x1, $y1, $x2, $y2, $mods, $steps, $button, $pressMs, $releaseMs) 
   [PR.N]::SetCursorPos([int]$x1, [int]$y1) | Out-Null; [PR.N]::Send(@([PR.N]::Mouse(0x1, 0))); Start-Sleep -Milliseconds 80
   $script:DragKeys = @{ before = (KeysDown $mods); resent = 0 }
   Mods $mods $false
-  # R-9 (TW-109, lauf 13: Alt did not arrive for the Alt drag): check the held keys before the press, send again
+  # R-9 (TW-109, run 13: Alt did not arrive for the Alt drag): check the held keys before the press, send again
   if (@($mods | ? { $_ }).Count) { Start-Sleep -Milliseconds 40
     for ($k = 0; $k -lt 2 -and -not (KeysDown $mods); $k++) { Mods $mods $false; $script:DragKeys.resent++; Start-Sleep -Milliseconds 80 } }
   $script:DragKeys.at_press = (KeysDown $mods)
-  # R-5 (lauf 9, xs-canvas/08,12): on the large bitmap the program is busy after the press; the moves of the drag
+  # R-5 (run 9, xs-canvas/08,12): on the large bitmap the program is busy after the press; the moves of the drag
   # were coalesced into the final one, and as the program evaluates the second-to-last position the object did not
   # move at all. Now every input waits until the UI thread takes messages again (no effect on a responsive program)
   $busy = 0

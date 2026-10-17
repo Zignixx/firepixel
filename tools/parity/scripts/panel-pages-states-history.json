@@ -582,7 +582,7 @@
     }
    ],
    "shot": null,
-   "note": "R-8 (TW-106): the last value lists the history after the replay (step count, selected rows, steps as script) on both sides. In the reference every runner script (select, log_value) is a history step of its own ('command script', lauf-12 image 14), so history_row 2 is not the same step as in Firepixel; the probe runs last for that reason"
+   "note": "R-8 (TW-106): the last value lists the history after the replay (step count, selected rows, steps as script) on both sides. In the reference every runner script (select, log_value) is a history step of its own ('command script', run-12 image 14), so history_row 2 is not the same step as in Firepixel; the probe runs last for that reason"
   },
   {
    "id": "17_history_copy_result",
