@@ -72,7 +72,10 @@ fn harness(k: usize) -> H {
     h
 }
 
-fn walk(nodes: &[Node], path: &str, out: &mut Vec<(String, String, Option<String>, bool, Option<bool>)>) {
+/// One menu row as collected by [`walk`].
+type MenuRow = (String, String, Option<String>, bool, Option<bool>);
+
+fn walk(nodes: &[Node], path: &str, out: &mut Vec<MenuRow>) {
     for n in nodes {
         match n {
             Node::Separator => {}
@@ -92,7 +95,7 @@ fn walk(nodes: &[Node], path: &str, out: &mut Vec<(String, String, Option<String
     }
 }
 
-fn menu_rows(h: &H) -> Vec<(String, String, Option<String>, bool, Option<bool>)> {
+fn menu_rows(h: &H) -> Vec<MenuRow> {
     let mut out = Vec::new();
     for (top, nodes) in fp_ui::menu::build_main_menu(&h.state().state) {
         walk(&nodes, &top, &mut out);

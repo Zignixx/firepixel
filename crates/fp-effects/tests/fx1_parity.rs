@@ -36,11 +36,7 @@ fn load_png(p: &Path) -> RgbaImage {
 fn save_png(p: &Path, img: &RgbaImage) {
     let b = img.bounds();
     let f = std::fs::File::create(p).expect("create");
-    let mut e = png::Encoder::new(
-        std::io::BufWriter::new(f),
-        b.width() as u32,
-        b.height() as u32,
-    );
+    let mut e = png::Encoder::new(std::io::BufWriter::new(f), b.width(), b.height());
     e.set_color(png::ColorType::Rgba);
     e.set_depth(png::BitDepth::Eight);
     let mut w = e.write_header().expect("hdr");

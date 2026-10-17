@@ -858,10 +858,10 @@ impl BrushTool {
 
     fn overlay_for(&self, ctx: &ToolContext) -> Vec<Overlay> {
         let mut v = Vec::new();
-        if !self.points.is_empty() {
-            if let Some(l) = &self.live {
-                v.push(Overlay::Paint(l.preview()));
-            }
+        if !self.points.is_empty()
+            && let Some(l) = &self.live
+        {
+            v.push(Overlay::Paint(l.preview()));
         }
         if let Some(h) = self.hover
             && ctx.prefs.get_bool("UseBrushSizeCursors", true)

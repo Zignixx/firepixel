@@ -447,7 +447,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                     .and_then(|f| f.file_stem())
                     .map(|n| n.to_string_lossy().to_string())
                     .unwrap_or_else(|| "Skript".into());
-                let v = run_script_prompting(s, &p, &code, path.as_deref(), &label)?;
+                let v = run_script_prompting(s, p, &code, path.as_deref(), &label)?;
                 Ok(CommandOutput::session_with(json!({"result": v})))
             }),
     );
@@ -469,7 +469,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                         name = name.as_str()
                     ))
                 })?;
-                let v = run_script_prompting(s, &p, &code, Some(&f), &name)?;
+                let v = run_script_prompting(s, p, &code, Some(&f), &name)?;
                 Ok(CommandOutput::session_with(json!({"result": v})))
             }),
     );

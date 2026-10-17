@@ -248,7 +248,7 @@ pub fn write_pdf_with(pages: &[PdfPage], title: &str, opt: &PdfOptions) -> Resul
                 let data: Vec<u8> = if opt.grayscale {
                     p.image.data().iter().map(|q| rgb_of(q)[0]).collect()
                 } else {
-                    p.image.data().iter().flat_map(|q| rgb_of(q)).collect()
+                    p.image.data().iter().flat_map(rgb_of).collect()
                 };
                 let (filter, data) = if c == PdfCompression::None {
                     ("", data)

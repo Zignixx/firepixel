@@ -727,9 +727,14 @@ pub const EXPECTED_NEW: &[&str] = &["Sprache"];
 pub struct Scene {
     pub id: String,
     pub label: String,
-    pub prep: Box<dyn Fn(&mut AppState, &Fix) + Send + Sync>,
-    pub ui: Box<dyn Fn(&mut H, &Fix) -> Result<(), String> + Send + Sync>,
+    pub prep: PrepFn,
+    pub ui: UiFn,
 }
+
+/// State preparation of a [`Scene`].
+pub type PrepFn = Box<dyn Fn(&mut AppState, &Fix) + Send + Sync>;
+/// UI interaction of a [`Scene`].
+pub type UiFn = Box<dyn Fn(&mut H, &Fix) -> Result<(), String> + Send + Sync>;
 
 pub fn scene(id: impl Into<String>, label: impl Into<String>, prep: impl Fn(&mut AppState, &Fix) + Send + Sync + 'static, ui: impl Fn(&mut H, &Fix) -> Result<(), String> + Send + Sync + 'static) -> Scene {
     Scene { id: id.into(), label: label.into(), prep: Box::new(prep), ui: Box::new(ui) }
@@ -1438,7 +1443,7 @@ pub fn render_images(scenes: &[Scene], pick: &[(&str, &str)], cfg: Cfg, prefix: 
                     if (w, hh) != (img.width(), img.height()) {
                         report.push(format!("{file}: Größe {w}×{hh} → {}×{}", img.width(), img.height()));
                     } else {
-                        let n = old.chunks_exact(4).zip(img.as_raw().chunks_exact(4)).filter(|(a, b)| a.iter().zip(b.iter()).any(|(x, y)| x.abs_diff(*y) > 8)).count();
+                        let n = old.as_chunks::<4>().0.iter().zip(img.as_raw().as_chunks::<4>().0.iter()).filter(|(a, b)| a.iter().zip(b.iter()).any(|(x, y)| x.abs_diff(*y) > 8)).count();
                         let total = (w * hh) as f64;
                         report.push(format!("{file}: {n} abweichende Pixel ({:.3} %)", 100.0 * n as f64 / total));
                     }
@@ -1559,7 +1564,7 @@ pub fn load_png(path: &std::path::Path) -> Option<(u32, u32, Vec<u8>)> {
     buf.truncate(info.buffer_size());
     match info.color_type {
         png::ColorType::Rgba if info.bit_depth == png::BitDepth::Eight => Some((info.width, info.height, buf)),
-        png::ColorType::Rgb if info.bit_depth == png::BitDepth::Eight => Some((info.width, info.height, buf.chunks_exact(3).flat_map(|p| [p[0], p[1], p[2], 255]).collect())),
+        png::ColorType::Rgb if info.bit_depth == png::BitDepth::Eight => Some((info.width, info.height, buf.as_chunks::<3>().0.iter().flat_map(|p| [p[0], p[1], p[2], 255]).collect())),
         _ => None,
     }
 }

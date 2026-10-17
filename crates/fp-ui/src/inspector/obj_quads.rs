@@ -3213,7 +3213,7 @@ pub fn text_row1(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target) {
     if let Some(s) = size {
         set_text(ui, st, tgt, json!({"size": s}));
     }
-    match popups::color_button(
+    if let Some(ColorChoice::Color(c)) = popups::color_button(
         ui,
         id.with("color"),
         d.r(240.0, 0.0, 15.0, 13.0),
@@ -3223,8 +3223,7 @@ pub fn text_row1(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target) {
         false,
         true,
     ) {
-        Some(ColorChoice::Color(c)) => set_text(ui, st, tgt, json!({"color": ui_commands::hex(c)})),
-        _ => {}
+        set_text(ui, st, tgt, json!({"color": ui_commands::hex(c)}));
     }
     super::glyphs::paint(
         ui.painter(),

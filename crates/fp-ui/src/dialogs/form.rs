@@ -582,13 +582,16 @@ pub struct FormDialog {
 
 /// Eigene Anordnung eines Formulars (Felder an den Stellen der Vorlage, z. B. Raster bearbeiten,
 /// Textgröße, Selektives JPEG). Werte, Prüfung, Voreinstellungen und OK bleiben die des Formulars.
+/// Draw callback of a [`CustomLayout`]: returns "changed" and the OK / Cancel rectangles.
+pub type CustomDraw = fn(&mut Ui, &AppState, &mut FormDialog, Rect) -> (bool, [Rect; 2]);
+
 #[derive(Clone, Copy, Debug)]
 pub struct CustomLayout {
     /// Größe des Client-Bereichs für die Texte der aktuellen Sprache.
     pub size: fn(&egui::Context, &FormDialog) -> egui::Vec2,
     /// Zeichnet die Felder in den Client-Bereich; liefert „geändert“ und die Rechtecke von OK und
     /// Abbrechen.
-    pub draw: fn(&mut Ui, &AppState, &mut FormDialog, Rect) -> (bool, [Rect; 2]),
+    pub draw: CustomDraw,
 }
 
 /// Entspricht der Wert eines Listeneintrags dem gemerkten Wert? Zahlen werden als Zahl, Texte als

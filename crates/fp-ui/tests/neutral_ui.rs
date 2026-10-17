@@ -96,11 +96,11 @@ fn oberflaeche_ist_neutral() {
         check("Hauptfenster", t, &mut found);
     }
     // jedes Hauptmenü geöffnet
-    for i in 0..menus.len() {
+    for (i, menu) in menus.iter().enumerate() {
         Popup::open_id(&h.ctx, egui::Id::new(("fp-main-menu", i)));
         h.run_steps(2);
         for t in drawn(&h) {
-            check(&format!("Menü {}", menus[i].0), &t, &mut found);
+            check(&format!("Menü {}", menu.0), &t, &mut found);
         }
         Popup::close_id(&h.ctx, egui::Id::new(("fp-main-menu", i)));
         h.run_steps(1);

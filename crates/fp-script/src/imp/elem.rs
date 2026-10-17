@@ -414,7 +414,7 @@ fn text_attrs_json(
 /// (Lauf 10 `menu-text/02,03,15`: 36 pt → 1,1999999152289496, 24 pt → 1,1999999682108562,
 /// 14 pt → 1,1999999455043249).
 pub(crate) fn engine_leading(size: f64, leading: f64) -> f64 {
-    if !(size > 0.0) || !(leading > 0.0) || !size.is_finite() || !leading.is_finite() {
+    if !(size > 0.0 && leading > 0.0 && size.is_finite() && leading.is_finite()) {
         return leading;
     }
     let x = size * leading;
@@ -1119,7 +1119,7 @@ fn element_get(
             JsValue::from(matches!(&e.kind, ElementKind::Text(t) if t.frame_type.unwrap_or(0) == 0))
         }
         "orientation" => conv::s(match &e.kind {
-            ElementKind::Text(t) => super::orientation_jsf_name(t.orientation as i32),
+            ElementKind::Text(t) => super::orientation_jsf_name(t.orientation),
             _ => "horizontal left to right",
         }),
         "transformMode" => conv::s("paths"),

@@ -11,13 +11,16 @@ use fp_raster::RgbaImage;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
+/// Background render of a page thumbnail: generation and result channel.
+type PendingThumb = (u64, std::sync::mpsc::Receiver<Option<RgbaImage>>);
+
 #[derive(Default)]
 struct Cache {
     map: HashMap<(u64, u64, u32), (u64, TextureHandle)>,
     frame: u64,
     used: u32,
     /// Seitenminiaturen, die im Hintergrund neu gerechnet werden (Schlüssel → Stand, Ergebnis).
-    pending: HashMap<(u64, u64, u32), (u64, std::sync::mpsc::Receiver<Option<RgbaImage>>)>,
+    pending: HashMap<(u64, u64, u32), PendingThumb>,
 }
 
 const MAX_PER_FRAME: u32 = 6;
@@ -135,15 +138,15 @@ fn get_refresh_async(
             return get(ctx, st, key, generation, render);
         }
     }
-    if !guard.pending.contains_key(&key) {
+    guard.pending.entry(key).or_insert_with(|| {
         let (tx, rx) = std::sync::mpsc::channel();
         let ctx2 = ctx.clone();
         std::thread::spawn(move || {
             let _ = tx.send(render());
             ctx2.request_repaint();
         });
-        guard.pending.insert(key, (generation, rx));
-    }
+        (generation, rx)
+    });
     // läuft noch (ggf. für einen älteren Stand – danach startet die nächste Rechnung)
     ctx.request_repaint_after(std::time::Duration::from_millis(50));
     existing.map(|(_, t)| t)

@@ -7,8 +7,10 @@ use fp_render::compose::{
     TEXT_BUFFER_ARIAL, text_buffer_from_box, text_content_box, text_effect_buffer,
 };
 
+type Row = (f64, &'static str, f64, f64, f64, [i32; 4]);
+
 /// (size, text, raw-left, raw-top, advance, measured buffer l, t, r, b)
-const TABLE: [(f64, &str, f64, f64, f64, [i32; 4]); 16] = [
+const TABLE: [Row; 16] = [
     (12.0, "Fx Ag", 40.0, 60.0, 31.0, [35, 55, 76, 76]),
     (12.0, "ii", 40.0, 60.0, 6.0, [39, 55, 47, 76]),
     (24.0, "ii", 40.0, 60.0, 10.0, [38, 51, 52, 90]),

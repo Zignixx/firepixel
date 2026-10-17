@@ -262,7 +262,7 @@ fn t3_sharpen() {
 
 /// Zentriertes Weichzeichnen (T4). Seit FX-3 (`73c3379`) wächst das Ergebnis wie im Original
 /// (Ausgabegrenzen nach `@00b2c9e0`: Rechteck + Menge, dann Quadrat um die Mitte der Eingabe; gemessen
-/// gegen neue Aufnahmen in Golden fx3, `fp-effects	estsx3.rs`). Die alten IDAT-Bilder dieser Dateien
+/// gegen neue Aufnahmen in Golden fx3, `fp-effects/tests/fx3.rs`). Die alten IDAT-Bilder dieser Dateien
 /// enden an den Eingabegrenzen (das Original lief teils in die Zeitbegrenzung) – verglichen wird daher
 /// nur innerhalb der Eingabe; die Grenzen prüft der Test gegen die FX-3-Formel (B-6).
 #[test]

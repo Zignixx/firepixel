@@ -59,7 +59,7 @@ fn result(src: &str) -> String {
     o.result.unwrap_or_default()
 }
 
-fn url(p: &PathBuf) -> String {
+fn url(p: &std::path::Path) -> String {
     format!("file:///{}", p.to_string_lossy().replace('\\', "/"))
 }
 

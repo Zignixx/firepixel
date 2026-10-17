@@ -2881,9 +2881,9 @@ fn mask_targets(d: &DocumentState) -> Vec<fp_model::ElementId> {
     d.selection
         .elements
         .iter()
-        .filter_map(|id| match docops::mask_owner(&d.doc, d.page, *id) {
-            Some(o) => Some(o.id),
-            None => Some(*id),
+        .map(|id| match docops::mask_owner(&d.doc, d.page, *id) {
+            Some(o) => o.id,
+            None => *id,
         })
         .collect()
 }

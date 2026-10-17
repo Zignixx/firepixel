@@ -110,14 +110,14 @@ fn field_center(h: &H, k: usize) -> Option<Pos2> {
     let dr = dialog_area(h)?;
     h.get_all(By::new().role(egui::accesskit::Role::TextInput)).filter(|n| dr.contains(n.rect().center()) && !n.accesskit_node().is_disabled()).nth(k).map(|n| {
         let c = n.rect().center();
-        egui::pos2(c.x as f32, c.y as f32)
+        egui::pos2(c.x, c.y)
     })
 }
 
 fn button_center(h: &H, label: &str) -> Pos2 {
     let dr = dialog_area(h).expect("Dialog");
     let c = h.get_all(By::new().role(egui::accesskit::Role::Button)).find(|n| dr.contains(n.rect().center()) && n.accesskit_node().label().is_some_and(|l| l == label)).map(|n| n.rect().center()).expect("Knopf");
-    egui::pos2(c.x as f32, c.y as f32)
+    egui::pos2(c.x, c.y)
 }
 
 fn open(h: &mut H, name: &str) {
@@ -430,7 +430,7 @@ fn radio_group_is_one_tab_stop_with_arrow_keys() {
     h.run_steps(3);
     let cycle = tab_cycle(&mut h, 12);
     let radios = cycle.iter().filter(|(r, _)| *r == egui::accesskit::Role::RadioButton).count();
-    assert!(radios <= 12 / 3 + 1 && radios >= 1, "Leinwandfarbe: Optionsgruppe einmal je Umlauf: {cycle:?}");
+    assert!((1..=12 / 3 + 1).contains(&radios), "Leinwandfarbe: Optionsgruppe einmal je Umlauf: {cycle:?}");
     // Stopps je Umlauf: Gruppe, (Farbfeld), OK, Abbrechen → kein Optionsfeld zweimal hintereinander
     assert!(cycle.windows(2).all(|w| !(w[0].0 == egui::accesskit::Role::RadioButton && w[1].0 == egui::accesskit::Role::RadioButton)), "zwei Optionsfelder nacheinander: {cycle:?}");
     // zur Gruppe zurück, Pfeil ab → „Transparent“ gewählt und fokussiert
@@ -488,7 +488,7 @@ fn field_centers(h: &H) -> Vec<Pos2> {
         .filter(|n| dr.contains(n.rect().center()))
         .map(|n| {
             let c = n.rect().center();
-            egui::pos2(c.x as f32, c.y as f32)
+            egui::pos2(c.x, c.y)
         })
         .collect()
 }
@@ -609,7 +609,7 @@ fn inspector_field_keeps_value_after_click_elsewhere() {
     // B (100) und H (60) des Inspektors: Textfelder mit diesen Werten unten im Fenster
     let find = |h: &H, v: &str| -> Pos2 {
         let c = h.get_all(By::new().role(egui::accesskit::Role::TextInput)).filter(|n| n.accesskit_node().value().as_deref() == Some(v) && n.rect().center().y > 500.0).map(|n| n.rect().center()).next().unwrap_or_else(|| panic!("Feld {v}"));
-        egui::pos2(c.x as f32, c.y as f32)
+        egui::pos2(c.x, c.y)
     };
     let (w0, h0) = size(&h);
     assert_eq!((w0, h0), (100.0, 60.0));

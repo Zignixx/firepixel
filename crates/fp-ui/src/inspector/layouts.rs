@@ -560,9 +560,12 @@ const TUNE_TOOLS: [ToolId; 7] = [
     ToolId::MagicWand,
 ];
 
+/// Identity of a mask (pointer, bounds) as used by the subject-tune check.
+type MaskKey = (usize, i32, i32, i32, i32);
+
 thread_local! {
     /// Letzte Prüfung (Kennung der Maske → Ergebnis); die volle Prüfsumme der Maske nur bei Änderung.
-    static SUBJECT_TUNE: std::cell::Cell<Option<((usize, i32, i32, i32, i32), bool)>> = const { std::cell::Cell::new(None) };
+    static SUBJECT_TUNE: std::cell::Cell<Option<(MaskKey, bool)>> = const { std::cell::Cell::new(None) };
 }
 
 /// Ist die Pixelauswahl das unveränderte Ergebnis der letzten Motivauswahl?

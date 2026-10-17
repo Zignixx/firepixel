@@ -187,7 +187,7 @@ fn bericht() {
                 by.entry(diff.to_string()).or_default().insert(scene.to_string());
             }
             let mut v: Vec<(String, BTreeSet<String>)> = by.into_iter().collect();
-            v.sort_by(|a, b| b.1.len().cmp(&a.1.len()));
+            v.sort_by_key(|a| std::cmp::Reverse(a.1.len()));
             for (diff, scenes) in v.iter().take(40) {
                 let sc: Vec<&String> = scenes.iter().take(3).collect();
                 details.push_str(&format!("| {} | {} {}{} |\n", esc(diff).replace('`', "'"), scenes.len(), sc.iter().map(|s| s.as_str()).collect::<Vec<_>>().join(", "), if scenes.len() > 3 { " …" } else { "" }));

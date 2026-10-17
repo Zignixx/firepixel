@@ -59,8 +59,10 @@ fn without_default_alt_no_extension_is_written() {
     // ohne Sprite-Felder und ohne ALT-Text bleibt die Datei frei von der eigenen Erweiterung
     let h = fp_model::HtmlSettings::cs6_default();
     assert!(h.default_alt.is_none());
-    let mut e = fp_model::ExportSettings::default();
-    e.html = Some(Box::new(h));
+    let e = fp_model::ExportSettings {
+        html: Some(Box::new(h)),
+        ..Default::default()
+    };
     let nodes = fp_fwpng::write::write_export(&e);
     assert!(!nodes.iter().any(|n| n.key == fp_fwpng::write::SPRITE_EXT));
 }

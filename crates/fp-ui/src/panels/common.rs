@@ -190,7 +190,7 @@ pub fn footer(
             );
         }
         glyphs::paint(ui.painter(), r.shrink(1.0), b.glyph, &theme, b.enabled);
-        crate::ui_kit::icon_button_info(&resp, b.enabled, &b.tip, None);
+        crate::ui_kit::icon_button_info(&resp, b.enabled, b.tip, None);
         let resp = resp.on_hover_text(b.tip);
         if b.enabled && resp.clicked() {
             out = b.action.clone();

@@ -50,10 +50,10 @@ fn norm_json(doc: &fp_model::Document) -> Value {
     fn walk(v: &mut Value, sums: &std::collections::HashMap<u64, u64>) {
         match v {
             Value::Object(m) => {
-                if let Some(Value::Object(t)) = m.get_mut("Tile") {
-                    if let Some(sum) = t.get("id").and_then(Value::as_u64).and_then(|id| sums.get(&id)) {
-                        t.insert("id".into(), Value::String(format!("px:{sum:016x}")));
-                    }
+                if let Some(Value::Object(t)) = m.get_mut("Tile")
+                    && let Some(sum) = t.get("id").and_then(Value::as_u64).and_then(|id| sums.get(&id))
+                {
+                    t.insert("id".into(), Value::String(format!("px:{sum:016x}")));
                 }
                 m.values_mut().for_each(|x| walk(x, sums));
             }

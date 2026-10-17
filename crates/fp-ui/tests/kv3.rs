@@ -54,7 +54,7 @@ fn click(h: &mut H, p: Pos2) {
 fn press(h: &mut H, label: &str) {
     h.run_steps(1);
     let r = h.get_all(By::new().label(label)).last().unwrap_or_else(|| panic!("Knopf {label}")).rect();
-    click(h, egui::pos2(r.center().x as f32, r.center().y as f32));
+    click(h, r.center());
 }
 
 // ------------------------------------------------------------------ Live-Effekt

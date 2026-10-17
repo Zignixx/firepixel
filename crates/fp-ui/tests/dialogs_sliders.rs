@@ -111,7 +111,7 @@ fn text_fields(h: &H) -> Vec<(egui::Rect, String)> {
 fn click_label(h: &mut H, label: &str) {
     h.run_steps(1);
     let dr = dialog_rect(h);
-    let mut r = h.query_all(By::new().label(label)).map(|n| n.rect()).filter(|r| dr.contains(r.center())).next_back();
+    let mut r = h.query_all(By::new().label(label)).map(|n| n.rect()).rfind(|r| dr.contains(r.center()));
     if r.is_none() {
         // Kästchen/Optionsfelder zeichnen ihre Beschriftung selbst (ohne Eintrag im
         // Barrierefreiheitsbaum): Lage aus dem Layout-Protokoll der Felder

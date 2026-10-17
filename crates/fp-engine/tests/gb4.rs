@@ -25,8 +25,8 @@ fn ba027_unlock_and_remove_edits_need_locked_or_edited_colors() {
     s.execute("file.new", json!({"width": 100, "height": 60})).expect("doc");
     s.execute("draw.rectangle", json!({"rect": [10, 10, 50, 50], "fillColor": "#ff0000"})).expect("rect");
     s.execute("pi.export.settings", json!({"settings": serde_json::to_value(fp_model::ExportSettings::default()).expect("json")})).expect("gif");
-    assert_eq!(s.command_state("panel.optimize.unlockAll").0, false, "ohne gesperrte Farbe grau");
-    assert_eq!(s.command_state("panel.optimize.removeAllEdits").0, false, "ohne Bearbeitung grau");
+    assert!(!s.command_state("panel.optimize.unlockAll").0, "ohne gesperrte Farbe grau");
+    assert!(!s.command_state("panel.optimize.removeAllEdits").0, "ohne Bearbeitung grau");
     assert_eq!(s.command_state("panel.optimize.removeUnusedColors"), (true, Some(true)), "Vorgabe an");
     assert_eq!(s.command_state("panel.optimize.swatchFeedback").1, Some(true), "Vorgabe an");
     s.execute("panel.optimize.lockColors", json!({"colors": ["#ff0000"]})).expect("sperren");

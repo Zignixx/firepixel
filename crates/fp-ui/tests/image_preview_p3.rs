@@ -477,7 +477,7 @@ fn file_and_animation_tabs_fit_in_de_and_en() {
                 let title = fp_i18n::t("dlg-preview-title");
                 let start = all.iter().position(|(s, r)| *s == title && rect.contains(r.center())).unwrap_or(all.len());
                 assert!(start < all.len(), "Titel gezeichnet");
-                for s in all[start..].to_vec() {
+                for s in all[start..].iter().cloned() {
                     assert!(!s.0.starts_with("image-preview-"), "{lang}: Rohschlüssel {}", s.0);
                     let r = s.1;
                     if r.is_positive() && rect.contains(r.center()) && r.center().x < left_r && r.center().y > rect.top() + 30.0 {

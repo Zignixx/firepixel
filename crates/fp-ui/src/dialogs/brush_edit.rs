@@ -309,6 +309,8 @@ fn num_row_unit(
 }
 
 /// Schieber + Zahlenfeld (Registerkarte Form).
+// Drawing helper whose parameters mirror the primitive; same convention as elsewhere.
+#[allow(clippy::too_many_arguments)]
 fn slider_row(
     ui: &mut Ui,
     o: egui::Pos2,

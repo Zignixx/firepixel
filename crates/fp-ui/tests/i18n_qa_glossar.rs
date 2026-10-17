@@ -110,7 +110,7 @@ fn placeholders(s: &str) -> BTreeSet<String> {
         let tail = &rest[i + 1..];
         let name: String = tail.chars().take_while(|c| c.is_alphanumeric() || *c == '_' || *c == '-').collect();
         out.insert(name);
-        rest = &tail[..];
+        rest = tail;
     }
     out
 }

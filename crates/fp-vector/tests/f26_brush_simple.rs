@@ -32,7 +32,6 @@ fn layer(b: &BrushParams, color: Argb) -> Vec<[u8; 4]> {
             pressure: 1.0,
             velocity: 0.5,
             seed: 7,
-            ..Default::default()
         };
         2
     ];

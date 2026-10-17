@@ -23,8 +23,11 @@ fn speed_size_factor_follows_code_rule() {
     assert_eq!(sensitivity_speed(0.0), 0.0);
     assert_eq!(sensitivity_speed(-1.0), 0.0);
     assert_eq!(sensitivity_speed(0.125), 32.0, "Vorgabe ohne Dynamik");
+    // False positive: 2.28515625 = 2 + 73/256 is exact in f32; the literal documents that.
+    #[allow(clippy::excessive_precision)]
+    let v_exact: f32 = 2.28515625;
     assert_eq!(
-        sensitivity_speed(2.28515625),
+        sensitivity_speed(v_exact),
         585.0,
         "nach oben offen, die Formeln begrenzen auf 256"
     );

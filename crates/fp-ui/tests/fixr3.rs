@@ -25,7 +25,7 @@ fn columns(lang: &str) -> (f32, f32) {
         let (cr, pr) = (h.get_by_label(&com_l).rect(), h.get_by_label(&pop_l).rect());
         let font = fp_ui::theme::Theme::current(&h.ctx).ui_font();
         let text_w = h.ctx.fonts_mut(|f| f.layout_no_wrap(com_l.clone(), font, egui::Color32::WHITE).size().x);
-        ((pr.left() - cr.left()) as f32, cr.left() as f32 + 18.0 + text_w - pr.left() as f32)
+        (pr.left() - cr.left(), cr.left() + 18.0 + text_w - pr.left())
     })
 }
 

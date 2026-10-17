@@ -56,8 +56,10 @@ fn l4_foreign_png_trimmed_and_centered_dib_whole() {
 /// „Original“), die Bildvorschau mit.
 #[test]
 fn d4_document_preview_ignores_export_scale() {
-    let mut s = fp_export::options::OptimizeSettings::default();
-    s.scale = Some(fp_model::ExportScale { use_scale: true, constrain: true, percent: 50, width: 600, height: 450 });
+    let s = fp_export::options::OptimizeSettings {
+        scale: Some(fp_model::ExportScale { use_scale: true, constrain: true, percent: 50, width: 600, height: 450 }),
+        ..Default::default()
+    };
     let u = fp_ui::preview::unscaled(&s);
     assert_eq!(u.scale, None);
     assert_eq!(fp_ui::preview::unscaled(&u), u);

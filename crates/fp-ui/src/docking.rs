@@ -712,7 +712,7 @@ fn iconic_dock(ui: &mut Ui, st: &mut AppState, area: Rect) {
                     r.width() - 30.0,
                 );
             }
-            crate::ui_kit::icon_button_info(&resp, true, &p.title(), Some(open));
+            crate::ui_kit::icon_button_info(&resp, true, p.title(), Some(open));
             if resp.on_hover_text(p.title()).clicked() {
                 st.dock.iconic_open = if open { None } else { Some(p) };
             }

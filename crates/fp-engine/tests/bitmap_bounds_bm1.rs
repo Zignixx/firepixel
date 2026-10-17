@@ -42,7 +42,7 @@ fn t1(name: &str, extra: u8) -> PathBuf {
     })
 }
 
-fn open(s: &mut Session, p: &PathBuf) {
+fn open(s: &mut Session, p: &std::path::Path) {
     ex(s, "file.open", json!({"path": p.to_string_lossy()}));
 }
 

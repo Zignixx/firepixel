@@ -86,9 +86,7 @@ fn auto_sets_channel_sets_and_keeps_rgb() {
     // Verlauf 20…230, je ein Pixel pro Wert → 20/1/230 in Rot, Grün, Blau, RGB unverändert
     let mut h = [[0u64; 256]; 3];
     for c in &mut h {
-        for v in 20..=230 {
-            c[v] = 1;
-        }
+        c[20..=230].fill(1);
     }
     let mut p = LevelsParams::default();
     p.rgb.gamma = 1.7;
@@ -246,7 +244,7 @@ fn click(h: &mut H, p: Pos2) {
 fn press(h: &mut H, label: &str) {
     h.run_steps(1);
     let r = h.get_all(By::new().label(label)).last().unwrap_or_else(|| panic!("Knopf {label}")).rect();
-    click(h, egui::pos2(r.center().x as f32, r.center().y as f32));
+    click(h, r.center());
 }
 
 /// Pixel des Bitmaps an (x, y) im Dokument.

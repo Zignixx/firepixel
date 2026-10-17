@@ -588,9 +588,9 @@ pub fn encode_jpeg(
     let q_tab = sel_par.map(|p| p.0).unwrap_or(q);
     let mut qt = tables.qtables(q_tab);
     if let Some(f) = &params.fixed_tables {
-        for k in 0..64 {
-            qt.lum[k] = f.0[ZIGZAG[k]];
-            qt.chrom[k] = f.1[ZIGZAG[k]];
+        for (k, &z) in ZIGZAG.iter().enumerate() {
+            qt.lum[k] = f.0[z];
+            qt.chrom[k] = f.1[z];
         }
     }
     let mut lum_nat = [0u16; 64];

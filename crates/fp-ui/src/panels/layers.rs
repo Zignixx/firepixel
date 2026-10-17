@@ -745,7 +745,7 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                                     st,
                                     doc_id,
                                     &doc,
-                                    &e,
+                                    e,
                                     m,
                                     (tpx as u32 * 2).max(16),
                                 ) {
@@ -1235,6 +1235,17 @@ fn footer_with_state(
     out
 }
 
+/// Objekte, die ein Klick auf eine (Unter-)Ebenenzeile wählt: wie im Original nur die eigenen,
+/// nicht gesperrten Objekte der Ebene, ohne Unterebenen und deren Objekte (re 28 S3: Klick auf
+/// „Ebene 1“ mit Unterebene „U“ wählt nur R1).
+pub fn own_objects(elements: &[std::sync::Arc<fp_model::Element>]) -> Vec<fp_model::ElementId> {
+    elements
+        .iter()
+        .filter(|e| !e.common.locked && !matches!(e.kind, ElementKind::SubLayer(_)))
+        .map(|e| e.id)
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1389,15 +1400,4 @@ mod tests {
             vec![(0, a.id.0), (0, b.id.0)]
         );
     }
-}
-
-/// Objekte, die ein Klick auf eine (Unter-)Ebenenzeile wählt: wie im Original nur die eigenen,
-/// nicht gesperrten Objekte der Ebene, ohne Unterebenen und deren Objekte (re 28 S3: Klick auf
-/// „Ebene 1“ mit Unterebene „U“ wählt nur R1).
-pub fn own_objects(elements: &[std::sync::Arc<fp_model::Element>]) -> Vec<fp_model::ElementId> {
-    elements
-        .iter()
-        .filter(|e| !e.common.locked && !matches!(e.kind, ElementKind::SubLayer(_)))
-        .map(|e| e.id)
-        .collect()
 }

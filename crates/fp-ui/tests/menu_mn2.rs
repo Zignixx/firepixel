@@ -407,5 +407,5 @@ fn schrift_menue_mit_bildlauf_im_fenster() {
     let hgt = *height.lock().unwrap();
     assert!(hgt > 100.0 && hgt <= 600.0, "Untermenü passt mit Bildlauf ins Fenster: {hgt}");
     // kurze Untermenüs bleiben ohne Bildlauf in voller Höhe
-    assert!(menu::LONG_SUBMENU >= 30);
+    const { assert!(menu::LONG_SUBMENU >= 30) };
 }

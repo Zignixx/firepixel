@@ -1628,6 +1628,106 @@ fn run_script(s: &mut Session, env: &ToolEnv, a: &Value) -> ToolOutput {
     out
 }
 
+/// Beschriftung eines Befehls in der Sprache der Antwort: `cmd-….label` (eindeutige Beschriftung,
+/// z. B. „State Properties“ statt des Bedienfeldmenütexts „Properties...“), sonst der Menütext
+/// `cmd-…` ohne Zugriffstaste und „...“; sonst der Text aus dem Register.
+pub fn command_label(i: &fp_engine::CommandInfo) -> String {
+    let k = fp_i18n::command_key(&i.name);
+    let label = format!("{k}.label");
+    if fp_i18n::has(&label) {
+        strip_amp(&fp_i18n::t(&label))
+    } else if fp_i18n::has(&k) {
+        strip_amp(&fp_i18n::t(&k))
+    } else {
+        i.label.clone()
+    }
+}
+
+/// Menüpfad eines Befehls in der Sprache der Antwort: je Stufe `menu-<präfix des Befehlsnamens>`
+/// (`modify.align.left` → `menu-modify`, `menu-modify-align`), wenn dessen deutscher Text der
+/// Stufe entspricht; sonst bleibt die Stufe wie im Register.
+pub fn command_menu_path(i: &fp_engine::CommandInfo) -> Vec<String> {
+    let segs: Vec<&str> = i.name.split('.').collect();
+    let source = fp_i18n::current_language() == fp_i18n::SOURCE_LANG;
+    i.menu_path
+        .iter()
+        .enumerate()
+        .map(|(k, de)| {
+            let plain = |t: String| {
+                strip_amp(&t)
+                    .trim_end_matches("...")
+                    .trim_end_matches('…')
+                    .to_string()
+            };
+            let de_plain = plain(de.clone());
+            if k < segs.len() {
+                let key = format!("menu-{}", segs[..=k].join("-"));
+                if fp_i18n::has(&key)
+                    && fp_i18n::with_language(fp_i18n::SOURCE_LANG, || plain(fp_i18n::t(&key)))
+                        == de_plain
+                {
+                    return if source {
+                        de.clone()
+                    } else {
+                        strip_amp(&fp_i18n::t(&key))
+                    };
+                }
+            }
+            if k + 1 == i.menu_path.len()
+                && fp_i18n::with_language(fp_i18n::SOURCE_LANG, || plain(command_label(i)))
+                    == de_plain
+            {
+                return if source { de.clone() } else { command_label(i) };
+            }
+            // sonst: Menüschlüssel desselben Hauptmenüs mit diesem deutschen Text (z. B. „Scannen“)
+            let prefix = format!("menu-{}", segs[0]);
+            let found = fp_i18n::keys(fp_i18n::SOURCE_LANG)
+                .into_iter()
+                .filter(|k| k.starts_with(&prefix) && !k.contains('.'))
+                .find(|k| {
+                    fp_i18n::with_language(fp_i18n::SOURCE_LANG, || plain(fp_i18n::t(k)))
+                        == de_plain
+                });
+            match found {
+                Some(k) if !source => strip_amp(&fp_i18n::t(&k)),
+                _ => de.clone(),
+            }
+        })
+        .collect()
+}
+
+/// Beschreibung eines Befehls in der Sprache der Antwort (`cmd-….description`, sonst `.tooltip`).
+pub fn command_description(i: &fp_engine::CommandInfo) -> Option<String> {
+    let k = fp_i18n::command_key(&i.name);
+    for attr in ["description", "tooltip"] {
+        let key = format!("{k}.{attr}");
+        if fp_i18n::has(&key) {
+            return Some(fp_i18n::t(&key));
+        }
+    }
+    i.description.clone()
+}
+
+/// `&Datei` → `Datei`, `&&` → `&`.
+fn strip_amp(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    let mut it = s.chars().peekable();
+    while let Some(c) = it.next() {
+        if c == '&' {
+            if it.peek() == Some(&'&') {
+                out.push('&');
+                it.next();
+            }
+            continue;
+        }
+        out.push(c);
+    }
+    out.trim_end_matches("...")
+        .trim_end_matches('…')
+        .trim()
+        .to_string()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1886,104 +1986,4 @@ mod tests {
         );
         assert!(!steps.is_error, "{}", steps.text());
     }
-}
-
-/// Beschriftung eines Befehls in der Sprache der Antwort: `cmd-….label` (eindeutige Beschriftung,
-/// z. B. „State Properties“ statt des Bedienfeldmenütexts „Properties...“), sonst der Menütext
-/// `cmd-…` ohne Zugriffstaste und „...“; sonst der Text aus dem Register.
-pub fn command_label(i: &fp_engine::CommandInfo) -> String {
-    let k = fp_i18n::command_key(&i.name);
-    let label = format!("{k}.label");
-    if fp_i18n::has(&label) {
-        strip_amp(&fp_i18n::t(&label))
-    } else if fp_i18n::has(&k) {
-        strip_amp(&fp_i18n::t(&k))
-    } else {
-        i.label.clone()
-    }
-}
-
-/// Menüpfad eines Befehls in der Sprache der Antwort: je Stufe `menu-<präfix des Befehlsnamens>`
-/// (`modify.align.left` → `menu-modify`, `menu-modify-align`), wenn dessen deutscher Text der
-/// Stufe entspricht; sonst bleibt die Stufe wie im Register.
-pub fn command_menu_path(i: &fp_engine::CommandInfo) -> Vec<String> {
-    let segs: Vec<&str> = i.name.split('.').collect();
-    let source = fp_i18n::current_language() == fp_i18n::SOURCE_LANG;
-    i.menu_path
-        .iter()
-        .enumerate()
-        .map(|(k, de)| {
-            let plain = |t: String| {
-                strip_amp(&t)
-                    .trim_end_matches("...")
-                    .trim_end_matches('…')
-                    .to_string()
-            };
-            let de_plain = plain(de.clone());
-            if k < segs.len() {
-                let key = format!("menu-{}", segs[..=k].join("-"));
-                if fp_i18n::has(&key)
-                    && fp_i18n::with_language(fp_i18n::SOURCE_LANG, || plain(fp_i18n::t(&key)))
-                        == de_plain
-                {
-                    return if source {
-                        de.clone()
-                    } else {
-                        strip_amp(&fp_i18n::t(&key))
-                    };
-                }
-            }
-            if k + 1 == i.menu_path.len()
-                && fp_i18n::with_language(fp_i18n::SOURCE_LANG, || plain(command_label(i)))
-                    == de_plain
-            {
-                return if source { de.clone() } else { command_label(i) };
-            }
-            // sonst: Menüschlüssel desselben Hauptmenüs mit diesem deutschen Text (z. B. „Scannen“)
-            let prefix = format!("menu-{}", segs[0]);
-            let found = fp_i18n::keys(fp_i18n::SOURCE_LANG)
-                .into_iter()
-                .filter(|k| k.starts_with(&prefix) && !k.contains('.'))
-                .find(|k| {
-                    fp_i18n::with_language(fp_i18n::SOURCE_LANG, || plain(fp_i18n::t(k)))
-                        == de_plain
-                });
-            match found {
-                Some(k) if !source => strip_amp(&fp_i18n::t(&k)),
-                _ => de.clone(),
-            }
-        })
-        .collect()
-}
-
-/// Beschreibung eines Befehls in der Sprache der Antwort (`cmd-….description`, sonst `.tooltip`).
-pub fn command_description(i: &fp_engine::CommandInfo) -> Option<String> {
-    let k = fp_i18n::command_key(&i.name);
-    for attr in ["description", "tooltip"] {
-        let key = format!("{k}.{attr}");
-        if fp_i18n::has(&key) {
-            return Some(fp_i18n::t(&key));
-        }
-    }
-    i.description.clone()
-}
-
-/// `&Datei` → `Datei`, `&&` → `&`.
-fn strip_amp(s: &str) -> String {
-    let mut out = String::with_capacity(s.len());
-    let mut it = s.chars().peekable();
-    while let Some(c) = it.next() {
-        if c == '&' {
-            if it.peek() == Some(&'&') {
-                out.push('&');
-                it.next();
-            }
-            continue;
-        }
-        out.push(c);
-    }
-    out.trim_end_matches("...")
-        .trim_end_matches('…')
-        .trim()
-        .to_string()
 }

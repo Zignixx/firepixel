@@ -413,7 +413,7 @@ fn hold_modifiers(raw: &mut egui::RawInput, held: Modifiers) {
     let mut found = false;
     for e in &mut raw.events {
         if let Event::ModifiersChanged(m) = e {
-            *m = *m | held;
+            *m |= held;
             found = true;
         }
     }

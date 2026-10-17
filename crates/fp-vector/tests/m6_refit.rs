@@ -373,7 +373,7 @@ fn dump_stages() {
     for (name, c) in [("P1", p1()), ("E1", e1())] {
         for w in [-5, -1, 5] {
             let st = inset_path_stages(
-                &[c.clone()],
+                std::slice::from_ref(&c),
                 (w as f64).abs(),
                 JoinKind::Bevel,
                 10.0,

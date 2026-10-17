@@ -162,7 +162,7 @@ pub fn anchored_popup<R>(
         .gap(0.0)
         .frame(crate::menu::menu_frame(&th).inner_margin(egui::Margin::same(6)))
         .show(add);
-    let Some(inner) = shown else { return None };
+    let inner = shown?;
     let opened: u64 = ctx.data(|d| d.get_temp(pid.with("pass"))).unwrap_or(0);
     let mut close = inner.response.should_close();
     if ctx.cumulative_pass_nr() > opened
@@ -833,7 +833,7 @@ pub fn pattern_swatch_texture(ctx: &egui::Context, name: &str) -> Option<egui::T
         .and_then(|p| fp_engine::commands::attrs::load_image_file(&p.to_string_lossy()).ok())
         .map(|img| {
             let ci = egui::ColorImage::from_rgba_unmultiplied(
-                [img.width() as usize, img.height() as usize],
+                [img.width(), img.height()],
                 img.as_bytes(),
             );
             ctx.load_texture(

@@ -376,8 +376,10 @@ fn html_bericht_mit_vorschaubildern_groessen_und_fehlern() {
     support::write_png(&b, 60, 90);
     let bad = dir.join("kaputt.png");
     std::fs::write(&bad, b"\x89PNG\r\n\x1a\nkaputt").expect("write");
-    let mut r = Recipe::default();
-    r.name = "Web <klein>".into();
+    let mut r = Recipe {
+        name: "Web <klein>".into(),
+        ..Default::default()
+    };
     r.steps.push(fp_batch::StepConfig::new(
         "resize",
         json!({"mode": "longEdge", "size": 40}),
@@ -429,7 +431,7 @@ fn html_bericht_mit_vorschaubildern_groessen_und_fehlern() {
             .is_some_and(|p| p.ends_with("batch-report.html"))
     );
     // Wiederholung: Bericht wird ersetzt, nicht angehängt; ausschaltbar
-    let rep2 = fp_i18n::with_language("en", || run(&r, &[a.clone()], &out));
+    let rep2 = fp_i18n::with_language("en", || run(&r, std::slice::from_ref(&a), &out));
     let html2 = std::fs::read_to_string(&html_path).expect("html");
     assert!(
         html2.contains("Batch report")

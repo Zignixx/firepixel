@@ -45,7 +45,7 @@ impl Img {
         let h = imgs.iter().map(|i| i.h).max().unwrap_or(1);
         let w = imgs.iter().map(|i| i.w).sum::<u32>() + gap * imgs.len().saturating_sub(1) as u32;
         let mut px = vec![128u8; (w * h * 4) as usize];
-        for a in px.chunks_exact_mut(4) {
+        for a in px.as_chunks_mut::<4>().0 {
             a[3] = 255;
         }
         let mut x = 0;

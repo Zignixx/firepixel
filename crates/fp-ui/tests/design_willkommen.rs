@@ -251,7 +251,8 @@ fn design_willkommen_bilder() {
     let _g = LANG.lock().unwrap_or_else(|e| e.into_inner());
     let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..").join("..").join("docs").join("screenshots");
     let recent = vec![tmp_file("banner_herbst.fw.png"), tmp_file("produktfoto_2026.jpg"), tmp_file("icons_neu.fw.png"), tmp_file("aufraeumen.jsf")];
-    let cases: [(&str, &str, Vec<PathBuf>, f32, f32, f32); 5] = [
+    type Case = (&'static str, &'static str, Vec<PathBuf>, f32, f32, f32);
+    let cases: [Case; 5] = [
         ("de", "", recent.clone(), 1280.0, 860.0, 1.0),
         ("en", "_en", recent.clone(), 1280.0, 860.0, 1.0),
         ("de", "_empty", vec![], 1280.0, 860.0, 1.0),

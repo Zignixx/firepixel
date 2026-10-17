@@ -36,9 +36,11 @@ fn set_format(s: &mut Session, f: ExportFormat, m: ColorMode) {
     let d = s.active_mut().expect("doc");
     let doc = Arc::make_mut(&mut d.doc);
     let page = Arc::make_mut(&mut doc.pages[0]);
-    let mut o = OptimizeSettings::default();
-    o.format = f;
-    o.color_mode = m;
+    let o = OptimizeSettings {
+        format: f,
+        color_mode: m,
+        ..Default::default()
+    };
     let base = page.root.export.as_deref().cloned().unwrap_or_default();
     page.root.export = Some(Box::new(o.to_model(&base)));
     page.legacy_export = None;

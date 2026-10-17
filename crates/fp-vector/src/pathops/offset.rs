@@ -337,8 +337,8 @@ fn expand_closed_contour(
     if let (Some(p), Some(f)) = (carry, kept.first().copied()) {
         let dlt = p - f.p0;
         let k = kept.len() - 1;
-        kept[k].p3 = kept[k].p3 + dlt;
-        kept[k].p2 = kept[k].p2 + dlt;
+        kept[k].p3 += dlt;
+        kept[k].p2 += dlt;
         let _ = f;
     }
     if kept.len() < 2 {

@@ -216,7 +216,7 @@ fn w21_texture_shows_default_name_with_zero() {
     click(&mut h, c.center());
     let none = fp_i18n::t("pi-none");
     let items: Vec<String> = h.query_all(By::new().role(egui::accesskit::Role::Button)).filter_map(|n| n.accesskit_node().label()).collect();
-    assert!(!items.iter().any(|l| *l == none), "kein Eintrag „Ohne“ in der Texturliste");
+    assert!(!items.contains(&none), "kein Eintrag „Ohne“ in der Texturliste");
     key(&mut h, Key::Escape, Modifiers::NONE);
     h.run_steps(2);
     // gewähltes Rechteck: „Ader“ mit 0, Wählen einer anderen Textur ist ein Schritt, Rückgängig stellt her

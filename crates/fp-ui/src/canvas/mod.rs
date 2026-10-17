@@ -908,23 +908,23 @@ fn canvas_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
     // Sichtbereich melden, Erst-Einpassung, Begrenzung
     let needs_fit = st.canvases.entry(id).or_default().needs_initial_fit;
     report_viewport(st, area.size());
-    if let Some(d) = st.session.active_mut() {
-        if let Some(pr) = page_rect(&d.doc, d.page) {
-            if needs_fit {
-                if pr.width() as f64 > d.view.viewport.0 || pr.height() as f64 > d.view.viewport.1 {
-                    d.view.fit_rect(fp_geom::Rect::new(
-                        pr.left as f32,
-                        pr.top as f32,
-                        pr.right as f32,
-                        pr.bottom as f32,
-                    ));
-                } else {
-                    d.view.zoom = 1.0;
-                }
+    if let Some(d) = st.session.active_mut()
+        && let Some(pr) = page_rect(&d.doc, d.page)
+    {
+        if needs_fit {
+            if pr.width() as f64 > d.view.viewport.0 || pr.height() as f64 > d.view.viewport.1 {
+                d.view.fit_rect(fp_geom::Rect::new(
+                    pr.left as f32,
+                    pr.top as f32,
+                    pr.right as f32,
+                    pr.bottom as f32,
+                ));
+            } else {
+                d.view.zoom = 1.0;
             }
-            clamp_view_bars(&mut d.view, pr, SCROLLBAR_T);
-            align_view_to_pixels(&mut d.view, pr, area.min, ppp);
         }
+        clamp_view_bars(&mut d.view, pr, SCROLLBAR_T);
+        align_view_to_pixels(&mut d.view, pr, area.min, ppp);
     }
     if needs_fit && let Some(cc) = st.canvases.get_mut(&id) {
         cc.needs_initial_fit = false;
@@ -1973,7 +1973,7 @@ fn input(ui: &mut Ui, st: &mut AppState, area: Rect, resp: &egui::Response) {
                             dp.x.round()
                         };
                         // unveränderte Lage: kein leerer Schritt „Hilfslinie verschieben“
-                        if current != Some(pos as f32) {
+                        if current != Some(pos) {
                             st.run(
                                 "guide.move",
                                 json!({"orientation": o, "index": index, "position": pos}),
@@ -2526,7 +2526,7 @@ fn overlays(
             // die live gezogenen Griffe zeichnet `Overlay::FillLive` über dem Live-Bild (FP4-02:
             // hier gezeichnet lagen sie unter dem Bild des Objekts und waren nicht zu sehen)
             if live_fill_element(feedback, e).is_none() {
-                fill_handles(painter, e, &spp, &c);
+                fill_handles(painter, e, &spp, c);
             }
         }
         // Bewegungspfad der einzigen gewählten Animationsinstanz (TW-20)
@@ -2839,7 +2839,7 @@ fn overlays(
                     }
                     // Griffslinie am Zeiger über dem Live-Bild (re 40 §1, FP4-02)
                     if view.show_edges && fill_live_shows_handles(st.session.tools.active) {
-                        fill_handles(painter, &e, &spp, &c);
+                        fill_handles(painter, &e, &spp, c);
                     }
                 }
             }

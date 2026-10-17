@@ -96,6 +96,9 @@ pub enum PaletteIo {
     Error(String),
 }
 
+/// Export-area drag in progress: pane, handle, area and pointer at press, area before the drag.
+type CropDrag = (usize, crop::Handle, [i32; 4], egui::Pos2, Option<[i32; 4]>);
+
 /// Zustand der Bildvorschau.
 pub struct ImagePreview {
     pub mode: ViewMode,
@@ -153,7 +156,7 @@ pub struct ImagePreview {
     pub doc_size: (usize, usize),
     /// Laufendes Ziehen mit dem Werkzeug „Exportbereich“: Feld, Griff, Bereich und Druckpunkt beim
     /// Drücken, dazu der Exportbereich vor dem Ziehen (Esc stellt ihn wieder her).
-    crop_drag: Option<(usize, crop::Handle, [i32; 4], egui::Pos2, Option<[i32; 4]>)>,
+    crop_drag: Option<CropDrag>,
     /// Strg+Mausrad: angesammelte Rastungen (eine Zoomstufe je volle Rastung).
     wheel_acc: f32,
     /// „Exportieren…“ hat den Exportdialog über der Bildvorschau geöffnet; nach seinem Schließen

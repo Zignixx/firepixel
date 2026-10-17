@@ -314,7 +314,7 @@ fn tile_visible(px: &[u8], ts: usize, cw: usize, ch: usize) -> Option<[u32; 4]> 
         y0 = y0.min(y);
         y1 = y + 1;
     }
-    (x0 != usize::MAX).then(|| [x0 as u32, y0 as u32, x1 as u32, y1 as u32])
+    (x0 != usize::MAX).then_some([x0 as u32, y0 as u32, x1 as u32, y1 as u32])
 }
 
 impl TileGrid {

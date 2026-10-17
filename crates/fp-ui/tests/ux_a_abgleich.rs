@@ -951,7 +951,7 @@ fn cases() -> Vec<Case> {
             drag(&mut h, a, b, 10, Modifiers::NONE);
             text(&mut h, "Rahmen");
             key(&mut h, Key::Escape, Modifiers::NONE);
-            format!("{}", elements(&h))
+            elements(&h).to_string()
         }),
         ("T04 Doppelklick auf Text (Zeiger) → Bearbeiten", || {
             let mut h = basis();

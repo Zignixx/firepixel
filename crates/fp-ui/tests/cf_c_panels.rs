@@ -420,10 +420,10 @@ fn ct_c_11_window_menu_checks_follow_one_rule() {
         _ => None,
     });
     let sym = PanelId::SymbolProperties.title();
-    assert_eq!(checked(&nodes, &sym), Some(false), "Symboleigenschaften: hinterer Reiter ohne ✓");
+    assert_eq!(checked(&nodes, sym), Some(false), "Symboleigenschaften: hinterer Reiter ohne ✓");
     h.state_mut().state.settings.workspace.show(PanelId::SymbolProperties);
     h.run_steps(2);
-    assert_eq!(checked(&window(&h), &sym), Some(true), "vorn: ✓");
+    assert_eq!(checked(&window(&h), sym), Some(true), "vorn: ✓");
 }
 
 /// CT-C-13: Brücke – `ui_action {"panel": "window.properties"}` wirkt, `visible_panels` nennt nur

@@ -227,7 +227,7 @@ impl BitmapSelectionDialog {
 
     /// Braucht OK erst die Rückfrage (Speichern unter „Neu“ mit einem vorhandenen Namen)?
     pub fn needs_confirm(&self) -> bool {
-        self.kind == Kind::Save && self.sel == 0 && self.names.iter().any(|n| *n == self.name)
+        self.kind == Kind::Save && self.sel == 0 && self.names.contains(&self.name)
     }
 
     /// Befehl und Parameter für OK.

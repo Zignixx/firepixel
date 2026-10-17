@@ -178,7 +178,6 @@ fn focused(h: &H) -> bool {
 /// Renderers. Damit braucht der Aufruf kein `--test-threads 1` mehr.
 static GPU: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
-#[must_use]
 fn shell_off() -> std::sync::MutexGuard<'static, ()> {
     let g = GPU.lock().unwrap_or_else(|e| e.into_inner());
     fp_engine::shell::disable();

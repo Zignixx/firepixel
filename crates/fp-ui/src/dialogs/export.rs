@@ -1166,16 +1166,7 @@ fn show_full(ctx: &egui::Context, st: &mut AppState, mut d: ExportDialog) {
                 FilesStyle::HtmlAndImages | FilesStyle::ImagesOnly => {
                     push(&mut items, 0, rules.selected_slices, d.selected_slices_only);
                     push(&mut items, 1, rules.current_frame, d.current_frame_only);
-                    push(
-                        &mut items,
-                        2,
-                        rules.include_unsliced,
-                        if d.has_slices {
-                            d.include_unsliced
-                        } else {
-                            d.include_unsliced
-                        },
-                    );
+                    push(&mut items, 2, rules.include_unsliced, d.include_unsliced);
                     push(&mut items, 3, rules.subfolder, d.subfolder);
                 }
                 FilesStyle::CssAndImages => {

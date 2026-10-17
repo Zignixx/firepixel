@@ -25,9 +25,11 @@ fn session() -> fp_engine::Session {
 fn export_options_follow_page_settings() {
     let mut s = session();
     // „PNG32“ und „GIF WebSnap 256“ wie aus der Exportformat-Liste des Inspektors
-    let mut png = fp_model::ExportSettings::default();
-    png.format = 2;
-    png.color_mode = 2;
+    let png = fp_model::ExportSettings {
+        format: 2,
+        color_mode: 2,
+        ..Default::default()
+    };
     s.execute(
         "pi.export.settings",
         json!({"settings": serde_json::to_value(&png).expect("json")}),
@@ -40,12 +42,14 @@ fn export_options_follow_page_settings() {
         ),
         "PNG/32 bit/PNG32"
     );
-    let mut e = fp_model::ExportSettings::default();
-    e.format = 0;
-    e.color_mode = 0;
-    e.palette_mode = 1;
-    e.websnap_adaptive = true;
-    e.entries_requested = 256;
+    let e = fp_model::ExportSettings {
+        format: 0,
+        color_mode: 0,
+        palette_mode: 1,
+        websnap_adaptive: true,
+        entries_requested: 256,
+        ..Default::default()
+    };
     s.execute(
         "pi.export.settings",
         json!({"settings": serde_json::to_value(&e).expect("json")}),

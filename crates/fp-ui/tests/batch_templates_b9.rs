@@ -57,7 +57,7 @@ fn launch_with_template_name_or_file() {
     assert_eq!(s.recipe.steps.len(), 1);
     assert_eq!(s.recipe.output.format, "svg");
     // gleiche Dateien noch einmal: keine Doppelten, Rezept ersetzt (nicht addiert)
-    assert!(batch::launch(&mut st, Some("web-webp"), &[a.clone()]));
+    assert!(batch::launch(&mut st, Some("web-webp"), std::slice::from_ref(&a)));
     let s = batch::studio(&st).expect("Studio");
     assert_eq!(s.files.len(), 2);
     assert_eq!(s.recipe.output.format, "webp");

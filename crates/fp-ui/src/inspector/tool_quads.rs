@@ -220,17 +220,6 @@ pub fn auto_star_angle(sides: u32) -> f64 {
     (r * 100.0 + 1e-9).floor().max(0.0)
 }
 
-#[cfg(test)]
-mod parx_tools3 {
-    /// PAR 10/09: „Autom.“ setzt den Winkel je Seitenzahl wie im Original (5 → 38, 6 → 57).
-    #[test]
-    fn auto_angle_follows_sides() {
-        assert_eq!(super::auto_star_angle(5), 38.0);
-        assert_eq!(super::auto_star_angle(6), 57.0);
-        assert!(super::auto_star_angle(12) > super::auto_star_angle(6));
-    }
-}
-
 fn path_tool_q3(ui: &mut Ui, st: &mut AppState, r: Rect) {
     let d = Dl::at(r.min);
     fields::label_right(
@@ -1451,4 +1440,15 @@ fn mask_sub(ui: &mut Ui, st: &AppState, d: Dl) {
 
 fn mask_sub_q4(ui: &mut Ui, st: &mut AppState, r: Rect) {
     mask_sub(ui, st, Dl::at(r.min).offset(254.0, 0.0));
+}
+
+#[cfg(test)]
+mod parx_tools3 {
+    /// PAR 10/09: „Autom.“ setzt den Winkel je Seitenzahl wie im Original (5 → 38, 6 → 57).
+    #[test]
+    fn auto_angle_follows_sides() {
+        assert_eq!(super::auto_star_angle(5), 38.0);
+        assert_eq!(super::auto_star_angle(6), 57.0);
+        assert!(super::auto_star_angle(12) > super::auto_star_angle(6));
+    }
 }

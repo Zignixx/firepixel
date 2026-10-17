@@ -685,7 +685,7 @@ fn options_tab_fits_in_all_themes_and_languages() {
                     let all = painted_texts(&h);
                     let title = fp_i18n::t("dlg-preview-title");
                     let start = all.iter().position(|(s, r)| *s == title && rect.contains(r.center()) && r.center().y < rect.top() + dialogs::DIALOG_TITLE_H).unwrap_or(all.len());
-                    for (s, r) in all[start..].to_vec() {
+                    for (s, r) in &all[start..] {
                         assert!(!s.starts_with("image-preview-") && !s.starts_with("dlg-preview-"), "{lang}: Rohschlüssel {s}");
                         if r.is_positive() && rect.contains(r.center()) && r.center().x < left_r {
                             assert!(r.right() <= left_r - 4.0, "{lang} {theme:?} {w}×{hh} Fall {case}: „{s}“ {r:?} ragt in die Vorschau");

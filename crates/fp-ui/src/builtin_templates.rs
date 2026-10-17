@@ -221,6 +221,8 @@ const ACCENT: Argb = Argb(0xff2f_7de1);
 const WHITE: Argb = Argb(0xffff_ffff);
 
 impl Canvas {
+    // Drawing helper whose parameters mirror the primitive; same convention as elsewhere.
+    #[allow(clippy::too_many_arguments)]
     fn rect(
         &mut self,
         l: f32,

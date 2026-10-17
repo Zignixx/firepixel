@@ -185,8 +185,6 @@ fn short_time(iso: &str) -> String {
     s.chars().take(16).collect()
 }
 
-/// Dauer des Laufs in Sekunden (aus `started`/`finished`).
-
 fn status_key(s: ItemStatus) -> (&'static str, &'static str) {
     match s {
         ItemStatus::Done => ("batch-html-status-done", "ok"),

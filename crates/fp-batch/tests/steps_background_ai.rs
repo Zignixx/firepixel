@@ -238,13 +238,12 @@ fn ct_c_01_ai_run_with_tight_budget_finishes_and_cancels_quickly() {
     r2.steps[0].params = json!({"expand": 1});
     let h = fp_batch::spawn(r2, items, opts());
     loop {
-        match h
+        if let fp_batch::Progress::ItemStarted { .. } = h
             .events
             .recv_timeout(std::time::Duration::from_secs(60))
             .expect("Ereignis")
         {
-            fp_batch::Progress::ItemStarted { .. } => break,
-            _ => {}
+            break;
         }
     }
     std::thread::sleep(std::time::Duration::from_millis(300));

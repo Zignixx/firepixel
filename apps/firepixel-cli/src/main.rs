@@ -1232,9 +1232,9 @@ mod tests {
             let i = c.info();
             let (label, desc, menu) = fp_i18n::with_language("en", || {
                 (
-                    fp_mcp::tools::command_label(&i),
-                    fp_mcp::tools::command_description(&i),
-                    fp_mcp::tools::command_menu_path(&i),
+                    fp_mcp::tools::command_label(i),
+                    fp_mcp::tools::command_description(i),
+                    fp_mcp::tools::command_menu_path(i),
                 )
             });
             let k = fp_i18n::command_key(&i.name);

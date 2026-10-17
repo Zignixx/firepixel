@@ -771,6 +771,8 @@ pub const TABLE_HEAD_H: f32 = 22.0;
 /// Tabelle mit Kopf (Verlauf wie Bedienfeld-Kopfzeilen), Zebrastreifen, Hover und Auswahl, in
 /// `height` Höhe mit senkrechtem Bildlauf. `cell(ui, zeile, spalte)` zeichnet den Inhalt einer
 /// Zelle in einer beschnittenen Unter-Ui (Text dort am besten mit [`cell_text`]).
+// Drawing helper whose parameters mirror the primitive; same convention as elsewhere.
+#[allow(clippy::too_many_arguments)]
 pub fn table(
     ui: &mut Ui,
     id: impl egui::AsId,
@@ -1264,6 +1266,8 @@ impl G<'_> {
                 .rect_stroke(r, 0.0, Stroke::new(self.w(1.0), c), StrokeKind::Inside);
         }
     }
+    // Drawing helper whose parameters mirror the primitive; same convention as elsewhere.
+    #[allow(clippy::too_many_arguments)]
     fn rrect(
         &self,
         x: f32,

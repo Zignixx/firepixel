@@ -187,9 +187,9 @@ fn tw69_fast_eye_drag_hides_every_crossed_row_with_sublayer() {
 fn labels(nodes: &[fp_ui::menu::Node]) -> Vec<(String, bool)> {
     nodes
         .iter()
-        .filter_map(|n| match n {
-            fp_ui::menu::Node::Item { label, enabled, .. } | fp_ui::menu::Node::Sub { label, enabled, .. } => Some((label.clone(), *enabled)),
-            fp_ui::menu::Node::Separator => Some(("-".into(), true)),
+        .map(|n| match n {
+            fp_ui::menu::Node::Item { label, enabled, .. } | fp_ui::menu::Node::Sub { label, enabled, .. } => (label.clone(), *enabled),
+            fp_ui::menu::Node::Separator => ("-".into(), true),
         })
         .collect()
 }

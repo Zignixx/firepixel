@@ -365,7 +365,7 @@ fn render_now(
 /// Dokument und Export bleiben unverändert.
 pub fn apply_gamma_preview(img: &mut RgbaImage) {
     let t = gamma_table();
-    for px in img.as_bytes_mut().chunks_exact_mut(4) {
+    for px in img.as_bytes_mut().as_chunks_mut::<4>().0 {
         px[0] = t[px[0] as usize];
         px[1] = t[px[1] as usize];
         px[2] = t[px[2] as usize];

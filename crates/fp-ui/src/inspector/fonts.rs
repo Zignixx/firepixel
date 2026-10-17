@@ -353,11 +353,9 @@ pub fn family_combo(
             if esc {
                 ui.close();
             }
-            if enter {
-                if let Some(m) = s.mark.filter(|m| shown.contains(m)) {
-                    out = Some(m);
-                    ui.close();
-                }
+            if enter && let Some(m) = s.mark.filter(|m| shown.contains(m)) {
+                out = Some(m);
+                ui.close();
             }
             let list_top = ui.cursor().top();
             if shown.is_empty() {

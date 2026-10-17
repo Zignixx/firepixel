@@ -302,8 +302,10 @@ fn psd_optionen_reduzieren_und_merken() {
     assert_eq!(st.session.prefs.get_int("PsdExport_Layers", 0), 2);
     assert_eq!(ExportDialog::new(&st).unwrap().psd, d.psd);
     // „Benutzerdefiniert“ behält die Einzelwerte, eine Vorgabe setzt sie
-    let mut p = PsdOpts::default();
-    p.objects = 1;
+    let mut p = PsdOpts {
+        objects: 1,
+        ..Default::default()
+    };
     p.set_settings(3);
     assert_eq!(p.objects, 1);
     p.set_settings(0);
