@@ -8,30 +8,32 @@ came about is kept outside the repository ([ARCHIVE_NOTE.md](ARCHIVE_NOTE.md)).
 Firepixel is feature-complete as a preview: all menus, tools, panels, the property inspector and the dialogs of
 the reference application exist and work, FW-PNG files round-trip, and everything is drivable over CLI, JSF and
 MCP. Work is now parity polishing: a scripted comparison runner measures Firepixel against the reference
-application unit by unit, and the remaining differences are tracked as findings. Nothing has been released
-publicly yet; preview builds are made on request.
+application unit by unit, and the remaining differences are tracked as findings. Release **v0.2.0** (Windows x64,
+macOS arm64) was published as a pre-release on 17 Oct 2026; further preview builds are made on request.
 
 ## Figures
 
 | Area | Value | Source |
 |---|---|---|
 | Parity units | 48 | [PARITY.md](PARITY.md) |
-| Equal except for design | **42** (2 real deviations, 2 unclear, 2 under-measured by runner bugs fixed in R-9, not yet re-run) | run 13, 17 Oct 2026 |
-| Proven 1:1 | **88 %** (42 / 48; 91 % of the 46 sufficiently measured units) | run 13 |
-| Canvas image pairs within 1 % | 155 / 196 | newest run per unit |
-| Measurement quota of run 13 | 79.7 % (283 / 355 measurable steps both `ok`, 14 units) | run 13 |
+| Equal except for design | **42** (4 real deviations, 1 unclear, 1 under-measured) | run 14, 17 Oct 2026 |
+| Proven 1:1 | **87.5 %** (42 / 48; 89.4 % of the 47 sufficiently measured units) | run 14 |
+| Canvas image pairs within 1 % | about **179 / 200** (was 155 / 196) | newest run per unit |
+| Measurement quota, all 48 units | **84.1 %** (1031 / 1226 measurable steps both `ok`; was 83.5 %) | newest run per unit |
+| Measurement quota of run 14 | 81.1 % (163 / 201, 8 units; the same units in run 13: 77.6 %) | run 14 |
 | Workspace tests | **2486 green, 0 red, 133 ignored** | full workspace run, 17 Oct 2026 |
-| Open findings | 4 fixable `[F]` (TW-108 GIF animation palette, TW-100 half-pixel drop, PDF layers, Alt-drag), 19 deferred `[V]`, 16 informational `[N]` | [FINDINGS.md](FINDINGS.md) |
-| Real differences known | Alt-drag duplicate (TW-97, pending run 14), animated GIF palette contents (TW-108) | [PARITY.md](PARITY.md) |
+| Open findings | 7 fixable `[F]` (TW-112 colour pop-up commit, TW-113 `.act` swatch count, TW-110 symbol properties table look, TW-97 Alt-drag, PDF layers, runner TW-115/116), 21 deferred `[V]` (incl. TW-111, TW-114), 17 informational `[N]` | [FINDINGS.md](FINDINGS.md) |
+| Real differences known | Alt-drag duplicate (TW-97), colour pop-up commits on press (TW-112), `.act` swatch loader ignores the colour count (TW-113), animated GIF frame-1 palette (TW-114) | [PARITY.md](PARITY.md) |
 | Closed findings (history) | 830+ | kept outside the repository ([ARCHIVE_NOTE.md](ARCHIVE_NOTE.md)) |
 | Startup time | about 0.8 s to the first frame (release build, warm) | smoke test 17 Oct 2026 |
 
 ## Last test build
 
-Preview build `2026-10-17_17-10` from commit `a389253` (17 Oct 2026), release profile, single `firepixel.exe`
-plus `firepixel-cli.exe`; full workspace test run on that commit: 2482 passed, 0 failed, 133 ignored. Package F28
-(symbol properties panel rectangle, animated GIF transparency slot, pointer log) came after that build. Full
-workspace test run on this snapshot: 2486 passed, 0 failed, 133 ignored.
+Release **v0.2.0** (17 Oct 2026, pre-release on GitHub, Windows x64 and macOS arm64) from commit `2c54845`
+plus the version bump `10bbd8f`; it contains package F28 (symbol properties panel rectangle, animated GIF
+transparency slot, pointer log). Comparison run 14 used preview build `2026-10-17_19-47`, release profile, single
+`firepixel.exe` plus `firepixel-cli.exe`, built from the same F28 state before the history reset. Full workspace
+test run on this snapshot: 2486 passed, 0 failed, 133 ignored.
 
 ## How tests run
 
@@ -60,11 +62,12 @@ with a real mouse and drag and drop between windows need a human click-test: [VE
 
 ## Next
 
-1. Comparison run 14 for the units touched by F28 and runner R-9 (`xs-shortcuts`, `inspector-group-symbol`,
-   `xs-canvas`, `export-results`, `tool-autoshapes`, `color-popup`).
-2. Behaviour descriptions from measurements for TW-108 (GIF animation palette) and TW-100 (half-pixel drop), then
-   the fixes.
-3. Human click-test of [VERIFICATION.md](VERIFICATION.md).
-4. Pre-release v0.2.0 on request.
+1. Package **F29**: colour pop-up commits on release (TW-112), `.act` swatch import honours the colour count
+   (TW-113), symbol properties table look (TW-110).
+2. Runner **R-10**: swatch reset at unit start (TW-115), tooltip decoding and spiral `center` handle (TW-116),
+   Properties tab before `inspector` shots (TW-111), Alt-drag press point beside R1's gradient handle (TW-97),
+   fitting the reference to the large canvas (`xs-canvas`).
+3. Behaviour description **RE-11** from measurements: animated GIF quantiser (TW-114), questions Q-51 and Q-52.
+4. Comparison run 15 for the affected units, then the human click-test of [VERIFICATION.md](VERIFICATION.md).
 
 See [ROADMAP.md](../ROADMAP.md) for the complete list.

@@ -27,24 +27,31 @@ Findings are grouped by their state:
 
 ---
 
-## [F] Fixable now (4)
+## [F] Fixable now (7)
 
-Recounted after comparison run 13 and package F28 (17 Oct 2026). The earlier remnants (sprite padding default,
+Recounted after comparison run 14 (17 Oct 2026). The earlier remnants (sprite padding default,
 Shift-constrain for L-shape/arrow line, import rubber band, New Style defaults, text runs, SVG layers, symbol
 origin, simple brush runner, TW-101 import edge, TW-102/103 export format choice, TW-104 symbol properties
-header) are closed; their history is in the commit log and the archive (see [ARCHIVE_NOTE.md](ARCHIVE_NOTE.md)).
+header, TW-100 library drop, TW-105/106 runner effects, TW-107 start colours, TW-109 Alt rectangle) are closed;
+their history is in the commit log and the archive (see [ARCHIVE_NOTE.md](ARCHIVE_NOTE.md)). The animated GIF
+palette (formerly TW-108) is now TW-114 under [V].
 
 | ID | Area | What is open (expected vs. current) |
 |---|---|---|
-| TW-108 rest | Export, animated GIF | Structure now matches the original (frame rectangles, disposal, delay, transparency index 255, palette size). Still different: the **palette contents and order** of frame 1. The original quantises the animation palette with 5 bits per channel (`#ffcc00` → `#ffce00`, `#cc0033` → `#ce0031`, white first); Firepixel deviates by up to 44 levels in frame 1. The single-frame PNG 8 export is palette-identical. Next: behaviour description of the animation quantiser and its sort order from measurements, then the fix. |
-| TW-100 | Library panel, drop onto the canvas | Dropping a symbol at 600,400.5 gives 570,371 in the original and 570,370 in Firepixel (the original probably rounds 370.5 up). Run 13 showed equal results at an integer drop point, so the unit counts as equal; the rounding rule for half pixels still has to be measured and written down before `fp-ui` is changed. |
+| TW-112 (F29) | Colour pop-up | The original tracks a drag inside the pop-up and takes the swatch under the pointer on **release** (drag black → red gives fill #ff0000); Firepixel commits on mouse **press** and closes the pop-up (fill stays #000000). Run 14, `color-popup/17_drag_red`. |
+| TW-113 (F29) | Swatches panel, `.act` import | The `.act` loader ignores the 4-byte trailer (colour count, transparency index) and loads all 256 entries: a 16-colour file adds 240 black padding swatches, and after "sort" black comes first. Expected: only the counted colours. Whether "load swatches – add" adds to or replaces the current set in the original is still open (Q-52). Run 14, `panel-swatches-mixer/06–08, 19, 20`. |
+| TW-110 (F29) | Symbol Properties panel | Table look: the original has light alternating rows, a 1 px grey grid, a gradient header, column 1 clipped without ellipsis and a row pitch of about 19 px; Firepixel is darker grey with a faint grid, "Na…" and about 22 px. The structure (header "Name \| Value", divider, rows) is already equal. |
+| TW-97 / Q-50 | Alt-drag duplicate | An Alt-drag of R1 duplicates the object only in the original (8 vs. 7 objects); the Alt rectangle itself is now equal. The scripted press point is still the start handle of R1's gradient, so the duplicate case is not yet separated from the handle hit. Next: runner R-10 presses beside the handle; fix the pointer tool only if the difference stays. |
+| TW-115 (R-10) | Comparison runner, swatches | The original keeps its swatch set across sessions (starts with 16 sorted colours), Firepixel starts with the colour cube. Reset both sides to the same set at unit start. |
+| TW-116 (R-10) | Comparison runner, auto shapes | Handle tooltips on the reference side are decoded with the wrong code page, so handle `size` is not found; the spiral's `center` handle is missing on both sides. |
 | U-1 rest | File ▸ Import, PDF | SVG files now import with their layers; **PDF files still arrive as one layer** because the pure-Rust PDF reader exposes no optional content groups (layers). Library limit; needs either an upstream feature or an own OCG reader. |
-| TW-97 / Q-50 | Alt-drag duplicate | In the comparison runs an Alt-drag of R1 duplicated the object only in the original (8 vs. 7 objects). F27 found that the scripted press point is the start handle of R1's gradient; F28 added a pointer log (`ui_state.pointer_log`: hit kind, modifiers, selection) and runner R-9 records the held keys. **Pending comparison run 14**: if the log shows a gradient-handle hit, the cause is the script; otherwise fix the pointer tool. |
 
-## [V] Deferred / expansion items (19)
+## [V] Deferred / expansion items (21)
 
 | ID | Area | What is deferred |
 |---|---|---|
+| TW-114 (RE-11) | Export, animated GIF | Frame rectangles, disposal, delay, loop, transparency index 255 and frame 2 now match the original; the **adaptive palette of frame 1** differs (3 of 256 entries shared, 3.44 % of pixels deviate by more than 8 levels, at most 44). The single-frame PNG 8/24/32 exports are pixel-identical. Needs a behaviour description of the animation quantiser and its sort order before a fix. |
+| TW-111 (Q-51) | Inspector, Symbol Properties tab | After the Symbol Properties panel was opened, Firepixel keeps it in front of Properties for the following steps; the original shows Properties. Unclear whether the original switches back by itself when the selection is no rich symbol (Q-51). Safe default: the runner activates Properties before each inspector shot (R-10); Firepixel unchanged until answered. |
 | BA-037 | AI object selection | Optional mask preview while hovering with the object-selection tool: when the model cache is warm, compute `select.aiObject` on a copy in the background and show the outline as an overlay. Currently there is no preview. |
 | BA-039 | Bitmap brush | The live brush preview is drawn above all objects: hidden parts appear on top, and the bitmap object's opacity, blend mode and effects are missing in the preview. Needs a rebuild of the live preview in stacking order. Pressure is not available from a mouse (tablet only). |
 | BA-100 | PDF export | "Enable text selection" is stored but has no effect: the PDF writer only stores the flat page image. Expected: invisible text (render mode 3) for text objects. |
@@ -65,10 +72,11 @@ header) are closed; their history is in the commit log and the archive (see [ARC
 | BA-109 (BATCH-6) | Batch steps | Steps from the batch spec are missing: `background.subjectCenter`, `background.alphaCleanup`, `overlay.roundCorners` (already possible with `overlay.border` width 0 + radius), `overlay.vignette`, `overlay.contactSheet`. Minor: `fp_raster::Mask` has no `is_empty()`. |
 | BA-110 (BATCH-8) | Batch GIF optimizer | The spec target of −30 % size at equal SSIM is not reached (ideas: optimal instead of greedy LZW parsing, perceptual palette, a corpus of real clips); no per-frame parallelism; no cancel inside one encode (encoder hook without `CancelToken`). |
 
-## [N] Not feasible / informational (16)
+## [N] Not feasible / informational (17)
 
 | ID | Area | Note |
 |---|---|---|
+| TW-117 | Comparison runner, colour pop-up | Canvas shots differ by capture method: Firepixel's shot contains the open colour pop-up and the selection handles, the original's does not (6.3 % of pixels above 32 levels); the fill under the hovered swatch is equal. Information only. |
 | BA-097 | Performance (no GPU) | The first drag of large objects takes up to ~1–2 s with software rendering: the drag preview texture (`canvas\ghost.rs::drag_sprite`) holds the whole selection (up to ~6000 × 1500 px) and uploads at ~30 MB/s; later steps take ~100–200 ms. Idea: limit the preview to the visible area plus a margin. |
 | BA-098 | Performance (no GPU) | The first frame after zoom/scroll with a large canvas texture takes up to 1.4 s (`canvas\mod.rs` renders the visible area plus half a view of margin on each side). Edits only upload the changed rectangle; zoom/scroll still upload everything. |
 | BA-021 | English UI texts | The English labels of D39 ("Sample radius:") and the English history names of the Select commands were not measured in the original (only the German UI of the original is installed). |

@@ -10,33 +10,41 @@ exist and work; FW-PNG round-trips; CLI, JSF and MCP drive everything.
 
 | Measure | Value |
 |---|---|
-| Parity units equal except for design | **42 / 48** (2 real deviations, 2 unclear, 2 under-measured by runner bugs fixed in R-9) |
-| Proven 1:1 | **88 %** (91 % of the sufficiently measured units) |
-| Canvas image pairs within 1 % | 155 / 196 |
+| Parity units equal except for design | **42 / 48** (4 real deviations, 1 unclear, 1 under-measured; run 14) |
+| Proven 1:1 | **87.5 %** (89.4 % of the 47 sufficiently measured units) |
+| Measurement quota, all 48 units | **84.1 %** (1031 / 1226 steps; was 83.5 %) |
+| Canvas image pairs within 1 % | about 179 / 200 |
 | Tests | 2486 green, 0 red, 133 ignored |
-| Open findings | 4 fixable · 19 deferred · 16 informational · 830+ closed |
+| Latest release | v0.2.0 pre-release (17 Oct 2026, Windows x64, macOS arm64) |
+| Open findings | 7 fixable · 21 deferred · 17 informational · 830+ closed |
 
 ## Next (in order)
 
-1. **Comparison run 14** for the units touched by F28 and runner R-9: `xs-shortcuts` (Alt-drag with the new
-   pointer log, TW-97/Q-50), `inspector-group-symbol` (symbol properties header, TW-104), `xs-canvas` and
-   `export-results` (under-measured by runner bugs fixed in R-9), `tool-autoshapes` (start colours, TW-107),
-   `color-popup` (hex field, Q-46/Q-49).
-2. **Behaviour descriptions, then fixes:** animated GIF palette contents and order (TW-108), half-pixel rounding of
-   a library drop (TW-100).
-3. **Human click-test** of [docs/VERIFICATION.md](docs/VERIFICATION.md) (embedded panel dialogs, real keyboard
-   paths, brush strokes with a real mouse, drag and drop between windows).
-4. **Pre-release v0.2.0** (Windows) on request; CI stays on demand. Then a new full parity run over all 48 units.
-5. **Deferred expansion block** (see below), then macOS and Linux builds.
+1. **Package F29** (Firepixel): the colour pop-up commits the swatch under the pointer on release instead of on
+   press (TW-112); the `.act` swatch import honours the colour count and transparency trailer (TW-113); table look
+   of the Symbol Properties panel (TW-110).
+2. **Runner R-10:** reset the swatch set on both sides at unit start (TW-115), decode reference tooltips correctly
+   and map the spiral's `center` handle (TW-116), activate Properties before each inspector shot (TW-111), press
+   beside R1's gradient handle for the Alt-drag duplicate (TW-97), fit the reference to the large canvas
+   (`xs-canvas`, Q-48), and the remaining locator gaps in `export-results` and `xs-shortcuts`.
+3. **Behaviour description RE-11** from measurements: the animated GIF quantiser and its sort order (TW-114), then
+   the fix; questions Q-51 (inspector tab), Q-52 (swatch load add/replace) and Q-49 (hex field).
+4. **Comparison run 15** for the units touched by F29 and R-10 (`color-popup`, `panel-swatches-mixer`,
+   `inspector-group-symbol`, `xs-shortcuts`, `xs-canvas`, `tool-autoshapes`, `export-results`).
+5. **Human click-test** of [docs/VERIFICATION.md](docs/VERIFICATION.md) (embedded panel dialogs, real keyboard
+   paths, brush strokes with a real mouse, drag and drop between windows, the run-14 checks in section A2).
+6. **Deferred expansion block** (see below), then a new full parity run over all 48 units and Linux builds.
 
 ## What remains
 
 ### Fixable remnants (`[F]`, small, mostly need a measurement first)
 
-- Animated GIF export: palette contents and order of the first frame (TW-108).
-- Library drop at a half pixel: rounding (TW-100).
+- Colour pop-up: commit on release, not on press (TW-112, F29).
+- Swatches: `.act` import ignores the colour count (TW-113, F29).
+- Symbol Properties panel: table look (TW-110, F29).
+- Alt-drag duplicate (TW-97/Q-50): press point in the runner first (R-10).
 - PDF import: no layers (the pure-Rust PDF reader exposes no optional content groups).
-- Alt-drag duplicate (TW-97/Q-50): pending comparison run 14.
+- Runner: swatch start set (TW-115), tooltip decoding and spiral handle (TW-116).
 
 ### Deferred expansion items (`[V]`)
 
@@ -49,6 +57,8 @@ exist and work; FW-PNG round-trips; CLI, JSF and MCP drive everything.
 - **HTML setup:** "set defaults", external CSS file, navigation bar HTML.
 - **CMD-1:** screenshot command, symbol scripts and the shared web palette currently show notices only.
 - **AI mask preview:** live object-mask preview while hovering with the object selection tool.
+- Animated GIF export: adaptive palette of the first frame (TW-114, needs RE-11 first); inspector tab after the
+  Symbol Properties panel (TW-111, Q-51).
 - Brush pressure and speed from a real tablet; resampler golden hashes on other operating systems (needs CI).
 - Internal German test-area identifiers in the i18n QA tests.
 

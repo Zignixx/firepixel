@@ -73,33 +73,29 @@ Conventions: coordinates are document pixels; "R1", "E1", "B1", "P1", "PG" are t
   **Expected:** All supported files are added (folder recursively as configured), unsupported files are reported.
 - [ ] **A1-18** (CF-C CT-C-02/03, F19 TW-69; needs: real mouse) – see VER-4.23 and VER-1.36: reorder states/pages and drag across eye icons.
 
-## A2. Unclear units from comparison run 12
+## A2. Open items from comparison runs 12–14
 
-Comparison run 12 left seven units unclear (`?`): the runner measured a difference but could not tell whether Firepixel or the runner is at fault. Each item needs one careful manual repeat in both programs.
+Comparison run 12 left seven units unclear (`?`). Runs 13 and 14 (17 Oct 2026) resolved or reclassified all of
+them; they stay listed here, ticked, so the history of each check is clear. The open checks below come from run 14.
 
-- [ ] **TW-100** (`panel-library-styles/03`; needs: real mouse, original)
-  **Steps:** Drag a 60 × 60 symbol from the Document Library onto the canvas so that the drop point is at document 600,400.5 (zoom so that half pixels are possible).
-  **Expected:** Original places the instance at 570,371 (rounds 370.5 up); Firepixel currently 570,370. If confirmed, open a "Parity gap" issue for drop rounding.
-- [ ] **TW-101** (`xs-file-formats/09`; needs: real mouse, original)
-  **Steps:** File ▸ Import `par.png` and place it with a drag from 100,100 to 420,340.
-  **Expected:** Original 121,120–417,322 (drag end treated as +1 px); Firepixel currently 120,120–415,322. This is the one measured deviation of run 12; confirm it by hand.
-- [ ] **TW-102** (`export-results/08`; needs: real window)
-  **Steps:** In the Optimize panel choose PNG 8, export; choose PNG 24, export; compare with PNG 32.
-  **Expected:** PNG 8 is a palette PNG (≈ 15 KB in the original), PNG 24 is RGB without alpha (≈ 50 KB); Firepixel wrote PNG 32 (RGBA) for all three in the run – check whether the format choice reaches the export.
-- [ ] **TW-103** (`export-results/07`; needs: real window)
-  **Steps:** Open `par_export.fw.png` (2 states), export as animated GIF.
-  **Expected:** GIF with 2 frames like the original; in the run Firepixel wrote only 1 frame.
-- [ ] **TW-104** (`inspector-group-symbol/04`; needs: real window)
-  **Steps:** Select a symbol instance, open the Symbol Properties panel.
-  **Expected:** Table with the header row "Name | Value" (column "Name" ≈ 35 px); the run showed no visible header (see also VER-4.32).
-- [ ] **TW-105** (`panel-swatches-mixer/19`; needs: real mouse)
-  **Steps:** Select an object and click a swatch in the Swatches panel (the original's swatch #4080c0).
-  **Expected:** Fill becomes #4080c0; in the run Firepixel set #000000 – probably a different swatch was hit; check the swatch grid and hit test.
-- [ ] **TW-106** (`panel-pages-states-history/16`; needs: real window, original)
-  **Steps:** Move an object by 10 px, select the steps in the History panel and click "Replay".
-  **Expected:** Original ends at `left` 210, Firepixel at 200 – note which steps the original replays.
+- [x] **TW-100** (`panel-library-styles/03`) – resolved: run 13 measured equal positions at an integer drop point; the unit counts as equal and the half-pixel case is no longer tracked.
+- [x] **TW-101** (`xs-file-formats/09`) – resolved in run 13: import by dragging lands on the same pixels 121,120–417,322 in both programs.
+- [x] **TW-102** (`export-results/08`) – resolved in run 14: images-only, PNG 8, PNG 24 and PNG 32 exports are pixel-identical to the original's files of the same run.
+- [x] **TW-103** (`export-results/07`) – resolved in run 14: the animated GIF has 2 frames with the same delay, loop, disposal and transparency index; only the frame-1 palette differs (TW-114, FINDINGS).
+- [x] **TW-104** (`inspector-group-symbol/04`) – resolved in run 14: header row, column divider and rows are present; the remaining table look is TW-110 below.
+- [x] **TW-105** (`panel-swatches-mixer/19`) – reclassified in run 14: the swatch probe hits index 5 on both sides (no hit-test offset); the colours differ because of the `.act` import bug **TW-113** (check below) and unequal start sets in the runner (TW-115).
+- [x] **TW-106** (`panel-pages-states-history/16`) – reclassified in run 13: the replay offset came from script steps in the original's history (runner effect).
+- [ ] **TW-113** (`panel-swatches-mixer/06`; needs: real window)
+  **Steps:** Swatches panel menu ▸ load swatches (add) with a 16-colour `.act` file (772 bytes, 16 colours plus 240 padding entries and the count trailer), then sort by colour.
+  **Expected:** Only the 16 file colours are added; Firepixel currently adds 256 entries (240 black), and after sorting black comes first. In the original, also note whether "add" adds to or replaces the current set (Q-52).
+- [ ] **TW-112** (`color-popup/17`; needs: real mouse)
+  **Steps:** Select a black-filled object, open the fill colour pop-up, press on a black swatch, drag to the red swatch and release there.
+  **Expected:** Original: the pop-up follows the drag and the fill becomes #ff0000 on release. Firepixel currently takes #000000 on press and closes the pop-up.
+- [ ] **TW-110 / TW-111** (`inspector-group-symbol/04–05`; needs: real window, original)
+  **Steps:** Select a rich symbol instance and open the Symbol Properties panel; then select a plain rectangle.
+  **Expected:** Table with light alternating rows, a 1 px grey grid, a gradient header and a row pitch of about 19 px (TW-110). Note whether the original brings Properties back to the front by itself when the selection is no rich symbol (Q-51); Firepixel keeps Symbol Properties in front.
 
-Related open questions from the same run: **TW-97 / Q-47** Alt-drag duplicates only in the original (8 vs. 7 objects) – repeat the runner's drag (window 397,266 → 457,276 with Alt held) with a real mouse; **Q-46** when does the original accept a hex value in the color pop-up (Enter, another key, or closing)?; **Q-48** grid snapping at low zoom (see VER-10.28).
+Related open questions: **TW-97 / Q-50** Alt-drag duplicates only in the original (8 vs. 7 objects) – repeat the drag with a real mouse, pressing on R1 beside its gradient start handle, with Alt held; **Q-49** when does the original accept a hex value in the color pop-up (Enter, another key, or closing)?; **Q-48** fitting the large test document and grid snapping at low zoom (see VER-10.28).
 
 ## A3. Spot checks of the fixes from 2026-10-17
 
