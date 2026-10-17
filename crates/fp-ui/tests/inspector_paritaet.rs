@@ -304,24 +304,24 @@ fn number_fields_behave_like_digit_fields() {
 
 // ------------------------------------------------------------------ O14: gemischte Werte
 
-/// Mehrfachauswahl: Deckkraft/Stil leer; Füllfarbe des zuletzt gewählten Objekts.
+/// Multi-selection: opacity/style blank; fill colour of the topmost object in stacking order,
+/// independent of the selection order (TW-120, re 45 §3).
 #[test]
-fn o14_mixed_values_and_last_selected_color() {
+fn o14_mixed_values_and_topmost_color() {
     let (mut h, r1, r2) = two_rects();
     let _ = h.state_mut().state.session.execute("element.setOpacity", json!({"opacity": 50}));
     let _ = h.state_mut().state.session.execute("select.set", json!({"ids": [r1]}));
-    // R1 zuerst, dann R2 mit Umschalt dazu (Auswahlreihenfolge)
     let _ = h.state_mut().state.session.execute("select.set", json!({"ids": [r2], "mode": "add"}));
     h.run_steps(3);
     assert_eq!(sel(&h), vec![r1, r2]);
     let a = fp_ui::inspector::obj_quads::shown_attrs(st(&h)).expect("Attribute");
-    assert_eq!(a.fill_color.0 & 0x00ff_ffff, 0x0000ff, "Farbe des zuletzt gewählten (blau)");
-    assert!(inputs(&h).iter().all(|(_, v)| v != "50" && v != "100"), "Deckkraft gemischt = leer: {:?}", inputs(&h));
-    // andere Reihenfolge: zuletzt R1 → rot
+    assert_eq!(a.fill_color.0 & 0x00ff_ffff, 0x0000ff, "topmost (R2, blue)");
+    assert!(inputs(&h).iter().all(|(_, v)| v != "50" && v != "100"), "mixed opacity = blank: {:?}", inputs(&h));
+    // reverse selection order: still the topmost (blue)
     let _ = h.state_mut().state.session.execute("select.set", json!({"ids": [r2, r1]}));
     h.run_steps(2);
     let a = fp_ui::inspector::obj_quads::shown_attrs(st(&h)).expect("Attribute");
-    assert_eq!(a.fill_color.0 & 0x00ff_ffff, 0xff0000, "Farbe des zuletzt gewählten (rot)");
+    assert_eq!(a.fill_color.0 & 0x00ff_ffff, 0x0000ff, "topmost (R2, blue)");
 }
 
 // ------------------------------------------------------------------ W2: gedrückte Formknöpfe

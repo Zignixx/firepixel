@@ -61,20 +61,35 @@ pub fn selection(st: &AppState) -> Vec<Arc<Element>> {
         .unwrap_or_default()
 }
 
+/// Selected elements in stacking order, topmost first (upper layer first).
+pub fn selection_stacked(st: &AppState) -> Vec<Arc<Element>> {
+    st.session
+        .active()
+        .map(|d| {
+            fp_engine::docops::paths_sorted(&d.doc, d.page, &d.selection.elements)
+                .iter()
+                .filter_map(|p| d.doc.element_at(p).cloned())
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+/// Element whose values the inspector shows: with several objects selected the **topmost** one
+/// in stacking order (TW-120, re 45 §3).
 fn first(st: &AppState) -> Option<Arc<Element>> {
-    selection(st).into_iter().next()
+    selection_stacked(st).into_iter().next()
 }
 
 fn first_attrs(st: &AppState) -> Option<Arc<PathAttrs>> {
     shown_attrs(st)
 }
 
-/// Füll-/Strichattribute, die der Inspektor zeigt: bei Mehrfachauswahl die des **zuletzt**
-/// gewählten Objekts (Auswahlreihenfolge), wie im Original (UX-A O14/O15, a_308).
+/// Fill/stroke attributes the inspector shows: with several objects selected those of the
+/// **topmost** object in stacking order (TW-120, re 45 §3: R+Text shows the text's black fill,
+/// E1+R1 shows E1's stroke whatever the selection order).
 pub fn shown_attrs(st: &AppState) -> Option<Arc<PathAttrs>> {
-    selection(st)
+    selection_stacked(st)
         .iter()
-        .rev()
         .find_map(|e| fp_engine::docops::path_attrs_of(e))
 }
 
@@ -505,11 +520,10 @@ fn mirror_fill_to_tool(ctx: &egui::Context, st: &mut AppState) {
     }
 }
 
-/// Winkel der Füllgriffe des zuletzt gewählten Objekts (Verlaufs-/Muster-Popup).
+/// Angle of the fill handles of the shown (topmost) object (gradient/pattern popup).
 fn selection_fill_angle(st: &AppState) -> Option<f64> {
-    selection(st)
+    selection_stacked(st)
         .iter()
-        .rev()
         .find_map(|e| ui_commands::handles_of(e))
         .filter(|h| h.valid)
         .map(|h| ui_commands::handles_angle(&h))
