@@ -1,12 +1,12 @@
-# Pre-Release: Version hochzaehlen (Minor), Windows x64 und macOS arm64 bauen, Tag + Pre-Release
-# mit beiden ZIPs anlegen. Nur manuell (workflow_dispatch); siehe docs/RELEASE.md.
+# Pre-release: bump the version (minor), build Windows x64 and macOS arm64, create a tag and a
+# pre-release with both ZIPs. Manual only (workflow_dispatch); see docs/RELEASE.md.
 name: prerelease
 
 on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Version (z. B. 0.3.0); leer = letzte Version mit Minor + 1"
+        description: "Version (e.g. 0.3.0); empty = latest version with minor + 1"
         type: string
         required: false
         default: ""
@@ -20,7 +20,7 @@ permissions:
 
 jobs:
   version:
-    name: Version setzen
+    name: Set version
     runs-on: ubuntu-latest
     timeout-minutes: 15
     outputs:
@@ -33,7 +33,7 @@ jobs:
           ref: main
           fetch-depth: 0
 
-      - name: Naechste Version bestimmen
+      - name: Determine next version
         id: ver
         env:
           INPUT_VERSION: ${{ inputs.version }}
@@ -49,12 +49,12 @@ jobs:
             version="${major}.$((minor + 1)).0"
           fi
           if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "::error::Ungueltige Version '$version' (erwartet X.Y.Z)"; exit 1
+            echo "::error::Invalid version '$version' (expected X.Y.Z)"; exit 1
           fi
           if git rev-parse -q --verify "refs/tags/v$version" >/dev/null; then
-            echo "::error::Tag v$version existiert bereits"; exit 1
+            echo "::error::Tag v$version already exists"; exit 1
           fi
-          echo "Letzter Tag: ${prev_tag:-keiner}, Cargo.toml: $cargo_ver -> neu: $version"
+          echo "Previous tag: ${prev_tag:-none}, Cargo.toml: $cargo_ver -> new: $version"
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "prev_tag=$prev_tag" >> "$GITHUB_OUTPUT"
 
@@ -63,7 +63,7 @@ jobs:
           rustup toolchain install stable --profile minimal
           rustup default stable
 
-      - name: Version in Cargo.toml/Cargo.lock setzen und auf main committen
+      - name: Set version in Cargo.toml/Cargo.lock and commit to main
         id: commit
         env:
           VERSION: ${{ steps.ver.outputs.version }}
@@ -74,7 +74,7 @@ jobs:
           git diff --stat
           changed=$(git diff --name-only | sort | tr '\n' ' ')
           if [ -n "$changed" ] && [ "$changed" != "Cargo.lock Cargo.toml " ]; then
-            echo "::error::Unerwartete Aenderungen: $changed"; exit 1
+            echo "::error::Unexpected changes: $changed"; exit 1
           fi
           if [ -n "$changed" ]; then
             git config user.name "github-actions[bot]"
@@ -100,7 +100,7 @@ jobs:
       ref: ${{ needs.version.outputs.sha }}
 
   release:
-    name: Tag und Pre-Release
+    name: Tag and pre-release
     needs: [version, windows, macos]
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -115,35 +115,47 @@ jobs:
           path: dist
           merge-multiple: true
 
-      - name: Notizen erzeugen
+      - name: Generate release notes
         env:
           VERSION: ${{ needs.version.outputs.version }}
           PREV: ${{ needs.version.outputs.prev_tag }}
         run: |
           set -euo pipefail
           ls -la dist
+          # Only use the previous tag if it is part of the current history (older tags from a
+          # rewritten history are ignored).
+          if [ -n "$PREV" ] && ! git merge-base --is-ancestor "$PREV" HEAD 2>/dev/null; then
+            echo "::warning::Previous tag $PREV is not an ancestor of HEAD; treating as initial release"
+            PREV=""
+          fi
           {
-            echo "Vorschau-Version **$VERSION** von Firepixel (Pre-Release, nicht final)."
+            echo "# Firepixel $VERSION (pre-release)"
             echo
-            echo "- **Windows x64:** ZIP entpacken, \`firepixel.exe\` starten."
-            echo "- **macOS (Apple Silicon):** ZIP entpacken, \`Firepixel.app\` per Rechtsklick > Oeffnen starten (ad-hoc signiert, nicht notarisiert)."
+            echo "This is a preview build, not a final release."
+            echo
+            echo "## Installation"
+            echo
+            echo "- **Windows x64:** unzip \`Firepixel-Windows-x64-$VERSION.zip\` and start \`firepixel.exe\`. No installer is needed."
+            echo "- **macOS (Apple Silicon):** unzip \`Firepixel-macOS-arm64-$VERSION.zip\`. The app is ad-hoc signed and not notarised, so on first launch right-click \`Firepixel.app\` > **Open** and confirm (or run \`xattr -dr com.apple.quarantine Firepixel.app\`)."
+            echo
+            echo "The command-line tool \`firepixel-cli\` and the manuals (English and German) are included in both packages."
             echo
             if [ -n "$PREV" ]; then
-              echo "### Aenderungen seit $PREV"
-              range="$PREV..HEAD"
+              echo "## Changes since $PREV"
+              echo
+              git log "$PREV..HEAD" --no-merges --max-count=100 --pretty='- %s' \
+                | grep -v -E '^- Version [0-9.]+ \[skip ci\]$' || true
+              total=$(git rev-list --no-merges --count "$PREV..HEAD")
+              if [ "$total" -gt 100 ]; then echo; echo "...and $((total - 100)) more commits."; fi
             else
-              echo "### Aenderungen (erste Vorschau, letzte 60 Commits)"
-              range="HEAD"
+              echo "## Changes"
+              echo
+              echo "Initial public pre-release."
             fi
-            echo
-            git log "$range" --no-merges --max-count=60 --pretty='- %s' \
-              | grep -v -E '^- Version [0-9.]+ \[skip ci\]$' || true
-            total=$(git rev-list --no-merges --count $range)
-            if [ "$total" -gt 60 ]; then echo; echo "… und $((total - 60)) weitere Commits."; fi
           } > notes.md
           cat notes.md
 
-      - name: Tag und Pre-Release anlegen
+      - name: Create tag and pre-release
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ needs.version.outputs.version }}
@@ -153,6 +165,6 @@ jobs:
           gh release create "v$VERSION" dist/*.zip \
             --target "$SHA" \
             --prerelease \
-            --title "Firepixel $VERSION (Vorschau)" \
+            --title "Firepixel $VERSION (pre-release)" \
             --notes-file notes.md
           gh release view "v$VERSION" --json url --jq .url

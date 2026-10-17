@@ -4,9 +4,9 @@
 
 | File | Trigger | Content |
 |---|---|---|
-| `windows-ci.yml` | manual only (`workflow_dispatch`) or called from `prerelease.yml` (`workflow_call`); push and PR trigger nothing | `cargo check --workspace --all-targets` (warning-free), tests without fp-ui, fp-ui tests (kittest), release build as an artifact – four jobs in parallel |
-| `macos-preview.yml` | manual only (input `tests`, default off) or called from `prerelease.yml` | `Firepixel.app` (Apple Silicon), ad-hoc signed, ZIP with CLI, manuals, licence |
-| `prerelease.yml` | manual only | bump version, build Windows + macOS, tag and pre-release |
+| `windows-ci.yml` | manual only (`workflow_dispatch`) or called from `prerelease.yml` (`workflow_call`, inputs `ref` and `package`); push and PR trigger nothing | four jobs in parallel: *cargo check (warning-free)*, *Tests (without fp-ui)*, *Tests fp-ui (kittest)*, *Release build (x64)* as the artifact `Firepixel-Windows-x64`. Called with `package: true` only the release build runs and uploads the ZIP as `release-windows` |
+| `macos-preview.yml` | manual only (input `tests`, default off) or called from `prerelease.yml` (input `ref`) | job *Firepixel.app (arm64)*: `Firepixel.app` (Apple Silicon), ad-hoc signed, ZIP with CLI, manuals, licence (artifact `Firepixel-macOS-arm64`), plus a 20 s startup probe; optional job *Tests (platform-neutral crates)* |
+| `prerelease.yml` | manual only (input `version`, optional) | jobs *Set version*, *Windows x64*, *macOS arm64*, *Tag and pre-release* |
 
 ## Triggering a pre-release
 
@@ -18,18 +18,30 @@ Locally in the repository:
 ```
 
 The script starts `gh workflow run prerelease.yml`, waits for it to finish and prints the release
-URL. Alternatively on GitHub: *Actions ▸ prerelease ▸ Run workflow*.
+URL. Without the script:
+
+```powershell
+gh workflow run prerelease.yml --ref main                  # next version automatically
+gh workflow run prerelease.yml --ref main -f version=0.5.0 # explicit version
+gh run watch
+```
+
+Alternatively on GitHub: *Actions ▸ prerelease ▸ Run workflow* (field *Version*, empty = automatic).
 
 Steps in the workflow:
 
-1. **Version**: highest tag `v0.*.0`, otherwise `[workspace.package] version` from `Cargo.toml`;
+1. **Set version**: highest tag `v0.*.0`, otherwise `[workspace.package] version` from `Cargo.toml`;
    minor + 1 (first run: `0.1.0` → `v0.2.0`). An explicitly entered version takes precedence.
 2. Set the version in `Cargo.toml`/`Cargo.lock`, bot commit `Version X.Y.0 [skip ci]` on `main`.
 3. In parallel: Windows x64 (`Firepixel-Windows-x64-X.Y.0.zip`: `firepixel.exe`, `firepixel-cli.exe`,
-   `LICENSE`, `docs\MANUAL.md`, `docs\MANUAL.en.md`) and macOS arm64
-   (`Firepixel-macOS-arm64-X.Y.0.zip`: `Firepixel.app`, `firepixel-cli`, manuals, `LICENSE`).
-4. Tag `vX.Y.0` on the version commit, **pre-release** with both ZIPs and short German notes
-   (commits since the last tag, at most 60).
+   `LICENSE`, `docs\MANUAL.md`, `docs\MANUAL.de.md`) and macOS arm64
+   (`Firepixel-macOS-arm64-X.Y.0.zip`: `Firepixel.app`, `firepixel-cli`, `MANUAL.md`,
+   `MANUAL.de.md`, `LICENSE`).
+4. **Tag and pre-release**: tag `vX.Y.0` on the version commit, **pre-release** titled
+   `Firepixel X.Y.0 (pre-release)` with both ZIPs. The English notes contain install hints for
+   Windows and macOS and a changelog: the commits since the previous tag (at most 100, version bump
+   commits left out) if that tag is part of the current history, otherwise
+   "Initial public pre-release".
 
 ## Versioning
 
