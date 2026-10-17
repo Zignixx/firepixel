@@ -25,6 +25,7 @@ pub mod install;
 pub mod models;
 pub mod palette;
 pub mod round;
+pub mod swatch_sets;
 pub mod swatches;
 
 pub use palette::Palette;

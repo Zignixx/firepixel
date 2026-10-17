@@ -789,6 +789,11 @@ pub fn open(st: &mut AppState, name: &str) -> bool {
             return true;
         }
         // Farbfelder
+        "panel.swatches.sortByColor" => {
+            let cols = crate::panels::color::last_grid_columns();
+            st.run(name, json!({ "columns": cols }));
+            return true;
+        }
         "panel.swatches.add" | "panel.swatches.replace" => {
             open_then_run(st, &t("dlg-pmenu-open-swatches"), SWATCH_FILES, name);
             return true;
@@ -1037,6 +1042,7 @@ pub fn needs_ui(name: &str) -> bool {
             | "panel.swatches.add"
             | "panel.swatches.replace"
             | "panel.swatches.save"
+            | "panel.swatches.sortByColor"
             | "panel.optimize.saveSettings"
             | "panel.optimize.deleteSettings"
             | "panel.optimize.optimizeToSize"

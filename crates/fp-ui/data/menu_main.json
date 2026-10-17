@@ -1761,17 +1761,17 @@
 "text": "Farbfelder",
 "children": [
 {
-"text": "F&arbfelder hinzufügen...",
+"text": "F&arbfelder hinzufügen",
 "key": "cmd-panel-swatches-add",
 "id": 35096
 },
 {
-"text": "Fa&rbfelder ersetzen...",
+"text": "Fa&rbfelder ersetzen",
 "key": "cmd-panel-swatches-replace",
 "id": 35097
 },
 {
-"text": "Farbfelder &speichern...",
+"text": "Farbfelder &speichern",
 "key": "cmd-panel-swatches-save",
 "id": 35098
 },

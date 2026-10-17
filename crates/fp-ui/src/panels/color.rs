@@ -1,11 +1,12 @@
 //! Farbfelder (`CSwatchesPanel`, 4140), Farbmischer (`CColorMixer`, 4125) und Farbpalette
 //! (Flash-Bedienfeld „Color Palette“, nativ nachgebaut).
 //!
-//! Farbfeldsätze (14 §2.1) und eigene Farbfelder stehen in den Voreinstellungen und werden über
-//! die Befehle `panel.swatches.*` (fp-engine) geändert: „Farbwürfel“ (Web 216 im Würfel),
-//! „Kontinuierlicher Farbton“ (Web 216 nach Farbton), Windows- und Macintosh-Systempalette,
-//! „Graustufen“ 256 Stufen, „Benutzerdefiniert“. Dateien ACT/ASE/ACO/GIF über fp-color.
-//! Sortieren nach Farbe wie `@006741a0` (kleinstes H8, Gleichstand → letzter).
+//! Swatch sets and custom swatches live in the preferences and are changed through the
+//! `panel.swatches.*` commands (fp-engine). Built-in sets (`fp_color::swatch_sets`): "Color
+//! Cubes" = 315-colour hue ramp (default), "Continuous Tone" = web-216 cube in rows of 21,
+//! Windows and Macintosh system palettes, 256-step grey ramp; custom = loaded/edited swatches.
+//! The grid has a 9 px pitch (8 px colour, 1 px line); columns = (width − scrollbar) / 9, and
+//! "Sort by Color" sorts each grid row of that width by brightness.
 
 use super::common;
 use crate::app_state::{Action, AppState};
@@ -15,6 +16,38 @@ use crate::ui_commands;
 use egui::{Align2, Color32, Id, Rect, Sense, Stroke, StrokeKind, Ui, pos2, vec2};
 use fp_color::{Argb, Rgba8};
 use serde_json::json;
+use std::sync::atomic::{AtomicUsize, Ordering};
+
+/// Grid pitch of the swatches panel (8 px colour + 1 px line).
+pub const SWATCH_PITCH: f32 = fp_color::swatch_sets::GRID_PITCH as f32;
+/// Size of the colour square inside a grid cell.
+pub const SWATCH_CELL: f32 = SWATCH_PITCH - 1.0;
+/// Width reserved for the vertical scrollbar beside the grid.
+pub const SWATCH_SCROLLBAR_W: f32 = 17.0;
+
+static GRID_COLUMNS: AtomicUsize = AtomicUsize::new(ui_commands::SWATCH_SORT_COLUMNS);
+
+/// Columns of the swatch grid for a client width: `(width − scrollbar) / 9`, at least 1.
+pub fn swatch_grid_columns(client_w: f32) -> usize {
+    fp_color::swatch_sets::grid_columns(client_w.max(0.0) as u32, SWATCH_SCROLLBAR_W as u32)
+}
+
+/// Column count of the most recently drawn swatch grid (for "Sort by Color").
+pub fn last_grid_columns() -> usize {
+    GRID_COLUMNS.load(Ordering::Relaxed).max(1)
+}
+
+/// Cell of swatch `i` (index 0 top left, row by row): the 9 × 9 px pitch rectangle.
+pub fn swatch_cell_rect(origin: egui::Pos2, i: usize, cols: usize) -> Rect {
+    let cols = cols.max(1);
+    Rect::from_min_size(
+        pos2(
+            origin.x + (i % cols) as f32 * SWATCH_PITCH,
+            origin.y + (i / cols) as f32 * SWATCH_PITCH,
+        ),
+        vec2(SWATCH_PITCH, SWATCH_PITCH),
+    )
+}
 
 /// Farbfeldsätze: Anzeigename und Nummer der Voreinstellung `SwatchesPanelColorPaletteChoice`
 /// (0 Farbwürfel, 1 benutzerdefiniert, 2 Graustufen, 3 Mac, 4 Windows, 5 Kontinuierlicher Farbton).
@@ -119,7 +152,12 @@ pub fn swatches(ui: &mut Ui, st: &mut AppState) {
             ("panel-swatches-sort", "panel.swatches.sortByColor"),
         ] {
             if fields::list_item(ui, &common::t(label), false).clicked() {
-                st.run(cmd, json!({}));
+                let args = if cmd == "panel.swatches.sortByColor" {
+                    json!({"columns": last_grid_columns()})
+                } else {
+                    json!({})
+                };
+                st.run(cmd, args);
                 ui.close();
             }
         }
@@ -128,13 +166,12 @@ pub fn swatches(ui: &mut Ui, st: &mut AppState) {
             ui.close();
         }
     });
-    // Raster
-    let cell = 12.0;
-    let avail = ui.available_width() - 4.0;
-    let cols = ((avail / cell).floor() as usize).max(1);
+    // Raster: 9 px pitch, columns from the width minus the scrollbar
+    let cols = swatch_grid_columns(ui.available_width());
+    GRID_COLUMNS.store(cols, Ordering::Relaxed);
     let rows = colors.len().div_ceil(cols).max(1);
     let (rect, resp) = ui.allocate_exact_size(
-        vec2(cols as f32 * cell, rows as f32 * cell),
+        vec2(cols as f32 * SWATCH_PITCH, rows as f32 * SWATCH_PITCH),
         Sense::click_and_drag(),
     );
     resp.widget_info(|| {
@@ -144,18 +181,15 @@ pub fn swatches(ui: &mut Ui, st: &mut AppState) {
             common::t("panel-swatches-grid"),
         )
     });
-    ui.painter().rect_filled(rect, 0.0, theme.colors.line_dark);
+    ui.painter().rect_filled(rect, 0.0, Color32::BLACK);
     let mut hovered = None;
     for (i, c) in colors.iter().enumerate() {
-        let r = Rect::from_min_size(
-            pos2(
-                rect.left() + (i % cols) as f32 * cell,
-                rect.top() + (i / cols) as f32 * cell,
-            ),
-            vec2(cell, cell),
+        let r = swatch_cell_rect(rect.min, i, cols);
+        ui.painter().rect_filled(
+            Rect::from_min_size(r.min, vec2(SWATCH_CELL, SWATCH_CELL)),
+            0.0,
+            Color32::from_rgb(c.r(), c.g(), c.b()),
         );
-        ui.painter()
-            .rect_filled(r.shrink(0.5), 0.0, Color32::from_rgb(c.r(), c.g(), c.b()));
         if resp.hover_pos().is_some_and(|p| r.contains(p)) {
             hovered = Some(i);
             ui.painter()
@@ -170,16 +204,8 @@ pub fn swatches(ui: &mut Ui, st: &mut AppState) {
     // Farbfeld auf ein Objekt ziehen: Füllfarbe (Umschalt: Strichfarbe)
     if resp.drag_started()
         && let Some(o) = ui.input(|i| i.pointer.press_origin())
-        && let Some(i) = (0..colors.len()).find(|i| {
-            Rect::from_min_size(
-                pos2(
-                    rect.left() + (i % cols) as f32 * cell,
-                    rect.top() + (i / cols) as f32 * cell,
-                ),
-                vec2(cell, cell),
-            )
-            .contains(o)
-        })
+        && let Some(i) =
+            (0..colors.len()).find(|&i| swatch_cell_rect(rect.min, i, cols).contains(o))
     {
         super::drag_drop::start(ui.ctx(), super::drag_drop::Payload::Color(colors[i].0));
     }
@@ -598,17 +624,49 @@ mod tests {
 
     #[test]
     fn sets_and_files() {
-        assert_eq!(ui_commands::swatch_set(0).len(), 216);
+        let cubes = ui_commands::swatch_set(0);
+        assert_eq!(cubes.len(), 315);
+        assert_eq!(cubes[0], Argb(0xffff_bfbf));
+        assert_eq!(cubes[5], Argb(0xffef_ffbf));
+        assert_eq!(cubes[314], Argb(0xffff_007f));
+        let tone = ui_commands::swatch_set(5);
+        assert_eq!(tone.len(), 253);
+        assert_eq!(tone[3], Argb(0xffcc_ffff));
+        assert_eq!(tone[252], Argb(0xff00_0000));
         assert_eq!(ui_commands::swatch_set(2).len(), 256);
         assert_eq!(ui_commands::swatch_set(3).len(), 256);
         assert_eq!(ui_commands::swatch_set(4).len(), 256);
-        assert_eq!(ui_commands::swatch_set(5).len(), 216);
+        assert!(ui_commands::swatch_set(1).is_empty());
         let cols = vec![Argb(0xffff_0000), Argb(0xff00_ff00), Argb(0xff00_00ff)];
         for ext in ["act", "ase", "aco"] {
             let b = write_swatch_bytes(ext, &cols);
             assert_eq!(read_swatch_bytes(ext, &b), Some(cols.clone()), "{ext}");
         }
-        let sorted = sort_by_color(&[Argb(0xff00_00ff), Argb(0xff80_8080), Argb(0xff00_ff00)]);
-        assert_eq!(sorted[0], Argb(0xff80_8080));
+        let sorted = sort_by_color(
+            &[Argb(0xff00_00ff), Argb(0xff80_8080), Argb(0xff00_ff00)],
+            21,
+        );
+        assert_eq!(
+            sorted,
+            vec![Argb(0xff00_ff00), Argb(0xff00_00ff), Argb(0xff80_8080)]
+        );
+    }
+
+    #[test]
+    fn grid_pitch_and_order() {
+        assert_eq!(SWATCH_PITCH, 9.0);
+        assert_eq!(SWATCH_CELL, 8.0);
+        // 21 columns as in the reference panel: 21 · 9 + scrollbar.
+        assert_eq!(swatch_grid_columns(21.0 * 9.0 + SWATCH_SCROLLBAR_W), 21);
+        assert_eq!(
+            swatch_grid_columns(21.0 * 9.0 + SWATCH_SCROLLBAR_W - 1.0),
+            20
+        );
+        assert_eq!(swatch_grid_columns(5.0), 1);
+        let o = pos2(2.0, 23.0);
+        assert_eq!(swatch_cell_rect(o, 0, 21).min, pos2(2.0, 23.0));
+        assert_eq!(swatch_cell_rect(o, 5, 21).min, pos2(47.0, 23.0));
+        assert_eq!(swatch_cell_rect(o, 21, 21).min, pos2(2.0, 32.0));
+        assert_eq!(swatch_cell_rect(o, 22, 21).size(), vec2(9.0, 9.0));
     }
 }
