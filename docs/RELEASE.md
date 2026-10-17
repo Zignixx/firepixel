@@ -47,7 +47,7 @@ Steps in the workflow:
 
 - Previews are released as `0.Y.0`; every run increases only the minor part.
 - **`v1.0` happens only at the user's explicit request** (input `version`; the script asks for
-  confirmation for 1.x). Without input it stays at `0.*`.
+  confirmation for 1.x and continues only on `yes`). Without input it stays at `0.*`.
 - An already existing tag aborts the run before building.
 
 ## Cost (GitHub Actions minutes, private repository)
