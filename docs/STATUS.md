@@ -1,6 +1,6 @@
 # Status
 
-Last updated: **17 Oct 2026**. This page is the single place for the current figures; the history of how they
+Last updated: **18 Oct 2026**. This page is the single place for the current figures; the history of how they
 came about is kept outside the repository ([ARCHIVE_NOTE.md](ARCHIVE_NOTE.md)).
 
 ## In one paragraph
@@ -16,14 +16,14 @@ macOS arm64) was published as a pre-release on 17 Oct 2026; further preview buil
 | Area | Value | Source |
 |---|---|---|
 | Parity units | 48 | [PARITY.md](PARITY.md) |
-| Equal except for design | **42** (4 real deviations, 1 unclear, 1 under-measured) | run 14, 17 Oct 2026 |
-| Proven 1:1 | **87.5 %** (42 / 48; 89.4 % of the 47 sufficiently measured units) | run 14 |
-| Canvas image pairs within 1 % | about **179 / 200** (was 155 / 196) | newest run per unit |
-| Measurement quota, all 48 units | **84.1 %** (1031 / 1226 measurable steps both `ok`; was 83.5 %) | newest run per unit |
-| Measurement quota of run 14 | 81.1 % (163 / 201, 8 units; the same units in run 13: 77.6 %) | run 14 |
+| Equal except for design | **44** (2 real deviations, 2 unclear, 0 under-measured) | run 15, 17/18 Oct 2026 |
+| Proven 1:1 | **91.7 %** (44 / 48; no unit under-measured) | run 15 |
+| Canvas image pairs within 1 % | about **177 / 201** (was 179 / 200) | newest run per unit |
+| Measurement quota, all 48 units | **84.8 %** (1041 / 1228 measurable steps both `ok`; was 84.1 %) | newest run per unit |
+| Measurement quota of run 15 | 86.9 % (153 / 176, 7 units; the same units in run 14: 82.2 %) | run 15 |
 | Workspace tests | **2486 green, 0 red, 133 ignored** | full workspace run, 17 Oct 2026 |
-| Open findings | 7 fixable `[F]` (TW-112 colour pop-up commit, TW-113 `.act` swatch count, TW-110 symbol properties table look, TW-97 Alt-drag, PDF layers, runner TW-115/116), 21 deferred `[V]` (incl. TW-111, TW-114), 17 informational `[N]` | [FINDINGS.md](FINDINGS.md) |
-| Real differences known | Alt-drag duplicate (TW-97), colour pop-up commits on press (TW-112), `.act` swatch loader ignores the colour count (TW-113), animated GIF frame-1 palette (TW-114) | [PARITY.md](PARITY.md) |
+| Open findings | 7 fixable `[F]` (TW-113 `.act` swatch loader and sort, TW-118 Shift-drag, TW-120 inspector with several objects, TW-121 button instance properties, PDF layers, runner TW-115/119), 20 deferred `[V]` (incl. TW-111), 17 informational `[N]` | [FINDINGS.md](FINDINGS.md) |
+| Real differences known | inspector shows the first instead of the last selected object (TW-120), button instance properties (TW-121), `.act` swatch loader and sort order (TW-113); unclear: Shift-drag of a selected object (TW-118) | [PARITY.md](PARITY.md) |
 | Closed findings (history) | 830+ | kept outside the repository ([ARCHIVE_NOTE.md](ARCHIVE_NOTE.md)) |
 | Startup time | about 0.8 s to the first frame (release build, warm) | smoke test 17 Oct 2026 |
 
@@ -31,9 +31,12 @@ macOS arm64) was published as a pre-release on 17 Oct 2026; further preview buil
 
 Release **v0.2.0** (17 Oct 2026, pre-release on GitHub, Windows x64 and macOS arm64) from commit `2c54845`
 plus the version bump `10bbd8f`; it contains package F28 (symbol properties panel rectangle, animated GIF
-transparency slot, pointer log). Comparison run 14 used preview build `2026-10-17_19-47`, release profile, single
-`firepixel.exe` plus `firepixel-cli.exe`, built from the same F28 state before the history reset. Full workspace
-test run on this snapshot: 2486 passed, 0 failed, 133 ignored.
+transparency slot, pointer log). Full workspace test run on that snapshot: 2486 passed, 0 failed, 133 ignored.
+
+Latest test build: preview build **`2026-10-17_23-53`** (release profile, single `firepixel.exe` plus
+`firepixel-cli.exe`) from `main` at `3695c7de`, with package F29 (colour pop-up commits on release TW-112, `.act`
+colour count TW-113, symbol properties table look TW-110) and F30 (animated GIF palette TW-114). Comparison run 15
+used this build.
 
 ## How tests run
 
@@ -62,12 +65,13 @@ with a real mouse and drag and drop between windows need a human click-test: [VE
 
 ## Next
 
-1. Package **F29**: colour pop-up commits on release (TW-112), `.act` swatch import honours the colour count
-   (TW-113), symbol properties table look (TW-110).
-2. Runner **R-10**: swatch reset at unit start (TW-115), tooltip decoding and spiral `center` handle (TW-116),
-   Properties tab before `inspector` shots (TW-111), Alt-drag press point beside R1's gradient handle (TW-97),
-   fitting the reference to the large canvas (`xs-canvas`).
-3. Behaviour description **RE-11** from measurements: animated GIF quantiser (TW-114), questions Q-51 and Q-52.
-4. Comparison run 15 for the affected units, then the human click-test of [VERIFICATION.md](VERIFICATION.md).
+1. Behaviour descriptions from measurements: the original's swatch file loader and sort key (TW-113), the
+   inspector with several selected objects (TW-120) and button instances (TW-121); then package **F31** with
+   tests that pin the measured values.
+2. Runner **R-11**: read back a swatch colour after the reset (TW-115), keep drag distances clear of the snap
+   tolerance and check wheel points against the view (TW-119).
+3. Questions Q-49 (hex field), Q-51 (inspector tab), Q-52 (swatch add) and Q-53 (Shift-drag, TW-118).
+4. Comparison run 16 for `panel-swatches-mixer`, `inspector-group-symbol`, `xs-shortcuts` and `xs-canvas`, then
+   the human click-test of [VERIFICATION.md](VERIFICATION.md).
 
 See [ROADMAP.md](../ROADMAP.md) for the complete list.

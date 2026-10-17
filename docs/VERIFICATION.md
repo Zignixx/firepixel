@@ -73,10 +73,11 @@ Conventions: coordinates are document pixels; "R1", "E1", "B1", "P1", "PG" are t
   **Expected:** All supported files are added (folder recursively as configured), unsupported files are reported.
 - [ ] **A1-18** (CF-C CT-C-02/03, F19 TW-69; needs: real mouse) – see VER-4.23 and VER-1.36: reorder states/pages and drag across eye icons.
 
-## A2. Open items from comparison runs 12–14
+## A2. Open items from comparison runs 12–15
 
 Comparison run 12 left seven units unclear (`?`). Runs 13 and 14 (17 Oct 2026) resolved or reclassified all of
-them; they stay listed here, ticked, so the history of each check is clear. The open checks below come from run 14.
+them; they stay listed here, ticked, so the history of each check is clear. Run 15 (17/18 Oct 2026) resolved
+TW-97, TW-110, TW-112, TW-114 and TW-116; the open checks below come from runs 14 and 15.
 
 - [x] **TW-100** (`panel-library-styles/03`) – resolved: run 13 measured equal positions at an integer drop point; the unit counts as equal and the half-pixel case is no longer tracked.
 - [x] **TW-101** (`xs-file-formats/09`) – resolved in run 13: import by dragging lands on the same pixels 121,120–417,322 in both programs.
@@ -85,17 +86,32 @@ them; they stay listed here, ticked, so the history of each check is clear. The 
 - [x] **TW-104** (`inspector-group-symbol/04`) – resolved in run 14: header row, column divider and rows are present; the remaining table look is TW-110 below.
 - [x] **TW-105** (`panel-swatches-mixer/19`) – reclassified in run 14: the swatch probe hits index 5 on both sides (no hit-test offset); the colours differ because of the `.act` import bug **TW-113** (check below) and unequal start sets in the runner (TW-115).
 - [x] **TW-106** (`panel-pages-states-history/16`) – reclassified in run 13: the replay offset came from script steps in the original's history (runner effect).
-- [ ] **TW-113** (`panel-swatches-mixer/06`; needs: real window)
-  **Steps:** Swatches panel menu ▸ load swatches (add) with a 16-colour `.act` file (772 bytes, 16 colours plus 240 padding entries and the count trailer), then sort by colour.
-  **Expected:** Only the 16 file colours are added; Firepixel currently adds 256 entries (240 black), and after sorting black comes first. In the original, also note whether "add" adds to or replaces the current set (Q-52).
-- [ ] **TW-112** (`color-popup/17`; needs: real mouse)
-  **Steps:** Select a black-filled object, open the fill colour pop-up, press on a black swatch, drag to the red swatch and release there.
-  **Expected:** Original: the pop-up follows the drag and the fill becomes #ff0000 on release. Firepixel currently takes #000000 on press and closes the pop-up.
-- [ ] **TW-110 / TW-111** (`inspector-group-symbol/04–05`; needs: real window, original)
+- [x] **TW-97 / Q-50** (`xs-shortcuts/13`) – resolved in run 15: pressing on R1's body, the Alt-drag duplicates in both programs (8 vs. 8 objects).
+- [x] **TW-110** (`inspector-group-symbol/04`) – resolved in run 15: the Symbol Properties table has the original's look (light rows, grid, clipped first column).
+- [x] **TW-112** (`color-popup/17`) – resolved in run 15: a drag from black to red in the pop-up gives #ff0000 in both programs.
+- [x] **TW-114** (`export-results/07`) – resolved in run 15: the animated GIF export is byte-identical to the original's file of the same run.
+- [x] **TW-116** (`tool-autoshapes/06, 13`) – resolved in run 15: the runner reaches the size handle and the spiral's `center` handle on both sides.
+- [x] **Q-48** (`xs-canvas`) – resolved in run 15: the reference fits the large test document (zoom 0.42833) and the drag steps are measured; both programs leave a 15 px margin when fitting.
+- [ ] **TW-113 / Q-52** (`panel-swatches-mixer/06–08`; needs: real window, original)
+  **Steps:** Swatches panel menu ▸ Colour cubes; then replace swatches with the 16-colour `.act` file (772 bytes, 16 colours plus 240 padding entries and the count trailer); scroll through the panel; sort by colour. Repeat with "add swatches".
+  **Expected:** Note how many swatches the original holds after "replace" (run 15 suggests 16 colours plus about 240 black), the order after sorting (run 15: yellow, beige, cyan, green, orange, #4080c0, …, black last) and whether "add" appends to the current set. Firepixel currently keeps only the 16 colours and sorts them by hue.
+- [ ] **TW-115** (`panel-swatches-mixer/00a`; needs: real window, original)
+  **Steps:** Swatches panel menu ▸ Colour cubes; hover the first and the sixth swatch.
+  **Expected:** Note the colours. Run 15 read #ffbfbf and #efffbf from the original's panel (a 21-column hue × lightness set) and #ffffff and #ffff00 from Firepixel's colour cube; find out whether the original's colour-cube set really looks like that or the runner's click did not take.
+- [ ] **TW-111 / Q-51** (`inspector-group-symbol/04–05`; needs: real window, original)
   **Steps:** Select a rich symbol instance and open the Symbol Properties panel; then select a plain rectangle.
-  **Expected:** Table with light alternating rows, a 1 px grey grid, a gradient header and a row pitch of about 19 px (TW-110). Note whether the original brings Properties back to the front by itself when the selection is no rich symbol (Q-51); Firepixel keeps Symbol Properties in front.
+  **Expected:** Note whether the original brings Properties back to the front by itself when the selection is no rich symbol; Firepixel keeps Symbol Properties in front.
+- [ ] **TW-120** (`inspector-group-symbol/11, 12`; needs: real window)
+  **Steps:** Select a rectangle and then a text object (Shift-click); select the ellipse and then the rectangle with a red stroke.
+  **Expected:** The inspector shows the fill and stroke of the last selected object (text black; red 1 px stroke). Firepixel currently shows the first selected object's values.
+- [ ] **TW-121** (`inspector-group-symbol/05`; needs: real window, original)
+  **Steps:** Select a button instance and look at the Properties panel.
+  **Expected:** Note the contents of the name field (symbol or instance name), whether the text field is enabled, the export setting shown (run 15: "PNG32") and whether an "Add filter…" button is present.
+- [ ] **TW-118 / Q-53** (`xs-shortcuts/13`; needs: real mouse, original)
+  **Steps:** Select R1, hold Shift, press on R1's body and drag 60 px to the right and 10 px down; release.
+  **Expected:** Note whether the original moves R1 (constrained horizontally, as Firepixel does) or leaves it in place and only toggles the selection.
 
-Related open questions: **TW-97 / Q-50** Alt-drag duplicates only in the original (8 vs. 7 objects) – repeat the drag with a real mouse, pressing on R1 beside its gradient start handle, with Alt held; **Q-49** when does the original accept a hex value in the color pop-up (Enter, another key, or closing)?; **Q-48** fitting the large test document and grid snapping at low zoom (see VER-10.28).
+Related open question: **Q-49** when does the original accept a hex value in the color pop-up (Enter, another key, or closing)? Grid snapping at low zoom stays in VER-10.28 (run 15 hit the tolerance edge, TW-119).
 
 ## A3. Spot checks of the fixes from 2026-10-17
 

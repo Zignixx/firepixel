@@ -3,9 +3,9 @@
 Firepixel aims to behave like the reference application button by button. This page explains how that is
 measured, what the figures mean, where the method stops, and gives the current per-unit result.
 
-**Current state (run 14, 17 Oct 2026):** 48 units — **42 equal except for design**, 4 real deviations, 1 unclear,
-1 under-measured. **Proven 1:1: 87.5 %** (42 / 48; 89.4 % of the 47 sufficiently measured units). Measurement quota
-over all 48 units: **84.1 %** (1031 / 1226 steps). Canvas image pairs within 1 %: about **179 / 200**.
+**Current state (run 15, 17/18 Oct 2026):** 48 units — **44 equal except for design**, 2 real deviations,
+2 unclear, 0 under-measured. **Proven 1:1: 91.7 %** (44 / 48; all 48 units are sufficiently measured). Measurement
+quota over all 48 units: **84.8 %** (1041 / 1228 steps). Canvas image pairs within 1 %: about **177 / 201**.
 
 ## Method: scripted comparison runs
 
@@ -43,8 +43,8 @@ state for a unit is always its newest run.
 
 **Measurement quota** = steps with both sides `ok` / steps without an `unsupported` or `skipped` side (repeated
 steps count with their second attempt). **Proven 1:1** = units "equal except for design" / sufficiently
-measured units. The headline figure is the strict one over all 48 units (87.5 %); over the 47 sufficiently measured
-units it is 89.4 %.
+measured units. The headline figure is the strict one over all 48 units (91.7 %); since run 15 no unit is
+under-measured, so both figures are the same.
 
 ## Limits
 
@@ -64,11 +64,12 @@ The runner cannot reach everything; these parts need a human (see [VERIFICATION.
 - The reference application's own rendering is the oracle only where it is deterministic; cursor images
   cannot be captured.
 
-## Per-unit result (run 14)
+## Per-unit result (run 15)
 
 State per unit from its newest run: run 10 (16/17 Oct) for 24 units, run 11 (17 Oct morning) for 3, run 12
-(17 Oct afternoon) for 7, run 13 (17 Oct evening, 14 units) for 6, run 14 (17 Oct, 19:48–20:38, 8 units, 215 steps,
-109 image pairs, preview build `2026-10-17_19-47`) for 8.
+(17 Oct afternoon) for 7, run 13 (17 Oct evening, 14 units) for 6, run 14 (17 Oct, 19:48–20:38) for 1
+(`panel-layers`), run 15 (17/18 Oct, 23:54–00:38, 7 units, 189 steps, 97 image pairs, preview build
+`2026-10-17_23-53` with packages F29 and F30, runner R-10) for 7.
 
 | Unit | Area | Class | Note |
 |---|---|---|---|
@@ -96,7 +97,7 @@ State per unit from its newest run: run 10 (16/17 Oct) for 24 units, run 11 (17 
 | `menu-text` | menus | equal except for design | |
 | `menu-view` | menus | equal except for design | |
 | `panel-info-align-path` | panels | equal except for design | |
-| `panel-layers` | panels | equal except for design | drag onto a locked layer fixed (TW-86); run 14 unchanged (74.1 % measured, locator gaps in the scrolled panel) |
+| `panel-layers` | panels | equal except for design | drag onto a locked layer fixed (TW-86); run 14 unchanged (74.1 % measured, locator gaps in the scrolled panel); not part of run 15 |
 | `panel-layers-menu` | panels | equal except for design | |
 | `panel-misc` | panels | equal except for design | embedded panels `unsupported`; run 13: 87.5 % measured |
 | `panel-optimize` | panels | equal except for design | |
@@ -109,27 +110,28 @@ State per unit from its newest run: run 10 (16/17 Oct) for 24 units, run 11 (17 
 | `tool-text` | tools | equal except for design | |
 | `tool-web` | tools | equal except for design | |
 | `toolbox` | tools | equal except for design | run 13 |
-| `tool-autoshapes` | tools | equal except for design | run 14: equal start colours (R-9, TW-107 closed), 27 of 31 pairs within 1 %; runner gaps TW-116 |
+| `tool-autoshapes` | tools | equal except for design | run 15: 100 % measured (was 95.0 %); the size handle with modifiers and the spiral's `center` handle are now reached on both sides (TW-116 closed); 27 of 31 pairs within 1 % |
+| `export-results` | preview / export | equal except for design | run 15: 66.7 %; the animated GIF is **byte-identical** to the original's file (TW-114 closed), images-only and PNG 8/24/32 pixel-identical; the remaining errors are runner gaps (`slice:0` locator, export-area dialog) |
+| `color-popup` | colour | equal except for design | run 15: 75.0 % (was 71.4 %); drag black → red now gives #ff0000 on both sides (TW-112 closed); hex field question Q-49 still open; canvas shots differ by capture method only (TW-117) |
 | `xs-context-menus` | cross-cutting | equal except for design | |
 | `xs-preferences` | cross-cutting | equal except for design | |
 | `xs-windows-tabs` | cross-cutting | equal except for design | |
 | `xs-file-formats` | cross-cutting | equal except for design | run 13: import by dragging lands on the same pixels 121,120–417,322 (TW-101 fixed) |
-| `xs-shortcuts` | cross-cutting | **real deviation** | run 14: 84.0 %; Alt rectangle now equal (TW-109 closed); Alt-drag still duplicates only in the original (8 vs. 7, TW-97/Q-50), press point still on R1's gradient handle (runner R-10) |
-| `color-popup` | colour | **real deviation** | run 14: 71.4 %; Firepixel commits on mouse press, the original on release (TW-112); hex field Q-49 still open |
-| `panel-swatches-mixer` | panels | **real deviation** | run 14: 96.2 %; `.act` import ignores the colour count and adds 240 black swatches (TW-113); unequal start sets on the runner side (TW-115, Q-52) |
-| `export-results` | preview / export | **real deviation** | run 14: 66.7 % (was 25.0 %); images-only and PNG 8/24/32 pixel-identical in the same run; GIF frames, delay, loop, disposal and transparency equal, frame-1 palette differs (TW-114) |
-| `inspector-group-symbol` | property inspector | unclear | run 14: 89.5 %; header "Name / Value" now present (TW-104 closed), table look TW-110; Firepixel keeps the Symbol Properties tab in front for steps 05–14, so six pairs measure the wrong panel (TW-111, Q-51) |
-| `xs-canvas` | cross-cutting | under-measured | run 14: 58.3 %; the reference still stays at zoom 1.0 instead of fitting the large test document (runner, TW-98, Q-48) |
+| `inspector-group-symbol` | property inspector | **real deviation** | run 15: 90.0 %; table look of the Symbol Properties panel now equal (TW-110 closed); with the runner bringing Properties to the front again (step 04b, TW-111) the inspector pairs measure the right panel and show two real differences: with several objects selected Firepixel shows the first selected object's fill and stroke, the original the last one's (TW-120), and the button instance properties differ (TW-121) |
+| `panel-swatches-mixer` | panels | **real deviation** | run 15: 96.3 %; after "replace swatches" with the 16-colour `.act` file the original holds about 256 entries (16 colours plus black padding) and sorts black last, while Firepixel now holds only the 16 colours, in a different sort order (TW-113, reopened with this evidence); the reset step 00a does not yet give equal sets, probe colours still differ (#efffbf vs. #ffff00, TW-115) |
+| `xs-shortcuts` | cross-cutting | unclear | run 15: 84.0 %; Alt-drag now duplicates on both sides (8 vs. 8, TW-97 closed); new: a Shift-drag of R1 moves it in Firepixel (+60 px, constrained) but not in the original (TW-118, Q-53) |
+| `xs-canvas` | cross-cutting | unclear | run 15: 79.2 % (was 58.3 %, no longer under-measured); the reference now fits the large document, five of the seven formerly failing steps are `ok` and their values equal (guide snap, guide lock); `12_grid_snap` differs only because the reference's whole-pixel drag moves 11.67 instead of 13 document px (runner, TW-119); 7 of 8 canvas pairs stay above 1 % (different view sizes, Ctrl+wheel point outside Firepixel's view, TW-119) |
 
-Totals: 42 / 4 / 1 / 1. Step level over all 48 units (newest run per unit): 1031 of 1226 measurable steps `ok` on
-both sides (**84.1 %**, was 83.5 %); in the 8 units of run 14: 163 of 201 (81.1 %, the same units in run 13: 77.6 %).
-Canvas image pairs within 1 % over all 48 units: about 179 of 200 (run 14 units: 35 of 41). `tool-autoshapes`
-moved to "equal", `panel-swatches-mixer` moved out because TW-113 turned out to be a real Firepixel deviation
-(it was hidden behind the runner explanation TW-105).
+Totals: 44 / 2 / 2 / 0. Step level over all 48 units (newest run per unit): 1041 of 1228 measurable steps `ok` on
+both sides (**84.8 %**, was 84.1 %); in the 7 units of run 15: 153 of 176 (86.9 %; the same units in run 14: 143 of
+174, 82.2 %). Canvas image pairs within 1 % over all 48 units: about 177 of 201 (run 15 units: 33 of 42; run 14:
+35 of 41 – the difference comes from `xs-canvas` pairs now taken at the fitted zoom). `export-results` and
+`color-popup` moved to "equal", `inspector-group-symbol` became a real deviation once it measured the right panel,
+`xs-shortcuts` became unclear and `xs-canvas` is no longer under-measured.
 
-Real differences in results that remain known: the Alt-drag duplicate (TW-97), the colour pop-up commit on press
-(TW-112), the `.act` swatch loader (TW-113) and the frame-1 palette of animated GIF exports (TW-114); see
-[FINDINGS.md](FINDINGS.md).
+Real differences in results that remain known: the inspector shows the first instead of the last selected object
+(TW-120), the button instance properties (TW-121) and the `.act` swatch loader and its sort order (TW-113); still
+unclear: the Shift-drag of a selected object (TW-118, Q-53). See [FINDINGS.md](FINDINGS.md).
 
 ## History of the headline figure
 
@@ -139,7 +141,10 @@ Real differences in results that remain known: the Alt-drag duplicate (TW-97), t
 | 11 (23 units) | 17 Oct 2026 | 31 of 48 (9 under-measured) | 79 % (31 / 39) |
 | 12 (20 units) | 17 Oct 2026 | 39 of 48 (0 under-measured) | 81 % (39 / 48) |
 | 13 (14 units) | 17 Oct 2026 | 42 of 48 (2 under-measured) | 88 % (42 / 48; 91 % = 42 / 46 of the sufficiently measured units) |
-| 14 (8 units) | 17 Oct 2026 | 42 of 48 (1 under-measured) | **87.5 %** (42 / 48; 89.4 % = 42 / 47 of the sufficiently measured units); step level 84.1 % |
+| 14 (8 units) | 17 Oct 2026 | 42 of 48 (1 under-measured) | 87.5 % (42 / 48; 89.4 % = 42 / 47 of the sufficiently measured units); step level 84.1 % |
+| 15 (7 units) | 17/18 Oct 2026 | 44 of 48 (0 under-measured) | **91.7 %** (44 / 48); step level 84.8 % |
 
-The next steps are in [ROADMAP.md](../ROADMAP.md): package F29 (TW-110/112/113), runner R-10, the behaviour
-description RE-11 for the GIF animation quantiser, comparison run 15, then the human click-test.
+The next steps are in [ROADMAP.md](../ROADMAP.md): behaviour descriptions for the swatch file loader and sort
+(TW-113) and for the inspector with several objects and button instances (TW-120/121), runner R-11 (TW-115,
+TW-119), the open questions Q-49 and Q-51 to Q-53, comparison run 16 for the affected units, then the human
+click-test.

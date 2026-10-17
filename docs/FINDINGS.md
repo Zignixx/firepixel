@@ -1,6 +1,6 @@
 # Open findings
 
-Last updated: 2026-10-17
+Last updated: 2026-10-18
 
 This file lists the findings that are still **open** in Firepixel: known bugs, deviations from the reference application, postponed features and accepted limitations. Closed findings are not kept here; their history lives in the commit log.
 
@@ -29,29 +29,30 @@ Findings are grouped by their state:
 
 ## [F] Fixable now (7)
 
-Recounted after comparison run 14 (17 Oct 2026). The earlier remnants (sprite padding default,
+Recounted after comparison run 15 (17/18 Oct 2026). The earlier remnants (sprite padding default,
 Shift-constrain for L-shape/arrow line, import rubber band, New Style defaults, text runs, SVG layers, symbol
 origin, simple brush runner, TW-101 import edge, TW-102/103 export format choice, TW-104 symbol properties
 header, TW-100 library drop, TW-105/106 runner effects, TW-107 start colours, TW-109 Alt rectangle) are closed;
-their history is in the commit log and the archive (see [ARCHIVE_NOTE.md](ARCHIVE_NOTE.md)). The animated GIF
-palette (formerly TW-108) is now TW-114 under [V].
+their history is in the commit log and the archive (see [ARCHIVE_NOTE.md](ARCHIVE_NOTE.md)). Run 15 closed
+TW-97 (Alt-drag duplicates on both sides, 8 vs. 8 objects), TW-110 (symbol properties table look), TW-112 (colour
+pop-up commits on release), TW-114 (animated GIF byte-identical) and TW-116 (runner reaches the size and spiral
+`center` handles). TW-113 stays open with new evidence from the original.
 
 | ID | Area | What is open (expected vs. current) |
 |---|---|---|
-| TW-112 (F29) | Colour pop-up | The original tracks a drag inside the pop-up and takes the swatch under the pointer on **release** (drag black → red gives fill #ff0000); Firepixel commits on mouse **press** and closes the pop-up (fill stays #000000). Run 14, `color-popup/17_drag_red`. |
-| TW-113 (F29) | Swatches panel, `.act` import | The `.act` loader ignores the 4-byte trailer (colour count, transparency index) and loads all 256 entries: a 16-colour file adds 240 black padding swatches, and after "sort" black comes first. Expected: only the counted colours. Whether "load swatches – add" adds to or replaces the current set in the original is still open (Q-52). Run 14, `panel-swatches-mixer/06–08, 19, 20`. |
-| TW-110 (F29) | Symbol Properties panel | Table look: the original has light alternating rows, a 1 px grey grid, a gradient header, column 1 clipped without ellipsis and a row pitch of about 19 px; Firepixel is darker grey with a faint grid, "Na…" and about 22 px. The structure (header "Name \| Value", divider, rows) is already equal. |
-| TW-97 / Q-50 | Alt-drag duplicate | An Alt-drag of R1 duplicates the object only in the original (8 vs. 7 objects); the Alt rectangle itself is now equal. The scripted press point is still the start handle of R1's gradient, so the duplicate case is not yet separated from the handle hit. Next: runner R-10 presses beside the handle; fix the pointer tool only if the difference stays. |
-| TW-115 (R-10) | Comparison runner, swatches | The original keeps its swatch set across sessions (starts with 16 sorted colours), Firepixel starts with the colour cube. Reset both sides to the same set at unit start. |
-| TW-116 (R-10) | Comparison runner, auto shapes | Handle tooltips on the reference side are decoded with the wrong code page, so handle `size` is not found; the spiral's `center` handle is missing on both sides. |
+| TW-113 (Q-52) | Swatches panel, `.act` import and sort | Run 15 reverses the run-14 assumption. After "replace swatches" with the 16-colour `.act` file (16 colours, 240 padding entries, count trailer) and "sort by colour", the original shows the 16 colours followed by a block of about 240 black swatches (black sorted **last**; order yellow, beige, cyan, green, orange, #4080c0, …). Firepixel (since F29) keeps only the 16 counted colours and sorts them by hue (#ff8000 at index 5 instead of #4080c0). "Add" leaves the visible part of the original's set unchanged, so it most likely appends. Needs a behaviour description of the original's swatch file loader and sort key before the next fix. `panel-swatches-mixer/06–08`. |
+| TW-118 (Q-53) | Pointer tool, Shift-drag | New in run 15 (the runner now presses on R1's body, doc 70,100): a Shift-drag of the selected R1 by +60/+10 moves it to 110,50–210,120 in Firepixel (constrained horizontally) but leaves it at 50,50–150,120 in the original. Unclear whether the original treats Shift+press on a selected object as "toggle selection" and then ignores the drag (Q-53). `xs-shortcuts/13_modifiers_drag`. |
+| TW-120 | Inspector, several objects | With two objects selected the original shows the fill and stroke of the **last** selected object, Firepixel those of the first: R + TX → original fill black (text), Firepixel blue (rectangle); E1 + R1 → original stroke red 1 px "1-Pixel Hard", Firepixel stroke none. First measured in run 15 because the inspector shots now show Properties. `inspector-group-symbol/11, 12`. |
+| TW-121 | Inspector, button instance | Properties of a button instance differ: the original shows the symbol name in the name field, a disabled text field, the export setting "PNG32" and an "Add filter…" button; Firepixel shows the instance name "BTN", an enabled text field, a disabled "GIF Web 216" with "Edit…" and no filter button. Needs a behaviour description of the button-instance inspector. `inspector-group-symbol/05_button`. |
+| TW-115 (R-11) | Comparison runner, swatches | The reset step 00a (R-10) takes "Colour cubes" from the panel menu on both sides, but the sets still differ: the original shows a 21-column hue × lightness set (index 0 #ffbfbf, index 5 #efffbf), Firepixel its colour cube (#ffffff, #ffff00). Either the reference click did not take or the original's colour-cube set differs from Firepixel's; the runner must read back a swatch colour after the reset, and the set needs one manual check (VERIFICATION A2). |
+| TW-119 (R-11) | Comparison runner, `xs-canvas` | (a) `12_grid_snap`: the reference drag is rounded to whole screen pixels at zoom 0.42833 and moves 11.67 document px, exactly at the snap tolerance (5 / zoom), so the original snaps to 0,20 while Firepixel, dragged by exactly 13 px, ends at 12,20; drag distances must stay clear of the tolerance or be checked in document units. (b) `02_zoom_center`: the Ctrl+wheel point (document 600,400) lies outside Firepixel's visible canvas at 100 %, so Firepixel does not zoom while the original does; the runner must check wheel points against the view as it does for drags. Fit zoom itself is equal (15 px margin on both sides; 0.43875 vs. 0.44875 only because the views differ in height). |
 | U-1 rest | File ▸ Import, PDF | SVG files now import with their layers; **PDF files still arrive as one layer** because the pure-Rust PDF reader exposes no optional content groups (layers). Library limit; needs either an upstream feature or an own OCG reader. |
 
-## [V] Deferred / expansion items (21)
+## [V] Deferred / expansion items (20)
 
 | ID | Area | What is deferred |
 |---|---|---|
-| TW-114 (RE-11) | Export, animated GIF | Frame rectangles, disposal, delay, loop, transparency index 255 and frame 2 now match the original; the **adaptive palette of frame 1** differs (3 of 256 entries shared, 3.44 % of pixels deviate by more than 8 levels, at most 44). The single-frame PNG 8/24/32 exports are pixel-identical. Needs a behaviour description of the animation quantiser and its sort order before a fix. |
-| TW-111 (Q-51) | Inspector, Symbol Properties tab | After the Symbol Properties panel was opened, Firepixel keeps it in front of Properties for the following steps; the original shows Properties. Unclear whether the original switches back by itself when the selection is no rich symbol (Q-51). Safe default: the runner activates Properties before each inspector shot (R-10); Firepixel unchanged until answered. |
+| TW-111 (Q-51) | Inspector, Symbol Properties tab | After the Symbol Properties panel was opened, Firepixel keeps it in front of Properties for the following steps; the original shows Properties. Unclear whether the original switches back by itself when the selection is no rich symbol (Q-51). The runner workaround (step 04b, R-10) works in run 15: steps 05–14 now measure the Properties panel on both sides. Firepixel unchanged until Q-51 is answered. |
 | BA-037 | AI object selection | Optional mask preview while hovering with the object-selection tool: when the model cache is warm, compute `select.aiObject` on a copy in the background and show the outline as an overlay. Currently there is no preview. |
 | BA-039 | Bitmap brush | The live brush preview is drawn above all objects: hidden parts appear on top, and the bitmap object's opacity, blend mode and effects are missing in the preview. Needs a rebuild of the live preview in stacking order. Pressure is not available from a mouse (tablet only). |
 | BA-100 | PDF export | "Enable text selection" is stored but has no effect: the PDF writer only stores the flat page image. Expected: invisible text (render mode 3) for text objects. |
@@ -76,7 +77,7 @@ palette (formerly TW-108) is now TW-114 under [V].
 
 | ID | Area | Note |
 |---|---|---|
-| TW-117 | Comparison runner, colour pop-up | Canvas shots differ by capture method: Firepixel's shot contains the open colour pop-up and the selection handles, the original's does not (6.3 % of pixels above 32 levels); the fill under the hovered swatch is equal. Information only. |
+| TW-117 | Comparison runner, colour pop-up | Unchanged in run 15. Canvas shots differ by capture method: Firepixel's shot contains the open colour pop-up and the selection handles, the original's does not (6.3 % of pixels above 32 levels); the fill under the hovered swatch is equal. Information only. |
 | BA-097 | Performance (no GPU) | The first drag of large objects takes up to ~1–2 s with software rendering: the drag preview texture (`canvas\ghost.rs::drag_sprite`) holds the whole selection (up to ~6000 × 1500 px) and uploads at ~30 MB/s; later steps take ~100–200 ms. Idea: limit the preview to the visible area plus a margin. |
 | BA-098 | Performance (no GPU) | The first frame after zoom/scroll with a large canvas texture takes up to 1.4 s (`canvas\mod.rs` renders the visible area plus half a view of margin on each side). Edits only upload the changed rectangle; zoom/scroll still upload everything. |
 | BA-021 | English UI texts | The English labels of D39 ("Sample radius:") and the English history names of the Select commands were not measured in the original (only the German UI of the original is installed). |
