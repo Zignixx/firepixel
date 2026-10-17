@@ -1,0 +1,20 @@
+# Build folders (shared and per agent)
+/target/
+/target-*/
+
+# Generated test data (can be regenerated at any time with the generators under tools/golden)
+/tools/golden/*/out/
+
+# Python intermediate files
+__pycache__/
+*.pyc
+
+# Images and reports written by tests and tools: never committed (attach screenshots to issues/PRs).
+# App icons and assets live under /assets and test fixtures under crates/*/tests/data; both stay tracked.
+/docs/screenshots/
+/docs/funktionstest/img/
+/docs/funktionstest/*_auto.md
+/docs/**/*.png
+**/phase5_*.png
+/docs/funktionstest/
+/docs/I18N_PRUEFUNG.md

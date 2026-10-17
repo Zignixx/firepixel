@@ -1,0 +1,32 @@
+{
+  "bytes": 1253,
+  "file": "photo.jpg",
+  "meta": {
+    "comment": "hallo",
+    "exif": {
+      "artist": null,
+      "bytes": 246,
+      "copyright": null,
+      "date": "2024-05-06 07:08:09",
+      "gps": false,
+      "lens": null,
+      "make": "TestCam",
+      "model": "Model X",
+      "orientation": 1,
+      "software": "Editor 1.0",
+      "tags": 9,
+      "thumbnail": true
+    },
+    "icc": {
+      "bytes": 300,
+      "description": "Test RGB"
+    },
+    "iptc": {
+      "bytes": 8
+    }
+  },
+  "size": [
+    48,
+    64
+  ]
+}

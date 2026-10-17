@@ -1,0 +1,125 @@
+[package]
+name = "fp-ui"
+description = "Firepixel user interface (egui/eframe): main window, themes, icons, menus, docking, canvas, property inspector, dialogs"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+# Integrationstests als ein Testprogramm (tests\all.rs), Einzelprozess-Tests unten (INF-1)
+autotests = false
+
+[dependencies]
+eframe = { workspace = true }
+egui = { workspace = true }
+fp-geom = { workspace = true }
+fp-color = { workspace = true }
+fp-raster = { workspace = true }
+fp-model = { workspace = true }
+fp-fwpng = { workspace = true }
+fp-render = { workspace = true }
+fp-engine = { workspace = true }
+# Mehrsprachigkeit (Phase 6): alle sichtbaren Texte über fp_i18n::t / tr!
+fp-i18n = { workspace = true }
+# Optimieren/Export (Phase 4) und Compound Shapes im Inspektor (Pfadoperationen)
+fp-export = { workspace = true }
+# Bitmap nachzeichnen (VT-2): Live-Vorschau im Dialog dialogs\trace.rs
+fp-trace = { workspace = true }
+# Batch-Studio (BATCH-2, src\batch\): Rezepte, Plan, Lauf, Vorschau aus dem Kern fp-batch
+fp-batch = { path = "../fp-batch" }
+fp-vector = { workspace = true }
+# Schriftenliste im Text-Inspektor (Index der Systemschriften, zur Laufzeit)
+fp-text = { workspace = true }
+# Formatliste für die Datei-Dialoge (Alle lesbaren Formate)
+fp-io = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+log = { workspace = true }
+# KI-Steuerkanal (src\bridge.rs, Agent AU): MCP-Brücke zur laufenden Oberfläche; JSF-Befehle-Menü
+fp-mcp = { workspace = true }
+fp-script = { workspace = true }
+# Bilder in/aus der Systemzwischenablage (reines Rust, schon über egui-winit im Baum) und PNG-Zwischendatei
+arboard = { version = "3", default-features = false, features = ["image-data"] }
+png = { workspace = true }
+# native Dateidialoge (Windows: Common Item Dialog über windows-sys, statisch, keine Zusatz-DLL)
+rfd = { version = "0.17", default-features = false }
+# Taskleisten-Icon (ICON_BIG): eframe setzt über `with_icon` nur das kleine Fenstersymbol;
+# dieselbe winit-Version wie in eframe, nur für `WindowExtWindows::set_taskbar_icon`.
+winit = { version = "0.30", default-features = false }
+
+[dev-dependencies]
+egui_kittest = { version = "0.36", features = ["wgpu", "snapshot"] }
+fp-neutral = { path = "../fp-neutral" }
+# Bildtyp des Testrenderers (egui_kittest::TestRenderer), schon über egui_kittest im Baum (FV-8)
+image = { workspace = true }
+# Liste aller tests\*.rs fuer tests\all.rs (INF-1)
+fp-testlist = { path = "../fp-testlist", features = ["fp-ui"] }
+
+[lints]
+workspace = true
+
+# Alle tests\*.rs laufen als EIN Testprogramm (INF-1, docs\AGENTEN_REGELN.md §2): neue Dateien
+# einfach unter tests\ anlegen, sie werden automatisch eingebunden (crates\fp-testlist).
+# `cargo test -p fp-ui --test all <datei>::`
+[[test]]
+name = "all"
+path = "tests/all.rs"
+
+# Eigener Prozess nur, wenn ein Test prozessweiten Zustand umstellt, den parallel laufende Tests
+# anderer Dateien sehen würden. Jede Datei hier mit Grund; die Liste klein halten.
+
+# Sonden mit Bildern: egui_kittest legt je Harness einen eigenen wgpu-Renderer (Instanz + Gerät) an;
+# gleichzeitig angelegt stürzt der Prozess gelegentlich ab. Die Datei läuft per Mutex nacheinander
+# (NZ-2), im gemeinsamen Programm würden die Renderer anderer Dateien parallel dazukommen.
+[[test]]
+name = "ux_b_abgleich"
+path = "tests/ux_b_abgleich.rs"
+
+# stellt die prozessweite KI-Modellsuche auf einen leeren Ordner um (fp_ai::models::set_search_override)
+[[test]]
+name = "ai_kittest_missing"
+path = "tests/ai_kittest_missing.rs"
+
+# KI-Rechnung mit echten Modellen: prozessweiter KI-Zwischenspeicher und Rechenpool (fp_ai), den
+# die Menue-Gesamttests mit ai.clearCache leeren; im gemeinsamen Programm haengt die Rechnung dann
+[[test]]
+name = "ai_kittest"
+path = "tests/ai_kittest.rs"
+
+# wie ai_kittest (Klickfolgen waehrend einer laufenden KI-Rechnung)
+[[test]]
+name = "ai_kittest_klickfolgen"
+path = "tests/ai_kittest_klickfolgen.rs"
+
+# oeffnet jeden Dialog aller Befehle des Registers in drei Sprachen; haengt im gemeinsamen Programm
+# (prozessweiter Zustand der Datei-Dialoge bzw. des Systems, file_dialog.rs), allein gruen
+[[test]]
+name = "dialogs_i18n"
+path = "tests/dialogs_i18n.rs"
+
+# stellt die prozessweite KI-Modellsuche um (fp_ai::models::set_search_override)
+[[test]]
+name = "ai_kittest_dialogs"
+path = "tests/ai_kittest_dialogs.rs"
+
+# KI-Fortschrittskarte: Zeitverhalten (kein Aufblitzen unter 300 ms) und, wenn vorhanden, echte Modelle
+[[test]]
+name = "ai_progress_ki2"
+path = "tests/ai_progress_ki2.rs"
+
+# stellt den prozessweiten Testmodus der Datei-Dialoge um (fp_ui::file_dialog::set_test_mode)
+[[test]]
+name = "file_dialogs_dlg3"
+path = "tests/file_dialogs_dlg3.rs"
+
+# haengt die MCP-Bruecke prozessweit ein (fp_ui::bridge::install_detached_for_tests): alle
+# Datei-Dialoge erscheinen dann in der App statt nativ (FIX-E, ui_action mit Datei-Dialog)
+[[test]]
+name = "bridge_file_dialog"
+path = "tests/bridge_file_dialog.rs"
+
+# startet die echte MCP-Bruecke (HTTP, prozessweiter Zustand in fp_ui::bridge) und beendet sie wie
+# beim Schliessen der App (CT-C-10: mcp-bridge.json wird geloescht)
+[[test]]
+name = "cf_c_bridge_exit"
+path = "tests/cf_c_bridge_exit.rs"

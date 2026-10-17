@@ -1,0 +1,840 @@
+{
+ "unit": "panel-pages-states-history",
+ "testfile": "T07",
+ "testfiles": [
+  "T07",
+  "T04"
+ ],
+ "note": "Action verbs (both/orig/fp): open_testfile <T..> (close docs unsaved, open fresh, base settings) / close_all; menu 'A > B'; command <id from commands.json>; panel <window.* id or title>; panel_menu <panel> (open its menu); select <object name|[names]>; select_none; tool <tool id>; open <logical ui key>; click/double_click/right_click/hover/mouse_down/mouse_up <label|{key}|{popup_swatch:#hex}|{area,pos}>; drag {from,to,mods}; canvas_click/canvas_move [x,y] (document px); canvas_drag {from,to,mods}; scroll {area,delta}; key <combo>; type <text>; wait <ms>; choose {target,item} (pick list entry); file_dialog <path> (choose file in open dialog); export_png doc (export + hash); resize_panel {panel,width}; set_field {target,value}; export {dir,name,type,...} (File > Export dialog); clear_dir/record_dir <dir>; record_file <path> (size+hash+pixels); record_file_text <path>; restart_app; resize_dialog {width,height}; target forms {canvas:[x,y]|name}, {pref_category}, {tree_item:[path]}, hold_key in drag/click; log_value <JSF expression, logged in both>; record_ui <logical ui key> (orig window text/UIA, fp ui_find/ui_state); jsf <code> (in both = fp run_script); fp-only ui_action {...}, ui_find_click <text>. Step keys: after = actions after the shot; log_menu_items = item texts + enabled/checked of the open menu; shot omitted = value-only checkpoint.",
+ "steps": [
+  {
+   "id": "00_overview_normal",
+   "check": "overview after opening the test file",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T07"
+    },
+    {
+     "panel": "window.pages"
+    }
+   ],
+   "shot": {
+    "area": "window"
+   }
+  },
+  {
+   "id": "01_pages_layout_normal",
+   "check": "pages layout",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T07"
+    },
+    {
+     "panel": "window.pages"
+    }
+   ],
+   "shot": {
+    "area": "panel:pages"
+   }
+  },
+  {
+   "id": "02_pages_menu_open",
+   "check": "pages menu",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "open_testfile": "T07"
+    },
+    {
+     "panel": "window.pages"
+    },
+    {
+     "panel_menu": "pages"
+    },
+    {
+     "log_menu_items": true
+    }
+   ],
+   "shot": {
+    "area": "menu"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "03_pages_new_dup_delete_result",
+   "check": "pages new dup delete",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T07"
+    },
+    {
+     "panel": "window.pages"
+    },
+    {
+     "click": "pages.footer.new"
+    },
+    {
+     "log_value": "fw.getDocumentDOM().pages ? fw.getDocumentDOM().pages.length : fw.getDocumentDOM().pagesCount"
+    },
+    {
+     "panel_menu": "pages"
+    },
+    {
+     "click": "Seite duplizieren"
+    },
+    {
+     "log_value": "fw.getDocumentDOM().pages ? fw.getDocumentDOM().pages.length : fw.getDocumentDOM().pagesCount"
+    },
+    {
+     "click": "pages.footer.delete"
+    },
+    {
+     "log_value": "fw.getDocumentDOM().pages ? fw.getDocumentDOM().pages.length : fw.getDocumentDOM().pagesCount"
+    }
+   ],
+   "shot": null,
+   "note": "pages count JSF unsure (fw.getDocumentDOM().pagesCount?)"
+  },
+  {
+   "id": "04_pages_rename_drag_result",
+   "check": "pages rename drag",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T07"
+    },
+    {
+     "panel": "window.pages"
+    },
+    {
+     "double_click": {
+      "page_name": 1
+     }
+    },
+    {
+     "key": "Ctrl+A"
+    },
+    {
+     "type": "Neu"
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "drag": {
+      "from": {
+       "page_row": 1
+      },
+      "to": {
+       "page_row": 0
+      }
+     }
+    },
+    {
+     "record_ui": "pages.rows"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "05_pages_master_result",
+   "check": "pages master",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T07"
+    },
+    {
+     "panel": "window.pages"
+    },
+    {
+     "click": {
+      "page_row": 0
+     }
+    },
+    {
+     "panel_menu": "pages"
+    },
+    {
+     "click": "Als Masterseite festlegen"
+    }
+   ],
+   "shot": {
+    "area": "panel:pages"
+   }
+  },
+  {
+   "id": "06_states_layout_normal",
+   "check": "states layout",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T07"
+    },
+    {
+     "panel": "window.states"
+    }
+   ],
+   "shot": {
+    "area": "panel:states"
+   }
+  },
+  {
+   "id": "07_states_menu_open",
+   "check": "states menu",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "open_testfile": "T07"
+    },
+    {
+     "panel": "window.states"
+    },
+    {
+     "panel_menu": "states"
+    },
+    {
+     "log_menu_items": true
+    }
+   ],
+   "shot": {
+    "area": "menu"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "08_states_delay_open",
+   "check": "states delay",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "open_testfile": "T07"
+    },
+    {
+     "panel": "window.states"
+    },
+    {
+     "double_click": {
+      "state_delay": 0
+     }
+    }
+   ],
+   "shot": {
+    "area": "panel:states"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "09_states_onion_open",
+   "check": "states onion",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T07"
+    },
+    {
+     "panel": "window.states"
+    },
+    {
+     "click": "states.onion_button"
+    },
+    {
+     "log_menu_items": true
+    }
+   ],
+   "shot": {
+    "area": "menu"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "09_states_onion_result",
+   "check": "states onion",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T07"
+    },
+    {
+     "panel": "window.states"
+    },
+    {
+     "click": "states.onion_button"
+    },
+    {
+     "click": "Alle Status anzeigen"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "10_states_loop_open",
+   "check": "states loop",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "open_testfile": "T07"
+    },
+    {
+     "panel": "window.states"
+    },
+    {
+     "click": "states.loop_button"
+    },
+    {
+     "log_menu_items": true
+    }
+   ],
+   "shot": {
+    "area": "menu"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "11_states_disposal_open",
+   "check": "states disposal",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "open_testfile": "T07"
+    },
+    {
+     "panel": "window.states"
+    },
+    {
+     "right_click": {
+      "state_row": 0
+     }
+    },
+    {
+     "log_menu_items": true
+    }
+   ],
+   "shot": {
+    "area": "menu"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "disposal method lives in state properties/context menu; path unsure"
+  },
+  {
+   "id": "12_states_play_result",
+   "check": "states play",
+   "method": {
+    "orig": "J",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T07"
+    },
+    {
+     "panel": "window.states"
+    },
+    {
+     "click": "status_bar.play"
+    },
+    {
+     "wait": 800
+    },
+    {
+     "log_value": "fw.getDocumentDOM().currentFrameNum"
+    },
+    {
+     "click": "status_bar.stop"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "13_states_distribute_result",
+   "check": "states distribute",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "panel": "window.states"
+    },
+    {
+     "select": [
+      "R1",
+      "R2",
+      "E1"
+     ]
+    },
+    {
+     "panel_menu": "states"
+    },
+    {
+     "click": "Auf Status verteilen"
+    },
+    {
+     "log_value": "fw.getDocumentDOM().frames.length"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "14_history_layout_normal",
+   "check": "history layout",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "panel": "window.history"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "key": "Right"
+    },
+    {
+     "key": "Right"
+    },
+    {
+     "key": "Down"
+    },
+    {
+     "select": "E1"
+    },
+    {
+     "key": "Shift+Right"
+    }
+   ],
+   "shot": {
+    "area": "panel:history"
+   }
+  },
+  {
+   "id": "15_history_slider_result",
+   "check": "history slider",
+   "method": {
+    "orig": "J",
+    "fp": "H"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "panel": "window.history"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "key": "Right"
+    },
+    {
+     "key": "Right"
+    },
+    {
+     "key": "Down"
+    },
+    {
+     "select": "E1"
+    },
+    {
+     "key": "Shift+Right"
+    },
+    {
+     "drag": {
+      "from": "history.slider",
+      "to": {
+       "history_row": 1
+      }
+     }
+    },
+    {
+     "log_value": "fw.selection.length ? fw.selection[0].left : null"
+    }
+   ],
+   "shot": {
+    "area": "panel:history"
+   }
+  },
+  {
+   "id": "16_history_replay_result",
+   "check": "history replay",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "panel": "window.history"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "key": "Right"
+    },
+    {
+     "key": "Right"
+    },
+    {
+     "key": "Down"
+    },
+    {
+     "select": "E1"
+    },
+    {
+     "key": "Shift+Right"
+    },
+    {
+     "click": {
+      "history_row": 2
+     }
+    },
+    {
+     "select": "R2"
+    },
+    {
+     "click": "history.replay"
+    },
+    {
+     "log_value": "fw.selection[0].left"
+    },
+    {
+     "log_value": "(function(){var h=fw.historyPalette,n=h.getStepCount(),a=[];for(var i=0;i<n;i++){a.push(i);}var s=h.getSelection();return n+\" | sel \"+(s&&s.toSource?s.toSource():String(s))+\" | \"+h.getStepsAsJavaScript(a);})()"
+    }
+   ],
+   "shot": null,
+   "note": "R-8 (TW-106): the last value lists the history after the replay (step count, selected rows, steps as script) on both sides. In the reference every runner script (select, log_value) is a history step of its own ('command script', lauf-12 image 14), so history_row 2 is not the same step as in Firepixel; the probe runs last for that reason"
+  },
+  {
+   "id": "17_history_copy_result",
+   "check": "history copy",
+   "method": {
+    "orig": "J",
+    "fp": "R"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "panel": "window.history"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "key": "Right"
+    },
+    {
+     "key": "Right"
+    },
+    {
+     "key": "Down"
+    },
+    {
+     "select": "E1"
+    },
+    {
+     "key": "Shift+Right"
+    },
+    {
+     "click": {
+      "history_row": 2
+     }
+    },
+    {
+     "click": "history.copy"
+    },
+    {
+     "record_ui": "clipboard.text"
+    }
+   ],
+   "shot": null,
+   "note": "compare clipboard script text (R)"
+  },
+  {
+   "id": "18_history_save_cmd_open",
+   "check": "history save cmd",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "panel": "window.history"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "key": "Right"
+    },
+    {
+     "key": "Right"
+    },
+    {
+     "key": "Down"
+    },
+    {
+     "select": "E1"
+    },
+    {
+     "key": "Shift+Right"
+    },
+    {
+     "click": {
+      "history_row": 2
+     }
+    },
+    {
+     "click": "history.save_command"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "19_history_unrepeatable_normal",
+   "check": "history unrepeatable",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "panel": "window.history"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "key": "Right"
+    },
+    {
+     "key": "Right"
+    },
+    {
+     "key": "Down"
+    },
+    {
+     "select": "E1"
+    },
+    {
+     "key": "Shift+Right"
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       100,
+       85
+      ],
+      "to": [
+       130,
+       95
+      ]
+     }
+    }
+   ],
+   "shot": {
+    "area": "panel:history"
+   },
+   "note": "mouse move of object is not repeatable (red X)"
+  },
+  {
+   "id": "20_history_menu_open",
+   "check": "history menu",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "panel": "window.history"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "key": "Right"
+    },
+    {
+     "key": "Right"
+    },
+    {
+     "key": "Down"
+    },
+    {
+     "select": "E1"
+    },
+    {
+     "key": "Shift+Right"
+    },
+    {
+     "panel_menu": "history"
+    },
+    {
+     "log_menu_items": true
+    }
+   ],
+   "shot": {
+    "area": "menu"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "21_history_merge_nudge_result",
+   "check": "history merge nudge",
+   "method": {
+    "orig": "J",
+    "fp": "H"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "panel": "window.history"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "key": "Right"
+    },
+    {
+     "key": "Right"
+    },
+    {
+     "key": "Down"
+    },
+    {
+     "select": "E1"
+    },
+    {
+     "key": "Shift+Right"
+    },
+    {
+     "log_value": "fw.historyPalette.getStepCount()"
+    }
+   ],
+   "shot": null,
+   "note": "three arrow nudges should merge into one step; record of undo step count via JSF unsure; fp may use ui_state history length instead"
+  },
+  {
+   "id": "22_history_limit_normal",
+   "check": "history limit",
+   "method": {
+    "orig": "J",
+    "fp": "H"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "log_value": "fw.getPref('UndoSteps')"
+    }
+   ],
+   "shot": null,
+   "note": "pref key name unsure; fp may read prefs via ui_state"
+  }
+ ]
+}

@@ -1,0 +1,484 @@
+{
+ "unit": "inspector-group-symbol",
+ "testfile": "T06",
+ "testfiles": [
+  "T06",
+  "T04",
+  "T08"
+ ],
+ "note": "Action verbs as in the shared list (see panel-layers.json): open_testfile, select, select_none, tool <tool id>, choose {target,item} (item path 'A > B'; toolbox.<tool>_flyout picks a flyout entry, orig_index = position in the owner-drawn list of the original), open <logical ui key>, click/double_click/hover <ui key|{handle}|{menu_item}>, drag {from,by|to,mods}, canvas_click/canvas_double_click/canvas_hover [x,y] (+mods), canvas_drag {from,to,mods}, canvas_wheel {pos,delta,modifiers}, key <combo>, repeat/do, type, menu 'A > B', menu_open, set_field {target,value}, jsf (both = fp run_script), record_ui <key>, log_value, log_menu_items, export_png doc, wait, close_all, window_size. Additions in this file: {handle: <index|role>} = control/frame handle of the selected object (orig: controlPoints, fp: autoShape.describe/frame); drag_popup_slider {to_fraction,hold} = drag inside the open popup slider; record_ui history.names = history step names; mods on canvas_click/canvas_hover = held modifier keys. Coordinates are document pixels. Labels are compared without '&' and trailing '...'/'…'.",
+ "steps": [
+  {
+   "id": "00_overview_normal",
+   "check": "overview after opening the test file",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    }
+   ],
+   "shot": {
+    "area": "window"
+   }
+  },
+  {
+   "id": "01_group_normal",
+   "check": "group",
+   "method": {
+    "orig": "W, B",
+    "fp": "S, B"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "select": "G"
+    },
+    {
+     "record_ui": "inspector.fields"
+    }
+   ],
+   "shot": {
+    "area": "inspector"
+   }
+  },
+  {
+   "id": "02_group_fill_result",
+   "check": "group fill",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "select": "G"
+    },
+    {
+     "open": "inspector.fill_color"
+    },
+    {
+     "set_field": {
+      "target": "color_popup.hex",
+      "value": "FF0000"
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ]
+  },
+  {
+   "id": "03_symbol_instance_normal",
+   "check": "symbol instance",
+   "method": {
+    "orig": "W, B",
+    "fp": "S, B"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "select": "I1"
+    },
+    {
+     "record_ui": "inspector.fields"
+    }
+   ],
+   "shot": {
+    "area": "inspector"
+   }
+  },
+  {
+   "id": "04_instance_props_normal",
+   "check": "instance props",
+   "method": {
+    "orig": "W",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "select": "I1"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Fenster > Symboleigenschaften"
+    },
+    {
+     "record_ui": "inspector.fields"
+    }
+   ],
+   "fp": [
+    {
+     "click_text": "Symboleigenschaften"
+    },
+    {
+     "record_ui": "inspector.fields"
+    }
+   ],
+   "shot": {
+    "area": "panel:symbol_properties"
+   },
+   "note": "Firepixel: tab 'Symboleigenschaften' in the inspector; original: separate panel (unsure menu path)."
+  },
+  {
+   "id": "05_button_normal",
+   "check": "button",
+   "method": {
+    "orig": "W, B",
+    "fp": "S, B"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "select": "BTN"
+    },
+    {
+     "record_ui": "inspector.fields"
+    }
+   ],
+   "shot": {
+    "area": "inspector"
+   }
+  },
+  {
+   "id": "06_button_edit_open",
+   "check": "button edit",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "tool": "pointer"
+    },
+    {
+     "canvas_double_click": [
+      310,
+      40
+     ]
+    }
+   ],
+   "shot": {
+    "area": "window"
+   },
+   "note": "Leave the editor afterwards (Escape / 'Symbolbearbeitung beenden')."
+  },
+  {
+   "id": "07_animation_normal",
+   "check": "animation",
+   "method": {
+    "orig": "W, B",
+    "fp": "S, B"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "select": "ANI"
+    },
+    {
+     "record_ui": "inspector.fields"
+    }
+   ],
+   "shot": {
+    "area": "inspector"
+   }
+  },
+  {
+   "id": "08_animation_change_result",
+   "check": "animation change",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "select": "ANI"
+    },
+    {
+     "set_field": {
+      "target": "inspector.anim_frames",
+      "value": "5"
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "record_ui": "history.names"
+    }
+   ]
+  },
+  {
+   "id": "09_animation_path_normal",
+   "check": "animation path",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "select": "ANI"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "10_multi_same_normal",
+   "check": "multi same",
+   "method": {
+    "orig": "W",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": [
+      "R1",
+      "R2"
+     ]
+    },
+    {
+     "record_ui": "inspector.fields"
+    }
+   ],
+   "shot": {
+    "area": "inspector"
+   }
+  },
+  {
+   "id": "11_multi_mixed_normal",
+   "check": "multi mixed",
+   "method": {
+    "orig": "W",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T08"
+    },
+    {
+     "select": [
+      "R",
+      "TX"
+     ]
+    },
+    {
+     "record_ui": "inspector.fields"
+    }
+   ],
+   "shot": {
+    "area": "inspector"
+   },
+   "note": "Uses T08 (rectangle + text)."
+  },
+  {
+   "id": "12_multi_fill_normal",
+   "check": "multi fill",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": [
+      "E1",
+      "R1"
+     ]
+    }
+   ],
+   "shot": {
+    "area": "inspector"
+   },
+   "note": "Fill swatch shows the last selected object (O15)."
+  },
+  {
+   "id": "13_multi_style_normal",
+   "check": "multi style",
+   "method": {
+    "orig": "W",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": [
+      "R1",
+      "E1"
+     ]
+    },
+    {
+     "record_ui": "inspector.fields"
+    }
+   ]
+  },
+  {
+   "id": "14_mask_group_normal",
+   "check": "mask group",
+   "method": {
+    "orig": "W",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": [
+      "R1",
+      "E1"
+     ]
+    },
+    {
+     "menu": "Modifizieren > Maske > Als Maske gruppieren"
+    },
+    {
+     "record_ui": "inspector.fields"
+    }
+   ],
+   "shot": {
+    "area": "inspector"
+   }
+  },
+  {
+   "id": "15_edit_symbol_open",
+   "check": "edit symbol",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "tool": "pointer"
+    },
+    {
+     "canvas_double_click": [
+      190,
+      50
+     ]
+    }
+   ],
+   "shot": {
+    "area": "window"
+   },
+   "note": "Leave the symbol editor afterwards."
+  },
+  {
+   "id": "16_break_apart_result",
+   "check": "break apart",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "select": "I1"
+    },
+    {
+     "menu": "Modifizieren > Symbol > Teilen"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "record_ui": "history.names"
+    }
+   ]
+  },
+  {
+   "id": "17_thumbnail_normal",
+   "check": "thumbnail",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "select": "I1"
+    }
+   ],
+   "shot": {
+    "area": "panel:layers"
+   }
+  },
+  {
+   "id": "18_undo_result",
+   "check": "undo",
+   "method": {
+    "orig": "J",
+    "fp": "H"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "select": "ANI"
+    },
+    {
+     "set_field": {
+      "target": "inspector.anim_frames",
+      "value": "5"
+     }
+    },
+    {
+     "select": "G"
+    },
+    {
+     "set_field": {
+      "target": "inspector.x",
+      "value": "30"
+     }
+    },
+    {
+     "record_ui": "history.names"
+    }
+   ]
+  }
+ ]
+}

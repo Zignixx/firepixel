@@ -1,0 +1,10 @@
+{
+  "format": "firepixel-batch-recipe",
+  "version": 1,
+  "name": "Remove metadata",
+  "description": "Remove EXIF, GPS, XMP and comments; keep format and pixels.",
+  "steps": [
+    { "id": "metadata.edit", "enabled": true, "params": { "keep": "none" } }
+  ],
+  "output": { "format": "same", "options": {} }
+}

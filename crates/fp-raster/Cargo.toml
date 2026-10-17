@@ -1,0 +1,24 @@
+[package]
+name = "fp-raster"
+description = "Pixel buffers (RGBA8, copy-on-write tiles), masks, compositing, resampling and the bitmap filters"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+fp-geom = { workspace = true, features = ["serde"] }
+fp-color = { workspace = true, features = ["serde"] }
+serde = { workspace = true }
+thiserror = { workspace = true }
+# Mehrsprachige Fehlermeldungen
+fp-i18n = { workspace = true }
+rayon = { workspace = true }
+
+[dev-dependencies]
+png = { workspace = true }
+serde_json = { workspace = true }
+
+[lints]
+workspace = true

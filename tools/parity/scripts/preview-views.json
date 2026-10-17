@@ -1,0 +1,941 @@
+{
+ "unit": "preview-views",
+ "testfile": "T09",
+ "testfiles": [
+  "T09",
+  "T10"
+ ],
+ "note": "Action verbs (both/orig/fp): open_testfile <T..> (close docs unsaved, open fresh, base settings) / close_all; menu 'A > B'; command <id from commands.json>; panel <window.* id or title>; panel_menu <panel> (open its menu); select <object name|[names]>; select_none; tool <tool id>; open <logical ui key>; click/double_click/right_click/hover/mouse_down/mouse_up <label|{key}|{popup_swatch:#hex}|{area,pos}>; drag {from,to,mods}; canvas_click/canvas_move [x,y] (document px); canvas_drag {from,to,mods}; scroll {area,delta}; key <combo>; type <text>; wait <ms>; choose {target,item} (pick list entry); file_dialog <path> (choose file in open dialog); export_png doc (export + hash); resize_panel {panel,width}; set_field {target,value}; export {dir,name,type,...} (File > Export dialog); clear_dir/record_dir <dir>; record_file <path> (size+hash+pixels); record_file_text <path>; restart_app; resize_dialog {width,height}; target forms {canvas:[x,y]|name}, {pref_category}, {tree_item:[path]}, hold_key in drag/click; log_value <JSF expression, logged in both>; record_ui <logical ui key> (orig window text/UIA, fp ui_find/ui_state); jsf <code> (in both = fp run_script); fp-only ui_action {...}, ui_find_click <text>. Step keys: after = actions after the shot; log_menu_items = item texts + enabled/checked of the open menu; shot omitted = value-only checkpoint.",
+ "steps": [
+  {
+   "id": "00_overview_normal",
+   "check": "overview after opening the test file",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "command": "file.imagePreview"
+    },
+    {
+     "wait": 800
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   }
+  },
+  {
+   "id": "01_mode_1_normal",
+   "check": "mode 1",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "command": "file.imagePreview"
+    },
+    {
+     "wait": 800
+    },
+    {
+     "click": "preview.mode_1"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "02_mode_2_normal",
+   "check": "mode 2",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "command": "file.imagePreview"
+    },
+    {
+     "wait": 800
+    },
+    {
+     "click": "preview.mode_2"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "03_mode_4_normal",
+   "check": "mode 4",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "command": "file.imagePreview"
+    },
+    {
+     "wait": 800
+    },
+    {
+     "click": "preview.mode_4"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "04_field_select_pressed",
+   "check": "field select",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "command": "file.imagePreview"
+    },
+    {
+     "wait": 800
+    },
+    {
+     "click": "preview.mode_4"
+    },
+    {
+     "click": {
+      "preview_pane": 2
+     }
+    },
+    {
+     "choose": {
+      "target": "preview.format",
+      "item": "JPEG"
+     }
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "05_field_header_normal",
+   "check": "field header",
+   "method": {
+    "orig": "W, B",
+    "fp": "S, B"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "command": "file.imagePreview"
+    },
+    {
+     "wait": 800
+    },
+    {
+     "click": "preview.mode_2"
+    },
+    {
+     "record_ui": "preview.pane_headers"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "06_preview_off_normal",
+   "check": "preview off",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "command": "file.imagePreview"
+    },
+    {
+     "wait": 800
+    },
+    {
+     "click": "preview.mode_2"
+    },
+    {
+     "click": {
+      "preview_pane": 0
+     }
+    },
+    {
+     "click": "preview.preview_checkbox"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "pane 0 shows the original when 'Vorschau' is off"
+  },
+  {
+   "id": "07_sync_scroll_before_result",
+   "check": "sync scroll - before",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T10"
+    },
+    {
+     "command": "file.imagePreview"
+    },
+    {
+     "wait": 800
+    },
+    {
+     "click": "preview.mode_2"
+    },
+    {
+     "click": "preview.zoom_100"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "07_sync_scroll_after_result",
+   "check": "sync scroll - after",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T10"
+    },
+    {
+     "command": "file.imagePreview"
+    },
+    {
+     "wait": 800
+    },
+    {
+     "click": "preview.mode_2"
+    },
+    {
+     "click": "preview.zoom_100"
+    },
+    {
+     "scroll": {
+      "area": {
+       "preview_pane": 0
+      },
+      "delta": 5
+     }
+    },
+    {
+     "scroll": {
+      "area": {
+       "preview_pane": 0
+      },
+      "delta": 5,
+      "mods": [
+       "shift"
+      ]
+     }
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "drag scrollbar not available in panes; wheel + shift-wheel"
+  },
+  {
+   "id": "08_sync_wheel_result",
+   "check": "sync wheel",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T10"
+    },
+    {
+     "command": "file.imagePreview"
+    },
+    {
+     "wait": 800
+    },
+    {
+     "click": "preview.mode_2"
+    },
+    {
+     "click": "preview.zoom_100"
+    },
+    {
+     "scroll": {
+      "area": {
+       "preview_pane": 1
+      },
+      "delta": 3
+     }
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "09_sync_space_result",
+   "check": "sync space",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T10"
+    },
+    {
+     "command": "file.imagePreview"
+    },
+    {
+     "wait": 800
+    },
+    {
+     "click": "preview.mode_2"
+    },
+    {
+     "click": "preview.zoom_100"
+    },
+    {
+     "drag": {
+      "from": {
+       "preview_pane": 0,
+       "pos": "center"
+      },
+      "to": {
+       "preview_pane": 0,
+       "pos": "center",
+       "offset": [
+        -150,
+        -100
+       ]
+      },
+      "hold_key": "Space"
+     }
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "10_sync_hand_result",
+   "check": "sync hand",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T10"
+    },
+    {
+     "command": "file.imagePreview"
+    },
+    {
+     "wait": 800
+    },
+    {
+     "click": "preview.mode_2"
+    },
+    {
+     "click": "preview.zoom_100"
+    },
+    {
+     "click": "preview.tool_hand"
+    },
+    {
+     "drag": {
+      "from": {
+       "preview_pane": 1,
+       "pos": "center"
+      },
+      "to": {
+       "preview_pane": 1,
+       "pos": "center",
+       "offset": [
+        -150,
+        -100
+       ]
+      }
+     }
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "11_sync_zoom_result",
+   "check": "sync zoom",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T10"
+    },
+    {
+     "command": "file.imagePreview"
+    },
+    {
+     "wait": 800
+    },
+    {
+     "click": "preview.mode_2"
+    },
+    {
+     "click": "preview.zoom_100"
+    },
+    {
+     "click": "preview.tool_zoom"
+    },
+    {
+     "click": {
+      "preview_pane": 0,
+      "pos": "center"
+     }
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "11_sync_zoom_open",
+   "check": "sync zoom",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T10"
+    },
+    {
+     "command": "file.imagePreview"
+    },
+    {
+     "wait": 800
+    },
+    {
+     "click": "preview.mode_2"
+    },
+    {
+     "click": "preview.zoom_100"
+    },
+    {
+     "click": "preview.zoom_list"
+    },
+    {
+     "record_ui": "list.items"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "12_tool_crop_result",
+   "check": "tool crop",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "command": "file.imagePreview"
+    },
+    {
+     "wait": 800
+    },
+    {
+     "click": "preview.tool_crop"
+    },
+    {
+     "drag": {
+      "from": {
+       "preview_pane": 0,
+       "pos": "image_tl",
+       "offset": [
+        20,
+        20
+       ]
+      },
+      "to": {
+       "preview_pane": 0,
+       "pos": "image_tl",
+       "offset": [
+        220,
+        170
+       ]
+      }
+     }
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "export area values recorded in 15_export_area"
+  },
+  {
+   "id": "13_tool_pointer_result",
+   "check": "tool pointer",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "command": "file.imagePreview"
+    },
+    {
+     "wait": 800
+    },
+    {
+     "click": "preview.tool_crop"
+    },
+    {
+     "click": "preview.tool_pointer"
+    },
+    {
+     "record_ui": "preview.active_tool"
+    }
+   ],
+   "shot": null,
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "14_file_tab_normal",
+   "check": "file tab",
+   "method": {
+    "orig": "W, B",
+    "fp": "S, B"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "command": "file.imagePreview"
+    },
+    {
+     "wait": 800
+    },
+    {
+     "click": "Datei"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "15_export_area_result",
+   "check": "export area",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "command": "file.imagePreview"
+    },
+    {
+     "wait": 800
+    },
+    {
+     "click": "Datei"
+    },
+    {
+     "click": "preview.export_area_checkbox"
+    },
+    {
+     "set_field": {
+      "target": "preview.export_area.w",
+      "value": "150"
+     }
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "16_anim_tab_normal",
+   "check": "anim tab",
+   "method": {
+    "orig": "W, B",
+    "fp": "S, B"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "command": "file.imagePreview"
+    },
+    {
+     "wait": 800
+    },
+    {
+     "choose": {
+      "target": "preview.format",
+      "item": "Animiertes GIF"
+     }
+    },
+    {
+     "click": "Animation"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "format item label unsure"
+  },
+  {
+   "id": "17_anim_buttons_play_pressed",
+   "check": "anim buttons - play",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "command": "file.imagePreview"
+    },
+    {
+     "wait": 800
+    },
+    {
+     "choose": {
+      "target": "preview.format",
+      "item": "Animiertes GIF"
+     }
+    },
+    {
+     "click": "Animation"
+    },
+    {
+     "click": "preview.anim_play"
+    },
+    {
+     "wait": 300
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "17_anim_buttons_next_pressed",
+   "check": "anim buttons - next",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "command": "file.imagePreview"
+    },
+    {
+     "wait": 800
+    },
+    {
+     "choose": {
+      "target": "preview.format",
+      "item": "Animiertes GIF"
+     }
+    },
+    {
+     "click": "Animation"
+    },
+    {
+     "click": "preview.anim_next"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "18_anim_crop_result",
+   "check": "anim crop",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "command": "file.imagePreview"
+    },
+    {
+     "wait": 800
+    },
+    {
+     "choose": {
+      "target": "preview.format",
+      "item": "Animiertes GIF"
+     }
+    },
+    {
+     "click": "Animation"
+    },
+    {
+     "click": "preview.anim_autocrop"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": null,
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "'Zuschneiden der Status' checkbox label unsure"
+  },
+  {
+   "id": "19_resize_window_normal",
+   "check": "resize window",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "command": "file.imagePreview"
+    },
+    {
+     "wait": 800
+    },
+    {
+     "click": "preview.mode_2"
+    },
+    {
+     "resize_dialog": {
+      "width": 1400,
+      "height": 900
+     }
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "20_checkerboard_normal",
+   "check": "checkerboard",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "command": "file.imagePreview"
+    },
+    {
+     "wait": 800
+    },
+    {
+     "choose": {
+      "target": "preview.format",
+      "item": "PNG 32"
+     }
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "T09 canvas transparent: checkerboard visible"
+  }
+ ]
+}

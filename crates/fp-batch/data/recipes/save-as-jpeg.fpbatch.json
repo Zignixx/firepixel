@@ -1,0 +1,10 @@
+{
+  "format": "firepixel-batch-recipe",
+  "version": 1,
+  "name": "Save as JPEG",
+  "description": "Transparency on white, JPEG quality 85.",
+  "steps": [
+    { "id": "background.flatten", "enabled": true, "params": { "kind": "color", "color": "#ffffff", "onlyIfTransparent": true } }
+  ],
+  "output": { "format": "jpeg", "options": { "quality": 85, "progressive": true, "background": "#ffffff" } }
+}

@@ -1,0 +1,1069 @@
+{
+ "unit": "menu-modify-a",
+ "testfile": "T04",
+ "note": "Verbs as in tools/parity/runner/README.md. Every step starts with reopen <Txx> (test file fresh, earlier changes discarded) or close_all (no document). Menu commands: orig = menu path, fp = command id (side-specific, so the following actions are listed on both sides). Logical keys used here that may still be unmapped in ui_map.json: dialog.field.<i> / dialog.combo.<i> (i-th edit/combo of the top dialog), labels for dropdowns. Rare verbs used here that the runner may log as unsupported: new_document, window_click, drag_text, hover_text, right_click_text, double_click_text, drag_guide, drag_ruler_origin, drag_dialog_title, drag_dialog_slider, click_dialog_rel, drag_dialog_rel, canvas_wheel, reopen_dialog (repeat the opening actions), save_history_as_command, delete_saved_command, add_live_filter, file_dialog_open_types, restart_app, window_size, set_clipboard_image, drop_files, log_focus_cycle-like record_ui {focus_cycle:n}. Object 'I1#2' = duplicate of I1; 'text' = first text element; canvas_drag option hold = screenshot while the button is held.",
+ "steps": [
+  {
+   "id": "00_overview_normal",
+   "check": "overview after opening the test file",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "shot": {
+    "area": "window"
+   }
+  },
+  {
+   "id": "01_canvas_size_result",
+   "check": "canvas size (-> D20) effect",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Modifizieren > Leinwand > Leinwandgröße..."
+    },
+    {
+     "set_field": {
+      "target": "dialog.field.0",
+      "value": "900"
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM();return [d.width,d.height,d.zoom,d.layers.length,d.frames.length].toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "modify.canvas.canvasSize"
+    },
+    {
+     "set_field": {
+      "target": "dialog.field.0",
+      "value": "900"
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM();return [d.width,d.height,d.zoom,d.layers.length,d.frames.length].toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": null,
+   "note": "runner logs DOC after the dialog was confirmed (after-actions run before the value read-out here)"
+  },
+  {
+   "id": "02_image_size_result",
+   "check": "image size (-> D19) resample",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "reopen": "T02"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Modifizieren > Leinwand > Bildgröße..."
+    },
+    {
+     "set_field": {
+      "target": "dialog.field.0",
+      "value": "400"
+     }
+    },
+    {
+     "key": "Enter"
+    }
+   ],
+   "fp": [
+    {
+     "command": "modify.canvas.imageSize"
+    },
+    {
+     "set_field": {
+      "target": "dialog.field.0",
+      "value": "400"
+     }
+    },
+    {
+     "key": "Enter"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "03_canvas_color_result",
+   "check": "canvas color",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Modifizieren > Leinwand > Leinwandfarbe..."
+    },
+    {
+     "click_text": "Transparent"
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "log_value": "fw.getDocumentDOM().backgroundColor"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "modify.canvas.canvasColor"
+    },
+    {
+     "click_text": "Transparent"
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "log_value": "fw.getDocumentDOM().backgroundColor"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "04_trim_fit_result",
+   "check": "trim / fit canvas",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Modifizieren > Leinwand > Leinwand zuschneiden"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM();return [d.width,d.height,d.zoom,d.layers.length,d.frames.length].toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "modify.canvas.trimCanvas"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM();return [d.width,d.height,d.zoom,d.layers.length,d.frames.length].toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "05_rotate_canvas_result",
+   "check": "rotate canvas 180/90/90",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Modifizieren > Leinwand > 90° im UZS drehen"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM();return [d.width,d.height,d.zoom,d.layers.length,d.frames.length].toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "modify.canvas.rotate90DegreeCw"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM();return [d.width,d.height,d.zoom,d.layers.length,d.frames.length].toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "06_flatten_result",
+   "check": "flatten selection, flatten layers",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "select": [
+      "R1",
+      "E1"
+     ]
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Modifizieren > Auswahl auf Hintergrund reduzieren"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "modify.flattenSelection"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": null,
+   "note": "original label may be 'Auswahl reduzieren'"
+  },
+  {
+   "id": "07_merge_down_result",
+   "check": "merge down",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "reopen": "T02"
+    },
+    {
+     "select": "B1"
+    },
+    {
+     "jsf": "fw.getDocumentDOM().addNewRectanglePrimitive({left:600,top:400,right:700,bottom:500},0)"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Modifizieren > Mit darunter liegender auf eine Ebene reduzieren"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "modify.mergeDown"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "08_convert_bitmap_result",
+   "check": "convert to bitmap",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "select": "ST"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Modifizieren > Auswahl auf Hintergrund reduzieren"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    }
+   ],
+   "fp": [
+    {
+     "command": "modify.flattenSelection"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "note": "'In Bitmap umwandeln' = flatten selection in the original menu; unverified"
+  },
+  {
+   "id": "09_animation_menu_result",
+   "check": "Animation > animate selection/settings/remove",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "select": "R1"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Modifizieren > Animation > Auswahl animieren..."
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "modify.animation.animateSelection"
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "10_symbol_convert_result",
+   "check": "convert to symbol / break apart",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "select": "R1"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Modifizieren > Symbol > In Symbol konvertieren..."
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "modify.symbol.convertToSymbol"
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "11_symbol_tween_open",
+   "check": "tween instances (message without 2)",
+   "method": {
+    "orig": "W, J",
+    "fp": "Fi, D"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "select": "R1"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Modifizieren > Symbol > Instanzen tweenen..."
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "modify.symbol.tweenInstances"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "11_symbol_tween_result",
+   "check": "tween instances (message without 2)",
+   "method": {
+    "orig": "W, J",
+    "fp": "Fi, D"
+   },
+   "both": [
+    {
+     "reopen": "T06"
+    },
+    {
+     "select": "I1"
+    },
+    {
+     "key": "ctrl+shift+D"
+    },
+    {
+     "select": [
+      "I1",
+      "I1#2"
+     ]
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Modifizieren > Symbol > Instanzen tweenen..."
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "modify.symbol.tweenInstances"
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": null,
+   "note": "'I1#2' = the duplicate of I1"
+  },
+  {
+   "id": "12_symbol_edit_open",
+   "check": "edit symbol",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "reopen": "T06"
+    },
+    {
+     "select": "I1"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Modifizieren > Symbol > Symbol bearbeiten"
+    }
+   ],
+   "fp": [
+    {
+     "command": "modify.symbol.editSymbol"
+    }
+   ],
+   "shot": {
+    "area": "window"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "13_popup_add_open",
+   "check": "add pop-up menu (prompt without target, D34)",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "select": "R1"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Modifizieren > Popupmenü > Popupmenü hinzufügen..."
+    }
+   ],
+   "fp": [
+    {
+     "command": "modify.popUpMenu.addPopUpMenu"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "14_popup_edit_delete_result",
+   "check": "edit/delete pop-up menu",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "reopen": "T06"
+    },
+    {
+     "select": "S1"
+    },
+    {
+     "menu_open": [
+      "Modifizieren",
+      "Popupmenü"
+     ]
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": null,
+   "log_menu_items": true
+  },
+  {
+   "id": "15_mask_reveal_hide_result",
+   "check": "Mask > reveal all/hide all/reveal selection",
+   "method": {
+    "orig": "J, E",
+    "fp": "D, E"
+   },
+   "both": [
+    {
+     "reopen": "T02"
+    },
+    {
+     "select": "B1"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Modifizieren > Maske > Alles einblenden"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "modify.mask.revealAll"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "16_mask_paste_result",
+   "check": "paste as mask / group as mask",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "select": [
+      "R1",
+      "E1"
+     ]
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Modifizieren > Maske > Als Maske gruppieren"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "modify.mask.groupAsMask"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "17_mask_disable_delete_result",
+   "check": "disable/delete/apply mask",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "select": [
+      "R1",
+      "E1"
+     ]
+    },
+    {
+     "menu": [
+      "Modifizieren",
+      "Maske",
+      "Als Maske gruppieren"
+     ]
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Modifizieren > Maske > Maske deaktivieren"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "modify.mask.disableMask"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "18_sel_jpeg_result",
+   "check": "Selective JPEG > save/restore/remove (history names)",
+   "method": {
+    "orig": "J",
+    "fp": "H"
+   },
+   "both": [
+    {
+     "reopen": "T02"
+    },
+    {
+     "select": "B1"
+    },
+    {
+     "tool": "tool.marquee"
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       100,
+       100
+      ],
+      "to": [
+       300,
+       250
+      ]
+     }
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Modifizieren > Selektives JPEG > Auswahl als JPEG-Maske speichern"
+    },
+    {
+     "log_value": "(function(){var h=fw.historyPalette,n=h.getStepCount(),a=[],js;for(var i=0;i<n;i++)a.push(i);try{js=h.getStepsAsJavaScript(a);}catch(e){js=\"ERR \"+e;}return [n,js].toSource();})()"
+    }
+   ],
+   "fp": [
+    {
+     "command": "modify.selectiveJpeg.saveSelectionAsJpegMask"
+    },
+    {
+     "log_value": "(function(){var h=fw.historyPalette,n=h.getStepCount(),a=[],js;for(var i=0;i<n;i++)a.push(i);try{js=h.getStepsAsJavaScript(a);}catch(e){js=\"ERR \"+e;}return [n,js].toSource();})()"
+    }
+   ],
+   "shot": null,
+   "note": "history read-out via fw.historyPalette.getStepCount()/getStepsAsJavaScript()"
+  },
+  {
+   "id": "19_bitmap_alpha_result",
+   "check": "transparency -> alpha",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "reopen": "T02"
+    },
+    {
+     "select": "B1"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Filter > Andere > In Alphakanal konvertieren"
+    }
+   ],
+   "fp": [
+    {
+     "command": "filter.other.convertToAlpha"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "note": "Firepixel label 'In Alphakanal konv.'; original label unverified"
+  },
+  {
+   "id": "20_marquee_to_path_result",
+   "check": "marquee to path",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "reopen": "T02"
+    },
+    {
+     "select": "B1"
+    },
+    {
+     "tool": "tool.marquee"
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       100,
+       100
+      ],
+      "to": [
+       300,
+       250
+      ]
+     }
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Auswählen > Auswahlrahmen in Pfad konvertieren"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "select.convertMarqueeToPath"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "21_path_to_marquee_result",
+   "check": "path to marquee (-> D32)",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "select": "E1"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Modifizieren > Pfad in Auswahlrahmen konvertieren..."
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "log_value": "(function(){var h=fw.historyPalette,n=h.getStepCount(),a=[],js;for(var i=0;i<n;i++)a.push(i);try{js=h.getStepsAsJavaScript(a);}catch(e){js=\"ERR \"+e;}return [n,js].toSource();})()"
+    }
+   ],
+   "fp": [
+    {
+     "command": "modify.convertPathToMarquee"
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "log_value": "(function(){var h=fw.historyPalette,n=h.getStepCount(),a=[],js;for(var i=0;i<n;i++)a.push(i);try{js=h.getStepsAsJavaScript(a);}catch(e){js=\"ERR \"+e;}return [n,js].toSource();})()"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "22_exit_bitmap_result",
+   "check": "exit bitmap mode",
+   "method": {
+    "orig": "J",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "reopen": "T02"
+    },
+    {
+     "select": "B1"
+    },
+    {
+     "tool": "tool.marquee"
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       100,
+       100
+      ],
+      "to": [
+       300,
+       250
+      ]
+     }
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "log_value": "(function(){var r=[],s=fw.selection;for(var i=0;i<s.length;i++){var p=s[i].pixelRect;r.push([s[i].name,s[i].toString(),p.left,p.top,p.right,p.bottom]);}return r.toSource();})()"
+    },
+    {
+     "record_ui": "ui_state.summary"
+    }
+   ],
+   "shot": null,
+   "note": "original: exit bitmap mode via the stop button in the status bar or Esc (unverified)"
+  },
+  {
+   "id": "23_disabled_states_disabled",
+   "check": "grayed entries per situation",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "select_none": true
+    },
+    {
+     "menu_open": [
+      "Modifizieren"
+     ]
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Escape"
+    }
+   ],
+   "shot": null,
+   "log_menu_items": true
+  },
+  {
+   "id": "24_undo_names_result",
+   "check": "history names",
+   "method": {
+    "orig": "J",
+    "fp": "H"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "menu": [
+      "Modifizieren",
+      "Leinwand",
+      "90° im UZS drehen"
+     ]
+    },
+    {
+     "menu": [
+      "Modifizieren",
+      "Maske",
+      "Als Maske gruppieren"
+     ]
+    },
+    {
+     "log_value": "(function(){var h=fw.historyPalette,n=h.getStepCount(),a=[],js;for(var i=0;i<n;i++)a.push(i);try{js=h.getStepsAsJavaScript(a);}catch(e){js=\"ERR \"+e;}return [n,js].toSource();})()"
+    }
+   ],
+   "shot": null,
+   "note": "history read-out via fw.historyPalette.getStepCount()/getStepsAsJavaScript()"
+  }
+ ]
+}

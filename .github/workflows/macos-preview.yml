@@ -1,0 +1,183 @@
+# macOS-Vorschau: Firepixel.app (Apple Silicon, arm64) als ZIP-Artifact, auf Wunsch dazu Tests der
+# plattformneutralen Crates. Kein Push-Ausloeser: nur manuell (workflow_dispatch) oder aus dem
+# Release-Workflow (workflow_call) – macOS-Minuten zaehlen 10-fach.
+name: macos-preview
+
+on:
+  workflow_dispatch:
+    inputs:
+      tests:
+        description: "Auch die Tests der plattformneutralen Crates ausfuehren (kostet ~12 Mac-Minuten)"
+        type: boolean
+        default: false
+  workflow_call:
+    inputs:
+      ref:
+        description: "Commit/Branch, der gebaut wird"
+        type: string
+        required: true
+
+concurrency:
+  group: macos-preview-${{ github.workflow }}-${{ inputs.ref || github.ref }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: "0"
+  # Vorschau: schneller bauen als das Windows-Release (thin LTO bleibt)
+  CARGO_PROFILE_RELEASE_CODEGEN_UNITS: "16"
+  MACOSX_DEPLOYMENT_TARGET: "11.0"
+
+jobs:
+  bundle:
+    name: Firepixel.app (arm64)
+    runs-on: macos-14
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+
+      - name: Rust stable
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+          rustc --version
+
+      - uses: Swatinem/rust-cache@v2.8.0
+        with:
+          shared-key: macos-arm64
+          cache-on-failure: true
+
+      - name: Release-Build (GUI + CLI)
+        run: cargo build --release --locked -p firepixel -p firepixel-cli
+
+      - name: App-Paket erzeugen
+        run: |
+          set -euo pipefail
+          VERSION=$(cargo pkgid -p firepixel | sed -E 's/.*[#@]//')
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          OUT=dist/Firepixel-macOS-arm64
+          APP=$OUT/Firepixel.app
+          mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
+          cp target/release/firepixel "$APP/Contents/MacOS/firepixel"
+          cp target/release/firepixel-cli "$OUT/firepixel-cli"
+
+          # Icon: vorhandene PNGs (16-256 px), groessere Stufen hochskaliert
+          ICONSET=$(mktemp -d)/Firepixel.iconset
+          mkdir -p "$ICONSET"
+          P=assets/icon/png
+          cp $P/firepixel_16.png  "$ICONSET/icon_16x16.png"
+          cp $P/firepixel_32.png  "$ICONSET/icon_16x16@2x.png"
+          cp $P/firepixel_32.png  "$ICONSET/icon_32x32.png"
+          cp $P/firepixel_64.png  "$ICONSET/icon_32x32@2x.png"
+          cp $P/firepixel_128.png "$ICONSET/icon_128x128.png"
+          cp $P/firepixel_256.png "$ICONSET/icon_128x128@2x.png"
+          cp $P/firepixel_256.png "$ICONSET/icon_256x256.png"
+          sips -z 512 512 $P/firepixel_256.png --out "$ICONSET/icon_256x256@2x.png" >/dev/null
+          sips -z 512 512 $P/firepixel_256.png --out "$ICONSET/icon_512x512.png" >/dev/null
+          sips -z 1024 1024 $P/firepixel_256.png --out "$ICONSET/icon_512x512@2x.png" >/dev/null
+          iconutil -c icns "$ICONSET" -o "$APP/Contents/Resources/Firepixel.icns"
+
+          # Handbuecher im Paket (Hilfe-Menue sucht in Contents/Resources) und daneben
+          cp docs/MANUAL.md docs/MANUAL.de.md "$APP/Contents/Resources/"
+          cp docs/MANUAL.md docs/MANUAL.de.md LICENSE "$OUT/"
+          cp LICENSE "$APP/Contents/Resources/"
+
+          cat > "$APP/Contents/Info.plist" <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>CFBundleName</key><string>Firepixel</string>
+            <key>CFBundleDisplayName</key><string>Firepixel</string>
+            <key>CFBundleIdentifier</key><string>app.firepixel</string>
+            <key>CFBundleExecutable</key><string>firepixel</string>
+            <key>CFBundleIconFile</key><string>Firepixel</string>
+            <key>CFBundlePackageType</key><string>APPL</string>
+            <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
+            <key>CFBundleShortVersionString</key><string>${VERSION}</string>
+            <key>CFBundleVersion</key><string>${VERSION}</string>
+            <key>LSMinimumSystemVersion</key><string>11.0</string>
+            <key>LSApplicationCategoryType</key><string>public.app-category.graphics-design</string>
+            <key>NSHighResolutionCapable</key><true/>
+            <key>NSSupportsAutomaticGraphicsSwitching</key><true/>
+          </dict>
+          </plist>
+          EOF
+          sed -i '' -e 's/^          //' "$APP/Contents/Info.plist"
+          plutil -lint "$APP/Contents/Info.plist"
+
+          # ad-hoc signieren (keine Apple-ID; Gatekeeper verlangt beim ersten Start Rechtsklick > Oeffnen)
+          codesign --force -s - "$OUT/firepixel-cli"
+          codesign --force --deep -s - "$APP"
+          codesign --verify --deep --strict --verbose=2 "$APP"
+          file "$APP/Contents/MacOS/firepixel" "$OUT/firepixel-cli"
+
+          # Kurztest der CLI auf dem Runner
+          "$OUT/firepixel-cli" --version || true
+          "$OUT/firepixel-cli" --help | head -n 20 || true
+
+          cd dist
+          ditto -c -k --sequesterRsrc --keepParent Firepixel-macOS-arm64 "Firepixel-macOS-arm64-${VERSION}.zip"
+          ls -la
+
+      - name: Startprobe (GUI 20 s, Bildschirmfoto)
+        continue-on-error: true
+        run: |
+          set -u
+          APP=dist/Firepixel-macOS-arm64/Firepixel.app
+          FP_STARTUP_TRACE=1 RUST_BACKTRACE=1 "$APP/Contents/MacOS/firepixel" > dist/start.log 2>&1 &
+          PID=$!
+          sleep 20
+          screencapture -x dist/startprobe.png || true
+          if kill -0 "$PID" 2>/dev/null; then
+            echo "Firepixel laeuft nach 20 s (PID $PID)"
+            kill "$PID" || true
+          else
+            echo "::warning::Firepixel nach 20 s nicht mehr aktiv"
+            wait "$PID"; echo "Exit-Code: $?"
+          fi
+          cat dist/start.log | tail -n 60
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Firepixel-macOS-arm64
+          path: dist/Firepixel-macOS-arm64-*.zip
+          if-no-files-found: error
+          retention-days: 14
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: startprobe
+          path: |
+            dist/startprobe.png
+            dist/start.log
+          if-no-files-found: ignore
+          retention-days: 7
+
+  tests:
+    name: Tests (plattformneutrale Crates)
+    runs-on: macos-14
+    timeout-minutes: 45
+    # nur auf Wunsch (Eingabe tests); rote Tests melden, aber den Lauf nicht blockieren
+    continue-on-error: true
+    if: ${{ inputs.tests == true }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Rust stable
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+
+      - uses: Swatinem/rust-cache@v2.8.0
+        with:
+          shared-key: macos-arm64-test
+          cache-on-failure: true
+
+      - name: cargo test
+        env:
+          FP_NO_SHELL_OPEN: "1"
+        run: cargo test --locked -p fp-model -p fp-geom -p fp-raster -p fp-vector -p fp-script --no-fail-fast

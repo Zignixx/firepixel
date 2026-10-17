@@ -1,0 +1,1030 @@
+{
+ "unit": "xs-preferences",
+ "testfile": "T04",
+ "note": "Action verbs (both/orig/fp): open_testfile <T..> (close docs unsaved, open fresh, base settings) / close_all; menu 'A > B'; command <id from commands.json>; panel <window.* id or title>; panel_menu <panel> (open its menu); select <object name|[names]>; select_none; tool <tool id>; open <logical ui key>; click/double_click/right_click/hover/mouse_down/mouse_up <label|{key}|{popup_swatch:#hex}|{area,pos}>; drag {from,to,mods}; canvas_click/canvas_move [x,y] (document px); canvas_drag {from,to,mods}; scroll {area,delta}; key <combo>; type <text>; wait <ms>; choose {target,item} (pick list entry); file_dialog <path> (choose file in open dialog); export_png doc (export + hash); resize_panel {panel,width}; set_field {target,value}; export {dir,name,type,...} (File > Export dialog); clear_dir/record_dir <dir>; record_file <path> (size+hash+pixels); record_file_text <path>; restart_app; resize_dialog {width,height}; target forms {canvas:[x,y]|name}, {pref_category}, {tree_item:[path]}, hold_key in drag/click; log_value <JSF expression, logged in both>; record_ui <logical ui key> (orig window text/UIA, fp ui_find/ui_state); jsf <code> (in both = fp run_script); fp-only ui_action {...}, ui_find_click <text>. Step keys: after = actions after the shot; log_menu_items = item texts + enabled/checked of the open menu; shot omitted = value-only checkpoint.",
+ "steps": [
+  {
+   "id": "00_overview_normal",
+   "check": "overview after opening the test file",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "command": "edit.preferences"
+    },
+    {
+     "wait": 500
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   }
+  },
+  {
+   "id": "01_categories_normal",
+   "check": "categories",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "command": "edit.preferences"
+    },
+    {
+     "wait": 500
+    },
+    {
+     "record_ui": "dialog.categories"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "fp-own categories (KI, Design, Sprache) are intended differences"
+  },
+  {
+   "id": "02_general_undo_result",
+   "check": "general undo",
+   "method": {
+    "orig": "J",
+    "fp": "H"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "command": "edit.preferences"
+    },
+    {
+     "wait": 500
+    },
+    {
+     "click": {
+      "pref_category": "Allgemein"
+     }
+    },
+    {
+     "set_field": {
+      "target": "pref.undo_steps",
+      "value": "3"
+     }
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "click": "OK"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "key": "Right"
+    },
+    {
+     "key": "Right"
+    },
+    {
+     "key": "Right"
+    },
+    {
+     "key": "Right"
+    },
+    {
+     "command": "edit.preferences"
+    },
+    {
+     "click": {
+      "pref_category": "Allgemein"
+     }
+    },
+    {
+     "set_field": {
+      "target": "pref.undo_steps",
+      "value": "20"
+     }
+    },
+    {
+     "click": "OK"
+    }
+   ],
+   "note": "effect check: record history length after 4 nudges inside cleanup is not logged; runner should log fw.historyPalette.getStepCount()"
+  },
+  {
+   "id": "03_general_color_result",
+   "check": "general color",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "command": "edit.preferences"
+    },
+    {
+     "wait": 500
+    },
+    {
+     "click": {
+      "pref_category": "Allgemein"
+     }
+    },
+    {
+     "open": "pref.default_fill_color"
+    },
+    {
+     "click": {
+      "popup_swatch": "#0000FF"
+     }
+    },
+    {
+     "click": "OK"
+    },
+    {
+     "tool": "tool.rectangle"
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       400,
+       400
+      ],
+      "to": [
+       480,
+       450
+      ]
+     }
+    },
+    {
+     "log_value": "fw.selection[0].pathAttributes.fillColor"
+    }
+   ],
+   "shot": null,
+   "after": [
+    {
+     "command": "edit.preferences"
+    },
+    {
+     "click": {
+      "pref_category": "Allgemein"
+     }
+    },
+    {
+     "open": "pref.default_fill_color"
+    },
+    {
+     "click": {
+      "popup_swatch": "#808080"
+     }
+    },
+    {
+     "click": "OK"
+    }
+   ],
+   "note": "default colors may be stroke/fill/highlight; original default is not #808080 - runner restores factory value"
+  },
+  {
+   "id": "04_general_interpolation_result",
+   "check": "general interpolation",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "command": "edit.preferences"
+    },
+    {
+     "wait": 500
+    },
+    {
+     "click": {
+      "pref_category": "Allgemein"
+     }
+    },
+    {
+     "choose": {
+      "target": "pref.interpolation",
+      "item": "Bilinear"
+     }
+    },
+    {
+     "click": "OK"
+    },
+    {
+     "select": "PG"
+    },
+    {
+     "command": "modify.canvas.imageSize"
+    },
+    {
+     "set_field": {
+      "target": "dialog.width_percent",
+      "value": "150"
+     }
+    },
+    {
+     "click": "OK"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": null,
+   "after": [
+    {
+     "command": "edit.preferences"
+    },
+    {
+     "click": {
+      "pref_category": "Allgemein"
+     }
+    },
+    {
+     "choose": {
+      "target": "pref.interpolation",
+      "item": "Bikubisch"
+     }
+    },
+    {
+     "click": "OK"
+    }
+   ],
+   "note": "E: hash of exported document"
+  },
+  {
+   "id": "05_general_workspace_result",
+   "check": "general workspace",
+   "method": {
+    "orig": "J",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "command": "edit.preferences"
+    },
+    {
+     "wait": 500
+    },
+    {
+     "click": {
+      "pref_category": "Allgemein"
+     }
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": null,
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "start screen / workspace options; effect needs restart (see 18)"
+  },
+  {
+   "id": "06_edit_delete_paths_result",
+   "check": "edit delete paths",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "command": "edit.preferences"
+    },
+    {
+     "wait": 500
+    },
+    {
+     "click": {
+      "pref_category": "Bearbeitung"
+     }
+    },
+    {
+     "click": "pref.delete_paths_when_cropping"
+    },
+    {
+     "click": "OK"
+    },
+    {
+     "tool": "tool.crop"
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       40,
+       40
+      ],
+      "to": [
+       320,
+       260
+      ]
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "log_value": "fw.getDocumentDOM().layers[0].frames[0].elements.map(function(e){return e.name}).join('|')"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "after": [
+    {
+     "command": "edit.preferences"
+    },
+    {
+     "click": {
+      "pref_category": "Bearbeitung"
+     }
+    },
+    {
+     "click": "pref.delete_paths_when_cropping"
+    },
+    {
+     "click": "OK"
+    }
+   ]
+  },
+  {
+   "id": "07_edit_pen_preview_result",
+   "check": "edit pen preview",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "command": "edit.preferences"
+    },
+    {
+     "wait": 500
+    },
+    {
+     "click": {
+      "pref_category": "Bearbeitung"
+     }
+    },
+    {
+     "click": "pref.pen_preview"
+    },
+    {
+     "click": "OK"
+    },
+    {
+     "tool": "tool.pen"
+    },
+    {
+     "canvas_click": [
+      400,
+      400
+     ]
+    },
+    {
+     "canvas_move": [
+      480,
+      450
+     ]
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    },
+    {
+     "command": "edit.preferences"
+    },
+    {
+     "click": {
+      "pref_category": "Bearbeitung"
+     }
+    },
+    {
+     "click": "pref.pen_preview"
+    },
+    {
+     "click": "OK"
+    }
+   ]
+  },
+  {
+   "id": "08_edit_precise_cursors_result",
+   "check": "edit precise cursors",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "command": "edit.preferences"
+    },
+    {
+     "wait": 500
+    },
+    {
+     "click": {
+      "pref_category": "Bearbeitung"
+     }
+    },
+    {
+     "click": "pref.precise_cursors"
+    },
+    {
+     "click": "OK"
+    },
+    {
+     "tool": "tool.brush"
+    },
+    {
+     "canvas_move": [
+      400,
+      400
+     ]
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "after": [
+    {
+     "command": "edit.preferences"
+    },
+    {
+     "click": {
+      "pref_category": "Bearbeitung"
+     }
+    },
+    {
+     "click": "pref.precise_cursors"
+    },
+    {
+     "click": "OK"
+    }
+   ],
+   "note": "shot must include cursor"
+  },
+  {
+   "id": "09_edit_pick_distance_result",
+   "check": "edit pick distance",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "command": "edit.preferences"
+    },
+    {
+     "wait": 500
+    },
+    {
+     "click": {
+      "pref_category": "Bearbeitung"
+     }
+    },
+    {
+     "set_field": {
+      "target": "pref.pick_distance",
+      "value": "10"
+     }
+    },
+    {
+     "click": "OK"
+    },
+    {
+     "select_none": true
+    },
+    {
+     "canvas_click": [
+      158,
+      85
+     ]
+    },
+    {
+     "log_value": "fw.selection.length"
+    }
+   ],
+   "shot": null,
+   "after": [
+    {
+     "command": "edit.preferences"
+    },
+    {
+     "click": {
+      "pref_category": "Bearbeitung"
+     }
+    },
+    {
+     "set_field": {
+      "target": "pref.pick_distance",
+      "value": "3"
+     }
+    },
+    {
+     "click": "OK"
+    }
+   ],
+   "note": "click 8 px right of R1; factory value assumed 3"
+  },
+  {
+   "id": "10_guides_grid_result",
+   "check": "guides grid",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "command": "view.grid.editGrid"
+    },
+    {
+     "open": "dialog.color_well"
+    },
+    {
+     "click": {
+      "popup_swatch": "#FF0000"
+     }
+    },
+    {
+     "click": "OK"
+    },
+    {
+     "command": "view.grid.showGrid"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "after": [
+    {
+     "command": "view.grid.showGrid"
+    },
+    {
+     "command": "view.grid.editGrid"
+    },
+    {
+     "click": "dialog.reset_color"
+    },
+    {
+     "click": "OK"
+    }
+   ],
+   "note": "grid/guide colour lives in Edit Grid dialog, not in preferences, in both programs (unsure)"
+  },
+  {
+   "id": "11_type_result",
+   "check": "type",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "command": "edit.preferences"
+    },
+    {
+     "wait": 500
+    },
+    {
+     "click": {
+      "pref_category": "Text"
+     }
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "12_ps_import_normal",
+   "check": "ps import",
+   "method": {
+    "orig": "W",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "command": "edit.preferences"
+    },
+    {
+     "wait": 500
+    },
+    {
+     "click": {
+      "pref_category": "PSD-Datei importieren"
+     }
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "logical category key ps_import (layered-file import); runner maps label"
+  },
+  {
+   "id": "13_launch_edit_normal",
+   "check": "launch edit",
+   "method": {
+    "orig": "W",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "command": "edit.preferences"
+    },
+    {
+     "wait": 500
+    },
+    {
+     "click": {
+      "pref_category": "Starten und bearbeiten"
+     }
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "14_plugins_normal",
+   "check": "plugins",
+   "method": {
+    "orig": "W",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "command": "edit.preferences"
+    },
+    {
+     "wait": 500
+    },
+    {
+     "click": {
+      "pref_category": "Zusatzmodule"
+     }
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "15_scale_strokes_result",
+   "check": "scale strokes",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "E1"
+    },
+    {
+     "command": "modify.transform.numericTransform"
+    },
+    {
+     "set_field": {
+      "target": "dialog.scale_percent",
+      "value": "200"
+     }
+    },
+    {
+     "click": "dialog.scale_attributes"
+    },
+    {
+     "click": "OK"
+    },
+    {
+     "log_value": "fw.selection[0].pathAttributes.brush ? fw.selection[0].pathAttributes.brush.diameter : null"
+    }
+   ],
+   "shot": null,
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "'Attribute skalieren' in numeric transform; command id unsure"
+  },
+  {
+   "id": "16_reset_warnings_result",
+   "check": "reset warnings",
+   "method": {
+    "orig": "J",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "command": "edit.preferences"
+    },
+    {
+     "wait": 500
+    },
+    {
+     "click": {
+      "pref_category": "Allgemein"
+     }
+    },
+    {
+     "click": "pref.reset_warnings"
+    },
+    {
+     "record_ui": "dialog.open"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "button label unsure"
+  },
+  {
+   "id": "17_cancel_result",
+   "check": "cancel",
+   "method": {
+    "orig": "J",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "command": "edit.preferences"
+    },
+    {
+     "wait": 500
+    },
+    {
+     "click": {
+      "pref_category": "Allgemein"
+     }
+    },
+    {
+     "set_field": {
+      "target": "pref.undo_steps",
+      "value": "7"
+     }
+    },
+    {
+     "click": "Abbrechen"
+    },
+    {
+     "command": "edit.preferences"
+    },
+    {
+     "click": {
+      "pref_category": "Allgemein"
+     }
+    },
+    {
+     "record_ui": "pref.undo_steps"
+    }
+   ],
+   "shot": null,
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "18_persist_result",
+   "check": "persist",
+   "method": {
+    "orig": "J",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "command": "edit.preferences"
+    },
+    {
+     "wait": 500
+    },
+    {
+     "click": {
+      "pref_category": "Bearbeitung"
+     }
+    },
+    {
+     "set_field": {
+      "target": "pref.pick_distance",
+      "value": "5"
+     }
+    },
+    {
+     "click": "OK"
+    },
+    {
+     "restart_app": true
+    },
+    {
+     "command": "edit.preferences"
+    },
+    {
+     "click": {
+      "pref_category": "Bearbeitung"
+     }
+    },
+    {
+     "record_ui": "pref.pick_distance"
+    }
+   ],
+   "shot": null,
+   "after": [
+    {
+     "key": "Escape"
+    },
+    {
+     "command": "edit.preferences"
+    },
+    {
+     "click": {
+      "pref_category": "Bearbeitung"
+     }
+    },
+    {
+     "set_field": {
+      "target": "pref.pick_distance",
+      "value": "3"
+     }
+    },
+    {
+     "click": "OK"
+    }
+   ],
+   "note": "restart_app: orig must be restarted by runner under gui-sitzung lock; skip on orig if not allowed"
+  },
+  {
+   "id": "19_tool_defaults_result",
+   "check": "tool defaults",
+   "method": {
+    "orig": "W",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "tool": "tool.brush"
+    },
+    {
+     "record_ui": "inspector.fields"
+    },
+    {
+     "tool": "tool.text"
+    },
+    {
+     "record_ui": "inspector.fields"
+    }
+   ],
+   "shot": null,
+   "note": "tool defaults from preferences (LW)"
+  },
+  {
+   "id": "20_tab_focus_focus",
+   "check": "tab focus",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "command": "edit.preferences"
+    },
+    {
+     "wait": 500
+    },
+    {
+     "click": {
+      "pref_category": "Allgemein"
+     }
+    },
+    {
+     "key": "Down"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  }
+ ]
+}

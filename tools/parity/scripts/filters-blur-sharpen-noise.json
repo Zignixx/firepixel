@@ -1,0 +1,908 @@
+{
+ "unit": "filters-blur-sharpen-noise",
+ "testfile": "T02",
+ "testfiles": [
+  "T02",
+  "T08",
+  "T03"
+ ],
+ "note": "Action verbs as in the shared list (see panel-layers.json): open_testfile, select, select_none, tool <tool id>, choose {target,item} (item path 'A > B'; toolbox.<tool>_flyout picks a flyout entry, orig_index = position in the owner-drawn list of the original), open <logical ui key>, click/double_click/hover <ui key|{handle}|{menu_item}>, drag {from,by|to,mods}, canvas_click/canvas_double_click/canvas_hover [x,y] (+mods), canvas_drag {from,to,mods}, canvas_wheel {pos,delta,modifiers}, key <combo>, repeat/do, type, menu 'A > B', menu_open, set_field {target,value}, jsf (both = fp run_script), record_ui <key>, log_value, log_menu_items, export_png doc, wait, close_all, window_size. Additions in this file: {handle: <index|role>} = control/frame handle of the selected object (orig: controlPoints, fp: autoShape.describe/frame); drag_popup_slider {to_fraction,hold} = drag inside the open popup slider; record_ui history.names = history step names; mods on canvas_click/canvas_hover = held modifier keys. Coordinates are document pixels. Labels are compared without '&' and trailing '...'/'…'.",
+ "steps": [
+  {
+   "id": "00_overview_normal",
+   "check": "overview after opening the test file",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T02"
+    }
+   ],
+   "shot": {
+    "area": "window"
+   }
+  },
+  {
+   "id": "01_menu_blur_open",
+   "check": "menu blur",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "open_testfile": "T02"
+    },
+    {
+     "select": "B1"
+    },
+    {
+     "menu_open": "Filter > Weichzeichnen"
+    },
+    {
+     "log_menu_items": true
+    }
+   ],
+   "shot": {
+    "area": "menu"
+   }
+  },
+  {
+   "id": "02_menu_sharpen_open",
+   "check": "menu sharpen",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "open_testfile": "T02"
+    },
+    {
+     "select": "B1"
+    },
+    {
+     "menu_open": "Filter > Scharfzeichnen"
+    },
+    {
+     "log_menu_items": true
+    }
+   ],
+   "shot": {
+    "area": "menu"
+   }
+  },
+  {
+   "id": "03_menu_noise_other_noise_open",
+   "check": "menu noise other",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "open_testfile": "T02"
+    },
+    {
+     "select": "B1"
+    },
+    {
+     "menu_open": "Filter > Rauschen"
+    },
+    {
+     "log_menu_items": true
+    }
+   ],
+   "shot": {
+    "area": "menu"
+   }
+  },
+  {
+   "id": "03_menu_noise_other_other_open",
+   "check": "menu noise other",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "open_testfile": "T02"
+    },
+    {
+     "select": "B1"
+    },
+    {
+     "menu_open": "Filter > Andere"
+    },
+    {
+     "log_menu_items": true
+    }
+   ],
+   "shot": {
+    "area": "menu"
+   },
+   "note": "Inventory 'Sonstige'; menu label in both is 'Andere' (PARITAET_B)."
+  },
+  {
+   "id": "04_blur_simple_blur_result",
+   "check": "blur simple",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T02"
+    },
+    {
+     "select": "B1"
+    },
+    {
+     "menu": "Filter > Weichzeichnen > Weichzeichnen"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "04_blur_simple_blur_more_result",
+   "check": "blur simple",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T02"
+    },
+    {
+     "select": "B1"
+    },
+    {
+     "menu": "Filter > Weichzeichnen > Stärker weichzeichnen"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "05_sharpen_simple_sharpen_result",
+   "check": "sharpen simple",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T02"
+    },
+    {
+     "select": "B1"
+    },
+    {
+     "menu": "Filter > Scharfzeichnen > Scharfzeichnen"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "05_sharpen_simple_sharpen_more_result",
+   "check": "sharpen simple",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T02"
+    },
+    {
+     "select": "B1"
+    },
+    {
+     "menu": "Filter > Scharfzeichnen > Stark scharfzeichnen"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "06_gauss_live_open",
+   "check": "gauss live",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T08"
+    },
+    {
+     "select": "BM"
+    }
+   ],
+   "orig": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Weichzeichnen > Gaußscher Weichz."
+     }
+    }
+   ],
+   "fp": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Weichzeichnen > Gaußscher Weichzeichner"
+     }
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   }
+  },
+  {
+   "id": "06_gauss_live_result",
+   "check": "gauss live",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T08"
+    },
+    {
+     "select": "BM"
+    }
+   ],
+   "orig": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Weichzeichnen > Gaußscher Weichz."
+     }
+    },
+    {
+     "click": "dialog.ok"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "fp": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Weichzeichnen > Gaußscher Weichzeichner"
+     }
+    },
+    {
+     "click": "dialog.ok"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "07_unsharp_live_open",
+   "check": "unsharp live",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T08"
+    },
+    {
+     "select": "BM"
+    }
+   ],
+   "orig": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Scharfzeichnen > Unscharf maskieren"
+     }
+    }
+   ],
+   "fp": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Scharfzeichnen > Unscharf maskieren"
+     }
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   }
+  },
+  {
+   "id": "08_motion_result",
+   "check": "motion",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T02"
+    },
+    {
+     "select": "B1"
+    },
+    {
+     "menu": "Filter > Weichzeichnen > Bewegungsunschärfe"
+    },
+    {
+     "set_field": {
+      "target": "dialog.angle",
+      "value": "90"
+     }
+    },
+    {
+     "set_field": {
+      "target": "dialog.distance",
+      "value": "20"
+     }
+    },
+    {
+     "click": "dialog.ok"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "note": "DLG-6: original grows the bitmap only downwards. Field labels differ ('Umfang' vs 'Abstand')."
+  },
+  {
+   "id": "09_radial_result",
+   "check": "radial",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T02"
+    },
+    {
+     "select": "B1"
+    },
+    {
+     "menu": "Filter > Weichzeichnen > Radiales Weichz."
+    },
+    {
+     "click": "dialog.ok"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "10_zoom_blur_result",
+   "check": "zoom blur",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T02"
+    },
+    {
+     "select": "B1"
+    },
+    {
+     "menu": "Filter > Weichzeichnen > Zentriertes Weichz."
+    },
+    {
+     "click": "dialog.ok"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "11_noise_color_color_on_result",
+   "check": "noise color",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T02"
+    },
+    {
+     "select": "B1"
+    },
+    {
+     "menu": "Filter > Rauschen > Rauschen hinzufügen"
+    },
+    {
+     "set_field": {
+      "target": "dialog.color",
+      "value": true
+     }
+    },
+    {
+     "click": "dialog.ok"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "note": "Noise is random: compare statistics, not pixels."
+  },
+  {
+   "id": "11_noise_color_color_off_result",
+   "check": "noise color",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T02"
+    },
+    {
+     "select": "B1"
+    },
+    {
+     "menu": "Filter > Rauschen > Rauschen hinzufügen"
+    },
+    {
+     "set_field": {
+      "target": "dialog.color",
+      "value": false
+     }
+    },
+    {
+     "click": "dialog.ok"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "12_find_edges_result",
+   "check": "find edges",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T02"
+    },
+    {
+     "select": "B1"
+    },
+    {
+     "menu": "Filter > Andere > Ränder suchen"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "note": "Inventory 'Kanten finden'; menu label 'Ränder suchen' (PARITAET_B)."
+  },
+  {
+   "id": "13_to_alpha_result",
+   "check": "to alpha",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T02"
+    },
+    {
+     "select": "B1"
+    },
+    {
+     "menu": "Filter > Andere > In Alphakanal konv."
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "14_clouds_result",
+   "check": "clouds",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T02"
+    },
+    {
+     "select": "B1"
+    },
+    {
+     "menu_open": "Filter > Andere"
+    },
+    {
+     "log_menu_items": true
+    }
+   ],
+   "note": "Clouds/difference clouds not in either menu per PARITAET_B; step only logs the submenu (no image)."
+  },
+  {
+   "id": "15_selection_only_result",
+   "check": "selection only",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T02"
+    },
+    {
+     "select": "B1"
+    },
+    {
+     "tool": "marquee"
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       100,
+       100
+      ],
+      "to": [
+       300,
+       250
+      ]
+     }
+    },
+    {
+     "menu": "Filter > Weichzeichnen > Stärker weichzeichnen"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "16_preview_box_on_result",
+   "check": "preview box",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T02"
+    },
+    {
+     "select": "B1"
+    },
+    {
+     "menu": "Filter > Weichzeichnen > Gaußscher Weichz."
+    },
+    {
+     "set_field": {
+      "target": "dialog.radius",
+      "value": "8"
+     }
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "note": "Close the dialog with Escape afterwards."
+  },
+  {
+   "id": "16_preview_box_off_result",
+   "check": "preview box",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T02"
+    },
+    {
+     "select": "B1"
+    },
+    {
+     "menu": "Filter > Weichzeichnen > Gaußscher Weichz."
+    },
+    {
+     "set_field": {
+      "target": "dialog.radius",
+      "value": "8"
+     }
+    },
+    {
+     "click": "dialog.preview"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "17_vector_warning_open",
+   "check": "vector warning",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "open_testfile": "T08"
+    },
+    {
+     "select": "R"
+    },
+    {
+     "menu": "Filter > Weichzeichnen > Weichzeichnen"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "note": "Answer the message with Escape afterwards."
+  },
+  {
+   "id": "18_transparent_edge_result",
+   "check": "transparent edge",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T03"
+    },
+    {
+     "select": "BM"
+    },
+    {
+     "menu": "Filter > Weichzeichnen > Gaußscher Weichz."
+    },
+    {
+     "set_field": {
+      "target": "dialog.radius",
+      "value": "8"
+     }
+    },
+    {
+     "click": "dialog.ok"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "19_result_ref_result",
+   "check": "result ref",
+   "method": {
+    "orig": "E (RE-FX)",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T02"
+    },
+    {
+     "select": "B1"
+    },
+    {
+     "menu": "Filter > Weichzeichnen > Gaußscher Weichz."
+    },
+    {
+     "click": "dialog.ok"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "note": "Reference pixels from RE-FX."
+  },
+  {
+   "id": "20_remember_result",
+   "check": "remember",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T02"
+    },
+    {
+     "select": "B1"
+    },
+    {
+     "menu": "Filter > Weichzeichnen > Gaußscher Weichz."
+    },
+    {
+     "set_field": {
+      "target": "dialog.radius",
+      "value": "2"
+     }
+    },
+    {
+     "click": "dialog.ok"
+    },
+    {
+     "menu": "Filter > Weichzeichnen > Gaußscher Weichz."
+    },
+    {
+     "record_ui": "dialog.fields"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ]
+  },
+  {
+   "id": "21_plugins_folder_normal",
+   "check": "plugins folder",
+   "method": {
+    "orig": "W",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "command": "edit.preferences"
+    },
+    {
+     "click_text": "Zusatzmodule"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "note": "Close the preferences dialog with Escape afterwards."
+  },
+  {
+   "id": "22_undo_result",
+   "check": "undo",
+   "method": {
+    "orig": "J",
+    "fp": "H"
+   },
+   "both": [
+    {
+     "open_testfile": "T02"
+    },
+    {
+     "select": "B1"
+    },
+    {
+     "menu": "Filter > Weichzeichnen > Weichzeichnen"
+    },
+    {
+     "menu": "Filter > Scharfzeichnen > Scharfzeichnen"
+    },
+    {
+     "menu": "Filter > Rauschen > Rauschen hinzufügen"
+    },
+    {
+     "click": "dialog.ok"
+    },
+    {
+     "record_ui": "history.names"
+    }
+   ]
+  }
+ ]
+}

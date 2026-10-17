@@ -1,0 +1,11 @@
+{
+  "format": "firepixel-batch-recipe",
+  "version": 1,
+  "name": "Thumbnails 256",
+  "description": "Fit into 256 × 256 px, PNG, name with _thumb.",
+  "steps": [
+    { "id": "resize", "enabled": true, "params": { "mode": "fit", "width": 256, "height": 256, "onlyShrink": true, "filter": "auto" } }
+  ],
+  "rename": { "mode": "builder", "parts": [ { "kind": "original" } ], "suffix": "_thumb" },
+  "output": { "format": "png", "options": {} }
+}

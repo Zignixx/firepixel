@@ -1,0 +1,28 @@
+[package]
+name = "fp-text"
+description = "Text: runtime font management, layout (point text, frames, text on path), glyph outlines, rasterisation with supersampling and tone curves"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+fp-i18n = { workspace = true }
+fp-geom = { workspace = true, features = ["serde"] }
+fp-color = { workspace = true, features = ["serde"] }
+fp-raster = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
+# crate-eigene Spezialfälle (reine Rust-Crates): Schriftdateien lesen und Shaping
+ttf-parser = "0.25"
+rustybuzz = "0.20"
+# Hinting der Glyphen (TrueType-Interpreter, PostScript-Hinter) wie die Schriftmaschine des Originals
+skrifa = "0.46"
+
+[dev-dependencies]
+serde_json = { workspace = true }
+png = { workspace = true }
+
+[lints]
+workspace = true

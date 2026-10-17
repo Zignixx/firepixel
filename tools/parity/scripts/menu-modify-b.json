@@ -1,0 +1,1060 @@
+{
+ "unit": "menu-modify-b",
+ "testfile": "T04",
+ "note": "Verbs as in tools/parity/runner/README.md. Every step starts with reopen <Txx> (test file fresh, earlier changes discarded) or close_all (no document). Menu commands: orig = menu path, fp = command id (side-specific, so the following actions are listed on both sides). Logical keys used here that may still be unmapped in ui_map.json: dialog.field.<i> / dialog.combo.<i> (i-th edit/combo of the top dialog), labels for dropdowns. Rare verbs used here that the runner may log as unsupported: new_document, window_click, drag_text, hover_text, right_click_text, double_click_text, drag_guide, drag_ruler_origin, drag_dialog_title, drag_dialog_slider, click_dialog_rel, drag_dialog_rel, canvas_wheel, reopen_dialog (repeat the opening actions), save_history_as_command, delete_saved_command, add_live_filter, file_dialog_open_types, restart_app, window_size, set_clipboard_image, drop_files, log_focus_cycle-like record_ui {focus_cycle:n}. Object 'I1#2' = duplicate of I1; 'text' = first text element; canvas_drag option hold = screenshot while the button is held.",
+ "steps": [
+  {
+   "id": "00_overview_normal",
+   "check": "overview after opening the test file",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "shot": {
+    "area": "window"
+   }
+  },
+  {
+   "id": "01_free_transform_result",
+   "check": "free transform/scale/distort/skew shows handles",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "select": "R1"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Modifizieren > Transformieren > Frei transformieren"
+    }
+   ],
+   "fp": [
+    {
+     "command": "modify.transform.freeTransform"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "02_numeric_result",
+   "check": "numeric transform (-> D26) effect",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "select": "R1"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Modifizieren > Transformieren > Numerisch transformieren..."
+    },
+    {
+     "set_field": {
+      "target": "dialog.field.0",
+      "value": "150"
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "modify.transform.numericTransform"
+    },
+    {
+     "set_field": {
+      "target": "dialog.field.0",
+      "value": "150"
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "03_rotate_flip_result",
+   "check": "rotate 180/90 cw/ccw, flip horizontal/vertical",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "select": "P1"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Modifizieren > Transformieren > 90° im UZS drehen"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "modify.transform.rotate90DegreeCw"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": null,
+   "note": "runner may repeat with rotate180Degree/rotate90DegreeCcw/flipHorizontal/flipVertical"
+  },
+  {
+   "id": "04_remove_transform_result",
+   "check": "remove transformations",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "reopen": "T02"
+    },
+    {
+     "select": "B1"
+    },
+    {
+     "menu": [
+      "Modifizieren",
+      "Transformieren",
+      "90° im UZS drehen"
+     ]
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Modifizieren > Transformieren > Transformationen entfernen"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "modify.transform.removeTransformations"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "05_arrange_result",
+   "check": "bring to front/forward/backward/to back",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "select": "R1"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Modifizieren > Anordnen > In den Vordergrund"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "modify.arrange.bringToFront"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "06_align_result",
+   "check": "align 6 + distribute 2",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "select": [
+      "R1",
+      "R2",
+      "E1"
+     ]
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Modifizieren > Ausrichten > Links"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "modify.align.left"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": null,
+   "note": "runner may repeat with the other 5 alignments and 2 distributions"
+  },
+  {
+   "id": "07_combine_union_result",
+   "check": "union",
+   "method": {
+    "orig": "J (points)",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "select": "E1"
+    },
+    {
+     "jsf": "fw.getDocumentDOM().moveSelectionBy({x:0,y:-100},false,false)"
+    },
+    {
+     "select": [
+      "R1",
+      "E1"
+     ]
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Modifizieren > Pfade kombinieren > Vereinigen"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "modify.combinePaths.union"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "note": "E1 moved up 100 px so it overlaps R1"
+  },
+  {
+   "id": "08_combine_intersect_result",
+   "check": "intersect",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "select": "E1"
+    },
+    {
+     "jsf": "fw.getDocumentDOM().moveSelectionBy({x:0,y:-100},false,false)"
+    },
+    {
+     "select": [
+      "R1",
+      "E1"
+     ]
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Modifizieren > Pfade kombinieren > Überschneiden"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "modify.combinePaths.intersect"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "09_combine_punch_result",
+   "check": "punch",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "select": "E1"
+    },
+    {
+     "jsf": "fw.getDocumentDOM().moveSelectionBy({x:30,y:-100},false,false)"
+    },
+    {
+     "select": [
+      "R1",
+      "E1"
+     ]
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Modifizieren > Pfade kombinieren > Öffnen"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "modify.combinePaths.punch"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "note": "German label 'Öffnen' (punch) - original label 'Ausstanzen'? unverified"
+  },
+  {
+   "id": "10_combine_crop_result",
+   "check": "crop",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "select": "E1"
+    },
+    {
+     "jsf": "fw.getDocumentDOM().moveSelectionBy({x:30,y:-100},false,false)"
+    },
+    {
+     "select": [
+      "R1",
+      "E1"
+     ]
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Modifizieren > Pfade kombinieren > Zuschneiden"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "modify.combinePaths.crop"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "11_combine_split_result",
+   "check": "split",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "select": [
+      "R1",
+      "E1"
+     ]
+    },
+    {
+     "menu": [
+      "Modifizieren",
+      "Pfade kombinieren",
+      "Verbinden"
+     ]
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Modifizieren > Pfade kombinieren > Teilen"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "modify.combinePaths.split"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "12_join_split_result",
+   "check": "join/split paths",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "select": [
+      "P1",
+      "L1"
+     ]
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Modifizieren > Pfade kombinieren > Verbinden"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "modify.combinePaths.join"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "13_simplify_result",
+   "check": "simplify (-> D29)",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "select": "P1"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Modifizieren > Pfad ändern > Vereinfachen..."
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "log_value": "(function(){var c=fw.selection[0].contours[0];return c.nodes.length;})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "modify.alterPath.simplify"
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "log_value": "(function(){var c=fw.selection[0].contours[0];return c.nodes.length;})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "14_expand_stroke_result",
+   "check": "expand stroke (-> D30)",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "select": "P1"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Modifizieren > Pfad ändern > Strich erweitern..."
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "modify.alterPath.expandStroke"
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "15_inset_path_result",
+   "check": "inset path (-> D31)",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "select": "PG"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Modifizieren > Pfad ändern > Pfad einlassen..."
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "modify.alterPath.insetPath"
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "16_add_points_result",
+   "check": "add points",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "select": "P1"
+    },
+    {
+     "menu_open": [
+      "Modifizieren",
+      "Pfad ändern"
+     ]
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": null,
+   "log_menu_items": true,
+   "note": "'Punkte hinzufügen' entry not found in menu.ftl; Firepixel may lack it - log menu items"
+  },
+  {
+   "id": "17_reverse_result",
+   "check": "reverse direction",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "select": "P1"
+    },
+    {
+     "menu_open": [
+      "Modifizieren",
+      "Pfad ändern"
+     ]
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "log_value": "(function(){var n=fw.selection[0].contours[0].nodes;return [n[0].x,n[0].y].toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": null,
+   "log_menu_items": true,
+   "note": "'Richtung umkehren' for paths: entry not in menu.ftl; original location unverified"
+  },
+  {
+   "id": "18_hard_soft_fill_result",
+   "check": "hard/soft fill entries",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "select": "R1"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Modifizieren > Pfad ändern > Präzise Füllung"
+    },
+    {
+     "log_value": "fw.selection[0].pathAttributes.fillEdgeMode"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "modify.alterPath.hardFill"
+    },
+    {
+     "log_value": "fw.selection[0].pathAttributes.fillEdgeMode"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "19_group_ungroup_result",
+   "check": "group/ungroup",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "select": [
+      "R1",
+      "R2"
+     ]
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Modifizieren > Gruppieren"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "modify.group"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "20_mask_group_result",
+   "check": "group as mask",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "select": [
+      "R1",
+      "E1"
+     ]
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Modifizieren > Maske > Als Maske gruppieren"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "modify.mask.groupAsMask"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "21_text_to_paths_result",
+   "check": "(text) convert to paths",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "reopen": "T05"
+    },
+    {
+     "select": "TX1"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Text > In Pfade konvertieren"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "text.convertToPaths"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "22_rect_corner_result",
+   "check": "rectangle corner commands",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "menu_open": [
+      "Befehle"
+     ]
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": null,
+   "log_menu_items": true,
+   "note": "rectangle corner commands are command-menu scripts in the original; folder name unverified"
+  },
+  {
+   "id": "23_disabled_states_disabled",
+   "check": "grayed entries per situation",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "menu_open": [
+      "Modifizieren",
+      "Pfade kombinieren"
+     ]
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Escape"
+    }
+   ],
+   "shot": null,
+   "log_menu_items": true
+  },
+  {
+   "id": "24_undo_names_result",
+   "check": "history names",
+   "method": {
+    "orig": "J",
+    "fp": "H"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "select": [
+      "R1",
+      "R2"
+     ]
+    },
+    {
+     "menu": [
+      "Modifizieren",
+      "Gruppieren"
+     ]
+    },
+    {
+     "menu": [
+      "Modifizieren",
+      "Ausrichten",
+      "Links"
+     ]
+    },
+    {
+     "menu": [
+      "Modifizieren",
+      "Transformieren",
+      "Horizontal spiegeln"
+     ]
+    },
+    {
+     "log_value": "(function(){var h=fw.historyPalette,n=h.getStepCount(),a=[],js;for(var i=0;i<n;i++)a.push(i);try{js=h.getStepsAsJavaScript(a);}catch(e){js=\"ERR \"+e;}return [n,js].toSource();})()"
+    }
+   ],
+   "shot": null,
+   "note": "history read-out via fw.historyPalette.getStepCount()/getStepsAsJavaScript()"
+  }
+ ]
+}

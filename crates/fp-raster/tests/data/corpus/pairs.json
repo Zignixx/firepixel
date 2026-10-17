@@ -1,0 +1,652 @@
+[
+{
+"name": "Search_Box.graphic_4e182837d5",
+"input": "pair_in_4e182837d5.png",
+"output": "pair_out_4e182837d5.png",
+"effects": [
+{
+"moa_id": "{dd54adc0-a279-11d3-b92a000502f3fdbe}",
+"name": "Color Fill",
+"visible": true,
+"params": {
+"Color": "#000000",
+"Opacity": "100",
+"Blendmode": "0"
+}
+}
+]
+},
+{
+"name": "Twitter_Login.graphic_b2933f5bc3",
+"input": "pair_in_b2933f5bc3.png",
+"output": "pair_out_b2933f5bc3.png",
+"effects": [
+{
+"moa_id": "{3439b08d-1922-11d3-9bde00e02910d580}",
+"name": "Hue/Saturation...",
+"visible": true,
+"params": {
+"category": "Adjust Color",
+"name": "Hue/Saturation...",
+"MB_filter_preview_tile_size": "-1 -1",
+"saturation_amount": "-100",
+"lightness_amount": "51",
+"hls_colorize": "false",
+"hue_amount": "0"
+}
+}
+]
+},
+{
+"name": "Twitter_Login.graphic_9e187f8291",
+"input": "pair_in_9e187f8291.png",
+"output": "pair_out_9e187f8291.png",
+"effects": [
+{
+"moa_id": "{3439b08d-1922-11d3-9bde00e02910d580}",
+"name": "Hue/Saturation...",
+"visible": true,
+"params": {
+"category": "Adjust Color",
+"name": "Hue/Saturation...",
+"MB_filter_preview_tile_size": "-1 -1",
+"saturation_amount": "-100",
+"lightness_amount": "51",
+"hls_colorize": "false",
+"hue_amount": "0"
+}
+}
+]
+},
+{
+"name": "Start_Screen.graphic_8224c09feb",
+"input": "pair_in_8224c09feb.png",
+"output": "pair_out_8224c09feb.png",
+"effects": [
+{
+"moa_id": "{3439b08d-1922-11d3-9bde00e02910d580}",
+"name": "Hue/Saturation...",
+"visible": true,
+"params": {
+"category": "Adjust Color",
+"name": "Hue/Saturation...",
+"MB_filter_preview_tile_size": "-1 -1",
+"saturation_amount": "-100",
+"lightness_amount": "0",
+"hls_colorize": "false",
+"hue_amount": "0"
+}
+}
+]
+},
+{
+"name": "Start_Screen.graphic_712b54e109",
+"input": "pair_in_712b54e109.png",
+"output": "pair_out_712b54e109.png",
+"effects": [
+{
+"moa_id": "{3439b08d-1922-11d3-9bde00e02910d580}",
+"name": "Hue/Saturation...",
+"visible": true,
+"params": {
+"category": "Adjust Color",
+"name": "Hue/Saturation...",
+"MB_filter_preview_tile_size": "-1 -1",
+"saturation_amount": "-100",
+"lightness_amount": "0",
+"hls_colorize": "false",
+"hue_amount": "0"
+}
+}
+]
+},
+{
+"name": "Real_Estate_45fcc97ba8",
+"input": "pair_in_45fcc97ba8.png",
+"output": "pair_out_45fcc97ba8.png",
+"effects": [
+{
+"moa_id": "{3439b08e-1923-11d3-9bde00e02910d580}",
+"name": "Curves...",
+"visible": true,
+"params": {
+"name": "Curves...",
+"category": "Adjust Color",
+"rgb_points": [
+[
+0.0,
+0.0
+],
+[
+118.0,
+134.0
+],
+[
+231.0,
+255.0
+]
+],
+"red_points": [
+[
+0.0,
+0.0
+],
+[
+255.0,
+255.0
+]
+],
+"green_points": [
+[
+0.0,
+0.0
+],
+[
+255.0,
+255.0
+]
+],
+"blue_points": [
+[
+0.0,
+0.0
+],
+[
+255.0,
+255.0
+]
+],
+"MB_filter_preview_tile_size": "-1 -1"
+}
+}
+]
+},
+{
+"name": "iPad_Sketch_4e182837d5",
+"input": "pair_in_4e182837d5.png",
+"output": "pair_out_4e182837d5.png",
+"effects": [
+{
+"moa_id": "{dd54adc0-a279-11d3-b92a000502f3fdbe}",
+"name": "Color Fill",
+"visible": true,
+"params": {
+"Color": "#000000",
+"Opacity": "100",
+"Blendmode": "0"
+}
+}
+]
+},
+{
+"name": "iPad_Sketch_c9fb576e19",
+"input": "pair_in_c9fb576e19.png",
+"output": "pair_out_c9fb576e19.png",
+"effects": [
+{
+"moa_id": "{3439b08c-1921-11d3-9bde00e02910d580}",
+"name": "Brightness/Contrast...",
+"visible": true,
+"params": {
+"name": "Brightness/Contrast...",
+"MB_filter_preview_tile_size": "-1 -1",
+"category": "Adjust Color",
+"contrast_amount": "100",
+"brightness_amount": "-100"
+}
+}
+]
+},
+{
+"name": "iPad_Sketch_f5f18d9223",
+"input": "pair_in_f5f18d9223.png",
+"output": "pair_out_f5f18d9223.png",
+"effects": [
+{
+"moa_id": "{3439b08d-1922-11d3-9bde00e02910d580}",
+"name": "Hue/Saturation...",
+"visible": true,
+"params": {
+"name": "Hue/Saturation...",
+"MB_filter_preview_tile_size": "-1 -1",
+"category": "Adjust Color",
+"hls_colorize": "false",
+"hue_amount": "0",
+"saturation_amount": "-100",
+"lightness_amount": "51"
+}
+}
+]
+},
+{
+"name": "iPad_Sketch_5ddc73c04b",
+"input": "pair_in_5ddc73c04b.png",
+"output": "pair_out_5ddc73c04b.png",
+"effects": [
+{
+"moa_id": "{3439b08d-1922-11d3-9bde00e02910d580}",
+"name": "Hue/Saturation...",
+"visible": true,
+"params": {
+"name": "Hue/Saturation...",
+"MB_filter_preview_tile_size": "-1 -1",
+"category": "Adjust Color",
+"hls_colorize": "false",
+"hue_amount": "0",
+"saturation_amount": "-100",
+"lightness_amount": "51"
+}
+}
+]
+},
+{
+"name": "iPad_4e182837d5",
+"input": "pair_in_4e182837d5.png",
+"output": "pair_out_4e182837d5.png",
+"effects": [
+{
+"moa_id": "{dd54adc0-a279-11d3-b92a000502f3fdbe}",
+"name": "Color Fill",
+"visible": true,
+"params": {
+"Color": "#000000",
+"Opacity": "100",
+"Blendmode": "0"
+}
+}
+]
+},
+{
+"name": "iPad_f5f18d9223",
+"input": "pair_in_f5f18d9223.png",
+"output": "pair_out_f5f18d9223.png",
+"effects": [
+{
+"moa_id": "{3439b08d-1922-11d3-9bde00e02910d580}",
+"name": "Hue/Saturation...",
+"visible": true,
+"params": {
+"name": "Hue/Saturation...",
+"MB_filter_preview_tile_size": "-1 -1",
+"category": "Adjust Color",
+"hls_colorize": "false",
+"hue_amount": "0",
+"saturation_amount": "-100",
+"lightness_amount": "51"
+}
+}
+]
+},
+{
+"name": "iPad_5ddc73c04b",
+"input": "pair_in_5ddc73c04b.png",
+"output": "pair_out_5ddc73c04b.png",
+"effects": [
+{
+"moa_id": "{3439b08d-1922-11d3-9bde00e02910d580}",
+"name": "Hue/Saturation...",
+"visible": true,
+"params": {
+"name": "Hue/Saturation...",
+"MB_filter_preview_tile_size": "-1 -1",
+"category": "Adjust Color",
+"hls_colorize": "false",
+"hue_amount": "0",
+"saturation_amount": "-100",
+"lightness_amount": "51"
+}
+}
+]
+},
+{
+"name": "iPhone_Sketch_4e182837d5",
+"input": "pair_in_4e182837d5.png",
+"output": "pair_out_4e182837d5.png",
+"effects": [
+{
+"moa_id": "{dd54adc0-a279-11d3-b92a000502f3fdbe}",
+"name": "Color Fill",
+"visible": true,
+"params": {
+"Color": "#000000",
+"Opacity": "100",
+"Blendmode": "0"
+}
+}
+]
+},
+{
+"name": "iPhone_6a6928280d",
+"input": "pair_in_6a6928280d.png",
+"output": "pair_out_6a6928280d.png",
+"effects": [
+{
+"moa_id": "{3439b08d-1922-11d3-9bde00e02910d580}",
+"name": "Hue/Saturation...",
+"visible": true,
+"params": {
+"hue_amount": "0",
+"saturation_amount": "-100",
+"lightness_amount": "0",
+"hls_colorize": "false",
+"MB_filter_preview_tile_size": "-1 -1",
+"name": "Hue/Saturation...",
+"category": "Adjust Color"
+}
+}
+]
+},
+{
+"name": "iPhone_4628b6499d",
+"input": "pair_in_4628b6499d.png",
+"output": "pair_out_4628b6499d.png",
+"effects": [
+{
+"moa_id": "{3439b08d-1922-11d3-9bde00e02910d580}",
+"name": "Hue/Saturation...",
+"visible": true,
+"params": {
+"hue_amount": "0",
+"saturation_amount": "-100",
+"lightness_amount": "0",
+"hls_colorize": "false",
+"MB_filter_preview_tile_size": "-1 -1",
+"name": "Hue/Saturation...",
+"category": "Adjust Color"
+}
+}
+]
+},
+{
+"name": "Bar_144f21733c",
+"input": "pair_in_144f21733c.png",
+"output": "pair_out_144f21733c.png",
+"effects": [
+{
+"moa_id": "{d04ef8c1-71b4-11d1-8c8200a024cdc039}",
+"name": "Auto Levels",
+"visible": true,
+"params": {
+"name": "Auto Levels",
+"category": "Adjust Color",
+"source_low_rgb": "0",
+"source_high_rgb": "255",
+"dest_low_rgb": "0",
+"dest_high_rgb": "255",
+"gamma_rgb": "1",
+"source_low_red": "0",
+"source_high_red": "255",
+"dest_low_red": "0",
+"dest_high_red": "255",
+"gamma_red": "1",
+"source_low_green": "0",
+"source_high_green": "255",
+"dest_low_green": "0",
+"dest_high_green": "255",
+"gamma_green": "1",
+"source_low_blue": "0",
+"source_high_blue": "255",
+"dest_low_blue": "0",
+"dest_high_blue": "255",
+"gamma_blue": "1",
+"MB_filter_preview_tile_size": "-1 -1"
+}
+}
+]
+},
+{
+"name": "Checker_01_0d7c01f60b",
+"input": "pair_in_0d7c01f60b.png",
+"output": "pair_out_0d7c01f60b.png",
+"effects": [
+{
+"moa_id": "{3439b08d-1922-11d3-9bde00e02910d580}",
+"name": "Hue/Saturation...",
+"visible": true,
+"params": {
+"name": "Hue/Saturation...",
+"category": "Adjust Color",
+"hue_amount": "0",
+"saturation_amount": "-100",
+"lightness_amount": "0",
+"hls_colorize": "false",
+"MB_filter_preview_tile_size": "-1 -1"
+}
+},
+{
+"moa_id": "{d04ef8c1-71b4-11d1-8c8200a024cdc039}",
+"name": "Auto Levels",
+"visible": true,
+"params": {
+"name": "Auto Levels",
+"category": "Adjust Color",
+"source_low_rgb": "0",
+"source_high_rgb": "255",
+"dest_low_rgb": "0",
+"dest_high_rgb": "255",
+"gamma_rgb": "1",
+"source_low_red": "0",
+"source_high_red": "255",
+"dest_low_red": "0",
+"dest_high_red": "255",
+"gamma_red": "1",
+"source_low_green": "0",
+"source_high_green": "255",
+"dest_low_green": "0",
+"dest_high_green": "255",
+"gamma_green": "1",
+"source_low_blue": "0",
+"source_high_blue": "255",
+"dest_low_blue": "0",
+"dest_high_blue": "255",
+"gamma_blue": "1",
+"MB_filter_preview_tile_size": "-1 -1"
+}
+}
+]
+},
+{
+"name": "Checker_02_8e1c5bd401",
+"input": "pair_in_8e1c5bd401.png",
+"output": "pair_out_8e1c5bd401.png",
+"effects": [
+{
+"moa_id": "{3439b08d-1922-11d3-9bde00e02910d580}",
+"name": "Hue/Saturation...",
+"visible": true,
+"params": {
+"name": "Hue/Saturation...",
+"category": "Adjust Color",
+"hue_amount": "0",
+"saturation_amount": "-100",
+"lightness_amount": "0",
+"hls_colorize": "false",
+"MB_filter_preview_tile_size": "-1 -1"
+}
+},
+{
+"moa_id": "{d04ef8c1-71b4-11d1-8c8200a024cdc039}",
+"name": "Auto Levels",
+"visible": true,
+"params": {
+"name": "Auto Levels",
+"category": "Adjust Color",
+"source_low_rgb": "0",
+"source_high_rgb": "255",
+"dest_low_rgb": "0",
+"dest_high_rgb": "255",
+"gamma_rgb": "1",
+"source_low_red": "0",
+"source_high_red": "255",
+"dest_low_red": "0",
+"dest_high_red": "255",
+"gamma_red": "1",
+"source_low_green": "0",
+"source_high_green": "255",
+"dest_low_green": "0",
+"dest_high_green": "255",
+"gamma_green": "1",
+"source_low_blue": "0",
+"source_high_blue": "255",
+"dest_low_blue": "0",
+"dest_high_blue": "255",
+"gamma_blue": "1",
+"MB_filter_preview_tile_size": "-1 -1"
+}
+}
+]
+},
+{
+"name": "G_Sample_638a16a2ea",
+"input": "pair_in_638a16a2ea.png",
+"output": "pair_out_638a16a2ea.png",
+"effects": [
+{
+"moa_id": "{3439b08c-1921-11d3-9bde00e02910d580}",
+"name": "Brightness/Contrast...",
+"visible": true,
+"params": {
+"name": "Brightness/Contrast...",
+"category": "Adjust Color",
+"brightness_amount": "-6",
+"contrast_amount": "15",
+"MB_filter_preview_tile_size": "-1 -1"
+}
+}
+]
+},
+{
+"name": "G_Sample_42d84dc926",
+"input": "pair_in_42d84dc926.png",
+"output": "pair_out_42d84dc926.png",
+"effects": [
+{
+"moa_id": "{3439b08c-1921-11d3-9bde00e02910d580}",
+"name": "Brightness/Contrast...",
+"visible": true,
+"params": {
+"name": "Brightness/Contrast...",
+"category": "Adjust Color",
+"brightness_amount": "-6",
+"contrast_amount": "15",
+"MB_filter_preview_tile_size": "-1 -1"
+}
+}
+]
+},
+{
+"name": "G_Sample_a5d20f378c",
+"input": "pair_in_a5d20f378c.png",
+"output": "pair_out_a5d20f378c.png",
+"effects": [
+{
+"moa_id": "{3439b08c-1921-11d3-9bde00e02910d580}",
+"name": "Brightness/Contrast...",
+"visible": true,
+"params": {
+"name": "Brightness/Contrast...",
+"category": "Adjust Color",
+"brightness_amount": "-6",
+"contrast_amount": "15",
+"MB_filter_preview_tile_size": "-1 -1"
+}
+}
+]
+},
+{
+"name": "G_Real_Estate_551e9ec74e",
+"input": "pair_in_551e9ec74e.png",
+"output": "pair_out_551e9ec74e.png",
+"effects": [
+{
+"moa_id": "{3439b08e-1923-11d3-9bde00e02910d580}",
+"name": "Curves...",
+"visible": true,
+"params": {
+"name": "Curves...",
+"category": "Adjust Color",
+"rgb_points": [
+[
+0.0,
+0.0
+],
+[
+143.0,
+111.0
+],
+[
+255.0,
+255.0
+]
+],
+"red_points": [
+[
+0.0,
+0.0
+],
+[
+255.0,
+255.0
+]
+],
+"green_points": [
+[
+0.0,
+0.0
+],
+[
+255.0,
+255.0
+]
+],
+"blue_points": [
+[
+0.0,
+0.0
+],
+[
+255.0,
+255.0
+]
+],
+"MB_filter_preview_tile_size": "-1 -1"
+}
+},
+{
+"moa_id": "{3439b08d-1922-11d3-9bde00e02910d580}",
+"name": "Hue/Saturation...",
+"visible": true,
+"params": {
+"name": "Hue/Saturation...",
+"category": "Adjust Color",
+"hue_amount": "0",
+"saturation_amount": "-37",
+"lightness_amount": "-46",
+"hls_colorize": "false",
+"MB_filter_preview_tile_size": "-1 -1"
+}
+}
+]
+},
+{
+"name": "G_Vector_Artist_2e64af60ad",
+"input": "pair_in_2e64af60ad.png",
+"output": "pair_out_2e64af60ad.png",
+"effects": [
+{
+"moa_id": "{3439b08d-1922-11d3-9bde00e02910d580}",
+"name": "Hue/Saturation...",
+"visible": true,
+"params": {
+"name": "Hue/Saturation...",
+"category": "Adjust Color",
+"hue_amount": "-154",
+"saturation_amount": "-15",
+"lightness_amount": "0",
+"hls_colorize": "false",
+"MB_filter_preview_tile_size": "-1 -1"
+}
+}
+]
+}
+]

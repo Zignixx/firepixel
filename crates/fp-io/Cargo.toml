@@ -1,0 +1,43 @@
+[package]
+name = "fp-io"
+description = "Import of foreign formats (PSD, GIF, JPEG, PNG, BMP, TIFF, TGA, WBMP, AI/EPS, clipboard) and modern formats (WebP, APNG, JPEG XL, QOI, ICO, SVG)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+fp-geom = { workspace = true }
+fp-color = { workspace = true }
+fp-raster = { workspace = true }
+fp-model = { workspace = true }
+fp-fwpng = { workspace = true }
+thiserror = { workspace = true }
+# Mehrsprachige Fehlermeldungen
+fp-i18n = { workspace = true }
+png = { workspace = true }
+flate2 = { workspace = true }
+# crate-eigene Spezialfälle (reine Rust-Crates, keine DLLs)
+zune-jpeg = "0.5.15"
+tiff = { version = "=0.11.3", default-features = false, features = ["deflate", "lzw", "jpeg", "fax"] }
+image-webp = "=0.2.4"
+jxl-oxide = { version = "=0.12.6", default-features = false }
+usvg = { version = "=0.48.1", default-features = false, features = ["svgz"] }
+# SVG-<text> selbst lesen (usvg ohne Textmodul verwirft Text): Farben/Transformationen; über usvg schon im Baum
+svgtypes = "=0.16.1"
+# AVIF: rav1d (Rust-Port von dav1d, BSD-2) mit sicherer Rust-API, ohne `asm` ⇒ kein nasm, reines Rust
+rav1d = { package = "sqzer-rav1d", version = "=0.1.0", default-features = false, features = ["bitdepth_8", "bitdepth_16"] }
+# HEIC/HEIF: reiner Rust-HEVC-Dekoder (MIT/Apache, `forbid(unsafe_code)`, bitgleich zu HM)
+heic-decoder = "=0.1.0"
+# PDF / AI-Dateien ab Version 9 (PDF-basiert): reiner Rust-PDF-Interpreter → SVG → Vektorpfade (ohne eingebettete
+# Schriften/CMaps: Standardschriften kommen zur Laufzeit aus den Systemschriften)
+hayro-svg = { version = "=0.8.0", default-features = false }
+
+[dev-dependencies]
+fp-render = { workspace = true }
+fp-export = { workspace = true }
+serde_json = { workspace = true }
+
+[lints]
+workspace = true

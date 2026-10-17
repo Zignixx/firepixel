@@ -1,0 +1,35 @@
+name: Feature request
+description: Suggest something new, or ask for a deferred item.
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Check ROADMAP.md first: deferred items (batch, PDF/PSD export, HTML setup …) are already listed there.
+        Please write in English and refer to other products only generically.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What do you want to do, and what stops you today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: How should it work (menu, command, CLI/MCP, file format)?
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Scope
+      options:
+        - label: This should also be available over the CLI / MCP.
+        - label: I could help implement or test it.

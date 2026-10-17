@@ -1,0 +1,6334 @@
+{
+"commands": [
+{
+"fw_id": 57600,
+"cmd": "cmd_New",
+"name": "file.new",
+"path_de": [
+"Datei",
+"Neu"
+],
+"path_en": "File::New",
+"status_de": "Erstellt ein neues Dokument",
+"label_de": "Neu",
+"menu_label_de": "Neu",
+"main_menu": true,
+"js": [
+"createDocumentWithDialog"
+],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg+N"
+],
+"placeholder": false,
+"handlers": 2
+},
+{
+"fw_id": 37866,
+"cmd": "cmd_FileNewFromTemplate",
+"name": "file.newFromTemplate",
+"path_de": [
+"Datei",
+"Neu von Vorlage..."
+],
+"path_en": "File::New From Template",
+"status_de": "Neues Dokument von Vorlage öffnen",
+"label_de": "Neu von Vorlage",
+"menu_label_de": "Neu von Vorlage...",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 57601,
+"cmd": "cmd_Open",
+"name": "file.open",
+"path_de": [
+"Datei",
+"Öffnen..."
+],
+"path_en": "File::Open",
+"status_de": "Öffnet ein vorhandenes Dokument",
+"label_de": "Öffnen",
+"menu_label_de": "Öffnen...",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg+O"
+],
+"placeholder": false,
+"handlers": 3
+},
+{
+"fw_id": 35795,
+"cmd": "cmd_browse",
+"name": "file.browseInBridge",
+"path_de": [
+"Datei",
+"Im Dateibrowser durchsuchen..."
+],
+"path_en": "File::Browse in File Browser",
+"status_de": "Öffnet den Ordner des aktuellen Dokuments im Dateibrowser des Systems",
+"label_de": "Im Dateibrowser durchsuchen",
+"menu_label_de": "Im Dateibrowser durchsuchen...",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg+Umschalt+O"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 57616,
+"cmd": null,
+"name": "file.openRecent",
+"path_de": [
+"Datei",
+"Zuletzt geöffnete Dateien",
+"Letzte Datei"
+],
+"path_en": null,
+"status_de": "Öffnet das angegebene Dokument",
+"label_de": "Zuletzt geöffnete Datei",
+"menu_label_de": "Letzte Datei",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35199,
+"cmd": "cmd_TwainAcquire",
+"name": "file.twainAcquire",
+"path_de": [
+"Datei",
+"Scannen",
+"Twain importieren..."
+],
+"path_en": "File::Twain Acquire",
+"status_de": "Neues Dokument aus einer Twain-Quelle erstellen",
+"label_de": "Twain importieren",
+"menu_label_de": "Twain importieren...",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 3
+},
+{
+"fw_id": 35200,
+"cmd": "cmd_TwainSelect",
+"name": "file.twainSelect",
+"path_de": [
+"Datei",
+"Scannen",
+"Twain auswählen..."
+],
+"path_en": "File::Twain Select",
+"status_de": "Twain-Gerät auswählen",
+"label_de": "Twain auswählen",
+"menu_label_de": "Twain auswählen...",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 3
+},
+{
+"fw_id": 57602,
+"cmd": "cmd_Close",
+"name": "file.close",
+"path_de": [
+"Datei",
+"Schließen"
+],
+"path_en": null,
+"status_de": "Schließt das aktive Dokumentfenster",
+"label_de": "Schließen",
+"menu_label_de": "Schließen",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg+F4",
+"Strg+W"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35789,
+"cmd": "cmd_CloseAll",
+"name": "file.closeAll",
+"path_de": [
+"Datei",
+"Alle schließen"
+],
+"path_en": null,
+"status_de": null,
+"label_de": "Alle schließen",
+"menu_label_de": "Alle schließen",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 57603,
+"cmd": "cmd_Save",
+"name": "file.save",
+"path_de": [
+"Datei",
+"Speichern"
+],
+"path_en": "File::Save",
+"status_de": "Speichert das aktive Dokument",
+"label_de": "Speichern",
+"menu_label_de": "Speichern",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg+S"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 57604,
+"cmd": "cmd_SaveAs",
+"name": "file.saveAs",
+"path_de": [
+"Datei",
+"Speichern unter..."
+],
+"path_en": "File::Save As",
+"status_de": "Speichert das aktive Dokument unter einem neuen Namen",
+"label_de": "Speichern unter",
+"menu_label_de": "Speichern unter...",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg+Umschalt+S"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35850,
+"cmd": "cmd_SaveAll",
+"name": "file.saveAll",
+"path_de": [
+"Datei",
+"Alles speichern"
+],
+"path_en": null,
+"status_de": null,
+"label_de": "Alles speichern",
+"menu_label_de": "Alles speichern",
+"main_menu": true,
+"js": [
+"saveAll"
+],
+"undo_classes": [
+"CSetElementMaskUndoable"
+],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 37867,
+"cmd": "cmd_SaveAsTemplate",
+"name": "file.saveAsTemplate",
+"path_de": [
+"Datei",
+"Als Vorlage speichern..."
+],
+"path_en": "File::Save As Template",
+"status_de": "Dokument als Vorlage speichern",
+"label_de": "Als Vorlage speichern",
+"menu_label_de": "Als Vorlage speichern...",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35036,
+"cmd": "cmd_Revert",
+"name": "file.revert",
+"path_de": [
+"Datei",
+"Wiederherstellen"
+],
+"path_en": "File::Revert",
+"status_de": "Stellt die zuvor gespeicherte Version wieder her",
+"label_de": "Wiederherstellen",
+"menu_label_de": "Wiederherstellen",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 2
+},
+{
+"fw_id": 35012,
+"cmd": "cmd_Import",
+"name": "file.import",
+"path_de": [
+"Datei",
+"Importieren..."
+],
+"path_en": "File::Import",
+"status_de": "Importiert eine Datei",
+"label_de": "Importieren",
+"menu_label_de": "Importieren...",
+"main_menu": true,
+"js": [
+"importSymbol"
+],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg+R"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35007,
+"cmd": "cmd_Export",
+"name": "file.export",
+"path_de": [
+"Datei",
+"Exportieren..."
+],
+"path_en": "File::Export",
+"status_de": "Exportiert das aktuelle Dokument",
+"label_de": "Exportieren",
+"menu_label_de": "Exportieren...",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg+Umschalt+R"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35404,
+"cmd": "cmd_ExportPreview",
+"name": "file.imagePreview",
+"path_de": [
+"Datei",
+"Bildvorschau..."
+],
+"path_en": "File::Image Preview",
+"status_de": "Dialogfeld \"Bildvorschau\" öffnen",
+"label_de": "Bildvorschau",
+"menu_label_de": "Bildvorschau...",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg+Umschalt+X"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35587,
+"cmd": "cmd_Mail_PNG",
+"name": "file.sendToEMail.firepixelPng",
+"path_de": [
+"Datei",
+"Als E-Mail senden",
+"PNG-Datei für Firepixel..."
+],
+"path_en": "File::Send to E-mail::Firepixel PNG",
+"status_de": "Aktuelles Dokument als PNG-Datei an neue E-Mail-Nachricht anhängen",
+"label_de": "PNG-Datei für Firepixel",
+"menu_label_de": "PNG-Datei für Firepixel...",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35588,
+"cmd": "cmd_Mail_JPG",
+"name": "file.sendToEMail.jpegCompressed",
+"path_de": [
+"Datei",
+"Als E-Mail senden",
+"Komprimierte JPG-Datei..."
+],
+"path_en": "File::Send to E-mail::JPEG Compressed",
+"status_de": "Aktuelles Dokument als JPEG-Datei an neue E-Mail-Nachricht anhängen",
+"label_de": "Komprimierte JPG-Datei",
+"menu_label_de": "Komprimierte JPG-Datei...",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35420,
+"cmd": "cmd_Mail_SETTING",
+"name": "file.sendToEMail.useExportSettings",
+"path_de": [
+"Datei",
+"Als E-Mail senden",
+"Exporteinstellungen verwenden..."
+],
+"path_en": "File::Send to E-mail::Use Export Settings",
+"status_de": "Aktuelles Dokument in aktuellem Dateiexportformat an neue E-Mail-Nachricht anhängen",
+"label_de": "Exporteinstellungen verwenden",
+"menu_label_de": "Exporteinstellungen verwenden...",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35416,
+"cmd": "cmd_UpdateHTML",
+"name": "file.updateHtml",
+"path_de": [
+"Datei",
+"HTML aktualisieren..."
+],
+"path_en": "File::Update HTML",
+"status_de": "Aktualisiert eine Tabelle in einer vorhandenen HTML-Datei",
+"label_de": "HTML aktualisieren",
+"menu_label_de": "HTML aktualisieren...",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35792,
+"cmd": "cmd_Doc_FileInfo",
+"name": "file.fileInfo",
+"path_de": [
+"Datei",
+"Datei-Info..."
+],
+"path_en": null,
+"status_de": null,
+"label_de": "Datei-Info",
+"menu_label_de": "Datei-Info...",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg+Alt+Umschalt+F"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35181,
+"cmd": "cmd_ExportWizard",
+"name": "file.exportWizard",
+"path_de": [
+"Datei",
+"Exportassistent..."
+],
+"path_en": "File::Export Wizard",
+"status_de": "Empfiehlt Exporteinstellungen für dieses Dokument",
+"label_de": "Exportassistent",
+"menu_label_de": "Exportassistent...",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35302,
+"cmd": "cmd_BatchProcess",
+"name": "file.batchProcess",
+"path_de": [
+"Datei",
+"Batch-Verarbeitung..."
+],
+"path_en": "File::Batch Process",
+"status_de": "Führt Batch-Verarbeitung für mehrere Dateien aus",
+"label_de": "Batch-Verarbeitung",
+"menu_label_de": "Batch-Verarbeitung...",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 3
+},
+{
+"fw_id": 35313,
+"cmd": "cmd_PreviewInBrowser",
+"name": "file.previewInBrowser.previewInPrimaryBrowser",
+"path_de": [
+"Datei",
+"Vorschau im Browser",
+"Vorschau im Primärbrowser"
+],
+"path_en": "File::Preview in Browser::Preview in Primary Browser",
+"status_de": "Vorschau des aktuellen Dokuments im Primärbrowser anzeigen ",
+"label_de": "Vorschau im Primärbrowser",
+"menu_label_de": "Vorschau im Primärbrowser",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [
+"F12"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35315,
+"cmd": "cmd_PreviewSecondary",
+"name": "file.previewInBrowser.previewInSecondaryBrowser",
+"path_de": [
+"Datei",
+"Vorschau im Browser",
+"Vorschau im Sekundärbrowser"
+],
+"path_en": "File::Preview in Browser::Preview in Secondary Browser",
+"status_de": "Vorschau des aktuellen Dokuments im Sekundärbrowser anzeigen ",
+"label_de": "Vorschau im Sekundärbrowser",
+"menu_label_de": "Vorschau im Sekundärbrowser",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [
+"Umschalt+F12"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 49003,
+"cmd": "cmd_PreviewAllPagesInBrowser",
+"name": "file.previewInBrowser.previewAllPagesInPrimaryBrowser",
+"path_de": [
+"Datei",
+"Vorschau im Browser",
+"Vorschau aller Seiten im Primärbrowser"
+],
+"path_en": "File::Preview in Browser::Preview All Pages in Primary Browser",
+"status_de": null,
+"label_de": "Vorschau aller Seiten im Primärbrowser",
+"menu_label_de": "Vorschau aller Seiten im Primärbrowser",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg+F12"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35314,
+"cmd": "cmd_SetBrowser",
+"name": "file.previewInBrowser.setPrimaryBrowser",
+"path_de": [
+"Datei",
+"Vorschau im Browser",
+"Primärbrowser festlegen..."
+],
+"path_en": "File::Preview in Browser::Set Primary Browser",
+"status_de": "Primärbrowser für die Vorschau von exportiertem HTML-Code festlegen",
+"label_de": "Primärbrowser festlegen",
+"menu_label_de": "Primärbrowser festlegen...",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35316,
+"cmd": "cmd_SetSecondBrowser",
+"name": "file.previewInBrowser.setSecondaryBrowser",
+"path_de": [
+"Datei",
+"Vorschau im Browser",
+"Sekundärbrowser festlegen..."
+],
+"path_en": "File::Preview in Browser::Set Secondary Browser",
+"status_de": "Sekundärbrowser für die Vorschau von exportiertem HTML-Code festlegen",
+"label_de": "Sekundärbrowser festlegen",
+"menu_label_de": "Sekundärbrowser festlegen...",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 57605,
+"cmd": "ID_FILE_PAGE_SETUP",
+"name": "file.pageSetup",
+"path_de": [
+"Datei",
+"Seite einrichten..."
+],
+"path_en": null,
+"status_de": "Ändert die Druckoptionen",
+"label_de": "Seite einrichten",
+"menu_label_de": "Seite einrichten...",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 57607,
+"cmd": "cmd_Print",
+"name": "file.print",
+"path_de": [
+"Datei",
+"Drucken..."
+],
+"path_en": "File::Print",
+"status_de": "Druckt das aktive Dokument",
+"label_de": "Drucken",
+"menu_label_de": "Drucken...",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg+P"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35452,
+"cmd": "cmd_HTMLSetup",
+"name": "file.htmlSetup",
+"path_de": [
+"Datei",
+"HTML-Einrichtung..."
+],
+"path_en": "File::HTML Setup",
+"status_de": "Öffnet das Dialogfeld \"HTML-Einrichtung\"",
+"label_de": "HTML-Einrichtung",
+"menu_label_de": "HTML-Einrichtung...",
+"main_menu": true,
+"js": [
+"setExportSettings"
+],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 57665,
+"cmd": "cmd_Quit",
+"name": "file.exit",
+"path_de": [
+"Datei",
+"Beenden"
+],
+"path_en": null,
+"status_de": "Beendet die Anwendung und fordert zum Speichern der Dokumente auf",
+"label_de": "Beenden",
+"menu_label_de": "Beenden",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [
+"Alt+F4",
+"Strg+Q"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 57643,
+"cmd": "cmd_Undo",
+"name": "edit.undo",
+"path_de": [
+"Bearbeiten",
+"Rückgängig"
+],
+"path_en": "Edit::Undo",
+"status_de": "Macht die letzte Aktion rückgängig",
+"label_de": "Rückgängig",
+"menu_label_de": "Rückgängig",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg+Z"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 57644,
+"cmd": "cmd_Redo",
+"name": "edit.redo",
+"path_de": [
+"Bearbeiten",
+"Wiederholen"
+],
+"path_en": "Edit::Redo",
+"status_de": "Stellt die zuletzt rückgängig gemachte Aktion wieder her",
+"label_de": "Wiederholen",
+"menu_label_de": "Wiederholen",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg+Umschalt+Z"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35191,
+"cmd": "cmd_NewButton",
+"name": "edit.insert.newButton",
+"path_de": [
+"Bearbeiten",
+"Objekt einfügen",
+"Neue Schaltfläche..."
+],
+"path_en": "Edit::Insert::New Button",
+"status_de": "Erstellt ein neues Schaltflächenobjekt im Schaltflächeneditor",
+"label_de": "Neue Schaltfläche",
+"menu_label_de": "Neue Schaltfläche...",
+"main_menu": true,
+"js": [
+"addNewSymbol"
+],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35195,
+"cmd": "cmd_NewSymbol",
+"name": "edit.insert.newSymbol",
+"path_de": [
+"Bearbeiten",
+"Objekt einfügen",
+"Neues Symbol..."
+],
+"path_en": "Edit::Insert::New Symbol",
+"status_de": "Erstellt ein neues Grafik- bzw. Schaltflächensymbol",
+"label_de": "Neues Symbol",
+"menu_label_de": "Neues Symbol...",
+"main_menu": true,
+"js": [
+"addNewSymbol"
+],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg+F8"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35179,
+"cmd": "cmd_SelectCopyToURL",
+"name": "edit.insert.hotspot",
+"path_de": [
+"Bearbeiten",
+"Objekt einfügen",
+"Hotspot"
+],
+"path_en": "Edit::Insert::Hotspot",
+"status_de": "Erstellt einen Hotspot in der Form der Auswahl",
+"label_de": "Hotspot",
+"menu_label_de": "Hotspot",
+"main_menu": true,
+"js": [
+"copyToHotspot"
+],
+"undo_classes": [
+"CDeleteUndoable"
+],
+"shortcuts_de": [
+"Strg+Umschalt+U"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35237,
+"cmd": "cmd_SelectCopyToSlice",
+"name": "edit.insert.slice",
+"path_de": [
+"Bearbeiten",
+"Objekt einfügen",
+"Rechteckiges Segment"
+],
+"path_en": "Edit::Insert::Slice",
+"status_de": "Segment in Form des Begrenzungsrahmens der Auswahl erstellen",
+"label_de": "Rechteckiges Segment",
+"menu_label_de": "Rechteckiges Segment",
+"main_menu": true,
+"js": [
+"copyToHotspot"
+],
+"undo_classes": [
+"CDeleteUndoable"
+],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35786,
+"cmd": "cmd_SelectCopyToPolySlice",
+"name": "edit.insert.polygonSlice",
+"path_de": [
+"Bearbeiten",
+"Objekt einfügen",
+"Polygonsegment"
+],
+"path_en": "Edit::Insert::Polygon Slice",
+"status_de": "Segment in Form der Auswahl erstellen",
+"label_de": "Polygonsegment",
+"menu_label_de": "Polygonsegment",
+"main_menu": true,
+"js": [
+"copyToHotspot"
+],
+"undo_classes": [
+"CDeleteUndoable"
+],
+"shortcuts_de": [
+"Alt+Umschalt+P"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35180,
+"cmd": "cmd_CreateImage",
+"name": "edit.insert.emptyBitmap",
+"path_de": [
+"Bearbeiten",
+"Objekt einfügen",
+"Leere Bitmap"
+],
+"path_en": "Edit::Insert::Empty Bitmap",
+"status_de": "Erstellt eine neue, leere Bitmap",
+"label_de": "Leere Bitmap",
+"menu_label_de": "Leere Bitmap",
+"main_menu": true,
+"js": [
+"addNewImage"
+],
+"undo_classes": [
+"CAddUndoable",
+"CSelectAsPaintModeUndoable",
+"CSelectionChangerUndoable",
+"CStdUndoable",
+"CStopBeingPaintModeUndoable",
+"IUndoable"
+],
+"shortcuts_de": [
+"Strg+Alt+Y"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35581,
+"cmd": "cmd_NewBitmapViaCopy",
+"name": "edit.insert.bitmapViaCopy",
+"path_de": [
+"Bearbeiten",
+"Objekt einfügen",
+"Bitmap durch Kopieren"
+],
+"path_en": "Edit::Insert::Bitmap Via Copy",
+"status_de": "Erzeugt eine neue Bitmap durch Kopieren der aktuellen Pixelauswahl",
+"label_de": "Bitmap durch Kopieren",
+"menu_label_de": "Bitmap durch Kopieren",
+"main_menu": true,
+"js": [
+"addNewImageViaCopy"
+],
+"undo_classes": [
+"CAddUndoable",
+"CArrangeUndoable",
+"CSelectAsPaintModeUndoable",
+"CSelectionChangerUndoable",
+"CStdUndoable",
+"CStopBeingPaintModeUndoable",
+"IUndoable"
+],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35582,
+"cmd": "cmd_NewBitmapViaCut",
+"name": "edit.insert.bitmapViaCut",
+"path_de": [
+"Bearbeiten",
+"Objekt einfügen",
+"Bitmap durch Ausschneiden"
+],
+"path_en": "Edit::Insert::Bitmap Via Cut",
+"status_de": "Erzeugt eine neue Bitmap durch Kopieren und anschließendem Löschen der aktuellen Pixelauswahl",
+"label_de": "Bitmap durch Ausschneiden",
+"menu_label_de": "Bitmap durch Ausschneiden",
+"main_menu": true,
+"js": [
+"addNewImageViaCut"
+],
+"undo_classes": [
+"CAddUndoable",
+"CArrangeUndoable",
+"CDeleteUndoable",
+"CSelectAsPaintModeUndoable",
+"CSelectionChangerUndoable",
+"CStdUndoable",
+"CStopBeingPaintModeUndoable",
+"IUndoable"
+],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35309,
+"cmd": "cmd_InsertLayer",
+"name": "edit.insert.layer",
+"path_de": [
+"Bearbeiten",
+"Objekt einfügen",
+"Ebene"
+],
+"path_en": "Edit::Insert::Layer",
+"status_de": "Fügt nach der aktuellen Ebene eine neue Ebene ein",
+"label_de": "Ebene",
+"menu_label_de": "Ebene",
+"main_menu": true,
+"js": [
+"addNewLayer"
+],
+"undo_classes": [],
+"shortcuts_de": [
+"Umschalt+L"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35301,
+"cmd": "cmd_InsertFrame",
+"name": "edit.insert.state",
+"path_de": [
+"Bearbeiten",
+"Objekt einfügen",
+"Status"
+],
+"path_en": "Edit::Insert::State",
+"status_de": "Neuen Status nach aktuellem Status einfügen",
+"label_de": "Status",
+"menu_label_de": "Status",
+"main_menu": true,
+"js": [
+"addFrames"
+],
+"undo_classes": [],
+"shortcuts_de": [
+"Umschalt+F"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35809,
+"cmd": "cmd_InsertPage",
+"name": "edit.insert.page",
+"path_de": [
+"Bearbeiten",
+"Objekt einfügen",
+"Seite"
+],
+"path_en": "Edit::Insert::Page",
+"status_de": null,
+"label_de": "Seite",
+"menu_label_de": "Seite",
+"main_menu": true,
+"js": [
+"addNewPage"
+],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 43402,
+"cmd": "cmd_PanelFind",
+"name": "edit.findAndReplace",
+"path_de": [
+"Bearbeiten",
+"Suchen und ersetzen..."
+],
+"path_en": "Edit::Find and Replace",
+"status_de": "Blendet das Feld \"Suchen und Ersetzen\" ein oder aus",
+"label_de": "Suchen und ersetzen",
+"menu_label_de": "Suchen und ersetzen...",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 2
+},
+{
+"fw_id": 57635,
+"cmd": "cmd_Cut",
+"name": "edit.cut",
+"path_de": [
+"Bearbeiten",
+"Ausschneiden"
+],
+"path_en": "Edit::Cut",
+"status_de": "Überträgt die Auswahl in die Zwischenablage",
+"label_de": "Ausschneiden",
+"menu_label_de": "Ausschneiden",
+"main_menu": true,
+"js": [
+"clipCut"
+],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg+X"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 57634,
+"cmd": "cmd_Copy",
+"name": "edit.copy",
+"path_de": [
+"Bearbeiten",
+"Kopieren"
+],
+"path_en": "Edit::Copy",
+"status_de": "Kopiert die Auswahl in die Zwischenablage",
+"label_de": "Kopieren",
+"menu_label_de": "Kopieren",
+"main_menu": true,
+"js": [
+"clipCopy"
+],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg+C"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35411,
+"cmd": "cmd_Edit_CopyAsPaths",
+"name": "edit.copyAsVectors",
+"path_de": [
+"Bearbeiten",
+"Als Vektoren kopieren"
+],
+"path_en": "Edit::Copy as Vectors",
+"status_de": "Pfadumriss in Zwischenablage kopieren",
+"label_de": "Als Vektoren kopieren",
+"menu_label_de": "Als Vektoren kopieren",
+"main_menu": true,
+"js": [
+"clipCopyFormats"
+],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35415,
+"cmd": "cmd_File_HTML_Wizard",
+"name": "edit.copyHtmlCode",
+"path_de": [
+"Bearbeiten",
+"HTML-Code kopieren..."
+],
+"path_en": null,
+"status_de": "Kopiert HTML-Code in die Zwischenablage, um ihn in HTML-Dateien einzufügen",
+"label_de": "HTML-Code kopieren",
+"menu_label_de": "HTML-Code kopieren...",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 57637,
+"cmd": "cmd_Paste",
+"name": "edit.paste",
+"path_de": [
+"Bearbeiten",
+"Einfügen"
+],
+"path_en": "Edit::Paste",
+"status_de": "Fügt den Inhalt der Zwischenablage ein",
+"label_de": "Einfügen",
+"menu_label_de": "Einfügen",
+"main_menu": true,
+"js": [
+"clipPaste"
+],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg+V"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 57632,
+"cmd": "cmd_Clear",
+"name": "edit.clear",
+"path_de": [
+"Bearbeiten",
+"Löschen"
+],
+"path_en": "Edit::Clear",
+"status_de": "Entfernt die Auswahl",
+"label_de": "Löschen",
+"menu_label_de": "Löschen",
+"main_menu": true,
+"js": [
+"deleteSelection",
+"removeElementMask"
+],
+"undo_classes": [
+"CArrangeUndoable",
+"CDeleteUndoable",
+"CMergeUndoable",
+"CSelectionChangerUndoable",
+"CSetElementMaskUndoable",
+"CStdUndoable",
+"CStopBeingPaintModeUndoable",
+"IUndoable"
+],
+"shortcuts_de": [
+"Entf",
+"Rück"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35430,
+"cmd": "cmd_PasteAsMask",
+"name": "edit.pasteAsMask",
+"path_de": [
+"Bearbeiten",
+"Als Maske einfügen"
+],
+"path_en": "Edit::Paste as Mask",
+"status_de": "Verwendet Daten in der Zwischenablage, um das derzeit ausgewählte Objekt zu maskieren",
+"label_de": "Als Maske einfügen",
+"menu_label_de": "Als Maske einfügen",
+"main_menu": true,
+"js": [
+"clipPasteAsMask"
+],
+"undo_classes": [
+"CDeleteUndoable",
+"CGroupUndoable",
+"CMergeUndoable",
+"CSetElementMaskUndoable"
+],
+"shortcuts_de": [
+"Strg+Alt+V"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35127,
+"cmd": "cmd_PasteInside",
+"name": "edit.pasteInside",
+"path_de": [
+"Bearbeiten",
+"Innen einfügen"
+],
+"path_en": "Edit::Paste Inside",
+"status_de": "Fügt den Inhalt der Zwischenablage in das ausgewählte Objekt ein",
+"label_de": "Innen einfügen",
+"menu_label_de": "Innen einfügen",
+"main_menu": true,
+"js": [
+"clipPasteInside"
+],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg+Umschalt+V"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35033,
+"cmd": "cmd_PasteAttributes",
+"name": "edit.pasteAttributes",
+"path_de": [
+"Bearbeiten",
+"Attribute einfügen"
+],
+"path_en": "Edit::Paste Attributes",
+"status_de": "Fügt die Attribute des zuvor kopierten Objekts ein",
+"label_de": "Attribute einfügen",
+"menu_label_de": "Attribute einfügen",
+"main_menu": true,
+"js": [
+"clipPasteAttributes"
+],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg+Alt+Umschalt+V"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35006,
+"cmd": "cmd_Duplicate",
+"name": "edit.duplicate",
+"path_de": [
+"Bearbeiten",
+"Duplizieren"
+],
+"path_en": "Edit::Duplicate",
+"status_de": "Dupliziert die Auswahl",
+"label_de": "Duplizieren",
+"menu_label_de": "Duplizieren",
+"main_menu": true,
+"js": [
+"duplicateSelection"
+],
+"undo_classes": [
+"CDuplicateUndoable"
+],
+"shortcuts_de": [
+"Strg+Alt+D"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35003,
+"cmd": "cmd_Clone",
+"name": "edit.clone",
+"path_de": [
+"Bearbeiten",
+"Klonen"
+],
+"path_en": "Edit::Clone",
+"status_de": "Dupliziert die Auswahl genau auf dem Original",
+"label_de": "Klonen",
+"menu_label_de": "Klonen",
+"main_menu": true,
+"js": [
+"cloneSelection"
+],
+"undo_classes": [
+"CDuplicateUndoable"
+],
+"shortcuts_de": [
+"Strg+Umschalt+C"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35145,
+"cmd": "cmd_ModifyCropObject",
+"name": "edit.cropSelectedBitmap",
+"path_de": [
+"Bearbeiten",
+"Ausgewählte Bitmap zuschneiden"
+],
+"path_en": "Edit::Crop Selected Bitmap",
+"status_de": "Schneidet die Ecken eines Bitmap-Objekts zu",
+"label_de": "Ausgewählte Bitmap zuschneiden",
+"menu_label_de": "Ausgewählte Bitmap zuschneiden",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg+Alt+C"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35346,
+"cmd": "cmd_CropToSelection",
+"name": "edit.cropDocument",
+"path_de": [
+"Bearbeiten",
+"Dokument zuschneiden"
+],
+"path_en": "Edit::Crop Document",
+"status_de": "Schneidet das Dokument auf den aktiven Auswahlbereich zu",
+"label_de": "Dokument zuschneiden",
+"menu_label_de": "Dokument zuschneiden",
+"main_menu": true,
+"js": [
+"setDocumentCanvasSize"
+],
+"undo_classes": [
+"CDirectlySetCurrentPageUndoable",
+"CStdUndoable",
+"IUndoable"
+],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35034,
+"cmd": "cmd_Preferences",
+"name": "edit.preferences",
+"path_de": [
+"Bearbeiten",
+"Voreinstellungen..."
+],
+"path_en": "Edit::Preferences",
+"status_de": "Öffnet das Dialogfeld \"Voreinstellungen\"",
+"label_de": "Voreinstellungen",
+"menu_label_de": "Voreinstellungen...",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35429,
+"cmd": "cmd_CustomizeShortcuts",
+"name": "edit.keyboardShortcuts",
+"path_de": [
+"Bearbeiten",
+"Tastaturkurzbefehle..."
+],
+"path_en": "Edit::Keyboard Shortcuts",
+"status_de": "Modifiziert Menükurzbefehle",
+"label_de": "Tastaturkurzbefehle",
+"menu_label_de": "Tastaturkurzbefehle...",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35063,
+"cmd": "cmd_ZoomIn",
+"name": "view.zoomIn",
+"path_de": [
+"Ansicht",
+"Größer zoomen"
+],
+"path_en": "View::Zoom In",
+"status_de": "Zoomt zur nächsten Vergrößerung",
+"label_de": "Größer zoomen",
+"menu_label_de": "Größer zoomen",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg++"
+],
+"placeholder": false,
+"handlers": 2
+},
+{
+"fw_id": 35064,
+"cmd": "cmd_ZoomOut",
+"name": "view.zoomOut",
+"path_de": [
+"Ansicht",
+"Kleiner zoomen"
+],
+"path_en": "View::Zoom Out",
+"status_de": "Zoomt zur nächsten Verkleinerung",
+"label_de": "Kleiner zoomen",
+"menu_label_de": "Kleiner zoomen",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg+-"
+],
+"placeholder": false,
+"handlers": 2
+},
+{
+"fw_id": 35624,
+"cmd": "cmd_Mag_6",
+"name": "view.magnification.6",
+"path_de": [
+"Ansicht",
+"Vergrößerung",
+"6%"
+],
+"path_en": "View::Magnification::6",
+"status_de": "Stellt die Vergrößerung auf 6% ein ",
+"label_de": "6%",
+"menu_label_de": "6%",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35617,
+"cmd": "cmd_Mag_12",
+"name": "view.magnification.12",
+"path_de": [
+"Ansicht",
+"Vergrößerung",
+"12%"
+],
+"path_en": "View::Magnification::12",
+"status_de": "Stellt die Vergrößerung auf 12% ein ",
+"label_de": "12%",
+"menu_label_de": "12%",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35620,
+"cmd": "cmd_Mag_25",
+"name": "view.magnification.25",
+"path_de": [
+"Ansicht",
+"Vergrößerung",
+"25%"
+],
+"path_en": "View::Magnification::25",
+"status_de": "Stellt die Vergrößerung auf 25% ein ",
+"label_de": "25%",
+"menu_label_de": "25%",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35623,
+"cmd": "cmd_Mag_50",
+"name": "view.magnification.50",
+"path_de": [
+"Ansicht",
+"Vergrößerung",
+"50%"
+],
+"path_en": "View::Magnification::50",
+"status_de": "Stellt die Vergrößerung auf 50% ein ",
+"label_de": "50%",
+"menu_label_de": "50%",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35625,
+"cmd": "cmd_Mag_66",
+"name": "view.magnification.66",
+"path_de": [
+"Ansicht",
+"Vergrößerung",
+"66%"
+],
+"path_en": "View::Magnification::66",
+"status_de": "Vergrößerung auf 66%",
+"label_de": "66%",
+"menu_label_de": "66%",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35616,
+"cmd": "cmd_Mag_100",
+"name": "view.magnification.100",
+"path_de": [
+"Ansicht",
+"Vergrößerung",
+"100%"
+],
+"path_en": "View::Magnification::100",
+"status_de": "Stellt die Vergrößerung auf 100% ein ",
+"label_de": "100%",
+"menu_label_de": "100%",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35626,
+"cmd": "cmd_Mag_150",
+"name": "view.magnification.150",
+"path_de": [
+"Ansicht",
+"Vergrößerung",
+"150%"
+],
+"path_en": "View::Magnification::150",
+"status_de": "Vergrößerung auf 150%",
+"label_de": "150%",
+"menu_label_de": "150%",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35619,
+"cmd": "cmd_Mag_200",
+"name": "view.magnification.200",
+"path_de": [
+"Ansicht",
+"Vergrößerung",
+"200%"
+],
+"path_en": "View::Magnification::200",
+"status_de": "Stellt die Vergrößerung auf 200% ein ",
+"label_de": "200%",
+"menu_label_de": "200%",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35627,
+"cmd": "cmd_Mag_300",
+"name": "view.magnification.300",
+"path_de": [
+"Ansicht",
+"Vergrößerung",
+"300%"
+],
+"path_en": "View::Magnification::300",
+"status_de": "Vergrößerung auf 300%",
+"label_de": "300%",
+"menu_label_de": "300%",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35622,
+"cmd": "cmd_Mag_400",
+"name": "view.magnification.400",
+"path_de": [
+"Ansicht",
+"Vergrößerung",
+"400%"
+],
+"path_en": "View::Magnification::400",
+"status_de": "Stellt die Vergrößerung auf 400% ein ",
+"label_de": "400%",
+"menu_label_de": "400%",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35629,
+"cmd": "cmd_Mag_800",
+"name": "view.magnification.800",
+"path_de": [
+"Ansicht",
+"Vergrößerung",
+"800%"
+],
+"path_en": "View::Magnification::800",
+"status_de": "Stellt die Vergrößerung auf 800% ein ",
+"label_de": "800%",
+"menu_label_de": "800%",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35618,
+"cmd": "cmd_Mag_1600",
+"name": "view.magnification.1600",
+"path_de": [
+"Ansicht",
+"Vergrößerung",
+"1600%"
+],
+"path_en": "View::Magnification::1600",
+"status_de": "Stellt die Vergrößerung auf 1600% ein ",
+"label_de": "1600%",
+"menu_label_de": "1600%",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35621,
+"cmd": "cmd_Mag_3200",
+"name": "view.magnification.3200",
+"path_de": [
+"Ansicht",
+"Vergrößerung",
+"3200%"
+],
+"path_en": "View::Magnification::3200",
+"status_de": "Stellt die Vergrößerung auf 3200% ein ",
+"label_de": "3200%",
+"menu_label_de": "3200%",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35628,
+"cmd": "cmd_Mag_6400",
+"name": "view.magnification.6400",
+"path_de": [
+"Ansicht",
+"Vergrößerung",
+"6400%"
+],
+"path_en": "View::Magnification::6400",
+"status_de": "Stellt die Vergrößerung auf 6400% ein ",
+"label_de": "6400%",
+"menu_label_de": "6400%",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35066,
+"cmd": "cmd_FitSelection",
+"name": "view.fitSelection",
+"path_de": [
+"Ansicht",
+"Auswahl anpassen"
+],
+"path_en": "View::Fit Selection",
+"status_de": "Vergrößert die aktuelle Auswahl, um sie dem Fenster anzupassen",
+"label_de": "Auswahl anpassen",
+"menu_label_de": "Auswahl anpassen",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg+0"
+],
+"placeholder": false,
+"handlers": 2
+},
+{
+"fw_id": 35065,
+"cmd": "cmd_FitInWindow",
+"name": "view.fitAll",
+"path_de": [
+"Ansicht",
+"Alles anpassen"
+],
+"path_en": "View::Fit All",
+"status_de": "Zeigt das gesamte Dokument an",
+"label_de": "Alles anpassen",
+"menu_label_de": "Alles anpassen",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg+Alt+0"
+],
+"placeholder": false,
+"handlers": 2
+},
+{
+"fw_id": 35367,
+"cmd": "cmd_PreviewGamma",
+"name": "view.macintoshGamma",
+"path_de": [
+"Ansicht",
+"Gamma 1.8"
+],
+"path_en": "View::Macintosh Gamma",
+"status_de": "Ändert die Anzeige, um Macintosh-Monitor-Gamma zu simulieren",
+"label_de": "Gamma 1.8",
+"menu_label_de": "Gamma 1.8",
+"main_menu": true,
+"js": [
+"setShowGammaPreview"
+],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35071,
+"cmd": "cmd_HideSelection",
+"name": "view.hideSelection",
+"path_de": [
+"Ansicht",
+"Auswahl ausblenden"
+],
+"path_en": "View::Hide Selection",
+"status_de": "Macht die Auswahl unsichtbar",
+"label_de": "Auswahl ausblenden",
+"menu_label_de": "Auswahl ausblenden",
+"main_menu": true,
+"js": [
+"hideSelection"
+],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg+M"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35826,
+"cmd": "cmd_Tooltips",
+"name": "view.tooltips",
+"path_de": [
+"Ansicht",
+"QuickInfos"
+],
+"path_en": "View::Tooltips",
+"status_de": null,
+"label_de": "QuickInfos",
+"menu_label_de": "QuickInfos",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg+´"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35072,
+"cmd": "cmd_ShowAll",
+"name": "view.showAll",
+"path_de": [
+"Ansicht",
+"Alles einblenden"
+],
+"path_en": "View::Show All",
+"status_de": "Alle unsichtbaren Elemente zeigen",
+"label_de": "Alles einblenden",
+"menu_label_de": "Alles einblenden",
+"main_menu": true,
+"js": [
+"showAllHidden"
+],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg+Umschalt+M"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35130,
+"cmd": "cmd_ViewRulers",
+"name": "view.rulers",
+"path_de": [
+"Ansicht",
+"Lineale"
+],
+"path_en": "View::Rulers",
+"status_de": "Blendet das Lineal ein oder aus",
+"label_de": "Lineale",
+"menu_label_de": "Lineale",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg+Alt+R"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35131,
+"cmd": "cmd_ViewGrid",
+"name": "view.grid.showGrid",
+"path_de": [
+"Ansicht",
+"Raster",
+"Raster anzeigen"
+],
+"path_en": "View::Grid::Show Grid",
+"status_de": "Blendet das Raster ein oder aus",
+"label_de": "Raster anzeigen",
+"menu_label_de": "Raster anzeigen",
+"main_menu": true,
+"js": [
+"setShowGrid"
+],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg+Ä"
+],
+"placeholder": false,
+"handlers": 3
+},
+{
+"fw_id": 35132,
+"cmd": "cmd_ViewSnapGrid",
+"name": "view.grid.snapToGrid",
+"path_de": [
+"Ansicht",
+"Raster",
+"Am Raster ausrichten"
+],
+"path_en": "View::Grid::Snap to Grid",
+"status_de": "Richtet Objekte am Raster aus",
+"label_de": "Am Raster ausrichten",
+"menu_label_de": "Am Raster ausrichten",
+"main_menu": true,
+"js": [
+"setSnapToGrid"
+],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg+Umschalt+Ä"
+],
+"placeholder": false,
+"handlers": 3
+},
+{
+"fw_id": 35133,
+"cmd": "cmd_ViewEditGrid",
+"name": "view.grid.editGrid",
+"path_de": [
+"Ansicht",
+"Raster",
+"Raster bearbeiten..."
+],
+"path_en": null,
+"status_de": "Dialogfeld \"Raster bearbeiten\" öffnen",
+"label_de": "Raster bearbeiten",
+"menu_label_de": "Raster bearbeiten...",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg+Alt+G"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35134,
+"cmd": "cmd_ViewGuides",
+"name": "view.guides.showGuides",
+"path_de": [
+"Ansicht",
+"Hilfslinien",
+"Hilfslinien anzeigen"
+],
+"path_en": "View::Guides::Show Guides",
+"status_de": "Blendet die Hilfslinien ein oder aus",
+"label_de": "Hilfslinien anzeigen",
+"menu_label_de": "Hilfslinien anzeigen",
+"main_menu": true,
+"js": [
+"setShowGuides"
+],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg+Ü"
+],
+"placeholder": false,
+"handlers": 3
+},
+{
+"fw_id": 35135,
+"cmd": "cmd_ViewLockGuides",
+"name": "view.guides.lockGuides",
+"path_de": [
+"Ansicht",
+"Hilfslinien",
+"Hilfslinien sperren"
+],
+"path_en": "View::Guides::Lock Guides",
+"status_de": "Verhindert das Verschieben von Hilfslinien",
+"label_de": "Hilfslinien sperren",
+"menu_label_de": "Hilfslinien sperren",
+"main_menu": true,
+"js": [],
+"undo_classes": [
+"CGuidePropsUndoable",
+"CStdUndoable",
+"IUndoable"
+],
+"shortcuts_de": [
+"Strg+Alt+Ü"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35136,
+"cmd": "cmd_ViewSnapGuides",
+"name": "view.guides.snapToGuides",
+"path_de": [
+"Ansicht",
+"Hilfslinien",
+"An Hilfslinien ausrichten"
+],
+"path_en": "View::Guides::Snap to Guides",
+"status_de": "Richtet Objekte an Hilfslinien aus",
+"label_de": "An Hilfslinien ausrichten",
+"menu_label_de": "An Hilfslinien ausrichten",
+"main_menu": true,
+"js": [
+"setSnapToGuides"
+],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg+Umschalt+Ü"
+],
+"placeholder": false,
+"handlers": 2
+},
+{
+"fw_id": 49004,
+"cmd": "cmd_ViewClearGuides",
+"name": "view.guides.clearGuides",
+"path_de": [
+"Ansicht",
+"Hilfslinien",
+"Hilfslinien entfernen"
+],
+"path_en": "View::Guides::Clear Guides",
+"status_de": null,
+"label_de": "Hilfslinien entfernen",
+"menu_label_de": "Hilfslinien entfernen",
+"main_menu": true,
+"js": [
+"removeAllGuides"
+],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35815,
+"cmd": "cmd_ViewSmartGuides",
+"name": "view.smartGuides.showSmartGuides",
+"path_de": [
+"Ansicht",
+"Intelligente Hilfslinien",
+"Intelligente Hilfslinien anzeigen"
+],
+"path_en": "View::Smart Guides::Show Smart Guides",
+"status_de": "Blendet die intelligente Hilfslinien ein/aus",
+"label_de": "Intelligente Hilfslinien anzeigen",
+"menu_label_de": "Intelligente Hilfslinien anzeigen",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg+^"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35821,
+"cmd": "cmd_SnapSmartGuides",
+"name": "view.smartGuides.snapToSmartGuides",
+"path_de": [
+"Ansicht",
+"Intelligente Hilfslinien",
+"An intelligenten Hilfslinien ausrichten"
+],
+"path_en": "View::Smart Guides::Snap to Smart Guides",
+"status_de": null,
+"label_de": "An intelligenten Hilfslinien ausrichten",
+"menu_label_de": "An intelligenten Hilfslinien ausrichten",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg+Umschalt+^"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35812,
+"cmd": "cmd_LockNineSliceGuides",
+"name": "view.nineSliceScalingGuides.lockGuides",
+"path_de": [
+"Ansicht",
+"Hilfslinien für 9-Slice-Skalierung",
+"Hilfslinien sperren"
+],
+"path_en": "View::9-Slice Scaling Guides::Lock Guides",
+"status_de": null,
+"label_de": "Hilfslinien sperren",
+"menu_label_de": "Hilfslinien sperren",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35299,
+"cmd": "cmd_ViewSliceGuides",
+"name": "view.sliceGuides",
+"path_de": [
+"Ansicht",
+"Segment-Hilfslinien"
+],
+"path_en": "View::Slice Guides",
+"status_de": "Blendet Segment-Hilfslinien ein oder aus",
+"label_de": "Segment-Hilfslinien",
+"menu_label_de": "Segment-Hilfslinien",
+"main_menu": true,
+"js": [
+"setShowSliceGuides"
+],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg+Alt+Umschalt+Ü"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35426,
+"cmd": "cmd_ViewSliceOverlays",
+"name": "view.sliceOverlay",
+"path_de": [
+"Ansicht",
+"Segmentüberlagerung"
+],
+"path_en": "View::Slice Overlay",
+"status_de": "Segmentüberlagerung anzeigen oder verbergen",
+"label_de": "Segmentüberlagerung",
+"menu_label_de": "Segmentüberlagerung",
+"main_menu": true,
+"js": [
+"setShowSliceOverlay"
+],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35088,
+"cmd": "cmd_HideEdges",
+"name": "view.edges",
+"path_de": [
+"Ansicht",
+"Ränder"
+],
+"path_en": "View::Edges",
+"status_de": "Blendet Auswahlgriffe ein oder aus",
+"label_de": "Ränder",
+"menu_label_de": "Ränder",
+"main_menu": true,
+"js": [
+"setShowEdges"
+],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg+H"
+],
+"placeholder": false,
+"handlers": 2
+},
+{
+"fw_id": 35038,
+"cmd": "cmd_SelectAll",
+"name": "select.all",
+"path_de": [
+"Auswählen",
+"Alles auswählen"
+],
+"path_en": "Select::Select All",
+"status_de": "Wählt alle Objekte aus",
+"label_de": "Alles auswählen",
+"menu_label_de": "Alles auswählen",
+"main_menu": true,
+"js": [
+"selectAll"
+],
+"undo_classes": [
+"CSelectAllUndoable",
+"CSelectionChangerUndoable",
+"CStdUndoable",
+"IUndoable"
+],
+"shortcuts_de": [
+"Strg+A"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35040,
+"cmd": "cmd_SelectNone",
+"name": "select.none",
+"path_de": [
+"Auswählen",
+"Auswahl aufheben"
+],
+"path_en": "Select::Deselect",
+"status_de": "Hebt die Auswahl aller Objekte auf",
+"label_de": "Auswahl aufheben",
+"menu_label_de": "Auswahl aufheben",
+"main_menu": true,
+"js": [
+"selectNone"
+],
+"undo_classes": [
+"CSelectNoneUndoable",
+"CSelectionChangerUndoable",
+"CStdUndoable",
+"IUndoable"
+],
+"shortcuts_de": [
+"Strg+D"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35194,
+"cmd": "cmd_SelectParent",
+"name": "select.superselect",
+"path_de": [
+"Auswählen",
+"Gesamtauswahl treffen"
+],
+"path_en": "Select::Superselect",
+"status_de": "Wählt die Gruppierung oder das Symbol, in der/dem die aktuelle Auswahl enthalten ist, aus",
+"label_de": "Gesamtauswahl treffen",
+"menu_label_de": "Gesamtauswahl treffen",
+"main_menu": true,
+"js": [
+"selectParents"
+],
+"undo_classes": [
+"CSelectParentsUndoable",
+"CSelectionChangerUndoable",
+"CStdUndoable",
+"IUndoable"
+],
+"shortcuts_de": [
+"Strg+Oben"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35193,
+"cmd": "cmd_SelectChildren",
+"name": "select.subselect",
+"path_de": [
+"Auswählen",
+"Teilauswahl treffen"
+],
+"path_en": "Select::Subselect",
+"status_de": "Wählt Elemente innerhalb einer ausgewählten Gruppierung oder einem Symbol aus",
+"label_de": "Teilauswahl treffen",
+"menu_label_de": "Teilauswahl treffen",
+"main_menu": true,
+"js": [
+"selectChildren"
+],
+"undo_classes": [
+"CSelectChildrenUndoable",
+"CSelectionChangerUndoable",
+"CStdUndoable",
+"IUndoable"
+],
+"shortcuts_de": [
+"Strg+Unten"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35041,
+"cmd": "cmd_SelectSimilar",
+"name": "select.similar",
+"path_de": [
+"Auswählen",
+"Ähnliches auswählen"
+],
+"path_en": "Select::Select Similar",
+"status_de": "Wählt Pixel aus, deren Farben der aktuellen Auswahl ähneln",
+"label_de": "Ähnliches auswählen",
+"menu_label_de": "Ähnliches auswählen",
+"main_menu": true,
+"js": [
+"selectSimilar"
+],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35039,
+"cmd": "cmd_SelectInverse",
+"name": "select.inverse",
+"path_de": [
+"Auswählen",
+"Auswahl umkehren"
+],
+"path_en": "Select::Select Inverse",
+"status_de": "Kehrt die Pixelauswahl um",
+"label_de": "Auswahl umkehren",
+"menu_label_de": "Auswahl umkehren",
+"main_menu": true,
+"js": [
+"selectInverse"
+],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg+Umschalt+I"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35089,
+"cmd": "cmd_SelectFeather",
+"name": "select.feather",
+"path_de": [
+"Auswählen",
+"Weiche Kante..."
+],
+"path_en": "Select::Feather",
+"status_de": "Gibt der Pixelauswahl einen weichen Rand",
+"label_de": "Weiche Kante",
+"menu_label_de": "Weiche Kante...",
+"main_menu": true,
+"js": [
+"selectFeather"
+],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35405,
+"cmd": "cmd_ExpandPixelSelection",
+"name": "select.expandMarquee",
+"path_de": [
+"Auswählen",
+"Auswahlrahmen erweitern..."
+],
+"path_en": "Select::Expand Marquee",
+"status_de": "Dehnt die Pixelauswahl aus",
+"label_de": "Auswahlrahmen erweitern",
+"menu_label_de": "Auswahlrahmen erweitern...",
+"main_menu": true,
+"js": [
+"selectAdjustPixelSel"
+],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35406,
+"cmd": "cmd_ContractPixelSelection",
+"name": "select.contractMarquee",
+"path_de": [
+"Auswählen",
+"Auswahlrahmen verkleinern..."
+],
+"path_en": "Select::Contract Marquee",
+"status_de": "Engt die Pixelauswahl ein",
+"label_de": "Auswahlrahmen verkleinern",
+"menu_label_de": "Auswahlrahmen verkleinern...",
+"main_menu": true,
+"js": [
+"selectAdjustPixelSel"
+],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35407,
+"cmd": "cmd_OutlinePixelSelection",
+"name": "select.borderMarquee",
+"path_de": [
+"Auswählen",
+"Auswahlrahmen begrenzen..."
+],
+"path_en": "Select::Border Marquee",
+"status_de": "Markiert einen Bereich entlang der Ränder der Pixelauswahl",
+"label_de": "Auswahlrahmen begrenzen",
+"menu_label_de": "Auswahlrahmen begrenzen...",
+"main_menu": true,
+"js": [
+"selectAdjustPixelSel"
+],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35408,
+"cmd": "cmd_SmoothPixelSelection",
+"name": "select.smoothMarquee",
+"path_de": [
+"Auswählen",
+"Auswahlrahmen glätten..."
+],
+"path_en": "Select::Smooth Marquee",
+"status_de": "Glättet die Ränder der Pixelauswahl",
+"label_de": "Auswahlrahmen glätten",
+"menu_label_de": "Auswahlrahmen glätten...",
+"main_menu": true,
+"js": [
+"selectAdjustPixelSel"
+],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35780,
+"cmd": "cmd_ConvertMarqueeToPath",
+"name": "select.convertMarqueeToPath",
+"path_de": [
+"Auswählen",
+"Auswahlrahmen in Pfad konvertieren"
+],
+"path_en": "Select::Convert Marquee to Path",
+"status_de": "Auswahlrahmen in Pfad konvertieren",
+"label_de": "Auswahlrahmen in Pfad konvertieren",
+"menu_label_de": "Auswahlrahmen in Pfad konvertieren",
+"main_menu": true,
+"js": [
+"convertMarqueeToPath"
+],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35467,
+"cmd": "cmd_SaveSelection",
+"name": "select.saveBitmapSelection",
+"path_de": [
+"Auswählen",
+"Bitmap-Auswahl speichern..."
+],
+"path_en": "Select::Save Bitmap Selection",
+"status_de": "Speichert den aktuellen Auswahlrahmen im Dokument",
+"label_de": "Bitmap-Auswahl speichern",
+"menu_label_de": "Bitmap-Auswahl speichern...",
+"main_menu": true,
+"js": [
+"saveSelection"
+],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35468,
+"cmd": "cmd_RestoreSelection",
+"name": "select.restoreBitmapSelection",
+"path_de": [
+"Auswählen",
+"Bitmap-Auswahl wiederherstellen..."
+],
+"path_en": "Select::Restore Bitmap Selection",
+"status_de": "Lädt die gespeicherten Auswahlrahmen-Einstellungen",
+"label_de": "Bitmap-Auswahl wiederherstellen",
+"menu_label_de": "Bitmap-Auswahl wiederherstellen...",
+"main_menu": true,
+"js": [
+"restoreSelection"
+],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35783,
+"cmd": "cmd_DeleteSelection",
+"name": "select.deleteBitmapSelection",
+"path_de": [
+"Auswählen",
+"Bitmap-Auswahl löschen..."
+],
+"path_en": "Select::Delete Bitmap Selection",
+"status_de": null,
+"label_de": "Bitmap-Auswahl löschen",
+"menu_label_de": "Bitmap-Auswahl löschen...",
+"main_menu": true,
+"js": [
+"deleteSavedSelection"
+],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35226,
+"cmd": "cmd_DocumentImageSize",
+"name": "modify.canvas.imageSize",
+"path_de": [
+"Modifizieren",
+"Leinwand",
+"Bildgröße..."
+],
+"path_en": "Modify::Canvas::Image Size",
+"status_de": "Ändert die Größe des Dokumentinhalts",
+"label_de": "Bildgröße",
+"menu_label_de": "Bildgröße...",
+"main_menu": true,
+"js": [
+"setDocumentImageSize"
+],
+"undo_classes": [
+"CDirectlySetCurrentPageUndoable",
+"CStdUndoable",
+"CUnselectAllUndoable",
+"IUndoable"
+],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35004,
+"cmd": "cmd_DocumentCanvasSize",
+"name": "modify.canvas.canvasSize",
+"path_de": [
+"Modifizieren",
+"Leinwand",
+"Leinwandgröße..."
+],
+"path_en": "Modify::Canvas::Canvas Size",
+"status_de": "Ändert die Dokumentränder",
+"label_de": "Leinwandgröße",
+"menu_label_de": "Leinwandgröße...",
+"main_menu": true,
+"js": [
+"setDocumentCanvasSize"
+],
+"undo_classes": [
+"CDirectlySetCurrentPageUndoable",
+"CStdUndoable",
+"IUndoable"
+],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35005,
+"cmd": "cmd_DocumentSettings",
+"name": "modify.canvas.canvasColor",
+"path_de": [
+"Modifizieren",
+"Leinwand",
+"Leinwandfarbe..."
+],
+"path_en": "Modify::Canvas::Canvas Color",
+"status_de": "Verändert die Leinwandfarbe im Hintergrund",
+"label_de": "Leinwandfarbe",
+"menu_label_de": "Leinwandfarbe...",
+"main_menu": true,
+"js": [
+"setDocumentCanvasColor"
+],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35250,
+"cmd": "cmd_TrimCanvasSize",
+"name": "modify.canvas.trimCanvas",
+"path_de": [
+"Modifizieren",
+"Leinwand",
+"Leinwand zuschneiden"
+],
+"path_en": "Modify::Canvas::Trim Canvas",
+"status_de": "Schneidet das Dokument auf verwendete Pixel zu",
+"label_de": "Leinwand zuschneiden",
+"menu_label_de": "Leinwand zuschneiden",
+"main_menu": true,
+"js": [
+"setDocumentCanvasSizeToDocumentExtents"
+],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35574,
+"cmd": "cmd_FitCanvasSize",
+"name": "modify.canvas.fitCanvas",
+"path_de": [
+"Modifizieren",
+"Leinwand",
+"Leinwand anpassen"
+],
+"path_en": "Modify::Canvas::Fit Canvas",
+"status_de": "Passt das Dokument an die verwendeten Pixel an",
+"label_de": "Leinwand anpassen",
+"menu_label_de": "Leinwand anpassen",
+"main_menu": true,
+"js": [
+"setDocumentCanvasSizeToDocumentExtents"
+],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35348,
+"cmd": "cmd_RotateDoc180",
+"name": "modify.canvas.rotate180Degree",
+"path_de": [
+"Modifizieren",
+"Leinwand",
+"180° drehen"
+],
+"path_en": "Modify::Canvas::Rotate 180 Degree",
+"status_de": "Dreht die Auswahl um 180°",
+"label_de": "180° drehen",
+"menu_label_de": "180° drehen",
+"main_menu": true,
+"js": [
+"rotateDocument"
+],
+"undo_classes": [
+"CStdUndoable",
+"CUnselectAllUndoable",
+"IUndoable"
+],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35349,
+"cmd": "cmd_RotateDoc90",
+"name": "modify.canvas.rotate90DegreeCw",
+"path_de": [
+"Modifizieren",
+"Leinwand",
+"90° im UZS drehen"
+],
+"path_en": "Modify::Canvas::Rotate 90 Degree CW",
+"status_de": "Dreht die Auswahl um 90° im Uhrzeigersinn",
+"label_de": "90° im UZS drehen",
+"menu_label_de": "90° im UZS drehen",
+"main_menu": true,
+"js": [
+"rotateDocument"
+],
+"undo_classes": [
+"CStdUndoable",
+"CUnselectAllUndoable",
+"IUndoable"
+],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35350,
+"cmd": "cmd_RotateDoc270",
+"name": "modify.canvas.rotate90DegreeCcw",
+"path_de": [
+"Modifizieren",
+"Leinwand",
+"90° gegen UZS drehen"
+],
+"path_en": "Modify::Canvas::Rotate 90 Degree CCW",
+"status_de": "Dreht die Auswahl um 90° gegen den Uhrzeigersinn",
+"label_de": "90° gegen UZS drehen",
+"menu_label_de": "90° gegen UZS drehen",
+"main_menu": true,
+"js": [
+"rotateDocument"
+],
+"undo_classes": [
+"CStdUndoable",
+"CUnselectAllUndoable",
+"IUndoable"
+],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35451,
+"cmd": "cmd_CreateAnimSym",
+"name": "modify.animation.animateSelection",
+"path_de": [
+"Modifizieren",
+"Animation",
+"Auswahl animieren..."
+],
+"path_en": "Modify::Animation::Animate Selection",
+"status_de": "Verwandelt die Auswahl in ein Animationssymbol",
+"label_de": "Auswahl animieren",
+"menu_label_de": "Auswahl animieren...",
+"main_menu": true,
+"js": [
+"convertToAnimSymbol"
+],
+"undo_classes": [
+"CConvertToSymbolUndoable"
+],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35463,
+"cmd": "cmd_AnimSymSettings",
+"name": "modify.animation.settings",
+"path_de": [
+"Modifizieren",
+"Animation",
+"Einstellungen..."
+],
+"path_en": "Modify::Animation::Settings",
+"status_de": "Modifiziert die Einstellungen für das ausgewählte Animationssymbol",
+"label_de": "Einstellungen",
+"menu_label_de": "Einstellungen...",
+"main_menu": true,
+"js": [
+"deleteSelection",
+"setAnimInstanceNumFrames",
+"setAnimInstanceOffsetDist",
+"setAnimInstanceRotationAmount",
+"setAnimInstanceScaleAmount",
+"setAnimInstanceStartEndOpacity",
+"setDocumentCanvasSize"
+],
+"undo_classes": [
+"CDeleteUndoable",
+"CDirectlySetCurrentPageUndoable",
+"CModifyMastersListUndoable",
+"CStdUndoable",
+"IUndoable"
+],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35472,
+"cmd": "cmd_RemoveAnimSym",
+"name": "modify.animation.removeAnimation",
+"path_de": [
+"Modifizieren",
+"Animation",
+"Animation entfernen"
+],
+"path_en": "Modify::Animation::Remove Animation",
+"status_de": "Löscht Animationseinstellungen aus dem ausgewählten Animationssymbol",
+"label_de": "Animation entfernen",
+"menu_label_de": "Animation entfernen",
+"main_menu": true,
+"js": [
+"convertAnimSymbolToGraphicSymbol"
+],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35189,
+"cmd": "cmd_ConvertToMaster",
+"name": "modify.symbol.convertToSymbol",
+"path_de": [
+"Modifizieren",
+"Symbol",
+"In Symbol konvertieren..."
+],
+"path_en": "Modify::Symbol::Convert to Symbol",
+"status_de": "Verwandelt die Auswahl in ein Symbol",
+"label_de": "In Symbol konvertieren",
+"menu_label_de": "In Symbol konvertieren...",
+"main_menu": true,
+"js": [
+"convertToSymbol"
+],
+"undo_classes": [
+"CConvertToSymbolUndoable"
+],
+"shortcuts_de": [
+"F8"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35334,
+"cmd": "cmd_EditSymbol",
+"name": "modify.symbol.editSymbol",
+"path_de": [
+"Modifizieren",
+"Symbol",
+"Symbol bearbeiten"
+],
+"path_en": "Modify::Symbol::Edit Symbol",
+"status_de": "Bearbeitet das Symbol in einem eigenen Fenster",
+"label_de": "Symbol bearbeiten",
+"menu_label_de": "Symbol bearbeiten",
+"main_menu": true,
+"js": [
+"setExportOptions",
+"setSliceExportOptions"
+],
+"undo_classes": [
+"CModifyMastersListUndoable",
+"CStdUndoable",
+"IUndoable"
+],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35842,
+"cmd": "cmd_EditSymbolInPlace",
+"name": "modify.symbol.editInPlace",
+"path_de": [
+"Modifizieren",
+"Symbol",
+"An Position bearbeiten"
+],
+"path_en": "Modify::Symbol::Edit in Place",
+"status_de": null,
+"label_de": "An Position bearbeiten",
+"menu_label_de": "An Position bearbeiten",
+"main_menu": true,
+"js": [],
+"undo_classes": [
+"CModifyMastersListUndoable",
+"CStdUndoable",
+"IUndoable"
+],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35188,
+"cmd": "cmd_TweenInstances",
+"name": "modify.symbol.tweenInstances",
+"path_de": [
+"Modifizieren",
+"Symbol",
+"Instanzen tweenen..."
+],
+"path_en": "Modify::Symbol::Tween Instances",
+"status_de": "Erstellt Instanzen zwischen den ausgewählten Instanzen",
+"label_de": "Instanzen tweenen",
+"menu_label_de": "Instanzen tweenen...",
+"main_menu": true,
+"js": [
+"tween"
+],
+"undo_classes": [
+"CTweenUndoable"
+],
+"shortcuts_de": [
+"Strg+Alt+Umschalt+T"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35190,
+"cmd": "cmd_BreakLinks",
+"name": "modify.symbol.breakApart",
+"path_de": [
+"Modifizieren",
+"Symbol",
+"Teilen"
+],
+"path_en": "Modify::Symbol::Break Apart",
+"status_de": "Hebt die Verknüpfung für die Auswahl auf, so dass sie kein Symbol mehr darstellt",
+"label_de": "Teilen",
+"menu_label_de": "Teilen",
+"main_menu": true,
+"js": [
+"detachInstanceFromSymbol"
+],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35807,
+"cmd": null,
+"name": "modify.symbol.swapSymbol",
+"path_de": [
+"Modifizieren",
+"Symbol",
+"Symbol austauschen..."
+],
+"path_en": "Modify::Swap Symbol",
+"status_de": null,
+"label_de": "Symbol austauschen",
+"menu_label_de": "Symbol austauschen...",
+"main_menu": true,
+"js": [
+"setExportOptions",
+"setSliceExportOptions"
+],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35445,
+"cmd": "cmd_InsertPopupMenu",
+"name": "modify.popUpMenu.addPopUpMenu",
+"path_de": [
+"Modifizieren",
+"Popupmenü",
+"Popupmenü hinzufügen..."
+],
+"path_en": "Modify::Pop-up Menu::Add Pop-up Menu",
+"status_de": "Erstellt ein neues JavaScript-Popupmenü",
+"label_de": "Popupmenü hinzufügen",
+"menu_label_de": "Popupmenü hinzufügen...",
+"main_menu": true,
+"js": [
+"copyToHotspot"
+],
+"undo_classes": [
+"CDeleteUndoable"
+],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 2
+},
+{
+"fw_id": 35592,
+"cmd": "cmd_EditPopupMenu",
+"name": "modify.popUpMenu.editPopUpMenu",
+"path_de": [
+"Modifizieren",
+"Popupmenü",
+"Popupmenü bearbeiten..."
+],
+"path_en": "Modify::Pop-up Menu::Edit Pop-up Menu",
+"status_de": "JavaScript-Popupmenü bearbeiten",
+"label_de": "Popupmenü bearbeiten",
+"menu_label_de": "Popupmenü bearbeiten...",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35593,
+"cmd": "cmd_DeletePopupMenu",
+"name": "modify.popUpMenu.deletePopUpMenu",
+"path_de": [
+"Modifizieren",
+"Popupmenü",
+"Popupmenü löschen"
+],
+"path_en": "Modify::Pop-up Menu::Delete Pop-up Menu",
+"status_de": "Löscht JavaScript-Popupmenü",
+"label_de": "Popupmenü löschen",
+"menu_label_de": "Popupmenü löschen",
+"main_menu": true,
+"js": [
+"removeBehavior"
+],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35431,
+"cmd": "cmd_Mask_RevealAll",
+"name": "modify.mask.revealAll",
+"path_de": [
+"Modifizieren",
+"Maske",
+"Alles einblenden"
+],
+"path_en": "Modify::Mask::Reveal All",
+"status_de": "Füllt die Maske mit weißen Pixeln und blendet dadurch das darunterliegende Objekt vollständig ein",
+"label_de": "Alles einblenden",
+"menu_label_de": "Alles einblenden",
+"main_menu": true,
+"js": [
+"addElementMask"
+],
+"undo_classes": [
+"CArrangeUndoable",
+"CSetElementMaskUndoable",
+"CStdUndoable",
+"IUndoable"
+],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35432,
+"cmd": "cmd_Mask_HideAll",
+"name": "modify.mask.hideAll",
+"path_de": [
+"Modifizieren",
+"Maske",
+"Alles ausblenden"
+],
+"path_en": "Modify::Mask::Hide All",
+"status_de": "Füllt die Maske mit schwarzen Pixeln und verdeckt dadurch das darunterliegende Objekt vollständig",
+"label_de": "Alles ausblenden",
+"menu_label_de": "Alles ausblenden",
+"main_menu": true,
+"js": [
+"addElementMask"
+],
+"undo_classes": [
+"CArrangeUndoable",
+"CSetElementMaskUndoable",
+"CStdUndoable",
+"IUndoable"
+],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35128,
+"cmd": "cmd_MaskGroup",
+"name": "modify.mask.groupAsMask",
+"path_de": [
+"Modifizieren",
+"Maske",
+"Als Maske gruppieren"
+],
+"path_en": "Modify::Mask::Group as Mask",
+"status_de": "Pixelwerte des obersten Objekts maskieren",
+"label_de": "Als Maske gruppieren",
+"menu_label_de": "Als Maske gruppieren",
+"main_menu": true,
+"js": [
+"group"
+],
+"undo_classes": [
+"CArrangeUndoable",
+"CGroupUndoable",
+"CSelectNoneUndoable",
+"CSelectionChangerUndoable",
+"CSelectorUndoable",
+"CSetElementMaskUndoable",
+"CStdUndoable",
+"IUndoable"
+],
+"shortcuts_de": [
+"Strg+Umschalt+G"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35433,
+"cmd": "cmd_Mask_RevealSel",
+"name": "modify.mask.revealSelection",
+"path_de": [
+"Modifizieren",
+"Maske",
+"Auswahl einblenden"
+],
+"path_en": "Modify::Mask::Reveal Selection",
+"status_de": "Fügt eine Maske hinzu, die die aktuelle Auswahl einblendet, den Hintergrund aber ausblendet",
+"label_de": "Auswahl einblenden",
+"menu_label_de": "Auswahl einblenden",
+"main_menu": true,
+"js": [
+"addElementMask"
+],
+"undo_classes": [
+"CArrangeUndoable",
+"CSetElementMaskUndoable",
+"CStdUndoable",
+"IUndoable"
+],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35434,
+"cmd": "cmd_Mask_HideSel",
+"name": "modify.mask.hideSelection",
+"path_de": [
+"Modifizieren",
+"Maske",
+"Auswahl ausblenden"
+],
+"path_en": "Modify::Mask::Hide Selection",
+"status_de": "Maske hinzufügen, die die aktuelle Auswahl ausblendet, den Hintergrund aber sichtbar lässt",
+"label_de": "Auswahl ausblenden",
+"menu_label_de": "Auswahl ausblenden",
+"main_menu": true,
+"js": [
+"addElementMask"
+],
+"undo_classes": [
+"CArrangeUndoable",
+"CSetElementMaskUndoable",
+"CStdUndoable",
+"IUndoable"
+],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35435,
+"cmd": "cmd_Mask_EnableDisable",
+"name": "modify.mask.disableMask",
+"path_de": [
+"Modifizieren",
+"Maske",
+"Maske deaktivieren"
+],
+"path_en": "Modify::Mask::Disable Mask",
+"status_de": "Verwendung der Maske für das ausgewählte Objekt umschalten",
+"label_de": "Maske deaktivieren",
+"menu_label_de": "Maske deaktivieren",
+"main_menu": true,
+"js": [
+"enableElementMask"
+],
+"undo_classes": [
+"CSetElementMaskUndoable"
+],
+"shortcuts_de": [
+"Strg+Umschalt+K"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35436,
+"cmd": "cmd_Mask_Delete",
+"name": "modify.mask.deleteMask",
+"path_de": [
+"Modifizieren",
+"Maske",
+"Maske löschen"
+],
+"path_en": "Modify::Mask::Delete Mask",
+"status_de": "Löscht die Maske vom ausgewählten Objekt",
+"label_de": "Maske löschen",
+"menu_label_de": "Maske löschen",
+"main_menu": true,
+"js": [
+"removeElementMask"
+],
+"undo_classes": [
+"CArrangeUndoable",
+"CMergeUndoable",
+"CSelectionChangerUndoable",
+"CSetElementMaskUndoable",
+"CStdUndoable",
+"CStopBeingPaintModeUndoable",
+"IUndoable"
+],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35469,
+"cmd": "cmd_SaveJPEGMask",
+"name": "modify.selectiveJpeg.saveSelectionAsJpegMask",
+"path_de": [
+"Modifizieren",
+"Selektives JPEG",
+"Auswahl als JPEG-Maske speichern"
+],
+"path_en": "Modify::Selective JPEG::Save Selection as JPEG Mask",
+"status_de": "Speichert den aktuellen Bereich des Auswahlrahmens als Bereich selektiver JPEG-Qualität",
+"label_de": "Auswahl als JPEG-Maske speichern",
+"menu_label_de": "Auswahl als JPEG-Maske speichern",
+"main_menu": true,
+"js": [
+"saveJPEGMask"
+],
+"undo_classes": [
+"CDirectlySetCurrentPageUndoable",
+"CJPEGMaskUndoable",
+"CStdUndoable",
+"IUndoable"
+],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35470,
+"cmd": "cmd_RestoreJPEGMask",
+"name": "modify.selectiveJpeg.restoreJpegMaskAsSelection",
+"path_de": [
+"Modifizieren",
+"Selektives JPEG",
+"JPEG-Maske als Auswahl wiederherstellen"
+],
+"path_en": "Modify::Selective JPEG::Restore JPEG Mask as Selection",
+"status_de": "Lädt den gespeicherten Bereich der selektiven JPEG-Qualität",
+"label_de": "JPEG-Maske als Auswahl wiederherstellen",
+"menu_label_de": "JPEG-Maske als Auswahl wiederherstellen",
+"main_menu": true,
+"js": [
+"restoreJPEGMask"
+],
+"undo_classes": [
+"CAddUndoable",
+"CSelectAsPaintModeUndoable",
+"CSelectionChangerUndoable",
+"CStdUndoable",
+"IUndoable"
+],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35576,
+"cmd": "cmd_SelectiveJPEG",
+"name": "modify.selectiveJpeg.settings",
+"path_de": [
+"Modifizieren",
+"Selektives JPEG",
+"Einstellungen..."
+],
+"path_en": "Modify::Selective JPEG::Settings",
+"status_de": "Selektive JPEG-Einstellungen bearbeiten",
+"label_de": "Einstellungen",
+"menu_label_de": "Einstellungen...",
+"main_menu": true,
+"js": [
+"setExportOptions",
+"setSliceExportOptions"
+],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35471,
+"cmd": "cmd_ClearJPEGMask",
+"name": "modify.selectiveJpeg.removeJpegMask",
+"path_de": [
+"Modifizieren",
+"Selektives JPEG",
+"JPEG-Maske entfernen"
+],
+"path_en": "Modify::Selective JPEG::Remove JPEG Mask",
+"status_de": "Löscht den derzeit gespeicherten Bereich mit selektiver JPEG-Qualität",
+"label_de": "JPEG-Maske entfernen",
+"menu_label_de": "JPEG-Maske entfernen",
+"main_menu": true,
+"js": [
+"clearJPEGMask"
+],
+"undo_classes": [
+"CJPEGMaskUndoable",
+"CStdUndoable",
+"IUndoable"
+],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35784,
+"cmd": "cmd_LockSelection",
+"name": "modify.lockSelection",
+"path_de": [
+"Modifizieren",
+"Auswahl sperren"
+],
+"path_en": "Modify::Lock Selection",
+"status_de": "Ausgewählte Elemente sperren",
+"label_de": "Auswahl sperren",
+"menu_label_de": "Auswahl sperren",
+"main_menu": true,
+"js": [
+"lockSelection"
+],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35009,
+"cmd": "cmd_FlattenSelection",
+"name": "modify.flattenSelection",
+"path_de": [
+"Modifizieren",
+"Auswahl auf Hintergrund reduzieren"
+],
+"path_en": "Modify::Flatten Selection",
+"status_de": "Verbindet die ausgewählten Elemente zu einer einzigen Bitmap",
+"label_de": "Auswahl auf Hintergrund reduzieren",
+"menu_label_de": "Auswahl auf Hintergrund reduzieren",
+"main_menu": true,
+"js": [
+"flattenSelection"
+],
+"undo_classes": [
+"CArrangeUndoable",
+"CMergeUndoable",
+"CSelectAsPaintModeUndoable",
+"CSelectionChangerUndoable",
+"CStdUndoable",
+"IUndoable"
+],
+"shortcuts_de": [
+"Strg+Alt+Umschalt+Z"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35583,
+"cmd": "cmd_MergeDown",
+"name": "modify.mergeDown",
+"path_de": [
+"Modifizieren",
+"Mit darunter liegender auf eine Ebene reduzieren"
+],
+"path_en": "Modify::Merge Down",
+"status_de": "Verbindet die aktuelle Auswahl mit der darunter liegenden Bitmap",
+"label_de": "Mit darunter liegender auf eine Ebene reduzieren",
+"menu_label_de": "Mit darunter liegender auf eine Ebene reduzieren",
+"main_menu": true,
+"js": [
+"mergeDown"
+],
+"undo_classes": [
+"CArrangeUndoable",
+"CMergeUndoable",
+"CSelectAsPaintModeUndoable",
+"CSelectionChangerUndoable",
+"CSelectorUndoable",
+"CStdUndoable",
+"IUndoable"
+],
+"shortcuts_de": [
+"Strg+Alt+E"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35008,
+"cmd": "cmd_FlattenDocument",
+"name": "modify.flattenLayers",
+"path_de": [
+"Modifizieren",
+"Ebenen als Hintergrund"
+],
+"path_en": "Modify::Flatten Layers",
+"status_de": "Kombiniert alle Ebenen zu einer einzelnen Ebene",
+"label_de": "Ebenen als Hintergrund",
+"menu_label_de": "Ebenen als Hintergrund",
+"main_menu": true,
+"js": [
+"flattenDocument"
+],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg+Alt+Umschalt+E"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35178,
+"cmd": "cmd_Transform",
+"name": "modify.transform.freeTransform",
+"path_de": [
+"Modifizieren",
+"Transformieren",
+"Frei transformieren"
+],
+"path_en": "Modify::Transform::Free Transform",
+"status_de": "Stellt Transformationsmodus für Auswahl ein",
+"label_de": "Frei transformieren",
+"menu_label_de": "Frei transformieren",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg+T"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35060,
+"cmd": "cmd_TransformScale",
+"name": "modify.transform.scale",
+"path_de": [
+"Modifizieren",
+"Transformieren",
+"Skalieren"
+],
+"path_en": "Modify::Transform::Scale",
+"status_de": "Stellt Transformationsmodus ein, um Auswahl zu skalieren",
+"label_de": "Skalieren",
+"menu_label_de": "Skalieren",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35061,
+"cmd": "cmd_TransformSkew",
+"name": "modify.transform.skew",
+"path_de": [
+"Modifizieren",
+"Transformieren",
+"Neigen"
+],
+"path_en": "Modify::Transform::Skew",
+"status_de": "Stellt Transformationsmodus ein, um Auswahl zu neigen",
+"label_de": "Neigen",
+"menu_label_de": "Neigen",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35090,
+"cmd": "cmd_TransformFreeTransform",
+"name": "modify.transform.distort",
+"path_de": [
+"Modifizieren",
+"Transformieren",
+"Verzerren"
+],
+"path_en": "Modify::Transform::Distort",
+"status_de": "Stellt Transformationsmodus ein, um die Auswahl zu verzerren",
+"label_de": "Verzerren",
+"menu_label_de": "Verzerren",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 2
+},
+{
+"fw_id": 35201,
+"cmd": "cmd_NumericTransform",
+"name": "modify.transform.numericTransform",
+"path_de": [
+"Modifizieren",
+"Transformieren",
+"Numerisch transformieren..."
+],
+"path_en": "Modify::Transform::Numeric Transform",
+"status_de": "Öffnet das Dialogfeld \"Numerisch transformieren\"",
+"label_de": "Numerisch transformieren",
+"menu_label_de": "Numerisch transformieren...",
+"main_menu": true,
+"js": [
+"enterPaintMode"
+],
+"undo_classes": [
+"CSelectAsPaintModeUndoable",
+"CSelectionChangerUndoable",
+"CStdUndoable",
+"IUndoable"
+],
+"shortcuts_de": [
+"Strg+Umschalt+T"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35173,
+"cmd": "cmd_Rotate180",
+"name": "modify.transform.rotate180Degree",
+"path_de": [
+"Modifizieren",
+"Transformieren",
+"180° drehen"
+],
+"path_en": "Modify::Transform::Rotate 180 Degree",
+"status_de": "Dreht die Auswahl um 180°",
+"label_de": "180° drehen",
+"menu_label_de": "180° drehen",
+"main_menu": true,
+"js": [
+"enterPaintMode",
+"rotateSelection"
+],
+"undo_classes": [
+"CSelectAsPaintModeUndoable",
+"CSelectionChangerUndoable",
+"CStdUndoable",
+"IUndoable"
+],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35174,
+"cmd": "cmd_Rotate90",
+"name": "modify.transform.rotate90DegreeCw",
+"path_de": [
+"Modifizieren",
+"Transformieren",
+"90° im UZS drehen"
+],
+"path_en": "Modify::Transform::Rotate 90 Degree CW",
+"status_de": "Dreht die Auswahl um 90° im Uhrzeigersinn",
+"label_de": "90° im UZS drehen",
+"menu_label_de": "90° im UZS drehen",
+"main_menu": true,
+"js": [
+"enterPaintMode",
+"rotateSelection"
+],
+"undo_classes": [
+"CSelectAsPaintModeUndoable",
+"CSelectionChangerUndoable",
+"CStdUndoable",
+"IUndoable"
+],
+"shortcuts_de": [
+"Strg+9"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35175,
+"cmd": "cmd_Rotate270",
+"name": "modify.transform.rotate90DegreeCcw",
+"path_de": [
+"Modifizieren",
+"Transformieren",
+"90° gegen UZS drehen"
+],
+"path_en": "Modify::Transform::Rotate 90 Degree CCW",
+"status_de": "Dreht die Auswahl um 90° gegen den Uhrzeigersinn",
+"label_de": "90° gegen UZS drehen",
+"menu_label_de": "90° gegen UZS drehen",
+"main_menu": true,
+"js": [
+"enterPaintMode",
+"rotateSelection"
+],
+"undo_classes": [
+"CSelectAsPaintModeUndoable",
+"CSelectionChangerUndoable",
+"CStdUndoable",
+"IUndoable"
+],
+"shortcuts_de": [
+"Strg+7"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35176,
+"cmd": "cmd_ReflectHoriz",
+"name": "modify.transform.flipHorizontal",
+"path_de": [
+"Modifizieren",
+"Transformieren",
+"Horizontal spiegeln"
+],
+"path_en": "Modify::Transform::Flip Horizontal",
+"status_de": "Spiegelt die Auswahl horizontal",
+"label_de": "Horizontal spiegeln",
+"menu_label_de": "Horizontal spiegeln",
+"main_menu": true,
+"js": [
+"enterPaintMode",
+"reflectSelection"
+],
+"undo_classes": [
+"CSelectAsPaintModeUndoable",
+"CSelectionChangerUndoable",
+"CStdUndoable",
+"IUndoable"
+],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35177,
+"cmd": "cmd_ReflectVert",
+"name": "modify.transform.flipVertical",
+"path_de": [
+"Modifizieren",
+"Transformieren",
+"Vertikal spiegeln"
+],
+"path_en": "Modify::Transform::Flip Vertical",
+"status_de": "Spiegelt die Auswahl vertikal",
+"label_de": "Vertikal spiegeln",
+"menu_label_de": "Vertikal spiegeln",
+"main_menu": true,
+"js": [
+"enterPaintMode",
+"reflectSelection"
+],
+"undo_classes": [
+"CSelectAsPaintModeUndoable",
+"CSelectionChangerUndoable",
+"CStdUndoable",
+"IUndoable"
+],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35152,
+"cmd": "cmd_TransformRemove",
+"name": "modify.transform.removeTransformations",
+"path_de": [
+"Modifizieren",
+"Transformieren",
+"Transformationen entfernen"
+],
+"path_en": "Modify::Transform::Remove Transformations",
+"status_de": "Entfernt Transformationen aus dem ausgewählten Objekt",
+"label_de": "Transformationen entfernen",
+"menu_label_de": "Transformationen entfernen",
+"main_menu": true,
+"js": [
+"removeTransformation"
+],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35067,
+"cmd": "cmd_ArrangeFront",
+"name": "modify.arrange.bringToFront",
+"path_de": [
+"Modifizieren",
+"Anordnen",
+"In den Vordergrund"
+],
+"path_en": "Modify::Arrange::Bring to Front",
+"status_de": "Bringt die Auswahl in den Vordergrund",
+"label_de": "In den Vordergrund",
+"menu_label_de": "In den Vordergrund",
+"main_menu": true,
+"js": [
+"arrange"
+],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg+F"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35068,
+"cmd": "cmd_ArrangeForward",
+"name": "modify.arrange.bringForward",
+"path_de": [
+"Modifizieren",
+"Anordnen",
+"Schrittweise nach vorne"
+],
+"path_en": "Modify::Arrange::Bring Forward",
+"status_de": "Verschiebt die Auswahl nach vorne",
+"label_de": "Schrittweise nach vorne",
+"menu_label_de": "Schrittweise nach vorne",
+"main_menu": true,
+"js": [
+"arrange"
+],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg+Umschalt+F"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35070,
+"cmd": "cmd_ArrangeBackward",
+"name": "modify.arrange.sendBackward",
+"path_de": [
+"Modifizieren",
+"Anordnen",
+"Schrittweise nach hinten"
+],
+"path_en": "Modify::Arrange::Send Backward",
+"status_de": "Verschiebt die Auswahl nach hinten",
+"label_de": "Schrittweise nach hinten",
+"menu_label_de": "Schrittweise nach hinten",
+"main_menu": true,
+"js": [
+"arrange"
+],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg+Umschalt+B"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35069,
+"cmd": "cmd_ArrangeBack",
+"name": "modify.arrange.sendToBack",
+"path_de": [
+"Modifizieren",
+"Anordnen",
+"In den Hintergrund"
+],
+"path_en": "Modify::Arrange::Send to Back",
+"status_de": "Stellt die Auswahl in den Hintergrund",
+"label_de": "In den Hintergrund",
+"menu_label_de": "In den Hintergrund",
+"main_menu": true,
+"js": [
+"arrange"
+],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg+B"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35073,
+"cmd": "cmd_AlignLeft",
+"name": "modify.align.left",
+"path_de": [
+"Modifizieren",
+"Ausrichten",
+"Links"
+],
+"path_en": "Modify::Align::Left",
+"status_de": "Richtet linke Ränder der Auswahl aus",
+"label_de": "Links",
+"menu_label_de": "Links",
+"main_menu": true,
+"js": [
+"align"
+],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg+Alt+1"
+],
+"placeholder": false,
+"handlers": 2
+},
+{
+"fw_id": 35075,
+"cmd": "cmd_AlignVertical",
+"name": "modify.align.centerVertical",
+"path_de": [
+"Modifizieren",
+"Ausrichten",
+"Vertikal zentrieren"
+],
+"path_en": "Modify::Align::Center Vertical",
+"status_de": "Zentriert entlang vertikaler Achse",
+"label_de": "Vertikal zentrieren",
+"menu_label_de": "Vertikal zentrieren",
+"main_menu": true,
+"js": [
+"align"
+],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg+Alt+2"
+],
+"placeholder": false,
+"handlers": 2
+},
+{
+"fw_id": 35074,
+"cmd": "cmd_AlignRight",
+"name": "modify.align.right",
+"path_de": [
+"Modifizieren",
+"Ausrichten",
+"Rechts"
+],
+"path_en": "Modify::Align::Right",
+"status_de": "Richtet rechte Ränder der Auswahl aus",
+"label_de": "Rechts",
+"menu_label_de": "Rechts",
+"main_menu": true,
+"js": [
+"align"
+],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg+Alt+3"
+],
+"placeholder": false,
+"handlers": 2
+},
+{
+"fw_id": 35077,
+"cmd": "cmd_AlignTop",
+"name": "modify.align.top",
+"path_de": [
+"Modifizieren",
+"Ausrichten",
+"Oben"
+],
+"path_en": "Modify::Align::Top",
+"status_de": "Richtet obere Ränder der Auswahl aus",
+"label_de": "Oben",
+"menu_label_de": "Oben",
+"main_menu": true,
+"js": [
+"align"
+],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg+Alt+4"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35076,
+"cmd": "cmd_AlignHorizontal",
+"name": "modify.align.centerHorizontal",
+"path_de": [
+"Modifizieren",
+"Ausrichten",
+"Horizontal zentrieren"
+],
+"path_en": "Modify::Align::Center Horizontal",
+"status_de": "Zentriert entlang horizontaler Achse",
+"label_de": "Horizontal zentrieren",
+"menu_label_de": "Horizontal zentrieren",
+"main_menu": true,
+"js": [
+"align"
+],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg+Alt+5"
+],
+"placeholder": false,
+"handlers": 2
+},
+{
+"fw_id": 35078,
+"cmd": "cmd_AlignBottom",
+"name": "modify.align.bottom",
+"path_de": [
+"Modifizieren",
+"Ausrichten",
+"Unten"
+],
+"path_en": "Modify::Align::Bottom",
+"status_de": "Richtet untere Ränder der Auswahl aus",
+"label_de": "Unten",
+"menu_label_de": "Unten",
+"main_menu": true,
+"js": [
+"align"
+],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg+Alt+6"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35080,
+"cmd": "cmd_DistributeHorizontal",
+"name": "modify.align.distributeWidths",
+"path_de": [
+"Modifizieren",
+"Ausrichten",
+"Breiten verteilen"
+],
+"path_en": "Modify::Align::Distribute Widths",
+"status_de": "Ordnet horizontal gleichmäßig an",
+"label_de": "Breiten verteilen",
+"menu_label_de": "Breiten verteilen",
+"main_menu": true,
+"js": [
+"distribute"
+],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg+Alt+7"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35079,
+"cmd": "cmd_DistributeVertical",
+"name": "modify.align.distributeHeights",
+"path_de": [
+"Modifizieren",
+"Ausrichten",
+"Höhen verteilen"
+],
+"path_en": "Modify::Align::Distribute Heights",
+"status_de": "Ordnet vertikal gleichmäßig an",
+"label_de": "Höhen verteilen",
+"menu_label_de": "Höhen verteilen",
+"main_menu": true,
+"js": [
+"distribute"
+],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg+Alt+9"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35781,
+"cmd": "cmd_ConvertPathToMarquee",
+"name": "modify.convertPathToMarquee",
+"path_de": [
+"Modifizieren",
+"Pfad in Auswahlrahmen konvertieren..."
+],
+"path_en": "Modify::Convert Path to Marquee",
+"status_de": "Pfad in Auswahlrahmen konvertieren",
+"label_de": "Pfad in Auswahlrahmen konvertieren",
+"menu_label_de": "Pfad in Auswahlrahmen konvertieren...",
+"main_menu": true,
+"js": [
+"convertPathToMarquee"
+],
+"undo_classes": [
+"CDeleteUndoable"
+],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35094,
+"cmd": "cmd_Join",
+"name": "modify.combinePaths.join",
+"path_de": [
+"Modifizieren",
+"Pfade kombinieren",
+"Verbinden"
+],
+"path_en": "Modify::Combine Paths::Join",
+"status_de": "Verbindet Objekte zu einem zusammengesetzten Pfad",
+"label_de": "Verbinden",
+"menu_label_de": "Verbinden",
+"main_menu": true,
+"js": [
+"joinPaths"
+],
+"undo_classes": [
+"CDeleteUndoable",
+"CSetElementMaskUndoable"
+],
+"shortcuts_de": [
+"Strg+J"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35095,
+"cmd": "cmd_Split",
+"name": "modify.combinePaths.split",
+"path_de": [
+"Modifizieren",
+"Pfade kombinieren",
+"Teilen"
+],
+"path_en": "Modify::Combine Paths::Split",
+"status_de": "Teilt zusammengesetzten Pfad",
+"label_de": "Teilen",
+"menu_label_de": "Teilen",
+"main_menu": true,
+"js": [
+"splitPaths"
+],
+"undo_classes": [
+"CDeleteUndoable"
+],
+"shortcuts_de": [
+"Strg+Umschalt+J"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35211,
+"cmd": "cmd_PathUnion",
+"name": "modify.combinePaths.union",
+"path_de": [
+"Modifizieren",
+"Pfade kombinieren",
+"Vereinigen"
+],
+"path_en": "Modify::Combine Paths::Union",
+"status_de": "Kombiniert Bereiche der ausgewählten Pfade",
+"label_de": "Vereinigen",
+"menu_label_de": "Vereinigen",
+"main_menu": true,
+"js": [
+"pathUnion"
+],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35212,
+"cmd": "cmd_PathIntersect",
+"name": "modify.combinePaths.intersect",
+"path_de": [
+"Modifizieren",
+"Pfade kombinieren",
+"Überschneiden"
+],
+"path_en": "Modify::Combine Paths::Intersect",
+"status_de": "Erstellt eine Überschneidung der ausgewählten Pfade",
+"label_de": "Überschneiden",
+"menu_label_de": "Überschneiden",
+"main_menu": true,
+"js": [
+"pathIntersect",
+"pathUnion"
+],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35217,
+"cmd": "cmd_PathPunch",
+"name": "modify.combinePaths.punch",
+"path_de": [
+"Modifizieren",
+"Pfade kombinieren",
+"Öffnen"
+],
+"path_en": "Modify::Combine Paths::Punch",
+"status_de": "Öffnet oberen Pfad durch Auswahl",
+"label_de": "Öffnen",
+"menu_label_de": "Öffnen",
+"main_menu": true,
+"js": [
+"pathPunch",
+"pathUnion"
+],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35213,
+"cmd": "cmd_PathCrop",
+"name": "modify.combinePaths.crop",
+"path_de": [
+"Modifizieren",
+"Pfade kombinieren",
+"Zuschneiden"
+],
+"path_en": "Modify::Combine Paths::Crop",
+"status_de": "Schneidet Bereich des obersten ausgewählten Pfads zu",
+"label_de": "Zuschneiden",
+"menu_label_de": "Zuschneiden",
+"main_menu": true,
+"js": [
+"pathCrop",
+"pathUnion"
+],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35214,
+"cmd": "cmd_PathSimplify",
+"name": "modify.alterPath.simplify",
+"path_de": [
+"Modifizieren",
+"Pfad ändern",
+"Vereinfachen..."
+],
+"path_en": "Modify::Alter Path::Simplify",
+"status_de": "Nicht erforderliche Punkte aus Pfad entfernen",
+"label_de": "Vereinfachen",
+"menu_label_de": "Vereinfachen...",
+"main_menu": true,
+"js": [
+"pathSimplify"
+],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35215,
+"cmd": "cmd_PathExpand",
+"name": "modify.alterPath.expandStroke",
+"path_de": [
+"Modifizieren",
+"Pfad ändern",
+"Strich erweitern..."
+],
+"path_en": "Modify::Alter Path::Expand Stroke",
+"status_de": "Pfad erweitern, damit eine geschlossene Form entsteht",
+"label_de": "Strich erweitern",
+"menu_label_de": "Strich erweitern...",
+"main_menu": true,
+"js": [
+"pathExpand",
+"pathSimplify"
+],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35216,
+"cmd": "cmd_PathInset",
+"name": "modify.alterPath.insetPath",
+"path_de": [
+"Modifizieren",
+"Pfad ändern",
+"Pfad einlassen..."
+],
+"path_en": "Modify::Alter Path::Inset Path",
+"status_de": "Pfadkontur einlassen oder nach außen stellen",
+"label_de": "Pfad einlassen",
+"menu_label_de": "Pfad einlassen...",
+"main_menu": true,
+"js": [
+"pathInset",
+"pathSimplify"
+],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35183,
+"cmd": "cmd_HardEdge",
+"name": "modify.alterPath.hardFill",
+"path_de": [
+"Modifizieren",
+"Pfad ändern",
+"Präzise Füllung"
+],
+"path_en": "Modify::Alter Path::Hard Fill",
+"status_de": "Füllt ausgewählte Objekte mit präzisem Rand",
+"label_de": "Präzise Füllung",
+"menu_label_de": "Präzise Füllung",
+"main_menu": true,
+"js": [
+"setFillEdgeMode"
+],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35184,
+"cmd": "cmd_Antialias",
+"name": "modify.alterPath.antiAliasFill",
+"path_de": [
+"Modifizieren",
+"Pfad ändern",
+"Anti-Alias-Füllung"
+],
+"path_en": "Modify::Alter Path::Anti-Alias Fill",
+"status_de": "Füllt ausgewählte Objekte mit Anti-Alias",
+"label_de": "Anti-Alias-Füllung",
+"menu_label_de": "Anti-Alias-Füllung",
+"main_menu": true,
+"js": [
+"setFillEdgeMode"
+],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35185,
+"cmd": "cmd_Feathered",
+"name": "modify.alterPath.featherFill",
+"path_de": [
+"Modifizieren",
+"Pfad ändern",
+"Weiche-Kante-Füllung"
+],
+"path_en": "Modify::Alter Path::Feather Fill",
+"status_de": "Füllt ausgewählte Objekte mit weicher Kante",
+"label_de": "Weiche-Kante-Füllung",
+"menu_label_de": "Weiche-Kante-Füllung",
+"main_menu": true,
+"js": [
+"setFillEdgeMode"
+],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35849,
+"cmd": "cmd_SnapToPixel",
+"name": "modify.snapToPixel",
+"path_de": [
+"Modifizieren",
+"An Pixeln ausrichten"
+],
+"path_en": null,
+"status_de": "Für einen präziseren Rendervorgang wird der ausgewählte Pfad an Pixeln ausgerichtet",
+"label_de": "An Pixeln ausrichten",
+"menu_label_de": "An Pixeln ausrichten",
+"main_menu": true,
+"js": [
+"saveAll",
+"snapToPixel"
+],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg+K"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35010,
+"cmd": "cmd_Group",
+"name": "modify.group",
+"path_de": [
+"Modifizieren",
+"Gruppieren"
+],
+"path_en": "Modify::Group",
+"status_de": "Gruppiert die ausgewählten Objekte",
+"label_de": "Gruppieren",
+"menu_label_de": "Gruppieren",
+"main_menu": true,
+"js": [
+"group"
+],
+"undo_classes": [
+"CArrangeUndoable",
+"CGroupUndoable",
+"CSelectNoneUndoable",
+"CSelectionChangerUndoable",
+"CSelectorUndoable",
+"CSetElementMaskUndoable",
+"CStdUndoable",
+"IUndoable"
+],
+"shortcuts_de": [
+"Strg+G"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35062,
+"cmd": "cmd_Ungroup",
+"name": "modify.ungroup",
+"path_de": [
+"Modifizieren",
+"Gruppierung aufheben"
+],
+"path_en": "Modify::Ungroup",
+"status_de": "Hebt die Gruppierung der Auswahl auf",
+"label_de": "Gruppierung aufheben",
+"menu_label_de": "Gruppierung aufheben",
+"main_menu": true,
+"js": [
+"ungroup"
+],
+"undo_classes": [
+"CArrangeUndoable",
+"CStdUndoable",
+"CUngroupUndoable",
+"IUndoable"
+],
+"shortcuts_de": [
+"Strg+U"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35343,
+"cmd": null,
+"name": "text.font",
+"path_de": [
+"Text",
+"Schrift",
+"Platzhalter - nicht entfernen"
+],
+"path_en": null,
+"status_de": null,
+"label_de": "Schrift",
+"menu_label_de": "Platzhalter - nicht entfernen",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": true,
+"handlers": 1
+},
+{
+"fw_id": 35230,
+"cmd": "cmd_TextSize_Other",
+"name": "text.size.other",
+"path_de": [
+"Text",
+"Größe",
+"Andere..."
+],
+"path_en": "Text::Size::Other",
+"status_de": "Bearbeitet Textgröße",
+"label_de": "Andere",
+"menu_label_de": "Andere...",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35635,
+"cmd": "cmd_TextSize_Smaller",
+"name": "text.size.smaller",
+"path_de": [
+"Text",
+"Größe",
+"Kleiner"
+],
+"path_en": "Text::Size::Smaller",
+"status_de": "Verringert Textgröße",
+"label_de": "Kleiner",
+"menu_label_de": "Kleiner",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35636,
+"cmd": "cmd_TextSize_Larger",
+"name": "text.size.larger",
+"path_de": [
+"Text",
+"Größe",
+"Größer"
+],
+"path_en": "Text::Size::Larger",
+"status_de": "Erhöht Textgröße",
+"label_de": "Größer",
+"menu_label_de": "Größer",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35196,
+"cmd": "cmd_TextSize_8",
+"name": "text.size.8",
+"path_de": [
+"Text",
+"Größe",
+"8"
+],
+"path_en": "Text::Size::8",
+"status_de": "Textgröße einstellen",
+"label_de": "8",
+"menu_label_de": "8",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35197,
+"cmd": "cmd_TextSize_9",
+"name": "text.size.9",
+"path_de": [
+"Text",
+"Größe",
+"9"
+],
+"path_en": "Text::Size::9",
+"status_de": "Textgröße einstellen",
+"label_de": "9",
+"menu_label_de": "9",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35198,
+"cmd": "cmd_TextSize_10",
+"name": "text.size.10",
+"path_de": [
+"Text",
+"Größe",
+"10"
+],
+"path_en": "Text::Size::10",
+"status_de": "Textgröße einstellen",
+"label_de": "10",
+"menu_label_de": "10",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35047,
+"cmd": "cmd_TextSize_12",
+"name": "text.size.12",
+"path_de": [
+"Text",
+"Größe",
+"12"
+],
+"path_en": "Text::Size::12",
+"status_de": "Textgröße einstellen",
+"label_de": "12",
+"menu_label_de": "12",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35048,
+"cmd": "cmd_TextSize_14",
+"name": "text.size.14",
+"path_de": [
+"Text",
+"Größe",
+"14"
+],
+"path_en": "Text::Size::14",
+"status_de": "Textgröße einstellen",
+"label_de": "14",
+"menu_label_de": "14",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35049,
+"cmd": "cmd_TextSize_18",
+"name": "text.size.18",
+"path_de": [
+"Text",
+"Größe",
+"18"
+],
+"path_en": "Text::Size::18",
+"status_de": "Textgröße einstellen",
+"label_de": "18",
+"menu_label_de": "18",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35050,
+"cmd": "cmd_TextSize_24",
+"name": "text.size.24",
+"path_de": [
+"Text",
+"Größe",
+"24"
+],
+"path_en": "Text::Size::24",
+"status_de": "Textgröße einstellen",
+"label_de": "24",
+"menu_label_de": "24",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35051,
+"cmd": "cmd_TextSize_36",
+"name": "text.size.36",
+"path_de": [
+"Text",
+"Größe",
+"36"
+],
+"path_en": "Text::Size::36",
+"status_de": "Textgröße einstellen",
+"label_de": "36",
+"menu_label_de": "36",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35052,
+"cmd": "cmd_TextSize_48",
+"name": "text.size.48",
+"path_de": [
+"Text",
+"Größe",
+"48"
+],
+"path_en": "Text::Size::48",
+"status_de": "Textgröße einstellen",
+"label_de": "48",
+"menu_label_de": "48",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35053,
+"cmd": "cmd_TextSize_72",
+"name": "text.size.72",
+"path_de": [
+"Text",
+"Größe",
+"72"
+],
+"path_en": "Text::Size::72",
+"status_de": "Textgröße einstellen",
+"label_de": "72",
+"menu_label_de": "72",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35054,
+"cmd": "cmd_TextSize_96",
+"name": "text.size.96",
+"path_de": [
+"Text",
+"Größe",
+"96"
+],
+"path_en": "Text::Size::96",
+"status_de": "Textgröße einstellen",
+"label_de": "96",
+"menu_label_de": "96",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35141,
+"cmd": "cmd_TextSize_120",
+"name": "text.size.120",
+"path_de": [
+"Text",
+"Größe",
+"120"
+],
+"path_en": "Text::Size::120",
+"status_de": "Stellt Punktgröße für Text ein",
+"label_de": "120",
+"menu_label_de": "120",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35057,
+"cmd": "cmd_TextStyle_Plain",
+"name": "text.style.plain",
+"path_de": [
+"Text",
+"Stil",
+"Standard"
+],
+"path_en": "Text::Style::Plain",
+"status_de": "Schriftstil \"Standard\"",
+"label_de": "Standard",
+"menu_label_de": "Standard",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [
+"F5",
+"Strg+Alt+Umschalt+P"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35055,
+"cmd": "cmd_TextStyle_Bold",
+"name": "text.style.fauxBold",
+"path_de": [
+"Text",
+"Stil",
+"Faux Fett"
+],
+"path_en": "Text::Style::Faux Bold",
+"status_de": "Schriftstil \"Fett\"",
+"label_de": "Faux Fett",
+"menu_label_de": "Faux Fett",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [
+"F6",
+"Strg+Alt+Umschalt+B"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35056,
+"cmd": "cmd_TextStyle_Italic",
+"name": "text.style.fauxItalic",
+"path_de": [
+"Text",
+"Stil",
+"Faux Kursiv"
+],
+"path_en": "Text::Style::Faux Italic",
+"status_de": "Schriftstil \"Kursiv\"",
+"label_de": "Faux Kursiv",
+"menu_label_de": "Faux Kursiv",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [
+"F7",
+"Strg+Alt+Umschalt+I"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35320,
+"cmd": "cmd_TextStyle_Underline",
+"name": "text.style.underline",
+"path_de": [
+"Text",
+"Stil",
+"Unterstrichen"
+],
+"path_en": "Text::Style::Underline",
+"status_de": "Textstil \"Unterstrichen\"",
+"label_de": "Unterstrichen",
+"menu_label_de": "Unterstrichen",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg+Alt+Umschalt+U"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35044,
+"cmd": "cmd_TextAlign_Left",
+"name": "text.align.left",
+"path_de": [
+"Text",
+"Ausrichten",
+"Links"
+],
+"path_en": "Text::Align::Left",
+"status_de": "Richtet den Text linksbündig aus",
+"label_de": "Links",
+"menu_label_de": "Links",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg+Alt+Umschalt+L"
+],
+"placeholder": false,
+"handlers": 2
+},
+{
+"fw_id": 35042,
+"cmd": "cmd_TextAlign_Center",
+"name": "text.align.centeredHorizontally",
+"path_de": [
+"Text",
+"Ausrichten",
+"Horizontal zentrieren"
+],
+"path_en": "Text::Align::Centered Horizontally",
+"status_de": "Zentriert den Text",
+"label_de": "Horizontal zentrieren",
+"menu_label_de": "Horizontal zentrieren",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg+Alt+Umschalt+C"
+],
+"placeholder": false,
+"handlers": 2
+},
+{
+"fw_id": 35045,
+"cmd": "cmd_TextAlign_Right",
+"name": "text.align.right",
+"path_de": [
+"Text",
+"Ausrichten",
+"Rechts"
+],
+"path_en": "Text::Align::Right",
+"status_de": "Richtet den Text rechtsbündig aus",
+"label_de": "Rechts",
+"menu_label_de": "Rechts",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg+Alt+Umschalt+R"
+],
+"placeholder": false,
+"handlers": 2
+},
+{
+"fw_id": 35043,
+"cmd": "cmd_TextAlign_Justified",
+"name": "text.align.justified",
+"path_de": [
+"Text",
+"Ausrichten",
+"Blocksatz"
+],
+"path_en": "Text::Align::Justified",
+"status_de": "Setzt Text in Blocksatz",
+"label_de": "Blocksatz",
+"menu_label_de": "Blocksatz",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg+Alt+Umschalt+J"
+],
+"placeholder": false,
+"handlers": 2
+},
+{
+"fw_id": 35114,
+"cmd": "cmd_TextAlign_VertTop",
+"name": "text.align.top",
+"path_de": [
+"Text",
+"Ausrichten",
+"Oben"
+],
+"path_en": "Text::Align::Top",
+"status_de": "Richtet vertikalen Text am oberen Rand aus",
+"label_de": "Oben",
+"menu_label_de": "Oben",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 2
+},
+{
+"fw_id": 35115,
+"cmd": "cmd_TextAlign_VertMiddle",
+"name": "text.align.centeredVertically",
+"path_de": [
+"Text",
+"Ausrichten",
+"Vertikal zentrieren"
+],
+"path_en": "Text::Align::Centered Vertically",
+"status_de": "Richtet vertikalen Text zentriert aus",
+"label_de": "Vertikal zentrieren",
+"menu_label_de": "Vertikal zentrieren",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 2
+},
+{
+"fw_id": 35116,
+"cmd": "cmd_TextAlign_VertBottom",
+"name": "text.align.bottom",
+"path_de": [
+"Text",
+"Ausrichten",
+"Unten"
+],
+"path_en": "Text::Align::Bottom",
+"status_de": "Richtet vertikalen Text am unteren Rand aus",
+"label_de": "Unten",
+"menu_label_de": "Unten",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 2
+},
+{
+"fw_id": 35117,
+"cmd": "cmd_TextAlign_VertJustified",
+"name": "text.align.justifiedVertically",
+"path_de": [
+"Text",
+"Ausrichten",
+"Vertikaler Blocksatz"
+],
+"path_en": "Text::Align::Justified Vertically",
+"status_de": "Stellt vertikalen Text in vertikalen Blocksatz",
+"label_de": "Vertikaler Blocksatz",
+"menu_label_de": "Vertikaler Blocksatz",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 2
+},
+{
+"fw_id": 49005,
+"cmd": null,
+"name": "text.attachInPath",
+"path_de": [
+"Text",
+"In Pfad einfügen"
+],
+"path_en": "Text::Attach In Path",
+"status_de": "Fügt ausgewählten Text innerhalb eines ausgewählten Pfads an",
+"label_de": "In Pfad einfügen",
+"menu_label_de": "In Pfad einfügen",
+"main_menu": true,
+"js": [
+"placeTextInPath"
+],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35118,
+"cmd": "cmd_AttachTextToPath",
+"name": "text.attachToPath",
+"path_de": [
+"Text",
+"An Pfad anfügen"
+],
+"path_en": "Text::Attach to Path",
+"status_de": "Fügt ausgewählten Text an ausgewählten Pfad an",
+"label_de": "An Pfad anfügen",
+"menu_label_de": "An Pfad anfügen",
+"main_menu": true,
+"js": [
+"attachTextToPath"
+],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg+Umschalt+Y"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35119,
+"cmd": "cmd_DetachTextFromPath",
+"name": "text.detachFromPath",
+"path_de": [
+"Text",
+"Von Pfad lösen"
+],
+"path_en": "Text::Detach from Path",
+"status_de": "Löst den Text vom ausgewählten Pfad",
+"label_de": "Von Pfad lösen",
+"menu_label_de": "Von Pfad lösen",
+"main_menu": true,
+"js": [
+"detachTextFromPath"
+],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35120,
+"cmd": "cmd_TextOnPathRotate",
+"name": "text.orientation.rotateAroundPath",
+"path_de": [
+"Text",
+"Richtung",
+"Um Pfad drehen"
+],
+"path_en": "Text::Orientation::Rotate Around Path",
+"status_de": "Dreht die Textzeichen rechtwinklig zum Pfad",
+"label_de": "Um Pfad drehen",
+"menu_label_de": "Um Pfad drehen",
+"main_menu": true,
+"js": [
+"setTextOnPathMode"
+],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 2
+},
+{
+"fw_id": 35121,
+"cmd": "cmd_TextOnPathVertical",
+"name": "text.orientation.vertical",
+"path_de": [
+"Text",
+"Richtung",
+"Vertikal"
+],
+"path_en": "Text::Orientation::Vertical",
+"status_de": "Setzt die Textzeichen vertikal",
+"label_de": "Vertikal",
+"menu_label_de": "Vertikal",
+"main_menu": true,
+"js": [
+"setTextOnPathMode"
+],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 2
+},
+{
+"fw_id": 35122,
+"cmd": "cmd_TextOnPathSkewVert",
+"name": "text.orientation.skewVertical",
+"path_de": [
+"Text",
+"Richtung",
+"Vertikal neigen"
+],
+"path_en": "Text::Orientation::Skew Vertical",
+"status_de": "Neigt die Textzeichen vertikal",
+"label_de": "Vertikal neigen",
+"menu_label_de": "Vertikal neigen",
+"main_menu": true,
+"js": [
+"setTextOnPathMode"
+],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 2
+},
+{
+"fw_id": 35123,
+"cmd": "cmd_TextOnPathSkewHoriz",
+"name": "text.orientation.skewHorizontal",
+"path_de": [
+"Text",
+"Richtung",
+"Horizontal neigen"
+],
+"path_en": "Text::Orientation::Skew Horizontal",
+"status_de": "Neigt die Textzeichen horizontal",
+"label_de": "Horizontal neigen",
+"menu_label_de": "Horizontal neigen",
+"main_menu": true,
+"js": [
+"setTextOnPathMode"
+],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 2
+},
+{
+"fw_id": 35124,
+"cmd": "cmd_ReversePathTextDirection",
+"name": "text.reverseDirection",
+"path_de": [
+"Text",
+"Richtung umkehren"
+],
+"path_en": "Text::Reverse Direction",
+"status_de": "Kehrt die Richtung des Textes auf dem Pfad um",
+"label_de": "Richtung umkehren",
+"menu_label_de": "Richtung umkehren",
+"main_menu": true,
+"js": [
+"reversePathTextDirection"
+],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35125,
+"cmd": "cmd_ConvertToPaths",
+"name": "text.convertToPaths",
+"path_de": [
+"Text",
+"In Pfade konvertieren"
+],
+"path_en": "Text::Convert to Paths",
+"status_de": "Konvertiert Text in bearbeitbare Pfade",
+"label_de": "In Pfade konvertieren",
+"menu_label_de": "In Pfade konvertieren",
+"main_menu": true,
+"js": [
+"convertToPaths"
+],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg+Umschalt+P"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35591,
+"cmd": "cmd_SpellCheck",
+"name": "text.checkSpelling",
+"path_de": [
+"Text",
+"Rechtschreibprüfung..."
+],
+"path_en": "Text::Check Spelling",
+"status_de": "Prüft die Rechtschreibung im Text",
+"label_de": "Rechtschreibprüfung",
+"menu_label_de": "Rechtschreibprüfung...",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35594,
+"cmd": "cmd_SpellingSetup",
+"name": "text.spellingSetup",
+"path_de": [
+"Text",
+"Rechtschreibprüfung einrichten..."
+],
+"path_en": "Text::Spelling Setup",
+"status_de": "Legt Optionen für die Rechtschreibprüfung fest",
+"label_de": "Rechtschreibprüfung einrichten",
+"menu_label_de": "Rechtschreibprüfung einrichten...",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35386,
+"cmd": "cmd_CommandsMenu_EditCommands",
+"name": "commands.manageSavedCommands",
+"path_de": [
+"Befehle",
+"Gespeicherte Befehle verwalten..."
+],
+"path_en": "Commands::Manage Saved Commands",
+"status_de": "Gespeicherte Befehle umbenennen oder löschen",
+"label_de": "Gespeicherte Befehle verwalten",
+"menu_label_de": "Gespeicherte Befehle verwalten...",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 2
+},
+{
+"fw_id": 35590,
+"cmd": "cmd_CommandsMenu_LaunchExtensionsManager",
+"name": "commands.manageExtensions",
+"path_de": [
+"Befehle",
+"Erweiterungen verwalten..."
+],
+"path_en": "Commands::Manage Extensions",
+"status_de": null,
+"label_de": "Erweiterungen verwalten",
+"menu_label_de": "Erweiterungen verwalten...",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35319,
+"cmd": "cmd_RunScript",
+"name": "commands.runScript",
+"path_de": [
+"Befehle",
+"Skript ausführen..."
+],
+"path_en": "Commands::Run Script",
+"status_de": "Führt Batch-Verarbeitung mit vorhandener Skriptdatei aus",
+"label_de": "Skript ausführen",
+"menu_label_de": "Skript ausführen...",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 3
+},
+{
+"fw_id": 35035,
+"cmd": "cmd_RepeatXtra",
+"name": "filter.repeat",
+"path_de": [
+"Filter",
+"Filter wiederholen"
+],
+"path_en": "Filters::Repeat Filter",
+"status_de": "Vorherigen Filter wiederholen",
+"label_de": "Filter wiederholen",
+"menu_label_de": "Filter wiederholen",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg+Alt+Umschalt+X"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 57648,
+"cmd": "cmd_NewWindow",
+"name": "window.duplicateWindow",
+"path_de": [
+"Fenster",
+"Fenster duplizieren"
+],
+"path_en": null,
+"status_de": "Öffnet ein weiteres Fenster für das aktive Dokument",
+"label_de": "Fenster duplizieren",
+"menu_label_de": "Fenster duplizieren",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 2
+},
+{
+"fw_id": 35298,
+"cmd": "cmd_HideOrShowAllPanels",
+"name": "window.hidePanels",
+"path_de": [
+"Fenster",
+"Bedienfelder ausblenden"
+],
+"path_en": "Window::Hide Panels",
+"status_de": "Blendet alle Bedienfelder ein oder aus",
+"label_de": "Bedienfelder ausblenden",
+"menu_label_de": "Bedienfelder ausblenden",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg+Umschalt+H",
+"Tab"
+],
+"placeholder": false,
+"handlers": 2
+},
+{
+"fw_id": 35848,
+"cmd": null,
+"name": "window.extensions",
+"path_de": [
+"Fenster",
+"Erweiterungen",
+""
+],
+"path_en": null,
+"status_de": null,
+"label_de": "Erweiterungen",
+"menu_label_de": "",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": true,
+"handlers": 1
+},
+{
+"fw_id": 35059,
+"cmd": "cmd_Toolbars_Main",
+"name": "window.toolbars.main",
+"path_de": [
+"Fenster",
+"Werkzeugleisten",
+"Standard"
+],
+"path_en": "Window::Toolbars::Main",
+"status_de": "Blendet die Standardsymbolleiste ein oder aus",
+"label_de": "Standard",
+"menu_label_de": "Standard",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35058,
+"cmd": "cmd_Toolbars_Art",
+"name": "window.tools",
+"path_de": [
+"Fenster",
+"Werkzeuge"
+],
+"path_en": "Window::Tools",
+"status_de": "Werkzeuge zum Zeichnen und Bearbeiten",
+"label_de": "Werkzeuge",
+"menu_label_de": "Werkzeuge",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg+Alt+T"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35586,
+"cmd": "cmd_PropertyInspector",
+"name": "window.properties",
+"path_de": [
+"Fenster",
+"Eigenschaften"
+],
+"path_en": "Window::Properties",
+"status_de": null,
+"label_de": "Eigenschaften",
+"menu_label_de": "Eigenschaften",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 43409,
+"cmd": "cmd_Panels_ExportPanel",
+"name": "window.optimize",
+"path_de": [
+"Fenster",
+"Optimieren"
+],
+"path_en": "Window::Optimize",
+"status_de": "Optimiert die Exporteinstellungen für Dokumente oder Segmente",
+"label_de": "Optimieren",
+"menu_label_de": "Optimieren",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 3
+},
+{
+"fw_id": 43412,
+"cmd": "cmd_Panels_Layers",
+"name": "window.layers",
+"path_de": [
+"Fenster",
+"Ebenen"
+],
+"path_en": "Window::Layers",
+"status_de": "Blendet das Ebenen-Bedienfeld ein oder aus",
+"label_de": "Ebenen",
+"menu_label_de": "Ebenen",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg+Alt+L"
+],
+"placeholder": false,
+"handlers": 3
+},
+{
+"fw_id": 45816,
+"cmd": "cmd_commonlib_form_elements",
+"name": "window.commonLibrary",
+"path_de": [
+"Fenster",
+"Allgemeine Bibliothek"
+],
+"path_en": "Window::Common Library",
+"status_de": null,
+"label_de": "Allgemeine Bibliothek",
+"menu_label_de": "Allgemeine Bibliothek",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg+Umschalt+L"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 49125,
+"cmd": "cmd_cssproperties",
+"name": "window.cssProperties",
+"path_de": [
+"Fenster",
+"CSS-Eigenschaften"
+],
+"path_en": null,
+"status_de": null,
+"label_de": "CSS-Eigenschaften",
+"menu_label_de": "CSS-Eigenschaften",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg+F7"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35798,
+"cmd": "cmd_Panels_Pages",
+"name": "window.pages",
+"path_de": [
+"Fenster",
+"Seiten"
+],
+"path_en": "Window::Pages",
+"status_de": null,
+"label_de": "Seiten",
+"menu_label_de": "Seiten",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg+Alt+O"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 43410,
+"cmd": "cmd_Panels_Frames",
+"name": "window.states",
+"path_de": [
+"Fenster",
+"Status"
+],
+"path_en": "Window::States",
+"status_de": "Statusbedienfeld ein- oder ausblenden",
+"label_de": "Status",
+"menu_label_de": "Status",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg+Alt+K"
+],
+"placeholder": false,
+"handlers": 3
+},
+{
+"fw_id": 43418,
+"cmd": "cmd_Panels_History",
+"name": "window.history",
+"path_de": [
+"Fenster",
+"Verlauf"
+],
+"path_en": "Window::History",
+"status_de": "Skriptfähige \"Rückgängig\"-Funktion",
+"label_de": "Verlauf",
+"menu_label_de": "Verlauf",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 43422,
+"cmd": null,
+"name": "window.autoShapes",
+"path_de": [
+"Fenster",
+"Automatische Formen"
+],
+"path_en": "Window::Auto Shapes",
+"status_de": null,
+"label_de": "Automatische Formen",
+"menu_label_de": "Automatische Formen",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 43415,
+"cmd": "cmd_Panels_Styles",
+"name": "window.styles",
+"path_de": [
+"Fenster",
+"Stile"
+],
+"path_en": "Window::Styles",
+"status_de": "Blendet das Stil-Bedienfeld ein oder aus",
+"label_de": "Stile",
+"menu_label_de": "Stile",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg+Alt+J"
+],
+"placeholder": false,
+"handlers": 2
+},
+{
+"fw_id": 43416,
+"cmd": "cmd_Panels_SymLibrary",
+"name": "window.documentLibrary",
+"path_de": [
+"Fenster",
+"Dokumentbibliothek"
+],
+"path_en": "Window::Document Library",
+"status_de": "Blendet das Symbolbibliotheks-Bedienfeld ein oder aus",
+"label_de": "Dokumentbibliothek",
+"menu_label_de": "Dokumentbibliothek",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 2
+},
+{
+"fw_id": 43414,
+"cmd": "cmd_Panels_URLMgr",
+"name": "window.url",
+"path_de": [
+"Fenster",
+"URL"
+],
+"path_en": "Window::URL",
+"status_de": "URLs importieren, speichern und anwenden\\URLs",
+"label_de": "URL",
+"menu_label_de": "URL",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg+Alt+U"
+],
+"placeholder": false,
+"handlers": 2
+},
+{
+"fw_id": 43405,
+"cmd": "cmd_Panels_ColorMixer",
+"name": "window.colorMixer",
+"path_de": [
+"Fenster",
+"Farbmischer"
+],
+"path_en": "Window::Color Mixer",
+"status_de": "Mischt Farben in Mehrfarbmodellen",
+"label_de": "Farbmischer",
+"menu_label_de": "Farbmischer",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg+Alt+M"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 43408,
+"cmd": "cmd_Panels_Swatches",
+"name": "window.swatches",
+"path_de": [
+"Fenster",
+"Farbfelder"
+],
+"path_en": "Window::Swatches",
+"status_de": "Blendet das Farbfelder-Bedienfeld ein oder aus",
+"label_de": "Farbfelder",
+"menu_label_de": "Farbfelder",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg+Alt+S"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 43404,
+"cmd": "cmd_PanelInfo",
+"name": "window.info",
+"path_de": [
+"Fenster",
+"Info"
+],
+"path_en": "Window::Info",
+"status_de": "Höhe und Breite der Auswahl",
+"label_de": "Info",
+"menu_label_de": "Info",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg+Alt+I"
+],
+"placeholder": false,
+"handlers": 2
+},
+{
+"fw_id": 43413,
+"cmd": "cmd_Panels_Behaviors",
+"name": "window.behaviors",
+"path_de": [
+"Fenster",
+"Verhalten"
+],
+"path_en": "Window::Behaviors",
+"status_de": "Wendet HTML-Verhalten auf Segmente oder Hotspots an",
+"label_de": "Verhalten",
+"menu_label_de": "Verhalten",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg+Alt+H"
+],
+"placeholder": false,
+"handlers": 3
+},
+{
+"fw_id": 57650,
+"cmd": "cmd_CascadeWindows",
+"name": "window.cascade",
+"path_de": [
+"Fenster",
+"Überlappend"
+],
+"path_en": null,
+"status_de": "Ordnet Fenster übereinander an",
+"label_de": "Überlappend",
+"menu_label_de": "Überlappend",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 3
+},
+{
+"fw_id": 57652,
+"cmd": "ID_WINDOW_TILE_VERT",
+"name": "window.tile",
+"path_de": [
+"Fenster",
+"Anordnen"
+],
+"path_en": null,
+"status_de": "Ordnet Fenster nebeneinander an",
+"label_de": "Anordnen",
+"menu_label_de": "Anordnen",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 3
+},
+{
+"fw_id": 57667,
+"cmd": "ID_HELP_FINDER",
+"name": "help.firepixelHelp",
+"path_de": [
+"Hilfe",
+"Firepixel-Hilfe"
+],
+"path_en": null,
+"status_de": "Öffnet die Firepixel-Hilfe",
+"label_de": "Firepixel-Hilfe",
+"menu_label_de": "Firepixel-Hilfe",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 2
+},
+{
+"fw_id": 35323,
+"cmd": null,
+"name": "help.supportCenter",
+"path_de": [
+"Hilfe",
+"Firepixel Support Center"
+],
+"path_en": null,
+"status_de": "Öffnet einen Browser und besucht das Firepixel Support Center",
+"label_de": "Firepixel Support Center",
+"menu_label_de": "Firepixel Support Center",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 2
+},
+{
+"fw_id": 7028,
+"cmd": null,
+"name": "help.productImprovement",
+"path_de": [
+"Hilfe",
+"Programm zur Produktverbesserung..."
+],
+"path_en": "Help::Find",
+"status_de": "Weicher",
+"label_de": "Programm zur Produktverbesserung",
+"menu_label_de": "Programm zur Produktverbesserung...",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 7013,
+"cmd": "cmd_HelpMenu_FirepixelExchange",
+"name": "help.firepixelExchange",
+"path_de": [
+"Hilfe",
+"Firepixel Exchange"
+],
+"path_en": null,
+"status_de": "Öffnet einen Browser und die Firepixel Exchange-Site",
+"label_de": "Firepixel Exchange",
+"menu_label_de": "Firepixel Exchange",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35637,
+"cmd": "cmd_HelpMenu_LaunchExtensionsManager",
+"name": "help.manageExtensions",
+"path_de": [
+"Hilfe",
+"Erweiterungen verwalten..."
+],
+"path_en": "Help::Manage Extensions",
+"status_de": null,
+"label_de": "Erweiterungen verwalten",
+"menu_label_de": "Erweiterungen verwalten...",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35580,
+"cmd": null,
+"name": "help.onlineForums",
+"path_de": [
+"Hilfe",
+"Onlineforen"
+],
+"path_en": null,
+"status_de": null,
+"label_de": "Onlineforen",
+"menu_label_de": "Onlineforen",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 57664,
+"cmd": "cmd_About",
+"name": "help.about",
+"path_de": [
+"Hilfe",
+"Über Firepixel..."
+],
+"path_en": null,
+"status_de": "Zeigt Programm- und Copyrightinformationen sowie die Versionsnummer an",
+"label_de": "Über Firepixel",
+"menu_label_de": "Über Firepixel...",
+"main_menu": true,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 33082,
+"cmd": "cmd_BigNudgeDown",
+"name": "edit.nudge.bigDown",
+"path_de": [],
+"path_en": null,
+"status_de": "Auswahl in großen Schritten nach unten verschieben",
+"label_de": "In großen Schritten nach unten verschieben",
+"menu_label_de": "In großen Schritten nach unten verschieben",
+"main_menu": false,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [
+"Umschalt+Unten"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 33076,
+"cmd": "cmd_BigNudgeLeft",
+"name": "edit.nudge.bigLeft",
+"path_de": [],
+"path_en": null,
+"status_de": "Auswahl in großen Schritten nach links verschieben",
+"label_de": "In großen Schritten nach links verschieben",
+"menu_label_de": "In großen Schritten nach links verschieben",
+"main_menu": false,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [
+"Umschalt+Links"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 33078,
+"cmd": "cmd_BigNudgeRight",
+"name": "edit.nudge.bigRight",
+"path_de": [],
+"path_en": null,
+"status_de": "Auswahl in großen Schritten nach rechts verschieben",
+"label_de": "In großen Schritten nach rechts verschieben",
+"menu_label_de": "In großen Schritten nach rechts verschieben",
+"main_menu": false,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [
+"Umschalt+Rechts"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 33080,
+"cmd": "cmd_BigNudgeUp",
+"name": "edit.nudge.bigUp",
+"path_de": [],
+"path_en": null,
+"status_de": "Auswahl in großen Schritten nach oben verschieben",
+"label_de": "In großen Schritten nach oben verschieben",
+"menu_label_de": "In großen Schritten nach oben verschieben",
+"main_menu": false,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [
+"Umschalt+Oben"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35027,
+"cmd": "cmd_EditImageObject",
+"name": "modify.editBitmap",
+"path_de": [],
+"path_en": null,
+"status_de": "Aktiviert den Bitmapmodus für das ausgewählte Bild",
+"label_de": "Bitmap bearbeiten",
+"menu_label_de": "Bitmap bearbeiten",
+"main_menu": false,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg+E"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35187,
+"cmd": "cmd_ExitImageEdit",
+"name": "modify.exitBitmapMode",
+"path_de": [],
+"path_en": null,
+"status_de": "Kehrt in den Vektormodus zurück",
+"label_de": "Bitmapmodus beenden",
+"menu_label_de": "Bitmapmodus beenden",
+"main_menu": false,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg+Umschalt+D"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35253,
+"cmd": "cmd_Frame_Next",
+"name": "view.state.next",
+"path_de": [],
+"path_en": null,
+"status_de": "Nächsten Status anzeigen",
+"label_de": "Nächster Status",
+"menu_label_de": "Nächster Status",
+"main_menu": false,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [
+"Umschalt+."
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35254,
+"cmd": "cmd_Frame_Previous",
+"name": "view.state.previous",
+"path_de": [],
+"path_en": null,
+"status_de": "Vorherigen Status anzeigen",
+"label_de": "Vorheriger Status",
+"menu_label_de": "Vorheriger Status",
+"main_menu": false,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [
+"Umschalt+,"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 49007,
+"cmd": "cmd_Next_Selection",
+"name": "select.next",
+"path_de": [],
+"path_en": null,
+"status_de": null,
+"label_de": "Nächste Auswahl",
+"menu_label_de": "Nächste Auswahl",
+"main_menu": false,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg+Umschalt+Rechts"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 33081,
+"cmd": "cmd_NudgeDown",
+"name": "edit.nudge.down",
+"path_de": [],
+"path_en": null,
+"status_de": "Auswahl schrittweise nach unten verschieben",
+"label_de": "Schrittweise nach unten verschieben",
+"menu_label_de": "Schrittweise nach unten verschieben",
+"main_menu": false,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [
+"Unten"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 33075,
+"cmd": "cmd_NudgeLeft",
+"name": "edit.nudge.left",
+"path_de": [],
+"path_en": null,
+"status_de": "Auswahl schrittweise nach links verschieben",
+"label_de": "Schrittweise nach links verschieben",
+"menu_label_de": "Schrittweise nach links verschieben",
+"main_menu": false,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [
+"Links"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 33077,
+"cmd": "cmd_NudgeRight",
+"name": "edit.nudge.right",
+"path_de": [],
+"path_en": null,
+"status_de": "Auswahl schrittweise nach rechts verschieben",
+"label_de": "Schrittweise nach rechts verschieben",
+"menu_label_de": "Schrittweise nach rechts verschieben",
+"main_menu": false,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [
+"Rechts"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 33079,
+"cmd": "cmd_NudgeUp",
+"name": "edit.nudge.up",
+"path_de": [],
+"path_en": null,
+"status_de": "Auswahl schrittweise nach oben verschieben",
+"label_de": "Schrittweise nach oben verschieben",
+"menu_label_de": "Schrittweise nach oben verschieben",
+"main_menu": false,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [
+"Oben"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 49002,
+"cmd": "cmd_Page_Next",
+"name": "view.page.next",
+"path_de": [],
+"path_en": null,
+"status_de": null,
+"label_de": "Nächste Seite",
+"menu_label_de": "Nächste Seite",
+"main_menu": false,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg+Bild auf"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 49001,
+"cmd": "cmd_Page_Previous",
+"name": "view.page.previous",
+"path_de": [],
+"path_en": null,
+"status_de": null,
+"label_de": "Vorherige Seite",
+"menu_label_de": "Vorherige Seite",
+"main_menu": false,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg+Bild ab"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 49006,
+"cmd": "cmd_Prev_Selection",
+"name": "select.previous",
+"path_de": [],
+"path_en": null,
+"status_de": null,
+"label_de": "Vorherige Auswahl",
+"menu_label_de": "Vorherige Auswahl",
+"main_menu": false,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg+Umschalt+Links"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35153,
+"cmd": "cmd_TextAlign_Stretch",
+"name": "text.align.stretched",
+"path_de": [],
+"path_en": null,
+"status_de": "Streckt Text im Blocksatz",
+"label_de": "Blocksatz gestreckt",
+"menu_label_de": "Blocksatz gestreckt",
+"main_menu": false,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg+Alt+Umschalt+S"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": 35046,
+"cmd": "cmd_TextEditor",
+"name": "text.editor",
+"path_de": [],
+"path_en": null,
+"status_de": "Öffnet den Texteditor",
+"label_de": "Texteditor",
+"menu_label_de": "Texteditor",
+"main_menu": false,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg+Umschalt+E"
+],
+"placeholder": false,
+"handlers": 1
+},
+{
+"fw_id": null,
+"cmd": "cmd_ViewEditGuides",
+"name": "view.guides.editGuides",
+"path_de": [],
+"path_en": null,
+"status_de": null,
+"label_de": "Hilfslinien bearbeiten",
+"menu_label_de": "Hilfslinien bearbeiten",
+"main_menu": false,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg+Alt+Umschalt+G"
+],
+"placeholder": false,
+"handlers": 0
+},
+{
+"fw_id": 49126,
+"cmd": "cmd_jquery",
+"name": "window.jquery",
+"path_de": [],
+"path_en": null,
+"status_de": null,
+"label_de": "jQuery",
+"menu_label_de": "jQuery",
+"main_menu": false,
+"js": [],
+"undo_classes": [],
+"shortcuts_de": [
+"Strg+F10"
+],
+"placeholder": false,
+"handlers": 1
+}
+],
+"zoom_steps": [
+0.0625,
+0.125,
+0.16,
+0.25,
+0.33,
+0.5,
+0.66,
+1.0,
+1.5,
+2.0,
+3.0,
+4.0,
+6.0,
+8.0,
+16.0,
+32.0,
+64.0
+],
+"panels": [
+{
+"command_id": 35058,
+"registriert_in_00f190e0": false,
+"js_floater_name": "toolbox",
+"cmd_name": "cmd_Toolbars_Art"
+},
+{
+"command_id": 35059,
+"registriert_in_00f190e0": false,
+"js_floater_name": "toolbar",
+"cmd_name": "cmd_Toolbars_Main"
+},
+{
+"command_id": 35425,
+"registriert_in_00f190e0": false,
+"js_floater_name": "whatsnew",
+"cmd_name": "cmd_Help_WhatsNew"
+},
+{
+"command_id": 35586,
+"registriert_in_00f190e0": false,
+"js_floater_name": "property inspector",
+"cmd_name": "cmd_PropertyInspector"
+},
+{
+"command_id": 35798,
+"registriert_in_00f190e0": true,
+"js_floater_name": "pages",
+"cmd_name": "cmd_Panels_Pages"
+},
+{
+"command_id": 43402,
+"registriert_in_00f190e0": true,
+"js_floater_name": "find",
+"cmd_name": "cmd_PanelFind"
+},
+{
+"command_id": 43404,
+"registriert_in_00f190e0": true,
+"js_floater_name": "info",
+"cmd_name": "cmd_PanelInfo"
+},
+{
+"command_id": 43405,
+"registriert_in_00f190e0": true,
+"js_floater_name": "mixer",
+"cmd_name": "cmd_Panels_ColorMixer"
+},
+{
+"command_id": 43408,
+"registriert_in_00f190e0": true,
+"js_floater_name": "swatches",
+"cmd_name": "cmd_Panels_Swatches"
+},
+{
+"command_id": 43409,
+"registriert_in_00f190e0": true,
+"js_floater_name": "optimize",
+"cmd_name": "cmd_Panels_ExportPanel"
+},
+{
+"command_id": 43410,
+"registriert_in_00f190e0": true,
+"js_floater_name": "states",
+"cmd_name": "cmd_Panels_Frames"
+},
+{
+"command_id": 43412,
+"registriert_in_00f190e0": true,
+"js_floater_name": "layers",
+"cmd_name": "cmd_Panels_Layers"
+},
+{
+"command_id": 43413,
+"registriert_in_00f190e0": true,
+"js_floater_name": "behaviors",
+"cmd_name": "cmd_Panels_Behaviors"
+},
+{
+"command_id": 43414,
+"registriert_in_00f190e0": true,
+"js_floater_name": "url",
+"cmd_name": "cmd_Panels_URLMgr"
+},
+{
+"command_id": 43415,
+"registriert_in_00f190e0": true,
+"js_floater_name": "styles",
+"cmd_name": "cmd_Panels_Styles"
+},
+{
+"command_id": 43416,
+"registriert_in_00f190e0": true,
+"js_floater_name": "library",
+"cmd_name": "cmd_Panels_SymLibrary"
+},
+{
+"command_id": 43418,
+"registriert_in_00f190e0": true,
+"js_floater_name": "history",
+"cmd_name": "cmd_Panels_History"
+},
+{
+"command_id": 43421,
+"registriert_in_00f190e0": false,
+"js_floater_name": "answers",
+"cmd_name": "cmd_Panels_Answers"
+},
+{
+"command_id": 43422,
+"registriert_in_00f190e0": true,
+"js_floater_name": "auto shapes",
+"cmd_name": null
+},
+{
+"command_id": 45816,
+"registriert_in_00f190e0": true,
+"js_floater_name": "Common Library",
+"cmd_name": "cmd_commonlib_form_elements"
+}
+]
+}

@@ -1,0 +1,984 @@
+{
+ "unit": "xs-context-menus",
+ "testfile": "T04",
+ "testfiles": [
+  "T04",
+  "T05",
+  "T02",
+  "T06"
+ ],
+ "note": "Action verbs (both/orig/fp): open_testfile <T..> (close docs unsaved, open fresh, base settings) / close_all; menu 'A > B'; command <id from commands.json>; panel <window.* id or title>; panel_menu <panel> (open its menu); select <object name|[names]>; select_none; tool <tool id>; open <logical ui key>; click/double_click/right_click/hover/mouse_down/mouse_up <label|{key}|{popup_swatch:#hex}|{area,pos}>; drag {from,to,mods}; canvas_click/canvas_move [x,y] (document px); canvas_drag {from,to,mods}; scroll {area,delta}; key <combo>; type <text>; wait <ms>; choose {target,item} (pick list entry); file_dialog <path> (choose file in open dialog); export_png doc (export + hash); resize_panel {panel,width}; set_field {target,value}; export {dir,name,type,...} (File > Export dialog); clear_dir/record_dir <dir>; record_file <path> (size+hash+pixels); record_file_text <path>; restart_app; resize_dialog {width,height}; target forms {canvas:[x,y]|name}, {pref_category}, {tree_item:[path]}, hold_key in drag/click; log_value <JSF expression, logged in both>; record_ui <logical ui key> (orig window text/UIA, fp ui_find/ui_state); jsf <code> (in both = fp run_script); fp-only ui_action {...}, ui_find_click <text>. Step keys: after = actions after the shot; log_menu_items = item texts + enabled/checked of the open menu; shot omitted = value-only checkpoint.",
+ "steps": [
+  {
+   "id": "00_overview_normal",
+   "check": "overview after opening the test file",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    }
+   ],
+   "shot": {
+    "area": "window"
+   }
+  },
+  {
+   "id": "01_canvas_empty_open",
+   "check": "canvas empty",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "right_click": {
+      "canvas": [
+       600,
+       520
+      ]
+     }
+    },
+    {
+     "log_menu_items": true
+    }
+   ],
+   "shot": {
+    "area": "menu"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "02_rect_open",
+   "check": "rect",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "right_click": {
+      "canvas": [
+       100,
+       85
+      ]
+     }
+    },
+    {
+     "log_menu_items": true
+    }
+   ],
+   "shot": {
+    "area": "menu"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "03_path_open",
+   "check": "path",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "P1"
+    },
+    {
+     "right_click": {
+      "canvas": "P1"
+     }
+    },
+    {
+     "log_menu_items": true
+    }
+   ],
+   "shot": {
+    "area": "menu"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "canvas:'P1' = a point on the object's stroke (runner from pixelRect/node)"
+  },
+  {
+   "id": "04_text_open",
+   "check": "text",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "open_testfile": "T05"
+    },
+    {
+     "select": "TX1"
+    },
+    {
+     "right_click": {
+      "canvas": "TX1"
+     }
+    },
+    {
+     "log_menu_items": true
+    }
+   ],
+   "shot": {
+    "area": "menu"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "04_text_editing_open",
+   "check": "text - editing",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "open_testfile": "T05"
+    },
+    {
+     "select": "TX1"
+    },
+    {
+     "tool": "tool.text"
+    },
+    {
+     "canvas_click": "TX1"
+    },
+    {
+     "right_click": {
+      "canvas": "TX1"
+     }
+    },
+    {
+     "log_menu_items": true
+    }
+   ],
+   "shot": {
+    "area": "menu"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "05_bitmap_open",
+   "check": "bitmap",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "open_testfile": "T02"
+    },
+    {
+     "select": "B1"
+    },
+    {
+     "right_click": {
+      "canvas": [
+       280,
+       200
+      ]
+     }
+    },
+    {
+     "log_menu_items": true
+    }
+   ],
+   "shot": {
+    "area": "menu"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "05_bitmap_marquee_open",
+   "check": "bitmap - marquee",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "open_testfile": "T02"
+    },
+    {
+     "select": "B1"
+    },
+    {
+     "tool": "tool.marquee"
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       100,
+       100
+      ],
+      "to": [
+       200,
+       180
+      ]
+     }
+    },
+    {
+     "right_click": {
+      "canvas": [
+       150,
+       140
+      ]
+     }
+    },
+    {
+     "log_menu_items": true
+    }
+   ],
+   "shot": {
+    "area": "menu"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "06_group_symbol_group_open",
+   "check": "group symbol - group",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "select": "G"
+    },
+    {
+     "right_click": {
+      "canvas": [
+       70,
+       60
+      ]
+     }
+    },
+    {
+     "log_menu_items": true
+    }
+   ],
+   "shot": {
+    "area": "menu"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "06_group_symbol_instance_open",
+   "check": "group symbol - instance",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "select": "I1"
+    },
+    {
+     "right_click": {
+      "canvas": [
+       190,
+       50
+      ]
+     }
+    },
+    {
+     "log_menu_items": true
+    }
+   ],
+   "shot": {
+    "area": "menu"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "07_slice_hotspot_slice_open",
+   "check": "slice hotspot - slice",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "select": "S1"
+    },
+    {
+     "right_click": {
+      "canvas": [
+       100,
+       240
+      ]
+     }
+    },
+    {
+     "log_menu_items": true
+    }
+   ],
+   "shot": {
+    "area": "menu"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "07_slice_hotspot_hotspot_open",
+   "check": "slice hotspot - hotspot",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "select": "H1"
+    },
+    {
+     "right_click": {
+      "canvas": [
+       70,
+       385
+      ]
+     }
+    },
+    {
+     "log_menu_items": true
+    }
+   ],
+   "shot": {
+    "area": "menu"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "08_multi_open",
+   "check": "multi",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": [
+      "R1",
+      "E1"
+     ]
+    },
+    {
+     "right_click": {
+      "canvas": [
+       100,
+       85
+      ]
+     }
+    },
+    {
+     "log_menu_items": true
+    }
+   ],
+   "shot": {
+    "area": "menu"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "09_tab_open",
+   "check": "tab",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "right_click": "document.tab.0"
+    },
+    {
+     "log_menu_items": true
+    }
+   ],
+   "shot": {
+    "area": "menu"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "10_panel_group_open",
+   "check": "panel group",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "panel": "window.layers"
+    },
+    {
+     "right_click": "panel_tab:layers"
+    },
+    {
+     "log_menu_items": true
+    }
+   ],
+   "shot": {
+    "area": "menu"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "11_ruler_guides_ruler_open",
+   "check": "ruler guides - ruler",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "command": "view.rulers"
+    },
+    {
+     "right_click": "ruler.horizontal"
+    },
+    {
+     "log_menu_items": true
+    }
+   ],
+   "shot": {
+    "area": "menu"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "command id for rulers unsure (Ansicht > Lineale)"
+  },
+  {
+   "id": "11_ruler_guides_guide_open",
+   "check": "ruler guides - guide",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "command": "view.rulers"
+    },
+    {
+     "drag": {
+      "from": "ruler.horizontal",
+      "to": {
+       "canvas": [
+        400,
+        300
+       ]
+      }
+     }
+    },
+    {
+     "right_click": {
+      "canvas": [
+       400,
+       300
+      ]
+     }
+    },
+    {
+     "log_menu_items": true
+    }
+   ],
+   "shot": {
+    "area": "menu"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "right-click on the guide line"
+  },
+  {
+   "id": "12_field_text_open",
+   "check": "field text",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "right_click": "inspector.field.w"
+    },
+    {
+     "log_menu_items": true
+    }
+   ],
+   "shot": {
+    "area": "menu"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "13_submenus_arrange_open",
+   "check": "submenus - arrange",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "right_click": {
+      "canvas": [
+       100,
+       85
+      ]
+     }
+    },
+    {
+     "hover": "Anordnen"
+    },
+    {
+     "log_menu_items": true
+    }
+   ],
+   "shot": {
+    "area": "menu"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "13_submenus_transform_open",
+   "check": "submenus - transform",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "right_click": {
+      "canvas": [
+       100,
+       85
+      ]
+     }
+    },
+    {
+     "hover": "Transformieren"
+    },
+    {
+     "log_menu_items": true
+    }
+   ],
+   "shot": {
+    "area": "menu"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "14_disabled_disabled",
+   "check": "disabled",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "right_click": {
+      "canvas": [
+       600,
+       520
+      ]
+     }
+    },
+    {
+     "record_ui": "menu.disabled_items"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "right_click": {
+      "canvas": [
+       100,
+       85
+      ]
+     }
+    },
+    {
+     "record_ui": "menu.disabled_items"
+    }
+   ],
+   "shot": null,
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "15_effect_arrange_back_result",
+   "check": "effect - arrange back",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "right_click": {
+      "canvas": [
+       100,
+       85
+      ]
+     }
+    },
+    {
+     "hover": "Anordnen"
+    },
+    {
+     "click": "Nach ganz hinten"
+    },
+    {
+     "log_value": "fw.getDocumentDOM().layers[0].frames[0].elements.map(function(e){return e.name}).join('|')"
+    }
+   ],
+   "shot": null,
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "sample of 5 entries"
+  },
+  {
+   "id": "15_effect_flip_h_result",
+   "check": "effect - flip h",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "PG"
+    },
+    {
+     "right_click": {
+      "canvas": [
+       500,
+       205
+      ]
+     }
+    },
+    {
+     "hover": "Transformieren"
+    },
+    {
+     "click": "Horizontal spiegeln"
+    },
+    {
+     "log_value": "fw.selection.map(function(e){var r=e.pixelRect;return e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom}).join('|')"
+    }
+   ],
+   "shot": null,
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "sample of 5 entries"
+  },
+  {
+   "id": "15_effect_group_result",
+   "check": "effect - group",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": [
+      "R1",
+      "R2"
+     ]
+    },
+    {
+     "right_click": {
+      "canvas": [
+       100,
+       85
+      ]
+     }
+    },
+    {
+     "click": "Gruppieren"
+    },
+    {
+     "log_value": "fw.selection.length + ':' + (fw.selection[0] ? fw.selection[0].toString() : '')"
+    }
+   ],
+   "shot": null,
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "sample of 5 entries"
+  },
+  {
+   "id": "15_effect_duplicate_result",
+   "check": "effect - duplicate",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "E1"
+    },
+    {
+     "right_click": {
+      "canvas": [
+       100,
+       205
+      ]
+     }
+    },
+    {
+     "click": "Duplizieren"
+    },
+    {
+     "log_value": "fw.getDocumentDOM().layers[0].frames[0].elements.length"
+    }
+   ],
+   "shot": null,
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "sample of 5 entries"
+  },
+  {
+   "id": "15_effect_delete_result",
+   "check": "effect - delete",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "L1"
+    },
+    {
+     "right_click": {
+      "canvas": [
+       175,
+       330
+      ]
+     }
+    },
+    {
+     "click": "Löschen"
+    },
+    {
+     "log_value": "fw.getDocumentDOM().layers[0].frames[0].elements.length"
+    }
+   ],
+   "shot": null,
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "sample of 5 entries"
+  },
+  {
+   "id": "16_esc_result",
+   "check": "esc",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "right_click": {
+      "canvas": [
+       100,
+       85
+      ]
+     }
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "record_ui": "menu.open"
+    },
+    {
+     "log_value": "fw.selection.length"
+    }
+   ],
+   "shot": null
+  }
+ ]
+}

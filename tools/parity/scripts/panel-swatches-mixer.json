@@ -1,0 +1,789 @@
+{
+ "unit": "panel-swatches-mixer",
+ "testfile": "T01",
+ "testfiles": [
+  "T01",
+  "T12",
+  "T04"
+ ],
+ "note": "Action verbs (both/orig/fp): open_testfile <T..> (close docs unsaved, open fresh, base settings) / close_all; menu 'A > B'; command <id from commands.json>; panel <window.* id or title>; panel_menu <panel> (open its menu); select <object name|[names]>; select_none; tool <tool id>; open <logical ui key>; click/double_click/right_click/hover/mouse_down/mouse_up <label|{key}|{popup_swatch:#hex}|{area,pos}>; drag {from,to,mods}; canvas_click/canvas_move [x,y] (document px); canvas_drag {from,to,mods}; scroll {area,delta}; key <combo>; type <text>; wait <ms>; choose {target,item} (pick list entry); file_dialog <path> (choose file in open dialog); export_png doc (export + hash); resize_panel {panel,width}; set_field {target,value}; export {dir,name,type,...} (File > Export dialog); clear_dir/record_dir <dir>; record_file <path> (size+hash+pixels); record_file_text <path>; restart_app; resize_dialog {width,height}; target forms {canvas:[x,y]|name}, {pref_category}, {tree_item:[path]}, hold_key in drag/click; log_value <JSF expression, logged in both>; record_ui <logical ui key> (orig window text/UIA, fp ui_find/ui_state); jsf <code> (in both = fp run_script); fp-only ui_action {...}, ui_find_click <text>. Step keys: after = actions after the shot; log_menu_items = item texts + enabled/checked of the open menu; shot omitted = value-only checkpoint.",
+ "steps": [
+  {
+   "id": "00_overview_normal",
+   "check": "overview after opening the test file",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "panel": "window.swatches"
+    }
+   ],
+   "shot": {
+    "area": "window"
+   }
+  },
+  {
+   "id": "01_swatches_layout_normal",
+   "check": "swatches layout",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "panel": "window.swatches"
+    }
+   ],
+   "shot": {
+    "area": "panel:swatches"
+   }
+  },
+  {
+   "id": "02_swatches_click_result",
+   "check": "swatches click",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "panel": "window.swatches"
+    },
+    {
+     "click": {
+      "panel_swatch": 5
+     }
+    },
+    {
+     "log_value": "fw.getDocumentDOM().fillColorDefault"
+    }
+   ],
+   "shot": null,
+   "note": "index 5 of the default swatch set"
+  },
+  {
+   "id": "03_swatches_add_result",
+   "check": "swatches add",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "panel": "window.swatches"
+    },
+    {
+     "click": "swatches.empty_area"
+    },
+    {
+     "record_ui": "swatches.count"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "04_swatches_ctrl_delete_result",
+   "check": "swatches ctrl - delete",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "panel": "window.swatches"
+    },
+    {
+     "click": {
+      "target": {
+       "panel_swatch": 0
+      },
+      "mods": [
+       "ctrl"
+      ]
+     }
+    },
+    {
+     "record_ui": "swatches.count"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "04_swatches_ctrl_replace_result",
+   "check": "swatches ctrl - replace",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "panel": "window.swatches"
+    },
+    {
+     "click": {
+      "target": {
+       "panel_swatch": 0
+      },
+      "mods": [
+       "shift"
+      ]
+     }
+    },
+    {
+     "record_ui": "swatches.swatch.0"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "05_swatches_menu_open",
+   "check": "swatches menu",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "panel": "window.swatches"
+    },
+    {
+     "panel_menu": "swatches"
+    },
+    {
+     "log_menu_items": true
+    }
+   ],
+   "shot": {
+    "area": "menu"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "06_swatches_load_add_result",
+   "check": "swatches load - add",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "panel": "window.swatches"
+    },
+    {
+     "panel_menu": "swatches"
+    },
+    {
+     "click": "Farbfelder hinzufügen..."
+    },
+    {
+     "file_dialog": "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\par_swatches.act"
+    },
+    {
+     "record_ui": "swatches.count"
+    }
+   ],
+   "shot": {
+    "area": "panel:swatches"
+   },
+   "note": "file_dialog = choose path in the open-file dialog (orig UIA, fp ui_file_dialog)"
+  },
+  {
+   "id": "06_swatches_load_replace_result",
+   "check": "swatches load - replace",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "panel": "window.swatches"
+    },
+    {
+     "panel_menu": "swatches"
+    },
+    {
+     "click": "Farbfelder ersetzen..."
+    },
+    {
+     "file_dialog": "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\par_swatches.act"
+    },
+    {
+     "record_ui": "swatches.count"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "07_swatches_sort_result",
+   "check": "swatches sort",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "panel": "window.swatches"
+    },
+    {
+     "panel_menu": "swatches"
+    },
+    {
+     "click": "Nach Farbe sortieren"
+    }
+   ],
+   "shot": {
+    "area": "panel:swatches"
+   }
+  },
+  {
+   "id": "08_swatches_tooltip_hover",
+   "check": "swatches tooltip",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "panel": "window.swatches"
+    },
+    {
+     "hover": {
+      "panel_swatch": 5
+     }
+    },
+    {
+     "wait": 1200
+    }
+   ],
+   "shot": {
+    "area": "panel:swatches"
+   }
+  },
+  {
+   "id": "09_mixer_layout_normal",
+   "check": "mixer layout",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "panel": "window.colorMixer"
+    }
+   ],
+   "shot": {
+    "area": "panel:mixer"
+   }
+  },
+  {
+   "id": "10_mixer_models_rgb_result",
+   "check": "mixer models - rgb",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "panel": "window.colorMixer"
+    },
+    {
+     "panel_menu": "mixer"
+    },
+    {
+     "click": "RGB"
+    }
+   ],
+   "shot": {
+    "area": "panel:mixer"
+   }
+  },
+  {
+   "id": "10_mixer_models_hex_result",
+   "check": "mixer models - hex",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "panel": "window.colorMixer"
+    },
+    {
+     "panel_menu": "mixer"
+    },
+    {
+     "click": "Hexadezimal"
+    }
+   ],
+   "shot": {
+    "area": "panel:mixer"
+   }
+  },
+  {
+   "id": "10_mixer_models_hsb_result",
+   "check": "mixer models - hsb",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "panel": "window.colorMixer"
+    },
+    {
+     "panel_menu": "mixer"
+    },
+    {
+     "click": "HSB"
+    }
+   ],
+   "shot": {
+    "area": "panel:mixer"
+   }
+  },
+  {
+   "id": "10_mixer_models_cmy_result",
+   "check": "mixer models - cmy",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "panel": "window.colorMixer"
+    },
+    {
+     "panel_menu": "mixer"
+    },
+    {
+     "click": "CMY"
+    }
+   ],
+   "shot": {
+    "area": "panel:mixer"
+   }
+  },
+  {
+   "id": "10_mixer_models_gray_result",
+   "check": "mixer models - gray",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "panel": "window.colorMixer"
+    },
+    {
+     "panel_menu": "mixer"
+    },
+    {
+     "click": "Graustufen"
+    }
+   ],
+   "shot": {
+    "area": "panel:mixer"
+   }
+  },
+  {
+   "id": "10_mixer_models_open",
+   "check": "mixer models",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "panel": "window.colorMixer"
+    },
+    {
+     "panel_menu": "mixer"
+    },
+    {
+     "log_menu_items": true
+    }
+   ],
+   "shot": null,
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "11_mixer_spectrum_result",
+   "check": "mixer spectrum",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "panel": "window.colorMixer"
+    },
+    {
+     "click": {
+      "area": "panel:mixer",
+      "pos": "spectrum_center"
+     }
+    },
+    {
+     "log_value": "fw.getDocumentDOM().fillColorDefault"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "12_mixer_fields_result",
+   "check": "mixer fields",
+   "method": {
+    "orig": "W",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "panel": "window.colorMixer"
+    },
+    {
+     "click": "mixer.field.r"
+    },
+    {
+     "key": "Ctrl+A"
+    },
+    {
+     "type": "300"
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "record_ui": "mixer.field.r"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "13_mixer_sliders_open",
+   "check": "mixer sliders",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "panel": "window.colorMixer"
+    },
+    {
+     "click": "mixer.field.r.slider"
+    }
+   ],
+   "shot": {
+    "area": "panel:mixer"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "14_palette_panel_normal",
+   "check": "palette panel",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "menu": "Fenster > Sonstige > Farbpalette"
+    }
+   ],
+   "shot": {
+    "area": "panel:palette"
+   }
+  },
+  {
+   "id": "14_palette_panel_second_tab_normal",
+   "check": "palette panel - second tab",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "menu": "Fenster > Sonstige > Farbpalette"
+    },
+    {
+     "click": "palette.tab.1"
+    }
+   ],
+   "shot": {
+    "area": "panel:palette"
+   },
+   "note": "second register of the colour palette; label unsure",
+   "unsupported": {
+    "orig": "Flash panel of the reference (SWF, no Win32 controls or texts): only the shot, not measured (R-7) - 'Farbpalette'"
+   }
+  },
+  {
+   "id": "15_palette_harmony_result",
+   "check": "palette harmony",
+   "method": {
+    "orig": "J",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "menu": "Fenster > Sonstige > Farbpalette"
+    },
+    {
+     "click": "palette.harmony_list"
+    },
+    {
+     "click": "palette.harmony.1"
+    },
+    {
+     "record_ui": "palette.colors"
+    }
+   ],
+   "shot": {
+    "area": "panel:palette"
+   },
+   "note": "keys unsure",
+   "unsupported": {
+    "orig": "Flash panel of the reference (SWF, no Win32 controls or texts): only the shot, not measured (R-7) - 'Farbpalette'"
+   }
+  },
+  {
+   "id": "16_palette_menu_open",
+   "check": "palette menu",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "menu": "Fenster > Sonstige > Farbpalette"
+    },
+    {
+     "panel_menu": "palette"
+    },
+    {
+     "log_menu_items": true
+    }
+   ],
+   "shot": null,
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "original: no native menu opens for this panel",
+   "unsupported": {
+    "orig": "Flash panel of the reference (SWF, no Win32 controls or texts): only the shot, not measured (R-7) - 'Farbpalette'"
+   }
+  },
+  {
+   "id": "17_sync_result",
+   "check": "sync",
+   "method": {
+    "orig": "J",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "panel": "window.colorMixer"
+    },
+    {
+     "open": "toolbox.fill_color"
+    },
+    {
+     "click": {
+      "popup_swatch": "#0000FF"
+     }
+    },
+    {
+     "record_ui": "mixer.fields"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "18_none_result",
+   "check": "none",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "panel": "window.colorMixer"
+    },
+    {
+     "click": "mixer.no_color"
+    },
+    {
+     "log_value": "fw.selection.length ? fw.selection[0].pathAttributes.fillColor : null"
+    }
+   ],
+   "shot": null,
+   "note": "'Ohne' button in mixer may only exist in toolbox"
+  },
+  {
+   "id": "19_selected_object_result",
+   "check": "selected object",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "panel": "window.swatches"
+    },
+    {
+     "click": {
+      "panel_swatch": 5
+     }
+    },
+    {
+     "log_value": "fw.selection.length ? fw.selection[0].pathAttributes.fillColor : null"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "20_undo_result",
+   "check": "undo",
+   "method": {
+    "orig": "J",
+    "fp": "H"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "panel": "window.swatches"
+    },
+    {
+     "log_value": "fw.historyPalette.getStepCount()"
+    },
+    {
+     "click": {
+      "panel_swatch": 5
+     }
+    },
+    {
+     "log_value": "fw.historyPalette.getStepCount()"
+    },
+    {
+     "key": "Ctrl+Z"
+    },
+    {
+     "log_value": "fw.selection.length ? fw.selection[0].pathAttributes.fillColor : null"
+    }
+   ],
+   "shot": null,
+   "note": "record of undo step count via JSF unsure; fp may use ui_state history length instead"
+  }
+ ]
+}

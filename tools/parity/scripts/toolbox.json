@@ -1,0 +1,1782 @@
+{
+ "unit": "toolbox",
+ "testfile": "T10",
+ "testfiles": [
+  "T10"
+ ],
+ "note": "Action verbs as in the shared list (see panel-layers.json): open_testfile, select, select_none, tool <tool id>, choose {target,item} (item path 'A > B'; toolbox.<tool>_flyout picks a flyout entry, orig_index = position in the owner-drawn list of the original), open <logical ui key>, click/double_click/hover <ui key|{handle}|{menu_item}>, drag {from,by|to,mods}, canvas_click/canvas_double_click/canvas_hover [x,y] (+mods), canvas_drag {from,to,mods}, canvas_wheel {pos,delta,modifiers}, key <combo>, repeat/do, type, menu 'A > B', menu_open, set_field {target,value}, jsf (both = fp run_script), record_ui <key>, log_value, log_menu_items, export_png doc, wait, close_all, window_size. Additions in this file: {handle: <index|role>} = control/frame handle of the selected object (orig: controlPoints, fp: autoShape.describe/frame); drag_popup_slider {to_fraction,hold} = drag inside the open popup slider; record_ui history.names = history step names; mods on canvas_click/canvas_hover = held modifier keys. Coordinates are document pixels. Labels are compared without '&' and trailing '...'/'…'.",
+ "steps": [
+  {
+   "id": "00_overview_normal",
+   "check": "overview after opening the test file",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T10"
+    }
+   ],
+   "shot": {
+    "area": "window"
+   }
+  },
+  {
+   "id": "01_groups_normal",
+   "check": "groups",
+   "method": {
+    "orig": "B, W",
+    "fp": "B, Fi"
+   },
+   "both": [
+    {
+     "open_testfile": "T10"
+    },
+    {
+     "record_ui": "toolbox.items"
+    }
+   ],
+   "shot": {
+    "area": "panel:tools"
+   }
+  },
+  {
+   "id": "02_flyouts_pointer_open",
+   "check": "flyouts",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T10"
+    },
+    {
+     "open": "toolbox.pointer_flyout"
+    }
+   ],
+   "shot": {
+    "area": "popup"
+   },
+   "note": "Original opens the flyout on press-and-hold (~1 s); close with Escape afterwards."
+  },
+  {
+   "id": "02_flyouts_crop_open",
+   "check": "flyouts",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T10"
+    },
+    {
+     "open": "toolbox.crop_flyout"
+    }
+   ],
+   "shot": {
+    "area": "popup"
+   },
+   "note": "Original opens the flyout on press-and-hold (~1 s); close with Escape afterwards."
+  },
+  {
+   "id": "02_flyouts_marquee_open",
+   "check": "flyouts",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T10"
+    },
+    {
+     "open": "toolbox.marquee_flyout"
+    }
+   ],
+   "shot": {
+    "area": "popup"
+   },
+   "note": "Original opens the flyout on press-and-hold (~1 s); close with Escape afterwards."
+  },
+  {
+   "id": "02_flyouts_lasso_open",
+   "check": "flyouts",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T10"
+    },
+    {
+     "open": "toolbox.lasso_flyout"
+    }
+   ],
+   "shot": {
+    "area": "popup"
+   },
+   "note": "Original opens the flyout on press-and-hold (~1 s); close with Escape afterwards."
+  },
+  {
+   "id": "02_flyouts_blur_open",
+   "check": "flyouts",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T10"
+    },
+    {
+     "open": "toolbox.blur_flyout"
+    }
+   ],
+   "shot": {
+    "area": "popup"
+   },
+   "note": "Original opens the flyout on press-and-hold (~1 s); close with Escape afterwards."
+  },
+  {
+   "id": "02_flyouts_rubberstamp_open",
+   "check": "flyouts",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T10"
+    },
+    {
+     "open": "toolbox.rubberStamp_flyout"
+    }
+   ],
+   "shot": {
+    "area": "popup"
+   },
+   "note": "Original opens the flyout on press-and-hold (~1 s); close with Escape afterwards."
+  },
+  {
+   "id": "02_flyouts_pen_open",
+   "check": "flyouts",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T10"
+    },
+    {
+     "open": "toolbox.pen_flyout"
+    }
+   ],
+   "shot": {
+    "area": "popup"
+   },
+   "note": "Original opens the flyout on press-and-hold (~1 s); close with Escape afterwards."
+  },
+  {
+   "id": "02_flyouts_rectangle_open",
+   "check": "flyouts",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T10"
+    },
+    {
+     "open": "toolbox.rectangle_flyout"
+    }
+   ],
+   "shot": {
+    "area": "popup"
+   },
+   "note": "Original opens the flyout on press-and-hold (~1 s); close with Escape afterwards."
+  },
+  {
+   "id": "02_flyouts_freeform_open",
+   "check": "flyouts",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T10"
+    },
+    {
+     "open": "toolbox.freeform_flyout"
+    }
+   ],
+   "shot": {
+    "area": "popup"
+   },
+   "note": "Original opens the flyout on press-and-hold (~1 s); close with Escape afterwards."
+  },
+  {
+   "id": "02_flyouts_hotspotrect_open",
+   "check": "flyouts",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T10"
+    },
+    {
+     "open": "toolbox.hotspotRect_flyout"
+    }
+   ],
+   "shot": {
+    "area": "popup"
+   },
+   "note": "Original opens the flyout on press-and-hold (~1 s); close with Escape afterwards."
+  },
+  {
+   "id": "02_flyouts_slice_open",
+   "check": "flyouts",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T10"
+    },
+    {
+     "open": "toolbox.slice_flyout"
+    }
+   ],
+   "shot": {
+    "area": "popup"
+   },
+   "note": "Original opens the flyout on press-and-hold (~1 s); close with Escape afterwards."
+  },
+  {
+   "id": "02_flyouts_paintbucket_open",
+   "check": "flyouts",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T10"
+    },
+    {
+     "open": "toolbox.paintBucket_flyout"
+    }
+   ],
+   "shot": {
+    "area": "popup"
+   },
+   "note": "Original opens the flyout on press-and-hold (~1 s); close with Escape afterwards."
+  },
+  {
+   "id": "03_tooltips_pointer_hover",
+   "check": "tooltips",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "open_testfile": "T10"
+    },
+    {
+     "hover": "toolbox.pointer"
+    },
+    {
+     "wait": 2000
+    },
+    {
+     "record_ui": "tooltip"
+    }
+   ],
+   "shot": {
+    "area": "panel:tools"
+   }
+  },
+  {
+   "id": "03_tooltips_rectangle_hover",
+   "check": "tooltips",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "open_testfile": "T10"
+    },
+    {
+     "hover": "toolbox.rectangle"
+    },
+    {
+     "wait": 2000
+    },
+    {
+     "record_ui": "tooltip"
+    }
+   ],
+   "shot": {
+    "area": "panel:tools"
+   }
+  },
+  {
+   "id": "03_tooltips_stroke_color_hover",
+   "check": "tooltips",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "open_testfile": "T10"
+    },
+    {
+     "hover": "toolbox.stroke_color"
+    },
+    {
+     "wait": 2000
+    },
+    {
+     "record_ui": "tooltip"
+    }
+   ],
+   "shot": {
+    "area": "panel:tools"
+   },
+   "note": "Original tooltip = hex value ('#C04040')."
+  },
+  {
+   "id": "04_pressed_pressed",
+   "check": "pressed",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T10"
+    },
+    {
+     "tool": "brush"
+    }
+   ],
+   "shot": {
+    "area": "panel:tools"
+   }
+  },
+  {
+   "id": "05_letter_cycle_m_result",
+   "check": "letter cycle",
+   "method": {
+    "orig": "J",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T10"
+    },
+    {
+     "tool": "pointer"
+    },
+    {
+     "select_none": true
+    },
+    {
+     "key": "M"
+    },
+    {
+     "record_ui": "ui_state.tool"
+    },
+    {
+     "key": "M"
+    },
+    {
+     "record_ui": "ui_state.tool"
+    },
+    {
+     "key": "M"
+    },
+    {
+     "record_ui": "ui_state.tool"
+    }
+   ]
+  },
+  {
+   "id": "05_letter_cycle_l_result",
+   "check": "letter cycle",
+   "method": {
+    "orig": "J",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T10"
+    },
+    {
+     "tool": "pointer"
+    },
+    {
+     "select_none": true
+    },
+    {
+     "key": "L"
+    },
+    {
+     "record_ui": "ui_state.tool"
+    },
+    {
+     "key": "L"
+    },
+    {
+     "record_ui": "ui_state.tool"
+    },
+    {
+     "key": "L"
+    },
+    {
+     "record_ui": "ui_state.tool"
+    }
+   ]
+  },
+  {
+   "id": "05_letter_cycle_r_result",
+   "check": "letter cycle",
+   "method": {
+    "orig": "J",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T10"
+    },
+    {
+     "tool": "pointer"
+    },
+    {
+     "select_none": true
+    },
+    {
+     "key": "R"
+    },
+    {
+     "record_ui": "ui_state.tool"
+    },
+    {
+     "key": "R"
+    },
+    {
+     "record_ui": "ui_state.tool"
+    },
+    {
+     "key": "R"
+    },
+    {
+     "record_ui": "ui_state.tool"
+    },
+    {
+     "key": "R"
+    },
+    {
+     "record_ui": "ui_state.tool"
+    },
+    {
+     "key": "R"
+    },
+    {
+     "record_ui": "ui_state.tool"
+    },
+    {
+     "key": "R"
+    },
+    {
+     "record_ui": "ui_state.tool"
+    }
+   ]
+  },
+  {
+   "id": "05_letter_cycle_u_result",
+   "check": "letter cycle",
+   "method": {
+    "orig": "J",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T10"
+    },
+    {
+     "tool": "pointer"
+    },
+    {
+     "select_none": true
+    },
+    {
+     "key": "U"
+    },
+    {
+     "record_ui": "ui_state.tool"
+    },
+    {
+     "key": "U"
+    },
+    {
+     "record_ui": "ui_state.tool"
+    },
+    {
+     "key": "U"
+    },
+    {
+     "record_ui": "ui_state.tool"
+    },
+    {
+     "key": "U"
+    },
+    {
+     "record_ui": "ui_state.tool"
+    }
+   ]
+  },
+  {
+   "id": "05_letter_cycle_o_result",
+   "check": "letter cycle",
+   "method": {
+    "orig": "J",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T10"
+    },
+    {
+     "tool": "pointer"
+    },
+    {
+     "select_none": true
+    },
+    {
+     "key": "O"
+    },
+    {
+     "record_ui": "ui_state.tool"
+    },
+    {
+     "key": "O"
+    },
+    {
+     "record_ui": "ui_state.tool"
+    },
+    {
+     "key": "O"
+    },
+    {
+     "record_ui": "ui_state.tool"
+    },
+    {
+     "key": "O"
+    },
+    {
+     "record_ui": "ui_state.tool"
+    },
+    {
+     "key": "O"
+    },
+    {
+     "record_ui": "ui_state.tool"
+    }
+   ]
+  },
+  {
+   "id": "05_letter_cycle_j_result",
+   "check": "letter cycle",
+   "method": {
+    "orig": "J",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T10"
+    },
+    {
+     "tool": "pointer"
+    },
+    {
+     "select_none": true
+    },
+    {
+     "key": "J"
+    },
+    {
+     "record_ui": "ui_state.tool"
+    },
+    {
+     "key": "J"
+    },
+    {
+     "record_ui": "ui_state.tool"
+    },
+    {
+     "key": "J"
+    },
+    {
+     "record_ui": "ui_state.tool"
+    },
+    {
+     "key": "J"
+    },
+    {
+     "record_ui": "ui_state.tool"
+    }
+   ]
+  },
+  {
+   "id": "05_letter_cycle_k_result",
+   "check": "letter cycle",
+   "method": {
+    "orig": "J",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T10"
+    },
+    {
+     "tool": "pointer"
+    },
+    {
+     "select_none": true
+    },
+    {
+     "key": "K"
+    },
+    {
+     "record_ui": "ui_state.tool"
+    },
+    {
+     "key": "K"
+    },
+    {
+     "record_ui": "ui_state.tool"
+    },
+    {
+     "key": "K"
+    },
+    {
+     "record_ui": "ui_state.tool"
+    }
+   ]
+  },
+  {
+   "id": "05_letter_cycle_g_result",
+   "check": "letter cycle",
+   "method": {
+    "orig": "J",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T10"
+    },
+    {
+     "tool": "pointer"
+    },
+    {
+     "select_none": true
+    },
+    {
+     "key": "G"
+    },
+    {
+     "record_ui": "ui_state.tool"
+    },
+    {
+     "key": "G"
+    },
+    {
+     "record_ui": "ui_state.tool"
+    },
+    {
+     "key": "G"
+    },
+    {
+     "record_ui": "ui_state.tool"
+    }
+   ]
+  },
+  {
+   "id": "05_letter_cycle_s_result",
+   "check": "letter cycle",
+   "method": {
+    "orig": "J",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T10"
+    },
+    {
+     "tool": "pointer"
+    },
+    {
+     "select_none": true
+    },
+    {
+     "key": "S"
+    },
+    {
+     "record_ui": "ui_state.tool"
+    },
+    {
+     "key": "S"
+    },
+    {
+     "record_ui": "ui_state.tool"
+    },
+    {
+     "key": "S"
+    },
+    {
+     "record_ui": "ui_state.tool"
+    },
+    {
+     "key": "S"
+    },
+    {
+     "record_ui": "ui_state.tool"
+    }
+   ]
+  },
+  {
+   "id": "05_letter_cycle_p_result",
+   "check": "letter cycle",
+   "method": {
+    "orig": "J",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T10"
+    },
+    {
+     "tool": "pointer"
+    },
+    {
+     "select_none": true
+    },
+    {
+     "key": "P"
+    },
+    {
+     "record_ui": "ui_state.tool"
+    },
+    {
+     "key": "P"
+    },
+    {
+     "record_ui": "ui_state.tool"
+    },
+    {
+     "key": "P"
+    },
+    {
+     "record_ui": "ui_state.tool"
+    },
+    {
+     "key": "P"
+    },
+    {
+     "record_ui": "ui_state.tool"
+    }
+   ]
+  },
+  {
+   "id": "05_letter_cycle_v_result",
+   "check": "letter cycle",
+   "method": {
+    "orig": "J",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T10"
+    },
+    {
+     "tool": "pointer"
+    },
+    {
+     "select_none": true
+    },
+    {
+     "key": "V"
+    },
+    {
+     "record_ui": "ui_state.tool"
+    },
+    {
+     "key": "V"
+    },
+    {
+     "record_ui": "ui_state.tool"
+    },
+    {
+     "key": "V"
+    },
+    {
+     "record_ui": "ui_state.tool"
+    }
+   ]
+  },
+  {
+   "id": "05_letter_cycle_c_result",
+   "check": "letter cycle",
+   "method": {
+    "orig": "J",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T10"
+    },
+    {
+     "tool": "pointer"
+    },
+    {
+     "select_none": true
+    },
+    {
+     "key": "C"
+    },
+    {
+     "record_ui": "ui_state.tool"
+    },
+    {
+     "key": "C"
+    },
+    {
+     "record_ui": "ui_state.tool"
+    },
+    {
+     "key": "C"
+    },
+    {
+     "record_ui": "ui_state.tool"
+    }
+   ]
+  },
+  {
+   "id": "05_letter_cycle_b_result",
+   "check": "letter cycle",
+   "method": {
+    "orig": "J",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T10"
+    },
+    {
+     "tool": "pointer"
+    },
+    {
+     "select_none": true
+    },
+    {
+     "key": "B"
+    },
+    {
+     "record_ui": "ui_state.tool"
+    },
+    {
+     "key": "B"
+    },
+    {
+     "record_ui": "ui_state.tool"
+    },
+    {
+     "key": "B"
+    },
+    {
+     "record_ui": "ui_state.tool"
+    }
+   ]
+  },
+  {
+   "id": "05_letter_cycle_q_result",
+   "check": "letter cycle",
+   "method": {
+    "orig": "J",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T10"
+    },
+    {
+     "tool": "pointer"
+    },
+    {
+     "select_none": true
+    },
+    {
+     "key": "Q"
+    },
+    {
+     "record_ui": "ui_state.tool"
+    },
+    {
+     "key": "Q"
+    },
+    {
+     "record_ui": "ui_state.tool"
+    }
+   ],
+   "note": "Q and Y: no effect without selection in the original."
+  },
+  {
+   "id": "05_letter_cycle_y_result",
+   "check": "letter cycle",
+   "method": {
+    "orig": "J",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T10"
+    },
+    {
+     "tool": "pointer"
+    },
+    {
+     "select_none": true
+    },
+    {
+     "key": "Y"
+    },
+    {
+     "record_ui": "ui_state.tool"
+    },
+    {
+     "key": "Y"
+    },
+    {
+     "record_ui": "ui_state.tool"
+    }
+   ],
+   "note": "Q and Y: no effect without selection in the original."
+  },
+  {
+   "id": "06_hand_tool_result",
+   "check": "hand",
+   "method": {
+    "orig": "J",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T10"
+    },
+    {
+     "tool": "hand"
+    },
+    {
+     "record_ui": "ui_state.zoom_scroll"
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       800,
+       500
+      ],
+      "to": [
+       700,
+       420
+      ]
+     }
+    },
+    {
+     "record_ui": "ui_state.zoom_scroll"
+    },
+    {
+     "record_ui": "ui_state.tool"
+    }
+   ]
+  },
+  {
+   "id": "06_hand_space_result",
+   "check": "hand",
+   "method": {
+    "orig": "J",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T10"
+    },
+    {
+     "tool": "pointer"
+    },
+    {
+     "record_ui": "ui_state.zoom_scroll"
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       800,
+       500
+      ],
+      "to": [
+       700,
+       420
+      ],
+      "mods": [
+       "space"
+      ]
+     }
+    },
+    {
+     "record_ui": "ui_state.zoom_scroll"
+    },
+    {
+     "record_ui": "ui_state.tool"
+    }
+   ],
+   "note": "Space held during the drag (temporary hand)."
+  },
+  {
+   "id": "07_hand_dblclick_result",
+   "check": "hand dblclick",
+   "method": {
+    "orig": "J",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T10"
+    },
+    {
+     "double_click": "toolbox.hand"
+    },
+    {
+     "record_ui": "ui_state.zoom_scroll"
+    }
+   ]
+  },
+  {
+   "id": "08_zoom_click_in_result",
+   "check": "zoom click",
+   "method": {
+    "orig": "J",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T10"
+    },
+    {
+     "tool": "zoom"
+    },
+    {
+     "canvas_click": [
+      600,
+      400
+     ]
+    },
+    {
+     "record_ui": "ui_state.zoom_scroll"
+    },
+    {
+     "canvas_click": [
+      600,
+      400
+     ]
+    },
+    {
+     "record_ui": "ui_state.zoom_scroll"
+    },
+    {
+     "canvas_click": [
+      600,
+      400
+     ]
+    },
+    {
+     "record_ui": "ui_state.zoom_scroll"
+    },
+    {
+     "canvas_click": [
+      600,
+      400
+     ]
+    },
+    {
+     "record_ui": "ui_state.zoom_scroll"
+    },
+    {
+     "canvas_click": [
+      600,
+      400
+     ]
+    },
+    {
+     "record_ui": "ui_state.zoom_scroll"
+    },
+    {
+     "record_ui": "ui_state.zoom_scroll"
+    }
+   ]
+  },
+  {
+   "id": "08_zoom_click_out_result",
+   "check": "zoom click",
+   "method": {
+    "orig": "J",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T10"
+    },
+    {
+     "tool": "zoom"
+    },
+    {
+     "canvas_click": [
+      600,
+      400
+     ]
+    },
+    {
+     "record_ui": "ui_state.zoom_scroll"
+    },
+    {
+     "canvas_click": [
+      600,
+      400
+     ]
+    },
+    {
+     "record_ui": "ui_state.zoom_scroll"
+    },
+    {
+     "canvas_click": [
+      600,
+      400
+     ]
+    },
+    {
+     "record_ui": "ui_state.zoom_scroll"
+    },
+    {
+     "canvas_click": [
+      600,
+      400
+     ]
+    },
+    {
+     "record_ui": "ui_state.zoom_scroll"
+    },
+    {
+     "canvas_click": [
+      600,
+      400
+     ]
+    },
+    {
+     "record_ui": "ui_state.zoom_scroll"
+    },
+    {
+     "canvas_click": [
+      600,
+      400
+     ],
+     "mods": [
+      "alt"
+     ]
+    },
+    {
+     "record_ui": "ui_state.zoom_scroll"
+    },
+    {
+     "canvas_click": [
+      600,
+      400
+     ],
+     "mods": [
+      "alt"
+     ]
+    },
+    {
+     "record_ui": "ui_state.zoom_scroll"
+    },
+    {
+     "canvas_click": [
+      600,
+      400
+     ],
+     "mods": [
+      "alt"
+     ]
+    },
+    {
+     "record_ui": "ui_state.zoom_scroll"
+    },
+    {
+     "canvas_click": [
+      600,
+      400
+     ],
+     "mods": [
+      "alt"
+     ]
+    },
+    {
+     "record_ui": "ui_state.zoom_scroll"
+    },
+    {
+     "canvas_click": [
+      600,
+      400
+     ],
+     "mods": [
+      "alt"
+     ]
+    },
+    {
+     "record_ui": "ui_state.zoom_scroll"
+    },
+    {
+     "canvas_click": [
+      600,
+      400
+     ],
+     "mods": [
+      "alt"
+     ]
+    },
+    {
+     "record_ui": "ui_state.zoom_scroll"
+    },
+    {
+     "canvas_click": [
+      600,
+      400
+     ],
+     "mods": [
+      "alt"
+     ]
+    },
+    {
+     "record_ui": "ui_state.zoom_scroll"
+    },
+    {
+     "canvas_click": [
+      600,
+      400
+     ],
+     "mods": [
+      "alt"
+     ]
+    },
+    {
+     "record_ui": "ui_state.zoom_scroll"
+    },
+    {
+     "record_ui": "ui_state.zoom_scroll"
+    }
+   ]
+  },
+  {
+   "id": "09_zoom_rect_result",
+   "check": "zoom rect",
+   "method": {
+    "orig": "J",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T10"
+    },
+    {
+     "tool": "zoom"
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       400,
+       300
+      ],
+      "to": [
+       600,
+       450
+      ]
+     }
+    },
+    {
+     "record_ui": "ui_state.zoom_scroll"
+    }
+   ],
+   "note": "200 x 150 screen px at 100 %; original -> 476 %."
+  },
+  {
+   "id": "10_zoom_dblclick_result",
+   "check": "zoom dblclick",
+   "method": {
+    "orig": "J",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T10"
+    },
+    {
+     "tool": "zoom"
+    },
+    {
+     "canvas_click": [
+      600,
+      400
+     ]
+    },
+    {
+     "canvas_click": [
+      600,
+      400
+     ]
+    },
+    {
+     "double_click": "toolbox.zoom"
+    },
+    {
+     "record_ui": "ui_state.zoom_scroll"
+    }
+   ]
+  },
+  {
+   "id": "11_ctrl_space_result",
+   "check": "ctrl space",
+   "method": {
+    "orig": "J",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T10"
+    },
+    {
+     "tool": "pointer"
+    },
+    {
+     "canvas_click": [
+      600,
+      400
+     ],
+     "mods": [
+      "ctrl",
+      "space"
+     ]
+    },
+    {
+     "record_ui": "ui_state.zoom_scroll"
+    },
+    {
+     "record_ui": "ui_state.tool"
+    }
+   ],
+   "note": "Hold Ctrl+Space only (never add Alt)."
+  },
+  {
+   "id": "12_wheel_plain_result",
+   "check": "wheel",
+   "method": {
+    "orig": "J",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T10"
+    },
+    {
+     "tool": "pointer"
+    },
+    {
+     "canvas_wheel": {
+      "pos": [
+       600,
+       400
+      ],
+      "delta": -1
+     }
+    },
+    {
+     "record_ui": "ui_state.zoom_scroll"
+    }
+   ]
+  },
+  {
+   "id": "12_wheel_shift_result",
+   "check": "wheel",
+   "method": {
+    "orig": "J",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T10"
+    },
+    {
+     "tool": "pointer"
+    },
+    {
+     "canvas_wheel": {
+      "pos": [
+       600,
+       400
+      ],
+      "delta": -1,
+      "modifiers": [
+       "shift"
+      ]
+     }
+    },
+    {
+     "record_ui": "ui_state.zoom_scroll"
+    }
+   ]
+  },
+  {
+   "id": "12_wheel_ctrl_result",
+   "check": "wheel",
+   "method": {
+    "orig": "J",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T10"
+    },
+    {
+     "tool": "pointer"
+    },
+    {
+     "canvas_wheel": {
+      "pos": [
+       600,
+       400
+      ],
+      "delta": 1,
+      "modifiers": [
+       "ctrl"
+      ]
+     }
+    },
+    {
+     "record_ui": "ui_state.zoom_scroll"
+    }
+   ]
+  },
+  {
+   "id": "12_wheel_alt_result",
+   "check": "wheel",
+   "method": {
+    "orig": "J",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T10"
+    },
+    {
+     "tool": "pointer"
+    },
+    {
+     "canvas_wheel": {
+      "pos": [
+       600,
+       400
+      ],
+      "delta": 1,
+      "modifiers": [
+       "alt"
+      ]
+     }
+    },
+    {
+     "record_ui": "ui_state.zoom_scroll"
+    }
+   ]
+  },
+  {
+   "id": "13_view_modes_full_menus_normal",
+   "check": "view modes",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T10"
+    },
+    {
+     "click": "toolbox.screen_full_menus"
+    }
+   ],
+   "shot": {
+    "area": "window"
+   }
+  },
+  {
+   "id": "13_view_modes_full_normal",
+   "check": "view modes",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T10"
+    },
+    {
+     "click": "toolbox.screen_full_menus"
+    },
+    {
+     "key": "F"
+    }
+   ],
+   "shot": {
+    "area": "window"
+   }
+  },
+  {
+   "id": "13_view_modes_standard_normal",
+   "check": "view modes",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T10"
+    },
+    {
+     "click": "toolbox.screen_full_menus"
+    },
+    {
+     "key": "F"
+    },
+    {
+     "key": "F"
+    }
+   ],
+   "shot": {
+    "area": "window"
+   },
+   "note": "Must restore 1600 x 1000 afterwards."
+  },
+  {
+   "id": "14_color_section_normal",
+   "check": "color section",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T10"
+    }
+   ],
+   "shot": {
+    "area": "panel:tools"
+   },
+   "note": "Crop to the colour group; details in unit 31."
+  },
+  {
+   "id": "15_cursor_hand_hover",
+   "check": "cursor",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T10"
+    },
+    {
+     "tool": "hand"
+    },
+    {
+     "canvas_hover": [
+      600,
+      400
+     ]
+    },
+    {
+     "wait": 300
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "note": "Screenshot must include the cursor."
+  },
+  {
+   "id": "15_cursor_zoom_in_hover",
+   "check": "cursor",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T10"
+    },
+    {
+     "tool": "zoom"
+    },
+    {
+     "canvas_hover": [
+      600,
+      400
+     ]
+    },
+    {
+     "wait": 300
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "note": "Screenshot must include the cursor."
+  },
+  {
+   "id": "15_cursor_zoom_out_hover",
+   "check": "cursor",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T10"
+    },
+    {
+     "tool": "zoom"
+    },
+    {
+     "canvas_hover": [
+      600,
+      400
+     ],
+     "mods": [
+      "alt"
+     ]
+    },
+    {
+     "wait": 300
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "note": "Alt held while hovering; screenshot must include the cursor."
+  },
+  {
+   "id": "16_collapse_default_normal",
+   "check": "collapse",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T10"
+    }
+   ],
+   "shot": {
+    "area": "panel:tools"
+   }
+  },
+  {
+   "id": "16_collapse_toggle_normal",
+   "check": "collapse",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T10"
+    },
+    {
+     "click": "toolbox.collapse"
+    }
+   ],
+   "shot": {
+    "area": "panel:tools"
+   },
+   "note": "Original: click on '>>' at the top left of the tool bar shows no visible change."
+  },
+  {
+   "id": "17_ai_tools_normal",
+   "check": "ai tools",
+   "method": {
+    "orig": "–",
+    "fp": "Fi"
+   },
+   "fp": [
+    {
+     "open_testfile": "T10"
+    },
+    {
+     "ui_find": {
+      "text": "Objektauswahl"
+     }
+    },
+    {
+     "ui_find": {
+      "text": "Motiv auswählen"
+     }
+    },
+    {
+     "ui_find": {
+      "text": "Kante verfeinern"
+     }
+    }
+   ],
+   "fp_only": true,
+   "note": "Own Firepixel tools (deliberately different), presence only."
+  },
+  {
+   "id": "18_disabled_disabled",
+   "check": "disabled",
+   "method": {
+    "orig": "W, B",
+    "fp": "S, B"
+   },
+   "both": [
+    {
+     "close_all": true
+    },
+    {
+     "key": "B"
+    },
+    {
+     "record_ui": "ui_state.tool"
+    }
+   ],
+   "shot": {
+    "area": "panel:tools"
+   }
+  }
+ ]
+}

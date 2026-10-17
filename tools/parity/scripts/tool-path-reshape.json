@@ -1,0 +1,814 @@
+{
+ "unit": "tool-path-reshape",
+ "testfile": "T04",
+ "testfiles": [
+  "T04"
+ ],
+ "note": "Action verbs as in the shared list (see panel-layers.json): open_testfile, select, select_none, tool <tool id>, choose {target,item} (item path 'A > B'; toolbox.<tool>_flyout picks a flyout entry, orig_index = position in the owner-drawn list of the original), open <logical ui key>, click/double_click/hover <ui key|{handle}|{menu_item}>, drag {from,by|to,mods}, canvas_click/canvas_double_click/canvas_hover [x,y] (+mods), canvas_drag {from,to,mods}, canvas_wheel {pos,delta,modifiers}, key <combo>, repeat/do, type, menu 'A > B', menu_open, set_field {target,value}, jsf (both = fp run_script), record_ui <key>, log_value, log_menu_items, export_png doc, wait, close_all, window_size. Additions in this file: {handle: <index|role>} = control/frame handle of the selected object (orig: controlPoints, fp: autoShape.describe/frame); drag_popup_slider {to_fraction,hold} = drag inside the open popup slider; record_ui history.names = history step names; mods on canvas_click/canvas_hover = held modifier keys. Coordinates are document pixels. Labels are compared without '&' and trailing '...'/'…'.",
+ "steps": [
+  {
+   "id": "00_overview_normal",
+   "check": "overview after opening the test file",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    }
+   ],
+   "shot": {
+    "area": "window"
+   }
+  },
+  {
+   "id": "01_freeform_inspector_normal",
+   "check": "freeform inspector",
+   "method": {
+    "orig": "W",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "P1"
+    },
+    {
+     "tool": "freeform"
+    },
+    {
+     "record_ui": "inspector.fields"
+    }
+   ],
+   "shot": {
+    "area": "inspector"
+   }
+  },
+  {
+   "id": "02_freeform_push_result",
+   "check": "freeform push",
+   "method": {
+    "orig": "J, B",
+    "fp": "D, B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "P1"
+    },
+    {
+     "tool": "freeform"
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       300,
+       120
+      ],
+      "to": [
+       300,
+       190
+      ]
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "record_ui": "history.names"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "03_freeform_pull_result",
+   "check": "freeform pull",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "P1"
+    },
+    {
+     "tool": "freeform"
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       249,
+       170
+      ],
+      "to": [
+       249,
+       110
+      ]
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "note": "Start point must lie on the P1 segment; original used 249,170."
+  },
+  {
+   "id": "04_freeform_size_keys_result",
+   "check": "freeform size keys",
+   "method": {
+    "orig": "W",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "P1"
+    },
+    {
+     "tool": "freeform"
+    },
+    {
+     "canvas_hover": [
+      500,
+      400
+     ]
+    },
+    {
+     "wait": 100
+    },
+    {
+     "repeat": 3,
+     "do": [
+      {
+       "key": "Up"
+      }
+     ]
+    },
+    {
+     "repeat": 2,
+     "do": [
+      {
+       "key": "]"
+      }
+     ]
+    },
+    {
+     "record_ui": "inspector.fields"
+    }
+   ]
+  },
+  {
+   "id": "05_reshape_area_result",
+   "check": "reshape area",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "P1"
+    },
+    {
+     "tool": "reshapeArea"
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       330,
+       210
+      ],
+      "to": [
+       330,
+       150
+      ]
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "record_ui": "history.names"
+    },
+    {
+     "record_ui": "inspector.fields"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "06_scrubber_add_result",
+   "check": "scrubber add",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "P1"
+    },
+    {
+     "tool": "pathScrubAdd"
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       200,
+       200
+      ],
+      "to": [
+       370,
+       200
+      ]
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "record_ui": "history.names"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "07_scrubber_sub_result",
+   "check": "scrubber sub",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "P1"
+    },
+    {
+     "tool": "pathScrubSubtract"
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       200,
+       200
+      ],
+      "to": [
+       370,
+       200
+      ]
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "record_ui": "history.names"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "08_knife_cut_result",
+   "check": "knife cut",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "tool": "knife"
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       100,
+       30
+      ],
+      "to": [
+       100,
+       140
+      ]
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "record_ui": "history.names"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "09_knife_shift_result",
+   "check": "knife shift",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "tool": "knife"
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       80,
+       30
+      ],
+      "to": [
+       110,
+       140
+      ],
+      "mods": [
+       "shift"
+      ]
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ]
+  },
+  {
+   "id": "10_knife_no_selection_result",
+   "check": "knife no selection",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select_none": true
+    },
+    {
+     "tool": "knife"
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       100,
+       30
+      ],
+      "to": [
+       100,
+       140
+      ]
+     }
+    },
+    {
+     "record_ui": "ui_state.tool"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "note": "Original: knife cannot be chosen without selection (tool stays pointer)."
+  },
+  {
+   "id": "11_rect_to_path_result",
+   "check": "rect to path",
+   "method": {
+    "orig": "J, B",
+    "fp": "D, B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "jsf": "fw.getDocumentDOM().addNewRectanglePrimitive({left:300,top:300,right:400,bottom:380},0)"
+    },
+    {
+     "tool": "freeform"
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       350,
+       280
+      ],
+      "to": [
+       350,
+       320
+      ]
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "note": "JSF addNewRectanglePrimitive in Firepixel run_script unsure; fallback: rectangle tool drag 300,300->400,380."
+  },
+  {
+   "id": "12_inspector_heads_freeform_normal",
+   "check": "inspector heads",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "P1"
+    },
+    {
+     "tool": "freeform"
+    }
+   ],
+   "shot": {
+    "area": "inspector"
+   }
+  },
+  {
+   "id": "12_inspector_heads_reshape_area_normal",
+   "check": "inspector heads",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "P1"
+    },
+    {
+     "tool": "reshapeArea"
+    }
+   ],
+   "shot": {
+    "area": "inspector"
+   }
+  },
+  {
+   "id": "12_inspector_heads_scrub_add_normal",
+   "check": "inspector heads",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "P1"
+    },
+    {
+     "tool": "pathScrubAdd"
+    }
+   ],
+   "shot": {
+    "area": "inspector"
+   }
+  },
+  {
+   "id": "12_inspector_heads_scrub_sub_normal",
+   "check": "inspector heads",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "P1"
+    },
+    {
+     "tool": "pathScrubSubtract"
+    }
+   ],
+   "shot": {
+    "area": "inspector"
+   }
+  },
+  {
+   "id": "13_cursor_freeform_push_hover",
+   "check": "cursor",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "P1"
+    },
+    {
+     "tool": "freeform"
+    },
+    {
+     "canvas_hover": [
+      300,
+      120
+     ]
+    },
+    {
+     "wait": 300
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "note": "Screenshot must include the cursor."
+  },
+  {
+   "id": "13_cursor_freeform_pull_hover",
+   "check": "cursor",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "P1"
+    },
+    {
+     "tool": "freeform"
+    },
+    {
+     "canvas_hover": [
+      249,
+      172
+     ]
+    },
+    {
+     "wait": 300
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "note": "Screenshot must include the cursor."
+  },
+  {
+   "id": "13_cursor_reshape_area_hover",
+   "check": "cursor",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "P1"
+    },
+    {
+     "tool": "reshapeArea"
+    },
+    {
+     "canvas_hover": [
+      300,
+      120
+     ]
+    },
+    {
+     "wait": 300
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "note": "Screenshot must include the cursor."
+  },
+  {
+   "id": "13_cursor_scrub_add_hover",
+   "check": "cursor",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "P1"
+    },
+    {
+     "tool": "pathScrubAdd"
+    },
+    {
+     "canvas_hover": [
+      300,
+      120
+     ]
+    },
+    {
+     "wait": 300
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "note": "Screenshot must include the cursor."
+  },
+  {
+   "id": "13_cursor_scrub_sub_hover",
+   "check": "cursor",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "P1"
+    },
+    {
+     "tool": "pathScrubSubtract"
+    },
+    {
+     "canvas_hover": [
+      300,
+      120
+     ]
+    },
+    {
+     "wait": 300
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "note": "Screenshot must include the cursor."
+  },
+  {
+   "id": "13_cursor_knife_hover",
+   "check": "cursor",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "tool": "knife"
+    },
+    {
+     "canvas_hover": [
+      100,
+      160
+     ]
+    },
+    {
+     "wait": 300
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "note": "Screenshot must include the cursor."
+  },
+  {
+   "id": "14_undo_result",
+   "check": "undo",
+   "method": {
+    "orig": "J",
+    "fp": "H"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "P1"
+    },
+    {
+     "tool": "freeform"
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       300,
+       120
+      ],
+      "to": [
+       300,
+       190
+      ]
+     }
+    },
+    {
+     "tool": "reshapeArea"
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       330,
+       210
+      ],
+      "to": [
+       330,
+       150
+      ]
+     }
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "tool": "knife"
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       100,
+       30
+      ],
+      "to": [
+       100,
+       140
+      ]
+     }
+    },
+    {
+     "record_ui": "history.names"
+    }
+   ]
+  }
+ ]
+}

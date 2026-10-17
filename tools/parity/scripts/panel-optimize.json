@@ -1,0 +1,752 @@
+{
+ "unit": "panel-optimize",
+ "testfile": "T09",
+ "note": "Action verbs (both/orig/fp): open_testfile <T..> (close docs unsaved, open fresh, base settings) / close_all; menu 'A > B'; command <id from commands.json>; panel <window.* id or title>; panel_menu <panel> (open its menu); select <object name|[names]>; select_none; tool <tool id>; open <logical ui key>; click/double_click/right_click/hover/mouse_down/mouse_up <label|{key}|{popup_swatch:#hex}|{area,pos}>; drag {from,to,mods}; canvas_click/canvas_move [x,y] (document px); canvas_drag {from,to,mods}; scroll {area,delta}; key <combo>; type <text>; wait <ms>; choose {target,item} (pick list entry); file_dialog <path> (choose file in open dialog); export_png doc (export + hash); resize_panel {panel,width}; set_field {target,value}; export {dir,name,type,...} (File > Export dialog); clear_dir/record_dir <dir>; record_file <path> (size+hash+pixels); record_file_text <path>; restart_app; resize_dialog {width,height}; target forms {canvas:[x,y]|name}, {pref_category}, {tree_item:[path]}, hold_key in drag/click; log_value <JSF expression, logged in both>; record_ui <logical ui key> (orig window text/UIA, fp ui_find/ui_state); jsf <code> (in both = fp run_script); fp-only ui_action {...}, ui_find_click <text>. Step keys: after = actions after the shot; log_menu_items = item texts + enabled/checked of the open menu; shot omitted = value-only checkpoint.",
+ "steps": [
+  {
+   "id": "00_overview_normal",
+   "check": "overview after opening the test file",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "panel": "window.optimize"
+    }
+   ],
+   "shot": {
+    "area": "window"
+   }
+  },
+  {
+   "id": "01_layout_gif_normal",
+   "check": "layout gif",
+   "method": {
+    "orig": "W, B",
+    "fp": "S, B"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "panel": "window.optimize"
+    },
+    {
+     "choose": {
+      "target": "optimize.format",
+      "item": "GIF"
+     }
+    },
+    {
+     "record_ui": "optimize.fields"
+    }
+   ],
+   "shot": {
+    "area": "panel:optimize"
+   }
+  },
+  {
+   "id": "02_layout_jpeg_normal",
+   "check": "layout jpeg",
+   "method": {
+    "orig": "W, B",
+    "fp": "S, B"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "panel": "window.optimize"
+    },
+    {
+     "choose": {
+      "target": "optimize.format",
+      "item": "JPEG"
+     }
+    },
+    {
+     "record_ui": "optimize.fields"
+    }
+   ],
+   "shot": {
+    "area": "panel:optimize"
+   }
+  },
+  {
+   "id": "03_layout_png_png8_normal",
+   "check": "layout png - png8",
+   "method": {
+    "orig": "W, B",
+    "fp": "S, B"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "panel": "window.optimize"
+    },
+    {
+     "choose": {
+      "target": "optimize.format",
+      "item": "PNG 8"
+     }
+    },
+    {
+     "record_ui": "optimize.fields"
+    }
+   ],
+   "shot": {
+    "area": "panel:optimize"
+   }
+  },
+  {
+   "id": "03_layout_png_png32_normal",
+   "check": "layout png - png32",
+   "method": {
+    "orig": "W, B",
+    "fp": "S, B"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "panel": "window.optimize"
+    },
+    {
+     "choose": {
+      "target": "optimize.format",
+      "item": "PNG 32"
+     }
+    },
+    {
+     "record_ui": "optimize.fields"
+    }
+   ],
+   "shot": {
+    "area": "panel:optimize"
+   }
+  },
+  {
+   "id": "03_layout_png_png24_normal",
+   "check": "layout png - png24",
+   "method": {
+    "orig": "W, B",
+    "fp": "S, B"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "panel": "window.optimize"
+    },
+    {
+     "choose": {
+      "target": "optimize.format",
+      "item": "PNG 24"
+     }
+    },
+    {
+     "record_ui": "optimize.fields"
+    }
+   ],
+   "shot": null,
+   "note": "third PNG variant: values only"
+  },
+  {
+   "id": "04_preset_list_open",
+   "check": "preset list",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "panel": "window.optimize"
+    },
+    {
+     "click": "optimize.preset"
+    },
+    {
+     "record_ui": "list.items"
+    }
+   ],
+   "shot": {
+    "area": "panel:optimize"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "05_format_list_open",
+   "check": "format list",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "panel": "window.optimize"
+    },
+    {
+     "click": "optimize.format"
+    },
+    {
+     "record_ui": "list.items"
+    }
+   ],
+   "shot": {
+    "area": "panel:optimize"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "06_palette_list_open",
+   "check": "palette list",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "panel": "window.optimize"
+    },
+    {
+     "choose": {
+      "target": "optimize.format",
+      "item": "GIF"
+     }
+    },
+    {
+     "click": "optimize.palette"
+    },
+    {
+     "record_ui": "list.items"
+    }
+   ],
+   "shot": {
+    "area": "panel:optimize"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "07_colors_list_open",
+   "check": "colors list",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "panel": "window.optimize"
+    },
+    {
+     "choose": {
+      "target": "optimize.format",
+      "item": "GIF"
+     }
+    },
+    {
+     "click": "optimize.colors"
+    },
+    {
+     "record_ui": "list.items"
+    }
+   ],
+   "shot": {
+    "area": "panel:optimize"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "08_loss_dither_open",
+   "check": "loss dither",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "panel": "window.optimize"
+    },
+    {
+     "choose": {
+      "target": "optimize.format",
+      "item": "GIF"
+     }
+    },
+    {
+     "click": "optimize.loss.slider"
+    }
+   ],
+   "shot": {
+    "area": "panel:optimize"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "09_transparency_open",
+   "check": "transparency",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "panel": "window.optimize"
+    },
+    {
+     "choose": {
+      "target": "optimize.format",
+      "item": "GIF"
+     }
+    },
+    {
+     "click": "optimize.transparency"
+    },
+    {
+     "record_ui": "list.items"
+    }
+   ],
+   "shot": {
+    "area": "panel:optimize"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "10_matte_open",
+   "check": "matte",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "panel": "window.optimize"
+    },
+    {
+     "choose": {
+      "target": "optimize.format",
+      "item": "GIF"
+     }
+    },
+    {
+     "open": "optimize.matte"
+    }
+   ],
+   "shot": {
+    "area": "popup"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "11_color_table_normal",
+   "check": "color table",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "panel": "window.optimize"
+    },
+    {
+     "choose": {
+      "target": "optimize.format",
+      "item": "GIF"
+     }
+    },
+    {
+     "click": "optimize.rebuild"
+    },
+    {
+     "wait": 500
+    }
+   ],
+   "shot": {
+    "area": "panel:optimize"
+   }
+  },
+  {
+   "id": "12_color_table_buttons_normal",
+   "check": "color table buttons",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "panel": "window.optimize"
+    },
+    {
+     "choose": {
+      "target": "optimize.format",
+      "item": "GIF"
+     }
+    },
+    {
+     "click": {
+      "color_table_cell": 0
+     }
+    }
+   ],
+   "shot": {
+    "area": "panel:optimize"
+   },
+   "note": "buttons enabled with a selected colour; disabled state in 12_..._disabled"
+  },
+  {
+   "id": "12_color_table_buttons_disabled",
+   "check": "color table buttons",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "panel": "window.optimize"
+    },
+    {
+     "choose": {
+      "target": "optimize.format",
+      "item": "JPEG"
+     }
+    }
+   ],
+   "shot": {
+    "area": "panel:optimize"
+   }
+  },
+  {
+   "id": "13_color_table_context_open",
+   "check": "color table context",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "panel": "window.optimize"
+    },
+    {
+     "choose": {
+      "target": "optimize.format",
+      "item": "GIF"
+     }
+    },
+    {
+     "right_click": {
+      "color_table_cell": 0
+     }
+    },
+    {
+     "log_menu_items": true
+    }
+   ],
+   "shot": {
+    "area": "menu"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "14_eyedroppers_pressed",
+   "check": "eyedroppers",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "panel": "window.optimize"
+    },
+    {
+     "choose": {
+      "target": "optimize.format",
+      "item": "GIF"
+     }
+    },
+    {
+     "click": "optimize.transparency_eyedropper"
+    }
+   ],
+   "shot": {
+    "area": "panel:optimize"
+   }
+  },
+  {
+   "id": "15_menu_open",
+   "check": "menu",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "panel": "window.optimize"
+    },
+    {
+     "panel_menu": "optimize"
+    },
+    {
+     "log_menu_items": true
+    }
+   ],
+   "shot": {
+    "area": "menu"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "16_save_preset_open",
+   "check": "save preset",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "panel": "window.optimize"
+    },
+    {
+     "panel_menu": "optimize"
+    },
+    {
+     "click": "Einstellungen speichern..."
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "17_optimize_to_size_open",
+   "check": "optimize to size",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "panel": "window.optimize"
+    },
+    {
+     "panel_menu": "optimize"
+    },
+    {
+     "click": "Optimieren für Dateigröße..."
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "18_selective_jpeg_normal",
+   "check": "selective jpeg",
+   "method": {
+    "orig": "W",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "panel": "window.optimize"
+    },
+    {
+     "choose": {
+      "target": "optimize.format",
+      "item": "JPEG"
+     }
+    },
+    {
+     "click": "optimize.selective_quality_button"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "19_slice_specific_result",
+   "check": "slice specific",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "panel": "window.optimize"
+    },
+    {
+     "select": "slice:0"
+    },
+    {
+     "choose": {
+      "target": "optimize.format",
+      "item": "JPEG"
+     }
+    },
+    {
+     "select": "slice:1"
+    },
+    {
+     "choose": {
+      "target": "optimize.format",
+      "item": "GIF"
+     }
+    },
+    {
+     "log_value": "fw.getDocumentDOM().layers[fw.getDocumentDOM().layers.length-1].frames[0].elements.map(function(e){return e.exportOptions?e.exportOptions.exportFormat:'-'}).join('|')"
+    }
+   ],
+   "shot": null,
+   "note": "slice export options JSF path unsure"
+  },
+  {
+   "id": "20_preview_tab_sync_result",
+   "check": "preview tab sync",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "panel": "window.optimize"
+    },
+    {
+     "choose": {
+      "target": "optimize.format",
+      "item": "GIF"
+     }
+    },
+    {
+     "click": "document.view_tab.preview"
+    },
+    {
+     "choose": {
+      "target": "optimize.colors",
+      "item": "8"
+     }
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "note": "canvas 'Vorschau' view follows the optimize settings"
+  }
+ ]
+}

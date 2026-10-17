@@ -1,0 +1,37 @@
+[package]
+name = "fp-mcp"
+description = "Firepixel MCP server (rmcp): stdio and Streamable HTTP on 127.0.0.1 only with token, headless or as a bridge to the running user interface"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+fp-engine = { workspace = true }
+fp-model = { workspace = true }
+fp-geom = { workspace = true }
+fp-color = { workspace = true }
+fp-raster = { workspace = true }
+fp-render = { workspace = true }
+fp-fwpng = { workspace = true }
+fp-script = { workspace = true }
+# BATCH-9: Werkzeug `batch` (Batch-Studio, eigenes Crate)
+fp-batch = { path = "../fp-batch" }
+fp-i18n = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+png = { workspace = true }
+rmcp = { version = "~3.4.1", default-features = false, features = ["server", "transport-io", "transport-streamable-http-server"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "io-std", "sync", "time"] }
+hyper = { version = "~1.11.1", features = ["server", "http1"] }
+hyper-util = { version = "0.1.21", features = ["tokio", "server", "http1", "service"] }
+http-body-util = "0.1"
+bytes = "1"
+tower-service = "0.3"
+tokio-util = "0.7"
+getrandom = "0.4"
+
+[lints]
+workspace = true

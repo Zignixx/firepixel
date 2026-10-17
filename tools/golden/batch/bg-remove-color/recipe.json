@@ -1,0 +1,17 @@
+{
+  "format": "firepixel-batch-recipe",
+  "name": "bg-remove-color",
+  "output": {
+    "format": "png"
+  },
+  "steps": [
+    {
+      "id": "background.removeColor",
+      "params": {
+        "feather": 1,
+        "tolerance": 16
+      }
+    }
+  ],
+  "version": 1
+}

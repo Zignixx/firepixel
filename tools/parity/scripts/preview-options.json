@@ -1,0 +1,1483 @@
+{
+ "unit": "preview-options",
+ "testfile": "T09",
+ "note": "Action verbs (both/orig/fp): open_testfile <T..> (close docs unsaved, open fresh, base settings) / close_all; menu 'A > B'; command <id from commands.json>; panel <window.* id or title>; panel_menu <panel> (open its menu); select <object name|[names]>; select_none; tool <tool id>; open <logical ui key>; click/double_click/right_click/hover/mouse_down/mouse_up <label|{key}|{popup_swatch:#hex}|{area,pos}>; drag {from,to,mods}; canvas_click/canvas_move [x,y] (document px); canvas_drag {from,to,mods}; scroll {area,delta}; key <combo>; type <text>; wait <ms>; choose {target,item} (pick list entry); file_dialog <path> (choose file in open dialog); export_png doc (export + hash); resize_panel {panel,width}; set_field {target,value}; export {dir,name,type,...} (File > Export dialog); clear_dir/record_dir <dir>; record_file <path> (size+hash+pixels); record_file_text <path>; restart_app; resize_dialog {width,height}; target forms {canvas:[x,y]|name}, {pref_category}, {tree_item:[path]}, hold_key in drag/click; log_value <JSF expression, logged in both>; record_ui <logical ui key> (orig window text/UIA, fp ui_find/ui_state); jsf <code> (in both = fp run_script); fp-only ui_action {...}, ui_find_click <text>. Step keys: after = actions after the shot; log_menu_items = item texts + enabled/checked of the open menu; shot omitted = value-only checkpoint.",
+ "steps": [
+  {
+   "id": "00_overview_normal",
+   "check": "overview after opening the test file",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "command": "file.imagePreview"
+    },
+    {
+     "wait": 800
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   }
+  },
+  {
+   "id": "01_window_normal",
+   "check": "window",
+   "method": {
+    "orig": "W, B",
+    "fp": "S, B"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "command": "file.imagePreview"
+    },
+    {
+     "wait": 800
+    },
+    {
+     "record_ui": "dialog.rect"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "02_tabs_options_normal",
+   "check": "tabs - options",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "command": "file.imagePreview"
+    },
+    {
+     "wait": 800
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "tab 'Optionen' active by default"
+  },
+  {
+   "id": "02_tabs_file_pressed",
+   "check": "tabs - file",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "command": "file.imagePreview"
+    },
+    {
+     "wait": 800
+    },
+    {
+     "click": "preview.tab.file"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "tab label 'Datei' inside the dialog, not the main menu"
+  },
+  {
+   "id": "02_tabs_animation_pressed",
+   "check": "tabs - animation",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "command": "file.imagePreview"
+    },
+    {
+     "wait": 800
+    },
+    {
+     "click": "preview.tab.animation"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "03_preset_list_open",
+   "check": "preset list",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "command": "file.imagePreview"
+    },
+    {
+     "wait": 800
+    },
+    {
+     "click": "preview.preset"
+    },
+    {
+     "record_ui": "list.items"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "04_format_list_open",
+   "check": "format list",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "command": "file.imagePreview"
+    },
+    {
+     "wait": 800
+    },
+    {
+     "click": "preview.format"
+    },
+    {
+     "record_ui": "list.items"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "original control id 4610"
+  },
+  {
+   "id": "05_fields_per_format_gif_normal",
+   "check": "fields per format - gif",
+   "method": {
+    "orig": "W",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "command": "file.imagePreview"
+    },
+    {
+     "wait": 800
+    },
+    {
+     "choose": {
+      "target": "preview.format",
+      "item": "GIF"
+     }
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": null,
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "05_fields_per_format_jpeg_normal",
+   "check": "fields per format - jpeg",
+   "method": {
+    "orig": "W",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "command": "file.imagePreview"
+    },
+    {
+     "wait": 800
+    },
+    {
+     "choose": {
+      "target": "preview.format",
+      "item": "JPEG"
+     }
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": null,
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "05_fields_per_format_png8_normal",
+   "check": "fields per format - png8",
+   "method": {
+    "orig": "W",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "command": "file.imagePreview"
+    },
+    {
+     "wait": 800
+    },
+    {
+     "choose": {
+      "target": "preview.format",
+      "item": "PNG 8"
+     }
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": null,
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "05_fields_per_format_png24_normal",
+   "check": "fields per format - png24",
+   "method": {
+    "orig": "W",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "command": "file.imagePreview"
+    },
+    {
+     "wait": 800
+    },
+    {
+     "choose": {
+      "target": "preview.format",
+      "item": "PNG 24"
+     }
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": null,
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "05_fields_per_format_png32_normal",
+   "check": "fields per format - png32",
+   "method": {
+    "orig": "W",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "command": "file.imagePreview"
+    },
+    {
+     "wait": 800
+    },
+    {
+     "choose": {
+      "target": "preview.format",
+      "item": "PNG 32"
+     }
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": null,
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "05_fields_per_format_other_normal",
+   "check": "fields per format - other",
+   "method": {
+    "orig": "W",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "command": "file.imagePreview"
+    },
+    {
+     "wait": 800
+    },
+    {
+     "choose": {
+      "target": "preview.format",
+      "item": "BMP"
+     }
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": null,
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "06_palette_list_open",
+   "check": "palette list",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "command": "file.imagePreview"
+    },
+    {
+     "wait": 800
+    },
+    {
+     "choose": {
+      "target": "preview.format",
+      "item": "GIF"
+     }
+    },
+    {
+     "click": "preview.palette"
+    },
+    {
+     "record_ui": "list.items"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "original control id 4616"
+  },
+  {
+   "id": "07_colors_open",
+   "check": "colors",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "command": "file.imagePreview"
+    },
+    {
+     "wait": 800
+    },
+    {
+     "choose": {
+      "target": "preview.format",
+      "item": "GIF"
+     }
+    },
+    {
+     "click": "preview.colors"
+    },
+    {
+     "record_ui": "list.items"
+    }
+   ],
+   "shot": null,
+   "after": [
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "08_loss_dither_result",
+   "check": "loss dither",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "command": "file.imagePreview"
+    },
+    {
+     "wait": 800
+    },
+    {
+     "choose": {
+      "target": "preview.format",
+      "item": "GIF"
+     }
+    },
+    {
+     "set_field": {
+      "target": "preview.loss",
+      "value": "30"
+     }
+    },
+    {
+     "set_field": {
+      "target": "preview.dither",
+      "value": "50"
+     }
+    },
+    {
+     "wait": 800
+    },
+    {
+     "export_png": "preview"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "E: preview pane pixels / export hash"
+  },
+  {
+   "id": "09_transparency_open",
+   "check": "transparency",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "command": "file.imagePreview"
+    },
+    {
+     "wait": 800
+    },
+    {
+     "choose": {
+      "target": "preview.format",
+      "item": "GIF"
+     }
+    },
+    {
+     "click": "preview.transparency"
+    },
+    {
+     "record_ui": "list.items"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "09_transparency_pressed",
+   "check": "transparency",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "command": "file.imagePreview"
+    },
+    {
+     "wait": 800
+    },
+    {
+     "choose": {
+      "target": "preview.format",
+      "item": "GIF"
+     }
+    },
+    {
+     "click": "preview.transparency_eyedropper"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "10_matte_open",
+   "check": "matte",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "command": "file.imagePreview"
+    },
+    {
+     "wait": 800
+    },
+    {
+     "choose": {
+      "target": "preview.format",
+      "item": "GIF"
+     }
+    },
+    {
+     "open": "preview.matte"
+    }
+   ],
+   "shot": {
+    "area": "popup"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "11_remove_unused_result",
+   "check": "remove unused",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "command": "file.imagePreview"
+    },
+    {
+     "wait": 800
+    },
+    {
+     "choose": {
+      "target": "preview.format",
+      "item": "GIF"
+     }
+    },
+    {
+     "click": "preview.options_menu"
+    },
+    {
+     "click": "Nicht verwendete Farben entfernen"
+    },
+    {
+     "record_ui": "preview.color_count"
+    }
+   ],
+   "shot": null,
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "12_interlace_result",
+   "check": "interlace",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "command": "file.imagePreview"
+    },
+    {
+     "wait": 800
+    },
+    {
+     "choose": {
+      "target": "preview.format",
+      "item": "GIF"
+     }
+    },
+    {
+     "click": "preview.options_menu"
+    },
+    {
+     "click": "Mit Zeilensprung"
+    },
+    {
+     "record_ui": "preview.size_text"
+    }
+   ],
+   "shot": null,
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "N23: label may be cut off"
+  },
+  {
+   "id": "13_jpeg_quality_result",
+   "check": "jpeg quality",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "command": "file.imagePreview"
+    },
+    {
+     "wait": 800
+    },
+    {
+     "choose": {
+      "target": "preview.format",
+      "item": "JPEG"
+     }
+    },
+    {
+     "set_field": {
+      "target": "preview.quality",
+      "value": "40"
+     }
+    },
+    {
+     "set_field": {
+      "target": "preview.smoothing",
+      "value": "2"
+     }
+    },
+    {
+     "wait": 800
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "14_color_table_normal",
+   "check": "color table",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "command": "file.imagePreview"
+    },
+    {
+     "wait": 800
+    },
+    {
+     "choose": {
+      "target": "preview.format",
+      "item": "GIF"
+     }
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "color table area of the dialog"
+  },
+  {
+   "id": "14_color_table_open",
+   "check": "color table",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "command": "file.imagePreview"
+    },
+    {
+     "wait": 800
+    },
+    {
+     "choose": {
+      "target": "preview.format",
+      "item": "GIF"
+     }
+    },
+    {
+     "right_click": {
+      "color_table_cell": 0,
+      "grid": "preview"
+     }
+    },
+    {
+     "log_menu_items": true
+    }
+   ],
+   "shot": {
+    "area": "menu"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "15_options_menu_open",
+   "check": "options menu",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "command": "file.imagePreview"
+    },
+    {
+     "wait": 800
+    },
+    {
+     "click": "preview.options_menu"
+    },
+    {
+     "log_menu_items": true
+    }
+   ],
+   "shot": {
+    "area": "menu"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "original control id 4624"
+  },
+  {
+   "id": "16_sub_dialogs_save_preset_open",
+   "check": "sub dialogs - save preset",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "command": "file.imagePreview"
+    },
+    {
+     "wait": 800
+    },
+    {
+     "click": "preview.preset_add"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "16_sub_dialogs_optimize_size_open",
+   "check": "sub dialogs - optimize size",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "command": "file.imagePreview"
+    },
+    {
+     "wait": 800
+    },
+    {
+     "click": "preview.optimize_to_size"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "see re 17-bildvorschau §2.8 for the button set"
+  },
+  {
+   "id": "17_size_time_normal",
+   "check": "size time",
+   "method": {
+    "orig": "W",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "command": "file.imagePreview"
+    },
+    {
+     "wait": 800
+    },
+    {
+     "choose": {
+      "target": "preview.format",
+      "item": "GIF"
+     }
+    },
+    {
+     "record_ui": "preview.size_text"
+    }
+   ],
+   "shot": null,
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "18_ok_cancel_export_result",
+   "check": "ok cancel export",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "command": "file.imagePreview"
+    },
+    {
+     "wait": 800
+    },
+    {
+     "choose": {
+      "target": "preview.format",
+      "item": "JPEG"
+     }
+    },
+    {
+     "click": "Abbrechen"
+    },
+    {
+     "log_value": "fw.getDocumentDOM().exportOptions.exportFormat"
+    },
+    {
+     "command": "file.imagePreview"
+    },
+    {
+     "wait": 800
+    },
+    {
+     "choose": {
+      "target": "preview.format",
+      "item": "JPEG"
+     }
+    },
+    {
+     "click": "OK"
+    },
+    {
+     "log_value": "fw.getDocumentDOM().exportOptions.exportFormat"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "19_remember_result",
+   "check": "remember",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "command": "file.imagePreview"
+    },
+    {
+     "wait": 800
+    },
+    {
+     "choose": {
+      "target": "preview.format",
+      "item": "PNG 8"
+     }
+    },
+    {
+     "click": "OK"
+    },
+    {
+     "command": "file.imagePreview"
+    },
+    {
+     "wait": 800
+    },
+    {
+     "record_ui": "preview.format"
+    }
+   ],
+   "shot": null,
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "20_user_preset_result",
+   "check": "user preset",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "command": "file.imagePreview"
+    },
+    {
+     "wait": 800
+    },
+    {
+     "choose": {
+      "target": "preview.format",
+      "item": "GIF"
+     }
+    },
+    {
+     "click": "preview.preset_add"
+    },
+    {
+     "type": "par_preset"
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "click": "preview.preset"
+    },
+    {
+     "record_ui": "list.items"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    },
+    {
+     "click": "preview.preset_remove"
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "cleanup deletes the user preset again"
+  },
+  {
+   "id": "21_esc_result",
+   "check": "esc",
+   "method": {
+    "orig": "J",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "command": "file.imagePreview"
+    },
+    {
+     "wait": 800
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "record_ui": "dialog.open"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "22_tooltips_format_hover",
+   "check": "tooltips - format",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "command": "file.imagePreview"
+    },
+    {
+     "wait": 800
+    },
+    {
+     "hover": "preview.format"
+    },
+    {
+     "wait": 1200
+    },
+    {
+     "record_ui": "tooltip"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "22_tooltips_eyedropper_hover",
+   "check": "tooltips - eyedropper",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "command": "file.imagePreview"
+    },
+    {
+     "wait": 800
+    },
+    {
+     "choose": {
+      "target": "preview.format",
+      "item": "GIF"
+     }
+    },
+    {
+     "hover": "preview.transparency_eyedropper"
+    },
+    {
+     "wait": 1200
+    },
+    {
+     "record_ui": "tooltip"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "23_optimize_sync_result",
+   "check": "optimize sync",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "command": "file.imagePreview"
+    },
+    {
+     "wait": 800
+    },
+    {
+     "choose": {
+      "target": "preview.format",
+      "item": "JPEG"
+     }
+    },
+    {
+     "set_field": {
+      "target": "preview.quality",
+      "value": "55"
+     }
+    },
+    {
+     "click": "OK"
+    },
+    {
+     "panel": "window.optimize"
+    },
+    {
+     "record_ui": "optimize.fields"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "24_result_hash_gif_result",
+   "check": "result hash - gif",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "command": "file.imagePreview"
+    },
+    {
+     "wait": 800
+    },
+    {
+     "choose": {
+      "target": "preview.format",
+      "item": "GIF"
+     }
+    },
+    {
+     "click": "Exportieren..."
+    },
+    {
+     "file_dialog": "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\work\\{side}\\{unit}\\export_gif"
+    },
+    {
+     "record_file": "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\work\\{side}\\{unit}\\export_gif.gif"
+    }
+   ],
+   "shot": null,
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "E: compare file size/hash/pixels; button label in original 'Exportieren...' (unsure)"
+  },
+  {
+   "id": "24_result_hash_jpeg_result",
+   "check": "result hash - jpeg",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "command": "file.imagePreview"
+    },
+    {
+     "wait": 800
+    },
+    {
+     "choose": {
+      "target": "preview.format",
+      "item": "JPEG"
+     }
+    },
+    {
+     "click": "Exportieren..."
+    },
+    {
+     "file_dialog": "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\work\\{side}\\{unit}\\export_jpeg"
+    },
+    {
+     "record_file": "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\work\\{side}\\{unit}\\export_jpeg.jpg"
+    }
+   ],
+   "shot": null,
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "E: compare file size/hash/pixels; button label in original 'Exportieren...' (unsure)"
+  },
+  {
+   "id": "24_result_hash_png8_result",
+   "check": "result hash - png8",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "command": "file.imagePreview"
+    },
+    {
+     "wait": 800
+    },
+    {
+     "choose": {
+      "target": "preview.format",
+      "item": "PNG 8"
+     }
+    },
+    {
+     "click": "Exportieren..."
+    },
+    {
+     "file_dialog": "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\work\\{side}\\{unit}\\export_png8"
+    },
+    {
+     "record_file": "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\work\\{side}\\{unit}\\export_png8.png"
+    }
+   ],
+   "shot": null,
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "E: compare file size/hash/pixels; button label in original 'Exportieren...' (unsure)"
+  },
+  {
+   "id": "24_result_hash_png32_result",
+   "check": "result hash - png32",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "command": "file.imagePreview"
+    },
+    {
+     "wait": 800
+    },
+    {
+     "choose": {
+      "target": "preview.format",
+      "item": "PNG 32"
+     }
+    },
+    {
+     "click": "Exportieren..."
+    },
+    {
+     "file_dialog": "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\work\\{side}\\{unit}\\export_png32"
+    },
+    {
+     "record_file": "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\work\\{side}\\{unit}\\export_png32.png"
+    }
+   ],
+   "shot": null,
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "E: compare file size/hash/pixels; button label in original 'Exportieren...' (unsure)"
+  }
+ ]
+}

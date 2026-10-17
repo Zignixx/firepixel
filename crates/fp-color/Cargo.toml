@@ -1,0 +1,25 @@
+[package]
+name = "fp-color"
+description = "Colours, colour models, exact CMYK, blend modes, swatch files (ACT/ASE/ACO/GIF)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[features]
+default = []
+# Serialisierung der Grundtypen (Argb, Rgba8, Opacity, BlendMode, Palette) für das Dokumentmodell.
+serde = ["dep:serde"]
+
+[dependencies]
+fp-i18n = { workspace = true }
+thiserror = { workspace = true }
+serde = { workspace = true, optional = true }
+
+[dev-dependencies]
+serde_json = { workspace = true, features = ["float_roundtrip"] }
+crc32fast = { workspace = true }
+
+[lints]
+workspace = true

@@ -1,0 +1,158 @@
+# Pre-Release: Version hochzaehlen (Minor), Windows x64 und macOS arm64 bauen, Tag + Pre-Release
+# mit beiden ZIPs anlegen. Nur manuell (workflow_dispatch); siehe docs/RELEASE.md.
+name: prerelease
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version (z. B. 0.3.0); leer = letzte Version mit Minor + 1"
+        type: string
+        required: false
+        default: ""
+
+concurrency:
+  group: prerelease
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  version:
+    name: Version setzen
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      version: ${{ steps.ver.outputs.version }}
+      prev_tag: ${{ steps.ver.outputs.prev_tag }}
+      sha: ${{ steps.commit.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Naechste Version bestimmen
+        id: ver
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          prev_tag=$(git tag -l 'v0.*.0' --sort=-v:refname | head -n 1)
+          cargo_ver=$(sed -n '/^\[workspace.package\]/,/^\[/{s/^version *= *"\(.*\)"/\1/p}' Cargo.toml | head -n 1)
+          if [ -n "$prev_tag" ]; then base=${prev_tag#v}; else base=$cargo_ver; fi
+          if [ -n "${INPUT_VERSION}" ]; then
+            version=${INPUT_VERSION#v}
+          else
+            IFS=. read -r major minor _ <<< "$base"
+            version="${major}.$((minor + 1)).0"
+          fi
+          if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Ungueltige Version '$version' (erwartet X.Y.Z)"; exit 1
+          fi
+          if git rev-parse -q --verify "refs/tags/v$version" >/dev/null; then
+            echo "::error::Tag v$version existiert bereits"; exit 1
+          fi
+          echo "Letzter Tag: ${prev_tag:-keiner}, Cargo.toml: $cargo_ver -> neu: $version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "prev_tag=$prev_tag" >> "$GITHUB_OUTPUT"
+
+      - name: Rust stable
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+
+      - name: Version in Cargo.toml/Cargo.lock setzen und auf main committen
+        id: commit
+        env:
+          VERSION: ${{ steps.ver.outputs.version }}
+        run: |
+          set -euo pipefail
+          sed -i '/^\[workspace.package\]/,/^\[/{s/^version *= *".*"/version = "'"$VERSION"'"/}' Cargo.toml
+          cargo update --workspace
+          git diff --stat
+          changed=$(git diff --name-only | sort | tr '\n' ' ')
+          if [ -n "$changed" ] && [ "$changed" != "Cargo.lock Cargo.toml " ]; then
+            echo "::error::Unerwartete Aenderungen: $changed"; exit 1
+          fi
+          if [ -n "$changed" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit -am "Version $VERSION [skip ci]"
+            git push origin HEAD:main
+          fi
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+  windows:
+    name: Windows x64
+    needs: version
+    uses: ./.github/workflows/windows-ci.yml
+    with:
+      ref: ${{ needs.version.outputs.sha }}
+      package: true
+
+  macos:
+    name: macOS arm64
+    needs: version
+    uses: ./.github/workflows/macos-preview.yml
+    with:
+      ref: ${{ needs.version.outputs.sha }}
+
+  release:
+    name: Tag und Pre-Release
+    needs: [version, windows, macos]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.version.outputs.sha }}
+          fetch-depth: 0
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Notizen erzeugen
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+          PREV: ${{ needs.version.outputs.prev_tag }}
+        run: |
+          set -euo pipefail
+          ls -la dist
+          {
+            echo "Vorschau-Version **$VERSION** von Firepixel (Pre-Release, nicht final)."
+            echo
+            echo "- **Windows x64:** ZIP entpacken, \`firepixel.exe\` starten."
+            echo "- **macOS (Apple Silicon):** ZIP entpacken, \`Firepixel.app\` per Rechtsklick > Oeffnen starten (ad-hoc signiert, nicht notarisiert)."
+            echo
+            if [ -n "$PREV" ]; then
+              echo "### Aenderungen seit $PREV"
+              range="$PREV..HEAD"
+            else
+              echo "### Aenderungen (erste Vorschau, letzte 60 Commits)"
+              range="HEAD"
+            fi
+            echo
+            git log "$range" --no-merges --max-count=60 --pretty='- %s' \
+              | grep -v -E '^- Version [0-9.]+ \[skip ci\]$' || true
+            total=$(git rev-list --no-merges --count $range)
+            if [ "$total" -gt 60 ]; then echo; echo "… und $((total - 60)) weitere Commits."; fi
+          } > notes.md
+          cat notes.md
+
+      - name: Tag und Pre-Release anlegen
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.version.outputs.version }}
+          SHA: ${{ needs.version.outputs.sha }}
+        run: |
+          set -euo pipefail
+          gh release create "v$VERSION" dist/*.zip \
+            --target "$SHA" \
+            --prerelease \
+            --title "Firepixel $VERSION (Vorschau)" \
+            --notes-file notes.md
+          gh release view "v$VERSION" --json url --jq .url

@@ -1,0 +1,715 @@
+{
+ "unit": "menu-view",
+ "testfile": "T10",
+ "note": "Verbs as in tools/parity/runner/README.md. Every step starts with reopen <Txx> (test file fresh, earlier changes discarded) or close_all (no document). Menu commands: orig = menu path, fp = command id (side-specific, so the following actions are listed on both sides). Logical keys used here that may still be unmapped in ui_map.json: dialog.field.<i> / dialog.combo.<i> (i-th edit/combo of the top dialog), labels for dropdowns. Rare verbs used here that the runner may log as unsupported: new_document, window_click, drag_text, hover_text, right_click_text, double_click_text, drag_guide, drag_ruler_origin, drag_dialog_title, drag_dialog_slider, click_dialog_rel, drag_dialog_rel, canvas_wheel, reopen_dialog (repeat the opening actions), save_history_as_command, delete_saved_command, add_live_filter, file_dialog_open_types, restart_app, window_size, set_clipboard_image, drop_files, log_focus_cycle-like record_ui {focus_cycle:n}. Object 'I1#2' = duplicate of I1; 'text' = first text element; canvas_drag option hold = screenshot while the button is held.",
+ "steps": [
+  {
+   "id": "00_overview_normal",
+   "check": "overview after opening the test file",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "reopen": "T10"
+    }
+   ],
+   "shot": {
+    "area": "window"
+   }
+  },
+  {
+   "id": "01_zoom_in_out_result",
+   "check": "zoom in/out steps",
+   "method": {
+    "orig": "J",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "reopen": "T10"
+    },
+    {
+     "menu": [
+      "Ansicht",
+      "Größer zoomen"
+     ]
+    },
+    {
+     "menu": [
+      "Ansicht",
+      "Größer zoomen"
+     ]
+    },
+    {
+     "menu": [
+      "Ansicht",
+      "Kleiner zoomen"
+     ]
+    },
+    {
+     "log_value": "fw.getDocumentDOM().zoom"
+    },
+    {
+     "record_ui": "ui_state.summary"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "02_magnification_result",
+   "check": "magnification > steps",
+   "method": {
+    "orig": "J",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "reopen": "T10"
+    },
+    {
+     "menu": [
+      "Ansicht",
+      "Vergrößerung",
+      "66%"
+     ]
+    },
+    {
+     "log_value": "fw.getDocumentDOM().zoom"
+    },
+    {
+     "record_ui": "ui_state.summary"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "03_fit_selection_result",
+   "check": "fit selection",
+   "method": {
+    "orig": "J",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "select": "PG"
+    },
+    {
+     "menu": [
+      "Ansicht",
+      "Auswahl anpassen"
+     ]
+    },
+    {
+     "log_value": "fw.getDocumentDOM().zoom"
+    },
+    {
+     "record_ui": "ui_state.summary"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "04_fit_all_result",
+   "check": "fit all",
+   "method": {
+    "orig": "J",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "reopen": "T10"
+    },
+    {
+     "menu": [
+      "Ansicht",
+      "Alles anpassen"
+     ]
+    },
+    {
+     "log_value": "fw.getDocumentDOM().zoom"
+    },
+    {
+     "record_ui": "ui_state.summary"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "05_full_display_result",
+   "check": "full display / draft (wireframe)",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "key": "ctrl+K"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "after": [
+    {
+     "key": "ctrl+K"
+    }
+   ],
+   "note": "Ctrl+K toggles full display in the original; Firepixel menu entry missing in menu.ftl -> shortcut only (unverified)"
+  },
+  {
+   "id": "05_full_display_result_full",
+   "check": "full display / draft (wireframe) - full display (default)",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "06_macintosh_gamma_result",
+   "check": "gamma view",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "reopen": "T02"
+    },
+    {
+     "menu": [
+      "Ansicht",
+      "Gamma 1.8"
+     ]
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "after": [
+    {
+     "menu": [
+      "Ansicht",
+      "Gamma 1.8"
+     ]
+    }
+   ],
+   "note": "original label may be 'Macintosh-Gamma'"
+  },
+  {
+   "id": "07_hide_show_selection_result",
+   "check": "hide/show selection, show all",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "menu": [
+      "Ansicht",
+      "Auswahl ausblenden"
+     ]
+    },
+    {
+     "log_value": "(function(){var e=fw.getDocumentDOM().layers[0].frames[0].elements,r=[];for(var i=0;i<e.length;i++)r.push([e[i].name,e[i].visible]);return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "08_rulers_result",
+   "check": "rulers toggle",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "reopen": "T10"
+    },
+    {
+     "menu": [
+      "Ansicht",
+      "Lineale"
+     ]
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "09_grid_menu_result",
+   "check": "grid > show/snap/edit",
+   "method": {
+    "orig": "J",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "reopen": "T10"
+    },
+    {
+     "menu": [
+      "Ansicht",
+      "Raster",
+      "Raster anzeigen"
+     ]
+    },
+    {
+     "menu_open": [
+      "Ansicht",
+      "Raster"
+     ]
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "record_ui": "ui_state.summary"
+    }
+   ],
+   "shot": null,
+   "log_menu_items": true
+  },
+  {
+   "id": "10_guides_menu_result",
+   "check": "guides > show/lock/snap/edit",
+   "method": {
+    "orig": "J",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "reopen": "T10"
+    },
+    {
+     "menu_open": [
+      "Ansicht",
+      "Hilfslinien"
+     ]
+    },
+    {
+     "record_ui": "ui_state.summary"
+    }
+   ],
+   "shot": {
+    "area": "menu"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "11_slice_guides_result",
+   "check": "slice guides",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "reopen": "T06"
+    },
+    {
+     "menu": [
+      "Ansicht",
+      "Segment-Hilfslinien"
+     ]
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "12_slice_overlay_result",
+   "check": "slice overlay",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "reopen": "T06"
+    },
+    {
+     "menu": [
+      "Ansicht",
+      "Segmentüberlagerung"
+     ]
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "13_edges_result",
+   "check": "edges",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "menu": [
+      "Ansicht",
+      "Ränder"
+     ]
+    },
+    {
+     "canvas_move": [
+      100,
+      85
+     ]
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "14_tooltips_result",
+   "check": "tool tooltips",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "reopen": "T10"
+    },
+    {
+     "menu": [
+      "Ansicht",
+      "QuickInfos"
+     ]
+    },
+    {
+     "menu": [
+      "Ansicht",
+      "QuickInfos"
+     ]
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "15_hide_panels_result",
+   "check": "hide panels",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "reopen": "T10"
+    }
+   ],
+   "orig": [
+    {
+     "key": "F4"
+    }
+   ],
+   "fp": [
+    {
+     "ui_action": {
+      "run": "window.hidePanels"
+     }
+    }
+   ],
+   "shot": {
+    "area": "window"
+   },
+   "after": [
+    {
+     "key": "F4"
+    }
+   ]
+  },
+  {
+   "id": "16_status_bar_result",
+   "check": "status bar toggle",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "reopen": "T10"
+    },
+    {
+     "menu_open": [
+      "Ansicht"
+     ]
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Escape"
+    }
+   ],
+   "shot": null,
+   "log_menu_items": true,
+   "note": "original may not have a status bar toggle; only the menu items are logged"
+  },
+  {
+   "id": "17_screen_modes_result",
+   "check": "screen modes",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "reopen": "T10"
+    },
+    {
+     "key": "F"
+    }
+   ],
+   "shot": {
+    "area": "window"
+   },
+   "after": [
+    {
+     "key": "F"
+    },
+    {
+     "key": "F"
+    }
+   ],
+   "note": "F cycles the screen modes in the original; Firepixel unverified"
+  },
+  {
+   "id": "18_smart_guides_result",
+   "check": "smart guides / snap to pixels",
+   "method": {
+    "orig": "J",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "reopen": "T10"
+    },
+    {
+     "menu_open": [
+      "Ansicht",
+      "Intelligente Hilfslinien"
+     ]
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "record_ui": "ui_state.summary"
+    }
+   ],
+   "shot": null,
+   "log_menu_items": true
+  },
+  {
+   "id": "19_pages_states_nav_result",
+   "check": "page/state next/previous",
+   "method": {
+    "orig": "J",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "reopen": "T09"
+    },
+    {
+     "key": "PageDown"
+    },
+    {
+     "log_value": "fw.getDocumentDOM().currentFrameNum"
+    },
+    {
+     "record_ui": "ui_state.summary"
+    }
+   ],
+   "shot": null,
+   "note": "PageDown = next state in the original"
+  },
+  {
+   "id": "20_edit_guides_dialog_open",
+   "check": "edit guides (Ctrl+Alt+Shift+G)",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T10"
+    },
+    {
+     "key": "ctrl+alt+shift+G"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "21_preview_modes_result",
+   "check": "original/preview/2-up/4-up in the document",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "reopen": "T09"
+    },
+    {
+     "click_text": "2fach"
+    }
+   ],
+   "shot": {
+    "area": "window"
+   },
+   "note": "document view tabs labels ('Original', 'Vorschau', '2fach', '4fach') unverified"
+  },
+  {
+   "id": "22_hotspots_show_result",
+   "check": "hotspots on/off",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "reopen": "T06"
+    },
+    {
+     "key": "2"
+    }
+   ],
+   "shot": null,
+   "note": "key 2 toggles hotspots/slices visibility in the original (unverified)"
+  },
+  {
+   "id": "23_checkmarks_normal",
+   "check": "checkmarks in sync with state",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "reopen": "T10"
+    },
+    {
+     "menu": [
+      "Ansicht",
+      "Raster",
+      "Raster anzeigen"
+     ]
+    },
+    {
+     "menu_open": [
+      "Ansicht",
+      "Raster"
+     ]
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Escape"
+    }
+   ],
+   "shot": null,
+   "log_menu_items": true
+  },
+  {
+   "id": "24_persist_result",
+   "check": "view state remembered per document",
+   "method": {
+    "orig": "J",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "reopen": "T10"
+    },
+    {
+     "menu": [
+      "Ansicht",
+      "Vergrößerung",
+      "50%"
+     ]
+    },
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "key": "ctrl+Tab"
+    },
+    {
+     "log_value": "fw.getDocumentDOM().zoom"
+    },
+    {
+     "record_ui": "ui_state.summary"
+    }
+   ],
+   "shot": null
+  }
+ ]
+}

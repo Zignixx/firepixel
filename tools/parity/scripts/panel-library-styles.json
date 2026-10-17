@@ -1,0 +1,602 @@
+{
+ "unit": "panel-library-styles",
+ "testfile": "T06",
+ "testfiles": [
+  "T06",
+  "T04"
+ ],
+ "note": "Action verbs (both/orig/fp): open_testfile <T..> (close docs unsaved, open fresh, base settings) / close_all; menu 'A > B'; command <id from commands.json>; panel <window.* id or title>; panel_menu <panel> (open its menu); select <object name|[names]>; select_none; tool <tool id>; open <logical ui key>; click/double_click/right_click/hover/mouse_down/mouse_up <label|{key}|{popup_swatch:#hex}|{area,pos}>; drag {from,to,mods}; canvas_click/canvas_move [x,y] (document px); canvas_drag {from,to,mods}; scroll {area,delta}; key <combo>; type <text>; wait <ms>; choose {target,item} (pick list entry); file_dialog <path> (choose file in open dialog); export_png doc (export + hash); resize_panel {panel,width}; set_field {target,value}; export {dir,name,type,...} (File > Export dialog); clear_dir/record_dir <dir>; record_file <path> (size+hash+pixels); record_file_text <path>; restart_app; resize_dialog {width,height}; target forms {canvas:[x,y]|name}, {pref_category}, {tree_item:[path]}, hold_key in drag/click; log_value <JSF expression, logged in both>; record_ui <logical ui key> (orig window text/UIA, fp ui_find/ui_state); jsf <code> (in both = fp run_script); fp-only ui_action {...}, ui_find_click <text>. Step keys: after = actions after the shot; log_menu_items = item texts + enabled/checked of the open menu; shot omitted = value-only checkpoint.",
+ "steps": [
+  {
+   "id": "00_overview_normal",
+   "check": "overview after opening the test file",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "panel": "window.documentLibrary"
+    }
+   ],
+   "shot": {
+    "area": "window"
+   }
+  },
+  {
+   "id": "01_doclib_layout_normal",
+   "check": "doclib layout",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "panel": "window.documentLibrary"
+    },
+    {
+     "click": {
+      "list_row": "Grafik1"
+     }
+    }
+   ],
+   "shot": {
+    "area": "panel:library"
+   }
+  },
+  {
+   "id": "02_doclib_menu_open",
+   "check": "doclib menu",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "panel": "window.documentLibrary"
+    },
+    {
+     "panel_menu": "library"
+    },
+    {
+     "log_menu_items": true
+    }
+   ],
+   "shot": {
+    "area": "menu"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "03_doclib_drag_result",
+   "check": "doclib drag",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "panel": "window.documentLibrary"
+    },
+    {
+     "log_value": "fw.getDocumentDOM().layers.map(function(l){return l.frames[0].elements.length}).join('|')"
+    },
+    {
+     "drag": {
+      "from": {
+       "list_row": "Grafik1"
+      },
+      "to": {
+       "canvas": [
+        600,
+        400
+       ]
+      },
+      "steps": 30,
+      "press_ms": 300,
+      "release_ms": 400
+     }
+    },
+    {
+     "wait": 500
+    },
+    {
+     "log_value": "fw.getDocumentDOM().layers.map(function(l){return l.frames[0].elements.length}).join('|')"
+    },
+    {
+     "log_value": "fw.selection.length ? [fw.selection[0].left, fw.selection[0].top, fw.selection[0].width, fw.selection[0].height].join(',') : null"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "note": "R-7 (TW-99, Q-42, M9 re 42 §1): count before and after, drag with a pause after the press, small moves past the drag threshold and a pause before the release (the drag did not arrive in the reference in lauf 11); M9 Soll: 4|3 -> 5|3, instance 571,371-631,431, selected"
+  },
+  {
+   "id": "04_doclib_props_open",
+   "check": "doclib props",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "panel": "window.documentLibrary"
+    },
+    {
+     "double_click": {
+      "list_row": "Grafik1",
+      "icon": true
+     }
+    }
+   ],
+   "shot": {
+    "area": "window"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    },
+    {
+     "command": "file.close"
+    }
+   ],
+   "note": "R-5: a double-click on the row icon edits the symbol in both programs (re 28 S2, FP1-05: name = rename, kind column = place); no dialog opens, so the shot is the window (lauf 9 Firepixel 'no dialog window found') R-7 (A3-10): Esc does not end the symbol editing - the symbol's tab is closed with 'Datei > Schließen' (no changes, so no question)"
+  },
+  {
+   "id": "05_doclib_footer_normal",
+   "check": "doclib footer",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "panel": "window.documentLibrary"
+    }
+   ],
+   "shot": {
+    "area": "panel:library"
+   }
+  },
+  {
+   "id": "06_commonlib_tree_normal",
+   "check": "commonlib tree",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "panel": "window.commonLibrary"
+    }
+   ],
+   "shot": {
+    "area": "panel:common-library"
+   }
+  },
+  {
+   "id": "06_commonlib_tree_open",
+   "check": "commonlib tree",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "panel": "window.commonLibrary"
+    },
+    {
+     "double_click": {
+      "list_row": 0
+     }
+    }
+   ],
+   "shot": {
+    "area": "panel:common-library"
+   }
+  },
+  {
+   "id": "07_commonlib_insert_result",
+   "check": "commonlib insert",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "panel": "window.commonLibrary"
+    },
+    {
+     "double_click": {
+      "list_row": 0
+     }
+    },
+    {
+     "drag": {
+      "from": {
+       "list_row": 0
+      },
+      "to": {
+       "canvas": [
+        600,
+        400
+       ]
+      }
+     }
+    },
+    {
+     "log_value": "fw.getDocumentDOM().layers.map(function(l){return l.frames[0].elements.length}).join('|')"
+    }
+   ],
+   "shot": null,
+   "note": "first folder's first element"
+  },
+  {
+   "id": "08_commonlib_menu_open",
+   "check": "commonlib menu",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "panel": "window.commonLibrary"
+    },
+    {
+     "panel_menu": "common-library"
+    },
+    {
+     "log_menu_items": true
+    }
+   ],
+   "shot": {
+    "area": "menu"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "09_styles_grid_normal",
+   "check": "styles grid",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "panel": "window.styles"
+    }
+   ],
+   "shot": {
+    "area": "panel:styles"
+   }
+  },
+  {
+   "id": "10_styles_apply_result",
+   "check": "styles apply",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "panel": "window.styles"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "click": {
+      "style_cell": 3
+     }
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "note": "E: export document PNG and hash"
+  },
+  {
+   "id": "11_styles_new_open",
+   "check": "styles new",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "panel": "window.styles"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "panel_menu": "styles"
+    },
+    {
+     "click": "Neuer Stil..."
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "12_styles_menu_open",
+   "check": "styles menu",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "panel": "window.styles"
+    },
+    {
+     "panel_menu": "styles"
+    },
+    {
+     "log_menu_items": true
+    }
+   ],
+   "shot": {
+    "area": "menu"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "13_styles_libraries_open",
+   "check": "styles libraries",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "panel": "window.styles"
+    },
+    {
+     "panel_menu": "styles"
+    },
+    {
+     "hover": "Stilbibliothek importieren..."
+    },
+    {
+     "log_menu_items": true
+    }
+   ],
+   "shot": null,
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "original may have a libraries submenu; label unsure"
+  },
+  {
+   "id": "14_styles_break_link_result",
+   "check": "styles break link",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "panel": "window.styles"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "click": {
+      "style_cell": 3
+     }
+    },
+    {
+     "panel_menu": "styles"
+    },
+    {
+     "click": "Verknüpfung mit Stil aufheben"
+    },
+    {
+     "log_value": "fw.selection[0].styleName"
+    }
+   ],
+   "shot": null,
+   "note": "JSF property for linked style unsure"
+  },
+  {
+   "id": "15_url_layout_normal",
+   "check": "url layout",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "panel": "window.url"
+    },
+    {
+     "select": "S1"
+    }
+   ],
+   "shot": {
+    "area": "panel:url"
+   }
+  },
+  {
+   "id": "16_url_menu_open",
+   "check": "url menu",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "panel": "window.url"
+    },
+    {
+     "panel_menu": "url"
+    },
+    {
+     "log_menu_items": true
+    }
+   ],
+   "shot": {
+    "area": "menu"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "17_url_apply_result",
+   "check": "url apply",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "panel": "window.url"
+    },
+    {
+     "select": "S1"
+    },
+    {
+     "click": "url.field"
+    },
+    {
+     "type": "https://example.org/par"
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "log_value": "fw.selection[0].urlText"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "18_undo_result",
+   "check": "undo",
+   "method": {
+    "orig": "J",
+    "fp": "H"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "panel": "window.styles"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "log_value": "fw.historyPalette.getStepCount()"
+    },
+    {
+     "click": {
+      "style_cell": 3
+     }
+    },
+    {
+     "log_value": "fw.historyPalette.getStepCount()"
+    },
+    {
+     "key": "Ctrl+Z"
+    },
+    {
+     "log_value": "fw.selection.length ? fw.selection[0].pathAttributes.fillColor : null"
+    }
+   ],
+   "shot": null,
+   "note": "record of undo step count via JSF unsure; fp may use ui_state history length instead"
+  }
+ ]
+}

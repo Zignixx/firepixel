@@ -1,0 +1,1293 @@
+{
+ "unit": "inspector-fields",
+ "testfile": "T04",
+ "testfiles": [
+  "T04",
+  "T05"
+ ],
+ "note": "Action verbs as in the shared list (see panel-layers.json): open_testfile, select, select_none, tool <tool id>, choose {target,item} (item path 'A > B'; toolbox.<tool>_flyout picks a flyout entry, orig_index = position in the owner-drawn list of the original), open <logical ui key>, click/double_click/hover <ui key|{handle}|{menu_item}>, drag {from,by|to,mods}, canvas_click/canvas_double_click/canvas_hover [x,y] (+mods), canvas_drag {from,to,mods}, canvas_wheel {pos,delta,modifiers}, key <combo>, repeat/do, type, menu 'A > B', menu_open, set_field {target,value}, jsf (both = fp run_script), record_ui <key>, log_value, log_menu_items, export_png doc, wait, close_all, window_size. Additions in this file: {handle: <index|role>} = control/frame handle of the selected object (orig: controlPoints, fp: autoShape.describe/frame); drag_popup_slider {to_fraction,hold} = drag inside the open popup slider; record_ui history.names = history step names; mods on canvas_click/canvas_hover = held modifier keys. Coordinates are document pixels. Labels are compared without '&' and trailing '...'/'…'.",
+ "steps": [
+  {
+   "id": "00_overview_normal",
+   "check": "overview after opening the test file",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    }
+   ],
+   "shot": {
+    "area": "window"
+   }
+  },
+  {
+   "id": "01_h_field_result",
+   "check": "h field",
+   "method": {
+    "orig": "W, J",
+    "fp": "S, D"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "set_field": {
+      "target": "inspector.height",
+      "value": "9999"
+     }
+    },
+    {
+     "record_ui": "inspector.fields"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "set_field": {
+      "target": "inspector.height",
+      "value": "-5"
+     }
+    },
+    {
+     "record_ui": "inspector.fields"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "set_field": {
+      "target": "inspector.height",
+      "value": "0"
+     }
+    },
+    {
+     "record_ui": "inspector.fields"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "set_field": {
+      "target": "inspector.height",
+      "value": "12,5"
+     }
+    },
+    {
+     "record_ui": "inspector.fields"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "set_field": {
+      "target": "inspector.height",
+      "value": "x"
+     }
+    },
+    {
+     "record_ui": "inspector.fields"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "record_ui": "inspector.fields"
+    }
+   ]
+  },
+  {
+   "id": "02_y_field_result",
+   "check": "y field",
+   "method": {
+    "orig": "W, J",
+    "fp": "S, D"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "set_field": {
+      "target": "inspector.y",
+      "value": "9999"
+     }
+    },
+    {
+     "record_ui": "inspector.fields"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "set_field": {
+      "target": "inspector.y",
+      "value": "-5"
+     }
+    },
+    {
+     "record_ui": "inspector.fields"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "set_field": {
+      "target": "inspector.y",
+      "value": "0"
+     }
+    },
+    {
+     "record_ui": "inspector.fields"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "set_field": {
+      "target": "inspector.y",
+      "value": "12,5"
+     }
+    },
+    {
+     "record_ui": "inspector.fields"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "set_field": {
+      "target": "inspector.y",
+      "value": "x"
+     }
+    },
+    {
+     "record_ui": "inspector.fields"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "record_ui": "inspector.fields"
+    }
+   ]
+  },
+  {
+   "id": "03_edge_field_result",
+   "check": "edge field",
+   "method": {
+    "orig": "W",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "choose": {
+      "target": "inspector.fill_edge",
+      "item": "Weiche Kante"
+     }
+    },
+    {
+     "set_field": {
+      "target": "inspector.fill_edge_amount",
+      "value": "0"
+     }
+    },
+    {
+     "record_ui": "inspector.fields"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "set_field": {
+      "target": "inspector.fill_edge_amount",
+      "value": "50"
+     }
+    },
+    {
+     "record_ui": "inspector.fields"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "set_field": {
+      "target": "inspector.fill_edge_amount",
+      "value": "100"
+     }
+    },
+    {
+     "record_ui": "inspector.fields"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "set_field": {
+      "target": "inspector.fill_edge_amount",
+      "value": "1000"
+     }
+    },
+    {
+     "record_ui": "inspector.fields"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "set_field": {
+      "target": "inspector.fill_edge_amount",
+      "value": "-5"
+     }
+    },
+    {
+     "record_ui": "inspector.fields"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "set_field": {
+      "target": "inspector.fill_edge_amount",
+      "value": "x"
+     }
+    },
+    {
+     "record_ui": "inspector.fields"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "record_ui": "inspector.fields"
+    }
+   ]
+  },
+  {
+   "id": "04_texture_field_result",
+   "check": "texture field",
+   "method": {
+    "orig": "W",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "choose": {
+      "target": "inspector.fill_texture",
+      "item": "Ader"
+     }
+    },
+    {
+     "set_field": {
+      "target": "inspector.fill_texture_amount",
+      "value": "0"
+     }
+    },
+    {
+     "record_ui": "inspector.fields"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "set_field": {
+      "target": "inspector.fill_texture_amount",
+      "value": "50"
+     }
+    },
+    {
+     "record_ui": "inspector.fields"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "set_field": {
+      "target": "inspector.fill_texture_amount",
+      "value": "100"
+     }
+    },
+    {
+     "record_ui": "inspector.fields"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "set_field": {
+      "target": "inspector.fill_texture_amount",
+      "value": "150"
+     }
+    },
+    {
+     "record_ui": "inspector.fields"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "set_field": {
+      "target": "inspector.fill_texture_amount",
+      "value": "-5"
+     }
+    },
+    {
+     "record_ui": "inspector.fields"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "set_field": {
+      "target": "inspector.fill_texture_amount",
+      "value": "x"
+     }
+    },
+    {
+     "record_ui": "inspector.fields"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "record_ui": "inspector.fields"
+    }
+   ]
+  },
+  {
+   "id": "05_tracking_field_result",
+   "check": "tracking field",
+   "method": {
+    "orig": "W",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T05"
+    },
+    {
+     "select": "TX1"
+    },
+    {
+     "set_field": {
+      "target": "inspector.tracking",
+      "value": "-50"
+     }
+    },
+    {
+     "record_ui": "inspector.fields"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "set_field": {
+      "target": "inspector.tracking",
+      "value": "0"
+     }
+    },
+    {
+     "record_ui": "inspector.fields"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "set_field": {
+      "target": "inspector.tracking",
+      "value": "999"
+     }
+    },
+    {
+     "record_ui": "inspector.fields"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "set_field": {
+      "target": "inspector.tracking",
+      "value": "x"
+     }
+    },
+    {
+     "record_ui": "inspector.fields"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "record_ui": "inspector.fields"
+    }
+   ]
+  },
+  {
+   "id": "06_leading_field_result",
+   "check": "leading field",
+   "method": {
+    "orig": "W",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T05"
+    },
+    {
+     "select": "TX2"
+    },
+    {
+     "set_field": {
+      "target": "inspector.leading",
+      "value": "0"
+     }
+    },
+    {
+     "record_ui": "inspector.fields"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "set_field": {
+      "target": "inspector.leading",
+      "value": "50"
+     }
+    },
+    {
+     "record_ui": "inspector.fields"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "set_field": {
+      "target": "inspector.leading",
+      "value": "999"
+     }
+    },
+    {
+     "record_ui": "inspector.fields"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "set_field": {
+      "target": "inspector.leading",
+      "value": "x"
+     }
+    },
+    {
+     "record_ui": "inspector.fields"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "record_ui": "inspector.fields"
+    }
+   ]
+  },
+  {
+   "id": "07_baseline_field_result",
+   "check": "baseline field",
+   "method": {
+    "orig": "W",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T05"
+    },
+    {
+     "select": "TX1"
+    },
+    {
+     "set_field": {
+      "target": "inspector.baseline",
+      "value": "-50"
+     }
+    },
+    {
+     "record_ui": "inspector.fields"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "set_field": {
+      "target": "inspector.baseline",
+      "value": "0"
+     }
+    },
+    {
+     "record_ui": "inspector.fields"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "set_field": {
+      "target": "inspector.baseline",
+      "value": "999"
+     }
+    },
+    {
+     "record_ui": "inspector.fields"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "set_field": {
+      "target": "inspector.baseline",
+      "value": "x"
+     }
+    },
+    {
+     "record_ui": "inspector.fields"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "record_ui": "inspector.fields"
+    }
+   ]
+  },
+  {
+   "id": "08_indent_field_result",
+   "check": "indent field",
+   "method": {
+    "orig": "W",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T05"
+    },
+    {
+     "select": "TX2"
+    },
+    {
+     "set_field": {
+      "target": "inspector.indent",
+      "value": "-50"
+     }
+    },
+    {
+     "record_ui": "inspector.fields"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "set_field": {
+      "target": "inspector.indent",
+      "value": "0"
+     }
+    },
+    {
+     "record_ui": "inspector.fields"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "set_field": {
+      "target": "inspector.indent",
+      "value": "999"
+     }
+    },
+    {
+     "record_ui": "inspector.fields"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "set_field": {
+      "target": "inspector.indent",
+      "value": "x"
+     }
+    },
+    {
+     "record_ui": "inspector.fields"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "set_field": {
+      "target": "inspector.space_before",
+      "value": "999"
+     }
+    },
+    {
+     "set_field": {
+      "target": "inspector.space_after",
+      "value": "-5"
+     }
+    },
+    {
+     "record_ui": "inspector.fields"
+    },
+    {
+     "record_ui": "inspector.fields"
+    }
+   ]
+  },
+  {
+   "id": "09_opacity_popup_open",
+   "check": "opacity popup",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "open": "inspector.opacity_slider"
+    }
+   ],
+   "shot": {
+    "area": "popup"
+   }
+  },
+  {
+   "id": "10_edge_popup_open",
+   "check": "edge popup",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "choose": {
+      "target": "inspector.fill_edge",
+      "item": "Weiche Kante"
+     }
+    },
+    {
+     "open": "inspector.fill_edge_slider"
+    }
+   ],
+   "shot": {
+    "area": "popup"
+   }
+  },
+  {
+   "id": "11_texture_popup_open",
+   "check": "texture popup",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "choose": {
+      "target": "inspector.fill_texture",
+      "item": "Ader"
+     }
+    },
+    {
+     "open": "inspector.fill_texture_slider"
+    }
+   ],
+   "shot": {
+    "area": "popup"
+   }
+  },
+  {
+   "id": "12_stroke_popup_open",
+   "check": "stroke popup",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "E1"
+    },
+    {
+     "open": "inspector.stroke_size_slider"
+    }
+   ],
+   "shot": {
+    "area": "popup"
+   }
+  },
+  {
+   "id": "13_roundness_popup_open",
+   "check": "roundness popup",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "open": "inspector.roundness_slider"
+    }
+   ],
+   "shot": {
+    "area": "popup"
+   },
+   "note": "R1 is a path in the original (no roundness field) per unit 13 recording; fallback: draw a rectangle primitive first."
+  },
+  {
+   "id": "14_popup_drag_live_popup_pressed",
+   "check": "popup drag live",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "open": "inspector.opacity_slider"
+    },
+    {
+     "drag_popup_slider": {
+      "to_fraction": 0.3,
+      "hold": true
+     }
+    }
+   ],
+   "shot": {
+    "area": "popup"
+   }
+  },
+  {
+   "id": "14_popup_drag_live_canvas_pressed",
+   "check": "popup drag live",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "open": "inspector.opacity_slider"
+    },
+    {
+     "drag_popup_slider": {
+      "to_fraction": 0.3,
+      "hold": true
+     }
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "note": "Screenshot while the mouse button is still held."
+  },
+  {
+   "id": "15_popup_esc_result",
+   "check": "popup esc",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "open": "inspector.opacity_slider"
+    },
+    {
+     "drag_popup_slider": {
+      "to_fraction": 0.3
+     }
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "log_value": "fw.selection.length"
+    }
+   ]
+  },
+  {
+   "id": "16_popup_click_out_result",
+   "check": "popup click out",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "open": "inspector.opacity_slider"
+    },
+    {
+     "drag_popup_slider": {
+      "to_fraction": 0.3
+     }
+    },
+    {
+     "canvas_click": [
+      700,
+      550
+     ]
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "log_value": "fw.selection.length"
+    }
+   ],
+   "note": "Click on an empty canvas point may also deselect; compare the opacity value."
+  },
+  {
+   "id": "17_focus_ring_width_focus",
+   "check": "focus ring",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "click": "inspector.width"
+    }
+   ],
+   "shot": {
+    "area": "inspector"
+   }
+  },
+  {
+   "id": "17_focus_ring_opacity_focus",
+   "check": "focus ring",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "click": "inspector.opacity"
+    }
+   ],
+   "shot": {
+    "area": "inspector"
+   }
+  },
+  {
+   "id": "18_tab_order_focus",
+   "check": "tab order",
+   "method": {
+    "orig": "W",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "click": "inspector.width"
+    },
+    {
+     "key": "Tab"
+    },
+    {
+     "record_ui": "focus"
+    },
+    {
+     "key": "Tab"
+    },
+    {
+     "record_ui": "focus"
+    },
+    {
+     "key": "Tab"
+    },
+    {
+     "record_ui": "focus"
+    },
+    {
+     "key": "Tab"
+    },
+    {
+     "record_ui": "focus"
+    },
+    {
+     "key": "Tab"
+    },
+    {
+     "record_ui": "focus"
+    },
+    {
+     "key": "Tab"
+    },
+    {
+     "record_ui": "focus"
+    },
+    {
+     "key": "Tab"
+    },
+    {
+     "record_ui": "focus"
+    },
+    {
+     "key": "Tab"
+    },
+    {
+     "record_ui": "focus"
+    },
+    {
+     "record_ui": "focus"
+    }
+   ]
+  },
+  {
+   "id": "19_enter_canvas_focus",
+   "check": "enter canvas",
+   "method": {
+    "orig": "J",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "set_field": {
+      "target": "inspector.width",
+      "value": "120"
+     }
+    },
+    {
+     "key": "V"
+    },
+    {
+     "record_ui": "ui_state.tool"
+    },
+    {
+     "record_ui": "focus"
+    },
+    {
+     "record_ui": "inspector.fields"
+    }
+   ],
+   "note": "Checks whether a tool letter typed after Enter reaches the canvas or the field."
+  },
+  {
+   "id": "20_undo_each_result",
+   "check": "undo each",
+   "method": {
+    "orig": "J",
+    "fp": "H"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "set_field": {
+      "target": "inspector.width",
+      "value": "120"
+     }
+    },
+    {
+     "set_field": {
+      "target": "inspector.x",
+      "value": "60"
+     }
+    },
+    {
+     "set_field": {
+      "target": "inspector.stroke_size",
+      "value": "3"
+     }
+    },
+    {
+     "choose": {
+      "target": "inspector.fill_edge",
+      "item": "Weiche Kante"
+     }
+    },
+    {
+     "set_field": {
+      "target": "inspector.fill_edge_amount",
+      "value": "20"
+     }
+    },
+    {
+     "choose": {
+      "target": "inspector.fill_texture",
+      "item": "Ader"
+     }
+    },
+    {
+     "set_field": {
+      "target": "inspector.fill_texture_amount",
+      "value": "40"
+     }
+    },
+    {
+     "record_ui": "history.names"
+    }
+   ]
+  },
+  {
+   "id": "21_mixed_empty_result",
+   "check": "mixed empty",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": [
+      "R1",
+      "R2"
+     ]
+    },
+    {
+     "record_ui": "inspector.fields"
+    },
+    {
+     "set_field": {
+      "target": "inspector.opacity",
+      "value": "70"
+     }
+    },
+    {
+     "record_ui": "inspector.fields"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": {
+    "area": "inspector"
+   }
+  },
+  {
+   "id": "22_units_leading_open",
+   "check": "units",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "open_testfile": "T05"
+    },
+    {
+     "select": "TX2"
+    },
+    {
+     "open": "inspector.leading_unit"
+    }
+   ],
+   "shot": {
+    "area": "popup"
+   }
+  },
+  {
+   "id": "22_units_size_open",
+   "check": "units",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "open_testfile": "T05"
+    },
+    {
+     "select": "TX2"
+    },
+    {
+     "open": "inspector.size_slider"
+    }
+   ],
+   "shot": {
+    "area": "popup"
+   },
+   "note": "Second unit list unsure (inventory: '%/px, pt'); size slider used as substitute."
+  },
+  {
+   "id": "23_disabled_look_path_no_fill_disabled",
+   "check": "disabled look",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "P1"
+    }
+   ],
+   "shot": {
+    "area": "inspector"
+   }
+  },
+  {
+   "id": "23_disabled_look_stroke_none_disabled",
+   "check": "disabled look",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "R1"
+    }
+   ],
+   "shot": {
+    "area": "inspector"
+   },
+   "note": "R1 has no stroke: stroke fields grey."
+  },
+  {
+   "id": "24_hover_field_hover",
+   "check": "hover",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "hover": "inspector.width"
+    },
+    {
+     "wait": 600
+    }
+   ],
+   "shot": {
+    "area": "inspector"
+   }
+  },
+  {
+   "id": "24_hover_arrow_hover",
+   "check": "hover",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "hover": "inspector.opacity_slider"
+    },
+    {
+     "wait": 600
+    }
+   ],
+   "shot": {
+    "area": "inspector"
+   }
+  }
+ ]
+}

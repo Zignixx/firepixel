@@ -1,0 +1,18 @@
+{
+  "format": "firepixel-batch-recipe",
+  "name": "bg-flatten-unmix",
+  "output": {
+    "format": "png"
+  },
+  "steps": [
+    {
+      "id": "background.flatten",
+      "params": {
+        "color": "#000000",
+        "edge": "unmix",
+        "matte": "#ffffff"
+      }
+    }
+  ],
+  "version": 1
+}

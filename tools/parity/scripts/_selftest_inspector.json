@@ -1,0 +1,14 @@
+{
+  "unit": "_selftest_inspector",
+  "testfile": "T04",
+  "note": "Runner self test: inspector with the rectangle R1 selected; canvas click maps document coordinates.",
+  "steps": [
+    { "id": "01_inspector_rect_selected", "check": "inspector for a selected rectangle", "both": [ {"select": "R1"} ],
+      "shot": {"area": "inspector"} },
+    { "id": "02_canvas_click_selects_r2", "check": "click at document 250,85 selects R2",
+      "both": [ {"tool": "tool.pointer"}, {"select_none": true}, {"canvas_click": [250, 85]},
+                {"log_value": "fw.selection.length ? fw.selection[0].name : 'none'"} ],
+      "shot": {"area": "canvas"} },
+    { "id": "03_layers_panel", "check": "layers panel", "both": [ {"panel": "window.layers"} ], "shot": {"area": "panel:layers"} }
+  ]
+}

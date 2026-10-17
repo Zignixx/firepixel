@@ -1,0 +1,77 @@
+[package]
+name = "fp-engine"
+description = "Firepixel core: command registry, undo/redo history, selection, clipboard, tool state machines, preferences and session (UI-independent)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+# Integrationstests als ein Testprogramm (tests\all.rs), Einzelprozess-Tests unten (INF-1)
+autotests = false
+
+[features]
+default = ["vector", "render"]
+# Pfadoperationen (boolesche Operationen, Strich erweitern, Einlassen, Vereinfachen) über
+# fp-vector. Ohne das Feature baut fp-engine mit der eingebauten Grundgeometrie.
+vector = ["dep:fp-vector"]
+# Compositor fp-render als Vorgabe-Renderer der Sitzung (Pipette, Reduzieren, flaches Bild beim
+# Speichern). Ohne das Feature steckt die Anwendung einen eigenen `PageRenderer` ein.
+render = ["dep:fp-render"]
+
+[dependencies]
+fp-geom = { workspace = true, features = ["serde"] }
+fp-color = { workspace = true, features = ["serde"] }
+fp-raster = { workspace = true }
+fp-model = { workspace = true }
+fp-fwpng = { workspace = true }
+fp-text = { workspace = true }
+# Export (Exportieren, Bildvorschau, HTML, PSD/PDF …) und Import (Importieren, Öffnen anderer Formate)
+fp-export = { workspace = true }
+fp-io = { workspace = true }
+# KI-Auswahl (Objektauswahl, Motiv auswählen, Kante verfeinern), Agent KI
+fp-ai = { path = "../fp-ai" }
+# Rechtschreibprüfung mit Hunspell-Wörterbüchern (reines Rust; Wörterbücher zur Laufzeit)
+spellbook = "0.4"
+fp-vector = { workspace = true, optional = true }
+fp-render = { workspace = true, optional = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+# Mehrsprachigkeit: Fehlertexte, Verlaufsschritte, Statushinweise, Standardnamen
+fp-i18n = { workspace = true }
+# Bitmap nachzeichnen (Vektorisierung, Agent VT)
+fp-trace = { workspace = true }
+
+[dev-dependencies]
+# Liste aller tests\*.rs fuer tests\all.rs (INF-1)
+fp-testlist = { path = "../fp-testlist", features = ["fp-engine"] }
+# Batch-Laufzeit für die Funktionstests der batch.*-Befehle (all_commands; fp-batch steckt sich über
+# den Haken BatchHost ein, wie in App, CLI und MCP)
+fp-batch = { path = "../fp-batch" }
+# Pixel-Hashes der Golden-Tests (sha256 der RGBA-Pixel wie die Messungen des Originals, PAR-X-BRUSH-1)
+sha2 = "0.10"
+
+[lints]
+workspace = true
+
+# Alle tests\*.rs laufen als EIN Testprogramm (INF-1, docs\AGENTEN_REGELN.md §2): neue Dateien
+# einfach unter tests\ anlegen, sie werden automatisch eingebunden (crates\fp-testlist).
+# `cargo test -p fp-engine --test all <datei>::`
+[[test]]
+name = "all"
+path = "tests/all.rs"
+
+# Eigener Prozess nur, wenn ein Test prozessweiten Zustand umstellt, den parallel laufende Tests
+# anderer Dateien sehen würden. Jede Datei hier mit Grund; die Liste klein halten.
+
+# stellt die prozessweite KI-Modellsuche auf einen leeren Ordner um (fp_ai::models::set_search_override)
+[[test]]
+name = "ai_missing"
+path = "tests/ai_missing.rs"
+
+# rechnet mit den echten Modellen und prüft „kein Modell geladen“ bzw. die zwischengespeicherte
+# Rohausgabe (`retune`): der KI-Zwischenspeicher (`fp_ai`) ist prozessweit, andere Dateien laden
+# und entladen parallel Modelle (NZ-2; im gemeinsamen Programm rot, allein 5/5 grün)
+[[test]]
+name = "ai_tuning_ki2"
+path = "tests/ai_tuning_ki2.rs"

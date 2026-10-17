@@ -1,0 +1,38 @@
+[package]
+name = "firepixel-cli"
+description = "Firepixel command line: run/batch/render/info/commands/convert/script/mcp"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+# App-Icon + Versionsangaben (gemeinsames Build-Skript der GUI)
+build = "../firepixel/build.rs"
+
+[[bin]]
+name = "firepixel-cli"
+path = "src/main.rs"
+
+[dependencies]
+fp-engine = { workspace = true }
+fp-geom = { workspace = true }
+fp-render = { workspace = true }
+fp-mcp = { workspace = true }
+fp-script = { workspace = true }
+# firepixel-cli language … (src\language.rs, I18N-KERN)
+fp-i18n = { workspace = true }
+# moderner Batch-Modus: batch --recipe/--steps, Befehle batch.* (BATCH-1)
+fp-batch = { path = "../../crates/fp-batch" }
+serde_json = { workspace = true }
+clap = { version = "4.6", features = ["derive", "string"] }
+tokio = { version = "1", features = ["rt-multi-thread"] }
+
+[build-dependencies]
+embed-resource = "3"
+
+[dev-dependencies]
+assert_cmd = "2.2"
+predicates = "3.1"
+
+[lints]
+workspace = true

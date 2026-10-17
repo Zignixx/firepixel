@@ -1,0 +1,33 @@
+# Paths to remove from the repository in the history reset (REPO-2).
+# German working notes and generated images; kept outside the repository (backup bundle/zip).
+# One path per line, relative to the repository root, forward slashes. Directories end with "/".
+# Use: git rm -r -q --pathspec-from-file=<(grep -v '^#' docs/_archive_list.txt | sed '/^$/d')
+STATUS.md
+ARCHITEKTUR.md
+docs/berichte/
+docs/funktionstest/
+docs/parity/
+docs/screenshots/
+docs/AGENTEN_REGELN.md
+docs/BATCH_MODERN.md
+docs/BEFUNDE.md
+docs/BEFUNDE_ABBAU.md
+docs/DESIGN.md
+docs/FUNKTIONSTEST.md
+docs/HANDOVER_2026-10-15.md
+docs/I18N_PRUEFUNG.md
+docs/MODELLE.md
+docs/NACHPRUEFUNG.md
+docs/NIGHT_PLAN_2026-10-13.md
+docs/NUTZERBEFUNDE.md
+docs/PARITAET_A.md
+docs/PARITAET_B.md
+docs/PARITY_SWEEP.md
+docs/PLAN.md
+docs/TECHNISCH_ENGLISCH.md
+docs/TESTLEITFADEN_2026-10-12.md
+docs/TESTLEITFADEN_2026-10-13.md
+docs/UX_ABGLEICH_A.md
+docs/UX_ABGLEICH_B.md
+docs/preview-notes-2026-10-13.md
+docs/progress-2026-10-13.md

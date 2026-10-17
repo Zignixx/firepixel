@@ -1,0 +1,19 @@
+{
+  "format": "firepixel-batch-recipe",
+  "name": "overlay-border-round",
+  "output": {
+    "format": "png"
+  },
+  "steps": [
+    {
+      "id": "overlay.border",
+      "params": {
+        "color": "#f0f0f0",
+        "radius": 12,
+        "unit": "percent",
+        "width": 5
+      }
+    }
+  ],
+  "version": 1
+}

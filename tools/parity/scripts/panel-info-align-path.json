@@ -1,0 +1,1121 @@
+{
+ "unit": "panel-info-align-path",
+ "testfile": "T04",
+ "note": "Action verbs (both/orig/fp): open_testfile <T..> (close docs unsaved, open fresh, base settings) / close_all; menu 'A > B'; command <id from commands.json>; panel <window.* id or title>; panel_menu <panel> (open its menu); select <object name|[names]>; select_none; tool <tool id>; open <logical ui key>; click/double_click/right_click/hover/mouse_down/mouse_up <label|{key}|{popup_swatch:#hex}|{area,pos}>; drag {from,to,mods}; canvas_click/canvas_move [x,y] (document px); canvas_drag {from,to,mods}; scroll {area,delta}; key <combo>; type <text>; wait <ms>; choose {target,item} (pick list entry); file_dialog <path> (choose file in open dialog); export_png doc (export + hash); resize_panel {panel,width}; set_field {target,value}; export {dir,name,type,...} (File > Export dialog); clear_dir/record_dir <dir>; record_file <path> (size+hash+pixels); record_file_text <path>; restart_app; resize_dialog {width,height}; target forms {canvas:[x,y]|name}, {pref_category}, {tree_item:[path]}, hold_key in drag/click; log_value <JSF expression, logged in both>; record_ui <logical ui key> (orig window text/UIA, fp ui_find/ui_state); jsf <code> (in both = fp run_script); fp-only ui_action {...}, ui_find_click <text>. Step keys: after = actions after the shot; log_menu_items = item texts + enabled/checked of the open menu; shot omitted = value-only checkpoint.",
+ "steps": [
+  {
+   "id": "00_overview_normal",
+   "check": "overview after opening the test file",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "panel": "window.info"
+    }
+   ],
+   "shot": {
+    "area": "window"
+   }
+  },
+  {
+   "id": "01_info_layout_normal",
+   "check": "info layout",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "panel": "window.info"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "canvas_move": [
+      100,
+      85
+     ]
+    }
+   ],
+   "shot": {
+    "area": "panel:info"
+   }
+  },
+  {
+   "id": "02_info_live_hover",
+   "check": "info live",
+   "method": {
+    "orig": "W",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "panel": "window.info"
+    },
+    {
+     "canvas_move": [
+      300,
+      300
+     ]
+    },
+    {
+     "record_ui": "info.fields"
+    },
+    {
+     "canvas_move": [
+      420,
+      240
+     ]
+    },
+    {
+     "record_ui": "info.fields"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "03_info_menu_open",
+   "check": "info menu",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "panel": "window.info"
+    },
+    {
+     "panel_menu": "info"
+    },
+    {
+     "log_menu_items": true
+    }
+   ],
+   "shot": {
+    "area": "menu"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "04_info_fields_result",
+   "check": "info fields",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "panel": "window.info"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "click": "info.field.w"
+    },
+    {
+     "key": "Ctrl+A"
+    },
+    {
+     "type": "150"
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "log_value": "fw.selection.map(function(e){var r=e.pixelRect;return e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom}).join('|')"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "05_align_layout_normal",
+   "check": "align layout",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "menu": "Fenster > Ausrichten"
+    },
+    {
+     "select": [
+      "R1",
+      "E1",
+      "PG"
+     ]
+    }
+   ],
+   "shot": {
+    "area": "panel:align"
+   }
+  },
+  {
+   "id": "06_align_buttons_left_result",
+   "check": "align buttons - left",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "menu": "Fenster > Ausrichten"
+    },
+    {
+     "select": [
+      "R1",
+      "E1",
+      "PG"
+     ]
+    },
+    {
+     "click": "Links ausrichten"
+    },
+    {
+     "log_value": "fw.selection.map(function(e){var r=e.pixelRect;return e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom}).join('|')"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "06_align_buttons_hcenter_result",
+   "check": "align buttons - hcenter",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "menu": "Fenster > Ausrichten"
+    },
+    {
+     "select": [
+      "R1",
+      "E1",
+      "PG"
+     ]
+    },
+    {
+     "click": "Horizontal zentrieren"
+    },
+    {
+     "log_value": "fw.selection.map(function(e){var r=e.pixelRect;return e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom}).join('|')"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "06_align_buttons_right_result",
+   "check": "align buttons - right",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "menu": "Fenster > Ausrichten"
+    },
+    {
+     "select": [
+      "R1",
+      "E1",
+      "PG"
+     ]
+    },
+    {
+     "click": "Rechts ausrichten"
+    },
+    {
+     "log_value": "fw.selection.map(function(e){var r=e.pixelRect;return e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom}).join('|')"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "06_align_buttons_top_result",
+   "check": "align buttons - top",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "menu": "Fenster > Ausrichten"
+    },
+    {
+     "select": [
+      "R1",
+      "E1",
+      "PG"
+     ]
+    },
+    {
+     "click": "Oben ausrichten"
+    },
+    {
+     "log_value": "fw.selection.map(function(e){var r=e.pixelRect;return e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom}).join('|')"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "06_align_buttons_vcenter_result",
+   "check": "align buttons - vcenter",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "menu": "Fenster > Ausrichten"
+    },
+    {
+     "select": [
+      "R1",
+      "E1",
+      "PG"
+     ]
+    },
+    {
+     "click": "Vertikal zentrieren"
+    },
+    {
+     "log_value": "fw.selection.map(function(e){var r=e.pixelRect;return e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom}).join('|')"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "06_align_buttons_bottom_result",
+   "check": "align buttons - bottom",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "menu": "Fenster > Ausrichten"
+    },
+    {
+     "select": [
+      "R1",
+      "E1",
+      "PG"
+     ]
+    },
+    {
+     "click": "Unten ausrichten"
+    },
+    {
+     "log_value": "fw.selection.map(function(e){var r=e.pixelRect;return e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom}).join('|')"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "06_align_buttons_distribute_top_result",
+   "check": "align buttons - distribute top",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "menu": "Fenster > Ausrichten"
+    },
+    {
+     "select": [
+      "R1",
+      "E1",
+      "PG"
+     ]
+    },
+    {
+     "click": "Oberkanten verteilen"
+    },
+    {
+     "log_value": "fw.selection.map(function(e){var r=e.pixelRect;return e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom}).join('|')"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "06_align_buttons_distribute_vcenter_result",
+   "check": "align buttons - distribute vcenter",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "menu": "Fenster > Ausrichten"
+    },
+    {
+     "select": [
+      "R1",
+      "E1",
+      "PG"
+     ]
+    },
+    {
+     "click": "Vertikale Mitten verteilen"
+    },
+    {
+     "log_value": "fw.selection.map(function(e){var r=e.pixelRect;return e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom}).join('|')"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "06_align_buttons_distribute_bottom_result",
+   "check": "align buttons - distribute bottom",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "menu": "Fenster > Ausrichten"
+    },
+    {
+     "select": [
+      "R1",
+      "E1",
+      "PG"
+     ]
+    },
+    {
+     "click": "Unterkanten verteilen"
+    },
+    {
+     "log_value": "fw.selection.map(function(e){var r=e.pixelRect;return e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom}).join('|')"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "06_align_buttons_distribute_left_result",
+   "check": "align buttons - distribute left",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "menu": "Fenster > Ausrichten"
+    },
+    {
+     "select": [
+      "R1",
+      "E1",
+      "PG"
+     ]
+    },
+    {
+     "click": "Linke Kanten verteilen"
+    },
+    {
+     "log_value": "fw.selection.map(function(e){var r=e.pixelRect;return e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom}).join('|')"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "06_align_buttons_distribute_hcenter_result",
+   "check": "align buttons - distribute hcenter",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "menu": "Fenster > Ausrichten"
+    },
+    {
+     "select": [
+      "R1",
+      "E1",
+      "PG"
+     ]
+    },
+    {
+     "click": "Horizontale Mitten verteilen"
+    },
+    {
+     "log_value": "fw.selection.map(function(e){var r=e.pixelRect;return e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom}).join('|')"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "06_align_buttons_distribute_right_result",
+   "check": "align buttons - distribute right",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "menu": "Fenster > Ausrichten"
+    },
+    {
+     "select": [
+      "R1",
+      "E1",
+      "PG"
+     ]
+    },
+    {
+     "click": "Rechte Kanten verteilen"
+    },
+    {
+     "log_value": "fw.selection.map(function(e){var r=e.pixelRect;return e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom}).join('|')"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "06_align_buttons_size_width_result",
+   "check": "align buttons - size width",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "menu": "Fenster > Ausrichten"
+    },
+    {
+     "select": [
+      "R1",
+      "E1",
+      "PG"
+     ]
+    },
+    {
+     "click": "Breite angleichen"
+    },
+    {
+     "log_value": "fw.selection.map(function(e){var r=e.pixelRect;return e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom}).join('|')"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "06_align_buttons_size_height_result",
+   "check": "align buttons - size height",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "menu": "Fenster > Ausrichten"
+    },
+    {
+     "select": [
+      "R1",
+      "E1",
+      "PG"
+     ]
+    },
+    {
+     "click": "Höhe angleichen"
+    },
+    {
+     "log_value": "fw.selection.map(function(e){var r=e.pixelRect;return e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom}).join('|')"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "06_align_buttons_size_both_result",
+   "check": "align buttons - size both",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "menu": "Fenster > Ausrichten"
+    },
+    {
+     "select": [
+      "R1",
+      "E1",
+      "PG"
+     ]
+    },
+    {
+     "click": "Breite und Höhe angleichen"
+    },
+    {
+     "log_value": "fw.selection.map(function(e){var r=e.pixelRect;return e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom}).join('|')"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "06_align_buttons_space_h_result",
+   "check": "align buttons - space h",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "menu": "Fenster > Ausrichten"
+    },
+    {
+     "select": [
+      "R1",
+      "E1",
+      "PG"
+     ]
+    },
+    {
+     "click": "Horizontal gleichmäßig verteilen"
+    },
+    {
+     "log_value": "fw.selection.map(function(e){var r=e.pixelRect;return e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom}).join('|')"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "06_align_buttons_space_v_result",
+   "check": "align buttons - space v",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "menu": "Fenster > Ausrichten"
+    },
+    {
+     "select": [
+      "R1",
+      "E1",
+      "PG"
+     ]
+    },
+    {
+     "click": "Vertikal gleichmäßig verteilen"
+    },
+    {
+     "log_value": "fw.selection.map(function(e){var r=e.pixelRect;return e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom}).join('|')"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "07_align_anchor_open",
+   "check": "align anchor",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "menu": "Fenster > Ausrichten"
+    },
+    {
+     "select": [
+      "R1",
+      "E1"
+     ]
+    },
+    {
+     "click": "align.anchor_list"
+    },
+    {
+     "record_ui": "list.items"
+    }
+   ],
+   "shot": {
+    "area": "panel:align"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "anchor/position list; label unsure"
+  },
+  {
+   "id": "08_align_hover_left_hover",
+   "check": "align hover - left",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "menu": "Fenster > Ausrichten"
+    },
+    {
+     "select": [
+      "R1",
+      "E1"
+     ]
+    },
+    {
+     "hover": "Links ausrichten"
+    },
+    {
+     "wait": 1200
+    }
+   ],
+   "shot": {
+    "area": "panel:align"
+   }
+  },
+  {
+   "id": "08_align_hover_space_hover",
+   "check": "align hover - space",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "menu": "Fenster > Ausrichten"
+    },
+    {
+     "select": [
+      "R1",
+      "E1"
+     ]
+    },
+    {
+     "hover": "Horizontal gleichmäßig verteilen"
+    },
+    {
+     "wait": 1200
+    }
+   ],
+   "shot": {
+    "area": "panel:align"
+   }
+  },
+  {
+   "id": "09_align_disabled_disabled",
+   "check": "align disabled",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "menu": "Fenster > Ausrichten"
+    },
+    {
+     "select_none": true
+    }
+   ],
+   "shot": {
+    "area": "panel:align"
+   }
+  },
+  {
+   "id": "10_path_layout_normal",
+   "check": "path layout",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "menu": "Fenster > Pfad"
+    },
+    {
+     "select": "P1"
+    }
+   ],
+   "shot": {
+    "area": "panel:path"
+   }
+  },
+  {
+   "id": "11_path_buttons_union_result",
+   "check": "path buttons - union",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "menu": "Fenster > Pfad"
+    },
+    {
+     "select": [
+      "R1",
+      "E1"
+     ]
+    },
+    {
+     "click": "Vereinigen"
+    },
+    {
+     "log_value": "fw.selection.map(function(e){var r=e.pixelRect;return e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom}).join('|')"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "note": "button labels from fp tooltips; original tooltip text may differ"
+  },
+  {
+   "id": "11_path_buttons_intersect_result",
+   "check": "path buttons - intersect",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "menu": "Fenster > Pfad"
+    },
+    {
+     "select": [
+      "R1",
+      "R2"
+     ]
+    },
+    {
+     "click": "Überschneiden"
+    },
+    {
+     "log_value": "fw.selection.map(function(e){var r=e.pixelRect;return e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom}).join('|')"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "12_path_points_result",
+   "check": "path points",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "menu": "Fenster > Pfad"
+    },
+    {
+     "select": "P1"
+    },
+    {
+     "tool": "tool.subselection"
+    },
+    {
+     "key": "Ctrl+A"
+    },
+    {
+     "click": "path.points.smooth"
+    },
+    {
+     "log_value": "fw.selection[0].contours[0].nodes.map(function(n){return n.x+','+n.y+','+n.predX+','+n.succX}).join('|')"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "13_path_hover_hover",
+   "check": "path hover",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "menu": "Fenster > Pfad"
+    },
+    {
+     "select": "P1"
+    },
+    {
+     "hover": "Vereinigen"
+    },
+    {
+     "wait": 1200
+    }
+   ],
+   "shot": {
+    "area": "panel:path"
+   }
+  },
+  {
+   "id": "14_path_disabled_disabled",
+   "check": "path disabled",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "menu": "Fenster > Pfad"
+    },
+    {
+     "select_none": true
+    }
+   ],
+   "shot": {
+    "area": "panel:path"
+   }
+  },
+  {
+   "id": "15_undo_result",
+   "check": "undo",
+   "method": {
+    "orig": "J",
+    "fp": "H"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "menu": "Fenster > Ausrichten"
+    },
+    {
+     "select": [
+      "R1",
+      "E1",
+      "PG"
+     ]
+    },
+    {
+     "log_value": "fw.historyPalette.getStepCount()"
+    },
+    {
+     "click": "Links ausrichten"
+    },
+    {
+     "log_value": "fw.historyPalette.getStepCount()"
+    },
+    {
+     "key": "Ctrl+Z"
+    },
+    {
+     "log_value": "fw.selection.map(function(e){var r=e.pixelRect;return e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom}).join('|')"
+    }
+   ],
+   "shot": null,
+   "note": "record of undo step count via JSF unsure; fp may use ui_state history length instead"
+  },
+  {
+   "id": "16_panel_resize_narrow_normal",
+   "check": "panel resize - narrow",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "menu": "Fenster > Ausrichten"
+    },
+    {
+     "resize_panel": {
+      "panel": "align",
+      "width": 200
+     }
+    }
+   ],
+   "shot": {
+    "area": "panel:align"
+   },
+   "note": "resize_panel = drag dock splitter to width px"
+  },
+  {
+   "id": "16_panel_resize_wide_normal",
+   "check": "panel resize - wide",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "menu": "Fenster > Ausrichten"
+    },
+    {
+     "resize_panel": {
+      "panel": "align",
+      "width": 400
+     }
+    }
+   ],
+   "shot": {
+    "area": "panel:align"
+   }
+  },
+  {
+   "id": "17_no_doc_disabled",
+   "check": "no doc",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "close_all": true
+    },
+    {
+     "menu": "Fenster > Ausrichten"
+    }
+   ],
+   "shot": {
+    "area": "panel:align"
+   }
+  },
+  {
+   "id": "18_scale_to_canvas_result",
+   "check": "scale to canvas",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "menu": "Fenster > Ausrichten"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "click": "Zur Leinwand ausrichten"
+    },
+    {
+     "click": "Rechts ausrichten"
+    },
+    {
+     "log_value": "fw.selection.map(function(e){var r=e.pixelRect;return e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom}).join('|')"
+    }
+   ],
+   "shot": null
+  }
+ ]
+}

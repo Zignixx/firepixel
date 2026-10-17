@@ -1,0 +1,21 @@
+[package]
+name = "fp-model"
+description = "Firepixel document model (pure data, serde): pages, states, layers, elements, symbols, styles"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+fp-geom = { workspace = true }
+fp-color = { workspace = true }
+serde = { workspace = true, features = ["rc"] }
+# Standardnamen neuer Ebenen in der Sprache der Oberfläche
+fp-i18n = { workspace = true }
+
+[dev-dependencies]
+serde_json = { workspace = true }
+
+[lints]
+workspace = true

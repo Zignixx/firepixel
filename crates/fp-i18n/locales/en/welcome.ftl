@@ -1,0 +1,33 @@
+# Start screen (welcome window, crates\fp-ui\src\welcome.rs). Owner: DESIGN.
+
+welcome-tagline = Pixels and vectors for screen and web
+welcome-recent-title = Open a Recent Item
+welcome-recent-empty = No recent files yet
+welcome-recent-empty-hint = Files you have worked on recently will appear here.
+welcome-recent-missing = File not found:
+welcome-open = Open...
+    .tooltip = Open an existing file
+welcome-new-title = Create New
+welcome-new-document = Firepixel Document (FW-PNG)
+    .tooltip = Create a new, blank document
+welcome-new-template = From Template...
+    .tooltip = Create a new document based on a template file
+welcome-extend-title = Extend
+welcome-extend-batch = Batch Process...
+    .tooltip = Process many files with one recipe (Batch Studio)
+welcome-extend-commands = Saved Commands...
+    .tooltip = Rename and delete your own commands (JSF scripts)
+welcome-extend-extensions = Manage Extensions...
+    .tooltip = Show and manage installed extensions
+welcome-help-title = Help and Learning
+welcome-help-guide = Quick Guide
+    .tooltip = Open the included guide
+welcome-help-shortcuts = Keyboard Shortcuts
+    .tooltip = View and customize keyboard shortcuts
+welcome-help-models = Manage AI Models
+    .tooltip = Download and check local models for AI selection
+welcome-help-automation = Automation and AI Control
+    .tooltip = Scripts, command line and the MCP control channel
+welcome-dont-show = Don't show again
+    .tooltip = Turn it back on under Edit ▸ Preferences ▸ General
+welcome-version = Version { $version }

@@ -1,0 +1,897 @@
+{
+ "unit": "color-popup",
+ "testfile": "T04",
+ "note": "Action verbs (both/orig/fp): open_testfile <T..> (close docs unsaved, open fresh, base settings) / close_all; menu 'A > B'; command <id from commands.json>; panel <window.* id or title>; panel_menu <panel> (open its menu); select <object name|[names]>; select_none; tool <tool id>; open <logical ui key>; click/double_click/right_click/hover/mouse_down/mouse_up <label|{key}|{popup_swatch:#hex}|{area,pos}>; drag {from,to,mods}; canvas_click/canvas_move [x,y] (document px); canvas_drag {from,to,mods}; scroll {area,delta}; key <combo>; type <text>; wait <ms>; choose {target,item} (pick list entry); file_dialog <path> (choose file in open dialog); export_png doc (export + hash); resize_panel {panel,width}; set_field {target,value}; export {dir,name,type,...} (File > Export dialog); clear_dir/record_dir <dir>; record_file <path> (size+hash+pixels); record_file_text <path>; restart_app; resize_dialog {width,height}; target forms {canvas:[x,y]|name}, {pref_category}, {tree_item:[path]}, hold_key in drag/click; log_value <JSF expression, logged in both>; record_ui <logical ui key> (orig window text/UIA, fp ui_find/ui_state); jsf <code> (in both = fp run_script); fp-only ui_action {...}, ui_find_click <text>. Step keys: after = actions after the shot; log_menu_items = item texts + enabled/checked of the open menu; shot omitted = value-only checkpoint.",
+ "steps": [
+  {
+   "id": "00_overview_normal",
+   "check": "overview after opening the test file",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "R1"
+    }
+   ],
+   "shot": {
+    "area": "window"
+   }
+  },
+  {
+   "id": "01_open_open",
+   "check": "open",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "open": "inspector.fill_color"
+    }
+   ],
+   "shot": {
+    "area": "window"
+   },
+   "note": "popup position relative to the swatch; window shot keeps both"
+  },
+  {
+   "id": "02_grid_open",
+   "check": "grid",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "open": "inspector.fill_color"
+    }
+   ],
+   "shot": {
+    "area": "popup"
+   }
+  },
+  {
+   "id": "03_swatch_hover_first_hover",
+   "check": "swatch hover - first",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "open": "inspector.fill_color"
+    },
+    {
+     "hover": {
+      "popup_swatch": "#000000"
+     }
+    }
+   ],
+   "shot": {
+    "area": "popup"
+   }
+  },
+  {
+   "id": "03_swatch_hover_red_hover",
+   "check": "swatch hover - red",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "open": "inspector.fill_color"
+    },
+    {
+     "hover": {
+      "popup_swatch": "#FF0000"
+     }
+    }
+   ],
+   "shot": {
+    "area": "popup"
+   }
+  },
+  {
+   "id": "04_pick_swatch_result",
+   "check": "pick swatch",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "open": "inspector.fill_color"
+    },
+    {
+     "click": {
+      "popup_swatch": "#0000FF"
+     }
+    },
+    {
+     "log_value": "fw.selection.length ? fw.selection[0].pathAttributes.fillColor : null"
+    },
+    {
+     "record_ui": "popup.visible"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "05_hex_field_focus",
+   "check": "hex field",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "open": "inspector.fill_color"
+    },
+    {
+     "click": "popup.hex_field"
+    },
+    {
+     "key": "Ctrl+A"
+    },
+    {
+     "type": "#3366CC"
+    }
+   ],
+   "shot": {
+    "area": "popup"
+   }
+  },
+  {
+   "id": "05_hex_field_result",
+   "check": "hex field",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "open": "inspector.fill_color"
+    },
+    {
+     "click": "popup.hex_field"
+    },
+    {
+     "key": "Ctrl+A"
+    },
+    {
+     "type": "#3366CC"
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "log_value": "fw.selection.length ? fw.selection[0].pathAttributes.fillColor : null"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "05_hex_field_invalid_result",
+   "check": "hex field - invalid",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "open": "inspector.fill_color"
+    },
+    {
+     "click": "popup.hex_field"
+    },
+    {
+     "key": "Ctrl+A"
+    },
+    {
+     "type": "zz12"
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "log_value": "fw.selection.length ? fw.selection[0].pathAttributes.fillColor : null"
+    },
+    {
+     "record_ui": "popup.hex_field"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "06_eyedropper_live_canvas_hover",
+   "check": "eyedropper live - canvas",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "open": "inspector.fill_color"
+    },
+    {
+     "canvas_move": [
+      100,
+      205
+     ]
+    }
+   ],
+   "shot": {
+    "area": "popup"
+   },
+   "note": "hover over E1 (no fill) area inside canvas; popup shows sampled color"
+  },
+  {
+   "id": "06_eyedropper_live_outside_hover",
+   "check": "eyedropper live - outside",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "open": "inspector.fill_color"
+    },
+    {
+     "hover": {
+      "area": "screen",
+      "pos": "outside_window"
+     }
+    }
+   ],
+   "shot": {
+    "area": "popup"
+   },
+   "note": "pointer outside the program window; runner must pick a safe neutral screen point"
+  },
+  {
+   "id": "07_eyedropper_click_result",
+   "check": "eyedropper click",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "open": "inspector.fill_color"
+    },
+    {
+     "canvas_click": [
+      250,
+      85
+     ]
+    },
+    {
+     "log_value": "fw.selection.length ? fw.selection[0].pathAttributes.fillColor : null"
+    }
+   ],
+   "shot": null,
+   "note": "samples R2 (50 % opacity) on white"
+  },
+  {
+   "id": "08_none_btn_pressed",
+   "check": "none btn",
+   "method": {
+    "orig": "J, B",
+    "fp": "D, B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "open": "inspector.fill_color"
+    },
+    {
+     "mouse_down": "popup.none_button"
+    }
+   ],
+   "shot": {
+    "area": "popup"
+   },
+   "after": [
+    {
+     "mouse_up": "popup.none_button"
+    }
+   ]
+  },
+  {
+   "id": "08_none_btn_result",
+   "check": "none btn",
+   "method": {
+    "orig": "J, B",
+    "fp": "D, B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "open": "inspector.fill_color"
+    },
+    {
+     "click": "popup.none_button"
+    },
+    {
+     "log_value": "fw.selection.length ? fw.selection[0].pathAttributes.fillColor : null"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "09_system_picker_open",
+   "check": "system picker",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "open": "inspector.fill_color"
+    },
+    {
+     "click": "popup.system_picker_button"
+    },
+    {
+     "wait": 500
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "10_palette_menu_open",
+   "check": "palette menu",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "open": "inspector.fill_color"
+    },
+    {
+     "click": "popup.palette_menu"
+    },
+    {
+     "log_menu_items": true
+    }
+   ],
+   "shot": {
+    "area": "popup"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "11_options_open",
+   "check": "options",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "open": "inspector.fill_color"
+    },
+    {
+     "click": "popup.options_menu"
+    },
+    {
+     "log_menu_items": true
+    }
+   ],
+   "shot": {
+    "area": "popup"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "original may merge options into the palette menu; name unsure"
+  },
+  {
+   "id": "12_rgb_fields_normal",
+   "check": "rgb fields",
+   "method": {
+    "orig": "W",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "open": "inspector.fill_color"
+    },
+    {
+     "record_ui": "popup.fields"
+    }
+   ],
+   "shot": null,
+   "note": "RGB fields may not exist in the popup"
+  },
+  {
+   "id": "13_fill_options_open",
+   "check": "fill options",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "open": "inspector.fill_color"
+    },
+    {
+     "click": "popup.fill_options"
+    }
+   ],
+   "shot": {
+    "area": "popup"
+   },
+   "note": "label in original: 'Füllungsoptionen' (unsure)"
+  },
+  {
+   "id": "14_esc_result",
+   "check": "esc",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "open": "inspector.fill_color"
+    },
+    {
+     "hover": {
+      "popup_swatch": "#0000FF"
+     }
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "log_value": "fw.selection.length ? fw.selection[0].pathAttributes.fillColor : null"
+    },
+    {
+     "log_value": "fw.selection.length"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "15_click_out_result",
+   "check": "click out",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "open": "inspector.fill_color"
+    },
+    {
+     "click": {
+      "area": "window",
+      "pos": [
+       800,
+       960
+      ]
+     }
+    },
+    {
+     "log_value": "fw.selection.length ? fw.selection[0].pathAttributes.fillColor : null"
+    },
+    {
+     "log_value": "fw.selection.length"
+    }
+   ],
+   "shot": null,
+   "note": "click into status-bar region, away from canvas objects"
+  },
+  {
+   "id": "16_keyboard_result",
+   "check": "keyboard",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "open": "inspector.fill_color"
+    },
+    {
+     "key": "Right"
+    },
+    {
+     "key": "Right"
+    },
+    {
+     "key": "Down"
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "log_value": "fw.selection.length ? fw.selection[0].pathAttributes.fillColor : null"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "17_drag_red_pressed",
+   "check": "drag red",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "open": "inspector.fill_color"
+    },
+    {
+     "mouse_down": {
+      "popup_swatch": "#000000"
+     }
+    },
+    {
+     "hover": {
+      "popup_swatch": "#FF0000"
+     }
+    }
+   ],
+   "shot": {
+    "area": "popup"
+   },
+   "after": [
+    {
+     "mouse_up": {
+      "popup_swatch": "#FF0000"
+     }
+    }
+   ]
+  },
+  {
+   "id": "17_drag_red_result",
+   "check": "drag red",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "open": "inspector.fill_color"
+    },
+    {
+     "drag": {
+      "from": {
+       "popup_swatch": "#000000"
+      },
+      "to": {
+       "popup_swatch": "#FF0000"
+      }
+     }
+    },
+    {
+     "log_value": "fw.selection.length ? fw.selection[0].pathAttributes.fillColor : null"
+    }
+   ],
+   "shot": {
+    "area": "inspector"
+   },
+   "note": "N27a: released on red must stay red"
+  },
+  {
+   "id": "18_live_preview_hover",
+   "check": "live preview",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "open": "inspector.fill_color"
+    },
+    {
+     "hover": {
+      "popup_swatch": "#FF0000"
+     }
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "19_recent_normal",
+   "check": "recent",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "open": "inspector.fill_color"
+    },
+    {
+     "click": {
+      "popup_swatch": "#FF0000"
+     }
+    },
+    {
+     "open": "inspector.fill_color"
+    },
+    {
+     "click": {
+      "popup_swatch": "#00FF00"
+     }
+    },
+    {
+     "open": "inspector.fill_color"
+    }
+   ],
+   "shot": {
+    "area": "popup"
+   },
+   "note": "recent colors row may not exist in original"
+  },
+  {
+   "id": "20_cursor_hover",
+   "check": "cursor",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "open": "inspector.fill_color"
+    },
+    {
+     "canvas_move": [
+      400,
+      400
+     ]
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "note": "screenshot must include the mouse cursor"
+  },
+  {
+   "id": "21_undo_result",
+   "check": "undo",
+   "method": {
+    "orig": "J",
+    "fp": "H"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "open": "inspector.fill_color"
+    },
+    {
+     "log_value": "fw.historyPalette.getStepCount()"
+    },
+    {
+     "click": {
+      "popup_swatch": "#0000FF"
+     }
+    },
+    {
+     "log_value": "fw.historyPalette.getStepCount()"
+    },
+    {
+     "key": "Ctrl+Z"
+    },
+    {
+     "log_value": "fw.selection.length ? fw.selection[0].pathAttributes.fillColor : null"
+    }
+   ],
+   "shot": null,
+   "note": "record of undo step count via JSF unsure; fp may use ui_state history length instead"
+  },
+  {
+   "id": "22_measure_normal",
+   "check": "measure",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "open": "inspector.fill_color"
+    },
+    {
+     "record_ui": "popup.rect"
+    },
+    {
+     "record_ui": "popup.swatch_rect"
+    }
+   ],
+   "shot": null,
+   "note": "compare with measurement RE-5 (re 22-ansicht-bitmap-farbe)"
+  }
+ ]
+}

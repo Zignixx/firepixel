@@ -1,0 +1,11 @@
+[package]
+name = "fp-neutral"
+description = "Neutrality guard: no third-party product or vendor names in user-visible texts and project documents"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+publish = false
+
+[dependencies]

@@ -1,0 +1,14 @@
+blank_issues_enabled: false
+contact_links:
+  - name: User manual
+    url: https://github.com/Zignixx/firepixel/blob/main/docs/MANUAL.md
+    about: How to use Firepixel (German version in docs/MANUAL.de.md).
+  - name: Open findings
+    url: https://github.com/Zignixx/firepixel/blob/main/docs/FINDINGS.md
+    about: Check whether a deviation is already known before opening an issue.
+  - name: Roadmap
+    url: https://github.com/Zignixx/firepixel/blob/main/ROADMAP.md
+    about: Deferred items and decisions already taken.
+  - name: Security issue
+    url: https://github.com/Zignixx/firepixel/blob/main/SECURITY.md
+    about: Please do not report vulnerabilities in public issues.

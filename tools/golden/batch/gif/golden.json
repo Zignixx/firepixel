@@ -1,0 +1,38 @@
+{
+  "cartoon/balanced": {
+    "bytes": 3473,
+    "ssim": 0.9961
+  },
+  "cartoon/best": {
+    "bytes": 5902,
+    "ssim": 1.0
+  },
+  "cartoon/smallest": {
+    "bytes": 2819,
+    "ssim": 0.9834
+  },
+  "pan/balanced": {
+    "bytes": 78034,
+    "ssim": 0.9704
+  },
+  "pan/best": {
+    "bytes": 122295,
+    "ssim": 0.9902
+  },
+  "pan/smallest": {
+    "bytes": 59915,
+    "ssim": 0.9072
+  },
+  "screen/balanced": {
+    "bytes": 2136,
+    "ssim": 1.0
+  },
+  "screen/best": {
+    "bytes": 2928,
+    "ssim": 1.0
+  },
+  "screen/smallest": {
+    "bytes": 2136,
+    "ssim": 1.0
+  }
+}

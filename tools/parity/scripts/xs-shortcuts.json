@@ -1,0 +1,2197 @@
+{
+ "unit": "xs-shortcuts",
+ "testfile": "T04",
+ "testfiles": [
+  "T04",
+  "T05",
+  "T02",
+  "T07",
+  "T10",
+  "T06"
+ ],
+ "note": "Action verbs (both/orig/fp): open_testfile <T..> (close docs unsaved, open fresh, base settings) / close_all; menu 'A > B'; command <id from commands.json>; panel <window.* id or title>; panel_menu <panel> (open its menu); select <object name|[names]>; select_none; tool <tool id>; open <logical ui key>; click/double_click/right_click/hover/mouse_down/mouse_up <label|{key}|{popup_swatch:#hex}|{area,pos}>; drag {from,to,mods}; canvas_click/canvas_move [x,y] (document px); canvas_drag {from,to,mods}; scroll {area,delta}; key <combo>; type <text>; wait <ms>; choose {target,item} (pick list entry); file_dialog <path> (choose file in open dialog); export_png doc (export + hash); resize_panel {panel,width}; set_field {target,value}; export {dir,name,type,...} (File > Export dialog); clear_dir/record_dir <dir>; record_file <path> (size+hash+pixels); record_file_text <path>; restart_app; resize_dialog {width,height}; target forms {canvas:[x,y]|name}, {pref_category}, {tree_item:[path]}, hold_key in drag/click; log_value <JSF expression, logged in both>; record_ui <logical ui key> (orig window text/UIA, fp ui_find/ui_state); jsf <code> (in both = fp run_script); fp-only ui_action {...}, ui_find_click <text>. Step keys: after = actions after the shot; log_menu_items = item texts + enabled/checked of the open menu; shot omitted = value-only checkpoint. ui:ui_state.summary = orig: JSF dump of tool/zoom/dialog + visible windows; fp: ui_state. Key names for German OEM keys to be mapped by the runner.",
+ "steps": [
+  {
+   "id": "00_overview_normal",
+   "check": "overview after opening the test file",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    }
+   ],
+   "shot": {
+    "area": "window"
+   }
+  },
+  {
+   "id": "01_file_result",
+   "check": "file",
+   "method": {
+    "orig": "J",
+    "fp": "S, D"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "key": "Ctrl+N"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "ui_state.summary"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Ctrl+O"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "ui_state.summary"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Ctrl+Shift+S"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "ui_state.summary"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Ctrl+P"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "ui_state.summary"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Ctrl+R"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "ui_state.summary"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Ctrl+Shift+X"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "ui_state.summary"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Ctrl+Shift+R"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "ui_state.summary"
+    },
+    {
+     "key": "Escape"
+    }
+   ],
+   "shot": null,
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "each key opens a dialog; Escape closes it; Strg+S/W/Q deliberately not pressed (would save/close/quit)"
+  },
+  {
+   "id": "02_edit_result",
+   "check": "edit",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "key": "Ctrl+C"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Ctrl+V"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Ctrl+Z"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Ctrl+Shift+Z"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Ctrl+Y"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Ctrl+Alt+D"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Ctrl+Shift+C"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Ctrl+A"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Ctrl+D"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Delete"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "key": "Escape"
+    }
+   ],
+   "shot": null,
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "Escape after each also clears selection; runner records before Escape"
+  },
+  {
+   "id": "03_view_result",
+   "check": "view",
+   "method": {
+    "orig": "J",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "key": "Ctrl+Plus"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "ui_state.summary"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Ctrl+Minus"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "ui_state.summary"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Ctrl+0"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "ui_state.summary"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Ctrl+1"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "ui_state.summary"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Ctrl+Alt+0"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "ui_state.summary"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Ctrl+Shift+H"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "ui_state.summary"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Ctrl+Alt+R"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "ui_state.summary"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Ctrl+Alt+Semicolon"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "ui_state.summary"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Ctrl+Apostrophe"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "ui_state.summary"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Ctrl+Semicolon"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "ui_state.summary"
+    },
+    {
+     "key": "Escape"
+    }
+   ],
+   "shot": null,
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "German layout: Strg+# / Strg+Ä keys; key names for OEM keys unsure"
+  },
+  {
+   "id": "04_select_result",
+   "check": "select",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "key": "Ctrl+Shift+A"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Ctrl+Shift+D"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Ctrl+Shift+I"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Ctrl+Shift+Right"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Ctrl+Shift+Left"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "key": "Escape"
+    }
+   ],
+   "shot": null,
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "05_modify_result",
+   "check": "modify",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": [
+      "R1",
+      "E1"
+     ]
+    },
+    {
+     "key": "Ctrl+G"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Ctrl+Shift+G"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Ctrl+U"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Ctrl+Shift+Up"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Ctrl+Shift+Down"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Ctrl+Alt+1"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Ctrl+Alt+4"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Ctrl+T"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Ctrl+Shift+T"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Ctrl+F8"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "F8"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "key": "Escape"
+    }
+   ],
+   "shot": null,
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "06_text_result",
+   "check": "text",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T05"
+    },
+    {
+     "select": "TX1"
+    },
+    {
+     "key": "Ctrl+Shift+B"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "log_value": "fw.selection[0] ? JSON.stringify(fw.selection[0].textRuns.initialAttrs) : null"
+    },
+    {
+     "record_ui": "ui_state.summary"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Ctrl+Shift+I"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "log_value": "fw.selection[0] ? JSON.stringify(fw.selection[0].textRuns.initialAttrs) : null"
+    },
+    {
+     "record_ui": "ui_state.summary"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Ctrl+Shift+U"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "log_value": "fw.selection[0] ? JSON.stringify(fw.selection[0].textRuns.initialAttrs) : null"
+    },
+    {
+     "record_ui": "ui_state.summary"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Ctrl+Shift+E"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "log_value": "fw.selection[0] ? JSON.stringify(fw.selection[0].textRuns.initialAttrs) : null"
+    },
+    {
+     "record_ui": "ui_state.summary"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Ctrl+Alt+Shift+S"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "log_value": "fw.selection[0] ? JSON.stringify(fw.selection[0].textRuns.initialAttrs) : null"
+    },
+    {
+     "record_ui": "ui_state.summary"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Ctrl+Shift+Period"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "log_value": "fw.selection[0] ? JSON.stringify(fw.selection[0].textRuns.initialAttrs) : null"
+    },
+    {
+     "record_ui": "ui_state.summary"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Ctrl+Shift+Comma"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "log_value": "fw.selection[0] ? JSON.stringify(fw.selection[0].textRuns.initialAttrs) : null"
+    },
+    {
+     "record_ui": "ui_state.summary"
+    },
+    {
+     "key": "Escape"
+    }
+   ],
+   "shot": null,
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "07_window_result",
+   "check": "window",
+   "method": {
+    "orig": "J",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "key": "F2"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "ui_state.summary"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "F3"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "ui_state.summary"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "F4"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "ui_state.summary"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "F5"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "ui_state.summary"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "F6"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "ui_state.summary"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "F7"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "ui_state.summary"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "F8"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "ui_state.summary"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "F10"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "ui_state.summary"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "F11"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "ui_state.summary"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Shift+F2"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "ui_state.summary"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Shift+F3"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "ui_state.summary"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Shift+F9"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "ui_state.summary"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Shift+F10"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "ui_state.summary"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Ctrl+F3"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "ui_state.summary"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Ctrl+F7"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "ui_state.summary"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Ctrl+F9"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "ui_state.summary"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Ctrl+F10"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "ui_state.summary"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Ctrl+F11"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "ui_state.summary"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Tab"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "ui_state.summary"
+    },
+    {
+     "key": "Escape"
+    }
+   ],
+   "shot": null,
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "F4/Tab hides panels; cleanup restores by pressing again"
+  },
+  {
+   "id": "08_tools_result",
+   "check": "tools",
+   "method": {
+    "orig": "J",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "key": "V"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "ui_state.tool"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "A"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "ui_state.tool"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Q"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "ui_state.tool"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "C"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "ui_state.tool"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "M"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "ui_state.tool"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "L"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "ui_state.tool"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "W"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "ui_state.tool"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "B"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "ui_state.tool"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Y"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "ui_state.tool"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "E"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "ui_state.tool"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "R"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "ui_state.tool"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "K"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "ui_state.tool"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "P"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "ui_state.tool"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "U"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "ui_state.tool"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "T"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "ui_state.tool"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "N"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "ui_state.tool"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "S"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "ui_state.tool"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "I"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "ui_state.tool"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "G"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "ui_state.tool"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "H"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "ui_state.tool"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Z"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "ui_state.tool"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "D"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "ui_state.tool"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "X"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "ui_state.tool"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "J"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "ui_state.tool"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "2"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "ui_state.tool"
+    },
+    {
+     "key": "Escape"
+    }
+   ],
+   "shot": null,
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "09_tool_cycle_result",
+   "check": "tool cycle",
+   "method": {
+    "orig": "J",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "key": "M"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "ui_state.tool"
+    },
+    {
+     "key": "M"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "ui_state.tool"
+    },
+    {
+     "key": "M"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "ui_state.tool"
+    },
+    {
+     "key": "L"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "ui_state.tool"
+    },
+    {
+     "key": "L"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "ui_state.tool"
+    },
+    {
+     "key": "L"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "ui_state.tool"
+    },
+    {
+     "key": "R"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "ui_state.tool"
+    },
+    {
+     "key": "R"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "ui_state.tool"
+    },
+    {
+     "key": "R"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "ui_state.tool"
+    }
+   ],
+   "shot": null,
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "Escape between presses must not reset cycling; runner should skip Escape here"
+  },
+  {
+   "id": "10_nudge_result",
+   "check": "nudge",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "key": "Right"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "log_value": "fw.selection.map(function(e){var r=e.pixelRect;return e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom}).join('|')"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Down"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "log_value": "fw.selection.map(function(e){var r=e.pixelRect;return e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom}).join('|')"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Shift+Right"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "log_value": "fw.selection.map(function(e){var r=e.pixelRect;return e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom}).join('|')"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Shift+Down"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "log_value": "fw.selection.map(function(e){var r=e.pixelRect;return e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom}).join('|')"
+    },
+    {
+     "key": "Escape"
+    }
+   ],
+   "shot": null,
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "10_nudge_point_result",
+   "check": "nudge - point",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "P1"
+    },
+    {
+     "tool": "tool.subselection"
+    },
+    {
+     "canvas_click": "P1.node.0"
+    },
+    {
+     "key": "Right"
+    },
+    {
+     "key": "Shift+Down"
+    },
+    {
+     "log_value": "fw.selection[0].contours[0].nodes[0].x+','+fw.selection[0].contours[0].nodes[0].y"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "11_pages_states_result",
+   "check": "pages states",
+   "method": {
+    "orig": "J",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T07"
+    },
+    {
+     "key": "Ctrl+PageUp"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "log_value": "fw.getDocumentDOM().currentPageNum + ':' + fw.getDocumentDOM().currentFrameNum"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Ctrl+PageDown"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "log_value": "fw.getDocumentDOM().currentPageNum + ':' + fw.getDocumentDOM().currentFrameNum"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Shift+Period"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "log_value": "fw.getDocumentDOM().currentPageNum + ':' + fw.getDocumentDOM().currentFrameNum"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Shift+Comma"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "log_value": "fw.getDocumentDOM().currentPageNum + ':' + fw.getDocumentDOM().currentFrameNum"
+    },
+    {
+     "key": "Escape"
+    }
+   ],
+   "shot": null,
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "12_bitmap_mode_result",
+   "check": "bitmap mode",
+   "method": {
+    "orig": "J",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T02"
+    },
+    {
+     "select": "B1"
+    },
+    {
+     "key": "Ctrl+E"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "ui_state.summary"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Ctrl+Shift+D"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "ui_state.summary"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "ui_state.summary"
+    },
+    {
+     "key": "Escape"
+    }
+   ],
+   "shot": null,
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "13_modifiers_drag_result",
+   "check": "modifiers drag",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       100,
+       85
+      ],
+      "to": [
+       160,
+       95
+      ],
+      "mods": [
+       "shift"
+      ]
+     }
+    },
+    {
+     "log_value": "fw.selection.map(function(e){var r=e.pixelRect;return e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom}).join('|')"
+    },
+    {
+     "key": "Ctrl+Z"
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       100,
+       85
+      ],
+      "to": [
+       160,
+       95
+      ],
+      "mods": [
+       "alt"
+      ]
+     }
+    },
+    {
+     "log_value": "fw.getDocumentDOM().layers[0].frames[0].elements.length"
+    },
+    {
+     "key": "Ctrl+Z"
+    },
+    {
+     "tool": "tool.rectangle"
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       400,
+       400
+      ],
+      "to": [
+       480,
+       450
+      ],
+      "mods": [
+       "shift"
+      ]
+     }
+    },
+    {
+     "log_value": "fw.selection.map(function(e){var r=e.pixelRect;return e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom}).join('|')"
+    },
+    {
+     "key": "Ctrl+Z"
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       400,
+       400
+      ],
+      "to": [
+       480,
+       450
+      ],
+      "mods": [
+       "alt"
+      ]
+     }
+    },
+    {
+     "log_value": "fw.selection.map(function(e){var r=e.pixelRect;return e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom}).join('|')"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "14_space_hand_result",
+   "check": "space hand",
+   "method": {
+    "orig": "J",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T10"
+    },
+    {
+     "drag": {
+      "from": {
+       "canvas": [
+        600,
+        400
+       ]
+      },
+      "to": {
+       "canvas": [
+        400,
+        300
+       ]
+      },
+      "hold_key": "Space"
+     }
+    },
+    {
+     "record_ui": "ui_state.scroll"
+    },
+    {
+     "click": {
+      "target": {
+       "canvas": [
+        600,
+        400
+       ]
+      },
+      "hold_key": "ctrl+Space"
+     }
+    },
+    {
+     "record_ui": "ui_state.zoom"
+    }
+   ],
+   "shot": null,
+   "note": "Strg+Leertaste must not collide with the forbidden Strg+Alt+Leertaste"
+  },
+  {
+   "id": "15_in_text_result",
+   "check": "in text",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T05"
+    },
+    {
+     "select": "TX1"
+    },
+    {
+     "tool": "tool.text"
+    },
+    {
+     "canvas_click": "TX1"
+    },
+    {
+     "type": "V"
+    },
+    {
+     "key": "R"
+    },
+    {
+     "record_ui": "ui_state.tool"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "log_value": "fw.selection[0] ? fw.selection[0].textChars : null"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "16_in_field_result",
+   "check": "in field",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "click": "inspector.field.w"
+    },
+    {
+     "key": "Ctrl+A"
+    },
+    {
+     "type": "123"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "log_value": "fw.selection.length"
+    },
+    {
+     "log_value": "fw.selection.map(function(e){var r=e.pixelRect;return e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom}).join('|')"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "17_menu_display_open",
+   "check": "menu display",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "menu": "Bearbeiten"
+    },
+    {
+     "log_menu_items": true
+    }
+   ],
+   "shot": {
+    "area": "menu"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "18_dialog_d17_open",
+   "check": "dialog d17",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "command": "edit.keyboardShortcuts"
+    },
+    {
+     "wait": 500
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "18_dialog_d17_conflict_open",
+   "check": "dialog d17 - conflict",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "command": "edit.keyboardShortcuts"
+    },
+    {
+     "wait": 500
+    },
+    {
+     "click": "dialog.duplicate_set"
+    },
+    {
+     "type": "par_set"
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "click": {
+      "tree_item": [
+       "Menübefehle",
+       "Datei",
+       "Neu"
+      ]
+     }
+    },
+    {
+     "click": "dialog.add_shortcut"
+    },
+    {
+     "key": "Ctrl+O"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "conflict message for Strg+O; set is not saved (Escape)"
+  },
+  {
+   "id": "19_custom_set_result",
+   "check": "custom set",
+   "method": {
+    "orig": "J",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "command": "edit.keyboardShortcuts"
+    },
+    {
+     "wait": 500
+    },
+    {
+     "click": "dialog.duplicate_set"
+    },
+    {
+     "type": "par_set"
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "click": {
+      "tree_item": [
+       "Menübefehle",
+       "Ansicht",
+       "Lineale"
+      ]
+     }
+    },
+    {
+     "click": "dialog.add_shortcut"
+    },
+    {
+     "key": "Ctrl+Shift+F12"
+    },
+    {
+     "click": "OK"
+    },
+    {
+     "key": "Ctrl+Shift+F12"
+    },
+    {
+     "record_ui": "ui_state.rulers"
+    }
+   ],
+   "shot": null,
+   "after": [
+    {
+     "command": "edit.keyboardShortcuts"
+    },
+    {
+     "choose": {
+      "target": "dialog.set",
+      "item": "Firepixel"
+     }
+    },
+    {
+     "click": "dialog.delete_set"
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "click": "OK"
+    }
+   ],
+   "note": "cleanup restores the default set; default set name differs per program (orig: vendor set) - runner maps 'default_set'"
+  },
+  {
+   "id": "20_alt_menus_open",
+   "check": "alt menus",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "key": "Alt+D"
+    },
+    {
+     "log_menu_items": true
+    }
+   ],
+   "shot": {
+    "area": "menu"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "21_escape_chain_result",
+   "check": "escape chain",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "open": "inspector.fill_color"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "record_ui": "popup.visible"
+    },
+    {
+     "log_value": "fw.selection.length"
+    },
+    {
+     "tool": "tool.pen"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "record_ui": "ui_state.tool"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "log_value": "fw.selection.length"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "22_enter_canvas_result",
+   "check": "enter canvas",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "select": "G"
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "log_value": "fw.selection.length ? fw.selection[0].toString() : null"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "select_none": true
+    },
+    {
+     "key": "Ctrl+Z"
+    }
+   ],
+   "shot": null,
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "Enter on group = subselect; bitmap-mode Enter covered in 12"
+  }
+ ]
+}

@@ -1,0 +1,10 @@
+{
+  "format": "firepixel-batch-recipe",
+  "version": 1,
+  "name": "Trace logos to SVG",
+  "description": "Trace logos and icons into clean vector paths (few flat colours) and save as SVG.",
+  "steps": [
+    { "id": "vector.trace", "enabled": true, "params": { "preset": "logo", "engine": "clusters", "keepOriginal": false, "transparentCanvas": true } }
+  ],
+  "output": { "format": "svg", "options": {} }
+}

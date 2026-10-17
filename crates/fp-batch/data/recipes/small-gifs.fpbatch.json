@@ -1,0 +1,10 @@
+{
+  "format": "firepixel-batch-recipe",
+  "version": 1,
+  "name": "Small GIFs",
+  "description": "Longest side 480 px, GIF with the optimizer preset balanced.",
+  "steps": [
+    { "id": "resize", "enabled": true, "params": { "mode": "longEdge", "size": 480, "onlyShrink": true, "filter": "auto" } }
+  ],
+  "output": { "format": "gif", "options": { "preset": "balanced", "quality": 80 } }
+}

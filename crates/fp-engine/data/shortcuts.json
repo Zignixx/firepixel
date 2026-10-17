@@ -1,0 +1,5257 @@
+{
+"sets": {
+"Firepixel": {
+"menu": {
+"cmd_Frame_Previous": [
+[
+2,
+188
+]
+],
+"cmd_Frame_Next": [
+[
+2,
+190
+]
+],
+"cmd_TextAlign_Justified": [
+[
+7,
+74
+]
+],
+"cmd_SelectNone": [
+[
+4,
+68
+]
+],
+"cmd_TextEditor": [
+[
+6,
+69
+]
+],
+"cmd_SelectCopyToURL": [
+[
+6,
+85
+]
+],
+"cmd_AlignHorizontal": [
+[
+5,
+53
+]
+],
+"cmd_Page_Next": [
+[
+4,
+33
+]
+],
+"cmd_HideSelection": [
+[
+4,
+77
+]
+],
+"cmd_Panels_URLMgr": [
+[
+5,
+85
+]
+],
+"cmd_ViewRulers": [
+[
+5,
+82
+]
+],
+"cmd_Open": [
+[
+4,
+79
+]
+],
+"cmd_EditImageObject": [
+[
+4,
+69
+]
+],
+"cmd_TextAlign_Stretch": [
+[
+7,
+83
+]
+],
+"cmd_ZoomIn": [
+[
+4,
+187
+]
+],
+"cmd_Mask_EnableDisable": [
+[
+6,
+75
+]
+],
+"cmd_HideEdges": [
+[
+4,
+72
+]
+],
+"cmd_AlignBottom": [
+[
+5,
+54
+]
+],
+"cmd_ArrangeFront": [
+[
+4,
+70
+]
+],
+"cmd_TextAlign_Left": [
+[
+7,
+76
+]
+],
+"cmd_FlattenSelection": [
+[
+7,
+90
+]
+],
+"cmd_Group": [
+[
+4,
+71
+]
+],
+"cmd_Split": [
+[
+6,
+74
+]
+],
+"cmd_TextStyle_Bold": [
+[
+7,
+66
+],
+[
+0,
+117
+]
+],
+"cmd_ArrangeBack": [
+[
+4,
+66
+]
+],
+"cmd_Toolbars_Art": [
+[
+5,
+84
+]
+],
+"cmd_Panels_Styles": [
+[
+5,
+74
+]
+],
+"cmd_AlignTop": [
+[
+5,
+52
+]
+],
+"cmd_Doc_FileInfo": [
+[
+7,
+70
+]
+],
+"cmd_New": [
+[
+4,
+78
+]
+],
+"cmd_NudgeRight": [
+[
+0,
+39
+]
+],
+"cmd_Duplicate": [
+[
+5,
+68
+]
+],
+"cmd_TextAlign_Right": [
+[
+7,
+82
+]
+],
+"cmd_Print": [
+[
+4,
+80
+]
+],
+"cmd_TweenInstances": [
+[
+7,
+84
+]
+],
+"cmd_ViewSliceGuides": [
+[
+7,
+186
+]
+],
+"cmd_ViewGrid": [
+[
+4,
+222
+]
+],
+"cmd_NumericTransform": [
+[
+6,
+84
+]
+],
+"cmd_Rotate270": [
+[
+4,
+55
+]
+],
+"cmd_AlignVertical": [
+[
+5,
+50
+]
+],
+"cmd_ExportPreview": [
+[
+6,
+88
+]
+],
+"cmd_Undo": [
+[
+4,
+90
+]
+],
+"cmd_Export": [
+[
+6,
+82
+]
+],
+"cmd_Clear": [
+[
+0,
+8
+],
+[
+0,
+46
+]
+],
+"cmd_Save": [
+[
+4,
+83
+]
+],
+"cmd_PasteAttributes": [
+[
+7,
+86
+]
+],
+"cmd_ZoomOut": [
+[
+4,
+189
+]
+],
+"cmd_SaveAs": [
+[
+6,
+83
+]
+],
+"cmd_Redo": [
+[
+6,
+90
+]
+],
+"cmd_Join": [
+[
+4,
+74
+]
+],
+"cmd_ViewSmartGuides": [
+[
+4,
+220
+]
+],
+"cmd_SnapSmartGuides": [
+[
+6,
+220
+]
+],
+"cmd_Tooltips": [
+[
+4,
+221
+]
+],
+"cmd_BigNudgeDown": [
+[
+2,
+40
+]
+],
+"cmd_ViewSnapGuides": [
+[
+6,
+186
+]
+],
+"cmd_NudgeUp": [
+[
+0,
+38
+]
+],
+"cmd_PreviewSecondary": [
+[
+2,
+123
+]
+],
+"cmd_PreviewAllPagesInBrowser": [
+[
+4,
+123
+]
+],
+"cmd_FitSelection": [
+[
+4,
+48
+]
+],
+"cmd_PasteInside": [
+[
+6,
+86
+]
+],
+"cmd_ViewLockGuides": [
+[
+5,
+186
+]
+],
+"cmd_ViewGuides": [
+[
+4,
+186
+]
+],
+"cmd_ViewSnapGrid": [
+[
+6,
+222
+]
+],
+"cmd_HideOrShowAllPanels": [
+[
+0,
+9
+],
+[
+6,
+72
+]
+],
+"cmd_SelectInverse": [
+[
+6,
+73
+]
+],
+"cmd_ModifyCropObject": [
+[
+5,
+67
+]
+],
+"cmd_TextStyle_Italic": [
+[
+7,
+73
+],
+[
+0,
+118
+]
+],
+"cmd_FitInWindow": [
+[
+5,
+48
+]
+],
+"cmd_Rotate90": [
+[
+4,
+57
+]
+],
+"cmd_Cut": [
+[
+4,
+88
+]
+],
+"cmd_ViewEditGuides": [
+[
+7,
+71
+]
+],
+"cmd_Panels_Frames": [
+[
+5,
+75
+]
+],
+"cmd_TextAlign_Center": [
+[
+7,
+67
+]
+],
+"cmd_Panels_Layers": [
+[
+5,
+76
+]
+],
+"cmd_Panels_Swatches": [
+[
+5,
+83
+]
+],
+"cmd_Quit": [
+[
+4,
+81
+]
+],
+"cmd_Copy": [
+[
+4,
+67
+]
+],
+"cmd_Page_Previous": [
+[
+4,
+34
+]
+],
+"cmd_ShowAll": [
+[
+6,
+77
+]
+],
+"cmd_Panels_Behaviors": [
+[
+5,
+72
+]
+],
+"cmd_SelectChildren": [
+[
+4,
+40
+]
+],
+"cmd_ConvertToMaster": [
+[
+0,
+119
+]
+],
+"cmd_ArrangeBackward": [
+[
+6,
+66
+]
+],
+"cmd_Close": [
+[
+4,
+87
+]
+],
+"cmd_Clone": [
+[
+6,
+67
+]
+],
+"cmd_Ungroup": [
+[
+4,
+85
+]
+],
+"cmd_RepeatXtra": [
+[
+7,
+88
+]
+],
+"cmd_Panels_Pages": [
+[
+5,
+79
+]
+],
+"cmd_cssproperties": [
+[
+4,
+118
+]
+],
+"cmd_jquery": [
+[
+4,
+121
+]
+],
+"cmd_SelectCopyToPolySlice": [
+[
+3,
+80
+]
+],
+"cmd_PreviewInBrowser": [
+[
+0,
+123
+]
+],
+"cmd_DistributeHorizontal": [
+[
+5,
+55
+]
+],
+"cmd_browse": [
+[
+6,
+79
+]
+],
+"cmd_InsertLayer": [
+[
+2,
+76
+]
+],
+"cmd_MergeDown": [
+[
+5,
+69
+]
+],
+"cmd_TextStyle_Underline": [
+[
+7,
+85
+]
+],
+"cmd_ViewEditGrid": [
+[
+5,
+71
+]
+],
+"cmd_commonlib_form_elements": [
+[
+6,
+76
+]
+],
+"cmd_Transform": [
+[
+4,
+84
+]
+],
+"cmd_SelectAll": [
+[
+4,
+65
+]
+],
+"cmd_NewSymbol": [
+[
+4,
+119
+]
+],
+"cmd_TextStyle_Plain": [
+[
+7,
+80
+],
+[
+0,
+116
+]
+],
+"cmd_ExitImageEdit": [
+[
+6,
+68
+]
+],
+"cmd_InsertFrame": [
+[
+2,
+70
+]
+],
+"cmd_FlattenDocument": [
+[
+7,
+69
+]
+],
+"cmd_PanelInfo": [
+[
+5,
+73
+]
+],
+"cmd_MaskGroup": [
+[
+6,
+71
+]
+],
+"cmd_CreateImage": [
+[
+5,
+89
+]
+],
+"cmd_DistributeVertical": [
+[
+5,
+57
+]
+],
+"cmd_ArrangeForward": [
+[
+6,
+70
+]
+],
+"cmd_BigNudgeUp": [
+[
+2,
+38
+]
+],
+"cmd_Panels_ColorMixer": [
+[
+5,
+77
+]
+],
+"cmd_AttachTextToPath": [
+[
+6,
+89
+]
+],
+"cmd_Import": [
+[
+4,
+82
+]
+],
+"cmd_AlignRight": [
+[
+5,
+51
+]
+],
+"cmd_BigNudgeRight": [
+[
+2,
+39
+]
+],
+"cmd_SelectParent": [
+[
+4,
+38
+]
+],
+"cmd_NudgeLeft": [
+[
+0,
+37
+]
+],
+"cmd_NudgeDown": [
+[
+0,
+40
+]
+],
+"cmd_AlignLeft": [
+[
+5,
+49
+]
+],
+"cmd_ConvertToPaths": [
+[
+6,
+80
+]
+],
+"cmd_BigNudgeLeft": [
+[
+2,
+37
+]
+],
+"cmd_Paste": [
+[
+4,
+86
+]
+],
+"cmd_PasteAsMask": [
+[
+5,
+86
+]
+],
+"cmd_Prev_Selection": [
+[
+6,
+37
+]
+],
+"cmd_Next_Selection": [
+[
+6,
+39
+]
+],
+"cmd_SnapToPixel": [
+[
+4,
+75
+]
+]
+},
+"tools": {
+"{4ce6b6a5-57b4-4d5a-aff4-ab88cf6c2ba9}": [
+[
+0,
+81
+]
+],
+"{8789476c-c6f7-11d0-9378-000502701850}": [
+[
+0,
+83
+]
+],
+"{41bf2ccc-c168-11d0-ba02-00059a80e4fd}": [
+[
+0,
+72
+]
+],
+"{030d071e-c6f5-11d0-b598-000502701850}": [
+[
+0,
+67
+]
+],
+"{4e54aeee-c168-11d0-ba02-00059a80e4fd}": [
+[
+0,
+86
+],
+[
+0,
+48
+]
+],
+"{06190c96-c6f5-11d0-b598-000502701850}": [
+[
+0,
+78
+]
+],
+"{d1216f78-25d2-11d1-beaf-00059a80e4fd}": [
+[
+0,
+80
+]
+],
+"{07ceceae-c6f5-11d0-b598-000502701850}": [
+[
+0,
+82
+]
+],
+"{8621c250-c6f7-11d0-9378-000502701850}": [
+[
+0,
+69
+]
+],
+"{0b081bb6-c6f5-11d0-b598-000502701850}": [
+[
+0,
+84
+]
+],
+"{c23a95ca-ec84-11d0-b475-000502701850}": [
+[
+0,
+70
+]
+],
+"{54ed11ba-c168-11d0-ba02-00059a80e4fd}": [
+[
+0,
+90
+]
+],
+"{f9c58cf8-c6f4-11d0-b598-000502701850}": [
+[
+0,
+76
+]
+],
+"{8a2ee0f8-c6f7-11d0-9378-000502701850}": [
+[
+0,
+81
+]
+],
+"{fda61c66-c6f4-11d0-b598-000502701850}": [
+[
+0,
+77
+]
+],
+"{7e7a7790-c6f7-11d0-9378-000502701850}": [
+[
+0,
+89
+]
+],
+"{83242ee4-c6f7-11d0-9378-000502701850}": [
+[
+0,
+73
+]
+],
+"{0491cc50-c6f5-11d0-b598-000502701850}": [
+[
+0,
+87
+]
+],
+"{84ba1638-c6f7-11d0-9378-000502701850}": [
+[
+0,
+75
+]
+],
+"{5c3ab743-15e6-4886-a8fb-611275acd9ff}": [
+[
+0,
+68
+]
+],
+"{6127ddbf-54f5-43ba-b34d-0fe2fbf050d8}": [
+[
+0,
+83
+]
+],
+"{030d073f-c6f6-11d0-b598-000502721851}": [
+[
+0,
+74
+]
+],
+"{47c8e37e-c168-11d0-ba02-00059a80e4fd}": [
+[
+0,
+66
+]
+],
+"{81ab1b54-c6f7-11d0-9378-000502701850}": [
+[
+0,
+81
+]
+],
+"{b5538880-ec84-11d0-b475-000502701850}": [
+[
+0,
+71
+]
+],
+"{015621b2-c6f5-11d0-b598-000502701850}": [
+[
+0,
+77
+]
+],
+"{dbf6dd93-314d-4fdc-899a-b75e7fa4229b}": [
+[
+0,
+88
+]
+],
+"{2f5b5766-f39c-11d0-b2ba-000502701850}": [
+[
+0,
+66
+]
+],
+"{4e54aeef-c168-11d0-ba02-00059a80e4fd}": [
+[
+0,
+65
+],
+[
+0,
+49
+]
+],
+"{c6c8dc5a-ec84-11d0-b475-000502701850}": [
+[
+0,
+70
+]
+],
+"{f4f7cbfa-c6f4-11d0-b598-000502701850}": [
+[
+0,
+86
+],
+[
+0,
+48
+]
+],
+"{22798f8a-157b-11d1-8840-000502701850}": [
+[
+0,
+85
+]
+],
+"{fb1bc11c-c6f4-11d0-b598-000502701850}": [
+[
+0,
+76
+]
+],
+"{ef34a56a-157a-11d1-8840-000502701850}": [
+[
+0,
+85
+]
+],
+"{3b81dcba-530b-4c66-a323-7838602e7aaf}": [
+[
+0,
+83
+]
+],
+"{097dd06a-c6f5-11d0-b598-000502701850}": [
+[
+0,
+82
+]
+],
+"{88dd5e14-c6f7-11d0-9378-000502701850}": [
+[
+0,
+81
+]
+]
+}
+},
+"Photoshop": {
+"menu": {
+"cmd_Doc_FileInfo": [
+[
+7,
+70
+]
+],
+"cmd_ArrangeBack": [
+[
+4,
+66
+]
+],
+"cmd_ViewRulers": [
+[
+4,
+82
+]
+],
+"cmd_cssproperties": [
+[
+4,
+118
+]
+],
+"cmd_jquery": [
+[
+4,
+121
+]
+],
+"cmd_Toolbars_Art": [
+[
+4,
+113
+]
+],
+"cmd_Panels_Styles": [
+[
+5,
+74
+]
+],
+"cmd_TextAlign_Center": [
+[
+7,
+67
+]
+],
+"cmd_ArrangeBackward": [
+[
+6,
+66
+]
+],
+"cmd_Panels_Layers": [
+[
+0,
+118
+]
+],
+"cmd_FlattenSelection": [
+[
+7,
+90
+]
+],
+"cmd_AlignTop": [
+[
+5,
+52
+]
+],
+"cmd_AlignBottom": [
+[
+5,
+54
+]
+],
+"cmd_Open": [
+[
+4,
+79
+]
+],
+"cmd_Panels_Swatches": [
+[
+0,
+116
+]
+],
+"cmd_Quit": [
+[
+4,
+81
+]
+],
+"cmd_Close": [
+[
+4,
+87
+]
+],
+"cmd_Clone": [
+[
+6,
+67
+]
+],
+"cmd_Ungroup": [
+[
+6,
+71
+]
+],
+"cmd_Group": [
+[
+4,
+71
+]
+],
+"cmd_Split": [
+[
+6,
+74
+]
+],
+"cmd_TextAlign_Stretch": [
+[
+7,
+83
+]
+],
+"cmd_ZoomIn": [
+[
+4,
+187
+]
+],
+"cmd_TextStyle_Bold": [
+[
+7,
+66
+]
+],
+"cmd_TextAlign_Left": [
+[
+7,
+76
+]
+],
+"cmd_TextStyle_Italic": [
+[
+7,
+73
+]
+],
+"cmd_Preferences": [
+[
+4,
+75
+]
+],
+"cmd_FitInWindow": [
+[
+4,
+48
+]
+],
+"cmd_Cut": [
+[
+4,
+88
+]
+],
+"cmd_Rotate90": [
+[
+4,
+120
+]
+],
+"cmd_BigNudgeDown": [
+[
+6,
+40
+]
+],
+"cmd_ViewSnapGuides": [
+[
+6,
+186
+]
+],
+"cmd_PreviewSecondary": [
+[
+2,
+123
+]
+],
+"cmd_PreviewAllPagesInBrowser": [
+[
+4,
+123
+]
+],
+"cmd_NudgeUp": [
+[
+4,
+38
+]
+],
+"cmd_ViewLockGuides": [
+[
+5,
+186
+]
+],
+"cmd_HideEdges": [
+[
+4,
+72
+]
+],
+"cmd_ViewSnapGrid": [
+[
+6,
+222
+]
+],
+"cmd_ViewGuides": [
+[
+4,
+186
+]
+],
+"cmd_HideOrShowAllPanels": [
+[
+0,
+9
+]
+],
+"cmd_TweenInstances": [
+[
+7,
+84
+]
+],
+"cmd_SelectInverse": [
+[
+6,
+73
+]
+],
+"cmd_ViewSliceGuides": [
+[
+7,
+186
+]
+],
+"cmd_ViewGrid": [
+[
+4,
+222
+]
+],
+"cmd_NumericTransform": [
+[
+6,
+84
+]
+],
+"cmd_Rotate270": [
+[
+4,
+122
+]
+],
+"cmd_AlignVertical": [
+[
+5,
+50
+]
+],
+"cmd_ExportPreview": [
+[
+6,
+88
+]
+],
+"cmd_Undo": [
+[
+4,
+90
+]
+],
+"cmd_Export": [
+[
+6,
+82
+]
+],
+"cmd_Clear": [
+[
+0,
+46
+],
+[
+0,
+8
+]
+],
+"cmd_PasteAttributes": [
+[
+5,
+86
+]
+],
+"cmd_Save": [
+[
+4,
+83
+]
+],
+"cmd_ZoomOut": [
+[
+4,
+189
+]
+],
+"cmd_SaveAs": [
+[
+6,
+83
+]
+],
+"cmd_Redo": [
+[
+6,
+90
+]
+],
+"cmd_Join": [
+[
+4,
+74
+]
+],
+"cmd_New": [
+[
+4,
+78
+]
+],
+"cmd_RepeatXtra": [
+[
+4,
+70
+]
+],
+"cmd_NudgeRight": [
+[
+4,
+39
+]
+],
+"cmd_Print": [
+[
+4,
+80
+]
+],
+"cmd_ArrangeForward": [
+[
+6,
+70
+]
+],
+"cmd_TextAlign_Right": [
+[
+7,
+82
+]
+],
+"cmd_Panels_ColorMixer": [
+[
+0,
+117
+]
+],
+"cmd_BigNudgeUp": [
+[
+6,
+38
+]
+],
+"cmd_AlignRight": [
+[
+5,
+51
+]
+],
+"cmd_BigNudgeRight": [
+[
+6,
+39
+]
+],
+"cmd_NudgeDown": [
+[
+4,
+40
+]
+],
+"cmd_NudgeLeft": [
+[
+4,
+37
+]
+],
+"cmd_BigNudgeLeft": [
+[
+6,
+37
+]
+],
+"cmd_AlignLeft": [
+[
+5,
+49
+]
+],
+"cmd_Copy": [
+[
+4,
+67
+]
+],
+"cmd_TextAlign_Justified": [
+[
+7,
+74
+]
+],
+"cmd_SelectCopyToURL": [
+[
+6,
+85
+]
+],
+"cmd_Panels_Frames": [
+[
+5,
+75
+]
+],
+"cmd_AlignHorizontal": [
+[
+5,
+53
+]
+],
+"cmd_Paste": [
+[
+4,
+86
+]
+],
+"cmd_Panels_Behaviors": [
+[
+5,
+72
+]
+],
+"cmd_Page_Next": [
+[
+4,
+33
+]
+],
+"cmd_Page_Previous": [
+[
+4,
+34
+]
+],
+"cmd_ShowAll": [
+[
+6,
+77
+]
+],
+"cmd_HideSelection": [
+[
+6,
+72
+]
+],
+"cmd_PreviewGamma": [
+[
+4,
+89
+]
+],
+"cmd_ViewEditGrid": [
+[
+5,
+71
+]
+],
+"cmd_ModifyCropObject": [
+[
+5,
+65
+]
+],
+"cmd_ViewEditGuides": [
+[
+7,
+71
+]
+],
+"cmd_DistributeHorizontal": [
+[
+5,
+55
+]
+],
+"cmd_DistributeVertical": [
+[
+5,
+57
+]
+],
+"cmd_TextEditor": [
+[
+6,
+69
+]
+],
+"cmd_Panels_History": [
+[
+0,
+120
+]
+],
+"cmd_Panels_URLMgr": [
+[
+5,
+85
+]
+],
+"cmd_PanelInfo": [
+[
+0,
+119
+]
+],
+"cmd_NewSymbol": [
+[
+4,
+119
+]
+],
+"cmd_SelectNone": [
+[
+4,
+68
+]
+],
+"cmd_SelectFeather": [
+[
+5,
+68
+]
+],
+"cmd_Panels_Answers": [
+[
+1,
+112
+]
+],
+"cmd_ExitImageEdit": [
+[
+6,
+68
+]
+],
+"cmd_PropertyInspector": [
+[
+4,
+114
+]
+],
+"cmd_SpellCheck": [
+[
+2,
+118
+]
+],
+"cmd_File_HTML_Wizard": [
+[
+5,
+67
+]
+],
+"cmd_PasteAsMask": [
+[
+6,
+86
+]
+],
+"cmd_InsertLayer": [
+[
+6,
+78
+]
+],
+"cmd_Transform": [
+[
+4,
+84
+]
+],
+"cmd_FlattenDocument": [
+[
+4,
+69
+]
+],
+"cmd_TextStyle_Plain": [
+[
+7,
+80
+]
+],
+"cmd_TextStyle_Underline": [
+[
+7,
+85
+]
+],
+"cmd_SaveCopyAs": [
+[
+5,
+83
+]
+],
+"cmd_FillClear": [
+[
+1,
+46
+]
+],
+"cmd_ViewSmartGuides": [
+[
+4,
+220
+]
+],
+"cmd_SnapSmartGuides": [
+[
+6,
+220
+]
+],
+"cmd_Tooltips": [
+[
+4,
+221
+]
+],
+"cmd_Prev_Selection": [
+[
+6,
+37
+]
+],
+"cmd_Next_Selection": [
+[
+6,
+39
+]
+]
+},
+"tools": {
+"{4e54aeee-c168-11d0-ba02-00059a80e4fd}": [
+[
+0,
+86
+],
+[
+0,
+48
+]
+],
+"{8789476c-c6f7-11d0-9378-000502701850}": [
+[
+0,
+83
+]
+],
+"{3b9abea6-cd49-11d0-b2d7-000502752052}": [
+[
+0,
+75
+]
+],
+"{0b081bb6-c6f5-11d0-b598-000502701850}": [
+[
+0,
+84
+]
+],
+"{83242ee4-c6f7-11d0-9378-000502701850}": [
+[
+0,
+73
+]
+],
+"{8a2ee0f8-c6f7-11d0-9378-000502701850}": [
+[
+0,
+81
+]
+],
+"{fdd4cc1c-db25-42ec-8398-f3243982341e}": [
+[
+0,
+82
+]
+],
+"{f9c58cf8-c6f4-11d0-b598-000502701850}": [
+[
+0,
+76
+]
+],
+"{41bf2ccc-c168-11d0-ba02-00059a80e4fd}": [
+[
+0,
+72
+]
+],
+"{3b9abea6-cd49-11d0-b2d7-000502751952}": [
+[
+0,
+74
+]
+],
+"{06190c96-c6f5-11d0-b598-000502701850}": [
+[
+0,
+78
+]
+],
+"{030d071e-c6f5-11d0-b598-000502701850}": [
+[
+0,
+67
+]
+],
+"{d1216f78-25d2-11d1-beaf-00059a80e4fd}": [
+[
+0,
+80
+]
+],
+"{fda61c66-c6f4-11d0-b598-000502701850}": [
+[
+0,
+77
+]
+],
+"{8621c250-c6f7-11d0-9378-000502701850}": [
+[
+0,
+69
+]
+],
+"{8f674c5e-47a3-4aa5-8984-08a0e6c88521}": [
+[
+0,
+66
+]
+],
+"{07ceceae-c6f5-11d0-b598-000502701850}": [
+[
+0,
+85
+]
+],
+"{0491cc50-c6f5-11d0-b598-000502701850}": [
+[
+0,
+87
+]
+],
+"{a93bdfd9-eb98-49a6-b2f2-68f74159ea9a}": [
+[
+0,
+89
+]
+],
+"{c23a95ca-ec84-11d0-b475-000502701850}": [
+[
+0,
+79
+]
+],
+"{98bdebde-43c8-47ec-8699-76f6c211e055}": [
+[
+0,
+65
+],
+[
+0,
+49
+]
+],
+"{7e7a7790-c6f7-11d0-9378-000502701850}": [
+[
+0,
+66
+]
+],
+"{84ba1638-c6f7-11d0-9378-000502701850}": [
+[
+0,
+71
+]
+],
+"{54ed11ba-c168-11d0-ba02-00059a80e4fd}": [
+[
+0,
+90
+]
+],
+"{5c3ab743-15e6-4886-a8fb-611275acd9ff}": [
+[
+0,
+68
+]
+],
+"{6127ddbf-54f5-43ba-b34d-0fe2fbf050d8}": [
+[
+0,
+83
+]
+],
+"{030d073f-c6f6-11d0-b598-000502721851}": [
+[
+0,
+67
+]
+],
+"{097dd06a-c6f5-11d0-b598-000502701850}": [
+[
+0,
+85
+]
+],
+"{47c8e37e-c168-11d0-ba02-00059a80e4fd}": [
+[
+0,
+80
+]
+],
+"{b5538880-ec84-11d0-b475-000502701850}": [
+[
+0,
+85
+]
+],
+"{81ab1b54-c6f7-11d0-9378-000502701850}": [
+[
+0,
+81
+]
+],
+"{015621b2-c6f5-11d0-b598-000502701850}": [
+[
+0,
+77
+]
+],
+"{dbf6dd93-314d-4fdc-899a-b75e7fa4229b}": [
+[
+0,
+88
+]
+],
+"{2f5b5766-f39c-11d0-b2ba-000502701850}": [
+[
+0,
+80
+]
+],
+"{4e54aeef-c168-11d0-ba02-00059a80e4fd}": [
+[
+0,
+65
+]
+],
+"{fb1bc11c-c6f4-11d0-b598-000502701850}": [
+[
+0,
+76
+]
+],
+"{f4f7cbfa-c6f4-11d0-b598-000502701850}": [
+[
+0,
+86
+],
+[
+0,
+48
+]
+],
+"{c6c8dc5a-ec84-11d0-b475-000502701850}": [
+[
+0,
+79
+]
+],
+"{22798f8a-157b-11d1-8840-000502701850}": [
+[
+0,
+79
+]
+],
+"{ef34a56a-157a-11d1-8840-000502701850}": [
+[
+0,
+79
+]
+],
+"{3b81dcba-530b-4c66-a323-7838602e7aaf}": [
+[
+0,
+83
+]
+],
+"{88dd5e14-c6f7-11d0-9378-000502701850}": [
+[
+0,
+81
+]
+],
+"{197dd06a-c6f4-11d1-b298-000502701850}": [
+[
+0,
+75
+]
+],
+"{80e51dc3-70b5-4d97-a5d0-8e08d5e89d20}": [
+[
+0,
+71
+]
+],
+"{d5d2ad45-1121-430d-95cc-7482c5efd97e}": [
+[
+0,
+70
+]
+],
+"{3f288332-3d0d-4998-8df5-53534060de4f}": [
+[
+0,
+50
+]
+],
+"{bb05205e-ec84-11d0-b475-000502701850}": [
+[
+0,
+85
+]
+],
+"{5b769684-01d2-4413-abc5-c740c2c3dfff}": [
+[
+0,
+82
+]
+],
+"{3b9abea6-cd49-11d0-b2d7-000502751852}": [
+[
+0,
+74
+]
+],
+"{6fe2c2ae-9f64-4045-a84f-2606afec8df5}": [
+[
+0,
+82
+]
+],
+"{097def6a-c6f5-11d0-b798-000502751851}": [
+[
+0,
+74
+]
+],
+"{9eaed3be-3b9f-4a6f-adac-5c3c95d6e3d6}": [
+[
+0,
+82
+]
+],
+"{c7f9aaec-2840-4543-9ecd-416a9374695c}": [
+[
+0,
+82
+]
+]
+}
+},
+"Illustrator": {
+"menu": {
+"cmd_PasteAsMask": [
+[
+6,
+86
+]
+],
+"cmd_ModifyCropObject": [
+[
+5,
+65
+]
+],
+"cmd_cssproperties": [
+[
+4,
+118
+]
+],
+"cmd_jquery": [
+[
+4,
+121
+]
+],
+"cmd_ViewEditGrid": [
+[
+5,
+71
+]
+],
+"cmd_TextStyle_Plain": [
+[
+7,
+80
+]
+],
+"cmd_FlattenDocument": [
+[
+4,
+69
+]
+],
+"cmd_Revert": [
+[
+0,
+123
+]
+],
+"cmd_InsertLayer": [
+[
+6,
+78
+]
+],
+"cmd_ViewEditGuides": [
+[
+7,
+71
+]
+],
+"cmd_TextStyle_Underline": [
+[
+7,
+85
+]
+],
+"cmd_SaveCopyAs": [
+[
+5,
+83
+]
+],
+"cmd_SelectFeather": [
+[
+5,
+68
+]
+],
+"cmd_DocumentImageSize": [
+[
+5,
+80
+]
+],
+"cmd_Doc_FileInfo": [
+[
+7,
+70
+]
+],
+"cmd_TextEditor": [
+[
+6,
+69
+]
+],
+"cmd_ArrangeBack": [
+[
+6,
+219
+]
+],
+"cmd_Panels_URLMgr": [
+[
+5,
+85
+]
+],
+"cmd_Panels_History": [
+[
+0,
+120
+]
+],
+"cmd_ViewRulers": [
+[
+4,
+82
+]
+],
+"cmd_Toolbars_Art": [
+[
+5,
+84
+]
+],
+"cmd_Panels_Styles": [
+[
+5,
+74
+]
+],
+"cmd_TextAlign_Center": [
+[
+7,
+67
+]
+],
+"cmd_ArrangeBackward": [
+[
+4,
+219
+]
+],
+"cmd_NewSymbol": [
+[
+4,
+119
+]
+],
+"cmd_Panels_Layers": [
+[
+0,
+118
+]
+],
+"cmd_FlattenSelection": [
+[
+7,
+90
+]
+],
+"cmd_AlignTop": [
+[
+5,
+52
+]
+],
+"cmd_AlignBottom": [
+[
+5,
+54
+]
+],
+"cmd_DistributeHorizontal": [
+[
+5,
+55
+]
+],
+"cmd_Open": [
+[
+4,
+79
+]
+],
+"cmd_Quit": [
+[
+4,
+81
+]
+],
+"cmd_ArrangeFront": [
+[
+6,
+221
+]
+],
+"cmd_Close": [
+[
+4,
+87
+]
+],
+"cmd_Clone": [
+[
+6,
+67
+]
+],
+"cmd_Ungroup": [
+[
+6,
+71
+]
+],
+"cmd_Group": [
+[
+4,
+71
+]
+],
+"cmd_Split": [
+[
+6,
+74
+]
+],
+"cmd_TextAlign_Stretch": [
+[
+7,
+83
+]
+],
+"cmd_ZoomIn": [
+[
+4,
+187
+]
+],
+"cmd_TextStyle_Bold": [
+[
+7,
+66
+]
+],
+"cmd_TextAlign_Left": [
+[
+7,
+76
+]
+],
+"cmd_TextStyle_Italic": [
+[
+7,
+73
+]
+],
+"cmd_Preferences": [
+[
+4,
+75
+]
+],
+"cmd_FitInWindow": [
+[
+4,
+89
+]
+],
+"cmd_File_HTML_Wizard": [
+[
+5,
+67
+]
+],
+"cmd_Cut": [
+[
+4,
+88
+],
+[
+0,
+113
+]
+],
+"cmd_Rotate90": [
+[
+4,
+120
+]
+],
+"cmd_BigNudgeDown": [
+[
+6,
+40
+]
+],
+"cmd_ViewSnapGuides": [
+[
+6,
+186
+]
+],
+"cmd_FitSelection": [
+[
+6,
+89
+]
+],
+"cmd_NudgeUp": [
+[
+4,
+38
+]
+],
+"cmd_ViewLockGuides": [
+[
+5,
+186
+]
+],
+"cmd_HideEdges": [
+[
+4,
+72
+]
+],
+"cmd_ViewSnapGrid": [
+[
+6,
+222
+]
+],
+"cmd_ViewGuides": [
+[
+4,
+186
+]
+],
+"cmd_HideOrShowAllPanels": [
+[
+0,
+9
+]
+],
+"cmd_SelectInverse": [
+[
+6,
+73
+]
+],
+"cmd_TweenInstances": [
+[
+7,
+84
+]
+],
+"cmd_ViewSliceGuides": [
+[
+7,
+186
+]
+],
+"cmd_ViewGrid": [
+[
+4,
+222
+]
+],
+"cmd_NumericTransform": [
+[
+6,
+84
+]
+],
+"cmd_Rotate270": [
+[
+4,
+122
+]
+],
+"cmd_AlignVertical": [
+[
+5,
+50
+]
+],
+"cmd_ExportPreview": [
+[
+6,
+88
+]
+],
+"cmd_Undo": [
+[
+4,
+90
+]
+],
+"cmd_PreviewAllPagesInBrowser": [
+[
+4,
+123
+]
+],
+"cmd_Export": [
+[
+6,
+82
+]
+],
+"cmd_Clear": [
+[
+0,
+8
+],
+[
+0,
+46
+]
+],
+"cmd_PasteAttributes": [
+[
+5,
+86
+]
+],
+"cmd_Save": [
+[
+4,
+83
+]
+],
+"cmd_ZoomOut": [
+[
+4,
+189
+]
+],
+"cmd_SaveAs": [
+[
+6,
+83
+]
+],
+"cmd_Redo": [
+[
+6,
+90
+]
+],
+"cmd_Join": [
+[
+4,
+74
+]
+],
+"cmd_New": [
+[
+4,
+78
+]
+],
+"cmd_NudgeRight": [
+[
+4,
+39
+]
+],
+"cmd_Print": [
+[
+4,
+80
+]
+],
+"cmd_TextAlign_Right": [
+[
+7,
+82
+]
+],
+"cmd_ArrangeForward": [
+[
+4,
+221
+]
+],
+"cmd_Panels_ColorMixer": [
+[
+0,
+117
+]
+],
+"cmd_BigNudgeUp": [
+[
+6,
+38
+]
+],
+"cmd_BigNudgeRight": [
+[
+6,
+39
+]
+],
+"cmd_NudgeDown": [
+[
+4,
+40
+]
+],
+"cmd_NudgeLeft": [
+[
+4,
+37
+]
+],
+"cmd_BigNudgeLeft": [
+[
+6,
+37
+]
+],
+"cmd_AlignLeft": [
+[
+5,
+49
+]
+],
+"cmd_SelectNone": [
+[
+6,
+65
+]
+],
+"cmd_TextAlign_Justified": [
+[
+7,
+74
+]
+],
+"cmd_Copy": [
+[
+4,
+67
+],
+[
+0,
+114
+]
+],
+"cmd_SelectCopyToURL": [
+[
+6,
+85
+]
+],
+"cmd_Transform": [
+[
+4,
+84
+]
+],
+"cmd_Paste": [
+[
+4,
+86
+]
+],
+"cmd_AlignHorizontal": [
+[
+5,
+53
+]
+],
+"cmd_Panels_Frames": [
+[
+5,
+75
+]
+],
+"cmd_Panels_Behaviors": [
+[
+5,
+72
+]
+],
+"cmd_DistributeVertical": [
+[
+5,
+57
+]
+],
+"cmd_Page_Previous": [
+[
+4,
+34
+]
+],
+"cmd_ConvertToMaster": [
+[
+0,
+119
+]
+],
+"cmd_Page_Next": [
+[
+4,
+33
+]
+],
+"cmd_ShowAll": [
+[
+5,
+51
+]
+],
+"cmd_HideSelection": [
+[
+4,
+51
+]
+],
+"cmd_ViewSmartGuides": [
+[
+4,
+220
+]
+],
+"cmd_SnapSmartGuides": [
+[
+6,
+220
+]
+],
+"cmd_Tooltips": [
+[
+4,
+221
+]
+],
+"cmd_Prev_Selection": [
+[
+6,
+37
+]
+],
+"cmd_Next_Selection": [
+[
+6,
+39
+]
+]
+},
+"tools": {
+"{54ed11ba-c168-11d0-ba02-00059a80e4fd}": [
+[
+0,
+90
+]
+],
+"{0491cc50-c6f5-11d0-b598-000502701850}": [
+[
+0,
+87
+]
+],
+"{3b9abea6-cd49-11d0-b2d7-000502752052}": [
+[
+0,
+89
+]
+],
+"{fda61c66-c6f4-11d0-b598-000502701850}": [
+[
+0,
+77
+]
+],
+"{7e7a7790-c6f7-11d0-9378-000502701850}": [
+[
+0,
+78
+]
+],
+"{83242ee4-c6f7-11d0-9378-000502701850}": [
+[
+0,
+73
+]
+],
+"{f9c58cf8-c6f4-11d0-b598-000502701850}": [
+[
+0,
+76
+]
+],
+"{4e54aeee-c168-11d0-ba02-00059a80e4fd}": [
+[
+0,
+86
+]
+],
+"{030d071e-c6f5-11d0-b598-000502701850}": [
+[
+0,
+67
+]
+],
+"{8789476c-c6f7-11d0-9378-000502701850}": [
+[
+0,
+83
+]
+],
+"{06190c96-c6f5-11d0-b598-000502701850}": [
+[
+0,
+76
+]
+],
+"{07ceceae-c6f5-11d0-b598-000502701850}": [
+[
+0,
+77
+]
+],
+"{8a2ee0f8-c6f7-11d0-9378-000502701850}": [
+[
+0,
+82
+]
+],
+"{0b081bb6-c6f5-11d0-b598-000502701850}": [
+[
+0,
+84
+]
+],
+"{d1216f78-25d2-11d1-beaf-00059a80e4fd}": [
+[
+0,
+80
+]
+],
+"{41bf2ccc-c168-11d0-ba02-00059a80e4fd}": [
+[
+0,
+72
+]
+],
+"{84ba1638-c6f7-11d0-9378-000502701850}": [
+[
+0,
+75
+]
+],
+"{c23a95ca-ec84-11d0-b475-000502701850}": [
+[
+0,
+69
+]
+],
+"{6127ddbf-54f5-43ba-b34d-0fe2fbf050d8}": [
+[
+0,
+83
+]
+],
+"{030d073f-c6f6-11d0-b598-000502721851}": [
+[
+0,
+74
+]
+],
+"{097dd06a-c6f5-11d0-b598-000502701850}": [
+[
+0,
+76
+]
+],
+"{47c8e37e-c168-11d0-ba02-00059a80e4fd}": [
+[
+0,
+66
+]
+],
+"{b5538880-ec84-11d0-b475-000502701850}": [
+[
+0,
+71
+]
+],
+"{2f5b5766-f39c-11d0-b2ba-000502701850}": [
+[
+0,
+66
+]
+],
+"{88dd5e14-c6f7-11d0-9378-000502701850}": [
+[
+0,
+84
+]
+],
+"{4e54aeef-c168-11d0-ba02-00059a80e4fd}": [
+[
+0,
+65
+]
+],
+"{fb1bc11c-c6f4-11d0-b598-000502701850}": [
+[
+0,
+73
+]
+],
+"{f4f7cbfa-c6f4-11d0-b598-000502701850}": [
+[
+0,
+86
+]
+],
+"{c6c8dc5a-ec84-11d0-b475-000502701850}": [
+[
+0,
+70
+]
+],
+"{3b81dcba-530b-4c66-a323-7838602e7aaf}": [
+[
+0,
+83
+]
+]
+}
+},
+"FreeHand": {
+"menu": {
+"cmd_Doc_FileInfo": [
+[
+7,
+73
+]
+],
+"cmd_ArrangeBack": [
+[
+4,
+66
+]
+],
+"cmd_ViewRulers": [
+[
+5,
+77
+]
+],
+"cmd_Toolbars_Art": [
+[
+5,
+84
+]
+],
+"cmd_Panels_Styles": [
+[
+4,
+51
+]
+],
+"cmd_TextAlign_Center": [
+[
+7,
+77
+]
+],
+"cmd_ArrangeBackward": [
+[
+7,
+75
+]
+],
+"cmd_Panels_Layers": [
+[
+4,
+54
+]
+],
+"cmd_FlattenSelection": [
+[
+7,
+90
+]
+],
+"cmd_AlignTop": [
+[
+6,
+37
+]
+],
+"cmd_AlignBottom": [
+[
+6,
+39
+]
+],
+"cmd_EditImageObject": [
+[
+4,
+69
+]
+],
+"cmd_Open": [
+[
+4,
+79
+]
+],
+"cmd_Panels_Swatches": [
+[
+5,
+83
+]
+],
+"cmd_Quit": [
+[
+4,
+81
+]
+],
+"cmd_ArrangeFront": [
+[
+4,
+70
+]
+],
+"cmd_Close": [
+[
+4,
+87
+]
+],
+"cmd_Clone": [
+[
+6,
+67
+]
+],
+"cmd_Ungroup": [
+[
+4,
+85
+]
+],
+"cmd_Group": [
+[
+4,
+71
+]
+],
+"cmd_Split": [
+[
+6,
+74
+]
+],
+"cmd_TextAlign_Stretch": [
+[
+7,
+83
+]
+],
+"cmd_ZoomIn": [
+[
+4,
+187
+]
+],
+"cmd_TextStyle_Bold": [
+[
+0,
+117
+],
+[
+5,
+66
+]
+],
+"cmd_TextAlign_Left": [
+[
+7,
+76
+]
+],
+"cmd_TextStyle_Italic": [
+[
+0,
+118
+],
+[
+5,
+73
+]
+],
+"cmd_Preferences": [
+[
+6,
+68
+]
+],
+"cmd_FitInWindow": [
+[
+5,
+48
+]
+],
+"cmd_Cut": [
+[
+4,
+88
+],
+[
+2,
+46
+]
+],
+"cmd_Rotate90": [
+[
+4,
+57
+]
+],
+"cmd_BigNudgeDown": [
+[
+2,
+40
+]
+],
+"cmd_ViewSnapGuides": [
+[
+5,
+71
+]
+],
+"cmd_PreviewSecondary": [
+[
+2,
+123
+]
+],
+"cmd_PreviewAllPagesInBrowser": [
+[
+4,
+123
+]
+],
+"cmd_NudgeUp": [
+[
+0,
+38
+]
+],
+"cmd_FitSelection": [
+[
+4,
+48
+]
+],
+"cmd_PasteInside": [
+[
+6,
+86
+]
+],
+"cmd_ViewLockGuides": [
+[
+5,
+186
+]
+],
+"cmd_HideEdges": [
+[
+4,
+72
+]
+],
+"cmd_ViewSnapGrid": [
+[
+6,
+186
+]
+],
+"cmd_ViewGuides": [
+[
+4,
+186
+]
+],
+"cmd_HideOrShowAllPanels": [
+[
+6,
+72
+],
+[
+0,
+123
+]
+],
+"cmd_TweenInstances": [
+[
+7,
+84
+]
+],
+"cmd_SelectInverse": [
+[
+6,
+73
+]
+],
+"cmd_ViewSliceGuides": [
+[
+7,
+186
+]
+],
+"cmd_ViewGrid": [
+[
+4,
+222
+]
+],
+"cmd_NumericTransform": [
+[
+6,
+84
+]
+],
+"cmd_Rotate270": [
+[
+4,
+55
+]
+],
+"cmd_AlignVertical": [
+[
+5,
+57
+]
+],
+"cmd_PanelFind": [
+[
+6,
+70
+]
+],
+"cmd_ExportPreview": [
+[
+6,
+88
+]
+],
+"cmd_Undo": [
+[
+4,
+90
+],
+[
+1,
+8
+]
+],
+"cmd_Export": [
+[
+6,
+82
+]
+],
+"cmd_Clear": [
+[
+0,
+8
+]
+],
+"cmd_PasteAttributes": [
+[
+7,
+86
+]
+],
+"cmd_Save": [
+[
+4,
+83
+]
+],
+"cmd_ZoomOut": [
+[
+4,
+189
+]
+],
+"cmd_SaveAs": [
+[
+6,
+83
+]
+],
+"cmd_Redo": [
+[
+4,
+89
+],
+[
+5,
+8
+]
+],
+"cmd_Join": [
+[
+4,
+74
+]
+],
+"cmd_New": [
+[
+4,
+78
+]
+],
+"cmd_RepeatXtra": [
+[
+7,
+88
+]
+],
+"cmd_NudgeRight": [
+[
+0,
+39
+]
+],
+"cmd_Duplicate": [
+[
+4,
+68
+]
+],
+"cmd_Print": [
+[
+4,
+80
+]
+],
+"cmd_ArrangeForward": [
+[
+7,
+70
+]
+],
+"cmd_TextAlign_Right": [
+[
+7,
+82
+]
+],
+"cmd_Panels_ColorMixer": [
+[
+6,
+57
+]
+],
+"cmd_BigNudgeUp": [
+[
+2,
+38
+]
+],
+"cmd_AttachTextToPath": [
+[
+6,
+89
+]
+],
+"cmd_AlignRight": [
+[
+5,
+54
+]
+],
+"cmd_BigNudgeRight": [
+[
+2,
+39
+]
+],
+"cmd_SelectParent": [
+[
+4,
+38
+]
+],
+"cmd_Import": [
+[
+4,
+82
+]
+],
+"cmd_ConvertToPaths": [
+[
+6,
+80
+]
+],
+"cmd_NudgeDown": [
+[
+0,
+40
+]
+],
+"cmd_NudgeLeft": [
+[
+0,
+37
+]
+],
+"cmd_BigNudgeLeft": [
+[
+2,
+37
+]
+],
+"cmd_AlignLeft": [
+[
+5,
+52
+]
+],
+"cmd_Copy": [
+[
+4,
+67
+],
+[
+4,
+45
+]
+],
+"cmd_TextAlign_Justified": [
+[
+7,
+74
+]
+],
+"cmd_SelectCopyToURL": [
+[
+6,
+85
+]
+],
+"cmd_Panels_Frames": [
+[
+5,
+75
+]
+],
+"cmd_AlignHorizontal": [
+[
+5,
+55
+]
+],
+"cmd_Paste": [
+[
+4,
+86
+],
+[
+2,
+45
+]
+],
+"cmd_Panels_Behaviors": [
+[
+5,
+72
+]
+],
+"cmd_Page_Next": [
+[
+4,
+33
+]
+],
+"cmd_ConvertToMaster": [
+[
+4,
+119
+]
+],
+"cmd_Page_Previous": [
+[
+4,
+34
+]
+],
+"cmd_SelectChildren": [
+[
+4,
+40
+]
+],
+"cmd_ShowAll": [
+[
+6,
+77
+]
+],
+"cmd_HideSelection": [
+[
+4,
+77
+]
+],
+"cmd_CreateImage": [
+[
+5,
+89
+]
+],
+"cmd_ModifyCropObject": [
+[
+5,
+67
+]
+],
+"cmd_ViewEditGuides": [
+[
+7,
+71
+]
+],
+"cmd_MaskGroup": [
+[
+6,
+71
+]
+],
+"cmd_TextEditor": [
+[
+6,
+69
+]
+],
+"cmd_cssproperties": [
+[
+4,
+118
+]
+],
+"cmd_jquery": [
+[
+4,
+121
+]
+],
+"ID_WINDOW_TILE_VERT": [
+[
+2,
+115
+]
+],
+"cmd_TransformScale": [
+[
+4,
+121
+]
+],
+"cmd_TransformSkew": [
+[
+4,
+122
+]
+],
+"cmd_TextStyle_Plain": [
+[
+7,
+80
+],
+[
+0,
+116
+]
+],
+"cmd_TextStyle_Underline": [
+[
+5,
+85
+]
+],
+"cmd_ViewSmartGuides": [
+[
+4,
+220
+]
+],
+"cmd_SnapSmartGuides": [
+[
+6,
+220
+]
+],
+"cmd_Tooltips": [
+[
+4,
+221
+]
+],
+"cmd_Prev_Selection": [
+[
+6,
+37
+]
+],
+"cmd_Next_Selection": [
+[
+6,
+39
+]
+],
+"cmd_SnapToPixel": [
+[
+4,
+75
+]
+]
+},
+"tools": {
+"{4e54aeee-c168-11d0-ba02-00059a80e4fd}": [
+[
+0,
+86
+],
+[
+0,
+48
+]
+],
+"{8789476c-c6f7-11d0-9378-000502701850}": [
+[
+0,
+83
+]
+],
+"{0b081bb6-c6f5-11d0-b598-000502701850}": [
+[
+0,
+84
+]
+],
+"{83242ee4-c6f7-11d0-9378-000502701850}": [
+[
+0,
+73
+]
+],
+"{f9c58cf8-c6f4-11d0-b598-000502701850}": [
+[
+0,
+76
+]
+],
+"{41bf2ccc-c168-11d0-ba02-00059a80e4fd}": [
+[
+0,
+72
+]
+],
+"{06190c96-c6f5-11d0-b598-000502701850}": [
+[
+0,
+78
+]
+],
+"{030d071e-c6f5-11d0-b598-000502701850}": [
+[
+0,
+67
+]
+],
+"{d1216f78-25d2-11d1-beaf-00059a80e4fd}": [
+[
+0,
+80
+]
+],
+"{fda61c66-c6f4-11d0-b598-000502701850}": [
+[
+0,
+77
+]
+],
+"{8621c250-c6f7-11d0-9378-000502701850}": [
+[
+0,
+69
+]
+],
+"{07ceceae-c6f5-11d0-b598-000502701850}": [
+[
+0,
+82
+]
+],
+"{0491cc50-c6f5-11d0-b598-000502701850}": [
+[
+0,
+87
+]
+],
+"{c23a95ca-ec84-11d0-b475-000502701850}": [
+[
+0,
+70
+]
+],
+"{7e7a7790-c6f7-11d0-9378-000502701850}": [
+[
+0,
+89
+]
+],
+"{84ba1638-c6f7-11d0-9378-000502701850}": [
+[
+0,
+75
+]
+],
+"{54ed11ba-c168-11d0-ba02-00059a80e4fd}": [
+[
+0,
+90
+]
+],
+"{5c3ab743-15e6-4886-a8fb-611275acd9ff}": [
+[
+0,
+68
+]
+],
+"{6127ddbf-54f5-43ba-b34d-0fe2fbf050d8}": [
+[
+0,
+83
+]
+],
+"{030d073f-c6f6-11d0-b598-000502721851}": [
+[
+0,
+74
+]
+],
+"{097dd06a-c6f5-11d0-b598-000502701850}": [
+[
+0,
+82
+]
+],
+"{47c8e37e-c168-11d0-ba02-00059a80e4fd}": [
+[
+0,
+66
+]
+],
+"{b5538880-ec84-11d0-b475-000502701850}": [
+[
+0,
+71
+]
+],
+"{81ab1b54-c6f7-11d0-9378-000502701850}": [
+[
+0,
+81
+]
+],
+"{015621b2-c6f5-11d0-b598-000502701850}": [
+[
+0,
+77
+]
+],
+"{dbf6dd93-314d-4fdc-899a-b75e7fa4229b}": [
+[
+0,
+88
+]
+],
+"{2f5b5766-f39c-11d0-b2ba-000502701850}": [
+[
+0,
+66
+]
+],
+"{4e54aeef-c168-11d0-ba02-00059a80e4fd}": [
+[
+0,
+65
+],
+[
+0,
+49
+]
+],
+"{fb1bc11c-c6f4-11d0-b598-000502701850}": [
+[
+0,
+76
+]
+],
+"{f4f7cbfa-c6f4-11d0-b598-000502701850}": [
+[
+0,
+86
+],
+[
+0,
+48
+]
+],
+"{c6c8dc5a-ec84-11d0-b475-000502701850}": [
+[
+0,
+70
+]
+],
+"{22798f8a-157b-11d1-8840-000502701850}": [
+[
+0,
+85
+]
+],
+"{ef34a56a-157a-11d1-8840-000502701850}": [
+[
+0,
+85
+]
+],
+"{3b81dcba-530b-4c66-a323-7838602e7aaf}": [
+[
+0,
+83
+]
+]
+}
+},
+"Web Standard": {
+"menu": {
+"cmd_Frame_Previous": [
+[
+2,
+188
+]
+],
+"cmd_Frame_Next": [
+[
+2,
+190
+]
+],
+"cmd_CloneBigNudgeLeft": [
+[
+3,
+37
+],
+[
+7,
+37
+]
+],
+"cmd_cssproperties": [
+[
+4,
+118
+]
+],
+"cmd_jquery": [
+[
+4,
+121
+]
+],
+"cmd_TextAlign_Justified": [
+[
+7,
+74
+]
+],
+"cmd_SelectNone": [
+[
+4,
+68
+]
+],
+"cmd_NewButton": [
+[
+6,
+119
+]
+],
+"cmd_SelectCopyToURL": [
+[
+6,
+85
+]
+],
+"cmd_AlignHorizontal": [
+[
+5,
+53
+],
+[
+5,
+101
+]
+],
+"cmd_Page_Next": [
+[
+0,
+34
+],
+[
+4,
+34
+]
+],
+"cmd_HideSelection": [
+[
+4,
+76
+]
+],
+"cmd_Panels_URLMgr": [
+[
+3,
+121
+]
+],
+"cmd_TextSize_Larger": [
+[
+6,
+190
+]
+],
+"cmd_SelectCopyToSlice": [
+[
+3,
+85
+]
+],
+"cmd_ViewRulers": [
+[
+5,
+82
+]
+],
+"cmd_Open": [
+[
+4,
+79
+]
+],
+"cmd_EditImageObject": [
+[
+2,
+69
+]
+],
+"cmd_TextAlign_Stretch": [
+[
+7,
+83
+]
+],
+"cmd_ZoomIn": [
+[
+4,
+187
+],
+[
+4,
+107
+],
+[
+6,
+187
+]
+],
+"cmd_Mag_100": [
+[
+4,
+49
+],
+[
+4,
+97
+]
+],
+"cmd_Mask_EnableDisable": [
+[
+5,
+72
+]
+],
+"cmd_HideEdges": [
+[
+4,
+72
+]
+],
+"cmd_AlignBottom": [
+[
+5,
+54
+],
+[
+5,
+102
+]
+],
+"cmd_ArrangeFront": [
+[
+6,
+38
+]
+],
+"cmd_TextAlign_Left": [
+[
+7,
+76
+]
+],
+"cmd_FlattenSelection": [
+[
+7,
+90
+]
+],
+"cmd_Group": [
+[
+4,
+71
+]
+],
+"cmd_Split": [
+[
+5,
+74
+]
+],
+"cmd_TextStyle_Bold": [
+[
+4,
+66
+]
+],
+"cmd_ArrangeBack": [
+[
+6,
+40
+]
+],
+"cmd_Toolbars_Art": [
+[
+4,
+113
+]
+],
+"cmd_Panels_Styles": [
+[
+4,
+122
+]
+],
+"cmd_AlignTop": [
+[
+5,
+52
+],
+[
+5,
+100
+]
+],
+"cmd_Doc_FileInfo": [
+[
+7,
+70
+]
+],
+"cmd_New": [
+[
+4,
+78
+]
+],
+"cmd_NudgeRight": [
+[
+0,
+39
+]
+],
+"cmd_Duplicate": [
+[
+5,
+68
+]
+],
+"cmd_TextAlign_Right": [
+[
+7,
+82
+]
+],
+"cmd_Print": [
+[
+4,
+80
+]
+],
+"cmd_TweenInstances": [
+[
+7,
+84
+]
+],
+"cmd_ViewSliceGuides": [
+[
+7,
+186
+]
+],
+"cmd_Mag_300": [
+[
+4,
+51
+],
+[
+4,
+99
+]
+],
+"cmd_ViewGrid": [
+[
+5,
+71
+]
+],
+"cmd_NumericTransform": [
+[
+6,
+84
+]
+],
+"cmd_Rotate270": [
+[
+6,
+55
+]
+],
+"cmd_AlignVertical": [
+[
+5,
+50
+],
+[
+5,
+98
+]
+],
+"cmd_ExportPreview": [
+[
+6,
+88
+]
+],
+"cmd_Undo": [
+[
+4,
+90
+]
+],
+"cmd_Export": [
+[
+6,
+82
+]
+],
+"cmd_Clear": [
+[
+0,
+8
+],
+[
+0,
+46
+]
+],
+"cmd_Save": [
+[
+4,
+83
+]
+],
+"cmd_PasteAttributes": [
+[
+7,
+86
+]
+],
+"cmd_ZoomOut": [
+[
+4,
+189
+],
+[
+4,
+109
+]
+],
+"cmd_SaveAs": [
+[
+6,
+83
+]
+],
+"cmd_Redo": [
+[
+4,
+89
+],
+[
+6,
+90
+]
+],
+"cmd_Join": [
+[
+6,
+74
+]
+],
+"cmd_BigNudgeDown": [
+[
+2,
+40
+]
+],
+"cmd_ViewSnapGuides": [
+[
+6,
+186
+]
+],
+"cmd_ViewSmartGuides": [
+[
+4,
+220
+]
+],
+"cmd_SnapSmartGuides": [
+[
+6,
+220
+]
+],
+"cmd_Tooltips": [
+[
+4,
+221
+]
+],
+"cmd_NudgeUp": [
+[
+0,
+38
+]
+],
+"cmd_PreviewSecondary": [
+[
+2,
+123
+]
+],
+"cmd_FitSelection": [
+[
+5,
+48
+],
+[
+5,
+96
+]
+],
+"cmd_PasteInside": [
+[
+6,
+86
+]
+],
+"cmd_ViewLockGuides": [
+[
+5,
+186
+]
+],
+"cmd_ViewGuides": [
+[
+4,
+186
+]
+],
+"cmd_ViewSnapGrid": [
+[
+7,
+71
+]
+],
+"cmd_HideOrShowAllPanels": [
+[
+0,
+115
+],
+[
+0,
+9
+]
+],
+"cmd_SelectInverse": [
+[
+6,
+73
+]
+],
+"cmd_TextStyle_Italic": [
+[
+4,
+73
+]
+],
+"cmd_FitInWindow": [
+[
+4,
+48
+],
+[
+4,
+96
+]
+],
+"cmd_Rotate90": [
+[
+6,
+57
+]
+],
+"cmd_Cut": [
+[
+4,
+88
+]
+],
+"cmd_CloneNudgeDown": [
+[
+1,
+40
+],
+[
+5,
+40
+]
+],
+"cmd_Panels_Frames": [
+[
+2,
+113
+]
+],
+"cmd_TextAlign_Center": [
+[
+7,
+67
+]
+],
+"cmd_Panels_Layers": [
+[
+0,
+113
+]
+],
+"cmd_Panels_Swatches": [
+[
+4,
+120
+]
+],
+"cmd_Quit": [
+[
+4,
+81
+]
+],
+"cmd_Copy": [
+[
+4,
+67
+]
+],
+"cmd_Page_Previous": [
+[
+0,
+33
+],
+[
+4,
+33
+]
+],
+"cmd_ShowAll": [
+[
+6,
+76
+]
+],
+"cmd_Panels_Behaviors": [
+[
+2,
+114
+]
+],
+"cmd_SelectChildren": [
+[
+4,
+37
+]
+],
+"cmd_ConvertToMaster": [
+[
+0,
+119
+]
+],
+"cmd_ArrangeBackward": [
+[
+4,
+40
+]
+],
+"cmd_Close": [
+[
+4,
+87
+]
+],
+"cmd_Clone": [
+[
+6,
+68
+]
+],
+"cmd_Ungroup": [
+[
+6,
+71
+]
+],
+"cmd_RepeatXtra": [
+[
+7,
+88
+]
+],
+"cmd_PanelFind": [
+[
+4,
+70
+]
+],
+"cmd_Panels_Pages": [
+[
+0,
+116
+]
+],
+"cmd_SelectCopyToPolySlice": [
+[
+3,
+80
+]
+],
+"cmd_File_HTML_Wizard": [
+[
+5,
+67
+]
+],
+"cmd_Mag_800": [
+[
+4,
+56
+],
+[
+4,
+104
+]
+],
+"cmd_Mag_400": [
+[
+4,
+52
+],
+[
+4,
+100
+]
+],
+"cmd_Panels_Answers": [
+[
+1,
+112
+]
+],
+"cmd_DocumentImageSize": [
+[
+4,
+74
+]
+],
+"cmd_Preferences": [
+[
+4,
+85
+]
+],
+"cmd_VCR_TogglePlayOrStop": [
+[
+5,
+80
+]
+],
+"cmd_PreviewInBrowser": [
+[
+0,
+123
+]
+],
+"cmd_PreviewAllPagesInBrowser": [
+[
+4,
+123
+]
+],
+"cmd_Panels_History": [
+[
+2,
+121
+]
+],
+"cmd_SpellCheck": [
+[
+2,
+118
+]
+],
+"cmd_Mag_1600": [
+[
+4,
+54
+],
+[
+4,
+102
+]
+],
+"cmd_TrimCanvasSize": [
+[
+5,
+84
+]
+],
+"cmd_Panels_SymLibrary": [
+[
+0,
+122
+]
+],
+"cmd_DistributeHorizontal": [
+[
+5,
+55
+],
+[
+5,
+103
+]
+],
+"cmd_FillClear": [
+[
+1,
+8
+],
+[
+1,
+46
+]
+],
+"cmd_Mag_200": [
+[
+4,
+50
+],
+[
+4,
+98
+]
+],
+"cmd_Panels_ExportPanel": [
+[
+0,
+117
+]
+],
+"cmd_browse": [
+[
+5,
+79
+]
+],
+"cmd_InsertLayer": [
+[
+2,
+76
+]
+],
+"cmd_PropertyInspector": [
+[
+4,
+114
+]
+],
+"cmd_SelectFeather": [
+[
+7,
+68
+]
+],
+"cmd_MergeDown": [
+[
+4,
+69
+]
+],
+"cmd_commonlib_form_elements": [
+[
+0,
+118
+]
+],
+"cmd_CloneBigNudgeUp": [
+[
+3,
+38
+],
+[
+7,
+38
+]
+],
+"cmd_Transform": [
+[
+4,
+84
+]
+],
+"cmd_SelectAll": [
+[
+4,
+65
+]
+],
+"cmd_CloneNudgeLeft": [
+[
+1,
+37
+],
+[
+5,
+37
+]
+],
+"cmd_PathUnion": [
+[
+5,
+85
+]
+],
+"cmd_NewSymbol": [
+[
+4,
+119
+]
+],
+"cmd_LockSelection": [
+[
+5,
+76
+]
+],
+"cmd_CreateAnimSym": [
+[
+3,
+119
+]
+],
+"cmd_CloneBigNudgeRight": [
+[
+3,
+39
+],
+[
+7,
+39
+]
+],
+"cmd_ExitImageEdit": [
+[
+6,
+69
+]
+],
+"cmd_InsertFrame": [
+[
+2,
+70
+]
+],
+"cmd_TextSize_Smaller": [
+[
+6,
+188
+]
+],
+"ID_HELP_FINDER": [
+[
+0,
+112
+]
+],
+"cmd_FlattenDocument": [
+[
+5,
+69
+]
+],
+"cmd_PanelInfo": [
+[
+3,
+123
+]
+],
+"cmd_CloneNudgeUp": [
+[
+1,
+38
+],
+[
+5,
+38
+]
+],
+"cmd_Mag_50": [
+[
+4,
+53
+],
+[
+4,
+101
+]
+],
+"cmd_BreakLinks": [
+[
+6,
+66
+]
+],
+"cmd_CloneNudgeRight": [
+[
+1,
+39
+],
+[
+5,
+39
+]
+],
+"cmd_DistributeVertical": [
+[
+5,
+57
+],
+[
+5,
+105
+]
+],
+"cmd_ArrangeForward": [
+[
+4,
+38
+]
+],
+"cmd_BigNudgeUp": [
+[
+2,
+38
+]
+],
+"cmd_Panels_ColorMixer": [
+[
+2,
+120
+]
+],
+"cmd_AttachTextToPath": [
+[
+6,
+89
+]
+],
+"cmd_Import": [
+[
+4,
+82
+]
+],
+"cmd_AlignRight": [
+[
+5,
+51
+],
+[
+5,
+99
+]
+],
+"cmd_FitCanvasSize": [
+[
+5,
+70
+]
+],
+"cmd_BigNudgeRight": [
+[
+2,
+39
+]
+],
+"cmd_SelectParent": [
+[
+4,
+39
+]
+],
+"cmd_NudgeLeft": [
+[
+0,
+37
+]
+],
+"cmd_NudgeDown": [
+[
+0,
+40
+]
+],
+"cmd_AlignLeft": [
+[
+5,
+49
+],
+[
+5,
+97
+]
+],
+"cmd_ConvertToPaths": [
+[
+6,
+80
+]
+],
+"cmd_BigNudgeLeft": [
+[
+2,
+37
+]
+],
+"cmd_Paste": [
+[
+4,
+86
+]
+],
+"cmd_PasteAsMask": [
+[
+5,
+86
+]
+],
+"cmd_CloneBigNudgeDown": [
+[
+3,
+40
+],
+[
+7,
+40
+]
+],
+"cmd_Prev_Selection": [
+[
+6,
+37
+]
+],
+"cmd_Next_Selection": [
+[
+6,
+39
+]
+],
+"cmd_SnapToPixel": [
+[
+4,
+75
+]
+]
+},
+"tools": {
+"{4ce6b6a5-57b4-4d5a-aff4-ab88cf6c2ba9}": [
+[
+0,
+81
+]
+],
+"{8789476c-c6f7-11d0-9378-000502701850}": [
+[
+0,
+83
+]
+],
+"{41bf2ccc-c168-11d0-ba02-00059a80e4fd}": [
+[
+0,
+72
+]
+],
+"{8f674c5e-47a3-4aa5-8984-08a0e6c88521}": [
+[
+0,
+66
+]
+],
+"{030d071e-c6f5-11d0-b598-000502701850}": [
+[
+0,
+67
+]
+],
+"{4e54aeee-c168-11d0-ba02-00059a80e4fd}": [
+[
+0,
+86
+],
+[
+0,
+48
+]
+],
+"{3b9abea6-cd49-11d0-b2d7-000502751952}": [
+[
+0,
+74
+]
+],
+"{a93bdfd9-eb98-49a6-b2f2-68f74159ea9a}": [
+[
+0,
+89
+]
+],
+"{3b9abea6-cd49-11d0-b2d7-000502752052}": [
+[
+0,
+75
+]
+],
+"{80e51dc3-70b5-4d97-a5d0-8e08d5e89d20}": [
+[
+0,
+71
+]
+],
+"{06190c96-c6f5-11d0-b598-000502701850}": [
+[
+0,
+78
+]
+],
+"{d1216f78-25d2-11d1-beaf-00059a80e4fd}": [
+[
+0,
+80
+]
+],
+"{07ceceae-c6f5-11d0-b598-000502701850}": [
+[
+0,
+85
+]
+],
+"{fdd4cc1c-db25-42ec-8398-f3243982341e}": [
+[
+0,
+82
+]
+],
+"{8621c250-c6f7-11d0-9378-000502701850}": [
+[
+0,
+69
+]
+],
+"{0b081bb6-c6f5-11d0-b598-000502701850}": [
+[
+0,
+84
+]
+],
+"{c23a95ca-ec84-11d0-b475-000502701850}": [
+[
+0,
+79
+]
+],
+"{54ed11ba-c168-11d0-ba02-00059a80e4fd}": [
+[
+0,
+90
+]
+],
+"{f9c58cf8-c6f4-11d0-b598-000502701850}": [
+[
+0,
+76
+]
+],
+"{8a2ee0f8-c6f7-11d0-9378-000502701850}": [
+[
+0,
+81
+]
+],
+"{fda61c66-c6f4-11d0-b598-000502701850}": [
+[
+0,
+77
+]
+],
+"{98bdebde-43c8-47ec-8699-76f6c211e055}": [
+[
+0,
+65
+],
+[
+0,
+49
+]
+],
+"{7e7a7790-c6f7-11d0-9378-000502701850}": [
+[
+0,
+66
+]
+],
+"{83242ee4-c6f7-11d0-9378-000502701850}": [
+[
+0,
+73
+]
+],
+"{0491cc50-c6f5-11d0-b598-000502701850}": [
+[
+0,
+87
+]
+],
+"{d5d2ad45-1121-430d-95cc-7482c5efd97e}": [
+[
+0,
+70
+]
+],
+"{84ba1638-c6f7-11d0-9378-000502701850}": [
+[
+0,
+71
+]
+],
+"{5c3ab743-15e6-4886-a8fb-611275acd9ff}": [
+[
+0,
+68
+]
+],
+"{6127ddbf-54f5-43ba-b34d-0fe2fbf050d8}": [
+[
+0,
+83
+]
+],
+"{030d073f-c6f6-11d0-b598-000502721851}": [
+[
+0,
+67
+]
+],
+"{47c8e37e-c168-11d0-ba02-00059a80e4fd}": [
+[
+0,
+80
+]
+],
+"{81ab1b54-c6f7-11d0-9378-000502701850}": [
+[
+0,
+81
+]
+],
+"{b5538880-ec84-11d0-b475-000502701850}": [
+[
+0,
+85
+]
+],
+"{015621b2-c6f5-11d0-b598-000502701850}": [
+[
+0,
+77
+]
+],
+"{dbf6dd93-314d-4fdc-899a-b75e7fa4229b}": [
+[
+0,
+88
+]
+],
+"{2f5b5766-f39c-11d0-b2ba-000502701850}": [
+[
+0,
+80
+]
+],
+"{4e54aeef-c168-11d0-ba02-00059a80e4fd}": [
+[
+0,
+65
+],
+[
+0,
+49
+]
+],
+"{c6c8dc5a-ec84-11d0-b475-000502701850}": [
+[
+0,
+79
+]
+],
+"{f4f7cbfa-c6f4-11d0-b598-000502701850}": [
+[
+0,
+86
+],
+[
+0,
+48
+]
+],
+"{22798f8a-157b-11d1-8840-000502701850}": [
+[
+0,
+79
+]
+],
+"{fb1bc11c-c6f4-11d0-b598-000502701850}": [
+[
+0,
+76
+]
+],
+"{ef34a56a-157a-11d1-8840-000502701850}": [
+[
+0,
+79
+]
+],
+"{3b81dcba-530b-4c66-a323-7838602e7aaf}": [
+[
+0,
+83
+]
+],
+"{097dd06a-c6f5-11d0-b598-000502701850}": [
+[
+0,
+85
+]
+],
+"{197dd06a-c6f4-11d1-b298-000502701850}": [
+[
+0,
+75
+]
+],
+"{3f288332-3d0d-4998-8df5-53534060de4f}": [
+[
+0,
+50
+]
+],
+"{88dd5e14-c6f7-11d0-9378-000502701850}": [
+[
+0,
+81
+]
+],
+"{c7f9aaec-2840-4543-9ecd-416a9374695c}": [
+[
+0,
+82
+]
+],
+"{6d8765da-5023-493a-9269-9d7a7bba9df5}": [
+[
+0,
+75
+]
+],
+"{9eaed3be-3b9f-4a6f-adac-5c3c95d6e3d6}": [
+[
+0,
+82
+]
+],
+"{3b9abea6-cd49-11d0-b2d7-000502751852}": [
+[
+0,
+74
+]
+],
+"{097def6a-c6f5-11d0-b798-000502751851}": [
+[
+0,
+74
+]
+],
+"{bb05205e-ec84-11d0-b475-000502701850}": [
+[
+0,
+85
+]
+],
+"{5b769684-01d2-4413-abc5-c740c2c3dfff}": [
+[
+0,
+82
+]
+],
+"{6fe2c2ae-9f64-4045-a84f-2606afec8df5}": [
+[
+0,
+82
+]
+]
+}
+}
+},
+"order": [
+"Firepixel",
+"Photoshop",
+"Illustrator",
+"FreeHand",
+"Web Standard"
+]
+}

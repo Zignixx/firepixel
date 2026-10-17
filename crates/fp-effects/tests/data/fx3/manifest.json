@@ -1,0 +1,219 @@
+{
+ "source": "re/23-effekte.md group 3 (PNG 32, whole canvas 240x180); plain_* = radial 1/1 (no change)",
+ "cases": [
+  {
+   "name": "blur_default",
+   "effects": [
+    {
+     "EffectMoaID": "{f1cfce41-718e-11d1-8c8200a024cdc039}",
+     "EffectIsVisible": true
+    }
+   ]
+  },
+  {
+   "name": "blur_triple",
+   "effects": [
+    {
+     "EffectMoaID": "{f1cfce41-718e-11d1-8c8200a024cdc039}",
+     "EffectIsVisible": true
+    },
+    {
+     "EffectMoaID": "{f1cfce41-718e-11d1-8c8200a024cdc039}",
+     "EffectIsVisible": true
+    },
+    {
+     "EffectMoaID": "{f1cfce41-718e-11d1-8c8200a024cdc039}",
+     "EffectIsVisible": true
+    }
+   ]
+  },
+  {
+   "name": "blur_more_default",
+   "effects": [
+    {
+     "EffectMoaID": "{f1cfce42-718e-11d1-8c8200a024cdc039}",
+     "EffectIsVisible": true
+    }
+   ]
+  },
+  {
+   "name": "blur_more_triple",
+   "effects": [
+    {
+     "EffectMoaID": "{f1cfce42-718e-11d1-8c8200a024cdc039}",
+     "EffectIsVisible": true
+    },
+    {
+     "EffectMoaID": "{f1cfce42-718e-11d1-8c8200a024cdc039}",
+     "EffectIsVisible": true
+    },
+    {
+     "EffectMoaID": "{f1cfce42-718e-11d1-8c8200a024cdc039}",
+     "EffectIsVisible": true
+    }
+   ]
+  },
+  {
+   "name": "gaussian_default",
+   "effects": [
+    {
+     "EffectMoaID": "{d04ef8c0-71b3-11d1-8c8200a024cdc039}",
+     "EffectIsVisible": true,
+     "gaussian_blur_radius": 4.1
+    }
+   ]
+  },
+  {
+   "name": "gaussian_extreme210",
+   "effects": [
+    {
+     "EffectMoaID": "{d04ef8c0-71b3-11d1-8c8200a024cdc039}",
+     "EffectIsVisible": true,
+     "gaussian_blur_radius": 210
+    }
+   ]
+  },
+  {
+   "name": "motion_default",
+   "effects": [
+    {
+     "EffectMoaID": "{538016b6-ffd6-418f-a10c590e6ee841ae}",
+     "EffectIsVisible": true,
+     "motion_blur_angle": 90,
+     "motion_blur_distance": 10
+    }
+   ]
+  },
+  {
+   "name": "motion_large",
+   "effects": [
+    {
+     "EffectMoaID": "{538016b6-ffd6-418f-a10c590e6ee841ae}",
+     "EffectIsVisible": true,
+     "motion_blur_angle": 45,
+     "motion_blur_distance": 100
+    }
+   ]
+  },
+  {
+   "name": "radial_default",
+   "effects": [
+    {
+     "EffectMoaID": "{d1c33142-2ad8-4215-a39fc5d934c8fc0c}",
+     "EffectIsVisible": true,
+     "radial_blur_amount": 30,
+     "radial_blur_quality": 20
+    }
+   ]
+  },
+  {
+   "name": "radial_large",
+   "effects": [
+    {
+     "EffectMoaID": "{d1c33142-2ad8-4215-a39fc5d934c8fc0c}",
+     "EffectIsVisible": true,
+     "radial_blur_amount": 100,
+     "radial_blur_quality": 100
+    }
+   ]
+  },
+  {
+   "name": "zoom_default",
+   "effects": [
+    {
+     "EffectMoaID": "{94dbd663-9b2e-44bf-8064ab6efdd2d327}",
+     "EffectIsVisible": true,
+     "zoom_blur_amount": 30,
+     "zoom_blur_quality": 20
+    }
+   ]
+  },
+  {
+   "name": "zoom_large",
+   "effects": [
+    {
+     "EffectMoaID": "{94dbd663-9b2e-44bf-8064ab6efdd2d327}",
+     "EffectIsVisible": true,
+     "zoom_blur_amount": 100,
+     "zoom_blur_quality": 100
+    }
+   ]
+  },
+  {
+   "name": "sharpen_default",
+   "effects": [
+    {
+     "EffectMoaID": "{c20952b1-fc76-11d0-8be700a024cdc039}",
+     "EffectIsVisible": true
+    }
+   ]
+  },
+  {
+   "name": "sharpen_triple",
+   "effects": [
+    {
+     "EffectMoaID": "{c20952b1-fc76-11d0-8be700a024cdc039}",
+     "EffectIsVisible": true
+    },
+    {
+     "EffectMoaID": "{c20952b1-fc76-11d0-8be700a024cdc039}",
+     "EffectIsVisible": true
+    },
+    {
+     "EffectMoaID": "{c20952b1-fc76-11d0-8be700a024cdc039}",
+     "EffectIsVisible": true
+    }
+   ]
+  },
+  {
+   "name": "sharpen_more_default",
+   "effects": [
+    {
+     "EffectMoaID": "{1f2f2591-9db7-11d1-8cad00a024cdc039}",
+     "EffectIsVisible": true
+    }
+   ]
+  },
+  {
+   "name": "sharpen_more_triple",
+   "effects": [
+    {
+     "EffectMoaID": "{1f2f2591-9db7-11d1-8cad00a024cdc039}",
+     "EffectIsVisible": true
+    },
+    {
+     "EffectMoaID": "{1f2f2591-9db7-11d1-8cad00a024cdc039}",
+     "EffectIsVisible": true
+    },
+    {
+     "EffectMoaID": "{1f2f2591-9db7-11d1-8cad00a024cdc039}",
+     "EffectIsVisible": true
+    }
+   ]
+  },
+  {
+   "name": "unsharp_default",
+   "effects": [
+    {
+     "EffectMoaID": "{f1cfce44-718e-11d1-8c8200a024cdc039}",
+     "EffectIsVisible": true,
+     "unsharp_mask_radius": 4.1,
+     "unsharp_mask_amount": 50,
+     "unsharp_mask_threshold": 0
+    }
+   ]
+  },
+  {
+   "name": "unsharp_large",
+   "effects": [
+    {
+     "EffectMoaID": "{f1cfce44-718e-11d1-8c8200a024cdc039}",
+     "EffectIsVisible": true,
+     "unsharp_mask_radius": 20,
+     "unsharp_mask_amount": 500,
+     "unsharp_mask_threshold": 10
+    }
+   ]
+  }
+ ]
+}

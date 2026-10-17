@@ -1,0 +1,22 @@
+[package]
+name = "fp-geom"
+description = "Geometry: points, rectangles, matrices, Bezier curves, flattening, offset primitives"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[features]
+default = []
+# Serialisierung der Grundtypen (Point, Rect, Matrix3, BezierNode, …) für das Dokumentmodell.
+serde = ["dep:serde"]
+
+[dependencies]
+serde = { workspace = true, optional = true }
+
+[dev-dependencies]
+serde_json = { workspace = true, features = ["float_roundtrip"] }
+
+[lints]
+workspace = true

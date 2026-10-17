@@ -1,0 +1,1355 @@
+{
+ "unit": "fx-shadow-glow",
+ "testfile": "T08",
+ "testfiles": [
+  "T08"
+ ],
+ "note": "Action verbs as in the shared list (see panel-layers.json): open_testfile, select, select_none, tool <tool id>, choose {target,item} (item path 'A > B'; toolbox.<tool>_flyout picks a flyout entry, orig_index = position in the owner-drawn list of the original), open <logical ui key>, click/double_click/hover <ui key|{handle}|{menu_item}>, drag {from,by|to,mods}, canvas_click/canvas_double_click/canvas_hover [x,y] (+mods), canvas_drag {from,to,mods}, canvas_wheel {pos,delta,modifiers}, key <combo>, repeat/do, type, menu 'A > B', menu_open, set_field {target,value}, jsf (both = fp run_script), record_ui <key>, log_value, log_menu_items, export_png doc, wait, close_all, window_size. Additions in this file: {handle: <index|role>} = control/frame handle of the selected object (orig: controlPoints, fp: autoShape.describe/frame); drag_popup_slider {to_fraction,hold} = drag inside the open popup slider; record_ui history.names = history step names; mods on canvas_click/canvas_hover = held modifier keys. Coordinates are document pixels. Labels are compared without '&' and trailing '...'/'…'.",
+ "steps": [
+  {
+   "id": "00_overview_normal",
+   "check": "overview after opening the test file",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T08"
+    }
+   ],
+   "shot": {
+    "area": "window"
+   }
+  },
+  {
+   "id": "01_shadow_popup_open",
+   "check": "shadow popup",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "open_testfile": "T08"
+    },
+    {
+     "select": "R"
+    }
+   ],
+   "orig": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Schatten und Glühen > Schlagschatten"
+     }
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "fp": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Schatten und Glühen > Schlagschatten"
+     }
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": {
+    "area": "popup"
+   }
+  },
+  {
+   "id": "02_shadow_fields_normal",
+   "check": "shadow fields",
+   "method": {
+    "orig": "W",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T08"
+    },
+    {
+     "select": "R"
+    }
+   ],
+   "orig": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Schatten und Glühen > Schlagschatten"
+     }
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "fp": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Schatten und Glühen > Schlagschatten"
+     }
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ]
+  },
+  {
+   "id": "03_shadow_limits_result",
+   "check": "shadow limits",
+   "method": {
+    "orig": "W",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T08"
+    },
+    {
+     "select": "R"
+    }
+   ],
+   "orig": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Schatten und Glühen > Schlagschatten"
+     }
+    },
+    {
+     "set_field": {
+      "target": "fx_popup.distance",
+      "value": "9999"
+     }
+    },
+    {
+     "record_ui": "dialog.fields"
+    },
+    {
+     "set_field": {
+      "target": "fx_popup.distance",
+      "value": "-5"
+     }
+    },
+    {
+     "record_ui": "dialog.fields"
+    },
+    {
+     "set_field": {
+      "target": "fx_popup.opacity",
+      "value": "9999"
+     }
+    },
+    {
+     "record_ui": "dialog.fields"
+    },
+    {
+     "set_field": {
+      "target": "fx_popup.opacity",
+      "value": "-5"
+     }
+    },
+    {
+     "record_ui": "dialog.fields"
+    },
+    {
+     "set_field": {
+      "target": "fx_popup.softness",
+      "value": "9999"
+     }
+    },
+    {
+     "record_ui": "dialog.fields"
+    },
+    {
+     "set_field": {
+      "target": "fx_popup.softness",
+      "value": "-5"
+     }
+    },
+    {
+     "record_ui": "dialog.fields"
+    },
+    {
+     "set_field": {
+      "target": "fx_popup.angle",
+      "value": "9999"
+     }
+    },
+    {
+     "record_ui": "dialog.fields"
+    },
+    {
+     "set_field": {
+      "target": "fx_popup.angle",
+      "value": "-5"
+     }
+    },
+    {
+     "record_ui": "dialog.fields"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Schatten und Glühen > Schlagschatten"
+     }
+    },
+    {
+     "set_field": {
+      "target": "fx_popup.distance",
+      "value": "9999"
+     }
+    },
+    {
+     "record_ui": "dialog.fields"
+    },
+    {
+     "set_field": {
+      "target": "fx_popup.distance",
+      "value": "-5"
+     }
+    },
+    {
+     "record_ui": "dialog.fields"
+    },
+    {
+     "set_field": {
+      "target": "fx_popup.opacity",
+      "value": "9999"
+     }
+    },
+    {
+     "record_ui": "dialog.fields"
+    },
+    {
+     "set_field": {
+      "target": "fx_popup.opacity",
+      "value": "-5"
+     }
+    },
+    {
+     "record_ui": "dialog.fields"
+    },
+    {
+     "set_field": {
+      "target": "fx_popup.softness",
+      "value": "9999"
+     }
+    },
+    {
+     "record_ui": "dialog.fields"
+    },
+    {
+     "set_field": {
+      "target": "fx_popup.softness",
+      "value": "-5"
+     }
+    },
+    {
+     "record_ui": "dialog.fields"
+    },
+    {
+     "set_field": {
+      "target": "fx_popup.angle",
+      "value": "9999"
+     }
+    },
+    {
+     "record_ui": "dialog.fields"
+    },
+    {
+     "set_field": {
+      "target": "fx_popup.angle",
+      "value": "-5"
+     }
+    },
+    {
+     "record_ui": "dialog.fields"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ]
+  },
+  {
+   "id": "04_shadow_angle_pressed",
+   "check": "shadow angle",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T08"
+    },
+    {
+     "select": "R"
+    }
+   ],
+   "orig": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Schatten und Glühen > Schlagschatten"
+     }
+    },
+    {
+     "drag": {
+      "from": "fx_popup.angle_dial",
+      "by": [
+       0,
+       20
+      ]
+     }
+    }
+   ],
+   "fp": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Schatten und Glühen > Schlagschatten"
+     }
+    },
+    {
+     "drag": {
+      "from": "fx_popup.angle_dial",
+      "by": [
+       0,
+       20
+      ]
+     }
+    }
+   ],
+   "shot": {
+    "area": "popup"
+   }
+  },
+  {
+   "id": "05_shadow_live_pressed",
+   "check": "shadow live",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T08"
+    },
+    {
+     "select": "R"
+    }
+   ],
+   "orig": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Schatten und Glühen > Schlagschatten"
+     }
+    },
+    {
+     "open": "fx_popup.distance_slider"
+    },
+    {
+     "drag_popup_slider": {
+      "to_fraction": 0.6,
+      "hold": true
+     }
+    }
+   ],
+   "fp": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Schatten und Glühen > Schlagschatten"
+     }
+    },
+    {
+     "open": "fx_popup.distance_slider"
+    },
+    {
+     "drag_popup_slider": {
+      "to_fraction": 0.6,
+      "hold": true
+     }
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "note": "Screenshot while the slider is held."
+  },
+  {
+   "id": "06_inner_shadow_open",
+   "check": "inner shadow",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "open_testfile": "T08"
+    },
+    {
+     "select": "R"
+    }
+   ],
+   "orig": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Schatten und Glühen > Innerer Schatten"
+     }
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "fp": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Schatten und Glühen > Innerer Schatten"
+     }
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": {
+    "area": "popup"
+   }
+  },
+  {
+   "id": "07_glow_popup_open",
+   "check": "glow popup",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "open_testfile": "T08"
+    },
+    {
+     "select": "R"
+    }
+   ],
+   "orig": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Schatten und Glühen > Glühen"
+     }
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "fp": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Schatten und Glühen > Glühen"
+     }
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": {
+    "area": "popup"
+   }
+  },
+  {
+   "id": "08_glow_color_open",
+   "check": "glow color",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T08"
+    },
+    {
+     "select": "R"
+    }
+   ],
+   "orig": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Schatten und Glühen > Glühen"
+     }
+    },
+    {
+     "open": "fx_popup.color"
+    }
+   ],
+   "fp": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Schatten und Glühen > Glühen"
+     }
+    },
+    {
+     "open": "fx_popup.color"
+    }
+   ],
+   "shot": {
+    "area": "popup"
+   }
+  },
+  {
+   "id": "08_glow_color_result",
+   "check": "glow color",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T08"
+    },
+    {
+     "select": "R"
+    }
+   ],
+   "orig": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Schatten und Glühen > Glühen"
+     }
+    },
+    {
+     "open": "fx_popup.color"
+    },
+    {
+     "set_field": {
+      "target": "color_popup.hex",
+      "value": "FF0000"
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "fp": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Schatten und Glühen > Glühen"
+     }
+    },
+    {
+     "open": "fx_popup.color"
+    },
+    {
+     "set_field": {
+      "target": "color_popup.hex",
+      "value": "FF0000"
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "note": "N27a: chosen red must stay red (not jump to grey)."
+  },
+  {
+   "id": "09_inner_glow_open",
+   "check": "inner glow",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "open_testfile": "T08"
+    },
+    {
+     "select": "R"
+    }
+   ],
+   "orig": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Schatten und Glühen > Inneres Glühen"
+     }
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "fp": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Schatten und Glühen > Inneres Glühen"
+     }
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": {
+    "area": "popup"
+   }
+  },
+  {
+   "id": "10_solid_shadow_open",
+   "check": "solid shadow",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "open_testfile": "T08"
+    },
+    {
+     "select": "R"
+    }
+   ],
+   "orig": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Schatten und Glühen > Einfarbiger Schatten"
+     }
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "fp": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Schatten und Glühen > Einfarbiger Schatten"
+     }
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": {
+    "area": "popup"
+   },
+   "note": "Original menu label 'Einfarbiger Schatten...' (inventory: 'Massiver Schatten')."
+  },
+  {
+   "id": "11_sliders_distance_open",
+   "check": "sliders",
+   "method": {
+    "orig": "W",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T08"
+    },
+    {
+     "select": "R"
+    }
+   ],
+   "orig": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Schatten und Glühen > Schlagschatten"
+     }
+    },
+    {
+     "open": "fx_popup.distance_slider"
+    }
+   ],
+   "fp": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Schatten und Glühen > Schlagschatten"
+     }
+    },
+    {
+     "open": "fx_popup.distance_slider"
+    }
+   ],
+   "shot": {
+    "area": "popup"
+   }
+  },
+  {
+   "id": "11_sliders_softness_open",
+   "check": "sliders",
+   "method": {
+    "orig": "W",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T08"
+    },
+    {
+     "select": "R"
+    }
+   ],
+   "orig": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Schatten und Glühen > Schlagschatten"
+     }
+    },
+    {
+     "open": "fx_popup.softness_slider"
+    }
+   ],
+   "fp": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Schatten und Glühen > Schlagschatten"
+     }
+    },
+    {
+     "open": "fx_popup.softness_slider"
+    }
+   ],
+   "shot": {
+    "area": "popup"
+   }
+  },
+  {
+   "id": "12_enter_esc_result",
+   "check": "enter esc",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T08"
+    },
+    {
+     "select": "R"
+    }
+   ],
+   "orig": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Schatten und Glühen > Schlagschatten"
+     }
+    },
+    {
+     "set_field": {
+      "target": "fx_popup.distance",
+      "value": "12"
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "click": "inspector.fx_row_info.0"
+    },
+    {
+     "set_field": {
+      "target": "fx_popup.distance",
+      "value": "30"
+     }
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "click": "inspector.fx_row_info.0"
+    },
+    {
+     "set_field": {
+      "target": "fx_popup.distance",
+      "value": "40"
+     }
+    },
+    {
+     "canvas_click": [
+      700,
+      550
+     ]
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Schatten und Glühen > Schlagschatten"
+     }
+    },
+    {
+     "set_field": {
+      "target": "fx_popup.distance",
+      "value": "12"
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "click": "inspector.fx_row_info.0"
+    },
+    {
+     "set_field": {
+      "target": "fx_popup.distance",
+      "value": "30"
+     }
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "click": "inspector.fx_row_info.0"
+    },
+    {
+     "set_field": {
+      "target": "fx_popup.distance",
+      "value": "40"
+     }
+    },
+    {
+     "canvas_click": [
+      700,
+      550
+     ]
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ]
+  },
+  {
+   "id": "13_result_ref_result",
+   "check": "result ref",
+   "method": {
+    "orig": "E (RE-FX)",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T08"
+    },
+    {
+     "select": "R"
+    },
+    {
+     "jsf": "fw.getDocumentDOM().applyEffects({category:'UNUSED', effects:[{EffectMoaID:'{a7944db8-6ce2-11d1-8c76000502701850}', ShadowAngle:315, ShadowBlur:4, ShadowColor:'#000000a6', ShadowDistance:7, ShadowType:0}], name:'UNUSED'})"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "note": "Reference pixels come from RE-FX (re 23); effect parameter keys unsure."
+  },
+  {
+   "id": "14_text_target_result",
+   "check": "text target",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T08"
+    },
+    {
+     "select": "TX"
+    }
+   ],
+   "orig": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Schatten und Glühen > Schlagschatten"
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "fp": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Schatten und Glühen > Schlagschatten"
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "15_bitmap_target_result",
+   "check": "bitmap target",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T08"
+    },
+    {
+     "select": "BM"
+    }
+   ],
+   "orig": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Schatten und Glühen > Schlagschatten"
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "fp": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Schatten und Glühen > Schlagschatten"
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "16_knockout_result",
+   "check": "knockout",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T08"
+    },
+    {
+     "select": "R"
+    }
+   ],
+   "orig": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Schatten und Glühen > Schlagschatten"
+     }
+    },
+    {
+     "click": "fx_popup.knockout"
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "fp": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Schatten und Glühen > Schlagschatten"
+     }
+    },
+    {
+     "click": "fx_popup.knockout"
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "note": "Checkbox 'Objekt ausblenden' in the shadow popup."
+  },
+  {
+   "id": "17_stack_order_result",
+   "check": "stack order",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T08"
+    },
+    {
+     "select": "R"
+    }
+   ],
+   "orig": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Schatten und Glühen > Schlagschatten"
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Schatten und Glühen > Glühen"
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "fp": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Schatten und Glühen > Schlagschatten"
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Schatten und Glühen > Glühen"
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "18_remember_result",
+   "check": "remember",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T08"
+    },
+    {
+     "select": "R"
+    }
+   ],
+   "orig": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Schatten und Glühen > Schlagschatten"
+     }
+    },
+    {
+     "set_field": {
+      "target": "fx_popup.distance",
+      "value": "20"
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "select": "EL"
+    },
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Schatten und Glühen > Schlagschatten"
+     }
+    },
+    {
+     "record_ui": "dialog.fields"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Schatten und Glühen > Schlagschatten"
+     }
+    },
+    {
+     "set_field": {
+      "target": "fx_popup.distance",
+      "value": "20"
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "select": "EL"
+    },
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Schatten und Glühen > Schlagschatten"
+     }
+    },
+    {
+     "record_ui": "dialog.fields"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ]
+  },
+  {
+   "id": "19_bounds_normal",
+   "check": "bounds",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T08"
+    },
+    {
+     "select": "R"
+    }
+   ],
+   "orig": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Schatten und Glühen > Schlagschatten"
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "record_ui": "inspector.fields"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Schatten und Glühen > Schlagschatten"
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "record_ui": "inspector.fields"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ]
+  },
+  {
+   "id": "20_undo_result",
+   "check": "undo",
+   "method": {
+    "orig": "J",
+    "fp": "H"
+   },
+   "both": [
+    {
+     "open_testfile": "T08"
+    },
+    {
+     "select": "R"
+    }
+   ],
+   "orig": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Schatten und Glühen > Schlagschatten"
+     }
+    },
+    {
+     "set_field": {
+      "target": "fx_popup.distance",
+      "value": "12"
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "click": "inspector.fx_row_info.0"
+    },
+    {
+     "set_field": {
+      "target": "fx_popup.softness",
+      "value": "8"
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "record_ui": "history.names"
+    }
+   ],
+   "fp": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Schatten und Glühen > Schlagschatten"
+     }
+    },
+    {
+     "set_field": {
+      "target": "fx_popup.distance",
+      "value": "12"
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "click": "inspector.fx_row_info.0"
+    },
+    {
+     "set_field": {
+      "target": "fx_popup.softness",
+      "value": "8"
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "record_ui": "history.names"
+    }
+   ]
+  }
+ ]
+}

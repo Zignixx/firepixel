@@ -1,0 +1,314 @@
+# Menüfreigabe im Original je Lage (S1 ohne Auswahl, S2 1 Rechteck, S3 2 Rechtecke, S4 Text, S5 Bitmap), aus docs/PARITAET_B.md §1 erzeugt.
+Datei > Neu	11111
+Datei > Neu von Vorlage	11111
+Datei > Öffnen	11111
+Datei > Bridge durchsuchen	00000
+Datei > Scannen	11111
+Datei > Scannen > Twain importieren	11111
+Datei > Scannen > Twain auswählen	11111
+Datei > Schließen	11111
+Datei > Alle schließen	11111
+Datei > Speichern	11111
+Datei > Speichern unter	11111
+Datei > Alles speichern	11111
+Datei > Als Vorlage speichern	11111
+Datei > Wiederherstellen	00000
+Datei > Importieren	11111
+Datei > Exportieren	11111
+Datei > Bildvorschau	11111
+Datei > Als E-Mail senden	11111
+Datei > Als E-Mail senden > PNG-Datei für Firepixel	11111
+Datei > Als E-Mail senden > Komprimierte JPG-Datei	11111
+Datei > Als E-Mail senden > Exporteinstellungen verwenden	11111
+Datei > HTML aktualisieren	11111
+Datei > Datei-Info	11111
+Datei > Exportassistent	11111
+Datei > Batch-Verarbeitung	11111
+Datei > Vorschau im Browser	11111
+Datei > Vorschau im Browser > Vorschau im Primärbrowser	11111
+Datei > Vorschau im Browser > Vorschau im Sekundärbrowser	00000
+Datei > Vorschau im Browser > Vorschau aller Seiten im Primärbrowser	11111
+Datei > Vorschau im Browser > Primärbrowser festlegen	11111
+Datei > Vorschau im Browser > Sekundärbrowser festlegen	11111
+Datei > Seite einrichten	11111
+Datei > Drucken	11111
+Datei > HTML-Einrichtung	11111
+Datei > Beenden	11111
+Bearbeiten > Objekt einfügen	11111
+Bearbeiten > Objekt einfügen > Neue Schaltfläche	11111
+Bearbeiten > Objekt einfügen > Neues Symbol	11111
+Bearbeiten > Objekt einfügen > Hotspot	11111
+Bearbeiten > Objekt einfügen > Rechteckiges Segment	11111
+Bearbeiten > Objekt einfügen > Polygonsegment	11111
+Bearbeiten > Objekt einfügen > Leere Bitmap	11111
+Bearbeiten > Objekt einfügen > Bitmap durch Kopieren	00000
+Bearbeiten > Objekt einfügen > Bitmap durch Ausschneiden	00000
+Bearbeiten > Objekt einfügen > Ebene	11111
+Bearbeiten > Objekt einfügen > Status	11111
+Bearbeiten > Objekt einfügen > Seite	11111
+Bearbeiten > Suchen und ersetzen	11111
+Bearbeiten > Ausschneiden	01111
+Bearbeiten > Kopieren	01111
+Bearbeiten > Als Vektoren kopieren	01111
+Bearbeiten > HTML-Code kopieren	11111
+Bearbeiten > Löschen	01111
+Bearbeiten > Duplizieren	01111
+Bearbeiten > Klonen	01111
+Bearbeiten > Ausgewählte Bitmap zuschneiden	00001
+Bearbeiten > Dokument zuschneiden	01111
+Bearbeiten > Voreinstellungen	11111
+Bearbeiten > Tastaturkurzbefehle	11111
+Ansicht > Größer zoomen	11111
+Ansicht > Kleiner zoomen	11111
+Ansicht > Vergrößerung	11111
+Ansicht > Vergrößerung > 6%	11111
+Ansicht > Vergrößerung > 12%	11111
+Ansicht > Vergrößerung > 25%	11111
+Ansicht > Vergrößerung > 50%	11111
+Ansicht > Vergrößerung > 66%	11111
+Ansicht > Vergrößerung > 100%	11111
+Ansicht > Vergrößerung > 150%	11111
+Ansicht > Vergrößerung > 200%	11111
+Ansicht > Vergrößerung > 300%	11111
+Ansicht > Vergrößerung > 400%	11111
+Ansicht > Vergrößerung > 800%	11111
+Ansicht > Vergrößerung > 1600%	11111
+Ansicht > Vergrößerung > 3200%	11111
+Ansicht > Vergrößerung > 6400%	11111
+Ansicht > Auswahl anpassen	01111
+Ansicht > Alles anpassen	11111
+Ansicht > Gamma 1.8	11111
+Ansicht > Auswahl ausblenden	01111
+Ansicht > QuickInfos	11111
+Ansicht > Alles einblenden	11111
+Ansicht > Lineale	11111
+Ansicht > Raster	11111
+Ansicht > Raster > Raster anzeigen	11111
+Ansicht > Raster > Am Raster ausrichten	11111
+Ansicht > Raster > Raster bearbeiten	11111
+Ansicht > Hilfslinien	11111
+Ansicht > Hilfslinien > Hilfslinien anzeigen	11111
+Ansicht > Hilfslinien > Hilfslinien sperren	11111
+Ansicht > Hilfslinien > An Hilfslinien ausrichten	11111
+Ansicht > Hilfslinien > Hilfslinien entfernen	00000
+Ansicht > Intelligente Hilfslinien	11111
+Ansicht > Intelligente Hilfslinien > Intelligente Hilfslinien anzeigen	11111
+Ansicht > Intelligente Hilfslinien > An intelligenten Hilfslinien ausrichten	11111
+Ansicht > Hilfslinien für 9-Slice-Skalierung	11111
+Ansicht > Hilfslinien für 9-Slice-Skalierung > Hilfslinien sperren	11111
+Ansicht > Segment-Hilfslinien	11111
+Ansicht > Segmentüberlagerung	11111
+Ansicht > Ränder	11111
+Auswählen > Alles auswählen	11111
+Auswählen > Auswahl aufheben	01111
+Auswählen > Gesamtauswahl treffen	01111
+Auswählen > Teilauswahl treffen	00000
+Auswählen > Ähnliches auswählen	11111
+Auswählen > Auswahl umkehren	11111
+Auswählen > Weiche Kante	11111
+Auswählen > Auswahlrahmen erweitern	00000
+Auswählen > Auswahlrahmen verkleinern	00000
+Auswählen > Auswahlrahmen begrenzen	00000
+Auswählen > Auswahlrahmen glätten	00000
+Auswählen > Auswahlrahmen in Pfad konvertieren	00000
+Auswählen > Bitmap-Auswahl speichern	00000
+Auswählen > Bitmap-Auswahl wiederherstellen	00000
+Auswählen > Bitmap-Auswahl löschen	00000
+Modifizieren > Leinwand	11111
+Modifizieren > Leinwand > Bildgröße	11111
+Modifizieren > Leinwand > Leinwandgröße	11111
+Modifizieren > Leinwand > Leinwandfarbe	11111
+Modifizieren > Leinwand > Leinwand zuschneiden	11111
+Modifizieren > Leinwand > Leinwand anpassen	11111
+Modifizieren > Leinwand > 180° drehen	11111
+Modifizieren > Leinwand > 90° im UZS drehen	11111
+Modifizieren > Leinwand > 90° gegen UZS drehen	11111
+Modifizieren > Animation	11111
+Modifizieren > Animation > Auswahl animieren	01111
+Modifizieren > Animation > Einstellungen	00000
+Modifizieren > Animation > Animation entfernen	00000
+Modifizieren > Symbol	11111
+Modifizieren > Symbol > In Symbol konvertieren	01111
+Modifizieren > Symbol > Symbol bearbeiten	00000
+Modifizieren > Symbol > An Position bearbeiten	00000
+Modifizieren > Symbol > Instanzen tweenen	11111
+Modifizieren > Symbol > Teilen	11111
+Modifizieren > Symbol > Symbol austauschen	00000
+Modifizieren > Popupmenü	11111
+Modifizieren > Popupmenü > Popupmenü hinzufügen	11111
+Modifizieren > Popupmenü > Popupmenü bearbeiten	00000
+Modifizieren > Popupmenü > Popupmenü löschen	00000
+Modifizieren > Maske	11111
+Modifizieren > Maske > Alles einblenden	01011
+Modifizieren > Maske > Alles ausblenden	01011
+Modifizieren > Maske > Als Maske gruppieren	00100
+Modifizieren > Maske > Auswahl einblenden	00000
+Modifizieren > Maske > Auswahl ausblenden	00000
+Modifizieren > Maske > Maske deaktivieren	00000
+Modifizieren > Maske > Maske löschen	00000
+Modifizieren > Selektives JPEG	11111
+Modifizieren > Selektives JPEG > Auswahl als JPEG-Maske speichern	11111
+Modifizieren > Selektives JPEG > JPEG-Maske als Auswahl wiederherstellen	11111
+Modifizieren > Selektives JPEG > Einstellungen	11111
+Modifizieren > Selektives JPEG > JPEG-Maske entfernen	11111
+Modifizieren > Auswahl sperren	01111
+Modifizieren > Auswahl auf Hintergrund reduzieren	01111
+Modifizieren > Mit darunter liegender auf eine Ebene reduzieren	00010
+Modifizieren > Ebenen als Hintergrund	00000
+Modifizieren > Transformieren	11111
+Modifizieren > Transformieren > Frei transformieren	01111
+Modifizieren > Transformieren > Skalieren	01111
+Modifizieren > Transformieren > Neigen	01111
+Modifizieren > Transformieren > Verzerren	01111
+Modifizieren > Transformieren > Numerisch transformieren	01111
+Modifizieren > Transformieren > 180° drehen	01111
+Modifizieren > Transformieren > 90° im UZS drehen	01111
+Modifizieren > Transformieren > 90° gegen UZS drehen	01111
+Modifizieren > Transformieren > Horizontal spiegeln	01111
+Modifizieren > Transformieren > Vertikal spiegeln	01111
+Modifizieren > Transformieren > Transformationen entfernen	01110
+Modifizieren > Anordnen	11111
+Modifizieren > Anordnen > In den Vordergrund	01111
+Modifizieren > Anordnen > Schrittweise nach vorne	01111
+Modifizieren > Anordnen > Schrittweise nach hinten	01111
+Modifizieren > Anordnen > In den Hintergrund	01111
+Modifizieren > Ausrichten	11111
+Modifizieren > Ausrichten > Links	00100
+Modifizieren > Ausrichten > Vertikal zentrieren	00100
+Modifizieren > Ausrichten > Rechts	00100
+Modifizieren > Ausrichten > Oben	00100
+Modifizieren > Ausrichten > Horizontal zentrieren	00100
+Modifizieren > Ausrichten > Unten	00100
+Modifizieren > Ausrichten > Breiten verteilen	00000
+Modifizieren > Ausrichten > Höhen verteilen	00000
+Modifizieren > Pfad in Auswahlrahmen konvertieren	01100
+Modifizieren > Pfade kombinieren	11111
+Modifizieren > Pfade kombinieren > Verbinden	01110
+Modifizieren > Pfade kombinieren > Teilen	00000
+Modifizieren > Pfade kombinieren > Vereinigen	11111
+Modifizieren > Pfade kombinieren > Überschneiden	11111
+Modifizieren > Pfade kombinieren > Öffnen	11111
+Modifizieren > Pfade kombinieren > Zuschneiden	11111
+Modifizieren > Pfad ändern	11111
+Modifizieren > Pfad ändern > Vereinfachen	11111
+Modifizieren > Pfad ändern > Strich erweitern	11111
+Modifizieren > Pfad ändern > Pfad einlassen	11111
+Modifizieren > Pfad ändern > Präzise Füllung	00010
+Modifizieren > Pfad ändern > Anti-Alias-Füllung	00010
+Modifizieren > Pfad ändern > Weiche-Kante-Füllung	00010
+Modifizieren > An Pixeln ausrichten	01100
+Modifizieren > Gruppieren	01111
+Modifizieren > Gruppierung aufheben	01100
+Text > Schrift	11111
+Text > Größe	11111
+Text > Größe > Andere	11111
+Text > Größe > Kleiner	00010
+Text > Größe > Größer	00010
+Text > Größe > 8	11111
+Text > Größe > 9	11111
+Text > Größe > 10	11111
+Text > Größe > 12	11111
+Text > Größe > 14	11111
+Text > Größe > 18	11111
+Text > Größe > 24	11111
+Text > Größe > 36	11111
+Text > Größe > 48	11111
+Text > Größe > 72	11111
+Text > Größe > 96	11111
+Text > Größe > 120	11111
+Text > Stil	11111
+Text > Stil > Standard	11111
+Text > Stil > Faux Fett	11111
+Text > Stil > Faux Kursiv	11111
+Text > Stil > Unterstrichen	11111
+Text > Ausrichten	11111
+Text > Ausrichten > Links	11111
+Text > Ausrichten > Horizontal zentrieren	11111
+Text > Ausrichten > Rechts	11111
+Text > Ausrichten > Blocksatz	11111
+Text > Ausrichten > Oben	11111
+Text > Ausrichten > Vertikal zentrieren	11111
+Text > Ausrichten > Unten	11111
+Text > Ausrichten > Vertikaler Blocksatz	11111
+Text > In Pfad einfügen	00000
+Text > An Pfad anfügen	00000
+Text > Von Pfad lösen	00000
+Text > Richtung	11111
+Text > Richtung > Um Pfad drehen	00000
+Text > Richtung > Vertikal	00000
+Text > Richtung > Vertikal neigen	00000
+Text > Richtung > Horizontal neigen	00000
+Text > Richtung umkehren	00000
+Text > In Pfade konvertieren	00010
+Text > Rechtschreibprüfung	11111
+Text > Rechtschreibprüfung einrichten	11111
+Befehle > Gespeicherte Befehle verwalten	11111
+Befehle > Erweiterungen verwalten	11111
+Befehle > Skript ausführen	11111
+Befehle > Warnmeldungen zurücksetzen	11111
+Filter > Filter wiederholen	00000
+Filter > Andere	11111
+Filter > Andere > In Alpha konvertieren	01111
+Filter > Andere > Kanten finden	01111
+Filter > Farbe anpassen	11111
+Filter > Farbe anpassen > Auto-Tonwertkorrektur	01111
+Filter > Farbe anpassen > Farbton/Sättigung	01111
+Filter > Farbe anpassen > Helligkeit/Kontrast	01111
+Filter > Farbe anpassen > Kurven	01111
+Filter > Farbe anpassen > Tonwertkorrektur	01111
+Filter > Farbe anpassen > Umkehren	01111
+Filter > Rauschen	11111
+Filter > Rauschen > Rauschen hinzufügen	01111
+Filter > Scharfzeichnen	11111
+Filter > Scharfzeichnen > Scharfzeichnen	01111
+Filter > Scharfzeichnen > Stark scharfzeichnen	01111
+Filter > Scharfzeichnen > Unscharf maskieren	01111
+Filter > Weichzeichnen	11111
+Filter > Weichzeichnen > Bewegungsunschärfe	01111
+Filter > Weichzeichnen > Gaußscher Weichzeichner	01111
+Filter > Weichzeichnen > Radiales Weichzeichnen	01111
+Filter > Weichzeichnen > Stark weichzeichnen	01111
+Filter > Weichzeichnen > Weichzeichnen	01111
+Filter > Weichzeichnen > Zentriertes Weichzeichnen	01111
+Fenster > Fenster duplizieren	11111
+Fenster > Bedienfelder ausblenden	11111
+Fenster > Erweiterungen	11111
+Fenster > Erweiterungen > Kuler	11111
+Fenster > Erweiterungen > jQuery Mobile-Thema – anwendungsinterne Vorschau	11111
+Fenster > Werkzeugleisten	11111
+Fenster > Werkzeugleisten > Standard	11111
+Fenster > Werkzeuge	11111
+Fenster > Eigenschaften	11111
+Fenster > Optimieren	11111
+Fenster > Ebenen	11111
+Fenster > Allgemeine Bibliothek	11111
+Fenster > CSS-Eigenschaften	11111
+Fenster > Seiten	11111
+Fenster > Status	11111
+Fenster > Verlauf	11111
+Fenster > Automatische Formen	11111
+Fenster > Stile	11111
+Fenster > Dokumentbibliothek	11111
+Fenster > URL	11111
+Fenster > Farbmischer	11111
+Fenster > Farbfelder	11111
+Fenster > Info	11111
+Fenster > Verhalten	11111
+Fenster > Suchen und ersetzen	11111
+Fenster > Ausrichten	11111
+Fenster > Eigenschaften für automatische Form	11111
+Fenster > Sonstige	11111
+Fenster > Sonstige > Farbpalette	11111
+Fenster > Sonstige > Bildbearbeitung	11111
+Fenster > Sonstige > Sonderzeichen	11111
+Fenster > Pfad	11111
+Fenster > Symboleigenschaften	11111
+Fenster > Überlappend	11111
+Fenster > Anordnen	11111
+Hilfe > Firepixel-Hilfe	11111
+Hilfe > Firepixel Support Center	11111
+Hilfe > Programm zur Produktverbesserung	11111
+Hilfe > Firepixel Exchange	11111
+Hilfe > Erweiterungen verwalten	11111
+Hilfe > Onlineforen	11111
+Hilfe > Über Firepixel	11111

@@ -1,0 +1,21 @@
+{
+  "format": "firepixel-batch-recipe",
+  "name": "overlay-image-tiled",
+  "output": {
+    "format": "png"
+  },
+  "steps": [
+    {
+      "id": "overlay.image",
+      "params": {
+        "imageData": "iVBORw0KGgoAAAANSUhEUgAAAAwAAAAGCAIAAAB4jOjWAAAAA3NCSVQICAjb4U/gAAAACXBIWXMAAAsSAAALEgHS3X78AAAAEnRFWHRTb2Z0d2FyZQBGaXJlcGl4ZWzfV97PAAAAG0lEQVR4nGP8//8/Ayq4Ky+PJsKExscKBqMiAHe3BCS1h+0qAAAAAElFTkSuQmCC",
+        "opacity": 50,
+        "position": "tiled",
+        "rotation": -30,
+        "scale": 20,
+        "spacing": 60
+      }
+    }
+  ],
+  "version": 1
+}

@@ -1,0 +1,1755 @@
+{
+ "unit": "tool-autoshapes",
+ "testfile": "T01",
+ "testfiles": [
+  "T01"
+ ],
+ "note": "Action verbs as in the shared list (see panel-layers.json): open_testfile, select, select_none, tool <tool id>, choose {target,item} (item path 'A > B'; toolbox.<tool>_flyout picks a flyout entry, orig_index = position in the owner-drawn list of the original), open <logical ui key>, click/double_click/hover <ui key|{handle}|{menu_item}>, drag {from,by|to,mods}, canvas_click/canvas_double_click/canvas_hover [x,y] (+mods), canvas_drag {from,to,mods}, canvas_wheel {pos,delta,modifiers}, key <combo>, repeat/do, type, menu 'A > B', menu_open, set_field {target,value}, jsf (both = fp run_script), record_ui <key>, log_value, log_menu_items, export_png doc, wait, close_all, window_size. Additions in this file: {handle: <index|role>} = control/frame handle of the selected object (orig: controlPoints, fp: autoShape.describe/frame); drag_popup_slider {to_fraction,hold} = drag inside the open popup slider; record_ui history.names = history step names; mods on canvas_click/canvas_hover = held modifier keys. Coordinates are document pixels. Labels are compared without '&' and trailing '...'/'…'.",
+ "steps": [
+  {
+   "id": "00_overview_normal",
+   "check": "overview after opening the test file",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    }
+   ],
+   "shot": {
+    "area": "window"
+   }
+  },
+  {
+   "id": "01_flyout_open",
+   "check": "flyout",
+   "method": {
+    "orig": "B, W",
+    "fp": "B, Fi"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "open": "toolbox.rectangle_flyout"
+    }
+   ],
+   "shot": {
+    "area": "popup"
+   },
+   "note": "Original: 13 automatic shapes incl. 'Messwerkzeug' after a separator; inventory names 12."
+  },
+  {
+   "id": "02_draw_each_chamfer_rect_result",
+   "check": "draw each",
+   "method": {
+    "orig": "J (Pfadpunkte), E",
+    "fp": "D, E"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "choose": {
+      "target": "toolbox.rectangle_flyout",
+      "item": "Abgefastes Rechteck"
+     },
+     "orig_index": 4
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       100,
+       100
+      ],
+      "to": [
+       220,
+       200
+      ]
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "02_draw_each_beveled_rect_result",
+   "check": "draw each",
+   "method": {
+    "orig": "J (Pfadpunkte), E",
+    "fp": "D, E"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "choose": {
+      "target": "toolbox.rectangle_flyout",
+      "item": "Abgeflachtes Rechteck"
+     },
+     "orig_index": 5
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       100,
+       100
+      ],
+      "to": [
+       220,
+       200
+      ]
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "02_draw_each_rounded_rect_result",
+   "check": "draw each",
+   "method": {
+    "orig": "J (Pfadpunkte), E",
+    "fp": "D, E"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "choose": {
+      "target": "toolbox.rectangle_flyout",
+      "item": "Abgerundetes Rechteck"
+     },
+     "orig_index": 6
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       100,
+       100
+      ],
+      "to": [
+       220,
+       200
+      ]
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "02_draw_each_doughnut_result",
+   "check": "draw each",
+   "method": {
+    "orig": "J (Pfadpunkte), E",
+    "fp": "D, E"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "choose": {
+      "target": "toolbox.rectangle_flyout",
+      "item": "Donut"
+     },
+     "orig_index": 7
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       100,
+       100
+      ],
+      "to": [
+       220,
+       200
+      ]
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "02_draw_each_smart_polygon_result",
+   "check": "draw each",
+   "method": {
+    "orig": "J (Pfadpunkte), E",
+    "fp": "D, E"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "choose": {
+      "target": "toolbox.rectangle_flyout",
+      "item": "Intelligentes Polygon"
+     },
+     "orig_index": 8
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       100,
+       100
+      ],
+      "to": [
+       220,
+       200
+      ]
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "02_draw_each_l_shape_result",
+   "check": "draw each",
+   "method": {
+    "orig": "J (Pfadpunkte), E",
+    "fp": "D, E"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "choose": {
+      "target": "toolbox.rectangle_flyout",
+      "item": "L-Form"
+     },
+     "orig_index": 9
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       100,
+       100
+      ],
+      "to": [
+       220,
+       200
+      ]
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "02_draw_each_measure_result",
+   "check": "draw each",
+   "method": {
+    "orig": "J (Pfadpunkte), E",
+    "fp": "D, E"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "choose": {
+      "target": "toolbox.rectangle_flyout",
+      "item": "Messwerkzeug"
+     },
+     "orig_index": 10
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       100,
+       100
+      ],
+      "to": [
+       220,
+       200
+      ]
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "note": "Measure tool: result is not selected afterwards in the original."
+  },
+  {
+   "id": "02_draw_each_arrow_result",
+   "check": "draw each",
+   "method": {
+    "orig": "J (Pfadpunkte), E",
+    "fp": "D, E"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "choose": {
+      "target": "toolbox.rectangle_flyout",
+      "item": "Pfeil"
+     },
+     "orig_index": 11
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       100,
+       100
+      ],
+      "to": [
+       220,
+       200
+      ]
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "02_draw_each_arrow_line_result",
+   "check": "draw each",
+   "method": {
+    "orig": "J (Pfadpunkte), E",
+    "fp": "D, E"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "choose": {
+      "target": "toolbox.rectangle_flyout",
+      "item": "Pfeillinie"
+     },
+     "orig_index": 12
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       100,
+       100
+      ],
+      "to": [
+       220,
+       200
+      ]
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "02_draw_each_spiral_result",
+   "check": "draw each",
+   "method": {
+    "orig": "J (Pfadpunkte), E",
+    "fp": "D, E"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "choose": {
+      "target": "toolbox.rectangle_flyout",
+      "item": "Spirale"
+     },
+     "orig_index": 13
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       100,
+       100
+      ],
+      "to": [
+       220,
+       200
+      ]
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "02_draw_each_star_result",
+   "check": "draw each",
+   "method": {
+    "orig": "J (Pfadpunkte), E",
+    "fp": "D, E"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "choose": {
+      "target": "toolbox.rectangle_flyout",
+      "item": "Stern"
+     },
+     "orig_index": 14
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       100,
+       100
+      ],
+      "to": [
+       220,
+       200
+      ]
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "02_draw_each_pie_result",
+   "check": "draw each",
+   "method": {
+    "orig": "J (Pfadpunkte), E",
+    "fp": "D, E"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "choose": {
+      "target": "toolbox.rectangle_flyout",
+      "item": "Torte"
+     },
+     "orig_index": 15
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       100,
+       100
+      ],
+      "to": [
+       220,
+       200
+      ]
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "02_draw_each_connector_result",
+   "check": "draw each",
+   "method": {
+    "orig": "J (Pfadpunkte), E",
+    "fp": "D, E"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "choose": {
+      "target": "toolbox.rectangle_flyout",
+      "item": "Verbindungslinie"
+     },
+     "orig_index": 16
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       100,
+       100
+      ],
+      "to": [
+       220,
+       200
+      ]
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "03_handles_rounded_rect_normal",
+   "check": "handles",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "choose": {
+      "target": "toolbox.rectangle_flyout",
+      "item": "Abgerundetes Rechteck"
+     },
+     "orig_index": 6
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       100,
+       100
+      ],
+      "to": [
+       220,
+       200
+      ]
+     }
+    },
+    {
+     "tool": "pointer"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "03_handles_star_normal",
+   "check": "handles",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "choose": {
+      "target": "toolbox.rectangle_flyout",
+      "item": "Stern"
+     },
+     "orig_index": 14
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       100,
+       100
+      ],
+      "to": [
+       220,
+       200
+      ]
+     }
+    },
+    {
+     "tool": "pointer"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "03_handles_arrow_normal",
+   "check": "handles",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "choose": {
+      "target": "toolbox.rectangle_flyout",
+      "item": "Pfeil"
+     },
+     "orig_index": 11
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       100,
+       100
+      ],
+      "to": [
+       220,
+       200
+      ]
+     }
+    },
+    {
+     "tool": "pointer"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "03_handles_doughnut_normal",
+   "check": "handles",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "choose": {
+      "target": "toolbox.rectangle_flyout",
+      "item": "Donut"
+     },
+     "orig_index": 7
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       100,
+       100
+      ],
+      "to": [
+       220,
+       200
+      ]
+     }
+    },
+    {
+     "tool": "pointer"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "03_handles_pie_normal",
+   "check": "handles",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "choose": {
+      "target": "toolbox.rectangle_flyout",
+      "item": "Torte"
+     },
+     "orig_index": 15
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       100,
+       100
+      ],
+      "to": [
+       220,
+       200
+      ]
+     }
+    },
+    {
+     "tool": "pointer"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "03_handles_spiral_normal",
+   "check": "handles",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "choose": {
+      "target": "toolbox.rectangle_flyout",
+      "item": "Spirale"
+     },
+     "orig_index": 13
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       100,
+       100
+      ],
+      "to": [
+       220,
+       200
+      ]
+     }
+    },
+    {
+     "tool": "pointer"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "04_handle_tooltip_rounded_corner_hover",
+   "check": "handle tooltip",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "choose": {
+      "target": "toolbox.rectangle_flyout",
+      "item": "Abgerundetes Rechteck"
+     },
+     "orig_index": 6
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       100,
+       100
+      ],
+      "to": [
+       220,
+       200
+      ]
+     }
+    },
+    {
+     "tool": "pointer"
+    },
+    {
+     "hover": {
+      "handle": 0
+     }
+    },
+    {
+     "wait": 1800
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "note": "Handle 0 = corner handle at 125,100 in the original; handle order in Firepixel from autoShape.describe (unsure)."
+  },
+  {
+   "id": "04_handle_tooltip_star_points_hover",
+   "check": "handle tooltip",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "choose": {
+      "target": "toolbox.rectangle_flyout",
+      "item": "Stern"
+     },
+     "orig_index": 14
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       100,
+       100
+      ],
+      "to": [
+       220,
+       200
+      ]
+     }
+    },
+    {
+     "tool": "pointer"
+    },
+    {
+     "hover": {
+      "handle": "points"
+     }
+    },
+    {
+     "wait": 1800
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "note": "Handle by role ('Punkte: 5' tooltip); runner must resolve the index per program (unsure)."
+  },
+  {
+   "id": "05_handle_drag_rounded_corner_result",
+   "check": "handle drag",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "choose": {
+      "target": "toolbox.rectangle_flyout",
+      "item": "Abgerundetes Rechteck"
+     },
+     "orig_index": 6
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       100,
+       100
+      ],
+      "to": [
+       220,
+       200
+      ]
+     }
+    },
+    {
+     "tool": "pointer"
+    },
+    {
+     "drag": {
+      "from": {
+       "handle": 0
+      },
+      "by": [
+       -20,
+       0
+      ]
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "05_handle_drag_star_points_result",
+   "check": "handle drag",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "choose": {
+      "target": "toolbox.rectangle_flyout",
+      "item": "Stern"
+     },
+     "orig_index": 14
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       100,
+       100
+      ],
+      "to": [
+       220,
+       200
+      ]
+     }
+    },
+    {
+     "tool": "pointer"
+    },
+    {
+     "drag": {
+      "from": {
+       "handle": "points"
+      },
+      "by": [
+       0,
+       40
+      ]
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "note": "Original: vertical +40 -> 3 points, -80 -> 34 points."
+  },
+  {
+   "id": "05_handle_drag_spiral_turns_result",
+   "check": "handle drag",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "choose": {
+      "target": "toolbox.rectangle_flyout",
+      "item": "Spirale"
+     },
+     "orig_index": 13
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       100,
+       100
+      ],
+      "to": [
+       220,
+       200
+      ]
+     }
+    },
+    {
+     "tool": "pointer"
+    },
+    {
+     "drag": {
+      "from": {
+       "handle": "turns"
+      },
+      "by": [
+       0,
+       40
+      ]
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "06_handle_modifiers_result",
+   "check": "handle modifiers",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "choose": {
+      "target": "toolbox.rectangle_flyout",
+      "item": "Abgerundetes Rechteck"
+     },
+     "orig_index": 6
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       100,
+       100
+      ],
+      "to": [
+       220,
+       200
+      ]
+     }
+    },
+    {
+     "tool": "pointer"
+    },
+    {
+     "click": {
+      "handle": 0
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "click": {
+      "handle": 0
+     },
+     "mods": [
+      "alt"
+     ]
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "drag": {
+      "from": {
+       "handle": 0
+      },
+      "by": [
+       -5,
+       0
+      ],
+      "mods": [
+       "alt"
+      ]
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "drag": {
+      "from": {
+       "handle": "size"
+      },
+      "by": [
+       30,
+       0
+      ],
+      "mods": [
+       "shift"
+      ]
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ]
+  },
+  {
+   "id": "07_inspector_head_normal",
+   "check": "inspector head",
+   "method": {
+    "orig": "W",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "choose": {
+      "target": "toolbox.rectangle_flyout",
+      "item": "Stern"
+     },
+     "orig_index": 14
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       100,
+       100
+      ],
+      "to": [
+       220,
+       200
+      ]
+     }
+    },
+    {
+     "record_ui": "inspector.fields"
+    }
+   ],
+   "shot": {
+    "area": "inspector"
+   }
+  },
+  {
+   "id": "08_properties_panel_normal",
+   "check": "properties panel",
+   "method": {
+    "orig": "W",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "choose": {
+      "target": "toolbox.rectangle_flyout",
+      "item": "Stern"
+     },
+     "orig_index": 14
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       100,
+       100
+      ],
+      "to": [
+       220,
+       200
+      ]
+     }
+    },
+    {
+     "menu": "Fenster > Eigenschaften für automatische Form"
+    }
+   ],
+   "shot": {
+    "area": "panel:auto_shape_properties"
+   },
+   "note": "Floating panel; the same menu command closes it again (original)."
+  },
+  {
+   "id": "09_ungroup_result",
+   "check": "ungroup",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "choose": {
+      "target": "toolbox.rectangle_flyout",
+      "item": "Stern"
+     },
+     "orig_index": 14
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       100,
+       100
+      ],
+      "to": [
+       220,
+       200
+      ]
+     }
+    },
+    {
+     "key": "Ctrl+Shift+G"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "record_ui": "history.names"
+    },
+    {
+     "export_png": "doc"
+    }
+   ]
+  },
+  {
+   "id": "10_scale_result",
+   "check": "scale",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "choose": {
+      "target": "toolbox.rectangle_flyout",
+      "item": "Stern"
+     },
+     "orig_index": 14
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       100,
+       100
+      ],
+      "to": [
+       220,
+       200
+      ]
+     }
+    },
+    {
+     "set_field": {
+      "target": "inspector.width",
+      "value": "240"
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "record_ui": "history.names"
+    }
+   ]
+  },
+  {
+   "id": "11_connector_result",
+   "check": "connector",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "jsf": "fw.getDocumentDOM().addNewRectangle({left:50,top:300,right:150,bottom:380},0)"
+    },
+    {
+     "jsf": "fw.getDocumentDOM().addNewRectangle({left:400,top:300,right:500,bottom:380},0)"
+    },
+    {
+     "select_none": true
+    },
+    {
+     "choose": {
+      "target": "toolbox.rectangle_flyout",
+      "item": "Verbindungslinie"
+     },
+     "orig_index": 16
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       150,
+       340
+      ],
+      "to": [
+       400,
+       340
+      ]
+     }
+    },
+    {
+     "tool": "pointer"
+    },
+    {
+     "wait": 100
+    },
+    {
+     "jsf": "var d=fw.getDocumentDOM(); d.selectNone(); d.selection=[d.layers[0].frames[0].elements[1]]; d.moveSelectionBy({x:0,y:60},false,false)"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "note": "Element index of the second rectangle in the JSF selection unsure (top-first order); check that the moved object is the right rectangle."
+  },
+  {
+   "id": "12_smart_polygon_result",
+   "check": "smart polygon",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "choose": {
+      "target": "toolbox.rectangle_flyout",
+      "item": "Intelligentes Polygon"
+     },
+     "orig_index": 8
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       100,
+       100
+      ],
+      "to": [
+       220,
+       200
+      ]
+     }
+    },
+    {
+     "tool": "pointer"
+    },
+    {
+     "drag": {
+      "from": {
+       "handle": "sides"
+      },
+      "by": [
+       0,
+       40
+      ]
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "drag": {
+      "from": {
+       "handle": "sides"
+      },
+      "by": [
+       0,
+       -60
+      ]
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ]
+  },
+  {
+   "id": "13_spiral_result",
+   "check": "spiral",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "choose": {
+      "target": "toolbox.rectangle_flyout",
+      "item": "Spirale"
+     },
+     "orig_index": 13
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       100,
+       100
+      ],
+      "to": [
+       220,
+       200
+      ]
+     }
+    },
+    {
+     "tool": "pointer"
+    },
+    {
+     "drag": {
+      "from": {
+       "handle": "turns"
+      },
+      "by": [
+       0,
+       -70
+      ]
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "click": {
+      "handle": "center"
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ]
+  },
+  {
+   "id": "14_shift_rounded_rect_result",
+   "check": "shift",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "choose": {
+      "target": "toolbox.rectangle_flyout",
+      "item": "Abgerundetes Rechteck"
+     },
+     "orig_index": 6
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       100,
+       100
+      ],
+      "to": [
+       220,
+       160
+      ],
+      "mods": [
+       "shift"
+      ]
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ]
+  },
+  {
+   "id": "14_shift_arrow_result",
+   "check": "shift",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "choose": {
+      "target": "toolbox.rectangle_flyout",
+      "item": "Pfeil"
+     },
+     "orig_index": 11
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       100,
+       100
+      ],
+      "to": [
+       220,
+       160
+      ],
+      "mods": [
+       "shift"
+      ]
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ]
+  },
+  {
+   "id": "14_shift_star_result",
+   "check": "shift",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "choose": {
+      "target": "toolbox.rectangle_flyout",
+      "item": "Stern"
+     },
+     "orig_index": 14
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       100,
+       100
+      ],
+      "to": [
+       220,
+       160
+      ],
+      "mods": [
+       "shift"
+      ]
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ]
+  },
+  {
+   "id": "15_cursor_tool_hover",
+   "check": "cursor",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "choose": {
+      "target": "toolbox.rectangle_flyout",
+      "item": "Stern"
+     },
+     "orig_index": 14
+    },
+    {
+     "canvas_hover": [
+      300,
+      300
+     ]
+    },
+    {
+     "wait": 300
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "note": "Screenshot must include the mouse cursor."
+  },
+  {
+   "id": "15_cursor_handle_hover",
+   "check": "cursor",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "choose": {
+      "target": "toolbox.rectangle_flyout",
+      "item": "Abgerundetes Rechteck"
+     },
+     "orig_index": 6
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       100,
+       100
+      ],
+      "to": [
+       220,
+       200
+      ]
+     }
+    },
+    {
+     "tool": "pointer"
+    },
+    {
+     "hover": {
+      "handle": 0
+     }
+    },
+    {
+     "wait": 300
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "note": "Screenshot must include the mouse cursor."
+  },
+  {
+   "id": "16_undo_result",
+   "check": "undo",
+   "method": {
+    "orig": "J",
+    "fp": "H"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "choose": {
+      "target": "toolbox.rectangle_flyout",
+      "item": "Abgerundetes Rechteck"
+     },
+     "orig_index": 6
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       100,
+       100
+      ],
+      "to": [
+       220,
+       200
+      ]
+     }
+    },
+    {
+     "tool": "pointer"
+    },
+    {
+     "drag": {
+      "from": {
+       "handle": 0
+      },
+      "by": [
+       -20,
+       0
+      ]
+     }
+    },
+    {
+     "record_ui": "history.names"
+    },
+    {
+     "repeat": 2,
+     "do": [
+      {
+       "key": "Ctrl+Z"
+      },
+      {
+       "record_ui": "document.summary"
+      }
+     ]
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ]
+  }
+ ]
+}

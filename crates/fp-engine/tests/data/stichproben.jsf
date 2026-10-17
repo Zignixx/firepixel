@@ -1,0 +1,24 @@
+// Stichproben gegen das Referenzprogramm: Ergebnis-Grenzen nach Menübefehlen (nur eigenes Testdokument).
+function b(e) { return Math.round(e.left * 100) / 100 + "," + Math.round(e.top * 100) / 100 + "," + Math.round(e.width * 100) / 100 + "," + Math.round(e.height * 100) / 100; }
+function sel() { var s = fw.selection; var o = []; for (var i = 0; i < s.length; i++) o.push(b(s[i])); return o.join(" | "); }
+fw.createDocument();
+var dom = fw.getDocumentDOM();
+dom.setDocumentCanvasSize({left: 0, top: 0, right: 300, bottom: 200}, true);
+function rect(l, t, r, bt) { dom.addNewRectangle({left: l, top: t, right: r, bottom: bt}, 0); return fw.selection[0]; }
+function reset() { dom.selectAll(); dom.deleteSelection(false); }
+
+fp_try("rotate90cw", function () { reset(); rect(10, 10, 60, 40); dom.rotateSelection(90, "autoTrimImages"); return sel(); });
+fp_try("rotate90ccw", function () { reset(); rect(10, 10, 60, 40); dom.rotateSelection(-90, "autoTrimImages"); return sel(); });
+fp_try("flipH2", function () { reset(); rect(10, 10, 60, 40); rect(100, 50, 130, 90); dom.selectAll(); dom.reflectSelection(true, false, "autoTrimImages"); return sel(); });
+fp_try("alignLeft", function () { reset(); rect(10, 10, 60, 40); rect(100, 50, 130, 90); dom.selectAll(); dom.align("left", false); return sel(); });
+fp_try("alignCenterV", function () { reset(); rect(10, 10, 60, 40); rect(100, 50, 130, 90); dom.selectAll(); dom.align("center vertical", false); return sel(); });
+fp_try("distributeWidths", function () { reset(); rect(10, 10, 60, 40); rect(100, 50, 130, 90); rect(200, 20, 210, 30); dom.selectAll(); dom.align("width", false); return sel(); });
+fp_try("duplicate", function () { reset(); rect(10, 10, 60, 40); dom.duplicateSelection(); return sel(); });
+fp_try("scale50", function () { reset(); rect(10, 10, 60, 40); dom.scaleSelection(0.5, 0.5, "autoTrimImages"); return sel(); });
+fp_try("group", function () { reset(); rect(10, 10, 60, 40); rect(100, 50, 130, 90); dom.selectAll(); dom.group("normal"); return sel(); });
+fp_try("imageSize150", function () { reset(); rect(10, 10, 60, 40); dom.setDocumentImageSize({left: 0, top: 0, right: 450, bottom: 300}, {pixelsPerUnit: 72, units: "inch"}, true); dom.selectAll(); return sel() + " doc " + dom.width + "x" + dom.height; });
+fp_try("canvasSizeCenter", function () { dom.setDocumentImageSize({left: 0, top: 0, right: 300, bottom: 200}, {pixelsPerUnit: 72, units: "inch"}, true); reset(); rect(10, 10, 60, 40); dom.setDocumentCanvasSize({left: -50, top: -25, right: 350, bottom: 225}, true); dom.selectAll(); return sel() + " doc " + dom.width + "x" + dom.height; });
+fp_try("union", function () { dom.setDocumentCanvasSize({left: 0, top: 0, right: 300, bottom: 200}, true); reset(); rect(10, 10, 60, 40); rect(40, 20, 90, 70); dom.selectAll(); dom.unionPaths(); return sel(); });
+fp_try("punch", function () { reset(); rect(10, 10, 60, 40); rect(40, 20, 90, 70); dom.selectAll(); dom.punchPaths(); return sel(); });
+fp_try("intersect", function () { reset(); rect(10, 10, 60, 40); rect(40, 20, 90, 70); dom.selectAll(); dom.intersectPaths(); return sel(); });
+dom.close(false);

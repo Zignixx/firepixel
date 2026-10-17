@@ -1,0 +1,19 @@
+[package]
+name = "fp-i18n"
+description = "Firepixel localisation: Fluent texts (built in: German, English; more languages as .ftl files at runtime), language selection, fallback chain, pseudo-locale"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+build = "build.rs"
+
+[dependencies]
+fluent-bundle = "0.15"
+fluent-syntax = "0.11"
+unic-langid = "0.9"
+sys-locale = "0.3"
+log = { workspace = true }
+
+[lints]
+workspace = true

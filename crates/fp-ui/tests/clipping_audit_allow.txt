@@ -1,0 +1,11 @@
+# Erlaubnisliste des Prüfers clipping_audit.rs (RAND-1, N23): bekannte Funde `Art|Ansicht|Text`.
+# Behobene Zeilen streichen (der Bericht docs\funktionstest\rand_auto.md nennt sie unter „nicht mehr gefunden“).
+# Neu schreiben: FP_RAND_FULL=1 FP_RAND_UPDATE_ALLOW=1 cargo test -p fp-ui --test clipping_audit
+# RAND-2a (13.10.): 61 erledigte Zeilen gestrichen (R2-1 Inspektor im schmalen Fenster, R2-2 Text/Segment, dazu inzwischen behobene Funde anderer Pakete).
+# RAND-2b (13.10.): die übrigen 17 Zeilen gestrichen: R2-3 (Voreinstellungen, Tastaturbefehle, KI-Modelle
+# ragten aus dem 800 × 512-pt-Fenster; jetzt begrenzt, Inhalt mit Bildlauf, Knopfzeile fest), R2-4
+# (Entfernen…), R2-5 (Flecken entfernen: Zeile an der Kante des Bildlaufs, jetzt Hinweis) und NZ-2
+# (Dokumentbibliothek: die Liste reichte mit der Mindesthöhe der ScrollArea über die Fußleiste).
+# MN-6 (13.10.): die 4 Menüzeilen gestrichen (Hauptmenü 1 und 9, Bedienfeldmenü 2, Kontextmenü
+# Leinwand): Menüs sind jetzt wie native Windows-Menüs auf das Fenster begrenzt, mit Pfeilleisten
+# und Bildlauf (menu_scroll.rs).

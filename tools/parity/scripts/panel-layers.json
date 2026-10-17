@@ -1,0 +1,897 @@
+{
+ "unit": "panel-layers",
+ "testfile": "T07",
+ "testfiles": [
+  "T07",
+  "T04",
+  "T02"
+ ],
+ "note": "Action verbs (both/orig/fp): open_testfile <T..> (close docs unsaved, open fresh, base settings) / close_all; menu 'A > B'; command <id from commands.json>; panel <window.* id or title>; panel_menu <panel> (open its menu); select <object name|[names]>; select_none; tool <tool id>; open <logical ui key>; click/double_click/right_click/hover/mouse_down/mouse_up <label|{key}|{popup_swatch:#hex}|{area,pos}>; drag {from,to,mods}; canvas_click/canvas_move [x,y] (document px); canvas_drag {from,to,mods}; scroll {area,delta}; key <combo>; type <text>; wait <ms>; choose {target,item} (pick list entry); file_dialog <path> (choose file in open dialog); export_png doc (export + hash); resize_panel {panel,width}; set_field {target,value}; export {dir,name,type,...} (File > Export dialog); clear_dir/record_dir <dir>; record_file <path> (size+hash+pixels); record_file_text <path>; restart_app; resize_dialog {width,height}; target forms {canvas:[x,y]|name}, {pref_category}, {tree_item:[path]}, hold_key in drag/click; log_value <JSF expression, logged in both>; record_ui <logical ui key> (orig window text/UIA, fp ui_find/ui_state); jsf <code> (in both = fp run_script); fp-only ui_action {...}, ui_find_click <text>. Step keys: after = actions after the shot; log_menu_items = item texts + enabled/checked of the open menu; shot omitted = value-only checkpoint.",
+ "steps": [
+  {
+   "id": "00_overview_normal",
+   "check": "overview after opening the test file",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T07"
+    },
+    {
+     "panel": "window.layers"
+    }
+   ],
+   "shot": {
+    "area": "window"
+   }
+  },
+  {
+   "id": "01_layout_normal",
+   "check": "layout",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T07"
+    },
+    {
+     "panel": "window.layers"
+    }
+   ],
+   "shot": {
+    "area": "panel:layers"
+   }
+  },
+  {
+   "id": "02_row_states_normal",
+   "check": "row states",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T07"
+    },
+    {
+     "panel": "window.layers"
+    },
+    {
+     "click": {
+      "layer_row": "Ebene 1"
+     }
+    }
+   ],
+   "shot": {
+    "area": "panel:layers"
+   }
+  },
+  {
+   "id": "02_row_states_hover",
+   "check": "row states",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T07"
+    },
+    {
+     "panel": "window.layers"
+    },
+    {
+     "hover": {
+      "layer_row": "Ebene 3"
+     }
+    }
+   ],
+   "shot": {
+    "area": "panel:layers"
+   }
+  },
+  {
+   "id": "02_row_states_pressed",
+   "check": "row states",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T07"
+    },
+    {
+     "panel": "window.layers"
+    },
+    {
+     "click": {
+      "object_row": 0,
+      "layer": "Ebene 1"
+     }
+    }
+   ],
+   "shot": {
+    "area": "panel:layers"
+   },
+   "note": "selected object row + target layer marker; T07 object names not documented, first object row of Ebene 1"
+  },
+  {
+   "id": "03_eye_result",
+   "check": "eye",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T07"
+    },
+    {
+     "panel": "window.layers"
+    },
+    {
+     "click": {
+      "layer_eye": "Ebene 2"
+     }
+    },
+    {
+     "log_value": "fw.getDocumentDOM().layers.map(function(l){return l.name+':'+l.frames[0].visible+':'+l.frames[0].locked}).join('|')"
+    }
+   ],
+   "shot": {
+    "area": "panel:layers"
+   }
+  },
+  {
+   "id": "03_eye_alt_result",
+   "check": "eye - alt",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T07"
+    },
+    {
+     "panel": "window.layers"
+    },
+    {
+     "click": {
+      "target": {
+       "layer_eye": "Ebene 1"
+      },
+      "mods": [
+       "alt"
+      ]
+     }
+    },
+    {
+     "log_value": "fw.getDocumentDOM().layers.map(function(l){return l.name+':'+l.frames[0].visible+':'+l.frames[0].locked}).join('|')"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "04_eye_drag_result",
+   "check": "eye drag",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T07"
+    },
+    {
+     "panel": "window.layers"
+    },
+    {
+     "drag": {
+      "from": {
+       "layer_eye": "Gemeinsam"
+      },
+      "to": {
+       "layer_eye": "Ebene 1"
+      }
+     }
+    },
+    {
+     "log_value": "fw.getDocumentDOM().layers.map(function(l){return l.name+':'+l.frames[0].visible+':'+l.frames[0].locked}).join('|')"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "05_lock_result",
+   "check": "lock",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T07"
+    },
+    {
+     "panel": "window.layers"
+    },
+    {
+     "click": {
+      "layer_lock": "Ebene 1"
+     }
+    },
+    {
+     "log_value": "fw.getDocumentDOM().layers.map(function(l){return l.name+':'+l.frames[0].visible+':'+l.frames[0].locked}).join('|')"
+    }
+   ],
+   "shot": {
+    "area": "panel:layers"
+   }
+  },
+  {
+   "id": "06_expand_result",
+   "check": "expand",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T07"
+    },
+    {
+     "panel": "window.layers"
+    },
+    {
+     "click": {
+      "layer_expand": "Ebene 1"
+     }
+    },
+    {
+     "click": {
+      "target": {
+       "layer_expand": "Ebene 3"
+      },
+      "mods": [
+       "alt"
+      ]
+     }
+    }
+   ],
+   "shot": {
+    "area": "panel:layers"
+   }
+  },
+  {
+   "id": "07_select_object_result",
+   "check": "select object",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T07"
+    },
+    {
+     "panel": "window.layers"
+    },
+    {
+     "click": {
+      "object_row": 0,
+      "layer": "Ebene 1"
+     }
+    },
+    {
+     "log_value": "fw.selection.length ? fw.selection[0].name : null"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "08_shift_ctrl_result",
+   "check": "shift ctrl",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T07"
+    },
+    {
+     "panel": "window.layers"
+    },
+    {
+     "click": {
+      "object_row": 0,
+      "layer": "Ebene 1"
+     }
+    },
+    {
+     "click": {
+      "target": {
+       "object_row": 0,
+       "layer": "Gemeinsam"
+      },
+      "mods": [
+       "shift"
+      ]
+     }
+    },
+    {
+     "log_value": "fw.selection.length"
+    },
+    {
+     "click": {
+      "target": {
+       "object_row": 0,
+       "layer": "Ebene 1"
+      },
+      "mods": [
+       "ctrl"
+      ]
+     }
+    },
+    {
+     "log_value": "fw.selection.length"
+    }
+   ],
+   "shot": null,
+   "note": "needs objects on layers; add via JSF if T07 layers are empty"
+  },
+  {
+   "id": "09_drag_reorder_pressed",
+   "check": "drag reorder",
+   "method": {
+    "orig": "J, B",
+    "fp": "D, B"
+   },
+   "both": [
+    {
+     "open_testfile": "T07"
+    },
+    {
+     "panel": "window.layers"
+    },
+    {
+     "mouse_down": {
+      "layer_row": "Ebene 1"
+     }
+    },
+    {
+     "hover": {
+      "layer_row": "Ebene 3"
+     }
+    }
+   ],
+   "shot": {
+    "area": "panel:layers"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    },
+    {
+     "mouse_up": {
+      "layer_row": "Ebene 3"
+     }
+    }
+   ],
+   "note": "insertion marker while dragging; Escape before release to cancel"
+  },
+  {
+   "id": "09_drag_reorder_result",
+   "check": "drag reorder",
+   "method": {
+    "orig": "J, B",
+    "fp": "D, B"
+   },
+   "both": [
+    {
+     "open_testfile": "T07"
+    },
+    {
+     "panel": "window.layers"
+    }
+   ],
+   "shot": null,
+   "orig": [
+    {
+     "jsf": "(function(){var d=fw.getDocumentDOM(),n=['Gemeinsam','Unterebene','Ebene 2'];for(var i=0;i<d.layers.length;i++){for(var k=0;k<n.length;k++){if(d.layers[i].name==n[k]){d.setLayerDisclosure(i,false);}}}})()"
+    },
+    {
+     "drag": {
+      "from": {
+       "layer_row": "Ebene 1"
+      },
+      "to": {
+       "layer_row": "Ebene 3"
+      }
+     }
+    },
+    {
+     "log_value": "fw.getDocumentDOM().layers.map(function(l){return l.name}).join('|')"
+    }
+   ],
+   "fp": [
+    {
+     "drag": {
+      "from": {
+       "layer_row": "Ebene 1"
+      },
+      "to": {
+       "layer_row": "Ebene 3"
+      }
+     }
+    },
+    {
+     "log_value": "fw.getDocumentDOM().layers.map(function(l){return l.name}).join('|')"
+    }
+   ],
+   "note": "R-7 (M9 re 42 §2): the reference collapses Gemeinsam, Unterebene and Ebene 2 first (setLayerDisclosure), otherwise Ebene 3 and Ebene 1 are not visible together; Ebene 3 is locked - Soll for 09 'no change' (into a locked layer is refused), 15 'no change' (web layer does not move)"
+  },
+  {
+   "id": "10_drag_into_layer_result",
+   "check": "drag into layer",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T07"
+    },
+    {
+     "panel": "window.layers"
+    },
+    {
+     "drag": {
+      "from": {
+       "object_row": 0,
+       "layer": "Ebene 1"
+      },
+      "to": {
+       "layer_row": "Gemeinsam"
+      }
+     }
+    },
+    {
+     "log_value": "fw.getDocumentDOM().layers.map(function(l){return l.name+':'+l.frames[0].elements.length}).join('|')"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "11_rename_focus",
+   "check": "rename",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T07"
+    },
+    {
+     "panel": "window.layers"
+    },
+    {
+     "double_click": {
+      "layer_name": "Ebene 1"
+     }
+    }
+   ],
+   "shot": {
+    "area": "panel:layers"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "original opens layer options dialog on double-click (5987); may need shot dialog"
+  },
+  {
+   "id": "12_selection_dot_result",
+   "check": "selection dot",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T07"
+    },
+    {
+     "panel": "window.layers"
+    },
+    {
+     "click": {
+      "object_row": 0,
+      "layer": "Ebene 1"
+     }
+    },
+    {
+     "drag": {
+      "from": {
+       "selection_dot": "Ebene 1"
+      },
+      "to": {
+       "layer_row": "Gemeinsam"
+      }
+     }
+    },
+    {
+     "log_value": "fw.selection[0] ? fw.getDocumentDOM().currentLayerNum : null"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "13_thumbnails_normal",
+   "check": "thumbnails",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T07"
+    },
+    {
+     "panel": "window.layers"
+    },
+    {
+     "click": {
+      "layer_expand": "Ebene 1"
+     }
+    }
+   ],
+   "shot": {
+    "area": "panel:layers"
+   }
+  },
+  {
+   "id": "14_opacity_blend_result",
+   "check": "opacity blend",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T07"
+    },
+    {
+     "panel": "window.layers"
+    },
+    {
+     "click": {
+      "object_row": 0,
+      "layer": "Ebene 1"
+     }
+    },
+    {
+     "click": "layers.opacity_field"
+    },
+    {
+     "key": "Ctrl+A"
+    },
+    {
+     "type": "40"
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "choose": {
+      "target": "layers.blend_mode",
+      "item": "Multiplizieren"
+     }
+    },
+    {
+     "log_value": "fw.selection[0].opacity + '|' + fw.selection[0].blendMode"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "15_web_layer_normal",
+   "check": "web layer",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T07"
+    },
+    {
+     "panel": "window.layers"
+    }
+   ],
+   "shot": null,
+   "note": "web layer name in original: 'Webebene' (unsure) R-7 (M9 re 42 §2): the reference collapses Gemeinsam, Unterebene and Ebene 2 first (setLayerDisclosure), otherwise Ebene 3 and Ebene 1 are not visible together; Ebene 3 is locked - Soll for 09 'no change' (into a locked layer is refused), 15 'no change' (web layer does not move)",
+   "orig": [
+    {
+     "jsf": "(function(){var d=fw.getDocumentDOM(),n=['Gemeinsam','Unterebene','Ebene 2'];for(var i=0;i<d.layers.length;i++){for(var k=0;k<n.length;k++){if(d.layers[i].name==n[k]){d.setLayerDisclosure(i,false);}}}})()"
+    },
+    {
+     "drag": {
+      "from": {
+       "layer_row": "Webebene"
+      },
+      "to": {
+       "layer_row": "Ebene 1"
+      }
+     }
+    },
+    {
+     "log_value": "fw.getDocumentDOM().layers.map(function(l){return l.name}).join('|')"
+    }
+   ],
+   "fp": [
+    {
+     "drag": {
+      "from": {
+       "layer_row": "Webebene"
+      },
+      "to": {
+       "layer_row": "Ebene 1"
+      }
+     }
+    },
+    {
+     "log_value": "fw.getDocumentDOM().layers.map(function(l){return l.name}).join('|')"
+    }
+   ]
+  },
+  {
+   "id": "16_shared_layer_normal",
+   "check": "shared layer",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T07"
+    },
+    {
+     "panel": "window.layers"
+    },
+    {
+     "hover": {
+      "layer_row": "Gemeinsam"
+     }
+    }
+   ],
+   "shot": {
+    "area": "panel:layers"
+   }
+  },
+  {
+   "id": "17_sublayer_normal",
+   "check": "sublayer",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T07"
+    },
+    {
+     "panel": "window.layers"
+    },
+    {
+     "record_ui": {
+      "layer_row": "Unterebene"
+     }
+    }
+   ],
+   "shot": null,
+   "note": "T07 sublayer listed as own layer in object model"
+  },
+  {
+   "id": "18_mask_row_normal",
+   "check": "mask row",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "panel": "window.layers"
+    },
+    {
+     "select": [
+      "R1",
+      "E1"
+     ]
+    },
+    {
+     "command": "modify.mask.groupAsMask"
+    }
+   ],
+   "shot": {
+    "area": "panel:layers"
+   },
+   "note": "mask built from T04 since T07 has none"
+  },
+  {
+   "id": "19_bitmap_mode_row_normal",
+   "check": "bitmap mode row",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T02"
+    },
+    {
+     "panel": "window.layers"
+    },
+    {
+     "select": "B1"
+    },
+    {
+     "key": "Ctrl+E"
+    }
+   ],
+   "shot": {
+    "area": "panel:layers"
+   },
+   "after": [
+    {
+     "key": "Ctrl+Shift+D"
+    }
+   ]
+  },
+  {
+   "id": "20_scroll_normal",
+   "check": "scroll",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T07"
+    },
+    {
+     "panel": "window.layers"
+    },
+    {
+     "click": {
+      "target": {
+       "layer_expand": "Ebene 1"
+      },
+      "mods": [
+       "alt"
+      ]
+     }
+    },
+    {
+     "scroll": {
+      "area": "panel:layers",
+      "delta": 5
+     }
+    }
+   ],
+   "shot": {
+    "area": "panel:layers"
+   },
+   "note": "needs enough rows; panel height 1600x1000 window may not overflow"
+  },
+  {
+   "id": "21_tooltip_eye_hover",
+   "check": "tooltip - eye",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "open_testfile": "T07"
+    },
+    {
+     "panel": "window.layers"
+    },
+    {
+     "hover": {
+      "layer_eye": "Ebene 1"
+     }
+    },
+    {
+     "wait": 1200
+    },
+    {
+     "record_ui": "tooltip"
+    }
+   ],
+   "shot": {
+    "area": "panel:layers"
+   }
+  },
+  {
+   "id": "21_tooltip_footer_hover",
+   "check": "tooltip - footer",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "open_testfile": "T07"
+    },
+    {
+     "panel": "window.layers"
+    },
+    {
+     "hover": "layers.footer.0"
+    },
+    {
+     "wait": 1200
+    },
+    {
+     "record_ui": "tooltip"
+    }
+   ],
+   "shot": {
+    "area": "panel:layers"
+   }
+  },
+  {
+   "id": "22_undo_result",
+   "check": "undo",
+   "method": {
+    "orig": "J",
+    "fp": "H"
+   },
+   "both": [
+    {
+     "open_testfile": "T07"
+    },
+    {
+     "panel": "window.layers"
+    },
+    {
+     "log_value": "fw.historyPalette.getStepCount()"
+    },
+    {
+     "click": {
+      "layer_eye": "Ebene 1"
+     }
+    },
+    {
+     "click": {
+      "layer_lock": "Ebene 1"
+     }
+    },
+    {
+     "log_value": "fw.historyPalette.getStepCount()"
+    },
+    {
+     "key": "Ctrl+Z"
+    },
+    {
+     "log_value": "fw.getDocumentDOM().layers.map(function(l){return l.name+':'+l.frames[0].visible+':'+l.frames[0].locked}).join('|')"
+    }
+   ],
+   "shot": null,
+   "note": "record of undo step count via JSF unsure; fp may use ui_state history length instead"
+  }
+ ]
+}

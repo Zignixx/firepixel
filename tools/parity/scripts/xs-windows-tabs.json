@@ -1,0 +1,699 @@
+{
+ "unit": "xs-windows-tabs",
+ "testfile": "T04",
+ "note": "Verbs as in tools/parity/runner/README.md. Every step starts with reopen <Txx> (test file fresh, earlier changes discarded) or close_all (no document). Menu commands: orig = menu path, fp = command id (side-specific, so the following actions are listed on both sides). Logical keys used here that may still be unmapped in ui_map.json: dialog.field.<i> / dialog.combo.<i> (i-th edit/combo of the top dialog), labels for dropdowns. Rare verbs used here that the runner may log as unsupported: new_document, window_click, drag_text, hover_text, right_click_text, double_click_text, drag_guide, drag_ruler_origin, drag_dialog_title, drag_dialog_slider, click_dialog_rel, drag_dialog_rel, canvas_wheel, reopen_dialog (repeat the opening actions), save_history_as_command, delete_saved_command, add_live_filter, file_dialog_open_types, restart_app, window_size, set_clipboard_image, drop_files, log_focus_cycle-like record_ui {focus_cycle:n}. Object 'I1#2' = duplicate of I1; 'text' = first text element; canvas_drag option hold = screenshot while the button is held.",
+ "steps": [
+  {
+   "id": "00_overview_normal",
+   "check": "overview after opening the test file",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "shot": {
+    "area": "window"
+   }
+  },
+  {
+   "id": "01_tabs_normal",
+   "check": "document tabs: name, *, close x, hover",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "open_testfile": "T05"
+    },
+    {
+     "select": "TX1"
+    },
+    {
+     "key": "Delete"
+    }
+   ],
+   "shot": {
+    "area": "window"
+   },
+   "note": "second document T05 open next to T04; modified (*) tab = T05 after a deletion"
+  },
+  {
+   "id": "01_tabs_hover",
+   "check": "document tabs: name, *, close x, hover",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "open_testfile": "T05"
+    },
+    {
+     "hover_text": "par_vector.fw.png",
+     "region": "tabs"
+    }
+   ],
+   "shot": {
+    "area": "window"
+   },
+   "note": "second document T05 open next to T04; modified (*) tab = T05 after a deletion"
+  },
+  {
+   "id": "02_tab_switch_result",
+   "check": "Ctrl+Tab and middle click",
+   "method": {
+    "orig": "J",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "open_testfile": "T05"
+    },
+    {
+     "key": "ctrl+Tab"
+    },
+    {
+     "log_value": "fw.getDocumentDOM().docTitle"
+    },
+    {
+     "record_ui": "ui_state.summary"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "03_tab_overflow_normal",
+   "check": "many tabs: overflow",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "open_testfile": "T02"
+    },
+    {
+     "open_testfile": "T03"
+    },
+    {
+     "open_testfile": "T05"
+    },
+    {
+     "open_testfile": "T06"
+    },
+    {
+     "open_testfile": "T07"
+    },
+    {
+     "open_testfile": "T08"
+    },
+    {
+     "open_testfile": "T09"
+    },
+    {
+     "open_testfile": "T10"
+    }
+   ],
+   "shot": {
+    "area": "window"
+   }
+  },
+  {
+   "id": "04_tab_context_open",
+   "check": "tab context menu (see unit 43)",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "right_click_text": "par_vector.fw.png",
+     "region": "tabs"
+    },
+    {
+     "key": "Escape"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "05_tab_float_result",
+   "check": "drag tab out -> own window",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "open_testfile": "T05"
+    },
+    {
+     "drag_text": {
+      "text": "par_text.fw.png",
+      "region": "tabs",
+      "by": [
+       300,
+       250
+      ]
+     }
+    }
+   ],
+   "shot": {
+    "area": "window"
+   },
+   "note": "original documents may float only when not maximized; restore afterwards"
+  },
+  {
+   "id": "06_cascade_tile_result",
+   "check": "cascade / tile",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "open_testfile": "T05"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Fenster > Überlappend"
+    }
+   ],
+   "fp": [
+    {
+     "command": "window.cascade"
+    }
+   ],
+   "shot": {
+    "area": "window"
+   }
+  },
+  {
+   "id": "06_cascade_tile_result_tile",
+   "check": "cascade / tile - tile",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "open_testfile": "T05"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Fenster > Anordnen"
+    }
+   ],
+   "fp": [
+    {
+     "command": "window.tile"
+    }
+   ],
+   "shot": {
+    "area": "window"
+   },
+   "note": "original label 'Nebeneinander' vs Firepixel 'Anordnen' (menu.ftl cmd-window-tile) - unverified R-7: the reference's Window menu has 'Überlappend' and 'Anordnen' (lauf-10 menu list), no 'Nebeneinander'."
+  },
+  {
+   "id": "07_duplicate_window_result",
+   "check": "duplicate window",
+   "method": {
+    "orig": "J",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Fenster > Fenster duplizieren"
+    },
+    {
+     "log_value": "(function(){var d=fw.documents,r=[];for(var i=0;i<d.length;i++)r.push(d[i].docTitle);return r.toSource();})()"
+    },
+    {
+     "record_ui": "ui_state.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "window.duplicateWindow"
+    },
+    {
+     "log_value": "(function(){var d=fw.documents,r=[];for(var i=0;i<d.length;i++)r.push(d[i].docTitle);return r.toSource();})()"
+    },
+    {
+     "record_ui": "ui_state.summary"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "08_unsaved_prompt_open",
+   "check": "unsaved prompt wording (N06)",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "key": "Delete"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Datei > Schließen"
+    }
+   ],
+   "fp": [
+    {
+     "command": "file.close"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "click_button": "Abbrechen"
+    }
+   ]
+  },
+  {
+   "id": "09_panel_dock_result",
+   "check": "undock / dock a panel",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "drag_text": {
+      "text": "Ebenen",
+      "region": "panel_tabs",
+      "by": [
+       -500,
+       100
+      ]
+     }
+    }
+   ],
+   "shot": {
+    "area": "window"
+   },
+   "note": "workspace is reset after this step (layout restore)"
+  },
+  {
+   "id": "09_panel_dock_result_docked",
+   "check": "undock / dock a panel - redocked",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "drag_text": {
+      "text": "Ebenen",
+      "region": "panel_tabs",
+      "by": [
+       -500,
+       100
+      ]
+     }
+    },
+    {
+     "drag_text": {
+      "text": "Ebenen",
+      "region": "floating",
+      "by": [
+       500,
+       -100
+      ]
+     }
+    }
+   ],
+   "shot": {
+    "area": "window"
+   }
+  },
+  {
+   "id": "10_panel_collapse_result",
+   "check": "collapse group, icon mode",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "double_click_text": "Ebenen",
+     "region": "panel_tabs"
+    }
+   ],
+   "shot": {
+    "area": "window"
+   }
+  },
+  {
+   "id": "10_panel_collapse_result_icons",
+   "check": "collapse group, icon mode - icon mode",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "click": "panel_dock_collapse_arrow"
+    }
+   ],
+   "shot": {
+    "area": "window"
+   },
+   "note": "collapse-to-icons double arrow at the top of the dock; target name unverified"
+  },
+  {
+   "id": "11_panel_group_menu_open",
+   "check": "panel group context menu",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "right_click_text": "Ebenen",
+     "region": "panel_tabs"
+    }
+   ],
+   "shot": {
+    "area": "popup"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "12_workspace_switch_open",
+   "check": "workspace switcher",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "menu_open": [
+      "Fenster",
+      "Arbeitsbereichlayouts"
+     ]
+    }
+   ],
+   "shot": {
+    "area": "menu"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "original has a switcher in the application bar too; Firepixel label menu-window-workspaceLayouts",
+   "unsupported": {
+    "orig": "the reference's Window menu has no 'Arbeitsbereichlayouts' (lauf-10 menu list; its workspace switcher is not a menu) - only the shot (R-7)"
+   }
+  },
+  {
+   "id": "13_workspace_restore_result",
+   "check": "layout after restart",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "drag_text": {
+      "text": "Ebenen",
+      "region": "panel_tabs",
+      "by": [
+       -500,
+       100
+      ]
+     }
+    },
+    {
+     "restart_app": true
+    }
+   ],
+   "shot": {
+    "area": "window"
+   },
+   "note": "restart the program; original: never quit the original (rules) -> step may be skipped for orig"
+  },
+  {
+   "id": "14_hide_panels_result",
+   "check": "F4/Tab hides panels",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "key": "F4"
+    }
+   ],
+   "shot": {
+    "area": "window"
+   },
+   "after": [
+    {
+     "key": "F4"
+    }
+   ]
+  },
+  {
+   "id": "15_status_bar_normal",
+   "check": "status bar contents",
+   "method": {
+    "orig": "W, B",
+    "fp": "S, B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "record_ui": "ui_state.summary"
+    }
+   ],
+   "shot": {
+    "area": "window"
+   }
+  },
+  {
+   "id": "16_start_screen_normal",
+   "check": "start screen contents (New, Recent) - design is deliberately different",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "close_all": true
+    },
+    {
+     "close_all": true
+    }
+   ],
+   "shot": {
+    "area": "window"
+   },
+   "note": "design deliberately different (DES-2); compare content only"
+  },
+  {
+   "id": "17_title_bar_normal",
+   "check": "title = document + zoom",
+   "method": {
+    "orig": "W",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "log_value": "fw.getDocumentDOM().docTitle"
+    },
+    {
+     "record_ui": "ui_state.summary"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "18_min_size_normal",
+   "check": "smallest window",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "window_size": [
+      200,
+      150
+     ]
+    }
+   ],
+   "shot": {
+    "area": "window"
+   },
+   "after": [
+    {
+     "window_size": [
+      1600,
+      1000
+     ]
+    }
+   ]
+  },
+  {
+   "id": "19_close_last_result",
+   "check": "close last document -> start screen",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "close_all": true
+    }
+   ],
+   "shot": {
+    "area": "window"
+   }
+  },
+  {
+   "id": "20_dialog_move_pressed",
+   "check": "dialogs can be moved freely (N02)",
+   "method": {
+    "orig": "J",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "drag_dialog_title": {
+      "by": [
+       -200,
+       120
+      ]
+     }
+    },
+    {
+     "record_ui": "dialog.rect"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Modifizieren > Leinwand > Bildgröße..."
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "record_ui": "ui_state.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "modify.canvas.imageSize"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "record_ui": "ui_state.summary"
+    }
+   ],
+   "shot": null
+  }
+ ]
+}

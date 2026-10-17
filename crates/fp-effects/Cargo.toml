@@ -1,0 +1,21 @@
+[package]
+name = "fp-effects"
+description = "Live effects: drop shadow, inner shadow, glow, inner glow, bevel/emboss, solid shadow, colour fill, imported layer effects and effect chains"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+fp-geom = { workspace = true }
+fp-color = { workspace = true }
+fp-raster = { workspace = true }
+rayon = { workspace = true }
+
+[dev-dependencies]
+png = { workspace = true }
+serde_json = { workspace = true }
+
+[lints]
+workspace = true

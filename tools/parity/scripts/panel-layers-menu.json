@@ -1,0 +1,682 @@
+{
+ "unit": "panel-layers-menu",
+ "testfile": "T07",
+ "testfiles": [
+  "T07",
+  "T05",
+  "T04"
+ ],
+ "note": "Action verbs (both/orig/fp): open_testfile <T..> (close docs unsaved, open fresh, base settings) / close_all; menu 'A > B'; command <id from commands.json>; panel <window.* id or title>; panel_menu <panel> (open its menu); select <object name|[names]>; select_none; tool <tool id>; open <logical ui key>; click/double_click/right_click/hover/mouse_down/mouse_up <label|{key}|{popup_swatch:#hex}|{area,pos}>; drag {from,to,mods}; canvas_click/canvas_move [x,y] (document px); canvas_drag {from,to,mods}; scroll {area,delta}; key <combo>; type <text>; wait <ms>; choose {target,item} (pick list entry); file_dialog <path> (choose file in open dialog); export_png doc (export + hash); resize_panel {panel,width}; set_field {target,value}; export {dir,name,type,...} (File > Export dialog); clear_dir/record_dir <dir>; record_file <path> (size+hash+pixels); record_file_text <path>; restart_app; resize_dialog {width,height}; target forms {canvas:[x,y]|name}, {pref_category}, {tree_item:[path]}, hold_key in drag/click; log_value <JSF expression, logged in both>; record_ui <logical ui key> (orig window text/UIA, fp ui_find/ui_state); jsf <code> (in both = fp run_script); fp-only ui_action {...}, ui_find_click <text>. Step keys: after = actions after the shot; log_menu_items = item texts + enabled/checked of the open menu; shot omitted = value-only checkpoint.",
+ "steps": [
+  {
+   "id": "00_overview_normal",
+   "check": "overview after opening the test file",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T07"
+    },
+    {
+     "panel": "window.layers"
+    }
+   ],
+   "shot": {
+    "area": "window"
+   }
+  },
+  {
+   "id": "01_menu_open_open",
+   "check": "menu open",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "open_testfile": "T07"
+    },
+    {
+     "panel": "window.layers"
+    },
+    {
+     "click": {
+      "layer_row": "Ebene 1"
+     }
+    },
+    {
+     "click": {
+      "object_row": 0,
+      "layer": "Ebene 1"
+     }
+    },
+    {
+     "panel_menu": "layers"
+    },
+    {
+     "log_menu_items": true
+    }
+   ],
+   "shot": {
+    "area": "menu"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "02_menu_states_no_sel_open",
+   "check": "menu states no sel",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "open_testfile": "T07"
+    },
+    {
+     "panel": "window.layers"
+    },
+    {
+     "select_none": true
+    },
+    {
+     "panel_menu": "layers"
+    },
+    {
+     "log_menu_items": true
+    }
+   ],
+   "shot": {
+    "area": "menu"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "03_context_layer_open",
+   "check": "context layer",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "open_testfile": "T07"
+    },
+    {
+     "panel": "window.layers"
+    },
+    {
+     "right_click": {
+      "layer_row": "Ebene 1"
+     }
+    },
+    {
+     "log_menu_items": true
+    }
+   ],
+   "shot": {
+    "area": "menu"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "04_context_object_open",
+   "check": "context object",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "open_testfile": "T07"
+    },
+    {
+     "panel": "window.layers"
+    },
+    {
+     "right_click": {
+      "object_row": 0,
+      "layer": "Ebene 1"
+     }
+    },
+    {
+     "log_menu_items": true
+    }
+   ],
+   "shot": {
+    "area": "menu"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "05_footer_normal",
+   "check": "footer",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T07"
+    },
+    {
+     "panel": "window.layers"
+    }
+   ],
+   "shot": {
+    "area": "panel:layers"
+   },
+   "note": "footer area of panel"
+  },
+  {
+   "id": "05_footer_hover",
+   "check": "footer",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T07"
+    },
+    {
+     "panel": "window.layers"
+    },
+    {
+     "hover": "layers.footer.new_layer"
+    },
+    {
+     "wait": 1200
+    }
+   ],
+   "shot": {
+    "area": "panel:layers"
+   }
+  },
+  {
+   "id": "06_new_layer_open",
+   "check": "new layer",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "open_testfile": "T07"
+    },
+    {
+     "panel": "window.layers"
+    },
+    {
+     "click": {
+      "layer_row": "Ebene 1"
+     }
+    },
+    {
+     "panel_menu": "layers"
+    },
+    {
+     "click": "Neue Ebene..."
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "07_new_sublayer_result",
+   "check": "new sublayer",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T07"
+    },
+    {
+     "panel": "window.layers"
+    },
+    {
+     "click": {
+      "layer_row": "Ebene 1"
+     }
+    },
+    {
+     "panel_menu": "layers"
+    },
+    {
+     "click": "Neue Unterebene..."
+    },
+    {
+     "log_value": "fw.getDocumentDOM().layers.length"
+    }
+   ],
+   "shot": null,
+   "after": [
+    {
+     "key": "Enter"
+    }
+   ],
+   "note": "may open a dialog in fp ('...'); Enter confirms"
+  },
+  {
+   "id": "08_duplicate_open",
+   "check": "duplicate",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "open_testfile": "T07"
+    },
+    {
+     "panel": "window.layers"
+    },
+    {
+     "click": {
+      "layer_row": "Ebene 1"
+     }
+    },
+    {
+     "panel_menu": "layers"
+    },
+    {
+     "click": "Ebene duplizieren..."
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "09_delete_result",
+   "check": "delete",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T07"
+    },
+    {
+     "panel": "window.layers"
+    },
+    {
+     "click": {
+      "layer_row": "Ebene 1"
+     }
+    },
+    {
+     "click": "layers.footer.delete"
+    },
+    {
+     "log_value": "fw.getDocumentDOM().layers.length"
+    },
+    {
+     "key": "Ctrl+Z"
+    },
+    {
+     "click": {
+      "layer_row": "Ebene 1"
+     }
+    },
+    {
+     "key": "Delete"
+    },
+    {
+     "log_value": "fw.getDocumentDOM().layers.length"
+    }
+   ],
+   "shot": null,
+   "note": "Delete key on a selected layer row; may delete objects instead"
+  },
+  {
+   "id": "10_options_open",
+   "check": "options",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "open_testfile": "T07"
+    },
+    {
+     "panel": "window.layers"
+    },
+    {
+     "double_click": {
+      "layer_row": "Ebene 1"
+     }
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "11_share_result",
+   "check": "share",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T07"
+    },
+    {
+     "panel": "window.layers"
+    },
+    {
+     "click": {
+      "layer_row": "Ebene 1"
+     }
+    },
+    {
+     "panel_menu": "layers"
+    },
+    {
+     "click": "Ebene statusübergreifend freigeben"
+    },
+    {
+     "log_value": "fw.getDocumentDOM().layers.map(function(l){return l.name+':'+l.sharing}).join('|')"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "12_single_layer_edit_result",
+   "check": "single layer edit",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T07"
+    },
+    {
+     "panel": "window.layers"
+    },
+    {
+     "click": {
+      "layer_row": "Ebene 1"
+     }
+    },
+    {
+     "panel_menu": "layers"
+    },
+    {
+     "click": "Einzelebene bearbeiten"
+    },
+    {
+     "log_value": "fw.getDocumentDOM().singleLayerEditing"
+    }
+   ],
+   "shot": null,
+   "note": "JSF property name unsure"
+  },
+  {
+   "id": "13_hide_all_show_all_hide_result",
+   "check": "hide all show all - hide",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T07"
+    },
+    {
+     "panel": "window.layers"
+    },
+    {
+     "click": {
+      "layer_row": "Ebene 1"
+     }
+    },
+    {
+     "panel_menu": "layers"
+    },
+    {
+     "click": "Alles ausblenden"
+    },
+    {
+     "log_value": "fw.getDocumentDOM().layers.map(function(l){return l.name+':'+l.frames[0].visible+':'+l.frames[0].locked}).join('|')"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "13_hide_all_show_all_show_result",
+   "check": "hide all show all - show",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T07"
+    },
+    {
+     "panel": "window.layers"
+    },
+    {
+     "click": {
+      "layer_row": "Ebene 1"
+     }
+    },
+    {
+     "panel_menu": "layers"
+    },
+    {
+     "click": "Alles ausblenden"
+    },
+    {
+     "panel_menu": "layers"
+    },
+    {
+     "click": "Alles anzeigen"
+    },
+    {
+     "log_value": "fw.getDocumentDOM().layers.map(function(l){return l.name+':'+l.frames[0].visible+':'+l.frames[0].locked}).join('|')"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "14_lock_all_result",
+   "check": "lock all",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T07"
+    },
+    {
+     "panel": "window.layers"
+    },
+    {
+     "click": {
+      "layer_row": "Ebene 1"
+     }
+    },
+    {
+     "panel_menu": "layers"
+    },
+    {
+     "click": "Alles sperren"
+    },
+    {
+     "log_value": "fw.getDocumentDOM().layers.map(function(l){return l.name+':'+l.frames[0].visible+':'+l.frames[0].locked}).join('|')"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "15_merge_down_result",
+   "check": "merge down",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T05"
+    },
+    {
+     "panel": "window.layers"
+    },
+    {
+     "select": "TX2"
+    },
+    {
+     "panel_menu": "layers"
+    },
+    {
+     "click": "Mit darunter liegender auf eine Ebene reduzieren"
+    },
+    {
+     "log_value": "fw.getDocumentDOM().layers[fw.getDocumentDOM().currentLayerNum].frames[0].elements.map(function(e){return e.toString()}).join('|')"
+    }
+   ],
+   "shot": null,
+   "note": "case 'also with text': text should be rasterised/merged"
+  },
+  {
+   "id": "16_flatten_result",
+   "check": "flatten",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "panel": "window.layers"
+    },
+    {
+     "select": [
+      "R1",
+      "E1"
+     ]
+    },
+    {
+     "panel_menu": "layers"
+    },
+    {
+     "click": "Auswahl auf Hintergrund reduzieren"
+    },
+    {
+     "log_value": "fw.getDocumentDOM().layers[0].frames[0].elements.length"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "17_thumbnail_options_open",
+   "check": "thumbnail options",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "open_testfile": "T07"
+    },
+    {
+     "panel": "window.layers"
+    },
+    {
+     "click": {
+      "layer_row": "Ebene 1"
+     }
+    },
+    {
+     "panel_menu": "layers"
+    },
+    {
+     "click": "Miniaturoptionen..."
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ]
+  },
+  {
+   "id": "18_mask_buttons_result",
+   "check": "mask buttons",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "panel": "window.layers"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "click": "layers.footer.add_mask"
+    },
+    {
+     "log_value": "fw.selection[0].mask ? 'mask' : 'none'"
+    }
+   ],
+   "shot": {
+    "area": "panel:layers"
+   },
+   "note": "footer button 'Maske hinzufügen'"
+  }
+ ]
+}

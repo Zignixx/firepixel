@@ -1,0 +1,1508 @@
+[
+ {
+  "name": "helligkeit-kontrast_vorgabe_vektor",
+  "object": "vektor",
+  "origin": [
+   75,
+   55
+  ],
+  "input": "in_vektor.png",
+  "output": "helligkeit-kontrast_vorgabe_vektor.png",
+  "effects": [
+   {
+    "moa_id": "{3439b08c-1921-11d3-9bde00e02910d580}",
+    "params": {
+     "brightness_amount": "0",
+     "contrast_amount": "0",
+     "MB_filter_preview_tile_size": "-1 -1"
+    }
+   }
+  ]
+ },
+ {
+  "name": "helligkeit-kontrast_vorgabe_text",
+  "object": "text",
+  "origin": [
+   23,
+   46
+  ],
+  "input": "in_text.png",
+  "output": "helligkeit-kontrast_vorgabe_text.png",
+  "effects": [
+   {
+    "moa_id": "{3439b08c-1921-11d3-9bde00e02910d580}",
+    "params": {
+     "brightness_amount": "0",
+     "contrast_amount": "0",
+     "MB_filter_preview_tile_size": "-1 -1"
+    }
+   }
+  ]
+ },
+ {
+  "name": "helligkeit-kontrast_vorgabe_bitmap",
+  "object": "bitmap",
+  "origin": [
+   72,
+   53
+  ],
+  "input": "in_bitmap.png",
+  "output": "helligkeit-kontrast_vorgabe_bitmap.png",
+  "effects": [
+   {
+    "moa_id": "{3439b08c-1921-11d3-9bde00e02910d580}",
+    "params": {
+     "brightness_amount": "0",
+     "contrast_amount": "0",
+     "MB_filter_preview_tile_size": "-1 -1"
+    }
+   }
+  ]
+ },
+ {
+  "name": "helligkeit-kontrast_gross_vektor",
+  "object": "vektor",
+  "origin": [
+   75,
+   55
+  ],
+  "input": "in_vektor.png",
+  "output": "helligkeit-kontrast_gross_vektor.png",
+  "effects": [
+   {
+    "moa_id": "{3439b08c-1921-11d3-9bde00e02910d580}",
+    "params": {
+     "brightness_amount": "-60",
+     "contrast_amount": "90",
+     "MB_filter_preview_tile_size": "-1 -1"
+    }
+   }
+  ]
+ },
+ {
+  "name": "helligkeit-kontrast_gross_text",
+  "object": "text",
+  "origin": [
+   23,
+   46
+  ],
+  "input": "in_text.png",
+  "output": "helligkeit-kontrast_gross_text.png",
+  "effects": [
+   {
+    "moa_id": "{3439b08c-1921-11d3-9bde00e02910d580}",
+    "params": {
+     "brightness_amount": "-60",
+     "contrast_amount": "90",
+     "MB_filter_preview_tile_size": "-1 -1"
+    }
+   }
+  ]
+ },
+ {
+  "name": "helligkeit-kontrast_gross_bitmap",
+  "object": "bitmap",
+  "origin": [
+   72,
+   53
+  ],
+  "input": "in_bitmap.png",
+  "output": "helligkeit-kontrast_gross_bitmap.png",
+  "effects": [
+   {
+    "moa_id": "{3439b08c-1921-11d3-9bde00e02910d580}",
+    "params": {
+     "brightness_amount": "-60",
+     "contrast_amount": "90",
+     "MB_filter_preview_tile_size": "-1 -1"
+    }
+   }
+  ]
+ },
+ {
+  "name": "farbton-saettigung_vorgabe_vektor",
+  "object": "vektor",
+  "origin": [
+   75,
+   55
+  ],
+  "input": "in_vektor.png",
+  "output": "farbton-saettigung_vorgabe_vektor.png",
+  "effects": [
+   {
+    "moa_id": "{3439b08d-1922-11d3-9bde00e02910d580}",
+    "params": {
+     "hue_amount": "0",
+     "saturation_amount": "0",
+     "lightness_amount": "0",
+     "hls_colorize": "false",
+     "MB_filter_preview_tile_size": "-1 -1"
+    }
+   }
+  ]
+ },
+ {
+  "name": "farbton-saettigung_vorgabe_text",
+  "object": "text",
+  "origin": [
+   23,
+   46
+  ],
+  "input": "in_text.png",
+  "output": "farbton-saettigung_vorgabe_text.png",
+  "effects": [
+   {
+    "moa_id": "{3439b08d-1922-11d3-9bde00e02910d580}",
+    "params": {
+     "hue_amount": "0",
+     "saturation_amount": "0",
+     "lightness_amount": "0",
+     "hls_colorize": "false",
+     "MB_filter_preview_tile_size": "-1 -1"
+    }
+   }
+  ]
+ },
+ {
+  "name": "farbton-saettigung_vorgabe_bitmap",
+  "object": "bitmap",
+  "origin": [
+   72,
+   53
+  ],
+  "input": "in_bitmap.png",
+  "output": "farbton-saettigung_vorgabe_bitmap.png",
+  "effects": [
+   {
+    "moa_id": "{3439b08d-1922-11d3-9bde00e02910d580}",
+    "params": {
+     "hue_amount": "0",
+     "saturation_amount": "0",
+     "lightness_amount": "0",
+     "hls_colorize": "false",
+     "MB_filter_preview_tile_size": "-1 -1"
+    }
+   }
+  ]
+ },
+ {
+  "name": "farbton-saettigung_gross_vektor",
+  "object": "vektor",
+  "origin": [
+   75,
+   55
+  ],
+  "input": "in_vektor.png",
+  "output": "farbton-saettigung_gross_vektor.png",
+  "effects": [
+   {
+    "moa_id": "{3439b08d-1922-11d3-9bde00e02910d580}",
+    "params": {
+     "hue_amount": "-150",
+     "saturation_amount": "-80",
+     "lightness_amount": "40",
+     "hls_colorize": "false",
+     "MB_filter_preview_tile_size": "-1 -1"
+    }
+   }
+  ]
+ },
+ {
+  "name": "farbton-saettigung_gross_text",
+  "object": "text",
+  "origin": [
+   23,
+   46
+  ],
+  "input": "in_text.png",
+  "output": "farbton-saettigung_gross_text.png",
+  "effects": [
+   {
+    "moa_id": "{3439b08d-1922-11d3-9bde00e02910d580}",
+    "params": {
+     "hue_amount": "-150",
+     "saturation_amount": "-80",
+     "lightness_amount": "40",
+     "hls_colorize": "false",
+     "MB_filter_preview_tile_size": "-1 -1"
+    }
+   }
+  ]
+ },
+ {
+  "name": "farbton-saettigung_gross_bitmap",
+  "object": "bitmap",
+  "origin": [
+   72,
+   53
+  ],
+  "input": "in_bitmap.png",
+  "output": "farbton-saettigung_gross_bitmap.png",
+  "effects": [
+   {
+    "moa_id": "{3439b08d-1922-11d3-9bde00e02910d580}",
+    "params": {
+     "hue_amount": "-150",
+     "saturation_amount": "-80",
+     "lightness_amount": "40",
+     "hls_colorize": "false",
+     "MB_filter_preview_tile_size": "-1 -1"
+    }
+   }
+  ]
+ },
+ {
+  "name": "farbton-saettigung_kolorieren_vektor",
+  "object": "vektor",
+  "origin": [
+   75,
+   55
+  ],
+  "input": "in_vektor.png",
+  "output": "farbton-saettigung_kolorieren_vektor.png",
+  "effects": [
+   {
+    "moa_id": "{3439b08d-1922-11d3-9bde00e02910d580}",
+    "params": {
+     "hue_amount": "200",
+     "saturation_amount": "60",
+     "lightness_amount": "0",
+     "hls_colorize": "true",
+     "MB_filter_preview_tile_size": "-1 -1"
+    }
+   }
+  ]
+ },
+ {
+  "name": "farbton-saettigung_kolorieren_text",
+  "object": "text",
+  "origin": [
+   23,
+   46
+  ],
+  "input": "in_text.png",
+  "output": "farbton-saettigung_kolorieren_text.png",
+  "effects": [
+   {
+    "moa_id": "{3439b08d-1922-11d3-9bde00e02910d580}",
+    "params": {
+     "hue_amount": "200",
+     "saturation_amount": "60",
+     "lightness_amount": "0",
+     "hls_colorize": "true",
+     "MB_filter_preview_tile_size": "-1 -1"
+    }
+   }
+  ]
+ },
+ {
+  "name": "farbton-saettigung_kolorieren_bitmap",
+  "object": "bitmap",
+  "origin": [
+   72,
+   53
+  ],
+  "input": "in_bitmap.png",
+  "output": "farbton-saettigung_kolorieren_bitmap.png",
+  "effects": [
+   {
+    "moa_id": "{3439b08d-1922-11d3-9bde00e02910d580}",
+    "params": {
+     "hue_amount": "200",
+     "saturation_amount": "60",
+     "lightness_amount": "0",
+     "hls_colorize": "true",
+     "MB_filter_preview_tile_size": "-1 -1"
+    }
+   }
+  ]
+ },
+ {
+  "name": "kurven_vorgabe_vektor",
+  "object": "vektor",
+  "origin": [
+   75,
+   55
+  ],
+  "input": "in_vektor.png",
+  "output": "kurven_vorgabe_vektor.png",
+  "effects": [
+   {
+    "moa_id": "{3439b08e-1923-11d3-9bde00e02910d580}",
+    "params": {},
+    "points": {
+     "rgb_points": [
+      [
+       0,
+       0
+      ],
+      [
+       255,
+       255
+      ]
+     ],
+     "red_points": [
+      [
+       0,
+       0
+      ],
+      [
+       255,
+       255
+      ]
+     ],
+     "green_points": [
+      [
+       0,
+       0
+      ],
+      [
+       255,
+       255
+      ]
+     ],
+     "blue_points": [
+      [
+       0,
+       0
+      ],
+      [
+       255,
+       255
+      ]
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "name": "kurven_vorgabe_text",
+  "object": "text",
+  "origin": [
+   23,
+   46
+  ],
+  "input": "in_text.png",
+  "output": "kurven_vorgabe_text.png",
+  "effects": [
+   {
+    "moa_id": "{3439b08e-1923-11d3-9bde00e02910d580}",
+    "params": {},
+    "points": {
+     "rgb_points": [
+      [
+       0,
+       0
+      ],
+      [
+       255,
+       255
+      ]
+     ],
+     "red_points": [
+      [
+       0,
+       0
+      ],
+      [
+       255,
+       255
+      ]
+     ],
+     "green_points": [
+      [
+       0,
+       0
+      ],
+      [
+       255,
+       255
+      ]
+     ],
+     "blue_points": [
+      [
+       0,
+       0
+      ],
+      [
+       255,
+       255
+      ]
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "name": "kurven_vorgabe_bitmap",
+  "object": "bitmap",
+  "origin": [
+   72,
+   53
+  ],
+  "input": "in_bitmap.png",
+  "output": "kurven_vorgabe_bitmap.png",
+  "effects": [
+   {
+    "moa_id": "{3439b08e-1923-11d3-9bde00e02910d580}",
+    "params": {},
+    "points": {
+     "rgb_points": [
+      [
+       0,
+       0
+      ],
+      [
+       255,
+       255
+      ]
+     ],
+     "red_points": [
+      [
+       0,
+       0
+      ],
+      [
+       255,
+       255
+      ]
+     ],
+     "green_points": [
+      [
+       0,
+       0
+      ],
+      [
+       255,
+       255
+      ]
+     ],
+     "blue_points": [
+      [
+       0,
+       0
+      ],
+      [
+       255,
+       255
+      ]
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "name": "kurven_gross_vektor",
+  "object": "vektor",
+  "origin": [
+   75,
+   55
+  ],
+  "input": "in_vektor.png",
+  "output": "kurven_gross_vektor.png",
+  "effects": [
+   {
+    "moa_id": "{3439b08e-1923-11d3-9bde00e02910d580}",
+    "params": {},
+    "points": {
+     "rgb_points": [
+      [
+       0,
+       40
+      ],
+      [
+       64,
+       200
+      ],
+      [
+       192,
+       30
+      ],
+      [
+       255,
+       230
+      ]
+     ],
+     "red_points": [
+      [
+       0,
+       0
+      ],
+      [
+       100,
+       160
+      ],
+      [
+       255,
+       255
+      ]
+     ],
+     "green_points": [
+      [
+       0,
+       0
+      ],
+      [
+       255,
+       255
+      ]
+     ],
+     "blue_points": [
+      [
+       0,
+       60
+      ],
+      [
+       255,
+       180
+      ]
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "name": "kurven_gross_text",
+  "object": "text",
+  "origin": [
+   23,
+   46
+  ],
+  "input": "in_text.png",
+  "output": "kurven_gross_text.png",
+  "effects": [
+   {
+    "moa_id": "{3439b08e-1923-11d3-9bde00e02910d580}",
+    "params": {},
+    "points": {
+     "rgb_points": [
+      [
+       0,
+       40
+      ],
+      [
+       64,
+       200
+      ],
+      [
+       192,
+       30
+      ],
+      [
+       255,
+       230
+      ]
+     ],
+     "red_points": [
+      [
+       0,
+       0
+      ],
+      [
+       100,
+       160
+      ],
+      [
+       255,
+       255
+      ]
+     ],
+     "green_points": [
+      [
+       0,
+       0
+      ],
+      [
+       255,
+       255
+      ]
+     ],
+     "blue_points": [
+      [
+       0,
+       60
+      ],
+      [
+       255,
+       180
+      ]
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "name": "kurven_gross_bitmap",
+  "object": "bitmap",
+  "origin": [
+   72,
+   53
+  ],
+  "input": "in_bitmap.png",
+  "output": "kurven_gross_bitmap.png",
+  "effects": [
+   {
+    "moa_id": "{3439b08e-1923-11d3-9bde00e02910d580}",
+    "params": {},
+    "points": {
+     "rgb_points": [
+      [
+       0,
+       40
+      ],
+      [
+       64,
+       200
+      ],
+      [
+       192,
+       30
+      ],
+      [
+       255,
+       230
+      ]
+     ],
+     "red_points": [
+      [
+       0,
+       0
+      ],
+      [
+       100,
+       160
+      ],
+      [
+       255,
+       255
+      ]
+     ],
+     "green_points": [
+      [
+       0,
+       0
+      ],
+      [
+       255,
+       255
+      ]
+     ],
+     "blue_points": [
+      [
+       0,
+       60
+      ],
+      [
+       255,
+       180
+      ]
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "name": "tonwert_vorgabe_vektor",
+  "object": "vektor",
+  "origin": [
+   75,
+   55
+  ],
+  "input": "in_vektor.png",
+  "output": "tonwert_vorgabe_vektor.png",
+  "effects": [
+   {
+    "moa_id": "{d04ef8c2-71b5-11d1-8c8200a024cdc039}",
+    "params": {
+     "source_low_rgb": "0",
+     "source_high_rgb": "255",
+     "dest_low_rgb": "0",
+     "dest_high_rgb": "255",
+     "gamma_rgb": "1",
+     "source_low_red": "0",
+     "source_high_red": "255",
+     "dest_low_red": "0",
+     "dest_high_red": "255",
+     "gamma_red": "1",
+     "source_low_green": "0",
+     "source_high_green": "255",
+     "dest_low_green": "0",
+     "dest_high_green": "255",
+     "gamma_green": "1",
+     "source_low_blue": "0",
+     "source_high_blue": "255",
+     "dest_low_blue": "0",
+     "dest_high_blue": "255",
+     "gamma_blue": "1",
+     "MB_filter_preview_tile_size": "-1 -1"
+    }
+   }
+  ]
+ },
+ {
+  "name": "tonwert_vorgabe_text",
+  "object": "text",
+  "origin": [
+   23,
+   46
+  ],
+  "input": "in_text.png",
+  "output": "tonwert_vorgabe_text.png",
+  "effects": [
+   {
+    "moa_id": "{d04ef8c2-71b5-11d1-8c8200a024cdc039}",
+    "params": {
+     "source_low_rgb": "0",
+     "source_high_rgb": "255",
+     "dest_low_rgb": "0",
+     "dest_high_rgb": "255",
+     "gamma_rgb": "1",
+     "source_low_red": "0",
+     "source_high_red": "255",
+     "dest_low_red": "0",
+     "dest_high_red": "255",
+     "gamma_red": "1",
+     "source_low_green": "0",
+     "source_high_green": "255",
+     "dest_low_green": "0",
+     "dest_high_green": "255",
+     "gamma_green": "1",
+     "source_low_blue": "0",
+     "source_high_blue": "255",
+     "dest_low_blue": "0",
+     "dest_high_blue": "255",
+     "gamma_blue": "1",
+     "MB_filter_preview_tile_size": "-1 -1"
+    }
+   }
+  ]
+ },
+ {
+  "name": "tonwert_vorgabe_bitmap",
+  "object": "bitmap",
+  "origin": [
+   72,
+   53
+  ],
+  "input": "in_bitmap.png",
+  "output": "tonwert_vorgabe_bitmap.png",
+  "effects": [
+   {
+    "moa_id": "{d04ef8c2-71b5-11d1-8c8200a024cdc039}",
+    "params": {
+     "source_low_rgb": "0",
+     "source_high_rgb": "255",
+     "dest_low_rgb": "0",
+     "dest_high_rgb": "255",
+     "gamma_rgb": "1",
+     "source_low_red": "0",
+     "source_high_red": "255",
+     "dest_low_red": "0",
+     "dest_high_red": "255",
+     "gamma_red": "1",
+     "source_low_green": "0",
+     "source_high_green": "255",
+     "dest_low_green": "0",
+     "dest_high_green": "255",
+     "gamma_green": "1",
+     "source_low_blue": "0",
+     "source_high_blue": "255",
+     "dest_low_blue": "0",
+     "dest_high_blue": "255",
+     "gamma_blue": "1",
+     "MB_filter_preview_tile_size": "-1 -1"
+    }
+   }
+  ]
+ },
+ {
+  "name": "tonwert_gross_vektor",
+  "object": "vektor",
+  "origin": [
+   75,
+   55
+  ],
+  "input": "in_vektor.png",
+  "output": "tonwert_gross_vektor.png",
+  "effects": [
+   {
+    "moa_id": "{d04ef8c2-71b5-11d1-8c8200a024cdc039}",
+    "params": {
+     "source_low_rgb": "80",
+     "source_high_rgb": "180",
+     "dest_low_rgb": "30",
+     "dest_high_rgb": "220",
+     "gamma_rgb": "0.4",
+     "source_low_red": "40",
+     "source_high_red": "255",
+     "dest_low_red": "0",
+     "dest_high_red": "255",
+     "gamma_red": "1",
+     "source_low_green": "0",
+     "source_high_green": "255",
+     "dest_low_green": "0",
+     "dest_high_green": "255",
+     "gamma_green": "1",
+     "source_low_blue": "0",
+     "source_high_blue": "255",
+     "dest_low_blue": "0",
+     "dest_high_blue": "255",
+     "gamma_blue": "2.5",
+     "MB_filter_preview_tile_size": "-1 -1"
+    }
+   }
+  ]
+ },
+ {
+  "name": "tonwert_gross_text",
+  "object": "text",
+  "origin": [
+   23,
+   46
+  ],
+  "input": "in_text.png",
+  "output": "tonwert_gross_text.png",
+  "effects": [
+   {
+    "moa_id": "{d04ef8c2-71b5-11d1-8c8200a024cdc039}",
+    "params": {
+     "source_low_rgb": "80",
+     "source_high_rgb": "180",
+     "dest_low_rgb": "30",
+     "dest_high_rgb": "220",
+     "gamma_rgb": "0.4",
+     "source_low_red": "40",
+     "source_high_red": "255",
+     "dest_low_red": "0",
+     "dest_high_red": "255",
+     "gamma_red": "1",
+     "source_low_green": "0",
+     "source_high_green": "255",
+     "dest_low_green": "0",
+     "dest_high_green": "255",
+     "gamma_green": "1",
+     "source_low_blue": "0",
+     "source_high_blue": "255",
+     "dest_low_blue": "0",
+     "dest_high_blue": "255",
+     "gamma_blue": "2.5",
+     "MB_filter_preview_tile_size": "-1 -1"
+    }
+   }
+  ]
+ },
+ {
+  "name": "tonwert_gross_bitmap",
+  "object": "bitmap",
+  "origin": [
+   72,
+   53
+  ],
+  "input": "in_bitmap.png",
+  "output": "tonwert_gross_bitmap.png",
+  "effects": [
+   {
+    "moa_id": "{d04ef8c2-71b5-11d1-8c8200a024cdc039}",
+    "params": {
+     "source_low_rgb": "80",
+     "source_high_rgb": "180",
+     "dest_low_rgb": "30",
+     "dest_high_rgb": "220",
+     "gamma_rgb": "0.4",
+     "source_low_red": "40",
+     "source_high_red": "255",
+     "dest_low_red": "0",
+     "dest_high_red": "255",
+     "gamma_red": "1",
+     "source_low_green": "0",
+     "source_high_green": "255",
+     "dest_low_green": "0",
+     "dest_high_green": "255",
+     "gamma_green": "1",
+     "source_low_blue": "0",
+     "source_high_blue": "255",
+     "dest_low_blue": "0",
+     "dest_high_blue": "255",
+     "gamma_blue": "2.5",
+     "MB_filter_preview_tile_size": "-1 -1"
+    }
+   }
+  ]
+ },
+ {
+  "name": "auto-tonwert_vorgabe_vektor",
+  "object": "vektor",
+  "origin": [
+   75,
+   55
+  ],
+  "input": "in_vektor.png",
+  "output": "auto-tonwert_vorgabe_vektor.png",
+  "effects": [
+   {
+    "moa_id": "{d04ef8c1-71b4-11d1-8c8200a024cdc039}",
+    "params": {
+     "source_low_rgb": "0",
+     "source_high_rgb": "255",
+     "dest_low_rgb": "0",
+     "dest_high_rgb": "255",
+     "gamma_rgb": "1",
+     "source_low_red": "0",
+     "source_high_red": "255",
+     "dest_low_red": "0",
+     "dest_high_red": "255",
+     "gamma_red": "1",
+     "source_low_green": "0",
+     "source_high_green": "255",
+     "dest_low_green": "0",
+     "dest_high_green": "255",
+     "gamma_green": "1",
+     "source_low_blue": "0",
+     "source_high_blue": "255",
+     "dest_low_blue": "0",
+     "dest_high_blue": "255",
+     "gamma_blue": "1",
+     "MB_filter_preview_tile_size": "-1 -1"
+    }
+   }
+  ]
+ },
+ {
+  "name": "auto-tonwert_vorgabe_text",
+  "object": "text",
+  "origin": [
+   23,
+   46
+  ],
+  "input": "in_text.png",
+  "output": "auto-tonwert_vorgabe_text.png",
+  "effects": [
+   {
+    "moa_id": "{d04ef8c1-71b4-11d1-8c8200a024cdc039}",
+    "params": {
+     "source_low_rgb": "0",
+     "source_high_rgb": "255",
+     "dest_low_rgb": "0",
+     "dest_high_rgb": "255",
+     "gamma_rgb": "1",
+     "source_low_red": "0",
+     "source_high_red": "255",
+     "dest_low_red": "0",
+     "dest_high_red": "255",
+     "gamma_red": "1",
+     "source_low_green": "0",
+     "source_high_green": "255",
+     "dest_low_green": "0",
+     "dest_high_green": "255",
+     "gamma_green": "1",
+     "source_low_blue": "0",
+     "source_high_blue": "255",
+     "dest_low_blue": "0",
+     "dest_high_blue": "255",
+     "gamma_blue": "1",
+     "MB_filter_preview_tile_size": "-1 -1"
+    }
+   }
+  ]
+ },
+ {
+  "name": "auto-tonwert_vorgabe_bitmap",
+  "object": "bitmap",
+  "origin": [
+   72,
+   53
+  ],
+  "input": "in_bitmap.png",
+  "output": "auto-tonwert_vorgabe_bitmap.png",
+  "effects": [
+   {
+    "moa_id": "{d04ef8c1-71b4-11d1-8c8200a024cdc039}",
+    "params": {
+     "source_low_rgb": "0",
+     "source_high_rgb": "255",
+     "dest_low_rgb": "0",
+     "dest_high_rgb": "255",
+     "gamma_rgb": "1",
+     "source_low_red": "0",
+     "source_high_red": "255",
+     "dest_low_red": "0",
+     "dest_high_red": "255",
+     "gamma_red": "1",
+     "source_low_green": "0",
+     "source_high_green": "255",
+     "dest_low_green": "0",
+     "dest_high_green": "255",
+     "gamma_green": "1",
+     "source_low_blue": "0",
+     "source_high_blue": "255",
+     "dest_low_blue": "0",
+     "dest_high_blue": "255",
+     "gamma_blue": "1",
+     "MB_filter_preview_tile_size": "-1 -1"
+    }
+   }
+  ]
+ },
+ {
+  "name": "umkehren_vorgabe_vektor",
+  "object": "vektor",
+  "origin": [
+   75,
+   55
+  ],
+  "input": "in_vektor.png",
+  "output": "umkehren_vorgabe_vektor.png",
+  "effects": [
+   {
+    "moa_id": "{d2541291-70d6-11d1-8c8000a024cdc039}",
+    "params": {
+     "MB_filter_preview_tile_size": "-1 -1"
+    }
+   }
+  ]
+ },
+ {
+  "name": "umkehren_vorgabe_text",
+  "object": "text",
+  "origin": [
+   23,
+   46
+  ],
+  "input": "in_text.png",
+  "output": "umkehren_vorgabe_text.png",
+  "effects": [
+   {
+    "moa_id": "{d2541291-70d6-11d1-8c8000a024cdc039}",
+    "params": {
+     "MB_filter_preview_tile_size": "-1 -1"
+    }
+   }
+  ]
+ },
+ {
+  "name": "umkehren_vorgabe_bitmap",
+  "object": "bitmap",
+  "origin": [
+   72,
+   53
+  ],
+  "input": "in_bitmap.png",
+  "output": "umkehren_vorgabe_bitmap.png",
+  "effects": [
+   {
+    "moa_id": "{d2541291-70d6-11d1-8c8000a024cdc039}",
+    "params": {
+     "MB_filter_preview_tile_size": "-1 -1"
+    }
+   }
+  ]
+ },
+ {
+  "name": "farbfuellung_vorgabe_vektor",
+  "object": "vektor",
+  "origin": [
+   75,
+   55
+  ],
+  "input": "in_vektor.png",
+  "output": "farbfuellung_vorgabe_vektor.png",
+  "effects": [
+   {
+    "moa_id": "{dd54adc0-a279-11d3-b92a000502f3fdbe}",
+    "params": {
+     "Color": "#ff0000",
+     "Opacity": "100",
+     "Blendmode": "0"
+    }
+   }
+  ]
+ },
+ {
+  "name": "farbfuellung_vorgabe_text",
+  "object": "text",
+  "origin": [
+   23,
+   46
+  ],
+  "input": "in_text.png",
+  "output": "farbfuellung_vorgabe_text.png",
+  "effects": [
+   {
+    "moa_id": "{dd54adc0-a279-11d3-b92a000502f3fdbe}",
+    "params": {
+     "Color": "#ff0000",
+     "Opacity": "100",
+     "Blendmode": "0"
+    }
+   }
+  ]
+ },
+ {
+  "name": "farbfuellung_vorgabe_bitmap",
+  "object": "bitmap",
+  "origin": [
+   72,
+   53
+  ],
+  "input": "in_bitmap.png",
+  "output": "farbfuellung_vorgabe_bitmap.png",
+  "effects": [
+   {
+    "moa_id": "{dd54adc0-a279-11d3-b92a000502f3fdbe}",
+    "params": {
+     "Color": "#ff0000",
+     "Opacity": "100",
+     "Blendmode": "0"
+    }
+   }
+  ]
+ },
+ {
+  "name": "farbfuellung_klein_vektor",
+  "object": "vektor",
+  "origin": [
+   75,
+   55
+  ],
+  "input": "in_vektor.png",
+  "output": "farbfuellung_klein_vektor.png",
+  "effects": [
+   {
+    "moa_id": "{dd54adc0-a279-11d3-b92a000502f3fdbe}",
+    "params": {
+     "Color": "#0000ff",
+     "Opacity": "20",
+     "Blendmode": "0"
+    }
+   }
+  ]
+ },
+ {
+  "name": "farbfuellung_klein_text",
+  "object": "text",
+  "origin": [
+   23,
+   46
+  ],
+  "input": "in_text.png",
+  "output": "farbfuellung_klein_text.png",
+  "effects": [
+   {
+    "moa_id": "{dd54adc0-a279-11d3-b92a000502f3fdbe}",
+    "params": {
+     "Color": "#0000ff",
+     "Opacity": "20",
+     "Blendmode": "0"
+    }
+   }
+  ]
+ },
+ {
+  "name": "farbfuellung_klein_bitmap",
+  "object": "bitmap",
+  "origin": [
+   72,
+   53
+  ],
+  "input": "in_bitmap.png",
+  "output": "farbfuellung_klein_bitmap.png",
+  "effects": [
+   {
+    "moa_id": "{dd54adc0-a279-11d3-b92a000502f3fdbe}",
+    "params": {
+     "Color": "#0000ff",
+     "Opacity": "20",
+     "Blendmode": "0"
+    }
+   }
+  ]
+ },
+ {
+  "name": "farbfuellung_gross_vektor",
+  "object": "vektor",
+  "origin": [
+   75,
+   55
+  ],
+  "input": "in_vektor.png",
+  "output": "farbfuellung_gross_vektor.png",
+  "effects": [
+   {
+    "moa_id": "{dd54adc0-a279-11d3-b92a000502f3fdbe}",
+    "params": {
+     "Color": "#00ff00",
+     "Opacity": "70",
+     "Blendmode": "1"
+    }
+   }
+  ]
+ },
+ {
+  "name": "farbfuellung_gross_text",
+  "object": "text",
+  "origin": [
+   23,
+   46
+  ],
+  "input": "in_text.png",
+  "output": "farbfuellung_gross_text.png",
+  "effects": [
+   {
+    "moa_id": "{dd54adc0-a279-11d3-b92a000502f3fdbe}",
+    "params": {
+     "Color": "#00ff00",
+     "Opacity": "70",
+     "Blendmode": "1"
+    }
+   }
+  ]
+ },
+ {
+  "name": "farbfuellung_gross_bitmap",
+  "object": "bitmap",
+  "origin": [
+   72,
+   53
+  ],
+  "input": "in_bitmap.png",
+  "output": "farbfuellung_gross_bitmap.png",
+  "effects": [
+   {
+    "moa_id": "{dd54adc0-a279-11d3-b92a000502f3fdbe}",
+    "params": {
+     "Color": "#00ff00",
+     "Opacity": "70",
+     "Blendmode": "1"
+    }
+   }
+  ]
+ },
+ {
+  "name": "rauschen_vorgabe_vektor",
+  "object": "vektor",
+  "origin": [
+   75,
+   55
+  ],
+  "input": "in_vektor.png",
+  "output": "rauschen_vorgabe_vektor.png",
+  "effects": [
+   {
+    "moa_id": "{e4c0f4bc-c0a3-4cb3-b3513822027e4d9f}",
+    "params": {
+     "add_noise_amount": "50",
+     "add_noise_use_color": "false",
+     "MB_filter_preview_tile_size": "-1 -1"
+    }
+   }
+  ]
+ },
+ {
+  "name": "rauschen_vorgabe_text",
+  "object": "text",
+  "origin": [
+   23,
+   46
+  ],
+  "input": "in_text.png",
+  "output": "rauschen_vorgabe_text.png",
+  "effects": [
+   {
+    "moa_id": "{e4c0f4bc-c0a3-4cb3-b3513822027e4d9f}",
+    "params": {
+     "add_noise_amount": "50",
+     "add_noise_use_color": "false",
+     "MB_filter_preview_tile_size": "-1 -1"
+    }
+   }
+  ]
+ },
+ {
+  "name": "rauschen_vorgabe_bitmap",
+  "object": "bitmap",
+  "origin": [
+   72,
+   53
+  ],
+  "input": "in_bitmap.png",
+  "output": "rauschen_vorgabe_bitmap.png",
+  "effects": [
+   {
+    "moa_id": "{e4c0f4bc-c0a3-4cb3-b3513822027e4d9f}",
+    "params": {
+     "add_noise_amount": "50",
+     "add_noise_use_color": "false",
+     "MB_filter_preview_tile_size": "-1 -1"
+    }
+   }
+  ]
+ },
+ {
+  "name": "rauschen_gross_vektor",
+  "object": "vektor",
+  "origin": [
+   75,
+   55
+  ],
+  "input": "in_vektor.png",
+  "output": "rauschen_gross_vektor.png",
+  "effects": [
+   {
+    "moa_id": "{e4c0f4bc-c0a3-4cb3-b3513822027e4d9f}",
+    "params": {
+     "add_noise_amount": "400",
+     "add_noise_use_color": "true",
+     "MB_filter_preview_tile_size": "-1 -1"
+    }
+   }
+  ]
+ },
+ {
+  "name": "rauschen_gross_text",
+  "object": "text",
+  "origin": [
+   23,
+   46
+  ],
+  "input": "in_text.png",
+  "output": "rauschen_gross_text.png",
+  "effects": [
+   {
+    "moa_id": "{e4c0f4bc-c0a3-4cb3-b3513822027e4d9f}",
+    "params": {
+     "add_noise_amount": "400",
+     "add_noise_use_color": "true",
+     "MB_filter_preview_tile_size": "-1 -1"
+    }
+   }
+  ]
+ },
+ {
+  "name": "rauschen_gross_bitmap",
+  "object": "bitmap",
+  "origin": [
+   72,
+   53
+  ],
+  "input": "in_bitmap.png",
+  "output": "rauschen_gross_bitmap.png",
+  "effects": [
+   {
+    "moa_id": "{e4c0f4bc-c0a3-4cb3-b3513822027e4d9f}",
+    "params": {
+     "add_noise_amount": "400",
+     "add_noise_use_color": "true",
+     "MB_filter_preview_tile_size": "-1 -1"
+    }
+   }
+  ]
+ },
+ {
+  "name": "in-alpha_vorgabe_vektor",
+  "object": "vektor",
+  "origin": [
+   75,
+   55
+  ],
+  "input": "in_vektor.png",
+  "output": "in-alpha_vorgabe_vektor.png",
+  "effects": [
+   {
+    "moa_id": "{2932d5a2-ca48-11d1-8561000502701850}",
+    "params": {
+     "MB_filter_preview_tile_size": "-1 -1"
+    }
+   }
+  ]
+ },
+ {
+  "name": "in-alpha_vorgabe_text",
+  "object": "text",
+  "origin": [
+   23,
+   46
+  ],
+  "input": "in_text.png",
+  "output": "in-alpha_vorgabe_text.png",
+  "effects": [
+   {
+    "moa_id": "{2932d5a2-ca48-11d1-8561000502701850}",
+    "params": {
+     "MB_filter_preview_tile_size": "-1 -1"
+    }
+   }
+  ]
+ },
+ {
+  "name": "in-alpha_vorgabe_bitmap",
+  "object": "bitmap",
+  "origin": [
+   72,
+   53
+  ],
+  "input": "in_bitmap.png",
+  "output": "in-alpha_vorgabe_bitmap.png",
+  "effects": [
+   {
+    "moa_id": "{2932d5a2-ca48-11d1-8561000502701850}",
+    "params": {
+     "MB_filter_preview_tile_size": "-1 -1"
+    }
+   }
+  ]
+ },
+ {
+  "name": "kanten-finden_vorgabe_vektor",
+  "object": "vektor",
+  "origin": [
+   75,
+   55
+  ],
+  "input": "in_vektor.png",
+  "output": "kanten-finden_vorgabe_vektor.png",
+  "effects": [
+   {
+    "moa_id": "{fc7093f1-f95c-11d0-8be200a024cdc039}",
+    "params": {
+     "MB_filter_preview_tile_size": "-1 -1"
+    }
+   }
+  ]
+ },
+ {
+  "name": "kanten-finden_vorgabe_text",
+  "object": "text",
+  "origin": [
+   23,
+   46
+  ],
+  "input": "in_text.png",
+  "output": "kanten-finden_vorgabe_text.png",
+  "effects": [
+   {
+    "moa_id": "{fc7093f1-f95c-11d0-8be200a024cdc039}",
+    "params": {
+     "MB_filter_preview_tile_size": "-1 -1"
+    }
+   }
+  ]
+ },
+ {
+  "name": "kanten-finden_vorgabe_bitmap",
+  "object": "bitmap",
+  "origin": [
+   72,
+   53
+  ],
+  "input": "in_bitmap.png",
+  "output": "kanten-finden_vorgabe_bitmap.png",
+  "effects": [
+   {
+    "moa_id": "{fc7093f1-f95c-11d0-8be200a024cdc039}",
+    "params": {
+     "MB_filter_preview_tile_size": "-1 -1"
+    }
+   }
+  ]
+ }
+]

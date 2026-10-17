@@ -1,0 +1,68 @@
+name: Parity gap
+description: Firepixel behaves or looks different from the reference application.
+title: "[Parity]: "
+labels: ["parity"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template when a tool, menu, dialog, panel or file result differs from the reference
+        application. Please do **not** name the reference application or its vendor (say "the reference
+        application" or "the original"), and do not attach files taken from its installation.
+        Known gaps are listed in docs/FINDINGS.md.
+  - type: input
+    id: version
+    attributes:
+      label: Firepixel version
+      description: Build name or commit (Help ▸ About).
+    validations:
+      required: true
+  - type: input
+    id: unit
+    attributes:
+      label: Unit
+      description: Area as named in docs/PARITY.md, e.g. tool-brush, panel-layers, inspector-text, menu-modify-a, dialogs-d21-d30, export-results. Leave empty if unsure.
+      placeholder: panel-layers
+  - type: textarea
+    id: step
+    attributes:
+      label: Step
+      description: Exact steps from a new or attached document, including tool settings, modifier keys and zoom.
+      placeholder: |
+        1. New document 800 × 600, zoom 100 %
+        2. Rectangle tool, Shift-drag from 100,100 to 300,200
+        3. …
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected (reference application)
+      description: What the reference application shows or produces — values, layout, texts, file result.
+    validations:
+      required: true
+  - type: textarea
+    id: observed
+    attributes:
+      label: Observed (Firepixel)
+    validations:
+      required: true
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Kind of deviation
+      options:
+        - value / behaviour
+        - missing element or command
+        - layout / design
+        - text / translation
+        - file output
+        - keyboard / mouse handling
+        - other
+    validations:
+      required: true
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots
+      description: Attach a screenshot of each side here (drag and drop). Never commit screenshots to the repository.

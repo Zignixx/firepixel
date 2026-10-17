@@ -1,0 +1,407 @@
+{
+ "unit": "inspector-bitmap",
+ "testfile": "T02",
+ "testfiles": [
+  "T02",
+  "T03"
+ ],
+ "note": "Action verbs as in the shared list (see panel-layers.json): open_testfile, select, select_none, tool <tool id>, choose {target,item} (item path 'A > B'; toolbox.<tool>_flyout picks a flyout entry, orig_index = position in the owner-drawn list of the original), open <logical ui key>, click/double_click/hover <ui key|{handle}|{menu_item}>, drag {from,by|to,mods}, canvas_click/canvas_double_click/canvas_hover [x,y] (+mods), canvas_drag {from,to,mods}, canvas_wheel {pos,delta,modifiers}, key <combo>, repeat/do, type, menu 'A > B', menu_open, set_field {target,value}, jsf (both = fp run_script), record_ui <key>, log_value, log_menu_items, export_png doc, wait, close_all, window_size. Additions in this file: {handle: <index|role>} = control/frame handle of the selected object (orig: controlPoints, fp: autoShape.describe/frame); drag_popup_slider {to_fraction,hold} = drag inside the open popup slider; record_ui history.names = history step names; mods on canvas_click/canvas_hover = held modifier keys. Coordinates are document pixels. Labels are compared without '&' and trailing '...'/'…'.",
+ "steps": [
+  {
+   "id": "00_overview_normal",
+   "check": "overview after opening the test file",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T02"
+    }
+   ],
+   "shot": {
+    "area": "window"
+   }
+  },
+  {
+   "id": "01_layout_normal",
+   "check": "layout",
+   "method": {
+    "orig": "W, B",
+    "fp": "S, B"
+   },
+   "both": [
+    {
+     "open_testfile": "T02"
+    },
+    {
+     "select": "B1"
+    },
+    {
+     "record_ui": "inspector.fields"
+    }
+   ],
+   "shot": {
+    "area": "inspector"
+   }
+  },
+  {
+   "id": "02_bounds_normal",
+   "check": "bounds",
+   "method": {
+    "orig": "J, W",
+    "fp": "D, S"
+   },
+   "both": [
+    {
+     "open_testfile": "T03"
+    },
+    {
+     "select": "BM"
+    },
+    {
+     "record_ui": "inspector.fields"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": {
+    "area": "inspector"
+   },
+   "note": "T03: original pixelRect reports only the opaque part 200,100-400,400 (case N26)."
+  },
+  {
+   "id": "03_resize_result",
+   "check": "resize",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T02"
+    },
+    {
+     "select": "B1"
+    },
+    {
+     "set_field": {
+      "target": "inspector.width",
+      "value": "240"
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "record_ui": "history.names"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "04_opacity_blend_opacity_result",
+   "check": "opacity blend",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T02"
+    },
+    {
+     "select": "B1"
+    },
+    {
+     "set_field": {
+      "target": "inspector.opacity",
+      "value": "50"
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "04_opacity_blend_blend_result",
+   "check": "opacity blend",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T02"
+    },
+    {
+     "select": "B1"
+    },
+    {
+     "choose": {
+      "target": "inspector.blend_mode",
+      "item": "Multiplizieren"
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "05_filters_normal",
+   "check": "filters",
+   "method": {
+    "orig": "W",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T02"
+    },
+    {
+     "select": "B1"
+    },
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Weichzeichnen > Weichzeichnen"
+     }
+    },
+    {
+     "record_ui": "inspector.fields"
+    }
+   ],
+   "shot": {
+    "area": "inspector"
+   }
+  },
+  {
+   "id": "06_style_open",
+   "check": "style",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "open_testfile": "T02"
+    },
+    {
+     "select": "B1"
+    },
+    {
+     "open": "inspector.style"
+    }
+   ],
+   "shot": {
+    "area": "popup"
+   },
+   "note": "Style list location in the bitmap inspector unsure in both programs."
+  },
+  {
+   "id": "07_bitmap_mode_normal",
+   "check": "bitmap mode",
+   "method": {
+    "orig": "W",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T02"
+    },
+    {
+     "select": "B1"
+    },
+    {
+     "canvas_double_click": [
+      280,
+      200
+     ]
+    },
+    {
+     "tool": "marquee"
+    },
+    {
+     "record_ui": "inspector.fields"
+    }
+   ],
+   "shot": {
+    "area": "inspector"
+   },
+   "note": "Double click on a bitmap enters bitmap mode."
+  },
+  {
+   "id": "08_mask_inspector_normal",
+   "check": "mask",
+   "method": {
+    "orig": "W, B",
+    "fp": "S, B"
+   },
+   "both": [
+    {
+     "open_testfile": "T02"
+    },
+    {
+     "select": "B1"
+    },
+    {
+     "menu": "Modifizieren > Maske > Alles einblenden"
+    },
+    {
+     "record_ui": "inspector.fields"
+    }
+   ],
+   "shot": {
+    "area": "inspector"
+   }
+  },
+  {
+   "id": "08_mask_layers_normal",
+   "check": "mask",
+   "method": {
+    "orig": "W, B",
+    "fp": "S, B"
+   },
+   "both": [
+    {
+     "open_testfile": "T02"
+    },
+    {
+     "select": "B1"
+    },
+    {
+     "menu": "Modifizieren > Maske > Alles einblenden"
+    }
+   ],
+   "shot": {
+    "area": "panel:layers"
+   }
+  },
+  {
+   "id": "09_thumbnail_normal",
+   "check": "thumbnail",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T02"
+    },
+    {
+     "select": "B1"
+    }
+   ],
+   "shot": {
+    "area": "panel:layers"
+   },
+   "note": "Inventory: 'Vorschaubild'; layers panel row thumbnail assumed."
+  },
+  {
+   "id": "10_transparent_click_result",
+   "check": "transparent click",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T03"
+    },
+    {
+     "select_none": true
+    },
+    {
+     "tool": "pointer"
+    },
+    {
+     "canvas_click": [
+      170,
+      80
+     ]
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "note": "170,80 is inside the BM rectangle 150,50-450,450 but on a transparent pixel."
+  },
+  {
+   "id": "11_name_result",
+   "check": "name",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T02"
+    },
+    {
+     "select": "B1"
+    },
+    {
+     "set_field": {
+      "target": "inspector.name",
+      "value": "Bild1"
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "record_ui": "history.names"
+    }
+   ]
+  },
+  {
+   "id": "12_multi_normal",
+   "check": "multi",
+   "method": {
+    "orig": "W",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T02"
+    },
+    {
+     "select": "B1"
+    },
+    {
+     "key": "Ctrl+Alt+D"
+    },
+    {
+     "key": "Ctrl+A"
+    },
+    {
+     "record_ui": "inspector.fields"
+    }
+   ],
+   "shot": {
+    "area": "inspector"
+   },
+   "note": "Ctrl+Alt+D = Klonen (original shortcut) creates the second bitmap; unsure shortcut in Firepixel -> menu Bearbeiten > Klonen."
+  }
+ ]
+}

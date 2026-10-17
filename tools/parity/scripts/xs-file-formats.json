@@ -1,0 +1,932 @@
+{
+ "unit": "xs-file-formats",
+ "testfile": "T11",
+ "note": "file dialogs: original via JSF or UI Automation (never left open), Firepixel via ui_file_dialog | Verbs as in tools/parity/runner/README.md. Every step starts with reopen <Txx> (test file fresh, earlier changes discarded) or close_all (no document). Menu commands: orig = menu path, fp = command id (side-specific, so the following actions are listed on both sides). Logical keys used here that may still be unmapped in ui_map.json: dialog.field.<i> / dialog.combo.<i> (i-th edit/combo of the top dialog), labels for dropdowns. Rare verbs used here that the runner may log as unsupported: new_document, window_click, drag_text, hover_text, right_click_text, double_click_text, drag_guide, drag_ruler_origin, drag_dialog_title, drag_dialog_slider, click_dialog_rel, drag_dialog_rel, canvas_wheel, reopen_dialog (repeat the opening actions), save_history_as_command, delete_saved_command, add_live_filter, file_dialog_open_types, restart_app, window_size, set_clipboard_image, drop_files, log_focus_cycle-like record_ui {focus_cycle:n}. Object 'I1#2' = duplicate of I1; 'text' = first text element; canvas_drag option hold = screenshot while the button is held.",
+ "steps": [
+  {
+   "id": "00_overview_normal",
+   "check": "overview after opening the test file",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "close_all": true
+    }
+   ],
+   "shot": {
+    "area": "window"
+   }
+  },
+  {
+   "id": "01_open_png_result",
+   "check": "open PNG: object and bounds",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "close_all": true
+    }
+   ],
+   "orig": [
+    {
+     "jsf": "fw.openDocument('file:///C:/Users/Administrator/Desktop/REA/re/_testdateien/par/par_import/par.png')"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "ui_action": {
+      "run": "file.open"
+     }
+    },
+    {
+     "ui_file_dialog": {
+      "action": "choose",
+      "path": "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\par_import\\par.png"
+     }
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": {
+    "area": "window"
+   }
+  },
+  {
+   "id": "02_open_jpg_result",
+   "check": "open JPEG",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "close_all": true
+    }
+   ],
+   "orig": [
+    {
+     "jsf": "fw.openDocument('file:///C:/Users/Administrator/Desktop/REA/re/_testdateien/par/par_import/par.jpg')"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "ui_action": {
+      "run": "file.open"
+     }
+    },
+    {
+     "ui_file_dialog": {
+      "action": "choose",
+      "path": "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\par_import\\par.jpg"
+     }
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "03_open_gif_anim_result",
+   "check": "open animated GIF -> states",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "close_all": true
+    },
+    {
+     "menu": [
+      "Fenster",
+      "Status"
+     ]
+    }
+   ],
+   "orig": [
+    {
+     "jsf": "fw.openDocument('file:///C:/Users/Administrator/Desktop/REA/re/_testdateien/par/par_import/par.gif')"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM();return [d.width,d.height,d.zoom,d.layers.length,d.frames.length].toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "ui_action": {
+      "run": "file.open"
+     }
+    },
+    {
+     "ui_file_dialog": {
+      "action": "choose",
+      "path": "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\par_import\\par.gif"
+     }
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM();return [d.width,d.height,d.zoom,d.layers.length,d.frames.length].toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": {
+    "area": "window"
+   }
+  },
+  {
+   "id": "04_open_bmp_tif_result",
+   "check": "open BMP and TIFF",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "close_all": true
+    }
+   ],
+   "orig": [
+    {
+     "jsf": "fw.openDocument('file:///C:/Users/Administrator/Desktop/REA/re/_testdateien/par/par_import/par.bmp')"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "ui_action": {
+      "run": "file.open"
+     }
+    },
+    {
+     "ui_file_dialog": {
+      "action": "choose",
+      "path": "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\par_import\\par.bmp"
+     }
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": null,
+   "note": "BMP part; TIFF in the next step"
+  },
+  {
+   "id": "04_open_bmp_tif_result_tif",
+   "check": "open BMP and TIFF",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "close_all": true
+    }
+   ],
+   "orig": [
+    {
+     "jsf": "fw.openDocument('file:///C:/Users/Administrator/Desktop/REA/re/_testdateien/par/par_import/par.tif')"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "ui_action": {
+      "run": "file.open"
+     }
+    },
+    {
+     "ui_file_dialog": {
+      "action": "choose",
+      "path": "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\par_import\\par.tif"
+     }
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "05_open_psd_result",
+   "check": "open PSD: layers, text editable?, effects",
+   "method": {
+    "orig": "J, B",
+    "fp": "D, B"
+   },
+   "both": [
+    {
+     "close_all": true
+    },
+    {
+     "menu": [
+      "Fenster",
+      "Ebenen"
+     ]
+    }
+   ],
+   "orig": [
+    {
+     "jsf": "fw.openDocument('file:///C:/Users/Administrator/Desktop/REA/re/_testdateien/par/par_import/par.psd')"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "ui_action": {
+      "run": "file.open"
+     }
+    },
+    {
+     "ui_file_dialog": {
+      "action": "choose",
+      "path": "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\par_import\\par.psd"
+     }
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": {
+    "area": "window"
+   }
+  },
+  {
+   "id": "05_open_psd_result_text",
+   "check": "open PSD: layers, text editable?, effects - text object after PSD import selected (inspector)",
+   "method": {
+    "orig": "J, B",
+    "fp": "D, B"
+   },
+   "both": [
+    {
+     "close_all": true
+    }
+   ],
+   "orig": [
+    {
+     "jsf": "fw.openDocument('file:///C:/Users/Administrator/Desktop/REA/re/_testdateien/par/par_import/par.psd')"
+    },
+    {
+     "select": "text"
+    }
+   ],
+   "fp": [
+    {
+     "ui_action": {
+      "run": "file.open"
+     }
+    },
+    {
+     "ui_file_dialog": {
+      "action": "choose",
+      "path": "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\par_import\\par.psd"
+     }
+    },
+    {
+     "select": "text"
+    }
+   ],
+   "shot": {
+    "area": "inspector"
+   },
+   "note": "'text' = first text element of the document; runner resolves by type"
+  },
+  {
+   "id": "06_open_svg_result",
+   "check": "open SVG",
+   "method": {
+    "orig": "J, B",
+    "fp": "D, B"
+   },
+   "both": [
+    {
+     "close_all": true
+    }
+   ],
+   "orig": [
+    {
+     "jsf": "fw.openDocument('file:///C:/Users/Administrator/Desktop/REA/re/_testdateien/par/par_import/par.svg')"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "ui_action": {
+      "run": "file.open"
+     }
+    },
+    {
+     "ui_file_dialog": {
+      "action": "choose",
+      "path": "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\par_import\\par.svg"
+     }
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "07_open_vector_result",
+   "check": "open vector file from corpus",
+   "method": {
+    "orig": "J, B",
+    "fp": "D, B"
+   },
+   "both": [
+    {
+     "close_all": true
+    }
+   ],
+   "orig": [
+    {
+     "jsf": "fw.openDocument('file:///C:/Users/Administrator/Desktop/REA/re/_testdateien/par/par_import/par.ai')"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "ui_action": {
+      "run": "file.open"
+     }
+    },
+    {
+     "ui_file_dialog": {
+      "action": "choose",
+      "path": "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\par_import\\par.ai"
+     }
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "08_open_fwpng_bounds_result",
+   "check": "native PNG with transparent margin: bitmap bounds (N26)",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "reopen": "T03"
+    },
+    {
+     "select": "BM"
+    },
+    {
+     "log_value": "(function(){var r=[],s=fw.selection;for(var i=0;i<s.length;i++){var p=s[i].pixelRect;r.push([s[i].name,s[i].toString(),p.left,p.top,p.right,p.bottom]);}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "09_import_place_pressed",
+   "check": "import: placement cursor, click/drag",
+   "method": {
+    "orig": "J, B",
+    "fp": "D, B"
+   },
+   "both": [
+    {
+     "reopen": "T01"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Datei > Importieren..."
+    },
+    {
+     "file_dialog": "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\par_import\\par.png"
+    },
+    {
+     "canvas_move": [
+      200,
+      200
+     ]
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "file.import"
+    },
+    {
+     "file_dialog": "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\par_import\\par.png"
+    },
+    {
+     "canvas_move": [
+      200,
+      200
+     ]
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "note": "original import file dialog must be answered by UI Automation (file name field + Open), never left open"
+  },
+  {
+   "id": "09_import_place_result",
+   "check": "import: placement cursor, click/drag",
+   "method": {
+    "orig": "J, B",
+    "fp": "D, B"
+   },
+   "both": [
+    {
+     "reopen": "T01"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Datei > Importieren..."
+    },
+    {
+     "file_dialog": "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\par_import\\par.png"
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       100,
+       100
+      ],
+      "to": [
+       420,
+       340
+      ]
+     }
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "command": "file.import"
+    },
+    {
+     "file_dialog": "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\par_import\\par.png"
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       100,
+       100
+      ],
+      "to": [
+       420,
+       340
+      ]
+     }
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "10_import_multipage_open",
+   "check": "multi-page file: page selection dialog",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "reopen": "T01"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Datei > Importieren..."
+    },
+    {
+     "file_dialog": "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\par_import\\par.ai"
+    }
+   ],
+   "fp": [
+    {
+     "command": "file.import"
+    },
+    {
+     "file_dialog": "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\par_import\\par.ai"
+    }
+   ],
+   "shot": {
+    "area": "dialog",
+    "delay_ms": 600
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "par.ai may have one page only; then no page selection appears in either program"
+  },
+  {
+   "id": "11_drop_file_result",
+   "check": "drop file onto open document imports it (N07)",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "reopen": "T01"
+    },
+    {
+     "drop_files": {
+      "paths": [
+       "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\par_import\\par.png"
+      ],
+      "pos": [
+       400,
+       300
+      ]
+     }
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": null,
+   "note": "drop into the original needs OLE drag&drop simulation; may be skipped there"
+  },
+  {
+   "id": "12_save_fwpng_result",
+   "check": "save native PNG, reopen = identical",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "jsf": "fw.saveDocument(fw.getDocumentDOM(), 'file:///C:/Users/Administrator/Desktop/REA/re/_testdateien/par/work/u47_save.fw.png')"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "run_script": "fw.saveDocument(fw.getDocumentDOM(), 'file:///C:/Users/Administrator/Desktop/REA/re/_testdateien/par/work/u47_save_fp.fw.png')"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){var p=e[i].pixelRect;r.push([l,e[i].name,e[i].toString(),p.left,p.top,p.right,p.bottom]);}}return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": null,
+   "note": "runner reopens the saved file and compares ELEMS before/after"
+  },
+  {
+   "id": "13_save_as_types_open",
+   "check": "save as: file type list",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Datei > Speichern unter..."
+    },
+    {
+     "file_dialog_open_types": true
+    }
+   ],
+   "fp": [
+    {
+     "command": "file.saveAs"
+    },
+    {
+     "ui_find_click": "Dateityp"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "type combo label in Firepixel's in-app file dialog unverified"
+  },
+  {
+   "id": "14_save_as_psd_result",
+   "check": "save as PSD",
+   "method": {
+    "orig": "J",
+    "fp": "R"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "jsf": "fw.exportPSD(fw.getDocumentDOM(), 'file:///C:/Users/Administrator/Desktop/REA/re/_testdateien/par/work/u47_{prog}.psd')"
+    }
+   ],
+   "shot": null,
+   "note": "{prog} = orig|fp; exportPSD name unverified, alternatively dom.exportTo with PSD options"
+  },
+  {
+   "id": "15_save_flat_open",
+   "check": "save as PNG/JPEG/GIF (flat): warning",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    }
+   ],
+   "orig": [
+    {
+     "menu": "Datei > Speichern unter..."
+    },
+    {
+     "file_dialog": "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\work\\u47_flat.png",
+     "filter": 4
+    }
+   ],
+   "fp": [
+    {
+     "command": "file.saveAs"
+    },
+    {
+     "file_dialog": "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\work\\u47_flat.png",
+     "filter": 4
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "filter index 4 = flattened PNG per AGENTS.md 5b; original type label unverified"
+  },
+  {
+   "id": "15_save_flat_result",
+   "check": "save as PNG/JPEG/GIF (flat): warning",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM();return [d.width,d.height,d.zoom,d.layers.length,d.frames.length].toSource();})()"
+    }
+   ],
+   "shot": null,
+   "note": "filter index 4 = flattened PNG per AGENTS.md 5b; original type label unverified"
+  },
+  {
+   "id": "16_open_as_untitled_result",
+   "check": "'open as untitled'",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "close_all": true
+    }
+   ],
+   "orig": [
+    {
+     "jsf": "fw.openDocument('file:///C:/Users/Administrator/Desktop/REA/re/_testdateien/par/par_vector.fw.png', true)"
+    },
+    {
+     "log_value": "(function(){var d=fw.documents,r=[];for(var i=0;i<d.length;i++)r.push(d[i].docTitle);return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "ui_action": {
+      "run": "file.open"
+     }
+    },
+    {
+     "ui_file_dialog": {
+      "action": "choose",
+      "path": "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\par_vector.fw.png",
+      "open_untitled": true
+     }
+    },
+    {
+     "log_value": "(function(){var d=fw.documents,r=[];for(var i=0;i<d.length;i++)r.push(d[i].docTitle);return r.toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": null
+  },
+  {
+   "id": "17_open_as_anim_result",
+   "check": "'open as animation' (several files)",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "close_all": true
+    }
+   ],
+   "orig": [
+    {
+     "jsf": "fw.openDocument(['file:///C:/Users/Administrator/Desktop/REA/re/_testdateien/par/par_import/par.png','file:///C:/Users/Administrator/Desktop/REA/re/_testdateien/par/par_import/par.jpg'], false, false)"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM();return [d.width,d.height,d.zoom,d.layers.length,d.frames.length].toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "ui_action": {
+      "run": "file.open"
+     }
+    },
+    {
+     "ui_file_dialog": {
+      "action": "choose",
+      "paths": [
+       "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\par_import\\par.png",
+       "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\par_import\\par.jpg"
+      ],
+      "open_as_animation": true
+     }
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM();return [d.width,d.height,d.zoom,d.layers.length,d.frames.length].toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": null,
+   "note": "original: opening several files as animation via JSF unverified (openDocument array form); may need file dialog checkbox via UI Automation"
+  },
+  {
+   "id": "18_recent_open",
+   "check": "recently opened list",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "close_all": true
+    },
+    {
+     "menu_open": [
+      "Datei",
+      "Zuletzt geöffnete Dateien"
+     ]
+    }
+   ],
+   "shot": {
+    "area": "menu"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Escape"
+    }
+   ]
+  }
+ ]
+}

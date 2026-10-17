@@ -1,0 +1,753 @@
+{
+ "unit": "filters-adjust-color",
+ "testfile": "T02",
+ "testfiles": [
+  "T02",
+  "T08"
+ ],
+ "note": "Action verbs as in the shared list (see panel-layers.json): open_testfile, select, select_none, tool <tool id>, choose {target,item} (item path 'A > B'; toolbox.<tool>_flyout picks a flyout entry, orig_index = position in the owner-drawn list of the original), open <logical ui key>, click/double_click/hover <ui key|{handle}|{menu_item}>, drag {from,by|to,mods}, canvas_click/canvas_double_click/canvas_hover [x,y] (+mods), canvas_drag {from,to,mods}, canvas_wheel {pos,delta,modifiers}, key <combo>, repeat/do, type, menu 'A > B', menu_open, set_field {target,value}, jsf (both = fp run_script), record_ui <key>, log_value, log_menu_items, export_png doc, wait, close_all, window_size. Additions in this file: {handle: <index|role>} = control/frame handle of the selected object (orig: controlPoints, fp: autoShape.describe/frame); drag_popup_slider {to_fraction,hold} = drag inside the open popup slider; record_ui history.names = history step names; mods on canvas_click/canvas_hover = held modifier keys. Coordinates are document pixels. Labels are compared without '&' and trailing '...'/'…'.",
+ "steps": [
+  {
+   "id": "00_overview_normal",
+   "check": "overview after opening the test file",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T02"
+    }
+   ],
+   "shot": {
+    "area": "window"
+   }
+  },
+  {
+   "id": "01_menu_entries_open",
+   "check": "menu entries",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "open_testfile": "T02"
+    },
+    {
+     "select": "B1"
+    },
+    {
+     "menu_open": "Filter > Farbe anpassen"
+    },
+    {
+     "log_menu_items": true
+    }
+   ],
+   "shot": {
+    "area": "menu"
+   }
+  },
+  {
+   "id": "02_brightness_live_open",
+   "check": "brightness live",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T08"
+    },
+    {
+     "select": "BM"
+    }
+   ],
+   "orig": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Farbe anpassen > Helligkeit/Kontrast"
+     }
+    }
+   ],
+   "fp": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Farbe anpassen > Helligkeit/Kontrast"
+     }
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   }
+  },
+  {
+   "id": "03_brightness_preview_result",
+   "check": "brightness preview",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T02"
+    },
+    {
+     "select": "B1"
+    },
+    {
+     "menu": "Filter > Farbe anpassen > Helligkeit/Kontrast"
+    },
+    {
+     "set_field": {
+      "target": "dialog.brightness",
+      "value": "40"
+     }
+    },
+    {
+     "click": "dialog.preview"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "note": "Preview checkbox toggled off; close the dialog with Escape afterwards."
+  },
+  {
+   "id": "04_hue_colorize_result",
+   "check": "hue colorize",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T02"
+    },
+    {
+     "select": "B1"
+    },
+    {
+     "menu": "Filter > Farbe anpassen > Farbton/Sättigung"
+    },
+    {
+     "click": "dialog.colorize"
+    },
+    {
+     "click": "dialog.ok"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "note": "Checkbox 'Kolorieren' (PARITAET_B D41); inventory says 'Färben'."
+  },
+  {
+   "id": "05_curves_live_open",
+   "check": "curves live",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T08"
+    },
+    {
+     "select": "BM"
+    }
+   ],
+   "orig": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Farbe anpassen > Kurven"
+     }
+    }
+   ],
+   "fp": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Farbe anpassen > Gradationskurven"
+     }
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "note": "Firepixel live list name 'Gradationskurven' vs menu 'Kurven' (unsure)."
+  },
+  {
+   "id": "06_levels_live_open",
+   "check": "levels live",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T08"
+    },
+    {
+     "select": "BM"
+    }
+   ],
+   "orig": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Farbe anpassen > Tonwertkorrektur"
+     }
+    }
+   ],
+   "fp": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Farbe anpassen > Tonwertkorrektur"
+     }
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   }
+  },
+  {
+   "id": "07_auto_levels_result",
+   "check": "auto levels",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T02"
+    },
+    {
+     "select": "B1"
+    },
+    {
+     "menu": "Filter > Farbe anpassen > Auto-Tonwertkorrektur"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "08_invert_result",
+   "check": "invert",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T02"
+    },
+    {
+     "select": "B1"
+    },
+    {
+     "menu": "Filter > Farbe anpassen > Umkehren"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "09_color_fill_result",
+   "check": "color fill",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T02"
+    },
+    {
+     "select": "B1"
+    }
+   ],
+   "orig": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Farbe anpassen > Farbfüllung"
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "fp": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Farbe anpassen > Farbfüllung"
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "note": "Original filter menu has no 'Farbfüllung'; applied as live effect."
+  },
+  {
+   "id": "10_destructive_open",
+   "check": "destructive",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "open_testfile": "T08"
+    },
+    {
+     "select": "R"
+    },
+    {
+     "menu": "Filter > Farbe anpassen > Umkehren"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "note": "Message 'in Bitmap umwandeln' expected; answer with Escape afterwards."
+  },
+  {
+   "id": "11_selection_only_result",
+   "check": "selection only",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T02"
+    },
+    {
+     "select": "B1"
+    },
+    {
+     "tool": "marquee"
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       100,
+       100
+      ],
+      "to": [
+       300,
+       250
+      ]
+     }
+    },
+    {
+     "menu": "Filter > Farbe anpassen > Umkehren"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "12_repeat_last_result",
+   "check": "repeat last",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T02"
+    },
+    {
+     "select": "B1"
+    },
+    {
+     "menu": "Filter > Farbe anpassen > Umkehren"
+    },
+    {
+     "key": "Ctrl+Alt+Shift+X"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "record_ui": "history.names"
+    }
+   ]
+  },
+  {
+   "id": "13_remember_result",
+   "check": "remember",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T02"
+    },
+    {
+     "select": "B1"
+    },
+    {
+     "menu": "Filter > Farbe anpassen > Farbton/Sättigung"
+    },
+    {
+     "set_field": {
+      "target": "dialog.hue",
+      "value": "40"
+     }
+    },
+    {
+     "click": "dialog.ok"
+    },
+    {
+     "menu": "Filter > Farbe anpassen > Farbton/Sättigung"
+    },
+    {
+     "record_ui": "dialog.fields"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ]
+  },
+  {
+   "id": "14_cancel_result",
+   "check": "cancel",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T02"
+    },
+    {
+     "select": "B1"
+    },
+    {
+     "menu": "Filter > Farbe anpassen > Farbton/Sättigung"
+    },
+    {
+     "set_field": {
+      "target": "dialog.hue",
+      "value": "40"
+     }
+    },
+    {
+     "click": "dialog.cancel"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "record_ui": "history.names"
+    }
+   ]
+  },
+  {
+   "id": "15_result_ref_result",
+   "check": "result ref",
+   "method": {
+    "orig": "E (RE-FX)",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T02"
+    },
+    {
+     "select": "B1"
+    },
+    {
+     "menu": "Filter > Farbe anpassen > Umkehren"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "note": "Reference pixels from RE-FX."
+  },
+  {
+   "id": "16_hist_levels_normal",
+   "check": "hist",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T02"
+    },
+    {
+     "select": "B1"
+    },
+    {
+     "menu": "Filter > Farbe anpassen > Tonwertkorrektur"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   }
+  },
+  {
+   "id": "16_hist_curves_normal",
+   "check": "hist",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T02"
+    },
+    {
+     "select": "B1"
+    },
+    {
+     "menu": "Filter > Farbe anpassen > Kurven"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   }
+  },
+  {
+   "id": "17_eyedroppers_levels_black_pressed",
+   "check": "eyedroppers",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T02"
+    },
+    {
+     "select": "B1"
+    },
+    {
+     "menu": "Filter > Farbe anpassen > Tonwertkorrektur"
+    },
+    {
+     "click": "dialog.eyedropper_black"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   }
+  },
+  {
+   "id": "17_eyedroppers_curves_white_pressed",
+   "check": "eyedroppers",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T02"
+    },
+    {
+     "select": "B1"
+    },
+    {
+     "menu": "Filter > Farbe anpassen > Kurven"
+    },
+    {
+     "click": "dialog.eyedropper_white"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   }
+  },
+  {
+   "id": "18_channel_list_open",
+   "check": "channel list",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "open_testfile": "T02"
+    },
+    {
+     "select": "B1"
+    },
+    {
+     "menu": "Filter > Farbe anpassen > Kurven"
+    },
+    {
+     "open": "dialog.channel"
+    },
+    {
+     "log_menu_items": true
+    }
+   ],
+   "shot": {
+    "area": "popup"
+   }
+  },
+  {
+   "id": "19_live_edit_again_open",
+   "check": "live edit again",
+   "method": {
+    "orig": "W",
+    "fp": "S"
+   },
+   "both": [
+    {
+     "open_testfile": "T08"
+    },
+    {
+     "select": "BM"
+    }
+   ],
+   "orig": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Farbe anpassen > Tonwertkorrektur"
+     }
+    },
+    {
+     "set_field": {
+      "target": "dialog.input_low",
+      "value": "20"
+     }
+    },
+    {
+     "click": "dialog.ok"
+    },
+    {
+     "click": "inspector.fx_row_info.0"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "fp": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Farbe anpassen > Tonwertkorrektur"
+     }
+    },
+    {
+     "set_field": {
+      "target": "dialog.input_low",
+      "value": "20"
+     }
+    },
+    {
+     "click": "dialog.ok"
+    },
+    {
+     "click": "inspector.fx_row_info.0"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ]
+  },
+  {
+   "id": "20_undo_result",
+   "check": "undo",
+   "method": {
+    "orig": "J",
+    "fp": "H"
+   },
+   "both": [
+    {
+     "open_testfile": "T02"
+    },
+    {
+     "select": "B1"
+    },
+    {
+     "menu": "Filter > Farbe anpassen > Umkehren"
+    },
+    {
+     "menu": "Filter > Farbe anpassen > Auto-Tonwertkorrektur"
+    },
+    {
+     "menu": "Filter > Farbe anpassen > Farbton/Sättigung"
+    },
+    {
+     "set_field": {
+      "target": "dialog.hue",
+      "value": "40"
+     }
+    },
+    {
+     "click": "dialog.ok"
+    },
+    {
+     "record_ui": "history.names"
+    }
+   ]
+  }
+ ]
+}

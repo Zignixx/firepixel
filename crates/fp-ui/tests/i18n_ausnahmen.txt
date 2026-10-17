@@ -1,0 +1,126 @@
+# Ausnahmen für den Scanner i18n_keine_festen_texte.rs (I18N-KERN pflegt die Liste).
+#
+# Zeilen ohne Präfix: erlaubte Wörter (Eigennamen, Formatnamen, Einheiten, Symbole), getrennt
+# durch Leerzeichen, Groß-/Kleinschreibung zählt.
+# „text <Datei> | <Literal>“: genau dieses Literal in dieser Datei erlauben (z. B. `text menu.rs | Firepixel Hilfe`),
+# „text <Literal>“: überall. Bitte mit Kommentar, warum der Text fest bleibt.
+
+# Eigennamen
+Firepixel Segoe UI Arial Tahoma Verdana Times New Roman Consolas Courier Microsoft YaHei Yu Gothic Malgun Gothic Meiryo
+Claude MCP JSF JavaScript Windows Explorer Unicode UTF ASCII SAM BiRefNet ONNX GitHub Hugging Face
+
+# Sprachen in ihrem Eigennamen (Sprachwahl)
+Deutsch English Français Español Italiano Português Nederlands Polski Русский Ελληνικά
+
+# Dateiformate und Fachkürzel
+PNG FW-PNG JPEG JPG GIF WebP AVIF BMP TIFF TIF SVG PSD ICO QOI APNG JXL TGA EPS PDF HTML HTM CSS URL XML JSON
+RGB RGBA ARGB HSB HSL HSV CMYK Hex LAB sRGB DPI PPI dpi ppi Lab
+fw png jpg gif webp avif bmp tiff svg psd ico qoi apng jxl tga eps htm html css jsf js
+
+# Einheiten und Symbole
+px pt mm cm in ms KB MB GB TB
+
+# Tasten (stehen in key-* bzw. kommen aus shortcut_label)
+Ctrl Shift Alt Esc Tab Num
+
+
+# Symbole
+text glyphs.rs | AV
+text styles.rs | Aa
+
+# Feste Kennungen (I18N-SHELL, 12.10.): Nachschlage-IDs der Export-Vorgaben (Anzeige über fp_export-Vorgabenamen)
+text preview.rs | JPEG – Höhere Qualität
+text preview.rs | GIF Adaptiv 256
+text preview.rs | JPEG – Kleinere Datei
+text preview.rs | GIF Web 216
+# Exportassistent (BA-032): Kennung der eingebauten Vorgabe für den JPEG-Vorschlag
+text export_wizard.rs | JPEG – Höhere Qualität
+# ToolGroup::label()/ThemeKind::label()/from_section: feste Kennungen, Anzeige über name() (ui-toolgroup-*, ui-theme-*)
+text theme.rs | Auswählen
+text theme.rs | Vektor
+text theme.rs | Farben
+text theme.rs | Ansicht
+text theme.rs | Dunkel
+# interne Fehler des Layout-XML-Lesers (Aufrufer verwerfen sie mit .ok(), nie sichtbar) und gespeicherte Layout-Kennungen
+text workspace.rs | unvollständiges Element
+text workspace.rs | Attribut {key} ohne Anführungszeichen
+text workspace.rs | ungültige Struktur
+text workspace.rs | Erweiterter Modus
+text workspace.rs | Symbolmodus
+text workspace.rs | Symbolmodus mit Bedienfeldnamen
+# Nachschlagetabellen der Bedienfelder (I18N-BEDIENFELDER, 12.10.): deutsche Quelltexte aus fp-script
+# (Parameter der automatischen Formen) bzw. fp-export (Vorgabenamen, Palette „Schwarzweiß“) → Schlüssel;
+# angezeigt wird immer die Übersetzung (panel-asp-p-*, panel-opt-*). Die Tabelle der Formparameter steht seit UE-1 in
+# fp-script/src/autoshape/shapes.rs (PARAM_LABEL_KEYS, `labelKey`/`optionKeys` in autoShape.list/describe).
+text shapes.rs | Länge der Spitze
+text shapes.rs | Eckgröße
+text shapes.rs | Krümmung
+text shapes.rs | Höhe
+text shapes.rs | Innerer Radius (Röhre)
+text shapes.rs | Länge
+text shapes.rs | Überhang
+text shapes.rs | Größe
+text shapes.rs | Spitzengröße
+text shapes.rs | Zähne
+text shapes.rs | Schaftlänge
+text shapes.rs | Wellenlänge
+text optimize.rs | Schwarzweiß
+text optimize.rs | JPEG – Höhere Qualität
+
+# I18N-ENGINE (12.10.): interne Fehler des eigenen JPEG-Dekoders. jpeg_in.rs ruft ihn mit `if let Ok(…)` auf und fällt bei jedem Fehler auf zune-jpeg zurück – diese Texte sieht nie ein Nutzer.
+text jpeg_ijg.rs | Huffman-Tabelle ungültig
+text jpeg_ijg.rs | ungültiger Huffman-Code
+text jpeg_ijg.rs | kein JPEG
+text jpeg_ijg.rs | nur 8-Bit-JPEG
+text jpeg_ijg.rs | JPEG-Kopf ungültig
+text jpeg_ijg.rs | zu groß
+text jpeg_ijg.rs | Abtastfaktor
+text jpeg_ijg.rs | JPEG-Variante nicht unterstützt (arithmetisch/verlustfrei)
+text jpeg_ijg.rs | Scan vor dem Bildkopf
+text jpeg_ijg.rs | Spektralauswahl
+text jpeg_ijg.rs | JPEG ohne Bild
+text jpeg_ijg.rs | nicht ganzzahliges Abtastverhältnis
+# I18N-ENGINE: Strichvorgaben (BRUSH_PRESETS category_de/name_de) und Verlaufsformen (GRADIENT_SHAPES) in fp-engine\src\commands\panel.rs sind feste Kennungen („Kategorie/Name“ als Parameter `preset`, gespeicherter Pinselname wie im Original); die Anzeige übersetzt der Inspektor (inspector\texte.rs, pi-*).
+# I18N-ENGINE/UE-3: Parameterbeschreibungen und Hinweise der Befehle (.opt/.param/.note in fp-engine) sind deutsche Quelltexte; MCP, Kommandozeile und Befehlskatalog zeigen sie über fp_engine::command::source_text aus befehlstexte.ftl (Test parameterbeschreibungen_in_de_und_en in firepixel-cli).
+# UE-1 (12.10.): Detailtexte der FW-PNG-Leser in fp-fwpng (tree.rs, ate.rs, chunks.rs, png.rs, file.rs, read.rs: „Tag-Baum …“,
+# „unpassendes >>“, „Magic FADECAFE fehlt“ …) bleiben deutsch: technische Ursache für Entwickler, eingebettet in die
+# übersetzte Hülle err-fwpng-* (Detail als Platzhalter). fp-io-Präfixe „BMP: …“ sind Formatname + übersetzter Text.
+
+# UE-3 (12.10.): Kommandozeile und MCP-Server werden mitgeprüft (Prüfart „Ausgabe“).
+# JSON-RPC-Standardmeldung (Protokolltext, in jeder Sprache gleich) und interner Renderbericht (Debug-Ausgabe der Struktur)
+text proxy.rs | Parse error: {e}
+text render.rs | Renderer: {:?}
+# Mischmodus-Liste: deutsche Namen sind nur Rückfall-Quelltexte; angezeigt wird blend-<name> aus filter.ftl
+# (inspector\texts.rs::blend_label, Test texts::keys_of_lists_exist prüft jeden Schlüssel)
+text obj_quads.rs | Sättigung
+text obj_quads.rs | Grün
+text obj_quads.rs | Glühen
+text obj_quads.rs | Abkühlen
+text obj_quads.rs | Erwärmen
+text obj_quads.rs | Auflösen
+text obj_quads.rs | Überlagern
+text obj_quads.rs | Löschen
+# Bibliotheksname
+zlib
+# Kennungen: Name der globalen JSF-Variable, Schlüsselzeile in neuen Sprachvorlagen, Eingabe-Alias der Rücktaste (MCP ui_input)
+text main.rs | FP_ARG
+text language.rs | language-name = {code}\n
+text inject.rs | rück
+# Formatkennungen in Fehlerdetails (fp-color, fp-io)
+ASE ACO HEIC HEIF XL WBMP
+# UE-3: technische Detailtexte der FW-PNG-Leser (siehe UE-1 oben) und interne serde-Fehler von fp-model (nie angezeigt, nur Rohdaten-Roundtrip)
+text file.rs | keine FW-PNG (mkTS fehlt)
+text png.rs | Bild zu groß
+text png.rs | Palette nicht expandiert
+text read.rs | mkTS beginnt nicht mit MKBv
+text zlib.rs | Strom größer als {limit} Byte
+text raw.rs | ungültiger Tag-Schlüssel {s:?}
+text chunks.rs | Magic FADECAFE fehlt
+text chunks.rs | Kopf ungültig (FACECAFE)
+text chunks.rs | Magic CAFEBEEF fehlt
+text chunks.rs | zu kurz ({} Byte)
+text chunks.rs | Größe {w}×{h} über 128
+# Parametername + Parser-Fehler bzw. Formel (technisch, in übersetzter Hülle err-param-*)
+text popup.rs | menu: {e}
+text tooling.rs | brush: {e}
+text text.rs | runs ≠ text

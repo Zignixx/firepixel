@@ -1,0 +1,999 @@
+{
+ "unit": "fx-stack",
+ "testfile": "T08",
+ "testfiles": [
+  "T08"
+ ],
+ "note": "Action verbs as in the shared list (see panel-layers.json): open_testfile, select, select_none, tool <tool id>, choose {target,item} (item path 'A > B'; toolbox.<tool>_flyout picks a flyout entry, orig_index = position in the owner-drawn list of the original), open <logical ui key>, click/double_click/hover <ui key|{handle}|{menu_item}>, drag {from,by|to,mods}, canvas_click/canvas_double_click/canvas_hover [x,y] (+mods), canvas_drag {from,to,mods}, canvas_wheel {pos,delta,modifiers}, key <combo>, repeat/do, type, menu 'A > B', menu_open, set_field {target,value}, jsf (both = fp run_script), record_ui <key>, log_value, log_menu_items, export_png doc, wait, close_all, window_size. Additions in this file: {handle: <index|role>} = control/frame handle of the selected object (orig: controlPoints, fp: autoShape.describe/frame); drag_popup_slider {to_fraction,hold} = drag inside the open popup slider; record_ui history.names = history step names; mods on canvas_click/canvas_hover = held modifier keys. Coordinates are document pixels. Labels are compared without '&' and trailing '...'/'…'.",
+ "steps": [
+  {
+   "id": "00_overview_normal",
+   "check": "overview after opening the test file",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T08"
+    }
+   ],
+   "shot": {
+    "area": "window"
+   }
+  },
+  {
+   "id": "01_plus_menu_vector_open",
+   "check": "plus menu",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "open_testfile": "T08"
+    },
+    {
+     "select": "R"
+    },
+    {
+     "open": "inspector.fx_add"
+    },
+    {
+     "log_menu_items": true
+    }
+   ],
+   "shot": {
+    "area": "menu"
+   }
+  },
+  {
+   "id": "01_plus_menu_bitmap_open",
+   "check": "plus menu",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "open_testfile": "T08"
+    },
+    {
+     "select": "BM"
+    },
+    {
+     "open": "inspector.fx_add"
+    }
+   ],
+   "shot": {
+    "area": "menu"
+   }
+  },
+  {
+   "id": "02_submenus_bevel_open",
+   "check": "submenus",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T08"
+    },
+    {
+     "select": "R"
+    },
+    {
+     "open": "inspector.fx_add"
+    }
+   ],
+   "orig": [
+    {
+     "hover": {
+      "menu_item": "Abgeflachte Kante und Relief"
+     }
+    },
+    {
+     "wait": 600
+    }
+   ],
+   "fp": [
+    {
+     "hover": {
+      "menu_item": "Abgeflachte Kante und Relief"
+     }
+    },
+    {
+     "wait": 600
+    }
+   ],
+   "shot": {
+    "area": "menu"
+   },
+   "note": "'+' menu group/entry names differ or are unsure (original group 'Abschrägung und Prägung' per inventory, entries per re 23; Firepixel 'Abgeflachte Kante und Relief'/'Abschrägung innen'...)."
+  },
+  {
+   "id": "02_submenus_shadow_glow_open",
+   "check": "submenus",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T08"
+    },
+    {
+     "select": "R"
+    },
+    {
+     "open": "inspector.fx_add"
+    }
+   ],
+   "orig": [
+    {
+     "hover": {
+      "menu_item": "Schatten und Glühen"
+     }
+    },
+    {
+     "wait": 600
+    }
+   ],
+   "fp": [
+    {
+     "hover": {
+      "menu_item": "Schatten und Glühen"
+     }
+    },
+    {
+     "wait": 600
+    }
+   ],
+   "shot": {
+    "area": "menu"
+   }
+  },
+  {
+   "id": "02_submenus_adjust_color_open",
+   "check": "submenus",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T08"
+    },
+    {
+     "select": "R"
+    },
+    {
+     "open": "inspector.fx_add"
+    }
+   ],
+   "orig": [
+    {
+     "hover": {
+      "menu_item": "Farbe anpassen"
+     }
+    },
+    {
+     "wait": 600
+    }
+   ],
+   "fp": [
+    {
+     "hover": {
+      "menu_item": "Farbe anpassen"
+     }
+    },
+    {
+     "wait": 600
+    }
+   ],
+   "shot": {
+    "area": "menu"
+   }
+  },
+  {
+   "id": "02_submenus_blur_open",
+   "check": "submenus",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T08"
+    },
+    {
+     "select": "R"
+    },
+    {
+     "open": "inspector.fx_add"
+    }
+   ],
+   "orig": [
+    {
+     "hover": {
+      "menu_item": "Weichzeichnen"
+     }
+    },
+    {
+     "wait": 600
+    }
+   ],
+   "fp": [
+    {
+     "hover": {
+      "menu_item": "Weichzeichnen"
+     }
+    },
+    {
+     "wait": 600
+    }
+   ],
+   "shot": {
+    "area": "menu"
+   }
+  },
+  {
+   "id": "02_submenus_sharpen_open",
+   "check": "submenus",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T08"
+    },
+    {
+     "select": "R"
+    },
+    {
+     "open": "inspector.fx_add"
+    }
+   ],
+   "orig": [
+    {
+     "hover": {
+      "menu_item": "Scharfzeichnen"
+     }
+    },
+    {
+     "wait": 600
+    }
+   ],
+   "fp": [
+    {
+     "hover": {
+      "menu_item": "Scharfzeichnen"
+     }
+    },
+    {
+     "wait": 600
+    }
+   ],
+   "shot": {
+    "area": "menu"
+   }
+  },
+  {
+   "id": "02_submenus_other_open",
+   "check": "submenus",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T08"
+    },
+    {
+     "select": "R"
+    },
+    {
+     "open": "inspector.fx_add"
+    }
+   ],
+   "orig": [
+    {
+     "hover": {
+      "menu_item": "Andere"
+     }
+    },
+    {
+     "wait": 600
+    }
+   ],
+   "fp": [
+    {
+     "hover": {
+      "menu_item": "Andere"
+     }
+    },
+    {
+     "wait": 600
+    }
+   ],
+   "shot": {
+    "area": "menu"
+   },
+   "note": "'+' menu group/entry names differ or are unsure (original group 'Abschrägung und Prägung' per inventory, entries per re 23; Firepixel 'Abgeflachte Kante und Relief'/'Abschrägung innen'...)."
+  },
+  {
+   "id": "03_list_row_normal",
+   "check": "list row",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T08"
+    },
+    {
+     "select": "FX"
+    }
+   ],
+   "shot": {
+    "area": "inspector"
+   }
+  },
+  {
+   "id": "04_checkbox_result",
+   "check": "checkbox",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T08"
+    },
+    {
+     "select": "FX"
+    },
+    {
+     "click": "inspector.fx_row_check.0"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "05_info_btn_open",
+   "check": "info btn",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T08"
+    },
+    {
+     "select": "FX"
+    },
+    {
+     "click": "inspector.fx_row_info.0"
+    }
+   ],
+   "shot": {
+    "area": "popup"
+   }
+  },
+  {
+   "id": "06_minus_result",
+   "check": "minus",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T08"
+    },
+    {
+     "select": "FX"
+    },
+    {
+     "click": "inspector.fx_row.1"
+    },
+    {
+     "click": "inspector.fx_delete"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "record_ui": "history.names"
+    }
+   ]
+  },
+  {
+   "id": "07_order_drag_result",
+   "check": "order drag",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T08"
+    },
+    {
+     "select": "FX"
+    },
+    {
+     "drag": {
+      "from": "inspector.fx_list.2",
+      "to": "inspector.fx_list.0"
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "shot": {
+    "area": "inspector"
+   }
+  },
+  {
+   "id": "08_repeat_change_result",
+   "check": "repeat change",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T08"
+    },
+    {
+     "select": "R"
+    }
+   ],
+   "orig": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Schatten und Glühen > Schlagschatten"
+     }
+    },
+    {
+     "set_field": {
+      "target": "fx_popup.distance",
+      "value": "3"
+     }
+    },
+    {
+     "set_field": {
+      "target": "fx_popup.distance",
+      "value": "5"
+     }
+    },
+    {
+     "set_field": {
+      "target": "fx_popup.distance",
+      "value": "7"
+     }
+    },
+    {
+     "set_field": {
+      "target": "fx_popup.distance",
+      "value": "9"
+     }
+    },
+    {
+     "set_field": {
+      "target": "fx_popup.distance",
+      "value": "11"
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Schatten und Glühen > Schlagschatten"
+     }
+    },
+    {
+     "set_field": {
+      "target": "fx_popup.distance",
+      "value": "3"
+     }
+    },
+    {
+     "set_field": {
+      "target": "fx_popup.distance",
+      "value": "5"
+     }
+    },
+    {
+     "set_field": {
+      "target": "fx_popup.distance",
+      "value": "7"
+     }
+    },
+    {
+     "set_field": {
+      "target": "fx_popup.distance",
+      "value": "9"
+     }
+    },
+    {
+     "set_field": {
+      "target": "fx_popup.distance",
+      "value": "11"
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "note": "N01: five changes must leave exactly one effect."
+  },
+  {
+   "id": "09_cancel_result",
+   "check": "cancel",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T08"
+    },
+    {
+     "select": "FX"
+    }
+   ],
+   "orig": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Schatten und Glühen > Schlagschatten"
+     }
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Schatten und Glühen > Schlagschatten"
+     }
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "note": "Adds a 2nd shadow then Escape; compare whether the effect stays."
+  },
+  {
+   "id": "10_options_menu_open",
+   "check": "options menu",
+   "method": {
+    "orig": "W, B",
+    "fp": "Fi, B"
+   },
+   "both": [
+    {
+     "open_testfile": "T08"
+    },
+    {
+     "select": "FX"
+    },
+    {
+     "open": "inspector.fx_options"
+    },
+    {
+     "log_menu_items": true
+    }
+   ],
+   "shot": {
+    "area": "menu"
+   },
+   "note": "Options menu location (gear/'Optionen') unsure in both programs."
+  },
+  {
+   "id": "11_save_style_result",
+   "check": "save style",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T08"
+    },
+    {
+     "select": "FX"
+    },
+    {
+     "open": "inspector.fx_options"
+    }
+   ],
+   "orig": [
+    {
+     "click": {
+      "menu_item": "Als Stil speichern"
+     }
+    },
+    {
+     "record_ui": "styles.count"
+    }
+   ],
+   "fp": [
+    {
+     "click": {
+      "menu_item": "Als Stil speichern"
+     }
+    },
+    {
+     "record_ui": "styles.count"
+    }
+   ],
+   "note": "Close the name dialog with Enter."
+  },
+  {
+   "id": "12_multi_result",
+   "check": "multi",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T08"
+    },
+    {
+     "select": [
+      "R",
+      "EL"
+     ]
+    }
+   ],
+   "orig": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Schatten und Glühen > Schlagschatten"
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Schatten und Glühen > Schlagschatten"
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ]
+  },
+  {
+   "id": "13_group_result",
+   "check": "group",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T08"
+    },
+    {
+     "select": [
+      "R",
+      "EL"
+     ]
+    },
+    {
+     "key": "Ctrl+G"
+    }
+   ],
+   "orig": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Schatten und Glühen > Schlagschatten"
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "fp": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Schatten und Glühen > Schlagschatten"
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   }
+  },
+  {
+   "id": "14_bitmap_menu_vs_live_result",
+   "check": "bitmap menu vs live",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T08"
+    },
+    {
+     "select": "BM"
+    },
+    {
+     "menu": "Filter > Weichzeichnen > Weichzeichnen"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "orig": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Weichzeichnen > Weichzeichnen"
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "record_ui": "history.names"
+    }
+   ],
+   "fp": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Weichzeichnen > Weichzeichnen"
+     }
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "record_ui": "history.names"
+    }
+   ]
+  },
+  {
+   "id": "15_photoshop_plugins_open",
+   "check": "photoshop plugins",
+   "method": {
+    "orig": "W",
+    "fp": "Fi"
+   },
+   "both": [
+    {
+     "command": "edit.preferences"
+    },
+    {
+     "click_text": "Zusatzmodule"
+    },
+    {
+     "record_ui": "dialog.fields"
+    }
+   ],
+   "shot": {
+    "area": "dialog"
+   },
+   "note": "Preferences category name 'Zusatzmodule' assumed equal in the original."
+  },
+  {
+   "id": "16_bounds_normal",
+   "check": "bounds",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T08"
+    },
+    {
+     "select": "FX"
+    },
+    {
+     "record_ui": "inspector.fields"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ]
+  },
+  {
+   "id": "17_undo_result",
+   "check": "undo",
+   "method": {
+    "orig": "J",
+    "fp": "H"
+   },
+   "both": [
+    {
+     "open_testfile": "T08"
+    },
+    {
+     "select": "R"
+    }
+   ],
+   "orig": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Schatten und Glühen > Schlagschatten"
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "click": "inspector.fx_row_check.0"
+    },
+    {
+     "click": "inspector.fx_delete"
+    },
+    {
+     "record_ui": "history.names"
+    }
+   ],
+   "fp": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Schatten und Glühen > Schlagschatten"
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "click": "inspector.fx_row_check.0"
+    },
+    {
+     "click": "inspector.fx_delete"
+    },
+    {
+     "record_ui": "history.names"
+    }
+   ]
+  },
+  {
+   "id": "18_defaults_memory_result",
+   "check": "defaults memory",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T08"
+    },
+    {
+     "select": "R"
+    }
+   ],
+   "orig": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Schatten und Glühen > Schlagschatten"
+     }
+    },
+    {
+     "set_field": {
+      "target": "fx_popup.distance",
+      "value": "20"
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "click": "inspector.fx_delete"
+    },
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Schatten und Glühen > Schlagschatten"
+     }
+    },
+    {
+     "record_ui": "dialog.fields"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ],
+   "fp": [
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Schatten und Glühen > Schlagschatten"
+     }
+    },
+    {
+     "set_field": {
+      "target": "fx_popup.distance",
+      "value": "20"
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "click": "inspector.fx_delete"
+    },
+    {
+     "choose": {
+      "target": "inspector.fx_add",
+      "item": "Schatten und Glühen > Schlagschatten"
+     }
+    },
+    {
+     "record_ui": "dialog.fields"
+    },
+    {
+     "record_ui": "document.summary"
+    }
+   ]
+  }
+ ]
+}
