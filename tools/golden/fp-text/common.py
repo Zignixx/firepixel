@@ -1,4 +1,4 @@
-"""Gemeinsame Helfer der fp-text-Golden-Generatoren (nur lesender Zugriff auf re/ und den Korpus)."""
+"""Shared helpers of the fp-text golden generators (read-only access to re/ and the corpus)."""
 import base64
 import os
 import sys
@@ -18,7 +18,7 @@ def leaves(n):
 
 
 def runs_of(n):
-    """TFSv-Laeufe wie scripts/text/extract_text.py: je Attributblock + TRNs ein dict."""
+    """TFSv runs like scripts/text/extract_text.py: one dict per attribute block + TRNs."""
     runs = []
     for tfs in n.children("TFSv"):
         cur = {}
@@ -35,7 +35,7 @@ def runs_of(n):
 
 
 def path_contours(pthv):
-    """PTHv -> Liste von Konturen {closed, nodes: [[x, y, xp, yp, xs, ys], ...]} (Anker, Eingangs-, Ausgangshenkel)."""
+    """PTHv -> list of contours {closed, nodes: [[x, y, xp, yp, xs, ys], ...]} (anchor, in handle, out handle)."""
     out = []
     pbl = pthv.child("PBLv") if pthv is not None else None
     if pbl is None:

@@ -1,12 +1,12 @@
-"""Golden-Testvektoren fuer fp-color aus den Python-Referenzen (nur lesen):
+"""Golden test vectors for fp-color from the Python references (read only):
   re\\farbe\\farbmodelle.py, re\\farbe\\farbfelddateien.py, re\\vektor\\blend.py, re\\vektor\\stroke.py (overlap_alpha),
-  re\\effekte\\fx.py (over, over_mmx, behind, over_exact, over_place; braucht numpy).
+  re\\effekte\\fx.py (over, over_mmx, behind, over_exact, over_place; needs numpy).
 
-Aufruf:  "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Python\\Python314\\python.exe" -I -B gen_color.py
-Ausgabe: crates/fp-color/tests/data/color_golden.json
+Usage:   "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Python\\Python314\\python.exe" -I -B gen_color.py
+Output:  crates/fp-color/tests/data/color_golden.json
 
-Grosse Wertebereiche werden als CRC-32 (zlib) ueber eine festgelegte Byte-Folge abgelegt; die Rust-Tests erzeugen
-dieselbe Folge. Zufallsstichproben kommen aus einem 64-Bit-LCG, den die Rust-Tests identisch nachbauen:
+Large value ranges are stored as CRC-32 (zlib) over a fixed byte sequence; the Rust tests produce the same
+sequence. Random samples come from a 64-bit LCG that the Rust tests rebuild identically:
   state = state * 6364136223846793005 + 1442695040888963407 (mod 2^64); next = state >> 33
 """
 import json
@@ -31,8 +31,8 @@ import fx as FX                    # noqa: E402
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 import neutral                     # noqa: E402
 
-# Die Referenzfunktionen in re\farbe\farbfelddateien.py tragen den Programmnamen des Originals; er kommt
-# aus der Installationskopie (tools/golden/neutral.py), nicht aus diesem Quelltext.
+# The reference functions in re\farbe\farbfelddateien.py carry the program name of the original; it comes
+# from the installation copy (tools/golden/neutral.py), not from this source.
 _APP = neutral.names()[0].lower()
 act_read_orig = getattr(ff, "act_read_" + _APP)
 act_write_orig = getattr(ff, "act_write_" + _APP)
@@ -65,7 +65,7 @@ class Crc:
 
 out = {"_quelle": "re/farbe/farbmodelle.py, farbfelddateien.py; re/vektor/blend.py, stroke.py; re/effekte/fx.py"}
 
-# ------------------------------------------------------------------ Farbmodelle: Raster 0..255 Schritt 5
+# ------------------------------------------------------------------ Color models: grid 0..255 step 5
 G = list(range(0, 256, 5))
 c = Crc()
 for r in G:
@@ -115,7 +115,7 @@ for _ in range(300):
     info.append([[a, r, g, b], [fm.info_panel_values(a, r, g, b, m) for m in range(6)], list(fm.rgb_to_hex_text(r, g, b))])
 out["info_panel"] = info
 
-# ------------------------------------------------------------------ CMYK exakt (Tabelle aus der Installation)
+# ------------------------------------------------------------------ CMYK exact (table from the installation)
 tab = fm.load_cmyk_table(os.path.join(RE, "farbe", "_scratch", "cmyk_1001.bin"))
 CG = list(range(0, 256, 15))
 c = Crc()
@@ -136,7 +136,7 @@ for v in ((255, 0, 0, 0), (0, 255, 0, 0), (0, 0, 255, 0), (0, 0, 0, 255), (255, 
 out["cmyk_samples"] = cm
 out["cmyk_no_table"] = [[v, list(fm.cmyk_to_rgb_exakt(*v, None))] for v in ([10, 20, 30, 40], [255, 0, 128, 3])]
 
-# ------------------------------------------------------------------ Mischmodi
+# ------------------------------------------------------------------ Blend modes
 modes = sorted(BL.MODES)
 chan = {}
 for mode in modes:
@@ -192,7 +192,7 @@ BL.MMX = True
 out["blend_pixel"] = pix
 out["blend_pixel_n"] = 4000
 
-# fx: Bild-auf-Bild-Mischungen
+# fx: image-over-image blends
 rng = Lcg(5)
 N = 20000
 top = np.zeros((N, 4), np.int64)
@@ -228,7 +228,7 @@ for n in (1, 2, 3, 5, 10, 20, 50, 100):
 out["overlap_alpha"] = ov
 out["stamp_promille"] = [(max(1, o) * 1000 // 255) * 255 // 1000 for o in range(256)]
 
-# ------------------------------------------------------------------ Farbfelddateien
+# ------------------------------------------------------------------ Swatch files
 rng = Lcg(9)
 pal_rand = [(rng.byte(), rng.byte(), rng.byte()) for _ in range(300)]
 pal_gray = [(v, v, v) for v in range(255, -1, -1)]
@@ -244,7 +244,7 @@ sw["small"]["ase_hex"] = ase_write_orig(pal_small).hex()
 ps = bytes(range(48)) + bytes(768 - 48) + struct.pack(">HH", 16, 0xFFFF)
 sw["photoshop_772"] = {"original": [list(x) for x in act_read_orig(ps)][-2:],
                        "original_len": len(act_read_orig(ps)), "photoshop_len": len(ff.act_read_photoshop(ps))}
-# allgemeine ASE mit Gruppe, Lab, Gray, CMYK
+# general ASE with group, Lab, Gray, CMYK (entry names are data)
 def blk(t, body):
     return struct.pack(">HI", t, len(body)) + body
 def nm(s):
@@ -268,4 +268,4 @@ out["swatches"] = sw
 os.makedirs(os.path.dirname(OUT), exist_ok=True)
 with open(OUT, "w", encoding="utf-8") as fh:
     json.dump(out, fh, separators=(",", ":"))
-print("geschrieben:", OUT, os.path.getsize(OUT), "Byte")
+print("written:", OUT, os.path.getsize(OUT), "bytes")

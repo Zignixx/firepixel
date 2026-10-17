@@ -1,12 +1,14 @@
-"""Kleine Golden-Daten fuer die regulaeren fp-text-Tests (crates/fp-text/tests/data/*.json).
+"""Small golden data for the regular fp-text tests (crates/fp-text/tests/data/*.json).
 
-  golden_luts.json    Tonkurven: text/glaettung.custom_lut fuer N in {4, 8, 16} und viele (Schaerfe, Staerke)
-  golden_fonts.json   Metriken der Korpusschriften: upm, asc (layout.ascent), desc, Vorschuebe, Kerning-Paare, Tinte
-  golden_layout.json  Punkttext-Layout (layout.layout_point_text): synthetische Faelle + Stichprobe des Korpus,
-                      Rahmen und Glyphen (gid, x, y)
-  golden_raster.json  Punktabtastung (raster.sample_counts) fuer kleine Texte, N in {1, 4, 8, 16}
+  golden_luts.json    tone curves: text/glaettung.custom_lut for N in {4, 8, 16} and many (sharpness, strength)
+  golden_fonts.json   metrics of the corpus fonts: upm, asc (layout.ascent), desc, advances, kerning pairs, ink
+  golden_layout.json  point text layout (layout.layout_point_text): synthetic cases + sample of the corpus,
+                      frame and glyphs (gid, x, y)
+  golden_raster.json  point sampling (raster.sample_counts) for small texts, N in {1, 4, 8, 16}
 
-Aufruf: python.exe -I -B gen_golden.py   (braucht out/layout_corpus.jsonl von gen_layout_corpus.py)
+The case names and sample texts in synthetic() are data (stored in golden_layout.json) and stay as they are.
+
+Usage: python.exe -I -B gen_golden.py   (needs out/layout_corpus.jsonl from gen_layout_corpus.py)
 """
 import json
 import os

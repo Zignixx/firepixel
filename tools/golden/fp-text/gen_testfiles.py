@@ -1,15 +1,15 @@
-"""Testdateien re/_testdateien/09/*.fw.png -> out/testfiles.jsonl (alle Textobjekte der ersten Seite).
+"""Test files re/_testdateien/09/*.fw.png -> out/testfiles.jsonl (all text objects of the first page).
 
-Je Text: Datei, Blatt-Tags (attrs), Laeufe, TAPv (Modus, Versatz, Pfadkonturen), PATv-Kante (FETi), MTXv,
-Render-Cache (x, y, w, h, RGBA base64) und die Rahmenvorhersage von re/text/layout.py fuer Punkttexte.
-Aufruf: python.exe -I -B gen_testfiles.py
+Per text: file, leaf tags (attrs), runs, TAPv (mode, offset, path contours), PATv edge (FETi), MTXv,
+render cache (x, y, w, h, RGBA base64) and the frame prediction of re/text/layout.py for point texts.
+Usage: python.exe -I -B gen_testfiles.py
 """
 import json
 import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import common  # noqa: E402,F401  (setzt sys.path)
+import common  # noqa: E402,F401  (sets sys.path)
 from common import OUT, RE, b64, leaves, path_contours, runs_of
 from fwpng import FwFile, iter_files
 from fwfmt import render
@@ -60,7 +60,7 @@ def main():
                         rec["py_frame"] = [fr["LFT"], fr["TOP"], fr["RIT"], fr["BOT"]]
                 fo.write(json.dumps(rec, ensure_ascii=False) + "\n")
                 n += 1
-    print("Texte:", n)
+    print("texts:", n)
 
 
 if __name__ == "__main__":

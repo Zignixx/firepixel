@@ -1,12 +1,12 @@
-"""Laufzeit-Testdateien aus re\\_testdateien\\07 (T2 natuerliche Pinsel, T5 Farb-Alpha, T6 Verlaufsformen/weiche
-Kante/Konturverlauf, T7 BFBi=2) fuer den #[ignore]-Test `testfiles` von fp-vector.
+"""Run-time test files from re\\_testdateien\\07 (T2 natural brushes, T5 color alpha, T6 gradient shapes/feathered
+edge/contour gradient, T7 BFBi=2) for the #[ignore] test `testfiles` of fp-vector.
 
-Je Datei: Leinwand, die Pfade in Zeichenreihenfolge (wie vektor/page.py: Ebenen unten->oben, ELMv umgekehrt) mit
-Deckkraft/Mischmodus, das flache IDAT (Original-Ergebnis) und das Ergebnis der Python-Referenz (page.py,
-Hintergrund zuletzt unterlegt, wie scripts/vektor/eval_page.py).
+Per file: canvas, the paths in drawing order (like vektor/page.py: layers bottom->top, ELMv reversed) with
+opacity/blend mode, the flat IDAT (original result) and the result of the Python reference (page.py,
+background composited last, like scripts/vektor/eval_page.py).
 
-Aufruf:  "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Python\\Python314\\python.exe" -I -B gen_testfiles.py
-Ausgabe: tools/golden/fp-vector/out/testfiles.json
+Usage:   "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Python\\Python314\\python.exe" -I -B gen_testfiles.py
+Output:  tools/golden/fp-vector/out/testfiles.json
 """
 import base64
 import glob
@@ -49,7 +49,7 @@ def strip(nd):
 
 
 def mask_of(pth, key, tiles):
-    """Texturmaske (TXFv = Fuellung, TXBv = Strich) aus den Kacheln der Datei; fehlende Kacheln = 255."""
+    """Texture mask (TXFv = fill, TXBv = stroke) from the tiles of the file; missing tiles = 255."""
     pat = pth.child("PATv")
     tx = pat.child(key) if pat is not None else None
     msk = tx.child("MSKv") if tx is not None else None
@@ -114,6 +114,6 @@ for path in NAMES:
     out.append({"name": os.path.basename(path), "w": int(pg.get("WID")), "h": int(pg.get("HIT")), "xlc": pg.get("XLC", 0.0),
                 "ylc": pg.get("YLC", 0.0), "bgc": bgc & 0xFFFFFFFF, "elements": r.captured, "other": r.other,
                 "missing": sorted(set(r.missing)), "idat": b64(img), "idat_w": W, "idat_h": H, "python": b64(px)})
-    print(os.path.basename(path), len(r.captured), "Pfade", r.other, "andere", sorted(set(r.missing)))
+    print(os.path.basename(path), len(r.captured), "paths", r.other, "other", sorted(set(r.missing)))
 json.dump(out, open(OUT, "w"), separators=(",", ":"))
-print(json.dumps({"dateien": len(out), "ausgabe": OUT}))
+print(json.dumps({"files": len(out), "output": OUT}))

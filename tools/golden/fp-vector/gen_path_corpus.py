@@ -1,20 +1,20 @@
-"""Korpus fuer die #[ignore]-Tests von fp-vector (Pfad-Rendering gegen die Render-Caches).
+"""Corpus for the #[ignore] tests of fp-vector (path rendering against the render caches).
 
-Messweise wie re\\scripts\\vektor\\test_paths.py (Aufruf dort: `test_paths.py 40000 all`):
-alle Pfade der Wurzel 0 mit Render-Cache, ohne sichtbare Live-Effekte (survey: fx leer), Cache-Flaeche
-<= 40.000 Pixel. Zusaetzlich die texturierten Fuellungen aus re\\scripts\\vektor\\test_tex.py (Dateien 647, 676,
-681, 683, alle Wurzeln, Fuellung mit FTBi, ohne Strich), dort mit den echten Texturkacheln.
+Measured like re\\scripts\\vektor\\test_paths.py (invoked there as `test_paths.py 40000 all`):
+all paths of root 0 with a render cache, without visible live effects (survey: fx empty), cache area
+<= 40,000 pixels. In addition the textured fills from re\\scripts\\vektor\\test_tex.py (files 647, 676,
+681, 683, all roots, fill with FTBi, no stroke), there with the real texture tiles.
 
-Je Fall eine JSON-Zeile:
-  {"set": "paths"|"tex", "file": Index, "name": Datei, "cat": [fuell, strich],
-   "win": [x0, y0, w, h], "pth": <PTHv als fwfmt.tree.to_json ohne Cache-IMGv>,
-   "texture": {"w","h","data": base64} | null,   (aufgeloeste TXFv-Maske, 8 Bit)
-   "pattern": {"w","h","rgba": base64} | null,   (aufgeloestes FPTv-Musterbild)
+One JSON line per case:
+  {"set": "paths"|"tex", "file": index, "name": file, "cat": [fill, stroke],
+   "win": [x0, y0, w, h], "pth": <PTHv as fwfmt.tree.to_json without cache IMGv>,
+   "texture": {"w","h","data": base64} | null,   (resolved TXFv mask, 8 bits)
+   "pattern": {"w","h","rgba": base64} | null,   (resolved FPTv pattern image)
    "cache": base64 RGBA (w*h*4),
-   "py": base64 RGBA | null   (Ergebnis von vektor/pathrender.py, nur wenn es vom Cache abweicht)}
+   "py": base64 RGBA | null   (result of vektor/pathrender.py, only if it differs from the cache)}
 
-Aufruf:  "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Python\\Python314\\python.exe" -I -B gen_path_corpus.py
-Ausgabe: tools/golden/fp-vector/out/path_corpus.jsonl (gross, nicht im Crate).
+Usage:   "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Python\\Python314\\python.exe" -I -B gen_path_corpus.py
+Output:  tools/golden/fp-vector/out/path_corpus.jsonl (large, not in the crate).
 """
 import base64
 import json
@@ -91,7 +91,7 @@ def pattern_of(pth, store):
 
 
 def strip_tree(nd):
-    """PTHv ohne Cache-IMGv, ohne Musterbild-/Texturkacheln (werden separat aufgeloest)."""
+    """PTHv without cache IMGv, without pattern image/texture tiles (resolved separately)."""
     j = tree.to_json([nd])[0]["PTHv"]
     j = [c for c in j if "IMGv" not in c]
     for c in j:
@@ -159,7 +159,7 @@ def main():
                     ok = emit(fh, "tex", fi, os.path.basename(paths[fi]), ["tex", "nostroke"], nd, bmp, f, True)
                     nt += 1
                     ext += ok
-    print(json.dumps({"paths": n, "python_exakt": ex, "tex": nt, "tex_exakt": ext, "ausgabe": OUT}))
+    print(json.dumps({"paths": n, "python_exact": ex, "tex": nt, "tex_exact": ext, "output": OUT}))
 
 
 if __name__ == "__main__":

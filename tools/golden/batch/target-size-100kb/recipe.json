@@ -1,7 +1,7 @@
 {
   "format": "firepixel-batch-recipe",
   "version": 1,
-  "name": "Zielgröße 100 KB",
+  "name": "Target size 100 KB",
   "steps": [
     { "id": "optimize.targetSize", "enabled": true, "params": { "maxKB": 100, "strategy": "quality" } }
   ],

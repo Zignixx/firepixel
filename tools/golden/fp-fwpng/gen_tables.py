@@ -1,28 +1,31 @@
-"""Erzeugt Rust-Tabellen fuer fp-fwpng aus re/format/ate_keys.json und re/format/vocabulary.json."""
-import json, sys
+"""Generates Rust tables for fp-fwpng from re/format/ate_keys.json and re/format/vocabulary.json."""
+import json, os, sys
 
-ATE = r'C:\Users\Administrator\Desktop\REA\re\format\ate_keys.json'
-VOC = r'C:\Users\Administrator\Desktop\REA\re\format\vocabulary.json'
-OUT_ATE = r'C:\Users\Administrator\Desktop\REA\firepixel\crates\fp-fwpng\src\ate_keys.rs'
-OUT_VOC = r'C:\Users\Administrator\Desktop\REA\firepixel\crates\fp-fwpng\src\vocab.rs'
+HERE = os.path.dirname(os.path.abspath(__file__))
+FP = os.path.normpath(os.path.join(HERE, '..', '..', '..'))
+RE = os.path.normpath(os.path.join(FP, '..', 're'))
+ATE = os.path.join(RE, 'format', 'ate_keys.json')
+VOC = os.path.join(RE, 'format', 'vocabulary.json')
+OUT_ATE = os.path.join(FP, 'crates', 'fp-fwpng', 'src', 'ate_keys.rs')
+OUT_VOC = os.path.join(FP, 'crates', 'fp-fwpng', 'src', 'vocab.rs')
 
 ate = json.load(open(ATE, encoding='utf-8'))
 lines = [
-    '//! ATE-Schlüsseltabellen (Spezifikation 02 §12.7, Quelle `re/format/ate_keys.json`).',
+    '//! ATE key tables (specification 02 §12.7, source `re/format/ate_keys.json`).',
     '//!',
-    '//! Je ATE-Klasse: Zahlenschlüssel → (Name, Versionsflag). Das Versionsflag kennzeichnet, ab welcher',
-    '//! ATE-Fassung ein Schlüssel existiert. Ältere Dateien (Stream-Version 4) schreiben die Schlüssel mit',
-    '//! Flag 5 im Klartext; ein Leser bildet sie über [`key_by_name`] auf die Nummer ab.',
-    '//! Automatisch erzeugt; nicht von Hand ändern.',
+    '//! Per ATE class: numeric key → (name, version flag). The version flag marks from which ATE',
+    '//! version on a key exists. Older files (stream version 4) write the keys with flag 5 as plain',
+    '//! text; a reader maps them to the number via [`key_by_name`].',
+    '//! Generated automatically; do not edit by hand.',
     '',
-    '/// Eine ATE-Klasse mit Pfadmustern (reguläre Ausdrücke aus der Analyse, nur zur Dokumentation).',
+    '/// An ATE class with path patterns (regular expressions from the analysis, documentation only).',
     'pub struct AteClass {',
     '    pub name: &\'static str,',
     '    pub paths: &\'static [&\'static str],',
     '    pub keys: &\'static [(u16, &\'static str, u8)],',
     '}',
     '',
-    '/// Alle Klassen.',
+    '/// All classes.',
     'pub const ATE_CLASSES: &[AteClass] = &[',
 ]
 consts = {}
@@ -37,17 +40,17 @@ for cname, c in ate.items():
 lines.append('];')
 lines.append('')
 lines += [
-    '/// Klasse zu einem Namen (Anfang des Klassennamens, z. B. `"StyleSheetData"`).',
+    '/// Class for a name (start of the class name, e.g. `"StyleSheetData"`).',
     'pub fn class(prefix: &str) -> Option<&\'static AteClass> {',
     '    ATE_CLASSES.iter().find(|c| c.name.starts_with(prefix))',
     '}',
     '',
-    '/// Name eines Zahlenschlüssels in einer Klasse.',
+    '/// Name of a numeric key in a class.',
     'pub fn key_name(class: &AteClass, key: u16) -> Option<&\'static str> {',
     '    class.keys.iter().find(|k| k.0 == key).map(|k| k.1)',
     '}',
     '',
-    '/// Zahlenschlüssel zu einem Klartextnamen (ältere Dateien).',
+    '/// Numeric key for a plain-text name (older files).',
     'pub fn key_by_name(class: &AteClass, name: &str) -> Option<u16> {',
     '    class.keys.iter().find(|k| k.1 == name).map(|k| k.0)',
     '}',
@@ -62,12 +65,12 @@ for k, d in voc['tags'].items():
     rows.append((d['chunk'], key, d['count'], sorted(d['parents'].items(), key=lambda x: -x[1])))
 rows.sort(key=lambda r: (r[0], r[1]))
 L = [
-    '//! Tag-Vokabular aus 710 FW-PNGs (Quelle `re/format/vocabulary.json`, Spezifikation 02 §9).',
+    '//! Tag vocabulary from 710 FW-PNGs (source `re/format/vocabulary.json`, specification 02 §9).',
     '//!',
-    '//! Je Eintrag: Chunk (`mkBS`/`mkTS`), Schlüssel, Vorkommen, Elterncontainer. Dient zur Prüfung und',
-    '//! Dokumentation; der Leser verarbeitet auch unbekannte Tags. Automatisch erzeugt.',
+    '//! Per entry: chunk (`mkBS`/`mkTS`), key, occurrences, parent containers. Used for checks and',
+    '//! documentation; the reader also handles unknown tags. Generated automatically.',
     '',
-    '/// Ein Vokabular-Eintrag.',
+    '/// A vocabulary entry.',
     'pub struct VocabEntry {',
     '    pub chunk: &\'static str,',
     '    pub key: &\'static str,',
@@ -75,7 +78,7 @@ L = [
     '    pub parents: &\'static [&\'static str],',
     '}',
     '',
-    '/// Alle 422 im Korpus beobachteten Tag/Typ-Kombinationen.',
+    '/// All 422 tag/type combinations observed in the corpus.',
     'pub const VOCABULARY: &[VocabEntry] = &[',
 ]
 for chunk, key, count, parents in rows:
@@ -84,7 +87,7 @@ for chunk, key, count, parents in rows:
 L.append('];')
 L.append('')
 L += [
-    '/// Tags, die der Code der Original-EXE kennt, die aber im Korpus fehlen (02 §12.5).',
+    '/// Tags known to the code of the original EXE but missing from the corpus (02 §12.5).',
     'pub const EXE_ONLY_TAGS: &[&str] = &[',
 ]
 exe_only = ['PTRy', 'EXSv', 'MSVv', 'MSSv', 'OSSv', 'NMSs', 'MJPv', 'MNTi', 'TMMi', 'PCWf', 'FNTs', 'LNKb', 'MENb',
@@ -97,12 +100,12 @@ L.append('    ' + ', '.join(json.dumps(t) for t in exe_only) + ',')
 L.append('];')
 L += [
     '',
-    '/// Vokabular-Eintrag zu einem Schlüssel im Dokumentbaum (`mkTS`).',
+    '/// Vocabulary entry for a key in the document tree (`mkTS`).',
     'pub fn lookup(key: &str) -> Option<&\'static VocabEntry> {',
     '    VOCABULARY.iter().find(|e| e.chunk == "mkTS" && e.key == key)',
     '}',
     '',
-    '/// Ist der Schlüssel bekannt (Korpus oder EXE)?',
+    '/// Is the key known (corpus or EXE)?',
     'pub fn is_known(key: &str) -> bool {',
     '    VOCABULARY.iter().any(|e| e.key == key) || EXE_ONLY_TAGS.contains(&key)',
     '}',

@@ -1,20 +1,23 @@
 # -*- coding: utf-8 -*-
-"""Erzeugt die Datentabellen von fp-engine aus den Spezifikationsdaten (nur lesen).
+"""Generates the data tables of fp-engine from the specification data (read only).
 
-Quellen:
-  re/werkzeuge/menuebefehle.json   Hauptmenue (260 Befehle) + 20 Kuerzel ohne Menueeintrag
-  korpus/German/Keyboard Shortcuts/*.xml   fuenf Tastenkuerzel-Sets (nur die Zuordnungen)
-  re/farbe/voreinstellungen.json   644 Voreinstellungen mit Vorgaben
+Sources:
+  re/werkzeuge/menuebefehle.json   main menu (260 commands) + 20 shortcuts without a menu entry
+  korpus/German/Keyboard Shortcuts/*.xml   five keyboard shortcut sets (only the assignments)
+  re/farbe/voreinstellungen.json   644 preferences with defaults
 
-Ausgabe (crates/fp-engine/data/):
-  commands.json   stabile Befehlsnamen, deutsche Menuepfade, Statuszeilentexte, JS-Namen
-  shortcuts.json  je Set: cmd_-Name -> [[Modifikatoren, VK], ...] und Werkzeug-GUID -> [[0, VK], ...]
-  prefs.json      Schluessel, Typ, Vorgabe, Kategorie, Wirkung
+Output (crates/fp-engine/data/):
+  commands.json   stable command names, German menu paths, status bar texts, JS names
+  shortcuts.json  per set: cmd_ name -> [[modifiers, VK], ...] and tool GUID -> [[0, VK], ...]
+  prefs.json      key, type, default, category, effect
 
-Neutralitaet: Programm- und Herstellername werden in allen Ausgaben ersetzt (tools/golden/neutral.py);
-das Standardset heisst "Firepixel".
+The German menu labels, status texts and preference texts are data (they must match the German UI)
+and stay German.
 
-Aufruf: python -I tools/golden/fp-engine/gen_data.py
+Neutrality: program and vendor name are replaced in all outputs (tools/golden/neutral.py);
+the default set is called "Firepixel".
+
+Usage: python -I tools/golden/fp-engine/gen_data.py
 """
 import json
 import os
@@ -33,7 +36,7 @@ OUT = os.path.join(FP, "crates", "fp-engine", "data")
 MENU_JSON = os.path.join(REA, "re", "werkzeuge", "menuebefehle.json")
 PREF_JSON = os.path.join(REA, "re", "farbe", "voreinstellungen.json")
 SHORTCUT_DIR = os.path.join(neutral.CORPUS, "German", "Keyboard Shortcuts")
-# erstes Set = Standardset des Originals (Dateiname = Programmname, aus der Installationskopie)
+# first set = default set of the original (file name = program name, from the installation copy)
 SETS = [neutral.names()[0], "Photoshop", "Illustrator", "FreeHand", "Web Standard"]
 
 TOP = {
@@ -42,7 +45,7 @@ TOP = {
     "Fenster": "window", "Hilfe": "help",
 }
 
-# Feste Namen fuer Eintraege ohne (brauchbaren) englischen Pfad.
+# Fixed names for entries without a (usable) English path.
 OVERRIDE = {
     57616: "file.openRecent",
     57602: "file.close",
@@ -95,7 +98,7 @@ def camel(words):
     words = [w for w in re.split(r"[^0-9A-Za-z]+", words) if w]
     if not words:
         return ""
-    # Abkuerzungen (JPEG, HTML, URL, PNG) wie normale Woerter behandeln
+    # treat abbreviations (JPEG, HTML, URL, PNG) like normal words
     words = [w.capitalize() if len(w) > 1 and w.isupper() else w for w in words]
     out = words[0][0].lower() + words[0][1:]
     for w in words[1:]:
@@ -166,7 +169,7 @@ def main():
             cmd = (b.get("cmd_name") or "").replace("cmd_", "")
             name = TOP.get(parts[0], "misc") + "." + camel(cmd)
         if name in seen:
-            raise SystemExit("doppelter Name %s (%s, %s)" % (name, fid, seen[name]))
+            raise SystemExit("duplicate name %s (%s, %s)" % (name, fid, seen[name]))
         seen[name] = fid
         status = (b.get("statuszeile_de") or "").split("\n")
         handlers = b.get("handler") or []
@@ -190,7 +193,7 @@ def main():
     for k in menu["kurzbefehle_ohne_menueeintrag"]:
         name = SHORTCUT_ONLY[k["cmd_name"]]
         if name in seen:
-            raise SystemExit("doppelter Name " + name)
+            raise SystemExit("duplicate name " + name)
         seen[name] = k.get("id")
         status = (k.get("statuszeile_de") or "").split("\n")
         label = status[1] if len(status) > 1 and status[1] else (status[0] or k["cmd_name"])
@@ -216,10 +219,10 @@ def main():
             if not c["main_menu"]:
                 c["menu_label_de"] = c["label_de"]
     zoom = [z["faktor"] for z in menu["zoomtabelle"]]
-    # technische Schluessel immer englisch (AGENTEN_REGELN 1c)
+    # technical keys always English (AGENTEN_REGELN 1c)
     panels = [{("command_id" if k == "befehl_id" else k): v for k, v in p.items()} for p in menu["bedienfelder"]]
 
-    # Tastenkuerzel-Sets
+    # Keyboard shortcut sets
     sets = {}
     for sname in SETS:
         root = ET.parse(os.path.join(SHORTCUT_DIR, sname + ".xml")).getroot()
@@ -237,7 +240,7 @@ def main():
                     tools[norm_guid(t.get("id"))] = lst
         sets[sname] = {"menu": mc, "tools": tools}
 
-    # Voreinstellungen
+    # Preferences
     pj = json.load(open(PREF_JSON, encoding="utf-8"))
     prefs = []
     for e in pj["eintraege"]:
@@ -259,22 +262,22 @@ def main():
 
     dump("commands.json", {"commands": cmds, "zoom_steps": zoom, "panels": panels})
     dump("shortcuts.json", {"sets": sets, "order": SETS})
-    # Beschreibende Texte ohne fremde Produktnamen (F12, 14.10.2026); Schluessel bleiben wie im Original
+    # Descriptive texts without third-party product names (F12, 14.10.2026); keys stay as in the original
     for p in prefs:
         for k in ("category", "effect", "dialog_page"):
             v = p.get(k)
             if isinstance(v, str):
                 v = v.replace("Photoshop-Zusatzmodulordner", "Zusatzmodulordner (8BF)")
                 v = v.replace("Photoshop-Zusatzmodule", "Zusatzmodule (8BF)").replace("Photoshop-", "PSD-")
-                # F14: weitere Produktnamen desselben Herstellers/Vorgaengers
+                # F14: further product names of the same vendor/predecessor
                 v = v.replace("CS-Extensions (CSXS/Flash-Panels)", "CS-Erweiterungen (CSXS/SWF-Bedienfelder)")
                 v = v.replace("Flash-Bedienfelder", "SWF-Bedienfelder").replace("Director-Export", "DIR-Export")
                 v = v.replace("FreeHand-8-kompatibel", "FH8-kompatibel")
                 p[k] = v
     dump("prefs.json", {"prefs": prefs})
-    print("Befehle:", len(cmds), "davon Hauptmenue:", sum(1 for c in cmds if c["main_menu"]))
+    print("commands:", len(cmds), "in main menu:", sum(1 for c in cmds if c["main_menu"]))
     print("Sets:", {k: (len(v["menu"]), len(v["tools"])) for k, v in sets.items()})
-    print("Voreinstellungen:", len(prefs))
+    print("preferences:", len(prefs))
 
 
 if __name__ == "__main__":

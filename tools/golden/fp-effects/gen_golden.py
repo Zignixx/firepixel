@@ -1,10 +1,10 @@
-"""Golden-Daten fuer fp-effects aus den Python-Referenzen (re\\effekte\\fx.py, bevel.py, psfx.py).
+"""Golden data for fp-effects from the Python references (re\\effekte\\fx.py, bevel.py, psfx.py).
 
-Erzeugt Eingabe-/Ausgabepaare als PNG plus manifest.json unter crates\\fp-effects\\tests\\data\\golden\\.
-Der Rust-Test tests/golden.rs liest das Manifest, wendet die Effektliste (EffectMoaID + Parameter-Strings
-wie in der Datei) mit fp_effects::apply_chain an und vergleicht pixelgenau (beide transparent = gleich).
+Writes input/output pairs as PNG plus manifest.json under crates\\fp-effects\\tests\\data\\golden\\.
+The Rust test tests/golden.rs reads the manifest, applies the effect list (EffectMoaID + parameter strings
+as in the file) with fp_effects::apply_chain and compares pixel-exact (both transparent = equal).
 
-Aufruf:
+Usage:
   "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Python\\Python314\\python.exe" -I gen_golden.py
 """
 import json
@@ -51,7 +51,7 @@ def save_png(name, arr):
     return fn
 
 
-# ---------------------------------------------------------------- Eingaben (x, y, rgba)
+# ---------------------------------------------------------------- Inputs (x, y, rgba)
 def rect(w, h, color, a=255):
     img = np.zeros((h, w, 4), np.int64)
     img[..., :3] = color
@@ -78,7 +78,7 @@ def ring(w, h, color):
 
 
 def glyph():
-    """Textaehnliche Form: 'T' aus duennen Balken mit weichen Kanten, zweifarbig."""
+    """Text-like shape: 'T' made of thin bars with soft edges, two colors."""
     img = np.zeros((14, 12, 4), np.int64)
     img[1:3, 1:11, :3] = (20, 40, 200)
     img[1:3, 1:11, 3] = 255
@@ -147,8 +147,8 @@ def case(name, key, effects, legacy=False):
     })
 
 
-# ---------------------------------------------------------------- Faelle
-# Schlagschatten
+# ---------------------------------------------------------------- Cases
+# Drop shadow
 for key in ("rect", "rect_a128", "disc", "glyph", "ring", "noisy"):
     for blur, dist, ang in ((4, 0, 315), (4, 2, 315), (3, 3, 45), (3, 6, 90), (2, 3, 135), (3, 6, 225),
                             (3, 3, 270), (0, 1, 315), (1, 2, 450), (5, 7, 315), (6, 1, 90)):
@@ -158,28 +158,28 @@ for key in ("rect", "disc", "glyph"):
     case("drop_knock_" + key, key, [effect(DROP, ShadowColor="#3020ffff", ShadowBlur=4, ShadowDistance=3, ShadowAngle=315, ShadowType=1)])
     case("drop_cs5_" + key, key, [effect(DROP, ShadowColor="#00000040", ShadowBlur=4, ShadowDistance=2, ShadowAngle=315)], legacy=True)
 
-# Innerer Schatten
+# Inner shadow
 for key in ("rect", "rect_a128", "disc", "glyph", "ring", "gray"):
     for blur, dist, ang in ((4, 7, 315), (2, 3, 315), (0, 1, 90), (1, 2, 200), (3, 4, 45)):
         case("inner_%s_b%d_d%d_a%d" % (key, blur, dist, ang), key,
              [effect(INNER, ShadowColor="#000000a5", ShadowBlur=blur, ShadowDistance=dist, ShadowAngle=ang, ShadowType=0)])
     case("inner_knock_" + key, key, [effect(INNER, ShadowColor="#ff0000c0", ShadowBlur=2, ShadowDistance=3, ShadowAngle=315, ShadowType=1)])
 
-# Massiver Schatten
+# Solid shadow
 for key in ("rect", "disc", "glyph", "ring", "small"):
     for ang, dist, col in ((45, 12, "#ff0000"), (45, 12, "#ffffff00"), (30, 7, "#0000ff"), (90, 1, "#00ff00"),
                            (270, 1, "#123456"), (315, 5, "#ff00ff80"), (200, 9, "#ffffff00"), (450, 4, "#000000")):
         case("solid_%s_a%d_d%d_%s" % (key, ang, dist, col.strip("#")), key,
              [effect(SOLID, angle=ang, distance=dist, color=col, usecolor="true")])
 
-# Inneres Gluehen
+# Inner glow
 for key in ("rect", "gray", "disc", "ring", "glyph"):
     for width, soft, start, con, col in ((4, 4, 0, 65, "#000000"), (2, 7, 0, 35, "#330000"), (2, 0, 0, 100, "#ffffff"),
                                          (6, 2, 0, 80, "#00ff00"), (4, 3, 2, 65, "#0000ff"), (3, 0, 1, 100, "#ff8800")):
         case("iglow_%s_w%d_s%d_st%d_c%d" % (key, width, soft, start, con), key,
              [effect(IGLOW, OuterBevelColor=col, MaskSoftness=soft, GlowWidth=width, GlowStartDistance=start, BevelContrast=con)])
 
-# Abschraegung / Praegung
+# Bevel / emboss
 BEV = dict(BevelWidth=6, BevelContrast=75, EdgeThreshold=0, AngleSoftness=3, MaskSoftness=0, LightDistance=100,
            LightAngle=135, SlopeType=0, SlopeMultiplier=1, OuterBevelColor="#df0000", DownBlendColor="#0000003f",
            HitBlendColor="#ffffff3f", HiliteColor="#ffffff", ShadowColor="#000000", EmbossFaceColor="#00000000",
@@ -209,19 +209,19 @@ for wdt, soft, con, ang in ((1, 0, 75, 135), (3, 10, 60, 45), (10, 5, 90, 300), 
 case("emboss_showobj", "disc", [bev(BevelType=2, BevelWidth=3, MaskSoftness=1, ShowObject="true")])
 case("emboss_face", "gray", [bev(BevelType=3, BevelWidth=2, MaskSoftness=2, EmbossFaceColor="#4080c0ff")])
 
-# Gluehen
+# Glow
 for key in ("gray", "disc", "glyph", "rect_a128"):
     for wdt, soft, start, con, edge in ((3, 7, 0, 65, 1), (1, 9, 0, 20, 1), (5, 12, 0, 65, 1), (4, 5, 8, 60, 1), (2, 3, 2, 50, 0.5)):
         case("glow_%s_w%d_s%d_st%d" % (key, wdt, soft, start), key,
              [bev(BevelType=4, GlowWidth=wdt, MaskSoftness=soft, GlowStartDistance=start, BevelContrast=con, EdgeThreshold=edge,
                   AngleSoftness=25, OuterBevelColor="#999999")])
 
-# Farbfuellung
+# Color fill
 for key in ("rect_a128", "disc", "noisy"):
     for col, op in (("#ff0000", 100), ("#00ff80", 50), ("#123456", 33)):
         case("fill_%s_%s_%d" % (key, col.strip("#"), op), key, [effect(FILL, Color=col, Opacity=op, Blendmode=0)])
 
-# Photoshop-Effekte
+# Photoshop effects
 SHADOW_TPL = "1&{op:f}&1&{ang:f}&0.000000&{dist:f}&{size:f}&{choke:f}&0&1&multiply&RGBColor;{r:f};{g:f};{b:f}&2$$0.000000;0.000000;1$255.000000;255.000000;1"
 for key in ("gray", "disc", "glyph", "rect_a128"):
     for size, dist, ang, op, choke in ((0, 1, 120, 75, 0), (1, 2, 90, 75, 0), (2, 3, -90, 50, 0), (3, 3, 120, 75, 0),
@@ -233,7 +233,7 @@ for key in ("disc", "rect_a128"):
     rec = SHADOW_TPL.format(op=75, ang=120, dist=3, size=5, choke=0, r=0, g=0, b=0)
     case("ps_fill_drop_" + key, key, [effect(PS, solidFill="1&100.000000&normal&RGBColor;0.000000;0.000000;255.000000", dropShadow=rec)])
 
-# Ketten
+# Chains
 for key in ("gray", "disc"):
     case("chain_iglow_drop_" + key, key, [
         effect(IGLOW, OuterBevelColor="#ffff00", MaskSoftness=3, GlowWidth=3, GlowStartDistance=0, BevelContrast=70),
@@ -247,4 +247,4 @@ for key in ("gray", "disc"):
 
 with open(os.path.join(OUT, "manifest.json"), "w", encoding="utf-8") as f:
     json.dump(manifest, f, indent=0)
-print(len(manifest), "Faelle ->", OUT)
+print(len(manifest), "cases ->", OUT)

@@ -1,11 +1,11 @@
-"""Golden-Testvektoren fuer fp-geom aus den Python-Referenzen (nur lesen) in re\\pfade und re\\vektor.
+"""Golden test vectors for fp-geom from the Python references (read only) in re\\pfade and re\\vektor.
 
-Aufruf (aus beliebigem Verzeichnis):
+Usage (from any directory):
   "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Python\\Python314\\python.exe" -I -B gen_geom.py
-(-B: keine .pyc-Dateien in den nur lesbaren Referenzordnern anlegen)
+(-B: do not create .pyc files in the read-only reference folders)
 
-Schreibt crates/fp-geom/tests/data/geom_golden.json. Zufallswerte mit festem Startwert, damit die Datei
-reproduzierbar ist. Gleitkommawerte werden mit repr() geschrieben (exakte Rundreise nach f64).
+Writes crates/fp-geom/tests/data/geom_golden.json. Random values use a fixed seed so the file is
+reproducible. Floating-point values are written with repr() (exact round trip to f64).
 """
 import json
 import os
@@ -41,11 +41,11 @@ def rnd_seg(q32=False):
     kind = rng.random()
     p0 = rnd_pt(q32=q32)
     p3 = rnd_pt(q32=q32)
-    if kind < 0.12:          # Gerade (Henkel auf den Ankern)
+    if kind < 0.12:          # straight line (handles on the anchors)
         return (p0, p0, p3, p3)
-    if kind < 0.22:          # ein Henkel eingezogen
+    if kind < 0.22:          # one handle retracted
         return (p0, p0, rnd_pt(q32=q32), p3)
-    if kind < 0.30:          # kleines Segment
+    if kind < 0.30:          # small segment
         s = rng.uniform(0.05, 3.0)
         b = rnd_pt(q32=q32)
         pts = [(b[0] + rng.uniform(-s, s), b[1] + rng.uniform(-s, s)) for _ in range(4)]
@@ -59,7 +59,7 @@ def seg_list(s):
     return [list(p) for p in s]
 
 
-# ------------------------------------------------------------------ Bezier-Grundlagen
+# ------------------------------------------------------------------ Bezier basics
 TS = [0.0, 0.1, 0.33, 0.5, 0.77, 1.0]
 bez = []
 for _ in range(250):
@@ -84,14 +84,14 @@ for _ in range(250):
         "p": list(p), "near_t": near[0], "near_d": near[1], "near_pt": list(near[2]),
     })
 
-# ------------------------------------------------------------------ Original-Abflachung (PCLv)
+# ------------------------------------------------------------------ Original flattening (PCLv)
 flat = []
 for i in range(400):
     s = rnd_seg(q32=True)
     n = [1, 1, 1, 64, 3, 2][i % 6]
     pts = FL.flatten_segment(s[0], s[1], s[2], s[3], n)
     flat.append({"seg": seg_list(s), "n": n, "pts": [list(q) for q in pts]})
-# ohne Eigenheit (quirk=False) als Gegenprobe
+# without the quirk (quirk=False) as a cross-check
 flat_noquirk = []
 for i in range(60):
     s = rnd_seg(q32=True)
@@ -114,7 +114,7 @@ for i in range(40):
     contours.append({"nodes": [[list(a), list(b), list(c)] for a, b, c in nodes], "closed": closed,
                      "counts": counts, "pts": [list(q) for q in poly]})
 
-# ------------------------------------------------------------------ alte Rasterizer-Abflachung (07)
+# ------------------------------------------------------------------ old rasterizer flattening (07)
 chord = []
 for i in range(120):
     s = rnd_seg()
@@ -131,7 +131,7 @@ for i in range(120):
     res = OF.offset_segment(s, d)
     offs.append({"seg": seg_list(s), "d": d, "out": [seg_list(o) for o in res]})
 
-# ------------------------------------------------------------------ Flaeche / Windungszahl
+# ------------------------------------------------------------------ Area / winding number
 polys = []
 for i in range(30):
     k = rng.randint(3, 9)
@@ -147,5 +147,5 @@ data = {"_quelle": "re/pfade/bezier.py, flatten.py, offset.py; re/vektor/fwraste
 os.makedirs(os.path.dirname(OUT), exist_ok=True)
 with open(OUT, "w", encoding="utf-8") as fh:
     json.dump(data, fh, separators=(",", ":"))
-print("geschrieben:", OUT, os.path.getsize(OUT), "Byte;",
+print("written:", OUT, os.path.getsize(OUT), "bytes;",
       {k: len(v) for k, v in data.items() if isinstance(v, list)})

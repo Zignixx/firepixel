@@ -1,16 +1,15 @@
-"""Neutralitaet erzeugter Daten (ARCHITEKTUR §1, docs\\AGENTEN_REGELN.md §1a).
+"""Neutrality of generated data (ARCHITEKTUR §1, docs\\AGENTEN_REGELN.md §1a).
 
-Die Namen des Originals und seines Herstellers stehen nirgends im Quelltext von Firepixel. Generatoren,
-die Texte aus der Installationskopie bzw. aus ..\\re\\ uebernehmen, ersetzen sie mit `neutral()` bzw.
-lassen Datensaetze mit `contains()` weg. Die Namen werden zur Laufzeit aus der Installationskopie
-gelesen:
+The names of the original and its vendor appear nowhere in the Firepixel source. Generators that take
+texts from the installation copy or from ..\\re\\ replace them with `neutral()` or drop records with
+`contains()`. The names are read from the installation copy at run time:
 
-  Programmname = Dateiname (ohne Endung) der Haupt-EXE (der EXE mit der Ressource CMYK/1001, erkannt
-                 am UTF-16-Ressourcennamen; die groesste EXE im Ordner),
-  Hersteller   = `CompanyName` aus der Versionsressource dieser EXE.
+  program name = file name (without extension) of the main EXE (the EXE with the resource CMYK/1001,
+                 recognised by the UTF-16 resource name; the largest EXE in the folder),
+  vendor       = `CompanyName` from the version resource of that EXE.
 
-Korpusordner: Umgebungsvariable FP_CORPUS_DIR, sonst <REA>\\korpus (Verzeichnisverbindung auf die
-Installationskopie).
+Corpus folder: environment variable FP_CORPUS_DIR, otherwise <REA>\\korpus (directory junction to the
+installation copy).
 """
 import os
 import re
@@ -29,7 +28,7 @@ def _main_exe(root):
             data = fh.read()
         if "CMYK".encode("utf-16-le") in data:
             return p, data
-    raise FileNotFoundError("keine Haupt-EXE im Korpus " + root)
+    raise FileNotFoundError("no main EXE in corpus " + root)
 
 
 def _version_string(data, key):
@@ -38,7 +37,7 @@ def _version_string(data, key):
     if i < 0:
         return None
     i += len(k)
-    while i % 4:  # Ausrichtung auf 32 Bit
+    while i % 4:  # align to 32 bits
         i += 1
     end = data.find(b"\0\0", i)
     while end >= 0 and (end - i) % 2:
@@ -47,7 +46,7 @@ def _version_string(data, key):
 
 
 def names():
-    """(Programmname, Hersteller) aus der Installationskopie."""
+    """(program name, vendor) from the installation copy."""
     global _names
     if _names is None:
         exe, data = _main_exe(CORPUS)
@@ -59,15 +58,15 @@ def names():
 
 
 def contains(text):
-    """Enthaelt der Text einen der beiden Namen (gleich welche Schreibweise)?"""
+    """Does the text contain one of the two names (in any case)?"""
     app, vendor = names()
     pats = [re.escape(n) for n in (app, vendor) if n]
     return bool(pats) and re.search("(?i)" + "|".join(pats), text) is not None
 
 
 def neutral(text):
-    """Ersetzt die Namen: Hersteller + Programm bzw. Programm -> "Firepixel" (Schreibweise
-    beibehalten), Hersteller als Vorsilbe ("<Hersteller>-Onlineforen", "<HERSTELLER> AI3") entfaellt."""
+    """Replaces the names: vendor + program or program -> "Firepixel" (case preserved); the vendor
+    as a prefix ("<Vendor>-Onlineforen", "<VENDOR> AI3") is dropped."""
     app, vendor = names()
     if vendor:
         text = re.sub(re.escape(vendor) + r"[ -](?=" + re.escape(app) + ")", "", text, flags=re.I)
@@ -86,5 +85,5 @@ def neutral(text):
 
 if __name__ == "__main__":
     a, v = names()
-    print("Programmname gefunden:", bool(a), "Hersteller gefunden:", bool(v))
+    print("program name found:", bool(a), "vendor found:", bool(v))
     print(neutral("Test"))

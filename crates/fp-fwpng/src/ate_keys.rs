@@ -1,18 +1,18 @@
-//! ATE-Schlüsseltabellen (Spezifikation 02 §12.7, Quelle `re/format/ate_keys.json`).
+//! ATE key tables (specification 02 §12.7, source `re/format/ate_keys.json`).
 //!
-//! Je ATE-Klasse: Zahlenschlüssel → (Name, Versionsflag). Das Versionsflag kennzeichnet, ab welcher
-//! ATE-Fassung ein Schlüssel existiert. Ältere Dateien (Stream-Version 4) schreiben die Schlüssel mit
-//! Flag 5 im Klartext; ein Leser bildet sie über [`key_by_name`] auf die Nummer ab.
-//! Automatisch erzeugt; nicht von Hand ändern.
+//! Per ATE class: numeric key → (name, version flag). The version flag marks from which ATE
+//! version on a key exists. Older files (stream version 4) write the keys with flag 5 as plain
+//! text; a reader maps them to the number via [`key_by_name`].
+//! Generated automatically; do not edit by hand.
 
-/// Eine ATE-Klasse mit Pfadmustern (reguläre Ausdrücke aus der Analyse, nur zur Dokumentation).
+/// An ATE class with path patterns (regular expressions from the analysis, documentation only).
 pub struct AteClass {
     pub name: &'static str,
     pub paths: &'static [&'static str],
     pub keys: &'static [(u16, &'static str, u8)],
 }
 
-/// Alle Klassen.
+/// All classes.
 pub const ATE_CLASSES: &[AteClass] = &[
     AteClass {
         name: "DocumentResources",
@@ -356,17 +356,17 @@ pub const ATE_CLASSES: &[AteClass] = &[
     },
 ];
 
-/// Klasse zu einem Namen (Anfang des Klassennamens, z. B. `"StyleSheetData"`).
+/// Class for a name (start of the class name, e.g. `"StyleSheetData"`).
 pub fn class(prefix: &str) -> Option<&'static AteClass> {
     ATE_CLASSES.iter().find(|c| c.name.starts_with(prefix))
 }
 
-/// Name eines Zahlenschlüssels in einer Klasse.
+/// Name of a numeric key in a class.
 pub fn key_name(class: &AteClass, key: u16) -> Option<&'static str> {
     class.keys.iter().find(|k| k.0 == key).map(|k| k.1)
 }
 
-/// Zahlenschlüssel zu einem Klartextnamen (ältere Dateien).
+/// Numeric key for a plain-text name (older files).
 pub fn key_by_name(class: &AteClass, name: &str) -> Option<u16> {
     class.keys.iter().find(|k| k.1 == name).map(|k| k.0)
 }

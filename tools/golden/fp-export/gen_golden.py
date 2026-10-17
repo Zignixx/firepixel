@@ -1,10 +1,10 @@
-"""Golden-Daten fuer fp-export aus den Python-Referenzen re/export (fw_palette, fw_rgba, fw_gif) und
-re/verhalten (fwbehavior). Ausgabe: crates/fp-export/tests/data/golden.json (klein, im Repo).
+"""Golden data for fp-export from the Python references re/export (fw_palette, fw_rgba, fw_gif) and
+re/verhalten (fwbehavior). Output: crates/fp-export/tests/data/golden.json (small, in the repo).
 
-Faelle: synthetische Bilder (Verlauf, Rauschen mit Alpha, wenige Farben) x Palettenarten (adaptiv, Web-adaptiv,
-Raster, Web 216, Graustufen, Mac, Windows, exakt, benutzerdefiniert), Dither (aus, Diffusion 100/50, 2x2),
-Transparenz (keine, Index-Alpha, RGBA), gesperrte Farben, verlustbehaftetes GIF, TRNs.
-Aufruf: python -I gen_golden.py
+Cases: synthetic images (gradient, noise with alpha, few colors) x palette kinds (adaptive, web adaptive,
+grid, web 216, grayscale, Mac, Windows, exact, custom), dither (off, diffusion 100/50, 2x2),
+transparency (none, index alpha, RGBA), locked colors, lossy GIF, TRNs.
+Usage: python -I gen_golden.py
 """
 import json
 import os
@@ -85,7 +85,7 @@ for iname, px in IMAGES.items():
     run(iname + "/rgba_png_d100", px, exportFormat=2, paletteTransparency=3, numEntriesRequested=64, ditherMode=1, ditherPercent=100)
     run(iname + "/unopt", px, optimized=False, numEntriesRequested=20)
 
-# verlustbehaftetes GIF auf einem Indexbild
+# lossy GIF on an indexed image
 c0 = next(c for c in CASES if c["name"] == "gradient/adaptive16_d100")
 pal_rgb = [((c >> 16) & 255, (c >> 8) & 255, c & 255) for c in c0["palette"]]
 lossy = {str(l): list(fw_gif.lossy_simulate(bytes(c0["indices"]), W, H, pal_rgb, l)) for l in (10, 40, 80)}
@@ -95,4 +95,4 @@ dst = os.path.join(FP, "crates", "fp-export", "tests", "data")
 os.makedirs(dst, exist_ok=True)
 json.dump({"w": W, "h": H, "images": IMAGES, "cases": CASES, "lossy": {"palette": [list(p) for p in pal_rgb], "indices": c0["indices"], "out": lossy}, "lzw": lzw},
           open(os.path.join(dst, "golden.json"), "w"), separators=(",", ":"))
-print("Faelle:", len(CASES), "->", os.path.join(dst, "golden.json"))
+print("cases:", len(CASES), "->", os.path.join(dst, "golden.json"))

@@ -1,13 +1,14 @@
-"""Golden-Daten fuer fp-text: Korpus-Textrahmen mit der Python-Referenz (re/text/layout.py).
+"""Golden data for fp-text: corpus text frames with the Python reference (re/text/layout.py).
 
-Liest (nur lesend) re/text/_scratch/texts.jsonl (scripts/text/extract_text.py) und
-re/text/_scratch/story_attrs.jsonl (scripts/text/story_attrs.py), rechnet fuer jeden Text das Layout mit
-layout.layout_point_text (Modus round_each, mit Tinte, Kerning-Art der Story) und schreibt je Text eine
-JSON-Zeile nach out/layout_corpus.jsonl:
-  file, attrs, runs, story_kern, category (Filter wie check_layout.py), py_frame, py_glyphs [[gid, x, y], ...]
-Zusaetzlich die Zaehlung wie check_layout.py auf stdout (Ziel: alle vier Kanten 3.998/4.147).
+Reads (read only) re/text/_scratch/texts.jsonl (scripts/text/extract_text.py) and
+re/text/_scratch/story_attrs.jsonl (scripts/text/story_attrs.py), computes the layout of every text with
+layout.layout_point_text (mode round_each, with ink, kerning kind of the story) and writes one JSON line
+per text to out/layout_corpus.jsonl:
+  file, attrs, runs, story_kern, category (filter like check_layout.py), py_frame, py_glyphs [[gid, x, y], ...]
+Also prints the count like check_layout.py on stdout (target: all four edges 3,998/4,147).
+The category values are data (crates/fp-text/tests/corpus.rs matches "Tabulator") and stay as they are.
 
-Aufruf (aus beliebigem Ordner):
+Usage (from any folder):
   "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Python\\Python314\\python.exe" -I -B gen_layout_corpus.py
 """
 import collections
@@ -57,10 +58,10 @@ def main():
     st = collections.Counter()
     with open(os.path.join(OUT, "layout_corpus.jsonl"), "w", encoding="utf-8") as fo:
         for r in recs:
-            # Neutralitaet: Texte mit dem Programm- oder Herstellernamen werden nicht gespeichert
-            # (betrifft 2 Datensaetze der Kategorie "kein ATE-Punkttext", ohne Einfluss auf die Messung).
+            # Neutrality: texts with the program or vendor name are not stored
+            # (affects 2 records of the category "kein ATE-Punkttext", no influence on the measurement).
             if neutral.contains(json.dumps(r, ensure_ascii=False)):
-                st["weggelassen (Neutralitaet)"] += 1
+                st["dropped (neutrality)"] += 1
                 continue
             a = r["attrs"]
             cat = category(r)
@@ -84,10 +85,10 @@ def main():
                 out["py_glyphs"] = [[g["gid"], g["x"], g["y"]] for ln in res["lines"] for g in ln["glyphs"]]
                 ok = [fr["LFT"] == a["LFTf"], fr["TOP"] == a["TOPf"], fr["RIT"] == a["RITf"], fr["BOT"] == a["BOTf"]]
                 st["n"] += 1
-                st["alle4"] += all(ok)
-                st["vertikal"] += ok[1] and ok[3]
+                st["all4"] += all(ok)
+                st["vertical"] += ok[1] and ok[3]
                 st["horizontal"] += ok[0] and ok[2]
-                st["breite"] += (fr["RIT"] - fr["LFT"]) == (a["RITf"] - a["LFTf"])
+                st["width"] += (fr["RIT"] - fr["LFT"]) == (a["RITf"] - a["LFTf"])
             else:
                 st["skip " + cat] += 1
             fo.write(json.dumps(out, ensure_ascii=False) + "\n")

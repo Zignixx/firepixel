@@ -1,13 +1,13 @@
-"""Korpusdaten fuer die #[ignore]-Tests von fp-raster (tests/corpus.rs).
+"""Corpus data for the #[ignore] tests of fp-raster (tests/corpus.rs).
 
-1. Korpus-Paare aus re\\filter\\_scratch\\pairs (Eingabe/Cache je Bitmap bzw. Gruppe, 06 §9) -> PNG + pairs.json.
-   Gleiche Inhalte (gleicher Hash-Suffix) werden nur einmal gespeichert; die Liste behaelt alle Faelle,
-   damit die Zahlen denen von scripts\\filter\\test_pairs.py entsprechen.
-2. Testdateien des Originals re\\_testdateien\\06\\*.fw.png (Laufzeittests 06 §11.2): je Bitmap-Element mit Namen
-   die gespeicherten Pixel (Eingabe bzw. destruktives Ergebnis), Lage, Live-Filter, Seitenursprung -> fw06.json.
-   Das Referenzbild (IDAT) liest der Rust-Test selbst aus der .fw.png.
+1. Corpus pairs from re\\filter\\_scratch\\pairs (input/cache per bitmap or group, 06 §9) -> PNG + pairs.json.
+   Identical contents (same hash suffix) are stored only once; the list keeps all cases so that the
+   numbers match those of scripts\\filter\\test_pairs.py.
+2. Test files of the original re\\_testdateien\\06\\*.fw.png (run-time tests 06 §11.2): per named bitmap element
+   the stored pixels (input or destructive result), position, live filters, page origin -> fw06.json.
+   The Rust test reads the reference image (IDAT) itself from the .fw.png.
 
-Aufruf:
+Usage:
   "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Python\\Python314\\python.exe" -I extract_corpus.py
 """
 import glob
@@ -65,7 +65,7 @@ def norm_effects(effs):
              "params": norm_params(e.get("params", {}))} for e in effs]
 
 
-# ---------------------------------------------------------------- 1. Paare
+# ---------------------------------------------------------------- 1. Pairs
 P = os.path.join(RE, "filter", "_scratch", "pairs")
 idx = json.load(open(os.path.join(P, "index.json"), encoding="utf-8"))
 pairs = []
@@ -77,9 +77,9 @@ for it in idx:
     pairs.append({"name": it["name"], "input": save("pair_in_%s.png" % key, z["inp"]),
                   "output": save("pair_out_%s.png" % key, z["out"]), "effects": norm_effects(it["effects"])})
 json.dump(pairs, open(os.path.join(OUT, "pairs.json"), "w", encoding="utf-8"), indent=0)
-print("Paare:", len(pairs))
+print("pairs:", len(pairs))
 
-# ---------------------------------------------------------------- 2. Testdateien 06
+# ---------------------------------------------------------------- 2. Test files 06
 D = os.path.join(RE, "_testdateien", "06")
 files = []
 for fn in sorted(glob.glob(os.path.join(D, "*.fw.png"))):

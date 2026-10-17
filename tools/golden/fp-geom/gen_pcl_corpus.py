@@ -1,12 +1,12 @@
-"""Korpus-Konturen fuer den #[ignore]-Test `pcl_corpus` von fp-geom (Abflachung des Originals gegen PCLv).
+"""Corpus contours for the #[ignore] test `pcl_corpus` of fp-geom (flattening of the original vs. PCLv).
 
-Wie re\\scripts\\pfade\\test_pcl.py: alle PTHv mit PBLv und PCLv aus den FW-PNGs der Installationskopie
-(..\\korpus bzw. FP_CORPUS_DIR, nur lesen). Je Kontur eine JSON-Zeile:
-  {"f": Datei, "closed": bool, "nodes": [[ax,ay,ix,iy,ox,oy], ...], "counts": [...], "pcl": [[x,y], ...],
-   "py": [[x,y], ...]}       (py = flatten.py-Ergebnis, nur wenn es von pcl abweicht)
+Like re\\scripts\\pfade\\test_pcl.py: all PTHv with PBLv and PCLv from the FW-PNGs of the installation copy
+(..\\korpus or FP_CORPUS_DIR, read only). One JSON line per contour:
+  {"f": file, "closed": bool, "nodes": [[ax,ay,ix,iy,ox,oy], ...], "counts": [...], "pcl": [[x,y], ...],
+   "py": [[x,y], ...]}       (py = flatten.py result, only if it differs from pcl)
 
-Aufruf:  "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Python\\Python314\\python.exe" -I -B gen_pcl_corpus.py
-Ausgabe: tools/golden/fp-geom/out/pcl_corpus.jsonl (gross, nicht Teil der Testdaten im Crate).
+Usage:   "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Python\\Python314\\python.exe" -I -B gen_pcl_corpus.py
+Output:  tools/golden/fp-geom/out/pcl_corpus.jsonl (large, not part of the test data in the crate).
 """
 import glob
 import json
@@ -80,4 +80,4 @@ with open(OUT, "w", encoding="utf-8") as fh:
                     if [tuple(map(float, q)) for q in got] != [tuple(map(float, q)) for q in ref]:
                         rec["py"] = [list(q) for q in got]
                     fh.write(json.dumps(rec, separators=(",", ":")) + "\n")
-print(json.dumps({"dateien": n_files, "konturen": n_cont, "python_gleich_pcl": n_same, "ausgabe": OUT}))
+print(json.dumps({"files": n_files, "contours": n_cont, "python_equals_pcl": n_same, "output": OUT}))

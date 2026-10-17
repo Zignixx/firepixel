@@ -1,11 +1,11 @@
-"""Golden-Daten fuer fp-raster aus den Python-Referenzen (re\\filter\\fwfilters.py, re\\effekte\\fx.py,
+"""Golden data for fp-raster from the Python references (re\\filter\\fwfilters.py, re\\effekte\\fx.py,
 re\\symbole\\laufzeit\\t2_9slice.py).
 
-Erzeugt kleine Eingabe-/Ausgabepaare als PNG plus manifest.json unter crates\\fp-raster\\tests\\data\\golden\\.
-Der Rust-Test tests/golden.rs liest das Manifest, wendet den Filter (JSON im serde-Format von
-fp_raster::Filter) an und vergleicht pixelgenau (alle vier Kanaele).
+Writes small input/output pairs as PNG plus manifest.json under crates\\fp-raster\\tests\\data\\golden\\.
+The Rust test tests/golden.rs reads the manifest, applies the filter (JSON in the serde format of
+fp_raster::Filter) and compares pixel-exact (all four channels).
 
-Aufruf:
+Usage:
   "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Python\\Python314\\python.exe" -I gen_golden.py
 """
 import json
@@ -51,7 +51,7 @@ def mask_png(arr):
     return np.stack([a, a, a, np.full_like(a, 255)], axis=-1)
 
 
-# ---------------------------------------------------------------- Eingaben
+# ---------------------------------------------------------------- Inputs
 rng = np.random.default_rng(20261011)
 
 
@@ -76,7 +76,7 @@ def disc_img(w, h):
     y, x = np.mgrid[0:h, 0:w]
     cx, cy, r = w / 2.0, h / 2.0, min(w, h) / 3.0
     d = np.sqrt((x + 0.5 - cx) ** 2 + (y + 0.5 - cy) ** 2)
-    img = rng.integers(0, 256, (h, w, 4), dtype=np.int64)  # Farbe transparenter Pixel zufaellig
+    img = rng.integers(0, 256, (h, w, 4), dtype=np.int64)  # color of transparent pixels random
     a = np.clip((r + 1.5 - d) / 3.0, 0, 1) * 255
     img[..., 3] = a.astype(np.int64)
     img[..., 0] = np.where(a > 0, 200, img[..., 0])
@@ -95,7 +95,7 @@ def add(name, src, fjson, out, out_origin=(0, 0), in_origin=(0, 0)):
     })
 
 
-# ---------------------------------------------------------------- Farbfilter
+# ---------------------------------------------------------------- Color filters
 for s in IMGS:
     add("invert_" + s, s, {"filter": "invert"}, F.invert(IMGS[s]))
     add("auto_levels_" + s, s, {"filter": "auto_levels"}, F.auto_levels(IMGS[s]))
@@ -155,7 +155,7 @@ for i, (col, op) in enumerate([("#000000", 100), ("#3366cc", 37), ("#ff8800", 0)
     for s in ("rnd", "disc"):
         add("colorfill%d_%s" % (i, s), s, fj, F.color_fill(IMGS[s], col, op, 0))
 
-# ---------------------------------------------------------------- Weichzeichner
+# ---------------------------------------------------------------- Blurs
 for r in (0.5, 2.0, 3.5, 4.1):
     for s in ("rnd", "disc", "grad"):
         out, m = F.gaussian_blur(IMGS[s], r)
@@ -172,8 +172,8 @@ for r in (2.0, 3.5, 1.3):
         add("gauss_s%s_%s" % (str(r).replace(".", "p"), s), s,
             {"filter": "gaussian_blur", "params": {"radius": r, "precision": "Single"}}, out, (-m, -m))
 def gauss_over_200_measured(img):
-    """r > 200 (FX-3, re\\23 Gruppe 3): gefuellt und gemittelt wird nur das Pixelrechteck (Alpha > 0)
-    der Eingabe; durchsichtige Pixel darin zaehlen mit. Ganz durchsichtig: die ganze Eingabe."""
+    """r > 200 (FX-3, re\\23 group 3): only the pixel rectangle (alpha > 0) of the input is filled and
+    averaged; transparent pixels inside it count too. Fully transparent: the whole input."""
     out = img.copy()
     ys, xs = np.nonzero(img[..., 3])
     if xs.size:
@@ -197,9 +197,9 @@ for i, (r, a, t) in enumerate([(4.1, 50, 0), (1.5, 200, 10), (2.0, 500, 0), (0.7
             F.unsharp_mask(IMGS[s], r, a, t))
 
 def motion_blur_measured(img, ang, d):
-    """Wie F.motion_blur (Proben i = 0 .. abstand), aber der Winkel als float wie im Original:
-    sin 90 Grad und -cos 180 Grad liegen knapp unter 1, trunc(i*sin) = i - 1 (FX-3, re\\23 Gruppe 3:
-    90/10 -> +9 mit Alpha-Stufen 255*k/11, 0/1 -> 1 px nach links; PM-6 D47 90/20 -> +19)."""
+    """Like F.motion_blur (samples i = 0 .. distance), but the angle as float like the original:
+    sin 90 degrees and -cos 180 degrees are just below 1, trunc(i*sin) = i - 1 (FX-3, re\\23 group 3:
+    90/10 -> +9 with alpha steps 255*k/11, 0/1 -> 1 px to the left; PM-6 D47 90/20 -> +19)."""
     import math
     m = max(0, int(d))
     H, W = img.shape[:2]
@@ -245,9 +245,9 @@ for i, (a, q) in enumerate([(30, 20), (100, 100), (10, 50)]):
         add("radial%d_%s" % (i, s), s, {"filter": "radial_blur", "params": {"amount": a, "quality": q}}, out, (-ox, -oy))
 
 def zoom_blur_measured(img, a, q):
-    """Wie F.zoom_blur, aber auf dem vergroesserten Puffer (06 4.13, 00b2c9e0: Rechteck + Menge, dann
-    Quadrat mit Halbkante floor(sqrt(((H'+1)/2)^2 + ((B'+1)/2)^2) + 0,5) + Menge) und Mitte der
-    Eingabegrenzen (FX-3, re\\23 Gruppe 3: 100/100 am Vektor -> sichtbar 32,21-207,158)."""
+    """Like F.zoom_blur, but on the enlarged buffer (06 4.13, 00b2c9e0: rectangle + amount, then a
+    square with half edge floor(sqrt(((H'+1)/2)^2 + ((W'+1)/2)^2) + 0.5) + amount) and the center of the
+    input bounds (FX-3, re\\23 group 3: 100/100 on the vector -> visible 32,21-207,158)."""
     import math
     H, W = img.shape[:2]
     l, t, r, b = -a, -a, W + a, H + a
@@ -266,7 +266,7 @@ for i, (a, q) in enumerate([(30, 20), (100, 100), (60, 40)]):
         out, org = zoom_blur_measured(IMGS[s], a, q)
         add("zoom%d_%s" % (i, s), s, {"filter": "zoom_blur", "params": {"amount": a, "quality": q}}, out, org)
 
-# ---------------------------------------------------------------- Rauschen
+# ---------------------------------------------------------------- Noise
 for i, (a, col, org) in enumerate([(50, False, (0, 0)), (100, True, (-13, 7)), (400, False, (5, -3)), (1, True, (300, 400))]):
     for s in ("rnd", "grad"):
         add("noise%d_%s" % (i, s), s, {"filter": "add_noise", "params": {"amount": a, "use_color": col}},
@@ -277,7 +277,7 @@ for i, (a, col, org) in enumerate([(50, False, (-13, 7)), (70, True, (487, -2))]
     add("noise_wide%d" % i, "wide", {"filter": "add_noise", "params": {"amount": a, "use_color": col}},
         F.add_noise(IMGS["wide"], a, col, origin=org), org, org)
 
-# ---------------------------------------------------------------- Masken (05 §2.2, 07 T6, 06 T7)
+# ---------------------------------------------------------------- Masks (05 §2.2, 07 T6, 06 T7)
 M = np.zeros((50, 60), np.int64)
 M[15:35, 20:40] = 255
 yy, xx = np.mgrid[0:50, 0:60]
@@ -301,7 +301,7 @@ for mn, mk in MASKS.items():
                              "input": mi, "output": save("out_%s%d_%s" % (op, amt, mn), mask_png(out)),
                              "output_origin": [0, 0], "compare": "input_bounds"})
 
-# ---------------------------------------------------------------- 9-Slice bikubisch (13 T2)
+# ---------------------------------------------------------------- 9-slice bicubic (13 T2)
 src9 = rnd_img(20, 20)
 src9[..., 3] = np.where(src9[..., 3] == 0, 30, src9[..., 3])
 si = inp("nine", src9)
@@ -321,4 +321,4 @@ for (W, H) in ((60, 60), (50, 20), (20, 20), (13, 31)):
 
 with open(os.path.join(OUT, "manifest.json"), "w", encoding="utf-8") as f:
     json.dump(manifest, f, indent=0)
-print("%d Faelle nach %s" % (len(manifest), OUT))
+print("%d cases to %s" % (len(manifest), OUT))

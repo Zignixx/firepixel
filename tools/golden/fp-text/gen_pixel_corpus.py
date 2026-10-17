@@ -1,12 +1,12 @@
-"""Pixel-Korpus fuer fp-text: Render-Caches (IMGv) der Korpus-Punkttexte wie scripts/text/render_check2.py.
+"""Pixel corpus for fp-text: render caches (IMGv) of the corpus point texts like scripts/text/render_check2.py.
 
-Auswahl wie text/check_render.candidates(all_aa=True): einzeiliger ATE-Punkttext, ein Lauf, Vollfarbe, ohne
-Strich/Effekte/Matrix/Faux/HSCf/BLSf, Cache <= 300.000 px. Schreibt out/pixel_corpus.jsonl mit je Text:
-Datei, attrs, runs, story_kern, Cache (x, y, w, h, Alpha base64) und das Ergebnis der Python-Referenz
-(exakte Pixel mit Punktabtastung N x N, Tonkurven aus text/glaettung.py, "stark" empirisch wie
-render_check2.LUT_STRONG). Gesamtquote auf stdout (Python-Bericht: 91,84 % mit gerundeter Bezier-Kurve).
+Selection like text/check_render.candidates(all_aa=True): single-line ATE point text, one run, solid color,
+without stroke/effects/matrix/faux/HSCf/BLSf, cache <= 300,000 px. Writes out/pixel_corpus.jsonl with per text:
+file, attrs, runs, story_kern, cache (x, y, w, h, alpha base64) and the result of the Python reference
+(exact pixels with point sampling N x N, tone curves from text/glaettung.py, "strong" empirical like
+render_check2.LUT_STRONG). Overall rate on stdout (Python report: 91.84 % with rounded Bezier curve).
 
-Aufruf: python.exe -I -B gen_pixel_corpus.py [max_texte] [--nopy]
+Usage: python.exe -I -B gen_pixel_corpus.py [max_texts] [--nopy]
 """
 import collections
 import json

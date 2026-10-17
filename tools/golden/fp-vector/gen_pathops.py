@@ -1,15 +1,15 @@
-"""Golden-Daten fuer die Pfadoperationen von fp-vector (Referenz re\\pfade\\: boolops, compound, offset,
+"""Golden data for the path operations of fp-vector (reference re\\pfade\\: boolops, compound, offset,
 simplify, shapes).
 
-Ausgaben:
-  crates/fp-vector/tests/data/pathops_golden.json   synthetische Faelle (normale Tests)
-  tools/golden/fp-vector/out/compound_corpus.json    21 verschiedene Compound Shapes des Korpus
-                                                     (wie re\\scripts\\pfade\\test_compound.py) plus die 4
-                                                     veralteten iPad-Sketch-Faelle mit zurueckgeschobenem
-                                                     Operanden (test_stale_shift.py) und die T16-Laufzeitdateien
-Kontur-Format: {"closed": bool, "nodes": [[ax, ay, ix, iy, ox, oy], ...]}
+Outputs:
+  crates/fp-vector/tests/data/pathops_golden.json   synthetic cases (normal tests)
+  tools/golden/fp-vector/out/compound_corpus.json    21 different compound shapes of the corpus
+                                                     (like re\\scripts\\pfade\\test_compound.py) plus the 4
+                                                     stale iPad sketch cases with a shifted-back
+                                                     operand (test_stale_shift.py) and the T16 run-time files
+Contour format: {"closed": bool, "nodes": [[ax, ay, ix, iy, ox, oy], ...]}
 
-Aufruf:  "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Python\\Python314\\python.exe" -I -B gen_pathops.py
+Usage:   "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Python\\Python314\\python.exe" -I -B gen_pathops.py
 """
 import json
 import math
@@ -51,7 +51,7 @@ def sq(x0, y0, x1, y1):
     return poly([(x0, y0), (x1, y0), (x1, y1), (x0, y1)])
 
 
-# ------------------------------------------------------------------ synthetische Faelle
+# ------------------------------------------------------------------ synthetic cases
 bool_cases = []
 
 
@@ -109,7 +109,7 @@ sine = poly([(i * 2.5, 10 * math.sin(i * 0.3) + (0.4 if i % 3 == 0 else -0.3)) f
 simplify_cases.append({"name": "sine40", "src": cjs([sine]), "amount": 2, "res": cjs(SI.simplify([sine], 2))})
 
 shape_cases = {"kappa": SH.KAPPA, "ellipse": cj(SH.ellipse(10, 20, 30, 15)), "rounded": cj(SH.rounded_rect(1, 2, 41, 22, 6)),
-               # polygon_tool(star=True) ist in der Referenz nicht aufrufbar (Parameter `star` verdeckt die Funktion)
+               # polygon_tool(star=True) cannot be called in the reference (parameter `star` shadows the function)
                "star_auto": cj(SH.star(0, 0, math.dist((0, 0), (10, 5)), SH.star_inner_radius_automatic(math.dist((0, 0), (10, 5)), 5), 5,
                                        math.degrees(math.atan2(5, 10)))),
                "polygon7": cj(SH.polygon_tool((3, 4), (3, -6), 7))}
@@ -117,7 +117,7 @@ shape_cases = {"kappa": SH.KAPPA, "ellipse": cj(SH.ellipse(10, 20, 30, 15)), "ro
 json.dump({"boolean": bool_cases, "expand": expand_cases, "inset": inset_cases, "simplify": simplify_cases, "shapes": shape_cases},
           open(OUT_GOLDEN, "w"), separators=(",", ":"))
 
-# ------------------------------------------------------------------ Compound-Korpus
+# ------------------------------------------------------------------ Compound corpus
 files = sorted({o["file"] for o in json.load(open(os.path.join(RE, "pfade", "_scratch", "csg_scan.json")))})
 stale = {tuple(r["bbox"]): r for r in json.load(open(os.path.join(RE, "pfade", "_scratch", "stale_shift.json"))) if r.get("diff_vorher")}
 cases = []
@@ -151,7 +151,7 @@ for path in files:
                 rec["stale_shift"] = {"operand_from_bottom": st["operand_index_von_unten"], "delta": st["versatz"]}
             cases.append(rec)
 
-# T16-Laufzeitdateien
+# T16 run-time files
 D16 = os.path.join(RE, "_testdateien", "16")
 
 

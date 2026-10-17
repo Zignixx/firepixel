@@ -1,9 +1,9 @@
-//! Tag-Vokabular aus 710 FW-PNGs (Quelle `re/format/vocabulary.json`, Spezifikation 02 §9).
+//! Tag vocabulary from 710 FW-PNGs (source `re/format/vocabulary.json`, specification 02 §9).
 //!
-//! Je Eintrag: Chunk (`mkBS`/`mkTS`), Schlüssel, Vorkommen, Elterncontainer. Dient zur Prüfung und
-//! Dokumentation; der Leser verarbeitet auch unbekannte Tags. Automatisch erzeugt.
+//! Per entry: chunk (`mkBS`/`mkTS`), key, occurrences, parent containers. Used for checks and
+//! documentation; the reader also handles unknown tags. Generated automatically.
 
-/// Ein Vokabular-Eintrag.
+/// A vocabulary entry.
 pub struct VocabEntry {
     pub chunk: &'static str,
     pub key: &'static str,
@@ -11,7 +11,7 @@ pub struct VocabEntry {
     pub parents: &'static [&'static str],
 }
 
-/// Alle 422 im Korpus beobachteten Tag/Typ-Kombinationen.
+/// All 422 tag/type combinations observed in the corpus.
 pub const VOCABULARY: &[VocabEntry] = &[
     VocabEntry {
         chunk: "mkBS",
@@ -2559,7 +2559,7 @@ pub const VOCABULARY: &[VocabEntry] = &[
     },
 ];
 
-/// Tags, die der Code der Original-EXE kennt, die aber im Korpus fehlen (02 §12.5).
+/// Tags known to the code of the original EXE but missing from the corpus (02 §12.5).
 pub const EXE_ONLY_TAGS: &[&str] = &[
     "PTRy", "EXSv", "MSVv", "MSSv", "OSSv", "NMSs", "MJPv", "MNTi", "TMMi", "PCWf", "FNTs", "LNKb",
     "MENb", "AEOi", "ASOi", "ANRi", "BUTs", "ALTs", "MSGs", "HTMs", "ANEi", "ANSi", "ROLi", "BEHv",
@@ -2570,14 +2570,14 @@ pub const EXE_ONLY_TAGS: &[&str] = &[
     "CBDs", "CXFs", "NMMi",
 ];
 
-/// Vokabular-Eintrag zu einem Schlüssel im Dokumentbaum (`mkTS`).
+/// Vocabulary entry for a key in the document tree (`mkTS`).
 pub fn lookup(key: &str) -> Option<&'static VocabEntry> {
     VOCABULARY
         .iter()
         .find(|e| e.chunk == "mkTS" && e.key == key)
 }
 
-/// Ist der Schlüssel bekannt (Korpus oder EXE)?
+/// Is the key known (corpus or EXE)?
 pub fn is_known(key: &str) -> bool {
     VOCABULARY.iter().any(|e| e.key == key) || EXE_ONLY_TAGS.contains(&key)
 }

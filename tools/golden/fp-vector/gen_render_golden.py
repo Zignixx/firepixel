@@ -1,10 +1,10 @@
-"""Golden-Daten fuer das Pfad-Rendering von fp-vector: synthetische Pfade (eigene Geometrie, keine Korpusdaten),
-gerendert mit der Python-Referenz re\\vektor\\pathrender.py.
+"""Golden data for the path rendering of fp-vector: synthetic paths (own geometry, no corpus data),
+rendered with the Python reference re\\vektor\\pathrender.py.
 
-Ausgabe: crates/fp-vector/tests/data/render_golden.json
-  [{"name", "win": [x0, y0, w, h], "pth": <PTHv in fwfmt.tree.to_json-Form>, "rgba": base64}]
+Output: crates/fp-vector/tests/data/render_golden.json
+  [{"name", "win": [x0, y0, w, h], "pth": <PTHv in fwfmt.tree.to_json form>, "rgba": base64}]
 
-Aufruf:  "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Python\\Python314\\python.exe" -I -B gen_render_golden.py
+Usage:   "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Python\\Python314\\python.exe" -I -B gen_render_golden.py
 """
 import base64
 import json
@@ -24,7 +24,7 @@ OUT = os.path.join(FP, "crates", "fp-vector", "tests", "data", "render_golden.js
 
 
 def pcl(contours):
-    """contours: [(punkte, geschlossen)] -> PCLv-Liste."""
+    """contours: [(points, closed)] -> PCLv list."""
     out = []
     for pts, closed in contours:
         ppl = [{"ISCb": bool(closed)}, {"PPCi": len(pts)}]
@@ -86,7 +86,7 @@ def add(name, j, win):
     x0, y0, w, h = win
     rgba, missing = PR.render_path(nd, x0, y0, w, h)
     if missing:
-        print("fehlt", name, missing)
+        print("missing", name, missing)
     cases.append({"name": name, "win": list(win), "pth": j, "rgba": base64.b64encode(bytes(rgba)).decode("ascii")})
 
 
@@ -146,4 +146,4 @@ add("stroke_brp2_winding", path(sq_hole, fill(), presets["hard_rounded3"], brp=2
 
 os.makedirs(os.path.dirname(OUT), exist_ok=True)
 json.dump(cases, open(OUT, "w"), separators=(",", ":"))
-print(json.dumps({"faelle": len(cases), "ausgabe": OUT}))
+print(json.dumps({"cases": len(cases), "output": OUT}))

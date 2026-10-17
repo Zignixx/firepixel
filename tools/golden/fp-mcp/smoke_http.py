@@ -1,7 +1,7 @@
-# Rauchtest für den HTTP-MCP-Server von Firepixel (CLI `firepixel-cli mcp --http` oder Oberfläche im Brückenmodus).
-# Liest URL und Token aus %LOCALAPPDATA%\Firepixel\mcp-http.json, führt initialize, tools/list,
-# new_document, run_command und render aus und speichert das Bild als smoke_render.png neben diesem Skript.
-# Aufruf: python -I tools\golden\fp-mcp\smoke_http.py [pfad\zur\mcp-http.json]
+# Smoke test for the HTTP MCP server of Firepixel (CLI `firepixel-cli mcp --http` or the UI in bridge mode).
+# Reads URL and token from %LOCALAPPDATA%\Firepixel\mcp-http.json, runs initialize, tools/list,
+# new_document, run_command and render and saves the image as smoke_render.png next to this script.
+# Usage: python -I tools\golden\fp-mcp\smoke_http.py [path\to\mcp-http.json]
 import base64
 import json
 import os
@@ -41,7 +41,7 @@ class Client:
             if sid:
                 self.session = sid
             body = resp.read().decode("utf-8", "replace")
-        # SSE: "data: {...}"-Zeilen; JSON: Text direkt
+        # SSE: "data: {...}" lines; JSON: text directly
         for line in body.splitlines():
             if line.startswith("data:"):
                 payload = line[5:].strip()
@@ -72,7 +72,7 @@ def main():
     print("Server:", init["result"]["serverInfo"])
     c.post({"jsonrpc": "2.0", "method": "notifications/initialized"})
     tools = c.request("tools/list", {})["result"]["tools"]
-    print("Werkzeuge:", ", ".join(t["name"] for t in tools))
+    print("Tools:", ", ".join(t["name"] for t in tools))
     c.call("new_document", {"width": 200, "height": 120, "background": "#ffffff"})
     r = c.call("run_command", {"name": "draw.ellipse", "params": {"rect": [20, 20, 180, 100], "fillColor": "#3366cc"}})
     print("run_command:", r["result"]["structuredContent"]["result"])
@@ -81,7 +81,7 @@ def main():
     out = os.path.join(HERE, "smoke_render.png")
     with open(out, "wb") as f:
         f.write(base64.b64decode(block["data"]))
-    print("Bild:", out)
+    print("Image:", out)
 
 
 if __name__ == "__main__":
