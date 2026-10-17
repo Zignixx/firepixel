@@ -348,6 +348,7 @@ pi-anim-cw = Rotate clockwise
 pi-anim-ccw = Rotate counterclockwise
 pi-btn-text = Text:
 pi-btn-show-down = Show Down state on load
+pi-btn-add-filters = Add Filters...
 pi-slice-type = Type:
 pi-slice-foreground = Foreground Image
 pi-slice-background = Background Image

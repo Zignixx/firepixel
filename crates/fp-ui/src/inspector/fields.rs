@@ -1541,6 +1541,18 @@ pub fn button(
     text: &str,
     enabled: bool,
 ) -> bool {
+    let resp = button_impl(ui, id, r, text, enabled, false);
+    enabled && resp.clicked()
+}
+
+/// Button like [`button`], returning the response (e.g. to anchor a popup menu).
+pub fn button_response(
+    ui: &mut Ui,
+    id: impl Hash + std::fmt::Debug,
+    r: Rect,
+    text: &str,
+    enabled: bool,
+) -> Response {
     button_impl(ui, id, r, text, enabled, false)
 }
 
@@ -1553,7 +1565,8 @@ pub fn button_fit(
     text: &str,
     enabled: bool,
 ) -> bool {
-    button_impl(ui, id, r, text, enabled, true)
+    let resp = button_impl(ui, id, r, text, enabled, true);
+    enabled && resp.clicked()
 }
 
 fn button_impl(
@@ -1563,7 +1576,7 @@ fn button_impl(
     text: &str,
     enabled: bool,
     force_fit: bool,
-) -> bool {
+) -> Response {
     let t = Theme::current(ui.ctx());
     let c = &t.colors;
     let resp = ui.interact(
@@ -1633,7 +1646,7 @@ fn button_impl(
         );
         audit(ui, "button", text, r.shrink2(vec2(3.0, 0.0)), drawn, 0);
     }
-    enabled && resp.clicked()
+    resp
 }
 
 /// Kontrollkästchen mit Beschriftung; liefert den neuen Zustand.

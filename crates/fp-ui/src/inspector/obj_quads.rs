@@ -2381,43 +2381,53 @@ fn button_strings(st: &AppState) -> Option<(fp_model::ButtonStrings, bool)> {
     })
 }
 
+/// Button symbol of the selected instance: export settings stored on the symbol and whether the
+/// symbol contains a text block (re 45 §4).
+fn button_symbol_info(st: &AppState) -> Option<(Option<fp_model::ExportSettings>, bool)> {
+    let e = first(st)?;
+    let ElementKind::Instance(i) = &e.kind else {
+        return None;
+    };
+    let d = st.session.active()?;
+    let (key, sym) = d.doc.symbol_by_id(i.symbol_id)?;
+    let mut has_text = false;
+    fp_model::traverse::walk_root(
+        &sym.root,
+        fp_model::traverse::RootRef::Symbol(key),
+        &mut |_, _, e| {
+            if matches!(e.kind, ElementKind::Text(_)) {
+                has_text = true;
+            }
+        },
+    );
+    Some((sym.export().cloned(), has_text))
+}
+
 fn button_q3(ui: &mut Ui, st: &mut AppState, r: Rect) {
     let d = Dl::at(r.min);
     let b = button_strings(st);
     let en = b.is_some();
     let (bs, _) = b.unwrap_or_default();
+    let info = button_symbol_info(st);
+    // "Text:" only for a button symbol with a text block (re 45 §4, Q3 row 1)
+    let text_en = en && info.as_ref().is_some_and(|(_, t)| *t);
     fields::label(ui, d.r(2.0, 2.0, 21.0, 8.0), &t("pi-btn-text"), en);
     if let Some(v) = fields::text(
         ui,
         "pi-btn-text",
         d.r(25.0, 0.0, 124.0, 13.0),
-        bs.text.as_deref().unwrap_or(""),
-        en,
+        if text_en {
+            bs.text.as_deref().unwrap_or("")
+        } else {
+            ""
+        },
+        text_en,
     ) {
         st.run("pi.button", json!({"text": v}));
     }
-    let presets: Vec<String> = fp_export::options::builtin_presets()
-        .iter()
-        .map(|p| crate::panels::optimize::preset_label(p.name))
-        .collect();
-    let presets = refs(&presets);
-    // „Bearbeiten...“ war mit 35 DLU abgeschnitten („Bearbei…“, CT-B-10): Knopf 49 DLU, damit der
-    // Text mit 3 px Rand in voller Größe passt (CF-X), die (graue) Exportliste entsprechend schmaler
-    let _ = fields::combo(
-        ui,
-        "pi-btn-export",
-        d.r(25.0, 14.0, 72.0, 13.0),
-        &presets,
-        Some(0),
-        false,
-    );
-    let _ = fields::button_fit(
-        ui,
-        "pi-btn-export-edit",
-        d.r(100.0, 14.0, 49.0, 13.0),
-        &t("pi-edit"),
-        false,
-    );
+    // export preset of the button slice: slice icon + full-width combo, no "Edit..." button
+    let own = info.and_then(|(e, _)| e);
+    slice_export(ui, st, d, own.as_ref(), ExportOwner::Button, en);
     fields::label_right(ui, d.r(152.0, 2.0, 39.0, 8.0), &t("pi-link"), en);
     if let Some(v) = fields::combo_edit(
         ui,
@@ -2447,6 +2457,18 @@ fn button_q4(ui: &mut Ui, st: &mut AppState, r: Rect) {
     let en = b.is_some();
     let (bs, down) = b.unwrap_or_default();
     opacity_panel(ui, st, d.offset(17.0, 1.0));
+    // instead of the filter list only an "Add Filters..." button opening the live filter menu
+    // (re 45 §4, Q4)
+    let resp = fields::button_response(
+        ui,
+        "pi-btn-add-filters",
+        d.r(27.0, 16.0, 87.0, 12.0),
+        &t("pi-btn-add-filters"),
+        en,
+    );
+    if en {
+        crate::dialogs::effects::add_menu(ui, &resp, st);
+    }
     fields::label_right(ui, d.r(147.0, 3.0, 33.0, 8.0), &t("pi-target"), en);
     if let Some(v) = fields::combo_edit(
         ui,
@@ -2588,7 +2610,14 @@ fn slice_q3(ui: &mut Ui, st: &mut AppState, r: Rect) {
     // Exportformat direkt unter „Typ“, Bearbeiten-Symbol links davon (TW-61, inspector-web/01)
     let sp = w.as_ref().and_then(|w| w.slice.clone());
     if ty == 0 {
-        slice_export(ui, st, d, sp.as_ref(), en);
+        slice_export(
+            ui,
+            st,
+            d,
+            sp.as_ref().and_then(|s| s.export.as_deref()),
+            ExportOwner::Slice,
+            en,
+        );
     }
 }
 
@@ -2694,11 +2723,22 @@ const SLICE_PRESET_ORDER: [&str; 8] = [
 /// Reihenfolge des Originals, danach die eigenen gespeicherten Einstellungen und die zusätzlichen
 /// Formate; ohne eigene Einstellung gilt die der Seite. Links davon das Bearbeiten-Symbol, es öffnet
 /// die Bildvorschau nur für das Segment.
+/// Who owns the export settings edited by [`slice_export`].
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum ExportOwner {
+    /// A slice: edit icon (opens the image preview) left of the combo.
+    Slice,
+    /// A button instance (re 45 §4): slice icon (display only) and a full-width combo; the
+    /// settings are stored on the button symbol.
+    Button,
+}
+
 fn slice_export(
     ui: &mut Ui,
     st: &mut AppState,
     d: Dl,
-    sp: Option<&fp_model::SliceProps>,
+    own_export: Option<&fp_model::ExportSettings>,
+    owner: ExportOwner,
     en: bool,
 ) {
     use crate::panels::optimize;
@@ -2710,12 +2750,8 @@ fn slice_export(
         .pages
         .get(ds.page)
         .and_then(|p| p.root.export.as_deref().cloned());
-    let model = sp
-        .and_then(|s| s.export.as_deref().cloned())
-        .or(page_export)
-        .unwrap_or_default();
-    let cur = sp
-        .and_then(|s| s.export.as_deref())
+    let model = own_export.cloned().or(page_export).unwrap_or_default();
+    let cur = own_export
         .map(|e| fp_export::OptimizeSettings::from_model(e, None))
         .unwrap_or_else(|| fp_export::doc_export::page_settings(&ds.doc, ds.page));
     let presets = fp_export::options::builtin_presets();
@@ -2736,8 +2772,11 @@ fn slice_export(
         .or_else(|| own_sel.map(|i| own[i].0.clone()))
         .unwrap_or_else(|| optimize::settings_label(&cur));
     let theme = Theme::current(ui.ctx());
-    let combo = d.r(27.0, 14.0, 108.0, 13.0);
-    let resp = fields::combo_box_frame(ui, Id::new("pi-slice-export"), combo, &label, en);
+    let (combo, combo_id) = match owner {
+        ExportOwner::Slice => (d.r(27.0, 14.0, 108.0, 13.0), "pi-slice-export"),
+        ExportOwner::Button => (d.r(25.0, 14.0, 124.0, 13.0), "pi-btn-export"),
+    };
+    let resp = fields::combo_box_frame(ui, Id::new(combo_id), combo, &label, en);
     let mut chosen: Option<fp_model::ExportSettings> = None;
     // vorn die Liste des Originals, dann eigene Vorgaben, dann die zusätzlichen Formate
     let front: Vec<usize> = SLICE_PRESET_ORDER
@@ -2794,7 +2833,20 @@ fn slice_export(
     if let Some(e) = chosen
         && let Ok(v) = serde_json::to_value(&e)
     {
-        st.run("pi.web", json!({"exportSettings": v}));
+        let cmd = match owner {
+            ExportOwner::Slice => "pi.web",
+            ExportOwner::Button => "pi.button",
+        };
+        st.run(cmd, json!({"exportSettings": v}));
+    }
+    if owner == ExportOwner::Button {
+        crate::icons::paint(
+            ui.painter(),
+            d.r(6.0, 15.0, 12.0, 11.0),
+            crate::icons::Icon::Slice,
+            &crate::icons::IconStyle::new(&theme, None, en),
+        );
+        return;
     }
     if fields::icon_button(
         ui,

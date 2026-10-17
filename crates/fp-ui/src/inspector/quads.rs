@@ -540,6 +540,44 @@ fn selection_q1(ui: &mut Ui, st: &mut AppState, r: Rect) {
             fp_export::slices::NameDate::today(),
         )
     };
+    // Button instance: the field shows the export name of the button slice (own file name, else
+    // the automatic one from the document name), not the instance or symbol name (re 45 §4)
+    if let fp_model::ElementKind::Instance(i) = &e.kind
+        && let Some(ds) = st.session.active()
+        && let Some((_, sym)) = ds.doc.symbol_by_id(i.symbol_id)
+        && sym.kind() == fp_model::SymbolKind::Button
+    {
+        let own = i
+            .button
+            .file_name
+            .clone()
+            .or_else(|| sym.button.file_name.clone())
+            .filter(|f| !f.is_empty());
+        let shown = own.clone().or_else(|| {
+            let doc_name = ds
+                .path
+                .as_ref()
+                .and_then(|p| p.file_name())
+                .map(|n| n.to_string_lossy().to_string())
+                .unwrap_or_default();
+            let doc_name = doc_name.strip_suffix(".png").unwrap_or(&doc_name);
+            let doc_name = doc_name.strip_suffix(".fw").unwrap_or(doc_name);
+            fp_export::slices::auto_name_of(
+                &ds.doc,
+                ds.page,
+                e.id,
+                doc_name,
+                fp_export::slices::NameDate::today(),
+            )
+        });
+        let shown = shown.unwrap_or_default();
+        if let Some(n) = fields::text(ui, "pi-objname", d.r(30.0, 14.0, 46.0, 12.0), &shown, true)
+            && n != shown
+        {
+            st.run("pi.web", json!({"fileName": n}));
+        }
+        return;
+    }
     // Segment: das Feld zeigt wie im Original den Exportnamen (eigener Dateiname, sonst der
     // automatische), auch wenn das Objekt einen Namen hat; ein Eintrag setzt den Exportnamen,
     // leer = wieder automatisch (Q-27)

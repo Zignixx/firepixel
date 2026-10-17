@@ -4400,9 +4400,37 @@ pub fn register(r: &mut CommandRegistry) {
                 ParamKind::Bool,
                 "Down-Status beim Laden anzeigen",
             )
+            .opt(
+                "exportSettings",
+                ParamKind::Json,
+                "Export settings of the button slice (stored on the button symbol)",
+            )
             .run(|s, p| {
                 let text = p.opt_str("text")?;
                 let down = p.opt_bool("showDownOnLoad")?;
+                // export preset of the button slice (re 45 §4, combo 14899): kept on the button
+                // symbol, so every instance of it exports alike
+                let export: Option<fp_model::ExportSettings> = p.parse("exportSettings")?;
+                if let Some(es) = export {
+                    return super::with_doc(s, |d| {
+                        let keys: Vec<usize> = super::selected_elements(d)
+                            .iter()
+                            .filter_map(|(_, e)| match &e.kind {
+                                ElementKind::Instance(i) => {
+                                    d.doc.symbol_by_id(i.symbol_id).map(|(k, _)| k.0)
+                                }
+                                _ => None,
+                            })
+                            .collect();
+                        let doc = Arc::make_mut(&mut d.doc);
+                        for k in keys {
+                            if let Some(sym) = doc.symbols.get_mut(k) {
+                                Arc::make_mut(sym).root.export = Some(Box::new(es.clone()));
+                            }
+                        }
+                        Ok(CommandOutput::doc())
+                    });
+                }
                 edit_each(s, p, |e, _| {
                     if let ElementKind::Instance(i) = &mut e.kind {
                         if let Some(t) = &text {

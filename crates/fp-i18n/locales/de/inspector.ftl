@@ -345,6 +345,7 @@ pi-anim-cw = Im Uhrzeigersinn drehen
 pi-anim-ccw = Entgegen dem Uhrzeigersinn drehen
 pi-btn-text = Text:
 pi-btn-show-down = Down-Status beim Laden anzeigen
+pi-btn-add-filters = Filter hinzufügen...
 pi-slice-type = Typ:
 pi-slice-foreground = Vordergrundbild
 pi-slice-background = Hintergrundbild

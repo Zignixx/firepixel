@@ -202,9 +202,9 @@ fn edit_buttons(lang: &str, setup: fn(&mut fp_engine::Session)) -> (Vec<fp_ui::i
     })
 }
 
-/// CT-B-10: "Bearbeiten..." / "Edit..." next to the export preset of a button is shown in full (at
-/// most slightly smaller), German and English, window 1600 × 1000. The slice shows the edit icon
-/// instead of this button since F17 TW-44 (like the original), so it is no longer checked here.
+/// CT-B-10 superseded by TW-121 (re 45 §4): the button instance tab has no "Edit..." button next
+/// to the export preset any more (German and English, window 1600 × 1000). The slice shows the edit
+/// icon instead of this button since F17 TW-44.
 #[test]
 fn edit_buttons_not_cut_off() {
     fn button(s: &mut fp_engine::Session) {
@@ -212,15 +212,8 @@ fn edit_buttons_not_cut_off() {
         s.execute("edit.insert.newButton", json!({})).expect("button");
     }
     for lang in ["de", "en"] {
-        for (what, setup) in [("button", button as fn(&mut fp_engine::Session))] {
-            let (b, min_w) = edit_buttons(lang, setup);
-            assert!(!b.is_empty(), "{lang} {what}: button found");
-            for e in b {
-                assert!(min_w <= e.avail.width() + 0.5, "{lang} {what}: button {:?} too narrow for the text ({min_w} px)", e.avail);
-                assert!(e.fit < 2, "{lang} {what}: \"{}\" cut off ({:?} in {:?})", e.text, e.drawn, e.avail);
-                assert!(e.drawn.width() <= e.avail.width() + 0.5, "{lang} {what}: text {:?} wider than {:?}", e.drawn, e.avail);
-            }
-        }
+        let (b, _) = edit_buttons(lang, button);
+        assert!(b.is_empty(), "{lang}: no Edit... button on the button tab: {b:?}");
     }
 }
 
