@@ -59,22 +59,35 @@ class TestfilesChanged(Exception):
 SWATCH_KEYS = ("panel_swatch", "popup_swatch", "color_table_cell", "swatch")
 
 
+def probe_color(side, pt, img=None) -> str:
+    """Colour '#rrggbb' at a side point (reference: screen, Firepixel: window); `img` = a Firepixel window image
+    already taken (several probes from one image)."""
+    if side.name == "orig":
+        tmp = Path(side.r.cfg["tmp_dir"]) / "orig_probe.png"
+        side.grab([int(pt[0]) - 1, int(pt[1]) - 1, int(pt[0]) + 2, int(pt[1]) + 2], tmp)
+        with Image.open(tmp) as im:
+            px = im.convert("RGB").getpixel((1, 1))
+    else:
+        img = img if img is not None else side.window_image()[0]
+        px = img.getpixel((min(img.width - 1, int(pt[0])), min(img.height - 1, int(pt[1]))))
+    return "#%02x%02x%02x" % tuple(px[:3])
+
+
 def click_probe(side, target, pt):
     rec = {"target": target, "at": [int(pt[0]), int(pt[1])]}
     try:
-        if side.name == "orig":
-            tmp = Path(side.r.cfg["tmp_dir"]) / "orig_probe.png"
-            side.grab([int(pt[0]) - 1, int(pt[1]) - 1, int(pt[0]) + 2, int(pt[1]) + 2], tmp)
-            with Image.open(tmp) as im:
-                px = im.convert("RGB").getpixel((1, 1))
-        else:
-            img, _ = side.window_image()
-            px = img.getpixel((min(img.width - 1, int(pt[0])), min(img.height - 1, int(pt[1]))))
-        rec["color"] = "#%02x%02x%02x" % tuple(px[:3])
+        rec["color"] = probe_color(side, pt)
     except Exception as e:  # noqa: BLE001
         rec["error"] = str(e)[:100]
     side.r.log(f"{side.name} click probe: {rec}")
     return rec
+
+
+# R-11 (TW-115): swatch set read-back after the reset step - JSF `fw.swatches` (reference; Firepixel may not have it)
+# and the reference's palette choice pref (0 = the 'colour cubes' table, re 14 section 2.1)
+SWATCH_COUNT_JS = ("(function(){try{var s=fw.swatches;if(!s)return 'none';var a=[];for(var i=0;i<8&&i<s.length;i++)"
+                   "a.push(String(s[i]));return s.length+'|'+a.join(',');}catch(e){return 'error '+e;}})()")
+SWATCH_PREF_JS = "(function(){try{return fw.getPref('SwatchesPanelColorPaletteChoice');}catch(e){return 'error '+e;}})()"
 
 
 # R-8 (TW-102/103): export options read on both sides before an export (and in Firepixel after a format choice)
@@ -105,6 +118,17 @@ class Unmapped(Exception):
 
 
 # --------------------------------------------------------------------------- helpers
+def select_names(names) -> list:
+    """`select` names: object names, {"index": i} (i-th element over all layers) and, R-11 (run 15
+    export-results/12, panel-optimize: 'slice:0' was looked up as an object name and not found on both sides),
+    "slice:N" / {"slice": N} = the N-th element of the web layer(s) (slices and hotspots in layer order)."""
+    out = []
+    for n in names if isinstance(names, list) else [names]:
+        m = re.fullmatch(r"slice:(\d+)", n.strip()) if isinstance(n, str) else None
+        out.append({"slice": int(m.group(1))} if m else n)
+    return out
+
+
 def clean_label(s: str) -> str:
     return re.sub(r"(\.\.\.|…)$", "", str(s).replace("&", "")).strip()
 
@@ -430,6 +454,54 @@ class Side:
         return "var ch = []; if (d) { " + " ".join(parts) + " }"
 
     def script_eval(self, expr):
+        raise NotImplementedError
+
+    def canvas_point(self, arg, what="canvas point"):
+        """R-11 (TW-119): side point (reference: screen, Firepixel: window) of a canvas argument. Besides document
+        points (`canvas_doc_point`) `{"view_frac": [fx, fy]}` (also as `pos`/`at`/`canvas`) = that fraction of the
+        page part shown in the document view, measured on each side (zoom/scroll independent; [0.5, 0.5] = centre
+        of the page as shown). Every point is checked against the side's document view: a point outside is not
+        sent, the action is 'unsupported' with the reason (run 15 xs-canvas/02: the wheel point lay outside
+        Firepixel's view and the step counted as a program difference)."""
+        a = arg
+        if isinstance(a, dict) and "view_frac" not in a:
+            inner = a.get("pos") or a.get("at") or a.get("canvas")
+            if isinstance(inner, dict):
+                a = inner
+        if isinstance(a, dict) and "view_frac" in a:
+            pt = self.view_frac_point(a["view_frac"])
+        else:
+            pt = self.doc_point_on_side(*self.canvas_doc_point(arg))
+        view = self.view_rect_now()
+        if view and not (view[0] <= pt[0] < view[2] and view[1] <= pt[1] < view[3]):
+            raise Unsupported(f"{what}: point {[int(v) for v in pt]} outside the {self.name} document view "
+                              f"{[int(v) for v in view]} - not sent (use view_frac or fit first)")
+        return pt
+
+    def view_frac_point(self, frac):
+        view, page = self.view_and_page()
+        r = list(view)
+        if page:
+            r = [max(view[0], page[0]), max(view[1], page[1]), min(view[2], page[2]), min(view[3], page[3])]
+            if r[2] - r[0] < 2 or r[3] - r[1] < 2:
+                r = list(view)
+        fx, fy = (float(frac[0]), float(frac[1])) if isinstance(frac, (list, tuple)) else (float(frac), float(frac))
+        return self.round_point(r[0] + (r[2] - r[0]) * fx, r[1] + (r[3] - r[1]) * fy)
+
+    def round_point(self, x, y):
+        return x, y
+
+    def doc_point_on_side(self, x, y):
+        raise NotImplementedError
+
+    def view_rect_now(self):
+        return None
+
+    def view_and_page(self):
+        """(document view rect, page rect shown or None) in side coordinates."""
+        raise NotImplementedError
+
+    def dialog_open(self) -> bool:
         raise NotImplementedError
 
     def canvas_doc_point(self, arg):
@@ -925,10 +997,17 @@ class OrigSide(Side):
             return
         self.r.log(f"foreground held by {fg.get('class')} (pid {fg.get('pid')}, {fg.get('proc')}) "
                    f"'{str(fg.get('title') or '')[:60]}' - bringing the reference program forward")
+        # R-11 (run 15, xs-shortcuts/10_nudge_point at 23:58:30: taken back before the step, the step's first canvas
+        # click then selected nothing and the step failed without a retry - the take-back happened before the step's
+        # own count started): flagged for step_side, an error in that step is played again
+        self.fg_taken = True
         try:
             self.o.focus(log=self.r.log)  # R-5: up to 6 hard tries with growing pauses
         except OrigError as e:
             raise OrigError(f"foreground stays with {fg.get('class')} (pid {fg.get('pid')}): {e}") from e
+        # the same settle time as after a take-back during input (GuardedHost._verify)
+        time.sleep(float(getattr(self.o, "FG_SETTLE", 0.4)))
+        self.r.log("foreground: reference program in front again")
 
     def log_foreground(self, where):
         """R-5: one protocol line at unit start: which window is in front."""
@@ -1216,6 +1295,37 @@ class OrigSide(Side):
             raise OrigError(f"drag point outside the document view {v}: {bad} (zoom {getattr(self, 'fit_zoom', None)},"
                             f" page {[int(x) for x in (getattr(self, 'page', None) or [])]})")
 
+    def doc_point_on_side(self, x, y):
+        return self.doc_to_screen(x, y)
+
+    def round_point(self, x, y):
+        return int(round(x)), int(round(y))
+
+    def view_rect_now(self):
+        try:
+            return self.h.call("view")
+        except OrigError:
+            return None
+
+    def view_and_page(self):
+        """R-11: document view and the page measured now (None when it is cut - then the whole view is the page)."""
+        v = self.h.call("view")
+        page = None
+        if self.doc_size[0]:
+            self.page = None
+            try:
+                p = self.calibrate()
+                page = None if self.page_cut else p
+            except Exception:  # noqa: BLE001
+                page = None
+        return v, page
+
+    def dialog_open(self) -> bool:
+        try:
+            return bool(self.h.list("dialogs"))
+        except OrigError:
+            return False
+
     def drag_record(self, fr, to, mods):
         """R-7 (TW-98, Q-44, import offset): drag points of the reference like the Firepixel side (window client
         relative) plus screen and document points."""
@@ -1342,7 +1452,7 @@ class OrigSide(Side):
             if g:
                 return g, self.win_at(g)
             if "canvas" in target:
-                return self.doc_to_screen(*self.canvas_doc_point(target["canvas"])), None
+                return self.canvas_point(target["canvas"]), None
             if "window_rel" in target:
                 c = self.client()
                 return (c[0] + target["window_rel"][0], c[1] + target["window_rel"][1]), None
@@ -1911,11 +2021,11 @@ class OrigSide(Side):
         return ret[-1] if ret else None
 
     def select(self, names):
-        names = names if isinstance(names, list) else [names]
-        code = ("var d = fw.getDocumentDOM(); var want = %s; var sel = [], cnt = 0;\n"
-                "for (var i = 0; i < d.layers.length; i++) { var fr = d.layers[i].frames[d.currentFrameNum];\n"
+        names = select_names(names)
+        code = ("var d = fw.getDocumentDOM(); var want = %s; var sel = [], cnt = 0, sc = 0;\n"
+                "for (var i = 0; i < d.layers.length; i++) { var fr = d.layers[i].frames[d.currentFrameNum]; var web = d.layers[i].layerType == 'web';\n"
                 "  for (var j = 0; j < fr.elements.length; j++) { var e = fr.elements[j];\n"
-                "    cnt++; for (var k = 0; k < want.length; k++) if (e.name == want[k] || (want[k] !== null && typeof want[k] == 'object' && want[k].index == cnt - 1)) sel.push(e); } }\n"
+                "    cnt++; if (web) sc++; for (var k = 0; k < want.length; k++) if (e.name == want[k] || (want[k] !== null && typeof want[k] == 'object' && (want[k].index == cnt - 1 || (web && want[k].slice == sc - 1)))) sel.push(e); } }\n"
                 "d.selectNone(); fw.selection = sel; fp_log('RET ' + sel.length);") % json.dumps(names, ensure_ascii=True)
         before = self.panel_image()
         lines = self.o.jsf(code)
@@ -2299,7 +2409,7 @@ class OrigSide(Side):
         elif verb in ("scroll", "wheel", "canvas_wheel"):
             a = arg if isinstance(arg, dict) else {"delta": arg}
             if verb == "canvas_wheel":
-                pt = self.doc_to_screen(*self.canvas_doc_point(a))
+                pt = self.canvas_point(a, "canvas_wheel")
             elif isinstance(a.get("area"), dict):
                 pt = self.resolve(a["area"])[0]
             elif a.get("target") is not None:
@@ -2346,7 +2456,7 @@ class OrigSide(Side):
     def pointer(self, verb, arg, act):
         mods = norm_mods(act.get("mods") or act.get("hold_key"))
         if verb.startswith("canvas_"):
-            pt, info = self.doc_to_screen(*self.canvas_doc_point(arg)), None
+            pt, info = self.canvas_point(arg, verb), None
             verb = {"canvas_click": "click", "canvas_double_click": "double_click"}.get(verb, "hover")
         else:
             target = arg
@@ -2765,6 +2875,35 @@ class FpSide(Side):
         w, h = self.doc_size if self.doc_size[0] else (r - l, b - t)
         return [l + (r - l) * x / w, t + (b - t) * y / h]
 
+    def doc_point_on_side(self, x, y):
+        return self.doc_to_win(x, y)
+
+    def round_point(self, x, y):
+        return [x, y]
+
+    def active_doc_state(self):
+        return next((d for d in (self.state().get("documents") or []) if d.get("active")), None)
+
+    def view_rect_now(self):
+        """R-11: the active document's canvas area (window coordinates, like doc_to_win)."""
+        try:
+            doc = self.active_doc_state()
+        except BridgeError:
+            return None
+        return list(doc["canvas_area"]) if doc and doc.get("canvas_area") else None
+
+    def view_and_page(self):
+        doc = self.active_doc_state()
+        if not doc or not doc.get("canvas_area"):
+            raise BridgeError("no active document view")
+        return list(doc["canvas_area"]), (list(doc["page_on_screen"]) if doc.get("page_on_screen") else None)
+
+    def dialog_open(self) -> bool:
+        try:
+            return bool(self.state().get("dialog_open"))
+        except BridgeError:
+            return False
+
     def find(self, text, role=None, exact=True, region=None, index=0):
         q = {"text": clean_label(text), "exact": exact}
         if role:
@@ -2843,7 +2982,7 @@ class FpSide(Side):
             if g:
                 return list(g)
             if "canvas" in target:
-                return self.doc_to_win(*self.canvas_doc_point(target["canvas"]))
+                return self.canvas_point(target["canvas"])
             if "window_rel" in target:
                 return list(target["window_rel"])
             if "area" in target and "pos" in target:
@@ -3292,11 +3431,11 @@ class FpSide(Side):
     def select(self, names):
         """Exactly the named objects, chosen like in the reference program (JSF fw.selection by name on the
         current state of all layers); the bridge's `select {ids}` is only the fallback."""
-        names = names if isinstance(names, list) else [names]
-        code = ("(function(){var d = fw.getDocumentDOM(); var want = %s; var sel = [], cnt = 0;"
-                "for (var i = 0; i < d.layers.length; i++) { var fr = d.layers[i].frames[d.currentFrameNum];"
+        names = select_names(names)
+        code = ("(function(){var d = fw.getDocumentDOM(); var want = %s; var sel = [], cnt = 0, sc = 0;"
+                "for (var i = 0; i < d.layers.length; i++) { var fr = d.layers[i].frames[d.currentFrameNum]; var web = d.layers[i].layerType == 'web';"
                 "  for (var j = 0; j < fr.elements.length; j++) { var e = fr.elements[j];"
-                "    cnt++; for (var k = 0; k < want.length; k++) if (e.name == want[k] || (want[k] !== null && typeof want[k] == 'object' && want[k].index == cnt - 1)) sel.push(e); } }"
+                "    cnt++; if (web) sc++; for (var k = 0; k < want.length; k++) if (e.name == want[k] || (want[k] !== null && typeof want[k] == 'object' && (want[k].index == cnt - 1 || (web && want[k].slice == sc - 1)))) sel.push(e); } }"
                 "d.selectNone(); fw.selection = sel; return [sel.length, fw.selection.length].join(',');})()") % json.dumps(names, ensure_ascii=True)
         try:
             v = str(self.script_value(code))
@@ -3639,7 +3778,7 @@ class FpSide(Side):
         elif verb in ("scroll", "wheel", "canvas_wheel"):
             a = arg if isinstance(arg, dict) else {"delta": arg}
             if verb == "canvas_wheel":
-                pos = self.doc_to_win(*self.canvas_doc_point(a))
+                pos = self.canvas_point(a, "canvas_wheel")
             elif isinstance(a.get("area"), dict):
                 pos = self.resolve(a["area"])
             elif a.get("target") is not None:
@@ -3760,7 +3899,7 @@ class FpSide(Side):
             pos = self.find(arg if isinstance(arg, str) else arg.get("text"))["center"]
             verb = "click"
         elif verb.startswith("canvas_"):
-            pos = self.doc_to_win(*self.canvas_doc_point(arg))
+            pos = self.canvas_point(arg, verb)
             verb = {"canvas_click": "click", "canvas_double_click": "double_click"}.get(verb, "hover")
         else:
             target = arg
@@ -4289,8 +4428,85 @@ class Runner:
                     pass
             if VIEW_TOGGLE.search(f"{verb} {json.dumps(arg, ensure_ascii=False)}"):
                 side.view_dirty = True
+            if verb == "if_no_dialog":
+                # R-11 (export-results/13): {"wait_ms": n, "do": [actions], "why": text} - the actions run only when
+                # no dialog opened within wait_ms (a second way to open it); logged in the side's values
+                a = arg if isinstance(arg, dict) else {"do": arg}
+                end = time.time() + float(a.get("wait_ms", 2000)) / 1000
+                opened = side.dialog_open()
+                while not opened and time.time() < end:
+                    time.sleep(0.3)
+                    opened = side.dialog_open()
+                side.values.append({"if_no_dialog": {"dialog": opened, "fallback": not opened, "why": a.get("why")}})
+                if not opened:
+                    self.log(f"  {side.name}: no dialog after the first way - {a.get('why') or 'fallback actions'}")
+                    self.run_actions(side, a.get("do") or [], rec)
+                rec["actions"].append({"verb": verb, "ms": int((time.time() - t0) * 1000)})
+                continue
+            if verb == "swatch_readback":
+                side.values.append({"swatch_readback": self.swatch_readback(side, arg if isinstance(arg, dict) else {})})
+                rec["actions"].append({"verb": verb, "ms": int((time.time() - t0) * 1000)})
+                continue
+            # R-11 (run 15 xs-canvas/07: View > Rulers moved the reference's page 2,9 px, the guide double-click used
+            # the page measured before and missed the guide): after a menu command the page is measured again at once
+            # (not lazily - a guide or object added by the next action would enter the measurement)
+            remeasure = verb == "menu" and side.name == "orig" and getattr(side, "page", None) is not None
             side.do(verb, arg, act)
+            if remeasure:
+                side.page = None
+                try:
+                    time.sleep(0.3)
+                    side.calibrate()
+                except Exception as e:  # noqa: BLE001
+                    self.log(f"  page after menu: {e}")
             rec["actions"].append({"verb": verb, "ms": int((time.time() - t0) * 1000)})
+
+    def swatch_readback(self, side: Side, a: dict) -> dict:
+        """R-11 (TW-115): swatch set after the reset - JSF `fw.swatches` (count + first 8), the colours of cells
+        0..n-1 from the panel image (the click-probe grid of ui_map `grid_targets.panel_swatch`) and, in the
+        reference, the palette choice pref. When the pref is not `pref_want` (the menu click did not take), the
+        panel menu is opened again and `retry_item` clicked once more."""
+        n = int(a.get("n", 8))
+
+        def read():
+            out = {}
+            try:
+                out["swatches_js"] = side.script_eval(SWATCH_COUNT_JS)
+            except Exception as e:  # noqa: BLE001
+                out["swatches_js"] = f"error {str(e)[:80]}"
+            cols = []
+            try:
+                img = side.window_image()[0] if side.name == "fp" else None
+                for i in range(n):
+                    pt = side.grid_point({"panel_swatch": i})
+                    cols.append(probe_color(side, pt, img) if pt else None)
+            except Exception as e:  # noqa: BLE001
+                out["colors_error"] = str(e)[:100]
+            out["colors"] = cols
+            if side.name == "orig":
+                try:
+                    out["pref"] = side.script_eval(SWATCH_PREF_JS)
+                except Exception as e:  # noqa: BLE001
+                    out["pref"] = f"error {str(e)[:80]}"
+            return out
+
+        got = read()
+        want = a.get("pref_want", 0)
+        if side.name == "orig" and a.get("retry_item") and str(got.get("pref")) != str(want):
+            self.log(f"  orig swatch read-back: pref {got.get('pref')} (want {want}) - menu click did not take, "
+                     f"panel menu again and '{a['retry_item']}'")
+            got["first"] = dict(got)
+            try:
+                side.do("panel_menu", a.get("panel", "swatches"), {})
+                side.do("click", a["retry_item"], {})
+                time.sleep(0.4)
+            except Exception as e:  # noqa: BLE001
+                got["retry_error"] = str(e)[:120]
+            got.update(read())
+            got["retried"] = True
+        self.log(f"{side.name} swatch read-back: {got.get('swatches_js')}; cells 0-{n - 1} {got.get('colors')}"
+                 + (f"; pref {got.get('pref')}" if "pref" in got else ""))
+        return got
 
     def keep_export(self, side: Side, f: Path):
         """Copy of an exported file into the unit's `files` folder (`<step>_<side>_<name>`): both sides export to
@@ -4334,6 +4550,10 @@ class Runner:
                 side.ensure_foreground()
                 side.o.focus()
                 lost0 = getattr(side.h, "lost", 0)
+                if getattr(side, "fg_taken", False):
+                    # R-11: taken back in the reset before this step (or right now) - an error is retried
+                    rec["fg_taken_before"] = True
+                    side.fg_taken = False
             if unsup:
                 for act in actions:
                     try:
@@ -4546,12 +4766,20 @@ class Runner:
                         except Exception:  # noqa: BLE001
                             before = None
                     rec = self.step_side(side, step, before)
-                    if name == "orig" and rec.get("focus_lost") and rec["status"] in ("ok", "error", "unmapped"):
-                        # R-7 (run 11, xs-canvas/08…12): the focus was lost during the step (or the pointer tool
-                        # could not be chosen): the result may come from a wrong tool or state. The step is marked
-                        # 'retry' and played once more after a reset; still disturbed -> error
-                        self.log(f"  {step['id']}: focus lost during the step {rec['focus_lost']} - tool "
-                                 f"{side.active_tool()} - repeating the step once")
+                    # R-7 (run 11, xs-canvas/08…12): the focus was lost during the step (or the pointer tool could
+                    # not be chosen): the result may come from a wrong tool or state. The step is marked 'retry' and
+                    # played again after a reset; still disturbed -> error.
+                    # R-11 (run 15, xs-shortcuts/10_nudge_point): also an error right after a take-back before the
+                    # step (`fg_taken_before`); up to `orig_step_retries` repeats (default 2, was 1)
+                    tries, max_tries = 0, int(self.cfg.get("orig_step_retries", 2))
+                    while name == "orig" and tries < max_tries and (
+                            (rec.get("focus_lost") and rec["status"] in ("ok", "error", "unmapped"))
+                            or (rec.get("fg_taken_before") and rec["status"] == "error")):
+                        tries += 1
+                        why = (f"focus lost during the step {rec['focus_lost']}" if rec.get("focus_lost")
+                               else f"error after a foreground take-back before the step ({str(rec.get('error'))[:80]})")
+                        self.log(f"  {step['id']}: {why} - tool {side.active_tool()} - repeating the step "
+                                 f"({tries}/{max_tries})")
                         first = dict(rec, status="retry")
                         try:
                             side.reset_light()
@@ -4560,9 +4788,10 @@ class Runner:
                         except Exception as e:  # noqa: BLE001
                             self.log(f"  retry reset: {e}")
                         rec = self.step_side(side, step, before)
-                        rec["retry_of"] = {k: first.get(k) for k in ("status", "error", "focus_lost", "shot")}
-                        if rec.get("focus_lost") and rec["status"] == "ok":
-                            rec.update(status="error", error=f"focus lost during the step again (retried once): {rec['focus_lost']}")
+                        rec["retry_of"] = {k: first.get(k) for k in ("status", "error", "focus_lost", "fg_taken_before", "shot")}
+                        rec["retries"] = tries
+                    if tries and rec.get("focus_lost") and rec["status"] == "ok":
+                        rec.update(status="error", error=f"focus lost during the step again (retried {tries}x): {rec['focus_lost']}")
                     entry["result"][name] = rec
                     if rec["status"] in ("error",):
                         self.recover(side)

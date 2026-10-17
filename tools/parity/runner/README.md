@@ -151,7 +151,7 @@ Aliases: `reset <T..|null>` = `open_testfile` (null: only close menus/dialogs), 
 | `key` | `"ctrl+shift+z"`, `"Escape"`, `"F1"` (`repeat`) | SendInput; plain Enter/Escape with a dialog open (no popup menu) press its OK/Cancel button, Tab/Shift+Tab with the focus in a dialog = `WM_NEXTDLGCTL` (the program's dialogs do not translate these keys: SendInput Enter/Tab end up as a character in the field) | `ui_input key` (egui names) |
 | `type` | text | Unicode SendInput | `ui_input type` |
 | `wait` | ms | sleep | sleep |
-| `select` | object name or list | JSF `fw.selection` by name | same JSF via `run_script` (exactly the named objects; `select {ids}` only as fallback) |
+| `select` | object name or list; `{index: i}` = i-th element over all layers; `"slice:N"` = N-th element of the web layer(s) (R-11) | JSF `fw.selection` by name | same JSF via `run_script` (exactly the named objects; `select {ids}` only as fallback) |
 | `select_none` / `select_all` | – | JSF | `select` |
 | `tool` | `tool.rectangle` | click on the toolbox button (`ui_map.json → tools`; single-key shortcuts do not reliably reach the program) | `ui_action {tool}` |
 | `panel` | `window.layers` / id / title | visible? else menu `Fenster > …` | `ui_action {panel}` if not visible (fallback: tab / menu, see below) |
@@ -178,7 +178,9 @@ Verbs for popups, flyouts, handles and scrolling:
 | `panel_menu` | panel id [+ `item`] | shows the panel, clicks the group's menu button (`orig_panel_menu_offset` from the group's top-right corner), optional item path | clicks the `Bedienfeldmenü` button in the panel's tab row |
 | `drag_popup_slider` / `slider_drag` | `{to_fraction, hold?, from_fraction?}` | the open popup slider (smallest extra window of the process): press near the target, move to the fraction of its long axis (vertical: top = maximum); `hold: true` keeps the button down until the next reset | same with the `slider` element from `ui_find` |
 | `scroll` / `wheel` | `{area | target, delta, mods?, horizontal?}` (`area` = shot area or `{preview_pane: i}`) | mouse wheel at the centre; `delta` > 0 scrolls the content down (wheel towards the user) | `ui_input wheel` (same sign rule) |
-| `canvas_wheel` | `{pos: [x, y] document px, delta, modifiers?}` | wheel at the document point; `delta` > 0 = wheel away from the user | same |
+| `canvas_wheel` | `{pos: [x, y] document px, delta, modifiers?}` or `{view_frac: [fx, fy], …}` | wheel at the document point; `delta` > 0 = wheel away from the user | same |
+| `if_no_dialog` | `{wait_ms, do: [actions], why}` | R-11: waits up to `wait_ms` for a dialog; only when none opened, `do` runs (a second way to open it; logged as `if_no_dialog` in the values) | same (`dialog_open` of `ui_state`) |
+| `swatch_readback` | `{n, panel, pref_want, retry_item}` | R-11 (TW-115): logs JSF `fw.swatches` (count, first 8), the colours of swatch cells 0..n-1 (grid `panel_swatch`) and the pref `SwatchesPanelColorPaletteChoice`; pref not `pref_want` -> panel menu again, `retry_item` clicked once more | same without pref/retry |
 | `drag_handle` / `click_handle` / `hover_handle` | `{handle, by?}` | control point of the selected object (`fw.selection[0].controlPoints`); `handle` = index or role (tooltip prefix via `handle_roles`, e.g. `points` → „Punkte“); without control points the 8 frame handles of `pixelRect` (0 = top left, clockwise) | `run_command autoShape.describe` of the selected element, else its bounds |
 | `mouse_down` / `mouse_up` | target | SendInput down/up (released at the next reset) | `ui_input down/up` |
 | `export_png` | `"doc"` | `fw.exportDocumentAs(dom, url, null)` (document's own export settings) into `run\<unit>\files\<step>_orig.png`, size + SHA-1 + pixels into `values` | bridge `render {}` into `…_fp.png` |
@@ -426,8 +428,14 @@ Self test: `python -I runner.py --units _selftest_menu,_selftest_inspector`.
 - **Focus:** the host's `Focus` uses `SwitchToThisWindow` when `SetForegroundWindow` was not honoured and checks that
   the foreground is still the reference 400 ms later (`how` `+stable` / `+lost to <process>`, two more rounds with the
   Alt tap). Every take-back is logged. A step during which the foreground was taken back, or whose pointer tool could
-  not be chosen after opening the test file, is played once more (`retry_of` in the log, the active tool is logged);
-  disturbed again -> `error`. Foreign programs are never minimised or closed (Q-43), they are only reported.
+  not be chosen after opening the test file, is played again (`retry_of` in the log, the active tool is logged), up to
+  `orig_step_retries` times (config, default 2 since R-11); disturbed again -> `error`. R-11: a take-back in the
+  reset before a step (`foreground held by …`) is followed by the `FG_SETTLE` wait and marks the step
+  (`fg_taken_before`); an `error` in such a step is retried the same way.
+- **Canvas points (R-11):** every canvas point (click, double-click, hover, wheel, `{canvas: …}` targets) is checked
+  against the side's document view; a point outside is not sent and the action is `unsupported` with the reason.
+  `{view_frac: [fx, fy]}` = that fraction of the page part shown in each side's view (zoom independent). After a
+  reference menu command the page is measured again at once (rulers move it). Foreign programs are never minimised or closed (Q-43), they are only reported.
 - **Values:** reference drags carry `from_win`/`to_win` (client), `from_scr`/`to_scr`, `from_doc`/`to_doc` and the
   measured `zoom`; every reference step that touches the canvas adds `view_zoom` (JSF candidate properties, '@ n %' in
   a window title, page width / document width).

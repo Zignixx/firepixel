@@ -175,9 +175,9 @@
     },
     {
      "canvas_wheel": {
-      "pos": [
-       600,
-       400
+      "view_frac": [
+       0.5,
+       0.5
       ],
       "delta": 1,
       "modifiers": [
@@ -189,7 +189,7 @@
    "shot": {
     "area": "canvas"
    },
-   "note": "canvas_wheel uses document coordinates; Ctrl+wheel zoom in the original unverified"
+   "note": "R-11 (TW-119 b): the wheel point is the centre of the page part shown in each side's view (view_frac, measured per side) - run 15 used document 600,400, which lay outside Firepixel's view at 100 % so only the original zoomed; the runner now skips a point outside the view as 'unsupported'. Ctrl+wheel zoom in the original unverified"
   },
   {
    "id": "02_zoom_center_result_center",
@@ -395,7 +395,7 @@
      "key": "Escape"
     }
    ],
-   "note": "addGuide(position, 'horizontal') signature unverified in both programs"
+   "note": "addGuide(position, 'horizontal') signature unverified in both programs. R-11 (TW-119 c): run 15 missed the guide in the reference - View > Rulers moved its page by 2,9 px and the double-click used the page measured before the rulers (fit); the runner now measures the page again right after every reference menu command, before the guide is added"
   },
   {
    "id": "08_guides_snap_result",
@@ -563,7 +563,7 @@
        100
       ],
       "to": [
-       113,
+       118.68,
        117
       ]
      }
@@ -575,7 +575,8 @@
      "record_ui": "document.summary"
     }
    ],
-   "shot": null
+   "shot": null,
+   "note": "R-11 (TW-119 a): grid 36, snap tolerance 5 screen px = 11.67 document px at the fit zoom 0.42833. Run 15 dragged x by 13 (reference: 5 screen px = 11.67, exactly at the tolerance: left edge snapped to 0; Firepixel 13: right edge snapped to 2412). Now x + 18.68 = 8 screen px, 3 px beyond the tolerance for the left edge (0 and 36 both clearly out), right edge 2418.68 clearly inside 2412 -> expected x 12 on both sides; y + 17 (bottom 1617 -> 1620 inside, top out) -> y 20"
   },
   {
    "id": "13_smart_guides_pressed",

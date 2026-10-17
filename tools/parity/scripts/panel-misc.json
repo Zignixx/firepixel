@@ -615,7 +615,7 @@
      "key": "Enter"
     },
     {
-     "log_value": "fw.selection[0].symbolParams ? JSON.stringify(fw.selection[0].symbolParams) : null"
+     "log_value": "fw.selection && fw.selection[0] && fw.selection[0].symbolParams ? fw.selection[0].symbolParams : null"
     }
    ],
    "shot": null,

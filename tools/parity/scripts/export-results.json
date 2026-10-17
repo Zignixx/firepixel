@@ -510,7 +510,11 @@
      "record_dir": "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\work\\{side}\\{unit}"
     }
    ],
-   "shot": null
+   "shot": null,
+   "unsupported": {
+    "both": "export with slices / 'selected slices only' - the runner's export verb drives only the plain image export with the document's own settings (export_spec); the selection of slice 0 (select slice:N = N-th element of the web layer, R-11) is still made and logged"
+   },
+   "note": "R-11: run 15 'objects not found: slice:0' on both sides - the runner looked 'slice:0' up as an object name; select now understands slice:N. The export itself stays unsupported (reason above)"
   },
   {
    "id": "13_export_area_result_result",
@@ -546,6 +550,23 @@
     },
     {
      "wait": 800
+    },
+    {
+     "if_no_dialog": {
+      "wait_ms": 2500,
+      "why": "Enter after the export-area drag opened no preview - double-click inside the area (second documented way)",
+      "do": [
+       {
+        "canvas_double_click": [
+         120,
+         95
+        ]
+       },
+       {
+        "wait": 800
+       }
+      ]
+     }
     }
    ],
    "shot": {
@@ -559,7 +580,7 @@
      "key": "Escape"
     }
    ],
-   "note": "export area opens preview; file hash recorded after export by runner (record_file not possible before dialog)"
+   "note": "export area opens preview; file hash recorded after export by runner (record_file not possible before dialog). R-11: run 15 reference 'no dialog open' after Enter (tool and drag were right: Exportbereich, document 20,20-220,170) - the image preview is a normal dialog of the reference (re 11, 4716), not an embedded panel; if Enter opens nothing within 2.5 s the step double-clicks inside the area (logged as if_no_dialog fallback in the values, so an Enter difference stays visible)"
   },
   {
    "id": "14_wizard_flow_result",

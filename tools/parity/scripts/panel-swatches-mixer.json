@@ -33,6 +33,14 @@
     },
     {
      "record_ui": "swatches.count"
+    },
+    {
+     "swatch_readback": {
+      "n": 8,
+      "panel": "swatches",
+      "pref_want": 0,
+      "retry_item": "Farbwürfel"
+     }
     }
    ],
    "shot": null,

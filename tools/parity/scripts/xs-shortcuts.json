@@ -674,13 +674,16 @@
      "wait": 300
     },
     {
-     "log_value": "fw.selection[0] ? JSON.stringify(fw.selection[0].textRuns.initialAttrs) : null"
+     "log_value": "fw.selection && fw.selection[0] && fw.selection[0].textRuns ? fw.selection[0].textRuns.initialAttrs : null"
     },
     {
      "record_ui": "ui_state.summary"
     },
     {
      "key": "Escape"
+    },
+    {
+     "select": "TX1"
     },
     {
      "key": "Ctrl+Shift+I"
@@ -689,13 +692,16 @@
      "wait": 300
     },
     {
-     "log_value": "fw.selection[0] ? JSON.stringify(fw.selection[0].textRuns.initialAttrs) : null"
+     "log_value": "fw.selection && fw.selection[0] && fw.selection[0].textRuns ? fw.selection[0].textRuns.initialAttrs : null"
     },
     {
      "record_ui": "ui_state.summary"
     },
     {
      "key": "Escape"
+    },
+    {
+     "select": "TX1"
     },
     {
      "key": "Ctrl+Shift+U"
@@ -704,13 +710,16 @@
      "wait": 300
     },
     {
-     "log_value": "fw.selection[0] ? JSON.stringify(fw.selection[0].textRuns.initialAttrs) : null"
+     "log_value": "fw.selection && fw.selection[0] && fw.selection[0].textRuns ? fw.selection[0].textRuns.initialAttrs : null"
     },
     {
      "record_ui": "ui_state.summary"
     },
     {
      "key": "Escape"
+    },
+    {
+     "select": "TX1"
     },
     {
      "key": "Ctrl+Shift+E"
@@ -719,13 +728,16 @@
      "wait": 300
     },
     {
-     "log_value": "fw.selection[0] ? JSON.stringify(fw.selection[0].textRuns.initialAttrs) : null"
+     "log_value": "fw.selection && fw.selection[0] && fw.selection[0].textRuns ? fw.selection[0].textRuns.initialAttrs : null"
     },
     {
      "record_ui": "ui_state.summary"
     },
     {
      "key": "Escape"
+    },
+    {
+     "select": "TX1"
     },
     {
      "key": "Ctrl+Alt+Shift+S"
@@ -734,13 +746,16 @@
      "wait": 300
     },
     {
-     "log_value": "fw.selection[0] ? JSON.stringify(fw.selection[0].textRuns.initialAttrs) : null"
+     "log_value": "fw.selection && fw.selection[0] && fw.selection[0].textRuns ? fw.selection[0].textRuns.initialAttrs : null"
     },
     {
      "record_ui": "ui_state.summary"
     },
     {
      "key": "Escape"
+    },
+    {
+     "select": "TX1"
     },
     {
      "key": "Ctrl+Shift+Period"
@@ -749,7 +764,7 @@
      "wait": 300
     },
     {
-     "log_value": "fw.selection[0] ? JSON.stringify(fw.selection[0].textRuns.initialAttrs) : null"
+     "log_value": "fw.selection && fw.selection[0] && fw.selection[0].textRuns ? fw.selection[0].textRuns.initialAttrs : null"
     },
     {
      "record_ui": "ui_state.summary"
@@ -758,13 +773,16 @@
      "key": "Escape"
     },
     {
+     "select": "TX1"
+    },
+    {
      "key": "Ctrl+Shift+Comma"
     },
     {
      "wait": 300
     },
     {
-     "log_value": "fw.selection[0] ? JSON.stringify(fw.selection[0].textRuns.initialAttrs) : null"
+     "log_value": "fw.selection && fw.selection[0] && fw.selection[0].textRuns ? fw.selection[0].textRuns.initialAttrs : null"
     },
     {
      "record_ui": "ui_state.summary"
@@ -774,6 +792,7 @@
     }
    ],
    "shot": null,
+   "note": "R-11: run 15 failed on both sides - the reference's script engine has no JSON object (JSON.stringify: ReferenceError) and Firepixel's fw.selection is null after Escape (TypeError). The object itself is logged now (the runner serialises it with toSource / the bridge as JSON), guarded against an empty selection; TX1 is selected again after each Escape so every shortcut acts on the text",
    "after": [
     {
      "key": "Escape"
