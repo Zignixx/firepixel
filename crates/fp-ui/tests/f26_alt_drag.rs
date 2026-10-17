@@ -147,9 +147,14 @@ fn alt_drag_duplicates_in_bridge_frames_tw97() {
         h.run_steps(2);
         let (a, b) = (at(&h, 100.0, 85.0), at(&h, 160.0, 95.0));
         bridge_drag(&mut h, a, b, Modifiers::SHIFT);
-        assert_eq!(sel_rect(&h), vec!["Some(\"R1\"):110,50,210,120".to_string()], "{tool:?}: Umschalt-Zug waagrecht");
-        ctrl_z(&mut h);
-        assert_eq!(sel_rect(&h), vec!["Some(\"R1\"):50,50,150,120".to_string()], "{tool:?}: Strg+Z");
+        if tool == ToolId::Pointer {
+            // TW-118: Shift on the selected R1 never moves it with the pointer (additive marquee)
+            assert_eq!(sel_rect(&h), vec!["Some(\"R1\"):50,50,150,120".to_string()], "{tool:?}: Shift drag does not move");
+        } else {
+            assert_eq!(sel_rect(&h), vec!["Some(\"R1\"):110,50,210,120".to_string()], "{tool:?}: Umschalt-Zug waagrecht");
+            ctrl_z(&mut h);
+            assert_eq!(sel_rect(&h), vec!["Some(\"R1\"):50,50,150,120".to_string()], "{tool:?}: Strg+Z");
+        }
         bridge_drag(&mut h, a, b, Modifiers::ALT);
         assert_eq!(count(&h), 8, "{tool:?}: Alt-Zug über die Brücke dupliziert: {:?}", names(&h));
     }

@@ -401,6 +401,8 @@ enum PState {
         copy: bool,
         toggle: Option<ElementId>,
         fresh: bool,
+        /// Shift was held at the press.
+        shift: bool,
     },
     PressedEmpty {
         start: Point,
@@ -423,6 +425,9 @@ enum PState {
         bounds: Option<Rect>,
         guides: Vec<Overlay>,
         fresh: bool,
+        /// Shift was already held when the button went down and has not been released since:
+        /// it then does not constrain the move (only Shift pressed after the start does, TW-118).
+        shift_latched: bool,
     },
     Rubber {
         start: Point,
@@ -876,14 +881,15 @@ impl PointerTool {
         match target.and_then(|t| ctx.doc.element_at(&t).map(|e| e.id)) {
             Some(id) => {
                 let already = ctx.selection.contains(id);
-                // Umschalt auf einem gewählten Objekt: Abwählen erst beim Loslassen ohne Ziehen –
-                // Umschalt-Ziehen verschiebt waagrecht/45° (PAR 08/03)
+                // Shift on a selected object: deselect on release without drag; a drag from there
+                // is an additive marquee and never moves the object (TW-118, re 45 §2.3)
                 let toggle_on_up = ev.mods.shift && already;
                 self.state = PState::PressedObject {
                     start: p,
                     copy: ev.mods.alt,
                     toggle: toggle_on_up.then_some(id),
                     fresh: !already,
+                    shift: ev.mods.shift,
                 };
                 let cmds = if toggle_on_up {
                     vec![]
@@ -925,8 +931,26 @@ impl PointerTool {
         let st = self.state.clone();
         match st {
             PState::Idle => self.hover(p, ctx),
+            // Shift on an already selected object never moves it with the pointer: the drag
+            // becomes an additive selection marquee (TW-118, re 45 §2.3)
             PState::PressedObject {
-                start, copy, fresh, ..
+                start,
+                toggle: Some(_),
+                ..
+            } if self.id == ToolId::Pointer && dist(start, p) >= thr => {
+                self.state = PState::Rubber {
+                    start,
+                    cur: p,
+                    add: true,
+                };
+                self.moved(p, ev, ctx)
+            }
+            PState::PressedObject {
+                start,
+                copy,
+                fresh,
+                shift,
+                ..
             } if dist(start, p) >= thr => {
                 self.state = PState::Moving {
                     start,
@@ -935,6 +959,7 @@ impl PointerTool {
                     bounds: Self::selection_bounds(ctx),
                     guides: Vec::new(),
                     fresh,
+                    shift_latched: shift && self.id == ToolId::Pointer,
                 };
                 self.moved(p, ev, ctx)
             }
@@ -949,6 +974,7 @@ impl PointerTool {
                     bounds: Self::selection_bounds(ctx),
                     guides: Vec::new(),
                     fresh: false,
+                    shift_latched: ev.mods.shift && self.id == ToolId::Pointer,
                 };
                 self.moved(p, ev, ctx)
             }
@@ -1019,17 +1045,22 @@ impl PointerTool {
                 copy,
                 bounds,
                 fresh,
+                shift_latched,
                 ..
             } => {
                 let copy = copy || ev.mods.alt;
-                let mut cur = if ev.mods.shift {
+                // Shift held since the press (adding to the selection) does not constrain; only
+                // Shift pressed after the move started snaps to 0°/45°/90° (re 45 §2.3)
+                let shift_latched = shift_latched && ev.mods.shift;
+                let constrain = ev.mods.shift && !shift_latched;
+                let mut cur = if constrain {
                     constrain_angle(start, p, 45.0)
                 } else {
                     p
                 };
                 let mut guides = Vec::new();
                 if let Some(b) = bounds
-                    && !ev.mods.shift
+                    && !constrain
                 {
                     let snap = Snapper::new(ctx, &ctx.selection.elements);
                     // re 41 §1.2: Zeigerpunkte mit floor auf ganze Pixel, Fang über den Gesamtzug
@@ -1045,6 +1076,7 @@ impl PointerTool {
                     bounds,
                     guides: guides.clone(),
                     fresh,
+                    shift_latched,
                 };
                 self.overlay = Vec::new();
                 if let Some(b) = bounds {

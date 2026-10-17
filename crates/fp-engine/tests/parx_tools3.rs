@@ -257,15 +257,16 @@ fn pointer_corner_point_moves_object() {
 }
 
 #[test]
-fn pointer_shift_drag_on_selected_constrains() {
-    let e = expected();
+fn pointer_shift_drag_on_selected_does_not_move() {
+    // TW-118 (re 45 §2): Shift pressed on a selected object never moves it; the drag is an
+    // additive marquee. This supersedes the older `c03_drag_shift_60_20` reading.
     let (mut s, r1) = r1_session();
     tool(&mut s, ToolId::Pointer);
     drag_m(&mut s, (100.0, 85.0), (160.0, 105.0), |ev| ev.shift());
-    assert!(rect_near(bounds(&s, r1), exp_rect(&e["unit08"]["c03_drag_shift_60_20"]), 0.01), "{:?}", bounds(&s, r1));
+    assert!(rect_near(bounds(&s, r1), Rect::new(50.0, 50.0, 150.0, 120.0), 0.01), "{:?}", bounds(&s, r1));
     assert_eq!(sel(&s), vec![r1], "bleibt gewählt");
     // Umschalt-Klick ohne Ziehen wählt ab
-    events(&mut s, &[ToolEvent::down(150.0, 85.0).shift(), ToolEvent::up(150.0, 85.0).shift()]);
+    events(&mut s, &[ToolEvent::down(100.0, 85.0).shift(), ToolEvent::up(100.0, 85.0).shift()]);
     assert!(sel(&s).is_empty());
 }
 
