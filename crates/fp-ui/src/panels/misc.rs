@@ -1120,6 +1120,70 @@ pub fn find_replace(ui: &mut Ui, st: &mut AppState) {
 /// Breite der Spalte „Name“ in den Symboleigenschaften (TW-84: schmal wie im Original, Rest „Wert“).
 pub const SYMPROPS_NAME_W: f32 = 35.0;
 
+/// Row pitch of the symbol properties table: 18 px row plus a 1 px grid line (TW-110, measured
+/// in the reference `inspector-group-symbol/04`; the first row is 19 px high).
+pub const SYMPROPS_ROW_PITCH: f32 = 19.0;
+
+/// Height of the header fill between its two border lines (TW-110).
+const SYMPROPS_HEAD_H: f32 = 19.0;
+
+/// Header gradient per row as steps of 17 from top to bottom colour (measured #e4 → #d3).
+const SYMPROPS_HEAD_STEPS: [u8; 19] = [
+    0, 0, 0, 0, 0, 0, 2, 3, 4, 6, 7, 8, 9, 11, 12, 13, 14, 16, 17,
+];
+
+/// Colours of the symbol properties table (TW-110). Normal: measured values of the reference;
+/// the other designs derive them from their own palette.
+struct SymTableColors {
+    /// 1 px light line above the table box.
+    highlight: Color32,
+    /// Box border, header bottom line and header column divider.
+    border: Color32,
+    /// Header gradient: first six rows flat, then linear to `head_bottom`.
+    head_top: Color32,
+    head_bottom: Color32,
+    /// Light edge left of the header column divider.
+    head_edge: Color32,
+    /// Row grid lines and the column divider in the rows.
+    grid: Color32,
+    /// Alternating row fills (first row `row_a`).
+    row_a: Color32,
+    row_b: Color32,
+}
+
+fn symprops_colors(t: &Theme) -> SymTableColors {
+    use crate::theme::{ThemeKind, mix};
+    let c = &t.colors;
+    match t.kind {
+        ThemeKind::Normal => SymTableColors {
+            highlight: Color32::from_gray(0xe8),
+            border: Color32::from_rgb(0xb7, 0xba, 0xbc),
+            head_top: Color32::from_gray(0xe4),
+            head_bottom: Color32::from_gray(0xd3),
+            head_edge: Color32::from_gray(0xf1),
+            grid: Color32::from_gray(0xaa),
+            row_a: Color32::from_gray(0xeb),
+            row_b: Color32::from_gray(0xe6),
+        },
+        ThemeKind::Dark | ThemeKind::Oled => SymTableColors {
+            highlight: c.frame_bg,
+            border: c.list_border,
+            head_top: c.header_top,
+            head_bottom: c.header_bottom,
+            head_edge: c.header_highlight,
+            grid: c.list_row_line,
+            row_a: c.list_bg,
+            row_b: mix(c.list_bg, c.list_row_line, 0.35),
+        },
+    }
+}
+
+/// Does the symbol properties panel show its table (a symbol instance is selected)? The table
+/// then fills the panel edge to edge like in the reference (TW-110).
+pub fn symbol_properties_table_shown(st: &AppState) -> bool {
+    first(st).is_some_and(|e| matches!(e.kind, ElementKind::Instance(_)))
+}
+
 /// Symboleigenschaften (Symbol Properties.swf): Parameter des ausgewählten Rich Symbols.
 pub fn symbol_properties(ui: &mut Ui, st: &mut AppState) {
     let theme = Theme::current(ui.ctx());
@@ -1137,94 +1201,168 @@ pub fn symbol_properties(ui: &mut Ui, st: &mut AppState) {
         );
         return;
     };
-    let (hr, _) = ui.allocate_exact_size(vec2(ui.available_width(), 18.0), Sense::hover());
-    ui.painter().rect_filled(hr, 0.0, theme.colors.header_top);
-    // TW-84: schmale feste Spalte „Name“, der Rest „Wert“, Köpfe linksbündig (Original
-    // `inspector-group-symbol/04`, `panel-misc/16`)
-    let split = hr.left() + SYMPROPS_NAME_W;
-    common::fit_text(
-        ui,
-        Rect::from_min_max(
-            pos2(hr.left() + 4.0, hr.top()),
-            pos2(split - 2.0, hr.bottom()),
-        ),
+    // TW-110: table look of the reference – 1 px light line, box with a grey-blue border, gradient
+    // header (19 px), rows alternating light/lighter with 1 px grid lines at a 19 px pitch, the
+    // rows filling the whole panel; column 1 (35 px) clipped without ellipsis.
+    let col = symprops_colors(&theme);
+    let area = ui.max_rect();
+    let note_h = if params.is_empty() { 0.0 } else { 22.0 };
+    let need = SYMPROPS_HEAD_H + 4.0 + SYMPROPS_ROW_PITCH * params.len() as f32 + 2.0;
+    let bottom = (area.bottom() - note_h).max(area.top() + need).round();
+    let (l, t, r) = (
+        area.left().round(),
+        area.top().round(),
+        area.right().round(),
+    );
+    let table = Rect::from_min_max(pos2(l, t), pos2(r, bottom));
+    ui.allocate_rect(table, Sense::hover());
+    let p = ui.painter().clone();
+    // inclusive pixel rectangle
+    let px = |x0: f32, y0: f32, x1: f32, y1: f32, c: Color32| {
+        if x1 >= x0 && y1 >= y0 {
+            p.rect_filled(
+                Rect::from_min_max(pos2(x0, y0), pos2(x1 + 1.0, y1 + 1.0)),
+                0.0,
+                c,
+            );
+        }
+    };
+    let (bx0, bx1) = (l, r - 2.0); // box border columns
+    let (by0, by1) = (t + 1.0, bottom - 2.0); // box border rows
+    let head0 = by0 + 1.0;
+    let head_line = head0 + SYMPROPS_HEAD_H;
+    let split = bx0 + SYMPROPS_NAME_W; // column divider
+    px(l, t, r - 1.0, t, col.highlight);
+    // rows
+    let rows_top = head_line + 1.0;
+    let mut k = 0usize;
+    let mut y = rows_top;
+    let mut row_rects = Vec::new();
+    while y < by1 {
+        let line = rows_top + 19.0 + SYMPROPS_ROW_PITCH * k as f32;
+        let fill_end = (line - 1.0).min(by1 - 1.0);
+        let fill = if k.is_multiple_of(2) {
+            col.row_a
+        } else {
+            col.row_b
+        };
+        px(bx0 + 1.0, y, bx1 - 1.0, fill_end, fill);
+        px(split, y, split, fill_end, col.grid);
+        if line < by1 {
+            px(bx0 + 1.0, line, bx1 - 1.0, line, col.grid);
+        }
+        row_rects.push(Rect::from_min_max(
+            pos2(bx0 + 1.0, y),
+            pos2(bx1, fill_end + 1.0),
+        ));
+        y = line + 1.0;
+        k += 1;
+    }
+    // header gradient
+    for (i, &step) in SYMPROPS_HEAD_STEPS.iter().enumerate() {
+        let f = step as f32 / 17.0;
+        let yy = head0 + i as f32;
+        let c = crate::theme::mix(col.head_top, col.head_bottom, f);
+        px(bx0 + 1.0, yy, bx1 - 1.0, yy, c);
+    }
+    px(
+        split - 1.0,
+        head0,
+        split - 1.0,
+        head_line - 1.0,
+        col.head_edge,
+    );
+    px(split, head0, split, head_line - 1.0, col.border);
+    px(bx0 + 1.0, head_line, bx1 - 1.0, head_line, col.border);
+    // box border
+    px(bx0, by0, bx1, by0, col.border);
+    px(bx0, by1, bx1, by1, col.border);
+    px(bx0, by0, bx0, by1, col.border);
+    px(bx1, by0, bx1, by1, col.border);
+    // header texts: bold, column 1 clipped without ellipsis
+    let head_font = theme.bold(theme.fonts.small);
+    let head_mid = head0 + SYMPROPS_HEAD_H / 2.0;
+    p.with_clip_rect(Rect::from_min_max(
+        pos2(bx0 + 1.0, head0),
+        pos2(split - 1.0, head_line),
+    ))
+    .text(
+        pos2(bx0 + 8.0, head_mid),
         Align2::LEFT_CENTER,
-        &common::t("panel-symprops-name"),
-        theme.small_font(),
+        common::t("panel-symprops-name"),
+        head_font.clone(),
         theme.colors.text,
     );
-    common::fit_text(
-        ui,
-        Rect::from_min_max(
-            pos2(split + 4.0, hr.top()),
-            pos2(hr.right() - 2.0, hr.bottom()),
-        ),
+    p.with_clip_rect(Rect::from_min_max(
+        pos2(split + 1.0, head0),
+        pos2(bx1, head_line),
+    ))
+    .text(
+        pos2(split + 8.0, head_mid),
         Align2::LEFT_CENTER,
-        &common::t("panel-symprops-value"),
-        theme.small_font(),
+        common::t("panel-symprops-value"),
+        head_font,
         theme.colors.text,
-    );
-    ui.painter().vline(
-        split - 0.5,
-        hr.y_range(),
-        Stroke::new(1.0, theme.colors.list_row_line),
     );
     if params.is_empty() {
-        // leere Tabelle wie im Original: Zeilenlinien und Spaltentrenner ohne Einträge
-        let (r, _) = ui.allocate_exact_size(vec2(ui.available_width(), 4.0 * 22.0), Sense::hover());
-        let line = Stroke::new(1.0, theme.colors.list_row_line);
-        for k in 1..=4 {
-            ui.painter()
-                .hline(r.x_range(), r.top() + k as f32 * 22.0 - 0.5, line);
-        }
-        ui.painter()
-            .vline(r.left() + SYMPROPS_NAME_W - 0.5, r.y_range(), line);
         return;
     }
-    for (i, p) in params.iter().enumerate() {
-        let (r, _) = ui.allocate_exact_size(vec2(ui.available_width(), 22.0), Sense::hover());
-        crate::widgets::text_clipped(
-            ui.painter(),
-            pos2(r.left() + 4.0, r.center().y),
-            Align2::LEFT_CENTER,
-            &p.name,
-            theme.ui_font(),
-            theme.colors.text,
-            SYMPROPS_NAME_W - 6.0,
-        );
+    for (i, (prm, rr)) in params.iter().zip(row_rects).enumerate() {
+        p.with_clip_rect(Rect::from_min_max(rr.min, pos2(split, rr.bottom())))
+            .text(
+                pos2(bx0 + 8.0, rr.center().y),
+                Align2::LEFT_CENTER,
+                &prm.name,
+                theme.ui_font(),
+                theme.colors.text,
+            );
         let vr = Rect::from_min_max(
-            pos2(r.left() + SYMPROPS_NAME_W + 2.0, r.top() + 1.0),
-            pos2(r.right() - 4.0, r.bottom() - 1.0),
+            pos2(split + 2.0, rr.top() + 1.0),
+            pos2(rr.right() - 3.0, rr.bottom() - 1.0),
         );
-        if p.kind.eq_ignore_ascii_case("boolean") {
-            let on = p.value == "true";
+        if prm.kind.eq_ignore_ascii_case("boolean") {
+            let on = prm.value == "true";
             if let Some(b) = fields::checkbox(ui, ("symp", i), vr, "", on, true) {
                 st.run(
                     "pi.symbol.params",
-                    json!({"values": {p.name.clone(): if b { "true" } else { "false" }}}),
+                    json!({"values": {prm.name.clone(): if b { "true" } else { "false" }}}),
                 );
             }
-        } else if p.kind.eq_ignore_ascii_case("color") {
-            let col = fp_color::Rgba8::parse_hex(&p.value).map(|c| c.to_argb());
+        } else if prm.kind.eq_ignore_ascii_case("color") {
+            let c = fp_color::Rgba8::parse_hex(&prm.value).map(|c| c.to_argb());
             if let Some(crate::inspector::popups::ColorChoice::Color(c)) =
                 crate::inspector::popups::color_button(
                     ui,
                     ("symp-c", i),
                     Rect::from_min_size(vr.min, vec2(20.0, vr.height())),
                     st,
-                    col,
+                    c,
                     true,
                     false,
                     false,
                 )
             {
-                st.run("pi.symbol.params", json!({"values": {p.name.clone(): format!("#{:02X}{:02X}{:02X}", c.r(), c.g(), c.b())}}));
+                let hex = format!("#{:02X}{:02X}{:02X}", c.r(), c.g(), c.b());
+                st.run(
+                    "pi.symbol.params",
+                    json!({"values": {prm.name.clone(): hex}}),
+                );
             }
-        } else if let Some(v) = fields::text(ui, ("symp", i), vr, &p.value, true) {
-            st.run("pi.symbol.params", json!({"values": {p.name.clone(): v}}));
+        } else if let Some(v) = fields::text(ui, ("symp", i), vr, &prm.value, true) {
+            st.run("pi.symbol.params", json!({"values": {prm.name.clone(): v}}));
         }
     }
-    common::not_available(ui, &common::t("panel-symprops-note"));
+    p.text(
+        pos2(l + 6.0, bottom + 6.0),
+        Align2::LEFT_TOP,
+        common::t("panel-symprops-note"),
+        theme.small_font(),
+        theme.colors.text_disabled,
+    );
+    ui.allocate_rect(
+        Rect::from_min_max(pos2(l, bottom), pos2(r, bottom + note_h)),
+        Sense::hover(),
+    );
 }
 
 // ---------------------------------------------------------------------- CSS-Eigenschaften

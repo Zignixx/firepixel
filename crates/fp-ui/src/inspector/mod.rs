@@ -285,7 +285,13 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
     }
     let body = Rect::from_min_max(pos2(full.left(), header.bottom() + 1.0), full.max);
     if active == 1 && sym_visible {
-        let mut child = ui.new_child(egui::UiBuilder::new().max_rect(body.shrink(6.0)));
+        // TW-110: the table fills the panel edge to edge, the "none" hint keeps the margin
+        let r = if crate::panels::misc::symbol_properties_table_shown(st) {
+            body
+        } else {
+            body.shrink(6.0)
+        };
+        let mut child = ui.new_child(egui::UiBuilder::new().max_rect(r));
         crate::panels::show(&mut child, st, PanelId::SymbolProperties);
         return;
     }
