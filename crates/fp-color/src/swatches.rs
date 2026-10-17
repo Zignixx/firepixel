@@ -639,7 +639,10 @@ pub fn read_gif_palette(data: &[u8]) -> Result<Palette, SwatchError> {
 
 /// Farbfelddatei lesen wie das Farbfelder-Bedienfeld (Hinzufügen/Ersetzen): `ASEF` → ASE
 /// (Übernahme wie das Original); `GIF` → Palette, bei Fehlschlag oder leerer Palette als ACT;
-/// sonst ACT (Original-Art).
+/// sonst ACT: a file of exactly 772 bytes (768-byte palette + count/transparency trailer) honours
+/// the colour count like the swatches panel of the reference does (a 16-colour file yields 16
+/// swatches, not 256 with black padding); every other length is read the original way.
+/// The swatch list has no transparency slot, so the transparency index is ignored here.
 pub fn read_swatches_original(
     data: &[u8],
     cmyk_table: Option<&CmykTable>,
@@ -652,6 +655,9 @@ pub fn read_swatches_original(
         && !p.colors.is_empty()
     {
         return Ok(p.colors);
+    }
+    if data.len() == 772 {
+        return Ok(read_act_photoshop(data)?.colors);
     }
     read_act_original(data)
 }
@@ -674,6 +680,28 @@ mod tests {
         assert_eq!(write_act_photoshop(&p), ps);
         assert_eq!(read_act_original(&[1, 2]), Err(SwatchError::TooShort(2)));
         assert_eq!(write_act_original(&fw[..2]), vec![0, 1, 2, 3, 4, 5]);
+    }
+
+    #[test]
+    fn swatches_act_honours_color_count() {
+        // 16 colours + 240 black padding entries + trailer (count 16, no transparency).
+        let mut data: Vec<u8> = (0..16u8).flat_map(|i| [i * 16, 255 - i, i]).collect();
+        data.resize(768, 0);
+        data.extend_from_slice(&[0, 16, 0xFF, 0xFF]);
+        assert_eq!(data.len(), 772);
+        let cols = read_swatches_original(&data, None).unwrap();
+        assert_eq!(cols.len(), 16);
+        assert_eq!(cols[0], Rgba8::rgb(0, 255, 0));
+        assert_eq!(cols[15], Rgba8::rgb(240, 240, 15));
+        // Count 0 means 256.
+        let mut all = data.clone();
+        all[768..770].copy_from_slice(&[0, 0]);
+        assert_eq!(read_swatches_original(&all, None).unwrap().len(), 256);
+        // A plain 768-byte file keeps all 256 entries.
+        assert_eq!(
+            read_swatches_original(&data[..768], None).unwrap().len(),
+            256
+        );
     }
 
     #[test]
