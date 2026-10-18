@@ -101,8 +101,16 @@ fn apply(
     Ok(ctx.warnings)
 }
 
+/// Writes a fixture losslessly. The batch GIF optimizer registers its encoder together with the
+/// step registry; without building the registry first, the encoder (and with it the pixels of
+/// the fixture) would depend on whether another test of this binary already built it.
 fn write_anim(path: &Path, item: &Item, fmt: OutputFormat) {
-    let (bytes, _) = encode(item, fmt, &Default::default()).expect("encode");
+    let _ = StepRegistry::global();
+    let lossless = json!({
+        "quality": 100, "lossy": 0, "dither": "none", "diffThreshold": 0, "mergeSimilar": false
+    });
+    let opts = lossless.as_object().cloned().unwrap_or_default();
+    let (bytes, _) = encode(item, fmt, &opts).expect("encode");
     std::fs::write(path, bytes).expect("write");
 }
 
@@ -1163,4 +1171,30 @@ fn video_import_passes_animations_through_silently() {
     assert!(w.is_empty(), "{w:?}");
     assert_eq!(reds(&it), before);
     assert_eq!(delays(&it), vec![100, 100, 100]);
+}
+
+/// B-5 in a recipe: a parameter-less `video.import` passes a GIF through unchanged and silently;
+/// a following `anim.trim` still trims it (the animation keeps being processed by the steps).
+#[test]
+fn video_import_on_gif_passes_through_and_trim_still_trims() {
+    let dir = temp("anim-video-import-gif");
+    let src = dir.join("a.gif");
+    write_anim(&src, &anim(&[100; 8]), OutputFormat::Gif);
+    let info = fp_batch::probe(&src).expect("probe");
+    let reg = StepRegistry::global();
+
+    let mut plain = recipe(&dir.join("out"), "gif");
+    plain.add_step(anim::VIDEO_IMPORT, json!({}));
+    let p = fp_batch::preview(&plain, &info, &reg, &Default::default()).expect("preview");
+    let after = p.after_item.expect("after");
+    assert_eq!(reds(&after), vec![0, 20, 40, 60, 80, 100, 120, 140]);
+    assert_eq!(delays(&after), vec![100; 8]);
+    assert!(p.warnings.is_empty(), "{:?}", p.warnings);
+
+    let mut trimmed = recipe(&dir.join("out"), "gif");
+    trimmed.add_step(anim::VIDEO_IMPORT, json!({}));
+    trimmed.add_step(anim::TRIM, json!({"unit": "frame", "start": 3, "end": 5}));
+    let p = fp_batch::preview(&trimmed, &info, &reg, &Default::default()).expect("preview");
+    assert_eq!(reds(&p.after_item.expect("after")), vec![40, 60, 80]);
+    let _ = std::fs::remove_dir_all(&dir);
 }
