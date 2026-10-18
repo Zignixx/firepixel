@@ -115,3 +115,38 @@ fn roundness_exact_mode_and_edge_and_pixel_rect() {
         "42,162,158,248"
     );
 }
+
+/// TW-128: export settings chosen in the Optimize panel with slices selected are read back per
+/// slice through `element.exportOptions` (null for a slice without own settings).
+#[test]
+fn slice_export_options_from_optimize_panel() {
+    let mut s = session();
+    s.execute(
+        "draw.rectangle",
+        json!({"rect": [10, 10, 60, 60], "fillColor": "#ff0000"}),
+    )
+    .expect("rect");
+    s.execute("edit.insert.slice", json!({})).expect("slice 1");
+    s.execute(
+        "draw.rectangle",
+        json!({"rect": [100, 10, 160, 60], "fillColor": "#0000ff"}),
+    )
+    .expect("rect");
+    s.execute("edit.insert.slice", json!({})).expect("slice 2");
+    let jpeg = fp_model::ExportSettings {
+        format: 1,
+        color_mode: 1,
+        ..Default::default()
+    };
+    s.execute(
+        "panel.optimize.settings",
+        json!({"settings": serde_json::to_value(&jpeg).expect("json")}),
+    )
+    .expect("JPEG on slice 2");
+    let src = "var a = fw.getDocumentDOM().layers[fw.getDocumentDOM().layers.length-1].frames[0].elements, o = []; \
+               for (var i = 0; i < a.length; i++) o.push(a[i].exportOptions ? a[i].exportOptions.exportFormat : '-'); o.join('|')";
+    let got = run(&mut s, src);
+    let mut parts: Vec<&str> = got.split('|').collect();
+    parts.sort();
+    assert_eq!(parts, vec!["-", "JPEG"], "{got}");
+}

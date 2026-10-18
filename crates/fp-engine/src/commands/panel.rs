@@ -4717,22 +4717,42 @@ pub fn register(r: &mut CommandRegistry) {
                 let es: fp_model::ExportSettings = p
                     .parse("settings")?
                     .ok_or_else(|| bad(p, fp_i18n::t("err-param-settings-missing")))?;
+                set_page_export(s, es)
+            }),
+    );
+
+    // Optimize panel: with slices selected the chosen settings belong to those slices (their
+    // `exportOptions`, used by the slice export), otherwise to the page (TW-128)
+    r.add(
+        cmd("panel.optimize.settings")
+            .label("Optimieren")
+            .requires(DOC)
+            .param(
+                "settings",
+                ParamKind::Json,
+                "fp_model::ExportSettings als JSON",
+            )
+            .run(|s, p| {
+                let es: fp_model::ExportSettings = p
+                    .parse("settings")?
+                    .ok_or_else(|| bad(p, fp_i18n::t("err-param-settings-missing")))?;
+                let slices = selected_slices(s);
+                if slices.is_empty() {
+                    return set_page_export(s, es);
+                }
                 let d = s.doc_mut()?;
                 let page = d.page;
-                let pg = Arc::make_mut(&mut d.doc)
-                    .page_mut(page)
-                    .ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-page")))?;
-                let frames = pg
-                    .root
-                    .export
-                    .as_ref()
-                    .map(|e| e.frames.clone())
-                    .unwrap_or_default();
-                let mut es = es;
-                if es.frames.is_empty() {
-                    es.frames = frames;
+                let doc = Arc::make_mut(&mut d.doc);
+                for id in slices {
+                    docops::edit_by_id(doc, page, id, |e| {
+                        if let ElementKind::WebObject(w) = &mut e.kind
+                            && let Some(sp) = w.slice.as_mut()
+                        {
+                            sp.export = Some(Box::new(es.clone()));
+                        }
+                    })
+                    .ok_or(EngineError::ElementNotFound(id.0))?;
                 }
-                pg.root.export = Some(Box::new(es));
                 Ok(CommandOutput::doc())
             }),
     );
@@ -5764,6 +5784,50 @@ fn selection_has_mask(s: &Session) -> bool {
             .and_then(|id| docops::element_on_page(&d.doc, d.page, *id))
             .is_some_and(|e| matches!(&e.kind, ElementKind::Group(g) if g.mask.is_some()))
     })
+}
+
+/// Export settings of the current page; keeps the per-frame settings when `es` has none.
+fn set_page_export(s: &mut Session, mut es: fp_model::ExportSettings) -> Result<CommandOutput> {
+    let pg = page_mut(s.doc_mut()?)?;
+    if es.frames.is_empty() {
+        es.frames = pg
+            .root
+            .export
+            .as_ref()
+            .map(|e| e.frames.clone())
+            .unwrap_or_default();
+    }
+    pg.root.export = Some(Box::new(es));
+    Ok(CommandOutput::doc())
+}
+
+/// Selected slices on the current page (web objects with slice properties), in selection order.
+pub fn selected_slices(s: &Session) -> Vec<ElementId> {
+    let Some(d) = s.active() else {
+        return Vec::new();
+    };
+    d.selection
+        .elements
+        .iter()
+        .copied()
+        .filter(|id| {
+            docops::element_on_page(&d.doc, d.page, *id)
+                .is_some_and(|e| matches!(&e.kind, ElementKind::WebObject(w) if w.slice.is_some()))
+        })
+        .collect()
+}
+
+/// Export settings the Optimize panel edits: those of the first selected slice that has its own,
+/// otherwise the page's (TW-128).
+pub fn optimize_target_export(s: &Session) -> Option<fp_model::ExportSettings> {
+    let d = s.active()?;
+    selected_slices(s)
+        .into_iter()
+        .filter_map(|id| docops::element_on_page(&d.doc, d.page, id))
+        .find_map(|e| match &e.kind {
+            ElementKind::WebObject(w) => w.slice.as_ref()?.export.as_deref().cloned(),
+            _ => None,
+        })
 }
 
 fn export_of(s: &Session) -> fp_model::ExportSettings {

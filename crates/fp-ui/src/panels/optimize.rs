@@ -248,16 +248,35 @@ pub fn apply_settings(st: &mut AppState, s: &OptimizeSettings) {
     apply_settings_step(st, s, None);
 }
 
+/// Settings chosen in the Optimize panel: on the selected slices when there are any (their
+/// `exportOptions`, like the original), otherwise on the page (TW-128).
+fn apply_panel_settings(st: &mut AppState, s: &OptimizeSettings) {
+    if fp_engine::commands::panel::selected_slices(&st.session).is_empty() {
+        apply_settings(st, s);
+        return;
+    }
+    write_settings(st, s, None, true);
+}
+
 /// Wie [`apply_settings`], mit eigenem Verlaufsschritt (`msg-step-…`-Endung); die Wahl im
 /// Dokument-Inspektor heißt „Exportoptionen“ (BA-028, re 29 §11).
 pub fn apply_settings_step(st: &mut AppState, s: &OptimizeSettings, step: Option<&str>) {
+    write_settings(st, s, step, false);
+}
+
+fn write_settings(st: &mut AppState, s: &OptimizeSettings, step: Option<&str>, slices: bool) {
     let Some(d) = st.session.active() else { return };
-    let base = d
+    let page_export = d
         .doc
         .pages
         .get(d.page)
-        .and_then(|p| p.root.export.as_deref().cloned())
-        .unwrap_or_default();
+        .and_then(|p| p.root.export.as_deref().cloned());
+    let base = if slices {
+        fp_engine::commands::panel::optimize_target_export(&st.session).or(page_export)
+    } else {
+        page_export
+    }
+    .unwrap_or_default();
     let model = s.to_model(&base);
     match serde_json::to_value(&model) {
         Ok(v) => {
@@ -265,7 +284,12 @@ pub fn apply_settings_step(st: &mut AppState, s: &OptimizeSettings, step: Option
             if let Some(k) = step {
                 p["step"] = json!(k);
             }
-            st.run("pi.export.settings", p)
+            let cmd = if slices {
+                "panel.optimize.settings"
+            } else {
+                "pi.export.settings"
+            };
+            st.run(cmd, p)
         }
         Err(e) => st.push(Action::Status(fp_i18n::tr!(
             "panel-opt-settings-error",
@@ -290,10 +314,15 @@ pub fn selected_own_preset(st: &AppState) -> Option<String> {
         .map(|(n, _)| n)
 }
 
+/// Settings the panel shows: a selected slice's own export settings, else the page's (TW-128).
 fn current(st: &AppState) -> Option<OptimizeSettings> {
-    st.session
-        .active()
-        .map(|d| fp_export::doc_export::page_settings(&d.doc, d.page))
+    let d = st.session.active()?;
+    Some(
+        match fp_engine::commands::panel::optimize_target_export(&st.session) {
+            Some(e) => OptimizeSettings::from_model(&e, None),
+            None => fp_export::doc_export::page_settings(&d.doc, d.page),
+        },
+    )
 }
 
 // ---------------------------------------------------------------------- Vorschau-Cache
@@ -850,7 +879,7 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
         ns.jpeg.progressive = b;
     }
     if ns != s {
-        apply_settings(st, &ns);
+        apply_panel_settings(st, &ns);
     }
     // Farbtabelle (4758) mit Auswahl, Markierungen (gesperrt, bearbeitet, transparent),
     // Sortierung und Anzahl; Kontextmenü 6942

@@ -1174,6 +1174,7 @@ cmd-pi-state-onionSkin = Zwiebelschichteneffekt
 cmd-pi-state-distribute = Auf Status verteilen
 cmd-pi-state-copyTo = In Status kopieren
 cmd-pi-export-settings = Optimieren
+cmd-panel-optimize-settings = Optimieren
 cmd-pi-page-setMaster = Als Masterseite festlegen
 cmd-pi-layer-addSub = Neue Unterebene
 cmd-pi-layer-setActiveShared = Aktive Ebene

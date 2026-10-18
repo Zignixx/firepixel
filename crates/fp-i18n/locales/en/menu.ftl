@@ -1174,6 +1174,7 @@ cmd-pi-state-onionSkin = Onion Skinning
 cmd-pi-state-distribute = Distribute to States
 cmd-pi-state-copyTo = Copy to State
 cmd-pi-export-settings = Optimize
+cmd-panel-optimize-settings = Optimize
 cmd-pi-page-setMaster = Set as Master Page
 cmd-pi-layer-addSub = New Sub-layer
 cmd-pi-layer-setActiveShared = Active Layer

@@ -1179,7 +1179,8 @@ fn element_get(
         },
         "exportOptions" => match &e.kind {
             ElementKind::WebObject(w) => match w.slice.as_ref().and_then(|s| s.export.as_ref()) {
-                Some(x) => j(serde_json::to_value(&**x).unwrap_or(Value::Null), ctx)?,
+                // same shape as `dom.exportOptions` (`exportFormat: "JPEG"` …, TW-128)
+                Some(x) => j(super::doc::export_options_json(Some(x)), ctx)?,
                 None => JsValue::null(),
             },
             _ => JsValue::null(),

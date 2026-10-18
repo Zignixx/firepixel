@@ -1066,7 +1066,7 @@ fn overrides(name: &str, ids: &Ids) -> Option<(Value, Option<Setup>)> {
             ex(s, "modify.symbol.convertToSymbol", json!({"name": "S"}));
             Value::Null
         })),
-        "pi.export.settings" => r(json!({"settings": serde_json::to_value(fp_model::ExportSettings { format: 1, jpeg_quality: 55, ..Default::default() }).unwrap_or_default()})),
+        "pi.export.settings" | "panel.optimize.settings" => r(json!({"settings": serde_json::to_value(fp_model::ExportSettings { format: 1, jpeg_quality: 55, ..Default::default() }).unwrap_or_default()})),
         "pi.element.moveTo" => r(json!({"id": ellipse.0, "layer": ids.layer, "index": 0})),
         "pi.style.new" | "panel.styles.new" => rs(json!({"name": "Stil1"}), sel_ids(vec![rect])),
         "pi.style.apply" | "panel.styles.breakLink" => rs(json!({"name": "Stil1"}), Box::new(move |s: &mut Session| {
