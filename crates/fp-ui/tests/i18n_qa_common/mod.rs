@@ -1,25 +1,30 @@
-//! Prüfgerüst der Mehrsprachigkeit (Agent I18N-QA, Phase 6, `docs\I18N_PRUEFUNG.md`).
+//! Test harness for translatability (agent I18N-QA, phase 6, `docs\I18N_PRUEFUNG.md`).
 //!
-//! Geht die ganze Oberfläche offscreen (egui_kittest) in einer gewählten Sprache durch –
-//! Hauptfenster in allen Designs, jedes Menü und Untermenü, jedes Bedienfeld mit Bedienfeldmenü,
-//! den Inspektor für jede Elementart und jedes Werkzeug, jeden über Menüs erreichbaren Dialog,
-//! die Kontextmenüs und die Statuszeile – und prüft je Bild:
+//! Walks the whole user interface offscreen (egui_kittest) in a chosen language – main window in
+//! all themes, every menu and submenu, every panel with its panel menu, the inspector for every
+//! element kind and every tool, every dialog reachable from the menus, the context menus and the
+//! status bar – and checks per image:
 //!
-//! * (a) **Rohschlüssel**: sichtbarer Text, der wie ein Schlüssel aussieht (`dlg-canvas-size`),
-//! * (b) **unmarkierter Text** in der Testsprache `qps` (jeder Text aus `fp_i18n::t` trägt `[!! … !!]`;
-//!   ohne Markierung ist er fest im Code; Eigennamen, Formatnamen, Zahlen und Symbole ausgenommen),
-//! * (c) **Überlauf**: Text waagerecht abgeschnitten (ohne „…“), Text über den Fensterrand, Texte
-//!   überlappen sich, Text ragt teilweise in ein fremdes Bedienelement, Bedienelement über den Rand,
-//! * (d) **Deutsch unverändert**: Liste aller gezeichneten Texte mit Lage je Bild gegen den Stand
-//!   vor Phase 6 (Commit `30ddaec`, erzeugt mit `FP_QA_MODE=baseline`).
+//! * (a) **raw keys**: visible text that looks like a key (`dlg-canvas-size`),
+//! * (b) **unmarked text** in the test language `qps` (every text from `fp_i18n::t` carries `[!! … !!]`;
+//!   without the marker it is hard-coded; proper names, format names, numbers and symbols are exempt),
+//! * (c) **overflow**: text clipped horizontally (without "…"), text beyond the window edge, texts
+//!   overlapping, text reaching into a foreign widget, widget beyond the window edge,
+//! * (d) **German unchanged**: list of all drawn texts with their position per image against the
+//!   state before phase 6 (commit `30ddaec`, produced with `FP_QA_MODE=baseline`).
 //!
-//! Umgebungsvariablen (TE2-E, englisch; die alten deutschen Namen und Werte werden weiter gelesen):
-//! `FP_QA_MODE` (`current`/`baseline`, alt `FP_QA_MODUS` mit `aktuell`/`basis`), `FP_QA_OUT`
-//! (Ausgabeordner, alt `FP_QA_AUS`), `FP_QA_ONLY` (Teil der Bild-ID, alt `FP_QA_NUR`), `FP_QA_NEW`
-//! (Dialoge neu suchen, alt `FP_QA_NEU`).
+//! Environment variables (TE2-E; the old German names and values are still read):
+//! `FP_QA_MODE` (`current`/`baseline`, old `FP_QA_MODUS` with `aktuell`/`basis`), `FP_QA_OUT`
+//! (output folder, old `FP_QA_AUS`), `FP_QA_ONLY` (part of the image id, old `FP_QA_NUR`), `FP_QA_NEW`
+//! (search the dialogs again, old `FP_QA_NEU`).
 //!
-//! Ergebnisse als JSON nach `target-i18n-qa\i18n-qa\<modus>\<sprache>_<bereich>.json`; der Test
-//! `i18n_qa_bericht` fasst sie in `docs\I18N_PRUEFUNG.md` zusammen.
+//! Results as JSON in `target-i18n-qa\i18n-qa\<mode>\<language>_<area>.json`; the test
+//! `i18n_qa_report` sums them up in `docs\I18N_PRUEFUNG.md`.
+//!
+//! Identifiers (BA-086): area names, scene ids, finding kinds, the dialog cache (`dialogs.json`)
+//! and image names are English. Results written before (German names) stay readable:
+//! [`load_result`] falls back to the old file names and translates old scene ids and finding kinds
+//! ([`LEGACY_SEGMENTS`], [`LEGACY_KINDS`]).
 #![allow(dead_code)]
 
 use egui::epaint::Shape;
@@ -37,9 +42,9 @@ use std::path::PathBuf;
 
 pub type H = Harness<'static, FirepixelApp>;
 
-// ------------------------------------------------------------------ Konfiguration
+// ------------------------------------------------------------------ Configuration
 
-/// Fenstergröße (Gerätepixel) und Skalierung.
+/// Window size (device pixels) and scale.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Cfg {
     pub w: f32,
@@ -53,9 +58,9 @@ impl Cfg {
     }
 }
 
-/// Größe für die Textliste (Deutsch unverändert) und die Text-/Schlüsselprüfung.
+/// Size for the text list (German unchanged) and the text/key check.
 pub const CFG_TEXT: Cfg = Cfg { w: 1600.0, h: 1000.0, ppp: 1.0 };
-/// Größen für die Überlaufprüfung (Auftrag: 1024×768 und 1920×1080, 100 % und 150 %).
+/// Sizes for the overflow check (task: 1024×768 and 1920×1080, 100 % and 150 %).
 pub const CFG_LAYOUT: [Cfg; 4] = [
     Cfg { w: 1024.0, h: 768.0, ppp: 1.0 },
     Cfg { w: 1920.0, h: 1080.0, ppp: 1.0 },
@@ -63,23 +68,23 @@ pub const CFG_LAYOUT: [Cfg; 4] = [
     Cfg { w: 1920.0, h: 1080.0, ppp: 1.5 },
 ];
 
-/// Wurzel des Repositorys.
+/// Root of the repository.
 pub fn repo() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..").join("..")
 }
 
-/// Wert einer Umgebungsvariablen; ohne den neuen (englischen) Namen der alte deutsche als Rückfall.
+/// Value of an environment variable; without the new (English) name the old German one as fallback.
 pub fn env_var(name: &str, legacy: &str) -> Option<String> {
     std::env::var(name).or_else(|_| std::env::var(legacy)).ok()
 }
 
-/// Modus `current` (Standard).
+/// Mode `current` (default).
 pub const MODE_CURRENT: &str = "current";
-/// Modus `baseline` (Stand vor Phase 6 erzeugen).
+/// Mode `baseline` (produce the state before phase 6).
 pub const MODE_BASELINE: &str = "baseline";
 
-/// Modus: `current` (Standard) oder `baseline` (Stand vor Phase 6 erzeugen); aus `FP_QA_MODE`
-/// (alt `FP_QA_MODUS`, alte Werte `aktuell`/`basis` werden umgesetzt).
+/// Mode: `current` (default) or `baseline` (produce the state before phase 6); from `FP_QA_MODE`
+/// (old `FP_QA_MODUS`, old values `aktuell`/`basis` are translated).
 pub fn mode() -> String {
     match env_var("FP_QA_MODE", "FP_QA_MODUS").as_deref() {
         Some("baseline" | "basis") => MODE_BASELINE.into(),
@@ -88,20 +93,21 @@ pub fn mode() -> String {
     }
 }
 
-/// Ergebnisordner eines Modus; liegt dort noch nichts, der Ordner mit dem früheren deutschen
-/// Namen (`aktuell`/`basis`), falls vorhanden.
+/// Result folder of a mode; if there is nothing yet, the folder with the former German name
+/// (`aktuell`/`basis`/`basislayout`), if present.
 pub fn mode_dir(mode: &str) -> PathBuf {
     let dir = out_root().join(mode);
     let legacy = match mode {
         MODE_CURRENT => "aktuell",
         MODE_BASELINE => "basis",
+        MODE_BASELINE_LAYOUT => "basislayout",
         _ => return dir,
     };
     let old = out_root().join(legacy);
     if !dir.is_dir() && old.is_dir() { old } else { dir }
 }
 
-/// Ausgabeordner der Ergebnisse (`FP_QA_OUT`, alt `FP_QA_AUS`, sonst `<repo>\target-i18n-qa\i18n-qa`).
+/// Output folder of the results (`FP_QA_OUT`, old `FP_QA_AUS`, else `<repo>\target-i18n-qa\i18n-qa`).
 pub fn out_root() -> PathBuf {
     match env_var("FP_QA_OUT", "FP_QA_AUS") {
         Some(p) => PathBuf::from(p),
@@ -109,7 +115,7 @@ pub fn out_root() -> PathBuf {
     }
 }
 
-/// Nur ausgewählte Szenen/Bilder (`FP_QA_ONLY`, alt `FP_QA_NUR`; Teilzeichenkette der ID).
+/// Only selected scenes/images (`FP_QA_ONLY`, old `FP_QA_NUR`; substring of the id).
 pub fn only_filter() -> Option<String> {
     env_var("FP_QA_ONLY", "FP_QA_NUR").filter(|s| !s.is_empty())
 }
@@ -120,20 +126,20 @@ pub fn out_dir() -> PathBuf {
     d
 }
 
-/// Nur ausgewählte Bilder (`FP_QA_ONLY=menues:3` o. ä., Teilzeichenkette der Bild-ID).
+/// Only selected images (`FP_QA_ONLY=menu:3` or similar, substring of the image id).
 fn only() -> Option<String> {
     only_filter()
 }
 
-/// Sprache setzen (vor dem Aufbau der Oberfläche).
+/// Set the language (before the user interface is built).
 pub fn set_lang(lang: &str) {
     fp_engine::shell::disable();
-    assert!(fp_i18n::set_language(lang), "Sprache {lang} unbekannt");
+    assert!(fp_i18n::set_language(lang), "unknown language {lang}");
 }
 
-// ------------------------------------------------------------------ Testdokument
+// ------------------------------------------------------------------ Test document
 
-/// Kennungen der Testobjekte.
+/// Ids of the test objects.
 #[derive(Default, Clone, Debug)]
 pub struct Fix {
     pub rect: Vec<u64>,
@@ -180,8 +186,10 @@ fn temp_dir() -> PathBuf {
     d
 }
 
-/// Testdokument 800 × 600 mit allen Objektarten (wie die Gesamttests), zwei Seiten, zwei Status,
-/// Zwischenablage, Stil, zuletzt geöffnete Datei.
+/// Test document 800 × 600 with all object kinds (like the full tests), two pages, two states,
+/// clipboard, style, recently opened file. Names inside the document (`vorlage.fw.png`,
+/// `Bibliothekssymbol`, `Knopf` …) are user data and stay German on purpose: they are part of the
+/// German text lists compared against the baseline.
 pub fn fixture() -> (AppState, egui::Context, Fix) {
     fp_engine::shell::disable();
     let session = fp_ui::ui_commands::new_session(fp_engine::Preferences::new());
@@ -268,10 +276,10 @@ pub fn fixture() -> (AppState, egui::Context, Fix) {
     (st, ctx, f)
 }
 
-/// Inhalte des Testdokuments (Nutzerdaten, nie übersetzt).
+/// Contents of the test document (user data, never translated).
 pub const FIXTURE_TEXTS: &[&str] = &["Firepixel Test", "Bibliothekssymbol", "Grafik", "Knopf", "Animation", "Teststil", "vorlage", "gespeichert", "Eins", "Mein Arbeitsbereich", "Testbefehl", ".htm"];
 
-/// Eine Testsituation (Auswahl, Vorbereitungsbefehle).
+/// A test situation (selection, preparation commands).
 #[derive(Clone, Debug)]
 pub struct Candidate {
     pub label: &'static str,
@@ -284,43 +292,43 @@ fn c(label: &'static str, ids: Vec<u64>) -> Candidate {
     Candidate { label, prep: vec![], ids, pixels: false }
 }
 
-/// Auswahl-Situationen: Inspektor je Elementart und Verfügbarkeit der Menübefehle.
+/// Selection situations: inspector per element kind and availability of the menu commands.
 pub fn candidates(f: &Fix) -> Vec<Candidate> {
     let save = json!({ "path": f.save_to.to_string_lossy() });
     vec![
-        c("ohne Auswahl", vec![]),
-        c("Rechteck", f.rect.clone()),
-        c("Rechteck + Ellipse", vec![first(&f.rect), first(&f.ellipse)]),
-        c("drei Objekte", vec![first(&f.rect), first(&f.ellipse), first(&f.group)]),
-        c("Text", f.text.clone()),
-        c("Text + Ellipse", vec![first(&f.text), first(&f.ellipse)]),
-        c("Bitmap", f.bitmap.clone()),
-        c("Gruppe", f.group.clone()),
-        c("Maskengruppe", f.mask.clone()),
-        c("Grafiksymbol", f.instance.clone()),
-        c("zwei Instanzen", vec![first(&f.instance), first(&f.instance2)]),
-        c("Schaltfläche", f.button.clone()),
-        c("Animationssymbol", f.anim.clone()),
-        c("Segment", f.slice.clone()),
-        c("Hotspot", f.hotspot.clone()),
-        c("Pfad", f.path.clone()),
-        c("zwei offene Pfade", vec![first(&f.path), first(&f.path2)]),
-        c("Ellipse", f.ellipse.clone()),
-        c("Automatische Form", f.autoshape.clone()),
-        Candidate { label: "Pixelauswahl", prep: vec![], ids: vec![], pixels: true },
-        Candidate { label: "Bitmap + Pixelauswahl", prep: vec![], ids: f.bitmap.clone(), pixels: true },
-        Candidate { label: "gespeichert + geändert", prep: vec![("file.saveAs", save), ("draw.rectangle", json!({ "rect": [10, 10, 30, 30] }))], ids: vec![], pixels: false },
-        Candidate { label: "nach Rückgängig", prep: vec![("draw.rectangle", json!({ "rect": [10, 10, 30, 30] })), ("edit.undo", json!({}))], ids: vec![], pixels: false },
-        Candidate { label: "Text auf Pfad", prep: vec![("select.set", json!({ "ids": [first(&f.text), first(&f.ellipse)] })), ("text.attachToPath", json!({}))], ids: vec![], pixels: false },
+        c("no selection", vec![]),
+        c("rectangle", f.rect.clone()),
+        c("rectangle + ellipse", vec![first(&f.rect), first(&f.ellipse)]),
+        c("three objects", vec![first(&f.rect), first(&f.ellipse), first(&f.group)]),
+        c("text", f.text.clone()),
+        c("text + ellipse", vec![first(&f.text), first(&f.ellipse)]),
+        c("bitmap", f.bitmap.clone()),
+        c("group", f.group.clone()),
+        c("mask group", f.mask.clone()),
+        c("graphic symbol", f.instance.clone()),
+        c("two instances", vec![first(&f.instance), first(&f.instance2)]),
+        c("button", f.button.clone()),
+        c("animation symbol", f.anim.clone()),
+        c("slice", f.slice.clone()),
+        c("hotspot", f.hotspot.clone()),
+        c("path", f.path.clone()),
+        c("two open paths", vec![first(&f.path), first(&f.path2)]),
+        c("ellipse", f.ellipse.clone()),
+        c("auto shape", f.autoshape.clone()),
+        Candidate { label: "pixel selection", prep: vec![], ids: vec![], pixels: true },
+        Candidate { label: "bitmap + pixel selection", prep: vec![], ids: f.bitmap.clone(), pixels: true },
+        Candidate { label: "saved + modified", prep: vec![("file.saveAs", save), ("draw.rectangle", json!({ "rect": [10, 10, 30, 30] }))], ids: vec![], pixels: false },
+        Candidate { label: "after undo", prep: vec![("draw.rectangle", json!({ "rect": [10, 10, 30, 30] })), ("edit.undo", json!({}))], ids: vec![], pixels: false },
+        Candidate { label: "text on path", prep: vec![("select.set", json!({ "ids": [first(&f.text), first(&f.ellipse)] })), ("text.attachToPath", json!({}))], ids: vec![], pixels: false },
         Candidate {
-            label: "Segment mit Pop-up-Menü",
+            label: "slice with pop-up menu",
             prep: vec![("select.set", json!({ "ids": f.slice })), ("modify.popUpMenu.addPopUpMenu", json!({ "items": [{ "text": "Eins", "url": "eins.htm" }] }))],
             ids: f.slice.clone(),
             pixels: false,
         },
-        Candidate { label: "zwei Ebenen", prep: vec![("layer.add", json!({}))], ids: vec![], pixels: false },
-        Candidate { label: "Masterseite", prep: vec![("pi.page.setMaster", json!({ "index": 0 })), ("page.setCurrent", json!({ "index": 1 }))], ids: vec![], pixels: false },
-        Candidate { label: "importiertes Symbol", prep: vec![("panel.library.import", json!({ "path": f.file.to_string_lossy() }))], ids: vec![], pixels: false },
+        Candidate { label: "two layers", prep: vec![("layer.add", json!({}))], ids: vec![], pixels: false },
+        Candidate { label: "master page", prep: vec![("pi.page.setMaster", json!({ "index": 0 })), ("page.setCurrent", json!({ "index": 1 }))], ids: vec![], pixels: false },
+        Candidate { label: "imported symbol", prep: vec![("panel.library.import", json!({ "path": f.file.to_string_lossy() }))], ids: vec![], pixels: false },
     ]
 }
 
@@ -328,7 +336,7 @@ pub fn apply_candidate(st: &mut AppState, cand: &Candidate) {
     for (n, p) in &cand.prep {
         let _ = st.session.execute(n, p.clone());
     }
-    if cand.label != "Text auf Pfad" {
+    if cand.label != "text on path" {
         select(st, &cand.ids);
     }
     if cand.pixels {
@@ -337,7 +345,7 @@ pub fn apply_candidate(st: &mut AppState, cand: &Candidate) {
             let _ = st.session.execute("select.set", json!({ "ids": cand.ids, "mode": "add" }));
         }
     }
-    if cand.label == "importiertes Symbol" {
+    if cand.label == "imported symbol" {
         let n = st.session.active().map(|d| d.doc.symbols.len()).unwrap_or(0);
         st.dialogs.panel_sel.symbol = n.checked_sub(1);
     }
@@ -356,7 +364,7 @@ pub fn available(st: &AppState, name: &str) -> bool {
     }
 }
 
-/// Befehle, die im Prüflauf nie ausgeführt werden (Fremdprogramme, Beenden, Fensteraktionen).
+/// Commands the check run never executes (external programs, quit, window actions).
 pub fn skip_command(name: &str) -> bool {
     let n = name.to_lowercase();
     n.contains("browser") || n.contains("print") || n.contains("bridge") || n.contains("twain") || n.contains("scan") || n.contains("mail") || n.contains("extension") || n.contains("exchange") || n == "file.exit" || n == "file.quit" || n.contains("help.") && n != "help.about" || n.contains("preview") && n.contains("browser") || n.contains("openfolder")
@@ -407,9 +415,9 @@ pub fn click(h: &mut H, p: Pos2, button: PointerButton) {
     h.run_steps(4);
 }
 
-// ------------------------------------------------------------------ Texte und Prüfungen
+// ------------------------------------------------------------------ Texts and checks
 
-/// Ein gezeichneter Text mit seiner Ebene (Fenster, Popup, Hintergrund).
+/// A drawn text with its layer (window, popup, background).
 #[derive(Clone, Debug)]
 pub struct TextItem {
     pub text: String,
@@ -434,7 +442,7 @@ fn walk_shape(s: &Shape, clip: Rect, layer: LayerId, out: &mut Vec<TextItem>) {
 
 const TEXTS_ID: &str = "i18n-qa-texts";
 
-/// Am Ende jedes Bildes (vor dem Abschluss des Durchgangs): alle Texte je Ebene merken.
+/// At the end of every frame (before the pass ends): remember all texts per layer.
 pub fn capture_texts(ctx: &egui::Context) {
     let mut layers: Vec<LayerId> = ctx.memory(|m| m.layer_ids().collect());
     let extra: Vec<LayerId> = ctx.viewport(|v| v.this_pass.widgets.layers().map(|(l, _)| *l).chain(v.prev_pass.widgets.layers().map(|(l, _)| *l)).collect());
@@ -456,15 +464,15 @@ pub fn capture_texts(ctx: &egui::Context) {
     ctx.data_mut(|d| d.insert_temp(Id::new(TEXTS_ID), std::sync::Arc::new(out)));
 }
 
-/// Texte des letzten Bildes (in Zeichenreihenfolge der Ebenen).
+/// Texts of the last frame (in the paint order of the layers).
 pub fn texts(h: &H) -> Vec<TextItem> {
     h.ctx.data(|d| d.get_temp::<std::sync::Arc<Vec<TextItem>>>(Id::new(TEXTS_ID))).map(|a| (*a).clone()).unwrap_or_default()
 }
 
-/// Bereichspräfixe der Schlüssel (`crates\fp-i18n\README.md`).
+/// Area prefixes of the keys (`crates\fp-i18n\README.md`).
 pub const KEY_PREFIXES: &[&str] = &["language", "btn", "fmt", "unit", "key", "test", "menu", "cmd", "ctx", "pmenu", "tool", "shape", "dlg", "pi", "panel", "ui", "err", "msg", "ai", "filter", "effect", "blend", "lang", "welcome"];
 
-/// Rohschlüssel im Text (z. B. `dlg-canvas-size`, `cmd-file-open.tooltip`).
+/// Raw keys in the text (e.g. `dlg-canvas-size`, `cmd-file-open.tooltip`).
 pub fn raw_keys(text: &str) -> Vec<String> {
     let mut out = Vec::new();
     for tok in text.split(|c: char| !(c.is_ascii_alphanumeric() || c == '-' || c == '.' || c == '_')) {
@@ -481,14 +489,14 @@ pub fn raw_keys(text: &str) -> Vec<String> {
     out
 }
 
-/// Eigennamen, Formatnamen, Einheiten, Symbole (dürfen in `qps` unmarkiert sein).
+/// Proper names, format names, units, symbols (may be unmarked in `qps`).
 pub const PROPER: &[&str] = &[
     "Firepixel", "FW-PNG", "PNG", "PNG8", "PNG24", "PNG32", "GIF", "JPEG", "JPG", "WebP", "AVIF", "BMP", "TIFF", "TIF", "PSD", "PDF", "SVG", "ICO", "WBMP", "PICT", "JSF", "HTML", "CSS", "XML", "SWF", "AI", "EPS", "RGB", "RGBA", "HSB", "HSL",
     "CMYK", "HEX", "px", "pt", "dpi", "ppi", "K", "M", "MB", "KB", "GB", "kB", "Bit", "Bits", "fps", "ms", "s", "x", "X", "Y", "W", "H", "B", "R", "G", "A", "Arial", "Tahoma", "Verdana", "Segoe", "UI", "Times", "New", "Roman", "Courier", "Sans", "Serif", "Regular",
     "Bold", "Italic", "Normal", "Mono", "Consolas", "Calibri", "Cambria", "Georgia", "Impact", "Symbol", "Wingdings", "Webdings", "Marlett", "MCP", "SAM", "BiRefNet", "ONNX", "URL", "OK", "mm", "cm", "Myriad", "Pro", "Apache-2", "Hiera", "Tiny", "Small", "lite", "Matting", "HR", "jQuery", "Twain", "WebSnap", "Lossless",
 ];
 
-/// Schriftfamilien und -stile des Systems sowie die Eigennamen aller Sprachen.
+/// Font families and styles of the system plus the native names of all languages.
 pub fn proper_names() -> &'static BTreeSet<String> {
     static N: std::sync::OnceLock<BTreeSet<String>> = std::sync::OnceLock::new();
     N.get_or_init(|| {
@@ -507,7 +515,7 @@ pub fn proper_names() -> &'static BTreeSet<String> {
                 s.insert(st.clone());
             }
         }
-        // Sprachnamen stehen in ihrer eigenen Sprache (nie übersetzt)
+        // language names are written in their own language (never translated)
         for l in fp_i18n::languages() {
             s.insert(l.name);
         }
@@ -515,7 +523,7 @@ pub fn proper_names() -> &'static BTreeSet<String> {
     })
 }
 
-/// Darf ein Text in der Testsprache unmarkiert sein?
+/// May a text be unmarked in the test language?
 pub fn exempt_unmarked(text: &str) -> bool {
     let t = text.trim();
     if !t.chars().any(|c| c.is_alphabetic()) {
@@ -524,16 +532,16 @@ pub fn exempt_unmarked(text: &str) -> bool {
     if FIXTURE_TEXTS.iter().any(|f| t == *f || (f.len() > 9 && t.contains(f))) {
         return true;
     }
-    // Schriftnamen (Systemschriften, Stile) und Eigennamen der Sprachen
+    // font names (system fonts, styles) and native names of the languages
     if proper_names().contains(t) {
         return true;
     }
-    // Pfade, Dateinamen, Farben
+    // paths, file names, colours
     if t.contains(":\\") || t.contains('/') && !t.contains(' ') || t.ends_with(".png") || t.ends_with(".jsf") || t.starts_with('#') && t.len() <= 9 {
         return true;
     }
-    // nur aus Eigennamen/Einheiten/Zahlen/Symbolen, Kürzeln (≤ 3 Großbuchstaben, F-Tasten,
-    // Papierformate), Sprachcodes (de_DE)
+    // only proper names/units/numbers/symbols, abbreviations (≤ 3 capitals, F keys,
+    // paper sizes), language codes (de_DE)
     let short = |w: &str| (w.chars().count() <= 3 && w.chars().all(|c| c.is_uppercase() || c.is_ascii_digit())) || (w.starts_with('F') && w.len() <= 3 && w[1..].chars().all(|c| c.is_ascii_digit()));
     t.split(|c: char| !c.is_alphanumeric() && c != '-' && c != '_').filter(|w| !w.is_empty()).all(|w| {
         w.chars().all(|c| c.is_ascii_digit()) || PROPER.contains(&w) || short(w) || w.chars().count() == 1 || w.len() == 5 && w.as_bytes()[2] == b'_' || w.chars().all(|c| c.is_ascii_hexdigit()) && w.len() >= 6
@@ -544,15 +552,37 @@ pub fn marked(text: &str) -> bool {
     text.contains("[!!") || text.contains("!!]")
 }
 
-/// Arten von Befunden.
+/// Kinds of findings.
 pub const KINDS: &[(&str, &str)] = &[
-    ("rohschluessel", "Rohschlüssel sichtbar"),
-    ("unmarkiert", "unmarkierter Text (qps)"),
-    ("abgeschnitten", "Text waagerecht abgeschnitten (ohne „…“)"),
-    ("fensterrand", "Text über den Fensterrand"),
-    ("ueberlappung", "Texte überlappen"),
-    ("in_element", "Text ragt in ein fremdes Bedienelement"),
-    ("element_rand", "Bedienelement über den Fensterrand"),
+    (KIND_RAW_KEY, "raw key visible"),
+    (KIND_UNMARKED, "unmarked text (qps)"),
+    (KIND_CLIPPED, "text clipped horizontally (without \"…\")"),
+    (KIND_WINDOW_EDGE, "text beyond the window edge"),
+    (KIND_OVERLAP, "texts overlap"),
+    (KIND_IN_WIDGET, "text reaches into a foreign widget"),
+    (KIND_WIDGET_EDGE, "widget beyond the window edge"),
+];
+
+pub const KIND_RAW_KEY: &str = "raw_key";
+pub const KIND_UNMARKED: &str = "unmarked";
+pub const KIND_CLIPPED: &str = "clipped";
+pub const KIND_WINDOW_EDGE: &str = "window_edge";
+pub const KIND_OVERLAP: &str = "overlap";
+pub const KIND_IN_WIDGET: &str = "in_widget";
+pub const KIND_WIDGET_EDGE: &str = "widget_edge";
+
+/// Finding kinds that are overflows (layout).
+pub const LAYOUT_KINDS: &[&str] = &[KIND_CLIPPED, KIND_WINDOW_EDGE, KIND_OVERLAP, KIND_IN_WIDGET, KIND_WIDGET_EDGE];
+
+/// Former German finding kinds (results written before BA-086) → current kind.
+pub const LEGACY_KINDS: &[(&str, &str)] = &[
+    ("rohschluessel", KIND_RAW_KEY),
+    ("unmarkiert", KIND_UNMARKED),
+    ("abgeschnitten", KIND_CLIPPED),
+    ("fensterrand", KIND_WINDOW_EDGE),
+    ("ueberlappung", KIND_OVERLAP),
+    ("in_element", KIND_IN_WIDGET),
+    ("element_rand", KIND_WIDGET_EDGE),
 ];
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
@@ -568,7 +598,7 @@ fn r(x: Rect) -> String {
     format!("[{:.0},{:.0}–{:.0},{:.0}]", x.min.x, x.min.y, x.max.x, x.max.y)
 }
 
-/// Ebene, zu der ein Text gehört: oberstes Fenster/Popup, dessen Fläche den Clip-Bereich enthält.
+/// Layer a text belongs to: topmost window/popup whose area contains the clip rectangle.
 fn layer_of(h: &H, clip: Rect, screen: Rect) -> Option<LayerId> {
     h.ctx.memory(|m| {
         let mut best = None;
@@ -582,7 +612,7 @@ fn layer_of(h: &H, clip: Rect, screen: Rect) -> Option<LayerId> {
     })
 }
 
-/// Prüft das aktuelle Bild; `text_checks` = (a)/(b), `layout_checks` = (c).
+/// Checks the current image; `text_checks` = (a)/(b), `layout_checks` = (c).
 pub fn check(h: &H, lang: &str, scene: &str, cfg: &Cfg, items: &[TextItem], text_checks: bool, layout_checks: bool) -> Vec<Finding> {
     let mut out = Vec::new();
     let cl = cfg.label();
@@ -595,10 +625,10 @@ pub fn check(h: &H, lang: &str, scene: &str, cfg: &Cfg, items: &[TextItem], text
             }
             let keys = raw_keys(&t.text);
             if !keys.is_empty() {
-                push("rohschluessel", &t.text, keys.join(", "));
+                push(KIND_RAW_KEY, &t.text, keys.join(", "));
             }
             if lang == fp_i18n::PSEUDO_LANG && !marked(&t.text) && !exempt_unmarked(&t.text) {
-                push("unmarkiert", &t.text, r(t.rect));
+                push(KIND_UNMARKED, &t.text, r(t.rect));
             }
         }
     }
@@ -606,7 +636,7 @@ pub fn check(h: &H, lang: &str, scene: &str, cfg: &Cfg, items: &[TextItem], text
         return out;
     }
     let screen = h.ctx.content_rect();
-    // sichtbarer Teil je Text; verdeckte Texte (unter einem Popup/Fenster) zählen nicht
+    // visible part per text; covered texts (below a popup/window) do not count
     let order_of = |l: &LayerId| -> usize { h.ctx.memory(|m| m.layer_ids().position(|x| x == *l).unwrap_or(0)) + l.order as usize * 10_000 };
     let occluded: Vec<bool> = items
         .iter()
@@ -621,17 +651,17 @@ pub fn check(h: &H, lang: &str, scene: &str, cfg: &Cfg, items: &[TextItem], text
         if !v.is_positive() || v.height() < 0.5 * t.rect.height() {
             continue;
         }
-        // Pfade in Eingabefeldern dürfen abgeschnitten sein (Feld rollt)
+        // paths in input fields may be clipped (the field scrolls)
         let ell = t.text.trim_end().ends_with('…') || t.text.trim_end().ends_with("...") || t.text.contains(":\\");
         let cut_x = t.rect.min.x < t.clip.min.x - 1.0 || t.rect.max.x > t.clip.max.x + 1.0;
         let at_screen = t.rect.min.x < screen.min.x - 0.5 || t.rect.max.x > screen.max.x + 0.5 || t.rect.min.y < screen.min.y - 0.5 || t.rect.max.y > screen.max.y + 0.5;
         if at_screen {
-            push("fensterrand", &t.text, format!("{} Fenster {}", r(t.rect), r(screen)));
+            push(KIND_WINDOW_EDGE, &t.text, format!("{} window {}", r(t.rect), r(screen)));
         } else if cut_x && !ell && t.rect.width() - v.width() > 2.0 {
-            push("abgeschnitten", &t.text, format!("{} sichtbar {}", r(t.rect), r(v)));
+            push(KIND_CLIPPED, &t.text, format!("{} visible {}", r(t.rect), r(v)));
         }
     }
-    // Text über Text (gleicher Clip-Bereich, kein Duplikat)
+    // text over text (same clip rectangle, no duplicate)
     let shrink = |x: Rect| Rect::from_min_max(x.min + egui::vec2(1.0, 2.0), x.max - egui::vec2(1.0, 2.0));
     let mut pairs = BTreeSet::new();
     for i in 0..items.len() {
@@ -649,11 +679,11 @@ pub fn check(h: &H, lang: &str, scene: &str, cfg: &Cfg, items: &[TextItem], text
             }
             let key = (a.text.clone(), b.text.clone());
             if pairs.insert(key) {
-                push("ueberlappung", &format!("{} ⟷ {}", a.text, b.text), format!("{} × {}", r(a.rect), r(b.rect)));
+                push(KIND_OVERLAP, &format!("{} ⟷ {}", a.text, b.text), format!("{} × {}", r(a.rect), r(b.rect)));
             }
         }
     }
-    // Text ragt teilweise in ein fremdes Bedienelement derselben Ebene
+    // text partly reaches into a foreign widget of the same layer
     let widgets: Vec<(LayerId, Rect)> = h.ctx.viewport(|vp| {
         let mut v = Vec::new();
         for (layer, rects) in vp.prev_pass.widgets.layers() {
@@ -680,33 +710,33 @@ pub fn check(h: &H, lang: &str, scene: &str, cfg: &Cfg, items: &[TextItem], text
             if !x.is_positive() || x.width() < 4.0 || x.height() < 4.0 {
                 continue;
             }
-            // eigener Text im Element oder Element im Text (z. B. Symbolknopf in einer Zeile)
+            // own text inside the widget or widget inside the text (e.g. icon button in a row)
             if w.expand(1.5).contains_rect(v) || v.expand(1.5).contains_rect(*w) {
                 continue;
             }
-            // Text, der das Element nur am Rand berührt (Beschriftung neben dem Feld)
+            // text that only touches the widget at its edge (label next to the field)
             if x.width() < 6.0 || x.area() < 0.15 * v.area().min(w.area()) {
                 continue;
             }
             if seen.insert(t.text.clone()) {
-                push("in_element", &t.text, format!("Text {} Element {}", r(t.rect), r(*w)));
+                push(KIND_IN_WIDGET, &t.text, format!("text {} widget {}", r(t.rect), r(*w)));
             }
         }
     }
-    // Bedienelemente über den Fensterrand
+    // widgets beyond the window edge
     let outside: Vec<Rect> = widgets.iter().filter(|(_, w)| !screen.expand(1.0).contains_rect(*w)).map(|(_, w)| *w).collect();
     if !outside.is_empty() {
-        push("element_rand", "", format!("{} Elemente, z. B. {}", outside.len(), r(outside[0])));
+        push(KIND_WIDGET_EDGE, "", format!("{} widgets, e.g. {}", outside.len(), r(outside[0])));
     }
     out
 }
 
-/// Zeile der Textliste (Deutsch unverändert): Text mit Lage.
+/// Line of the text list (German unchanged): text with position.
 pub fn dump_line(t: &TextItem) -> String {
     format!("{}\t{:.0},{:.0},{:.0},{:.0}", normalize_text(&t.text).replace('\n', "⏎"), t.rect.min.x, t.rect.min.y, t.rect.width(), t.rect.height())
 }
 
-/// Laufabhängige Teile (Temp-Ordner mit Prozessnummer) vereinheitlichen.
+/// Normalise run-dependent parts (temp folder with process id).
 pub fn normalize_text(s: &str) -> String {
     match s.find("firepixel-i18n-qa\\") {
         Some(i) => {
@@ -718,12 +748,12 @@ pub fn normalize_text(s: &str) -> String {
     }
 }
 
-/// Neue Einträge, die Phase 6 bewusst hinzufügt (Ansicht ▸ Sprache): im Vergleich nicht als Abweichung zählen.
+/// New entries phase 6 adds on purpose (View ▸ Language, German UI text): not counted as a difference.
 pub const EXPECTED_NEW: &[&str] = &["Sprache"];
 
-// ------------------------------------------------------------------ Bilder (Szenen)
+// ------------------------------------------------------------------ Images (scenes)
 
-/// Ein Prüfbild: ID (sprachunabhängig), Beschreibung, Vorbereitung des Zustands, Bedienung.
+/// A check image: id (language independent), description, state preparation, interaction.
 pub struct Scene {
     pub id: String,
     pub label: String,
@@ -744,15 +774,15 @@ fn no_ui(_: &mut H, _: &Fix) -> Result<(), String> {
     Ok(())
 }
 
-/// Hauptfenster in allen Designs.
+/// Main window in all themes.
 pub fn scenes_main() -> Vec<Scene> {
     let mut v = Vec::new();
     for k in ThemeKind::ALL {
         let name = format!("{k:?}").to_lowercase();
-        v.push(scene(format!("haupt:{name}"), format!("Hauptfenster, Design {name}"), move |st, _| st.set_theme(k), no_ui));
+        v.push(scene(format!("main:{name}"), format!("main window, theme {name}"), move |st, _| st.set_theme(k), no_ui));
         v.push(scene(
-            format!("haupt:{name}:auswahl"),
-            format!("Hauptfenster mit Auswahl, Design {name}"),
+            format!("main:{name}:selection"),
+            format!("main window with selection, theme {name}"),
             move |st, f| {
                 st.set_theme(k);
                 select(st, &f.rect);
@@ -761,8 +791,8 @@ pub fn scenes_main() -> Vec<Scene> {
         ));
     }
     v.push(scene(
-        "haupt:leer",
-        "Hauptfenster ohne Dokument",
+        "main:empty",
+        "main window without document",
         |st, _| {
             while st.session.active_id().is_some() {
                 let _ = st.session.execute("file.close", json!({ "discard": true }));
@@ -771,8 +801,8 @@ pub fn scenes_main() -> Vec<Scene> {
         no_ui,
     ));
     v.push(scene(
-        "haupt:symbolmodus",
-        "Bedienfelder als Symbole mit Namen",
+        "main:iconic",
+        "panels as icons with names",
         |st, _| {
             st.settings.workspace.dock_mode = fp_ui::workspace::DockMode::IconicWithNames;
         },
@@ -781,25 +811,25 @@ pub fn scenes_main() -> Vec<Scene> {
     v
 }
 
-/// Statuszeile: Zeigerposition über der Leinwand, Meldung nach einem Befehl, Werkzeughinweise.
+/// Status bar: pointer position over the canvas, message after a command, tool hints.
 pub fn scenes_status() -> Vec<Scene> {
     let mut v = Vec::new();
-    v.push(scene("status:zeiger", "Statuszeile, Zeiger über der Leinwand", |_, _| {}, |h, _| {
-        let c = canvas_rect(h).ok_or("keine Leinwand")?;
+    v.push(scene("status:pointer", "status bar, pointer over the canvas", |_, _| {}, |h, _| {
+        let c = canvas_rect(h).ok_or("no canvas")?;
         hover(h, c.center());
         Ok(())
     }));
-    for (id, cmd, cand) in [("status:gruppieren", "modify.group", "Rechteck"), ("status:einfuegen", "edit.paste", "ohne Auswahl"), ("status:auswahl", "select.all", "ohne Auswahl")] {
-        v.push(scene(id, format!("Statuszeile nach {cmd}"), move |st, f| {
+    for (id, cmd, cand) in [("status:group", "modify.group", "rectangle"), ("status:paste", "edit.paste", "no selection"), ("status:select_all", "select.all", "no selection")] {
+        v.push(scene(id, format!("status bar after {cmd}"), move |st, f| {
             if let Some(c) = candidate_by_label(f, cand) {
                 apply_candidate(st, &c);
             }
             st.run(cmd, json!({}));
         }, no_ui));
     }
-    for (id, tool) in [("status:stift", fp_engine::ToolId::Pen), ("status:zauberstab", fp_engine::ToolId::MagicWand), ("status:text", fp_engine::ToolId::Text)] {
-        v.push(scene(id, format!("Statuszeile mit Werkzeug {tool:?} über der Leinwand"), move |st, _| st.push(Action::SetTool(tool)), |h, _| {
-            let c = canvas_rect(h).ok_or("keine Leinwand")?;
+    for (id, tool) in [("status:pen", fp_engine::ToolId::Pen), ("status:magic_wand", fp_engine::ToolId::MagicWand), ("status:text", fp_engine::ToolId::Text)] {
+        v.push(scene(id, format!("status bar with tool {tool:?} over the canvas"), move |st, _| st.push(Action::SetTool(tool)), |h, _| {
+            let c = canvas_rect(h).ok_or("no canvas")?;
             hover(h, c.center());
             Ok(())
         }));
@@ -812,7 +842,7 @@ pub fn canvas_rect(h: &H) -> Option<Rect> {
     widget_rect(h, Id::new(("canvas", id.0)))
 }
 
-/// Pfade aller Untermenüs (Indizes in `build_main_menu`), Menü selbst = `[i]`.
+/// Paths of all submenus (indices into `build_main_menu`), the menu itself = `[i]`.
 pub fn menu_paths(st: &AppState) -> Vec<(Vec<usize>, String)> {
     fn rec(nodes: &[Node], path: &mut Vec<usize>, label: &str, out: &mut Vec<(Vec<usize>, String)>, depth: usize) {
         for (k, n) in nodes.iter().enumerate() {
@@ -839,10 +869,10 @@ pub fn menu_paths(st: &AppState) -> Vec<(Vec<usize>, String)> {
     out
 }
 
-/// Öffnet Hauptmenü `path[0]` und fährt nacheinander über die Untermenü-Einträge.
+/// Opens main menu `path[0]` and hovers the submenu entries one after the other.
 pub fn open_menu_path(h: &mut H, path: &[usize]) -> Result<(), String> {
     let menus = fp_ui::menu::build_main_menu(st(h));
-    let (title, mut nodes): (String, Vec<Node>) = menus.get(path[0]).cloned().ok_or("Menü fehlt")?;
+    let (title, mut nodes): (String, Vec<Node>) = menus.get(path[0]).cloned().ok_or("menu missing")?;
     let first_label = |nodes: &[Node]| -> Option<String> {
         nodes.iter().find_map(|n| match n {
             Node::Item { label, .. } | Node::Sub { label, .. } => Some(label.clone()),
@@ -854,12 +884,12 @@ pub fn open_menu_path(h: &mut H, path: &[usize]) -> Result<(), String> {
     h.run_steps(3);
     let shown = |h: &H, w: &Option<String>| w.as_ref().is_none_or(|w| texts(h).iter().any(|t| &t.text == w));
     if !shown(h, &want0) {
-        // schmales Fenster: das Menü steht im Überlaufmenü „»“ (Popup mit kleinerem Index)
+        // narrow window: the menu sits in the overflow menu "»" (popup with a lower index)
         egui::Popup::close_id(&h.ctx, Id::new(("fp-main-menu", path[0])));
         h.run_steps(1);
         let mut ok = false;
         let mut seen_title = Vec::new();
-        // Index des Überlaufmenüs „»“ = Anzahl der Menüs, die in die Leiste passen (≤ path[0])
+        // index of the overflow menu "»" = number of menus that fit into the bar (≤ path[0])
         for j in (0..=path[0]).rev() {
             egui::Popup::open_id(&h.ctx, Id::new(("fp-main-menu", j)));
             h.run_steps(3);
@@ -878,19 +908,19 @@ pub fn open_menu_path(h: &mut H, path: &[usize]) -> Result<(), String> {
             h.run_steps(1);
         }
         if !ok {
-            return Err(format!("Menü „{title}“ öffnet nicht (auch nicht über „»“; Titel im Überlauf: {seen_title:?}, erster Eintrag {want0:?})"));
+            return Err(format!("menu \"{title}\" does not open (not via \"»\" either; titles in the overflow: {seen_title:?}, first entry {want0:?})"));
         }
     }
     for &k in &path[1..] {
-        let Some(Node::Sub { label, children, .. }) = nodes.get(k).cloned() else { return Err(format!("Untermenü {k} fehlt")) };
-        // Eintrag im zuletzt gezeichneten Popup suchen (letztes Vorkommen in Zeichenreihenfolge)
+        let Some(Node::Sub { label, children, .. }) = nodes.get(k).cloned() else { return Err(format!("submenu {k} missing")) };
+        // find the entry in the popup drawn last (last occurrence in paint order)
         let ts = texts(h);
-        let t = ts.iter().rev().find(|t| t.text == label).ok_or_else(|| format!("Eintrag „{label}“ nicht gezeichnet"))?;
+        let t = ts.iter().rev().find(|t| t.text == label).ok_or_else(|| format!("entry \"{label}\" not drawn"))?;
         let p = t.rect.center();
         hover(h, p);
         h.run_steps(3);
         nodes = children;
-        // erster Eintrag des Untermenüs sichtbar?
+        // first entry of the submenu visible?
         let want: Option<String> = nodes.iter().find_map(|n| match n {
             Node::Item { label, .. } | Node::Sub { label, .. } => Some(label.clone()),
             Node::Separator => None,
@@ -898,14 +928,14 @@ pub fn open_menu_path(h: &mut H, path: &[usize]) -> Result<(), String> {
         if let Some(w) = want
             && !texts(h).iter().any(|t| t.text == w)
         {
-            return Err(format!("Untermenü „{label}“ öffnet nicht"));
+            return Err(format!("submenu \"{label}\" does not open"));
         }
     }
     Ok(())
 }
 
-/// Auswahl-Situationen, in denen die Menüs geöffnet werden (damit Untermenüs aktiv sind).
-pub const MENU_STATES: &[&str] = &["Rechteck + Ellipse", "Text", "Bitmap", "Segment", "Pixelauswahl", "ohne Auswahl"];
+/// Selection situations in which the menus are opened (so that submenus are enabled).
+pub const MENU_STATES: &[&str] = &["rectangle + ellipse", "text", "bitmap", "slice", "pixel selection", "no selection"];
 
 pub fn scenes_menus(_st0: &AppState) -> Vec<Scene> {
     let mut seen = BTreeSet::new();
@@ -938,8 +968,8 @@ pub fn scenes_menus(_st0: &AppState) -> Vec<Scene> {
     out
 }
 
-/// Alle Einträge des Menübaums (auch gesperrte und nicht geöffnete Untermenüs), der
-/// Bedienfeldmenüs und der Leinwand-Kontextmenüs als Text: (a) Rohschlüssel, (b) unmarkiert.
+/// All entries of the menu tree (also disabled and unopened submenus), of the panel menus and
+/// of the canvas context menus as text: (a) raw keys, (b) unmarked.
 pub fn menu_tree_findings(lang: &str) -> Vec<Finding> {
     fn rec(nodes: &[Node], path: &str, out: &mut Vec<(String, String)>) {
         for n in nodes {
@@ -948,7 +978,7 @@ pub fn menu_tree_findings(lang: &str) -> Vec<Finding> {
                 Node::Item { label, shortcut, .. } => {
                     out.push((path.to_string(), label.clone()));
                     if let Some(s) = shortcut {
-                        out.push((format!("{path} ▸ {label} (Kürzel)"), s.clone()));
+                        out.push((format!("{path} ▸ {label} (shortcut)"), s.clone()));
                     }
                 }
                 Node::Sub { label, children, .. } => {
@@ -966,54 +996,54 @@ pub fn menu_tree_findings(lang: &str) -> Vec<Finding> {
         }
         st.process_actions(&ctx);
         for (title, nodes) in fp_ui::menu::build_main_menu(&st) {
-            entries.push(("Menüleiste".to_string(), title.clone()));
+            entries.push(("menu bar".to_string(), title.clone()));
             rec(&nodes, &title, &mut entries);
         }
         for p in PanelId::ALL {
-            rec(&fp_ui::menu::build_panel_menu(&st, *p), &format!("Bedienfeldmenü {p:?}"), &mut entries);
+            rec(&fp_ui::menu::build_panel_menu(&st, *p), &format!("panel menu {p:?}"), &mut entries);
         }
         for id in ["6906", "6910", "6912", "6913", "6914", "6915", "6916", "6925", "49120"] {
-            rec(&fp_ui::canvas::context::build(&st, fp_ui::canvas::context::entries(id)), &format!("Kontextmenü {id}"), &mut entries);
+            rec(&fp_ui::canvas::context::build(&st, fp_ui::canvas::context::entries(id)), &format!("context menu {id}"), &mut entries);
         }
     }
     let mut seen = BTreeSet::new();
     let mut out = Vec::new();
     for (path, text) in entries {
-        // Dokumentliste im Fenster-Menü (Nutzerdaten)
+        // document list in the Window menu (user data; "Unbenannt" is the German UI text)
         if text.contains("Unbenannt") || text.contains(".png") || !seen.insert(text.clone()) {
             continue;
         }
         let keys = raw_keys(&text);
         if !keys.is_empty() {
-            out.push(Finding { kind: "rohschluessel".into(), scene: format!("menübaum: {path}"), cfg: "Baum".into(), text: text.clone(), detail: keys.join(", ") });
+            out.push(Finding { kind: KIND_RAW_KEY.into(), scene: format!("menu_tree: {path}"), cfg: "tree".into(), text: text.clone(), detail: keys.join(", ") });
         }
         if lang == fp_i18n::PSEUDO_LANG && !marked(&text) && !exempt_unmarked(&text) {
-            out.push(Finding { kind: "unmarkiert".into(), scene: format!("menübaum: {path}"), cfg: "Baum".into(), text, detail: String::new() });
+            out.push(Finding { kind: KIND_UNMARKED.into(), scene: format!("menu_tree: {path}"), cfg: "tree".into(), text, detail: String::new() });
         }
     }
     out
 }
 
-/// Bedienfelder (vorn im Dock) und ihre Bedienfeldmenüs (≡).
+/// Panels (in front in the dock) and their panel menus (≡).
 pub fn scenes_panels() -> Vec<Scene> {
     let mut v = Vec::new();
     for p in PanelId::ALL.iter().copied() {
         let name = format!("{p:?}");
         let cand = match p {
-            PanelId::SymbolProperties | PanelId::DocumentLibrary => "Grafiksymbol",
-            PanelId::AutoShapeProperties => "Automatische Form",
-            PanelId::Url | PanelId::Behaviors => "Segment",
-            PanelId::Path => "Pfad",
-            PanelId::ImageEditing => "Bitmap",
-            _ => "Rechteck",
+            PanelId::SymbolProperties | PanelId::DocumentLibrary => "graphic symbol",
+            PanelId::AutoShapeProperties => "auto shape",
+            PanelId::Url | PanelId::Behaviors => "slice",
+            PanelId::Path => "path",
+            PanelId::ImageEditing => "bitmap",
+            _ => "rectangle",
         };
-        v.push(scene(format!("panel:{name}"), format!("Bedienfeld {name}"), move |st, f| {
+        v.push(scene(format!("panel:{name}"), format!("panel {name}"), move |st, f| {
             if let Some(c) = candidate_by_label(f, cand) {
                 apply_candidate(st, &c);
             }
             st.push(Action::ShowPanel(p));
         }, no_ui));
-        v.push(scene(format!("pmenu:{name}"), format!("Bedienfeldmenü {name}"), move |st, f| {
+        v.push(scene(format!("pmenu:{name}"), format!("panel menu {name}"), move |st, f| {
             if let Some(c) = candidate_by_label(f, cand) {
                 apply_candidate(st, &c);
             }
@@ -1027,10 +1057,10 @@ pub fn scenes_panels() -> Vec<Scene> {
                     let first = st(h).settings.workspace.floating.get(group).and_then(|f| f.group.panels.first().copied());
                     Id::new(("float", group, first)).with("g").with("menu")
                 }
-                // unten neben dem Inspektor: Menü des Inspektors (eigene Bilder unter „Inspektor“)
+                // at the bottom next to the inspector: menu of the inspector (own images under "inspector")
                 _ => return Ok(()),
             };
-            let r = widget_rect(h, id).ok_or("Menüknopf nicht gefunden")?;
+            let r = widget_rect(h, id).ok_or("menu button not found")?;
             click(h, r.center(), PointerButton::Primary);
             Ok(())
         }));
@@ -1038,13 +1068,13 @@ pub fn scenes_panels() -> Vec<Scene> {
     v
 }
 
-/// Inspektor je Elementart (alle Auswahl-Situationen) und je Werkzeug.
+/// Inspector per element kind (all selection situations) and per tool.
 pub fn scenes_inspector() -> Vec<Scene> {
     let mut v = Vec::new();
     let (_, _, f0) = fixture();
     for cand in candidates(&f0) {
         let label = cand.label;
-        v.push(scene(format!("pi:{label}"), format!("Inspektor: {label}"), move |st, f| {
+        v.push(scene(format!("pi:{label}"), format!("inspector: {label}"), move |st, f| {
             if let Some(c) = candidate_by_label(f, label) {
                 apply_candidate(st, &c);
             }
@@ -1052,7 +1082,7 @@ pub fn scenes_inspector() -> Vec<Scene> {
     }
     for t in fp_engine::tools::TOOLS {
         let id = t.id;
-        v.push(scene(format!("werkzeug:{}", t.name), format!("Werkzeug {}", t.name), move |st, _| {
+        v.push(scene(format!("tool:{}", t.name), format!("tool {}", t.name), move |st, _| {
             let _ = st.session.execute("select.set", json!({ "ids": [] }));
             st.push(Action::SetTool(id));
         }, no_ui));
@@ -1060,23 +1090,23 @@ pub fn scenes_inspector() -> Vec<Scene> {
     v
 }
 
-/// Kontextmenüs: Leinwand je Zustand, Dokumentreiter, Ebenenzeile.
+/// Context menus: canvas per state, document tab, layer row.
 pub fn scenes_context() -> Vec<Scene> {
     use fp_engine::ToolId as T;
     let mut v = Vec::new();
     let cases: Vec<(&str, &str, Option<T>, bool)> = vec![
-        ("nichts", "ohne Auswahl", None, false),
-        ("objekt", "Rechteck", None, false),
-        ("text", "Text", None, false),
-        ("pixel", "Pixelauswahl", Some(T::Marquee), false),
-        ("skalieren", "Rechteck", Some(T::Scale), false),
-        ("zuschneiden", "ohne Auswahl", Some(T::Crop), false),
-        ("zuschneiden_bitmap", "Bitmap", Some(T::Crop), true),
-        ("zoom", "ohne Auswahl", Some(T::Zoom), false),
-        ("pipette", "ohne Auswahl", Some(T::Eyedropper), false),
+        ("none", "no selection", None, false),
+        ("object", "rectangle", None, false),
+        ("text", "text", None, false),
+        ("pixel", "pixel selection", Some(T::Marquee), false),
+        ("scale", "rectangle", Some(T::Scale), false),
+        ("crop", "no selection", Some(T::Crop), false),
+        ("crop_bitmap", "bitmap", Some(T::Crop), true),
+        ("zoom", "no selection", Some(T::Zoom), false),
+        ("eyedropper", "no selection", Some(T::Eyedropper), false),
     ];
     for (id, cand, tool, bitmap_mode) in cases {
-        v.push(scene(format!("ctx:leinwand:{id}"), format!("Kontextmenü Leinwand: {id}"), move |st, f| {
+        v.push(scene(format!("ctx:canvas:{id}"), format!("context menu canvas: {id}"), move |st, f| {
             if let Some(c) = candidate_by_label(f, cand) {
                 apply_candidate(st, &c);
             }
@@ -1087,23 +1117,23 @@ pub fn scenes_context() -> Vec<Scene> {
                 st.push(Action::SetTool(t));
             }
         }, |h, _| {
-            let c = canvas_rect(h).ok_or("keine Leinwand")?;
-            // leere Stelle links oben in der Leinwandfläche (neben der Seite)
+            let c = canvas_rect(h).ok_or("no canvas")?;
+            // empty spot at the top left of the canvas area (next to the page)
             click(h, c.min + egui::vec2(12.0, 12.0), PointerButton::Secondary);
             Ok(())
         }));
     }
-    v.push(scene("ctx:reiter", "Kontextmenü Dokumentreiter", |_, _| {}, |h, _| {
-        let id = st(h).session.active_id().ok_or("kein Dokument")?;
-        let r = widget_rect(h, Id::new(("doc-tab", id.0))).ok_or("Reiter nicht gefunden")?;
+    v.push(scene("ctx:tab", "context menu document tab", |_, _| {}, |h, _| {
+        let id = st(h).session.active_id().ok_or("no document")?;
+        let r = widget_rect(h, Id::new(("doc-tab", id.0))).ok_or("tab not found")?;
         click(h, r.center(), PointerButton::Secondary);
         Ok(())
     }));
-    for (pid, what) in [(PanelId::Layers, "ebene"), (PanelId::Pages, "seite"), (PanelId::States, "status")] {
-        v.push(scene(format!("ctx:{what}"), format!("Kontextmenü Zeile im Bedienfeld {pid:?}"), move |st, _| st.push(Action::ShowPanel(pid)), move |h, _| {
+    for (pid, what) in [(PanelId::Layers, "layer"), (PanelId::Pages, "page"), (PanelId::States, "state")] {
+        v.push(scene(format!("ctx:{what}"), format!("context menu of a row in panel {pid:?}"), move |st, _| st.push(Action::ShowPanel(pid)), move |h, _| {
             h.run_steps(2);
             let name = {
-                let d = st(h).session.active().ok_or("kein Dokument")?;
+                let d = st(h).session.active().ok_or("no document")?;
                 match pid {
                     PanelId::Layers => fp_engine::docops::own_layers(&d.doc, d.page).into_iter().map(|(_, l)| l.name.clone()).next(),
                     PanelId::Pages => d.doc.pages.first().and_then(|p| p.name.clone()),
@@ -1114,10 +1144,10 @@ pub fn scenes_context() -> Vec<Scene> {
             let dock_x = ts.iter().map(|t| t.rect.center().x).fold(0.0f32, f32::max) - 400.0;
             let t = match name {
                 Some(n) => ts.iter().filter(|t| t.text == n).max_by(|a, b| a.rect.left().total_cmp(&b.rect.left())).cloned(),
-                // Status: erste Zeile mit Ziffer im Dock
+                // states: first row with a digit in the dock
                 None => ts.iter().filter(|t| t.rect.center().x > dock_x && t.text.trim().chars().next().is_some_and(|c| c.is_ascii_digit())).min_by(|a, b| a.rect.top().total_cmp(&b.rect.top())).cloned(),
             };
-            let t = t.ok_or("Zeile nicht gefunden")?;
+            let t = t.ok_or("row not found")?;
             click(h, t.rect.center(), PointerButton::Secondary);
             Ok(())
         }));
@@ -1125,9 +1155,9 @@ pub fn scenes_context() -> Vec<Scene> {
     v
 }
 
-// ------------------------------------------------------------------ Dialoge
+// ------------------------------------------------------------------ Dialogs
 
-/// Bauart des offenen Dialogs (sprachunabhängig).
+/// Kind of the open dialog (language independent).
 pub fn dialog_kind(st: &AppState, cmd: &str) -> Option<String> {
     let d = &st.dialogs;
     if let Some(f) = &d.form {
@@ -1137,37 +1167,37 @@ pub fn dialog_kind(st: &AppState, cmd: &str) -> Option<String> {
         return Some(format!("pending:{p:?}"));
     }
     if d.message.is_some() {
-        return Some(format!("meldung:{cmd}"));
+        return Some(format!("message:{cmd}"));
     }
     if d.confirm.is_some() {
-        return Some(format!("rueckfrage:{cmd}"));
+        return Some(format!("confirm:{cmd}"));
     }
     let named: [(&str, bool); 20] = [
-        ("neues_dokument", d.new_document.is_some()),
-        ("ungespeichert", d.unsaved.is_some()),
-        ("voreinstellungen", d.preferences.is_some()),
-        ("ueber", d.about),
-        ("arbeitsbereich_speichern", d.save_workspace.is_some()),
-        ("leinwandgroesse", d.canvas_size.is_some()),
-        ("bildgroesse", d.image_size.is_some()),
-        ("numerisch", d.numeric_transform.is_some()),
-        ("tonwert", d.levels.is_some()),
-        ("kurven", d.curves.is_some()),
+        ("new_document", d.new_document.is_some()),
+        ("unsaved", d.unsaved.is_some()),
+        ("preferences", d.preferences.is_some()),
+        ("about", d.about),
+        ("save_workspace", d.save_workspace.is_some()),
+        ("canvas_size", d.canvas_size.is_some()),
+        ("image_size", d.image_size.is_some()),
+        ("numeric_transform", d.numeric_transform.is_some()),
+        ("levels", d.levels.is_some()),
+        ("curves", d.curves.is_some()),
         ("export", d.export.is_some()),
-        ("bildvorschau", d.preview.is_some()),
-        ("tastenkuerzel", d.shortcuts.is_some()),
-        ("texteditor", d.text_editor.is_some()),
-        ("html_segment", d.html_slice.is_some()),
-        ("befehle_verwalten", d.saved_commands.is_some()),
-        ("rechtschreibung", d.spelling.is_some()),
+        ("image_preview", d.preview.is_some()),
+        ("shortcuts", d.shortcuts.is_some()),
+        ("text_editor", d.text_editor.is_some()),
+        ("html_slice", d.html_slice.is_some()),
+        ("saved_commands", d.saved_commands.is_some()),
+        ("spelling", d.spelling.is_some()),
         ("popup_editor", d.popup_editor.is_some()),
-        ("ki_fehlt", d.ai.missing.is_some()),
-        ("ki_verwalten", d.ai.manager.is_some()),
+        ("ai_missing", d.ai.missing.is_some()),
+        ("ai_manager", d.ai.manager.is_some()),
     ];
     named.iter().find(|(_, open)| *open).map(|(n, _)| n.to_string())
 }
 
-/// Ein gefundener Dialog: Befehl, Auswahl-Situation, Bauart.
+/// A dialog found: command, selection situation, kind.
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct DialogCase {
     pub command: String,
@@ -1175,7 +1205,7 @@ pub struct DialogCase {
     pub kind: String,
 }
 
-/// Alle Befehle aus Menüs, Bedienfeldmenüs und Leinwand-Kontextmenüs.
+/// All commands from menus, panel menus and canvas context menus.
 pub fn all_commands(st: &AppState) -> Vec<String> {
     fn rec(nodes: &[Node], out: &mut Vec<String>) {
         for n in nodes {
@@ -1202,9 +1232,11 @@ pub fn all_commands(st: &AppState) -> Vec<String> {
     out
 }
 
-/// Sucht zu jedem Befehl einen Dialog (zwischengespeichert in `dialoge.json`; neu mit `FP_QA_NEW=1`, alt `FP_QA_NEU`).
+/// Searches a dialog for every command (cached in `dialogs.json`; again with `FP_QA_NEW=1`, old `FP_QA_NEU`).
+/// A cache with the former German name (`dialoge.json`) is not read: its kinds and candidates
+/// carry the old German names, so it is simply rebuilt.
 pub fn discover_dialogs() -> Vec<DialogCase> {
-    let cache = out_root().join("dialoge.json");
+    let cache = out_root().join("dialogs.json");
     if env_var("FP_QA_NEW", "FP_QA_NEU").is_none()
         && let Ok(s) = std::fs::read_to_string(&cache)
         && let Ok(v) = serde_json::from_str::<Vec<DialogCase>>(&s)
@@ -1215,7 +1247,7 @@ pub fn discover_dialogs() -> Vec<DialogCase> {
     let cmds = all_commands(&st0);
     drop(st0);
     let cands = candidates(&f0);
-    // Verfügbarkeit je Situation einmal bestimmen
+    // determine the availability per situation once
     let mut avail: BTreeMap<String, Vec<usize>> = BTreeMap::new();
     for (ci, cand) in cands.iter().enumerate() {
         let (mut st, _, _) = fixture();
@@ -1253,10 +1285,10 @@ pub fn discover_dialogs() -> Vec<DialogCase> {
             }
         }
     }
-    // Dialoge ohne eigenen Menübefehl
-    for (cmd, kind) in [("ui.unsaved", "ungespeichert"), ("ui.saveWorkspace", "arbeitsbereich_speichern")] {
+    // dialogs without a menu command of their own
+    for (cmd, kind) in [("ui.unsaved", "unsaved"), ("ui.saveWorkspace", "save_workspace")] {
         if kinds.insert(kind.into()) {
-            found.push(DialogCase { command: cmd.into(), candidate: "gespeichert + geändert".into(), kind: kind.into() });
+            found.push(DialogCase { command: cmd.into(), candidate: "saved + modified".into(), kind: kind.into() });
         }
     }
     let _ = std::fs::create_dir_all(out_root());
@@ -1269,7 +1301,7 @@ pub fn scenes_dialogs() -> Vec<Scene> {
     for dc in discover_dialogs() {
         let DialogCase { command, candidate, kind } = dc.clone();
         let cmd2 = command.clone();
-        v.push(scene(format!("dlg:{kind}"), format!("Dialog {kind} ({command})"), move |st, f| {
+        v.push(scene(format!("dlg:{kind}"), format!("dialog {kind} ({command})"), move |st, f| {
             if let Some(c) = candidate_by_label(f, &candidate) {
                 apply_candidate(st, &c);
             }
@@ -1284,7 +1316,7 @@ pub fn scenes_dialogs() -> Vec<Scene> {
             }
         }, no_ui));
     }
-    // Live-Filter-Dialoge (Inspektor „+“): jeder einstellbare Effekt einmal
+    // live filter dialogs (inspector "+"): every adjustable effect once
     let mut fx_kinds = BTreeSet::new();
     for i in 0..80usize {
         let (mut st, _, f) = fixture();
@@ -1294,15 +1326,15 @@ pub fn scenes_dialogs() -> Vec<Scene> {
         if !fx_kinds.insert(form.id.clone()) {
             continue;
         }
-        v.push(scene(format!("fx:{}", form.id), format!("Live-Filter-Dialog Nr. {i}"), move |st, f| {
+        v.push(scene(format!("fx:{}", form.id), format!("live filter dialog no. {i}"), move |st, f| {
             select(st, &f.rect);
             fp_ui::dialogs::effects::begin_add(st, i);
         }, no_ui));
     }
-    // Menü „+“ der Live-Filter im Inspektor, Untermenüs nacheinander
+    // menu "+" of the live filters in the inspector, submenus one after the other
     for k in 0..9usize {
-        v.push(scene(format!("fx:menue:{k}"), format!("Live-Filter-Menü „+“, Untermenü {k}"), |st, f| select(st, &f.rect), move |h, _| {
-            let r = widget_rect(h, Id::new("pi-fx-add")).ok_or("Knopf „+“ nicht gefunden")?;
+        v.push(scene(format!("fx:menu:{k}"), format!("live filter menu \"+\", submenu {k}"), |st, f| select(st, &f.rect), move |h, _| {
+            let r = widget_rect(h, Id::new("pi-fx-add")).ok_or("button \"+\" not found")?;
             let before: BTreeSet<String> = texts(h).into_iter().map(|t| t.text).collect();
             click(h, r.center(), PointerButton::Primary);
             if k == 0 {
@@ -1316,11 +1348,11 @@ pub fn scenes_dialogs() -> Vec<Scene> {
             Ok(())
         }));
     }
-    // Voreinstellungen: jede Kategorie
+    // preferences: every category
     for i in 0..7usize {
-        v.push(scene(format!("dlg:voreinstellungen:{i}"), format!("Voreinstellungen, Kategorie {i}"), |st, _| st.run("edit.preferences", json!({})), move |h, _| {
+        v.push(scene(format!("dlg:preferences:{i}"), format!("preferences, category {i}"), |st, _| st.run("edit.preferences", json!({})), move |h, _| {
             h.run_steps(2);
-            let r = widget_rect(h, Id::new(("prefcat", i))).ok_or("Kategorie nicht gefunden")?;
+            let r = widget_rect(h, Id::new(("prefcat", i))).ok_or("category not found")?;
             click(h, r.center(), PointerButton::Primary);
             Ok(())
         }));
@@ -1328,7 +1360,7 @@ pub fn scenes_dialogs() -> Vec<Scene> {
     v
 }
 
-// ------------------------------------------------------------------ Ablauf
+// ------------------------------------------------------------------ Run
 
 #[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
 pub struct AreaResult {
@@ -1337,24 +1369,24 @@ pub struct AreaResult {
     pub mode: String,
     pub scenes: usize,
     pub configs: Vec<String>,
-    /// Bilder, die sich nicht herstellen ließen (Szene: Grund).
+    /// Images that could not be produced (scene: reason).
     pub failed: Vec<String>,
     pub findings: Vec<Finding>,
-    /// Textliste je Bild (nur Deutsch, `CFG_TEXT`).
+    /// Text list per image (German only, `CFG_TEXT`).
     pub dump: BTreeMap<String, Vec<String>>,
-    /// Abweichungen gegenüber dem Stand vor Phase 6 (nur Deutsch).
+    /// Differences against the state before phase 6 (German only).
     pub de_changed: Vec<String>,
     pub seconds: f64,
 }
 
-/// Ein Bild herstellen: Testdokument, Vorbereitung, Harness, Bedienung.
+/// Produce an image: test document, preparation, harness, interaction.
 pub fn build_scene(sc: &Scene, cfg: Cfg, wgpu: bool) -> Result<H, String> {
     let (mut st, ctx, f) = fixture();
     (sc.prep)(&mut st, &f);
     st.process_actions(&ctx);
-    let mut h = std::panic::catch_unwind(AssertUnwindSafe(|| harness_for(st, cfg, wgpu))).map_err(|e| format!("PANIK {}", panic_msg(&e)))?;
-    std::panic::catch_unwind(AssertUnwindSafe(|| (sc.ui)(&mut h, &f))).map_err(|e| format!("PANIK {}", panic_msg(&e)))??;
-    std::panic::catch_unwind(AssertUnwindSafe(|| h.run_steps(3))).map_err(|e| format!("PANIK {}", panic_msg(&e)))?;
+    let mut h = std::panic::catch_unwind(AssertUnwindSafe(|| harness_for(st, cfg, wgpu))).map_err(|e| format!("PANIC {}", panic_msg(&e)))?;
+    std::panic::catch_unwind(AssertUnwindSafe(|| (sc.ui)(&mut h, &f))).map_err(|e| format!("PANIC {}", panic_msg(&e)))??;
+    std::panic::catch_unwind(AssertUnwindSafe(|| h.run_steps(3))).map_err(|e| format!("PANIC {}", panic_msg(&e)))?;
     Ok(h)
 }
 
@@ -1362,12 +1394,12 @@ pub fn panic_msg(e: &Box<dyn std::any::Any + Send>) -> String {
     e.downcast_ref::<String>().cloned().or_else(|| e.downcast_ref::<&str>().map(|s| s.to_string())).unwrap_or_default()
 }
 
-/// Prüft alle Bilder eines Bereichs in einer Sprache und schreibt das Ergebnis.
+/// Checks all images of an area in one language and writes the result.
 pub fn run_area(lang: &str, area: &str, scenes: Vec<Scene>) -> AreaResult {
     run_area_with(lang, area, scenes, Vec::new())
 }
 
-/// Wie [`run_area`], mit zusätzlichen Befunden (z. B. aus dem Menübaum).
+/// Like [`run_area`], with additional findings (e.g. from the menu tree).
 pub fn run_area_with(lang: &str, area: &str, scenes: Vec<Scene>, extra: Vec<Finding>) -> AreaResult {
     let t0 = std::time::Instant::now();
     let filter = only();
@@ -1377,7 +1409,7 @@ pub fn run_area_with(lang: &str, area: &str, scenes: Vec<Scene>, extra: Vec<Find
     res.configs = std::iter::once(CFG_TEXT).chain(layout_cfgs.iter().copied()).map(|c| c.label()).collect();
     res.findings.extend(extra);
     for sc in &scenes {
-        // Text-/Schlüsselprüfung und Textliste
+        // text/key check and text list
         match build_scene(sc, CFG_TEXT, false) {
             Ok(h) => {
                 let items = texts(&h);
@@ -1401,24 +1433,25 @@ pub fn run_area_with(lang: &str, area: &str, scenes: Vec<Scene>, extra: Vec<Find
         }
     }
     if lang == "de" && mode() != MODE_BASELINE {
-        res.de_changed = compare_with_basis(area, &res.dump);
+        res.de_changed = compare_with_baseline(area, &res.dump);
     }
     res.seconds = t0.elapsed().as_secs_f64();
-    let name = if filter.is_some() { format!("{lang}_{area}_teil.json") } else { format!("{lang}_{area}.json") };
+    let name = if filter.is_some() { format!("{lang}_{area}_partial.json") } else { format!("{lang}_{area}.json") };
     let _ = std::fs::write(out_dir().join(name), serde_json::to_string_pretty(&res).unwrap_or_default());
-    eprintln!("{lang}/{area}: {} Bilder, {} Befunde, {} nicht herstellbar, {} Abweichungen Deutsch, {:.0} s", res.scenes, res.findings.len(), res.failed.len(), res.de_changed.len(), res.seconds);
+    eprintln!("{lang}/{area}: {} images, {} findings, {} not producible, {} German differences, {:.0} s", res.scenes, res.findings.len(), res.failed.len(), res.de_changed.len(), res.seconds);
     res
 }
 
-/// Bilder ausgewählter Szenen (wgpu) nach `docs\screenshots\<prefix><datei>.png`; mit `vergleich`
-/// zusätzlich Pixelvergleich gegen vorhandene Bilder `<vergleich><datei>.png` (Anteil abweichender
-/// Pixel je Bild). Ohne Grafikadapter leer.
+/// Images of selected scenes (wgpu) to `docs\screenshots\<prefix><file>.png`; with `compare`
+/// also a pixel comparison against existing images `<compare><file>.png` (share of differing
+/// pixels per image; images with the names used before BA-086 are found as well). Empty without
+/// a graphics adapter.
 pub fn render_images(scenes: &[Scene], pick: &[(&str, &str)], cfg: Cfg, prefix: &str, compare: Option<&str>) -> Vec<String> {
     let dir = repo().join("docs").join("screenshots");
     let mut report = Vec::new();
     for (id, file) in pick {
         let Some(sc) = scenes.iter().find(|s| s.id == *id) else {
-            report.push(format!("{id}: Szene fehlt"));
+            report.push(format!("{id}: scene missing"));
             continue;
         };
         let mut h = match build_scene(sc, cfg, true) {
@@ -1432,23 +1465,23 @@ pub fn render_images(scenes: &[Scene], pick: &[(&str, &str)], cfg: Cfg, prefix: 
         let img = match h.render() {
             Ok(i) => i,
             Err(e) => {
-                report.push(format!("kein Grafikadapter: {e}"));
+                report.push(format!("no graphics adapter: {e}"));
                 return report;
             }
         };
         let path = dir.join(format!("{prefix}{file}.png"));
         if let Some(cmp) = compare {
-            match load_png(&dir.join(format!("{cmp}{file}.png"))) {
+            match load_png(&dir.join(format!("{cmp}{file}.png"))).or_else(|| load_png(&dir.join(format!("{}{}.png", legacy_image_prefix(cmp), legacy_image_name(file))))) {
                 Some((w, hh, old)) => {
                     if (w, hh) != (img.width(), img.height()) {
-                        report.push(format!("{file}: Größe {w}×{hh} → {}×{}", img.width(), img.height()));
+                        report.push(format!("{file}: size {w}×{hh} → {}×{}", img.width(), img.height()));
                     } else {
                         let n = old.as_chunks::<4>().0.iter().zip(img.as_raw().as_chunks::<4>().0.iter()).filter(|(a, b)| a.iter().zip(b.iter()).any(|(x, y)| x.abs_diff(*y) > 8)).count();
                         let total = (w * hh) as f64;
-                        report.push(format!("{file}: {n} abweichende Pixel ({:.3} %)", 100.0 * n as f64 / total));
+                        report.push(format!("{file}: {n} differing pixels ({:.3} %)", 100.0 * n as f64 / total));
                     }
                 }
-                None => report.push(format!("{file}: kein Vergleichsbild")),
+                None => report.push(format!("{file}: no comparison image")),
             }
         }
         let _ = img.save(&path);
@@ -1456,15 +1489,15 @@ pub fn render_images(scenes: &[Scene], pick: &[(&str, &str)], cfg: Cfg, prefix: 
     report
 }
 
-/// Standardbilder: Hauptfenster je Design, ein Menü, ein Dialog, Inspektor (Rechteck), Normal und Dunkel.
+/// Standard images: main window per theme, a menu, a dialog, inspector (rectangle), normal and dark.
 pub fn images_standard(prefix: &str, compare: Option<&str>) -> Vec<String> {
     let mut all = scenes_main();
     let (st0, _, _) = fixture();
     all.extend(scenes_menus(&st0).into_iter().filter(|s| s.id == "menu:4" || s.id == "menu:0"));
     drop(st0);
-    all.extend(scenes_dialogs().into_iter().filter(|s| s.id == "dlg:leinwandgroesse" || s.id == "dlg:neues_dokument" || s.id == "dlg:voreinstellungen:0"));
-    all.extend(scenes_inspector().into_iter().filter(|s| s.id == "pi:Rechteck" || s.id == "pi:Text"));
-    // Dunkel-Varianten von Dialog und Inspektor
+    all.extend(scenes_dialogs().into_iter().filter(|s| s.id == "dlg:canvas_size" || s.id == "dlg:new_document" || s.id == "dlg:preferences:0"));
+    all.extend(scenes_inspector().into_iter().filter(|s| s.id == "pi:rectangle" || s.id == "pi:text"));
+    // dark variants of dialog and inspector
     let dark = |id: &str, scenes: Vec<Scene>| -> Vec<Scene> {
         scenes
             .into_iter()
@@ -1472,8 +1505,8 @@ pub fn images_standard(prefix: &str, compare: Option<&str>) -> Vec<String> {
             .map(|s| {
                 let Scene { id, label, prep, ui } = s;
                 Scene {
-                    id: format!("{id}:dunkel"),
-                    label: format!("{label} (Dunkel)"),
+                    id: format!("{id}:dark"),
+                    label: format!("{label} (dark)"),
                     prep: Box::new(move |st: &mut AppState, f: &Fix| {
                         st.set_theme(ThemeKind::Dark);
                         prep(st, f)
@@ -1483,79 +1516,108 @@ pub fn images_standard(prefix: &str, compare: Option<&str>) -> Vec<String> {
             })
             .collect()
     };
-    all.extend(dark("dlg:leinwandgroesse", scenes_dialogs()));
-    all.extend(dark("pi:Rechteck", scenes_inspector()));
+    all.extend(dark("dlg:canvas_size", scenes_dialogs()));
+    all.extend(dark("pi:rectangle", scenes_inspector()));
     let pick = [
-        ("haupt:normal:auswahl", "hauptfenster_normal"),
-        ("haupt:dark:auswahl", "hauptfenster_dunkel"),
-        ("haupt:oled:auswahl", "hauptfenster_oled"),
-        ("menu:0", "menue_datei"),
-        ("menu:4", "menue_modifizieren"),
-        ("dlg:leinwandgroesse", "dialog_leinwandgroesse_normal"),
-        ("dlg:leinwandgroesse:dunkel", "dialog_leinwandgroesse_dunkel"),
-        ("dlg:neues_dokument", "dialog_neues_dokument"),
-        ("dlg:voreinstellungen:0", "dialog_voreinstellungen"),
-        ("pi:Rechteck", "inspektor_rechteck_normal"),
-        ("pi:Rechteck:dunkel", "inspektor_rechteck_dunkel"),
-        ("pi:Text", "inspektor_text"),
+        ("main:normal:selection", "main_window_normal"),
+        ("main:dark:selection", "main_window_dark"),
+        ("main:oled:selection", "main_window_oled"),
+        ("menu:0", "menu_file"),
+        ("menu:4", "menu_modify"),
+        ("dlg:canvas_size", "dialog_canvas_size_normal"),
+        ("dlg:canvas_size:dark", "dialog_canvas_size_dark"),
+        ("dlg:new_document", "dialog_new_document"),
+        ("dlg:preferences:0", "dialog_preferences"),
+        ("pi:rectangle", "inspector_rectangle_normal"),
+        ("pi:rectangle:dark", "inspector_rectangle_dark"),
+        ("pi:text", "inspector_text"),
     ];
     render_images(&all, &pick, Cfg { w: 1600.0, h: 1000.0, ppp: 1.0 }, prefix, compare)
 }
 
-/// Die Prüftests eines Sprachlaufs (je Bereich ein Test, parallel ausführbar).
+/// Image prefix of the German baseline images.
+pub const IMAGE_PREFIX_BASELINE_DE: &str = "phase6_baseline_de_";
+
+/// Image names (without prefix) used before BA-086 → current name.
+pub const LEGACY_IMAGE_NAMES: &[(&str, &str)] = &[
+    ("hauptfenster_normal", "main_window_normal"),
+    ("hauptfenster_dunkel", "main_window_dark"),
+    ("hauptfenster_oled", "main_window_oled"),
+    ("menue_datei", "menu_file"),
+    ("menue_modifizieren", "menu_modify"),
+    ("dialog_leinwandgroesse_normal", "dialog_canvas_size_normal"),
+    ("dialog_leinwandgroesse_dunkel", "dialog_canvas_size_dark"),
+    ("dialog_neues_dokument", "dialog_new_document"),
+    ("dialog_voreinstellungen", "dialog_preferences"),
+    ("inspektor_rechteck_normal", "inspector_rectangle_normal"),
+    ("inspektor_rechteck_dunkel", "inspector_rectangle_dark"),
+    ("inspektor_text", "inspector_text"),
+];
+
+/// Former name of an image (for comparisons against images written before BA-086).
+pub fn legacy_image_name(name: &str) -> &str {
+    LEGACY_IMAGE_NAMES.iter().find(|(_, new)| *new == name).map_or(name, |(old, _)| old)
+}
+
+/// Former image prefix (`phase6_baseline_de_` was `phase6_basis_de_`).
+pub fn legacy_image_prefix(prefix: &str) -> String {
+    prefix.replace("_baseline_", "_basis_")
+}
+
+/// The check tests of a language run (one test per area, can run in parallel).
 #[macro_export]
 macro_rules! qa_tests {
     ($lang:expr) => {
         #[test]
         #[ignore]
-        fn hauptfenster() {
+        fn main_window() {
             i18n_qa_common::set_lang($lang);
-            i18n_qa_common::run_area($lang, "hauptfenster", i18n_qa_common::scenes_main());
+            i18n_qa_common::run_area($lang, "main_window", i18n_qa_common::scenes_main());
         }
         #[test]
         #[ignore]
-        fn statuszeile() {
+        fn status_bar() {
             i18n_qa_common::set_lang($lang);
-            i18n_qa_common::run_area($lang, "statuszeile", i18n_qa_common::scenes_status());
+            i18n_qa_common::run_area($lang, "status_bar", i18n_qa_common::scenes_status());
         }
         #[test]
         #[ignore]
-        fn menues() {
+        fn menus() {
             i18n_qa_common::set_lang($lang);
             let (st, _, _) = i18n_qa_common::fixture();
             let sc = i18n_qa_common::scenes_menus(&st);
             drop(st);
             let tree = i18n_qa_common::menu_tree_findings($lang);
-            i18n_qa_common::run_area_with($lang, "menues", sc, tree);
+            i18n_qa_common::run_area_with($lang, "menus", sc, tree);
         }
         #[test]
         #[ignore]
-        fn bedienfelder() {
+        fn panels() {
             i18n_qa_common::set_lang($lang);
-            i18n_qa_common::run_area($lang, "bedienfelder", i18n_qa_common::scenes_panels());
+            i18n_qa_common::run_area($lang, "panels", i18n_qa_common::scenes_panels());
         }
         #[test]
         #[ignore]
-        fn inspektor() {
+        fn inspector() {
             i18n_qa_common::set_lang($lang);
-            i18n_qa_common::run_area($lang, "inspektor", i18n_qa_common::scenes_inspector());
+            i18n_qa_common::run_area($lang, "inspector", i18n_qa_common::scenes_inspector());
         }
         #[test]
         #[ignore]
-        fn dialoge() {
+        fn dialogs() {
             i18n_qa_common::set_lang($lang);
-            i18n_qa_common::run_area($lang, "dialoge", i18n_qa_common::scenes_dialogs());
+            i18n_qa_common::run_area($lang, "dialogs", i18n_qa_common::scenes_dialogs());
         }
         #[test]
         #[ignore]
-        fn kontextmenues() {
+        fn context_menus() {
             i18n_qa_common::set_lang($lang);
-            i18n_qa_common::run_area($lang, "kontextmenues", i18n_qa_common::scenes_context());
+            i18n_qa_common::run_area($lang, "context_menus", i18n_qa_common::scenes_context());
         }
     };
 }
 
-/// PNG als RGBA8 laden.
+/// Load a PNG as RGBA8.
 pub fn load_png(path: &std::path::Path) -> Option<(u32, u32, Vec<u8>)> {
     let dec = png::Decoder::new(std::io::BufReader::new(std::fs::File::open(path).ok()?));
     let mut rd = dec.read_info().ok()?;
@@ -1569,26 +1631,28 @@ pub fn load_png(path: &std::path::Path) -> Option<(u32, u32, Vec<u8>)> {
     }
 }
 
-/// Vergleicht die deutsche Textliste mit dem Stand vor Phase 6.
-pub fn compare_with_basis(area: &str, dump: &BTreeMap<String, Vec<String>>) -> Vec<String> {
-    let path = mode_dir(MODE_BASELINE).join(format!("de_{area}.json"));
-    let Ok(s) = std::fs::read_to_string(&path) else { return vec![format!("keine Basis {}", path.display())] };
-    let Ok(base) = serde_json::from_str::<AreaResult>(&s) else { return vec!["Basis unlesbar".into()] };
+/// Compares the German text list with the state before phase 6.
+pub fn compare_with_baseline(area: &str, dump: &BTreeMap<String, Vec<String>>) -> Vec<String> {
+    let base = match load_result(MODE_BASELINE, "de", area) {
+        Ok(Some(b)) => b,
+        Ok(None) => return vec![format!("no baseline {}", mode_dir(MODE_BASELINE).join(format!("de_{area}.json")).display())],
+        Err(_) => return vec!["baseline unreadable".into()],
+    };
     let mut out = Vec::new();
     for (id, lines) in dump {
         let Some(old) = base.dump.get(id) else {
-            out.push(format!("{id}: neu (nicht in der Basis)"));
+            out.push(format!("{id}: new (not in the baseline)"));
             continue;
         };
-        // Texte mit Temp-Pfad: Breite hängt von der Prozessnummer ab → nur Text vergleichen
+        // texts with a temp path: the width depends on the process id → compare the text only
         let norm = |v: &Vec<String>| -> BTreeSet<String> { v.iter().map(|l| normalize_text(l)).map(|l| if l.contains("firepixel-i18n-qa\\X") { l.split('\t').next().unwrap_or("").to_string() } else { l }).filter(|l| !EXPECTED_NEW.iter().any(|e| l.split('\t').next() == Some(*e))).collect() };
         let a: BTreeSet<String> = norm(old);
         let b: BTreeSet<String> = norm(lines);
         if a == b {
             continue;
         }
-        // je geänderte Zeile ein Eintrag („−“ vorher, „+“ jetzt), damit gleiche Änderungen über
-        // viele Bilder im Bericht zusammengefasst werden können
+        // one entry per changed line ("−" before, "+" now), so that the same change across many
+        // images can be summed up in the report
         for g in a.difference(&b).take(10) {
             out.push(format!("{id}: − {g}"));
         }
@@ -1598,8 +1662,147 @@ pub fn compare_with_basis(area: &str, dump: &BTreeMap<String, Vec<String>>) -> V
     }
     for id in base.dump.keys() {
         if !dump.contains_key(id) && only().is_none() {
-            out.push(format!("{id}: fehlt (war in der Basis)"));
+            out.push(format!("{id}: missing (was in the baseline)"));
         }
     }
     out
+}
+
+// ------------------------------------------------------------------ Names before BA-086
+
+/// Mode folder with the German layout results before phase 6 (used by the report).
+pub const MODE_BASELINE_LAYOUT: &str = "baseline_layout";
+
+/// Former German area names (results written before BA-086) → current name.
+pub const LEGACY_AREAS: &[(&str, &str)] = &[
+    ("hauptfenster", "main_window"),
+    ("menues", "menus"),
+    ("bedienfelder", "panels"),
+    ("inspektor", "inspector"),
+    ("dialoge", "dialogs"),
+    ("kontextmenues", "context_menus"),
+    ("statuszeile", "status_bar"),
+];
+
+/// Former German parts of scene ids (between `:`, candidate labels included) → current part.
+pub const LEGACY_SEGMENTS: &[(&str, &str)] = &[
+    ("haupt", "main"),
+    ("auswahl", "selection"),
+    ("leer", "empty"),
+    ("symbolmodus", "iconic"),
+    ("zeiger", "pointer"),
+    ("gruppieren", "group"),
+    ("einfuegen", "paste"),
+    ("stift", "pen"),
+    ("zauberstab", "magic_wand"),
+    ("werkzeug", "tool"),
+    ("leinwand", "canvas"),
+    ("nichts", "none"),
+    ("objekt", "object"),
+    ("skalieren", "scale"),
+    ("zuschneiden", "crop"),
+    ("zuschneiden_bitmap", "crop_bitmap"),
+    ("pipette", "eyedropper"),
+    ("reiter", "tab"),
+    ("ebene", "layer"),
+    ("seite", "page"),
+    ("meldung", "message"),
+    ("rueckfrage", "confirm"),
+    ("neues_dokument", "new_document"),
+    ("ungespeichert", "unsaved"),
+    ("voreinstellungen", "preferences"),
+    ("ueber", "about"),
+    ("arbeitsbereich_speichern", "save_workspace"),
+    ("leinwandgroesse", "canvas_size"),
+    ("bildgroesse", "image_size"),
+    ("numerisch", "numeric_transform"),
+    ("tonwert", "levels"),
+    ("kurven", "curves"),
+    ("bildvorschau", "image_preview"),
+    ("tastenkuerzel", "shortcuts"),
+    ("texteditor", "text_editor"),
+    ("html_segment", "html_slice"),
+    ("befehle_verwalten", "saved_commands"),
+    ("rechtschreibung", "spelling"),
+    ("ki_fehlt", "ai_missing"),
+    ("ki_verwalten", "ai_manager"),
+    ("menue", "menu"),
+    ("dunkel", "dark"),
+    ("ohne Auswahl", "no selection"),
+    ("Rechteck", "rectangle"),
+    ("Rechteck + Ellipse", "rectangle + ellipse"),
+    ("drei Objekte", "three objects"),
+    ("Text", "text"),
+    ("Text + Ellipse", "text + ellipse"),
+    ("Bitmap", "bitmap"),
+    ("Gruppe", "group"),
+    ("Maskengruppe", "mask group"),
+    ("Grafiksymbol", "graphic symbol"),
+    ("zwei Instanzen", "two instances"),
+    ("Schaltfläche", "button"),
+    ("Animationssymbol", "animation symbol"),
+    ("Segment", "slice"),
+    ("Hotspot", "hotspot"),
+    ("Pfad", "path"),
+    ("zwei offene Pfade", "two open paths"),
+    ("Ellipse", "ellipse"),
+    ("Automatische Form", "auto shape"),
+    ("Pixelauswahl", "pixel selection"),
+    ("Bitmap + Pixelauswahl", "bitmap + pixel selection"),
+    ("gespeichert + geändert", "saved + modified"),
+    ("nach Rückgängig", "after undo"),
+    ("Text auf Pfad", "text on path"),
+    ("Segment mit Pop-up-Menü", "slice with pop-up menu"),
+    ("zwei Ebenen", "two layers"),
+    ("Masterseite", "master page"),
+    ("importiertes Symbol", "imported symbol"),
+];
+
+/// Current scene id of a scene id written before BA-086 (current ids pass through unchanged).
+pub fn legacy_scene_id(id: &str) -> String {
+    // `status:auswahl` (after "select all") is the only id whose part means something else
+    if id == "status:auswahl" {
+        return "status:select_all".into();
+    }
+    if let Some(rest) = id.strip_prefix("menübaum: ") {
+        return format!("menu_tree: {rest}");
+    }
+    id.split(':').map(|p| LEGACY_SEGMENTS.iter().find(|(old, _)| *old == p).map_or(p, |(_, new)| new)).collect::<Vec<_>>().join(":")
+}
+
+/// Current finding kind of a kind written before BA-086.
+pub fn legacy_kind(kind: &str) -> &str {
+    LEGACY_KINDS.iter().find(|(old, _)| *old == kind).map_or(kind, |(_, new)| new)
+}
+
+/// Translates a result written before BA-086 (German area, scene ids and finding kinds) in place.
+pub fn upgrade_result(r: &mut AreaResult) {
+    if let Some((_, new)) = LEGACY_AREAS.iter().find(|(old, _)| *old == r.area) {
+        r.area = (*new).into();
+    }
+    for f in &mut r.findings {
+        f.kind = legacy_kind(&f.kind).to_string();
+        f.scene = legacy_scene_id(&f.scene);
+    }
+    r.dump = std::mem::take(&mut r.dump).into_iter().map(|(k, v)| (legacy_scene_id(&k), v)).collect();
+    for c in &mut r.de_changed {
+        if let Some((id, rest)) = c.split_once(": ") {
+            *c = format!("{}: {rest}", legacy_scene_id(id));
+        }
+    }
+}
+
+/// Loads `<language>_<area>.json` of a mode; without it the file with the former German area name.
+/// `Ok(None)`: no file, `Err`: file unreadable. Old results are translated with [`upgrade_result`].
+pub fn load_result(mode: &str, lang: &str, area: &str) -> Result<Option<AreaResult>, String> {
+    let dir = mode_dir(mode);
+    let mut names = vec![format!("{lang}_{area}.json")];
+    names.extend(LEGACY_AREAS.iter().filter(|(_, new)| *new == area).map(|(old, _)| format!("{lang}_{old}.json")));
+    for n in names {
+        let Ok(s) = std::fs::read_to_string(dir.join(&n)) else { continue };
+        let mut r = serde_json::from_str::<AreaResult>(&s).map_err(|e| format!("{n}: {e}"))?;
+        upgrade_result(&mut r);
+        return Ok(Some(r));
+    }
+    Ok(None)
 }

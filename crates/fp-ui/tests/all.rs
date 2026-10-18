@@ -3,7 +3,7 @@
 //!
 //! * every `tests\<name>.rs` is the module `<name>`; a new file is included automatically
 //!   (list built by `crates\fp-testlist`), nobody keeps a list
-//! * helper folders (`gesamt_common`, `i18n_qa_common`) are compiled once: `use crate::<helper>;`
+//! * helper folders (`full_common`, `i18n_qa_common`) are compiled once: `use crate::<helper>;`
 //! * run: `cargo test -p fp-ui --test all`; one former file: `cargo test -p fp-ui --test all inspector_fv10::`
 //! * the language applies per test thread here (`fp_i18n::set_language`), so tests switching to
 //!   English do not disturb the German ones running at the same time

@@ -2,11 +2,11 @@
 //! Texte der mitgelieferten Befehlsskripte (`fp.t`), „Maske deaktivieren“ ohne Kürzel im Menü und
 //! die Rückfrage 3169 beim Löschen einer gespeicherten Optimierungseinstellung.
 
-use crate::gesamt_common;
+use crate::full_common;
 
 use fp_ui::app_state::{Action, AppState};
 use fp_ui::menu::{self, ItemAction, Node};
-use gesamt_common::*;
+use full_common::*;
 use serde_json::{json, Value};
 
 fn run(st: &mut AppState, ctx: &egui::Context, name: &str, p: Value) {

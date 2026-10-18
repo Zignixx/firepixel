@@ -19,7 +19,7 @@ use fp_ui::theme::ThemeKind;
 use i18n_qa_common::{build_scene, repo, select, Cfg, Fix, Scene};
 use serde_json::json;
 
-/// Zuschnitt eines RGBA-Bilds (wie `design_bilder`).
+/// Zuschnitt eines RGBA-Bilds (wie `design_images`).
 struct Img {
     w: u32,
     h: u32,

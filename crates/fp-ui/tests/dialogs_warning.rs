@@ -83,7 +83,7 @@ fn history_len(h: &H) -> usize {
 const Z01: &str = "Zum Öffnen, Vereinigen, Überschneiden und Zuschneiden müssen zwei oder mehr Pfade ausgewählt werden.";
 
 #[test]
-fn warnung_mit_nicht_mehr_anzeigen_und_zuruecksetzen() {
+fn warning_with_do_not_show_again_and_reset() {
     fp_i18n::with_language("de", || {
         let mut h = harness();
         let steps = history_len(&h);
@@ -148,7 +148,7 @@ fn warnung_mit_nicht_mehr_anzeigen_und_zuruecksetzen() {
 }
 
 #[test]
-fn warnung_statt_befehlsdialog() {
+fn warning_instead_of_command_dialog() {
     fp_i18n::with_language("de", || {
         let mut h = harness();
         // Vereinfachen…/Weiche Kante… haben einen Dialog – ohne Ziel kommt zuerst die Warnung
@@ -168,7 +168,7 @@ fn warnung_statt_befehlsdialog() {
 }
 
 #[test]
-fn englisch_ohne_ueberlauf() {
+fn english_without_overflow() {
     fp_i18n::with_language("en", || {
         let mut h = harness();
         run(&mut h, "modify.symbol.breakApart");
@@ -184,7 +184,7 @@ fn englisch_ohne_ueberlauf() {
 }
 
 #[test]
-fn popupmenue_rueckfrage_hotspot() {
+fn popup_menu_confirm_hotspot() {
     fp_i18n::with_language("de", || {
         let mut h = harness();
         run(&mut h, "modify.popUpMenu.addPopUpMenu");
@@ -226,7 +226,7 @@ fn popupmenue_rueckfrage_hotspot() {
 }
 
 #[test]
-fn wiederholen_mit_letztem_schritt_im_menue() {
+fn redo_with_last_step_in_menu() {
     fp_i18n::with_language("de", || {
         let h = harness();
         let menus = fp_ui::menu::build_main_menu(st(&h));

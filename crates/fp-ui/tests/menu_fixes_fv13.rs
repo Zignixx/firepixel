@@ -2,18 +2,18 @@
 //! Original (grau ohne Ziel, aktiv mit Ziel), Wirkung am Dokument bzw. an den Voreinstellungen,
 //! Rückgängig stellt exakt her; der Gesamttest liest nie das echte Nutzerprofil.
 
-use crate::gesamt_common;
+use crate::full_common;
 
 use fp_ui::app_state::{Action, AppState};
 use fp_ui::menu::{self, ItemAction, Node};
-use gesamt_common::*;
+use full_common::*;
 use serde_json::{json, Value};
 
 /// Testdokument mit eigenem Befehlsordner je Test: parallel laufende Tests, die Befehle speichern,
 /// ändern das Befehle-Menü dieses Tests nicht (FIX-F).
 fn fixture() -> (AppState, egui::Context, Fix) {
     own_commands_dir();
-    gesamt_common::fixture()
+    full_common::fixture()
 }
 
 fn run(st: &mut AppState, ctx: &egui::Context, name: &str, p: Value) {

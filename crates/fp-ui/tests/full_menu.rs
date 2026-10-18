@@ -9,11 +9,11 @@
 //! `docs\FUNKTIONSTEST.md`). Der Test schlägt nur bei Paniken fehl; fehlende Funktionen werden als
 //! Befund gemeldet und im Bericht gezählt.
 
-use crate::gesamt_common;
+use crate::full_common;
 
 use fp_ui::menu;
 use fp_ui::panels::PanelId;
-use gesamt_common::*;
+use full_common::*;
 
 fn assert_no_panics(rows: &[Row]) {
     let panics: Vec<_> = rows.iter().filter(|r| matches!(r.outcome, Outcome::Panic(_))).map(|r| format!("{} ({:?})", r.path, r.outcome)).collect();
@@ -21,7 +21,7 @@ fn assert_no_panics(rows: &[Row]) {
 }
 
 #[test]
-fn gesamt_hauptmenue() {
+fn full_main_menu() {
     let (st, _ctx, _f) = fixture();
     let menus = menu::build_main_menu(&st);
     assert_eq!(menus.len(), 10, "10 Hauptmenüs");
@@ -31,7 +31,7 @@ fn gesamt_hauptmenue() {
     }
     drop(st);
     let rows = run_nodes(items);
-    let (ok, n) = write_report("menue_auto.md", "Hauptmenü", "gesamt_menu.rs", &rows);
+    let (ok, n) = write_report("menue_auto.md", "Hauptmenü", "full_menu.rs", &rows);
     eprintln!("Hauptmenü: {ok}/{n} ✅");
     assert_no_panics(&rows);
 }
@@ -40,7 +40,7 @@ fn gesamt_hauptmenue() {
 /// läuft ohne Panik; gesperrte bzw. ausgeblendete Objekte bleiben unverändert (außer bei Befehlen,
 /// die genau das umschalten); Rückgängig stellt exakt her.
 #[test]
-fn gesamt_hauptmenue_situationen() {
+fn full_main_menu_situations() {
     use fp_ui::app_state::Action;
     use serde_json::json;
     let (st, _ctx, _f) = fixture();
@@ -134,7 +134,7 @@ fn gesamt_hauptmenue_situationen() {
         let o = if problems.is_empty() { Outcome::Doc } else { Outcome::Error(format!("{} Fund(e)", problems.len())) };
         rows.push(Row { path: format!("Situation „{sit}“"), command: format!("{ran} verfügbare Menübefehle"), outcome: o, note: if problems.is_empty() { format!("{ok}/{ran} ohne Befund") } else { problems.join("; ") } });
     }
-    let (ok, n) = write_report("menue_situationen_auto.md", "Hauptmenü in Sondersituationen", "gesamt_menu.rs", &rows);
+    let (ok, n) = write_report("menue_situationen_auto.md", "Hauptmenü in Sondersituationen", "full_menu.rs", &rows);
     eprintln!("Situationen: {ok}/{n} ✅");
     let panics: Vec<_> = rows.iter().filter(|r| r.note.contains("PANIK")).map(|r| r.note.clone()).collect();
     assert!(panics.is_empty(), "Paniken: {panics:#?}");
@@ -142,7 +142,7 @@ fn gesamt_hauptmenue_situationen() {
 
 /// Kontextmenüs der Leinwand (alle Ressourcen-Menüs, je Werkzeug/Auswahl).
 #[test]
-fn gesamt_kontextmenues() {
+fn full_context_menus() {
     let (st, _ctx, _f) = fixture();
     let mut items = Vec::new();
     let names = [("6914", "Nichts ausgewählt"), ("6925", "Objekt ausgewählt"), ("6915", "Text"), ("6913", "Pixel"), ("6916", "Transformieren"), ("6910", "Zuschneiden"), ("6906", "Zoom"), ("49120", "Pipette")];
@@ -152,13 +152,13 @@ fn gesamt_kontextmenues() {
     }
     drop(st);
     let rows = run_nodes(items);
-    let (ok, n) = write_report("kontextmenues_auto.md", "Kontextmenüs der Leinwand", "gesamt_menu.rs", &rows);
+    let (ok, n) = write_report("kontextmenues_auto.md", "Kontextmenüs der Leinwand", "full_menu.rs", &rows);
     eprintln!("Kontextmenüs: {ok}/{n} ✅");
     assert_no_panics(&rows);
 }
 
 #[test]
-fn gesamt_bedienfeldmenues() {
+fn full_panel_menus() {
     let (st, _ctx, _f) = fixture();
     let mut items = Vec::new();
     for p in PanelId::ALL {
@@ -167,7 +167,7 @@ fn gesamt_bedienfeldmenues() {
     }
     drop(st);
     let rows = run_nodes(items);
-    let (ok, n) = write_report("bedienfeldmenues_auto.md", "Bedienfeldmenüs", "gesamt_menu.rs", &rows);
+    let (ok, n) = write_report("bedienfeldmenues_auto.md", "Bedienfeldmenüs", "full_menu.rs", &rows);
     eprintln!("Bedienfeldmenüs: {ok}/{n} ✅");
     assert_no_panics(&rows);
 }

@@ -1,6 +1,6 @@
 //! Agent DESIGN: Startbildschirm (`src\welcome.rs`) – Inhalt, Bedienung, „Nicht mehr anzeigen“,
 //! Kürzen langer Namen, leerer Zustand und Layout in allen Größen, DPI-Stufen, Designs und Sprachen
-//! (de, en, Testsprache qps). Bilder: `--ignored design_willkommen_bilder`.
+//! (de, en, Testsprache qps). Bilder: `--ignored design_welcome_images`.
 
 use egui::epaint::Shape;
 use egui::{vec2, Event, Modifiers, PointerButton, Pos2, Rect};
@@ -109,7 +109,7 @@ fn tmp_file(name: &str) -> PathBuf {
 }
 
 #[test]
-fn zeigt_alle_bereiche_und_eintraege() {
+fn shows_all_areas_and_entries() {
     let _g = LANG.lock().unwrap_or_else(|e| e.into_inner());
     lang("de");
     let a = tmp_file("banner.fw.png");
@@ -124,7 +124,7 @@ fn zeigt_alle_bereiche_und_eintraege() {
 }
 
 #[test]
-fn neues_dokument_wirkt() {
+fn new_document_works() {
     let _g = LANG.lock().unwrap_or_else(|e| e.into_inner());
     lang("de");
     let mut h = harness(state(vec![], ThemeKind::Normal), 1280.0, 860.0, 1.0);
@@ -137,7 +137,7 @@ fn neues_dokument_wirkt() {
 }
 
 #[test]
-fn zuletzt_geoeffnete_datei_oeffnet() {
+fn recent_file_opens() {
     let _g = LANG.lock().unwrap_or_else(|e| e.into_inner());
     lang("de");
     let mut s = state(vec![], ThemeKind::Normal);
@@ -156,7 +156,7 @@ fn zuletzt_geoeffnete_datei_oeffnet() {
 }
 
 #[test]
-fn nicht_mehr_anzeigen_setzt_voreinstellung() {
+fn do_not_show_again_sets_preference() {
     let _g = LANG.lock().unwrap_or_else(|e| e.into_inner());
     lang("de");
     let mut h = harness(state(vec![], ThemeKind::Normal), 1280.0, 860.0, 1.0);
@@ -177,7 +177,7 @@ fn nicht_mehr_anzeigen_setzt_voreinstellung() {
 }
 
 #[test]
-fn leerer_zustand_und_lange_namen() {
+fn empty_state_and_long_names() {
     let _g = LANG.lock().unwrap_or_else(|e| e.into_inner());
     lang("de");
     let h = harness(state(vec![], ThemeKind::Dark), 1280.0, 860.0, 1.0);
@@ -217,7 +217,7 @@ fn layout_findings(h: &Harness<'_, W>) -> Vec<String> {
 }
 
 #[test]
-fn alle_groessen_designs_und_sprachen_ohne_ueberlauf() {
+fn all_sizes_themes_and_languages_without_overflow() {
     let _g = LANG.lock().unwrap_or_else(|e| e.into_inner());
     let recent: Vec<PathBuf> = (0..8).map(|i| tmp_file(&format!("projekt_{i}_mit_einem_recht_langen_namen_fuer_die_liste.fw.png"))).collect();
     let mut all = Vec::new();
@@ -247,7 +247,7 @@ fn alle_groessen_designs_und_sprachen_ohne_ueberlauf() {
 /// `design_after_welcome{,_en,_empty,_narrow,_150}.png` (technische Namen englisch, B-6).
 #[test]
 #[ignore]
-fn design_willkommen_bilder() {
+fn design_welcome_images() {
     let _g = LANG.lock().unwrap_or_else(|e| e.into_inner());
     let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..").join("..").join("docs").join("screenshots");
     let recent = vec![tmp_file("banner_herbst.fw.png"), tmp_file("produktfoto_2026.jpg"), tmp_file("icons_neu.fw.png"), tmp_file("aufraeumen.jsf")];

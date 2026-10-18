@@ -1,6 +1,6 @@
 //! FV-8: Tippen mit dem Textwerkzeug auf einer großen Korpusseite – Zeit je Zeichen.
 //!
-//! `cargo test -p fp-ui --release --test tippen_messung -- --ignored --nocapture`
+//! `cargo test -p fp-ui --release --test typing_measurement -- --ignored --nocapture`
 //!
 //! Je Zeichen wird ein Bild der Oberfläche berechnet (Ereignis → Werkzeug → Textsatz → Vorschau)
 //! und mit egui-wgpu gezeichnet wie im echten Fenster (Zerlegen in Dreiecke, Texturen und Puffer
@@ -187,8 +187,8 @@ fn tippen(path: &std::path::Path, tuning: bool) -> (Vec<f64>, Vec<f64>) {
 }
 
 #[test]
-#[ignore = "Messung (Release): cargo test -p fp-ui --release --test tippen_messung -- --ignored --nocapture"]
-fn tippen_50_zeichen_auf_grosser_korpusseite() {
+#[ignore = "Messung (Release): cargo test -p fp-ui --release --test typing_measurement -- --ignored --nocapture"]
+fn typing_50_characters_on_large_corpus_page() {
     let Some(path) = korpus_seite() else {
         eprintln!("Korpus fehlt – übersprungen");
         return;

@@ -150,7 +150,7 @@ fn check(lang: &str, w: f32, hgt: f32, ppp: f32, kind: ThemeKind) -> Vec<String>
 }
 
 #[test]
-fn sprachen_groessen_ohne_ueberlauf() {
+fn languages_sizes_without_overflow() {
     let _g = LOCK.lock().unwrap_or_else(|e| e.into_inner());
     let mut all = Vec::new();
     let mut n = 0;
@@ -175,7 +175,7 @@ fn sprachen_groessen_ohne_ueberlauf() {
 }
 
 #[test]
-fn sprachwechsel_zur_laufzeit() {
+fn language_switch_at_runtime() {
     let _g = LOCK.lock().unwrap_or_else(|e| e.into_inner());
     assert!(fp_i18n::set_language("de"));
     let mut h = harness(app(), 1366.0, 768.0, 1.0);
@@ -217,7 +217,7 @@ fn cut_texts(texts: &[Painted], area: Rect) -> Vec<String> {
 /// Jedes Bedienfeld bei kleinster Dockbreite (angedockt) und als sehr kleine schwebende Gruppe:
 /// das Dock bzw. die Gruppe wird nie schmaler als das Bedienfeld, nichts wird abgeschnitten.
 #[test]
-fn bedienfelder_bei_minimaler_dockbreite() {
+fn panels_at_minimal_dock_width() {
     let _g = LOCK.lock().unwrap_or_else(|e| e.into_inner());
     let mut problems = Vec::new();
     for lang in LANGS {
@@ -276,7 +276,7 @@ fn bedienfelder_bei_minimaler_dockbreite() {
 }
 
 #[test]
-fn deutsch_wortlaut_unveraendert() {
+fn german_wording_unchanged() {
     let _g = LOCK.lock().unwrap_or_else(|e| e.into_inner());
     assert!(fp_i18n::set_language("de"));
     assert_eq!(fp_ui::appbar::workspace_display_name("Erweiterter Modus"), "Erweiterter Modus");

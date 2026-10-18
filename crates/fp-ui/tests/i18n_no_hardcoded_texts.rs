@@ -12,10 +12,10 @@
 //! 3. **Ausgaben** (UE-3, firepixel-cli und fp-mcp): Konsolenausgaben, Fehler, JSON-Texte (`"hint"` …),
 //!    clap-Hilfetexte (Doku-Kommentare in `#[derive(Parser/Subcommand)]`) und jedes deutsche Literal.
 //!
-//! Ausnahmen (Eigennamen, Formatnamen, Einheiten, bewusst feste Texte): `i18n_ausnahmen.txt`.
+//! Ausnahmen (Eigennamen, Formatnamen, Einheiten, bewusst feste Texte): `i18n_exceptions.txt`.
 //!
-//! Aufruf: `cargo test -p fp-ui --test i18n_keine_festen_texte -- --ignored --nocapture`
-//! (Filter auf Pfadteile: Umgebungsvariable `FP_I18N_FILTER=menu.rs`). `keine_festen_texte` ist
+//! Aufruf: `cargo test -p fp-ui --test i18n_no_hardcoded_texts -- --ignored --nocapture`
+//! (Filter auf Pfadteile: Umgebungsvariable `FP_I18N_FILTER=menu.rs`). `no_hardcoded_texts` ist
 //! scharf (läuft immer).
 
 use std::collections::{BTreeMap, BTreeSet};
@@ -453,7 +453,7 @@ fn in_internal_call_mode(m: &[u8], pos: usize, console: bool) -> bool {
 }
 
 fn exceptions() -> Exceptions {
-    let text = include_str!("i18n_ausnahmen.txt");
+    let text = include_str!("i18n_exceptions.txt");
     let mut words = BTreeSet::new();
     let mut literals = Vec::new();
     let mut no_german = Vec::new();
@@ -772,25 +772,25 @@ fn report(hits: &[Hit]) -> String {
     out
 }
 
-/// Bericht (immer grün): `cargo test -p fp-ui --test i18n_keine_festen_texte -- --ignored --nocapture`.
+/// Bericht (immer grün): `cargo test -p fp-ui --test i18n_no_hardcoded_texts -- --ignored --nocapture`.
 #[test]
 #[ignore]
-fn feste_texte_bericht() {
+fn hardcoded_texts_report() {
     let hits = scan();
     println!("{}", report(&hits));
 }
 
 /// Scharf (seit UE-3, 12.10.): keine festen Texte mehr im ganzen Workspace (begründete Ausnahmen in
-/// `i18n_ausnahmen.txt`).
+/// `i18n_exceptions.txt`).
 #[test]
-fn keine_festen_texte() {
+fn no_hardcoded_texts() {
     let hits = scan();
     assert!(hits.is_empty(), "{}", report(&hits));
 }
 
 /// Der Scanner selbst (läuft immer).
 #[test]
-fn scanner_erkennt_typische_faelle() {
+fn scanner_detects_typical_cases() {
     let src = r##"
 fn f(ui: &mut Ui, st: &mut AppState) {
     ui.label("Ebenen");
@@ -839,7 +839,7 @@ mod tests { fn g() { ui.label("Testtext"); } }
 
 /// UE-3: Prüfart „Ausgabe“ (Kommandozeile, MCP-Server) – Konsole, JSON-Texte, thiserror, clap-Hilfe.
 #[test]
-fn scanner_erkennt_ausgaben_von_cli_und_mcp() {
+fn scanner_detects_cli_and_mcp_output() {
     let src = r##"
 #[derive(Debug, thiserror::Error)]
 enum E {

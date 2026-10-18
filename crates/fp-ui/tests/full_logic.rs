@@ -10,12 +10,12 @@
 //!
 //! Ergebnis: `docs\funktionstest\logik_auto.md`.
 
-use crate::gesamt_common;
+use crate::full_common;
 
 use fp_ui::app_state::{Action, AppState};
 use fp_ui::dialogs::effects::{begin_add, begin_edit, FxKind, FX};
 use fp_ui::dialogs::form::{apply_preview, revert_preview, FieldKind, FormDialog};
-use gesamt_common::*;
+use full_common::*;
 use serde_json::{json, Value};
 
 /// Woher der Dialog kommt.
@@ -335,7 +335,7 @@ fn synth_params(info: &fp_engine::CommandInfo, k: usize) -> Option<Value> {
 /// mit wechselnden Werten: Struktur gleich einmaligem Anwenden (keine Duplikate), je Aufruf ein
 /// Verlaufsschritt, 50× Rückgängig stellt exakt her, 50× Wiederholen = Endergebnis.
 #[test]
-fn gesamt_logik_setzbefehle() {
+fn full_logic_set_commands() {
     let (st0, _, f0) = fixture();
     let infos: Vec<fp_engine::CommandInfo> = st0
         .session
@@ -434,14 +434,14 @@ fn gesamt_logik_setzbefehle() {
         let Some((o, note)) = result else { continue };
         rows.push(Row { path: info.menu_path.join(" ▸ ").to_string() + if info.menu_path.is_empty() { info.label.as_str() } else { "" }, command: info.name.clone(), outcome: o, note });
     }
-    let (ok, n) = write_report("logik_setzbefehle_auto.md", "Logik der Setzbefehle (50× ändern, Rückgängig/Wiederholen)", "gesamt_logik.rs", &rows);
+    let (ok, n) = write_report("logik_setzbefehle_auto.md", "Logik der Setzbefehle (50× ändern, Rückgängig/Wiederholen)", "full_logic.rs", &rows);
     eprintln!("Logik Setzbefehle: {ok}/{n} ✅");
     let panics: Vec<_> = rows.iter().filter(|r| matches!(r.outcome, Outcome::Panic(_))).map(|r| format!("{} {:?}", r.command, r.outcome)).collect();
     assert!(panics.is_empty(), "Paniken: {panics:#?}");
 }
 
 #[test]
-fn gesamt_logik_dialoge() {
+fn full_logic_dialogs() {
     let (_, _, f0) = fixture();
     let ncand = candidates(&f0).len();
     let mut rows = Vec::new();
@@ -471,7 +471,7 @@ fn gesamt_logik_dialoge() {
                 break;
             }
         }
-        // Menüeinträge ohne Formular-Dialog (eigene Dialogarten) prüft gesamt_menu
+        // Menüeinträge ohne Formular-Dialog (eigene Dialogarten) prüft full_menu
         let Some((o, note)) = result else { continue };
         let cmd = match &src {
             Source::Menu(c) => c.clone(),
@@ -479,7 +479,7 @@ fn gesamt_logik_dialoge() {
         };
         rows.push(Row { path, command: cmd, outcome: o, note });
     }
-    let (ok, n) = write_report("logik_auto.md", "Logik der Dialoge (50× ändern, Vorschau, Abbrechen, OK, Rückgängig/Wiederholen, Auswahlwechsel)", "gesamt_logik.rs", &rows);
+    let (ok, n) = write_report("logik_auto.md", "Logik der Dialoge (50× ändern, Vorschau, Abbrechen, OK, Rückgängig/Wiederholen, Auswahlwechsel)", "full_logic.rs", &rows);
     eprintln!("Logik Dialoge: {ok}/{n} ✅");
     let panics: Vec<_> = rows.iter().filter(|r| matches!(r.outcome, Outcome::Panic(_))).map(|r| format!("{} {:?}", r.path, r.outcome)).collect();
     assert!(panics.is_empty(), "Paniken: {panics:#?}");

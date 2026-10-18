@@ -55,7 +55,7 @@
 //! Die Sprache ist prozessweit: erst alle deutschen, dann alle englischen Varianten; eigene
 //! Test-Binärdatei.
 
-use crate::gesamt_common;
+use crate::full_common;
 
 use egui::accesskit::Role;
 use egui::{pos2, vec2, Id, LayerId, Order, Pos2, Rect, Shape};
@@ -65,7 +65,7 @@ use fp_ui::panels::PanelId;
 use fp_ui::theme::ThemeKind;
 use fp_ui::workspace::Workspace;
 use fp_ui::FirepixelApp;
-use gesamt_common::{apply_candidate, available, candidates, fixture, Candidate, Fix};
+use full_common::{apply_candidate, available, candidates, fixture, Candidate, Fix};
 use serde_json::json;
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::path::{Path, PathBuf};
@@ -227,7 +227,7 @@ fn discover_dialogs(cands: &[Candidate]) -> Vec<(String, usize)> {
     names.dedup();
     let mut out = Vec::new();
     for n in names {
-        if gesamt_common::external(&n) {
+        if full_common::external(&n) {
             continue;
         }
         for (i, c) in cands.iter().enumerate() {

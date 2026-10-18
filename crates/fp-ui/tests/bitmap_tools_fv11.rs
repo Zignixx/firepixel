@@ -113,7 +113,7 @@ fn near(v: u8, want: i32, tol: i32, what: &str) {
 // ------------------------------------------------------------------ L36 Pinsel
 
 #[test]
-fn pinsel_ohne_auswahl_legt_neue_bitmap_an_und_malt_weiter_hinein() {
+fn brush_without_selection_creates_new_bitmap_and_keeps_painting_into_it() {
     let mut t = app();
     let (r1, b) = (t.r1, t.b2);
     let s = ses(&mut t);
@@ -154,7 +154,7 @@ fn pinsel_ohne_auswahl_legt_neue_bitmap_an_und_malt_weiter_hinein() {
 }
 
 #[test]
-fn pinsel_mit_gewaehltem_vektor_legt_neue_bitmap_an() {
+fn brush_with_selected_vector_creates_new_bitmap() {
     let mut t = app();
     let (r1, b) = (t.r1, t.b2);
     let s = ses(&mut t);
@@ -173,7 +173,7 @@ fn pinsel_mit_gewaehltem_vektor_legt_neue_bitmap_an() {
 }
 
 #[test]
-fn pinsel_malt_in_gewaehlte_bitmap_und_erweitert_sie() {
+fn brush_paints_into_selected_bitmap_and_extends_it() {
     let mut t = app();
     let (r1, b) = (t.r1, t.b2);
     let s = ses(&mut t);
@@ -194,7 +194,7 @@ fn pinsel_malt_in_gewaehlte_bitmap_und_erweitert_sie() {
 }
 
 #[test]
-fn pinsel_vielfach_ohne_duplikate() {
+fn brush_many_times_without_duplicates() {
     // §4b: 30 Striche in die gewählte neue Bitmap → genau ein neues Objekt, 30 Verlaufsschritte
     let mut t = app();
     let (r1, b) = (t.r1, t.b2);
@@ -215,7 +215,7 @@ fn pinsel_vielfach_ohne_duplikate() {
 // ------------------------------------------------------------------ L37 Radiergummi
 
 #[test]
-fn radiergummi_abdruck_und_strich_wie_im_original() {
+fn eraser_dab_and_stroke_like_original() {
     let mut t = app();
     let (r1, b) = (t.r1, t.b2);
     let s = ses(&mut t);
@@ -263,7 +263,7 @@ fn radiergummi_abdruck_und_strich_wie_im_original() {
 }
 
 #[test]
-fn radiergummi_ohne_bitmap_hebt_auswahl_auf() {
+fn eraser_without_bitmap_clears_selection() {
     let mut t = app();
     let (r1, b) = (t.r1, t.b2);
     let s = ses(&mut t);
@@ -280,7 +280,7 @@ fn radiergummi_ohne_bitmap_hebt_auswahl_auf() {
 // ------------------------------------------------------------------ L38 Weichzeichner
 
 #[test]
-fn weichzeichner_staerke_und_wachsen_wie_im_original() {
+fn blur_strength_and_growth_like_original() {
     let mut t = app();
     let (r1, b) = (t.r1, t.b2);
     let s = ses(&mut t);
@@ -315,7 +315,7 @@ fn weichzeichner_staerke_und_wachsen_wie_im_original() {
 // ------------------------------------------------------------------ L39 Stempel
 
 #[test]
-fn stempel_kante_und_esc_wie_im_original() {
+fn stamp_edge_and_esc_like_original() {
     let mut t = app();
     let (r1, b) = (t.r1, t.b2);
     let s = ses(&mut t);
@@ -347,7 +347,7 @@ fn stempel_kante_und_esc_wie_im_original() {
 }
 
 #[test]
-fn esc_in_malwerkzeugen_mit_und_ohne_bitmap() {
+fn esc_in_paint_tools_with_and_without_bitmap() {
     for t in [ToolId::Brush, ToolId::Pencil, ToolId::Eraser, ToolId::Blur, ToolId::Sharpen, ToolId::Dodge, ToolId::Burn, ToolId::Smudge, ToolId::RubberStamp, ToolId::ReplaceColor, ToolId::RedEyeRemoval] {
         let mut tt = app();
         let (r1, b) = (tt.r1, tt.b2);
@@ -372,7 +372,7 @@ fn esc_in_malwerkzeugen_mit_und_ohne_bitmap() {
 /// Das Original zeigt um die gewählte Bitmap keinen Rahmen und keine Griffe, solange ein
 /// Malwerkzeug aktiv ist (Paarbilder fv11_*); mit dem Zeiger erscheinen sie wieder.
 #[test]
-fn malwerkzeug_zeigt_keinen_auswahlrahmen_um_die_bitmap() {
+fn paint_tool_shows_no_selection_frame_around_bitmap() {
     let t = app();
     let (r1, b) = (t.r1, t.b2);
     let mut h = egui_kittest::Harness::builder()

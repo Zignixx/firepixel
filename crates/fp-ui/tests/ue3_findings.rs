@@ -7,7 +7,7 @@ use fp_ui::app_state::{AppState, UiSettings};
 use fp_ui::panels::PanelId;
 
 #[test]
-fn haekchen_nur_fuer_das_vorderste_bedienfeld() {
+fn check_mark_only_for_front_panel() {
     let mut st = AppState::new(Session::default(), UiSettings::default(), None);
     let ws = &st.settings.workspace;
     // eine angedockte Gruppe mit mindestens zwei sichtbaren Bedienfeldern (Reiter)
@@ -31,7 +31,7 @@ fn haekchen_nur_fuer_das_vorderste_bedienfeld() {
 /// bekommen den Namen in der Sprache der Oberfläche (`msg-default-page`, UE-1); gespeicherte Namen
 /// bleiben Dokumentdaten.
 #[test]
-fn seitenname_neuer_dokumente_folgt_der_sprache() {
+fn page_name_of_new_documents_follows_language() {
     let name_after_new = |lang: &str| {
         fp_i18n::with_language(lang, || {
             let mut s = Session::default();

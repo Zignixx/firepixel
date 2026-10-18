@@ -362,7 +362,7 @@ fn o6_text_antialias_list_maps_like_set_properties() {
 
 // ------------------------------------------------------------------ Textwerkzeug-Vorgaben
 
-/// Knopf „ab/cd“ über das Layout-Protokoll (Lage wie in inspector_paritaet::w17).
+/// Knopf „ab/cd“ über das Layout-Protokoll (Lage wie in inspector_parity::w17).
 fn orientation_button(h: &mut H) -> Pos2 {
     fp_ui::inspector::fields::set_audit(&h.ctx, true);
     h.run_steps(1);

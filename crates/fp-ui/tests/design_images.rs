@@ -5,7 +5,7 @@
 //! ```text
 //! $env:FP_NO_SHELL_OPEN='1'; $env:FP_QA_OUT='…\target-design\design-qa'
 //! $env:FP_DESIGN_IMAGE='before'   # oder 'after'
-//! cargo test -j 4 -p fp-ui --test all design_bilder:: -- --ignored --nocapture --test-threads 1
+//! cargo test -j 4 -p fp-ui --test all design_images:: -- --ignored --nocapture --test-threads 1
 //! ```
 //!
 //! Nur einzelne Dialoge: `FP_QA_ONLY=<Teil der Szenen-ID>` (z. B. `dlg:export`).
@@ -93,21 +93,21 @@ fn themed(sc: &Scene, kind: ThemeKind) -> Scene {
 }
 
 fn all_scenes() -> Vec<Scene> {
-    let mut v: Vec<Scene> = scenes_main().into_iter().filter(|s| s.id == "haupt:leer").collect();
+    let mut v: Vec<Scene> = scenes_main().into_iter().filter(|s| s.id == "main:empty").collect();
     v.extend(scenes_dialogs());
     v
 }
 
 /// Dateiname aus der Szenen-ID.
 fn file_name(id: &str) -> String {
-    let s = id.trim_start_matches("dlg:").trim_start_matches("haupt:");
-    let s = if s == "leer" { "startbildschirm".to_string() } else { s.to_string() };
+    let s = id.trim_start_matches("dlg:").trim_start_matches("main:");
+    let s = if s == "empty" { "start_screen".to_string() } else { s.to_string() };
     s.chars().map(|c| if c.is_ascii_alphanumeric() { c.to_ascii_lowercase() } else { '_' }).collect::<String>().trim_matches('_').to_string()
 }
 
 #[test]
 #[ignore]
-fn design_bestand() {
+fn design_inventory() {
     fp_engine::shell::disable();
     let stage = match i18n_qa_common::env_var("FP_DESIGN_IMAGE", "FP_DESIGN_BILD").as_deref() {
         Some("after" | "nachher") => "after".to_string(),

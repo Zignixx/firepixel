@@ -189,7 +189,7 @@ fn fonts_cover_cyrillic_greek_and_cjk() {
 /// Bild der Sprachwahl für das README (`-- --ignored`, braucht einen Grafikadapter).
 #[test]
 #[ignore]
-fn screenshot_sprachwahl() {
+fn screenshot_language_choice() {
     let _g = lock();
     fp_i18n::set_language("de");
     let dir = std::env::temp_dir().join(format!("fp-ui-shot-{}", std::process::id()));

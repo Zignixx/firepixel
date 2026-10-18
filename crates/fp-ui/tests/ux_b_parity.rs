@@ -2,7 +2,7 @@
 //! jeder Hauptmenü-Eintrag in 7 Lagen (aktiv/Häkchen/Kürzel), Wirkung beim Auslösen (Dialog, Verlaufsschritt,
 //! Formularfelder mit Bereich/Vorgabe/Nachkommastellen/Schieber/Einheit/Vorschau) und die Bedienfeldmenüs.
 //! Ausgabe als TSV nach `target-uxb\paritaet\` (bzw. `%FP_UXB_OUT%`); nichts wird geprüft.
-//! Aufruf: `cargo test -p fp-ui --test ux_b_paritaet -- --nocapture --test-threads 1`.
+//! Aufruf: `cargo test -p fp-ui --test ux_b_parity -- --nocapture --test-threads 1`.
 
 use egui::{Event, Key, Modifiers};
 use egui_kittest::Harness;
@@ -108,7 +108,7 @@ fn shell_off() {
 }
 
 #[test]
-fn paritaet_menues() {
+fn parity_menus() {
     shell_off();
     let mut tab: Vec<(String, String, Option<String>, Vec<String>)> = Vec::new();
     for k in 0..LAGEN.len() {
@@ -144,7 +144,7 @@ fn esc(h: &mut H) {
 }
 
 #[test]
-fn paritaet_ausloesen() {
+fn parity_trigger() {
     shell_off();
     // alle Befehle des Hauptmenüs aus Lage 1 (für die Liste)
     let rows = menu_rows(&harness(1));
@@ -202,7 +202,7 @@ fn paritaet_ausloesen() {
 
 /// Bedienfeldmenüs (≡) aller Bedienfelder in Lage „1 Rechteck“ (wie im Original gemessen).
 #[test]
-fn paritaet_bedienfeldmenues() {
+fn parity_panel_menus() {
     shell_off();
     let h = harness(2);
     let st = &h.state().state;

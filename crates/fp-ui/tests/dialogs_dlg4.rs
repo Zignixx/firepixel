@@ -17,7 +17,7 @@ type H = Harness<'static, FirepixelApp>;
 fn harness() -> H {
     // keine Fremdprogramme (Hilfe) und nie das echte Nutzerprofil (Befehlsordner)
     fp_engine::shell::disable();
-    crate::gesamt_common::test_profile();
+    crate::full_common::test_profile();
     let mut s = fp_ui::ui_commands::new_session(fp_engine::Preferences::new());
     s.execute("file.new", json!({"width": 500, "height": 400, "background": "#ffffff"})).expect("doc");
     s.execute("draw.rectangle", json!({"rect": [20, 20, 120, 80], "name": "R1"})).expect("R1");

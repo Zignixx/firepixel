@@ -9,13 +9,13 @@
 //!
 //! Ergebnis: `docs\funktionstest\kuerzel_auto.md`.
 
-use crate::gesamt_common;
+use crate::full_common;
 
 use egui_kittest::Harness;
 use fp_engine::{PrefValue, Shortcut};
 use fp_ui::app_state::UiSettings;
 use fp_ui::FirepixelApp;
-use gesamt_common::*;
+use full_common::*;
 
 fn egui_key_for_vk(vk: u16) -> Option<egui::Key> {
     // Ziffernblock: egui meldet dieselben Tasten wie die Ziffernreihe (input.rs probiert beides)
@@ -53,7 +53,7 @@ fn key_has_effect(set: &str, sc: Shortcut) -> bool {
 }
 
 #[test]
-fn gesamt_kuerzelsaetze() {
+fn full_shortcut_sets() {
     let mut rows = Vec::new();
     for set in fp_engine::shortcuts::builtin_sets() {
         let (mut st, _ctx, _f) = fixture();
@@ -149,6 +149,6 @@ fn gesamt_kuerzelsaetze() {
         let ok = check(&h.state().state);
         rows.push(Row { path: format!("Tastatur ▸ {label}"), command: format!("{key:?}"), outcome: if ok { Outcome::Ui } else { Outcome::Nothing(String::new()) }, note: if ok { "Wirkung erkannt".into() } else { "keine Wirkung".into() } });
     }
-    let (ok, n) = write_report("kuerzel_auto.md", "Tastenkürzel", "gesamt_kuerzel.rs", &rows);
+    let (ok, n) = write_report("kuerzel_auto.md", "Tastenkürzel", "full_shortcuts.rs", &rows);
     eprintln!("Kürzel: {ok}/{n} ✅");
 }

@@ -1,5 +1,5 @@
 //! HG-Befund: Farbfeld, Stil und Symbol aus den Bedienfeldern auf Objekt bzw. Leinwand ziehen,
-//! mit realistischen Ziehfolgen über viele Bilder (Helfer wie `gesamt_alltag.rs`):
+//! mit realistischen Ziehfolgen über viele Bilder (Helfer wie `full_everyday.rs`):
 //! Farbfeld auf Objekt → Füllung (Umschalt → Strich), Stil auf Objekt → Stil angewendet, Symbol
 //! auf die Leinwand → Instanz an der Ablagestelle. Ablegen neben dem Objekt bzw. außerhalb der
 //! Leinwand und Esc ändern nichts; jedes Ablegen ist ein Verlaufsschritt, Rückgängig exakt.

@@ -1,7 +1,7 @@
 //! UX-Abgleich A (Leinwand und Eingabe): misst das Verhalten von Firepixel mit realistischen
 //! Eingaben (egui-winit-Ereignisse wie unter Windows) für die Szenarien in `docs\UX_ABGLEICH_A.md`.
 //!
-//! `cargo test -p fp-ui --test ux_a_abgleich -- --ignored --nocapture` gibt je Szenario eine
+//! `cargo test -p fp-ui --test ux_a_comparison -- --ignored --nocapture` gibt je Szenario eine
 //! Zeile `UXA|<Nr>|<Beobachtung>` aus. Die Erwartung (Verhalten des Originals) steht im Katalog;
 //! die Prüfungen mit `assert` stehen in `regressions` (laufen immer).
 
@@ -1379,7 +1379,7 @@ fn cases() -> Vec<Case> {
 
 #[test]
 #[ignore = "Messlauf für docs\\UX_ABGLEICH_A.md (--ignored --nocapture)"]
-fn messen() {
+fn measure() {
     let filter = std::env::var("UXA_FILTER").unwrap_or_default();
     let mut out = String::new();
     for (name, f) in cases() {

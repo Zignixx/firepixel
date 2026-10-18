@@ -15,7 +15,7 @@
 //! Ergebnis: `docs\funktionstest\groessen_auto.md`; mit `FP_SNAPSHOTS=1` zusätzlich Bilder je
 //! Größe/Design nach `target\fp-ui-groessen\`.
 
-use crate::gesamt_common;
+use crate::full_common;
 
 use egui::{Rect, Sense};
 use egui_kittest::Harness;
@@ -24,7 +24,7 @@ use fp_ui::panels::PanelId;
 use fp_ui::theme::ThemeKind;
 use fp_ui::workspace::DockMode;
 use fp_ui::FirepixelApp;
-use gesamt_common::*;
+use full_common::*;
 use serde_json::json;
 use std::panic::AssertUnwindSafe;
 
@@ -216,7 +216,7 @@ fn check(kind: ThemeKind, size: (f32, f32), ppp: f32, state: State) -> Result<Ve
 }
 
 #[test]
-fn gesamt_groessen() {
+fn full_sizes() {
     let mut rows = Vec::new();
     // alle Größen × Designs × DPI im Standardzustand
     for (w, hgt, label) in SIZES {
@@ -236,17 +236,17 @@ fn gesamt_groessen() {
             }
         }
     }
-    let (ok, n) = write_report("groessen_auto.md", "UI über Größen, DPI, Designs und Zustände", "gesamt_groessen.rs", &rows);
+    let (ok, n) = write_report("groessen_auto.md", "UI über Größen, DPI, Designs und Zustände", "full_sizes.rs", &rows);
     eprintln!("Größen: {ok}/{n} ✅");
     let panics: Vec<_> = rows.iter().filter(|r| matches!(r.outcome, Outcome::Panic(_))).map(|r| format!("{} {:?}", r.path, r.outcome)).collect();
     assert!(panics.is_empty(), "Paniken: {panics:#?}");
 }
 
 /// Bilder je Größe, DPI und Design (zur Sichtprüfung) nach `target\fp-ui-groessen\`:
-/// `cargo test -p fp-ui --test gesamt_groessen groessen_bilder -- --ignored`.
+/// `cargo test -p fp-ui --test full_sizes sizes_images -- --ignored`.
 #[test]
 #[ignore]
-fn groessen_bilder() {
+fn sizes_images() {
     let out = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("..").join("..").join("target").join("fp-ui-groessen");
     let _ = std::fs::create_dir_all(&out);
     for (w, hgt, label) in SIZES {

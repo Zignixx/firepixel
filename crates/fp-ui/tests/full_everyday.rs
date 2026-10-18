@@ -12,13 +12,13 @@
 //! Geprüft wird, was ein Mensch erwartet (eine Rastung = eine Zoomstufe, Einfügen fügt ein …).
 //! Ergebnis: `docs\funktionstest\alltag_auto.md`.
 
-use crate::gesamt_common;
+use crate::full_common;
 
 use egui::{Event, Key, Modifiers, PointerButton, Pos2};
 use egui_kittest::Harness;
 use fp_ui::app_state::{AppState, UiSettings};
 use fp_ui::FirepixelApp;
-use gesamt_common::*;
+use full_common::*;
 use serde_json::json;
 
 type H = Harness<'static, FirepixelApp>;
@@ -640,7 +640,7 @@ fn cases() -> Vec<Case> {
 }
 
 #[test]
-fn gesamt_alltag() {
+fn full_everyday() {
     let mut rows = Vec::new();
     for c in cases() {
         let r = std::panic::catch_unwind(c.run);
@@ -651,6 +651,6 @@ fn gesamt_alltag() {
         };
         rows.push(Row { path: c.name.to_string(), command: "realistische Eingabe".into(), outcome: o, note });
     }
-    let (ok, n) = write_report("alltag_auto.md", "Alltagsabläufe mit realistischen Eingaben", "gesamt_alltag.rs", &rows);
+    let (ok, n) = write_report("alltag_auto.md", "Alltagsabläufe mit realistischen Eingaben", "full_everyday.rs", &rows);
     eprintln!("Alltag: {ok}/{n} ✅");
 }

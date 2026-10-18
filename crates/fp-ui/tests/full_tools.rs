@@ -5,12 +5,12 @@
 //! Auswahl, Farbe, Ansicht) und dass das Werkzeug ein Icon und einen Platz im Werkzeugbedienfeld
 //! hat. Ergebnis: `docs\funktionstest\werkzeuge_auto.md`.
 
-use crate::gesamt_common;
+use crate::full_common;
 
 use fp_engine::tools::{ToolEvent, ToolKey, TOOLS};
 use fp_engine::ToolId;
 use fp_ui::app_state::Action;
-use gesamt_common::*;
+use full_common::*;
 use std::panic::AssertUnwindSafe;
 
 /// Testablauf je Werkzeug: Auswahl vorher (IDs aus dem Testdokument) und Ereignisse.
@@ -117,7 +117,7 @@ fn run_tool(t: ToolId) -> (Outcome, String) {
 }
 
 #[test]
-fn gesamt_werkzeuge() {
+fn full_tools() {
     let mut rows = Vec::new();
     for info in TOOLS {
         let icon_ok = std::panic::catch_unwind(|| fp_ui::icons::tool_icon(info.id)).is_ok();
@@ -130,7 +130,7 @@ fn gesamt_werkzeuge() {
         }
         rows.push(Row { path: format!("{} ▸ {}", info.section, info.label), command: info.name.to_string(), outcome: o, note });
     }
-    let (ok, n) = write_report("werkzeuge_auto.md", "Werkzeuge", "gesamt_werkzeuge.rs", &rows);
+    let (ok, n) = write_report("werkzeuge_auto.md", "Werkzeuge", "full_tools.rs", &rows);
     eprintln!("Werkzeuge: {ok}/{n} ✅");
     let panics: Vec<_> = rows.iter().filter(|r| matches!(r.outcome, Outcome::Panic(_))).map(|r| format!("{} {:?}", r.path, r.outcome)).collect();
     assert!(panics.is_empty(), "Paniken: {panics:#?}");

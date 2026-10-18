@@ -7,12 +7,12 @@
 //!
 //! Ergebnis: `docs\funktionstest\dateien_auto.md`.
 
-use crate::gesamt_common;
+use crate::full_common;
 
 use egui_kittest::Harness;
 use fp_ui::app_state::{Action, AppState, UiSettings};
 use fp_ui::FirepixelApp;
-use gesamt_common::*;
+use full_common::*;
 use serde_json::json;
 use std::path::{Path, PathBuf};
 
@@ -86,7 +86,7 @@ impl egui::DroppedFile for TestDrop {
 }
 
 #[test]
-fn gesamt_dateien() {
+fn full_files() {
     let mut rows = Vec::new();
     let (mut st, ctx, f) = fixture();
     let dir = f.save_to.parent().map(Path::to_path_buf).unwrap_or_default();
@@ -185,6 +185,6 @@ fn gesamt_dateien() {
         let m = h.state().state.session.documents().len();
         rows.push(Row { path: "Hauptfenster ▸ Drag & Drop einer Datei".into(), command: "dropped_files".into(), outcome: if m == n + 1 || h.state().state.session.documents().iter().any(|d| d.path.as_deref() == Some(fw.as_path())) { Outcome::Ui } else { Outcome::Error(format!("{n} → {m} Dokumente")) }, note: String::new() });
     }
-    let (ok, n) = write_report("dateien_auto.md", "Dateien (Öffnen, Speichern, Export, Import, Drag & Drop)", "gesamt_dateien.rs", &rows);
+    let (ok, n) = write_report("dateien_auto.md", "Dateien (Öffnen, Speichern, Export, Import, Drag & Drop)", "full_files.rs", &rows);
     eprintln!("Dateien: {ok}/{n} ✅");
 }

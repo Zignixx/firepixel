@@ -1,16 +1,16 @@
-﻿//! I18N-QA: Prüflauf in der Testsprache `qps` – jeder Text aus `fp_i18n` ist markiert (`[!! … !!]`)
-//! und um ~40 % verlängert. Unmarkierter Text = fester Text im Code; dazu Überläufe.
-//! `cargo test -j 4 -p fp-ui --test i18n_qa_qps -- --ignored --test-threads 4`, Bericht: `i18n_qa_bericht`.
+//! I18N-QA: check run in the test language `qps` – every text from `fp_i18n` is marked (`[!! … !!]`)
+//! and about 40 % longer. Unmarked text = text hard-coded in the source; plus overflows.
+//! `cargo test -j 4 -p fp-ui --test all i18n_qa_qps:: -- --ignored --test-threads 4`, report: `i18n_qa_report`.
 
 use crate::i18n_qa_common;
 
 qa_tests!("qps");
 
-/// Bilder in dieser Sprache nach `docs\screenshots\phase6_qps_*.png` (Hauptfenster je Design,
-/// Menüs, Dialoge, Inspektor; Normal und Dunkel).
+/// Images in this language to `docs\screenshots\phase6_qps_*.png` (main window per theme,
+/// menus, dialogs, inspector; normal and dark).
 #[test]
 #[ignore]
-fn bilder() {
+fn images() {
     i18n_qa_common::set_lang("qps");
     let rep = i18n_qa_common::images_standard("phase6_qps_", None);
     eprintln!("{}", rep.join("\n"));

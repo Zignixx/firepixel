@@ -6,11 +6,11 @@
 //! - Text ▸ Schrift: auch ohne Text aktiv (setzt die Vorgabe des Textwerkzeugs), ✓ an der aktuellen
 //!   Schrift, zuletzt benutzte Schriften oben (`RecentFontList`), Familien flach.
 
-use crate::gesamt_common;
+use crate::full_common;
 
 use fp_ui::app_state::{Action, AppState};
 use fp_ui::menu::{self, ItemAction, Node};
-use gesamt_common::*;
+use full_common::*;
 use serde_json::{json, Value};
 
 /// Die 12 Objektbefehle, die das Original bei einer Pixelauswahl sperrt.

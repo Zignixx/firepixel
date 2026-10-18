@@ -8,7 +8,7 @@
 //!
 //! Ergebnis: `docs\funktionstest\oberflaeche_auto.md`.
 
-use crate::gesamt_common;
+use crate::full_common;
 
 use egui_kittest::Harness;
 use fp_engine::view::PreviewMode;
@@ -16,7 +16,7 @@ use fp_ui::app_state::{Action, AppState, UiSettings};
 use fp_ui::panels::PanelId;
 use fp_ui::theme::ThemeKind;
 use fp_ui::FirepixelApp;
-use gesamt_common::*;
+use full_common::*;
 use serde_json::json;
 use std::panic::AssertUnwindSafe;
 
@@ -45,7 +45,7 @@ fn row(path: String, cmd: &str, r: Result<String, String>) -> Row {
 }
 
 #[test]
-fn gesamt_oberflaeche() {
+fn full_ui() {
     let mut rows = Vec::new();
     for kind in ThemeKind::ALL {
         let k = kind.label();
@@ -158,7 +158,7 @@ fn gesamt_oberflaeche() {
         }
         let _ = opened;
     }
-    let (ok, n) = write_report("oberflaeche_auto.md", "Oberfläche (Bedienfelder, Inspektor, Dialoge, Ansichten; 3 Designs)", "gesamt_oberflaeche.rs", &rows);
+    let (ok, n) = write_report("oberflaeche_auto.md", "Oberfläche (Bedienfelder, Inspektor, Dialoge, Ansichten; 3 Designs)", "full_ui.rs", &rows);
     eprintln!("Oberfläche: {ok}/{n} ✅");
     let bad: Vec<_> = rows.iter().filter(|r| !r.outcome.ok()).map(|r| format!("{} {:?}", r.path, r.outcome)).collect();
     assert!(bad.iter().all(|b| !b.contains("Panic")), "Paniken: {bad:#?}");
