@@ -13,6 +13,7 @@
 pub mod container;
 pub mod encoders;
 pub mod exif;
+pub mod iptc; // B-4
 pub mod pngopt;
 pub mod quantize;
 pub mod target;
@@ -201,7 +202,7 @@ pub fn format_keeps(fmt: OutputFormat) -> (bool, bool, bool) {
         OutputFormat::Jpeg | OutputFormat::Png | OutputFormat::Apng | OutputFormat::WebP => {
             (true, true, true)
         }
-        OutputFormat::Tiff => (false, true, true),
+        OutputFormat::Tiff => (true, true, true),
         _ => (false, false, false),
     }
 }
@@ -253,10 +254,8 @@ pub fn embed(bytes: Vec<u8>, fmt: OutputFormat, meta: &Meta) -> (Vec<u8>, Option
             }
         }
         OutputFormat::Tiff => {
-            // ICC/XMP schreibt der TIFF-Kodierer selbst
+            // EXIF/ICC/XMP/IPTC schreibt der TIFF-Kodierer selbst (B-4: EXIF und IPTC)
             let rest = container::Found {
-                exif: f.exif.clone(),
-                iptc: f.iptc.clone(),
                 comment: f.comment.clone(),
                 ..Default::default()
             };

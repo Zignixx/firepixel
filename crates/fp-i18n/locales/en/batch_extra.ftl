@@ -451,3 +451,16 @@ batch-value-perspective-straighten-shear = Shear (horizontals and verticals sepa
 batch-param-perspective-maxAngle = Maximum angle
 batch-param-perspective-crop = Crop transparent corners
 batch-warn-straighten-none = No straight lines found; the image stays unchanged.
+
+## Metadata: GPS, IPTC, collected export (B-4)
+batch-value-metadata-set-gps-set = Set position
+batch-param-metadata-set-latitude = Latitude
+    .tooltip = Decimal degrees, negative = south.
+batch-param-metadata-set-longitude = Longitude
+    .tooltip = Decimal degrees, negative = west.
+batch-param-metadata-set-altitude = Altitude
+    .tooltip = Metres above sea level; empty = none.
+batch-param-metadata-set-iptc = Also write IPTC
+batch-meta-issue-altitude = The altitude must be a number in metres.
+batch-param-metadata-export-collect = One file for all images
+    .tooltip = Writes metadata.csv or metadata.json into the output folder instead of one file per image.

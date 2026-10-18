@@ -290,11 +290,30 @@ impl Step for Set {
             ParamDef::text("keywords", ""),
             ParamDef::int("rating", -1, 5, -1),
             ParamDef::text("dateTaken", ""),
-            ParamDef::choice("gps", &["keep", "remove"], "keep"),
+            ParamDef::choice("gps", &["keep", "remove", "set"], "keep"),
+            // B-4: GPS position and IPTC
+            ParamDef::number("latitude", -90.0, 90.0, 0.0).when("gps", &["set"]),
+            ParamDef::number("longitude", -180.0, 180.0, 0.0).when("gps", &["set"]),
+            ParamDef::text("altitude", "")
+                .unit("m")
+                .when("gps", &["set"]),
+            ParamDef::bool("iptc", true),
         ]
     }
     fn validate(&self, params: &Value) -> Vec<Issue> {
         let mut out = crate::step::validate_params(&self.params(), params);
+        if params.get("gps").and_then(Value::as_str) == Some("set")
+            && let Some(a) = params
+                .get("altitude")
+                .and_then(Value::as_str)
+                .filter(|a| !a.trim().is_empty())
+            && a.trim().replace(',', ".").parse::<f64>().is_err()
+        {
+            out.push(Issue::param(
+                "altitude",
+                fp_i18n::t("batch-meta-issue-altitude"),
+            ));
+        }
         if let Some(d) = params
             .get("dateTaken")
             .and_then(Value::as_str)
@@ -344,15 +363,53 @@ impl Step for Set {
             .filter(|s| !s.is_empty())
             .map(str::to_string);
         let remove_gps = params.get("gps").and_then(Value::as_str) == Some("remove");
+        let set_gps = (params.get("gps").and_then(Value::as_str) == Some("set")).then(|| {
+            let f = |k: &str| params.get(k).and_then(Value::as_f64).unwrap_or(0.0);
+            let alt = params
+                .get("altitude")
+                .and_then(Value::as_str)
+                .and_then(|a| a.trim().replace(',', ".").parse::<f64>().ok());
+            (
+                f("latitude").clamp(-90.0, 90.0),
+                f("longitude").clamp(-180.0, 180.0),
+                alt,
+            )
+        });
+        let write_iptc = params.get("iptc").and_then(Value::as_bool).unwrap_or(true);
         let Some(m) = item.meta_mut() else {
             return Ok(());
         };
+        // IPTC (B-4): the same fields as record-2 datasets
+        if write_iptc {
+            let one = |v: &Option<String>| v.iter().cloned().collect::<Vec<String>>();
+            let mut sets: Vec<(u8, Vec<String>)> = Vec::new();
+            for (ds, v) in [
+                (meta::iptc::DS_BYLINE, &artist),
+                (meta::iptc::DS_COPYRIGHT, &copyright),
+                (meta::iptc::DS_CAPTION, &description),
+                (meta::iptc::DS_OBJECT_NAME, &title),
+            ] {
+                if v.is_some() {
+                    sets.push((ds, one(v)));
+                }
+            }
+            if let Some(k) = &keywords {
+                sets.push((meta::iptc::DS_KEYWORDS, k.clone()));
+            }
+            if !sets.is_empty() {
+                let cur = meta::iptc(m);
+                let irb = meta::iptc::set_record2(cur.as_deref(), &sets);
+                m.extra
+                    .insert(EXTRA_IPTC.into(), Value::String(meta::to_hex(&irb)));
+            }
+        }
         // EXIF
         let exif_needed = artist.is_some()
             || copyright.is_some()
             || description.is_some()
             || date.is_some()
-            || remove_gps;
+            || remove_gps
+            || set_gps.is_some();
         if exif_needed {
             let existing = m.exif.as_deref().and_then(exif::Exif::parse);
             if existing.is_some()
@@ -360,6 +417,7 @@ impl Step for Set {
                 || copyright.is_some()
                 || description.is_some()
                 || date.is_some()
+                || set_gps.is_some()
             {
                 let before = existing.clone();
                 let mut e = existing.unwrap_or_else(exif::Exif::new_empty);
@@ -391,6 +449,9 @@ impl Step for Set {
                 }
                 if remove_gps {
                     e.gps = None;
+                }
+                if let Some((lat, lon, alt)) = set_gps {
+                    e.set_gps(lat, lon, alt);
                 }
                 if before.as_ref() != Some(&e) {
                     m.exif = Some(e.write());

@@ -463,13 +463,19 @@ extension spelling under ⋯ (lower/upper case, `jpg`/`jpeg`).
 | ID | Name | Parameters | V | Method | P |
 |---|---|---|---|---|---|
 | `metadata.edit` | Metadata | **A** `keep`: all / none / chosen *all*; **A** `remove`: [gps, camera (make/model/serial number), software, thumbnails, xmp, iptc, comments, icc] *[gps]*; Pro: list of individual EXIF tags | info table before/after | reading: `kamadak-exif` 0.6 (BSD-2); writing/removing: container level with `img-parts` 0.3/0.4 (MIT/Apache, JPEG/PNG/WebP) and an own EXIF TIFF writer (tag list filtered, offsets recomputed); AVIF/JXL/TIFF: own box/IFD code | **P1** (keep/none/gps) · P2 (individual tags) |
-| `metadata.set` | Set metadata | **A** `artist`, **A** `copyright`, `description`, `keywords` (XMP `dc:subject` + IPTC), `title`, `rating` 0…5, `dateTaken` (fixed or shifted ± time), set/remove `gps`; placeholders allowed | info | own EXIF; XMP packet with `xmp-writer` 0.3 (MIT/Apache); own simple IPTC-IIM | P2 |
+| `metadata.set` | Set metadata | **A** `artist`, **A** `copyright`, `description`, `keywords` (XMP `dc:subject` + IPTC), `title`, `rating` 0…5, `dateTaken` (fixed or shifted ± time), `gps` keep/remove/set (B-4: `latitude` −90…90, `longitude` −180…180 decimal degrees, `altitude` m or empty → GPS IFD version 2.3 with D/M/S rationals); `iptc` on (B-4): artist/copyright/description/title/keywords also as IPTC-IIM record 2 (2:80, 2:116, 2:120, 2:05, 2:25, UTF-8 via 1:90; other datasets and resources kept); placeholders allowed | info | own EXIF; XMP packet with `xmp-writer` 0.3 (MIT/Apache); own simple IPTC-IIM (`meta::iptc`) | P2 |
 | `metadata.orientation` | Apply orientation | apply EXIF orientation to the pixels, tag = 1 | yes | own (= `rotate.autoExif`) | **P1** |
-| `metadata.export` | Metadata as file | **A** `format` json/csv *json*: sidecar `<name>.json`/`<name>.csv` next to each output (source path, file, format, bytes, size after the steps before, frames, dpi, transparency, EXIF summary, `meta::info` overview; CSV = header + one row, RFC 4180). Collected CSV over all files not done | – | own; executor extra-output hook (`extraTargets`) | P3 |
+| `metadata.export` | Metadata as file | **A** `format` json/csv *json*: sidecar `<name>.json`/`<name>.csv` next to each output (source path, file, format, bytes, size after the steps before, frames, dpi, transparency, EXIF summary, `meta::info` overview; CSV = header + one row, RFC 4180). **A** `collect` off (B-4): on = one `metadata.csv` (header + one row per item, list order) or `metadata.json` (array) in the common output folder instead of sidecars; existing file → `metadata (2).csv` unless the conflict rule is overwrite; listed in `extraTargets` of the first written item | – | own; executor extra-output hook (`extraTargets`) | P3 |
 
 Rule: when converting, metadata is **carried over** as far as the target format can hold it
 (EXIF/XMP/ICC in JPEG, PNG `eXIf`/`iTXt`, WebP, AVIF, TIFF); GIF/BMP/TGA/QOI/ICO lose it, with the
-hint "Format does not store metadata". Without a "Metadata" step, `keep: all` applies; the
+hint "Format does not store metadata". Reading (B-4) also covers TIFF (IFD0 descriptive tags, EXIF and GPS
+sub-IFDs, XMP tag 700, ICC 34675, IPTC 33723), AVIF/HEIF (ISOBMFF `meta`: `Exif` item and `mime`
+XMP item via `iinf`/`iloc` construction method 0, ICC from `colr` `prof`/`rICC`) and the JPEG XL
+container (`Exif`, `xml ` boxes; `brob` skipped). Writing TIFF (B-4) adds the descriptive IFD0 tags,
+an EXIF IFD (34665) and a GPS IFD (34853), and IPTC (33723) besides ICC/XMP. AVIF/HEIF/JPEG XL
+metadata is **read only**: writing their boxes is not done (rewriting `iinf`/`iloc`/`iref` with
+shifted offsets), so AVIF output keeps the "Format does not store metadata" hint. Without a "Metadata" step, `keep: all` applies; the
 orientation is applied and set to 1.
 
 Alternative to the own EXIF writer: `little_exif` (MIT/Apache, reads and writes EXIF in JPEG, PNG,

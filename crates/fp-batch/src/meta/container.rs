@@ -480,9 +480,198 @@ pub fn write_webp(d: &[u8], m: &Found) -> Option<Vec<u8>> {
     Some(riff_assemble(&out))
 }
 
+// ------------------------------------------------------------------ TIFF (B-4)
+
+fn read_tiff(d: &[u8]) -> Found {
+    let mut f = Found::default();
+    let Some(ex) = super::exif::Exif::parse(d) else {
+        return f;
+    };
+    let take = |tag: u16| ex.ifd0.get(tag).map(|e| e.data.clone());
+    f.xmp = take(700).filter(|x| looks_like_xmp(x));
+    f.icc = take(34675);
+    f.iptc = take(33723).map(|i| super::iptc::irb_from_iim(&i));
+    let mut e = ex.clone();
+    e.ifd0
+        .entries
+        .retain(|x| super::encoders::TIFF_EXIF_IFD0_TAGS.contains(&x.tag));
+    e.ifd1 = None;
+    e.thumbnail = None;
+    e.interop = None;
+    if !e.ifd0.entries.is_empty() || e.exif.is_some() || e.gps.is_some() {
+        f.exif = Some(e.write());
+    }
+    f
+}
+
+// ------------------------------------------------------------------ ISOBMFF: AVIF/HEIF (B-4)
+
+/// Boxes `(type, payload)` of a box sequence (64-bit sizes and size 0 = to the end).
+fn boxes(d: &[u8]) -> Vec<([u8; 4], &[u8])> {
+    let mut out = Vec::new();
+    let mut i = 0usize;
+    while i + 8 <= d.len() {
+        let size = u32::from_be_bytes([d[i], d[i + 1], d[i + 2], d[i + 3]]) as u64;
+        let ty = [d[i + 4], d[i + 5], d[i + 6], d[i + 7]];
+        let (head, len) = match size {
+            0 => (8u64, (d.len() - i) as u64),
+            1 => match be(d, i + 8, 8) {
+                Some(n) => (16, n),
+                None => break,
+            },
+            n => (8, n),
+        };
+        if len < head {
+            break;
+        }
+        let Some(end) = i.checked_add(len as usize).filter(|e| *e <= d.len()) else {
+            break;
+        };
+        out.push((ty, &d[i + head as usize..end]));
+        i = end;
+    }
+    out
+}
+
+fn child<'a>(d: &'a [u8], ty: &[u8; 4]) -> Option<&'a [u8]> {
+    boxes(d).into_iter().find(|b| &b.0 == ty).map(|b| b.1)
+}
+
+fn be(d: &[u8], i: usize, n: usize) -> Option<u64> {
+    let s = d.get(i..i.checked_add(n)?)?;
+    Some(s.iter().fold(0u64, |a, b| (a << 8) | *b as u64))
+}
+
+/// Exif/XMP items and the ICC profile of an AVIF/HEIF file (read only).
+fn read_isobmff(d: &[u8]) -> Found {
+    let mut f = Found::default();
+    let Some(meta) = child(d, b"meta").and_then(|m| m.get(4..)) else {
+        return f;
+    };
+    // item types
+    let mut kinds: Vec<(u64, bool)> = Vec::new(); // (id, is_exif)
+    if let Some(iinf) = child(meta, b"iinf") {
+        let v = iinf.first().copied().unwrap_or(0);
+        let start = if v == 0 { 6 } else { 8 };
+        for (ty, infe) in boxes(iinf.get(start..).unwrap_or_default()) {
+            let ver = infe.first().copied().unwrap_or(0);
+            if &ty != b"infe" || ver < 2 {
+                continue;
+            }
+            let (id, p) = if ver == 2 {
+                (be(infe, 4, 2), 6)
+            } else {
+                (be(infe, 4, 4), 8)
+            };
+            let (Some(id), Some(t)) = (id, infe.get(p + 2..p + 6)) else {
+                continue;
+            };
+            let rest = infe.get(p + 6..).unwrap_or_default();
+            let mut parts = rest.split(|c| *c == 0);
+            let _name = parts.next();
+            let content = parts.next().unwrap_or_default();
+            match t {
+                b"Exif" => kinds.push((id, true)),
+                b"mime" if content.starts_with(b"application/rdf+xml") => kinds.push((id, false)),
+                _ => {}
+            }
+        }
+    }
+    // item locations (construction method 0 = file offset)
+    if let Some(iloc) = child(meta, b"iloc")
+        && let (Some(a), Some(b)) = (iloc.get(4), iloc.get(5))
+    {
+        let ver = iloc.first().copied().unwrap_or(0);
+        let (off_s, len_s, base_s) = ((a >> 4) as usize, (a & 15) as usize, (b >> 4) as usize);
+        let idx_s = if ver >= 1 { (b & 15) as usize } else { 0 };
+        let id_n = if ver < 2 { 2 } else { 4 };
+        let (count, mut p) = if ver < 2 {
+            (be(iloc, 6, 2).unwrap_or(0), 8)
+        } else {
+            (be(iloc, 6, 4).unwrap_or(0), 10)
+        };
+        for _ in 0..count.min(10_000) {
+            let Some(id) = be(iloc, p, id_n) else { break };
+            p += id_n;
+            let mut method = 0;
+            if ver >= 1 {
+                method = be(iloc, p, 2).unwrap_or(0) & 15;
+                p += 2;
+            }
+            p += 2; // data reference index
+            let base = be(iloc, p, base_s).unwrap_or(0);
+            p += base_s;
+            let Some(n) = be(iloc, p, 2) else { break };
+            p += 2;
+            let mut data = Vec::new();
+            for _ in 0..n {
+                p += idx_s;
+                let o = be(iloc, p, off_s).unwrap_or(0);
+                p += off_s;
+                let l = be(iloc, p, len_s).unwrap_or(0);
+                p += len_s;
+                let s = base.saturating_add(o) as usize;
+                if method == 0
+                    && let Some(chunk) = d.get(s..s.saturating_add(l as usize))
+                {
+                    data.extend_from_slice(chunk);
+                }
+            }
+            match kinds.iter().find(|k| k.0 == id) {
+                Some((_, true)) => {
+                    // 4-byte offset to the TIFF header
+                    let skip = be(&data, 0, 4).unwrap_or(0) as usize;
+                    if let Some(t) = data.get(4usize.saturating_add(skip)..) {
+                        let t = t.strip_prefix(b"Exif\0\0").unwrap_or(t);
+                        if super::exif::Exif::parse(t).is_some() {
+                            f.exif = Some(t.to_vec());
+                        }
+                    }
+                }
+                Some((_, false)) if looks_like_xmp(&data) => f.xmp = Some(data),
+                _ => {}
+            }
+        }
+    }
+    // ICC profile: colr box with type prof/rICC
+    if let Some(ipco) = child(meta, b"iprp").and_then(|p| child(p, b"ipco")) {
+        for (ty, b) in boxes(ipco) {
+            if &ty == b"colr" && matches!(b.get(0..4), Some(b"prof" | b"rICC")) {
+                f.icc = Some(b[4..].to_vec());
+                break;
+            }
+        }
+    }
+    f
+}
+
+// ------------------------------------------------------------------ JPEG XL container (B-4)
+
+const JXL_SIG: &[u8] = b"\0\0\0\x0CJXL \r\n\x87\n";
+
+/// `Exif` and `xml ` boxes of a JPEG XL container (read only; `brob` boxes are skipped).
+fn read_jxl(d: &[u8]) -> Found {
+    let mut f = Found::default();
+    for (ty, b) in boxes(d) {
+        match &ty {
+            b"Exif" => {
+                let skip = be(b, 0, 4).unwrap_or(0) as usize;
+                if let Some(t) = b.get(4usize.saturating_add(skip)..)
+                    && super::exif::Exif::parse(t).is_some()
+                {
+                    f.exif = Some(t.to_vec());
+                }
+            }
+            b"xml " if looks_like_xmp(b) => f.xmp = Some(b.to_vec()),
+            _ => {}
+        }
+    }
+    f
+}
+
 // ------------------------------------------------------------------ allgemein
 
-/// Liest die Metadaten einer Datei (JPEG, PNG, WebP; sonst leer).
+/// Liest die Metadaten einer Datei (JPEG, PNG, WebP; B-4: TIFF, AVIF/HEIF, JPEG XL; sonst leer).
 pub fn read(d: &[u8]) -> Found {
     if d.starts_with(&[0xFF, 0xD8]) {
         read_jpeg(d)
@@ -490,6 +679,12 @@ pub fn read(d: &[u8]) -> Found {
         read_png(d)
     } else if d.starts_with(b"RIFF") {
         read_webp(d)
+    } else if d.starts_with(b"II*\0") || d.starts_with(b"MM\0*") {
+        read_tiff(d)
+    } else if d.starts_with(JXL_SIG) {
+        read_jxl(d)
+    } else if d.get(4..8) == Some(b"ftyp") {
+        read_isobmff(d)
     } else {
         Found::default()
     }

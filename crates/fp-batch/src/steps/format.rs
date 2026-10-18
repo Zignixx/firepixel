@@ -532,6 +532,25 @@ pub const CSV_COLUMNS: [&str; 12] = [
     "icc",
 ];
 
+/// One CSV over several sidecars (header + one row each; B-4 `collect: true`).
+pub fn collected_csv(rows: &[Value]) -> String {
+    let mut out = format!(
+        "{}
+",
+        CSV_COLUMNS.join(",")
+    );
+    for d in rows {
+        let one = sidecar_csv(d);
+        if let Some((_, row)) = one.split_once(
+            "
+",
+        ) {
+            out.push_str(row);
+        }
+    }
+    out
+}
+
 /// Sidecar as CSV (header + one row; RFC 4180 quoting).
 pub fn sidecar_csv(d: &Value) -> String {
     let m = &d["metadata"];
@@ -575,7 +594,11 @@ impl Step for MetadataExport {
         StepGroup::Metadata
     }
     fn params(&self) -> Vec<ParamDef> {
-        vec![ParamDef::choice("format", &["json", "csv"], "json").beginner()]
+        vec![
+            ParamDef::choice("format", &["json", "csv"], "json").beginner(),
+            // B-4: one file over all items instead of one sidecar each
+            ParamDef::bool("collect", false).beginner(),
+        ]
     }
     fn applies_to(&self) -> &[ItemKind] {
         &ItemKind::PIXELS
@@ -589,11 +612,23 @@ impl Step for MetadataExport {
         if let Some(m) = item.meta_mut() {
             m.extra.insert(
                 EXTRA_SIDECAR.into(),
-                json!({"format": format, "data": data}),
+                json!({"format": format, "data": data, "collect": p_bool(params, "collect", false)}),
             );
         }
         Ok(())
     }
+}
+
+/// Row of `metadata.export` with `collect: true`: (format, data); `None` = per-item sidecar.
+pub fn collected_sidecar(item: &Item) -> Option<(String, Value)> {
+    let s = item.meta()?.extra.get(EXTRA_SIDECAR)?;
+    if s["collect"].as_bool() != Some(true) {
+        return None;
+    }
+    Some((
+        s["format"].as_str().unwrap_or("json").to_string(),
+        s["data"].clone(),
+    ))
 }
 
 /// Text of a sidecar stored by `metadata.export`: (extension, content).

@@ -451,3 +451,16 @@ batch-value-perspective-straighten-shear = Scheren (Waagerechte und Senkrechte g
 batch-param-perspective-maxAngle = Größter Winkel
 batch-param-perspective-crop = Transparente Ecken abschneiden
 batch-warn-straighten-none = Keine geraden Linien gefunden; das Bild bleibt unverändert.
+
+## Metadaten: GPS, IPTC, gesammelte Ausgabe (B-4)
+batch-value-metadata-set-gps-set = Position setzen
+batch-param-metadata-set-latitude = Breite
+    .tooltip = Dezimalgrad, negativ = Süd.
+batch-param-metadata-set-longitude = Länge
+    .tooltip = Dezimalgrad, negativ = West.
+batch-param-metadata-set-altitude = Höhe
+    .tooltip = Meter über dem Meeresspiegel; leer = keine.
+batch-param-metadata-set-iptc = Auch IPTC schreiben
+batch-meta-issue-altitude = Die Höhe muss eine Zahl in Metern sein.
+batch-param-metadata-export-collect = Eine Datei für alle Bilder
+    .tooltip = Schreibt metadata.csv bzw. metadata.json in den Ausgabeordner statt einer Datei je Bild.

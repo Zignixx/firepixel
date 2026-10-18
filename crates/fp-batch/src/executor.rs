@@ -16,6 +16,7 @@ use crate::report::{self, ItemReport, ItemStatus, Report};
 use crate::step::{StepContext, StepRegistry};
 use crate::steps::fileops::{EXTRA_INDEX, TIMESTAMPS};
 use rayon::prelude::*;
+use serde_json::Value;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::mpsc::{Receiver, Sender};
@@ -191,6 +192,8 @@ struct Job<'a> {
     lang: String,
     /// Names with the size token: renamed after processing (BA-105).
     renamer: Option<Renamer>,
+    /// B-4: rows of `metadata.export` with `collect: true` (list index, format, data).
+    meta_rows: Mutex<Vec<(usize, String, Value)>>,
 }
 
 /// Re-naming after processing when the name uses the image size (BA-105).
@@ -706,6 +709,13 @@ impl Job<'_> {
 
     /// Metadata sidecar `<stem>.json`/`.csv` of `metadata.export` (B-3).
     fn write_extra_sidecar(&self, item: &Item, target: &Path, rep: &mut ItemReport) -> Result<()> {
+        if let Some((format, data)) = crate::steps::format::collected_sidecar(item) {
+            self.meta_rows
+                .lock()
+                .unwrap_or_else(|p| p.into_inner())
+                .push((rep.index, format, data));
+            return Ok(());
+        }
         let Some((ext, text)) = crate::steps::format::sidecar_file(item) else {
             return Ok(());
         };
@@ -807,6 +817,42 @@ pub fn default_threads() -> usize {
 }
 
 /// Gemeinsamer Ordner mehrerer Pfade (für den Bericht im Ausgabeordner).
+/// Writes `metadata.csv` / `metadata.json` over all collected rows (list order) into `dir`
+/// (B-4). Conflicts: overwrite only with the overwrite rule, otherwise `metadata (2).csv` ….
+fn write_collected_metadata(
+    dir: &Path,
+    mut rows: Vec<(usize, String, Value)>,
+    conflict: crate::recipe::Conflict,
+) -> Result<PathBuf> {
+    rows.sort_by_key(|r| r.0);
+    let csv = rows.first().is_some_and(|r| r.1 == "csv");
+    let (ext, text) = if csv {
+        let data: Vec<Value> = rows.into_iter().map(|r| r.2).collect();
+        ("csv", crate::steps::format::collected_csv(&data))
+    } else {
+        let data: Vec<Value> = rows.into_iter().map(|r| r.2).collect();
+        (
+            "json",
+            serde_json::to_string_pretty(&data).unwrap_or_default()
+                + "
+",
+        )
+    };
+    let mut path = dir.join(format!("metadata.{ext}"));
+    let mut k = 2;
+    while path.exists() && conflict != crate::recipe::Conflict::Overwrite && k < 10_000 {
+        path = dir.join(format!("metadata ({k}).{ext}"));
+        k += 1;
+    }
+    std::fs::create_dir_all(output::long_path(dir))
+        .map_err(|e| BatchError::Io(format!("{}: {e}", dir.display())))?;
+    let tmp = output::temp_path(&path);
+    std::fs::write(output::long_path(&tmp), text.as_bytes())
+        .map_err(|e| BatchError::Io(format!("{}: {e}", tmp.display())))?;
+    output::commit_temp(&tmp, &path)?;
+    Ok(path)
+}
+
 fn common_dir(dirs: &[PathBuf]) -> Option<PathBuf> {
     let mut it = dirs.iter();
     let mut acc = it.next()?.clone();
@@ -863,7 +909,7 @@ pub fn run(recipe: &Recipe, items: &[ItemInfo], opts: &RunOptions) -> Result<Rep
     let now = opts.plan.now.unwrap_or_else(naming::now_local);
     let plan_opts = PlanOptions { now: Some(now) };
     let plan = naming::plan(recipe, items, pipe.file_only, &plan_opts)?;
-    let warnings: Vec<String> = pipe
+    let mut warnings: Vec<String> = pipe
         .unknown
         .iter()
         .map(|id| fp_i18n::tr!("batch-issue-unknown-step", id = id.clone()))
@@ -964,6 +1010,7 @@ pub fn run(recipe: &Recipe, items: &[ItemInfo], opts: &RunOptions) -> Result<Rep
                 now,
                 claims: Mutex::new(naming::Claims::from_plan(&plan)),
             }),
+            meta_rows: Mutex::new(Vec::new()),
         };
         let pool = rayon::ThreadPoolBuilder::new()
             .num_threads(threads)
@@ -980,6 +1027,25 @@ pub fn run(recipe: &Recipe, items: &[ItemInfo], opts: &RunOptions) -> Result<Rep
                 pool.install(|| fp_i18n::with_language(&job.lang, || run_collect(&job, &plan, k)))
             }
         };
+        // B-4: one metadata file over all items (`metadata.export` with `collect: true`)
+        let rows = std::mem::take(&mut *job.meta_rows.lock().unwrap_or_else(|p| p.into_inner()));
+        if !rows.is_empty()
+            && !opts.cancel.is_cancelled()
+            && let Some(dir) = common_dir(&plan.output_dirs)
+        {
+            match write_collected_metadata(&dir, rows, recipe.output.conflict) {
+                Ok(p) => {
+                    if let Some(r) = report
+                        .items
+                        .iter_mut()
+                        .find(|r| r.status == ItemStatus::Done)
+                    {
+                        r.extra_targets.push(p);
+                    }
+                }
+                Err(e) => warnings.push(e.to_string()),
+            }
+        }
         report.cancelled = opts.cancel.is_cancelled();
         if report.cancelled {
             remove_temp_files(&plan);

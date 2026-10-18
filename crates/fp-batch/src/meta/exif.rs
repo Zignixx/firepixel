@@ -354,6 +354,103 @@ impl Exif {
         });
     }
 
+    /// GPS position (B-4): replaces the GPS IFD with version 2.3, latitude/longitude as degrees,
+    /// minutes, seconds (seconds in 1/1000) and an optional altitude in metres.
+    pub fn set_gps(&mut self, lat: f64, lon: f64, alt: Option<f64>) {
+        let le = self.little_endian;
+        let u32b = |v: u32| if le { v.to_le_bytes() } else { v.to_be_bytes() };
+        let rat = |num: u32, den: u32| [u32b(num), u32b(den)].concat();
+        let dms = |v: f64| {
+            let v = v.abs();
+            let d = v.floor();
+            let m = ((v - d) * 60.0).floor();
+            let sec = ((v - d) * 60.0 - m) * 60.0;
+            [
+                rat(d as u32, 1),
+                rat(m as u32, 1),
+                rat((sec * 1000.0).round() as u32, 1000),
+            ]
+            .concat()
+        };
+        let ascii = |c: &str| {
+            let mut v = c.as_bytes().to_vec();
+            v.push(0);
+            v
+        };
+        let mut g = Ifd::default();
+        g.set(Entry {
+            tag: 0,
+            ty: 1,
+            count: 4,
+            data: vec![2, 3, 0, 0],
+        });
+        g.set(Entry {
+            tag: 1,
+            ty: 2,
+            count: 2,
+            data: ascii(if lat < 0.0 { "S" } else { "N" }),
+        });
+        g.set(Entry {
+            tag: 2,
+            ty: 5,
+            count: 3,
+            data: dms(lat),
+        });
+        g.set(Entry {
+            tag: 3,
+            ty: 2,
+            count: 2,
+            data: ascii(if lon < 0.0 { "W" } else { "E" }),
+        });
+        g.set(Entry {
+            tag: 4,
+            ty: 5,
+            count: 3,
+            data: dms(lon),
+        });
+        if let Some(a) = alt.filter(|a| a.is_finite()) {
+            g.set(Entry {
+                tag: 5,
+                ty: 1,
+                count: 1,
+                data: vec![u8::from(a < 0.0)],
+            });
+            g.set(Entry {
+                tag: 6,
+                ty: 5,
+                count: 1,
+                data: rat((a.abs() * 100.0).round() as u32, 100),
+            });
+        }
+        self.gps = Some(g);
+    }
+
+    /// GPS position in decimal degrees (latitude, longitude), if present.
+    pub fn gps_position(&self) -> Option<(f64, f64)> {
+        let g = self.gps.as_ref()?;
+        let val = |tag: u16, reft: u16, neg: u8| -> Option<f64> {
+            let e = g.get(tag)?;
+            let rd = Reader {
+                b: &e.data,
+                le: self.little_endian,
+            };
+            let mut v = 0.0;
+            for (k, div) in [1.0, 60.0, 3600.0].into_iter().enumerate() {
+                let n = rd.u32(k * 8)? as f64;
+                let d = rd.u32(k * 8 + 4)? as f64;
+                if d > 0.0 {
+                    v += n / d / div;
+                }
+            }
+            let sign = g
+                .get(reft)
+                .and_then(|e| e.data.first().copied())
+                .is_some_and(|c| c == neg);
+            Some(if sign { -v } else { v })
+        };
+        Some((val(2, 1, b'S')?, val(4, 3, b'W')?))
+    }
+
     /// Ausrichtung setzen (IFD0).
     pub fn set_orientation(&mut self, v: u16) {
         let data = if self.little_endian {

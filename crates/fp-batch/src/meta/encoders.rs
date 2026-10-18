@@ -237,6 +237,35 @@ fn tiff_page(
     if let Some(icc) = &meta.icc {
         tags.push((34675, 7, icc.len() as u32, icc.clone()));
     }
+    // B-4: IPTC (raw IIM) and EXIF (descriptive IFD0 tags, EXIF and GPS sub-IFDs)
+    if let Some(iim) = super::iptc(meta).and_then(|irb| super::iptc::iim_of(&irb)) {
+        tags.push((33723, 7, iim.len() as u32, iim));
+    }
+    let mut subs: Vec<(u16, Vec<u8>)> = Vec::new();
+    if let Some(ex) = meta.exif.as_deref().and_then(super::exif::Exif::parse) {
+        let le = ex.little_endian;
+        for e in &ex.ifd0.entries {
+            if TIFF_EXIF_IFD0_TAGS.contains(&e.tag) && !tags.iter().any(|t| t.0 == e.tag) {
+                tags.push((e.tag, e.ty, e.count, entry_le(e, le)));
+            }
+        }
+        for (tag, ifd) in [(34665u16, &ex.exif), (34853, &ex.gps)] {
+            if let Some(ifd) = ifd.as_ref().filter(|i| !i.entries.is_empty()) {
+                let entries: Vec<super::exif::Entry> = ifd
+                    .entries
+                    .iter()
+                    .filter(|e| e.tag != super::exif::TAG_INTEROP_IFD)
+                    .map(|e| super::exif::Entry {
+                        data: entry_le(e, le),
+                        ..e.clone()
+                    })
+                    .collect();
+                // placeholder pointer; the IFD is placed with the blobs
+                tags.push((tag, 4, 1, l32(0)));
+                subs.push((tag, entries_to_bytes(&entries)));
+            }
+        }
+    }
     tags.sort_by_key(|t| t.0);
     if out.len() % 2 == 1 {
         out.push(0);
@@ -256,6 +285,20 @@ fn tiff_page(
     for (tag, ty, count, mut val) in tags {
         if tag == 273 {
             val = l32(strip_at);
+        }
+        if let Some(i) = subs.iter().position(|s| s.0 == tag) {
+            // B-4: sub-IFD at the next even offset, values right behind it
+            data_at += data_at % 2;
+            let entries = sub_entries(&subs[i].1);
+            let bytes = sub_ifd(&entries, data_at);
+            out.extend_from_slice(&tag.to_le_bytes());
+            out.extend_from_slice(&ty.to_le_bytes());
+            out.extend_from_slice(&count.to_le_bytes());
+            out.extend_from_slice(&(data_at as u32).to_le_bytes());
+            let len = bytes.len();
+            blobs.push((data_at, bytes));
+            data_at += len;
+            continue;
         }
         out.extend_from_slice(&tag.to_le_bytes());
         out.extend_from_slice(&ty.to_le_bytes());
@@ -277,6 +320,98 @@ fn tiff_page(
         out.extend_from_slice(&v);
     }
     Ok(next_at)
+}
+
+/// IFD0 tags of an EXIF block that are copied into a TIFF IFD (description, make, model,
+/// software, date, artist, copyright, XP tags). Orientation is not copied: pixels are written
+/// already oriented.
+pub const TIFF_EXIF_IFD0_TAGS: [u16; 12] = [
+    0x010E, 0x010F, 0x0110, 0x0131, 0x0132, 0x013B, 0x8298, 0x9C9B, 0x9C9C, 0x9C9D, 0x9C9E, 0x9C9F,
+];
+
+/// Entry data in little-endian order (`src_le` = byte order of the source block).
+pub fn entry_le(e: &super::exif::Entry, src_le: bool) -> Vec<u8> {
+    if src_le {
+        return e.data.clone();
+    }
+    let unit = match e.ty {
+        3 | 8 => 2,
+        4 | 9 | 11 | 13 | 5 | 10 => 4,
+        12 => 8,
+        _ => 1,
+    };
+    let mut d = e.data.clone();
+    if unit > 1 {
+        for c in d.chunks_mut(unit) {
+            c.reverse();
+        }
+    }
+    d
+}
+
+/// Serialised entries for the transport between the passes (tag, type, count, len, data).
+fn entries_to_bytes(entries: &[super::exif::Entry]) -> Vec<u8> {
+    let mut o = Vec::new();
+    for e in entries {
+        o.extend_from_slice(&e.tag.to_le_bytes());
+        o.extend_from_slice(&e.ty.to_le_bytes());
+        o.extend_from_slice(&e.count.to_le_bytes());
+        o.extend_from_slice(&(e.data.len() as u32).to_le_bytes());
+        o.extend_from_slice(&e.data);
+    }
+    o
+}
+
+fn sub_entries(b: &[u8]) -> Vec<super::exif::Entry> {
+    let mut out = Vec::new();
+    let mut i = 0;
+    while i + 12 <= b.len() {
+        let tag = u16::from_le_bytes([b[i], b[i + 1]]);
+        let ty = u16::from_le_bytes([b[i + 2], b[i + 3]]);
+        let count = u32::from_le_bytes([b[i + 4], b[i + 5], b[i + 6], b[i + 7]]);
+        let n = u32::from_le_bytes([b[i + 8], b[i + 9], b[i + 10], b[i + 11]]) as usize;
+        let Some(data) = b.get(i + 12..i + 12 + n) else {
+            break;
+        };
+        out.push(super::exif::Entry {
+            tag,
+            ty,
+            count,
+            data: data.to_vec(),
+        });
+        i += 12 + n;
+    }
+    out
+}
+
+/// Little-endian IFD placed at absolute offset `at` (values > 4 bytes follow the IFD).
+fn sub_ifd(entries: &[super::exif::Entry], at: usize) -> Vec<u8> {
+    let mut list: Vec<&super::exif::Entry> = entries.iter().collect();
+    list.sort_by_key(|e| e.tag);
+    let n = list.len();
+    let mut o = Vec::new();
+    o.extend_from_slice(&(n as u16).to_le_bytes());
+    let data_at = at + 2 + 12 * n + 4;
+    let mut tail: Vec<u8> = Vec::new();
+    for e in list {
+        o.extend_from_slice(&e.tag.to_le_bytes());
+        o.extend_from_slice(&e.ty.to_le_bytes());
+        o.extend_from_slice(&e.count.to_le_bytes());
+        if e.data.len() <= 4 {
+            let mut v = e.data.clone();
+            v.resize(4, 0);
+            o.extend_from_slice(&v);
+        } else {
+            o.extend_from_slice(&((data_at + tail.len()) as u32).to_le_bytes());
+            tail.extend_from_slice(&e.data);
+            if tail.len() % 2 == 1 {
+                tail.push(0);
+            }
+        }
+    }
+    o.extend_from_slice(&0u32.to_le_bytes());
+    o.extend_from_slice(&tail);
+    o
 }
 
 // ------------------------------------------------------------------ TGA
