@@ -73,7 +73,7 @@ Conventions: coordinates are document pixels; "R1", "E1", "B1", "P1", "PG" are t
   **Expected:** All supported files are added (folder recursively as configured), unsupported files are reported.
 - [ ] **A1-18** (CF-C CT-C-02/03, F19 TW-69; needs: real mouse) – see VER-4.23 and VER-1.36: reorder states/pages and drag across eye icons.
 
-## A2. Open items from comparison runs 12–19
+## A2. Open items from comparison runs 12–20
 
 Comparison run 12 left seven units unclear (`?`). Runs 13 and 14 (17 Oct 2026) resolved or reclassified all of
 them; they stay listed here, ticked, so the history of each check is clear. Run 15 (17/18 Oct 2026) resolved
@@ -85,8 +85,9 @@ TW-131, TW-134, TW-135 and most of TW-133 and changed the runner for TW-132 (R-1
 and are confirmed by run 19 or, failing that, by the matching A4 check. Run 19 (18 Oct 2026, 6 units) confirmed
 TW-125 (States menu), TW-130 / Q-57, TW-131, TW-132 (rest moved to TW-140 / TW-141), TW-135 and TW-133 except for
 the stretch shortcut, and added TW-136 to TW-141; TW-134 was not part of run 19. After run 19, TW-136 turned out to
-be a capture artefact (struck below), and TW-137, TW-138 and TW-139 were fixed; run 20 is to confirm them. The open
-checks below come from runs 17 to 19.
+be a capture artefact (struck below), and TW-137, TW-138, TW-139 and TW-141 were fixed. Run 20 (18 Oct 2026, 7 units)
+confirmed TW-137, TW-138, TW-139 and TW-141; it could not confirm TW-134 (the reference did not apply the crop),
+left TW-140 open (runner R-16) and added TW-142 to TW-144. The open checks below come from runs 17 to 20.
 
 - [x] **TW-100** (`panel-library-styles/03`) – resolved: run 13 measured equal positions at an integer drop point; the unit counts as equal and the half-pixel case is no longer tracked.
 - [x] **TW-101** (`xs-file-formats/09`) – resolved in run 13: import by dragging lands on the same pixels 121,120–417,322 in both programs.
@@ -119,7 +120,7 @@ checks below come from runs 17 to 19.
 - [ ] **TW-133** (`xs-shortcuts/06`; needs: a valid point text in the reference test file, a measurement of "stretch" and "justified" on it) – fixed in part after run 18 (RE spec 48); run 19 confirms Ctrl+Shift+B and Ctrl+Shift+I (warning on both sides), Ctrl+Shift+U, Ctrl+Shift+E and Larger/Smaller (24 → 25 → 24). Still different: Ctrl+Alt+Shift+S sets "stretch" on TX1 in Firepixel, the reference keeps "left" (TX1 is invalid in the reference file).
   **Steps:** With the "Web Standard" set active, select the text object with the pointer (do not edit it); press Ctrl+Shift+B, Escape, reselect; repeat with Ctrl+Shift+I, Ctrl+Alt+Shift+S, Ctrl+Shift+Period and Ctrl+Shift+Comma; then set "justified" alignment on the point text.
   **Expected:** As in the reference: a warning for Ctrl+Shift+B and Ctrl+Shift+I, nothing for Ctrl+Alt+Shift+S, 24 → 25 pt on Ctrl+Shift+Period and back on Ctrl+Shift+Comma. "Justified" on point text: not yet measured in the reference.
-- [x] **TW-134** (`xs-preferences/06`) – fixed after run 18: the crop tool, Crop Document and Canvas Size honour *Delete objects when cropping* (`CropDocCropsImages`); on deletes objects entirely outside and clips crossing bitmaps, off changes nothing but the position. Not part of run 19; confirm in the next `xs-preferences` run or by hands-on check A4-13.
+- [x] **TW-134** (`xs-preferences/06`) – fixed after run 18: the crop tool, Crop Document and Canvas Size honour *Delete objects when cropping* (`CropDocCropsImages`); on deletes objects entirely outside and clips crossing bitmaps, off changes nothing but the position. Not part of run 19. Run 20: Firepixel crops to 280 × 220 and removes L1, ST and PG (entirely outside), but the reference did not apply the crop (page 800 × 600, all seven paths; runner, TW-140), so the step compares nothing; confirm in run 21 or by hands-on check A4-13.
 - [x] **TW-135** (`tool-text/06`) – fixed after run 18: a pointer double-click places the caret at the click point and a character typed at once lands there ("ZeilQe eins"). Run 19: Firepixel reads back "ZeilQe eins" after Escape, as the reference showed in run 18; the reference's double-click opened no editor in run 19 (runner, TW-140); hands-on check A4-12.
 - [ ] **Q-49** (`color-popup/05`; needs: real keyboard)
   **Steps:** Select a rectangle, open the fill colour pop-up, type #3366CC into the hex field and press Enter; repeat with "zz12".
@@ -127,21 +128,28 @@ checks below come from runs 17 to 19.
 - [x] **TW-127 / TW-129** (runner R-13) – resolved in run 18: `xs-preferences` sets and reads back its options (`15` equal; `06` continued as TW-134); the reference opens Feather / Save Bitmap Selection, the "add swatches" file dialog and receives the library drop; `xs-canvas/15` selects R1 first. The plain arrow keys in `xs-shortcuts/10` moved to TW-132.
 - [x] **TW-132** (runner R-14) – runner changed after run 18: read-back scripts on the reference side record open dialogs first and every cancelled dialog is logged; the history read-back is guarded and retried (`menu-edit/01, 22`); Delete, Ctrl+D and the plain arrow keys are checked for effect and retried once (`menu-edit/09, 20`, `xs-shortcuts/10`); the text tool is left with Escape at the start of a unit (`tool-text`); Firepixel's menu read-back takes the enabled state from the accessibility tree (`xs-canvas/15`). Confirmed in run 19 for the dialogs, the history read-back, Ctrl+D and the text read-backs; Delete and the plain arrow keys select other tools on the reference side and a "c" arrives after Escape (continued as **TW-140** below); Firepixel's menu enabled state is still not read (continued as **TW-141** below).
 - [x] ~~**TW-136** (`panel-library-styles/16`)~~ – not a deviation (capture artefact): the reference's labels end in "..." as well, and the 17 px came from the shot including the ≡ button row and the drop shadow; the menu frame is 323 × 231 vs. 321 × 231 px, pinned by a size test.
-- [x] **TW-137** (`menu-edit/22`) – fixed after run 19 (RE spec), confirm in run 20: Copy and Cut are History rows of their own ("Kopie" / "Copy", "Ausschneiden" / "Cut"), Select All always adds a row, Deselect only when the selection changes; Copy does not mark the document as changed.
+- [x] **TW-137** (`menu-edit/22`) – fixed after run 19 (RE spec), confirmed in run 20 (both Histories list Clone, Copy, Paste): Copy and Cut are History rows of their own ("Kopie" / "Copy", "Ausschneiden" / "Cut"), Select All always adds a row, Deselect only when the selection changes; Copy does not mark the document as changed.
   **Steps:** Select a rectangle; Clone (Ctrl+Shift+D), Copy (Ctrl+C), Paste (Ctrl+V); look at the History panel.
   **Expected:** As in the reference: Clone, Copy, Paste are listed.
-- [x] **TW-138** (`tool-text/11, 13, 14, 16`) – fixed after run 19 (RE spec), confirm in run 20: attributes set while the editor is open never change the text tool defaults; with pointer-selected text or nothing selected they do. The *Text* menu remnant stays open in FINDINGS (TW-138 rest).
+- [x] **TW-138** (`tool-text/11, 13, 14, 16`) – fixed after run 19 (RE spec), confirmed in run 20 (the new text in `14` and `16` keeps 12 pt black; `14` now 0.54 %): attributes set while the editor is open never change the text tool defaults; with pointer-selected text or nothing selected they do. The *Text* menu remnant stays open in FINDINGS (TW-138 rest).
   **Steps:** Text tool: type a text, select three characters and set 72 pt in the inspector; press Escape; click elsewhere and type a new text.
   **Expected:** The new text keeps the tool's earlier size and colour as in the reference.
-- [x] **TW-139** (`tool-text/06, 07`, `xs-shortcuts/15_in_text_tx2`) – fixed after run 19, confirm in run 20 and with the real keyboard: script read-back shows the live editor text (limits: MCP `get_document` / `render` show the committed state; the live element is not in the selection).
+- [x] **TW-139** (`tool-text/06, 07`, `xs-shortcuts/15_in_text_tx2`) – fixed after run 19, confirmed in run 20 ("Hallo Welt" and "ZeileVr zwei" read back while the editor is open; the bounds remnant is TW-143), still to try with the real keyboard: script read-back shows the live editor text (limits: MCP `get_document` / `render` show the committed state; the live element is not in the selection).
   **Steps:** Text tool: click on an empty canvas and type "Hallo"; without pressing Escape run a script that lists the document's texts; look at the canvas.
   **Expected:** The new text object exists and shows "Hallo" in the read-back and on the canvas while the editor is open, as in the reference.
-- [ ] **TW-140** (runner R-15 on `main`; needs: run 20)
-  **Steps:** Runner: plain arrow keys, Delete and Escape on the reference side; effect check on the object bounds; tool and text-attribute reset after typing.
-  **Expected:** `menu-edit/09, 22` delete R1, `xs-shortcuts/10` and `panel-pages-states-history/14–21` nudge by 1 px, no stray "c" after Escape, no tool change, no text attributes carried into `tool-text`.
-- [ ] **TW-141** (Rust fix F40 in progress: menu rows get an AccessKit node; needs: run 20)
-  **Steps:** Read the enabled state of Modify ▸ Snap to Pixel without a selection and of the URL panel menu entries in Firepixel.
-  **Expected:** `enabled` is reported (false for Snap to Pixel without a selection; Edit URL and Delete URL false without a selected URL).
+- [ ] **TW-140** (runner R-16 on `main`; needs: run 21) – run 20 with R-15 showed no change: Delete selects the Eraser, the plain Right arrow the Text tool, a "c" arrives after Escape, a typed "Q" was lost in `tool-text/06`, the crop in `xs-preferences/06` was not committed, and the text-attribute and default-colour resets at unit start had no effect; `key_echo` failed with a script error (fixed in R-16), the log has no layout or tool-switch lines.
+  **Steps:** Runner: `key_echo` self-test, plain arrow keys, Delete, Enter and Escape on the reference side; effect check on the object bounds; tool and text-attribute reset at unit start and after typing.
+  **Expected:** `menu-edit/09, 22` delete R1, `xs-shortcuts/10` and `panel-pages-states-history/14–21` nudge by 1 px, `xs-preferences/06` crops the reference's page to 280 × 220, `tool-text/06` reads "ZeilQe eins", no stray "c" after Escape, no tool change, no text attributes carried into `tool-text` (12 pt regular at unit start).
+- [x] **TW-141** (`xs-canvas/15_snap_pixels_disabled`) – fixed by package F40 and confirmed in run 20: Modify ▸ Snap to Pixel without a selection reads `enabled: false` in both programs. Panel pop-up menus continue as TW-142.
+- [ ] **TW-142** (`panel-library-styles/16`; runner / bridge; needs: run 21)
+  **Steps:** Open the URL panel menu without a selected URL and read its entries in both programs.
+  **Expected:** Firepixel reports `enabled: false` for Edit URL and Delete URL (the shots already show both grey on both sides); labels compare equal with or without a trailing "...".
+- [ ] **TW-143** (`xs-shortcuts/15_in_text_tx2`; direct fix; needs: run 21)
+  **Steps:** Double-click into line 2 of TX2 with the text tool, type "Vr" and read the text objects back before Escape.
+  **Expected:** As in the reference: TX2's bounds grow to 50,150–120,194 while the editor is open (Firepixel keeps 107 until commit).
+- [ ] **TW-144** (`xs-shortcuts/15_in_text_tx2`, `tool-text/06`; RE spec; needs: a measurement in the reference)
+  **Steps:** Read TX2's `textChars` (three paragraphs) in both programs.
+  **Expected:** The same paragraph separator as the reference (run 20: Firepixel `\r`, reference read-back `\n`).
 
 Questions answered after run 16: **Q-49** (the colour pop-up HEX field now parses every keystroke like the
 reference), **Q-51** (see TW-111 above), **Q-55** (`xs-shortcuts/15`: Firepixel's text-tool click was already right;

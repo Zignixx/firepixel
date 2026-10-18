@@ -10,26 +10,27 @@ exist and work; FW-PNG round-trips; CLI, JSF and MCP drive everything.
 
 | Measure | Value |
 |---|---|
-| Parity units equal except for design | **44 / 48** (2 real deviations, 2 unclear, 0 under-measured; runs 19 and 18 on top of full run 17) |
-| Proven 1:1 | **91.7 %** (44 / 48) |
+| Parity units equal except for design | **45 / 48** (1 real deviation, 2 unclear, 0 under-measured; runs 20 and 18 on top of full run 17) |
+| Proven 1:1 | **93.8 %** (45 / 48) |
 | Measurement quota, all 48 units | **86.9 %** (1066 / 1226 steps, newest run per unit; run 17 alone: 86.3 %) |
-| Canvas image pairs within 1 % | 174 / 202 |
-| Tests | Run on `2d64547a` pending; last full run: 2695 passed, 1 failed (missing command text, fixed in `0f96dd71`), 134 ignored at `6e2ad3b1` |
+| Canvas image pairs within 1 % | 175 / 202 |
+| Tests | 2714 passed, 0 failed, 134 ignored at `054bdc05` (preview `2026-10-18_15-28`) |
 | Latest release | **v0.2.2** pre-release (18 Oct 2026, tag from `c031a987`): Windows x64 ZIP, macOS universal ZIP (arm64 + x86_64), Linux x86_64 tar.gz and AppImage; Linux tested in CI only, the Intel macOS slice verified by tools only |
-| Open findings | 5 fixable · 5 deferred · 20 informational · 850+ closed |
+| Open findings | 7 fixable · 5 deferred · 20 informational · 850+ closed |
 
 ## Next (in order)
 
-1. **Run 20** of `menu-edit`, `xs-shortcuts`, `tool-text`, `xs-canvas`, `panel-library-styles` and `xs-preferences`
-   once the menu enabled-state fix (TW-141, package F40, in progress) is on `main`: confirms the fixes after run 19
-   (TW-137 History rows, TW-138 text defaults, TW-139 live read-back), the crop option (TW-134) and runner R-15
-   (TW-140).
+1. **Run 21** of `tool-text`, `xs-preferences`, `xs-shortcuts`, `menu-edit`, `panel-pages-states-history` and
+   `panel-library-styles` with runner R-16: confirms the reference-side keys, the text-attribute reset and the crop
+   commit (TW-140), so the crop option (TW-134) and the double-click typing in `tool-text/06` can be compared; before
+   it, the panel pop-up enabled state (TW-142, runner / bridge).
 2. **Human click-test** of [docs/VERIFICATION.md](docs/VERIFICATION.md) (embedded panel dialogs, real keyboard
    paths, brush strokes with a real mouse, drag and drop between windows, the open checks in section A2), including
    the wave-3 Batch Studio UI, the PDF/PSD export options and section A4 (wave-4 features, URL panel menu, typing after
    a double-click, the crop option, the Linux start).
-3. **Remaining parity items:** "stretch" / "justified" on point text (TW-133 rest) and the *Text* menu remnant of
-   the text tool defaults (TW-138 rest).
+3. **Remaining parity items:** "stretch" / "justified" on point text (TW-133 rest), the *Text* menu remnant of
+   the text tool defaults (TW-138 rest), live bounds of an edited text in the read-back (TW-143) and the paragraph
+   separator in text read-backs (TW-144).
 4. **Remaining deferred items:** BA-101 (JPEG 2000 in PDF, PSD stroke), BA-108 (writing AVIF/HEIF/JXL metadata
    boxes), BA-110 rest (lossy LZW with an SSIM bound), BA-083 (resampler hashes on another OS), U-1 PDF import
    layers.
@@ -40,10 +41,10 @@ exist and work; FW-PNG round-trips; CLI, JSF and MCP drive everything.
 
 - PDF import: no layers (the pure-Rust PDF reader exposes no optional content groups).
 - TW-133 rest ("stretch" / "justified" on point text), TW-138 rest (*Text* menu commands and the text tool
-  defaults), TW-140 (runner R-15 on `main`, to confirm in run 20) and TW-141 (menu enabled state, Rust fix F40 in
-  progress). Fixed after run 19 and to confirm in run 20: TW-137 (History rows for Copy, Cut, Select All,
-  Deselect), TW-138 (text tool defaults from the inspector) and TW-139 (live read-back while a text is edited);
-  TW-136 closed as no deviation; TW-134 (crop option) waits for the `xs-preferences` run.
+  defaults), TW-140 (reference-side keys, runner R-16, to confirm in run 21), TW-142 (panel pop-up enabled state,
+  runner / bridge), TW-143 (live bounds while editing) and TW-144 (paragraph separator in text read-backs). Run 20
+  confirmed TW-137 (History rows), TW-138 (text tool defaults), TW-139 (live read-back) and TW-141 (menu enabled
+  state); TW-134 (crop option) waits for a run in which the reference applies the crop.
 
 ### Deferred expansion items (`[V]`)
 

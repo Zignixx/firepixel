@@ -19,14 +19,14 @@ run only in CI, not yet on a real Linux desktop.
 | Area | Value | Source |
 |---|---|---|
 | Parity units | 48 | [PARITY.md](PARITY.md) |
-| Equal except for design | **44** (2 real deviations, 2 unclear, 0 under-measured) | run 19 (6 units) and run 18 (5 units) on top of full run 17, 18 Oct 2026 |
-| Proven 1:1 | **91.7 %** (44 / 48; no unit under-measured; run 18: 89.6 %, run 17: 87.5 %) | runs 17–19 |
-| Canvas image pairs within 1 % | **174 / 202** (unchanged in run 19; run 17: 176 / 202; two `tool-text` pairs are above 1 % through the reference's text-tool state) | runs 17–19 |
-| Measurement quota, all 48 units | **86.9 %** (1066 / 1226 measurable steps both `ok`, newest run per unit; run 17 alone 86.3 %; the six units of run 19: 87.1 %, 121 / 139, unchanged) | runs 17–19 |
-| Errors, newest run per unit | 38 reference-side (run 17: 46), 21 Firepixel-side (unchanged, all known) | runs 17–19 |
-| Workspace tests | Run on `2d64547a` pending; last full run **2695 passed, 1 failed, 134 ignored** at `6e2ad3b1` (the failure was a missing DE/EN command text, added in `0f96dd71`) | full workspace run on `main`, 18 Oct 2026 |
-| Open findings | 5 fixable `[F]` (PDF layers; TW-133 rest; TW-138 rest; TW-140 runner R-15, to confirm; TW-141 menu enabled state, fix F40 in progress), 5 deferred `[V]`, 20 informational `[N]`; after run 19 TW-137, TW-138 and TW-139 were fixed (confirm in run 20) and TW-136 closed as no deviation | [FINDINGS.md](FINDINGS.md) |
-| Real differences known | Ctrl+Alt+Shift+S sets "stretch" on a text the reference leaves alone (TW-133 rest); smaller: *Text* menu commands on pointer-selected text do not yet update the text tool defaults (TW-138 rest). Fixed and waiting for run 20: History rows for Copy / Cut (TW-137), text tool defaults (TW-138), live read-back while editing (TW-139), the crop option (TW-134) | [PARITY.md](PARITY.md) |
+| Equal except for design | **45** (1 real deviation, 2 unclear, 0 under-measured) | run 20 (7 units) and run 18 (4 units) on top of full run 17, 18 Oct 2026 |
+| Proven 1:1 | **93.8 %** (45 / 48; no unit under-measured; run 19: 91.7 %, run 17: 87.5 %) | runs 17–20 |
+| Canvas image pairs within 1 % | **175 / 202** (run 19: 174; `tool-text/14` moved below 1 % in run 20; run 17: 176 / 202; `tool-text/02` and `/16` stay above 1 % through the reference's text-tool state) | runs 17–20 |
+| Measurement quota, all 48 units | **86.9 %** (1066 / 1226 measurable steps both `ok`, newest run per unit; run 17 alone 86.3 %; the seven units of run 20: 86.8 %, 138 / 159, unchanged) | runs 17–20 |
+| Errors, newest run per unit | 38 reference-side (run 17: 46), 21 Firepixel-side (unchanged, all known) | runs 17–20 |
+| Workspace tests | **2714 passed, 0 failed, 134 ignored** at `054bdc05` (the commit of preview `2026-10-18_15-28`) | full workspace run on `main`, 18 Oct 2026 |
+| Open findings | 7 fixable `[F]` (PDF layers; TW-133 rest; TW-138 rest; TW-140 reference-side keys, runner R-16; TW-142 panel pop-up enabled state, runner / bridge; TW-143 live bounds while editing; TW-144 paragraph separator in text read-backs), 5 deferred `[V]`, 20 informational `[N]`; run 20 closed TW-137, TW-138, TW-139 and TW-141; TW-134 waits for a reference-side crop | [FINDINGS.md](FINDINGS.md) |
+| Real differences known | Ctrl+Alt+Shift+S sets "stretch" on a text the reference leaves alone (TW-133 rest); smaller: *Text* menu commands on pointer-selected text do not yet update the text tool defaults (TW-138 rest), the live read-back keeps an edited text's old bounds until commit (TW-143), text read-backs separate paragraphs with `\r` where the reference's show `\n` (TW-144). Fixed, not yet confirmed by a run: the crop option (TW-134; the reference did not apply the crop in run 20) | [PARITY.md](PARITY.md) |
 | Closed findings (history) | 850+ | kept outside the repository ([ARCHIVE_NOTE.md](ARCHIVE_NOTE.md)) |
 | Startup time | about 0.8 s to the first frame (release build, warm) | smoke test 17 Oct 2026 |
 
@@ -46,10 +46,11 @@ the app under Xvfb and checks that the control channel comes up. The first CI ru
 real Linux desktop; file dialogs need `xdg-desktop-portal`. v0.2.2 is the first release with Windows x64, macOS
 universal and Linux x86_64.
 
-Latest test build: preview build **`2026-10-18_13-04`** (release profile, single `firepixel.exe` plus
-`firepixel-cli.exe`) from `main` at `a3510515` (packages F34–F36: text-tool caret, URL panel menu, Select Inverse
-warning, text size ±1 pt, no stretch on point text, caret and typing after a pointer double-click). The previous
-preview `2026-10-18_10-59` from `4e677046` passed a full workspace test run (2676 passed, 0 failed, 134 ignored).
+Latest test build: preview build **`2026-10-18_15-28`** (release profile, single `firepixel.exe` plus
+`firepixel-cli.exe`) from `main` at `054bdc05` (packages F37–F40: crop option, live text read-back, History rows for
+Copy / Cut / Select All / Deselect, text tool defaults from the inspector, menu enabled state); a full workspace test
+run on that commit passed (2714 passed, 0 failed, 134 ignored). The previous preview was `2026-10-18_13-04` from
+`a3510515` (packages F34–F36).
 
 Full comparison run 17 (18 Oct 2026, 04:59–09:40, all 48 units, 1284 steps, 683 image pairs) used the earlier
 preview build `2026-10-18_04-57` from `main` at `7e3d2d12` (fixes after run 16, runner R-12): 42 units equal except
@@ -71,6 +72,14 @@ After run 19 (on `main` up to `2d64547a`, not yet in a preview build): TW-136 cl
 already matched, the shot included the ≡ row and the shadow; 323 × 231 vs. 321 × 231 px), TW-137 (History rows for
 Copy, Cut, Select All and Deselect), TW-138 (text tool defaults) and TW-139 (live read-back while editing) fixed,
 runner R-15 for TW-140; TW-141 needs a Rust change (F40, in progress). Run 20 is to confirm.
+
+Follow-up run 20 (18 Oct 2026, 15:30–16:09, 7 units, 170 steps, 78 image pairs) used preview `2026-10-18_15-28` and
+runner R-15: `menu-edit` is now equal except for design (Copy row in both Histories, TW-137), `xs-shortcuts` stays a
+real deviation for one shortcut (TW-133 rest), `tool-text` and `xs-preferences` stay unclear (reference-side runner
+effects: text attributes carried between units, the stray "c", the crop not applied on the reference side),
+`xs-canvas`, `panel-library-styles` and `panel-pages-states-history` stay equal. Step quota unchanged, one more
+canvas pair within 1 % (`tool-text/14`); TW-137, TW-138, TW-139 and TW-141 closed; TW-140 stays open (R-15's
+`key_echo` failed with a script error, fixed in R-16), TW-142 to TW-144 added.
 
 ## How tests run
 
