@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=Firepixel
+GenericName=Graphics Editor
+Comment=Bitmap, vector and web graphics editor
+Exec=firepixel %F
+Icon=firepixel
+Terminal=false
+Categories=Graphics;2DGraphics;RasterGraphics;VectorGraphics;
+MimeType=image/png;image/jpeg;image/gif;image/webp;image/bmp;image/tiff;image/svg+xml;
+Keywords=image;editor;bitmap;vector;web;
+StartupWMClass=firepixel

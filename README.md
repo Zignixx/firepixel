@@ -39,7 +39,8 @@ kept outside the repository ([docs/ARCHIVE_NOTE.md](docs/ARCHIVE_NOTE.md)).
 ## Build and run
 
 Requirements: Rust **1.95** or newer (edition 2024). Windows is the primary platform (MSVC toolchain;
-the workspace links with `rust-lld` and a static C runtime). macOS builds exist as previews; Linux is planned.
+the workspace links with `rust-lld` and a static C runtime). macOS builds exist as previews; Linux x86_64 builds (tar.gz and AppImage, glibc 2.35+)
+are produced by CI and are untested on real desktops so far.
 
 ```powershell
 cargo build --release -p firepixel -p firepixel-cli
@@ -59,7 +60,8 @@ cargo test -p fp-neutral        # neutrality guard, must stay green
 ## Downloads
 
 There are no public binaries yet. **Preview builds are available on request** (open an issue). Releases will
-be published under [Releases](../../releases) once the repository is public; CI runs on demand only
+be published under [Releases](../../releases) once the repository is public (Windows x64 ZIP, macOS universal
+ZIP, Linux x86_64 tar.gz and AppImage); CI runs on demand only
 (see [docs/RELEASE.md](docs/RELEASE.md)).
 
 ## Documentation

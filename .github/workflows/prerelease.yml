@@ -1,5 +1,6 @@
-# Pre-release: bump the version (minor), build Windows x64 and macOS universal, create a tag and a
-# pre-release with both ZIPs. Manual only (workflow_dispatch); see docs/RELEASE.md.
+# Pre-release: bump the version (minor), build Windows x64, macOS universal and Linux x86_64, create
+# a tag and a pre-release with both ZIPs, the Linux tar.gz and the AppImage. Manual only
+# (workflow_dispatch); see docs/RELEASE.md.
 name: prerelease
 
 on:
@@ -99,9 +100,17 @@ jobs:
     with:
       ref: ${{ needs.version.outputs.sha }}
 
+  linux:
+    name: Linux x86_64
+    needs: version
+    uses: ./.github/workflows/linux-build.yml
+    with:
+      ref: ${{ needs.version.outputs.sha }}
+      package: true
+
   release:
     name: Tag and pre-release
-    needs: [version, windows, macos]
+    needs: [version, windows, macos, linux]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -137,8 +146,9 @@ jobs:
             echo
             echo "- **Windows x64:** unzip \`Firepixel-Windows-x64-$VERSION.zip\` and start \`firepixel.exe\`. No installer is needed."
             echo "- **macOS (Apple Silicon and Intel, macOS 10.15 or later):** unzip \`Firepixel-macOS-universal-$VERSION.zip\`. The app is ad-hoc signed and not notarised, so on first launch right-click \`Firepixel.app\` > **Open** and confirm (or run \`xattr -dr com.apple.quarantine Firepixel.app\`)."
+            echo "- **Linux x86_64 (glibc 2.35 or later, e.g. Ubuntu 22.04 or Debian 12):** AppImage: \`chmod +x Firepixel-x86_64.AppImage\`, then run it. tar.gz: unpack \`Firepixel-Linux-x64-$VERSION.tar.gz\` and run \`./firepixel\` in the folder \`Firepixel-Linux-x64\`. Needs a Vulkan or OpenGL driver; runs on Wayland and X11. File dialogs use the XDG desktop portal."
             echo
-            echo "The command-line tool \`firepixel-cli\` and the manuals (English and German) are included in both packages."
+            echo "The command-line tool \`firepixel-cli\` and the manuals (English and German) are included in all packages."
             echo
             if [ -n "$PREV" ]; then
               echo "## Changes since $PREV"
@@ -162,7 +172,7 @@ jobs:
           SHA: ${{ needs.version.outputs.sha }}
         run: |
           set -euo pipefail
-          gh release create "v$VERSION" dist/*.zip \
+          gh release create "v$VERSION" dist/*.zip dist/*.tar.gz dist/*.AppImage \
             --target "$SHA" \
             --prerelease \
             --title "Firepixel $VERSION (pre-release)" \

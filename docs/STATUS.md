@@ -34,7 +34,8 @@ on Intel hardware.
 Release **v0.2.1** (18 Oct 2026, pre-release on GitHub, Windows x64 and macOS universal) with version bump
 `b3919cb6`; the macOS bundle is built by `macos-preview.yml` as one universal app (arm64 + x86_64; the x86_64
 slice checked with `lipo`, not run on Intel hardware). The previous release was v0.2.0 (17 Oct 2026, Windows x64,
-macOS arm64).
+macOS arm64). From the next pre-release on, `prerelease.yml` also builds Linux x86_64 (`linux-build.yml`: tar.gz and
+AppImage, Ubuntu 22.04 / glibc 2.35 baseline); not yet run in CI.
 
 Latest test build: preview build **`2026-10-18_10-59`** (release profile, single `firepixel.exe` plus
 `firepixel-cli.exe`) from `main` at `4e677046` (packages F33/F34: per-slice export options, short panel menus,

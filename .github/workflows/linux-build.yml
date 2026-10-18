@@ -1,0 +1,250 @@
+# Linux x86_64 build: tar.gz (binaries, manuals, licence, .desktop file, hicolor icons) and an
+# AppImage, optionally plus tests of the platform-neutral crates. No push trigger: manual only
+# (workflow_dispatch) or from the release workflow (workflow_call).
+#
+# Built on ubuntu-22.04 so that the binaries only need glibc 2.35 (and OpenSSL 3) at runtime.
+# X11, Wayland, xkbcommon, Vulkan and EGL/GL are loaded at runtime (dlopen), so the target system
+# needs a Vulkan or OpenGL driver but no development packages.
+name: linux-build
+
+on:
+  workflow_dispatch:
+    inputs:
+      tests:
+        description: "Also run the tests of the platform-neutral crates"
+        type: boolean
+        default: false
+  workflow_call:
+    inputs:
+      ref:
+        description: "Commit or branch to build"
+        type: string
+        required: true
+      package:
+        description: "Release package (codegen-units = 1 like the Windows release ZIP)"
+        type: boolean
+        default: true
+
+concurrency:
+  group: linux-build-${{ github.workflow }}-${{ inputs.ref || github.ref }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: "0"
+  # Pinned AppImage packer (official release of AppImage/appimagetool) and its SHA-256
+  APPIMAGETOOL_VERSION: "1.9.1"
+  APPIMAGETOOL_SHA256: "ed4ce84f0d9caff66f50bcca6ff6f35aae54ce8135408b3fa33abfc3cb384eb0"
+
+jobs:
+  build:
+    name: Linux x86_64 (tar.gz + AppImage)
+    runs-on: ubuntu-22.04
+    timeout-minutes: 60
+    env:
+      # Manual preview: optimise in parallel; the release package keeps codegen-units = 1
+      CARGO_PROFILE_RELEASE_CODEGEN_UNITS: ${{ inputs.package && '1' || '16' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+
+      # Build dependencies derived from Cargo.lock:
+      # - pkg-config + libssl-dev: openssl-sys (ureq with native-tls in fp-ai)
+      # - nasm: build dependency of the AV1 decoder crate (only used for its assembly; harmless)
+      # - libwayland-dev, libxkbcommon-dev, libx11-dev, libxcursor-dev, libxrandr-dev, libxi-dev,
+      #   libgl1-mesa-dev, libvulkan-dev: headers/pkg-config files of the window system and graphics
+      #   stack; winit and wgpu load these libraries at runtime, but the clipboard/Wayland crates may
+      #   link libwayland-client directly
+      # - desktop-file-utils: validates the .desktop file
+      # No GTK: the file dialogs use the XDG desktop portal (D-Bus). No cmake: no crate needs it.
+      # A C compiler (gcc, for libwebp) is preinstalled on the runner.
+      - name: Install build dependencies
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            pkg-config libssl-dev nasm \
+            libwayland-dev libxkbcommon-dev libx11-dev libxcursor-dev libxrandr-dev libxi-dev \
+            libgl1-mesa-dev libvulkan-dev \
+            desktop-file-utils
+
+      - name: Rust stable
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+          rustc --version
+
+      - uses: Swatinem/rust-cache@v2.8.0
+        with:
+          shared-key: linux-x64
+          cache-on-failure: true
+
+      - name: Release build (GUI + CLI)
+        run: cargo build --release --locked -p firepixel -p firepixel-cli
+
+      - name: Inspect binaries
+        run: |
+          set -euo pipefail
+          for BIN in target/release/firepixel target/release/firepixel-cli; do
+            file "$BIN"
+            echo "Linked libraries of $BIN:"
+            ldd "$BIN"
+            echo "Highest glibc symbol version: $(objdump -T "$BIN" | grep -o 'GLIBC_[0-9.]*' | sort -uV | tail -n 1)"
+          done
+          target/release/firepixel-cli --version
+          target/release/firepixel-cli --help | head -n 20 || true
+
+      - name: Create tar.gz package
+        run: |
+          set -euo pipefail
+          VERSION=$(cargo pkgid -p firepixel | sed -E 's/.*[#@]//')
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          OUT=dist/Firepixel-Linux-x64
+          mkdir -p "$OUT/share/applications"
+          cp target/release/firepixel target/release/firepixel-cli "$OUT/"
+          # Manuals next to the binary (the Help menu searches the executable's folder and its parents)
+          cp LICENSE docs/MANUAL.md docs/MANUAL.de.md "$OUT/"
+          desktop-file-validate assets/linux/firepixel.desktop
+          cp assets/linux/firepixel.desktop "$OUT/share/applications/firepixel.desktop"
+          # Icons in the hicolor layout (share/icons/hicolor/<N>x<N>/apps/firepixel.png)
+          for PNG in assets/icon/png/firepixel_*.png; do
+            N=$(basename "$PNG" .png); N=${N#firepixel_}
+            mkdir -p "$OUT/share/icons/hicolor/${N}x${N}/apps"
+            cp "$PNG" "$OUT/share/icons/hicolor/${N}x${N}/apps/firepixel.png"
+          done
+          tar -C dist -czf "dist/Firepixel-Linux-x64-${VERSION}.tar.gz" Firepixel-Linux-x64
+          tar -tzf "dist/Firepixel-Linux-x64-${VERSION}.tar.gz"
+
+      # Kept simple: AppRun starts usr/bin/firepixel; no libraries are bundled (glibc, OpenSSL 3
+      # and the graphics drivers come from the system).
+      - name: Create AppImage
+        run: |
+          set -euo pipefail
+          TOOL="$RUNNER_TEMP/appimagetool-x86_64.AppImage"
+          curl -fsSL -o "$TOOL" \
+            "https://github.com/AppImage/appimagetool/releases/download/${APPIMAGETOOL_VERSION}/appimagetool-x86_64.AppImage"
+          echo "${APPIMAGETOOL_SHA256}  $TOOL" | sha256sum -c -
+          chmod +x "$TOOL"
+
+          APPDIR="$RUNNER_TEMP/Firepixel.AppDir"
+          rm -rf "$APPDIR"
+          mkdir -p "$APPDIR/usr/bin" "$APPDIR/usr/share/applications" "$APPDIR/docs"
+          cp target/release/firepixel target/release/firepixel-cli "$APPDIR/usr/bin/"
+          cp LICENSE docs/MANUAL.md docs/MANUAL.de.md "$APPDIR/docs/"
+          cp assets/linux/firepixel.desktop "$APPDIR/firepixel.desktop"
+          cp assets/linux/firepixel.desktop "$APPDIR/usr/share/applications/firepixel.desktop"
+          cp -r dist/Firepixel-Linux-x64/share/icons "$APPDIR/usr/share/"
+          cp assets/icon/png/firepixel_256.png "$APPDIR/firepixel.png"
+          ln -s firepixel.png "$APPDIR/.DirIcon"
+          cat > "$APPDIR/AppRun" <<'EOF'
+          #!/bin/sh
+          HERE="$(dirname "$(readlink -f "$0")")"
+          exec "$HERE/usr/bin/firepixel" "$@"
+          EOF
+          chmod +x "$APPDIR/AppRun"
+          sh -n "$APPDIR/AppRun"
+
+          # The runner has no FUSE 2, so the packer runs extracted. It fetches the AppImage
+          # runtime itself.
+          ARCH=x86_64 APPIMAGE_EXTRACT_AND_RUN=1 "$TOOL" --no-appstream "$APPDIR" dist/Firepixel-x86_64.AppImage
+          chmod +x dist/Firepixel-x86_64.AppImage
+          ls -la dist
+
+      # Software rendering only (lavapipe / llvmpipe), no GPU on the runner. Checks that the window
+      # comes up and the MCP bridge writes mcp-bridge.json into the (redirected) state folder.
+      - name: Startup probe (GUI under Xvfb, MCP bridge)
+        continue-on-error: true
+        run: |
+          set -u
+          sudo apt-get install -y --no-install-recommends xvfb xauth mesa-vulkan-drivers libegl1 libgl1-mesa-dri imagemagick
+          PROBE=$(mktemp -d)
+          mkdir -p "$PROBE/home"
+          cat > "$RUNNER_TEMP/probe.sh" <<'EOF'
+          #!/bin/bash
+          set -u
+          BIN="$1"; PROBE="$2"; OUT="$3"
+          export HOME="$PROBE/home" XDG_CONFIG_HOME="$PROBE/config" XDG_STATE_HOME="$PROBE/state"
+          export XDG_DATA_HOME="$PROBE/data" XDG_CACHE_HOME="$PROBE/cache"
+          FP_STARTUP_TRACE=1 RUST_BACKTRACE=1 "$BIN" --mcp > "$OUT/start-linux.log" 2>&1 &
+          PID=$!
+          FOUND=""
+          for _ in $(seq 1 30); do
+            FOUND=$(find "$PROBE" -name mcp-bridge.json -print -quit 2>/dev/null)
+            [ -n "$FOUND" ] && break
+            kill -0 "$PID" 2>/dev/null || break
+            sleep 1
+          done
+          sleep 3
+          import -window root "$OUT/startprobe-linux.png" || true
+          RC=0
+          if [ -n "$FOUND" ]; then
+            echo "MCP bridge file written: $FOUND"
+          else
+            echo "::warning::No mcp-bridge.json below $PROBE after 30 s"
+            RC=1
+          fi
+          if kill -0 "$PID" 2>/dev/null; then
+            echo "Firepixel still running (PID $PID)"
+            kill "$PID" || true
+          else
+            echo "::warning::Firepixel no longer running"
+            wait "$PID"; echo "Exit code: $?"
+            RC=1
+          fi
+          exit "$RC"
+          EOF
+          bash -n "$RUNNER_TEMP/probe.sh"
+          RC=0
+          xvfb-run -a -s "-screen 0 1600x1000x24" bash "$RUNNER_TEMP/probe.sh" "$PWD/dist/Firepixel-Linux-x64/firepixel" "$PROBE" "$PWD/dist" || RC=$?
+          tail -n 60 dist/start-linux.log || true
+          exit "$RC"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Firepixel-Linux-x64
+          path: |
+            dist/Firepixel-Linux-x64-*.tar.gz
+            dist/Firepixel-x86_64.AppImage
+          if-no-files-found: error
+          retention-days: 14
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: startprobe-linux
+          path: |
+            dist/startprobe-linux.png
+            dist/start-linux.log
+          if-no-files-found: ignore
+          retention-days: 7
+
+  tests:
+    name: Tests (platform-neutral crates)
+    runs-on: ubuntu-22.04
+    timeout-minutes: 45
+    # only on request (input tests); report failing tests without failing the run
+    continue-on-error: true
+    if: ${{ inputs.tests == true }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends pkg-config libssl-dev nasm
+
+      - name: Rust stable
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+
+      - uses: Swatinem/rust-cache@v2.8.0
+        with:
+          shared-key: linux-x64-test
+          cache-on-failure: true
+
+      - name: cargo test
+        env:
+          FP_NO_SHELL_OPEN: "1"
+        run: cargo test --locked -p fp-model -p fp-geom -p fp-raster -p fp-vector -p fp-script --no-fail-fast

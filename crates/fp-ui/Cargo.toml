@@ -47,6 +47,15 @@ rfd = { version = "0.17", default-features = false }
 # dieselbe winit-Version wie in eframe, nur für `WindowExtWindows::set_taskbar_icon`.
 winit = { version = "0.30", default-features = false }
 
+# Linux: eframe/winit are used without default features, so they would build without any window
+# system backend (winit then stops with a compile error). Enable X11 and Wayland (libwayland is
+# loaded at runtime, client-side decorations for compositors without server-side ones), and the
+# file dialogs via the XDG desktop portal (D-Bus, no GTK at build time; rfd needs one backend).
+[target.'cfg(target_os = "linux")'.dependencies]
+eframe = { workspace = true, features = ["x11", "wayland"] }
+winit = { version = "0.30", default-features = false, features = ["x11", "wayland", "wayland-dlopen", "wayland-csd-adwaita"] }
+rfd = { version = "0.17", default-features = false, features = ["xdg-portal"] }
+
 [dev-dependencies]
 egui_kittest = { version = "0.36", features = ["wgpu", "snapshot"] }
 fp-neutral = { path = "../fp-neutral" }
