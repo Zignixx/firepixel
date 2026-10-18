@@ -173,14 +173,14 @@ fn t5_escape_in_popup_keeps_selection() {
     type_into(&mut h, f, "60");
     key(&mut h, Key::Enter, Modifiers::NONE);
     assert_eq!(opacity(&h, r1), 60.0);
-    // zweites Esc ohne Popup hebt die Auswahl wie gewohnt auf
+    // a second Escape without the popup keeps the selection (re 51 §1)
     let p = screen(&h, 450.0, 250.0);
     click(&mut h, p);
     let _ = h.state_mut().state.session.execute("select.set", json!({"ids": [r1]}));
     h.run_steps(2);
     key(&mut h, Key::Escape, Modifiers::NONE);
     h.run_steps(2);
-    assert!(sel(&h).is_empty(), "Esc ohne Popup hebt die Auswahl auf");
+    assert_eq!(sel(&h), vec![r1], "Escape without popup keeps the selection");
 }
 
 // ------------------------------------------------------------------ T4: senkrechter Schieber

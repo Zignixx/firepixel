@@ -1,5 +1,5 @@
 //! F22 / TW-70: Esc nach Mausöffnung eines Menüs schließt wie unter Windows eine Ebene je Esc
-//! (Untermenü, Menü, Leiste); erst das nächste Esc erreicht die Leinwand und hebt die Auswahl auf.
+//! (Untermenü, Menü, Leiste); the next Escape reaches the canvas and keeps the selection (re 51 §1).
 //! Enter auf einem per Maus geöffneten Menü lässt die Auswahl stehen.
 
 use egui::{Event, Id, Key, Modifiers, PointerButton, Pos2, Rect, Shape};
@@ -116,9 +116,9 @@ fn esc_after_mouse_open_closes_one_level_each() {
     key(&mut h, Key::Escape);
     assert!(!kbd(&h).0, "Esc 3: Leiste aus");
     assert_eq!(selected(&h), 1, "Esc 3 lässt die Auswahl");
-    // Esc 4 erreicht die Leinwand
+    // Escape 4 reaches the canvas: the selection stays
     key(&mut h, Key::Escape);
-    assert_eq!(selected(&h), 0, "Esc 4 hebt die Auswahl auf");
+    assert_eq!(selected(&h), 1, "Escape 4 keeps the selection");
 }
 
 #[test]

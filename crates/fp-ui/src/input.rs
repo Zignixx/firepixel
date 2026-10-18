@@ -314,12 +314,6 @@ fn run_clip(
     }
 }
 
-/// Hebt Esc (vom Werkzeug nicht verbraucht) die Auswahl auf? Nur mit gewählten Objekten und ohne
-/// offenes Menü (dort schließt Esc das Menü).
-pub fn esc_deselects(st: &AppState) -> bool {
-    st.session.active().is_some_and(|d| !d.selection.is_empty()) && st.flyout.is_none()
-}
-
 /// Verarbeitet die Tastatureingaben dieses Frames.
 pub fn handle(ctx: &egui::Context, st: &mut AppState) {
     let editing = st.session.tool_is_editing_text();
@@ -441,13 +435,8 @@ pub fn handle(ctx: &egui::Context, st: &mut AppState) {
                 {
                     continue;
                 }
-                // Esc ohne laufende Aktion des Werkzeugs hebt die Objektauswahl auf, wie im Original
-                // bei jedem Werkzeug (Esc-Kette: Popup zu, Stift, Esc, Esc → nichts gewählt; TW-32).
-                // Popups, Menüs, KI-Rechnung und Werkzeugaktionen haben Esc oben schon verbraucht.
-                if key == Key::Escape && !ctrl && !modifiers.alt && esc_deselects(st) {
-                    st.push(Action::Run("select.none".into(), json!({})));
-                    continue;
-                }
+                // Escape without a running tool action does nothing to the document: the object
+                // selection stays (re 51 §1). Popups, menus and the AI job consumed it above.
                 let Some(vk) = vk_of(key) else { continue };
                 let sc = Shortcut {
                     ctrl,

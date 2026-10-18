@@ -173,7 +173,7 @@ fn pointer_rubber_band_keys_and_double_click() {
     drag(&mut s, (0.0, 0.0), (160.0, 70.0));
     assert_eq!(sel(&s).len(), 2);
     events(&mut s, &[ToolEvent::key(ToolKey::Escape)]);
-    assert!(sel(&s).is_empty(), "Esc hebt die Auswahl auf");
+    assert_eq!(sel(&s).len(), 2, "Escape keeps the selection (re 51 §1)");
     select(&mut s, &[a]);
     let before = doc(&s);
     events(&mut s, &[ToolEvent::key(ToolKey::Right).shift()]);

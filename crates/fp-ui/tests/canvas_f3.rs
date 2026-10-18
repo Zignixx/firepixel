@@ -3,7 +3,7 @@
 //!   das Dokument bleibt unverändert.
 //! - TW-19: Schaltflächen-Instanzen haben ein eigenes Segment (grüne Überlagerung, Hilfslinien).
 //! - TW-20: Animationsinstanz: Rahmen nur um das aktuelle Bild, Bewegungspfad Start → Ende.
-//! - TW-32: Esc ohne laufende Aktion hebt die Objektauswahl auf (auch beim Stift).
+//! - re 51 §1: Escape without a running action keeps the object selection (any tool).
 //! - N21: Weiche Pixelauswahl ohne Pixel ≥ 50 % zeigt trotzdem Ameisen.
 
 use egui::{Event, Key, Modifiers};
@@ -155,8 +155,9 @@ fn selected(h: &Harness<'static, FirepixelApp>) -> usize {
     h.state().state.session.active().map(|d| d.selection.elements.len()).unwrap_or(0)
 }
 
+/// Escape on the canvas never clears the object selection, with any tool (re 51 §1).
 #[test]
-fn tw32_escape_chain_deselects() {
+fn escape_keeps_selection_with_pen_pointer_and_rectangle() {
     let mut s = session();
     let r = id_of(&s.execute("draw.rectangle", json!({"rect": [50, 50, 150, 120], "fillColor": "#ff0000"})).expect("R1"));
     s.execute("select.set", json!({"ids": [r]})).expect("Auswahl");
@@ -166,17 +167,18 @@ fn tw32_escape_chain_deselects() {
     h.run_steps(2);
     esc(&mut h);
     esc(&mut h);
-    assert_eq!(selected(&h), 0, "Esc, Esc beim Stift: nichts gewählt");
+    assert_eq!(selected(&h), 1, "Escape, Escape with the pen: selection stays");
+    h.state_mut().state.session.set_tool(ToolId::Pointer).expect("pointer");
+    h.run_steps(2);
+    esc(&mut h);
+    assert_eq!(selected(&h), 1, "Escape with the pointer: selection stays");
     // auch beim Rechteck-Werkzeug
     let r2 = id_of(&h.state_mut().state.session.execute("draw.rectangle", json!({"rect": [200, 50, 260, 120]})).expect("R2"));
     h.state_mut().state.session.execute("select.set", json!({"ids": [r2]})).expect("Auswahl");
     h.state_mut().state.session.set_tool(ToolId::Rectangle).expect("Rechteck");
     h.run_steps(2);
     esc(&mut h);
-    assert_eq!(selected(&h), 0, "Esc beim Rechteck-Werkzeug");
-    // ohne Auswahl tut Esc nichts (kein Fehler, kein Verlaufsschritt)
-    esc(&mut h);
-    assert_eq!(selected(&h), 0);
+    assert_eq!(selected(&h), 1, "Escape with the rectangle tool: selection stays");
 }
 
 #[test]

@@ -1,8 +1,8 @@
 //! F17 (Tweak-Liste 15.10.): Dialoge, Dateien, Inspektor.
 //! - TW-52: Esc im Popup-Schieber schließt nur das Popup (Wert verworfen, Auswahl bleibt); ein
 //!   Klick neben das Popup auf leere Leinwand übernimmt den Wert und hebt die Auswahl nicht auf;
-//!   Pfeil drücken und ziehen übernimmt beim Loslassen. TW-32 bleibt: Esc ohne Popup hebt die
-//!   Auswahl auf.
+//!   Pfeil drücken und ziehen übernimmt beim Loslassen. A second Escape without the popup
+//!   keeps the selection too (re 51 §1).
 
 use egui::{Event, Key, Modifiers, PointerButton, Pos2};
 use egui_kittest::kittest::{By, NodeT, Queryable};
@@ -143,10 +143,10 @@ fn tw52_escape_in_popup_slider_after_drag_keeps_selection() {
     assert_eq!(sel(&h), 1, "Esc im Popup hebt die Auswahl nicht auf");
     assert_eq!(opacity(&h, r1), 100.0, "Esc verwirft den gezogenen Wert");
     assert_eq!(undo_count(&h), n0, "kein Verlaufsschritt");
-    // TW-32 bleibt: Esc ohne Popup hebt die Auswahl auf
+    // a second Escape without the popup keeps the selection too (re 51 §1)
     key(&mut h, Key::Escape);
     h.run_steps(2);
-    assert_eq!(sel(&h), 0, "zweites Esc (ohne Popup) hebt die Auswahl auf");
+    assert_eq!(sel(&h), 1, "second Escape (no popup) keeps the selection");
 }
 
 #[test]

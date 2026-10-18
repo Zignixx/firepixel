@@ -1703,22 +1703,19 @@ impl ToolMachine for PointerTool {
                         ToolResponse::commit(vec![Invocation::new("edit.clear", json!({}))])
                     }
                     ToolKey::Escape => {
+                        // Escape never clears the object selection (re 51 §1: the pointer has no
+                        // cancel slot). It only drops a running drag state and, in bitmap edit
+                        // mode, leaves that mode; the bitmap stays selected.
                         let was_busy = self.state != PState::Idle;
                         self.state = PState::Idle;
                         self.overlay.clear();
-                        // eine gewählte Bitmap (z. B. nach „Bitmapmodus beenden“ per Esc) bleibt wie im
-                        // Original gewählt (PAR 06/18: zweites Esc ändert nichts)
-                        let single_bitmap = ctx.selection.elements.len() == 1
-                            && docops::element_on_page(
-                                ctx.doc,
-                                ctx.page,
-                                ctx.selection.elements[0],
-                            )
-                            .is_some_and(|e| matches!(e.kind, fp_model::ElementKind::Bitmap(_)));
-                        if was_busy || ctx.selection.is_empty() || single_bitmap {
-                            ToolResponse::default()
+                        if !was_busy && ctx.bitmap_mode {
+                            ToolResponse::commit(vec![Invocation::new(
+                                "modify.exitBitmapMode",
+                                json!({}),
+                            )])
                         } else {
-                            ToolResponse::commit(vec![Invocation::new("select.none", json!({}))])
+                            ToolResponse::default()
                         }
                     }
                     // Enter auf der Leinwand hebt die Auswahl auf wie im Original (Lauf 10
