@@ -288,6 +288,7 @@ pub fn preview(
     opts: &PreviewOptions,
 ) -> Result<PreviewResult> {
     let t0 = std::time::Instant::now();
+    crate::security::check(recipe, crate::security::current_caller())?;
     let pipe = Pipeline::new(recipe, reg)?;
     let original = item::load(info, false)?;
     opts.cancel.check()?;

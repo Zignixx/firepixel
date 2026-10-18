@@ -824,7 +824,11 @@ pub fn call(s: &mut Session, env: &ToolEnv, name: &str, args: &Value) -> ToolOut
     let lang = arg_str(args, "language")
         .map(str::to_string)
         .unwrap_or_else(|| env.language.clone());
-    fp_i18n::with_language(&lang, || call_inner(s, env, name, args))
+    // B-5: every tool call is an MCP caller for the batch gates (`fp_batch::security`): no
+    // `script.external`, no `script.code` with `allowIo`, whichever way the batch is started
+    fp_batch::with_caller(fp_batch::Caller::Mcp, || {
+        fp_i18n::with_language(&lang, || call_inner(s, env, name, args))
+    })
 }
 
 fn call_inner(s: &mut Session, env: &ToolEnv, name: &str, args: &Value) -> ToolOutput {

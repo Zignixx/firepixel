@@ -1,15 +1,16 @@
 //! `script.code` and `script.external` (B-4, `docs/BATCH.md` §3.12).
 //!
 //! - `script.code` runs a JSF snippet against the item's document in its own headless session
-//!   (like `script.command`). By default the snippet runs **sandboxed**: a prelude replaces `Files`
-//!   and `System` with objects that refuse every call, wraps `fw`/`app` and the document objects so
-//!   that file, export, launch and save methods throw, and lets `fp.run` refuse the blocked command
-//!   groups (`file.`, `batch.`, `commands.`, `app.` …). `allowIo: true` in the step turns the
-//!   sandbox off. Globals: `batch.index`, `batch.total`, `batch.source`.
+//!   (like `script.command`). By default the snippet runs **sandboxed** (deep guard, see
+//!   [`sandbox_prelude`]): `Files`/`System` refuse every call, every API prototype has its file,
+//!   export, launch and save methods replaced by throwing stubs, every object returned from the API
+//!   graph is wrapped recursively, and `fp.run` only calls commands of an allowlist of safe groups.
+//!   `allowIo: true` in the step turns the sandbox off (refused for MCP callers,
+//!   [`crate::security`]). Globals: `batch.index`, `batch.total`, `batch.source`.
 //! - `script.external` runs an external program with `{in}`/`{out}` placeholders (no shell; the
 //!   command line is split like a Windows command line with double quotes), a timeout and the test
 //!   profile environment. It is **opt-in**: the step needs `allowExternal: true`, otherwise the
-//!   validation refuses it. `{in}` is a temporary PNG/TIFF/JPEG of the current image; with
+//!   validation refuses it; MCP callers are always refused ([`crate::security`]). `{in}` is a temporary PNG/TIFF/JPEG of the current image; with
 //!   `result: replace` the file at `{out}` becomes the new image.
 
 use crate::error::{BatchError, Result};
@@ -29,9 +30,9 @@ pub const SCRIPT_CODE: &str = "script.code";
 /// ID "External program".
 pub const SCRIPT_EXTERNAL: &str = "script.external";
 
-/// Method names that the sandbox refuses on `fw` and documents (prefix match, see
+/// Method names that the sandbox refuses on every object of the API graph (prefix match, see
 /// [`SANDBOX_ALLOWED`]).
-pub const SANDBOX_DENIED_PREFIXES: [&str; 17] = [
+pub const SANDBOX_DENIED_PREFIXES: &[&str] = &[
     "open",
     "save",
     "export",
@@ -49,6 +50,24 @@ pub const SANDBOX_DENIED_PREFIXES: [&str; 17] = [
     "getenv",
     "getTempFilePath",
     "setPref",
+    "eval",
+    "clip",
+    "doBatchProcess",
+    "takeScreenshot",
+    "associate",
+    "updateHTML",
+    "sendEmail",
+    "loadColorPalette",
+    "newDocumentFromTemplate",
+    "revertDocument",
+    "addProjectEntry",
+    "logChangeInProject",
+    "removeAllProjectEntries",
+    "findApp",
+    "chooseBrowser",
+    "locateDocDialog",
+    "getHTMLFileForScript",
+    "copyHtmlWizard",
 ];
 
 /// Names that match a denied prefix but touch no files.
@@ -60,6 +79,52 @@ pub const SANDBOX_ALLOWED: [&str; 6] = [
     "exportFormatOptions",
     "exportOptionsToUse",
 ];
+
+/// API classes whose every method and property the sandbox refuses (file system, system,
+/// open files).
+pub const SANDBOX_SEALED_CLASSES: [&str; 3] = ["Files", "System", "FileReference"];
+
+/// Command groups `fp.run` may call inside the sandbox (allowlist; everything else is refused).
+pub const SANDBOX_SAFE_GROUPS: [&str; 18] = [
+    "autoShape.",
+    "bitmap.",
+    "color.",
+    "document.",
+    "draw.",
+    "edit.",
+    "element.",
+    "filter.",
+    "guide.",
+    "history.",
+    "layer.",
+    "modify.",
+    "page.",
+    "path.",
+    "pi.",
+    "select.",
+    "text.",
+    "transform.",
+];
+
+/// Commands inside the safe groups that still touch files, preferences or the clipboard
+/// (prefix match).
+pub const SANDBOX_DENIED_COMMANDS: [&str; 8] = [
+    "edit.preferences",
+    "edit.copy",
+    "edit.paste",
+    "edit.insert.bitmapViaCopy",
+    "history.export",
+    "pi.brush.save",
+    "pi.export.",
+    "pi.symbol.import",
+];
+
+/// May `fp.run` call `name` inside the sandbox?
+pub fn sandbox_allows_command(name: &str) -> bool {
+    SANDBOX_SAFE_GROUPS.iter().any(|g| name.starts_with(g))
+        && !SANDBOX_DENIED_COMMANDS.iter().any(|d| name.starts_with(d))
+        && !BLOCKED_PREFIXES.iter().any(|b| name.starts_with(b))
+}
 
 /// Registers both steps.
 pub fn register(r: &mut StepRegistry) {
@@ -74,53 +139,149 @@ fn p_bool(p: &Value, k: &str) -> bool {
     p.get(k).and_then(Value::as_bool).unwrap_or(false)
 }
 
-/// JavaScript prelude of the sandbox.
+/// JavaScript prelude of the sandbox (deep guard).
+///
+/// 1. **Prototypes**: every class prototype of the API (`__fp_protos`, also the ones built later)
+///    is rewritten once: denied methods and every member of the sealed classes throw; all other
+///    native methods and property accessors get a wrapper that unwraps guarded `this`/arguments
+///    before the native call and guards the result. So no path to a native file, export or launch
+///    method is left, whatever object or prototype a script reaches.
+/// 2. **Objects**: every object returned from the guarded graph is wrapped in a memoised proxy
+///    (recursively on property reads) that refuses denied method names; assignments store the
+///    unwrapped value.
+/// 3. **Globals**: `Files`/`System` refuse everything, every global alias of `fw` and the other API
+///    singletons are guarded, `fp.run` only calls commands of [`SANDBOX_SAFE_GROUPS`].
 pub fn sandbox_prelude() -> String {
-    let denied = serde_json::to_string(&SANDBOX_DENIED_PREFIXES).unwrap_or_default();
+    let denied = serde_json::to_string(SANDBOX_DENIED_PREFIXES).unwrap_or_default();
     let allowed = serde_json::to_string(&SANDBOX_ALLOWED).unwrap_or_default();
+    let sealed = serde_json::to_string(&SANDBOX_SEALED_CLASSES).unwrap_or_default();
+    let safe = serde_json::to_string(&SANDBOX_SAFE_GROUPS).unwrap_or_default();
+    let denied_cmds = serde_json::to_string(&SANDBOX_DENIED_COMMANDS).unwrap_or_default();
     let blocked = serde_json::to_string(&BLOCKED_PREFIXES).unwrap_or_default();
     format!(
         r#"(function (g) {{
-  var denied = {denied}, allowed = {allowed}, blocked = {blocked};
+  var denied = {denied}, allowed = {allowed}, sealed = {sealed};
+  var safe = {safe}, deniedCmds = {denied_cmds}, blocked = {blocked};
   function refuse(n) {{ return function () {{ throw new Error("sandbox: " + n + " is not allowed in a batch (allowIo: false)"); }}; }}
-  function isDenied(k) {{
-    if (typeof k !== "string" || allowed.indexOf(k) >= 0) return false;
-    for (var i = 0; i < denied.length; i++) if (k.indexOf(denied[i]) === 0) return true;
+  function starts(s, list) {{
+    for (var i = 0; i < list.length; i++) if (s.indexOf(list[i]) === 0) return true;
     return false;
   }}
-  var cache = [];
-  function wrap(o, deep) {{
-    if (o === null || (typeof o !== "object" && typeof o !== "function")) return o;
-    for (var i = 0; i < cache.length; i++) if (cache[i][0] === o) return cache[i][1];
-    var p = new Proxy(o, {{
+  function isDenied(k) {{
+    return typeof k === "string" && allowed.indexOf(k) < 0 && starts(k, denied);
+  }}
+  function cmdAllowed(n) {{
+    return starts(n, safe) && !starts(n, deniedCmds) && !starts(n, blocked);
+  }}
+  var toProxy = new WeakMap(), toRaw = new WeakMap();
+  function isObj(v) {{ return v !== null && (typeof v === "object" || typeof v === "function"); }}
+  function raw(v) {{ return isObj(v) && toRaw.has(v) ? toRaw.get(v) : v; }}
+  function rawArgs(a) {{
+    var out = [];
+    for (var i = 0; i < a.length; i++) {{
+      var v = raw(a[i]);
+      if (Array.isArray(v)) {{
+        var c = [];
+        for (var j = 0; j < v.length; j++) c.push(raw(v[j]));
+        v = c;
+      }}
+      out.push(v);
+    }}
+    return out;
+  }}
+  function guard(v) {{
+    if (v === null || typeof v !== "object") return v;
+    if (toRaw.has(v)) return v;
+    var p = toProxy.get(v);
+    if (p) return p;
+    p = new Proxy(v, {{
       get: function (t, k) {{
-        if (isDenied(k)) return refuse(String(k));
-        var v = t[k];
-        if (typeof v === "function") {{
-          return function () {{
-            var r = v.apply(t, arguments);
-            return deep ? wrap(r, false) : r;
-          }};
-        }}
-        return deep ? wrap(v, false) : v;
+        var x = t[k];
+        if (typeof x === "function") return isDenied(k) ? refuse(String(k)) : x;
+        return guard(x);
       }},
-      set: function (t, k, v) {{ t[k] = v; return true; }}
+      set: function (t, k, x) {{ t[k] = raw(x); return true; }},
+      defineProperty: function (t, k, d) {{
+        if ("value" in d) d.value = raw(d.value);
+        return Reflect.defineProperty(t, k, d);
+      }},
+      getOwnPropertyDescriptor: function (t, k) {{
+        var d = Reflect.getOwnPropertyDescriptor(t, k);
+        if (d && d.configurable && "value" in d) d.value = guard(d.value);
+        return d;
+      }}
     }});
-    cache.push([o, p]);
+    toProxy.set(v, p);
+    toRaw.set(p, v);
     return p;
   }}
+  var protos = g.__fp_protos, done = {{}}, seen = -1;
+  function native(f) {{
+    return function () {{
+      var r = f.apply(raw(this), rawArgs(arguments));
+      scan();
+      return guard(r);
+    }};
+  }}
+  function seal(cls, proto) {{
+    var all = sealed.indexOf(cls) >= 0;
+    var names = Object.getOwnPropertyNames(proto);
+    for (var i = 0; i < names.length; i++) {{
+      var k = names[i];
+      if (k === "__fpc" || k === "constructor") continue;
+      var d = Object.getOwnPropertyDescriptor(proto, k);
+      if (!d || !d.configurable) continue;
+      if (typeof d.value === "function") {{
+        d.value = all || isDenied(k) ? refuse(cls + "." + k) : native(d.value);
+      }} else if (d.get || d.set) {{
+        if (all) {{
+          d.get = refuse(cls + "." + k);
+          if (d.set) d.set = refuse(cls + "." + k);
+        }} else {{
+          if (d.get) d.get = native(d.get);
+          if (d.set) d.set = native(d.set);
+        }}
+      }} else continue;
+      Object.defineProperty(proto, k, d);
+    }}
+  }}
+  function scan() {{
+    if (!protos) return;
+    var names = Object.getOwnPropertyNames(protos);
+    if (names.length === seen) return;
+    seen = names.length;
+    for (var i = 0; i < names.length; i++) {{
+      var n = names[i];
+      if (done[n]) continue;
+      done[n] = true;
+      var p = protos[n];
+      if (isObj(p)) seal(n, p);
+    }}
+  }}
+  var rawFw = g.fw;
+  scan();
   var none = new Proxy({{}}, {{ get: function (t, k) {{ return refuse(String(k)); }} }});
+  var fw = guard(rawFw);
+  var globals = Object.getOwnPropertyNames(g);
+  for (var i = 0; i < globals.length; i++) {{
+    try {{ if (g[globals[i]] === rawFw) g[globals[i]] = fw; }} catch (e) {{}}
+  }}
+  g.fw = fw; g.app = fw; g.App = fw; g.firepixel = fw;
   g.Files = none;
   g.System = none;
-  var fw = wrap(g.fw, true);
-  g.fw = fw; g.app = fw; g.App = fw; g.firepixel = fw;
+  var singles = ["$", "Document", "Tools", "Errors", "Widget"];
+  for (var s = 0; s < singles.length; s++) {{
+    try {{ if (isObj(g[singles[s]])) g[singles[s]] = guard(g[singles[s]]); }} catch (e) {{}}
+  }}
   if (g.fp && g.fp.run) {{
     var run = g.fp.run;
     g.fp = {{
       run: function (name) {{
-        for (var i = 0; i < blocked.length; i++)
-          if (String(name).indexOf(blocked[i]) === 0) return refuse(String(name))();
-        return run.apply(null, arguments);
+        var n = String(name);
+        if (!cmdAllowed(n)) return refuse(n)();
+        var r = run.apply(null, rawArgs(arguments));
+        scan();
+        return guard(r);
       }},
       available: g.fp.available,
       t: g.fp.t

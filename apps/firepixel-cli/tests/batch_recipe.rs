@@ -196,3 +196,41 @@ fn batch_commands_are_available_in_cli_sessions() {
     );
     assert!(text.contains("file.copyOnly"), "{text}");
 }
+
+/// B-5: the CLI keeps the opt-ins (`allowExternal`, `allowIo`) that MCP callers may not use.
+#[cfg(windows)]
+#[test]
+fn recipe_with_opt_ins_runs_from_the_cli() {
+    let dir = tmp("optin");
+    let input = dir.join("in");
+    std::fs::create_dir_all(&input).expect("in");
+    png(&input.join("a.png"), 10, 6);
+    let recipe = dir.join("optin.fpbatch.json");
+    std::fs::write(
+        &recipe,
+        r#"{"format":"firepixel-batch-recipe","version":1,"name":"optin","steps":[
+            {"id":"script.external","params":{"command":"cmd /c copy {in} {out}","allowExternal":true}},
+            {"id":"script.code","params":{"code":"Files.exists(batch.source);","allowIo":true}}
+        ],"output":{"format":"png"}}"#,
+    )
+    .expect("recipe");
+    let out_dir = dir.join("out");
+    let out = cli()
+        .args(["batch", "--recipe"])
+        .arg(&recipe)
+        .arg("--in")
+        .arg(&input)
+        .arg("--out")
+        .arg(&out_dir)
+        .arg("--json")
+        .output()
+        .expect("run");
+    assert!(
+        out.status.success(),
+        "{}{}",
+        String::from_utf8_lossy(&out.stdout),
+        String::from_utf8_lossy(&out.stderr)
+    );
+    assert!(out_dir.join("a.png").exists());
+    let _ = std::fs::remove_dir_all(&dir);
+}

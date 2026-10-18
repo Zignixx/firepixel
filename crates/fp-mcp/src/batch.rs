@@ -266,6 +266,7 @@ fn start(args: &Value) -> ToolOutput {
             .and_then(Value::as_u64)
             .map(|n| n as usize),
         log: true,
+        caller: fp_batch::Caller::Mcp,
         ..RunOptions::default()
     };
     let total = items.len();

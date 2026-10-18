@@ -464,3 +464,8 @@ batch-param-metadata-set-iptc = Auch IPTC schreiben
 batch-meta-issue-altitude = Die Höhe muss eine Zahl in Metern sein.
 batch-param-metadata-export-collect = Eine Datei für alle Bilder
     .tooltip = Schreibt metadata.csv bzw. metadata.json in den Ausgabeordner statt einer Datei je Bild.
+
+## Aufrufer-Sperre: nicht über MCP (B-5)
+batch-issue-mcp-external = Schritt { $index } (Externes Programm): externe Programme sind über MCP nicht erlaubt.
+batch-issue-mcp-allow-io = Schritt { $index } (JSF-Code): „Dateizugriff erlauben“ (allowIo) ist über MCP nicht erlaubt.
+batch-err-mcp-refused = Das Rezept kann über MCP nicht ausgeführt werden: { $steps }

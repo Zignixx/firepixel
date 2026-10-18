@@ -331,3 +331,73 @@ fn run_blocking_and_in_background_with_progress() {
     assert_eq!(tmp, 0, "keine Temporärdateien");
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+/// B-5: `script.external` and `script.code` with `allowIo` are refused for MCP callers, however
+/// the batch is started (tool `batch` blocking/async/preview/validate, `run_command batch.run`).
+#[test]
+fn mcp_refuses_external_programs_and_io_code() {
+    let mut s = fp_engine::Session::default();
+    let e = env();
+    let dir = temp("gate");
+    let files = sources(&dir, 1);
+    let out = dir.join("out");
+    let recipes = [
+        json!({"name": "ext", "steps": [
+            {"id": "format.colorDepth", "params": {"mode": "grayscale"}},
+            {"id": "script.external", "params": {"command": "cmd /c copy {in} {out}", "allowExternal": true}}
+        ], "output": {"format": "png"}}),
+        json!({"name": "io", "steps": [
+            {"id": "script.code", "params": {"code": "Files.exists(batch.source);", "allowIo": true}}
+        ], "output": {"format": "png"}}),
+    ];
+    for recipe in recipes {
+        let base = json!({"recipe": recipe, "files": files, "out": out.to_string_lossy()});
+        let with = |extra: Value| {
+            let mut a = base.clone();
+            for (k, v) in extra.as_object().cloned().unwrap_or_default() {
+                a[k] = v;
+            }
+            a
+        };
+        for args in [
+            with(json!({})),
+            with(json!({"async": true})),
+            with(json!({"action": "preview", "file": files[0]})),
+        ] {
+            let r = call(&mut s, &e, "batch", &args);
+            assert!(r.is_error, "{args}: {}", r.text());
+            assert!(r.text().contains("MCP"), "{}", r.text());
+        }
+        let v = ok(&call(
+            &mut s,
+            &e,
+            "batch",
+            &with(json!({"action": "validate"})),
+        ));
+        assert_eq!(v["ok"], false, "{v}");
+        assert!(v["issues"].to_string().contains("refusedForMcp"), "{v}");
+        let r = call(
+            &mut s,
+            &e,
+            "run_command",
+            &json!({"name": "batch.run", "params": base}),
+        );
+        assert!(
+            r.is_error || r.text().contains("MCP"),
+            "run_command: {}",
+            r.text()
+        );
+        assert!(!out.exists() || std::fs::read_dir(&out).map(|d| d.count()).unwrap_or(0) == 0);
+    }
+    // outside an MCP call the same recipe with the opt-in is accepted by validation
+    let r = fp_batch::Recipe::from_value(json!({"steps": [
+        {"id": "script.code", "params": {"code": "1;", "allowIo": true}}
+    ]}))
+    .expect("recipe");
+    assert!(
+        r.validate(&fp_batch::StepRegistry::global())
+            .iter()
+            .all(|i| i.code != "refusedForMcp")
+    );
+    let _ = std::fs::remove_dir_all(&dir);
+}

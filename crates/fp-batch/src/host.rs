@@ -170,6 +170,7 @@ fn handle(op: BatchOp, p: &Value) -> Result<Value, String> {
                 dry_run: p.get("dryRun").and_then(Value::as_bool).unwrap_or(false),
                 threads: p.get("threads").and_then(Value::as_u64).map(|n| n as usize),
                 log: true,
+                caller: crate::security::current_caller(),
                 ..RunOptions::default()
             };
             let report = executor::run(&r, &items, &opts).map_err(|e| e.to_string())?;

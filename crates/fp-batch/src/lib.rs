@@ -25,6 +25,7 @@ pub mod predict; // BA-105: output size for the dry run
 pub mod recipe;
 pub mod report;
 pub mod report_html; // BATCH-11b: batch-report.html
+pub mod security; // B-5: caller gates (not via MCP)
 pub mod step;
 pub mod steps;
 pub mod templates;
@@ -39,6 +40,7 @@ pub use output::OutputFormat;
 pub use pipeline::{Pipeline, PreviewOptions, PreviewResult, preview};
 pub use recipe::{Recipe, StepConfig};
 pub use report::{ItemReport, ItemStatus, Report};
+pub use security::{Caller, with_caller};
 pub use step::{
     Issue, ParamDef, ParamType, Severity, Step, StepContext, StepGroup, StepKind, StepRegistry,
 };

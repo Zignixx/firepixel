@@ -690,6 +690,11 @@ impl Recipe {
             _ => {}
         }
         out.extend(crate::steps::multipage::validate_recipe(self)); // B-4
+        // B-5: steps an MCP caller may not run
+        out.extend(crate::security::caller_issues(
+            self,
+            crate::security::current_caller(),
+        ));
         // „Nur kopieren/verschieben“ verträgt keine Bildschritte und kein anderes Zielformat
         let enabled: Vec<&StepConfig> = self.steps.iter().filter(|s| s.enabled).collect();
         let file_steps = enabled

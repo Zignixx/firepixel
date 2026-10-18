@@ -134,6 +134,9 @@ pub struct RunOptions {
     pub log: bool,
     /// Plan-Optionen (Tests: festes „heute“).
     pub plan: PlanOptions,
+    /// B-5: who asked for the run (MCP callers may not run `script.external` or `script.code`
+    /// with `allowIo`); the current thread's caller ([`crate::security::with_caller`]) also counts.
+    pub caller: crate::security::Caller,
 }
 
 /// Byte-Semaphor: lässt nur so viele Elemente gleichzeitig zu, wie ins Budget passen; ein Element
@@ -903,6 +906,7 @@ pub fn plan(
 /// ungültiges Rezept ist ein Fehler, fehlgeschlagene Elemente stehen im Bericht.
 pub fn run(recipe: &Recipe, items: &[ItemInfo], opts: &RunOptions) -> Result<Report> {
     let started = iso_now();
+    crate::security::check(recipe, crate::security::effective(opts.caller))?;
     let reg = opts.registry.clone().unwrap_or_else(StepRegistry::global);
     let pipe = Pipeline::new(recipe, &reg)?;
     // one "now" for the plan and for names rebuilt after processing (BA-105)
