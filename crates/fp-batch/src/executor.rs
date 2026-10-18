@@ -187,6 +187,14 @@ struct Job<'a> {
     total: usize,
     /// Sprache des Aufrufers (Meldungen aus den Arbeits-Threads in derselben Sprache).
     lang: String,
+    /// Names with the size token: renamed after processing (BA-105).
+    renamer: Option<Renamer>,
+}
+
+/// Re-naming after processing when the name uses the image size (BA-105).
+struct Renamer {
+    now: chrono::NaiveDateTime,
+    claims: Mutex<naming::Claims>,
 }
 
 impl Job<'_> {
@@ -303,29 +311,64 @@ impl Job<'_> {
         rep
     }
 
+    /// Resolves the `ask` rule for `e`: the answer's target and action, `None` = skip.
+    fn resolve_ask(&self, e: &PlanEntry, info: &ItemInfo) -> Option<(PathBuf, PlanAction)> {
+        match self.ask(e) {
+            AskChoice::Skip => None,
+            AskChoice::Overwrite => Some((
+                e.target.clone(),
+                if naming_same(&e.target, &info.path) {
+                    PlanAction::ReplaceOriginal
+                } else {
+                    PlanAction::Overwrite
+                },
+            )),
+            AskChoice::Rename => Some((
+                e.alt_target.clone().unwrap_or_else(|| e.target.clone()),
+                PlanAction::Write,
+            )),
+        }
+    }
+
+    /// Size token in the name (BA-105): rebuild the name from the output size and re-resolve
+    /// conflicts. `None` = name unchanged.
+    fn retarget(&self, e: &PlanEntry, item: &Item) -> Result<Option<PlanEntry>> {
+        let Some(r) = &self.renamer else {
+            return Ok(None);
+        };
+        let Some(name) =
+            naming::name_for_size(self.recipe, self.items, e.index, r.now, item.dimensions())?
+        else {
+            return Ok(None);
+        };
+        let mut claims = r.claims.lock().unwrap_or_else(|p| p.into_inner());
+        let t = claims.retarget(self.recipe, e, &name);
+        Ok(Some(PlanEntry {
+            target: t.target,
+            alt_target: t.alt_target,
+            action: t.action,
+            ..e.clone()
+        }))
+    }
+
     fn process_inner(&self, e: &PlanEntry, info: &ItemInfo, rep: &mut ItemReport) -> Result<()> {
         let cancel = &self.opts.cancel;
+        let skip = |rep: &mut ItemReport, target: PathBuf| {
+            rep.status = ItemStatus::Skipped;
+            rep.target = Some(target);
+            rep.warnings.push(naming::NameHint::Skipped.message());
+        };
+        // with the size token the name is final only after processing: ask afterwards
+        let late_naming = self.renamer.is_some() && !self.pipe.file_only;
         // Ziel und Aktion (Rückfrage bei `ask`)
         let (mut target, mut action) = (e.target.clone(), e.action);
-        if action == PlanAction::Ask {
-            match self.ask(e) {
-                AskChoice::Skip => {
-                    rep.status = ItemStatus::Skipped;
-                    rep.target = Some(target);
-                    rep.warnings.push(naming::NameHint::Skipped.message());
+        if action == PlanAction::Ask && !late_naming {
+            match self.resolve_ask(e, info) {
+                None => {
+                    skip(rep, target);
                     return Ok(());
                 }
-                AskChoice::Overwrite => {
-                    action = if naming_same(&target, &info.path) {
-                        PlanAction::ReplaceOriginal
-                    } else {
-                        PlanAction::Overwrite
-                    }
-                }
-                AskChoice::Rename => {
-                    target = e.alt_target.clone().unwrap_or(target);
-                    action = PlanAction::Write;
-                }
+                Some((t, a)) => (target, action) = (t, a),
             }
         }
         rep.target = Some(target.clone());
@@ -348,6 +391,25 @@ impl Job<'_> {
             self.pipe.apply(&mut item, &mut ctx)?;
             rep.warnings.append(&mut ctx.warnings);
             cancel.check()?;
+            if late_naming {
+                let renamed = self.retarget(e, &item)?;
+                let entry = renamed.as_ref().unwrap_or(e);
+                (target, action) = (entry.target.clone(), entry.action);
+                if action == PlanAction::Skip {
+                    skip(rep, target);
+                    return Ok(());
+                }
+                if action == PlanAction::Ask {
+                    match self.resolve_ask(entry, info) {
+                        None => {
+                            skip(rep, target);
+                            return Ok(());
+                        }
+                        Some((t, a)) => (target, action) = (t, a),
+                    }
+                }
+                rep.target = Some(target.clone());
+            }
             self.write_item(&item, fmt, &target, action, info, rep)?;
             self.write_extra_fwpng(&item, fmt, &target, rep)?;
         }
@@ -558,7 +620,10 @@ pub fn run(recipe: &Recipe, items: &[ItemInfo], opts: &RunOptions) -> Result<Rep
     let started = iso_now();
     let reg = opts.registry.clone().unwrap_or_else(StepRegistry::global);
     let pipe = Pipeline::new(recipe, &reg)?;
-    let plan = naming::plan(recipe, items, pipe.file_only, &opts.plan)?;
+    // one "now" for the plan and for names rebuilt after processing (BA-105)
+    let now = opts.plan.now.unwrap_or_else(naming::now_local);
+    let plan_opts = PlanOptions { now: Some(now) };
+    let plan = naming::plan(recipe, items, pipe.file_only, &plan_opts)?;
     let warnings: Vec<String> = pipe
         .unknown
         .iter()
@@ -615,6 +680,7 @@ pub fn run(recipe: &Recipe, items: &[ItemInfo], opts: &RunOptions) -> Result<Rep
         // KI-Schritte: höchstens wenige Elemente zugleich (Schritt-Grenze, BATCH-T)
         let threads = pipe.max_parallel().map_or(threads, |m| threads.min(m));
         let collect_at = pipe.collect_at();
+        let pipe_file_only = pipe.file_only;
         let job = Job {
             recipe,
             items,
@@ -628,6 +694,10 @@ pub fn run(recipe: &Recipe, items: &[ItemInfo], opts: &RunOptions) -> Result<Rep
             ask_lock: Mutex::new(None),
             total: items.len(),
             lang: fp_i18n::current_language(),
+            renamer: (!pipe_file_only && naming::uses_size(&recipe.rename)).then(|| Renamer {
+                now,
+                claims: Mutex::new(naming::Claims::from_plan(&plan)),
+            }),
         };
         let pool = rayon::ThreadPoolBuilder::new()
             .num_threads(threads)

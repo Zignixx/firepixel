@@ -902,3 +902,65 @@ fn f5_preview_of_rename_only_reports_source_size() {
     );
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+/// BA-105: the size token names the **output** size (after `resize`), and the name conflicts
+/// this creates are resolved at that point (`name (2)` …, or skip).
+#[test]
+fn size_token_uses_output_size_and_resolves_new_conflicts() {
+    use fp_batch::recipe::SizeWhich;
+    let dir = temp("size_token");
+    let src = sources(&dir, 3); // 8x6, 9x6, 10x6 → distinct planned names
+    let out = dir.join("out");
+    let recipe = |conflict| {
+        let mut r = folder_recipe(&out, "png");
+        r.rename.parts = vec![
+            NamePart::Text {
+                text: "img_".into(),
+            },
+            NamePart::Size {
+                which: SizeWhich::Both,
+            },
+        ];
+        r.output.conflict = conflict;
+        r.add_step(
+            "resize",
+            json!({"mode": "exact", "width": 20, "height": 10, "onlyShrink": false}),
+        );
+        r
+    };
+    let rep = executor::run(&recipe(Conflict::Rename), &items(&src), &opts()).expect("run");
+    assert_eq!(rep.totals.done, 3, "{:#?}", rep.items);
+    let pngs = || {
+        files_under(&out)
+            .into_iter()
+            .filter(|p| p.extension().is_some_and(|e| e == "png"))
+            .collect::<Vec<_>>()
+    };
+    let mut names: Vec<String> = pngs()
+        .iter()
+        .map(|p| p.file_name().unwrap().to_string_lossy().to_string())
+        .collect();
+    names.sort();
+    assert_eq!(
+        names,
+        ["img_20x10 (2).png", "img_20x10 (3).png", "img_20x10.png"]
+    );
+    for i in &rep.items {
+        let t = i.target.as_ref().expect("target");
+        assert!(t.exists(), "report names the written file: {}", t.display());
+        assert_eq!(dims(t), (20, 10));
+    }
+    // existing files: "skip" leaves them alone and skips every item
+    let rep = executor::run(&recipe(Conflict::Skip), &items(&src), &opts()).expect("run");
+    assert_eq!(rep.totals.done, 0, "{:#?}", rep.items);
+    assert_eq!(rep.totals.skipped, 3);
+    assert_eq!(pngs().len(), 3);
+    assert!(!has_temp_files(&dir));
+    // without a size step the source size stays (name unchanged)
+    let mut r = recipe(Conflict::Rename);
+    r.steps.clear();
+    let rep = executor::run(&r, &items(&src[..1]), &opts()).expect("run");
+    let t = rep.items[0].target.clone().expect("target");
+    assert_eq!(t.file_name().unwrap().to_string_lossy(), "img_8x6.png");
+    let _ = std::fs::remove_dir_all(&dir);
+}

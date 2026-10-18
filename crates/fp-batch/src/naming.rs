@@ -1021,3 +1021,143 @@ pub fn plan(
     plan.output_dirs = dirs;
     Ok(plan)
 }
+
+// ------------------------------------------------------------------ Output size (BA-105)
+
+/// Does the name depend on the image size (`size` part, `{w}`/`{h}` in the regex replacement)?
+pub fn uses_size(spec: &RenameSpec) -> bool {
+    match spec.mode {
+        RenameMode::Builder => spec
+            .parts
+            .iter()
+            .any(|p| matches!(p, NamePart::Size { .. })),
+        RenameMode::Regex => {
+            let r = &spec.regex.replace;
+            r.contains("{w}") || r.contains("{h}")
+        }
+    }
+}
+
+/// Name of item `index` for the **output** size `size` (after `resize`/`crop` …), built exactly
+/// like the plan does. `None` if the name does not use the size or the size did not change.
+pub fn name_for_size(
+    recipe: &Recipe,
+    items: &[ItemInfo],
+    index: usize,
+    now: NaiveDateTime,
+    size: (u32, u32),
+) -> Result<Option<NameResult>> {
+    let Some(src) = items.get(index) else {
+        return Ok(None);
+    };
+    if !uses_size(&recipe.rename) || (src.width, src.height) == size {
+        return Ok(None);
+    }
+    let fmt = OutputFormat::parse(&recipe.output.format).unwrap_or(OutputFormat::Same);
+    let (resolved, _) = resolve_format(fmt, &src.format);
+    let dir = key(&src.dir());
+    let folder_index = items[..index]
+        .iter()
+        .filter(|i| key(&i.dir()) == dir)
+        .count();
+    let mut info = src.clone();
+    (info.width, info.height) = size;
+    let ctx = NameContext {
+        info: &info,
+        list_index: index,
+        folder_index,
+        now,
+        out_ext: target_extension(&recipe.rename, resolved, &src.file_name(), false),
+        out_format: resolved.name().to_string(),
+    };
+    build_name(&recipe.rename, &ctx).map(Some)
+}
+
+/// Target names claimed during a run (list index per name). Lets a worker re-resolve name
+/// conflicts when its name changes after processing (size token, BA-105).
+#[derive(Debug, Default)]
+pub struct Claims {
+    map: HashMap<String, usize>,
+}
+
+/// New target of an entry after renaming at run time.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Retarget {
+    pub target: PathBuf,
+    pub alt_target: Option<PathBuf>,
+    pub action: PlanAction,
+}
+
+impl Claims {
+    /// All targets (and fallback targets) the plan reserved.
+    pub fn from_plan(plan: &Plan) -> Claims {
+        let mut map = HashMap::new();
+        for e in plan.entries.iter().filter(|e| e.action != PlanAction::Skip) {
+            map.insert(key(&e.target), e.index);
+            if let Some(a) = &e.alt_target {
+                map.insert(key(a), e.index);
+            }
+        }
+        Claims { map }
+    }
+
+    /// Moves entry `e` to the new name `name` in the same folder and resolves conflicts with the
+    /// recipe's rule, like the plan: a name another item of this run holds is never overwritten
+    /// (`name (2).ext` …, or skip/ask); an existing file follows the rule; the source itself
+    /// is replaced only with "overwrite".
+    pub fn retarget(&mut self, recipe: &Recipe, e: &PlanEntry, name: &NameResult) -> Retarget {
+        let index = e.index;
+        self.map.retain(|_, v| *v != index);
+        let dir = e.target.parent().map(Path::to_path_buf).unwrap_or_default();
+        let ext = split_extension(&name.file_name).1;
+        let ext = if name.file_name.len() > name.stem.len() {
+            ext
+        } else {
+            String::new()
+        };
+        let mut target = dir.join(&name.file_name);
+        let taken = |m: &HashMap<String, usize>, p: &Path| {
+            m.contains_key(&key(p)) || crate::output::long_path(p).exists()
+        };
+        let free = |m: &HashMap<String, usize>| {
+            (2..10_000)
+                .map(|k| numbered(&dir, &name.stem, &ext, k))
+                .find(|p| !taken(m, p))
+                .unwrap_or_else(|| dir.join(&name.file_name))
+        };
+        let in_run = self.map.contains_key(&key(&target));
+        let same_as_source = key(&target) == key(&e.source);
+        let on_disk = !same_as_source && crate::output::long_path(&target).exists();
+        let mut action = PlanAction::Write;
+        let mut alt_target = None;
+        let conflict = recipe.output.conflict;
+        if in_run || same_as_source || on_disk {
+            match conflict {
+                Conflict::Skip => action = PlanAction::Skip,
+                Conflict::Ask => {
+                    action = PlanAction::Ask;
+                    alt_target = Some(free(&self.map));
+                }
+                Conflict::Overwrite if !in_run => {
+                    action = if same_as_source {
+                        PlanAction::ReplaceOriginal
+                    } else {
+                        PlanAction::Overwrite
+                    }
+                }
+                Conflict::Rename | Conflict::Overwrite => target = free(&self.map),
+            }
+        }
+        if action != PlanAction::Skip {
+            self.map.insert(key(&target), index);
+            if let Some(a) = &alt_target {
+                self.map.insert(key(a), index);
+            }
+        }
+        Retarget {
+            target,
+            alt_target,
+            action,
+        }
+    }
+}
