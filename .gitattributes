@@ -1,0 +1,7 @@
+# Keep source files at LF regardless of the platform; files that
+# deliberately use CRLF (parity runner Python/JSON) are not listed.
+*.rs    text eol=lf
+*.toml  text eol=lf
+*.ftl   text eol=lf
+*.yml   text eol=lf
+*.yaml  text eol=lf
