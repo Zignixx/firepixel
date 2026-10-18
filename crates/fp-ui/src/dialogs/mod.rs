@@ -45,8 +45,8 @@ pub mod web_behavior;
 pub use misc::Confirm;
 pub use new_document::NewDocumentDialog;
 pub use preferences::{
-    CATEGORIES as PREFERENCE_CATEGORIES, PreferencesDialog, font_preview_index,
-    general_group_titles,
+    CATEGORIES as PREFERENCE_CATEGORIES, FFMPEG_KEY as PREFERENCE_FFMPEG_KEY, PreferencesDialog,
+    font_preview_index, general_group_titles,
 };
 pub use unsaved::{PendingClose, UnsavedFlow, without_last_extension};
 

@@ -132,6 +132,8 @@ dlg-pref-useextratexturesdir = Texturen
 dlg-pref-useextrapatternsdir = Muster
 dlg-pref-cap-originaldir = Ressourcenordner des Originals (leer = automatische Suche):
 dlg-pref-originalresourcedir = Ordner:
+dlg-pref-cap-ffmpeg = ffmpeg für Videos (leer = automatische Suche):
+dlg-pref-ffmpeg = Datei:
 dlg-pref-leglookforpng = Beim Bearbeiten mit externer Anwendung:
 dlg-pref-loptlookforpng = Beim Optimieren mit externer Anwendung:
 dlg-pref-cap-ui = Benutzeroberfläche

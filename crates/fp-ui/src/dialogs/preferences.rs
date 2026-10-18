@@ -286,6 +286,9 @@ fn page_items(cat: usize) -> &'static [Item] {
             ),
             Item::Caption("dlg-pref-cap-originaldir"),
             Text(ORIGINAL_DIR_KEY, "dlg-pref-originalresourcedir", ""),
+            // the same setting as the Batch Studio's settings ("ffmpeg file…", BA-107)
+            Item::Caption("dlg-pref-cap-ffmpeg"),
+            Text(FFMPEG_KEY, "dlg-pref-ffmpeg", ""),
         ],
     }
 }
@@ -590,12 +593,31 @@ impl PreferencesDialog {
     }
 
     fn get(&self, prefs: &Preferences, key: &str) -> Option<PrefValue> {
+        if key == FFMPEG_KEY && !self.values.contains_key(key) {
+            return Some(PrefValue::Str(
+                fp_batch::video::ffmpeg::configured_path()
+                    .map(|p| p.to_string_lossy().to_string())
+                    .unwrap_or_default(),
+            ));
+        }
         self.values.get(key).cloned().or_else(|| prefs.get(key))
     }
 
     /// Änderungen in die Voreinstellungen schreiben.
     pub fn apply(&self, prefs: &mut Preferences) {
         for (k, v) in &self.values {
+            if k == FFMPEG_KEY {
+                // not a preference: the ffmpeg file of the Batch Studio (`video.json` in the profile)
+                let path = v.as_str().unwrap_or_default();
+                let path = path.trim().trim_matches('"');
+                let r = fp_batch::video::ffmpeg::set_configured_path(
+                    (!path.is_empty()).then(|| std::path::Path::new(path)),
+                );
+                if let Err(e) = r {
+                    log::warn!("ffmpeg setting: {e}");
+                }
+                continue;
+            }
             prefs.set(k, v.clone());
         }
         if self.reset_warnings {
@@ -604,6 +626,10 @@ impl PreferencesDialog {
         apply_original_dir(prefs);
     }
 }
+
+/// Row "ffmpeg file" (BA-107): not stored in the preferences but in the Batch Studio's video settings
+/// (`fp_batch::video::ffmpeg::configured_path`); empty = search automatically.
+pub const FFMPEG_KEY: &str = "ffmpegPath";
 
 /// Firepixel-eigene Voreinstellung: Ressourcenordner des Originals (CMYK-/JPEG-Tabellen, Texturen,
 /// Bibliotheken; nur zur Laufzeit gelesen). Leer = automatische Suche (`fp_color::install`).
