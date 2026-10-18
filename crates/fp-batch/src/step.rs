@@ -439,6 +439,11 @@ pub struct StepContext<'a> {
     /// (Rahmenbreite, Schattenabstand, Radius …) damit um, damit die Vorschau wie das Ergebnis
     /// aussieht – unabhängig von Größenschritten davor. Abfrage über [`StepContext::preview_scale`].
     pub proxy_scale: Option<f64>,
+    /// Collect steps only: inputs (list index, see `crate::steps::fileops::EXTRA_INDEX`) the step
+    /// dropped on purpose, with the reason; the executor reports them as skipped.
+    pub item_skips: Vec<(usize, String)>,
+    /// Collect steps only: notes for single inputs (list index, message) for the report.
+    pub item_notes: Vec<(usize, String)>,
 }
 
 impl<'a> StepContext<'a> {
@@ -460,6 +465,8 @@ impl<'a> StepContext<'a> {
             step_index: 0,
             warnings: Vec::new(),
             proxy_scale: None,
+            item_skips: Vec::new(),
+            item_notes: Vec::new(),
         }
     }
     /// Maßstab der Vorschau für Pixelangaben: 1,0 außerhalb der Vorschau, sonst der Proxy-Maßstab

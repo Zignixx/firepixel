@@ -86,10 +86,12 @@ impl Pipeline {
             .map(|n| n.max(1))
     }
 
-    /// Dateiaktion bei „nur Dateischritten“ (`file.copyOnly` mit `action: move` → verschieben).
+    /// Dateiaktion bei „nur Dateischritten“ (`file.copyOnly` or `file.organize` with
+    /// `action: move` → verschieben).
     pub fn file_action(&self) -> FileAction {
         let mv = self.steps.iter().any(|r| {
-            r.step.id() == crate::steps::files::COPY_ONLY
+            (r.step.id() == crate::steps::files::COPY_ONLY
+                || r.step.id() == crate::steps::fileops::ORGANIZE)
                 && r.params.get("action").and_then(Value::as_str) == Some("move")
         });
         if mv {
@@ -97,6 +99,14 @@ impl Pipeline {
         } else {
             FileAction::Copy
         }
+    }
+
+    /// Parameters of the first enabled step `id` (with defaults).
+    pub fn params_of(&self, id: &str) -> Option<&Value> {
+        self.steps
+            .iter()
+            .find(|r| r.step.id() == id)
+            .map(|r| &r.params)
     }
 
     /// Position des ersten Sammel-Schritts.
@@ -135,7 +145,9 @@ impl Pipeline {
             }
             ctx.step_index = r.index;
             r.step.apply(item, &r.params, ctx).map_err(|e| match e {
-                BatchError::Step { .. } | BatchError::Cancelled(_) => e,
+                BatchError::Step { .. }
+                | BatchError::Cancelled(_)
+                | BatchError::Filtered { .. } => e,
                 other => BatchError::step(r.step.id(), other.to_string()),
             })?;
         }

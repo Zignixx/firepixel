@@ -14,6 +14,7 @@ use crate::predict;
 use crate::recipe::Recipe;
 use crate::report::{self, ItemReport, ItemStatus, Report};
 use crate::step::{StepContext, StepRegistry};
+use crate::steps::fileops::{EXTRA_INDEX, TIMESTAMPS};
 use rayon::prelude::*;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
@@ -288,6 +289,17 @@ impl Job<'_> {
                     Progress::ItemCancelled { index: e.index },
                 );
             }
+            Err(BatchError::Filtered { reason, copy }) => {
+                // `file.filterSkip`: not processed; optionally copied unchanged (B-3)
+                self.filtered(info, reason.clone(), copy, &mut rep);
+                send(
+                    &self.opts.progress,
+                    Progress::ItemSkipped {
+                        index: e.index,
+                        reason,
+                    },
+                );
+            }
             Err(err) => {
                 rep.status = ItemStatus::Failed;
                 let (step, msg) = match &err {
@@ -430,13 +442,69 @@ impl Job<'_> {
             self.write_item(&item, fmt, &target, action, info, rep)?;
             self.write_extras(&item, fmt, &target, rep)?;
         }
-        if self.recipe.output.keep_timestamps
-            && action != PlanAction::ReplaceOriginal
-            && target.exists()
-        {
-            let _ = output::copy_modified_time(&info.path, &target);
+        if action != PlanAction::ReplaceOriginal || self.pipe.params_of(TIMESTAMPS).is_some() {
+            self.set_timestamp(info, &target);
         }
         Ok(())
+    }
+
+    /// Modification time of a written file: `file.timestamps` (B-3) or "keep timestamps".
+    fn set_timestamp(&self, info: &ItemInfo, target: &Path) {
+        if !target.exists() {
+            return;
+        }
+        if let Some(p) = self.pipe.params_of(TIMESTAMPS) {
+            if let Some(t) = crate::steps::fileops::timestamp_for(p, info)
+                && let Ok(f) = std::fs::OpenOptions::new()
+                    .write(true)
+                    .open(output::long_path(target))
+            {
+                let _ = f.set_modified(t);
+            }
+        } else if self.recipe.output.keep_timestamps {
+            let _ = output::copy_modified_time(&info.path, target);
+        }
+    }
+
+    /// Item skipped by a filter step: report it, copy the source unchanged when asked.
+    fn filtered(&self, info: &ItemInfo, reason: String, copy: bool, rep: &mut ItemReport) {
+        rep.status = ItemStatus::Skipped;
+        rep.error = None;
+        rep.warnings.push(reason);
+        if !copy {
+            return;
+        }
+        let dir = rep
+            .target
+            .as_ref()
+            .and_then(|t| t.parent())
+            .map(Path::to_path_buf)
+            .unwrap_or_else(|| info.dir());
+        let name = info.file_name();
+        let mut dest = dir.join(&name);
+        if naming_same(&dest, &info.path) {
+            rep.warnings.push(fp_i18n::t("batch-warn-unchanged"));
+            return;
+        }
+        let (stem, ext) = naming::split_extension(&name);
+        let mut k = 2;
+        while dest.exists() && k < 10_000 {
+            dest = dir.join(if ext.is_empty() {
+                format!("{stem} ({k})")
+            } else {
+                format!("{stem} ({k}).{ext}")
+            });
+            k += 1;
+        }
+        match output::copy_atomic(&info.path, &dest) {
+            Ok(n) => {
+                rep.bytes_out = n;
+                rep.target = Some(dest.clone());
+                rep.warnings.push(fp_i18n::t("batch-warn-filter-copied"));
+                self.set_timestamp(info, &dest);
+            }
+            Err(e) => rep.warnings.push(e.to_string()),
+        }
     }
 
     fn write_item(
@@ -968,6 +1036,11 @@ fn run_collect(job: &Job, plan: &Plan, k: usize) -> Vec<ItemReport> {
                 let mut ctx = StepContext::new(e.index, job.total, info, cancel, fmt);
                 job.pipe.apply_range(0..k, &mut item, &mut ctx)?;
                 crate::steps::anim::tag_source(&mut item, info); // BATCH-7: Quellname für Sammel-Schritte
+                if let Some(m) = item.meta_mut() {
+                    // B-3: list index, so collect results can be reported per input
+                    m.extra
+                        .insert(EXTRA_INDEX.into(), serde_json::json!(e.index));
+                }
                 Ok(item)
             });
             (e.index, r)
@@ -993,6 +1066,11 @@ fn run_collect(job: &Job, plan: &Plan, k: usize) -> Vec<ItemReport> {
         match r {
             Ok(item) => inputs.push((index, item)),
             Err(e) if e.is_cancelled() => {}
+            Err(BatchError::Filtered { reason, copy }) => {
+                if let Some(rep) = reports.iter_mut().find(|r| r.index == index) {
+                    job.filtered(&job.items[index], reason, copy, rep);
+                }
+            }
             Err(e) => {
                 if let Some(rep) = reports.iter_mut().find(|r| r.index == index) {
                     rep.status = ItemStatus::Failed;
@@ -1038,6 +1116,21 @@ fn run_collect(job: &Job, plan: &Plan, k: usize) -> Vec<ItemReport> {
             return reports;
         }
     };
+    for (index, reason) in std::mem::take(&mut ctx.item_skips) {
+        if let Some(rep) = reports.iter_mut().find(|r| r.index == index) {
+            rep.status = ItemStatus::Skipped;
+            rep.warnings.push(reason);
+        }
+    }
+    let notes = std::mem::take(&mut ctx.item_notes);
+    let indices: Vec<usize> = indices
+        .into_iter()
+        .filter(|i| {
+            reports
+                .iter()
+                .any(|r| r.index == *i && r.status != ItemStatus::Skipped)
+        })
+        .collect();
     let (dir, stem, ext) = {
         let t = &first_entry.target;
         let name = t
@@ -1048,30 +1141,46 @@ fn run_collect(job: &Job, plan: &Plan, k: usize) -> Vec<ItemReport> {
         (t.parent().map(Path::to_path_buf).unwrap_or_default(), s, x)
     };
     let mut out_reports = Vec::new();
+    let mut used_targets: Vec<PathBuf> = Vec::new();
+    // B-3: a step that keeps its inputs as they are (dedupe) writes each to its planned target
+    let pass_through = step.step.id() == crate::steps::fileops::DEDUPE;
     for (n, mut out) in outputs.into_iter().enumerate() {
-        let target = crate::steps::anim::collect_target(
-            if n == 0 {
-                first_entry.target.clone()
+        let own = crate::steps::fileops::item_index(&out, first);
+        let own = if pass_through && indices.contains(&own) {
+            own
+        } else {
+            first
+        };
+        let planned = plan
+            .entries
+            .iter()
+            .find(|e| pass_through && e.index == own)
+            .map(|e| e.target.clone())
+            .filter(|t| !used_targets.iter().any(|u| naming_same(u, t)));
+        let default = match planned {
+            Some(t) => t,
+            None if n == 0 => first_entry.target.clone(),
+            None => dir.join(if ext.is_empty() {
+                format!("{stem} ({})", n + 1)
             } else {
-                dir.join(if ext.is_empty() {
-                    format!("{stem} ({})", n + 1)
-                } else {
-                    format!("{stem} ({}).{ext}", n + 1)
-                })
-            },
-            &dir,
-            &ext,
-            &out,
-        ); // BATCH-7
-        let mut rep = ItemReport::new(first, &info.path, 0);
+                format!("{stem} ({}).{ext}", n + 1)
+            }),
+        };
+        let target = crate::steps::anim::collect_target(default, &dir, &ext, &out); // BATCH-7
+        used_targets.push(target.clone());
+        let info = &job.items[own];
+        let mut rep = ItemReport::new(own, &info.path, 0);
         rep.target = Some(target.clone());
         let t0 = Instant::now();
-        let mut c2 = StepContext::new(first, job.total, info, cancel, fmt);
+        let mut c2 = StepContext::new(own, job.total, info, cancel, fmt);
         let r = job
             .pipe
             .apply_range(k + 1..job.pipe.steps.len(), &mut out, &mut c2)
             .and_then(|_| job.write_item(&out, fmt, &target, PlanAction::Write, info, &mut rep))
             .and_then(|_| job.write_extras(&out, fmt, &target, &mut rep));
+        if r.is_ok() {
+            job.set_timestamp(info, &target);
+        }
         rep.ms = t0.elapsed().as_millis() as u64;
         rep.warnings.extend(c2.warnings);
         match r {
@@ -1083,6 +1192,23 @@ fn run_collect(job: &Job, plan: &Plan, k: usize) -> Vec<ItemReport> {
             }
         }
         out_reports.push(rep);
+    }
+    if pass_through {
+        // B-3: every kept input has its own result
+        for o in out_reports {
+            if let Some(rep) = reports.iter_mut().find(|r| r.index == o.index) {
+                *rep = ItemReport {
+                    bytes_in: rep.bytes_in,
+                    ..o
+                };
+            }
+        }
+        for (index, note) in notes {
+            if let Some(rep) = reports.iter_mut().find(|r| r.index == index) {
+                rep.warnings.push(note);
+            }
+        }
+        return reports;
     }
     // Eingänge des Sammel-Schritts gelten als verarbeitet (Ziel = erstes Ergebnis)
     let ok = out_reports.iter().any(|r| r.status == ItemStatus::Done);
@@ -1101,6 +1227,11 @@ fn run_collect(job: &Job, plan: &Plan, k: usize) -> Vec<ItemReport> {
         first_rep.bytes_out = out_reports.iter().map(|r| r.bytes_out).sum();
         first_rep.error = o.error.clone();
         first_rep.warnings = o.warnings.clone();
+    }
+    for (index, note) in notes {
+        if let Some(rep) = reports.iter_mut().find(|r| r.index == index) {
+            rep.warnings.push(note);
+        }
     }
     reports
 }

@@ -27,6 +27,10 @@ pub enum BatchError {
     /// Abgebrochen (Abbrechen-Knopf, neue Vorschau-Generation).
     #[error("{0}")]
     Cancelled(String),
+    /// The item does not pass a filter step (`file.filterSkip`, `file.dedupe`): it is reported
+    /// as skipped with `reason`; `copy` = copy the source file unchanged into the output folder.
+    #[error("{reason}")]
+    Filtered { reason: String, copy: bool },
 }
 
 impl BatchError {
@@ -40,6 +44,14 @@ impl BatchError {
         BatchError::Step {
             step: step.to_string(),
             message: message.into(),
+        }
+    }
+
+    /// Skipped by a filter step (see [`BatchError::Filtered`]).
+    pub fn filtered(reason: impl Into<String>, copy: bool) -> BatchError {
+        BatchError::Filtered {
+            reason: reason.into(),
+            copy,
         }
     }
 

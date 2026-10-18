@@ -8,6 +8,7 @@ pub mod adjust; // BATCH-4
 pub mod anim; // BATCH-7
 pub mod background;
 pub mod extra; // BA-109
+pub mod fileops; // B-3
 pub mod files;
 pub mod geometry; // BATCH-4
 pub mod gifopt; // BATCH-8
@@ -31,4 +32,5 @@ pub fn register_all(r: &mut StepRegistry) {
     gifopt::register(r); // BATCH-8
     vector::register(r); // BATCH-9
     extra::register(r); // BA-109
+    fileops::register(r); // B-3
 }

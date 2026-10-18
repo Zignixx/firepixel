@@ -832,6 +832,20 @@ fn output_dir(
     recipe: &Recipe,
     info: &ItemInfo,
     new_folders: &mut HashMap<PathBuf, PathBuf>,
+    now: NaiveDateTime,
+) -> PathBuf {
+    let dir = base_output_dir(recipe, info, new_folders);
+    // `file.organize`: subfolder by date/type/size … (B-3)
+    match crate::steps::fileops::organize_subdir(recipe, info, now) {
+        Some(sub) => dir.join(sub),
+        None => dir,
+    }
+}
+
+fn base_output_dir(
+    recipe: &Recipe,
+    info: &ItemInfo,
+    new_folders: &mut HashMap<PathBuf, PathBuf>,
 ) -> PathBuf {
     let t = &recipe.output.target;
     let rel = if t.keep_structure {
@@ -921,7 +935,7 @@ pub fn plan(
         if fallback.is_some() {
             hints.push(NameHint::FormatFallback);
         }
-        let dir = output_dir(recipe, info, &mut new_folders);
+        let dir = output_dir(recipe, info, &mut new_folders, now);
         if seen_dirs.insert(key(&dir)) {
             dirs.push(dir.clone());
         }
