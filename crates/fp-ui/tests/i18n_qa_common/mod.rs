@@ -1,4 +1,4 @@
-//! Test harness for translatability (agent I18N-QA, phase 6, `docs\I18N_PRUEFUNG.md`).
+//! Test harness for translatability (agent I18N-QA, phase 6, `docs\I18N_CHECK.md`).
 //!
 //! Walks the whole user interface offscreen (egui_kittest) in a chosen language – main window in
 //! all themes, every menu and submenu, every panel with its panel menu, the inspector for every
@@ -19,7 +19,7 @@
 //! (search the dialogs again, old `FP_QA_NEU`).
 //!
 //! Results as JSON in `target-i18n-qa\i18n-qa\<mode>\<language>_<area>.json`; the test
-//! `i18n_qa_report` sums them up in `docs\I18N_PRUEFUNG.md`.
+//! `i18n_qa_report` sums them up in `docs\I18N_CHECK.md`.
 //!
 //! Identifiers (BA-086): area names, scene ids, finding kinds, the dialog cache (`dialogs.json`)
 //! and image names are English. Results written before (German names) stay readable:

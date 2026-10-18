@@ -6,8 +6,8 @@ live in code as constants and theme functions and are changed there, not here.
 
 Reference images (generated locally, not committed): `docs\screenshots\design_before_*.png` and `design_after_*.png`; each image shows
 the three themes side by side (**Normal | Dark | OLED**). They are generated with
-`cargo test -j 4 -p fp-ui --test all design_bilder:: -- --ignored --nocapture` and
-`FP_DESIGN_IMAGE=before|after` (start page: `--test all design_willkommen:: -- --ignored`).
+`cargo test -j 4 -p fp-ui --test all design_images:: -- --ignored --nocapture` and
+`FP_DESIGN_IMAGE=before|after` (start page: `--test all design_welcome:: -- --ignored`).
 
 ---
 

@@ -2,7 +2,7 @@
 //!
 //! Sonden mit realistischen Eingaben (Tastenereignisse wie egui-winit, Klicks über mehrere Bilder).
 //! Jede Sonde druckt `UXB <Nr>: <Beobachtung>`; geprüft wird nur, was im Katalog als „Original“
-//! belegt ist. Aufruf: `cargo test -p fp-ui --test ux_b_abgleich -- --nocapture` (die Sonden laufen über
+//! belegt ist. Aufruf: `cargo test -p fp-ui --test ux_b_comparison -- --nocapture` (die Sonden laufen über
 //! [`shell_off`] nacheinander).
 
 use egui::{Event, Key, Modifiers, PointerButton, Pos2};

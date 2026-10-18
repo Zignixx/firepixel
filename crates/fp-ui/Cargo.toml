@@ -72,8 +72,8 @@ path = "tests/all.rs"
 # gleichzeitig angelegt stürzt der Prozess gelegentlich ab. Die Datei läuft per Mutex nacheinander
 # (NZ-2), im gemeinsamen Programm würden die Renderer anderer Dateien parallel dazukommen.
 [[test]]
-name = "ux_b_abgleich"
-path = "tests/ux_b_abgleich.rs"
+name = "ux_b_comparison"
+path = "tests/ux_b_comparison.rs"
 
 # stellt die prozessweite KI-Modellsuche auf einen leeren Ordner um (fp_ai::models::set_search_override)
 [[test]]
@@ -88,8 +88,8 @@ path = "tests/ai_kittest.rs"
 
 # wie ai_kittest (Klickfolgen waehrend einer laufenden KI-Rechnung)
 [[test]]
-name = "ai_kittest_klickfolgen"
-path = "tests/ai_kittest_klickfolgen.rs"
+name = "ai_kittest_click_sequences"
+path = "tests/ai_kittest_click_sequences.rs"
 
 # oeffnet jeden Dialog aller Befehle des Registers in drei Sprachen; haengt im gemeinsamen Programm
 # (prozessweiter Zustand der Datei-Dialoge bzw. des Systems, file_dialog.rs), allein gruen

@@ -1,4 +1,4 @@
-# Ausnahmen für den Scanner i18n_keine_festen_texte.rs (I18N-KERN pflegt die Liste).
+# Exceptions for the scanner i18n_no_hardcoded_texts.rs (maintained by I18N-KERN).
 #
 # Zeilen ohne Präfix: erlaubte Wörter (Eigennamen, Formatnamen, Einheiten, Symbole), getrennt
 # durch Leerzeichen, Groß-/Kleinschreibung zählt.

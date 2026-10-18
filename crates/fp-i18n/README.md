@@ -86,7 +86,7 @@ every text marked and lengthened by about 40 %: `[!! Cancel ····!!]`. Untran
 texts stand out immediately, and layouts are checked with long texts.
 
 ### Fonts and writing direction
-- Latin, Cyrillic, Greek: Segoe UI (checked in the test `i18n_sprachwahl`).
+- Latin, Cyrillic, Greek: Segoe UI (checked in the test `i18n_language_choice`).
 - Chinese, Japanese, Korean: the system fonts Microsoft YaHei, Yu Gothic, Malgun Gothic as fallback (the one for the current language first), loaded at runtime.
 - **Right-to-left (Arabic, Hebrew, Persian, Urdu): not supported.** egui lays out text left→right only and without glyph shaping (no bidi reordering, no Arabic joining forms, no mirrored layout). Such language files can be loaded and appear in the menu marked "(RTL)", but are barely readable.
 
@@ -139,8 +139,8 @@ leistung -- --ignored --nocapture`, 12.10.2026, machine loaded by parallel build
 
 ### Checks (permanent)
 - `fp-i18n`: completeness de/en, no orphaned keys, syntax, same placeholders per key, no new access-key conflicts in English.
-- `fp-ui\tests\i18n_keine_festen_texte.rs`: source scanner for hard-coded texts across the whole workspace (UI calls, German literals, error messages of all libraries, output of the command line and MCP server) with the exception list `i18n_ausnahmen.txt`; reports `file:line` and the number of hard-coded texts left; enforced (`keine_festen_texte` must yield 0). Report: `cargo test -p fp-ui --test i18n_keine_festen_texte -- --ignored --nocapture` (filter: `$env:FP_I18N_FILTER = 'menu.rs'`).
-- `fp-ui\tests\i18n_sprachwahl.rs`: menu, switching without restart, startup with saved/system language, language folders, font coverage.
+- `fp-ui\tests\i18n_no_hardcoded_texts.rs`: source scanner for hard-coded texts across the whole workspace (UI calls, German literals, error messages of all libraries, output of the command line and MCP server) with the exception list `i18n_exceptions.txt`; reports `file:line` and the number of hard-coded texts left; enforced (`no_hardcoded_texts` must yield 0). Report: `cargo test -p fp-ui --test all i18n_no_hardcoded_texts:: -- --ignored --nocapture` (filter: `$env:FP_I18N_FILTER = 'menu.rs'`).
+- `fp-ui\tests\i18n_language_choice.rs`: menu, switching without restart, startup with saved/system language, language folders, font coverage.
 
 ## Keys and area files
 Keys: lowercase letters, hyphens, area prefix. Attributes with a dot (`key.tooltip`). Fluent syntax: <https://projectfluent.org/fluent/guide/>.

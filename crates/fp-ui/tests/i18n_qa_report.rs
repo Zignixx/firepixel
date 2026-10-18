@@ -1,5 +1,5 @@
 //! I18N-QA: sums up the results of the language runs (`i18n_qa_de`, `i18n_qa_en`, `i18n_qa_qps`)
-//! as numbers per area and writes them into `docs\I18N_PRUEFUNG.md` (section between the markers
+//! as numbers per area and writes them into `docs\I18N_CHECK.md` (section between the markers
 //! `<!-- AUTO:START -->` and `<!-- AUTO:END -->`). Results written before BA-086 (German area
 //! names, scene ids and finding kinds) are read through `i18n_qa_common::load_result`.
 //! `cargo test -j 4 -p fp-ui --test all i18n_qa_report:: -- --ignored`
@@ -208,13 +208,13 @@ fn report() {
         md.push_str(&details_de_new);
     }
 
-    let path = i18n_qa_common::repo().join("docs").join("I18N_PRUEFUNG.md");
+    let path = i18n_qa_common::repo().join("docs").join("I18N_CHECK.md");
     let old = std::fs::read_to_string(&path).unwrap_or_else(|_| "# Translatability check (I18N-QA)\n\n<!-- AUTO:START -->\n<!-- AUTO:END -->\n".into());
     let (a, rest) = old.split_once("<!-- AUTO:START -->").unwrap_or((&old, ""));
     let (_, b) = rest.split_once("<!-- AUTO:END -->").unwrap_or(("", ""));
     let md = neutral(&md);
     let new = format!("{a}<!-- AUTO:START -->\n{md}\n<!-- AUTO:END -->{b}");
-    std::fs::write(&path, new).expect("write I18N_PRUEFUNG.md");
+    std::fs::write(&path, new).expect("write I18N_CHECK.md");
     eprintln!("total: {totals:?}");
 }
 

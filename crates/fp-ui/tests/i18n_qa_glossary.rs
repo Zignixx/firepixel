@@ -1,6 +1,6 @@
 //! I18N-QA: terminology check of the English texts against the German ones and `GLOSSAR.md`
 //! (without user interface, fast). Writes `target-i18n-qa\i18n-qa\current\glossary.json` and the
-//! section "English terminology" in `docs\I18N_PRUEFUNG.md` (markers `<!-- EN:START -->`/`<!-- EN:END -->`).
+//! section "English terminology" in `docs\I18N_CHECK.md` (markers `<!-- EN:START -->`/`<!-- EN:END -->`).
 //! `cargo test -j 4 -p fp-ui --test all i18n_qa_glossary:: -- --ignored`
 //!
 //! Checked per key (de ↔ en):
@@ -327,7 +327,7 @@ fn english_terminology() {
         }
     }
     let md: String = md.lines().map(|l| if fp_neutral::find_in_bytes(l.as_bytes()).is_empty() { l.to_string() } else { "| (line removed: blocked name) |".to_string() }).collect::<Vec<_>>().join("\n");
-    let path = i18n_qa_common::repo().join("docs").join("I18N_PRUEFUNG.md");
+    let path = i18n_qa_common::repo().join("docs").join("I18N_CHECK.md");
     let old = std::fs::read_to_string(&path).unwrap_or_else(|_| "# Translatability check (I18N-QA)\n\n<!-- EN:START -->\n<!-- EN:END -->\n".into());
     let new = match old.split_once("<!-- EN:START -->") {
         Some((a, rest)) => {
@@ -336,6 +336,6 @@ fn english_terminology() {
         }
         None => format!("{old}\n<!-- EN:START -->\n{md}\n<!-- EN:END -->\n"),
     };
-    std::fs::write(&path, new).expect("write I18N_PRUEFUNG.md");
+    std::fs::write(&path, new).expect("write I18N_CHECK.md");
     eprintln!("English terminology: {} notes {:?}", items.len(), by.iter().map(|(k, v)| (k.clone(), v.len())).collect::<Vec<_>>());
 }
