@@ -248,6 +248,18 @@ Bild. Liegt es im Ordner des Dokuments, wird der Pfad relativ eingetragen.
 In den PDF-Exportoptionen schreibt die Komprimierung „JPEG 2000 (JPEG)“ normales JPEG (DCT), weil
 Firepixel keinen JPEG-2000-Kodierer hat; der Eintrag „Producer“ des PDFs vermerkt das.
 
+**PDF- und PSD-Exportoptionen:**
+
+- PDF, „Textauswahl aktivieren“: Jedes sichtbare Textobjekt wird als unsichtbarer Text über das
+  Seitenbild geschrieben, so lässt sich Text im PDF-Betrachter markieren, suchen und kopieren. Nur
+  Zeichen des westeuropäischen Zeichensatzes (WinAnsi) kommen in die Textebene; andere bleiben im Bild
+  sichtbar.
+- PSD, „In PSD-Ebenen konvertieren“: Jedes Objekt wird zu einer eigenen PSD-Ebene, gruppiert nach
+  Dokumentebene. Mit „Bearbeitbarkeit beibehalten“ werden bei Text die Textobjekte zu bearbeitbaren
+  Textebenen, bei Effekten Schlagschatten, innerer Schatten, Leuchten, Abgeflachte Kante/Relief und
+  Farbfüllung zu Ebeneneffekten, bei Vektor Pfade mit einfacher Füllung zu Füllebenen mit Vektormaske.
+  Die anderen Einstellungen rechnen Text, Effekte und Vektoren in die Pixel ein.
+
 **Web-Funktionen:**
 
 - *Bearbeiten ▸ HTML-Code kopieren…* ist ein Assistent mit drei Seiten: HTML-Stil, Basis-Dateiname für die
@@ -285,7 +297,8 @@ Gespeicherte Einstellungen wählst du aus der Liste oben, „+“ speichert die 
   ansehen und ausführen. Im Zielordner liegt danach der Bericht `batch-report.html` mit Vorschaubildern.
   Der Reiter „Plan“ des Trockenlaufs schätzt die Größe jeder Ausgabedatei („≈ 192 KB“) und die Summe.
   Bricht man einen Lauf ab, zeigt die Ende-Karte „Abgebrochen: n fertig, m nicht verarbeitet“. Die
-  Größensumme zählt dann nur fertige Dateien.
+  Größensumme zählt dann nur fertige Dateien. Alle Batch-Schritte und ihre Parameter beschreibt
+  `docs\BATCH.md` (englisch); „Hilfe“ im Kartenmenü öffnet den passenden Abschnitt.
 - **Kommandozeile:** `firepixel-cli` kann Dokumente prüfen (`info`), Befehle anwenden (`run`,
   `batch`), Bilder rendern (`render`), umwandeln (`convert`), Skripte starten (`script`) und
   Übersetzungen prüfen (`language check`). `firepixel-cli <befehl> --help` zeigt Beispiele;

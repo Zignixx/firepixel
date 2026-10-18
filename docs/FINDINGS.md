@@ -60,23 +60,24 @@ The wave after run 16 closed the rest:
 |---|---|---|
 | U-1 rest | File ▸ Import, PDF | SVG files now import with their layers; **PDF files still arrive as one layer** because the pure-Rust PDF reader exposes no optional content groups (layers). Library limit; needs either an upstream feature or an own OCG reader. |
 
-## [V] Deferred / expansion items (13)
+## [V] Deferred / expansion items (9)
+
+Wave 3 (18 Oct 2026) closed BA-086, BA-100 (PDF selectable text), BA-102 (PSD layers per object with text,
+vector and effects), BA-105 and BA-106, and BA-107 (Batch Studio UI); the last point of BA-107, an ffmpeg row in
+the application's Preferences, is in progress (C-1). BA-108, BA-109 and BA-110 were shortened to what is still
+open.
 
 | ID | Area | What is deferred |
 |---|---|---|
 | BA-037 | AI object selection | Optional mask preview while hovering with the object-selection tool: when the model cache is warm, compute `select.aiObject` on a copy in the background and show the outline as an overlay. Currently there is no preview. |
 | BA-039 | Bitmap brush | The live brush preview is drawn above all objects: hidden parts appear on top, and the bitmap object's opacity, blend mode and effects are missing in the preview. Needs a rebuild of the live preview in stacking order. Pressure is not available from a mouse (tablet only). |
-| BA-100 | PDF export | "Enable text selection" is stored but has no effect: the PDF writer only stores the flat page image. Expected: invisible text (render mode 3) for text objects. |
-| BA-101 | PDF export | "JPEG 2000" writes plain JPEG (DCT) because there is no JPEG 2000 encoder. |
-| BA-102 | PSD export | The options Effects, Vector and Text are stored but do not change the file: the PSD writer always stores rendered pixel layers without layer effects or text layers. "Convert to PSD layers" creates one PSD layer per layer, not per object. |
-| BA-103 | HTML Setup | No "Set defaults", external CSS file or navigation-bar HTML, because neither export nor New Document uses them. HTML style only offers HTML/XHTML (the original's template styles carry brand names and only change a comment in the output). |
-| BA-104 (CMD-1) | Commands menu | Screen capture, "Create symbol script" and Web ▸ Shared Palette only show a message (`fp-script\src\builtin_commands.rs`). Wanted: real screen capture, symbol scripts for graphic symbols, a shared color table across all slices; texts via `fp.t`. |
-| BA-105 (BATCH-7) | Batch Studio, video | Pass `video.import` parameters to `item::load` (avoid reading twice); streamed `Item::Animation` (blocks of 32 frames) for very long videos. |
-| BA-107 (BATCH-2/7/8/9) | Batch Studio UI | Missing UI: filters by size/pixels/transparency and glob (pro mode), sort by drag, Space/Enter in the file list, "Save as template"/"Help" in the card menu, per-file progress (`ItemProgress`), hint "JPEG fills transparency with white", fields shown per `mode`/`engine`, GIF fields of `output.gif` (`preset`, `quality`, `maxKB`) with the reached size or a "target size not reachable" warning, an ffmpeg row in Preferences and in the video row, and inserting the `video.import` card automatically for videos. |
+| BA-101 | PDF/PSD export | No JPEG 2000 encoder: the PDF compression "JPEG 2000 (JPEG)" writes DCT/JPEG on purpose and says so loudly (option label, the PDF's producer entry, both manuals). PSD export: the model has no stroke effect, so nothing maps to a PSD stroke. |
+| BA-103 | HTML Setup | No "Set defaults", external CSS file or navigation-bar HTML, because neither export nor New Document uses them. HTML style only offers HTML/XHTML (the original's template styles carry brand names and only change a comment in the output). In progress (C-1). |
+| BA-104 (CMD-1) | Commands menu | Screen capture, "Create symbol script" and Web ▸ Shared Palette only show a message (`fp-script\src\builtin_commands.rs`). Wanted: real screen capture, symbol scripts for graphic symbols, a shared color table across all slices; texts via `fp.t`. In progress (C-1). |
 | BA-083 (BATCH-4) | Batch tests | Golden hashes of the resampler depend on `f64::sin` (Lanczos) and may need regenerating on other operating systems. Open until CI runs on another OS. |
-| BA-108 (BATCH-5) | Batch metadata | Reading/writing metadata of AVIF/JXL/HEIF (box level) is missing; TIFF sources: metadata not read, TIFF output without EXIF IFD; `metadata.set` cannot write GPS/IPTC; `metadata.export` and `format.colorProfile` (to sRGB) are not implemented. |
-| BA-109 (BATCH-6) | Batch steps | Nine steps were added (`background.subjectCenter`, `background.alphaCleanup`, `overlay.roundCorners`, `overlay.vignette`, `adjust.posterize`, `adjust.threshold`, `filter.pixelate`, `canvas.pad`, `anim.firstFrame`). Still missing from the batch spec: `file.organize`, `file.filterSkip`, `file.dedupe`, `file.timestamps`, `format.colorDepth`, `format.colorProfile`, `format.multiPage`, `perspective`, `tile.split`, `filter.noise`, `effect.style`, `adjust.lut`, `ai.upscale`, `ai.faceBlur`, `overlay.contactSheet`, `metadata.export`, `anim.stabilize`, `anim.boomerang`, `anim.crossfade`, `document.findReplace`, `document.pages`, `document.layers`, `document.slices`, `optimize.jpeg`, `optimize.webSafe`, `script.code`, `script.condition`, `script.external` (in progress). Minor: `fp_raster::Mask` has no `is_empty()`. |
-| BA-110 (BATCH-8) | Batch GIF optimizer | The spec target of −30 % size at equal SSIM is not reached (ideas: optimal instead of greedy LZW parsing, perceptual palette, a corpus of real clips); no per-frame parallelism; no cancel inside one encode (encoder hook without `CancelToken`). |
+| BA-108 (BATCH-5) | Batch metadata | Writing metadata boxes for AVIF/HEIF/JXL is missing (reading works since wave 3; TIFF reads and writes EXIF/GPS/IPTC). |
+| BA-109 (BATCH-6) | Batch steps | All steps of the batch spec exist except `ai.upscale` and `ai.faceBlur` (need models). `format.multiPage` only combines; splitting multi-page sources stays with `document.pages`/`anim.toFrames`. Runs started in the Batch Studio UI are not checked by the MCP caller gate (the UI keeps the opt-ins of `script.external`/`script.code`). Minor: `fp_raster::Mask` has no `is_empty()`. |
+| BA-110 (BATCH-8) | Batch GIF optimizer | Measured with the new opt-in modes `lzw: flexible` and `perceptualPalette` (off by default; figures in [BATCH.md](BATCH.md) §5.6): screen −54.3 %, cartoon −37.9 % (both modes −38.8 %) vs. the export at SSIM ≥ 0.99; the camera pan reaches SSIM 0.99 in no mode (best 0.986). Not done: lossy LZW with an SSIM bound, cancel inside one encode. |
 
 ## [N] Not feasible / informational (17)
 

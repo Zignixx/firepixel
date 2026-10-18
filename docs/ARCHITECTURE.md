@@ -16,11 +16,13 @@ fp-ui        egui user interface: main window, menus, docking, canvas interactio
              dialogs, themes, icons, start page, MCP bridge endpoint (bridge.rs, bridge/)
 fp-mcp       MCP server (rmcp): stdio and Streamable HTTP on 127.0.0.1 with token; headless or bridge
 fp-script    JSF compatibility: JavaScript (boa_engine) with fw / document DOM / Files / Errors → commands
-fp-batch     Batch studio core: recipes, steps, pipeline, parallel processing, renaming, report
+fp-batch     Batch studio core: recipes, steps, pipeline, parallel processing, renaming, report,
+             MCP caller gate for external programs and unsandboxed scripts (security.rs)
 fp-engine    command registry, undo/redo history, selection, clipboard, tool state machines,
              preferences, session (UI-independent)
 fp-export    export: optimize settings, palettes, quantizers, dithering, GIF/JPEG/PNG8/24/32, animation,
-             slices, HTML/CSS/behaviours, PSD, WebP, AVIF, APNG
+             slices, HTML/CSS/behaviours, PSD (layer per object, type layers, vector masks, layer effects),
+             PDF (invisible text layer), WebP, AVIF, APNG
 fp-io        import: PSD, GIF, JPEG, PNG, BMP, TIFF, TGA, WBMP, AI/EPS/PDF, SVG, WebP, APNG, JPEG XL, QOI,
              ICO, clipboard
 fp-ai        on-device AI selection (pure-Rust CPU inference), model management with verified download

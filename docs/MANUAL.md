@@ -243,6 +243,18 @@ is entered relative to it.
 In the PDF export options, the compression "JPEG 2000 (JPEG)" writes plain JPEG (DCT), because
 Firepixel has no JPEG 2000 encoder; the PDF's producer entry notes this.
 
+**PDF and PSD export options:**
+
+- PDF, "Enable text selection": every visible text object is written as invisible text over the page
+  image, so text can be selected, searched and copied in a PDF viewer. Only characters of the Western
+  (WinAnsi) character set are included; others are left out of the text layer but stay visible in the
+  image.
+- PSD, "Convert to PSD layers": every object becomes its own PSD layer, grouped by document layer. With
+  "Maintain editability" for Text, text objects become editable type layers; for Effects, drop shadow,
+  inner shadow, glows, bevel/emboss and colour fill become layer effects; for Vector, paths with a plain
+  fill become fill layers with a vector mask. The other choices render text, effects and vectors into
+  the pixels.
+
 **Web features:**
 
 - *Edit ▸ Copy HTML Code...* is a wizard with three pages: HTML style, base file name for the slices,
@@ -280,7 +292,8 @@ Choose saved settings from the list at the top; "+" saves the current one.
   target folder then holds the report `batch-report.html` with preview images. The "Plan" tab of the
   dry run estimates the size of each output file ("≈ 192 KB") and the total. If you cancel a run,
   the end card shows "Canceled: n done, m not processed". The size total then counts finished
-  files only.
+  files only. All batch steps and their parameters are described in `docs\BATCH.md`; the card
+  menu's "Help" opens the matching section.
 - **Command line:** `firepixel-cli` can inspect documents (`info`), apply commands (`run`,
   `batch`), render images (`render`), convert (`convert`), run scripts (`script`) and check
   translations (`language check`). `firepixel-cli <command> --help` shows examples; `--lang en|de`

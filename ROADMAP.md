@@ -16,18 +16,20 @@ exist and work; FW-PNG round-trips; CLI, JSF and MCP drive everything.
 | Canvas image pairs within 1 % | about 177 / 201 |
 | Tests | 2510 green, 0 red, 133 ignored |
 | Latest release | v0.2.1 pre-release (18 Oct 2026, Windows x64, macOS universal arm64 + x86_64) |
-| Open findings | 1 fixable · 13 deferred · 17 informational · 840+ closed |
+| Open findings | 1 fixable · 9 deferred · 17 informational · 840+ closed |
 
 ## Next (in order)
 
-1. **Full parity run over all 48 units** (in progress tonight) with runner R-12 and the Firepixel shortcut set in
-   the runner profile; it also checks the fixes after run 16 (TW-122, TW-123 including the app-wide 33 px menu arrow
-   column, TW-115/124, Q-49, Q-55, Q-56).
-2. **Evaluation** of that run: new tweaks and questions, a review of the `xs-canvas` canvas pairs, updated figures.
-3. **Human click-test** of [docs/VERIFICATION.md](docs/VERIFICATION.md) (embedded panel dialogs, real keyboard
-   paths, brush strokes with a real mouse, drag and drop between windows, the open checks in section A2).
-4. **Remaining deferred items** (see below): missing batch steps (being implemented), batch metadata, batch UI
-   conveniences, PDF/PSD export details, HTML setup, CMD-1, AI mask preview; then Linux builds.
+1. **Full parity run 17 over all 48 units** (in progress) with runner R-12 and the Firepixel shortcut set in the
+   runner profile; it also checks the fixes after run 16 (TW-122, TW-123 including the app-wide 33 px menu arrow
+   column, TW-115/124, Q-49, Q-55, Q-56). The **evaluation** follows: new tweaks and questions, a review of the
+   `xs-canvas` canvas pairs, updated figures.
+2. **Human click-test** of [docs/VERIFICATION.md](docs/VERIFICATION.md) (embedded panel dialogs, real keyboard
+   paths, brush strokes with a real mouse, drag and drop between windows, the open checks in section A2), now
+   including the wave-3 Batch Studio UI and the PDF/PSD export options.
+3. **Remaining deferred items:** BA-037 AI mask preview, BA-039 brush preview in stacking order, BA-103 HTML setup
+   and BA-104 CMD-1 (both in progress, C-1, together with the ffmpeg row in Preferences), U-1 PDF import layers;
+   then Linux builds.
 
 ## What remains
 
@@ -37,14 +39,17 @@ exist and work; FW-PNG round-trips; CLI, JSF and MCP drive everything.
 
 ### Deferred expansion items (`[V]`)
 
-- **Batch studio:** streamed long videos, remaining UI conveniences (filters, drag sorting, per-file progress),
-  AVIF/JXL/HEIF/TIFF metadata, the remaining steps of the batch spec (see BA-109 in FINDINGS), GIF optimiser target
-  (−30 % at equal SSIM). Done since run 16: size token after resize, Ctrl+C cancel in the CLI, close confirmation
-  while a batch runs, extra outputs per item (FW-PNG, sprite-sheet atlas), WebP/AVIF alpha options, nine new steps.
-- **PDF/PSD export:** PDF "enable text selection" (invisible text layer), JPEG 2000 in PDF, PSD options for effects,
-  vector and text layers.
-- **HTML setup:** "set defaults", external CSS file, navigation bar HTML.
-- **CMD-1:** screenshot command, symbol scripts and the shared web palette currently show notices only.
+- **Batch studio:** `ai.upscale` and `ai.faceBlur`, writing AVIF/HEIF/JXL metadata boxes, lossy LZW with an SSIM
+  bound in the GIF optimiser. Done in wave 3: 27 new steps (file, document, perspective with auto-straighten,
+  tiles, noise, LUT, style, JPEG/web-safe, boomerang/crossfade, colour depth/profile, multi-page, metadata export,
+  contact sheet, script steps with opt-ins), chained collect steps, TIFF/AVIF/HEIF/JXL metadata reading, TIFF
+  EXIF/GPS/IPTC writing, MCP refusal of external/IO scripts with a deep script sandbox, opt-in GIF optimiser modes
+  (figures in [docs/BATCH.md](docs/BATCH.md)), per-file progress with ETA, file order, the pro filter bar,
+  drag/keyboard sorting, Save as Template and Help in the card menu.
+- **PDF/PSD export:** JPEG 2000 in PDF (no encoder; written as JPEG and flagged). Done in wave 3: selectable PDF
+  text, PSD layers per object with text layers, vector masks and layer effects.
+- **HTML setup:** "set defaults", external CSS file, navigation bar HTML (in progress).
+- **CMD-1:** screenshot command, symbol scripts and the shared web palette currently show notices only (in progress).
 - **AI mask preview:** live object-mask preview while hovering with the object selection tool.
 - Brush pressure and speed from a real tablet; resampler golden hashes on other operating systems (needs CI).
 

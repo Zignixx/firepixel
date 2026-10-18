@@ -24,7 +24,7 @@ on Intel hardware.
 | Measurement quota, all 48 units | **85.0 %** (1042 / 1226 measurable steps both `ok`; was 84.8 %) | newest run per unit |
 | Measurement quota of run 16 | 86.3 % (126 / 146, 7 units; the same units before: 84.5 %); 0 Firepixel-side errors | run 16 |
 | Workspace tests | **2510 green, 0 red, 133 ignored** | full workspace run on `main` at `666c15c6`, 18 Oct 2026 |
-| Open findings | 1 fixable `[F]` (PDF layers), 13 deferred `[V]`, 17 informational `[N]`; TW-122/123/115/124 and TW-111 closed after run 16, to be confirmed by the next full run | [FINDINGS.md](FINDINGS.md) |
+| Open findings | 1 fixable `[F]` (PDF layers), 9 deferred `[V]` (wave 3 closed BA-086, BA-100, BA-102, BA-105, BA-106, BA-107), 17 informational `[N]`; TW-122/123/115/124 and TW-111 closed after run 16, to be confirmed by the next full run | [FINDINGS.md](FINDINGS.md) |
 | Real differences known | none from the runs; unclear: the remaining `xs-canvas` canvas pairs (TW-122 was a shortcut-set mismatch in the runner profile) | [PARITY.md](PARITY.md) |
 | Closed findings (history) | 840+ | kept outside the repository ([ARCHIVE_NOTE.md](ARCHIVE_NOTE.md)) |
 | Startup time | about 0.8 s to the first frame (release build, warm) | smoke test 17 Oct 2026 |
@@ -70,12 +70,15 @@ with a real mouse and drag and drop between windows need a human click-test: [VE
 
 ## Next
 
-1. Full parity run over all 48 units (in progress tonight; runner R-12, Firepixel shortcut set in the runner
-   profile); it also checks the fixes made after run 16 (TW-122, TW-123 and the app-wide menu arrow column,
-   TW-115/124, Q-49, Q-55, Q-56).
-2. Evaluation of that run, including a review of the `xs-canvas` canvas pairs.
-3. Human click-test of [VERIFICATION.md](VERIFICATION.md).
-4. Remaining deferred items: missing batch steps (being implemented), batch metadata and UI conveniences, PDF/PSD
-   export details, HTML setup, CMD-1, AI mask preview.
+1. Full parity run 17 over all 48 units (in progress; runner R-12, Firepixel shortcut set in the runner profile);
+   it also checks the fixes made after run 16 (TW-122, TW-123 and the app-wide menu arrow column, TW-115/124, Q-49,
+   Q-55, Q-56). Its evaluation follows, including a review of the `xs-canvas` canvas pairs.
+2. Human click-test of [VERIFICATION.md](VERIFICATION.md).
+3. Remaining deferred items: BA-037 AI mask preview, BA-039 brush preview, BA-103 HTML setup and BA-104 CMD-1 (both
+   in progress), U-1 PDF import layers.
+
+Wave 3 (18 Oct 2026) added 27 batch steps, chained collect steps, more metadata formats, the MCP gate for external
+programs and unsandboxed scripts, opt-in GIF optimiser modes, the remaining Batch Studio UI conveniences, selectable
+PDF text and editable PSD layers ([FINDINGS.md](FINDINGS.md), [BATCH.md](BATCH.md)).
 
 See [ROADMAP.md](../ROADMAP.md) for the complete list.
