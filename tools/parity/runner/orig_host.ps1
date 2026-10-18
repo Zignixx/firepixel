@@ -321,7 +321,9 @@ $VK = @{ shift = 0x10; ctrl = 0x11; alt = 0x12; space = 0x20; enter = 0x0D; retu
 # R-9 (run 13: 'unknown key semicolon'): punctuation by key position (US names; on the German layout
 # semicolon = Ue, apostrophe = Ae, openbracket = sz ... - the keys the program's German shortcuts use)
 $VK += @{ semicolon = 0xBA; apostrophe = 0xDE; quote = 0xDE; slash = 0xBF; backslash = 0xDC; openbracket = 0xDB; closebracket = 0xDD; backtick = 0xC0; equals = 0xBB }
-function VkOf([string]$k) { $k = $k.ToLower(); if ($VK.ContainsKey($k)) { return [uint16]$VK[$k] }; if ($k.Length -eq 1) { return [uint16][int][char]$k.ToUpper() }; if ($k -match '^f(\d+)$') { return [uint16](0x6F + [int]$matches[1]) }; if ($k -match '^0x') { return [uint16][Convert]::ToInt32($k, 16) }; throw "unknown key $k" }
+# R-16 (run 20): PowerShell names are case-insensitive and scoped dynamically - a caller's local `$vk` hid this table
+# ("[System.UInt16] does not contain a method named 'ContainsKey'"); always the script's table, never a caller's variable
+function VkOf([string]$k) { $k = $k.ToLower(); if ($script:VK.ContainsKey($k)) { return [uint16]$script:VK[$k] }; if ($k.Length -eq 1) { return [uint16][int][char]$k.ToUpper() }; if ($k -match '^f(\d+)$') { return [uint16](0x6F + [int]$matches[1]) }; if ($k -match '^0x') { return [uint16][Convert]::ToInt32($k, 16) }; throw "unknown key $k" }
 function Combo([string]$c) {
   $parts = $c.Split('+') | ? { $_ }
   if (($parts | % { $_.ToLower() }) -contains 'ctrl' -and ($parts | % { $_.ToLower() }) -contains 'alt' -and ($parts | % { $_.ToLower() }) -contains 'space') { throw 'ctrl+alt+space is forbidden' }
@@ -533,19 +535,25 @@ function Layout($want) {
     $hkl = [PR.N]::LoadKeyboardLayout([string]$want, 0)
     if ($hkl -ne [IntPtr]::Zero) { [PR.N]::PostMessage($m, 0x0050, [IntPtr]::Zero, $hkl) | Out-Null; Start-Sleep -Milliseconds 300; $out.requested = (Hex $hkl) } else { $out.requested = "LoadKeyboardLayout $want failed" } }
   $after = TargetHkl; [PR.N]::KeyHkl = $after; $out.after = (Hex $after); $out.host = (Hex ([PR.N]::GetKeyboardLayout(0))); $out }
-function KeyEcho($keys) {
+# R-16: `$mock` (offline self test, selftest_host.ps1): no hook, no SendInput - the inputs that would be sent are
+# echoed back as the hook would record them (injected flag set). Locals never reuse script names ($VK, $S: same
+# variable for PowerShell, see VkOf).
+function KeyEcho($keys, [switch]$mock) {
   $hkl = TargetHkl; [PR.N]::KeyHkl = $hkl; $m = MainWin; $foc = [PR.N]::FocusOf($m)
-  $err = [PR.E]::Start(); if ($err) { [PR.E]::Stop(); throw "key_echo: $err" }
-  $sent = @()
-  try { foreach ($k in @($keys)) { $vk = VkOf $k; $dn = [PR.N]::Key($vk, $false); $sent += ,@($k, [int]$vk, [int]$dn.u.ki.wScan, [int]($dn.u.ki.dwFlags -band 1))
-          [PR.N]::Send(@($dn, [PR.N]::Key($vk, $true))); Start-Sleep -Milliseconds 80 }
-        Start-Sleep -Milliseconds 200 } finally { [PR.E]::Stop() }
-  $all = @([PR.E]::Take()); $got = @($all | ? { $_[0] -eq 0x100 -or $_[0] -eq 0x104 }); $rows = @(); $ok = $true
-  for ($i = 0; $i -lt $sent.Count; $i++) { $s = $sent[$i]; $g = if ($i -lt $got.Count) { $got[$i] } else { $null }
-    $row = @{ key = $s[0]; sent = @{ vk = $s[1]; scan = $s[2]; ext = $s[3] } }
+  if (-not $mock) { $err = [PR.E]::Start(); if ($err) { [PR.E]::Stop(); throw "key_echo: $err" } }
+  $sent = @(); $fake = @()
+  try { foreach ($k in @($keys)) { $kv = VkOf $k; $dn = [PR.N]::Key($kv, $false); $up = [PR.N]::Key($kv, $true)
+          $sent += ,@($k, [int]$kv, [int]$dn.u.ki.wScan, [int]($dn.u.ki.dwFlags -band 1))
+          if ($mock) { foreach ($in in @($dn, $up)) { $fl = $in.u.ki.dwFlags
+              $fake += ,[uint32[]]@($(if ($fl -band 2) { 0x101 } else { 0x100 }), $in.u.ki.wVk, $in.u.ki.wScan, (($fl -band 1) -bor 0x10)) } }
+          else { [PR.N]::Send(@($dn, $up)); Start-Sleep -Milliseconds 80 } }
+        if (-not $mock) { Start-Sleep -Milliseconds 200 } } finally { if (-not $mock) { [PR.E]::Stop() } }
+  $all = if ($mock) { $fake } else { @([PR.E]::Take()) }; $got = @($all | ? { $_[0] -eq 0x100 -or $_[0] -eq 0x104 }); $rows = @(); $ok = $true
+  for ($i = 0; $i -lt $sent.Count; $i++) { $sk = $sent[$i]; $g = if ($i -lt $got.Count) { $got[$i] } else { $null }
+    $row = @{ key = $sk[0]; sent = @{ vk = $sk[1]; scan = $sk[2]; ext = $sk[3] } }
     if ($g) { $ext = [int]($g[3] -band 1); $row.arrived = @{ vk = [int]$g[1]; scan = [int]$g[2]; ext = $ext; injected = [bool]($g[3] -band 0x10) }
       $row.name = [PR.N]::KeyName($g[2], [bool]$ext, $hkl); $row.char = [PR.N]::KeyChar($g[1], $g[2], $hkl)
-      $row.ok = ([int]$g[1] -eq $s[1] -and [int]$g[2] -eq $s[2] -and $ext -eq $s[3]) } else { $row.ok = $false; $row.arrived = $null }
+      $row.ok = ([int]$g[1] -eq $sk[1] -and [int]$g[2] -eq $sk[2] -and $ext -eq $sk[3]) } else { $row.ok = $false; $row.arrived = $null }
     if (-not $row.ok) { $ok = $false }; $rows += $row }
   @{ ok = $ok; layout = (Hex $hkl); host_layout = (Hex ([PR.N]::GetKeyboardLayout(0))); focus_class = $(if ($foc -ne [IntPtr]::Zero) { [PR.N]::Cls($foc) } else { '' })
      events = $all.Count; keys = $rows; dbl_ms = [int][PR.N]::GetDoubleClickTime(); dbl_cx = [PR.N]::GetSystemMetrics(36); dbl_cy = [PR.N]::GetSystemMetrics(37) } }
@@ -647,7 +655,10 @@ function Handle($c) {
     'uia_do' { $e = FindEl $c.name $c.type $c.scope $c.exact; if (-not $e) { throw "not found: $($c.name) [$($c.type)]" }; $r = DoAct $e $c.action $c.value; $i = ElInfo $e; $i.done = $r; return $i }
     'key' { Combo $c.combo; Start-Sleep -Milliseconds 80; return 'ok' }
     'layout' { return (Layout ([string]$c.want)) }
-    'key_echo' { $k = if ($c.keys) { @($c.keys) } else { @('escape', 'delete', 'right', 'left', 'home', 'end', 'pageup', 'insert', 'c', 'e', 't', 'z') }; return (KeyEcho $k) }
+    'key_echo' { $k = if ($c.keys) { @($c.keys) } else { @('escape', 'delete', 'right', 'left', 'home', 'end', 'pageup', 'insert', 'c', 'e', 't', 'z') }
+      # R-16: the failure goes back to the runner (logged there, not fatal) with the host script line that raised it
+      try { return (KeyEcho $k) } catch { $ii = $_.InvocationInfo; $src = if ($ii -and $ii.Line) { $ii.Line.Trim() } else { '' }; if ($src.Length -gt 240) { $src = $src.Substring(0, 240) + '...' }
+        throw "$($_.Exception.GetType().FullName): $($_.Exception.Message) [orig_host.ps1 line $(if ($ii) { $ii.ScriptLineNumber } else { '?' }), offset $(if ($ii) { $ii.OffsetInLine } else { '?' }): $src]" } }
     'view_focus' { # R-15 (TW-140): keyboard focus to the document view (SetFocus with attached input), no click
       $v = ViewHwnd; if ($v -eq [IntPtr]::Zero) { throw 'view window not found' }
       $m = MainWin; $was = [PR.N]::FocusOf($m); $me = [PR.N]::GetCurrentThreadId(); $tt = [PR.N]::Tid($v)
