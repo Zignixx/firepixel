@@ -736,3 +736,50 @@ Self test: `python -I runner.py --units _selftest_menu,_selftest_inspector`.
   block's lowest text order minus 40); `state_from: "<role> node"`. Entries without a node keep the text's state and
   a log line counts them. `--dry-run` prints `menu state self check: ok` (mocked `ui_find`: a pop-up over a panel,
   button / check_box / unlabelled / disabled nodes, a panel button outside the block).
+
+## R-19 additions (18.10.)
+
+- **Plain keys on the reference side (TW-140, run 21):** the reference application treats unmodified Delete/arrow/Escape
+  keys sent by the runner as tool shortcuts (Delete -> Eraser, Right -> Text, Down -> Line, Escape -> Crop / Export
+  Area, and a "c" typed into an open text editor), although virtual key, scan code, extended flag, keyboard layout and
+  focus are right (`key echo`, `key layout`, `key probe` of run 21). Keys with Shift or Ctrl work (Shift+arrows move
+  by 10 px, Ctrl+D deselects). On the reference side these keys are therefore replaced; **Firepixel keeps the real
+  keys**. `key_substitute` decides per key (pure function `key_substitute_plan`, checked offline by `--dry-run`:
+  `key substitute self check: ok`):
+
+  | key (no modifier) | situation | reference side |
+  |---|---|---|
+  | Delete / Backspace | document open, no dialog / menu / new popup window, text tool not active | Edit ▸ Clear through the menu (`ui_map.json → commands → edit.clear`; keeps the History rows comparable); when the menu fails or removes nothing: script `deleteSelection(false)` |
+  | Left / Right / Up / Down | same | script `moveSelectionBy({x: ±1, y: ±1}, false, false)` |
+  | Escape | text tool active (editor open) | click on the Pointer tool in the tools column, verified: pointer active and the keyboard focus not in an edit control (one more click otherwise; runner error when the editor stays open) |
+  | Escape | pointer tool, nothing open | nothing (`none`; the real key would select a tool) |
+  | Escape | another tool active | Pointer tool click |
+  | any of them | dialog, popup menu or a window that appeared during the step (colour popup, slider) open; no document; text editor open (Delete / Backspace / arrows edit the text there) | the real key, as before (it works in menus and dialogs) |
+
+  Nothing selected before Delete / an arrow: `none (nothing selected)`. Every substitute is logged as
+  `orig key substitute: <key> -> <method> (…)`, recorded as value `{"key_substitute": {key, method, before, after,
+  effect, …}}` and marked in the step record: the action entry gets `arg` and `substituted: "<method>"`, the record a
+  list `substituted: [{verb, arg, method}]`. `key_check` (R-14) does not run for a replaced key. Config
+  `orig.key_substitutes: false` sends the real keys again. The windows open at step start are taken as permanent
+  (`step_windows`), so only windows that appear during the step keep a key real.
+- **Text editor ends without Escape:** the cleanup after a step with `type` (R-14) and the unit start no longer press
+  Escape twice; when the text tool is active, the Pointer tool click ends the edit (`text_cleanup` / `unit start:
+  orig key substitute: escape -> Pointer tool click`).
+- **Text selection by mouse (`tool-text/07`, `11`, `13`):** new verb `text_select_drag {text, chars, start_frac?,
+  line_frac?}` (reference side): the text object whose `textChars` contains `text` (else the selected one) is read
+  (`pixelRect`, length), then a mouse drag runs from 1 px left of its right edge to the estimated start of the last
+  `chars` characters (share of the characters; `start_frac` overrides) at the middle of the line. Read-back: the
+  clipboard is emptied, Ctrl+C sent, its text read; value `{"text_select": {rect, length, drag, selected, expected,
+  ok}}`, log line `orig key substitute: shift+left xN -> mouse drag over the characters (…); selection read-back:
+  '<text>' (expected '<text>', ok|DIFFERENT)`. Shift+Left moved the reference's caret without selecting.
+- **Per-side actions:** `{"per_side": {"orig": [actions], "fp": [actions]}}` runs different actions on each side at
+  that point of the step (the scripts above: `text_select_drag` on the reference side, Shift+Left in Firepixel).
+- **Crop commit (`xs-preferences/06`, TW-134):** `crop {from, to}` commits on the reference side with a double-click
+  in the middle of the crop box instead of Enter; page size before and after; unchanged -> one retry (a second
+  double-click while the crop tool is still active, else crop tool, drag and double-click again), then a runner error.
+  Value `crop.commit`, log `orig key substitute: enter -> double-click inside the crop box [x, y]`.
+- **Text colour in the unit-start reset (R-17):** the colour is set by a click on the swatch of that colour in the open
+  colour popup; without one, by the hex field (click for the focus, `WM_SETTEXT`, Ctrl+A, typed, Enter). When the
+  read-back still differs, a scratch text from the tool's defaults gets the colour by script (`setFillColor`, then
+  deleted) and the attributes are read again; a remaining difference is listed under `errors` in the
+  `unit start text tool reset` line.

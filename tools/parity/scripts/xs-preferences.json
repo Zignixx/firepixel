@@ -125,7 +125,7 @@
      "click": "OK"
     }
    ],
-   "note": "effect check: record history length after 4 nudges inside cleanup is not logged; runner should log fw.historyPalette.getStepCount()"
+   "note": "effect check: record history length after 4 nudges inside cleanup is not logged; runner should log fw.historyPalette.getStepCount(); R-19 (TW-140): on the reference side the runner replaces the plain keys - Delete by Edit > Clear (script deleteSelection(false) as fallback), plain arrows by moveSelectionBy 1 px, Escape in the text editor by a Pointer tool click; Firepixel keeps the real keys; replaced actions carry `substituted` in the step record"
   },
   {
    "id": "03_general_color_result",
@@ -375,7 +375,7 @@
      "click": "OK"
     }
    ],
-   "note": "R-13 (TW-127): the option persists in the profile - it is read back and set to 'on' on both sides (no toggle click), the start state is restored in after; R-17 (TW-134, run 20: the reference page stayed 800 x 600): crop tool, drag and Enter as one `crop` action - page size logged before/after on both sides, the reference retries once with the view focused"
+   "note": "R-13 (TW-127): the option persists in the profile - it is read back and set to 'on' on both sides (no toggle click), the start state is restored in after; R-17 (TW-134, run 20: the reference page stayed 800 x 600): crop tool, drag and Enter as one `crop` action - page size logged before/after on both sides, the reference retries once with the view focused; R-19 (TW-140, TW-134): the reference side commits the crop with a double-click inside the crop box instead of Enter (page size checked, one retry); Firepixel keeps Enter"
   },
   {
    "id": "07_edit_pen_preview_result",

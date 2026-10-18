@@ -1593,7 +1593,7 @@
      "key": "Escape"
     }
    ],
-   "note": "R-13 (TW-129 d): R1 selected again (and checked) before every nudge - Escape clears the selection; R1's position read by name, with the selection count"
+   "note": "R-13 (TW-129 d): R1 selected again (and checked) before every nudge - Escape clears the selection; R1's position read by name, with the selection count; R-19 (TW-140): on the reference side the runner replaces the plain keys - Delete by Edit > Clear (script deleteSelection(false) as fallback), plain arrows by moveSelectionBy 1 px, Escape in the text editor by a Pointer tool click; Firepixel keeps the real keys; replaced actions carry `substituted` in the step record (Shift+arrows stay real keys: 10 px)"
   },
   {
    "id": "10_nudge_point_result",
@@ -1625,7 +1625,8 @@
      "log_value": "fw.selection[0].contours[0].nodes[0].x+','+fw.selection[0].contours[0].nodes[0].y"
     }
    ],
-   "shot": null
+   "shot": null,
+   "note": "R-19 (TW-140): on the reference side the runner replaces the plain keys - Delete by Edit > Clear (script deleteSelection(false) as fallback), plain arrows by moveSelectionBy 1 px, Escape in the text editor by a Pointer tool click; Firepixel keeps the real keys; replaced actions carry `substituted` in the step record (Shift+arrows stay real keys: 10 px)"
   },
   {
    "id": "11_pages_states_result",
@@ -1955,7 +1956,7 @@
     }
    ],
    "shot": null,
-   "note": "Q-55 (re 46 sec. 4): explicit click inside the 'A' of TX1 (T05: TX1 starts at document 50,50, 24 pt 'Abc 123'), the reference reports an invalid pixelRect for TX1 so a named click landed at different places in both programs. Logged before typing: selection length and TX1 text; after Escape: the text of every text object. R-13b: unsupported (TX1 has zero width / invalid pixelRect in the reference file), see 15_in_text_tx2_result; texts logged before Escape too.",
+   "note": "Q-55 (re 46 sec. 4): explicit click inside the 'A' of TX1 (T05: TX1 starts at document 50,50, 24 pt 'Abc 123'), the reference reports an invalid pixelRect for TX1 so a named click landed at different places in both programs. Logged before typing: selection length and TX1 text; after Escape: the text of every text object. R-13b: unsupported (TX1 has zero width / invalid pixelRect in the reference file), see 15_in_text_tx2_result; texts logged before Escape too.; R-19 (TW-140): on the reference side the runner replaces the plain keys - Delete by Edit > Clear (script deleteSelection(false) as fallback), plain arrows by moveSelectionBy 1 px, Escape in the text editor by a Pointer tool click; Firepixel keeps the real keys; replaced actions carry `substituted` in the step record (Shift+arrows stay real keys: 10 px)",
    "unsupported": {
     "both": "TX1 invalid in reference test file (T05 needs a rebuild)"
    }
@@ -2012,7 +2013,7 @@
     }
    ],
    "shot": null,
-   "note": "R-13b: like 15_in_text_result on TX2 (valid text object of T05): text tool click at TX2's centre, 'V' typed, R pressed (must type 'r', not switch tools); textChars logged before and after Escape; R-14 (TW-130): all text objects (layer/index, name, pixelRect, textChars, selection count) logged before typing, after typing and after Escape on both sides"
+   "note": "R-13b: like 15_in_text_result on TX2 (valid text object of T05): text tool click at TX2's centre, 'V' typed, R pressed (must type 'r', not switch tools); textChars logged before and after Escape; R-14 (TW-130): all text objects (layer/index, name, pixelRect, textChars, selection count) logged before typing, after typing and after Escape on both sides; R-19 (TW-140): on the reference side the runner replaces the plain keys - Delete by Edit > Clear (script deleteSelection(false) as fallback), plain arrows by moveSelectionBy 1 px, Escape in the text editor by a Pointer tool click; Firepixel keeps the real keys; replaced actions carry `substituted` in the step record (Shift+arrows stay real keys: 10 px)"
   },
   {
    "id": "16_in_field_result",

@@ -355,7 +355,8 @@
      "record_ui": "document.summary"
     }
    ],
-   "shot": null
+   "shot": null,
+   "note": "R-19 (TW-140): on the reference side the runner replaces the plain keys - Delete by Edit > Clear (script deleteSelection(false) as fallback), plain arrows by moveSelectionBy 1 px, Escape in the text editor by a Pointer tool click; Firepixel keeps the real keys; replaced actions carry `substituted` in the step record (Edit > Clear keeps the History row comparable)"
   },
   {
    "id": "10_duplicate_result",
@@ -863,7 +864,7 @@
     }
    ],
    "shot": null,
-   "note": "history read-out via fw.historyPalette.getStepCount()/getStepsAsJavaScript(); R-14 (TW-132 a): every history call guarded (run 18: getStepCount() outside the try gave script error -2147216344); [count, steps, {errors, selection, documents}] - the runner shows the History panel and reads again when the error comes back"
+   "note": "history read-out via fw.historyPalette.getStepCount()/getStepsAsJavaScript(); R-14 (TW-132 a): every history call guarded (run 18: getStepCount() outside the try gave script error -2147216344); [count, steps, {errors, selection, documents}] - the runner shows the History panel and reads again when the error comes back; R-19 (TW-140): on the reference side the runner replaces the plain keys - Delete by Edit > Clear (script deleteSelection(false) as fallback), plain arrows by moveSelectionBy 1 px, Escape in the text editor by a Pointer tool click; Firepixel keeps the real keys; replaced actions carry `substituted` in the step record (Edit > Clear keeps the History row comparable)"
   }
  ]
 }

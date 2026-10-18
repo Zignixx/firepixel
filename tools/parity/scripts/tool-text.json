@@ -242,7 +242,7 @@
    "shot": {
     "area": "canvas"
    },
-   "note": "70,160 lies inside TX2 ('Zeile eins'); original inserts at the click position.; R-14 (TW-130): all text objects (layer/index, name, pixelRect, textChars, selection count) logged before typing, after typing and after Escape on both sides (Escape and the last read-back after the shot)",
+   "note": "70,160 lies inside TX2 ('Zeile eins'); original inserts at the click position.; R-14 (TW-130): all text objects (layer/index, name, pixelRect, textChars, selection count) logged before typing, after typing and after Escape on both sides (Escape and the last read-back after the shot); R-19 (TW-140): on the reference side the runner replaces the plain keys - Delete by Edit > Clear (script deleteSelection(false) as fallback), plain arrows by moveSelectionBy 1 px, Escape in the text editor by a Pointer tool click; Firepixel keeps the real keys; replaced actions carry `substituted` in the step record",
    "after": [
     {
      "key": "Escape"
@@ -282,12 +282,26 @@
      "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){if(e[i].textChars!=null){var q='?';try{var p=e[i].pixelRect;q=p.left+','+p.top+','+p.right+','+p.bottom;}catch(x){}r.push(l+'/'+i+' '+e[i].name+' @'+q+': '+e[i].textChars);}}}return r.length+' texts | '+r.join(' | ')+' | sel='+fw.selection.length;})()"
     },
     {
-     "repeat": 4,
-     "do": [
-      {
-       "key": "Shift+Left"
-      }
-     ]
+     "per_side": {
+      "orig": [
+       {
+        "text_select_drag": {
+         "text": "Hallo Welt",
+         "chars": 4
+        }
+       }
+      ],
+      "fp": [
+       {
+        "repeat": 4,
+        "do": [
+         {
+          "key": "Shift+Left"
+         }
+        ]
+       }
+      ]
+     }
     }
    ],
    "shot": {
@@ -301,7 +315,7 @@
      "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){if(e[i].textChars!=null){var q='?';try{var p=e[i].pixelRect;q=p.left+','+p.top+','+p.right+','+p.bottom;}catch(x){}r.push(l+'/'+i+' '+e[i].name+' @'+q+': '+e[i].textChars);}}}return r.length+' texts | '+r.join(' | ')+' | sel='+fw.selection.length;})()"
     }
    ],
-   "note": "R-14 (TW-130): all text objects (layer/index, name, pixelRect, textChars, selection count) logged before typing, after typing and after Escape on both sides (Escape and the last read-back after the shot)"
+   "note": "R-14 (TW-130): all text objects (layer/index, name, pixelRect, textChars, selection count) logged before typing, after typing and after Escape on both sides (Escape and the last read-back after the shot); R-19 (TW-140, TW-145): the reference side selects the last 4 characters with a mouse drag (text_select_drag, selection read back through the clipboard) - Shift+Left moved its caret without selecting; Firepixel keeps Shift+Left; R-19 (TW-140): on the reference side the runner replaces the plain keys - Delete by Edit > Clear (script deleteSelection(false) as fallback), plain arrows by moveSelectionBy 1 px, Escape in the text editor by a Pointer tool click; Firepixel keeps the real keys; replaced actions carry `substituted` in the step record"
   },
   {
    "id": "07_select_text_double_click_focus",
@@ -351,7 +365,7 @@
    "shot": {
     "area": "canvas"
    },
-   "note": "Original: double click does not select a word (caret at click position). R-13b: texts logged before and after Escape (stray 'c' after Escape, run 17).; R-14 (TW-130): all text objects (layer/index, name, pixelRect, textChars, selection count) logged before typing, after typing and after Escape on both sides"
+   "note": "Original: double click does not select a word (caret at click position). R-13b: texts logged before and after Escape (stray 'c' after Escape, run 17).; R-14 (TW-130): all text objects (layer/index, name, pixelRect, textChars, selection count) logged before typing, after typing and after Escape on both sides; R-19 (TW-140): on the reference side the runner replaces the plain keys - Delete by Edit > Clear (script deleteSelection(false) as fallback), plain arrows by moveSelectionBy 1 px, Escape in the text editor by a Pointer tool click; Firepixel keeps the real keys; replaced actions carry `substituted` in the step record"
   },
   {
    "id": "08_arrows_result",
@@ -519,12 +533,26 @@
      "type": "Abc 123"
     },
     {
-     "repeat": 3,
-     "do": [
-      {
-       "key": "Shift+Left"
-      }
-     ]
+     "per_side": {
+      "orig": [
+       {
+        "text_select_drag": {
+         "text": "Abc 123",
+         "chars": 3
+        }
+       }
+      ],
+      "fp": [
+       {
+        "repeat": 3,
+        "do": [
+         {
+          "key": "Shift+Left"
+         }
+        ]
+       }
+      ]
+     }
     },
     {
      "set_field": {
@@ -541,7 +569,8 @@
    ],
    "shot": {
     "area": "canvas"
-   }
+   },
+   "note": "R-19 (TW-140, TW-145): the reference side selects the last 3 characters with a mouse drag (text_select_drag, selection read back through the clipboard) - Shift+Left moved its caret without selecting; Firepixel keeps Shift+Left"
   },
   {
    "id": "12_font_live_result",
@@ -610,12 +639,26 @@
      "type": "Abc 123"
     },
     {
-     "repeat": 3,
-     "do": [
-      {
-       "key": "Shift+Left"
-      }
-     ]
+     "per_side": {
+      "orig": [
+       {
+        "text_select_drag": {
+         "text": "Abc 123",
+         "chars": 3
+        }
+       }
+      ],
+      "fp": [
+       {
+        "repeat": 3,
+        "do": [
+         {
+          "key": "Shift+Left"
+         }
+        ]
+       }
+      ]
+     }
     },
     {
      "open": "inspector.text_color"
@@ -638,7 +681,8 @@
    ],
    "shot": {
     "area": "canvas"
-   }
+   },
+   "note": "R-19 (TW-140, TW-145): the reference side selects the last 3 characters with a mouse drag (text_select_drag, selection read back through the clipboard) - Shift+Left moved its caret without selecting; Firepixel keeps Shift+Left"
   },
   {
    "id": "14_bounds_normal",
@@ -672,7 +716,8 @@
    ],
    "shot": {
     "area": "canvas"
-   }
+   },
+   "note": "R-19 (TW-140): on the reference side the runner replaces the plain keys - Delete by Edit > Clear (script deleteSelection(false) as fallback), plain arrows by moveSelectionBy 1 px, Escape in the text editor by a Pointer tool click; Firepixel keeps the real keys; replaced actions carry `substituted` in the step record"
   },
   {
    "id": "15_frame_resize_result",
@@ -769,7 +814,8 @@
    ],
    "shot": {
     "area": "canvas"
-   }
+   },
+   "note": "R-19 (TW-140): on the reference side the runner replaces the plain keys - Delete by Edit > Clear (script deleteSelection(false) as fallback), plain arrows by moveSelectionBy 1 px, Escape in the text editor by a Pointer tool click; Firepixel keeps the real keys; replaced actions carry `substituted` in the step record"
   },
   {
    "id": "17_vertical_result",

@@ -82,6 +82,7 @@
     "edit.deselect": "Auswählen > Auswahl aufheben",
     "commands.manageSavedCommands": "Befehle > Gespeicherte Befehle verwalten",
     "edit.clone": "Bearbeiten > Klonen",
+    "edit.clear": "Bearbeiten > Löschen",
     "edit.copyAsVectors": "Bearbeiten > Als Vektoren kopieren",
     "edit.copyHtmlCode": "Bearbeiten > HTML-Code kopieren",
     "edit.cropDocument": "Bearbeiten > Dokument zuschneiden",

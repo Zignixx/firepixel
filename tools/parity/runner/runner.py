@@ -585,6 +585,97 @@ def tools_anchor_in(g: Image.Image):
 CHECKED_KEYS = {"delete": "remove", "backspace": "remove", "ctrl+d": "deselect",
                 "left": "move", "right": "move", "up": "move", "down": "move"}
 POINTER_TOOLS = ("zeiger", "pointer")
+# R-19 (TW-140, run 21): the reference application treats unmodified Delete / arrow / Escape keys sent by the runner
+# as tool shortcuts (Delete -> Eraser, Right -> Text, Down -> Line, Escape -> Crop / Export Area, a "c" in an open
+# text editor), although virtual key, scan code, layout and focus are right; modified keys work. On the reference
+# side these keys are replaced by menu / script / mouse actions with the same effect (Firepixel keeps the real keys)
+SUBST_KEYS = {"delete": "clear", "backspace": "clear", "left": "nudge", "right": "nudge", "up": "nudge",
+              "down": "nudge", "esc": "escape"}
+NUDGE = {"left": (-1, 0), "right": (1, 0), "up": (0, -1), "down": (0, 1)}
+
+
+def key_substitute_plan(combo: str, view: bool, busy: str, tool: str) -> tuple[str | None, str]:
+    """R-19: what replaces a reference-side key. (kind, why); kind None = send the real key. Kinds: `clear` (Edit >
+    Clear, script fallback), `nudge` (moveSelectionBy 1 px), `leave_editor` (Pointer tool click), `pointer_tool`
+    (Escape with another tool active), `none` (Escape with nothing to close)."""
+    mods, k = parse_combo(combo)
+    kind = SUBST_KEYS.get(k)
+    if mods or not kind:
+        return None, "not substituted (modified or other key)"
+    if not view:
+        return None, "no document open"
+    if busy:
+        return None, f"{busy} open (the real key works there)"
+    tl = str(tool or "").lower()
+    editing = "text" in tl
+    if kind == "escape":
+        if editing:
+            return "leave_editor", f"text tool active ({tool})"
+        if any(t in tl for t in POINTER_TOOLS):
+            return "none", "pointer tool, nothing open"
+        return "pointer_tool", f"tool {tool} active"
+    if editing:
+        return None, f"text editor open ({tool}): the real key edits the text"
+    return kind, f"tool {tool}"
+
+
+def key_substitute_selfcheck() -> str:
+    """R-19: offline check of key_substitute_plan, run by --dry-run."""
+    cases = [(("Delete", True, "", "Zeiger"), "clear"), (("Backspace", True, "", "Unterauswahl"), "clear"),
+             (("Right", True, "", "Zeiger"), "nudge"), (("ArrowDown", True, "", "Zeiger"), "nudge"),
+             (("Shift+Right", True, "", "Zeiger"), None), (("ctrl+d", True, "", "Zeiger"), None),
+             (("Escape", True, "", "Text"), "leave_editor"), (("Escape", True, "", "Zeiger"), "none"),
+             (("Escape", True, "", "Zuschneiden"), "pointer_tool"), (("Escape", True, "dialog", "Text"), None),
+             (("Escape", True, "menu", "Zeiger"), None), (("Delete", False, "", "?"), None),
+             (("Left", True, "", "Text"), None), (("Delete", True, "", "Text"), None), (("Enter", True, "", "Zeiger"), None)]
+    bad = [f"{args} -> {key_substitute_plan(*args)[0]} (want {want})" for args, want in cases
+           if key_substitute_plan(*args)[0] != want]
+    return "ok" if not bad else "FAILED: " + "; ".join(bad)
+
+
+def clipboard_text() -> str | None:
+    """R-19: Unicode text on the system clipboard (None when it cannot be opened)."""
+    import ctypes
+    u, k = ctypes.windll.user32, ctypes.windll.kernel32
+    u.OpenClipboard.argtypes = [ctypes.c_void_p]
+    u.GetClipboardData.restype = ctypes.c_void_p
+    u.GetClipboardData.argtypes = [ctypes.c_uint]
+    k.GlobalLock.restype = ctypes.c_void_p
+    k.GlobalLock.argtypes = [ctypes.c_void_p]
+    k.GlobalUnlock.argtypes = [ctypes.c_void_p]
+    for _ in range(10):
+        if u.OpenClipboard(None):
+            break
+        time.sleep(0.05)
+    else:
+        return None
+    try:
+        h = u.GetClipboardData(13)  # CF_UNICODETEXT
+        if not h:
+            return ""
+        p = k.GlobalLock(h)
+        if not p:
+            return None
+        try:
+            return ctypes.wstring_at(p)
+        finally:
+            k.GlobalUnlock(h)
+    finally:
+        u.CloseClipboard()
+
+
+def clipboard_clear() -> bool:
+    import ctypes
+    u = ctypes.windll.user32
+    u.OpenClipboard.argtypes = [ctypes.c_void_p]
+    for _ in range(10):
+        if u.OpenClipboard(None):
+            try:
+                return bool(u.EmptyClipboard())
+            finally:
+                u.CloseClipboard()
+        time.sleep(0.05)
+    return False
 # R-15 (TW-140): text attributes the reference's text tool is reset to at unit start (config `orig.text_defaults`)
 TEXT_DEFAULTS = {"face": "ArialMT", "size": "12pt", "bold": False, "italic": False, "underline": False, "fillColor": "#000000"}
 # R-15: after a pointer double-click: active tool and whether exactly one text is selected
@@ -1279,16 +1370,18 @@ class OrigSide(Side):
         # editor left open by an earlier unit): Escape twice ends a text edit left open; the pointer tool follows
         # with the first document. The script API has no setter for the text tool's defaults (font, size and
         # style setters act on selected text only), so they are not reset by script - the unit's first
-        # document logs the active tool instead
-        for _ in range(2):
-            try:
-                self.o.focus()
-                self.view_focus_if_frame("escape")  # R-15
-                self.h.call("key", combo="escape")
-                time.sleep(0.15)
-            except OrigError as e:
-                self.r.log(f"unit start Escape: {e}")
-                break
+        # document logs the active tool instead.
+        # R-19 (TW-140): no Escape (it types a "c" into an open editor, or selects the Crop / Export Area tool):
+        # with a document and the text tool active, the Pointer tool click ends the edit
+        try:
+            if self.view_or_none() is not None:
+                tool = self.active_tool()
+                if "text" in tool.lower():
+                    self.substituted = None
+                    rec = self.leave_text_editor()
+                    self.r.log(f"unit start: orig key substitute: escape -> Pointer tool click (text editor): {rec}")
+        except OrigError as e:
+            self.r.log(f"unit start text editor check: {e}")
         self.pending_tool_log = True
         # R-15 (TW-140): the text tool's attributes from earlier units are reset with the first document (R-17:
         # through the Properties panel, see text_tool_reset)
@@ -1368,25 +1461,39 @@ class OrigSide(Side):
                         errs.append(f"{attr}: {str(e)[:100]}")
             col = str(want.get("fillColor", "#000000")).lower()
             if not known or str(before.get("fillColor", "")).lower() != col:
+                # R-19 (TW-140, run 21: the colour stayed #808080 - the Enter in the hex field did not commit): first
+                # the swatch of that colour in the open popup (mouse only), else the hex field with the focus set
+                # by a click on it (WM_SETTEXT, Ctrl+A, typed, Enter); the script fallback follows below
                 try:
                     self.click_at(self.resolve("inspector.text_color")[0])
                     time.sleep(0.6)
-                    pt, info = self.resolve("popup.hex_field")
-                    if info and info.get("class") == "Edit":
-                        self.h.call("set_text", hwnd=info["hwnd"], text=col.lstrip("#"))
-                    self.click_at(pt, count=2)
-                    self.h.call("key", combo="ctrl+a")
-                    self.h.call("type", text=col.lstrip("#"))
-                    self.h.call("key", combo="enter")
-                    time.sleep(0.4)
                     try:
-                        # popup still open (the first Enter only committed the field): a second Enter closes it
-                        self.resolve("popup.hex_field")
+                        self.click_at(self.resolve({"popup_swatch": col})[0])
+                        time.sleep(0.4)
+                        done.append(f"colour {col} (popup swatch)")
+                    except Exception as e:  # noqa: BLE001
+                        pt, info = self.resolve("popup.hex_field")
+                        if info and info.get("class") == "Edit":
+                            self.h.call("set_text", hwnd=info["hwnd"], text=col.lstrip("#"))
+                        self.click_at(pt)
+                        time.sleep(0.15)
+                        self.click_at(pt, count=2)
+                        self.h.call("key", combo="ctrl+a")
+                        self.h.call("type", text=col.lstrip("#"))
                         self.h.call("key", combo="enter")
-                        time.sleep(0.3)
-                        done.append(f"colour {col} (Enter x2)")
-                    except Exception:  # noqa: BLE001
-                        done.append(f"colour {col}")
+                        time.sleep(0.4)
+                        try:
+                            # popup still open (the first Enter only committed the field): a second Enter closes it
+                            self.resolve("popup.hex_field")
+                            self.h.call("key", combo="enter")
+                            time.sleep(0.3)
+                            done.append(f"colour {col} (hex field, Enter x2; no swatch: {str(e)[:60]})")
+                        except Exception:  # noqa: BLE001
+                            done.append(f"colour {col} (hex field; no swatch: {str(e)[:60]})")
+                    try:
+                        self.h.call("close_menus")
+                    except OrigError:
+                        pass
                 except Exception as e:  # noqa: BLE001
                     errs.append(f"colour: {str(e)[:100]}")
         try:
@@ -1395,6 +1502,25 @@ class OrigSide(Side):
         except Exception as e:  # noqa: BLE001
             errs.append(f"pointer tool: {str(e)[:100]}")
         after = self.text_tool_attrs()
+        col = str(want.get("fillColor", "#000000")).lower()
+        if "_error" not in after and str(after.get("fillColor", "")).lower() != col:
+            # R-19: colour still different - by script on a scratch text from the tool's defaults (selected, its
+            # fill set like an attribute edit, deleted); read again
+            code = ("var d = fw.getDocumentDOM(), out = 'error no document';\n"
+                    "if (d) { try { d.selectNone(); d.addNewText({left: 10, top: 10, right: 200, bottom: 40}, true);\n"
+                    "  if (fw.selection.length == 1) { d.setFillColor(" + js_str(col) + "); out = 'ok ' + fw.selection[0].textRuns.initialAttrs.fillColor; d.deleteSelection(false); }\n"
+                    "  else { out = 'error scratch text not selected (' + fw.selection.length + ')'; }\n"
+                    "} catch (e) { out = 'error ' + e; } }\n"
+                    "fp_log('RET ' + out);")
+            try:
+                lines = self.o.jsf(code, why="text colour reset")
+                got = ([ln[4:] for ln in lines or [] if ln.startswith("RET ")] or ["error no result"])[-1]
+            except OrigError as e:
+                got = f"error {str(e)[:100]}"
+            done.append(f"colour by script on a scratch text: {got[:80]}")
+            after = self.text_tool_attrs()
+        if "_error" not in after and str(after.get("fillColor", "")).lower() != col:
+            errs.append(f"colour not {col} after the reset: {after.get('fillColor')}")
 
         def fmt(a):
             return a.get("_error") or " ".join(f"{k}={a[k]}" for k in sorted(a))
@@ -1414,30 +1540,30 @@ class OrigSide(Side):
         to}` = crop tool from the tools column, canvas drag inside the page, Enter with the keyboard focus on the
         document view; the page size (getDocumentDOM().width/height) before and after - unchanged: once more, with
         the view focus forced. Recorded as value `crop` and logged."""
+        # R-19 (TW-140, run 21: Enter did not commit the crop, also with the view focus forced): the crop is
+        # committed with a double-click inside the crop box instead of Enter; page size checked, one retry (a second
+        # double-click while the crop tool is still active, else crop tool, drag and double-click again)
         before = self.page_size()
         tries, after = [], before
+        mid = [(a["from"][0] + a["to"][0]) / 2, (a["from"][1] + a["to"][1]) / 2]
         for n in (1, 2):
             t = {}
             try:
-                self.do("tool", "tool.crop", {})
-                time.sleep(0.3)
-                t["tool"] = self.active_tool()
-                self.do("canvas_drag", {"from": a["from"], "to": a["to"]}, {})
-                time.sleep(0.3)
+                tool = self.active_tool() if n == 2 else ""
+                if n == 1 or "zuschneid" not in tool.lower() and "crop" not in tool.lower():
+                    self.do("tool", "tool.crop", {})
+                    time.sleep(0.3)
+                    t["tool"] = self.active_tool()
+                    self.do("canvas_drag", {"from": a["from"], "to": a["to"]}, {})
+                    time.sleep(0.3)
+                else:
+                    t["tool"] = f"{tool} (crop box kept)"
                 if self.dialog_open():
                     t["dialog"] = True
                     self.key("enter")
                 else:
-                    self.o.focus()
-                    if n == 1:
-                        self.view_focus_if_frame("enter")
-                    else:
-                        try:
-                            t["view_focus"] = (self.h.call("view_focus") or {}).get("focus_class")
-                        except OrigError as e:
-                            t["view_focus"] = f"? ({str(e)[:60]})"
-                    self.key_probe("enter")
-                    self.h.call("key", combo="enter")
+                    self.do("canvas_double_click", mid, {})
+                    t["commit"] = f"double-click {mid}"
                 time.sleep(0.5)
             except (OrigError, Unmapped) as e:
                 t["error"] = str(e)[:120]
@@ -1446,9 +1572,14 @@ class OrigSide(Side):
             tries.append(t)
             if after != before and not after.startswith("?"):
                 break
-        self.values.append({"crop": {"before": before, "after": after, "tries": len(tries)}})
+        self.values.append({"crop": {"before": before, "after": after, "tries": len(tries),
+                                     "commit": "double-click inside the crop box"}})
+        self.substituted = (getattr(self, "substituted", None) or []) + ["double-click inside the crop box"]
+        self.r.log(f"  orig key substitute: enter -> double-click inside the crop box {mid}")
         self.r.log(f"  orig crop {a['from']} -> {a['to']}: page {before} -> {after}"
                    + "".join(f"; try {i + 1}: {t}" for i, t in enumerate(tries)))
+        if after == before:
+            self.runner_error(f"crop not committed by the double-click (page {after}, {len(tries)} tries)")
 
     def select_pointer_if_pending(self):
         if not getattr(self, "pending_pointer", False):
@@ -1907,8 +2038,9 @@ class OrigSide(Side):
 
     def text_cleanup(self):
         """R-14 (TW-132 d): after a step that typed text the editor must not stay open into the next step/unit:
-        Escape twice (host key with scan code), then the pointer tool when the text tool is still active; the
-        active tool and the focused window are logged before and after."""
+        the pointer tool when the text tool is still active; the active tool and the focused window are logged
+        before and after. R-19 (TW-140): no Escape any more (it typed a "c" into the open editor) - the Pointer
+        tool click alone ends the edit."""
         out = {}
         try:
             f = self.h.call("focused") or {}
@@ -1916,11 +2048,6 @@ class OrigSide(Side):
             if self.dialog_open():
                 out["dialog"] = True
                 return out
-            for _ in range(2):
-                self.o.focus()
-                self.view_focus_if_frame("escape")  # R-15
-                self.h.call("key", combo="escape")
-                time.sleep(0.15)
             tool = self.active_tool()
             if not any(t in tool.lower() for t in POINTER_TOOLS):
                 self.do("tool", "tool.pointer", {})
@@ -1934,6 +2061,173 @@ class OrigSide(Side):
             out["error"] = str(e)[:160]
         self.r.log(f"  orig text cleanup after typing: {out}")
         return out
+
+    # ---- R-19 (TW-140): plain keys replaced on the reference side ----
+
+    def overlay_open(self) -> str:
+        """R-19: what is open over the document ('' = nothing): a dialog, a popup menu or a window of the program
+        that appeared during the step (colour popup, slider) - there the real key works and is sent."""
+        if self.h.list("dialogs"):
+            return "dialog"
+        if (self.h.call("menus") or {}).get("menus"):
+            return "menu"
+        main = self.h.call("main")["hwnd"]
+        base = getattr(self, "step_windows", None) or set()
+        skip = {"tooltips_class32", self.r.cfg["orig"].get("floating_dock_class", "OWL.Dock"), "OWL.FrameDrawer",
+                "OWL.ShadowView"}
+        for w in self.h.list("windows"):
+            if w["hwnd"] != main and w["hwnd"] not in base and w.get("class") not in skip:
+                return f"window {w.get('class')}"
+        return ""
+
+    def substituted_as(self, combo, method, rec: dict) -> str:
+        """R-19: one replaced key - value `key_substitute`, the method for the step record, log line
+        `orig key substitute: <key> -> <method>`."""
+        rec = {"key": combo, "method": method, **rec}
+        self.values.append({"key_substitute": rec})
+        self.substituted = getattr(self, "substituted", None) or []
+        self.substituted.append(method)
+        detail = ", ".join(f"{k} {v}" for k, v in rec.items() if k not in ("key", "method"))
+        self.r.log(f"  orig key substitute: {combo} -> {method}" + (f" ({detail})" if detail else ""))
+        return method
+
+    def leave_text_editor(self) -> dict:
+        """R-19: end a text edit with a click on the Pointer tool in the tools column (Escape typed a "c" into the
+        editor); verified: pointer tool active, keyboard focus not in an edit control. One more click when not."""
+        out = {"tool_before": self.active_tool()}
+        tool = out["tool_before"]
+        for n in (1, 2):
+            try:
+                self.do("tool", "tool.pointer", {})
+            except (OrigError, Unmapped) as e:
+                out[f"error_{n}"] = str(e)[:120]
+            time.sleep(0.25)
+            tool = self.active_tool()
+            out["tries"] = n
+            if any(t in tool.lower() for t in POINTER_TOOLS):
+                break
+        try:
+            focus = (self.h.call("focused") or {}).get("class")
+        except OrigError:
+            focus = "?"
+        out["tool_after"], out["focus_after"] = tool, focus
+        out["editor_closed"] = any(t in tool.lower() for t in POINTER_TOOLS) \
+            and str(focus or "").lower() not in ("edit", "richedit20w", "richedit50w")
+        if not out["editor_closed"]:
+            self.runner_error(f"text editor not closed by the Pointer tool click (tool {tool}, focus {focus})")
+        return out
+
+    def key_substitute(self, combo) -> str | None:
+        """R-19 (TW-140): a plain Delete / Backspace / arrow / Escape on the reference side is replaced (see
+        key_substitute_plan): Delete -> Edit > Clear (menu; `deleteSelection(false)` when the menu fails or removes
+        nothing), arrow -> `moveSelectionBy({x, y}, false, false)`, Escape in the text editor -> Pointer tool click.
+        Returns the method, or None for the real key (dialogs, menus, popups, text editing, no document; config
+        `orig.key_substitutes: false` switches it off)."""
+        if not self.r.cfg["orig"].get("key_substitutes", True):
+            return None
+        mods, k = parse_combo(combo)
+        if mods or k not in SUBST_KEYS:
+            return None
+        try:
+            view = self.view_or_none() is not None
+            busy = self.overlay_open() if view else ""
+            tool = self.active_tool() if view and not busy else ""
+        except OrigError as e:
+            self.r.log(f"  orig key {combo}: substitute check failed ({str(e)[:80]}) - real key")
+            return None
+        kind, why = key_substitute_plan(combo, view, busy, tool)
+        if kind is None:
+            self.r.log(f"  orig key {combo}: real key ({why})")
+            return None
+        if kind == "none":
+            return self.substituted_as(combo, "none (nothing to close; the real key would select a tool)", {"tool": tool})
+        if kind in ("leave_editor", "pointer_tool"):
+            rec = self.leave_text_editor()
+            return self.substituted_as(combo, "Pointer tool click" + (" (text editor)" if kind == "leave_editor" else ""), rec)
+        try:
+            st0 = self.key_state()
+        except OrigError as e:
+            st0 = {"error": str(e)[:120]}
+        rec = {"before": st0}
+        if "error" not in st0 and int(st0.get("sel") or 0) == 0:
+            return self.substituted_as(combo, "none (nothing selected)", rec)
+        if kind == "nudge":
+            dx, dy = NUDGE[k]
+            self.o.jsf(f"fw.getDocumentDOM().moveSelectionBy({{x: {dx}, y: {dy}}}, false, false);", why="key substitute")
+            time.sleep(0.15)
+            st1 = rec["after"] = self.key_state()
+            rec["effect"] = self.key_effect("move", st0, st1)
+            return self.substituted_as(combo, f"script moveSelectionBy({{x: {dx}, y: {dy}}}, false, false)", rec)
+        path = self.r.ui_map.get("commands", {}).get("edit.clear") or "Bearbeiten > Löschen"
+        method = None
+        try:
+            self.h.call("menu", path=split_path(path), final="invoke", bar=self.r.ui_map["menu_bar"]["orig"], timeout=40)
+            self.after_menu()
+            st1 = self.key_state()
+            if self.key_effect("remove", st0, st1):
+                method = f"menu {path}"
+            else:
+                rec["menu_no_effect"] = st1
+        except Exception as e:  # noqa: BLE001
+            rec["menu_error"] = str(e)[:120]
+            try:
+                self.h.call("close_menus")
+            except OrigError:
+                pass
+        if not method:
+            self.o.jsf("fw.getDocumentDOM().deleteSelection(false);", why="key substitute")
+            time.sleep(0.15)
+            method = "script deleteSelection(false)"
+        st1 = rec["after"] = self.key_state()
+        rec["effect"] = self.key_effect("remove", st0, st1)
+        return self.substituted_as(combo, method, rec)
+
+    def text_select_drag(self, a):
+        """R-19 (TW-140, run 21 tool-text/07: Shift+Left moved the caret without selecting on the reference side):
+        select the last `chars` characters of the text being edited (the text object whose `textChars` contains
+        `text`, else the selected one) with a mouse drag from its right end to the estimated start of those
+        characters (share of the characters, `start_frac` overrides), at the middle of the line (`line_frac`,
+        default 0.5). Read back: Ctrl+C (modified keys work) and the clipboard text, value `text_select`."""
+        a = a if isinstance(a, dict) else {"chars": a}
+        want_text, n = str(a.get("text") or ""), int(a.get("chars") or 0)
+        code = ("(function(){var d=fw.getDocumentDOM(),best=null;"
+                "function ok(e){return e&&e.textChars!=null&&(" + js_str(want_text) + "==''||String(e.textChars).indexOf(" + js_str(want_text) + ")>=0);}"
+                "try{if(fw.selection.length==1&&ok(fw.selection[0]))best=fw.selection[0];}catch(x){}"
+                "if(!best){for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;"
+                "for(var i=0;i<e.length;i++)if(ok(e[i]))best=e[i];}}"
+                "if(!best)return 'none';var p=best.pixelRect;"
+                "return p.left+','+p.top+','+p.right+','+p.bottom+'|'+String(best.textChars).length;})()")
+        rec = {"text": want_text, "chars": n}
+        got = str(self.jsf_value(code, why="text selection") or "none")
+        if "|" not in got:
+            rec["error"] = f"text not found ({got[:80]})"
+            self.values.append({"text_select": rec})
+            self.runner_error(f"text selection by drag: {rec['error']}")
+            return
+        box, length = got.split("|", 1)
+        left, top, right, bottom = (float(v) for v in box.split(","))
+        length = max(1, int(length))
+        frac = float(a["start_frac"]) if a.get("start_frac") is not None else max(0.0, (length - n) / length)
+        y = top + (bottom - top) * float(a.get("line_frac", 0.5))
+        x0, x1 = right - 1, left + (right - left) * frac
+        rec.update(rect=[left, top, right, bottom], length=length, start_frac=round(frac, 3),
+                   drag=[[round(x0, 1), round(y, 1)], [round(x1, 1), round(y, 1)]])
+        self.do("canvas_drag", {"from": [x0, y], "to": [x1, y]}, {})
+        time.sleep(0.2)
+        expected = want_text[-n:] if want_text and n else None
+        cleared = clipboard_clear()
+        self.o.focus()
+        self.h.call("key", combo="ctrl+c")
+        time.sleep(0.3)
+        rec["selected"] = clipboard_text()
+        rec["clipboard_cleared"] = cleared
+        rec["expected"] = expected
+        rec["ok"] = expected is None or rec["selected"] == expected
+        self.values.append({"text_select": rec})
+        self.substituted = (getattr(self, "substituted", None) or []) + ["mouse drag over the characters"]
+        self.r.log(f"  orig key substitute: shift+left x{n} -> mouse drag over the characters "
+                   f"({rec['drag'][0]} -> {rec['drag'][1]}, text box {rec['rect']}); selection read-back: "
+                   f"{rec['selected']!r} (expected {expected!r}, {'ok' if rec['ok'] else 'DIFFERENT'})")
 
     def drag_record(self, fr, to, mods):
         """R-7 (TW-98, Q-44, import offset): drag points of the reference like the Firepixel side (window client
@@ -2947,11 +3241,16 @@ class OrigSide(Side):
             self.reset_light()
         elif verb == "key":
             for _ in range(int(act.get("repeat", 1) or 1)):
-                self.key_checked(arg)
+                # R-19 (TW-140): plain Delete / arrow / Escape replaced by menu / script / mouse actions; no
+                # key_check for a replaced key
+                if self.key_substitute(arg) is None:
+                    self.key_checked(arg)
             if getattr(self, "popup_edit", None) and str(arg).lower() in ("enter", "return", "tab"):
                 self.popup_edit_record("after_key", str(arg))
         elif verb == "crop":
             self.crop(arg)
+        elif verb == "text_select_drag":
+            self.text_select_drag(arg)
         elif verb == "type":
             self.o.focus()
             self.h.call("type", text=str(arg), timeout=60)
@@ -5297,6 +5596,11 @@ class Runner:
                 for _ in range(int(arg or 0)):
                     self.run_actions(side, act.get("do") or [], rec)
                 continue
+            if verb == "per_side":
+                # R-19: {"per_side": {"orig": [actions], "fp": [actions]}} - different actions per side at this
+                # point of the step (e.g. a mouse selection on the reference side where Firepixel keeps the keys)
+                self.run_actions(side, (arg or {}).get(side.name) or [], rec)
+                continue
             if verb == "reset":
                 if arg in (None, False, "", "null"):
                     verb = "close_dialogs"
@@ -5403,6 +5707,7 @@ class Runner:
             # the page measured before and missed the guide): after a menu command the page is measured again at once
             # (not lazily - a guide or object added by the next action would enter the measurement)
             remeasure = verb == "menu" and side.name == "orig" and getattr(side, "page", None) is not None
+            side.substituted = None
             side.do(verb, arg, act)
             if remeasure:
                 side.page = None
@@ -5411,7 +5716,15 @@ class Runner:
                     side.calibrate()
                 except Exception as e:  # noqa: BLE001
                     self.log(f"  page after menu: {e}")
-            rec["actions"].append({"verb": verb, "ms": int((time.time() - t0) * 1000)})
+            entry = {"verb": verb, "ms": int((time.time() - t0) * 1000)}
+            subs = getattr(side, "substituted", None)
+            if subs:
+                # R-19 (TW-140): the reference side replaced this action (key) - marked for the evaluation
+                entry["arg"] = arg if isinstance(arg, (str, int, float)) else json.dumps(arg, ensure_ascii=False)[:120]
+                entry["substituted"] = "; ".join(dict.fromkeys(subs))
+                rec.setdefault("substituted", []).append({"verb": verb, "arg": entry["arg"], "method": entry["substituted"]})
+                side.substituted = None
+            rec["actions"].append(entry)
 
     def set_option(self, side: Side, verb, arg):
         """R-13 (TW-127, run 17 xs-preferences/06, 15): a stored option (check box whose state persists in the
@@ -5827,11 +6140,15 @@ class Runner:
                     before = None
                     if name == "orig":
                         side.windows_before = set()
+                        # R-19: the program's windows at step start (permanent tool windows); a window that appears
+                        # later (colour popup, slider) keeps plain keys real (key_substitute / overlay_open)
+                        side.step_windows = set()
+                        try:
+                            side.step_windows = {w["hwnd"] for w in side.h.list("windows")}
+                        except Exception:  # noqa: BLE001
+                            pass
                         if (step.get("shot") or {}).get("area") == "popup" or "popup.visible" in json.dumps(step):
-                            try:
-                                side.windows_before = {w["hwnd"] for w in side.h.list("windows")}
-                            except Exception:  # noqa: BLE001
-                                pass
+                            side.windows_before = set(side.step_windows)
                     if (step.get("shot") or {}).get("area") in ("menu", "popup") or step.get("log_menu_items") \
                             or re.search(r'"(log_menu_items|menu\.open|menu\.disabled_items)"', json.dumps(step)):
                         try:
@@ -5943,6 +6260,8 @@ def main(argv=None):
     if a.dry_run:
         # R-18: offline check of the Firepixel menu-entry reading (mocked ui_find result)
         print(f"menu state self check: {menu_state_selfcheck()}")
+        # R-19: offline check of the reference-side key substitutes
+        print(f"key substitute self check: {key_substitute_selfcheck()}")
     if a.gallery_only:
         print(gallery.build(Path(cfg["out_dir"])))
         return 0
