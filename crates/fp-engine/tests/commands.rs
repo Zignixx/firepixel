@@ -256,6 +256,8 @@ fn insert_objects() {
 #[test]
 fn canvas_commands() {
     let mut s = doc_session(300.0, 200.0);
+    // keep objects that end up outside the canvas ("delete objects when cropping" off, TW-134)
+    s.prefs.set("CropDocCropsImages", fp_engine::PrefValue::Bool(false));
     let a = rect(&mut s, 10.0, 10.0, 50.0, 30.0);
     let canvas = |s: &Session| s.active().map(|d| (d.doc.pages[d.page].canvas.width, d.doc.pages[d.page].canvas.height)).unwrap_or_default();
     ex(&mut s, "modify.canvas.canvasSize", json!({"width": 400, "height": 300, "anchor": "topLeft"}));

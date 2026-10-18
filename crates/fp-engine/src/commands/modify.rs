@@ -1,7 +1,9 @@
 //! Menü „Modifizieren“: Leinwand, Animation, Symbol, Popupmenü, Maske, selektives JPEG, Sperren,
 //! Reduzieren, Transformieren, Anordnen, Ausrichten, Pfade, An Pixeln ausrichten, Gruppieren.
 
-use super::edit::{crop_page, make_symbol, transform_page};
+use super::edit::{
+    crop_deletes_objects, crop_page, delete_outside_canvas, make_symbol, transform_page,
+};
 use super::select::mask_to_data;
 use super::{
     DOC, SEL, canvas_rect, ids_json, sel_err, selected_elements, selected_paths, take_ids, with_doc,
@@ -1277,11 +1279,16 @@ pub(super) fn register(r: &mut CommandRegistry) {
             .run(|s, p| {
                 let (w, h) = (p.f64("width")? as f32, p.f64("height")? as f32);
                 let (ax, ay) = anchor_factor(&p.opt_str("anchor")?.unwrap_or_default());
+                let delete_outside = crop_deletes_objects(s);
                 with_doc(s, |d| {
                     let c = canvas_rect(&d.doc, d.page);
                     let x0 = c.left + (c.width() - w) * ax;
                     let y0 = c.top + (c.height() - h) * ay;
                     crop_page(d, Rect::new(x0, y0, x0 + w, y0 + h).round_nearest())?;
+                    // TW-134: "delete objects when cropping" applies to Canvas Size as well
+                    if delete_outside {
+                        delete_outside_canvas(d);
+                    }
                     // Original: danach sind alle Objekte der Seite ausgewählt (PM-5 D20; gehört
                     // zum selben Verlaufsschritt, Rückgängig stellt die alte Auswahl wieder her)
                     if !d.bitmap_mode {

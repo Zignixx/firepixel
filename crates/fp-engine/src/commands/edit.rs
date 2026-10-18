@@ -1111,10 +1111,11 @@ pub(super) fn register(r: &mut CommandRegistry) {
             // Menü wie im Original nur mit Auswahl; das Zuschneiden-Werkzeug übergibt `rect`
             .menu_when(|s| s.active().is_some_and(|d| !d.selection.is_empty()))
             .opt("rect", ParamKind::Rect, "Zuschnitt (Vorgabe: Pixelauswahl bzw. Grenzen der Auswahl)")
-            .opt("tool", ParamKind::Bool, "Zuschneiden-Werkzeug: Rahmen auf die Leinwand begrenzen, Objekte ganz außerhalb löschen, Bitmaps beschneiden, danach alles auswählen")
+            .opt("tool", ParamKind::Bool, "Crop tool: limit the frame to the canvas and select everything afterwards (objects outside are deleted per the CropDocCropsImages preference)")
             .run(|s, p| {
                 let rect = p.opt_rect("rect")?;
                 let tool = p.bool_or("tool", false)?;
+                let delete_outside = crop_deletes_objects(s);
                 with_doc(s, |d| {
                     let r = match rect {
                         Some(r) => r.normalized().round_nearest(),
@@ -1128,8 +1129,13 @@ pub(super) fn register(r: &mut CommandRegistry) {
                     let r = if tool { r.intersect(&super::canvas_rect(&d.doc, d.page).round_nearest()) } else { r };
                     crop_page(d, r)?;
                     d.selection.pixels = None;
+                    if delete_outside {
+                        delete_outside_canvas(d);
+                    }
                     if tool {
-                        crop_tool_cleanup(d);
+                        // the crop tool selects everything afterwards (PAR 08/19)
+                        let ids = docops::selectable_ids(&d.doc, d.page, d.frame);
+                        d.selection.set(ids);
                     }
                     Ok(CommandOutput::doc())
                 })
@@ -1137,10 +1143,20 @@ pub(super) fn register(r: &mut CommandRegistry) {
     );
 }
 
-/// Nach dem Zuschneiden mit dem Werkzeug (PAR 08/18, 08/19, im Original gemessen): Objekte ganz
-/// außerhalb der neuen Leinwand werden gelöscht, Bitmaps auf die Leinwand beschnitten, danach sind
-/// alle Objekte gewählt.
-fn crop_tool_cleanup(d: &mut DocumentState) {
+/// Preference "delete objects when cropping" (Preferences ▸ Edit, factory default on, TW-134).
+pub(crate) const CROP_DELETES_OBJECTS_KEY: &str = "CropDocCropsImages";
+
+/// Whether setting a new canvas rectangle (crop tool, Crop Document, Canvas Size) deletes objects
+/// entirely outside the canvas and clips bitmaps crossing its edge (TW-134).
+pub(crate) fn crop_deletes_objects(s: &Session) -> bool {
+    s.prefs.get_bool(CROP_DELETES_OBJECTS_KEY, true)
+}
+
+/// After a new canvas rectangle with "delete objects when cropping" on (TW-134, PAR 08/18, 08/19):
+/// objects entirely outside the new canvas are deleted on all layers and states, bitmaps crossing
+/// the edge are clipped to the canvas, vectors crossing the edge stay unchanged. Deleted objects
+/// leave the selection.
+pub(crate) fn delete_outside_canvas(d: &mut DocumentState) {
     let page = d.page;
     let canvas = super::canvas_rect(&d.doc, page);
     let ican = canvas.round_nearest();
@@ -1177,8 +1193,9 @@ fn crop_tool_cleanup(d: &mut DocumentState) {
             }
         }
     }
-    let ids = docops::selectable_ids(&d.doc, d.page, d.frame);
-    d.selection.set(ids);
+    let (doc, page) = (Arc::clone(&d.doc), d.page);
+    d.selection
+        .retain_existing(|id| docops::element_on_page(&doc, page, id).is_some());
 }
 
 /// Neue Ebene über der aktiven; wird aktiv.
