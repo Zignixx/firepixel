@@ -1482,16 +1482,43 @@
      "select": "R1"
     },
     {
+     "retry_if": {
+      "check": "fw.selection.length",
+      "retry_when_falsy": true,
+      "why": "R1 not selected before the nudge (TW-129 d) - select again",
+      "do": [
+       {
+        "select": "R1"
+       }
+      ]
+     }
+    },
+    {
      "key": "Right"
     },
     {
      "wait": 300
     },
     {
-     "log_value": "(function(){var __a=fw.selection,__o=[];for(var __i=0;__i<__a.length;__i++)__o.push((function(e){var r=e.pixelRect;return e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom})(__a[__i]));return __o.join('|');})()"
+     "log_value": "(function(){var d=fw.getDocumentDOM(),o=[];for(var l=0;l<d.layers.length;l++){var a=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<a.length;i++){var e=a[i];if(e.name=='R1'){var r=e.pixelRect;o.push(e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom);}}}return o.join('|')+' sel='+fw.selection.length;})()"
     },
     {
      "key": "Escape"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "retry_if": {
+      "check": "fw.selection.length",
+      "retry_when_falsy": true,
+      "why": "R1 not selected before the nudge (TW-129 d) - select again",
+      "do": [
+       {
+        "select": "R1"
+       }
+      ]
+     }
     },
     {
      "key": "Down"
@@ -1500,10 +1527,25 @@
      "wait": 300
     },
     {
-     "log_value": "(function(){var __a=fw.selection,__o=[];for(var __i=0;__i<__a.length;__i++)__o.push((function(e){var r=e.pixelRect;return e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom})(__a[__i]));return __o.join('|');})()"
+     "log_value": "(function(){var d=fw.getDocumentDOM(),o=[];for(var l=0;l<d.layers.length;l++){var a=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<a.length;i++){var e=a[i];if(e.name=='R1'){var r=e.pixelRect;o.push(e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom);}}}return o.join('|')+' sel='+fw.selection.length;})()"
     },
     {
      "key": "Escape"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "retry_if": {
+      "check": "fw.selection.length",
+      "retry_when_falsy": true,
+      "why": "R1 not selected before the nudge (TW-129 d) - select again",
+      "do": [
+       {
+        "select": "R1"
+       }
+      ]
+     }
     },
     {
      "key": "Shift+Right"
@@ -1512,10 +1554,25 @@
      "wait": 300
     },
     {
-     "log_value": "(function(){var __a=fw.selection,__o=[];for(var __i=0;__i<__a.length;__i++)__o.push((function(e){var r=e.pixelRect;return e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom})(__a[__i]));return __o.join('|');})()"
+     "log_value": "(function(){var d=fw.getDocumentDOM(),o=[];for(var l=0;l<d.layers.length;l++){var a=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<a.length;i++){var e=a[i];if(e.name=='R1'){var r=e.pixelRect;o.push(e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom);}}}return o.join('|')+' sel='+fw.selection.length;})()"
     },
     {
      "key": "Escape"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "retry_if": {
+      "check": "fw.selection.length",
+      "retry_when_falsy": true,
+      "why": "R1 not selected before the nudge (TW-129 d) - select again",
+      "do": [
+       {
+        "select": "R1"
+       }
+      ]
+     }
     },
     {
      "key": "Shift+Down"
@@ -1524,7 +1581,7 @@
      "wait": 300
     },
     {
-     "log_value": "(function(){var __a=fw.selection,__o=[];for(var __i=0;__i<__a.length;__i++)__o.push((function(e){var r=e.pixelRect;return e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom})(__a[__i]));return __o.join('|');})()"
+     "log_value": "(function(){var d=fw.getDocumentDOM(),o=[];for(var l=0;l<d.layers.length;l++){var a=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<a.length;i++){var e=a[i];if(e.name=='R1'){var r=e.pixelRect;o.push(e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom);}}}return o.join('|')+' sel='+fw.selection.length;})()"
     },
     {
      "key": "Escape"
@@ -1535,7 +1592,8 @@
     {
      "key": "Escape"
     }
-   ]
+   ],
+   "note": "R-13 (TW-129 d): R1 selected again (and checked) before every nudge - Escape clears the selection; R1's position read by name, with the selection count"
   },
   {
    "id": "10_nudge_point_result",

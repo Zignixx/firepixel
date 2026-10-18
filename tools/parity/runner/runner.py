@@ -126,6 +126,33 @@ class Unmapped(Exception):
     """Logical UI key without an entry for this side in ui_map.json."""
 
 
+# R-13 (TW-126): shortcut set written into Firepixel's runner profile (config `fp.shortcut_set`, same default as
+# fpctl) and the reference preference read for its set (config `orig.shortcut_set_pref`)
+FP_SHORTCUT_SET_DEFAULT = "Firepixel"
+ORIG_SHORTCUT_SET_PREF_DEFAULT = "CurrentShortcutSet"
+
+
+def bm_getcheck(hwnd: int):
+    """R-13 (TW-127): BM_GETCHECK of a Win32 check box / radio button of the reference (True / False, None for
+    'indeterminate' or no answer). The message carries no pointers, so it works across processes."""
+    import ctypes
+    from ctypes import wintypes
+    u = ctypes.windll.user32
+    u.SendMessageTimeoutW.argtypes = [wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM, wintypes.UINT,
+                                      wintypes.UINT, ctypes.POINTER(ctypes.c_size_t)]
+    u.SendMessageTimeoutW.restype = ctypes.c_size_t
+    res = ctypes.c_size_t(0)
+    ok = u.SendMessageTimeoutW(wintypes.HWND(int(hwnd)), 0x00F0, 0, 0, 0x0002, 1500, ctypes.byref(res))
+    if not ok:
+        return None
+    return {0: False, 1: True}.get(int(res.value))
+
+
+def falsy_value(v) -> bool:
+    """A read-back value that means 'nothing' (retry_if `retry_when_falsy`)."""
+    return v is None or str(v).strip().lower() in ("", "0", "false", "null", "undefined", "[]", "none")
+
+
 # --------------------------------------------------------------------------- helpers
 def select_names(names) -> list:
     """`select` names: object names, {"index": i} (i-th element over all layers) and, R-11 (run 15
@@ -493,6 +520,15 @@ class Side:
         return "var ch = []; if (d) { " + " ".join(parts) + " }"
 
     def script_eval(self, expr):
+        raise NotImplementedError
+
+    def option_state(self, target):
+        """R-13 (TW-127): checked state (True/False/None) of a stored option control of the open dialog."""
+        raise NotImplementedError
+
+    def menu_entry_state(self, path):
+        """R-13 (TW-129 e): {"enabled", "checked", "text"} of the last entry of a menu path, read with the menu
+        open (opened for this and closed again; nothing is executed)."""
         raise NotImplementedError
 
     def canvas_point(self, arg, what="canvas point", allow_outside=False):
@@ -1414,7 +1450,15 @@ class OrigSide(Side):
     def log_zoom(self):
         """R-7 (TW-98/RE-9, Q-45): zoom of the reference per canvas step. `fw.getDocumentDOM().zoom` is undefined
         in the reference, so: every candidate property by JSF, the zoom in the main window / document tab title
-        ('@ 100%'), and the zoom measured from the page on screen (page width / document width)."""
+        ('@ 100%'), and the zoom measured from the page on screen (page width / document width).
+        R-13 (TW-129 a, run 17 dialogs-d31-d40/09, 14, 15, 16): not while a dialog is open - the JSF hand-over
+        cancels open dialogs (origctl.jsf), so Feather / Save Bitmap Selection were gone before the dialog shot
+        ('no dialog open'); the zoom is then logged as skipped."""
+        if self.dialog_open():
+            z = {"skipped": "dialog open (a script would cancel it)"}
+            self.values.append({"view_zoom": z})
+            self.r.log(f"orig zoom: {z}")
+            return z
         z = {}
         try:
             props = " + ".join(f'"{k}=" + d.{k} + ";"' for k in self.ZOOM_PROPS)
@@ -2391,9 +2435,16 @@ class OrigSide(Side):
             self.values.append({verb: arg, "value": r.record_path(verb, arg)})
         elif verb in ("file_dialog", "file_dialog_choose"):
             path = arg if isinstance(arg, str) else arg.get("path")
+            # R-13 (TW-129 b, run 17 panel-swatches-mixer/06): the dialog opened by a panel menu entry can take a few
+            # seconds - wait up to `wait_ms` (default 6000) before giving up
+            wait = float((arg.get("wait_ms") if isinstance(arg, dict) else None) or act.get("wait_ms") or 6000) / 1000
+            end = time.time() + wait
             ds = [d for d in self.h.list("dialogs")]
+            while not ds and time.time() < end:
+                time.sleep(0.3)
+                ds = [d for d in self.h.list("dialogs")]
             if not ds:
-                raise OrigError("no file dialog open")
+                raise OrigError(f"no file dialog open (waited {wait:.1f} s)")
             ed = self.h.call("find_child", scope="dialog", title=None, **{"class": "Edit"}, index=0)
             self.h.call("set_text", hwnd=ed["hwnd"], text=path)
             self.h.call("dialog_close", mode="ok")
@@ -2769,6 +2820,35 @@ class OrigSide(Side):
             menus = self.h.call("menus").get("menus") or []
             return {"visible": bool(ws or menus), "windows": sorted({w["class"] for w in ws}), "menus": len(menus)}
         return {"title": self.h.call("main")["title"], "dialogs": [d.get("title") for d in self.h.list("dialogs")]}
+
+    def option_state(self, target):
+        loc = self.loc_of(target)
+        if "dialog_label" in loc:
+            _pt, info = self.dialog_label_point(loc)
+        else:
+            _pt, info = self.resolve(target)
+        hwnd = (info or {}).get("hwnd") if isinstance(info, dict) else None
+        if not hwnd:
+            raise OrigError(f"option {target}: no Win32 control to read its state")
+        if info.get("class") and info.get("class") != "Button":
+            raise OrigError(f"option {target}: control is a {info.get('class')}, not a check box")
+        return bm_getcheck(int(hwnd))
+
+    def menu_entry_state(self, path):
+        parts = split_path(path)
+        bar = self.r.ui_map["menu_bar"]["orig"]
+        try:
+            self.h.call("menu", path=parts[:-1], final="open", bar=bar, timeout=40)
+            time.sleep(0.3)
+            want = clean_label(parts[-1]).lower()
+            items = [i for m in self.h.call("menus").get("menus") or [] for i in m.get("items") or [] if not i.get("separator")]
+            hit = next((i for i in items if clean_label(i["text"]).lower() == want), None) \
+                or next((i for i in items if clean_label(i["text"]).lower().startswith(want)), None)
+            if not hit:
+                raise OrigError(f"menu entry '{parts[-1]}' not found in the open menu")
+            return {"text": hit["text"], "enabled": not hit["grayed"], "checked": hit["checked"]}
+        finally:
+            self.h.call("close_menus")
 
     def menu_items(self):
         out = []
@@ -4053,6 +4133,38 @@ class FpSide(Side):
             return {"visible": big, "box": bb}
         return self.state()
 
+    def option_state(self, target):
+        loc = self.loc_of(target)
+        if "find" not in loc:
+            raise BridgeError(f"option {target}: fp locator without 'find' ({loc})")
+        hit = self.find(loc["find"], loc.get("role"), loc.get("exact", True), None, loc.get("index", 0))
+        v = hit.get("toggled")
+        return None if v is None else bool(v)
+
+    def menu_entry_state(self, path):
+        parts = split_path(path)
+        try:
+            h = self.find(parts[0], None, True, [0, 0, 2000, 40])
+            self.inp([{"type": "click", "pos": h["center"]}, {"type": "wait", "ms": 200}])
+            for p in parts[1:-1]:
+                hit = self.find(p, None, True, [0, 30, 10000, 10000])
+                self.inp([{"type": "move", "pos": hit["center"]}, {"type": "wait", "ms": 350}])
+            want = clean_label(parts[-1])
+            hits = []
+            for exact in (True, False):
+                hits = (self.call("ui_find", {"text": want, "exact": exact, "region": [0, 30, 10000, 10000], "limit": 20}) or {}).get("hits") or []
+                if hits:
+                    break
+            if not hits:
+                raise BridgeError(f"menu entry '{parts[-1]}' not found in the open menu")
+            # painted texts may carry no state; prefer the node that reports one
+            hit = next((x for x in hits if x.get("enabled") is not None), hits[0])
+            return {"text": hit.get("text"), "enabled": hit.get("enabled"), "checked": hit.get("toggled"),
+                    "role": hit.get("role")}
+        finally:
+            self.inp([{"type": "key", "key": "Escape"}, {"type": "wait", "ms": 120},
+                      {"type": "key", "key": "Escape"}, {"type": "wait", "ms": 120}])
+
     def dialog_fields(self):
         """Like the reference side's dialog list: title and the texts of the dialog's controls/labels in reading
         order (top to bottom, left to right), plus the controls with role, text and state."""
@@ -4257,6 +4369,7 @@ class Runner:
         sums = self.read_testfile_sums()
         self.log(f"test files: {len(sums)} match {self.sums_path().name}")
         if self.dry:
+            self.log_shortcut_sets()
             return
         ref = self.tmp / "testfiles_ref"
         root = Path(self.cfg["testfile_dir"])
@@ -4537,6 +4650,21 @@ class Runner:
                             raise Unsupported(f"{side.name}: {a['unsupported_if_none']}")
                 rec["actions"].append({"verb": verb, "ms": int((time.time() - t0) * 1000)})
                 continue
+            if verb in ("set_option", "restore_option"):
+                self.set_option(side, verb, arg)
+                rec["actions"].append({"verb": verb, "ms": int((time.time() - t0) * 1000)})
+                continue
+            if verb == "retry_if":
+                self.retry_if(side, arg if isinstance(arg, dict) else {}, rec)
+                rec["actions"].append({"verb": verb, "ms": int((time.time() - t0) * 1000)})
+                continue
+            if verb == "menu_state":
+                path = arg if isinstance(arg, (str, list)) else arg.get("path")
+                st = side.menu_entry_state(path)
+                side.values.append({"menu_state": " > ".join(split_path(path)), "value": st})
+                self.log(f"  {side.name} menu state {' > '.join(split_path(path))}: {st}")
+                rec["actions"].append({"verb": verb, "ms": int((time.time() - t0) * 1000)})
+                continue
             if verb == "swatch_readback":
                 side.values.append({"swatch_readback": self.swatch_readback(side, arg if isinstance(arg, dict) else {})})
                 rec["actions"].append({"verb": verb, "ms": int((time.time() - t0) * 1000)})
@@ -4554,6 +4682,102 @@ class Runner:
                 except Exception as e:  # noqa: BLE001
                     self.log(f"  page after menu: {e}")
             rec["actions"].append({"verb": verb, "ms": int((time.time() - t0) * 1000)})
+
+    def set_option(self, side: Side, verb, arg):
+        """R-13 (TW-127, run 17 xs-preferences/06, 15): a stored option (check box whose state persists in the
+        program's profile) is set to a known value instead of being toggled with a click: the state is read
+        (reference: BM_GETCHECK, Firepixel: `toggled` of the ui_find node), the control clicked only when it differs,
+        and read again (up to two clicks). `{"set_option": {"target", "value": bool}}`; the state found first is
+        remembered per side and target, `{"restore_option": target}` sets it back (no-op when unknown)."""
+        prev = side.__dict__.setdefault("option_prev", {})
+        if verb == "restore_option":
+            target = arg if isinstance(arg, str) else arg.get("target")
+            if prev.get(target) is None:
+                prev.pop(target, None)
+                side.values.append({"option": target, "restore": "unknown start state - left as is"})
+                self.log(f"  {side.name} option {target}: start state unknown, not restored")
+                return
+            want = bool(prev.pop(target))
+        else:
+            target, want = arg.get("target"), bool(arg.get("value", True))
+        err = OrigError if side.name == "orig" else BridgeError
+        before = side.option_state(target)
+        if verb == "set_option":
+            prev.setdefault(target, before)
+        if before is None:
+            raise err(f"option {target}: state not readable")
+        now, clicks = before, 0
+        while now != want and clicks < 2:
+            side.do("click", target, {})
+            clicks += 1
+            time.sleep(0.25)
+            now = side.option_state(target)
+        side.values.append({"option": target, "verb": verb, "before": before, "want": want, "after": now, "clicks": clicks})
+        self.log(f"  {side.name} option {target}: {before} -> {now} (want {want}, {clicks} click(s))")
+        if now != want:
+            raise err(f"option {target}: still {now} after {clicks} clicks (want {want})")
+
+    def retry_if(self, side: Side, a: dict, rec):
+        """R-13 (TW-129): `{"retry_if": {"check": JSF expr, "retry_when": [values] | "retry_when_falsy": true,
+        "do": [actions], "why": text, "remeasure": bool}}` - the expression is read (both sides, `log_value` rules);
+        when its value is one of `retry_when` (compared as text) or means 'nothing', `do` runs once (remeasure: the
+        reference's page is measured again first) and the value is read again. Both values go into the side's
+        values; nothing is raised (the step's own checks decide)."""
+        expr = a.get("check")
+
+        def read():
+            try:
+                return side.script_eval(expr) if expr else None
+            except Exception as e:  # noqa: BLE001
+                return f"error {str(e)[:100]}"
+
+        def bad(v):
+            if a.get("retry_when_falsy") and falsy_value(v):
+                return True
+            return str(v) in [str(x) for x in (a.get("retry_when") or [])]
+
+        v = read()
+        out = {"why": a.get("why"), "check": expr, "value": v, "retried": False}
+        if bad(v):
+            out["retried"] = True
+            self.log(f"  {side.name}: retry_if {a.get('why') or expr}: value {v!r} - running the retry once")
+            if a.get("remeasure") and side.name == "orig" and getattr(side, "page", None) is not None:
+                side.page = None
+                try:
+                    time.sleep(0.3)
+                    side.calibrate()
+                except Exception as e:  # noqa: BLE001
+                    self.log(f"  page before the retry: {e}")
+            try:
+                self.run_actions(side, a.get("do") or [], rec)
+            except Exception as e:  # noqa: BLE001
+                out["retry_error"] = f"{type(e).__name__}: {e}"[:200]
+            out["value_after"] = read()
+            self.log(f"  {side.name}: retry_if after the retry: {out['value_after']!r}")
+        side.values.append({"retry_if": out})
+
+    def log_shortcut_sets(self):
+        """R-13 (TW-126): which shortcut set each side uses, once per run. Firepixel: config `fp.shortcut_set`
+        (written into the runner profile by fpctl, default "Firepixel"). Reference: its preference
+        (`orig.shortcut_set_pref`, default "CurrentShortcutSet") read with fw.getPref when it can be read, else
+        'unknown'."""
+        if getattr(self, "shortcut_sets_logged", False):
+            return
+        self.shortcut_sets_logged = True
+        fp_set = (self.cfg.get("fp") or {}).get("shortcut_set") or FP_SHORTCUT_SET_DEFAULT
+        orig_set = "unknown (dry run, not read)" if self.dry else "unknown"
+        key = (self.cfg.get("orig") or {}).get("shortcut_set_pref", ORIG_SHORTCUT_SET_PREF_DEFAULT)
+        side = (getattr(self, "sides", None) or {}).get("orig")
+        if not self.dry and key and side is not None:
+            try:
+                v = side.script_eval("(function(){try{return fw.getPref(%s);}catch(e){return 'ERR '+e;}})()" % json.dumps(key))
+                if v is not None and not str(v).startswith("ERR") and str(v) not in ("undefined", "null", ""):
+                    orig_set = f"'{v}' (pref {key})"
+                else:
+                    orig_set = f"unknown (pref {key}: {v})"
+            except Exception as e:  # noqa: BLE001
+                orig_set = f"unknown ({str(e)[:80]})"
+        self.log(f"shortcut sets: fp '{fp_set}' (fp.shortcut_set), orig {orig_set}")
 
     def swatch_readback(self, side: Side, a: dict) -> dict:
         """R-11 (TW-115): swatch set after the reset - JSF `fw.swatches` (count + first 8), the colours of cells
@@ -4785,6 +5009,7 @@ class Runner:
                         side.pending_colors = True  # R-9 (TW-107): default colours with the unit's first document
                     if side.name == "orig":
                         side.log_foreground(f"unit start {unit_name}")
+                        self.log_shortcut_sets()
                         try:
                             side.ensure_foreground()
                         except Exception as e:  # noqa: BLE001

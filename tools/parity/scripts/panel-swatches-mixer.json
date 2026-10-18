@@ -266,18 +266,46 @@
     },
     {
      "click": "Farbfelder hinzufügen..."
+    }
+   ],
+   "shot": {
+    "area": "panel:swatches"
+   },
+   "note": "file_dialog = choose path in the open-file dialog (orig UIA, fp ui_file_dialog); R-13 (TW-129 b): reference waits up to 6 s for the file dialog, else opens it once more",
+   "orig": [
+    {
+     "if_no_dialog": {
+      "wait_ms": 6000,
+      "why": "file dialog not open in time (TW-129 b) - panel menu entry again",
+      "do": [
+       {
+        "panel": "window.swatches"
+       },
+       {
+        "panel_menu": "swatches"
+       },
+       {
+        "click": "Farbfelder hinzufügen..."
+       }
+      ]
+     }
     },
+    {
+     "file_dialog": "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\par_swatches.act",
+     "wait_ms": 8000
+    },
+    {
+     "record_ui": "swatches.count"
+    }
+   ],
+   "fp": [
     {
      "file_dialog": "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\par_swatches.act"
     },
     {
      "record_ui": "swatches.count"
     }
-   ],
-   "shot": {
-    "area": "panel:swatches"
-   },
-   "note": "file_dialog = choose path in the open-file dialog (orig UIA, fp ui_file_dialog)"
+   ]
   },
   {
    "id": "06_swatches_load_replace_result",
@@ -310,7 +338,36 @@
     },
     {
      "click": "Farbfelder ersetzen..."
+    }
+   ],
+   "shot": null,
+   "orig": [
+    {
+     "if_no_dialog": {
+      "wait_ms": 6000,
+      "why": "file dialog not open in time (TW-129 b) - panel menu entry again",
+      "do": [
+       {
+        "panel": "window.swatches"
+       },
+       {
+        "panel_menu": "swatches"
+       },
+       {
+        "click": "Farbfelder ersetzen..."
+       }
+      ]
+     }
     },
+    {
+     "file_dialog": "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\par_swatches.act",
+     "wait_ms": 8000
+    },
+    {
+     "record_ui": "swatches.count"
+    }
+   ],
+   "fp": [
     {
      "file_dialog": "C:\\Users\\Administrator\\Desktop\\REA\\re\\_testdateien\\par\\par_swatches.act"
     },
@@ -318,7 +375,7 @@
      "record_ui": "swatches.count"
     }
    ],
-   "shot": null
+   "note": "R-13 (TW-129 b): reference waits up to 6 s for the file dialog, else opens it once more"
   },
   {
    "id": "07_swatches_sort_result",

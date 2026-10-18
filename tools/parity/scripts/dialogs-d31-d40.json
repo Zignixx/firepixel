@@ -513,11 +513,66 @@
        250
       ]
      }
+    },
+    {
+     "retry_if": {
+      "check": "(function(){var d=fw.getDocumentDOM(),e;try{e=d.isSelectionEmpty;}catch(x){return 'ERR '+x;}return String(e);})()",
+      "retry_when": [
+       "true"
+      ],
+      "remeasure": true,
+      "why": "marquee selection empty after the drag (TW-129 a) - drag once more",
+      "do": [
+       {
+        "tool": "tool.marquee"
+       },
+       {
+        "canvas_drag": {
+         "from": [
+          100,
+          100
+         ],
+         "to": [
+          300,
+          250
+         ]
+        }
+       }
+      ]
+     }
     }
    ],
    "orig": [
     {
      "menu_item": "Auswählen > Weiche Kante..."
+    },
+    {
+     "if_no_dialog": {
+      "wait_ms": 3000,
+      "remeasure": true,
+      "why": "Feather did not open after the marquee drag (TW-129 a) - marquee and menu again",
+      "do": [
+       {
+        "tool": "tool.marquee"
+       },
+       {
+        "canvas_drag": {
+         "from": [
+          100,
+          100
+         ],
+         "to": [
+          300,
+          250
+         ]
+        }
+       },
+       {
+        "menu_item": "Auswählen > Weiche Kante..."
+       }
+      ],
+      "unsupported_if_none": "Feather dialog did not open in the reference (no marquee selection)"
+     }
     },
     {
      "record_ui": "dialog.fields"
@@ -538,7 +593,8 @@
     {
      "key": "Escape"
     }
-   ]
+   ],
+   "note": "R-13 (TW-129 a): marquee checked (retry_if), second way when the dialog does not open"
   },
   {
    "id": "10_d35_effect_result",
@@ -550,11 +606,84 @@
    "both": [
     {
      "reopen": "T02"
+    },
+    {
+     "select": "B1"
+    },
+    {
+     "tool": "tool.marquee"
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       100,
+       100
+      ],
+      "to": [
+       300,
+       250
+      ]
+     }
+    },
+    {
+     "retry_if": {
+      "check": "(function(){var d=fw.getDocumentDOM(),e;try{e=d.isSelectionEmpty;}catch(x){return 'ERR '+x;}return String(e);})()",
+      "retry_when": [
+       "true"
+      ],
+      "remeasure": true,
+      "why": "marquee selection empty after the drag (TW-129 a) - drag once more",
+      "do": [
+       {
+        "tool": "tool.marquee"
+       },
+       {
+        "canvas_drag": {
+         "from": [
+          100,
+          100
+         ],
+         "to": [
+          300,
+          250
+         ]
+        }
+       }
+      ]
+     }
     }
    ],
    "orig": [
     {
      "menu_item": "Auswählen > Weiche Kante..."
+    },
+    {
+     "if_no_dialog": {
+      "wait_ms": 3000,
+      "remeasure": true,
+      "why": "Feather did not open after the marquee drag (TW-129 a) - marquee and menu again",
+      "do": [
+       {
+        "tool": "tool.marquee"
+       },
+       {
+        "canvas_drag": {
+         "from": [
+          100,
+          100
+         ],
+         "to": [
+          300,
+          250
+         ]
+        }
+       },
+       {
+        "menu_item": "Auswählen > Weiche Kante..."
+       }
+      ],
+      "unsupported_if_none": "Feather dialog did not open in the reference (no marquee selection)"
+     }
     },
     {
      "set_field": {
@@ -586,7 +715,8 @@
      "log_value": "(function(){var h=fw.historyPalette,n=h.getStepCount(),a=[],js;for(var i=0;i<n;i++)a.push(i);try{js=h.getStepsAsJavaScript(a);}catch(e){js=\"ERR \"+e;}return [n,js].toSource();})()"
     }
    ],
-   "shot": null
+   "shot": null,
+   "note": "R-13 (TW-129 a): marquee drawn first - without a selection the entry is disabled in the reference and the step never reached its dialog"
   },
   {
    "id": "11_d36_d37_result",
@@ -816,11 +946,66 @@
        250
       ]
      }
+    },
+    {
+     "retry_if": {
+      "check": "(function(){var d=fw.getDocumentDOM(),e;try{e=d.isSelectionEmpty;}catch(x){return 'ERR '+x;}return String(e);})()",
+      "retry_when": [
+       "true"
+      ],
+      "remeasure": true,
+      "why": "marquee selection empty after the drag (TW-129 a) - drag once more",
+      "do": [
+       {
+        "tool": "tool.marquee"
+       },
+       {
+        "canvas_drag": {
+         "from": [
+          100,
+          100
+         ],
+         "to": [
+          300,
+          250
+         ]
+        }
+       }
+      ]
+     }
     }
    ],
    "orig": [
     {
      "menu_item": "Auswählen > Bitmap-Auswahl speichern..."
+    },
+    {
+     "if_no_dialog": {
+      "wait_ms": 3000,
+      "remeasure": true,
+      "why": "Save Bitmap Selection did not open after the marquee drag (TW-129 a) - marquee and menu again",
+      "do": [
+       {
+        "tool": "tool.marquee"
+       },
+       {
+        "canvas_drag": {
+         "from": [
+          100,
+          100
+         ],
+         "to": [
+          300,
+          250
+         ]
+        }
+       },
+       {
+        "menu_item": "Auswählen > Bitmap-Auswahl speichern..."
+       }
+      ],
+      "unsupported_if_none": "Save Bitmap Selection dialog did not open in the reference (no marquee selection)"
+     }
     },
     {
      "record_ui": "dialog.fields"
@@ -841,7 +1026,8 @@
     {
      "key": "Escape"
     }
-   ]
+   ],
+   "note": "R-13 (TW-129 a): marquee checked (retry_if), second way when the dialog does not open"
   },
   {
    "id": "15_d40_effect_result",
@@ -871,11 +1057,66 @@
        250
       ]
      }
+    },
+    {
+     "retry_if": {
+      "check": "(function(){var d=fw.getDocumentDOM(),e;try{e=d.isSelectionEmpty;}catch(x){return 'ERR '+x;}return String(e);})()",
+      "retry_when": [
+       "true"
+      ],
+      "remeasure": true,
+      "why": "marquee selection empty after the drag (TW-129 a) - drag once more",
+      "do": [
+       {
+        "tool": "tool.marquee"
+       },
+       {
+        "canvas_drag": {
+         "from": [
+          100,
+          100
+         ],
+         "to": [
+          300,
+          250
+         ]
+        }
+       }
+      ]
+     }
     }
    ],
    "orig": [
     {
      "menu_item": "Auswählen > Bitmap-Auswahl speichern..."
+    },
+    {
+     "if_no_dialog": {
+      "wait_ms": 3000,
+      "remeasure": true,
+      "why": "Save Bitmap Selection did not open after the marquee drag (TW-129 a) - marquee and menu again",
+      "do": [
+       {
+        "tool": "tool.marquee"
+       },
+       {
+        "canvas_drag": {
+         "from": [
+          100,
+          100
+         ],
+         "to": [
+          300,
+          250
+         ]
+        }
+       },
+       {
+        "menu_item": "Auswählen > Bitmap-Auswahl speichern..."
+       }
+      ],
+      "unsupported_if_none": "Save Bitmap Selection dialog did not open in the reference (no marquee selection)"
+     }
     },
     {
      "key": "Enter"
@@ -891,12 +1132,6 @@
     },
     {
      "record_ui": "dialog.fields"
-    },
-    {
-     "log_value": "(function(){var h=fw.historyPalette,n=h.getStepCount(),a=[],js;for(var i=0;i<n;i++)a.push(i);try{js=h.getStepsAsJavaScript(a);}catch(e){js=\"ERR \"+e;}return [n,js].toSource();})()"
-    },
-    {
-     "record_ui": "document.summary"
     }
    ],
    "fp": [
@@ -917,12 +1152,6 @@
     },
     {
      "record_ui": "dialog.fields"
-    },
-    {
-     "log_value": "(function(){var h=fw.historyPalette,n=h.getStepCount(),a=[],js;for(var i=0;i<n;i++)a.push(i);try{js=h.getStepsAsJavaScript(a);}catch(e){js=\"ERR \"+e;}return [n,js].toSource();})()"
-    },
-    {
-     "record_ui": "document.summary"
     }
    ],
    "shot": {
@@ -931,9 +1160,15 @@
    "after": [
     {
      "key": "Escape"
+    },
+    {
+     "log_value": "(function(){var h=fw.historyPalette,n=h.getStepCount(),a=[],js;for(var i=0;i<n;i++)a.push(i);try{js=h.getStepsAsJavaScript(a);}catch(e){js=\"ERR \"+e;}return [n,js].toSource();})()"
+    },
+    {
+     "record_ui": "document.summary"
     }
    ],
-   "note": "image = restore dialog; 'menu' inside after runs for both programs (fp via ui_find)"
+   "note": "image = restore dialog; 'menu' inside after runs for both programs (fp via ui_find); R-13 (TW-129 a): history and document read-back moved to after the shot (a script cancels the open dialog in the reference)"
   },
   {
    "id": "16_invalid_values_open",
@@ -963,11 +1198,66 @@
        250
       ]
      }
+    },
+    {
+     "retry_if": {
+      "check": "(function(){var d=fw.getDocumentDOM(),e;try{e=d.isSelectionEmpty;}catch(x){return 'ERR '+x;}return String(e);})()",
+      "retry_when": [
+       "true"
+      ],
+      "remeasure": true,
+      "why": "marquee selection empty after the drag (TW-129 a) - drag once more",
+      "do": [
+       {
+        "tool": "tool.marquee"
+       },
+       {
+        "canvas_drag": {
+         "from": [
+          100,
+          100
+         ],
+         "to": [
+          300,
+          250
+         ]
+        }
+       }
+      ]
+     }
     }
    ],
    "orig": [
     {
      "menu_item": "Auswählen > Weiche Kante..."
+    },
+    {
+     "if_no_dialog": {
+      "wait_ms": 3000,
+      "remeasure": true,
+      "why": "Feather did not open after the marquee drag (TW-129 a) - marquee and menu again",
+      "do": [
+       {
+        "tool": "tool.marquee"
+       },
+       {
+        "canvas_drag": {
+         "from": [
+          100,
+          100
+         ],
+         "to": [
+          300,
+          250
+         ]
+        }
+       },
+       {
+        "menu_item": "Auswählen > Weiche Kante..."
+       }
+      ],
+      "unsupported_if_none": "Feather dialog did not open in the reference (no marquee selection)"
+     }
     },
     {
      "set_field": {
@@ -996,7 +1286,7 @@
    "shot": {
     "area": "dialog"
    },
-   "note": "screenshot shows the message after Enter; afterwards close all dialogs"
+   "note": "screenshot shows the message after Enter; afterwards close all dialogs; R-13 (TW-129 a): marquee checked (retry_if), second way when the dialog does not open"
   },
   {
    "id": "16_invalid_values_open_range",
@@ -1026,11 +1316,66 @@
        250
       ]
      }
+    },
+    {
+     "retry_if": {
+      "check": "(function(){var d=fw.getDocumentDOM(),e;try{e=d.isSelectionEmpty;}catch(x){return 'ERR '+x;}return String(e);})()",
+      "retry_when": [
+       "true"
+      ],
+      "remeasure": true,
+      "why": "marquee selection empty after the drag (TW-129 a) - drag once more",
+      "do": [
+       {
+        "tool": "tool.marquee"
+       },
+       {
+        "canvas_drag": {
+         "from": [
+          100,
+          100
+         ],
+         "to": [
+          300,
+          250
+         ]
+        }
+       }
+      ]
+     }
     }
    ],
    "orig": [
     {
      "menu_item": "Auswählen > Auswahlrahmen erweitern..."
+    },
+    {
+     "if_no_dialog": {
+      "wait_ms": 3000,
+      "remeasure": true,
+      "why": "Expand Marquee did not open after the marquee drag (TW-129 a) - marquee and menu again",
+      "do": [
+       {
+        "tool": "tool.marquee"
+       },
+       {
+        "canvas_drag": {
+         "from": [
+          100,
+          100
+         ],
+         "to": [
+          300,
+          250
+         ]
+        }
+       },
+       {
+        "menu_item": "Auswählen > Auswahlrahmen erweitern..."
+       }
+      ],
+      "unsupported_if_none": "Expand Marquee dialog did not open in the reference (no marquee selection)"
+     }
     },
     {
      "set_field": {
@@ -1063,7 +1408,8 @@
     {
      "key": "Escape"
     }
-   ]
+   ],
+   "note": "R-13 (TW-129 a): marquee checked (retry_if), second way when the dialog does not open"
   },
   {
    "id": "17_enter_esc_result",
@@ -1198,11 +1544,84 @@
    "both": [
     {
      "reopen": "T02"
+    },
+    {
+     "select": "B1"
+    },
+    {
+     "tool": "tool.marquee"
+    },
+    {
+     "canvas_drag": {
+      "from": [
+       100,
+       100
+      ],
+      "to": [
+       300,
+       250
+      ]
+     }
+    },
+    {
+     "retry_if": {
+      "check": "(function(){var d=fw.getDocumentDOM(),e;try{e=d.isSelectionEmpty;}catch(x){return 'ERR '+x;}return String(e);})()",
+      "retry_when": [
+       "true"
+      ],
+      "remeasure": true,
+      "why": "marquee selection empty after the drag (TW-129 a) - drag once more",
+      "do": [
+       {
+        "tool": "tool.marquee"
+       },
+       {
+        "canvas_drag": {
+         "from": [
+          100,
+          100
+         ],
+         "to": [
+          300,
+          250
+         ]
+        }
+       }
+      ]
+     }
     }
    ],
    "orig": [
     {
      "menu_item": "Auswählen > Bitmap-Auswahl speichern..."
+    },
+    {
+     "if_no_dialog": {
+      "wait_ms": 3000,
+      "remeasure": true,
+      "why": "Save Bitmap Selection did not open after the marquee drag (TW-129 a) - marquee and menu again",
+      "do": [
+       {
+        "tool": "tool.marquee"
+       },
+       {
+        "canvas_drag": {
+         "from": [
+          100,
+          100
+         ],
+         "to": [
+          300,
+          250
+         ]
+        }
+       },
+       {
+        "menu_item": "Auswählen > Bitmap-Auswahl speichern..."
+       }
+      ],
+      "unsupported_if_none": "Save Bitmap Selection dialog did not open in the reference (no marquee selection)"
+     }
     },
     {
      "record_ui": {
@@ -1227,7 +1646,8 @@
     {
      "key": "Escape"
     }
-   ]
+   ],
+   "note": "R-13 (TW-129 a): marquee drawn first - without a selection the entry is disabled in the reference and the step never reached its dialog"
   },
   {
    "id": "19_remember_result",

@@ -711,7 +711,22 @@
    },
    "both": [
     {
-     "reopen": "T10"
+     "reopen": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "retry_if": {
+      "check": "fw.selection.length",
+      "retry_when_falsy": true,
+      "why": "R1 not selected (TW-129 e) - select again",
+      "do": [
+       {
+        "select": "R1"
+       }
+      ]
+     }
     },
     {
      "menu": [
@@ -727,7 +742,28 @@
     }
    ],
    "shot": null,
-   "note": "menu location of 'An Pixeln ausrichten' (View vs Modify) may differ between programs"
+   "note": "menu location of 'An Pixeln ausrichten' (View vs Modify) may differ between programs; R-13 (TW-129 e): R1 of T04 selected first (the entry is disabled without a selection, T10 has no vector object), the disabled state is checked in 15_snap_pixels_disabled"
+  },
+  {
+   "id": "15_snap_pixels_disabled",
+   "check": "snap to pixels - menu entry disabled without a selection",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "reopen": "T04"
+    },
+    {
+     "select_none": true
+    },
+    {
+     "menu_state": "Modifizieren > An Pixeln ausrichten"
+    }
+   ],
+   "shot": null,
+   "note": "R-13 (TW-129 e): enabled/checked state of the entry read with nothing selected (menu opened and closed, nothing executed)"
   },
   {
    "id": "16_edges_normal",

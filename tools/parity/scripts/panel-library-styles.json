@@ -98,6 +98,12 @@
      "log_value": "(function(){var __a=fw.getDocumentDOM().layers,__o=[];for(var __i=0;__i<__a.length;__i++)__o.push((function(l){return l.frames[0].elements.length})(__a[__i]));return __o.join('|');})()"
     },
     {
+     "panel": "window.documentLibrary"
+    },
+    {
+     "wait": 400
+    },
+    {
      "drag": {
       "from": {
        "list_row": "Grafik1"
@@ -117,6 +123,43 @@
      "wait": 500
     },
     {
+     "retry_if": {
+      "check": "(function(){var __a=fw.getDocumentDOM().layers,__o=[];for(var __i=0;__i<__a.length;__i++)__o.push((function(l){return l.frames[0].elements.length})(__a[__i]));return __o.join('|');})()",
+      "retry_when": [
+       "4|3"
+      ],
+      "remeasure": true,
+      "why": "library drop did not arrive (element count unchanged, TW-129 c) - panel again, drag once more",
+      "do": [
+       {
+        "panel": "window.documentLibrary"
+       },
+       {
+        "wait": 400
+       },
+       {
+        "drag": {
+         "from": {
+          "list_row": "Grafik1"
+         },
+         "to": {
+          "canvas": [
+           600,
+           400
+          ]
+         },
+         "steps": 30,
+         "press_ms": 300,
+         "release_ms": 400
+        }
+       },
+       {
+        "wait": 500
+       }
+      ]
+     }
+    },
+    {
      "log_value": "(function(){var __a=fw.getDocumentDOM().layers,__o=[];for(var __i=0;__i<__a.length;__i++)__o.push((function(l){return l.frames[0].elements.length})(__a[__i]));return __o.join('|');})()"
     },
     {
@@ -126,7 +169,7 @@
    "shot": {
     "area": "canvas"
    },
-   "note": "R-7 (TW-99, Q-42, M9 re 42 §1): count before and after, drag with a pause after the press, small moves past the drag threshold and a pause before the release (the drag did not arrive in the reference in run 11); M9 expected: 4|3 -> 5|3, instance 571,371-631,431, selected"
+   "note": "R-7 (TW-99, Q-42, M9 re 42 §1): count before and after, drag with a pause after the press, small moves past the drag threshold and a pause before the release (the drag did not arrive in the reference in run 11); M9 expected: 4|3 -> 5|3, instance 571,371-631,431, selected; R-13 (TW-129 c): panel shown (re-measured) right before the drag, one retry when the count stays 4|3"
   },
   {
    "id": "04_doclib_props_open",

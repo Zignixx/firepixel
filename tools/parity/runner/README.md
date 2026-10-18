@@ -307,7 +307,9 @@ locator measured once from a screenshot of the 1600 × 1000 window.
 dialog that must stay open), `orig.canvas_offset` (optional correction for document → screen),
 `orig.align_state_file` / `orig.align_state_key` (store file of the align panel's 'to canvas' switch, R-2),
 `fp.preview_glob`, `fp.work_dir`, `fp.rect`, `fp.theme`, `fp.language`, `testfile_dir`, `testfiles`
-(T-code → file), `out_dir`, `tmp_dir`, `step_timeout_s`.
+(T-code → file), `out_dir`, `tmp_dir`, `step_timeout_s`, `fp.shortcut_set` (R-13: shortcut set written into
+Firepixel's runner profile, default "Firepixel"), `orig.shortcut_set_pref` (R-13: reference preference holding
+its active set, default `CurrentShortcutSet`).
 
 ## Files
 
@@ -523,3 +525,43 @@ Self test: `python -I runner.py --units _selftest_menu,_selftest_inspector`.
   use them.
 - **Shot regions (TW-124 f):** a region with swapped corners is normalised (`norm_rect`) on both sides instead of
   falling back to the whole window; the Firepixel menu box (`tight_popup`) returns nothing for an inverted result.
+
+## R-13 additions (18.10.)
+
+- **Stored options (TW-127, `xs-preferences/06, 15`):** `{"set_option": {"target", "value": true|false}}` sets a check box
+  whose state persists in the program's profile to a known value instead of toggling it: the state is read (reference:
+  `BM_GETCHECK` on the Win32 control found by the target's locator, e.g. `dialog_label`; Firepixel: `toggled` of the
+  `ui_find` node), the control is clicked only when it differs and read again (up to two clicks, error when it still
+  differs). Values: `{"option", "before", "want", "after", "clicks"}`, also in the run log. The state found first is
+  remembered per side; `{"restore_option": target}` sets it back (no-op with a log line when it is unknown).
+  06 sets 'delete objects when cropping' on and restores the start state in `after`; 15 sets 'scale attributes' on and
+  logs the stroke before and after.
+- **`retry_if` (TW-129):** `{"retry_if": {"check": JSF expr, "retry_when": [values] | "retry_when_falsy": true, "do":
+  [actions], "why", "remeasure"}}` reads the expression on the side; when the value is one of `retry_when` (as text) or
+  means nothing (`""`, `0`, `false`, `null`, `undefined`), `do` runs once (`remeasure`: the reference's page is measured
+  again first) and the value is read again. Logged as `retry_if` {value, retried, value_after}; it never fails the step.
+- **`menu_state` (TW-129 e):** `{"menu_state": "A > B"}` opens the menu up to the parent, reads the last entry's
+  enabled/checked state (reference: popup menu item state; Firepixel: `ui_find` node) and closes the menu again without
+  executing anything. Values `{"menu_state": path, "value": {text, enabled, checked}}`.
+- **Zoom log vs. dialogs (TW-129 a):** the per-step reference zoom log (`view_zoom`, R-7) runs a script, and the script
+  hand-over cancels open dialogs (`origctl.jsf`). In run 17 this closed Feather / Save Bitmap Selection between the
+  actions and the dialog shot (`dialogs-d31-d40/09, 14, 15, 16`: 'no dialog open'). With a dialog open the zoom log is
+  now skipped (`view_zoom: {skipped: …}`). Scripts must not run `log_value`/`jsf` while the dialog to be shot is open:
+  `dialogs-d31-d40/15` reads history and document after the shot.
+- **Marquee steps (`dialogs-d31-d40/09, 10, 14, 15, 16, 18_d40`):** after the marquee drag a `retry_if` logs the
+  document's `isSelectionEmpty` (both sides) and drags once more when it is `true`; on the reference side an
+  `if_no_dialog` (3 s) draws the marquee and invokes the entry again, then `unsupported_if_none`. 10 and 18_d40 had no
+  marquee at all (entry disabled in the reference) and now draw one first.
+- **File dialog wait (TW-129 b):** the reference's `file_dialog` waits up to `wait_ms` (default 6000) for the dialog;
+  `panel-swatches-mixer/06` (both variants) also opens it once more through the panel menu when none appeared within 6 s.
+- **Library drop (TW-129 c, `panel-library-styles/03`):** the panel is shown again right before the drag (its rectangle
+  is measured fresh) and a `retry_if` on the element count drags once more when it is still `4|3`.
+- **Nudge (TW-129 d, `xs-shortcuts/10_nudge_result`):** R1 is selected again (and the selection checked) before every arrow
+  key; Escape after each nudge cleared it. R1's position is read by name together with the selection count.
+- **Snap to pixel (TW-129 e, `xs-canvas/15`):** `15_snap_pixels_result` selects R1 of T04 first (the entry is disabled
+  without a selection; T10 has no vector object); the new `15_snap_pixels_disabled` reads the entry's state with nothing
+  selected on both sides (`menu_state`, no `unsupported`).
+- **Shortcut sets (TW-126):** the set written into Firepixel's profile comes from `fp.shortcut_set` (config, default
+  "Firepixel"). Once per run the log says which set each side uses: `shortcut sets: fp '<set>' (fp.shortcut_set), orig …`
+  - reference: `fw.getPref(orig.shortcut_set_pref)` (default key `CurrentShortcutSet`) when it returns a value, else
+  `unknown (…)`; a dry run does not read it.
