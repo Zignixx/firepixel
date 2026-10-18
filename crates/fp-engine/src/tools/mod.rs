@@ -581,8 +581,10 @@ pub struct ToolOptions {
     pub stroke_well: bool,
     pub text_font: String,
     pub text_size: f32,
-    /// Eigene Textfarbe des Textwerkzeugs (`Text_FillColor`, Werksvorgabe schwarz) – nicht die
-    /// Füllfarbe des Werkzeugbedienfelds.
+    /// Current fill colour of the text tool (its own colour well, factory black) - not the fill
+    /// colour of the tools panel. New text takes it; `Text_FillColor` is written by the colour
+    /// commands but never read for new text (TW-138, re 50 section 2.3; the source of the colour
+    /// is an assumption there).
     #[serde(default = "black")]
     pub text_color: Argb,
     /// Genauigkeit der Freihand-Kurvenanpassung (`PathToolPrecision`, 1..10).
@@ -760,7 +762,8 @@ impl ToolOptions {
             stroke_well: false,
             text_font: default_text_font(p),
             text_size: p.get_real("Text_Size", 12.0) as f32,
-            text_color: p.get_color("Text_FillColor", black()),
+            // not from `Text_FillColor` (re 50 section 2.3)
+            text_color: black(),
             path_precision: p.get_int("PathToolPrecision", 5).clamp(1, 10) as u32,
             opacity: 100,
             new_fill: None,

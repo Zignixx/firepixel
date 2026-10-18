@@ -1,6 +1,7 @@
-//! TW-138: attributes set while the text editor is open change only the marked text, never the
-//! defaults of the text tool. Defaults (app-wide prefs `Text_*`) change only with no editor open:
-//! text objects selected with the pointer, or the text tool with nothing selected.
+//! TW-138 (re 50 section 2): every text attribute command writes its `Text_*` default, with the
+//! editor open (also for a partial selection) and with text selected by the pointer; only
+//! Larger/Smaller write nothing. New text reads every `Text_*` default except `Text_FillColor`:
+//! its colour is the current fill colour of the text tool.
 
 use crate::common::{doc_session, ex, select, top_elements};
 use fp_color::Argb;
@@ -94,40 +95,124 @@ fn factory_defaults() {
     assert_eq!(first_attrs(&s, id), (12.0, BLACK));
 }
 
-#[test]
-fn partial_selection_in_editor_keeps_the_defaults() {
-    let mut s = setup();
+/// Marks "123" of a new "Abc 123" in the open editor.
+fn editor_with_partial_selection(s: &mut Session) {
     s.set_tool(ToolId::Text).expect("text tool");
     s.tool_event(&ToolEvent::down(50.0, 80.0)).expect("down");
     s.tool_event(&ToolEvent::up(50.0, 80.0)).expect("up");
-    send(&mut s, ToolInput::Text("Abc 123".into()));
-    // mark "123"
-    send(&mut s, ToolInput::TextCaret { index: 4, extend: false });
-    send(&mut s, ToolInput::TextCaret { index: 7, extend: true });
+    send(s, ToolInput::Text("Abc 123".into()));
+    send(s, ToolInput::TextCaret { index: 4, extend: false });
+    send(s, ToolInput::TextCaret { index: 7, extend: true });
+}
+
+#[test]
+fn partial_selection_size_becomes_the_default() {
+    let mut s = setup();
+    editor_with_partial_selection(&mut s);
     ex(&mut s, "text.applyAttributes", json!({"size": 72}));
-    ex(&mut s, "text.applyAttributes", json!({"color": "#a0a0a0"}));
-    // the inspector's other entries and the menu behave the same while the editor is open
-    ex(&mut s, "text.setAttributes", json!({"size": 60}));
-    ex(&mut s, "text.size.other", json!({"size": 60}));
     assert!(s.tool_is_editing_text(), "editor stays open");
-    assert_eq!(s.tools.options.text_size, 12.0, "size default unchanged");
-    assert_eq!(s.tools.options.text_color, BLACK, "colour default unchanged");
+    assert_eq!(s.prefs.get_real("Text_Size", 12.0), 72.0, "Text_Size written");
+    assert_eq!(s.tools.options.text_size, 72.0);
     s.tool_event(&ToolEvent::key(ToolKey::Escape)).expect("Esc");
     let first = text_ids(&s)[0];
-    assert_eq!(first_attrs(&s, first), (12.0, BLACK), "\"Abc \" untouched");
-    assert_eq!(
-        last_attrs(&s, first),
-        (60.0, Argb(0xffa0_a0a0)),
-        "\"123\" changed"
-    );
-    // neither the commit nor a tool switch take the attributes over
+    assert_eq!(first_attrs(&s, first).0, 12.0, "\"Abc \" untouched");
+    assert_eq!(last_attrs(&s, first).0, 72.0, "\"123\" changed");
     s.set_tool(ToolId::Pointer).expect("pointer");
+    let next = new_text(&mut s, 50.0, 250.0, "Xyz");
+    assert_eq!(first_attrs(&s, next).0, 72.0, "next text is 72 pt");
+}
+
+#[test]
+fn partial_selection_colour_does_not_colour_new_text() {
+    let mut s = setup();
+    editor_with_partial_selection(&mut s);
+    ex(&mut s, "text.applyAttributes", json!({"color": "#a0a0a0"}));
+    assert_eq!(
+        s.prefs.get_color("Text_FillColor", BLACK),
+        Argb(0xffa0_a0a0),
+        "Text_FillColor written"
+    );
+    assert_eq!(s.tools.options.text_color, BLACK, "fill colour of the tool stays");
+    s.tool_event(&ToolEvent::key(ToolKey::Escape)).expect("Esc");
+    let first = text_ids(&s)[0];
+    assert_eq!(first_attrs(&s, first).1, BLACK);
+    assert_eq!(last_attrs(&s, first).1, Argb(0xffa0_a0a0), "\"123\" grey");
+    s.set_tool(ToolId::Pointer).expect("pointer");
+    let next = new_text(&mut s, 50.0, 250.0, "Xyz");
+    assert_eq!(first_attrs(&s, next).1, BLACK, "next text keeps the fill colour");
+    // a restart does not read `Text_FillColor` either
+    let opts = fp_engine::tools::ToolOptions::from_prefs(&s.prefs);
+    assert_eq!(opts.text_color, BLACK);
+}
+
+#[test]
+fn editor_menu_commands_write_the_defaults() {
+    let mut s = setup();
+    editor_with_partial_selection(&mut s);
+    ex(&mut s, "text.size.other", json!({"size": 60}));
+    ex(&mut s, "text.style.fauxBold", json!({}));
+    ex(&mut s, "text.align.right", json!({}));
+    assert!(s.tool_is_editing_text());
+    assert_eq!(s.prefs.get_real("Text_Size", 12.0), 60.0);
+    assert!(s.prefs.get_bool("Text_Bold", false));
+    assert_eq!(s.prefs.get_int("Text_Justification", 0), 2);
+    // the script setter writes nothing
+    ex(&mut s, "text.setAttributes", json!({"size": 30}));
+    assert_eq!(s.prefs.get_real("Text_Size", 12.0), 60.0);
+    s.tool_event(&ToolEvent::key(ToolKey::Escape)).expect("Esc");
+    s.set_tool(ToolId::Pointer).expect("pointer");
+    let next = new_text(&mut s, 50.0, 250.0, "Xyz");
+    let e = top_elements(&s).into_iter().find(|e| e.id == next).expect("text");
+    let ElementKind::Text(t) = &e.kind else { panic!("no text") };
+    let a = t.resolved_runs()[0].0.clone();
+    assert_eq!((a.size, a.bold, a.alignment), (Some(60.0), Some(true), Some(2)));
+}
+
+#[test]
+fn larger_smaller_write_no_default() {
+    let mut s = setup();
+    let v = ex(
+        &mut s,
+        "draw.text",
+        json!({"text": "Abc", "anchor": [50, 80], "size": 24}),
+    );
+    let id = ElementId(v["id"].as_u64().unwrap_or(0));
+    s.set_tool(ToolId::Pointer).expect("pointer");
+    select(&mut s, &[id]);
+    ex(&mut s, "text.size.larger", json!({}));
+    assert_eq!(first_attrs(&s, id).0, 25.0);
+    assert_eq!(s.prefs.get_real("Text_Size", 12.0), 12.0, "pointer: unchanged");
     assert_eq!(s.tools.options.text_size, 12.0);
-    assert_eq!(s.prefs.get_real("Text_Size", 12.0), 12.0);
-    assert_eq!(s.prefs.get_color("Text_FillColor", BLACK), BLACK);
-    let next = new_text(&mut s, 50.0, 250.0, "Abc 123");
-    assert_eq!(first_attrs(&s, next), (12.0, BLACK), "next text keeps old defaults");
-    assert_eq!(last_attrs(&s, next), (12.0, BLACK));
+    editor_with_partial_selection(&mut s);
+    ex(&mut s, "text.size.larger", json!({}));
+    ex(&mut s, "text.size.smaller", json!({}));
+    ex(&mut s, "text.size.smaller", json!({}));
+    assert_eq!(s.prefs.get_real("Text_Size", 12.0), 12.0, "editor: unchanged");
+    assert_eq!(s.tools.options.text_size, 12.0);
+}
+
+#[test]
+fn text_menu_bold_with_pointer_selection_writes_the_default() {
+    let mut s = setup();
+    let v = ex(
+        &mut s,
+        "draw.text",
+        json!({"text": "Abc", "anchor": [50, 80], "size": 24}),
+    );
+    let id = ElementId(v["id"].as_u64().unwrap_or(0));
+    s.set_tool(ToolId::Pointer).expect("pointer");
+    select(&mut s, &[id]);
+    ex(&mut s, "text.style.fauxBold", json!({}));
+    assert!(s.prefs.get_bool("Text_Bold", false), "Text_Bold written");
+    ex(&mut s, "text.style.fauxBold", json!({}));
+    assert!(!s.prefs.get_bool("Text_Bold", true), "toggled off again");
+    ex(&mut s, "text.size.36", json!({}));
+    assert_eq!(s.prefs.get_real("Text_Size", 12.0), 36.0);
+    ex(&mut s, "text.align.centeredHorizontally", json!({}));
+    assert_eq!(s.prefs.get_int("Text_Justification", 0), 1);
+    ex(&mut s, "text.style.underline", json!({}));
+    ex(&mut s, "text.style.plain", json!({}));
+    assert!(!s.prefs.get_bool("Text_Underline", true));
 }
 
 #[test]

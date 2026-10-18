@@ -3063,9 +3063,15 @@ fn tool_style(st: &AppState, key: &str) -> bool {
     st.session.prefs.get_bool(key, false)
 }
 
-/// Alignment default of the text tool (`Text_Justification`, factory value left).
+/// Alignment default of the text tool (`Text_Justification`, factory value left) as new text gets
+/// it: a stored "stretched" (4) shows left (TW-133).
 fn tool_align(st: &AppState) -> i32 {
-    st.session.prefs.get_int("Text_Justification", 0) as i32
+    fp_engine::commands::effective_alignment(
+        st.session
+            .prefs
+            .get_int("Text_Justification", 0)
+            .clamp(0, 4) as i32,
+    )
 }
 
 /// Zeilenabstand des Textwerkzeugs aus den Voreinstellungen (fp-engine legt ihn auf neue Texte).
@@ -3138,8 +3144,8 @@ pub fn apply_text_tool_defaults(ctx: &egui::Context, st: &mut AppState) {
 }
 
 fn set_text(_ui: &Ui, st: &mut AppState, _tgt: Target, p: Value) {
-    // fp-engine decides (TW-138): open text editor → only the marked text (defaults stay); text
-    // objects selected → those texts and the defaults; nothing selected → only the defaults
+    // fp-engine decides (TW-138): open text editor → the marked text, text objects selected →
+    // those texts; in every case the `Text_*` defaults (new text ignores `Text_FillColor`)
     st.run("text.applyAttributes", p);
 }
 

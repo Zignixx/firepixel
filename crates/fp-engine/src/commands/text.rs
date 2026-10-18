@@ -120,18 +120,21 @@ fn has_text_on_path(s: &Session) -> bool {
     })
 }
 
-/// Mit Textauswahl die Texte ändern, sonst die Vorgaben des Textwerkzeugs (wie das Original).
+/// Text attribute command without open editor: with selected text change those texts; the
+/// defaults of the text tool (`Text_*`) are written in every case (TW-138, re 50 section 2.2).
 fn texts_or_defaults(
     s: &mut Session,
     on_text: impl Fn(&mut TextElem),
     on_defaults: impl FnOnce(&mut Session),
 ) -> Result<CommandOutput> {
-    if has_text(s) {
-        return edit_texts(s, on_text);
-    }
+    let out = if has_text(s) {
+        edit_texts(s, on_text)?
+    } else {
+        CommandOutput::session()
+    };
     on_defaults(s);
     s.prefs_changed();
-    Ok(CommandOutput::session())
+    Ok(out)
 }
 
 /// Familienname zu einem Schriftnamen (PostScript- oder Familienname); unbekannt → unverändert.
@@ -187,6 +190,20 @@ pub fn new_text_pref_attrs(prefs: &crate::prefs::Preferences) -> TextAttrs {
     if just != 0 {
         a.alignment = Some(just);
     }
+    let on = |k: &str| prefs.get_bool(k, false).then_some(true);
+    a.bold = on("Text_Bold");
+    a.italic = on("Text_Italic");
+    a.underline = on("Text_Underline");
+    let real = |k: &str, d: f64| {
+        let v = prefs.get_real(k, d);
+        ((v - d).abs() > 1e-6).then_some(v as f32)
+    };
+    a.tracking = real("Text_RangeKerning", 0.0);
+    a.indent = real("Text_ParagraphIndent", 0.0);
+    a.space_before = real("Text_ParagraphSpacingBefore", 0.0);
+    a.space_after = real("Text_ParagraphSpacingAfter", 0.0);
+    a.horizontal_scale = real("Text_HorizScale", 1.0);
+    a.baseline_shift = real("Text_BaselineShift", 0.0);
     a
 }
 
@@ -432,7 +449,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
             )
             .run(|s, p| {
                 use crate::prefs::PrefValue;
-                store_text_tool_defaults(s, p)?;
+                store_text_tool_defaults(s, p, true)?;
                 if let Some(n) = p.opt_str("antialias")? {
                     let v = antialias_code(&n);
                     s.prefs.set("Text_AntiAliasedFill", PrefValue::Bool(v >= 0));
@@ -609,14 +626,16 @@ pub(super) fn register(r: &mut CommandRegistry) {
                     // Toggle over the whole pointer selection (re 46 §1.3): only when every
                     // selected text already has the style everywhere is it removed, else set on
                     // all runs of all selected texts.
-                    let on = !all_texts_have(s, get);
+                    // Without selected text the default toggles.
+                    let on = if has_text(s) {
+                        !all_texts_have(s, get)
+                    } else {
+                        !current_style(s, key)
+                    };
                     texts_or_defaults(
                         s,
                         move |t| set_attr(t, &move |a| set(a, on)),
-                        move |s| {
-                            let on = !current_style(s, key);
-                            s.prefs.set(key, crate::prefs::PrefValue::Bool(on));
-                        },
+                        move |s| s.prefs.set(key, crate::prefs::PrefValue::Bool(on)),
                     )
                 }),
         );
@@ -1061,10 +1080,10 @@ pub(super) fn register(r: &mut CommandRegistry) {
         )
         .run(set_attributes),
     );
-    // Inspector entry (TW-138): with the text editor open the attributes go to the editor only
-    // (routed by `Session::execute`, see `editor_patch`) and never change the defaults; with text
-    // objects selected they change those texts and become the defaults; with nothing selected they
-    // only set the defaults of the text tool.
+    // Inspector entry (TW-138, re 50 section 2): with the text editor open the attributes go to
+    // the marked text (routed by `Session::execute`, see `editor_patch`), with text objects
+    // selected to those texts; in every case they become the defaults (`Text_*`). With nothing
+    // selected they only set the defaults.
     r.add(
         text_attr_opts(
             cmd("text.applyAttributes")
@@ -1074,11 +1093,11 @@ pub(super) fn register(r: &mut CommandRegistry) {
         .run(|s, p| {
             if has_text(s) {
                 let out = set_attributes(s, p)?;
-                store_text_tool_defaults(s, p)?;
+                store_text_tool_defaults(s, p, true)?;
                 s.prefs_changed();
                 return Ok(out);
             }
-            store_text_tool_defaults(s, p)?;
+            store_text_tool_defaults(s, p, true)?;
             s.prefs_changed();
             Ok(CommandOutput::session())
         }),
@@ -1291,7 +1310,10 @@ fn set_attributes(s: &mut Session, p: &Params) -> Result<CommandOutput> {
 }
 
 /// Stores text attributes as the defaults of the text tool (prefs `Text_*`, app-wide; TW-138).
-fn store_text_tool_defaults(s: &mut Session, p: &Params) -> Result<()> {
+/// New text never reads `Text_FillColor` (re 50 section 2.3): its colour is the current fill colour
+/// of the text tool (`tools.options.text_color`), which `tool_color` also sets - not for a
+/// partial selection in the open editor.
+fn store_text_tool_defaults(s: &mut Session, p: &Params, tool_color: bool) -> Result<()> {
     use crate::prefs::PrefValue;
     if let Some(f) = p.opt_str("font")? {
         let family = font_family_of(&f);
@@ -1307,7 +1329,9 @@ fn store_text_tool_defaults(s: &mut Session, p: &Params) -> Result<()> {
     if let Some(c) = p.opt_color("color")? {
         let hex = fp_color::Rgba8::from(c).to_hex_rgba();
         s.prefs.set("Text_FillColor", PrefValue::Str(hex));
-        s.tools.options.text_color = c;
+        if tool_color {
+            s.tools.options.text_color = c;
+        }
     }
     for (k, pref) in [
         ("bold", "Text_Bold"),
@@ -1344,6 +1368,69 @@ const TEXT_TOOL_REAL_PREFS: [(&str, &str); 7] = [
     ("horizontalScale", "Text_HorizScale"),
     ("baselineShift", "Text_BaselineShift"),
 ];
+
+/// Text attribute command routed to the open text editor: writes the `Text_*` defaults like
+/// without editor (TW-138, re 50 section 2.2) - the size, font, style and alignment of a partial
+/// selection become the defaults of new text. Larger/Smaller (1 pt steps) and the script setter
+/// `text.setAttributes` write nothing; a colour is stored in `Text_FillColor` only (new text
+/// keeps the fill colour of the text tool).
+pub(crate) fn store_editor_prefs(
+    s: &mut Session,
+    name: &str,
+    params: &serde_json::Value,
+    patch: &TextAttrs,
+) -> Result<()> {
+    use crate::prefs::PrefValue;
+    match name {
+        "text.size.larger" | "text.size.smaller" | "text.setAttributes" => return Ok(()),
+        "text.applyAttributes" => {
+            store_text_tool_defaults(s, &Params::new(name, params.clone()), false)?;
+        }
+        _ => {
+            if let Some(code) = name
+                .strip_prefix("text.align.")
+                .and_then(horizontal_align_code)
+            {
+                // editor: only `Text_Justification` (re 50 section 2.2), as given (also 4)
+                s.prefs
+                    .set("Text_Justification", PrefValue::Int(code as i64));
+            }
+            if let Some(f) = &patch.font {
+                let family = font_family_of(f);
+                s.prefs
+                    .values
+                    .insert("Text_Font".to_string(), PrefValue::Str(family.clone()));
+                s.tools.options.text_font = family;
+            }
+            if let Some(v) = patch.size {
+                set_default_size(s, v);
+            }
+            for (v, key) in [
+                (patch.bold, "Text_Bold"),
+                (patch.italic, "Text_Italic"),
+                (patch.underline, "Text_Underline"),
+            ] {
+                if let Some(v) = v {
+                    s.prefs.set(key, PrefValue::Bool(v));
+                }
+            }
+        }
+    }
+    s.prefs_changed();
+    Ok(())
+}
+
+/// Code of a horizontal Text > Align command (`text.align.<name>`).
+fn horizontal_align_code(name: &str) -> Option<i32> {
+    match name {
+        "left" => Some(0),
+        "centeredHorizontally" => Some(1),
+        "right" => Some(2),
+        "justified" => Some(3),
+        "stretched" => Some(4),
+        _ => None,
+    }
+}
 
 /// Menü-/Inspektor-Befehl als Attributänderung für den offenen Text-Editor (`cur` = Attribute an
 /// der Markierung): `text.setAttributes` (ohne `ids`), `text.font`, `text.size.*`, `text.style.*`,

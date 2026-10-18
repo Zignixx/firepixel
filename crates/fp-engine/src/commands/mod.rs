@@ -38,7 +38,7 @@ pub use export::PageSetup;
 pub use file::{load_document, save_document};
 pub use filters::{FILTERS, whole_numbers_as_ints};
 pub use select::restore_bitmap_selection_preview;
-pub(crate) use text::editor_patch;
+pub(crate) use text::{editor_patch, store_editor_prefs};
 pub use text::{effective_alignment, new_text_pref_attrs, tool_text_defaults};
 
 use crate::command::{CommandRegistry, Requirement};

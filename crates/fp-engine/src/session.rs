@@ -754,17 +754,19 @@ impl Session {
         }
         // Offener Text-Editor: Textattribute aus Inspektor und Menü „Text“ gehen live an den
         // Editor (Markierung bzw. ganzer Text), der Editor bleibt offen; kein Verlaufsschritt –
-        // übernommen wird beim Beenden der Bearbeitung.
+        // übernommen wird beim Beenden der Bearbeitung. The `Text_*` defaults are written as
+        // without editor (TW-138).
         if let Some(cur) = self.tools.machine.text_edit_attrs()
             && let Some(patch) = crate::commands::editor_patch(name, &params, &cur)
         {
             let ev = ToolEvent {
-                input: tools::ToolInput::Edit(tools::EditOp::Attrs(patch)),
+                input: tools::ToolInput::Edit(tools::EditOp::Attrs(patch.clone())),
                 mods: Default::default(),
                 pressure: 1.0,
                 time_ms: 0,
             };
             self.tool_event(&ev)?;
+            crate::commands::store_editor_prefs(self, name, &params, &patch)?;
             self.events.push(SessionEvent::CommandExecuted(name.into()));
             return Ok(CommandOutput::value(Value::Null));
         }
