@@ -271,6 +271,7 @@ batch-ui-sort-size = Size
 batch-ui-sort-pixels = Pixels
 batch-ui-sort-manual = Manual order
 batch-ui-file-keys = Space: on/off · Enter: preview · Del: remove · Ctrl+A: all on
+batch-ui-file-progress = { $p }%
 batch-ui-file-drag = Drag to reorder (Ctrl+Up/Down)
 # Recipe card
 batch-ui-recipe-title = Recipe

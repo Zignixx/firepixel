@@ -24,7 +24,8 @@ type AskReq = (PlanEntry, Sender<(AskChoice, bool)>);
 
 /// Laufender Auftrag.
 pub struct RunState {
-    handle: fp_batch::JobHandle,
+    /// The job (None: a run driven by [`apply_events`] alone, e.g. in tests).
+    handle: Option<fp_batch::JobHandle>,
     /// Index im Auftrag → Index in `files`.
     pub map: Vec<usize>,
     pub total: usize,
@@ -37,21 +38,43 @@ pub struct RunState {
     pub cancelling: bool,
     /// Geglättete Restzeit (Zeitpunkt der Schätzung, Sekunden), siehe [`RunState::update_eta`].
     eta: Option<(Instant, f64)>,
+    /// Sum of the progress of the running files (0..1 each, from `Progress::ItemProgress`).
+    pub partial: f32,
 }
 
 impl RunState {
+    /// A run without a job thread: progress comes only through [`apply_events`]; it ends when
+    /// cancelled or when `Progress::Finished` arrives (tests of the progress display).
+    pub fn detached(map: Vec<usize>) -> RunState {
+        let (_tx, ask_rx) = channel::<AskReq>();
+        RunState {
+            handle: None,
+            total: map.len(),
+            map,
+            finished: 0,
+            started: Instant::now(),
+            ask_rx,
+            ask: None,
+            ask_all: false,
+            cancelling: false,
+            eta: None,
+            partial: 0.0,
+        }
+    }
     pub fn cancel(&self) {
-        self.handle.cancel();
+        if let Some(h) = &self.handle {
+            h.cancel();
+        }
         if let Some((_, tx)) = &self.ask {
             let _ = tx.send((AskChoice::Skip, true));
         }
     }
-    /// Anteil fertig.
+    /// Anteil fertig (finished files plus the progress of the running ones).
     pub fn fraction(&self) -> f32 {
         if self.total == 0 {
             0.0
         } else {
-            self.finished as f32 / self.total as f32
+            ((self.finished as f32 + self.partial) / self.total as f32).clamp(0.0, 1.0)
         }
     }
     /// Geschätzte Restzeit in Sekunden: letzte Schätzung, seitdem heruntergezählt.
@@ -63,11 +86,13 @@ impl RunState {
     /// heruntergezählten alten Schätzung gemittelt (gleitender Mittelwert, SPEC §2.8). Ohne Glättung
     /// sprang die Restzeit bei parallelen Läufen stark (0:58 → 3:59 → 0:47, BATCH-T).
     pub fn update_eta(&mut self) {
-        if self.finished == 0 || self.total == 0 {
+        // finished files plus the parts of the running ones (per-file progress, BA-107)
+        let done = self.finished as f64 + self.partial as f64;
+        if done <= 0.01 || self.total == 0 {
             return;
         }
-        let per = self.started.elapsed().as_secs_f64() / self.finished as f64;
-        let raw = per * self.total.saturating_sub(self.finished) as f64;
+        let per = self.started.elapsed().as_secs_f64() / done;
+        let raw = per * (self.total as f64 - done).max(0.0);
         let est = match self.remaining() {
             Some(prev) if self.finished < self.total => 0.35 * raw + 0.65 * prev,
             _ => raw,
@@ -140,6 +165,7 @@ pub fn start(s: &mut Studio, now: f64) {
         f.status = EntryStatus::Waiting;
         f.message = None;
         f.target = None;
+        f.progress = 0.0;
     }
     let (ask_tx, ask_rx) = channel::<AskReq>();
     let ask: Arc<fp_batch::executor::AskFn> = Arc::new(move |e: &PlanEntry| {
@@ -157,7 +183,8 @@ pub fn start(s: &mut Studio, now: f64) {
     let handle = fp_batch::spawn(s.recipe.clone(), items, opts);
     let total = map.len();
     s.run = Some(RunState {
-        handle,
+        handle: Some(handle),
+        partial: 0.0,
         map,
         total,
         finished: 0,
@@ -184,11 +211,30 @@ pub fn poll(ctx: &egui::Context, s: &mut Studio, now: f64) {
         run.ask = Some(req);
     }
     // Ist der Thread schon fertig, kommen danach keine Ereignisse mehr: erst prüfen, dann leeren
-    let thread_done = run.handle.is_finished();
-    let events: Vec<Progress> = run.handle.events.try_iter().collect();
+    let thread_done = match &run.handle {
+        Some(h) => h.is_finished(),
+        None => run.cancelling,
+    };
+    let events: Vec<Progress> = run
+        .handle
+        .as_ref()
+        .map(|h| h.events.try_iter().collect())
+        .unwrap_or_default();
+    let finished = apply_events(s, events);
+    if finished.is_none() && !thread_done {
+        return;
+    }
+    finish(ctx, s, finished, now);
+}
+
+/// Applies progress events of the run to the list (status, per-file progress, ETA). Returns the
+/// report when `Progress::Finished` arrived.
+pub fn apply_events(s: &mut Studio, events: Vec<Progress>) -> Option<fp_batch::Report> {
+    let run = s.run.as_mut()?;
     let map = run.map.clone();
     let mut finished: Option<fp_batch::Report> = None;
     let finished_before = run.finished;
+    let mut progressed = false;
     for ev in events {
         let idx = |k: usize| map.get(k).copied();
         match ev {
@@ -196,9 +242,17 @@ pub fn poll(ctx: &egui::Context, s: &mut Studio, now: f64) {
             Progress::ItemStarted { index } => {
                 if let Some(i) = idx(index) {
                     s.files[i].status = EntryStatus::Running;
+                    s.files[i].progress = 0.0;
                 }
             }
-            Progress::ItemProgress { .. } => {}
+            Progress::ItemProgress { index, fraction } => {
+                if let Some(i) = idx(index)
+                    && fraction.is_finite()
+                {
+                    s.files[i].progress = fraction.clamp(0.0, 1.0);
+                    progressed = true;
+                }
+            }
             Progress::ItemDone { index, target, .. } => {
                 run.finished += 1;
                 if let Some(i) = idx(index) {
@@ -235,17 +289,27 @@ pub fn poll(ctx: &egui::Context, s: &mut Studio, now: f64) {
             Progress::Finished(r) => finished = Some(*r),
         }
     }
-    if run.finished != finished_before {
+    run.partial = map
+        .iter()
+        .filter(|&&i| s.files[i].status == EntryStatus::Running)
+        .map(|&i| s.files[i].progress)
+        .sum();
+    if run.finished != finished_before || progressed {
         run.update_eta();
     }
-    if finished.is_none() && !thread_done {
-        return;
-    }
+    finished
+}
+
+/// End of the run: take over the report or report the error of the whole job.
+fn finish(ctx: &egui::Context, s: &mut Studio, mut finished: Option<fp_batch::Report>, now: f64) {
     // Ende: Bericht übernehmen bzw. Fehler des ganzen Auftrags melden
     let Some(run) = s.run.take() else { return };
+    let map = run.map.clone();
     let mut error = None;
-    if finished.is_none() {
-        match run.handle.join() {
+    if finished.is_none()
+        && let Some(h) = run.handle
+    {
+        match h.join() {
             Ok(r) => finished = Some(r),
             Err(e) => error = Some(e.to_string()),
         }

@@ -531,3 +531,67 @@ fn help_names_the_section_of_the_step() {
     let n = studio(&mut h).notice.clone().expect("notice");
     assert!(n.text.contains(&section), "{}", n.text);
 }
+
+// ------------------------------------------------------------------ 5. per-file progress
+
+#[test]
+fn per_file_progress_eta_and_cancel() {
+    use fp_batch::Progress;
+    use fp_ui::batch::output_bar::{self, RunState};
+    let d = dir("progress");
+    let files: Vec<PathBuf> = ["p1.png", "p2.png", "p3.png"].iter().map(|n| png_file(&d, n, 40, 30, false)).collect();
+    let mut h = open(&files);
+    let map = studio(&mut h).to_process();
+    studio(&mut h).run = Some(RunState::detached(map));
+    output_bar::apply_events(studio(&mut h), vec![Progress::Started { total: 3 }, Progress::ItemStarted { index: 0 }, Progress::ItemProgress { index: 0, fraction: 0.42 }]);
+    h.run_steps(2);
+    assert_eq!(studio(&mut h).files[0].status, batch::EntryStatus::Running);
+    let pct = batch::files::progress_label(0.42);
+    assert!(has_text(&h, &pct), "row shows {pct}");
+    let run = studio(&mut h).run.as_ref().expect("run");
+    assert!((run.fraction() - 0.14).abs() < 0.001, "overall bar includes the running part");
+    // the remaining time appears once a part is done
+    std::thread::sleep(std::time::Duration::from_millis(30));
+    output_bar::apply_events(studio(&mut h), vec![Progress::ItemProgress { index: 0, fraction: 0.6 }]);
+    h.run_steps(2);
+    assert!(studio(&mut h).run.as_ref().and_then(|r| r.remaining()).is_some(), "ETA estimated from partial progress");
+    let remaining_word = fp_i18n::tr!("batch-ui-remaining", time = "0:00".to_string()).replace("0:00", "");
+    assert!(has_text(&h, remaining_word.trim()), "ETA in the footer");
+    // first file done, second running
+    output_bar::apply_events(studio(&mut h), vec![Progress::ItemDone { index: 0, target: d.join("out1.png"), bytes_out: 10 }, Progress::ItemStarted { index: 1 }, Progress::ItemProgress { index: 1, fraction: 0.25 }]);
+    h.run_steps(2);
+    assert_eq!(studio(&mut h).files[0].status, batch::EntryStatus::Done);
+    assert!(has_text(&h, &batch::files::progress_label(0.25)));
+    assert!(!has_text(&h, &pct), "no percentage on a finished row");
+    assert!(has_text(&h, &fp_i18n::tr!("batch-ui-progress", done = 1, total = 3)));
+    // nonsense from the executor is clamped
+    output_bar::apply_events(studio(&mut h), vec![Progress::ItemProgress { index: 1, fraction: 7.0 }, Progress::ItemProgress { index: 9, fraction: 0.5 }]);
+    assert_eq!(studio(&mut h).files[1].progress, 1.0);
+    // Cancel still works: the run ends, finished files keep their status
+    let cancel = h.query_all(By::new().label(&t("batch-ui-cancel"))).map(|n| n.rect()).next().expect("Cancel");
+    click(&mut h, cancel.center());
+    h.run_steps(3);
+    assert!(studio(&mut h).run.is_none(), "run ended");
+    let st: Vec<_> = studio(&mut h).files.iter().map(|f| f.status).collect();
+    assert_eq!(st, [batch::EntryStatus::Done, batch::EntryStatus::Cancelled, batch::EntryStatus::Cancelled]);
+}
+
+#[test]
+fn real_run_resets_progress_and_finishes() {
+    let d = dir("realrun");
+    let files: Vec<PathBuf> = ["r1.png", "r2.png"].iter().map(|n| png_file(&d, n, 40, 30, false)).collect();
+    let mut h = open(&files);
+    studio(&mut h).files[0].progress = 0.7;
+    let now = h.ctx.input(|i| i.time);
+    batch::output_bar::start(studio(&mut h), now);
+    assert_eq!(studio(&mut h).files[0].progress, 0.0, "a new run starts at 0");
+    for _ in 0..600 {
+        h.run_steps(1);
+        if !studio(&mut h).running() {
+            break;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(10));
+    }
+    assert!(!studio(&mut h).running());
+    assert!(studio(&mut h).files.iter().all(|f| f.status == batch::EntryStatus::Done), "{:?}", studio(&mut h).files.iter().map(|f| (f.status, f.message.clone())).collect::<Vec<_>>());
+}

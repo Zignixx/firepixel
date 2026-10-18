@@ -1118,6 +1118,12 @@ fn file_list(
     }
 }
 
+/// Percentage of a running file ("42 %" / "42%").
+pub fn progress_label(fraction: f32) -> String {
+    let p = (fraction.clamp(0.0, 1.0) * 100.0).floor() as u32;
+    fp_i18n::tr!("batch-ui-file-progress", p = p)
+}
+
 /// Eine Zeile: Kästchen, Miniatur 36 px, Name, Maße · Größe · Format, Zustand rechts.
 #[allow(clippy::too_many_arguments)]
 fn file_row(
@@ -1327,6 +1333,10 @@ fn file_row(
         name_col,
     );
     let mut meta = Vec::new();
+    // while running: percentage first, a thin bar along the bottom of the row (BA-107)
+    if e.status == EntryStatus::Running {
+        meta.push(progress_label(e.progress));
+    }
     if e.info.width > 0 {
         meta.push(format!("{}×{}", e.info.width, e.info.height));
     }
@@ -1398,6 +1408,23 @@ fn file_row(
         );
     }
     let p = ui.painter();
+    if e.status == EntryStatus::Running {
+        let bar = Rect::from_min_max(
+            pos2(x, rect.bottom() - 4.0),
+            pos2(rect.right() - sp::XS - status_w, rect.bottom() - 2.0),
+        );
+        if bar.width() > 8.0 {
+            p.rect_filled(bar, CornerRadius::same(1), with_alpha(c.focus, 50));
+            p.rect_filled(
+                Rect::from_min_size(
+                    bar.min,
+                    vec2(bar.width() * e.progress.clamp(0.0, 1.0), bar.height()),
+                ),
+                CornerRadius::same(1),
+                c.focus,
+            );
+        }
+    }
     kit::status_mark(
         p,
         pos2(rect.right() - sp::XS - 8.0, rect.center().y),
