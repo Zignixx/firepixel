@@ -455,3 +455,79 @@ fn enter_in_narrow_layout_switches_to_preview_tab() {
     assert_eq!(studio(&mut h).narrow_tab, 2, "single column: tab Preview");
     assert!(find_text(&h, "y.png").is_none() || studio(&mut h).selected == Some(1));
 }
+
+// ------------------------------------------------------------------ 4. card menu
+
+fn open_step_menu(h: &mut H) {
+    let m = h.query_all(By::new().label(&t("batch-ui-step-menu"))).map(|n| n.rect()).next().expect("card menu ⋯");
+    click(h, m.center());
+}
+
+#[test]
+fn save_step_as_template_appears_in_template_list() {
+    let d = dir("tpl");
+    let mut h = open(&[png_file(&d, "a.png", 40, 30, false)]);
+    studio(&mut h).edit("add", |r| {
+        r.add_step("resize", json!({"mode": "longEdge", "size": 777}));
+        true
+    });
+    studio(&mut h).end_gesture();
+    h.run_steps(2);
+    open_step_menu(&mut h);
+    let item = find_text(&h, &t("batch-ui-step-save-template")).expect("menu entry");
+    click(&mut h, item.center());
+    assert!(studio(&mut h).template_prompt.is_some(), "name prompt open");
+    assert!(has_text(&h, &t("batch-ui-template-title")));
+    // Esc cancels without writing
+    key(&mut h, Key::Escape, Modifiers::NONE);
+    assert!(studio(&mut h).template_prompt.is_none());
+    open_step_menu(&mut h);
+    let item = find_text(&h, &t("batch-ui-step-save-template")).expect("menu entry");
+    click(&mut h, item.center());
+    h.run_steps(2);
+    let name = format!("Web 777 {}", std::process::id());
+    key(&mut h, Key::A, Modifiers::COMMAND);
+    type_text(&mut h, &name);
+    key(&mut h, Key::Enter, Modifiers::NONE);
+    assert!(studio(&mut h).template_prompt.is_none(), "Enter saves");
+    let file = batch::step_menu::template_dir().expect("folder").join(format!("{name}.fpbatch.json"));
+    assert!(file.is_file(), "template written: {}", file.display());
+    let r = fp_batch::Recipe::load(&file).expect("recipe");
+    assert_eq!((r.name.as_str(), r.steps.len(), r.steps[0].params["size"].clone()), (name.as_str(), 1, json!(777)));
+    assert!(has_text(&h, &fp_i18n::tr!("batch-ui-template-saved", name = name.clone())));
+    // listed with the templates; choosing it loads the recipe
+    let tpl = batch::templates().into_iter().find(|t| t.title == name).expect("in the template list");
+    assert_eq!(tpl.recipe.steps[0].id, "resize");
+    let menu = h.query_all(By::new().label(&t("batch-ui-recipes"))).map(|n| n.rect()).next().expect("Recipes ▾");
+    click(&mut h, menu.center());
+    let entry = find_text(&h, &name).expect("template in the Recipes menu");
+    click(&mut h, entry.center());
+    assert_eq!(studio(&mut h).recipe.name, name);
+    let _ = std::fs::remove_file(file);
+}
+
+#[test]
+fn help_names_the_section_of_the_step() {
+    // the section lookup on the real documentation
+    let (file, section) = batch::step_menu::help_section("file.filterSkip").expect("docs/BATCH.md found");
+    assert!(file.ends_with("BATCH.md"));
+    let section = section.expect("section");
+    assert!(section.starts_with("3.1"), "{section}");
+    assert!(batch::step_menu::help_section("resize").and_then(|x| x.1).is_some_and(|s| s.starts_with("3.3")));
+    assert_eq!(batch::step_menu::section_for("# A\n## B\n| `x.y` | X |\n", "x.y").as_deref(), Some("B"));
+    // the menu entry opens it (shell disabled in tests) and names the section
+    let d = dir("help");
+    let mut h = open(&[png_file(&d, "a.png", 40, 30, false)]);
+    studio(&mut h).edit("add", |r| {
+        r.add_step("file.filterSkip", json!({}));
+        true
+    });
+    studio(&mut h).end_gesture();
+    h.run_steps(2);
+    open_step_menu(&mut h);
+    // the main menu bar has a "Help" too: the menu entry is the last one drawn
+    let item = texts(&h).into_iter().filter(|(x, _)| *x == t("batch-ui-step-help")).map(|(_, r)| r).next_back().expect("Help entry");
+    click(&mut h, item.center());
+    let n = studio(&mut h).notice.clone().expect("notice");
+    assert!(n.text.contains(&section), "{}", n.text);
+}

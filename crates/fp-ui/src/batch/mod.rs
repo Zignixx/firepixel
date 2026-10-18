@@ -32,6 +32,7 @@ pub mod recipe;
 pub mod rename_ui;
 pub mod report_ui;
 pub mod settings; // BATCH-11a: Einstellungen (ffmpeg), Rückfrage beim Schließen
+pub mod step_menu; // BA-107: card menu "Save as Template…" and "Help"
 mod thumbs;
 pub mod timeline; // BATCH-7
 
@@ -207,6 +208,8 @@ pub struct Studio {
     /// The file list has the keyboard (row clicked or navigated with the arrows): Space and Enter
     /// act on the selected row, which shows the focus ring (BA-107).
     pub list_focus: bool,
+    /// Open "Save as Template" name prompt (card menu, BA-107).
+    pub template_prompt: Option<step_menu::TemplatePrompt>,
     pub(crate) last_active_doc: Option<fp_engine::DocId>,
     pub(crate) files_version: u64,
     order_cache: Option<(u64, Vec<usize>)>,
@@ -231,6 +234,7 @@ impl Studio {
     /// Neues, leeres Studio.
     pub fn new(mode: Mode) -> Studio {
         rename_ui::register();
+        register_templates(step_menu::user_templates);
         let recipe = Recipe::default();
         let saved_json = recipe.to_json();
         Studio {
@@ -267,6 +271,7 @@ impl Studio {
             drag: None,
             file_drag: None,
             list_focus: false,
+            template_prompt: None,
             last_active_doc: None,
             files_version: 0,
             order_cache: None,
@@ -991,8 +996,8 @@ fn keyboard(ctx: &egui::Context, st: &mut AppState, now: f64) {
     let Some(s) = st.batch.as_mut() else { return };
     let ctrl = Modifiers::COMMAND;
     // Esc schließt Überlagerungen (Einstellungen, Galerie, Ende-Karte), nie den Lauf
-    if s.close_ask.is_some() {
-        return; // Rückfrage beim Schließen: Esc wertet die Überlagerung selbst aus
+    if s.close_ask.is_some() || s.template_prompt.is_some() {
+        return; // Rückfrage beim Schließen / Vorlagenname: Esc wertet die Überlagerung selbst aus
     }
     if s.settings.is_some() {
         if consume(ctx, Modifiers::NONE, Key::Escape) {
@@ -1410,6 +1415,7 @@ pub fn show(ui: &mut Ui, st: &mut AppState, rect: Rect) {
         output_bar::ask_overlay(ui, &mut s, rect); // Rückfrage beim Schließen liegt darüber
     }
     settings::show(ui, st, &mut s, rect, now);
+    step_menu::prompt_overlay(ui, &mut s, rect, now);
     if s.close_requested {
         settings::may_close_studio(&mut s); // läuft ein Auftrag: erst fragen
     }

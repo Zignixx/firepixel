@@ -45,6 +45,8 @@ enum Act {
     Duplicate(usize),
     Move(usize, usize),
     PickPath(usize, String),
+    SaveTemplate(usize),
+    Help(usize),
 }
 
 /// Erscheint ein Schritt im Anfänger-Modus? (mindestens ein Parameter mit `beginner()` oder gar keine Parameter)
@@ -228,7 +230,7 @@ pub fn show(ui: &mut Ui, st: &mut AppState, s: &mut Studio, rect: Rect, now: f64
         }
     }
     for a in acts {
-        apply(st, s, a);
+        apply(st, s, a, now);
     }
 }
 
@@ -265,7 +267,7 @@ pub fn insert_index(rects: &[Rect], y: f32, from: usize) -> usize {
     to
 }
 
-fn apply(st: &mut AppState, s: &mut Studio, a: Act) {
+fn apply(st: &mut AppState, s: &mut Studio, a: Act, now: f64) {
     s.end_gesture();
     match a {
         Act::Toggle(i) => {
@@ -305,6 +307,8 @@ fn apply(st: &mut AppState, s: &mut Studio, a: Act) {
                 s.open_card = Some(CardId::Step(to));
             }
         }
+        Act::SaveTemplate(i) => super::step_menu::ask_template_name(s, i),
+        Act::Help(i) => super::step_menu::open_help(st, s, i, now),
         Act::PickPath(i, param) => {
             let inbox = s.inbox_sender();
             crate::files::pick_one(
@@ -560,6 +564,13 @@ fn step_card(
                 .clicked()
             {
                 acts.push(Act::Move(i, i + 1));
+            }
+            ui.separator();
+            if ui.button(t("batch-ui-step-save-template")).clicked() {
+                acts.push(Act::SaveTemplate(i));
+            }
+            if ui.button(t("batch-ui-step-help")).clicked() {
+                acts.push(Act::Help(i));
             }
             ui.separator();
             if ui.button(t("batch-ui-step-remove")).clicked() {
