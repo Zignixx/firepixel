@@ -319,3 +319,50 @@ batch-value-anim-crossfade-mode-overlap = Overlap (shorter animation)
 batch-value-anim-crossfade-mode-append = Append frames
 batch-err-crossfade-short = The animation has { $frames } frames; this fade needs at least { $need }.
 batch-err-frame-size = The frames of the animation have different sizes.
+
+# B-3: format, metadata and overlay steps (crates\fp-batch\src\steps\format.rs)
+
+## Color depth
+batch-step-format-colorDepth = Color depth
+    .description = Converts to grayscale, to a limited palette or to fewer bits per color channel.
+batch-param-format-colorDepth-mode = Convert to
+batch-param-format-colorDepth-colors = Colors
+batch-param-format-colorDepth-dither = Dithering
+batch-param-format-colorDepth-bits = Bits per channel
+batch-value-format-colorDepth-mode-grayscale = Grayscale
+batch-value-format-colorDepth-mode-indexed = Indexed (palette)
+batch-value-format-colorDepth-mode-bits = Fewer bits
+batch-value-format-colorDepth-dither-none = None
+batch-value-format-colorDepth-dither-ordered = Ordered
+batch-value-format-colorDepth-dither-floydSteinberg = Diffusion
+
+## Color profile
+batch-step-format-colorProfile = Color profile
+    .description = Converts images to sRGB, tags them as sRGB or removes the embedded color profile.
+batch-param-format-colorProfile-mode = Profile
+batch-value-format-colorProfile-mode-keep = Keep
+batch-value-format-colorProfile-mode-convertToSrgb = Convert to sRGB
+batch-value-format-colorProfile-mode-assignSrgb = Tag as sRGB
+batch-value-format-colorProfile-mode-strip = Remove
+batch-warn-profile-unsupported = The color profile cannot be converted (only RGB matrix profiles); it stays unchanged.
+
+## Metadata as file
+batch-step-metadata-export = Metadata as file
+    .description = Writes the metadata of every image into a JSON or CSV file next to the result.
+batch-param-metadata-export-format = File type
+batch-value-metadata-export-format-json = JSON
+batch-value-metadata-export-format-csv = CSV
+
+## Contact sheet
+batch-step-overlay-contactSheet = Contact sheet
+    .description = Puts all images as thumbnails with file names into one overview image.
+batch-param-overlay-contactSheet-columns = Columns
+batch-param-overlay-contactSheet-cellSize = Thumbnail size
+batch-param-overlay-contactSheet-spacing = Spacing
+batch-param-overlay-contactSheet-background = Background
+batch-param-overlay-contactSheet-captions = File names
+batch-param-overlay-contactSheet-captionSize = Text size
+batch-param-overlay-contactSheet-captionColor = Text color
+batch-param-overlay-contactSheet-perPage = Images per sheet
+    .tooltip = 0 = all on one sheet.
+batch-param-overlay-contactSheet-name = File name

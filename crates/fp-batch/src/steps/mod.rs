@@ -12,6 +12,7 @@ pub mod document; // B-3
 pub mod extra; // BA-109
 pub mod fileops; // B-3
 pub mod files;
+pub mod format; // B-3
 pub mod geometry; // BATCH-4
 pub mod gifopt; // BATCH-8
 pub mod metadata;
@@ -39,4 +40,5 @@ pub fn register_all(r: &mut StepRegistry) {
     document::register(r); // B-3
     pixel::register(r); // B-3
     animfx::register(r); // B-3
+    format::register(r); // B-3
 }

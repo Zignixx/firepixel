@@ -385,8 +385,8 @@ Metadata grey, Animation pink, Optimize green-teal, Vector/Script neutral.
 | – PSD | | `layers` on (from FW-PNG/PSD sources) | – | `fp-export::psd_out` | P2 |
 | – JPEG XL | | `lossless` on / `distance` 0…15 *1* | yes | check licence/maturity: `zune-jpegxl` (lossless only, MIT/Apache/Zlib) or `jxl-encoder` if permissive; otherwise P3 | P2 |
 | – PDF | | `pageSize` image/A4/Letter, `fit`, one PDF per image or **all in one** | – | own writer (`fp-export` has PDF building blocks for vector output) | P2 |
-| `format.colorDepth` | Colour depth | 8/16 bit, greyscale, indexed | yes | own | P3 |
-| `format.colorProfile` | Colour profile | `mode` keep / convertToSrgb / assignSrgb / strip *convertToSrgb* | yes | own ICC reader; conversion via `qcms` 0.3 (MPL-2.0, **only** if MPL is allowed, otherwise own matrix/TRC conversion for RGB matrix profiles) | P2 |
+| `format.colorDepth` | Colour depth | **A** `mode` grayscale/indexed/bits *indexed*; **A** `colors` 2…256 *256* and `dither` none/ordered/floydSteinberg *floydSteinberg* (indexed); **A** `bits` 1…8 *5* per channel (bits). Pixels stay 8-bit RGBA (16 bit output not offered) | yes | own; indexed = `meta::quantize` (same as `optimize.quantize`) | P3 |
+| `format.colorProfile` | Colour profile | **A** `mode` keep / convertToSrgb / assignSrgb / strip *convertToSrgb*. convertToSrgb: RGB matrix/TRC profiles (`curv` gamma/table, `para` types 0…4) are converted to sRGB and tagged with a generated sRGB profile; no profile = tagged as sRGB; LUT-based or non-RGB profiles stay unchanged with a warning. assignSrgb embeds the sRGB profile without touching pixels | yes | own ICC reader and writer (v2.1 sRGB, 1024-entry curve), matrix conversion via D50 XYZ; no `qcms` | P2 |
 | `format.multiPage` | Split pages/layers | source with pages/layers/frames (FW-PNG, PSD, TIFF, ICO, GIF) → one file per page/layer/frame; `{page}`/`{layer}`/`{frame}` in the name | – | `fp-io`, `fp-model` | P2 |
 
 **Fields per format:** the schema of the end card (`output`) attaches every format field to
@@ -456,7 +456,7 @@ extension spelling under ⋯ (lower/upper case, `jpg`/`jpeg`).
 | `overlay.border` | Border | **A** `width` px/%; **A** `color`; `radius` (rounded corners, transparent outside) 0…50 %; `inner`/`outer` | yes | own | **P1** |
 | `overlay.roundCorners` | Round corners | **A** `radius` 0…10000 *16*; **A** `unit` px/percent (of the shorter side, max 50) *px* | yes | own (anti-aliased, transparent outside; same shape as `overlay.border` `radius`) | P2 |
 | `overlay.vignette` | Vignette | **A** `strength` 0…100 % *50*; **A** `size` (untouched centre) 0…100 % *50*; `color` *#000000* | yes | own (smoothstep over the normalised distance to the centre, alpha unchanged) | P3 |
-| `overlay.contactSheet` | Contact sheet | grid, spacing, captions; **several files → one image** | yes | own (collect step, §5.1) | P2 |
+| `overlay.contactSheet` | Contact sheet | **A** `columns` 1…50 *4*; **A** `cellSize` 16…2048 px *256* (thumbnail fits, never enlarged); `spacing` 0…200 px *8*; **A** `background` *#ffffff*; **A** `captions` on (`captionSize` 6…72 px *12*, caption row 1.6 × size; `captionColor` *#000000*; file name without extension); `perPage` 0 = all; `name` *contact-sheet* (`-1`, `-2` … with several sheets) | – | own (collect step, §5.1; captions via the `overlay.text` stamp) | P2 |
 
 ### 3.7 Metadata (group "Metadata")
 
@@ -465,7 +465,7 @@ extension spelling under ⋯ (lower/upper case, `jpg`/`jpeg`).
 | `metadata.edit` | Metadata | **A** `keep`: all / none / chosen *all*; **A** `remove`: [gps, camera (make/model/serial number), software, thumbnails, xmp, iptc, comments, icc] *[gps]*; Pro: list of individual EXIF tags | info table before/after | reading: `kamadak-exif` 0.6 (BSD-2); writing/removing: container level with `img-parts` 0.3/0.4 (MIT/Apache, JPEG/PNG/WebP) and an own EXIF TIFF writer (tag list filtered, offsets recomputed); AVIF/JXL/TIFF: own box/IFD code | **P1** (keep/none/gps) · P2 (individual tags) |
 | `metadata.set` | Set metadata | **A** `artist`, **A** `copyright`, `description`, `keywords` (XMP `dc:subject` + IPTC), `title`, `rating` 0…5, `dateTaken` (fixed or shifted ± time), set/remove `gps`; placeholders allowed | info | own EXIF; XMP packet with `xmp-writer` 0.3 (MIT/Apache); own simple IPTC-IIM | P2 |
 | `metadata.orientation` | Apply orientation | apply EXIF orientation to the pixels, tag = 1 | yes | own (= `rotate.autoExif`) | **P1** |
-| `metadata.export` | Metadata as file | JSON/CSV per file or collected | – | `kamadak-exif` | P3 |
+| `metadata.export` | Metadata as file | **A** `format` json/csv *json*: sidecar `<name>.json`/`<name>.csv` next to each output (source path, file, format, bytes, size after the steps before, frames, dpi, transparency, EXIF summary, `meta::info` overview; CSV = header + one row, RFC 4180). Collected CSV over all files not done | – | own; executor extra-output hook (`extraTargets`) | P3 |
 
 Rule: when converting, metadata is **carried over** as far as the target format can hold it
 (EXIF/XMP/ICC in JPEG, PNG `eXIf`/`iTXt`, WebP, AVIF, TIFF); GIF/BMP/TGA/QOI/ICO lose it, with the

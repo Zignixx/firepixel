@@ -319,3 +319,50 @@ batch-value-anim-crossfade-mode-overlap = Überlappend (kürzere Animation)
 batch-value-anim-crossfade-mode-append = Bilder anhängen
 batch-err-crossfade-short = Die Animation hat { $frames } Bilder; diese Überblendung braucht mindestens { $need }.
 batch-err-frame-size = Die Bilder der Animation sind unterschiedlich groß.
+
+# B-3: Format-, Metadaten- und Überlagerungsschritte (crates\fp-batch\src\steps\format.rs)
+
+## Farbtiefe
+batch-step-format-colorDepth = Farbtiefe
+    .description = Wandelt in Graustufen, in eine begrenzte Palette oder in weniger Bits je Farbkanal um.
+batch-param-format-colorDepth-mode = Umwandeln in
+batch-param-format-colorDepth-colors = Farben
+batch-param-format-colorDepth-dither = Dithering
+batch-param-format-colorDepth-bits = Bits je Kanal
+batch-value-format-colorDepth-mode-grayscale = Graustufen
+batch-value-format-colorDepth-mode-indexed = Indiziert (Palette)
+batch-value-format-colorDepth-mode-bits = Weniger Bits
+batch-value-format-colorDepth-dither-none = Keins
+batch-value-format-colorDepth-dither-ordered = Geordnet
+batch-value-format-colorDepth-dither-floydSteinberg = Diffusion
+
+## Farbprofil
+batch-step-format-colorProfile = Farbprofil
+    .description = Rechnet Bilder in sRGB um, kennzeichnet sie als sRGB oder entfernt das eingebettete Farbprofil.
+batch-param-format-colorProfile-mode = Profil
+batch-value-format-colorProfile-mode-keep = Beibehalten
+batch-value-format-colorProfile-mode-convertToSrgb = In sRGB umrechnen
+batch-value-format-colorProfile-mode-assignSrgb = Als sRGB kennzeichnen
+batch-value-format-colorProfile-mode-strip = Entfernen
+batch-warn-profile-unsupported = Das Farbprofil kann nicht umgerechnet werden (nur RGB-Matrixprofile); es bleibt unverändert.
+
+## Metadaten als Datei
+batch-step-metadata-export = Metadaten als Datei
+    .description = Schreibt die Metadaten jedes Bildes in eine JSON- oder CSV-Datei neben das Ergebnis.
+batch-param-metadata-export-format = Dateityp
+batch-value-metadata-export-format-json = JSON
+batch-value-metadata-export-format-csv = CSV
+
+## Kontaktbogen
+batch-step-overlay-contactSheet = Kontaktbogen
+    .description = Legt alle Bilder als Miniaturen mit Dateinamen in ein Übersichtsbild.
+batch-param-overlay-contactSheet-columns = Spalten
+batch-param-overlay-contactSheet-cellSize = Miniaturgröße
+batch-param-overlay-contactSheet-spacing = Abstand
+batch-param-overlay-contactSheet-background = Hintergrund
+batch-param-overlay-contactSheet-captions = Dateinamen
+batch-param-overlay-contactSheet-captionSize = Textgröße
+batch-param-overlay-contactSheet-captionColor = Textfarbe
+batch-param-overlay-contactSheet-perPage = Bilder je Bogen
+    .tooltip = 0 = alle auf einem Bogen.
+batch-param-overlay-contactSheet-name = Dateiname

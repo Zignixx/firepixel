@@ -700,7 +700,19 @@ impl Job<'_> {
         rep: &mut ItemReport,
     ) -> Result<()> {
         self.write_extra_fwpng(item, fmt, target, rep)?;
-        self.write_extra_atlas(item, target, rep)
+        self.write_extra_atlas(item, target, rep)?;
+        self.write_extra_sidecar(item, target, rep)
+    }
+
+    /// Metadata sidecar `<stem>.json`/`.csv` of `metadata.export` (B-3).
+    fn write_extra_sidecar(&self, item: &Item, target: &Path, rep: &mut ItemReport) -> Result<()> {
+        let Some((ext, text)) = crate::steps::format::sidecar_file(item) else {
+            return Ok(());
+        };
+        self.write_extra(target, &ext, rep, |tmp| {
+            std::fs::write(tmp, text.as_bytes())
+                .map_err(|e| BatchError::Io(format!("{}: {e}", tmp.display())))
+        })
     }
 
     /// Atlas `.json`/`.css` next to a sprite sheet (BA-105).
@@ -819,6 +831,7 @@ pub fn remove_temp_files(plan: &Plan) {
                 output::temp_path(&extra_fwpng_target(t)),
                 output::temp_path(&extra_target(t, "json")),
                 output::temp_path(&extra_target(t, "css")),
+                output::temp_path(&extra_target(t, "csv")),
             ] {
                 let p = output::long_path(&tmp);
                 if p.is_file() {
