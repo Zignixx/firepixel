@@ -381,7 +381,7 @@ Metadata grey, Animation pink, Optimize green-teal, Vector/Script neutral.
 | – TIFF/BMP/TGA/QOI/WBMP | | TIFF `compression` default/none/lzw/deflate/packbits *default = lzw*; TGA `compression` default/none *default = RLE*; BMP/WBMP `background` *#ffffff* | yes | `fp-export::formats` (present) | **P1** |
 | – ICO | | `sizes` [16,24,32,48,64,128,256] *all ≤ image*; `pngFrom` 256 | yes | `fp-export::write_ico` | P2 |
 | – FW-PNG | | – (document stays editable) | – | `fp-fwpng` | **P1** |
-| – all except FW-PNG | | `alsoFwpng` off: additionally writes an editable FW-PNG with the same name next to each output (e.g. SVG **and** FW-PNG from `vector.trace` in one run); conflicts follow the recipe's rule, report field `extraTargets` | – | executor | **P1** |
+| – all except FW-PNG | | `alsoFwpng` off: additionally writes an editable FW-PNG with the same name next to each output (e.g. SVG **and** FW-PNG from `vector.trace` in one run); conflicts follow the recipe's rule, report field `extraTargets` | – | executor (extra-output hook, §5.2) | **P1** |
 | – PSD | | `layers` on (from FW-PNG/PSD sources) | – | `fp-export::psd_out` | P2 |
 | – JPEG XL | | `lossless` on / `distance` 0…15 *1* | yes | check licence/maturity: `zune-jpegxl` (lossless only, MIT/Apache/Zlib) or `jxl-encoder` if permissive; otherwise P3 | P2 |
 | – PDF | | `pageSize` image/A4/Letter, `fit`, one PDF per image or **all in one** | – | own writer (`fp-export` has PDF building blocks for vector output) | P2 |
@@ -492,7 +492,7 @@ fully in memory).
 | `anim.frameDelay` | Frame duration | all equal (ms) / first/last longer (pause at the end 0…10 s) | yes | own | P2 |
 | `anim.toFrames` | Animation → image sequence | format per frame, name `{name}_{frame:4}` | – | own | **P1** |
 | `anim.fromFrames` | Image sequence → animation | **collect step**: all (filtered) items in list order → one animation; `delay` ms *100*; `size` first/largest/fixed | yes | own | **P1** |
-| `anim.spriteSheet` | Sprite sheet | direction: animation/items → sheet (columns, spacing, margin, JSON/CSS atlas `{frames:[{x,y,w,h}]}`) **and** sheet → frames (grid N×M) | yes | extend `fp-export::sprites` (present) | P2 |
+| `anim.spriteSheet` | Sprite sheet | direction: animation → sheet (columns, spacing, margin; `atlas` json/css/none *json*: extra file `<name>.json` `{image, size, columns, rows, frames:[{x,y,w,h,delayMs}]}` or `<name>.css` with one class `.<name>-<n>` per frame, written next to the sheet; coordinates follow later resize steps) **and** sheet → frames (grid N×M) | yes | own; atlas via the executor's extra-output hook | P2 |
 | `anim.crop`, `anim.resize`, colour ... | – | all geometry/colour steps act on every frame (same parameters, computed in parallel per frame) | yes | as for still images | **P1** |
 | `anim.firstFrame` | Still from animation | **A** `pick` first/middle/last/number/time/sharpest *first*; **A** `number` 1… (clamped to the last frame); **A** `time` ms (frame shown at that time, after the end → last) | yes | own (sharpest = highest variance of the Laplacian) | P2 |
 | `anim.stabilize` | Calm background | freeze static areas over time (removes noise, helps compression) | yes | own (§5.6 "temporal smoothing") | P2 |
@@ -694,6 +694,12 @@ Long runs over MCP: `batch.run` with `async: true` returns `{jobId}`; `batch.sta
    steps in order → encode → temporary file `.<name>.fptmp` → `rename`. Collect steps
    (`anim.fromFrames`, `overlay.contactSheet`, PDF "all in one") run after the per-item steps in a
    second phase.
+   **Extra outputs** (hook `write_extras`): after the main file, producers may write further files
+   next to it with the same stem: the editable FW-PNG (`alsoFwpng`) and the sprite-sheet atlas
+   (`.json`/`.css`). Each extra file is written atomically, follows the recipe's conflict rule
+   (rename `name (2).ext`, skip with a warning, overwrite) and is listed in the report under
+   `extraTargets`. Without an extra producer the run writes exactly one file per item, byte-identical
+   to before.
 4. **Memory budget**: estimated need per item = W × H × 4 × (2 + steps that copy), or for animations
    the frames in the window; a byte semaphore (default min(40 % of free RAM, 6 GB)) admits only as
    many items at once as fit. Items larger than the budget run alone. Videos are streamed in blocks

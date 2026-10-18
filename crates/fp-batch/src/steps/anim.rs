@@ -49,6 +49,9 @@ pub const EXTRA_SOURCE_NAME: &str = "batch.sourceName";
 pub const EXTRA_OUTPUT_STEM: &str = "batch.outputStem";
 /// `Meta::extra`: Atlas eines Sprite-Sheets (`{"size": [w, h], "frames": [{x, y, w, h, delayMs}]}`).
 pub const EXTRA_ATLAS: &str = "anim.atlas";
+/// `Meta::extra`: file format of the atlas written next to the sheet (`json`, `css`, `none`);
+/// the executor writes it as an extra output (BA-105).
+pub const EXTRA_ATLAS_FORMAT: &str = "anim.atlasFormat";
 
 /// Registriert die Schritte der Gruppe.
 pub fn register(r: &mut StepRegistry) {
@@ -1307,6 +1310,8 @@ impl Step for SpriteSheet {
             ParamDef::int("padding", 0, 512, 0).unit("px"),
             ParamDef::int("count", 0, 65536, 0),
             ParamDef::int("delay", 1, 60000, 100).unit("ms"),
+            ParamDef::choice("atlas", &["json", "css", "none"], "json")
+                .when("direction", &["toSheet"]),
         ]
     }
     fn applies_to(&self) -> &[ItemKind] {
@@ -1333,6 +1338,7 @@ impl Step for SpriteSheet {
             )?;
             let mut meta = s.meta.clone();
             meta.extra.remove(EXTRA_ATLAS);
+            meta.extra.remove(EXTRA_ATLAS_FORMAT);
             let (w, h) = (
                 frames[0].image.width() as u32,
                 frames[0].image.height() as u32,
@@ -1366,6 +1372,10 @@ impl Step for SpriteSheet {
         let mut meta = meta;
         meta.has_transparency = sheet.data().iter().any(|p| p[3] < 255);
         meta.extra.insert(EXTRA_ATLAS.into(), atlas);
+        meta.extra.insert(
+            EXTRA_ATLAS_FORMAT.into(),
+            json!(text(params, "atlas", "json")),
+        );
         *item = Item::Still(Still { image: sheet, meta });
         Ok(())
     }

@@ -411,7 +411,7 @@ impl Job<'_> {
                 rep.target = Some(target.clone());
             }
             self.write_item(&item, fmt, &target, action, info, rep)?;
-            self.write_extra_fwpng(&item, fmt, &target, rep)?;
+            self.write_extras(&item, fmt, &target, rep)?;
         }
         if self.recipe.output.keep_timestamps
             && action != PlanAction::ReplaceOriginal
@@ -473,20 +473,109 @@ impl Job<'_> {
 
 /// Ziel der zusätzlichen FW-PNG: gleicher Ordner und Stamm wie `target`, Endung `.fw.png`.
 pub fn extra_fwpng_target(target: &Path) -> PathBuf {
+    extra_target(target, "fw.png")
+}
+
+/// File name of `target` without its extension (`.fw.png` counts as one extension).
+fn target_stem(target: &Path) -> String {
     let name = target
         .file_name()
         .map(|n| n.to_string_lossy().to_string())
         .unwrap_or_default();
     let lower = name.to_lowercase();
-    let stem = if lower.ends_with(".fw.png") {
-        &name[..name.len() - 7]
+    if lower.ends_with(".fw.png") {
+        name[..name.len() - 7].to_string()
     } else {
         match name.rfind('.') {
-            Some(i) if i > 0 => &name[..i],
-            _ => name.as_str(),
+            Some(i) if i > 0 => name[..i].to_string(),
+            _ => name,
         }
+    }
+}
+
+/// Extra output next to `target`: same folder and stem, extension `ext` (`fw.png`, `json` …).
+pub fn extra_target(target: &Path, ext: &str) -> PathBuf {
+    target.with_file_name(format!("{}.{ext}", target_stem(target)))
+}
+
+/// Atlas file of a sprite sheet (BA-105): `json` = the atlas with the sheet's file name
+/// (`{"image", "size", "columns", "rows", "frames": [{x, y, w, h, delayMs}]}`), `css` = one
+/// class per frame (`.<stem>-<n>` with size and background position). When later steps scaled
+/// the sheet to `size`, the coordinates are scaled with it. `None` for an unknown format.
+pub fn atlas_file(
+    atlas: &serde_json::Value,
+    format: &str,
+    sheet_name: &str,
+    size: (u32, u32),
+) -> Option<String> {
+    use serde_json::{Value, json};
+    let num = |v: &Value| v.as_f64().unwrap_or(0.0);
+    let (aw, ah) = (
+        num(&atlas["size"][0]).max(1.0),
+        num(&atlas["size"][1]).max(1.0),
+    );
+    let (sx, sy) = (size.0 as f64 / aw, size.1 as f64 / ah);
+    let scaled = |f: &Value| {
+        let r = |v: f64, k: f64| (v * k).round() as i64;
+        (
+            r(num(&f["x"]), sx),
+            r(num(&f["y"]), sy),
+            r(num(&f["w"]), sx),
+            r(num(&f["h"]), sy),
+        )
     };
-    target.with_file_name(format!("{stem}.fw.png"))
+    let empty = Vec::new();
+    let frames = atlas["frames"].as_array().unwrap_or(&empty);
+    match format {
+        "json" => {
+            let list: Vec<Value> = frames
+                .iter()
+                .map(|f| {
+                    let (x, y, w, h) = scaled(f);
+                    json!({"x": x, "y": y, "w": w, "h": h, "delayMs": f["delayMs"]})
+                })
+                .collect();
+            let out = json!({
+                "image": sheet_name,
+                "size": [size.0, size.1],
+                "columns": atlas["columns"],
+                "rows": atlas["rows"],
+                "frames": list,
+            });
+            serde_json::to_string_pretty(&out).ok().map(|s| s + "\n")
+        }
+        "css" => {
+            let stem = target_stem(Path::new(sheet_name));
+            let mut class: String = stem
+                .chars()
+                .map(|c| {
+                    if c.is_ascii_alphanumeric() || c == '-' || c == '_' {
+                        c
+                    } else {
+                        '-'
+                    }
+                })
+                .collect();
+            if !class.starts_with(|c: char| c.is_ascii_alphabetic() || c == '_') {
+                class.insert_str(0, "s-");
+            }
+            let mut css = format!(
+                ".{class} {{ background-image: url(\"{}\"); background-repeat: no-repeat; display: inline-block; }}\n",
+                sheet_name.replace('"', "%22")
+            );
+            for (i, f) in frames.iter().enumerate() {
+                let (x, y, w, h) = scaled(f);
+                css.push_str(&format!(
+                    ".{class}-{} {{ width: {w}px; height: {h}px; background-position: {}px {}px; }}\n",
+                    i + 1,
+                    -x,
+                    -y
+                ));
+            }
+            Some(css)
+        }
+        _ => None,
+    }
 }
 
 impl Job<'_> {
@@ -511,7 +600,61 @@ impl Job<'_> {
         if !on || fmt == OutputFormat::FwPng {
             return Ok(());
         }
-        let mut extra = extra_fwpng_target(target);
+        self.write_extra(target, "fw.png", rep, |tmp| output::write_fwpng(item, tmp))
+    }
+
+    /// Hook for extra files per item (BA-105): after the main output, every producer below may
+    /// write further files next to it. Today: the editable FW-PNG (`alsoFwpng`) and the atlas of
+    /// a sprite sheet (`anim.spriteSheet` `atlas` json/css). Without them nothing is written, so
+    /// a single-output run stays byte-identical.
+    fn write_extras(
+        &self,
+        item: &Item,
+        fmt: OutputFormat,
+        target: &Path,
+        rep: &mut ItemReport,
+    ) -> Result<()> {
+        self.write_extra_fwpng(item, fmt, target, rep)?;
+        self.write_extra_atlas(item, target, rep)
+    }
+
+    /// Atlas `.json`/`.css` next to a sprite sheet (BA-105).
+    fn write_extra_atlas(&self, item: &Item, target: &Path, rep: &mut ItemReport) -> Result<()> {
+        use crate::steps::anim::{EXTRA_ATLAS, EXTRA_ATLAS_FORMAT};
+        let Some(meta) = item.meta() else {
+            return Ok(());
+        };
+        let Some(atlas) = meta.extra.get(EXTRA_ATLAS) else {
+            return Ok(());
+        };
+        let format = meta
+            .extra
+            .get(EXTRA_ATLAS_FORMAT)
+            .and_then(serde_json::Value::as_str)
+            .unwrap_or("json");
+        let name = target
+            .file_name()
+            .map(|n| n.to_string_lossy().to_string())
+            .unwrap_or_default();
+        let Some(text) = atlas_file(atlas, format, &name, item.dimensions()) else {
+            return Ok(());
+        };
+        self.write_extra(target, format, rep, |tmp| {
+            std::fs::write(tmp, text.as_bytes())
+                .map_err(|e| BatchError::Io(format!("{}: {e}", tmp.display())))
+        })
+    }
+
+    /// Writes one extra file `<stem>.<ext>` next to `target` atomically. Conflicts follow the
+    /// recipe's rule: rename (`name (2).ext`), skip (warning) or overwrite; "ask" renames.
+    fn write_extra(
+        &self,
+        target: &Path,
+        ext: &str,
+        rep: &mut ItemReport,
+        write: impl FnOnce(&Path) -> Result<()>,
+    ) -> Result<()> {
+        let mut extra = extra_target(target, ext);
         if extra.exists() {
             match self.recipe.output.conflict {
                 crate::recipe::Conflict::Skip => {
@@ -526,21 +669,17 @@ impl Job<'_> {
                 }
                 crate::recipe::Conflict::Overwrite => {}
                 _ => {
-                    let stem = extra
-                        .file_name()
-                        .map(|n| n.to_string_lossy().to_string())
-                        .unwrap_or_default();
-                    let stem = stem.trim_end_matches(".fw.png").to_string();
+                    let stem = target_stem(target);
                     let mut k = 2;
                     while extra.exists() && k < 10_000 {
-                        extra = target.with_file_name(format!("{stem} ({k}).fw.png"));
+                        extra = target.with_file_name(format!("{stem} ({k}).{ext}"));
                         k += 1;
                     }
                 }
             }
         }
         let tmp = output::temp_path(&extra);
-        if let Err(e) = output::write_fwpng(item, &output::long_path(&tmp)) {
+        if let Err(e) = write(&output::long_path(&tmp)) {
             let _ = std::fs::remove_file(output::long_path(&tmp));
             return Err(e);
         }
@@ -593,6 +732,8 @@ pub fn remove_temp_files(plan: &Plan) {
             for tmp in [
                 output::temp_path(t),
                 output::temp_path(&extra_fwpng_target(t)),
+                output::temp_path(&extra_target(t, "json")),
+                output::temp_path(&extra_target(t, "css")),
             ] {
                 let p = output::long_path(&tmp);
                 if p.is_file() {
@@ -886,7 +1027,7 @@ fn run_collect(job: &Job, plan: &Plan, k: usize) -> Vec<ItemReport> {
             .pipe
             .apply_range(k + 1..job.pipe.steps.len(), &mut out, &mut c2)
             .and_then(|_| job.write_item(&out, fmt, &target, PlanAction::Write, info, &mut rep))
-            .and_then(|_| job.write_extra_fwpng(&out, fmt, &target, &mut rep));
+            .and_then(|_| job.write_extras(&out, fmt, &target, &mut rep));
         rep.ms = t0.elapsed().as_millis() as u64;
         rep.warnings.extend(c2.warnings);
         match r {

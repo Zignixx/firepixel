@@ -72,3 +72,9 @@ batch-value-anim-firstFrame-pick-last = Letztes
 batch-value-anim-firstFrame-pick-number = Bildnummer
 batch-value-anim-firstFrame-pick-time = Zu einem Zeitpunkt
 batch-value-anim-firstFrame-pick-sharpest = Schärfstes
+
+## Atlas des Sprite-Sheets (BA-105)
+batch-param-anim-spriteSheet-atlas = Atlas-Datei
+batch-value-anim-spriteSheet-atlas-json = JSON neben dem Sheet
+batch-value-anim-spriteSheet-atlas-css = CSS neben dem Sheet
+batch-value-anim-spriteSheet-atlas-none = Keine

@@ -72,3 +72,9 @@ batch-value-anim-firstFrame-pick-last = Last
 batch-value-anim-firstFrame-pick-number = Frame number
 batch-value-anim-firstFrame-pick-time = At a time
 batch-value-anim-firstFrame-pick-sharpest = Sharpest
+
+## Sprite sheet atlas (BA-105)
+batch-param-anim-spriteSheet-atlas = Atlas file
+batch-value-anim-spriteSheet-atlas-json = JSON next to the sheet
+batch-value-anim-spriteSheet-atlas-css = CSS next to the sheet
+batch-value-anim-spriteSheet-atlas-none = None
