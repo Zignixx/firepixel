@@ -2959,7 +2959,7 @@ pub fn aa_index(aa: i32) -> usize {
     }
 }
 
-fn text_vals(st: &AppState, ctx: &egui::Context, tgt: Target) -> Option<TextVals> {
+fn text_vals(st: &AppState, _ctx: &egui::Context, tgt: Target) -> Option<TextVals> {
     // Vorgaben des Textwerkzeugs für neue Texte (Glättung, Unterschneidung, Richtung; fp-engine)
     let (tool_aa, tool_kern, tool_ori) = fp_engine::commands::tool_text_defaults(&st.session.prefs);
     // Offener Text-Editor: Werte an der Markierung bzw. am Caret (ändern sich live mit)
@@ -2998,7 +2998,6 @@ fn text_vals(st: &AppState, ctx: &egui::Context, tgt: Target) -> Option<TextVals
     }
     match tgt {
         Target::Tool => {
-            let ta = tool_attrs(ctx);
             let o = &st.session.tools.options;
             let (leading, leading_px) = tool_leading(st);
             let pr = |k: &str, d: f64| st.session.prefs.get_real(k, d) as f32;
@@ -3006,13 +3005,13 @@ fn text_vals(st: &AppState, ctx: &egui::Context, tgt: Target) -> Option<TextVals
                 font: o.text_font.clone(),
                 size: o.text_size,
                 color: Some(o.text_color),
-                bold: ta.bold,
-                italic: ta.italic,
-                underline: ta.underline,
+                bold: tool_style(st, "Text_Bold"),
+                italic: tool_style(st, "Text_Italic"),
+                underline: tool_style(st, "Text_Underline"),
                 tracking: pr("Text_RangeKerning", 0.0),
                 leading,
                 leading_px,
-                align: ta.align,
+                align: tool_align(st),
                 indent: pr("Text_ParagraphIndent", 0.0),
                 space_before: pr("Text_ParagraphSpacingBefore", 0.0),
                 space_after: pr("Text_ParagraphSpacingAfter", 0.0),
@@ -3059,6 +3058,16 @@ fn text_vals(st: &AppState, ctx: &egui::Context, tgt: Target) -> Option<TextVals
     }
 }
 
+/// Style default of the text tool (`Text_Bold`, `Text_Italic`, `Text_Underline`; app-wide prefs).
+fn tool_style(st: &AppState, key: &str) -> bool {
+    st.session.prefs.get_bool(key, false)
+}
+
+/// Alignment default of the text tool (`Text_Justification`, factory value left).
+fn tool_align(st: &AppState) -> i32 {
+    st.session.prefs.get_int("Text_Justification", 0) as i32
+}
+
 /// Zeilenabstand des Textwerkzeugs aus den Voreinstellungen (fp-engine legt ihn auf neue Texte).
 fn tool_leading(st: &AppState) -> (f32, bool) {
     (
@@ -3080,20 +3089,20 @@ const TEXT_TOOL_PREFS: [(&str, &str, f64); 6] = [
 
 /// Vorgaben des Textwerkzeugs als Parameter für `text.setAttributes` (nur abweichende Werte;
 /// Schrift, Größe, Farbe und Zeilenabstand setzt fp-engine selbst).
-pub fn text_tool_defaults(ctx: &egui::Context, st: &AppState) -> serde_json::Map<String, Value> {
-    let ta = tool_attrs(ctx);
+pub fn text_tool_defaults(_ctx: &egui::Context, st: &AppState) -> serde_json::Map<String, Value> {
     let mut m = serde_json::Map::new();
     for (k, on) in [
-        ("bold", ta.bold),
-        ("italic", ta.italic),
-        ("underline", ta.underline),
+        ("bold", tool_style(st, "Text_Bold")),
+        ("italic", tool_style(st, "Text_Italic")),
+        ("underline", tool_style(st, "Text_Underline")),
     ] {
         if on {
             m.insert(k.into(), json!(true));
         }
     }
-    if ta.align != 0 {
-        m.insert("alignment".into(), json!(ta.align));
+    let align = tool_align(st);
+    if align != 0 {
+        m.insert("alignment".into(), json!(align));
     }
     for (pref, k, d) in TEXT_TOOL_PREFS {
         let v = st.session.prefs.get_real(pref, d);
@@ -3128,62 +3137,10 @@ pub fn apply_text_tool_defaults(ctx: &egui::Context, st: &mut AppState) {
     }
 }
 
-fn set_text(ui: &Ui, st: &mut AppState, tgt: Target, p: Value) {
-    match tgt {
-        Target::Selection => st.run("text.setAttributes", p),
-        Target::Tool => {
-            // offener Text-Editor (neuer Text): live auf Markierung bzw. ganzen Text (fp-engine
-            // leitet text.setAttributes an den Editor); zusätzlich als Vorgabe des Werkzeugs
-            if st.session.tool_is_editing_text() {
-                st.run("text.setAttributes", p.clone());
-            }
-            if let Some(f) = p.get("font").and_then(|v| v.as_str()) {
-                st.session.tools.options.text_font = f.to_string();
-            }
-            if let Some(s) = p.get("size").and_then(|v| v.as_f64()) {
-                st.session.tools.options.text_size = s as f32;
-            }
-            if let Some(c) = p
-                .get("color")
-                .and_then(|v| v.as_str())
-                .and_then(fp_color::Rgba8::parse_hex)
-            {
-                // eigene Textfarbe des Textwerkzeugs (wie im Original), nicht die Füllfarbe
-                st.session.tools.options.text_color = c.to_argb();
-            }
-            if let Some(v) = p.get("leading").and_then(|v| v.as_f64()) {
-                st.session
-                    .prefs
-                    .set("Text_Leading", fp_engine::prefs::PrefValue::Real(v));
-            }
-            if let Some(v) = p.get("leadingMode").and_then(|v| v.as_i64()) {
-                st.session
-                    .prefs
-                    .set("Text_LeadingMode", fp_engine::prefs::PrefValue::Int(v));
-            }
-            for (pref, k, _) in TEXT_TOOL_PREFS {
-                if let Some(v) = p.get(k).and_then(|v| v.as_f64()) {
-                    st.session
-                        .prefs
-                        .set(pref, fp_engine::prefs::PrefValue::Real(v));
-                }
-            }
-            edit_tool_attrs(ui.ctx(), |a| {
-                if let Some(v) = p.get("bold").and_then(|v| v.as_bool()) {
-                    a.bold = v;
-                }
-                if let Some(v) = p.get("italic").and_then(|v| v.as_bool()) {
-                    a.italic = v;
-                }
-                if let Some(v) = p.get("underline").and_then(|v| v.as_bool()) {
-                    a.underline = v;
-                }
-                if let Some(v) = p.get("alignment").and_then(|v| v.as_i64()) {
-                    a.align = v as i32;
-                }
-            });
-        }
-    }
+fn set_text(_ui: &Ui, st: &mut AppState, _tgt: Target, p: Value) {
+    // fp-engine decides (TW-138): open text editor → only the marked text (defaults stay); text
+    // objects selected → those texts and the defaults; nothing selected → only the defaults
+    st.run("text.applyAttributes", p);
 }
 
 /// Text Zeile 1 (14141): Schriftfamilie, Stil, Größe, Farbe, Laufweite, Zeilenabstand, B/I/U, Ausrichtung.

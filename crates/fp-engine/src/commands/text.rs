@@ -373,8 +373,7 @@ pub fn tool_text_defaults(prefs: &crate::prefs::Preferences) -> (i32, bool, i32)
 
 pub(super) fn register(r: &mut CommandRegistry) {
     r.add(
-        cmd("text.setToolDefaults")
-            .label("Textwerkzeug-Vorgaben")
+        text_attr_opts(cmd("text.setToolDefaults").label("Textwerkzeug-Vorgaben"))
             .opt(
                 "antialias",
                 ParamKind::Enum {
@@ -396,6 +395,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
             )
             .run(|s, p| {
                 use crate::prefs::PrefValue;
+                store_text_tool_defaults(s, p)?;
                 if let Some(n) = p.opt_str("antialias")? {
                     let v = antialias_code(&n);
                     s.prefs.set("Text_AntiAliasedFill", PrefValue::Bool(v >= 0));
@@ -1004,116 +1004,35 @@ pub(super) fn register(r: &mut CommandRegistry) {
             }),
     );
     r.add(
-        cmd("text.setAttributes")
-            .label("Textattribute")
-            .requires(crate::commands::DOC)
-            .opt("ids", ParamKind::Ids, "Textobjekte (Vorgabe: Auswahl)")
-            .opt("font", ParamKind::String, "Schrift")
-            .opt(
-                "size",
-                ParamKind::Number {
-                    min: Some(1.0),
-                    max: Some(5000.0),
-                },
-                "Größe",
-            )
-            .opt("bold", ParamKind::Bool, "Faux Fett")
-            .opt("italic", ParamKind::Bool, "Faux Kursiv")
-            .opt("underline", ParamKind::Bool, "unterstrichen")
-            .opt("color", ParamKind::Color, "Textfarbe")
-            .opt(
-                "alignment",
-                ParamKind::Integer {
-                    min: Some(0),
-                    max: Some(0x14),
-                },
-                "JSTi",
-            )
-            .opt(
-                "leading",
-                ParamKind::Number {
-                    min: Some(0.0),
-                    max: None,
-                },
-                "Zeilenabstand",
-            )
-            .opt(
-                "leadingMode",
-                ParamKind::Integer {
-                    min: Some(0),
-                    max: Some(1),
-                },
-                "0 Prozent, 1 exakt",
-            )
-            .opt(
-                "tracking",
-                ParamKind::Number {
-                    min: None,
-                    max: None,
-                },
-                "Laufweite",
-            )
-            .opt(
-                "baselineShift",
-                ParamKind::Number {
-                    min: None,
-                    max: None,
-                },
-                "Grundlinienversatz",
-            )
-            .opt(
-                "horizontalScale",
-                ParamKind::Number {
-                    min: Some(0.01),
-                    max: None,
-                },
-                "horizontale Skalierung (1 = 100 %)",
-            )
-            .opt(
-                "indent",
-                ParamKind::Number {
-                    min: None,
-                    max: None,
-                },
-                "Einzug",
-            )
-            .opt(
-                "spaceBefore",
-                ParamKind::Number {
-                    min: None,
-                    max: None,
-                },
-                "Abstand vor",
-            )
-            .opt(
-                "spaceAfter",
-                ParamKind::Number {
-                    min: None,
-                    max: None,
-                },
-                "Abstand nach",
-            )
-            .run(|s, p| {
-                let a = attrs_from_params(p)?;
-                let color = p.opt_color("color")?;
-                with_doc(s, |d| {
-                    let (page, ids) = (d.page, target_ids(d, p)?);
-                    let doc = Arc::make_mut(&mut d.doc);
-                    for id in ids {
-                        docops::edit_by_id(doc, page, id, |e| {
-                            if let ElementKind::Text(t) = &mut e.kind {
-                                let a2 = a.clone();
-                                set_attr(t, &move |x| x.apply(&a2));
-                                if let Some(c) = color {
-                                    Arc::make_mut(&mut t.attrs).fill_color = c;
-                                }
-                                t.detach_story();
-                            }
-                        });
-                    }
-                    Ok(CommandOutput::doc())
-                })
-            }),
+        text_attr_opts(
+            cmd("text.setAttributes")
+                .label("Textattribute")
+                .requires(crate::commands::DOC)
+                .opt("ids", ParamKind::Ids, "Textobjekte (Vorgabe: Auswahl)"),
+        )
+        .run(set_attributes),
+    );
+    // Inspector entry (TW-138): with the text editor open the attributes go to the editor only
+    // (routed by `Session::execute`, see `editor_patch`) and never change the defaults; with text
+    // objects selected they change those texts and become the defaults; with nothing selected they
+    // only set the defaults of the text tool.
+    r.add(
+        text_attr_opts(
+            cmd("text.applyAttributes")
+                .label("Textattribute anwenden")
+                .requires(crate::commands::DOC),
+        )
+        .run(|s, p| {
+            if has_text(s) {
+                let out = set_attributes(s, p)?;
+                store_text_tool_defaults(s, p)?;
+                s.prefs_changed();
+                return Ok(out);
+            }
+            store_text_tool_defaults(s, p)?;
+            s.prefs_changed();
+            Ok(CommandOutput::session())
+        }),
     );
 }
 
@@ -1210,6 +1129,173 @@ fn convert_to_paths(s: &mut Session) -> Result<CommandOutput> {
     })
 }
 
+/// Parameters shared by `text.setAttributes`, `text.applyAttributes` and `text.setToolDefaults`.
+fn text_attr_opts(b: crate::command::CommandBuilder) -> crate::command::CommandBuilder {
+    b.opt("font", ParamKind::String, "Schrift")
+        .opt(
+            "size",
+            ParamKind::Number {
+                min: Some(1.0),
+                max: Some(5000.0),
+            },
+            "Größe",
+        )
+        .opt("bold", ParamKind::Bool, "Faux Fett")
+        .opt("italic", ParamKind::Bool, "Faux Kursiv")
+        .opt("underline", ParamKind::Bool, "unterstrichen")
+        .opt("color", ParamKind::Color, "Textfarbe")
+        .opt(
+            "alignment",
+            ParamKind::Integer {
+                min: Some(0),
+                max: Some(0x14),
+            },
+            "JSTi",
+        )
+        .opt(
+            "leading",
+            ParamKind::Number {
+                min: Some(0.0),
+                max: None,
+            },
+            "Zeilenabstand",
+        )
+        .opt(
+            "leadingMode",
+            ParamKind::Integer {
+                min: Some(0),
+                max: Some(1),
+            },
+            "0 Prozent, 1 exakt",
+        )
+        .opt(
+            "tracking",
+            ParamKind::Number {
+                min: None,
+                max: None,
+            },
+            "Laufweite",
+        )
+        .opt(
+            "baselineShift",
+            ParamKind::Number {
+                min: None,
+                max: None,
+            },
+            "Grundlinienversatz",
+        )
+        .opt(
+            "horizontalScale",
+            ParamKind::Number {
+                min: Some(0.01),
+                max: None,
+            },
+            "horizontale Skalierung (1 = 100 %)",
+        )
+        .opt(
+            "indent",
+            ParamKind::Number {
+                min: None,
+                max: None,
+            },
+            "Einzug",
+        )
+        .opt(
+            "spaceBefore",
+            ParamKind::Number {
+                min: None,
+                max: None,
+            },
+            "Abstand vor",
+        )
+        .opt(
+            "spaceAfter",
+            ParamKind::Number {
+                min: None,
+                max: None,
+            },
+            "Abstand nach",
+        )
+}
+
+/// `text.setAttributes` on the given or selected text objects.
+fn set_attributes(s: &mut Session, p: &Params) -> Result<CommandOutput> {
+    let a = attrs_from_params(p)?;
+    let color = p.opt_color("color")?;
+    with_doc(s, |d| {
+        let (page, ids) = (d.page, target_ids(d, p)?);
+        let doc = Arc::make_mut(&mut d.doc);
+        for id in ids {
+            docops::edit_by_id(doc, page, id, |e| {
+                if let ElementKind::Text(t) = &mut e.kind {
+                    let a2 = a.clone();
+                    set_attr(t, &move |x| x.apply(&a2));
+                    if let Some(c) = color {
+                        Arc::make_mut(&mut t.attrs).fill_color = c;
+                    }
+                    t.detach_story();
+                }
+            });
+        }
+        Ok(CommandOutput::doc())
+    })
+}
+
+/// Stores text attributes as the defaults of the text tool (prefs `Text_*`, app-wide; TW-138).
+fn store_text_tool_defaults(s: &mut Session, p: &Params) -> Result<()> {
+    use crate::prefs::PrefValue;
+    if let Some(f) = p.opt_str("font")? {
+        let family = font_family_of(&f);
+        // stored explicitly, also when it is the factory font (see `text.font`)
+        s.prefs
+            .values
+            .insert("Text_Font".to_string(), PrefValue::Str(family.clone()));
+        s.tools.options.text_font = family;
+    }
+    if let Some(v) = p.opt_f64("size")? {
+        set_default_size(s, v as f32);
+    }
+    if let Some(c) = p.opt_color("color")? {
+        let hex = fp_color::Rgba8::from(c).to_hex_rgba();
+        s.prefs.set("Text_FillColor", PrefValue::Str(hex));
+        s.tools.options.text_color = c;
+    }
+    for (k, pref) in [
+        ("bold", "Text_Bold"),
+        ("italic", "Text_Italic"),
+        ("underline", "Text_Underline"),
+    ] {
+        if let Some(v) = p.opt_bool(k)? {
+            s.prefs.set(pref, PrefValue::Bool(v));
+        }
+    }
+    for (k, pref) in [
+        ("alignment", "Text_Justification"),
+        ("leadingMode", "Text_LeadingMode"),
+    ] {
+        if let Some(v) = p.opt_i64(k)? {
+            s.prefs.set(pref, PrefValue::Int(v));
+        }
+    }
+    for (k, pref) in TEXT_TOOL_REAL_PREFS {
+        if let Some(v) = p.opt_f64(k)? {
+            s.prefs.set(pref, PrefValue::Real(v));
+        }
+    }
+    Ok(())
+}
+
+/// Number attributes of the text tool defaults: parameter and preference key.
+const TEXT_TOOL_REAL_PREFS: [(&str, &str); 7] = [
+    ("leading", "Text_Leading"),
+    ("tracking", "Text_RangeKerning"),
+    ("indent", "Text_ParagraphIndent"),
+    ("spaceBefore", "Text_ParagraphSpacingBefore"),
+    ("spaceAfter", "Text_ParagraphSpacingAfter"),
+    ("horizontalScale", "Text_HorizScale"),
+    ("baselineShift", "Text_BaselineShift"),
+];
+
 /// Menü-/Inspektor-Befehl als Attributänderung für den offenen Text-Editor (`cur` = Attribute an
 /// der Markierung): `text.setAttributes` (ohne `ids`), `text.font`, `text.size.*`, `text.style.*`,
 /// `text.align.*` (horizontal). `None` = kein Textattribut-Befehl.
@@ -1224,7 +1310,7 @@ pub(crate) fn editor_patch(
     let p = Params::new(name, params.clone());
     let mut a = TextAttrs::default();
     match name {
-        "text.setAttributes" => a = attrs_from_params(&p).ok()?,
+        "text.setAttributes" | "text.applyAttributes" => a = attrs_from_params(&p).ok()?,
         "text.font" => a.font = Some(p.str("font").ok()?),
         "text.size.other" => a.size = Some(p.f64("size").ok()? as f32),
         "text.size.larger" | "text.size.smaller" => {

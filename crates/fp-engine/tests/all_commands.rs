@@ -1031,6 +1031,7 @@ fn overrides(name: &str, ids: &Ids) -> Option<(Value, Option<Setup>)> {
             Value::Null
         })),
         "text.setAttributes" => rs(json!({"size": 30, "bold": true, "color": "#ff0000"}), sel_ids(vec![text])),
+        "text.applyAttributes" => rs(json!({"size": 30, "bold": true, "color": "#ff0000"}), sel_ids(vec![text])),
         "tool.pick" => r(json!({"command": "select.set", "params": {"ids": [rect.0]}})),
         "tool.shape" => r(json!({"draw": "draw.rectangle", "params": {"rect": [0, 0, 10, 10]}, "fill": {"category": "gradient"}, "stroke": {"width": 3}})),
         // ---------------------------------------------------------------- Inspektor (pi.*)

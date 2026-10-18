@@ -1076,6 +1076,7 @@ cmd-text-editor = Text Editor
 cmd-text-setProperties = Text Properties
 cmd-text-setAttributes = Text Attributes
 cmd-text-setToolDefaults = Text Tool Defaults
+cmd-text-applyAttributes = Apply Text Attributes
 cmd-bitmap-paint = Brush
 cmd-bitmap-erase = Eraser
 cmd-bitmap-floodFill = Fill
