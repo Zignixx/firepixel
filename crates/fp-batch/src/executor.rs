@@ -76,9 +76,12 @@ pub enum Progress {
     ItemStarted {
         index: usize,
     },
+    /// B-5: at least once per per-item step (`step` = id of the step about to run; empty when the
+    /// steps of a stage are done).
     ItemProgress {
         index: usize,
         fraction: f32,
+        step: String,
     },
     ItemDone {
         index: usize,
@@ -422,7 +425,18 @@ impl Job<'_> {
         } else {
             let mut item = item::load(info, false)?;
             let (fmt, _) = resolve_format(self.pipe.format, &info.format);
+            let report = |fraction: f32, step: &str| {
+                send(
+                    &self.opts.progress,
+                    Progress::ItemProgress {
+                        index: e.index,
+                        fraction,
+                        step: step.to_string(),
+                    },
+                )
+            };
             let mut ctx = StepContext::new(e.index, self.total, info, cancel, fmt);
+            ctx.progress = Some(&report);
             self.pipe.apply(&mut item, &mut ctx)?;
             rep.warnings.append(&mut ctx.warnings);
             cancel.check()?;
@@ -1116,7 +1130,18 @@ fn run_collect(job: &Job, plan: &Plan, k: usize) -> Vec<ItemReport> {
                 cancel.check()?;
                 let mut item = item::load(info, false)?;
                 let (fmt, _) = resolve_format(job.pipe.format, &info.format);
+                let report = |fraction: f32, step: &str| {
+                    send(
+                        &job.opts.progress,
+                        Progress::ItemProgress {
+                            index: e.index,
+                            fraction,
+                            step: step.to_string(),
+                        },
+                    )
+                };
                 let mut ctx = StepContext::new(e.index, job.total, info, cancel, fmt);
+                ctx.progress = Some(&report);
                 job.pipe.apply_range(0..k, &mut item, &mut ctx)?;
                 crate::steps::anim::tag_source(&mut item, info); // BATCH-7: Quellname für Sammel-Schritte
                 if let Some(m) = item.meta_mut() {

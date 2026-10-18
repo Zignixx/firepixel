@@ -66,6 +66,57 @@ pub fn items_from_params(p: &Value, allow_other: bool) -> Result<Vec<ItemInfo>, 
     Ok(item::collect(&paths, recursive, allow_other, &[]).items)
 }
 
+/// B-5: orders `items` by `recipe.extra["fileOrder"]` when present: a list of entries, each a
+/// string `"folder/name"` (or just `"name"`) or an object `{"folder": …, "name": …}`. An item
+/// matches the first entry whose name equals its file name and whose folder (if given) is the end of
+/// its parent folder (`/` or backslash, case-insensitive). Matching items come first in list order,
+/// the others keep their order after them.
+pub fn apply_file_order(recipe: &Recipe, items: &mut [ItemInfo]) {
+    let Some(Value::Array(list)) = recipe.extra.get("fileOrder") else {
+        return;
+    };
+    let norm = |s: &str| s.replace('\\', "/").trim_matches('/').to_lowercase();
+    let entries: Vec<(String, String)> = list
+        .iter()
+        .filter_map(|e| match e {
+            Value::String(s) => {
+                let s = norm(s);
+                Some(match s.rsplit_once('/') {
+                    Some((f, n)) => (f.to_string(), n.to_string()),
+                    None => (String::new(), s),
+                })
+            }
+            Value::Object(o) => Some((
+                norm(o.get("folder").and_then(Value::as_str).unwrap_or_default()),
+                norm(o.get("name").and_then(Value::as_str)?),
+            )),
+            _ => None,
+        })
+        .collect();
+    if entries.is_empty() {
+        return;
+    }
+    let rank = |it: &ItemInfo| -> usize {
+        let name = it
+            .path
+            .file_name()
+            .map(|n| n.to_string_lossy().to_lowercase())
+            .unwrap_or_default();
+        let parent = it
+            .path
+            .parent()
+            .map(|p| norm(&p.to_string_lossy()))
+            .unwrap_or_default();
+        entries
+            .iter()
+            .position(|(f, n)| {
+                *n == name && (f.is_empty() || parent == *f || parent.ends_with(&format!("/{f}")))
+            })
+            .unwrap_or(usize::MAX)
+    };
+    items.sort_by_key(rank); // stable: unmatched items keep their order
+}
+
 /// Überschreibungen aus den Parametern (`out`, `conflict`).
 pub fn apply_overrides(recipe: &mut Recipe, p: &Value) -> Result<(), String> {
     if let Some(out) = p

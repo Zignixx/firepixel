@@ -420,6 +420,9 @@ pub fn with_defaults(defs: &[ParamDef], params: &Value) -> Value {
 }
 
 /// Kontext eines Schritts für ein Element.
+/// Per-item progress callback (fraction 0…1, id of the step about to run), B-5.
+pub type ProgressFn<'f> = dyn Fn(f32, &str) + Sync + 'f;
+
 pub struct StepContext<'a> {
     /// Position des Elements in der (gefilterten, sortierten) Liste.
     pub index: usize,
@@ -444,6 +447,9 @@ pub struct StepContext<'a> {
     pub item_skips: Vec<(usize, String)>,
     /// Collect steps only: notes for single inputs (list index, message) for the report.
     pub item_notes: Vec<(usize, String)>,
+    /// B-5: progress of the item (fraction 0…1 of the per-item steps, id of the step about to run);
+    /// set by the executor, called by [`crate::Pipeline::apply_range`] before every step.
+    pub progress: Option<&'a ProgressFn<'a>>,
 }
 
 impl<'a> StepContext<'a> {
@@ -467,6 +473,7 @@ impl<'a> StepContext<'a> {
             proxy_scale: None,
             item_skips: Vec::new(),
             item_notes: Vec::new(),
+            progress: None,
         }
     }
     /// Maßstab der Vorschau für Pixelangaben: 1,0 außerhalb der Vorschau, sonst der Proxy-Maßstab

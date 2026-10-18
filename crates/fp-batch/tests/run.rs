@@ -1080,3 +1080,56 @@ fn dry_run_shows_names_after_resize_and_rechecks_skips() {
     assert!(!has_temp_files(&dir));
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+/// B-5: the executor reports per-item progress at least once per step (fraction and step id).
+#[test]
+fn per_item_progress_once_per_step() {
+    let dir = std::env::temp_dir().join(format!("fp-batch-progress-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).expect("dir");
+    let mut srcs = Vec::new();
+    for n in ["a", "b"] {
+        let p = dir.join(format!("{n}.png"));
+        let item = fp_batch::item::still_from_rgba(8, 6, &[90u8; 8 * 6 * 4]).expect("item");
+        let (bytes, _) =
+            fp_batch::output::encode(&item, fp_batch::OutputFormat::Png, &Default::default())
+                .expect("png");
+        std::fs::write(&p, bytes).expect("write");
+        srcs.push(p);
+    }
+    let list = fp_batch::collect(&srcs, true, false, &[]).items;
+    let mut r = fp_batch::Recipe::named("p");
+    r.output.format = "png".into();
+    r.output.target = fp_batch::recipe::TargetSpec {
+        kind: fp_batch::recipe::TargetKind::Folder,
+        path: Some(dir.join("out")),
+        ..Default::default()
+    };
+    r.add_step(
+        "format.colorDepth",
+        serde_json::json!({"mode": "grayscale"}),
+    );
+    r.add_step("adjust.invert", serde_json::json!({}));
+    let h = fp_batch::spawn(r, list, fp_batch::RunOptions::default());
+    let events: Vec<fp_batch::Progress> = h.events.iter().collect();
+    for index in 0..2 {
+        let p: Vec<(f32, String)> = events
+            .iter()
+            .filter_map(|e| match e {
+                fp_batch::Progress::ItemProgress {
+                    index: i,
+                    fraction,
+                    step,
+                } if *i == index => Some((*fraction, step.clone())),
+                _ => None,
+            })
+            .collect();
+        let steps: Vec<&str> = p.iter().map(|(_, s)| s.as_str()).collect();
+        assert_eq!(steps, ["format.colorDepth", "adjust.invert", ""], "{p:?}");
+        assert_eq!(
+            p.iter().map(|(f, _)| *f).collect::<Vec<_>>(),
+            [0.0, 0.5, 1.0]
+        );
+    }
+    let _ = std::fs::remove_dir_all(&dir);
+}

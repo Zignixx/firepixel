@@ -490,7 +490,7 @@ fully in memory).
 
 | ID | Name | Parameters | V | Method | P |
 |---|---|---|---|---|---|
-| `video.import` (automatic for videos, card visible) | Read video | **A** `start`/`end` (time, millisecond-exact) *whole*; **A** `fps` 1…60 *12*; `maxFrames` 1…3000 *600*; `decoder` auto/builtin/ffmpeg | yes (timeline) | §5.5 | **P1** (via ffmpeg) · P2 (built-in H.264/AV1) |
+| `video.import` (automatic for videos, card visible) | Read video | **A** `start`/`end` (time, millisecond-exact) *whole*; **A** `fps` 1…60 *12*; `maxFrames` 1…3000 *600*; `decoder` auto/builtin/ffmpeg; animations (GIF/APNG/animated WebP) pass through unchanged without a warning (B-5) | yes (timeline) | §5.5 | **P1** (via ffmpeg) · P2 (built-in H.264/AV1) |
 | `anim.trim` | Trim | **A** `start`/`end` (time or frame number) with timeline and handles; `removeFrames` list/ranges (`1-3, 10, 20-`) | yes (timeline) | own | **P1** |
 | `anim.speed` | Speed | **A** `factor` 0.1…10 *1*; or fixed `fps`; `minDelay` 20 ms (browsers round < 20 ms up to 100 ms!) | yes | own | **P1** |
 | `anim.loop` | Loop | **A** `count` 0 = infinite…65535; `pingPong` (forward-backward) off; `reverse` off | yes | own | **P1** |
@@ -733,7 +733,9 @@ Long runs over MCP: `batch.run` with `async: true` returns `{jobId}`; `batch.sta
 5. **Cancel**: `CancelToken` (`Arc<AtomicBool>`, pattern from `fp-ai::cancel`), checked between
    steps, frames and tile rows; encoders are not interrupted hard, their result is discarded.
 6. **Progress**: `crossbeam-channel` or `std::sync::mpsc` with events `ItemStarted`,
-   `ItemProgress(f32)`, `ItemDone{bytes}`, `ItemFailed{msg}`, `Finished`. The UI polls once per frame
+   `ItemProgress{index, fraction, step}` (B-5: sent before every per-item step with the step id and
+   the fraction of the stage's steps done, then once with 1.0 and an empty step; also in phase 1 of
+   collect recipes), `ItemDone{bytes}`, `ItemFailed{msg}`, `Finished`. The UI polls once per frame
    (no blocking), `ctx.request_repaint_after(100 ms)`.
 7. **Documents** (FW-PNG/PSD/SVG, steps `document.*`, `script.*`, `effect.live`): a separate headless
    `Session` per worker thread (like `firepixel-cli batch`), no access to the UI session. Open UI
@@ -843,6 +845,11 @@ firepixel-cli batch --recipe recipe.fpbatch.json (--in <folder> [--recursive] | 
 firepixel-cli batch --steps [--json]            # catalogue
 firepixel-cli batch --actions ...               (existing, unchanged)
 ```
+
+Input order (B-5): when the recipe has `fileOrder` (list of `"folder/name"` strings or
+`{"folder", "name"}` objects, written by the UI), the CLI orders the collected files by it
+(`fp_batch::host::apply_file_order`: name equal, folder = end of the parent folder,
+case-insensitive; unlisted files keep their order after the listed ones).
 
 Exit code 0 = everything done, 1 = at least one error, 2 = invalid invocation, 3 = cancelled.
 Progress on stderr (one line per file; with `--json` as NDJSON). MCP: tool `batch` (shorthand for

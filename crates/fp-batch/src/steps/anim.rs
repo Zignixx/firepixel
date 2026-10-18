@@ -461,7 +461,10 @@ impl Step for VideoImport {
             .and_then(Value::as_str)
             .map(PathBuf::from)
         else {
-            ctx.warn(fp_i18n::t("batch-anim-warn-not-video"));
+            // B-5: animations (GIF/APNG/animated WebP) pass through silently
+            if !matches!(item, Item::Animation(_)) {
+                ctx.warn(fp_i18n::t("batch-anim-warn-not-video"));
+            }
             return Ok(());
         };
         let mut vp = VideoParams::from_json(params);

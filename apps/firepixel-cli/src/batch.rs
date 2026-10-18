@@ -308,7 +308,9 @@ fn run(m: &ArgMatches, json_out: bool) -> ExitCode {
         log: true,
         ..RunOptions::default()
     };
-    let items = collected.items;
+    let mut items = collected.items;
+    // B-5: order chosen in the UI (`fileOrder` in the recipe)
+    fp_batch::host::apply_file_order(&recipe, &mut items);
     let sources: Vec<PathBuf> = items.iter().map(|i| i.path.clone()).collect();
     let handle = executor::spawn(recipe, items, opts);
     let interrupted = Arc::new(AtomicBool::new(false));

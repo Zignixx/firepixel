@@ -234,3 +234,52 @@ fn recipe_with_opt_ins_runs_from_the_cli() {
     assert!(out_dir.join("a.png").exists());
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+/// B-5: `fileOrder` in the recipe orders the inputs (folder/name entries).
+#[test]
+fn recipe_file_order_orders_the_inputs() {
+    let dir = tmp("order");
+    let input = dir.join("in");
+    std::fs::create_dir_all(input.join("sub")).expect("in");
+    png(&input.join("a.png"), 4, 4);
+    png(&input.join("b.png"), 4, 4);
+    png(&input.join("sub").join("c.png"), 4, 4);
+    let recipe = dir.join("order.fpbatch.json");
+    std::fs::write(
+        &recipe,
+        r#"{"format":"firepixel-batch-recipe","version":1,"name":"order",
+            "fileOrder":["sub/c.png",{"folder":"in","name":"b.png"}],
+            "output":{"format":"png"}}"#,
+    )
+    .expect("recipe");
+    let out_dir = dir.join("out");
+    let out = cli()
+        .args(["batch", "--recipe"])
+        .arg(&recipe)
+        .arg("--in")
+        .arg(&input)
+        .arg("--out")
+        .arg(&out_dir)
+        .args(["--recursive", "--json"])
+        .output()
+        .expect("run");
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let v = json_of(&out.stdout);
+    let sources: Vec<String> = v["items"]
+        .as_array()
+        .expect("items")
+        .iter()
+        .map(|i| {
+            std::path::Path::new(i["source"].as_str().unwrap_or_default())
+                .file_name()
+                .map(|n| n.to_string_lossy().to_string())
+                .unwrap_or_default()
+        })
+        .collect();
+    assert_eq!(sources, ["c.png", "b.png", "a.png"], "{v}");
+    let _ = std::fs::remove_dir_all(&dir);
+}

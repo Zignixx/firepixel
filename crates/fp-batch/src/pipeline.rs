@@ -137,11 +137,23 @@ impl Pipeline {
         // B-5: a `script.condition` gate only covers the cards of its own stage (a range ends at a
         // collect step)
         crate::steps::condition::reset_gate(item);
-        for r in &self.steps[range] {
+        let steps = &self.steps[range];
+        let count = steps
+            .iter()
+            .filter(|r| r.step.kind() == StepKind::PerItem)
+            .count()
+            .max(1);
+        let mut pos = 0usize;
+        for r in steps {
             ctx.check_cancel()?;
             if r.step.kind() != StepKind::PerItem {
                 continue;
             }
+            // B-5: per-item progress before every step (also for steps skipped below)
+            if let Some(p) = ctx.progress {
+                p(pos as f32 / count as f32, r.step.id());
+            }
+            pos += 1;
             // B-4: `script.condition` (gate mode) skips the following cards
             if crate::steps::condition::take_skip(item) {
                 continue;
@@ -169,6 +181,11 @@ impl Pipeline {
             })?;
         }
         crate::steps::condition::reset_gate(item);
+        if pos > 0
+            && let Some(p) = ctx.progress
+        {
+            p(1.0, "");
+        }
         Ok(())
     }
 

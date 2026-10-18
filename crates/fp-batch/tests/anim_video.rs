@@ -1153,3 +1153,14 @@ fn catalog_lists_animation_steps_with_texts_in_both_languages() {
     }
     let _ = Arc::clone(&reg);
 }
+
+/// B-5: `video.import` passes animations (GIF/APNG/animated WebP) through without a warning.
+#[test]
+fn video_import_passes_animations_through_silently() {
+    let mut it = anim(&[100, 100, 100]);
+    let before = reds(&it);
+    let w = apply("video.import", &mut it, json!({}), OutputFormat::Gif).expect("apply");
+    assert!(w.is_empty(), "{w:?}");
+    assert_eq!(reds(&it), before);
+    assert_eq!(delays(&it), vec![100, 100, 100]);
+}
