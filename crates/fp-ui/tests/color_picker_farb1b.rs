@@ -425,10 +425,10 @@ fn all_call_sites_open_the_same_popup() {
 /// übernommen; das HEX-Feld hat beim Öffnen keinen Fokus.
 #[test]
 fn t10_invalid_hex_becomes_black_and_hex_not_focused_on_open() {
-    assert_eq!(cp::hex_value("zz12"), Some(0));
-    assert_eq!(cp::hex_value("#3366CC"), Some(0x3366cc));
-    assert_eq!(cp::hex_value("3366"), None, "unvollständig: keine Änderung");
-    assert_eq!(cp::hex_value(""), None);
+    assert_eq!(cp::hex_value("zz12"), 0);
+    assert_eq!(cp::hex_value("#3366CC"), 0x3366cc);
+    assert_eq!(cp::hex_value("3366"), 0x336600, "incomplete: missing pair = 0 (re 46 §2.2)");
+    assert_eq!(cp::hex_value(""), 0xff_ffff, "empty = white");
     let mut h = harness(app(&[("#ff0000", [20.0, 20.0, 120.0, 80.0])]));
     open_glow(&mut h);
     let sw = glow_swatch(&h);
@@ -444,4 +444,25 @@ fn t10_invalid_hex_becomes_black_and_hex_not_focused_on_open() {
     key(&mut h, Key::Enter, Modifiers::NONE);
     assert!(cp::open_rect(&h.ctx, sw).is_none(), "Enter schließt");
     assert_eq!(&form_color(&h)[..7], "#000000");
+}
+
+/// Q-49 (re 46 §2.3): every keystroke in the HEX field sets the color (shorthand already after the
+/// third digit); Enter closes the popup with the last value.
+#[test]
+fn q49_hex_field_commits_every_keystroke() {
+    let mut h = harness(app(&[("#ff0000", [20.0, 20.0, 120.0, 80.0])]));
+    open_glow(&mut h);
+    let sw = glow_swatch(&h);
+    let p = open_popup(&mut h, sw);
+    click_at(&mut h, p.min + egui::vec2(180.0, 201.0));
+    type_into(&mut h, "36c");
+    h.event(Event::PointerMoved(p.min + egui::vec2(180.0, 201.0)));
+    h.run_steps(2);
+    assert_eq!(cp::live_color(&h.ctx, sw), Some(Some(Argb(0xff33_66cc))), "shorthand while typing");
+    h.event(Event::Text("z".into()));
+    h.run_steps(2);
+    assert_eq!(cp::live_color(&h.ctx, sw), Some(Some(Argb(0xff36_0c00))), "36cz: pairs 36, 0c, then stop");
+    key(&mut h, Key::Enter, Modifiers::NONE);
+    assert!(cp::open_rect(&h.ctx, sw).is_none(), "Enter closes");
+    assert_eq!(&form_color(&h)[..7].to_ascii_lowercase(), "#360c00");
 }

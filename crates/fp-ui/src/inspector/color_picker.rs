@@ -176,19 +176,94 @@ pub fn placement_name(k: u8) -> &'static str {
     ["inside", "center", "outside"][(k as usize).min(2)]
 }
 
-/// Wert des HEX-Felds beim Tippen: sechs Hex-Ziffern (mit oder ohne „#“) = diese Farbe; Text mit
-/// einem Zeichen, das keine Hex-Ziffer ist (z. B. „zz12“), gilt wie im Original als 0 = #000000,
-/// schon beim Tippen (re 42 §4); sonst (noch unvollständig) keine Änderung.
-pub fn hex_value(text: &str) -> Option<u32> {
-    let h = text.trim().trim_start_matches('#');
-    if !h.is_empty() && !h.chars().all(|c| c.is_ascii_hexdigit()) {
-        return Some(0);
+/// Value of the HEX field, parsed on every keystroke like the original (re 46 §2.2); the result is
+/// always a color (`0xRRGGBB`), invalid input never keeps the old value:
+/// - `0x` prefix (any case): stripped, then left-padded with `0` to six digits (`0x36c` → `00036C`)
+/// - exactly three characters or `#` + three: shorthand, each digit doubled (`36c` → `3366CC`)
+/// - empty: white
+/// - `#…`: up to three two-digit hex pairs after the `#` (a fourth pair, alpha, is ignored)
+/// - more than six characters without `#`: up to three decimal numbers separated by blanks (each
+///   taken modulo 256; nonsense, but what the original does)
+/// - otherwise up to three two-digit hex pairs
+///
+/// Reading stops at the first invalid pair; unread components stay 0 (`zz12` → `#000000`,
+/// `12zz` → `#120000`, `abcde` → `#ABCD0E`). Leading blanks before a pair are skipped.
+pub fn hex_value(text: &str) -> u32 {
+    let mut s: Vec<char> = text.chars().collect();
+    if s.len() >= 2 && s[0] == '0' && (s[1] == 'x' || s[1] == 'X') {
+        s.drain(..2);
+        while s.len() < 6 {
+            s.insert(0, '0');
+        }
     }
-    if h.len() == 6 {
-        u32::from_str_radix(h, 16).ok()
+    if s.len() == 3 || (s.len() == 4 && s[0] == '#') {
+        let t = &s[s.len() - 3..];
+        s = vec![t[0], t[0], t[1], t[1], t[2], t[2]];
+    }
+    if s.is_empty() {
+        return 0xff_ffff;
+    }
+    let comps = if s[0] == '#' {
+        scan_hex_pairs(&s[1..])
+    } else if s.len() > 6 {
+        scan_decimals(&s)
     } else {
-        None
+        scan_hex_pairs(&s)
+    };
+    comps[0] << 16 | comps[1] << 8 | comps[2]
+}
+
+/// `%02lx%02lx%02lx`: up to three values of at most two hex digits each, blanks before a value
+/// skipped; stops at the first value without a digit.
+fn scan_hex_pairs(s: &[char]) -> [u32; 3] {
+    let mut out = [0u32; 3];
+    let mut i = 0;
+    for slot in &mut out {
+        while i < s.len() && s[i].is_whitespace() {
+            i += 1;
+        }
+        let mut v = 0u32;
+        let mut n = 0;
+        while n < 2 && i < s.len() {
+            let Some(d) = s[i].to_digit(16) else { break };
+            v = v * 16 + d;
+            i += 1;
+            n += 1;
+        }
+        if n == 0 {
+            break;
+        }
+        *slot = v;
     }
+    out
+}
+
+/// `%ld %ld %ld`: up to three decimal numbers (optional sign), each taken modulo 256.
+fn scan_decimals(s: &[char]) -> [u32; 3] {
+    let mut out = [0u32; 3];
+    let mut i = 0;
+    for slot in &mut out {
+        while i < s.len() && s[i].is_whitespace() {
+            i += 1;
+        }
+        let neg = i < s.len() && s[i] == '-';
+        if i < s.len() && (s[i] == '-' || s[i] == '+') {
+            i += 1;
+        }
+        let mut v: i64 = 0;
+        let mut n = 0;
+        while i < s.len() {
+            let Some(d) = s[i].to_digit(10) else { break };
+            v = v.wrapping_mul(10).wrapping_add(i64::from(d));
+            i += 1;
+            n += 1;
+        }
+        if n == 0 {
+            break;
+        }
+        *slot = (if neg { v.wrapping_neg() } else { v } & 0xff) as u32;
+    }
+    out
 }
 
 /// Zeichenkette für den HEX-Kopierknopf und das Feld: `#RRGGBB`.
@@ -932,12 +1007,21 @@ fn body(
             let hex_r = Rect::from_min_max(o + vec2(137.0, 191.0), o + vec2(234.0, 212.0));
             let mut hex = s.hex.clone();
             if field(ui, pid.with("hex"), hex_r, &mut hex, false).changed() {
+                // every keystroke sets the color (re 46 §2.3); the field keeps the typed text
                 s.hex = hex.clone();
-                if let Some(v) = hex_value(&hex) {
-                    s.work = Some(Argb(0xff00_0000 | v));
-                    s.dirty = true;
-                    let w = s.work.unwrap_or(Argb(0xff00_0000));
-                    s.rgb = [w.r().to_string(), w.g().to_string(), w.b().to_string()];
+                let v = hex_value(&hex);
+                s.work = Some(Argb(0xff00_0000 | v));
+                s.dirty = true;
+                s.rgb = [
+                    (v >> 16 & 0xff).to_string(),
+                    (v >> 8 & 0xff).to_string(),
+                    (v & 0xff).to_string(),
+                ];
+                // alpha comes from the opacity field; at 0 it jumps to 100
+                if footer.has_opacity() && s.opacity == 0 {
+                    s.opacity = 100;
+                    s.op = "100".into();
+                    s.opacity_dirty = true;
                 }
             }
             if copy_button(
@@ -1290,6 +1374,34 @@ fn sys_dialog(ui: &mut Ui, swatch_pid: Id, s: &CpState, r: Rect) -> Option<Optio
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Q-49 (re 46 §2.2): HEX field parser examples.
+    #[test]
+    fn hex_field_parser_like_the_original() {
+        for (text, want) in [
+            ("3366CC", 0x3366cc),
+            ("#3366cc", 0x3366cc),
+            ("3366cc", 0x3366cc),
+            ("36c", 0x3366cc),
+            ("#36C", 0x3366cc),
+            ("0x36c", 0x00036c),
+            ("0X3366CC", 0x3366cc),
+            ("zz12", 0x000000),
+            ("12zz", 0x120000),
+            ("abcd", 0xabcd00),
+            ("abcde", 0xabcd0e),
+            ("#12345678", 0x123456),
+            ("", 0xffffff),
+            ("#", 0x000000),
+            ("3", 0x030000),
+            ("3366", 0x336600),
+            ("aBcDeF", 0xabcdef),
+            ("1 2 3 4", 0x010203),
+            ("256 257 1", 0x000101),
+        ] {
+            assert_eq!(hex_value(text), want, "{text:?}");
+        }
+    }
 
     #[test]
     fn grid_formula_spot_checks() {
