@@ -178,6 +178,7 @@ batch-cli-value-file = FILE
 batch-cli-value-rule = RULE
 batch-cli-err-args = Wrong call: { $error }
 batch-cli-skipped-file = Skipped (unsupported format): { $path }
+batch-cli-interrupted = Cancel requested (Ctrl+C) – finishing running files, press Ctrl+C again to quit at once …
 batch-cli-progress-done = [{ $n }/{ $total }] { $source } → { $target }
 batch-cli-progress-skipped = [{ $n }/{ $total }] { $source }: { $reason }
 batch-cli-progress-failed = [{ $n }/{ $total }] { $source }: Error: { $error }

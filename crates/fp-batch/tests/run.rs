@@ -269,6 +269,45 @@ fn zero_byte_and_unknown_files_are_not_collected() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
+/// BA-106: an external cancel (Ctrl+C in the CLI, window close in the UI) from another thread
+/// mid-run stops scheduling, and no `.<name>.fptmp` survives, not even a stale one left by an
+/// earlier interrupted run for a planned target.
+#[test]
+fn external_cancel_mid_run_removes_all_temp_files() {
+    let dir = temp("cancel_ext");
+    let src = sources(&dir, 10);
+    let out = dir.join("out");
+    std::fs::create_dir_all(&out).expect("out");
+    for k in 6..10 {
+        std::fs::write(out.join(format!(".bild{k}.png.fptmp")), b"stale").expect("stale");
+    }
+    let mut o = opts();
+    o.threads = Some(1);
+    let h = executor::spawn(folder_recipe(&out, "png"), items(&src), o);
+    for ev in h.events.iter() {
+        if matches!(ev, Progress::ItemDone { .. }) {
+            h.cancel(); // like the Ctrl+C handler
+        }
+        if matches!(ev, Progress::Finished(_)) {
+            break;
+        }
+    }
+    let rep = h.join().expect("run");
+    assert!(rep.cancelled);
+    assert!(
+        rep.totals.done >= 1 && rep.totals.done < 10,
+        "{:?}",
+        rep.totals
+    );
+    assert!(rep.totals.cancelled > 0);
+    assert!(
+        !has_temp_files(&dir),
+        "no .fptmp left: {:?}",
+        files_under(&dir)
+    );
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
 #[test]
 fn cancel_mid_run_leaves_no_temp_files_and_complete_outputs() {
     let dir = temp("cancel");

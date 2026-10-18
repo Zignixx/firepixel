@@ -178,6 +178,7 @@ batch-cli-value-file = DATEI
 batch-cli-value-rule = REGEL
 batch-cli-err-args = Falscher Aufruf: { $error }
 batch-cli-skipped-file = Übersprungen (kein unterstütztes Format): { $path }
+batch-cli-interrupted = Abbruch angefordert (Strg+C) – laufende Dateien werden beendet, nochmals Strg+C beendet sofort …
 batch-cli-progress-done = [{ $n }/{ $total }] { $source } → { $target }
 batch-cli-progress-skipped = [{ $n }/{ $total }] { $source }: { $reason }
 batch-cli-progress-failed = [{ $n }/{ $total }] { $source }: Fehler: { $error }

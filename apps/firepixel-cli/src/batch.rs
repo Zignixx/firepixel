@@ -7,7 +7,8 @@
 //!                     [--report bericht.json] [--json]
 //! firepixel-cli batch --steps [--json]
 //! ```
-//! Exit-Code 0 = alles fertig, 1 = mindestens ein Fehler, 2 = Aufruf falsch, 3 = abgebrochen.
+//! Exit-Code 0 = alles fertig, 1 = mindestens ein Fehler, 2 = Aufruf falsch, 3 = abgebrochen,
+//! 130 = cancelled with Ctrl+C (running files finish or are discarded, temp files are removed).
 //! Fortschritt auf stderr (eine Zeile je Datei, mit `--json` als NDJSON).
 
 use clap::{Arg, ArgAction, ArgMatches, Command};
@@ -16,6 +17,11 @@ use fp_i18n::{t, tr};
 use serde_json::{Value, json};
 use std::path::PathBuf;
 use std::process::ExitCode;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
+
+/// Exit code after Ctrl+C (shell convention 128 + SIGINT).
+pub const EXIT_INTERRUPTED: u8 = 130;
 
 /// Prüft die Kommandozeile: `batch` mit `--recipe` oder `--steps` übernimmt dieses Modul (sonst
 /// `None` → alter Weg in `main.rs`). Steckt außerdem die Batch-Laufzeit für `batch.*`-Befehle ein.
@@ -305,6 +311,8 @@ fn run(m: &ArgMatches, json_out: bool) -> ExitCode {
     let items = collected.items;
     let sources: Vec<PathBuf> = items.iter().map(|i| i.path.clone()).collect();
     let handle = executor::spawn(recipe, items, opts);
+    let interrupted = Arc::new(AtomicBool::new(false));
+    watch_ctrl_c(handle.cancel.clone(), interrupted.clone());
     let total = sources.len();
     let mut n = 0usize;
     let src = |i: usize| {
@@ -400,5 +408,56 @@ fn run(m: &ArgMatches, json_out: bool) -> ExitCode {
             );
         }
     }
-    ExitCode::from(report.exit_code())
+    ExitCode::from(exit_code(
+        report.exit_code(),
+        interrupted.load(Ordering::SeqCst),
+    ))
+}
+
+/// Exit code of a run: 130 after Ctrl+C, otherwise the report's own code.
+fn exit_code(report_code: u8, interrupted: bool) -> u8 {
+    if interrupted {
+        EXIT_INTERRUPTED
+    } else {
+        report_code
+    }
+}
+
+/// Ctrl+C during `batch --recipe` (BA-106): the first press cancels the run cleanly (no new
+/// files are started, running ones finish or are discarded, temp files are removed, the
+/// summary is printed); a second press ends the process at once. Portable via `tokio::signal`;
+/// if the handler cannot be installed, Ctrl+C keeps its default behaviour.
+fn watch_ctrl_c(cancel: fp_batch::CancelToken, interrupted: Arc<AtomicBool>) {
+    let _ = std::thread::Builder::new()
+        .name("ctrl-c".into())
+        .spawn(move || {
+            let Ok(rt) = tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .build()
+            else {
+                return;
+            };
+            rt.block_on(async move {
+                while tokio::signal::ctrl_c().await.is_ok() {
+                    if interrupted.swap(true, Ordering::SeqCst) {
+                        std::process::exit(i32::from(EXIT_INTERRUPTED));
+                    }
+                    cancel.cancel();
+                    eprintln!("{}", t("batch-cli-interrupted"));
+                }
+            });
+        });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn ctrl_c_exit_code_is_130() {
+        assert_eq!(exit_code(0, false), 0);
+        assert_eq!(exit_code(3, false), 3);
+        assert_eq!(exit_code(3, true), EXIT_INTERRUPTED);
+        assert_eq!(EXIT_INTERRUPTED, 130);
+    }
 }

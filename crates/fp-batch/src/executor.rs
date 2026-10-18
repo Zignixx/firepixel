@@ -522,6 +522,25 @@ fn common_dir(dirs: &[PathBuf]) -> Option<PathBuf> {
     Some(acc)
 }
 
+/// After a cancelled run (button, window close or Ctrl+C in the CLI): delete every temp file
+/// `.<name>.fptmp` a planned target may have left behind, so an interrupted run never leaves
+/// half-written files next to the outputs (BA-106).
+pub fn remove_temp_files(plan: &Plan) {
+    for e in &plan.entries {
+        for t in std::iter::once(&e.target).chain(e.alt_target.as_ref()) {
+            for tmp in [
+                output::temp_path(t),
+                output::temp_path(&extra_fwpng_target(t)),
+            ] {
+                let p = output::long_path(&tmp);
+                if p.is_file() {
+                    let _ = std::fs::remove_file(p);
+                }
+            }
+        }
+    }
+}
+
 /// Plant einen Auftrag (Trockenlauf-Tabelle) ohne zu schreiben.
 pub fn plan(
     recipe: &Recipe,
@@ -626,6 +645,9 @@ pub fn run(recipe: &Recipe, items: &[ItemInfo], opts: &RunOptions) -> Result<Rep
             }
         };
         report.cancelled = opts.cancel.is_cancelled();
+        if report.cancelled {
+            remove_temp_files(&plan);
+        }
         if job.pipe.max_parallel().is_some() {
             // KI-Schritte: Rechenpuffer des Netzes (bis 1,5 GB) ans System zurückgeben (CT-C-01)
             fp_ai::nn::trim();
