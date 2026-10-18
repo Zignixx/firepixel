@@ -10,39 +10,37 @@ exist and work; FW-PNG round-trips; CLI, JSF and MCP drive everything.
 
 | Measure | Value |
 |---|---|
-| Parity units equal except for design | **44 / 48** (2 real deviations, 2 unclear, 0 under-measured; run 15) |
-| Proven 1:1 | **91.7 %** (44 / 48) |
-| Measurement quota, all 48 units | **84.8 %** (1041 / 1228 steps; was 84.1 %) |
+| Parity units equal except for design | **46 / 48** (0 real deviations, 2 unclear, 0 under-measured; run 16) |
+| Proven 1:1 | **95.8 %** (46 / 48) |
+| Measurement quota, all 48 units | **85.0 %** (1042 / 1226 steps; was 84.8 %) |
 | Canvas image pairs within 1 % | about 177 / 201 |
-| Tests | 2486 green, 0 red, 133 ignored |
-| Latest release | v0.2.0 pre-release (17 Oct 2026, Windows x64, macOS arm64) |
-| Open findings | 7 fixable · 20 deferred · 17 informational · 830+ closed |
+| Tests | 2510 green, 0 red, 133 ignored |
+| Latest release | v0.2.0 pre-release (17 Oct 2026, Windows x64, macOS arm64); CI now builds a universal macOS bundle |
+| Open findings | 5 fixable · 20 deferred · 17 informational · 830+ closed |
 
 ## Next (in order)
 
-1. **Behaviour descriptions** from measurements: the original's swatch file loader and sort key (TW-113), the
-   inspector with several selected objects (TW-120) and the button-instance inspector (TW-121).
-2. **Package F31** (Firepixel): implement TW-113, TW-120 and TW-121 from those descriptions, with tests that pin
-   the measured values.
-3. **Runner R-11:** read back a swatch colour after the reset (TW-115); keep drag distances clear of the snap
-   tolerance and check Ctrl+wheel points against the view (TW-119); remaining locator gaps (`slice:0`,
-   export-area dialog, guide double-click and guide drag off the canvas in `xs-canvas`).
-4. **Questions** Q-49 (hex field), Q-51 (inspector tab), Q-52 (swatch add) and Q-53 (Shift-drag, TW-118).
-5. **Comparison run 16** for `panel-swatches-mixer`, `inspector-group-symbol`, `xs-shortcuts` and `xs-canvas`.
-6. **Human click-test** of [docs/VERIFICATION.md](docs/VERIFICATION.md) (embedded panel dialogs, real keyboard
-   paths, brush strokes with a real mouse, drag and drop between windows, the run-14/15 checks in section A2).
-7. **Deferred expansion block** (see below), then a new full parity run over all 48 units and Linux builds.
+1. **Runner R-12:** probe and read back Firepixel's swatches at the 9 px pitch (TW-115); serialise objects over the
+   bridge, read panel pop-up menus instead of the panel, reference-safe read-back scripts (no `Array.map`), allow
+   drag end points outside the view, guide double-click and export-area dialog in the reference (TW-124).
+2. **Behaviour description** of text style shortcuts on a selected text object (TW-122, Q-54), then a small
+   package with the fix and the Optimize colour-table context menu width (TW-123).
+3. **Questions** Q-49 (hex field), Q-51 (inspector tab), Q-55 (caret after a text-tool click) and Q-56 (Snap to
+   Pixel without a selection).
+4. **Comparison run 17** for `xs-shortcuts`, `xs-canvas`, `panel-swatches-mixer` and `panel-optimize`; one review
+   of the `xs-canvas` canvas pairs.
+5. **Human click-test** of [docs/VERIFICATION.md](docs/VERIFICATION.md) (embedded panel dialogs, real keyboard
+   paths, brush strokes with a real mouse, drag and drop between windows, the run-15/16 checks in section A2).
+6. **Deferred expansion block** (see below), then a new full parity run over all 48 units and Linux builds.
 
 ## What remains
 
 ### Fixable remnants (`[F]`, small, mostly need a measurement first)
 
-- Swatches: the original keeps the `.act` padding entries and sorts black last (TW-113, behaviour description first).
-- Inspector: show the last selected object's fill and stroke with several objects selected (TW-120); button
-  instance properties (TW-121).
-- Pointer tool: Shift-drag of a selected object (TW-118, Q-53 first).
+- Text style shortcuts on a selected text object (TW-122, behaviour description first).
+- Optimize panel: colour-table context menu about twice as wide as the original's (TW-123).
 - PDF import: no layers (the pure-Rust PDF reader exposes no optional content groups).
-- Runner: swatch reset check (TW-115), snap-tolerance drag and wheel point in `xs-canvas` (TW-119).
+- Runner: swatch cell pitch for Firepixel (TW-115) and the remaining gaps of run 16 (TW-124).
 
 ### Deferred expansion items (`[V]`)
 

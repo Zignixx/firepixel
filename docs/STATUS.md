@@ -9,21 +9,22 @@ Firepixel is feature-complete as a preview: all menus, tools, panels, the proper
 the reference application exist and work, FW-PNG files round-trip, and everything is drivable over CLI, JSF and
 MCP. Work is now parity polishing: a scripted comparison runner measures Firepixel against the reference
 application unit by unit, and the remaining differences are tracked as findings. Release **v0.2.0** (Windows x64,
-macOS arm64) was published as a pre-release on 17 Oct 2026; further preview builds are made on request.
+macOS arm64) was published as a pre-release on 17 Oct 2026; further preview builds are made on request. Since
+18 Oct 2026 the macOS CI job builds a **universal** app bundle (arm64 + x86_64, macOS 10.15 or later).
 
 ## Figures
 
 | Area | Value | Source |
 |---|---|---|
 | Parity units | 48 | [PARITY.md](PARITY.md) |
-| Equal except for design | **44** (2 real deviations, 2 unclear, 0 under-measured) | run 15, 17/18 Oct 2026 |
-| Proven 1:1 | **91.7 %** (44 / 48; no unit under-measured) | run 15 |
-| Canvas image pairs within 1 % | about **177 / 201** (was 179 / 200) | newest run per unit |
-| Measurement quota, all 48 units | **84.8 %** (1041 / 1228 measurable steps both `ok`; was 84.1 %) | newest run per unit |
-| Measurement quota of run 15 | 86.9 % (153 / 176, 7 units; the same units in run 14: 82.2 %) | run 15 |
-| Workspace tests | **2486 green, 0 red, 133 ignored** | full workspace run, 17 Oct 2026 |
-| Open findings | 7 fixable `[F]` (TW-113 `.act` swatch loader and sort, TW-118 Shift-drag, TW-120 inspector with several objects, TW-121 button instance properties, PDF layers, runner TW-115/119), 20 deferred `[V]` (incl. TW-111), 17 informational `[N]` | [FINDINGS.md](FINDINGS.md) |
-| Real differences known | inspector shows the first instead of the last selected object (TW-120), button instance properties (TW-121), `.act` swatch loader and sort order (TW-113); unclear: Shift-drag of a selected object (TW-118) | [PARITY.md](PARITY.md) |
+| Equal except for design | **46** (0 real deviations, 2 unclear, 0 under-measured) | run 16, 18 Oct 2026 |
+| Proven 1:1 | **95.8 %** (46 / 48; no unit under-measured; was 91.7 %) | run 16 |
+| Canvas image pairs within 1 % | about **177 / 201** (unchanged) | newest run per unit |
+| Measurement quota, all 48 units | **85.0 %** (1042 / 1226 measurable steps both `ok`; was 84.8 %) | newest run per unit |
+| Measurement quota of run 16 | 86.3 % (126 / 146, 7 units; the same units before: 84.5 %); 0 Firepixel-side errors | run 16 |
+| Workspace tests | **2510 green, 0 red, 133 ignored** | full workspace run on `main` at `666c15c6`, 18 Oct 2026 |
+| Open findings | 5 fixable `[F]` (TW-122 text shortcuts on a selected text object, TW-123 Optimize context menu width, PDF layers, runner TW-115/124), 20 deferred `[V]` (incl. TW-111), 17 informational `[N]` | [FINDINGS.md](FINDINGS.md) |
+| Real differences known | none from the runs; unclear: text shortcuts on a selected text object (TW-122) and the remaining `xs-canvas` canvas pairs | [PARITY.md](PARITY.md) |
 | Closed findings (history) | 830+ | kept outside the repository ([ARCHIVE_NOTE.md](ARCHIVE_NOTE.md)) |
 | Startup time | about 0.8 s to the first frame (release build, warm) | smoke test 17 Oct 2026 |
 
@@ -33,10 +34,12 @@ Release **v0.2.0** (17 Oct 2026, pre-release on GitHub, Windows x64 and macOS ar
 plus the version bump `10bbd8f`; it contains package F28 (symbol properties panel rectangle, animated GIF
 transparency slot, pointer log). Full workspace test run on that snapshot: 2486 passed, 0 failed, 133 ignored.
 
-Latest test build: preview build **`2026-10-17_23-53`** (release profile, single `firepixel.exe` plus
-`firepixel-cli.exe`) from `main` at `3695c7de`, with package F29 (colour pop-up commits on release TW-112, `.act`
-colour count TW-113, symbol properties table look TW-110) and F30 (animated GIF palette TW-114). Comparison run 15
-used this build.
+Latest test build: preview build **`2026-10-18_02-04`** (release profile, single `firepixel.exe` plus
+`firepixel-cli.exe`) from `main` at `788f4fa1`, with package F31 (swatch file loader with 257 entries, built-in
+swatch sets, sort by colour and 9 px cells TW-113; Shift on a selected object never moves it TW-118; topmost object
+drives the inspector TW-120; button instance tab TW-121). Comparison run 16 used this build. `main` is now at
+`666c15c6` (universal macOS CI build, DE/EN texts for two command parameters); full workspace test run there:
+2510 passed, 0 failed, 133 ignored.
 
 ## How tests run
 
@@ -65,13 +68,14 @@ with a real mouse and drag and drop between windows need a human click-test: [VE
 
 ## Next
 
-1. Behaviour descriptions from measurements: the original's swatch file loader and sort key (TW-113), the
-   inspector with several selected objects (TW-120) and button instances (TW-121); then package **F31** with
-   tests that pin the measured values.
-2. Runner **R-11**: read back a swatch colour after the reset (TW-115), keep drag distances clear of the snap
-   tolerance and check wheel points against the view (TW-119).
-3. Questions Q-49 (hex field), Q-51 (inspector tab), Q-52 (swatch add) and Q-53 (Shift-drag, TW-118).
-4. Comparison run 16 for `panel-swatches-mixer`, `inspector-group-symbol`, `xs-shortcuts` and `xs-canvas`, then
-   the human click-test of [VERIFICATION.md](VERIFICATION.md).
+1. Runner **R-12**: probe and read back Firepixel's swatches at the 9 px pitch (TW-115); serialise objects over the
+   bridge, read panel pop-up menus, reference-safe read-back scripts, drag end points outside the view, guide
+   double-click and export-area dialog in the reference (TW-124).
+2. Behaviour description of text style shortcuts on a selected text object (TW-122, Q-54), then the fix; the
+   Optimize colour-table context menu width (TW-123).
+3. Questions Q-49 (hex field), Q-51 (inspector tab), Q-55 (caret after a text-tool click) and Q-56 (Snap to Pixel
+   without a selection).
+4. Comparison run 17 for `xs-shortcuts`, `xs-canvas`, `panel-swatches-mixer` and `panel-optimize`, then the human
+   click-test of [VERIFICATION.md](VERIFICATION.md).
 
 See [ROADMAP.md](../ROADMAP.md) for the complete list.

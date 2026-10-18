@@ -3,9 +3,9 @@
 Firepixel aims to behave like the reference application button by button. This page explains how that is
 measured, what the figures mean, where the method stops, and gives the current per-unit result.
 
-**Current state (run 15, 17/18 Oct 2026):** 48 units — **44 equal except for design**, 2 real deviations,
-2 unclear, 0 under-measured. **Proven 1:1: 91.7 %** (44 / 48; all 48 units are sufficiently measured). Measurement
-quota over all 48 units: **84.8 %** (1041 / 1228 steps). Canvas image pairs within 1 %: about **177 / 201**.
+**Current state (run 16, 18 Oct 2026):** 48 units — **46 equal except for design**, 0 real deviations,
+2 unclear, 0 under-measured. **Proven 1:1: 95.8 %** (46 / 48; all 48 units are sufficiently measured). Measurement
+quota over all 48 units: **85.0 %** (1042 / 1226 steps). Canvas image pairs within 1 %: about **177 / 201**.
 
 ## Method: scripted comparison runs
 
@@ -43,7 +43,7 @@ state for a unit is always its newest run.
 
 **Measurement quota** = steps with both sides `ok` / steps without an `unsupported` or `skipped` side (repeated
 steps count with their second attempt). **Proven 1:1** = units "equal except for design" / sufficiently
-measured units. The headline figure is the strict one over all 48 units (91.7 %); since run 15 no unit is
+measured units. The headline figure is the strict one over all 48 units (95.8 %); since run 15 no unit is
 under-measured, so both figures are the same.
 
 ## Limits
@@ -64,12 +64,13 @@ The runner cannot reach everything; these parts need a human (see [VERIFICATION.
 - The reference application's own rendering is the oracle only where it is deterministic; cursor images
   cannot be captured.
 
-## Per-unit result (run 15)
+## Per-unit result (run 16)
 
 State per unit from its newest run: run 10 (16/17 Oct) for 24 units, run 11 (17 Oct morning) for 3, run 12
-(17 Oct afternoon) for 7, run 13 (17 Oct evening, 14 units) for 6, run 14 (17 Oct, 19:48–20:38) for 1
-(`panel-layers`), run 15 (17/18 Oct, 23:54–00:38, 7 units, 189 steps, 97 image pairs, preview build
-`2026-10-17_23-53` with packages F29 and F30, runner R-10) for 7.
+(17 Oct afternoon) for 6, run 13 (17 Oct evening, 14 units) for 5, run 14 (17 Oct, 19:48–20:38) for 1
+(`panel-layers`), run 15 (17/18 Oct, 23:54–00:38, preview build `2026-10-17_23-53`, runner R-10) for 2
+(`tool-autoshapes`, `color-popup`), run 16 (18 Oct, 02:06–02:39, 7 units, 170 steps, 86 image pairs, preview build
+`2026-10-18_02-04` from `main` at `788f4fa1` with package F31, runner R-11) for 7.
 
 | Unit | Area | Class | Note |
 |---|---|---|---|
@@ -99,8 +100,8 @@ State per unit from its newest run: run 10 (16/17 Oct) for 24 units, run 11 (17 
 | `panel-info-align-path` | panels | equal except for design | |
 | `panel-layers` | panels | equal except for design | drag onto a locked layer fixed (TW-86); run 14 unchanged (74.1 % measured, locator gaps in the scrolled panel); not part of run 15 |
 | `panel-layers-menu` | panels | equal except for design | |
-| `panel-misc` | panels | equal except for design | embedded panels `unsupported`; run 13: 87.5 % measured |
-| `panel-optimize` | panels | equal except for design | |
+| `panel-misc` | panels | equal except for design | embedded panels `unsupported`; run 16 unchanged from run 13: 87.5 % (14 / 16), no error on either side; the undo step's step-count read-back returns an error code in the reference (the step is `unsupported` there anyway); panel menu texts are read from the panel instead of the pop-up on Firepixel's side (runner, TW-124) |
+| `panel-optimize` | panels | equal except for design | run 16: 79.2 % (19 / 24, as in run 12); `slice:N` now selects the slices on both sides and Firepixel's step 19 is `ok`; the reference fails only in the runner's read-back script (`Array.map` is missing in its script engine, TW-124); the colour-table context menu opens about 600 px wide in Firepixel (reference about 270 px, TW-123) |
 | `panel-library-styles` | panels | equal except for design | run 13: equal at an integer drop point; half-pixel rounding still open (TW-100) |
 | `panel-pages-states-history` | panels | equal except for design | run 13: replay offset came from script steps in the original's history (TW-106) |
 | `preview-options` | preview / export | equal except for design | |
@@ -111,27 +112,28 @@ State per unit from its newest run: run 10 (16/17 Oct) for 24 units, run 11 (17 
 | `tool-web` | tools | equal except for design | |
 | `toolbox` | tools | equal except for design | run 13 |
 | `tool-autoshapes` | tools | equal except for design | run 15: 100 % measured (was 95.0 %); the size handle with modifiers and the spiral's `center` handle are now reached on both sides (TW-116 closed); 27 of 31 pairs within 1 % |
-| `export-results` | preview / export | equal except for design | run 15: 66.7 %; the animated GIF is **byte-identical** to the original's file (TW-114 closed), images-only and PNG 8/24/32 pixel-identical; the remaining errors are runner gaps (`slice:0` locator, export-area dialog) |
+| `export-results` | preview / export | equal except for design | run 16: 72.7 % (was 66.7 %); animated GIF and PNG 8/24/32 stay pixel-identical (4 of 4 pairs within 1 %); `12_selected_slices` is now `unsupported` on both sides (`slice:0` is selected, but the runner's export verb has no "selected slices only"); `13_export_area`: `if_no_dialog` fell back to the double-click in the reference and still no preview opened (reference side only, Firepixel `ok`) |
 | `color-popup` | colour | equal except for design | run 15: 75.0 % (was 71.4 %); drag black → red now gives #ff0000 on both sides (TW-112 closed); hex field question Q-49 still open; canvas shots differ by capture method only (TW-117) |
 | `xs-context-menus` | cross-cutting | equal except for design | |
 | `xs-preferences` | cross-cutting | equal except for design | |
 | `xs-windows-tabs` | cross-cutting | equal except for design | |
 | `xs-file-formats` | cross-cutting | equal except for design | run 13: import by dragging lands on the same pixels 121,120–417,322 (TW-101 fixed) |
-| `inspector-group-symbol` | property inspector | **real deviation** | run 15: 90.0 %; table look of the Symbol Properties panel now equal (TW-110 closed); with the runner bringing Properties to the front again (step 04b, TW-111) the inspector pairs measure the right panel and show two real differences: with several objects selected Firepixel shows the first selected object's fill and stroke, the original the last one's (TW-120), and the button instance properties differ (TW-121) |
-| `panel-swatches-mixer` | panels | **real deviation** | run 15: 96.3 %; after "replace swatches" with the 16-colour `.act` file the original holds about 256 entries (16 colours plus black padding) and sorts black last, while Firepixel now holds only the 16 colours, in a different sort order (TW-113, reopened with this evidence); the reset step 00a does not yet give equal sets, probe colours still differ (#efffbf vs. #ffff00, TW-115) |
-| `xs-shortcuts` | cross-cutting | unclear | run 15: 84.0 %; Alt-drag now duplicates on both sides (8 vs. 8, TW-97 closed); new: a Shift-drag of R1 moves it in Firepixel (+60 px, constrained) but not in the original (TW-118, Q-53) |
-| `xs-canvas` | cross-cutting | unclear | run 15: 79.2 % (was 58.3 %, no longer under-measured); the reference now fits the large document, five of the seven formerly failing steps are `ok` and their values equal (guide snap, guide lock); `12_grid_snap` differs only because the reference's whole-pixel drag moves 11.67 instead of 13 document px (runner, TW-119); 7 of 8 canvas pairs stay above 1 % (different view sizes, Ctrl+wheel point outside Firepixel's view, TW-119) |
+| `inspector-group-symbol` | property inspector | equal except for design | run 16: 90.0 % (18 / 20, unchanged; the two missing steps are unmapped animation fields); with several objects selected both programs now show the fill and stroke of the topmost object (TW-120 closed: R + TX fill black; E1 + R1 red 1 px stroke) and the button instance shows symbol name, disabled text field, "PNG32" and "Add filter…" on both sides (TW-121 closed); 1 of 1 canvas pair within 1 % |
+| `panel-swatches-mixer` | panels | equal except for design | run 16: 96.3 % (26 / 27, unchanged); the screenshots show equal swatch sets: after the reset both start with the 21-hue colour-cube ramp (#ffbfbf, #ffcfbf, #ffdfbf …), after "replace" + "sort by colour" both show the identical first row (#ffff00, #f0dcb4, #00ffff, #00ff00, #ff8000, #4080c0, …, #ffffff, #808080) followed by black, in 9 px cells (TW-113 and Q-52 closed); Firepixel's wider panel shows 27 columns instead of 21 (design); the probe and read-back colours still differ (#efffbf vs. #cfffbf) only because the runner reads Firepixel's panel at the old 12 px pitch (TW-115) |
+| `xs-shortcuts` | cross-cutting | unclear | run 16: 88.0 % (was 84.0 %); the Shift-drag of the selected R1 now leaves it at 50,50–150,120 in both programs (TW-118 and Q-53 closed), Alt-drag still 8 vs. 8; step 06 is measured for the first time and differs: with the text object selected, Ctrl+Shift+B opens a warning in Firepixel and Ctrl+Shift+I / Ctrl+Shift+U change the selection, while the original keeps the text selected (TW-122, Q-54); `15_in_text` gives "Vrc" vs. "Vr" (unchanged since run 15, Q-55) |
+| `xs-canvas` | cross-cutting | unclear | run 16: 82.6 % (was 79.2 %); `12_grid_snap` is equal (12,20–2412,1620 on both sides, TW-119 a closed); the Ctrl+wheel point is now taken inside each view (`view_frac`) and the zoom-centre pair drops from 6.3 % to 1.6 % (TW-119 b closed); no value differs any more, but 7 of 8 canvas pairs stay between 1.6 % and 12.7 % at the fractional fit zoom (page phase and view size), so the unit stays unclear until one pair review; reference-side errors: the guide double-click opens no dialog (`07`) and Modify ▸ Snap to Pixel is disabled without a selection (`15`, Q-56); `10_guides_remove` is now `unsupported` on both sides (the drag end on the ruler lies outside the view, TW-124) |
 
-Totals: 44 / 2 / 2 / 0. Step level over all 48 units (newest run per unit): 1041 of 1228 measurable steps `ok` on
-both sides (**84.8 %**, was 84.1 %); in the 7 units of run 15: 153 of 176 (86.9 %; the same units in run 14: 143 of
-174, 82.2 %). Canvas image pairs within 1 % over all 48 units: about 177 of 201 (run 15 units: 33 of 42; run 14:
-35 of 41 – the difference comes from `xs-canvas` pairs now taken at the fitted zoom). `export-results` and
-`color-popup` moved to "equal", `inspector-group-symbol` became a real deviation once it measured the right panel,
-`xs-shortcuts` became unclear and `xs-canvas` is no longer under-measured.
+Totals: 46 / 0 / 2 / 0. Step level over all 48 units (newest run per unit): 1042 of 1226 measurable steps `ok` on
+both sides (**85.0 %**, was 84.8 %); in the 7 units of run 16: 126 of 146 (86.3 %; the same units in their previous
+newest runs: 125 of 148, 84.5 %). Reference-side errors in run 16: 5 (the same units before: 8); Firepixel-side
+errors: 0 (was 3). Canvas image pairs within 1 % over all 48 units: about 177 of 201, unchanged (run 16 units: 6 of
+13, as before; the zoom-centre pair improved from 6.3 % to 1.6 %). `inspector-group-symbol` and
+`panel-swatches-mixer` moved to "equal"; `xs-shortcuts` and `xs-canvas` stay unclear. The runner's new foreground
+retry recovered twice from another application taking the foreground (`inspector-group-symbol`, before step 13).
 
-Real differences in results that remain known: the inspector shows the first instead of the last selected object
-(TW-120), the button instance properties (TW-121) and the `.act` swatch loader and its sort order (TW-113); still
-unclear: the Shift-drag of a selected object (TW-118, Q-53). See [FINDINGS.md](FINDINGS.md).
+No real difference in results remains known from the runs. Still unclear: text style shortcuts on a selected text
+object (TW-122, Q-54) and the remaining `xs-canvas` canvas pairs; small UI deviation: the width of the Optimize
+colour-table context menu (TW-123). See [FINDINGS.md](FINDINGS.md).
 
 ## History of the headline figure
 
@@ -142,9 +144,10 @@ unclear: the Shift-drag of a selected object (TW-118, Q-53). See [FINDINGS.md](F
 | 12 (20 units) | 17 Oct 2026 | 39 of 48 (0 under-measured) | 81 % (39 / 48) |
 | 13 (14 units) | 17 Oct 2026 | 42 of 48 (2 under-measured) | 88 % (42 / 48; 91 % = 42 / 46 of the sufficiently measured units) |
 | 14 (8 units) | 17 Oct 2026 | 42 of 48 (1 under-measured) | 87.5 % (42 / 48; 89.4 % = 42 / 47 of the sufficiently measured units); step level 84.1 % |
-| 15 (7 units) | 17/18 Oct 2026 | 44 of 48 (0 under-measured) | **91.7 %** (44 / 48); step level 84.8 % |
+| 15 (7 units) | 17/18 Oct 2026 | 44 of 48 (0 under-measured) | 91.7 % (44 / 48); step level 84.8 % |
+| 16 (7 units) | 18 Oct 2026 | 46 of 48 (0 under-measured) | **95.8 %** (46 / 48); step level 85.0 % |
 
-The next steps are in [ROADMAP.md](../ROADMAP.md): behaviour descriptions for the swatch file loader and sort
-(TW-113) and for the inspector with several objects and button instances (TW-120/121), runner R-11 (TW-115,
-TW-119), the open questions Q-49 and Q-51 to Q-53, comparison run 16 for the affected units, then the human
-click-test.
+The next steps are in [ROADMAP.md](../ROADMAP.md): runner R-12 (Firepixel's swatch pitch, TW-115, and the gaps in
+TW-124), a behaviour description for text style shortcuts on a selected text object (TW-122), the Optimize context
+menu width (TW-123), the open questions Q-49, Q-51 and Q-54 to Q-56, comparison run 17 for the affected units, then
+the human click-test.

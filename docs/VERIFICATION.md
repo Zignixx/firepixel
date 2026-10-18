@@ -73,11 +73,12 @@ Conventions: coordinates are document pixels; "R1", "E1", "B1", "P1", "PG" are t
   **Expected:** All supported files are added (folder recursively as configured), unsupported files are reported.
 - [ ] **A1-18** (CF-C CT-C-02/03, F19 TW-69; needs: real mouse) – see VER-4.23 and VER-1.36: reorder states/pages and drag across eye icons.
 
-## A2. Open items from comparison runs 12–15
+## A2. Open items from comparison runs 12–16
 
 Comparison run 12 left seven units unclear (`?`). Runs 13 and 14 (17 Oct 2026) resolved or reclassified all of
 them; they stay listed here, ticked, so the history of each check is clear. Run 15 (17/18 Oct 2026) resolved
-TW-97, TW-110, TW-112, TW-114 and TW-116; the open checks below come from runs 14 and 15.
+TW-97, TW-110, TW-112, TW-114 and TW-116; run 16 (18 Oct 2026) resolved TW-113, TW-118, TW-119, TW-120 and TW-121.
+The open checks below come from runs 15 and 16.
 
 - [x] **TW-100** (`panel-library-styles/03`) – resolved: run 13 measured equal positions at an integer drop point; the unit counts as equal and the half-pixel case is no longer tracked.
 - [x] **TW-101** (`xs-file-formats/09`) – resolved in run 13: import by dragging lands on the same pixels 121,120–417,322 in both programs.
@@ -92,26 +93,32 @@ TW-97, TW-110, TW-112, TW-114 and TW-116; the open checks below come from runs 1
 - [x] **TW-114** (`export-results/07`) – resolved in run 15: the animated GIF export is byte-identical to the original's file of the same run.
 - [x] **TW-116** (`tool-autoshapes/06, 13`) – resolved in run 15: the runner reaches the size handle and the spiral's `center` handle on both sides.
 - [x] **Q-48** (`xs-canvas`) – resolved in run 15: the reference fits the large test document (zoom 0.42833) and the drag steps are measured; both programs leave a 15 px margin when fitting.
-- [ ] **TW-113 / Q-52** (`panel-swatches-mixer/06–08`; needs: real window, original)
-  **Steps:** Swatches panel menu ▸ Colour cubes; then replace swatches with the 16-colour `.act` file (772 bytes, 16 colours plus 240 padding entries and the count trailer); scroll through the panel; sort by colour. Repeat with "add swatches".
-  **Expected:** Note how many swatches the original holds after "replace" (run 15 suggests 16 colours plus about 240 black), the order after sorting (run 15: yellow, beige, cyan, green, orange, #4080c0, …, black last) and whether "add" appends to the current set. Firepixel currently keeps only the 16 colours and sorts them by hue.
-- [ ] **TW-115** (`panel-swatches-mixer/00a`; needs: real window, original)
-  **Steps:** Swatches panel menu ▸ Colour cubes; hover the first and the sixth swatch.
-  **Expected:** Note the colours. Run 15 read #ffbfbf and #efffbf from the original's panel (a 21-column hue × lightness set) and #ffffff and #ffff00 from Firepixel's colour cube; find out whether the original's colour-cube set really looks like that or the runner's click did not take.
+- [x] **TW-113 / Q-52** (`panel-swatches-mixer/06–08`) – resolved in run 16: after "replace swatches" with the 16-colour `.act` file and "sort by colour" both programs show the same first row (#ffff00, #f0dcb4, #00ffff, #00ff00, #ff8000, #4080c0, …, #ffffff, #808080) followed by black; "add" appends in both.
+- [x] **TW-118 / Q-53** (`xs-shortcuts/13`) – resolved in run 16: a Shift-drag pressed on the selected R1 leaves it at 50,50–150,120 in both programs.
+- [x] **TW-119** (`xs-canvas/02, 12`) – resolved in run 16: grid snap ends at 12,20–2412,1620 in both programs; the Ctrl+wheel point lies inside both views and the zoom-centre pair differs by 1.6 % (was 6.3 %).
+- [x] **TW-120** (`inspector-group-symbol/11, 12`) – resolved in run 16: with two objects selected both programs show the topmost object's fill and stroke (black fill; red 1 px stroke).
+- [x] **TW-121** (`inspector-group-symbol/05`) – resolved in run 16: the button instance shows the symbol name, a disabled text field, "PNG32" and "Add filter…" in both programs.
+- [ ] **TW-115** (`panel-swatches-mixer/00a, 19, 20`; needs: real window)
+  **Steps:** Swatches panel menu ▸ Colour cubes in both programs; hover the first and the sixth swatch; click the sixth swatch with a rectangle selected.
+  **Expected:** Both show #ffbfbf and #efffbf and the rectangle gets #efffbf (run 16 screenshots show equal sets; the runner still probes Firepixel at 12 px instead of 9 px and hits #cfffbf).
 - [ ] **TW-111 / Q-51** (`inspector-group-symbol/04–05`; needs: real window, original)
   **Steps:** Select a rich symbol instance and open the Symbol Properties panel; then select a plain rectangle.
   **Expected:** Note whether the original brings Properties back to the front by itself when the selection is no rich symbol; Firepixel keeps Symbol Properties in front.
-- [ ] **TW-120** (`inspector-group-symbol/11, 12`; needs: real window)
-  **Steps:** Select a rectangle and then a text object (Shift-click); select the ellipse and then the rectangle with a red stroke.
-  **Expected:** The inspector shows the fill and stroke of the last selected object (text black; red 1 px stroke). Firepixel currently shows the first selected object's values.
-- [ ] **TW-121** (`inspector-group-symbol/05`; needs: real window, original)
-  **Steps:** Select a button instance and look at the Properties panel.
-  **Expected:** Note the contents of the name field (symbol or instance name), whether the text field is enabled, the export setting shown (run 15: "PNG32") and whether an "Add filter…" button is present.
-- [ ] **TW-118 / Q-53** (`xs-shortcuts/13`; needs: real mouse, original)
-  **Steps:** Select R1, hold Shift, press on R1's body and drag 60 px to the right and 10 px down; release.
-  **Expected:** Note whether the original moves R1 (constrained horizontally, as Firepixel does) or leaves it in place and only toggles the selection.
+- [ ] **TW-122 / Q-54** (`xs-shortcuts/06`; needs: real keyboard, original)
+  **Steps:** Open the text test file, select the text object with the pointer tool (do not edit it); press Ctrl+Shift+B, Escape, reselect; repeat with Ctrl+Shift+I, Ctrl+Shift+U, Ctrl+Shift+E, Ctrl+Alt+Shift+S, Ctrl+Shift+Period and Ctrl+Shift+Comma.
+  **Expected:** Note for each key what the original does (no dialog, text stays selected in run 16; the document is changed from Ctrl+Shift+U on) and which text attribute changes. Firepixel currently opens a warning on Ctrl+Shift+B and changes the selection on Ctrl+Shift+I and Ctrl+Shift+U.
+- [ ] **TW-123** (`panel-optimize/13`; needs: real window)
+  **Steps:** Optimize panel with GIF; right-click the colour table.
+  **Expected:** The context menu is about as wide as its longest item (original about 270 px); Firepixel currently opens it about 600 px wide.
+- [ ] **xs-canvas pairs** (`xs-canvas/03, 11, 13, 14, 16`; needs: eyes on the image pairs)
+  **Steps:** Open the run-16 gallery for `xs-canvas` and compare the canvas pairs at the fit zoom 0.42833.
+  **Expected:** Decide whether the remaining 1.6–12.7 % come only from page phase and view size (then the unit counts as equal) or from rendering (grid colour, pixel grid, edges).
 
-Related open question: **Q-49** when does the original accept a hex value in the color pop-up (Enter, another key, or closing)? Grid snapping at low zoom stays in VER-10.28 (run 15 hit the tolerance edge, TW-119).
+Related open questions: **Q-49** when does the original accept a hex value in the color pop-up (Enter, another key,
+or closing)? **Q-55** (`xs-shortcuts/15`): after a click into the text object with the text tool, typing "V" and
+"R" gives "Vrc" in the original and "Vr" in Firepixel – where does the original place the caret? **Q-56**
+(`xs-canvas/15`): Modify ▸ Snap to Pixel is disabled in the original without a selection; Firepixel runs it –
+check Firepixel's menu state with nothing selected. Grid snapping at low zoom stays in VER-10.28.
 
 ## A3. Spot checks of the fixes from 2026-10-17
 
