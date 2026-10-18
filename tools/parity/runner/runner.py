@@ -169,6 +169,35 @@ def clean_label(s: str) -> str:
     return re.sub(r"(\.\.\.|…)$", "", str(s).replace("&", "")).strip()
 
 
+TEXT_CTL = ("\r", "\n", "\x03")
+
+
+def text_escape(s: str) -> str:
+    """R-17b (TW-144): CR, LF and U+0003 (forced line break) visible and transportable in one line: backslash
+    doubled, then \\r, \\n, \\x03. Inverse: text_unescape."""
+    return str(s).replace("\\", "\\\\").replace("\r", "\\r").replace("\n", "\\n").replace("\x03", "\\x03")
+
+
+def text_unescape(s: str) -> str:
+    return re.sub(r"\\(\\|r|n|x03)", lambda m: {"\\": "\\", "r": "\r", "n": "\n", "x03": "\x03"}[m.group(1)], str(s))
+
+
+# JSF: the same escaping in the reference's script (split/join, no regular expressions; a function expression -
+# the script body runs inside a try block)
+JSF_TEXT_ESCAPE = ('var __esc = function (s) { return String(s).split("\\\\").join("\\\\\\\\").split("\\r").join("\\\\r")'
+                   '.split("\\n").join("\\\\n").split(String.fromCharCode(3)).join("\\\\x03"); };\n')
+
+
+def value_record(side, expr, val, **extra) -> dict:
+    """R-17b: a `log_value` record; a text value with CR / LF / U+0003 also as `value_escaped` (same escaping on both
+    sides) and as a run-log line, so the exact characters stay visible."""
+    rec = dict({"expr": expr, "value": val}, **extra)
+    if isinstance(val, str) and any(c in val for c in TEXT_CTL):
+        rec["value_escaped"] = text_escape(val)
+        side.r.log(f"  {side.name} log_value text: {rec['value_escaped'][:400]}")
+    return rec
+
+
 ELLIPSIS_END = re.compile(r"\s*(\.\.\.|…)$")
 
 
@@ -2609,9 +2638,14 @@ class OrigSide(Side):
         return self.jsf_value(expr)
 
     def jsf_value(self, expr, why="jsf_value"):
-        lines = self.o.jsf(why=why, code=f'var __v = ({expr}); fp_log("RET " + (typeof __v == "object" && __v !== null ? (__v.toSource ? __v.toSource() : String(__v)) : String(__v)));')
-        # R-14 (TW-130): a value with line breaks (textChars of a multi-line text: "Zeile eins\rZeile zwei ...")
-        # was cut to its first line - the log file is read line by line; the lines after the RET line belong to it
+        # R-17b (TW-144): the value travels escaped (text_escape: CR, LF, U+0003) in one log line and is decoded here -
+        # R-14 split the script output with splitlines() and joined it with "\n", so a "\r" of textChars was logged
+        # as "\n"; marker "RETE " = escaped value
+        lines = self.o.jsf(why=why, code=JSF_TEXT_ESCAPE + f'var __v = ({expr}); fp_log("RETE " + __esc(typeof __v == "object" && __v !== null ? (__v.toSource ? __v.toSource() : String(__v)) : String(__v)));')
+        idx = [i for i, ln in enumerate(lines) if ln.startswith("RETE ")]
+        if idx:
+            return text_unescape(lines[idx[0]][5:])
+        # R-14 (TW-130) fallback: unescaped value over several lines
         idx = [i for i, ln in enumerate(lines) if ln.startswith("RET ")]
         if not idx:
             return None
@@ -2892,9 +2926,9 @@ class OrigSide(Side):
                     except (OrigError, Unmapped) as e:
                         self.r.log(f"log_value: history panel: {e}")
                     self.r.log(f"log_value: history read-back -2147216344 - History panel shown, read again: {str(val)[:120]}")
-                    self.values.append({"expr": expr, "value": val, "first": first, "retry": "history panel shown"})
+                    self.values.append(value_record(self, expr, val, first=first, retry="history panel shown"))
                 else:
-                    self.values.append({"expr": expr, "value": val})
+                    self.values.append(value_record(self, expr, val))
             except OrigError as e:
                 # R-6 (run 10 color-popup/21, panel-info-align-path/15, panel-misc/20): the history palette is not
                 # readable by script in the reference program (-2147216344); the value is recorded as missing and the
@@ -4276,7 +4310,8 @@ class FpSide(Side):
                 raise Unsupported(f"log {arg}")
             # R-12 (TW-124 a, run 16 xs-shortcuts/06): the bridge returns String(value), an object came back as
             # "[object Object]"; objects/arrays are serialised in the script like the reference side (toSource)
-            self.values.append({"expr": expr, "value": self.script_value(fp_serialised_js(expr))})
+            # R-17b: the bridge returns the string as JSON (exact characters); escaped copy like the reference side
+            self.values.append(value_record(self, expr, self.script_value(fp_serialised_js(expr))))
         elif verb in ("click", "double_click", "right_click", "hover", "mouse_down", "mouse_up", "click_text",
                       "double_click_text", "right_click_text", "hover_text", "click_button", "toolbox_click",
                       "open", "canvas_click", "canvas_double_click", "canvas_move", "canvas_hover", "window_click",

@@ -715,3 +715,11 @@ Self test: `python -I runner.py --units _selftest_menu,_selftest_inspector`.
   its read-back lacked the ellipsis Firepixel's kept. Recorded menu entries (`menu_items`, `record_ui menu.open`,
   `log_menu_items`) now carry `text` without a trailing ellipsis and `ellipsis: true|false` on both sides
   (reference: from the raw menu text before the tab) - the texts compare equal, the ellipsis is compared separately.
+- **Text read-backs keep CR / LF / U+0003 (R-17b, TW-144):** the reference's `textChars` separates paragraphs with
+  `\r` (U+0003 = forced line break), but `jsf_value` split the script output with `splitlines()` and joined it with
+  `\n`, so every logged break was `\n` (runner artefact). The reference script now escapes the value into one log
+  line (`RETE <value>`: backslash doubled, then `\r`, `\n`, `\x03` as text; `text_escape`/`text_unescape`, JSF
+  `JSF_TEXT_ESCAPE`) and the runner decodes it, so `value` holds the exact characters (old multi-line `RET` read as
+  fallback). Firepixel's `run_script` result already arrives as JSON. On both sides a `log_value` text containing
+  one of these characters also gets `value_escaped` (same escaping) and a run-log line `<side> log_value text:
+  <escaped>` - e.g. the `textChars` read-backs of `tool-text/06` and `xs-shortcuts/15_in_text_tx2`.
