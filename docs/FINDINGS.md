@@ -27,9 +27,9 @@ Findings are grouped by their state:
 
 ---
 
-## [F] Fixable now (3)
+## [F] Fixable now (8)
 
-Recounted after comparison run 18 (18 Oct 2026, 10 units; the other 38 units from full run 17). The earlier remnants (sprite
+Recounted after comparison run 19 (18 Oct 2026, 6 units; 5 units from run 18, the other 37 from full run 17). The earlier remnants (sprite
 padding default, Shift-constrain for L-shape/arrow line, import rubber band, New Style defaults, text runs, SVG
 layers, symbol origin, simple brush runner, TW-101 import edge, TW-102/103 export format choice, TW-104 symbol
 properties header, TW-100 library drop, TW-105/106 runner effects, TW-107 start colours, TW-109 Alt rectangle) are
@@ -100,10 +100,25 @@ The wave after run 18 (18 Oct 2026) closed most of them; run 19 of the affected 
   menu read-back takes the enabled state from the accessibility tree. TW-130 / Q-57 stays open until run 19 reads
   back all text lines on the reference side.
 
+Follow-up run 19 (18 Oct 2026, preview `2026-10-18_13-04` from `a3510515`, packages F34–F36, runner R-14) closed
+**TW-130 / Q-57** (the typed "Vr" lands in line 2 at the click point in both programs: "ZeileVr zwei"), **TW-131**
+(nine URL menu entries in the reference's order), **TW-125** (States menu 210 vs. 207 px), **TW-135** (Firepixel
+inserts at the double-click point, "ZeilQe eins", as the reference did in run 18; in run 19 the reference's
+double-click opened no editor) and **TW-132** (dialogs recorded before the read-backs, history read-back, Ctrl+D and
+the text read-backs work on the reference side; the rest continues as TW-140 and TW-141). TW-133 is confirmed except
+for the stretch shortcut. TW-134 was not part of run 19 (A4-13 and the next `xs-preferences` run). New: TW-136 to
+TW-141. Tags: *RE spec* = behaviour description from the reference first, *direct fix* = fix from the measured
+values, *runner* = parity runner change (R-15).
+
 | ID | Area | What is open (expected vs. current) |
 |---|---|---|
-| TW-130 (Q-57) | Text tool, click on a text (*runner*, then *RE spec*) | Since F34 Firepixel places the caret at the click point: `xs-shortcuts/15_in_text_tx2` (text-tool click at TX2's centre, "V" and "R" typed) gives "Zeile eins / ZeileVr zwei / Zeile drei". The reference's read-back of TX2 shows only "Zeile eins" before and after typing, so where its typed text goes is not measured; the TX1 step is `unsupported` (invalid TX1 in the reference file). The stray "c" of run 17 appears only on the reference side (`tool-text/02, 03`: "Abc 123c"). Runner R-14 now reads back all text objects before and after typing and after Escape (`xs-shortcuts/15`, `tool-text/06, 07`). Needs: run 19, then compare. |
-| TW-133 | Shortcut set "Web Standard", text (*RE spec*, rest) | Fixed per RE spec 48 after run 18: Select Inverse warns without a pixel selection, Larger/Smaller step by 1 pt, stretched alignment leaves point text alone; the Break Apart warning on Ctrl+Shift+B was already right (the runner had closed the reference's dialog). Still unverified: what "justified" alignment does on point (auto-width) text in the reference. Needs: run 19 of `xs-shortcuts`, and a measurement of "justified" on point text. Continues TW-122 / TW-126. |
+| TW-133 | Shortcut set "Web Standard", text (*RE spec*, rest) | Run 19 confirms Ctrl+Shift+B and Ctrl+Shift+I (a warning on both sides), Ctrl+Shift+U, Ctrl+Shift+E and Larger / Smaller (24 → 25 → 24 pt) in `xs-shortcuts/06`. Still different: Ctrl+Alt+Shift+S sets "stretch" on TX1 in Firepixel, the reference keeps "left" (both read the leading back as 1.1999…, so the command ran on both sides). TX1 is invalid in the reference's test file; check whether Firepixel treats TX1 as point text, and measure "stretch" and "justified" on a valid point text in the reference. Continues TW-122 / TW-126. |
+| TW-136 | URL panel menu labels (*direct fix*) | `panel-library-styles/16`: the nine entries and their order match, but five of Firepixel's labels end in "..." (add URL, edit URL, new URL library, import, export) where the reference's have none; the menu shot is 327 × 248 vs. 321 × 231 px (17 px taller). Expected: the reference's labels and separator spacing. |
+| TW-137 | History panel, Copy (*RE spec*) | `menu-edit/22` (Clone, Copy, Paste, Delete on R1): the reference's History lists Clone, Copy, Paste (its step count includes Copy; the Delete had no effect there, see TW-140), Firepixel's lists Clone, Paste, Clear without a Copy row. Needs a behaviour description: which commands that do not change the document the reference lists in History, and how they behave on undo, replay and the history limit. |
+| TW-138 | Text tool defaults (*RE spec*) | `tool-text/14, 16` (runs 18 and 19): after `11` (72 pt set on three selected characters while editing) and `13` (grey A0A0A0 on three characters), Firepixel's next new text is 72 pt and grey; the reference's next text takes neither value. Needs a behaviour description of when the reference's text tool takes inspector values as defaults. |
+| TW-139 | Scripting read-back while a text is edited (*direct fix*, then click-test) | While the text editor is open, Firepixel's element list, `textChars` and `pixelRect` still show the state before the edit (`tool-text/07`: no text object until Escape; `xs-shortcuts/15_in_text_tx2`, `tool-text/06`: the typed characters appear only after Escape); the reference shows the new object at the first click and the typed text live. In `tool-text/06` Firepixel's canvas shot taken while editing shows no "Q" either; check by hand that typed text is drawn at once. |
+| TW-140 | Reference-side keys (*runner*, R-15) | Run 19's effect checks show that on the reference side Delete selects the Eraser tool (`menu-edit/09, 22`) and the plain Right arrow the Text tool (`xs-shortcuts/10`, `panel-pages-states-history/14–21`), both dropping the selection, and that a "c" arrives after Escape (a stray "c" in an open editor in `tool-text/07` and `xs-shortcuts/15_in_text_tx2`, otherwise the Crop tool). The effect check counts the dropped selection as an effect. In `tool-text/06` the reference's pointer double-click opened no editor. The text-tool reset leaves the reference's text attributes from earlier units (large italic underlined text in `tool-text/02, 14, 16`). Needs: the keys sent the way the reference reads them, an effect check on the object bounds, a tool and attribute reset after typing. |
+| TW-141 | Firepixel menu enabled state (*runner* / bridge) | `xs-canvas/15_snap_pixels_disabled`, `panel-library-styles/16`: Firepixel's menu read-back still reports no enabled state (no accessibility node with an enabled state over the entry's text), so grey entries cannot be compared. Needs: the enabled state of menu entries exposed through the accessibility tree or the bridge. |
 | U-1 rest | File ▸ Import, PDF | SVG files now import with their layers; **PDF files still arrive as one layer** because the pure-Rust PDF reader exposes no optional content groups (layers). Library limit; needs either an upstream feature or an own OCG reader. |
 
 ## [V] Deferred / expansion items (5)

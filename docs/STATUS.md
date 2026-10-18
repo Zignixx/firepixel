@@ -18,14 +18,14 @@ on Intel hardware, and the Linux build has run only in CI, not yet on a real Lin
 | Area | Value | Source |
 |---|---|---|
 | Parity units | 48 | [PARITY.md](PARITY.md) |
-| Equal except for design | **43** (2 real deviations, 3 unclear, 0 under-measured) | run 18 (10 units) on top of full run 17, 18 Oct 2026 |
-| Proven 1:1 | **89.6 %** (43 / 48; no unit under-measured; run 17: 87.5 %) | runs 17 + 18 |
-| Canvas image pairs within 1 % | **174 / 202** (run 17: 176 / 202; two `tool-text` pairs moved above 1 % through the reference's text-tool state) | runs 17 + 18 |
-| Measurement quota, all 48 units | **86.9 %** (1066 / 1226 measurable steps both `ok`, newest run per unit; run 17 alone 86.3 %; the ten units of run 18: 90.3 %, 214 / 237) | runs 17 + 18 |
-| Errors, newest run per unit | 38 reference-side (run 17: 46), 21 Firepixel-side (unchanged, all known) | runs 17 + 18 |
+| Equal except for design | **44** (2 real deviations, 2 unclear, 0 under-measured) | run 19 (6 units) and run 18 (5 units) on top of full run 17, 18 Oct 2026 |
+| Proven 1:1 | **91.7 %** (44 / 48; no unit under-measured; run 18: 89.6 %, run 17: 87.5 %) | runs 17–19 |
+| Canvas image pairs within 1 % | **174 / 202** (unchanged in run 19; run 17: 176 / 202; two `tool-text` pairs are above 1 % through the reference's text-tool state) | runs 17–19 |
+| Measurement quota, all 48 units | **86.9 %** (1066 / 1226 measurable steps both `ok`, newest run per unit; run 17 alone 86.3 %; the six units of run 19: 87.1 %, 121 / 139, unchanged) | runs 17–19 |
+| Errors, newest run per unit | 38 reference-side (run 17: 46), 21 Firepixel-side (unchanged, all known) | runs 17–19 |
 | Workspace tests | **2695 passed, 1 failed, 134 ignored** at `6e2ad3b1` (the failure was a missing DE/EN command text, added in `0f96dd71`) | full workspace run on `main`, 18 Oct 2026 |
-| Open findings | 3 fixable `[F]` (PDF layers; TW-130 waiting for run 19; TW-133 rest), 5 deferred `[V]`, 20 informational `[N]`; run 18 closed TW-125 to TW-129, the wave after it TW-131, TW-132, TW-134, TW-135 and most of TW-133 | [FINDINGS.md](FINDINGS.md) |
-| Real differences known | none confirmed open; the run-18 differences (URL panel menu TW-131, text shortcuts under "Web Standard" TW-133, crop option TW-134, typing after a pointer double-click TW-135) are fixed and wait for run 19; unclear: the reference's text-tool read-back (TW-130), "justified" on point text (TW-133 rest) | [PARITY.md](PARITY.md) |
+| Open findings | 8 fixable `[F]` (PDF layers; TW-133 rest; TW-136 to TW-141 from run 19, two of them runner items), 5 deferred `[V]`, 20 informational `[N]`; run 19 closed TW-125, TW-130 / Q-57, TW-131, TW-132 and TW-135 | [FINDINGS.md](FINDINGS.md) |
+| Real differences known | Ctrl+Alt+Shift+S sets "stretch" on a text the reference leaves alone (TW-133 rest), no Copy row in History (TW-137); smaller: URL menu labels with "..." (TW-136), text-tool defaults after a change on a partial selection (TW-138), scripting read-back while a text is edited (TW-139); the crop option (TW-134) is fixed and waits for the next `xs-preferences` run | [PARITY.md](PARITY.md) |
 | Closed findings (history) | 850+ | kept outside the repository ([ARCHIVE_NOTE.md](ARCHIVE_NOTE.md)) |
 | Startup time | about 0.8 s to the first frame (release build, warm) | smoke test 17 Oct 2026 |
 
@@ -44,9 +44,10 @@ the app under Xvfb and checks that the control channel comes up. The first CI ru
 real Linux desktop; file dialogs need `xdg-desktop-portal`. v0.2.2 (planned 18 Oct 2026) is the first release with
 Windows x64, macOS universal and Linux x86_64.
 
-Latest test build: preview build **`2026-10-18_10-59`** (release profile, single `firepixel.exe` plus
-`firepixel-cli.exe`) from `main` at `4e677046` (packages F33/F34: per-slice export options, short panel menus,
-filter shortcuts, text-tool caret); full workspace test run there: 2676 passed, 0 failed, 134 ignored.
+Latest test build: preview build **`2026-10-18_13-04`** (release profile, single `firepixel.exe` plus
+`firepixel-cli.exe`) from `main` at `a3510515` (packages F34–F36: text-tool caret, URL panel menu, Select Inverse
+warning, text size ±1 pt, no stretch on point text, caret and typing after a pointer double-click). The previous
+preview `2026-10-18_10-59` from `4e677046` passed a full workspace test run (2676 passed, 0 failed, 134 ignored).
 
 Full comparison run 17 (18 Oct 2026, 04:59–09:40, all 48 units, 1284 steps, 683 image pairs) used the earlier
 preview build `2026-10-18_04-57` from `main` at `7e3d2d12` (fixes after run 16, runner R-12): 42 units equal except
@@ -56,6 +57,13 @@ Follow-up run 18 (18 Oct 2026, 11:00–11:54, 10 units, 252 steps, 126 image pai
 and runner R-13/R-13b (the "Web Standard" set in both programs): 5 of the 10 units equal except for design, 2 real
 deviations (`panel-library-styles`: URL panel menu, `xs-shortcuts`: text shortcuts), 3 unclear (`menu-edit`,
 `xs-preferences`, `tool-text`); TW-125 to TW-129 closed.
+
+Follow-up run 19 (18 Oct 2026, 13:04–13:40, 6 units, 149 steps, 66 image pairs) used preview `2026-10-18_13-04` and
+runner R-14: `panel-library-styles` is now equal except for design (URL panel menu), `menu-edit` became a real
+deviation (no Copy row in History, TW-137), `xs-shortcuts` stays a real deviation for one shortcut (TW-133 rest),
+`tool-text` stays unclear (reference-side text-tool state), `xs-canvas` and `panel-pages-states-history` stay equal
+(States menu 210 vs. 207 px). Step quota and canvas pairs unchanged; TW-125, TW-130 / Q-57, TW-131, TW-132 and
+TW-135 closed, TW-136 to TW-141 added.
 
 ## How tests run
 
@@ -84,12 +92,13 @@ with a real mouse and drag and drop between windows need a human click-test: [VE
 
 ## Next
 
-1. Comparison run 19 of the units touched by the fixes after run 18 (TW-131, TW-133 in part, TW-134, TW-135, runner
-   R-14 for TW-132) and its evaluation, including the reference's text-tool read-back (TW-130) and "justified" on
-   point text (TW-133 rest).
-2. Release v0.2.2 with Windows x64, macOS universal and Linux x86_64.
-3. Human click-test of [VERIFICATION.md](VERIFICATION.md), including section A4 (wave-4 features, URL panel menu,
-   typing after a double-click, crop option off, Linux start).
+1. Release v0.2.2 today (18 Oct 2026) with Windows x64, macOS universal and Linux x86_64.
+2. Human click-test of [VERIFICATION.md](VERIFICATION.md), including section A4 (wave-4 features, URL panel menu,
+   typing after a double-click, crop option off, Linux start) and the open A2 checks from run 19.
+3. Remaining parity items from run 19: behaviour descriptions for the Copy history row (TW-137), the text-tool
+   defaults (TW-138) and "stretch" / "justified" on point text (TW-133 rest); the URL menu labels (TW-136) and the
+   read-back while editing (TW-139); runner R-15 (TW-140, TW-141); then a run of `xs-preferences` (TW-134) and the
+   affected units.
 4. Remaining deferred items: BA-101, BA-108 (metadata box writing), BA-110 rest, BA-083, U-1 PDF import layers.
 
 Wave 3 (18 Oct 2026) added 27 batch steps, chained collect steps, more metadata formats, the MCP gate for external

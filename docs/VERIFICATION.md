@@ -73,7 +73,7 @@ Conventions: coordinates are document pixels; "R1", "E1", "B1", "P1", "PG" are t
   **Expected:** All supported files are added (folder recursively as configured), unsupported files are reported.
 - [ ] **A1-18** (CF-C CT-C-02/03, F19 TW-69; needs: real mouse) – see VER-4.23 and VER-1.36: reorder states/pages and drag across eye icons.
 
-## A2. Open items from comparison runs 12–18
+## A2. Open items from comparison runs 12–19
 
 Comparison run 12 left seven units unclear (`?`). Runs 13 and 14 (17 Oct 2026) resolved or reclassified all of
 them; they stay listed here, ticked, so the history of each check is clear. Run 15 (17/18 Oct 2026) resolved
@@ -82,8 +82,10 @@ Full run 17 (18 Oct 2026) confirmed TW-115 and TW-123 and the `xs-canvas` pair r
 (continued as TW-126) and added TW-125 to TW-130. Follow-up run 18 (18 Oct 2026, 10 units) resolved TW-125 (Common
 Library menu), TW-126, TW-127 (`15`), TW-128 and TW-129 and added TW-131 to TW-135. The wave after run 18 fixed
 TW-131, TW-134, TW-135 and most of TW-133 and changed the runner for TW-132 (R-14); those items are ticked as fixed
-and are confirmed by run 19 or, failing that, by the matching A4 check. The open checks below come from runs 17 and
-18.
+and are confirmed by run 19 or, failing that, by the matching A4 check. Run 19 (18 Oct 2026, 6 units) confirmed
+TW-125 (States menu), TW-130 / Q-57, TW-131, TW-132 (rest moved to TW-140 / TW-141), TW-135 and TW-133 except for
+the stretch shortcut, and added TW-136 to TW-141; TW-134 was not part of run 19. The open checks below come from runs
+17 to 19.
 
 - [x] **TW-100** (`panel-library-styles/03`) – resolved: run 13 measured equal positions at an integer drop point; the unit counts as equal and the half-pixel case is no longer tracked.
 - [x] **TW-101** (`xs-file-formats/09`) – resolved in run 13: import by dragging lands on the same pixels 121,120–417,322 in both programs.
@@ -108,25 +110,39 @@ and are confirmed by run 19 or, failing that, by the matching A4 check. The open
 - [x] **TW-122 / Q-54 → TW-126** (`xs-shortcuts/06`) – partly resolved in run 18: with both programs on "Web Standard", Ctrl+Shift+U and Ctrl+Shift+E are equal and Ctrl+Shift+D clones; the four keys that still differ are continued as **TW-133** below.
 - [x] **TW-123** (`panel-optimize/13`, panel menus) – resolved in run 17: the Optimize colour-table menu is 282 vs. 270 px (frame included); Pages, History, Swatches and Layers menus are within 5 px of the reference; main menus stay narrower than the reference, none became wider through the 33 px arrow column.
 - [x] **xs-canvas pairs** (`xs-canvas/03, 11, 13, 14, 16`) – reviewed in run 17: the fit pair differs by the fit zoom of different view sizes (0.43875 vs. 0.44875), the grid pair by the sub-pixel phase of one-pixel grid lines at 0.42833 (cells and lines line up); no rendering difference, the unit counts as equal.
-- [ ] **TW-125** (`panel-pages-states-history/07`; needs: next run of that unit, else real window) – the Common Library menu is resolved in run 18 (183 vs. 179 px); the States menu (run 17: 231 vs. 207 px) was not part of run 18.
-  **Steps:** Open the States panel menu.
-  **Expected:** As wide as its longest item plus the usual margin (reference: 207 px).
+- [x] **TW-125** (`panel-pages-states-history/07`) – resolved: the Common Library menu in run 18 (183 vs. 179 px), the States menu in run 19 (210 vs. 207 px; run 17: 231 px).
 - [x] **TW-126** (`menu-edit/02`, `dialogs-d31-d40/06`, `menu-modify-a/11`) – resolved in run 18: Ctrl+Shift+D clones in both programs; twelve tweened instances on both sides; Firepixel's history shows the clone step.
 - [x] **TW-128** (`panel-optimize/19`) – resolved in run 18: both programs report JPEG and GIF as the two slices' export formats.
-- [ ] **TW-130 / Q-57** (`xs-shortcuts/15_in_text_tx2`; needs: reference read-back of all lines (runner R-14), else real mouse)
-  **Steps:** Select TX2 ("Zeile eins / Zeile zwei / Zeile drei") with the pointer, choose the Text tool and click at its centre; type "V" and "R", press Escape.
-  **Expected:** The typed text lands at the same place in both programs. Run 18: Firepixel inserts "Vr" at the click point ("ZeileVr zwei"); the reference's read-back shows only "Zeile eins" before and after typing. The stray "c" of run 17 is on the reference side only.
-- [x] **TW-131** (`panel-library-styles/16`) – fixed after run 18: the URL panel menu has the reference's nine entries (add used URLs to the library, clear unused URLs, add / edit / delete URL, new URL library, import, export, Help) with edit and delete grey without a selected URL. Confirm in run 19; hands-on check A4-11.
-- [ ] **TW-133** (`xs-shortcuts/06`; needs: run 19, and a measurement of "justified" on point text) – fixed in part after run 18 (RE spec 48): Select Inverse warns without a pixel selection and keeps the text selected, Larger/Smaller step by 1 pt (24 → 25 → 24), stretched alignment leaves point text alone; the Break Apart warning on Ctrl+Shift+B was already right (the runner had closed the reference's dialog).
+- [x] **TW-130 / Q-57** (`xs-shortcuts/15_in_text_tx2`) – resolved in run 19: with all text objects read back, both programs end with "Zeile eins / ZeileVr zwei / Zeile drei" (the typed text lands at the click point in line 2). The reference adds a stray "c" after Escape (runner, TW-140) and shows the text live while Firepixel's read-back changes only on commit (TW-139).
+- [x] **TW-131** (`panel-library-styles/16`) – fixed after run 18: the URL panel menu has the reference's nine entries (add used URLs to the library, clear unused URLs, add / edit / delete URL, new URL library, import, export, Help) with edit and delete grey without a selected URL. Confirmed in run 19 (nine entries in the reference's order); the "..." labels continue as TW-136, the enabled states are not read on Firepixel's side (TW-141); hands-on check A4-11.
+- [ ] **TW-133** (`xs-shortcuts/06`; needs: a valid point text in the reference test file, a measurement of "stretch" and "justified" on it) – fixed in part after run 18 (RE spec 48); run 19 confirms Ctrl+Shift+B and Ctrl+Shift+I (warning on both sides), Ctrl+Shift+U, Ctrl+Shift+E and Larger/Smaller (24 → 25 → 24). Still different: Ctrl+Alt+Shift+S sets "stretch" on TX1 in Firepixel, the reference keeps "left" (TX1 is invalid in the reference file).
   **Steps:** With the "Web Standard" set active, select the text object with the pointer (do not edit it); press Ctrl+Shift+B, Escape, reselect; repeat with Ctrl+Shift+I, Ctrl+Alt+Shift+S, Ctrl+Shift+Period and Ctrl+Shift+Comma; then set "justified" alignment on the point text.
   **Expected:** As in the reference: a warning for Ctrl+Shift+B and Ctrl+Shift+I, nothing for Ctrl+Alt+Shift+S, 24 → 25 pt on Ctrl+Shift+Period and back on Ctrl+Shift+Comma. "Justified" on point text: not yet measured in the reference.
-- [x] **TW-134** (`xs-preferences/06`) – fixed after run 18: the crop tool, Crop Document and Canvas Size honour *Delete objects when cropping* (`CropDocCropsImages`); on deletes objects entirely outside and clips crossing bitmaps, off changes nothing but the position. Confirm in run 19; hands-on check A4-13.
-- [x] **TW-135** (`tool-text/06`) – fixed after run 18: a pointer double-click places the caret at the click point and a character typed at once lands there ("ZeilQe eins"). Confirm in run 19; hands-on check A4-12.
+- [x] **TW-134** (`xs-preferences/06`) – fixed after run 18: the crop tool, Crop Document and Canvas Size honour *Delete objects when cropping* (`CropDocCropsImages`); on deletes objects entirely outside and clips crossing bitmaps, off changes nothing but the position. Not part of run 19; confirm in the next `xs-preferences` run or by hands-on check A4-13.
+- [x] **TW-135** (`tool-text/06`) – fixed after run 18: a pointer double-click places the caret at the click point and a character typed at once lands there ("ZeilQe eins"). Run 19: Firepixel reads back "ZeilQe eins" after Escape, as the reference showed in run 18; the reference's double-click opened no editor in run 19 (runner, TW-140); hands-on check A4-12.
 - [ ] **Q-49** (`color-popup/05`; needs: real keyboard)
   **Steps:** Select a rectangle, open the fill colour pop-up, type #3366CC into the hex field and press Enter; repeat with "zz12".
   **Expected:** The same result as the reference. The runner cannot prove it: the reference's pop-up closes without applying the text the runner sets; Firepixel gives #3366cc and, for "zz12", #000000.
 - [x] **TW-127 / TW-129** (runner R-13) – resolved in run 18: `xs-preferences` sets and reads back its options (`15` equal; `06` continued as TW-134); the reference opens Feather / Save Bitmap Selection, the "add swatches" file dialog and receives the library drop; `xs-canvas/15` selects R1 first. The plain arrow keys in `xs-shortcuts/10` moved to TW-132.
-- [x] **TW-132** (runner R-14) – runner changed after run 18: read-back scripts on the reference side record open dialogs first and every cancelled dialog is logged; the history read-back is guarded and retried (`menu-edit/01, 22`); Delete, Ctrl+D and the plain arrow keys are checked for effect and retried once (`menu-edit/09, 20`, `xs-shortcuts/10`); the text tool is left with Escape at the start of a unit (`tool-text`); Firepixel's menu read-back takes the enabled state from the accessibility tree (`xs-canvas/15`). Confirm in run 19.
+- [x] **TW-132** (runner R-14) – runner changed after run 18: read-back scripts on the reference side record open dialogs first and every cancelled dialog is logged; the history read-back is guarded and retried (`menu-edit/01, 22`); Delete, Ctrl+D and the plain arrow keys are checked for effect and retried once (`menu-edit/09, 20`, `xs-shortcuts/10`); the text tool is left with Escape at the start of a unit (`tool-text`); Firepixel's menu read-back takes the enabled state from the accessibility tree (`xs-canvas/15`). Confirmed in run 19 for the dialogs, the history read-back, Ctrl+D and the text read-backs; Delete and the plain arrow keys select other tools on the reference side and a "c" arrives after Escape (continued as **TW-140** below); Firepixel's menu enabled state is still not read (continued as **TW-141** below).
+- [ ] **TW-136** (`panel-library-styles/16`; needs: next run of that unit, else real window)
+  **Steps:** Open the URL panel menu.
+  **Expected:** The reference's labels without "..." (add URL, edit URL, new URL library, import, export) and its height (321 × 231 px shot; Firepixel run 19: 327 × 248).
+- [ ] **TW-137** (`menu-edit/22`; needs: behaviour description, then next run)
+  **Steps:** Select a rectangle; Clone (Ctrl+Shift+D), Copy (Ctrl+C), Paste (Ctrl+V); look at the History panel.
+  **Expected:** As in the reference: Clone, Copy, Paste are listed (Firepixel run 19: Clone, Paste without Copy).
+- [ ] **TW-138** (`tool-text/11, 13, 14, 16`; needs: behaviour description, then next run)
+  **Steps:** Text tool: type a text, select three characters and set 72 pt in the inspector; press Escape; click elsewhere and type a new text.
+  **Expected:** The new text keeps the tool's earlier size and colour as in the reference (Firepixel runs 18 and 19: 72 pt and grey).
+- [ ] **TW-139** (`tool-text/06, 07`, `xs-shortcuts/15_in_text_tx2`; needs: fix, then next run and real keyboard)
+  **Steps:** Text tool: click on an empty canvas and type "Hallo"; without pressing Escape run a script that lists the document's texts; look at the canvas.
+  **Expected:** The new text object exists and shows "Hallo" in the read-back and on the canvas while the editor is open, as in the reference.
+- [ ] **TW-140** (runner R-15; needs: runner change, then next run)
+  **Steps:** Runner: plain arrow keys, Delete and Escape on the reference side; effect check on the object bounds; tool and text-attribute reset after typing.
+  **Expected:** `menu-edit/09, 22` delete R1, `xs-shortcuts/10` and `panel-pages-states-history/14–21` nudge by 1 px, no stray "c" after Escape, no tool change, no text attributes carried into `tool-text`.
+- [ ] **TW-141** (runner / bridge; needs: change, then next run)
+  **Steps:** Read the enabled state of Modify ▸ Snap to Pixel without a selection and of the URL panel menu entries in Firepixel.
+  **Expected:** `enabled` is reported (false for Snap to Pixel without a selection; Edit URL and Delete URL false without a selected URL).
 
 Questions answered after run 16: **Q-49** (the colour pop-up HEX field now parses every keystroke like the
 reference), **Q-51** (see TW-111 above), **Q-55** (`xs-shortcuts/15`: Firepixel's text-tool click was already right;

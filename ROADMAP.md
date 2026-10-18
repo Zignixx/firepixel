@@ -10,28 +10,28 @@ exist and work; FW-PNG round-trips; CLI, JSF and MCP drive everything.
 
 | Measure | Value |
 |---|---|
-| Parity units equal except for design | **43 / 48** (2 real deviations, 3 unclear, 0 under-measured; run 18 on top of full run 17) |
-| Proven 1:1 | **89.6 %** (43 / 48) |
+| Parity units equal except for design | **44 / 48** (2 real deviations, 2 unclear, 0 under-measured; runs 19 and 18 on top of full run 17) |
+| Proven 1:1 | **91.7 %** (44 / 48) |
 | Measurement quota, all 48 units | **86.9 %** (1066 / 1226 steps, newest run per unit; run 17 alone: 86.3 %) |
 | Canvas image pairs within 1 % | 174 / 202 |
 | Tests | 2695 passed, 1 failed (missing command text, fixed in `0f96dd71`), 134 ignored at `6e2ad3b1` |
 | Latest release | v0.2.1 pre-release (18 Oct 2026, Windows x64, macOS universal arm64 + x86_64); v0.2.2 planned for 18 Oct 2026 with Linux x86_64 |
-| Open findings | 3 fixable · 5 deferred · 20 informational · 850+ closed |
+| Open findings | 8 fixable · 5 deferred · 20 informational · 850+ closed |
 
 ## Next (in order)
 
-1. **Run 19 of the affected units, then its evaluation:** the fixes after run 18 are in `main` (URL panel menu
-   TW-131, text fixes TW-133 in part, crop option TW-134, typing after a pointer double-click TW-135, runner R-14 for
-   TW-132); run 19 covers `panel-library-styles`, `xs-shortcuts`, `xs-preferences`, `tool-text`, `menu-edit` and
-   `xs-canvas`, reads back the reference's text lines (TW-130, Q-57) and the States menu width (TW-125 rest,
-   `panel-pages-states-history`). Still to measure: "justified" alignment on point text (TW-133 rest).
-2. **Release v0.2.2** (pre-release, planned 18 Oct 2026): Windows x64, macOS universal and, for the first time,
+1. **Release v0.2.2** (pre-release, today, 18 Oct 2026): Windows x64, macOS universal and, for the first time,
    Linux x86_64 (tar.gz and AppImage, glibc 2.35+; built and start-probed in CI, not yet tried on a real Linux
    desktop).
-3. **Human click-test** of [docs/VERIFICATION.md](docs/VERIFICATION.md) (embedded panel dialogs, real keyboard
+2. **Human click-test** of [docs/VERIFICATION.md](docs/VERIFICATION.md) (embedded panel dialogs, real keyboard
    paths, brush strokes with a real mouse, drag and drop between windows, the open checks in section A2), including
    the wave-3 Batch Studio UI, the PDF/PSD export options and section A4 (wave-4 features, URL panel menu, typing after
    a double-click, the crop option, the Linux start).
+3. **Remaining parity items from run 19:** behaviour descriptions for the Copy row in History (TW-137), the
+   text-tool defaults after a change on a partial selection (TW-138) and "stretch" / "justified" on point text
+   (TW-133 rest); the URL menu labels (TW-136) and the scripting read-back while a text is edited (TW-139); runner
+   R-15 for the reference-side keys (TW-140) and Firepixel's menu enabled state (TW-141); then a run of
+   `xs-preferences` (crop option TW-134, not part of run 19) and the affected units.
 4. **Remaining deferred items:** BA-101 (JPEG 2000 in PDF, PSD stroke), BA-108 (writing AVIF/HEIF/JXL metadata
    boxes), BA-110 rest (lossy LZW with an SSIM bound), BA-083 (resampler hashes on another OS), U-1 PDF import
    layers.
@@ -41,9 +41,10 @@ exist and work; FW-PNG round-trips; CLI, JSF and MCP drive everything.
 ### Fixable remnants (`[F]`)
 
 - PDF import: no layers (the pure-Rust PDF reader exposes no optional content groups).
-- TW-130 / Q-57 (the reference's text-tool read-back; waits for run 19) and TW-133 rest ("justified" on point
-  text). Run 18 closed TW-125 to TW-129; the wave after it closed TW-131 (URL panel menu), TW-133 in part, TW-134
-  (crop option), TW-135 (typing after a pointer double-click) and TW-132 (runner R-14), to be confirmed in run 19.
+- TW-133 rest ("stretch" / "justified" on point text), TW-136 (URL menu labels), TW-137 (Copy row in History),
+  TW-138 (text-tool defaults), TW-139 (read-back while a text is edited), TW-140 and TW-141 (runner R-15). Run 19
+  confirmed TW-125, TW-130 / Q-57, TW-131, TW-132 and TW-135; TW-134 (crop option) waits for the next
+  `xs-preferences` run.
 
 ### Deferred expansion items (`[V]`)
 
