@@ -483,7 +483,7 @@ impl Step for ImageStep {
 
 /// Deckung (0…1) eines Pixels (Mitte x+0.5, y+0.5) im abgerundeten Rechteck `[x0, x1) × [y0, y1)`
 /// mit Eckenradius `r` (Kantenglättung über den Abstand).
-fn round_rect_cov(x: f64, y: f64, x0: f64, y0: f64, x1: f64, y1: f64, r: f64) -> f32 {
+pub(crate) fn round_rect_cov(x: f64, y: f64, x0: f64, y0: f64, x1: f64, y1: f64, r: f64) -> f32 {
     let (px, py) = (x + 0.5, y + 0.5);
     if x1 <= x0 || y1 <= y0 {
         return 0.0;

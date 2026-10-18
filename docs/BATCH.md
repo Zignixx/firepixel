@@ -410,7 +410,7 @@ extension spelling under ⋯ (lower/upper case, `jpg`/`jpeg`).
 | `trim` | Trim edges | **A** `what` transparent / color (corner) / both; `tolerance` 0…255 *8*; `padding` 0…500 px *0* | yes | own | **P1** |
 | `rotate` | Rotate/flip | **A** `angle` 90/180/270/free (−360…360); **A** `flip` none/h/v; `autoExif` on (rotate by EXIF orientation, then set the tag to 1); `background` for free angles *transparent* | yes | own (90° lossless by reordering; free: bilinear/bicubic) | **P1** |
 | `canvas` | Canvas/border | **A** `mode`: addBorder (px per side), toSize (W×H), toAspect, square; **A** `color` *transparent*; `anchor` *center* | yes | own; documents: `modify.canvas.canvasSize` | **P1** |
-| `canvas.pad` | Pad to multiple | multiple of 2/4/8/16 (video/tiles) | yes | own | P3 |
+| `canvas.pad` | Pad to multiple | **A** `multiple` 2…256 px *16* (video/tiles); **A** `color` *transparent*; image centred | yes | own | P3 |
 | `perspective` | Straighten | angle automatic (Hough) or fixed | yes | own | P3 |
 | `tile.split` | Split into tiles | grid N×M or tile size; name `{row}_{col}` | – | own | P2 |
 
@@ -423,11 +423,11 @@ extension spelling under ⋯ (lower/upper case, `jpg`/`jpeg`).
 | `adjust.levels` / `adjust.curves` | Levels / Curves | as in the dialogs (points as JSON); "from preset" | yes | registry `filter.adjustColor.levels`/`curves` | P2 |
 | `adjust.grayscale` | Black & white/sepia/duotone | **A** `style` gray/sepia/duotone; colours | yes | own | **P1** |
 | `adjust.invert` | Invert | – | yes | registry `filter.adjustColor.invert` | **P1** |
-| `adjust.posterize` / `adjust.threshold` | Posterize/threshold | levels 2…64; threshold 0…255 | yes | own | P2 |
+| `adjust.posterize` / `adjust.threshold` | Posterize/threshold | **A** `levels` 2…64 *4*; **A** `threshold` 0…255 *128* (luminance Rec. 601, ≥ threshold → white; alpha unchanged) | yes | own | P2 |
 | `filter.sharpen` | Sharpen | **A** `amount` 0…500 % *60*; `radius` 0.1…10 *1*; `threshold` 0…255 *0* | yes | registry `filter.sharpen.unsharpMask` | **P1** |
 | `filter.blur` | Blur | **A** `kind` gaussian/motion/radial/zoom; `radius` 0…250 *2* | yes | registry `filter.blur.*` | **P1** |
 | `filter.noise` | Add/remove noise | add: amount; remove: median 1…10 | yes | registry `filter.noise.addNoise`; own median | P2 |
-| `filter.pixelate` | Pixelate (whole/area) | block size 2…200 | yes | own | P2 |
+| `filter.pixelate` | Pixelate (whole image) | **A** `size` 2…200 px *8* (alpha-weighted mean per block) | yes | own; area only: not yet | P2 |
 | `filter.registry` | Any filter | choice of all `filter.*` registry commands with their schema (form built from `describe_command`) | yes | command registry | **P1** |
 | `effect.live` | Firepixel live effect | **A** `effect` dropShadow/innerShadow/glow/innerGlow/bevel/emboss/... (list from `element.addEffect`); `params` per effect; applied to the bitmap as an element, then flattened (canvas grows by the effect margin, checkbox "Extend canvas" on) | yes | `element.addEffect` + `fp-effects`/`fp-render` | **P1** |
 | `effect.style` | Apply style | style from the style library | yes | registry | P2 |
@@ -443,8 +443,8 @@ extension spelling under ⋯ (lower/upper case, `jpg`/`jpeg`).
 | `background.removeColor` | Remove colour (no AI) | **A** `color` *top-left corner*/eyedropper; **A** `tolerance` 0…255 *24*; `contiguous` on (only from the edges); `feather` 0…10 | yes | own (flood fill like `bitmap.floodFill`) | **P1** |
 | `background.flatten` | Transparency → colour | **A** `color` *#ffffff*; `kind` color/gradient/image/blur (blurred copy of the image) *color*; `onlyIfTransparent` on | yes | own (optional alpha blending in linear light) | **P1** |
 | `background.replace` | Replace background | `remove` + `flatten` in one (colour/gradient/image/blur) | yes | combination | P2 |
-| `background.subjectCenter` | Center subject | margin 0…50 % *10*, square on/off, shadow under the subject off | yes | BiRefNet mask → box → `canvas` | P2 |
-| `background.alphaCleanup` | Clean up alpha | semi-transparency < x → 0, > y → 255; defringe 0…5 px | yes | own | P2 |
+| `background.subjectCenter` | Center subject | **A** `margin` 0…50 % of the subject's longer side *10*; **A** `square` off; `shadow` (soft shadow below the subject) off; `detect` auto/alpha/color *auto* (alpha if the item has transparency, else "differs from the top-left corner colour"); `tolerance` 0…255 *24*; `fill` auto/transparent/color *auto* (transparent, or the corner colour when detected by colour), `color` | yes | own: subject box (union over all frames of an animation) → crop → centred on the new canvas; no subject → unchanged with a warning. AI mask: run `background.remove` first | P2 |
+| `background.alphaCleanup` | Clean up alpha | **A** `low` 0…254 *8* (alpha below → 0); **A** `high` 1…255 *247* (alpha above → 255; must be > `low`); `minIsland` 0…1,000,000 px *0* (remove 8-connected specks smaller than this); `defringe` 0…5 px *0* (semi-transparent edge pixels take the colour of opaque neighbours, one ring per px) | yes | own | P2 |
 | `background.shadow` | Add shadow | like `effect.live` dropShadow, presets for product shots | yes | `fp-effects` | P2 |
 
 ### 3.6 Watermark, text, border (group "Overlay")
@@ -454,8 +454,8 @@ extension spelling under ⋯ (lower/upper case, `jpg`/`jpeg`).
 | `overlay.text` | Text/watermark | **A** `text` with placeholders (`{name}`, `{date}`, `{exif-date}`, `{n}`, `©`); **A** `position` 9 points / tiled / free; **A** `size` % of image width 1…50 *4*; `font` (system fonts like the Text tool), `color`, `opacity` 0…100 *60*, `margin` %, `rotation`, `shadow`/`outline` | yes | `fp-text` + `fp-render` (present) | **P1** |
 | `overlay.image` | Insert logo/image | **A** `image` (file, can be embedded in the recipe); **A** `position`; **A** `scale` % of image width *15*; `opacity`; `margin`; `blend` (registry blend modes) | yes | `fp-render` | **P1** |
 | `overlay.border` | Border | **A** `width` px/%; **A** `color`; `radius` (rounded corners, transparent outside) 0…50 %; `inner`/`outer` | yes | own | **P1** |
-| `overlay.roundCorners` | Round corners | radius px/% | yes | own (anti-aliased) | P2 |
-| `overlay.vignette` | Vignette | strength, size | yes | own | P3 |
+| `overlay.roundCorners` | Round corners | **A** `radius` 0…10000 *16*; **A** `unit` px/percent (of the shorter side, max 50) *px* | yes | own (anti-aliased, transparent outside; same shape as `overlay.border` `radius`) | P2 |
+| `overlay.vignette` | Vignette | **A** `strength` 0…100 % *50*; **A** `size` (untouched centre) 0…100 % *50*; `color` *#000000* | yes | own (smoothstep over the normalised distance to the centre, alpha unchanged) | P3 |
 | `overlay.contactSheet` | Contact sheet | grid, spacing, captions; **several files → one image** | yes | own (collect step, §5.1) | P2 |
 
 ### 3.7 Metadata (group "Metadata")
@@ -494,7 +494,7 @@ fully in memory).
 | `anim.fromFrames` | Image sequence → animation | **collect step**: all (filtered) items in list order → one animation; `delay` ms *100*; `size` first/largest/fixed | yes | own | **P1** |
 | `anim.spriteSheet` | Sprite sheet | direction: animation/items → sheet (columns, spacing, margin, JSON/CSS atlas `{frames:[{x,y,w,h}]}`) **and** sheet → frames (grid N×M) | yes | extend `fp-export::sprites` (present) | P2 |
 | `anim.crop`, `anim.resize`, colour ... | – | all geometry/colour steps act on every frame (same parameters, computed in parallel per frame) | yes | as for still images | **P1** |
-| `anim.firstFrame` | Still from animation | frame no. / time / "sharpest" / middle | yes | own | P2 |
+| `anim.firstFrame` | Still from animation | **A** `pick` first/middle/last/number/time/sharpest *first*; **A** `number` 1… (clamped to the last frame); **A** `time` ms (frame shown at that time, after the end → last) | yes | own (sharpest = highest variance of the Laplacian) | P2 |
 | `anim.stabilize` | Calm background | freeze static areas over time (removes noise, helps compression) | yes | own (§5.6 "temporal smoothing") | P2 |
 | `anim.boomerang`, `anim.crossfade` | Special | cross-fade at the loop end (n frames) | yes | own | P3 |
 
