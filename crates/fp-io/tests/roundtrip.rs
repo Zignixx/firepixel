@@ -1147,6 +1147,7 @@ fn psd_roundtrip() {
             opacity: 255,
             blend: 0,
             visible: true,
+            blocks: Vec::new(),
         },
         PsdLayer {
             name: "Rechteck".into(),
@@ -1154,6 +1155,7 @@ fn psd_roundtrip() {
             opacity: 255,
             blend: 0,
             visible: true,
+            blocks: Vec::new(),
         },
     ];
     let data = write_psd(W, H, &layers, &composite, 72.0, &[]).unwrap();

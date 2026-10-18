@@ -135,6 +135,9 @@ pub struct PanelOptions {
     pub pdf: crate::vector_out::PdfOptions,
     /// Photoshop „Objekte: Jede Ebene auf Hintergrundebene reduzieren“ (re\18 §4.5).
     pub psd_flatten: bool,
+    /// Photoshop "Effects", "Vector", "Text": keep editable (layer effects, fill layers with
+    /// vector masks, type layers) instead of rendering into the pixels.
+    pub psd_editable: crate::psd_objects::PsdEditable,
 }
 
 /// Präfix/Suffix der Dateinamen bei Ebenen/Status/Seiten in Dateien (re\18 §4.3). Zwischen
@@ -199,6 +202,7 @@ impl Default for PanelOptions {
             doc_name: String::new(),
             pdf: crate::vector_out::PdfOptions::default(),
             psd_flatten: false,
+            psd_editable: crate::psd_objects::PsdEditable::default(),
         }
     }
 }
@@ -753,8 +757,14 @@ fn safe_name(s: &str) -> String {
     if v.is_empty() { "unbenannt".into() } else { v }
 }
 
-/// Photoshop-Datei einer Seite (Ebenen einzeln, Hilfslinien).
-fn psd_bytes(doc: &Document, r: &dyn PageRenderer, page: usize, flatten: bool) -> Result<Vec<u8>> {
+/// Photoshop-Datei einer Seite (eine Ebene je Objekt in einer Gruppe je Ebene, Hilfslinien).
+fn psd_bytes(
+    doc: &Document,
+    r: &dyn PageRenderer,
+    page: usize,
+    flatten: bool,
+    editable: crate::psd_objects::PsdEditable,
+) -> Result<Vec<u8>> {
     let p = doc.pages.get(page).ok_or_else(|| {
         ExportError::Encode(fp_i18n::tr!(
             "err-export-d-page-missing",
@@ -763,39 +773,11 @@ fn psd_bytes(doc: &Document, r: &dyn PageRenderer, page: usize, flatten: bool) -
     })?;
     let ctx = page_context(doc, page);
     let rect = page_rect(doc, page).unwrap_or_default();
-    let mut layers = Vec::new();
-    for slot in &p.root.layers {
-        let LayerSlot::Own(l) = slot else { continue };
-        if l.kind == LayerKind::Web {
-            continue;
-        }
-        let img = r
-            .render(
-                doc,
-                &RenderRequest {
-                    page,
-                    frame: 0,
-                    layers: LayerFilter::Only(vec![l.id]),
-                    background: Background::Transparent,
-                    area: Some(rect),
-                },
-            )
-            .map_err(ExportError::Render)?;
-        let ab = img.alpha_bounds();
-        let img = if ab.is_empty() {
-            RgbaImage::empty_at(rect.left, rect.top)
-        } else {
-            img.cropped(ab)
-        };
-        let img = img.translated(-rect.left, -rect.top);
-        layers.push(crate::psd_out::PsdLayer {
-            name: l.name.clone(),
-            image: img,
-            opacity: l.opacity.0,
-            blend: l.blend.0,
-            visible: l.is_visible(),
-        });
-    }
+    let mut layers = if flatten {
+        Vec::new()
+    } else {
+        crate::psd_objects::psd_layers(doc, r, page, rect, editable)?
+    };
     let comp = r
         .render(
             doc,
@@ -815,6 +797,7 @@ fn psd_bytes(doc: &Document, r: &dyn PageRenderer, page: usize, flatten: bool) -
             opacity: 255,
             blend: 0,
             visible: true,
+            blocks: Vec::new(),
         }];
     }
     let guides: Vec<crate::psd_out::PsdGuide> = p
@@ -1327,6 +1310,7 @@ pub fn export_document_noted(
                     r,
                     page,
                     o.panel.as_ref().is_some_and(|p| p.psd_flatten),
+                    o.panel.as_ref().map(|p| p.psd_editable).unwrap_or_default(),
                 )?,
             });
         }

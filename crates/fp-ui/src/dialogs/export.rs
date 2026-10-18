@@ -553,6 +553,11 @@ impl ExportDialog {
                     .unwrap_or(72.0),
             ),
             psd_flatten: self.psd.objects == 1,
+            psd_editable: fp_export::psd_objects::PsdEditable {
+                effects: self.psd.effects == 0,
+                vector: self.psd.vector == 0,
+                text: self.psd.text == 0,
+            },
         }
     }
 }

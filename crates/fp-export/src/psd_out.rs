@@ -2,9 +2,8 @@
 //! Original-Ebene (Name, Deckkraft, Mischmodus, Sichtbarkeit), Composite mit Alpha, Auflösung
 //! (Ressource 1005) und Hilfslinien (1032).
 //!
-//! Abweichung (A): Das Original schreibt über die PSL-Bibliothek bearbeitbare Texte, Vektormasken und
-//! Ebeneneffekte; hier werden alle Ebenen gerastert (Live-Effekte eingerechnet, so wie der Renderer
-//! sie liefert). Unterebenen werden in ihre Ebene eingerechnet.
+//! Editable type layers, vector masks with fill layers and layer effects come as additional blocks
+//! from [`crate::psd_objects`] (BA-102); the pixels of every layer are always written as well.
 
 use crate::formats::packbits;
 use crate::{ExportError, Result};
@@ -48,6 +47,9 @@ pub struct PsdLayer {
     pub opacity: u8,
     pub blend: u8,
     pub visible: bool,
+    /// Additional layer information blocks (key, data) after the Unicode name, e.g. `lsct`,
+    /// `lfx2`, `TySh`, `SoCo`, `vmsk` ([`crate::psd_blocks`]).
+    pub blocks: Vec<([u8; 4], Vec<u8>)>,
 }
 
 /// Hilfslinie (Position in px, vertikal?).
@@ -200,6 +202,16 @@ pub fn write_psd(
         extra.extend_from_slice(b"8BIMluni");
         extra.extend_from_slice(&(luni.len() as u32).to_be_bytes());
         extra.extend_from_slice(&luni);
+        for (key, data) in &l.blocks {
+            let mut d = data.clone();
+            while d.len() % 4 != 0 {
+                d.push(0);
+            }
+            extra.extend_from_slice(b"8BIM");
+            extra.extend_from_slice(key);
+            extra.extend_from_slice(&(d.len() as u32).to_be_bytes());
+            extra.extend_from_slice(&d);
+        }
         recs.extend_from_slice(&(extra.len() as u32).to_be_bytes());
         recs.extend_from_slice(&extra);
         for c in chans {
@@ -281,6 +293,7 @@ mod tests {
             opacity: 255,
             blend: 0,
             visible: true,
+            blocks: Vec::new(),
         };
         let psd = write_psd(
             4,

@@ -53,6 +53,8 @@ pub mod png_out;
 pub mod popup;
 pub mod popup_images;
 pub mod preview;
+pub mod psd_blocks; // BA-102: PSD descriptors, layer effects, type layers, vector masks
+pub mod psd_objects; // BA-102: one PSD layer per object
 pub mod psd_out;
 pub mod px;
 pub mod quant;
