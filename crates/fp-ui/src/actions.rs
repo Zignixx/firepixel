@@ -175,6 +175,9 @@ fn run_command(st: &mut AppState, ctx: &egui::Context, name: &str, params: Value
     if crate::language::run_action(st, ctx, name, &params) {
         return;
     }
+    if crate::panels::url_lib::run(st, name, &params) {
+        return;
+    }
     match name {
         "file.new" if !has_param(&params, "width") => {
             st.dialogs.new_document =

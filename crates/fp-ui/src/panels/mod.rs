@@ -19,6 +19,7 @@ pub mod pages;
 pub mod states;
 pub mod styles;
 pub mod thumbs;
+pub mod url_lib;
 
 use crate::app_state::AppState;
 use crate::theme::ToolGroup;

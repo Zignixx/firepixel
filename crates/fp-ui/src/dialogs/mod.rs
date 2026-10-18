@@ -93,6 +93,8 @@ pub struct Dialogs {
     pub html_slice: Option<String>,
     /// Auswahl in den Bedienfeldern (für die Befehle der Bedienfeldmenüs).
     pub panel_sel: panel_menus::PanelSelection,
+    /// URL libraries and selected URL of the URL panel (TW-131).
+    pub url: crate::panels::url_lib::UrlPanelState,
     /// Text, der beim nächsten Bild in die Zwischenablage kommt.
     pub clipboard: Option<String>,
     /// „Gespeicherte Befehle verwalten“.

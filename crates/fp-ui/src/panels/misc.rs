@@ -467,41 +467,8 @@ pub fn image_editing(ui: &mut Ui, st: &mut AppState) {
 
 // ---------------------------------------------------------------------- URL
 
-const URL_LIB: &str = "url-library";
-
-fn url_file() -> Option<std::path::PathBuf> {
-    fp_engine::Preferences::default_path().and_then(|p| p.parent().map(|d| d.join("URLs.txt")))
-}
-
-fn url_library(ctx: &egui::Context) -> Vec<String> {
-    if let Some(v) = ctx.data(|d| d.get_temp::<Vec<String>>(Id::new(URL_LIB))) {
-        return v;
-    }
-    let v: Vec<String> = url_file()
-        .and_then(|p| std::fs::read_to_string(p).ok())
-        .map(|s| {
-            s.lines()
-                .map(|l| l.trim().to_string())
-                .filter(|l| !l.is_empty())
-                .collect()
-        })
-        .unwrap_or_default();
-    ctx.data_mut(|d| d.insert_temp(Id::new(URL_LIB), v.clone()));
-    v
-}
-
-fn set_url_library(ctx: &egui::Context, v: Vec<String>) {
-    if let Some(p) = url_file() {
-        fp_i18n::profile::guard_write(&p);
-        if let Some(dir) = p.parent() {
-            let _ = std::fs::create_dir_all(dir);
-        }
-        let _ = std::fs::write(p, v.join("\n"));
-    }
-    ctx.data_mut(|d| d.insert_temp(Id::new(URL_LIB), v));
-}
-
-/// URL-Bedienfeld (4142): aktuelle URL, Bibliothek, Liste, Hinzufügen/Löschen.
+/// URL-Bedienfeld (4142): aktuelle URL, Bibliothek, Liste, Hinzufügen/Löschen; Bibliotheken und
+/// Auswahl in [`super::url_lib::UrlPanelState`] (TW-131).
 pub fn url(ui: &mut Ui, st: &mut AppState) {
     let theme = Theme::current(ui.ctx());
     let cur = first(st).and_then(|e| match &e.kind {
@@ -510,7 +477,14 @@ pub fn url(ui: &mut Ui, st: &mut AppState) {
         _ => None,
     });
     let en = cur.is_some();
-    let mut lib = url_library(ui.ctx());
+    st.dialogs.url.ensure_loaded();
+    let lib = st
+        .dialogs
+        .url
+        .lib()
+        .map(|l| l.urls.clone())
+        .unwrap_or_default();
+    let names: Vec<String> = st.dialogs.url.libs.iter().map(|l| l.name.clone()).collect();
     let (head, _) = ui.allocate_exact_size(vec2(ui.available_width(), 50.0), Sense::hover());
     let d = Dl::at(head.min + vec2(4.0, 2.0));
     fields::label(ui, d.r(0.0, 2.0, 40.0, 8.0), "URL:", en);
@@ -524,15 +498,18 @@ pub fn url(ui: &mut Ui, st: &mut AppState) {
     ) {
         st.run("pi.web", json!({"url": v}));
     }
-    let _ = fields::combo(
+    let name_refs: Vec<&str> = names.iter().map(String::as_str).collect();
+    if let Some(i) = fields::combo(
         ui,
         "url-lib",
         d.r(30.0, 15.0, 110.0, 13.0),
-        &["URLs.htm"],
-        Some(0),
+        &name_refs,
+        Some(st.dialogs.url.current),
         true,
-    );
-    let sel: Option<usize> = ui.data(|dd| dd.get_temp(Id::new("url-sel")));
+    ) {
+        st.dialogs.url.set_current(i);
+    }
+    let sel = st.dialogs.url.selected();
     let mut pick = None;
     common::list_frame(ui, "url-list", common::FOOTER_H, |ui| {
         for (i, u) in lib.iter().enumerate() {
@@ -552,7 +529,7 @@ pub fn url(ui: &mut Ui, st: &mut AppState) {
         }
     });
     if let Some(i) = pick {
-        ui.data_mut(|dd| dd.insert_temp(Id::new("url-sel"), i));
+        st.dialogs.url.sel = Some(i);
         if en {
             st.run("pi.web", json!({"url": lib[i]}));
         }
@@ -569,10 +546,8 @@ pub fn url(ui: &mut Ui, st: &mut AppState) {
     )
     .clicked()
         && let Some(u) = cur
-        && !lib.contains(&u)
     {
-        lib.push(u);
-        set_url_library(ui.ctx(), lib.clone());
+        st.dialogs.url.add(&u);
     }
     if fields::icon_button(
         ui,
@@ -584,11 +559,8 @@ pub fn url(ui: &mut Ui, st: &mut AppState) {
     )
     .clicked()
         && let Some(i) = sel
-        && i < lib.len()
     {
-        lib.remove(i);
-        set_url_library(ui.ctx(), lib);
-        ui.data_mut(|dd| dd.remove::<usize>(Id::new("url-sel")));
+        st.dialogs.url.delete(i);
     }
 }
 

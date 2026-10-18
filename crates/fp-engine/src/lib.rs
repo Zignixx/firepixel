@@ -56,6 +56,7 @@ pub mod shell;
 pub mod shortcuts;
 pub mod symbol_origin;
 pub mod tools;
+pub mod url_library;
 #[cfg(feature = "vector")]
 pub mod vector_backend;
 pub mod view;

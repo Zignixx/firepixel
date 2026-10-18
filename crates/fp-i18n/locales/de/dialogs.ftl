@@ -1139,3 +1139,17 @@ dlg-md-overlay-color-ak = Überla&gerungsfarbe:
 dlg-md-preserve-text-ak = &Textqualität beibehalten
 dlg-md-preserve-buttons-ak = Schaltflächenqualität &beibehalten
 dlg-lbl-size-ak = &Größe:
+
+## URL panel menu (TW-131)
+
+dlg-url-add-title = URL hinzufügen
+dlg-url-edit-title = URL bearbeiten
+dlg-url-new-library-title = Neue URL-Bibliothek
+dlg-url-lbl-url = URL:
+dlg-url-lbl-library-name = Name der URL-Bibliothek:
+dlg-url-default-library = URL-Bibliothek
+dlg-url-import-title = URLs importieren
+dlg-url-export-title = URLs exportieren
+dlg-filter-url-list = URL-Liste (*.htm, *.txt)
+dlg-filter-url-htm = HTML (*.htm)
+dlg-filter-url-txt = Text (*.txt)

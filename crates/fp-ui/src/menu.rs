@@ -904,6 +904,18 @@ pub fn build_panel_menu(st: &AppState, panel: PanelId) -> Vec<Node> {
             .map(grey),
         ),
         PanelId::AutoShapes => nodes.push(grey(("pmenu-autoshapes-more", "panel.autoShapes.more"))),
+        // TW-131: URL library entries of the original (actions in the UI, model in fp-engine)
+        PanelId::Url => nodes.extend(crate::panels::url_lib::menu_entries(st).into_iter().map(
+            |e| match e {
+                Some((key, action, en)) => item(
+                    &t(key),
+                    ItemAction::Ui(Action::Run(action.into(), json!({}))),
+                    en,
+                    None,
+                ),
+                None => Node::Separator,
+            },
+        )),
         _ => {}
     }
     if !nodes.is_empty() {
