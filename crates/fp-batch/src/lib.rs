@@ -21,6 +21,7 @@ pub mod meta;
 pub mod naming;
 pub mod output;
 pub mod pipeline;
+pub mod predict; // BA-105: output size for the dry run
 pub mod recipe;
 pub mod report;
 pub mod report_html; // BATCH-11b: batch-report.html

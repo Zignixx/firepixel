@@ -78,3 +78,6 @@ batch-param-anim-spriteSheet-atlas = Atlas file
 batch-value-anim-spriteSheet-atlas-json = JSON next to the sheet
 batch-value-anim-spriteSheet-atlas-css = CSS next to the sheet
 batch-value-anim-spriteSheet-atlas-none = None
+
+## Dry run with the size token (BA-105)
+batch-hint-size-after-processing = The name uses the image size, which is only known after processing; shown with the source size.

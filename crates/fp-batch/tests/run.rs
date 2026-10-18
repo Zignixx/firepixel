@@ -964,3 +964,119 @@ fn size_token_uses_output_size_and_resolves_new_conflicts() {
     assert_eq!(t.file_name().unwrap().to_string_lossy(), "img_8x6.png");
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+/// BA-105: the dry run shows the names after `resize` when the size follows from the step
+/// parameters (conflicts resolved like the run), marks unknown sizes, and an item the plan
+/// skips (its source-size name exists) is re-checked against the name after processing.
+#[test]
+fn dry_run_shows_names_after_resize_and_rechecks_skips() {
+    use fp_batch::recipe::SizeWhich;
+    let dir = temp("size_token_dry");
+    let src = sources(&dir, 3); // 8x6, 9x6, 10x6
+    let out = dir.join("out");
+    let recipe = |conflict, step: Option<(&str, Value)>| {
+        let mut r = folder_recipe(&out, "png");
+        r.rename.parts = vec![
+            NamePart::Text {
+                text: "img_".into(),
+            },
+            NamePart::Size {
+                which: SizeWhich::Both,
+            },
+        ];
+        r.output.conflict = conflict;
+        if let Some((id, p)) = step {
+            r.add_step(id, p);
+        }
+        r
+    };
+    let exact = || {
+        Some((
+            "resize",
+            json!({"mode": "exact", "width": 20, "height": 10, "onlyShrink": false}),
+        ))
+    };
+    let dry = RunOptions {
+        dry_run: true,
+        ..opts()
+    };
+    let file = |i: &fp_batch::ItemReport| {
+        i.target
+            .as_ref()
+            .and_then(|t| t.file_name())
+            .map(|n| n.to_string_lossy().to_string())
+            .unwrap_or_default()
+    };
+    // 1. names after resize, conflicts resolved as in the run; nothing written
+    let rep = executor::run(&recipe(Conflict::Rename, exact()), &items(&src), &dry).expect("dry");
+    let mut names: Vec<String> = rep.items.iter().map(file).collect();
+    names.sort();
+    assert_eq!(
+        names,
+        ["img_20x10 (2).png", "img_20x10 (3).png", "img_20x10.png"]
+    );
+    assert!(rep.items.iter().all(|i| i.status == ItemStatus::Planned));
+    assert!(!out.exists() || files_under(&out).is_empty());
+    // 2. size only known after processing (trim) → source-size name with a hint
+    let hint = fp_i18n::t("batch-hint-size-after-processing");
+    let rep = executor::run(
+        &recipe(Conflict::Rename, Some(("trim", json!({})))),
+        &items(&src[..1]),
+        &dry,
+    )
+    .expect("dry");
+    assert_eq!(file(&rep.items[0]), "img_8x6.png");
+    assert!(
+        rep.items[0].warnings.contains(&hint),
+        "{:?}",
+        rep.items[0].warnings
+    );
+    // 3. "skip": img_8x6.png exists → the plan skips item 0, but after resize its name is
+    //    img_20x10.png and free; items 1 and 2 then collide with it and are skipped
+    std::fs::create_dir_all(&out).expect("out");
+    write_png(&out.join("img_8x6.png"), 2, 2);
+    let r = recipe(Conflict::Skip, exact());
+    let rep = executor::run(&r, &items(&src), &dry).expect("dry");
+    let by_index = |rep: &fp_batch::Report, k: usize| {
+        rep.items
+            .iter()
+            .find(|i| i.index == k)
+            .cloned()
+            .expect("item")
+    };
+    assert_eq!(
+        by_index(&rep, 0).status,
+        ItemStatus::Planned,
+        "{:#?}",
+        rep.items
+    );
+    assert_eq!(file(&by_index(&rep, 0)), "img_20x10.png");
+    assert!(
+        !by_index(&rep, 0)
+            .warnings
+            .contains(&fp_batch::naming::NameHint::Skipped.message())
+    );
+    for k in [1, 2] {
+        assert_eq!(by_index(&rep, k).status, ItemStatus::Skipped, "{k}");
+    }
+    // the real run agrees with the dry run
+    let run = executor::run(
+        &r,
+        &items(&src),
+        &RunOptions {
+            threads: Some(1),
+            ..opts()
+        },
+    )
+    .expect("run");
+    assert_eq!(run.totals.done, 1, "{:#?}", run.items);
+    assert_eq!(run.totals.skipped, 2);
+    assert_eq!(dims(&out.join("img_20x10.png")), (20, 10));
+    assert_eq!(
+        dims(&out.join("img_8x6.png")),
+        (2, 2),
+        "existing file untouched"
+    );
+    assert!(!has_temp_files(&dir));
+    let _ = std::fs::remove_dir_all(&dir);
+}

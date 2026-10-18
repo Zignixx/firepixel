@@ -540,10 +540,10 @@ pub const RESIZE_MODES: [&str; 9] = [
 ];
 
 /// Zielgröße (Breite, Höhe) und bei `fill` der Ausschnitt danach (Breite, Höhe).
-type ResizeTarget = (f64, f64, Option<(f64, f64)>);
+pub(crate) type ResizeTarget = (f64, f64, Option<(f64, f64)>);
 
 /// Zielgröße in voller Auflösung (None = nicht ändern).
-fn resize_target(w: f64, h: f64, p: &Value) -> Option<ResizeTarget> {
+pub(crate) fn resize_target(w: f64, h: f64, p: &Value) -> Option<ResizeTarget> {
     if w <= 0.0 || h <= 0.0 {
         return None;
     }
@@ -578,7 +578,7 @@ fn resize_target(w: f64, h: f64, p: &Value) -> Option<ResizeTarget> {
     }
 }
 
-fn px_round(v: f64) -> i64 {
+pub(crate) fn px_round(v: f64) -> i64 {
     (v.round() as i64).max(1)
 }
 
@@ -721,7 +721,7 @@ struct Crop;
 pub const CROP_MODES: [&str; 3] = ["aspect", "rect", "edges"];
 
 /// Rechteck des Ausschnitts in Bildpixeln (None = unverändert).
-fn crop_rect(w: i64, h: i64, p: &Value, scale: f64) -> Option<IRect> {
+pub(crate) fn crop_rect(w: i64, h: i64, p: &Value, scale: f64) -> Option<IRect> {
     if w <= 0 || h <= 0 {
         return None;
     }
@@ -1290,7 +1290,12 @@ struct Canvas;
 pub const CANVAS_MODES: [&str; 4] = ["addBorder", "toSize", "toAspect", "square"];
 
 /// Neue Leinwand (Breite, Höhe, Versatz x, Versatz y) in Bildpixeln.
-fn canvas_geometry(w: i64, h: i64, p: &Value, scale: f64) -> Option<(i64, i64, i64, i64)> {
+pub(crate) fn canvas_geometry(
+    w: i64,
+    h: i64,
+    p: &Value,
+    scale: f64,
+) -> Option<(i64, i64, i64, i64)> {
     let (fx, fy) = anchor_factors(p_str(p, "anchor", "center"));
     let placed = |nw: i64, nh: i64| {
         Some((

@@ -625,6 +625,14 @@ extension).
   `_` (as in the original), ⓘ **EXIF date missing** (fallback used).
 - Conflict resolution as in §2.7 (default `name (2)`); in the builder additionally a button "Append
   number" that inserts a `counter` block.
+- **Size token** (`size` part, `{w}`/`{h}` in the regex replacement): the name uses the size
+  **after** the steps. The dry run (`fp_batch::predict`) computes it from the step parameters when
+  it follows from them alone (`resize`, `crop` without smart, `canvas`, `canvas.pad`, `rotate` by
+  multiples of 90°, `overlay.border`, size-neutral colour/overlay/metadata steps) and resolves
+  conflicts on those names exactly like the run; otherwise the row keeps the source size with the
+  note ⓘ **size after processing** (`batch-hint-size-after-processing`). An item the plan skips
+  because its source-size name is taken is re-checked after processing (dry run: with the
+  predicted name), so it is written when its final name is free.
 
 ### 4.4 Order of name construction (binding, used by tests)
 

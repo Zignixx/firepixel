@@ -10,6 +10,7 @@ use crate::item::{self, Item, ItemInfo};
 use crate::naming::{self, Plan, PlanAction, PlanEntry, PlanOptions};
 use crate::output::{self, OutputFormat, resolve_format};
 use crate::pipeline::{FileAction, Pipeline};
+use crate::predict;
 use crate::recipe::Recipe;
 use crate::report::{self, ItemReport, ItemStatus, Report};
 use crate::step::{StepContext, StepRegistry};
@@ -225,7 +226,7 @@ impl Job<'_> {
             .filter(|h| !matches!(h, naming::NameHint::Conflict | naming::NameHint::Skipped))
             .map(|h| h.message())
             .collect();
-        if e.action == PlanAction::Skip {
+        if e.action == PlanAction::Skip && !self.name_may_change(e) {
             rep.status = ItemStatus::Skipped;
             rep.target = Some(e.target.clone());
             rep.warnings.push(naming::NameHint::Skipped.message());
@@ -328,6 +329,22 @@ impl Job<'_> {
                 PlanAction::Write,
             )),
         }
+    }
+
+    /// An entry the plan skips (its source-size name is taken) is processed anyway when the size
+    /// token may give it another name after processing (BA-105); the conflict is re-checked
+    /// then. Not when the predicted output size equals the source size.
+    fn name_may_change(&self, e: &PlanEntry) -> bool {
+        if self.renamer.is_none() || self.pipe.file_only {
+            return false;
+        }
+        let info = &self.items[e.index];
+        let reg = self
+            .opts
+            .registry
+            .clone()
+            .unwrap_or_else(StepRegistry::global);
+        predict::output_size(self.recipe, info, &reg) != Some((info.width, info.height))
     }
 
     /// Size token in the name (BA-105): rebuild the name from the output size and re-resolve
@@ -792,19 +809,46 @@ pub fn run(recipe: &Recipe, items: &[ItemInfo], opts: &RunOptions) -> Result<Rep
         report_html: None,
     };
     if opts.dry_run {
+        // size token (BA-105): show the name after processing when the size follows from the
+        // step parameters, and re-check "skip" entries against that name
+        let size_naming = !pipe.file_only && naming::uses_size(&recipe.rename);
+        let mut claims = naming::Claims::from_plan(&plan);
         report.items = plan
             .entries
             .iter()
             .map(|e| {
                 let info = &items[e.index];
                 let mut r = ItemReport::new(e.index, &info.path, info.bytes);
-                r.target = Some(e.target.clone());
-                r.status = if e.action == PlanAction::Skip {
+                let (mut target, mut action) = (e.target.clone(), e.action);
+                let mut warnings = e.hint_messages();
+                if size_naming {
+                    match predict::output_size(recipe, info, &reg) {
+                        Some(size) => {
+                            if let Ok(Some(name)) =
+                                naming::name_for_size(recipe, items, e.index, now, size)
+                            {
+                                let t = claims.retarget(recipe, e, &name);
+                                if e.action == PlanAction::Skip && t.action != PlanAction::Skip {
+                                    let skipped = naming::NameHint::Skipped.message();
+                                    warnings.retain(|w| *w != skipped);
+                                } else if t.action == PlanAction::Skip
+                                    && e.action != PlanAction::Skip
+                                {
+                                    warnings.push(naming::NameHint::Skipped.message());
+                                }
+                                (target, action) = (t.target, t.action);
+                            }
+                        }
+                        None => warnings.push(fp_i18n::t("batch-hint-size-after-processing")),
+                    }
+                }
+                r.target = Some(target);
+                r.status = if action == PlanAction::Skip {
                     ItemStatus::Skipped
                 } else {
                     ItemStatus::Planned
                 };
-                r.warnings = e.hint_messages();
+                r.warnings = warnings;
                 r
             })
             .collect();
