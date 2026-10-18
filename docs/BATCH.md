@@ -712,6 +712,10 @@ Long runs over MCP: `batch.run` with `async: true` returns `{jobId}`; `batch.sta
    collect steps run on every intermediate result, then the next collect step gets all of them
    (e.g. `file.dedupe` → `document.pages` → `overlay.contactSheet`); inputs dropped by an earlier
    stage are reported as skipped, and the last collect step decides how the results are written.
+   An input that fails in a per-item step between two collect steps is reported as **failed** with
+   its step and error (not done); the results are attributed to the first input still alive after
+   the chain. A `script.condition` gate only covers cards of its own stage: its counter is reset at
+   the start and end of every stage (B-5).
    With one collect step the behaviour is unchanged.
    **Extra outputs** (hook `write_extras`): after the main file, producers may write further files
    next to it with the same stem: the editable FW-PNG (`alsoFwpng`) and the sprite-sheet atlas

@@ -460,6 +460,14 @@ pub fn take_skip(item: &mut Item) -> bool {
     true
 }
 
+/// Clears an open gate counter (start and end of every stage, so a gate never crosses a collect
+/// step).
+pub fn reset_gate(item: &mut Item) {
+    if let Some(m) = item.meta_mut() {
+        m.extra.remove(EXTRA_SKIP_NEXT);
+    }
+}
+
 fn p_str<'a>(p: &'a Value, k: &str, d: &'a str) -> &'a str {
     p.get(k).and_then(Value::as_str).unwrap_or(d)
 }

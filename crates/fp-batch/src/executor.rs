@@ -1227,7 +1227,12 @@ fn run_collect(job: &Job, plan: &Plan, k: usize) -> Vec<ItemReport> {
                 }
                 (Err(e), Some(rep)) if !e.is_cancelled() => {
                     rep.status = ItemStatus::Failed;
-                    rep.error = Some(e.to_string());
+                    if let BatchError::Step { step, message } = &e {
+                        rep.step = Some(step.clone());
+                        rep.error = Some(format!("{}: {message}", crate::step::step_label(step)));
+                    } else {
+                        rep.error = Some(e.to_string());
+                    }
                 }
                 _ => {}
             }
@@ -1267,6 +1272,14 @@ fn run_collect(job: &Job, plan: &Plan, k: usize) -> Vec<ItemReport> {
             })
         })
         .collect();
+    // B-5: the results belong to the first input still alive after the chain; an input that
+    // failed (or was dropped) in a later stage keeps its own status and error
+    let first = indices.first().copied().unwrap_or(first);
+    let first_entry = plan
+        .entries
+        .iter()
+        .find(|e| e.index == first)
+        .unwrap_or(first_entry);
     let (dir, stem, ext) = {
         let t = &first_entry.target;
         let name = t

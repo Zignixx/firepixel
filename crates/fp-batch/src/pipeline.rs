@@ -134,6 +134,9 @@ impl Pipeline {
         item: &mut Item,
         ctx: &mut StepContext,
     ) -> Result<()> {
+        // B-5: a `script.condition` gate only covers the cards of its own stage (a range ends at a
+        // collect step)
+        crate::steps::condition::reset_gate(item);
         for r in &self.steps[range] {
             ctx.check_cancel()?;
             if r.step.kind() != StepKind::PerItem {
@@ -165,6 +168,7 @@ impl Pipeline {
                 other => BatchError::step(r.step.id(), other.to_string()),
             })?;
         }
+        crate::steps::condition::reset_gate(item);
         Ok(())
     }
 
