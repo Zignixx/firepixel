@@ -84,8 +84,9 @@ Library menu), TW-126, TW-127 (`15`), TW-128 and TW-129 and added TW-131 to TW-1
 TW-131, TW-134, TW-135 and most of TW-133 and changed the runner for TW-132 (R-14); those items are ticked as fixed
 and are confirmed by run 19 or, failing that, by the matching A4 check. Run 19 (18 Oct 2026, 6 units) confirmed
 TW-125 (States menu), TW-130 / Q-57, TW-131, TW-132 (rest moved to TW-140 / TW-141), TW-135 and TW-133 except for
-the stretch shortcut, and added TW-136 to TW-141; TW-134 was not part of run 19. The open checks below come from runs
-17 to 19.
+the stretch shortcut, and added TW-136 to TW-141; TW-134 was not part of run 19. After run 19, TW-136 turned out to
+be a capture artefact (struck below), and TW-137, TW-138 and TW-139 were fixed; run 20 is to confirm them. The open
+checks below come from runs 17 to 19.
 
 - [x] **TW-100** (`panel-library-styles/03`) – resolved: run 13 measured equal positions at an integer drop point; the unit counts as equal and the half-pixel case is no longer tracked.
 - [x] **TW-101** (`xs-file-formats/09`) – resolved in run 13: import by dragging lands on the same pixels 121,120–417,322 in both programs.
@@ -125,22 +126,20 @@ the stretch shortcut, and added TW-136 to TW-141; TW-134 was not part of run 19.
   **Expected:** The same result as the reference. The runner cannot prove it: the reference's pop-up closes without applying the text the runner sets; Firepixel gives #3366cc and, for "zz12", #000000.
 - [x] **TW-127 / TW-129** (runner R-13) – resolved in run 18: `xs-preferences` sets and reads back its options (`15` equal; `06` continued as TW-134); the reference opens Feather / Save Bitmap Selection, the "add swatches" file dialog and receives the library drop; `xs-canvas/15` selects R1 first. The plain arrow keys in `xs-shortcuts/10` moved to TW-132.
 - [x] **TW-132** (runner R-14) – runner changed after run 18: read-back scripts on the reference side record open dialogs first and every cancelled dialog is logged; the history read-back is guarded and retried (`menu-edit/01, 22`); Delete, Ctrl+D and the plain arrow keys are checked for effect and retried once (`menu-edit/09, 20`, `xs-shortcuts/10`); the text tool is left with Escape at the start of a unit (`tool-text`); Firepixel's menu read-back takes the enabled state from the accessibility tree (`xs-canvas/15`). Confirmed in run 19 for the dialogs, the history read-back, Ctrl+D and the text read-backs; Delete and the plain arrow keys select other tools on the reference side and a "c" arrives after Escape (continued as **TW-140** below); Firepixel's menu enabled state is still not read (continued as **TW-141** below).
-- [ ] **TW-136** (`panel-library-styles/16`; needs: next run of that unit, else real window)
-  **Steps:** Open the URL panel menu.
-  **Expected:** The reference's labels without "..." (add URL, edit URL, new URL library, import, export) and its height (321 × 231 px shot; Firepixel run 19: 327 × 248).
-- [ ] **TW-137** (`menu-edit/22`; needs: behaviour description, then next run)
+- [x] ~~**TW-136** (`panel-library-styles/16`)~~ – not a deviation (capture artefact): the reference's labels end in "..." as well, and the 17 px came from the shot including the ≡ button row and the drop shadow; the menu frame is 323 × 231 vs. 321 × 231 px, pinned by a size test.
+- [x] **TW-137** (`menu-edit/22`) – fixed after run 19 (RE spec), confirm in run 20: Copy and Cut are History rows of their own ("Kopie" / "Copy", "Ausschneiden" / "Cut"), Select All always adds a row, Deselect only when the selection changes; Copy does not mark the document as changed.
   **Steps:** Select a rectangle; Clone (Ctrl+Shift+D), Copy (Ctrl+C), Paste (Ctrl+V); look at the History panel.
-  **Expected:** As in the reference: Clone, Copy, Paste are listed (Firepixel run 19: Clone, Paste without Copy).
-- [ ] **TW-138** (`tool-text/11, 13, 14, 16`; needs: behaviour description, then next run)
+  **Expected:** As in the reference: Clone, Copy, Paste are listed.
+- [x] **TW-138** (`tool-text/11, 13, 14, 16`) – fixed after run 19 (RE spec), confirm in run 20: attributes set while the editor is open never change the text tool defaults; with pointer-selected text or nothing selected they do. The *Text* menu remnant stays open in FINDINGS (TW-138 rest).
   **Steps:** Text tool: type a text, select three characters and set 72 pt in the inspector; press Escape; click elsewhere and type a new text.
-  **Expected:** The new text keeps the tool's earlier size and colour as in the reference (Firepixel runs 18 and 19: 72 pt and grey).
-- [ ] **TW-139** (`tool-text/06, 07`, `xs-shortcuts/15_in_text_tx2`; needs: fix, then next run and real keyboard)
+  **Expected:** The new text keeps the tool's earlier size and colour as in the reference.
+- [x] **TW-139** (`tool-text/06, 07`, `xs-shortcuts/15_in_text_tx2`) – fixed after run 19, confirm in run 20 and with the real keyboard: script read-back shows the live editor text (limits: MCP `get_document` / `render` show the committed state; the live element is not in the selection).
   **Steps:** Text tool: click on an empty canvas and type "Hallo"; without pressing Escape run a script that lists the document's texts; look at the canvas.
   **Expected:** The new text object exists and shows "Hallo" in the read-back and on the canvas while the editor is open, as in the reference.
-- [ ] **TW-140** (runner R-15; needs: runner change, then next run)
+- [ ] **TW-140** (runner R-15 on `main`; needs: run 20)
   **Steps:** Runner: plain arrow keys, Delete and Escape on the reference side; effect check on the object bounds; tool and text-attribute reset after typing.
   **Expected:** `menu-edit/09, 22` delete R1, `xs-shortcuts/10` and `panel-pages-states-history/14–21` nudge by 1 px, no stray "c" after Escape, no tool change, no text attributes carried into `tool-text`.
-- [ ] **TW-141** (runner / bridge; needs: change, then next run)
+- [ ] **TW-141** (Rust fix F40 in progress: menu rows get an AccessKit node; needs: run 20)
   **Steps:** Read the enabled state of Modify ▸ Snap to Pixel without a selection and of the URL panel menu entries in Firepixel.
   **Expected:** `enabled` is reported (false for Snap to Pixel without a selection; Edit URL and Delete URL false without a selected URL).
 

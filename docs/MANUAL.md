@@ -49,7 +49,8 @@ available in German (`MANUAL.de.md`).
   in five folders (`Document Presets`, `Grids`, `Mobile`, `Web`, `Wireframes`), e.g. Web Banner
   728 × 90 or Smartphone 390 × 844. Each template brings a fitting export setting (PNG 32 or JPEG).
   Templates you delete do not come back.
-- *Edit ▸ Undo/Redo* (Ctrl+Z / Ctrl+Y); the History panel shows all steps.
+- *Edit ▸ Undo/Redo* (Ctrl+Z / Ctrl+Y); the History panel shows all steps. Copy and Cut get a row of
+  their own ("Copy", "Cut"); Copy does not mark the document as changed.
 - At the top of the window is the application bar with logo, menus, quick buttons and the
   workspace switcher, below it the main toolbar, the tools on the left, the panels on the right
   and the Properties inspector at the bottom.
@@ -202,6 +203,8 @@ opacity, blending mode, Live Filters (+/−) and text or symbol settings.
   *Inner Bevel*, *Outer Bevel*, *Inset Emboss*, *Raised Emboss*. The kind is part of the menu item;
   the dialog has no separate field for it. Double-click an entry in the filter list to open its settings.
 
+- **Text tool defaults:** attributes set while the text editor is open change only the marked text;
+  set with text selected by the pointer, or with nothing selected, they become the defaults for new texts.
 - **Font search:** the opened font list (text inspector, Text tool, text editor) has a search field
   at the top. Typing filters (part of a word, case-insensitive), ↑/↓ select, Enter applies, Esc
   closes without a change.

@@ -8,10 +8,11 @@ came about is kept outside the repository ([ARCHIVE_NOTE.md](ARCHIVE_NOTE.md)).
 Firepixel is feature-complete as a preview: all menus, tools, panels, the property inspector and the dialogs of
 the reference application exist and work, FW-PNG files round-trip, and everything is drivable over CLI, JSF and
 MCP. Work is now parity polishing: a scripted comparison runner measures Firepixel against the reference
-application unit by unit, and the remaining differences are tracked as findings. Release **v0.2.1** (Windows x64,
-macOS universal arm64 + x86_64, macOS 10.15 or later) was published as a pre-release on 18 Oct 2026; **v0.2.2** is
-planned for the same day and adds Linux x86_64 (tar.gz and AppImage). Further preview builds are made on request. The Intel slice of the macOS bundle is verified with `lipo` only, not yet run
-on Intel hardware, and the Linux build has run only in CI, not yet on a real Linux desktop.
+application unit by unit, and the remaining differences are tracked as findings. Release **v0.2.2** was published as a
+pre-release on 18 Oct 2026 (tag from `c031a987`) for Windows x64, macOS universal arm64 + x86_64 (macOS 10.15 or
+later) and, for the first time, Linux x86_64 (tar.gz and AppImage). Further preview builds are made on request. The
+Intel slice of the macOS bundle is verified with tools only, not yet run on Intel hardware, and the Linux build has
+run only in CI, not yet on a real Linux desktop.
 
 ## Figures
 
@@ -23,26 +24,27 @@ on Intel hardware, and the Linux build has run only in CI, not yet on a real Lin
 | Canvas image pairs within 1 % | **174 / 202** (unchanged in run 19; run 17: 176 / 202; two `tool-text` pairs are above 1 % through the reference's text-tool state) | runs 17–19 |
 | Measurement quota, all 48 units | **86.9 %** (1066 / 1226 measurable steps both `ok`, newest run per unit; run 17 alone 86.3 %; the six units of run 19: 87.1 %, 121 / 139, unchanged) | runs 17–19 |
 | Errors, newest run per unit | 38 reference-side (run 17: 46), 21 Firepixel-side (unchanged, all known) | runs 17–19 |
-| Workspace tests | **2695 passed, 1 failed, 134 ignored** at `6e2ad3b1` (the failure was a missing DE/EN command text, added in `0f96dd71`) | full workspace run on `main`, 18 Oct 2026 |
-| Open findings | 8 fixable `[F]` (PDF layers; TW-133 rest; TW-136 to TW-141 from run 19, two of them runner items), 5 deferred `[V]`, 20 informational `[N]`; run 19 closed TW-125, TW-130 / Q-57, TW-131, TW-132 and TW-135 | [FINDINGS.md](FINDINGS.md) |
-| Real differences known | Ctrl+Alt+Shift+S sets "stretch" on a text the reference leaves alone (TW-133 rest), no Copy row in History (TW-137); smaller: URL menu labels with "..." (TW-136), text-tool defaults after a change on a partial selection (TW-138), scripting read-back while a text is edited (TW-139); the crop option (TW-134) is fixed and waits for the next `xs-preferences` run | [PARITY.md](PARITY.md) |
+| Workspace tests | Run on `2d64547a` pending; last full run **2695 passed, 1 failed, 134 ignored** at `6e2ad3b1` (the failure was a missing DE/EN command text, added in `0f96dd71`) | full workspace run on `main`, 18 Oct 2026 |
+| Open findings | 5 fixable `[F]` (PDF layers; TW-133 rest; TW-138 rest; TW-140 runner R-15, to confirm; TW-141 menu enabled state, fix F40 in progress), 5 deferred `[V]`, 20 informational `[N]`; after run 19 TW-137, TW-138 and TW-139 were fixed (confirm in run 20) and TW-136 closed as no deviation | [FINDINGS.md](FINDINGS.md) |
+| Real differences known | Ctrl+Alt+Shift+S sets "stretch" on a text the reference leaves alone (TW-133 rest); smaller: *Text* menu commands on pointer-selected text do not yet update the text tool defaults (TW-138 rest). Fixed and waiting for run 20: History rows for Copy / Cut (TW-137), text tool defaults (TW-138), live read-back while editing (TW-139), the crop option (TW-134) | [PARITY.md](PARITY.md) |
 | Closed findings (history) | 850+ | kept outside the repository ([ARCHIVE_NOTE.md](ARCHIVE_NOTE.md)) |
 | Startup time | about 0.8 s to the first frame (release build, warm) | smoke test 17 Oct 2026 |
 
 ## Last test build
 
-Release **v0.2.1** (18 Oct 2026, pre-release on GitHub, Windows x64 and macOS universal) with version bump
-`b3919cb6`; the macOS bundle is built by `macos-preview.yml` as one universal app (arm64 + x86_64; the x86_64
-slice checked with `lipo`, not run on Intel hardware). The previous release was v0.2.0 (17 Oct 2026, Windows x64,
-macOS arm64).
+Release **v0.2.2** (18 Oct 2026, pre-release on GitHub, tag from `c031a987`, version bump `2cfff08d`): Windows x64
+ZIP, macOS universal ZIP (arm64 + x86_64) and Linux x86_64 tar.gz and AppImage. All assets were verified after
+publishing (fat binary, CLI version, archive contents). The Linux build is tested in CI only, the Intel macOS slice
+by tools only (not run on Intel hardware). The previous releases were v0.2.1 (18 Oct 2026, Windows x64, macOS
+universal) and v0.2.0 (17 Oct 2026, Windows x64, macOS arm64).
 
 **Linux CI:** `prerelease.yml` now also calls `linux-build.yml`, which builds Linux x86_64 on Ubuntu 22.04 (glibc
 2.35 baseline): release build of `firepixel` and `firepixel-cli`, a tar.gz (manuals, licence, `.desktop` file,
 icons) and an AppImage (pinned, checksum-verified `appimagetool`). TLS for the model download uses rustls on all
 non-Windows targets, so the binaries do not link OpenSSL (the build fails if `ldd` lists it). A startup probe runs
 the app under Xvfb and checks that the control channel comes up. The first CI runs are green. Not yet tested on a
-real Linux desktop; file dialogs need `xdg-desktop-portal`. v0.2.2 (planned 18 Oct 2026) is the first release with
-Windows x64, macOS universal and Linux x86_64.
+real Linux desktop; file dialogs need `xdg-desktop-portal`. v0.2.2 is the first release with Windows x64, macOS
+universal and Linux x86_64.
 
 Latest test build: preview build **`2026-10-18_13-04`** (release profile, single `firepixel.exe` plus
 `firepixel-cli.exe`) from `main` at `a3510515` (packages F34–F36: text-tool caret, URL panel menu, Select Inverse
@@ -64,6 +66,11 @@ deviation (no Copy row in History, TW-137), `xs-shortcuts` stays a real deviatio
 `tool-text` stays unclear (reference-side text-tool state), `xs-canvas` and `panel-pages-states-history` stay equal
 (States menu 210 vs. 207 px). Step quota and canvas pairs unchanged; TW-125, TW-130 / Q-57, TW-131, TW-132 and
 TW-135 closed, TW-136 to TW-141 added.
+
+After run 19 (on `main` up to `2d64547a`, not yet in a preview build): TW-136 closed as no deviation (the labels
+already matched, the shot included the ≡ row and the shadow; 323 × 231 vs. 321 × 231 px), TW-137 (History rows for
+Copy, Cut, Select All and Deselect), TW-138 (text tool defaults) and TW-139 (live read-back while editing) fixed,
+runner R-15 for TW-140; TW-141 needs a Rust change (F40, in progress). Run 20 is to confirm.
 
 ## How tests run
 
@@ -92,13 +99,12 @@ with a real mouse and drag and drop between windows need a human click-test: [VE
 
 ## Next
 
-1. Release v0.2.2 today (18 Oct 2026) with Windows x64, macOS universal and Linux x86_64.
+1. Run 20 of `menu-edit`, `xs-shortcuts`, `tool-text`, `xs-canvas`, `panel-library-styles` and `xs-preferences`
+   after the menu enabled-state fix (TW-141, F40): confirms TW-134, TW-137, TW-138, TW-139 and runner R-15 (TW-140).
 2. Human click-test of [VERIFICATION.md](VERIFICATION.md), including section A4 (wave-4 features, URL panel menu,
-   typing after a double-click, crop option off, Linux start) and the open A2 checks from run 19.
-3. Remaining parity items from run 19: behaviour descriptions for the Copy history row (TW-137), the text-tool
-   defaults (TW-138) and "stretch" / "justified" on point text (TW-133 rest); the URL menu labels (TW-136) and the
-   read-back while editing (TW-139); runner R-15 (TW-140, TW-141); then a run of `xs-preferences` (TW-134) and the
-   affected units.
+   typing after a double-click, crop option off, Linux start) and the open A2 checks.
+3. Remaining parity items: "stretch" / "justified" on point text (TW-133 rest) and the *Text* menu remnant of the
+   text tool defaults (TW-138 rest).
 4. Remaining deferred items: BA-101, BA-108 (metadata box writing), BA-110 rest, BA-083, U-1 PDF import layers.
 
 Wave 3 (18 Oct 2026) added 27 batch steps, chained collect steps, more metadata formats, the MCP gate for external

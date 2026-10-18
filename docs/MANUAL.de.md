@@ -51,6 +51,8 @@ ohne Neustart. Weitere Sprachen sind einfache `.ftl`-Textdateien in `%APPDATA%\F
   390 × 844. Jede Vorlage bringt eine passende Exportvorgabe mit (PNG 32 bzw. JPEG). Gelöschte Vorlagen
   kommen nicht wieder.
 - *Bearbeiten ▸ Rückgängig/Wiederholen* (Strg+Z / Strg+Y); das Verlauf-Bedienfeld zeigt alle Schritte.
+  Kopieren und Ausschneiden erhalten eine eigene Zeile („Kopie“, „Ausschneiden“); Kopieren markiert das
+  Dokument nicht als geändert.
 - Das Fenster hat oben die Anwendungsleiste mit Logo, Menüs, Schnellknöpfen und dem
   Arbeitsbereich-Umschalter, darunter die Hauptsymbolleiste, links die Werkzeuge, rechts die
   Bedienfelder und unten den Eigenschaften-Inspektor.
@@ -209,6 +211,8 @@ Mischmodus, Filter (+/−) und Text- bzw. Symbol-Einstellungen.
   Die Art steht im Menüeintrag; der Dialog hat dafür kein eigenes Feld. Doppelklick auf einen Eintrag
   der Filterliste öffnet seine Einstellungen.
 
+- **Textvorgaben:** Attribute, die bei offenem Texteditor gesetzt werden, ändern nur den markierten Text;
+  mit dem Zeiger ausgewählter Text oder keine Auswahl macht sie zur Vorgabe für neue Texte.
 - **Schriftsuche:** Die aufgeklappte Schriftliste (Text-Inspektor, Textwerkzeug, Texteditor) hat oben
   ein Suchfeld. Tippen filtert (Teilwort, ohne Groß-/Kleinschreibung), ↑/↓ wählen, Eingabe
   übernimmt, Esc schließt ohne Änderung.

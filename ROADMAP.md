@@ -14,24 +14,22 @@ exist and work; FW-PNG round-trips; CLI, JSF and MCP drive everything.
 | Proven 1:1 | **91.7 %** (44 / 48) |
 | Measurement quota, all 48 units | **86.9 %** (1066 / 1226 steps, newest run per unit; run 17 alone: 86.3 %) |
 | Canvas image pairs within 1 % | 174 / 202 |
-| Tests | 2695 passed, 1 failed (missing command text, fixed in `0f96dd71`), 134 ignored at `6e2ad3b1` |
-| Latest release | v0.2.1 pre-release (18 Oct 2026, Windows x64, macOS universal arm64 + x86_64); v0.2.2 planned for 18 Oct 2026 with Linux x86_64 |
-| Open findings | 8 fixable · 5 deferred · 20 informational · 850+ closed |
+| Tests | Run on `2d64547a` pending; last full run: 2695 passed, 1 failed (missing command text, fixed in `0f96dd71`), 134 ignored at `6e2ad3b1` |
+| Latest release | **v0.2.2** pre-release (18 Oct 2026, tag from `c031a987`): Windows x64 ZIP, macOS universal ZIP (arm64 + x86_64), Linux x86_64 tar.gz and AppImage; Linux tested in CI only, the Intel macOS slice verified by tools only |
+| Open findings | 5 fixable · 5 deferred · 20 informational · 850+ closed |
 
 ## Next (in order)
 
-1. **Release v0.2.2** (pre-release, today, 18 Oct 2026): Windows x64, macOS universal and, for the first time,
-   Linux x86_64 (tar.gz and AppImage, glibc 2.35+; built and start-probed in CI, not yet tried on a real Linux
-   desktop).
+1. **Run 20** of `menu-edit`, `xs-shortcuts`, `tool-text`, `xs-canvas`, `panel-library-styles` and `xs-preferences`
+   once the menu enabled-state fix (TW-141, package F40, in progress) is on `main`: confirms the fixes after run 19
+   (TW-137 History rows, TW-138 text defaults, TW-139 live read-back), the crop option (TW-134) and runner R-15
+   (TW-140).
 2. **Human click-test** of [docs/VERIFICATION.md](docs/VERIFICATION.md) (embedded panel dialogs, real keyboard
    paths, brush strokes with a real mouse, drag and drop between windows, the open checks in section A2), including
    the wave-3 Batch Studio UI, the PDF/PSD export options and section A4 (wave-4 features, URL panel menu, typing after
    a double-click, the crop option, the Linux start).
-3. **Remaining parity items from run 19:** behaviour descriptions for the Copy row in History (TW-137), the
-   text-tool defaults after a change on a partial selection (TW-138) and "stretch" / "justified" on point text
-   (TW-133 rest); the URL menu labels (TW-136) and the scripting read-back while a text is edited (TW-139); runner
-   R-15 for the reference-side keys (TW-140) and Firepixel's menu enabled state (TW-141); then a run of
-   `xs-preferences` (crop option TW-134, not part of run 19) and the affected units.
+3. **Remaining parity items:** "stretch" / "justified" on point text (TW-133 rest) and the *Text* menu remnant of
+   the text tool defaults (TW-138 rest).
 4. **Remaining deferred items:** BA-101 (JPEG 2000 in PDF, PSD stroke), BA-108 (writing AVIF/HEIF/JXL metadata
    boxes), BA-110 rest (lossy LZW with an SSIM bound), BA-083 (resampler hashes on another OS), U-1 PDF import
    layers.
@@ -41,10 +39,11 @@ exist and work; FW-PNG round-trips; CLI, JSF and MCP drive everything.
 ### Fixable remnants (`[F]`)
 
 - PDF import: no layers (the pure-Rust PDF reader exposes no optional content groups).
-- TW-133 rest ("stretch" / "justified" on point text), TW-136 (URL menu labels), TW-137 (Copy row in History),
-  TW-138 (text-tool defaults), TW-139 (read-back while a text is edited), TW-140 and TW-141 (runner R-15). Run 19
-  confirmed TW-125, TW-130 / Q-57, TW-131, TW-132 and TW-135; TW-134 (crop option) waits for the next
-  `xs-preferences` run.
+- TW-133 rest ("stretch" / "justified" on point text), TW-138 rest (*Text* menu commands and the text tool
+  defaults), TW-140 (runner R-15 on `main`, to confirm in run 20) and TW-141 (menu enabled state, Rust fix F40 in
+  progress). Fixed after run 19 and to confirm in run 20: TW-137 (History rows for Copy, Cut, Select All,
+  Deselect), TW-138 (text tool defaults from the inspector) and TW-139 (live read-back while a text is edited);
+  TW-136 closed as no deviation; TW-134 (crop option) waits for the `xs-preferences` run.
 
 ### Deferred expansion items (`[V]`)
 
