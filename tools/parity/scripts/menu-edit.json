@@ -131,13 +131,29 @@
      "key": "ctrl+V"
     },
     {
+     "wait": 300
+    },
+    {
+     "retry_if": {
+      "check": "fw.selection.length",
+      "retry_when_falsy": true,
+      "do": [
+       {
+        "wait": 300
+       }
+      ],
+      "why": "R-20 (TW-147 d): paste not settled - selection read again"
+     }
+    },
+    {
      "log_value": "(function(){var r=[],s=fw.selection;for(var i=0;i<s.length;i++){var p=s[i].pixelRect;r.push([s[i].name,s[i].toString(),p.left,p.top,p.right,p.bottom]);}return r.toSource();})()"
     },
     {
      "record_ui": "document.summary"
     }
    ],
-   "shot": null
+   "shot": null,
+   "note": "R-20 (TW-147 d): the selection is read after a 300 ms settle, once more after another 300 ms when it is empty (reference read-back empty in runs 20 and 22)"
   },
   {
    "id": "04_paste_offset_result",

@@ -127,6 +127,16 @@ public static class N {
   public static string KeyName(uint scan, bool ext, IntPtr hkl) { IntPtr old = IntPtr.Zero; if (hkl != IntPtr.Zero) old = ActivateKeyboardLayout(hkl, 0);
     var s = new StringBuilder(64); GetKeyNameText((int)((scan << 16) | (ext ? (1u << 24) : 0u)), s, 64); if (old != IntPtr.Zero) ActivateKeyboardLayout(old, 0); return s.ToString(); }
   public static string KeyChar(uint vk, uint scan, IntPtr hkl) { var s = new StringBuilder(8); int n = ToUnicodeEx(vk, scan, new byte[256], s, 8, 4, hkl); return n > 0 ? s.ToString(0, n) : ""; }
+  // R-20 (TW-146): typed text as real keys - virtual key and shift state of the character in the target's layout
+  // (VkKeyScanEx with KeyHkl), every key with its scan code (Key); null = no key for it in that layout (sent as Unicode)
+  [DllImport("user32.dll", CharSet=CharSet.Unicode)] public static extern short VkKeyScanEx(char ch, IntPtr hkl);
+  public static INPUT[] CharKeys(char c) { IntPtr hkl = KeyHkl != IntPtr.Zero ? KeyHkl : GetKeyboardLayout(0); short r = VkKeyScanEx(c, hkl);
+    if (r == -1 || (r & 0xFF) == 0xFF) return null; ushort vk = (ushort)(r & 0xFF); int sh = (r >> 8) & 0xFF; var a = new List<INPUT>();
+    if ((sh & 2) != 0) a.Add(Key(0x11, false)); if ((sh & 4) != 0) a.Add(Key(0x12, false)); if ((sh & 1) != 0) a.Add(Key(0x10, false));
+    a.Add(Key(vk, false)); a.Add(Key(vk, true));
+    if ((sh & 1) != 0) a.Add(Key(0x10, true)); if ((sh & 4) != 0) a.Add(Key(0x12, true)); if ((sh & 2) != 0) a.Add(Key(0x11, true)); return a.ToArray(); }
+  // R-20 (TW-146): GUI thread state of a window's thread (focus, caret window, caret rectangle, flags 1 = caret blinking)
+  public static GUITHREADINFO GuiOf(IntPtr top) { uint p; uint tid = GetWindowThreadProcessId(top, out p); var g = new GUITHREADINFO(); g.cbSize = Marshal.SizeOf(typeof(GUITHREADINFO)); GetGUIThreadInfo(tid, ref g); return g; }
   public static INPUT Uni(char c, bool up) { var i = new INPUT(); i.type = 1; i.u.ki.wScan = c; i.u.ki.dwFlags = 4u | (up ? 2u : 0u); return i; }
   public static INPUT Mouse(uint flags, uint data) { var i = new INPUT(); i.type = 0; i.u.mi.dwFlags = flags; i.u.mi.mouseData = data; return i; }
   public static Bitmap Screen(int l, int t, int r, int b) { var bmp = new Bitmap(Math.Max(1, r - l), Math.Max(1, b - t)); using (var g = Graphics.FromImage(bmp)) g.CopyFromScreen(l, t, 0, 0, bmp.Size); return bmp; }
@@ -683,7 +693,17 @@ function Handle($c) {
       try { [PR.N]::SetFocus($v) | Out-Null } finally { if ($tt -and $tt -ne $me) { [PR.N]::AttachThreadInput($me, $tt, $false) | Out-Null } }
       Start-Sleep -Milliseconds 60; $f = [PR.N]::FocusOf($m)
       return @{ view = [int64]$v; was_class = $(if ($was -ne [IntPtr]::Zero) { [PR.N]::Cls($was) } else { '' }); focus_class = $(if ($f -ne [IntPtr]::Zero) { [PR.N]::Cls($f) } else { '' }); ok = ($f -eq $v -or [PR.N]::IsChild($v, $f)) } }
-    'type' { foreach ($ch in ([string]$c.text).ToCharArray()) { [PR.N]::Send(@([PR.N]::Uni($ch, $false), [PR.N]::Uni($ch, $true))); Start-Sleep -Milliseconds 25 }; return 'ok' }
+    # R-20 (TW-146): `mode: keys` types every character as its real key (vk + scan code + shift state of the target's
+    # layout, Unicode only for characters without a key; LF is sent as Enter), `delay_ms` between characters (default 25)
+    'type' { $d = if ($c.delay_ms -ne $null) { [int]$c.delay_ms } else { 25 }; $keys = ([string]$c.mode -eq 'keys'); $nk = 0; $nu = 0
+      foreach ($ch in ([string]$c.text).ToCharArray()) { $a = $null
+        if ($keys) { if ($ch -eq [char]10) { $ch = [char]13 }; $a = [PR.N]::CharKeys($ch) }
+        if ($a -ne $null) { [PR.N]::Send($a); $nk++ } else { [PR.N]::Send(@([PR.N]::Uni($ch, $false), [PR.N]::Uni($ch, $true))); $nu++ }
+        Start-Sleep -Milliseconds $d }
+      if ($keys) { return @{ keys = $nk; unicode = $nu; delay_ms = $d } }; return 'ok' }
+    'caret' { # R-20 (TW-146): caret window and keyboard focus of the main window's thread (text editor open?)
+      $m = MainWin; $g = [PR.N]::GuiOf($m)
+      return @{ caret = [int64]$g.hwndCaret; caret_class = (ClsOf $g.hwndCaret); blinking = (($g.flags -band 1) -ne 0); caret_rect = @([int]$g.rcCaret.L, [int]$g.rcCaret.T, [int]$g.rcCaret.R, [int]$g.rcCaret.B); focus_class = (ClsOf $g.hwndFocus) } }
     'click' { Click $c.x $c.y $c.button $c.mods $c.count; return 'ok' }
     'move' { [PR.N]::SetCursorPos([int]$c.x, [int]$c.y) | Out-Null; [PR.N]::Send(@([PR.N]::Mouse(0x1, 0))); Start-Sleep -Milliseconds 120; return 'ok' }
     'drag' { $script:DragKeys = $null; $b = Drag $c.x1 $c.y1 $c.x2 $c.y2 $c.mods $c.steps $c.button $c.press_ms $c.release_ms

@@ -2305,7 +2305,8 @@
      "log_value": "fw.selection.length"
     }
    ],
-   "shot": null
+   "shot": null,
+   "note": "R-20 (TW-147 b): Escape with the pointer tool and a selection on the reference side follows config orig.escape_deselects (default false: selection kept, step marked escape_not_comparable; true: Select > Deselect)"
   },
   {
    "id": "22_enter_canvas_result",

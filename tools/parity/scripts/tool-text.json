@@ -86,7 +86,8 @@
    ],
    "shot": {
     "area": "canvas"
-   }
+   },
+   "note": "R-20 (TW-146): on the reference side `type` waits for the text editor (one retry of the creating click / drag), types real keys at ~20 ms per character, reads textChars back (one retry) and the commit checks the object count"
   },
   {
    "id": "03_typing_result",
@@ -124,7 +125,7 @@
    "shot": {
     "area": "canvas"
    },
-   "note": "Tool defaults differ by profile (original: 48 pt, fill colour); runner sets font/size via the text tool inspector first if needed."
+   "note": "Tool defaults differ by profile (original: 48 pt, fill colour); runner sets font/size via the text tool inspector first if needed.; R-20 (TW-146): on the reference side `type` waits for the text editor (one retry of the creating click / drag), types real keys at ~20 ms per character, reads textChars back (one retry) and the commit checks the object count"
   },
   {
    "id": "04_esc_result",
@@ -242,7 +243,7 @@
    "shot": {
     "area": "canvas"
    },
-   "note": "70,160 lies inside TX2 ('Zeile eins'); original inserts at the click position.; R-14 (TW-130): all text objects (layer/index, name, pixelRect, textChars, selection count) logged before typing, after typing and after Escape on both sides (Escape and the last read-back after the shot); R-19 (TW-140): on the reference side the runner replaces the plain keys - Delete by Edit > Clear (script deleteSelection(false) as fallback), plain arrows by moveSelectionBy 1 px, Escape in the text editor by a Pointer tool click; Firepixel keeps the real keys; replaced actions carry `substituted` in the step record",
+   "note": "70,160 lies inside TX2 ('Zeile eins'); original inserts at the click position.; R-14 (TW-130): all text objects (layer/index, name, pixelRect, textChars, selection count) logged before typing, after typing and after Escape on both sides (Escape and the last read-back after the shot); R-19 (TW-140): on the reference side the runner replaces the plain keys - Delete by Edit > Clear (script deleteSelection(false) as fallback), plain arrows by moveSelectionBy 1 px, Escape in the text editor by a Pointer tool click; Firepixel keeps the real keys; replaced actions carry `substituted` in the step record; R-20 (TW-146): on the reference side `type` waits for the text editor (one retry of the creating click / drag), types real keys at ~20 ms per character, reads textChars back (one retry) and the commit checks the object count",
    "after": [
     {
      "key": "Escape"
@@ -315,7 +316,7 @@
      "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){if(e[i].textChars!=null){var q='?';try{var p=e[i].pixelRect;q=p.left+','+p.top+','+p.right+','+p.bottom;}catch(x){}r.push(l+'/'+i+' '+e[i].name+' @'+q+': '+e[i].textChars);}}}return r.length+' texts | '+r.join(' | ')+' | sel='+fw.selection.length;})()"
     }
    ],
-   "note": "R-14 (TW-130): all text objects (layer/index, name, pixelRect, textChars, selection count) logged before typing, after typing and after Escape on both sides (Escape and the last read-back after the shot); R-19 (TW-140, TW-145): the reference side selects the last 4 characters with a mouse drag (text_select_drag, selection read back through the clipboard) - Shift+Left moved its caret without selecting; Firepixel keeps Shift+Left; R-19 (TW-140): on the reference side the runner replaces the plain keys - Delete by Edit > Clear (script deleteSelection(false) as fallback), plain arrows by moveSelectionBy 1 px, Escape in the text editor by a Pointer tool click; Firepixel keeps the real keys; replaced actions carry `substituted` in the step record"
+   "note": "R-14 (TW-130): all text objects (layer/index, name, pixelRect, textChars, selection count) logged before typing, after typing and after Escape on both sides (Escape and the last read-back after the shot); R-19 (TW-140, TW-145): the reference side selects the last 4 characters with a mouse drag (text_select_drag, selection read back from the highlight pixels of the text box since R-20, no Ctrl+C) - Shift+Left moved its caret without selecting; Firepixel keeps Shift+Left; R-19 (TW-140): on the reference side the runner replaces the plain keys - Delete by Edit > Clear (script deleteSelection(false) as fallback), plain arrows by moveSelectionBy 1 px, Escape in the text editor by a Pointer tool click; Firepixel keeps the real keys; replaced actions carry `substituted` in the step record; R-20 (TW-146): on the reference side `type` waits for the text editor (one retry of the creating click / drag), types real keys at ~20 ms per character, reads textChars back (one retry) and the commit checks the object count"
   },
   {
    "id": "07_select_text_double_click_focus",
@@ -570,7 +571,7 @@
    "shot": {
     "area": "canvas"
    },
-   "note": "R-19 (TW-140, TW-145): the reference side selects the last 3 characters with a mouse drag (text_select_drag, selection read back through the clipboard) - Shift+Left moved its caret without selecting; Firepixel keeps Shift+Left"
+   "note": "R-19 (TW-140, TW-145): the reference side selects the last 3 characters with a mouse drag (text_select_drag, selection read back from the highlight pixels of the text box since R-20, no Ctrl+C) - Shift+Left moved its caret without selecting; Firepixel keeps Shift+Left; R-20 (TW-146): on the reference side `type` waits for the text editor (one retry of the creating click / drag), types real keys at ~20 ms per character, reads textChars back (one retry) and the commit checks the object count"
   },
   {
    "id": "12_font_live_result",
@@ -682,7 +683,7 @@
    "shot": {
     "area": "canvas"
    },
-   "note": "R-19 (TW-140, TW-145): the reference side selects the last 3 characters with a mouse drag (text_select_drag, selection read back through the clipboard) - Shift+Left moved its caret without selecting; Firepixel keeps Shift+Left"
+   "note": "R-19 (TW-140, TW-145): the reference side selects the last 3 characters with a mouse drag (text_select_drag, selection read back from the highlight pixels of the text box since R-20, no Ctrl+C) - Shift+Left moved its caret without selecting; Firepixel keeps Shift+Left; R-20 (TW-146): on the reference side `type` waits for the text editor (one retry of the creating click / drag), types real keys at ~20 ms per character, reads textChars back (one retry) and the commit checks the object count"
   },
   {
    "id": "14_bounds_normal",
@@ -717,7 +718,7 @@
    "shot": {
     "area": "canvas"
    },
-   "note": "R-19 (TW-140): on the reference side the runner replaces the plain keys - Delete by Edit > Clear (script deleteSelection(false) as fallback), plain arrows by moveSelectionBy 1 px, Escape in the text editor by a Pointer tool click; Firepixel keeps the real keys; replaced actions carry `substituted` in the step record"
+   "note": "R-19 (TW-140): on the reference side the runner replaces the plain keys - Delete by Edit > Clear (script deleteSelection(false) as fallback), plain arrows by moveSelectionBy 1 px, Escape in the text editor by a Pointer tool click; Firepixel keeps the real keys; replaced actions carry `substituted` in the step record; R-20 (TW-146): on the reference side `type` waits for the text editor (one retry of the creating click / drag), types real keys at ~20 ms per character, reads textChars back (one retry) and the commit checks the object count"
   },
   {
    "id": "15_frame_resize_result",

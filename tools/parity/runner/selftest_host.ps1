@@ -21,6 +21,14 @@ catch { Write-Output "FAIL: VkOf with a shadowing caller: $($_.Exception.Message
 try { $p = KeyProbe ''; $l = Layout ''; Write-Output ("ok: key_probe fg {0} focus {1} layout {2}; layout before {3} after {4} focus {5}" -f $p.fg_class, $p.focus_class, $p.layout, $l.before, $l.after, $l.focus_after)
       if ($p.requested -or $l.requested) { Write-Output 'FAIL: a layout request without want'; $fail++ } }
 catch { Write-Output "FAIL: key_probe / layout: $($_.Exception.Message) [line $($_.InvocationInfo.ScriptLineNumber)]"; $fail++ }
+# R-20 (TW-146): typed characters as real keys (`type` with mode keys): vk, scan code and shift state per character
+try { $bad = @(); $row = @()
+  foreach ($ch in 'Ab 1'.ToCharArray()) { $a = [PR.N]::CharKeys($ch); if ($a -eq $null) { $bad += "'$ch' no key"; continue }
+    $main = @($a | ? { $_.u.ki.wVk -ne 0x10 -and $_.u.ki.wVk -ne 0x11 -and $_.u.ki.wVk -ne 0x12 })[0]; $sh = @($a | ? { $_.u.ki.wVk -eq 0x10 }).Count -gt 0
+    if ($main.u.ki.wScan -eq 0) { $bad += "'$ch' scan 0" }; if ([char]::IsUpper($ch) -ne $sh) { $bad += "'$ch' shift $sh" }
+    $row += ('{0}=0x{1:X2}/0x{2:X2}{3}' -f $ch, $main.u.ki.wVk, $main.u.ki.wScan, $(if ($sh) { '+shift' } else { '' })) }
+  if ($bad) { Write-Output "FAIL: typed keys: $($bad -join ', ')"; $fail++ } else { Write-Output "ok: typed keys $($row -join ' ')" } }
+catch { Write-Output "FAIL: typed keys: $($_.Exception.Message) [line $($_.InvocationInfo.ScriptLineNumber)]"; $fail++ }
 $r = $null
 try { $r = KeyEcho $Keys -mock } catch { Write-Output "FAIL: key_echo: $($_.Exception.Message) [line $($_.InvocationInfo.ScriptLineNumber)]"; exit 1 }
 # expected: Escape always scan 0x01 without the extended flag; navigation/editing keys extended; letters/punctuation not

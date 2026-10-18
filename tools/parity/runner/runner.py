@@ -676,6 +676,96 @@ def clipboard_clear() -> bool:
                 u.CloseClipboard()
         time.sleep(0.05)
     return False
+# R-20 (TW-146): state of the reference's text editor - active tool, object count, selection count and, with one
+# text selected, its characters (last field: may contain ";")
+EDITOR_STATE_JS = ('(function(){var r="tool="+fw.activeTool;try{var d=fw.getDocumentDOM(),n=0;'
+                   'for(var l=0;l<d.layers.length;l++)n+=d.layers[l].frames[d.currentFrameNum].elements.length;'
+                   'var s=fw.selection,k=0;for(var i=0;i<s.length;i++)if(s[i].textChars!=null)k++;r+=";n="+n+";sel="+s.length+";texts="+k;'
+                   'if(s.length==1&&s[0].textChars!=null)r+=";text=1;chars="+s[0].textChars;}catch(e){r+=";error="+e;}'
+                   'return r;})()')
+# R-20 (TW-146, run 22 tool-text/11: the size field click opened Image Size with no text): Properties panel fields
+# that act on text only - clicked on the reference side only with the text tool active or a text selected
+TEXT_FIELDS = ("inspector.size", "inspector.size_slider", "inspector.font", "inspector.font_style", "inspector.text_color")
+# R-20: actions after which a `type` still belongs to the text created by the last canvas click / drag
+TEXT_ENTRY_KEEP = {"type", "log_value", "record", "wait", "record_ui", "text_select_drag"}
+
+
+def parse_editor_state(got) -> dict:
+    """R-20 (TW-146): EDITOR_STATE_JS read-back -> {tool, n, sel, text, chars, open}; `open` = text tool active and
+    exactly one text selected (the editor's text object exists while it is still empty, run 22 tool-text/07)."""
+    head, sep, chars = str(got or "").partition(";chars=")
+    st = {k: v for k, v in (p.split("=", 1) for p in head.split(";") if "=" in p)}
+    st["chars"] = chars if sep else None
+    st["open"] = "text" in str(st.get("tool", "")).lower() and st.get("sel") == "1" and st.get("text") == "1"
+    return st
+
+
+def text_entry_ok(before, after, text: str) -> bool:
+    """R-20 (TW-146): the typed text arrived - a new (empty) text holds exactly `text`, an existing one grew by its
+    length and contains it."""
+    if after is None:
+        return False
+    if not before:
+        return after == text
+    return len(after) == len(before) + len(text) and text in after
+
+
+def selection_highlight(a: Image.Image, b: Image.Image, box, want=None, thr: int = 90) -> dict:
+    """R-20 (TW-146): selection read-back without the clipboard (Ctrl+C typed U+0003 into the reference's text in
+    run 22). Pixels of `box` ([l, t, r, b], image coordinates) that changed between the shot before the drag (`a`)
+    and after it (`b`) (sum of the RGB differences >= thr); `want` = [x_from, x_to] of the characters to be
+    selected. ok = the changed pixels cover at least half of `want` and are more than a caret line (a blinking
+    caret is 1-2 px wide)."""
+    l, t, r, bt = (int(round(v)) for v in box)
+    diff = ImageChops.difference(a.convert("RGB").crop((l, t, r, bt)), b.convert("RGB").crop((l, t, r, bt)))
+    w, h = diff.size
+    px = diff.load()
+    hits = [(x, y) for y in range(h) for x in range(w) if sum(px[x, y][:3]) >= thr]
+    out = {"changed_px": len(hits), "box": [l, t, r, bt]}
+    if not hits:
+        out["ok"] = False
+        return out
+    xs, ys = [x for x, _ in hits], [y for _, y in hits]
+    cb = [l + min(xs), t + min(ys), l + max(xs) + 1, t + max(ys) + 1]
+    out["changed_box"] = cb
+    if want:
+        x0, x1 = sorted(float(v) for v in want)
+        cover = max(0.0, min(cb[2], x1) - max(cb[0], x0))
+        out["cover"] = round(cover / max(1.0, x1 - x0), 2)
+        out["ok"] = out["cover"] >= 0.5 and len(hits) >= 2 * (cb[3] - cb[1])
+    else:
+        out["ok"] = cb[2] - cb[0] >= 4
+    return out
+
+
+def text_entry_selfcheck() -> str:
+    """R-20: offline check of the editor read-back parser, the typed-text check and the highlight measurement
+    (run by --dry-run)."""
+    bad = []
+    st = parse_editor_state("tool=Text;n=1;sel=1;text=1;chars=Hallo; Welt")
+    if not (st["open"] and st["chars"] == "Hallo; Welt" and st["n"] == "1"):
+        bad.append(f"parse {st}")
+    if parse_editor_state("tool=Teilauswahl;n=0;sel=0")["open"] or parse_editor_state("tool=Text;n=2;sel=0")["open"]:
+        bad.append("closed editor read as open")
+    cases = ((("", "Abc 123", "Abc 123"), True), (("", "bc 123 Abc 123", "Abc 123"), False), (("", "", "A"), False),
+             (("Zeile eins", "ZeilQe eins", "Q"), True), (("Zeile eins", "Zeile eins", "Q"), False), (("", None, "A"), False))
+    bad += [f"text_entry_ok{args} != {want}" for args, want in cases if text_entry_ok(*args) != want]
+    a = Image.new("RGB", (60, 20), "white")
+    b, c = a.copy(), a.copy()
+    for x in range(30, 50):
+        for y in range(5, 15):
+            b.putpixel((x, y), (0, 0, 128))
+    for y in range(5, 15):
+        c.putpixel((49, y), (0, 0, 0))
+    if not selection_highlight(a, b, [0, 0, 60, 20], [30, 50]).get("ok"):
+        bad.append("highlight not found")
+    if selection_highlight(a, c, [0, 0, 60, 20], [30, 50]).get("ok"):
+        bad.append("caret read as a selection")
+    if selection_highlight(a, a.copy(), [0, 0, 60, 20], [30, 50]).get("ok"):
+        bad.append("unchanged box read as a selection")
+    return "ok" if not bad else "FAILED: " + "; ".join(bad)
+
+
 # R-15 (TW-140): text attributes the reference's text tool is reset to at unit start (config `orig.text_defaults`)
 TEXT_DEFAULTS = {"face": "ArialMT", "size": "12pt", "bold": False, "italic": False, "underline": False, "fillColor": "#000000"}
 # R-15: after a pointer double-click: active tool and whether exactly one text is selected
@@ -1591,6 +1681,7 @@ class OrigSide(Side):
                 self.o.focus()
                 self.click_at(self.tools_point(ptr["tools_rel"]))
                 time.sleep(0.2)
+                self.pointer_tool_check()
             except OrigError as e:
                 self.r.log(f"pointer tool: {e}")
         if getattr(self, "pending_tool_log", False):
@@ -2057,6 +2148,7 @@ class OrigSide(Side):
             out["after"] = {"tool": self.active_tool(), "focus": f.get("class")}
             out["editor_closed"] = any(t in out["after"]["tool"].lower() for t in POINTER_TOOLS) \
                 and str(out["after"]["focus"] or "").lower() not in ("edit", "richedit20w", "richedit50w")
+            self.commit_check(out)
         except Exception as e:  # noqa: BLE001
             out["error"] = str(e)[:160]
         self.r.log(f"  orig text cleanup after typing: {out}")
@@ -2115,7 +2207,189 @@ class OrigSide(Side):
             and str(focus or "").lower() not in ("edit", "richedit20w", "richedit50w")
         if not out["editor_closed"]:
             self.runner_error(f"text editor not closed by the Pointer tool click (tool {tool}, focus {focus})")
+        self.commit_check(out)
         return out
+
+    # ---- R-20 (TW-146, TW-147 a): text entry, commit, text fields and the Pointer tool on the reference side ----
+
+    def editor_state(self) -> dict:
+        """R-20: EDITOR_STATE_JS on the reference (tool, objects, selection, the selected text's characters)."""
+        try:
+            return parse_editor_state(self.jsf_value(EDITOR_STATE_JS, why="text editor check"))
+        except OrigError as e:
+            return {"open": False, "error": str(e)[:120]}
+
+    def wait_text_editor(self, st=None) -> dict:
+        """R-20 (TW-146): wait until the text editor is open (text tool active, one text selected - its object exists
+        while still empty), up to config `orig.text_editor_wait_s` (default 3 s); the caret window and keyboard focus
+        of the main window's thread (host `caret`) are recorded with it."""
+        end, polls = time.time() + float(self.r.cfg["orig"].get("text_editor_wait_s", 3.0)), 0
+        while True:
+            if st is None:
+                st = self.editor_state()
+            polls += 1
+            if st.get("open") or time.time() >= end:
+                break
+            time.sleep(0.2)
+            st = None
+        st["polls"] = polls
+        try:
+            c = self.h.call("caret") or {}
+            st["caret"] = {k: c.get(k) for k in ("caret_class", "blinking", "focus_class")}
+        except OrigError as e:
+            st["caret"] = {"error": str(e)[:80]}
+        return st
+
+    def type_keys(self, text: str):
+        """R-20: typed as real keys (vk + scan code + shift state of the reference's layout, host `type` mode keys),
+        config `orig.type_delay_ms` (default 20) between the characters."""
+        delay = int(self.r.cfg["orig"].get("type_delay_ms", 20))
+        self.o.focus()
+        return self.h.call("type", text=text, mode="keys", delay_ms=delay, timeout=60 + len(text) * delay / 1000)
+
+    def text_entry(self, text: str) -> bool:
+        """R-20 (TW-146, run 22 tool-text/02, 03, 06, 11, 13, 14: texts created by a text-tool click stayed empty and
+        were discarded, letters reached the tool shortcuts ("A" = Subselection) or the first one was lost). With the
+        text tool active: wait for the editor (wait_text_editor), else the creating canvas click / drag once more and
+        wait again; no editor -> nothing typed (runner error: the letters would select tools). Typed as real keys
+        with ~20 ms per character, the selected text's `textChars` read back: nothing arrived -> typed once more;
+        a new text with other characters -> Ctrl+A in the editor and typed once more. The commit (Pointer tool
+        click: leave_text_editor / text_cleanup) checks that the object count grew (commit_check). Log `orig text
+        entry: … -> "<escaped>"`, value `text_entry`. Returns False when the text tool is not active (plain `type`).
+        Config `orig.text_entry_check: false` switches it off."""
+        if not self.r.cfg["orig"].get("text_entry_check", True):
+            return False
+        try:
+            if self.view_or_none() is None or self.overlay_open() in ("dialog", "menu"):
+                return False
+        except OrigError:
+            return False
+        st = self.editor_state()
+        if "text" not in str(st.get("tool", "")).lower():
+            return False
+        rec = {"text": text}
+        st = self.wait_text_editor(st)
+        rec["editor"] = {k: st.get(k) for k in ("tool", "n", "sel", "open", "polls", "caret")}
+        how = []
+        lc = getattr(self, "last_canvas", None)
+        if not st.get("open") and lc and lc[0] in ("canvas_click", "canvas_drag"):
+            how.append(f"no editor after {lc[0]} ({st.get('polls')} polls) - {lc[0]} once more")
+            self.do(lc[0], lc[1], lc[2])
+            st = self.wait_text_editor()
+            rec["retry_click"] = {k: st.get(k) for k in ("tool", "n", "sel", "open", "polls", "caret")}
+        if not st.get("open"):
+            rec["typed"] = False
+            self.values.append({"text_entry": rec})
+            self.runner_error(f"text entry: no text editor open (tool {st.get('tool')}, selection {st.get('sel')}, "
+                              f"caret {st.get('caret')}) - {text!r} not typed (the letters would select tools)")
+            self.r.log(f'  orig text entry: {"; ".join(how + ["no editor - not typed"])} -> ""')
+            return True
+        before = st.get("chars") or ""
+        res = self.type_keys(text)
+        how.append(f"editor after {st.get('polls')} poll(s), typed as keys {res}")
+        time.sleep(0.3)
+        after = self.editor_state()
+        got = after.get("chars")
+        if not text_entry_ok(before, got, text) and after.get("open"):
+            rec["first"] = got
+            if (got or "") == before:
+                how.append("nothing arrived - typed once more")
+                self.type_keys(text)
+            elif not before:
+                how.append(f'got "{text_escape(str(got))}" - Ctrl+A in the editor, typed once more')
+                self.h.call("key", combo="ctrl+a")
+                time.sleep(0.15)
+                self.type_keys(text)
+            else:
+                how.append(f'got "{text_escape(str(got))}" - existing text, not retried')
+            time.sleep(0.3)
+            after = self.editor_state()
+            got = after.get("chars")
+        ok = text_entry_ok(before, got, text)
+        rec.update(typed=True, before=before, after=got, ok=ok, how=how)
+        self.values.append({"text_entry": rec})
+        self.text_entry_state = {"new_text": not before, "text": text,
+                                 "n_before": int(st.get("n") or 0) - (0 if before else 1)}
+        self.r.log(f'  orig text entry: {"; ".join(how)} -> "{text_escape(str(got if got is not None else ""))}"'
+                   + ("" if ok else f' (wanted "{text_escape(text)}", DIFFERENT)'))
+        if not ok:
+            self.runner_error(f'text entry: "{text_escape(str(got))}" instead of "{text_escape(text)}" '
+                              f'(before "{text_escape(before)}")')
+        return True
+
+    def commit_check(self, out: dict) -> None:
+        """R-20 (TW-146): after the Pointer tool click that ends a text entry of this step the document must hold one
+        object more than before the text was created (an empty text is discarded at the commit). Value `commit` in
+        the caller's record; runner error when a new text is gone."""
+        te = getattr(self, "text_entry_state", None)
+        if not te:
+            return
+        self.text_entry_state = None
+        try:
+            n = int(self.key_state().get("n") or 0)
+        except (OrigError, ValueError) as e:
+            out["commit"] = {"error": str(e)[:120]}
+            return
+        c = out["commit"] = {"elements_before": te["n_before"], "elements_after": n, "new_text": te["new_text"],
+                             "grew": n > te["n_before"]}
+        self.r.log(f"  orig text commit: elements {te['n_before']} -> {n} "
+                   f"({'ok' if c['grew'] or not te['new_text'] else 'TEXT DISCARDED'})")
+        if te["new_text"] and not c["grew"]:
+            self.runner_error(f"text entry {te['text']!r}: the new text was discarded at the commit "
+                              f"(elements {te['n_before']} -> {n})")
+
+    def text_field_guard(self, target, verb) -> bool:
+        """R-20 (TW-146, run 22 tool-text/11: with no text the size field position of the Properties panel holds
+        the document's Image Size button): a text field of the Properties panel (TEXT_FIELDS) is used only with the
+        text tool active or a text among the selected objects. False = not clicked (runner error). Config `orig.text_field_guard`."""
+        if str(target) not in TEXT_FIELDS or not self.r.cfg["orig"].get("text_field_guard", True):
+            return True
+        st = self.editor_state()
+        if "text" in str(st.get("tool", "")).lower() or int(st.get("texts") or 0) > 0:
+            return True
+        self.values.append({"text_field_guard": {"target": target, "verb": verb,
+                                                 "state": {k: st.get(k) for k in ("tool", "n", "sel")}}})
+        self.runner_error(f"{verb} {target}: no text tool and no text selected (tool {st.get('tool')}, selection "
+                          f"{st.get('sel')}) - not clicked (the panel shows other fields there)")
+        return False
+
+    def pointer_tool_check(self) -> str:
+        """R-20 (TW-147 a, run 22 xs-shortcuts/07: after the F-key panel toggles the Pointer slot of the tools column
+        held Select Behind, so every 'Pointer tool click' selected that tool): the active tool is read after the
+        click; not the Pointer -> the Pointer through the slot's flyout (`toolbox.pointer_flyout`, entry config
+        `orig.pointer_flyout_index`, default 0), then by script (`fw.activeTool`, config `orig.pointer_tool_name`,
+        default "Zeiger"). Log `orig pointer tool: …`, runner error when another tool stays active."""
+        time.sleep(0.15)
+        tool = self.active_tool()
+        if any(t in tool.lower() for t in POINTER_TOOLS):
+            return tool
+        steps = [f"slot click gave {tool}"]
+        try:
+            self.choose({"target": "toolbox.pointer_flyout", "item": ""},
+                        {"orig_index": int(self.r.cfg["orig"].get("pointer_flyout_index", 0))})
+            time.sleep(0.3)
+        except (OrigError, Unmapped, Unsupported) as e:
+            steps.append(f"flyout error {str(e)[:80]}")
+            try:
+                self.h.call("close_menus")
+            except OrigError:
+                pass
+        tool = self.active_tool()
+        steps.append(f"flyout entry -> {tool}")
+        if not any(t in tool.lower() for t in POINTER_TOOLS):
+            name = str(self.r.cfg["orig"].get("pointer_tool_name", "Zeiger"))
+            try:
+                self.o.jsf(f"fw.activeTool = {js_str(name)};", why="pointer tool")
+            except OrigError as e:
+                steps.append(f"script error {str(e)[:60]}")
+            tool = self.active_tool()
+            steps.append(f"script -> {tool}")
+        self.r.log(f"  orig pointer tool: {'; '.join(steps)}")
+        if hasattr(self, "values"):
+            self.values.append({"pointer_tool": steps})
+        if not any(t in tool.lower() for t in POINTER_TOOLS):
+            self.runner_error(f"pointer tool not selectable (tools column slot / flyout / script: {tool})")
+        return tool
 
     def key_substitute(self, combo) -> str | None:
         """R-19 (TW-140): a plain Delete / Backspace / arrow / Escape on the reference side is replaced (see
@@ -2140,6 +2414,12 @@ class OrigSide(Side):
             self.r.log(f"  orig key {combo}: real key ({why})")
             return None
         if kind == "none":
+            try:
+                st0 = self.key_state()
+            except OrigError as e:
+                st0 = {"error": str(e)[:120]}
+            if int(st0.get("sel") or 0) > 0:
+                return self.escape_with_selection(combo, st0)
             return self.substituted_as(combo, "none (nothing to close; the real key would select a tool)", {"tool": tool})
         if kind in ("leave_editor", "pointer_tool"):
             rec = self.leave_text_editor()
@@ -2153,10 +2433,21 @@ class OrigSide(Side):
             return self.substituted_as(combo, "none (nothing selected)", rec)
         if kind == "nudge":
             dx, dy = NUDGE[k]
+            if str(getattr(self, "nudge_keys", "") or "").lower() == "shift":
+                # R-20 (TW-147 c): step flag `orig_nudge_keys: "shift"` - a real Shift+arrow (10 px; modified keys
+                # work in the reference), so the nudges reach the History like key nudges
+                self.o.focus()
+                self.h.call("key", combo=f"shift+{k}")
+                time.sleep(0.15)
+                st1 = rec["after"] = self.key_state()
+                rec["effect"] = self.key_effect("move", st0, st1)
+                return self.substituted_as(combo, f"real Shift+{k.capitalize()} (10 px, step orig_nudge_keys shift)", rec)
             self.o.jsf(f"fw.getDocumentDOM().moveSelectionBy({{x: {dx}, y: {dy}}}, false, false);", why="key substitute")
             time.sleep(0.15)
             st1 = rec["after"] = self.key_state()
             rec["effect"] = self.key_effect("move", st0, st1)
+            # R-20 (TW-147 c): every script nudge is a History row of its own in the reference (no merging)
+            self.history_not_comparable = True
             return self.substituted_as(combo, f"script moveSelectionBy({{x: {dx}, y: {dy}}}, false, false)", rec)
         path = self.r.ui_map.get("commands", {}).get("edit.clear") or "Bearbeiten > Löschen"
         method = None
@@ -2182,12 +2473,52 @@ class OrigSide(Side):
         rec["effect"] = self.key_effect("remove", st0, st1)
         return self.substituted_as(combo, method, rec)
 
+    def escape_with_selection(self, combo, st0: dict) -> str:
+        """R-20 (TW-147 b, run 22 xs-shortcuts/21: the 'none' substitute kept R1 selected where Firepixel's Escape
+        deselects). Config `orig.escape_deselects` (default false; RE-18 checks whether the reference deselects on
+        Escape): false -> nothing done, the step is marked `escape_not_comparable`; true -> the selection is cleared
+        the way `orig.escape_deselect_method` says: "menu" (default, Select > Deselect, script selectNone() as
+        fallback) or "real_key" (the real Escape; a tool switch is a runner error). Decision logged once per run."""
+        des = bool(self.r.cfg["orig"].get("escape_deselects", False))
+        how = str(self.r.cfg["orig"].get("escape_deselect_method", "menu"))
+        if not getattr(self.r, "escape_decision_logged", False):
+            self.r.escape_decision_logged = True
+            self.r.log("orig escape with a selection: orig.escape_deselects " + (
+                f"true -> deselect ({how})" if des else
+                "false -> selection kept, step marked escape_not_comparable (does the reference deselect on Escape? RE-18)"))
+        rec = {"before": st0, "escape_deselects": des}
+        if not des:
+            self.escape_not_comparable = True
+            return self.substituted_as(combo, "kept (selection stays; orig.escape_deselects false)", rec)
+        if how == "real_key":
+            self.key("escape", log_tool=False)
+            method = "real Escape"
+        else:
+            path = self.r.ui_map.get("commands", {}).get("select.none") or "Auswählen > Auswahl aufheben"
+            method = f"menu {path}"
+            try:
+                self.h.call("menu", path=split_path(path), final="invoke", bar=self.r.ui_map["menu_bar"]["orig"], timeout=40)
+                self.after_menu()
+            except Exception as e:  # noqa: BLE001
+                rec["menu_error"] = str(e)[:120]
+                try:
+                    self.h.call("close_menus")
+                except OrigError:
+                    pass
+                self.o.jsf("fw.getDocumentDOM().selectNone();", why="key substitute")
+                method = "script selectNone()"
+        st1 = rec["after"] = self.key_state()
+        rec["effect"] = self.key_effect("deselect", st0, st1)
+        if how == "real_key":
+            self.tool_switch_check("escape", st1, rec, "tool_switched")
+        return self.substituted_as(combo, method, rec)
+
     def text_select_drag(self, a):
         """R-19 (TW-140, run 21 tool-text/07: Shift+Left moved the caret without selecting on the reference side):
         select the last `chars` characters of the text being edited (the text object whose `textChars` contains
         `text`, else the selected one) with a mouse drag from its right end to the estimated start of those
         characters (share of the characters, `start_frac` overrides), at the middle of the line (`line_frac`,
-        default 0.5). Read back: Ctrl+C (modified keys work) and the clipboard text, value `text_select`."""
+        default 0.5). Read back (R-20): the selection highlight in the text's box (no Ctrl+C), value `text_select`."""
         a = a if isinstance(a, dict) else {"chars": a}
         want_text, n = str(a.get("text") or ""), int(a.get("chars") or 0)
         code = ("(function(){var d=fw.getDocumentDOM(),best=null;"
@@ -2212,22 +2543,42 @@ class OrigSide(Side):
         x0, x1 = right - 1, left + (right - left) * frac
         rec.update(rect=[left, top, right, bottom], length=length, start_frac=round(frac, 3),
                    drag=[[round(x0, 1), round(y, 1)], [round(x1, 1), round(y, 1)]])
-        self.do("canvas_drag", {"from": [x0, y], "to": [x1, y]}, {})
-        time.sleep(0.2)
-        expected = want_text[-n:] if want_text and n else None
-        cleared = clipboard_clear()
-        self.o.focus()
-        self.h.call("key", combo="ctrl+c")
-        time.sleep(0.3)
-        rec["selected"] = clipboard_text()
-        rec["clipboard_cleared"] = cleared
-        rec["expected"] = expected
-        rec["ok"] = expected is None or rec["selected"] == expected
+        expected = rec["expected"] = want_text[-n:] if want_text and n else None
+        # R-20 (TW-146, run 22 tool-text/07: the Ctrl+C read-back typed U+0003 into the text): no key into the editor -
+        # the text's box (2 px margin) is grabbed before and after the drag, the changed pixels must cover the
+        # characters (selection_highlight); none -> a click at the text's end and the drag once more (slower)
+        p0, p1 = self.doc_to_screen(left - 2, top - 2), self.doc_to_screen(right + 2, bottom + 2)
+        sbox = [p0[0], p0[1], max(p1[0], p0[0] + 1), max(p1[1], p0[1] + 1)]
+        wx = [self.doc_to_screen(x1, y)[0] - sbox[0], self.doc_to_screen(x0, y)[0] - sbox[0]]
+        tmp = Path(self.r.cfg["tmp_dir"])
+        keep = getattr(self, "last_canvas", None)
+        hl, tries = {}, 0
+        for tries, steps in ((1, 20), (2, 40)):
+            if tries > 1:
+                self.do("canvas_click", [x0, y], {})
+                time.sleep(0.3)
+            self.grab(sbox, tmp / "orig_textsel_a.png")
+            with Image.open(tmp / "orig_textsel_a.png") as im:
+                ia = im.convert("RGB")
+            self.do("canvas_drag", {"from": [x0, y], "to": [x1, y], "steps": steps}, {})
+            time.sleep(0.3)
+            self.grab(sbox, tmp / "orig_textsel_b.png")
+            with Image.open(tmp / "orig_textsel_b.png") as im:
+                ib = im.convert("RGB")
+            hl = selection_highlight(ia, ib, [0, 0, ia.size[0], ia.size[1]], wx)
+            rec["highlight" if tries == 1 else f"highlight_{tries}"] = hl
+            if hl.get("ok"):
+                break
+        self.last_canvas = keep
+        rec.update(tries=tries, screen_box=sbox, readback="highlight pixels (no clipboard)", ok=bool(hl.get("ok")))
         self.values.append({"text_select": rec})
         self.substituted = (getattr(self, "substituted", None) or []) + ["mouse drag over the characters"]
         self.r.log(f"  orig key substitute: shift+left x{n} -> mouse drag over the characters "
-                   f"({rec['drag'][0]} -> {rec['drag'][1]}, text box {rec['rect']}); selection read-back: "
-                   f"{rec['selected']!r} (expected {expected!r}, {'ok' if rec['ok'] else 'DIFFERENT'})")
+                   f"({rec['drag'][0]} -> {rec['drag'][1]}, text box {rec['rect']}, {tries} drag(s)); selection read-back "
+                   f"(highlight, no clipboard): {hl.get('changed_px')} px changed in {hl.get('changed_box')}, cover "
+                   f"{hl.get('cover')} of the {expected!r} span ({'ok' if rec['ok'] else 'NO SELECTION'})")
+        if not rec["ok"]:
+            self.runner_error(f"text selection by drag: no selection highlight over {expected!r} after {tries} drags ({hl})")
 
     def drag_record(self, fr, to, mods):
         """R-7 (TW-98, Q-44, import offset): drag points of the reference like the Firepixel side (window client
@@ -3196,6 +3547,14 @@ class OrigSide(Side):
 
     def do(self, verb, arg, act):
         r = self.r
+        # R-20 (TW-146): the last canvas click / drag of the step (text_entry repeats it once when no editor opened)
+        if verb in ("canvas_click", "canvas_drag", "canvas_double_click"):
+            self.last_canvas = (verb, arg, dict(act or {}))
+        elif verb not in TEXT_ENTRY_KEEP:
+            self.last_canvas = None
+        if verb in ("open", "click", "set_field", "set") and not self.text_field_guard(
+                arg.get("target") if isinstance(arg, dict) else arg, verb):
+            return
         if verb.startswith("canvas_"):
             self.confirm_import()
             if getattr(self, "import_pending", False) and verb in ("canvas_click", "canvas_drag", "canvas_double_click"):
@@ -3252,10 +3611,13 @@ class OrigSide(Side):
         elif verb == "text_select_drag":
             self.text_select_drag(arg)
         elif verb == "type":
-            self.o.focus()
-            self.h.call("type", text=str(arg), timeout=60)
-            if getattr(self, "popup_edit", None):
-                self.popup_edit_type(str(arg))
+            # R-20 (TW-146): with the text tool active the text goes through text_entry (editor wait, real keys,
+            # read-back, one retry); otherwise (fields, popups) typed as before
+            if getattr(self, "popup_edit", None) or not self.text_entry(str(arg)):
+                self.o.focus()
+                self.h.call("type", text=str(arg), timeout=60)
+                if getattr(self, "popup_edit", None):
+                    self.popup_edit_type(str(arg))
         elif verb == "wait":
             time.sleep(float(arg if not isinstance(arg, dict) else arg.get("ms", 0)) / 1000)
         elif verb == "select":
@@ -3280,6 +3642,8 @@ class OrigSide(Side):
             elif isinstance(k, dict):
                 self.reset_light()
                 self.click_at(self.locate(k)[0])
+                if t == "tool.pointer":
+                    self.pointer_tool_check()  # R-20 (TW-147 a): the slot may hold Select Behind
             else:
                 self.reset_light()
                 self.key(k)
@@ -5901,6 +6265,12 @@ class Runner:
             # blocks the script until it is closed: only for steps whose scripts run while no dialog is expected)
             side.o.keep_dialogs = bool(step.get("keep_dialog"))
             side.o.closed_dialogs = []
+            # R-20 (TW-146, TW-147 c): per-step text entry state and nudge / History flags
+            side.last_canvas = None
+            side.text_entry_state = None
+            side.nudge_keys = step.get("orig_nudge_keys")
+            side.history_not_comparable = bool(step.get("history_not_comparable"))
+            side.escape_not_comparable = False
         t0 = time.time()
         if getattr(side, "resized", None):
             side.resized = None
@@ -6001,6 +6371,11 @@ class Runner:
                 side.o.closed_dialogs = []
             if any(isinstance(a, dict) and "type" in a for a in actions + list(step.get("after") or [])):
                 rec["text_cleanup"] = side.text_cleanup()
+            # R-20 (TW-147 b, c): History row count / Escape result of this step not comparable (evaluation skips them)
+            if getattr(side, "history_not_comparable", False):
+                rec["history_not_comparable"] = True
+            if getattr(side, "escape_not_comparable", False):
+                rec["escape_not_comparable"] = True
             if getattr(side, "runner_errors", None):
                 rec["runner_errors"] = list(side.runner_errors)
                 side.runner_errors = []
@@ -6262,6 +6637,8 @@ def main(argv=None):
         print(f"menu state self check: {menu_state_selfcheck()}")
         # R-19: offline check of the reference-side key substitutes
         print(f"key substitute self check: {key_substitute_selfcheck()}")
+        # R-20: offline check of the text entry / selection read-back helpers
+        print(f"text entry self check: {text_entry_selfcheck()}")
     if a.gallery_only:
         print(gallery.build(Path(cfg["out_dir"])))
         return 0

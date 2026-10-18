@@ -783,3 +783,72 @@ Self test: `python -I runner.py --units _selftest_menu,_selftest_inspector`.
   read-back still differs, a scratch text from the tool's defaults gets the colour by script (`setFillColor`, then
   deleted) and the attributes are read again; a remaining difference is listed under `errors` in the
   `unit start text tool reset` line.
+
+## R-20 additions (19.10.)
+
+- **Text entry on the reference side (TW-146, run 22 `tool-text/02, 03, 06, 11, 13, 14`):** texts created by a
+  text-tool click stayed empty and were discarded at the commit, the letters reached the tool shortcuts ("A" =
+  Subselection, the tool after the typing read Subselection or Crop) or the first letter was lost ("bc 123 Abc 123 …"
+  in `02`). Run 21 and `07` of run 22 (a read-back script between the click and the typing) typed correctly: the
+  keys came before the editor was open. With the text tool active, `type` on the reference side now runs
+  `text_entry` (other `type` actions - fields, colour popup - are unchanged):
+  - **editor wait:** `EDITOR_STATE_JS` (active tool, object count, selection count and the selected text's
+    `textChars`) is polled every 0.2 s up to `orig.text_editor_wait_s` (default 3 s) until the text tool is active
+    and exactly one text is selected (the editor's object exists while still empty); host verb `caret`
+    (`GetGUIThreadInfo` of the main window's thread: caret window class, blinking flag, focus class) is recorded
+    with it. No editor -> the step's last canvas click / drag (`last_canvas`) once more, wait again; still none ->
+    nothing is typed (`runner error: text entry: no text editor open … not typed (the letters would select tools)`);
+  - **typing:** host `type` with `mode: "keys"`: every character as its real key - virtual key and shift state of
+    the target's layout (`VkKeyScanEx` with the layout used for the scan codes), scan code from `MapVirtualKeyEx`
+    (`Key`), Shift/Ctrl/Alt as needed; Unicode only for a character without a key; LF is sent as Enter;
+    `orig.type_delay_ms` (default 20) between the characters. The host returns `{keys, unicode, delay_ms}`;
+  - **read-back:** `textChars` of the selected text 0.3 s later (`text_entry_ok`: a new text holds exactly the typed
+    text, an existing one grew by its length and contains it). Nothing arrived -> typed once more; a new text with
+    other characters -> Ctrl+A in the editor and typed once more; an existing text is not retried. Value
+    `text_entry` {text, editor, retry_click?, first?, before, after, ok, how}, log line
+    `orig text entry: <how> -> "<escaped textChars>"` (`text_escape`: `\r`, `\n`, `\x03` as text), runner error
+    when it differs;
+  - **commit:** the Pointer tool click that ends the edit (Escape substitute `leave_text_editor`, or `text_cleanup`
+    after the step) reads the object count: a new text must have raised it above the count before the text was
+    created (`commit` {elements_before, elements_after, new_text, grew} in the substitute / cleanup record, log
+    `orig text commit: elements a -> b (ok|TEXT DISCARDED)`, runner error when discarded).
+  - Config `orig.text_entry_check: false` types as before (Unicode, no wait).
+- **Drag selection read-back (TW-146, `tool-text/07, 11, 13`):** run 22's `text_select_drag` read an empty clipboard
+  and its Ctrl+C typed U+0003 into the text ("Hallo \x03Welt"). The script API has no read-back of the editor's
+  selection (re\46-50 list none; `textRuns`/`setTextRuns` act on the whole text and would change it), so no key is
+  sent into the editor any more: the text's box (2 px margin) is grabbed before and after the drag and
+  `selection_highlight` counts the changed pixels - they must cover at least half of the span of the characters
+  to be selected and be more than a caret line. None -> a click at the text's end and the drag once more (40
+  steps), then a runner error. Value `text_select` {rect, length, drag, expected, highlight, highlight_2?, tries,
+  screen_box, readback, ok}; log `… selection read-back (highlight, no clipboard): <n> px changed in [box], cover
+  <c> of the '<text>' span (ok|NO SELECTION)`.
+- **Text fields of the Properties panel (TW-146, `tool-text/11, 13`):** `inspector.size`, `size_slider`, `font`,
+  `font_style` and `text_color` (`TEXT_FIELDS`) are clicked / set on the reference side only with the text tool
+  active or a text selected; otherwise the action is skipped with a runner error (run 22: with no text the size
+  field position held the document's Image Size button). Config `orig.text_field_guard: false` switches it off.
+- **Pointer slot (TW-147 a, `xs-shortcuts/07`):** after the F-key panel toggles the Pointer slot of the reference's
+  tools column held Select Behind ("Hintere auswählen"). Every Pointer selection by the slot (`tool.pointer`, the
+  Escape substitutes, `text_cleanup`, the unit start) reads `fw.activeTool` afterwards; not the Pointer -> the
+  slot's flyout entry (`toolbox.pointer_flyout`, entry `orig.pointer_flyout_index`, default 0), then the script
+  `fw.activeTool = <orig.pointer_tool_name>` (default "Zeiger"); log `orig pointer tool: slot click gave … ;
+  flyout entry -> …`, runner error when another tool stays active. Keyboard V is not used (plain keys select tools).
+- **Escape with a selection (TW-147 b, `xs-shortcuts/21`):** with the Pointer tool and a selection the R-19 `none`
+  substitute kept R1 selected where Firepixel's Escape deselects. New config `orig.escape_deselects` (default
+  **false** until RE-18 shows whether the reference deselects on Escape): false -> nothing is done, method `kept
+  (selection stays; orig.escape_deselects false)`, the step record gets `escape_not_comparable: true`; true -> the
+  selection is cleared by `orig.escape_deselect_method`: `"menu"` (default, `commands → select.none`, script
+  `selectNone()` as fallback) or `"real_key"` (the real Escape, tool switch checked). The decision is logged once
+  per run: `orig escape with a selection: orig.escape_deselects false -> …`. Without a selection Escape stays `none`.
+- **Nudges and History rows (TW-147 c, `panel-pages-states-history/16, 21`):** every `moveSelectionBy` substitute is a
+  History row of its own in the reference. Step flag `"orig_nudge_keys": "shift"` (used by `21`, only the step count
+  is compared): the reference side sends a real Shift+arrow (10 px) per plain arrow, method `real Shift+Right (10 px,
+  step orig_nudge_keys shift)`. Otherwise the script nudge stays and the step record gets `history_not_comparable:
+  true` (set automatically by any script nudge; `16` also sets the flag in the script) - the evaluation skips the
+  History row count of such steps.
+- **Paste read-back (TW-147 d, `menu-edit/03`):** after Ctrl+V the script waits 300 ms and a `retry_if` on
+  `fw.selection.length` waits another 300 ms and reads again when it is empty (both sides).
+- **History limit (TW-147 e, `panel-pages-states-history/22`):** reads `fw.getPref('MaxUndos')` (`UndoSteps` does not
+  exist).
+- `--dry-run` prints `text entry self check: ok` (editor read-back parser, `text_entry_ok`, `selection_highlight`
+  with a synthetic highlight, a caret line and an unchanged box); `selftest_host.ps1` checks the typed keys of
+  "Ab 1" (scan code not 0, Shift only for "A").
