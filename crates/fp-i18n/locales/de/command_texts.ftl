@@ -675,3 +675,4 @@ cmdtext-palette-im-bedienfeld-farbfelder-zeigen = Palette im Bedienfeld „Farbf
 cmdtext-palette-zusaetzlich-in-diese-act-datei-schreiben = Palette zusätzlich in diese ACT-Datei schreiben
 cmdtext-felder-der-html-einstellungen-fp-model-h-c0ba73 = Felder der HTML-Einstellungen (fp_model::HtmlSettings, snake_case) als Standard für neue Dokumente und Exporte; ohne = lesen
 cmdtext-gespeicherten-standard-entfernen-es-gelt-893276 = gespeicherten Standard entfernen (es gelten wieder die eingebauten Vorgaben)
+cmdtext-crop-tool-limit-the-frame-to-the-canvas-4c0a60 = Zuschneidewerkzeug: Rahmen auf die Leinwand begrenzen und danach alles auswählen (Objekte außerhalb werden gemäß Voreinstellung CropDocCropsImages gelöscht)
