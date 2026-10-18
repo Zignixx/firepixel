@@ -111,6 +111,13 @@ fn by_parent(paths: &[ElementPath]) -> HashMap<(usize, usize, Vec<PathStep>), Ve
     m
 }
 
+/// Arrange entries: grey (and their shortcuts silent) in bitmap edit mode, i.e. with a pixel
+/// selection or while a bitmap is being edited (re 46 §1.3, Q-56).
+fn arrange_allowed(s: &Session) -> bool {
+    s.active()
+        .is_none_or(|d| !d.bitmap_mode && !d.selection.has_pixels())
+}
+
 fn arrange(s: &mut Session, how: &'static str) -> Result<CommandOutput> {
     with_doc(s, |d| {
         let page = d.page;
@@ -2309,25 +2316,25 @@ pub(super) fn register(r: &mut CommandRegistry) {
     r.add(
         cmd("modify.arrange.bringToFront")
             .requires(SEL)
-            .menu_when(super::no_pixel_selection)
+            .menu_when(arrange_allowed)
             .run(|s, _| arrange(s, "front")),
     );
     r.add(
         cmd("modify.arrange.bringForward")
             .requires(SEL)
-            .menu_when(super::no_pixel_selection)
+            .menu_when(arrange_allowed)
             .run(|s, _| arrange(s, "forward")),
     );
     r.add(
         cmd("modify.arrange.sendBackward")
             .requires(SEL)
-            .menu_when(super::no_pixel_selection)
+            .menu_when(arrange_allowed)
             .run(|s, _| arrange(s, "backward")),
     );
     r.add(
         cmd("modify.arrange.sendToBack")
             .requires(SEL)
-            .menu_when(super::no_pixel_selection)
+            .menu_when(arrange_allowed)
             .run(|s, _| arrange(s, "back")),
     );
     for (name, how) in [
