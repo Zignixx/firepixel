@@ -411,8 +411,8 @@ extension spelling under ⋯ (lower/upper case, `jpg`/`jpeg`).
 | `rotate` | Rotate/flip | **A** `angle` 90/180/270/free (−360…360); **A** `flip` none/h/v; `autoExif` on (rotate by EXIF orientation, then set the tag to 1); `background` for free angles *transparent* | yes | own (90° lossless by reordering; free: bilinear/bicubic) | **P1** |
 | `canvas` | Canvas/border | **A** `mode`: addBorder (px per side), toSize (W×H), toAspect, square; **A** `color` *transparent*; `anchor` *center* | yes | own; documents: `modify.canvas.canvasSize` | **P1** |
 | `canvas.pad` | Pad to multiple | **A** `multiple` 2…256 px *16* (video/tiles); **A** `color` *transparent*; image centred | yes | own | P3 |
-| `perspective` | Straighten | angle automatic (Hough) or fixed | yes | own | P3 |
-| `tile.split` | Split into tiles | grid N×M or tile size; name `{row}_{col}` | – | own | P2 |
+| `perspective` | Perspective (four points) | **A** corners `tlX`/`tlY`, `trX`/`trY`, `brX`/`brY`, `blX`/`blY` in % of width/height (−100…200; *0,0 / 100,0 / 100,100 / 0,100* = unchanged); **A** `size` auto/keep *auto* (auto = mean lengths of opposite edges). The quad becomes the whole output; outside the source = transparent. Automatic straightening (Hough) not done | yes | own projective mapping (unit square → quad), bilinear with premultiplied alpha, rayon | P3 |
+| `tile.split` | Split into tiles | **A** `mode` grid/size *grid*; **A** `columns`/`rows` 1…100 *2* (edges at `i·w/n`); **A** `tileWidth`/`tileHeight` 1…32768 px *256* (last row/column smaller); `pattern` *`{name}_{row}_{col}`* (numbers zero-padded to the largest). Collect step; animations become animated tiles | – | own | P2 |
 
 ### 3.4 Colour, correction, filters, effects (group "Color and Effects")
 
@@ -426,12 +426,12 @@ extension spelling under ⋯ (lower/upper case, `jpg`/`jpeg`).
 | `adjust.posterize` / `adjust.threshold` | Posterize/threshold | **A** `levels` 2…64 *4*; **A** `threshold` 0…255 *128* (luminance Rec. 601, ≥ threshold → white; alpha unchanged) | yes | own | P2 |
 | `filter.sharpen` | Sharpen | **A** `amount` 0…500 % *60*; `radius` 0.1…10 *1*; `threshold` 0…255 *0* | yes | registry `filter.sharpen.unsharpMask` | **P1** |
 | `filter.blur` | Blur | **A** `kind` gaussian/motion/radial/zoom; `radius` 0…250 *2* | yes | registry `filter.blur.*` | **P1** |
-| `filter.noise` | Add/remove noise | add: amount; remove: median 1…10 | yes | registry `filter.noise.addNoise`; own median | P2 |
+| `filter.noise` | Add/remove noise | **A** `mode` add/remove *add*; **A** `amount` 0…100 % *10* (uniform ± amount·127.5, Gaussian σ = amount·64); `distribution` uniform/gaussian *gaussian*; `monochrome` off; `seed` 0…1,000,000 *1* (same seed = same noise); **A** `radius` 1…10 px *1* (remove: median per channel); alpha unchanged | yes | own (xorshift per row, rayon) | P2 |
 | `filter.pixelate` | Pixelate (whole image) | **A** `size` 2…200 px *8* (alpha-weighted mean per block) | yes | own; area only: not yet | P2 |
 | `filter.registry` | Any filter | choice of all `filter.*` registry commands with their schema (form built from `describe_command`) | yes | command registry | **P1** |
 | `effect.live` | Firepixel live effect | **A** `effect` dropShadow/innerShadow/glow/innerGlow/bevel/emboss/... (list from `element.addEffect`); `params` per effect; applied to the bitmap as an element, then flattened (canvas grows by the effect margin, checkbox "Extend canvas" on) | yes | `element.addEffect` + `fp-effects`/`fp-render` | **P1** |
-| `effect.style` | Apply style | style from the style library | yes | registry | P2 |
-| `adjust.lut` | Colour LUT (.cube) | file, strength 0…100 | yes | own `.cube` reader, trilinear | P3 |
+| `effect.style` | Apply style | **A** `name`; **A** `library` (style library `.json` or FW-PNG, imported first; otherwise the document's own styles). Unknown style = error of the item | yes | registry `panel.styles.importLibrary`, `select.all`, `pi.style.apply` in a headless session (documents stay documents) | P2 |
+| `adjust.lut` | Colour LUT (.cube) | **A** `file` (`.cube`, 3D, `LUT_3D_SIZE` 2…256, `DOMAIN_MIN/MAX`; 1D = error; checked in the validation); **A** `strength` 0…100 % *100* | yes | own `.cube` reader (cached by path and time), trilinear | P3 |
 | `ai.upscale` | AI upscale ×2/×4 | model (Real-ESRGAN family, BSD-3, via `ai.manageModels`) | yes (region) | `fp-ai` (new network, own CPU inference) | P3 |
 | `ai.faceBlur` | Blur faces | strength | yes | needs a model (check licence) | P3 |
 
@@ -546,8 +546,8 @@ smallest file ..."; during a run the warning goes into the report (`batch-warn-g
 |---|---|---|---|---|---|
 | `optimize.targetSize` | Target size | **A** `maxKB` 1…100,000; `strategy`: quality only / quality + resize *quality only*; `minQuality` 10…95 *40*; `minScale` 10…100 % *50* | yes (size reached) | bisection over quality (JPEG/WebP/AVIF; GIF: quality, lossy, colours, then fps/size; PNG: colours 256→16, then size); at most 8 encodes per file; result reports the size reached, ⚠ if not reachable | **P1** |
 | `optimize.png` | Optimize PNG losslessly | **A** `level` 1…6 *2*; `strip` safe; `alphaClean` on | yes (size) | `oxipng` 9.x (MIT, pure Rust with the `libdeflater` feature off; check feature licences) | **P1** |
-| `optimize.jpeg` | Optimize JPEG losslessly | optimized Huffman tables, progressive, metadata per the "Metadata" step | yes | own (`fp-export::jpeg` has Huffman optimization) | P2 |
-| `optimize.webSafe` | For the web | sRGB, 8 bit, metadata without GPS, orientation applied | yes | combined step | P2 |
+| `optimize.jpeg` | Optimize JPEG | **A** `quality` 1…100 *82*; **A** `maxKB` 0…100,000 *0 = off* (target size, bisection down to `minQuality` 10…95 *40*); `progressive` on; `subsampling` auto/444/422/420. Only with "Save as JPEG" (otherwise a warning). Re-encodes (not lossless transcoding) | yes (size) | output options in `Meta::extra` → `meta::finish_encode` (same path as `optimize.targetSize`) | P2 |
+| `optimize.webSafe` | Web-safe colours | **A** `dither` none/ordered *none* (4 × 4 Bayer, ± half a step); every channel snapped to a multiple of 51 (216-colour web palette), alpha unchanged | yes | own | P2 |
 | `optimize.quantize` | Reduce colours (PNG8) | 2…256, dithering as for GIF | yes | `quantette` 0.6 (MIT/Apache, k-means in Oklab, Wu) + own dithering | **P1** |
 
 ### 3.12 Vector and automation (group "Advanced")

@@ -16,6 +16,7 @@ pub mod gifopt; // BATCH-8
 pub mod metadata;
 pub mod optimize;
 pub mod overlay;
+pub mod pixel; // B-3
 pub mod script; // BATCH-4
 pub mod vector; // BATCH-9
 
@@ -35,4 +36,5 @@ pub fn register_all(r: &mut StepRegistry) {
     extra::register(r); // BA-109
     fileops::register(r); // B-3
     document::register(r); // B-3
+    pixel::register(r); // B-3
 }

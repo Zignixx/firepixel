@@ -215,3 +215,88 @@ batch-step-document-slices = Export slices
 batch-param-document-slices-pattern = File name
     .tooltip = Placeholders: {"{"}name{"}"}, {"{"}slice{"}"} (slice name or number), {"{"}n{"}"}.
 batch-skip-no-slices = The document has no slices.
+
+# B-3: geometry, color and optimize steps (crates\fp-batch\src\steps\pixel.rs)
+
+## Perspective
+batch-step-perspective = Perspective
+    .description = Straightens a skewed area: the four corners become the corners of the new image.
+batch-param-perspective-tlX = Top left X
+batch-param-perspective-tlY = Top left Y
+batch-param-perspective-trX = Top right X
+batch-param-perspective-trY = Top right Y
+batch-param-perspective-brX = Bottom right X
+batch-param-perspective-brY = Bottom right Y
+batch-param-perspective-blX = Bottom left X
+batch-param-perspective-blY = Bottom left Y
+batch-param-perspective-size = Result size
+batch-value-perspective-size-auto = From the corners
+batch-value-perspective-size-keep = Keep image size
+
+## Split into tiles
+batch-step-tile-split = Split into tiles
+    .description = Cuts every image into a grid of tiles, each saved as its own file.
+batch-param-tile-split-mode = Split by
+batch-param-tile-split-columns = Columns
+batch-param-tile-split-rows = Rows
+batch-param-tile-split-tileWidth = Tile width
+batch-param-tile-split-tileHeight = Tile height
+batch-param-tile-split-pattern = File name
+    .tooltip = Placeholders: {"{"}name{"}"}, {"{"}row{"}"}, {"{"}col{"}"}.
+batch-value-tile-split-mode-grid = Number of tiles
+batch-value-tile-split-mode-size = Tile size
+
+## Noise
+batch-step-filter-noise = Add/remove noise
+    .description = Adds film grain or removes speckles with a median filter.
+batch-param-filter-noise-mode = Noise
+batch-param-filter-noise-amount = Amount
+batch-param-filter-noise-distribution = Distribution
+batch-param-filter-noise-monochrome = Monochrome
+batch-param-filter-noise-seed = Seed
+batch-param-filter-noise-radius = Radius
+batch-value-filter-noise-mode-add = Add
+batch-value-filter-noise-mode-remove = Remove (median)
+batch-value-filter-noise-distribution-uniform = Uniform
+batch-value-filter-noise-distribution-gaussian = Gaussian
+
+## Color LUT
+batch-step-adjust-lut = Color LUT (.cube)
+    .description = Applies a color look-up table from a .cube file.
+batch-param-adjust-lut-file = LUT file
+batch-param-adjust-lut-strength = Strength
+batch-err-lut-file = Choose a .cube file.
+batch-err-lut-line = A line of the LUT file does not hold three numbers.
+batch-err-lut-size = The LUT file has no valid LUT_3D_SIZE (2 to 256).
+batch-err-lut-1d = Only 3D LUT files are supported.
+batch-err-lut-count = The number of LUT entries does not match LUT_3D_SIZE.
+
+## Apply style
+batch-step-effect-style = Apply style
+    .description = Applies a saved style (fill, stroke, effects) by name to every image or document.
+batch-param-effect-style-name = Style name
+batch-param-effect-style-library = Style library
+    .tooltip = Optional: style library (.json) or FW-PNG with styles; otherwise the styles of the document.
+batch-err-style-name = Enter the name of a style.
+batch-err-style-missing = Style “{ $name }” not found.
+
+## Optimize JPEG
+batch-step-optimize-jpeg = Optimize JPEG
+    .description = Re-encodes JPEG files with the chosen quality, optionally down to a target size.
+batch-param-optimize-jpeg-quality = Quality
+batch-param-optimize-jpeg-maxKB = Target size (0 = off)
+batch-param-optimize-jpeg-minQuality = Lowest quality
+batch-param-optimize-jpeg-progressive = Progressive
+batch-param-optimize-jpeg-subsampling = Color subsampling
+batch-value-optimize-jpeg-subsampling-auto = Automatic
+batch-value-optimize-jpeg-subsampling-444 = 4:4:4 (best)
+batch-value-optimize-jpeg-subsampling-422 = 4:2:2
+batch-value-optimize-jpeg-subsampling-420 = 4:2:0 (smallest)
+batch-warn-jpeg-only = JPEG optimization only works with “Save as JPEG” (selected: { $format }).
+
+## Web-safe colors
+batch-step-optimize-webSafe = Web-safe colors
+    .description = Snaps every color to the 216 web-safe colors.
+batch-param-optimize-webSafe-dither = Dithering
+batch-value-optimize-webSafe-dither-none = None
+batch-value-optimize-webSafe-dither-ordered = Ordered

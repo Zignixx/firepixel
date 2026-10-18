@@ -215,3 +215,88 @@ batch-step-document-slices = Slices exportieren
 batch-param-document-slices-pattern = Dateiname
     .tooltip = Platzhalter: {"{"}name{"}"}, {"{"}slice{"}"} (Slice-Name oder Nummer), {"{"}n{"}"}.
 batch-skip-no-slices = Das Dokument hat keine Slices.
+
+# B-3: Geometrie-, Farb- und Optimierungsschritte (crates\fp-batch\src\steps\pixel.rs)
+
+## Perspektive
+batch-step-perspective = Perspektive
+    .description = Richtet einen verzerrten Bereich gerade: die vier Ecken werden zu den Ecken des neuen Bildes.
+batch-param-perspective-tlX = Oben links X
+batch-param-perspective-tlY = Oben links Y
+batch-param-perspective-trX = Oben rechts X
+batch-param-perspective-trY = Oben rechts Y
+batch-param-perspective-brX = Unten rechts X
+batch-param-perspective-brY = Unten rechts Y
+batch-param-perspective-blX = Unten links X
+batch-param-perspective-blY = Unten links Y
+batch-param-perspective-size = Ergebnisgröße
+batch-value-perspective-size-auto = Aus den Ecken
+batch-value-perspective-size-keep = Bildgröße beibehalten
+
+## In Kacheln teilen
+batch-step-tile-split = In Kacheln teilen
+    .description = Schneidet jedes Bild in ein Raster aus Kacheln, jede wird als eigene Datei gespeichert.
+batch-param-tile-split-mode = Teilen nach
+batch-param-tile-split-columns = Spalten
+batch-param-tile-split-rows = Zeilen
+batch-param-tile-split-tileWidth = Kachelbreite
+batch-param-tile-split-tileHeight = Kachelhöhe
+batch-param-tile-split-pattern = Dateiname
+    .tooltip = Platzhalter: {"{"}name{"}"}, {"{"}row{"}"}, {"{"}col{"}"}.
+batch-value-tile-split-mode-grid = Anzahl Kacheln
+batch-value-tile-split-mode-size = Kachelgröße
+
+## Rauschen
+batch-step-filter-noise = Rauschen hinzufügen/entfernen
+    .description = Fügt Filmkorn hinzu oder entfernt Sprenkel mit einem Medianfilter.
+batch-param-filter-noise-mode = Rauschen
+batch-param-filter-noise-amount = Stärke
+batch-param-filter-noise-distribution = Verteilung
+batch-param-filter-noise-monochrome = Einfarbig
+batch-param-filter-noise-seed = Startwert
+batch-param-filter-noise-radius = Radius
+batch-value-filter-noise-mode-add = Hinzufügen
+batch-value-filter-noise-mode-remove = Entfernen (Median)
+batch-value-filter-noise-distribution-uniform = Gleichmäßig
+batch-value-filter-noise-distribution-gaussian = Gaußsch
+
+## Farb-LUT
+batch-step-adjust-lut = Farb-LUT (.cube)
+    .description = Wendet eine Farbtabelle aus einer .cube-Datei an.
+batch-param-adjust-lut-file = LUT-Datei
+batch-param-adjust-lut-strength = Stärke
+batch-err-lut-file = Bitte eine .cube-Datei wählen.
+batch-err-lut-line = Eine Zeile der LUT-Datei enthält nicht drei Zahlen.
+batch-err-lut-size = Die LUT-Datei hat keine gültige LUT_3D_SIZE (2 bis 256).
+batch-err-lut-1d = Nur 3D-LUT-Dateien werden unterstützt.
+batch-err-lut-count = Die Zahl der LUT-Einträge passt nicht zu LUT_3D_SIZE.
+
+## Stil anwenden
+batch-step-effect-style = Stil anwenden
+    .description = Wendet einen gespeicherten Stil (Füllung, Strich, Effekte) nach Namen auf jedes Bild oder Dokument an.
+batch-param-effect-style-name = Stilname
+batch-param-effect-style-library = Stilbibliothek
+    .tooltip = Optional: Stilbibliothek (.json) oder FW-PNG mit Stilen; sonst die Stile des Dokuments.
+batch-err-style-name = Bitte den Namen eines Stils eingeben.
+batch-err-style-missing = Stil „{ $name }“ nicht gefunden.
+
+## JPEG optimieren
+batch-step-optimize-jpeg = JPEG optimieren
+    .description = Kodiert JPEG-Dateien mit der gewählten Qualität neu, auf Wunsch bis zu einer Zielgröße.
+batch-param-optimize-jpeg-quality = Qualität
+batch-param-optimize-jpeg-maxKB = Zielgröße (0 = aus)
+batch-param-optimize-jpeg-minQuality = Niedrigste Qualität
+batch-param-optimize-jpeg-progressive = Progressiv
+batch-param-optimize-jpeg-subsampling = Farbunterabtastung
+batch-value-optimize-jpeg-subsampling-auto = Automatisch
+batch-value-optimize-jpeg-subsampling-444 = 4:4:4 (beste)
+batch-value-optimize-jpeg-subsampling-422 = 4:2:2
+batch-value-optimize-jpeg-subsampling-420 = 4:2:0 (kleinste)
+batch-warn-jpeg-only = JPEG-Optimierung wirkt nur mit „Speichern als JPEG“ (gewählt: { $format }).
+
+## Websichere Farben
+batch-step-optimize-webSafe = Websichere Farben
+    .description = Rundet jede Farbe auf die 216 websicheren Farben.
+batch-param-optimize-webSafe-dither = Dithering
+batch-value-optimize-webSafe-dither-none = Keins
+batch-value-optimize-webSafe-dither-ordered = Geordnet
