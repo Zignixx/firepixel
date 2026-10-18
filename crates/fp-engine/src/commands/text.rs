@@ -807,7 +807,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
             .param("text", ParamKind::String, "neuer Text (Absätze mit \\r)")
             .opt("runs", ParamKind::Json, "formatierte Läufe [{attrs, text}] (Text-Editor); Vorgabe: ein Lauf mit den Attributen des ersten")
             .run(|s, p| {
-                let txt = p.str("text")?;
+                let txt = normalize_breaks(&p.str("text")?);
                 let runs = parse_runs(p, &txt)?;
                 with_doc(s, |d| {
                     let id = match p.opt_i64("id")? {
@@ -1472,7 +1472,18 @@ pub(crate) fn editor_patch(
     (a != TextAttrs::default()).then_some(a)
 }
 
-/// Parameter `runs` (Liste von `TextRun`); der Text der Läufe muss `text` ergeben.
+/// Paragraph separators of text given by scripts, MCP or CLI (TW-144, re 50 section 3.4): CRLF and
+/// a single LF become CR (the separator stored in the text and in `TRNs`), like pasted text.
+pub fn normalize_breaks(s: &str) -> String {
+    if s.contains('\n') {
+        s.replace("\r\n", "\r").replace('\n', "\r")
+    } else {
+        s.to_string()
+    }
+}
+
+/// Parameter `runs` (Liste von `TextRun`); der Text der Läufe muss `text` ergeben. Paragraph
+/// separators are normalized like `text` (see [`normalize_breaks`]).
 pub(crate) fn parse_runs(p: &Params, text: &str) -> Result<Option<Vec<TextRun>>> {
     let Some(v) = p.get("runs") else {
         return Ok(None);
@@ -1481,7 +1492,11 @@ pub(crate) fn parse_runs(p: &Params, text: &str) -> Result<Option<Vec<TextRun>>>
         name: p.command.clone(),
         message: m,
     };
-    let runs: Vec<TextRun> = serde_json::from_value(v.clone()).map_err(|e| bad(e.to_string()))?;
+    let mut runs: Vec<TextRun> =
+        serde_json::from_value(v.clone()).map_err(|e| bad(e.to_string()))?;
+    for r in &mut runs {
+        r.text = normalize_breaks(&r.text);
+    }
     let joined: String = runs.iter().map(|r| r.text.as_str()).collect();
     if joined != text {
         return Err(bad("runs ≠ text".into()));

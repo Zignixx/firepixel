@@ -594,7 +594,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 "Textrichtung (Vorgabe: Textwerkzeug, Text_Orientation)",
             )
             .run(|s, p| {
-                let text = p.str("text")?;
+                let text = super::text::normalize_breaks(&p.str("text")?);
                 // Glättung, Unterschneidung und Richtung sind Objektattribute; neue Texte bekommen die
                 // Vorgaben des Textwerkzeugs (Original `a_133`, O6), Parameter überschreiben sie.
                 let (d_aa, d_kern, d_ori) = super::text::tool_text_defaults(&s.prefs);
