@@ -164,6 +164,14 @@ const ENTRIES: &[Entry] = &[
         missing: |d| !d.selection.has_pixels(),
     },
     Entry {
+        key: "selectInverse",
+        commands: &["select.inverse"],
+        text: "msg-warn-select-inverse",
+        pref: Some("DisableNoticeSelectInverse"),
+        choices: &[],
+        missing: |d| !d.selection.has_pixels(),
+    },
+    Entry {
         key: "addPopUpMenu",
         commands: &["modify.popUpMenu.addPopUpMenu"],
         text: "msg-warn-popup-hotspot-or-slice",

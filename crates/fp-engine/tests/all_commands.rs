@@ -858,6 +858,17 @@ fn overrides(name: &str, ids: &Ids) -> Option<(Value, Option<Setup>)> {
         })),
         "modify.alterPath.simplify" | "modify.alterPath.expandStroke" | "modify.alterPath.insetPath" => rs(json!({}), sel_ids(vec![ellipse])),
         "text.size.larger" | "text.size.smaller" => rs(json!({}), sel_ids(vec![text])),
+        // only pixel selections are inverted (TW-133)
+        "select.inverse" => rs(json!({}), Box::new(|s: &mut Session| {
+            ex(s, "select.pixels", json!({"shape": "rect", "rect": [0, 0, 5, 5]}));
+            Value::Null
+        })),
+        // "stretched" needs a fixed-width frame; point text keeps its alignment (TW-133)
+        "text.align.stretched" => rs(json!({}), Box::new(move |s: &mut Session| {
+            select(s, &[text]);
+            ex(s, "text.setProperties", json!({"frameType": "fixed", "width": 200}));
+            Value::Null
+        })),
         n if n.starts_with("text.size.") || n.starts_with("text.style.") && n != "text.style.plain" || n.starts_with("text.align.") && n != "text.align.left" => {
             rs(json!({"size": 30}), sel_ids(vec![text]))
         }

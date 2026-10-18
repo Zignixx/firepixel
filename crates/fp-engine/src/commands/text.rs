@@ -166,6 +166,16 @@ fn current_style(s: &Session, key: &str) -> bool {
     s.prefs.get_bool(key, false)
 }
 
+/// Text size after Text ▸ Size ▸ Larger/Smaller: `cur + delta` pt, at least 1 pt.
+pub(crate) fn step_size(cur: f32, delta: f32) -> f32 {
+    (cur + delta).max(1.0)
+}
+
+/// Point text (automatic width, `frame_type` 0 or unset)?
+fn is_point_text(t: &TextElem) -> bool {
+    t.frame_type.unwrap_or(0) == 0
+}
+
 fn first_size(t: &TextElem) -> f32 {
     t.resolved_runs()
         .first()
@@ -488,25 +498,14 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 }),
         );
     }
-    for (name, up) in [("text.size.larger", true), ("text.size.smaller", false)] {
+    // Larger/smaller step every run by exactly 1 pt (relative, no size list; TW-133).
+    for (name, delta) in [("text.size.larger", 1.0), ("text.size.smaller", -1.0)] {
         r.add(cmd(name).requires(TEXT_SEL).run(move |s, _| {
             edit_texts(s, move |t| {
-                let cur = first_size(t);
-                let next = if up {
-                    SIZES
-                        .iter()
-                        .copied()
-                        .find(|&x| x > cur)
-                        .unwrap_or(cur * 1.2)
-                } else {
-                    SIZES
-                        .iter()
-                        .rev()
-                        .copied()
-                        .find(|&x| x < cur)
-                        .unwrap_or((cur / 1.2).max(1.0))
-                };
-                set_attr(t, &move |a| a.size = Some(next));
+                let fallback = first_size(t);
+                set_attr(t, &move |a| {
+                    a.size = Some(step_size(a.size.unwrap_or(fallback), delta));
+                });
             })
         }));
     }
@@ -607,7 +606,8 @@ pub(super) fn register(r: &mut CommandRegistry) {
                     }
                 })
                 .run(move |s, _| {
-                    let out = texts_or_defaults(s, move |t| set_attr(t, &move |a| a.alignment = Some(v)), move |s| s.prefs.set("Text_Justification", crate::prefs::PrefValue::Int(v as i64)))?;
+                    // "Stretched" needs a line width: point text keeps its alignment (TW-133)
+                    let out = texts_or_defaults(s, move |t| if !(v == 4 && is_point_text(t)) { set_attr(t, &move |a| a.alignment = Some(v)) }, move |s| s.prefs.set("Text_Justification", crate::prefs::PrefValue::Int(v as i64)))?;
                     reduce_selection_to_texts(s);
                     Ok(out)
                 }),
@@ -1229,16 +1229,8 @@ pub(crate) fn editor_patch(
         "text.size.other" => a.size = Some(p.f64("size").ok()? as f32),
         "text.size.larger" | "text.size.smaller" => {
             let c = cur.size.unwrap_or(12.0);
-            a.size = Some(if name.ends_with("larger") {
-                SIZES.iter().copied().find(|&x| x > c).unwrap_or(c * 1.2)
-            } else {
-                SIZES
-                    .iter()
-                    .rev()
-                    .copied()
-                    .find(|&x| x < c)
-                    .unwrap_or((c / 1.2).max(1.0))
-            });
+            let delta = if name.ends_with("larger") { 1.0 } else { -1.0 };
+            a.size = Some(step_size(c, delta));
         }
         "text.style.plain" => {
             a.bold = Some(false);

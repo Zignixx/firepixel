@@ -298,8 +298,9 @@ fn select_commands() {
     ex(&mut s, "select.none", json!({}));
     assert!(sel(&s).is_empty());
     select(&mut s, &[a]);
-    ex(&mut s, "select.inverse", json!({}));
-    assert_eq!(sel(&s), vec![c, b]);
+    // without a pixel selection: warning, object selection unchanged (TW-133)
+    assert!(s.execute("select.inverse", json!({})).is_err());
+    assert_eq!(sel(&s), vec![a]);
     select(&mut s, &[a]);
     ex(&mut s, "select.similar", json!({}));
     assert_eq!(sel(&s).len(), 2);
@@ -580,7 +581,7 @@ fn text_commands() {
     ex(&mut s, "text.size.36", json!({}));
     assert_eq!(attrs(&s).size, Some(36.0));
     ex(&mut s, "text.size.larger", json!({}));
-    assert_eq!(attrs(&s).size, Some(48.0));
+    assert_eq!(attrs(&s).size, Some(37.0));
     ex(&mut s, "text.size.smaller", json!({}));
     assert_eq!(attrs(&s).size, Some(36.0));
     ex(&mut s, "text.size.other", json!({"size": 17}));
@@ -610,6 +611,37 @@ fn text_commands() {
     ex(&mut s, "text.reverseDirection", json!({}));
     ex(&mut s, "text.detachFromPath", json!({}));
     assert_eq!(top_elements(&s).len(), 2);
+}
+
+/// TW-133: Text size larger/smaller step exactly 1 pt (minimum 1 pt); "stretched" leaves point
+/// text alone and applies to fixed-width text.
+#[test]
+fn text_size_step_and_stretch_on_point_text() {
+    let mut s = doc_session(300.0, 200.0);
+    let v = ex(&mut s, "draw.text", json!({"text": "Abc 123", "anchor": [10, 50], "size": 24}));
+    let t = ElementId(v["id"].as_u64().unwrap_or(0));
+    let attrs = |s: &Session, id: ElementId| match &el(s, id).kind {
+        ElementKind::Text(x) => x.resolved_runs()[0].0.clone(),
+        _ => Default::default(),
+    };
+    ex(&mut s, "text.size.larger", json!({}));
+    assert_eq!(attrs(&s, t).size, Some(25.0));
+    ex(&mut s, "text.size.smaller", json!({}));
+    assert_eq!(attrs(&s, t).size, Some(24.0));
+    ex(&mut s, "text.size.other", json!({"size": 1}));
+    ex(&mut s, "text.size.smaller", json!({}));
+    assert_eq!(attrs(&s, t).size, Some(1.0), "clamped at 1 pt");
+
+    let before = attrs(&s, t).alignment;
+    ex(&mut s, "text.align.stretched", json!({}));
+    assert_eq!(attrs(&s, t).alignment, before, "point text keeps its alignment");
+
+    let v = ex(&mut s, "draw.text", json!({"text": "Rahmen", "rect": [10, 100, 200, 140], "size": 14}));
+    let f = ElementId(v["id"].as_u64().unwrap_or(0));
+    assert!(matches!(&el(&s, f).kind, ElementKind::Text(x) if x.frame_type == Some(1)));
+    select(&mut s, &[f]);
+    ex(&mut s, "text.align.stretched", json!({}));
+    assert_eq!(attrs(&s, f).alignment, Some(4), "fixed-width text is stretched");
 }
 
 // ------------------------------------------------------------------ Ebenen, Seiten, Status

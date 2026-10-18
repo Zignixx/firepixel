@@ -115,6 +115,7 @@ warn_test! {
     z15_rechteckiges_segment: "edit.insert.slice", "insertSlice", "Wählen Sie mindestens ein Objekt aus, bevor Sie den Befehl zum Einfügen eines Segments verwenden.";
     z16_polygonsegment: "edit.insert.polygonSlice", "insertSlice", "Wählen Sie mindestens ein Objekt aus, bevor Sie den Befehl zum Einfügen eines Segments verwenden.";
     z17_aehnliches_auswaehlen: "select.similar", "selectSimilar", "Nehmen Sie mit dem Auswahlrahmen, dem Lasso oder dem Zauberstab eine Pixelauswahl vor, bevor Sie den Befehl \"Ähnliches auswählen\" verwenden.";
+    tw133_auswahl_umkehren: "select.inverse", "selectInverse", "Nehmen Sie mit dem Auswahlrahmen, dem Lasso oder dem Zauberstab eine Pixelauswahl vor, bevor Sie den Befehl \"Auswahl umkehren\" verwenden.";
     z18_weiche_kante: "select.feather", "feather", "Bevor Sie den Befehl \"Weiche Kante\" verwenden, nehmen Sie mit dem Auswahlrahmen, dem Lasso oder dem Zauberstab eine Pixelauswahl vor.";
 }
 

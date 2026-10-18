@@ -604,6 +604,7 @@ msg-warn-insert-hotspot = Select at least one object before using the command to
 msg-warn-insert-slice = Select at least one object before using the command to insert a slice.
 msg-warn-select-similar = Make a pixel selection with the Marquee, Lasso or Magic Wand before using the "Select Similar" command.
 msg-warn-feather = Before using the "Feather" command, make a pixel selection with the Marquee, Lasso or Magic Wand.
+msg-warn-select-inverse = Make a pixel selection with the Marquee, Lasso or Magic Wand tool before using the "Select Inverse" command.
 msg-warn-popup-hotspot-or-slice = Behaviors are applied to hotspot or slice objects through the Behaviors panel. Create a hotspot or a slice?
 msg-warn-insert-behavior = Select a slice or a hotspot before using the "Add Behavior" command.
 msg-warn-choice-hotspot = &Hotspot

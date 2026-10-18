@@ -663,15 +663,12 @@ pub(super) fn register(r: &mut CommandRegistry) {
             {
                 let within = canvas_rect(&d.doc, d.page).round_out().union(&m.bounds());
                 d.selection.pixels = m.inverted(within).ok();
+                Ok(CommandOutput::doc())
             } else {
-                let cur = d.selection.elements.clone();
-                let ids: Vec<_> = all_selectable(d)
-                    .into_iter()
-                    .filter(|i| !cur.contains(i))
-                    .collect();
-                d.selection.set(ids);
+                // Only pixel selections are inverted; without one the session shows the
+                // `selectInverse` warning and the object selection stays as it is (TW-133).
+                Err(sel_err("err-req-pixel-selection"))
             }
-            Ok(CommandOutput::doc())
         })
     }));
     r.add(
