@@ -86,3 +86,64 @@ fn single_click_in_text_inserts_at_caret() {
     assert_eq!(t[0].chars().count(), 9, "inserted, nothing replaced: {t:?}");
     assert!(t[0].contains("Vr") && t[0].replace("Vr", "") == "Abc 123", "{t:?}");
 }
+
+// ------------------------------------------------------------------ TW-130 (re 47 §2)
+
+fn setup_tx1() -> (H, fp_geom::Rect) {
+    fp_engine::shell::disable();
+    let mut s = fp_engine::Session::default();
+    s.execute("file.new", json!({"width": 300, "height": 200, "background": "#ffffff"})).expect("doc");
+    let v = s.execute("draw.text", json!({"text": "Abc 123", "anchor": [50, 80], "size": 24, "color": "#000000"})).expect("text");
+    let id = v.value["id"].as_u64().unwrap_or(0);
+    s.execute("select.set", json!({"ids": [id]})).expect("select");
+    s.execute("tool.select", json!({"tool": "tool.text"})).expect("tool");
+    let b = {
+        let d = s.active().expect("doc");
+        fp_engine::docops::ids_bounds(&d.doc, d.page, &[fp_model::ElementId(id)]).expect("bounds")
+    };
+    (harness(s), b)
+}
+
+fn type_and_escape(h: &mut H, chars: &[&str]) {
+    for ch in chars {
+        h.event(Event::Text((*ch).into()));
+        h.run_steps(1);
+    }
+    h.event(Event::Key { key: Key::Escape, physical_key: None, pressed: true, repeat: false, modifiers: Modifiers::NONE });
+    h.event(Event::Key { key: Key::Escape, physical_key: None, pressed: false, repeat: false, modifiers: Modifiers::NONE });
+    h.run_steps(3);
+}
+
+/// Runner step xs-shortcuts/15 with a valid TX1: the caret lands at the click point, not at the end.
+#[test]
+fn single_click_puts_caret_at_click_point() {
+    let (mut h, b) = setup_tx1();
+    let p = screen_of(&h, b.left + 12.0, (b.top + b.bottom) / 2.0);
+    click(&mut h, p);
+    assert!(h.state().state.session.tool_is_editing_text(), "editing TX1");
+    type_and_escape(&mut h, &["V", "r"]);
+    assert_eq!(texts(&h), vec!["AVrbc 123".to_string()]);
+}
+
+/// Second click inside the editor the first click opened selects the word.
+#[test]
+fn second_click_in_open_editor_selects_word() {
+    let (mut h, b) = setup_tx1();
+    let p = screen_of(&h, b.left + 12.0, (b.top + b.bottom) / 2.0);
+    click(&mut h, p);
+    click(&mut h, p);
+    type_and_escape(&mut h, &["Q"]);
+    assert_eq!(texts(&h), vec!["Q 123".to_string()]);
+}
+
+/// Third click selects the whole paragraph.
+#[test]
+fn third_click_in_open_editor_selects_paragraph() {
+    let (mut h, b) = setup_tx1();
+    let p = screen_of(&h, b.left + 12.0, (b.top + b.bottom) / 2.0);
+    click(&mut h, p);
+    click(&mut h, p);
+    click(&mut h, p);
+    type_and_escape(&mut h, &["Q"]);
+    assert_eq!(texts(&h), vec!["Q".to_string()]);
+}

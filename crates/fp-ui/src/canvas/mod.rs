@@ -2045,8 +2045,28 @@ fn input(ui: &mut Ui, st: &mut AppState, area: Rect, resp: &egui::Response) {
         let tol = (4.0 / view.zoom.max(1e-6)) as f32;
         let in_text = editing && cc.text.as_ref().is_some_and(|lc| lc.contains(dp, tol));
         if primary_pressed && free && area.contains(p) && !space && in_text {
+            // click count inside the open editor (re 47 §2.2): 2nd click selects the word, 3rd the
+            // paragraph; the click that opened the editor counts as the first one
+            let near = |t: f64, q: Pos2| time - t <= 0.5 && q.distance(p) <= 4.0;
+            let clicks = match (cc.text_clicks, cc.last_click) {
+                (Some((t, q, n)), _) if near(t, q) => n.saturating_add(1),
+                (_, Some((t, q))) if near(t, q) => 2,
+                _ => 1,
+            };
+            cc.text_clicks = Some((time, p, clicks));
+            cc.last_click = None;
             if let Some(lc) = cc.text.as_ref() {
-                events.push(caret(lc.hit(dp), mods_now.shift));
+                events.push(caret(lc.hit(dp), mods_now.shift && clicks == 1));
+            }
+            if clicks == 2 {
+                events.push(mk(PointerKind::DoubleClick, dp));
+            } else if clicks >= 3 {
+                events.push(ToolEvent {
+                    input: ToolInput::Edit(fp_engine::tools::EditOp::SelectParagraph),
+                    mods: mods_now,
+                    pressure: 1.0,
+                    time_ms: t_ms,
+                });
             }
             cc.text_drag = true;
             cc.last_pos = Some(dp);

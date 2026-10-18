@@ -483,6 +483,49 @@ impl Default for TextTool {
     }
 }
 
+/// Character index (caret position) of a text element at a document point, from the same text
+/// layout the renderer uses: nearest character boundary (boundary = glyph middle), line by `y`.
+/// `None` without a layout engine.
+#[cfg(feature = "render")]
+fn caret_index_at(doc: &Document, t: &TextElem, p: Point) -> Option<usize> {
+    let block = fp_render::convert::text_block(doc, t);
+    let fonts = fp_text::FontDb::shared();
+    let lay = fp_text::layout(&block, &fonts, &fp_text::LayoutOptions::default());
+    let q = match t
+        .transform
+        .filter(|m| !m.is_identity())
+        .and_then(|m| m.inverse())
+    {
+        Some(inv) => inv.apply(p),
+        None => p,
+    };
+    Some(lay.hit_test(q.x as f64, q.y as f64).char_index)
+}
+
+#[cfg(not(feature = "render"))]
+fn caret_index_at(_doc: &Document, _t: &TextElem, _p: Point) -> Option<usize> {
+    None
+}
+
+/// Paragraph (between `\r`/`\n` separators) around a character index: `(start, end)`.
+fn paragraph_bounds(text: &str, at: usize) -> (usize, usize) {
+    let cs: Vec<char> = text.chars().collect();
+    let at = at.min(cs.len());
+    let is_sep = |c: char| c == '\r' || c == '\n';
+    let mut a = at;
+    while a > 0 && !is_sep(cs[a - 1]) {
+        a -= 1;
+    }
+    let mut b = at;
+    while b < cs.len() && !is_sep(cs[b]) {
+        b += 1;
+    }
+    (a, b)
+}
+
+/// Smallest drag (document px, horizontally or vertically) that creates a fixed-width text frame.
+const FRAME_MIN_DRAG: f32 = 20.0;
+
 fn char_len(s: &str) -> usize {
     s.chars().count()
 }
@@ -629,6 +672,8 @@ impl TextTool {
         {
             let text = t.plain_text();
             let n = char_len(&text);
+            // TW-130 (re 47 §2.5): caret at the character boundary under the click point, no selection
+            let caret = caret_index_at(ctx.doc, t, p).map_or(n, |i| i.min(n));
             let spans = spans_of(t);
             let mut base = spans.first().map(|s| s.attrs.clone()).unwrap_or_else(|| {
                 let mut a = t.initial.clone();
@@ -650,8 +695,8 @@ impl TextTool {
                 anchor: Point::new(t.bounds.left, t.bounds.top),
                 width: None,
                 text,
-                caret: n,
-                sel_anchor: n,
+                caret,
+                sel_anchor: caret,
                 preedit: None,
                 font: String::new(),
                 size: 0.0,
@@ -748,7 +793,11 @@ impl TextTool {
                     let snap = Snapper::new(ctx, &[]).without_smart();
                     let s = snap.point(start).point;
                     let e = snap.point(*pos).point;
-                    let width = if dist(start, *pos) >= ctx.drag_threshold() {
+                    // a drag below 20 px (frame width and height) is a click: auto-width text
+                    // (re 47 §2.2); from 20 px on a fixed-width frame
+                    let width = if (e.x - s.x).abs() >= FRAME_MIN_DRAG
+                        || (e.y - s.y).abs() >= FRAME_MIN_DRAG
+                    {
                         Some((e.x - s.x).abs().max(1.0))
                     } else {
                         None
@@ -840,6 +889,11 @@ impl TextTool {
                         EditOp::SelectAll => {
                             v.sel_anchor = 0;
                             v.caret = char_len(&v.text);
+                        }
+                        EditOp::SelectParagraph => {
+                            let (a, b) = paragraph_bounds(&v.text, v.caret);
+                            v.sel_anchor = a;
+                            v.caret = b;
                         }
                         EditOp::Copy | EditOp::Cut => {
                             let (a, b) = v.selection();

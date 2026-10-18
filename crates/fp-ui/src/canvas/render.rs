@@ -197,6 +197,8 @@ pub struct CanvasCache {
     pub pending_caret: Option<fp_geom::Point>,
     /// Letzter Klick auf der Leinwand (Zeit, Bildschirmpunkt) für die Doppelklick-Erkennung.
     pub last_click: Option<(f64, egui::Pos2)>,
+    /// Last click inside the open text editor (time, screen point, click count) for word/paragraph selection.
+    pub text_clicks: Option<(f64, egui::Pos2, u8)>,
     pub pinch_acc: f32,
     /// Umschalttasten am Ende des letzten Bildes (Startzustand für die Ereignisfolge des nächsten).
     pub frame_mods: Option<egui::Modifiers>,

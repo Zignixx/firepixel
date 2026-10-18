@@ -146,7 +146,8 @@ fn freehand_and_text() {
     tool(&mut s, ToolId::Text);
     let b = bounds(&s, t);
     events(&mut s, &[ToolEvent::down(b.left + 1.0, b.top + 1.0), ToolEvent::up(b.left + 1.0, b.top + 1.0), ToolEvent::text("!"), ToolEvent::key(ToolKey::Escape)]);
-    assert!(matches!(&el(&s, t).kind, ElementKind::Text(x) if x.plain_text() == "Rahmen!"));
+    // TW-130 (re 47 §2.5): the caret lands at the click point (here before the first character)
+    assert!(matches!(&el(&s, t).kind, ElementKind::Text(x) if x.plain_text() == "!Rahmen"));
 }
 
 #[test]

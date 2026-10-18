@@ -92,6 +92,8 @@ pub enum EditOp {
     /// Einfügen von Text aus der Systemzwischenablage.
     Paste(String),
     SelectAll,
+    /// Select the paragraph around the caret (third click in the open text editor, re 47 §2.2).
+    SelectParagraph,
     /// Rückgängig/Wiederholen innerhalb des Text-Editors (Strg+Z, Strg+Y bzw. Umschalt+Strg+Z).
     Undo,
     Redo,
