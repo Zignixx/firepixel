@@ -11,6 +11,16 @@ Tastenkürzel und Mausbedienung.
 braucht keine weiteren Bibliotheken. `firepixel-cli.exe` (Kommandozeile und KI-Steuerung) liegt
 daneben, wird für die Oberfläche aber nicht gebraucht.
 
+**Linux (x86_64, glibc 2.35 oder neuer, z. B. Ubuntu 22.04 oder Debian 12):** entweder das AppImage mit
+`chmod +x Firepixel-x86_64.AppImage` ausführbar machen und starten, oder das tar.gz entpacken und im
+Ordner `Firepixel-Linux-x64` `./firepixel` starten (dort liegen auch `firepixel-cli`, die Anleitungen,
+eine `.desktop`-Datei und Symbole). Firepixel läuft unter Wayland und X11 und braucht einen Vulkan- oder
+OpenGL-Treiber sowie die Bibliotheken `libxkbcommon0`, `libxkbcommon-x11-0` (X11) und
+`libwayland-client0` (Wayland), die auf den meisten Desktops schon vorhanden sind. Öffnen- und
+Speichern-Dialoge laufen über das XDG-Desktop-Portal; `xdg-desktop-portal` und ein Portal-Backend für
+den Desktop (GTK, KDE, …) müssen installiert sein. Der Linux-Build ist neu und noch auf wenigen Desktops
+ausprobiert.
+
 **Start:**
 
 - Doppelklick auf `firepixel.exe`, oder Dateien auf die exe bzw. das offene Fenster ziehen.
@@ -109,6 +119,16 @@ mit der Strichart *Einfach ▸ Präzise abger.* (1 px); eine eigene Wahl im Insp
 - *Modifizieren ▸ Maske ▸ Alles einblenden / Alles ausblenden* legt eine leere Maske über das
   gewählte Objekt. Ebenen-Bedienfeld und Inspektor zeigen weiter das Objekt selbst (z. B. die Bitmap)
   mit der Maske als zweiter Miniatur.
+- *Auswählen ▸ Auswahl umkehren* kehrt nur eine Pixelauswahl um; ohne sie erscheint eine Warnung, und
+  die gewählten Objekte bleiben unverändert.
+- *Text ▸ Größe ▸ Größer / Kleiner* ändern die Größe um genau 1 pt (24 → 25 → 24), bei gewählten Texten
+  und im offenen Texteditor; die kleinste Größe ist 1 pt. Die Ausrichtung *Blocksatz gestreckt* wirkt
+  nur auf Textblöcke mit fester Breite; Punkttext (automatische Breite) behält seine Ausrichtung.
+- **Zuschneiden:** Das Zuschneidewerkzeug, *Bearbeiten ▸ Dokument zuschneiden* und *Modifizieren ▸
+  Leinwand ▸ Leinwandgröße* folgen der Option *Bearbeiten ▸ Voreinstellungen ▸ Bearbeitung ▸ Objekte
+  beim Zuschneiden löschen* (standardmäßig an). An: Objekte ganz außerhalb der neuen Leinwand werden auf
+  allen Ebenen und Status gelöscht, Bitmaps über den Rand beschnitten, Vektorobjekte über den Rand
+  bleiben ganz. Aus: nichts wird gelöscht oder beschnitten, die Objekte wandern nur mit der Leinwand.
 - *Auswählen ▸ Ähnliches auswählen* nimmt Objekte mit gleicher Füllung, gleichem Strich, gleicher Deckkraft
   und gleichem Mischmodus dazu.
 - *Text ▸ Von Pfad lösen* macht den Text wieder zu einem Textrahmen mit seiner früheren Breite, mittig über
@@ -171,6 +191,15 @@ Wichtige Bedienfelder:
   Auswahlrahmen umschließt nur das aktuelle Bild.
 - **Optimieren:** Exportformat und Farben.
 - **Verlauf:** Schritte zurückspulen, wiederholen oder als Befehl speichern.
+- **URL:** URLs für Slices, Hotspots und Schaltflächen. Das Menü ≡ enthält *Verwendete URLs in
+  Bibliothek aufnehmen* (aus den Slices, Hotspots und Schaltflächen aller offenen Dokumente), *Nicht
+  verwendete URLs löschen*, *URL hinzufügen...*, *URL bearbeiten...* und *URL löschen* (beide nur mit
+  gewählter URL), *Neue URL-Bibliothek...*, *URLs importieren...* und *URLs exportieren...* (`.txt` mit
+  einer URL pro Zeile oder `.htm` mit einem Link pro URL) sowie die Hilfe. Die Standardbibliothek ist
+  `URLs.txt` in `%APPDATA%\Firepixel`, weitere Bibliotheken liegen als HTML-Dateien im Ordner
+  `URL Libraries` daneben und lassen sich in der Bibliotheksliste des Bedienfelds wählen. Änderungen an
+  einer Bibliothek lassen sich nicht mit Strg+Z rückgängig machen, und diese Menübefehle stehen Skripten,
+  der Kommandozeile und MCP nicht zur Verfügung.
 
 Der **Eigenschaften-Inspektor** unten zeigt je nach Auswahl Füllung, Strich, Deckkraft,
 Mischmodus, Filter (+/−) und Text- bzw. Symbol-Einstellungen.

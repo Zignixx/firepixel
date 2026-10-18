@@ -27,7 +27,7 @@ Findings are grouped by their state:
 
 ---
 
-## [F] Fixable now (7)
+## [F] Fixable now (3)
 
 Recounted after comparison run 18 (18 Oct 2026, 10 units; the other 38 units from full run 17). The earlier remnants (sprite
 padding default, Shift-constrain for L-shape/arrow line, import rubber band, New Style defaults, text runs, SVG
@@ -75,14 +75,35 @@ dialog, the library drop and Snap to Pixel with a selection all measured on the 
 different is listed below as TW-131 to TW-135; the reference-side remainder of TW-129 (plain arrow keys) moved to
 TW-132. Tags in the table now refer to runner R-14.
 
+The wave after run 18 (18 Oct 2026) closed most of them; run 19 of the affected units is to confirm:
+
+- **TW-131:** the URL panel menu has the reference's nine entries in its order, with its separators and enable
+  rules (edit and delete grey without a selected URL): add used URLs (slices, hotspots, button instances and button
+  symbols of the open documents), clear unused URLs, add / edit / delete URL, new URL library, import and export
+  (`.txt` one URL per line, `.htm` one link per URL), Help. The default library stays in `URLs.txt`, further
+  libraries are HTML files in `URL Libraries`. Limits: these panel actions are UI-side only (not reachable over
+  CLI, MCP or JSF), and library edits have no undo.
+- **TW-133 (in part, RE spec 48):** *Select Inverse* only inverts a pixel selection and otherwise shows a warning
+  ("do not show again" possible) without touching the object selection; the Break Apart warning was already right
+  (the runner had closed the reference's dialogs). *Text ▸ Size ▸ Larger / Smaller* step by exactly 1 pt (clamped
+  at 1 pt), on selected texts and in the open editor. Stretched alignment leaves point (auto-width) text alone.
+  Still open: "justified" on point text (see the table).
+- **TW-134:** the preference *Delete objects when cropping* (`CropDocCropsImages`, Preferences ▸ Edit, default on)
+  was stored but never read. The crop tool, *Crop Document* and *Canvas Size* now honour it: on deletes objects
+  entirely outside the new canvas on all layers and states and clips crossing bitmaps (crossing vectors stay); off
+  deletes and clips nothing. Pinned by tests for all three paths.
+- **TW-135:** a pointer double-click on a text opens the editor with the caret at the click point; the late caret
+  report a few frames later is removed, so a character typed at once is no longer lost or misplaced.
+- **TW-132 (runner R-14):** read-back scripts on the reference side record open dialogs (values and a dialog shot)
+  before they run, every dialog the runner cancels is logged, the history read-back is guarded and retried, Delete,
+  Ctrl+D and the arrow keys are checked for effect, the text tool is reset at the start of a unit and Firepixel's
+  menu read-back takes the enabled state from the accessibility tree. TW-130 / Q-57 stays open until run 19 reads
+  back all text lines on the reference side.
+
 | ID | Area | What is open (expected vs. current) |
 |---|---|---|
-| TW-130 (Q-57) | Text tool, click on a text (*runner*, then *RE spec*) | Since F34 Firepixel places the caret at the click point: `xs-shortcuts/15_in_text_tx2` (text-tool click at TX2's centre, "V" and "R" typed) gives "Zeile eins / ZeileVr zwei / Zeile drei". The reference's read-back of TX2 shows only "Zeile eins" before and after typing, so where its typed text goes is not measured; the TX1 step is `unsupported` (invalid TX1 in the reference file). The stray "c" of run 17 appears only on the reference side (`tool-text/02, 03`: "Abc 123c"). Needs: a read-back of all lines and the typed text in the reference (R-14), then compare. |
-| TW-131 | URL panel, panel menu (*direct fix*) | `panel-library-styles/16`: the reference's URL panel menu has nine entries (add used URLs to the library, delete unused URLs, add URL, edit URL, delete URL, new URL library, import URLs, export URLs, Help; edit and delete grey without a selected URL); Firepixel's has only "Help" (runs 17 and 18). The panel itself has its own buttons. Expected: the same entries, wired to the existing URL library functions, with the same enable rules. |
-| TW-132 | Parity runner, reference side (*runner*) | Reference-side effects in run 18: the history read-back (`getStepsAsJavaScript`) fails with script error -2147216344 in `menu-edit/01, 22`; Delete (`menu-edit/09`) and Ctrl+D (`menu-edit/20`) leave the reference's document unchanged; the plain arrow keys do not move R1 (`xs-shortcuts/10`, Shift+arrows do); the text tool keeps state from earlier units (large italic underlined text, stray "c", text left in edit mode; `tool-text/02, 03, 07, 14`); Firepixel's menu read-back reports no enabled state for Snap to Pixel (`xs-canvas/15_snap_pixels_disabled`). Expected: read-back without the script error, keys that reach the canvas, the text tool reset before the unit, the enabled state read on both sides. |
-| TW-133 | Shortcut set "Web Standard", text (*RE spec*) | `xs-shortcuts/06` with TX1 selected and both programs on "Web Standard": Ctrl+Shift+B does nothing in the reference, Firepixel opens a warning; Ctrl+Shift+I keeps the text selected in the reference, Firepixel drops the selection; Ctrl+Alt+Shift+S changes nothing in the reference, Firepixel sets "stretch" alignment; Ctrl+Shift+Period grows 24 to 25 pt in the reference (Ctrl+Shift+Comma back to 24), Firepixel jumps to 36 pt. Ctrl+Shift+U and Ctrl+Shift+E are equal. Needs: the reference's "Web Standard" bindings for these keys and its size step, then Firepixel's set corrected. Continues TW-122 / TW-126. |
-| TW-134 | Preferences, "delete paths when cropping" (*RE spec*) | `xs-preferences/06`: the option is read back as on in both programs (reference: off at the start, set with one click; Firepixel's profile already on); after cropping 40,40–320,260 the reference keeps all seven paths, Firepixel removes the three outside (L1, ST, PG; 44 % canvas pair). Needs: when the reference applies the option (paths fully outside, bitmap mode, after a restart?), then the same rule in Firepixel. |
-| TW-135 | Text editing after a pointer double-click (*RE spec*) | `tool-text/06`: pointer tool, double-click at 70,160 inside "Zeile eins" of TX2, type "Q". The reference inserts the "Q" at the click point ("ZeilQe eins"); Firepixel shows the caret after "Zeile " and no "Q" in the shot (runs 17 and 18; the canvas pair stays below 1 %, so the score did not catch it). Needs: the reference's caret rule for the double-click, then a fix so the typed character lands at that point. |
+| TW-130 (Q-57) | Text tool, click on a text (*runner*, then *RE spec*) | Since F34 Firepixel places the caret at the click point: `xs-shortcuts/15_in_text_tx2` (text-tool click at TX2's centre, "V" and "R" typed) gives "Zeile eins / ZeileVr zwei / Zeile drei". The reference's read-back of TX2 shows only "Zeile eins" before and after typing, so where its typed text goes is not measured; the TX1 step is `unsupported` (invalid TX1 in the reference file). The stray "c" of run 17 appears only on the reference side (`tool-text/02, 03`: "Abc 123c"). Runner R-14 now reads back all text objects before and after typing and after Escape (`xs-shortcuts/15`, `tool-text/06, 07`). Needs: run 19, then compare. |
+| TW-133 | Shortcut set "Web Standard", text (*RE spec*, rest) | Fixed per RE spec 48 after run 18: Select Inverse warns without a pixel selection, Larger/Smaller step by 1 pt, stretched alignment leaves point text alone; the Break Apart warning on Ctrl+Shift+B was already right (the runner had closed the reference's dialog). Still unverified: what "justified" alignment does on point (auto-width) text in the reference. Needs: run 19 of `xs-shortcuts`, and a measurement of "justified" on point text. Continues TW-122 / TW-126. |
 | U-1 rest | File ▸ Import, PDF | SVG files now import with their layers; **PDF files still arrive as one layer** because the pure-Rust PDF reader exposes no optional content groups (layers). Library limit; needs either an upstream feature or an own OCG reader. |
 
 ## [V] Deferred / expansion items (5)

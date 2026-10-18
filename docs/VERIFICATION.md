@@ -80,8 +80,10 @@ them; they stay listed here, ticked, so the history of each check is clear. Run 
 TW-97, TW-110, TW-112, TW-114 and TW-116; run 16 (18 Oct 2026) resolved TW-113, TW-118, TW-119, TW-120 and TW-121.
 Full run 17 (18 Oct 2026) confirmed TW-115 and TW-123 and the `xs-canvas` pair review; it did not confirm TW-122
 (continued as TW-126) and added TW-125 to TW-130. Follow-up run 18 (18 Oct 2026, 10 units) resolved TW-125 (Common
-Library menu), TW-126, TW-127 (`15`), TW-128 and TW-129 and added TW-131 to TW-135. The open checks below come
-from runs 17 and 18.
+Library menu), TW-126, TW-127 (`15`), TW-128 and TW-129 and added TW-131 to TW-135. The wave after run 18 fixed
+TW-131, TW-134, TW-135 and most of TW-133 and changed the runner for TW-132 (R-14); those items are ticked as fixed
+and are confirmed by run 19 or, failing that, by the matching A4 check. The open checks below come from runs 17 and
+18.
 
 - [x] **TW-100** (`panel-library-styles/03`) – resolved: run 13 measured equal positions at an integer drop point; the unit counts as equal and the half-pixel case is no longer tracked.
 - [x] **TW-101** (`xs-file-formats/09`) – resolved in run 13: import by dragging lands on the same pixels 121,120–417,322 in both programs.
@@ -114,23 +116,17 @@ from runs 17 and 18.
 - [ ] **TW-130 / Q-57** (`xs-shortcuts/15_in_text_tx2`; needs: reference read-back of all lines (runner R-14), else real mouse)
   **Steps:** Select TX2 ("Zeile eins / Zeile zwei / Zeile drei") with the pointer, choose the Text tool and click at its centre; type "V" and "R", press Escape.
   **Expected:** The typed text lands at the same place in both programs. Run 18: Firepixel inserts "Vr" at the click point ("ZeileVr zwei"); the reference's read-back shows only "Zeile eins" before and after typing. The stray "c" of run 17 is on the reference side only.
-- [ ] **TW-131** (`panel-library-styles/16`; needs: fix, then the next run, else real window)
-  **Steps:** Open the URL panel and its panel menu, with and without a selected URL.
-  **Expected:** The same nine entries as the reference (add used URLs to the library, delete unused URLs, add / edit / delete URL, new URL library, import, export, Help) with edit and delete grey without a selected URL; Firepixel shows only "Help".
-- [ ] **TW-133** (`xs-shortcuts/06`; needs: behaviour description of "Web Standard", then the next run, else real keyboard)
-  **Steps:** With the "Web Standard" set active, select the text object with the pointer (do not edit it); press Ctrl+Shift+B, Escape, reselect; repeat with Ctrl+Shift+I, Ctrl+Alt+Shift+S, Ctrl+Shift+Period and Ctrl+Shift+Comma.
-  **Expected:** As in the reference: nothing for Ctrl+Shift+B and Ctrl+Alt+Shift+S, the text stays selected on Ctrl+Shift+I, 24 → 25 pt on Ctrl+Shift+Period and back on Ctrl+Shift+Comma. Run 18: Firepixel shows a warning, drops the selection, sets "stretch" alignment and jumps to 36 pt.
-- [ ] **TW-134** (`xs-preferences/06`; needs: behaviour description, else real window)
-  **Steps:** Preferences ▸ Edit: switch "delete paths when cropping" on; crop the vector test file to 40,40–320,260; count the paths.
-  **Expected:** The same paths as the reference. Run 18 (option on in both): the reference keeps all seven paths, Firepixel removes the three outside.
-- [ ] **TW-135** (`tool-text/06`; needs: behaviour description, else real mouse and keyboard)
-  **Steps:** Pointer tool: double-click inside the word "Zeile" of a multi-line text and type "Q".
-  **Expected:** "Q" appears at the click point (reference: "ZeilQe eins"). Runs 17 and 18: Firepixel shows the caret after "Zeile " and no "Q".
+- [x] **TW-131** (`panel-library-styles/16`) – fixed after run 18: the URL panel menu has the reference's nine entries (add used URLs to the library, clear unused URLs, add / edit / delete URL, new URL library, import, export, Help) with edit and delete grey without a selected URL. Confirm in run 19; hands-on check A4-11.
+- [ ] **TW-133** (`xs-shortcuts/06`; needs: run 19, and a measurement of "justified" on point text) – fixed in part after run 18 (RE spec 48): Select Inverse warns without a pixel selection and keeps the text selected, Larger/Smaller step by 1 pt (24 → 25 → 24), stretched alignment leaves point text alone; the Break Apart warning on Ctrl+Shift+B was already right (the runner had closed the reference's dialog).
+  **Steps:** With the "Web Standard" set active, select the text object with the pointer (do not edit it); press Ctrl+Shift+B, Escape, reselect; repeat with Ctrl+Shift+I, Ctrl+Alt+Shift+S, Ctrl+Shift+Period and Ctrl+Shift+Comma; then set "justified" alignment on the point text.
+  **Expected:** As in the reference: a warning for Ctrl+Shift+B and Ctrl+Shift+I, nothing for Ctrl+Alt+Shift+S, 24 → 25 pt on Ctrl+Shift+Period and back on Ctrl+Shift+Comma. "Justified" on point text: not yet measured in the reference.
+- [x] **TW-134** (`xs-preferences/06`) – fixed after run 18: the crop tool, Crop Document and Canvas Size honour *Delete objects when cropping* (`CropDocCropsImages`); on deletes objects entirely outside and clips crossing bitmaps, off changes nothing but the position. Confirm in run 19; hands-on check A4-13.
+- [x] **TW-135** (`tool-text/06`) – fixed after run 18: a pointer double-click places the caret at the click point and a character typed at once lands there ("ZeilQe eins"). Confirm in run 19; hands-on check A4-12.
 - [ ] **Q-49** (`color-popup/05`; needs: real keyboard)
   **Steps:** Select a rectangle, open the fill colour pop-up, type #3366CC into the hex field and press Enter; repeat with "zz12".
   **Expected:** The same result as the reference. The runner cannot prove it: the reference's pop-up closes without applying the text the runner sets; Firepixel gives #3366cc and, for "zz12", #000000.
 - [x] **TW-127 / TW-129** (runner R-13) – resolved in run 18: `xs-preferences` sets and reads back its options (`15` equal; `06` continued as TW-134); the reference opens Feather / Save Bitmap Selection, the "add swatches" file dialog and receives the library drop; `xs-canvas/15` selects R1 first. The plain arrow keys in `xs-shortcuts/10` moved to TW-132.
-- [ ] **TW-132** (runner R-14; needs: runner change, then the next run) – reference-side history read-back error (`menu-edit/01, 22`), Delete and Ctrl+D without effect (`menu-edit/09, 20`), plain arrow keys without effect (`xs-shortcuts/10`), text-tool state carried between units (`tool-text/02, 03, 07, 14`) and Firepixel's missing enabled state in the menu read-back (`xs-canvas/15_snap_pixels_disabled`).
+- [x] **TW-132** (runner R-14) – runner changed after run 18: read-back scripts on the reference side record open dialogs first and every cancelled dialog is logged; the history read-back is guarded and retried (`menu-edit/01, 22`); Delete, Ctrl+D and the plain arrow keys are checked for effect and retried once (`menu-edit/09, 20`, `xs-shortcuts/10`); the text tool is left with Escape at the start of a unit (`tool-text`); Firepixel's menu read-back takes the enabled state from the accessibility tree (`xs-canvas/15`). Confirm in run 19.
 
 Questions answered after run 16: **Q-49** (the colour pop-up HEX field now parses every keystroke like the
 reference), **Q-51** (see TW-111 above), **Q-55** (`xs-shortcuts/15`: Firepixel's text-tool click was already right;
@@ -163,7 +159,7 @@ VER-10.28.
   **Steps:** File ▸ Import an SVG with groups and layers, a single-layer SVG, a PDF and a vector test file; use the "Vector File Options" (scale 200 %, page choice, "Convert layers to states").
   **Expected:** Import succeeds and scale works (see VER-3.32); known gaps: no layers from SVG/PDF, options without effect (FINDINGS U-1) – note anything else.
 
-## A4. Wave-4 features to try
+## A4. Wave-4 features and later fixes to try
 
 - [ ] **A4-01** (BA-103; needs: real window)
   **Steps:** File ▸ HTML Setup, change a few values (e.g. extension, style), click *Set Defaults*, OK; File ▸ New, open HTML Setup again.
@@ -195,6 +191,18 @@ VER-10.28.
 - [ ] **A4-10** (BA-039; needs: real mouse)
   **Steps:** Repeat A4-09 at 50 % and 200 % zoom, on a 2000 × 1500 bitmap, and with a bitmap inside a symbol being edited.
   **Expected:** Painting stays smooth; at 50 % the preview may look slightly blocky until release; the bitmap inside a symbol is previewed on top until release (known limit).
+- [ ] **A4-11** (TW-131; needs: real window)
+  **Steps:** Document with two slices with URLs and one hotspot. URL panel ≡ menu without and with a selected URL; *Add Used URLs to Library*; *Add URL...*, *Edit URL...*, *Delete URL*; *New URL Library...*; *Export URLs...* as `.htm` and `.txt`; *Clear Unused URLs*; *Import URLs...* of both files.
+  **Expected:** Nine entries in the reference's order, Edit and Delete grey without a selected URL; the used URLs appear in the list; the new library shows in the panel's library list and survives a restart; both exported files load back with the same URLs.
+- [ ] **A4-12** (TW-135; needs: real mouse and keyboard)
+  **Steps:** Pointer tool: double-click inside the word "Zeile" of a multi-line text and type "Q" at once, then a few more characters quickly; repeat at the start and end of a line.
+  **Expected:** The editor opens with the caret at the click point; every typed character appears there in order ("ZeilQe eins"), none is lost and the caret does not jump.
+- [ ] **A4-13** (TW-134; needs: real window)
+  **Steps:** Edit ▸ Preferences ▸ Edit: switch *Delete objects when cropping* off. Vector test file with paths partly and fully outside 40,40–320,260 plus a bitmap crossing the edge; crop with the crop tool, undo, then Crop Document and Modify ▸ Canvas ▸ Canvas Size; switch the option on and repeat.
+  **Expected:** Off: all objects stay, the bitmap is not clipped, everything only moves with the canvas origin. On: objects fully outside are deleted on all layers and states, the crossing bitmap is clipped, crossing vector paths stay whole.
+- [ ] **A4-14** (Linux build; needs: real Linux desktop, X11 and Wayland)
+  **Steps:** On Ubuntu 22.04 or later (or Debian 12): `chmod +x Firepixel-x86_64.AppImage` and start it; unpack the tar.gz and start `./firepixel`; open, save and export a file; start `./firepixel-cli --help`.
+  **Expected:** The window opens under X11 and Wayland with the GPU renderer; open and save dialogs appear (needs `xdg-desktop-portal`); missing runtime libraries are reported clearly; no OpenSSL is needed.
 
 ---
 

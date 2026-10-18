@@ -14,34 +14,36 @@ exist and work; FW-PNG round-trips; CLI, JSF and MCP drive everything.
 | Proven 1:1 | **89.6 %** (43 / 48) |
 | Measurement quota, all 48 units | **86.9 %** (1066 / 1226 steps, newest run per unit; run 17 alone: 86.3 %) |
 | Canvas image pairs within 1 % | 174 / 202 |
-| Tests | 2676 green, 0 red, 134 ignored at `4e677046` |
-| Latest release | v0.2.1 pre-release (18 Oct 2026, Windows x64, macOS universal arm64 + x86_64) |
-| Open findings | 7 fixable · 5 deferred · 20 informational · 850+ closed |
+| Tests | 2695 passed, 1 failed (missing command text, fixed in `0f96dd71`), 134 ignored at `6e2ad3b1` |
+| Latest release | v0.2.1 pre-release (18 Oct 2026, Windows x64, macOS universal arm64 + x86_64); v0.2.2 planned for 18 Oct 2026 with Linux x86_64 |
+| Open findings | 3 fixable · 5 deferred · 20 informational · 850+ closed |
 
 ## Next (in order)
 
-1. **Fixes for the run-18 findings, then run 19 of the affected units:** the URL panel menu (TW-131, direct fix,
-   `panel-library-styles`); behaviour descriptions first for four text shortcuts under "Web Standard" (TW-133,
-   `xs-shortcuts`), "delete paths when cropping" (TW-134, `xs-preferences`) and typing after a pointer double-click
-   on a text (TW-135, `tool-text`); runner R-14 for the reference-side effects (TW-132: history read-back, Delete,
-   Ctrl+D and arrow keys, text-tool state; `menu-edit`, `xs-shortcuts`, `tool-text`, `xs-canvas`) and the
-   text-tool read-back (TW-130, Q-57); the States menu width (TW-125 rest) in the next run of
-   `panel-pages-states-history`.
-2. **Human click-test** of [docs/VERIFICATION.md](docs/VERIFICATION.md) (embedded panel dialogs, real keyboard
+1. **Run 19 of the affected units, then its evaluation:** the fixes after run 18 are in `main` (URL panel menu
+   TW-131, text fixes TW-133 in part, crop option TW-134, typing after a pointer double-click TW-135, runner R-14 for
+   TW-132); run 19 covers `panel-library-styles`, `xs-shortcuts`, `xs-preferences`, `tool-text`, `menu-edit` and
+   `xs-canvas`, reads back the reference's text lines (TW-130, Q-57) and the States menu width (TW-125 rest,
+   `panel-pages-states-history`). Still to measure: "justified" alignment on point text (TW-133 rest).
+2. **Release v0.2.2** (pre-release, planned 18 Oct 2026): Windows x64, macOS universal and, for the first time,
+   Linux x86_64 (tar.gz and AppImage, glibc 2.35+; built and start-probed in CI, not yet tried on a real Linux
+   desktop).
+3. **Human click-test** of [docs/VERIFICATION.md](docs/VERIFICATION.md) (embedded panel dialogs, real keyboard
    paths, brush strokes with a real mouse, drag and drop between windows, the open checks in section A2), including
-   the wave-3 Batch Studio UI, the PDF/PSD export options and the wave-4 features in section A4.
-3. **Remaining deferred items:** BA-101 (JPEG 2000 in PDF, PSD stroke), BA-108 (writing AVIF/HEIF/JXL metadata
+   the wave-3 Batch Studio UI, the PDF/PSD export options and section A4 (wave-4 features, URL panel menu, typing after
+   a double-click, the crop option, the Linux start).
+4. **Remaining deferred items:** BA-101 (JPEG 2000 in PDF, PSD stroke), BA-108 (writing AVIF/HEIF/JXL metadata
    boxes), BA-110 rest (lossy LZW with an SSIM bound), BA-083 (resampler hashes on another OS), U-1 PDF import
-   layers; then Linux builds.
+   layers.
 
 ## What remains
 
 ### Fixable remnants (`[F]`)
 
 - PDF import: no layers (the pure-Rust PDF reader exposes no optional content groups).
-- Run 18: TW-131 (URL panel menu), TW-133 (text shortcuts under "Web Standard"), TW-134 (delete paths when
-  cropping), TW-135 (typing after a pointer double-click), TW-130 (text-tool read-back), TW-132 (runner). Run 18
-  closed TW-125 to TW-129.
+- TW-130 / Q-57 (the reference's text-tool read-back; waits for run 19) and TW-133 rest ("justified" on point
+  text). Run 18 closed TW-125 to TW-129; the wave after it closed TW-131 (URL panel menu), TW-133 in part, TW-134
+  (crop option), TW-135 (typing after a pointer double-click) and TW-132 (runner R-14), to be confirmed in run 19.
 
 ### Deferred expansion items (`[V]`)
 

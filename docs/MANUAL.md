@@ -11,6 +11,15 @@ and mouse handling.
 additional libraries. `firepixel-cli.exe` (command line and AI control) sits next to it but is not
 needed for the user interface.
 
+**Linux (x86_64, glibc 2.35 or later, e.g. Ubuntu 22.04 or Debian 12):** either make the AppImage
+executable with `chmod +x Firepixel-x86_64.AppImage` and run it, or unpack the tar.gz and run
+`./firepixel` in the folder `Firepixel-Linux-x64` (it also holds `firepixel-cli`, the manuals, a
+`.desktop` file and icons). Firepixel runs on Wayland and X11 and needs a Vulkan or OpenGL driver plus
+the libraries `libxkbcommon0`, `libxkbcommon-x11-0` (X11) and `libwayland-client0` (Wayland), which most
+desktops already have. Open and save dialogs go through the XDG desktop portal, so
+`xdg-desktop-portal` and a portal backend for your desktop (GTK, KDE, …) must be installed. The Linux
+build is new and has not yet been tried on many desktops.
+
 **Starting:**
 
 - Double-click `firepixel.exe`, or drag files onto the exe or the open window.
@@ -107,6 +116,16 @@ bitmap, or paints into a bitmap inside a symbol, is previewed on top until you r
 - *Modify ▸ Mask ▸ Reveal All / Hide All* puts an empty mask over the selected object. The Layers
   panel and the inspector still show the object itself (e.g. the bitmap) with the mask as a second
   thumbnail.
+- *Select ▸ Select Inverse* inverts a pixel selection only; without one it shows a warning and leaves
+  the selected objects alone.
+- *Text ▸ Size ▸ Larger / Smaller* change the size by exactly 1 pt (24 → 25 → 24), on selected texts
+  and in the open text editor; the smallest size is 1 pt. *Stretched Alignment* affects only
+  fixed-width text blocks; point text (auto width) keeps its alignment.
+- **Cropping:** the crop tool, *Edit ▸ Crop Document* and *Modify ▸ Canvas ▸ Canvas Size* follow the
+  option *Edit ▸ Preferences ▸ Edit ▸ Delete objects when cropping* (on by default). On: objects
+  entirely outside the new canvas are deleted on all layers and states, bitmaps crossing the edge are
+  clipped, vector objects crossing it stay whole. Off: nothing is deleted or clipped, the objects only
+  move with the canvas.
 - *Select ▸ Select Similar* adds objects with the same fill, stroke, opacity and blending mode.
 - *Text ▸ Detach from Path* turns the text back into a text block with its previous width, centered
   on the path. The path is on top afterwards. Text on a path shows only the first paragraph, as in
@@ -168,6 +187,13 @@ Important panels:
   frame encloses only the current frame.
 - **Optimize:** export format and colors.
 - **History:** step back, replay steps or save them as a command.
+- **URL:** URLs for slices, hotspots and buttons. The ≡ menu has *Add Used URLs to Library* (from the
+  slices, hotspots and buttons of all open documents), *Clear Unused URLs*, *Add URL...*, *Edit URL...*
+  and *Delete URL* (both need a selected URL), *New URL Library...*, *Import URLs...* and *Export
+  URLs...* (`.txt` with one URL per line or `.htm` with one link per URL) and Help. The default library
+  is `URLs.txt` in `%APPDATA%\Firepixel`; further libraries are HTML files in its `URL Libraries`
+  folder and can be chosen in the panel's library list. Changes to a library cannot be undone with
+  Ctrl+Z, and these menu commands are not available to scripts, the command line or MCP.
 
 The **Properties inspector** at the bottom shows, depending on the selection, fill, stroke,
 opacity, blending mode, Live Filters (+/−) and text or symbol settings.
