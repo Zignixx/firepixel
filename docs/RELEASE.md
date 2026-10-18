@@ -80,8 +80,9 @@ Windows CI itself; macOS and Linux run only manually or via `prerelease.yml`
 - macOS: not notarized – first launch via right-click ▸ Open, or
   `xattr -dr com.apple.quarantine Firepixel.app`.
 - The Windows runner has no real GPU; the kittest tests run on wgpu's software renderer.
-- Linux: built on Ubuntu 22.04, so the binaries need glibc 2.35+ and OpenSSL 3 (`libssl.so.3`, used
-  for the AI model download). X11, Wayland, xkbcommon, Vulkan and EGL/GL are loaded at runtime; a
+- Linux: built on Ubuntu 22.04, so the binaries need glibc 2.35+. No OpenSSL: the AI model
+  download uses rustls on non-Windows targets (`fp-ai/Cargo.toml`; Windows keeps SChannel), and the
+  inspect step fails if `ldd` lists `libssl`/`libcrypto`. X11, Wayland, xkbcommon, Vulkan and EGL/GL are loaded at runtime; a
   Vulkan or OpenGL driver is required. File dialogs use the XDG desktop portal (no GTK). The
   AppImage bundles no libraries; it needs FUSE 2 to mount, otherwise run it with
   `--appimage-extract-and-run`. `fp-ui/Cargo.toml` enables the X11/Wayland backends of eframe/winit

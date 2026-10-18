@@ -2,7 +2,8 @@
 # AppImage, optionally plus tests of the platform-neutral crates. No push trigger: manual only
 # (workflow_dispatch) or from the release workflow (workflow_call).
 #
-# Built on ubuntu-22.04 so that the binaries only need glibc 2.35 (and OpenSSL 3) at runtime.
+# Built on ubuntu-22.04 so that the binaries only need glibc 2.35 at runtime (TLS is rustls,
+# no OpenSSL).
 # X11, Wayland, xkbcommon, Vulkan and EGL/GL are loaded at runtime (dlopen), so the target system
 # needs a Vulkan or OpenGL driver but no development packages.
 name: linux-build
@@ -50,7 +51,8 @@ jobs:
           ref: ${{ inputs.ref || github.sha }}
 
       # Build dependencies derived from Cargo.lock:
-      # - pkg-config + libssl-dev: openssl-sys (ureq with native-tls in fp-ai)
+      # - pkg-config: used by -sys build scripts to find system libraries. No libssl-dev: ureq uses
+      #   rustls on non-Windows targets (fp-ai/Cargo.toml)
       # - nasm: build dependency of the AV1 decoder crate (only used for its assembly; harmless)
       # - libwayland-dev, libxkbcommon-dev, libx11-dev, libxcursor-dev, libxrandr-dev, libxi-dev,
       #   libgl1-mesa-dev, libvulkan-dev: headers/pkg-config files of the window system and graphics
@@ -64,7 +66,7 @@ jobs:
           set -euo pipefail
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            pkg-config libssl-dev nasm \
+            pkg-config nasm \
             libwayland-dev libxkbcommon-dev libx11-dev libxcursor-dev libxrandr-dev libxi-dev \
             libgl1-mesa-dev libvulkan-dev \
             desktop-file-utils
@@ -90,6 +92,11 @@ jobs:
             file "$BIN"
             echo "Linked libraries of $BIN:"
             ldd "$BIN"
+            # Guard: no dynamic OpenSSL (ureq must use rustls on Linux)
+            if ldd "$BIN" | grep -E 'libssl|libcrypto'; then
+              echo "::error::$BIN links OpenSSL (libssl/libcrypto); expected rustls"
+              exit 1
+            fi
             echo "Highest glibc symbol version: $(objdump -T "$BIN" | grep -o 'GLIBC_[0-9.]*' | sort -uV | tail -n 1)"
           done
           target/release/firepixel-cli --version
@@ -116,8 +123,8 @@ jobs:
           tar -C dist -czf "dist/Firepixel-Linux-x64-${VERSION}.tar.gz" Firepixel-Linux-x64
           tar -tzf "dist/Firepixel-Linux-x64-${VERSION}.tar.gz"
 
-      # Kept simple: AppRun starts usr/bin/firepixel; no libraries are bundled (glibc, OpenSSL 3
-      # and the graphics drivers come from the system).
+      # Kept simple: AppRun starts usr/bin/firepixel; no libraries are bundled (glibc and the
+      # graphics drivers come from the system).
       - name: Create AppImage
         run: |
           set -euo pipefail
@@ -232,7 +239,7 @@ jobs:
       - name: Install build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends pkg-config libssl-dev nasm
+          sudo apt-get install -y --no-install-recommends pkg-config nasm
 
       - name: Rust stable
         run: |

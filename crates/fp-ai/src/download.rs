@@ -98,9 +98,12 @@ pub fn download(id: ModelId, prog: &Progress) -> Result<PathBuf> {
 }
 
 fn fetch(url: &str, part: &Path, size: u64, sha: &str, prog: &Progress) -> Result<()> {
-    let tls = ureq::tls::TlsConfig::builder()
-        .provider(ureq::tls::TlsProvider::NativeTls)
-        .build();
+    // Windows: SChannel via native-tls; elsewhere rustls (see Cargo.toml), no OpenSSL.
+    #[cfg(windows)]
+    let provider = ureq::tls::TlsProvider::NativeTls;
+    #[cfg(not(windows))]
+    let provider = ureq::tls::TlsProvider::Rustls;
+    let tls = ureq::tls::TlsConfig::builder().provider(provider).build();
     let agent: ureq::Agent = ureq::Agent::config_builder()
         .tls_config(tls)
         .timeout_connect(Some(std::time::Duration::from_secs(30)))

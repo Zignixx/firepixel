@@ -20,8 +20,14 @@ rayon = { workspace = true }
 faer = { version = "0.24", default-features = false, features = ["std", "rayon"] }
 # Prüfsumme der Modelldateien
 sha2 = "0.10"
-# Download der Modelle nach Zustimmung (TLS über die Windows-Systembibliothek, keine eigene DLL)
+
+# Model download after consent. Windows: TLS through the system library (SChannel, no extra DLL).
+[target.'cfg(windows)'.dependencies]
 ureq = { version = "3", default-features = false, features = ["native-tls"] }
+
+# Other platforms: rustls (ring, bundled webpki roots), so the Linux build does not link OpenSSL.
+[target.'cfg(not(windows))'.dependencies]
+ureq = { version = "3", default-features = false, features = ["rustls"] }
 
 [dev-dependencies]
 png = { workspace = true }
