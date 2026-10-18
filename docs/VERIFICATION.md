@@ -73,13 +73,13 @@ Conventions: coordinates are document pixels; "R1", "E1", "B1", "P1", "PG" are t
   **Expected:** All supported files are added (folder recursively as configured), unsupported files are reported.
 - [ ] **A1-18** (CF-C CT-C-02/03, F19 TW-69; needs: real mouse) – see VER-4.23 and VER-1.36: reorder states/pages and drag across eye icons.
 
-## A2. Open items from comparison runs 12–16
+## A2. Open items from comparison runs 12–17
 
 Comparison run 12 left seven units unclear (`?`). Runs 13 and 14 (17 Oct 2026) resolved or reclassified all of
 them; they stay listed here, ticked, so the history of each check is clear. Run 15 (17/18 Oct 2026) resolved
 TW-97, TW-110, TW-112, TW-114 and TW-116; run 16 (18 Oct 2026) resolved TW-113, TW-118, TW-119, TW-120 and TW-121.
-The open checks below come from runs 15 and 16; the fixes made after run 16 are confirmed by the full run
-that follows it.
+Full run 17 (18 Oct 2026) confirmed TW-115 and TW-123 and the `xs-canvas` pair review; it did not confirm TW-122
+(continued as TW-126) and added TW-125 to TW-130. The open checks below come from runs 16 and 17.
 
 - [x] **TW-100** (`panel-library-styles/03`) – resolved: run 13 measured equal positions at an integer drop point; the unit counts as equal and the half-pixel case is no longer tracked.
 - [x] **TW-101** (`xs-file-formats/09`) – resolved in run 13: import by dragging lands on the same pixels 121,120–417,322 in both programs.
@@ -100,24 +100,36 @@ that follows it.
 - [x] **TW-120** (`inspector-group-symbol/11, 12`) – resolved in run 16: with two objects selected both programs show the topmost object's fill and stroke (black fill; red 1 px stroke).
 - [x] **TW-121** (`inspector-group-symbol/05`) – resolved in run 16: the button instance shows the symbol name, a disabled text field, "PNG32" and "Add filter…" in both programs.
 - [x] **TW-111 / Q-51** (`inspector-group-symbol/04–05`) – resolved without a change: the reference does not bring Properties back to the front by itself either; Firepixel is right and runner step 04b stays.
-- [ ] **TW-115** (`panel-swatches-mixer/00a, 19, 20`; needs: next full run, else real window)
-  **Steps:** Swatches panel menu ▸ Colour cubes in both programs; hover the first and the sixth swatch; click the sixth swatch with a rectangle selected.
-  **Expected:** Both show #ffbfbf and #efffbf and the rectangle gets #efffbf. Runner R-12 now probes Firepixel at the 9 px pitch; tick when the full run measures this equal.
-- [ ] **TW-122 / Q-54** (`xs-shortcuts/06`; needs: next full run, else real keyboard)
+- [x] **TW-115** (`panel-swatches-mixer/00a, 19, 20`) – resolved in run 17: at the 9 px pitch the probe and the read-back give #efffbf in both programs.
+- [ ] **TW-122 / Q-54 → TW-126** (`xs-shortcuts/06`; needs: behaviour description of the reference machine's shortcut set, then run 18, else real keyboard)
   **Steps:** Open the text test file, select the text object with the pointer tool (do not edit it); press Ctrl+Shift+B, Escape, reselect; repeat with Ctrl+Shift+I, Ctrl+Shift+U, Ctrl+Shift+E, Ctrl+Alt+Shift+S, Ctrl+Shift+Period and Ctrl+Shift+Comma.
-  **Expected:** With the Firepixel shortcut set (now written into the runner profile) Ctrl+Shift+B is Arrange ▸ Send Backward and, with nothing to move, changes nothing; no dialog opens, the text stays selected and the style shortcuts toggle bold/italic/underline across the whole selection. Tick when the full run measures this equal.
-- [ ] **TW-123** (`panel-optimize/13`; also the Frames panel menu and the swatch drop-down; needs: next full run, else real window)
-  **Steps:** Optimize panel with GIF; right-click the colour table. Open the Frames panel menu and the swatch drop-down.
-  **Expected:** Each menu is about as wide as its longest item (Optimize context menu about 270 px, was about 600 px). Also check the new 33 px arrow column in menus app-wide against the reference.
-- [ ] **xs-canvas pairs** (`xs-canvas/03, 11, 13, 14, 16`; needs: eyes on the image pairs)
-  **Steps:** Open the run-16 gallery for `xs-canvas` and compare the canvas pairs at the fit zoom 0.42833.
-  **Expected:** Decide whether the remaining 1.6–12.7 % come only from page phase and view size (then the unit counts as equal) or from rendering (grid colour, pixel grid, edges).
+  **Expected:** The same result as the reference with the shortcut set the reference machine actually uses. Run 17 (Firepixel set in the runner profile): Ctrl+Shift+B equal (no change); the reference keeps the text selected on Ctrl+Shift+I, changes nothing on Ctrl+Shift+E and Ctrl+Alt+Shift+S and grows the text to 25 pt on Ctrl+Shift+Period; Firepixel drops the selection, opens the Text Editor, sets "stretch" alignment and keeps 24 pt.
+- [x] **TW-123** (`panel-optimize/13`, panel menus) – resolved in run 17: the Optimize colour-table menu is 282 vs. 270 px (frame included); Pages, History, Swatches and Layers menus are within 5 px of the reference; main menus stay narrower than the reference, none became wider through the 33 px arrow column.
+- [x] **xs-canvas pairs** (`xs-canvas/03, 11, 13, 14, 16`) – reviewed in run 17: the fit pair differs by the fit zoom of different view sizes (0.43875 vs. 0.44875), the grid pair by the sub-pixel phase of one-pixel grid lines at 0.42833 (cells and lines line up); no rendering difference, the unit counts as equal.
+- [ ] **TW-125** (`panel-library-styles/08`, `panel-pages-states-history/07`; needs: fix, then run 18, else real window)
+  **Steps:** Open the Common Library panel menu and the States panel menu.
+  **Expected:** Each menu is as wide as its longest item plus the usual margin (reference: 179 px and 207 px); Firepixel shows 231 px for both (minimum width).
+- [ ] **TW-126** (`menu-edit/01, 02`, `dialogs-d31-d40/06`, `menu-modify-a/11`; needs: behaviour description, then run 18, else real keyboard)
+  **Steps:** In both programs select a rectangle and press Ctrl+Shift+D, then Ctrl+Z; check Edit ▸ Clone's shortcut in each program's active shortcut set.
+  **Expected:** Ctrl+Shift+D clones in both programs (history shows the clone step). In run 17 Firepixel with the "Firepixel" set did nothing.
+- [ ] **TW-128** (`panel-optimize/19`; needs: fix, then run 18, else real window)
+  **Steps:** Open a document with two slices; select the first slice and choose JPEG in the Optimize panel, select the second and choose GIF; read `exportOptions.exportFormat` of both slices with a script.
+  **Expected:** JPEG and GIF (reference); Firepixel returned `null` for both in run 17.
+- [ ] **TW-130 / Q-57** (`xs-shortcuts/15`; needs: behaviour description, then run 18, else real mouse)
+  **Steps:** Select the text "Abc 123" with the pointer, choose the Text tool and click inside the "A"; type "V" and "R", press Escape.
+  **Expected:** The same as the reference. In run 17 the reference started a new text object ("Vrc") and Firepixel added to the selected text ("Abc 123Vr").
+- [ ] **Q-49** (`color-popup/05`; needs: real keyboard)
+  **Steps:** Select a rectangle, open the fill colour pop-up, type #3366CC into the hex field and press Enter; repeat with "zz12".
+  **Expected:** The same result as the reference. The runner cannot prove it: the reference's pop-up closes without applying the text the runner sets; Firepixel gives #3366cc and, for "zz12", #000000.
+- [ ] **TW-127 / TW-129** (runner R-13; needs: runner change, then run 18) – `xs-preferences/06, 15` must set the stored option to a defined value before the action; reference-side dialog, file-dialog and drop failures in `dialogs-d31-d40`, `panel-swatches-mixer/06`, `panel-library-styles/03`, `xs-shortcuts/10` and `xs-canvas/15` need a retry, a remeasure or a selection in the step.
 
 Questions answered after run 16: **Q-49** (the colour pop-up HEX field now parses every keystroke like the
 reference), **Q-51** (see TW-111 above), **Q-55** (`xs-shortcuts/15`: Firepixel's text-tool click was already right;
 the runner clicked a different point, the step now clicks document 62,62), **Q-56** (`xs-canvas/15`: Modify-menu
 enable rules implemented and pinned by tests; Snap to Pixel is grey without a path object; Arrange is grey in bitmap
-edit mode). The next full run confirms them. Grid snapping at low zoom stays in VER-10.28.
+edit mode). Run 17 confirmed Q-51 and Q-56 (Firepixel `ok`; the reference greys Snap to Pixel without a selection),
+continued Q-55 as TW-130 / Q-57 and left Q-49 to the real keyboard (see above). Grid snapping at low zoom stays in
+VER-10.28.
 
 ## A3. Spot checks of the fixes from 2026-10-17
 

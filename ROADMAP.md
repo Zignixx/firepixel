@@ -10,20 +10,22 @@ exist and work; FW-PNG round-trips; CLI, JSF and MCP drive everything.
 
 | Measure | Value |
 |---|---|
-| Parity units equal except for design | **46 / 48** (0 real deviations, 2 unclear, 0 under-measured; run 16) |
-| Proven 1:1 | **95.8 %** (46 / 48) |
-| Measurement quota, all 48 units | **85.0 %** (1042 / 1226 steps; was 84.8 %) |
-| Canvas image pairs within 1 % | about 177 / 201 |
-| Tests | full workspace run green at `e38dc531` (fp-ui 854); re-run including V-1 in progress (last full count 2510 green, 0 red, 133 ignored) |
+| Parity units equal except for design | **42 / 48** (1 real deviation, 5 unclear, 0 under-measured; full run 17) |
+| Proven 1:1 | **87.5 %** (42 / 48) |
+| Measurement quota, all 48 units | **86.3 %** (1057 / 1225 steps, run 17 alone; last full run 13: 79.7 %) |
+| Canvas image pairs within 1 % | 176 / 202 |
+| Tests | 2660 green, 0 red, 134 ignored at `cd30c354` |
 | Latest release | v0.2.1 pre-release (18 Oct 2026, Windows x64, macOS universal arm64 + x86_64) |
-| Open findings | 1 fixable · 5 deferred · 20 informational · 845+ closed |
+| Open findings | 7 fixable · 5 deferred · 20 informational · 845+ closed |
 
 ## Next (in order)
 
-1. **Evaluation of full parity run 17** over all 48 units (runner R-12, Firepixel shortcut set in the runner
-   profile): check the fixes after run 16 (TW-122, TW-123 including the app-wide 33 px menu arrow column,
-   TW-115/124, Q-49, Q-55, Q-56), new tweaks and questions, a review of the `xs-canvas` canvas pairs, updated
-   figures.
+1. **Fixes for the run-17 findings, then run 18 of the affected units:** behaviour descriptions first for the
+   reference machine's active shortcut set (TW-126: Ctrl+Shift+D Clone, text size and style shortcuts; affects
+   `menu-edit`, `menu-modify-a`, `dialogs-d31-d40`, `xs-shortcuts`) and the text-tool click on a selected text
+   (TW-130, Q-57); direct fixes for per-slice export formats in the Optimize panel (TW-128, `panel-optimize`) and the
+   minimum width of short panel menus (TW-125); runner R-13 for defined option start states and reference-side
+   retries (TW-127, TW-129; `xs-preferences`, `dialogs-d31-d40`, `panel-swatches-mixer`, `panel-library-styles`).
 2. **Human click-test** of [docs/VERIFICATION.md](docs/VERIFICATION.md) (embedded panel dialogs, real keyboard
    paths, brush strokes with a real mouse, drag and drop between windows, the open checks in section A2), including
    the wave-3 Batch Studio UI, the PDF/PSD export options and the wave-4 features in section A4.
@@ -36,6 +38,8 @@ exist and work; FW-PNG round-trips; CLI, JSF and MCP drive everything.
 ### Fixable remnants (`[F]`)
 
 - PDF import: no layers (the pure-Rust PDF reader exposes no optional content groups).
+- Run 17: TW-125 (minimum panel-menu width), TW-126 (shortcut set), TW-127 and TW-129 (runner), TW-128 (per-slice
+  export formats), TW-130 (text-tool click on a selected text).
 
 ### Deferred expansion items (`[V]`)
 

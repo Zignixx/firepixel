@@ -27,9 +27,9 @@ Findings are grouped by their state:
 
 ---
 
-## [F] Fixable now (1)
+## [F] Fixable now (7)
 
-Recounted after comparison run 16 (18 Oct 2026) and the fix wave that followed it. The earlier remnants (sprite
+Recounted after full comparison run 17 (18 Oct 2026) over all 48 units. The earlier remnants (sprite
 padding default, Shift-constrain for L-shape/arrow line, import rubber band, New Style defaults, text runs, SVG
 layers, symbol origin, simple brush runner, TW-101 import edge, TW-102/103 export format choice, TW-104 symbol
 properties header, TW-100 library drop, TW-105/106 runner effects, TW-107 start colours, TW-109 Alt rectangle) are
@@ -56,8 +56,24 @@ The wave after run 16 closed the rest:
   clicked a different point, step `xs-shortcuts/15` fixed), Q-56 (Modify-menu enable rules implemented and pinned by
   tests; Arrange is grey in bitmap edit mode).
 
+Full run 17 (18 Oct 2026, preview `2026-10-18_04-57` from `7e3d2d12`, runner R-12) confirmed **TW-115** (swatch
+probe and read-back #efffbf on both sides), **TW-123** (Optimize colour-table menu 282 vs. 270 px; panel menus within
+5 px of the reference, none wider because of the 33 px arrow column), **TW-124** (object read-back, `for`-loop
+read-backs, guide drag onto the ruler, `unsupported` instead of errors), **TW-111 / Q-51** and the byte-identical
+animated GIF. It did not confirm **TW-122**: under the shortcut set the runner now writes, the text style shortcuts
+and Ctrl+Shift+D behave differently from the reference machine (continued as TW-126). **Q-55** is continued as
+TW-130 / Q-57. **Q-49** cannot be proven by the runner (the reference's pop-up closes without applying the text the
+runner sets); it moves to the human click-test. Tags in the table: *RE spec* = write a behaviour description from
+the reference first, *direct fix* = fix from the measured values, *runner* = parity runner change (R-13).
+
 | ID | Area | What is open (expected vs. current) |
 |---|---|---|
+| TW-125 | Menus, panel pop-up menus (*direct fix*) | Short panel menus keep a minimum width of about 230 px: Common Library menu 231 vs. 179 px, States menu 231 vs. 207 px in run 17 (`panel-library-styles/08`, `panel-pages-states-history/07`). Expected: sized to the longest item like the other panel menus (within 5 px after TW-123). Not caused by the arrow column; the Common Library width is the same as in run 13. |
+| TW-126 | Shortcut sets, parity runner profile (*RE spec*) | Since R-12 the runner writes the "Firepixel" set into Firepixel's profile. In that set Ctrl+Shift+D is Exit Image Edit, not Clone, so `menu-edit/01, 02`, `dialogs-d31-d40/06` and `menu-modify-a/11` start from a different document (0 vs. 2 history steps; 1 vs. 12 tweened instances); in `xs-shortcuts/06` the reference keeps the text selected on Ctrl+Shift+I and grows it to 25 pt on Ctrl+Shift+Period, Firepixel drops the selection, opens the Text Editor on Ctrl+Shift+E and sets "stretch" alignment on Ctrl+Alt+Shift+S. Run 10 (default "Web Standard" set) cloned equally. Needs: the reference machine's active set read key by key, then either the runner set or Firepixel's built-in set corrected. Continues TW-122 / Q-54. |
+| TW-127 | Parity runner, `xs-preferences/06, 15` (*runner*) | Both steps click a stored option ("delete paths when cropping", "scale attributes") without fixing its start state. Run 17: the reference keeps all seven paths after the crop, Firepixel removes the three outside (44 % canvas pair); stroke 2 vs. 1 after scaling to 200 % (run 12: 1 vs. 1). Expected: the step sets the option to a defined value on both sides and reads it back; then compare again. |
+| TW-128 | Optimize panel, slices (*direct fix*) | With a slice selected, choosing JPEG and GIF in the Optimize panel stores them on the slices in the reference (`exportOptions.exportFormat` = JPEG \| GIF); in Firepixel `exportOptions` of both slices stays `null` (`panel-optimize/19`; the panel itself shows the chosen formats). Expected: per-slice export settings written to the slice and readable through the script API. |
+| TW-129 | Parity runner, reference side (*runner*) | Reference-side artefacts in run 17: Feather and Save Bitmap Selection report "no dialog open" after the marquee drag (`dialogs-d31-d40/09, 10, 14, 15, 16, 18`), the "add swatches" file dialog does not open in time (`panel-swatches-mixer/06`), the Document Library drop leaves the element count at 4 (`panel-library-styles/03`), the selection is empty after an arrow key (`xs-shortcuts/10`), and Snap to Pixel is grey without a selection (`xs-canvas/15`). Expected: retry or remeasure, or a selection in the step script. |
+| TW-130 (Q-57) | Text tool, click on a selected text (*RE spec*) | `xs-shortcuts/15`: with TX1 selected, a text-tool click at document 62,62 (inside the "A") starts a new text object in the reference ("Vrc"), while Firepixel places the caret in TX1 ("Abc 123Vr"). Q-55 assumed the click point was the cause; run 17 clicks the same point on both sides. Needs: the reference's hit test for the text tool on existing text (and why "R" gives "rc"). |
 | U-1 rest | File ▸ Import, PDF | SVG files now import with their layers; **PDF files still arrive as one layer** because the pure-Rust PDF reader exposes no optional content groups (layers). Library limit; needs either an upstream feature or an own OCG reader. |
 
 ## [V] Deferred / expansion items (5)
@@ -95,7 +111,7 @@ Wave 4 (18 Oct 2026) closed the rest of the expansion work:
 | BA-037 | AI hover preview | Tested with a stub decoder only; not yet tried with real model weights. Works only with a warm cache (model loaded, embedding cached); it never loads a model itself. |
 | BA-039 | Brush live preview | Bitmaps with live effects are slower (whole scratch raster, 48 px effect margin); strokes that create a new bitmap or paint into a bitmap inside a symbol use the old overlay above all objects; below 100 % zoom the composite tiles are sampled NEAREST. Frame time on 2000 × 1500 rose from 2.4 to 4.3 ms on average. |
 | BA-104 (CMD-1) | Commands menu | Screen capture uses the system's own capture tool, so there is no interactive drag rectangle (the area is entered as numbers before the countdown). The symbol script skips bitmaps, nested instances and compound shapes and writes gradients as solid fills. |
-| TW-117 | Comparison runner, colour pop-up | Unchanged in run 15. Canvas shots differ by capture method: Firepixel's shot contains the open colour pop-up and the selection handles, the original's does not (6.3 % of pixels above 32 levels); the fill under the hovered swatch is equal. Information only. |
+| TW-117 | Comparison runner, colour pop-up | Unchanged in runs 15 and 17. Canvas shots differ by capture method: Firepixel's shot contains the open colour pop-up and the selection handles, the original's does not (6.3 % of pixels above 32 levels); the fill under the hovered swatch is equal. Information only. |
 | BA-097 | Performance (no GPU) | The first drag of large objects takes up to ~1–2 s with software rendering: the drag preview texture (`canvas\ghost.rs::drag_sprite`) holds the whole selection (up to ~6000 × 1500 px) and uploads at ~30 MB/s; later steps take ~100–200 ms. Idea: limit the preview to the visible area plus a margin. |
 | BA-098 | Performance (no GPU) | The first frame after zoom/scroll with a large canvas texture takes up to 1.4 s (`canvas\mod.rs` renders the visible area plus half a view of margin on each side). Edits only upload the changed rectangle; zoom/scroll still upload everything. |
 | BA-021 | English UI texts | The English labels of D39 ("Sample radius:") and the English history names of the Select commands were not measured in the original (only the German UI of the original is installed). |
