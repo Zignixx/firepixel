@@ -245,7 +245,7 @@ pub fn apply_events(s: &mut Studio, events: Vec<Progress>) -> Option<fp_batch::R
                     s.files[i].progress = 0.0;
                 }
             }
-            Progress::ItemProgress { index, fraction } => {
+            Progress::ItemProgress { index, fraction, .. } => {
                 if let Some(i) = idx(index)
                     && fraction.is_finite()
                 {
