@@ -124,3 +124,6 @@ text chunks.rs | Größe {w}×{h} über 128
 text popup.rs | menu: {e}
 text tooling.rs | brush: {e}
 text text.rs | runs ≠ text
+
+# Glob example in the Batch Studio name filter (pattern syntax, language-neutral)
+text files.rs | *.png; logo_*
