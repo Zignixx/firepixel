@@ -221,3 +221,21 @@ fn short_panel_menus_size_to_content() {
     }
     assert!(bad.is_empty(), "{bad:?}");
 }
+
+/// TW-136: the URL panel ≡ menu has the size of the reference menu (DE, run 19: 321 × 231 px
+/// including the 1 px border; nine entries, three separators). The labels keep their "..." like
+/// the reference's.
+#[test]
+fn url_panel_menu_matches_reference_size() {
+    fp_i18n::set_language("de");
+    let mut h = harness();
+    let (r, names) = panel_menu_rect(&mut h, PanelId::Url);
+    eprintln!("Url ≡: {:.0} × {:.0} px ({names:?})", r.width(), r.height());
+    assert_eq!(names.len(), 9, "{names:?}");
+    assert!(
+        (r.width() - 321.0).abs() <= 5.0 && (r.height() - 231.0).abs() <= 5.0,
+        "Url ≡: {:.0} × {:.0} px, reference 321 × 231 px",
+        r.width(),
+        r.height()
+    );
+}
