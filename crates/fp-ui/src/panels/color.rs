@@ -142,15 +142,26 @@ pub fn swatches(ui: &mut Ui, st: &mut AppState) {
         &common::t("panel-swatches-menu"),
         true,
     );
-    egui::Popup::menu(&resp).frame(crate::menu::menu_frame(&theme)).show(|ui| {
+    let items = [
+        ("panel-swatches-add", "panel.swatches.add"),
+        ("panel-swatches-replace", "panel.swatches.replace"),
+        ("panel-swatches-save", "panel.swatches.save"),
+        ("panel-swatches-clear", "panel.swatches.clear"),
+        ("panel-swatches-sort", "panel.swatches.sortByColor"),
+    ];
+    let labels: Vec<String> = items
+        .iter()
+        .map(|(l, _)| l)
+        .chain(std::iter::once(&"panel-swatches-add-fill"))
+        .map(|l| common::t(l))
+        .collect();
+    // so breit wie der längste Eintrag (TW-123; ohne Grenze füllten die Einträge 600 px)
+    let list_w = fields::list_width(ui, labels.iter().map(|s| s.as_str()), resp.rect.width());
+    egui::Popup::menu(&resp).frame(crate::menu::menu_frame(&theme)).width(list_w).show(|ui| {
         ui.spacing_mut().item_spacing = vec2(0.0, 0.0);
-        for (label, cmd) in [
-            ("panel-swatches-add", "panel.swatches.add"),
-            ("panel-swatches-replace", "panel.swatches.replace"),
-            ("panel-swatches-save", "panel.swatches.save"),
-            ("panel-swatches-clear", "panel.swatches.clear"),
-            ("panel-swatches-sort", "panel.swatches.sortByColor"),
-        ] {
+        ui.set_min_width(list_w);
+        ui.set_max_width(list_w);
+        for (label, cmd) in items {
             if fields::list_item(ui, &common::t(label), false).clicked() {
                 let args = if cmd == "panel.swatches.sortByColor" {
                     json!({"columns": last_grid_columns()})

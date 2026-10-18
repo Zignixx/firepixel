@@ -5,7 +5,6 @@
 
 use super::common::{self, FooterButton};
 use crate::app_state::{Action, AppState};
-use crate::inspector::fields;
 use crate::inspector::glyphs::{self, Glyph};
 use crate::theme::Theme;
 use egui::{Align2, Id, Rect, Sense, Stroke, Ui, pos2, vec2};
@@ -149,24 +148,7 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
             if resp.secondary_clicked() && i != current {
                 actions.push(Action::SetFrame(i));
             }
-            resp.context_menu(|ui| {
-                ui.spacing_mut().item_spacing = vec2(0.0, 0.0);
-                for node in &disposal_nodes {
-                    if let crate::menu::Node::Item {
-                        label,
-                        action: crate::menu::ItemAction::Command(cmd),
-                        enabled,
-                        checked,
-                        ..
-                    } = node
-                        && fields::list_item(ui, label, *checked == Some(true)).clicked()
-                        && *enabled
-                    {
-                        actions.push(Action::Run(cmd.clone(), json!({})));
-                        ui.close();
-                    }
-                }
-            });
+            common::nodes_context_menu(&resp, &disposal_nodes, &mut actions);
             if resp.double_clicked() {
                 if resp.interact_pointer_pos().is_some_and(|p| dr.contains(p)) {
                     ui.data_mut(|dd| dd.insert_temp(Id::new(DELAY), i));

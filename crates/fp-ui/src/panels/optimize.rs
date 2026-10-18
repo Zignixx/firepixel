@@ -963,40 +963,9 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
         }
     }
     st.dialogs.panel_sel.palette = sel.clone();
-    let menu_nodes = common::resource_menu_nodes(st, "6942");
-    let mut menu_actions = Vec::new();
-    tresp.context_menu(|ui| {
-        ui.spacing_mut().item_spacing = vec2(0.0, 0.0);
-        for node in &menu_nodes {
-            match node {
-                crate::menu::Node::Item {
-                    label,
-                    action: crate::menu::ItemAction::Command(cmd),
-                    enabled,
-                    checked,
-                    ..
-                } => {
-                    if ui
-                        .add_enabled_ui(*enabled, |ui| {
-                            fields::list_item(ui, label, *checked == Some(true))
-                        })
-                        .inner
-                        .clicked()
-                    {
-                        menu_actions.push(Action::Run(cmd.clone(), json!({})));
-                        ui.close();
-                    }
-                }
-                crate::menu::Node::Separator => {
-                    ui.separator();
-                }
-                _ => {}
-            }
-        }
-    });
-    for a in menu_actions {
-        st.push(a);
-    }
+    // Kontextmenü 6942 wie die übrigen Bedienfeld-Kontextmenüs: so breit wie der breiteste
+    // Eintrag, mit Häkchenspalte (TW-123; vorher füllten Listeneinträge egui's 600-px-Vorgabe)
+    common::resource_context_menu(&tresp, st, "6942");
     let y = table.bottom() + 4.0;
     common::fit_text(
         ui,

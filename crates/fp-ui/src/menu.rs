@@ -1001,6 +1001,10 @@ const CHECK_COL: f32 = 28.0;
 /// Ab so vielen Einträgen bekommt ein Untermenü einen Bildlauf.
 pub const LONG_SUBMENU: usize = 40;
 const RIGHT_PAD: f32 = 22.0;
+/// Freie Spalte rechts nach dem Text (Kürzel- bzw. Pfeilspalte; native Windows-Menüs lassen sie
+/// auch ohne Kürzel frei). Gemessen am Kontextmenü der Farbtabelle (TW-123): Referenz 270 px bei
+/// gleichem Text, ohne diese Spalte 237 px. Einträge mit Kürzel nutzen dieselbe Spalte.
+const ARROW_COL: f32 = 33.0;
 
 /// Gewünschte Breite eines Menüeintrags (Häkchenspalte, Text, Kürzel, Rand; mindestens die
 /// Menü-Mindestbreite).
@@ -1011,7 +1015,7 @@ fn item_width(ui: &Ui, label: &str, shortcut: Option<&str>) -> f32 {
     let sw = shortcut
         .map(|s| crate::widgets::text_width(ui, s, &font) + 30.0)
         .unwrap_or(0.0);
-    (CHECK_COL + lw + sw + RIGHT_PAD + 10.0).max(theme.metrics.menu_min_width - 8.0)
+    (CHECK_COL + lw + sw.max(ARROW_COL) + RIGHT_PAD + 10.0).max(theme.metrics.menu_min_width - 8.0)
 }
 
 /// Breite eines Menüs: der breiteste Eintrag.

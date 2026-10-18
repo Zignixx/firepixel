@@ -326,6 +326,21 @@ pub fn resource_context_menu(resp: &egui::Response, st: &mut crate::app_state::A
     }
 }
 
+/// Kontextmenü (Rechtsklick) aus fertigen Knoten an `resp`, gestaltet und bemessen wie
+/// [`resource_context_menu`] (so breit wie der breiteste Eintrag, TW-123).
+pub fn nodes_context_menu(
+    resp: &egui::Response,
+    nodes: &[crate::menu::Node],
+    out: &mut Vec<crate::app_state::Action>,
+) {
+    let theme = Theme::current(&resp.ctx);
+    egui::Popup::context_menu(resp)
+        .frame(crate::menu::menu_frame(&theme))
+        .close_behavior(crate::menu::MENU_CLOSE)
+        .info(crate::menu::menu_info())
+        .show(|ui| crate::menu::show_nodes(ui, nodes, out));
+}
+
 pub fn resource_menu(
     ui: &Ui,
     resp: &egui::Response,
