@@ -300,3 +300,22 @@ batch-step-optimize-webSafe = Web-safe colors
 batch-param-optimize-webSafe-dither = Dithering
 batch-value-optimize-webSafe-dither-none = None
 batch-value-optimize-webSafe-dither-ordered = Ordered
+
+# B-3: animation steps (crates\fp-batch\src\steps\animfx.rs)
+
+## Boomerang
+batch-step-anim-boomerang = Boomerang
+    .description = Plays the animation forward and then backward, without repeating the turning frames.
+batch-param-anim-boomerang-hold = Pause at both ends
+
+## Cross-fade loop
+batch-step-anim-crossfade = Cross-fade loop
+    .description = Fades the end of the animation into its start so the loop has no visible jump.
+batch-param-anim-crossfade-frames = Fade frames
+batch-param-anim-crossfade-mode = Fade
+batch-param-anim-crossfade-delay = Duration per fade frame
+    .tooltip = 0 = average frame duration.
+batch-value-anim-crossfade-mode-overlap = Overlap (shorter animation)
+batch-value-anim-crossfade-mode-append = Append frames
+batch-err-crossfade-short = The animation has { $frames } frames; this fade needs at least { $need }.
+batch-err-frame-size = The frames of the animation have different sizes.

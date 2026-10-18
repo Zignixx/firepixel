@@ -495,8 +495,9 @@ fully in memory).
 | `anim.spriteSheet` | Sprite sheet | direction: animation → sheet (columns, spacing, margin; `atlas` json/css/none *json*: extra file `<name>.json` `{image, size, columns, rows, frames:[{x,y,w,h,delayMs}]}` or `<name>.css` with one class `.<name>-<n>` per frame, written next to the sheet; coordinates follow later resize steps) **and** sheet → frames (grid N×M) | yes | own; atlas via the executor's extra-output hook | P2 |
 | `anim.crop`, `anim.resize`, colour ... | – | all geometry/colour steps act on every frame (same parameters, computed in parallel per frame) | yes | as for still images | **P1** |
 | `anim.firstFrame` | Still from animation | **A** `pick` first/middle/last/number/time/sharpest *first*; **A** `number` 1… (clamped to the last frame); **A** `time` ms (frame shown at that time, after the end → last) | yes | own (sharpest = highest variance of the Laplacian) | P2 |
-| `anim.stabilize` | Calm background | freeze static areas over time (removes noise, helps compression) | yes | own (§5.6 "temporal smoothing") | P2 |
-| `anim.boomerang`, `anim.crossfade` | Special | cross-fade at the loop end (n frames) | yes | own | P3 |
+| `anim.stabilize` | Calm background | **A** `threshold` 0…32 *3* (Oklab distance × 100): opaque pixels that change less than this against the (smoothed) previous frame keep its value; frames of different size = error | yes | own (§5.6 "temporal smoothing", step in `steps::gifopt`) | P2 |
+| `anim.boomerang` | Boomerang | **A** `hold` 0…10,000 ms *0* (added to the first and the turning frame); order `0 … n-1 … 1` (turning frames not doubled, 2 frames stay 2) | yes | own | P3 |
+| `anim.crossfade` | Cross-fade loop | **A** `frames` 1…60 *5*; **A** `mode` overlap/append *overlap*: overlap = the last n frames take `(i+1)/(n+1)` of frame i, the first n frames are dropped (needs ≥ 2n + 1 frames, otherwise error); append = n fade frames last → first with `delay` 0…10,000 ms *0 = mean* | yes | own (premultiplied mix) | P3 |
 
 Output of an animation through "Save as": **GIF** (with the optimizer, §3.9), **APNG**
 (`fp-export::animation::apng`, frame optimization: difference rectangle, blend op), **animated

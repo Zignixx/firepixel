@@ -300,3 +300,22 @@ batch-step-optimize-webSafe = Websichere Farben
 batch-param-optimize-webSafe-dither = Dithering
 batch-value-optimize-webSafe-dither-none = Keins
 batch-value-optimize-webSafe-dither-ordered = Geordnet
+
+# B-3: Animationsschritte (crates\fp-batch\src\steps\animfx.rs)
+
+## Bumerang
+batch-step-anim-boomerang = Bumerang
+    .description = Spielt die Animation vorwärts und dann rückwärts, ohne die Wendebilder doppelt zu zeigen.
+batch-param-anim-boomerang-hold = Pause an beiden Enden
+
+## Überblendete Schleife
+batch-step-anim-crossfade = Überblendete Schleife
+    .description = Blendet das Ende der Animation in ihren Anfang über, damit die Schleife ohne sichtbaren Sprung läuft.
+batch-param-anim-crossfade-frames = Überblendbilder
+batch-param-anim-crossfade-mode = Überblenden
+batch-param-anim-crossfade-delay = Dauer je Überblendbild
+    .tooltip = 0 = mittlere Bilddauer.
+batch-value-anim-crossfade-mode-overlap = Überlappend (kürzere Animation)
+batch-value-anim-crossfade-mode-append = Bilder anhängen
+batch-err-crossfade-short = Die Animation hat { $frames } Bilder; diese Überblendung braucht mindestens { $need }.
+batch-err-frame-size = Die Bilder der Animation sind unterschiedlich groß.

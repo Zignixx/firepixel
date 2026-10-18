@@ -6,6 +6,7 @@ use crate::step::StepRegistry;
 
 pub mod adjust; // BATCH-4
 pub mod anim; // BATCH-7
+pub mod animfx; // B-3
 pub mod background;
 pub mod document; // B-3
 pub mod extra; // BA-109
@@ -37,4 +38,5 @@ pub fn register_all(r: &mut StepRegistry) {
     fileops::register(r); // B-3
     document::register(r); // B-3
     pixel::register(r); // B-3
+    animfx::register(r); // B-3
 }
