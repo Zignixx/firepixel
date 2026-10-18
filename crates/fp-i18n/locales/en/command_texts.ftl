@@ -667,5 +667,11 @@ cmdtext-export-settings-of-the-button-slice-stor-38b4e2 = Export settings of the
 cmdtext-spalten-des-farbfeldrasters-vorgabe-21 = Columns of the swatch grid (default 21)
 
 # BA-103/BA-104
+cmdtext-countdown-in-sekunden-vor-der-aufnahme = Countdown in seconds before the capture
+cmdtext-bildschirmausschnitt-in-bildschirmpixeln-2ca2b7 = Screen rectangle in screen pixels (without: the whole primary screen)
+cmdtext-name-des-grafiksymbols-ohne-symbol-der-a-b963ae = Name of the graphic symbol (without: symbol of the selected instance)
+cmdtext-anzahl-der-farben = Number of colors
+cmdtext-palette-im-bedienfeld-farbfelder-zeigen = Show the palette in the Swatches panel
+cmdtext-palette-zusaetzlich-in-diese-act-datei-schreiben = Also write the palette to this ACT file
 cmdtext-felder-der-html-einstellungen-fp-model-h-c0ba73 = HTML settings fields (fp_model::HtmlSettings, snake_case) as the default for new documents and exports; without = read
 cmdtext-gespeicherten-standard-entfernen-es-gelt-893276 = remove the stored default (the built-in defaults apply again)

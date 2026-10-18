@@ -5882,6 +5882,11 @@ pub fn current_swatches(prefs: &crate::Preferences) -> Vec<Argb> {
     }
 }
 
+/// Show `v` as the custom swatch set in the Swatches panel.
+pub fn set_swatches(s: &mut Session, v: &[Argb]) {
+    set_custom_swatches(s, v);
+}
+
 fn set_custom_swatches(s: &mut Session, v: &[Argb]) {
     let list = v
         .iter()

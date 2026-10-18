@@ -667,5 +667,11 @@ cmdtext-export-settings-of-the-button-slice-stor-38b4e2 = Exporteinstellungen de
 cmdtext-spalten-des-farbfeldrasters-vorgabe-21 = Spalten des Farbfeldrasters (Vorgabe 21)
 
 # BA-103/BA-104
+cmdtext-countdown-in-sekunden-vor-der-aufnahme = Countdown in Sekunden vor der Aufnahme
+cmdtext-bildschirmausschnitt-in-bildschirmpixeln-2ca2b7 = Bildschirmausschnitt in Bildschirmpixeln (ohne: ganzer Hauptbildschirm)
+cmdtext-name-des-grafiksymbols-ohne-symbol-der-a-b963ae = Name des Grafiksymbols (ohne: Symbol der ausgewählten Instanz)
+cmdtext-anzahl-der-farben = Anzahl der Farben
+cmdtext-palette-im-bedienfeld-farbfelder-zeigen = Palette im Bedienfeld „Farbfelder“ zeigen
+cmdtext-palette-zusaetzlich-in-diese-act-datei-schreiben = Palette zusätzlich in diese ACT-Datei schreiben
 cmdtext-felder-der-html-einstellungen-fp-model-h-c0ba73 = Felder der HTML-Einstellungen (fp_model::HtmlSettings, snake_case) als Standard für neue Dokumente und Exporte; ohne = lesen
 cmdtext-gespeicherten-standard-entfernen-es-gelt-893276 = gespeicherten Standard entfernen (es gelten wieder die eingebauten Vorgaben)

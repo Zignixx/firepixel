@@ -495,9 +495,11 @@ pub(super) fn method(name: &str, args: &[Arg], ctx: &mut Context) -> FwResult<Js
             )))
         }
         "shiftKeyDown" | "ctrlCmdKeyDown" | "altOptKeyDown" | "isPIExpanded"
-        | "getHideAllFloaters" | "takeScreenshot" | "associatePngwithFw" => {
-            Ok(JsValue::from(false))
-        }
+        | "getHideAllFloaters" | "associatePngwithFw" => Ok(JsValue::from(false)),
+        // primary screen into a new document (not under automation: FP_NO_SHELL_OPEN)
+        "takeScreenshot" => Ok(JsValue::from(
+            crate::shell_open_allowed() && exec(None, "commands.screenCapture", json!({})).is_ok(),
+        )),
         "isPIVisible" | "getFloaterVisibility" | "checkFwJsVersion" => {
             Ok(JsValue::from(name != "getFloaterVisibility"))
         }

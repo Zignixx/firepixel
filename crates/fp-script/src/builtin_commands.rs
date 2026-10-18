@@ -210,9 +210,18 @@ fw.selection = pick;\n",
     // ------------------------------------------------------------- seit MN-4 (Index ab ADDED_FROM)
     (
         "Bildschirmfoto.jsf",
-        "// Bildschirmfoto als neues Dokument, sofern Firepixel den Bildschirm aufnehmen kann\n\
-if (!fw.takeScreenshot()) {\n\
-  alert(fp.t(\"builtin-cmd-screenshot-unavailable\") + \"\\n\\n\" + fp.t(\"builtin-cmd-screenshot-howto\"));\n\
+        "// Bildschirmfoto (Hauptbildschirm oder Ausschnitt) nach einem Countdown als neues Dokument\n\
+var s = prompt(fp.t(\"builtin-cmd-screenshot-delay\"), \"3\");\n\
+var area = s === null ? null : prompt(fp.t(\"builtin-cmd-screenshot-area\"), \"\");\n\
+if (area !== null) {\n\
+  var p = { delay: Math.max(0, Math.min(10, parseInt(s, 10) || 0)) };\n\
+  var v = String(area).split(/[^0-9.-]+/).filter(function (x) { return x !== \"\"; }).map(Number);\n\
+  if (v.length == 4 && v[2] > 0 && v[3] > 0) p.rect = [v[0], v[1], v[0] + v[2], v[1] + v[3]];\n\
+  try {\n\
+    fp.run(\"commands.screenCapture\", p);\n\
+  } catch (e) {\n\
+    alert(fp.t(\"builtin-cmd-screenshot-unavailable\") + \"\\n\\n\" + (e && e.message ? e.message : e) + \"\\n\\n\" + fp.t(\"builtin-cmd-screenshot-howto\"));\n\
+  }\n\
 }\n",
     ),
     (
@@ -232,7 +241,11 @@ for (var i = 0; i < sel.length; i++) if (sel[i].symbolName) { inst = sel[i]; bre
 if (!inst) {\n\
   alert(fp.t(\"builtin-cmd-symbol-script-no-instance\"));\n\
 } else {\n\
-  alert(fp.t(\"builtin-cmd-symbol-script-unsupported\", { name: inst.symbolName }));\n\
+  var r = null;\n\
+  try { r = fp.run(\"commands.symbolScript\", { symbol: inst.symbolName }); } catch (e) {\n\
+    alert(fp.t(\"builtin-cmd-symbol-script-not-graphic\", { name: inst.symbolName }));\n\
+  }\n\
+  if (r) fp.saveAs(r.script, r.name + \".jsf\");\n\
 }\n",
     ),
     (
@@ -253,8 +266,16 @@ if (!b) {\n\
     ),
     (
         "Web/Gemeinsame Palette.jsf",
-        "// gemeinsame Farbtabelle für mehrere Segmente\n\
-alert(fp.t(\"builtin-cmd-shared-palette\"));\n",
+        "// gemeinsame adaptive Farbtabelle über alle geöffneten Dokumente, im Bedienfeld „Farbfelder“\n\
+if (!fw.getDocumentDOM()) {\n\
+  alert(fp.t(\"builtin-cmd-shared-palette-no-document\"));\n\
+} else {\n\
+  var n = parseInt(prompt(fp.t(\"builtin-cmd-shared-palette-colors\"), \"256\"), 10);\n\
+  if (n >= 2) {\n\
+    var r = fp.run(\"commands.sharedPalette\", { colors: Math.min(256, n) });\n\
+    alert(fp.t(\"builtin-cmd-shared-palette-done\", { count: r.colors.length }));\n\
+  }\n\
+}\n",
     ),
 ];
 
@@ -347,11 +368,40 @@ alert(\"Gemeinsame Palette: Firepixel legt keine eigene gemeinsame Farbtabelle f
     ),
 ];
 
+/// Versions before CMD-1 (BA-104: screen capture, symbol script and shared palette were message-only
+/// stubs). Unchanged files are replaced on start ([`update_outdated`]).
+const BEFORE_CMD1: &[(usize, &str)] = &[
+    (
+        36,
+        "// Bildschirmfoto als neues Dokument, sofern Firepixel den Bildschirm aufnehmen kann\n\
+if (!fw.takeScreenshot()) {\n\
+  alert(fp.t(\"builtin-cmd-screenshot-unavailable\") + \"\\n\\n\" + fp.t(\"builtin-cmd-screenshot-howto\"));\n\
+}\n",
+    ),
+    (
+        38,
+        "// Symbolskript für die ausgewählte Symbolinstanz\n\
+var sel = fw.getDocumentDOM() ? fw.selection : [], inst = null;\n\
+for (var i = 0; i < sel.length; i++) if (sel[i].symbolName) { inst = sel[i]; break; }\n\
+if (!inst) {\n\
+  alert(fp.t(\"builtin-cmd-symbol-script-no-instance\"));\n\
+} else {\n\
+  alert(fp.t(\"builtin-cmd-symbol-script-unsupported\", { name: inst.symbolName }));\n\
+}\n",
+    ),
+    (
+        40,
+        "// gemeinsame Farbtabelle für mehrere Segmente\n\
+alert(fp.t(\"builtin-cmd-shared-palette\"));\n",
+    ),
+];
+
 /// Ist `text` eine frühere, unveränderte Fassung des mitgelieferten Befehls `i`?
 fn is_old_version(i: usize, text: &str) -> bool {
     OUTDATED
         .iter()
         .chain(FIXED_GERMAN)
+        .chain(BEFORE_CMD1)
         .any(|(k, o)| *k == i && text == *o)
 }
 
@@ -503,7 +553,7 @@ const OUTDATED: &[(usize, &str)] = &[
 /// der neue Name frei ist. Liefert die Zahl der ersetzten bzw. umbenannten Dateien.
 pub fn update_outdated(dir: &Path) -> std::io::Result<usize> {
     let mut n = 0;
-    for (i, old) in OUTDATED.iter().chain(FIXED_GERMAN) {
+    for (i, old) in OUTDATED.iter().chain(FIXED_GERMAN).chain(BEFORE_CMD1) {
         let Some((rel_de, src)) = BUILTIN.get(*i) else {
             continue;
         };

@@ -218,6 +218,7 @@ pub fn new_context(loop_limit: u64) -> JsResult<Context> {
             imp::global_fp_run as boa_engine::native_function::NativeFunctionPointer,
         ),
         ("available", imp::global_fp_available),
+        ("saveAs", imp::global_fp_save_as),
         ("t", imp::global_fp_t),
     ] {
         let func = FunctionObjectBuilder::new(ctx.realm(), NativeFunction::from_fn_ptr(f))

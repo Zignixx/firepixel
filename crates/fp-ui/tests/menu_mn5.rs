@@ -156,12 +156,13 @@ fn builtin_scripts_follow_ui_language() {
     let dir = temp_dir().join("Commands");
     std::fs::create_dir_all(&dir).unwrap();
     install_builtin_commands_in(&dir, "en").unwrap();
-    let script = dir.join("Web").join("Shared Palette.jsf");
+    let script = dir.join("Create Symbol Script.jsf");
     assert!(script.exists());
-    for (lang, expect) in [("en", "Shared Palette: Firepixel does not create a shared color table"), ("de", "Gemeinsame Palette: Firepixel legt keine eigene")] {
+    for (lang, expect) in [("en", "Create Symbol Script: Select an instance of a graphic symbol first."), ("de", "Symbolskript erstellen: Wählen Sie zuerst eine Instanz eines Grafiksymbols aus.")] {
         fp_i18n::set_language(lang);
         let (mut st, ctx, _f) = fixture();
         fp_i18n::set_language(lang);
+        let _ = st.session.execute("select.set", json!({ "ids": [] }));
         run(&mut st, &ctx, "commands.runScript", json!({ "path": script.to_string_lossy() }));
         let (title, body) = st.dialogs.message.clone().unwrap_or_else(|| panic!("{lang}: Meldung erwartet, Status {:?}", st.status));
         assert_eq!(title, "Firepixel");
@@ -205,7 +206,7 @@ fn old_german_scripts_are_replaced_user_edits_kept() {
     std::fs::write(en.join("Web").join("Shared Palette.jsf"), OLD_SHARED_PALETTE).unwrap();
     std::fs::write(en.join(MARKER_FILE), "0.1.0\nset-2\n").unwrap();
     install_builtin_commands_in(&en, "en").unwrap();
-    assert!(std::fs::read_to_string(en.join("Web").join("Shared Palette.jsf")).unwrap().contains("fp.t(\"builtin-cmd-shared-palette\")"));
+    assert_eq!(std::fs::read_to_string(en.join("Web").join("Shared Palette.jsf")).unwrap(), src("Web/Gemeinsame Palette.jsf"), "current version");
     // vom Nutzer geänderte Datei bleibt unverändert
     std::fs::write(dir.join("Web").join("Gemeinsame Palette.jsf"), &user).unwrap();
     install_builtin_commands_in(&dir, "de").unwrap();

@@ -52,10 +52,16 @@ builtin-cmd-twist-copies = Number of copies
 builtin-cmd-text-width = Width in pixels
 builtin-cmd-alt-text = ALT text for the selected hotspots and slices
 builtin-cmd-resize-percent = New size in percent
-builtin-cmd-screenshot-unavailable = Screenshot: Firepixel cannot capture the screen itself.
+builtin-cmd-screenshot-unavailable = Screenshot: The screen could not be captured.
 builtin-cmd-screenshot-howto = Capture the image with the system (Windows: Win+Shift+S) and paste it with File ▸ New and Edit ▸ Paste (Ctrl+V).
 builtin-cmd-demo-no-document = Demo Current Document: Open a document first.
 builtin-cmd-symbol-script-no-instance = Create Symbol Script: Select an instance of a graphic symbol first.
 builtin-cmd-symbol-script-unsupported = Create Symbol Script: Firepixel cannot create symbol scripts for the symbol “{ $name }” yet. Edit the properties of the instance in the Symbol Properties panel.
 builtin-cmd-auto-mask-no-selection = Auto Vector Mask: Select one or more objects first.
 builtin-cmd-shared-palette = Shared Palette: Firepixel does not create a shared color table for multiple slices. To make slices use the same colors, set the same color table for each slice in the Optimize panel.
+builtin-cmd-screenshot-delay = Screenshot: countdown in seconds (0–10)
+builtin-cmd-screenshot-area = Screenshot: area as “x, y, width, height” in screen pixels (empty = the whole primary screen)
+builtin-cmd-symbol-script-not-graphic = Create Symbol Script: not possible for “{ $name }” – symbol scripts exist only for graphic symbols.
+builtin-cmd-shared-palette-no-document = Shared Palette: Open a document first.
+builtin-cmd-shared-palette-colors = Shared Palette: number of colors (2–256)
+builtin-cmd-shared-palette-done = Shared Palette: { $count } colors from all open documents are now in the Swatches panel. To save them as an ACT file, use “Save Swatches” there.

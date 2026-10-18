@@ -632,3 +632,10 @@ dlg-layer-unshare-ask = Möchten Sie freigegebene Daten aus "{ $name }" in den a
 dlg-layer-unshare-current = Aktuell
 dlg-layer-unshare-all = Alle
 msg-step-layer-options = Ebenenoptionen
+
+# BA-104 Commands menu
+err-symbol-script-no-instance = Wählen Sie zuerst eine Instanz eines Grafiksymbols aus.
+err-symbol-script-not-graphic = Symbolskripte gibt es nur für Grafiksymbole (nicht für Schaltflächen oder Animationen).
+err-screen-capture = Der Bildschirm konnte nicht aufgenommen werden: { $detail }
+err-screen-capture-status = Das Aufnahmeprogramm endete mit { $status }.
+err-screen-capture-no-tool = Kein Aufnahmeprogramm gefunden (grim, import oder gnome-screenshot).

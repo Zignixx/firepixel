@@ -123,6 +123,7 @@ ui-file-import-failed =
 ui-revert-confirm = Revert to the last saved version of “{ $name }”?
 ui-not-implemented = “{ $label }” is not implemented yet.
 ui-script-failed = Could not run the script.
+ui-script-save-as = Save Script
 ui-script-needs-document = This command is only possible when a document is active.
 ui-script-error = An error occurred.
 ui-preview-created = Preview created: { $path }

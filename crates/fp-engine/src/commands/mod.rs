@@ -10,6 +10,7 @@ pub(crate) mod bitmap;
 mod draw;
 pub(crate) mod edit;
 pub mod export;
+pub mod extras;
 mod import;
 pub use import::{
     import_visible_bounds, inclusive_drag, map_bounds, place_preview_rect, place_rect,
@@ -55,6 +56,7 @@ pub fn register_all(r: &mut CommandRegistry) {
     file::register(r);
     file_info::register(r);
     export::register(r);
+    extras::register(r);
     misc::register(r);
     import::register(r);
     symbol_edit::register(r);

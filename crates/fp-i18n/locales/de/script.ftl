@@ -52,10 +52,16 @@ builtin-cmd-twist-copies = Anzahl der Kopien
 builtin-cmd-text-width = Breite in Pixel
 builtin-cmd-alt-text = ALT-Text für die ausgewählten Hotspots und Segmente
 builtin-cmd-resize-percent = Neue Größe in Prozent
-builtin-cmd-screenshot-unavailable = Bildschirmfoto: Firepixel kann den Bildschirm nicht selbst aufnehmen.
+builtin-cmd-screenshot-unavailable = Bildschirmfoto: Der Bildschirm konnte nicht aufgenommen werden.
 builtin-cmd-screenshot-howto = Nehmen Sie das Bild mit dem System auf (Windows: Win+Umschalt+S) und fügen Sie es mit Datei ▸ Neu und Bearbeiten ▸ Einfügen (Strg+V) ein.
 builtin-cmd-demo-no-document = Demo - aktuelles Dokument: Öffnen Sie zuerst ein Dokument.
 builtin-cmd-symbol-script-no-instance = Symbolskript erstellen: Wählen Sie zuerst eine Instanz eines Grafiksymbols aus.
 builtin-cmd-symbol-script-unsupported = Symbolskript erstellen: Für das Symbol „{ $name }“ kann Firepixel noch keine Symbolskripte anlegen. Eigenschaften der Instanz bearbeiten Sie im Bedienfeld „Symboleigenschaften“.
 builtin-cmd-auto-mask-no-selection = Autom. Vektormaske: Wählen Sie zuerst ein oder mehrere Objekte aus.
 builtin-cmd-shared-palette = Gemeinsame Palette: Firepixel legt keine eigene gemeinsame Farbtabelle für mehrere Segmente an. Damit Segmente dieselben Farben verwenden, stellen Sie für jedes Segment im Bedienfeld „Optimieren“ dieselbe Farbtabelle ein.
+builtin-cmd-screenshot-delay = Bildschirmfoto: Countdown in Sekunden (0–10)
+builtin-cmd-screenshot-area = Bildschirmfoto: Ausschnitt als „x, y, Breite, Höhe“ in Bildschirmpixeln (leer = ganzer Hauptbildschirm)
+builtin-cmd-symbol-script-not-graphic = Symbolskript erstellen: Für „{ $name }“ geht das nicht – Symbolskripte gibt es nur für Grafiksymbole.
+builtin-cmd-shared-palette-no-document = Gemeinsame Palette: Öffnen Sie zuerst ein Dokument.
+builtin-cmd-shared-palette-colors = Gemeinsame Palette: Anzahl der Farben (2–256)
+builtin-cmd-shared-palette-done = Gemeinsame Palette: { $count } Farben aus allen geöffneten Dokumenten stehen jetzt im Bedienfeld „Farbfelder“. Als ACT-Datei speichern Sie sie dort mit „Farbfelder speichern“.

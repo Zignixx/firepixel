@@ -107,6 +107,8 @@ pub struct ScriptOutcome {
     pub thrown: Option<f64>,
     /// Texte aus `alert()`.
     pub alerts: Vec<String>,
+    /// Texts from `fp.saveAs(text, fileName)` that the host offers to save (file name, text).
+    pub save_as: Vec<(String, String)>,
     /// Ausgaben aus `write()`/`writeLog()`.
     pub log: Vec<String>,
     /// Erklärungen zu Fehlern der API-Aufrufe (auch abgefangene).
@@ -181,7 +183,8 @@ impl fp_engine::ScriptHost for JsfHost {
         let unavailable = state::take_last_unavailable();
         if o.ok {
             Ok(
-                json!({"result": o.result, "alerts": o.alerts, "log": o.log, "notImplemented": o.not_implemented}),
+                json!({"result": o.result, "alerts": o.alerts, "log": o.log, "notImplemented": o.not_implemented,
+                    "saveAs": o.save_as.iter().map(|(name, text)| json!({"name": name, "text": text})).collect::<Vec<_>>()}),
             )
         } else {
             // CT-A-03/04: abgebrochen, weil ein Befehl im Skript nicht passte (keine passende Auswahl,
@@ -307,6 +310,7 @@ fn run_inner(session: &mut Session, source: &str, opts: &ScriptOptions) -> Scrip
     }
     if let Some(st) = state::install(None) {
         outcome.alerts = st.alerts;
+        outcome.save_as = st.save_as;
         outcome.log = st.log;
         outcome.diagnostics = st.diagnostics;
         outcome.not_implemented = st.not_implemented.into_iter().collect();

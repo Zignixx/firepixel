@@ -646,6 +646,14 @@ fn run_command(st: &mut AppState, ctx: &egui::Context, name: &str, params: Value
                             .collect()
                     })
                     .unwrap_or_default();
+                // fp.saveAs(text, name) (e.g. "Create Symbol Script"): offer the text for saving
+                if let Some(req) = out.value["result"]["saveAs"]
+                    .as_array()
+                    .and_then(|a| a.first())
+                    .cloned()
+                {
+                    save_script_text(st, &req);
+                }
                 if !alerts.is_empty() {
                     st.dialogs.message = Some(("Firepixel".into(), alerts.join("\n\n")));
                 } else if let Some(p) = &script_file
@@ -690,6 +698,23 @@ fn run_command(st: &mut AppState, ctx: &egui::Context, name: &str, params: Value
         // Meldungen der Engine beginnen klein (CLI, Begründungen); in der Statuszeile als Satz (CT-A-16)
         Err(e) => st.set_status(sentence_case(&e.to_string()), now(ctx)),
     }
+}
+
+/// Save dialog for a text a command script handed over with `fp.saveAs(text, name)`.
+fn save_script_text(st: &mut AppState, req: &serde_json::Value) {
+    let name = req["name"].as_str().unwrap_or_default().to_string();
+    let text = req["text"].as_str().unwrap_or_default().to_string();
+    crate::dialogs::panel_menus::pick_save(
+        st,
+        &fp_i18n::t("ui-script-save-as"),
+        &name,
+        &[("dlg-filter-script", &["jsf"])],
+        move |st, p| {
+            if let Err(e) = std::fs::write(&p, text.as_bytes()) {
+                st.dialogs.message = Some(("Firepixel".into(), e.to_string()));
+            }
+        },
+    );
 }
 
 /// Meldung „Skript konnte nicht ausgeführt werden.“ mit dem Grund in der zweiten Zeile (CT-A-03).

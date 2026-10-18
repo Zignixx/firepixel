@@ -170,6 +170,8 @@ pub struct State {
     pub handles: Vec<Handle>,
     pub opts: ScriptOptions,
     pub alerts: Vec<String>,
+    /// `fp.saveAs(text, fileName)`: texts the host offers to save (file name, text).
+    pub save_as: Vec<(String, String)>,
     pub log: Vec<String>,
     pub diagnostics: Vec<String>,
     pub not_implemented: BTreeSet<String>,
@@ -197,6 +199,7 @@ impl State {
             handles: Vec::new(),
             opts,
             alerts: Vec::new(),
+            save_as: Vec::new(),
             log: Vec::new(),
             diagnostics: Vec::new(),
             not_implemented: BTreeSet::new(),

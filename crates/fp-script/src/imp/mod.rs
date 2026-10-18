@@ -548,6 +548,35 @@ pub(crate) fn global_fp_run(
     conv::json_to_js(&v, ctx)
 }
 
+/// `fp.saveAs(text, fileName)`: offer `text` to be saved under a file the user picks (proposed
+/// name `fileName`); the host (user interface) shows the save dialog after the script ends.
+pub(crate) fn global_fp_save_as(
+    _this: &JsValue,
+    args: &[JsValue],
+    ctx: &mut Context,
+) -> JsResult<JsValue> {
+    let text = match args.first() {
+        Some(v) if !v.is_undefined() && !v.is_null() => v.to_string(ctx)?.to_std_string_escaped(),
+        _ => {
+            return Err(runtime::throw(
+                FwErr::Hr(
+                    crate::bindings::hr::E_BAD_PARAM_COUNT,
+                    "fp.saveAs(text, fileName)".into(),
+                ),
+                "fp.saveAs",
+            ));
+        }
+    };
+    let name = match args.get(1) {
+        Some(v) if !v.is_undefined() && !v.is_null() => v.to_string(ctx)?.to_std_string_escaped(),
+        _ => String::new(),
+    };
+    let _ = with_state(|s| {
+        s.save_as.push((name, text));
+    });
+    Ok(JsValue::undefined())
+}
+
 /// `fp.t(key, args)`: übersetzter Text aus den Sprachdateien in der aktuellen Sprache der Oberfläche
 /// (z. B. für die mitgelieferten Befehlsskripte, MN-5). `args` ist ein Objekt mit Fluent-Variablen
 /// (`{ name: "Knopf" }`); ein unbekannter Schlüssel liefert den Schlüssel selbst.

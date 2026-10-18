@@ -156,11 +156,12 @@ fn reset_warnings_only_once() {
 
 #[test]
 fn new_commands_run_and_explain_missing_functions() {
+    // Some(text): message; None: neither message nor question; "?": asks first (prompt dialog)
     for (path, expect) in [
-        (&["Bildschirmfoto"][..], Some("Bildschirmfoto: Firepixel kann den Bildschirm nicht selbst aufnehmen.")),
+        (&["Bildschirmfoto"][..], Some("?")),
         (&["Symbolskript erstellen"], Some("Symbolskript erstellen: Wählen Sie zuerst eine Instanz eines Grafiksymbols aus.")),
         (&["Kreativ", "Autom. Vektormaske"], Some("Autom. Vektormaske: Wählen Sie zuerst ein oder mehrere Objekte aus.")),
-        (&["Web", "Gemeinsame Palette"], Some("Gemeinsame Palette: Firepixel legt keine eigene gemeinsame Farbtabelle")),
+        (&["Web", "Gemeinsame Palette"], Some("?")),
         (&["Demo - aktuelles Dokument"], None),
     ] {
         let (mut st, ctx, _f) = fixture();
@@ -170,6 +171,10 @@ fn new_commands_run_and_explain_missing_functions() {
         run(&mut st, &ctx, "commands.runScript", p);
         let msg = st.dialogs.message.clone();
         match expect {
+            Some("?") => {
+                assert!(msg.is_none(), "{path:?}: {msg:?}");
+                assert!(st.dialogs.script_prompt.is_some(), "{path:?}: asks first");
+            }
             Some(text) => {
                 let (title, body) = msg.unwrap_or_else(|| panic!("{path:?}: Meldung erwartet, Status {:?}", st.status));
                 assert_eq!(title, "Firepixel");
@@ -181,14 +186,30 @@ fn new_commands_run_and_explain_missing_functions() {
     }
 }
 
+/// BA-104: "Create Symbol Script" offers the generated JSF for saving; the script recreates the
+/// graphic symbol in a new document.
 #[test]
-fn symbol_script_names_selected_symbol() {
+fn symbol_script_is_offered_for_saving_and_recreates_the_symbol() {
     let (mut st, ctx, f) = fixture();
     let _ = st.session.execute("select.set", json!({ "ids": f.instance }));
+    let target = std::env::temp_dir().join(format!("fp-ba104-{}-Grafik.jsf", std::process::id()));
+    let _ = std::fs::remove_file(&target);
+    st.file_override = Some(fp_ui::files::FilePickOverride { open: Vec::new(), save: Some(target.clone()) });
+    let before = doc_json(&st);
     let p = script_params(&st, &["Symbolskript erstellen"]);
     run(&mut st, &ctx, "commands.runScript", p);
-    let (_, body) = st.dialogs.message.clone().expect("Meldung");
-    assert!(body.contains("Für das Symbol „"), "{body}");
+    assert!(st.dialogs.message.is_none(), "{:?}", st.dialogs.message);
+    assert_eq!(doc_json(&st), before, "document unchanged");
+    let script = std::fs::read_to_string(&target).expect("saved script");
+    let _ = std::fs::remove_file(&target);
+    assert!(script.contains("modify.symbol.convertToSymbol") && script.contains("\"Grafik\""), "{script}");
+    // running the saved script in a new document recreates the symbol
+    st.session.execute("file.new", json!({ "width": 300, "height": 200 })).unwrap();
+    let out = st.session.execute("commands.runScript", json!({ "code": script })).expect("run");
+    assert!(out.value.get("result").is_some(), "{:?}", out.value);
+    let d = st.session.active().unwrap();
+    let sym = d.doc.symbol_by_name("Grafik").expect("symbol recreated");
+    assert_eq!(sym.1.kind(), fp_model::SymbolKind::Graphic);
 }
 
 #[test]

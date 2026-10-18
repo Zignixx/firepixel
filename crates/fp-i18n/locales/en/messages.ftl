@@ -632,3 +632,10 @@ dlg-layer-unshare-ask = Do you want to copy shared data from "{ $name }" to the 
 dlg-layer-unshare-current = Current
 dlg-layer-unshare-all = All
 msg-step-layer-options = Layer Options
+
+# BA-104 Commands menu
+err-symbol-script-no-instance = Select an instance of a graphic symbol first.
+err-symbol-script-not-graphic = Symbol scripts exist only for graphic symbols (not for buttons or animations).
+err-screen-capture = The screen could not be captured: { $detail }
+err-screen-capture-status = The capture tool ended with { $status }.
+err-screen-capture-no-tool = No screen capture tool found (grim, import or gnome-screenshot).

@@ -840,6 +840,11 @@ fn overrides(name: &str, ids: &Ids) -> Option<(Value, Option<Setup>)> {
             ex(s, "select.pixels", json!({"shape": "rect", "rect": [202, 102, 212, 112]}));
             Value::Null
         })),
+        "commands.symbolScript" => rs(json!({}), Box::new(move |s: &mut Session| {
+            select(s, &[ellipse]);
+            ex(s, "modify.symbol.convertToSymbol", json!({"name": "S"}));
+            Value::Null
+        })),
         "modify.symbol.breakApart" => rs(json!({}), Box::new(move |s: &mut Session| {
             select(s, &[ellipse]);
             ex(s, "modify.symbol.convertToSymbol", json!({"name": "S"}));
