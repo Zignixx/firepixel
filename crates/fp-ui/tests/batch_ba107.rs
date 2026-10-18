@@ -543,7 +543,7 @@ fn per_file_progress_eta_and_cancel() {
     let mut h = open(&files);
     let map = studio(&mut h).to_process();
     studio(&mut h).run = Some(RunState::detached(map));
-    output_bar::apply_events(studio(&mut h), vec![Progress::Started { total: 3 }, Progress::ItemStarted { index: 0 }, Progress::ItemProgress { index: 0, fraction: 0.42 }]);
+    output_bar::apply_events(studio(&mut h), vec![Progress::Started { total: 3 }, Progress::ItemStarted { index: 0 }, Progress::ItemProgress { index: 0, fraction: 0.42, step: String::new() }]);
     h.run_steps(2);
     assert_eq!(studio(&mut h).files[0].status, batch::EntryStatus::Running);
     let pct = batch::files::progress_label(0.42);
@@ -552,20 +552,20 @@ fn per_file_progress_eta_and_cancel() {
     assert!((run.fraction() - 0.14).abs() < 0.001, "overall bar includes the running part");
     // the remaining time appears once a part is done
     std::thread::sleep(std::time::Duration::from_millis(30));
-    output_bar::apply_events(studio(&mut h), vec![Progress::ItemProgress { index: 0, fraction: 0.6 }]);
+    output_bar::apply_events(studio(&mut h), vec![Progress::ItemProgress { index: 0, fraction: 0.6, step: String::new() }]);
     h.run_steps(2);
     assert!(studio(&mut h).run.as_ref().and_then(|r| r.remaining()).is_some(), "ETA estimated from partial progress");
     let remaining_word = fp_i18n::tr!("batch-ui-remaining", time = "0:00".to_string()).replace("0:00", "");
     assert!(has_text(&h, remaining_word.trim()), "ETA in the footer");
     // first file done, second running
-    output_bar::apply_events(studio(&mut h), vec![Progress::ItemDone { index: 0, target: d.join("out1.png"), bytes_out: 10 }, Progress::ItemStarted { index: 1 }, Progress::ItemProgress { index: 1, fraction: 0.25 }]);
+    output_bar::apply_events(studio(&mut h), vec![Progress::ItemDone { index: 0, target: d.join("out1.png"), bytes_out: 10 }, Progress::ItemStarted { index: 1 }, Progress::ItemProgress { index: 1, fraction: 0.25, step: String::new() }]);
     h.run_steps(2);
     assert_eq!(studio(&mut h).files[0].status, batch::EntryStatus::Done);
     assert!(has_text(&h, &batch::files::progress_label(0.25)));
     assert!(!has_text(&h, &pct), "no percentage on a finished row");
     assert!(has_text(&h, &fp_i18n::tr!("batch-ui-progress", done = 1, total = 3)));
     // nonsense from the executor is clamped
-    output_bar::apply_events(studio(&mut h), vec![Progress::ItemProgress { index: 1, fraction: 7.0 }, Progress::ItemProgress { index: 9, fraction: 0.5 }]);
+    output_bar::apply_events(studio(&mut h), vec![Progress::ItemProgress { index: 1, fraction: 7.0, step: String::new() }, Progress::ItemProgress { index: 9, fraction: 0.5, step: String::new() }]);
     assert_eq!(studio(&mut h).files[1].progress, 1.0);
     // Cancel still works: the run ends, finished files keep their status
     let cancel = h.query_all(By::new().label(&t("batch-ui-cancel"))).map(|n| n.rect()).next().expect("Cancel");
