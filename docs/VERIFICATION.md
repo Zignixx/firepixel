@@ -73,13 +73,15 @@ Conventions: coordinates are document pixels; "R1", "E1", "B1", "P1", "PG" are t
   **Expected:** All supported files are added (folder recursively as configured), unsupported files are reported.
 - [ ] **A1-18** (CF-C CT-C-02/03, F19 TW-69; needs: real mouse) – see VER-4.23 and VER-1.36: reorder states/pages and drag across eye icons.
 
-## A2. Open items from comparison runs 12–17
+## A2. Open items from comparison runs 12–18
 
 Comparison run 12 left seven units unclear (`?`). Runs 13 and 14 (17 Oct 2026) resolved or reclassified all of
 them; they stay listed here, ticked, so the history of each check is clear. Run 15 (17/18 Oct 2026) resolved
 TW-97, TW-110, TW-112, TW-114 and TW-116; run 16 (18 Oct 2026) resolved TW-113, TW-118, TW-119, TW-120 and TW-121.
 Full run 17 (18 Oct 2026) confirmed TW-115 and TW-123 and the `xs-canvas` pair review; it did not confirm TW-122
-(continued as TW-126) and added TW-125 to TW-130. The open checks below come from runs 16 and 17.
+(continued as TW-126) and added TW-125 to TW-130. Follow-up run 18 (18 Oct 2026, 10 units) resolved TW-125 (Common
+Library menu), TW-126, TW-127 (`15`), TW-128 and TW-129 and added TW-131 to TW-135. The open checks below come
+from runs 17 and 18.
 
 - [x] **TW-100** (`panel-library-styles/03`) – resolved: run 13 measured equal positions at an integer drop point; the unit counts as equal and the half-pixel case is no longer tracked.
 - [x] **TW-101** (`xs-file-formats/09`) – resolved in run 13: import by dragging lands on the same pixels 121,120–417,322 in both programs.
@@ -101,27 +103,34 @@ Full run 17 (18 Oct 2026) confirmed TW-115 and TW-123 and the `xs-canvas` pair r
 - [x] **TW-121** (`inspector-group-symbol/05`) – resolved in run 16: the button instance shows the symbol name, a disabled text field, "PNG32" and "Add filter…" in both programs.
 - [x] **TW-111 / Q-51** (`inspector-group-symbol/04–05`) – resolved without a change: the reference does not bring Properties back to the front by itself either; Firepixel is right and runner step 04b stays.
 - [x] **TW-115** (`panel-swatches-mixer/00a, 19, 20`) – resolved in run 17: at the 9 px pitch the probe and the read-back give #efffbf in both programs.
-- [ ] **TW-122 / Q-54 → TW-126** (`xs-shortcuts/06`; needs: behaviour description of the reference machine's shortcut set, then run 18, else real keyboard)
-  **Steps:** Open the text test file, select the text object with the pointer tool (do not edit it); press Ctrl+Shift+B, Escape, reselect; repeat with Ctrl+Shift+I, Ctrl+Shift+U, Ctrl+Shift+E, Ctrl+Alt+Shift+S, Ctrl+Shift+Period and Ctrl+Shift+Comma.
-  **Expected:** The same result as the reference with the shortcut set the reference machine actually uses. Run 17 (Firepixel set in the runner profile): Ctrl+Shift+B equal (no change); the reference keeps the text selected on Ctrl+Shift+I, changes nothing on Ctrl+Shift+E and Ctrl+Alt+Shift+S and grows the text to 25 pt on Ctrl+Shift+Period; Firepixel drops the selection, opens the Text Editor, sets "stretch" alignment and keeps 24 pt.
+- [x] **TW-122 / Q-54 → TW-126** (`xs-shortcuts/06`) – partly resolved in run 18: with both programs on "Web Standard", Ctrl+Shift+U and Ctrl+Shift+E are equal and Ctrl+Shift+D clones; the four keys that still differ are continued as **TW-133** below.
 - [x] **TW-123** (`panel-optimize/13`, panel menus) – resolved in run 17: the Optimize colour-table menu is 282 vs. 270 px (frame included); Pages, History, Swatches and Layers menus are within 5 px of the reference; main menus stay narrower than the reference, none became wider through the 33 px arrow column.
 - [x] **xs-canvas pairs** (`xs-canvas/03, 11, 13, 14, 16`) – reviewed in run 17: the fit pair differs by the fit zoom of different view sizes (0.43875 vs. 0.44875), the grid pair by the sub-pixel phase of one-pixel grid lines at 0.42833 (cells and lines line up); no rendering difference, the unit counts as equal.
-- [ ] **TW-125** (`panel-library-styles/08`, `panel-pages-states-history/07`; needs: fix, then run 18, else real window)
-  **Steps:** Open the Common Library panel menu and the States panel menu.
-  **Expected:** Each menu is as wide as its longest item plus the usual margin (reference: 179 px and 207 px); Firepixel shows 231 px for both (minimum width).
-- [ ] **TW-126** (`menu-edit/01, 02`, `dialogs-d31-d40/06`, `menu-modify-a/11`; needs: behaviour description, then run 18, else real keyboard)
-  **Steps:** In both programs select a rectangle and press Ctrl+Shift+D, then Ctrl+Z; check Edit ▸ Clone's shortcut in each program's active shortcut set.
-  **Expected:** Ctrl+Shift+D clones in both programs (history shows the clone step). In run 17 Firepixel with the "Firepixel" set did nothing.
-- [ ] **TW-128** (`panel-optimize/19`; needs: fix, then run 18, else real window)
-  **Steps:** Open a document with two slices; select the first slice and choose JPEG in the Optimize panel, select the second and choose GIF; read `exportOptions.exportFormat` of both slices with a script.
-  **Expected:** JPEG and GIF (reference); Firepixel returned `null` for both in run 17.
-- [ ] **TW-130 / Q-57** (`xs-shortcuts/15`; needs: behaviour description, then run 18, else real mouse)
-  **Steps:** Select the text "Abc 123" with the pointer, choose the Text tool and click inside the "A"; type "V" and "R", press Escape.
-  **Expected:** The same as the reference. In run 17 the reference started a new text object ("Vrc") and Firepixel added to the selected text ("Abc 123Vr").
+- [ ] **TW-125** (`panel-pages-states-history/07`; needs: next run of that unit, else real window) – the Common Library menu is resolved in run 18 (183 vs. 179 px); the States menu (run 17: 231 vs. 207 px) was not part of run 18.
+  **Steps:** Open the States panel menu.
+  **Expected:** As wide as its longest item plus the usual margin (reference: 207 px).
+- [x] **TW-126** (`menu-edit/02`, `dialogs-d31-d40/06`, `menu-modify-a/11`) – resolved in run 18: Ctrl+Shift+D clones in both programs; twelve tweened instances on both sides; Firepixel's history shows the clone step.
+- [x] **TW-128** (`panel-optimize/19`) – resolved in run 18: both programs report JPEG and GIF as the two slices' export formats.
+- [ ] **TW-130 / Q-57** (`xs-shortcuts/15_in_text_tx2`; needs: reference read-back of all lines (runner R-14), else real mouse)
+  **Steps:** Select TX2 ("Zeile eins / Zeile zwei / Zeile drei") with the pointer, choose the Text tool and click at its centre; type "V" and "R", press Escape.
+  **Expected:** The typed text lands at the same place in both programs. Run 18: Firepixel inserts "Vr" at the click point ("ZeileVr zwei"); the reference's read-back shows only "Zeile eins" before and after typing. The stray "c" of run 17 is on the reference side only.
+- [ ] **TW-131** (`panel-library-styles/16`; needs: fix, then the next run, else real window)
+  **Steps:** Open the URL panel and its panel menu, with and without a selected URL.
+  **Expected:** The same nine entries as the reference (add used URLs to the library, delete unused URLs, add / edit / delete URL, new URL library, import, export, Help) with edit and delete grey without a selected URL; Firepixel shows only "Help".
+- [ ] **TW-133** (`xs-shortcuts/06`; needs: behaviour description of "Web Standard", then the next run, else real keyboard)
+  **Steps:** With the "Web Standard" set active, select the text object with the pointer (do not edit it); press Ctrl+Shift+B, Escape, reselect; repeat with Ctrl+Shift+I, Ctrl+Alt+Shift+S, Ctrl+Shift+Period and Ctrl+Shift+Comma.
+  **Expected:** As in the reference: nothing for Ctrl+Shift+B and Ctrl+Alt+Shift+S, the text stays selected on Ctrl+Shift+I, 24 → 25 pt on Ctrl+Shift+Period and back on Ctrl+Shift+Comma. Run 18: Firepixel shows a warning, drops the selection, sets "stretch" alignment and jumps to 36 pt.
+- [ ] **TW-134** (`xs-preferences/06`; needs: behaviour description, else real window)
+  **Steps:** Preferences ▸ Edit: switch "delete paths when cropping" on; crop the vector test file to 40,40–320,260; count the paths.
+  **Expected:** The same paths as the reference. Run 18 (option on in both): the reference keeps all seven paths, Firepixel removes the three outside.
+- [ ] **TW-135** (`tool-text/06`; needs: behaviour description, else real mouse and keyboard)
+  **Steps:** Pointer tool: double-click inside the word "Zeile" of a multi-line text and type "Q".
+  **Expected:** "Q" appears at the click point (reference: "ZeilQe eins"). Runs 17 and 18: Firepixel shows the caret after "Zeile " and no "Q".
 - [ ] **Q-49** (`color-popup/05`; needs: real keyboard)
   **Steps:** Select a rectangle, open the fill colour pop-up, type #3366CC into the hex field and press Enter; repeat with "zz12".
   **Expected:** The same result as the reference. The runner cannot prove it: the reference's pop-up closes without applying the text the runner sets; Firepixel gives #3366cc and, for "zz12", #000000.
-- [ ] **TW-127 / TW-129** (runner R-13; needs: runner change, then run 18) – `xs-preferences/06, 15` must set the stored option to a defined value before the action; reference-side dialog, file-dialog and drop failures in `dialogs-d31-d40`, `panel-swatches-mixer/06`, `panel-library-styles/03`, `xs-shortcuts/10` and `xs-canvas/15` need a retry, a remeasure or a selection in the step.
+- [x] **TW-127 / TW-129** (runner R-13) – resolved in run 18: `xs-preferences` sets and reads back its options (`15` equal; `06` continued as TW-134); the reference opens Feather / Save Bitmap Selection, the "add swatches" file dialog and receives the library drop; `xs-canvas/15` selects R1 first. The plain arrow keys in `xs-shortcuts/10` moved to TW-132.
+- [ ] **TW-132** (runner R-14; needs: runner change, then the next run) – reference-side history read-back error (`menu-edit/01, 22`), Delete and Ctrl+D without effect (`menu-edit/09, 20`), plain arrow keys without effect (`xs-shortcuts/10`), text-tool state carried between units (`tool-text/02, 03, 07, 14`) and Firepixel's missing enabled state in the menu read-back (`xs-canvas/15_snap_pixels_disabled`).
 
 Questions answered after run 16: **Q-49** (the colour pop-up HEX field now parses every keystroke like the
 reference), **Q-51** (see TW-111 above), **Q-55** (`xs-shortcuts/15`: Firepixel's text-tool click was already right;

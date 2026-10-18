@@ -18,15 +18,15 @@ on Intel hardware.
 | Area | Value | Source |
 |---|---|---|
 | Parity units | 48 | [PARITY.md](PARITY.md) |
-| Equal except for design | **42** (1 real deviation, 5 unclear, 0 under-measured) | full run 17, 18 Oct 2026 |
-| Proven 1:1 | **87.5 %** (42 / 48; no unit under-measured; run 16 carried 95.8 %) | run 17 |
-| Canvas image pairs within 1 % | **176 / 202** (was about 177 / 201) | run 17 |
-| Measurement quota, all 48 units | **86.3 %** (1057 / 1225 measurable steps both `ok`, run 17 alone; last full run 13: 79.7 %; carried figure 85.0 %) | run 17 |
-| Run 17 errors | 46 reference-side (the same units before: 59), 21 Firepixel-side (was 27, all known from earlier runs) | run 17 |
-| Workspace tests | **2660 green, 0 red, 134 ignored** at `cd30c354` | full workspace run on `main`, 18 Oct 2026 |
-| Open findings | 7 fixable `[F]` (PDF layers; TW-125 to TW-130 from run 17), 5 deferred `[V]`, 20 informational `[N]`; run 17 confirmed TW-115, TW-123 and TW-124 | [FINDINGS.md](FINDINGS.md) |
-| Real differences known | per-slice export formats in the Optimize panel (TW-128), minimum width of short panel menus (TW-125); unclear: shortcut set of the runner profile (TW-126), text-tool click on a selected text (TW-130), runner start states (TW-127) | [PARITY.md](PARITY.md) |
-| Closed findings (history) | 845+ | kept outside the repository ([ARCHIVE_NOTE.md](ARCHIVE_NOTE.md)) |
+| Equal except for design | **43** (2 real deviations, 3 unclear, 0 under-measured) | run 18 (10 units) on top of full run 17, 18 Oct 2026 |
+| Proven 1:1 | **89.6 %** (43 / 48; no unit under-measured; run 17: 87.5 %) | runs 17 + 18 |
+| Canvas image pairs within 1 % | **174 / 202** (run 17: 176 / 202; two `tool-text` pairs moved above 1 % through the reference's text-tool state) | runs 17 + 18 |
+| Measurement quota, all 48 units | **86.9 %** (1066 / 1226 measurable steps both `ok`, newest run per unit; run 17 alone 86.3 %; the ten units of run 18: 90.3 %, 214 / 237) | runs 17 + 18 |
+| Errors, newest run per unit | 38 reference-side (run 17: 46), 21 Firepixel-side (unchanged, all known) | runs 17 + 18 |
+| Workspace tests | **2676 green, 0 red, 134 ignored** at `4e677046` | full workspace run on `main`, 18 Oct 2026 |
+| Open findings | 7 fixable `[F]` (PDF layers; TW-130 to TW-135), 5 deferred `[V]`, 20 informational `[N]`; run 18 closed TW-125 to TW-129 | [FINDINGS.md](FINDINGS.md) |
+| Real differences known | URL panel menu with only "Help" (TW-131), four text shortcuts under "Web Standard" (TW-133); unclear: "delete paths when cropping" (TW-134), typing after a pointer double-click on a text (TW-135), the reference's text-tool read-back (TW-130), reference-side runner effects (TW-132) | [PARITY.md](PARITY.md) |
+| Closed findings (history) | 850+ | kept outside the repository ([ARCHIVE_NOTE.md](ARCHIVE_NOTE.md)) |
 | Startup time | about 0.8 s to the first frame (release build, warm) | smoke test 17 Oct 2026 |
 
 ## Last test build
@@ -36,13 +36,18 @@ Release **v0.2.1** (18 Oct 2026, pre-release on GitHub, Windows x64 and macOS un
 slice checked with `lipo`, not run on Intel hardware). The previous release was v0.2.0 (17 Oct 2026, Windows x64,
 macOS arm64).
 
-Latest test build: preview build **`2026-10-18_09-22`** (release profile, single `firepixel.exe` plus
-`firepixel-cli.exe`) from `main` at `cd30c354` (wave-4 features, brush preview in stacking order); full workspace
-test run there: 2660 passed, 0 failed, 134 ignored.
+Latest test build: preview build **`2026-10-18_10-59`** (release profile, single `firepixel.exe` plus
+`firepixel-cli.exe`) from `main` at `4e677046` (packages F33/F34: per-slice export options, short panel menus,
+filter shortcuts, text-tool caret); full workspace test run there: 2676 passed, 0 failed, 134 ignored.
 
 Full comparison run 17 (18 Oct 2026, 04:59–09:40, all 48 units, 1284 steps, 683 image pairs) used the earlier
 preview build `2026-10-18_04-57` from `main` at `7e3d2d12` (fixes after run 16, runner R-12): 42 units equal except
 for design, 1 real deviation, 5 unclear; step level 86.3 %; the animated GIF export is byte-identical again.
+
+Follow-up run 18 (18 Oct 2026, 11:00–11:54, 10 units, 252 steps, 126 image pairs) used preview `2026-10-18_10-59`
+and runner R-13/R-13b (the "Web Standard" set in both programs): 5 of the 10 units equal except for design, 2 real
+deviations (`panel-library-styles`: URL panel menu, `xs-shortcuts`: text shortcuts), 3 unclear (`menu-edit`,
+`xs-preferences`, `tool-text`); TW-125 to TW-129 closed.
 
 ## How tests run
 
@@ -71,9 +76,10 @@ with a real mouse and drag and drop between windows need a human click-test: [VE
 
 ## Next
 
-1. Fixes for the run-17 findings: behaviour descriptions for the reference machine's shortcut set (TW-126) and
-   the text-tool click on a selected text (TW-130), direct fixes for per-slice export formats (TW-128) and the
-   minimum panel-menu width (TW-125), runner R-13 (TW-127, TW-129); then comparison run 18 of the affected units.
+1. Fixes for the run-18 findings: the URL panel menu (TW-131, direct fix), behaviour descriptions for four text
+   shortcuts under "Web Standard" (TW-133), "delete paths when cropping" (TW-134) and typing after a pointer
+   double-click on a text (TW-135), runner R-14 (TW-132, read-back for TW-130); then comparison run 19 of the
+   affected units.
 2. Human click-test of [VERIFICATION.md](VERIFICATION.md), including section A4 (wave-4 features).
 3. Remaining deferred items: BA-101, BA-108 (metadata box writing), BA-110 rest, BA-083, U-1 PDF import layers.
 

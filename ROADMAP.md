@@ -10,22 +10,23 @@ exist and work; FW-PNG round-trips; CLI, JSF and MCP drive everything.
 
 | Measure | Value |
 |---|---|
-| Parity units equal except for design | **42 / 48** (1 real deviation, 5 unclear, 0 under-measured; full run 17) |
-| Proven 1:1 | **87.5 %** (42 / 48) |
-| Measurement quota, all 48 units | **86.3 %** (1057 / 1225 steps, run 17 alone; last full run 13: 79.7 %) |
-| Canvas image pairs within 1 % | 176 / 202 |
-| Tests | 2660 green, 0 red, 134 ignored at `cd30c354` |
+| Parity units equal except for design | **43 / 48** (2 real deviations, 3 unclear, 0 under-measured; run 18 on top of full run 17) |
+| Proven 1:1 | **89.6 %** (43 / 48) |
+| Measurement quota, all 48 units | **86.9 %** (1066 / 1226 steps, newest run per unit; run 17 alone: 86.3 %) |
+| Canvas image pairs within 1 % | 174 / 202 |
+| Tests | 2676 green, 0 red, 134 ignored at `4e677046` |
 | Latest release | v0.2.1 pre-release (18 Oct 2026, Windows x64, macOS universal arm64 + x86_64) |
-| Open findings | 7 fixable · 5 deferred · 20 informational · 845+ closed |
+| Open findings | 7 fixable · 5 deferred · 20 informational · 850+ closed |
 
 ## Next (in order)
 
-1. **Fixes for the run-17 findings, then run 18 of the affected units:** behaviour descriptions first for the
-   reference machine's active shortcut set (TW-126: Ctrl+Shift+D Clone, text size and style shortcuts; affects
-   `menu-edit`, `menu-modify-a`, `dialogs-d31-d40`, `xs-shortcuts`) and the text-tool click on a selected text
-   (TW-130, Q-57); direct fixes for per-slice export formats in the Optimize panel (TW-128, `panel-optimize`) and the
-   minimum width of short panel menus (TW-125); runner R-13 for defined option start states and reference-side
-   retries (TW-127, TW-129; `xs-preferences`, `dialogs-d31-d40`, `panel-swatches-mixer`, `panel-library-styles`).
+1. **Fixes for the run-18 findings, then run 19 of the affected units:** the URL panel menu (TW-131, direct fix,
+   `panel-library-styles`); behaviour descriptions first for four text shortcuts under "Web Standard" (TW-133,
+   `xs-shortcuts`), "delete paths when cropping" (TW-134, `xs-preferences`) and typing after a pointer double-click
+   on a text (TW-135, `tool-text`); runner R-14 for the reference-side effects (TW-132: history read-back, Delete,
+   Ctrl+D and arrow keys, text-tool state; `menu-edit`, `xs-shortcuts`, `tool-text`, `xs-canvas`) and the
+   text-tool read-back (TW-130, Q-57); the States menu width (TW-125 rest) in the next run of
+   `panel-pages-states-history`.
 2. **Human click-test** of [docs/VERIFICATION.md](docs/VERIFICATION.md) (embedded panel dialogs, real keyboard
    paths, brush strokes with a real mouse, drag and drop between windows, the open checks in section A2), including
    the wave-3 Batch Studio UI, the PDF/PSD export options and the wave-4 features in section A4.
@@ -38,8 +39,9 @@ exist and work; FW-PNG round-trips; CLI, JSF and MCP drive everything.
 ### Fixable remnants (`[F]`)
 
 - PDF import: no layers (the pure-Rust PDF reader exposes no optional content groups).
-- Run 17: TW-125 (minimum panel-menu width), TW-126 (shortcut set), TW-127 and TW-129 (runner), TW-128 (per-slice
-  export formats), TW-130 (text-tool click on a selected text).
+- Run 18: TW-131 (URL panel menu), TW-133 (text shortcuts under "Web Standard"), TW-134 (delete paths when
+  cropping), TW-135 (typing after a pointer double-click), TW-130 (text-tool read-back), TW-132 (runner). Run 18
+  closed TW-125 to TW-129.
 
 ### Deferred expansion items (`[V]`)
 
