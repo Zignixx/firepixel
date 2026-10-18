@@ -257,6 +257,7 @@ msg-step-duplicate-state = Duplicate State
 msg-step-edit-popup = Edit Pop-up Menu
 msg-step-edit-symbol = Edit Symbol
 msg-step-edit-text = Edit Text
+msg-step-text-change = Text Change
 msg-step-export-settings = Export Settings
 msg-step-export-wizard = Export Wizard
 msg-step-html-setup = HTML Setup

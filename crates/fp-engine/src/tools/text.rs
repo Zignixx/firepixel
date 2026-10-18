@@ -817,6 +817,8 @@ impl TextTool {
                     // Zeilenabstand der Werksvorgabe (`Text_Leading` 120 %, UX-A O4)
                     base.leading = Some(ctx.prefs.get_real("Text_Leading", 1.2) as f32);
                     base.leading_mode = Some(ctx.prefs.get_int("Text_LeadingMode", 0) as i32);
+                    // the other `Text_*` defaults (not the colour, re 50 section 2.3)
+                    base.apply(&crate::commands::new_text_pref_attrs(ctx.prefs));
                     self.state = TextState::Editing(Box::new(TextEditView {
                         target: None,
                         anchor,

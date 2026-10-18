@@ -615,10 +615,10 @@ fn text_commands() {
     assert_eq!(top_elements(&s).len(), 2);
 }
 
-/// TW-133: Text size larger/smaller step exactly 1 pt (minimum 1 pt); "stretched" leaves point
-/// text alone and applies to fixed-width text.
+/// TW-133: Text size larger/smaller step exactly 1 pt (minimum 1 pt); "stretched" cannot be
+/// stored and becomes left on point and fixed-width text alike (re 50 section 1).
 #[test]
-fn text_size_step_and_stretch_on_point_text() {
+fn text_size_step_and_stretch_becomes_left() {
     let mut s = doc_session(300.0, 200.0);
     let v = ex(&mut s, "draw.text", json!({"text": "Abc 123", "anchor": [10, 50], "size": 24}));
     let t = ElementId(v["id"].as_u64().unwrap_or(0));
@@ -634,16 +634,16 @@ fn text_size_step_and_stretch_on_point_text() {
     ex(&mut s, "text.size.smaller", json!({}));
     assert_eq!(attrs(&s, t).size, Some(1.0), "clamped at 1 pt");
 
-    let before = attrs(&s, t).alignment;
+    ex(&mut s, "text.align.right", json!({}));
     ex(&mut s, "text.align.stretched", json!({}));
-    assert_eq!(attrs(&s, t).alignment, before, "point text keeps its alignment");
+    assert_eq!(attrs(&s, t).alignment, Some(0), "point text: stretched becomes left");
 
     let v = ex(&mut s, "draw.text", json!({"text": "Rahmen", "rect": [10, 100, 200, 140], "size": 14}));
     let f = ElementId(v["id"].as_u64().unwrap_or(0));
     assert!(matches!(&el(&s, f).kind, ElementKind::Text(x) if x.frame_type == Some(1)));
     select(&mut s, &[f]);
     ex(&mut s, "text.align.stretched", json!({}));
-    assert_eq!(attrs(&s, f).alignment, Some(4), "fixed-width text is stretched");
+    assert_eq!(attrs(&s, f).alignment, Some(0), "fixed-width text: stretched becomes left");
 }
 
 // ------------------------------------------------------------------ Ebenen, Seiten, Status

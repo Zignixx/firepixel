@@ -863,10 +863,10 @@ fn overrides(name: &str, ids: &Ids) -> Option<(Value, Option<Setup>)> {
             ex(s, "select.pixels", json!({"shape": "rect", "rect": [0, 0, 5, 5]}));
             Value::Null
         })),
-        // "stretched" needs a fixed-width frame; point text keeps its alignment (TW-133)
+        // "stretched" is stored as left; right-aligned text changes (TW-133)
         "text.align.stretched" => rs(json!({}), Box::new(move |s: &mut Session| {
             select(s, &[text]);
-            ex(s, "text.setProperties", json!({"frameType": "fixed", "width": 200}));
+            ex(s, "text.align.right", json!({}));
             Value::Null
         })),
         n if n.starts_with("text.size.") || n.starts_with("text.style.") && n != "text.style.plain" || n.starts_with("text.align.") && n != "text.align.left" => {

@@ -171,9 +171,44 @@ pub(crate) fn step_size(cur: f32, delta: f32) -> f32 {
     (cur + delta).max(1.0)
 }
 
-/// Point text (automatic width, `frame_type` 0 or unset)?
-fn is_point_text(t: &TextElem) -> bool {
-    t.frame_type.unwrap_or(0) == 0
+/// Alignment the text engine actually stores (TW-133, re 50 section 1.4): "stretched" (4, or
+/// 0x14 vertical) cannot be represented and becomes left (0 / 0x10) on every text, point or
+/// fixed-width; 0-3 (and their vertical variants) are kept.
+pub fn effective_alignment(code: i32) -> i32 {
+    if code & 0x0f >= 4 { code & 0x10 } else { code }
+}
+
+/// Attributes new text takes from the `Text_*` defaults (text tool, `draw.text`, `addNewText`),
+/// only where they differ from the factory values (re 50 section 2.3). The alignment is the one
+/// the engine can store ("stretched" becomes left).
+pub fn new_text_pref_attrs(prefs: &crate::prefs::Preferences) -> TextAttrs {
+    let mut a = TextAttrs::default();
+    let just = effective_alignment(prefs.get_int("Text_Justification", 0).clamp(0, 4) as i32);
+    if just != 0 {
+        a.alignment = Some(just);
+    }
+    a
+}
+
+/// Text ▸ Align: stores the defaults like the original (re 50 section 1.2): `Text_Justification`
+/// gets the horizontal code as given (also 4 = stretched), `Text_Orientation` horizontal/vertical.
+fn store_alignment_prefs(s: &mut Session, code: i32) {
+    use crate::prefs::PrefValue;
+    s.prefs
+        .set("Text_Justification", PrefValue::Int((code & !0x10) as i64));
+    let vertical = code & 0x10 != 0;
+    let ori = s.prefs.get_int("Text_Orientation", 0);
+    // keep the direction (left/right to left) and switch only between horizontal and vertical
+    let now_vertical = ori == 1 || ori == 3;
+    if vertical != now_vertical {
+        let v = match (vertical, ori) {
+            (true, 2) => 3,
+            (true, _) => 1,
+            (false, 3) => 2,
+            (false, _) => 0,
+        };
+        s.prefs.set("Text_Orientation", PrefValue::Int(v));
+    }
 }
 
 fn first_size(t: &TextElem) -> f32 {
@@ -198,7 +233,9 @@ pub(crate) fn attrs_from_params(p: &Params) -> Result<TextAttrs> {
         baseline_shift: p.opt_f64("baselineShift")?.map(|v| v as f32),
         leading: p.opt_f64("leading")?.map(|v| v as f32),
         leading_mode: p.opt_i64("leadingMode")?.map(|v| v as i32),
-        alignment: p.opt_i64("alignment")?.map(|v| v as i32),
+        alignment: p
+            .opt_i64("alignment")?
+            .map(|v| effective_alignment(v as i32)),
         color: p.opt_color("color")?.map(|c| c.0),
         indent: p.opt_f64("indent")?.map(|v| v as f32),
         space_before: p.opt_f64("spaceBefore")?.map(|v| v as f32),
@@ -602,14 +639,26 @@ pub(super) fn register(r: &mut CommandRegistry) {
                     if has_text(s) {
                         s.active().is_some_and(|d| selected_elements(d).iter().any(|(_, e)| matches!(&e.kind, ElementKind::Text(t) if t.resolved_runs().first().and_then(|(a, _)| a.alignment).unwrap_or(0) == v)))
                     } else {
-                        s.prefs.get_int("Text_Justification", 0) as i32 == v
+                        let ori = s.prefs.get_int("Text_Orientation", 0);
+                        let vertical = if ori == 1 || ori == 3 { 0x10 } else { 0 };
+                        let just = s.prefs.get_int("Text_Justification", 0) as i32;
+                        effective_alignment(just | vertical) == v
                     }
                 })
                 .run(move |s, _| {
-                    // "Stretched" needs a line width: point text keeps its alignment (TW-133)
-                    let out = texts_or_defaults(s, move |t| if !(v == 4 && is_point_text(t)) { set_attr(t, &move |a| a.alignment = Some(v)) }, move |s| s.prefs.set("Text_Justification", crate::prefs::PrefValue::Int(v as i64)))?;
+                    // TW-133 (re 50 section 1): the defaults are always written (also 4 =
+                    // stretched); selected texts get the alignment the engine can store
+                    // ("stretched" becomes left on every text), are laid out again and the
+                    // step is named "Text change"
+                    let eff = effective_alignment(v);
+                    store_alignment_prefs(s, v);
+                    s.prefs_changed();
+                    if !has_text(s) {
+                        return Ok(CommandOutput::session());
+                    }
+                    let out = edit_texts(s, move |t| set_attr(t, &move |a| a.alignment = Some(eff)))?;
                     reduce_selection_to_texts(s);
-                    Ok(out)
+                    Ok(out.labeled(fp_i18n::t("msg-step-text-change")))
                 }),
         );
     }
@@ -1330,7 +1379,7 @@ pub(crate) fn editor_patch(
         "text.align.centeredHorizontally" => a.alignment = Some(1),
         "text.align.right" => a.alignment = Some(2),
         "text.align.justified" => a.alignment = Some(3),
-        "text.align.stretched" => a.alignment = Some(4),
+        "text.align.stretched" => a.alignment = Some(effective_alignment(4)),
         _ => a.size = Some(name.strip_prefix("text.size.")?.parse::<f32>().ok()?),
     }
     (a != TextAttrs::default()).then_some(a)

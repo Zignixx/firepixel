@@ -615,6 +615,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 let color = p.opt_color("color")?.unwrap_or(s.tools.options.text_color);
                 let rect = p.opt_rect("rect")?;
                 let lead = s.prefs.get_real("Text_Leading", 1.2);
+                let pref_attrs = super::text::new_text_pref_attrs(&s.prefs);
                 let anchor = p
                     .opt_point("anchor")?
                     .or_else(|| rect.map(|r| Point::new(r.left, r.top + size)))
@@ -649,6 +650,11 @@ pub(super) fn register(r: &mut CommandRegistry) {
                             t.initial.leading = l;
                             for r in &mut t.runs {
                                 r.attrs.leading = l;
+                            }
+                            // the other `Text_*` defaults (not the colour, re 50 section 2.3)
+                            t.initial.apply(&pref_attrs);
+                            for r in &mut t.runs {
+                                r.attrs.apply(&pref_attrs);
                             }
                         }
                         _ => {}
