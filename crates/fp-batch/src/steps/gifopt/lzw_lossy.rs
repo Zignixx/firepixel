@@ -49,6 +49,9 @@ pub struct LzwParams<'a> {
     pub threshold: f32,
     /// Breite des Rechtecks (für die Fehlerweitergabe nach unten).
     pub width: usize,
+    /// B-5: flexible (non-greedy) parsing instead of the greedy longest match
+    /// ([`encode_flexible`]).
+    pub flexible: bool,
 }
 
 /// Gewicht der Helligkeit in der Verlust-Toleranz (BATCH-8b): Ersetzungen dürfen den Farbton deutlich
@@ -112,6 +115,9 @@ impl Trie {
 /// Kodiert die Pixel eines Rechtecks. Ergebnis: gepackte LZW-Codes (ohne Mindest-Codelänge und ohne
 /// Unterblöcke) und die tatsächlich gewählten Indizes je Pixel.
 pub fn encode(plan: &[PlanPx], p: &LzwParams) -> (Vec<u8>, Vec<u8>) {
+    if p.flexible {
+        return encode_flexible(plan, p);
+    }
     let mcs = p.min_code_size.clamp(2, 8);
     let clear = 1u16 << mcs;
     let eoi = clear + 1;
@@ -323,6 +329,196 @@ fn lookahead(
     n
 }
 
+/// How far back from the end of the longest match flexible parsing looks for a better phrase end.
+const FLEX_BACK: usize = 4;
+/// Longest walk when measuring the reach of the following phrase.
+const FLEX_WALK: usize = 512;
+/// Extra pixels the shorter split must reach beyond the greedy one.
+const FLEX_MARGIN: usize = 2;
+
+/// Path buffer of [`walk`]: dictionary nodes and chosen indices.
+type WalkBuf = (Vec<u16>, Vec<u8>);
+
+/// Walks the dictionary from position `i` (phrase start with root index `root`): returns the nodes
+/// of the path (node `k` covers `k + 1` pixels) and the chosen index per pixel. Among equal
+/// candidates the default index wins, then the smallest distance (`accept`), no error diffusion.
+fn walk(
+    trie: &Trie,
+    plan: &[PlanPx],
+    i: usize,
+    root: u8,
+    limit: usize,
+    accept: &impl Fn(&PlanPx, u8, &Lab) -> Option<f32>,
+    buf: &mut WalkBuf,
+) {
+    let (nodes, picks) = (&mut buf.0, &mut buf.1);
+    nodes.clear();
+    picks.clear();
+    let mut cur = root as u16;
+    nodes.push(cur);
+    picks.push(root);
+    for px in plan.iter().skip(i + 1).take(limit.saturating_sub(1)) {
+        let mut best: Option<(u16, u8, f32)> = None;
+        let mut c = trie.first[cur as usize];
+        while c != NONE {
+            let idx = trie.index[c as usize];
+            if let Some(cost) = accept(px, idx, &[0.0; 3]) {
+                let better = match best {
+                    None => true,
+                    Some((_, bi, bc)) => bi != px.default && (idx == px.default || cost < bc),
+                };
+                if better {
+                    best = Some((c, idx, cost));
+                }
+            }
+            c = trie.sibling[c as usize];
+        }
+        let Some((code, idx, _)) = best else {
+            break;
+        };
+        cur = code;
+        nodes.push(cur);
+        picks.push(idx);
+    }
+}
+
+/// Root indices a phrase may start with at pixel `i` (default first).
+fn roots(
+    px: &PlanPx,
+    p: &LzwParams,
+    accept: &impl Fn(&PlanPx, u8, &Lab) -> Option<f32>,
+) -> Vec<u8> {
+    let mut r = vec![px.default];
+    if px.flex
+        && let Some(t) = p.transparent
+        && t != px.default
+        && accept(px, t, &[0.0; 3]).is_some()
+    {
+        r.push(t);
+    }
+    r
+}
+
+/// Longest phrase at `i` over all allowed roots: (length, root).
+fn longest(
+    trie: &Trie,
+    plan: &[PlanPx],
+    p: &LzwParams,
+    i: usize,
+    limit: usize,
+    accept: &impl Fn(&PlanPx, u8, &Lab) -> Option<f32>,
+    buf: &mut WalkBuf,
+) -> (usize, u8) {
+    let mut best = (0usize, plan[i].default);
+    for root in roots(&plan[i], p, accept) {
+        walk(trie, plan, i, root, limit, accept, buf);
+        if buf.0.len() > best.0 {
+            best = (buf.0.len(), root);
+        }
+    }
+    best
+}
+
+/// Flexible (non-greedy) parsing, B-5: the phrase at `i` does not have to be the longest match.
+/// Among the ends `k` in the last [`FLEX_BACK`] positions of the longest match, the one whose
+/// following phrase reaches furthest is taken (one-step lookahead over phrase lengths, "flexible
+/// parsing"). Emitting a shorter phrase is legal GIF: the decoder adds "previous phrase + first
+/// index" exactly as the encoder does here, duplicate dictionary entries included. Lossy matching
+/// uses the same tolerance as the greedy encoder, without error diffusion.
+fn encode_flexible(plan: &[PlanPx], p: &LzwParams) -> (Vec<u8>, Vec<u8>) {
+    let mcs = p.min_code_size.clamp(2, 8);
+    let clear = 1u16 << mcs;
+    let eoi = clear + 1;
+    let mut w = BitWriter {
+        out: Vec::with_capacity(plan.len() / 2 + 16),
+        acc: 0,
+        n: 0,
+    };
+    let mut chosen = vec![0u8; plan.len()];
+    let mut trie = Trie::new();
+    let mut width = mcs + 1;
+    let mut next = eoi + 1;
+    w.put(clear, width);
+    if plan.is_empty() {
+        w.put(eoi, width);
+        return (w.finish(), chosen);
+    }
+    let thr2 = if p.threshold > 0.0 {
+        p.threshold * p.threshold
+    } else {
+        1e-10
+    };
+    let accept = |px: &PlanPx, cand: u8, _carry: &Lab| -> Option<f32> {
+        if cand == px.default {
+            return Some(0.0);
+        }
+        if !px.flex || cand as u16 == px.forbid {
+            return None;
+        }
+        if Some(cand) == p.transparent {
+            return if px.can_transp { Some(0.0) } else { None };
+        }
+        let c = p.palette.get(cand as usize)?;
+        if px.can_transp {
+            return (dist2(c, &px.reference) <= 1e-10).then_some(0.0);
+        }
+        let d = super::color::wdist2(c, &px.reference, LOSSY_L_WEIGHT);
+        (d <= thr2).then_some(d)
+    };
+    let mut main: WalkBuf = (Vec::new(), Vec::new());
+    let mut side: WalkBuf = (Vec::new(), Vec::new());
+    let mut i = 0usize;
+    // root of the phrase at `i` (chosen by the previous step)
+    let (_, mut root) = longest(&trie, plan, p, 0, usize::MAX, &accept, &mut side);
+    while i < plan.len() {
+        walk(&trie, plan, i, root, usize::MAX, &accept, &mut main);
+        let (nodes, picks) = (&main.0, &main.1);
+        let len = nodes.len();
+        // choose the phrase length
+        let mut take = len;
+        let mut next_root = None;
+        if i + len < plan.len() {
+            let mut best_reach = 0usize;
+            for k in (len.saturating_sub(FLEX_BACK).max(1)..=len).rev() {
+                let (l2, r2) = longest(&trie, plan, p, i + k, FLEX_WALK, &accept, &mut side);
+                // a shorter phrase also leaves a shorter dictionary entry: only worth it with a
+                // clear gain over the greedy split
+                let margin = if k == len { 0 } else { FLEX_MARGIN };
+                if k + l2 > best_reach + margin {
+                    best_reach = k + l2;
+                    take = k;
+                    next_root = Some(r2);
+                }
+            }
+        }
+        chosen[i..i + take].copy_from_slice(&picks[..take]);
+        w.put(nodes[take - 1], width);
+        i += take;
+        if i >= plan.len() {
+            break;
+        }
+        let r = match next_root {
+            Some(r) => r,
+            None => longest(&trie, plan, p, i, FLEX_WALK, &accept, &mut side).1,
+        };
+        if (next as usize) < MAX_CODES {
+            trie.add(nodes[take - 1], r, next);
+            next += 1;
+            if next > (1u16 << width) && width < 12 {
+                width += 1;
+            }
+        } else {
+            w.put(clear, width);
+            trie.reset();
+            width = mcs + 1;
+            next = eoi + 1;
+        }
+        root = r;
+    }
+    w.put(eoi, width);
+    (w.finish(), chosen)
+}
+
 /// Mindest-Codelänge für eine Farbtabelle mit `entries` Einträgen.
 pub fn min_code_size(entries: usize) -> u8 {
     let mut b = 2u8;
@@ -405,6 +601,7 @@ pub(crate) mod tests {
             transparent: None,
             threshold: 0.0,
             width: 64,
+            flexible: false,
         }
     }
 
@@ -462,6 +659,7 @@ pub(crate) mod tests {
             transparent: Some(2),
             threshold: 0.0,
             width: 4000,
+            flexible: false,
         };
         let (bytes, chosen) = encode(&plan, &p);
         let strict: Vec<PlanPx> = plan.iter().map(|q| PlanPx::fixed(q.default)).collect();
@@ -495,6 +693,7 @@ pub(crate) mod tests {
             transparent: None,
             threshold: t,
             width: 200,
+            flexible: false,
         };
         let (lossless, c0) = encode(&plan, &mk(0.0));
         let (lossy, c1) = encode(&plan, &mk(0.08));
@@ -548,6 +747,7 @@ pub(crate) mod tests {
                 transparent: None,
                 threshold: 0.08,
                 width: 200,
+                flexible: false,
             };
             let (bytes, chosen) = encode(&plan, &p);
             (
@@ -565,5 +765,44 @@ pub(crate) mod tests {
             nc > 4 * nl.max(1) && bc < bl,
             "Farbton {nc} Ersetzungen/{bc} B, Helligkeit {nl}/{bl} B"
         );
+    }
+
+    #[test]
+    fn flexible_parsing_round_trips_and_is_not_larger() {
+        let mut seed = 777u64;
+        let (mut greedy_total, mut flex_total) = (0usize, 0usize);
+        for (len, colors) in [
+            (1usize, 4usize),
+            (2, 2),
+            (60_000, 256),
+            (40_000, 3),
+            (9_000, 16),
+        ] {
+            let data: Vec<u8> = (0..len)
+                .map(|i| {
+                    seed = seed.wrapping_mul(6_364_136_223_846_793_005).wrapping_add(1);
+                    if (i / 29) % 3 == 0 {
+                        ((i / 300) % colors) as u8
+                    } else {
+                        ((seed >> 40) as usize % colors.min(4)) as u8
+                    }
+                })
+                .collect();
+            let mcs = min_code_size(colors);
+            let plan: Vec<PlanPx> = data.iter().map(|d| PlanPx::fixed(*d)).collect();
+            let greedy = encode(&plan, &params(mcs));
+            let flex = encode(
+                &plan,
+                &LzwParams {
+                    flexible: true,
+                    ..params(mcs)
+                },
+            );
+            assert_eq!(flex.1, data);
+            assert_eq!(decode(&flex.0, mcs), data, "len {len}");
+            greedy_total += greedy.0.len();
+            flex_total += flex.0.len();
+        }
+        assert!(flex_total < greedy_total, "{flex_total} vs {greedy_total}");
     }
 }

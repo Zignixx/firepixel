@@ -207,6 +207,10 @@ pub struct GifOptions {
     pub transparency: Option<bool>,
     pub matte: Option<[u8; 3]>,
     pub split_frames: Option<bool>,
+    /// B-5: `lzw` greedy/flexible.
+    pub lzw_flexible: Option<bool>,
+    /// B-5: `perceptualPalette`.
+    pub perceptual_palette: Option<bool>,
 }
 
 fn num(o: &Map<String, Value>, k: &str) -> Option<f64> {
@@ -249,6 +253,12 @@ impl GifOptions {
                 .and_then(crate::step::parse_color)
                 .map(|c| [c[0], c[1], c[2]]),
             split_frames: b("splitFrames"),
+            lzw_flexible: s("lzw").and_then(|v| match v {
+                "flexible" => Some(true),
+                "greedy" => Some(false),
+                _ => None,
+            }),
+            perceptual_palette: b("perceptualPalette"),
         }
     }
 
@@ -309,6 +319,8 @@ impl GifOptions {
             scale: 1.0,
             frame_step: 1,
             split_frames: self.split_frames.unwrap_or(q < 95),
+            lzw_flexible: self.lzw_flexible.unwrap_or(false),
+            perceptual_palette: self.perceptual_palette.unwrap_or(false),
         }
     }
 }
@@ -410,6 +422,9 @@ impl Step for GifOutput {
             ParamDef::choice("disposal", &["auto", "keep"], "auto"),
             ParamDef::bool("transparency", true),
             ParamDef::new("splitFrames", ParamType::Bool, Value::Null),
+            // B-5: size modes, off by default (output of the defaults unchanged)
+            ParamDef::choice("lzw", &["greedy", "flexible"], "greedy"),
+            ParamDef::bool("perceptualPalette", false),
             // Füllfarbe für halbtransparente Pixel ohne GIF-Transparenz (BATCH-11b: eigenes Feld)
             ParamDef::color("background", "#ffffff").when("transparency", &["false"]),
         ]

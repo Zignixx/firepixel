@@ -469,3 +469,11 @@ batch-param-metadata-export-collect = Eine Datei für alle Bilder
 batch-issue-mcp-external = Schritt { $index } (Externes Programm): externe Programme sind über MCP nicht erlaubt.
 batch-issue-mcp-allow-io = Schritt { $index } (JSF-Code): „Dateizugriff erlauben“ (allowIo) ist über MCP nicht erlaubt.
 batch-err-mcp-refused = Das Rezept kann über MCP nicht ausgeführt werden: { $steps }
+
+## GIF-Optimierer: Größenmodi (B-5)
+batch-param-output-gif-lzw = LZW-Zerlegung
+    .tooltip = Flexibel: wählt die Code-Grenzen vorausschauend statt immer den längsten Treffer – kleinere Datei, gleiche Pixel.
+batch-value-output-gif-lzw-greedy = Standard (längster Treffer)
+batch-value-output-gif-lzw-flexible = Flexibel (kleiner)
+batch-param-output-gif-perceptualPalette = Wahrnehmungsgewichtete Palette
+    .tooltip = Ruhige Flächen zählen bei der Farbauswahl mehr als unruhige Strukturen, in denen Farbfehler kaum auffallen.

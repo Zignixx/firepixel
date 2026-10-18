@@ -50,6 +50,11 @@ pub struct GifSettings {
     /// Getrennte Änderungen eines Frames als Teilbilder speichern (BATCH-8b): vordere Teile je 20 ms
     /// vor dem Bildwechsel, das letzte zur Zeit des Frames.
     pub split_frames: bool,
+    /// B-5: flexible (non-greedy) LZW parsing (`lzw: flexible`); off by default (output unchanged).
+    pub lzw_flexible: bool,
+    /// B-5: perceptual palette (`perceptualPalette`): colour statistics weighted by visibility (flat
+    /// areas count more than busy texture, where quantization errors are masked); off by default.
+    pub perceptual_palette: bool,
 }
 
 impl Default for GifSettings {
@@ -73,6 +78,8 @@ impl Default for GifSettings {
             scale: 1.0,
             frame_step: 1,
             split_frames: true,
+            lzw_flexible: false,
+            perceptual_palette: false,
         }
     }
 }
@@ -193,10 +200,12 @@ struct FileOrder {
     /// RGB in Datei-Reihenfolge (ohne Transparenz-Eintrag)
     rgb: Vec<[u8; 3]>,
     transp: bool,
+    /// B-5: flexible LZW parsing ([`GifSettings::lzw_flexible`]).
+    flexible: bool,
 }
 
 impl FileOrder {
-    fn new(pal: &Palette, usage: &[u64], transp: bool) -> FileOrder {
+    fn new(pal: &Palette, usage: &[u64], transp: bool, flexible: bool) -> FileOrder {
         let k = pal.len();
         let mut colors: Vec<usize> = (0..k).collect();
         colors.sort_by(|a, b| usage[*b].cmp(&usage[*a]).then(a.cmp(b)));
@@ -218,6 +227,7 @@ impl FileOrder {
             lab,
             rgb: colors.iter().map(|ci| pal.rgb[*ci]).collect(),
             transp,
+            flexible,
         }
     }
 
@@ -244,8 +254,24 @@ impl FileOrder {
             transparent: self.transp.then_some(0),
             threshold,
             width,
+            flexible: false,
         };
-        let (data, chosen) = lzw_lossy::encode(&mapped, &p);
+        // B-5: with `lzw: flexible` both parsings run in parallel, the smaller result is kept
+        // (flexible parsing alone loses on sub-images where the greedy lookahead over equivalent
+        // indices is better)
+        let (data, chosen) = if self.flexible {
+            let pf = LzwParams {
+                flexible: true,
+                ..p
+            };
+            let (g, f) = rayon::join(
+                || lzw_lossy::encode(&mapped, &p),
+                || lzw_lossy::encode(&mapped, &pf),
+            );
+            if f.0.len() < g.0.len() { f } else { g }
+        } else {
+            lzw_lossy::encode(&mapped, &p)
+        };
         (
             data,
             chosen.iter().map(|c| self.to_int[*c as usize]).collect(),
@@ -260,8 +286,10 @@ pub fn encode(w: usize, h: usize, frames: &[PFrame], s: &GifSettings) -> (Vec<u8
     let has_alpha = frames.iter().any(|f| f.px.iter().any(|p| *p & OPAQUE == 0));
     let need_transp = has_alpha || (frames.len() > 1 && s.diff_transparency);
     // Oklab und Kanten je Frame
-    let labs: Vec<Vec<Lab>> = frames.iter().map(|f| frame_lab(&f.px)).collect();
-    let edges: Vec<Vec<f32>> = labs.iter().map(|l| edge_map(w, h, l)).collect();
+    // per frame in parallel (B-5; deterministic, same result as sequential)
+    use rayon::prelude::*;
+    let labs: Vec<Vec<Lab>> = frames.par_iter().map(|f| frame_lab(&f.px)).collect();
+    let edges: Vec<Vec<f32>> = labs.par_iter().map(|l| edge_map(w, h, l)).collect();
 
     // --- Paletten
     let total: usize = n * frames.len();
@@ -279,7 +307,12 @@ pub fn encode(w: usize, h: usize, frames: &[PFrame], s: &GifSettings) -> (Vec<u8
                 // jedes Pixel jedes Frames zählt gleich (BATCH-8b: gemessen besser als „statisch 0,1,
                 // Kanten bis 2×“ – große ruhige Flächen bekommen feinere Stufen, die Palette streut
                 // weniger in Mischfarben von Kanten)
-                hist.add(unpack(p), &labs[fi][i], 1.0);
+                let weight = if s.perceptual_palette {
+                    perceptual_weight(edges[fi][i])
+                } else {
+                    1.0
+                };
+                hist.add(unpack(p), &labs[fi][i], weight);
             }
         }
         hist
@@ -400,7 +433,7 @@ pub fn encode(w: usize, h: usize, frames: &[PFrame], s: &GifSettings) -> (Vec<u8
     let orders: Vec<FileOrder> = palettes
         .iter()
         .zip(&usage)
-        .map(|(p, u)| FileOrder::new(p, u, need_transp))
+        .map(|(p, u)| FileOrder::new(p, u, need_transp, s.lzw_flexible))
         .collect();
 
     // --- Planen und Kodieren
@@ -641,6 +674,12 @@ fn reencode_expanded(pd: &mut Encoded, er: Rect, orders: &[FileOrder]) {
     pd.data = data;
     pd.chosen = chosen;
     pd.mcs = mcs;
+}
+
+/// Visibility weight of a pixel for the perceptual palette (B-5): quantization errors are seen in
+/// flat areas and masked by local contrast (edge strength in Oklab, see [`edge_map`]).
+pub fn perceptual_weight(edge: f32) -> f32 {
+    1.0 / (1.0 + 12.0 * edge)
 }
 
 fn frame_lab(px: &[u32]) -> Vec<Lab> {

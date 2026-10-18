@@ -537,6 +537,8 @@ smallest file ..."; during a run the warning goes into the report (`batch-warn-g
 | `transparency` | on | store transparency as GIF transparency |
 | `background` | colour *#ffffff* (only with `transparency` off) | fill colour for semi-transparent pixels |
 | `splitFrames` | on/off *automatic* (on below quality 95) | separate changes of one frame as individual sub-images (each 20 ms before the frame change) |
+| `lzw` | greedy / flexible *greedy* | B-5: `flexible` also encodes every sub-image with flexible (non-greedy) parsing — a phrase may end up to 4 pixels before the longest match when the following phrase then reaches at least 2 pixels further — and keeps the smaller of both (run in parallel); same decoder, lossless parsing keeps the pixels |
+| `perceptualPalette` | off | B-5: colour statistics weighted by visibility, `1 / (1 + 12 · local Oklab contrast)` (flat areas count more, busy texture masks errors) |
 
 ### 3.10 Document steps (FW-PNG/PSD/SVG as documents, group "Document")
 
@@ -811,6 +813,15 @@ zenquant (AGPL). The techniques are known from publications and are implemented 
 7. **Measurement**: test corpus `tools\golden\batch\gif\` (5 short clips: screen recording, photo
    camera pan, cartoon, gradient, pixel art), metrics size and SSIM (own SSIM on Oklab L). Goal:
    "balanced" ≥ 30 % smaller than the classic GIF export at equal or better SSIM.
+   Measured (B-5, `tests\gifopt_measure.rs`, smallest file with SSIM ≥ 0.99 by quality bisection,
+   320×240×24 synthetic clips): screen −54.3 % vs. the export in every mode; cartoon default
+   6,274 B (−37.9 %), `lzw: flexible` 6,271 B, `perceptualPalette` 6,271 B, both 6,185 B (−38.8 %,
+   −1.4 % vs. default); the camera pan does not reach SSIM 0.99 in any mode (best 0.986, the export
+   0.961; at the export's SSIM the default is −32 %). Both modes stay **off by default** (the spec
+   does not define them, so the output of the defaults is unchanged); the gains are small because
+   the greedy encoder already looks ahead over equivalent indices. Frame Oklab and edge maps are
+   computed per frame in parallel (rayon, deterministic). Not done: lossy LZW with an SSIM bound,
+   cancel inside one encode.
 
 ### 5.7 UI files (`crates\fp-ui\src\batch\`)
 

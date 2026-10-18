@@ -125,4 +125,56 @@ fn measure_against_plain_export() {
             row(&format!("gleiche SSIM (Qualität {q})"), &bytes, 0);
         }
     }
+
+    // B-5 (BA-110): smallest file with SSIM ≥ 0.99 per mode (quality bisection), against the export
+    println!();
+    println!("| Clip | Mode | Quality | Bytes | vs. export | vs. default | SSIM |");
+    println!("|---|---|---:|---:|---:|---:|---:|");
+    let modes: [(&str, Value); 4] = [
+        ("default", json!({})),
+        ("lzw flexible", json!({"lzw": "flexible"})),
+        ("perceptual palette", json!({"perceptualPalette": true})),
+        (
+            "both",
+            json!({"lzw": "flexible", "perceptualPalette": true}),
+        ),
+    ];
+    for (clip, base) in clips.iter().zip(&baseline) {
+        let mut default_bytes = 0usize;
+        for (name, extra) in &modes {
+            let (mut lo, mut hi) = (10u8, 100u8);
+            let mut found: Option<(u8, Vec<u8>, f64)> = None;
+            while lo <= hi {
+                let mid = lo + (hi - lo) / 2;
+                let mut o = opts(extra.clone());
+                o.insert("quality".into(), json!(mid));
+                let r = gifopt::optimize(&clip.item(), &o).expect("optimize");
+                let ssim = mean_ssim(clip, &r.bytes);
+                if ssim >= 0.99 {
+                    found = Some((mid, r.bytes, ssim));
+                    hi = mid - 1;
+                } else {
+                    lo = mid + 1;
+                }
+            }
+            match found {
+                Some((q, bytes, ssim)) => {
+                    if *name == "default" {
+                        default_bytes = bytes.len();
+                    }
+                    println!(
+                        "| {} | {} | {} | {} | {:+.1} % | {:+.1} % | {:.4} |",
+                        clip.name,
+                        name,
+                        q,
+                        bytes.len(),
+                        (bytes.len() as f64 / base.len() as f64 - 1.0) * 100.0,
+                        (bytes.len() as f64 / default_bytes.max(1) as f64 - 1.0) * 100.0,
+                        ssim
+                    );
+                }
+                None => println!("| {} | {} | – | – | – | – | < 0.99 |", clip.name, name),
+            }
+        }
+    }
 }
