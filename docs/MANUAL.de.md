@@ -83,6 +83,10 @@ weichem Rand wie im Original; Esc beendet das Malen und wechselt zum Zeiger. Das
 **Verlauf** hat eigene Farben (Vorgabe Schwarz → Weiß, Klick aufs Farbfeld öffnet den
 Verlaufseditor), „Auswahl füllen“ und Toleranz gelten getrennt vom Farbeimer. **Farbe ersetzen**
 hat eigene Farben „Von“ und „in“ (Vorgabe Grün → Rot).
+Beim Malen mit Pinsel, Bleistift, Radiergummi oder Stempel erscheint die Vorschau an der Stelle der
+Bitmap in der Stapelreihenfolge, mit ihrer Deckkraft, Füllmethode, ihren Effekten und Masken. Ein
+Strich, der eine neue Bitmap anlegt oder in eine Bitmap in einem Symbol malt, wird bis zum Loslassen
+obenauf angezeigt.
 
 **Strich ab Werk:** Linie, Stift, Vektorpfad, Rechteck, Ellipse und Polygon zeichnen wie im Original
 mit der Strichart *Einfach ▸ Präzise abger.* (1 px); eine eigene Wahl im Inspektor gilt weiter.
@@ -133,7 +137,12 @@ mit der Strichart *Einfach ▸ Präzise abger.* (1 px); eine eigene Wahl im Insp
   neue Status an, „Nicht mehr anzeigen“ lässt sich unter *Warnmeldungen zurücksetzen* wieder einschalten).
 - **Befehle:** Skript ausführen (`.jsf`), gespeicherte Befehle aus dem Befehlsordner
   (`%APPDATA%\Firepixel\Commands`, Unterordner werden Untermenüs), KI-Modelle verwalten,
-  Warnmeldungen zurücksetzen und der KI-Steuerkanal.
+  Warnmeldungen zurücksetzen und der KI-Steuerkanal. Mitgelieferte Befehle: **Bildschirmfoto** (nach
+  einem Countdown der ganze Bildschirm oder ein als Zahlen eingegebener Ausschnitt, aufgenommen mit
+  dem Werkzeug des Systems, öffnet sich als neues Dokument), **Symbolskript erstellen** (ein
+  JSF-Skript, das das gewählte Grafiksymbol nachbaut; Bitmaps, verschachtelte Instanzen und
+  zusammengesetzte Formen fehlen, Verläufe werden Vollfarben) und **Web ▸ Gemeinsame Palette** (eine
+  Palette über alle offenen Dokumente, im Bedienfeld Farbfelder, auf Wunsch als `.act` gespeichert).
 - **Fenster:** blendet Bedienfelder ein und aus. Unter *Arbeitsbereichlayouts* lassen sich
   Anordnungen speichern und laden; dazu gibt es die Dokumentliste.
 
@@ -206,7 +215,10 @@ Drei Werkzeuge am Platz des Zauberstabs (Abschnitt Bitmap) erzeugen Pixelauswahl
 KI-Modellen, ohne Netzverbindung beim Rechnen:
 
 - **Objektauswahl:** auf ein Objekt klicken oder einen Rahmen ziehen; wie beim Zauberstab fügt
-  Umschalt+Klick hinzu, Alt+Klick zieht ab.
+  Umschalt+Klick hinzu, Alt+Klick zieht ab. Mit *Bearbeiten ▸ Voreinstellungen ▸ Bearbeitung ▸
+  Auswahlvorschau beim Überfahren anzeigen* (Vorgabe aus) zeigt der ruhende Mauszeiger den Umriss des
+  Objekts gestrichelt; das geht erst, wenn das Modell für das Bild geladen ist, und ein Klick auf
+  dieselbe Stelle wählt dann sofort aus.
 - **Motiv auswählen** (auch *Auswählen ▸ Motiv auswählen*): wählt das Hauptmotiv mit weicher Kante.
 - **Kante verfeinern** (auch *Auswählen ▸ Kante verfeinern…*): verbessert die Kante einer vorhandenen
   Auswahl bei Haaren, Fell und Halbtransparenz.
@@ -244,7 +256,11 @@ nebeneinander.
 *Datei ▸ HTML-Einrichtung…* (Register *Allgemein*) schreibt „CSS in externe Datei schreiben“
 (Vorgabe an, wirkt mit „CSS für Popupmenüs verwenden“) die Stile in eine eigene `.css`-Datei neben
 der HTML-Datei, die per `@import` eingebunden wird. Neben „Hintergrundbild:“ wählt „Durchsuchen...“ ein
-Bild. Liegt es im Ordner des Dokuments, wird der Pfad relativ eingetragen.
+Bild. Liegt es im Ordner des Dokuments, wird der Pfad relativ eingetragen. „Seitenstile in externe
+Datei schreiben (styles.css)“ legt die Seitenstile in `styles.css` neben der HTML-Datei ab; der Stil
+*Allgemeines HTML5* schreibt eine HTML5-Seite; Schaltflächen behalten in jedem Stil ihr
+Navigationsleisten-Skript. *Als Standard festlegen* speichert die Werte des Dialogs für neue Dokumente
+und für Dokumente ohne eigene HTML-Einstellungen.
 In den PDF-Exportoptionen schreibt die Komprimierung „JPEG 2000 (JPEG)“ normales JPEG (DCT), weil
 Firepixel keinen JPEG-2000-Kodierer hat; der Eintrag „Producer“ des PDFs vermerkt das.
 
@@ -312,6 +328,8 @@ Gespeicherte Einstellungen wählst du aus der Liste oben, „+“ speichert die 
 ## Fehlerbehebung
 
 - **Voreinstellungen** liegen in `%APPDATA%\Firepixel\preferences.json`. Löschen setzt sie zurück.
+  Die Zeile „ffmpeg für Videos“ (*Voreinstellungen ▸ Zusatzmodule*) ist dieselbe Einstellung wie im
+  Batch-Studio; leer heißt automatische Suche.
 - **Ordnernamen:** Seit dem 12.10.2026 heißen die Ordner der App englisch: `Languages` (früher
   `Sprachen`), `Models` (früher `Modelle`, unter `%LOCALAPPDATA%\Firepixel`), `Common Library`
   (früher `Allgemeine Bibliothek`). Beim ersten Start einer neuen Version benennt Firepixel die alten

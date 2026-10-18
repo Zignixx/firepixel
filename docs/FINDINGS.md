@@ -16,7 +16,7 @@ Every finding keeps the ID it was given when it was first recorded, so it can be
 Findings are grouped by their state:
 
 - **[F] Fixable** – a bug or deviation that can be fixed in the current architecture (often after one more measurement in the reference application).
-- **[V] Deferred** – a larger feature or expansion that was postponed on purpose (batch extensions, PDF/PSD export details, HTML setup, CMD-1, AI mask preview, ...).
+- **[V] Deferred** – a larger feature or expansion that was postponed on purpose (batch extensions, PDF/PSD export details, ...).
 - **[N] Not feasible / informational** – limits of the platform or of the project rules (for example `unsafe_code = "forbid"`), performance notes for machines without a GPU, and items that only need a regenerated report.
 
 ## How to add a finding
@@ -60,29 +60,41 @@ The wave after run 16 closed the rest:
 |---|---|---|
 | U-1 rest | File ▸ Import, PDF | SVG files now import with their layers; **PDF files still arrive as one layer** because the pure-Rust PDF reader exposes no optional content groups (layers). Library limit; needs either an upstream feature or an own OCG reader. |
 
-## [V] Deferred / expansion items (9)
+## [V] Deferred / expansion items (5)
 
 Wave 3 (18 Oct 2026) closed BA-086, BA-100 (PDF selectable text), BA-102 (PSD layers per object with text,
-vector and effects), BA-105 and BA-106, and BA-107 (Batch Studio UI); the last point of BA-107, an ffmpeg row in
-the application's Preferences, is in progress (C-1). BA-108, BA-109 and BA-110 were shortened to what is still
-open.
+vector and effects), BA-105 and BA-106; BA-108, BA-109 and BA-110 were shortened to what is still open.
+Wave 4 (18 Oct 2026) closed the rest of the expansion work:
+
+- **BA-103 HTML Setup:** "Set Defaults" stores the dialog's values as document-independent defaults (used by New
+  Document and by the HTML export for pages without settings of their own); a new option writes the page styles
+  to an external `styles.css`; a new neutral "Generic HTML5" style; button symbols keep their navigation-bar
+  markup and script in every style (tests export a nav-bar document).
+- **BA-104 (CMD-1) Commands menu:** `commands.screenCapture` (via the operating system's own screenshot tool),
+  `commands.symbolScript` (generates a JSF script for the selected graphic symbol) and `commands.sharedPalette`
+  (one adaptive palette over all open documents, filled into the Swatches panel; `.act` file via the `path`
+  parameter for CLI/MCP) now work. Limits are listed under [N].
+- **BA-107 complete:** the "ffmpeg for videos" row in Preferences (same setting as the Batch Studio).
+- **BA-037 AI hover preview:** optional, preference "Show selection preview while hovering" (off by default);
+  only with a warm model cache; a click on the same pixel reuses the result.
+- **BA-039 brush preview in stacking order:** brush, pencil, eraser and rubber stamp preview at the bitmap's
+  layer position with its opacity, blend mode, effects and masks. Limits are listed under [N].
 
 | ID | Area | What is deferred |
 |---|---|---|
-| BA-037 | AI object selection | Optional mask preview while hovering with the object-selection tool: when the model cache is warm, compute `select.aiObject` on a copy in the background and show the outline as an overlay. Currently there is no preview. |
-| BA-039 | Bitmap brush | The live brush preview is drawn above all objects: hidden parts appear on top, and the bitmap object's opacity, blend mode and effects are missing in the preview. Needs a rebuild of the live preview in stacking order. Pressure is not available from a mouse (tablet only). |
 | BA-101 | PDF/PSD export | No JPEG 2000 encoder: the PDF compression "JPEG 2000 (JPEG)" writes DCT/JPEG on purpose and says so loudly (option label, the PDF's producer entry, both manuals). PSD export: the model has no stroke effect, so nothing maps to a PSD stroke. |
-| BA-103 | HTML Setup | No "Set defaults", external CSS file or navigation-bar HTML, because neither export nor New Document uses them. HTML style only offers HTML/XHTML (the original's template styles carry brand names and only change a comment in the output). In progress (C-1). |
-| BA-104 (CMD-1) | Commands menu | Screen capture, "Create symbol script" and Web ▸ Shared Palette only show a message (`fp-script\src\builtin_commands.rs`). Wanted: real screen capture, symbol scripts for graphic symbols, a shared color table across all slices; texts via `fp.t`. In progress (C-1). |
 | BA-083 (BATCH-4) | Batch tests | Golden hashes of the resampler depend on `f64::sin` (Lanczos) and may need regenerating on other operating systems. Open until CI runs on another OS. |
 | BA-108 (BATCH-5) | Batch metadata | Writing metadata boxes for AVIF/HEIF/JXL is missing (reading works since wave 3; TIFF reads and writes EXIF/GPS/IPTC). |
 | BA-109 (BATCH-6) | Batch steps | All steps of the batch spec exist except `ai.upscale` and `ai.faceBlur` (need models). `format.multiPage` only combines; splitting multi-page sources stays with `document.pages`/`anim.toFrames`. Runs started in the Batch Studio UI are not checked by the MCP caller gate (the UI keeps the opt-ins of `script.external`/`script.code`). Minor: `fp_raster::Mask` has no `is_empty()`. |
 | BA-110 (BATCH-8) | Batch GIF optimizer | Measured with the new opt-in modes `lzw: flexible` and `perceptualPalette` (off by default; figures in [BATCH.md](BATCH.md) §5.6): screen −54.3 %, cartoon −37.9 % (both modes −38.8 %) vs. the export at SSIM ≥ 0.99; the camera pan reaches SSIM 0.99 in no mode (best 0.986). Not done: lossy LZW with an SSIM bound, cancel inside one encode. |
 
-## [N] Not feasible / informational (17)
+## [N] Not feasible / informational (20)
 
 | ID | Area | Note |
 |---|---|---|
+| BA-037 | AI hover preview | Tested with a stub decoder only; not yet tried with real model weights. Works only with a warm cache (model loaded, embedding cached); it never loads a model itself. |
+| BA-039 | Brush live preview | Bitmaps with live effects are slower (whole scratch raster, 48 px effect margin); strokes that create a new bitmap or paint into a bitmap inside a symbol use the old overlay above all objects; below 100 % zoom the composite tiles are sampled NEAREST. Frame time on 2000 × 1500 rose from 2.4 to 4.3 ms on average. |
+| BA-104 (CMD-1) | Commands menu | Screen capture uses the system's own capture tool, so there is no interactive drag rectangle (the area is entered as numbers before the countdown). The symbol script skips bitmaps, nested instances and compound shapes and writes gradients as solid fills. |
 | TW-117 | Comparison runner, colour pop-up | Unchanged in run 15. Canvas shots differ by capture method: Firepixel's shot contains the open colour pop-up and the selection handles, the original's does not (6.3 % of pixels above 32 levels); the fill under the hovered swatch is equal. Information only. |
 | BA-097 | Performance (no GPU) | The first drag of large objects takes up to ~1–2 s with software rendering: the drag preview texture (`canvas\ghost.rs::drag_sprite`) holds the whole selection (up to ~6000 × 1500 px) and uploads at ~30 MB/s; later steps take ~100–200 ms. Idea: limit the preview to the visible area plus a margin. |
 | BA-098 | Performance (no GPU) | The first frame after zoom/scroll with a large canvas texture takes up to 1.4 s (`canvas\mod.rs` renders the visible area plus half a view of margin on each side). Edits only upload the changed rectangle; zoom/scroll still upload everything. |

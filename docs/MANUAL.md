@@ -83,6 +83,9 @@ soft edge as in the original; Esc ends painting and switches to the Pointer. The
 has its own colors (default black → white, a click on the swatch opens the gradient editor);
 "Fill selection" and tolerance are separate from the Paint Bucket. **Replace Color** has its own
 "From" and "To" colors (default green → red).
+While you paint with Brush, Pencil, Eraser or Rubber Stamp, the preview appears at the bitmap's place
+in the stacking order, with its opacity, blend mode, effects and masks. A stroke that creates a new
+bitmap, or paints into a bitmap inside a symbol, is previewed on top until you release the mouse.
 
 **Default stroke:** Line, Pen, Vector Path, Rectangle, Ellipse and Polygon draw with the stroke
 *Basic ▸ Hard Rounded* (1 px), as in the original; a choice of your own in the inspector still applies.
@@ -131,7 +134,12 @@ has its own colors (default black → white, a click on the swatch opens the gra
   "Don't show again" can be switched back on with *Reset Warning Dialogs*).
 - **Commands:** Run Script (`.jsf`), saved commands from the commands folder
   (`%APPDATA%\Firepixel\Commands`, subfolders become submenus), Manage AI Models, Reset Warning
-  Dialogs and the AI control channel.
+  Dialogs and the AI control channel. Built-in commands: **Screenshot** (after a countdown, the whole
+  screen or an area entered as numbers, taken with the system's own capture tool, opens as a new
+  document), **Create Symbol Script** (a JSF script that recreates the selected graphic symbol;
+  bitmaps, nested instances and compound shapes are skipped, gradients become solid fills) and
+  **Web ▸ Shared Palette** (one palette over all open documents, shown in the Swatches panel and
+  optionally saved as `.act`).
 - **Window:** shows and hides panels. *Workspace Layouts* saves and loads arrangements; at the end
   is the list of open documents.
 
@@ -202,7 +210,9 @@ Three tools in the slot of the Magic Wand (Bitmap section) create pixel selectio
 models, without a network connection while computing:
 
 - **Object Selection:** click an object or drag a box; as with the Magic Wand, Shift+click adds and
-  Alt+click subtracts.
+  Alt+click subtracts. With *Edit ▸ Preferences ▸ Edit ▸ Show selection preview while hovering* (off
+  by default), resting the pointer shows the object's outline dashed; this only works once the model is
+  loaded for the image, and a click on the same spot then selects at once.
 - **Select Subject** (also *Select ▸ Select Subject*): selects the main subject with a soft edge.
 - **Refine Edge** (also *Select ▸ Refine Edge...*): improves the edge of an existing selection for
   hair, fur and semi-transparency.
@@ -239,7 +249,10 @@ each with file size and download time. 4-Up shows three settings side by side fo
 (tab *General*), "Write CSS to external file" (on by default, works together with "Use CSS for
 popups") writes the styles to a separate `.css` file next to the HTML file, included via `@import`.
 Next to "Background image:", "Browse..." picks an image. If it is in the document's folder, the path
-is entered relative to it.
+is entered relative to it. "Write page styles to an external file (styles.css)" moves the page styles
+into `styles.css` next to the HTML; the style *Generic HTML5* writes an HTML5 page; buttons keep their
+navigation-bar script in every style. *Set Defaults* stores the dialog's values for new documents and
+for documents without HTML settings of their own.
 In the PDF export options, the compression "JPEG 2000 (JPEG)" writes plain JPEG (DCT), because
 Firepixel has no JPEG 2000 encoder; the PDF's producer entry notes this.
 
@@ -307,7 +320,8 @@ Choose saved settings from the list at the top; "+" saves the current one.
 ## Troubleshooting
 
 - **Preferences** are stored in `%APPDATA%\Firepixel\preferences.json`. Deleting the file resets
-  them.
+  them. The row "ffmpeg for videos" (*Preferences ▸ Plug-ins*) is the same setting as in the Batch
+  Studio; empty means search automatically.
 - **Folder names:** since 12.10.2026 the app's folders have English names: `Languages` (formerly
   `Sprachen`), `Models` (formerly `Modelle`, under `%LOCALAPPDATA%\Firepixel`), `Common Library`
   (formerly `Allgemeine Bibliothek`). On the first start of a new version Firepixel renames the old

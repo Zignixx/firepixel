@@ -1,6 +1,6 @@
 # Manual verification
 
-Last updated: 2026-10-17
+Last updated: 2026-10-18
 
 This file is the human click-checklist for Firepixel. Most of Firepixel is checked automatically: unit and integration tests, headless UI tests with image series, and a scripted comparison runner that drives Firepixel and the reference application side by side through the automation bridge (`--mcp`) and compares the results. Some things cannot be covered that way and stay **manual**:
 
@@ -141,6 +141,39 @@ edit mode). The next full run confirms them. Grid snapping at low zoom stays in 
 - [ ] **A3-12** (U-1; needs: real window)
   **Steps:** File ▸ Import an SVG with groups and layers, a single-layer SVG, a PDF and a vector test file; use the "Vector File Options" (scale 200 %, page choice, "Convert layers to states").
   **Expected:** Import succeeds and scale works (see VER-3.32); known gaps: no layers from SVG/PDF, options without effect (FINDINGS U-1) – note anything else.
+
+## A4. Wave-4 features to try
+
+- [ ] **A4-01** (BA-103; needs: real window)
+  **Steps:** File ▸ HTML Setup, change a few values (e.g. extension, style), click *Set Defaults*, OK; File ▸ New, open HTML Setup again.
+  **Expected:** A confirmation message appears; the new document shows the stored values; an older document with its own HTML settings keeps them.
+- [ ] **A4-02** (BA-103; needs: real window, browser)
+  **Steps:** Sliced document, HTML Setup: tick "Write page styles to an external file (styles.css)", export HTML and images; open the page.
+  **Expected:** `styles.css` lies next to the HTML and is linked; the HTML has no `<style>` block; the page looks the same as without the option.
+- [ ] **A4-03** (BA-103; needs: real window, browser)
+  **Steps:** Document with a button symbol (up/over/down states), HTML style *Generic HTML5*; export and open in a browser; repeat with HTML and XHTML.
+  **Expected:** HTML5 doctype and `<meta charset>`; hover and press swap the state images in every style.
+- [ ] **A4-04** (BA-104; needs: real window)
+  **Steps:** Commands ▸ Screenshot: once the whole screen, once an area entered as numbers, each with a countdown of 3 s.
+  **Expected:** After the countdown a new untitled document opens with the screen content or the chosen area.
+- [ ] **A4-05** (BA-104; needs: real window)
+  **Steps:** Select an instance of a graphic symbol with paths, texts and a gradient fill; Commands ▸ Create Symbol Script; save the script; run it in a new document (Commands ▸ Run Script).
+  **Expected:** A save dialog offers the script; running it creates a graphic symbol of the same name with the paths and texts; the gradient arrives as a solid fill (known limit).
+- [ ] **A4-06** (BA-104; needs: real window)
+  **Steps:** Open two documents with different colours; Commands ▸ Web ▸ Shared Palette, save as `.act`; load the `.act` in the Swatches panel.
+  **Expected:** The Swatches panel shows one palette with colours from both documents; the `.act` file loads back with the same colours.
+- [ ] **A4-07** (BA-107; needs: real window)
+  **Steps:** Edit ▸ Preferences ▸ Plug-ins: set "ffmpeg for videos" to an ffmpeg file, OK; open the Batch Studio settings.
+  **Expected:** The Batch Studio shows the same path; clearing it in either place clears both (empty = search automatically).
+- [ ] **A4-08** (BA-037; needs: real mouse, AI model)
+  **Steps:** Edit ▸ Preferences ▸ Edit: tick "Show selection preview while hovering". Object Selection tool on a photo; click once (model loads), then rest the pointer over another object; then click on that same spot.
+  **Expected:** After a short rest a dashed outline of the object appears; moving the pointer removes it; the click selects at once with the same outline. With the option off, no outline appears.
+- [ ] **A4-09** (BA-039; needs: real mouse)
+  **Steps:** Bitmap with opacity 50 %, blend mode Multiply and a drop shadow, partly covered by a rectangle above it; paint across it with the Brush, then with the Eraser and the Rubber Stamp.
+  **Expected:** While painting, the stroke is hidden under the rectangle and already shows the opacity, blend mode and shadow; on release nothing jumps.
+- [ ] **A4-10** (BA-039; needs: real mouse)
+  **Steps:** Repeat A4-09 at 50 % and 200 % zoom, on a 2000 × 1500 bitmap, and with a bitmap inside a symbol being edited.
+  **Expected:** Painting stays smooth; at 50 % the preview may look slightly blocky until release; the bitmap inside a symbol is previewed on top until release (known limit).
 
 ---
 

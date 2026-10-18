@@ -23,10 +23,10 @@ on Intel hardware.
 | Canvas image pairs within 1 % | about **177 / 201** (unchanged) | newest run per unit |
 | Measurement quota, all 48 units | **85.0 %** (1042 / 1226 measurable steps both `ok`; was 84.8 %) | newest run per unit |
 | Measurement quota of run 16 | 86.3 % (126 / 146, 7 units; the same units before: 84.5 %); 0 Firepixel-side errors | run 16 |
-| Workspace tests | **2510 green, 0 red, 133 ignored** | full workspace run on `main` at `666c15c6`, 18 Oct 2026 |
-| Open findings | 1 fixable `[F]` (PDF layers), 9 deferred `[V]` (wave 3 closed BA-086, BA-100, BA-102, BA-105, BA-106, BA-107), 17 informational `[N]`; TW-122/123/115/124 and TW-111 closed after run 16, to be confirmed by the next full run | [FINDINGS.md](FINDINGS.md) |
+| Workspace tests | **all green** at `e38dc531` (fp-ui 854); re-run including V-1 in progress; last full count 2510 green, 0 red, 133 ignored at `666c15c6` | full workspace runs on `main`, 18 Oct 2026 |
+| Open findings | 1 fixable `[F]` (PDF layers), 5 deferred `[V]` (wave 3 closed BA-086, BA-100, BA-102, BA-105, BA-106; wave 4 closed BA-037, BA-039, BA-103, BA-104, BA-107), 20 informational `[N]`; TW-122/123/115/124 and TW-111 closed after run 16, to be confirmed by the next full run | [FINDINGS.md](FINDINGS.md) |
 | Real differences known | none from the runs; unclear: the remaining `xs-canvas` canvas pairs (TW-122 was a shortcut-set mismatch in the runner profile) | [PARITY.md](PARITY.md) |
-| Closed findings (history) | 840+ | kept outside the repository ([ARCHIVE_NOTE.md](ARCHIVE_NOTE.md)) |
+| Closed findings (history) | 845+ | kept outside the repository ([ARCHIVE_NOTE.md](ARCHIVE_NOTE.md)) |
 | Startup time | about 0.8 s to the first frame (release build, warm) | smoke test 17 Oct 2026 |
 
 ## Last test build
@@ -70,15 +70,17 @@ with a real mouse and drag and drop between windows need a human click-test: [VE
 
 ## Next
 
-1. Full parity run 17 over all 48 units (in progress; runner R-12, Firepixel shortcut set in the runner profile);
-   it also checks the fixes made after run 16 (TW-122, TW-123 and the app-wide menu arrow column, TW-115/124, Q-49,
-   Q-55, Q-56). Its evaluation follows, including a review of the `xs-canvas` canvas pairs.
-2. Human click-test of [VERIFICATION.md](VERIFICATION.md).
-3. Remaining deferred items: BA-037 AI mask preview, BA-039 brush preview, BA-103 HTML setup and BA-104 CMD-1 (both
-   in progress), U-1 PDF import layers.
+1. Evaluation of full parity run 17 over all 48 units (runner R-12, Firepixel shortcut set in the runner
+   profile), including the fixes made after run 16 (TW-122, TW-123 and the app-wide menu arrow column, TW-115/124,
+   Q-49, Q-55, Q-56) and a review of the `xs-canvas` canvas pairs.
+2. Human click-test of [VERIFICATION.md](VERIFICATION.md), including section A4 (wave-4 features).
+3. Remaining deferred items: BA-101, BA-108 (metadata box writing), BA-110 rest, BA-083, U-1 PDF import layers.
 
 Wave 3 (18 Oct 2026) added 27 batch steps, chained collect steps, more metadata formats, the MCP gate for external
 programs and unsandboxed scripts, opt-in GIF optimiser modes, the remaining Batch Studio UI conveniences, selectable
-PDF text and editable PSD layers ([FINDINGS.md](FINDINGS.md), [BATCH.md](BATCH.md)).
+PDF text and editable PSD layers ([FINDINGS.md](FINDINGS.md), [BATCH.md](BATCH.md)). Wave 4 (18 Oct 2026)
+added HTML Setup defaults, an external page style sheet and a Generic HTML5 style, working screenshot, symbol
+script and shared palette commands, the ffmpeg row in Preferences, an optional AI object-selection preview on hover
+and the brush live preview in the bitmap's stacking position.
 
 See [ROADMAP.md](../ROADMAP.md) for the complete list.

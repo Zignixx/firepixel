@@ -67,13 +67,20 @@ catalogue. The history panel shows agent commands like user actions; the maximum
 
 Tools are state machines in `fp-engine/src/tools` fed with raw pointer and key events; `fp-ui` only translates
 OS input into these events and draws overlays. This is what makes `tool_event` and `ui_input` over MCP behave
-like a human.
+like a human. UI-side helpers that belong to one tool (for example the background hover preview of the AI
+object selection) live in `fp-ui/src/canvas/tools/`.
+
+Commands that reach outside the document (screen capture through the system's capture tool, the symbol-script
+generator, the shared palette over all open documents) live in `fp-engine/src/commands/extras.rs`.
 
 ## 4. Rendering
 
 `fp-render` is a CPU reference compositor, bit-exact to the measured behaviour where it is known, and tested
 against the flat PNG preview stored in FW-PNG files (corpus and golden tests). The canvas shows its result as
-a texture; partial rendering and caches keep large documents interactive. Pixel buffers are RGBA8 in
+a texture; partial rendering and caches keep large documents interactive. For live bitmap painting the
+canvas renders the changed rectangle with `Renderer::render_region_with` and a `PixelOverride` that swaps in the
+scratch pixels of the painted bitmap, so the preview sits in the right stacking position with its opacity, blend
+mode, effects and masks. Pixel buffers are RGBA8 in
 128 × 128 copy-on-write tiles (cheap undo). `rayon` parallelises filters and large areas; long operations run
 in the background with progress so the UI never blocks.
 

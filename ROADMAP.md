@@ -14,22 +14,22 @@ exist and work; FW-PNG round-trips; CLI, JSF and MCP drive everything.
 | Proven 1:1 | **95.8 %** (46 / 48) |
 | Measurement quota, all 48 units | **85.0 %** (1042 / 1226 steps; was 84.8 %) |
 | Canvas image pairs within 1 % | about 177 / 201 |
-| Tests | 2510 green, 0 red, 133 ignored |
+| Tests | full workspace run green at `e38dc531` (fp-ui 854); re-run including V-1 in progress (last full count 2510 green, 0 red, 133 ignored) |
 | Latest release | v0.2.1 pre-release (18 Oct 2026, Windows x64, macOS universal arm64 + x86_64) |
-| Open findings | 1 fixable · 9 deferred · 17 informational · 840+ closed |
+| Open findings | 1 fixable · 5 deferred · 20 informational · 845+ closed |
 
 ## Next (in order)
 
-1. **Full parity run 17 over all 48 units** (in progress) with runner R-12 and the Firepixel shortcut set in the
-   runner profile; it also checks the fixes after run 16 (TW-122, TW-123 including the app-wide 33 px menu arrow
-   column, TW-115/124, Q-49, Q-55, Q-56). The **evaluation** follows: new tweaks and questions, a review of the
-   `xs-canvas` canvas pairs, updated figures.
+1. **Evaluation of full parity run 17** over all 48 units (runner R-12, Firepixel shortcut set in the runner
+   profile): check the fixes after run 16 (TW-122, TW-123 including the app-wide 33 px menu arrow column,
+   TW-115/124, Q-49, Q-55, Q-56), new tweaks and questions, a review of the `xs-canvas` canvas pairs, updated
+   figures.
 2. **Human click-test** of [docs/VERIFICATION.md](docs/VERIFICATION.md) (embedded panel dialogs, real keyboard
-   paths, brush strokes with a real mouse, drag and drop between windows, the open checks in section A2), now
-   including the wave-3 Batch Studio UI and the PDF/PSD export options.
-3. **Remaining deferred items:** BA-037 AI mask preview, BA-039 brush preview in stacking order, BA-103 HTML setup
-   and BA-104 CMD-1 (both in progress, C-1, together with the ffmpeg row in Preferences), U-1 PDF import layers;
-   then Linux builds.
+   paths, brush strokes with a real mouse, drag and drop between windows, the open checks in section A2), including
+   the wave-3 Batch Studio UI, the PDF/PSD export options and the wave-4 features in section A4.
+3. **Remaining deferred items:** BA-101 (JPEG 2000 in PDF, PSD stroke), BA-108 (writing AVIF/HEIF/JXL metadata
+   boxes), BA-110 rest (lossy LZW with an SSIM bound), BA-083 (resampler hashes on another OS), U-1 PDF import
+   layers; then Linux builds.
 
 ## What remains
 
@@ -48,9 +48,9 @@ exist and work; FW-PNG round-trips; CLI, JSF and MCP drive everything.
   drag/keyboard sorting, Save as Template and Help in the card menu.
 - **PDF/PSD export:** JPEG 2000 in PDF (no encoder; written as JPEG and flagged). Done in wave 3: selectable PDF
   text, PSD layers per object with text layers, vector masks and layer effects.
-- **HTML setup:** "set defaults", external CSS file, navigation bar HTML (in progress).
-- **CMD-1:** screenshot command, symbol scripts and the shared web palette currently show notices only (in progress).
-- **AI mask preview:** live object-mask preview while hovering with the object selection tool.
+- Done in wave 4: HTML setup (Set Defaults, external `styles.css`, Generic HTML5 style, nav-bar tests), CMD-1
+  (screen capture, symbol scripts, shared palette), the ffmpeg row in Preferences, the optional AI hover preview
+  and the brush preview in stacking order.
 - Brush pressure and speed from a real tablet; resampler golden hashes on other operating systems (needs CI).
 
 ### Not feasible / informational (`[N]`)
