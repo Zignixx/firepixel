@@ -5,8 +5,10 @@
 use fp_engine::tools::{EditOp, ToolId, ToolInput};
 use fp_engine::{Session, ToolEvent, ToolKey};
 use fp_model::ElementKind;
+use fp_model::element::BitmapNode;
 use fp_script::{ScriptOptions, run_source};
 use serde_json::json;
+use std::sync::Arc;
 
 /// Text objects of the first frame as "textChars|pixelRect has ink", joined by ",".
 const TEXTS: &str = "var d = fw.getDocumentDOM(), a = [], L = d.frames[0].layers;\n\
@@ -146,4 +148,86 @@ for (var i = 0; i < L.length; i++) for (var k = 0; k < L[i].elements.length; k++
         .expect("commit");
     assert_eq!(model_texts(&s), ["AltVrrrr"]);
     assert_eq!(right(&mut s), live, "live bounds = committed bounds");
+}
+
+/// TW-143 (rest): the parity runner reads the bounds through
+/// `dom.layers[l].frames[f].elements[i]`; while typing into line 2 of a two-line text loaded from a
+/// file (which carries the file's stored render cache) that path reports the same live
+/// `pixelRect.right` and `width` as `fw.selection[0]`, and both grow with the typed text before
+/// Escape. Run 21 (`xs-shortcuts/15_in_text_tx2`): the live element kept the committed text's
+/// render cache, so `pixelRect` read the old ink (107) until Escape (120).
+#[test]
+fn element_list_reads_the_live_bounds_like_the_selection() {
+    const BOTH: &str = "var d = fw.getDocumentDOM(), e = null;
+for (var l = 0; l < d.layers.length; l++) { var E = d.layers[l].frames[d.currentFrameNum].elements;
+  for (var i = 0; i < E.length; i++) if (E[i].textChars != null) e = E[i]; }
+var s = fw.selection[0];
+[e.pixelRect.right, e.width, e.left, s.pixelRect.right, s.width, s.left, e.textChars.length].join('|')";
+    let read = |s: &mut Session| -> Vec<f64> {
+        let v = eval(s, BOTH);
+        let n: Vec<f64> = v.split('|').filter_map(|x| x.parse().ok()).collect();
+        assert_eq!(n.len(), 7, "bounds: {v}");
+        n
+    };
+    let mut s = session();
+    s.execute(
+        "draw.text",
+        json!({"text": "Abcdef\rAb", "anchor": [40, 60], "size": 24}),
+    )
+    .expect("text");
+    // like a text loaded from a file: the element carries a stored render cache of its committed
+    // look (here a flattened clone of it)
+    let text_id = s.active().expect("doc").selection.elements[0];
+    s.execute("edit.clone", json!({})).expect("clone");
+    s.execute("modify.flattenSelection", json!({}))
+        .expect("flatten");
+    let d = s.active().expect("doc");
+    let bmp = d.selection.elements[0];
+    let path = d.doc.find_element(bmp).expect("bitmap");
+    let ElementKind::Bitmap(b) = &d.doc.element_at(&path).expect("bitmap").kind else {
+        panic!("flattened clone is a bitmap");
+    };
+    let cache = Arc::new(BitmapNode {
+        common: Default::default(),
+        bitmap: b.clone(),
+        extra: Default::default(),
+    });
+    s.execute("edit.clear", json!({})).expect("clear");
+    let d = s.active_mut().expect("doc");
+    let page = d.page;
+    fp_engine::docops::edit_by_id(Arc::make_mut(&mut d.doc), page, text_id, |e| {
+        e.cache = Some(cache)
+    })
+    .expect("text");
+    eval(
+        &mut s,
+        "var E = fw.getDocumentDOM().layers[0].frames[0].elements;
+for (var i = 0; i < E.length; i++) if (E[i].textChars != null) fw.selection = [E[i]];",
+    );
+    let before = read(&mut s);
+    assert_eq!(before[..3], before[3..6], "committed: {before:?}");
+    s.set_tool(ToolId::Text).expect("tool");
+    // a click on line 2 (below the first line's baseline)
+    click(&mut s, 45.0, 80.0);
+    assert!(s.tool_is_editing_text());
+    s.tool_event(&ToolEvent::key(ToolKey::End)).expect("end");
+    send(&mut s, ToolInput::Text("VrVrVrVr".into()));
+    let mut prev = read(&mut s);
+    assert_eq!(prev[..3], prev[3..6], "element list = selection: {prev:?}");
+    assert!(prev[0] > before[0] + 10.0, "live {prev:?} vs. {before:?}");
+    assert!(prev[1] > before[1] + 10.0, "live {prev:?} vs. {before:?}");
+    for _ in 0..2 {
+        send(&mut s, ToolInput::Text("WW".into()));
+        let now = read(&mut s);
+        assert_eq!(now[..3], now[3..6], "element list = selection: {now:?}");
+        assert!(
+            now[0] > prev[0] && now[1] > prev[1],
+            "grows: {now:?} vs. {prev:?}"
+        );
+        prev = now;
+    }
+    assert!(s.tool_is_editing_text());
+    s.tool_event(&ToolEvent::key(ToolKey::Escape))
+        .expect("commit");
+    assert_eq!(read(&mut s), prev, "live bounds = committed bounds");
 }

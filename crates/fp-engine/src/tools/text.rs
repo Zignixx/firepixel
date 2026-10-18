@@ -387,6 +387,10 @@ impl TextEditView {
             if let ElementKind::Text(t) = &mut e.kind {
                 apply_runs(t, runs);
             }
+            // TW-143: the content changed, so the committed look's render cache (e.g. the one
+            // stored in a loaded file) no longer applies; else rendering and `pixelRect` show the
+            // old text until the commit drops it
+            e.cache = None;
             return Some(e);
         }
         let mut ids = IdGen::default();
