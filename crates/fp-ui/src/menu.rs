@@ -1091,6 +1091,12 @@ fn paint_item(
             Sense::hover()
         },
     );
+    // Accessibility node with name, enabled state and check mark (TW-141: `ui_find` reports
+    // `enabled` and `toggled`); disabled rows (hover only, still not clickable) get one too
+    resp.widget_info(|| match checked {
+        Some(on) => egui::WidgetInfo::selected(egui::WidgetType::Checkbox, enabled, on, label),
+        None => egui::WidgetInfo::labeled(egui::WidgetType::Button, enabled, label),
+    });
     let rect = resp.rect;
     let hot = enabled && (resp.hovered() || open);
     if hot {
