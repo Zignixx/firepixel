@@ -377,3 +377,81 @@ fn ctrl_arrows_move_the_selected_file() {
     assert!(order_list(&mut h).is_empty());
     assert_eq!(names(&mut h), ["a.png", "b.png", "c.png", "d.png"]);
 }
+
+// ------------------------------------------------------------------ 3. keys in the file list
+
+/// Is a focus ring (1.5 px, focus colour) drawn around a file row?
+fn focus_ring_rows(h: &H) -> usize {
+    let focus = fp_ui::theme::Theme::current(&h.ctx).colors.focus;
+    fn walk(s: &Shape, focus: egui::Color32, n: &mut usize) {
+        match s {
+            Shape::Rect(r) if (r.stroke.width - 1.5).abs() < 0.01 && r.stroke.color == focus && (r.rect.height() - batch::files::ROW_H).abs() < 0.5 => *n += 1,
+            Shape::Vec(v) => v.iter().for_each(|x| walk(x, focus, n)),
+            _ => {}
+        }
+    }
+    let mut n = 0;
+    for cs in &h.output().shapes {
+        walk(&cs.shape, focus, &mut n);
+    }
+    n
+}
+
+#[test]
+fn space_enter_delete_ctrl_a_and_focus_ring() {
+    let (mut h, _) = four_files("keys3");
+    let row_a = find_text(&h, "a.png").expect("row a");
+    click(&mut h, row_a.center());
+    assert_eq!(studio(&mut h).selected, Some(0));
+    assert!(studio(&mut h).list_focus);
+    assert_eq!(focus_ring_rows(&h), 1, "focus ring on the selected row");
+    // Space switches the file off and on again
+    key(&mut h, Key::Space, Modifiers::NONE);
+    assert!(!studio(&mut h).files[0].enabled);
+    assert_eq!(studio(&mut h).to_process().len(), 3);
+    key(&mut h, Key::Space, Modifiers::NONE);
+    assert!(studio(&mut h).files[0].enabled);
+    // arrow down, Space on "b"
+    key(&mut h, Key::ArrowDown, Modifiers::NONE);
+    assert_eq!(studio(&mut h).selected, Some(1));
+    key(&mut h, Key::Space, Modifiers::NONE);
+    assert!(!studio(&mut h).files[1].enabled);
+    // Ctrl+A switches all files on (never off)
+    key(&mut h, Key::A, Modifiers::COMMAND);
+    assert!(studio(&mut h).files.iter().all(|f| f.enabled));
+    key(&mut h, Key::A, Modifiers::COMMAND);
+    assert!(studio(&mut h).files.iter().all(|f| f.enabled));
+    // Enter leaves the plan and shows the file in the preview
+    studio(&mut h).view_tab = batch::preview::Tab::Plan;
+    key(&mut h, Key::Enter, Modifiers::NONE);
+    assert_eq!(studio(&mut h).view_tab, batch::preview::Tab::Compare);
+    assert_eq!(studio(&mut h).narrow_tab, 2);
+    // Delete removes the selected file
+    key(&mut h, Key::Delete, Modifiers::NONE);
+    assert_eq!(names(&mut h), ["a.png", "c.png", "d.png"]);
+    // a click elsewhere takes the keyboard from the list: Space does nothing to the files
+    let recipe_title = find_text(&h, &t("batch-ui-recipe-title")).expect("recipe card");
+    click(&mut h, recipe_title.center() + vec2(0.0, 120.0));
+    assert!(!studio(&mut h).list_focus);
+    assert_eq!(focus_ring_rows(&h), 0);
+    key(&mut h, Key::Space, Modifiers::NONE);
+    assert!(studio(&mut h).files.iter().all(|f| f.enabled));
+}
+
+#[test]
+fn enter_in_narrow_layout_switches_to_preview_tab() {
+    let d = dir("narrow");
+    let files: Vec<PathBuf> = ["x.png", "y.png"].iter().map(|n| png_file(&d, n, 40, 30, false)).collect();
+    let mut st = state();
+    st.run("file.batchProcess", json!({}));
+    let b = Harness::builder().renderer(crate::gpu_common::renderer()).with_size(vec2(700.0, 700.0)).with_pixels_per_point(1.0).with_max_steps(30).with_step_dt(1.0 / 60.0);
+    let mut h = b.build_ui_state(|ui, a: &mut FirepixelApp| a.root_ui(ui), app(st));
+    h.run_steps(4);
+    studio(&mut h).add_paths(&files, false);
+    settle(&mut h);
+    let row = find_text(&h, "y.png").expect("row y");
+    click(&mut h, row.center());
+    key(&mut h, Key::Enter, Modifiers::NONE);
+    assert_eq!(studio(&mut h).narrow_tab, 2, "single column: tab Preview");
+    assert!(find_text(&h, "y.png").is_none() || studio(&mut h).selected == Some(1));
+}

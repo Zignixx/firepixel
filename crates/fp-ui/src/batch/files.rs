@@ -1007,6 +1007,7 @@ fn file_list(
                 i,
                 e,
                 s.selected == Some(i),
+                s.list_focus && s.selected == Some(i),
                 theme,
                 now,
                 enabled,
@@ -1099,6 +1100,13 @@ fn file_list(
     }
     if let Some(i) = clicked {
         s.selected = Some(i);
+        s.list_focus = true;
+    } else if toggled.is_some() || drag_start.is_some() {
+        s.list_focus = true;
+    } else if ui.input(|i| {
+        i.pointer.any_pressed() && i.pointer.interact_pos().is_some_and(|p| !r.contains(p))
+    }) {
+        s.list_focus = false;
     }
     if let Some(i) = toggled {
         s.files[i].enabled = !s.files[i].enabled;
@@ -1118,6 +1126,7 @@ fn file_row(
     i: usize,
     e: &FileEntry,
     selected: bool,
+    focus_ring: bool,
     theme: &Theme,
     now: f64,
     enabled: bool,
@@ -1161,7 +1170,7 @@ fn file_row(
             },
         );
     }
-    if resp.has_focus() {
+    if resp.has_focus() || focus_ring {
         p.rect_stroke(rect, cr, Stroke::new(1.5, c.focus), StrokeKind::Inside);
     }
     // Kästchen
@@ -1402,6 +1411,9 @@ fn file_row(
     }
     if let Some(tg) = &e.target {
         tip = format!("{tip}\n→ {}", tg.display());
+    }
+    if enabled {
+        tip = format!("{tip}\n{}", t("batch-ui-file-keys"));
     }
     let resp = resp.on_hover_text(tip);
     let box_click = cresp.clicked();

@@ -204,6 +204,9 @@ pub struct Studio {
     pub(crate) drag: Option<recipe::DragState>,
     /// Dragging a file row: its position in the visible list (BA-107).
     pub(crate) file_drag: Option<usize>,
+    /// The file list has the keyboard (row clicked or navigated with the arrows): Space and Enter
+    /// act on the selected row, which shows the focus ring (BA-107).
+    pub list_focus: bool,
     pub(crate) last_active_doc: Option<fp_engine::DocId>,
     pub(crate) files_version: u64,
     order_cache: Option<(u64, Vec<usize>)>,
@@ -263,6 +266,7 @@ impl Studio {
             tab_rect: None,
             drag: None,
             file_drag: None,
+            list_focus: false,
             last_active_doc: None,
             files_version: 0,
             order_cache: None,
@@ -492,6 +496,32 @@ impl Studio {
         });
         self.end_gesture();
         self.files_changed();
+        true
+    }
+
+    /// Space in the file list: switches the selected file on or off (BA-107).
+    pub fn toggle_selected(&mut self) -> bool {
+        let Some(f) = self.selected.and_then(|i| self.files.get_mut(i)) else {
+            return false;
+        };
+        f.enabled = !f.enabled;
+        self.files_changed();
+        true
+    }
+
+    /// Enter in the file list: shows the selected file in the preview card (also in the narrow
+    /// layouts, where the preview is a tab), leaving the plan and the end card (BA-107).
+    pub fn show_details(&mut self) -> bool {
+        let Some(i) = self.selected.filter(|&i| i < self.files.len()) else {
+            return false;
+        };
+        self.show_summary = false;
+        let failed = self.files[i].status == EntryStatus::Failed;
+        if self.view_tab == preview::Tab::Plan || (self.view_tab == preview::Tab::Errors && !failed)
+        {
+            self.view_tab = preview::Tab::Compare;
+        }
+        self.narrow_tab = 2;
         true
     }
 
@@ -1026,10 +1056,21 @@ fn keyboard(ctx: &egui::Context, st: &mut AppState, now: f64) {
         if consume(ctx, Modifiers::NONE, Key::ArrowDown) && !vis.is_empty() {
             s.selected = Some(vis[pos.map(|p| (p + 1).min(vis.len() - 1)).unwrap_or(0)]);
             s.scroll_to_selected = true;
+            s.list_focus = true;
         }
         if consume(ctx, Modifiers::NONE, Key::ArrowUp) && !vis.is_empty() {
             s.selected = Some(vis[pos.map(|p| p.saturating_sub(1)).unwrap_or(0)]);
             s.scroll_to_selected = true;
+            s.list_focus = true;
+        }
+        // Space/Enter only while the list has the keyboard (a focused button keeps its own keys)
+        if s.list_focus && s.selected.is_some() {
+            if consume(ctx, Modifiers::NONE, Key::Space) {
+                s.toggle_selected();
+            }
+            if consume(ctx, Modifiers::NONE, Key::Enter) {
+                s.show_details();
+            }
         }
         if (consume(ctx, Modifiers::NONE, Key::Delete)
             || consume(ctx, Modifiers::NONE, Key::Backspace))
