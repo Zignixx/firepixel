@@ -89,6 +89,28 @@ fn has_text(s: &Session) -> bool {
     })
 }
 
+/// Do all selected texts carry the style on every run? `false` without selected text.
+fn all_texts_have(s: &Session, get: fn(&TextAttrs) -> Option<bool>) -> bool {
+    s.active().is_some_and(|d| {
+        let texts: Vec<Vec<bool>> = selected_elements(d)
+            .into_iter()
+            .filter_map(|(_, e)| match &e.kind {
+                ElementKind::Text(t) => Some(
+                    t.resolved_runs()
+                        .iter()
+                        .map(|(a, _)| get(a).unwrap_or(false))
+                        .collect(),
+                ),
+                _ => None,
+            })
+            .collect();
+        !texts.is_empty()
+            && texts
+                .iter()
+                .all(|runs| !runs.is_empty() && runs.iter().all(|&b| b))
+    })
+}
+
 /// Ist ein Text auf Pfad ausgewählt?
 fn has_text_on_path(s: &Session) -> bool {
     s.active().is_some_and(|d| {
@@ -542,20 +564,19 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 .requires(DOC)
                 .checked(move |s| {
                     if has_text(s) {
-                        s.active().is_some_and(|d| {
-                            selected_elements(d).iter().any(|(_, e)| matches!(&e.kind, ElementKind::Text(t) if t.resolved_runs().first().and_then(|(a, _)| get(a)).unwrap_or(false)))
-                        })
+                        all_texts_have(s, get)
                     } else {
                         current_style(s, key)
                     }
                 })
                 .run(move |s, _| {
+                    // Toggle over the whole pointer selection (re 46 §1.3): only when every
+                    // selected text already has the style everywhere is it removed, else set on
+                    // all runs of all selected texts.
+                    let on = !all_texts_have(s, get);
                     texts_or_defaults(
                         s,
-                        move |t| {
-                            let on = !t.resolved_runs().first().and_then(|(a, _)| get(a)).unwrap_or(false);
-                            set_attr(t, &move |a| set(a, on));
-                        },
+                        move |t| set_attr(t, &move |a| set(a, on)),
                         move |s| {
                             let on = !current_style(s, key);
                             s.prefs.set(key, crate::prefs::PrefValue::Bool(on));

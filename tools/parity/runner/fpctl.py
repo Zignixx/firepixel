@@ -90,6 +90,9 @@ class Firepixel:
             prefs = {"version": 1, "theme": "normal", "recent_files": [], "values": {}}
         prefs["theme"] = self.cfg.get("theme", "normal")
         prefs.setdefault("values", {})["Language"] = self.cfg.get("language", "de")
+        # TW-122 (re 46 §1): the reference machine runs the program's own shortcut set, not the fresh-install
+        # default "Web Standard" (there Ctrl+Shift+B is Break Apart, which warned in run 16 xs-shortcuts/06)
+        prefs["values"]["CurrentShortcutSet"] = self.cfg.get("shortcut_set", "Firepixel")
         pf.write_text(json.dumps(prefs, indent=2), encoding="utf-8")
         bridge = local / "mcp-bridge.json"
         if bridge.exists():

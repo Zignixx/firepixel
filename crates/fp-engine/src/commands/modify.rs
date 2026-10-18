@@ -116,7 +116,11 @@ fn arrange(s: &mut Session, how: &'static str) -> Result<CommandOutput> {
         let page = d.page;
         let paths = selected_paths(d);
         let groups = by_parent(&paths);
-        let doc = Arc::make_mut(&mut d.doc);
+        // Work on a copy: an object already at the bottom (top) stays put, and then the document
+        // must stay untouched (no history step, not dirty, no message; re 46 §1.3).
+        let mut work = (*d.doc).clone();
+        let doc = &mut work;
+        let mut changed = false;
         for ((slot, cel, prefix), mut idx) in groups {
             let mut probe = docops::slot_path(doc, page, slot, cel, prefix.clone());
             probe.steps.push(PathStep::Child(0));
@@ -125,6 +129,7 @@ fn arrange(s: &mut Session, how: &'static str) -> Result<CommandOutput> {
             };
             idx.sort_unstable();
             let n = list.len();
+            let before: Vec<ElementId> = list.iter().map(|e| e.id).collect();
             match how {
                 "front" | "back" => {
                     let sel: Vec<Arc<Element>> =
@@ -160,6 +165,10 @@ fn arrange(s: &mut Session, how: &'static str) -> Result<CommandOutput> {
                     }
                 }
             }
+            changed |= list.iter().map(|e| e.id).ne(before.iter().copied());
+        }
+        if changed {
+            d.doc = Arc::new(work);
         }
         Ok(CommandOutput::doc())
     })
