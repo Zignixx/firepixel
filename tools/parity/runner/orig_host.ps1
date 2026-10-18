@@ -100,13 +100,63 @@ public static class N {
   [DllImport("user32.dll")] public static extern bool GetGUIThreadInfo(uint tid, ref GUITHREADINFO g);
   public static IntPtr FocusOf(IntPtr top) { uint p; uint tid = GetWindowThreadProcessId(top, out p); var g = new GUITHREADINFO(); g.cbSize = Marshal.SizeOf(typeof(GUITHREADINFO)); if (!GetGUIThreadInfo(tid, ref g)) return IntPtr.Zero; return g.hwndFocus; }
   [DllImport("user32.dll")] public static extern uint MapVirtualKey(uint code, uint mapType);
-  // R-13b: keys carry their scan code (MAPVK_VK_TO_VSC; Escape = 0x01). With scan code 0 an Escape after typed text
-  // left a stray "c" in the text (xs-shortcuts/15 "Vrc", tool-text/07 "Hallo Weltc")
-  public static INPUT Key(ushort vk, bool up) { var i = new INPUT(); i.type = 1; i.u.ki.wVk = vk; i.u.ki.wScan = (ushort)(MapVirtualKey(vk, 0) & 0xFFFF); i.u.ki.dwFlags = up ? 2u : 0u;
-    if ((vk >= 0x21 && vk <= 0x28) || vk == 0x2D || vk == 0x2E) i.u.ki.dwFlags |= 1; return i; }
+  [DllImport("user32.dll")] public static extern uint MapVirtualKeyEx(uint code, uint mapType, IntPtr hkl);
+  [DllImport("user32.dll")] public static extern IntPtr GetKeyboardLayout(uint tid);
+  [DllImport("user32.dll", CharSet=CharSet.Unicode)] public static extern IntPtr LoadKeyboardLayout(string klid, uint flags);
+  [DllImport("user32.dll")] public static extern IntPtr ActivateKeyboardLayout(IntPtr hkl, uint flags);
+  [DllImport("user32.dll", CharSet=CharSet.Unicode)] public static extern int GetKeyNameText(int l, StringBuilder s, int n);
+  [DllImport("user32.dll", CharSet=CharSet.Unicode)] public static extern int ToUnicodeEx(uint vk, uint scan, byte[] state, StringBuilder s, int n, uint flags, IntPtr hkl);
+  [DllImport("user32.dll")] public static extern IntPtr SetFocus(IntPtr h);
+  [DllImport("user32.dll")] public static extern bool IsChild(IntPtr p, IntPtr h);
+  [DllImport("user32.dll")] public static extern uint GetDoubleClickTime();
+  [DllImport("user32.dll")] public static extern int GetSystemMetrics(int i);
+  // R-13b: keys carry their scan code (Escape = 0x01).
+  // R-15 (TW-140, run 19: Delete selected the Eraser, Right the Text tool, Escape gave a "c"/the Crop tool): the
+  // extended flags were already right. Most likely (it explains all three cases) the reference matches plain keys by the key's NAME (GetKeyNameText of scan
+  // code + extended bit in the target thread's keyboard layout); when the names do not match its shortcut set
+  // ("Delete" vs "Entf") it falls back to a tool letter - the name's last letter: Delet-e = Eraser, Righ-t = Text,
+  // Es-c = Crop. Scan codes now come from the TARGET thread's layout (KeyHkl, set by `layout`/`key_echo`; letters
+  // differ between layouts, e.g. Y/Z), extended keys from an explicit table (Insert, Delete, Home, End, PgUp, PgDn,
+  // arrows, Win, Apps, NumPad /, NumLock, right Ctrl/Alt), Escape always 0x01 without the extended flag.
+  public static IntPtr KeyHkl = IntPtr.Zero;
+  public static bool IsExtended(ushort vk) { return (vk >= 0x21 && vk <= 0x28) || vk == 0x2D || vk == 0x2E || vk == 0x5B || vk == 0x5C || vk == 0x5D || vk == 0x6F || vk == 0x90 || vk == 0xA3 || vk == 0xA5; }
+  public static ushort ScanOf(ushort vk) { if (vk == 0x1B) return 0x01; uint s = KeyHkl != IntPtr.Zero ? MapVirtualKeyEx(vk, 0, KeyHkl) : MapVirtualKey(vk, 0); return (ushort)(s & 0xFF); }
+  public static INPUT Key(ushort vk, bool up) { var i = new INPUT(); i.type = 1; i.u.ki.wVk = vk; i.u.ki.wScan = ScanOf(vk); i.u.ki.dwFlags = up ? 2u : 0u;
+    if (IsExtended(vk)) i.u.ki.dwFlags |= 1; return i; }
+  // key name / character as the target sees them (layout hkl; the host thread borrows that layout for the call)
+  public static string KeyName(uint scan, bool ext, IntPtr hkl) { IntPtr old = IntPtr.Zero; if (hkl != IntPtr.Zero) old = ActivateKeyboardLayout(hkl, 0);
+    var s = new StringBuilder(64); GetKeyNameText((int)((scan << 16) | (ext ? (1u << 24) : 0u)), s, 64); if (old != IntPtr.Zero) ActivateKeyboardLayout(old, 0); return s.ToString(); }
+  public static string KeyChar(uint vk, uint scan, IntPtr hkl) { var s = new StringBuilder(8); int n = ToUnicodeEx(vk, scan, new byte[256], s, 8, 4, hkl); return n > 0 ? s.ToString(0, n) : ""; }
   public static INPUT Uni(char c, bool up) { var i = new INPUT(); i.type = 1; i.u.ki.wScan = c; i.u.ki.dwFlags = 4u | (up ? 2u : 0u); return i; }
   public static INPUT Mouse(uint flags, uint data) { var i = new INPUT(); i.type = 0; i.u.mi.dwFlags = flags; i.u.mi.mouseData = data; return i; }
   public static Bitmap Screen(int l, int t, int r, int b) { var bmp = new Bitmap(Math.Max(1, r - l), Math.Max(1, b - t)); using (var g = Graphics.FromImage(bmp)) g.CopyFromScreen(l, t, 0, 0, bmp.Size); return bmp; }
+}
+// R-15 (TW-140): `key_echo` - a low-level keyboard hook on its own thread records every key event as the system
+// delivers it (message, vk, scan, flags: 1 = extended, 0x10 = injected) and swallows it, so the self test types
+// nothing into any program
+public static class E {
+  public delegate IntPtr LLProc(int code, IntPtr w, IntPtr l);
+  [StructLayout(LayoutKind.Sequential)] public struct KLL { public uint vk, scan, flags, time; public IntPtr extra; }
+  [StructLayout(LayoutKind.Sequential)] public struct EMSG { public IntPtr hwnd; public uint message; public IntPtr wParam, lParam; public uint time; public int x, y; }
+  [DllImport("user32.dll", SetLastError=true)] static extern IntPtr SetWindowsHookEx(int id, LLProc p, IntPtr mod, uint tid);
+  [DllImport("user32.dll")] static extern bool UnhookWindowsHookEx(IntPtr h);
+  [DllImport("user32.dll")] static extern IntPtr CallNextHookEx(IntPtr h, int c, IntPtr w, IntPtr l);
+  [DllImport("kernel32.dll", CharSet=CharSet.Unicode)] static extern IntPtr GetModuleHandle(string n);
+  [DllImport("user32.dll")] static extern int GetMessage(out EMSG m, IntPtr h, uint a, uint b);
+  [DllImport("user32.dll")] static extern bool PostThreadMessage(uint tid, uint m, IntPtr w, IntPtr l);
+  [DllImport("kernel32.dll")] static extern uint GetCurrentThreadId();
+  public static List<uint[]> Got = new List<uint[]>();
+  static LLProc P; static IntPtr H = IntPtr.Zero; static uint T; static System.Threading.Thread Th; static string Err = "";
+  static IntPtr Proc(int c, IntPtr w, IntPtr l) {
+    if (c >= 0) { var k = (KLL)Marshal.PtrToStructure(l, typeof(KLL)); lock (Got) { Got.Add(new uint[] { (uint)w.ToInt64(), k.vk, k.scan, k.flags }); } return (IntPtr)1; }
+    return CallNextHookEx(H, c, w, l); }
+  static void Loop(object o) { var ok = (System.Threading.ManualResetEvent)o; T = GetCurrentThreadId();
+    H = SetWindowsHookEx(13, P, GetModuleHandle(null), 0); if (H == IntPtr.Zero) Err = "SetWindowsHookEx error " + Marshal.GetLastWin32Error();
+    ok.Set(); if (H == IntPtr.Zero) return; EMSG m; while (GetMessage(out m, IntPtr.Zero, 0, 0) > 0) { } UnhookWindowsHookEx(H); H = IntPtr.Zero; }
+  public static string Start() { Stop(); lock (Got) { Got.Clear(); } Err = ""; P = Proc; var ok = new System.Threading.ManualResetEvent(false);
+    Th = new System.Threading.Thread(Loop); Th.IsBackground = true; Th.Start(ok); if (!ok.WaitOne(3000)) return "hook thread did not start"; return Err; }
+  public static void Stop() { if (Th != null) { PostThreadMessage(T, 0x12, IntPtr.Zero, IntPtr.Zero); Th.Join(2000); Th = null; } }
+  public static uint[][] Take() { lock (Got) { return Got.ToArray(); } }
 }}
 '@
 [PR.N]::SetProcessDPIAware() | Out-Null
@@ -287,7 +337,11 @@ function Click($x, $y, $button, $mods, $count) {
   [PR.N]::Send(@([PR.N]::Mouse(0x1, 0)))
   Mods $mods $false
   $d, $u = 0x2, 0x4; if ($button -eq 'right') { $d, $u = 0x8, 0x10 } elseif ($button -eq 'middle') { $d, $u = 0x20, 0x40 }
-  for ($i = 0; $i -lt [Math]::Max(1, [int]$count); $i++) { [PR.N]::Send(@([PR.N]::Mouse($d, 0))); Start-Sleep -Milliseconds 70; [PR.N]::Send(@([PR.N]::Mouse($u, 0))); Start-Sleep -Milliseconds 50 }
+  if ([int]$count -ge 2) {
+    # R-15 (TW-140, tool-text/06: the pointer double-click opened no editor): all clicks of a multi-click in ONE
+    # SendInput batch, well inside the system double-click time (GetDoubleClickTime, reported by `key_echo`)
+    $a = @(); for ($i = 0; $i -lt [int]$count; $i++) { $a += [PR.N]::Mouse($d, 0); $a += [PR.N]::Mouse($u, 0) }; [PR.N]::Send($a); Start-Sleep -Milliseconds 50
+  } else { [PR.N]::Send(@([PR.N]::Mouse($d, 0))); Start-Sleep -Milliseconds 70; [PR.N]::Send(@([PR.N]::Mouse($u, 0))); Start-Sleep -Milliseconds 50 }
   Mods $mods $true; Start-Sleep -Milliseconds 120
 }
 # R-9 (TW-109): are all given keys down right now (GetAsyncKeyState, also set by injected input)?
@@ -465,9 +519,39 @@ function MenuPath($path, $final, $bar) {
   }
   @{ menus = @(MenuWins | % { WRect $_ }); invoked = $invoked }
 }
+# R-15 (TW-140): the document view window (largest child of the view class), the target's keyboard layout, a key self test
+function ViewHwnd { $m = MainWin; $best = [IntPtr]::Zero; $area = 0
+  foreach ($h in [PR.N]::Kids($m)) { if ([PR.N]::Cls($h) -eq $S.view_class) { $r = CRect $h; $a = ($r[2] - $r[0]) * ($r[3] - $r[1]); if ($a -gt $area) { $area = $a; $best = $h } } }
+  $best }
+function Hex($p) { '0x{0:X8}' -f ([int64]$p -band 0xFFFFFFFF) }
+function TargetHkl { [PR.N]::GetKeyboardLayout([PR.N]::Tid((MainWin))) }
+function Layout($want) {
+  $m = MainWin; $before = TargetHkl; $out = @{ before = (Hex $before); requested = $null }
+  # `want` = KLID ("00000407"): requested for the target's main window only (WM_INPUTLANGCHANGEREQUEST, like the
+  # user switching the input language of that window); nothing is changed when the language already matches
+  if ($want -and (([int64]$before -band 0xFFFF) -ne ([Convert]::ToInt64($want, 16) -band 0xFFFF))) {
+    $hkl = [PR.N]::LoadKeyboardLayout([string]$want, 0)
+    if ($hkl -ne [IntPtr]::Zero) { [PR.N]::PostMessage($m, 0x0050, [IntPtr]::Zero, $hkl) | Out-Null; Start-Sleep -Milliseconds 300; $out.requested = (Hex $hkl) } else { $out.requested = "LoadKeyboardLayout $want failed" } }
+  $after = TargetHkl; [PR.N]::KeyHkl = $after; $out.after = (Hex $after); $out.host = (Hex ([PR.N]::GetKeyboardLayout(0))); $out }
+function KeyEcho($keys) {
+  $hkl = TargetHkl; [PR.N]::KeyHkl = $hkl; $m = MainWin; $foc = [PR.N]::FocusOf($m)
+  $err = [PR.E]::Start(); if ($err) { [PR.E]::Stop(); throw "key_echo: $err" }
+  $sent = @()
+  try { foreach ($k in @($keys)) { $vk = VkOf $k; $dn = [PR.N]::Key($vk, $false); $sent += ,@($k, [int]$vk, [int]$dn.u.ki.wScan, [int]($dn.u.ki.dwFlags -band 1))
+          [PR.N]::Send(@($dn, [PR.N]::Key($vk, $true))); Start-Sleep -Milliseconds 80 }
+        Start-Sleep -Milliseconds 200 } finally { [PR.E]::Stop() }
+  $all = @([PR.E]::Take()); $got = @($all | ? { $_[0] -eq 0x100 -or $_[0] -eq 0x104 }); $rows = @(); $ok = $true
+  for ($i = 0; $i -lt $sent.Count; $i++) { $s = $sent[$i]; $g = if ($i -lt $got.Count) { $got[$i] } else { $null }
+    $row = @{ key = $s[0]; sent = @{ vk = $s[1]; scan = $s[2]; ext = $s[3] } }
+    if ($g) { $ext = [int]($g[3] -band 1); $row.arrived = @{ vk = [int]$g[1]; scan = [int]$g[2]; ext = $ext; injected = [bool]($g[3] -band 0x10) }
+      $row.name = [PR.N]::KeyName($g[2], [bool]$ext, $hkl); $row.char = [PR.N]::KeyChar($g[1], $g[2], $hkl)
+      $row.ok = ([int]$g[1] -eq $s[1] -and [int]$g[2] -eq $s[2] -and $ext -eq $s[3]) } else { $row.ok = $false; $row.arrived = $null }
+    if (-not $row.ok) { $ok = $false }; $rows += $row }
+  @{ ok = $ok; layout = (Hex $hkl); host_layout = (Hex ([PR.N]::GetKeyboardLayout(0))); focus_class = $(if ($foc -ne [IntPtr]::Zero) { [PR.N]::Cls($foc) } else { '' })
+     events = $all.Count; keys = $rows; dbl_ms = [int][PR.N]::GetDoubleClickTime(); dbl_cx = [PR.N]::GetSystemMetrics(36); dbl_cy = [PR.N]::GetSystemMetrics(37) } }
 function Handle($c) {
   switch ($c.cmd) {
-    'init' { if ($c.settle_ms) { $S.settle_ms = [int]$c.settle_ms }; $S.process = $c.process; $S.main_class = [string]$c.main_class; $S.view_class = [string]$c.view_class; $S.panel_class = [string]$c.panel_class; $S.forbidden = @($c.forbidden_menu | ? { $_ } | % { (($_ -split '>') | % { Clean $_ }) -join ' > ' }); [PR.N]::TargetClass = $S.main_class; $p = Proc; return @{ pid = $S.pid } }
+    'init' { if ($c.settle_ms) { $S.settle_ms = [int]$c.settle_ms }; $S.process = $c.process; $S.main_class = [string]$c.main_class; $S.view_class = [string]$c.view_class; $S.panel_class = [string]$c.panel_class; $S.forbidden = @($c.forbidden_menu | ? { $_ } | % { (($_ -split '>') | % { Clean $_ }) -join ' > ' }); [PR.N]::TargetClass = $S.main_class; $p = Proc; try { [PR.N]::KeyHkl = TargetHkl } catch { }; return @{ pid = $S.pid } }
     'ping' { return 'pong' }
     'pid' { Proc | Out-Null; return $S.pid }
     'main_pid' { return (MainOwner) }
@@ -562,6 +646,15 @@ function Handle($c) {
     'uia_find' { $e = FindEl $c.name $c.type $c.scope $c.exact; if (-not $e) { throw "not found: $($c.name) [$($c.type)]" }; return (ElInfo $e) }
     'uia_do' { $e = FindEl $c.name $c.type $c.scope $c.exact; if (-not $e) { throw "not found: $($c.name) [$($c.type)]" }; $r = DoAct $e $c.action $c.value; $i = ElInfo $e; $i.done = $r; return $i }
     'key' { Combo $c.combo; Start-Sleep -Milliseconds 80; return 'ok' }
+    'layout' { return (Layout ([string]$c.want)) }
+    'key_echo' { $k = if ($c.keys) { @($c.keys) } else { @('escape', 'delete', 'right', 'left', 'home', 'end', 'pageup', 'insert', 'c', 'e', 't', 'z') }; return (KeyEcho $k) }
+    'view_focus' { # R-15 (TW-140): keyboard focus to the document view (SetFocus with attached input), no click
+      $v = ViewHwnd; if ($v -eq [IntPtr]::Zero) { throw 'view window not found' }
+      $m = MainWin; $was = [PR.N]::FocusOf($m); $me = [PR.N]::GetCurrentThreadId(); $tt = [PR.N]::Tid($v)
+      if ($tt -and $tt -ne $me) { [PR.N]::AttachThreadInput($me, $tt, $true) | Out-Null }
+      try { [PR.N]::SetFocus($v) | Out-Null } finally { if ($tt -and $tt -ne $me) { [PR.N]::AttachThreadInput($me, $tt, $false) | Out-Null } }
+      Start-Sleep -Milliseconds 60; $f = [PR.N]::FocusOf($m)
+      return @{ view = [int64]$v; was_class = $(if ($was -ne [IntPtr]::Zero) { [PR.N]::Cls($was) } else { '' }); focus_class = $(if ($f -ne [IntPtr]::Zero) { [PR.N]::Cls($f) } else { '' }); ok = ($f -eq $v -or [PR.N]::IsChild($v, $f)) } }
     'type' { foreach ($ch in ([string]$c.text).ToCharArray()) { [PR.N]::Send(@([PR.N]::Uni($ch, $false), [PR.N]::Uni($ch, $true))); Start-Sleep -Milliseconds 25 }; return 'ok' }
     'click' { Click $c.x $c.y $c.button $c.mods $c.count; return 'ok' }
     'move' { [PR.N]::SetCursorPos([int]$c.x, [int]$c.y) | Out-Null; [PR.N]::Send(@([PR.N]::Mouse(0x1, 0))); Start-Sleep -Milliseconds 120; return 'ok' }

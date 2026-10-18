@@ -763,7 +763,7 @@
     }
    ],
    "shot": null,
-   "note": "R-13 (TW-129 e): enabled/checked state of the entry read with nothing selected (menu opened and closed, nothing executed)"
+   "note": "R-13 (TW-129 e): enabled/checked state of the entry read with nothing selected (menu opened and closed, nothing executed). R-15 (TW-141): Firepixel's enabled state needs a UI change - menu rows (fp-ui menu.rs paint_item) carry no AccessKit widget_info, so ui_find has no `enabled` on them (see runner README, R-15)."
   },
   {
    "id": "16_edges_normal",

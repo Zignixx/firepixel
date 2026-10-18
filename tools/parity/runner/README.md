@@ -620,3 +620,59 @@ Self test: `python -I runner.py --units _selftest_menu,_selftest_inspector`.
   `07_select_text_shift_arrows_focus` and `07_select_text_double_click_focus` log every text object (layer/index, name,
   pixelRect, `textChars`, selection count) before typing, after typing and after Escape on both sides (06 and 07 shift
   arrows: Escape and the last read-back in `after`, the shot is unchanged).
+
+## R-15 additions (18.10.)
+
+- **Reference keys (TW-140, run 19):** Delete selected the Eraser, the plain Right arrow the Text tool (both dropping
+  the selection), Escape left a "c" in an open editor or the Crop tool active. The extended-key flags and the scan
+  codes were already right (R-13b); every failed key had the keyboard focus on the main frame (a click on the tools
+  column puts it there). The pattern fits key-name matching: the reference names a plain key with the window
+  system's key name of its scan code in the reference's keyboard layout and falls back to the tool letter of the
+  name's last letter when no shortcut matches ("Delete" -> e = Eraser, "Right" -> t = Text, "Esc" -> c = Crop - the
+  English names; the names in the German layout are "ENTF", "NACH-RECHTS", "ESC"). `key_echo` logs the names the reference
+  gets, so the next run confirms or refutes this. Changes:
+  - host: scan codes from the **target thread's** keyboard layout (`MapVirtualKeyEx`; letters differ between layouts,
+    e.g. Y/Z), extended flag from an explicit table (Insert, Delete, Home, End, PgUp, PgDn, arrows, Win, Apps,
+    NumPad /, NumLock, right Ctrl/Alt), Escape always scan 0x01 without the flag;
+  - host verb `layout {want}`: the reference's layout (`GetKeyboardLayout` of its UI thread) and, when its language
+    differs from `want` (KLID), a `WM_INPUTLANGCHANGEREQUEST` to its main window (only that window's input language,
+    like the user switching it). Config `orig.key_layout` (default `"00000407"`, German; `""` = never change); the
+    runner requests it at every unit start (a restarted instance starts with the default layout again), log line
+    `key layout: target <before> -> <after> …` when something was requested;
+  - host verb `key_echo {keys}`: once per run (first unit) a low-level keyboard hook records the keys as the system
+    delivers them and **swallows** them (nothing reaches any program): sent vk/scan/extended vs arrived, key name
+    and character in the reference's layout, the focused window class, double-click time and rectangle. Logged
+    before and (when a layout change was requested) after the layout request: `key echo (before layout request;
+    target layout 0x…, host 0x…, focus …, double-click time … ms): ok|MISMATCH - escape 0x1b/0x01 -> … name 'Esc' …`.
+    A real text field of the reference is not used: every field there commits into the document or a preference;
+  - host verb `view_focus`: keyboard focus to the document view (`SetFocus` with attached input, no click). The runner
+    uses it before every plain key (no Ctrl/Alt) and before the cleanup Escapes when the frame itself holds the
+    focus (an open editor, a panel field or a dialog keep theirs); a failure is logged.
+- **Key check (TW-140):** after a checked key the pointer tool must still be active; otherwise the step record gets
+  `runner_errors: ["tool switched by key: <tool> (key <combo>)"]`, the log `runner error: tool switched by key: …`, the
+  key check `tool_switched`/`tool_switched_retry`, and the pointer tool is chosen again. Such a key never counts as
+  an effect; an arrow key counts only when the same number of objects stays selected with other rectangles (a dropped
+  selection is no move). The log line shows the tool after the key.
+- **Double-click (TW-140, `tool-text/06`):** the host sends all clicks of a double-click in one `SendInput` batch.
+  After a pointer double-click on the canvas the runner reads `fw.activeTool` and whether one text is selected;
+  a selected text with the pointer still active means no editor: the double-click is sent once more, values
+  `{"double_click_retry": {at, before, after, after_retry, editor}}`, a log line, and a runner error when the
+  editor stays closed.
+- **Text attributes across units (TW-140, `tool-text/02, 14, 16`):** with the unit's first document the reference
+  creates a scratch document (`fw.createDocument`), a text in it, sets its attributes to config `orig.text_defaults`
+  (default `{"face": "ArialMT", "size": "12pt", "bold": false, "italic": false, "underline": false, "fillColor":
+  "#000000"}`; `setTextRuns` acts like an edit in the text editor, the last used attributes become the tool's),
+  deletes it, creates one more text from the tool's defaults (`addNewText(.., true)`), logs its attributes and closes
+  the scratch document without saving (the test document gets no history step). Log line `unit start text defaults
+  (<s> s, wanted …): before … | after …`.
+- **Firepixel menu enabled state (TW-141) - needs a UI change:** `ui_find` reports `enabled`/`toggled` only for
+  AccessKit nodes. Menu rows are painted by `crates/fp-ui/src/menu.rs::paint_item` with `ui.allocate_response(..)`
+  and no `widget_info`, so they produce no labelled AccessKit node (role `unknown`, empty label - dropped by
+  `bridge/inject.rs::find_hits`); the painted text has no state. Run 19 (`xs-canvas/15_snap_pixels_disabled`):
+  `menu_item: 0 hits; button: 0 hits; any: 5 hits (button accesskit, text)` - none over the row. Missing: an
+  `enabled` (and `toggled`) field on the `ui_find` hit of a menu row, i.e. `resp.widget_info(|| ..)` in `paint_item`
+  (`WidgetInfo::selected(WidgetType::Checkbox, enabled, checked, label)` for checkable rows, `WidgetInfo::labeled(
+  WidgetType::Button, enabled, label)` otherwise, label without the `&` marker, as `dialogs/popup_menu.rs` does), and
+  a node also for disabled rows (they use `Sense::hover()`). The runner already looks for such a node (`role:
+  menu_item`/`button`, `enabled_from`); no runner change is needed once it exists. Panel menus
+  (`panel-library-styles/16`, `log_menu_items`) are drawn by the same function.
