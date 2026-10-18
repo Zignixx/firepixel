@@ -28,6 +28,8 @@ type Key = (PathBuf, Option<SystemTime>);
 #[derive(Default)]
 struct Inner {
     map: HashMap<Key, State>,
+    /// Has the file transparent pixels? Known once its thumbnail was read (BA-107 filter).
+    alpha: HashMap<Key, bool>,
     queue: VecDeque<Key>,
     workers: usize,
 }
@@ -90,20 +92,45 @@ fn worker(ctx: egui::Context, c: Cache) {
                 }
             }
         };
-        let state = match decode(&key.0) {
-            Some(img) => State::Ready(ctx.load_texture(
-                format!("fp-batch-thumb-{}", key.0.display()),
-                img,
-                TextureOptions::LINEAR,
-            )),
-            None => State::None,
+        let (state, alpha) = match decode(&key.0) {
+            Some((img, alpha)) => (
+                State::Ready(ctx.load_texture(
+                    format!("fp-batch-thumb-{}", key.0.display()),
+                    img,
+                    TextureOptions::LINEAR,
+                )),
+                alpha,
+            ),
+            None => (State::None, false),
         };
-        c.0.lock()
-            .unwrap_or_else(|e| e.into_inner())
-            .map
-            .insert(key, state);
+        let mut g = c.0.lock().unwrap_or_else(|e| e.into_inner());
+        g.alpha.insert(key.clone(), alpha);
+        g.map.insert(key, state);
+        drop(g);
         ctx.request_repaint();
     }
+}
+
+/// Has the file transparent pixels (first image)? `None` while unknown; asks for the thumbnail
+/// (which reads it) like [`get`]. Files too large for a thumbnail stay unknown.
+pub fn alpha(
+    ctx: &egui::Context,
+    path: &Path,
+    modified: Option<SystemTime>,
+    bytes: u64,
+) -> Option<bool> {
+    let key: Key = (path.to_path_buf(), modified);
+    if let Some(a) = cache(ctx)
+        .0
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .alpha
+        .get(&key)
+    {
+        return Some(*a);
+    }
+    let _ = get(ctx, path, modified, bytes);
+    None
 }
 
 /// Werden noch Miniaturen gelesen?
@@ -117,8 +144,9 @@ pub fn pending(ctx: &egui::Context) -> bool {
         .any(|s| matches!(s, State::Loading))
 }
 
-/// Liest die Datei (erstes Bild) und verkleinert auf höchstens [`THUMB_PX`].
-fn decode(path: &Path) -> Option<ColorImage> {
+/// Liest die Datei (erstes Bild) und verkleinert auf höchstens [`THUMB_PX`]; dazu, ob das Bild
+/// transparente Pixel hat (vor dem Verkleinern geprüft).
+fn decode(path: &Path) -> Option<(ColorImage, bool)> {
     let info = fp_batch::probe(path).ok()?;
     if matches!(
         info.kind,
@@ -128,7 +156,8 @@ fn decode(path: &Path) -> Option<ColorImage> {
     }
     let item = fp_batch::item::load(&info, false).ok()?;
     let img = item.preview_image().ok()?;
-    Some(to_color_image(&img, THUMB_PX))
+    let alpha = img.data().iter().any(|p| p[3] < 255);
+    Some((to_color_image(&img, THUMB_PX), alpha))
 }
 
 /// Verkleinert ein Bild (Flächenmittel, vormultipliziert gemittelt) auf höchstens `max` px.

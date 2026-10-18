@@ -24,8 +24,16 @@ batch-ui-ffmpeg-choose = ffmpeg file…
     .tooltip = Opens the batch settings, section "Videos (ffmpeg)".
 
 ## Filter by size and pixels (Pro)
-batch-ui-filter-size = File size (MB)
-batch-ui-filter-pixels = Longest side (px)
+batch-ui-filter-size = File size (KB)
+batch-ui-filter-width = Width (px)
+batch-ui-filter-height = Height (px)
+batch-ui-filter-alpha = Transparency
+batch-ui-filter-alpha-any = Any
+batch-ui-filter-alpha-with = With transparency
+batch-ui-filter-alpha-without = Without transparency
+batch-ui-filter-glob = Name pattern
+    .tooltip = Wildcards * and ?, separate several patterns with ; (e.g. *.png; logo_*). Case does not matter.
+batch-ui-filter-recipe-hint = These conditions are kept in the recipe as the step "Process only some".
 batch-ui-filter-min = from
 batch-ui-filter-max = to
 batch-ui-filter-reset = Reset filter

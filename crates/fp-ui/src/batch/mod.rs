@@ -75,6 +75,12 @@ pub struct FileEntry {
     pub target: Option<PathBuf>,
     /// Reihenfolge des Hinzufügens.
     pub added: usize,
+    /// Position in the manual order (sort key "Manual", drag or Ctrl+Up/Down; BA-107).
+    pub pos: usize,
+    /// Has transparent pixels (None = not known yet; read in the background for the filter).
+    pub has_alpha: Option<bool>,
+    /// Progress of this file while it is running (0..=1, from `Progress::ItemProgress`).
+    pub progress: f32,
 }
 
 /// Anfänger- oder Profi-Modus (SPEC §2.10).
@@ -313,6 +319,9 @@ impl Studio {
                 message: None,
                 target: None,
                 added: self.next_added,
+                pos: self.next_added,
+                has_alpha: None,
+                progress: 0.0,
             });
             self.next_added += 1;
         }
@@ -384,6 +393,24 @@ impl Studio {
         self.order_cache = None;
         self.plan = None;
         self.preview.invalidate();
+    }
+
+    /// While the Pro filter asks for transparency: collect what the thumbnail reader learned about
+    /// each file (read in the background for all files, not only the visible rows).
+    pub(crate) fn refresh_alpha(&mut self, ctx: &egui::Context) {
+        if self.filter.transparency == files::Transparency::Any {
+            return;
+        }
+        let mut changed = false;
+        for f in self.files.iter_mut().filter(|f| f.has_alpha.is_none()) {
+            if let Some(a) = thumbs::alpha(ctx, &f.info.path, f.info.modified, f.info.bytes) {
+                f.has_alpha = Some(a);
+                changed = true;
+            }
+        }
+        if changed {
+            self.order_cache = None;
+        }
     }
 
     /// Sichtbare Dateien (Filter, Sortierung) als Indizes in `files`.
@@ -482,11 +509,78 @@ impl Studio {
     }
 
     pub(crate) fn recipe_changed(&mut self) {
+        // the Pro filter mirrors the first `file.filterSkip` step (BA-107)
+        self.filter.from_step(&self.recipe);
         self.plan = None;
         self.plan_error = None;
         self.issues_cache = None;
         self.order_cache = None;
         self.preview.invalidate();
+    }
+
+    /// Writes the Pro filter of the file list (size, width/height, transparency, name pattern) into
+    /// the first `file.filterSkip` step of the recipe (BA-107). Without such a step one is inserted
+    /// at the top; clearing all conditions removes a step that holds nothing else. Typing in the same
+    /// field is one undo step.
+    pub fn set_pro_filter(&mut self, f: &files::Filter) {
+        let id = fp_batch::steps::fileops::FILTER_SKIP;
+        let pos = self.recipe.steps.iter().position(|s| s.id == id);
+        let mut inserted = false;
+        let mut removed = None;
+        // one undo step per field (typing in one field is one step; reset is its own step)
+        let o = &self.filter;
+        let key = if !f.has_pro_filter() {
+            "filter-reset"
+        } else if f.min_kb != o.min_kb {
+            "filter-min-kb"
+        } else if f.max_kb != o.max_kb {
+            "filter-max-kb"
+        } else if f.min_w != o.min_w {
+            "filter-min-w"
+        } else if f.max_w != o.max_w {
+            "filter-max-w"
+        } else if f.min_h != o.min_h {
+            "filter-min-h"
+        } else if f.max_h != o.max_h {
+            "filter-max-h"
+        } else if f.transparency != o.transparency {
+            "filter-alpha"
+        } else {
+            "filter-name"
+        };
+        self.edit(key, |r| match pos {
+            Some(i) => {
+                let params = f.step_params(&r.steps[i].params);
+                let rest_default = ["animation", "action"].iter().all(|k| {
+                    params
+                        .get(*k)
+                        .and_then(serde_json::Value::as_str)
+                        .is_none_or(|v| v == "any" || v == "skip")
+                });
+                if !f.has_pro_filter() && rest_default {
+                    r.steps.remove(i);
+                    removed = Some(i);
+                } else {
+                    r.steps[i].params = params;
+                    r.steps[i].enabled = true;
+                }
+                true
+            }
+            None if f.has_pro_filter() => {
+                let base = serde_json::json!({"animation": "any", "action": "skip"});
+                r.steps
+                    .insert(0, fp_batch::StepConfig::new(id, f.step_params(&base)));
+                inserted = true;
+                true
+            }
+            None => false,
+        });
+        self.open_card = match (self.open_card, removed) {
+            (Some(CardId::Step(j)), _) if inserted => Some(CardId::Step(j + 1)),
+            (Some(CardId::Step(j)), Some(i)) if j == i => None,
+            (Some(CardId::Step(j)), Some(i)) if j > i => Some(CardId::Step(j - 1)),
+            (o, _) => o,
+        };
     }
 
     /// Neues Rezept (z. B. geladen oder Vorlage); Verlauf beginnt neu.

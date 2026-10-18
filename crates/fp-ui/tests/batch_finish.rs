@@ -485,24 +485,25 @@ fn filter_nach_groesse_pixeln_und_platzhaltern() {
         .expect("Typ-Liste");
     click(&mut h, kind.center());
     let from = t("batch-ui-filter-min");
-    let px_label = format!("{} {from}", t("batch-ui-filter-pixels"));
-    let f = node(&h, &px_label, egui::accesskit::Role::TextInput).expect("Feld längste Seite ab");
+    let px_label = format!("{} {from}", t("batch-ui-filter-width"));
+    let f = node(&h, &px_label, egui::accesskit::Role::TextInput).expect("Feld Breite ab");
     click(&mut h, f.center());
     type_text(&mut h, "250");
-    assert_eq!(studio(&mut h).filter.min_px, Some(250));
+    assert_eq!(studio(&mut h).filter.min_w, Some(250));
     assert_eq!(names(&mut h), ["gross_01.png", "mittel.jpg.png"]);
-    let mb_label = format!("{} {}", t("batch-ui-filter-size"), t("batch-ui-filter-max"));
-    let f2 = node(&h, &mb_label, egui::accesskit::Role::TextInput).expect("Feld Größe bis");
+    let kb_label = format!("{} {}", t("batch-ui-filter-size"), t("batch-ui-filter-max"));
+    let f2 = node(&h, &kb_label, egui::accesskit::Role::TextInput).expect("Feld Größe bis");
     click(&mut h, f2.center());
-    type_text(&mut h, "0,1");
-    assert_eq!(studio(&mut h).filter.max_mb, Some(0.1));
-    assert_eq!(names(&mut h), ["mittel.jpg.png"], "das große Rauschbild ist > 0,1 MB");
-    // Zähler „1 von 3 Dateien“, Anfänger ignoriert die Profi-Filter (Werte bleiben)
+    type_text(&mut h, "100");
+    assert_eq!(studio(&mut h).filter.max_kb, Some(100.0));
+    assert_eq!(names(&mut h), ["mittel.jpg.png"], "das große Rauschbild ist > 100 KB");
+    // Zähler „1 von 3 Dateien“; die Bedingungen stehen im Rezept (BA-107) und gelten darum auch im
+    // Anfänger-Modus (dort nur nicht bearbeitbar)
     assert!(has_text(&h, &fp_i18n::tr!("batch-ui-files-count-filtered", shown = 1, total = 3)));
     key(&mut h, Key::Escape, Modifiers::NONE);
     studio(&mut h).mode = Mode::Beginner;
-    assert_eq!(names(&mut h).len(), 3);
-    assert_eq!(studio(&mut h).filter.min_px, Some(250));
+    assert_eq!(names(&mut h).len(), 1);
+    assert_eq!(studio(&mut h).filter.min_w, Some(250));
     // gefilterte Dateien werden nicht verarbeitet
     studio(&mut h).mode = Mode::Pro;
     let items = studio(&mut h).to_process();

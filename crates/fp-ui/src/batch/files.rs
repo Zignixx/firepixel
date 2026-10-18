@@ -44,7 +44,47 @@ impl SortKey {
     }
 }
 
+/// Transparency condition of the Pro filter (`file.filterSkip` parameter `transparency`).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
+pub enum Transparency {
+    #[default]
+    Any,
+    With,
+    Without,
+}
+
+impl Transparency {
+    pub const ALL: [Transparency; 3] =
+        [Transparency::Any, Transparency::With, Transparency::Without];
+    /// Value of the `transparency` parameter of `file.filterSkip`.
+    pub fn key(self) -> &'static str {
+        match self {
+            Transparency::Any => "any",
+            Transparency::With => "with",
+            Transparency::Without => "without",
+        }
+    }
+    pub fn from_key(k: &str) -> Transparency {
+        match k {
+            "with" => Transparency::With,
+            "without" => Transparency::Without,
+            _ => Transparency::Any,
+        }
+    }
+    pub fn label(self) -> String {
+        t(match self {
+            Transparency::Any => "batch-ui-filter-alpha-any",
+            Transparency::With => "batch-ui-filter-alpha-with",
+            Transparency::Without => "batch-ui-filter-alpha-without",
+        })
+    }
+}
+
 /// Filter der Liste. Gefilterte Dateien werden nicht verarbeitet.
+///
+/// The Pro part (file size, width/height, transparency, name pattern) mirrors the first
+/// `file.filterSkip` step of the recipe (BA-107): editing it here writes the step, and loading or
+/// editing the step updates these fields ([`Filter::from_step`], [`Filter::step_params`]).
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Filter {
     /// Suchtext im Namen (Groß/klein egal).
@@ -55,12 +95,20 @@ pub struct Filter {
     pub regex: String,
     /// Nur Dateien mit Fehler (nach einem Lauf).
     pub only_failed: bool,
-    /// Profi: Dateigröße ab/bis (MB; Befund BATCH-2, SPEC §2.3).
-    pub min_mb: Option<f64>,
-    pub max_mb: Option<f64>,
-    /// Profi: längste Seite ab/bis (Pixel; unbekannte Maße passen immer).
-    pub min_px: Option<u32>,
-    pub max_px: Option<u32>,
+    /// Pro: file size from/to in KB (source file).
+    pub min_kb: Option<f64>,
+    pub max_kb: Option<f64>,
+    /// Pro: width and height from/to in pixels (unknown dimensions always pass).
+    pub min_w: Option<u32>,
+    pub max_w: Option<u32>,
+    pub min_h: Option<u32>,
+    pub max_h: Option<u32>,
+    /// Pro: with/without transparency (a file passes until its transparency is known).
+    pub transparency: Transparency,
+    /// Pro: name pattern (`*`, `?`, alternatives separated by `;`, case-insensitive).
+    pub glob: String,
+    /// The recipe step is inverted (`invert`): the other files are processed.
+    pub invert: bool,
 }
 
 impl Filter {
@@ -72,10 +120,12 @@ impl Filter {
         self.kind.map(|k| k as u8).hash(&mut h);
         self.regex.hash(&mut h);
         self.only_failed.hash(&mut h);
-        self.min_mb.map(f64::to_bits).hash(&mut h);
-        self.max_mb.map(f64::to_bits).hash(&mut h);
-        self.min_px.hash(&mut h);
-        self.max_px.hash(&mut h);
+        self.min_kb.map(f64::to_bits).hash(&mut h);
+        self.max_kb.map(f64::to_bits).hash(&mut h);
+        (self.min_w, self.max_w, self.min_h, self.max_h).hash(&mut h);
+        self.transparency.hash(&mut h);
+        self.glob.hash(&mut h);
+        self.invert.hash(&mut h);
         h.finish()
     }
 
@@ -84,25 +134,145 @@ impl Filter {
             || self.kind.is_some()
             || !self.regex.is_empty()
             || self.only_failed
-            || self.has_size_filter()
+            || self.has_pro_filter()
     }
 
     /// Filter nach Größe bzw. Pixeln gesetzt?
     pub fn has_size_filter(&self) -> bool {
-        self.min_mb.is_some()
-            || self.max_mb.is_some()
-            || self.min_px.is_some()
-            || self.max_px.is_some()
+        self.min_kb.is_some()
+            || self.max_kb.is_some()
+            || self.min_w.is_some()
+            || self.max_w.is_some()
+            || self.min_h.is_some()
+            || self.max_h.is_some()
+    }
+
+    /// Any Pro condition (mirrored into `file.filterSkip`)?
+    pub fn has_pro_filter(&self) -> bool {
+        self.has_size_filter()
+            || self.transparency != Transparency::Any
+            || !self.glob.trim().is_empty()
+    }
+
+    /// Clears the Pro conditions (size, pixels, transparency, name pattern).
+    pub fn clear_pro(&mut self) {
+        self.min_kb = None;
+        self.max_kb = None;
+        self.min_w = None;
+        self.max_w = None;
+        self.min_h = None;
+        self.max_h = None;
+        self.transparency = Transparency::Any;
+        self.glob.clear();
+        self.invert = false;
+    }
+
+    /// Same Pro conditions?
+    pub fn same_pro(&self, o: &Filter) -> bool {
+        self.min_kb == o.min_kb
+            && self.max_kb == o.max_kb
+            && (self.min_w, self.max_w, self.min_h, self.max_h)
+                == (o.min_w, o.max_w, o.min_h, o.max_h)
+            && self.transparency == o.transparency
+            && self.glob == o.glob
+            && self.invert == o.invert
     }
 
     /// Passt eine Datei zu Größe und Pixeln?
     pub fn size_ok(&self, info: &fp_batch::ItemInfo) -> bool {
-        let mb = info.bytes as f64 / (1024.0 * 1024.0);
-        let long = info.width.max(info.height);
-        self.min_mb.is_none_or(|m| mb >= m)
-            && self.max_mb.is_none_or(|m| mb <= m)
-            && (long == 0
-                || (self.min_px.is_none_or(|m| long >= m) && self.max_px.is_none_or(|m| long <= m)))
+        let kb = info.bytes as f64 / 1024.0;
+        let known = info.width > 0 && info.height > 0;
+        let px = |lo: Option<u32>, hi: Option<u32>, v: u32| {
+            !known || (lo.is_none_or(|m| v >= m) && hi.is_none_or(|m| v <= m))
+        };
+        self.min_kb.is_none_or(|m| kb >= m)
+            && self.max_kb.is_none_or(|m| kb <= m)
+            && px(self.min_w, self.max_w, info.width)
+            && px(self.min_h, self.max_h, info.height)
+    }
+
+    /// Does a file match all Pro conditions (`has_alpha` = known transparency of the file)?
+    /// Same rules as `file.filterSkip` on the source, including `invert`.
+    pub fn pro_ok(&self, info: &fp_batch::ItemInfo, has_alpha: Option<bool>) -> bool {
+        if !self.has_pro_filter() {
+            return true;
+        }
+        let alpha_ok = !matches!(
+            (self.transparency, has_alpha),
+            (Transparency::With, Some(false)) | (Transparency::Without, Some(true))
+        );
+        let name_ok = match fp_batch::steps::fileops::glob_regex(&self.glob) {
+            Ok(Some(re)) => re.is_match(&info.file_name()),
+            _ => true,
+        };
+        (self.size_ok(info) && alpha_ok && name_ok) != self.invert
+    }
+
+    /// Pro conditions from the first `file.filterSkip` step of a recipe (cleared without one or
+    /// when that step is switched off).
+    pub fn from_step(&mut self, recipe: &fp_batch::Recipe) {
+        self.clear_pro();
+        let Some(step) = recipe
+            .steps
+            .iter()
+            .find(|s| s.id == fp_batch::steps::fileops::FILTER_SKIP)
+        else {
+            return;
+        };
+        if !step.enabled {
+            return;
+        }
+        let p = &step.params;
+        let num = |k: &str| {
+            p.get(k)
+                .and_then(serde_json::Value::as_f64)
+                .filter(|v| v.is_finite() && *v > 0.0)
+        };
+        let px = |k: &str| num(k).map(|v| v.round() as u32);
+        self.min_kb = num("minKB");
+        self.max_kb = num("maxKB");
+        self.min_w = px("minWidth");
+        self.max_w = px("maxWidth");
+        self.min_h = px("minHeight");
+        self.max_h = px("maxHeight");
+        let s = |k: &str| {
+            p.get(k)
+                .and_then(serde_json::Value::as_str)
+                .unwrap_or("")
+                .to_string()
+        };
+        self.transparency = Transparency::from_key(&s("transparency"));
+        self.glob = s("name");
+        self.invert = p
+            .get("invert")
+            .and_then(serde_json::Value::as_bool)
+            .unwrap_or(false);
+    }
+
+    /// The Pro conditions as parameters of `file.filterSkip` (0 = off), merged into `base` so that
+    /// the step's other parameters (`animation`, `action`) are kept.
+    pub fn step_params(&self, base: &serde_json::Value) -> serde_json::Value {
+        let mut v = base.as_object().cloned().unwrap_or_default();
+        let n = |x: Option<u32>| serde_json::json!(x.unwrap_or(0));
+        v.insert("minWidth".into(), n(self.min_w));
+        v.insert("maxWidth".into(), n(self.max_w));
+        v.insert("minHeight".into(), n(self.min_h));
+        v.insert("maxHeight".into(), n(self.max_h));
+        v.insert(
+            "minKB".into(),
+            serde_json::json!(self.min_kb.unwrap_or(0.0)),
+        );
+        v.insert(
+            "maxKB".into(),
+            serde_json::json!(self.max_kb.unwrap_or(0.0)),
+        );
+        v.insert(
+            "transparency".into(),
+            serde_json::json!(self.transparency.key()),
+        );
+        v.insert("name".into(), serde_json::json!(self.glob));
+        v.insert("invert".into(), serde_json::json!(self.invert));
+        serde_json::Value::Object(v)
     }
 }
 
@@ -140,7 +310,9 @@ pub fn order(files: &[FileEntry], f: &Filter, sort: SortKey, mode: Mode) -> Vec<
     let needle = f.text.to_lowercase();
     // Suchtext mit * oder ? = Platzhalter über den ganzen Namen (BATCH-11b)
     let glob = needle.contains(['*', '?']);
-    let size_filter = mode == Mode::Pro && f.has_size_filter();
+    // Pro conditions mirror the recipe step `file.filterSkip`: they apply in both modes because
+    // the run skips those files anyway (BA-107)
+    let pro_filter = f.has_pro_filter();
     let re = if mode == Mode::Pro && !f.regex.is_empty() {
         fp_batch::naming::compile_regex(&fp_batch::recipe::RegexRename {
             find: f.regex.clone(),
@@ -161,7 +333,7 @@ pub fn order(files: &[FileEntry], f: &Filter, sort: SortKey, mode: Mode) -> Vec<
                 } else {
                     name.to_lowercase().contains(&needle)
                 })
-                && (!size_filter || f.size_ok(&e.info))
+                && (!pro_filter || f.pro_ok(&e.info, e.has_alpha))
                 && f.kind.is_none_or(|k| e.info.kind == k)
                 && re.as_ref().is_none_or(|r| r.is_match(&name))
                 && (!f.only_failed || e.status == EntryStatus::Failed)
@@ -268,6 +440,7 @@ pub fn show(ui: &mut Ui, st: &mut AppState, s: &mut Studio, rect: Rect, now: f64
     let c = &theme.colors;
     let col = kit::accent(&theme, 0);
     let p = ui.painter().clone();
+    s.refresh_alpha(ui.ctx());
     let vis = s.visible();
     let total_bytes: u64 = vis.iter().map(|&i| s.files[i].info.bytes).sum();
     let count = if s.filter.is_active() || vis.len() != s.files.len() {
@@ -476,7 +649,7 @@ fn filter_row(ui: &mut Ui, s: &mut Studio, r: Rect) {
     );
     let mut kc = ui.new_child(egui::UiBuilder::new().max_rect(kr));
     crate::theme::field_widgets(&mut kc);
-    let kind_text = if pro && f.has_size_filter() {
+    let kind_text = if f.has_pro_filter() {
         format!("{} •", kind_label(f.kind))
     } else {
         kind_label(f.kind)
@@ -484,6 +657,7 @@ fn filter_row(ui: &mut Ui, s: &mut Studio, r: Rect) {
     egui::ComboBox::from_id_salt("fp-batch-filter-kind")
         .selected_text(kind_text)
         .width(kind_w)
+        .height(if pro { 520.0 } else { 200.0 })
         .truncate()
         .close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside)
         .show_ui(&mut kc, |ui| {
@@ -528,8 +702,17 @@ fn filter_row(ui: &mut Ui, s: &mut Studio, r: Rect) {
         f.regex = f.text[1..].to_string();
         f.text.clear();
     }
-    if f != s.filter {
-        s.filter = f;
+    // Pro conditions go into the recipe step `file.filterSkip`, which updates `s.filter` (BA-107)
+    if !f.same_pro(&s.filter) && !s.running() {
+        s.set_pro_filter(&f);
+    }
+    let mut nf = s.filter.clone();
+    nf.text = f.text;
+    nf.kind = f.kind;
+    nf.regex = f.regex;
+    nf.only_failed = f.only_failed;
+    if nf != s.filter {
+        s.filter = nf;
         s.files_changed();
     }
     if sort != s.sort {
@@ -538,9 +721,11 @@ fn filter_row(ui: &mut Ui, s: &mut Studio, r: Rect) {
     }
 }
 
-/// Profi: Felder „Dateigröße (MB) ab … bis …“ und „Längste Seite (px) ab … bis …“ in der Typ-Liste.
+/// Pro: fields "File size (KB) from … to", "Width/Height (px) from … to", transparency and name
+/// pattern in the type list. They mirror the recipe step `file.filterSkip` (BA-107).
 fn size_filter_fields(ui: &mut Ui, f: &mut Filter) {
     let theme = Theme::current(ui.ctx());
+    ui.set_min_width(250.0);
     let num = |ui: &mut Ui, id: &str, label: &str, v: &mut Option<f64>| {
         let buf_id = Id::new(("fp-batch-filter-num", id));
         let focused = ui.memory(|m| m.has_focus(buf_id));
@@ -562,44 +747,73 @@ fn size_filter_fields(ui: &mut Ui, f: &mut Filter) {
         );
         r.widget_info(|| super::params::text_info(label));
         if r.changed() {
-            *v = super::params::parse_number(&buf, None).filter(|x| *x >= 0.0);
+            *v = super::params::parse_number(&buf, None).filter(|x| *x > 0.0);
             ui.ctx()
                 .data_mut(|m| m.insert_temp(buf_id.with("b"), buf.clone()));
         } else if !r.has_focus() {
             ui.ctx().data_mut(|m| m.remove::<String>(buf_id.with("b")));
         }
     };
+    let px = |ui: &mut Ui, id: &str, label: &str, v: &mut Option<u32>| {
+        let mut x = v.map(f64::from);
+        num(ui, id, label, &mut x);
+        *v = x.map(|x| x.round().min(u32::MAX as f64) as u32);
+    };
     let from = t("batch-ui-filter-min");
     let to = t("batch-ui-filter-max");
+    let weak = kit::weak(&theme);
     egui::Grid::new("fp-batch-filter-size-grid")
         .num_columns(5)
         .spacing(vec2(sp::XS + 2.0, sp::XS))
         .show(ui, |ui| {
             let size_l = t("batch-ui-filter-size");
-            ui.label(egui::RichText::new(&size_l).color(kit::weak(&theme)));
+            ui.label(egui::RichText::new(&size_l).color(weak));
             ui.label(&from);
-            num(ui, "min-mb", &format!("{size_l} {from}"), &mut f.min_mb);
+            num(ui, "min-kb", &format!("{size_l} {from}"), &mut f.min_kb);
             ui.label(&to);
-            num(ui, "max-mb", &format!("{size_l} {to}"), &mut f.max_mb);
+            num(ui, "max-kb", &format!("{size_l} {to}"), &mut f.max_kb);
             ui.end_row();
-            let px_l = t("batch-ui-filter-pixels");
-            ui.label(egui::RichText::new(&px_l).color(kit::weak(&theme)));
-            let mut lo = f.min_px.map(|x| x as f64);
-            let mut hi = f.max_px.map(|x| x as f64);
+            let w_l = t("batch-ui-filter-width");
+            ui.label(egui::RichText::new(&w_l).color(weak));
             ui.label(&from);
-            num(ui, "min-px", &format!("{px_l} {from}"), &mut lo);
+            px(ui, "min-w", &format!("{w_l} {from}"), &mut f.min_w);
             ui.label(&to);
-            num(ui, "max-px", &format!("{px_l} {to}"), &mut hi);
-            f.min_px = lo.map(|x| x.round() as u32);
-            f.max_px = hi.map(|x| x.round() as u32);
+            px(ui, "max-w", &format!("{w_l} {to}"), &mut f.max_w);
+            ui.end_row();
+            let h_l = t("batch-ui-filter-height");
+            ui.label(egui::RichText::new(&h_l).color(weak));
+            ui.label(&from);
+            px(ui, "min-h", &format!("{h_l} {from}"), &mut f.min_h);
+            ui.label(&to);
+            px(ui, "max-h", &format!("{h_l} {to}"), &mut f.max_h);
             ui.end_row();
         });
-    if f.has_size_filter() && ui.button(t("batch-ui-filter-reset")).clicked() {
-        f.min_mb = None;
-        f.max_mb = None;
-        f.min_px = None;
-        f.max_px = None;
+    // transparency: three choices in a row (a nested list would close the type list)
+    ui.label(egui::RichText::new(t("batch-ui-filter-alpha")).color(weak));
+    ui.horizontal(|ui| {
+        for a in Transparency::ALL {
+            ui.selectable_value(&mut f.transparency, a, a.label());
+        }
+    });
+    // name pattern (glob, alternatives with ;)
+    let glob_l = t("batch-ui-filter-glob");
+    ui.label(egui::RichText::new(&glob_l).color(weak));
+    let r = ui.add(
+        egui::TextEdit::singleline(&mut f.glob)
+            .id(Id::new("fp-batch-filter-glob"))
+            .hint_text("*.png; logo_*")
+            .desired_width(200.0),
+    );
+    r.widget_info(|| super::params::text_info(&glob_l));
+    r.on_hover_text(t("batch-ui-filter-glob.tooltip"));
+    if f.has_pro_filter() && ui.button(t("batch-ui-filter-reset")).clicked() {
+        f.clear_pro();
     }
+    ui.label(
+        egui::RichText::new(t("batch-ui-filter-recipe-hint"))
+            .color(weak)
+            .small(),
+    );
 }
 
 fn empty_state(ui: &mut Ui, st: &mut AppState, s: &mut Studio, r: Rect, enabled: bool) {
