@@ -1436,11 +1436,20 @@ impl Session {
         else {
             return false;
         };
-        let Some(d) = self.active_mut() else {
+        let Some(orig) = self.active().map(|d| Arc::clone(&d.doc)) else {
             return false;
         };
-        let orig = Arc::clone(&d.doc);
         let Some(mut e) = v.preview_element(&orig) else {
+            return false;
+        };
+        // TW-143: the element carries the editor's current layout bounds (as the commit sets
+        // them), not the bounds of the committed text
+        if let fp_model::element::ElementKind::Text(t) = &mut e.kind
+            && let Some(f) = self.renderer.as_ref().and_then(|r| r.text_frame(&orig, t))
+        {
+            t.bounds = f;
+        }
+        let Some(d) = self.active_mut() else {
             return false;
         };
         let mut doc = (*orig).clone();

@@ -104,3 +104,46 @@ fn edited_text_reads_back_live_and_a_command_still_works() {
         .expect("commit");
     assert_eq!(model_texts(&s), ["Neu"]);
 }
+
+/// TW-143: typing into an auto-width text grows its read-back bounds at once (the reference reads
+/// 107 → 120 while typing): `left + width` and `pixelRect.right` both grow before Escape, and the
+/// live values equal the committed ones afterwards.
+#[test]
+fn edited_text_bounds_grow_live_while_typing() {
+    const RIGHT: &str = "var L = fw.getDocumentDOM().frames[0].layers, e = null;
+for (var i = 0; i < L.length; i++) for (var k = 0; k < L[i].elements.length; k++)
+  if (L[i].elements[k].textChars !== undefined) e = L[i].elements[k];
+(e.left + e.width) + '|' + e.pixelRect.right";
+    let right = |s: &mut Session| -> (f64, f64) {
+        let v = eval(s, RIGHT);
+        let n: Vec<f64> = v.split('|').filter_map(|x| x.parse().ok()).collect();
+        assert_eq!(n.len(), 2, "bounds: {v}");
+        (n[0], n[1])
+    };
+    let mut s = session();
+    s.execute(
+        "draw.text",
+        json!({"text": "Alt", "anchor": [40, 60], "size": 24}),
+    )
+    .expect("text");
+    let before = right(&mut s);
+    s.set_tool(ToolId::Text).expect("tool");
+    click(&mut s, 45.0, 52.0);
+    assert!(s.tool_is_editing_text());
+    s.tool_event(&ToolEvent::key(ToolKey::End)).expect("end");
+    send(&mut s, ToolInput::Text("Vrrrr".into()));
+    let live = right(&mut s);
+    assert!(
+        live.0 > before.0 + 10.0,
+        "live left + width {live:?} vs. committed {before:?}"
+    );
+    assert!(
+        live.1 > before.1 + 10.0,
+        "live pixelRect.right {live:?} vs. committed {before:?}"
+    );
+    assert!(s.tool_is_editing_text());
+    s.tool_event(&ToolEvent::key(ToolKey::Escape))
+        .expect("commit");
+    assert_eq!(model_texts(&s), ["AltVrrrr"]);
+    assert_eq!(right(&mut s), live, "live bounds = committed bounds");
+}
