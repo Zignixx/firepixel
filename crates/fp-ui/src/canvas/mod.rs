@@ -2030,15 +2030,6 @@ fn input(ui: &mut Ui, st: &mut AppState, area: Rect, resp: &egui::Response) {
         pressure: 1.0,
         time_ms: t_ms,
     };
-    if let Some(pc) = cc.pending_caret
-        && let Some(lc) = cc.text.as_ref()
-    {
-        events.push(caret(lc.hit(pc), false));
-        cc.pending_caret = None;
-    }
-    if !editing {
-        cc.pending_caret = None;
-    }
     if let Some(p) = pointer {
         let dp = to_doc(p);
         // Klick/Ziehen im bearbeiteten Text: Caret setzen bzw. markieren (Layout von fp-text)
@@ -2195,14 +2186,15 @@ fn input(ui: &mut Ui, st: &mut AppState, area: Rect, resp: &egui::Response) {
         if matches!(kind, Some(PointerKind::Down | PointerKind::Up)) {
             log_pointer(st, &ev, hit_before);
         }
-        // Doppelklick auf Text öffnet den Editor: Einfügemarke an die Klickstelle, sobald das
-        // Textlayout da ist (nächstes Bild)
-        if ev.kind() == Some(PointerKind::DoubleClick)
+        // Double-click on a text opens the editor within this event (on the second press, so
+        // keys typed afterwards already reach it); the engine places the caret at the click point
+        // (TW-135). No caret is reported later: it would move the caret away from characters
+        // typed in between. Only the layout is rebuilt.
+        if kind == Some(PointerKind::DoubleClick)
             && r.as_ref()
                 .is_ok_and(|r| r.switch_tool == Some(fp_engine::ToolId::Text))
             && let Some(cc) = st.canvases.get_mut(&id)
         {
-            cc.pending_caret = ev.pos();
             cc.text = None;
         }
         tool_result(&ctx, st, r);

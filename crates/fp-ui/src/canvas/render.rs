@@ -193,8 +193,6 @@ pub struct CanvasCache {
     pub wheel_acc: f32,
     /// Dokumentpunkt des letzten Drückens auf der Leinwand (Greifpunkt beim Ziehen).
     pub press_pos: Option<fp_geom::Point>,
-    /// Einfügemarke nach Doppelklick auf Text setzen, sobald das Textlayout vorliegt.
-    pub pending_caret: Option<fp_geom::Point>,
     /// Letzter Klick auf der Leinwand (Zeit, Bildschirmpunkt) für die Doppelklick-Erkennung.
     pub last_click: Option<(f64, egui::Pos2)>,
     /// Last click inside the open text editor (time, screen point, click count) for word/paragraph selection.
