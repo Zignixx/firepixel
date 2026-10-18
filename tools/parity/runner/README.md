@@ -723,3 +723,16 @@ Self test: `python -I runner.py --units _selftest_menu,_selftest_inspector`.
   fallback). Firepixel's `run_script` result already arrives as JSON. On both sides a `log_value` text containing
   one of these characters also gets `value_escaped` (same escaping) and a run-log line `<side> log_value text:
   <escaped>` - e.g. the `textChars` read-backs of `tool-text/06` and `xs-shortcuts/15_in_text_tx2`.
+
+## R-18 additions (18.10.)
+
+- **Firepixel menu entry state (TW-141/TW-142):** since F40 Firepixel's menu and panel pop-up rows have accessibility
+  nodes with `enabled`/`toggled`, but R-12's `menu_items()` read only the painted texts (`role: text`, topmost paint
+  block), which carry no state - hence `enabled: None` in run 20 (`panel-library-styles/16`, `xs-canvas/15`).
+  `menu_entries_from_hits(texts, nodes)` keeps the painted texts for the geometry (columns, shortcuts; `tight_popup`
+  and clicks unchanged) and takes each entry's `enabled` / `toggled` (also as `checked`) from the `ui_find` hit of
+  role `menu_item`, `button` or `check_box` in the menu region whose label matches on the entry's row (exact, label
+  plus shortcut, or an unlabelled node around the text), inside the topmost popup block (paint order not below the
+  block's lowest text order minus 40); `state_from: "<role> node"`. Entries without a node keep the text's state and
+  a log line counts them. `--dry-run` prints `menu state self check: ok` (mocked `ui_find`: a pop-up over a panel,
+  button / check_box / unlabelled / disabled nodes, a panel button outside the block).

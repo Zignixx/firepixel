@@ -263,6 +263,105 @@ def top_paint_block(hits, gap: int = POPUP_ORDER_GAP):
     return out
 
 
+MENU_STATE_ROLES = ("menu_item", "button", "check_box")
+
+
+def menu_entries_from_hits(hits, nodes=()) -> list:
+    """Firepixel menu entries (main menus and panel pop-ups) from `ui_find` results: `hits` = painted texts of the
+    menu region (`role: text`), `nodes` = accessibility hits (roles MENU_STATE_ROLES) of the same region.
+    Geometry from the painted texts (R-12: topmost paint block; entries left aligned per column, shortcuts right
+    aligned); R-18: each entry's `enabled` / `toggled` (also as `checked`) from the accessibility node with the same
+    label on its row - since F40 the pop-up rows have such nodes, the painted texts carry no state (run 20:
+    `enabled: None` in panel-library-styles/16, xs-canvas/15). Without a matching node the text hit's own state is
+    kept. Returns a list of columns (lists of entry dicts)."""
+    hits = [h for h in hits if h.get("text") and h.get("source") != "accesskit"]
+    hits = top_paint_block(hits)
+
+    def count(h, i, tol):
+        return sum(1 for o in hits if abs(o["rect"][i] - h["rect"][i]) <= tol)
+
+    def row_of(h):
+        return (h["rect"][1] + h["rect"][3]) / 2
+
+    # entries are left aligned (shared left edge per column), shortcuts right aligned (shared right edge)
+    short = [h for h in hits if count(h, 2, 1.5) >= 2 and count(h, 0, 2) < 3
+             and any(o is not h and o["rect"][0] < h["rect"][0] and abs(row_of(o) - row_of(h)) < 4 for o in hits)]
+    entries = [h for h in hits if not any(h is s for s in short)]
+    cols: dict = {}
+    for h in sorted(entries, key=lambda h: (h["rect"][0], h["rect"][1])):
+        col = next((c for c in cols if abs(c - h["rect"][0]) <= 2), h["rect"][0])
+        cols.setdefault(col, []).append(dict(menu_entry_text(h["text"]), enabled=h.get("enabled"),
+                                             toggled=h.get("toggled"), checked=h.get("toggled"), _r=h["rect"]))
+    for s in short:
+        cand = [e for c in cols.values() for e in c if e["_r"][0] < s["rect"][0] and abs((e["_r"][1] + e["_r"][3]) / 2 - row_of(s)) < 4]
+        if cand:
+            max(cand, key=lambda e: e["_r"][0])["shortcut"] = s["text"]
+    # R-18: state from the accessibility nodes inside the topmost popup block (paint order not below the block's
+    # lowest text order minus the block gap, when both carry an order), matched by label on the entry's row
+    orders = [int(h["order"]) for h in hits if "order" in h]
+    low = min(orders) - POPUP_ORDER_GAP if orders else None
+    nodes = [n for n in nodes or [] if n.get("rect") and (n.get("enabled") is not None or n.get("toggled") is not None)
+             and (low is None or "order" not in n or int(n["order"]) >= low)]
+    for e in (e for c in cols.values() for e in c):
+        r = e["_r"]
+        cy = (r[1] + r[3]) / 2
+        want = e["text"].lower()
+        best = None
+        for n in nodes:
+            nr = n["rect"]
+            if not (nr[1] - 3 <= cy <= nr[3] + 3) or nr[2] < r[0] or nr[0] > r[2]:
+                continue
+            lab = menu_entry_text(str(n.get("text") or "").replace("&", ""))["text"].lower()
+            if lab == want:
+                score = 0
+            elif lab and (lab.startswith(want + " ") or lab.startswith(want + "\t")):
+                score = 1  # label with the shortcut appended
+            elif not lab and nr[0] - 2 <= r[0] and nr[2] + 2 >= r[2]:
+                score = 2  # unlabelled node around the painted text
+            else:
+                continue
+            key = (score, abs((nr[1] + nr[3]) / 2 - cy))
+            if best is None or key < best[0]:
+                best = (key, n)
+        if best:
+            n = best[1]
+            e.update(enabled=n.get("enabled"), toggled=n.get("toggled"), checked=n.get("toggled"),
+                     state_from=f"{n.get('role')} node")
+    out = []
+    for c in sorted(cols):
+        col = sorted(cols[c], key=lambda e: e["_r"][1])
+        for e in col:
+            e.pop("_r")
+        out.append(col)
+    return out
+
+
+def menu_state_selfcheck() -> str:
+    """R-18: offline check of menu_entries_from_hits with a mocked `ui_find` result (painted texts of a pop-up over
+    a panel, accessibility nodes of the rows: button, check_box, one disabled, one unlabelled); run by --dry-run."""
+    t = lambda s, x, y, o, w=80: {"text": s, "rect": [x, y, x + w, y + 14], "role": "text", "source": "paint", "order": o}
+    hits = [t("Sortieren nach:", 10, 300, 100),  # panel text under the pop-up (other paint block)
+            t("Neue URL...", 200, 100, 500), t("URL bearbeiten...", 200, 120, 502), t("URL löschen", 200, 140, 504),
+            t("Entf", 345, 140, 505, 25), t("Raster", 200, 160, 506), t("Strg+R", 330, 160, 507, 40)]
+    n = lambda s, y, en, tg, role="button", o=520: {"text": s, "rect": [196, y - 2, 380, y + 16], "role": role,
+                                                    "source": "accesskit", "enabled": en, "toggled": tg, "order": o}
+    nodes = [n("Neue URL...", 100, True, None), n("URL bearbeiten...", 120, False, None),
+             n("", 140, False, None), n("Raster Strg+R", 160, True, True, "check_box"),
+             n("Raster", 300, True, None, o=90)]  # a panel button outside the block
+    got = menu_entries_from_hits(hits, nodes)
+    flat = {e["text"]: e for c in got for e in c}
+    want = {"Neue URL": (True, None), "URL bearbeiten": (False, None), "URL löschen": (False, None), "Raster": (True, True)}
+    bad = [f"{k}: {(flat.get(k) or {}).get('enabled')}/{(flat.get(k) or {}).get('toggled')} != {v}" for k, v in want.items()
+           if k not in flat or (flat[k].get("enabled"), flat[k].get("toggled")) != v]
+    if "Sortieren nach:" in flat:
+        bad.append("panel text inside the menu")
+    if (flat.get("Raster") or {}).get("shortcut") != "Strg+R" or (flat.get("URL löschen") or {}).get("shortcut") != "Entf":
+        bad.append("shortcut lost")
+    if not (flat.get("Neue URL") or {}).get("ellipsis"):
+        bad.append("ellipsis flag lost")
+    return "ok" if not bad else "FAIL: " + "; ".join(bad)
+
+
 def diff_bbox(a: Image.Image | None, b: Image.Image | None, pad: int = 6):
     """Bounding box of what changed between two equally sized images (used for popup/menu areas)."""
     if a is None or b is None or a.size != b.size:
@@ -4857,7 +4956,8 @@ class FpSide(Side):
         shortcut right)."""
         hits = (self.call("ui_find", {"role": "menu_item", "limit": 200}) or {}).get("hits") or []
         if hits:
-            return [dict(menu_entry_text(h.get("text")), enabled=h.get("enabled"), checked=h.get("toggled")) for h in hits]
+            return [dict(menu_entry_text(h.get("text")), enabled=h.get("enabled"), toggled=h.get("toggled"),
+                         checked=h.get("toggled")) for h in hits]
         before = getattr(self, "before_img", None)
         img, _ = self.window_image()
         # R-4: only the open popup (and the sub menus touching it), not every change in the window
@@ -4874,34 +4974,20 @@ class FpSide(Side):
         # name and were dropped as duplicates of their accessibility node (panel-optimize/13, panel-misc/14 read
         # only panel texts); only the topmost paint block (the menu, not the panel under it) is kept
         hits = (self.call("ui_find", {"region": bb, "role": "text", "limit": 500}) or {}).get("hits") or []
-        # menu entries are painted texts; accessibility nodes in the box are toolbar/panel controls
-        hits = [h for h in hits if h.get("text") and h["rect"][1] >= bb[1] - 1 and h.get("source") != "accesskit"]
-        hits = top_paint_block(hits)
-        def count(h, i, tol):
-            return sum(1 for o in hits if abs(o["rect"][i] - h["rect"][i]) <= tol)
-
-        def row_of(h):
-            return (h["rect"][1] + h["rect"][3]) / 2
-
-        # entries are left aligned (shared left edge per column), shortcuts right aligned (shared right edge)
-        short = [h for h in hits if count(h, 2, 1.5) >= 2 and count(h, 0, 2) < 3
-                 and any(o is not h and o["rect"][0] < h["rect"][0] and abs(row_of(o) - row_of(h)) < 4 for o in hits)]
-        entries = [h for h in hits if not any(h is s for s in short)]
-        cols: dict = {}
-        for h in sorted(entries, key=lambda h: (h["rect"][0], h["rect"][1])):
-            col = next((c for c in cols if abs(c - h["rect"][0]) <= 2), h["rect"][0])
-            cols.setdefault(col, []).append(dict(menu_entry_text(h["text"]), enabled=h.get("enabled"),
-                                                 checked=h.get("toggled"), _r=h["rect"]))
-        for s in short:
-            cand = [e for c in cols.values() for e in c if e["_r"][0] < s["rect"][0] and abs((e["_r"][1] + e["_r"][3]) / 2 - row_of(s)) < 4]
-            if cand:
-                max(cand, key=lambda e: e["_r"][0])["shortcut"] = s["text"]
-        out = []
-        for c in sorted(cols):
-            col = sorted(cols[c], key=lambda e: e["_r"][1])
-            for e in col:
-                e.pop("_r")
-            out.append(col)
+        # menu entries are painted texts (geometry); their state comes from the accessibility nodes of the rows (R-18)
+        hits = [h for h in hits if h.get("text") and h["rect"][1] >= bb[1] - 1]
+        nodes = []
+        for role in MENU_STATE_ROLES:
+            try:
+                nodes += (self.call("ui_find", {"region": bb, "role": role, "limit": 200}) or {}).get("hits") or []
+            except BridgeError as e:
+                self.r.log(f"  fp menu entries: ui_find {role}: {str(e)[:100]}")
+        out = menu_entries_from_hits(hits, nodes)
+        n_all = sum(len(c) for c in out)
+        n_state = sum(1 for c in out for e in c if e.get("state_from"))
+        if n_all and n_state < n_all:
+            self.r.log(f"  fp menu entries: state from accessibility nodes for {n_state} of {n_all} entries "
+                       f"({len(nodes)} nodes in the menu region)")
         return out
 
 
@@ -5854,6 +5940,9 @@ def main(argv=None):
                     help="write TESTFILES.sha256 from the current test files (only after checking them) and stop")
     a = ap.parse_args(argv)
     cfg = json.loads(a.config.read_text(encoding="utf-8"))
+    if a.dry_run:
+        # R-18: offline check of the Firepixel menu-entry reading (mocked ui_find result)
+        print(f"menu state self check: {menu_state_selfcheck()}")
     if a.gallery_only:
         print(gallery.build(Path(cfg["out_dir"])))
         return 0
