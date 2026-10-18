@@ -1,6 +1,6 @@
-# macOS preview: Firepixel.app (Apple Silicon, arm64) as a ZIP artifact, optionally plus tests of the
-# platform-neutral crates. No push trigger: manual only (workflow_dispatch) or from the release
-# workflow (workflow_call), because macOS minutes count ten times.
+# macOS preview: Firepixel.app as a universal binary (arm64 + x86_64) in a ZIP artifact, optionally
+# plus tests of the platform-neutral crates. No push trigger: manual only (workflow_dispatch) or from
+# the release workflow (workflow_call), because macOS minutes count ten times.
 name: macos-preview
 
 on:
@@ -26,11 +26,12 @@ env:
   CARGO_INCREMENTAL: "0"
   # Preview: build faster than the Windows release (thin LTO stays)
   CARGO_PROFILE_RELEASE_CODEGEN_UNITS: "16"
-  MACOSX_DEPLOYMENT_TARGET: "11.0"
+  # Minimum macOS for both architectures of the universal build (Intel Macs from Catalina on)
+  MACOSX_DEPLOYMENT_TARGET: "10.15"
 
 jobs:
   bundle:
-    name: Firepixel.app (arm64)
+    name: Firepixel.app (universal)
     runs-on: macos-14
     timeout-minutes: 60
     steps:
@@ -42,26 +43,58 @@ jobs:
         run: |
           rustup toolchain install stable --profile minimal
           rustup default stable
+          rustup target add x86_64-apple-darwin aarch64-apple-darwin
           rustc --version
+
+      # nasm: only needed if the AV1 encoder crate builds its x86 assembly for the x86_64 target;
+      # harmless otherwise.
+      - name: Install nasm
+        run: brew install nasm
 
       - uses: Swatinem/rust-cache@v2.8.0
         with:
-          shared-key: macos-arm64
+          shared-key: macos-universal
           cache-on-failure: true
 
-      - name: Release build (GUI + CLI)
-        run: cargo build --release --locked -p firepixel -p firepixel-cli
+      - name: Release build arm64 (GUI + CLI)
+        run: cargo build --release --locked --target aarch64-apple-darwin -p firepixel -p firepixel-cli
+
+      - name: Release build x86_64 (GUI + CLI)
+        run: cargo build --release --locked --target x86_64-apple-darwin -p firepixel -p firepixel-cli
+
+      - name: Merge universal binaries (lipo)
+        run: |
+          set -euo pipefail
+          mkdir -p target/universal
+          for BIN in firepixel firepixel-cli; do
+            lipo -create               "target/aarch64-apple-darwin/release/$BIN"               "target/x86_64-apple-darwin/release/$BIN"               -output "target/universal/$BIN"
+          done
+
+      - name: Verify universal binaries
+        run: |
+          set -euo pipefail
+          for BIN in target/universal/firepixel target/universal/firepixel-cli; do
+            lipo -info "$BIN"
+            file "$BIN"
+            ARCHS=$(lipo -archs "$BIN")
+            for ARCH in arm64 x86_64; do
+              case " $ARCHS " in
+                *" $ARCH "*) ;;
+                *) echo "::error::$BIN lacks architecture $ARCH (has: $ARCHS)"; exit 1 ;;
+              esac
+            done
+          done
 
       - name: Create app bundle
         run: |
           set -euo pipefail
           VERSION=$(cargo pkgid -p firepixel | sed -E 's/.*[#@]//')
           echo "VERSION=$VERSION" >> "$GITHUB_ENV"
-          OUT=dist/Firepixel-macOS-arm64
+          OUT=dist/Firepixel-macOS-universal
           APP=$OUT/Firepixel.app
           mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
-          cp target/release/firepixel "$APP/Contents/MacOS/firepixel"
-          cp target/release/firepixel-cli "$OUT/firepixel-cli"
+          cp target/universal/firepixel "$APP/Contents/MacOS/firepixel"
+          cp target/universal/firepixel-cli "$OUT/firepixel-cli"
 
           # Icon: existing PNGs (16-256 px), larger sizes upscaled
           ICONSET=$(mktemp -d)/Firepixel.iconset
@@ -98,7 +131,12 @@ jobs:
             <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
             <key>CFBundleShortVersionString</key><string>${VERSION}</string>
             <key>CFBundleVersion</key><string>${VERSION}</string>
-            <key>LSMinimumSystemVersion</key><string>11.0</string>
+            <key>LSMinimumSystemVersion</key><string>10.15</string>
+            <key>LSArchitecturePriority</key>
+            <array>
+              <string>arm64</string>
+              <string>x86_64</string>
+            </array>
             <key>LSApplicationCategoryType</key><string>public.app-category.graphics-design</string>
             <key>NSHighResolutionCapable</key><true/>
             <key>NSSupportsAutomaticGraphicsSwitching</key><true/>
@@ -114,19 +152,21 @@ jobs:
           codesign --verify --deep --strict --verbose=2 "$APP"
           file "$APP/Contents/MacOS/firepixel" "$OUT/firepixel-cli"
 
-          # Quick CLI smoke test on the runner
+          # Quick CLI smoke test on the runner (runs the native arm64 slice)
           "$OUT/firepixel-cli" --version || true
           "$OUT/firepixel-cli" --help | head -n 20 || true
 
           cd dist
-          ditto -c -k --sequesterRsrc --keepParent Firepixel-macOS-arm64 "Firepixel-macOS-arm64-${VERSION}.zip"
+          ditto -c -k --sequesterRsrc --keepParent Firepixel-macOS-universal "Firepixel-macOS-universal-${VERSION}.zip"
           ls -la
 
+      # The runner is Apple Silicon, so the probe only exercises the arm64 slice of the universal
+      # binary; the x86_64 slice is checked by lipo/file above but never executed here.
       - name: Startup probe (GUI 20 s, screenshot)
         continue-on-error: true
         run: |
           set -u
-          APP=dist/Firepixel-macOS-arm64/Firepixel.app
+          APP=dist/Firepixel-macOS-universal/Firepixel.app
           FP_STARTUP_TRACE=1 RUST_BACKTRACE=1 "$APP/Contents/MacOS/firepixel" > dist/start.log 2>&1 &
           PID=$!
           sleep 20
@@ -142,8 +182,8 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: Firepixel-macOS-arm64
-          path: dist/Firepixel-macOS-arm64-*.zip
+          name: Firepixel-macOS-universal
+          path: dist/Firepixel-macOS-universal-*.zip
           if-no-files-found: error
           retention-days: 14
 
@@ -161,7 +201,8 @@ jobs:
     name: Tests (platform-neutral crates)
     runs-on: macos-14
     timeout-minutes: 45
-    # only on request (input tests); report failing tests without failing the run
+    # only on request (input tests); report failing tests without failing the run.
+    # Native arm64 only (host target of the Apple Silicon runner), no universal build here.
     continue-on-error: true
     if: ${{ inputs.tests == true }}
     steps:

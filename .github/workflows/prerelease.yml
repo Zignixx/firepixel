@@ -1,4 +1,4 @@
-# Pre-release: bump the version (minor), build Windows x64 and macOS arm64, create a tag and a
+# Pre-release: bump the version (minor), build Windows x64 and macOS universal, create a tag and a
 # pre-release with both ZIPs. Manual only (workflow_dispatch); see docs/RELEASE.md.
 name: prerelease
 
@@ -93,7 +93,7 @@ jobs:
       package: true
 
   macos:
-    name: macOS arm64
+    name: macOS universal
     needs: version
     uses: ./.github/workflows/macos-preview.yml
     with:
@@ -136,7 +136,7 @@ jobs:
             echo "## Installation"
             echo
             echo "- **Windows x64:** unzip \`Firepixel-Windows-x64-$VERSION.zip\` and start \`firepixel.exe\`. No installer is needed."
-            echo "- **macOS (Apple Silicon):** unzip \`Firepixel-macOS-arm64-$VERSION.zip\`. The app is ad-hoc signed and not notarised, so on first launch right-click \`Firepixel.app\` > **Open** and confirm (or run \`xattr -dr com.apple.quarantine Firepixel.app\`)."
+            echo "- **macOS (Apple Silicon and Intel, macOS 10.15 or later):** unzip \`Firepixel-macOS-universal-$VERSION.zip\`. The app is ad-hoc signed and not notarised, so on first launch right-click \`Firepixel.app\` > **Open** and confirm (or run \`xattr -dr com.apple.quarantine Firepixel.app\`)."
             echo
             echo "The command-line tool \`firepixel-cli\` and the manuals (English and German) are included in both packages."
             echo
