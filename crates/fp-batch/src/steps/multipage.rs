@@ -64,6 +64,7 @@ pub fn encode_pdf(item: &Item, _options: &Map<String, Value>) -> Result<Vec<u8>>
             image: img,
             width_pt: img.width() as f64 * 72.0 / dpi,
             height_pt: img.height() as f64 * 72.0 / dpi,
+            text: None,
         })
         .collect();
     let title = item
