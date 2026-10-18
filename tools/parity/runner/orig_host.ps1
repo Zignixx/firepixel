@@ -99,7 +99,10 @@ public static class N {
   [StructLayout(LayoutKind.Sequential)] public struct GUITHREADINFO { public int cbSize, flags; public IntPtr hwndActive, hwndFocus, hwndCapture, hwndMenuOwner, hwndMoveSize, hwndCaret; public RECT rcCaret; }
   [DllImport("user32.dll")] public static extern bool GetGUIThreadInfo(uint tid, ref GUITHREADINFO g);
   public static IntPtr FocusOf(IntPtr top) { uint p; uint tid = GetWindowThreadProcessId(top, out p); var g = new GUITHREADINFO(); g.cbSize = Marshal.SizeOf(typeof(GUITHREADINFO)); if (!GetGUIThreadInfo(tid, ref g)) return IntPtr.Zero; return g.hwndFocus; }
-  public static INPUT Key(ushort vk, bool up) { var i = new INPUT(); i.type = 1; i.u.ki.wVk = vk; i.u.ki.dwFlags = up ? 2u : 0u;
+  [DllImport("user32.dll")] public static extern uint MapVirtualKey(uint code, uint mapType);
+  // R-13b: keys carry their scan code (MAPVK_VK_TO_VSC; Escape = 0x01). With scan code 0 an Escape after typed text
+  // left a stray "c" in the text (xs-shortcuts/15 "Vrc", tool-text/07 "Hallo Weltc")
+  public static INPUT Key(ushort vk, bool up) { var i = new INPUT(); i.type = 1; i.u.ki.wVk = vk; i.u.ki.wScan = (ushort)(MapVirtualKey(vk, 0) & 0xFFFF); i.u.ki.dwFlags = up ? 2u : 0u;
     if ((vk >= 0x21 && vk <= 0x28) || vk == 0x2D || vk == 0x2E) i.u.ki.dwFlags |= 1; return i; }
   public static INPUT Uni(char c, bool up) { var i = new INPUT(); i.type = 1; i.u.ki.wScan = c; i.u.ki.dwFlags = 4u | (up ? 2u : 0u); return i; }
   public static INPUT Mouse(uint flags, uint data) { var i = new INPUT(); i.type = 0; i.u.mi.dwFlags = flags; i.u.mi.mouseData = data; return i; }

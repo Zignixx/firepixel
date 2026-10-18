@@ -128,7 +128,7 @@ class Unmapped(Exception):
 
 # R-13 (TW-126): shortcut set written into Firepixel's runner profile (config `fp.shortcut_set`, same default as
 # fpctl) and the reference preference read for its set (config `orig.shortcut_set_pref`)
-FP_SHORTCUT_SET_DEFAULT = "Firepixel"
+FP_SHORTCUT_SET_DEFAULT = "Web Standard"  # R-13b (RE-14): the reference machine's set
 ORIG_SHORTCUT_SET_PREF_DEFAULT = "CurrentShortcutSet"
 
 

@@ -1942,6 +1942,9 @@
      "record_ui": "ui_state.tool"
     },
     {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){if(e[i].textChars!=null)r.push(e[i].name+':'+e[i].textChars);}}return r.join('|');})()"
+    },
+    {
      "key": "Escape"
     },
     {
@@ -1952,7 +1955,61 @@
     }
    ],
    "shot": null,
-   "note": "Q-55 (re 46 sec. 4): explicit click inside the 'A' of TX1 (T05: TX1 starts at document 50,50, 24 pt 'Abc 123'), the reference reports an invalid pixelRect for TX1 so a named click landed at different places in both programs. Logged before typing: selection length and TX1 text; after Escape: the text of every text object."
+   "note": "Q-55 (re 46 sec. 4): explicit click inside the 'A' of TX1 (T05: TX1 starts at document 50,50, 24 pt 'Abc 123'), the reference reports an invalid pixelRect for TX1 so a named click landed at different places in both programs. Logged before typing: selection length and TX1 text; after Escape: the text of every text object. R-13b: unsupported (TX1 has zero width / invalid pixelRect in the reference file), see 15_in_text_tx2_result; texts logged before Escape too.",
+   "unsupported": {
+    "both": "TX1 invalid in reference test file (T05 needs a rebuild)"
+   }
+  },
+  {
+   "id": "15_in_text_tx2_result",
+   "check": "in text - valid text object TX2",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T05"
+    },
+    {
+     "select": "TX2"
+    },
+    {
+     "tool": "tool.text"
+    },
+    {
+     "canvas_click": "TX2"
+    },
+    {
+     "log_value": "fw.selection.length"
+    },
+    {
+     "log_value": "fw.selection[0] ? fw.selection[0].textChars : null"
+    },
+    {
+     "type": "V"
+    },
+    {
+     "key": "R"
+    },
+    {
+     "record_ui": "ui_state.tool"
+    },
+    {
+     "log_value": "fw.selection[0] ? fw.selection[0].textChars : null"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){if(e[i].textChars!=null)r.push(e[i].name+':'+e[i].textChars);}}return r.join('|');})()"
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){if(e[i].textChars!=null)r.push(e[i].name+':'+e[i].textChars);}}return r.join('|');})()"
+    }
+   ],
+   "shot": null,
+   "note": "R-13b: like 15_in_text_result on TX2 (valid text object of T05): text tool click at TX2's centre, 'V' typed, R pressed (must type 'r', not switch tools); textChars logged before and after Escape"
   },
   {
    "id": "16_in_field_result",

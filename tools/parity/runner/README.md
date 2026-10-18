@@ -308,7 +308,7 @@ dialog that must stay open), `orig.canvas_offset` (optional correction for docum
 `orig.align_state_file` / `orig.align_state_key` (store file of the align panel's 'to canvas' switch, R-2),
 `fp.preview_glob`, `fp.work_dir`, `fp.rect`, `fp.theme`, `fp.language`, `testfile_dir`, `testfiles`
 (T-code → file), `out_dir`, `tmp_dir`, `step_timeout_s`, `fp.shortcut_set` (R-13: shortcut set written into
-Firepixel's runner profile, default "Firepixel"), `orig.shortcut_set_pref` (R-13: reference preference holding
+Firepixel's runner profile, default "Web Standard" since R-13b), `orig.shortcut_set_pref` (R-13: reference preference holding
 its active set, default `CurrentShortcutSet`).
 
 ## Files
@@ -562,6 +562,16 @@ Self test: `python -I runner.py --units _selftest_menu,_selftest_inspector`.
   without a selection; T10 has no vector object); the new `15_snap_pixels_disabled` reads the entry's state with nothing
   selected on both sides (`menu_state`, no `unsupported`).
 - **Shortcut sets (TW-126):** the set written into Firepixel's profile comes from `fp.shortcut_set` (config, default
-  "Firepixel"). Once per run the log says which set each side uses: `shortcut sets: fp '<set>' (fp.shortcut_set), orig …`
+  "Web Standard" since R-13b). Once per run the log says which set each side uses: `shortcut sets: fp '<set>' (fp.shortcut_set), orig …`
   - reference: `fw.getPref(orig.shortcut_set_pref)` (default key `CurrentShortcutSet`) when it returns a value, else
   `unknown (…)`; a dry run does not read it.
+
+## R-13b additions (18.10.)
+
+- **Shortcut set (RE-14):** the reference machine uses the bundled "Web Standard" set (pref `CurrentShortcutSet`,
+  key confirmed; its user set folder is empty). `fp.shortcut_set` now defaults to "Web Standard" (fpctl and runner).
+- **Key scan codes:** the host sends every virtual key (`Combo`, held modifiers) with its scan code
+  (`MapVirtualKey`, Escape = 0x01). With scan code 0 an Escape after typed text left a stray "c" in the reference's
+  text (`xs-shortcuts/15` "Vrc", `tool-text/07` "Hallo Weltc"); both steps log the texts before Escape now.
+- **`xs-shortcuts/15_in_text_result`** is `unsupported` on both sides (TX1 of T05 has zero width and an invalid
+  pixelRect in the reference file; T05 needs a rebuild); `15_in_text_tx2_result` does the same on TX2.

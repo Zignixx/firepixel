@@ -298,7 +298,13 @@
      "type": "Hallo Welt"
     },
     {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){if(e[i].textChars!=null)r.push(e[i].name+':'+e[i].textChars);}}return r.join('|');})()"
+    },
+    {
      "key": "Escape"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){if(e[i].textChars!=null)r.push(e[i].name+':'+e[i].textChars);}}return r.join('|');})()"
     },
     {
      "tool": "pointer"
@@ -313,7 +319,7 @@
    "shot": {
     "area": "canvas"
    },
-   "note": "Original: double click does not select a word (caret at click position)."
+   "note": "Original: double click does not select a word (caret at click position). R-13b: texts logged before and after Escape (stray 'c' after Escape, run 17)."
   },
   {
    "id": "08_arrows_result",
