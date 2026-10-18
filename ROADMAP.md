@@ -10,27 +10,27 @@ exist and work; FW-PNG round-trips; CLI, JSF and MCP drive everything.
 
 | Measure | Value |
 |---|---|
-| Parity units equal except for design | **45 / 48** (1 real deviation, 2 unclear, 0 under-measured; runs 20 and 18 on top of full run 17) |
+| Parity units equal except for design | **45 / 48** (1 real deviation, 2 unclear, 0 under-measured; runs 21 and 18 on top of full run 17) |
 | Proven 1:1 | **93.8 %** (45 / 48) |
 | Measurement quota, all 48 units | **86.9 %** (1066 / 1226 steps, newest run per unit; run 17 alone: 86.3 %) |
-| Canvas image pairs within 1 % | 175 / 202 |
-| Tests | 2714 passed, 0 failed, 134 ignored at `054bdc05` (preview `2026-10-18_15-28`) |
+| Canvas image pairs within 1 % | 176 / 202 |
+| Tests | 2740 passed, 0 failed, 134 ignored at `65db4012` (preview `2026-10-18_22-05`) |
 | Latest release | **v0.2.2** pre-release (18 Oct 2026, tag from `c031a987`): Windows x64 ZIP, macOS universal ZIP (arm64 + x86_64), Linux x86_64 tar.gz and AppImage; Linux tested in CI only, the Intel macOS slice verified by tools only |
-| Open findings | 7 fixable · 5 deferred · 20 informational · 850+ closed |
+| Open findings | 5 fixable · 5 deferred · 20 informational · 850+ closed |
 
 ## Next (in order)
 
-1. **Run 21** of `tool-text`, `xs-preferences`, `xs-shortcuts`, `menu-edit`, `panel-pages-states-history` and
-   `panel-library-styles` with runner R-16: confirms the reference-side keys, the text-attribute reset and the crop
-   commit (TW-140), so the crop option (TW-134) and the double-click typing in `tool-text/06` can be compared; before
-   it, the panel pop-up enabled state (TW-142, runner / bridge).
+1. **Runner R-19 and run 22** of `tool-text`, `xs-preferences`, `xs-shortcuts`, `menu-edit` and
+   `panel-pages-states-history`: on the reference side Delete, nudges, leaving the text editor and the crop commit go
+   through menu, script or mouse instead of plain keys, and text is selected by mouse (TW-140); this lets the crop
+   option (TW-134) and the size of a new text after a partial-selection edit (TW-145) be compared; before it, the live
+   bounds through the element list (TW-143).
 2. **Human click-test** of [docs/VERIFICATION.md](docs/VERIFICATION.md) (embedded panel dialogs, real keyboard
    paths, brush strokes with a real mouse, drag and drop between windows, the open checks in section A2), including
    the wave-3 Batch Studio UI, the PDF/PSD export options and section A4 (wave-4 features, URL panel menu, typing after
    a double-click, the crop option, the Linux start).
-3. **Remaining parity items:** "stretch" / "justified" on point text (TW-133 rest), the *Text* menu remnant of
-   the text tool defaults (TW-138 rest), live bounds of an edited text in the read-back (TW-143) and the paragraph
-   separator in text read-backs (TW-144).
+3. **Remaining parity items:** the *Text* menu remnant of the text tool defaults (TW-138 rest), live bounds of an
+   edited text through the element list (TW-143) and the size rule for new text (TW-145, after run 22).
 4. **Remaining deferred items:** BA-101 (JPEG 2000 in PDF, PSD stroke), BA-108 (writing AVIF/HEIF/JXL metadata
    boxes), BA-110 rest (lossy LZW with an SSIM bound), BA-083 (resampler hashes on another OS), U-1 PDF import
    layers.
@@ -40,11 +40,10 @@ exist and work; FW-PNG round-trips; CLI, JSF and MCP drive everything.
 ### Fixable remnants (`[F]`)
 
 - PDF import: no layers (the pure-Rust PDF reader exposes no optional content groups).
-- TW-133 rest ("stretch" / "justified" on point text), TW-138 rest (*Text* menu commands and the text tool
-  defaults), TW-140 (reference-side keys, runner R-16, to confirm in run 21), TW-142 (panel pop-up enabled state,
-  runner / bridge), TW-143 (live bounds while editing) and TW-144 (paragraph separator in text read-backs). Run 20
-  confirmed TW-137 (History rows), TW-138 (text tool defaults), TW-139 (live read-back) and TW-141 (menu enabled
-  state); TW-134 (crop option) waits for a run in which the reference applies the crop.
+- TW-138 rest (*Text* menu commands and the text tool defaults), TW-140 (reference-side keys, runner R-19), TW-143
+  (live bounds through the element list) and TW-145 (size of a new text after a partial-selection edit). Run 21
+  confirmed TW-133 (stretch shortcut), TW-142 (panel pop-up enabled state) and TW-144 (paragraph separator); TW-134
+  (crop option) waits for a run in which the reference applies the crop.
 
 ### Deferred expansion items (`[V]`)
 

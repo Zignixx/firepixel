@@ -19,14 +19,14 @@ run only in CI, not yet on a real Linux desktop.
 | Area | Value | Source |
 |---|---|---|
 | Parity units | 48 | [PARITY.md](PARITY.md) |
-| Equal except for design | **45** (1 real deviation, 2 unclear, 0 under-measured) | run 20 (7 units) and run 18 (4 units) on top of full run 17, 18 Oct 2026 |
-| Proven 1:1 | **93.8 %** (45 / 48; no unit under-measured; run 19: 91.7 %, run 17: 87.5 %) | runs 17–20 |
-| Canvas image pairs within 1 % | **175 / 202** (run 19: 174; `tool-text/14` moved below 1 % in run 20; run 17: 176 / 202; `tool-text/02` and `/16` stay above 1 % through the reference's text-tool state) | runs 17–20 |
-| Measurement quota, all 48 units | **86.9 %** (1066 / 1226 measurable steps both `ok`, newest run per unit; run 17 alone 86.3 %; the seven units of run 20: 86.8 %, 138 / 159, unchanged) | runs 17–20 |
-| Errors, newest run per unit | 38 reference-side (run 17: 46), 21 Firepixel-side (unchanged, all known) | runs 17–20 |
-| Workspace tests | **2714 passed, 0 failed, 134 ignored** at `054bdc05` (the commit of preview `2026-10-18_15-28`) | full workspace run on `main`, 18 Oct 2026 |
-| Open findings | 7 fixable `[F]` (PDF layers; TW-133 rest; TW-138 rest; TW-140 reference-side keys, runner R-16; TW-142 panel pop-up enabled state, runner / bridge; TW-143 live bounds while editing; TW-144 paragraph separator in text read-backs), 5 deferred `[V]`, 20 informational `[N]`; run 20 closed TW-137, TW-138, TW-139 and TW-141; TW-134 waits for a reference-side crop | [FINDINGS.md](FINDINGS.md) |
-| Real differences known | Ctrl+Alt+Shift+S sets "stretch" on a text the reference leaves alone (TW-133 rest); smaller: *Text* menu commands on pointer-selected text do not yet update the text tool defaults (TW-138 rest), the live read-back keeps an edited text's old bounds until commit (TW-143), text read-backs separate paragraphs with `\r` where the reference's show `\n` (TW-144). Fixed, not yet confirmed by a run: the crop option (TW-134; the reference did not apply the crop in run 20) | [PARITY.md](PARITY.md) |
+| Equal except for design | **45** (1 real deviation, 2 unclear, 0 under-measured) | run 21 (7 units) and run 18 (4 units) on top of full run 17, 18 Oct 2026 |
+| Proven 1:1 | **93.8 %** (45 / 48; no unit under-measured; unchanged in run 21; run 19: 91.7 %, run 17: 87.5 %) | runs 17–21 |
+| Canvas image pairs within 1 % | **176 / 202** (run 20: 175; `tool-text/02` moved below 1 % in run 21 with the reference's text tool at 12 pt; `tool-text/16` stays above 1 %, TW-145) | runs 17–21 |
+| Measurement quota, all 48 units | **86.9 %** (1066 / 1226 measurable steps both `ok`, newest run per unit; run 17 alone 86.3 %; the seven units of run 21: 86.8 %, 138 / 159, unchanged) | runs 17–21 |
+| Errors, newest run per unit | 38 reference-side (run 17: 46), 21 Firepixel-side (unchanged, all known) | runs 17–21 |
+| Workspace tests | **2740 passed, 0 failed, 134 ignored** at `65db4012` (the commit of preview `2026-10-18_22-05`) | full workspace run on `main`, 18 Oct 2026 |
+| Open findings | 5 fixable `[F]` (PDF layers; TW-138 rest; TW-140 reference-side keys, runner R-19; TW-143 live bounds through the element list; TW-145 size of new text after a partial-selection edit), 5 deferred `[V]`, 20 informational `[N]`; run 21 closed TW-133, TW-142 and TW-144; TW-134 waits for a reference-side crop | [FINDINGS.md](FINDINGS.md) |
+| Real differences known | The live read-back keeps an edited text's old bounds in the element list until commit (TW-143); smaller: *Text* menu commands on pointer-selected text do not yet update the text tool defaults (TW-138 rest). Not yet compared: the size of a new text after a partial-selection edit (TW-145) and the crop option (TW-134), both because the reference-side keys fail (TW-140) | [PARITY.md](PARITY.md) |
 | Closed findings (history) | 850+ | kept outside the repository ([ARCHIVE_NOTE.md](ARCHIVE_NOTE.md)) |
 | Startup time | about 0.8 s to the first frame (release build, warm) | smoke test 17 Oct 2026 |
 
@@ -46,11 +46,11 @@ the app under Xvfb and checks that the control channel comes up. The first CI ru
 real Linux desktop; file dialogs need `xdg-desktop-portal`. v0.2.2 is the first release with Windows x64, macOS
 universal and Linux x86_64.
 
-Latest test build: preview build **`2026-10-18_15-28`** (release profile, single `firepixel.exe` plus
-`firepixel-cli.exe`) from `main` at `054bdc05` (packages F37–F40: crop option, live text read-back, History rows for
-Copy / Cut / Select All / Deselect, text tool defaults from the inspector, menu enabled state); a full workspace test
-run on that commit passed (2714 passed, 0 failed, 134 ignored). The previous preview was `2026-10-18_13-04` from
-`a3510515` (packages F34–F36).
+Latest test build: preview build **`2026-10-18_22-05`** (release profile, single `firepixel.exe` plus
+`firepixel-cli.exe`) from `main` at `65db4012` (packages F42–F44: panel pop-up menu state, live bounds of an edited
+text, stretched alignment stored as left, text attribute commands writing the text tool defaults, paragraph
+separator tests); a full workspace test run on that commit passed (2740 passed, 0 failed, 134 ignored). The previous
+preview was `2026-10-18_15-28` from `054bdc05` (packages F37–F40).
 
 Full comparison run 17 (18 Oct 2026, 04:59–09:40, all 48 units, 1284 steps, 683 image pairs) used the earlier
 preview build `2026-10-18_04-57` from `main` at `7e3d2d12` (fixes after run 16, runner R-12): 42 units equal except
@@ -81,6 +81,15 @@ effects: text attributes carried between units, the stray "c", the crop not appl
 canvas pair within 1 % (`tool-text/14`); TW-137, TW-138, TW-139 and TW-141 closed; TW-140 stays open (R-15's
 `key_echo` failed with a script error, fixed in R-16), TW-142 to TW-144 added.
 
+Follow-up run 21 (18 Oct 2026, 22:06–22:51, 7 units, 170 steps, 78 image pairs) used preview `2026-10-18_22-05` and
+runner R-17 / R-17b / R-18: no class changed (45 / 1 / 2 / 0). `xs-shortcuts` stays a real deviation, now for the
+live bounds of an edited text (TW-143 not confirmed) after Ctrl+Alt+Shift+S became equal (TW-133 closed); the URL
+panel menu reads the same enabled states and "..." flags on both sides (TW-142 closed) and both programs separate
+paragraphs with `\r` (TW-144 closed). Step quota unchanged, one more canvas pair within 1 % (`tool-text/02`). The new
+key lines show that the reference takes plain Delete, Right, Down and Escape as tool letters although the keys
+arrive correctly and the document view has focus (TW-140, runner R-19); the crop option (TW-134) and the size of a
+new text after a partial-selection edit (TW-145, new) remain uncompared.
+
 ## How tests run
 
 - Every crate has unit tests; `fp-ui` and `fp-engine` bundle their integration tests into one program `all`
@@ -108,12 +117,13 @@ with a real mouse and drag and drop between windows need a human click-test: [VE
 
 ## Next
 
-1. Run 20 of `menu-edit`, `xs-shortcuts`, `tool-text`, `xs-canvas`, `panel-library-styles` and `xs-preferences`
-   after the menu enabled-state fix (TW-141, F40): confirms TW-134, TW-137, TW-138, TW-139 and runner R-15 (TW-140).
+1. Runner R-19 (reference-side Delete, nudges, leaving the text editor and the crop commit through menu, script or
+   mouse; text selection by mouse; TW-140), then run 22 of `tool-text`, `xs-preferences`, `xs-shortcuts`,
+   `menu-edit` and `panel-pages-states-history`: compares TW-134 and TW-145 and confirms TW-143.
 2. Human click-test of [VERIFICATION.md](VERIFICATION.md), including section A4 (wave-4 features, URL panel menu,
    typing after a double-click, crop option off, Linux start) and the open A2 checks.
-3. Remaining parity items: "stretch" / "justified" on point text (TW-133 rest) and the *Text* menu remnant of the
-   text tool defaults (TW-138 rest).
+3. Remaining parity items: live bounds of an edited text through the element list (TW-143), the size rule for new
+   text (TW-145) and the *Text* menu remnant of the text tool defaults (TW-138 rest).
 4. Remaining deferred items: BA-101, BA-108 (metadata box writing), BA-110 rest, BA-083, U-1 PDF import layers.
 
 Wave 3 (18 Oct 2026) added 27 batch steps, chained collect steps, more metadata formats, the MCP gate for external
