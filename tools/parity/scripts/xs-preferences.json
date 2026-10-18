@@ -341,10 +341,7 @@
      "click": "OK"
     },
     {
-     "tool": "tool.crop"
-    },
-    {
-     "canvas_drag": {
+     "crop": {
       "from": [
        40,
        40
@@ -354,9 +351,6 @@
        260
       ]
      }
-    },
-    {
-     "key": "Enter"
     },
     {
      "log_value": "(function(){var __a=fw.getDocumentDOM().layers[0].frames[0].elements,__o=[];for(var __i=0;__i<__a.length;__i++)__o.push((function(e){return e.name})(__a[__i]));return __o.join('|');})()"
@@ -381,7 +375,7 @@
      "click": "OK"
     }
    ],
-   "note": "R-13 (TW-127): the option persists in the profile - it is read back and set to 'on' on both sides (no toggle click), the start state is restored in after"
+   "note": "R-13 (TW-127): the option persists in the profile - it is read back and set to 'on' on both sides (no toggle click), the start state is restored in after; R-17 (TW-134, run 20: the reference page stayed 800 x 600): crop tool, drag and Enter as one `crop` action - page size logged before/after on both sides, the reference retries once with the view focused"
   },
   {
    "id": "07_edit_pen_preview_result",

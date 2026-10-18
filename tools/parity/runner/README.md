@@ -676,3 +676,42 @@ Self test: `python -I runner.py --units _selftest_menu,_selftest_inspector`.
   a node also for disabled rows (they use `Sense::hover()`). The runner already looks for such a node (`role:
   menu_item`/`button`, `enabled_from`); no runner change is needed once it exists. Panel menus
   (`panel-library-styles/16`, `log_menu_items`) are drawn by the same function.
+
+## R-17 additions (18.10.)
+
+- **Layout and tool lines (TW-140, run 20 had neither):** the `key layout` line was written only after a layout
+  request, and the tool-switch check sat behind `key_effect(..) and not tool_switch_check(..)` - a key without
+  effect (Delete -> Eraser, `effect False`) never reached it. Now:
+  - every unit start logs `key layout: requested <KLID> -> active <hkl> (change sent: <hkl> | not needed; main thread
+    <before> -> <after>; focus <class> <before> -> <after>; host <hkl>)`. Host verb `layout` requests the language
+    on the main window **and** the window holding its keyboard focus (`WM_INPUTLANGCHANGEREQUEST` to both) when
+    either differs; `KeyHkl` (scan codes) follows the focus thread's layout;
+  - after every plain reference-side key (no Ctrl/Alt): `tool after key: <tool> (key <combo>)` (`fw.activeTool`; not
+    read while a dialog or a menu is open: `not read (dialog open)`); checked keys log it from their own read-back,
+    and `tool_switch_check` runs on every checked key (`runner error: tool switched by key: …`);
+  - before every plain key: `key probe <combo>: foreground <class>, focus <class>, layout <hkl>` (host verb
+    `key_probe {want}`: foreground window, `GetGUIThreadInfo` focus, `GetKeyboardLayout` of the focus thread); a
+    language other than `orig.key_layout` is requested on the focused window and read again (`… -> <hkl> (ok|NOT
+    CHANGED)`);
+  - the `key_echo` self test (fixed in R-16) is repeated at the next unit when no echo came back (3 units at most);
+    the second echo runs only when the layout request sent a change. `selftest_host.ps1` also runs `key_probe` and
+    `layout` without `want` (nothing is posted).
+- **Text tool attributes (TW-140):** R-15's scratch-document reset (`setTextRuns`) did not reach the tool's defaults
+  (36 pt bold italic underlined before and after in all seven units of run 20). Replaced by the UI path, with the
+  unit's first document (the tools column anchor needs a document view): nothing selected, text tool from the tools
+  column, Properties panel `inspector.size` = size of `orig.text_defaults` (double-click, Ctrl+A, type, Enter),
+  `inspector.bold` / `italic` / `underline` clicked when on, text colour through `inspector.text_color` and the
+  popup's hex field (`popup.hex_field`, Enter; a second Enter when the popup stays open), pointer tool back. Read
+  before and after with a scratch text from the tool's defaults (`addNewText(.., true)`, attributes, deleted); the
+  test document is then opened afresh (no history from the reset). Log line `unit start text tool reset (Properties
+  panel, <s> s, wanted …): before … | <actions>[; errors: …] | after …`.
+- **Crop (TW-134, `xs-preferences/06`):** run 20's reference did not crop (page stayed 800 × 600). New step action
+  `crop {from, to}` on both sides: crop tool, canvas drag, Enter. Reference: tool from the tools column, drag, Enter
+  with the keyboard focus on the document view (`view_focus` when the frame holds it; `key_probe` logged); page size
+  `getDocumentDOM().width/height` before and after; unchanged -> once more with the view focus forced. Firepixel:
+  page size from `get_document`. Value `{"crop": {before, after, tries}}`, log `orig crop [..] -> [..]: page WxH ->
+  WxH; try 1: {tool, after, …}` / `fp crop …`. `xs-preferences/06` uses it.
+- **Menu entries (TW-142):** the reference host strips a trailing "..." on purpose (`Clean`, for path matching), so
+  its read-back lacked the ellipsis Firepixel's kept. Recorded menu entries (`menu_items`, `record_ui menu.open`,
+  `log_menu_items`) now carry `text` without a trailing ellipsis and `ellipsis: true|false` on both sides
+  (reference: from the raw menu text before the tab) - the texts compare equal, the ellipsis is compared separately.

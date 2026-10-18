@@ -169,6 +169,18 @@ def clean_label(s: str) -> str:
     return re.sub(r"(\.\.\.|…)$", "", str(s).replace("&", "")).strip()
 
 
+ELLIPSIS_END = re.compile(r"\s*(\.\.\.|…)$")
+
+
+def menu_entry_text(text, raw=None) -> dict:
+    """R-17 (TW-142): a recorded menu entry on both sides - `text` without a trailing ellipsis (the reference host
+    strips it on purpose for path matching, Firepixel's texts kept it: the read-backs differed where both shots show
+    "..."), `ellipsis` = the entry had one (reference: from the raw menu text, shortcut after a tab cut off)."""
+    t = str(text or "")
+    src = re.sub(r"\t.*$", "", str(raw if raw is not None else t)).rstrip()
+    return {"text": ELLIPSIS_END.sub("", t).strip(), "ellipsis": bool(ELLIPSIS_END.search(src))}
+
+
 def split_path(p) -> list[str]:
     if isinstance(p, list):
         return [clean_label(x) for x in p]
@@ -1150,7 +1162,8 @@ class OrigSide(Side):
                 self.r.log(f"unit start Escape: {e}")
                 break
         self.pending_tool_log = True
-        # R-15 (TW-140): the text tool's attributes from earlier units are reset with the first document
+        # R-15 (TW-140): the text tool's attributes from earlier units are reset with the first document (R-17:
+        # through the Properties panel, see text_tool_reset)
         self.pending_text_defaults = True
         # the pointer tool is selected once a document view exists (open_testfile): without a document the tools
         # anchor is only provisional and a click could hit the main toolbar instead
@@ -1159,36 +1172,155 @@ class OrigSide(Side):
         # no document is open here: the view switches are reset by the next open_testfile (R-4: not before)
         self.view_dirty = False
 
-    def text_defaults_reset(self):
-        """R-15 (TW-140, run 19 tool-text/02, 14, 16: large italic underlined text left from earlier units): in a
-        scratch document (closed without saving, no history in the test document) a text is created, its
-        attributes set to config `orig.text_defaults` (setTextRuns acts like an edit in the text editor, the last
-        used attributes become the tool's), deleted; a second scratch text created from the tool's defaults
-        (`addNewText(.., true)`) shows the result in the log, then the document is closed. ~3 s."""
+    def text_tool_attrs(self) -> dict:
+        """R-17: the text tool's current attributes - a scratch text from the tool's defaults (`addNewText(r, true)`)
+        in the open test document, its attributes read, the text deleted again. {"_error": ...} when not readable."""
+        code = ("var d = fw.getDocumentDOM(), out = 'error no document';\n"
+                "function attrs(t) { var a = t.textRuns.initialAttrs, s = []; for (var k in a) if (/^(face|size|bold|italic|underline|fillColor)$/.test(k)) s.push(k + '=' + a[k]); return s.join('|'); }\n"
+                "if (d) { try { d.selectNone(); d.addNewText({left: 10, top: 10, right: 200, bottom: 40}, true);\n"
+                "  if (fw.selection.length == 1) { out = attrs(fw.selection[0]); d.deleteSelection(false); } else { out = 'error scratch text not selected (' + fw.selection.length + ')'; }\n"
+                "} catch (e) { out = 'error ' + e; } }\n"
+                "fp_log('RET ' + out);")
+        try:
+            lines = self.o.jsf(code, why="text tool attributes")
+            got = ([ln[4:] for ln in lines or [] if ln.startswith("RET ")] or ["error no result"])[-1]
+        except OrigError as e:
+            got = f"error {str(e)[:160]}"
+        if got.startswith("error"):
+            return {"_error": got}
+        return dict(kv.split("=", 1) for kv in got.split("|") if "=" in kv)
+
+    def text_tool_reset(self):
+        """R-17 (TW-140, run 20: 36 pt bold italic underlined before and after the R-15 scratch-document reset in all
+        seven units - setTextRuns does not reach the tool's defaults): set like a user does it. Nothing selected, the
+        text tool from the tools column, then the Properties panel (ui_map `inspector.*`): size field = config size,
+        faux bold / italic / underline clicked when on, text colour through the colour popup's hex field; pointer
+        tool back. Read before and after with a scratch text (text_tool_attrs); the caller reopens the document."""
         want = dict(TEXT_DEFAULTS)
         want.update(self.r.cfg["orig"].get("text_defaults") or {})
-        attrs = json.dumps(want, ensure_ascii=True)
-        code = ("var out = [], dd = null;\n"
-                "try { dd = fw.createDocument(); } catch (e) { out.push('createDocument ' + e); }\n"
-                "var d = fw.getDocumentDOM();\n"
-                "function newText(r) { d.selectNone(); d.addNewText(r, true); if (fw.selection.length != 1) { var fr = d.layers[d.currentLayerNum].frames[d.currentFrameNum]; fw.selection = [fr.elements[0]]; } return fw.selection[0]; }\n"
-                "function attrs(t) { var a = t.textRuns.initialAttrs, s = []; for (var k in a) if (/^(face|size|bold|italic|underline|fillColor)$/.test(k)) s.push(k + '=' + a[k]); return s.join(' '); }\n"
-                "if (dd !== null && d) { try {\n"
-                "  var t = newText({left: 10, top: 10, right: 200, bottom: 40}); out.push('before ' + attrs(t));\n"
-                "  var A = " + attrs + "; var ia = t.textRuns.initialAttrs, na = {}; for (var k in ia) na[k] = ia[k]; for (var k in A) na[k] = A[k];\n"
-                "  d.setTextRuns({initialAttrs: na, textRuns: [{changedAttrs: {}, characters: 'Text'}]});\n"
-                "  d.deleteSelection(false);\n"
-                "  var p = newText({left: 10, top: 60, right: 200, bottom: 90}); out.push('after ' + attrs(p)); d.deleteSelection(false);\n"
-                "} catch (e) { out.push('error ' + e); } }\n"
-                "try { if (dd !== null) fw.getDocumentDOM().close(false); } catch (e) { out.push('close ' + e); }\n"
-                "fp_log('RET ' + out.join(' | '));")
         t0 = time.time()
+        before = self.text_tool_attrs()
+        known = "_error" not in before
+        done, errs = [], []
+
+        def on(v) -> bool:
+            return str(v).strip().lower() == "true"
+
+        def field(target, text):
+            pt = self.resolve(target)[0]
+            self.o.focus()
+            self.click_at(pt, count=2)
+            self.h.call("key", combo="ctrl+a")
+            self.h.call("type", text=text)
+            self.h.call("key", combo="enter")
+            time.sleep(0.3)
+
         try:
-            lines = self.o.jsf(code, why="text defaults")
-            got = ([ln[4:] for ln in lines or [] if ln.startswith("RET ")] or ["no result"])[-1]
+            self.o.jsf("fw.getDocumentDOM().selectNone();", why="text tool reset")
+            self.do("tool", "tool.text", {})
+            time.sleep(0.3)
+            done.append(f"tool {self.active_tool()}")
+        except Exception as e:  # noqa: BLE001
+            errs.append(f"text tool: {str(e)[:100]}")
+        if not errs:
+            size = re.sub(r"[^\d.]", "", str(want.get("size", "12"))) or "12"
+            if not known or re.sub(r"[^\d.]", "", str(before.get("size", ""))) != size:
+                try:
+                    field("inspector.size", size)
+                    done.append(f"size {size}")
+                except Exception as e:  # noqa: BLE001
+                    errs.append(f"size: {str(e)[:100]}")
+            for attr in ("bold", "italic", "underline"):
+                if known and on(before.get(attr)) != bool(want.get(attr)):
+                    try:
+                        self.click_at(self.resolve(f"inspector.{attr}")[0])
+                        time.sleep(0.25)
+                        done.append(f"{attr} clicked")
+                    except Exception as e:  # noqa: BLE001
+                        errs.append(f"{attr}: {str(e)[:100]}")
+            col = str(want.get("fillColor", "#000000")).lower()
+            if not known or str(before.get("fillColor", "")).lower() != col:
+                try:
+                    self.click_at(self.resolve("inspector.text_color")[0])
+                    time.sleep(0.6)
+                    pt, info = self.resolve("popup.hex_field")
+                    if info and info.get("class") == "Edit":
+                        self.h.call("set_text", hwnd=info["hwnd"], text=col.lstrip("#"))
+                    self.click_at(pt, count=2)
+                    self.h.call("key", combo="ctrl+a")
+                    self.h.call("type", text=col.lstrip("#"))
+                    self.h.call("key", combo="enter")
+                    time.sleep(0.4)
+                    try:
+                        # popup still open (the first Enter only committed the field): a second Enter closes it
+                        self.resolve("popup.hex_field")
+                        self.h.call("key", combo="enter")
+                        time.sleep(0.3)
+                        done.append(f"colour {col} (Enter x2)")
+                    except Exception:  # noqa: BLE001
+                        done.append(f"colour {col}")
+                except Exception as e:  # noqa: BLE001
+                    errs.append(f"colour: {str(e)[:100]}")
+        try:
+            self.do("tool", "tool.pointer", {})
+            time.sleep(0.2)
+        except Exception as e:  # noqa: BLE001
+            errs.append(f"pointer tool: {str(e)[:100]}")
+        after = self.text_tool_attrs()
+
+        def fmt(a):
+            return a.get("_error") or " ".join(f"{k}={a[k]}" for k in sorted(a))
+        self.r.log(f"unit start text tool reset (Properties panel, {time.time() - t0:.1f} s, wanted {want}): before "
+                   f"{fmt(before)} | {', '.join(done) or 'nothing to change'}{'; errors: ' + '; '.join(errs) if errs else ''}"
+                   f" | after {fmt(after)}")
+
+    def page_size(self) -> str:
+        """R-17: the document's size, "WxH" (or "? (reason)")."""
+        try:
+            return str(self.jsf_value("fw.getDocumentDOM().width + 'x' + fw.getDocumentDOM().height", why="page size"))
         except OrigError as e:
-            got = f"script error: {str(e)[:160]}"
-        self.r.log(f"unit start text defaults ({time.time() - t0:.1f} s, wanted {want}): {got}")
+            return f"? ({str(e)[:60]})"
+
+    def crop(self, a):
+        """R-17 (TW-134, run 20 xs-preferences/06: the reference did not crop, page stayed 800 x 600): `crop {from,
+        to}` = crop tool from the tools column, canvas drag inside the page, Enter with the keyboard focus on the
+        document view; the page size (getDocumentDOM().width/height) before and after - unchanged: once more, with
+        the view focus forced. Recorded as value `crop` and logged."""
+        before = self.page_size()
+        tries, after = [], before
+        for n in (1, 2):
+            t = {}
+            try:
+                self.do("tool", "tool.crop", {})
+                time.sleep(0.3)
+                t["tool"] = self.active_tool()
+                self.do("canvas_drag", {"from": a["from"], "to": a["to"]}, {})
+                time.sleep(0.3)
+                if self.dialog_open():
+                    t["dialog"] = True
+                    self.key("enter")
+                else:
+                    self.o.focus()
+                    if n == 1:
+                        self.view_focus_if_frame("enter")
+                    else:
+                        try:
+                            t["view_focus"] = (self.h.call("view_focus") or {}).get("focus_class")
+                        except OrigError as e:
+                            t["view_focus"] = f"? ({str(e)[:60]})"
+                    self.key_probe("enter")
+                    self.h.call("key", combo="enter")
+                time.sleep(0.5)
+            except (OrigError, Unmapped) as e:
+                t["error"] = str(e)[:120]
+            after = self.page_size()
+            t["after"] = after
+            tries.append(t)
+            if after != before and not after.startswith("?"):
+                break
+        self.values.append({"crop": {"before": before, "after": after, "tries": len(tries)}})
+        self.r.log(f"  orig crop {a['from']} -> {a['to']}: page {before} -> {after}"
+                   + "".join(f"; try {i + 1}: {t}" for i, t in enumerate(tries)))
 
     def select_pointer_if_pending(self):
         if not getattr(self, "pending_pointer", False):
@@ -1278,9 +1410,6 @@ class OrigSide(Side):
         except OrigError as e:
             self.r.log(f"open test file: {e}")
         self.reset_light()
-        if getattr(self, "pending_text_defaults", False):
-            self.pending_text_defaults = False
-            self.text_defaults_reset()
         self.o.open_doc(path)
         # unit start (R-4): stroke and fill colour of the tools back to the program's defaults, like a freshly
         # started Firepixel (run 8: auto shapes without stroke and with fill #808080 left by earlier runs)
@@ -1328,6 +1457,12 @@ class OrigSide(Side):
         self.fitted = self.fit_if_needed()
         self.page = None
         self.calibrate()
+        if getattr(self, "pending_text_defaults", False):
+            # R-17: with the unit's first document (the tools column anchor needs a document view); the scratch texts
+            # of the read-back leave history entries, so the test document is opened afresh afterwards
+            self.pending_text_defaults = False
+            self.text_tool_reset()
+            self.open_testfile(path)
 
     def close_doc(self, path: Path):
         self.o.close_doc(path)
@@ -1608,10 +1743,14 @@ class OrigSide(Side):
         if int(st0.get("sel") or 0) == 0 and kind != "deselect" and getattr(self, "last_select", None):
             rec["reselected_before"] = self.restore_selection(kind, st0)
             st0 = rec["before_reselected"] = self.key_state()
-        self.key(combo)
+        self.key(combo, log_tool=False)
         time.sleep(0.25)
         st1 = rec["after"] = self.key_state()
-        rec["effect"] = self.key_effect(kind, st0, st1) and not self.tool_switch_check(combo, st1, rec, "tool_switched")
+        self.r.log(f"  tool after key: {st1.get('tool', '?')} (key {combo})")
+        # R-17 (run 20: 'tool Radiergummi, effect False' without a tool-switch line): the check ran only when the key
+        # had an effect (`and` short-circuit) - now always
+        switched = self.tool_switch_check(combo, st1, rec, "tool_switched")
+        rec["effect"] = self.key_effect(kind, st0, st1) and not switched
         if not rec["effect"] and int(st0.get("sel") or 0) > 0:
             pt = None
             try:
@@ -1624,10 +1763,12 @@ class OrigSide(Side):
             rec["focus_click"] = list(pt) if pt else None
             rec["restored"] = self.restore_selection(kind, st0)
             st0b = rec["before_retry"] = self.key_state()
-            self.key(combo)
+            self.key(combo, log_tool=False)
             time.sleep(0.25)
             st2 = rec["after_retry"] = self.key_state()
-            rec["effect_retry"] = self.key_effect(kind, st0b, st2) and not self.tool_switch_check(combo, st2, rec, "tool_switched_retry")
+            self.r.log(f"  tool after key: {st2.get('tool', '?')} (key {combo}, retry)")
+            switched = self.tool_switch_check(combo, st2, rec, "tool_switched_retry")
+            rec["effect_retry"] = self.key_effect(kind, st0b, st2) and not switched
         self.values.append({"key_check": rec})
         self.r.log(f"  orig key {combo}: focus {rec['focus'].get('class')} sel {st0.get('sel')} -> {st1.get('sel')} "
                    f"objects {st0.get('n')} -> {st1.get('n')}, tool {st1.get('tool')}, effect {rec['effect']}"
@@ -2327,7 +2468,7 @@ class OrigSide(Side):
         self.o.focus()
         self.h.call("click", x=pt[0], y=pt[1], button=button, mods=list(mods), count=count)
 
-    def key(self, combo):
+    def key(self, combo, log_tool=True):
         mods, k = parse_combo(combo)
         if set(mods) >= {"ctrl", "alt"} and k == "space":
             raise Unsupported("Ctrl+Alt+Space is forbidden")
@@ -2353,9 +2494,45 @@ class OrigSide(Side):
                 pass
             self.tab_pressed = True
         self.o.focus()
-        if not {"ctrl", "alt"} & set(mods):
+        plain = not {"ctrl", "alt"} & set(mods)
+        if plain:
             self.view_focus_if_frame(combo)
+            self.key_probe(combo)
         self.h.call("key", combo="+".join(mods + [k]))
+        if plain and log_tool:
+            self.log_tool_after_key(combo)
+
+    def key_probe(self, combo) -> None:
+        """R-17 (TW-140): before every plain key - foreground window, keyboard focus and the focus thread's keyboard
+        layout (`key_probe`); a layout other than config `orig.key_layout` is requested on the focused window
+        (WM_INPUTLANGCHANGEREQUEST) and read again. One log line per key."""
+        want = str(self.r.cfg["orig"].get("key_layout", "00000407") or "")
+        try:
+            p = self.h.call("key_probe", want=want) or {}
+        except OrigError as e:
+            self.r.log(f"  key probe {combo}: {str(e)[:120]}")
+            return
+        msg = (f"  key probe {combo}: foreground {p.get('fg_class')}{'' if p.get('fg_own') else ' (not the reference)'}, "
+               f"focus {p.get('focus_class') or '-'}, layout {p.get('layout')}")
+        if p.get("requested"):
+            msg += (f"; not {want}: requested {p['requested']} on the focused window -> {p.get('layout_after')} "
+                    f"({'ok' if p.get('ok') else 'NOT CHANGED'})")
+        self.r.log(msg)
+
+    def log_tool_after_key(self, combo) -> None:
+        """R-17 (TW-140, run 20: no tool-switch line although Delete selected the Eraser): the active tool after every
+        plain key. Not read while a dialog or a menu is open (the script hand-over would cancel the dialog / close
+        the menu)."""
+        why = ""
+        try:
+            if self.h.list("dialogs"):
+                why = "dialog open"
+            elif (self.h.call("menus") or {}).get("menus"):
+                why = "menu open"
+        except OrigError as e:
+            why = f"host: {str(e)[:60]}"
+        tool = f"not read ({why})" if why else self.active_tool()
+        self.r.log(f"  tool after key: {tool} (key {combo})")
 
     def view_focus_if_frame(self, combo) -> None:
         """R-15 (TW-140, run 19: every failed key had the keyboard focus on the main frame - a click on the tools
@@ -2376,11 +2553,15 @@ class OrigSide(Side):
     def key_self_test(self):
         """R-15 (TW-140): once per run - the keys as the system delivers them (`key_echo`: a low-level hook records
         and swallows them, nothing reaches a program) with key name and character in the reference's keyboard
-        layout, before and after the layout request (config `orig.key_layout`, default German 00000407)."""
+        layout, before and after the layout request (config `orig.key_layout`, default German 00000407).
+        R-17: the layout request is logged in any case; the second echo runs only when a change was requested.
+        True when at least one echo came back (the caller repeats the test at the next unit otherwise)."""
         want = str(self.r.cfg["orig"].get("key_layout", "00000407") or "")
+        done = False
         for phase in ("before", "after"):
             if phase == "after":
-                if not want or not self.layout_request(want):
+                if not self.layout_request(want):
+                    self.r.log("key echo (after layout request): not repeated - no layout change was requested")
                     break
             try:
                 self.o.focus()
@@ -2388,6 +2569,7 @@ class OrigSide(Side):
             except OrigError as e:
                 self.r.log(f"key echo ({phase} layout request): {e}")
                 continue
+            done = True
 
             def one(k):
                 s, a = k.get("sent") or {}, k.get("arrived")
@@ -2397,23 +2579,25 @@ class OrigSide(Side):
             self.r.log(f"key echo ({phase} layout request; target layout {echo.get('layout')}, host {echo.get('host_layout')}, "
                        f"focus {echo.get('focus_class')}, double-click time {echo.get('dbl_ms')} ms): "
                        f"{'ok' if echo.get('ok') else 'MISMATCH'} - " + "; ".join(one(k) for k in echo.get("keys") or []))
+        return done
 
     def layout_request(self, want=None) -> bool:
         """R-15 (TW-140): the reference's keyboard layout = config `orig.key_layout` (its shortcut set matches key
         names of that layout); unit start, after a restart the new instance starts with the default layout again.
-        True when a change was requested."""
+        True when a change was requested. R-17 (run 20: no line at all - logged only after a request): one line at
+        every call, `key layout: requested <want> -> active <focus thread layout>`, the request (main window and
+        focused window) and the main thread's layout before/after."""
         want = str(self.r.cfg["orig"].get("key_layout", "00000407") or "") if want is None else want
-        if not want:
-            return False
         try:
             lay = self.h.call("layout", want=want) or {}
         except OrigError as e:
-            self.r.log(f"key layout: {e}")
+            self.r.log(f"key layout: requested {want or '-'} -> active ? ({str(e)[:160]})")
             return False
-        if lay.get("requested"):
-            self.r.log(f"key layout: target {lay.get('before')} -> {lay.get('after')} (requested {lay.get('requested')}, "
-                       f"host {lay.get('host')})")
-        return bool(lay.get("requested"))
+        self.r.log(f"key layout: requested {want or '- (orig.key_layout empty)'} -> active {lay.get('focus_after') or lay.get('after')} "
+                   f"(change {'sent: ' + str(lay['requested']) if lay.get('requested') else 'not needed'}; main thread "
+                   f"{lay.get('before')} -> {lay.get('after')}; focus {lay.get('focus_class') or '-'} {lay.get('focus_before')} -> "
+                   f"{lay.get('focus_after')}; host {lay.get('host')})")
+        return bool(lay.get("requested")) and not str(lay.get("requested")).startswith("LoadKeyboardLayout")
 
     def window_size(self, w, h):
         """Main window size at the configured position (None = configured size)."""
@@ -2633,6 +2817,8 @@ class OrigSide(Side):
                 self.key_checked(arg)
             if getattr(self, "popup_edit", None) and str(arg).lower() in ("enter", "return", "tab"):
                 self.popup_edit_record("after_key", str(arg))
+        elif verb == "crop":
+            self.crop(arg)
         elif verb == "type":
             self.o.focus()
             self.h.call("type", text=str(arg), timeout=60)
@@ -3221,7 +3407,8 @@ class OrigSide(Side):
     def menu_items(self):
         out = []
         for m in self.h.call("menus").get("menus") or []:
-            out.append([{"text": i["text"], "enabled": not i["grayed"], "checked": i["checked"], "submenu": i["submenu"]}
+            out.append([dict(menu_entry_text(i["text"], i.get("raw")), enabled=not i["grayed"], checked=i["checked"],
+                             submenu=i["submenu"])
                         for i in m.get("items") or [] if not i.get("separator")])
         return out
 
@@ -3940,6 +4127,29 @@ class FpSide(Side):
         name = EGUI_KEYS.get(k, k.upper() if len(k) == 1 else k[:1].upper() + k[1:])
         self.inp([{"type": "key", "key": name, "modifiers": mods}])
 
+    def page_size(self) -> str:
+        """R-17: size of the active document's current page, "WxH" (or "? (reason)")."""
+        try:
+            doc = self.call("get_document", {"depth": 1, "max_elements": 1}) or {}
+            pg = next((p for p in doc.get("pages") or [] if p.get("index", 0) == doc.get("currentPage", doc.get("page", 0))),
+                      None) or ((doc.get("pages") or [{}])[0])
+            return f"{pg.get('width')}x{pg.get('height')}"
+        except Exception as e:  # noqa: BLE001
+            return f"? ({str(e)[:60]})"
+
+    def crop(self, a):
+        """R-17 (TW-134): `crop {from, to}` = crop tool, canvas drag, Enter; the page size before/after is recorded
+        (`crop` value) and logged like on the reference side."""
+        before = self.page_size()
+        self.do("tool", "tool.crop", {})
+        self.do("canvas_drag", {"from": a["from"], "to": a["to"]}, {})
+        time.sleep(0.2)
+        self.key("enter")
+        time.sleep(0.4)
+        after = self.page_size()
+        self.values.append({"crop": {"before": before, "after": after, "tries": 1}})
+        self.r.log(f"  fp crop {a['from']} -> {a['to']}: page {before} -> {after}")
+
     def select(self, names):
         """Exactly the named objects, chosen like in the reference program (JSF fw.selection by name on the
         current state of all layers); the bridge's `select {ids}` is only the fallback."""
@@ -4014,6 +4224,8 @@ class FpSide(Side):
         elif verb == "key":
             for _ in range(int(act.get("repeat", 1) or 1)):
                 self.key(arg)
+        elif verb == "crop":
+            self.crop(arg)
         elif verb == "type":
             self.inp([{"type": "type", "text": str(arg)}])
         elif verb == "wait":
@@ -4610,7 +4822,7 @@ class FpSide(Side):
         shortcut right)."""
         hits = (self.call("ui_find", {"role": "menu_item", "limit": 200}) or {}).get("hits") or []
         if hits:
-            return [{"text": h.get("text"), "enabled": h.get("enabled"), "checked": h.get("toggled")} for h in hits]
+            return [dict(menu_entry_text(h.get("text")), enabled=h.get("enabled"), checked=h.get("toggled")) for h in hits]
         before = getattr(self, "before_img", None)
         img, _ = self.window_image()
         # R-4: only the open popup (and the sub menus touching it), not every change in the window
@@ -4643,8 +4855,8 @@ class FpSide(Side):
         cols: dict = {}
         for h in sorted(entries, key=lambda h: (h["rect"][0], h["rect"][1])):
             col = next((c for c in cols if abs(c - h["rect"][0]) <= 2), h["rect"][0])
-            cols.setdefault(col, []).append({"text": h["text"], "enabled": h.get("enabled"), "checked": h.get("toggled"),
-                                             "_r": h["rect"]})
+            cols.setdefault(col, []).append(dict(menu_entry_text(h["text"]), enabled=h.get("enabled"),
+                                                 checked=h.get("toggled"), _r=h["rect"]))
         for s in short:
             cand = [e for c in cols.values() for e in c if e["_r"][0] < s["rect"][0] and abs((e["_r"][1] + e["_r"][3]) / 2 - row_of(s)) < 4]
             if cand:
@@ -5428,9 +5640,10 @@ class Runner:
                         except Exception as e:  # noqa: BLE001
                             self.log(f"unit start: {e}")
                         # R-15 (TW-140): key self test once per run, the keyboard layout at every unit start
+                        # R-17: the self test is repeated at the next unit when no echo came back (3 units at most)
                         if not getattr(self, "key_echo_done", False):
-                            self.key_echo_done = True
-                            side.key_self_test()
+                            self.key_echo_tries = getattr(self, "key_echo_tries", 0) + 1
+                            self.key_echo_done = bool(side.key_self_test()) or self.key_echo_tries >= 3
                         else:
                             side.layout_request()
                         self.orig.kill_hung_own()

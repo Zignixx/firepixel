@@ -527,14 +527,30 @@ function ViewHwnd { $m = MainWin; $best = [IntPtr]::Zero; $area = 0
   $best }
 function Hex($p) { '0x{0:X8}' -f ([int64]$p -band 0xFFFFFFFF) }
 function TargetHkl { [PR.N]::GetKeyboardLayout([PR.N]::Tid((MainWin))) }
+function ClsOf($h) { if ($h -eq [IntPtr]::Zero) { return '' }; [PR.N]::Cls($h) }
+function HklOf($h) { if ($h -eq [IntPtr]::Zero) { return (TargetHkl) }; [PR.N]::GetKeyboardLayout([PR.N]::Tid($h)) }
+function LangDiffers($hkl, [string]$want) { $want -and (([int64]$hkl -band 0xFFFF) -ne ([Convert]::ToInt64($want, 16) -band 0xFFFF)) }
+# R-17 (TW-140): WM_INPUTLANGCHANGEREQUEST to every given window (main window and the window with the keyboard focus)
+function LangRequest($wins, [string]$want) { $hkl = [PR.N]::LoadKeyboardLayout($want, 0); if ($hkl -eq [IntPtr]::Zero) { return "LoadKeyboardLayout $want failed" }
+  foreach ($w in @($wins | ? { $_ -ne [IntPtr]::Zero } | Select -Unique)) { [PR.N]::PostMessage($w, 0x0050, [IntPtr]::Zero, $hkl) | Out-Null }; Start-Sleep -Milliseconds 300; (Hex $hkl) }
 function Layout($want) {
-  $m = MainWin; $before = TargetHkl; $out = @{ before = (Hex $before); requested = $null }
-  # `want` = KLID ("00000407"): requested for the target's main window only (WM_INPUTLANGCHANGEREQUEST, like the
-  # user switching the input language of that window); nothing is changed when the language already matches
-  if ($want -and (([int64]$before -band 0xFFFF) -ne ([Convert]::ToInt64($want, 16) -band 0xFFFF))) {
-    $hkl = [PR.N]::LoadKeyboardLayout([string]$want, 0)
-    if ($hkl -ne [IntPtr]::Zero) { [PR.N]::PostMessage($m, 0x0050, [IntPtr]::Zero, $hkl) | Out-Null; Start-Sleep -Milliseconds 300; $out.requested = (Hex $hkl) } else { $out.requested = "LoadKeyboardLayout $want failed" } }
-  $after = TargetHkl; [PR.N]::KeyHkl = $after; $out.after = (Hex $after); $out.host = (Hex ([PR.N]::GetKeyboardLayout(0))); $out }
+  $m = MainWin; $foc = [PR.N]::FocusOf($m); $before = TargetHkl; $fb = HklOf $foc
+  $out = @{ before = (Hex $before); requested = $null; focus_class = (ClsOf $foc); focus_before = (Hex $fb) }
+  # `want` = KLID ("00000407"): requested for the target's main window and (R-17) the window holding its keyboard
+  # focus (WM_INPUTLANGCHANGEREQUEST, like the user switching the input language); nothing is changed when the
+  # language of both already matches
+  if ((LangDiffers $before $want) -or (LangDiffers $fb $want)) { $out.requested = LangRequest @($m, $foc) $want }
+  $after = TargetHkl; $foc = [PR.N]::FocusOf($m); $fa = HklOf $foc; [PR.N]::KeyHkl = $fa
+  $out.after = (Hex $after); $out.focus_after = (Hex $fa); $out.host = (Hex ([PR.N]::GetKeyboardLayout(0))); $out }
+# R-17 (TW-140): evidence before every plain key - foreground window, keyboard focus (GetGUIThreadInfo of the
+# foreground thread when it belongs to the target, else of the main window) and the focus thread's keyboard layout;
+# with `want` and another language: WM_INPUTLANGCHANGEREQUEST to the focused window (and the main window), read again
+function KeyProbe([string]$want) {
+  $fg = [PR.N]::GetForegroundWindow(); $m = MainWin; $own = ($fg -ne [IntPtr]::Zero -and [PR.N]::Pid($fg) -eq [uint32]$S.pid)
+  $foc = [PR.N]::FocusOf($(if ($own) { $fg } else { $m })); $hkl = HklOf $foc
+  $out = @{ fg_class = (ClsOf $fg); fg_own = $own; focus_class = (ClsOf $foc); focus_hwnd = [int64]$foc; layout = (Hex $hkl); requested = $null }
+  if (LangDiffers $hkl $want) { $out.requested = LangRequest @($foc, $m) $want; $hkl = HklOf $foc; $out.layout_after = (Hex $hkl); $out.ok = -not (LangDiffers $hkl $want) }
+  [PR.N]::KeyHkl = $hkl; $out }
 # R-16: `$mock` (offline self test, selftest_host.ps1): no hook, no SendInput - the inputs that would be sent are
 # echoed back as the hook would record them (injected flag set). Locals never reuse script names ($VK, $S: same
 # variable for PowerShell, see VkOf).
@@ -655,6 +671,7 @@ function Handle($c) {
     'uia_do' { $e = FindEl $c.name $c.type $c.scope $c.exact; if (-not $e) { throw "not found: $($c.name) [$($c.type)]" }; $r = DoAct $e $c.action $c.value; $i = ElInfo $e; $i.done = $r; return $i }
     'key' { Combo $c.combo; Start-Sleep -Milliseconds 80; return 'ok' }
     'layout' { return (Layout ([string]$c.want)) }
+    'key_probe' { return (KeyProbe ([string]$c.want)) }
     'key_echo' { $k = if ($c.keys) { @($c.keys) } else { @('escape', 'delete', 'right', 'left', 'home', 'end', 'pageup', 'insert', 'c', 'e', 't', 'z') }
       # R-16: the failure goes back to the runner (logged there, not fatal) with the host script line that raised it
       try { return (KeyEcho $k) } catch { $ii = $_.InvocationInfo; $src = if ($ii -and $ii.Line) { $ii.Line.Trim() } else { '' }; if ($src.Length -gt 240) { $src = $src.Substring(0, 240) + '...' }

@@ -17,6 +17,10 @@ function ShadowProbe { $vk = [uint16]0; $vk = VkOf 'escape'; $vk = VkOf 'delete'
 $fail = 0
 try { if ((ShadowProbe) -ne 0x2E) { Write-Output 'FAIL: VkOf with a shadowing caller'; $fail++ } else { Write-Output 'ok: VkOf with a shadowing caller' } }
 catch { Write-Output "FAIL: VkOf with a shadowing caller: $($_.Exception.Message)"; $fail++ }
+# R-17: the focus / layout probe and the layout read-back run offline without a request (no `want`: nothing is posted)
+try { $p = KeyProbe ''; $l = Layout ''; Write-Output ("ok: key_probe fg {0} focus {1} layout {2}; layout before {3} after {4} focus {5}" -f $p.fg_class, $p.focus_class, $p.layout, $l.before, $l.after, $l.focus_after)
+      if ($p.requested -or $l.requested) { Write-Output 'FAIL: a layout request without want'; $fail++ } }
+catch { Write-Output "FAIL: key_probe / layout: $($_.Exception.Message) [line $($_.InvocationInfo.ScriptLineNumber)]"; $fail++ }
 $r = $null
 try { $r = KeyEcho $Keys -mock } catch { Write-Output "FAIL: key_echo: $($_.Exception.Message) [line $($_.InvocationInfo.ScriptLineNumber)]"; exit 1 }
 # expected: Escape always scan 0x01 without the extended flag; navigation/editing keys extended; letters/punctuation not
