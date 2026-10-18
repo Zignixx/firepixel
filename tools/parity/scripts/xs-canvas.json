@@ -376,7 +376,13 @@
      ]
     },
     {
+     "tool": "tool.pointer"
+    },
+    {
      "jsf": "fw.getDocumentDOM().addGuide(300,'horizontal')"
+    },
+    {
+     "log_value": "fw.getDocumentDOM().guides ? fw.getDocumentDOM().guides.toSource() : null"
     },
     {
      "double_click": {
@@ -384,6 +390,63 @@
        400,
        300
       ]
+     }
+    },
+    {
+     "if_no_dialog": {
+      "wait_ms": 2000,
+      "remeasure": true,
+      "why": "the double-click at document 400,300 opened no move-guide dialog - page measured again, double-click on the line's neighbouring pixel rows (the guide is 1 px; at zoom 0.43 document 298/302 are one screen pixel above/below)",
+      "do": [
+       {
+        "double_click": {
+         "canvas": [
+          400,
+          300
+         ]
+        }
+       },
+       {
+        "wait": 500
+       },
+       {
+        "if_no_dialog": {
+         "wait_ms": 1500,
+         "do": [
+          {
+           "double_click": {
+            "canvas": [
+             400,
+             298
+            ]
+           }
+          },
+          {
+           "wait": 500
+          }
+         ]
+        }
+       },
+       {
+        "if_no_dialog": {
+         "wait_ms": 1500,
+         "do": [
+          {
+           "double_click": {
+            "canvas": [
+             400,
+             302
+            ]
+           }
+          },
+          {
+           "wait": 500
+          }
+         ]
+        }
+       }
+      ],
+      "unsupported_if_none": "no scripted double-click on the guide opened the move-guide dialog (run 16: none at the measured line; the guides read-back in the values shows whether the script added the guide)"
      }
     }
    ],
@@ -395,7 +458,7 @@
      "key": "Escape"
     }
    ],
-   "note": "addGuide(position, 'horizontal') signature unverified in both programs. R-11 (TW-119 c): run 15 missed the guide in the reference - View > Rulers moved its page by 2,9 px and the double-click used the page measured before the rulers (fit); the runner now measures the page again right after every reference menu command, before the guide is added"
+   "note": "addGuide(position, 'horizontal') signature unverified in both programs. R-11 (TW-119 c): run 15 missed the guide in the reference - View > Rulers moved its page by 2,9 px and the double-click used the page measured before the rulers (fit); the runner now measures the page again right after every reference menu command, before the guide is added. R-12 (TW-124 e): run 16 again no dialog in the reference; the pointer tool is chosen first, the guides are logged after addGuide, and if the double-click opens nothing the page is measured again and the rows next to the line are tried; when none opens a dialog the reference side is 'unsupported' with that reason"
   },
   {
    "id": "08_guides_snap_result",
@@ -502,7 +565,8 @@
       "to": [
        400,
        -80
-      ]
+      ],
+      "allow_outside_end": true
      }
     },
     {
@@ -513,7 +577,7 @@
     }
    ],
    "shot": null,
-   "note": "dom.guides property name unverified"
+   "note": "dom.guides property name unverified. R-12 (TW-124 d): the end point lies on the ruler above the view on purpose (allow_outside_end; the start must be in the view, the end in the program window)"
   },
   {
    "id": "11_grid_show_normal",

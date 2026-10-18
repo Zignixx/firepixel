@@ -707,7 +707,7 @@
      }
     },
     {
-     "log_value": "fw.getDocumentDOM().layers[fw.getDocumentDOM().layers.length-1].frames[0].elements.map(function(e){return e.exportOptions?e.exportOptions.exportFormat:'-'}).join('|')"
+     "log_value": "(function(){var __a=fw.getDocumentDOM().layers[fw.getDocumentDOM().layers.length-1].frames[0].elements,__o=[];for(var __i=0;__i<__a.length;__i++)__o.push((function(e){return e.exportOptions?e.exportOptions.exportFormat:'-'})(__a[__i]));return __o.join('|');})()"
     }
    ],
    "shot": null,

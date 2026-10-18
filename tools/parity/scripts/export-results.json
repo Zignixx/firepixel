@@ -564,6 +564,59 @@
        },
        {
         "wait": 800
+       },
+       {
+        "if_no_dialog": {
+         "wait_ms": 2500,
+         "remeasure": true,
+         "why": "double-click opened no preview either - the area is drawn again slowly (held press, 40 moves) and confirmed with Enter, then a double-click",
+         "do": [
+          {
+           "tool": "tool.exportArea"
+          },
+          {
+           "canvas_drag": {
+            "from": [
+             20,
+             20
+            ],
+            "to": [
+             220,
+             170
+            ],
+            "steps": 40,
+            "press_ms": 300,
+            "release_ms": 300
+           }
+          },
+          {
+           "wait": 500
+          },
+          {
+           "key": "Enter"
+          },
+          {
+           "wait": 800
+          },
+          {
+           "if_no_dialog": {
+            "wait_ms": 2000,
+            "do": [
+             {
+              "canvas_double_click": [
+               120,
+               95
+              ]
+             },
+             {
+              "wait": 800
+             }
+            ]
+           }
+          }
+         ],
+         "unsupported_if_none": "the export-area preview opened neither by Enter nor by a double-click inside the area, also after drawing the area again slowly (run 15/16: the reference opened no dialog on the scripted input)"
+        }
        }
       ]
      }
@@ -580,7 +633,7 @@
      "key": "Escape"
     }
    ],
-   "note": "export area opens preview; file hash recorded after export by runner (record_file not possible before dialog). R-11: run 15 reference 'no dialog open' after Enter (tool and drag were right: Exportbereich, document 20,20-220,170) - the image preview is a normal dialog of the reference (re 11, 4716), not an embedded panel; if Enter opens nothing within 2.5 s the step double-clicks inside the area (logged as if_no_dialog fallback in the values, so an Enter difference stays visible)"
+   "note": "export area opens preview; file hash recorded after export by runner (record_file not possible before dialog). R-11: run 15 reference 'no dialog open' after Enter (tool and drag were right: Exportbereich, document 20,20-220,170) - the image preview is a normal dialog of the reference (re 11, 4716), not an embedded panel; if Enter opens nothing within 2.5 s the step double-clicks inside the area (logged as if_no_dialog fallback in the values, so an Enter difference stays visible). R-12 (TW-124 e): run 16 the double-click opened nothing either; a third way draws the area again slowly and repeats Enter and the double-click; when none opens the preview the side is 'unsupported' with that reason"
   },
   {
    "id": "14_wizard_flow_result",

@@ -75,7 +75,7 @@
      }
     },
     {
-     "log_value": "fw.getDocumentDOM().layers.map(function(l){return l.frames[0].elements.length}).join('|')"
+     "log_value": "(function(){var __a=fw.getDocumentDOM().layers,__o=[];for(var __i=0;__i<__a.length;__i++)__o.push((function(l){return l.frames[0].elements.length})(__a[__i]));return __o.join('|');})()"
     }
    ],
    "shot": null,
@@ -208,7 +208,7 @@
      "key": "Escape"
     },
     {
-     "log_value": "fw.selection[0].textRuns.textRuns.map(function(r){return r.characters}).join('')"
+     "log_value": "(function(){var __a=fw.selection[0].textRuns.textRuns,__o=[];for(var __i=0;__i<__a.length;__i++)__o.push((function(r){return r.characters})(__a[__i]));return __o.join('');})()"
     }
    ],
    "shot": {
@@ -390,7 +390,7 @@
      "click": "Alle ersetzen"
     },
     {
-     "log_value": "fw.getDocumentDOM().layers[0].frames[0].elements.map(function(e){return e.textChars||''}).join('|')"
+     "log_value": "(function(){var __a=fw.getDocumentDOM().layers[0].frames[0].elements,__o=[];for(var __i=0;__i<__a.length;__i++)__o.push((function(e){return e.textChars||''})(__a[__i]));return __o.join('|');})()"
     }
    ],
    "shot": null,

@@ -90,6 +90,15 @@ SWATCH_COUNT_JS = ("(function(){try{var s=fw.swatches;if(!s)return 'none';var a=
 SWATCH_PREF_JS = "(function(){try{return fw.getPref('SwatchesPanelColorPaletteChoice');}catch(e){return 'error '+e;}})()"
 
 
+def fp_serialised_js(expr: str) -> str:
+    """R-12 (TW-124 a): Firepixel's `run_script` returns String(result), so an object read back by `log_value`
+    (`textRuns.initialAttrs`) came back as "[object Object]". The expression is wrapped so that objects and
+    arrays come back serialised - toSource() like the reference side's read-back, JSON.stringify as fallback;
+    other values stay unchanged."""
+    return ("(function(){var __v=(%s);if(typeof __v=='object'&&__v!==null){try{if(__v.toSource)return __v.toSource();}"
+            "catch(e){}try{return JSON.stringify(__v);}catch(e){}}return __v;})()" % expr)
+
+
 # R-8 (TW-102/103): export options read on both sides before an export (and in Firepixel after a format choice)
 EXPORT_PROBES = (("colorMode", "fw.getDocumentDOM().exportOptions.colorMode"),
                  ("numPaletteEntries", "fw.getDocumentDOM().exportOptions.numPaletteEntries"),
@@ -154,6 +163,36 @@ def bbox_union(rects):
     if not rects:
         return None
     return [min(r[0] for r in rects), min(r[1] for r in rects), max(r[2] for r in rects), max(r[3] for r in rects)]
+
+
+def norm_rect(rect):
+    """R-12 (TW-124 f, run 16 panel-optimize/13: [1438, 263, 1357, 631]): a region with swapped corners is
+    normalised (left <= right, top <= bottom) instead of falling back to the whole window."""
+    if not rect or len(rect) < 4:
+        return rect
+    x0, y0, x1, y1 = (float(v) for v in rect[:4])
+    return [min(x0, x1), min(y0, y1), max(x0, x1), max(y0, y1)]
+
+
+# R-12 (TW-124 b): order gap (painted shapes) that ends the topmost block of texts in a region
+POPUP_ORDER_GAP = 40
+
+
+def top_paint_block(hits, gap: int = POPUP_ORDER_GAP):
+    """R-12 (TW-124 b, run 16 panel-optimize/13,15, panel-misc/14,18): Firepixel's popup menus are painted over the
+    panels, and `ui_find` in the menu's box also returns the panel texts underneath ("Sortieren nach:",
+    "Webebene", the find panel's labels). The menu is painted last: the texts with the highest paint `order`
+    form one block (entries, shortcuts, sub menus a few shapes apart); the block ends at the first order gap
+    larger than `gap`. Hits without an order are kept as they are."""
+    if not hits or any("order" not in h for h in hits):
+        return hits
+    srt = sorted(hits, key=lambda h: -int(h["order"]))
+    out = [srt[0]]
+    for h in srt[1:]:
+        if int(out[-1]["order"]) - int(h["order"]) > gap:
+            break
+        out.append(h)
+    return out
 
 
 def diff_bbox(a: Image.Image | None, b: Image.Image | None, pad: int = 6):
@@ -456,13 +495,14 @@ class Side:
     def script_eval(self, expr):
         raise NotImplementedError
 
-    def canvas_point(self, arg, what="canvas point"):
+    def canvas_point(self, arg, what="canvas point", allow_outside=False):
         """R-11 (TW-119): side point (reference: screen, Firepixel: window) of a canvas argument. Besides document
         points (`canvas_doc_point`) `{"view_frac": [fx, fy]}` (also as `pos`/`at`/`canvas`) = that fraction of the
         page part shown in the document view, measured on each side (zoom/scroll independent; [0.5, 0.5] = centre
         of the page as shown). Every point is checked against the side's document view: a point outside is not
         sent, the action is 'unsupported' with the reason (run 15 xs-canvas/02: the wheel point lay outside
-        Firepixel's view and the step counted as a program difference)."""
+        Firepixel's view and the step counted as a program difference). R-12 (TW-124 d): `allow_outside` lets a
+        drag end point lie outside the view (a guide dragged onto the ruler, `allow_outside_end`)."""
         a = arg
         if isinstance(a, dict) and "view_frac" not in a:
             inner = a.get("pos") or a.get("at") or a.get("canvas")
@@ -472,6 +512,8 @@ class Side:
             pt = self.view_frac_point(a["view_frac"])
         else:
             pt = self.doc_point_on_side(*self.canvas_doc_point(arg))
+        if allow_outside:
+            return pt
         view = self.view_rect_now()
         if view and not (view[0] <= pt[0] < view[2] and view[1] <= pt[1] < view[3]):
             raise Unsupported(f"{what}: point {[int(v) for v in pt]} outside the {self.name} document view "
@@ -533,6 +575,10 @@ class Side:
             if not r:
                 raise Unmapped(f"grid {k}: area {e['area']} not found for {self.name}")
             cols = max(1, int(e.get("cols", 1)))
+            # R-12 (TW-115): a grid whose column count follows the panel width (Firepixel's swatches: 9 px pitch,
+            # columns = (client width - scrollbar) / 9) gives `cols_width` = shot width minus the grid's width
+            if e.get("cols_width") is not None and float(e["cell"][0]) > 0:
+                cols = max(1, int((r[2] - r[0] - float(e["cols_width"])) // float(e["cell"][0])))
             i = int(v)
             x = r[0] + float(e["origin"][0]) + float(e["cell"][0]) * (i % cols)
             y = r[1] + float(e["origin"][1]) + float(e["cell"][1]) * (i // cols)
@@ -1295,6 +1341,13 @@ class OrigSide(Side):
             raise OrigError(f"drag point outside the document view {v}: {bad} (zoom {getattr(self, 'fit_zoom', None)},"
                             f" page {[int(x) for x in (getattr(self, 'page', None) or [])]})")
 
+    def check_on_window(self, pt):
+        """R-12 (TW-124 d): a drag end allowed outside the document view must still lie in the program's window
+        (a ruler, not the desktop or another program)."""
+        c = self.client()
+        if not (c[0] <= pt[0] < c[2] and c[1] <= pt[1] < c[3]):
+            raise Unsupported(f"drag end {[int(v) for v in pt]} outside the reference window {[int(v) for v in c]}")
+
     def doc_point_on_side(self, x, y):
         return self.doc_to_screen(x, y)
 
@@ -1452,7 +1505,7 @@ class OrigSide(Side):
             if g:
                 return g, self.win_at(g)
             if "canvas" in target:
-                return self.canvas_point(target["canvas"]), None
+                return self.canvas_point(target["canvas"], allow_outside=bool(target.get("allow_outside"))), None
             if "window_rel" in target:
                 c = self.client()
                 return (c[0] + target["window_rel"][0], c[1] + target["window_rel"][1]), None
@@ -1964,6 +2017,7 @@ class OrigSide(Side):
 
     def grab(self, rect, path: Path):
         path.parent.mkdir(parents=True, exist_ok=True)
+        rect = norm_rect(rect)  # R-12 (TW-124 f)
         self.h.call("shot", rect=[int(v) for v in rect], path=str(path))
 
     def window_image(self):
@@ -2289,13 +2343,19 @@ class OrigSide(Side):
             a = arg
             fr = self.resolve({"canvas": a["from"]} if verb == "canvas_drag" or isinstance(a.get("from"), list) else a["from"])[0]
             if "to" in a:
-                to = self.resolve({"canvas": a["to"]} if verb == "canvas_drag" or isinstance(a.get("to"), list) else a["to"])[0]
+                # R-12 (TW-124 d): `allow_outside_end` - the end point may lie outside the document view (xs-canvas/10
+                # drags a guide onto the ruler); the start point is checked as before
+                out_end = bool(a.get("allow_outside_end"))
+                to = self.resolve({"canvas": a["to"], "allow_outside": out_end}
+                                  if verb == "canvas_drag" or isinstance(a.get("to"), list) else a["to"])[0]
             elif "by" in a:
                 to = (fr[0] + a["by"][0], fr[1] + a["by"][1])
             else:
                 raise Unsupported("drag without to/by")
             if verb == "canvas_drag" or isinstance(a.get("from"), list):
-                self.check_drag_points([fr, to])
+                self.check_drag_points([fr] if a.get("allow_outside_end") else [fr, to])
+                if a.get("allow_outside_end"):
+                    self.check_on_window(to)
             self.o.focus()
             dmods = norm_mods(a.get("mods") or a.get("hold_key"))
             drec = self.drag_record(fr, to, dmods)
@@ -2982,7 +3042,7 @@ class FpSide(Side):
             if g:
                 return list(g)
             if "canvas" in target:
-                return self.canvas_point(target["canvas"])
+                return self.canvas_point(target["canvas"], allow_outside=bool(target.get("allow_outside")))
             if "window_rel" in target:
                 return list(target["window_rel"])
             if "area" in target and "pos" in target:
@@ -3168,8 +3228,10 @@ class FpSide(Side):
         """R-6: box of the open menu (with sub menus) inside the difference box `bb`. Menu entries are painted
         texts (no accessibility node) sharing a left edge (>= 3 per column); the changed region touching them is
         taken (popup_component, 3 px cells), its left edge is the menu frame found left of the first column."""
-        hits = (self.call("ui_find", {"region": list(bb), "limit": 400}) or {}).get("hits") or []
-        hits = [h for h in hits if h.get("text") and h.get("source") != "accesskit"]
+        # R-12 (TW-124 b/f): all painted texts (menu entries with a widget name included), topmost block only - the
+        # panel columns under a context menu made a seed beside the menu and an inverted box (panel-optimize/13)
+        hits = (self.call("ui_find", {"region": list(bb), "role": "text", "limit": 500}) or {}).get("hits") or []
+        hits = top_paint_block([h for h in hits if h.get("text") and h.get("source") != "accesskit"])
         cols: dict = {}
         for h in hits:
             col = next((c for c in cols if abs(c - h["rect"][0]) <= 2), h["rect"][0])
@@ -3188,7 +3250,7 @@ class FpSide(Side):
         # walk left over the menu background to its frame (not over the highlighted entry: first row)
         fx, _ = scan_edge(img, x0, y, -1, 0, thr=30)
         left = max(comp[0], fx - 2)
-        if left >= seed[0]:
+        if left >= seed[0] or left >= comp[2] - 4 or comp[1] >= comp[3] - 4:
             return None
         return [left, comp[1], comp[2], comp[3]]
 
@@ -3394,6 +3456,8 @@ class FpSide(Side):
     def grab(self, rect, path: Path):
         path.parent.mkdir(parents=True, exist_ok=True)
         args = {"max_size": 8192}
+        # R-12 (TW-124 f): swapped corners are normalised first (they fell back to the whole window)
+        rect = norm_rect(rect)
         if rect and (float(rect[2]) - float(rect[0]) < 1 or float(rect[3]) - float(rect[1]) < 1):
             # R-9 (run 13 toolbox/14,16: 'screenshot: empty region'): an empty area falls back to the whole window
             self.r.log(f"fp screenshot: empty region {[round(float(v), 1) for v in rect]} - whole window instead")
@@ -3550,7 +3614,9 @@ class FpSide(Side):
             expr = arg if isinstance(arg, str) else arg.get("value") or arg.get("expr")
             if isinstance(arg, dict) and not expr:
                 raise Unsupported(f"log {arg}")
-            self.values.append({"expr": expr, "value": self.script_value(expr)})
+            # R-12 (TW-124 a, run 16 xs-shortcuts/06): the bridge returns String(value), an object came back as
+            # "[object Object]"; objects/arrays are serialised in the script like the reference side (toSource)
+            self.values.append({"expr": expr, "value": self.script_value(fp_serialised_js(expr))})
         elif verb in ("click", "double_click", "right_click", "hover", "mouse_down", "mouse_up", "click_text",
                       "double_click_text", "right_click_text", "hover_text", "click_button", "toolbox_click",
                       "open", "canvas_click", "canvas_double_click", "canvas_move", "canvas_hover", "window_click",
@@ -3560,7 +3626,11 @@ class FpSide(Side):
             a = arg
             fr = self.resolve({"canvas": a["from"]} if verb == "canvas_drag" or isinstance(a.get("from"), list) else a["from"])
             if "to" in a:
-                to = self.resolve({"canvas": a["to"]} if verb == "canvas_drag" or isinstance(a.get("to"), list) else a["to"])
+                # R-12 (TW-124 d): `allow_outside_end` - the end point may lie outside the document view (xs-canvas/10
+                # drags a guide onto the ruler); the start point is checked as before
+                out_end = bool(a.get("allow_outside_end"))
+                to = self.resolve({"canvas": a["to"], "allow_outside": out_end}
+                                  if verb == "canvas_drag" or isinstance(a.get("to"), list) else a["to"])
             elif "by" in a:
                 to = [fr[0] + a["by"][0], fr[1] + a["by"][1]]
             else:
@@ -4044,9 +4114,13 @@ class FpSide(Side):
             bb[1] = max(bb[1], bar[3] + 2)
         except Exception:  # noqa: BLE001
             pass
-        hits = (self.call("ui_find", {"region": bb, "limit": 400}) or {}).get("hits") or []
+        # R-12 (TW-124 b): `role: text` returns every painted text - entries of context/button menus carry a widget
+        # name and were dropped as duplicates of their accessibility node (panel-optimize/13, panel-misc/14 read
+        # only panel texts); only the topmost paint block (the menu, not the panel under it) is kept
+        hits = (self.call("ui_find", {"region": bb, "role": "text", "limit": 500}) or {}).get("hits") or []
         # menu entries are painted texts; accessibility nodes in the box are toolbar/panel controls
         hits = [h for h in hits if h.get("text") and h["rect"][1] >= bb[1] - 1 and h.get("source") != "accesskit"]
+        hits = top_paint_block(hits)
         def count(h, i, tol):
             return sum(1 for o in hits if abs(o["rect"][i] - h["rect"][i]) <= tol)
 
@@ -4440,7 +4514,27 @@ class Runner:
                 side.values.append({"if_no_dialog": {"dialog": opened, "fallback": not opened, "why": a.get("why")}})
                 if not opened:
                     self.log(f"  {side.name}: no dialog after the first way - {a.get('why') or 'fallback actions'}")
+                    if a.get("remeasure") and side.name == "orig" and getattr(side, "page", None) is not None:
+                        # R-12 (TW-124 e, xs-canvas/07): page measured again before the second way (a guide
+                        # double-click must hit the line at its current screen position)
+                        side.page = None
+                        try:
+                            time.sleep(0.3)
+                            side.calibrate()
+                        except Exception as e:  # noqa: BLE001
+                            self.log(f"  page before the fallback: {e}")
                     self.run_actions(side, a.get("do") or [], rec)
+                    if a.get("unsupported_if_none"):
+                        # R-12 (TW-124 e): no scripted way opened the dialog on this side - the step is
+                        # 'unsupported' with the reason instead of an error (or a program difference)
+                        end = time.time() + float(a.get("wait_ms", 2000)) / 1000
+                        opened = side.dialog_open()
+                        while not opened and time.time() < end:
+                            time.sleep(0.3)
+                            opened = side.dialog_open()
+                        side.values.append({"if_no_dialog": {"dialog": opened, "after_fallback": True}})
+                        if not opened:
+                            raise Unsupported(f"{side.name}: {a['unsupported_if_none']}")
                 rec["actions"].append({"verb": verb, "ms": int((time.time() - t0) * 1000)})
                 continue
             if verb == "swatch_readback":
@@ -4607,6 +4701,7 @@ class Runner:
                             rect[1] = max(rect[1], bar[3] + 2)
                         except Exception:  # noqa: BLE001
                             pass
+                rect = norm_rect(rect)
                 rec["rect"] = [round(v) for v in rect]
                 out = self.out / self.unit["unit"] / side.name / f"{step['id']}.png"
                 side.grab(rect, out)

@@ -356,7 +356,7 @@
      "key": "Enter"
     },
     {
-     "log_value": "fw.getDocumentDOM().layers[0].frames[0].elements.map(function(e){return e.name}).join('|')"
+     "log_value": "(function(){var __a=fw.getDocumentDOM().layers[0].frames[0].elements,__o=[];for(var __i=0;__i<__a.length;__i++)__o.push((function(e){return e.name})(__a[__i]));return __o.join('|');})()"
     }
    ],
    "shot": {

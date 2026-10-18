@@ -416,7 +416,7 @@
      "click": "Ebene statusübergreifend freigeben"
     },
     {
-     "log_value": "fw.getDocumentDOM().layers.map(function(l){return l.name+':'+l.sharing}).join('|')"
+     "log_value": "(function(){var __a=fw.getDocumentDOM().layers,__o=[];for(var __i=0;__i<__a.length;__i++)__o.push((function(l){return l.name+':'+l.sharing})(__a[__i]));return __o.join('|');})()"
     }
    ],
    "shot": null
@@ -479,7 +479,7 @@
      "click": "Alles ausblenden"
     },
     {
-     "log_value": "fw.getDocumentDOM().layers.map(function(l){return l.name+':'+l.frames[0].visible+':'+l.frames[0].locked}).join('|')"
+     "log_value": "(function(){var __a=fw.getDocumentDOM().layers,__o=[];for(var __i=0;__i<__a.length;__i++)__o.push((function(l){return l.name+':'+l.frames[0].visible+':'+l.frames[0].locked})(__a[__i]));return __o.join('|');})()"
     }
    ],
    "shot": null
@@ -516,7 +516,7 @@
      "click": "Alles anzeigen"
     },
     {
-     "log_value": "fw.getDocumentDOM().layers.map(function(l){return l.name+':'+l.frames[0].visible+':'+l.frames[0].locked}).join('|')"
+     "log_value": "(function(){var __a=fw.getDocumentDOM().layers,__o=[];for(var __i=0;__i<__a.length;__i++)__o.push((function(l){return l.name+':'+l.frames[0].visible+':'+l.frames[0].locked})(__a[__i]));return __o.join('|');})()"
     }
    ],
    "shot": null
@@ -547,7 +547,7 @@
      "click": "Alles sperren"
     },
     {
-     "log_value": "fw.getDocumentDOM().layers.map(function(l){return l.name+':'+l.frames[0].visible+':'+l.frames[0].locked}).join('|')"
+     "log_value": "(function(){var __a=fw.getDocumentDOM().layers,__o=[];for(var __i=0;__i<__a.length;__i++)__o.push((function(l){return l.name+':'+l.frames[0].visible+':'+l.frames[0].locked})(__a[__i]));return __o.join('|');})()"
     }
    ],
    "shot": null
@@ -576,7 +576,7 @@
      "click": "Mit darunter liegender auf eine Ebene reduzieren"
     },
     {
-     "log_value": "fw.getDocumentDOM().layers[fw.getDocumentDOM().currentLayerNum].frames[0].elements.map(function(e){return e.toString()}).join('|')"
+     "log_value": "(function(){var __a=fw.getDocumentDOM().layers[fw.getDocumentDOM().currentLayerNum].frames[0].elements,__o=[];for(var __i=0;__i<__a.length;__i++)__o.push((function(e){return e.toString()})(__a[__i]));return __o.join('|');})()"
     }
    ],
    "shot": null,

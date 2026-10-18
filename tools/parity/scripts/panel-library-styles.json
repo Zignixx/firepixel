@@ -95,7 +95,7 @@
      "panel": "window.documentLibrary"
     },
     {
-     "log_value": "fw.getDocumentDOM().layers.map(function(l){return l.frames[0].elements.length}).join('|')"
+     "log_value": "(function(){var __a=fw.getDocumentDOM().layers,__o=[];for(var __i=0;__i<__a.length;__i++)__o.push((function(l){return l.frames[0].elements.length})(__a[__i]));return __o.join('|');})()"
     },
     {
      "drag": {
@@ -117,7 +117,7 @@
      "wait": 500
     },
     {
-     "log_value": "fw.getDocumentDOM().layers.map(function(l){return l.frames[0].elements.length}).join('|')"
+     "log_value": "(function(){var __a=fw.getDocumentDOM().layers,__o=[];for(var __i=0;__i<__a.length;__i++)__o.push((function(l){return l.frames[0].elements.length})(__a[__i]));return __o.join('|');})()"
     },
     {
      "log_value": "fw.selection.length ? [fw.selection[0].left, fw.selection[0].top, fw.selection[0].width, fw.selection[0].height].join(',') : null"
@@ -257,7 +257,7 @@
      }
     },
     {
-     "log_value": "fw.getDocumentDOM().layers.map(function(l){return l.frames[0].elements.length}).join('|')"
+     "log_value": "(function(){var __a=fw.getDocumentDOM().layers,__o=[];for(var __i=0;__i<__a.length;__i++)__o.push((function(l){return l.frames[0].elements.length})(__a[__i]));return __o.join('|');})()"
     }
    ],
    "shot": null,

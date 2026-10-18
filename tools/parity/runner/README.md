@@ -156,11 +156,11 @@ Aliases: `reset <T..|null>` = `open_testfile` (null: only close menus/dialogs), 
 | `tool` | `tool.rectangle` | click on the toolbox button (`ui_map.json → tools`; single-key shortcuts do not reliably reach the program) | `ui_action {tool}` |
 | `panel` | `window.layers` / id / title | visible? else menu `Fenster > …` | `ui_action {panel}` if not visible (fallback: tab / menu, see below) |
 | `jsf` / `run_script` | code | JSF in the running instance | `run_script` |
-| `log_value` / `log` | JSF expression | value into `values` | `run_script` value |
+| `log_value` / `log` | JSF expression | value into `values` | `run_script` value (objects/arrays serialised with `toSource()`, R-12) |
 | `click` / `double_click` / `right_click` / `hover` / `open` / `click_text` / `click_button` / `toolbox_click` | target | SendInput at the target | `ui_input` at the target |
 | `mouse_down` / `mouse_up` | target | unsupported | `ui_input down/up` |
 | `canvas_click` / `canvas_double_click` / `canvas_move` / `canvas_hover` | `[x, y]` document px (+`mods`) | page rectangle measured in the view image (+ `orig.canvas_offset`) | `page_on_screen` |
-| `drag` / `canvas_drag` | `{from, to | by, mods, steps}` (points = `[x,y]` document px or targets) | SendInput drag | `ui_input drag` |
+| `drag` / `canvas_drag` | `{from, to | by, mods, steps, allow_outside_end}` (points = `[x,y]` document px or targets; `allow_outside_end: true` = the end point may lie outside the document view, R-12) | SendInput drag | `ui_input drag` |
 | `choose` | `{target, item}` (`item` may be `A > B`) | Win32 combo box: select entry | click target, click item texts |
 | `set_field` / `set` / `set_dialog_field` | `{target, value, commit?}` | edit in a dialog: click, `WM_SETTEXT`, then `commit` (Tab = `WM_NEXTDLGCTL`, Enter = Tab + OK button); other fields: double click, Ctrl+A, type, `commit` key | click (double click if needed) - **only if a text field took the focus** (else error, so Ctrl+A never reaches the canvas), Ctrl+A, type, `commit` key |
 | `record_ui` | logical key (`ui_state.*`, `document.summary`, `menu.open`, `dialog.fields`, `focus`, …) or `{"focus_cycle": n}` | dialogs (title + control texts)/menu items/focused control (Tab n times) | `dialog.*`: title, texts in reading order and controls (role, text, state) from `ui_find` inside the dialog; `menu.*`: texts of the open menus (columns, shortcuts) inside the difference box; `focus_cycle`: `focus_gained` of `ui_input`; else `ui_state`/`get_document` |
@@ -179,7 +179,7 @@ Verbs for popups, flyouts, handles and scrolling:
 | `drag_popup_slider` / `slider_drag` | `{to_fraction, hold?, from_fraction?}` | the open popup slider (smallest extra window of the process): press near the target, move to the fraction of its long axis (vertical: top = maximum); `hold: true` keeps the button down until the next reset | same with the `slider` element from `ui_find` |
 | `scroll` / `wheel` | `{area | target, delta, mods?, horizontal?}` (`area` = shot area or `{preview_pane: i}`) | mouse wheel at the centre; `delta` > 0 scrolls the content down (wheel towards the user) | `ui_input wheel` (same sign rule) |
 | `canvas_wheel` | `{pos: [x, y] document px, delta, modifiers?}` or `{view_frac: [fx, fy], …}` | wheel at the document point; `delta` > 0 = wheel away from the user | same |
-| `if_no_dialog` | `{wait_ms, do: [actions], why}` | R-11: waits up to `wait_ms` for a dialog; only when none opened, `do` runs (a second way to open it; logged as `if_no_dialog` in the values) | same (`dialog_open` of `ui_state`) |
+| `if_no_dialog` | `{wait_ms, do: [actions], why, remeasure, unsupported_if_none}` | R-11: waits up to `wait_ms` for a dialog; only when none opened, `do` runs (a second way to open it; logged as `if_no_dialog` in the values). R-12: `remeasure: true` measures the reference's page again before `do`; `unsupported_if_none: reason` makes the side `unsupported` with that reason when still no dialog is open after `do` (nested `if_no_dialog` in `do` = further ways) | same (`dialog_open` of `ui_state`) |
 | `swatch_readback` | `{n, panel, pref_want, retry_item}` | R-11 (TW-115): logs JSF `fw.swatches` (count, first 8), the colours of swatch cells 0..n-1 (grid `panel_swatch`) and the pref `SwatchesPanelColorPaletteChoice`; pref not `pref_want` -> panel menu again, `retry_item` clicked once more | same without pref/retry |
 | `drag_handle` / `click_handle` / `hover_handle` | `{handle, by?}` | control point of the selected object (`fw.selection[0].controlPoints`); `handle` = index or role (tooltip prefix via `handle_roles`, e.g. `points` → „Punkte“); without control points the 8 frame handles of `pixelRect` (0 = top left, clockwise) | `run_command autoShape.describe` of the selected element, else its bounds |
 | `mouse_down` / `mouse_up` | target | SendInput down/up (released at the next reset) | `ui_input down/up` |
@@ -500,3 +500,26 @@ Self test: `python -I runner.py --units _selftest_menu,_selftest_inspector`.
   released around pointer events and drags on the Firepixel side; `Apostrophe`/`Quote`, `Semicolon`, `Slash` ...
   mapped for egui and by key position (US names) in the host.
 - **Screenshots:** an empty region on the Firepixel side falls back to the whole window instead of an error.
+
+## R-12 additions (18.10.)
+
+- **Swatch grid (TW-115):** Firepixel's swatches panel draws 9 px cells (8 px colour + 1 px line, index 0 top left,
+  columns = (client width - 17) / 9). ui_map `grid_targets.panel_swatch.fp` is now `origin [8, 53]`, `cell [9, 9]`
+  (measured in run 16, panel-swatches-mixer/01) with the new grid key `cols_width`: columns =
+  (shot width of the area - `cols_width`) // cell width (268 px shot -> 27 columns). Click targets, the click probes
+  and `swatch_readback` use it; the reference grid is unchanged.
+- **Object read-back (TW-124 a):** Firepixel's `log_value` wraps the expression so objects and arrays come back as
+  `toSource()` (JSON as fallback) instead of `[object Object]`, like the reference side.
+- **Menu reading (TW-124 b):** `log_menu_items` and the menu shot box on the Firepixel side ask `ui_find` for all painted
+  texts (`role: text`; context/button menu entries carry a widget name and were dropped before) and keep only the
+  topmost paint block (`top_paint_block`, order gap 40): the menu, not the panel texts under it.
+- **No `Array.map` (TW-124 c):** the reference's script engine has no `map` on element lists; every `log_value` in the
+  step scripts that used `X.map(function(e){...}).join(sep)` is now a plain `for` loop.
+- **Drag end outside the view (TW-124 d):** `{"canvas_drag": {..., "allow_outside_end": true}}` - the start point is
+  checked against the document view as before, the end point may lie outside it (reference: inside the program window);
+  xs-canvas/10 drags a guide onto the ruler.
+- **Dialog fallbacks (TW-124 e):** `if_no_dialog` takes `remeasure` and `unsupported_if_none` (table above);
+  xs-canvas/07 (pointer tool first, guides logged, neighbouring rows) and export-results/13 (area drawn again slowly)
+  use them.
+- **Shot regions (TW-124 f):** a region with swapped corners is normalised (`norm_rect`) on both sides instead of
+  falling back to the whole window; the Firepixel menu box (`tight_popup`) returns nothing for an inverted result.

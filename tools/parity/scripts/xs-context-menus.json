@@ -781,7 +781,7 @@
      "click": "Nach ganz hinten"
     },
     {
-     "log_value": "fw.getDocumentDOM().layers[0].frames[0].elements.map(function(e){return e.name}).join('|')"
+     "log_value": "(function(){var __a=fw.getDocumentDOM().layers[0].frames[0].elements,__o=[];for(var __i=0;__i<__a.length;__i++)__o.push((function(e){return e.name})(__a[__i]));return __o.join('|');})()"
     }
    ],
    "shot": null,
@@ -821,7 +821,7 @@
      "click": "Horizontal spiegeln"
     },
     {
-     "log_value": "fw.selection.map(function(e){var r=e.pixelRect;return e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom}).join('|')"
+     "log_value": "(function(){var __a=fw.selection,__o=[];for(var __i=0;__i<__a.length;__i++)__o.push((function(e){var r=e.pixelRect;return e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom})(__a[__i]));return __o.join('|');})()"
     }
    ],
    "shot": null,

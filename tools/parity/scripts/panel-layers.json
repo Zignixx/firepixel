@@ -140,7 +140,7 @@
      }
     },
     {
-     "log_value": "fw.getDocumentDOM().layers.map(function(l){return l.name+':'+l.frames[0].visible+':'+l.frames[0].locked}).join('|')"
+     "log_value": "(function(){var __a=fw.getDocumentDOM().layers,__o=[];for(var __i=0;__i<__a.length;__i++)__o.push((function(l){return l.name+':'+l.frames[0].visible+':'+l.frames[0].locked})(__a[__i]));return __o.join('|');})()"
     }
    ],
    "shot": {
@@ -172,7 +172,7 @@
      }
     },
     {
-     "log_value": "fw.getDocumentDOM().layers.map(function(l){return l.name+':'+l.frames[0].visible+':'+l.frames[0].locked}).join('|')"
+     "log_value": "(function(){var __a=fw.getDocumentDOM().layers,__o=[];for(var __i=0;__i<__a.length;__i++)__o.push((function(l){return l.name+':'+l.frames[0].visible+':'+l.frames[0].locked})(__a[__i]));return __o.join('|');})()"
     }
    ],
    "shot": null
@@ -202,7 +202,7 @@
      }
     },
     {
-     "log_value": "fw.getDocumentDOM().layers.map(function(l){return l.name+':'+l.frames[0].visible+':'+l.frames[0].locked}).join('|')"
+     "log_value": "(function(){var __a=fw.getDocumentDOM().layers,__o=[];for(var __i=0;__i<__a.length;__i++)__o.push((function(l){return l.name+':'+l.frames[0].visible+':'+l.frames[0].locked})(__a[__i]));return __o.join('|');})()"
     }
    ],
    "shot": null
@@ -227,7 +227,7 @@
      }
     },
     {
-     "log_value": "fw.getDocumentDOM().layers.map(function(l){return l.name+':'+l.frames[0].visible+':'+l.frames[0].locked}).join('|')"
+     "log_value": "(function(){var __a=fw.getDocumentDOM().layers,__o=[];for(var __i=0;__i<__a.length;__i++)__o.push((function(l){return l.name+':'+l.frames[0].visible+':'+l.frames[0].locked})(__a[__i]));return __o.join('|');})()"
     }
    ],
    "shot": {
@@ -417,7 +417,7 @@
      }
     },
     {
-     "log_value": "fw.getDocumentDOM().layers.map(function(l){return l.name}).join('|')"
+     "log_value": "(function(){var __a=fw.getDocumentDOM().layers,__o=[];for(var __i=0;__i<__a.length;__i++)__o.push((function(l){return l.name})(__a[__i]));return __o.join('|');})()"
     }
    ],
    "fp": [
@@ -432,7 +432,7 @@
      }
     },
     {
-     "log_value": "fw.getDocumentDOM().layers.map(function(l){return l.name}).join('|')"
+     "log_value": "(function(){var __a=fw.getDocumentDOM().layers,__o=[];for(var __i=0;__i<__a.length;__i++)__o.push((function(l){return l.name})(__a[__i]));return __o.join('|');})()"
     }
    ],
    "note": "R-7 (M9 re 42 §2): the reference collapses Gemeinsam, Unterebene and Ebene 2 first (setLayerDisclosure), otherwise Ebene 3 and Ebene 1 are not visible together; Ebene 3 is locked - expected for 09 'no change' (into a locked layer is refused), 15 'no change' (web layer does not move)"
@@ -463,7 +463,7 @@
      }
     },
     {
-     "log_value": "fw.getDocumentDOM().layers.map(function(l){return l.name+':'+l.frames[0].elements.length}).join('|')"
+     "log_value": "(function(){var __a=fw.getDocumentDOM().layers,__o=[];for(var __i=0;__i<__a.length;__i++)__o.push((function(l){return l.name+':'+l.frames[0].elements.length})(__a[__i]));return __o.join('|');})()"
     }
    ],
    "shot": null
@@ -634,7 +634,7 @@
      }
     },
     {
-     "log_value": "fw.getDocumentDOM().layers.map(function(l){return l.name}).join('|')"
+     "log_value": "(function(){var __a=fw.getDocumentDOM().layers,__o=[];for(var __i=0;__i<__a.length;__i++)__o.push((function(l){return l.name})(__a[__i]));return __o.join('|');})()"
     }
    ],
    "fp": [
@@ -649,7 +649,7 @@
      }
     },
     {
-     "log_value": "fw.getDocumentDOM().layers.map(function(l){return l.name}).join('|')"
+     "log_value": "(function(){var __a=fw.getDocumentDOM().layers,__o=[];for(var __i=0;__i<__a.length;__i++)__o.push((function(l){return l.name})(__a[__i]));return __o.join('|');})()"
     }
    ]
   },
@@ -887,7 +887,7 @@
      "key": "Ctrl+Z"
     },
     {
-     "log_value": "fw.getDocumentDOM().layers.map(function(l){return l.name+':'+l.frames[0].visible+':'+l.frames[0].locked}).join('|')"
+     "log_value": "(function(){var __a=fw.getDocumentDOM().layers,__o=[];for(var __i=0;__i<__a.length;__i++)__o.push((function(l){return l.name+':'+l.frames[0].visible+':'+l.frames[0].locked})(__a[__i]));return __o.join('|');})()"
     }
    ],
    "shot": null,

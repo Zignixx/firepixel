@@ -145,7 +145,7 @@
      "key": "Enter"
     },
     {
-     "log_value": "fw.selection.map(function(e){var r=e.pixelRect;return e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom}).join('|')"
+     "log_value": "(function(){var __a=fw.selection,__o=[];for(var __i=0;__i<__a.length;__i++)__o.push((function(e){var r=e.pixelRect;return e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom})(__a[__i]));return __o.join('|');})()"
     }
    ],
    "shot": null
@@ -201,7 +201,7 @@
      "click": "Links ausrichten"
     },
     {
-     "log_value": "fw.selection.map(function(e){var r=e.pixelRect;return e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom}).join('|')"
+     "log_value": "(function(){var __a=fw.selection,__o=[];for(var __i=0;__i<__a.length;__i++)__o.push((function(e){var r=e.pixelRect;return e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom})(__a[__i]));return __o.join('|');})()"
     }
    ],
    "shot": {
@@ -233,7 +233,7 @@
      "click": "Horizontal zentrieren"
     },
     {
-     "log_value": "fw.selection.map(function(e){var r=e.pixelRect;return e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom}).join('|')"
+     "log_value": "(function(){var __a=fw.selection,__o=[];for(var __i=0;__i<__a.length;__i++)__o.push((function(e){var r=e.pixelRect;return e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom})(__a[__i]));return __o.join('|');})()"
     }
    ],
    "shot": null
@@ -263,7 +263,7 @@
      "click": "Rechts ausrichten"
     },
     {
-     "log_value": "fw.selection.map(function(e){var r=e.pixelRect;return e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom}).join('|')"
+     "log_value": "(function(){var __a=fw.selection,__o=[];for(var __i=0;__i<__a.length;__i++)__o.push((function(e){var r=e.pixelRect;return e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom})(__a[__i]));return __o.join('|');})()"
     }
    ],
    "shot": null
@@ -293,7 +293,7 @@
      "click": "Oben ausrichten"
     },
     {
-     "log_value": "fw.selection.map(function(e){var r=e.pixelRect;return e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom}).join('|')"
+     "log_value": "(function(){var __a=fw.selection,__o=[];for(var __i=0;__i<__a.length;__i++)__o.push((function(e){var r=e.pixelRect;return e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom})(__a[__i]));return __o.join('|');})()"
     }
    ],
    "shot": null
@@ -323,7 +323,7 @@
      "click": "Vertikal zentrieren"
     },
     {
-     "log_value": "fw.selection.map(function(e){var r=e.pixelRect;return e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom}).join('|')"
+     "log_value": "(function(){var __a=fw.selection,__o=[];for(var __i=0;__i<__a.length;__i++)__o.push((function(e){var r=e.pixelRect;return e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom})(__a[__i]));return __o.join('|');})()"
     }
    ],
    "shot": null
@@ -353,7 +353,7 @@
      "click": "Unten ausrichten"
     },
     {
-     "log_value": "fw.selection.map(function(e){var r=e.pixelRect;return e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom}).join('|')"
+     "log_value": "(function(){var __a=fw.selection,__o=[];for(var __i=0;__i<__a.length;__i++)__o.push((function(e){var r=e.pixelRect;return e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom})(__a[__i]));return __o.join('|');})()"
     }
    ],
    "shot": null
@@ -383,7 +383,7 @@
      "click": "Oberkanten verteilen"
     },
     {
-     "log_value": "fw.selection.map(function(e){var r=e.pixelRect;return e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom}).join('|')"
+     "log_value": "(function(){var __a=fw.selection,__o=[];for(var __i=0;__i<__a.length;__i++)__o.push((function(e){var r=e.pixelRect;return e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom})(__a[__i]));return __o.join('|');})()"
     }
    ],
    "shot": null
@@ -413,7 +413,7 @@
      "click": "Vertikale Mitten verteilen"
     },
     {
-     "log_value": "fw.selection.map(function(e){var r=e.pixelRect;return e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom}).join('|')"
+     "log_value": "(function(){var __a=fw.selection,__o=[];for(var __i=0;__i<__a.length;__i++)__o.push((function(e){var r=e.pixelRect;return e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom})(__a[__i]));return __o.join('|');})()"
     }
    ],
    "shot": null
@@ -443,7 +443,7 @@
      "click": "Unterkanten verteilen"
     },
     {
-     "log_value": "fw.selection.map(function(e){var r=e.pixelRect;return e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom}).join('|')"
+     "log_value": "(function(){var __a=fw.selection,__o=[];for(var __i=0;__i<__a.length;__i++)__o.push((function(e){var r=e.pixelRect;return e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom})(__a[__i]));return __o.join('|');})()"
     }
    ],
    "shot": null
@@ -473,7 +473,7 @@
      "click": "Linke Kanten verteilen"
     },
     {
-     "log_value": "fw.selection.map(function(e){var r=e.pixelRect;return e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom}).join('|')"
+     "log_value": "(function(){var __a=fw.selection,__o=[];for(var __i=0;__i<__a.length;__i++)__o.push((function(e){var r=e.pixelRect;return e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom})(__a[__i]));return __o.join('|');})()"
     }
    ],
    "shot": null
@@ -503,7 +503,7 @@
      "click": "Horizontale Mitten verteilen"
     },
     {
-     "log_value": "fw.selection.map(function(e){var r=e.pixelRect;return e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom}).join('|')"
+     "log_value": "(function(){var __a=fw.selection,__o=[];for(var __i=0;__i<__a.length;__i++)__o.push((function(e){var r=e.pixelRect;return e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom})(__a[__i]));return __o.join('|');})()"
     }
    ],
    "shot": {
@@ -535,7 +535,7 @@
      "click": "Rechte Kanten verteilen"
     },
     {
-     "log_value": "fw.selection.map(function(e){var r=e.pixelRect;return e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom}).join('|')"
+     "log_value": "(function(){var __a=fw.selection,__o=[];for(var __i=0;__i<__a.length;__i++)__o.push((function(e){var r=e.pixelRect;return e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom})(__a[__i]));return __o.join('|');})()"
     }
    ],
    "shot": null
@@ -565,7 +565,7 @@
      "click": "Breite angleichen"
     },
     {
-     "log_value": "fw.selection.map(function(e){var r=e.pixelRect;return e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom}).join('|')"
+     "log_value": "(function(){var __a=fw.selection,__o=[];for(var __i=0;__i<__a.length;__i++)__o.push((function(e){var r=e.pixelRect;return e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom})(__a[__i]));return __o.join('|');})()"
     }
    ],
    "shot": null
@@ -595,7 +595,7 @@
      "click": "Höhe angleichen"
     },
     {
-     "log_value": "fw.selection.map(function(e){var r=e.pixelRect;return e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom}).join('|')"
+     "log_value": "(function(){var __a=fw.selection,__o=[];for(var __i=0;__i<__a.length;__i++)__o.push((function(e){var r=e.pixelRect;return e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom})(__a[__i]));return __o.join('|');})()"
     }
    ],
    "shot": null
@@ -625,7 +625,7 @@
      "click": "Breite und Höhe angleichen"
     },
     {
-     "log_value": "fw.selection.map(function(e){var r=e.pixelRect;return e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom}).join('|')"
+     "log_value": "(function(){var __a=fw.selection,__o=[];for(var __i=0;__i<__a.length;__i++)__o.push((function(e){var r=e.pixelRect;return e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom})(__a[__i]));return __o.join('|');})()"
     }
    ],
    "shot": null
@@ -655,7 +655,7 @@
      "click": "Horizontal gleichmäßig verteilen"
     },
     {
-     "log_value": "fw.selection.map(function(e){var r=e.pixelRect;return e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom}).join('|')"
+     "log_value": "(function(){var __a=fw.selection,__o=[];for(var __i=0;__i<__a.length;__i++)__o.push((function(e){var r=e.pixelRect;return e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom})(__a[__i]));return __o.join('|');})()"
     }
    ],
    "shot": null
@@ -685,7 +685,7 @@
      "click": "Vertikal gleichmäßig verteilen"
     },
     {
-     "log_value": "fw.selection.map(function(e){var r=e.pixelRect;return e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom}).join('|')"
+     "log_value": "(function(){var __a=fw.selection,__o=[];for(var __i=0;__i<__a.length;__i++)__o.push((function(e){var r=e.pixelRect;return e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom})(__a[__i]));return __o.join('|');})()"
     }
    ],
    "shot": null
@@ -857,7 +857,7 @@
      "click": "Vereinigen"
     },
     {
-     "log_value": "fw.selection.map(function(e){var r=e.pixelRect;return e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom}).join('|')"
+     "log_value": "(function(){var __a=fw.selection,__o=[];for(var __i=0;__i<__a.length;__i++)__o.push((function(e){var r=e.pixelRect;return e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom})(__a[__i]));return __o.join('|');})()"
     }
    ],
    "shot": {
@@ -889,7 +889,7 @@
      "click": "Überschneiden"
     },
     {
-     "log_value": "fw.selection.map(function(e){var r=e.pixelRect;return e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom}).join('|')"
+     "log_value": "(function(){var __a=fw.selection,__o=[];for(var __i=0;__i<__a.length;__i++)__o.push((function(e){var r=e.pixelRect;return e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom})(__a[__i]));return __o.join('|');})()"
     }
    ],
    "shot": {
@@ -923,7 +923,7 @@
      "click": "path.points.smooth"
     },
     {
-     "log_value": "fw.selection[0].contours[0].nodes.map(function(n){return n.x+','+n.y+','+n.predX+','+n.succX}).join('|')"
+     "log_value": "(function(){var __a=fw.selection[0].contours[0].nodes,__o=[];for(var __i=0;__i<__a.length;__i++)__o.push((function(n){return n.x+','+n.y+','+n.predX+','+n.succX})(__a[__i]));return __o.join('|');})()"
     }
    ],
    "shot": null
@@ -1012,7 +1012,7 @@
      "key": "Ctrl+Z"
     },
     {
-     "log_value": "fw.selection.map(function(e){var r=e.pixelRect;return e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom}).join('|')"
+     "log_value": "(function(){var __a=fw.selection,__o=[];for(var __i=0;__i<__a.length;__i++)__o.push((function(e){var r=e.pixelRect;return e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom})(__a[__i]));return __o.join('|');})()"
     }
    ],
    "shot": null,
@@ -1112,7 +1112,7 @@
      "click": "Rechts ausrichten"
     },
     {
-     "log_value": "fw.selection.map(function(e){var r=e.pixelRect;return e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom}).join('|')"
+     "log_value": "(function(){var __a=fw.selection,__o=[];for(var __i=0;__i<__a.length;__i++)__o.push((function(e){var r=e.pixelRect;return e.name+':'+r.left+','+r.top+','+r.right+','+r.bottom})(__a[__i]));return __o.join('|');})()"
     }
    ],
    "shot": null
