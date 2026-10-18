@@ -677,3 +677,4 @@ cmdtext-palette-zusaetzlich-in-diese-act-datei-schreiben = Also write the palett
 cmdtext-felder-der-html-einstellungen-fp-model-h-c0ba73 = HTML settings fields (fp_model::HtmlSettings, snake_case) as the default for new documents and exports; without = read
 cmdtext-gespeicherten-standard-entfernen-es-gelt-893276 = remove the stored default (the built-in defaults apply again)
 cmdtext-crop-tool-limit-the-frame-to-the-canvas-4c0a60 = Crop tool: limit the frame to the canvas and select everything afterwards (objects outside are deleted per the CropDocCropsImages preference)
+cmdtext-arrow-key-nudge-with-copy-the-history-ro-69900c = arrow-key nudge (with copy the history row reads "Duplicate")
