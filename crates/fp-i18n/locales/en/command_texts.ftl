@@ -663,3 +663,5 @@ cmdtext-fortsetzung-eines-zugs-ueber-die-augen-e-8fb93c = continuation of a drag
 cmdtext-fester-abstand-fuer-spaceh-spacev-sonst-9130eb = fixed spacing for spaceH/spaceV (otherwise even)
 cmdtext-aufheben-freigegebene-daten-in-current-a-0dc29a = Unshare: copy the shared data into "current" (current state) or "all" (all states, default)
 cmdtext-ebenen-id-als-oberste-unterebene-in-dies-b7f841 = Layer ID: move into this layer as its top sub-layer (TW-86, re 40 §2a)
+cmdtext-export-settings-of-the-button-slice-stor-38b4e2 = Export settings of the button slice (stored on the button symbol)
+cmdtext-spalten-des-farbfeldrasters-vorgabe-21 = Columns of the swatch grid (default 21)

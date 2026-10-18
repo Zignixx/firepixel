@@ -663,3 +663,5 @@ cmdtext-fortsetzung-eines-zugs-ueber-die-augen-e-8fb93c = Fortsetzung eines Zugs
 cmdtext-fester-abstand-fuer-spaceh-spacev-sonst-9130eb = fester Abstand für spaceH/spaceV (sonst gleichmäßig)
 cmdtext-aufheben-freigegebene-daten-in-current-a-0dc29a = Aufheben: freigegebene Daten in "current" (aktuellen Status) oder "all" (alle Status, Vorgabe) kopieren
 cmdtext-ebenen-id-als-oberste-unterebene-in-dies-b7f841 = Ebenen-ID: als oberste Unterebene in diese Ebene verschieben (TW-86, re 40 §2a)
+cmdtext-export-settings-of-the-button-slice-stor-38b4e2 = Exporteinstellungen des Button-Slice (am Button-Symbol gespeichert)
+cmdtext-spalten-des-farbfeldrasters-vorgabe-21 = Spalten des Farbfeldrasters (Vorgabe 21)
