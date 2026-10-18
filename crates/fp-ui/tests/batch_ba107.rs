@@ -595,3 +595,38 @@ fn real_run_resets_progress_and_finishes() {
     assert!(!studio(&mut h).running());
     assert!(studio(&mut h).files.iter().all(|f| f.status == batch::EntryStatus::Done), "{:?}", studio(&mut h).files.iter().map(|f| (f.status, f.message.clone())).collect::<Vec<_>>());
 }
+
+// ------------------------------------------------------------------ remaining BA-107: "Read video" card
+
+#[test]
+fn adding_a_video_inserts_the_read_video_card() {
+    let d = dir("video");
+    let img = png_file(&d, "a.png", 40, 30, false);
+    let v1 = d.join("clip.mp4");
+    let v2 = d.join("clip2.mp4");
+    std::fs::write(&v1, b"not a real video").expect("mp4");
+    std::fs::write(&v2, b"not a real video").expect("mp4");
+    let mut h = open(&[img]);
+    assert!(studio(&mut h).recipe.steps.is_empty(), "no card for images");
+    studio(&mut h).add_paths(std::slice::from_ref(&v1), false);
+    h.run_steps(2);
+    let ids: Vec<String> = studio(&mut h).recipe.steps.iter().map(|s| s.id.clone()).collect();
+    assert_eq!(ids, ["video.import"]);
+    assert_eq!(studio(&mut h).open_card, Some(batch::CardId::Step(0)), "card visible and open");
+    assert!(has_text(&h, &fp_batch::step::step_label("video.import")));
+    // a second video: no second card
+    studio(&mut h).add_paths(std::slice::from_ref(&v2), false);
+    assert_eq!(studio(&mut h).recipe.steps.len(), 1);
+    // one undo step
+    key(&mut h, Key::Z, Modifiers::COMMAND);
+    assert!(studio(&mut h).recipe.steps.is_empty());
+    // a recipe with file steps only (copy/rename) gets no card
+    studio(&mut h).clear_files();
+    let id = fp_batch::steps::files::COPY_ONLY;
+    studio(&mut h).edit("add", |r| {
+        r.add_step(id, json!({}));
+        true
+    });
+    studio(&mut h).add_paths(&[v1, v2], false);
+    assert_eq!(studio(&mut h).recipe.steps.len(), 1);
+}

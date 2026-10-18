@@ -414,7 +414,8 @@ fn ffmpeg_fehlt_hinweis_in_zeile_und_karte_oeffnet_einstellungen() {
     {
         let s = studio(&mut h);
         s.add_paths(&[p, v], false);
-        batch::recipe::add_step(s, "video.import");
+        // the card "Read video" comes with the video (BA-107)
+        assert_eq!(s.recipe.steps.iter().filter(|c| c.id == "video.import").count(), 1);
     }
     settle(&mut h);
     let now = h.ctx.input(|i| i.time);
@@ -558,7 +559,7 @@ fn batch11b_bilder() {
                         s.end_gesture();
                         s.open_card = Some(CardId::Output);
                     } else if view == "video" {
-                        batch::recipe::add_step(s, "video.import");
+                        s.open_card = Some(CardId::Step(0)); // "Read video" came with the video
                     } else {
                         // Lauf ohne das Video, danach die Ende-Karte mit „Bericht ansehen“
                         let last = s.files.len() - 1;

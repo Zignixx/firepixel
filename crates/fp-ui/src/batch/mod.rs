@@ -325,6 +325,7 @@ impl Studio {
         let existing: Vec<ItemInfo> = self.files.iter().map(|f| f.info.clone()).collect();
         let c = fp_batch::collect(paths, recursive, allow_other, &existing);
         let n = c.items.len();
+        let videos = c.items.iter().any(|i| i.kind == fp_batch::ItemKind::Video);
         if self.files.is_empty() && n > 0 {
             self.forget_report(); // neue Liste: Zahlen des letzten Laufs gehören nicht dazu (BATCH-T)
         }
@@ -354,8 +355,33 @@ impl Studio {
                 f.pos = end + 1 + k;
             }
         }
+        if videos && !allow_other {
+            self.ensure_video_import();
+        }
         self.files_changed();
         (n, c.duplicates.len(), c.skipped.len())
+    }
+
+    /// Videos need the card "Read video" (`video.import`, SPEC §3.8 "automatic for videos, card
+    /// visible"): inserted at the top and opened when a video is added and the recipe has none
+    /// (one undo step). Returns `true` when inserted.
+    pub fn ensure_video_import(&mut self) -> bool {
+        let id = fp_batch::steps::anim::VIDEO_IMPORT;
+        if self.running() || self.recipe.steps.iter().any(|s| s.id == id) {
+            return false;
+        }
+        self.end_gesture();
+        let added = self.edit("video-import", |r| {
+            r.steps
+                .insert(0, fp_batch::StepConfig::new(id, serde_json::json!({})));
+            true
+        });
+        self.end_gesture();
+        if added {
+            self.open_card = Some(CardId::Step(0));
+            self.show_more = false;
+        }
+        added
     }
 
     /// Fügt hinzu und meldet Doppelte/Übersprungene als Hinweis.
