@@ -166,7 +166,8 @@ fn layers_panel_clipboard_delete_arrows() {
     assert_eq!(h.state().state.session.clipboard.elements.len(), 1, "Strg+C kopiert das gewählte Objekt");
     ctrl_v(&mut h, None);
     assert_eq!(names(&h).len(), 3, "Strg+V fügt ein");
-    assert_eq!(undo_count(&h), n0 + 1);
+    // Copy and Paste are one history row each (TW-137, RE spec 49 section 1)
+    assert_eq!(undo_count(&h), n0 + 2, "Copy row + Paste row");
     // Paste mit Text in der Systemablage: wieder genau einmal
     ctrl_v(&mut h, Some("Text"));
     assert_eq!(names(&h).len(), 4, "kein doppeltes Einfügen");

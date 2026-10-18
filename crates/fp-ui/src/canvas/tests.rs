@@ -357,9 +357,20 @@ fn clipboard_and_menu_shortcuts_with_real_event_sequences() {
         !h.state().state.session.clipboard.elements.is_empty(),
         "Strg+C kopiert das Objekt"
     );
+    // Copy is a history row of its own like in the original (TW-137, RE spec 49 section 1)
+    assert_eq!(undo_count(&h), n0 + 1, "Ctrl+C adds the Copy row");
+    assert_eq!(
+        h.state()
+            .state
+            .session
+            .active()
+            .and_then(|d| d.history.undo_label().map(str::to_owned)),
+        Some(fp_i18n::t("msg-step-copy")),
+        "the extra row is Copy"
+    );
     ctrl_v(&mut h, None);
     assert_eq!(top(&h).len(), 2, "Strg+V fügt ein");
-    assert_eq!(undo_count(&h), n0 + 1, "ein Verlaufsschritt");
+    assert_eq!(undo_count(&h), n0 + 2, "Copy row + one Paste row");
     let d = h.state().state.session.active().expect("d");
     let b0 = fp_engine::docops::element_bounds(&d.doc, &top(&h)[0]).expect("b");
     assert_eq!(

@@ -423,7 +423,10 @@ fn o8_horizontal_scale_with_percent() {
     // Textwerkzeug ohne Auswahl
     h.state_mut().state.session.execute("select.none", json!({})).expect("nichts");
     tool(&mut h, ToolId::Text);
-    assert!(input_with(&h, "100%").1, "Werkzeug: „100%“");
+    // Text tool without a selection shows the tool defaults. Values set on text objects selected
+    // with the pointer are stored as defaults (TW-138, RE spec 49 section 2.5) and undo does not
+    // reset preferences, so the last typed value (109 %) is the default now.
+    assert!(input_with(&h, "109%").1, "tool: default from the last object edit");
 }
 
 // ------------------------------------------------------------------ O16 Stil-Liste
