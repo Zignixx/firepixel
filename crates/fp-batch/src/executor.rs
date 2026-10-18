@@ -1114,21 +1114,74 @@ fn run_collect(job: &Job, plan: &Plan, k: usize) -> Vec<ItemReport> {
             BatchError::Step { .. } | BatchError::Cancelled(_) => e,
             other => BatchError::step(step.step.id(), other.to_string()),
         });
-    let outputs = match collected {
+    let fail_all = |reports: &mut Vec<ItemReport>, e: &BatchError, id: &str| {
+        for rep in reports.iter_mut().filter(|r| indices.contains(&r.index)) {
+            rep.status = if e.is_cancelled() {
+                ItemStatus::Cancelled
+            } else {
+                ItemStatus::Failed
+            };
+            rep.error = (!e.is_cancelled()).then(|| e.to_string());
+            rep.step = Some(id.to_string());
+        }
+    };
+    let mut outputs = match collected {
         Ok(o) => o,
         Err(e) => {
-            for rep in reports.iter_mut().filter(|r| indices.contains(&r.index)) {
-                rep.status = if e.is_cancelled() {
-                    ItemStatus::Cancelled
-                } else {
-                    ItemStatus::Failed
-                };
-                rep.error = (!e.is_cancelled()).then(|| e.to_string());
-                rep.step = Some(step.step.id().to_string());
-            }
+            fail_all(&mut reports, &e, step.step.id());
             return reports;
         }
     };
+    // B-4: further collect steps form a chain (e.g. dedupe → pages → contact sheet): the per-item
+    // steps between two collect steps run on every intermediate result, then the next collect
+    // step gets all of them. The last collect step decides how results are written.
+    let mut step = step;
+    let mut k = k;
+    while let Some(k2) = job.pipe.next_collect_after(k) {
+        let mut mid = Vec::with_capacity(outputs.len());
+        for mut out in outputs {
+            let own = crate::steps::fileops::item_index(&out, first);
+            let info = &job.items[own];
+            let mut c2 = StepContext::new(own, job.total, info, cancel, fmt);
+            let r = job.pipe.apply_range(k + 1..k2, &mut out, &mut c2);
+            let rep = reports.iter_mut().find(|r| r.index == own);
+            match (r, rep) {
+                (Ok(()), rep) => {
+                    if let Some(rep) = rep {
+                        rep.warnings.extend(c2.warnings);
+                    }
+                    mid.push(out);
+                }
+                (Err(BatchError::Filtered { reason, .. }), Some(rep)) => {
+                    ctx.item_skips.push((rep.index, reason));
+                }
+                (Err(e), Some(rep)) if !e.is_cancelled() => {
+                    rep.status = ItemStatus::Failed;
+                    rep.error = Some(e.to_string());
+                }
+                _ => {}
+            }
+        }
+        if cancel.is_cancelled() {
+            return reports;
+        }
+        let next = &job.pipe.steps[k2];
+        outputs = match next
+            .step
+            .collect(mid, &next.params, &mut ctx)
+            .map_err(|e| match e {
+                BatchError::Step { .. } | BatchError::Cancelled(_) => e,
+                other => BatchError::step(next.step.id(), other.to_string()),
+            }) {
+            Ok(o) => o,
+            Err(e) => {
+                fail_all(&mut reports, &e, next.step.id());
+                return reports;
+            }
+        };
+        step = next;
+        k = k2;
+    }
     for (index, reason) in std::mem::take(&mut ctx.item_skips) {
         if let Some(rep) = reports.iter_mut().find(|r| r.index == index) {
             rep.status = ItemStatus::Skipped;
@@ -1139,9 +1192,9 @@ fn run_collect(job: &Job, plan: &Plan, k: usize) -> Vec<ItemReport> {
     let indices: Vec<usize> = indices
         .into_iter()
         .filter(|i| {
-            reports
-                .iter()
-                .any(|r| r.index == *i && r.status != ItemStatus::Skipped)
+            reports.iter().any(|r| {
+                r.index == *i && r.status != ItemStatus::Skipped && r.status != ItemStatus::Failed
+            })
         })
         .collect();
     let (dir, stem, ext) = {

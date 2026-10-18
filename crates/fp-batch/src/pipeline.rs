@@ -116,6 +116,16 @@ impl Pipeline {
             .position(|r| r.step.kind() == StepKind::Collect)
     }
 
+    /// B-4: position of the next collect step after `k` (collect stages are chained).
+    pub fn next_collect_after(&self, k: usize) -> Option<usize> {
+        self.steps
+            .iter()
+            .enumerate()
+            .skip(k + 1)
+            .find(|(_, r)| r.step.kind() == StepKind::Collect)
+            .map(|(i, _)| i)
+    }
+
     /// Wendet die Einzelschritte `range` an (Abbruch zwischen den Schritten). Schritte, die nicht
     /// auf die Element-Art wirken, bleiben ohne Wirkung (Warnung).
     pub fn apply_range(

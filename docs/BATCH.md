@@ -702,7 +702,11 @@ Long runs over MCP: `batch.run` with `async: true` returns `{jobId}`; `batch.sta
 3. **Execute**: rayon pool with `threads` = cores − 1 (at least 1, configurable). Per item: decode →
    steps in order → encode → temporary file `.<name>.fptmp` → `rename`. Collect steps
    (`anim.fromFrames`, `overlay.contactSheet`, PDF "all in one") run after the per-item steps in a
-   second phase.
+   second phase. Several collect steps form a **chain** (B-4): the per-item steps between two
+   collect steps run on every intermediate result, then the next collect step gets all of them
+   (e.g. `file.dedupe` → `document.pages` → `overlay.contactSheet`); inputs dropped by an earlier
+   stage are reported as skipped, and the last collect step decides how the results are written.
+   With one collect step the behaviour is unchanged.
    **Extra outputs** (hook `write_extras`): after the main file, producers may write further files
    next to it with the same stem: the editable FW-PNG (`alsoFwpng`) and the sprite-sheet atlas
    (`.json`/`.css`). Each extra file is written atomically, follows the recipe's conflict rule
