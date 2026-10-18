@@ -593,6 +593,11 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 },
                 "Textrichtung (Vorgabe: Textwerkzeug, Text_Orientation)",
             )
+            .opt(
+                "initFromPrefs",
+                ParamKind::Bool,
+                "Text_*-Vorgaben übernehmen (Vorgabe: ja)",
+            )
             .run(|s, p| {
                 let text = super::text::normalize_breaks(&p.str("text")?);
                 // Glättung, Unterschneidung und Richtung sind Objektattribute; neue Texte bekommen die
@@ -614,8 +619,17 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 let size = p.f64_or("size", s.tools.options.text_size as f64)? as f32;
                 let color = p.opt_color("color")?.unwrap_or(s.tools.options.text_color);
                 let rect = p.opt_rect("rect")?;
-                let lead = s.prefs.get_real("Text_Leading", 1.2);
-                let pref_attrs = super::text::new_text_pref_attrs(&s.prefs);
+                // `initFromPrefs: false` (script `addNewText(rect, false)`): factory alignment,
+                // style and leading instead of the `Text_*` defaults (re 50 section 2.3)
+                let from_prefs = p.opt_bool("initFromPrefs")?.unwrap_or(true);
+                let (lead, pref_attrs) = if from_prefs {
+                    (
+                        s.prefs.get_real("Text_Leading", 1.2),
+                        super::text::new_text_pref_attrs(&s.prefs),
+                    )
+                } else {
+                    (1.2, fp_model::text::TextAttrs::default())
+                };
                 let anchor = p
                     .opt_point("anchor")?
                     .or_else(|| rect.map(|r| Point::new(r.left, r.top + size)))

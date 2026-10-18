@@ -555,6 +555,7 @@ cmdtext-textrichtung-neuer-texte = Textrichtung neuer Texte
 cmdtext-glaettung-vorgabe-textwerkzeug-text-anti-d915dd = Glättung (Vorgabe: Textwerkzeug, Text_AntiAliasLevel)
 cmdtext-automatische-unterschneidung-vorgabe-tex-fe97e1 = automatische Unterschneidung (Vorgabe: Textwerkzeug, Text_AutoKern)
 cmdtext-textrichtung-vorgabe-textwerkzeug-text-o-89d01a = Textrichtung (Vorgabe: Textwerkzeug, Text_Orientation)
+cmdtext-text-vorgaben-uebernehmen-vorgabe-ja = Text_*-Vorgaben übernehmen (Vorgabe: ja)
 cmdtext-strich-als-zeichenbefehl-command-draw-pa-7d1c61 = Strich als Zeichenbefehl {"{"}command: draw.path|tool.shape, params{"}"} – wird mit dem Werkzeugstrich gerendert
 cmdtext-rand-0-100-vorgabe-werkzeugeinstellung = Rand 0..100 (Vorgabe: Werkzeugeinstellung)
 cmdtext-reduziertes-png-speichern = reduziertes PNG speichern

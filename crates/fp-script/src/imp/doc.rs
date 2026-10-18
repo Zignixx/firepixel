@@ -851,6 +851,7 @@ pub(super) fn method(doc: DocId, name: &str, args: &[Arg], ctx: &mut Context) ->
                 p["antialias"] = json!("smooth");
                 p["autoKern"] = json!(false);
                 p["orientation"] = json!("horizontalLtr");
+                p["initFromPrefs"] = json!(false);
             }
             if (r[2] - r[0]).abs() > 2.0 {
                 p["rect"] = rect_arr(r);
@@ -1456,10 +1457,20 @@ pub(super) fn method(doc: DocId, name: &str, args: &[Arg], ctx: &mut Context) ->
             set_text_runs(doc, &a(0).json())?;
             u()
         }
-        "setTextAlignment" => match text_align_code(&arg_str(args, 0)) {
-            Some(al) => on_selection(doc, "text.setAttributes", json!({"alignment": al})),
-            None => u(),
-        },
+        // same path as Text > Align and the inspector (TW-133, re 50 section 1.2): writes
+        // `Text_Justification` as given (also 4), stores "stretch" as left, "Text Change" step
+        "setTextAlignment" => {
+            let cmd = match text_align_code(&arg_str(args, 0)) {
+                Some(0) => "text.align.left",
+                Some(1) => "text.align.centeredHorizontally",
+                Some(2) => "text.align.right",
+                Some(3) => "text.align.justified",
+                Some(4) => "text.align.stretched",
+                _ => return u(),
+            };
+            exec(Some(doc), cmd, json!({}))?;
+            u()
+        }
         "setTextAutoKern" => {
             let v = a(0).bool();
             super::set_text_props(doc, None, json!({"autoKern": v}))?;

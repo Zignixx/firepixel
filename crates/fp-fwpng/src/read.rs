@@ -1507,6 +1507,12 @@ fn read_points(v: &[RawNode], ctx: &mut ReadCtx) -> PointList {
     }
 }
 
+/// Alignment the text engine keeps for `JSTi` (TW-133, re 50 section 1.2): "stretched" (4, or
+/// 0x14 vertical) cannot be represented and loads as left (0 / 0x10); the writer then stores 0.
+fn stored_alignment(v: i32) -> i32 {
+    if v & 0x0f >= 4 { v & 0x10 } else { v }
+}
+
 /// Textattribute (Kopf bzw. Attributblock).
 fn read_text_attrs(r: &mut Rd) -> TextAttrs {
     TextAttrs {
@@ -1522,7 +1528,7 @@ fn read_text_attrs(r: &mut Rd) -> TextAttrs {
         baseline_shift: r.f32(k!(b"BLSf")),
         leading: r.f32(k!(b"LEDf")),
         leading_mode: r.i32(k!(b"LDMi")),
-        alignment: r.i32(k!(b"JSTi")),
+        alignment: r.i32(k!(b"JSTi")).map(stored_alignment),
         color: r.int(k!(b"FCLi")),
         indent: r.f32(k!(b"PINf")),
         space_before: r.f32(k!(b"PSBf")),

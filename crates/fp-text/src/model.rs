@@ -60,13 +60,13 @@ pub enum Alignment {
 }
 
 impl Alignment {
-    /// Aus `JSTi` (0–4, vertikal 0x10–0x14); unbekannt → links.
+    /// From `JSTi` (0-4, vertical 0x10-0x14). "Stretched" (4) loads as left like in the
+    /// reference text engine, which never stores it (TW-133, re 50 section 1.2); unknown → left.
     pub fn from_jsti(v: i64) -> Self {
         match v & 0x0f {
             1 => Alignment::Center,
             2 => Alignment::Right,
             3 => Alignment::Justify,
-            4 => Alignment::Stretch,
             _ => Alignment::Left,
         }
     }

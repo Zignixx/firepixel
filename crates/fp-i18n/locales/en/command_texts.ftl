@@ -555,6 +555,7 @@ cmdtext-textrichtung-neuer-texte = Text orientation of new texts
 cmdtext-glaettung-vorgabe-textwerkzeug-text-anti-d915dd = Anti-aliasing (default: Text tool, Text_AntiAliasLevel)
 cmdtext-automatische-unterschneidung-vorgabe-tex-fe97e1 = automatic kerning (default: Text tool, Text_AutoKern)
 cmdtext-textrichtung-vorgabe-textwerkzeug-text-o-89d01a = Text orientation (default: Text tool, Text_Orientation)
+cmdtext-text-vorgaben-uebernehmen-vorgabe-ja = take the Text_* defaults (default: yes)
 cmdtext-strich-als-zeichenbefehl-command-draw-pa-7d1c61 = Stroke as a drawing command {"{"}command: draw.path|tool.shape, params{"}"} – rendered with the tool stroke
 cmdtext-rand-0-100-vorgabe-werkzeugeinstellung = Edge 0..100 (default: tool setting)
 cmdtext-reduziertes-png-speichern = save as flattened PNG
