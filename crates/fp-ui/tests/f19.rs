@@ -112,13 +112,13 @@ fn menu_rows(h: &H, p: fp_ui::panels::PanelId) -> Vec<String> {
 }
 
 /// TW-73/74: Bedienfeldmenüs Allgemeine Bibliothek und Automatische Formen mit den Einträgen des
-/// Originals (ohne Wirkung grau), danach „Hilfe“.
+/// Originals (ohne Wirkung grau), danach „Hilfe“; ellipses as in the reference (run 17, TW-125).
 #[test]
 fn tw73_tw74_library_and_auto_shapes_menus() {
     let h = setup();
     assert_eq!(
         menu_rows(&h, fp_ui::panels::PanelId::CommonLibrary),
-        ["Neuer Ordner (grau)", "Löschen (grau)", "Duplizieren (grau)", "Umbenennen (grau)", "Neu laden (grau)", "---", "Hilfe"]
+        ["Neuer Ordner... (grau)", "Löschen (grau)", "Duplizieren... (grau)", "Umbenennen (grau)", "Neu laden (grau)", "---", "Hilfe"]
     );
     assert_eq!(menu_rows(&h, fp_ui::panels::PanelId::AutoShapes), ["Zusätzliche automatische Formen... (grau)", "---", "Hilfe"]);
 }

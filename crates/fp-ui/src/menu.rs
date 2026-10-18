@@ -1015,7 +1015,32 @@ fn item_width(ui: &Ui, label: &str, shortcut: Option<&str>) -> f32 {
     let sw = shortcut
         .map(|s| crate::widgets::text_width(ui, s, &font) + 30.0)
         .unwrap_or(0.0);
-    (CHECK_COL + lw + sw.max(ARROW_COL) + RIGHT_PAD + 10.0).max(theme.metrics.menu_min_width - 8.0)
+    let min = if is_content_sized(ui.ctx()) {
+        0.0
+    } else {
+        theme.metrics.menu_min_width - 8.0
+    };
+    (CHECK_COL + lw + sw.max(ARROW_COL) + RIGHT_PAD + 10.0).max(min)
+}
+
+/// egui memory key: menus drawn right now belong to a panel (≡ menu, tab or context menu of a
+/// panel) and are as wide as their widest entry, without the minimum width of the main menus
+/// (TW-125: Common Library 179 px, States 207 px in the reference).
+const CONTENT_SIZED_ID: &str = "fp-menu-content-sized";
+
+fn is_content_sized(ctx: &egui::Context) -> bool {
+    ctx.data(|d| d.get_temp::<bool>(egui::Id::new(CONTENT_SIZED_ID)))
+        .unwrap_or(false)
+}
+
+/// Runs `f` (which shows a panel menu) with menus sized to their content (TW-125).
+pub fn content_sized<R>(ctx: &egui::Context, f: impl FnOnce() -> R) -> R {
+    let id = egui::Id::new(CONTENT_SIZED_ID);
+    let prev = is_content_sized(ctx);
+    ctx.data_mut(|d| d.insert_temp(id, true));
+    let r = f();
+    ctx.data_mut(|d| d.insert_temp(id, prev));
+    r
 }
 
 /// Breite eines Menüs: der breiteste Eintrag.
@@ -1267,6 +1292,11 @@ pub fn sub_head_checked(siblings: &[Node], children: &[Node]) -> Option<bool> {
 /// egui schiebt das Untermenü nach oben bzw. auf die andere Seite, damit es ganz zu sehen ist.
 pub fn show_submenu_body(ui: &mut Ui, children: &[Node], out: &mut Vec<Action>) {
     show_nodes(ui, children, out);
+}
+
+/// Like [`popup_menu`] for a panel menu: as wide as its widest entry (TW-125).
+pub fn panel_popup_menu(ui: &Ui, resp: &Response, nodes: &[Node], out: &mut Vec<Action>) {
+    content_sized(ui.ctx(), || popup_menu(ui, resp, nodes, out));
 }
 
 /// Öffnet ein Menü-Popup an `resp` (Bedienfeldmenü, Flyout-ähnliche Menüs).

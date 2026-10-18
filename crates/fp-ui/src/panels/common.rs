@@ -319,7 +319,9 @@ pub fn resource_context_menu(resp: &egui::Response, st: &mut crate::app_state::A
         .show(|ui| {
             // Einträge erst beim Öffnen bilden (Zustände/Häkchen aus dem Register)
             let nodes = resource_menu_nodes(view, id);
-            crate::menu::show_nodes(ui, &nodes, &mut acts)
+            crate::menu::content_sized(&ui.ctx().clone(), || {
+                crate::menu::show_nodes(ui, &nodes, &mut acts)
+            })
         });
     for a in acts {
         st.push(a);
@@ -338,7 +340,11 @@ pub fn nodes_context_menu(
         .frame(crate::menu::menu_frame(&theme))
         .close_behavior(crate::menu::MENU_CLOSE)
         .info(crate::menu::menu_info())
-        .show(|ui| crate::menu::show_nodes(ui, nodes, out));
+        .show(|ui| {
+            crate::menu::content_sized(&ui.ctx().clone(), || {
+                crate::menu::show_nodes(ui, nodes, out)
+            })
+        });
 }
 
 pub fn resource_menu(
@@ -349,7 +355,7 @@ pub fn resource_menu(
 ) {
     let nodes = resource_menu_nodes(st, id);
     let mut acts = Vec::new();
-    crate::menu::popup_menu(ui, resp, &nodes, &mut acts);
+    crate::menu::panel_popup_menu(ui, resp, &nodes, &mut acts);
     for a in acts {
         st.push(a);
     }

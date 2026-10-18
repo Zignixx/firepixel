@@ -424,7 +424,7 @@ fn group_ui(
     if let (Some(resp), Some(p)) = (&out.menu_clicked, active_panel) {
         let nodes = menu::build_panel_menu(st, p);
         let mut acts = Vec::new();
-        menu::popup_menu(ui, resp, &nodes, &mut acts);
+        menu::panel_popup_menu(ui, resp, &nodes, &mut acts);
         for a in acts {
             st.push(a);
         }
@@ -433,7 +433,11 @@ fn group_ui(
     let mut acts = Vec::new();
     for (i, r) in out.tab_resps.iter().enumerate() {
         if let Some(p) = vis.get(i) {
-            r.context_menu(|ui| menu::show_nodes(ui, &menu::build_tab_menu(st, *p), &mut acts));
+            r.context_menu(|ui| {
+                menu::content_sized(&ui.ctx().clone(), || {
+                    menu::show_nodes(ui, &menu::build_tab_menu(st, *p), &mut acts)
+                })
+            });
         }
     }
     for a in acts {

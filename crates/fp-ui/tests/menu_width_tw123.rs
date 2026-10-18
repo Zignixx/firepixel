@@ -167,3 +167,57 @@ fn panel_drop_down_and_context_menus_fit_their_entries() {
     let w = widest(&h, &names).max(anchor.width());
     assert_fits("swatches file menu", r, w);
 }
+
+/// Opens the ≡ menu of panel `p` (the ≡ button in the row of its tab) and returns the rect of
+/// the menu area that opened, with the labels of the panel menu.
+fn panel_menu_rect(h: &mut Harness<'_, FirepixelApp>, p: PanelId) -> (Rect, Vec<String>) {
+    use egui_kittest::kittest::{By, Queryable};
+    show(h, p);
+    let names = labels(&fp_ui::menu::build_panel_menu(&h.state().state, p));
+    let tab = h
+        .query_all(By::new().label(&fp_i18n::t(p.title_key())))
+        .map(|n| n.rect())
+        .next()
+        .expect("panel tab");
+    let button = h
+        .query_all(By::new().label(&fp_i18n::t("ui-dock-panel-menu")))
+        .map(|n| n.rect())
+        .filter(|r| r.center().y >= tab.top() && r.center().y <= tab.bottom())
+        .min_by(|a, b| (a.left() - tab.right()).abs().total_cmp(&(b.left() - tab.right()).abs()))
+        .expect("≡ button in the tab row");
+    let layers = |h: &Harness<'_, FirepixelApp>| {
+        h.ctx.memory(|m| m.areas().visible_layer_ids())
+    };
+    let before = layers(h);
+    press(h, button.center(), PointerButton::Primary);
+    let rect = h.ctx.memory(|m| {
+        m.areas()
+            .visible_layer_ids()
+            .into_iter()
+            .filter(|l| !before.contains(l))
+            .filter_map(|l| m.area_rect(l.id))
+            .find(|r| r.top() >= button.top() - 2.0)
+    });
+    (rect.expect("menu area"), names)
+}
+
+/// TW-125: short panel menus are as wide as their widest entry, not the 230 px minimum of the
+/// main menus. Reference (DE, run 17): Common Library 179 px, States 207 px, Swatches 226 px.
+#[test]
+fn short_panel_menus_size_to_content() {
+    fp_i18n::set_language("de");
+    let mut bad = Vec::new();
+    for (p, reference) in [
+        (PanelId::CommonLibrary, 179.0),
+        (PanelId::States, 207.0),
+        (PanelId::Swatches, 226.0),
+    ] {
+        let mut h = harness();
+        let (r, names) = panel_menu_rect(&mut h, p);
+        eprintln!("{p:?} ≡: {:.0} px ({names:?})", r.width());
+        if (r.width() - reference).abs() > 5.0 {
+            bad.push(format!("{p:?} ≡: {:.0} px, reference {reference} px", r.width()));
+        }
+    }
+    assert!(bad.is_empty(), "{bad:?}");
+}

@@ -263,12 +263,16 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
     let mut acts = Vec::new();
     if let Some(resp) = &out.menu_clicked {
         let nodes = crate::menu::build_inspector_menu(st);
-        crate::menu::popup_menu(ui, resp, &nodes, &mut acts);
+        crate::menu::panel_popup_menu(ui, resp, &nodes, &mut acts);
     }
     if !out.tab_resps.is_empty() {
         let nodes = crate::menu::build_inspector_tab_menu(st);
         for r in &out.tab_resps {
-            r.context_menu(|ui| crate::menu::show_nodes(ui, &nodes, &mut acts));
+            r.context_menu(|ui| {
+                crate::menu::content_sized(&ui.ctx().clone(), || {
+                    crate::menu::show_nodes(ui, &nodes, &mut acts)
+                })
+            });
         }
     }
     for a in acts {
