@@ -1026,7 +1026,20 @@
 81
 ]
 ]
+},
+"dynamic": [
+{
+"filter": "Auto Levels",
+"category": "Adjust Color",
+"uid": "{d04ef8c1-71b4-11d1-8c82-00a024cdc039}",
+"keys": [
+[
+6,
+65
+]
+]
 }
+]
 },
 "Photoshop": {
 "menu": {
@@ -5244,7 +5257,31 @@
 82
 ]
 ]
+},
+"dynamic": [
+{
+"filter": "Auto Levels",
+"category": "Adjust Color",
+"uid": "{d04ef8c1-71b4-11d1-8c82-00a024cdc039}",
+"keys": [
+[
+7,
+65
+]
+]
+},
+{
+"filter": "Invert",
+"category": "Adjust Color",
+"uid": "{d2541291-70d6-11d1-8c80-00a024cdc039}",
+"keys": [
+[
+7,
+73
+]
+]
 }
+]
 }
 },
 "order": [

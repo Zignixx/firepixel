@@ -307,10 +307,10 @@ impl CommandInfo {
 
     /// Kürzel im angegebenen Set.
     pub fn shortcuts<'a>(&self, set: &'a ShortcutSet) -> &'a [Shortcut] {
-        self.fw_cmd
-            .as_deref()
-            .map(|c| set.command(c))
-            .unwrap_or(&[])
+        match self.fw_cmd.as_deref() {
+            Some(c) => set.command(c),
+            None => set.dynamic_command(&self.name),
+        }
     }
 }
 

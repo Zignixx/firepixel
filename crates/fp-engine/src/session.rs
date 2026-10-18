@@ -659,6 +659,12 @@ impl Session {
         set.commands_for(sc)
             .into_iter()
             .find_map(|cmd| self.registry.by_fw_cmd(cmd).map(|c| c.info().name.clone()))
+            .or_else(|| {
+                // dynamic filter shortcuts (re 47 §1.4) name the Firepixel command directly
+                set.dynamic_commands_for(sc)
+                    .into_iter()
+                    .find_map(|name| self.registry.get(name).map(|c| c.info().name.clone()))
+            })
     }
 
     // ------------------------------------------------------------ Verfügbarkeit

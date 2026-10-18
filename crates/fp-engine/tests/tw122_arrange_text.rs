@@ -162,3 +162,39 @@ fn style_toggles_over_whole_pointer_selection() {
     assert!(bold_runs(&s, a).iter().all(|x| !*x));
     assert!(bold_runs(&s, b).iter().all(|x| !*x));
 }
+
+/// TW-126 (re 47 §1.4): the dynamic filter shortcuts of both sets run the Filters menu entries.
+#[test]
+fn filter_shortcuts_resolve_in_both_sets() {
+    let mut s = Session::default();
+    assert_eq!(s.shortcut_set().name, "Web Standard");
+    let auto = "filter.adjustColor.autoLevels";
+    let invert = "filter.adjustColor.invert";
+    assert_eq!(
+        s.command_for_shortcut(&sc(true, true, true, 0x41)).as_deref(),
+        Some(auto)
+    );
+    assert_eq!(
+        s.command_for_shortcut(&sc(true, true, true, 0x49)).as_deref(),
+        Some(invert)
+    );
+    assert_eq!(s.command_shortcuts(auto), vec![sc(true, true, true, 0x41)]);
+    assert_eq!(s.command_shortcuts(invert), vec![sc(true, true, true, 0x49)]);
+    assert_eq!(s.command_for_shortcut(&sc(true, false, true, 0x41)), None);
+
+    s.prefs.set(
+        "CurrentShortcutSet",
+        fp_engine::prefs::PrefValue::Str("Firepixel".into()),
+    );
+    assert_eq!(
+        s.command_for_shortcut(&sc(true, false, true, 0x41)).as_deref(),
+        Some(auto)
+    );
+    assert_eq!(s.command_shortcuts(auto), vec![sc(true, false, true, 0x41)]);
+    assert!(s.command_shortcuts(invert).is_empty());
+    // Ctrl+Alt+Shift+I stays italic in the program's own set
+    assert_eq!(
+        s.command_for_shortcut(&sc(true, true, true, 0x49)).as_deref(),
+        Some("text.style.fauxItalic")
+    );
+}

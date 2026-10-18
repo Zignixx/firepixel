@@ -226,12 +226,30 @@ pub struct ShortcutSet {
     pub menu: BTreeMap<String, Vec<Shortcut>>,
     /// Werkzeuge: Werkzeug-GUID (klein, `{8-4-4-4-12}`) → Kürzel.
     pub tools: BTreeMap<String, Vec<Shortcut>>,
+    /// Dynamic shortcuts for entries of the runtime-built Filters menu (re 47 §1.4), keyed by the
+    /// Firepixel command name (e.g. `filter.adjustColor.autoLevels`).
+    #[serde(default)]
+    pub dynamic: BTreeMap<String, Vec<Shortcut>>,
 }
 
 impl ShortcutSet {
     /// Kürzel eines Menübefehls (`cmd_`-Name).
     pub fn command(&self, cmd: &str) -> &[Shortcut] {
         self.menu.get(cmd).map(|v| v.as_slice()).unwrap_or(&[])
+    }
+
+    /// Shortcuts of a dynamic (filter) command, by Firepixel command name.
+    pub fn dynamic_command(&self, name: &str) -> &[Shortcut] {
+        self.dynamic.get(name).map(|v| v.as_slice()).unwrap_or(&[])
+    }
+
+    /// Firepixel command names of all dynamic (filter) commands bound to this shortcut.
+    pub fn dynamic_commands_for(&self, sc: &Shortcut) -> Vec<&str> {
+        self.dynamic
+            .iter()
+            .filter(|(_, v)| v.contains(sc))
+            .map(|(k, _)| k.as_str())
+            .collect()
     }
 
     /// Kürzel eines Werkzeugs (GUID, Schreibweise egal).
@@ -313,6 +331,40 @@ pub fn normalize_guid(g: &str) -> String {
 struct RawSet {
     menu: BTreeMap<String, Vec<(u8, u16)>>,
     tools: BTreeMap<String, Vec<(u8, u16)>>,
+    #[serde(default)]
+    dynamic: Vec<RawDynamic>,
+}
+
+/// A dynamic filter shortcut as stored in `shortcuts.json` (re 47 §1.4): the filter is named by its
+/// menu category and entry (English); the stored `uid` only documents the filter's identifier.
+#[derive(Deserialize)]
+struct RawDynamic {
+    filter: String,
+    category: String,
+    keys: Vec<(u8, u16)>,
+}
+
+/// `"Adjust Color"` → `"adjustColor"`.
+fn lower_camel(text: &str) -> String {
+    let mut out = String::new();
+    for (i, word) in text.split_whitespace().enumerate() {
+        let mut cs = word.chars();
+        if let Some(first) = cs.next() {
+            if i == 0 {
+                out.extend(first.to_lowercase());
+            } else {
+                out.extend(first.to_uppercase());
+            }
+            out.push_str(cs.as_str());
+        }
+    }
+    out
+}
+
+/// Firepixel command name of a dynamic filter shortcut: `filter.<category>.<filter>` in lower camel
+/// case, e.g. Adjust Color ▸ Auto Levels → `filter.adjustColor.autoLevels`.
+pub fn dynamic_filter_command(category: &str, filter: &str) -> String {
+    format!("filter.{}.{}", lower_camel(category), lower_camel(filter))
 }
 
 #[derive(Deserialize)]
@@ -350,6 +402,19 @@ pub fn builtin_sets() -> &'static [ShortcutSet] {
                     name: n.clone(),
                     menu: conv(&s.menu),
                     tools: conv(&s.tools),
+                    dynamic: s
+                        .dynamic
+                        .iter()
+                        .map(|d| {
+                            (
+                                dynamic_filter_command(&d.category, &d.filter),
+                                d.keys
+                                    .iter()
+                                    .map(|&(mask, vk)| Shortcut::from_fw(mask, vk))
+                                    .collect(),
+                            )
+                        })
+                        .collect(),
                 })
             })
             .collect()
