@@ -36,7 +36,6 @@ use std::sync::Arc;
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct DocId(pub u64);
 
-/// Verschiebung eines Pfeiltasten-Befehls (`edit.nudge.*`), sonst `None`.
 /// Adressen aller Elemente der Auswahl (Objekte und Punkte) in einem Durchlauf (PERF-1: vor und
 /// nach jedem Befehl; eine Suche je ID kostete bei Tausenden gewählten Objekten Sekunden).
 fn selection_paths(
@@ -48,20 +47,6 @@ fn selection_paths(
     ids.extend(sel.points.iter().map(|p| p.element));
     let paths = crate::docops::find_many_on_page(doc, page, &ids);
     ids.into_iter().zip(paths).collect()
-}
-
-fn nudge_delta(name: &str) -> Option<(f64, f64)> {
-    Some(match name.strip_prefix("edit.nudge.")? {
-        "left" => (-1.0, 0.0),
-        "right" => (1.0, 0.0),
-        "up" => (0.0, -1.0),
-        "down" => (0.0, 1.0),
-        "bigLeft" => (-10.0, 0.0),
-        "bigRight" => (10.0, 0.0),
-        "bigUp" => (0.0, -10.0),
-        "bigDown" => (0.0, 10.0),
-        _ => return None,
-    })
 }
 
 /// Hat sich am Text etwas geändert, das den Satz ändert (Inhalt, Attribute, Rahmenart, Größe des
@@ -1008,34 +993,8 @@ impl Session {
         if !doc_changed && SILENT.contains(&name) {
             return;
         }
-        // Pfeiltasten: aufeinanderfolgendes Verschieben (auch Umschalt, andere Richtung) ist im
-        // Original EIN Schritt (gemessen: 3× rechts + Umschalt+unten → `moveSelectionBy({x:3, y:10})`,
-        // `docs\UX_ABGLEICH_A.md` N03). Zusammengefasst wird nur direkt Aufeinanderfolgendes mit
-        // gleicher Auswahl; dazwischen ein anderer Schritt beginnt einen neuen.
+        // Arrow-key nudges are never merged: one history row per press (re 51 §2).
         let now = d.snapshot();
-        if doc_changed
-            && let Some((dx, dy)) = nudge_delta(name)
-            && let Some(top) = d.history.last_mergeable()
-            && (top.command.starts_with("edit.nudge.")
-                || (top.command == "edit.move" && top.params.get("nudge").is_some()))
-            && Arc::ptr_eq(&top.after.doc, &before.doc)
-            && top.after.selection == before.selection
-            && top.after.page == before.page
-            && top.after.frame == before.frame
-        {
-            let (x0, y0) = match nudge_delta(&top.command) {
-                Some(v) => v,
-                None => (
-                    top.params["dx"].as_f64().unwrap_or(0.0),
-                    top.params["dy"].as_f64().unwrap_or(0.0),
-                ),
-            };
-            top.command = "edit.move".into();
-            top.params = serde_json::json!({"dx": x0 + dx, "dy": y0 + dy, "nudge": true});
-            top.after = now;
-            self.events.push(SessionEvent::HistoryChanged(id));
-            return;
-        }
         // Ziehen über die Ebenen-Augen ist im Original EIN Verlaufsschritt (TW-69 Rest): die
         // Fortsetzungen eines Zugs (`dragContinue`) gehen in den Schritt seiner ersten Zeile ein.
         if doc_changed

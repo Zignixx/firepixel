@@ -111,32 +111,27 @@ fn undo_count(s: &Session) -> usize {
     s.active().expect("d").history.undo_count()
 }
 
+/// One history row per arrow press, also for auto-repeat, mixed directions and Shift (re 51 §2).
 #[test]
-fn consecutive_nudges_are_one_step() {
+fn every_nudge_is_its_own_step() {
     let mut s = session(600, 400);
     rect(&mut s, [50, 50, 150, 120]);
     let n0 = undo_count(&s);
-    // Original: 3× rechts + Umschalt+unten = ein Schritt moveSelectionBy({x:3, y:10})
     for _ in 0..3 {
-        s.execute("edit.nudge.right", json!({})).expect("rechts");
+        s.execute("edit.nudge.right", json!({})).expect("right");
     }
-    s.execute("edit.nudge.bigDown", json!({})).expect("unten");
+    s.execute("edit.nudge.bigDown", json!({})).expect("down");
     assert_eq!(sel_bounds(&s), [53.0, 60.0, 153.0, 130.0]);
-    assert_eq!(undo_count(&s), n0 + 1);
-    let st = s.active().expect("d").history.steps().last().map(|x| (x.command.clone(), x.params.clone())).expect("Schritt");
-    assert_eq!(st.0, "edit.move");
-    assert_eq!((st.1["dx"].as_f64(), st.1["dy"].as_f64()), (Some(3.0), Some(10.0)));
-    // ein Rückgängig stellt die Ausgangslage her, Wiederholen die Endlage
-    s.execute("edit.undo", json!({})).expect("rückgängig");
-    assert_eq!(sel_bounds(&s), [50.0, 50.0, 150.0, 120.0]);
-    s.execute("edit.redo", json!({})).expect("wiederholen");
-    assert_eq!(sel_bounds(&s), [53.0, 60.0, 153.0, 130.0]);
-    // 50× (Tastenwiederholung) bleibt ein Schritt
-    for _ in 0..50 {
-        s.execute("edit.nudge.left", json!({})).expect("links");
-    }
-    assert_eq!(undo_count(&s), n0 + 1);
-    assert_eq!(sel_bounds(&s), [3.0, 60.0, 103.0, 130.0]);
+    assert_eq!(undo_count(&s), n0 + 4);
+    let steps = s.active().expect("d").history.steps().iter().map(|x| x.command.clone()).collect::<Vec<_>>();
+    assert_eq!(&steps[n0..], ["edit.nudge.right", "edit.nudge.right", "edit.nudge.right", "edit.nudge.bigDown"]);
+    // undo steps back one press at a time
+    s.execute("edit.undo", json!({})).expect("undo");
+    assert_eq!(sel_bounds(&s), [53.0, 50.0, 153.0, 120.0]);
+    s.execute("edit.undo", json!({})).expect("undo");
+    assert_eq!(sel_bounds(&s), [52.0, 50.0, 152.0, 120.0]);
+    s.execute("edit.redo", json!({})).expect("redo");
+    assert_eq!(sel_bounds(&s), [53.0, 50.0, 153.0, 120.0]);
 }
 
 #[test]
@@ -145,19 +140,11 @@ fn nudge_after_other_step_or_undo_starts_new_step() {
     rect(&mut s, [50, 50, 150, 120]);
     s.execute("edit.nudge.right", json!({})).expect("rechts");
     let n1 = undo_count(&s);
-    // Duplizieren dazwischen (Original: eigener Schritt), danach Verschieben = neuer Schritt
     s.execute("edit.duplicate", json!({})).expect("duplizieren");
     s.execute("edit.nudge.right", json!({})).expect("rechts");
     assert_eq!(undo_count(&s), n1 + 2);
-    // nach Rückgängig: kein Zusammenfassen mit dem zurückgenommenen Schritt
     s.execute("edit.undo", json!({})).expect("rückgängig");
     s.execute("edit.nudge.down", json!({})).expect("unten");
     assert_eq!(undo_count(&s), n1 + 2);
     assert_eq!(s.active().expect("d").history.redo_count(), 0);
-    // Auswahlwechsel dazwischen: neuer Schritt
-    let other = rect(&mut s, [300, 300, 320, 320]);
-    s.execute("select.set", json!({"ids": [other]})).expect("auswahl");
-    let n2 = undo_count(&s);
-    s.execute("edit.nudge.right", json!({})).expect("rechts");
-    assert_eq!(undo_count(&s), n2 + 1);
 }

@@ -1683,7 +1683,7 @@ impl ToolMachine for PointerTool {
                     if ev.mods.alt {
                         return ToolResponse::commit(vec![Invocation::new(
                             "edit.move",
-                            json!({"dx": dx, "dy": dy, "copy": true}),
+                            json!({"dx": dx, "dy": dy, "copy": true, "nudge": true}),
                         )]);
                     }
                     let name = if big {

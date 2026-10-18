@@ -864,14 +864,23 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 ParamKind::Ids,
                 "Elemente (Vorgabe: Auswahl; die Auswahl bleibt unverändert)",
             )
+            .opt_default(
+                "nudge",
+                ParamKind::Bool,
+                json!(false),
+                "arrow-key nudge (with copy the history row reads \"Duplicate\")",
+            )
             .run(|s, p| {
+                let copy = p.bool_or("copy", false)?;
+                let nudge = p.bool_or("nudge", false)?;
                 super::with_targets(s, p, |s, p| {
-                    move_selection(
-                        s,
-                        p.f64("dx")? as f32,
-                        p.f64("dy")? as f32,
-                        p.bool_or("copy", false)?,
-                    )
+                    let out = move_selection(s, p.f64("dx")? as f32, p.f64("dy")? as f32, copy)?;
+                    // Alt+arrow: one "Duplicate" row per press (re 51 §2)
+                    Ok(if copy && nudge {
+                        out.labeled(fp_i18n::t("msg-step-duplicate"))
+                    } else {
+                        out
+                    })
                 })
             }),
     );
