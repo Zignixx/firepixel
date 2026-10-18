@@ -70,6 +70,7 @@ cmd-file-print = &Drucken...
     .description = Druckt das aktive Dokument
 cmd-file-htmlSetup = HTM&L-Einrichtung...
     .description = Öffnet das Dialogfeld "HTML-Einrichtung"
+cmd-file-htmlSetupDefaults = HTML-Standard festlegen
 cmd-file-exit = &Beenden
     .description = Beendet die Anwendung und fordert zum Speichern der Dokumente auf
 

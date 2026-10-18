@@ -107,6 +107,12 @@ pub struct HtmlOptions {
     /// „CSS in externe Datei schreiben“ (`externalCSS`, re8 §6.2): Name der CSS-Datei für die
     /// Stile der CSS-Pop-up-Menüs (im Kopf nur `@import`); leer = Stile im Kopf.
     pub external_css: String,
+    /// Neutral "Generic" HTML style (HTML5 doctype, `<meta charset>`, lowercase event attributes);
+    /// takes precedence over `xhtml`.
+    pub html5: bool,
+    /// Write all page styles (cell images, `body`, inline popup-menu rules) into this file next to
+    /// the HTML and link it instead of `<style>` blocks; empty = styles stay in the head.
+    pub page_css_file: String,
 }
 
 /// Inhalt leerer Tabellenzellen (re\18 §6.3 „Inhalt:“).
@@ -158,6 +164,8 @@ impl Default for HtmlOptions {
             default_alt: String::new(),
             body_css: String::new(),
             external_css: String::new(),
+            html5: false,
+            page_css_file: String::new(),
         }
     }
 }
@@ -284,13 +292,13 @@ pub fn write_html(
     o: &HtmlOptions,
 ) -> HtmlOutput {
     let ev = |s: &str| {
-        if o.xhtml {
+        if o.xhtml || o.html5 {
             s.to_ascii_lowercase()
         } else {
             s.to_string()
         }
     };
-    let close = if o.xhtml { " />" } else { ">" };
+    let close = if o.xhtml && !o.html5 { " />" } else { ">" };
     let x0 = grid.xs.first().copied().unwrap_or(0);
     let y0 = grid.ys.first().copied().unwrap_or(0);
     // Zellnamen und Rechtecke je Slice
@@ -707,6 +715,8 @@ pub fn write_html(
     {
         support.push((o.spacer.clone(), spacer_gif()));
     }
+    // page styles collected for the external style sheet (`page_css_file`)
+    let mut page_css = String::new();
     let rt = runtime_js(&needs);
     if !rt.is_empty() {
         head.push_str(&format!(
@@ -725,9 +735,13 @@ pub fn write_html(
             let mut css = String::new();
             for (v, sl, st) in &menu_views {
                 css.push_str(&v.css(*sl, *st, &o.images_dir));
-                menus_html.push_str(&v.html(o.xhtml, &format!("{}{}", o.images_dir, o.arrow)));
+                menus_html.push_str(
+                    &v.html(o.xhtml && !o.html5, &format!("{}{}", o.images_dir, o.arrow)),
+                );
             }
-            if o.external_css.is_empty() {
+            if o.external_css.is_empty() && !o.page_css_file.is_empty() {
+                page_css.push_str(&css);
+            } else if o.external_css.is_empty() {
                 head.push_str(&format!("<style type=\"text/css\">\n{css}</style>\n"));
             } else {
                 // wie die Original-Vorlage: im Kopf nur der Import, die Regeln in der eigenen Datei
@@ -763,7 +777,9 @@ pub fn write_html(
         body_attr.push_str(&format!(" {}=\"{onload}\"", ev("onLoad")));
     }
     let mut html = String::new();
-    if o.xhtml {
+    if o.html5 {
+        html.push_str("<!DOCTYPE html>\n<html>\n");
+    } else if o.xhtml {
         html.push_str("<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\"\n\"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">\n<html xmlns=\"http://www.w3.org/1999/xhtml\">\n");
     } else {
         html.push_str(
@@ -771,17 +787,35 @@ pub fn write_html(
         );
     }
     html.push_str("<head>\n");
-    html.push_str(&format!("<title>{}</title>\n", esc_attr(&o.title)));
-    html.push_str(&format!(
-        "<meta http-equiv=\"Content-Type\" content=\"text/html; charset={}\"{close}\n",
-        o.charset
-    ));
-    html.push_str("<style type=\"text/css\">td img {display: block;}</style>\n");
-    if !o.body_css.is_empty() {
+    if o.html5 {
+        html.push_str(&format!("<meta charset=\"{}\">\n", o.charset));
+        html.push_str(&format!("<title>{}</title>\n", esc_attr(&o.title)));
+    } else {
+        html.push_str(&format!("<title>{}</title>\n", esc_attr(&o.title)));
         html.push_str(&format!(
-            "<style type=\"text/css\">body {{ {} }}</style>\n",
-            o.body_css
+            "<meta http-equiv=\"Content-Type\" content=\"text/html; charset={}\"{close}\n",
+            o.charset
         ));
+    }
+    if o.page_css_file.is_empty() {
+        html.push_str("<style type=\"text/css\">td img {display: block;}</style>\n");
+        if !o.body_css.is_empty() {
+            html.push_str(&format!(
+                "<style type=\"text/css\">body {{ {} }}</style>\n",
+                o.body_css
+            ));
+        }
+    } else {
+        let mut css = String::from("td img {display: block;}\n");
+        if !o.body_css.is_empty() {
+            css.push_str(&format!("body {{ {} }}\n", o.body_css));
+        }
+        css.push_str(&page_css);
+        html.push_str(&format!(
+            "<link rel=\"stylesheet\" type=\"text/css\" href=\"{}\"{close}\n",
+            esc_attr(&o.page_css_file)
+        ));
+        support.push((o.page_css_file.clone(), css.into_bytes()));
     }
     html.push_str("<!--Firepixel HTML-Export (eigene Vorlage)-->\n");
     html.push_str(&head);

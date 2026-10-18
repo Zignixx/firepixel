@@ -35,13 +35,16 @@ const COL_GAP: f32 = 18.0;
 pub struct HtmlSetupDialog {
     pub tab: usize,
     // Allgemein
-    pub xhtml: bool,
+    /// "HTML style": 0 HTML, 1 XHTML, 2 Generic (HTML5) = value of `HtmlSettings::xhtml`.
+    pub style: usize,
     pub extension: String,
     pub comments: bool,
     pub lowercase: bool,
     pub css_popups: bool,
     /// „CSS in externe Datei schreiben“ (`externalCSS`, grau solange `css_popups` aus ist).
     pub external_css: bool,
+    /// "Write page styles to styles.css" (`external_css_for_doc`).
+    pub page_css: bool,
     pub background_url: String,
     pub background_repeat: usize,
     /// Liste „Anhang:“: 0 fixed, 1 scroll (= Wert von `CBAi`).
@@ -62,6 +65,8 @@ pub struct HtmlSetupDialog {
     pub utf8: bool,
     /// „Durchsuchen...“ neben dem Hintergrundbild gedrückt (TW-29; die Dateiwahl startet [`show`]).
     pub browse_bg: bool,
+    /// "Set defaults" pressed (handled by [`show`]).
+    pub set_defaults: bool,
     /// Ausgangswerte (für „ohne Änderung nichts schreiben“).
     initial: Option<Box<HtmlSetupDialog>>,
 }
@@ -81,7 +86,7 @@ impl HtmlSetupDialog {
             .and_then(|p| p.root.export.as_ref())
             .and_then(|e| e.html.as_deref())
             .cloned()
-            .unwrap_or_else(fp_model::HtmlSettings::cs6_default);
+            .unwrap_or_else(|| fp_engine::commands::export::html_defaults(&st.session.prefs));
         let prefs = &st.session.prefs;
         let hp = fp_engine::commands::export::html_prefs(prefs);
         let names = h
@@ -96,12 +101,13 @@ impl HtmlSetupDialog {
         let ext = fp_export::doc_export::html_extension(Some(&h), &hp);
         let mut dlg = HtmlSetupDialog {
             tab: 0,
-            xhtml: h.xhtml.unwrap_or(1) != 0,
+            style: h.xhtml.unwrap_or(1).clamp(0, 2) as usize,
             extension: format!(".{ext}"),
             comments: hp.comments,
             lowercase: hp.lowercase,
             css_popups: h.css_popups.unwrap_or(true),
             external_css: h.external_css.unwrap_or(1) != 0,
+            page_css: h.external_css_for_doc == Some(true),
             background_url: h.background_url.clone().unwrap_or_default(),
             background_repeat: h.background_repeat.unwrap_or(0).clamp(0, 3) as usize,
             attachment: if h.background_attachment == Some(0) {
@@ -125,6 +131,7 @@ impl HtmlSetupDialog {
             include_unsliced: !h.discard_unspecified_slices.unwrap_or(false),
             utf8: h.encoding.unwrap_or(1) == 1,
             browse_bg: false,
+            set_defaults: false,
             initial: None,
         };
         dlg.initial = Some(Box::new(dlg.clone()));
@@ -143,10 +150,12 @@ impl HtmlSetupDialog {
         let mut a = self.clone();
         a.tab = 0;
         a.browse_bg = false;
+        a.set_defaults = false;
         a.initial = None;
         let mut b = self.base();
         b.tab = 0;
         b.browse_bg = false;
+        b.set_defaults = false;
         b.initial = None;
         a == b
     }
@@ -180,14 +189,23 @@ impl HtmlSetupDialog {
 
     /// Felder des Dokuments, die sich gegenüber dem Öffnen geändert haben (für `file.htmlSetup`).
     pub fn doc_changes(&self) -> Map<String, Value> {
+        self.doc_fields(false)
+    }
+
+    /// All document fields of the dialog (for "Set defaults").
+    pub fn doc_settings(&self) -> Map<String, Value> {
+        self.doc_fields(true)
+    }
+
+    fn doc_fields(&self, all: bool) -> Map<String, Value> {
         let b = self.base();
         let mut m = Map::new();
         let mut put = |k: &str, changed: bool, v: Value| {
-            if changed {
+            if all || changed {
                 m.insert(k.into(), v);
             }
         };
-        put("xhtml", self.xhtml != b.xhtml, json!(i32::from(self.xhtml)));
+        put("xhtml", self.style != b.style, json!(self.style));
         put(
             "css_popups",
             self.css_popups != b.css_popups,
@@ -197,6 +215,11 @@ impl HtmlSetupDialog {
             "external_css",
             self.external_css != b.external_css,
             json!(i32::from(self.external_css)),
+        );
+        put(
+            "external_css_for_doc",
+            self.page_css != b.page_css,
+            json!(self.page_css),
         );
         put(
             "background_url",
@@ -361,6 +384,9 @@ pub fn show(ctx: &egui::Context, st: &mut AppState) {
         .unwrap_or_default();
     let ans = show_dialog(ctx, &mut d, &doc_name);
     let browse = std::mem::take(&mut d.browse_bg);
+    if std::mem::take(&mut d.set_defaults) {
+        set_defaults(st, &d);
+    }
     match ans {
         Some(true) => apply(st, &d),
         Some(false) => {}
@@ -368,6 +394,35 @@ pub fn show(ctx: &egui::Context, st: &mut AppState) {
     }
     if browse && ans.is_none() {
         pick_background(st);
+    }
+}
+
+/// "Set defaults": store the dialog's values as the document-independent defaults (used by
+/// New Document and by exports of pages without their own HTML settings). The values kept in the
+/// preferences (extension, comments, lower case, empty cells) are written at once as well.
+pub fn set_defaults(st: &mut AppState, d: &HtmlSetupDialog) {
+    let prefs = &mut st.session.prefs;
+    prefs.set("HTMLExtension", PrefValue::Str(d.ext()));
+    prefs.set("HTMLCommentsOn", PrefValue::Bool(d.comments));
+    prefs.set("ForceLowercaseFilenames", PrefValue::Bool(d.lowercase));
+    if let Some(c) = parse_hex(&d.cell_color) {
+        prefs.set("HTMLEmptyCellColor", PrefValue::Str(format!("#{c:06x}")));
+    }
+    prefs.set(
+        "HTMLEmptyCellUsesCanvasColor",
+        PrefValue::Bool(d.use_canvas),
+    );
+    prefs.set(
+        "HTMLEmptyCellContents",
+        PrefValue::Int(d.contents as i64 + 1),
+    );
+    match crate::ui_commands::execute(
+        &mut st.session,
+        "file.htmlSetupDefaults",
+        json!({ "settings": Value::Object(d.doc_settings()) }),
+    ) {
+        Ok(_) => st.dialogs.message = Some((t("dlg-md-html-setup"), t("dlg-hs-defaults-set"))),
+        Err(e) => st.dialogs.message = Some((t("dlg-md-html-setup"), e.to_string())),
     }
 }
 
@@ -547,17 +602,21 @@ pub fn show_dialog(ctx: &egui::Context, d: &mut HtmlSetupDialog, doc_name: &str)
                 0 => {
                     // zweispaltig wie das Original: links Stil + Kommentare/Kleinbuchstaben,
                     // rechts Endung + die beiden CSS-Schalter
-                    let style_items = [l("dlg-hs-style-html"), l("dlg-hs-style-xhtml")];
+                    let style_items = [
+                        l("dlg-hs-style-html"),
+                        l("dlg-hs-style-xhtml"),
+                        l("dlg-hs-style-generic"),
+                    ];
                     super::fit_label(ui, label(0.0), &g_labels[0], true);
                     if let Some(i) = fields::combo(
                         ui,
                         "hs-style",
                         field(0.0, COL1_W),
                         &refs(&style_items),
-                        Some(usize::from(d.xhtml)),
+                        Some(d.style),
                         true,
                     ) {
-                        d.xhtml = i == 1;
+                        d.style = i;
                     }
                     let x2 = fx + col1 + COL_GAP;
                     let label2 =
@@ -687,6 +746,17 @@ pub fn show_dialog(ctx: &egui::Context, d: &mut HtmlSetupDialog, doc_name: &str)
                         true,
                     ) {
                         d.attachment = i;
+                    }
+                    // page styles in an external style sheet next to the HTML
+                    if let Some(b) = fields::checkbox(
+                        ui,
+                        "hs-page-css",
+                        Rect::from_min_size(o + vec2(0.0, 210.0), vec2(body.width() - 32.0, 18.0)),
+                        &l("dlg-hs-page-css"),
+                        d.page_css,
+                        true,
+                    ) {
+                        d.page_css = b;
                     }
                     super::fit_label(ui, label(176.0), &g_labels[5], true);
                     if let Some(i) = fields::combo(
@@ -882,6 +952,18 @@ pub fn show_dialog(ctx: &egui::Context, d: &mut HtmlSetupDialog, doc_name: &str)
             );
             if push_button(ui, rects[0], &ok_l, true, true) {
                 ans = Some(true);
+            }
+            // "Set defaults" bottom left
+            let def_l = t("dlg-hs-set-defaults");
+            let dw = super::button_w(ui.ctx(), &def_l, 90.0);
+            if push_button(
+                ui,
+                Rect::from_min_size(pos2(body.left() + 12.0, rects[0].top()), vec2(dw, 23.0)),
+                &def_l,
+                false,
+                true,
+            ) {
+                d.set_defaults = true;
             }
             if push_button(ui, rects[1], &cancel_l, false, true) {
                 ans = Some(false);

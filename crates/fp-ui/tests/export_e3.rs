@@ -64,7 +64,7 @@ fn html_einrichtung_felder_wirken_auf_das_html() {
 
     let mut d = HtmlSetupDialog::new(&st).expect("Dialog");
     assert_eq!(d.tab, 0, "Start-Reiter Allgemein");
-    d.xhtml = false;
+    d.style = 0;
     d.extension = ".html".into();
     d.comments = true;
     d.lowercase = true;

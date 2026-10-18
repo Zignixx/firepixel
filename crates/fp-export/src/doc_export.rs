@@ -257,6 +257,9 @@ pub struct HtmlPrefs {
     pub empty_cell_canvas: bool,
     /// 0 Ohne, 1 Platzhalter-Grafik, 2 Geschütztes Leerzeichen.
     pub empty_cell_contents: i32,
+    /// Document-independent HTML setup defaults ("Set defaults"); used for pages without their
+    /// own HTML settings instead of the built-in defaults.
+    pub defaults: Option<fp_model::HtmlSettings>,
 }
 
 impl Default for HtmlPrefs {
@@ -268,6 +271,7 @@ impl Default for HtmlPrefs {
             empty_cell_color: 0xFF_FFFF,
             empty_cell_canvas: true,
             empty_cell_contents: 1,
+            defaults: None,
         }
     }
 }
@@ -317,6 +321,12 @@ pub fn body_css(h: &fp_model::HtmlSettings) -> String {
     }
     css.join(" ")
 }
+
+/// Value of `HtmlSettings::xhtml` for the neutral "Generic" HTML5 style (0 HTML, 1 XHTML).
+pub const HTML_STYLE_GENERIC: i32 = 2;
+
+/// File name of the external page style sheet (`external_css_for_doc`).
+pub const PAGE_CSS_FILE: &str = "styles.css";
 
 /// Name der externen CSS-Datei („CSS in externe Datei schreiben“, `externalCSS`, Vorgabe an):
 /// der gespeicherte Name (`externalCSSFilename`), sonst `<Basisname>.css` neben der HTML-Datei;
@@ -1394,6 +1404,7 @@ pub fn export_document_noted(
                 .as_ref()
                 .and_then(|e| e.html.as_deref())
                 .cloned()
+                .or_else(|| o.html_prefs.defaults.clone())
                 .unwrap_or_else(fp_model::HtmlSettings::cs6_default);
             let tokens = html_set
                 .slice_naming
@@ -1502,6 +1513,7 @@ pub fn export_document_noted(
             let mut ho = HtmlOptions {
                 shims: Shims::from_code(html_set.shim_generation.unwrap_or(1)),
                 xhtml: html_set.xhtml.unwrap_or(1) == 1,
+                html5: html_set.xhtml == Some(HTML_STYLE_GENERIC),
                 charset: [
                     "iso-8859-1",
                     "utf-8",
@@ -1563,6 +1575,11 @@ pub fn export_document_noted(
                 default_alt: html_set.default_alt.clone().unwrap_or_default(),
                 body_css: body_css(&html_set),
                 external_css: external_css_file(&html_set, &base),
+                page_css_file: if html_set.external_css_for_doc == Some(true) {
+                    PAGE_CSS_FILE.into()
+                } else {
+                    String::new()
+                },
                 ..HtmlOptions::default()
             };
             if o.html_prefs.empty_cell_canvas {

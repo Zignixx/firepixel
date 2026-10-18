@@ -70,6 +70,7 @@ cmd-file-print = &Print...
     .description = Prints the active document
 cmd-file-htmlSetup = &HTML Setup...
     .description = Opens the HTML Setup dialog box
+cmd-file-htmlSetupDefaults = Set HTML Defaults
 cmd-file-exit = Exi&t
     .description = Quits the application; prompts to save documents
 

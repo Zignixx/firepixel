@@ -279,7 +279,7 @@ impl ExportDialog {
             .as_ref()
             .and_then(|e| e.html.as_deref())
             .cloned()
-            .unwrap_or_else(fp_model::HtmlSettings::cs6_default);
+            .unwrap_or_else(|| fp_engine::commands::export::html_defaults(&st.session.prefs));
         let svg_last = page
             .last_export_file
             .as_deref()

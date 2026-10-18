@@ -665,3 +665,7 @@ cmdtext-aufheben-freigegebene-daten-in-current-a-0dc29a = Unshare: copy the shar
 cmdtext-ebenen-id-als-oberste-unterebene-in-dies-b7f841 = Layer ID: move into this layer as its top sub-layer (TW-86, re 40 §2a)
 cmdtext-export-settings-of-the-button-slice-stor-38b4e2 = Export settings of the button slice (stored on the button symbol)
 cmdtext-spalten-des-farbfeldrasters-vorgabe-21 = Columns of the swatch grid (default 21)
+
+# BA-103/BA-104
+cmdtext-felder-der-html-einstellungen-fp-model-h-c0ba73 = HTML settings fields (fp_model::HtmlSettings, snake_case) as the default for new documents and exports; without = read
+cmdtext-gespeicherten-standard-entfernen-es-gelt-893276 = remove the stored default (the built-in defaults apply again)

@@ -421,7 +421,32 @@ pub fn html_prefs(prefs: &crate::prefs::Preferences) -> fp_export::doc_export::H
             .unwrap_or(0xFF_FFFF),
         empty_cell_canvas: prefs.get_bool("HTMLEmptyCellUsesCanvasColor", true),
         empty_cell_contents: (prefs.get_int("HTMLEmptyCellContents", 2) - 1).clamp(0, 2) as i32,
+        defaults: stored_html_defaults(prefs),
     }
+}
+
+/// Preference key of the document-independent HTML setup defaults ("Set defaults"): the
+/// `fp_model::HtmlSettings` fields as a JSON object string.
+pub const HTML_DEFAULTS_PREF: &str = "HTMLSetupDefaults";
+
+/// HTML setup defaults stored with "Set defaults", if any (built-in defaults overlaid with them).
+pub fn stored_html_defaults(prefs: &crate::prefs::Preferences) -> Option<fp_model::HtmlSettings> {
+    let text = prefs.get(HTML_DEFAULTS_PREF)?.as_str()?;
+    let Ok(Value::Object(upd)) = serde_json::from_str::<Value>(&text) else {
+        return None;
+    };
+    let mut v = serde_json::to_value(fp_model::HtmlSettings::cs6_default()).ok()?;
+    if let Value::Object(m) = &mut v {
+        m.extend(upd);
+    }
+    let mut h: fp_model::HtmlSettings = serde_json::from_value(v).ok()?;
+    h.not_yet_set = Some(true);
+    Some(h)
+}
+
+/// HTML settings for a page without its own: the stored defaults, else the built-in ones.
+pub fn html_defaults(prefs: &crate::prefs::Preferences) -> fp_model::HtmlSettings {
+    stored_html_defaults(prefs).unwrap_or_else(fp_model::HtmlSettings::cs6_default)
 }
 
 /// HTML-Endung (ohne Punkt) des aktiven Dokuments: Dokument, sonst Voreinstellung (re\18 §6.5).
@@ -1086,7 +1111,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
             .run(|s, p| {
                 let d = s.doc()?;
                 let page = d.page;
-                let cur = d.doc.pages[page].root.export.as_ref().and_then(|e| e.html.as_deref()).cloned().unwrap_or_else(fp_model::HtmlSettings::cs6_default);
+                let cur = d.doc.pages[page].root.export.as_ref().and_then(|e| e.html.as_deref()).cloned().unwrap_or_else(|| html_defaults(&s.prefs));
                 let Some(Value::Object(upd)) = p.get("settings").cloned() else {
                     return Ok(CommandOutput::value(serde_json::to_value(&cur).unwrap_or(Value::Null)));
                 };
@@ -1110,6 +1135,32 @@ pub(super) fn register(r: &mut CommandRegistry) {
                     })?;
                 }
                 Ok(super::view::doc_without_step(s, !same, out))
+            }),
+    );
+    r.add(
+        cmd("file.htmlSetupDefaults")
+            .label("HTML-Standard festlegen")
+            .opt("settings", sp(), "Felder der HTML-Einstellungen (fp_model::HtmlSettings, snake_case) als Standard für neue Dokumente und Exporte; ohne = lesen")
+            .opt_default("reset", ParamKind::Bool, json!(false), "gespeicherten Standard entfernen (es gelten wieder die eingebauten Vorgaben)")
+            .run(|s, p| {
+                if p.bool_or("reset", false)? {
+                    s.prefs.reset(HTML_DEFAULTS_PREF);
+                } else if let Some(Value::Object(upd)) = p.get("settings").cloned() {
+                    let mut v = serde_json::to_value(html_defaults(&s.prefs)).map_err(|e| EngineError::Failed(e.to_string()))?;
+                    if let Value::Object(m) = &mut v {
+                        for (k, x) in upd {
+                            m.insert(k, x);
+                        }
+                    }
+                    let mut new: fp_model::HtmlSettings = serde_json::from_value(v).map_err(|e| bad("file.htmlSetupDefaults", e.to_string()))?;
+                    // document-only values never become defaults
+                    new.not_yet_set = None;
+                    new.last_export_dir = None;
+                    new.base_name = None;
+                    let text = serde_json::to_string(&new).map_err(|e| EngineError::Failed(e.to_string()))?;
+                    s.prefs.set(HTML_DEFAULTS_PREF, crate::prefs::PrefValue::Str(text));
+                }
+                Ok(CommandOutput::value(serde_json::to_value(html_defaults(&s.prefs)).unwrap_or(Value::Null)))
             }),
     );
     r.add(cmd("edit.copyHtmlCode").requires(DOC).opt_default("style", ParamKind::Enum { values: vec!["htmlAndImages".into(), "cssAndImages".into()] }, json!("htmlAndImages"), "HTML-Art").opt("dir", ParamKind::Path, "Ordner für die Bilder (ohne: nur der Code)").opt("baseName", ParamKind::String, "Basis-Dateiname für Segmente").opt("xhtml", ParamKind::Bool, "XHTML statt HTML").run(|s, p| {

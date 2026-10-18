@@ -298,3 +298,68 @@ fn state_doc_shows_symbol_state() {
     // das Original bleibt unverändert
     assert_eq!(shown_rects(&d), 1);
 }
+
+/// BA-103: "Generic" (HTML5) style with page styles in `styles.css` – the nav bar of a button
+/// symbol (up/over/down) is written as plain HTML + CSS + JS next to its state images.
+#[test]
+fn generic_style_nav_bar_with_external_page_css() {
+    let mut d = doc(true, false, None);
+    let p = d.page_mut(0).expect("Seite");
+    let e = p.root.export.get_or_insert_with(Default::default);
+    let mut h = fp_model::HtmlSettings::cs6_default();
+    h.xhtml = Some(fp_export::doc_export::HTML_STYLE_GENERIC);
+    h.external_css_for_doc = Some(true);
+    h.background_url = Some("bg.png".into());
+    e.html = Some(Box::new(h));
+    let (h, files) = export(&d);
+    assert!(
+        h.starts_with("<!DOCTYPE html>\n<html>\n<head>\n<meta charset=\"utf-8\">"),
+        "{h}"
+    );
+    assert!(!h.contains("<style"), "no inline styles:\n{h}");
+    assert!(
+        h.contains("<link rel=\"stylesheet\" type=\"text/css\" href=\"styles.css\">"),
+        "{h}"
+    );
+    assert!(!h.contains(" />"), "HTML5 without XML closers:\n{h}");
+    assert!(h.contains("onmouseover=\"MM_nbGroup('over'"), "{h}");
+    assert!(h.contains("onclick=\"MM_nbGroup('down','navbar1'"), "{h}");
+    assert!(
+        h.contains("function MM_nbGroup("),
+        "nav-bar script in the page:\n{h}"
+    );
+    let css = file(&files, "styles.css").expect("styles.css");
+    let css = String::from_utf8_lossy(&css.bytes);
+    assert!(css.contains("td img {display: block;}"), "{css}");
+    assert!(css.contains("background-image: url(\"bg.png\");"), "{css}");
+    for n in ["knopf_r2_c2.", "_s2.", "_s3."] {
+        let f = file(&files, n).unwrap_or_else(|| panic!("{n} missing"));
+        assert!(h.contains(&f.path), "{} referenced:\n{h}", f.path);
+    }
+}
+
+/// BA-103: "Set defaults" – pages without their own HTML settings use the stored defaults.
+#[test]
+fn stored_defaults_apply_to_pages_without_settings() {
+    let mut d = doc(false, false, None);
+    if let Some(e) = d.page_mut(0).expect("Seite").root.export.as_mut() {
+        e.html = None;
+    }
+    let mut o = DocExportOptions::new("knopf");
+    o.style = FilesStyle::HtmlAndImages;
+    let mut h = fp_model::HtmlSettings::cs6_default();
+    h.xhtml = Some(fp_export::doc_export::HTML_STYLE_GENERIC);
+    h.external_css_for_doc = Some(true);
+    o.html_prefs.defaults = Some(h);
+    let files = export_document(&d, &render, &o, &EncodeExtras::default()).expect("Export");
+    let html = files
+        .iter()
+        .find(|f| f.path == "knopf.htm")
+        .expect("knopf.htm");
+    assert!(String::from_utf8_lossy(&html.bytes).starts_with("<!DOCTYPE html>"));
+    assert!(files.iter().any(|f| f.path == "styles.css"));
+    // without defaults: XHTML and inline styles as before
+    let (h, files) = export(&d);
+    assert!(h.contains("XHTML 1.0") && h.contains("<style"), "{h}");
+    assert!(!files.iter().any(|f| f.path == "styles.css"));
+}

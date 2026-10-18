@@ -295,6 +295,11 @@ pub(super) fn register(r: &mut CommandRegistry) {
                         i32::from(res.per_cm)
                     };
                     pg.root.grid = Some(s.prefs.new_document_grid());
+                    // HTML setup defaults ("Set defaults") apply to new documents
+                    if let Some(h) = super::export::stored_html_defaults(&s.prefs) {
+                        pg.root.export.get_or_insert_with(Default::default).html =
+                            Some(Box::new(h));
+                    }
                 }
                 let id = s.add_document(doc, None);
                 Ok(CommandOutput::session_with(json!({"doc": id.0})))
