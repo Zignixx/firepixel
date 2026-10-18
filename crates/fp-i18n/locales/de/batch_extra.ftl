@@ -392,3 +392,52 @@ batch-param-format-multiPage-background = Seitenfarbe
 batch-param-format-multiPage-name = Dateiname
     .tooltip = Leer = Name des ersten Bildes.
 batch-issue-multipage-format = Eine mehrseitige Datei braucht „Speichern als“ TIFF oder PDF.
+
+## Wenn … dann (B-4)
+batch-step-script-condition = Wenn … dann
+    .description = Prüft für jedes Bild eine Bedingung (Größe, Format, Transparenz, Name) und überspringt das Bild oder die folgenden Karten.
+batch-param-script-condition-condition = Bedingung
+    .tooltip = Zum Beispiel: width > 1000 and hasAlpha, name ~ "*.png", size < 2mb
+batch-param-script-condition-mode = Wenn nicht erfüllt
+batch-value-script-condition-mode-gate = Folgende Karten überspringen
+batch-value-script-condition-mode-skipItem = Bild überspringen
+batch-param-script-condition-steps = Anzahl Karten
+batch-param-script-condition-invert = Bedingung umkehren
+batch-param-script-condition-copySkipped = Übersprungene Bilder unverändert kopieren
+batch-issue-condition-syntax = Die Bedingung ist bei „{ $detail }“ ungültig.
+batch-issue-condition-quote = schließendes Anführungszeichen fehlt
+batch-issue-condition-end = unerwartetes Ende
+batch-issue-condition-empty = Bitte eine Bedingung eingeben.
+batch-issue-condition-variable = Unbekannter Wert „{ $name }“. Möglich: { $list }.
+batch-skip-condition = Bedingung nicht erfüllt: { $condition }
+
+## JSF-Code (B-4)
+batch-step-script-code = JSF-Code
+    .description = Führt ein kurzes JSF-Skript für jedes Bild aus (fw.getDocumentDOM() ist das aktuelle Bild).
+batch-param-script-code-code = Code
+batch-param-script-code-allowIo = Dateizugriff erlauben
+    .tooltip = Aus: Das Skript kann keine Dateien öffnen, speichern oder exportieren und keine Programme starten.
+batch-issue-code-empty = Bitte den JSF-Code eingeben.
+batch-err-code-failed = Der JSF-Code ist fehlgeschlagen: { $detail }
+
+## Externes Programm (B-4)
+batch-step-script-external = Externes Programm
+    .description = Führt für jedes Bild ein externes Programm aus; {"{"}in{"}"} ist das Bild, {"{"}out{"}"} das Ergebnis.
+batch-param-script-external-command = Befehlszeile
+    .tooltip = Platzhalter: {"{"}in{"}"} Eingabedatei, {"{"}out{"}"} Ausgabedatei, {"{"}name{"}"} Name der Quelldatei.
+batch-param-script-external-inputFormat = Übergabeformat
+batch-value-script-external-inputFormat-png = PNG
+batch-value-script-external-inputFormat-tiff = TIFF
+batch-value-script-external-inputFormat-jpeg = JPEG
+batch-param-script-external-result = Ergebnis
+batch-value-script-external-result-replace = Ausgabedatei des Programms verwenden
+batch-value-script-external-result-ignore = Bild behalten (nur Programm ausführen)
+batch-param-script-external-timeout = Zeitlimit
+batch-param-script-external-allowExternal = Externe Programme erlauben
+batch-issue-external-optin = Externe Programme laufen nur, wenn im Rezept „Externe Programme erlauben“ eingeschaltet ist (allowExternal: true).
+batch-issue-external-empty = Bitte die Befehlszeile des Programms eingeben.
+batch-issue-external-no-out = Die Befehlszeile braucht {"{"}out{"}"}, damit das Ergebnis zurückgelesen werden kann.
+batch-err-external-start = Das Programm „{ $program }“ konnte nicht gestartet werden: { $error }
+batch-err-external-timeout = Das Programm „{ $program }“ ist nicht innerhalb von { $seconds } s fertig geworden und wurde beendet.
+batch-err-external-failed = Das Programm „{ $program }“ endete mit Code { $code }. { $detail }
+batch-err-external-no-output = Das Programm „{ $program }“ hat keine Ausgabedatei geschrieben.

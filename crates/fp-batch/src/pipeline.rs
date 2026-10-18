@@ -129,6 +129,10 @@ impl Pipeline {
             if r.step.kind() != StepKind::PerItem {
                 continue;
             }
+            // B-4: `script.condition` (gate mode) skips the following cards
+            if crate::steps::condition::take_skip(item) {
+                continue;
+            }
             if ctx.preview && !r.step.preview_ok() {
                 ctx.warn(fp_i18n::tr!(
                     "batch-warn-preview-skipped",

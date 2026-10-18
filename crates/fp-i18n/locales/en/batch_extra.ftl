@@ -392,3 +392,52 @@ batch-param-format-multiPage-background = Page color
 batch-param-format-multiPage-name = File name
     .tooltip = Empty = name of the first image.
 batch-issue-multipage-format = A multi-page file needs “Save as” TIFF or PDF.
+
+## If … then (B-4)
+batch-step-script-condition = If … then
+    .description = Checks a condition on every image (size, format, transparency, name) and skips the image or the following cards.
+batch-param-script-condition-condition = Condition
+    .tooltip = For example: width > 1000 and hasAlpha, name ~ "*.png", size < 2mb
+batch-param-script-condition-mode = If not met
+batch-value-script-condition-mode-gate = Skip the following cards
+batch-value-script-condition-mode-skipItem = Skip the image
+batch-param-script-condition-steps = Number of cards
+batch-param-script-condition-invert = Invert condition
+batch-param-script-condition-copySkipped = Copy skipped images unchanged
+batch-issue-condition-syntax = The condition is not valid near “{ $detail }”.
+batch-issue-condition-quote = missing closing quote
+batch-issue-condition-end = unexpected end
+batch-issue-condition-empty = Enter a condition.
+batch-issue-condition-variable = Unknown value “{ $name }”. Possible: { $list }.
+batch-skip-condition = Condition not met: { $condition }
+
+## JSF code (B-4)
+batch-step-script-code = JSF code
+    .description = Runs a short JSF script on every image (fw.getDocumentDOM() is the current image).
+batch-param-script-code-code = Code
+batch-param-script-code-allowIo = Allow file access
+    .tooltip = Off: the script cannot open, save or export files or start programs.
+batch-issue-code-empty = Enter the JSF code.
+batch-err-code-failed = The JSF code failed: { $detail }
+
+## External program (B-4)
+batch-step-script-external = External program
+    .description = Runs an external program on every image; {"{"}in{"}"} is the image, {"{"}out{"}"} the result.
+batch-param-script-external-command = Command line
+    .tooltip = Placeholders: {"{"}in{"}"} input file, {"{"}out{"}"} output file, {"{"}name{"}"} source file name.
+batch-param-script-external-inputFormat = Transfer format
+batch-value-script-external-inputFormat-png = PNG
+batch-value-script-external-inputFormat-tiff = TIFF
+batch-value-script-external-inputFormat-jpeg = JPEG
+batch-param-script-external-result = Result
+batch-value-script-external-result-replace = Use the program's output file
+batch-value-script-external-result-ignore = Keep the image (run the program only)
+batch-param-script-external-timeout = Time limit
+batch-param-script-external-allowExternal = Allow running external programs
+batch-issue-external-optin = External programs only run when “Allow running external programs” is switched on in the recipe (allowExternal: true).
+batch-issue-external-empty = Enter the command line of the program.
+batch-issue-external-no-out = The command line needs {"{"}out{"}"} so the result can be read back.
+batch-err-external-start = The program “{ $program }” could not be started: { $error }
+batch-err-external-timeout = The program “{ $program }” did not finish within { $seconds } s and was stopped.
+batch-err-external-failed = The program “{ $program }” ended with code { $code }. { $detail }
+batch-err-external-no-output = The program “{ $program }” did not write an output file.

@@ -8,6 +8,7 @@ pub mod adjust; // BATCH-4
 pub mod anim; // BATCH-7
 pub mod animfx; // B-3
 pub mod background;
+pub mod condition; // B-4
 pub mod document; // B-3
 pub mod extra; // BA-109
 pub mod fileops; // B-3
@@ -21,6 +22,7 @@ pub mod optimize;
 pub mod overlay;
 pub mod pixel; // B-3
 pub mod script; // BATCH-4
+pub mod script_extra; // B-4
 pub mod vector; // BATCH-9
 
 /// Registriert alle eingebauten Schritte.
@@ -43,4 +45,6 @@ pub fn register_all(r: &mut StepRegistry) {
     animfx::register(r); // B-3
     format::register(r); // B-3
     multipage::register(r); // B-4
+    condition::register(r); // B-4
+    script_extra::register(r); // B-4
 }
