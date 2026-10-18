@@ -12,6 +12,9 @@ fp-geom = { workspace = true }
 fp-color = { workspace = true }
 fp-raster = { workspace = true }
 fp-model = { workspace = true }
+# text layout for invisible PDF text and PSD type layers (same layout as the renderer)
+fp-text = { workspace = true }
+fp-render = { workspace = true }
 thiserror = { workspace = true }
 # Mehrsprachige Fehlermeldungen
 fp-i18n = { workspace = true }

@@ -1910,6 +1910,8 @@ dependencies = [
  "fp-i18n",
  "fp-model",
  "fp-raster",
+ "fp-render",
+ "fp-text",
  "png",
  "ravif",
  "serde_json",

@@ -240,6 +240,8 @@ each with file size and download time. 4-Up shows three settings side by side fo
 popups") writes the styles to a separate `.css` file next to the HTML file, included via `@import`.
 Next to "Background image:", "Browse..." picks an image. If it is in the document's folder, the path
 is entered relative to it.
+In the PDF export options, the compression "JPEG 2000 (JPEG)" writes plain JPEG (DCT), because
+Firepixel has no JPEG 2000 encoder; the PDF's producer entry notes this.
 
 **Web features:**
 

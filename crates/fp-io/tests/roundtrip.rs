@@ -476,6 +476,7 @@ fn pdf_import() {
             image: &img,
             width_pt: W as f64,
             height_pt: H as f64,
+            text: None,
         }],
         "Test",
     )

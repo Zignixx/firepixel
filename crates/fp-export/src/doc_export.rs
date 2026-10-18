@@ -870,13 +870,24 @@ fn pdf_bytes(
         sizes.push((img.width() as f64 * k, img.height() as f64 * k));
         imgs.push(img);
     }
+    let texts: Vec<crate::vector_out::PdfTextLayer> = if opt.selectable_text {
+        let fonts = fp_text::FontDb::shared();
+        pages
+            .iter()
+            .map(|&i| crate::pdf_text::text_layer(doc, i, &fonts))
+            .collect()
+    } else {
+        Vec::new()
+    };
     let pages: Vec<crate::vector_out::PdfPage> = imgs
         .iter()
         .zip(&sizes)
-        .map(|(i, &(w, h))| crate::vector_out::PdfPage {
+        .enumerate()
+        .map(|(k, (i, &(w, h)))| crate::vector_out::PdfPage {
             image: i,
             width_pt: w,
             height_pt: h,
+            text: texts.get(k),
         })
         .collect();
     crate::vector_out::write_pdf_with(&pages, title, opt)

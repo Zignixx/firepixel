@@ -171,6 +171,7 @@ impl PdfOpts {
             jpeg_quality: PDF_QUALITY[self.quality.min(4)],
             quality_level: Some(self.quality.min(4) as u8),
             grayscale: self.grayscale,
+            selectable_text: self.selectable_text,
             bleed_pt: self.bleed.max(0) as f64 * 72.0 / dpi.max(1.0) as f64,
             open_password: if self.use_open_password {
                 self.open_password.clone()
@@ -526,7 +527,8 @@ fn show_pdf(ctx: &egui::Context, o: &mut PdfOpts) -> Option<bool> {
         l("dlg-export-none"),
         "ZIP".into(),
         "JPEG".into(),
-        "JPEG 2000".into(),
+        // no JPEG 2000 encoder: the entry writes JPEG (DCT) and says so (BA-101)
+        "JPEG 2000 (JPEG)".into(),
     ];
     let qual_items: Vec<String> = ["high", "medium-high", "medium", "medium-low", "low"]
         .iter()

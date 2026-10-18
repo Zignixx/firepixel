@@ -27,6 +27,220 @@ pub struct PdfPage<'a> {
     pub image: &'a RgbaImage,
     pub width_pt: f64,
     pub height_pt: f64,
+    /// Invisible text over the page image ("Enable text selection"); written only when
+    /// [`PdfOptions::selectable_text`] is on.
+    pub text: Option<&'a PdfTextLayer>,
+}
+
+/// Invisible, selectable text of one page: glyphs of the text objects in page pixels.
+///
+/// Each font is written as the standard Type1 base font `Helvetica` (WinAnsi encoding, not
+/// embedded) with a `/Widths` array taken from the real font of the layout engine, so selection
+/// boxes match the rendered glyphs. The text is drawn in render mode 3 (invisible).
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct PdfTextLayer {
+    pub fonts: Vec<PdfTextFont>,
+    pub glyphs: Vec<PdfTextGlyph>,
+}
+
+/// A font of a [`PdfTextLayer`].
+#[derive(Clone, Debug, PartialEq)]
+pub struct PdfTextFont {
+    /// Name of the real font (for diagnostics only).
+    pub name: String,
+    /// Advance widths of the WinAnsi codes 32..=255 in 1/1000 em (224 entries).
+    pub widths: Vec<f64>,
+}
+
+/// A glyph of a [`PdfTextLayer`].
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct PdfTextGlyph {
+    /// Index into [`PdfTextLayer::fonts`].
+    pub font: usize,
+    pub ch: char,
+    /// Text space (1 unit = 1 em, y up) → page pixels (y down): `x = a·u + c·v + e`,
+    /// `y = b·u + d·v + f`.
+    pub m: [f64; 6],
+}
+
+/// WinAnsi codes 0x80..=0x9F that differ from Latin-1.
+const WIN_HIGH: [(char, u8); 27] = [
+    ('€', 0x80),
+    ('‚', 0x82),
+    ('ƒ', 0x83),
+    ('„', 0x84),
+    ('…', 0x85),
+    ('†', 0x86),
+    ('‡', 0x87),
+    ('ˆ', 0x88),
+    ('‰', 0x89),
+    ('Š', 0x8A),
+    ('‹', 0x8B),
+    ('Œ', 0x8C),
+    ('Ž', 0x8E),
+    ('‘', 0x91),
+    ('’', 0x92),
+    ('“', 0x93),
+    ('”', 0x94),
+    ('•', 0x95),
+    ('–', 0x96),
+    ('—', 0x97),
+    ('˜', 0x98),
+    ('™', 0x99),
+    ('š', 0x9A),
+    ('›', 0x9B),
+    ('œ', 0x9C),
+    ('ž', 0x9E),
+    ('Ÿ', 0x9F),
+];
+
+/// WinAnsi code of a character (`None` = not representable).
+pub fn win_ansi(ch: char) -> Option<u8> {
+    let c = ch as u32;
+    if (0x20..0x7F).contains(&c) || (0xA0..=0xFF).contains(&c) {
+        return Some(c as u8);
+    }
+    WIN_HIGH.iter().find(|(h, _)| *h == ch).map(|(_, b)| *b)
+}
+
+/// Character of a WinAnsi code (inverse of [`win_ansi`]; undefined codes give `None`).
+pub fn win_ansi_char(code: u8) -> Option<char> {
+    match code {
+        0x20..=0x7E | 0xA0..=0xFF => Some(code as char),
+        _ => WIN_HIGH.iter().find(|(_, b)| *b == code).map(|(c, _)| *c),
+    }
+}
+
+/// Position corrections below this (1/1000 em) are not written.
+const TJ_THRESHOLD: f64 = 1.0;
+
+fn pdf_num(v: f64) -> String {
+    let s = format!("{v:.4}");
+    let s = s.trim_end_matches('0').trim_end_matches('.');
+    if s == "-0" || s.is_empty() {
+        "0".into()
+    } else {
+        s.to_string()
+    }
+}
+
+fn pdf_string(bytes: &[u8]) -> String {
+    let mut s = String::from("(");
+    for &b in bytes {
+        match b {
+            b'(' | b')' | b'\\' => {
+                s.push('\\');
+                s.push(b as char);
+            }
+            0x20..=0x7E => s.push(b as char),
+            _ => s.push_str(&format!("\\{b:03o}")),
+        }
+    }
+    s.push(')');
+    s
+}
+
+/// Content-stream operators of the invisible text (`BT 3 Tr … ET`). `w`/`h` = image size in px,
+/// `kx`/`ky` = pt per px, `b` = bleed in pt.
+fn text_ops(layer: &PdfTextLayer, w: f64, h: f64, kx: f64, ky: f64, b: f64) -> String {
+    let _ = w;
+    let glyphs: Vec<(&PdfTextGlyph, u8)> = layer
+        .glyphs
+        .iter()
+        .filter(|g| g.font < layer.fonts.len())
+        .filter_map(|g| win_ansi(g.ch).map(|c| (g, c)))
+        .collect();
+    if glyphs.is_empty() {
+        return String::new();
+    }
+    let width = |g: &PdfTextGlyph, c: u8| -> f64 {
+        layer.fonts[g.font]
+            .widths
+            .get((c as usize).wrapping_sub(32))
+            .copied()
+            .unwrap_or(500.0)
+    };
+    let mut out = String::from("\nBT 3 Tr");
+    let mut cur_font = usize::MAX;
+    let mut i = 0;
+    while i < glyphs.len() {
+        let (g0, _) = glyphs[i];
+        let m = g0.m;
+        let det = m[0] * m[3] - m[1] * m[2];
+        // group: same font and linear part, same baseline, moving forward
+        let mut uv = vec![0.0f64];
+        let mut j = i + 1;
+        while j < glyphs.len() && det.abs() > 1e-12 {
+            let g = glyphs[j].0;
+            let same = g.font == g0.font
+                && (0..4).all(|k| (g.m[k] - m[k]).abs() <= 1e-6 * (1.0 + m[k].abs()));
+            if !same {
+                break;
+            }
+            let (dx, dy) = (g.m[4] - m[4], g.m[5] - m[5]);
+            let u = (m[3] * dx - m[2] * dy) / det;
+            let v = (m[0] * dy - m[1] * dx) / det;
+            if v.abs() > 0.01 || u < *uv.last().unwrap_or(&0.0) - 1e-6 {
+                break;
+            }
+            uv.push(u);
+            j += 1;
+        }
+        if g0.font != cur_font {
+            cur_font = g0.font;
+            out.push_str(&format!("\n/F{cur_font} 1 Tf"));
+        }
+        let tm = [
+            m[0] * kx,
+            -m[1] * ky,
+            m[2] * kx,
+            -m[3] * ky,
+            b + m[4] * kx,
+            b + (h - m[5]) * ky,
+        ];
+        out.push('\n');
+        for v in tm {
+            out.push_str(&pdf_num(v));
+            out.push(' ');
+        }
+        out.push_str("Tm [");
+        let mut run: Vec<u8> = Vec::new();
+        let mut pen = 0.0f64;
+        for k in i..j {
+            let (g, c) = glyphs[k];
+            run.push(c);
+            pen += width(g, c) / 1000.0;
+            if k + 1 < j {
+                let target = uv[k + 1 - i];
+                let adj = (pen - target) * 1000.0;
+                // the pen error stays below the threshold because the next step corrects it
+                if adj.abs() > TJ_THRESHOLD {
+                    out.push_str(&pdf_string(&run));
+                    run.clear();
+                    out.push(' ');
+                    out.push_str(&pdf_num(adj));
+                    out.push(' ');
+                    pen = target;
+                }
+            }
+        }
+        if !run.is_empty() {
+            out.push_str(&pdf_string(&run));
+        }
+        out.push_str("] TJ");
+        i = j;
+    }
+    out.push_str("\nET");
+    out
+}
+
+/// Producer string of the document info; notes the JPEG fallback of "JPEG 2000" (no encoder).
+pub fn pdf_producer(opt: &PdfOptions) -> &'static str {
+    if opt.compression == PdfCompression::Jpeg2000 {
+        "Firepixel (JPEG 2000 not available: images written with DCT/JPEG)"
+    } else {
+        "Firepixel"
+    }
 }
 
 /// Bildkomprimierung im PDF (re\18 §4.1 „Komprimierung:“).
@@ -60,6 +274,8 @@ pub struct PdfOptions {
     pub open_password: String,
     /// Kennwort zum Einschränken von Aufgaben mit den erlaubten Aufgaben.
     pub permissions_password: Option<(String, crate::pdf_crypt::PdfPermissions)>,
+    /// "Enable text selection": write the pages' [`PdfTextLayer`]s as invisible text.
+    pub selectable_text: bool,
 }
 
 impl Default for PdfOptions {
@@ -73,6 +289,7 @@ impl Default for PdfOptions {
             bleed_pt: 0.0,
             open_password: String::new(),
             permissions_password: None,
+            selectable_text: false,
         }
     }
 }
@@ -142,23 +359,53 @@ pub fn write_pdf_with(pages: &[PdfPage], title: &str, opt: &PdfOptions) -> Resul
             format!(
                 "<< /Title <{}> /Producer <{}> >>",
                 enc(3, &t),
-                enc(3, "Firepixel")
+                enc(3, pdf_producer(opt))
             )
         }
-        None => format!("<< /Title ({t}) /Producer (Firepixel) >>"),
+        None => format!("<< /Title ({t}) /Producer ({}) >>", pdf_producer(opt)),
     };
     objs.push(info.into_bytes());
     let b = opt.bleed_pt.max(0.0);
+    // font objects of the invisible text follow the pages (one per page font)
+    let mut next_font_obj = 4 + n * 4;
+    let mut font_objs: Vec<Vec<u8>> = Vec::new();
     for (i, p) in pages.iter().enumerate() {
         let (w, h) = (p.image.width(), p.image.height());
         if w == 0 || h == 0 {
             return Err(ExportError::BadSize(w, h));
         }
         let base = page_obj(i);
-        let content = format!(
+        let mut content = format!(
             "q {:.4} 0 0 {:.4} {b:.4} {b:.4} cm /Im{i} Do Q",
             p.width_pt, p.height_pt
         );
+        let mut font_res = String::new();
+        if let Some(tl) = p.text.filter(|_| opt.selectable_text) {
+            let ops = text_ops(
+                tl,
+                w as f64,
+                h as f64,
+                p.width_pt / w as f64,
+                p.height_pt / h as f64,
+                b,
+            );
+            if !ops.is_empty() {
+                content.push_str(&ops);
+                font_res.push_str(" /Font <<");
+                for (k, f) in tl.fonts.iter().enumerate() {
+                    let widths: Vec<String> = (0..224)
+                        .map(|c| pdf_num(f.widths.get(c).copied().unwrap_or(500.0)))
+                        .collect();
+                    font_res.push_str(&format!(" /F{k} {next_font_obj} 0 R"));
+                    font_objs.push(format!(
+                        "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding /FirstChar 32 /LastChar 255 /Widths [{}] >>",
+                        widths.join(" ")
+                    ).into_bytes());
+                    next_font_obj += 1;
+                }
+                font_res.push_str(" >>");
+            }
+        }
         let (mw, mh) = (p.width_pt + 2.0 * b, p.height_pt + 2.0 * b);
         let boxes = if b > 0.0 {
             format!(
@@ -169,7 +416,7 @@ pub fn write_pdf_with(pages: &[PdfPage], title: &str, opt: &PdfOptions) -> Resul
         } else {
             String::new()
         };
-        objs.push(format!("<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {mw:.4} {mh:.4}]{boxes} /Resources << /XObject << /Im{i} {} 0 R >> >> /Contents {} 0 R >>", base + 2, base + 1).into_bytes());
+        objs.push(format!("<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {mw:.4} {mh:.4}]{boxes} /Resources << /XObject << /Im{i} {} 0 R >>{font_res} >> /Contents {} 0 R >>", base + 2, base + 1).into_bytes());
         objs.push(if flate {
             stream(
                 base + 1,
@@ -273,6 +520,7 @@ pub fn write_pdf_with(pages: &[PdfPage], title: &str, opt: &PdfOptions) -> Resul
         };
         objs.push(stream(base + 3, &format!("/Type /XObject /Subtype /Image /Width {w} /Height {h} /ColorSpace /DeviceGray /BitsPerComponent 8{filter}"), adata));
     }
+    objs.extend(font_objs);
     if let Some(s) = &sec {
         objs.push(s.dict().into_bytes());
     }
@@ -539,6 +787,7 @@ mod tests {
                 image: &img,
                 width_pt: 3.0,
                 height_pt: 2.0,
+                text: None,
             }],
             "t",
         )
@@ -564,5 +813,115 @@ mod tests {
         let svg = write_svg(&d, 0, 0, None).unwrap();
         assert!(svg.contains("<path d=\"M1 1 C1 1 5 1 5 1"));
         assert!(svg.contains("fill=\"#ff0000\""));
+    }
+
+    /// Content stream of the first page (object 5), uncompressed.
+    fn page_content(pdf: &[u8]) -> String {
+        let s = String::from_utf8_lossy(pdf).to_string();
+        let o = s.find("5 0 obj").expect("content object");
+        let a = s[o..]
+            .find(
+                "stream
+",
+            )
+            .expect("stream")
+            + o
+            + 7;
+        let b = s[a..]
+            .find(
+                "
+endstream",
+            )
+            .expect("endstream")
+            + a;
+        s[a..b].to_string()
+    }
+
+    fn text_page_pdf(selectable: bool, compression: PdfCompression) -> Vec<u8> {
+        let img = RgbaImage::filled(
+            fp_geom::IRect::new(0, 0, 100, 50),
+            fp_color::Rgba8::new(255, 255, 255, 255),
+        )
+        .unwrap();
+        let mut widths = vec![600.0; 224];
+        widths[(b'i' - 32) as usize] = 250.0;
+        let em = |x: f64| [20.0, 0.0, 0.0, -20.0, x, 30.0];
+        let layer = PdfTextLayer {
+            fonts: vec![PdfTextFont {
+                name: "Test".into(),
+                widths,
+            }],
+            glyphs: vec![
+                PdfTextGlyph {
+                    font: 0,
+                    ch: 'H',
+                    m: em(10.0),
+                },
+                // H advances 600/1000 em = 12 px: no adjustment
+                PdfTextGlyph {
+                    font: 0,
+                    ch: 'i',
+                    m: em(22.0),
+                },
+                // i advances 5 px, 3 px tracking: -150/1000 em
+                PdfTextGlyph {
+                    font: 0,
+                    ch: '(',
+                    m: em(30.0),
+                },
+            ],
+        };
+        write_pdf_with(
+            &[PdfPage {
+                image: &img,
+                width_pt: 100.0,
+                height_pt: 50.0,
+                text: Some(&layer),
+            }],
+            "t",
+            &PdfOptions {
+                compression,
+                selectable_text: selectable,
+                ..PdfOptions::default()
+            },
+        )
+        .unwrap()
+    }
+
+    #[test]
+    fn pdf_selectable_text_is_invisible_text_over_the_image() {
+        let pdf = text_page_pdf(true, PdfCompression::None);
+        let c = page_content(&pdf);
+        let toks: Vec<&str> = c.split_whitespace().collect();
+        // image first, then the invisible text
+        assert!(c.starts_with("q 100.0000 0 0 50.0000"), "{c}");
+        let bt = toks.iter().position(|t| *t == "BT").expect("BT");
+        assert_eq!(&toks[bt..bt + 3], ["BT", "3", "Tr"]);
+        assert_eq!(&toks[bt + 3..bt + 6], ["/F0", "1", "Tf"]);
+        // Tm: 20 px em at x 10, baseline y 30 px from the top of a 50 pt page
+        assert_eq!(
+            &toks[bt + 6..bt + 13],
+            ["20", "0", "0", "20", "10", "20", "Tm"]
+        );
+        assert_eq!(&toks[bt + 13..], ["[(Hi)", "-150", r"(\()]", "TJ", "ET"]);
+        let s = String::from_utf8_lossy(&pdf);
+        assert!(s.contains("/Font << /F0 "), "font resource");
+        assert!(s.contains("/BaseFont /Helvetica /Encoding /WinAnsiEncoding /FirstChar 32"));
+        assert!(s.contains("/Widths [600 600"));
+        // switched off: no text
+        let off = text_page_pdf(false, PdfCompression::None);
+        assert!(!page_content(&off).contains("Tr"));
+        assert!(!String::from_utf8_lossy(&off).contains("/Font"));
+    }
+
+    #[test]
+    fn pdf_jpeg2000_falls_back_to_dct_and_says_so() {
+        let pdf = text_page_pdf(false, PdfCompression::Jpeg2000);
+        let s = String::from_utf8_lossy(&pdf);
+        assert!(s.contains("/Filter /DCTDecode"));
+        assert!(!s.contains("JPXDecode"));
+        assert!(s.contains("/Producer (Firepixel (JPEG 2000 not available"));
+        let zip = text_page_pdf(false, PdfCompression::Zip);
+        assert!(String::from_utf8_lossy(&zip).contains("/Producer (Firepixel)"));
     }
 }

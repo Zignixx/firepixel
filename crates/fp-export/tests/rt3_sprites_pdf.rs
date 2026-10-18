@@ -74,6 +74,7 @@ fn e6_pdf_quality_tables() {
         image: &img,
         width_pt: 32.0,
         height_pt: 16.0,
+        text: None,
     };
     for level in 0..5u8 {
         let opt = fp_export::vector_out::PdfOptions {

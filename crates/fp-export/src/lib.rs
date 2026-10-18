@@ -47,6 +47,7 @@ pub mod palette_edit;
 pub mod palettes;
 pub mod pdf_crypt; // E2: Kennwortschutz der PDF-Optionen (re\18 §4.1)
 pub mod pdf_jpeg_tables; // re 28 E6: feste JPEG-Tabellen der PDF-Qualitätsstufen
+pub mod pdf_text; // BA-100: invisible text for "Enable text selection"
 pub mod pipeline;
 pub mod png_out;
 pub mod popup;

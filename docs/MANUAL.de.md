@@ -245,6 +245,8 @@ nebeneinander.
 (Vorgabe an, wirkt mit „CSS für Popupmenüs verwenden“) die Stile in eine eigene `.css`-Datei neben
 der HTML-Datei, die per `@import` eingebunden wird. Neben „Hintergrundbild:“ wählt „Durchsuchen...“ ein
 Bild. Liegt es im Ordner des Dokuments, wird der Pfad relativ eingetragen.
+In den PDF-Exportoptionen schreibt die Komprimierung „JPEG 2000 (JPEG)“ normales JPEG (DCT), weil
+Firepixel keinen JPEG-2000-Kodierer hat; der Eintrag „Producer“ des PDFs vermerkt das.
 
 **Web-Funktionen:**
 
