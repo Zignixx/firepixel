@@ -182,6 +182,7 @@ pub(crate) fn edit_doc<R>(
         {
             let _ = s.session.activate(p);
         }
+        s.session.begin_live_text_view();
         r
     })
 }
@@ -212,6 +213,7 @@ pub(crate) fn exec_group(doc: DocId, cmds: Vec<(&'static str, Value)>) -> FwResu
         {
             let _ = s.session.activate(p);
         }
+        s.session.begin_live_text_view();
         r
     })
 }

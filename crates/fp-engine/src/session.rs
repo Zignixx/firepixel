@@ -415,6 +415,9 @@ pub struct Session {
     pub last_command: Option<RecordedCommand>,
     pub last_command_label: Option<String>,
     group_depth: u32,
+    /// TW-139: live text view for script read-back: document whose model currently shows the open
+    /// text editor's state, with the committed model to put back (see [`Session::begin_live_text_view`]).
+    live_text: Option<(DocId, Arc<Document>)>,
     group_log: Vec<RecordedCommand>,
     /// Nächster Befehl legt auch ohne Änderung einen Verlaufsschritt an (Original: z. B.
     /// „JPEG-Maske löschen“ ohne Maske).
@@ -467,6 +470,7 @@ impl Session {
             last_command: None,
             last_command_label: None,
             group_depth: 0,
+            live_text: None,
             group_log: Vec::new(),
             force_step: false,
             next_doc: 1,
@@ -557,6 +561,7 @@ impl Session {
 
     /// Aktiviert ein Dokument.
     pub fn activate(&mut self, id: DocId) -> Result<()> {
+        self.end_live_text_view();
         let i = self
             .docs
             .iter()
@@ -606,6 +611,7 @@ impl Session {
 
     /// Schließt ein Dokument (ohne Rückfrage; die UI fragt vorher nach `is_dirty`).
     pub fn close_document(&mut self, id: DocId) -> Result<()> {
+        self.end_live_text_view();
         let i = self
             .docs
             .iter()
@@ -734,6 +740,7 @@ impl Session {
 
     /// Führt einen Befehl aus (siehe Moduldoku).
     pub fn execute(&mut self, name: &str, params: Value) -> Result<CommandOutput> {
+        self.end_live_text_view();
         let reg = Arc::clone(&self.registry);
         let cmd = reg
             .get(name)
@@ -1066,6 +1073,7 @@ impl Session {
         label: &str,
         f: impl FnOnce(&mut Session) -> Result<()>,
     ) -> Result<()> {
+        self.end_live_text_view();
         let doc_id = self.active_id();
         let before = self.active().map(|d| d.snapshot());
         let outer = self.group_depth == 0;
@@ -1104,6 +1112,7 @@ impl Session {
 
     /// Rückgängig im aktiven Dokument.
     pub fn undo(&mut self) -> Result<()> {
+        self.end_live_text_view();
         let d = self.doc_mut()?;
         let snap = d
             .history
@@ -1177,6 +1186,7 @@ impl Session {
 
     /// Wiederholen im aktiven Dokument.
     pub fn redo(&mut self) -> Result<()> {
+        self.end_live_text_view();
         let d = self.doc_mut()?;
         let snap = d
             .history
@@ -1232,6 +1242,7 @@ impl Session {
     /// Wechselt das Werkzeug; ein laufender Vorgang des alten Werkzeugs wird abgeschlossen
     /// (z. B. Text übernehmen). Liefert die Antwort des alten Werkzeugs.
     pub fn set_tool(&mut self, id: ToolId) -> Result<ToolResponse> {
+        self.end_live_text_view();
         let mut resp = ToolResponse::default();
         if id != self.tools.active {
             let old_resp = self.with_tool_ctx(|m, ctx| m.finish(ctx));
@@ -1382,6 +1393,64 @@ impl Session {
         self.renderer.as_ref()?.text_frame(&d.doc, t)
     }
 
+    /// TW-139: while the text tool edits, put the editor's live state into the active document's
+    /// model for read-back (scripts: element list, `textChars`, `pixelRect`), as the original shows
+    /// the new text object from the first click and the typed text at once. The edited object gets
+    /// the editor's text and formatting; a new text is inserted at the top of the active layer as
+    /// `draw.text` would. No history step, nothing marked dirty: the committed model is kept and put
+    /// back by [`Session::end_live_text_view`], which every changing entry point (commands, groups,
+    /// undo/redo, tool events, document switches) calls first. Returns whether a view is active.
+    pub fn begin_live_text_view(&mut self) -> bool {
+        self.end_live_text_view();
+        let Some(v) = self
+            .tools
+            .machine
+            .overlay()
+            .into_iter()
+            .find_map(|o| match o {
+                tools::Overlay::TextEdit(v) => Some(v),
+                _ => None,
+            })
+        else {
+            return false;
+        };
+        let Some(d) = self.active_mut() else {
+            return false;
+        };
+        let orig = Arc::clone(&d.doc);
+        let Some(mut e) = v.preview_element(&orig) else {
+            return false;
+        };
+        let mut doc = (*orig).clone();
+        let placed = match v.target {
+            Some(t) => {
+                crate::docops::edit_by_id(&mut doc, d.page, fp_model::ElementId(t), |x| *x = e)
+                    .is_some()
+            }
+            None => {
+                e.id = doc.ids.element();
+                crate::docops::insert_element(&mut doc, d.page, d.frame, d.layer, 0, Arc::new(e))
+                    .is_some()
+            }
+        };
+        if !placed {
+            return false;
+        }
+        d.doc = Arc::new(doc);
+        self.live_text = Some((d.id, orig));
+        true
+    }
+
+    /// Ends the live text view of [`Session::begin_live_text_view`]: the document gets its
+    /// committed model back. No-op without a view.
+    pub fn end_live_text_view(&mut self) {
+        if let Some((id, orig)) = self.live_text.take()
+            && let Some(d) = self.docs.iter_mut().find(|d| d.id == id)
+        {
+            d.doc = orig;
+        }
+    }
+
     /// Angezeigte Grenzen des Texts im offenen Editor wie im Original (Rahmen + 2 px Rand je Seite,
     /// `docops::TEXT_MARGIN`) – für B/H/X/Y im Inspektor und das Info-Bedienfeld während der Bearbeitung.
     pub fn text_edit_bounds(&self) -> Option<fp_geom::Rect> {
@@ -1392,6 +1461,7 @@ impl Session {
     /// Laufenden Werkzeugvorgang abschließen (vor einem Menübefehl, 10 §2.2 „Werkzeug vs.
     /// Menübefehl“), z. B. Text übernehmen oder einen offenen Stiftpfad beenden.
     pub fn finish_tool(&mut self) -> Result<ToolResponse> {
+        self.end_live_text_view();
         let resp = self.with_tool_ctx(|m, ctx| m.finish(ctx));
         self.run_tool_response(resp)
     }
@@ -1443,6 +1513,7 @@ impl Session {
 
     /// Ein Eingabe-Ereignis an das aktive Werkzeug geben; die erzeugten Befehle werden ausgeführt.
     pub fn tool_event(&mut self, ev: &ToolEvent) -> Result<ToolResponse> {
+        self.end_live_text_view();
         let resp = self.with_tool_ctx(|m, ctx| m.handle(ev, ctx));
         self.run_tool_response(resp)
     }

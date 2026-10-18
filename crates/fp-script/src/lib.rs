@@ -270,6 +270,8 @@ fn run_inner(session: &mut Session, source: &str, opts: &ScriptOptions) -> Scrip
     let placeholder = Session::with_registry(Preferences::new(), Arc::clone(session.registry()));
     let real = std::mem::replace(session, placeholder);
     let mut st = state::State::new(real, opts.clone());
+    // TW-139: reads see the open text editor's live state (ended again before handing back)
+    st.session.begin_live_text_view();
     if let Some(p) = &opts.script_path {
         st.script_stack.push(p.clone());
     }
@@ -315,7 +317,9 @@ fn run_inner(session: &mut Session, source: &str, opts: &ScriptOptions) -> Scrip
         outcome.diagnostics = st.diagnostics;
         outcome.not_implemented = st.not_implemented.into_iter().collect();
         outcome.used = st.used.into_iter().collect();
-        *session = st.session;
+        let mut real = st.session;
+        real.end_live_text_view();
+        *session = real;
     }
     outcome
 }

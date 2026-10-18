@@ -242,6 +242,8 @@ impl State {
             })?;
         }
         let r = self.session.execute(name, params);
+        // TW-139: after the command, reads see the open text editor's live state again
+        self.session.begin_live_text_view();
         if let (Some(d), Some(p)) = (doc, prev)
             && p != d
             && self.session.document(p).is_some()
