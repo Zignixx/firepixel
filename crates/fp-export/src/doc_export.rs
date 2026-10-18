@@ -629,6 +629,8 @@ pub struct WholePreview {
 }
 
 /// Ergebnis von [`optimize_whole_to_size`].
+// one value per search, returned once: boxing `Found` would only add noise for the callers
+#[allow(clippy::large_enum_variant)]
 #[derive(Clone, Debug, PartialEq)]
 pub enum SizeOutcome {
     /// Gefundene Einstellung (zuletzt berechnete der Bisektion, kann das Ziel überschreiten).

@@ -419,6 +419,15 @@ pub fn encode_plain(
             s.webp.quality = quality
                 .unwrap_or(default_quality(OutputFormat::WebP).unwrap_or(82))
                 .clamp(0, 100) as i32;
+            // BA-108: alpha quality and encoder effort reach the writer
+            s.webp.alpha_quality = opt_i(options, "alphaQuality")
+                .unwrap_or(i64::from(
+                    fp_export::options::WebpSettings::DEFAULT_ALPHA_QUALITY,
+                ))
+                .clamp(0, 100) as i32;
+            s.webp.method = opt_i(options, "method")
+                .unwrap_or(i64::from(fp_export::options::WebpSettings::DEFAULT_METHOD))
+                .clamp(0, 6) as i32;
         }
         OutputFormat::Avif => {
             s.color_mode = ColorMode::Rgba32;
@@ -426,6 +435,7 @@ pub fn encode_plain(
                 .unwrap_or(default_quality(OutputFormat::Avif).unwrap_or(60))
                 .clamp(1, 100) as i32;
             s.avif.speed = opt_i(options, "speed").unwrap_or(6).clamp(1, 10) as u8;
+            s.avif.alpha_quality = opt_i(options, "alphaQuality").map(|a| a.clamp(1, 100) as i32); // BA-108
         }
         OutputFormat::Gif => {
             s.color_mode = ColorMode::Indexed;

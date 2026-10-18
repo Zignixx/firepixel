@@ -355,6 +355,16 @@ pub struct WebpSettings {
     pub lossless: bool,
     /// Qualität 0…100 (verlustbehaftet) bzw. Aufwand (verlustfrei).
     pub quality: i32,
+    /// Quality of the alpha plane 0…100 (100 = lossless alpha).
+    pub alpha_quality: i32,
+    /// Encoder effort 0 (fast) … 6 (slow, smaller).
+    pub method: i32,
+}
+
+impl WebpSettings {
+    /// Default alpha quality and effort of the encoder.
+    pub const DEFAULT_ALPHA_QUALITY: i32 = 100;
+    pub const DEFAULT_METHOD: i32 = 4;
 }
 
 /// AVIF-Einstellungen.
@@ -364,6 +374,8 @@ pub struct AvifSettings {
     pub quality: i32,
     /// Geschwindigkeit 1 (langsam, klein) … 10 (schnell).
     pub speed: u8,
+    /// Quality of the alpha plane 1…100; `None` = same as `quality`.
+    pub alpha_quality: Option<i32>,
 }
 
 /// Animation (Status als Einzelbilder).
@@ -498,10 +510,13 @@ impl OptimizeSettings {
                 lossless: format == ExportFormat::WebPLossless
                     || color_mode == ColorMode::Rgba32 && format == ExportFormat::AnimatedWebP,
                 quality: e.jpeg_quality,
+                alpha_quality: WebpSettings::DEFAULT_ALPHA_QUALITY,
+                method: WebpSettings::DEFAULT_METHOD,
             },
             avif: AvifSettings {
                 quality: e.jpeg_quality,
                 speed: 6,
+                alpha_quality: None,
             },
             anim: AnimSettings {
                 loop_count: e.loop_count,

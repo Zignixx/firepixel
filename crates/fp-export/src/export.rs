@@ -189,7 +189,12 @@ pub fn encode(
         ) => {
             let lossless = s.format == ExportFormat::WebPLossless
                 || (s.format == ExportFormat::AnimatedWebP && s.webp.lossless);
-            crate::modern::write_webp(pixels, *width, *height, lossless, s.webp.quality)
+            crate::modern::write_webp_with(
+                pixels,
+                *width,
+                *height,
+                &crate::options::WebpSettings { lossless, ..s.webp },
+            )
         }
         (
             ExportFormat::Avif,
@@ -199,7 +204,7 @@ pub fn encode(
                 pixels,
                 ..
             },
-        ) => crate::modern::write_avif(pixels, *width, *height, s.avif.quality, s.avif.speed),
+        ) => crate::modern::write_avif_with(pixels, *width, *height, &s.avif),
         (
             ExportFormat::Qoi,
             Optimized::Truecolor {
