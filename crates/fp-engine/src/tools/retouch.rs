@@ -177,6 +177,7 @@ impl StampLive {
                         key: (tx, ty),
                         rect: tr,
                         image: std::sync::Arc::new(t),
+                        exact: None,
                         version: next_gen,
                     });
                 }
@@ -218,7 +219,7 @@ impl RetouchTool {
     /// Stempel: Vorschau beim Drücken beginnen (ausgewählte Bitmap als Ziel).
     fn begin_stamp_live(&mut self, ctx: &ToolContext) {
         self.live = None;
-        let Some((_, e)) = crate::paint::target_bitmap(ctx.doc, ctx.page, &ctx.selection.elements)
+        let Some((id, e)) = crate::paint::target_bitmap(ctx.doc, ctx.page, &ctx.selection.elements)
         else {
             return;
         };
@@ -238,6 +239,7 @@ impl RetouchTool {
             sel,
             preview: crate::paint::PaintPreview {
                 stroke: next_stamp_stroke(),
+                target: Some(id.0),
                 ..crate::paint::PaintPreview::default()
             },
         });

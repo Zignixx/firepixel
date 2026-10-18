@@ -61,7 +61,9 @@ pub mod options;
 pub mod tiles;
 
 pub use cache::{CacheStats, Look, RenderCache};
-pub use compose::{RenderOutput, Renderer, has_visible_effects, kind_tag};
+pub use compose::{
+    PixelOverride, RenderOutput, Renderer, find_bitmap, has_visible_effects, kind_tag,
+};
 pub use hit::{Hit, HitOptions};
 pub use nine::{AxisMap, PointMap, Stage};
 pub use options::{BackgroundMode, CachePolicy, RenderOptions, RenderReport};

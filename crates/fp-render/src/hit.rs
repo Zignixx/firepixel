@@ -56,6 +56,7 @@ impl Renderer {
             map: PointMap::identity(),
             frame,
             symbols: Vec::new(),
+            over: None,
         };
         for (slot, s) in p.root.layers.iter().enumerate().rev() {
             let (layer, root, slot_i, state) = match s {

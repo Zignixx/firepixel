@@ -974,8 +974,16 @@ fn canvas_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
             Overlay::Ghost { ids, copy, .. } if preview_drag && source.is_none() => {
                 source = Some((ids.clone(), *copy, true))
             }
+            // BA-039: a stroke on a bitmap the page draws directly is composited in place (full
+            // page composite per tile); only other strokes use the layered overlay
             Overlay::Paint(p) if source.is_none() => {
-                source = p.target.map(|t| (vec![t], true, false))
+                let in_place = st
+                    .session
+                    .active()
+                    .is_some_and(|d| paint_preview::composite_possible(&d.doc, d.page, p));
+                if !in_place {
+                    source = p.target.map(|t| (vec![t], true, false))
+                }
             }
             Overlay::TextEdit(v) => text_hidden.extend(v.target),
             // Zeiger zieht einen Füllgriff: das Objekt zeichnet die Vorschau live (re 40 §1)
@@ -3040,7 +3048,19 @@ fn preview_stack(
             }
             Overlay::Paint(p) => {
                 had_paint = true;
-                paint_preview::paint(&ctx, &page_painter, id, p, view.zoom, time, &spp);
+                let input = paint_preview::CompositeInput {
+                    renderer: &st.renderer,
+                    doc: &d.doc,
+                    generation,
+                    page: page_i,
+                    frame: frame_i,
+                    gamma: view.gamma_preview,
+                };
+                if paint_preview::paint_composite(&ctx, &page_painter, id, p, &input, time, &spp)
+                    .is_none()
+                {
+                    paint_preview::paint(&ctx, &page_painter, id, p, view.zoom, time, &spp);
+                }
             }
             _ => {}
         }

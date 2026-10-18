@@ -566,6 +566,10 @@ pub struct PaintTile {
     pub key: (i32, i32),
     pub rect: IRect,
     pub image: Arc<RgbaImage>,
+    /// True new bitmap pixels where `image` is not transparent (`image` shows pixels whose
+    /// coverage dropped over a backdrop); `None` = `image` already holds the true pixels. The
+    /// canvas composites them in the bitmap's stacking position (BA-039).
+    pub exact: Option<Arc<RgbaImage>>,
     /// Steigt bei jeder Änderung der Kachel.
     pub version: u64,
 }
@@ -822,9 +826,11 @@ impl LivePaint {
                         RgbaImage::new(trect)
                             .unwrap_or_else(|_| RgbaImage::empty_at(trect.left, trect.top)),
                     ),
+                    exact: None,
                     version: 0,
                 });
                 let ti = Arc::make_mut(&mut tile.image);
+                let mut exact = tile.exact.take();
                 let base = self.base.as_deref();
                 for y in part.top..part.bottom {
                     for x in part.left..part.right {
@@ -837,9 +843,17 @@ impl LivePaint {
                         } else {
                             over(new, self.backdrop.at(x, y))
                         };
+                        if shown[3] != 0 && (shown != new || exact.is_some()) {
+                            // first pixel whose shown value differs: start from the shown image,
+                            // which holds the true pixels everywhere else so far
+                            let ex =
+                                Arc::make_mut(exact.get_or_insert_with(|| Arc::new(ti.clone())));
+                            ex.set_pixel(x, y, Rgba8::new(new[0], new[1], new[2], new[3]));
+                        }
                         ti.set_pixel(x, y, Rgba8::new(shown[0], shown[1], shown[2], shown[3]));
                     }
                 }
+                tile.exact = exact;
                 tile.version = self.generation;
             }
         }

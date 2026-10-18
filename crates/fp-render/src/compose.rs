@@ -128,6 +128,35 @@ pub(crate) struct State {
     pub frame: usize,
     /// Symbole auf dem Weg (Schutz vor Rekursion).
     pub symbols: Vec<fp_model::SymbolId>,
+    /// Replaced pixels of one bitmap (live paint preview, BA-039).
+    pub over: Option<Arc<Override>>,
+}
+
+/// Replaced pixels of one bitmap element plus the containers that hold it (their caches are
+/// bypassed while the override is active).
+pub(crate) struct Override {
+    pub id: u64,
+    pub image: Arc<RgbaImage>,
+    pub ancestors: std::collections::HashSet<u64>,
+}
+
+impl State {
+    /// Is `e` the overridden bitmap or one of its containers (no cached look then)?
+    fn overridden(&self, e: &Element) -> bool {
+        self.over
+            .as_ref()
+            .is_some_and(|o| o.id == e.id.0 || o.ancestors.contains(&e.id.0))
+    }
+}
+
+/// Pixels that replace the stored pixels of one bitmap element for a single render: the live
+/// preview of the bitmap tools composites the stroke in the bitmap's stacking position, with its
+/// opacity, blend mode, live effects and masks (BA-039). `image` is in document coordinates like
+/// the stored bitmap (its bounds may be a crop of the bitmap when only that part is rendered).
+#[derive(Clone, Debug)]
+pub struct PixelOverride {
+    pub id: fp_model::ElementId,
+    pub image: Arc<RgbaImage>,
 }
 
 /// Der Renderer (thread-sicher; Element-Cache intern).
@@ -237,7 +266,7 @@ impl Renderer {
         frame: usize,
         rect: IRect,
     ) -> RenderOutput {
-        let (grid, image, report) = self.compose_rect(doc, page, frame, rect);
+        let (grid, image, report) = self.compose_rect(doc, page, frame, rect, None);
         match grid {
             Some(g) => RenderOutput {
                 image: g.assemble(rect),
@@ -254,6 +283,7 @@ impl Renderer {
         page: usize,
         frame: usize,
         rect: IRect,
+        over: Option<Arc<Override>>,
     ) -> (Option<crate::tiles::TileGrid>, RgbaImage, RenderReport) {
         let mut report = RenderReport::default();
         let Some(p) = doc.pages.get(page) else {
@@ -287,13 +317,14 @@ impl Renderer {
             map: PointMap::identity(),
             frame,
             symbols: Vec::new(),
+            over,
         };
         let underlay = if mode == BackgroundMode::UnderlayLast && bg.a > 0 {
             Some(bg)
         } else {
             None
         };
-        if self.options.tile_cache && self.options.cache_budget_pixels > 0 {
+        if self.options.tile_cache && self.options.cache_budget_pixels > 0 && st.over.is_none() {
             // Aufzeichnen (Aussehen aus dem Element-Cache), dann kachelweise mischen; unveränderte
             // Kacheln kommen aus dem Kachel-Cache (Ergebnis pixelgleich zum direkten Mischen).
             let mut cv = Canvas {
@@ -352,12 +383,45 @@ impl Renderer {
         region: IRect,
         zoom: f64,
     ) -> RenderOutput {
+        self.region_of(doc, page, frame, region, zoom, None)
+    }
+
+    /// Like [`Self::render_region`], with the pixels of one bitmap replaced (live paint preview,
+    /// BA-039). `None` when the bitmap is not drawn as part of the page (e.g. it is not on this
+    /// page or lies inside a symbol); the caller then shows its own preview.
+    pub fn render_region_with(
+        &self,
+        doc: &Document,
+        page: usize,
+        frame: usize,
+        region: IRect,
+        zoom: f64,
+        over: &PixelOverride,
+    ) -> Option<RenderOutput> {
+        let (_, ancestors) = find_bitmap(doc, page, over.id)?;
+        let o = Override {
+            id: over.id.0,
+            image: Arc::clone(&over.image),
+            ancestors: ancestors.into_iter().collect(),
+        };
+        Some(self.region_of(doc, page, frame, region, zoom, Some(Arc::new(o))))
+    }
+
+    fn region_of(
+        &self,
+        doc: &Document,
+        page: usize,
+        frame: usize,
+        region: IRect,
+        zoom: f64,
+        over: Option<Arc<Override>>,
+    ) -> RenderOutput {
         let zoom = if zoom.is_finite() && zoom > 0.0 {
             zoom.clamp(1.0 / 256.0, 256.0)
         } else {
             1.0
         };
-        let (grid, base_img, report) = self.compose_rect(doc, page, frame, region);
+        let (grid, base_img, report) = self.compose_rect(doc, page, frame, region, over);
         if (zoom - 1.0).abs() < 1e-12 {
             let mut img = match &grid {
                 Some(g) => g.assemble(region),
@@ -420,6 +484,7 @@ impl Renderer {
             map: PointMap::identity(),
             frame,
             symbols: vec![symbol.id],
+            over: None,
         };
         let mut cv = Canvas::growable();
         self.draw_symbol_layers(doc, &mut cv, symbol, &st, &mut report);
@@ -443,6 +508,7 @@ impl Renderer {
             map: map.clone(),
             frame,
             symbols: Vec::new(),
+            over: None,
         };
         let image = match self.look(doc, e, &st, &mut report) {
             Some(l) => (*l.image).clone(),
@@ -648,7 +714,11 @@ impl Renderer {
             ElementKind::Instance(i) => doc.symbol_by_id(i.symbol_id).map(|(_, s)| Arc::clone(s)),
             _ => None,
         };
-        let budget = self.options.cache_budget_pixels;
+        let budget = if st.overridden(e) {
+            0
+        } else {
+            self.options.cache_budget_pixels
+        };
         if budget > 0
             && let Some((look, r)) = self.with_cache(|c| c.get(e, frame, &st.map, symbol.as_ref()))
         {
@@ -681,6 +751,7 @@ impl Renderer {
         let has_fx = effects.iter().any(|x| x.visible);
         // Gespeicherter Render-Cache (enthält Effekte).
         if let Some(c) = &e.cache
+            && !st.overridden(e)
             && self.cache_allowed(doc, e)
             && let Some(img) = convert::image_of_node(c)
             && let Some(placed) = self.place_cached(&img, &st.map, e, rep)
@@ -693,6 +764,10 @@ impl Renderer {
         }
         let mut extra_opacity = None;
         let base: Option<RgbaImage> = match &e.kind {
+            ElementKind::Bitmap(_) if st.over.as_ref().is_some_and(|o| o.id == e.id.0) => {
+                let o = st.over.as_ref()?;
+                self.place_bitmap(&o.image, &st.map, rep)
+            }
             ElementKind::Bitmap(b) => {
                 if has_fx
                     && self.options.cache_policy != CachePolicy::None
@@ -1314,6 +1389,7 @@ impl Renderer {
             map: inner,
             frame,
             symbols: syms,
+            over: None,
         };
         let mut cv = Canvas::growable();
         self.draw_symbol_layers(doc, &mut cv, sym, &st2, rep);
@@ -1335,6 +1411,7 @@ impl Renderer {
             map: PointMap::identity(),
             frame: 0,
             symbols: vec![sym.id],
+            over: None,
         };
         let mut r = RenderReport::default();
         self.draw_symbol_layers(doc, &mut cv, sym, &st, &mut r);
@@ -1389,4 +1466,46 @@ pub fn kind_tag(e: &Element) -> &'static str {
         ElementKind::SubLayer(_) => "LSLv",
         ElementKind::Raw(_) => "RAW",
     }
+}
+
+/// The bitmap `id` drawn as part of `page` and the ids of the containers around it (groups,
+/// sub-layers, mask groups), outermost first; `None` when no such bitmap is drawn as part of the
+/// page (symbol contents are not searched).
+pub fn find_bitmap(
+    doc: &Document,
+    page: usize,
+    id: fp_model::ElementId,
+) -> Option<(Arc<Element>, Vec<u64>)> {
+    fn in_list(list: &[Arc<Element>], id: u64, path: &mut Vec<u64>) -> Option<Arc<Element>> {
+        for e in list {
+            if e.id.0 == id {
+                return matches!(e.kind, ElementKind::Bitmap(_)).then(|| Arc::clone(e));
+            }
+            path.push(e.id.0);
+            let found = match &e.kind {
+                ElementKind::Group(g) => in_list(&g.children, id, path).or_else(|| {
+                    g.mask
+                        .as_ref()
+                        .and_then(|m| in_list(std::slice::from_ref(m), id, path))
+                }),
+                ElementKind::SubLayer(l) => {
+                    l.cels.iter().find_map(|c| in_list(&c.elements, id, path))
+                }
+                _ => None,
+            };
+            if found.is_some() {
+                return found;
+            }
+            path.pop();
+        }
+        None
+    }
+    let mut path = Vec::new();
+    doc.resolved_layers(page).iter().find_map(|rl| {
+        rl.layer
+            .cels
+            .iter()
+            .find_map(|c| in_list(&c.elements, id.0, &mut path))
+            .map(|e| (e, path.clone()))
+    })
 }
