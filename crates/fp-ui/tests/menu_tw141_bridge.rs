@@ -112,3 +112,61 @@ fn view_menu_checkable_row_reports_toggled() {
     assert_eq!(hit["toggled"], json!(expected), "{hit}");
     assert_eq!(hit["role"], json!("check_box"), "{hit}");
 }
+
+// TW-142: panel ≡ menus (and the other pop-up menus drawn by the same row painter) expose the
+// same enabled / toggled state as the main menu rows.
+
+/// Opens the ≡ menu of panel `p` (the ≡ button in the row of its tab).
+fn open_panel_menu(h: &mut H, p: fp_ui::panels::PanelId) {
+    use egui_kittest::kittest::{By, Queryable};
+    h.state_mut().state.push(fp_ui::app_state::Action::ShowPanel(p));
+    h.run_steps(4);
+    let tab = h.query_all(By::new().label(&fp_i18n::t(p.title_key()))).map(|n| n.rect()).next().expect("panel tab");
+    let button = h
+        .query_all(By::new().label(&fp_i18n::t("ui-dock-panel-menu")))
+        .map(|n| n.rect())
+        .filter(|r| r.center().y >= tab.top() && r.center().y <= tab.bottom())
+        .min_by(|a, b| (a.left() - tab.right()).abs().total_cmp(&(b.left() - tab.right()).abs()))
+        .expect("≡ button in the tab row");
+    click(h, button.center());
+    assert!(egui::Popup::is_any_open(&h.ctx), "{p:?} ≡ menu open");
+}
+
+/// Top-level item rows of the ≡ menu of `p`: (label, enabled, checked).
+fn panel_rows(h: &H, p: fp_ui::panels::PanelId) -> Vec<(String, bool, Option<bool>)> {
+    menu::build_panel_menu(&h.state().state, p)
+        .into_iter()
+        .filter_map(|n| match n {
+            Node::Item { label, enabled, checked, .. } => Some((label, enabled, checked)),
+            _ => None,
+        })
+        .collect()
+}
+
+#[test]
+fn url_panel_menu_rows_report_enabled_state() {
+    use fp_ui::panels::PanelId;
+    let mut h = harness(false);
+    let rows = panel_rows(&h, PanelId::Url);
+    let off = rows.iter().find(|r| !r.1).expect("grey URL menu entry (no URL selected)").0.clone();
+    let on = rows.iter().find(|r| r.1).expect("enabled URL menu entry").0.clone();
+    open_panel_menu(&mut h, PanelId::Url);
+    let hit = row_hit(&mut h, &off);
+    assert_eq!(hit["enabled"], json!(false), "{off}: {hit}");
+    let hit = row_hit(&mut h, &on);
+    assert_eq!(hit["enabled"], json!(true), "{on}: {hit}");
+}
+
+#[test]
+fn panel_menu_checkable_row_reports_toggled() {
+    use fp_ui::panels::PanelId;
+    let mut h = harness(true);
+    let (p, label, on) = PanelId::ALL
+        .iter()
+        .find_map(|&p| panel_rows(&h, p).into_iter().find_map(|(l, _, c)| c.map(|c| (p, l, c))))
+        .expect("a panel menu with a checkable row");
+    open_panel_menu(&mut h, p);
+    let hit = row_hit(&mut h, &label);
+    assert_eq!(hit["toggled"], json!(on), "{p:?} {label}: {hit}");
+    assert_eq!(hit["role"], json!("check_box"), "{p:?} {label}: {hit}");
+}

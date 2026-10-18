@@ -602,6 +602,11 @@ fn flyout_popup(ctx: &egui::Context, st: &mut AppState) {
                         continue;
                     }
                     let resp = ui.allocate_response(vec2(width, 22.0), Sense::click());
+                    // TW-142: flyout rows report name and check mark to the bridge like menu rows
+                    let on = tool == Some(active) && tool != Some(ToolId::AutoShape);
+                    resp.widget_info(|| {
+                        egui::WidgetInfo::selected(egui::WidgetType::Checkbox, true, on, &text)
+                    });
                     let r = resp.rect;
                     if resp.hovered() {
                         ui.painter()
@@ -613,7 +618,7 @@ fn flyout_popup(ctx: &egui::Context, st: &mut AppState) {
                             StrokeKind::Inside,
                         );
                     }
-                    if tool == Some(active) && tool != Some(ToolId::AutoShape) {
+                    if on {
                         icons::paint(
                             ui.painter(),
                             Rect::from_center_size(
