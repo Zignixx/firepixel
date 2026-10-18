@@ -375,7 +375,7 @@ Metadata grey, Animation pink, Optimize green-teal, Vector/Script neutral.
 | `output` (end card) | Save as | **A** `format`: same, png, jpeg, webp, avif, gif, apng, tiff, bmp, tga, qoi, ico, wbmp, fwpng, psd, jxl (P2), pdf (P2), svg (via `vector.trace`); format options below | yes (size) | `fp-export` (present) | **P1** |
 | – PNG | | **A** `bitDepth` 8/24/32/auto *auto*; `palette` 2…256 *256* (8-bit only); `interlace` off; `compression` default/fast/max *default* | yes | `png`, `fp-export::png_out`; max → `optimize.png` | **P1** |
 | – JPEG | | **A** `quality` 1…100 *85*; `progressive` on; `subsampling` 4:4:4/4:2:2/4:2:0 *auto (≥ 90 → 4:4:4)*; `background` for transparency *#ffffff* | yes | `fp-export::jpeg` (own) | **P1** |
-| – WebP | | **A** `quality` 0…100 *82*; **A** `lossless` off; `alphaQuality` 0…100 *100*; `method` 0…6 *4* | yes | `webp` 0.3.1 (static libwebp, BSD-3) | **P1** |
+| – WebP | | **A** `quality` 0…100 *82*; **A** `lossless` off; `alphaQuality` 0…100 *100*; `method` 0…6 *4* (still and animated WebP) | yes | `webp` 0.3.1 (static libwebp, BSD-3) | **P1** |
 | – AVIF | | **A** `quality` 1…100 *60*; `speed` 1…10 *6*; `alphaQuality` | yes | `ravif` 0.13 (BSD-3) | **P1** |
 | – GIF (still and animated) | | options of the GIF optimizer, table §3.9 (schema `output.gif`) | yes | own encoder §5.6 | **P1** |
 | – TIFF/BMP/TGA/QOI/WBMP | | TIFF `compression` default/none/lzw/deflate/packbits *default = lzw*; TGA `compression` default/none *default = RLE*; BMP/WBMP `background` *#ffffff* | yes | `fp-export::formats` (present) | **P1** |

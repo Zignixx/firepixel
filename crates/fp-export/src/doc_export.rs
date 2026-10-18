@@ -6,7 +6,7 @@ use fp_geom::IRect;
 use fp_model::{Document, ElementKind, LayerKind, LayerSlot};
 use fp_raster::{RgbaImage, Sampler};
 
-use crate::animation::{AnimFrameSrc, animated_gif, animated_webp, apng};
+use crate::animation::{AnimFrameSrc, animated_gif, animated_webp_with, apng};
 use crate::export::{EncodeExtras, export_image};
 use crate::html::{CellContent, HtmlOptions, MapArea, Shims, write_css_layers, write_html};
 use crate::options::{ExportFormat, OptimizeSettings};
@@ -581,14 +581,7 @@ fn export_animation(
     match s.format {
         ExportFormat::AnimatedGif => animated_gif(&fr, w, h, s, ctx),
         ExportFormat::Apng => apng(&fr, w, h, ctx, s.anim.loop_count),
-        _ => animated_webp(
-            &fr,
-            w,
-            h,
-            s.webp.lossless,
-            s.webp.quality,
-            s.anim.loop_count,
-        ),
+        _ => animated_webp_with(&fr, w, h, &s.webp, s.anim.loop_count),
     }
 }
 

@@ -67,12 +67,36 @@ pub struct WebpFrame {
 }
 
 /// Animiertes WebP; `loop_count` 0 = endlos (wie GIF), `None` ⇒ einmal (WebP-Schleife 1).
+/// Alpha quality 100, effort 4 (see [`write_animated_webp_with`]).
 pub fn write_animated_webp(
     w: usize,
     h: usize,
     frames: &[WebpFrame],
     lossless: bool,
     quality: i32,
+    loop_count: Option<u16>,
+) -> Result<Vec<u8>> {
+    write_animated_webp_with(
+        w,
+        h,
+        frames,
+        &WebpSettings {
+            lossless,
+            quality,
+            alpha_quality: WebpSettings::DEFAULT_ALPHA_QUALITY,
+            method: WebpSettings::DEFAULT_METHOD,
+        },
+        loop_count,
+    )
+}
+
+/// Animated WebP with all settings: quality, alpha quality 0…100 and effort (`method`) 0…6
+/// (BA-108, mirrors [`write_webp_with`]).
+pub fn write_animated_webp_with(
+    w: usize,
+    h: usize,
+    frames: &[WebpFrame],
+    s: &WebpSettings,
     loop_count: Option<u16>,
 ) -> Result<Vec<u8>> {
     if frames.is_empty() {
@@ -85,8 +109,10 @@ pub fn write_animated_webp(
     }
     let mut cfg = webp::WebPConfig::new()
         .map_err(|_| ExportError::Encode(fp_i18n::t("err-export-d-webp-config")))?;
-    cfg.lossless = i32::from(lossless);
-    cfg.quality = quality.clamp(0, 100) as f32;
+    cfg.lossless = i32::from(s.lossless);
+    cfg.quality = s.quality.clamp(0, 100) as f32;
+    cfg.alpha_quality = s.alpha_quality.clamp(0, 100);
+    cfg.method = s.method.clamp(0, 6);
     let data: Vec<Vec<u8>> = frames
         .iter()
         .map(|f| rgba_bytes(&f.pixels[..w * h]))

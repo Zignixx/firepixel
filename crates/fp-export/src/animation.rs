@@ -298,6 +298,28 @@ pub fn animated_webp(
     quality: i32,
     loop_count: i32,
 ) -> Result<Vec<u8>> {
+    animated_webp_with(
+        frames,
+        w,
+        h,
+        &crate::options::WebpSettings {
+            lossless,
+            quality,
+            alpha_quality: crate::options::WebpSettings::DEFAULT_ALPHA_QUALITY,
+            method: crate::options::WebpSettings::DEFAULT_METHOD,
+        },
+        loop_count,
+    )
+}
+
+/// Animated WebP from state images with all WebP settings (alpha quality, method; BA-108).
+pub fn animated_webp_with(
+    frames: &[AnimFrameSrc],
+    w: usize,
+    h: usize,
+    s: &crate::options::WebpSettings,
+    loop_count: i32,
+) -> Result<Vec<u8>> {
     let fr: Vec<crate::modern::WebpFrame> = frames
         .iter()
         .filter(|f| f.info.visible)
@@ -315,7 +337,7 @@ pub fn animated_webp(
     } else {
         Some(loop_count.min(65535) as u16)
     };
-    crate::modern::write_animated_webp(w, h, &fr, lossless, quality, lc)
+    crate::modern::write_animated_webp_with(w, h, &fr, s, lc)
 }
 
 #[cfg(test)]
