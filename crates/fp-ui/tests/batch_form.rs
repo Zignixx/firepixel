@@ -516,6 +516,26 @@ fn fenster_schliessen_waehrend_des_laufs_fragt() {
     assert!(h.state().state.quit_confirmed, "beendet");
 }
 
+/// BA-106: closing the **minimized** window (taskbar, WM_CLOSE) while a batch runs and no
+/// document is dirty must not quit silently (the studio's `Drop` would cancel the run) but
+/// restore the window and ask "Batch is still running – cancel and close?".
+#[test]
+fn closing_minimized_window_while_running_asks() {
+    let (mut h, _d) = running_studio("minimized");
+    assert!(!h.state().state.any_dirty(), "only the batch may hold the close");
+    let ctx = h.ctx.clone();
+    assert!(h.state_mut().close_while_minimized(&ctx, true, true), "close request kept");
+    h.run_steps(3);
+    assert!(!h.state().state.quit_confirmed, "not quit silently");
+    assert!(batch::is_open(&h.state().state) && studio(&mut h).running(), "run continues");
+    assert_eq!(studio(&mut h).close_ask, Some(batch::settings::CloseAsk::Window));
+    assert!(find(&h, &t("batch-quit-text")).is_some(), "question visible");
+    let ok = node(&h, &t("batch-quit-confirm"), egui::accesskit::Role::Button).expect("cancel and close");
+    click(&mut h, ok.center());
+    h.run_steps(3);
+    assert!(h.state().state.quit_confirmed, "quits after confirmation");
+}
+
 #[test]
 fn studio_schliessen_waehrend_des_laufs_fragt() {
     let (mut h, _d) = running_studio("studio");

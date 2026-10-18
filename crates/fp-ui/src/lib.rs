@@ -389,7 +389,10 @@ impl FirepixelApp {
         minimized: bool,
         close: bool,
     ) -> bool {
-        if !(minimized && close && !self.state.quit_confirmed && self.state.any_dirty()) {
+        // a running batch also asks first (BA-106): "Batch is still running – cancel and close?"
+        let ask = self.state.any_dirty()
+            || crate::batch::studio(&self.state).is_some_and(|s| s.running());
+        if !(minimized && close && !self.state.quit_confirmed && ask) {
             return false;
         }
         ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
