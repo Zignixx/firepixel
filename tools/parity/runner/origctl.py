@@ -194,6 +194,11 @@ class Original:
         # restart after a crash does not change it)
         self.started_by_us = None
         self.own_pids: set[int] = set()  # processes this runner started (instances and script launchers)
+        # R-14 (RE-15, TW-132): jsf() cancels dialogs while a script runs (a modal dialog blocks the script).
+        # `keep_dialogs` (step flag `keep_dialog`) switches that off; every dialog it cancels is logged and
+        # collected in `closed_dialogs` (the runner moves them into the step record)
+        self.keep_dialogs = False
+        self.closed_dialogs: list[dict] = []
 
     # ---------------------------------------------------------------- process
     def pid(self) -> int:
@@ -320,8 +325,31 @@ class Original:
         return r
 
     # -------------------------------------------------------------------- JSF
-    def jsf(self, code: str, timeout: float = 60) -> list[str]:
-        """Run JSF in the running instance; returns the log lines (fp_log / fp_ret)."""
+    def _cancel_dialogs_during_script(self, why: str, progress: str, kept: set) -> None:
+        """R-14 (RE-15): open dialogs (except the script progress window) are cancelled while a script runs - a
+        notice the reference shows after a shortcut (Break Apart / Select Inverse warning) was closed silently
+        before `record_ui` could see it (a ~845 ms `log_value` was the only trace). Now every cancelled dialog is
+        logged as 'dialog closed by <why>: <title | texts>'; with `keep_dialogs` it is left open and logged once."""
+        ds = [d for d in self.host.list("dialogs") if isinstance(d, dict)
+              and not re.search(progress, f"{d.get('title') or ''} | {d.get('texts') or ''}", re.I)]
+        if not ds:
+            return
+        if self.keep_dialogs:
+            for d in ds:
+                if d.get("hwnd") not in kept:
+                    kept.add(d.get("hwnd"))
+                    self.log(f"dialog kept open during {why} (keep_dialog): {d.get('title') or ''} | "
+                             f"{str(d.get('texts') or '')[:160]}")
+            return
+        self.host.call("dialog_close", mode="cancel", **{"except": progress})
+        for d in ds:
+            info = {"by": why, "title": d.get("title"), "texts": str(d.get("texts") or "")[:300], "rect": d.get("rect")}
+            self.closed_dialogs.append(info)
+            self.log(f"dialog closed by {why}: {info['title'] or ''} | {info['texts'][:160]}")
+
+    def jsf(self, code: str, timeout: float = 60, why: str = "jsf") -> list[str]:
+        """Run JSF in the running instance; returns the log lines (fp_log / fp_ret). `why` names the caller in the
+        'dialog closed by ...' log lines (R-14)."""
         if not self.running():
             self.log("reference program not running before a script - starting it")
             self.start()
@@ -355,6 +383,7 @@ class Original:
         end = time.time() + timeout
         progress = self.cfg.get("progress_dialog_regex", "Befehlsskript|verarbeitet|Processing|Fortschritt")
         gone_since, resends = None, 0
+        kept: set = set()
         while time.time() < end and not done.exists():
             time.sleep(0.4)
             # the launcher hands the script over and ends; if it ended but the script never started
@@ -368,7 +397,7 @@ class Original:
                     self.own_pids.add(launcher.pid)
                     gone_since = None
             try:
-                self.host.call("dialog_close", mode="cancel", **{"except": progress})
+                self._cancel_dialogs_during_script(why, progress, kept)
             except OrigError:
                 pass
             if not self.running():

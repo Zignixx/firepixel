@@ -575,3 +575,48 @@ Self test: `python -I runner.py --units _selftest_menu,_selftest_inspector`.
   text (`xs-shortcuts/15` "Vrc", `tool-text/07` "Hallo Weltc"); both steps log the texts before Escape now.
 - **`xs-shortcuts/15_in_text_result`** is `unsupported` on both sides (TX1 of T05 has zero width and an invalid
   pixelRect in the reference file; T05 needs a rebuild); `15_in_text_tx2_result` does the same on TX2.
+
+## R-14 additions (18.10.)
+
+- **Dialogs and read-back scripts (RE-15, TW-132):** the script hand-over (`origctl.Original.jsf`) cancels open dialogs
+  every 0.4 s while a script runs (a modal dialog would block it). Notices the reference shows after a shortcut (Break
+  Apart / Select Inverse warning) were therefore closed before `record_ui` saw them; a `log_value` of ~845 ms was the
+  only trace. Now:
+  - before the reference's `log_value` script, open dialogs are recorded: values `{"dialog_before_log_value": [{title,
+    rect, texts, controls}], "shot": path}`, the largest one grabbed to `<unit>/orig/dialogs/<step>_<n>.png` (not part
+    of the compared shots, cleared at unit start), log line `orig: dialog open before log_value: <title> | <texts>`;
+  - every dialog a script cancels is logged as `dialog closed by <log_value|key check|jsf|jsf_value>: <title> | <texts>`
+    and listed in the step record (`dialogs_closed_by_scripts`);
+  - step flag `"keep_dialog": true`: the scripts of that step leave open dialogs alone (logged once as `dialog kept
+    open during …`). A modal dialog blocks the script until it is closed, so a script then ends with a JSF timeout -
+    only for steps whose scripts run while a non-modal window is to be kept.
+- **History read-back (TW-132 a, `menu-edit/01_undo_redo_result, 22`):** `getStepCount()` stood outside the try and gave
+  script error -2147216344. Every history call is guarded; the value is `[count, steps, {count_err, sel | sel_err,
+  docs}]`. When the error comes back, the reference side shows the History panel and reads once more (values `first`,
+  `retry: "history panel shown"`, log line).
+- **Checked keys (TW-132 b, c; `menu-edit/09, 20`, `xs-shortcuts/10`):** on the reference side Delete/Backspace,
+  Ctrl+D and the plain arrow keys are checked when the pointer tool is active, a document is open and no dialog is:
+  tool, object count, `fw.selection.length` and the selection rectangles are read before and after the key, with the
+  focused window. Nothing selected before Delete/arrow: the step's last `select` is restored first. No effect (no
+  object removed / selection not cleared / selection not moved): click on an empty canvas spot outside the page (gives
+  the view the focus), selection restored (`select` of the step, or select all when everything was selected), key
+  pressed once more. Values `{"key_check": {key, kind, focus, before, after, effect, focus_click, restored,
+  after_retry, effect_retry}}` and a log line `orig key <combo>: …`. Other tools (text editing, subselection) are not
+  checked.
+- **Text tool state (TW-132 d):** at unit start the reference gets Escape twice (host key with scan code) before the
+  pointer tool is chosen with the first document; the log line `unit start text reset (Escape x2, pointer tool):
+  active tool …` follows. The script API has no setter for the text tool's defaults (font/size/style setters act on
+  selected text only), so these are not reset by script. After every step with a `type` action the reference gets
+  Escape twice and the pointer tool when the text tool is still active; `text_cleanup` {before, after: {tool, focus},
+  pointer_selected, editor_closed} is in the step record and the log.
+- **Firepixel menu state (TW-132 e, `xs-canvas/15_snap_pixels_disabled`):** when the entry's best `ui_find` hit is a
+  painted text without state, the runner looks for an accessibility node over the text (`menu_item`, `button`, any
+  role) and takes its `enabled`/`toggled` (`enabled_from`); without one the value carries `enabled_why` (what the
+  bridge returned) and the log says so.
+- **Multi-line read-back (TW-130):** `log_value` on the reference side kept only the first line of a value (the script
+  log is read line by line; a text's `textChars` holds line breaks - TX2 showed only "Zeile eins"). The lines after
+  the `RET` line now belong to the value (joined with `\n`).
+- **Text read-back (TW-130):** `xs-shortcuts/15_in_text_tx2_result`, `tool-text/06_edit_existing_focus`,
+  `07_select_text_shift_arrows_focus` and `07_select_text_double_click_focus` log every text object (layer/index, name,
+  pixelRect, `textChars`, selection count) before typing, after typing and after Escape on both sides (06 and 07 shift
+  arrows: Escape and the last read-back in `after`, the shot is unchanged).

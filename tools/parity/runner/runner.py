@@ -438,6 +438,20 @@ def tools_anchor_in(g: Image.Image):
     return None
 
 
+# R-14 (TW-132 b, c; run 18 menu-edit/09, 20, xs-shortcuts/10): keys whose effect on the reference's document is
+# checked (pointer tool, document open, no dialog): Delete/Backspace must remove an object, Ctrl+D must clear the
+# selection, a plain arrow key must move the selection. Without an effect the view gets the focus (click on an
+# empty canvas spot outside the page), the selection is restored and the key pressed once more - all logged
+CHECKED_KEYS = {"delete": "remove", "backspace": "remove", "ctrl+d": "deselect",
+                "left": "move", "right": "move", "up": "move", "down": "move"}
+POINTER_TOOLS = ("zeiger", "pointer")
+KEY_STATE_JS = ('(function(){var r="tool="+fw.activeTool;try{var d=fw.getDocumentDOM(),n=0;'
+                'for(var l=0;l<d.layers.length;l++)n+=d.layers[l].frames[d.currentFrameNum].elements.length;'
+                'var s=fw.selection,b=[];for(var i=0;i<s.length;i++){var p=s[i].pixelRect;'
+                'b.push(p.left+","+p.top+","+p.right+","+p.bottom);}r+=";n="+n+";sel="+s.length+";rects="+b.join("/");}'
+                'catch(e){r+=";error="+e;}return r;})()')
+
+
 class LayoutError(Exception):
     """The reference program's layout (panels, tools column, main toolbar) could not be restored: the unit is
     aborted for that side instead of clicking with a guessed anchor (R-2)."""
@@ -1116,6 +1130,20 @@ class OrigSide(Side):
             self.align_to_canvas_off()
         except OrigError as e:
             self.r.log(f"align to canvas: {e}")
+        # R-14 (TW-132 d, run 18 tool-text/02, 03, 07, 14: large italic underlined text, a stray "c", the text
+        # editor left open by an earlier unit): Escape twice ends a text edit left open; the pointer tool follows
+        # with the first document. The script API has no setter for the text tool's defaults (font, size and
+        # style setters act on selected text only), so they are not reset by script - the unit's first
+        # document logs the active tool instead
+        for _ in range(2):
+            try:
+                self.o.focus()
+                self.h.call("key", combo="escape")
+                time.sleep(0.15)
+            except OrigError as e:
+                self.r.log(f"unit start Escape: {e}")
+                break
+        self.pending_tool_log = True
         # the pointer tool is selected once a document view exists (open_testfile): without a document the tools
         # anchor is only provisional and a click could hit the main toolbar instead
         self.pending_pointer = True
@@ -1135,6 +1163,10 @@ class OrigSide(Side):
                 time.sleep(0.2)
             except OrigError as e:
                 self.r.log(f"pointer tool: {e}")
+        if getattr(self, "pending_tool_log", False):
+            # R-14 (TW-132 d): tool after the unit-start reset (Escape x2, pointer tool)
+            self.pending_tool_log = False
+            self.r.log(f"unit start text reset (Escape x2, pointer tool): active tool {self.active_tool()}")
 
     def log_view(self, lines):
         ch = [ln[5:] for ln in lines or [] if ln.startswith("VIEW ") and ln[5:].strip()]
@@ -1414,6 +1446,161 @@ class OrigSide(Side):
             return bool(self.h.list("dialogs"))
         except OrigError:
             return False
+
+    def record_dialogs_before_script(self, why: str):
+        """R-14 (RE-15, TW-132): a script cancels open dialogs (origctl jsf) - a notice the reference shows after a
+        shortcut was gone before `record_ui` could see it. Before the read-back script runs, open dialogs are
+        recorded in the step values (title, texts, controls) and grabbed to `<unit>/orig/dialogs/<step>_<n>.png`
+        (outside the compared shots); the script then cancels them and logs 'dialog closed by ...'."""
+        try:
+            ds = self.h.list("dialog_kids")
+        except OrigError:
+            return None
+        if not ds:
+            return None
+        out = []
+        for d in ds:
+            kids = d.get("kids") or []
+            out.append({"title": d.get("title"), "rect": d.get("rect"),
+                        "texts": " | ".join(str(k.get("title")) for k in kids if k.get("title")),
+                        "controls": [{"class": k.get("class"), "text": k.get("title")} for k in kids][:40]})
+        shot = None
+        try:
+            big = max(ds, key=lambda d: (d["rect"][2] - d["rect"][0]) * (d["rect"][3] - d["rect"][1]))
+            ddir = self.r.out / self.r.unit["unit"] / "orig" / "dialogs"
+            ddir.mkdir(parents=True, exist_ok=True)
+            n = len(list(ddir.glob(f"{self.r.cur_step}_*.png")))
+            shot = ddir / f"{self.r.cur_step}_{n}.png"
+            self.grab(norm_rect(big["rect"]), shot)
+        except Exception as e:  # noqa: BLE001
+            self.r.log(f"  orig dialog shot before {why}: {e}")
+            shot = None
+        rec = {"dialog_before_" + why: out, "shot": str(shot) if shot else None}
+        self.values.append(rec)
+        for d in out:
+            self.r.log(f"  orig: dialog open before {why}: {d['title'] or ''} | {d['texts'][:160]}"
+                       + (f" (shot {shot.name})" if shot else ""))
+        return rec
+
+    def key_state(self) -> dict:
+        """R-14: active tool, object count, selection count and selection rectangles of the reference."""
+        got = str(self.jsf_value(KEY_STATE_JS, why="key check") or "")
+        return {k: v for k, v in (p.split("=", 1) for p in got.split(";") if "=" in p)}
+
+    def empty_canvas_point(self):
+        """R-14 (TW-132 b, c): a point of the document view outside the page (a click there gives the view the
+        keyboard focus; with the pointer tool it only clears the selection). None when the page fills the view."""
+        v = self.h.call("view")
+        page = getattr(self, "page", None)
+        if page is None:
+            try:
+                page = self.calibrate()
+            except Exception:  # noqa: BLE001
+                page = None
+            if page is None or getattr(self, "page_cut", False):
+                return None
+        for pt in ((v[0] + 14, v[3] - 26), (v[2] - 26, v[3] - 26), (v[0] + 14, v[1] + 14), (v[2] - 26, v[1] + 14)):
+            if not (page[0] - 4 <= pt[0] <= page[2] + 4 and page[1] - 4 <= pt[1] <= page[3] + 4):
+                return pt
+        return None
+
+    @staticmethod
+    def key_effect(kind, a: dict, b: dict) -> bool:
+        if kind == "remove":
+            return int(b.get("n") or 0) < int(a.get("n") or 0)
+        if kind == "deselect":
+            return int(b.get("sel") or 0) == 0
+        return b.get("rects") != a.get("rects")
+
+    def restore_selection(self, kind, st: dict) -> str:
+        names = getattr(self, "last_select", None)
+        if kind == "deselect" and int(st.get("sel") or 0) == int(st.get("n") or -1):
+            self.o.jsf("fw.getDocumentDOM().selectAll();", why="key check")
+            return "select all"
+        if names:
+            self.select(names)
+            return f"select {names}"
+        return "nothing to restore (no select in this step)"
+
+    def key_checked(self, combo):
+        """R-14 (TW-132 b, c): press a key from CHECKED_KEYS and check its effect on the document; without an
+        effect: focus click on an empty canvas spot, selection restored, key pressed once more. Logged in the
+        step values (`key_check`) and the run log, with fw.selection.length and the focused window."""
+        mods, k = parse_combo(combo)
+        kind = CHECKED_KEYS.get("+".join(mods + [k]).lower())
+        try:
+            if not kind or self.view_or_none() is None or self.dialog_open():
+                return self.key(combo)
+            st0 = self.key_state()
+        except OrigError:
+            return self.key(combo)
+        if "error" in st0 or not any(t in str(st0.get("tool", "")).lower() for t in POINTER_TOOLS):
+            return self.key(combo)
+        try:
+            f = self.h.call("focused") or {}
+        except OrigError:
+            f = {}
+        rec = {"key": combo, "kind": kind, "focus": {"class": f.get("class"), "text": f.get("title"),
+               "parent": (f.get("parent") or {}).get("class")}, "before": st0}
+        if int(st0.get("sel") or 0) == 0 and kind != "deselect" and getattr(self, "last_select", None):
+            rec["reselected_before"] = self.restore_selection(kind, st0)
+            st0 = rec["before_reselected"] = self.key_state()
+        self.key(combo)
+        time.sleep(0.25)
+        st1 = rec["after"] = self.key_state()
+        rec["effect"] = self.key_effect(kind, st0, st1)
+        if not rec["effect"] and int(st0.get("sel") or 0) > 0:
+            pt = None
+            try:
+                pt = self.empty_canvas_point()
+            except OrigError as e:
+                rec["focus_click_error"] = str(e)[:120]
+            if pt:
+                self.click_at(pt)
+                time.sleep(0.2)
+            rec["focus_click"] = list(pt) if pt else None
+            rec["restored"] = self.restore_selection(kind, st0)
+            st0b = rec["before_retry"] = self.key_state()
+            self.key(combo)
+            time.sleep(0.25)
+            st2 = rec["after_retry"] = self.key_state()
+            rec["effect_retry"] = self.key_effect(kind, st0b, st2)
+        self.values.append({"key_check": rec})
+        self.r.log(f"  orig key {combo}: focus {rec['focus'].get('class')} sel {st0.get('sel')} -> {st1.get('sel')} "
+                   f"objects {st0.get('n')} -> {st1.get('n')}, effect {rec['effect']}"
+                   + (f"; no effect - focus click {rec['focus_click']}, {rec['restored']}, retry: sel "
+                      f"{rec['after_retry'].get('sel')} objects {rec['after_retry'].get('n')}, effect {rec['effect_retry']}"
+                      if "effect_retry" in rec else ""))
+        return None
+
+    def text_cleanup(self):
+        """R-14 (TW-132 d): after a step that typed text the editor must not stay open into the next step/unit:
+        Escape twice (host key with scan code), then the pointer tool when the text tool is still active; the
+        active tool and the focused window are logged before and after."""
+        out = {}
+        try:
+            f = self.h.call("focused") or {}
+            out["before"] = {"tool": self.active_tool(), "focus": f.get("class")}
+            if self.dialog_open():
+                out["dialog"] = True
+                return out
+            for _ in range(2):
+                self.o.focus()
+                self.h.call("key", combo="escape")
+                time.sleep(0.15)
+            tool = self.active_tool()
+            if not any(t in tool.lower() for t in POINTER_TOOLS):
+                self.do("tool", "tool.pointer", {})
+                time.sleep(0.2)
+                out["pointer_selected"] = True
+            f = self.h.call("focused") or {}
+            out["after"] = {"tool": self.active_tool(), "focus": f.get("class")}
+            out["editor_closed"] = any(t in out["after"]["tool"].lower() for t in POINTER_TOOLS) \
+                and str(out["after"]["focus"] or "").lower() not in ("edit", "richedit20w", "richedit50w")
+        except Exception as e:  # noqa: BLE001
+            out["error"] = str(e)[:160]
+        self.r.log(f"  orig text cleanup after typing: {out}")
+        return out
 
     def drag_record(self, fr, to, mods):
         """R-7 (TW-98, Q-44, import offset): drag points of the reference like the Firepixel side (window client
@@ -2113,13 +2300,18 @@ class OrigSide(Side):
     def script_eval(self, expr):
         return self.jsf_value(expr)
 
-    def jsf_value(self, expr):
-        lines = self.o.jsf(f'var __v = ({expr}); fp_log("RET " + (typeof __v == "object" && __v !== null ? (__v.toSource ? __v.toSource() : String(__v)) : String(__v)));')
-        ret = [ln[4:] for ln in lines if ln.startswith("RET ")]
-        return ret[-1] if ret else None
+    def jsf_value(self, expr, why="jsf_value"):
+        lines = self.o.jsf(why=why, code=f'var __v = ({expr}); fp_log("RET " + (typeof __v == "object" && __v !== null ? (__v.toSource ? __v.toSource() : String(__v)) : String(__v)));')
+        # R-14 (TW-130): a value with line breaks (textChars of a multi-line text: "Zeile eins\rZeile zwei ...")
+        # was cut to its first line - the log file is read line by line; the lines after the RET line belong to it
+        idx = [i for i, ln in enumerate(lines) if ln.startswith("RET ")]
+        if not idx:
+            return None
+        return "\n".join([lines[idx[0]][4:]] + lines[idx[0] + 1:])
 
     def select(self, names):
         names = select_names(names)
+        self.last_select = names  # R-14: restored by key_checked
         code = ("var d = fw.getDocumentDOM(); var want = %s; var sel = [], cnt = 0, sc = 0;\n"
                 "for (var i = 0; i < d.layers.length; i++) { var fr = d.layers[i].frames[d.currentFrameNum]; var web = d.layers[i].layerType == 'web';\n"
                 "  for (var j = 0; j < fr.elements.length; j++) { var e = fr.elements[j];\n"
@@ -2314,7 +2506,7 @@ class OrigSide(Side):
             self.reset_light()
         elif verb == "key":
             for _ in range(int(act.get("repeat", 1) or 1)):
-                self.key(arg)
+                self.key_checked(arg)
             if getattr(self, "popup_edit", None) and str(arg).lower() in ("enter", "return", "tab"):
                 self.popup_edit_record("after_key", str(arg))
         elif verb == "type":
@@ -2369,8 +2561,30 @@ class OrigSide(Side):
             expr = arg if isinstance(arg, str) else arg.get("value") or arg.get("expr")
             if isinstance(arg, dict) and not expr:
                 raise Unsupported(f"log {arg}")
+            # R-14 (RE-15, TW-132): open notices recorded (values + dialog shot) before the script cancels them
+            self.record_dialogs_before_script("log_value")
             try:
-                self.values.append({"expr": expr, "value": self.jsf_value(expr)})
+                try:
+                    val = self.jsf_value(expr, why="log_value")
+                except OrigError as e0:
+                    # an error the script itself could not catch: the history retry below covers it as well
+                    if "historyPalette" not in expr or "-2147216344" not in str(e0):
+                        raise
+                    val = f"ERROR {e0}"
+                if "historyPalette" in expr and "-2147216344" in str(val):
+                    # R-14 (TW-132 a, run 18 menu-edit/01, 22): the history read-back fails with -2147216344
+                    # (guarded in the expression); History panel shown, then read once more
+                    first = val
+                    try:
+                        self.do("panel", "history", {})
+                        time.sleep(0.5)
+                        val = self.jsf_value(expr, why="log_value")
+                    except (OrigError, Unmapped) as e:
+                        self.r.log(f"log_value: history panel: {e}")
+                    self.r.log(f"log_value: history read-back -2147216344 - History panel shown, read again: {str(val)[:120]}")
+                    self.values.append({"expr": expr, "value": val, "first": first, "retry": "history panel shown"})
+                else:
+                    self.values.append({"expr": expr, "value": val})
             except OrigError as e:
                 # R-6 (run 10 color-popup/21, panel-info-align-path/15, panel-misc/20): the history palette is not
                 # readable by script in the reference program (-2147216344); the value is recorded as missing and the
@@ -4159,8 +4373,37 @@ class FpSide(Side):
                 raise BridgeError(f"menu entry '{parts[-1]}' not found in the open menu")
             # painted texts may carry no state; prefer the node that reports one
             hit = next((x for x in hits if x.get("enabled") is not None), hits[0])
-            return {"text": hit.get("text"), "enabled": hit.get("enabled"), "checked": hit.get("toggled"),
-                    "role": hit.get("role")}
+            out = {"text": hit.get("text"), "enabled": hit.get("enabled"), "checked": hit.get("toggled"),
+                   "role": hit.get("role")}
+            if hit.get("enabled") is None:
+                # R-14 (TW-132 e, run 18 xs-canvas/15_snap_pixels_disabled: only the painted text was found, no
+                # enabled state): the `enabled` field comes from the accessibility node of the entry - look for a
+                # node (menu_item / button / any role) whose box holds the painted text, also by a non-exact label
+                r0 = hit.get("rect") or [0, 0, 0, 0]
+                reg = [r0[0] - 400, r0[1] - 3, r0[2] + 400, r0[3] + 3]
+                tried = []
+                for args in ({"role": "menu_item", "region": reg, "limit": 40},
+                             {"text": want, "exact": False, "role": "button", "limit": 20},
+                             {"region": reg, "limit": 60}):
+                    try:
+                        cand = (self.call("ui_find", args) or {}).get("hits") or []
+                    except BridgeError as e:
+                        tried.append(f"{args.get('role') or 'any'}: {e}")
+                        continue
+                    tried.append(f"{args.get('role') or 'any'}: {len(cand)} hits "
+                                 f"{sorted({(c.get('role'), c.get('source')) for c in cand}, key=str)[:6]}")
+                    node = next((c for c in cand if c.get("enabled") is not None and c.get("rect")
+                                 and c["rect"][0] - 2 <= r0[0] and c["rect"][2] + 2 >= r0[2]
+                                 and c["rect"][1] - 3 <= r0[1] and c["rect"][3] + 3 >= r0[3]), None)
+                    if node:
+                        out.update(enabled=node.get("enabled"), checked=node.get("toggled"), role=node.get("role"),
+                                   enabled_from=f"{node.get('source')} node '{node.get('text')}'")
+                        break
+                else:
+                    out["enabled_why"] = ("the bridge returned no accessibility node with an enabled state over the "
+                                          "entry's painted text (only painted texts carry no state): " + "; ".join(tried))
+                    self.r.log(f"  fp menu state {' > '.join(parts)}: no enabled state - {out['enabled_why'][:300]}")
+            return out
         finally:
             self.inp([{"type": "key", "key": "Escape"}, {"type": "wait", "ms": 120},
                       {"type": "key", "key": "Escape"}, {"type": "wait", "ms": 120}])
@@ -4852,6 +5095,12 @@ class Runner:
         side.popup_edit = None  # R-8: popup edit of the previous step is forgotten
         side.before_img = before_img
         side.open_before = None
+        side.last_select = None
+        if side.name == "orig":
+            # R-14 (RE-15): `"keep_dialog": true` - scripts of this step leave open dialogs alone (a modal dialog
+            # blocks the script until it is closed: only for steps whose scripts run while no dialog is expected)
+            side.o.keep_dialogs = bool(step.get("keep_dialog"))
+            side.o.closed_dialogs = []
         t0 = time.time()
         if getattr(side, "resized", None):
             side.resized = None
@@ -4945,6 +5194,13 @@ class Runner:
             rec.update(status="unmapped", error=str(e))
         except Exception as e:  # noqa: BLE001
             rec.update(status="error", error=f"{type(e).__name__}: {e}", trace=traceback.format_exc(limit=8)[-1500:])
+        if side.name == "orig":
+            side.o.keep_dialogs = False
+            if side.o.closed_dialogs:
+                rec["dialogs_closed_by_scripts"] = list(side.o.closed_dialogs)
+                side.o.closed_dialogs = []
+            if any(isinstance(a, dict) and "type" in a for a in actions + list(step.get("after") or [])):
+                rec["text_cleanup"] = side.text_cleanup()
         if unsup:
             # shot (if any) kept; the status says why the side is not measured
             rec["unsupported_reason"] = str(unsup)
@@ -4978,7 +5234,7 @@ class Runner:
                 acts = [next(iter(a)) if isinstance(a, dict) else a for k in ("both", "orig", "fp", "after") for a in s.get(k) or []]
                 self.log(f"  {s['id']}: {', '.join(acts)} -> {(s.get('shot') or {}).get('area')}")
             return
-        for sub in ("orig", "fp", "cmp"):
+        for sub in ("orig", "fp", "cmp", "orig/dialogs"):
             d = udir / sub
             d.mkdir(parents=True, exist_ok=True)
             for f in d.glob("*.png"):

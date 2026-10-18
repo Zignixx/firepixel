@@ -75,10 +75,11 @@
      "key": "ctrl+Z"
     },
     {
-     "log_value": "(function(){var h=fw.historyPalette,n=h.getStepCount(),a=[],js;for(var i=0;i<n;i++)a.push(i);try{js=h.getStepsAsJavaScript(a);}catch(e){js=\"ERR \"+e;}return [n,js].toSource();})()"
+     "log_value": "(function(){var h=null,n=null,js=null,x={};try{h=fw.historyPalette;n=h.getStepCount();}catch(e){x.count_err=String(e);}if(n!==null){var a=[];for(var i=0;i<n;i++)a.push(i);try{js=h.getStepsAsJavaScript(a);}catch(e){js=\"ERR \"+e;}}try{x.sel=String(h.getSelection());}catch(e){x.sel_err=String(e);}try{x.docs=fw.documents.length;}catch(e){}var o=[n,js,x];try{return o.toSource();}catch(e){return JSON.stringify(o);}})()"
     }
    ],
-   "shot": null
+   "shot": null,
+   "note": "R-14 (TW-132 a): every history call guarded (run 18: getStepCount() outside the try gave script error -2147216344); [count, steps, {errors, selection, documents}] - the runner shows the History panel and reads again when the error comes back"
   },
   {
    "id": "02_redo_last_result",
@@ -858,11 +859,11 @@
      "key": "Delete"
     },
     {
-     "log_value": "(function(){var h=fw.historyPalette,n=h.getStepCount(),a=[],js;for(var i=0;i<n;i++)a.push(i);try{js=h.getStepsAsJavaScript(a);}catch(e){js=\"ERR \"+e;}return [n,js].toSource();})()"
+     "log_value": "(function(){var h=null,n=null,js=null,x={};try{h=fw.historyPalette;n=h.getStepCount();}catch(e){x.count_err=String(e);}if(n!==null){var a=[];for(var i=0;i<n;i++)a.push(i);try{js=h.getStepsAsJavaScript(a);}catch(e){js=\"ERR \"+e;}}try{x.sel=String(h.getSelection());}catch(e){x.sel_err=String(e);}try{x.docs=fw.documents.length;}catch(e){}var o=[n,js,x];try{return o.toSource();}catch(e){return JSON.stringify(o);}})()"
     }
    ],
    "shot": null,
-   "note": "history read-out via fw.historyPalette.getStepCount()/getStepsAsJavaScript()"
+   "note": "history read-out via fw.historyPalette.getStepCount()/getStepsAsJavaScript(); R-14 (TW-132 a): every history call guarded (run 18: getStepCount() outside the try gave script error -2147216344); [count, steps, {errors, selection, documents}] - the runner shows the History panel and reads again when the error comes back"
   }
  ]
 }

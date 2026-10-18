@@ -227,7 +227,13 @@
      ]
     },
     {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){if(e[i].textChars!=null){var q='?';try{var p=e[i].pixelRect;q=p.left+','+p.top+','+p.right+','+p.bottom;}catch(x){}r.push(l+'/'+i+' '+e[i].name+' @'+q+': '+e[i].textChars);}}}return r.length+' texts | '+r.join(' | ')+' | sel='+fw.selection.length;})()"
+    },
+    {
      "type": "Q"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){if(e[i].textChars!=null){var q='?';try{var p=e[i].pixelRect;q=p.left+','+p.top+','+p.right+','+p.bottom;}catch(x){}r.push(l+'/'+i+' '+e[i].name+' @'+q+': '+e[i].textChars);}}}return r.length+' texts | '+r.join(' | ')+' | sel='+fw.selection.length;})()"
     },
     {
      "record_ui": "ui_state.tool"
@@ -236,7 +242,15 @@
    "shot": {
     "area": "canvas"
    },
-   "note": "70,160 lies inside TX2 ('Zeile eins'); original inserts at the click position."
+   "note": "70,160 lies inside TX2 ('Zeile eins'); original inserts at the click position.; R-14 (TW-130): all text objects (layer/index, name, pixelRect, textChars, selection count) logged before typing, after typing and after Escape on both sides (Escape and the last read-back after the shot)",
+   "after": [
+    {
+     "key": "Escape"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){if(e[i].textChars!=null){var q='?';try{var p=e[i].pixelRect;q=p.left+','+p.top+','+p.right+','+p.bottom;}catch(x){}r.push(l+'/'+i+' '+e[i].name+' @'+q+': '+e[i].textChars);}}}return r.length+' texts | '+r.join(' | ')+' | sel='+fw.selection.length;})()"
+    }
+   ]
   },
   {
    "id": "07_select_text_shift_arrows_focus",
@@ -259,7 +273,13 @@
      ]
     },
     {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){if(e[i].textChars!=null){var q='?';try{var p=e[i].pixelRect;q=p.left+','+p.top+','+p.right+','+p.bottom;}catch(x){}r.push(l+'/'+i+' '+e[i].name+' @'+q+': '+e[i].textChars);}}}return r.length+' texts | '+r.join(' | ')+' | sel='+fw.selection.length;})()"
+    },
+    {
      "type": "Hallo Welt"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){if(e[i].textChars!=null){var q='?';try{var p=e[i].pixelRect;q=p.left+','+p.top+','+p.right+','+p.bottom;}catch(x){}r.push(l+'/'+i+' '+e[i].name+' @'+q+': '+e[i].textChars);}}}return r.length+' texts | '+r.join(' | ')+' | sel='+fw.selection.length;})()"
     },
     {
      "repeat": 4,
@@ -272,7 +292,16 @@
    ],
    "shot": {
     "area": "canvas"
-   }
+   },
+   "after": [
+    {
+     "key": "Escape"
+    },
+    {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){if(e[i].textChars!=null){var q='?';try{var p=e[i].pixelRect;q=p.left+','+p.top+','+p.right+','+p.bottom;}catch(x){}r.push(l+'/'+i+' '+e[i].name+' @'+q+': '+e[i].textChars);}}}return r.length+' texts | '+r.join(' | ')+' | sel='+fw.selection.length;})()"
+    }
+   ],
+   "note": "R-14 (TW-130): all text objects (layer/index, name, pixelRect, textChars, selection count) logged before typing, after typing and after Escape on both sides (Escape and the last read-back after the shot)"
   },
   {
    "id": "07_select_text_double_click_focus",
@@ -295,16 +324,19 @@
      ]
     },
     {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){if(e[i].textChars!=null){var q='?';try{var p=e[i].pixelRect;q=p.left+','+p.top+','+p.right+','+p.bottom;}catch(x){}r.push(l+'/'+i+' '+e[i].name+' @'+q+': '+e[i].textChars);}}}return r.length+' texts | '+r.join(' | ')+' | sel='+fw.selection.length;})()"
+    },
+    {
      "type": "Hallo Welt"
     },
     {
-     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){if(e[i].textChars!=null)r.push(e[i].name+':'+e[i].textChars);}}return r.join('|');})()"
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){if(e[i].textChars!=null){var q='?';try{var p=e[i].pixelRect;q=p.left+','+p.top+','+p.right+','+p.bottom;}catch(x){}r.push(l+'/'+i+' '+e[i].name+' @'+q+': '+e[i].textChars);}}}return r.length+' texts | '+r.join(' | ')+' | sel='+fw.selection.length;})()"
     },
     {
      "key": "Escape"
     },
     {
-     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){if(e[i].textChars!=null)r.push(e[i].name+':'+e[i].textChars);}}return r.join('|');})()"
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){if(e[i].textChars!=null){var q='?';try{var p=e[i].pixelRect;q=p.left+','+p.top+','+p.right+','+p.bottom;}catch(x){}r.push(l+'/'+i+' '+e[i].name+' @'+q+': '+e[i].textChars);}}}return r.length+' texts | '+r.join(' | ')+' | sel='+fw.selection.length;})()"
     },
     {
      "tool": "pointer"
@@ -319,7 +351,7 @@
    "shot": {
     "area": "canvas"
    },
-   "note": "Original: double click does not select a word (caret at click position). R-13b: texts logged before and after Escape (stray 'c' after Escape, run 17)."
+   "note": "Original: double click does not select a word (caret at click position). R-13b: texts logged before and after Escape (stray 'c' after Escape, run 17).; R-14 (TW-130): all text objects (layer/index, name, pixelRect, textChars, selection count) logged before typing, after typing and after Escape on both sides"
   },
   {
    "id": "08_arrows_result",

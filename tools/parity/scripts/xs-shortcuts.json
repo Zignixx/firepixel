@@ -1987,6 +1987,9 @@
      "log_value": "fw.selection[0] ? fw.selection[0].textChars : null"
     },
     {
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){if(e[i].textChars!=null){var q='?';try{var p=e[i].pixelRect;q=p.left+','+p.top+','+p.right+','+p.bottom;}catch(x){}r.push(l+'/'+i+' '+e[i].name+' @'+q+': '+e[i].textChars);}}}return r.length+' texts | '+r.join(' | ')+' | sel='+fw.selection.length;})()"
+    },
+    {
      "type": "V"
     },
     {
@@ -1999,17 +2002,17 @@
      "log_value": "fw.selection[0] ? fw.selection[0].textChars : null"
     },
     {
-     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){if(e[i].textChars!=null)r.push(e[i].name+':'+e[i].textChars);}}return r.join('|');})()"
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){if(e[i].textChars!=null){var q='?';try{var p=e[i].pixelRect;q=p.left+','+p.top+','+p.right+','+p.bottom;}catch(x){}r.push(l+'/'+i+' '+e[i].name+' @'+q+': '+e[i].textChars);}}}return r.length+' texts | '+r.join(' | ')+' | sel='+fw.selection.length;})()"
     },
     {
      "key": "Escape"
     },
     {
-     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){if(e[i].textChars!=null)r.push(e[i].name+':'+e[i].textChars);}}return r.join('|');})()"
+     "log_value": "(function(){var d=fw.getDocumentDOM(),r=[];for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;for(var i=0;i<e.length;i++){if(e[i].textChars!=null){var q='?';try{var p=e[i].pixelRect;q=p.left+','+p.top+','+p.right+','+p.bottom;}catch(x){}r.push(l+'/'+i+' '+e[i].name+' @'+q+': '+e[i].textChars);}}}return r.length+' texts | '+r.join(' | ')+' | sel='+fw.selection.length;})()"
     }
    ],
    "shot": null,
-   "note": "R-13b: like 15_in_text_result on TX2 (valid text object of T05): text tool click at TX2's centre, 'V' typed, R pressed (must type 'r', not switch tools); textChars logged before and after Escape"
+   "note": "R-13b: like 15_in_text_result on TX2 (valid text object of T05): text tool click at TX2's centre, 'V' typed, R pressed (must type 'r', not switch tools); textChars logged before and after Escape; R-14 (TW-130): all text objects (layer/index, name, pixelRect, textChars, selection count) logged before typing, after typing and after Escape on both sides"
   },
   {
    "id": "16_in_field_result",
