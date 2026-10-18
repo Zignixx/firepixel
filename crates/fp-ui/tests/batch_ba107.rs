@@ -288,3 +288,92 @@ fn loaded_filter_step_fills_the_filter_bar() {
     });
     assert_eq!(names(&mut h).len(), 2);
 }
+
+// ------------------------------------------------------------------ 2. manual order
+
+fn four_files(tag: &str) -> (H, Vec<PathBuf>) {
+    let d = dir(tag);
+    let files: Vec<PathBuf> = ["a.png", "b.png", "c.png", "d.png"].iter().map(|n| png_file(&d, n, 40, 30, false)).collect();
+    let h = open(&files);
+    (h, files)
+}
+
+fn grips(h: &H) -> Vec<Rect> {
+    let mut v: Vec<Rect> = h.query_all(By::new().label(&t("batch-ui-file-drag"))).map(|n| n.rect()).collect();
+    v.sort_by(|a, b| a.top().total_cmp(&b.top()));
+    v
+}
+
+fn drag(h: &mut H, from: Pos2, to: Pos2) {
+    h.event(Event::PointerMoved(from));
+    h.run_steps(1);
+    h.event(Event::PointerButton { pos: from, button: PointerButton::Primary, pressed: true, modifiers: Modifiers::NONE });
+    h.run_steps(1);
+    for k in 1..=8 {
+        let p = from + (to - from) * (k as f32 / 8.0);
+        h.event(Event::PointerMoved(p));
+        h.run_steps(1);
+    }
+    h.event(Event::PointerButton { pos: to, button: PointerButton::Primary, pressed: false, modifiers: Modifiers::NONE });
+    h.run_steps(3);
+}
+
+fn order_list(h: &mut H) -> Vec<String> {
+    studio(h).recipe.extra.get(batch::FILE_ORDER).and_then(|v| v.as_array()).map(|a| a.iter().filter_map(|x| x.as_str().map(String::from)).collect()).unwrap_or_default()
+}
+
+#[test]
+fn drag_handle_reorders_and_keeps_order_in_recipe() {
+    let (mut h, _) = four_files("drag");
+    let g = grips(&h);
+    assert_eq!(g.len(), 4, "a handle per row");
+    // drag "a" below "c"
+    let to = Pos2::new(g[0].center().x, g[2].bottom() + 2.0);
+    drag(&mut h, g[0].center(), to);
+    assert_eq!(names(&mut h), ["b.png", "c.png", "a.png", "d.png"]);
+    assert_eq!(studio(&mut h).sort, batch::files::SortKey::Manual);
+    assert_eq!(order_list(&mut h), ["b.png", "c.png", "a.png", "d.png"]);
+    assert!(studio(&mut h).is_dirty(), "the order belongs to the recipe");
+    // undo → previous order ("Added")
+    key(&mut h, Key::Z, Modifiers::COMMAND);
+    assert_eq!(names(&mut h), ["a.png", "b.png", "c.png", "d.png"]);
+    assert!(order_list(&mut h).is_empty());
+    key(&mut h, Key::Y, Modifiers::COMMAND);
+    assert_eq!(names(&mut h), ["b.png", "c.png", "a.png", "d.png"]);
+    // drag "d" to the top
+    let g = grips(&h);
+    drag(&mut h, g[3].center(), Pos2::new(g[0].center().x, g[0].top() + 3.0));
+    assert_eq!(names(&mut h), ["d.png", "b.png", "c.png", "a.png"]);
+}
+
+#[test]
+fn ctrl_arrows_move_the_selected_file() {
+    let (mut h, files) = four_files("keys");
+    studio(&mut h).selected = Some(0);
+    h.run_steps(1);
+    key(&mut h, Key::ArrowDown, Modifiers::COMMAND);
+    key(&mut h, Key::ArrowDown, Modifiers::COMMAND);
+    assert_eq!(names(&mut h), ["b.png", "c.png", "a.png", "d.png"]);
+    assert_eq!(studio(&mut h).selected, Some(0), "the moved file stays selected");
+    key(&mut h, Key::ArrowUp, Modifiers::COMMAND);
+    assert_eq!(names(&mut h), ["b.png", "a.png", "c.png", "d.png"]);
+    // at the edges nothing happens
+    studio(&mut h).selected = Some(1);
+    key(&mut h, Key::ArrowUp, Modifiers::COMMAND);
+    assert_eq!(names(&mut h), ["b.png", "a.png", "c.png", "d.png"]);
+    // saved and loaded with the files added afterwards: same order
+    let path = dir("keys-recipe").join("order.fpbatch.json");
+    studio(&mut h).recipe.save(&path).expect("save");
+    let loaded = fp_batch::Recipe::load(&path).expect("load");
+    assert_eq!(loaded.extra.get(batch::FILE_ORDER), studio(&mut h).recipe.extra.get(batch::FILE_ORDER));
+    studio(&mut h).clear_files();
+    studio(&mut h).set_recipe(fp_batch::Recipe::default(), None);
+    assert_eq!(studio(&mut h).sort, batch::files::SortKey::Added);
+    studio(&mut h).set_recipe(loaded, Some(path));
+    studio(&mut h).add_paths(&files, false);
+    assert_eq!(names(&mut h), ["b.png", "a.png", "c.png", "d.png"]);
+    // another sort key leaves the manual order and removes it from the recipe
+    studio(&mut h).set_sort(batch::files::SortKey::Name);
+    assert!(order_list(&mut h).is_empty());
+    assert_eq!(names(&mut h), ["a.png", "b.png", "c.png", "d.png"]);
+}

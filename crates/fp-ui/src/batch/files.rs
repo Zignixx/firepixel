@@ -14,6 +14,8 @@ use std::path::PathBuf;
 
 /// Höhe einer Dateizeile (wie „Zuletzt geöffnet“ auf dem Startbildschirm).
 pub const ROW_H: f32 = 44.0;
+/// Width of the drag handle at the left of a row (BA-107).
+pub const GRIP_W: f32 = 12.0;
 
 /// Sortierung (SPEC §2.3). Die Reihenfolge bestimmt die Nummerierung beim Umbenennen.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -23,18 +25,22 @@ pub enum SortKey {
     Date,
     Size,
     Pixels,
+    /// Manual order (drag or Ctrl+Up/Down; kept in the recipe as `fileOrder`, BA-107).
+    Manual,
 }
 
 impl SortKey {
-    pub const ALL: [SortKey; 5] = [
+    pub const ALL: [SortKey; 6] = [
         SortKey::Added,
         SortKey::Name,
         SortKey::Date,
         SortKey::Size,
         SortKey::Pixels,
+        SortKey::Manual,
     ];
     pub fn label(self) -> String {
         t(match self {
+            SortKey::Manual => "batch-ui-sort-manual",
             SortKey::Added => "batch-ui-sort-added",
             SortKey::Name => "batch-ui-sort-name",
             SortKey::Date => "batch-ui-sort-date",
@@ -341,6 +347,7 @@ pub fn order(files: &[FileEntry], f: &Filter, sort: SortKey, mode: Mode) -> Vec<
         .collect();
     match sort {
         SortKey::Added => v.sort_by_key(|&i| files[i].added),
+        SortKey::Manual => v.sort_by_key(|&i| (files[i].pos, files[i].added)),
         SortKey::Name => v.sort_by(|&a, &b| {
             fp_batch::item::natural_cmp(&files[a].info.file_name(), &files[b].info.file_name())
         }),
@@ -716,8 +723,7 @@ fn filter_row(ui: &mut Ui, s: &mut Studio, r: Rect) {
         s.files_changed();
     }
     if sort != s.sort {
-        s.sort = sort;
-        s.files_changed();
+        s.set_sort(sort);
     }
 }
 
@@ -984,6 +990,8 @@ fn file_list(
     }
     let mut clicked: Option<usize> = None;
     let mut toggled: Option<usize> = None;
+    let mut drag_start: Option<usize> = None;
+    let dragging = s.file_drag;
     let mut ffmpeg_click = false;
     let ffmpeg_missing =
         vis.iter().any(|&i| s.files[i].info.kind == ItemKind::Video) && !s.ffmpeg_available(now);
@@ -1011,11 +1019,84 @@ fn file_list(
             if box_click {
                 toggled = Some(i);
             }
+            // drag handle ⠿ (BA-107): drag to reorder, Ctrl+Up/Down with the keyboard
+            let gr = Rect::from_min_size(row.min, vec2(GRIP_W, ROW_H));
+            let g = ui.interact(
+                gr,
+                Id::new(("fp-batch-file-grip", i)),
+                if enabled {
+                    Sense::drag()
+                } else {
+                    Sense::hover()
+                },
+            );
+            g.widget_info(|| {
+                egui::WidgetInfo::labeled(egui::WidgetType::Other, enabled, t("batch-ui-file-drag"))
+            });
+            let hot = ui.rect_contains_pointer(row) || s.selected == Some(i);
+            if enabled && (hot || dragging == Some(k)) {
+                kit::grip(
+                    ui.painter(),
+                    gr.center() + vec2(1.0, 0.0),
+                    if g.hovered() || dragging == Some(k) {
+                        theme.colors.focus
+                    } else {
+                        kit::weak(theme)
+                    },
+                );
+            }
+            if g.hovered() || g.dragged() {
+                ui.ctx().set_cursor_icon(if g.dragged() {
+                    egui::CursorIcon::Grabbing
+                } else {
+                    egui::CursorIcon::Grab
+                });
+            }
+            if g.drag_started() {
+                drag_start = Some(k);
+            }
+            let _ = g.on_hover_text(t("batch-ui-file-drag"));
         }
     });
     child
         .ctx()
         .data_mut(|d| d.insert_temp(Id::new("fp-batch-file-list-off"), out.state.offset.y));
+    // dragging a row: insertion line, drop on release
+    if let Some(k) = drag_start {
+        s.file_drag = Some(k);
+        if let Some(&i) = vis.get(k) {
+            s.selected = Some(i);
+        }
+    }
+    if let Some(from) = s.file_drag {
+        let content_top = out.inner_rect.top() - out.state.offset.y;
+        let (py, down) = ui.input(|i| (i.pointer.latest_pos().map(|p| p.y), i.pointer.any_down()));
+        let to = py.map(|y| {
+            ((y - content_top) / ROW_H)
+                .round()
+                .clamp(0.0, vis.len() as f32) as usize
+        });
+        if let Some(to) = to {
+            let y = (content_top + to as f32 * ROW_H)
+                .clamp(out.inner_rect.top() + 1.0, out.inner_rect.bottom() - 1.0);
+            ui.painter()
+                .with_clip_rect(out.inner_rect.expand(2.0))
+                .hline(
+                    out.inner_rect.x_range(),
+                    y,
+                    Stroke::new(2.0, theme.colors.focus),
+                );
+        }
+        if !down {
+            s.file_drag = None;
+            if let Some(to) = to
+                && enabled
+            {
+                s.move_file(from, to);
+            }
+        }
+        ui.ctx().request_repaint();
+    }
     if let Some(i) = clicked {
         s.selected = Some(i);
     }
@@ -1085,7 +1166,7 @@ fn file_row(
     }
     // Kästchen
     let cb = Rect::from_center_size(
-        pos2(rect.left() + sp::XS + 7.0, rect.center().y),
+        pos2(rect.left() + GRIP_W + 7.0, rect.center().y),
         vec2(14.0, 14.0),
     );
     let cresp = ui.interact(

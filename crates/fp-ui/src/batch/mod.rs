@@ -47,6 +47,8 @@ use std::sync::{Arc, Mutex};
 pub const PREF_MODE: &str = "BatchMode";
 /// Voreinstellung: Ordner rekursiv hinzufügen.
 pub const PREF_RECURSIVE: &str = "BatchRecursive";
+/// Recipe key of the manual file order (list of `folder/name`, BA-107).
+pub const FILE_ORDER: &str = "fileOrder";
 /// Höchstzahl gemerkter Rezept-Zustände für Rückgängig.
 const UNDO_LIMIT: usize = 200;
 
@@ -200,9 +202,13 @@ pub struct Studio {
     pub(crate) inbox: Arc<Mutex<Vec<Inbox>>>,
     pub(crate) tab_rect: Option<Rect>,
     pub(crate) drag: Option<recipe::DragState>,
+    /// Dragging a file row: its position in the visible list (BA-107).
+    pub(crate) file_drag: Option<usize>,
     pub(crate) last_active_doc: Option<fp_engine::DocId>,
     pub(crate) files_version: u64,
     order_cache: Option<(u64, Vec<usize>)>,
+    /// `fileOrder` of the recipe last applied to the list.
+    applied_order: Option<serde_json::Value>,
     issues_cache: Option<(String, Vec<fp_batch::Issue>)>,
     next_added: usize,
     pub(crate) close_requested: bool,
@@ -256,9 +262,11 @@ impl Studio {
             inbox: Arc::new(Mutex::new(Vec::new())),
             tab_rect: None,
             drag: None,
+            file_drag: None,
             last_active_doc: None,
             files_version: 0,
             order_cache: None,
+            applied_order: None,
             issues_cache: None,
             next_added: 0,
             close_requested: false,
@@ -327,6 +335,15 @@ impl Studio {
         }
         if self.selected.is_none() && n > 0 {
             self.selected = Some(self.files.len() - n);
+        }
+        if self.recipe.extra.contains_key(FILE_ORDER) {
+            self.apply_file_order();
+        } else if self.sort == files::SortKey::Manual {
+            let end = self.files.iter().map(|f| f.pos).max().unwrap_or(0);
+            let len = self.files.len();
+            for (k, f) in self.files[len - n..].iter_mut().enumerate() {
+                f.pos = end + 1 + k;
+            }
         }
         self.files_changed();
         (n, c.duplicates.len(), c.skipped.len())
@@ -429,6 +446,96 @@ impl Studio {
         v
     }
 
+    /// Key of a file in the recipe's `fileOrder` (folder relative to the root and name, `/`).
+    pub fn order_key(info: &ItemInfo) -> String {
+        let rel = info.rel_dir().join(info.file_name());
+        rel.to_string_lossy().replace('\\', "/")
+    }
+
+    /// Moves the file at position `from` of the visible list to position `to` (insertion index in
+    /// the visible list before the move, `0..=len`). Switches to the manual order (the current order
+    /// is its start) and keeps it in the recipe as `fileOrder` (one undo step). Returns `true` on a
+    /// change.
+    pub fn move_file(&mut self, from: usize, to: usize) -> bool {
+        let vis = self.visible();
+        let (Some(&moved), true) = (vis.get(from), to <= vis.len()) else {
+            return false;
+        };
+        if to == from || to == from + 1 {
+            return false;
+        }
+        // all files in the current order: visible ones first, hidden ones keep their place after
+        let mut all: Vec<usize> = vis.clone();
+        let mut hidden: Vec<usize> = (0..self.files.len()).filter(|i| !vis.contains(i)).collect();
+        hidden.sort_by_key(|&i| (self.files[i].pos, self.files[i].added));
+        all.extend(hidden);
+        let target = vis.get(to).copied();
+        all.retain(|&i| i != moved);
+        let at = target
+            .and_then(|t| all.iter().position(|&i| i == t))
+            .unwrap_or(vis.len() - 1);
+        all.insert(at, moved);
+        for (k, &i) in all.iter().enumerate() {
+            self.files[i].pos = k;
+        }
+        self.sort = files::SortKey::Manual;
+        self.order_cache = None;
+        let order: Vec<serde_json::Value> = all
+            .iter()
+            .map(|&i| serde_json::Value::String(Self::order_key(&self.files[i].info)))
+            .collect();
+        self.end_gesture();
+        self.edit("file-order", |r| {
+            r.extra
+                .insert(FILE_ORDER.into(), serde_json::Value::Array(order));
+            true
+        });
+        self.end_gesture();
+        self.files_changed();
+        true
+    }
+
+    /// Sort key chosen in the list ▾: leaving the manual order removes `fileOrder` from the recipe.
+    pub fn set_sort(&mut self, sort: files::SortKey) {
+        if sort == self.sort {
+            return;
+        }
+        self.sort = sort;
+        if sort != files::SortKey::Manual && self.recipe.extra.contains_key(FILE_ORDER) {
+            self.end_gesture();
+            self.edit("file-order", |r| r.extra.remove(FILE_ORDER).is_some());
+            self.end_gesture();
+        }
+        self.files_changed();
+    }
+
+    /// Applies the recipe's `fileOrder` (if any) to the list: listed files first in that order,
+    /// the others after them in the order they were added. Without `fileOrder` a manual order
+    /// falls back to "Added".
+    pub(crate) fn apply_file_order(&mut self) {
+        let Some(list) = self.recipe.extra.get(FILE_ORDER).and_then(|v| v.as_array()) else {
+            if self.sort == files::SortKey::Manual {
+                self.sort = files::SortKey::Added;
+            }
+            return;
+        };
+        let rank: std::collections::HashMap<&str, usize> = list
+            .iter()
+            .filter_map(|v| v.as_str())
+            .enumerate()
+            .map(|(k, s)| (s, k))
+            .collect();
+        let n = rank.len();
+        for f in &mut self.files {
+            f.pos = rank
+                .get(Self::order_key(&f.info).as_str())
+                .copied()
+                .unwrap_or(n + f.added);
+        }
+        self.sort = files::SortKey::Manual;
+        self.order_cache = None;
+    }
+
     /// Dateien, die verarbeitet werden (sichtbar und aktiviert), in Listenreihenfolge.
     pub fn to_process(&mut self) -> Vec<usize> {
         self.visible()
@@ -509,8 +616,13 @@ impl Studio {
     }
 
     pub(crate) fn recipe_changed(&mut self) {
-        // the Pro filter mirrors the first `file.filterSkip` step (BA-107)
+        // the Pro filter mirrors the first `file.filterSkip` step, the manual order `fileOrder`
+        // (BA-107)
         self.filter.from_step(&self.recipe);
+        if self.recipe.extra.get(FILE_ORDER) != self.applied_order.as_ref() {
+            self.applied_order = self.recipe.extra.get(FILE_ORDER).cloned();
+            self.apply_file_order();
+        }
         self.plan = None;
         self.plan_error = None;
         self.issues_cache = None;
@@ -896,6 +1008,21 @@ fn keyboard(ctx: &egui::Context, st: &mut AppState, now: f64) {
         let pos = s
             .selected
             .and_then(|sel| vis.iter().position(|&i| i == sel));
+        // Ctrl+↑/↓ moves the selected file in the manual order (BA-107)
+        if consume(ctx, ctrl, Key::ArrowUp)
+            && let Some(p) = pos
+            && p > 0
+        {
+            s.move_file(p, p - 1);
+            s.scroll_to_selected = true;
+        }
+        if consume(ctx, ctrl, Key::ArrowDown)
+            && let Some(p) = pos
+            && p + 1 < vis.len()
+        {
+            s.move_file(p, p + 2);
+            s.scroll_to_selected = true;
+        }
         if consume(ctx, Modifiers::NONE, Key::ArrowDown) && !vis.is_empty() {
             s.selected = Some(vis[pos.map(|p| (p + 1).min(vis.len() - 1)).unwrap_or(0)]);
             s.scroll_to_selected = true;

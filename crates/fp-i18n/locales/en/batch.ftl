@@ -269,6 +269,8 @@ batch-ui-sort-name = Name
 batch-ui-sort-date = Date
 batch-ui-sort-size = Size
 batch-ui-sort-pixels = Pixels
+batch-ui-sort-manual = Manual order
+batch-ui-file-drag = Drag to reorder (Ctrl+Up/Down)
 # Recipe card
 batch-ui-recipe-title = Recipe
 batch-ui-recipe-steps = { $n ->
