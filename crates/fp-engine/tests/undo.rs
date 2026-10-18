@@ -77,8 +77,10 @@ fn selection_changes_are_steps_view_is_not() {
     assert_eq!(n(&s), before + 2);
     ex(&mut s, "view.zoomIn", json!({}));
     ex(&mut s, "view.grid.showGrid", json!({}));
+    assert_eq!(n(&s), before + 2, "view changes are no steps");
+    // Copy is a row of its own (TW-137)
     ex(&mut s, "edit.copy", json!({}));
-    assert_eq!(n(&s), before + 2, "Ansicht und Kopieren sind keine Schritte");
+    assert_eq!(n(&s), before + 3, "Copy is a step");
 }
 
 #[test]

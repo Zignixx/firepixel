@@ -127,6 +127,15 @@ pub(crate) fn clear_masked(img: &mut RgbaImage, mask: &Mask) {
     }
 }
 
+/// Copy as a history row of its own (TW-137): like the original, every copy is a finished undo
+/// session named "Copy". The row is an undoable no-op: neither the document nor its unsaved state
+/// changes, undoing it leaves the clipboard alone.
+fn copy_step(s: &mut Session, vectors_only: bool) -> Result<CommandOutput> {
+    let out = copy_to_clipboard(s, vectors_only)?;
+    s.force_history_step();
+    Ok(CommandOutput::doc_with(out.value).labeled(fp_i18n::t("msg-step-copy")))
+}
+
 fn copy_to_clipboard(s: &mut Session, vectors_only: bool) -> Result<CommandOutput> {
     let d = s.doc()?;
     let res = d.doc.pages.get(d.page).map(|p| p.canvas.resolution);
@@ -632,13 +641,13 @@ pub(super) fn register(r: &mut CommandRegistry) {
     r.add(
         cmd("edit.copy")
             .requires(&[Requirement::Document, Requirement::SelectionOrPixels])
-            .run(|s, _| copy_to_clipboard(s, false)),
+            .run(|s, _| copy_step(s, false)),
     );
     r.add(
         cmd("edit.copyAsVectors")
             .requires(SEL)
             .menu_when(|s| super::no_pixel_selection(s) && super::not_only_web(s))
-            .run(|s, _| copy_to_clipboard(s, true)),
+            .run(|s, _| copy_step(s, true)),
     );
     r.add(
         cmd("edit.cut")
@@ -646,7 +655,9 @@ pub(super) fn register(r: &mut CommandRegistry) {
             .run(|s, _| {
                 copy_to_clipboard(s, false)?;
                 with_doc(s, clear_selection)?;
-                Ok(CommandOutput::doc())
+                // copy and removal form ONE history row "Cut" (TW-137)
+                s.force_history_step();
+                Ok(CommandOutput::doc().labeled(fp_i18n::t("msg-step-cut")))
             }),
     );
     r.add(

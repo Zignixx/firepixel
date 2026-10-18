@@ -13,6 +13,9 @@ use crate::command::{
 use crate::error::{EngineError, Result};
 use crate::geometry::{GeometryOps, default_geometry};
 use crate::history::{History, RecordedCommand, Snapshot};
+
+/// Name of a history row whose command or script has no name of its own (TW-137).
+pub const STEP_COMMAND_SCRIPT: &str = "msg-step-command-script";
 use crate::prefs::Preferences;
 use crate::render::PageRenderer;
 use crate::selection::{Clipboard, Selection};
@@ -1048,6 +1051,15 @@ impl Session {
         }
         if doc_changed || sel_changed || forced {
             let after = now;
+            // a step without a name reads "Command script" like the original (TW-137)
+            let (label, key) = if label.trim().is_empty() {
+                (
+                    fp_i18n::with_ui_language(|| fp_i18n::t(STEP_COMMAND_SCRIPT)),
+                    Some(crate::history::StepKey::Text(STEP_COMMAND_SCRIPT.into())),
+                )
+            } else {
+                (label, key)
+            };
             d.history.push(crate::history::HistoryStep {
                 label,
                 key,
@@ -1212,6 +1224,8 @@ impl Session {
         // stehen, solange die Seiten dieselben sind.
         let grids: Vec<Option<fp_model::Grid>> =
             d.doc.pages.iter().map(|p| p.root.grid.clone()).collect();
+        let doc_before = Arc::clone(&d.doc);
+        let loc_before = (d.page, d.frame, d.layer);
         d.restore(snap);
         if d.doc.pages.len() == grids.len()
             && d.doc
@@ -1226,6 +1240,14 @@ impl Session {
                     Arc::make_mut(p).root.grid = g;
                 }
             }
+        }
+        // steps that leave the document untouched (Copy, Select All …) do not mark it as changed
+        // when they are undone or redone (TW-137)
+        if Arc::ptr_eq(&doc_before, &d.doc) && loc_before == (d.page, d.frame, d.layer) {
+            let id = d.id;
+            self.events.push(SessionEvent::SelectionChanged(id));
+            self.events.push(SessionEvent::HistoryChanged(id));
+            return;
         }
         d.generation += 1;
         let (id, g) = (d.id, d.generation);

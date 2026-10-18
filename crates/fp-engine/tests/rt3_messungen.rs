@@ -85,7 +85,9 @@ fn l3_exit_bitmap_mode_trims_after_delete() {
     let v = ex(&mut s, "edit.paste", json!({}));
     let cid = fp_model::ElementId(v["ids"][0].as_u64().expect("id"));
     assert_eq!(bounds(&s, cid), Rect::new(150.0, 50.0, 200.0, 150.0), "Kopie an gleicher Stelle");
-    // Rückgängig stellt die ungeschnittenen Grenzen wieder her
+    // Rückgängig stellt die ungeschnittenen Grenzen wieder her (Paste, Copy – a row of its own
+    // since TW-137 – and the trim)
+    ex(&mut s, "edit.undo", json!({}));
     ex(&mut s, "edit.undo", json!({}));
     ex(&mut s, "edit.undo", json!({}));
     assert_eq!(bounds(&s, id), Rect::new(0.0, 0.0, 400.0, 300.0));

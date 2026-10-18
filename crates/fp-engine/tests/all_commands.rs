@@ -1339,7 +1339,8 @@ fn case_for(name: &str, info: &fp_engine::CommandInfo, ids: &Ids) -> Case {
             (Value::Object(o), auto_setup(&info.requires, ids))
         }
     };
-    let no_effect_ok = matches!(name, "file.saveAll" | "view.fitSelection" | "view.hideSelection" | "ai.clearCache");
+    // Copy is a history row of its own that leaves the document untouched (TW-137)
+    let no_effect_ok = matches!(name, "file.saveAll" | "view.fitSelection" | "view.hideSelection" | "ai.clearCache" | "edit.copy" | "edit.copyAsVectors");
     Case { params, setup, check: check_for(name, ids), no_effect_ok }
 }
 

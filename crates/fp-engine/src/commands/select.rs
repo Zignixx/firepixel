@@ -479,7 +479,12 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 d.selection.set(ids);
             }
             Ok(CommandOutput::doc())
-        })
+        })?;
+        // every Select All is a history row of its own, also when everything was selected already
+        // (TW-137); Deselect stays row-less without a change because the pointer tool sends it
+        // for every click on empty canvas
+        s.force_history_step();
+        Ok(CommandOutput::doc())
     }));
     r.add(
         cmd("select.none")
