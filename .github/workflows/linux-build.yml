@@ -164,7 +164,7 @@ jobs:
         continue-on-error: true
         run: |
           set -u
-          sudo apt-get install -y --no-install-recommends xvfb xauth mesa-vulkan-drivers libegl1 libgl1-mesa-dri imagemagick
+          sudo apt-get install -y --no-install-recommends xvfb xauth mesa-vulkan-drivers libegl1 libgl1-mesa-dri imagemagick libxkbcommon-x11-0 libxkbcommon0 libwayland-client0
           PROBE=$(mktemp -d)
           mkdir -p "$PROBE/home"
           cat > "$RUNNER_TEMP/probe.sh" <<'EOF'

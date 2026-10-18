@@ -146,7 +146,7 @@ jobs:
             echo
             echo "- **Windows x64:** unzip \`Firepixel-Windows-x64-$VERSION.zip\` and start \`firepixel.exe\`. No installer is needed."
             echo "- **macOS (Apple Silicon and Intel, macOS 10.15 or later):** unzip \`Firepixel-macOS-universal-$VERSION.zip\`. The app is ad-hoc signed and not notarised, so on first launch right-click \`Firepixel.app\` > **Open** and confirm (or run \`xattr -dr com.apple.quarantine Firepixel.app\`)."
-            echo "- **Linux x86_64 (glibc 2.35 or later, e.g. Ubuntu 22.04 or Debian 12):** AppImage: \`chmod +x Firepixel-x86_64.AppImage\`, then run it. tar.gz: unpack \`Firepixel-Linux-x64-$VERSION.tar.gz\` and run \`./firepixel\` in the folder \`Firepixel-Linux-x64\`. Needs a Vulkan or OpenGL driver; runs on Wayland and X11. File dialogs use the XDG desktop portal."
+            echo "- **Linux x86_64 (glibc 2.35 or later, e.g. Ubuntu 22.04 or Debian 12):** AppImage: \`chmod +x Firepixel-x86_64.AppImage\`, then run it. tar.gz: unpack \`Firepixel-Linux-x64-$VERSION.tar.gz\` and run \`./firepixel\` in the folder \`Firepixel-Linux-x64\`. Needs a Vulkan or OpenGL driver; runs on Wayland and X11. File dialogs use the XDG desktop portal. Runtime libraries: libxkbcommon0, libxkbcommon-x11-0 (X11), libwayland-client0 (Wayland), libgl1 or Vulkan."
             echo
             echo "The command-line tool \`firepixel-cli\` and the manuals (English and German) are included in all packages."
             echo
