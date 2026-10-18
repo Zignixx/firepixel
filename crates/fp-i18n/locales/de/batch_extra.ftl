@@ -161,3 +161,57 @@ batch-value-file-timestamps-mode-source = Quelldatei
 batch-value-file-timestamps-mode-exif = Aufnahmedatum (EXIF), sonst Quelldatei
 batch-value-file-timestamps-mode-fixed = Festes Datum
 batch-err-timestamp-date = Bitte das Datum als JJJJ-MM-TT HH:MM eingeben.
+
+# B-3: Dokumentschritte (crates\fp-batch\src\steps\document.rs)
+
+## Suchen und ersetzen
+batch-step-document-findReplace = Suchen und ersetzen
+    .description = Ersetzt Text, Schriften, Farben oder URLs in Dokumenten; das Dokument bleibt bearbeitbar.
+batch-param-document-findReplace-whatToFind = Suchen nach
+batch-param-document-findReplace-find = Suchen
+batch-param-document-findReplace-replace = Ersetzen durch
+batch-param-document-findReplace-matchCase = Groß-/Kleinschreibung beachten
+batch-param-document-findReplace-wholeWord = Ganzes Wort
+batch-param-document-findReplace-regex = Regulärer Ausdruck
+batch-value-document-findReplace-whatToFind-text = Text
+batch-value-document-findReplace-whatToFind-font = Schrift
+batch-value-document-findReplace-whatToFind-color = Farbe
+batch-value-document-findReplace-whatToFind-url = URL
+batch-value-document-findReplace-whatToFind-nonWeb216 = Nicht-Web216-Farben
+batch-err-find-empty = Bitte den Suchbegriff eingeben.
+batch-err-find-color = Bitte Farben als #rrggbb eingeben.
+batch-err-find-regex = Ungültiges Suchmuster: { $error }
+batch-warn-find-none = Nichts zum Ersetzen gefunden.
+
+## Ebenen ein-/ausblenden
+batch-step-document-layers = Ebenen ein-/ausblenden
+    .description = Blendet die Ebenen mit passendem Namen ein oder aus, bevor das Dokument gespeichert oder exportiert wird.
+batch-param-document-layers-name = Ebenenname
+    .tooltip = Platzhalter * und ?, mehrere Namen mit ; trennen (zum Beispiel Hintergrund; Text*).
+batch-param-document-layers-regex = Regulärer Ausdruck
+batch-param-document-layers-mode = Passende Ebenen
+batch-value-document-layers-mode-only = Nur diese einblenden
+batch-value-document-layers-mode-show = Einblenden
+batch-value-document-layers-mode-hide = Ausblenden
+batch-err-layers-name = Bitte einen Ebenennamen eingeben.
+batch-warn-layers-none = Kein Ebenenname passt.
+
+## Seiten/Status wählen
+batch-step-document-pages = Seiten/Status wählen
+    .description = Speichert die gewählten Seiten (und Status) jedes Dokuments als eigene Bilder.
+batch-param-document-pages-pages = Seiten
+    .tooltip = Leer = alle Seiten, sonst zum Beispiel 1-3, 5.
+batch-param-document-pages-states = Status
+batch-param-document-pages-pattern = Dateiname
+    .tooltip = Platzhalter: {"{"}name{"}"}, {"{"}page{"}"}, {"{"}pageName{"}"}, {"{"}state{"}"}.
+batch-value-document-pages-states-first = Erster Status
+batch-value-document-pages-states-all = Alle Status
+batch-err-pages-none = Keine Seite zum Exportieren.
+batch-skip-not-document = Kein Dokument mit Seiten.
+
+## Slices exportieren
+batch-step-document-slices = Slices exportieren
+    .description = Speichert jeden Slice der Dokumente als eigenes Bild (ohne HTML).
+batch-param-document-slices-pattern = Dateiname
+    .tooltip = Platzhalter: {"{"}name{"}"}, {"{"}slice{"}"} (Slice-Name oder Nummer), {"{"}n{"}"}.
+batch-skip-no-slices = Das Dokument hat keine Slices.

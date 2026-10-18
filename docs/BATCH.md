@@ -535,10 +535,10 @@ smallest file ..."; during a run the warning goes into the report (`batch-warn-g
 
 | ID | Name | Parameters | V | Method | P |
 |---|---|---|---|---|---|
-| `document.findReplace` | Find and replace | `whatToFind` text/font/color/url/nonWeb216 (as in the original), `find`, `replace`, `matchCase`, `wholeWord`, `regex` | yes | existing Find panel / commands in fp-engine | P2 |
-| `document.pages` | Choose pages/states | which page/state is exported (all → one file each) | yes | `fp-engine` | P2 |
-| `document.layers` | Show/hide layers | layer name (regex) visible/invisible before export | yes | registry `layer.setVisible` | P2 |
-| `document.slices` | Export slices | like export "HTML and Images" without HTML | – | `fp-export::slices` | P3 |
+| `document.findReplace` | Find and replace | **A** `whatToFind` text/font/color/url/nonWeb216 *text*; **A** `find`, **A** `replace` (colours `#rrggbb`, alpha kept); `matchCase` off, `wholeWord` off, `regex` off (text/url; `$1` groups in the replacement). Text is replaced per text run (a match across two runs is not found); font = runs and initial attributes with that font name (case-insensitive); color = fill/stroke of paths and text, text run colours; nonWeb216 = every such colour snapped to the nearest web-safe colour (channels to multiples of 51). Nothing found = warning; empty `find`, invalid regex/colour = error | yes | own walk over all pages, layers, groups, masks, compound shapes and sub-layers (copy-on-write, render caches cleared); no headless engine command exists | P2 |
+| `document.pages` | Choose pages/states | **A** `pages` ranges (`1-3, 5`; empty = all); **A** `states` first/all *first*; `pattern` *`{name}_{page}`* (`{name}`, `{page}`, `{pageName}`, `{state}`; with all states and no `{state}` → `_<state>` appended). Collect step: one flat image per page/state; items that are not documents are skipped | – | `fp-render` `render_page` | P2 |
+| `document.layers` | Show/hide layers | **A** `name` glob (`*`, `?`, `;`) or `regex` (case-insensitive); **A** `mode` only/show/hide *only* (only = matching visible, all other top-level layers hidden); applies to every page and state; no match = warning | yes | own (layer visibility in the model; the document stays editable) | P2 |
+| `document.slices` | Export slices | **A** `pattern` *`{name}_{slice}`* (`{slice}` = slice file name, element name or number; `{n}`). Collect step: every slice of every page (sorted top to bottom, left to right) cropped from the rendered page; documents without slices are skipped | – | own (`slices_of` + `fp-render`) | P3 |
 
 ### 3.11 Optimize and compress (group "Optimize")
 

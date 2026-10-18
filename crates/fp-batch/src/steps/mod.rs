@@ -7,6 +7,7 @@ use crate::step::StepRegistry;
 pub mod adjust; // BATCH-4
 pub mod anim; // BATCH-7
 pub mod background;
+pub mod document; // B-3
 pub mod extra; // BA-109
 pub mod fileops; // B-3
 pub mod files;
@@ -33,4 +34,5 @@ pub fn register_all(r: &mut StepRegistry) {
     vector::register(r); // BATCH-9
     extra::register(r); // BA-109
     fileops::register(r); // B-3
+    document::register(r); // B-3
 }

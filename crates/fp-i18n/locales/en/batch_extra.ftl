@@ -161,3 +161,57 @@ batch-value-file-timestamps-mode-source = Source file
 batch-value-file-timestamps-mode-exif = Capture date (EXIF), otherwise source file
 batch-value-file-timestamps-mode-fixed = Fixed date
 batch-err-timestamp-date = Enter the date as YYYY-MM-DD HH:MM.
+
+# B-3: document steps (crates\fp-batch\src\steps\document.rs)
+
+## Find and replace
+batch-step-document-findReplace = Find and replace
+    .description = Replaces text, fonts, colors or URLs in documents; the document stays editable.
+batch-param-document-findReplace-whatToFind = Find
+batch-param-document-findReplace-find = Search for
+batch-param-document-findReplace-replace = Replace with
+batch-param-document-findReplace-matchCase = Match case
+batch-param-document-findReplace-wholeWord = Whole word
+batch-param-document-findReplace-regex = Regular expression
+batch-value-document-findReplace-whatToFind-text = Text
+batch-value-document-findReplace-whatToFind-font = Font
+batch-value-document-findReplace-whatToFind-color = Color
+batch-value-document-findReplace-whatToFind-url = URL
+batch-value-document-findReplace-whatToFind-nonWeb216 = Non-web216 colors
+batch-err-find-empty = Enter what to search for.
+batch-err-find-color = Enter colors as #rrggbb.
+batch-err-find-regex = Invalid search pattern: { $error }
+batch-warn-find-none = Nothing found to replace.
+
+## Show/hide layers
+batch-step-document-layers = Show/hide layers
+    .description = Shows or hides the layers whose name matches, before the document is saved or exported.
+batch-param-document-layers-name = Layer name
+    .tooltip = Wildcards * and ?, several names separated by ; (for example Background; Text*).
+batch-param-document-layers-regex = Regular expression
+batch-param-document-layers-mode = Matching layers
+batch-value-document-layers-mode-only = Show only these
+batch-value-document-layers-mode-show = Show
+batch-value-document-layers-mode-hide = Hide
+batch-err-layers-name = Enter a layer name.
+batch-warn-layers-none = No layer name matches.
+
+## Choose pages/states
+batch-step-document-pages = Choose pages/states
+    .description = Saves the chosen pages (and states) of every document as separate images.
+batch-param-document-pages-pages = Pages
+    .tooltip = Empty = all pages, otherwise for example 1-3, 5.
+batch-param-document-pages-states = States
+batch-param-document-pages-pattern = File name
+    .tooltip = Placeholders: {"{"}name{"}"}, {"{"}page{"}"}, {"{"}pageName{"}"}, {"{"}state{"}"}.
+batch-value-document-pages-states-first = First state
+batch-value-document-pages-states-all = All states
+batch-err-pages-none = No page to export.
+batch-skip-not-document = Not a document with pages.
+
+## Export slices
+batch-step-document-slices = Export slices
+    .description = Saves every slice of the documents as its own image (without HTML).
+batch-param-document-slices-pattern = File name
+    .tooltip = Placeholders: {"{"}name{"}"}, {"{"}slice{"}"} (slice name or number), {"{"}n{"}"}.
+batch-skip-no-slices = The document has no slices.
