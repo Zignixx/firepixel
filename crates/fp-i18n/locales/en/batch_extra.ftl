@@ -441,3 +441,13 @@ batch-err-external-start = The program “{ $program }” could not be started: 
 batch-err-external-timeout = The program “{ $program }” did not finish within { $seconds } s and was stopped.
 batch-err-external-failed = The program “{ $program }” ended with code { $code }. { $detail }
 batch-err-external-no-output = The program “{ $program }” did not write an output file.
+
+## Perspective: automatic straightening (B-4)
+batch-param-perspective-straighten = Straighten automatically
+    .tooltip = Finds the dominant horizontal and vertical lines and corrects their tilt.
+batch-value-perspective-straighten-off = Off (use the corners)
+batch-value-perspective-straighten-rotate = Rotate
+batch-value-perspective-straighten-shear = Shear (horizontals and verticals separately)
+batch-param-perspective-maxAngle = Maximum angle
+batch-param-perspective-crop = Crop transparent corners
+batch-warn-straighten-none = No straight lines found; the image stays unchanged.

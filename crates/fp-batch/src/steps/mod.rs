@@ -23,6 +23,7 @@ pub mod overlay;
 pub mod pixel; // B-3
 pub mod script; // BATCH-4
 pub mod script_extra; // B-4
+pub mod straighten; // B-4
 pub mod vector; // BATCH-9
 
 /// Registriert alle eingebauten Schritte.

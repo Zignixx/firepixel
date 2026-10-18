@@ -185,15 +185,36 @@ impl Step for Perspective {
         let mut v: Vec<ParamDef> = CORNERS
             .iter()
             .zip(CORNER_DEFAULTS)
-            .map(|(n, d)| ParamDef::number(n, -100.0, 200.0, d).unit("%").beginner())
+            .map(|(n, d)| {
+                ParamDef::number(n, -100.0, 200.0, d)
+                    .unit("%")
+                    .beginner()
+                    .when("straighten", &["off"])
+            })
             .collect();
-        v.push(ParamDef::choice("size", &["auto", "keep"], "auto").beginner());
+        v.push(
+            ParamDef::choice("size", &["auto", "keep"], "auto")
+                .beginner()
+                .when("straighten", &["off"]),
+        );
+        // B-4: automatic straightening
+        v.push(ParamDef::choice("straighten", &["off", "rotate", "shear"], "off").beginner());
+        v.push(
+            ParamDef::number("maxAngle", 0.5, 45.0, 10.0)
+                .unit("°")
+                .when("straighten", &["rotate", "shear"]),
+        );
+        v.push(ParamDef::bool("crop", true).when("straighten", &["rotate", "shear"]));
         v
     }
     fn applies_to(&self) -> &[ItemKind] {
         &ItemKind::PIXELS
     }
     fn apply(&self, item: &mut Item, params: &Value, ctx: &mut StepContext) -> Result<()> {
+        let mode = p_str(params, "straighten", "off");
+        if mode != "off" {
+            return straighten_item(item, params, mode == "rotate", ctx);
+        }
         let c: Vec<f64> = CORNERS
             .iter()
             .zip(CORNER_DEFAULTS)
@@ -233,6 +254,44 @@ impl Step for Perspective {
         crate::steps::geometry::refresh_transparency(item);
         Ok(())
     }
+}
+
+/// Automatic straightening (B-4): detection on the first image, the same correction for all
+/// frames, output in the source size.
+fn straighten_item(
+    item: &mut Item,
+    params: &Value,
+    rotate: bool,
+    ctx: &mut StepContext,
+) -> Result<()> {
+    use crate::steps::straighten;
+    let max = p_f64(params, "maxAngle", 10.0).clamp(0.5, 45.0);
+    let crop = p_bool(params, "crop", true);
+    let first = item.preview_image()?;
+    let skew = straighten::detect(&first, max);
+    if skew.horizontal.is_none() && skew.vertical.is_none() {
+        ctx.warn(fp_i18n::t("batch-warn-straighten-none"));
+        return Ok(());
+    }
+    let tiny = |a: Option<f64>| a.is_none_or(|a| a.abs() < 0.05);
+    if (rotate && tiny(skew.rotation()))
+        || (!rotate && tiny(skew.horizontal) && tiny(skew.vertical))
+    {
+        return Ok(()); // already straight
+    }
+    let cancel = ctx.cancel;
+    item.map_images(|img| {
+        cancel.check()?;
+        let (w, h) = (img.width(), img.height());
+        let q = straighten::quad(w as f64, h as f64, &skew, rotate, crop);
+        *img = perspective(img, q, w, h)?;
+        Ok(())
+    })?;
+    if let Some(m) = item.meta_mut() {
+        m.has_transparency = true;
+    }
+    crate::steps::geometry::refresh_transparency(item);
+    Ok(())
 }
 
 // ------------------------------------------------------------------ Split into tiles
